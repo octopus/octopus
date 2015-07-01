@@ -145,6 +145,7 @@ contains
       imass = 1
       do iatom = 1, sys%geo%natoms
         if(g_opt%fixed_atom == iatom) cycle
+        if(.not. g_opt%geo%atom(iatom)%move) cycle
         mass(imass:imass + 2) = species_mass(sys%geo%atom(iatom)%species)
         imass = imass + 3
       end do
@@ -188,7 +189,7 @@ contains
     subroutine init_()
 
       logical :: center, does_exist
-      integer :: iter
+      integer :: iter, iatom
       character(len=100) :: filename
       FLOAT :: default_toldr
       real(8) :: default_step
@@ -224,6 +225,13 @@ contains
         g_opt%size = g_opt%size  - g_opt%dim
         call messages_experimental('GOCenter')
       end if
+
+      !Check if atoms are allowed to move and redifine g_opt%size
+      do iatom = 1, g_opt%geo%natoms
+        if (.not. g_opt%geo%atom(iatom)%move) then
+          g_opt%size = g_opt%size  - g_opt%dim
+        end if
+      end do
       
       !%Variable GOMethod
       !%Type integer
@@ -385,6 +393,7 @@ contains
         else
           exit
         end if
+      ! TODO: clean forces directory
       end do
 
       call restart_init(g_opt%restart_dump, RESTART_GS, RESTART_TYPE_DUMP, sys%st%dom_st_kpt_mpi_grp, &
@@ -579,6 +588,7 @@ contains
     icoord = 1
     do iatom = 1, gopt%geo%natoms
       if(gopt%fixed_atom == iatom) cycle
+      if(.not. gopt%geo%atom(iatom)%move) cycle
       do idir = 1, gopt%dim
         coords(icoord) = gopt%geo%atom(iatom)%x(idir)
         if(gopt%fixed_atom /= 0) coords(icoord) = coords(icoord) - gopt%geo%atom(gopt%fixed_atom)%x(idir)
@@ -602,6 +612,7 @@ contains
     icoord = 1
     do iatom = 1, gopt%geo%natoms
       if(gopt%fixed_atom == iatom) cycle
+      if(.not. gopt%geo%atom(iatom)%move) cycle
       do idir = 1, gopt%dim
         grad(icoord) = -gopt%geo%atom(iatom)%f(idir)
         if(gopt%fixed_atom /= 0) grad(icoord) = grad(icoord) + gopt%geo%atom(gopt%fixed_atom)%f(idir)
@@ -625,10 +636,9 @@ contains
     icoord = 1
     do iatom = 1, gopt%geo%natoms
       if(gopt%fixed_atom == iatom) cycle      
+      if(.not. gopt%geo%atom(iatom)%move) cycle
       do idir = 1, gopt%dim
-        if(gopt%geo%atom(iatom)%move) then
-           gopt%geo%atom(iatom)%x(idir) = coords(icoord)
-        end if
+        gopt%geo%atom(iatom)%x(idir) = coords(icoord)
         if(gopt%fixed_atom /= 0) then
           gopt%geo%atom(iatom)%x(idir) = gopt%geo%atom(iatom)%x(idir) + gopt%geo%atom(gopt%fixed_atom)%x(idir)
         end if
