@@ -625,9 +625,10 @@ contains
     icoord = 1
     do iatom = 1, gopt%geo%natoms
       if(gopt%fixed_atom == iatom) cycle      
-      if(.not.gopt%geo%atom(iatom)%move) cycle
       do idir = 1, gopt%dim
-        gopt%geo%atom(iatom)%x(idir) = coords(icoord)
+        if(gopt%geo%atom(iatom)%move) then
+           gopt%geo%atom(iatom)%x(idir) = coords(icoord)
+        end if
         if(gopt%fixed_atom /= 0) then
           gopt%geo%atom(iatom)%x(idir) = gopt%geo%atom(iatom)%x(idir) + gopt%geo%atom(gopt%fixed_atom)%x(idir)
         end if
