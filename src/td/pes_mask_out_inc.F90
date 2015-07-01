@@ -265,7 +265,7 @@ subroutine pes_mask_interpolator_init(pesK, Lk, ll, dim, cube_f, interp, pmesh)
   PUSH_SUB(pes_mask_interpolator_init)
 
 
-  call messages_write("Initializing Qshep interpolator... ")
+  call messages_write("Initializing Qshep interpolator. Be patient it may take a while... ")
   call messages_info()  
   
   np = ll(1)*ll(2)*ll(3)  
@@ -708,8 +708,8 @@ subroutine pes_mask_output_full_mapM_cut(pesK, file, ll, dim, pol, dir, integrat
        end select
    
        write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &
-               units_from_atomic(sqrt(units_out%energy), Lk_(ix, 1)),&
-               units_from_atomic(sqrt(units_out%energy), Lk_(iy, 2)),&
+               units_from_atomic(sqrt(units_out%energy), KK(1)),&
+               units_from_atomic(sqrt(units_out%energy), KK( 2)),&
                temp
 
   
