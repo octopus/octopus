@@ -482,15 +482,15 @@ end subroutine pes_mask_output_full_mapM
 
 
 ! ---------------------------------------------------------
-subroutine pes_mask_output_full_mapM_cut(pesK, file, Lk, ll, dim, pol, dir, integrate, pmesh)
+subroutine pes_mask_output_full_mapM_cut(pesK, file, ll, dim, pol, dir, integrate, Lk, pmesh)
   FLOAT,            intent(in) :: pesK(:,:,:)
-  FLOAT,            intent(in) :: Lk(:,:)
-  integer,          intent(in) :: ll(:)
   character(len=*), intent(in) :: file
+  integer,          intent(in) :: ll(:)
   integer,          intent(in) :: dim
   FLOAT,            intent(in) :: pol(3)
   integer,          intent(in) :: dir
   integer,          intent(in) :: integrate
+  FLOAT, optional,  intent(in) :: Lk(:,:)
   FLOAT, optional,  intent(in) :: pmesh(:,:,:,:)
 
   integer              :: ii, ix, iy, iunit,ldir(2), icut
@@ -513,18 +513,23 @@ subroutine pes_mask_output_full_mapM_cut(pesK, file, Lk, ll, dim, pol, dir, inte
   iunit = io_open(file, action='write')
 
 
+  
   ASSERT(size(pesK, 1) == ll(1))
 
-  SAFE_ALLOCATE(idx(1:maxval(ll(:)), 1:3))
-  SAFE_ALLOCATE(Lk_(1:maxval(ll(:)), 1:3))
+  if (.not. present(pmesh)) then
+    ASSERT(present(Lk))
+    
+    SAFE_ALLOCATE(idx(1:maxval(ll(:)), 1:3))
+    SAFE_ALLOCATE(Lk_(1:maxval(ll(:)), 1:3))
 
-  Dk(:) = M_ZERO
-  Dk(1:dim) = abs(Lk(2,1:dim)-Lk(1,1:dim))
+    Dk(:) = M_ZERO
+    Dk(1:dim) = abs(Lk(2,1:dim)-Lk(1,1:dim))
   
-  do ii = 1, 3
-    Lk_(:,ii) = Lk(:,ii)
-    call sort(Lk_(1:ll(ii), ii), idx(1:ll(ii), ii)) !We need to sort the k-vectors in order to dump in gnuplot format
-  end do  
+    do ii = 1, 3
+      Lk_(:,ii) = Lk(:,ii)
+      call sort(Lk_(1:ll(ii), ii), idx(1:ll(ii), ii)) !We need to sort the k-vectors in order to dump in gnuplot format
+    end do  
+  end if
   
   aligned_axis = sum((pol-(/0 ,0 ,1/))**2)  <= M_EPSILON  .or. &
                  sum((pol-(/0 ,1 ,0/))**2)  <= M_EPSILON  .or. &
@@ -1552,8 +1557,8 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
         write(fn, '(a,a)') trim(dir), '_map.pz=0'
       end if
       pol = (/M_ZERO, M_ZERO, M_ONE/)
-      call pes_mask_output_full_mapM_cut(pesK, fn, mask%Lk, mask%ll, mask%mesh%sb%dim, pol = pol, &
-                                     dir = 3, integrate = INTEGRATE_NONE )
+      call pes_mask_output_full_mapM_cut(pesK, fn, mask%ll, mask%mesh%sb%dim, pol = pol, &
+                                     dir = 3, integrate = INTEGRATE_NONE, Lk = mask%Lk)
                                      
     end if
   end do
