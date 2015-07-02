@@ -207,7 +207,7 @@ contains
     !%Option multigrid 7
     !% Multigrid method (only for finite systems).
     !%Option isf 8
-    !% Interpolating Scaling Functions Poisson solver.
+    !% Interpolating Scaling Functions Poisson solver (only for finite systems).
     !%Option sete 9
     !% (Obsolete) SETE solver.
     !%Option libisf 10
