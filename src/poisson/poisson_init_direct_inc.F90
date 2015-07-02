@@ -32,6 +32,11 @@ subroutine poisson_kernel_init(this, all_nodes_comm)
     valid_solver = .true.
   case(POISSON_MULTIGRID, POISSON_ISF, POISSON_LIBISF)
     valid_solver = .true.
+  case(POISSON_NO)
+    write(message(1),'(a)')'Info: you have elected to not use a Poisson solver.'
+    write(message(2),'(a)')' Hartree potential and energy will be 0'
+    call messages_info(2)
+    valid_solver = .true.
   case default
     valid_solver = .false.
   end select
@@ -173,6 +178,8 @@ subroutine poisson_kernel_init(this, all_nodes_comm)
       call poisson_corrections_init(this%corrector, maxl, this%der%mesh)
     end if
 
+  case(POISSON_NO)
+    call poisson_no_init(this%no_solver, this%der%mesh, this%cube)
   end select
 
   POP_SUB(poisson_kernel_init)

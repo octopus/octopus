@@ -49,6 +49,7 @@ module poisson_m
   use poisson_fmm_m
   use poisson_libisf_m
   use poisson_multigrid_m
+  use poisson_no_m
   use profiling_m
   use simul_box_m
   use test_parameters_m
@@ -94,6 +95,7 @@ module poisson_m
     POISSON_ISF           =  8,         &
     POISSON_SETE          =  9,         &
     POISSON_LIBISF        = 10,         &
+    POISSON_NO            = -99,        &
     POISSON_NULL          = -999
   
   type poisson_t
@@ -109,6 +111,7 @@ module poisson_m
     type(poisson_corr_t) :: corrector
     type(poisson_isf_t)  :: isf_solver
     type(poisson_libisf_t) :: libisf_solver
+    type(poisson_no_t) :: no_solver
     integer :: nslaves
     FLOAT :: theta !< cmplxscl
     FLOAT :: qq(MAX_DIM) !< for exchange in periodic system
@@ -188,7 +191,7 @@ contains
     !% Defaults:
     !% <br> 1D and 2D: <tt>fft</tt>.
     !% <br> 3D: <tt>cg_corrected</tt> if curvilinear, <tt>isf</tt> if not periodic, <tt>fft</tt> if periodic.
-    !%Option NoPoisson -999
+    !%Option NoPoisson -99
     !% Do not use a Poisson solver at all.
     !%Option FMM -4
     !% (Experimental) Fast multipole method. Requires FMM library.
@@ -267,8 +270,8 @@ contains
       str = "SETE"
     case (POISSON_LIBISF)
       str = "interpolating scaling functions (from BigDFT)"
-    case (POISSON_NULL)
-      str = "none"
+    case (POISSON_NO)
+      str = "no Poisson solver - Hartree set to 0"
     end select
     write(message(1),'(a,a,a)') "The chosen Poisson solver is '",trim(str),"'"
     call messages_info(1)
@@ -592,6 +595,9 @@ contains
     case(POISSON_FMM)
       call poisson_fmm_end(this%params_fmm)
 
+    case(POISSON_NO)
+      call poisson_no_end(this%no_solver)
+
     end select
     this%method = POISSON_NULL
 
@@ -808,7 +814,9 @@ contains
       else ! "D" Distributed version
         call poisson_libisf_parallel_solve(this%libisf_solver, der%mesh, this%cube, pot, rho, this%mesh_cube_map)
       end if
-
+    
+    case(POISSON_NO)
+      call poisson_no_solve(this%no_solver, der%mesh, this%cube, pot, rho)
     end select
 
     POP_SUB(dpoisson_solve)
