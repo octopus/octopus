@@ -1867,6 +1867,208 @@ subroutine X(inhomog_per_component_2nd_order)(sys, hm, idir, &
   POP_SUB(X(inhomog_per_component_2nd_order))
 end subroutine X(inhomog_per_component_2nd_order)
 
+!----------------------------------------------------------
+! Calculation of contribution to the density for second-order perturbations
+! or magnetic perturbations with kdotp that come from elements of the density 
+! matrix within occupied and unoccupied subspaces
+subroutine X(calc_rho)(sh, sys, hm, factor, factor_sum, factor_e, &
+  factor_k, lr_e, lr_k, lr0)
+  type(sternheimer_t),  intent(inout) :: sh
+  type(system_t),       intent(inout) :: sys
+  type(hamiltonian_t),  intent(inout) :: hm
+  R_TYPE,               intent(in)    :: factor
+  R_TYPE,               intent(in)    :: factor_sum
+  R_TYPE,               intent(in)    :: factor_e
+  R_TYPE,               intent(in)    :: factor_k
+  type(lr_t),           intent(in)    :: lr_e 
+  type(lr_t),           intent(in)    :: lr_k 
+  type(lr_t),           intent(inout) :: lr0 
+
+  integer :: ip, ik, ist, idim, ist_occ, ispin
+  FLOAT :: weight
+  type(matrix_t):: mat
+
+  PUSH_SUB(X(calc_rho))
+
+  SAFE_ALLOCATE(mat%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
+
+  do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
+    ispin = states_dim_get_spin_index(sys%st%d, ik)
+    call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+      factor_k * lr_k%X(dl_psi)(:,:,:,ik), factor_e*lr_e%X(dl_psi)(:,:,:,ik), mat%X(matrix))
+
+    do ist  = 1, sys%st%nst
+      if (sys%st%occ(ist, ik) .gt. M_EPSILON) then
+        weight = sys%st%d%kweights(ik) * sys%st%smear%el_per_state
+        do idim = 1, hm%d%dim
+          do ip = 1, sys%gr%mesh%np
+            lr0%X(dl_rho)(ip, ispin) = lr0%X(dl_rho)(ip, ispin) + factor * weight * factor_e * &
+              lr_e%X(dl_psi)(ip, idim, ist, ik) * R_CONJ(factor_k * lr_k%X(dl_psi)(ip, idim, ist, ik))
+          end do
+        end do
+        do ist_occ  = 1, sys%st%nst
+          if (sys%st%occ(ist_occ, ik) .gt. M_EPSILON) then
+            do idim = 1, hm%d%dim
+              do ip = 1, sys%gr%mesh%np
+                lr0%X(dl_rho)(ip, ispin) = lr0%X(dl_rho)(ip, ispin) - factor * factor_sum * weight * &
+                  mat%X(matrix)(ist,ist_occ) * sys%st%X(psi)(ip,idim,ist,ik) * &
+                  R_CONJ(sys%st%X(psi)(ip,idim,ist_occ,ik))
+              end do
+            end do
+          end if
+        end do
+      end if
+    end do
+  end do
+
+  SAFE_DEALLOCATE_P(mat%X(matrix))
+
+  POP_SUB(X(calc_rho))
+end subroutine X(calc_rho)
+
+! --------------------------------------------------------------------------
+! Calculation of V_{hxc}[n^{(1)}] | \psi^{(0)}>  for magnetic perturbations 
+! with kdotp coming from the contribution to the density from elements of
+! the density matrix within occupied and unoccupied subspaces
+subroutine X(calc_hvar_psi)(sh, sys, hm, nsigma, lr, psi_out)
+  type(sternheimer_t),  intent(inout) :: sh
+  type(system_t),       intent(inout) :: sys 
+  type(hamiltonian_t),  intent(inout) :: hm
+  integer,              intent(in)    :: nsigma
+  type(lr_t),           intent(inout) :: lr(:) 
+  R_TYPE,                intent(inout):: psi_out(:,:,:,:,:)   
+    
+  R_TYPE, allocatable :: hvar(:,:,:) 
+  integer :: ip, ik, ist, ispin, idim, isigma
+    
+  PUSH_SUB(X(calc_hvar_psi))
+
+  SAFE_ALLOCATE(hvar(1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:nsigma))
+  
+  call X(sternheimer_calc_hvar)(sh, sys, lr, nsigma, hvar)
+  do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
+    ispin = states_dim_get_spin_index(sys%st%d, ik)
+    do ist = 1, sys%st%nst
+      if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+        do isigma = 1, nsigma
+          do idim = 1, hm%d%dim
+            do ip = 1, sys%gr%mesh%np
+              psi_out(ip, idim, ist, ik, isigma) = psi_out(ip, idim, ist, ik, isigma) &
+                - hvar(ip, ispin, isigma) * sys%st%X(psi)(ip,idim,ist,ik)
+            end do
+          end do
+        end do
+      end if
+    end do
+  end do
+  
+  SAFE_DEALLOCATE_A(hvar)
+  
+  POP_SUB(X(calc_hvar_psi))
+end subroutine X(calc_hvar_psi)
+
+! --------------------------------------------------------------------------
+! Calculation of V_{hxc}[n^{(1)}] |  \psi^{(1)}> for second-order perturbations
+subroutine X(calc_hvar_lr)(sh, sys, hm, nsigma1, nsigma2, lr1, lr2, &
+  factor1, factor2, psi_out)
+  type(sternheimer_t),  intent(inout) :: sh
+  type(system_t),       intent(inout) :: sys 
+  type(hamiltonian_t),  intent(inout) :: hm
+  integer,              intent(in)    :: nsigma1, nsigma2
+  type(lr_t),           intent(inout) :: lr1(:), lr2(:)
+  R_TYPE,               intent(in)    :: factor1, factor2
+  R_TYPE,               intent(inout) :: psi_out(:,:,:,:,:)
+    
+  R_TYPE, allocatable :: hvar(:,:,:),psi(:,:,:)
+  integer :: ip, ik, ist, ispin, idim, isigma, ist1
+  type(matrix_t):: mat
+    
+  PUSH_SUB(X(calc_hvar_lr))
+  
+  SAFE_ALLOCATE(hvar(1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:nsigma1))
+  SAFE_ALLOCATE(psi(1:sys%gr%mesh%np,1:hm%d%dim, 1:sys%st%nst))
+  SAFE_ALLOCATE(mat%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
+
+  psi(1:sys%gr%mesh%np,1:hm%d%dim, 1:sys%st%nst) = M_ZERO
+
+  call X(sternheimer_calc_hvar)(sh, sys, lr1, nsigma1, hvar)
+  do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
+    ispin = states_dim_get_spin_index(sys%st%d, ik)
+    if(nsigma1 > 1) then 
+      do isigma = 1, nsigma1
+        do ist = 1, sys%st%nst
+          if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+            do idim = 1, hm%d%dim
+              do ip = 1, sys%gr%mesh%np
+                psi_out(ip, idim, ist, ik, isigma) = psi_out(ip, idim, ist, ik, isigma) &
+                  - factor1 * hvar(ip, ispin, isigma) * factor2 * lr2(1)%X(dl_psi)(ip,idim,ist,ik)
+                psi(ip, idim, ist) = factor1 * hvar(ip, ispin, isigma) * sys%st%X(psi)(ip,idim,ist,ik)
+              end do
+            end do
+          end if
+        end do
+
+        call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+          sys%st%X(psi)(:,:,:,ik), psi(:,:,:), mat%X(matrix))
+        
+        do ist  = 1, sys%st%nst
+          if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+            do ist1 = 1, sys%st%nst
+              if(abs(sys%st%occ(ist1, ik)) .gt. M_EPSILON) then	
+                do idim = 1, hm%d%dim
+                  do ip = 1, sys%gr%mesh%np
+                    psi_out(ip,idim,ist,ik,isigma) = psi_out(ip,idim,ist,ik,isigma) + &
+                      mat%X(matrix)(ist1,ist) * factor2 * lr2(1)%X(dl_psi)(ip,idim,ist1,ik)
+                  end do
+                end do
+              end if 
+            end do
+          end if
+        end do
+      end do
+    else
+      do isigma = 1, nsigma2
+        do ist = 1, sys%st%nst
+          if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+            do idim = 1, hm%d%dim
+              do ip = 1, sys%gr%mesh%np
+                psi_out(ip, idim, ist, ik, isigma) = psi_out(ip, idim, ist, ik, isigma) &
+                  - factor1 * hvar(ip, ispin, 1) * factor2 * lr2(isigma)%X(dl_psi)(ip,idim,ist,ik)
+                psi(ip, idim, ist) = factor1 * hvar(ip, ispin, 1) * sys%st%X(psi)(ip,idim,ist,ik)
+              end do
+            end do
+          end if
+        end do
+
+        call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+          sys%st%X(psi)(:,:,:,ik), psi(:,:,:), mat%X(matrix))
+
+        do ist  = 1, sys%st%nst
+          if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+            do ist1  = 1, sys%st%nst
+              if(abs(sys%st%occ(ist1, ik)) .gt. M_EPSILON) then
+                do idim = 1, hm%d%dim
+                  do ip = 1, sys%gr%mesh%np
+                    psi_out(ip,idim,ist,ik,isigma) = psi_out(ip,idim,ist,ik,isigma) + &
+                      mat%X(matrix)(ist1,ist) * factor2 * lr2(isigma)%X(dl_psi)(ip,idim,ist1,ik)
+                  end do
+                end do
+              end if
+            end do
+          end if
+        end do
+      end do
+    end if
+  end do
+  
+  SAFE_DEALLOCATE_P(mat%X(matrix))
+  SAFE_DEALLOCATE_A(hvar)
+  SAFE_DEALLOCATE_A(psi)
+  
+  POP_SUB(X(calc_hvar_lr))
+end subroutine X(calc_hvar_lr)
+
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8
