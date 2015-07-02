@@ -57,6 +57,16 @@ module em_resp_calc_m
      zcalc_polarizability_finite,      &
      dcalc_polarizability_periodic,    &
      zcalc_polarizability_periodic,    &
+     dinhomog_B,                       &
+     zinhomog_B,                       &
+     dinhomog_BE_tot,                  &
+     zinhomog_BE_tot,                  &
+     dinhomog_KB_tot,                  &
+     zinhomog_KB_tot,                  &
+     dinhomog_KE_tot,                  &
+     zinhomog_KE_tot,                  &
+     dinhomog_K2_tot,                  &
+     zinhomog_K2_tot,                  &
      dlr_calc_magnetization_periodic,  &
      zlr_calc_magnetization_periodic,  &
      dlr_calc_magneto_optics_finite,   &

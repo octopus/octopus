@@ -2439,6 +2439,150 @@ subroutine X(inhomog_KB)(sh, sys, hm, idir, idir1, idir2, &
   POP_SUB(X(inhomog_KB))
 end subroutine X(inhomog_KB)
 
+
+ ! --------------------------------------------------------------------------
+subroutine X(inhomog_KB_tot)(sh, sys, hm, idir, idir1, idir2, & 
+  lr_k, lr_b, lr_k1, lr_k2, lr_kk1, lr_kk2, psi_out)
+  type(sternheimer_t),  intent(inout) :: sh
+  type(system_t),       intent(inout) :: sys
+  type(hamiltonian_t),  intent(inout) :: hm
+  integer,              intent(in)    :: idir, idir1, idir2
+  type(lr_t),           intent(inout) :: lr_k(:)
+  type(lr_t),           intent(inout) :: lr_b(:)
+  type(lr_t),           intent(inout) :: lr_kk1(:)
+  type(lr_t),           intent(inout) :: lr_kk2(:)
+  type(lr_t),           intent(inout) :: lr_k1(:)
+  type(lr_t),           intent(inout) :: lr_k2(:)
+  R_TYPE,               intent(inout) :: psi_out(:,:,:,:,:) 
+
+  R_TYPE :: factor1, factor2
+  logical :: calc_var
+
+  PUSH_SUB(X(inhomog_KB_tot))
+
+#if defined(R_TCOMPLEX)
+  factor1 = -M_zI
+  factor2 = -M_zI
+#else 
+  factor1 = M_ONE
+  factor2 = -M_ONE
+#endif 
+
+  psi_out(:,:,:,:,:) = M_ZERO
+  
+  call X(inhomog_KB)(sh, sys, hm, idir, idir1, idir2, & 
+    lr_b, lr_k, lr_k1, lr_k2, psi_out)
+  
+  calc_var = .false.
+  call X(inhomog_BE)(sh, sh, sys, hm, idir1, idir2, 1, & 
+    calc_var, lr_k1, lr_k2, lr_k, &
+    lr_kk1, lr_kk2, lr_b, factor1, factor2, psi_out)
+
+  POP_SUB(X(inhomog_KB_tot))
+end subroutine X(inhomog_KB_tot)
+
+! --------------------------------------------------------------------------
+subroutine X(inhomog_KE_tot)(sh, sys, hm, idir, nsigma, & 
+  lr_k, lr_e, lr_kk, psi_out)
+  type(sternheimer_t),  intent(inout) :: sh
+  type(system_t),       intent(inout) :: sys
+  type(hamiltonian_t),  intent(inout) :: hm
+  integer,              intent(in)    :: idir, nsigma
+  type(lr_t),           intent(inout) :: lr_e(:) 
+  type(lr_t),           intent(inout) :: lr_k(:)  
+  type(lr_t),           intent(inout) :: lr_kk(:)  
+  R_TYPE,               intent(inout) :: psi_out(:,:,:,:,:) 
+   
+  R_TYPE :: factor_k
+
+  PUSH_SUB(X(inhomog_KE_tot))
+
+#if defined(R_TCOMPLEX)
+  factor_k = -M_zI
+#else 
+  factor_k = M_ONE
+#endif 
+
+  psi_out(:,:,:,:,:) = M_ZERO
+
+  call X(inhomog_EB)(sh, sys, hm, nsigma, &
+    lr_kk, lr_e, lr_k, factor_k, psi_out)
+
+  call X(inhomog_KE)(sh, sys, hm, idir, nsigma, & 
+    lr_e, psi_out)
+
+  POP_SUB(X(inhomog_KE_tot))
+end subroutine X(inhomog_KE_tot)
+ 
+! --------------------------------------------------------------------------
+subroutine X(inhomog_K2_tot)(sh, sys, hm, idir1, idir2, & 
+  lr_k1, lr_k2, psi_out)
+  type(sternheimer_t),  intent(inout) :: sh
+  type(system_t),       intent(inout) :: sys
+  type(hamiltonian_t),  intent(inout) :: hm
+  integer,              intent(in)    :: idir1, idir2
+  type(lr_t),           intent(inout) :: lr_k1(:) 
+  type(lr_t),           intent(inout) :: lr_k2(:) 
+  R_TYPE,               intent(inout) :: psi_out(:,:,:,:,:) 
+  
+  PUSH_SUB(X(inhomog_K2_tot))
+
+  psi_out(:,:,:,:,:) = M_ZERO
+
+  call X(inhomog_K2)(sh, sys, hm, idir1, idir2, & 
+    lr_k1, lr_k2, psi_out)
+
+  if(idir1 == idir2) then
+    psi_out(:,:,:,:,:) = M_TWO*psi_out(:,:,:,:,:)
+  else
+    call X(inhomog_K2)(sh, sys, hm, idir2, idir1, & 
+      lr_k2, lr_k1, psi_out)
+  end if
+
+  POP_SUB(X(inhomog_K2_tot))
+end subroutine X(inhomog_K2_tot)
+
+! --------------------------------------------------------------------------
+subroutine X(inhomog_BE_tot)(sh, sh2, sys, hm, idir1, idir2, nsigma, & 
+  lr_e, lr_b, lr_kb, lr_k1, lr_k2, lr_ek1, lr_ek2, psi_out)
+  type(sternheimer_t),  intent(inout) :: sh, sh2 !!for B and E perturbations
+  type(system_t),       intent(inout) :: sys
+  type(hamiltonian_t),  intent(inout) :: hm
+  integer,              intent(in)    :: idir1, idir2, nsigma
+  type(lr_t),           intent(inout) :: lr_e(:) 
+  type(lr_t),           intent(inout) :: lr_b(:) 
+  type(lr_t),           intent(inout) :: lr_kb(:)     
+  type(lr_t),           intent(inout) :: lr_ek1(:) 
+  type(lr_t),           intent(inout) :: lr_ek2(:)    
+  type(lr_t),           intent(inout) :: lr_k1(:) 
+  type(lr_t),           intent(inout) :: lr_k2(:)   
+  R_TYPE,               intent(inout) :: psi_out(:,:,:,:,:) 
+
+  logical :: calc_var
+  R_TYPE :: factor, factor_b
+  
+  PUSH_SUB(X(inhomog_BE_tot))
+
+  factor = -M_ONE
+#if defined(R_TCOMPLEX)
+  factor_b = M_ONE
+#else 
+  factor_b = -M_ONE
+#endif 
+
+  psi_out(:,:,:,:,:) = M_ZERO
+
+  call X(inhomog_EB)(sh2, sys, hm, nsigma, &
+    lr_kb, lr_e, lr_b, factor_b, psi_out, lr_k1, lr_k2)
+     
+  calc_var = .true.
+  call X(inhomog_BE)(sh2, sh, sys, hm, idir1, idir2, nsigma, & 
+    calc_var, lr_k1, lr_k2, lr_e, lr_ek1, &
+    lr_ek2, lr_b, factor, factor, psi_out)
+  
+  POP_SUB(X(inhomog_BE_tot))
+end subroutine X(inhomog_BE_tot)
+
 !----------------------------------------------------------
 ! Calculation of contribution to the density for second-order perturbations
 ! or magnetic perturbations with kdotp that come from elements of the density 
