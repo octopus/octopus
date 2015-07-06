@@ -49,7 +49,8 @@ module kpoints_m
     kpoints_point_is_gamma,       &
     kpoints_get_symmetry_ops,     &
     kpoints_get_num_symmetry_ops, &
-    kpoints_kweight_denominator
+    kpoints_kweight_denominator,  &
+    kpoints_grid_generate
 
   type kpoints_grid_t
     FLOAT, pointer :: point(:, :)
@@ -627,15 +628,17 @@ contains
   !! used with a shift of (1/2, 1/2, 1/2).
   !! naxis(i) are the number of points in the three directions determined by the lattice vectors.
   !! shift(i) and sz shift the grid of integration points from the origin.
-  subroutine kpoints_grid_generate(dim, naxis, shift, kpoints)  
+  subroutine kpoints_grid_generate(dim, naxis, shift, kpoints, lk123)  
     integer,           intent(in)  :: dim
     integer,           intent(in)  :: naxis(:)
     FLOAT,             intent(in)  :: shift(:)
     FLOAT,             intent(out) :: kpoints(:, :)
+    integer, optional, intent(out) :: lk123(:,:)      !< lk123(1:nkpt,1:3): maps ik to a triplet of indices on a cube
+                                                      !< running from 0 to naxis(1:3).
   
     FLOAT :: dx(1:MAX_DIM), maxcoord
     integer :: ii, jj, divisor, ik, idir, npoints
-    integer, allocatable :: ix(:)
+    integer, allocatable :: ix(:), lk123_(:,:),idx(:)
     FLOAT, allocatable :: nrm(:), shell(:), coords(:, :)
 
     PUSH_SUB(kpoints_grid_generate)
@@ -645,6 +648,11 @@ contains
     npoints = product(naxis(1:dim))
 
     SAFE_ALLOCATE(ix(1:dim))
+    
+    if (present(lk123)) then
+      SAFE_ALLOCATE(lk123_(1:npoints,1:dim))
+      SAFE_ALLOCATE(idx(1:npoints))
+    end if
 
     do ii = 0, npoints - 1
 
@@ -666,11 +674,16 @@ contains
         !bring back point to first Brillouin zone, except for points at 1/2 that would be sent to -1/2
         if ( kpoints(idir,ik) /= M_HALF )  kpoints(idir, ik) = mod(kpoints(idir, ik) + M_HALF, M_ONE) - M_HALF
 
+
       end do
+      if (present(lk123)) then
+        lk123_(ik, 1:dim) = ix(1:dim)
+        idx(ik) = ik
+      end if
 
     end do
 
-    SAFE_DEALLOCATE_A(ix)
+    SAFE_DEALLOCATE_A(ix)    
 
     ! sort the k-points
 
@@ -701,7 +714,17 @@ contains
       nrm(ik) = nrm(ik) + shell(ik)*maxcoord
     end do
 
-    call sort(nrm, kpoints)
+    if (present(lk123)) then
+      call sort(nrm, idx)      
+      do ik = 1, npoints
+        lk123(ik,1:dim) = lk123_(idx(ik),1:dim)
+      end do
+      SAFE_DEALLOCATE_A(lk123_)
+      SAFE_DEALLOCATE_A(idx)
+    end if
+
+    call sort(nrm, kpoints)      
+
 
     SAFE_DEALLOCATE_A(nrm)
     SAFE_DEALLOCATE_A(shell)
