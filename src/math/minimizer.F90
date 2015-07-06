@@ -385,20 +385,13 @@ contains
     SAFE_ALLOCATE(x_new(1:dim))
     SAFE_ALLOCATE(dr_i(1:dim))
 
-    x_new = 0.0
+    x_new = x
     dr_i = 0.0
 
     n_iter = 1
     do while (n_iter <= maxiter)
-
-      vec_delta_pos(1:dim)=vel(1:dim)*dt
       
-      x_new(1:dim) = x(1:dim) + vec_delta_pos(1:dim)
-      dr_i(1:dim) = sqrt((x_new(1:dim)-x(1:dim))**2)
-
-      do dr_atom_iter = 0, dim/3 - 1
-        dr_atoms(dr_atom_iter+1) = sqrt(dr_i(3*dr_atom_iter+1)**2+dr_i(3*dr_atom_iter+2)**2+dr_i(3*dr_atom_iter+3)**2)
-      end do
+      vel(1:dim) = vel(1:dim) - grad(1:dim)*dt/mass(1:dim)
 
       call f(dim, x_new, en, 1, grad)
       
@@ -417,13 +410,6 @@ contains
         p_value = p_value - grad(3*i_tmp+1)*vel(3*i_tmp+1) - grad(3*i_tmp+2)*vel(3*i_tmp+2) - grad(3*i_tmp+3)*vel(3*i_tmp+3)
       end do
 
-      x(1:dim)=x_new(1:dim)
-
-      mod_force = lalg_nrm2(dim,grad)
-      mod_vel = lalg_nrm2(dim,vel)
-      
-      vel(1:dim) = (1.0 - alpha) * vel(1:dim) - alpha * grad(1:dim) * mod_vel / mod_force
-      
       if(p_value > 0.0) then
         p_times = p_times + 1
         if(p_times > n_min) then
@@ -438,8 +424,25 @@ contains
         vel = 0.0
       end if
 
-      call write_iter_info(n_iter, dim, en, maxval(dr_atoms(1:)), max_grad_atoms, x_new)
+      x(1:dim)=x_new(1:dim)
+
+      mod_force = lalg_nrm2(dim,grad)
+      mod_vel = lalg_nrm2(dim,vel)
       
+      vel(1:dim) = (1.0 - alpha) * vel(1:dim) - alpha * grad(1:dim) * mod_vel / mod_force
+      
+      ! Velocity Verlet displacement : vel*dt - 1/2 * grad * dt**2
+      vec_delta_pos(1:dim) = vel(1:dim)*dt - grad(1:dim)*dt**2 / mass(1:dim)
+      
+      x_new(1:dim) = x(1:dim) + vec_delta_pos(1:dim)
+      dr_i(1:dim) = sqrt((x_new(1:dim)-x(1:dim))**2)
+
+      do dr_atom_iter = 0, dim/3 - 1
+        dr_atoms(dr_atom_iter+1) = sqrt(dr_i(3*dr_atom_iter+1)**2+dr_i(3*dr_atom_iter+2)**2+dr_i(3*dr_atom_iter+3)**2)
+      end do
+
+      call write_iter_info(n_iter, dim, en, maxval(dr_atoms(1:)), max_grad_atoms, x)
+
       if(max_grad_atoms < tolgrad) then
         ierr = 0
         n_iter = maxiter + 1
