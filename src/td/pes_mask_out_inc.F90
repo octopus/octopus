@@ -416,7 +416,7 @@ subroutine pes_mask_output_full_mapM(pesK, file, Lk, ll, how, sb, pmesh)
     
     if (present(pmesh)) then          
       call dout_cf_vts(filename, ierr, cf, cube,& 
-        sqrt(units_out%energy)**sb%dim, pmesh)
+        sqrt(units_out%energy)**sb%dim, pmesh, ascii = .false.)
     else 
       call dout_cf_vtk(filename, ierr, cf, cube, dk(:),& 
         sqrt(units_out%energy)**sb%dim)
@@ -482,18 +482,19 @@ end subroutine pes_mask_output_full_mapM
 
 
 ! ---------------------------------------------------------
-subroutine pes_mask_output_full_mapM_cut(pesK, file, ll, dim, pol, dir, integrate, Lk, pmesh)
-  FLOAT,            intent(in) :: pesK(:,:,:)
-  character(len=*), intent(in) :: file
-  integer,          intent(in) :: ll(:)
-  integer,          intent(in) :: dim
-  FLOAT,            intent(in) :: pol(3)
-  integer,          intent(in) :: dir
-  integer,          intent(in) :: integrate
-  FLOAT, optional,  intent(in) :: Lk(:,:)
-  FLOAT, optional,  intent(in) :: pmesh(:,:,:,:)
+subroutine pes_mask_output_full_mapM_cut(pesK, file, ll, dim, pol, dir, integrate, pos, Lk, pmesh)
+  FLOAT,             intent(in) :: pesK(:,:,:)
+  character(len=*),  intent(in) :: file
+  integer,           intent(in) :: ll(:)
+  integer,           intent(in) :: dim
+  FLOAT,             intent(in) :: pol(3)
+  integer,           intent(in) :: dir
+  integer,           intent(in) :: integrate
+  integer, optional, intent(in) :: pos(3)
+  FLOAT, optional,   intent(in) :: Lk(:,:)
+  FLOAT, optional,   intent(in) :: pmesh(:,:,:,:)
 
-  integer              :: ii, ix, iy, iunit,ldir(2), icut
+  integer              :: ii, ix, iy, iunit,ldir(2), icut(3)
   FLOAT                :: KK(3),temp
   integer, allocatable :: idx(:,:)
   FLOAT, allocatable   :: Lk_(:,:)
@@ -535,6 +536,12 @@ subroutine pes_mask_output_full_mapM_cut(pesK, file, ll, dim, pol, dir, integrat
                  sum((pol-(/0 ,1 ,0/))**2)  <= M_EPSILON  .or. &
                  sum((pol-(/1 ,0 ,0/))**2)  <= M_EPSILON  
   
+  if (present(pos)) then
+    icut(1:3) = pos(1:3) 
+  else
+    icut(1:3) = ll(1:3)/2 + 1
+  end if
+  
   if (aligned_axis .and. integrate == INTEGRATE_NONE) then !no need to rotate and interpolate
     
     select case (dir)
@@ -554,20 +561,17 @@ subroutine pes_mask_output_full_mapM_cut(pesK, file, ll, dim, pol, dir, integrat
       
           select case (dir)
             case (1)
-              icut = ll(dir)/2 + 1
-              temp = pesK(icut, ix, iy)    
-              KK(1) = pmesh(icut, ix, iy, ldir(1))
-              KK(2) = pmesh(icut, ix, iy, ldir(2))
+              temp = pesK(icut(dir), ix, iy)    
+              KK(1) = pmesh(icut(dir), ix, iy, ldir(1))
+              KK(2) = pmesh(icut(dir), ix, iy, ldir(2))
             case (2)
-              icut = ll(dir)/2 + 1
-              temp = pesK(ix, icut, iy)    
-              KK(1) = pmesh(ix, icut, iy, ldir(1))
-              KK(2) = pmesh(ix, icut, iy, ldir(2))
+              temp = pesK(ix, icut(dir), iy)    
+              KK(1) = pmesh(ix, icut(dir), iy, ldir(1))
+              KK(2) = pmesh(ix, icut(dir), iy, ldir(2))
             case (3)
-              icut = ll(dir)/2 + 1
-              temp = pesK(ix, iy, icut)        
-              KK(1) = pmesh(ix, iy, icut, ldir(1))
-              KK(2) = pmesh(ix, iy, icut, ldir(2))
+              temp = pesK(ix, iy, icut(dir))        
+              KK(1) = pmesh(ix, iy, icut(dir), ldir(1))
+              KK(2) = pmesh(ix, iy, icut(dir), ldir(2))
           end select
         
           write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &
@@ -586,11 +590,11 @@ subroutine pes_mask_output_full_mapM_cut(pesK, file, ll, dim, pol, dir, integrat
       
           select case (dir)
             case (1)
-              temp = pesK(idx(ll(dir)/2 + 1, 1), idx(ix, 2), idx(iy, 3))    
+              temp = pesK(idx(icut(dir), 1), idx(ix, 2), idx(iy, 3))    
             case (2)
-              temp = pesK(idx(ix, 1), idx(ll(dir)/2 + 1, 2), idx(iy, 3))    
+              temp = pesK(idx(ix, 1), idx(icut(dir), 2), idx(iy, 3))    
             case (3)
-              temp = pesK(idx(ix, 1), idx(iy, 2), idx(ll(dir)/2 + 1, 3))        
+              temp = pesK(idx(ix, 1), idx(iy, 2), idx(icut(dir), 3))        
           end select
         
           write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &
@@ -603,7 +607,7 @@ subroutine pes_mask_output_full_mapM_cut(pesK, file, ll, dim, pol, dir, integrat
     end if
     
   else 
-    ! We set the z-axis along the polarization 
+    ! We set the z-axis along the pol vector 
     call generate_rotation_matrix(rotation, (/M_ZERO, M_ZERO, M_ONE/), pol )
 
     if(in_debug_mode) then

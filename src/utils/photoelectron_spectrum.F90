@@ -56,7 +56,7 @@ program photoelectron_spectrum
   FLOAT, allocatable   :: pesk(:,:,:), pmesh(:,:,:,:)
   integer, allocatable :: Lp(:,:,:,:,:)
   logical              :: interpol, need_pmesh
-  integer              :: ii, i1,i2,i3
+  integer              :: ii, i1,i2,i3, idxZero(1:3)
   
   type(space_t)     :: space
   type(geometry_t)  :: geo
@@ -157,10 +157,21 @@ program photoelectron_spectrum
   ll(1:sb%dim) = ll(1:sb%dim) * sb%kpoints%nik_axis(1:sb%dim)
 
   SAFE_ALLOCATE(pmesh(1:ll(1),1:ll(2),1:ll(3),1:3))
-  call pes_mask_pmesh(sb%kpoints, lll, Lk, pmesh, Lp)  
+  call pes_mask_pmesh(sb%kpoints, lll, Lk, pmesh, Lp, idxZero)  
  
   SAFE_ALLOCATE(pesk(1:ll(1),1:ll(2),1:ll(3)))
   
+!   do i1 = 1, ll(1)
+!     do i2 = 1, ll(2)
+!       do i3 = 1, ll(3)
+!         if ( (pmesh(i1, i2, i3, 1) - M_HUGE)**2<=M_EPSILON ) then
+!           print *,"unfilled indices (ip1,ip2,ip3)=     ", i1,i2,i3
+!         end if
+!
+!       end do
+!     end do
+!   end do
+
 
   call pes_mask_map_from_states(restart, st, lll, pesk, Lp)
 
@@ -203,7 +214,8 @@ program photoelectron_spectrum
 
 
   ! Convert the grid units
-  if (allocated(pmesh)) then
+  if (need_pmesh) then
+    
     forall (i1=1:ll(1), i2=1:ll(2), i3=1:ll(3), ii = 1:3)
       pmesh(i1,i2,i3,ii) = units_from_atomic(sqrt(units_out%energy), pmesh(i1,i2,i3,ii))
     end forall
@@ -213,13 +225,13 @@ program photoelectron_spectrum
   ! these functions are defined in pes_mask_out_inc.F90
   select case(mode)
   case(1) ! Energy-resolved
-    write(message(1), '(a)') 'Write energy-resolved PES'
+    write(message(1), '(a)') 'Save energy-resolved PES'
     call messages_info(1)
     call pes_mask_output_power_totalM(pesk,'./PES_power.sum', Lk, ll, dim, Emax, Estep, interpol)
  
  
   case(2) ! Angle and energy resolved
-    write(message(1), '(a)') 'Write angle- and energy-resolved PES'
+    write(message(1), '(a)') 'Save angle- and energy-resolved PES'
     call messages_info(1)
     call pes_mask_output_ar_polar_M(pesk,'./PES_angle_energy.map', Lk, ll, dim, pol, Emax, Estep)
 
@@ -238,7 +250,7 @@ program photoelectron_spectrum
         write(message(1), '(a)') 'Unrecognized plane. Use -u to change.'
         call messages_fatal(1)
       else
-        write(message(1), '(a)') 'Write velocity map on plane: '//index2axis(dir)//" = 0"
+        write(message(1), '(a)') 'Save velocity map on plane: '//index2axis(dir)//" = 0"
         call messages_info(1)
     end if 
     
@@ -249,13 +261,15 @@ program photoelectron_spectrum
     end if
     
     if (need_pmesh) then
-      call pes_mask_output_full_mapM_cut(pesk, filename, ll, dim, pol, dir, integrate, pmesh = pmesh)    
+      call pes_mask_output_full_mapM_cut(pesk, filename, ll, dim, pol, dir, integrate, & 
+                                         pos = idxZero, pmesh = pmesh)  
     else    
-      call pes_mask_output_full_mapM_cut(pesk, filename, ll, dim, pol, dir, integrate, Lk = Lk)    
+      call pes_mask_output_full_mapM_cut(pesk, filename, ll, dim, pol, dir, integrate, &
+                                         pos = idxZero, Lk = Lk)    
     end if
 
   case(4) ! Angle energy resolved on plane 
-    write(message(1), '(a)') 'Write angle and energy-resolved PES'
+    write(message(1), '(a)') 'Save angle and energy-resolved PES'
     call messages_info(1)
     if(uEstep >  0 .and. uEstep > Estep) then
       Estep = uEstep
@@ -269,7 +283,7 @@ program photoelectron_spectrum
 
 
     write(message(1), '(a,es19.12,a2,es19.12,2x,a19)') &
-          'Write PES on a spherical cut at E= ',Emin,", ",Emax, & 
+          'Save PES on a spherical cut at E= ',Emin,", ",Emax, & 
            str_center('['//trim(units_abbrev(units_out%energy)) // ']', 19) 
     call messages_info(1)
 
@@ -285,7 +299,7 @@ program photoelectron_spectrum
   
     call io_function_read_how(sb, how, ignore_error = .true.)
  
-    write(message(1), '(a)') 'Write full momentum-resolved PES'
+    write(message(1), '(a)') 'Save full momentum-resolved PES'
     call messages_info(1)
 
     if (need_pmesh) then
@@ -297,7 +311,7 @@ program photoelectron_spectrum
 
     case(7) ! ARPES 
  
-      write(message(1), '(a)') 'Write ARPES'
+      write(message(1), '(a)') 'Save ARPES'
       call messages_info(1)
 
       forall (i1=1:ll(1), i2=1:ll(2), i3=1:ll(3))
@@ -386,20 +400,22 @@ program photoelectron_spectrum
 
     !< Generate the momentum-space mesh (p) and the arrays mapping the 
     !< the mask and the kpoint meshes in p.
-    subroutine pes_mask_pmesh(kpoints, ll, Lk, pmesh, Lp)
-      type(kpoints_t),   intent(in)  :: kpoints 
-      integer,           intent(in)  :: ll(:)             !< ll(1:dim): the dimensions of the mask-mesh
-      FLOAT,             intent(in)  :: Lk(:,:)           !< Lk(1:maxval(ll),1:dim): the mask-mesh points  
-      FLOAT,             intent(out) :: pmesh(:,:,:,:)    !< pmesh(i1,i2,i3,1:dim): contains the positions of point 
+    subroutine pes_mask_pmesh(kpoints, ll, Lk, pmesh, Lp, idxZero)
+      type(kpoints_t),   intent(inout) :: kpoints 
+      integer,           intent(in)    :: ll(:)             !< ll(1:dim): the dimensions of the mask-mesh
+      FLOAT,             intent(in)    :: Lk(:,:)           !< Lk(1:maxval(ll),1:dim): the mask-mesh points  
+      FLOAT,             intent(out)   :: pmesh(:,:,:,:)    !< pmesh(i1,i2,i3,1:dim): contains the positions of point 
                                                           !< in the final mesh in momentum space "p" combining the 
                                                           !< mask-mesh with kpoints. 
       integer,           intent(out) :: Lp(:,:,:,:,:)     !< Lp(1:ll(1),1:ll(2),1:ll(3),1:nkpt,1:dim): maps a 
                                                           !< mask-mesh triplet of indices together with a kpoint 
                                                           !< index into a triplet on the combined momentum space mesh.
+
+      integer,           intent(out) :: idxZero(:)       !< The triplet identifying the zero of the coordinates                  
   
-      integer :: ik, i1, i2, i3, nk(1:3), ip1, ip2, ip3, idir
+      integer :: ik, i1, i2, i3, nk(1:3), ip1, ip2, ip3, idir, dim
       FLOAT :: kpt(1:3),kval(1:3), dx(1:sb%dim)
-      integer, allocatable :: Lkpt(:,:)
+      integer, allocatable :: Lkpt(:,:), err
       
       integer, allocatable :: idx(:,:)
       FLOAT, allocatable   :: Lk_(:,:)
@@ -409,27 +425,22 @@ program photoelectron_spectrum
 
       SAFE_ALLOCATE(Lkpt(1:kpoints_number(kpoints),1:3))
       
-      nk = 1  
-      nk(1:sb%dim) = kpoints%nik_axis(1:sb%dim)
+      dim = sb%dim
+      
+      nk(:) = 1  
+      nk(1:dim) = kpoints%nik_axis(1:dim)
 
-      ! Populate Lkpt which maps a kpoint index into an 
-      ! triplet of array indices (1:nk(idir)) on a cube
-      ! Only works with automatically generated k-point grids
-      ! (KPOINTS_MONKH_PACK)      
       Lkpt(:,:) = 1
       kpt(:) = M_ZERO
-      dx(1:sb%dim) = M_ONE/(M_TWO*nk(1:sb%dim))
-      do ik = 1, kpoints_number(kpoints)
-        kpt(1:sb%dim) = kpoints_get_point(kpoints, ik, absolute_coordinates = .false.) 
-        Lkpt(ik,1:sb%dim) = (kpt(1:sb%dim)/dx(1:sb%dim) + nk(1:sb%dim))/M_TWO
-        do idir = 1, sb%dim
-          if(mod(nk(idir), 2) /= 0) then    
-            Lkpt(ik,idir) = Lkpt(ik,idir) + 1
-          end if
-        end do
-!         Lkpt(ik,sb%periodic_dim+1:sb%dim) = 1
+            
+      call kpoints_grid_generate(dim, kpoints%nik_axis(1:dim), kpoints%shifts(1:dim), &
+                                 kpoints%full%red_point,  Lkpt(:,1:dim))
+
+!       do ik = 1, kpoints_number(kpoints)
+!         kpt(1:sb%dim) = kpoints_get_point(kpoints, ik, absolute_coordinates = .false.)
 !         print *, ik, "Lkpt(ik)= ", Lkpt(ik,:), "-- kpt= ",kpt
-      end do
+!       end do
+      
       
 !       print *,"----"
 !       print *,"ll(:)", ll(:)
@@ -441,15 +452,17 @@ program photoelectron_spectrum
       SAFE_ALLOCATE(idx(1:maxval(ll(:)), 1:3))
       SAFE_ALLOCATE(Lk_(1:maxval(ll(:)), 1:3))
       idx(:,:)=1
-      do idir = 1, sb%dim
+      do idir = 1, dim
         Lk_(:,idir) = Lk(:,idir)
         call sort(Lk_(1:ll(idir), idir), idx(1:ll(idir), idir)) 
       end do  
       
+      pmesh(:, :, :, :) = M_HUGE      
+      err = -1
       
       ! Generate the p-space mesh and populate Lp
       do ik = 1, kpoints_number(kpoints)
-        kpt(1:sb%dim) = kpoints_get_point(kpoints, ik) 
+        kpt(1:dim) = kpoints_get_point(kpoints, ik) 
         do i1 = 1, ll(1) 
           do i2 = 1, ll(2) 
             do i3 = 1, ll(3) 
@@ -462,14 +475,33 @@ program photoelectron_spectrum
               
               Lp(idx(i1,1),idx(i2,2),idx(i3,3),ik,1:3) =  (/ip1,ip2,ip3/)
               
-!               print *,ik,i1,i2,i3,"  Lp(i1,i2,i3,ik,1:sb%dim) = ",  (/ip1,ip2,ip3/)
               
-              pmesh(ip1, ip2, ip3, 1:sb%dim) = kval(1:sb%dim) + kpt(1:sb%dim)
+              pmesh(ip1, ip2, ip3, 1:dim) = kval(1:dim) + kpt(1:dim)
+
+!               print *,ik,i1,i2,i3,"  Lp(i1,i2,i3,ik,1:dim) = ",  (/ip1,ip2,ip3/)
+!               print *, "pmesh = ",pmesh(ip1, ip2, ip3, 1:dim) ,"  kval = ",  kval (1:3), "  kpt = ", kpt(1:dim)
+
+              if (sum(pmesh(ip1, ip2, ip3, 1:3)**2)<=M_EPSILON) then
+                err = err + 1 
+                idxZero(1:3) = (/ip1,ip2,ip3/)
+              end if
+
 
             end do 
           end do 
         end do 
       end do
+  
+      if (err == -1) then
+        write(message(1), '(a)') 'Illformed momentum-space mesh: could not find zero coordinate.'
+        call messages_fatal(1)
+      end if 
+
+      if (err > 0) then
+        write(message(1), '(a)') 'Illformed momentum-space mesh: too many points with zero coordinate .'
+        call messages_fatal(1)
+      end if 
+
   
   
       SAFE_DEALLOCATE_A(Lkpt)
