@@ -440,7 +440,8 @@ contains
           ! use value read from XSF lattice vectors
           sb%lsize(:) = geo%lsize(:)
         else if(parse_block('Lsize', blk) == 0) then
-          if(parse_block_cols(blk,0) < sb%dim) call messages_input_error('Lsize')
+          if(parse_block_cols(blk,0) < sb%dim .and. .not. parse_is_defined('LatticeVectors')) &
+              call messages_input_error('Lsize')
           do idir = 1, sb%dim
             call parse_block_float(blk, 0, idir - 1, sb%lsize(idir), units_inp%length)
             if(def_rsize > M_ZERO .and. sb%periodic_dim < idir) &
@@ -659,11 +660,14 @@ contains
         if(sb%nonorthogonal) &
           call messages_experimental('Non-orthogonal unit cells')
         
-! check if Lsize was also defined, otherwise set it to 1/2, 1/2, 1/2
-        if (parse_is_defined('Lsize')) then
+! check if Lsize is defined, if not, then set it to a/2, b/2, c/2
+        if (.not. parse_is_defined('Lsize')) then  
           sb%lsize(:) = M_ZERO
           sb%lsize(1:sb%dim) = M_HALF
-        end if
+	else
+	  message(1) = 'Lsize need not be declared alongwith Lattice Vectors'
+	  call messages_fatal(1)
+	end if
       end if
 
     end if
@@ -757,6 +761,7 @@ contains
           end if
         end do
         ASSERT(all(xx(1:pd) >= M_ZERO))
+
         ASSERT(all(xx(1:pd) < CNST(1.0)))
         xx(1:pd) = (xx(1:pd) - M_HALF)*M_TWO*sb%lsize(1:pd) 
 ! TODO : change to rlattice not primitive, and remove line above
@@ -1040,11 +1045,11 @@ contains
     SAFE_ALLOCATE(xx(1:sb%dim, 1:npoints))
     xx = M_ZERO
     
-    !convert from lattice to Cartesian
+    !convert from Cartesian to reduced lattice coord 
     if(npoints == 1) then
       xx(1:sb%dim, 1) = matmul(point(1:sb%dim, 1), sb%klattice_primitive(1:sb%dim, 1:sb%dim))
     else
-      call lalg_gemm(sb%dim, npoints, sb%dim, M_ONE, sb%klattice_primitive, point, -M_ONE, xx)
+      call lalg_gemmt(sb%dim, npoints, sb%dim, M_ONE, sb%klattice_primitive, point, M_ZERO, xx)
     end if
 
     select case(sb%box_shape)

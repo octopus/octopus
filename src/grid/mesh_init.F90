@@ -158,6 +158,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
 
   mesh%idx%ll(:) = mesh%idx%nr(2, :) - mesh%idx%nr(1, :) + 1
 
+
   call profiling_out(mesh_init_prof)
   POP_SUB(mesh_init_stage_1)
 end subroutine mesh_init_stage_1
@@ -241,8 +242,9 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
 #endif
 
   call profiling_in(prof, "MESH_LABEL")
-
+  
   ! We label the points inside the mesh
+
   do iz = start_z, end_z
     chi(3) = real(iz, REAL_PRECISION) * mesh%spacing(3)
     do iy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
