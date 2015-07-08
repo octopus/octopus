@@ -131,7 +131,6 @@ subroutine output_states(st, gr, geo, dir, outp)
               end if
             end if
 
-print *, 'states_are_real ', states_are_real(st)
             if (states_are_real(st)) then
               call states_get_state(st, gr%mesh, idim, ist, ik, dtmp)
               call dio_function_output(outp%how, dir, fname, gr%mesh, dtmp, &
