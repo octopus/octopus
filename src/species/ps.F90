@@ -118,7 +118,7 @@ module ps_m
                                   !< local potential in terms of r^2, to avoid the sqrt
     type(spline_t) :: nlr         !< the charge density associated with the long-range part
     
-    type(spline_t) :: density     !< the atomic density
+    type(spline_t), allocatable :: density(:)  !< the atomic density for each spin
     
     logical :: is_separated
     logical :: local
@@ -297,6 +297,7 @@ contains
     SAFE_ALLOCATE(ps%ur   (1:ps%conf%p, 1:ps%ispin))
     SAFE_ALLOCATE(ps%ur_sq(1:ps%conf%p, 1:ps%ispin))
     SAFE_ALLOCATE(ps%h    (0:ps%l_max, 1:ps%kbc, 1:ps%kbc))
+    SAFE_ALLOCATE(ps%density(1:ps%ispin))
     nullify(ps%k)
 
     call spline_init(ps%kb)
@@ -639,6 +640,7 @@ contains
     SAFE_DEALLOCATE_P(ps%ur_sq)
     SAFE_DEALLOCATE_P(ps%h)
     SAFE_DEALLOCATE_P(ps%k)
+    SAFE_DEALLOCATE_A(ps%density)
 
     POP_SUB(ps_end)
   end subroutine ps_end
@@ -708,8 +710,8 @@ contains
 
       ! Define the table for the pseudo-wavefunction components (using splines)
       ! with a correct normalization function
-      dens = CNST(0.0)
       do is = 1, ps%ispin
+        dens = CNST(0.0)
         do l = 1, ps%conf%p
           hato(2:psp%g%nrval) = psp%rphi(2:psp%g%nrval, l)/psp%g%rofi(2:psp%g%nrval)
           hato(1) = hato(2)
@@ -719,10 +721,9 @@ contains
           call spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%ur(l, is))
           call spline_fit(psp%g%nrval, psp%g%r2ofi, hato, ps%ur_sq(l, is))
         end do
+        call spline_fit(psp%g%nrval, psp%g%rofi, dens, ps%density(is))
       end do
 
-      call spline_fit(psp%g%nrval, psp%g%rofi, dens, ps%density)
-      
       SAFE_DEALLOCATE_A(hato)
       SAFE_DEALLOCATE_A(dens)
 
@@ -770,10 +771,11 @@ contains
       SAFE_ALLOCATE(hato(1:g%nrval))
       SAFE_ALLOCATE(dens(1:g%nrval))
 
-      dens = CNST(0.0)
-      
       ! the wavefunctions
       do is = 1, ps%ispin
+
+        dens = CNST(0.0)
+
         do l = 1, ps_grid%no_l_channels
           hato(2:) = ps_grid%rphi(2:, l, 1+is)/g%rofi(2:)
           hato(1)  = linear_extrapolate(g%rofi(1), g%rofi(2), g%rofi(3), &
@@ -785,9 +787,11 @@ contains
           call spline_fit(g%nrval, g%r2ofi, hato, ps%ur_sq(l, is))
 
         end do
-      end do
 
-      call spline_fit(g%nrval, g%rofi, dens, ps%density)
+        call spline_fit(g%nrval, g%rofi, dens, ps%density(is))
+
+      end do
+      
 
       ! the Kleinman-Bylander projectors
       do l = 1, ps%l_max+1
@@ -834,7 +838,7 @@ contains
     type(ps_t),     intent(inout) :: ps
     type(ps_upf_t), intent(in)    :: ps_upf
 
-    integer :: i, l, ll, is, nrc, ir, j, ij
+    integer :: i, l, ll, is, nrc, ir, j, ij, ispin
     FLOAT :: x
     FLOAT, allocatable :: hato(:)
 
@@ -959,9 +963,12 @@ contains
     end do
 
     ! the atomic density
-    hato(2:ps%g%nrval) = ps_upf%rho(2:ps%g%nrval)/ps%g%rofi(2:ps%g%nrval)
+    hato(2:ps%g%nrval) = ps_upf%rho(2:ps%g%nrval)/ps%g%rofi(2:ps%g%nrval)/ps%ispin
     hato(1) = linear_extrapolate(ps%g%rofi(1), ps%g%rofi(2), ps%g%rofi(3), hato(2), hato(3)) !take care of the point at zero
-    call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%density)
+
+    do ispin = 1, ps%ispin
+      call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%density(ispin))
+    end do
     
     SAFE_DEALLOCATE_A(hato)
 
@@ -1127,7 +1134,7 @@ contains
   FLOAT function ps_density_volume(ps) result(volume)
     type(ps_t), intent(in) :: ps
 
-    integer :: ip
+    integer :: ip, ispin
     FLOAT :: rr
     FLOAT, allocatable ::vol(:)
     type(spline_t) :: volspl
@@ -1138,7 +1145,10 @@ contains
     
     do ip = 1, ps%g%nrval
       rr = ps%g%rofi(ip)
-      vol(ip) = spline_eval(ps%density, rr)*CNST(4.0)*M_PI*rr**5
+      vol(ip) = CNST(0.0)
+      do ispin = 1, ps%ispin
+        vol(ip) = vol(ip) + spline_eval(ps%density(ispin), rr)*CNST(4.0)*M_PI*rr**5
+      end do
     end do
 
     call spline_init(volspl)
