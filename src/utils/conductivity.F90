@@ -69,7 +69,7 @@
 
     call unit_system_init()
 
-    call spectrum_init(spectrum, default_energy_step = CNST(0.001), default_max_energy  = CNST(1.0))
+    call spectrum_init(spectrum, default_energy_step = CNST(0.0001), default_max_energy  = CNST(1.0))
  
     !%Variable ConductivitySpectrumTimeStepFactor
     !%Type integer
@@ -146,7 +146,7 @@
     SAFE_ALLOCATE(velocities(1:nvel, 1:ntime))
 
     ! Opens the coordinates files.
-    iunit = io_open('td.general/coordinates', action='read')
+    iunit = io_open('td.general/coordinates', action='read', status='old', die=.false.)
 
     call io_skip_header(iunit)
 
@@ -192,18 +192,29 @@
 
     deltat = time(2) - time(1)
 
-    SAFE_ALLOCATE(total_current(1:3, ntime))
+    SAFE_ALLOCATE(total_current(1:3, 1:ntime))
 
-    iunit = io_open('td.general/total_current', action='read')
+    iunit = io_open('td.general/total_current', action='read', status='old', die=.false.)
 
-    call io_skip_header(iunit)
-
-    do iter = 1, ntime
+    if(iunit > 0) then
+      
+      call io_skip_header(iunit)
+      
+      do iter = 1, ntime
         read(unit = iunit, iostat = ierr, fmt = *) read_iter, curtime, &
           total_current(1, iter), total_current(2, iter), total_current(3, iter)
-    end do
+      end do
+      
+      call io_close(iunit)
 
-    call io_close(iunit)
+    else
+
+      call messages_write("Cannot find the 'td.general/total_current' file. Conductivity will only be calculated from the forces")
+      call messages_warning()
+      
+      total_current(1:3, 1:ntime) = CNST(0.0)
+
+    end if
 
     SAFE_ALLOCATE(curr(ntime, 1:3, 1:2))
 
@@ -279,6 +290,7 @@
 !    write(unit = iunit, iostat = ierr, fmt = 800 ) 
 
     v0 = sqrt(sum(vel0(1:space%dim)**2))
+    if(v0 < epsilon(v0)) v0 = CNST(1.0)
 
     do ifreq = 1, max_freq
       ww = spectrum%energy_step*(ifreq - 1)
