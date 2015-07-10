@@ -125,7 +125,8 @@ program photoelectron_spectrum
 
   
   call get_laser_polarization(pol)
-  if (sum(pol(1:3)**2) <= M_EPSILON) pol = (/0,0,1/)
+  ! if there is no laser set pol along the z-axis
+  if (sum(pol(1:3)**2) <= M_EPSILON) pol = (/0,0,1/) 
   
   
   call getopt_photoelectron_spectrum(mode,interp,uEstep, uEspan,&
@@ -156,8 +157,9 @@ program photoelectron_spectrum
 
   ll(1:sb%dim) = ll(1:sb%dim) * sb%kpoints%nik_axis(1:sb%dim)
 
-  SAFE_ALLOCATE(pmesh(1:ll(1),1:ll(2),1:ll(3),1:3))
-  call pes_mask_pmesh(sb%kpoints, lll, Lk, pmesh, Lp, idxZero)  
+  SAFE_ALLOCATE(pmesh(1:ll(1),1:ll(2),1:ll(3),1:3 + 1))
+
+  call pes_mask_pmesh(sb%dim, sb%kpoints, lll, Lk, pmesh, Lp, idxZero)  
  
   SAFE_ALLOCATE(pesk(1:ll(1),1:ll(2),1:ll(3)))
   
@@ -400,7 +402,8 @@ program photoelectron_spectrum
 
     !< Generate the momentum-space mesh (p) and the arrays mapping the 
     !< the mask and the kpoint meshes in p.
-    subroutine pes_mask_pmesh(kpoints, ll, Lk, pmesh, Lp, idxZero)
+    subroutine pes_mask_pmesh(dim, kpoints, ll, Lk, pmesh, Lp, idxZero)
+      integer,           intent(in)    :: dim
       type(kpoints_t),   intent(inout) :: kpoints 
       integer,           intent(in)    :: ll(:)             !< ll(1:dim): the dimensions of the mask-mesh
       FLOAT,             intent(in)    :: Lk(:,:)           !< Lk(1:maxval(ll),1:dim): the mask-mesh points  
@@ -413,20 +416,17 @@ program photoelectron_spectrum
 
       integer,           intent(out) :: idxZero(:)       !< The triplet identifying the zero of the coordinates                  
   
-      integer :: ik, i1, i2, i3, nk(1:3), ip1, ip2, ip3, idir, dim
-      FLOAT :: kpt(1:3),kval(1:3), dx(1:sb%dim)
-      integer, allocatable :: Lkpt(:,:), err
-      
-      integer, allocatable :: idx(:,:)
+      integer :: ik, i1, i2, i3, nk(1:3), ip1, ip2, ip3, idir, err
+      FLOAT :: kpt(1:3),kval(1:3)
+
+      integer, allocatable :: Lkpt(:,:), idx(:,:)
       FLOAT, allocatable   :: Lk_(:,:)
       
   
       PUSH_SUB(pes_mask_pmesh)
 
       SAFE_ALLOCATE(Lkpt(1:kpoints_number(kpoints),1:3))
-      
-      dim = sb%dim
-      
+            
       nk(:) = 1  
       nk(1:dim) = kpoints%nik_axis(1:dim)
 
@@ -437,11 +437,11 @@ program photoelectron_spectrum
                                  kpoints%full%red_point,  Lkpt(:,1:dim))
 
 !       do ik = 1, kpoints_number(kpoints)
-!         kpt(1:sb%dim) = kpoints_get_point(kpoints, ik, absolute_coordinates = .false.)
+!         kpt(1:sb%dim) = kpoints_get_point(kpoints, ik, absolute_coordinates = .true.)
 !         print *, ik, "Lkpt(ik)= ", Lkpt(ik,:), "-- kpt= ",kpt
 !       end do
-      
-      
+
+
 !       print *,"----"
 !       print *,"ll(:)", ll(:)
 !       print *,"----"
@@ -458,6 +458,7 @@ program photoelectron_spectrum
       end do  
       
       pmesh(:, :, :, :) = M_HUGE      
+      pmesh(:, :, :, dim+1) = M_ZERO      
       err = -1
       
       ! Generate the p-space mesh and populate Lp
@@ -466,7 +467,7 @@ program photoelectron_spectrum
         do i1 = 1, ll(1) 
           do i2 = 1, ll(2) 
             do i3 = 1, ll(3) 
-              
+
               kval (1:3)= (/Lk_(i1,1),Lk_(i2,2),Lk_(i3,3)/)               
 
               ip1 = (i1 - 1) * nk(1) + Lkpt(ik,1) 
@@ -477,13 +478,19 @@ program photoelectron_spectrum
               
               
               pmesh(ip1, ip2, ip3, 1:dim) = kval(1:dim) + kpt(1:dim)
+              pmesh(ip1, ip2, ip3, dim+1) = pmesh(ip1, ip2, ip3, dim+1) + 1 
+              
 
 !               print *,ik,i1,i2,i3,"  Lp(i1,i2,i3,ik,1:dim) = ",  (/ip1,ip2,ip3/)
-!               print *, "pmesh = ",pmesh(ip1, ip2, ip3, 1:dim) ,"  kval = ",  kval (1:3), "  kpt = ", kpt(1:dim)
+!               print *, "pmesh = ",pmesh(ip1, ip2, ip3, 1:dim) ,"  kval = ",  kval (1:dim), "  kpt = ", kpt(1:dim)
 
-              if (sum(pmesh(ip1, ip2, ip3, 1:3)**2)<=M_EPSILON) then
+              if (sum(pmesh(ip1, ip2, ip3, 1:dim)**2)<=M_EPSILON) then
                 err = err + 1 
                 idxZero(1:3) = (/ip1,ip2,ip3/)
+              end if
+              
+              if (pmesh(ip1, ip2, ip3, dim+1) > 1 ) then
+                err = -2 
               end if
 
 
@@ -493,18 +500,26 @@ program photoelectron_spectrum
       end do
   
       if (err == -1) then
-        write(message(1), '(a)') 'Illformed momentum-space mesh: could not find zero coordinate.'
+        write(message(1), '(a)') 'Illformed momentum-space mesh: could not find p=0 coordinate.'
         call messages_fatal(1)
       end if 
 
-      if (err > 0) then
-        write(message(1), '(a)') 'Illformed momentum-space mesh: too many points with zero coordinate .'
+      if (err > 1) then
+        write(message(1), '(a)') 'Illformed momentum-space mesh: too many points with p=0 coordinate.'
         call messages_fatal(1)
       end if 
 
-  
+      if (err == -2) then
+        write(message(1), '(a)') 'Illformed momentum-space mesh: two or more points with the same p.'
+        call messages_fatal(1)
+      end if 
+      
+
   
       SAFE_DEALLOCATE_A(Lkpt)
+      SAFE_DEALLOCATE_A(idx)
+      SAFE_DEALLOCATE_A(Lk_)
+      
       
       POP_SUB(pes_mask_pmesh)
     end subroutine pes_mask_pmesh
