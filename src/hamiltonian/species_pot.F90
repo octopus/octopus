@@ -218,7 +218,7 @@ contains
 
       if(ps_niwfs(ps) > 0 .and. &
         ps_type(species_ps(species)) /= PS_TYPE_CPI .and. ps_type(species_ps(species)) /= PS_TYPE_CPI) then
-        
+
         call periodic_copy_init(pp, sb, atom%x, &
           range = spline_cutoff_radius(ps%Ur(1, 1), ps%projectors_sphere_threshold))
 
@@ -228,11 +228,9 @@ contains
             call mesh_r(mesh, ip, rr, origin = pos)
             rr = max(rr, r_small)
             
-              do nn = 1, ps%conf%p
-                do isp = 1, spin_channels
-                if(rr >= spline_range_max(ps%Ur(nn, isp))) cycle
-                rho(ip, isp) = rho(ip, isp) + ps%conf%occ(nn, isp) * spline_eval(ps%Ur(nn, isp), rr)**2 /(M_FOUR*M_PI)
-              end do
+            do isp = 1, spin_channels
+              if(rr >= spline_range_max(ps%density(isp))) cycle
+              rho(ip, isp) = rho(ip, isp) + spline_eval(ps%density(isp), rr)
             end do
             
           end do

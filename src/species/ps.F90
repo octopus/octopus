@@ -457,7 +457,7 @@ contains
     integer,    intent(in)    :: filter
     FLOAT,      intent(in)    :: gmax
 
-    integer :: l, k
+    integer :: l, k, ispin
     type(profile_t), save:: prof
 
     FLOAT :: alpha, beta_fs, rmax, rcut, gamma, beta_rs
@@ -486,6 +486,11 @@ contains
         call spline_filter_mask(ps%core, 0, rmax, gmax, alpha, gamma)
       end if
 
+      do ispin = 1, ps%ispin
+        rmax = spline_cutoff_radius(ps%density(ispin), ps%projectors_sphere_threshold)
+        call spline_filter_mask(ps%density(ispin), 0, rmax, gmax, alpha, gamma)
+      end do
+      
     case(PS_FILTER_BSB)
       alpha   = CNST(0.7) ! The original was M_FOUR/CNST(7.0)
       beta_fs = CNST(18.0)
@@ -503,6 +508,10 @@ contains
       if(ps%nlcc) then
         call spline_filter_bessel(ps%core, 0, gmax, alpha, beta_fs, rcut, beta_rs)
       end if
+      
+      do ispin = 1, ps%ispin
+        call spline_filter_bessel(ps%density(ispin), 0, gmax, alpha, beta_fs, rcut, beta_rs)
+      end do
 
     end select
 
@@ -838,9 +847,9 @@ contains
     type(ps_t),     intent(inout) :: ps
     type(ps_upf_t), intent(in)    :: ps_upf
 
-    integer :: i, l, ll, is, nrc, ir, j, ij, ispin
+    integer :: i, l, ll, is, nrc, ir, j, ij, ispin, ip
     FLOAT :: x
-    FLOAT, allocatable :: hato(:)
+    FLOAT, allocatable :: hato(:), dens(:)
 
     PUSH_SUB(ps_upf_load)
 
@@ -943,34 +952,47 @@ contains
       end if
 
     end do
- 
-    ! Define the table for the pseudo-wavefunction components (using splines)
-    ! with a correct normalization function
-    do is = 1, ps%ispin
-      do l = 1, ps%conf%p
-        ! do not divide by zero
-        if(ps%g%rofi(1) > M_EPSILON) then
-          hato(1) = ps_upf%wfs(1, l)/ps%g%rofi(1)
-        else
-          hato(1) = M_ZERO
-        end if
-        ! rofi /= 0 except rofi(1) possibly
-        hato(2:ps%g%nrval) = ps_upf%wfs(2:ps%g%nrval, l)/ps%g%rofi(2:ps%g%nrval)
 
-        call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%ur(l, is))
-        call spline_fit(ps%g%nrval, ps%g%r2ofi, hato, ps%ur_sq(l, is))
+    SAFE_ALLOCATE(dens(1:ps%g%nrval))
+
+    if(ps%conf%p > 0) then
+      
+      ! Define the table for the pseudo-wavefunction components (using splines)
+      ! with a correct normalization function
+      do is = 1, ps%ispin
+        dens = CNST(0.0)
+        do l = 1, ps%conf%p
+          ! do not divide by zero
+          if(ps%g%rofi(1) > M_EPSILON) then
+            hato(1) = ps_upf%wfs(1, l)/ps%g%rofi(1)
+          else
+            hato(1) = M_ZERO
+          end if
+          ! rofi /= 0 except rofi(1) possibly
+          hato(2:ps%g%nrval) = ps_upf%wfs(2:ps%g%nrval, l)/ps%g%rofi(2:ps%g%nrval)
+          
+          forall(ip = 1:ps%g%nrval) dens(ip) = dens(ip) + ps%conf%occ(l, is)*hato(ip)**2/(M_FOUR*M_PI)
+        
+          call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%ur(l, is))
+          call spline_fit(ps%g%nrval, ps%g%r2ofi, hato, ps%ur_sq(l, is))
+        end do
+        call spline_fit(ps%g%nrval, ps%g%rofi, dens, ps%density(is))
       end do
-    end do
 
-    ! the atomic density
-    hato(2:ps%g%nrval) = ps_upf%rho(2:ps%g%nrval)/ps%g%rofi(2:ps%g%nrval)/ps%ispin
-    hato(1) = linear_extrapolate(ps%g%rofi(1), ps%g%rofi(2), ps%g%rofi(3), hato(2), hato(3)) !take care of the point at zero
+    else
 
-    do ispin = 1, ps%ispin
-      call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%density(ispin))
-    end do
+      ! no orbitals, but we should have the atomic density
+      dens(2:ps%g%nrval) = ps_upf%rho(2:ps%g%nrval)/ps%g%rofi(2:ps%g%nrval)/ps%ispin
+      dens(1) = linear_extrapolate(ps%g%rofi(1), ps%g%rofi(2), ps%g%rofi(3), dens(2), dens(3)) !take care of the point at zero
+      
+      do is = 1, ps%ispin
+        call spline_fit(ps%g%nrval, ps%g%rofi, dens, ps%density(is))
+      end do
+
+    end if
     
     SAFE_DEALLOCATE_A(hato)
+    SAFE_DEALLOCATE_A(dens)
 
     POP_SUB(ps_upf_load)
   end subroutine ps_upf_load
