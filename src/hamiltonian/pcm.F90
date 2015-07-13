@@ -1,4 +1,4 @@
-!! Copyright (C) 2014 Alain Delgado
+!! Copyright (C) 2014 Alain Delgado Gran, Carlo Andrea Rozzi, Stefano Corni
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -50,8 +50,10 @@ module pcm_m
  !> The cavity hosting the solute molecule is built from a set of 
  !! interlocking spheres with optimized radii centered at the nuclear positions.  
   type, public :: sphere_t  
-    FLOAT :: center(MAX_DIM) !< center of the sphere
-    FLOAT :: radius          !< radius of the sphere (different for each species)
+    FLOAT :: x !
+    FLOAT :: y !< center of the sphere
+    FLOAT :: z !
+    FLOAT :: r !< radius of the sphere (different for each species)
   end type
 
  !> The resulting cavity is discretized by a set of tesserae.  
@@ -68,6 +70,7 @@ module pcm_m
     integer                      :: n_tesserae    !< Total number of tesserae
     type(sphere_t), allocatable  :: spheres(:)    !< See definition for type sphere_t
     type(tessera_t), allocatable :: tess(:)       !< See definition for type tessera_t
+    FLOAT                        :: scale_r       !< factor to scale the radii of the spheres used in PCM
     FLOAT, allocatable           :: matrix(:,:)   !< PCM response matrix
     FLOAT, allocatable           :: q_e(:)        !< set of polarization charges due to the solute electrons        
     FLOAT, allocatable           :: q_n(:)        !< set of polarization charges due to the solute nuclei
@@ -133,6 +136,9 @@ contains
     FLOAT :: rcav_Na
     FLOAT :: rcav_Cl
 
+    type(tessera_t) :: dum2(1)
+    logical :: band
+
     PUSH_SUB(pcm_init)
 
     !%Variable Solvation
@@ -147,8 +153,6 @@ contains
     !% only for ground-state calculations, and only for <tt>TheoryLevel = DFT</tt>.
     !%End
 
-    ! FIXME: pcm terms are only added to total energy in DFT case
-
     call parse_variable('Solvation', .false., pcm%run_pcm)
     if (pcm%run_pcm) then
       if (grid%sb%box_shape /= MINIMUM) then
@@ -162,13 +166,22 @@ contains
       return
     end if
 
-    rcav_C  = CNST(2.4)*P_Ang    ! 
-    rcav_O  = CNST(1.8)*P_Ang    !    
-    rcav_N  = CNST(1.9)*P_Ang    !
-    rcav_S  = CNST(2.0175)*P_Ang ! Angstrom -> Bohr 
-    rcav_F  = CNST(1.682)*P_Ang  !
-    rcav_Na = CNST(2.772)*P_Ang  !  
-    rcav_Cl = CNST(2.172)*P_Ang  !
+    !%Variable RadiusScalingFactor
+    !%Type float
+    !%Default 1.0
+    !%Section Hamiltonian::PCM
+    !%Description
+    !% Scales the radii of the spheres used to build the solute cavity surface.
+    !%End
+    call parse_variable('RadiusScalingFactor', M_ONE, pcm%scale_r)
+
+    rcav_C  = CNST(2.4)*P_Ang*pcm%scale_r    ! 
+    rcav_O  = CNST(1.8)*P_Ang*pcm%scale_r    !    
+    rcav_N  = CNST(1.9)*P_Ang*pcm%scale_r    !
+    rcav_S  = CNST(2.0175)*P_Ang*pcm%scale_r ! Angstrom -> Bohr 
+    rcav_F  = CNST(1.682)*P_Ang*pcm%scale_r  !
+    rcav_Na = CNST(2.772)*P_Ang*pcm%scale_r  !  
+    rcav_Cl = CNST(2.172)*P_Ang*pcm%scale_r  !
 
     !%Variable SolventDielectricConstant
     !%Type float
@@ -179,7 +192,7 @@ contains
     !%End
     call parse_variable('SolventDielectricConstant', M_ONE, pcm%epsilon_0)
 
-    !%Variable SmearingFactor
+    !%Variable PcmSmearingFactor
     !%Type float
     !%Default 1.0
     !%Section Hamiltonian::PCM
@@ -188,7 +201,7 @@ contains
     !% the polarization charges on each tessera of the cavity surface. If set to zero, the solvent 
     !% reaction potential in real-space is defined by using point charges.
     !%End
-    call parse_variable('SmearingFactor', M_ONE, pcm%gaussian_width)
+    call parse_variable('PcmSmearingFactor', M_ONE, pcm%gaussian_width)
 
     if (pcm%gaussian_width == M_ZERO) then
       message(1) = "Info: PCM potential will be defined in terms of polarization point charges"
@@ -197,63 +210,9 @@ contains
       message(1) = "Info: PCM potential is regularized to avoid Coulomb singularity"
       call messages_info(1)        
     end if
-    
-    pcm%n_spheres = 0
-    do ia = 1, geo%natoms
-      if (geo%atom(ia)%label == 'H') cycle
-      pcm%n_spheres = pcm%n_spheres + 1 !counting the number of species different from Hydrogen
-    end do
-    
-    SAFE_ALLOCATE( pcm%spheres(1:pcm%n_spheres) )
-    
-    pcm%n_spheres = 0
-    do ia = 1, geo%natoms
-      
-      if (geo%atom(ia)%label == 'H') cycle
-      pcm%n_spheres = pcm%n_spheres + 1
-      
-      ! These coordinates are already in atomic units (Bohr)
-      pcm%spheres(pcm%n_spheres)%center = geo%atom(ia)%x
-      
-      if (geo%atom(ia)%label == 'C')  pcm%spheres(pcm%n_spheres)%radius = rcav_C
-      if (geo%atom(ia)%label == 'O')  pcm%spheres(pcm%n_spheres)%radius = rcav_O
-      if (geo%atom(ia)%label == 'N')  pcm%spheres(pcm%n_spheres)%radius = rcav_N
-      if (geo%atom(ia)%label == 'S')  pcm%spheres(pcm%n_spheres)%radius = rcav_S
-      if (geo%atom(ia)%label == 'F')  pcm%spheres(pcm%n_spheres)%radius = rcav_F
-      if (geo%atom(ia)%label == 'Na') pcm%spheres(pcm%n_spheres)%radius = rcav_Na
-      if (geo%atom(ia)%label == 'Cl') pcm%spheres(pcm%n_spheres)%radius = rcav_Cl
-    end do
-    
+
     call io_mkdir('pcm')
-    
-    pcm%info_unit = io_open('pcm/pcm_info.out', action='write')
 
-    write(pcm%info_unit,'(A34)') '#Configuration: Molecule + Solvent'
-    write(pcm%info_unit,'(A34)') '#---------------------------------'
-    write(pcm%info_unit,'(A20,F12.3)') '#Epsilon(Solvent) = ', pcm%epsilon_0
-    write(pcm%info_unit,'(A1)')'#' 
-    write(pcm%info_unit,'(A34,I4)') '#Number of interlocking spheres = ', pcm%n_spheres
-    write(pcm%info_unit,'(A1)')'#'  
-
-    write(pcm%info_unit,'(A7,3X,A7,8X,A26,20X,A10)') '#SPHERE', 'ELEMENT', 'CENTER  (X,Y,Z) (A)', 'RADIUS (A)'
-    write(pcm%info_unit,'(A7,3X,A7,4X,A43,7X,A10)') '#------', '-------', &
-                              '-------------------------------------------', '----------'  
-
-    pcm%n_spheres = 0
-    do ia = 1, geo%natoms
-      if (geo%atom(ia)%label == 'H') cycle
-      pcm%n_spheres = pcm%n_spheres + 1       
-      
-      write(pcm%info_unit,'(A1,2X,I3,9X,A2,3X,F14.8,2X,F14.8,2X,F14.8,3X,F14.8)')'#', pcm%n_spheres,            &
-           geo%atom(ia)%label,       &
-           geo%atom(ia)%x*P_a_B,     &
-           pcm%spheres(pcm%n_spheres)%radius*P_a_B
-    end do
-    write(pcm%info_unit,'(A1)')'#'  
-    write(pcm%info_unit,'(A1,4X,A4,9X,A4,15X,A4,15X,A4,15X,A4,15X,A8,12X,A5,15X,A5)') &
-         '#','iter', 'E_ee', 'E_en', 'E_nn', 'E_ne', 'E_M-solv', 'Q_M^e','Q_M^n'
-    pcm%counter = 0
-    
     !%Variable CavityGeometry
     !%Type string
     !%Section Hamiltonian::PCM
@@ -263,47 +222,136 @@ contains
     !%End
     call parse_variable('CavityGeometry', '', pcm%input_cavity)
 
-    iunit = io_open(trim(pcm%input_cavity), status='old', action='read')
+    if (pcm%input_cavity == '') then
     
-    read(iunit,*) pcm%n_tesserae
+     pcm%n_spheres = 0
+     band = .false.
+     do ia = 1, geo%natoms
+       if (geo%atom(ia)%label == 'H') cycle
+       pcm%n_spheres = pcm%n_spheres + 1 !counting the number of species different from Hydrogen
+     end do
     
-    if (pcm%n_tesserae.gt.mxts) then
-      write(message(1),'(a,I5,a,I5)') "total number of tesserae", pcm%n_tesserae, ">",mxts
-      call messages_warning(1)     
-    end if
+     SAFE_ALLOCATE( pcm%spheres(1:pcm%n_spheres) )
     
-    SAFE_ALLOCATE(pcm%tess(1:pcm%n_tesserae))
+     pcm%n_spheres = 0
+     do ia = 1, geo%natoms
+      
+      if (geo%atom(ia)%label == 'H') cycle
+      pcm%n_spheres = pcm%n_spheres + 1
+      
+      !> These coordinates are already in atomic units (Bohr)
+      pcm%spheres(pcm%n_spheres)%x = geo%atom(ia)%x(1)
+      pcm%spheres(pcm%n_spheres)%y = geo%atom(ia)%x(2)
+      pcm%spheres(pcm%n_spheres)%z = geo%atom(ia)%x(3)
+      
+      if (geo%atom(ia)%label == 'C') then
+        pcm%spheres(pcm%n_spheres)%r = rcav_C
+        band = .true.
+      elseif (geo%atom(ia)%label == 'O') then
+        pcm%spheres(pcm%n_spheres)%r = rcav_O
+        band = .true.
+      elseif (geo%atom(ia)%label == 'N') then
+        pcm%spheres(pcm%n_spheres)%r = rcav_N
+        band = .true.
+      elseif (geo%atom(ia)%label == 'S') then
+        pcm%spheres(pcm%n_spheres)%r = rcav_S
+        band = .true.
+      elseif (geo%atom(ia)%label == 'F') then
+        pcm%spheres(pcm%n_spheres)%r = rcav_F
+        band = .true.
+      elseif (geo%atom(ia)%label == 'Na') then
+        pcm%spheres(pcm%n_spheres)%r = rcav_Na
+        band = .true.
+      elseif (geo%atom(ia)%label == 'Cl') then 
+        pcm%spheres(pcm%n_spheres)%r = rcav_Cl
+        band = .true.
+      endif
+
+      if (.not.(band)) then
+        write(message(1),'(a,a)') "Missing radius parameter for species", geo%atom(ia)%label
+        call messages_fatal(1)
+      endif
+
+     end do
     
-    do ia=1, pcm%n_tesserae
-      read(iunit,*) pcm%tess(ia)%point(1)
-    end do
+     pcm%info_unit = io_open(PCM_DIR//'pcm_info.out', action='write')
+
+     write(pcm%info_unit,'(A35)') '# Configuration: Molecule + Solvent'
+     write(pcm%info_unit,'(A35)') '# ---------------------------------'
+     write(pcm%info_unit,'(A21,F12.3)') '# Epsilon(Solvent) = ', pcm%epsilon_0
+     write(pcm%info_unit,'(A1)')'#' 
+     write(pcm%info_unit,'(A35,I4)') '# Number of interlocking spheres = ', pcm%n_spheres
+     write(pcm%info_unit,'(A1)')'#'  
+
+     write(pcm%info_unit,'(A8,3X,A7,8X,A26,20X,A10)') '# SPHERE', 'ELEMENT', 'CENTER  (X,Y,Z) (A)', 'RADIUS (A)'
+     write(pcm%info_unit,'(A8,3X,A7,4X,A43,7X,A10)') '# ------', '-------', &
+                               '-------------------------------------------', '----------'  
+
+     pcm%n_spheres = 0
+     do ia = 1, geo%natoms
+       if (geo%atom(ia)%label == 'H') cycle
+       pcm%n_spheres = pcm%n_spheres + 1       
+      
+       write(pcm%info_unit,'(A1,2X,I3,9X,A2,3X,F14.8,2X,F14.8,2X,F14.8,3X,F14.8)')'#', pcm%n_spheres, &
+            geo%atom(ia)%label,       &
+            geo%atom(ia)%x*P_a_B,     &
+            pcm%spheres(pcm%n_spheres)%r*P_a_B
+     end do
+
+     !> Counting the number of tesserae
+     call cav_gen(0, 1, pcm%n_spheres, pcm%spheres, pcm%n_tesserae, dum2, pcm%info_unit)
+
+     SAFE_ALLOCATE(pcm%tess(1:pcm%n_tesserae))
+
+     !> Generating the Van der Waals discretized surface of the solute system
+     call cav_gen(1, 1, pcm%n_spheres, pcm%spheres, pcm%n_tesserae, pcm%tess, pcm%info_unit)
+
+     message(1) = "Info: van der Waals surface has been calculated"
+     call messages_info(1)
+
+    else
+
+     !> The cavity surface will be read from a external file
+     iunit = io_open(trim(pcm%input_cavity), status='old', action='read')
+      read(iunit,*) pcm%n_tesserae
     
-    do ia=1, pcm%n_tesserae
-      read(iunit,*) pcm%tess(ia)%point(2)
-    end do
+     if (pcm%n_tesserae.gt.mxts) then
+       write(message(1),'(a,I5,a,I5)') "total number of tesserae", pcm%n_tesserae, ">",mxts
+       call messages_warning(1)     
+     endif
     
-    do ia=1, pcm%n_tesserae
-      read(iunit,*) pcm%tess(ia)%point(3)
-    end do
+     SAFE_ALLOCATE(pcm%tess(1:pcm%n_tesserae))
     
-    do ia=1, pcm%n_tesserae
-      read(iunit,*) pcm%tess(ia)%area
-    end do
+     do ia=1, pcm%n_tesserae
+       read(iunit,*) pcm%tess(ia)%point(1)
+     end do
     
-    do ia=1, pcm%n_tesserae
-      read(iunit,*) pcm%tess(ia)%r_sphere
-    end do
+     do ia=1, pcm%n_tesserae
+       read(iunit,*) pcm%tess(ia)%point(2)
+     end do
     
-    do ia=1, pcm%n_tesserae
-      read(iunit,*) pcm%tess(ia)%normal
-    end do
+     do ia=1, pcm%n_tesserae
+       read(iunit,*) pcm%tess(ia)%point(3)
+     end do
     
-    call io_close(iunit)
+     do ia=1, pcm%n_tesserae
+       read(iunit,*) pcm%tess(ia)%area
+     end do
     
-    message(1) = "Info: van der Waals surface has been read from " // trim(pcm%input_cavity)
-    call messages_info(1)
+     do ia=1, pcm%n_tesserae
+       read(iunit,*) pcm%tess(ia)%r_sphere
+     end do
     
-    cav_unit_test = io_open('pcm/cavity_mol.xyz', action='write')
+     do ia=1, pcm%n_tesserae
+       read(iunit,*) pcm%tess(ia)%normal
+     end do
+    
+     call io_close(iunit)
+     message(1) = "Info: van der Waals surface has been read from " // trim(pcm%input_cavity)
+     call messages_info(1)
+    endif
+
+    cav_unit_test = io_open(PCM_DIR//'cavity_mol.xyz', action='write')
     
     write (cav_unit_test,'(2X,I4)') pcm%n_tesserae + geo%natoms
     write (cav_unit_test,'(2X)')
@@ -318,6 +366,11 @@ contains
     end do
 
     call io_close(cav_unit_test)
+
+    write(pcm%info_unit,'(A1)')'#'  
+    write(pcm%info_unit,'(A1,4X,A4,9X,A4,15X,A4,15X,A4,15X,A4,15X,A8,12X,A5,15X,A5)') &
+         '#','iter', 'E_ee', 'E_en', 'E_nn', 'E_ne', 'E_M-solv', 'Q_M^e','Q_M^n'
+    pcm%counter = 0
     
     pcm%n_vertices = 8
     SAFE_ALLOCATE(pcm%ind_vh(1:pcm%n_tesserae, 1:pcm%n_vertices))
@@ -325,23 +378,6 @@ contains
     
     SAFE_ALLOCATE(pcm%arg_li(1:pcm%n_tesserae, 1:grid%mesh%sb%dim))
     pcm%arg_li = M_ZERO
-
-!    vdw_unit  = io_open('pcm/vdw_cavity.dat', action='write')
-!    grid_unit = io_open('pcm/grid.dat', action='write')
-
-!     do ia=1,pcm%n_tesserae
-!        write(vdw_unit,*) pcm%tess(ia)%x/P_Ang
-!     end do
-
-!     do ia=1, grid%mesh%np
-!        write(grid_unit,*) grid%mesh%x(ia,:)/P_Ang
-!     end do
-
-!    call io_close(vdw_unit)
-!    call io_close(grid_unit)
-    
-!    nearest_idx_unit    = io_open('pcm/nearest_index.dat', action='write')
-!    idx_from_coord_unit = io_open('pcm/index_from_coords.dat', action='write')
 
     !> Creating the list of the nearest grid points to each tessera
     !! to be used to interpolate the Hartree potential at the representative points
@@ -354,10 +390,7 @@ contains
       end do
     end do
     
-!    call io_close(nearest_idx_unit)
-!    call io_close(idx_from_coord_unit)
-
-!   Generating the dynamical PCM matrix to be inputed to GAMESS
+    !>Generating the dynamical PCM matrix to be inputed to GAMESS
     pcm%epsilon_infty = CNST(1.7760) 
     SAFE_ALLOCATE( mat_gamess(1:pcm%n_tesserae, 1:pcm%n_tesserae) )
     mat_gamess = M_ZERO
@@ -367,7 +400,7 @@ contains
     
     call pcm_matrix(pcm%epsilon_infty, pcm%tess, pcm%n_tesserae, pcm%matrix) 
     
-    pcmmat_gamess_unit = io_open('pcm/pcm_matrix_gamess_dyn.out', action='write')
+    pcmmat_gamess_unit = io_open(PCM_DIR//'pcm_matrix_gamess_dyn.out', action='write')
     
     do jtess = 1, pcm%n_tesserae
       do itess = 1, pcm%n_tesserae
@@ -384,8 +417,8 @@ contains
     message(1) = "Info: PCM response matrix has been evaluated"
     call messages_info(1)
     
-    pcmmat_unit = io_open('pcm/pcm_matrix.out', action='write')
-    pcmmat_gamess_unit = io_open('pcm/pcm_matrix_gamess.out', action='write')
+    pcmmat_unit = io_open(PCM_DIR//'pcm_matrix.out', action='write')
+    pcmmat_gamess_unit = io_open(PCM_DIR//'pcm_matrix_gamess.out', action='write')
     
     do jtess = 1, pcm%n_tesserae
       do itess = 1, pcm%n_tesserae
@@ -571,10 +604,6 @@ contains
     integer :: point_0(1:MAX_DIM)
     integer :: point_f(1:MAX_DIM)
     integer :: ii
-    !   integer :: tess_unit
-    !   integer :: vertices_unit
-
-    !   character(LEN=20) :: cc
 
     PUSH_SUB(nearest_cube_vertices)    
 
@@ -582,9 +611,6 @@ contains
 
     coord_0 = mesh%x(vert_idx(1), :)
     point_0 = NINT(coord_0/mesh%spacing)
-
-    !   write(nearest_idx_unit,*) vert_idx(1)
-    !   write(idx_from_coord_unit,*) index_from_coords(mesh%idx, point_0)
 
     sign_x = INT( sign( CNST(1.0), point(1) - coord_0(1) ) )
     sign_y = INT( sign( CNST(1.0), point(2) - coord_0(2) ) )
@@ -625,20 +651,6 @@ contains
     !POINT P8
     point_f(2) = point_f(2) - sign_y
     vert_idx(8) = index_from_coords(mesh%idx, point_f)
-
-    !   write(cc,'(I3)') ia
-
-    !   tess_unit     = io_open('pcm/'//trim(cc)//'_tess.dat', action='write')
-    !   vertices_unit = io_open('pcm/'//trim(cc)//'_vertices.dat', action='write')
-
-    !    write(tess_unit,*) point/P_Ang
-
-    !    do ii=1, n_vertices
-    !       write(vertices_unit,*) mesh%x(vert_idx(ii), :)/P_Ang 
-    !    end do
-
-    !   call io_close(tess_unit)
-    !   call io_close(vertices_unit)
 
     POP_SUB(nearest_cube_vertices)    
 
@@ -931,6 +943,852 @@ contains
     
   end function d_mat_elem_I
 
+  !> It builds the solute cavity surface and calculates the vertices,
+  !! representative points and areas of the tesserae by using the 
+  !! Gauss-Bonnet theorem.
+  subroutine cav_gen(i_count, tess_sphere, nesf, sfe, nts, cts, unit_pcminfo)
+    integer, intent(in)  :: i_count
+    integer, intent(in)  :: tess_sphere
+    integer, intent(in)  :: nesf
+    integer, intent(out) :: nts
+    integer, intent(in)  :: unit_pcminfo
+ 
+    type(sphere_t),   intent(inout) :: sfe(:)
+    type(tessera_t),  intent(out)   :: cts(:)
+
+    integer, parameter :: dim_angles = 24
+    integer, parameter :: dim_ten = 10
+    integer, parameter :: dim_vertices = 122
+    integer, parameter :: n_tess_sphere = 60
+    integer, parameter :: max_vertices = 6
+    integer, parameter :: mxts = 10000
+
+    FLOAT :: thev(1:dim_angles)
+    FLOAT :: fiv(1:dim_angles)
+    FLOAT :: fir
+    FLOAT :: cv(1:dim_vertices, 1:MAX_DIM)
+    FLOAT :: th
+    FLOAT :: fi
+    FLOAT :: cth
+    FLOAT :: sth
+
+    FLOAT :: xctst(tess_sphere*n_tess_sphere)
+    FLOAT :: yctst(tess_sphere*n_tess_sphere)
+    FLOAT :: zctst(tess_sphere*n_tess_sphere)
+    FLOAT :: ast(tess_sphere*n_tess_sphere)
+    FLOAT :: nctst(MAX_DIM, tess_sphere*n_tess_sphere)
+    FLOAT :: pts(1:MAX_DIM, 1:dim_ten)
+    FLOAT :: pp(1:MAX_DIM)
+    FLOAT :: pp1(1:MAX_DIM)
+    FLOAT :: ccc(1:MAX_DIM, 1:dim_ten)
+      
+    integer :: idum(1:n_tess_sphere*max_vertices)
+    integer :: jvt1(1:max_vertices,1:n_tess_sphere)
+    integer :: isfet(1:dim_ten*dim_angles)
+      
+    integer :: ii
+    integer :: ia
+    integer :: ja
+    integer :: nn
+    integer :: nsfe
+    integer :: its
+    integer :: n1
+    integer :: n2
+    integer :: n3
+    integer :: nv
+    integer :: i_tes
+
+    FLOAT :: xen
+    FLOAT :: yen
+    FLOAT :: zen
+    FLOAT :: ren
+    FLOAT :: area
+    FLOAT :: test
+    FLOAT :: test2
+    FLOAT :: rij
+    FLOAT :: dnorm
+
+    FLOAT :: xi
+    FLOAT :: yi
+    FLOAT :: zi
+    FLOAT :: xj
+    FLOAT :: yj
+    FLOAT :: zj
+
+    FLOAT :: vol
+    FLOAT :: stot
+    FLOAT :: prod
+    FLOAT :: dr  
+
+    logical :: band_iter
+
+    PUSH_SUB(gen_cav)
+      
+    !> Angles corresponding to the vertices and centres of a polyhedron
+    !! within a sphere of unitary radius and centered at the origin
+    data thev/ CNST(0.6523581398) , CNST(1.107148718)  , CNST(1.382085796) , &
+               CNST(1.759506858)  , CNST(2.034443936)  , CNST(2.489234514) , &
+                                    CNST(0.3261790699) , CNST(0.5535743589), &
+               CNST(0.8559571251) , CNST(0.8559571251) , CNST(1.017221968) , &
+               CNST(1.229116717)  , CNST(1.229116717)  , CNST(1.433327788) , &
+               CNST(1.570796327)  , CNST(1.570796327)  , CNST(1.708264866) , &
+               CNST(1.912475937)  , CNST(1.912475937)  , CNST(2.124370686) , &
+               CNST(2.285635528)  , CNST(2.285635528)  , CNST(2.588018295) , &
+               CNST(2.815413584) /
+    data fiv/                       CNST(0.6283185307) , M_ZERO            , &
+               CNST(0.6283185307) , M_ZERO             , CNST(0.6283185307), &
+               M_ZERO             , CNST(0.6283185307) , M_ZERO, 	     &
+               CNST(0.2520539002) , CNST(1.004583161)  , CNST(0.6283185307), &
+               CNST(0.3293628477) , CNST(0.9272742138) , M_ZERO, 	     &
+               CNST(0.3141592654) , CNST(0.9424777961) , CNST(0.6283185307), &
+               CNST(0.2989556830) , CNST(0.9576813784) , M_ZERO, 	     &
+               CNST(0.3762646305) , CNST(0.8803724309) , CNST(0.6283188307), &
+               M_ZERO /
+    data fir / CNST(1.256637061)  /
+
+    !> the vector idum, contained in the matrix jvt1, indicates the vertices 
+    !! of the tesserae (using less than 19 continuations)
+    data (idum(ii),ii = 1, 280) /                                   &
+       1, 6, 2, 32, 36, 37, 1, 2, 3, 33, 32, 38, 1, 3, 4, 34,         &
+       33, 39, 1, 4, 5, 35, 34, 40, 1, 5, 6, 36, 35, 41, 7, 2, 6, 51, &
+       42, 37, 8, 3, 2, 47, 43, 38, 9, 4, 3, 48, 44, 39, 10, 5, 4,    &
+       49, 45, 40, 11, 6, 5, 50, 46, 41, 8, 2, 12, 62, 47, 52, 9,     &
+       3, 13, 63, 48, 53, 10, 4, 14, 64, 49, 54, 11, 5, 15, 65, 50,   &
+       55, 7, 6, 16, 66, 51, 56, 7, 12, 2, 42, 57, 52, 8, 13, 3,      &
+       43, 58, 53, 9, 14, 4, 44, 59, 54, 10, 15, 5, 45, 60, 55, 11,   &
+       16, 6, 46, 61, 56, 8, 12, 18, 68, 62, 77, 9, 13, 19, 69, 63,   &
+       78, 10, 14, 20, 70, 64, 79, 11, 15, 21, 71, 65, 80, 7, 16,     &
+       17, 67, 66, 81, 7, 17, 12, 57, 67, 72, 8, 18, 13, 58, 68, 73,  &
+       9, 19, 14, 59, 69, 74, 10, 20, 15, 60, 70, 75, 11, 21, 16,     &
+       61, 71, 76, 22, 12, 17, 87, 82, 72, 23, 13, 18, 88, 83, 73,    &
+       24, 14, 19, 89, 84, 74, 25, 15, 20, 90, 85, 75, 26, 16, 21,    &
+       91, 86, 76, 22, 18, 12, 82, 92, 77, 23, 19, 13, 83, 93, 78,    &
+       24, 20, 14, 84, 94, 79, 25, 21, 15, 85, 95, 80, 26, 17, 16,    &
+       86, 96, 81, 22, 17, 27, 102, 87, 97, 23, 18, 28, 103, 88, 98,  &
+       24, 19, 29, 104, 89, 99, 25, 20, 30, 105, 90, 100, 26, 21,     &
+       31, 106, 91, 101, 22, 28, 18, 92, 107, 98, 23, 29, 19, 93 /
+    data (idum(ii),ii = 281,360) / 				      &
+       108, 99, 24, 30, 20, 94, 109, 100, 25, 31, 21, 95, 110, 101,   &
+       26, 27, 17, 96, 111, 97, 22, 27, 28, 107, 102, 112, 23, 28,    &
+       29, 108, 103, 113, 24, 29, 30, 109, 104, 114, 25, 30, 31,      &
+       110, 105, 115, 26, 31, 27, 111, 106, 116, 122, 28, 27, 117,    &
+       118, 112, 122, 29, 28, 118, 119, 113, 122, 30, 29, 119, 120,   &
+       114, 122, 31, 30, 120, 121, 115, 122, 27, 31, 121, 117, 116 /
+
+    if (i_count == 0) then
+     if (tess_sphere == 1) then
+         write(unit_pcminfo,'(A1)')  '#' 
+         write(unit_pcminfo,'(A34)') '# Number of tesserae / sphere = 60'
+         write(unit_pcminfo,'(A1)')  '#' 
+     else
+         write(unit_pcminfo,'(A1)')  '#' 
+         write(unit_pcminfo,'(A35)') '# Number of tesserae / sphere = 240' 
+         write(unit_pcminfo,'(A1)')  '#' 
+     endif 
+    endif
+
+   !> geometrical data are converted to Angstrom and back transformed
+   !! to Bohr at the end of the subroutine.
+    dr = CNST(0.01)
+    dr = dr*P_a_B
+
+    sfe(:)%x = sfe(:)%x*P_a_B
+    sfe(:)%y = sfe(:)%y*P_a_B
+    sfe(:)%z = sfe(:)%z*P_a_B
+    sfe(:)%r = sfe(:)%r*P_a_B
+
+    vol  = M_ZERO
+    stot = M_ZERO
+    jvt1 = reshape(idum,(/6,60/))
+
+    !> Coordinates of vertices of tesserae in a sphere with unit radius.
+    !! the matrix 'cv' and 'xc', 'yc', 'zc' conatin the vertices and 
+    !! the centers of 240 tesserae. The matrix 'jvt1(i,j)' denotes the index
+    !! of the i-th vertex of the j-th big tessera. On each big tessera
+    !! the 6 vertices are ordered as follows:
+    !!  
+    !!                      1
+    !!
+    !!                   4     5
+    !!
+    !!                3     6     2
+
+    cv(1,1)   =  M_ZERO
+    cv(1,2)   =  M_ZERO
+    cv(1,3)   =  M_ONE
+
+    cv(122,1) =  M_ZERO
+    cv(122,2) =  M_ZERO
+    cv(122,3) = -M_ONE
+
+    ii = 1
+    do ia = 1, dim_angles
+       th = thev(ia)
+       fi = fiv(ia)
+       cth = cos(th)
+       sth = sin(th)
+     do ja = 1, 5
+        fi = fi + fir
+        if (ja == 1) fi = fiv(ia)
+        ii = ii + 1
+        cv(ii,1) = sth*cos(fi)
+        cv(ii,2) = sth*sin(fi)
+        cv(ii,3) = cth
+     enddo
+    enddo
+
+    !> Controls whether the tessera is covered or need to be reshaped it
+    nn = 0
+    do nsfe = 1, nesf
+     xen = sfe(nsfe)%x
+     yen = sfe(nsfe)%y
+     zen = sfe(nsfe)%z
+     ren = sfe(nsfe)%r
+
+     xctst(:) = M_ZERO
+     yctst(:) = M_ZERO
+     zctst(:) = M_ZERO
+     ast(:)   = M_ZERO
+
+     do its = 1, n_tess_sphere 
+       do i_tes = 1, tess_sphere
+        if (tess_sphere == 1) then
+         n1 = jvt1(1,its)
+         n2 = jvt1(2,its)
+         n3 = jvt1(3,its)
+        else
+         if (i_tes == 1)      then
+          n1 = jvt1(1,its)
+          n2 = jvt1(5,its)
+          n3 = jvt1(4,its)
+         elseif (i_tes == 2)  then 
+          n1 = jvt1(4,its)
+          n2 = jvt1(6,its)
+          n3 = jvt1(3,its)
+         elseif (i_tes == 3)  then
+          n1 = jvt1(4,its)
+          n2 = jvt1(5,its)
+          n3 = jvt1(6,its)
+         elseif (i_tes == 4)  then
+          n1 = jvt1(2,its)
+          n2 = jvt1(6,its)
+          n3 = jvt1(5,its)
+         endif
+        endif
+
+        pts(1,1) = cv(n1,1)*ren + xen
+        pts(2,1) = cv(n1,3)*ren + yen
+        pts(3,1) = cv(n1,2)*ren + zen
+
+        pts(1,2) = cv(n2,1)*ren + xen
+        pts(2,2) = cv(n2,3)*ren + yen
+        pts(3,2) = cv(n2,2)*ren + zen
+
+        pts(1,3) = cv(n3,1)*ren + xen
+        pts(2,3) = cv(n3,3)*ren + yen
+        pts(3,3) = cv(n3,2)*ren + zen
+
+        pp(:)  = M_ZERO
+        pp1(:) = M_ZERO
+        nv = 3
+
+        call subtessera(sfe, nsfe, nesf, nv, pts ,ccc, pp, pp1, area)
+
+        if (area == M_ZERO) cycle
+
+        xctst(tess_sphere*(its-1) + i_tes)   = pp(1)
+        yctst(tess_sphere*(its-1) + i_tes)   = pp(2)
+        zctst(tess_sphere*(its-1) + i_tes)   = pp(3)
+        nctst(:,tess_sphere*(its-1) + i_tes) = pp1(:)
+        ast(tess_sphere*(its-1) + i_tes)     = area
+        isfet(tess_sphere*(its-1) + i_tes)   = nsfe
+
+        enddo
+       enddo !> loop through the tesseare on the sphere 'nsfe'
+
+       do its = 1, n_tess_sphere*tess_sphere
+
+        if (ast(its) == M_ZERO) cycle
+        nn = nn + 1
+
+        if (nn > mxts) then !> check the total number of tessera
+         write(message(1),'(a,I5,a,I5)') "total number of tesserae", nn, ">",mxts
+         call messages_warning(1)     
+        endif
+
+        if (i_count ==  1) then
+          cts(nn)%point(1)  = xctst(its)
+          cts(nn)%point(2)  = yctst(its)
+          cts(nn)%point(3)  = zctst(its)
+          cts(nn)%normal(:) = nctst(:,its)
+          cts(nn)%area      = ast(its)
+          cts(nn)%r_sphere  = sfe(isfet(its))%r
+        endif
+
+       enddo
+      enddo !> loop through the spheres
+
+     nts = nn
+
+     if (i_count == 1) then
+
+     !> checks if two tesseare are too close
+     test = CNST(0.1)
+     test2 = test*test
+
+     band_iter = .false.
+     do while (.not.(band_iter))
+       band_iter = .true.
+
+       loop_ia: do ia = 1, nts-1
+        if (cts(ia)%area == M_ZERO) cycle
+         xi = cts(ia)%point(1)
+         yi = cts(ia)%point(2)
+         zi = cts(ia)%point(3)
+
+        loop_ja: do ja = ia+1, nts
+         if (cts(ja)%area == M_ZERO) cycle
+          xj = cts(ja)%point(1)
+          yj = cts(ja)%point(2)
+          zj = cts(ja)%point(3)
+
+          rij = (xi-xj)**2 + (yi-yj)**2 + (zi-zj)**2
+
+          if (rij > test2) cycle
+
+          write(unit_pcminfo,'(A40,I4,A5,I4,A4,F8.4,A13,F8.4,A3)' ) &
+                              '# Warning: The distance between tesserae', &
+                               ia,' and ', ja,' is ',sqrt(rij),' A, less than', test,' A.'
+
+         !> calculating the coordinates of the new tessera weighted by the areas
+          xi = (xi*cts(ia)%area + xj*cts(ja)%area) / (cts(ia)%area + cts(ja)%area)
+          yi = (yi*cts(ia)%area + yj*cts(ja)%area) / (cts(ia)%area + cts(ja)%area)
+          zi = (zi*cts(ia)%area + zj*cts(ja)%area) / (cts(ia)%area + cts(ja)%area)
+
+          cts(ia)%point(1) = xi
+          cts(ia)%point(2) = yi
+          cts(ia)%point(3) = zi
+
+          !> calculating the normal vector of the new tessera weighted by the areas
+          cts(ia)%normal = (cts(ia)%normal*cts(ia)%area + cts(ja)%normal*cts(ja)%area)
+          dnorm = sqrt( dot_product(cts(ia)%normal, cts(ia)%normal) )
+          cts(ia)%normal = cts(ia)%normal/dnorm
+
+          !> calculating the sphere radius of the new tessera weighted by the areas
+          cts(ia)%r_sphere = ( cts(ia)%r_sphere*cts(ia)%area + cts(ja)%r_sphere*cts(ja)%area ) / &
+                             ( cts(ia)%area + cts(ja)%area )
+
+          !> calculating the area of the new tessera
+          cts(ia)%area = cts(ia)%area + cts(ja)%area
+
+          !> deleting tessera ja
+          do ii = ja+1, nts
+           cts(ii-1) = cts(ii)
+          enddo
+          nts = nts -1 
+          band_iter = .false.
+          exit loop_ia
+
+         enddo loop_ja
+        enddo loop_ia
+       enddo !> while loop
+
+      !> Calculates the cavity volume: vol = \sum_{its=1}^nts A_{its} s*n/3.
+      vol = M_ZERO
+      do its = 1, nts
+       prod = dot_product( cts(its)%point, cts(its)%normal ) 
+       vol  = vol + cts(its)%area * prod / M_THREE
+       stot = stot + cts(its)%area
+      enddo
+
+      write(unit_pcminfo, '(A2)')  '# '
+      write(unit_pcminfo, '(A29,I4)')    '# Total number of tesserae = ', nts
+      write(unit_pcminfo, '(A30,F12.6)') '# Cavity surface area (A^2) = ' , stot
+      write(unit_pcminfo, '(A24,F12.6)') '# Cavity volume (A^3) = '       , vol
+      write(unit_pcminfo, '(A2)')  '# '
+
+      !> transforms results into Bohr.
+      cts(:)%area     = cts(:)%area*P_Ang*P_Ang
+      cts(:)%point(1) = cts(:)%point(1)*P_Ang
+      cts(:)%point(2) = cts(:)%point(2)*P_Ang
+      cts(:)%point(3) = cts(:)%point(3)*P_Ang
+      cts(:)%r_sphere = cts(:)%r_sphere*P_Ang
+     endif
+
+     sfe(:)%x=sfe(:)%x*P_Ang
+     sfe(:)%y=sfe(:)%y*P_Ang
+     sfe(:)%z=sfe(:)%z*P_Ang
+     sfe(:)%r=sfe(:)%r*P_Ang
+
+  return
+  POP_SUB(cav_gen)
+  end subroutine cav_gen
+
+  !> find the uncovered region for each tessera and computes the area,
+  !! the representative point (pp) and the unitary normal vector (pp1)
+  subroutine subtessera(sfe, ns, nesf, nv, pts, ccc, pp, pp1, area)
+    type(sphere_t), intent(in) :: sfe(:) !< (1:nesf)
+    integer, intent(in)        :: ns 
+    integer, intent(in)        :: nesf
+    integer, intent(inout)     :: nv
+    FLOAT, intent(inout)       :: pts(:,:) !< (1:MAX_DIM, 1:dim_ten)
+    FLOAT, intent(out)         :: ccc(:,:) !< (1:MAX_DIM, 1:dim_ten)
+    FLOAT, intent(out)         :: pp(:)    !< (1:MAX_DIM)
+    FLOAT, intent(out)         :: pp1(:)   !< (1:MAX_DIM)
+    FLOAT, intent(out)         :: area
+
+    FLOAT, parameter   :: tol = -CNST(1.0e-10)
+    integer, parameter :: dim_ten = 10
+
+    integer :: intsph(1:dim_ten)
+    integer :: nsfe1
+    integer :: na
+    integer :: icop
+    integer :: ll
+    integer :: iv1
+    integer :: iv2
+    integer :: ii
+    integer :: icut
+    integer :: jj
+
+    FLOAT  :: p1(1:MAX_DIM)
+    FLOAT  :: p2(1:MAX_DIM)
+    FLOAT  :: p3(1:MAX_DIM)
+    FLOAT  :: p4(1:MAX_DIM)
+    FLOAT  :: point(1:MAX_DIM)
+    FLOAT  :: pscr(1:MAX_DIM,1:dim_ten)
+    FLOAT  :: cccp(1:MAX_DIM,1:dim_ten)
+    FLOAT  :: pointl(1:MAX_DIM,1:dim_ten)
+    FLOAT  :: diff(1:MAX_DIM)
+
+    integer :: ind(1:dim_ten)
+    integer :: ltyp(1:dim_ten)
+    integer :: intscr(1:dim_ten)
+
+    FLOAT  :: delr
+    FLOAT  :: delr2
+    FLOAT  :: rc
+    FLOAT  :: rc2
+    FLOAT  :: dnorm
+    FLOAT  :: dist
+    FLOAT  :: de2
+
+    PUSH_SUB(subtessera)
+
+    area = M_ZERO
+    do jj=1, 3
+      ccc(1,jj) = sfe(ns)%x
+      ccc(2,jj) = sfe(ns)%y
+      ccc(3,jj) = sfe(ns)%z
+    enddo
+
+    intsph = ns
+    do nsfe1 = 1, nesf 
+     if (nsfe1 == ns) cycle
+     do jj =1, nv
+      intscr(jj) = intsph(jj)
+      pscr(:,jj) = pts(:,jj)
+      cccp(:,jj) = ccc(:,jj)
+     enddo
+
+     icop = 0
+     ind = 0
+     ltyp = 0
+
+     do ii = 1, nv
+      delr2 = ( pts(1,ii) - sfe(nsfe1)%x )**2 + ( pts(2,ii) - sfe(nsfe1)%y )**2 + &
+	      ( pts(3,ii) - sfe(nsfe1)%z )**2
+      delr = sqrt(delr2)
+      if (delr < sfe(nsfe1)%r) then
+	ind(ii) = 1
+	icop = icop + 1
+      endif
+     enddo
+
+     if (icop == nv) return
+
+     do ll = 1, nv
+      iv1 = ll
+      iv2 = ll+1
+      if (ll == nv) iv2 = 1
+      IF ( (ind(iv1) == 1) .and. (ind(iv2) == 1) ) then
+	ltyp(ll) = 0
+      else if ( (ind(iv1) == 0) .and. (ind(iv2) == 1) ) then
+	ltyp(ll) = 1
+      else if ( (ind(iv1) == 1) .and. (ind(iv2) == 0) ) then
+	ltyp(ll) = 2
+      else if ( (ind(iv1) == 0) .and. (ind(iv2) == 0) ) then
+	ltyp(ll) = 4
+	diff = ccc(:,ll) - pts(:,ll)
+	rc2 = dot_product(diff,diff)
+	rc = sqrt(rc2)
+
+	do ii = 1, 11
+	 point = pts(:,iv1) + ii * (pts(:,iv2) - pts(:,iv1)) / 11
+	 point = point - CCC(:,ll)
+	 dnorm = sqrt( dot_product(point, point) )
+	 point = point * rc / dnorm + CCC(:,ll)
+
+	 dist = sqrt(  (point(1) - sfe(nsfe1)%x)**2 + ( point(2) - sfe(nsfe1)%y)**2 &
+						    + ( point(3) - sfe(nsfe1)%z)**2  )
+       
+	if ( (dist - sfe(nsfe1)%r) < tol) then
+	  ltyp(ll) = 3
+	  pointl(:,ll) = point
+	  exit
+	endif
+
+	enddo
+      endif
+    enddo
+
+    icut = 0
+    do ll = 1, nv
+      if ( (ltyp(ll) == 1) .or. (ltyp(ll) == 2) ) icut = icut + 1
+      if (ltyp(ll) == 3) icut = icut + 2
+    enddo
+    icut = icut / 2
+    if (icut > 1) return
+
+    na = 1
+    do ll = 1, nv
+
+      if (ltyp(ll) == 0) cycle
+      iv1 = ll
+      iv2 = ll + 1
+      if (ll == nv) iv2 = 1
+
+      if (ltyp(ll) == 1) then
+       pts(:,na) = pscr(:,iv1)
+       ccc(:,na) = cccp(:,iv1)
+       intsph(na) = intscr(iv1)
+       na = na + 1
+       p1 = pscr(:,IV1)
+       p2 = pscr(:,IV2)
+       p3 = cccp(:,IV1)
+
+       call inter(sfe, p1, p2, p3, p4, nsfe1, 0)
+       pts(:,na) = p4
+
+       de2 = ( sfe(nsfe1)%x - sfe(ns)%x )**2 + ( sfe(nsfe1)%y - sfe(ns)%y )**2 + &
+	     ( sfe(nsfe1)%z - sfe(ns)%z )**2
+
+       ccc(1,na) = sfe(ns)%x + ( sfe(nsfe1)%x - sfe(ns)%x)* &
+			       ( sfe(ns)%r**2 - sfe(nsfe1)%r**2 + de2 ) / (M_TWO*de2)
+
+       ccc(2,na) = sfe(ns)%y + ( sfe(nsfe1)%y - sfe(ns)%y)* &
+			       ( sfe(ns)%r**2 - sfe(nsfe1)%r**2 + de2 ) / (M_TWO*de2)
+
+       ccc(3,na) = sfe(ns)%z + ( sfe(nsfe1)%z - sfe(ns)%z)* &
+			       ( sfe(ns)%r**2 - sfe(nsfe1)%r**2 + de2 ) / (M_TWO*de2)
+
+       intsph(na) = nsfe1
+       na = na + 1
+      endif
+
+      if (ltyp(ll) == 2) then
+       p1 = pscr(:,iv1)
+       p2 = pscr(:,iv2)
+       p3 = cccp(:,iv1)
+
+       call inter( sfe, p1, p2, p3, p4, nsfe1, 1 )
+       pts(:,na) = p4
+       ccc(:,na) = cccp(:,iv1)
+       intsph(na) = intscr(iv1)
+       na = na + 1
+      endif
+
+      if (ltyp(ll) == 3) then
+       pts(:,na) = pscr(:,iv1)
+       ccc(:,na) = cccp(:,iv1)
+       intsph(na) = intscr(iv1)
+       na = na + 1
+       p1 = pscr(:,iv1)
+       p2 = pointl(:,ll)
+       p3 = cccp(:,iv1)
+
+       call inter( sfe, p1, p2, p3, p4, nsfe1, 0 )
+       pts(:,na) = p4
+
+       de2 = ( sfe(nsfe1)%x - sfe(ns)%x )**2 + ( sfe(nsfe1)%y - sfe(ns)%y )**2 + &
+					       ( sfe(nsfe1)%z - sfe(ns)%z )**2
+
+       ccc(1,na) = sfe(ns)%x + ( sfe(nsfe1)%x - sfe(ns)%x )* &
+			      ( sfe(ns)%r**2 - sfe(nsfe1)%r**2 + de2 ) / (M_TWO*de2)
+
+       ccc(2,na) = sfe(ns)%y + ( sfe(nsfe1)%y - sfe(ns)%y )* &
+			      ( sfe(ns)%r**2 - sfe(nsfe1)%r**2 + de2 ) / (M_TWO*de2)
+
+       ccc(3,na) = sfe(ns)%z + ( sfe(nsfe1)%z - sfe(ns)%z )* &
+			      ( sfe(ns)%r**2 - sfe(nsfe1)%r**2 + de2 ) / (M_TWO*de2)
+
+       intsph(na) = nsfe1
+       na = na + 1
+       p1 = pointl(:,ll)
+       p2 = pscr(:,iv2)
+       p3 = cccp(:,iv1)
+
+       call inter( sfe, p1, p2, p3, p4, nsfe1, 1 )
+       pts(:,na) = p4
+       ccc(:,na) = cccp(:,iv1)
+       intsph(na) = intscr(iv1)
+       na = na + 1
+      endif
+
+      if (ltyp(ll) == 4) then
+       pts(:,na) = pscr(:,iv1)
+       ccc(:,na) = cccp(:,iv1)
+       intsph(na) = intscr(iv1)
+       na = na + 1
+      endif
+    enddo
+
+    nv = na - 1
+    if (nv > 10) then
+     message(1) = "Too many vertices on the tessera"
+     call messages_fatal(1)     
+    endif
+   enddo
+
+   call gaubon( sfe, nv, ns, pts, ccc, pp, pp1, area, intsph)
+  return
+  POP_SUB(subtessera)
+  end subroutine subtessera
+
+!    !> Finds the point 'p4', on the arc 'p1'-'p2' developed from 'p3',
+!    !! which is on the surface of sphere 'ns'. p4 is a linear combination 
+     !! of p1 and p2 with the 'alpha' parameter optimized iteratively.
+  subroutine inter( sfe, p1, p2, p3, p4, ns, ia)
+    type(sphere_t), intent(in) :: sfe(:) !< (1:nesf)
+    FLOAT, intent(in)          :: p1(:)  !< (1:MAX_DIM)
+    FLOAT, intent(in)          :: p2(:)  !< (1:MAX_DIM)
+    FLOAT, intent(in)          :: p3(:)  !< (1:MAX_DIM)
+    FLOAT, intent(out)         :: p4(:)  !< (1:MAX_DIM)
+      
+    integer, intent(in) :: ns
+    integer, intent(in) :: ia
+
+    FLOAT, parameter :: tol = CNST(1.0e-08)
+
+    integer :: m_iter
+    FLOAT  :: r
+    FLOAT  :: alpha
+    FLOAT  :: delta
+    FLOAT  :: dnorm
+    FLOAT  :: diff
+    FLOAT  :: diff_vec(1:MAX_DIM)
+
+    logical :: band_iter
+
+    diff_vec = p1 - p3
+    r = sqrt( dot_product(diff_vec, diff_vec) )
+
+    alpha = M_HALF
+    delta = M_ZERO
+    m_iter = 1
+
+    band_iter = .false.
+    do while(.not.(band_iter))
+     if (m_iter > 1000) then
+      message(1) = "Too many iterations inside subrotuine inter"
+      call messages_fatal(1)     
+     endif
+
+     band_iter = .true.
+
+     alpha = alpha + delta
+     dnorm = M_ZERO
+
+     p4 = p1 + alpha*(p2-p1)-p3
+     dnorm = sqrt( dot_product(p4,p4) )
+     p4 = p4*r/dnorm + p3
+     diff =( p4(1) - sfe(ns)%x )**2 + ( p4(2) - sfe(ns)%y )**2 + ( p4(3) - sfe(ns)%z )**2
+     diff = sqrt(diff) - sfe(ns)%r
+
+     if ( abs(diff) < tol ) return
+
+     if (ia == 0) then
+      if (diff > M_ZERO) delta =  M_ONE/(M_TWO**(m_iter+1))
+      if (diff < M_ZERO) delta = -M_ONE/(M_TWO**(m_iter+1))
+      m_iter = m_iter + 1
+      band_iter = .false.
+     endif
+
+     if (ia == 1) then
+      if (diff > M_ZERO) delta = -M_ONE/(M_TWO**(m_iter+1))
+      if (diff < M_ZERO) delta =  M_ONE/(M_TWO**(m_iter+1))
+      m_iter = m_iter + 1
+      band_iter = .false.
+     endif
+    enddo
+
+  return
+  end subroutine inter
+
+    !> Use the Gauss-Bonnet theorem to calculate the area of the 
+    !! tessera with vertices 'pts(3,nv)'. 
+    !! Area = R^2 [ 2pi + S(Phi(N)cosT(N)) - S(Beta(N)) ]
+    !! Phi(n): length of the arc in radians of the side 'n'. 
+    !! T(n): azimuthal angle for the side 'n'
+    !! Beta(n): external angle respect to vertex 'n'.
+  subroutine gaubon( sfe, nv, ns, pts, ccc, pp, pp1, area, intsph )
+    type(sphere_t), intent(in) :: sfe(:)    !< (1:nesf)
+    FLOAT, intent(in)          :: pts(:,:)  !< (1:MAX_DIM,1:dim_ten) 
+    FLOAT, intent(in)          :: ccc(:,:)  !< (1:MAX_DIM,1:dim_ten)
+    FLOAT, intent(inout)       :: pp(:)     !< (1:MAX_DIM)
+    FLOAT, intent(inout)       :: pp1(:)    !< (1:MAX_DIM)
+    integer, intent(in)        :: intsph(:) !< (1:dim_ten)
+    FLOAT, intent(out)         :: area
+    integer, intent(in)        :: nv
+    integer, intent(in)        :: ns
+
+    FLOAT ::  p1(1:MAX_DIM)
+    FLOAT ::  p2(1:MAX_DIM)
+    FLOAT ::  p3(1:MAX_DIM)
+    FLOAT ::  u1(1:MAX_DIM)
+    FLOAT ::  u2(1:MAX_DIM)
+    FLOAT ::  point_1(1:MAX_DIM)
+    FLOAT ::  point_2(1:MAX_DIM)
+    FLOAT :: tpi
+    FLOAT :: sum1
+    FLOAT :: dnorm
+    FLOAT :: dnorm1
+    FLOAT :: dnorm2
+    FLOAT :: scal
+    FLOAT :: cosphin
+    FLOAT :: phin
+    FLOAT :: costn
+    FLOAT :: sum2
+    FLOAT :: betan
+
+    integer :: nsfe1
+    integer :: ia
+    integer :: nn
+    integer :: n0
+    integer :: n1
+    integer :: n2
+
+    PUSH_SUB(gaubon)
+
+    tpi=2*M_Pi
+    sum1 = M_ZERO
+    point_1 = M_ZERO
+    point_2 = M_ZERO
+    do nn = 1, nv
+     point_1 = pts(:,nn) - ccc(:,nn)
+     if (nn < nv) then
+      point_2 = pts(:,nn+1) - ccc(:,nn)
+     else
+      point_2 = pts(:,1) - ccc(:,nn)
+     endif
+
+     dnorm1 = sqrt( dot_product(point_1, point_1) )
+     dnorm2 = sqrt( dot_product(point_2, point_2) )
+     cosphin = dot_product(point_1, point_2) / (dnorm1*dnorm2)
+
+     if (cosphin >  M_ONE) cosphin =  M_ONE
+     if (cosphin < -M_ONE) cosphin = -M_ONE
+
+     phin = acos(cosphin)
+     nsfe1 = intsph(nn)
+
+     point_1(1) = sfe(nsfe1)%x - sfe(ns)%x
+     point_1(2) = sfe(nsfe1)%y - sfe(ns)%y
+     point_1(3) = sfe(nsfe1)%z - sfe(ns)%z
+
+     dnorm1 = sqrt( dot_product(point_1, point_1) )
+
+     if (dnorm1 == M_ZERO) dnorm1 = M_ONE
+      point_2(1) = pts(1,nn) - sfe(ns)%x
+      point_2(2) = pts(2,nn) - sfe(ns)%y
+      point_2(3) = pts(3,nn) - sfe(ns)%z
+
+      dnorm2 = sqrt( dot_product(point_2, point_2) )
+      costn  = dot_product(point_1, point_2)/(dnorm1*dnorm2)
+      sum1 = sum1 + phin * costn
+    enddo
+
+    sum2 = M_ZERO
+    !> Loop over the vertices
+    do nn = 1, nv
+      p1 = M_ZERO
+      p2 = M_ZERO    
+      p3 = M_ZERO  
+
+      n1 = nn
+      if (nn > 1)   n0 = nn - 1
+      if (nn == 1)  n0 = nv
+      if (nn < nv)  n2 = nn + 1
+      if (nn == nv) n2 = 1
+      
+      p1 = pts(:,n1) - ccc(:,n0)
+      p2 = pts(:,n0) - ccc(:,n0)
+      call vecp(p1, p2, p3, dnorm)
+      p2 = p3    
+
+      call vecp(p1, p2, p3, dnorm)
+      u1 = p3/dnorm
+
+      p1 = pts(:,n1) - ccc(:,n1)
+      p2 = pts(:,n2) - ccc(:,n1)
+      call vecp(p1, p2, p3, dnorm)
+      p2 = p3
+
+      call vecp(p1, p2, p3, dnorm)
+      u2 = p3/dnorm
+
+      betan = acos( dot_product(u1, u2) )
+      sum2 = sum2 + (M_Pi - betan)
+    enddo
+
+    !> computes the area of the tessera
+    area = sfe(ns)%r*sfe(ns)%r*(tpi + sum1 - sum2)
+
+    !> computes the representative point
+    pp = M_ZERO
+
+     do ia = 1, nv
+      pp(1) = pp(1) + ( pts(1,ia) - sfe(ns)%x )
+      pp(2) = pp(2) + ( pts(2,ia) - sfe(ns)%y )
+      pp(3) = pp(3) + ( pts(3,ia) - sfe(ns)%z )
+     enddo
+
+     dnorm = M_ZERO
+     dnorm = sqrt( dot_product(pp,pp) )
+
+     pp(1) = sfe(ns)%x + pp(1) * sfe(ns)%r / dnorm
+     pp(2) = sfe(ns)%y + pp(2) * sfe(ns)%r / dnorm
+     pp(3) = sfe(ns)%z + pp(3) * sfe(ns)%r / dnorm
+
+     !> finds the internal normal at the representative point
+     pp1(1) = (pp(1) - sfe(ns)%x) / sfe(ns)%r
+     pp1(2) = (pp(2) - sfe(ns)%y) / sfe(ns)%r
+     pp1(3) = (pp(3) - sfe(ns)%z) / sfe(ns)%r
+
+     !> If the area of the tessera is negative (0^-), due to numerical errors, is discarded
+     if (area < M_ZERO) area = M_ZERO
+
+  return
+  end subroutine gaubon
+
+  !> calculates the vectorial product p3 = p1 x p2
+  subroutine vecp(p1, p2, p3, dnorm)
+    FLOAT, intent(in)  :: P1(:) !< (1:MAX_DIM)
+    FLOAT, intent(in)  :: P2(:) !< (1:MAX_DIM)
+    FLOAT, intent(out) :: P3(:) !< (1:MAX_DIM)
+    FLOAT, intent(out) :: dnorm
+
+    p3(1) = p1(2)*p2(3) - p1(3)*p2(2)
+    p3(2) = p1(3)*p2(1) - p1(1)*p2(3)
+    P3(3) = p1(1)*p2(2) - p1(2)*p2(1)
+
+    dnorm = M_ZERO
+    dnorm = sqrt( dot_product(p3, p3) )
+
+  return
+  POP_SUB(gaubon)
+  end subroutine vecp
+
   subroutine pcm_end(pcm)
     type(pcm_t), intent(inout) :: pcm
     
@@ -960,3 +1818,4 @@ end module pcm_m
 !! mode: f90
 !! coding: utf-8
 !! End:
+

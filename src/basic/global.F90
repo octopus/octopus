@@ -126,6 +126,7 @@ module global_m
   character(len=*), public, parameter :: VDW_DIR = "vdw/"
   character(len=*), public, parameter :: CASIDA_DIR = "casida/"
   character(len=*), public, parameter :: OCT_DIR = "opt-control/"
+  character(len=*), public, parameter :: PCM_DIR = "pcm/"
 
   ! End of declaration of public objects.
   ! ---------------------------------------------------------
