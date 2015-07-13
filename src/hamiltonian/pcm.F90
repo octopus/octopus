@@ -292,9 +292,11 @@ contains
        if (geo%atom(ia)%label == 'H') cycle
        pcm%n_spheres = pcm%n_spheres + 1       
       
-       write(pcm%info_unit,'(A1,2X,I3,9X,A2,3X,F14.8,2X,F14.8,2X,F14.8,3X,F14.8)')'#', pcm%n_spheres, &
-            geo%atom(ia)%label,       &
-            geo%atom(ia)%x*P_a_B,     &
+       write(pcm%info_unit,'(A1,2X,I3,7X,A2,3X,F14.8,2X,F14.8,2X,F14.8,4X,F14.8)')'#', pcm%n_spheres, &
+            geo%atom(ia)%label,          &
+            geo%atom(ia)%x(1)*P_a_B,     &
+            geo%atom(ia)%x(2)*P_a_B,     &
+            geo%atom(ia)%x(3)*P_a_B,     &
             pcm%spheres(pcm%n_spheres)%r*P_a_B
      end do
 
@@ -1642,13 +1644,13 @@ contains
     integer, intent(in)        :: nv
     integer, intent(in)        :: ns
 
-    FLOAT ::  p1(1:MAX_DIM)
-    FLOAT ::  p2(1:MAX_DIM)
-    FLOAT ::  p3(1:MAX_DIM)
-    FLOAT ::  u1(1:MAX_DIM)
-    FLOAT ::  u2(1:MAX_DIM)
-    FLOAT ::  point_1(1:MAX_DIM)
-    FLOAT ::  point_2(1:MAX_DIM)
+    FLOAT :: p1(1:MAX_DIM)
+    FLOAT :: p2(1:MAX_DIM)
+    FLOAT :: p3(1:MAX_DIM)
+    FLOAT :: u1(1:MAX_DIM)
+    FLOAT :: u2(1:MAX_DIM)
+    FLOAT :: point_1(1:MAX_DIM)
+    FLOAT :: point_2(1:MAX_DIM)
     FLOAT :: tpi
     FLOAT :: sum1
     FLOAT :: dnorm
