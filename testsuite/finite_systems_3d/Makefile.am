@@ -99,6 +99,9 @@ dist_share_DATA = \
 	26-nlcc.01-Fatom.inp \
 	26-nlcc.test                                 \
 	27-fine_mesh.test                            \
-	27-fine_mesh.01-gs.inp
+	27-fine_mesh.01-gs.inp \
+        29-pcm_chlorine_anion.01-ground_state.inp \
+        29-pcm_chlorine_anion.02-td_prop.inp      \
+        29-pcm_chlorine_anion.test
 
 CLEANFILES = *~ *.bak
