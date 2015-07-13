@@ -58,6 +58,7 @@ module geom_opt_m
     integer  :: method
     FLOAT    :: step
     FLOAT    :: line_tol
+    FLOAT    :: fire_mass
     FLOAT    :: tolgrad
     FLOAT    :: toldr
     integer  :: max_iter
@@ -146,7 +147,11 @@ contains
       do iatom = 1, sys%geo%natoms
         if(g_opt%fixed_atom == iatom) cycle
         if(.not. g_opt%geo%atom(iatom)%move) cycle
-        mass(imass:imass + 2) = species_mass(sys%geo%atom(iatom)%species)
+        if (g_opt%fire_mass <= M_ZERO) then
+          mass(imass:imass + 2) = species_mass(sys%geo%atom(iatom)%species)
+        else
+          mass(imass:imass + 2) = g_opt%fire_mass  ! Mass of H
+        end if
         imass = imass + 3
       end do
 
@@ -354,6 +359,20 @@ contains
         message(1) = "GOMaxIter has to be larger than 0"
         call messages_fatal(1)
       end if
+
+      !%Variable GOFireMass
+      !%Type float
+      !%Default 0.0 amu
+      !%Section Calculation Modes::Geometry Optimization
+      !%Description
+      !% Fire algorithm assumes that all degrees of freedom
+      !% are comparable. All the velocities should be on the same
+      !% scale,  which  for  heteronuclear  systems  can  be  roughly
+      !% achieved by setting all the atom masses equala. 
+      !% If GOFireMass is smaller or equal to 0., the masses of each 
+      !% species will be used. 
+      !%End
+      call parse_variable('GOFireMass', M_ZERO, g_opt%fire_mass, unit_amu)
 
       call messages_obsolete_variable('GOWhat2Minimize', 'GOObjective')
 
