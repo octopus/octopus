@@ -1,0 +1,27 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: $
+
+Test       : Polarizable Continuum Model (PCM)
+Program    : octopus
+TestGroups : short-run, finite_systems_3d
+Enabled    : Yes
+Processors : serial
+
+Input      : 29-pcm_chlorine_anion.01-ground_state.inp
+Precision: 0.0001
+match ; eigenvalue [1]                ;  GREPFIELD(static/info, '1   --', 3)            ; -16.861598
+match ; eigenvalue [2]                ;  GREPFIELD(static/info, '2   --', 3)            ;  -5.302870
+match ; eigenvalue [3]                ;  GREPFIELD(static/info, '3   --', 3)            ;  -5.300421 
+match ; eigenvalue [4]                ;  GREPFIELD(static/info, '4   --', 3)            ;  -5.299381
+match ; electrons-solvent int. energy ;  GREPFIELD(static/info, 'E_e-solvent =', 3)     ; -25.16561998
+match ; nuclei-solvent int. energy    ;  GREPFIELD(static/info, 'E_n-solvent =', 3)     ;  22.11516530
+match ; molecule-solvent int. energy  ;  GREPFIELD(static/info, 'E_M-solvent =', 3)     ;  -3.05045468
+match ; electronic pol. charge        ;  GREPFIELD(pcm/pcm_info.out, '       9', 7)     ;  -7.96465612
+match ; nuclear pol. charge           ;  GREPFIELD(pcm/pcm_info.out, '       9', 8)     ;   6.99925894
+
+
+Input      : 29-pcm_chlorine_anion.02-td_prop.inp
+Precision: 0.0001
+match ; M-solvent int. energy @ t=0    ;  GREPFIELD(td.general/energy,'       0', 12)   ; -3.050447717404e+00
+match ; M-solvent int. energy @ t=5*dt ;  GREPFIELD(td.general/energy,'       5', 12)   ; -3.050447717404e+00
+
