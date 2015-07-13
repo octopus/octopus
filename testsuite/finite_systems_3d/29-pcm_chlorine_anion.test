@@ -4,7 +4,7 @@
 Test       : Polarizable Continuum Model (PCM)
 Program    : octopus
 TestGroups : short-run, finite_systems_3d
-Enabled    : Yes
+Enabled    : No
 Processors : serial
 
 Input      : 29-pcm_chlorine_anion.01-ground_state.inp
