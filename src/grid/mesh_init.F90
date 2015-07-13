@@ -932,14 +932,18 @@ contains
 
       !%Variable MeshPartitionWrite
       !%Type logical
-      !%Default true
+      !%Default no
       !%Section Execution::Parallelization
       !%Description
-      !% If set to yes (the default), <tt>Octopus</tt> will write the mesh
+      !% (Experimental) If set to yes, <tt>Octopus</tt> will write the mesh
       !% partition of the current run to directory <tt>MeshPartitionDir</tt>.
       !%End
-      call parse_logical(datasets_check('MeshPartitionWrite'), .true., write_partition)
+      call parse_logical(datasets_check('MeshPartitionWrite'), .false., write_partition)
 
+      if(write_partition) then
+        call messages_experimental('MeshPartitionWrite')
+      end if
+      
       if (mpi_grp_is_root(mesh%mpi_grp)) then
         call io_mkdir(trim(partition_dir), is_tmp = .true., parents=.true.)
       end if
