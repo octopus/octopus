@@ -122,8 +122,6 @@ contains
     integer :: pcmmat_unit
     integer :: pcmmat_gamess_unit
     integer :: iunit
-    integer :: vdw_unit
-    integer :: grid_unit
     integer :: ip
 
     integer, parameter :: mxts = 10000
@@ -386,7 +384,7 @@ contains
     SAFE_ALLOCATE(sr_dist(1:pcm%n_tesserae, 1:grid%mesh%np)) 
     sr_dist = M_ZERO
     do ia = 1, pcm%n_tesserae
-      call nearest_cube_vertices(pcm%tess(ia)%point, grid%mesh, pcm%ind_vh(ia,:), pcm%arg_li(ia,:), ia, pcm%n_vertices)
+      call nearest_cube_vertices(pcm%tess(ia)%point, grid%mesh, pcm%ind_vh(ia,:), pcm%arg_li(ia,:))
       do ip = 1, grid%mesh%np !running serially np=np_global
         call mesh_r(grid%mesh, ip, sr_dist(ia,ip), origin=pcm%tess(ia)%point)
       end do
@@ -588,13 +586,12 @@ contains
 
   !> Creating the list of the nearest 8 cube vertices in real-space 
   !! to calculate the Hartree potential at 'point'
-  subroutine nearest_cube_vertices(point, mesh, vert_idx, weight_li, ia, n_vertices)
+!  subroutine nearest_cube_vertices(point, mesh, vert_idx, weight_li, ia, n_vertices)
+  subroutine nearest_cube_vertices(point, mesh, vert_idx, weight_li)
     FLOAT, intent(in)        :: point(1:MAX_DIM)
     type(mesh_t), intent(in) :: mesh
     integer, intent(out)     :: vert_idx(:)
     FLOAT, intent(out)       :: weight_li(:)
-    integer, intent(in)      :: ia
-    integer, intent(in)      :: n_vertices
 
     FLOAT   :: dmin
     integer :: rankmin
@@ -605,7 +602,7 @@ contains
     integer :: sign_z
     integer :: point_0(1:MAX_DIM)
     integer :: point_f(1:MAX_DIM)
-    integer :: ii
+!    integer :: ii
 
     PUSH_SUB(nearest_cube_vertices)    
 
@@ -979,6 +976,7 @@ contains
     FLOAT :: zctst(tess_sphere*n_tess_sphere)
     FLOAT :: ast(tess_sphere*n_tess_sphere)
     FLOAT :: nctst(MAX_DIM, tess_sphere*n_tess_sphere)
+
     FLOAT :: pts(1:MAX_DIM, 1:dim_ten)
     FLOAT :: pp(1:MAX_DIM)
     FLOAT :: pp1(1:MAX_DIM)
@@ -1465,9 +1463,9 @@ contains
        ccc(:,na) = cccp(:,iv1)
        intsph(na) = intscr(iv1)
        na = na + 1
-       p1 = pscr(:,IV1)
-       p2 = pscr(:,IV2)
-       p3 = cccp(:,IV1)
+       p1 = pscr(:,iv1)
+       p2 = pscr(:,iv2)
+       p3 = cccp(:,iv1)
 
        call inter(sfe, p1, p2, p3, p4, nsfe1, 0)
        pts(:,na) = p4
@@ -1656,7 +1654,6 @@ contains
     FLOAT :: dnorm
     FLOAT :: dnorm1
     FLOAT :: dnorm2
-    FLOAT :: scal
     FLOAT :: cosphin
     FLOAT :: phin
     FLOAT :: costn
@@ -1672,7 +1669,7 @@ contains
 
     PUSH_SUB(gaubon)
 
-    tpi=2*M_Pi
+    tpi = M_TWO*M_Pi
     sum1 = M_ZERO
     point_1 = M_ZERO
     point_2 = M_ZERO
