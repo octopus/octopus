@@ -586,7 +586,6 @@ contains
 
   !> Creating the list of the nearest 8 cube vertices in real-space 
   !! to calculate the Hartree potential at 'point'
-!  subroutine nearest_cube_vertices(point, mesh, vert_idx, weight_li, ia, n_vertices)
   subroutine nearest_cube_vertices(point, mesh, vert_idx, weight_li)
     FLOAT, intent(in)        :: point(1:MAX_DIM)
     type(mesh_t), intent(in) :: mesh
