@@ -1696,14 +1696,16 @@ contains
 
      dnorm1 = sqrt( dot_product(point_1, point_1) )
 
-     if (dnorm1 == M_ZERO) dnorm1 = M_ONE
-      point_2(1) = pts(1,nn) - sfe(ns)%x
-      point_2(2) = pts(2,nn) - sfe(ns)%y
-      point_2(3) = pts(3,nn) - sfe(ns)%z
+!     if (dnorm1 == M_ZERO) dnorm1 = M_ONE
+     dnorm1 = M_ONE
+     point_2(1) = pts(1,nn) - sfe(ns)%x
+     point_2(2) = pts(2,nn) - sfe(ns)%y
+     point_2(3) = pts(3,nn) - sfe(ns)%z
 
-      dnorm2 = sqrt( dot_product(point_2, point_2) )
-      costn  = dot_product(point_1, point_2)/(dnorm1*dnorm2)
-      sum1 = sum1 + phin * costn
+     dnorm2 = sqrt( dot_product(point_2, point_2) )
+
+     costn  = dot_product(point_1, point_2)/(dnorm1*dnorm2)
+     sum1 = sum1 + phin * costn
     enddo
 
     sum2 = M_ZERO
