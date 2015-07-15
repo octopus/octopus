@@ -601,7 +601,6 @@ contains
     integer :: sign_z
     integer :: point_0(1:MAX_DIM)
     integer :: point_f(1:MAX_DIM)
-!    integer :: ii
 
     PUSH_SUB(nearest_cube_vertices)    
 
@@ -1696,8 +1695,8 @@ contains
 
      dnorm1 = sqrt( dot_product(point_1, point_1) )
 
-!     if (dnorm1 == M_ZERO) dnorm1 = M_ONE
-     dnorm1 = M_ONE
+     if (dnorm1 == M_ZERO) dnorm1 = M_ONE
+
      point_2(1) = pts(1,nn) - sfe(ns)%x
      point_2(2) = pts(2,nn) - sfe(ns)%y
      point_2(3) = pts(3,nn) - sfe(ns)%z
@@ -1769,6 +1768,7 @@ contains
      if (area < M_ZERO) area = M_ZERO
 
   return
+  POP_SUB(gaubon)
   end subroutine gaubon
 
   !> calculates the vectorial product p3 = p1 x p2
@@ -1784,9 +1784,7 @@ contains
 
     dnorm = M_ZERO
     dnorm = sqrt( dot_product(p3, p3) )
-
   return
-  POP_SUB(gaubon)
   end subroutine vecp
 
   subroutine pcm_end(pcm)
