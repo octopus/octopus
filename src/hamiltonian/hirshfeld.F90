@@ -226,51 +226,82 @@ contains
 
   ! -----------------------------------------------
 
-  subroutine hirshfeld_position_derivative(this, der, iatom, density, dposition)
+  subroutine hirshfeld_position_derivative(this, der, iatom, jatom, density, dposition)
     type(hirshfeld_t),         intent(in)    :: this
     type(derivatives_t),       intent(in)    :: der
     integer,                   intent(in)    :: iatom
+    integer,                   intent(in)    :: jatom
     FLOAT,                     intent(in)    :: density(:, :)
     FLOAT,                     intent(out)   :: dposition(:)
 
     integer :: ip, idir
-    FLOAT :: dens_ip, rr
-    FLOAT, allocatable :: tdensity(:), grad(:, :), atom_density(:, :)
+    FLOAT :: atom_dens, atom_der, rri, rrj, tdensity
+    FLOAT, allocatable :: grad(:, :), atom_density(:, :), atom_derivative(:, :)
     
     PUSH_SUB(hirshfeld_position_derivative)
 
     SAFE_ALLOCATE(atom_density(1:this%mesh%np, 1:this%st%d%nspin))
-    SAFE_ALLOCATE(tdensity(1:this%mesh%np_part))
+    SAFE_ALLOCATE(atom_derivative(1:this%mesh%np, 1:this%st%d%nspin))
     SAFE_ALLOCATE(grad(1:this%mesh%np, 1:this%mesh%sb%dim))
     
     call species_atom_density(this%mesh, this%mesh%sb, this%geo%atom(iatom), this%st%d%nspin, atom_density)
+    call species_atom_density_derivative(this%mesh, this%mesh%sb, this%geo%atom(jatom), this%st%d%nspin, atom_derivative)
 
+    dposition(1:this%mesh%sb%dim) = CNST(0.0)
+
+    do ip = 1, this%mesh%np
+      rri = sqrt(sum((this%mesh%x(ip, 1:this%mesh%sb%dim) - this%geo%atom(iatom)%x(1:this%mesh%sb%dim))**2))
+      rrj = sqrt(sum((this%mesh%x(ip, 1:this%mesh%sb%dim) - this%geo%atom(jatom)%x(1:this%mesh%sb%dim))**2))
+      tdensity = sum(density(ip, 1:this%st%d%nspin))
+      atom_dens = sum(atom_density(ip, 1:this%st%d%nspin))
+      atom_der = sum(atom_derivative(ip, 1:this%st%d%nspin))
+
+      if(rrj > CNST(1e-12)) then 
+        do idir = 1, this%mesh%sb%dim
+          grad(ip, idir) = -rri*3*atom_dens*tdensity*atom_der/this%total_density(ip)**2&
+            *(this%mesh%x(ip, idir) - this%geo%atom(jatom)%x(idir))/rrj
+        end do
+      else
+        grad(ip, 1:this%mesh%sb%dim) = CNST(0.0)
+      end if
+
+      if(iatom == jatom) then
+        
+        do idir = 1, this%mesh%sb%dim
+          grad(ip, idir) =  grad(ip, idir) + (CNST(3.0)*rri*atom_dens + rri**2*atom_der)&
+            *tdensity/this%total_density(ip)*(this%mesh%x(ip, idir) - this%geo%atom(iatom)%x(idir))
+        end do
+
+      end if
+    end do
+      
+    
     ! we use the same trick as for the forces:
     !  df(r-R)/dR = f(r-R)*d/dr
     
-    do ip = 1, this%mesh%np
-      tdensity(ip) = sum(density(ip, 1:this%st%d%nspin))
-    end do
-
-    call dderivatives_grad(der, tdensity, grad)
-    
-    do ip = 1, this%mesh%np
-      rr = sqrt(sum((this%mesh%x(ip, 1:this%mesh%sb%dim) - this%geo%atom(iatom)%x(1:this%mesh%sb%dim))**2))
-      dens_ip = sum(atom_density(ip, 1:this%st%d%nspin))
-
-      do idir = 1, this%mesh%sb%dim
-        if(abs(dens_ip) > CNST(1e-12)) then
-          grad(ip, idir) = grad(ip, idir)*rr**3*dens_ip/this%total_density(ip)
-        else
-          grad(ip, idir) = CNST(0.0)
-        end if
-      end do
-      
-    end do
-
-    do idir = 1, this%mesh%sb%dim
-      dposition(idir) = -dmf_integrate(this%mesh, grad(:, idir))/this%free_volume(iatom)
-    end do
+!!$    do ip = 1, this%mesh%np
+!!$      tdensity(ip) = sum(density(ip, 1:this%st%d%nspin))
+!!$    end do
+!!$
+!!$    call dderivatives_grad(der, tdensity, grad)
+!!$    
+!!$    do ip = 1, this%mesh%np
+!!$      rr = sqrt(sum((this%mesh%x(ip, 1:this%mesh%sb%dim) - this%geo%atom(iatom)%x(1:this%mesh%sb%dim))**2))
+!!$      atom_dens_ip = sum(atom_density(ip, 1:this%st%d%nspin))
+!!$
+!!$      do idir = 1, this%mesh%sb%dim
+!!$        if(abs(atom_dens_ip) > CNST(1e-12)) then
+!!$          grad(ip, idir) = grad(ip, idir)*rr**3*atom_dens_ip/this%total_density(ip)
+!!$        else
+!!$          grad(ip, idir) = CNST(0.0)
+!!$        end if
+!!$      end do
+!!$      
+!!$    end do
+!!$
+!!$    do idir = 1, this%mesh%sb%dim
+!!$      dposition(idir) = -dmf_integrate(this%mesh, grad(:, idir))/this%free_volume(iatom)
+!!$    end do
     
     SAFE_DEALLOCATE_A(atom_density)
     

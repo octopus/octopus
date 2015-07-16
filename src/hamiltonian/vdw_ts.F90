@@ -168,71 +168,9 @@ contains
     end do
 
 #if 0
-    !SAFE_ALLOCATE(dvadens(1:der%mesh%np))
-    SAFE_ALLOCATE(dvbdens(1:der%mesh%np))
-    SAFE_ALLOCATE(dvadrr(1:geo%space%dim))
-    SAFE_ALLOCATE(dvbdrr(1:geo%space%dim))
-    
-    energy = CNST(0.0)
-    force = CNST(0.0)
-    potential(1:der%mesh%np) = CNST(0.0)
-    
-    do iatom = 1, geo%natoms
-
-      !call hirshfeld_density_derivative(this%hirshfeld, iatom, dvadens)
-      !call hirshfeld_position_derivative(this%hirshfeld, der, iatom, density, dvadrr)
-      
-      do jatom = 1, geo%natoms
-        if(iatom == jatom) cycle
-
-        !call hirshfeld_density_derivative(this%hirshfeld, jatom, dvbdens)
-        !call hirshfeld_position_derivative(this%hirshfeld, der, iatom, density, dvbdrr)
-        
-        ispecies = species_index(geo%atom(iatom)%species)
-        jspecies = species_index(geo%atom(jatom)%species)
-        
-        c6abfree = this%c6abfree(ispecies, jspecies)
-        c6ab = volume_ratio(iatom)*volume_ratio(jatom)*c6abfree
-
-        rij(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim) - geo%atom(jatom)%x(1:geo%space%dim)
-        rr = sqrt(sum(rij(1:geo%space%dim)**2))
-        call fdamp(rr, r0(iatom) + r0(jatom), ff, dffdrr, dffdr0)
-        
-!        print*, species_label(geo%atom(iatom)%species), species_label(geo%atom(jatom)%species), c6ab
-!        print*, '    ', r0(iatom) + r0(jatom)
-!        print*, '    ', rr
-!        print*, '    ', fdamp(rr, r0(iatom) + r0(jatom))
-!        print*, '    ', CNST(0.5)*fdamp(rr, r0(iatom) + r0(jatom))*c6ab/rr**6
-!        energy = energy - CNST(0.5)*ff*c6ab/rr**6
-        energy = energy - CNST(0.5)*ff*c6ab/rr**6
-
-        do idir = 1, geo%space%dim
-          force(idir, iatom) = force(idir, iatom) &
-            - CNST(6.0)*ff*c6ab*rij(idir)/rr**8 &
-            - dffdrr*c6ab*rij(idir)/rr**7
-        end do
-        
-!        forall(ip = 1:der%mesh%np)
-!          potential(ip) = potential(ip) &
-!            - CNST(0.5)*ff*c6abfree/rr**6*(volume_ratio(iatom)*dvbdens(ip) + dvadens(ip)*volume_ratio(jatom)) &
-!            - CNST(0.5)*dffdr0*c6ab/rr**6*( &
-!            dvadens(ip)*this%r0free(ispecies)/CNST(3.0)*volume_ratio(iatom)**(-CNST(2.0)/CNST(3.0)) + &
-!            dvbdens(ip)*this%r0free(jspecies)/CNST(3.0)*volume_ratio(jatom)**(-CNST(2.0)/CNST(3.0)) )
-!        end forall
-
-      end do
-    end do
-
-    print*, "EVDW", energy
-    
-    do iatom = 1, geo%natoms
-      print*, "FVDW ", species_label(geo%atom(iatom)%species), force(:, iatom)
-    end do
-      
     call dio_function_output(1, "./", "vvdw", der%mesh, potential, unit_one, ip)
     
     print*, dmf_integrate(der%mesh, potential(1:der%mesh%np)*density(1:der%mesh%np, 1))
-
 #endif    
 
     SAFE_DEALLOCATE_A(c6)
@@ -244,29 +182,6 @@ contains
     POP_SUB(vdw_ts_calculate)
   end subroutine vdw_ts_calculate
 
-  !------------------------------------------
-
-  subroutine fdamp(rab, r0, ff, dffdrab, dffdr0)
-    FLOAT, intent(in)  :: rab
-    FLOAT, intent(in)  :: r0
-    FLOAT, intent(out) :: ff
-    FLOAT, intent(out) :: dffdrab
-    FLOAT, intent(out) :: dffdr0
-    
-    FLOAT, parameter :: dd = CNST(20.0)
-    FLOAT, parameter :: sr = CNST(0.94) ! value for PBE, should be 0.96 for PBE0
-
-    FLOAT :: ee, dff
-    
-    ee = exp(-dd*(rab/(sr*r0) - CNST(1.0)))
-    dff = ee/(CNST(1.0) + ee)**2
-
-    ff = CNST(1.0)/(CNST(1.0) + ee)
-    dffdrab = -dd/(sr*r0)*dff
-    dffdr0 = dd*rab/(sr*r0**2)*dff
-    
-  end subroutine fdamp
-  
   !------------------------------------------
   
   subroutine get_vdw_param(atom, c6, alpha, r0)

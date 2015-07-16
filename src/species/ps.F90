@@ -118,7 +118,8 @@ module ps_m
                                   !< local potential in terms of r^2, to avoid the sqrt
     type(spline_t) :: nlr         !< the charge density associated with the long-range part
     
-    type(spline_t), allocatable :: density(:)  !< the atomic density for each spin
+    type(spline_t), allocatable :: density(:)      !< the atomic density for each spin
+    type(spline_t), allocatable :: density_der(:)  !< the radial derivative for the atomic density for each spin
     
     logical :: is_separated
     logical :: local
@@ -139,7 +140,7 @@ contains
     FLOAT,             intent(in)    :: z
     character(len=*),  intent(in)    :: filename
     
-    integer :: l, ii, ll
+    integer :: l, ii, ll, is
     type(ps_psf_t) :: ps_psf !< SIESTA pseudopotential
     type(ps_cpi_t) :: ps_cpi !< Fritz-Haber pseudopotential
     type(ps_fhi_t) :: ps_fhi !< Fritz-Haber pseudopotential (from abinit)
@@ -298,6 +299,8 @@ contains
     SAFE_ALLOCATE(ps%ur_sq(1:ps%conf%p, 1:ps%ispin))
     SAFE_ALLOCATE(ps%h    (0:ps%l_max, 1:ps%kbc, 1:ps%kbc))
     SAFE_ALLOCATE(ps%density(1:ps%ispin))
+    SAFE_ALLOCATE(ps%density_der(1:ps%ispin))
+
     nullify(ps%k)
 
     call spline_init(ps%kb)
@@ -305,6 +308,7 @@ contains
     call spline_init(ps%vl)
     call spline_init(ps%core)
     call spline_init(ps%density)
+    call spline_init(ps%density_der)
     
     ! Now we load the necessary information.
     select case(ps%flavour)
@@ -328,6 +332,12 @@ contains
       call ps_qso_load(ps, ps_qso)
       call ps_qso_end(ps_qso)
     end select
+
+    if(ps_has_density(ps)) then 
+      do is = 1, ps%ispin
+        call spline_der(ps%density(is), ps%density_der(is))
+      end do
+    end if
 
     ! Fix the threshold to calculate the radius of the projector-function localization spheres:
 
@@ -445,7 +455,6 @@ contains
         call spline_der(ps%kb(l, j), ps%dkb(l, j))
       end do
     end do
-
 
     POP_SUB(ps_derivatives)
   end subroutine ps_derivatives
@@ -644,6 +653,7 @@ contains
     call spline_end(ps%core)
 
     call spline_end(ps%density)
+    call spline_end(ps%density_der)
 
     call logrid_end(ps%g)
 
@@ -654,6 +664,7 @@ contains
     SAFE_DEALLOCATE_P(ps%h)
     SAFE_DEALLOCATE_P(ps%k)
     SAFE_DEALLOCATE_A(ps%density)
+    SAFE_DEALLOCATE_A(ps%density_der)
 
     POP_SUB(ps_end)
   end subroutine ps_end
@@ -802,7 +813,6 @@ contains
         end do
 
         call spline_fit(g%nrval, g%rofi, dens, ps%density(is))
-
       end do
       
 
