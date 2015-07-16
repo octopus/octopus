@@ -126,7 +126,10 @@ contains
 
     integer :: iatom, jatom, ispecies, jspecies, ip, idir
     FLOAT :: rr, c6ab, c6abfree, ff, dffdrr, dffdr0
-    FLOAT, allocatable :: c6(:), r0(:), volume_ratio(:), dvadens(:), dvbdens(:), rij(:), dvadrr(:), dvbdrr(:)
+    FLOAT, allocatable :: c6(:), r0(:), volume_ratio(:), dvadens(:), dvbdens(:), rij(:), dvadrr(:), dvbdrr(:),&
+     coordinates(:,:), potential_coeff(:)
+
+    integer, allocatable :: zatom(:)
 
     PUSH_SUB(vdw_ts_calculate)
 
@@ -134,6 +137,10 @@ contains
     SAFE_ALLOCATE(c6(1:geo%natoms))
     SAFE_ALLOCATE(r0(1:geo%natoms))
     SAFE_ALLOCATE(volume_ratio(1:geo%natoms))
+    SAFE_ALLOCATE(coordinates(1:3, 1:geo%natoms))
+    SAFE_ALLOCATE(zatom(1:geo%natoms))
+    SAFE_ALLOCATE(potential_coeff(1:geo%natoms))
+    SAFE_ALLOCATE(dvadens(1:der%mesh%np))
     
     do iatom = 1, geo%natoms
       ispecies = species_index(geo%atom(iatom)%species)
@@ -141,12 +148,27 @@ contains
       
       c6(iatom) = volume_ratio(iatom)**2*this%c6free(ispecies)
       r0(iatom) = volume_ratio(iatom)**(CNST(1.0)/CNST(3.0))*this%r0free(ispecies)
-      print*, species_label(geo%atom(iatom)%species), "vol", volume_ratio(iatom)
+      
       !print*, species_label(geo%atom(iatom)%species), "c6 ", c6(iatom), this%c6free(ispecies)
       !print*, species_label(geo%atom(iatom)%species), "r0 ", r0(iatom), this%r0free(ispecies)
+
+      coordinates(1:3, iatom) = geo%atom(iatom)%x(1:3)
+      !print*, "iatom ", iatom, ": ", coordinates(1:3, iatom)
+      zatom(iatom) = species_z(geo%atom(iatom)%species)
+      !print*, species_label(geo%atom(iatom)%species),zatom(iatom)
     end do
 
-    SAFE_ALLOCATE(dvadens(1:der%mesh%np))
+    call vdw_calculate(geo%natoms, zatom, coordinates, volume_ratio, energy, force, potential_coeff)
+
+    potential = CNST(0.0)
+
+    do iatom = 1, geo%natoms
+      call hirshfeld_density_derivative(this%hirshfeld, iatom, dvadens)
+      !potential(1:der%mesh%np) = potential(1:der%mesh%np) + potential_coeff(iatom)*dvadens(1:der%mesh%np)
+    end do
+
+#if 0
+    !SAFE_ALLOCATE(dvadens(1:der%mesh%np))
     SAFE_ALLOCATE(dvbdens(1:der%mesh%np))
     SAFE_ALLOCATE(dvadrr(1:geo%space%dim))
     SAFE_ALLOCATE(dvbdrr(1:geo%space%dim))
@@ -157,14 +179,14 @@ contains
     
     do iatom = 1, geo%natoms
 
-      call hirshfeld_density_derivative(this%hirshfeld, iatom, dvadens)
-      call hirshfeld_position_derivative(this%hirshfeld, der, iatom, density, dvadrr)
+      !call hirshfeld_density_derivative(this%hirshfeld, iatom, dvadens)
+      !call hirshfeld_position_derivative(this%hirshfeld, der, iatom, density, dvadrr)
       
       do jatom = 1, geo%natoms
         if(iatom == jatom) cycle
 
-        call hirshfeld_density_derivative(this%hirshfeld, jatom, dvbdens)
-        call hirshfeld_position_derivative(this%hirshfeld, der, iatom, density, dvbdrr)
+        !call hirshfeld_density_derivative(this%hirshfeld, jatom, dvbdens)
+        !call hirshfeld_position_derivative(this%hirshfeld, der, iatom, density, dvbdrr)
         
         ispecies = species_index(geo%atom(iatom)%species)
         jspecies = species_index(geo%atom(jatom)%species)
@@ -210,7 +232,9 @@ contains
     call dio_function_output(1, "./", "vvdw", der%mesh, potential, unit_one, ip)
     
     print*, dmf_integrate(der%mesh, potential(1:der%mesh%np)*density(1:der%mesh%np, 1))
-    
+
+#endif    
+
     SAFE_DEALLOCATE_A(c6)
     SAFE_DEALLOCATE_A(r0)
     SAFE_DEALLOCATE_A(volume_ratio)

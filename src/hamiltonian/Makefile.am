@@ -44,7 +44,8 @@ libhamiltonian_a_SOURCES =         \
 	xc.F90                     \
 	ion_interaction.F90        \
 	hirshfeld.F90              \
-	vdw_ts.F90
+	vdw_ts.F90                 \
+	vdw_ts_low.c
 #       boundaries.F90             \
 #       boundaries_abs.F90         \
 #       boundaries_ecs.F90
