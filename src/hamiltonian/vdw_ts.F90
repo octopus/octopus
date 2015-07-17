@@ -124,6 +124,20 @@ contains
     FLOAT,               intent(out)   :: potential(:)
     FLOAT,               intent(out)   :: force(:, :)
 
+    interface 
+     subroutine f90_vdw_calculate(natoms, zatom, coordinates, volume_ratio, volume_ratio_derivative, &
+       energy, force, potential_coeff)
+        integer, intent(in)  :: natoms
+        integer, intent(in)  :: zatom
+        real(8), intent(in)  :: coordinates
+        real(8), intent(in)  :: volume_ratio
+        real(8), intent(in)  :: volume_ratio_derivative
+        real(8), intent(out) :: energy
+        real(8), intent(out) :: force
+        real(8), intent(out) :: potential_coeff
+      end subroutine f90_vdw_calculate
+    end interface
+
     integer :: iatom, jatom, ispecies, jspecies, ip, idir
     FLOAT :: rr, c6ab, c6abfree, ff, dffdrr, dffdr0
     FLOAT, allocatable :: c6(:), r0(:), volume_ratio(:), dvadens(:), dvadrr(:, :, :), coordinates(:,:), potential_coeff(:)
@@ -162,7 +176,8 @@ contains
 
     end do
 
-    call vdw_calculate(geo%natoms, zatom, coordinates, volume_ratio, dvadrr, energy, force, potential_coeff)
+    call f90_vdw_calculate(geo%natoms, zatom(1), coordinates(1, 1), volume_ratio(1), dvadrr(1, 1, 1), &
+      energy, force(1, 1), potential_coeff(1))
 
     potential = CNST(0.0)
 
