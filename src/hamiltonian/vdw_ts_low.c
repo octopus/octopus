@@ -560,8 +560,8 @@ void vdw_calculate (const int natoms, const int * zatom, const double * coordina
 
 #ifndef _TEST
 /* This is a wrapper to be called from Fortran. */
-void FC_FUNC_(vdw_calculate, VDW_CALCULATE) (const int * natoms, const int * zatom, const double * coordinates, const double * volume_ratio, double * energy, double * force, double * potential_coeff) {
-  vdw_calculate(*natoms, zatom, coordinates, volume_ratio, NULL, energy, force, potential_coeff);
+void FC_FUNC_(vdw_calculate, VDW_CALCULATE) (const int * natoms, const int * zatom, const double * coordinates, const double * volume_ratio,  const double * volume_ratio_derivative, double * energy, double * force, double * potential_coeff) {
+  vdw_calculate(*natoms, zatom, coordinates, volume_ratio, volume_ratio_derivative, energy, force, potential_coeff);
 }
 #endif
 

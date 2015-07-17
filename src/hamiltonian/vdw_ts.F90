@@ -126,14 +126,12 @@ contains
 
     integer :: iatom, jatom, ispecies, jspecies, ip, idir
     FLOAT :: rr, c6ab, c6abfree, ff, dffdrr, dffdr0
-    FLOAT, allocatable :: c6(:), r0(:), volume_ratio(:), dvadens(:), dvbdens(:), rij(:), dvadrr(:), dvbdrr(:),&
-     coordinates(:,:), potential_coeff(:)
+    FLOAT, allocatable :: c6(:), r0(:), volume_ratio(:), dvadens(:), dvadrr(:, :, :), coordinates(:,:), potential_coeff(:)
 
     integer, allocatable :: zatom(:)
 
     PUSH_SUB(vdw_ts_calculate)
 
-    SAFE_ALLOCATE(rij(1:geo%space%dim))
     SAFE_ALLOCATE(c6(1:geo%natoms))
     SAFE_ALLOCATE(r0(1:geo%natoms))
     SAFE_ALLOCATE(volume_ratio(1:geo%natoms))
@@ -141,6 +139,7 @@ contains
     SAFE_ALLOCATE(zatom(1:geo%natoms))
     SAFE_ALLOCATE(potential_coeff(1:geo%natoms))
     SAFE_ALLOCATE(dvadens(1:der%mesh%np))
+    SAFE_ALLOCATE(dvadrr(1:3, 1:geo%natoms, 1:geo%natoms))
     
     do iatom = 1, geo%natoms
       ispecies = species_index(geo%atom(iatom)%species)
@@ -156,9 +155,14 @@ contains
       !print*, "iatom ", iatom, ": ", coordinates(1:3, iatom)
       zatom(iatom) = species_z(geo%atom(iatom)%species)
       !print*, species_label(geo%atom(iatom)%species),zatom(iatom)
+
+      do jatom = 1, geo%natoms
+        call hirshfeld_position_derivative(this%hirshfeld, der, iatom, jatom, density, dvadrr(:, iatom, jatom))
+      end do
+
     end do
 
-    call vdw_calculate(geo%natoms, zatom, coordinates, volume_ratio, energy, force, potential_coeff)
+    call vdw_calculate(geo%natoms, zatom, coordinates, volume_ratio, dvadrr, energy, force, potential_coeff)
 
     potential = CNST(0.0)
 
@@ -177,7 +181,6 @@ contains
     SAFE_DEALLOCATE_A(r0)
     SAFE_DEALLOCATE_A(volume_ratio)
     SAFE_DEALLOCATE_A(dvadens)
-    SAFE_DEALLOCATE_A(dvbdens)
     
     POP_SUB(vdw_ts_calculate)
   end subroutine vdw_ts_calculate
