@@ -56,12 +56,13 @@ module pcm_m
     FLOAT :: r !< radius of the sphere (different for each species)
   end type
 
- !> The resulting cavity is discretized by a set of tesserae.  
+ !> The resulting cavity is discretized by a set of tesserae defined in 3d.  
+  integer, parameter :: pcm_dim_space = 3
   type, public :: tessera_t
-    FLOAT :: point(MAX_DIM)  !< representative point of the tessera 
-    FLOAT :: area            !< area of the tessera
-    FLOAT :: normal(MAX_DIM) !< unitary outgoing vector normal to the tessera surface 
-    FLOAT :: r_sphere        !< radius of the sphere to which the tessera belongs
+    FLOAT :: point(1:pcm_dim_space)  !< representative point of the tessera  
+    FLOAT :: area                    !< area of the tessera
+    FLOAT :: normal(1:pcm_dim_space) !< unitary outgoing vector normal to the tessera surface  
+    FLOAT :: r_sphere                !< radius of the sphere to which the tessera belongs
   end type tessera_t
 
   type pcm_t
@@ -80,7 +81,8 @@ module pcm_m
     FLOAT, allocatable           :: v_n(:)        !< Electrostatic potential produced by nuclei at each tessera
     FLOAT, allocatable           :: v_e_rs(:)     !< PCM real-space potential produced by q_e(:) 
     FLOAT, allocatable           :: v_n_rs(:)     !< PCM real-space potential produced by q_n(:)
-    FLOAT, allocatable           :: arg_li(:,:)   !< 
+    FLOAT, allocatable           :: arg_li(:,:)   !< used in the trilinear interpolation to estimate the Hartree potential
+                                                  !< at the tesserae representative points 
     FLOAT                        :: epsilon_0     !< Static dielectric constant of the solvent 
     FLOAT                        :: epsilon_infty !< Infinite-frequency dielectric constant of the solvent
     FLOAT                        :: gaussian_width!< Parameter to change the width of density of polarization charges  
@@ -153,9 +155,8 @@ contains
 
     call parse_variable('Solvation', .false., pcm%run_pcm)
     if (pcm%run_pcm) then
-      if (grid%sb%box_shape /= MINIMUM) then
-        message(1) = "PCM is only available for BoxShape = minimum"
-        call messages_fatal(1)
+      if ( (grid%sb%box_shape /= MINIMUM).OR.(grid%sb%dim /= pcm_dim_space) ) then
+        message(1) = "PCM is only available for BoxShape = minimum and 3d calculations"
       else 
         call messages_experimental("polarizable continuum model")
       end if
@@ -230,6 +231,10 @@ contains
      end do
     
      SAFE_ALLOCATE( pcm%spheres(1:pcm%n_spheres) )
+     pcm%spheres(:)%x = M_ZERO
+     pcm%spheres(:)%y = M_ZERO
+     pcm%spheres(:)%z = M_ZERO        
+     pcm%spheres(:)%r = M_ZERO
     
      pcm%n_spheres = 0
      do ia = 1, geo%natoms
@@ -303,6 +308,13 @@ contains
 
      SAFE_ALLOCATE(pcm%tess(1:pcm%n_tesserae))
 
+     do ia=1, pcm%n_tesserae
+       pcm%tess(ia)%point    = M_ZERO
+       pcm%tess(ia)%area     = M_ZERO
+       pcm%tess(ia)%r_sphere = M_ZERO
+       pcm%tess(ia)%normal   = M_ZERO
+     end do
+    
      !> Generating the Van der Waals discretized surface of the solute system
      call cav_gen(1, 1, pcm%n_spheres, pcm%spheres, pcm%n_tesserae, pcm%tess, pcm%info_unit)
 
@@ -321,6 +333,13 @@ contains
      endif
     
      SAFE_ALLOCATE(pcm%tess(1:pcm%n_tesserae))
+
+     do ia=1, pcm%n_tesserae
+       pcm%tess(ia)%point    = M_ZERO
+       pcm%tess(ia)%area     = M_ZERO
+       pcm%tess(ia)%r_sphere = M_ZERO
+       pcm%tess(ia)%normal   = M_ZERO
+     end do
     
      do ia=1, pcm%n_tesserae
        read(iunit,*) pcm%tess(ia)%point(1)
@@ -376,7 +395,7 @@ contains
     SAFE_ALLOCATE(pcm%ind_vh(1:pcm%n_tesserae, 1:pcm%n_vertices))
     pcm%ind_vh = INT(M_ZERO)
     
-    SAFE_ALLOCATE(pcm%arg_li(1:pcm%n_tesserae, 1:grid%mesh%sb%dim))
+    SAFE_ALLOCATE(pcm%arg_li(1:pcm%n_tesserae, 1:pcm_dim_space))
     pcm%arg_li = M_ZERO
 
     !> Creating the list of the nearest grid points to each tessera
@@ -500,7 +519,7 @@ contains
     type(tessera_t), intent(in)  :: tess(:)    !< (1:n_tess)
     integer, intent(in)          :: n_tess
 
-    FLOAT   :: diff(1:MAX_DIM)
+    FLOAT   :: diff(1:pcm_dim_space)
     FLOAT   :: dist
     FLOAT   :: z_ia
     integer :: ik
@@ -510,12 +529,13 @@ contains
 
     PUSH_SUB(v_nuclei_cav)
 
+    diff = M_ZERO
     v_n_cav = M_ZERO
 
     do ik = 1, n_tess
       do ia = 1, geo%natoms
-        diff = geo%atom(ia)%x - tess(ik)%point
 
+        diff = geo%atom(ia)%x(1:pcm_dim_space) - tess(ik)%point
         dist = dot_product( diff, diff )
         dist = sqrt(dist)
 
@@ -541,7 +561,7 @@ contains
     FLOAT, intent(out)           :: E_int_ne 
     FLOAT, intent(out)           :: E_int_nn 
 
-    FLOAT   :: diff(1:MAX_DIM)
+    FLOAT   :: diff(1:pcm_dim_space)
     FLOAT   :: dist
     FLOAT   :: z_ia
     integer :: ik
@@ -555,6 +575,8 @@ contains
     E_int_en = M_ZERO
     E_int_ne = M_ZERO
     E_int_nn = M_ZERO
+
+    diff = M_ZERO
     
     do ik = 1, pcm%n_tesserae
       
@@ -562,8 +584,8 @@ contains
       E_int_en = E_int_en + pcm%v_e(ik)*pcm%q_n(ik)
       
       do ia = 1, geo%natoms
-        diff = geo%atom(ia)%x - pcm%tess(ik)%point 
-        
+
+        diff = geo%atom(ia)%x(1:pcm_dim_space) - pcm%tess(ik)%point
         dist = dot_product( diff, diff )
         dist = sqrt(dist)
 
@@ -587,7 +609,7 @@ contains
   !> Creating the list of the nearest 8 cube vertices in real-space 
   !! to calculate the Hartree potential at 'point'
   subroutine nearest_cube_vertices(point, mesh, vert_idx, weight_li)
-    FLOAT, intent(in)        :: point(1:MAX_DIM)
+    FLOAT, intent(in)        :: point(:)!< (1:pcm_dim_space)
     type(mesh_t), intent(in) :: mesh
     integer, intent(out)     :: vert_idx(:)
     FLOAT, intent(out)       :: weight_li(:)
@@ -595,25 +617,30 @@ contains
     FLOAT   :: dmin
     integer :: rankmin
 
-    FLOAT   :: coord_0(1:MAX_DIM)
+    FLOAT   :: coord_0(1:pcm_dim_space)
     integer :: sign_x
     integer :: sign_y
     integer :: sign_z
-    integer :: point_0(1:MAX_DIM)
-    integer :: point_f(1:MAX_DIM)
+    integer :: point_0(1:pcm_dim_space)
+    integer :: point_f(1:pcm_dim_space)
 
     PUSH_SUB(nearest_cube_vertices)    
 
+    coord_0 = M_ZERO
+    point_0 = 0
+    point_f = 0
+
     vert_idx(1) = mesh_nearest_point(mesh, point, dmin, rankmin)
 
-    coord_0 = mesh%x(vert_idx(1), :)
-    point_0 = NINT(coord_0/mesh%spacing)
+    coord_0 = mesh%x(vert_idx(1), 1:pcm_dim_space)
+
+    point_0 = NINT(coord_0/mesh%spacing(1:pcm_dim_space))
 
     sign_x = INT( sign( CNST(1.0), point(1) - coord_0(1) ) )
     sign_y = INT( sign( CNST(1.0), point(2) - coord_0(2) ) )
     sign_z = INT( sign( CNST(1.0), point(3) - coord_0(3) ) )
 
-    weight_li = ABS(point - coord_0)/mesh%spacing 
+    weight_li = ABS(point - coord_0)/mesh%spacing(1:pcm_dim_space)
 
     !FRONT CUBE PLANE
     point_f = point_0
@@ -873,13 +900,14 @@ contains
     FLOAT, parameter :: M_SD_DIAG    = CNST(1.0694)
     FLOAT, parameter :: M_DIST_MIN   = CNST(0.1)
     
-    FLOAT :: diff(1:MAX_DIM)
+    FLOAT :: diff(1:pcm_dim_space)
     FLOAT :: dist
     FLOAT :: s_diag
     FLOAT :: s_off_diag
 
     s_diag = M_ZERO
     s_off_diag = M_ZERO
+    diff = M_ZERO
 
     diff = tessi%point - tessj%point
 
@@ -908,13 +936,14 @@ contains
     FLOAT, parameter :: M_SD_DIAG    = CNST(1.0694)
     FLOAT, parameter :: M_DIST_MIN   = CNST(0.04)
 
-    FLOAT :: diff(1:MAX_DIM)
+    FLOAT :: diff(1:pcm_dim_space)
     FLOAT :: dist
     FLOAT :: d_diag
     FLOAT :: d_off_diag
 
     d_diag = M_ZERO
     d_off_diag = M_ZERO
+    diff = M_ZERO
 
     diff = tessi%point - tessj%point
 
@@ -950,8 +979,8 @@ contains
     integer, intent(out) :: nts
     integer, intent(in)  :: unit_pcminfo
  
-    type(sphere_t),   intent(inout) :: sfe(:)
-    type(tessera_t),  intent(out)   :: cts(:)
+    type(sphere_t),   intent(inout) :: sfe(:) !< (1:pcm%n_spheres)
+    type(tessera_t),  intent(out)   :: cts(:) !< (1:pcm%n_tesserae)
 
     integer, parameter :: dim_angles = 24
     integer, parameter :: dim_ten = 10
@@ -963,7 +992,7 @@ contains
     FLOAT :: thev(1:dim_angles)
     FLOAT :: fiv(1:dim_angles)
     FLOAT :: fir
-    FLOAT :: cv(1:dim_vertices, 1:MAX_DIM)
+    FLOAT :: cv(1:dim_vertices, 1:pcm_dim_space)
     FLOAT :: th
     FLOAT :: fi
     FLOAT :: cth
@@ -973,12 +1002,12 @@ contains
     FLOAT :: yctst(tess_sphere*n_tess_sphere)
     FLOAT :: zctst(tess_sphere*n_tess_sphere)
     FLOAT :: ast(tess_sphere*n_tess_sphere)
-    FLOAT :: nctst(MAX_DIM, tess_sphere*n_tess_sphere)
+    FLOAT :: nctst(pcm_dim_space, tess_sphere*n_tess_sphere)
 
-    FLOAT :: pts(1:MAX_DIM, 1:dim_ten)
-    FLOAT :: pp(1:MAX_DIM)
-    FLOAT :: pp1(1:MAX_DIM)
-    FLOAT :: ccc(1:MAX_DIM, 1:dim_ten)
+    FLOAT :: pts(1:pcm_dim_space, 1:dim_ten)
+    FLOAT :: pp(1:pcm_dim_space)
+    FLOAT :: pp1(1:pcm_dim_space)
+    FLOAT :: ccc(1:pcm_dim_space, 1:dim_ten)
       
     integer :: idum(1:n_tess_sphere*max_vertices)
     integer :: jvt1(1:max_vertices,1:n_tess_sphere)
@@ -1329,10 +1358,10 @@ contains
     integer, intent(in)        :: ns 
     integer, intent(in)        :: nesf
     integer, intent(inout)     :: nv
-    FLOAT, intent(inout)       :: pts(:,:) !< (1:MAX_DIM, 1:dim_ten)
-    FLOAT, intent(out)         :: ccc(:,:) !< (1:MAX_DIM, 1:dim_ten)
-    FLOAT, intent(out)         :: pp(:)    !< (1:MAX_DIM)
-    FLOAT, intent(out)         :: pp1(:)   !< (1:MAX_DIM)
+    FLOAT, intent(inout)       :: pts(:,:) !< (1:pcm_dim_space, 1:dim_ten)
+    FLOAT, intent(out)         :: ccc(:,:) !< (1:pcm_dim_space, 1:dim_ten)
+    FLOAT, intent(out)         :: pp(:)    !< (1:pcm_dim_space)
+    FLOAT, intent(out)         :: pp1(:)   !< (1:pcm_dim_space)
     FLOAT, intent(out)         :: area
 
     FLOAT, parameter   :: tol = -CNST(1.0e-10)
@@ -1349,15 +1378,15 @@ contains
     integer :: icut
     integer :: jj
 
-    FLOAT  :: p1(1:MAX_DIM)
-    FLOAT  :: p2(1:MAX_DIM)
-    FLOAT  :: p3(1:MAX_DIM)
-    FLOAT  :: p4(1:MAX_DIM)
-    FLOAT  :: point(1:MAX_DIM)
-    FLOAT  :: pscr(1:MAX_DIM,1:dim_ten)
-    FLOAT  :: cccp(1:MAX_DIM,1:dim_ten)
-    FLOAT  :: pointl(1:MAX_DIM,1:dim_ten)
-    FLOAT  :: diff(1:MAX_DIM)
+    FLOAT  :: p1(1:pcm_dim_space)
+    FLOAT  :: p2(1:pcm_dim_space)
+    FLOAT  :: p3(1:pcm_dim_space)
+    FLOAT  :: p4(1:pcm_dim_space)
+    FLOAT  :: point(1:pcm_dim_space)
+    FLOAT  :: pscr(1:pcm_dim_space,1:dim_ten)
+    FLOAT  :: cccp(1:pcm_dim_space,1:dim_ten)
+    FLOAT  :: pointl(1:pcm_dim_space,1:dim_ten)
+    FLOAT  :: diff(1:pcm_dim_space)
 
     integer :: ind(1:dim_ten)
     integer :: ltyp(1:dim_ten)
@@ -1373,7 +1402,17 @@ contains
 
     PUSH_SUB(subtessera)
 
-    area = M_ZERO
+    p1     = M_ZERO
+    p2     = M_ZERO
+    p3     = M_ZERO
+    p4     = M_ZERO
+    point  = M_ZERO
+    pscr   = M_ZERO
+    cccp   = M_ZERO
+    pointl = M_ZERO
+    diff   = M_ZERO
+    area   = M_ZERO
+
     do jj=1, 3
       ccc(1,jj) = sfe(ns)%x
       ccc(2,jj) = sfe(ns)%y
@@ -1558,10 +1597,10 @@ contains
      !! of p1 and p2 with the 'alpha' parameter optimized iteratively.
   subroutine inter( sfe, p1, p2, p3, p4, ns, ia)
     type(sphere_t), intent(in) :: sfe(:) !< (1:nesf)
-    FLOAT, intent(in)          :: p1(:)  !< (1:MAX_DIM)
-    FLOAT, intent(in)          :: p2(:)  !< (1:MAX_DIM)
-    FLOAT, intent(in)          :: p3(:)  !< (1:MAX_DIM)
-    FLOAT, intent(out)         :: p4(:)  !< (1:MAX_DIM)
+    FLOAT, intent(in)          :: p1(:)  !< (1:pcm_dim_space)
+    FLOAT, intent(in)          :: p2(:)  !< (1:pcm_dim_space)
+    FLOAT, intent(in)          :: p3(:)  !< (1:pcm_dim_space)
+    FLOAT, intent(out)         :: p4(:)  !< (1:pcm_dim_space)
       
     integer, intent(in) :: ns
     integer, intent(in) :: ia
@@ -1574,9 +1613,11 @@ contains
     FLOAT  :: delta
     FLOAT  :: dnorm
     FLOAT  :: diff
-    FLOAT  :: diff_vec(1:MAX_DIM)
+    FLOAT  :: diff_vec(1:pcm_dim_space)
 
     logical :: band_iter
+
+    diff_vec = M_ZERO
 
     diff_vec = p1 - p3
     r = sqrt( dot_product(diff_vec, diff_vec) )
@@ -1631,22 +1672,23 @@ contains
     !! Beta(n): external angle respect to vertex 'n'.
   subroutine gaubon( sfe, nv, ns, pts, ccc, pp, pp1, area, intsph )
     type(sphere_t), intent(in) :: sfe(:)    !< (1:nesf)
-    FLOAT, intent(in)          :: pts(:,:)  !< (1:MAX_DIM,1:dim_ten) 
-    FLOAT, intent(in)          :: ccc(:,:)  !< (1:MAX_DIM,1:dim_ten)
-    FLOAT, intent(inout)       :: pp(:)     !< (1:MAX_DIM)
-    FLOAT, intent(inout)       :: pp1(:)    !< (1:MAX_DIM)
+    FLOAT, intent(in)          :: pts(:,:)  !< (1:pcm_dim_space,1:dim_ten) 
+    FLOAT, intent(in)          :: ccc(:,:)  !< (1:pcm_dim_space,1:dim_ten)
+    FLOAT, intent(inout)       :: pp(:)     !< (1:pcm_dim_space)
+    FLOAT, intent(inout)       :: pp1(:)    !< (1:pcm_dim_space)
     integer, intent(in)        :: intsph(:) !< (1:dim_ten)
     FLOAT, intent(out)         :: area
     integer, intent(in)        :: nv
     integer, intent(in)        :: ns
 
-    FLOAT :: p1(1:MAX_DIM)
-    FLOAT :: p2(1:MAX_DIM)
-    FLOAT :: p3(1:MAX_DIM)
-    FLOAT :: u1(1:MAX_DIM)
-    FLOAT :: u2(1:MAX_DIM)
-    FLOAT :: point_1(1:MAX_DIM)
-    FLOAT :: point_2(1:MAX_DIM)
+    FLOAT :: p1(1:pcm_dim_space)
+    FLOAT :: p2(1:pcm_dim_space)
+    FLOAT :: p3(1:pcm_dim_space)
+    FLOAT :: u1(1:pcm_dim_space)
+    FLOAT :: u2(1:pcm_dim_space)
+    FLOAT :: point_1(1:pcm_dim_space)
+    FLOAT :: point_2(1:pcm_dim_space)
+
     FLOAT :: tpi
     FLOAT :: sum1
     FLOAT :: dnorm
@@ -1667,10 +1709,16 @@ contains
 
     PUSH_SUB(gaubon)
 
-    tpi = M_TWO*M_Pi
-    sum1 = M_ZERO
     point_1 = M_ZERO
     point_2 = M_ZERO
+    p1      = M_ZERO
+    p2      = M_ZERO
+    p3      = M_ZERO
+    u1      = M_ZERO
+    u2      = M_ZERO
+
+    tpi = M_TWO*M_Pi
+    sum1 = M_ZERO
     do nn = 1, nv
      point_1 = pts(:,nn) - ccc(:,nn)
      if (nn < nv) then
@@ -1773,11 +1821,12 @@ contains
 
   !> calculates the vectorial product p3 = p1 x p2
   subroutine vecp(p1, p2, p3, dnorm)
-    FLOAT, intent(in)  :: P1(:) !< (1:MAX_DIM)
-    FLOAT, intent(in)  :: P2(:) !< (1:MAX_DIM)
-    FLOAT, intent(out) :: P3(:) !< (1:MAX_DIM)
+    FLOAT, intent(in)  :: P1(:) !< (1:pcm_dim_space)
+    FLOAT, intent(in)  :: P2(:) !< (1:pcm_dim_space)
+    FLOAT, intent(out) :: P3(:) !< (1:pcm_dim_space)
     FLOAT, intent(out) :: dnorm
 
+    p3 = M_ZERO
     p3(1) = p1(2)*p2(3) - p1(3)*p2(2)
     p3(2) = p1(3)*p2(1) - p1(1)*p2(3)
     P3(3) = p1(1)*p2(2) - p1(2)*p2(1)
