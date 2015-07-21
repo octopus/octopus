@@ -649,7 +649,7 @@ contains
     FLOAT,           intent(in)    :: excess_charge
     type(kpoints_t), intent(in)    :: kpoints
 
-    integer :: ik, ist, ispin, nspin, ncols, nrows, el_per_state, icol, start_pos
+    integer :: ik, ist, ispin, nspin, ncols, nrows, el_per_state, icol, start_pos, spin_n
     type(block_t) :: blk
     FLOAT :: rr, charge
     logical :: integral_occs
@@ -757,15 +757,25 @@ contains
 
       SAFE_ALLOCATE(read_occs(1:ncols, 1:st%d%nik))
 
+      charge_in_block = M_ZERO
       do ik = 1, st%d%nik
         do icol = 1, ncols
           call parse_block_float(blk, ik - 1, icol - 1, read_occs(icol, ik))
+          charge_in_block = charge_in_block + read_occs(icol, ik) * st%d%kweights(ik)
         end do
       end do
-
-      charge_in_block = sum(read_occs)
-
-      start_pos = int((st%qtot - charge_in_block)/(el_per_state*st%d%nik))
+      
+      spin_n = 2
+      select case(st%d%ispin)
+        case(UNPOLARIZED) 
+          spin_n = 2 
+        case(SPIN_POLARIZED)
+          spin_n = 2
+        case(SPINORS)
+          spin_n = 1         
+      end select 
+      
+      start_pos = int((st%qtot - charge_in_block)/spin_n)
 
       if(start_pos + ncols > st%nst) then
         message(1) = "To balance charge, the first column in block Occupations is taken to refer to state"
