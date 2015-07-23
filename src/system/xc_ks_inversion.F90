@@ -312,7 +312,7 @@ contains
     call hamiltonian_update(aux_hm, gr%mesh)
     call eigensolver_run(eigensolver, gr, st, aux_hm, 1)
     call density_calc(st, gr, st%rho)
-    
+
     SAFE_DEALLOCATE_A(sqrtrho)
     SAFE_DEALLOCATE_A(laplace)
     SAFE_DEALLOCATE_A(vks)
@@ -322,6 +322,8 @@ contains
 
 
   ! iterative inversion of KS potential from the density
+  ! here states are used to iterate KS solution and update of the VHXC potential,
+  ! then new calculation of rho.
   ! ---------------------------------------------------------
   subroutine invertks_iter(target_rho, nspin, aux_hm, gr, st, eigensolver, asymptotics)
     type(grid_t),        intent(in)    :: gr
@@ -406,6 +408,9 @@ contains
       
       counter = counter + 1 
       beta = diffdensity*0.001 !parameter to avoid numerical problems due to small denominator
+
+      ! proposition to increase convergence speed progressively
+      alpha = max (0.05, 0.5 - diffdensity*100.*0.45)
   
       if(verbosity == 2) then
         write(fname,'(i6.6)') counter
@@ -423,18 +428,19 @@ contains
       do ii = 1, nspin
         do jj = 1, np
           vhxc(jj, ii) = vhxc(jj, ii) &
-                       + ((st%rho(jj, ii) - target_rho(jj, ii))/(target_rho(jj, ii) + beta))*alpha
+             + ((st%rho(jj, ii) - target_rho(jj, ii))/(target_rho(jj, ii) + beta))*alpha
         end do
       end do
 
       diffdensity = M_ZERO
-      do jj = 1, nspin
-        do ii = 1, np
-          if (abs(st%rho(ii,jj)-target_rho(ii,jj)) > diffdensity) then
-            diffdensity = abs(st%rho(ii,jj)-target_rho(ii,jj))
-          end if
-        end do
-      end do
+      diffdensity = maxval ( abs ( st%rho(1:np,1:nspin)-target_rho(1:np,1:nspin) ) )
+      !do jj = 1, nspin
+      !  do ii = 1, np
+      !    if (abs(st%rho(ii,jj)-target_rho(ii,jj)) > diffdensity) then
+      !      diffdensity = abs(st%rho(ii,jj)-target_rho(ii,jj))
+      !    end if
+      !  end do
+      !end do
             
       if(verbosity == 1 .or. verbosity == 2) then
         write(iunit,'(i6.6)', ADVANCE = 'no') counter
@@ -543,16 +549,23 @@ contains
         ks_inversion%aux_hm%vhxc(:,ii) = ks_inversion%vhxc_previous_step(:,ii)
       end do
     else 
+! no restart data available, start with vhxc = vh, which we know from exact input rho
       do ii = 1, st%d%nspin
         ks_inversion%aux_hm%vxc(:,ii)  = M_ZERO !hm%ep%vpsl(:)
         ks_inversion%aux_hm%vhxc(:,ii) = ks_inversion%aux_hm%vhartree(:) + ks_inversion%aux_hm%vxc(:,ii)
       end do
+! TODO: restart data found. Use first KS orbital to invert equation and get starting vhxc
+!      call invertks_2part(ks_inversion%aux_st%rho, st%d%nspin, ks_inversion%aux_hm, gr, &
+!                         ks_inversion%aux_st, ks_inversion%eigensolver, ks_inversion%asymp)
+
     end if
     !ks_inversion%aux_hm%ep%vpsl(:)  = M_ZERO ! hm%ep%vpsl(:)
     ks_inversion%aux_hm%ep%vpsl(:)  = hm%ep%vpsl(:)
 
     ! compute ks inversion, vhxc contains total KS potential
     
+    ! these 2 routines need to be cleaned - they are not consistent in updating 
+    ! the hamiltonian, states, etc...
     select case (ks_inversion%method)
     ! adiabatic ks inversion
     case(XC_INV_METHOD_TWO_PARTICLE)
@@ -563,7 +576,8 @@ contains
                          ks_inversion%aux_st, ks_inversion%eigensolver, ks_inversion%asymp)
     end select
 
-    !subtract external and Hartree potentials, ATTENTION: subtracts true external potential not adiabatic one 
+    ! subtract Hartree potential
+    ! ATTENTION: subtracts true external potential not adiabatic one 
     
     do ii = 1, st%d%nspin
       ks_inversion%aux_hm%vxc(:,ii)  = ks_inversion%aux_hm%vhxc(:,ii) - hm%vhartree(:)
@@ -571,6 +585,7 @@ contains
 
     vxc = ks_inversion%aux_hm%vxc
     
+    ! save vhxc for next step if we are running td
     if (present(time)) then
 !      write(*,*) 'debug 2'
       ks_inversion%vhxc_previous_step = ks_inversion%aux_hm%vhxc
