@@ -209,8 +209,13 @@ contains
     !% in the PSF format for some elements: H, Li, C, N, O, Na, Si, S, Ti, Se, Cd.
     !%Option sg15 2
     !% (experimental) The set of Optimized Norm-Conserving Vanderbilt
-    !% PBE pseudopotentials (<a href=http://arxiv.org/abs/1502.00995>M. Schlipf and F. Gygi, 2015</a>).
-    !% This set provides pseudopotentials for most elements.
+    !% PBE pseudopotentials (<a
+    !% href="http://dx.doi.org/10.1016/j.cpc.2015.05.011">M. Schlipf
+    !% and F. Gygi, Comp. Phys. Commun. doi:10.1016/j.cpc.2015.05.011
+    !% (2015)</a>).
+    !%
+    !% This set provides pseudopotentials for elements up to Z = 83
+    !% (Bi) excluding Lanthanides.
     !%Option hgh_lda 3
     !% The set of Hartwigsen-Goedecker-Hutter LDA pseudopotentials
     !% for elements from H to Rn. For many species a semi-core variant
@@ -218,10 +223,10 @@ contains
     !% element name.
     !% Ref: C. Hartwigsen, S. Goedecker, and J. Hutter, <i>Phys. Rev. B</i> <b>58</b>, 3641 (1998).
     !%Option hscv_lda 4
-    !% The set of Hamann-Schlueter-Chiang-Vanderbilt (HSCV) potentials
+    !% (experimental) The set of Hamann-Schlueter-Chiang-Vanderbilt (HSCV) potentials
     !% for LDA exchange and correlation downloaded from
     !%
-    !%  http://fpmd.ucdavis.edu/potentials/index.htm
+    !%  http://fpmd.ucdavis.edu/potentials/index.htm .
     !%
     !% These pseudopotentials were originally intended for the QBox
     !% code. They were generated using the method of Hamann, Schluter
@@ -233,8 +238,8 @@ contains
     !% potentials were not tested. Potentials should be thoroughly
     !% tested before being used in simulations.
     !%Option hscv_pbe 5
-    !% PBE version of the HSCV pseudopotentials. Check the
-    !% documentation of the option hscv_lda for details and warnings.
+    !% (experimental) PBE version of the HSCV pseudopotentials. Check the
+    !% documentation of the option <tt>hscv_lda</tt> for details and warnings.
     !%End
 
     call parse_variable('PseudopotentialSet', OPTION_STANDARD, pseudo_set)
