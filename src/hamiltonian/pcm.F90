@@ -157,6 +157,7 @@ contains
     if (pcm%run_pcm) then
       if ( (grid%sb%box_shape /= MINIMUM).OR.(grid%sb%dim /= pcm_dim_space) ) then
         message(1) = "PCM is only available for BoxShape = minimum and 3d calculations"
+        call messages_fatal(1)
       else 
         call messages_experimental("polarizable continuum model")
       end if

@@ -162,9 +162,25 @@ contains
         ASSERT(associated(subsys_hm))
         call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, subsys_hm)
         nullify(subsys_model, subsys_hm)
+
+        ! At present, PCM calculations in parallel must have ParallelizationStrategy = par_states
+        if (hm%pcm%run_pcm) then 
+           if ( (sys%mc%par_strategy /= P_STRATEGY_SERIAL).and.(sys%mc%par_strategy /= P_STRATEGY_STATES) ) then
+            message(1) = "Parallel calculations with PCM are only possible with ParallelizationStrategy=par_states"
+            call messages_fatal(1)
+           endif
+        endif
       else
         call system_init(sys)
         call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family)
+
+        ! At present, PCM calculations in parallel must have ParallelizationStrategy = par_states
+        if (hm%pcm%run_pcm) then 
+           if ( (sys%mc%par_strategy /= P_STRATEGY_SERIAL).and.(sys%mc%par_strategy /= P_STRATEGY_STATES) ) then
+            message(1) = "Parallel calculations with PCM are only possible with ParallelizationStrategy=par_states"
+            call messages_fatal(1)
+           endif
+        endif
       end if
       
       call messages_print_stress(stdout, 'Approximate memory requirements')
