@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-## Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
+## Copyright (C) 2015 X. Andrade
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -17,34 +17,6 @@
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 ## 02110-1301, USA.
 ##
-## $Id$
+## $Id: Makefile.am 13390 2015-03-18 15:21:52Z xavier $
 
-SUBDIRS = PSF HGH UPF CPI FHI sg15 hscv
-
-ppdir = $(pkgdatadir)/pseudopotentials
-
-dist_pp_DATA =           \
-	standard.set     \
-	sg15.set         \
-	hgh_lda.set      \
-	hscv_lda.set     \
-	hscv_pbe.set     \
-	elements
-
-# In order to get `make check' working with a `VPATH' build (e. g. to use
-# the `distcheck' target) the pseudopotential files have to be accessible
-# in the build tree.
-check:
-	for f in $(dist_pp_DATA); do \
-	  if [ ! -e $$f -o $$f -ot $(srcdir)/$$f ]; then \
-	    cp $(srcdir)/$$f $$f; \
-	  fi \
-	done
-
-clean-local:
-	if [ -n "$(top_builddir)" -a "$(top_builddir)" != "$(top_srcdir)" ]; then \
-	  rm -f $(dist_pp_DATA); \
-	fi
-
-.PHONY: check
-
+SUBDIRS = lda pbe

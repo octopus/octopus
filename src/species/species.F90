@@ -217,11 +217,31 @@ contains
     !% is available, it can be obtained by appending <tt>_sc</tt> to the
     !% element name.
     !% Ref: C. Hartwigsen, S. Goedecker, and J. Hutter, <i>Phys. Rev. B</i> <b>58</b>, 3641 (1998).
+    !%Option hscv_lda 4
+    !% The set of Hamann-Schlueter-Chiang-Vanderbilt (HSCV) potentials
+    !% for LDA exchange and correlation downloaded from
+    !%
+    !%  http://fpmd.ucdavis.edu/potentials/index.htm
+    !%
+    !% These pseudopotentials were originally intended for the QBox
+    !% code. They were generated using the method of Hamann, Schluter
+    !% and Chiang, as modified by Vanderbilt (Phys. Rev. B32, 8412
+    !% (1985))
+    !%
+    !% Warning from the original site: The potentials provided in this
+    !% site are distributed without warranty. In most cases,
+    !% potentials were not tested. Potentials should be thoroughly
+    !% tested before being used in simulations.
+    !%Option hscv_pbe 5
+    !% PBE version of the HSCV pseudopotentials. Check the
+    !% documentation of the option hscv_lda for details and warnings.
     !%End
 
     call parse_variable('PseudopotentialSet', OPTION_STANDARD, pseudo_set)
     call messages_print_var_option(stdout, 'PseudopotentialSet', pseudo_set)
     if(pseudo_set == OPTION_SG15) call messages_experimental('PseudopotentialSet = sg15')
+    if(pseudo_set == OPTION_HSCV_LDA) call messages_experimental('PseudopotentialSet = hscv_lda')
+    if(pseudo_set == OPTION_HSCV_PBE) call messages_experimental('PseudopotentialSet = hscv_pbe')
 
     POP_SUB(species_init_global)
   end subroutine species_init_global
@@ -475,6 +495,10 @@ contains
       fname = trim(conf%share)//'/pseudopotentials/sg15.set'
     case(OPTION_HGH_LDA)
       fname = trim(conf%share)//'/pseudopotentials/hgh_lda.set'
+    case(OPTION_HSCV_LDA)
+      fname = trim(conf%share)//'/pseudopotentials/hscv_lda.set'
+    case(OPTION_HSCV_PBE)
+      fname = trim(conf%share)//'/pseudopotentials/hscv_pbe.set'
     case default
       ASSERT(.false.)
     end select
@@ -1352,10 +1376,17 @@ contains
 
     read_data = 8
 
-    ! get the mass for this element
+    ! get the mass and atomic number for this element
     call element_init(element, label)
+
     ASSERT(element_valid(element))
+
     spec%mass = element_mass(element)
+
+    if(spec%z < 0) then
+      spec%z = element_atomic_number(element)
+    end if
+    
     call element_end(element)
     
     POP_SUB(read_from_default_file)
