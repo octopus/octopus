@@ -78,6 +78,39 @@ AC_DEFUN([ACX_FFT],
     AC_DEFINE(HAVE_FFTW3_THREADS, 1,[Define if the threaded version of FFTW3 is available.])
   fi
 
+  dnl Check for distributed FFTW3 library
+  AC_MSG_CHECKING([for fftw_mpi_init in $LIBS_FFT])
+
+testprogram="AC_LANG_PROGRAM([],[ 
+    use, intrinsic :: iso_c_binding
+    implicit none
+
+    include 'fftw3-mpi.f03'
+
+    call MPI_Init
+    call fftw_mpi_init
+    call MPI_Finalize
+  ])"
+
+  if test x"$acx_mpi_ok" != xyes; then
+     AC_MSG_RESULT([requires MPI])
+     acx_fft_mpi_ok=no
+  else
+	AC_LINK_IFELSE($testprogram, [acx_fft_mpi_ok=yes], [acx_fft_mpi_ok=no])
+  	AC_MSG_RESULT([$acx_fft_mpi_ok])
+  	if test x"$acx_fft_mpi_ok" != xyes; then
+    	   LIBS="$LIBS -lfftw3_mpi -lfftw3"
+    	   AC_MSG_CHECKING([for fftw_mpi_init in $LIBS_FFT -lfftw3_mpi -lfftw3])
+    	   AC_LINK_IFELSE($testprogram,[acx_fft_mpi_ok=yes; LIBS_FFT="$LIBS_FFT -lfftw3_mpi -lfftw3"],
+    	   						    [acx_fft_mpi_ok=no])
+    							    AC_MSG_RESULT([$acx_fft_mpi_ok])
+        fi
+
+  fi
+  if test x"$acx_fft_mpi_ok" = xyes; then  
+    AC_DEFINE(HAVE_FFTW3_MPI, 1,[Define if the distributed version of FFTW3 is available.])
+  fi
+
   AC_SUBST(LIBS_FFT)
   LIBS="$acx_fft_save_LIBS"
 
