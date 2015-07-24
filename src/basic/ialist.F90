@@ -140,6 +140,7 @@ contains
       SAFE_ALLOCATE(ptr)
       ptr%key  =  key
       ptr%val  =  val
+      nullify(ptr%next)
       l%head   => ptr
       l%length =  1
     ! List is not empty.
