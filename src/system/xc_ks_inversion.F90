@@ -407,10 +407,10 @@ contains
       call messages_info(1)
       
       counter = counter + 1 
-      beta = diffdensity*0.001 !parameter to avoid numerical problems due to small denominator
+      beta = diffdensity*CNST(0.001) !parameter to avoid numerical problems due to small denominator
 
       ! proposition to increase convergence speed progressively
-      alpha = max (0.05, 0.5 - diffdensity*100.*0.45)
+      alpha = max(CNST(0.05), CNST(0.5) - diffdensity*CNST(100.0)*CNST(0.45))
   
       if(verbosity == 2) then
         write(fname,'(i6.6)') counter
