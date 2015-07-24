@@ -18,4 +18,4 @@ Input: 05-ks_inversion.02-two_particle.inp
 match ; xc potential                             ; LINEFIELD(static/vxc.y=0\,z=0, 302, 2);  -4.81973137281612E-001
 
 Input: 05-ks_inversion.03-inversion.inp
-match ; KS Inversion                             ; LINEFIELD(InvertKSconvergence,  36, 2) ; 2.8804767E-03
+match ; KS Inversion                             ; LINEFIELD(InvertKSconvergence,  19, 2) ; 1.0834623954E-02
