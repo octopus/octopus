@@ -24,7 +24,7 @@
 !! This module provides a single interface that works with different
 !! FFT implementations.
 module fft_m
-  use iso_c_binding
+  use,intrinsic :: iso_c_binding
 #ifdef HAVE_OPENCL  
   use cl
 #ifdef HAVE_CLAMDFFT
@@ -47,9 +47,7 @@ module fft_m
   use opencl_m
   use parser_m
   use pfft_m
-  use pfft_params_m
   use pnfft_m
-  use pnfft_params_m
   use profiling_m
   use types_m
   use unit_system_m
@@ -119,8 +117,8 @@ module fft_m
 
     type(c_ptr) :: planf                  !< plan for forward transform
     type(c_ptr) :: planb                  !< plan for backward transform
-    integer(ptrdiff_t_kind) :: pfft_planf !< PFFT plan for forward transform
-    integer(ptrdiff_t_kind) :: pfft_planb !< PFFT plan for backward transform
+    !integer(ptrdiff_t_kind) :: pfft_planf !< PFFT plan for forward transform
+    !integer(ptrdiff_t_kind) :: pfft_planb !< PFFT plan for backward transform
 
     !> The following arrays have to be stored here and allocated in the initialization routine because of PFFT 
     FLOAT, pointer :: drs_data(:,:,:) !< array used to store the function in real space that is passed to PFFT.
@@ -409,7 +407,7 @@ contains
  
       call pfft_decompose(mpi_grp_%size, column_size, row_size)
  
-      call pfft_create_procmesh_2d(ierror, mpi_grp_%comm, column_size, row_size, fft_array(jj)%comm)        
+      ierror = pfft_create_procmesh_2d(mpi_grp_%comm, column_size, row_size, fft_array(jj)%comm)        
    
       if (ierror /= 0) then
         message(1) = "The number of rows and columns in PFFT processor grid is not equal to "
@@ -517,14 +515,14 @@ contains
     case (FFTLIB_PFFT)
 #ifdef HAVE_PFFT     
       if(type == FFT_REAL) then
-        call pfft_prepare_plan_r2c(fft_array(jj)%pfft_planf, fft_array(jj)%rs_n_global, fft_array(jj)%drs_data, &
+        call pfft_prepare_plan_r2c(fft_array(jj)%planf, fft_array(jj)%rs_n_global, fft_array(jj)%drs_data, &
              fft_array(jj)%fs_data, FFTW_FORWARD, fft_prepare_plan, mpi_comm)
-        call pfft_prepare_plan_c2r(fft_array(jj)%pfft_planb, fft_array(jj)%rs_n_global, fft_array(jj)%fs_data, &
+        call pfft_prepare_plan_c2r(fft_array(jj)%planb, fft_array(jj)%rs_n_global, fft_array(jj)%fs_data, &
              fft_array(jj)%drs_data, FFTW_BACKWARD, fft_prepare_plan, mpi_comm)
       else
-        call pfft_prepare_plan_c2c(fft_array(jj)%pfft_planf, fft_array(jj)%rs_n_global, fft_array(jj)%zrs_data, &
+        call pfft_prepare_plan_c2c(fft_array(jj)%planf, fft_array(jj)%rs_n_global, fft_array(jj)%zrs_data, &
              fft_array(jj)%fs_data, FFTW_FORWARD, fft_prepare_plan, mpi_comm)
-        call pfft_prepare_plan_c2c(fft_array(jj)%pfft_planb, fft_array(jj)%rs_n_global, fft_array(jj)%fs_data, &
+        call pfft_prepare_plan_c2c(fft_array(jj)%planb, fft_array(jj)%rs_n_global, fft_array(jj)%fs_data, &
              fft_array(jj)%zrs_data, FFTW_BACKWARD, fft_prepare_plan, mpi_comm)
       end if
 #endif
@@ -727,7 +725,7 @@ contains
       write(message(3),'(a, i9)') " No. of processors                = ", mpi_grp_%size
       write(message(4),'(a, i9)') " No. of columns in the proc. grid = ", column_size
       write(message(5),'(a, i9)') " No. of rows    in the proc. grid = ", row_size
-      write(message(6),'(a, i9)') " The size of integer is = ", ptrdiff_t_kind
+      write(message(6),'(a, i9)') " The size of integer is = ", C_INTPTR_T
       call messages_info(6)
 
     case (FFTLIB_PNFFT)
@@ -815,8 +813,8 @@ contains
           call fftw_destroy_plan(fft_array(ii)%planb)
         case (FFTLIB_PFFT)
 #ifdef HAVE_PFFT
-          call pfft_destroy_plan(fft_array(ii)%pfft_planf)
-          call pfft_destroy_plan(fft_array(ii)%pfft_planb)
+          call pfft_destroy_plan(fft_array(ii)%planf)
+          call pfft_destroy_plan(fft_array(ii)%planb)
 #endif
           SAFE_DEALLOCATE_P(fft_array(ii)%drs_data)
           SAFE_DEALLOCATE_P(fft_array(ii)%zrs_data)

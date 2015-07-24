@@ -19,19 +19,16 @@
 
 #include "global.h"
 
-#  define PDFFT(x) dpfft_ ## x
-
 !> The includes for the PFFT
 module pfft_params_m
-  use fftw_m
-
+  use, intrinsic :: iso_c_binding
+  use fftw_mpi_params_m
   implicit none
 
 #ifdef HAVE_PFFT
-  include "pfft.f"
-#else
-  integer, parameter :: ptrdiff_t_kind = 8
+  include "pfft.f03"
 #endif
+
 end module pfft_params_m
  
 !> The low level module to work with the PFFT library.
@@ -49,222 +46,15 @@ module pfft_m
 
 #ifdef HAVE_PFFT
   public ::                    &
-    pfft_init,                 &
     pfft_decompose,            &
     pfft_prepare_plan_r2c,     &
     pfft_prepare_plan_c2r,     &
     pfft_prepare_plan_c2c,     &
-    pfft_get_dims,             &
-    pfft_create_procmesh_2d,   &
-    pfft_execute,              &
-    pfft_destroy_plan,         &
-    pfft_cleanup
+    pfft_get_dims
 
-  !> PFFT initialization routines
-  interface pfft_init
-    subroutine PDFFT(init)
-      implicit none
-    end subroutine PDFFT(init)
-  end interface pfft_init
-
-  interface pfft_create_procmesh_2d
-    subroutine PDFFT(create_procmesh_2d) (ierror, mpi_comm, n1, n2, mpi_comm_2d)
-      implicit none
-      integer, intent(in)  :: mpi_comm, n1, n2
-      integer, intent(out) :: ierror, mpi_comm_2d
-    end subroutine PDFFT(create_procmesh_2d)
-  end interface pfft_create_procmesh_2d
-
-  interface
-    ! ---------------------------------------------------------
-    !> PFFT basic interface to get the local size of input and output arrays. Real to complex version
-    subroutine PDFFT(local_size_dft_r2c_3d)(alloc_size, n, mpi_comm, pfft_flags, &
-         local_ni, local_i_start, local_no, local_o_start)
-      use pfft_params_m
-      implicit none
-      integer(ptrdiff_t_kind), intent(inout) :: alloc_size    !< Size that has to be allocated
-      integer(ptrdiff_t_kind), intent(inout) :: n             !< The size of the global matrix
-      integer,                 intent(in)    :: mpi_comm, pfft_flags
-      integer(ptrdiff_t_kind), intent(inout) :: local_ni      !< Local number of elements of the input matrix. Rank = 3
-      integer(ptrdiff_t_kind), intent(inout) :: local_i_start !< Local start point of the input matrix. Rank = 3
-      integer(ptrdiff_t_kind), intent(inout) :: local_no      !< Local number of elements of the output matrix. Rank = 3
-      integer(ptrdiff_t_kind), intent(inout) :: local_o_start !< Local start point of the output matrix. Rank = 3
-    end subroutine PDFFT(local_size_dft_r2c_3d)
-    
-    ! ---------------------------------------------------------
-    !> PFFT advanced interface to get the local size of input and output arrays. Real to complex version
-    subroutine PDFFT(local_size_many_dft_r2c)(alloc_size, rank_n, n, ni, no, howmany, iblock, oblock, &
-         mpi_comm, pfft_flags, local_ni, local_i_start, local_no, local_o_start)
-      use pfft_params_m
-      implicit none
-      integer(ptrdiff_t_kind), intent(inout) :: alloc_size !< Size that has to be allocated
-      integer(ptrdiff_t_kind), intent(in)    :: rank_n     !< The dimensions of the matrices
-      integer(ptrdiff_t_kind), intent(inout) :: n       !< The size of the global matrix
-      integer(ptrdiff_t_kind), intent(inout) :: ni      !< An integer array with the same length as 'n'. 
-                                                        !! It gives the size of the FFT input (non-oversampled)
-      integer(ptrdiff_t_kind), intent(inout) :: no      !< An integer array with the same length as 'n'. 
-                                                        !! It gives the size of the FFT output
-      integer(ptrdiff_t_kind), intent(in)    :: howmany !< More than one FFT could be calculated at once, 
-                                                        !! but the input has to be stored interleaved - (Just set howmany to 1)
-      integer(ptrdiff_t_kind), intent(in)    :: iblock  !< The block size of the input data distribution (Just use the constant
-                                                        !! PFFT_DEFAULT_BLOCKS to set the blocks to their default value)
-      integer(ptrdiff_t_kind), intent(in)    :: oblock  !< The block size of the output data distribution (Just use the constant
-                                                        !! PFFT_DEFAULT_BLOCKS to set the blocks to their default value)
-      integer,                 intent(in)    :: mpi_comm, pfft_flags
-      integer(ptrdiff_t_kind), intent(inout) :: local_ni      !< Local number of elements of the input matrix. Rank = 3
-      integer(ptrdiff_t_kind), intent(inout) :: local_i_start !< Local start point of the input matrix. Rank = 3
-      integer(ptrdiff_t_kind), intent(inout) :: local_no      !< Local number of elements of the output matrix. Rank = 3
-      integer(ptrdiff_t_kind), intent(inout) :: local_o_start !< Local start point of the output matrix. Rank = 3
-    end subroutine PDFFT(local_size_many_dft_r2c)
-
-    ! ---------------------------------------------------------
-    !> PFFT basic interface to get the local size of input and output arrays. Complex to complex version
-    subroutine PDFFT(local_size_dft_3d)(alloc_size, n, mpi_comm, pfft_flags, &
-         local_ni, local_i_start, local_no, local_o_start)
-      use pfft_params_m
-      implicit none
-      integer(ptrdiff_t_kind), intent(inout) :: alloc_size    !< Size that has to be allocated
-      integer(ptrdiff_t_kind), intent(inout) :: n             !< The size of the global matrix
-      integer,                 intent(in)    :: mpi_comm, pfft_flags
-      integer(ptrdiff_t_kind), intent(inout) :: local_ni      !< Local number of elements of the input matrix. Rank = 3
-      integer(ptrdiff_t_kind), intent(inout) :: local_i_start !< Local start point of the input matrix. Rank = 3
-      integer(ptrdiff_t_kind), intent(inout) :: local_no      !< Local number of elements of the output matrix. Rank = 3
-      integer(ptrdiff_t_kind), intent(inout) :: local_o_start !< Local start point of the output matrix. Rank = 3
-    end subroutine PDFFT(local_size_dft_3d)
-
-    ! ---------------------------------------------------------
-    !> PFFT advanced interface to get the local size of input and output arrays
-    subroutine PDFFT(local_size_many_dft)(alloc_size, rank_n, n, ni, no, howmany, iblock, oblock, &
-         mpi_comm, pfft_flags, &
-         local_ni, local_i_start, local_no, local_o_start)
-      use pfft_params_m
-      implicit none
-      integer(ptrdiff_t_kind), intent(inout) :: alloc_size    !< Size that has to be allocated
-      integer(ptrdiff_t_kind), intent(in)    :: rank_n        !< The dimensions of the matrices
-      integer(ptrdiff_t_kind), intent(inout) :: n       !< The size of the global matrix
-      integer(ptrdiff_t_kind), intent(inout) :: ni      !< An integer array with the same length as 'n'. 
-                                                        !! It gives the size of the FFT input (non-oversampled)
-      integer(ptrdiff_t_kind), intent(inout) :: no      !< An integer array with the same length as 'n'. 
-                                                        !! It gives the size of the FFT output
-      integer(ptrdiff_t_kind), intent(in)    :: howmany !< More than one FFT could be calculated at once, 
-                                                        !! but the input has to be stored interleaved - (Just set howmany to 1)
-      integer(ptrdiff_t_kind), intent(in)    :: iblock  !< The block size of the input data distribution (Just use the constant
-                                                        !! PFFT_DEFAULT_BLOCKS to set the blocks to their default value)
-      integer(ptrdiff_t_kind), intent(in)    :: oblock  !< The block size of the output data distribution(Just use the constant
-                                                        !! PFFT_DEFAULT_BLOCKS to set the blocks to their default value)
-      integer,                 intent(in)    :: mpi_comm, pfft_flags
-      integer(ptrdiff_t_kind), intent(inout) :: local_ni      !< Local number of elements of the input matrix. Rank = 3
-      integer(ptrdiff_t_kind), intent(inout) :: local_i_start !< Local start point of the input matrix. Rank = 3
-      integer(ptrdiff_t_kind), intent(inout) :: local_no      !< Local number of elements of the output matrix. Rank = 3
-      integer(ptrdiff_t_kind), intent(inout) :: local_o_start !< Local start point of the output matrix. Rank = 3
-    end subroutine PDFFT(local_size_many_dft)
-
-    ! ---------------------------------------------------------
-    !> PFFT simple interface to create plan from real to complex
-    subroutine PDFFT(plan_dft_r2c_3d)(plan, n, in, out, mpi_comm, sign, pfft_flags)
-      use pfft_params_m
-      implicit none
-      integer(ptrdiff_t_kind), intent(out)   :: plan    !< The plan that is created by PFFT
-      integer(ptrdiff_t_kind), intent(inout) :: n       !< The size of the global matrix
-      FLOAT,                   intent(in)    :: in      !< The input matrix that is going to be used to do the transform
-      CMPLX,                   intent(in)    :: out     !< The output matrix that is going to be used to do the transform
-      integer,                 intent(in)    :: mpi_comm, sign, pfft_flags
-    end subroutine PDFFT(plan_dft_r2c_3d)
-
-    ! ---------------------------------------------------------
-    !> PFFT simple interface to create plan from complex to real
-    subroutine PDFFT(plan_dft_c2r_3d)(plan, n, in, out, mpi_comm, sign, pfft_flags)
-      use pfft_params_m
-      implicit none
-      integer(ptrdiff_t_kind), intent(out)   :: plan    !< The plan that is created by PFFT
-      integer(ptrdiff_t_kind), intent(inout) :: n       !< The size of the global matrix
-      CMPLX,                   intent(in)    :: in      !< The input matrix that is going to be used to do the transform
-      FLOAT,                   intent(in)    :: out     !< The output matrix that is going to be used to do the transform
-      integer,                 intent(in)    :: mpi_comm, sign, pfft_flags
-    end subroutine PDFFT(plan_dft_c2r_3d)
-
-    ! ---------------------------------------------------------
-    !> Advanced interface for creating plan of FFT from real to complex
-    subroutine PDFFT(plan_many_dft_r2c)(plan, rank_n, n, ni, no, howmany, &
-         iblock, oblock, in, out, mpi_comm, sign, pfft_flags)
-      use pfft_params_m
-      implicit none
-      integer(ptrdiff_t_kind), intent(out)   :: plan    !< The plan that is created by PFFT
-      integer(ptrdiff_t_kind), intent(in)    :: rank_n  !< The dimensions of the matrices
-      integer(ptrdiff_t_kind), intent(inout) :: n       !< The size of the global matrix
-      integer(ptrdiff_t_kind), intent(inout) :: ni      !< An integer array with the same length as 'n'. 
-                                                        !! It gives the size of the FFT input (non-oversampled)
-      integer(ptrdiff_t_kind), intent(inout) :: no      !< An integer array with the same length as 'n'. 
-                                                        !! It gives the size of the FFT output
-      integer(ptrdiff_t_kind), intent(in)    :: howmany !< More than one FFT could be calculated at once, 
-                                                        !! but the input has to be stored interleaved - (Just set howmany to 1)
-      integer(ptrdiff_t_kind), intent(in)    :: iblock  !< The block size of the input data distribution (Just use the constant
-                                                        !! PFFT_DEFAULT_BLOCKS to set the blocks to their default value)
-      integer(ptrdiff_t_kind), intent(in)    :: oblock  !< The block size of the output data distribution (Just use the constant 
-                                                        !! PFFT_DEFAULT_BLOCKS to set the blocks to their default value)
-      FLOAT,                   intent(in)    :: in      !< The input matrix that is going to be used to do the transform
-      CMPLX,                   intent(in)    :: out     !< The output matrix that is going to be used to do the transform
-      integer,                 intent(in)    :: mpi_comm, sign, pfft_flags
-    end subroutine PDFFT(plan_many_dft_r2c) 
-
-    ! ---------------------------------------------------------
-    !> Advanced interface for creating plan of FFT from complex to real
-    subroutine PDFFT(plan_many_dft_c2r)(plan, rank_n, n, ni, no, howmany, &
-         iblock, oblock, in, out, mpi_comm, sign, pfft_flags)
-      use pfft_params_m
-      implicit none
-      integer(ptrdiff_t_kind), intent(out)   :: plan    !< The plan that is created by PFFT
-      integer(ptrdiff_t_kind), intent(in)    :: rank_n  !< The dimensions of the matrices
-      integer(ptrdiff_t_kind), intent(inout) :: n       !< The size of the global matrix
-      integer(ptrdiff_t_kind), intent(inout) :: ni      !< An integer array with the same length as 'n'. 
-                                                        !! It gives the size of the FFT input (non-oversampled)
-      integer(ptrdiff_t_kind), intent(inout) :: no      !< An integer array with the same length as 'n'. 
-                                                        !! It gives the size of the FFT output
-      integer(ptrdiff_t_kind), intent(in)    :: howmany !< More than one FFT could be calculated at once, 
-                                                        !! but the input has to be stored interleaved - (Just set howmany to 1)
-      integer(ptrdiff_t_kind), intent(in)    :: iblock  !< The block size of the input data distribution (Just use the constant
-                                                        !! PFFT_DEFAULT_BLOCKS to set the blocks to their default value)
-      integer(ptrdiff_t_kind), intent(in)    :: oblock  !< The block size of the output data distribution (Just use the constant 
-                                                        !! PFFT_DEFAULT_BLOCKS to set the blocks to their default value)
-      CMPLX,                   intent(in)    :: in      !< The input matrix that is going to be used to do the transform
-      FLOAT,                   intent(in)    :: out     !< The output matrix that is going to be used to do the transform
-      integer,                 intent(in)    :: mpi_comm, sign, pfft_flags
-    end subroutine PDFFT(plan_many_dft_c2r)
-
-  ! ---------------------------------------------------------
-    !> Advanced interface for creating plan of FFT
-    subroutine PDFFT(plan_dft_3d)(plan, n, in, out, mpi_comm, sign, pfft_flags)
-      use pfft_params_m
-      implicit none
-      integer(ptrdiff_t_kind), intent(out)   :: plan    !< The plan that is created by PFFT
-      integer(ptrdiff_t_kind), intent(inout) :: n       !< The size of the global matrix
-      CMPLX,                   intent(in)    :: in      !< The input matrix that is going to be used to do the transform
-      CMPLX,                   intent(in)    :: out     !< The output matrix that is going to be used to do the transform
-      integer,                 intent(in)    :: mpi_comm, sign, pfft_flags
-    end subroutine PDFFT(plan_dft_3d)
-  end interface
-
-  interface pfft_execute
-    subroutine PDFFT(execute)(plan)
-      use pfft_params_m
-      implicit none
-      integer(ptrdiff_t_kind), intent(inout) :: plan
-    end subroutine PDFFT(execute)
-  end interface pfft_execute
-
-  interface pfft_destroy_plan
-    subroutine PDFFT(destroy_plan)(plan)
-      use pfft_params_m
-      implicit none
-      integer(ptrdiff_t_kind), intent(inout) :: plan
-    end subroutine PDFFT(destroy_plan)
-  end interface pfft_destroy_plan
-
-  interface pfft_cleanup
-    subroutine PDFFT(cleanup)
-      implicit none
-    end subroutine PDFFT(cleanup)
-  end interface pfft_cleanup
+  ! make public some symbols from the pfft library
+  public :: pfft_create_procmesh_2d, pfft_init, pfft_cleanup, &
+       & pfft_destroy_plan, pfft_execute
 
 contains
 
@@ -312,26 +102,26 @@ contains
   ! ---------------------------------------------------------
   !> Octopus subroutine to prepare a PFFT plan real to complex
   subroutine pfft_prepare_plan_r2c(plan, n, in, out, sign, flags, mpi_comm)
-    integer(ptrdiff_t_kind), intent(out)   :: plan       !< The plan that is created by PFFT
-    integer,                 intent(in)    :: n(:)       !< The size of the global matrix
-    FLOAT,   pointer,        intent(inout) :: in(:,:,:)  !< The input matrix that is going to be used to do the transform
-    CMPLX,   pointer,        intent(inout) :: out(:,:,:) !< The output matrix that is going to be used to do the transform
-    integer,                 intent(in)    :: sign       !< Sign flag to decide FFT direction. Has to be FFTW_FORWARD
-    integer,                 intent(in)    :: flags      !< Flags for FFT library. Could be changed with the input variable
-                                                         !! FFTPreparePlan. Default value is FFTW_MEASURE
-    integer,                 intent(in)    :: mpi_comm   !< MPI communicator
+    type(C_PTR),   intent(out)   :: plan       !< The plan that is created by PFFT
+    integer,          intent(in)    :: n(:)       !< The size of the global matrix
+    FLOAT,   pointer, intent(inout) :: in(:,:,:)  !< The input matrix that is going to be used to do the transform
+    CMPLX,   pointer, intent(inout) :: out(:,:,:) !< The output matrix that is going to be used to do the transform
+    integer,          intent(in)    :: sign       !< Sign flag to decide FFT direction. Has to be FFTW_FORWARD
+    integer,          intent(in)    :: flags      !< Flags for FFT library. Could be changed with the input variable
+                                                  !! FFTPreparePlan. Default value is FFTW_MEASURE
+    integer,          intent(in)    :: mpi_comm   !< MPI communicator
     
-    integer(ptrdiff_t_kind) :: tmp_n(3)
+    integer(C_INTPTR_T) :: tmp_n(3)
     type(profile_t), save   :: prof
     PUSH_SUB(pfft_prepare_plan_r2c)
     call profiling_in(prof,"PFFT_PLAN_R2C")
 
     ASSERT(sign == FFTW_FORWARD)
 
-    tmp_n(1:3) = n(1:3)
+    tmp_n(1:3) = n(3:1:-1)
 
-    call PDFFT(plan_dft_r2c_3d) (plan, tmp_n(1), in(1,1,1), out(1,1,1), mpi_comm, sign, &
-         PFFT_TRANSPOSED_OUT + PFFT_MEASURE + PFFT_DESTROY_INPUT + PFFT_TUNE) 
+    plan = pfft_plan_dft_r2c_3d(tmp_n,in,out,mpi_comm,sign,&
+         &                      PFFT_TRANSPOSED_OUT + PFFT_MEASURE + PFFT_DESTROY_INPUT + PFFT_TUNE) 
     
     call profiling_out(prof)
     POP_SUB(pfft_prepare_plan_r2c)
@@ -340,26 +130,28 @@ contains
   ! ---------------------------------------------------------
   !> Octopus subroutine to prepare a PFFT plan real to complex
   subroutine pfft_prepare_plan_c2r(plan, n, in, out, sign, flags, mpi_comm)
-    integer(ptrdiff_t_kind), intent(out)   :: plan       !< The plan that is created by PFFT
-    integer,                 intent(in)    :: n(:)       !< The size of the global matrix
-    CMPLX,   pointer,        intent(inout) :: in(:,:,:)  !< The input matrix that is going to be used to do the transform
-    FLOAT,   pointer,        intent(inout) :: out(:,:,:) !< The output matrix that is going to be used to do the transform
-    integer,                 intent(in)    :: sign       !< Sign flag to decide FFT direction. Has to be FFTW_BACKWARD
-    integer,                 intent(in)    :: flags      !< Flags for FFT library. Could be changed with the input variable
-                                                         !! FFTPreparePlan. Default value is FFTW_MEASURE
-    integer,                 intent(in)    :: mpi_comm   !< MPI communicator
+    type(C_PTR),      intent(out)   :: plan       !< The plan that is created by PFFT
+    integer,          intent(in)    :: n(:)       !< The size of the global matrix
+    CMPLX,   pointer, intent(inout) :: in(:,:,:)  !< The input matrix that is going to be used to do the transform
+    FLOAT,   pointer, intent(inout) :: out(:,:,:) !< The output matrix that is going to be used to do the transform
+    integer,          intent(in)    :: sign       !< Sign flag to decide FFT direction. Has to be FFTW_BACKWARD
+    integer,          intent(in)    :: flags      !< Flags for FFT library. Could be changed with the input variable
+                                                  !! FFTPreparePlan. Default value is FFTW_MEASURE
+    integer,          intent(in)    :: mpi_comm   !< MPI communicator
     
-    integer(ptrdiff_t_kind) :: tmp_n(3)
+    integer(C_INTPTR_T) :: tmp_n(3)
     type(profile_t), save   :: prof
     PUSH_SUB(pfft_prepare_plan_c2r)
     call profiling_in(prof,"PFFT_PLAN_C2R")
 
     ASSERT(sign == FFTW_BACKWARD)
 
-    tmp_n(1:3) = n(1:3)
+    tmp_n(1:3) = n(3:1:-1)
 
-    call PDFFT(plan_dft_c2r_3d) (plan, tmp_n(1), in(1,1,1), out(1,1,1), mpi_comm, sign, &
-         PFFT_TRANSPOSED_IN + PFFT_MEASURE + PFFT_DESTROY_INPUT + PFFT_TUNE) 
+    plan = pfft_plan_dft_c2r_3d(tmp_n,in,out,mpi_comm, sign, &
+         &                      PFFT_TRANSPOSED_IN + PFFT_MEASURE + PFFT_DESTROY_INPUT + PFFT_TUNE) 
+    !call PDFFT(plan_dft_c2r_3d) (plan, tmp_n(1), in(1,1,1), out(1,1,1), mpi_comm, sign, &
+    !     PFFT_TRANSPOSED_IN + PFFT_MEASURE + PFFT_DESTROY_INPUT + PFFT_TUNE) 
 
     call profiling_out(prof)
     POP_SUB(pfft_prepare_plan_c2r)
@@ -368,22 +160,22 @@ contains
   ! ---------------------------------------------------------  
   !> Octopus subroutine to prepare a PFFT plan real to complex
   subroutine pfft_prepare_plan_c2c(plan, n, in, out, sign, flags, mpi_comm)
-    integer(ptrdiff_t_kind), intent(out)   :: plan       !< The plan that is created by PFFT
-    integer,                 intent(in)    :: n(:)       !< The size of the global matrix
-    CMPLX,   pointer,        intent(inout) :: in(:,:,:)  !< The input matrix that is going to be used to do the transform
-    CMPLX,   pointer,        intent(inout) :: out(:,:,:) !< The output matrix that is going to be used to do the transform
-    integer,                 intent(in)    :: sign       !< Sign flag to decide FFT direction. 
+    type(C_PTR),      intent(out)   :: plan       !< The plan that is created by PFFT
+    integer,          intent(in)    :: n(:)       !< The size of the global matrix
+    CMPLX,   pointer, intent(inout) :: in(:,:,:)  !< The input matrix that is going to be used to do the transform
+    CMPLX,   pointer, intent(inout) :: out(:,:,:) !< The output matrix that is going to be used to do the transform
+    integer,          intent(in)    :: sign       !< Sign flag to decide FFT direction. 
                                                          !! Has to be FFTW_FORWARD or FFTW_BACKWARD
-    integer,                 intent(in)    :: flags      !< Flags for FFT library. Could be changed with the input variable
-                                                         !! FFTPreparePlan. Default value is FFTW_MEASURE
-    integer,                 intent(in)    :: mpi_comm   !< MPI communicator
+    integer,          intent(in)    :: flags      !< Flags for FFT library. Could be changed with the input variable
+                                                  !! FFTPreparePlan. Default value is FFTW_MEASURE
+    integer,          intent(in)    :: mpi_comm   !< MPI communicator
 
-    integer :: pfft_flags
-    integer(ptrdiff_t_kind) :: tmp_n(3)
+    integer(C_INT) :: pfft_flags
+    integer(C_INTPTR_T) :: tmp_n(3)
 
     PUSH_SUB(pfft_prepare_plan_c2c)
 
-    tmp_n(1:3) = n(1:3)
+    tmp_n(1:3) = n(3:1:-1)
 
     if (sign == FFTW_FORWARD) then
       pfft_flags = PFFT_TRANSPOSED_OUT
@@ -391,7 +183,8 @@ contains
       pfft_flags = PFFT_TRANSPOSED_IN
     end if
 
-    call PDFFT(plan_dft_3d) (plan, tmp_n(1), in(1,1,1), out(1,1,1), mpi_comm, sign, pfft_flags)
+    plan = pfft_plan_dft_3d(tmp_n,in,out,mpi_comm, sign, pfft_flags)
+    !call PDFFT(plan_dft_3d) (plan, tmp_n(1), in(1,1,1), out(1,1,1), mpi_comm, sign, pfft_flags)
 
     POP_SUB(pfft_prepare_plan_c2c)
   end subroutine pfft_prepare_plan_c2c
@@ -408,29 +201,35 @@ contains
     integer, intent(out) :: rs_istart(1:3)   !< Where does the local portion of the function start in real space
     integer, intent(out) :: fs_istart(1:3)   !< Where does the local portion of the function start in Fourier space
 
-    integer(ptrdiff_t_kind) :: tmp_alloc_size, tmp_n(3)
-    integer(ptrdiff_t_kind) :: tmp_rs_n(3), tmp_rs_istart(3)
-    integer(ptrdiff_t_kind) :: tmp_fs_n(3), tmp_fs_istart(3)
+    integer(C_INTPTR_T) :: tmp_alloc_size, tmp_n(3)
+    integer(C_INTPTR_T) :: tmp_rs_n(3), tmp_rs_istart(3)
+    integer(C_INTPTR_T) :: tmp_fs_n(3), tmp_fs_istart(3)
 
     PUSH_SUB(pfft_get_dims)
 
     fs_n_global(1:3) = rs_n_global(1:3)
-    tmp_n(1:3) = rs_n_global(1:3)
+    ! if calling the ISO_C_BINDING routines from PFFT, one must take into account that
+    ! the array order is the C array order
+    tmp_n(1:3) = rs_n_global(3:1:-1)
 
     if (is_real) then
-      call PDFFT(local_size_dft_r2c_3d)(tmp_alloc_size, tmp_n(1), mpi_comm, PFFT_TRANSPOSED_OUT, &
-           tmp_rs_n(1), tmp_rs_istart(1), tmp_fs_n(1), tmp_fs_istart(1)) 
-      fs_n_global(1) = rs_n_global(1)/2 + 1
+       tmp_alloc_size = pfft_local_size_dft_r2c_3d(tmp_n, mpi_comm, PFFT_TRANSPOSED_OUT, &
+            &                                      tmp_rs_n, tmp_rs_istart, tmp_fs_n, tmp_fs_istart) 
+       !call PDFFT(local_size_dft_r2c_3d)(tmp_alloc_size, tmp_n(1), mpi_comm, PFFT_TRANSPOSED_OUT, &
+       !       tmp_rs_n(1), tmp_rs_istart(1), tmp_fs_n(1), tmp_fs_istart(1)) 
+       fs_n_global(1) = rs_n_global(1)/2 + 1
     else
-      call PDFFT(local_size_dft_3d)(tmp_alloc_size, tmp_n(1), mpi_comm, PFFT_TRANSPOSED_OUT, &
-                 tmp_rs_n(1), tmp_rs_istart(1), tmp_fs_n(1), tmp_fs_istart(1))
+       tmp_alloc_size = pfft_local_size_dft_3d(tmp_n,mpi_comm, PFFT_TRANSPOSED_OUT, &
+         &                                  tmp_rs_n,tmp_rs_istart,tmp_fs_n,tmp_fs_istart)
+       !call PDFFT(local_size_dft_3d)(tmp_alloc_size, tmp_n(1), mpi_comm, PFFT_TRANSPOSED_OUT, &
+       !             tmp_rs_n(1), tmp_rs_istart(1), tmp_fs_n(1), tmp_fs_istart(1))
     end if
 
     alloc_size       = tmp_alloc_size
-    rs_n(1:3)        = tmp_rs_n(1:3)
-    fs_n(1:3)        = tmp_fs_n(1:3)
-    rs_istart(1:3)   = tmp_rs_istart(1:3)
-    fs_istart(1:3)   = tmp_fs_istart(1:3)
+    rs_n(1:3)        = tmp_rs_n(3:1:-1)
+    fs_n(1:3)        = tmp_fs_n(3:1:-1)
+    rs_istart(1:3)   = tmp_rs_istart(3:1:-1)+1
+    fs_istart(1:3)   = tmp_fs_istart(3:1:-1)+1
 
     POP_SUB(pfft_get_dims)
   end subroutine pfft_get_dims

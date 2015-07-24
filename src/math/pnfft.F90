@@ -22,12 +22,9 @@
 
 !> The includes for the PNFFT
 module pnfft_params_m
-  use fftw_m
+  use,intrinsic :: iso_c_binding
+  use fftw_params_m
   use pfft_params_m
-#ifdef HAVE_PNFFT
-  use iso_c_binding
-#endif
-
   implicit none
 
 #ifdef HAVE_PNFFT

@@ -22,7 +22,7 @@
 ! ---------------------------------------------------------
 subroutine X(fft_forward)(fft, in, out, norm)
     type(fft_t),     intent(in)  :: fft
-    R_TYPE,          intent(in)  :: in(:,:,:)
+    R_TYPE,          intent(inout)  :: in(:,:,:)
     CMPLX,           intent(out) :: out(:,:,:)
     FLOAT, optional, intent(out) :: norm 
 
@@ -44,7 +44,11 @@ subroutine X(fft_forward)(fft, in, out, norm)
       ii = min(1, fft_array(slot)%rs_n(1))
       jj = min(1, fft_array(slot)%rs_n(2))
       kk = min(1, fft_array(slot)%rs_n(3))
-      call fftw_execute_dft(fft_array(slot)%planf, in(ii,jj,kk), out(ii,jj,kk))
+#ifdef R_TREAL
+      call fftw_execute_dft_r2c(fft_array(slot)%planf, in(ii:,jj:,kk:), out(ii:,jj:,kk:))
+#else
+      call fftw_execute_dft(fft_array(slot)%planf, in(ii:,jj:,kk:), out(ii:,jj:,kk:))
+#endif
     case (FFTLIB_NFFT)
 #ifdef HAVE_NFFT
       call X(nfft_forward)(fft_array(slot)%nfft, in(:,:,:), out(:,:,:))
@@ -75,7 +79,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
       end if
 #endif 
 #ifdef HAVE_PFFT
-      call pfft_execute(fft_array(slot)%pfft_planf)
+      call pfft_execute(fft_array(slot)%planf)
 #endif
     case(FFTLIB_CLAMD)
 #ifdef HAVE_CLAMDFFT
@@ -174,12 +178,16 @@ subroutine X(fft_forward)(fft, in, out, norm)
 
   subroutine X(fft_forward1)(fft, in, out)
     type(fft_t), intent(in)  :: fft
-    R_TYPE,      intent(in)  :: in(:)
+    R_TYPE,      intent(inout)  :: in(:)
     CMPLX,       intent(out) :: out(:)
 
     PUSH_SUB(X(fft_forward1))
 
-    call fftw_execute_dft(fft_array(fft%slot)%planf, in(1), out(1))
+#ifdef R_TREAL
+    call fftw_execute_dft_r2c(fft_array(fft%slot)%planf, in, out)
+#else
+    call fftw_execute_dft(fft_array(fft%slot)%planf, in, out)
+#endif
     call fft_operation_count(fft)
 
     POP_SUB(X(fft_forward1))
@@ -188,7 +196,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
   ! ---------------------------------------------------------
   subroutine X(fft_backward)(fft, in, out, norm)
     type(fft_t), intent(in)  :: fft
-    CMPLX,       intent(in)  :: in(:,:,:)
+    CMPLX,       intent(inout)  :: in(:,:,:)
     R_TYPE,      intent(out) :: out(:,:,:)
     FLOAT, optional, intent(out) :: norm 
     
@@ -210,7 +218,11 @@ subroutine X(fft_forward)(fft, in, out, norm)
     slot = fft%slot
     select case (fft_array(slot)%library)
     case (FFTLIB_FFTW)
-      call fftw_execute_dft(fft_array(slot)%planb, in(1,1,1), out(1,1,1))
+#ifdef R_TREAL
+      call fftw_execute_dft_c2r(fft_array(slot)%planb, in, out)
+#else
+      call fftw_execute_dft(fft_array(slot)%planb, in, out)
+#endif
     case (FFTLIB_NFFT)
       scale = .false. ! the result is already scaled
 #ifdef HAVE_NFFT    
@@ -231,7 +243,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
         ASSERT(fft_array(slot)%X(rs_data)(1,1,1) == out(1,1,1))
       end if
 #ifdef HAVE_PFFT
-      call pfft_execute(fft_array(slot)%pfft_planb)
+      call pfft_execute(fft_array(slot)%planb)
 #endif
     case(FFTLIB_CLAMD)
 #ifdef HAVE_CLAMDFFT
@@ -346,12 +358,16 @@ subroutine X(fft_forward)(fft, in, out, norm)
   ! ---------------------------------------------------------
   subroutine X(fft_backward1)(fft, in, out)
     type(fft_t), intent(in)  :: fft
-    CMPLX,       intent(in)  :: in(:)
+    CMPLX,       intent(inout)  :: in(:)
     R_TYPE,      intent(out) :: out(:)
  
     PUSH_SUB(X(fft_backward1))
     
-    call fftw_execute_dft(fft_array(fft%slot)%planb, in(1), out(1))
+#ifdef R_TREAL
+    call fftw_execute_dft_c2r(fft_array(fft%slot)%planb, in, out)
+#else
+    call fftw_execute_dft(fft_array(fft%slot)%planb, in, out)
+#endif
 
     call fft_operation_count(fft)
 

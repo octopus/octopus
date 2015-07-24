@@ -1133,7 +1133,7 @@ contains
   subroutine pes_mask_X_to_K(mask,mesh,wfin,wfout)
     type(pes_mask_t), intent(in)  :: mask
     type(mesh_t),     intent(in)  :: mesh
-    CMPLX,              intent(in):: wfin(:,:,:)
+    CMPLX,              intent(inout):: wfin(:,:,:)
     CMPLX,             intent(out):: wfout(:,:,:)
     
     type(profile_t), save :: prof
@@ -1197,7 +1197,7 @@ contains
   subroutine pes_mask_K_to_X(mask,mesh,wfin,wfout)
     type(pes_mask_t), intent(in)  :: mask
     type(mesh_t),     intent(in)  :: mesh
-    CMPLX,            intent(in)  :: wfin(:,:,:)
+    CMPLX,            intent(inout)  :: wfin(:,:,:)
     CMPLX,            intent(out) :: wfout(:,:,:)
     
     type(profile_t), save :: prof

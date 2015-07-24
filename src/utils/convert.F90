@@ -25,7 +25,7 @@ program oct_convert
   use calc_mode_par_m
   use command_line_m
   use fft_m
-  use fftw_m
+  use fftw_params_m
   use geometry_m
   use global_m
   use io_m
@@ -549,7 +549,7 @@ contains
       end do ! Time
 
       call profiling_in(prof_fftw, "CONVERT_FFTW")
-      call fftw_execute_dft(fft%planf, read_ft(1), out_fft(1))
+      call fftw_execute_dft_r2c(fft%planf, read_ft(1), out_fft(1))
       call profiling_out(prof_fftw)
       point_tmp(read_count, 1:e_point+1) = dble(out_fft(1:e_point+1))
 

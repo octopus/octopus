@@ -20,233 +20,39 @@
 
 #include "global.h"
 
-#  define DFFTW(x) dfftw_ ## x
+module fftw_mpi_params_m
+  use, intrinsic :: iso_c_binding
+  implicit none
+
+  include "fftw3-mpi.f03"
+end module fftw_mpi_params_m
+
+module fftw_params_m
+  use, intrinsic :: iso_c_binding
+  implicit none
+
+  include "fftw3.f03"
+end module fftw_params_m
 
 module fftw_m
-  use iso_c_binding
+  use,intrinsic :: iso_c_binding
   use global_m
   use messages_m
   use profiling_m
-
+  use fftw_params_m
   implicit none
 
   private
 
   public :: &
-    fftw_execute_dft,        &
-    fftw_destroy_plan,       &
-    fftw_cleanup,            &
-    fftw_init_threads,       &
-    fftw_plan_with_nthreads, &
-    fftw_cleanup_threads,    &
-    fftw_prepare_plan_r2c,   &
     fftw_prepare_plan,       &
-    fftw_get_dims,           &
-    fftw_set_timelimit
+    fftw_prepare_plan_r2c,   &
+    fftw_get_dims
 
-  !> fftw constants. this is just a copy from file fftw3.f,
-  !! distributed with fftw package.
-  integer, public, parameter ::        &
-    FFTW_R2HC                =      0, &
-    FFTW_HC2R                =      1, &
-    FFTW_DHT                 =      2, &
-    FFTW_REDFT00             =      3, &
-    FFTW_REDFT01             =      4, &
-    FFTW_REDFT10             =      5, &
-    FFTW_REDFT11             =      6, &
-    FFTW_RODFT00             =      7, &
-    FFTW_RODFT01             =      8, &
-    FFTW_RODFT10             =      9, &
-    FFTW_RODFT11             =     10, &
-    FFTW_FORWARD             =     -1, &
-    FFTW_BACKWARD            =      1, &
-    FFTW_MEASURE             =      0, &
-    FFTW_DESTROY_INPUT       =      1, &
-    FFTW_UNALIGNED           =      2, &
-    FFTW_CONSERVE_MEMORY     =      4, &
-    FFTW_EXHAUSTIVE          =      8, &
-    FFTW_PRESERVE_INPUT      =     16, &
-    FFTW_PATIENT             =     32, &
-    FFTW_ESTIMATE            =     64, &
-    FFTW_ESTIMATE_PATIENT    =    128, &
-    FFTW_BELIEVE_PCOST       =    256, &
-    FFTW_DFT_R2HC_ICKY       =    512, &
-    FFTW_NONTHREADED_ICKY    =   1024, &
-    FFTW_NO_BUFFERING        =   2048, &
-    FFTW_NO_INDIRECT_OP      =   4096, &
-    FFTW_ALLWO_LARGE_GENERIC =   8192, &
-    FFTW_NO_RANK_SPLITS      =  16384, &
-    FFTW_NO_VRANK_SPLITS     =  32768, &
-    FFTW_NO_VRECURSE         =  65536, &
-    FFTW_NO_SIMD             = 131072
-
-  !> ----------------- plan_dft ------------------
-  interface 
-    subroutine DFFTW(plan_dft_r2c_1d)(plan, n, in, out, flags)
-      use iso_c_binding
-      implicit none
-      type(c_ptr), intent(inout) :: plan
-      integer,     intent(in)    :: n
-      FLOAT,       intent(in)    :: in  !< in(n)
-      CMPLX,       intent(out)   :: out !< out(n/2+1)
-      integer,     intent(in)    :: flags
-    end subroutine DFFTW(plan_dft_r2c_1d)
-
-    subroutine DFFTW(plan_dft_r2c_2d)(plan, n1, n2, in, out, flags)
-      use iso_c_binding
-      implicit none
-      type(c_ptr), intent(inout) :: plan
-      integer,     intent(in)    :: n1, n2
-      FLOAT,       intent(in)    :: in  !< in(n1, n2)
-      CMPLX,       intent(out)   :: out !< out(n1/2+1, n2)
-      integer,     intent(in)    :: flags
-    end subroutine DFFTW(plan_dft_r2c_2d)
-    
-    subroutine DFFTW(plan_dft_r2c_3d)(plan, n1, n2, n3, in, out, flags)
-      use iso_c_binding
-      implicit none
-      type(c_ptr), intent(inout) :: plan
-      integer,     intent(in)    :: n1, n2, n3
-      FLOAT,       intent(in)    :: in  !< in(n1, n2, n3)
-      CMPLX,       intent(out)   :: out !< out(n1/2+1, n2, n3)
-      integer,     intent(in)    :: flags
-    end subroutine DFFTW(plan_dft_r2c_3d)
-
-    subroutine DFFTW(plan_dft_c2r_1d)(plan, n, in, out, flags)
-      use iso_c_binding
-      implicit none
-      type(c_ptr), intent(inout) :: plan
-      integer,     intent(in)    :: n
-      CMPLX,       intent(in)    :: in  !< in(n/2+1)
-      FLOAT,       intent(out)   :: out !< out(n)
-      integer,     intent(in)    :: flags
-    end subroutine DFFTW(plan_dft_c2r_1d)
-
-    subroutine DFFTW(plan_dft_c2r_2d)(plan, n1, n2, in, out, flags)
-      use iso_c_binding
-      implicit none
-      type(c_ptr), intent(inout) :: plan
-      integer,     intent(in)    :: n1, n2
-      CMPLX,       intent(in)    :: in  !< in(n1/2+1, n2)
-      FLOAT,       intent(out)   :: out !< out(n1, n2)
-      integer,     intent(in)    :: flags
-    end subroutine DFFTW(plan_dft_c2r_2d)
-
-    subroutine DFFTW(plan_dft_c2r_3d)(plan, n1, n2, n3, in, out, flags)
-      use iso_c_binding
-      implicit none
-      type(c_ptr), intent(inout) :: plan
-      integer,     intent(in)    :: n1, n2, n3
-      CMPLX,       intent(in)    :: in  !< in(n1/2+1, n2, n3)
-      FLOAT,       intent(out)   :: out !< out(n1, n2, n3)
-      integer,     intent(in)    :: flags
-    end subroutine DFFTW(plan_dft_c2r_3d)
-
-    subroutine DFFTW(plan_dft_1d)(plan, n, in, out, sign, flags)
-      use iso_c_binding
-      implicit none
-      type(c_ptr), intent(inout) :: plan
-      integer,     intent(in)    :: n
-      CMPLX,       intent(in)    :: in  !< in(n/2+1)
-      CMPLX,       intent(out)   :: out !< out(n)
-      integer,     intent(in)    :: sign, flags
-    end subroutine DFFTW(plan_dft_1d)
-
-    subroutine DFFTW(plan_dft_2d)(plan, n1, n2, in, out, sign, flags)
-      use iso_c_binding
-      implicit none
-      type(c_ptr), intent(inout) :: plan
-      integer,     intent(in)    :: n1, n2
-      CMPLX,       intent(in)    :: in  !< in(n1/2+1, n2)
-      CMPLX,       intent(out)   :: out !< out(n1, n2)
-      integer,     intent(in)    :: sign, flags
-    end subroutine DFFTW(plan_dft_2d)
-
-    subroutine DFFTW(plan_dft_3d)(plan, n1, n2, n3, in, out, sign, flags)
-      use iso_c_binding
-      implicit none
-      type(c_ptr), intent(inout) :: plan
-      integer,     intent(in)    :: n1, n2, n3
-      CMPLX,       intent(in)    :: in  !< in(n1/2+1, n2, n3)
-      CMPLX,       intent(out)   :: out !< out(n1, n2, n3)
-      integer,     intent(in)    :: sign, flags
-    end subroutine DFFTW(plan_dft_3d)
-  end interface
-
-  interface fftw_set_timelimit
-    subroutine DFFTW(set_timelimit)(time)
-      implicit none
-      FLOAT, intent(in) :: time
-    end subroutine DFFTW(set_timelimit)
-  end interface fftw_set_timelimit
-  
-  ! ----------------- execute_dft ------------------
-  interface fftw_execute_dft
-    subroutine DFFTW(execute_dft_r2c)(plan, in, out)
-      use iso_c_binding
-      implicit none
-      type(c_ptr), intent(in)  :: plan
-      FLOAT,       intent(in)  :: in
-      CMPLX,       intent(out) :: out
-    end subroutine DFFTW(execute_dft_r2c)
-
-    subroutine DFFTW(execute_dft_c2r)(plan, in, out)
-      use iso_c_binding
-      implicit none
-      type(c_ptr), intent(in)  :: plan
-      CMPLX,       intent(in)  :: in
-      FLOAT,       intent(out) :: out
-    end subroutine DFFTW(execute_dft_c2r)
-
-    subroutine DFFTW(execute_dft)(plan, in, out)
-      use iso_c_binding
-      implicit none
-      type(c_ptr), intent(in)  :: plan
-      CMPLX,       intent(in)  :: in
-      CMPLX,       intent(out) :: out
-    end subroutine DFFTW(execute_dft)
-  end interface fftw_execute_dft
-
-
-  !> ----------------- destroy_plan ------------------
-  interface fftw_destroy_plan
-    subroutine DFFTW(destroy_plan)(plan)
-      use iso_c_binding
-      implicit none
-      type(c_ptr), intent(inout) :: plan
-    end subroutine DFFTW(destroy_plan)
-  end interface fftw_destroy_plan
-
- 
-  !> ----------------- cleanup ------------------
-  interface fftw_cleanup
-    subroutine DFFTW(cleanup)
-      implicit none
-    end subroutine DFFTW(cleanup)
-  end interface fftw_cleanup
-
-
-  !> ----------------- thread-related functions---------------
-
-  interface fftw_init_threads
-    subroutine DFFTW(init_threads)(iret)
-      implicit none
-      integer, intent(out) :: iret
-    end subroutine DFFTW(init_threads)
-  end interface fftw_init_threads
-
-  interface fftw_plan_with_nthreads
-    subroutine DFFTW(plan_with_nthreads)(nthreads)
-      implicit none
-      integer, intent(in) :: nthreads
-    end subroutine DFFTW(plan_with_nthreads)
-  end interface fftw_plan_with_nthreads
-
-  interface fftw_cleanup_threads
-    subroutine DFFTW(cleanup_threads)
-      implicit none
-    end subroutine DFFTW(cleanup_threads)
-  end interface fftw_cleanup_threads
+  ! make public some needed symbols from the FFTW library
+  public :: FFTW_BACKWARD, FFTW_FORWARD, FFTW_UNALIGNED, FFTW_MEASURE,&
+       &fftw_execute_dft, fftw_execute_dft_c2r, fftw_execute_dft_r2c, &
+       & fftw_destroy_plan, fftw_cleanup
 
 contains
 
@@ -270,11 +76,14 @@ contains
 
     select case (dim)
     case (1)
-      call DFFTW(plan_dft_r2c_1d)(plan, n(1), in(1,1,1), out(1,1,1), flags)
+       plan = fftw_plan_dft_r2c_1d(n(1), in, out, flags)
+       !call DFFTW(plan_dft_r2c_1d)(plan, n(1), in(1,1,1), out(1,1,1), flags)
     case (2)
-      call DFFTW(plan_dft_r2c_2d)(plan, n(1), n(2), in(1,1,1), out(1,1,1), flags)
+       plan = fftw_plan_dft_r2c_2d(n(2),n(1), in, out, flags)
+       !call DFFTW(plan_dft_r2c_2d)(plan, n(1), n(2), in(1,1,1), out(1,1,1), flags)
     case (3)
-      call DFFTW(plan_dft_r2c_3d)(plan, n(1), n(2), n(3), in(1,1,1), out(1,1,1), flags)
+       plan = fftw_plan_dft_r2c_3d(n(3),n(2), n(1), in, out, flags)
+       !call DFFTW(plan_dft_r2c_3d)(plan, n(1), n(2), n(3), in(1,1,1), out(1,1,1), flags)
     end select
 
     SAFE_DEALLOCATE_A(in)
@@ -308,11 +117,14 @@ contains
 
         select case (dim)
         case (1)
-          call DFFTW(plan_dft_r2c_1d)(plan, n(1), rin(1,1,1), cout(1,1,1), flags)
+           plan = fftw_plan_dft_r2c_1d(n(1), rin, cout, flags)
+           !call DFFTW(plan_dft_r2c_1d)(plan, n(1), rin(1,1,1), cout(1,1,1), flags)
         case (2)
-          call DFFTW(plan_dft_r2c_2d)(plan, n(1), n(2), rin(1,1,1), cout(1,1,1), flags)
+           plan = fftw_plan_dft_r2c_2d(n(2), n(1),rin, cout, flags)
+           !call DFFTW(plan_dft_r2c_2d)(plan, n(1), n(2), rin(1,1,1), cout(1,1,1), flags)
         case (3)
-          call DFFTW(plan_dft_r2c_3d)(plan, n(1), n(2), n(3), rin(1,1,1), cout(1,1,1), flags)
+           plan = fftw_plan_dft_r2c_3d(n(3), n(2), n(1), rin, cout, flags)
+           !call DFFTW(plan_dft_r2c_3d)(plan, n(1), n(2), n(3), rin(1,1,1), cout(1,1,1), flags)
         end select
 
         SAFE_DEALLOCATE_A(rin)
@@ -323,11 +135,14 @@ contains
 
         select case (dim)
         case (1)
-          call DFFTW(plan_dft_c2r_1d)(plan, n(1), cin(1,1,1), rout(1,1,1), flags)
+           plan = fftw_plan_dft_c2r_1d(n(1), cin, rout, flags)
+           !call DFFTW(plan_dft_c2r_1d)(plan, n(1), cin(1,1,1), rout(1,1,1), flags)
         case (2)
-          call DFFTW(plan_dft_c2r_2d)(plan, n(1), n(2), cin(1,1,1), rout(1,1,1), flags)
+           plan = fftw_plan_dft_c2r_2d(n(2), n(1), cin, rout, flags)
+           !call DFFTW(plan_dft_c2r_2d)(plan, n(1), n(2), cin(1,1,1), rout(1,1,1), flags)
         case (3)
-          call DFFTW(plan_dft_c2r_3d)(plan, n(1), n(2), n(3), cin(1,1,1), rout(1,1,1), flags)
+           plan = fftw_plan_dft_c2r_3d(n(3), n(2), n(1), cin, rout, flags)
+           !call DFFTW(plan_dft_c2r_3d)(plan, n(1), n(2), n(3), cin(1,1,1), rout(1,1,1), flags)
         end select
 
         SAFE_DEALLOCATE_A(cin)
@@ -339,11 +154,14 @@ contains
 
       select case (dim)
       case (1)
-        call DFFTW(plan_dft_1d)(plan, n(1), cin(1,1,1), cout(1,1,1), sign, flags)
+         plan = fftw_plan_dft_1d(n(1), cin, cout, sign, flags)
+         !call DFFTW(plan_dft_1d)(plan, n(1), cin(1,1,1), cout(1,1,1), sign, flags)
       case (2)
-        call DFFTW(plan_dft_2d)(plan, n(1), n(2), cin(1,1,1), cout(1,1,1), sign, flags)
+         plan = fftw_plan_dft_2d(n(2), n(1), cin, cout, sign, flags)
+         !call DFFTW(plan_dft_2d)(plan, n(1), n(2), cin(1,1,1), cout(1,1,1), sign, flags)
       case (3)
-        call DFFTW(plan_dft_3d)(plan, n(1), n(2), n(3), cin(1,1,1), cout(1,1,1), sign, flags)
+         plan = fftw_plan_dft_3d(n(3), n(2), n(1), cin, cout, sign, flags)
+         !call DFFTW(plan_dft_3d)(plan, n(1), n(2), n(3), cin(1,1,1), cout(1,1,1), sign, flags)
       end select
 
       SAFE_DEALLOCATE_A(cin)

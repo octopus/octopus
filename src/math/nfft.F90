@@ -26,9 +26,8 @@ module nfft_m
   integer, public :: nfft_dummy ! this avoids compilers complaining about empty module
 #else
 
-
-  use iso_c_binding
-  use fftw_m
+  use,intrinsic :: iso_c_binding
+  use fftw_params_m
   use global_m
   use loct_math_m
   use messages_m
