@@ -39,7 +39,6 @@ module cube_function_m
   use parser_m
   use partition_transfer_m
   use par_vec_m
-  use pfft_m
   use profiling_m
   use simul_box_m
   use types_m

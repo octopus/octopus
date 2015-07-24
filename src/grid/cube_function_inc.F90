@@ -31,8 +31,6 @@ subroutine X(cube_function_alloc_rs)(cube, cf, in_device, force_alloc)
 
   logical :: allocated
   
-  
-
   PUSH_SUB(X(cube_function_alloc_rs))
 
   ASSERT(.not.associated(cf%X(rs)))
@@ -82,26 +80,26 @@ subroutine X(cube_function_free_rs)(cube, cf)
   deallocated = .false.
 
   if(associated(cube%fft)) then
-    select case(cube%fft%library)
-    case(FFTLIB_PFFT)
-      if(.not. cf%forced_alloc) then
-        deallocated = .true.
-        nullify(cf%X(rs))
-      end if
-    case(FFTLIB_CLAMD)
+     select case(cube%fft%library)
+     case(FFTLIB_PFFT)
+        if(.not. cf%forced_alloc) then
+           deallocated = .true.
+           nullify(cf%X(rs))
+        end if
+     case(FFTLIB_CLAMD)
 #ifdef HAVE_OPENCL
-      if(cf%in_device_memory) then
-        deallocated = .true.
-        ASSERT(cf%in_device_memory)
-        call opencl_release_buffer(cf%real_space_buffer)
-        cf%in_device_memory = .false.
-      end if
+        if(cf%in_device_memory) then
+           deallocated = .true.
+           ASSERT(cf%in_device_memory)
+           call opencl_release_buffer(cf%real_space_buffer)
+           cf%in_device_memory = .false.
+        end if
 #endif
-    end select
+     end select
   end if
 
   if(.not. deallocated) then
-    SAFE_DEALLOCATE_P(cf%X(rs))
+     SAFE_DEALLOCATE_P(cf%X(rs))
   end if
 
   POP_SUB(X(cube_function_free_rs))
@@ -134,7 +132,7 @@ subroutine X(cube_function_allgather)(cube, cf, cf_local, order, gatherfs)
     ! memory will not be contiguous (see cube_function_alloc_rs). In that case the 
     ! Fortran compiler should do a temporary copy.
     call MPI_Allgatherv ( cf_local, cube%np_local(cube%mpi_grp%rank+1), R_MPITYPE, &
-         cf_tmp(1), cube%np_local, cube%xlocal - 1, R_MPITYPE, &
+         cf_tmp, cube%np_local, cube%xlocal - 1, R_MPITYPE, &
          cube%mpi_grp%comm, mpi_err)
     call mpi_debug_out(cube%mpi_grp%comm, C_MPI_ALLGATHERV)
 
@@ -144,7 +142,6 @@ subroutine X(cube_function_allgather)(cube, cf, cf_local, order, gatherfs)
       order_ = (/1,2,3/)
     end if
     if(present(order)) order_ = order
-
 
 
     do index = 1, cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3)
@@ -165,7 +162,7 @@ subroutine X(cube_function_allgather)(cube, cf, cf_local, order, gatherfs)
     ! memory will not be contiguous (see cube_function_alloc_rs). In that case the 
     ! Fortran compiler should do a temporary copy.
     call MPI_Allgatherv ( cf_local, cube%np_local_fs(cube%mpi_grp%rank+1), R_MPITYPE, &
-         cf_tmp(1), cube%np_local_fs, cube%xlocal_fs - 1, R_MPITYPE, &
+         cf_tmp, cube%np_local_fs, cube%xlocal_fs - 1, R_MPITYPE, &
          cube%mpi_grp%comm, mpi_err)
     call mpi_debug_out(cube%mpi_grp%comm, C_MPI_ALLGATHERV)
 
