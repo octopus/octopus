@@ -924,10 +924,12 @@ contains
   !> see http://local.wasp.uwa.edu.au/~pbourke/dataformats/cube/
   !! Writes only real part
   subroutine out_cube()
+
     integer :: ix, iy, iz, idir, idir2, iatom
     FLOAT   :: offset(MAX_DIM)
     type(cube_t) :: cube
     type(cube_function_t) :: cf
+    character(len=8) :: fmt
 
     PUSH_SUB(X(io_function_output_global).out_cube)
 
@@ -963,11 +965,16 @@ contains
 
     do ix = 1, cube%rs_n_global(1)
       do iy = 1, cube%rs_n_global(2)
-        do iz = 1, cube%rs_n_global(3)
-          write(iunit,'(e14.6)', advance='no') units_from_atomic(unit, R_REAL(cf%X(RS)(ix, iy, iz)))
-          if(mod(iz-1, 6) == 5)  write(iunit, '(1x)')
+        do iz = 1, cube%rs_n_global(3), 6
+
+          if(iz + 6 - 1 <= cube%rs_n_global(3)) then
+            write(iunit,'(6e14.6)') units_from_atomic(unit, R_REAL(cf%X(RS)(ix, iy, iz:iz + 6 - 1)))
+          else
+            write(fmt, '(a,i1,a)') '(', cube%rs_n_global(3) - iz + 1, 'e14.6)'
+            write(iunit, trim(fmt)) units_from_atomic(unit, R_REAL(cf%X(RS)(ix, iy, iz:cube%rs_n_global(3))))
+          end if
+        
         end do
-        write(iunit, '(1x)')
       end do
     end do
 
