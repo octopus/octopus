@@ -621,6 +621,7 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
 
   call profiling_in(prof, "BATCH_GET_STATE")
 
+  ASSERT(ubound(psi, dim = 1) >= np)
   ASSERT(ist >= 1 .and. ist <= this%nst_linear)
 #ifdef R_TREAL
   ! cannot get a real value from a complex batch
