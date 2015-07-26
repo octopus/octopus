@@ -22,6 +22,7 @@
 module density_m
   use blas_m
   use batch_m
+  use batch_ops_m
   use iso_c_binding
 #ifdef HAVE_OPENCL
   use cl
@@ -35,6 +36,7 @@ module density_m
   use loct_m
   use math_m
   use mesh_m
+  use mesh_function_m
   use messages_m
   use multigrid_m
   use multicomm_m
@@ -144,16 +146,16 @@ contains
   ! ---------------------------------------------------
 
   subroutine density_calc_accumulate(this, ik, psib, psibL)
-    type(density_calc_t), target, intent(inout) :: this
+    type(density_calc_t),         intent(inout) :: this
     integer,                      intent(in)    :: ik
     type(batch_t),                intent(inout) :: psib
     type(batch_t), optional,      intent(inout) :: psibL !< Left states
 
     integer :: ist, ip, ispin
+    FLOAT   :: nrm
     CMPLX   :: term, psi1, psi2
-    FLOAT, pointer :: crho(:)
-    FLOAT, pointer :: Imcrho(:)  
-    FLOAT, allocatable :: frho(:), weight(:)
+    CMPLX, allocatable :: psi(:), fpsi(:)
+    FLOAT, allocatable :: weight(:), sqpsi(:)
     type(profile_t), save :: prof
     logical :: correct_size, cmplxscl
 #ifdef HAVE_OPENCL
@@ -176,40 +178,30 @@ contains
     SAFE_ALLOCATE(weight(1:psib%nst))
     forall(ist = 1:psib%nst) weight(ist) = this%st%d%kweights(ik)*this%st%occ(psib%states(ist)%ist, ik)
 
-    if(this%st%d%ispin /= SPINORS) then 
-
-      if(this%gr%have_fine_mesh) then
-        SAFE_ALLOCATE(crho(1:this%gr%mesh%np_part))
-        crho = M_ZERO
-        if(cmplxscl) then
-          SAFE_ALLOCATE(Imcrho(1:this%gr%mesh%np_part))
-          Imcrho = M_ZERO
-        end if
-      else
-        crho => this%density(:, ispin)
-        if (cmplxscl) Imcrho => this%Imdensity(:, ispin)
-      end if
+    if(this%st%d%ispin /= SPINORS .and. .not. this%gr%have_fine_mesh) then 
 
       select case(batch_status(psib))
       case(BATCH_NOT_PACKED)
         if(states_are_real(this%st)) then
           do ist = 1, psib%nst
             forall(ip = 1:this%gr%mesh%np)
-              crho(ip) = crho(ip) + weight(ist)*psib%states(ist)%dpsi(ip, 1)**2
+              this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*psib%states(ist)%dpsi(ip, 1)**2
             end forall
           end do
         else
           if(cmplxscl) then
             do ist = 1, psib%nst
               forall(ip = 1:this%gr%mesh%np)
-                crho(ip)   = crho(ip)   + weight(ist) * real( psibL%states(ist)%zpsi(ip, 1) * psib%states(ist)%zpsi(ip, 1))
-                Imcrho(ip) = Imcrho(ip) + weight(ist) * aimag(psibL%states(ist)%zpsi(ip, 1) * psib%states(ist)%zpsi(ip, 1))
+                this%density(ip, ispin) = this%density(ip, ispin) + &
+                  weight(ist)*real(psibL%states(ist)%zpsi(ip, 1)*psib%states(ist)%zpsi(ip, 1))
+                this%Imdensity(ip, ispin) = this%Imdensity(ip, ispin) + &
+                  weight(ist)*aimag(psibL%states(ist)%zpsi(ip, 1)*psib%states(ist)%zpsi(ip, 1))
               end forall
             end do
           else
             do ist = 1, psib%nst
               forall(ip = 1:this%gr%mesh%np)
-                crho(ip) = crho(ip) + weight(ist)* &
+                this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
                   (real(psib%states(ist)%zpsi(ip, 1), REAL_PRECISION)**2 + aimag(psib%states(ist)%zpsi(ip, 1))**2)
               end forall
             end do
@@ -219,21 +211,23 @@ contains
         if(states_are_real(this%st)) then
           do ip = 1, this%gr%mesh%np
             do ist = 1, psib%nst
-              crho(ip) = crho(ip) + weight(ist)*psib%pack%dpsi(ist, ip)**2
+              this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*psib%pack%dpsi(ist, ip)**2
             end do
           end do
         else
           if(cmplxscl) then
             do ip = 1, this%gr%mesh%np
               do ist = 1, psib%nst
-                crho(ip)   = crho(ip)   + weight(ist) * real( psibL%pack%zpsi(ist, ip) * psib%pack%zpsi(ist, ip))
-                Imcrho(ip) = Imcrho(ip) + weight(ist) * aimag(psibL%pack%zpsi(ist, ip) * psib%pack%zpsi(ist, ip))
+                this%density(ip, ispin) = this%density(ip, ispin) + &
+                  weight(ist)*real(psibL%pack%zpsi(ist, ip)*psib%pack%zpsi(ist, ip))
+                this%Imdensity(ip, ispin) = this%Imdensity(ip, ispin) + &
+                  weight(ist)*aimag(psibL%pack%zpsi(ist, ip)*psib%pack%zpsi(ist, ip))
               end do
             end do
           else  
             do ip = 1, this%gr%mesh%np
               do ist = 1, psib%nst
-                crho(ip) = crho(ip) + weight(ist)* &
+                this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
                   (real(psib%pack%zpsi(ist, ip), REAL_PRECISION)**2 + aimag(psib%pack%zpsi(ist, ip))**2)
               end do
             end do
@@ -270,28 +264,42 @@ contains
 #endif
       end select
 
-      if(this%gr%have_fine_mesh) then
-        if(cmplxscl) then
-          SAFE_ALLOCATE(frho(1:this%gr%fine%mesh%np))
-          call dmultigrid_coarse2fine(this%gr%fine%tt, this%gr%der, this%gr%fine%mesh, crho, frho, order = 2)
-          forall(ip = 1:this%gr%fine%mesh%np) this%density(ip, ispin) = this%density(ip, ispin) + frho(ip)    
-          call dmultigrid_coarse2fine(this%gr%fine%tt, this%gr%der, this%gr%fine%mesh, Imcrho, frho, order = 2)
-          forall(ip = 1:this%gr%fine%mesh%np) this%density(ip, ispin) = this%Imdensity(ip, ispin) + frho(ip)
-          SAFE_DEALLOCATE_P(crho)
-          SAFE_DEALLOCATE_P(Imcrho)
-          SAFE_DEALLOCATE_A(frho)
-        else  
-          SAFE_ALLOCATE(frho(1:this%gr%fine%mesh%np))
-          call dmultigrid_coarse2fine(this%gr%fine%tt, this%gr%der, this%gr%fine%mesh, crho, frho, order = 2)
-          ! some debugging output that I will keep here for the moment, XA
-          !      call dio_function_output(1, "./", "n_fine", this%gr%fine%mesh, frho, unit_one, ierr)
-          !      call dio_function_output(1, "./", "n_coarse", this%gr%mesh, crho, unit_one, ierr)
-          forall(ip = 1:this%gr%fine%mesh%np) this%density(ip, ispin) = this%density(ip, ispin) + frho(ip)
-          SAFE_DEALLOCATE_P(crho)
-          SAFE_DEALLOCATE_A(frho)
-        end if
-      end if
+    else if(this%gr%have_fine_mesh) then
 
+      ASSERT(.not. cmplxscl)
+
+      SAFE_ALLOCATE(psi(1:this%gr%mesh%np_part))
+      SAFE_ALLOCATE(fpsi(1:this%gr%fine%mesh%np))
+      SAFE_ALLOCATE(sqpsi(1:this%gr%fine%mesh%np))
+
+      do ist = 1, psib%nst
+
+        call batch_get_state(psib, ist, this%gr%mesh%np, psi)
+
+        call zmultigrid_coarse2fine(this%gr%fine%tt, this%gr%der, this%gr%fine%mesh, psi, fpsi, order = 2)
+
+        do ip = 1, this%gr%fine%mesh%np
+          sqpsi(ip) = abs(fpsi(ip))**2
+        end do
+
+        nrm = dmf_integrate(this%gr%fine%mesh, sqpsi)
+        
+        do ip = 1, this%gr%fine%mesh%np
+          this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*sqpsi(ip)/nrm
+        end do
+        
+      end do
+
+
+      ! some debugging output that I will keep here for the moment, XA
+      !      call dio_function_output(1, "./", "n_fine", this%gr%fine%mesh, frho, unit_one, ierr)
+      !      call dio_function_output(1, "./", "n_coarse", this%gr%mesh, crho, unit_one, ierr)
+      !        forall(ip = 1:this%gr%fine%mesh%np) this%density(ip, ispin) = this%density(ip, ispin) + frho(ip)
+
+      SAFE_DEALLOCATE_A(psi)
+      SAFE_DEALLOCATE_A(fpsi)
+      SAFE_DEALLOCATE_A(sqpsi)
+      
     else !SPINORS
 
       ! in this case wavefunctions are always complex
