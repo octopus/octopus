@@ -27,6 +27,8 @@ module pnfft_params_m
   use pfft_params_m
   implicit none
 
+  private
+
 #ifdef HAVE_PNFFT
   include "pnfft.f03"
 #else

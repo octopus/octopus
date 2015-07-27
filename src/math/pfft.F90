@@ -25,6 +25,8 @@ module pfft_params_m
   use fftw_mpi_params_m
   implicit none
 
+  private
+
 #ifdef HAVE_PFFT
   include "pfft.f03"
 #endif
