@@ -21,12 +21,12 @@
 !> Write the photoelectron wavefunctions in real space
 ! ---------------------------------------------------------
 subroutine pes_mask_output_states(st, gr, geo, dir, outp, mask)
-  type(states_t),   intent(in) :: st
-  type(grid_t),     intent(in) :: gr
-  type(geometry_t), intent(in) :: geo
-  character(len=*), intent(in) :: dir
-  type(output_t),   intent(in) :: outp
-  type(pes_mask_t), intent(in) :: mask
+  type(states_t),   intent(in)    :: st
+  type(grid_t),     intent(in)    :: gr
+  type(geometry_t), intent(in)    :: geo
+  character(len=*), intent(in)    :: dir
+  type(output_t),   intent(in)    :: outp
+  type(pes_mask_t), intent(inout) :: mask
 
   integer :: ik, ist, idim, is, ierr
   character(len=80) :: fname
@@ -1450,14 +1450,14 @@ end subroutine pes_mask_write_power_total
 !
 ! ---------------------------------------------------------
 subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
-  type(pes_mask_t),  intent(in)    :: mask
-  type(mesh_t),      intent(in)    :: mesh
-  type(states_t),    intent(in)    :: st
-  character(len=*),  intent(in)    :: file
-  type(output_t),    intent(in)    :: outp
-  type(grid_t),      intent(inout) :: gr
-  type(geometry_t),  intent(in)    :: geo
-  integer,           intent(in)    :: iter
+  type(pes_mask_t),  intent(inout)    :: mask
+  type(mesh_t),      intent(in)       :: mesh
+  type(states_t),    intent(in)       :: st
+  character(len=*),  intent(in)       :: file
+  type(output_t),    intent(in)       :: outp
+  type(grid_t),      intent(inout)    :: gr
+  type(geometry_t),  intent(in)       :: geo
+  integer,           intent(in)       :: iter
 
   CMPLX, allocatable :: wfAk(:,:,:,:,:,:), psi(:)
   FLOAT :: pesK(1:mask%fs_n_global(1),1:mask%fs_n_global(2),1:mask%fs_n_global(3)),pol(3)
@@ -1482,10 +1482,10 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
   end if
   
   if (simul_box_is_periodic(mesh%sb)) then
-    ! For periodic systems the results must be obtained using 
-    ! the oct-photoelectron-spectrum routine 
+    ! For periodic systems the results must be obtained using
+    ! the oct-photoelectron-spectrum routine
     POP_SUB(pes_mask_output)
-    return     
+    return
   end if
 
   !Write the output in the td.00iter directories
