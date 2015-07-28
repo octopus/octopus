@@ -221,9 +221,9 @@ contains
 
     PUSH_SUB(pes_calc)
 
-    if(pes%calc_rc)   call pes_rc_calc  (pes%rc, st, mesh, ii, dt, iter)
+    if(pes%calc_rc)   call pes_rc_calc  (pes%rc, st, mesh, ii, dt, iter - 1)
     if(pes%calc_mask) call pes_mask_calc(pes%mask, mesh, st, dt, iter)
-    if(pes%calc_flux) call pes_flux_save(pes%flux, mesh, st, gr, hm, iter, maxiter, dt)
+    if(pes%calc_flux) call pes_flux_save(pes%flux, mesh, st, gr, hm, iter - 1, maxiter, dt)
 
     POP_SUB(pes_calc)
   end subroutine pes_calc
