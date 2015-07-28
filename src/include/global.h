@@ -75,11 +75,8 @@
 ! and SAFE_DEALLOCATE_A for arrays.
 #if defined(NDEBUG)
 #  define SAFE_ALLOCATE(x) allocate(x)
-#  define SAFE_DEALLOCATE_P(x) if(associated(x)) then; _newline_ \
-  deallocate(x); _newline_ \
-  nullify(x); end if
-#  define SAFE_DEALLOCATE_A(x) if(allocated(x)) then; _newline_ \
-  deallocate(x); end if
+#  define SAFE_DEALLOCATE_P(x) if(associated(x)) then; deallocate(x); nullify(x); end if
+#  define SAFE_DEALLOCATE_A(x) if(allocated(x)) then; deallocate(x); end if
 #else
 #  define SAFE_ALLOCATE(x)			\
   allocate(x, stat=global_alloc_err); _newline_ \
