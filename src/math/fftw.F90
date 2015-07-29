@@ -55,6 +55,9 @@ module fftw_m
   public :: FFTW_BACKWARD, FFTW_FORWARD, FFTW_UNALIGNED, FFTW_MEASURE,&
        &fftw_execute_dft, fftw_execute_dft_c2r, fftw_execute_dft_r2c, &
        & fftw_destroy_plan, fftw_cleanup
+#if defined(HAVE_OPENMP) && defined(HAVE_FFTW3_THREADS)
+  public :: fftw_init_threads, fftw_plan_with_nthreads, fftw_cleanup_threads
+#endif
 
 contains
 

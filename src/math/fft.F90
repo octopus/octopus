@@ -221,7 +221,7 @@ contains
       call messages_write('Info: Initializing Multi-threaded FFTW')
       call messages_info()
       
-      call fftw_init_threads(iret)
+      iret = fftw_init_threads()
       if (iret == 0) then 
         call messages_write('Initialization of FFTW3 threads failed.')
         call messages_fatal()

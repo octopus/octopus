@@ -24,6 +24,7 @@ acx_pfft_ok=no
 
 dnl Check if the library was given in the command line
 AC_ARG_WITH(pfft-prefix, [AS_HELP_STRING([--with-pfft-prefix=<lib>], [PFFT version 1.0.7 is required, linked with a patched version of FFTW3.3.3. Source and more information at http://www-user.tu-chemnitz.de/~mpip/software.php])])
+
 case $with_pfft_prefix in
   yes | "") ;;
   no) acx_pfft_ok=disable ;;
@@ -40,27 +41,9 @@ AC_ARG_WITH(pfft-include, [AS_HELP_STRING([--with-pfft-include=DIR], [PFFT Fortr
 case $with_pfft_include in
   "") if test "x$FCFLAGS_PFFT" == x; then
         FCFLAGS_PFFT="$ax_cv_f90_modflag/usr/include"
-      fi;;
-  *)  FCFLAGS_PFFT="$ax_cv_f90_modflag$with_pfft_include" ;;
-esac
-
-
-dnl We need to link against the MPI FFTW3 used to compile PFFT 
-AC_ARG_WITH(mpifftw-prefix, [AS_HELP_STRING([--with-mpifftw-prefix=DIR], [MPI FFTW3 libraries directory (the one used to build PFFT).])])
-case $with_mpifftw_prefix in
- "")  case $LIBS_FFT in 
-      *.a | *.so | *.so.* | *.o) xpath=${LIBS_FFT%/lib/*};
-         LIBS_MPIFFT="-L$xpath/lib -lfftw3_mpi"; 
-         FCFLAGS_MPIFFT="$ax_cv_f90_modflag$xpath/include";;
-      *) LIBS_MPIFFT="-L/usr/lib -lfftw3_mpi"; 
-         FCFLAGS_MPIFFT="$ax_cv_f90_modflag/usr/include";;
-      esac
+      fi
       ;;
- *.a | *.so | *.so.* | *.o) LIBS_MPIFFT=$with_mpifftw_prefix;
-     xpath=${with_mpifftw_prefix%/lib/*} 
-     FCFLAGS_MPIFFT="$ax_cv_f90_modflag$xpath/include";;
- *)  LIBS_MPIFFT="-L$with_mpifftw_prefix/lib -lfftw3_mpi -lfftw3";
-     FCFLAGS_MPIFFT="$ax_cv_f90_modflag$with_mpifftw_prefix/include" ;;
+  *)  FCFLAGS_PFFT="$ax_cv_f90_modflag$with_pfft_include" ;;
 esac
 
 
@@ -69,16 +52,16 @@ if test "x$acx_mpi_ok" != xyes; then
   acx_pfft_ok=nompi
 fi
 
-dnl We cannot use PFFT if FFTW3 is not found
-if test "x$acx_fft_ok" != xyes; then
-  acx_pfft_ok=nofftw3
+dnl We cannot use PFFT if FFTW3-MPI is not found
+if test "x$acx_fft_mpi_ok" != xyes; then
+  acx_pfft_ok=nofftw3_mpi
 fi
 
 dnl Backup LIBS and FCFLAGS
 acx_pfft_save_LIBS="$LIBS"
 acx_pfft_save_FCFLAGS="$FCFLAGS"
 
-FCFLAGS_PFFT="$FCFLAGS_PFFT $FCFLAGS_MPIFFT"
+FCFLAGS_PFFT="$FCFLAGS_PFFT $FCFLAGS_FFT"
 FCFLAGS="$FCFLAGS_PFFT $acx_pfft_save_FCFLAGS"
 
 # some symbols below will not be defined for version 1.0.4, making sure
