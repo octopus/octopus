@@ -57,10 +57,10 @@ FCFLAGS="$FCFLAGS_PNFFT  $acx_pnfft_save_FCFLAGS"
 
 
 testprogram="AC_LANG_PROGRAM([],[ 
-    use iso_c_binding
-    include \"fftw3-mpi.f03\"
-    include \"pfft.f03\"
-    include \"pnfft.f03\"
+    use, intrinsic :: iso_c_binding
+    include 'fftw3-mpi.f03'
+    include 'pfft.f03'
+    include 'pnfft.f03'
     
     call pnfft_init()
   ])"
