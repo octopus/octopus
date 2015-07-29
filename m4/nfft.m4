@@ -18,7 +18,7 @@
 ##
 
 AC_DEFUN([ACX_NFFT], [
-AC_REQUIRE([ACX_FFT])
+AC_REQUIRE([ACX_FFTW])
 acx_nfft_ok=no
 
 nfft_func="nfft_init_1d"
@@ -46,7 +46,7 @@ if test $acx_nfft_ok = no; then
   if test "$LIBS_NFFT"; then
     nfft_cflags="$CFLAGS_NFFT" 
     nfft_libs="$LIBS_NFFT"
-    CFLAGS="$nfft_cflags $CFLAGS_FFT"
+    CFLAGS="$nfft_cflags $CFLAGS_FFTW"
     LIBS="$nfft_libs $LIBS_FFT"
     AC_LINK_IFELSE([AC_LANG_SOURCE([
 #include "nfft3util.h"
@@ -70,7 +70,7 @@ fi
 
 AC_SUBST(CFLAGS_NFFT)
 AC_SUBST(LIBS_NFFT)
-CFLAGS="$CFLAGS_NFFT $CFLAGS_FFT $acx_nfft_save_CFLAGS"
+CFLAGS="$CFLAGS_NFFT $CFLAGS_FFTW $acx_nfft_save_CFLAGS"
 LIBS="$LIBS_NFFT $acx_nfft_save_LIBS"
 
 

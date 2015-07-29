@@ -19,7 +19,7 @@
 ##
 
 AC_DEFUN([ACX_PFFT], [
-AC_REQUIRE([ACX_FFT])
+AC_REQUIRE([ACX_FFTW])
 acx_pfft_ok=no
 
 dnl Check if the library was given in the command line
@@ -66,10 +66,10 @@ if test x$skip_mpifftw != xyes; then
 else
     # no explicit mpifftw prefix was given
     dnl We cannot use PFFT if FFTW3-MPI is not found
-    if test "x$acx_fft_mpi_ok" != xyes; then
+    if test "x$acx_fftw_mpi_ok" != xyes; then
        acx_pfft_ok=nofftw3_mpi
     else
-	FCFLAGS_MPIFFT=$FCFLAGS_FFT
+	FCFLAGS_MPIFFT=$FCFLAGS_FFTW
 	LIBS_MPIFFT=$LIBS_FFT
     fi
 fi

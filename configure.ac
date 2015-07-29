@@ -268,8 +268,8 @@ ACX_GDLIB
 
 AC_LANG_POP(C)
 
-dnl check for FFT
-ACX_FFT
+dnl check for FFTW
+ACX_FFTW
 
 dnl check for NFFT
 AC_LANG_PUSH(C)

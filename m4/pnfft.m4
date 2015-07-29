@@ -18,7 +18,7 @@
 ##
 
 AC_DEFUN([ACX_PNFFT], [
-AC_REQUIRE([ACX_FFT])
+AC_REQUIRE([ACX_FFTW])
 AC_REQUIRE([ACX_PFFT])
 acx_pnfft_ok=no
 
