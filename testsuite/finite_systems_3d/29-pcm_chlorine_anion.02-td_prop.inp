@@ -24,8 +24,8 @@ spacing = 0.19
 ConvRelDens = 1e-5
 XCFunctional = gga_x_pbe + gga_c_pbe
 
-PcmCalculation = true
-PcmStaticEpsilon = 78.39
+PCMCalculation = true
+PCMStaticEpsilon = 78.39
 
 TDDeltaStrength = 0.0
 TDPolarizationDirection = 1

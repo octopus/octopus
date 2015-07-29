@@ -141,7 +141,7 @@ contains
 
     PUSH_SUB(pcm_init)
 
-    !%Variable PcmCalculation
+    !%Variable PCMCalculation
     !%Type logical
     !%Default no
     !%Section Hamiltonian::PCM
@@ -153,7 +153,7 @@ contains
     !% only for <tt>TheoryLevel = DFT</tt>.
     !%End
 
-    call parse_variable('PcmCalculation', .false., pcm%run_pcm)
+    call parse_variable('PCMCalculation', .false., pcm%run_pcm)
     if (pcm%run_pcm) then
       if ( (grid%sb%box_shape /= MINIMUM).OR.(grid%sb%dim /= pcm_dim_space) ) then
         message(1) = "PCM is only available for BoxShape = minimum and 3d calculations"
@@ -166,14 +166,14 @@ contains
       return
     end if
 
-    !%Variable PcmRadiusScaling
+    !%Variable PCMRadiusScaling
     !%Type float
     !%Default 1.0
     !%Section Hamiltonian::PCM
     !%Description
     !% Scales the radii of the spheres used to build the solute cavity surface.
     !%End
-    call parse_variable('PcmRadiusScaling', M_ONE, pcm%scale_r)
+    call parse_variable('PCMRadiusScaling', M_ONE, pcm%scale_r)
 
     rcav_C  = CNST(2.4)*P_Ang*pcm%scale_r    ! 
     rcav_O  = CNST(1.8)*P_Ang*pcm%scale_r    !    
@@ -183,27 +183,27 @@ contains
     rcav_Na = CNST(2.772)*P_Ang*pcm%scale_r  !  
     rcav_Cl = CNST(2.172)*P_Ang*pcm%scale_r  !
 
-    !%Variable PcmStaticEpsilon
+    !%Variable PCMStaticEpsilon
     !%Type float
     !%Default 1.0
     !%Section Hamiltonian::PCM
     !%Description
     !% Static dielectric constant of the solvent (<math>\varepsilon_0</math>). 1.0 indicates gas phase.
     !%End
-    call parse_variable('PcmStaticEpsilon', M_ONE, pcm%epsilon_0)
+    call parse_variable('PCMStaticEpsilon', M_ONE, pcm%epsilon_0)
 
-    !%Variable PcmDynamicEpsilon
+    !%Variable PCMDynamicEpsilon
     !%Type float
-    !%Default PcmStaticEpsilon
+    !%Default PCMStaticEpsilon
     !%Section Hamiltonian::PCM
     !%Description
     !% High-frequency dielectric constant of the solvent (<math>\varepsilon_d</math>). 1.0 indicates gas phase.
     !% At present, non-equilibrium effects within PCM calculations are not implemented. For td calculations
-    !% take PcmDynamicEpsilon = PcmStaticEpsilon (default). 
+    !% take PCMDynamicEpsilon = PCMStaticEpsilon (default). 
     !%End
-    call parse_variable('PcmDynamicEpsilon', pcm%epsilon_0, pcm%epsilon_infty)
+    call parse_variable('PCMDynamicEpsilon', pcm%epsilon_0, pcm%epsilon_infty)
 
-    !%Variable PcmSmearingFactor
+    !%Variable PCMSmearingFactor
     !%Type float
     !%Default 1.0
     !%Section Hamiltonian::PCM
@@ -212,7 +212,7 @@ contains
     !% the polarization charges on each tessera (arXiv:1507.05471). If set to zero, the solvent 
     !% reaction potential in real-space is defined by using point charges.
     !%End
-    call parse_variable('PcmSmearingFactor', M_ONE, pcm%gaussian_width)
+    call parse_variable('PCMSmearingFactor', M_ONE, pcm%gaussian_width)
 
     if (pcm%gaussian_width == M_ZERO) then
       message(1) = "Info: PCM potential will be defined in terms of polarization point charges"
@@ -224,7 +224,7 @@ contains
 
     call io_mkdir('pcm')
 
-    !%Variable PcmCavity
+    !%Variable PCMCavity
     !%Type string
     !%Section Hamiltonian::PCM
     !%Description
@@ -238,7 +238,7 @@ contains
     !%  R_sph(1:T)      < Radii of the spheres to which the tesserae belong
     !%  normal(1:T,1:3) < Outgoing unitary vectors at the tesserae surfaces 
     !%End
-    call parse_variable('PcmCavity', '', pcm%input_cavity)
+    call parse_variable('PCMCavity', '', pcm%input_cavity)
 
     if (pcm%input_cavity == '') then
     
