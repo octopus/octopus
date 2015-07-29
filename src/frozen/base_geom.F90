@@ -60,64 +60,15 @@ module base_geom_m
 #include "thash_inc.F90"
 #undef HASH_INCLUDE_PREFIX
 
-  use atom_m,    only: atom_t, atom_set_species, atom_get_label, atom_end
-  use basis_m,   only: basis_t, basis_init, basis_to_external, basis_end
-  use json_m,    only: JSON_OK
-  use json_m,    only: json_object_t, json_init, json_get, json_end
-  use json_m,    only: json_array_t, json_array_iterator_t, json_len, json_next
-  use space_m,   only: operator(==), space_t
-  use species_m, only: LABEL_LEN, species_t, species_init, species_label, species_index, species_copy, species_end
-
-  use config_dict_m, only: &
-    config_dict_t,         &
-    config_dict_init,      &
-    config_dict_set,       &
-    config_dict_get,       &
-    config_dict_copy,      &
-    config_dict_end
-
-  use config_dict_m, only:  &
-    config_dict_iterator_t
-
-  use config_dict_m, only: &
-    CONFIG_DICT_OK,        &
-    CONFIG_DICT_NAME_LEN
-
-  use geometry_m, only:             &
-    geometry_t,                     &
-    geometry_nullify,               &
-    geometry_init_from_data_object, &
-    geometry_end
-
-  use atom_list_m,  only: &
-    ATOM_LIST_OK,         &
-    atom_list_t,          &
-    atom_list_len,        &
-    atom_list_init,       &
-    atom_list_next,       &
-    atom_list_append,     &
-    atom_list_push,       &
-    atom_list_pop,        &
-    atom_list_copy,       &
-    atom_list_end
-
-  use atom_list_m,  only: &
-    atom_list_iterator_t
-
-  use species_dict_m, only: &
-    SPECIES_DICT_OK,        &
-    species_dict_t,         &
-    species_dict_len,       &
-    species_dict_init,      &
-    species_dict_next,      &
-    species_dict_pop,       &
-    species_dict_set,       &
-    species_dict_get,       &
-    species_dict_copy,      &
-    species_dict_end
-
-  use species_dict_m, only:  &
-    species_dict_iterator_t
+  use atom_m
+  use basis_m
+  use json_m
+  use space_m
+  use species_m
+  use config_dict_m
+  use geometry_m
+  use atom_list_m
+  use species_dict_m
 
 #define TEMPLATE_PREFIX base_geom
 #define EXCLUDE_TYPE

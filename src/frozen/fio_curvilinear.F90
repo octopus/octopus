@@ -5,19 +5,14 @@ module fio_curvilinear_m
   use global_m
   use messages_m
   use profiling_m
-
-  use curv_briggs_m, only: curv_briggs_init
-  use curv_gygi_m,   only: curv_gygi_init
-  use curv_modine_m, only: curv_modine_init
-  use geometry_m,    only: geometry_t
-  use json_m,        only: JSON_OK, json_object_t, json_get
-  use kinds_m,       only: wp
-
-  use curvilinear_m, only: &
-    CURV_METHOD_UNIFORM,   &
-    CURV_METHOD_GYGI,      &
-    CURV_METHOD_BRIGGS,    &
-    CURV_METHOD_MODINE
+  use curv_briggs_m
+  use curv_gygi_m
+  use curv_modine_m
+  use geometry_m
+  use json_m
+  use kinds_m
+  use curvilinear_m
+  use fio_simul_box_m
 
   use curvilinear_m, only:              &
     fio_curvilinear_t => curvilinear_t
@@ -25,9 +20,6 @@ module fio_curvilinear_m
   use curvilinear_m, only:                    &
     fio_curvilinear_copy => curvilinear_copy, &
     fio_curvilinear_end  => curvilinear_end
-
-  use fio_simul_box_m, only: &
-    fio_simul_box_t
 
   implicit none
 

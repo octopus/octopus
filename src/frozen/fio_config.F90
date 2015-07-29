@@ -5,30 +5,22 @@ module fio_config_m
   use global_m
   use messages_m
   use profiling_m
-
-  use curvilinear_m, only: CURV_METHOD_UNIFORM
-  use intrpl_m,      only: NEAREST
-  use io_m,          only: io_open, io_close
-  use json_m,        only: JSON_OK, json_isdef, json_len, json_object_t, json_array_t, json_update
-  use json_m,        only: json_object_t, json_array_t, json_array_iterator_t
-  use json_m,        only: json_init, json_next, json_set, json_get, json_append, json_copy, json_end
-  use json_parser_m, only: json_parser_t, json_parser_init, json_parser_end
-  use json_parser_m, only: json_parser_parse, json_parser_error
-  use kinds_m,       only: wp
-  use loct_m,        only: loct_dir_exists
-  use parser_m,      only: block_t, parse_block_string, parse_block_integer
-  use path_m,        only: path_isabs, path_realpath, path_getcwd, path_join
-  use species_m,     only: SPECIES_FROZEN
-
-  use base_hamiltonian_m, only: &
-    HMLT_TYPE_POTN,             &
-    HMLT_TYPE_HMLT
-
-  use base_config_m, only: &
-    base_config_parse
-
-  use fio_handle_m, only: &
-    HNDL_TYPE_FNIO
+  use curvilinear_m
+  use intrpl_m
+  use io_m
+  use json_m
+  use json_m
+  use json_m
+  use json_parser_m
+  use json_parser_m
+  use kinds_m
+  use loct_m
+  use parser_m
+  use path_m
+  use species_m
+  use base_hamiltonian_m
+  use base_config_m
+  use fio_handle_m
 
   implicit none
 

@@ -38,38 +38,11 @@ module base_states_m
 #include "thash_inc.F90"
 #undef HASH_INCLUDE_PREFIX
 
-  use json_m,  only: JSON_OK, json_object_t, json_get
-  use kinds_m, only: wp
-
-  use config_dict_m, only: &
-    CONFIG_DICT_OK,        &
-    CONFIG_DICT_NAME_LEN
-
-  use config_dict_m, only: &
-    config_dict_t,         &
-    config_dict_init,      &
-    config_dict_set,       &
-    config_dict_get,       &
-    config_dict_copy,      &
-    config_dict_end
-
-  use simulation_m, only: &
-    simulation_t
-
-  use base_density_m, only: &
-    base_density__init__,   &
-    base_density__start__,  &
-    base_density__update__, &
-    base_density__stop__,   &
-    base_density__reset__,  &
-    base_density__acc__,    &
-    base_density__add__,    &
-    base_density__copy__,   &
-    base_density__end__
-
-  use base_density_m, only: &
-    base_density_t,         &
-    base_density_get
+  use json_m
+  use kinds_m
+  use config_dict_m
+  use simulation_m
+  use base_density_m
 
 #define TEMPLATE_PREFIX base_states
 #define INCLUDE_PREFIX

@@ -38,35 +38,10 @@ module base_handle_m
 #include "thash_inc.F90"
 #undef HASH_INCLUDE_PREFIX
 
-  use grid_m, only: grid_t
-  use json_m, only: JSON_OK, json_object_t, json_init, json_get, json_end
-  use json_m, only: json_array_t, json_array_iterator_t, json_next
-
-  use config_dict_m, only: &
-    CONFIG_DICT_OK,        &
-    CONFIG_DICT_NAME_LEN
-
-  use config_dict_m, only: &
-    config_dict_t,         &
-    config_dict_len,       &
-    config_dict_init,      &
-    config_dict_set,       &
-    config_dict_get,       &
-    config_dict_end
-
-  use base_model_m, only: &
-    base_model__init__,   &
-    base_model__start__,  &
-    base_model__update__, &
-    base_model__stop__,   &
-    base_model__reset__,  &
-    base_model__add__,    &
-    base_model__copy__,   &
-    base_model__end__
-
-  use base_model_m, only: &
-    base_model_t,         &
-    base_model_get
+  use grid_m
+  use json_m
+  use config_dict_m
+  use base_model_m
 
 #define TEMPLATE_PREFIX base_handle
 #define INCLUDE_PREFIX

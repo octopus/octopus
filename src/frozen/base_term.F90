@@ -38,23 +38,10 @@ module base_term_m
 #include "thash_inc.F90"
 #undef HASH_INCLUDE_PREFIX
 
-  use json_m,  only: JSON_OK, json_object_t, json_get
-  use kinds_m, only: wp
-
-  use config_dict_m, only: &
-    CONFIG_DICT_OK,        &
-    CONFIG_DICT_NAME_LEN
-
-  use config_dict_m, only: &
-    config_dict_t,         &
-    config_dict_init,      &
-    config_dict_set,       &
-    config_dict_get,       &
-    config_dict_copy,      &
-    config_dict_end
-
-  use base_system_m, only: &
-    base_system_t
+  use json_m
+  use kinds_m
+  use config_dict_m
+  use base_system_m
 
 #define TEMPLATE_PREFIX base_term
 #define INCLUDE_PREFIX

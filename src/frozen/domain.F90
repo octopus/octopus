@@ -38,24 +38,11 @@ module domain_m
 #include "thash_inc.F90"
 #undef HASH_INCLUDE_PREFIX
 
-  use kinds_m,     only: wp
-  use geometry_m,  only: geometry_t
-  use simul_box_m, only: simul_box_t, simul_box_in_box
-
-  use json_m, only: JSON_OK, json_get
-
-  use config_dict_m, only: &
-    CONFIG_DICT_OK,        &
-    CONFIG_DICT_NAME_LEN
-
-  use config_dict_m, only: &
-    config_dict_t,         &
-    config_dict_len,       &
-    config_dict_init,      &
-    config_dict_set,       &
-    config_dict_get,       &
-    config_dict_copy,      &
-    config_dict_end
+  use kinds_m
+  use geometry_m
+  use simul_box_m
+  use json_m
+  use config_dict_m
 
 #define TEMPLATE_PREFIX domain
 #define INCLUDE_PREFIX

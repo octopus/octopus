@@ -2,19 +2,14 @@
 
 module base_config_m
 
-  use global_m
-  use messages_m
-  use profiling_m
-
+  use base_hamiltonian_m
+  use base_handle_m
   use curvilinear_m
+  use global_m
   use intrpl_m
   use json_m
-  
-  use base_hamiltonian_m, only: &
-    HMLT_TYPE_HMLT
-
-  use base_handle_m, only: &
-    HNDL_TYPE_NONE
+  use messages_m
+  use profiling_m
 
   implicit none
 

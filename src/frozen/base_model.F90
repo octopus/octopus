@@ -41,69 +41,13 @@ module base_model_m
   use grid_m, only: grid_t
   use json_m, only: JSON_OK, json_object_t, json_get
 
-  use config_dict_m, only: &
-    CONFIG_DICT_OK,        &
-    CONFIG_DICT_NAME_LEN
-
-  use config_dict_m, only: &
-    config_dict_t,         &
-    config_dict_init,      &
-    config_dict_set,       &
-    config_dict_get,       &
-    config_dict_copy,      &
-    config_dict_end
-
-  use space_m, only: &
-    space_t
-
-  use geometry_m, only: &
-    geometry_t
-
-  use simulation_m, only: &
-    simulation__init__,   &
-    simulation__start__,  &
-    simulation__add__,    &
-    simulation__copy__,   &
-    simulation__end__
-
-  use simulation_m, only: &
-    simulation_t,         &
-    simulation_set,       &
-    simulation_get
-
-  use base_geom_m, only: &
-    base_geom_t,         &
-    base_geom_get
-
-  use base_system_m, only: &
-    base_system__init__,   &
-    base_system__start__,  &
-    base_system__update__, &
-    base_system__stop__,   &
-    base_system__reset__,  &
-    base_system__acc__,    &
-    base_system__add__,    &
-    base_system__copy__,   &
-    base_system__end__
-
-  use base_system_m, only: &
-    base_system_t,         &
-    base_system_set,       &
-    base_system_get
-
-  use base_hamiltonian_m, only: &
-    base_hamiltonian__init__,   &
-    base_hamiltonian__start__,  &
-    base_hamiltonian__update__, &
-    base_hamiltonian__stop__,   &
-    base_hamiltonian__reset__,  &
-    base_hamiltonian__acc__,    &
-    base_hamiltonian__add__,    &
-    base_hamiltonian__copy__,   &
-    base_hamiltonian__end__
-
-  use base_hamiltonian_m, only: &
-    base_hamiltonian_t
+  use config_dict_m
+  use space_m
+  use geometry_m
+  use simulation_m
+  use base_geom_m
+  use base_system_m
+  use base_hamiltonian_m
 
 #define TEMPLATE_PREFIX base_model
 #define INCLUDE_PREFIX

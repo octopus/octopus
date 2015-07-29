@@ -88,26 +88,12 @@ module TEMPLATE(dict_m)
 #define TEMPLATE_PREFIX DICT_TEMPLATE_NAME
 #include "template.h"
  
-  use kinds_m,  only: wp
-
-  use strng_m, only: &
-    strng_t
-
-  use strng_m, only: &
-    operator(==)
-
-  use strng_m, only: &
-    strng_init,      &
-    strng_hash,      &
-    strng_tolower,   &
-    strng_get,       &
-    strng_copy,      &
-    strng_end
+  use kinds_m
+  use strng_m
 
 #if defined(DICT_TYPE_EXTERNAL) || defined(DICT_INCLUDE_MODULE)
 
-  use DICT_TYPE_MODULE_NAME, only: &
-    DICT_TYPE_NAME
+  use DICT_TYPE_MODULE_NAME
 
 #endif
 

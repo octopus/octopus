@@ -5,21 +5,14 @@ module fio_simul_box_m
   use global_m
   use messages_m
   use profiling_m
-
-  use geometry_m,   only: geometry_t
-  use json_m,       only: JSON_OK, json_object_t, json_get
-  use kpoints_m,    only: kpoints_init
-  use mpi_m,        only: mpi_world
-  use symmetries_m, only: symmetries_init
-
-  use simul_box_m, only:   &
-    HYPERCUBE,             &
-    simul_box_load,        &
-    simul_box_lookup_init
-
+  use geometry_m
+  use json_m
+  use kpoints_m
+  use mpi_m
+  use symmetries_m
+  use simul_box_m
   use simul_box_m, only:            &
     fio_simul_box_t => simul_box_t
-
   use simul_box_m, only:                  &
     fio_simul_box_copy => simul_box_copy, &
     fio_simul_box_end  => simul_box_end

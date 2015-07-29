@@ -128,18 +128,13 @@ module TEMPLATE(hash_m)
 
   use kinds_m, only: wp
 
-  use HASH_KEY_TYPE_MODULE_NAME, only: &
-    operator(==),                      &
-    HASH_KEY_TYPE_NAME
-
-  use HASH_KEY_FUNCTION_MODULE_NAME, only: &
-    HASH_KEY_FUNCTION_NAME
+  use HASH_KEY_TYPE_MODULE_NAME
+  use HASH_KEY_FUNCTION_MODULE_NAME
 
 #endif
 #if defined(HASH_INCLUDE_MODULE)
 
-  use HASH_VAL_TYPE_MODULE_NAME, only: &
-    HASH_VAL_TYPE_NAME
+  use HASH_VAL_TYPE_MODULE_NAME
 
   implicit none
 

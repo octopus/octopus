@@ -3,12 +3,11 @@
 module basis_m
 
   use global_m
+  use json_m
+  use kinds_m
   use messages_m
   use profiling_m
-
-  use json_m,  only: JSON_OK, json_object_t, json_len, json_get
-  use kinds_m, only: wp, operator(.equal.)
-  use space_m, only: space_t
+  use space_m
 
   implicit none
 

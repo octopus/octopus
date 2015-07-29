@@ -44,38 +44,11 @@ module base_density_m
 #undef INCLUDE_PREFIX
 #undef TEMPLATE_PREFIX
 
-  use json_m,  only: JSON_OK, json_get
-  use kinds_m, only: wp
-
-  use config_dict_m, only: &
-    CONFIG_DICT_OK
-
-  use config_dict_m, only: &
-    config_dict_t
-
-  use config_dict_m, only: &
-    config_dict_init,      &
-    config_dict_set,       &
-    config_dict_get,       &
-    config_dict_end
-    
-  use simulation_m, only: &
-    simulation_t
-
-  use storage_m, only: &
-    storage_t
-
-  use storage_m, only: &
-    storage_init,      &
-    storage_start,     &
-    storage_update,    &
-    storage_stop,      &
-    storage_reset,     &
-    storage_reduce,    &
-    storage_add,       &
-    storage_get,       &
-    storage_copy,      &
-    storage_end
+  use json_m
+  use kinds_m
+  use config_dict_m    
+  use simulation_m
+  use storage_m
 
   implicit none
 

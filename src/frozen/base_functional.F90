@@ -38,60 +38,15 @@ module base_functional_m
 #include "thash_inc.F90"
 #undef HASH_INCLUDE_PREFIX
 
-  use json_m,  only: JSON_OK, json_object_t, json_get
-  use kinds_m, only: wp
-
-  use config_dict_m, only: &
-    CONFIG_DICT_OK,        &
-    CONFIG_DICT_NAME_LEN
-
-  use config_dict_m, only: &
-    config_dict_t,         &
-    config_dict_init,      &
-    config_dict_set,       &
-    config_dict_get,       &
-    config_dict_copy,      &
-    config_dict_end
-
-  use functional_m, only: &
-    functional_t,         &
-    functional_init,      &
-    functional_start,     &
-    functional_get,       &
-    functional_calc,      &
-    functional_end
-
-  use functional_m, only: &
-    FUNCT_XC_NONE
-
-  use storage_m, only:  &
-    storage_t,          &
-    storage_init,       &
-    storage_start,      &
-    storage_update,     &
-    storage_stop,       &
-    storage_reset,      &
-    storage_add,        &
-    storage_sub,        &
-    storage_get,        &
-    storage_transfer,   &
-    storage_copy,       &
-    storage_end
-
-  use simulation_m, only: &
-    simulation_t
-
-  use base_density_m, only: &
-    base_density_t,         &
-    base_density_get
-
-  use base_states_m, only: &
-    base_states_t,         &
-    base_states_get
-
-  use base_system_m, only: &
-    base_system_t,         &
-    base_system_get
+  use json_m
+  use kinds_m
+  use config_dict_m
+  use functional_m
+  use storage_m
+  use simulation_m
+  use base_density_m
+  use base_states_m
+  use base_system_m
 
 #define TEMPLATE_PREFIX base_functional
 #define INCLUDE_PREFIX

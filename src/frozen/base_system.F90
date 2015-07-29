@@ -38,58 +38,14 @@ module base_system_m
 #include "thash_inc.F90"
 #undef HASH_INCLUDE_PREFIX
 
-  use json_m,  only: JSON_OK, json_object_t, json_get
-  use kinds_m, only: wp
-
-  use config_dict_m, only: &
-    CONFIG_DICT_OK,        &
-    CONFIG_DICT_NAME_LEN
-
-  use config_dict_m, only: &
-    config_dict_t,         &
-    config_dict_init,      &
-    config_dict_set,       &
-    config_dict_get,       &
-    config_dict_copy,      &
-    config_dict_end
-
-  use simulation_m, only: &
-    simulation_t
-
-  use space_m, only: &
-    operator(==),    &
-    space_t,         &
-    space_init,      &
-    space_copy,      &
-    space_end
-
-  use geometry_m, only: &
-    geometry_t
-
-  use base_geom_m, only: &
-    base_geom__init__,   &
-    base_geom__add__,    &
-    base_geom__copy__,   &
-    base_geom__end__
-
-  use base_geom_m, only: &
-    base_geom_t,         &
-    base_geom_get
-
-  use base_states_m, only: &
-    base_states__init__,   &
-    base_states__start__,  &
-    base_states__update__, &
-    base_states__stop__,   &
-    base_states__reset__,  &
-    base_states__acc__,    &
-    base_states__add__,    &
-    base_states__copy__,   &
-    base_states__end__
-
-  use base_states_m, only: &
-    base_states_t,         &
-    base_states_get
+  use json_m
+  use kinds_m
+  use config_dict_m
+  use simulation_m
+  use space_m
+  use geometry_m
+  use base_geom_m
+  use base_states_m
 
 #define TEMPLATE_PREFIX base_system
 #define INCLUDE_PREFIX

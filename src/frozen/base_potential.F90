@@ -38,46 +38,14 @@ module base_potential_m
 #include "thash_inc.F90"
 #undef HASH_INCLUDE_PREFIX
 
-  use json_m,  only: JSON_OK, json_object_t, json_get
-  use kinds_m, only: wp
-
-  use config_dict_m, only: &
-    CONFIG_DICT_OK,        &
-    CONFIG_DICT_NAME_LEN
-
-  use config_dict_m, only: &
-    config_dict_t,         &
-    config_dict_init,      &
-    config_dict_set,       &
-    config_dict_get,       &
-    config_dict_copy,      &
-    config_dict_end
-
-  use storage_m, only: &
-    storage_t,         &
-    storage_init,      &
-    storage_start,     &
-    storage_update,    &
-    storage_stop,      &
-    storage_reset,     &
-    storage_add,       &
-    storage_get,       &
-    storage_copy,      &
-    storage_end
-
-  use simulation_m, only: &
-    simulation_t
-
-  use base_density_m, only: &
-    base_density_t
-
-  use base_states_m, only: &
-    base_states_t,         &
-    base_states_get
-
-  use base_system_m, only: &
-    base_system_t,         &
-    base_system_get
+  use json_m
+  use kinds_m
+  use config_dict_m
+  use storage_m
+  use simulation_m
+  use base_density_m
+  use base_states_m
+  use base_system_m
 
 #define TEMPLATE_PREFIX base_potential
 #define INCLUDE_PREFIX

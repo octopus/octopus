@@ -54,95 +54,17 @@ module base_hamiltonian_m
 #undef DICT_INCLUDE_PREFIX
 #undef DICT_TEMPLATE_NAME
 
-  use json_m,  only: JSON_OK, JSON_TYPE_ERROR
-  use json_m,  only: json_object_t, json_object_iterator_t
-  use json_m,  only: json_init, json_get, json_next, json_end
-  use kinds_m, only: wp
-
-  use config_dict_m, only: &
-    config_dict_t,         &
-    config_dict_init,      &
-    config_dict_set,       &
-    config_dict_get,       &
-    config_dict_end
-
-  use config_dict_m, only: &
-    CONFIG_DICT_OK,        &
-    CONFIG_DICT_NAME_LEN
-
+  use json_m
+  use kinds_m
+  use config_dict_m
 #if 0
-
-  use storage_m, only:  &
-    storage_t
-
-  use storage_m, only:  &
-    storage_init,       &
-    storage_start,      &
-    storage_update,     &
-    storage_stop,       &
-    storage_reset,      &
-    storage_add,        &
-    storage_get,        &
-    storage_copy,       &
-    storage_end
-
+  use storage_m
 #endif
-
-  use simulation_m, only: &
-    simulation_t
-
-  use base_system_m, only: &
-    base_system_t,         &
-    base_system_get
-
-  use base_term_m, only: &
-    base_term__init__,   &
-    base_term__update__, &
-    base_term__reset__,  &
-    base_term__acc__,    &
-    base_term__add__,    &
-    base_term__copy__,   &
-    base_term__end__
-
-  use base_term_m, only: &
-    base_term_t,         &
-    base_term_get
-
-  use base_potential_m, only: &
-    base_potential__init__,   &
-    base_potential__start__,  &
-    base_potential__update__, &
-    base_potential__stop__,   &
-    base_potential__reset__,  &
-    base_potential__acc__,    &
-    base_potential__add__,    &
-    base_potential__copy__,   &
-    base_potential__end__
-
-  use base_potential_m, only: &
-    base_potential_t,         &
-    base_potential_get
-
-  use base_functional_m, only: &
-    base_functional_t
-
-#if 0
-
-  use base_functional_m, only: &
-    base_functional__init__,   &
-    base_functional__start__,  &
-    base_functional__update__, &
-    base_functional__stop__,   &
-    base_functional__reset__,  &
-    base_functional__acc__,    &
-    base_functional__add__,    &
-    base_functional__copy__,   &
-    base_functional__end__
-
-  use base_functional_m, only: &
-    base_functional_get
-
-#endif
+  use simulation_m
+  use base_system_m
+  use base_term_m
+  use base_potential_m
+  use base_functional_m
 
 #define TEMPLATE_PREFIX base_hamiltonian
 #define INCLUDE_PREFIX
