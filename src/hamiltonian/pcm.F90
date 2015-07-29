@@ -78,7 +78,7 @@ module pcm_m
     FLOAT                        :: qtot_e        !< total polarization charge due to electrons
     FLOAT                        :: qtot_n        !< total polarization charge due to nuclei
     FLOAT, allocatable           :: v_e(:)        !< Hartree potential at each tessera
-    FLOAT, allocatable           :: v_n(:)        !< Nuclei's potential at each tessera
+    FLOAT, allocatable           :: v_n(:)        !< Nuclear potential at each tessera
     FLOAT, allocatable           :: v_e_rs(:)     !< PCM potential in real-space produced by q_e(:) 
     FLOAT, allocatable           :: v_n_rs(:)     !< PCM potential in real-space produced by q_n(:)
     FLOAT, allocatable           :: arg_li(:,:)   !< used in the trilinear interpolation to estimate
