@@ -163,18 +163,6 @@ program photoelectron_spectrum
  
   SAFE_ALLOCATE(pesk(1:ll(1),1:ll(2),1:ll(3)))
   
-!   do i1 = 1, ll(1)
-!     do i2 = 1, ll(2)
-!       do i3 = 1, ll(3)
-!         if ( (pmesh(i1, i2, i3, 1) - M_HUGE)**2<=M_EPSILON ) then
-!           print *,"unfilled indices (ip1,ip2,ip3)=     ", i1,i2,i3
-!         end if
-!
-!       end do
-!     end do
-!   end do
-
-
   call pes_mask_map_from_states(restart, st, lll, pesk, Lp)
 
   call restart_end(restart)    
@@ -399,14 +387,50 @@ program photoelectron_spectrum
           write(ch,'(i1)') ivar
       end select
     end function index2var
+    
+    
+    ! This needed in order to flip the sign of each Kpoit and 
+    ! still preserve an array ordering on the kpoint mesh 
+    ! such that the lowest index touple is associated with the smaller 
+    ! (negative) kpoint value.
+    subroutine flip_sign_Lkpt_idx( dim, nk, idx)
+       integer, intent(out) :: idx(:,:)
+       integer, intent(in)  :: dim, nk(:)
 
+       integer :: idx_tmp(1:maxval(nk(1:3)), 1:3)
+       integer :: idir, ii
+
+       PUSH_SUB(flip_sign_Lkpt_idx)
+       
+       
+       idx(:,:) = 1
+       do idir = 1, dim
+         ! fill it with the range 1:nk
+         do ii = 1, nk(idir)
+           idx_tmp(ii,idir) = ii
+         end do
+        
+         
+         do ii = 1, nk(idir)
+           idx(ii,idir) = nk(idir) - idx_tmp(ii,idir) + 1 
+         end do
+         
+!          do ii=1, nk(idir)
+!            print *,idir, ii, "idx = ", idx(ii,idir),"idx_tmp =", idx_tmp(ii,idir),mod(nk(idir),2)
+!          end do
+       end do
+       
+       
+       POP_SUB(flip_sign_kpt_idx)      
+    end subroutine flip_sign_Lkpt_idx
+    
     !< Generate the momentum-space mesh (p) and the arrays mapping the 
     !< the mask and the kpoint meshes in p.
-    subroutine pes_mask_pmesh(dim, kpoints, ll, Lk, pmesh, Lp, idxZero)
+    subroutine pes_mask_pmesh(dim, kpoints, ll, LG, pmesh, Lp, idxZero)
       integer,           intent(in)    :: dim
       type(kpoints_t),   intent(inout) :: kpoints 
       integer,           intent(in)    :: ll(:)             !< ll(1:dim): the dimensions of the mask-mesh
-      FLOAT,             intent(in)    :: Lk(:,:)           !< Lk(1:maxval(ll),1:dim): the mask-mesh points  
+      FLOAT,             intent(in)    :: LG(:,:)           !< LG(1:maxval(ll),1:dim): the mask-mesh points  
       FLOAT,             intent(out)   :: pmesh(:,:,:,:)    !< pmesh(i1,i2,i3,1:dim): contains the positions of point 
                                                           !< in the final mesh in momentum space "p" combining the 
                                                           !< mask-mesh with kpoints. 
@@ -416,11 +440,11 @@ program photoelectron_spectrum
 
       integer,           intent(out) :: idxZero(:)       !< The triplet identifying the zero of the coordinates                  
   
-      integer :: ik, i1, i2, i3, nk(1:3), ip1, ip2, ip3, idir, err
-      FLOAT :: kpt(1:3),kval(1:3)
+      integer :: ik, j1, j2, j3, nk(1:3), ip1, ip2, ip3, idir, err
+      FLOAT :: kpt(1:3),GG(1:3)
 
-      integer, allocatable :: Lkpt(:,:), idx(:,:)
-      FLOAT, allocatable   :: Lk_(:,:)
+      integer, allocatable :: Lkpt(:,:), idx(:,:), idx_inv(:,:), ikidx(:,:)
+      FLOAT, allocatable   :: LG_(:,:)
       
   
       PUSH_SUB(pes_mask_pmesh)
@@ -442,6 +466,17 @@ program photoelectron_spectrum
 !       end do
 
 
+      SAFE_ALLOCATE(ikidx(maxval(nk(1:3)),1:3))
+      call flip_sign_Lkpt_idx(sb%dim, nk(:), ikidx(:,:))
+
+!       print *,"reordered"
+!       do ik = 1, kpoints_number(kpoints)
+!         kpt(1:sb%dim) = kpoints_get_point(kpoints, ik, absolute_coordinates = .true.)
+!         print *, ik, "Lkpt(ik)= ", ikidx(Lkpt(ik,1),1), "-- kpt= ",kpt(1)
+!       end do
+      
+
+
 !       print *,"----"
 !       print *,"ll(:)", ll(:)
 !       print *,"----"
@@ -450,40 +485,75 @@ program photoelectron_spectrum
       ! We want the results to be sorted on a cube i,j,k
       ! with the first triplet associated with the smallest positions 
       SAFE_ALLOCATE(idx(1:maxval(ll(:)), 1:3))
-      SAFE_ALLOCATE(Lk_(1:maxval(ll(:)), 1:3))
+      SAFE_ALLOCATE(idx_inv(1:maxval(ll(:)), 1:3))
+      SAFE_ALLOCATE(LG_(1:maxval(ll(:)), 1:3))
       idx(:,:)=1
+      idx_inv(:,:)=1
       do idir = 1, dim
-        Lk_(:,idir) = Lk(:,idir)
-        call sort(Lk_(1:ll(idir), idir), idx(1:ll(idir), idir)) 
+        LG_(:,idir) = LG(:,idir)
+        call sort(LG_(1:ll(idir), idir), idx(1:ll(idir), idir)) 
+        idx_inv(:,idir) = idx(:,idir)
+        call sort(idx(1:ll(idir),idir),idx_inv(1:ll(idir),idir))
       end do  
+
+!       do j1 = 1, ll(1)
+!         print *,j1, "LG = ",LG(j1,1),"LG_ = ",LG_(j1,1), "idx = ", idx(j1,1), "idx_inv = ", idx_inv(j1,1)
+!       end do
       
       pmesh(:, :, :, :) = M_HUGE      
-      pmesh(:, :, :, dim+1) = M_ZERO      
+      pmesh(:, :, :, dim+1) = M_ZERO   
+      Lp = 0   
       err = -1
       
-      ! Generate the p-space mesh and populate Lp
+      ! Generate the p-space mesh and populate Lp.
+      ! The grid is filled combining G-points and K-points according to the following sketch: 
+      ! 
+      !          x        x        x
+      !
+      !       o  o  o
+      !       o  x  o     x        x
+      !       o  o  o
+      !
+      !       (G = x and Kpt = o)
+      ! 
+      ! The grid represents the final momentum p = G + Kpt. 
+      ! The lower left corner correspond to the minimum value of p and the lowest 
+      ! index-touple value (ip1,ip2,ip3) = (1,1,1). 
       do ik = 1, kpoints_number(kpoints)
         kpt(1:dim) = kpoints_get_point(kpoints, ik) 
-        do i1 = 1, ll(1) 
-          do i2 = 1, ll(2) 
-            do i3 = 1, ll(3) 
+        do j1 = 1, ll(1) 
+          do j2 = 1, ll(2) 
+            do j3 = 1, ll(3) 
 
-              kval (1:3)= (/Lk_(i1,1),Lk_(i2,2),Lk_(i3,3)/)               
+              GG(1:3)= (/LG_(j1,1),LG_(j2,2),LG_(j3,3)/)
+              
+!               ip1 = (j1 - 1) * nk(1) + Lkpt(ik,1)
+!               ip2 = (j2 - 1) * nk(2) + Lkpt(ik,2)
+!               ip3 = (j3 - 1) * nk(3) + Lkpt(ik,3)
 
-              ip1 = (i1 - 1) * nk(1) + Lkpt(ik,1) 
-              ip2 = (i2 - 1) * nk(2) + Lkpt(ik,2) 
-              ip3 = (i3 - 1) * nk(3) + Lkpt(ik,3)
+              ip1 = (j1 - 1) * nk(1) + ikidx(Lkpt(ik,1), 1) 
+              ip2 = (j2 - 1) * nk(2) + ikidx(Lkpt(ik,2), 2) 
+              ip3 = (j3 - 1) * nk(3) + ikidx(Lkpt(ik,3), 3)
               
-              Lp(idx(i1,1),idx(i2,2),idx(i3,3),ik,1:3) =  (/ip1,ip2,ip3/)
+              Lp(idx_inv(j1,1),idx_inv(j2,2),idx_inv(j3,3),ik,1:3) =  (/ip1,ip2,ip3/)
               
-              
-              pmesh(ip1, ip2, ip3, 1:dim) = kval(1:dim) + kpt(1:dim)
+              ! The final momentum corresponds to p = G - K. 
+              ! This is due to the convention for the sign of the Bloch phase associated to 
+              ! each kpoint subspace in hamilonian_update wich is exp(-i K*r) instead of the 
+              ! most commonly used (in textbooks) exp(i K*r). 
+              ! Thus in order to solve the propagation equations only for the periodic part 
+              ! of each KS orbital u_K(r) I nees to project on plane waves with <p|=<G-K|. 
+              ! Note: in order to preserve the correct ordering of the final mesh in p 
+              ! we remap each kpoint grid-index with ikidx(:,1:3).
+              pmesh(ip1, ip2, ip3, 1:dim) = GG(1:dim) - kpt(1:dim)
               pmesh(ip1, ip2, ip3, dim+1) = pmesh(ip1, ip2, ip3, dim+1) + 1 
               
+!               print *,idx_inv(j1,1),idx_inv(j2,2),idx_inv(j3,3),ik,"  Lp(i1,i2,i3,ik,1:dim) = ",  (/ip1,ip2,ip3/)
+!               print *, "pmesh = ",pmesh(ip1, ip2, ip3, 1:dim) !,"  GG = ",  GG (1:dim), "  kpt = ", kpt(1:dim)
 
-!               print *,ik,i1,i2,i3,"  Lp(i1,i2,i3,ik,1:dim) = ",  (/ip1,ip2,ip3/)
-!               print *, "pmesh = ",pmesh(ip1, ip2, ip3, 1:dim) ,"  kval = ",  kval (1:dim), "  kpt = ", kpt(1:dim)
 
+
+              ! Sanity checks
               if (sum(pmesh(ip1, ip2, ip3, 1:dim)**2)<=M_EPSILON) then
                 err = err + 1 
                 idxZero(1:3) = (/ip1,ip2,ip3/)
@@ -496,16 +566,22 @@ program photoelectron_spectrum
 
             end do 
           end do 
+!           print *,idx_inv(j1,1),ik,"  Lp(i1,ll(2),ll(3),ik,1) = ", ip1, "pmesh = ",pmesh(ip1, ip2, ip3, 1)
+
         end do 
       end do
+      
+!       do ip1 = 1, ll(1) * nk(1)
+!         print *,ip1, "Pmesh", pmesh(ip1, 1, 1, 1)
+!       end do
   
       if (err == -1) then
-        write(message(1), '(a)') 'Illformed momentum-space mesh: could not find p=0 coordinate.'
+        write(message(1), '(a)') 'Illformed momentum-space mesh: could not find p = 0 coordinate.'
         call messages_fatal(1)
       end if 
 
       if (err > 1) then
-        write(message(1), '(a)') 'Illformed momentum-space mesh: too many points with p=0 coordinate.'
+        write(message(1), '(a)') 'Illformed momentum-space mesh: too many points with p = 0 coordinate.'
         call messages_fatal(1)
       end if 
 
@@ -518,7 +594,9 @@ program photoelectron_spectrum
   
       SAFE_DEALLOCATE_A(Lkpt)
       SAFE_DEALLOCATE_A(idx)
-      SAFE_DEALLOCATE_A(Lk_)
+      SAFE_DEALLOCATE_A(idx_inv)
+      SAFE_DEALLOCATE_A(ikidx)      
+      SAFE_DEALLOCATE_A(LG_)
       
       
       POP_SUB(pes_mask_pmesh)
@@ -536,7 +614,7 @@ program photoelectron_spectrum
       integer :: ik, ist, idim, itot
       integer :: i1, i2, i3, ip(1:3)
       integer :: idone, ntodo
-      CMPLX   :: psik(1:ll(1),1:ll(2),1:ll(3))
+      CMPLX   :: psiG(1:ll(1),1:ll(2),1:ll(3))
 
       PUSH_SUB(pes_mask_map_from_states)
   
@@ -549,15 +627,15 @@ program photoelectron_spectrum
         do ist = 1, st%nst
           do idim = 1, st%d%dim
             itot = ist + (ik-1) * st%nst +  (idim-1) * st%nst * st%d%kpt%nglobal
-            call pes_mask_map_from_state(restart, itot, ll, psik)
+            call pes_mask_map_from_state(restart, itot, ll, psiG)
             
             do i1=1, ll(1)
               do i2=1, ll(2)
                 do i3=1, ll(3)
-                  ip(1:3) = Lp(i1 , i2, i3, ik, 1:3) 
+                  ip(1:3) = Lp(i1, i2, i3, ik, 1:3) 
                   
                   pesK(ip(1),ip(2),ip(3)) = pesK(ip(1),ip(2),ip(3)) &
-                    + abs(psik(i1,i2,i3))**2 * st%occ(ist, ik) * st%d%kweights(ik)
+                    + abs(psiG(i1,i2,i3))**2 * st%occ(ist, ik) * st%d%kweights(ik)
                                           
                 end do
               end do
@@ -576,11 +654,11 @@ program photoelectron_spectrum
     end subroutine pes_mask_map_from_states
 
 
-    subroutine pes_mask_map_from_state(restart, idx, ll, psik)
+    subroutine pes_mask_map_from_state(restart, idx, ll, psiG)
       type(restart_t),  intent(in)  :: restart
       integer,          intent(in)  :: idx
       integer,          intent(in)  :: ll(:)
-      CMPLX, target,    intent(out) :: psik(:,:,:)
+      CMPLX, target,    intent(out) :: psiG(:,:,:)
 
       character(len=80) :: filename, path
       integer ::  np, err, iunit 
@@ -588,13 +666,13 @@ program photoelectron_spectrum
   
       PUSH_SUB(pes_mask_map_from_state)
 
-      psik = M_Z0
+      psiG = M_Z0
       np = product(ll(:))
       
       write(filename,'(i10.10)') idx
  
       path = trim(restart_dir(restart))//'/pes_'//trim(filename)//'.obf'
-      call io_binary_read(path, np, psik(:,:,:), err)
+      call io_binary_read(path, np, psiG(:,:,:), err)
       if (err /= 0) then
         message(1) = "Unable to read PES mask restart data from '"//trim(path)//"'."
         call messages_warning(1)
