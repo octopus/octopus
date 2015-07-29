@@ -66,28 +66,28 @@ module pcm_m
   end type tessera_t
 
   type pcm_t
-    logical                      :: run_pcm       !< If True, PCM calculation is enabled
+    logical                      :: run_pcm       !< If .true., PCM calculation is enabled
     integer                      :: n_spheres     !< Number of spheres used to build the VdW cavity
     integer                      :: n_tesserae    !< Total number of tesserae
-    type(sphere_t), allocatable  :: spheres(:)    !< See definition for type sphere_t
-    type(tessera_t), allocatable :: tess(:)       !< See definition for type tessera_t
-    FLOAT                        :: scale_r       !< factor to scale the radii of the spheres used in PCM
+    type(sphere_t), allocatable  :: spheres(:)    !< See type sphere_t
+    type(tessera_t), allocatable :: tess(:)       !< See type tessera_t
+    FLOAT                        :: scale_r       !< scaling factor for the radii of the spheres used in PCM
     FLOAT, allocatable           :: matrix(:,:)   !< PCM response matrix
-    FLOAT, allocatable           :: q_e(:)        !< set of polarization charges due to the solute electrons        
-    FLOAT, allocatable           :: q_n(:)        !< set of polarization charges due to the solute nuclei
+    FLOAT, allocatable           :: q_e(:)        !< polarization charges due to the solute electrons        
+    FLOAT, allocatable           :: q_n(:)        !< polarization charges due to the solute nuclei
     FLOAT                        :: qtot_e        !< total polarization charge due to electrons
     FLOAT                        :: qtot_n        !< total polarization charge due to nuclei
-    FLOAT, allocatable           :: v_e(:)        !< Electrostatic potential produced by the electrons at each tessera
-    FLOAT, allocatable           :: v_n(:)        !< Electrostatic potential produced by nuclei at each tessera
-    FLOAT, allocatable           :: v_e_rs(:)     !< PCM real-space potential produced by q_e(:) 
-    FLOAT, allocatable           :: v_n_rs(:)     !< PCM real-space potential produced by q_n(:)
-    FLOAT, allocatable           :: arg_li(:,:)   !< used in the trilinear interpolation to estimate the Hartree potential
-                                                  !< at the tesserae representative points 
+    FLOAT, allocatable           :: v_e(:)        !< Hartree potential at each tessera
+    FLOAT, allocatable           :: v_n(:)        !< Nuclei's potential at each tessera
+    FLOAT, allocatable           :: v_e_rs(:)     !< PCM potential in real-space produced by q_e(:) 
+    FLOAT, allocatable           :: v_n_rs(:)     !< PCM potential in real-space produced by q_n(:)
+    FLOAT, allocatable           :: arg_li(:,:)   !< used in the trilinear interpolation to estimate
+                                                  !< the Hartree potential at the tesserae 
     FLOAT                        :: epsilon_0     !< Static dielectric constant of the solvent 
     FLOAT                        :: epsilon_infty !< Infinite-frequency dielectric constant of the solvent
     FLOAT                        :: gaussian_width!< Parameter to change the width of density of polarization charges  
     integer                      :: n_vertices    !< Number of grid points used to interpolate the Hartree potential
-                                                  !! at the tesserae representative points 
+                                                  !! at the tesserae 
     integer, allocatable         :: ind_vh(:,:)   !< Grid points used during interpolation 
     integer                      :: info_unit     !< unit for pcm info file
     integer                      :: counter       !< used to print the number of SCF or TD iterations in energy_calc  
@@ -141,19 +141,19 @@ contains
 
     PUSH_SUB(pcm_init)
 
-    !%Variable Solvation
+    !%Variable PcmCalculation
     !%Type logical
     !%Default no
     !%Section Hamiltonian::PCM
     !%Description
     !% (Experimental) If true, the calculation is performed accounting for solvation effects
-    !% in the framework of Integral Equation Formalism Polarizable Continuum Model IEF-PCM
-    !% (<i>Chem. Rev.</i> <b>105</b>, 2999 (2005), <i>J. Chem. Phys.</i> <b>107</b>, 3032 (1997),
+    !% by using the Integral Equation Formalism Polarizable Continuum Model IEF-PCM
+    !% formulated in real-space and real-time (arXiv:1507.05471, <i>Chem. Rev.</i> <b>105</b>, 2999 (2005),
     !% <i>J. Chem. Phys.</i> <b>139</b>, 024105 (2013)). At the moment, this option is available 
-    !% only for ground-state calculations, and only for <tt>TheoryLevel = DFT</tt>.
+    !% only for <tt>TheoryLevel = DFT</tt>.
     !%End
 
-    call parse_variable('Solvation', .false., pcm%run_pcm)
+    call parse_variable('PcmCalculation', .false., pcm%run_pcm)
     if (pcm%run_pcm) then
       if ( (grid%sb%box_shape /= MINIMUM).OR.(grid%sb%dim /= pcm_dim_space) ) then
         message(1) = "PCM is only available for BoxShape = minimum and 3d calculations"
@@ -166,14 +166,14 @@ contains
       return
     end if
 
-    !%Variable RadiusScalingFactor
+    !%Variable PcmRadiusScaling
     !%Type float
     !%Default 1.0
     !%Section Hamiltonian::PCM
     !%Description
     !% Scales the radii of the spheres used to build the solute cavity surface.
     !%End
-    call parse_variable('RadiusScalingFactor', M_ONE, pcm%scale_r)
+    call parse_variable('PcmRadiusScaling', M_ONE, pcm%scale_r)
 
     rcav_C  = CNST(2.4)*P_Ang*pcm%scale_r    ! 
     rcav_O  = CNST(1.8)*P_Ang*pcm%scale_r    !    
@@ -183,14 +183,25 @@ contains
     rcav_Na = CNST(2.772)*P_Ang*pcm%scale_r  !  
     rcav_Cl = CNST(2.172)*P_Ang*pcm%scale_r  !
 
-    !%Variable SolventDielectricConstant
+    !%Variable PcmStaticEpsilon
     !%Type float
     !%Default 1.0
     !%Section Hamiltonian::PCM
     !%Description
     !% Static dielectric constant of the solvent (<math>\varepsilon_0</math>). 1.0 indicates gas phase.
     !%End
-    call parse_variable('SolventDielectricConstant', M_ONE, pcm%epsilon_0)
+    call parse_variable('PcmStaticEpsilon', M_ONE, pcm%epsilon_0)
+
+    !%Variable PcmDynamicEpsilon
+    !%Type float
+    !%Default PcmStaticEpsilon
+    !%Section Hamiltonian::PCM
+    !%Description
+    !% High-frequency dielectric constant of the solvent (<math>\varepsilon_d</math>). 1.0 indicates gas phase.
+    !% At present, non-equilibrium effects within PCM calculations are not implemented. For td calculations
+    !% take PcmDynamicEpsilon = PcmStaticEpsilon (default). 
+    !%End
+    call parse_variable('PcmDynamicEpsilon', pcm%epsilon_0, pcm%epsilon_infty)
 
     !%Variable PcmSmearingFactor
     !%Type float
@@ -198,7 +209,7 @@ contains
     !%Section Hamiltonian::PCM
     !%Description
     !% Parameter used to control the width (area of each tessera) of the Gaussians used to distribute
-    !% the polarization charges on each tessera of the cavity surface. If set to zero, the solvent 
+    !% the polarization charges on each tessera (arXiv:1507.05471). If set to zero, the solvent 
     !% reaction potential in real-space is defined by using point charges.
     !%End
     call parse_variable('PcmSmearingFactor', M_ONE, pcm%gaussian_width)
@@ -213,14 +224,21 @@ contains
 
     call io_mkdir('pcm')
 
-    !%Variable CavityGeometry
+    !%Variable PcmCavity
     !%Type string
     !%Section Hamiltonian::PCM
     !%Description
-    !% Name of the file containing the geometry of the Van der Waals surface that defines the cavity hosting
-    !% the solute molecule in PCM calculations. Tesserae representative points must be in atomic units.
+    !% Name of the file containing the geometry of the cavity hosting the solute molecule.
+    !% The data must be in atomic units and the file must contain the following information sequentially:
+    !%  T               < Number of tesserae
+    !%  s_x(1:T)        < coordinates x of the tesserae 
+    !%  s_y(1:T)        < coordinates y of the tesserae        
+    !%  s_z(1:T)        < coordinates z of the tesserae            
+    !%  A(1:T)          < areas of the tesserae
+    !%  R_sph(1:T)      < Radii of the spheres to which the tesserae belong
+    !%  normal(1:T,1:3) < Outgoing unitary vectors at the tesserae surfaces 
     !%End
-    call parse_variable('CavityGeometry', '', pcm%input_cavity)
+    call parse_variable('PcmCavity', '', pcm%input_cavity)
 
     if (pcm%input_cavity == '') then
     
@@ -410,8 +428,7 @@ contains
       end do
     end do
     
-    !>Generating the dynamical PCM matrix to be inputed to GAMESS
-    pcm%epsilon_infty = CNST(1.7760) 
+    !>Generating the dynamical PCM matrix
     SAFE_ALLOCATE( mat_gamess(1:pcm%n_tesserae, 1:pcm%n_tesserae) )
     mat_gamess = M_ZERO
     
@@ -424,7 +441,7 @@ contains
     
     do jtess = 1, pcm%n_tesserae
       do itess = 1, pcm%n_tesserae
-        write(pcmmat_gamess_unit,*) mat_gamess(itess,jtess)
+        write(pcmmat_gamess_unit,*) mat_gamess(itess,jtess) !< for benchmarking with GAMESS
       end do
     end do
 
@@ -443,7 +460,7 @@ contains
     do jtess = 1, pcm%n_tesserae
       do itess = 1, pcm%n_tesserae
         write(pcmmat_unit,*) pcm%matrix(itess,jtess)
-        write(pcmmat_gamess_unit,*) mat_gamess(itess,jtess)
+        write(pcmmat_gamess_unit,*) mat_gamess(itess,jtess) !< for benchmarking with GAMESS
       end do
     end do
 
