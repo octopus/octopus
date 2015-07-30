@@ -271,10 +271,16 @@ AC_LANG_POP(C)
 dnl check for FFTW
 ACX_FFTW
 
+dnl check for PFFT
+ACX_PFFT
+
 dnl check for NFFT
 AC_LANG_PUSH(C)
 ACX_NFFT
 AC_LANG_POP(C)
+
+dnl check for PNFFT
+ACX_PNFFT
 
 dnl check for NETCDF
 ACX_NETCDF
@@ -309,15 +315,9 @@ ACX_FEAST
 dnl check for Libfm
 ACX_LIBFM
 
-dnl check for PFFT
-ACX_PFFT
-
 dnl check for ISF included from version 1.7.6 of BigDFT
 ACX_ISF
 AM_CONDITIONAL(COMPILE_ISF, test x${HAVE_COMP_ISF} = x1)
-
-dnl check for PNFFT
-ACX_PNFFT
 
 dnl check for PSPIO
 ACX_PSPIO

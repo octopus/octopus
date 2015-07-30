@@ -52,33 +52,17 @@ if test "x$acx_mpi_ok" != xyes; then
   acx_pfft_ok=nompi
 fi
 
-
-dnl if there is --with-mpifftw-prefix given, use this include path and library
-dnl We need to link against the MPI FFTW3 used to compile PFFT
-AC_ARG_WITH(mpifftw-prefix, [AS_HELP_STRING([--with-mpifftw-prefix=DIR],
-                                            [MPI FFTW3 libraries directory (the one used to build PFFT).])],
-	    [if test x$with_mpifftw_prefix == x; then skip_mpifftw=yes; else skip_mpifftw=no; fi],[skip_mpifftw=yes])
-
-if test x$skip_mpifftw != xyes; then
-    # The mpifftw option was given with an explicit value
-    FCFLAGS_MPIFFT=$ax_cv_f90_modflag$with_mpifftw_prefix/include
-    LIBS_MPIFFT="-L$with_mpifftw_prefix/lib -lfftw3_mpi -lfftw3"
-else
-    # no explicit mpifftw prefix was given
-    dnl We cannot use PFFT if FFTW3-MPI is not found
-    if test "x$acx_fftw_mpi_ok" != xyes; then
-       acx_pfft_ok=nofftw3_mpi
-    else
-	FCFLAGS_MPIFFT=$FCFLAGS_FFTW
-	LIBS_MPIFFT=$LIBS_FFT
-    fi
+# no explicit mpifftw prefix was given
+dnl We cannot use PFFT if FFTW3-MPI is not found
+if test "x$acx_fftw_mpi_ok" != xyes; then
+  acx_pfft_ok=nofftw3_mpi
 fi
 
 dnl Backup LIBS and FCFLAGS
 acx_pfft_save_LIBS="$LIBS"
 acx_pfft_save_FCFLAGS="$FCFLAGS"
 
-FCFLAGS_PFFT="$FCFLAGS_PFFT $FCFLAGS_MPIFFT"
+FCFLAGS_PFFT="$FCFLAGS_PFFT $FCFLAGS_FFTW"
 FCFLAGS="$FCFLAGS_PFFT $acx_pfft_save_FCFLAGS"
 
 # some symbols below will not be defined for version 1.0.4, making sure
@@ -103,7 +87,7 @@ testprogram="AC_LANG_PROGRAM([],[
 
 if test $acx_pfft_ok = no; then
   AC_MSG_CHECKING([for pfft library])
-  LIBS="$LIBS_PFFT $LIBS_MPIFFT $acx_pfft_save_LIB"
+  LIBS="$LIBS_PFFT $LIBS_FFTW $acx_pfft_save_LIB"
   AC_LINK_IFELSE($testprogram, [acx_pfft_ok=yes; LIBS_PFFT="$LIBS"], [])  
 
   if test $acx_pfft_ok = no; then
