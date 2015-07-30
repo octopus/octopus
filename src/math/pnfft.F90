@@ -23,16 +23,11 @@
 !> The includes for the PNFFT
 module pnfft_params_m
   use,intrinsic :: iso_c_binding
-  use fftw_params_m
   use pfft_params_m
   implicit none
 
-  private
-
 #ifdef HAVE_PNFFT
   include "pnfft.f03"
-#else
-!           integer, parameter :: ptrdiff_t_kind = 8
 #endif
 end module pnfft_params_m
  

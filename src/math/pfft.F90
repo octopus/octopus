@@ -22,30 +22,11 @@
 !> The includes for the PFFT
 module pfft_params_m
   use, intrinsic :: iso_c_binding
-  use fftw_mpi_params_m
+  use fftw_params_m
   implicit none
 
-  private
 
 #ifdef HAVE_PFFT
-
-  public ::                      &
-    pfft_cleanup,                &
-    pfft_create_procmesh_2d,     &
-    pfft_destroy_input,          &
-    pfft_destroy_plan,           &
-    pfft_execute,                &
-    pfft_init,                   &
-    pfft_local_size_dft_r2c_3d,  &
-    pfft_local_size_dft_3d,      &
-    pfft_measure,                &
-    pfft_plan_dft_r2c_3d,        &
-    pfft_plan_dft_c2r_3d,        &
-    pfft_plan_dft_3d,            &
-    pfft_transposed_in,          &
-    pfft_transposed_out,         &
-    pfft_tune
-
   include "pfft.f03"
 #endif
 
@@ -54,7 +35,6 @@ end module pfft_params_m
 !> The low level module to work with the PFFT library.
 !! http://www-user.tu-chemnitz.de/~mpip/software.php?lang=en
 module pfft_m
-  use fftw_m
   use global_m
   use, intrinsic :: iso_c_binding
   use math_m
@@ -138,7 +118,7 @@ contains
     PUSH_SUB(pfft_prepare_plan_r2c)
     call profiling_in(prof,"PFFT_PLAN_R2C")
 
-    ASSERT(sign == FFTW_FORWARD)
+    ASSERT(sign == PFFT_FORWARD)
 
     tmp_n(1:3) = n(3:1:-1)
 
@@ -166,7 +146,7 @@ contains
     PUSH_SUB(pfft_prepare_plan_c2r)
     call profiling_in(prof,"PFFT_PLAN_C2R")
 
-    ASSERT(sign == FFTW_BACKWARD)
+    ASSERT(sign == PFFT_BACKWARD)
 
     tmp_n(1:3) = n(3:1:-1)
 
@@ -199,7 +179,7 @@ contains
 
     tmp_n(1:3) = n(3:1:-1)
 
-    if (sign == FFTW_FORWARD) then
+    if (sign == PFFT_FORWARD) then
       pfft_flags = PFFT_TRANSPOSED_OUT
     else
       pfft_flags = PFFT_TRANSPOSED_IN

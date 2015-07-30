@@ -20,20 +20,15 @@
 
 #include "global.h"
 
-module fftw_mpi_params_m
+module fftw_params_m
   use, intrinsic :: iso_c_binding
   implicit none
 
 #ifdef HAVE_FFTW3_MPI
   include "fftw3-mpi.f03"
-#endif
-end module fftw_mpi_params_m
-
-module fftw_params_m
-  use, intrinsic :: iso_c_binding
-  implicit none
-
+#else
   include "fftw3.f03"
+#endif
 end module fftw_params_m
 
 module fftw_m
