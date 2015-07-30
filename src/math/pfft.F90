@@ -27,6 +27,8 @@ module pfft_params_m
 
   private
 
+#ifdef HAVE_PFFT
+
   public ::                      &
     pfft_cleanup,                &
     pfft_create_procmesh_2d,     &
@@ -44,7 +46,6 @@ module pfft_params_m
     pfft_transposed_out,         &
     pfft_tune
 
-#ifdef HAVE_PFFT
   include "pfft.f03"
 #endif
 
