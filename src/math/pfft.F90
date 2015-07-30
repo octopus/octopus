@@ -27,6 +27,23 @@ module pfft_params_m
 
   private
 
+  public ::                      &
+    pfft_cleanup,                &
+    pfft_create_procmesh_2d,     &
+    pfft_destroy_input,          &
+    pfft_destroy_plan,           &
+    pfft_execute,                &
+    pfft_init,                   &
+    pfft_local_size_dft_r2c_3d,  &
+    pfft_local_size_dft_3d,      &
+    pfft_measure,                &
+    pfft_plan_dft_r2c_3d,        &
+    pfft_plan_dft_c2r_3d,        &
+    pfft_plan_dft_3d,            &
+    pfft_transposed_in,          &
+    pfft_transposed_out,         &
+    pfft_tune
+
 #ifdef HAVE_PFFT
   include "pfft.f03"
 #endif
@@ -36,7 +53,9 @@ end module pfft_params_m
 !> The low level module to work with the PFFT library.
 !! http://www-user.tu-chemnitz.de/~mpip/software.php?lang=en
 module pfft_m
+  use fftw_m
   use global_m
+  use, intrinsic :: iso_c_binding
   use math_m
   use messages_m
   use pfft_params_m
@@ -56,7 +75,7 @@ module pfft_m
 
   ! make public some symbols from the pfft library
   public :: pfft_create_procmesh_2d, pfft_init, pfft_cleanup, &
-       & pfft_destroy_plan, pfft_execute
+    pfft_destroy_plan, pfft_execute
 
 contains
 
@@ -123,7 +142,7 @@ contains
     tmp_n(1:3) = n(3:1:-1)
 
     plan = pfft_plan_dft_r2c_3d(tmp_n,in,out,mpi_comm,sign,&
-         &                      PFFT_TRANSPOSED_OUT + PFFT_MEASURE + PFFT_DESTROY_INPUT + PFFT_TUNE) 
+      PFFT_TRANSPOSED_OUT + PFFT_MEASURE + PFFT_DESTROY_INPUT + PFFT_TUNE) 
     
     call profiling_out(prof)
     POP_SUB(pfft_prepare_plan_r2c)
@@ -151,7 +170,7 @@ contains
     tmp_n(1:3) = n(3:1:-1)
 
     plan = pfft_plan_dft_c2r_3d(tmp_n,in,out,mpi_comm, sign, &
-         &                      PFFT_TRANSPOSED_IN + PFFT_MEASURE + PFFT_DESTROY_INPUT + PFFT_TUNE) 
+      PFFT_TRANSPOSED_IN + PFFT_MEASURE + PFFT_DESTROY_INPUT + PFFT_TUNE) 
     !call PDFFT(plan_dft_c2r_3d) (plan, tmp_n(1), in(1,1,1), out(1,1,1), mpi_comm, sign, &
     !     PFFT_TRANSPOSED_IN + PFFT_MEASURE + PFFT_DESTROY_INPUT + PFFT_TUNE) 
 
@@ -216,13 +235,13 @@ contains
 
     if (is_real) then
        tmp_alloc_size = pfft_local_size_dft_r2c_3d(tmp_n, mpi_comm, PFFT_TRANSPOSED_OUT, &
-            &                                      tmp_rs_n, tmp_rs_istart, tmp_fs_n, tmp_fs_istart) 
+         tmp_rs_n, tmp_rs_istart, tmp_fs_n, tmp_fs_istart) 
        !call PDFFT(local_size_dft_r2c_3d)(tmp_alloc_size, tmp_n(1), mpi_comm, PFFT_TRANSPOSED_OUT, &
        !       tmp_rs_n(1), tmp_rs_istart(1), tmp_fs_n(1), tmp_fs_istart(1)) 
        fs_n_global(1) = rs_n_global(1)/2 + 1
     else
        tmp_alloc_size = pfft_local_size_dft_3d(tmp_n,mpi_comm, PFFT_TRANSPOSED_OUT, &
-         &                                  tmp_rs_n,tmp_rs_istart,tmp_fs_n,tmp_fs_istart)
+         tmp_rs_n,tmp_rs_istart,tmp_fs_n,tmp_fs_istart)
        !call PDFFT(local_size_dft_3d)(tmp_alloc_size, tmp_n(1), mpi_comm, PFFT_TRANSPOSED_OUT, &
        !             tmp_rs_n(1), tmp_rs_istart(1), tmp_fs_n(1), tmp_fs_istart(1))
     end if
