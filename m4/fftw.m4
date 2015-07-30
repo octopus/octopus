@@ -129,21 +129,24 @@ AC_DEFUN([ACX_FFTW],
     call MPI_Finalize
   ])"
 
-  AC_MSG_CHECKING([whether fftw has MPI support])
+  if test x$acx_mpi_ok = xyes; then
+    AC_MSG_CHECKING([whether fftw has MPI support])
 
-  LIBS="$LIBS_FFTW -lfftw3_mpi -lfftw3 $acx_fftw_save_LIBS"
-  AC_LINK_IFELSE($fftw_mpi_program, [acx_fftw_mpi_ok=yes], [acx_fftw_mpi_ok=no])
+    LIBS="$LIBS_FFTW -lfftw3_mpi -lfftw3 $acx_fftw_save_LIBS"
+    AC_LINK_IFELSE($fftw_mpi_program, [acx_fftw_mpi_ok=yes], [acx_fftw_mpi_ok=no])
 
-  AC_MSG_RESULT([$acx_fftw_mpi_ok])
+    AC_MSG_RESULT([$acx_fftw_mpi_ok])
 
-  if test x"$acx_fftw_mpi_ok" = xyes; then
-    LIBS_FFTW="$LIBS_FFTW -lfftw3_mpi"
-    AC_DEFINE(HAVE_FFTW3_MPI, 1,[Define if the distributed version of FFTW3 is available.])
+    if test x"$acx_fftw_mpi_ok" = xyes; then
+      LIBS_FFTW="$LIBS_FFTW -lfftw3_mpi"
+      AC_DEFINE(HAVE_FFTW3_MPI, 1,[Define if the distributed version of FFTW3 is available.])
+    fi
   fi
 
   dnl now we append -lfftw3
   LIBS_FFTW="$LIBS_FFTW -lfftw3"
 
+  CFLAGS_FFTW="$FCFLAGS_FFTW"
   AC_SUBST(FCFLAGS_FFTW)
   AC_SUBST(LIBS_FFTW)
 
