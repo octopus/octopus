@@ -2,46 +2,21 @@
 
 module fio_external_m
 
+  use atom_m
   use global_m
   use messages_m
   use profiling_m
-
-  use atom_m,      only: atom_t
-  use io_binary_m, only: io_binary_read
-  use json_m,      only: JSON_OK, json_object_t, json_get
-  use kinds_m,     only: wp
-  use path_m,      only: path_join
-  use species_m,   only: species_zval
-
-  use base_geom_m, only: &
-    base_geom_t
-
-  use base_geom_m, only:  &
-    base_geom_iterator_t
-  
-  use base_geom_m, only: &
-    base_geom_init,      &
-    base_geom_next,      &
-    base_geom_end
-
-  use fio_simulation_m, only: &
-    fio_simulation_t
-
-  use fio_system_m, only: &
-    fio_system_t,         &
-    fio_system_get
-
+  use io_binary_m
+  use json_m
+  use kinds_m
+  use path_m
+  use species_m
+  use base_geom_m
+  use fio_simulation_m
+  use fio_system_m
   use base_potential_m, only:           &
     fio_external_t => base_potential_t
-
-  use base_potential_m, only: &
-    base_potential__init__,   &
-    base_potential__update__, &
-    base_potential__copy__,   &
-    base_potential__end__
-
-  use base_potential_m, only: &
-    base_potential_get
+  use base_potential_m
 
 #define TEMPLATE_NAME fio_external
 #define INCLUDE_PREFIX

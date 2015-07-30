@@ -38,44 +38,15 @@ module simulation_m
 #include "thash_inc.F90"
 #undef HASH_INCLUDE_PREFIX
 
-  use derivatives_m, only: derivatives_t
-  use grid_m,        only: grid_t
-  use json_m,        only: JSON_OK, json_object_t, json_get
-
-  use space_m, only: &
-    space_t
-
-  use geometry_m, only: &
-    geometry_t
-
-  use simul_box_m, only: &
-    simul_box_t
-
-  use mesh_m, only: &
-    mesh_t
-
-  use config_dict_m, only: &
-    CONFIG_DICT_OK,        &
-    CONFIG_DICT_NAME_LEN
-
-  use config_dict_m, only: &
-    config_dict_t,         &
-    config_dict_len,       &
-    config_dict_init,      &
-    config_dict_set,       &
-    config_dict_get,       &
-    config_dict_copy,      &
-    config_dict_end
-
-  use domain_m, only: &
-    domain__add__,    &
-    domain__init__,   &
-    domain__start__,  &
-    domain__copy__,   &
-    domain__end__
-
-  use domain_m, only: &
-    domain_t
+  use derivatives_m
+  use grid_m
+  use json_m
+  use space_m
+  use geometry_m
+  use simul_box_m
+  use mesh_m
+  use config_dict_m
+  use domain_m
 
 #define TEMPLATE_PREFIX simulation
 #define INCLUDE_PREFIX

@@ -5,47 +5,21 @@ module fio_grid_m
   use global_m
   use messages_m
   use profiling_m
-
-  use boundaries_m,     only: boundaries_t
-  use derivatives_m,    only: derivatives_t
-  use double_grid_m,    only: double_grid_nullify
-  use geometry_m,       only: geometry_t
-  use json_m,           only: JSON_OK, json_object_t, json_get
-  use kinds_m,          only: wp
-  use multigrid_m,      only: multigrid_level_t
-  use mpi_m,            only: mpi_grp_t
-  use stencil_m,        only: stencil_t
-  use transfer_table_m, only: transfer_table_t
-
+  use boundaries_m
+  use derivatives_m
+  use double_grid_m
+  use geometry_m
+  use json_m
+  use kinds_m
+  use multigrid_m
+  use mpi_m
+  use stencil_m
+  use transfer_table_m
   use grid_m, only:       &
     fio_grid_t => grid_t
-
-  use fio_simul_box_m, only: &
-    fio_simul_box_t
-
-  use fio_simul_box_m, only: &
-    fio_simul_box_init,      &
-    fio_simul_box_copy,      &
-    fio_simul_box_end
-
-  use fio_mesh_m, only: &
-    fio_mesh_t
-
-  use fio_mesh_m, only: &
-    fio_mesh_init,      &
-    fio_mesh_copy,      &
-    fio_mesh_end
-
-  use fio_curvilinear_m, only: &
-    fio_curvilinear_t
-
-  use fio_curvilinear_m, only: &
-    fio_curvilinear_init,      &
-    fio_curvilinear_copy,      &
-    fio_curvilinear_end
-
-  use fio_curvilinear_m, only: &
-    CURV_METHOD_UNIFORM
+  use fio_simul_box_m
+  use fio_mesh_m
+  use fio_curvilinear_m
 
   implicit none
 

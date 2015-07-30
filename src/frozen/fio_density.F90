@@ -5,27 +5,14 @@ module fio_density_m
   use global_m
   use messages_m
   use profiling_m
-
-  use io_binary_m, only: io_binary_read
-  use json_m,      only: JSON_OK, json_object_t, json_array_t, json_array_iterator_t
-  use json_m,      only: json_len, json_init, json_next, json_get, json_end
-  use kinds_m,     only: wp
-  use path_m,      only: path_join
-
-  use fio_simulation_m, only: &
-    fio_simulation_t
-
+  use io_binary_m
+  use json_m
+  use kinds_m
+  use path_m
+  use fio_simulation_m
+  use base_density_m
   use base_density_m, only:          &
     fio_density_t => base_density_t
-
-  use base_density_m, only: &
-    base_density__init__,   &
-    base_density__update__, &
-    base_density__copy__,   &
-    base_density__end__
-
-  use base_density_m, only: &
-    base_density_get
 
 #define TEMPLATE_NAME fio_density
 #define INCLUDE_PREFIX

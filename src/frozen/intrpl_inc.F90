@@ -2,20 +2,8 @@
 
 #if defined(INCLUDE_PREFIX) && !defined(INCLUDE_HEADER) && !defined(INCLUDE_BODY)
 
-  use intrpl_m, only: &
-    intrpl_t,         &
-    intrpl_init,      &
-    intrpl_eval,      &
-    intrpl_copy,      &
-    intrpl_end
-
-  use intrpl_m, only: &
-    INTRPL_OK,        &
-    INTRPL_OD,        &
-    INTRPL_NI
-
-  use storage_m, only: &
-    storage_t
+  use intrpl_m
+  use storage_m
 
 #endif
 #if !defined(INCLUDE_PREFIX) && defined(INCLUDE_HEADER) && !defined(INCLUDE_BODY)

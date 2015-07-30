@@ -45,8 +45,7 @@ module TEMPLATE(list_m)
   use messages_m
   use profiling_m
 
-  use LIST_TYPE_MODULE_NAME, only: &
-    LIST_TYPE_NAME
+  use LIST_TYPE_MODULE_NAME
 
   implicit none
 

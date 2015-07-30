@@ -45,8 +45,7 @@ module TEMPLATE(single_m)
   use messages_m
   use profiling_m
 
-  use SINGLE_TYPE_MODULE_NAME, only: &
-    SINGLE_TYPE_NAME
+  use SINGLE_TYPE_MODULE_NAME
 
   implicit none
 
