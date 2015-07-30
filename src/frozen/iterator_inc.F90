@@ -2,33 +2,7 @@
 #include "template.h"
 
 #if defined(INCLUDE_PREFIX) && !defined(INCLUDE_HEADER) && !defined(INCLUDE_BODY)
-
-#if defined(EXCLUDE_TYPE)
-
-  use config_dict_m, only: &
-    config_dict_t,         &
-    config_dict_next
-
-#else
-
-  use config_dict_m, only:  &
-    config_dict_iterator_t
-
-  use config_dict_m, only:  &
-    config_dict_init,       &
-    config_dict_next,       &
-    config_dict_copy,       &
-    config_dict_end
-
-#endif
-
-  use config_dict_m, only: &
-    config_dict_t
-
-  use config_dict_m, only: &
-    CONFIG_DICT_OK,        &
-    CONFIG_DICT_NAME_LEN
-
+  use config_dict_m
 #endif
 
 #if !defined(INCLUDE_PREFIX) && defined(INCLUDE_HEADER) && !defined(INCLUDE_BODY)

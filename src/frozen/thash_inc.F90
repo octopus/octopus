@@ -126,7 +126,7 @@ module TEMPLATE(hash_m)
 #define TEMPLATE_PREFIX IHASH_TMPL_NAME
 #include "template.h"
 
-  use kinds_m, only: wp
+  use kinds_m
 
   use HASH_KEY_TYPE_MODULE_NAME
   use HASH_KEY_FUNCTION_MODULE_NAME

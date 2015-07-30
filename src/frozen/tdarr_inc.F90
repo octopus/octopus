@@ -70,13 +70,12 @@ module TEMPLATE(darr_m)
 #include "tsingle_inc.F90"
 #undef SINGLE_INCLUDE_PREFIX
 
-  use kinds_m, only: wp
+  use kinds_m
 
 #endif
 #if defined(DARR_INCLUDE_MODULE)
 
-  use DARR_TYPE_MODULE_NAME, only: &
-    DARR_TYPE_NAME
+  use DARR_TYPE_MODULE_NAME
 
   implicit none
 
