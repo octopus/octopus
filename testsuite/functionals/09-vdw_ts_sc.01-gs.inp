@@ -14,7 +14,7 @@ LCAOAlternative = yes
 
 FromScratch = yes
 
-VDWCorrection = yes
+VDWCorrection = vdw_ts
 
 ExperimentalFeatures = yes
 
