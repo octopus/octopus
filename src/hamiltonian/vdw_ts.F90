@@ -183,7 +183,7 @@ contains
 
     do iatom = 1, geo%natoms
       call hirshfeld_density_derivative(this%hirshfeld, iatom, dvadens)
-      !potential(1:der%mesh%np) = potential(1:der%mesh%np) + potential_coeff(iatom)*dvadens(1:der%mesh%np)
+      potential(1:der%mesh%np) = potential(1:der%mesh%np) + potential_coeff(iatom)*dvadens(1:der%mesh%np)
     end do
 
 #if 0

@@ -16,5 +16,7 @@ FromScratch = yes
 
 VDWCorrection = yes
 
+VDWSelfConsistent = no
+
 ExperimentalFeatures = yes
 

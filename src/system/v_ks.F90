@@ -91,7 +91,6 @@ module v_ks_m
     type(energy_t),       pointer :: energy
     type(states_t),       pointer :: hf_st
     FLOAT,                pointer :: vxc(:, :)
-    FLOAT,                pointer :: vvdw(:)
     FLOAT,                pointer :: vtau(:, :)
     FLOAT,                pointer :: axc(:, :, :)
     FLOAT,                pointer :: vberry(:, :)
@@ -125,6 +124,7 @@ module v_ks_m
     logical                  :: calculate_current
     type(current_t)          :: current_calculator
     logical                  :: vdw_correction
+    logical                  :: vdw_self_consistent
     type(vdw_ts_t)           :: vdw_ts
   end type v_ks_t
 
@@ -368,8 +368,23 @@ contains
     
     if(ks%vdw_correction) then
       call messages_experimental('VDWCorrection')
-      call vdw_ts_init(ks%vdw_ts, geo, gr%der, st)
+      call vdw_ts_init(ks%vdw_ts, geo, gr%fine%der, st)
+
+      !%Variable VDWSelfConsistent
+      !%Type logical
+      !%Default yes
+      !%Section Hamiltonian::XC
+      !%Description
+      !% This variable controls whether the VDW correction is applied
+      !% self-consistently, the default, or just as a correction to
+      !% the total energy.
+      !%End
+      call parse_variable('VDWSelfConsistent', .true., ks%vdw_self_consistent)
+
+    else
+      ks%vdw_self_consistent = .false.
     end if
+    
     
     POP_SUB(v_ks_init)
   end subroutine v_ks_init
@@ -763,7 +778,8 @@ contains
       FLOAT :: factor
       CMPLX :: ctmp
       integer :: ispin
-
+      FLOAT, allocatable :: vvdw(:)
+      
       PUSH_SUB(v_ks_calc_start.v_a_xc)
       call profiling_in(prof, "XC")
 
@@ -856,17 +872,20 @@ contains
       end if
 
       if(ks%vdw_correction) then
-        SAFE_ALLOCATE(ks%calc%vvdw(1:ks%gr%mesh%np))
+        SAFE_ALLOCATE(vvdw(1:ks%gr%fine%mesh%np))
         SAFE_ALLOCATE(vdw_force(1:geo%space%dim, 1:geo%natoms))
-        ks%calc%vvdw = CNST(0.0)
-        call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, st%rho, ks%calc%energy%vdw, ks%calc%vvdw, vdw_force)
+        vvdw = CNST(0.0)
+        call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, st%rho, ks%calc%energy%vdw, vvdw, vdw_force)
 
-        do ispin = 1, hm%d%nspin
-          ks%calc%vxc(1:ks%gr%fine%mesh%np, ispin) = ks%calc%vxc(1:ks%gr%fine%mesh%np, ispin) + ks%calc%vvdw(1:ks%gr%fine%mesh%np)
-        end do
-
+        if(ks%vdw_self_consistent) then
+          do ispin = 1, hm%d%nspin
+            ks%calc%vxc(1:ks%gr%fine%mesh%np, ispin) = ks%calc%vxc(1:ks%gr%fine%mesh%np, ispin) + vvdw(1:ks%gr%fine%mesh%np)
+          end do
+        end if
+        
+        SAFE_DEALLOCATE_A(vvdw)    
+        
       else
-        nullify(ks%calc%vvdw)
         ks%calc%energy%vdw = CNST(0.0)
       end if
       
@@ -1051,7 +1070,6 @@ contains
 
     call hamiltonian_update(hm, ks%gr%mesh, time = ks%calc%time)
 
-    SAFE_DEALLOCATE_P(ks%calc%vvdw)    
     SAFE_DEALLOCATE_P(ks%calc%density)
     SAFE_DEALLOCATE_P(ks%calc%Imdensity)
     if(ks%calc%total_density_alloc) then
