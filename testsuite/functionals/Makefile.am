@@ -136,6 +136,8 @@ dist_share_DATA =                                  \
 	07-sic.01-gs.inp                           \
 	07-sic.test                                \
 	08-vdw_ts.test                             \
-	08-vdw_ts.01-gs.inp
+	08-vdw_ts.01-gs.inp                        \
+	09-vdw_ts_sc.test                          \
+	09-vdw_ts_sc.01-gs.inp
 
 CLEANFILES = *~ *.bak
