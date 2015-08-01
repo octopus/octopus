@@ -591,16 +591,6 @@ contains
       SAFE_ALLOCATE(ks%calc%b_ind(1:ks%gr%mesh%np_part, 1:ks%gr%sb%dim))
       call magnetic_induced(ks%gr%der, st, ks%calc%a_ind, ks%calc%b_ind)
     end if
-
-    if(ks%vdw_correction) then
-      SAFE_ALLOCATE(ks%calc%vvdw(1:ks%gr%mesh%np))
-      SAFE_ALLOCATE(vdw_force(1:geo%space%dim, 1:geo%natoms))
-      ks%calc%vvdw = CNST(0.0)
-      call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, st%rho, ks%calc%energy%vdw, ks%calc%vvdw, vdw_force)
-    else
-      nullify(ks%calc%vvdw)
-      ks%calc%energy%vdw = CNST(0.0)
-    end if
    
     call profiling_out(prof)
     POP_SUB(v_ks_calc_start)
@@ -865,6 +855,21 @@ contains
         end if
       end if
 
+      if(ks%vdw_correction) then
+        SAFE_ALLOCATE(ks%calc%vvdw(1:ks%gr%mesh%np))
+        SAFE_ALLOCATE(vdw_force(1:geo%space%dim, 1:geo%natoms))
+        ks%calc%vvdw = CNST(0.0)
+        call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, st%rho, ks%calc%energy%vdw, ks%calc%vvdw, vdw_force)
+
+        do ispin = 1, hm%d%nspin
+          ks%calc%vxc(1:ks%gr%fine%mesh%np, ispin) = ks%calc%vxc(1:ks%gr%fine%mesh%np, ispin) + ks%calc%vvdw(1:ks%gr%fine%mesh%np)
+        end do
+
+      else
+        nullify(ks%calc%vvdw)
+        ks%calc%energy%vdw = CNST(0.0)
+      end if
+      
       if(ks%calc%calc_energy) then
         ! Now we calculate Int[n vxc] = energy%intnvxc
         ks%calc%energy%intnvxc = M_ZERO
@@ -1002,10 +1007,6 @@ contains
         forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 1) = hm%vhxc(ip, 1) + hm%vberry(ip, 1)
       end if
 
-      if(associated(ks%calc%vvdw)) then
-        forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 1) = hm%vhxc(ip, 1) + ks%calc%vvdw(ip)
-      end if
-     
       ! Calculate subsystem kinetic non-additive term
       nullify(subsys_tnadd)
       if(associated(hm%subsys_hm))then
