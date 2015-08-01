@@ -72,7 +72,7 @@ program oct_test
   !%Option ion_interaction 5
   !% Tests the ion-ion interaction routines.
   !%End
-  call parse_variable('TestMode', OPTION_HARTREE, test_mode)
+  call parse_variable('TestMode', OPTION__TESTMODE__HARTREE, test_mode)
 
   call messages_obsolete_variable('TestDerivatives', 'TestType')
   call messages_obsolete_variable('TestOrthogonalization', 'TestType')
@@ -94,7 +94,7 @@ program oct_test
   !%Option all 3
   !% Tests for double-precision real and complex functions.
   !%End
-  call parse_variable('TestType', OPTION_ALL, test_type)
+  call parse_variable('TestType', OPTION__TESTTYPE__ALL, test_type)
   if(test_type < 1 .or. test_type > 5) then
     message(1) = "Invalid option for TestType."
     call messages_fatal(1, only_root_writes = .true.)
@@ -158,15 +158,15 @@ program oct_test
   call unit_system_init()
 
   select case(test_mode)
-  case(OPTION_HARTREE)
+  case(OPTION__TESTMODE__HARTREE)
     call test_hartree()
-  case(OPTION_DERIVATIVES)
+  case(OPTION__TESTMODE__DERIVATIVES)
     call test_derivatives()
-  case(OPTION_ORTHOGONALIZATION)
+  case(OPTION__TESTMODE__ORTHOGONALIZATION)
     call test_orthogonalization()
-  case(OPTION_INTERPOLATION)
+  case(OPTION__TESTMODE__INTERPOLATION)
     call test_interpolation()
-  case(OPTION_ION_INTERACTION)
+  case(OPTION__TESTMODE__ION_INTERACTION)
     call test_ion_interaction() 
   end select
 
@@ -209,19 +209,19 @@ program oct_test
     message(2) = ''
     call messages_info(2)
 
-    if(test_type == OPTION_ALL .or. test_type == OPTION_REAL) then
+    if(test_type == OPTION__TESTTYPE__ALL .or. test_type == OPTION__TESTTYPE__REAL) then
       call dderivatives_test(sys%gr%der, test_param)
     end if
 
-    if(test_type == OPTION_ALL .or. test_type == OPTION_COMPLEX) then
+    if(test_type == OPTION__TESTTYPE__ALL .or. test_type == OPTION__TESTTYPE__COMPLEX) then
       call zderivatives_test(sys%gr%der, test_param)
     end if
 
-    if(test_type == OPTION_REAL_SINGLE) then
+    if(test_type == OPTION__TESTTYPE__REAL_SINGLE) then
       call sderivatives_test(sys%gr%der, test_param)
     end if
    
-    if(test_type == OPTION_COMPLEX_SINGLE) then
+    if(test_type == OPTION__TESTTYPE__COMPLEX_SINGLE) then
       call cderivatives_test(sys%gr%der, test_param)
     end if
 
@@ -246,13 +246,13 @@ program oct_test
     message(2) = ''
     call messages_info(2)
 
-    if(test_type == OPTION_ALL .or. test_type == OPTION_REAL) then
+    if(test_type == OPTION__TESTTYPE__ALL .or. test_type == OPTION__TESTTYPE__REAL) then
       message(1) = 'Info: Real wave-functions.'
       call messages_info(1)
       call dstates_calc_orth_test(sys%st, sys%gr%mesh)
     end if
 
-    if(test_type == OPTION_ALL .or. test_type == OPTION_COMPLEX) then
+    if(test_type == OPTION__TESTTYPE__ALL .or. test_type == OPTION__TESTTYPE__COMPLEX) then
       message(1) = 'Info: Complex wave-functions.'
       call messages_info(1)
       call zstates_calc_orth_test(sys%st, sys%gr%mesh)
@@ -272,7 +272,7 @@ program oct_test
 
     call system_init(sys)
 
-    if(test_type == OPTION_ALL .or. test_type == OPTION_REAL) then
+    if(test_type == OPTION__TESTTYPE__ALL .or. test_type == OPTION__TESTTYPE__REAL) then
       call messages_write('Info: Testing real interpolation routines')
       call messages_new_line()
       call messages_new_line()
@@ -281,7 +281,7 @@ program oct_test
       call dmesh_interpolation_test(sys%gr%mesh)
     end if
 
-    if(test_type == OPTION_ALL .or. test_type == OPTION_COMPLEX) then
+    if(test_type == OPTION__TESTTYPE__ALL .or. test_type == OPTION__TESTTYPE__COMPLEX) then
       call messages_new_line()
       call messages_write('Info: Testing complex interpolation routines')
       call messages_new_line()

@@ -64,7 +64,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
   ! Nonetheless, routines containing MPI calls such as X(mesh_to_cube) must be called by all processors.
 
   ! geometry
-  if (iand(outp%what, OPTION_GEOMETRY) /= 0) then
+  if (iand(outp%what, OPTION__OUTPUT__GEOMETRY) /= 0) then
 
     if(mpi_grp_is_root(mpi_world)) then
       call output_etsf_geometry_dims(geo, gr%sb, geometry_dims, geometry_flags)
@@ -79,7 +79,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
   end if
 
   ! density
-  if (iand(outp%what, OPTION_DENSITY) /= 0) then
+  if (iand(outp%what, OPTION__OUTPUT__DENSITY) /= 0) then
     call dcube_function_alloc_rs(dcube, cf)
 
     call output_etsf_geometry_dims(geo, gr%sb, density_dims, density_flags)
@@ -100,7 +100,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
   end if
 
   ! wave-functions
-  if (iand(outp%what, OPTION_WFS) /= 0) then
+  if (iand(outp%what, OPTION__OUTPUT__WFS) /= 0) then
 
     if(st%parallel_in_states) &
       call messages_not_implemented("ETSF_IO real-space wavefunctions output parallel in states")
@@ -132,7 +132,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
   end if
 
   ! wave-functions in fourier space
-  if (iand(outp%what, OPTION_WFS_FOURIER) /= 0) then
+  if (iand(outp%what, OPTION__OUTPUT__WFS_FOURIER) /= 0) then
 
     if(st%parallel_in_states) &
       call messages_not_implemented("ETSF_IO Fourier-space wavefunctions output parallel in states")

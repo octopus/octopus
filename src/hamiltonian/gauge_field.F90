@@ -176,7 +176,7 @@ contains
       !% Bertsch et al, Phys. Rev. B 62 7998 (2000).
       !%End
 
-      call parse_variable('GaugeFieldDynamics', OPTION_POLARIZATION, this%dynamics)
+      call parse_variable('GaugeFieldDynamics', OPTION__GAUGEFIELDDYNAMICS__POLARIZATION, this%dynamics)
 
     end if
 
@@ -421,10 +421,10 @@ contains
     ASSERT(st%d%nspin == 1)
 
     select case(this%dynamics)
-    case(OPTION_NONE)
+    case(OPTION__GAUGEFIELDDYNAMICS__NONE)
       force%vecpot(1:gr%sb%dim) = CNST(0.0)
 
-    case(OPTION_POLARIZATION)
+    case(OPTION__GAUGEFIELDDYNAMICS__POLARIZATION)
       do idir = 1, gr%sb%dim
         force%vecpot(idir) = CNST(4.0)*M_PI*P_c/gr%sb%rcell_volume*dmf_integrate(gr%mesh, st%current(:, idir, 1))
       end do

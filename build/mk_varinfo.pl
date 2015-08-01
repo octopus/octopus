@@ -76,7 +76,8 @@ EndOfWarning
 open(OUT_text, ">$share/varinfo");
 open(OUT_orig, ">$share/varinfo_orig");
 
-%opt = ();
+%opt_value = ();
+%varopt = ();
 foreach $F90file (@F90){
   open(IN, "<$F90file");
   while($_=<IN>){
@@ -93,9 +94,9 @@ foreach $F90file (@F90){
 	    printf STDERR "File $F90file, Variable $var, Option $1.\n";
 	    exit(1);
 	  }
-	  put_opt($1, (1<<($2)));
+	  put_opt($1, (1<<($2)), $var);
 	} elsif(/^Option\s+(\S+)\s+(\S+)/){
-	  put_opt($1, $2);
+	  put_opt($1, $2, $var);
 	}
 
 	if(/^ </){ # lines that start with a html command
@@ -139,37 +140,40 @@ print_opt();
 print_header();
 
 #####################################################
-# tries to put an option in global %opt
+# tries to put an option in global %opt_value
 sub put_opt{
-  my ($a, $b) = @_;
+  my ($a, $b, $var) = @_;
 
-  if($opt{$a} && ($opt{$a} ne $b)){
+  if($opt_value{$a} && ($opt_value{$a} ne $b)){
     print stderr "Option '", $a, "' is multiply defined\n",
-      "    '", $opt{$b}, "' ne '", $b, "'\n";
+      "    '", $opt_value{$b}, "' ne '", $b, "'\n";
     exit 3;
   }
-  $opt{$a} = $b;
+  
+  $opt_value{$a} = $b;
+  $varopt{$var."__".$a} = $b;
+ 
 }
 
 #####################################################
-# prints %opt to share/variables
+# prints %opt_value to share/variables
 sub print_opt{
   open(OUT, ">$share/variables");
   my $key;
-  foreach $key (sort(keys %opt)) {
-    print OUT $key, " = ", $opt{"$key"}, "\n";
+  foreach $key (sort(keys %opt_value)) {
+    print OUT $key, " = ", $opt_value{"$key"}, "\n";
   }
 
   close(OUT);
 }
 
 #####################################################
-# prints %opt to src/include/options.h
+# prints %opt_value to src/include/options.h
 sub print_header{
   open(OUT, ">$include/options.h");
   my $key;
-  foreach $key (sort(keys %opt)) {
-    print OUT "#define OPTION_", uc $key , " (", $opt{"$key"}, ")\n";
+  foreach $key (sort(keys %varopt)) {
+    print OUT "#define OPTION__", uc $key, " (", $varopt{"$key"}, ")\n";
   }
 
   close(OUT);

@@ -159,8 +159,8 @@ contains
       call messages_info(1)
     end if
 
-    if(iand(sys%outp%what, OPTION_DENSITY) /= 0 .or. &
-       iand(sys%outp%what, OPTION_POL_DENSITY) /= 0) then
+    if(iand(sys%outp%what, OPTION__OUTPUT__DENSITY) /= 0 .or. &
+       iand(sys%outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) then
        if(i_start > 2 .and. calc_diagonal) then
           i_start = 2
           diagonal_done = .false.
@@ -504,13 +504,13 @@ contains
       PUSH_SUB(output_init_)
 
       !allocate memory for what we want to output
-      if(iand(sys%outp%what, OPTION_DENSITY) /= 0 .or. &
-         iand(sys%outp%what, OPTION_POL_DENSITY) /= 0 ) then 
+      if(iand(sys%outp%what, OPTION__OUTPUT__DENSITY) /= 0 .or. &
+         iand(sys%outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0 ) then 
         SAFE_ALLOCATE(lr_rho (1:sys%gr%mesh%np, 1:sys%st%d%nspin))
         SAFE_ALLOCATE(lr_rho2(1:sys%gr%mesh%np, 1:sys%st%d%nspin))
       end if
       
-      if(iand(sys%outp%what, OPTION_ELF) /= 0) then 
+      if(iand(sys%outp%what, OPTION__OUTPUT__ELF) /= 0) then 
         SAFE_ALLOCATE(    elf(1:sys%gr%mesh%np, 1:sys%st%d%nspin))
         SAFE_ALLOCATE( lr_elf(1:sys%gr%mesh%np, 1:sys%st%d%nspin))
         SAFE_ALLOCATE(   elfd(1:sys%gr%mesh%np, 1:sys%st%d%nspin))
@@ -547,8 +547,8 @@ contains
       end if
 
       !DENSITY AND POLARIZABILITY DENSITY   
-      if(iand(sys%outp%what, OPTION_DENSITY) /= 0 .or. &
-         iand(sys%outp%what, OPTION_POL_DENSITY) /= 0) then 
+      if(iand(sys%outp%what, OPTION__OUTPUT__DENSITY) /= 0 .or. &
+         iand(sys%outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) then 
          
         if(isign == 1 .and. ii == 2) then
           tmp_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = sys%st%rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin)
@@ -568,7 +568,7 @@ contains
 
           !write
           do is = 1, sys%st%d%nspin
-            if(iand(sys%outp%what, OPTION_DENSITY) /= 0) then
+            if(iand(sys%outp%what, OPTION__OUTPUT__DENSITY) /= 0) then
               fn_unit = units_out%length**(1-sys%gr%sb%dim) / units_out%energy
               write(fname, '(a,i1,2a)') 'fd_density-sp', is, '-', index2axis(ii)
               call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
@@ -583,7 +583,7 @@ contains
               end do
             end if
 
-            if(iand(sys%outp%what, OPTION_POL_DENSITY) /= 0) then
+            if(iand(sys%outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) then
               do jj = ii, sys%gr%mesh%sb%dim
                 fn_unit = units_out%length**(2-sys%gr%sb%dim) / units_out%energy
                 write(fname, '(a,i1,4a)') 'alpha_density-sp', is, '-', index2axis(ii), '-', index2axis(jj)
@@ -603,7 +603,7 @@ contains
       end if
 
       !ELF
-      if(iand(sys%outp%what, OPTION_ELF) /= 0) then 
+      if(iand(sys%outp%what, OPTION__OUTPUT__ELF) /= 0) then 
          
         if(isign == 1) then 
           call elf_calc(sys%st, sys%gr, elf, elfd)
@@ -645,21 +645,21 @@ contains
 
       call io_mkdir(EM_RESP_FD_DIR)
 
-      if((iand(sys%outp%what, OPTION_DENSITY) /= 0 .or. &
-         iand(sys%outp%what, OPTION_POL_DENSITY) /= 0) .and. calc_diagonal) then 
+      if((iand(sys%outp%what, OPTION__OUTPUT__DENSITY) /= 0 .or. &
+         iand(sys%outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) .and. calc_diagonal) then 
         lr_rho2(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = &
           -(sys%st%rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) - lr_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) &
           - tmp_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) + gs_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin)) / e_field**2
   
         do is = 1, sys%st%d%nspin
-          if(iand(sys%outp%what, OPTION_DENSITY) /= 0) then
+          if(iand(sys%outp%what, OPTION__OUTPUT__DENSITY) /= 0) then
             fn_unit = units_out%length**(2-sys%gr%sb%dim) / units_out%energy**2
             write(fname, '(a,i1,a)') 'fd2_density-sp', is, '-y-z'
             call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
               sys%gr%mesh, lr_rho2(:, is), fn_unit, ierr, geo = sys%geo)
           end if
   
-          if(iand(sys%outp%what, OPTION_POL_DENSITY) /= 0) then
+          if(iand(sys%outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) then
             fn_unit = units_out%length**(3-sys%gr%sb%dim) / units_out%energy**2
             write(fname, '(a,i1,a)') 'beta_density-sp', is, '-x-y-z'
             call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
@@ -709,13 +709,13 @@ contains
         end if
       end if
 
-      if(iand(sys%outp%what, OPTION_DENSITY) /= 0 .or. &
-         iand(sys%outp%what, OPTION_POL_DENSITY) /= 0) then 
+      if(iand(sys%outp%what, OPTION__OUTPUT__DENSITY) /= 0 .or. &
+         iand(sys%outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) then 
         SAFE_DEALLOCATE_A(lr_rho)
         SAFE_DEALLOCATE_A(lr_rho2)
       end if
       
-      if(iand(sys%outp%what, OPTION_ELF) /= 0) then 
+      if(iand(sys%outp%what, OPTION__OUTPUT__ELF) /= 0) then 
         SAFE_DEALLOCATE_A(lr_elf)
         SAFE_DEALLOCATE_A(elf)
         SAFE_DEALLOCATE_A(lr_elfd)

@@ -40,7 +40,7 @@
 
     PUSH_SUB(output_hamiltonian)
 
-    if(iand(outp%what, OPTION_POTENTIAL) /= 0) then
+    if(iand(outp%what, OPTION__OUTPUT__POTENTIAL) /= 0) then
       if(hm%cmplxscl%space) then
         call zio_function_output(outp%how, dir, "v0", der%mesh,&
           hm%ep%vpsl + M_zI*hm%ep%Imvpsl, units_out%energy, err, geo = geo, grp = grp)
@@ -148,7 +148,7 @@
       end if
     end if
 
-    if(iand(outp%what, OPTION_XC_DENSITY) /= 0 .and. hm%theory_level /= INDEPENDENT_PARTICLES) then
+    if(iand(outp%what, OPTION__OUTPUT__XC_DENSITY) /= 0 .and. hm%theory_level /= INDEPENDENT_PARTICLES) then
       SAFE_ALLOCATE(v0(1:der%mesh%np_part, 1))
       SAFE_ALLOCATE(nxc(1:der%mesh%np))
 
@@ -171,7 +171,7 @@
       SAFE_DEALLOCATE_A(nxc)
     end if
 
-    if(iand(outp%what, OPTION_CURRENT) /= 0) then
+    if(iand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
       if(states_are_complex(st)) then
         ! calculate current first
         SAFE_ALLOCATE(current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:hm%d%nspin))
@@ -214,7 +214,7 @@
 
     PUSH_SUB(output_scalar_pot)
 
-    if(iand(outp%what, OPTION_EXTERNAL_TD_POTENTIAL) /= 0) then
+    if(iand(outp%what, OPTION__OUTPUT__EXTERNAL_TD_POTENTIAL) /= 0) then
       SAFE_ALLOCATE(scalar_pot(1:gr%mesh%np))
       do is = 1, hm%ep%no_lasers
         write(fname, '(a,i1)') 'scalar_pot-', is
@@ -242,7 +242,7 @@
     
     PUSH_SUB(output_kick)
 
-    if(iand(outp%what, OPTION_DELTA_PERTURBATION) /= 0) then
+    if(iand(outp%what, OPTION__OUTPUT__DELTA_PERTURBATION) /= 0) then
       SAFE_ALLOCATE(kick_function(1:mesh%np))
       call kick_function_get(mesh, kick, kick_function)
       call zio_function_output(outp%how, dir, "kick_function", mesh, kick_function(:), &

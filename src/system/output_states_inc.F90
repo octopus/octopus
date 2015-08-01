@@ -39,7 +39,7 @@ subroutine output_states(st, gr, geo, dir, outp)
   PUSH_SUB(output_states)
 
   nullify(subsys_density, base_density, pdensity)
-  if(iand(outp%what, OPTION_DENSITY) /= 0) then
+  if(iand(outp%what, OPTION__OUTPUT__DENSITY) /= 0) then
     fn_unit = units_out%length**(-gr%mesh%sb%dim)
     do is = 1, st%d%nspin
       if(st%d%nspin == 1) then
@@ -86,7 +86,7 @@ subroutine output_states(st, gr, geo, dir, outp)
     end if    
   end if
 
-  if(iand(outp%what, OPTION_POL_DENSITY) /= 0) then
+  if(iand(outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) then
     fn_unit = units_out%length**(1-gr%mesh%sb%dim)
     SAFE_ALLOCATE(dtmp(1:gr%fine%mesh%np))
     do idir = 1, gr%sb%dim
@@ -104,7 +104,7 @@ subroutine output_states(st, gr, geo, dir, outp)
     SAFE_DEALLOCATE_A(dtmp)
   end if
 
-  if(iand(outp%what, OPTION_WFS) /= 0) then
+  if(iand(outp%what, OPTION__OUTPUT__WFS) /= 0) then
     fn_unit = sqrt(units_out%length**(-gr%mesh%sb%dim))
 
     if (states_are_real(st)) then
@@ -155,7 +155,7 @@ subroutine output_states(st, gr, geo, dir, outp)
     SAFE_DEALLOCATE_A(ztmp)
   end if
 
-  if(iand(outp%what, OPTION_WFS_SQMOD) /= 0) then
+  if(iand(outp%what, OPTION__OUTPUT__WFS_SQMOD) /= 0) then
     fn_unit = units_out%length**(-gr%mesh%sb%dim)
     SAFE_ALLOCATE(dtmp(1:gr%mesh%np_part))
     if (states_are_complex(st)) then
@@ -196,7 +196,7 @@ subroutine output_states(st, gr, geo, dir, outp)
     SAFE_DEALLOCATE_A(ztmp)
   end if
 
-  if(iand(outp%what, OPTION_KINETIC_ENERGY_DENSITY) /= 0) then
+  if(iand(outp%what, OPTION__OUTPUT__KINETIC_ENERGY_DENSITY) /= 0) then
     fn_unit = units_out%energy * units_out%length**(-gr%mesh%sb%dim)
     SAFE_ALLOCATE(elf(1:gr%mesh%np, 1:st%d%nspin))
     call states_calc_quantities(gr%der, st, kinetic_energy_density = elf)
@@ -215,15 +215,15 @@ subroutine output_states(st, gr, geo, dir, outp)
     SAFE_DEALLOCATE_A(elf)
   end if
 
-  if(iand(outp%what, OPTION_DOS) /= 0) then
+  if(iand(outp%what, OPTION__OUTPUT__DOS) /= 0) then
     call states_write_dos (trim(dir), st)
   end if
 
-  if(iand(outp%what, OPTION_TPA) /= 0) then
+  if(iand(outp%what, OPTION__OUTPUT__TPA) /= 0) then
     call states_write_tpa (trim(dir), gr, st)
   end if
 
-  if(iand(outp%what, OPTION_MMB_DEN) /= 0 .or. iand(outp%what, OPTION_MMB_WFS) /= 0) then
+  if(iand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0 .or. iand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0) then
     if (states_are_real(st)) then
       call doutput_modelmb (trim(dir), gr, st, geo, outp)
     else
@@ -249,7 +249,7 @@ subroutine output_current_flow(gr, st, dir, outp)
 
   PUSH_SUB(output_current_flow)
 
-  if(iand(outp%what, OPTION_J_FLOW) == 0) then
+  if(iand(outp%what, OPTION__OUTPUT__J_FLOW) == 0) then
     POP_SUB(output_current_flow)
     return
   end if

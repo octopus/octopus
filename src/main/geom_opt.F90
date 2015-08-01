@@ -538,7 +538,7 @@ contains
     call geometry_write_xyz(g_opt%geo, 'geom/'//trim(c_geom_iter), comment = trim(title))
     call geometry_write_xyz(g_opt%geo, './last')
 
-    if(iand(g_opt%syst%outp%what, OPTION_FORCES) /= 0) then
+    if(iand(g_opt%syst%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
     write(c_forces_iter, '(a,i4.4)') "forces.", geom_iter
       if(iand(g_opt%syst%outp%how, C_OUTPUT_HOW_BILD) /= 0) then
         call write_bild_forces_file('forces', trim(c_forces_iter), g_opt%geo, g_opt%syst%gr%mesh)

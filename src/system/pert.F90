@@ -181,7 +181,7 @@ contains
       !%Option hcom_vel 1
       !% As a commutator of the position operator and Hamiltonian, <math>-i \left[ r, H \right]</math>. 
       !%End
-      call parse_variable('KdotPVelMethod', OPTION_GRAD_VEL, this%vel_method)
+      call parse_variable('KdotPVelMethod', OPTION__KDOTPVELMETHOD__GRAD_VEL, this%vel_method)
     end if
 
     POP_SUB(pert_init)

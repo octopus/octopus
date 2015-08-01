@@ -361,15 +361,15 @@ contains
     !%Description
     !% (Experimental) This variable selects which van der Waals
     !% correction to apply to the correlation functional.
-    !%Option none
+    !%Option none 0
     !% No correction is applied.
     !%Option vdw_ts 1
     !% The scheme of Tkatchenko and Scheffler, Phys. Rev. Lett. 102
     !% 073005 (2009).
     !%End
-    call parse_variable('VDWCorrection', OPTION_NONE, ks%vdw_correction)
+    call parse_variable('VDWCorrection', OPTION__VDWCORRECTION__NONE, ks%vdw_correction)
     
-    if(ks%vdw_correction /= OPTION_NONE) then
+    if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
       call messages_experimental('VDWCorrection')
 
       !%Variable VDWSelfConsistent
@@ -384,7 +384,7 @@ contains
       call parse_variable('VDWSelfConsistent', .true., ks%vdw_self_consistent)
 
       select case(ks%vdw_correction)
-      case(OPTION_VDW_TS)
+      case(OPTION__VDWCORRECTION__VDW_TS)
         call vdw_ts_init(ks%vdw_ts, geo, gr%fine%der, st)
       case default
         ASSERT(.false.)
@@ -407,7 +407,7 @@ contains
     PUSH_SUB(v_ks_end)
     
     select case(ks%vdw_correction)
-    case(OPTION_VDW_TS)
+    case(OPTION__VDWCORRECTION__VDW_TS)
       call vdw_ts_end(ks%vdw_ts)
     end select
 
@@ -883,14 +883,14 @@ contains
         end if
       end if
 
-      if(ks%vdw_correction /= OPTION_NONE) then
+      if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
 
         SAFE_ALLOCATE(vvdw(1:ks%gr%fine%mesh%np))
         SAFE_ALLOCATE(vdw_force(1:geo%space%dim, 1:geo%natoms))
         
         select case(ks%vdw_correction)
 
-        case(OPTION_VDW_TS)
+        case(OPTION__VDWCORRECTION__VDW_TS)
           vvdw = CNST(0.0)
           call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, st%rho, ks%calc%energy%vdw, vvdw, vdw_force)
           

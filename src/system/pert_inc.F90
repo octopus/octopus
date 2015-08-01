@@ -127,7 +127,7 @@ subroutine X(pert_apply)(this, gr, geo, hm, ik, f_in, f_out, set_bc)
 
   apply_kpoint = associated(hm%phase) .and. this%pert_type /= PERTURBATION_ELECTRIC
   ! electric does not need it since (e^-ikr)r(e^ikr) = r
-  if(this%pert_type == PERTURBATION_KDOTP .and. this%vel_method == OPTION_HCOM_VEL) &
+  if(this%pert_type == PERTURBATION_KDOTP .and. this%vel_method == OPTION__KDOTPVELMETHOD__HCOM_VEL) &
     apply_kpoint = .false.
 
   if (apply_kpoint) then
@@ -200,7 +200,7 @@ contains
 
     PUSH_SUB(X(pert_apply).kdotp)
 
-    if(this%vel_method /= OPTION_HCOM_VEL) then
+    if(this%vel_method /= OPTION__KDOTPVELMETHOD__HCOM_VEL) then
       SAFE_ALLOCATE(grad(1:gr%mesh%np, 1:gr%sb%dim, 1:hm%d%dim))
 
       do idim = 1, hm%d%dim
@@ -599,7 +599,7 @@ contains
 
     PUSH_SUB(X(pert_apply_order_2).kdotp)
 
-    if(this%vel_method /= OPTION_HCOM_VEL) then
+    if(this%vel_method /= OPTION__KDOTPVELMETHOD__HCOM_VEL) then
       f_out(1:gr%mesh%np, 1:hm%d%dim) = M_ZERO
       SAFE_ALLOCATE(cpsi(1:gr%mesh%np_part, 1:hm%d%dim))
       cpsi(1:gr%mesh%np_part, 1:hm%d%dim) = M_ZERO
