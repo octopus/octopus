@@ -123,7 +123,7 @@ module v_ks_m
     type(v_ks_calc_t)        :: calc
     logical                  :: calculate_current
     type(current_t)          :: current_calculator
-    logical                  :: vdw_correction
+    integer                  :: vdw_correction
     logical                  :: vdw_self_consistent
     type(vdw_ts_t)           :: vdw_ts
   end type v_ks_t
@@ -355,20 +355,22 @@ contains
     call current_init(ks%current_calculator)
     
     !%Variable VDWCorrection
-    !%Type logical
+    !%Type integer
     !%Default no
     !%Section Hamiltonian::XC
     !%Description
-    !% (Experimental) This variable enables the van der Waals
-    !% corrections to the correlation functional following the scheme
-    !% of Tkatchenko and Scheffler, Phys. Rev. Lett. 102 073005
-    !% (2009).
+    !% (Experimental) This variable selects which van der Waals
+    !% correction to apply to the correlation functional.
+    !%Option none
+    !% No correction is applied.
+    !%Option vdw_ts 1
+    !% The scheme of Tkatchenko and Scheffler, Phys. Rev. Lett. 102
+    !% 073005 (2009).
     !%End
-    call parse_variable('VDWCorrection', .false., ks%vdw_correction)
+    call parse_variable('VDWCorrection', OPTION_NONE, ks%vdw_correction)
     
-    if(ks%vdw_correction) then
+    if(ks%vdw_correction /= OPTION_NONE) then
       call messages_experimental('VDWCorrection')
-      call vdw_ts_init(ks%vdw_ts, geo, gr%fine%der, st)
 
       !%Variable VDWSelfConsistent
       !%Type logical
@@ -381,6 +383,13 @@ contains
       !%End
       call parse_variable('VDWSelfConsistent', .true., ks%vdw_self_consistent)
 
+      select case(ks%vdw_correction)
+      case(OPTION_VDW_TS)
+        call vdw_ts_init(ks%vdw_ts, geo, gr%fine%der, st)
+      case default
+        ASSERT(.false.)
+      end select
+      
     else
       ks%vdw_self_consistent = .false.
     end if
@@ -396,8 +405,11 @@ contains
     type(v_ks_t),     intent(inout) :: ks
 
     PUSH_SUB(v_ks_end)
-
-    if(ks%vdw_correction) call vdw_ts_end(ks%vdw_ts)
+    
+    select case(ks%vdw_correction)
+    case(OPTION_VDW_TS)
+      call vdw_ts_end(ks%vdw_ts)
+    end select
 
     call current_end(ks%current_calculator)
 
@@ -871,12 +883,22 @@ contains
         end if
       end if
 
-      if(ks%vdw_correction) then
+      if(ks%vdw_correction /= OPTION_NONE) then
+
         SAFE_ALLOCATE(vvdw(1:ks%gr%fine%mesh%np))
         SAFE_ALLOCATE(vdw_force(1:geo%space%dim, 1:geo%natoms))
-        vvdw = CNST(0.0)
-        call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, st%rho, ks%calc%energy%vdw, vvdw, vdw_force)
+        
+        select case(ks%vdw_correction)
 
+        case(OPTION_VDW_TS)
+          vvdw = CNST(0.0)
+          call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, st%rho, ks%calc%energy%vdw, vvdw, vdw_force)
+          
+        case default
+          ASSERT(.false.)
+          
+        end select
+        
         if(ks%vdw_self_consistent) then
           do ispin = 1, hm%d%nspin
             ks%calc%vxc(1:ks%gr%fine%mesh%np, ispin) = ks%calc%vxc(1:ks%gr%fine%mesh%np, ispin) + vvdw(1:ks%gr%fine%mesh%np)
@@ -886,7 +908,9 @@ contains
         SAFE_DEALLOCATE_A(vvdw)    
         
       else
+
         ks%calc%energy%vdw = CNST(0.0)
+
       end if
       
       if(ks%calc%calc_energy) then
