@@ -289,8 +289,6 @@ contains
         frequency = em_vars%freq_factor(ifactor)*em_vars%omega(iomega)
         frequency_eta = frequency + M_zI * em_vars%eta
 
-        do idir = 1, sys%gr%sb%dim
-
           ierr = 0
 
           have_to_calculate = .true.
@@ -306,6 +304,7 @@ contains
             if( have_to_calculate .and. abs(em_vars%freq_factor(ifactor - 1) * em_vars%omega(iomega) &
                                             - frequency) < M_EPSILON ) then
 
+           do idir = 1, sys%gr%sb%dim
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, ifactor - 1), em_vars%lr(idir, 1, ifactor))
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 2, ifactor - 1), em_vars%lr(idir, 2, ifactor))
 
@@ -317,6 +316,7 @@ contains
                     kdotp_em_lr2(idir, idir2, 2, ifactor))
                 end do
               end if
+            end do
 
               have_to_calculate = .false.
 
@@ -326,6 +326,7 @@ contains
             if( have_to_calculate .and. abs(em_vars%freq_factor(ifactor - 1) * em_vars%omega(iomega) &
                                             + frequency) < M_EPSILON ) then 
 
+            do idir = 1, sys%gr%sb%dim
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, ifactor - 1), em_vars%lr(idir, 2, ifactor))
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 2, ifactor - 1), em_vars%lr(idir, 1, ifactor))
 
@@ -337,6 +338,7 @@ contains
                     kdotp_em_lr2(idir, idir2, 1, ifactor))
                 end do
               end if
+            end do
 
               have_to_calculate = .false.
 
@@ -349,6 +351,7 @@ contains
             ! if this frequency is the same as the previous one, just copy it
             if( have_to_calculate .and. abs(frequency - last_omega) < M_EPSILON ) then
 
+            do idir = 1, sys%gr%sb%dim
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, em_vars%nfactor), em_vars%lr(idir, 1, 1))
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 2, em_vars%nfactor), em_vars%lr(idir, 2, 1))
 
@@ -360,6 +363,7 @@ contains
                     kdotp_em_lr2(idir, idir2, 2, 1))
                 end do
               end if
+            end do
 
               have_to_calculate = .false.
 
@@ -368,6 +372,7 @@ contains
             ! if this frequency is minus the previous one, copy it inverted
             if( have_to_calculate .and. abs(frequency + last_omega) < M_EPSILON ) then
 
+            do idir = 1, sys%gr%sb%dim
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, em_vars%nfactor), em_vars%lr(idir, 2, 1))
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 2, em_vars%nfactor), em_vars%lr(idir, 1, 1))
 
@@ -379,6 +384,7 @@ contains
                     kdotp_em_lr2(idir, idir2, 1, 1))
                 end do
               end if
+            end do
 
               have_to_calculate = .false.
 
@@ -387,11 +393,6 @@ contains
           end if
 
           if(have_to_calculate) then 
-
-            str_tmp = freq2str(units_from_atomic(units_out%energy, frequency))
-            write(message(1), '(5a)') 'Info: Calculating response for the ', index2axis(idir), &
-              '-direction and frequency ', trim(str_tmp), '.'
-            call messages_info(1)
 
             exact_freq = .false.
 
@@ -402,8 +403,6 @@ contains
             end if
 
           end if ! have_to_calculate
-
-        end do ! idir
 
         if(.not. have_to_calculate) cycle
 

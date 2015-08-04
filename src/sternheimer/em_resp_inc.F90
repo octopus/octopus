@@ -29,6 +29,8 @@ subroutine X(run_sternheimer)()
     call restart_init(restart_load, RESTART_EM_RESP, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
                       ierr, mesh=sys%gr%mesh)
 
+    do idir = 1, sys%gr%sb%dim
+
     ! try to load wavefunctions, if first frequency; otherwise will already be initialized
     if(iomega == 1 .and. .not. em_vars%wfns_from_scratch) then
       do sigma = 1, em_vars%nsigma
@@ -82,6 +84,7 @@ subroutine X(run_sternheimer)()
       end if
     end if
     
+    if((em_vars%nfactor > 1) .or. (iomega == 1)) then
     !search for the density of the closest frequency, including negative
     closest_omega = em_vars%freq_factor(ifactor) * em_vars%omega(iomega)
     call loct_search_file_lr(closest_omega, idir, ierr, trim(restart_dir(restart_load)))
@@ -115,22 +118,30 @@ subroutine X(run_sternheimer)()
       
       em_vars%lr(idir, swap_sigma(sigma_alt), ifactor)%X(dl_rho) = R_CONJ(em_vars%lr(idir, sigma_alt, ifactor)%X(dl_rho))
     end if
-    
+    end if
+    end do
+
     call restart_end(restart_load)
   end if ! .not. fromscratch
-  
-  call pert_setup_dir(em_vars%perturbation, idir)
-  
-  if(use_kdotp .and. idir <= gr%sb%periodic_dim) then
-    call X(sternheimer_set_rhs)(sh, kdotp_lr(idir, 1)%X(dl_psi))
-  end if
-  
+    
   ! if the frequency is zero, we do not need to calculate both responses
   if(abs(frequency) < M_EPSILON .and. em_vars%nsigma == 2) then
     nsigma_eff = 1
   else
     nsigma_eff = em_vars%nsigma
   end if
+
+  do idir = 1, sys%gr%sb%dim
+  call pert_setup_dir(em_vars%perturbation, idir)
+  
+  if(use_kdotp .and. idir <= gr%sb%periodic_dim) then
+    call X(sternheimer_set_rhs)(sh, kdotp_lr(idir, 1)%X(dl_psi))
+  end if
+
+  str_tmp = freq2str(units_from_atomic(units_out%energy, frequency))
+  write(message(1), '(5a)') 'Info: Calculating response for the ', index2axis(idir), &
+    '-direction and frequency ', trim(str_tmp), '.'
+  call messages_info(1)
   
   call X(sternheimer_solve)(sh, sys, hm, em_vars%lr(idir, 1:nsigma_eff, ifactor), nsigma_eff, &
     R_TOPREC(frequency_eta), em_vars%perturbation, restart_dump, &
@@ -193,6 +204,8 @@ subroutine X(run_sternheimer)()
 
     call restart_end(kdotp_restart)
   end if
+
+  end do
 
   call restart_end(restart_dump)
 
