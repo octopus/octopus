@@ -289,22 +289,22 @@ contains
         frequency = em_vars%freq_factor(ifactor)*em_vars%omega(iomega)
         frequency_eta = frequency + M_zI * em_vars%eta
 
-          ierr = 0
+        ierr = 0
 
-          have_to_calculate = .true.
-          opp_freq = .false.
+        have_to_calculate = .true.
+        opp_freq = .false.
 
-          ! if this frequency is zero and this is not the first
-          ! iteration we do not have to do anything
-          if(iomega > 1 .and. em_vars%freq_factor(ifactor) == M_ZERO) have_to_calculate = .false. 
+        ! if this frequency is zero and this is not the first
+        ! iteration we do not have to do anything
+        if(iomega > 1 .and. em_vars%freq_factor(ifactor) == M_ZERO) have_to_calculate = .false. 
 
-          if(ifactor > 1) then 
+        if(ifactor > 1) then 
 
-            ! if this frequency is the same as the previous one, just copy it
-            if( have_to_calculate .and. abs(em_vars%freq_factor(ifactor - 1) * em_vars%omega(iomega) &
+          ! if this frequency is the same as the previous one, just copy it
+          if( have_to_calculate .and. abs(em_vars%freq_factor(ifactor - 1) * em_vars%omega(iomega) &
                                             - frequency) < M_EPSILON ) then
 
-           do idir = 1, sys%gr%sb%dim
+            do idir = 1, sys%gr%sb%dim
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, ifactor - 1), em_vars%lr(idir, 1, ifactor))
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 2, ifactor - 1), em_vars%lr(idir, 2, ifactor))
 
@@ -318,12 +318,12 @@ contains
               end if
             end do
 
-              have_to_calculate = .false.
+            have_to_calculate = .false.
 
-            end if
+          end if
 
-            ! if this frequency is minus the previous one, copy it inverted
-            if( have_to_calculate .and. abs(em_vars%freq_factor(ifactor - 1) * em_vars%omega(iomega) &
+          ! if this frequency is minus the previous one, copy it inverted
+          if( have_to_calculate .and. abs(em_vars%freq_factor(ifactor - 1) * em_vars%omega(iomega) &
                                             + frequency) < M_EPSILON ) then 
 
             do idir = 1, sys%gr%sb%dim
@@ -340,16 +340,16 @@ contains
               end if
             end do
 
-              have_to_calculate = .false.
-
-            end if
+            have_to_calculate = .false.
 
           end if
 
-          if(iomega > 1 .and. ifactor == 1) then 
+        end if
 
-            ! if this frequency is the same as the previous one, just copy it
-            if( have_to_calculate .and. abs(frequency - last_omega) < M_EPSILON ) then
+        if(iomega > 1 .and. ifactor == 1) then 
+
+          ! if this frequency is the same as the previous one, just copy it
+          if( have_to_calculate .and. abs(frequency - last_omega) < M_EPSILON ) then
 
             do idir = 1, sys%gr%sb%dim
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, em_vars%nfactor), em_vars%lr(idir, 1, 1))
@@ -365,12 +365,12 @@ contains
               end if
             end do
 
-              have_to_calculate = .false.
+            have_to_calculate = .false.
 
-            end if
+          end if
 
-            ! if this frequency is minus the previous one, copy it inverted
-            if( have_to_calculate .and. abs(frequency + last_omega) < M_EPSILON ) then
+          ! if this frequency is minus the previous one, copy it inverted
+          if( have_to_calculate .and. abs(frequency + last_omega) < M_EPSILON ) then
 
             do idir = 1, sys%gr%sb%dim
               call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, em_vars%nfactor), em_vars%lr(idir, 2, 1))
@@ -386,23 +386,23 @@ contains
               end if
             end do
 
-              have_to_calculate = .false.
-
-            end if
+            have_to_calculate = .false.
 
           end if
 
-          if(have_to_calculate) then 
+        end if
 
-            exact_freq = .false.
+        if(have_to_calculate) then 
 
-            if(states_are_real(sys%st)) then
-              call drun_sternheimer()
-            else
-              call zrun_sternheimer()
-            end if
+          exact_freq = .false.
 
-          end if ! have_to_calculate
+          if(states_are_real(sys%st)) then
+            call drun_sternheimer()
+          else
+            call zrun_sternheimer()
+          end if
+
+        end if ! have_to_calculate
 
         if(.not. have_to_calculate) cycle
 

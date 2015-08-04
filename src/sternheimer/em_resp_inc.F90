@@ -31,94 +31,94 @@ subroutine X(run_sternheimer)()
 
     do idir = 1, sys%gr%sb%dim
 
-    ! try to load wavefunctions, if first frequency; otherwise will already be initialized
-    if(iomega == 1 .and. .not. em_vars%wfns_from_scratch) then
-      do sigma = 1, em_vars%nsigma
-        if(sigma == 2 .and. abs(frequency) < M_EPSILON) then
-          em_vars%lr(idir, 2, ifactor)%X(dl_psi) = em_vars%lr(idir, 1, ifactor)%X(dl_psi)
+      ! try to load wavefunctions, if first frequency; otherwise will already be initialized
+      if(iomega == 1 .and. .not. em_vars%wfns_from_scratch) then
+        do sigma = 1, em_vars%nsigma
+          if(sigma == 2 .and. abs(frequency) < M_EPSILON) then
+            em_vars%lr(idir, 2, ifactor)%X(dl_psi) = em_vars%lr(idir, 1, ifactor)%X(dl_psi)
           
-          if(em_vars%calc_hyperpol .and. use_kdotp) then
-            do idir2 = 1, gr%sb%periodic_dim
-              kdotp_em_lr2(idir2, idir, 2, ifactor)%X(dl_psi) = kdotp_em_lr2(idir2, idir, 1, ifactor)%X(dl_psi)
-            end do
-          end if
-        else
-          sigma_alt = sigma
-          if(frequency < -M_EPSILON .and. em_vars%nsigma == 2) &
-            sigma_alt = swap_sigma(sigma)
+            if(em_vars%calc_hyperpol .and. use_kdotp) then
+              do idir2 = 1, gr%sb%periodic_dim
+                kdotp_em_lr2(idir2, idir, 2, ifactor)%X(dl_psi) = kdotp_em_lr2(idir2, idir, 1, ifactor)%X(dl_psi)
+              end do
+            end if
+          else
+            sigma_alt = sigma
+            if(frequency < -M_EPSILON .and. em_vars%nsigma == 2) &
+              sigma_alt = swap_sigma(sigma)
           
-          str_tmp = em_wfs_tag(idir, ifactor)
-          call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, sigma), ierr)
-          if (ierr == 0) call states_load(restart_load, sys%st, sys%gr, ierr, lr=em_vars%lr(idir, sigma_alt, ifactor))
-          call restart_close_dir(restart_load)
+            str_tmp = em_wfs_tag(idir, ifactor)
+            call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, sigma), ierr)
+            if (ierr == 0) call states_load(restart_load, sys%st, sys%gr, ierr, lr=em_vars%lr(idir, sigma_alt, ifactor))
+            call restart_close_dir(restart_load)
 
-          if(ierr /= 0) then
-            message(1) = "Unable to read response wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, sigma))//&
+            if(ierr /= 0) then
+              message(1) = "Unable to read response wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, sigma))//&
                  "': Initializing to zero."
-            call messages_warning(1)
-          end if
+              call messages_warning(1)
+            end if
           
-          if(em_vars%calc_hyperpol .and. use_kdotp) then
-            do idir2 = 1, gr%sb%periodic_dim
-              str_tmp = em_wfs_tag(idir, ifactor, idir2)              
-              call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, sigma), ierr)
-              if (ierr == 0) call states_load(restart_load, sys%st, sys%gr, ierr, &
-                lr=kdotp_em_lr2(idir2, idir, sigma_alt, ifactor))
-              call restart_close_dir(restart_load)
+            if(em_vars%calc_hyperpol .and. use_kdotp) then
+              do idir2 = 1, gr%sb%periodic_dim
+                str_tmp = em_wfs_tag(idir, ifactor, idir2)              
+                call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, sigma), ierr)
+                if (ierr == 0) call states_load(restart_load, sys%st, sys%gr, ierr, &
+                  lr=kdotp_em_lr2(idir2, idir, sigma_alt, ifactor))
+                call restart_close_dir(restart_load)
               
-              if(ierr /= 0) then
-                message(1) = "Unable to read second-order response wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, sigma))//&
+                if(ierr /= 0) then
+                  message(1) = "Unable to read second-order response wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, sigma))//&
                      "': Initializing to zero."
-                call messages_warning(1)
-              end if
-            end do
+                  call messages_warning(1)
+                end if
+              end do
+            end if
+          end if
+        end do
+      end if
+    
+      ! if opposite sign from last frequency, swap signs to get a closer frequency
+      if(iomega > 1 .and. em_vars%nsigma == 2) then
+        if(em_vars%omega(iomega - 1) * em_vars%omega(iomega) < M_ZERO) then
+          call X(lr_swap_sigma)(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, ifactor), em_vars%lr(idir, 2, ifactor))
+        end if
+      end if
+    
+      if((em_vars%nfactor > 1) .or. (iomega == 1)) then
+        !search for the density of the closest frequency, including negative
+        closest_omega = em_vars%freq_factor(ifactor) * em_vars%omega(iomega)
+        call loct_search_file_lr(closest_omega, idir, ierr, trim(restart_dir(restart_load)))
+    
+        !attempt to read 
+        if(ierr == 0) then 
+          sigma_alt = 1
+          if(closest_omega * frequency < M_ZERO) opp_freq = .true.
+          if(opp_freq .and. em_vars%nsigma == 2) sigma_alt = 2
+      
+          call X(lr_load_rho)(em_vars%lr(idir, sigma_alt, ifactor)%X(dl_rho), sys%gr%mesh, sys%st%d%nspin, &
+            restart_load, em_rho_tag(closest_omega, idir), ierr)
+      
+          if (ierr == 0) then 
+            message(1) = "Read response density '"//trim(em_rho_tag(closest_omega, idir))//"'."
+          else
+            message(1) = "Unable to read response density '"//trim(em_rho_tag(closest_omega, idir))//"'."
+          end if
+          call messages_info(1)
+
+          if (ierr == 0 .and. &
+            abs(abs(closest_omega) - abs(frequency)) <= CNST(1e-4)) then
+            ! the frequencies are written to four decimals in the restart directory, so we cannot expect higher precision
+            exact_freq = .true.
           end if
         end if
-      end do
-    end if
     
-    ! if opposite sign from last frequency, swap signs to get a closer frequency
-    if(iomega > 1 .and. em_vars%nsigma == 2) then
-      if(em_vars%omega(iomega - 1) * em_vars%omega(iomega) < M_ZERO) then
-        call X(lr_swap_sigma)(sys%st, sys%gr%mesh, em_vars%lr(idir, 1, ifactor), em_vars%lr(idir, 2, ifactor))
-      end if
-    end if
-    
-    if((em_vars%nfactor > 1) .or. (iomega == 1)) then
-    !search for the density of the closest frequency, including negative
-    closest_omega = em_vars%freq_factor(ifactor) * em_vars%omega(iomega)
-    call loct_search_file_lr(closest_omega, idir, ierr, trim(restart_dir(restart_load)))
-    
-    !attempt to read 
-    if(ierr == 0) then 
-      sigma_alt = 1
-      if(closest_omega * frequency < M_ZERO) opp_freq = .true.
-      if(opp_freq .and. em_vars%nsigma == 2) sigma_alt = 2
+        if (ierr == 0 .and. em_vars%nsigma == 2) then 
+          sigma_alt = 1
+          if(opp_freq) sigma_alt = 2
       
-      call X(lr_load_rho)(em_vars%lr(idir, sigma_alt, ifactor)%X(dl_rho), sys%gr%mesh, sys%st%d%nspin, &
-        restart_load, em_rho_tag(closest_omega, idir), ierr)
-      
-      if (ierr == 0) then 
-        message(1) = "Read response density '"//trim(em_rho_tag(closest_omega, idir))//"'."
-      else
-        message(1) = "Unable to read response density '"//trim(em_rho_tag(closest_omega, idir))//"'."
+          em_vars%lr(idir, swap_sigma(sigma_alt), ifactor)%X(dl_rho) = R_CONJ(em_vars%lr(idir, sigma_alt, ifactor)%X(dl_rho))
+        end if
       end if
-      call messages_info(1)
-
-      if (ierr == 0 .and. &
-        abs(abs(closest_omega) - abs(frequency)) <= CNST(1e-4)) then
-        ! the frequencies are written to four decimals in the restart directory, so we cannot expect higher precision
-        exact_freq = .true.
-      end if
-    end if
-    
-    if (ierr == 0 .and. em_vars%nsigma == 2) then 
-      sigma_alt = 1
-      if(opp_freq) sigma_alt = 2
-      
-      em_vars%lr(idir, swap_sigma(sigma_alt), ifactor)%X(dl_rho) = R_CONJ(em_vars%lr(idir, sigma_alt, ifactor)%X(dl_rho))
-    end if
-    end if
     end do
 
     call restart_end(restart_load)
@@ -132,78 +132,78 @@ subroutine X(run_sternheimer)()
   end if
 
   do idir = 1, sys%gr%sb%dim
-  call pert_setup_dir(em_vars%perturbation, idir)
+    call pert_setup_dir(em_vars%perturbation, idir)
   
-  if(use_kdotp .and. idir <= gr%sb%periodic_dim) then
-    call X(sternheimer_set_rhs)(sh, kdotp_lr(idir, 1)%X(dl_psi))
-  end if
+    if(use_kdotp .and. idir <= gr%sb%periodic_dim) then
+      call X(sternheimer_set_rhs)(sh, kdotp_lr(idir, 1)%X(dl_psi))
+    end if
 
-  str_tmp = freq2str(units_from_atomic(units_out%energy, frequency))
-  write(message(1), '(5a)') 'Info: Calculating response for the ', index2axis(idir), &
-    '-direction and frequency ', trim(str_tmp), '.'
-  call messages_info(1)
+    str_tmp = freq2str(units_from_atomic(units_out%energy, frequency))
+    write(message(1), '(5a)') 'Info: Calculating response for the ', index2axis(idir), &
+      '-direction and frequency ', trim(str_tmp), '.'
+    call messages_info(1)
   
-  call X(sternheimer_solve)(sh, sys, hm, em_vars%lr(idir, 1:nsigma_eff, ifactor), nsigma_eff, &
-    R_TOPREC(frequency_eta), em_vars%perturbation, restart_dump, &
-    em_rho_tag(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)), idir), &
-    em_wfs_tag(idir, ifactor), have_restart_rho=(ierr==0), have_exact_freq = exact_freq)
+    call X(sternheimer_solve)(sh, sys, hm, em_vars%lr(idir, 1:nsigma_eff, ifactor), nsigma_eff, &
+      R_TOPREC(frequency_eta), em_vars%perturbation, restart_dump, &
+      em_rho_tag(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)), idir), &
+      em_wfs_tag(idir, ifactor), have_restart_rho=(ierr==0), have_exact_freq = exact_freq)
   
-  if(nsigma_eff == 1 .and. em_vars%nsigma == 2) then
-    em_vars%lr(idir, 2, ifactor)%X(dl_psi) = em_vars%lr(idir, 1, ifactor)%X(dl_psi)
-    em_vars%lr(idir, 2, ifactor)%X(dl_rho) = R_CONJ(em_vars%lr(idir, 1, ifactor)%X(dl_rho))
-  end if
+    if(nsigma_eff == 1 .and. em_vars%nsigma == 2) then
+      em_vars%lr(idir, 2, ifactor)%X(dl_psi) = em_vars%lr(idir, 1, ifactor)%X(dl_psi)
+      em_vars%lr(idir, 2, ifactor)%X(dl_rho) = R_CONJ(em_vars%lr(idir, 1, ifactor)%X(dl_rho))
+    end if
   
-  if(use_kdotp) then
-    call sternheimer_unset_rhs(sh)
-  end if
+    if(use_kdotp) then
+      call sternheimer_unset_rhs(sh)
+    end if
   
-  em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh)
+    em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh)
   
-  if(em_vars%calc_hyperpol .and. use_kdotp) then
-    call X(em_resp_calc_eigenvalues)(sys, dl_eig)
+    if(em_vars%calc_hyperpol .and. use_kdotp) then
+      call X(em_resp_calc_eigenvalues)(sys, dl_eig)
 
-    call restart_init(kdotp_restart, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
+      call restart_init(kdotp_restart, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
                        ierr, mesh=sys%gr%mesh)
 
-    do idir2 = 1, gr%sb%periodic_dim
-      write(message(1), '(a,a,a)') 'Info: Calculating kdotp response in ', index2axis(idir2), '-direction.'
-      call messages_info(1)
-      call pert_setup_dir(pert_kdotp, idir2)
+      do idir2 = 1, gr%sb%periodic_dim
+        write(message(1), '(a,a,a)') 'Info: Calculating kdotp response in ', index2axis(idir2), '-direction.'
+        call messages_info(1)
+        call pert_setup_dir(pert_kdotp, idir2)
       
-      message(1) = "Reading 2nd-order kdotp wavefunction."
-      call messages_info(1)
+        message(1) = "Reading 2nd-order kdotp wavefunction."
+        call messages_info(1)
 
-      ! load wavefunctions
-      str_tmp = kdotp_wfs_tag(min(idir, idir2), max(idir, idir2))
-      ! 1 is the sigma index which is used in em_resp
-      call restart_open_dir(kdotp_restart, wfs_tag_sigma(str_tmp, 1), ierr)
-      if (ierr == 0) call states_load(kdotp_restart, sys%st, sys%gr, ierr, lr=kdotp_lr2)
-      call restart_close_dir(kdotp_restart)
-      if(ierr /= 0) then
-        message(1) = "Unable to read second-order kdotp wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, 1))//"'."
-        message(2) = "Previous kdotp calculation (with KdotPCalcSecondOrder) required."
-        call messages_fatal(2)
-      end if
+        ! load wavefunctions
+        str_tmp = kdotp_wfs_tag(min(idir, idir2), max(idir, idir2))
+        ! 1 is the sigma index which is used in em_resp
+        call restart_open_dir(kdotp_restart, wfs_tag_sigma(str_tmp, 1), ierr)
+        if (ierr == 0) call states_load(kdotp_restart, sys%st, sys%gr, ierr, lr=kdotp_lr2)
+        call restart_close_dir(kdotp_restart)
+        if(ierr /= 0) then
+          message(1) = "Unable to read second-order kdotp wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, 1))//"'."
+          message(2) = "Previous kdotp calculation (with KdotPCalcSecondOrder) required."
+          call messages_fatal(2)
+        end if
           
-      call X(sternheimer_solve_order2)(sh, sh_kdotp, sh2, sys, hm, em_vars%lr(idir, 1:nsigma_eff, ifactor), &
-        kdotp_lr(idir2, 1:1), nsigma_eff, R_TOPREC(frequency_eta), R_TOTYPE(M_ZERO), &
-        em_vars%perturbation, pert_kdotp, kdotp_em_lr2(idir2, idir, 1:nsigma_eff, ifactor), &
-        pert2_none, restart_dump, &
-        "null", em_wfs_tag(idir, ifactor, idir2), have_restart_rho=.true., have_exact_freq = .true., &
-        give_pert1psi2 = kdotp_lr2%X(dl_psi), give_dl_eig1 = dl_eig(:, :, idir2))
+        call X(sternheimer_solve_order2)(sh, sh_kdotp, sh2, sys, hm, em_vars%lr(idir, 1:nsigma_eff, ifactor), &
+          kdotp_lr(idir2, 1:1), nsigma_eff, R_TOPREC(frequency_eta), R_TOTYPE(M_ZERO), &
+          em_vars%perturbation, pert_kdotp, kdotp_em_lr2(idir2, idir, 1:nsigma_eff, ifactor), &
+          pert2_none, restart_dump, &
+          "null", em_wfs_tag(idir, ifactor, idir2), have_restart_rho=.true., have_exact_freq = .true., &
+          give_pert1psi2 = kdotp_lr2%X(dl_psi), give_dl_eig1 = dl_eig(:, :, idir2))
       
-      ! if the frequency is zero, we do not need to calculate both responses
-      if(nsigma_eff == 1 .and. em_vars%nsigma == 2) then
-        kdotp_em_lr2(idir2, idir, 2, ifactor)%X(dl_psi) = kdotp_em_lr2(idir2, idir, 1, ifactor)%X(dl_psi)
-      end if
+        ! if the frequency is zero, we do not need to calculate both responses
+        if(nsigma_eff == 1 .and. em_vars%nsigma == 2) then
+          kdotp_em_lr2(idir2, idir, 2, ifactor)%X(dl_psi) = kdotp_em_lr2(idir2, idir, 1, ifactor)%X(dl_psi)
+        end if
       
-      em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh)
-    end do
-    write(message(1), '(a)') ''
-    call messages_info(1)
+        em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh)
+      end do
+      write(message(1), '(a)') ''
+      call messages_info(1)
 
-    call restart_end(kdotp_restart)
-  end if
+      call restart_end(kdotp_restart)
+    end if
 
   end do
 
