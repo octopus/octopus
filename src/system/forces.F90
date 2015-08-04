@@ -274,9 +274,9 @@ contains
     time = M_ZERO
     if(present(t)) time = t
 
-    ! the ion-ion term is already calculated
+    ! the ion-ion and vdw terms are already calculated
     do iatom = 1, geo%natoms
-      geo%atom(iatom)%f(1:gr%sb%dim) = hm%ep%fii(1:gr%sb%dim, iatom)
+      geo%atom(iatom)%f(1:gr%sb%dim) = hm%ep%fii(1:gr%sb%dim, iatom) + hm%ep%vdw_forces(1:gr%sb%dim, iatom)
     end do
 
     if(present(t)) then

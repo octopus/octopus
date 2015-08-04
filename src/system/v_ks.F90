@@ -104,7 +104,9 @@ module v_ks_m
     FLOAT,                pointer :: Imvtau(:, :)
     FLOAT,                pointer :: Imaxc(:, :, :)
     FLOAT,                pointer :: Imvberry(:, :)
-    
+
+    FLOAT, allocatable :: vdw_forces(:, :)
+    type(geometry_t), pointer :: geo
   end type v_ks_calc_t
 
   type v_ks_t
@@ -509,14 +511,13 @@ contains
     type(v_ks_t),            target,   intent(inout) :: ks 
     type(hamiltonian_t),     target,   intent(in)    :: hm !< This MUST be intent(in), changes to hm are done in v_ks_calc_finish.
     type(states_t),                    intent(inout) :: st
-    type(geometry_t) ,                 intent(in)    :: geo
+    type(geometry_t) ,       target,   intent(in)    :: geo
     FLOAT,                   optional, intent(in)    :: time 
     logical,                 optional, intent(in)    :: calc_berry !< Use this before wfns initialized.
     logical,                 optional, intent(in)    :: calc_energy
 
     type(profile_t), save :: prof
     logical :: cmplxscl
-    FLOAT, allocatable :: vdw_force(:, :)
 
     PUSH_SUB(v_ks_calc_start)
     call profiling_in(prof, "KOHN_SHAM_CALC")
@@ -525,6 +526,8 @@ contains
     ASSERT(.not. ks%calc%calculating)
     ks%calc%calculating = .true.
 
+    ks%calc%geo => geo
+    
     if(in_debug_mode) then
       write(message(1), '(a)') 'Debug: Calculating Kohn-Sham potential.'
       call messages_info(1)
@@ -886,13 +889,13 @@ contains
       if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
 
         SAFE_ALLOCATE(vvdw(1:ks%gr%fine%mesh%np))
-        SAFE_ALLOCATE(vdw_force(1:geo%space%dim, 1:geo%natoms))
-        
+        SAFE_ALLOCATE(ks%calc%vdw_forces(1:geo%space%dim, 1:geo%natoms))
+
         select case(ks%vdw_correction)
 
         case(OPTION__VDWCORRECTION__VDW_TS)
           vvdw = CNST(0.0)
-          call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, st%rho, ks%calc%energy%vdw, vvdw, vdw_force)
+          call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, st%rho, ks%calc%energy%vdw, vvdw, ks%calc%vdw_forces)
           
         case default
           ASSERT(.false.)
@@ -1090,6 +1093,13 @@ contains
         end select
       end if
       
+    end if
+
+    if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
+      hm%ep%vdw_forces(1:ks%gr%sb%dim, 1:ks%calc%geo%natoms) = ks%calc%vdw_forces(1:ks%gr%sb%dim, 1:ks%calc%geo%natoms)
+      SAFE_DEALLOCATE_A(ks%calc%vdw_forces)
+    else
+      hm%ep%vdw_forces(1:ks%gr%sb%dim, 1:ks%calc%geo%natoms) = CNST(0.0)      
     end if
 
     call hamiltonian_update(hm, ks%gr%mesh, time = ks%calc%time)
