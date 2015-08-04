@@ -262,7 +262,7 @@ contains
     FLOAT,     optional, intent(in)    :: t
     FLOAT,     optional, intent(in)    :: dt
 
-    integer :: i, j, iatom, idir
+    integer :: j, iatom, idir
     FLOAT :: x(MAX_DIM), time, global_force(1:MAX_DIM)
     FLOAT, allocatable :: force(:, :)
     type(profile_t), save :: forces_prof
@@ -275,16 +275,16 @@ contains
     if(present(t)) time = t
 
     ! the ion-ion term is already calculated
-    do i = 1, geo%natoms
-      geo%atom(i)%f(1:gr%sb%dim) = hm%ep%fii(1:gr%sb%dim, i)
+    do iatom = 1, geo%natoms
+      geo%atom(iatom)%f(1:gr%sb%dim) = hm%ep%fii(1:gr%sb%dim, iatom)
     end do
 
     if(present(t)) then
       call epot_global_force(hm%ep, geo, time, global_force)
 
       ! the ion-ion term is already calculated
-      do i = 1, geo%natoms
-        geo%atom(i)%f(1:gr%sb%dim) = geo%atom(i)%f(1:gr%sb%dim) + global_force(1:gr%sb%dim)
+      do iatom = 1, geo%natoms
+        geo%atom(iatom)%f(1:gr%sb%dim) = geo%atom(iatom)%f(1:gr%sb%dim) + global_force(1:gr%sb%dim)
       end do
     end if
 
@@ -313,10 +313,10 @@ contains
         case(E_FIELD_ELECTRIC)
           x(1:gr%sb%dim) = M_ZERO
           call laser_field(hm%ep%lasers(j), x(1:gr%sb%dim), t)
-          do i = 1, geo%natoms
+          do iatom = 1, geo%natoms
             ! Here the proton charge is +1, since the electric field has the usual sign.
-            geo%atom(i)%f(1:gr%mesh%sb%dim) = geo%atom(i)%f(1:gr%mesh%sb%dim) &
-             + species_zval(geo%atom(i)%species)*x(1:gr%mesh%sb%dim)
+            geo%atom(iatom)%f(1:gr%mesh%sb%dim) = geo%atom(iatom)%f(1:gr%mesh%sb%dim) &
+             + species_zval(geo%atom(iatom)%species)*x(1:gr%mesh%sb%dim)
           end do
     
         case(E_FIELD_VECTOR_POTENTIAL)
@@ -327,10 +327,10 @@ contains
 
           x(1:gr%sb%dim) = M_ZERO
           call laser_electric_field(hm%ep%lasers(j), x(1:gr%sb%dim), t, dt) !convert in E field (E = -dA/ c dt)
-          do i = 1, geo%natoms
+          do iatom = 1, geo%natoms
             ! Also here the proton charge is +1
-            geo%atom(i)%f(1:gr%mesh%sb%dim) = geo%atom(i)%f(1:gr%mesh%sb%dim) &
-             + species_zval(geo%atom(i)%species)*x(1:gr%mesh%sb%dim)
+            geo%atom(iatom)%f(1:gr%mesh%sb%dim) = geo%atom(iatom)%f(1:gr%mesh%sb%dim) &
+             + species_zval(geo%atom(iatom)%species)*x(1:gr%mesh%sb%dim)
           end do
 
         case(E_FIELD_MAGNETIC, E_FIELD_SCALAR_POTENTIAL)
@@ -342,10 +342,10 @@ contains
     end if
 
     if(associated(hm%ep%E_field)) then
-      do i = 1, geo%natoms
+      do iatom = 1, geo%natoms
         ! Here the proton charge is +1, since the electric field has the usual sign.
-        geo%atom(i)%f(1:gr%mesh%sb%dim) = geo%atom(i)%f(1:gr%mesh%sb%dim) &
-          + species_zval(geo%atom(i)%species)*hm%ep%E_field(1:gr%mesh%sb%dim)
+        geo%atom(iatom)%f(1:gr%mesh%sb%dim) = geo%atom(iatom)%f(1:gr%mesh%sb%dim) &
+          + species_zval(geo%atom(iatom)%species)*hm%ep%E_field(1:gr%mesh%sb%dim)
       end do
     end if
     
