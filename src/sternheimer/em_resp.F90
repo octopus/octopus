@@ -606,6 +606,17 @@ contains
       call pert_init(em_vars%perturbation, perturb_type, sys%gr, sys%geo)
 
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
+        !%Variable EMCalcRotatoryResponse
+        !%Type logical
+        !%Default false
+        !%Section Linear Response::Polarizabilities
+        !%Description
+        !% Calculate circular-dichroism spectrum from electric perturbation,
+        !% and write to file <tt>rotatory_strength</tt>.
+        !%End
+
+        call parse_variable('EMCalcRotatoryResponse', .false., em_vars%calc_rotatory)
+
         !%Variable EMHyperpol
         !%Type block
         !%Section Linear Response::Polarizabilities
@@ -658,17 +669,6 @@ contains
 
       call parse_variable('EMCalcBornCharges', .false., em_vars%calc_Born)
       if (em_vars%calc_Born) call messages_experimental("Calculation of Born effective charges")
-
-      !%Variable EMCalcRotatoryResponse
-      !%Type logical
-      !%Default false
-      !%Section Linear Response::Polarizabilities
-      !%Description
-      !% Calculate circular-dichroism spectrum from electric perturbation,
-      !% and write to file <tt>rotatory_strength</tt>.
-      !%End
-
-      call parse_variable('EMCalcRotatoryResponse', .false., em_vars%calc_rotatory)
 
       !%Variable EMOccupiedResponse
       !%Type logical
@@ -779,6 +779,15 @@ contains
         call out_Born_charges(em_vars%Born_charges(ifactor), geo, gr%sb%dim, dirname, &
           write_real = em_vars%eta < M_EPSILON)
       end if
+
+      if(gr%sb%periodic_dim  ==  gr%sb%dim) then
+        call out_dielectric_constant()
+      end if
+
+      if((.not. simul_box_is_periodic(gr%sb) .or. em_vars%force_no_kdotp) .and. em_vars%calc_rotatory) then
+        call out_circular_dichroism()
+      end if
+
     else if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
       call out_susceptibility()
     end if
@@ -787,14 +796,6 @@ contains
 !      This routine does not give any useful information.
 
     call out_wfn_and_densities()
-
-    if(gr%sb%periodic_dim  ==  gr%sb%dim) then
-      call out_dielectric_constant()
-    end if
-
-    if((.not. simul_box_is_periodic(gr%sb) .or. em_vars%force_no_kdotp) .and. em_vars%calc_rotatory) then
-      call out_circular_dichroism()
-    end if
 
     POP_SUB(em_resp_output)
 
