@@ -47,7 +47,9 @@ noinst_HEADERS = \
 	states_calc_inc.F90 \
 	modelmb_density_matrix_inc.F90 \
 	states_block_inc.F90 linear_response_inc.F90 restart_inc.F90 \
-	states_inc.F90 modelmb_exchange_syms_inc.F90
+	states_inc.F90                 \
+	modelmb_exchange_syms_inc.F90  \
+	density_inc.F90
 
 include $(srcdir)/../common-rules.make
 

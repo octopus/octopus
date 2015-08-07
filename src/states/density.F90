@@ -68,7 +68,9 @@ module density_m
     density_calc_end,                 &
     density_calc,                     &
     states_freeze_orbitals,           &
-    states_total_density
+    states_total_density,             &
+    ddensity_accumulate_grad,         &
+    zdensity_accumulate_grad
 
   type density_calc_t
     FLOAT,                pointer :: density(:, :)
@@ -675,6 +677,14 @@ contains
 
     POP_SUB(states_total_density)
   end subroutine states_total_density
+
+#include "undef.F90"
+#include "real.F90"
+#include "density_inc.F90"
+
+#include "undef.F90"
+#include "complex.F90"
+#include "density_inc.F90"
 
 end module density_m
 
