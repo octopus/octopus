@@ -218,15 +218,17 @@ contains
   
 
 ! ---------------------------------------------------------
-  character(len=100) function em_wfs_tag(idir, ifactor, idir2) result(str)
+  character(len=100) function em_wfs_tag(idir, ifactor, idir2, ipert) result(str)
     integer,           intent(in) :: idir
     integer,           intent(in) :: ifactor
     integer, optional, intent(in) :: idir2
+    integer, optional, intent(in) :: ipert 
 
     PUSH_SUB(em_wfs_tag)
 
     write(str, '(3a,i1)') "wfs_", index2axis(idir), "_f", ifactor
     if(present(idir2)) write(str, '(3a)') trim(str), "_", index2axis(idir2)
+    if(present(ipert)) write(str, '(3a)') trim(str), "_", index2pert(ipert) 
 
     POP_SUB(em_wfs_tag)
 
@@ -266,6 +268,29 @@ contains
 
   end function magn_dir
 
+
+! ---------------------------------------------------------
+
+  character(len=2) pure function index2pert(ipert) result(ch)
+    integer, intent(in) :: ipert
+    
+    select case(ipert)
+      case(1)
+        ch = 'B'
+      case(2)
+        ch = 'K2'
+      case(3)
+        ch = 'KB'
+      case(4)
+        ch = 'KE'
+      case(5)
+        ch = 'BE'
+      case(6)
+        ch = 'E'
+    end select
+
+  end function index2pert
+  
 #include "undef.F90"
 #include "real.F90"
 #include "em_resp_calc_inc.F90"

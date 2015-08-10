@@ -86,6 +86,7 @@ module em_resp_m
 
     CMPLX   :: chi_para(MAX_DIM, MAX_DIM, 3)     !< The paramagnetic part of the susceptibility
     CMPLX   :: chi_dia (MAX_DIM, MAX_DIM, 3)     !< The diamagnetic  part of the susceptibility
+    CMPLX   :: magn(MAX_DIM)                     !< Orbital magnetization
 
     logical :: ok(1:3)                           !< whether calculation is converged
     logical :: force_no_kdotp                    !< whether to use kdotp run for periodic system
@@ -108,20 +109,22 @@ contains
 
     type(grid_t),   pointer :: gr
     type(em_resp_t)         :: em_vars
-    type(sternheimer_t)     :: sh, sh_kdotp, sh2
+    type(sternheimer_t)     :: sh, sh_kdotp, sh2, sh_kmo
     type(lr_t)              :: kdotp_lr(MAX_DIM, 1)
     type(lr_t)              :: kdotp_lr2
     type(lr_t), allocatable :: kdotp_em_lr2(:, :, :, :)
+    type(lr_t), allocatable :: kb_lr(:,:,:), k2_lr(:,:,:) 
     type(pert_t)            :: pert_kdotp, pert2_none
 
-    integer :: sigma, sigma_alt, ndim, idir, idir2, ierr, iomega, ifactor, nsigma_eff
+    integer :: sigma, sigma_alt, ndim, idir, idir2, ierr, iomega, ifactor, nsigma_eff, ipert
     character(len=100) :: dirname_output, str_tmp
-    logical :: complex_response, have_to_calculate, use_kdotp, opp_freq, exact_freq
+    logical :: complex_response, have_to_calculate, use_kdotp, opp_freq, exact_freq, complex_wfs
 
     FLOAT :: closest_omega, last_omega, frequency
     FLOAT, allocatable :: dl_eig(:,:,:)
-    CMPLX :: frequency_eta
+    CMPLX :: frequency_eta, frequency_zero
     type(restart_t) :: gs_restart, restart_load, restart_dump, kdotp_restart
+    integer, parameter :: PB=1, PK2=2, PKB=3, PKE=4, PBE=5, PE=6
 
     PUSH_SUB(em_resp_run)
 
@@ -139,6 +142,7 @@ contains
       call messages_not_implemented('Dynamical magnetic response')
     end if
 
+    complex_wfs = states_are_complex(sys%st)
     complex_response = (em_vars%eta > M_EPSILON) .or. states_are_complex(sys%st)
     call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
                       ierr, mesh=sys%gr%mesh, exact=.true.)
@@ -172,10 +176,6 @@ contains
       ! there needs to be a gap.
       message(1) = "em_resp with kdotp can only be used with semiconducting smearing"
       call messages_fatal(1)
-    end if
-
-    if(use_kdotp .and. pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
-      call messages_not_implemented('Magnetic perturbation in periodic system')
     end if
 
     ! read kdotp wavefunctions if necessary
@@ -249,6 +249,57 @@ contains
       call lr_init(kdotp_lr2)
       call lr_allocate(kdotp_lr2, sys%st, sys%gr%mesh)
 
+    end if
+
+    if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
+      em_vars%nsigma = 1
+      if(use_kdotp) call messages_experimental("Magnetic perturbation for periodic systems")
+    end if
+
+   if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
+      frequency_zero = M_ZERO
+      em_vars%occ_response = .false.
+   
+      if(use_kdotp) then
+        em_vars%nfactor = 1
+
+        call pert_init(pert2_none, PERTURBATION_NONE,  sys%gr, sys%geo)
+        call pert_setup_dir(pert2_none, 1) 
+
+        SAFE_ALLOCATE(k2_lr(1:gr%sb%dim,1:gr%sb%dim,1:1))
+        SAFE_ALLOCATE(kb_lr(1:gr%sb%dim,1:gr%sb%dim,1:1))
+        do idir = 1, gr%sb%dim
+          do idir2 = 1, gr%sb%dim
+            call lr_init(kb_lr(idir,idir2,1))
+            call lr_allocate(kb_lr(idir,idir2,1),sys%st,sys%gr%mesh)
+            if(idir2<=idir) then
+              call lr_init(k2_lr(idir,idir2,1))
+              call lr_allocate(k2_lr(idir,idir2,1),sys%st,sys%gr%mesh)
+            end if
+          end do
+        end do
+
+        if(gr%sb%periodic_dim<gr%sb%dim) then
+          if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
+           message(2) = "All directions should be periodic for magnetic perturbations with kdotp."
+          else
+            message(2) = "All directions should be periodic for magnetooptics with kdotp."
+          end if
+          call messages_fatal(2)
+        end if
+        if(.not. complex_response) then
+          do idir = 1,gr%sb%dim
+            call dlr_orth_response(sys%gr%mesh, sys%st, &
+                  kdotp_lr(idir,1), M_ZERO)
+          end do
+        else
+          do idir = 1,gr%sb%dim
+            call zlr_orth_response(sys%gr%mesh, sys%st, &
+                  kdotp_lr(idir,1), frequency_zero)
+          end do
+        end if
+        call sternheimer_init(sh_kmo, sys, hm, complex_response, set_ham_var = 0, set_last_occ_response = em_vars%occ_response)  
+      end if
     end if
 
     SAFE_ALLOCATE(em_vars%lr(1:gr%sb%dim, 1:em_vars%nsigma, 1:em_vars%nfactor))
@@ -458,6 +509,21 @@ contains
       end do
       SAFE_DEALLOCATE_A(kdotp_em_lr2)
       SAFE_DEALLOCATE_A(dl_eig)
+    end if
+
+  if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
+      if(use_kdotp) then  
+        call pert_end(pert2_none) 
+        call sternheimer_end(sh_kmo)
+        do idir = 1, gr%sb%dim
+          do idir2 = 1, gr%sb%dim 
+             call lr_dealloc(kb_lr(idir,idir2,1))
+             if(idir2<=idir) call lr_dealloc(k2_lr(idir,idir2,1))
+          end do
+        end do
+        SAFE_DEALLOCATE_A(k2_lr)
+        SAFE_DEALLOCATE_A(kb_lr)
+      end if
     end if
 
     SAFE_DEALLOCATE_P(em_vars%omega)
@@ -764,8 +830,11 @@ contains
     
     integer :: iunit
     character(len=80) :: dirname, str_tmp
+    logical :: use_kdotp
 
     PUSH_SUB(em_resp_output)
+
+    use_kdotp = simul_box_is_periodic(gr%sb) .and. .not. em_vars%force_no_kdotp
 
     str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%freq_factor(ifactor)*em_vars%omega(iomega)))
     write(dirname, '(a, a)') EM_RESP_DIR//'freq_', trim(str_tmp)
@@ -948,6 +1017,9 @@ contains
 
       if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
 
+      ! There is no separation into the diamagnetic and paramagnetic terms in the expression 
+      ! for periodic systems 
+      if(.not. use_kdotp) then
       write(iunit, '(2a)') '# Paramagnetic contribution to the susceptibility tensor [ppm a.u.]'
       call output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor)), gr%sb%dim, unit_ppm)
       write(iunit, '(1x)')
@@ -955,6 +1027,7 @@ contains
       write(iunit, '(2a)') '# Diamagnetic contribution to the susceptibility tensor [ppm a.u.]'
       call output_tensor(iunit, TOFLOAT(em_vars%chi_dia(:, :, ifactor)), gr%sb%dim, unit_ppm)
       write(iunit, '(1x)')
+      end if
 
       write(iunit, '(2a)') '# Total susceptibility tensor [ppm a.u.]'
       call output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor) + em_vars%chi_dia(:,:, ifactor)), &
@@ -963,6 +1036,7 @@ contains
 
       write(iunit, '(a)') hyphens
 
+      if(.not. use_kdotp) then
       write(iunit, '(2a)') '# Paramagnetic contribution to the susceptibility tensor [ppm cgs / mol]'
       call output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor)), gr%sb%dim, unit_susc_ppm_cgs)
       write(iunit, '(1x)')
@@ -970,11 +1044,20 @@ contains
       write(iunit, '(2a)') '# Diamagnetic contribution to the susceptibility tensor [ppm cgs / mol]'
       call output_tensor(iunit, TOFLOAT(em_vars%chi_dia(:, :, ifactor)), gr%sb%dim, unit_susc_ppm_cgs)
       write(iunit, '(1x)')
+      end if
 
       write(iunit, '(2a)') '# Total susceptibility tensor [ppm cgs / mol]'
       call output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor) + em_vars%chi_dia(:,:, ifactor)), &
            gr%sb%dim, unit_susc_ppm_cgs)
       write(iunit, '(1x)')
+
+      if(use_kdotp) then
+        write(iunit, '(a)') hyphens
+        write(iunit, '(1a)') '# Magnetization [ppm a.u.]'
+        write(iunit, '(3f20.8)') units_from_atomic(unit_ppm, real(em_vars%magn(1))), &
+          units_from_atomic(unit_ppm, real(em_vars%magn(2))), &
+          units_from_atomic(unit_ppm, real(em_vars%magn(3)))
+      end if
 
       call io_close(iunit)      
       POP_SUB(em_resp_output.out_susceptibility)
