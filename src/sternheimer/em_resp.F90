@@ -113,7 +113,7 @@ contains
     type(lr_t)              :: kdotp_lr(MAX_DIM, 1)
     type(lr_t)              :: kdotp_lr2
     type(lr_t), allocatable :: kdotp_em_lr2(:, :, :, :)
-    type(lr_t), allocatable :: kb_lr(:,:,:), k2_lr(:,:,:) 
+    type(lr_t), allocatable :: kb_lr(:, :, :), k2_lr(:, :, :) 
     type(pert_t)            :: pert_kdotp, pert2_none
 
     integer :: sigma, sigma_alt, ndim, idir, idir2, ierr, iomega, ifactor, nsigma_eff, ipert
@@ -124,7 +124,7 @@ contains
     FLOAT, allocatable :: dl_eig(:,:,:)
     CMPLX :: frequency_eta, frequency_zero
     type(restart_t) :: gs_restart, restart_load, restart_dump, kdotp_restart
-    integer, parameter :: PB=1, PK2=2, PKB=3, PKE=4, PBE=5, PE=6
+    integer, parameter :: PB = 1, PK2 = 2, PKB = 3, PKE = 4, PBE = 5, PE = 6
 
     PUSH_SUB(em_resp_run)
 
@@ -266,22 +266,22 @@ contains
         call pert_init(pert2_none, PERTURBATION_NONE,  sys%gr, sys%geo)
         call pert_setup_dir(pert2_none, 1) 
 
-        SAFE_ALLOCATE(k2_lr(1:gr%sb%dim,1:gr%sb%dim,1:1))
-        SAFE_ALLOCATE(kb_lr(1:gr%sb%dim,1:gr%sb%dim,1:1))
+        SAFE_ALLOCATE(k2_lr(1:gr%sb%dim, 1:gr%sb%dim, 1:1))
+        SAFE_ALLOCATE(kb_lr(1:gr%sb%dim, 1:gr%sb%dim, 1:1))
         do idir = 1, gr%sb%dim
           do idir2 = 1, gr%sb%dim
-            call lr_init(kb_lr(idir,idir2,1))
-            call lr_allocate(kb_lr(idir,idir2,1),sys%st,sys%gr%mesh)
-            if(idir2<=idir) then
-              call lr_init(k2_lr(idir,idir2,1))
-              call lr_allocate(k2_lr(idir,idir2,1),sys%st,sys%gr%mesh)
-            end if
+            call lr_init(kb_lr(idir, idir2, 1))
+            call lr_allocate(kb_lr(idir, idir2, 1), sys%st, sys%gr%mesh)
+            if(idir2 <= idir) then
+              call lr_init(k2_lr(idir, idir2, 1))
+              call lr_allocate(k2_lr(idir, idir2, 1), sys%st, sys%gr%mesh)
+            end if 
           end do
         end do
 
-        if(gr%sb%periodic_dim<gr%sb%dim) then
+        if(gr%sb%periodic_dim < gr%sb%dim) then
           if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
-           message(2) = "All directions should be periodic for magnetic perturbations with kdotp."
+            message(2) = "All directions should be periodic for magnetic perturbations with kdotp."
           else
             message(2) = "All directions should be periodic for magnetooptics with kdotp."
           end if
@@ -290,12 +290,12 @@ contains
         if(.not. complex_response) then
           do idir = 1,gr%sb%dim
             call dlr_orth_response(sys%gr%mesh, sys%st, &
-                  kdotp_lr(idir,1), M_ZERO)
+              kdotp_lr(idir, 1), M_ZERO)
           end do
         else
           do idir = 1,gr%sb%dim
             call zlr_orth_response(sys%gr%mesh, sys%st, &
-                  kdotp_lr(idir,1), frequency_zero)
+              kdotp_lr(idir, 1), frequency_zero)
           end do
         end if
         call sternheimer_init(sh_kmo, sys, hm, complex_response, set_ham_var = 0, set_last_occ_response = em_vars%occ_response)  
@@ -518,7 +518,7 @@ contains
         do idir = 1, gr%sb%dim
           do idir2 = 1, gr%sb%dim 
              call lr_dealloc(kb_lr(idir,idir2,1))
-             if(idir2<=idir) call lr_dealloc(k2_lr(idir,idir2,1))
+             if(idir2 <= idir) call lr_dealloc(k2_lr(idir,idir2,1))
           end do
         end do
         SAFE_DEALLOCATE_A(k2_lr)
@@ -1020,13 +1020,13 @@ contains
       ! There is no separation into the diamagnetic and paramagnetic terms in the expression 
       ! for periodic systems 
       if(.not. use_kdotp) then
-      write(iunit, '(2a)') '# Paramagnetic contribution to the susceptibility tensor [ppm a.u.]'
-      call output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor)), gr%sb%dim, unit_ppm)
-      write(iunit, '(1x)')
+        write(iunit, '(2a)') '# Paramagnetic contribution to the susceptibility tensor [ppm a.u.]'
+        call output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor)), gr%sb%dim, unit_ppm)
+        write(iunit, '(1x)')
 
-      write(iunit, '(2a)') '# Diamagnetic contribution to the susceptibility tensor [ppm a.u.]'
-      call output_tensor(iunit, TOFLOAT(em_vars%chi_dia(:, :, ifactor)), gr%sb%dim, unit_ppm)
-      write(iunit, '(1x)')
+        write(iunit, '(2a)') '# Diamagnetic contribution to the susceptibility tensor [ppm a.u.]'
+        call output_tensor(iunit, TOFLOAT(em_vars%chi_dia(:, :, ifactor)), gr%sb%dim, unit_ppm)
+        write(iunit, '(1x)')
       end if
 
       write(iunit, '(2a)') '# Total susceptibility tensor [ppm a.u.]'
@@ -1037,13 +1037,13 @@ contains
       write(iunit, '(a)') hyphens
 
       if(.not. use_kdotp) then
-      write(iunit, '(2a)') '# Paramagnetic contribution to the susceptibility tensor [ppm cgs / mol]'
-      call output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor)), gr%sb%dim, unit_susc_ppm_cgs)
-      write(iunit, '(1x)')
+        write(iunit, '(2a)') '# Paramagnetic contribution to the susceptibility tensor [ppm cgs / mol]'
+        call output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor)), gr%sb%dim, unit_susc_ppm_cgs)
+        write(iunit, '(1x)')
 
-      write(iunit, '(2a)') '# Diamagnetic contribution to the susceptibility tensor [ppm cgs / mol]'
-      call output_tensor(iunit, TOFLOAT(em_vars%chi_dia(:, :, ifactor)), gr%sb%dim, unit_susc_ppm_cgs)
-      write(iunit, '(1x)')
+        write(iunit, '(2a)') '# Diamagnetic contribution to the susceptibility tensor [ppm cgs / mol]'
+        call output_tensor(iunit, TOFLOAT(em_vars%chi_dia(:, :, ifactor)), gr%sb%dim, unit_susc_ppm_cgs)
+        write(iunit, '(1x)')
       end if
 
       write(iunit, '(2a)') '# Total susceptibility tensor [ppm cgs / mol]'
