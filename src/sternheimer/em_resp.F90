@@ -82,11 +82,12 @@ module em_resp_m
 
     logical :: calc_hyperpol
     CMPLX   :: alpha(MAX_DIM, MAX_DIM, 3)        !< the linear polarizability
+    CMPLX   :: alpha_be(MAX_DIM, MAX_DIM, MAX_DIM, 3) !< the magneto-optical response
     CMPLX   :: beta (MAX_DIM, MAX_DIM, MAX_DIM)  !< first hyperpolarizability
 
     CMPLX   :: chi_para(MAX_DIM, MAX_DIM, 3)     !< The paramagnetic part of the susceptibility
     CMPLX   :: chi_dia (MAX_DIM, MAX_DIM, 3)     !< The diamagnetic  part of the susceptibility
-    CMPLX   :: magn(MAX_DIM)                     !< Orbital magnetization
+    CMPLX   :: magn(MAX_DIM)                     !< The orbital magnetization
 
     logical :: ok(1:3)                           !< whether calculation is converged
     logical :: force_no_kdotp                    !< whether to use kdotp run for periodic system
@@ -96,6 +97,9 @@ module em_resp_m
     type(Born_charges_t) :: Born_charges(3)      !< one set for each frequency factor
     logical :: occ_response                      !< whether to calculate full response in Sternheimer eqn.
     logical :: wfns_from_scratch                 !< whether to ignore restart LR wfns and initialize to zero
+    logical :: calc_magnetooptics                !< whether to calculate magneto-optical response
+    logical :: magnetooptics_nohvar              !< whether to consider corrections to exchange-correlation 
+                                                 !! and Hartree terms for magnetic perturbations in magneto-optics
     
   end type em_resp_t
 
@@ -109,12 +113,13 @@ contains
 
     type(grid_t),   pointer :: gr
     type(em_resp_t)         :: em_vars
-    type(sternheimer_t)     :: sh, sh_kdotp, sh2, sh_kmo
+    type(sternheimer_t)     :: sh, sh_kdotp, sh2, sh_kmo, sh_mo
     type(lr_t)              :: kdotp_lr(MAX_DIM, 1)
     type(lr_t)              :: kdotp_lr2
     type(lr_t), allocatable :: kdotp_em_lr2(:, :, :, :)
+    type(lr_t), allocatable :: b_lr(:, :), e_lr(:, :)
     type(lr_t), allocatable :: kb_lr(:, :, :), k2_lr(:, :, :) 
-    type(pert_t)            :: pert_kdotp, pert2_none
+    type(pert_t)            :: pert_kdotp, pert2_none, pert_b
 
     integer :: sigma, sigma_alt, ndim, idir, idir2, ierr, iomega, ifactor, nsigma_eff, ipert
     character(len=100) :: dirname_output, str_tmp
@@ -256,7 +261,8 @@ contains
       if(use_kdotp) call messages_experimental("Magnetic perturbation for periodic systems")
     end if
 
-   if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
+    if(em_vars%calc_magnetooptics .or. &
+      (pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC)) then
       frequency_zero = M_ZERO
       em_vars%occ_response = .false.
    
@@ -330,6 +336,33 @@ contains
         end do
       end do
     end do
+
+    if(em_vars%calc_magnetooptics) then
+      if(em_vars%magnetooptics_nohvar) then
+        call sternheimer_init(sh_mo, sys, hm, complex_response, set_ham_var = 0, set_last_occ_response = em_vars%occ_response) 
+      else
+        call sternheimer_init(sh_mo, sys, hm, complex_response, set_last_occ_response = em_vars%occ_response) 
+        call sternheimer_build_kxc(sh_mo, sys%gr%mesh, sys%st, sys%ks)
+      end if
+      call messages_experimental("Magneto-optical response")
+      SAFE_ALLOCATE(b_lr(1:gr%sb%dim, 1:1))
+       do idir = 1, gr%sb%dim
+        call lr_init(b_lr(idir, 1))
+        call lr_allocate(b_lr(idir, 1), sys%st, sys%gr%mesh)
+      end do
+      
+      if(.not. use_kdotp) then
+        call pert_init(pert_b, PERTURBATION_MAGNETIC,  sys%gr, sys%geo)
+        SAFE_ALLOCATE(e_lr(1:gr%sb%dim, 1:em_vars%nsigma))
+        do idir = 1, gr%sb%dim
+          do sigma = 1, em_vars%nsigma
+            call lr_init(e_lr(idir, sigma))
+            call lr_allocate(e_lr(idir, sigma), sys%st, sys%gr%mesh)
+          end do
+        end do
+      end if
+    end if
+
 
     last_omega = M_HUGE
     do iomega = 1, em_vars%nomega
@@ -511,18 +544,38 @@ contains
       SAFE_DEALLOCATE_A(dl_eig)
     end if
 
-  if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
+    if(em_vars%calc_magnetooptics .or. &
+      (pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC)) then
       if(use_kdotp) then  
         call pert_end(pert2_none) 
         call sternheimer_end(sh_kmo)
         do idir = 1, gr%sb%dim
           do idir2 = 1, gr%sb%dim 
-             call lr_dealloc(kb_lr(idir,idir2,1))
-             if(idir2 <= idir) call lr_dealloc(k2_lr(idir,idir2,1))
+            call lr_dealloc(kb_lr(idir, idir2, 1))
+            if(idir2 <= idir) call lr_dealloc(k2_lr(idir, idir2, 1))
           end do
         end do
         SAFE_DEALLOCATE_A(k2_lr)
         SAFE_DEALLOCATE_A(kb_lr)
+      end if
+    end if
+
+    if(em_vars%calc_magnetooptics) then
+      if(.not. em_vars%magnetooptics_nohvar) call sternheimer_unset_kxc(sh_mo)
+      call sternheimer_end(sh_mo)
+      do idir = 1, gr%sb%dim
+        call lr_dealloc(b_lr(idir, 1))
+      end do
+      SAFE_DEALLOCATE_A(b_lr)
+      
+      if(.not. use_kdotp) then
+        call pert_end(pert_b)
+        do idir = 1, gr%sb%dim
+          do sigma = 1, em_vars%nsigma
+            call lr_dealloc(e_lr(idir, sigma))
+          end do
+        end do
+        SAFE_DEALLOCATE_A(e_lr)
       end if
     end if
 
@@ -651,6 +704,8 @@ contains
       ! reset the values of these variables
       em_vars%calc_hyperpol = .false.
       em_vars%freq_factor(1:3) = M_ONE
+      em_vars%calc_magnetooptics = .false.
+      em_vars%magnetooptics_nohvar = .true.
 
       !%Variable EMPerturbationType
       !%Type integer
@@ -709,6 +764,26 @@ contains
 
           em_vars%calc_hyperpol = .true.
         end if
+
+        !%Variable EMCalcMagnetooptics
+        !%Type logical
+        !%Default false
+        !%Section Linear Response::Polarizabilities
+        !%Description
+        !% Calculate magneto-optical response.
+        !%End
+        call parse_variable('EMCalcMagnetooptics', .false., em_vars%calc_magnetooptics)
+
+        !%Variable EMMagnetoopticsNoHVar
+        !%Type logical
+        !%Default true
+        !%Section Linear Response::Polarizabilities
+        !%Description
+        !% Exclude corrections to the exchange-correlation and Hartree terms 
+        !% from consideration of perturbations induced by a magnetic field
+        !%End
+        call parse_variable('EMMagnetoopticsNoHVar', .true., em_vars%magnetooptics_nohvar)
+
       end if
 
       !%Variable EMForceNoKdotP
@@ -831,6 +906,7 @@ contains
     integer :: iunit
     character(len=80) :: dirname, str_tmp
     logical :: use_kdotp
+    CMPLX :: epsilon(MAX_DIM, MAX_DIM) 
 
     PUSH_SUB(em_resp_output)
 
@@ -855,6 +931,11 @@ contains
 
       if((.not. simul_box_is_periodic(gr%sb) .or. em_vars%force_no_kdotp) .and. em_vars%calc_rotatory) then
         call out_circular_dichroism()
+      end if
+
+      if(em_vars%calc_magnetooptics) then 
+        call out_magnetooptics() 
+        if(iomega == 1) call out_susceptibility()
       end if
 
     else if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
@@ -983,7 +1064,6 @@ contains
     ! ---------------------------------------------------------
     !> epsilon = 1 + 4 * pi * alpha/volume
     subroutine out_dielectric_constant()
-      CMPLX :: epsilon(MAX_DIM, MAX_DIM) 
       integer :: idir
 
       PUSH_SUB(em_resp_output.out_dielectric_constant)
@@ -1011,9 +1091,17 @@ contains
     ! ---------------------------------------------------------
     subroutine out_susceptibility()
 
+      character(len=80) :: dirname1
+
       PUSH_SUB(em_resp_output.out_susceptibility)
 
-      iunit = io_open(trim(dirname)//'/susceptibility', action='write')
+      if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
+        write(dirname1, '(a, a)') EM_RESP_DIR//'freq_0.0000'
+        call io_mkdir(trim(dirname1))
+        iunit = io_open(trim(dirname1)//'/susceptibility', action='write')
+      else  
+        iunit = io_open(trim(dirname)//'/susceptibility', action='write')
+      end if
 
       if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
 
@@ -1224,6 +1312,68 @@ contains
 
     end subroutine out_circular_dichroism
     
+   ! ---------------------------------------------------------
+    subroutine out_magnetooptics   
+      integer :: idir
+      CMPLX :: mcd(3), diff(3)
+      CMPLX :: eps1, eps2
+      
+      PUSH_SUB(em_resp_output.out_magnetooptics)
+      
+      do idir = 1, gr%sb%dim 
+        diff(idir) = M_HALF * (em_vars%alpha_be(magn_dir(idir, 1), magn_dir(idir, 2), idir, ifactor) - &
+          em_vars%alpha_be(magn_dir(idir, 2), magn_dir(idir, 1), idir, ifactor))
+
+        eps1 = epsilon(magn_dir(idir, 1), magn_dir(idir, 1))
+        eps2 = epsilon(magn_dir(idir, 2), magn_dir(idir, 2))
+        if(use_kdotp) mcd(idir) = M_TWO * M_PI * em_vars%freq_factor(ifactor) * &
+          em_vars%omega(iomega)/(gr%sb%rcell_volume * P_C) * diff(idir)/(M_HALF * (sqrt(eps1) + sqrt(eps2)))
+      end do
+      if(.not. use_kdotp) mcd(1) = M_TWO * M_PI * em_vars%freq_factor(ifactor) * & 
+        em_vars%omega(iomega)/P_C * (diff(1) + diff(2) + diff(3)) / M_THREE
+  
+      iunit = io_open(trim(dirname)//'/alpha_be', action='write')
+  
+      if (.not. em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
+  
+      write(iunit, '(1a)') '# Real part of magneto-optical response [a.u.]'
+      
+      do idir = 1, gr%sb%dim 
+        call output_tensor(iunit, real(em_vars%alpha_be(:,:,idir,ifactor)), &
+          gr%sb%dim, unit_one)
+        write(iunit, '(3a,f25.15)') 'Re_', index2axis(idir), ' ', real(diff(idir))
+      end do
+      
+      write(iunit, '(1a)') '# Imaginary part of magneto-optical response [a.u.]'
+      
+      do idir = 1, gr%sb%dim 
+        call output_tensor(iunit, aimag(em_vars%alpha_be(:,:,idir,ifactor)), &
+          gr%sb%dim, unit_one)
+        write(iunit, '(3a,f25.15)') 'Im_', index2axis(idir), ' ', aimag(diff(idir))
+      end do
+      
+      mcd(:) = mcd(:) / unit_ppm%factor
+      
+      write(iunit, '()')        
+      if(use_kdotp) then
+        write(iunit, '(1a)') '# Faraday rotation [ppm a.u.]'
+        write(iunit, '(3f20.10)') -aimag(mcd(1)), -aimag(mcd(2)), -aimag(mcd(3))
+      else
+        write(iunit, '(1a,f20.10)')' Faraday rotation [1e-3 a.u.]  ', -aimag(mcd(1) * CNST(1e-3))
+      end if
+
+      if(use_kdotp) then
+        write(iunit, '(1a)') '# Magnetic circular dichroism [ppm a.u.]'
+        write(iunit, '(3f20.10)')   real(mcd(1)), real(mcd(2)), real(mcd(3))
+      else
+        write(iunit, '(1a,f20.10)')' Magnetic circular dichroism [1e-3 a.u.]  ', real(mcd(1) * CNST(1e-3))
+      end if
+      
+      call io_close(iunit)
+      
+      POP_SUB(em_resp_output.out_magnetooptics)
+    end subroutine out_magnetooptics
+
   end subroutine em_resp_output
 
   ! ---------------------------------------------------------
