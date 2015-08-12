@@ -87,6 +87,7 @@ contains
     this%eigenvalues  = M_ZERO
     this%exchange     = M_ZERO
     this%correlation  = M_ZERO
+    this%vdw          = M_ZERO
     this%xc_j         = M_ZERO
     this%intnvxc      = M_ZERO
     this%hartree      = M_ZERO
@@ -132,6 +133,7 @@ contains
     eout%eigenvalues  = ein%eigenvalues
     eout%exchange     = ein%exchange
     eout%correlation  = ein%correlation
+    eout%vdw          = ein%vdw
     eout%xc_j         = ein%xc_j
     eout%intnvxc      = ein%intnvxc
     eout%hartree      = ein%hartree
