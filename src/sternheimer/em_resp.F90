@@ -118,7 +118,8 @@ contains
     type(lr_t)              :: kdotp_lr2
     type(lr_t), allocatable :: kdotp_em_lr2(:, :, :, :)
     type(lr_t), allocatable :: b_lr(:, :), e_lr(:, :)
-    type(lr_t), allocatable :: kb_lr(:, :, :), k2_lr(:, :, :) 
+    type(lr_t), allocatable :: kb_lr(:, :, :), k2_lr(:, :, :)
+    type(lr_t), allocatable :: ke_lr(:, :, :), be_lr(:, :, :)
     type(pert_t)            :: pert_kdotp, pert2_none, pert_b
 
     integer :: sigma, sigma_alt, ndim, idir, idir2, ierr, iomega, ifactor, nsigma_eff, ipert
@@ -256,6 +257,17 @@ contains
 
     end if
 
+    ! Hyperpolarizability requires full corrections to wavefunctions (with projections on occupied states).
+    ! Magnetooptics is implemented only for projections of corrections to wavefunctions on unoccupied states.
+    if(em_vars%calc_magnetooptics) then 
+      if(em_vars%calc_hyperpol .and. use_kdotp) then
+        message(1) = "Hyperpolarizability and magnetooptics with kdotp are not compatible."
+        message(2) = "Only calculation of hyperpolarizability will be performed."
+        call messages_warning(2)
+        em_vars%calc_magnetooptics = .false.
+      end if
+    end if
+
     if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
       em_vars%nsigma = 1
       if(use_kdotp) call messages_experimental("Magnetic perturbation for periodic systems")
@@ -351,7 +363,20 @@ contains
         call lr_allocate(b_lr(idir, 1), sys%st, sys%gr%mesh)
       end do
       
-      if(.not. use_kdotp) then
+      if(use_kdotp) then
+        SAFE_ALLOCATE(ke_lr(1:gr%sb%dim, 1:gr%sb%dim, 1:em_vars%nsigma))
+        SAFE_ALLOCATE(be_lr(1:gr%sb%dim, 1:gr%sb%dim, 1:em_vars%nsigma))
+        do idir = 1, gr%sb%dim
+          do idir2 = 1, gr%sb%dim
+            do sigma = 1, em_vars%nsigma
+              call lr_init(ke_lr(idir, idir2, sigma))
+              call lr_allocate(ke_lr(idir, idir2, sigma), sys%st, sys%gr%mesh)
+              call lr_init(be_lr(idir, idir2, sigma))
+              call lr_allocate(be_lr(idir, idir2, sigma), sys%st, sys%gr%mesh)
+            end do
+          end do
+        end do
+      else
         call pert_init(pert_b, PERTURBATION_MAGNETIC,  sys%gr, sys%geo)
         SAFE_ALLOCATE(e_lr(1:gr%sb%dim, 1:em_vars%nsigma))
         do idir = 1, gr%sb%dim
@@ -372,6 +397,11 @@ contains
       do ifactor = 1, em_vars%nfactor
         frequency = em_vars%freq_factor(ifactor)*em_vars%omega(iomega)
         frequency_eta = frequency + M_zI * em_vars%eta
+
+        if(abs(frequency) < M_EPSILON .and. em_vars%calc_magnetooptics .and. use_kdotp) then
+          message(1) = "Magnetooptical response with kdotp requires non-zero frequency."
+          call messages_warning(1)       
+        end if
 
         ierr = 0
 
@@ -568,7 +598,18 @@ contains
       end do
       SAFE_DEALLOCATE_A(b_lr)
       
-      if(.not. use_kdotp) then
+      if(use_kdotp) then
+        do idir = 1, gr%sb%dim 
+          do idir2 = 1, gr%sb%dim
+            do sigma = 1, em_vars%nsigma
+              call lr_dealloc(ke_lr(idir, idir2, sigma))
+              call lr_dealloc(be_lr(idir, idir2, sigma))
+            end do
+          end do
+        end do
+        SAFE_DEALLOCATE_A(be_lr)
+        SAFE_DEALLOCATE_A(ke_lr)
+      else
         call pert_end(pert_b)
         do idir = 1, gr%sb%dim
           do sigma = 1, em_vars%nsigma
@@ -1315,11 +1356,12 @@ contains
    ! ---------------------------------------------------------
     subroutine out_magnetooptics   
       integer :: idir
-      CMPLX :: mcd(3), diff(3)
+      CMPLX :: mcd(4), diff(3)
       CMPLX :: eps1, eps2
       
       PUSH_SUB(em_resp_output.out_magnetooptics)
       
+      mcd(:) = M_ZERO
       do idir = 1, gr%sb%dim 
         diff(idir) = M_HALF * (em_vars%alpha_be(magn_dir(idir, 1), magn_dir(idir, 2), idir, ifactor) - &
           em_vars%alpha_be(magn_dir(idir, 2), magn_dir(idir, 1), idir, ifactor))
@@ -1329,7 +1371,7 @@ contains
         if(use_kdotp) mcd(idir) = M_TWO * M_PI * em_vars%freq_factor(ifactor) * &
           em_vars%omega(iomega)/(gr%sb%rcell_volume * P_C) * diff(idir)/(M_HALF * (sqrt(eps1) + sqrt(eps2)))
       end do
-      if(.not. use_kdotp) mcd(1) = M_TWO * M_PI * em_vars%freq_factor(ifactor) * & 
+      mcd(4) = M_TWO * M_PI * em_vars%freq_factor(ifactor) * & 
         em_vars%omega(iomega)/P_C * (diff(1) + diff(2) + diff(3)) / M_THREE
   
       iunit = io_open(trim(dirname)//'/alpha_be', action='write')
@@ -1358,16 +1400,15 @@ contains
       if(use_kdotp) then
         write(iunit, '(1a)') '# Faraday rotation [ppm a.u.]'
         write(iunit, '(3f20.10)') -aimag(mcd(1)), -aimag(mcd(2)), -aimag(mcd(3))
-      else
-        write(iunit, '(1a,f20.10)')' Faraday rotation [1e-3 a.u.]  ', -aimag(mcd(1) * CNST(1e-3))
       end if
+      write(iunit, '(1a,f20.10)')' Average for Faraday rotation [1e-3 a.u.]  ', -aimag(mcd(4) * CNST(1e-3))
+
 
       if(use_kdotp) then
         write(iunit, '(1a)') '# Magnetic circular dichroism [ppm a.u.]'
         write(iunit, '(3f20.10)')   real(mcd(1)), real(mcd(2)), real(mcd(3))
-      else
-        write(iunit, '(1a,f20.10)')' Magnetic circular dichroism [1e-3 a.u.]  ', real(mcd(1) * CNST(1e-3))
       end if
+      write(iunit, '(1a,f20.10)')' Average for magnetic circular dichroism [1e-3 a.u.]  ', real(mcd(4) * CNST(1e-3))
       
       call io_close(iunit)
       
