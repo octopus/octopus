@@ -536,14 +536,10 @@ void vdw_calculate (const int natoms, const int * zatom, const double * coordina
       int katom;
       for (katom = 0; katom < natoms; katom++) {
         
-        // Derivative of the volume ratio of atom A with respect to the position of another atom.
-        double dvradrc;
-        dvradrc = 1.0; // volume_ratio_derivative ?
-        
         // Calculation of the correction to the force.
-        //force[3*iatom + 0] += -deabdvra*dvradrc[3*katom + 0];
-        //force[3*iatom + 1] += -deabdvra*dvradrc[3*katom + 1];
-        //force[3*iatom + 2] += -deabdvra*dvradrc[3*katom + 2];
+        force[3*katom + 0] += -deabdvra*volume_ratio_derivative[3*(natoms*katom + iatom) + 0];
+        force[3*katom + 1] += -deabdvra*volume_ratio_derivative[3*(natoms*katom + iatom) + 1];
+        force[3*katom + 2] += -deabdvra*volume_ratio_derivative[3*(natoms*katom + iatom) + 2];
       
       }
       
