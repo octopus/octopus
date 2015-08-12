@@ -38,8 +38,8 @@ module base_model_m
 #include "thash_inc.F90"
 #undef HASH_INCLUDE_PREFIX
 
-  use grid_m, only: grid_t
-  use json_m, only: JSON_OK, json_object_t, json_get
+  use grid_m
+  use json_m
 
   use config_dict_m
   use space_m
