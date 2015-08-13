@@ -665,9 +665,11 @@ contains
           sb%lsize(:) = M_ZERO
           sb%lsize(1:sb%dim) = M_HALF
 	else
-	  message(1) = 'Lsize need not be declared alongwith Lattice Vectors'
-	  call messages_fatal(1)
-	end if
+	  message(1) = 'Lsize is being declared along with Lattice Vectors:'
+          message(2) = ' this will multiply each vector by the corresponding lsize'
+          message(3) = ' For the default behavior set lsize = 0.5 | 0.5 | 0.5 '
+	  call messages_warning(3)
+        end if
       end if
 
     end if
