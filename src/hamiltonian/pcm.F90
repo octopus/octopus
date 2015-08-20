@@ -128,16 +128,43 @@ contains
 
     integer, parameter :: mxts = 10000
 
-    FLOAT :: rcav_C
-    FLOAT :: rcav_O
-    FLOAT :: rcav_N
-    FLOAT :: rcav_S
-    FLOAT :: rcav_F
-    FLOAT :: rcav_Na
-    FLOAT :: rcav_Cl
+    integer, parameter :: upto_Xe = 54
+    FLOAT              :: vdw_radii(1:upto_Xe) !< van der Waals radii in Angstrom for elements H-Xe reported
+                                               !  by Stefan Grimme in J. Comput. Chem. 27: 1787-1799, 2006
+                                               !  except for C, N and O, reported in J. Chem. Phys. 120, 3893 (2004).
+    data (vdw_radii(ia), ia=1, upto_Xe)            		        						 / &
+     !H													      He
+      CNST(1.001),                                                                                            CNST(1.012), &
+     !Li     	   Be			     B 	          C	       N	    O	         F	      Ne	           
+      CNST(0.825), CNST(1.408),              CNST(1.485), CNST(2.000), CNST(1.583), CNST(1.500), CNST(1.287), CNST(1.243), &
+     !Na           Mg                        Al           Si           P            S            Cl           Ar
+      CNST(1.144), CNST(1.364),              CNST(1.639), CNST(1.716), CNST(1.705), CNST(1.683), CNST(1.639), CNST(1.595), &
+     !K            Ca
+      CNST(1.485), CNST(1.474),                                                                                            &
+                                !>      Sc -- Zn       <!                                       
+                                CNST(1.562), CNST(1.562),     	    				 		           &
+                                CNST(1.562), CNST(1.562), 								   &
+                                CNST(1.562), CNST(1.562), 								   &
+                                CNST(1.562), CNST(1.562), 							           &
+                                CNST(1.562), CNST(1.562),                                                                  &
+                                            !Ga           Ge           As           Se           Br           Kr 
+                                             CNST(1.650), CNST(1.727), CNST(1.760), CNST(1.771), CNST(1.749), CNST(1.727), &
+     !Rb           Sr           !>      Y -- Cd        <!                                       
+      CNST(1.628), CNST(1.606), CNST(1.639), CNST(1.639),						                   &
+                                CNST(1.639), CNST(1.639),						                   &
+                                CNST(1.639), CNST(1.639),						                   &
+                                CNST(1.639), CNST(1.639),                                                                  &
+                                CNST(1.639), CNST(1.639),                                                                  &
+                                            !In	          Sn           Sb           Te           I            Xe
+                                             CNST(1.672), CNST(1.804), CNST(1.881), CNST(1.892), CNST(1.892), CNST(1.881)  /
 
     type(tessera_t) :: dum2(1)
+
     logical :: band
+    logical :: add_spheres_h
+
+    type(species_t), pointer :: spci 
+    FLOAT :: z_ia
 
     PUSH_SUB(pcm_init)
 
@@ -173,15 +200,7 @@ contains
     !%Description
     !% Scales the radii of the spheres used to build the solute cavity surface.
     !%End
-    call parse_variable('PCMRadiusScaling', M_ONE, pcm%scale_r)
-
-    rcav_C  = CNST(2.4)*P_Ang*pcm%scale_r    ! 
-    rcav_O  = CNST(1.8)*P_Ang*pcm%scale_r    !    
-    rcav_N  = CNST(1.9)*P_Ang*pcm%scale_r    !
-    rcav_S  = CNST(2.0175)*P_Ang*pcm%scale_r ! Angstrom -> Bohr 
-    rcav_F  = CNST(1.682)*P_Ang*pcm%scale_r  !
-    rcav_Na = CNST(2.772)*P_Ang*pcm%scale_r  !  
-    rcav_Cl = CNST(2.172)*P_Ang*pcm%scale_r  !
+    call parse_variable('PCMRadiusScaling', CNST(1.2), pcm%scale_r)
 
     !%Variable PCMStaticEpsilon
     !%Type float
@@ -241,11 +260,20 @@ contains
     call parse_variable('PCMCavity', '', pcm%input_cavity)
 
     if (pcm%input_cavity == '') then
+
+     !%Variable PCMSpheresOnH
+     !%Type logical
+     !%Default no
+     !%Section Hamiltonian::PCM
+     !%Description
+     !% If true, spheres centered at the Hydrogens atoms are included to build the solute cavity surface.
+     !%End
+     call parse_variable('PCMSpheresOnH', .false., add_spheres_h)
     
      pcm%n_spheres = 0
      band = .false.
      do ia = 1, geo%natoms
-       if (geo%atom(ia)%label == 'H') cycle
+       if ( (.not.(add_spheres_h)).and.(geo%atom(ia)%label == 'H') ) cycle
        pcm%n_spheres = pcm%n_spheres + 1 !counting the number of species different from Hydrogen
      end do
     
@@ -257,43 +285,23 @@ contains
     
      pcm%n_spheres = 0
      do ia = 1, geo%natoms
-      
-      if (geo%atom(ia)%label == 'H') cycle
+      if ( (.not.(add_spheres_h)).and.(geo%atom(ia)%label == 'H') ) cycle
       pcm%n_spheres = pcm%n_spheres + 1
       
       !> These coordinates are already in atomic units (Bohr)
       pcm%spheres(pcm%n_spheres)%x = geo%atom(ia)%x(1)
       pcm%spheres(pcm%n_spheres)%y = geo%atom(ia)%x(2)
       pcm%spheres(pcm%n_spheres)%z = geo%atom(ia)%x(3)
+
+      spci => geo%atom(ia)%species
+      z_ia = species_z(spci)
+
+      if ( (INT(z_ia) < 1).or.(INT(z_ia) > upto_Xe) ) then
+        write(message(1),'(a,a)') "the van der Waals radius is missing for element ", geo%atom(ia)%label
+        call messages_fatal(1)       
+      endif
       
-      if (geo%atom(ia)%label == 'C') then
-        pcm%spheres(pcm%n_spheres)%r = rcav_C
-        band = .true.
-      elseif (geo%atom(ia)%label == 'O') then
-        pcm%spheres(pcm%n_spheres)%r = rcav_O
-        band = .true.
-      elseif (geo%atom(ia)%label == 'N') then
-        pcm%spheres(pcm%n_spheres)%r = rcav_N
-        band = .true.
-      elseif (geo%atom(ia)%label == 'S') then
-        pcm%spheres(pcm%n_spheres)%r = rcav_S
-        band = .true.
-      elseif (geo%atom(ia)%label == 'F') then
-        pcm%spheres(pcm%n_spheres)%r = rcav_F
-        band = .true.
-      elseif (geo%atom(ia)%label == 'Na') then
-        pcm%spheres(pcm%n_spheres)%r = rcav_Na
-        band = .true.
-      elseif (geo%atom(ia)%label == 'Cl') then 
-        pcm%spheres(pcm%n_spheres)%r = rcav_Cl
-        band = .true.
-      endif
-
-      if (.not.(band)) then
-        write(message(1),'(a,a)') "Missing radius parameter for species", geo%atom(ia)%label
-        call messages_fatal(1)
-      endif
-
+      pcm%spheres(pcm%n_spheres)%r = vdw_radii(INT(z_ia))*P_Ang*pcm%scale_r     
      end do
     
      pcm%info_unit = io_open(PCM_DIR//'pcm_info.out', action='write')

@@ -9,19 +9,19 @@ Processors : 1
 
 Input      : 29-pcm_chlorine_anion.01-ground_state.inp
 Precision: 0.0001
-match ; eigenvalue [1]                ;  GREPFIELD(static/info, '1   --', 3)            ; -16.877740
-match ; eigenvalue [2]                ;  GREPFIELD(static/info, '2   --', 3)            ;  -5.302730
-match ; eigenvalue [3]                ;  GREPFIELD(static/info, '3   --', 3)            ;  -5.302427 
-match ; eigenvalue [4]                ;  GREPFIELD(static/info, '4   --', 3)            ;  -5.300338
-match ; electrons-solvent int. energy ;  GREPFIELD(static/info, 'E_e-solvent =', 3)     ; -25.17558503
-match ; nuclei-solvent int. energy    ;  GREPFIELD(static/info, 'E_n-solvent =', 3)     ;  22.12286084
-match ; molecule-solvent int. energy  ;  GREPFIELD(static/info, 'E_M-solvent =', 3)     ;  -3.05272419
-match ; electronic pol. charge        ;  GREPFIELD(pcm/pcm_info.out, '       9   ', 7)  ;  -7.96499205
+match ; eigenvalue [1]                ;  GREPFIELD(static/info, '1   --', 3)            ; -17.161694
+match ; eigenvalue [2]                ;  GREPFIELD(static/info, '2   --', 3)            ;  -5.579994
+match ; eigenvalue [3]                ;  GREPFIELD(static/info, '3   --', 3)            ;  -5.575194 
+match ; eigenvalue [4]                ;  GREPFIELD(static/info, '4   --', 3)            ;  -5.574328
+match ; electrons-solvent int. energy ;  GREPFIELD(static/info, 'E_e-solvent =', 3)     ; -27.07646806
+match ; nuclei-solvent int. energy    ;  GREPFIELD(static/info, 'E_n-solvent =', 3)     ;  23.86066947
+match ; molecule-solvent int. energy  ;  GREPFIELD(static/info, 'E_M-solvent =', 3)     ;  -3.21579859
+match ; electronic pol. charge        ;  GREPFIELD(pcm/pcm_info.out, '       9   ', 7)  ;  -7.94244818
 match ; nuclear pol. charge           ;  GREPFIELD(pcm/pcm_info.out, '       9   ', 8)  ;   6.99925894
 
 
 Input      : 29-pcm_chlorine_anion.02-td_prop.inp
 Precision: 0.0001
-match ; M-solvent int. energy @ t=0    ;  GREPFIELD(td.general/energy,'       0', 12)   ; -3.052714186037e+00
-match ; M-solvent int. energy @ t=5*dt ;  GREPFIELD(td.general/energy,'       5', 12)   ; -3.052714189665e+00
+match ; M-solvent int. energy @ t=0    ;  GREPFIELD(td.general/energy,'       0', 12)   ; -3.215791814616e+00
+match ; M-solvent int. energy @ t=5*dt ;  GREPFIELD(td.general/energy,'       5', 12)   ; -3.215791811556e+00
 
