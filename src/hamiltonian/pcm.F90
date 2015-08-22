@@ -195,7 +195,7 @@ contains
 
     !%Variable PCMRadiusScaling
     !%Type float
-    !%Default 1.0
+    !%Default 1.2
     !%Section Hamiltonian::PCM
     !%Description
     !% Scales the radii of the spheres used to build the solute cavity surface.
