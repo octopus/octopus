@@ -274,37 +274,15 @@ contains
 
       end if
     end do
-      
     
-    ! we use the same trick as for the forces:
-    !  df(r-R)/dR = f(r-R)*d/dr
-    
-!!$    do ip = 1, this%mesh%np
-!!$      tdensity(ip) = sum(density(ip, 1:this%st%d%nspin))
-!!$    end do
-!!$
-!!$    call dderivatives_grad(der, tdensity, grad)
-!!$    
-!!$    do ip = 1, this%mesh%np
-!!$      rr = sqrt(sum((this%mesh%x(ip, 1:this%mesh%sb%dim) - this%geo%atom(iatom)%x(1:this%mesh%sb%dim))**2))
-!!$      atom_dens_ip = sum(atom_density(ip, 1:this%st%d%nspin))
-!!$
-!!$      do idir = 1, this%mesh%sb%dim
-!!$        if(abs(atom_dens_ip) > CNST(1e-12)) then
-!!$          grad(ip, idir) = grad(ip, idir)*rr**3*atom_dens_ip/this%total_density(ip)
-!!$        else
-!!$          grad(ip, idir) = CNST(0.0)
-!!$        end if
-!!$      end do
-!!$      
-!!$    end do
-!!$
-!!$    do idir = 1, this%mesh%sb%dim
-!!$      dposition(idir) = -dmf_integrate(this%mesh, grad(:, idir))/this%free_volume(iatom)
-!!$    end do
+    do idir = 1, this%mesh%sb%dim
+      dposition(idir) = -dmf_integrate(this%mesh, grad(:, idir))/this%free_volume(iatom)
+    end do
     
     SAFE_DEALLOCATE_A(atom_density)
-    
+    SAFE_DEALLOCATE_A(atom_derivative)
+    SAFE_DEALLOCATE_A(grad)
+
     POP_SUB(hirshfeld_position_derivative)
   end subroutine hirshfeld_position_derivative
   
