@@ -166,9 +166,25 @@ contains
     scdm%st%d%nik = st%d%nik
     scdm%st%d     = st%d
     scdm%cmplxscl = st%cmplxscl
+
+    !%Variable SCDM_reorthonormalize
+    !%Type logical
+    !%Default no
+    !%Section Hamiltonian
+    !%Description
+    !% If set to yes, and <tt>scdm_EXX = yes</tt>, the SCDM states are orthonormalized 
+    !% on the domain defined by <tt>SCDMCutoffRadius<tt> (as opposed to the full simulation cell).
+    !%End 
     call parse_variable('SCDM_reorthonormalize', .false., scdm%re_ortho_normalize)
     if (scdm%re_ortho_normalize) scdm%st%d%orth_method = ORTH_CHOLESKY_SERIAL
 
+    !%Variable SCDM_verbose
+    !%Type logical
+    !%Default no
+    !%Section Hamiltonian
+    !%Description
+    !% Output detailed information in SCDM procedure.
+    !%End
     call parse_variable('SCDM_verbose', .false., scdm%verbose)
 
     scdm%full_cube_n = fullcube%rs_n_global
@@ -178,6 +194,13 @@ contains
 
     ! make a cube around the center points
     ! with side length NOTE: this should be dynamic
+    !%Variable SCDM_reorthonormalize
+    !%Type float
+    !%Default 3. Ang
+    !%Section Hamiltonian
+    !%Description
+    !% Controls the size of the box on which the SCDM states are defined (box size = 2*radius).
+    !%End  
     call parse_variable('SCDMCutoffRadius', 3._8, scdm%rcut, units_inp%length)
     if (scdm%root.and.scdm%verbose) call messages_print_var_value(stdout, 'SCDM cutoff', scdm%rcut)
     ! box_size is half the size of the  box
