@@ -183,7 +183,7 @@ contains
     !%Default no
     !%Section Hamiltonian
     !%Description
-    !% Output detailed information in SCDM procedure.
+    !% Output detailed information on SCDM procedure.
     !%End
     call parse_variable('SCDM_verbose', .false., scdm%verbose)
 
@@ -194,7 +194,8 @@ contains
 
     ! make a cube around the center points
     ! with side length NOTE: this should be dynamic
-    !%Variable SCDM_reorthonormalize
+
+    !%Variable SCDMCutoffRadius
     !%Type float
     !%Default 3. Ang
     !%Section Hamiltonian
