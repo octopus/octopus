@@ -171,7 +171,9 @@ subroutine X(scdm_localize)(st,mesh,scdm)
       ! invert
       call X(invert)(nval,Pcc)
     end if
+#ifdef HAVE_MPI
     call MPI_Bcast(Pcc,nval*nval , R_MPITYPE, 0, mesh%mpi_grp%comm, mpi_err)
+#endif
     call cpu_time(t2)
     if(scdm%verbose) call messages_print_var_value(stdout, 'time: transpose invert:',t2-t1)
     ! form orthogonal SCDM
