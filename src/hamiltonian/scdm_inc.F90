@@ -1,3 +1,4 @@
+
 !! Copyright (C) 2015 H. Huebener
 !!
 !! This program is free software; you can redistribute it and/or modify
@@ -129,7 +130,9 @@ subroutine X(scdm_localize)(st,mesh,scdm)
                  KSt_original(vv,1:mesh%np_global)*R_CONJ( KSt_original(vv,JPVT(ii)) )
     end do
   end do
+#ifdef HAVE_MPI
   call MPI_Allreduce(MPI_IN_PLACE, SCDM_temp(1,1), mesh%np_global*nval, R_MPITYPE, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
+#endif
   call cpu_time(t1)
   if (scdm%verbose) call messages_print_var_value(stdout, 'time: explicit matmul1:',t1-t2)
 
