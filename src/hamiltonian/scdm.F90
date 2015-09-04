@@ -160,12 +160,15 @@ contains
     scdm%root = (rank ==0)
 
     ! inherit some indices from st
-    !scdm%st%d%dim = st%d%dim
+    scdm%st%d%dim = st%d%dim
     scdm%st%nst   = st%nst
     scdm%nst   = st%nst
     scdm%st%d%nik = st%d%nik
     scdm%st%d     = st%d
     scdm%cmplxscl = st%cmplxscl
+    scdm%st%st_start = st%st_start
+    scdm%st%st_end = st%st_end
+    scdm%st%lnst = st%lnst
 
     !%Variable SCDM_reorthonormalize
     !%Type logical
@@ -299,31 +302,12 @@ contains
         end do
       end do
     end do
+    
     call mesh_cube_map_init(scdm%boxmesh%cube_map, scdm%boxmesh%idx, scdm%boxmesh%np_global)
 
     ! create a cube object for the small box, with double size for coulomb truncation
-!    call cube_init(scdm%boxcube, scdm%boxmesh%idx%ll, scdm%boxmesh%sb, &
-!               fft_type=FFT_REAL, fft_library=FFTLIB_FFTW, dont_optimize = .true.)
- 
-    ! without nfft we have to double the box 
-#ifndef HAVE_NFFT
     box(1:3) = scdm%boxmesh%idx%ll(1:3)*2
     call cube_init(scdm%boxcube, box, scdm%boxmesh%sb,fft_type=FFT_REAL, fft_library=FFTLIB_FFTW)
-# else
-    ! nfft case    
-    box(1:3) = scdm%boxmesh%idx%ll(1:3) +2
-    if (der%mesh%sb%periodic_dim.eq.3) then
-      !enlargement factor to fit he simulationbox boundary
-      ! not sure
-      enlarge = der%mesh%sb%lsize(1)/(2*scdm%box_size+1)
-    else ! non-periodic case
-      enlarge(1:3) = M_TWO
-    end if
-    call cube_init(scdm%boxcube, box, scdm%boxmesh%sb, &
-         fft_type=FFT_COMPLEX, fft_library=FFTLIB_NFFT, &
-         tp_enlarge=enlarge,spacing=der%mesh%spacing)
-    !call cube_init(scdm%boxcube, box*2, scdm%boxmesh%sb,fft_type=FFT_REAL, fft_library=FFTLIB_FFTW)
-#endif 
     
     ! Joseba recommends including this
     !if (der%mesh%parallel_in_domains .and. this%cube%parallel_in_domains) then
