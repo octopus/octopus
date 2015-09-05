@@ -299,7 +299,7 @@ contains
         wfact(stst:stend, dim, kptst:kptend, ip) = psi(stst:stend, dim, 1, kptst:kptend)
 
         if(pesrc%recipe == M_PHASES) then
-          call PES_rc_calc_rcphase(pesrc, st, mesh, iter, dt, hm, ip, ii)
+          call PES_rc_calc_rcphase(pesrc, mesh, iter, dt, hm, ip, ii)
         end if
 
         if(pesrc%onfly) then
@@ -586,9 +586,8 @@ contains
   end subroutine pes_rc_load 
 
   ! ---------------------------------------------------------
-  subroutine PES_rc_calc_rcphase(pesrc, st, mesh, iter, dt, hm, ip, ii)
+  subroutine PES_rc_calc_rcphase(pesrc, mesh, iter, dt, hm, ip, ii)
     type(PES_rc_t),      intent(inout) :: pesrc
-    type(states_t),      intent(in)    :: st
     type(mesh_t),        intent(in)    :: mesh
     type(hamiltonian_t), intent(in)    :: hm
     integer,             intent(in)    :: iter
