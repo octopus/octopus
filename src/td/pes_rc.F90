@@ -45,7 +45,6 @@ module pes_rc_m
     integer          :: npoints                 !< how many points we store the wf
     integer, pointer :: points(:)               !< which points to use (local index)
     integer, pointer :: points_global(:)        !< global index of the points
-    character(len=30), pointer :: filenames(:)  !< filenames
     CMPLX, pointer   :: wf(:,:,:,:,:)
     integer, pointer :: rankmin(:)              !< partition of the mesh containing the points
   end type PES_rc_t
@@ -61,11 +60,11 @@ contains
     integer,        intent(in)  :: save_iter
 
     type(block_t) :: blk
-    integer  :: ip
-    FLOAT :: xx(MAX_DIM)
-    FLOAT :: dmin
-    integer :: buf
-    integer :: rankmin
+    integer       :: ip
+    FLOAT         :: xx(MAX_DIM)
+    FLOAT         :: dmin
+    integer       :: buf
+    integer       :: rankmin
 
     PUSH_SUB(PES_rc_init)
 
@@ -93,15 +92,12 @@ contains
 
     pesrc%npoints = parse_block_n(blk)
 
-    ! setup filenames and read points
-    SAFE_ALLOCATE(pesrc%filenames(1:pesrc%npoints))
+    ! read points
     SAFE_ALLOCATE(pesrc%points   (1:pesrc%npoints))
     SAFE_ALLOCATE(pesrc%points_global(1:pesrc%npoints))
     SAFE_ALLOCATE(pesrc%rankmin   (1:pesrc%npoints))
 
     do ip = 1, pesrc%npoints
-      write(pesrc%filenames(ip), '(a,i2.2,a)') 'PES_rc.', ip, '.out'
-
       call parse_block_float(blk, ip - 1, 0, xx(1), units_inp%length)
       call parse_block_float(blk, ip - 1, 1, xx(2), units_inp%length)
       call parse_block_float(blk, ip - 1, 2, xx(3), units_inp%length)
@@ -116,7 +112,7 @@ contains
         else
           buf = 0
         end if
-        call mpi_allreduce(buf, pesrc%points_global(ip), 1, MPI_INTEGER, mpi_sum, mpi_comm_world, mpi_err)
+        call MPI_Allreduce(buf, pesrc%points_global(ip), 1, MPI_INTEGER, mpi_sum, mpi_comm_world, mpi_err)
 #endif
       else
         pesrc%points_global(ip) = pesrc%points(ip)
@@ -138,8 +134,7 @@ contains
 
     PUSH_SUB(PES_rc_end)
 
-    if(associated(pesrc%filenames)) then
-      SAFE_DEALLOCATE_P(pesrc%filenames)
+    if(associated(pesrc%points)) then
       SAFE_DEALLOCATE_P(pesrc%points)
       SAFE_DEALLOCATE_P(pesrc%points_global)
       SAFE_DEALLOCATE_P(pesrc%wf)
@@ -159,11 +154,10 @@ contains
     FLOAT,          intent(in)    :: dt
     integer,        intent(in)    :: iter
 
-    CMPLX, allocatable            :: psi(:,:,:,:), wfact(:,:,:,:)
-
-    integer :: ip, isdim
-    integer :: nst, dim, stst, stend, kptst, kptend
-    logical :: contains_ip
+    CMPLX, allocatable :: psi(:,:,:,:), wfact(:,:,:,:)
+    integer            :: ip, isdim
+    integer            :: nst, dim, stst, stend, kptst, kptend
+    logical            :: contains_ip
 
     PUSH_SUB(PES_rc_calc)
 
@@ -201,7 +195,7 @@ contains
 
 #if defined(HAVE_MPI)
     isdim = st%nst * dim * st%d%nik * pesrc%npoints
-    call mpi_allreduce(wfact(:,:,:,:), pesrc%wf(:,:,:,:,ii), isdim, MPI_DOUBLE_COMPLEX, mpi_sum, mpi_comm_world, mpi_err)
+    call MPI_Allreduce(wfact(:,:,:,:), pesrc%wf(:,:,:,:,ii), isdim, MPI_CMPLX, mpi_sum, mpi_comm_world, mpi_err)
 #else
     pesrc%wf(:,:,:,:,ii) = wfact(:,:,:,:)
 #endif
@@ -220,13 +214,16 @@ contains
     integer,        intent(in) :: iter, save_iter
     FLOAT,          intent(in) :: dt
 
-    integer :: ip, iunit, ii, jj, ik, ist, idim
-    CMPLX :: vfu
+    integer          :: ip, iunit, ii, jj, ik, ist, idim
+    CMPLX            :: vfu
+    character(len=2) :: filenr
 
     PUSH_SUB(PES_rc_output)
 
     do ip = 1, pesrc%npoints
-      iunit = io_open('td.general/'//pesrc%filenames(ip), action='write', position='append')
+      write(filenr, '(i2.2)') ip
+
+      iunit = io_open('td.general/'//'PES_rc.'//filenr//'.wavefunctions.out', action='write', position='append')
       do ii = 1, save_iter - mod(iter, save_iter)
         jj = iter - save_iter + ii + mod(save_iter - mod(iter, save_iter), save_iter)
         write(iunit, '(e17.10)', advance='no') units_from_atomic(units_inp%time, jj * dt)
@@ -250,18 +247,21 @@ contains
   ! ---------------------------------------------------------
   subroutine PES_rc_init_write(pesrc, mesh, st)
     type(PES_rc_t), intent(in) :: pesrc
-    type(mesh_t),   intent(in)  :: mesh
-    type(states_t), intent(in)  :: st
+    type(mesh_t),   intent(in) :: mesh
+    type(states_t), intent(in) :: st
 
-    integer  :: ip,ik,ist,idim,iunit
-    FLOAT :: xx(MAX_DIM)
+    integer          :: ip,ik,ist,idim,iunit
+    FLOAT            :: xx(MAX_DIM)
+    character(len=2) :: filenr
 
     PUSH_SUB(PES_rc_init_write)
 
     xx = M_ZERO
     if(mpi_grp_is_root(mpi_world)) then
       do ip = 1, pesrc%npoints
-        iunit = io_open('td.general/'//pesrc%filenames(ip), action='write')
+        write(filenr, '(i2.2)') ip
+
+        iunit = io_open('td.general/'//'PES_rc.'//filenr//'.wavefunctions.out', action='write')
         xx = mesh_x_global(mesh, pesrc%points_global(ip))
         write(iunit,'(a1)') '#'
         write(iunit, '(a7,f17.6,a1,f17.6,a1,f17.6,5a)') &
