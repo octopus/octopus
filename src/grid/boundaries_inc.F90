@@ -75,7 +75,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
 
   ! first post the receptions
   select case(batch_status(v_local))
-#ifdef HAVE_OPENCL
+
   case(BATCH_CL_PACKED)
     SAFE_ALLOCATE(handle%X(recv_buffer)(1:v_local%pack%size(1)*vp%np_ghost))
 
@@ -86,11 +86,10 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
       tag = 0
       pos = 1 + vp%ghost_rdispls(ipart)*v_local%pack%size(1)
 #ifdef HAVE_MPI
-      call MPI_Irecv(handle%X(recv_buffer)(pos), vp%rcounts(ipart)*v_local%pack%size(1), R_MPITYPE, &
+      call MPI_Irecv(handle%X(recv_buffer)(pos), vp%ghost_rcounts(ipart)*v_local%pack%size(1), R_MPITYPE, &
            ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
 #endif
     end do
-#endif
 
   case(BATCH_PACKED)
     !In this case, data from different vectors is contiguous. So we can use one message per partition.
@@ -132,16 +131,16 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   !now collect the data for sending
   call X(subarray_gather_batch)(vp%ghost_spoints, v_local, handle%ghost_send)
 
-#ifdef HAVE_OPENCL
   if(batch_status(v_local) == BATCH_CL_PACKED) then
     nn = product(handle%ghost_send%pack%size(1:2))
     SAFE_ALLOCATE(handle%X(send_buffer)(1:nn))
+#ifdef HAVE_OPENCL
     call opencl_read_buffer(handle%ghost_send%pack%buffer, nn, handle%X(send_buffer))
-  end if
 #endif
+  end if
 
   select case(batch_status(v_local))
-#ifdef HAVE_OPENCL
+
   case(BATCH_CL_PACKED)
     do ipart = 1, vp%npart
       if(vp%ghost_scounts(ipart) == 0) cycle
@@ -153,7 +152,6 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
         R_MPITYPE, ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
 #endif
     end do
-#endif
 
   case(BATCH_PACKED)
     do ipart = 1, vp%npart
