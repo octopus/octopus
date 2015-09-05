@@ -244,11 +244,14 @@ contains
     type(hamiltonian_t), intent(in)    :: hm
 
     CMPLX, allocatable :: psi(:,:,:,:), wfact(:,:,:,:), wfftact(:,:,:,:,:)
-    integer            :: ip, isdim
+    integer            :: ip
     integer            :: dim, stst, stend, kptst, kptend
     logical            :: contains_ip
     CMPLX              :: cfac
+#if defined(HAVE_MPI)
     FLOAT, allocatable :: buf(:)
+    integer            :: isdim
+#endif
     FLOAT              :: omega
     integer            :: iom
 
@@ -270,10 +273,12 @@ contains
       wfftact = M_z0
     endif
 
+#if defined(HAVE_MPI)
     if(pesrc%recipe == M_PHASES) then
       SAFE_ALLOCATE(buf(1:pesrc%npoints))
       buf = M_ZERO
     end if
+#endif
 
     contains_ip = .true.
 
@@ -321,6 +326,8 @@ contains
     if(pesrc%recipe == M_PHASES) then
       call MPI_Allreduce(pesrc%dq(:,ii), buf(:), pesrc%npoints, MPI_FLOAT, mpi_sum, mpi_comm_world, mpi_err)
       pesrc%dq(:,ii) = buf(:)
+
+      SAFE_DEALLOCATE_A(buf)
     end if
 
     if(pesrc%onfly) then
