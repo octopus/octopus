@@ -201,14 +201,13 @@ contains
 
     CMPLX, allocatable :: psi(:,:,:,:), wfact(:,:,:,:)
     integer            :: ip, isdim
-    integer            :: nst, dim, stst, stend, kptst, kptend
+    integer            :: dim, stst, stend, kptst, kptend
     logical            :: contains_ip
     CMPLX              :: cfac
     FLOAT, allocatable :: buf(:)
 
     PUSH_SUB(PES_rc_calc)
 
-    nst    = st%nst
     stst   = st%st_start
     stend  = st%st_end
     kptst  = st%d%kpt%start
@@ -457,7 +456,7 @@ contains
     FLOAT,               intent(in)    :: dt
     integer,             intent(in)    :: ii
     
-    integer :: dim
+    integer :: dim, il
     FLOAT   :: vp(1:MAX_DIM)
     FLOAT   :: xx(MAX_DIM), er(MAX_DIM)
 
