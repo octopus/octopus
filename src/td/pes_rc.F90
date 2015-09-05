@@ -82,7 +82,9 @@ contains
     integer       :: ip
     FLOAT         :: xx(MAX_DIM)
     FLOAT         :: dmin
+#if defined(HAVE_MPI)
     integer       :: buf
+#endif
     integer       :: rankmin
 
     PUSH_SUB(PES_rc_init)
