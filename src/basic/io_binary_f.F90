@@ -45,6 +45,7 @@ module io_binary_m
     module procedure iwrite_binary2, dwrite_binary2, zwrite_binary2
     module procedure zwrite_binary3, dwrite_binary3, iwrite_binary3
     module procedure zwrite_binary4, dwrite_binary4, iwrite_binary4
+    module procedure zwrite_binary5, dwrite_binary5, iwrite_binary5
   end interface io_binary_write
   
   interface io_binary_write_parallel
@@ -55,6 +56,7 @@ module io_binary_m
     module procedure dread_binary, zread_binary, iread_binary
     module procedure iread_binary2, zread_binary2, dread_binary2
     module procedure zread_binary3, iread_binary3, dread_binary3
+    module procedure zread_binary5, iread_binary5, dread_binary5
   end interface io_binary_read
 
   interface io_binary_read_parallel

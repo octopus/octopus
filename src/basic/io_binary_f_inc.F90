@@ -128,6 +128,31 @@
     POP_SUB(X(write_binary4))
   end subroutine X(write_binary4)
 
+  ! ------------------------------------------------------
+
+  subroutine X(write_binary5)(fname, np, ff, ierr, nohead, fendian)
+    character(len=*),    intent(in)  :: fname
+    integer,             intent(in)  :: np
+    R_TYPE,              intent(in)  :: ff(:,:,:,:,:)
+    integer,             intent(out) :: ierr
+    logical, optional,   intent(in)  :: nohead   !> skip header
+    logical, optional,   intent(in)  :: fendian  !> flip endianness
+
+
+    integer :: nhd, flpe
+
+    PUSH_SUB(X(write_binary5))
+
+    ASSERT(product(ubound(ff)) >= np)
+
+    nhd = logical_to_integer(optional_default(nohead, .false.))
+    flpe = logical_to_integer(optional_default(fendian, .false.))
+
+    call write_binary(np, ff(1,1,1,1,1), R_TYPE_IOBINARY, ierr, nhd, flpe, trim(fname))
+
+    POP_SUB(X(write_binary5))
+  end subroutine X(write_binary5)
+ 
 
   ! ------------------------------------------------------
 
@@ -271,6 +296,23 @@
 
     POP_SUB(X(read_binary3))
   end subroutine X(read_binary3)
+
+  !------------------------------------------------------
+
+  subroutine X(read_binary5)(fname, np, ff, ierr)
+    character(len=*),    intent(in)  :: fname
+    integer,             intent(in)  :: np
+    R_TYPE,              intent(out) :: ff(:,:,:,:,:)
+    integer,             intent(out) :: ierr
+
+    PUSH_SUB(X(read_binary5))
+
+    ASSERT(product(ubound(ff)) >= np)
+
+    call read_binary(np, 0, ff(1,1,1,1,1), R_TYPE_IOBINARY, ierr, trim(fname))
+
+    POP_SUB(X(read_binary5))
+  end subroutine X(read_binary5)
 
 
 !! Local Variables:

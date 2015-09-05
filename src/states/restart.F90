@@ -72,19 +72,19 @@ module restart_m
     restart_are_basedirs_equal
 
   interface drestart_write_binary
-    module procedure drestart_write_binary1, drestart_write_binary2, drestart_write_binary3
+    module procedure drestart_write_binary1, drestart_write_binary2, drestart_write_binary3, drestart_write_binary5
   end interface drestart_write_binary
 
   interface zrestart_write_binary
-    module procedure zrestart_write_binary1, zrestart_write_binary2, zrestart_write_binary3
+    module procedure zrestart_write_binary1, zrestart_write_binary2, zrestart_write_binary3, zrestart_write_binary5
   end interface zrestart_write_binary
 
   interface drestart_read_binary
-    module procedure drestart_read_binary1, drestart_read_binary2, drestart_read_binary3
+    module procedure drestart_read_binary1, drestart_read_binary2, drestart_read_binary3, drestart_read_binary5
   end interface drestart_read_binary
 
   interface zrestart_read_binary
-    module procedure zrestart_read_binary1, zrestart_read_binary2, zrestart_read_binary3
+    module procedure zrestart_read_binary1, zrestart_read_binary2, zrestart_read_binary3, zrestart_read_binary5
   end interface zrestart_read_binary
 
 

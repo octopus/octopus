@@ -260,6 +260,38 @@ subroutine X(restart_write_binary3)(restart, filename, np, ff, ierr)
   POP_SUB(X(restart_write_binary3))
 end subroutine X(restart_write_binary3)
 
+! ---------------------------------------------------------
+subroutine X(restart_write_binary5)(restart, filename, np, ff, ierr)
+  type(restart_t),  intent(in)  :: restart
+  character(len=*), intent(in)  :: filename
+  integer,          intent(in)  :: np
+  R_TYPE,           intent(in)  :: ff(:,:,:,:,:)
+  integer,          intent(out) :: ierr
+
+  PUSH_SUB(X(restart_write_binary5))
+
+  ASSERT(.not. restart%skip)
+  ASSERT(restart%type == RESTART_TYPE_DUMP)
+
+  !Only the root node writes
+  if (mpi_grp_is_root(restart%mpi_grp)) then
+    call io_binary_write(trim(restart%pwd)//"/"//trim(filename)//".obf", np, ff, ierr)
+  end if
+
+#if defined(HAVE_MPI)
+  if(restart%mpi_grp%size > 1) then
+    call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, restart%mpi_grp%comm, mpi_err)
+    call MPI_Barrier(restart%mpi_grp%comm, mpi_err)
+  endif
+#endif
+
+  if (ierr /= 0) then
+    message(1) = "Unable to write restart information to '"//trim(restart%pwd)//"/"//trim(filename)//"'."
+    call messages_warning(1)
+  end if
+
+  POP_SUB(X(restart_write_binary5))
+end subroutine X(restart_write_binary5)
 
 ! ---------------------------------------------------------
 subroutine X(restart_read_binary1)(restart, filename, np, ff, ierr)
@@ -331,6 +363,29 @@ subroutine X(restart_read_binary3)(restart, filename, np, ff, ierr)
 
   POP_SUB(X(restart_read_binary3))
 end subroutine X(restart_read_binary3)
+
+! ---------------------------------------------------------
+subroutine X(restart_read_binary5)(restart, filename, np, ff, ierr)
+  type(restart_t),  intent(in)  :: restart
+  character(len=*), intent(in)  :: filename
+  integer,          intent(in)  :: np
+  R_TYPE,           intent(out) :: ff(:,:,:,:,:)
+  integer,          intent(out) :: ierr
+
+  PUSH_SUB(X(restart_read_binary5))
+
+  ASSERT(.not. restart%skip)
+  ASSERT(restart%type == RESTART_TYPE_LOAD)
+
+  call io_binary_read(trim(restart%pwd)//"/"//trim(filename)//".obf", np, ff, ierr)
+
+  if (ierr /= 0) then
+    message(1) = "Unable to read restart information from '"//trim(restart%pwd)//"/"//trim(filename)//"'."
+    call messages_warning(1)
+  end if
+
+  POP_SUB(X(restart_read_binary5))
+end subroutine X(restart_read_binary5)
 
 
 !! Local Variables:
