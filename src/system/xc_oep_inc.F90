@@ -42,7 +42,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
   
   if(oep%level == XC_OEP_NONE) return
 
-  call profiling_in(C_PROFILING_XC_OEP)
+  call profiling_in(C_PROFILING_XC_OEP, 'XC_OEP')
   PUSH_SUB(X(xc_oep_calc))
 
   ! initialize oep structure
@@ -147,7 +147,7 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
   FLOAT, allocatable :: ss(:), vxc_old(:)
   R_TYPE, allocatable :: bb(:,:)
 
-  call profiling_in(C_PROFILING_XC_OEP_FULL)
+  call profiling_in(C_PROFILING_XC_OEP_FULL, 'XC_OEP_FULL')
   PUSH_SUB(X(xc_oep_solve))
 
   if(st%parallel_in_states) &

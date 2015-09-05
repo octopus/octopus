@@ -191,7 +191,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
 #endif
 
   PUSH_SUB(mesh_init_stage_2)
-  call profiling_in(mesh_init_prof)
+  call profiling_in(mesh_init_prof, "MESH_INIT")
 
   ! enlarge mesh for boundary points
   mesh%idx%nr(1,:) = mesh%idx%nr(1,:) - mesh%idx%enlarge(:)
@@ -453,7 +453,7 @@ subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
   integer :: ip
 
   PUSH_SUB(mesh_init_stage_3)
-  call profiling_in(mesh_init_prof)
+  call profiling_in(mesh_init_prof, "MESH_INIT")
 
   ! check if we are running in parallel in domains
   mesh%parallel_in_domains = .false.

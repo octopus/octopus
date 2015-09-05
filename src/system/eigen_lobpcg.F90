@@ -46,6 +46,11 @@ module eigen_lobpcg_m
   public ::                  &
     deigensolver_lobpcg,    &
     zeigensolver_lobpcg
+
+  type(profile_t), save ::     &
+    C_PROFILING_LOBPCG_ESOLVE, &
+    C_PROFILING_LOBPCG_CHOL,   &
+    C_PROFILING_LOBPCG_INV
   
   contains
 

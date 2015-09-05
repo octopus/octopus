@@ -32,7 +32,7 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
   FLOAT, allocatable :: vxc(:, :), rho(:,:)
   R_TYPE, allocatable :: psi(:, :)
 
-  call profiling_in(C_PROFILING_XC_SIC)
+  call profiling_in(C_PROFILING_XC_SIC, 'XC_SIC')
   PUSH_SUB(X(oep_sic))
 
   ASSERT(st%d%dim == 1)

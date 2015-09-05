@@ -50,7 +50,7 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi2_start, &
   R_TYPE, allocatable  :: psi1_block(:, :, :), res_local(:, :)
 #endif
 
-  call profiling_in(C_PROFILING_BLOCKT)
+  call profiling_in(C_PROFILING_BLOCKT, 'BLOCKT')
   PUSH_SUB(X(states_blockt_mul))
 
   symm_ = .false.
@@ -88,7 +88,7 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi2_start, &
     ! Compact psi1 in order to use BLAS gemm on it.
     if(.not.mesh%use_curvilinear) then
       SAFE_ALLOCATE(psi1_block(1:mesh%np, 1:st%d%dim, 1:xpsi1_count(rank)))
-      call profiling_in(C_PROFILING_BLOCKT_CP)
+      call profiling_in(C_PROFILING_BLOCKT_CP, 'BLOCKT_CP')
       call X(states_compactify)(st%d%dim, mesh, psi1_start, &
         xpsi1_node(1:xpsi1_count(rank), rank), psi1, psi1_block)
       call profiling_out(C_PROFILING_BLOCKT_CP)
@@ -137,12 +137,12 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi2_start, &
         if(xpsi1_count(rank) > 0.and.sendcnt > 0) then
           SAFE_ALLOCATE(res_local(1:xpsi1_count(rank), 1:sendcnt))
 
-          call profiling_in(C_PROFILING_BLOCKT_MM)
+          call profiling_in(C_PROFILING_BLOCKT_MM, 'BLOCKT_MM')
           call lalg_gemmt(xpsi1_count(rank), sendcnt, mesh%np*st%d%dim, R_TOTYPE(mesh%vol_pp(1)), &
             psi1_block, sendbuf, R_TOTYPE(M_ZERO), res_local)
           call profiling_out(C_PROFILING_BLOCKT_MM)
 
-          call profiling_in(C_PROFILING_BLOCKT_CP)
+          call profiling_in(C_PROFILING_BLOCKT_CP, 'BLOCKT_CP')
           res(res_row_offset+1:res_row_offset+xpsi1_count(rank), res_col_offset+1:res_col_offset+sendcnt) = res_local
           call profiling_out(C_PROFILING_BLOCKT_CP)
           SAFE_DEALLOCATE_A(res_local)
@@ -160,7 +160,7 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi2_start, &
     SAFE_DEALLOCATE_P(sendbuf)
     SAFE_DEALLOCATE_P(recvbuf)
     ! Add up all the individual blocks.
-    call profiling_in(C_PROFILING_BLOCKT_AR)
+    call profiling_in(C_PROFILING_BLOCKT_AR, 'BLOCKT_AR')
 #ifndef HAVE_MPI2
     SAFE_ALLOCATE(res_tmp(1:psi1_col, 1:psi2_col))
     res_tmp = res
@@ -240,7 +240,7 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, res_start, &
   R_TYPE, pointer      :: sendbuf(:, :, :), recvbuf(:, :, :), tmp_ptr(:, :, :)
 #endif
 
-  call profiling_in(C_PROFILING_BLOCK_MATR)
+  call profiling_in(C_PROFILING_BLOCK_MATR, 'BLOCK_MATR')
   PUSH_SUB(X(states_block_matr_mul_add))
 
   ! Calculate global index sets of state block psi and res.
@@ -274,7 +274,7 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, res_start, &
 
     ! Take care of beta first, if necessary, and compact res to res_block.
     if(beta /= R_TOTYPE(M_ZERO)) then
-      call profiling_in(C_PROFILING_BLOCK_MATR_CP)
+      call profiling_in(C_PROFILING_BLOCK_MATR_CP, 'BLOCK_MATR_CP')
       do ii = 1, xres_count(rank)
         do idim = 1, st%d%dim
           call lalg_scal(mesh%np, beta, res(:, idim, xres_node(ii, rank)))
@@ -285,7 +285,7 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, res_start, &
       res = R_TOTYPE(M_ZERO)
     end if
     SAFE_ALLOCATE(res_block(1:mesh%np, 1:st%d%dim, 1:xres_count(rank)))
-    call profiling_in(C_PROFILING_BLOCK_MATR_CP)
+    call profiling_in(C_PROFILING_BLOCK_MATR_CP, 'BLOCK_MATR_CP')
     call X(states_compactify)(st%d%dim, mesh, res_start, xres_node(1:xres_count(rank), rank), res, res_block)
     call profiling_out(C_PROFILING_BLOCK_MATR_CP)
 
@@ -297,7 +297,7 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, res_start, &
 
     ! Compact the local block to send away.
     sendcnt = xpsi_count(rank)
-    call profiling_in(C_PROFILING_BLOCK_MATR_CP)
+    call profiling_in(C_PROFILING_BLOCK_MATR_CP, 'BLOCK_MATR_CP')
     call X(states_compactify)(st%d%dim, mesh, psi_start, xpsi_node(1:xpsi_count(rank), rank), psi(:, :, :), sendbuf)
     call profiling_out(C_PROFILING_BLOCK_MATR_CP)
 
@@ -333,11 +333,11 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, res_start, &
       matr_col_offset = sum(xres_count(0:rank-1))
       SAFE_ALLOCATE(matr_block(1:xpsi_count(kk), 1:xres_count(rank)))
       if(sendcnt > 0.and.xres_count(rank) > 0) then
-        call profiling_in(C_PROFILING_BLOCK_MATR_CP)
+        call profiling_in(C_PROFILING_BLOCK_MATR_CP, 'BLOCK_MATR_CP')
         matr_block = matr(matr_row_offset+1:matr_row_offset+xpsi_count(kk), &
           matr_col_offset+1:matr_col_offset+xres_count(rank))
         call profiling_out(C_PROFILING_BLOCK_MATR_CP)
-        call profiling_in(C_PROFILING_BLOCK_MATR_MM)
+        call profiling_in(C_PROFILING_BLOCK_MATR_MM, 'BLOCK_MATR_MM')
         call lalg_gemm(mesh%np * st%d%dim, xres_count(rank), sendcnt, alpha, &
           sendbuf, matr_block, R_TOTYPE(M_ONE), res_block)
         call profiling_out(C_PROFILING_BLOCK_MATR_MM)
@@ -346,7 +346,7 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, res_start, &
     end do
 
     ! Copy result.
-    call profiling_in(C_PROFILING_BLOCK_MATR_CP)
+    call profiling_in(C_PROFILING_BLOCK_MATR_CP, 'BLOCK_MATR_CP')
     call X(states_uncompactify)(st%d%dim, mesh, res_start, xres_node(1:xres_count(rank), rank), res_block, res)
     call profiling_out(C_PROFILING_BLOCK_MATR_CP)
 
@@ -364,12 +364,12 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, res_start, &
   else ! No states parallelization.
     ! Compact everything to pass it to BLAS.
     SAFE_ALLOCATE(res_block(1:mesh%np, 1:st%d%dim, 1:res_col))
-    call profiling_in(C_PROFILING_BLOCK_MATR_CP)
+    call profiling_in(C_PROFILING_BLOCK_MATR_CP, 'BLOCK_MATR_CP')
     call X(states_compactify)(st%d%dim, mesh, res_start, xres_(1:res_col), res, res_block)
     call profiling_out(C_PROFILING_BLOCK_MATR_CP)
 
     SAFE_ALLOCATE(psi_block(1:mesh%np, 1:st%d%dim, 1:psi_col))
-    call profiling_in(C_PROFILING_BLOCK_MATR_CP)
+    call profiling_in(C_PROFILING_BLOCK_MATR_CP, 'BLOCK_MATR_CP')
     call X(states_compactify)(st%d%dim, mesh, psi_start, xpsi_(1:psi_col), psi, psi_block)
     call profiling_out(C_PROFILING_BLOCK_MATR_CP)
 
@@ -381,7 +381,7 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, res_start, &
     SAFE_DEALLOCATE_A(matr_block)
 
     ! Copy result.
-    call profiling_in(C_PROFILING_BLOCK_MATR_CP)
+    call profiling_in(C_PROFILING_BLOCK_MATR_CP, 'BLOCK_MATR_CP')
     call X(states_uncompactify)(st%d%dim, mesh, res_start, xres_(1:res_col), res_block, res)
     call profiling_out(C_PROFILING_BLOCK_MATR_CP)
     SAFE_DEALLOCATE_A(res_block)

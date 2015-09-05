@@ -77,6 +77,15 @@ module states_block_m
     module procedure dstates_block_matr_mul_add, zstates_block_matr_mul_add
   end interface states_block_matr_mul_add
 
+  type(profile_t), save, public :: &
+    C_PROFILING_BLOCKT,            &
+    C_PROFILING_BLOCKT_AR,         &
+    C_PROFILING_BLOCKT_MM,         &
+    C_PROFILING_BLOCKT_CP,         &
+    C_PROFILING_BLOCK_MATR,        &
+    C_PROFILING_BLOCK_MATR_CP,     &
+    C_PROFILING_BLOCK_MATR_MM
+  
 contains
 
   ! ---------------------------------------------------------

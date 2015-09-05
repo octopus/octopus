@@ -74,10 +74,9 @@ module profiling_m
     profile_t,                          &
     profile_pointer_t,                  &
     profile_vars_t,                     &
-    profile_init,                       &
     profile_is_initialized,             &
-    profiling_init,                     &
     profiling_end,                      &
+    profiling_init,                     &
     profiling_in,                       &
     profiling_out,                      &
     profiling_count_operations,         &
@@ -170,27 +169,6 @@ module profiling_m
   !! i.e. DO NOT PUT NEW PROFILES HERE
 
   type(profile_t), save, public :: C_PROFILING_COMPLETE_RUN
-
-  type(profile_t), save, public :: &
-       C_PROFILING_XC_OEP,         &
-       C_PROFILING_XC_EXX,         &
-       C_PROFILING_XC_SIC,         &
-       C_PROFILING_XC_OEP_FULL,    &
-       C_PROFILING_XC_KLI
-
-  type(profile_t), save, public ::    &
-       C_PROFILING_BLOCKT,            &
-       C_PROFILING_BLOCKT_AR,         &
-       C_PROFILING_BLOCKT_MM,         &
-       C_PROFILING_BLOCKT_CP,         &
-       C_PROFILING_BLOCK_MATR,        &
-       C_PROFILING_BLOCK_MATR_CP,     &
-       C_PROFILING_BLOCK_MATR_MM,     &
-       C_PROFILING_LOBPCG_ESOLVE,     &
-       C_PROFILING_LOBPCG_CHOL,       &
-       C_PROFILING_LOBPCG_INV,        &
-       C_PROFILING_LOBPCG_COPY,       &
-       C_PROFILING_LOBPCG_LOOP
 
 contains
 
@@ -301,38 +279,11 @@ contains
     prof_vars%last_profile = 0
     nullify(prof_vars%current%p)
 
-    call init_profiles()
-
-    call profiling_in(C_PROFILING_COMPLETE_RUN)
+    call profiling_in(C_PROFILING_COMPLETE_RUN, 'COMPLETE_RUN')
 
     POP_SUB(profiling_init)
 
   contains
-    ! ---------------------------------------------------------
-    subroutine init_profiles
-      PUSH_SUB(profiling_init.init_profiles)
-
-      call profile_init(C_PROFILING_COMPLETE_RUN,     'COMPLETE_RUN')
-      call profile_init(C_PROFILING_XC_OEP,           'XC_OEP')
-      call profile_init(C_PROFILING_XC_EXX,           'XC_EXX')
-      call profile_init(C_PROFILING_XC_SIC,           'XC_SIC')
-      call profile_init(C_PROFILING_XC_KLI,           'XC_KLI')
-      call profile_init(C_PROFILING_XC_OEP_FULL,      'XC_OEP_FULL')
-      call profile_init(C_PROFILING_BLOCKT,           'BLOCKT')
-      call profile_init(C_PROFILING_BLOCKT_AR,        'BLOCKT_AR')
-      call profile_init(C_PROFILING_BLOCKT_MM,        'BLOCKT_MM')
-      call profile_init(C_PROFILING_BLOCKT_CP,        'BLOCKT_CP')
-      call profile_init(C_PROFILING_BLOCK_MATR,       'BLOCK_MATR')
-      call profile_init(C_PROFILING_BLOCK_MATR_CP,    'BLOCK_MATR_CP')
-      call profile_init(C_PROFILING_BLOCK_MATR_MM,    'BLOCK_MATR_MM')
-      call profile_init(C_PROFILING_LOBPCG_ESOLVE,    'LOBPCG_ESOLVE')
-      call profile_init(C_PROFILING_LOBPCG_CHOL,      'LOBPCG_CHOL')
-      call profile_init(C_PROFILING_LOBPCG_INV,       'LOBPCG_INV')
-      call profile_init(C_PROFILING_LOBPCG_COPY,      'LOBPCG_COPY')
-      call profile_init(C_PROFILING_LOBPCG_LOOP,      'LOBPCG_LOOP')
-
-      POP_SUB(profiling_init.init_profiles)
-    end subroutine init_profiles
 
     ! ---------------------------------------------------------
     subroutine get_output_dir()
@@ -467,7 +418,7 @@ contains
   !!
   subroutine profiling_in(this, label, exclude)
     type(profile_t), target,    intent(inout) :: this
-    character(*),    optional,  intent(in)    :: label
+    character(*),               intent(in)    :: label
     logical,         optional,  intent(in)    :: exclude !< .true. The time spent here is also excluded from the parent total_time.
                                                          !! Only use it for functions that otherwise would spoil statistics.
 
@@ -482,7 +433,6 @@ contains
     ! no PUSH_SUB, called too often
 
     if(.not. this%initialized) then 
-      ASSERT(present(label))
       call profile_init(this, label)
     end if
 

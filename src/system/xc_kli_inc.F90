@@ -29,7 +29,8 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
   FLOAT, allocatable :: rho_sigma(:), v_bar_S(:), sqphi(:, :, :), dd(:)
   FLOAT, allocatable :: Ma(:,:), xx(:,:), yy(:,:)
 
-  call profiling_in(C_PROFILING_XC_KLI)
+  call profiling_in(C_PROFILING_XC_KLI, 'XC_KLI')
+  
   PUSH_SUB(X(xc_KLI_solve))
   ! some intermediate quantities
   ! vxc contains the Slater part!
