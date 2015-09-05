@@ -207,12 +207,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_calc(pes, mesh, st, ii, dt, iter, maxiter, gr, hm)
+  subroutine pes_calc(pes, mesh, st, iwrite, dt, iter, maxiter, gr, hm)
     type(pes_t),         intent(inout) :: pes
     type(mesh_t),        intent(in)    :: mesh
     type(states_t),      intent(inout) :: st
     type(grid_t),        intent(in)    :: gr
-    integer,             intent(in)    :: ii
+    integer,             intent(in)    :: iwrite
     FLOAT,               intent(in)    :: dt
     integer,             intent(in)    :: iter
     integer,             intent(in)    :: maxiter
@@ -220,9 +220,9 @@ contains
 
     PUSH_SUB(pes_calc)
 
-    if(pes%calc_rc)   call pes_rc_calc  (pes%rc, st, mesh, ii, dt, iter - 1, hm)
+    if(pes%calc_rc)   call pes_rc_calc  (pes%rc, st, mesh, iwrite, dt, iter, hm)
     if(pes%calc_mask) call pes_mask_calc(pes%mask, mesh, st, dt, iter)
-    if(pes%calc_flux) call pes_flux_save(pes%flux, mesh, st, gr, hm, iter - 1, maxiter, dt)
+    if(pes%calc_flux) call pes_flux_save(pes%flux, mesh, st, gr, hm, iter, maxiter, dt)
 
     POP_SUB(pes_calc)
   end subroutine pes_calc

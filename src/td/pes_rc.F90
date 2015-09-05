@@ -234,10 +234,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine PES_rc_calc(pesrc, st, mesh, ii, dt, iter, hm)
+  subroutine PES_rc_calc(pesrc, st, mesh, iwrite, dt, iter, hm)
     type(PES_rc_t),      intent(inout) :: pesrc
     type(states_t),      intent(in)    :: st
-    integer,             intent(in)    :: ii
+    integer,             intent(in)    :: iwrite
     type(mesh_t),        intent(in)    :: mesh
     FLOAT,               intent(in)    :: dt
     integer,             intent(in)    :: iter
@@ -256,6 +256,8 @@ contains
     integer            :: iom
 
     PUSH_SUB(PES_rc_calc)
+
+    ii = mod(iter-1, iwrite)
 
     stst   = st%st_start
     stend  = st%st_end
