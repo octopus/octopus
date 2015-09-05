@@ -455,6 +455,7 @@ contains
     integer,             intent(in)    :: iter
     integer,             intent(in)    :: ip
     FLOAT,               intent(in)    :: dt
+    integer,             intent(in)    :: ii
     
     integer :: dim
     FLOAT   :: vp(1:MAX_DIM)
