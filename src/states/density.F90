@@ -43,6 +43,7 @@ module density_m
   use mpi_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
   use mpi_lib_m
   use opencl_m
+  use octcl_kernel_m
   use profiling_m
   use simul_box_m
   use smear_m
