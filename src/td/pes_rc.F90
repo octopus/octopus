@@ -61,7 +61,8 @@ module pes_rc_m
     FLOAT            :: omegamax                !< maximum frequency of the spectrum
     FLOAT            :: delomega                !< frequency spacing of the spectrum
     integer          :: komega                  !< number of frequencies of the spectrum
-    logical          :: onfly                   !< spectrum is calculated on-the-fly when true 
+    logical          :: onfly                   !< spectrum is calculated on-the-fly when true
+    integer          :: save_iter               !< output interval and size of arrays 
   end type PES_rc_t
 
   integer, parameter :: &
@@ -203,6 +204,8 @@ contains
       pesrc%domega = M_ZERO
     end if
 
+    pesrc%save_iter = save_iter
+
     POP_SUB(PES_rc_init)
   end subroutine PES_rc_init
 
@@ -234,10 +237,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine PES_rc_calc(pesrc, st, mesh, save_iter, dt, iter, hm)
+  subroutine PES_rc_calc(pesrc, st, mesh, dt, iter, hm)
     type(PES_rc_t),      intent(inout) :: pesrc
     type(states_t),      intent(in)    :: st
-    integer,             intent(in)    :: save_iter
     type(mesh_t),        intent(in)    :: mesh
     FLOAT,               intent(in)    :: dt
     integer,             intent(in)    :: iter
@@ -257,7 +259,7 @@ contains
 
     PUSH_SUB(PES_rc_calc)
 
-    ii = mod(iter-1, save_iter)
+    ii = mod(iter-1, pesrc%save_iter)
 
     stst   = st%st_start
     stend  = st%st_end
@@ -359,10 +361,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine PES_rc_output(pesrc, st, iter, save_iter, dt)
+  subroutine PES_rc_output(pesrc, st, iter, dt)
     type(PES_rc_t), intent(in) :: pesrc
     type(states_t), intent(in) :: st
-    integer,        intent(in) :: iter, save_iter
+    integer,        intent(in) :: iter
     FLOAT,          intent(in) :: dt
 
     integer            :: ip, iunit, ii, jj, ik, ist, idim, iom
@@ -370,8 +372,11 @@ contains
     character(len=2)   :: filenr
     FLOAT              :: wfu, omega
     FLOAT, allocatable :: wffttot(:)
+    integer            :: save_iter
 
     PUSH_SUB(PES_rc_output)
+
+    save_iter = pesrc%save_iter
 
     if(pesrc%onfly) then
       SAFE_ALLOCATE(wffttot(1:pesrc%komega))
