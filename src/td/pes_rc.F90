@@ -244,7 +244,7 @@ contains
     type(hamiltonian_t), intent(in)    :: hm
 
     CMPLX, allocatable :: psi(:,:,:,:), wfact(:,:,:,:), wfftact(:,:,:,:,:)
-    integer            :: ip
+    integer            :: ip, ii
     integer            :: dim, stst, stend, kptst, kptend
     logical            :: contains_ip
     CMPLX              :: cfac
