@@ -220,7 +220,7 @@ contains
 
     PUSH_SUB(pes_calc)
 
-    if(pes%calc_rc)   call pes_rc_calc  (pes%rc, st, mesh, ii, dt, iter - 1)
+    if(pes%calc_rc)   call pes_rc_calc  (pes%rc, st, mesh, ii, dt, iter - 1, hm)
     if(pes%calc_mask) call pes_mask_calc(pes%mask, mesh, st, dt, iter)
     if(pes%calc_flux) call pes_flux_save(pes%flux, mesh, st, gr, hm, iter - 1, maxiter, dt)
 
@@ -283,6 +283,10 @@ contains
       call pes_flux_dump(restart, pes%flux, mesh, ierr)
     end if
 
+    if (pes%calc_rc) then
+      call pes_rc_dump(restart, pes%rc, st, ierr)
+    end if
+
     if (in_debug_mode) then
       message(1) = "Debug: Writing PES restart done."
       call messages_info(1)
@@ -321,6 +325,10 @@ contains
 
     if(pes%calc_flux) then
       call pes_flux_load(restart, pes%flux, mesh, ierr)
+    end if
+
+    if (pes%calc_rc) then
+      call pes_rc_load(restart, pes%rc, st, ierr)
     end if
 
     if (in_debug_mode) then

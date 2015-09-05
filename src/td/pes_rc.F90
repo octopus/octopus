@@ -27,9 +27,14 @@ module pes_rc_m
   use mpi_m
   use parser_m
   use profiling_m
+  use restart_m
+  use simul_box_m
   use states_m
   use unit_m
   use unit_system_m
+  use hamiltonian_m
+  use lasers_m
+  use varinfo_m
 
   private
 
@@ -39,16 +44,24 @@ module pes_rc_m
     pes_rc_init_write,                  &
     pes_rc_output,                      &
     pes_rc_calc,                        &
-    pes_rc_end
+    pes_rc_end,                         &
+    pes_rc_dump,                        &
+    pes_rc_load
 
   type PES_rc_t
     integer          :: npoints                 !< how many points we store the wf
     integer, pointer :: points(:)               !< which points to use (local index)
     integer, pointer :: points_global(:)        !< global index of the points
-    CMPLX, pointer   :: wf(:,:,:,:,:)
+    CMPLX, pointer   :: wf(:,:,:,:,:)           !< wavefunctions at sample points
     integer, pointer :: rankmin(:)              !< partition of the mesh containing the points
+    FLOAT, pointer   :: dq(:,:)                 !< part 1 of Volkov phase (type PHASES) 
+    FLOAT, pointer   :: domega(:)               !< part 2 of Volkov phase (type PHASES)
+    integer          :: recipe                  !< type of calculation (RAW/PHASES)
   end type PES_rc_t
 
+  integer, parameter :: &
+    M_RAW    = 1,       &
+    M_PHASES = 2
 
 contains
 
@@ -90,6 +103,25 @@ contains
       call messages_fatal(1)
     end if
 
+    !%Variable PES_rc_recipe
+    !%Type integer
+    !%Default raw
+    !%Section Time-Dependent::PhotoElectronSpectrum
+    !%Description
+    !% The type for calculating the photoelectron spectrum in the sample point method.
+    !%Option raw 1
+    !% Calculate the photoelectron spectrum according to A. Pohl, P.-G. Reinhard, and 
+    !% E. Suraud, <i>Phys. Rev. Lett.</i> <b>84</b>, 5090 (2000).
+    !%Option phases 2
+    !% Calculate the photoelectron spectrum by including the Volkov phase (approximately), see
+    !% P. M. Dinh, P. Romaniello, P.-G. Reinhard, and E. Suraud, <i>Phys. Rev. A.</i> <b>87</b>, 032514 (2013).
+    !%End
+    call parse_variable('PES_rc_recipe', M_RAW, pesrc%recipe)
+    if(.not.varinfo_valid_option('PES_rc_recipe', pesrc%recipe, is_flag = .true.)) then 
+      call messages_input_error('PES_rc_recipe')
+    end if
+    call messages_print_var_option(stdout, "PES_rc_recipe", pesrc%recipe)
+
     pesrc%npoints = parse_block_n(blk)
 
     ! read points
@@ -124,6 +156,13 @@ contains
     SAFE_ALLOCATE(pesrc%wf(1:st%nst, 1:st%d%dim, 1:st%d%nik, 1:pesrc%npoints, 0:save_iter-1))
     pesrc%wf = M_z0
 
+    if(pesrc%recipe == M_PHASES) then
+      SAFE_ALLOCATE(pesrc%dq(1:pesrc%npoints, 0:save_iter-1))
+      SAFE_ALLOCATE(pesrc%domega(0:save_iter-1))
+      pesrc%dq = M_ZERO
+      pesrc%domega = M_ZERO
+    end if
+
     POP_SUB(PES_rc_init)
   end subroutine PES_rc_init
 
@@ -139,6 +178,11 @@ contains
       SAFE_DEALLOCATE_P(pesrc%points_global)
       SAFE_DEALLOCATE_P(pesrc%wf)
       SAFE_DEALLOCATE_P(pesrc%rankmin)
+
+      if(pesrc%recipe == M_PHASES) then
+        SAFE_DEALLOCATE_P(pesrc%dq)
+        SAFE_DEALLOCATE_P(pesrc%domega)
+      end if
     end if
 
     POP_SUB(PES_rc_end)
@@ -146,18 +190,21 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine PES_rc_calc(pesrc, st, mesh, ii, dt, iter)
-    type(PES_rc_t), intent(inout) :: pesrc
-    type(states_t), intent(in)    :: st
-    integer,        intent(in)    :: ii
-    type(mesh_t),   intent(in)    :: mesh
-    FLOAT,          intent(in)    :: dt
-    integer,        intent(in)    :: iter
+  subroutine PES_rc_calc(pesrc, st, mesh, ii, dt, iter, hm)
+    type(PES_rc_t),      intent(inout) :: pesrc
+    type(states_t),      intent(in)    :: st
+    integer,             intent(in)    :: ii
+    type(mesh_t),        intent(in)    :: mesh
+    FLOAT,               intent(in)    :: dt
+    integer,             intent(in)    :: iter
+    type(hamiltonian_t), intent(in)    :: hm
 
     CMPLX, allocatable :: psi(:,:,:,:), wfact(:,:,:,:)
     integer            :: ip, isdim
     integer            :: nst, dim, stst, stend, kptst, kptend
     logical            :: contains_ip
+    CMPLX              :: cfac
+    FLOAT, allocatable :: buf(:)
 
     PUSH_SUB(PES_rc_calc)
 
@@ -172,6 +219,11 @@ contains
 
     SAFE_ALLOCATE(wfact(1:st%nst, dim, 1:st%d%nik, 1:pesrc%npoints))
     wfact = M_z0
+
+    if(pesrc%recipe == M_PHASES) then
+      SAFE_ALLOCATE(buf(1:pesrc%npoints))
+      buf = M_ZERO
+    end if
 
     contains_ip = .true.
 
@@ -190,12 +242,21 @@ contains
       if(contains_ip) then
         call states_get_points(st, pesrc%points(ip), pesrc%points(ip), psi)
         wfact(stst:stend, dim, kptst:kptend, ip) = psi(stst:stend, dim, 1, kptst:kptend)
+
+        if(pesrc%recipe == M_PHASES) then
+          call PES_rc_calc_rcphase(pesrc, st, mesh, iter, dt, hm, ip, ii)
+        end if
       end if
     end do
 
 #if defined(HAVE_MPI)
     isdim = st%nst * dim * st%d%nik * pesrc%npoints
     call MPI_Allreduce(wfact(:,:,:,:), pesrc%wf(:,:,:,:,ii), isdim, MPI_CMPLX, mpi_sum, mpi_comm_world, mpi_err)
+
+    if(pesrc%recipe == M_PHASES) then
+      call MPI_Allreduce(pesrc%dq(:,ii), buf(:), pesrc%npoints, MPI_FLOAT, mpi_sum, mpi_comm_world, mpi_err)
+      pesrc%dq(:,ii) = buf(:)
+    end if
 #else
     pesrc%wf(:,:,:,:,ii) = wfact(:,:,:,:)
 #endif
@@ -239,6 +300,19 @@ contains
         write(iunit, '(1x)', advance='yes')
       end do
       call io_close(iunit)
+
+      if(pesrc%recipe == M_PHASES) then
+        iunit = io_open('td.general/'//'PES_rc.'//filenr//'.phases.out', action='write', position='append')
+        do ii = 1, save_iter - mod(iter, save_iter)
+          jj = iter - save_iter + ii + mod(save_iter - mod(iter, save_iter), save_iter)
+          write(iunit, '(e17.10)', advance='no') units_from_atomic(units_inp%time, jj * dt)
+          write(iunit, '(1x,e18.10E3,1x,e18.10E3)', advance='no') &
+            pesrc%domega(ii-1), pesrc%dq(ip, ii-1)
+          write(iunit, '(1x)', advance='yes')
+        end do
+        call io_close(iunit)
+      end if
+
     end do
 
     POP_SUB(PES_rc_output)
@@ -281,11 +355,129 @@ contains
         write(iunit, '(1x)', advance='yes')
 
         call io_close(iunit)
+
+        if(pesrc%recipe == M_PHASES) then
+          iunit = io_open('td.general/'//'PES_rc.'//filenr//'.phases.out', action='write')
+          write(iunit,'(a24)') '# time, dq(t), dOmega(t)'
+          call io_close(iunit)
+        end if
       end do
     end if
 
     POP_SUB(PES_rc_init_write)
   end subroutine PES_rc_init_write
+
+! ---------------------------------------------------------
+  subroutine pes_rc_dump(restart, pesrc, st, ierr)
+    type(restart_t), intent(in)  :: restart    
+    type(pes_rc_t),  intent(in)  :: pesrc
+    type(states_t),  intent(in)  :: st
+    integer,         intent(out) :: ierr
+    
+    integer :: err, iunit
+    
+    PUSH_SUB(pes_rc_dump)
+
+    ierr = 0
+    
+    if (restart_skip(restart)) then
+      POP_SUB(pes_rc_dump)
+      return
+    end if
+    
+    if (in_debug_mode) then
+      message(1) = "Debug: Writing pes_rc restart."
+      call messages_info(1)
+    end if
+   
+    if(pesrc%recipe == M_PHASES) then
+      iunit = restart_open(restart, 'rcphases')
+      write(iunit, *)  pesrc%domega(:), pesrc%dq(:,:)
+      call restart_close(restart, iunit)
+    end if
+
+    if (err /= 0) ierr = ierr + 1
+    
+    if (in_debug_mode) then
+      message(1) = "Debug: Writing pes_rc restart done."
+      call messages_info(1)
+    end if
+    
+    POP_SUB(pes_rc_dump)
+  end subroutine pes_rc_dump
+
+! ---------------------------------------------------------
+  subroutine pes_rc_load(restart, pesrc, st, ierr)
+    type(restart_t), intent(in)    :: restart    
+    type(pes_rc_t),  intent(inout) :: pesrc
+    type(states_t),  intent(inout) :: st
+    integer,         intent(out)   :: ierr
+    
+    integer :: err, iunit
+    
+    PUSH_SUB(pes_rc_load)
+    
+    ierr = 0
+    
+    if (restart_skip(restart)) then
+      ierr = -1
+      POP_SUB(pes_rc_load)
+      return
+    end if
+    
+    if (in_debug_mode) then
+      message(1) = "Debug: Reading pes_rc restart."
+      call messages_info(1)
+    end if
+
+    if(pesrc%recipe == M_PHASES) then
+      iunit = restart_open(restart, 'rcphases')
+      read(iunit, *)  pesrc%domega(:), pesrc%dq(:,:)
+      call restart_close(restart, iunit)
+    end if
+
+    if (err /= 0) ierr = ierr + 1
+    
+    if(in_debug_mode) then
+      message(1) = "Debug: Reading pes_rc restart done."
+      call messages_info(1)
+    end if
+    
+    POP_SUB(pes_rc_load)
+  end subroutine pes_rc_load 
+
+  ! ---------------------------------------------------------
+  subroutine PES_rc_calc_rcphase(pesrc, st, mesh, iter, dt, hm, ip, ii)
+    type(PES_rc_t),      intent(inout) :: pesrc
+    type(states_t),      intent(in)    :: st
+    type(mesh_t),        intent(in)    :: mesh
+    type(hamiltonian_t), intent(in)    :: hm
+    integer,             intent(in)    :: iter
+    integer,             intent(in)    :: ip
+    FLOAT,               intent(in)    :: dt
+    
+    integer :: dim
+    FLOAT   :: vp(1:MAX_DIM)
+    FLOAT   :: xx(MAX_DIM), er(MAX_DIM)
+
+    PUSH_SUB(PES_rc_calc_rcphase)
+
+    dim = mesh%sb%dim
+
+    xx(1:dim) = mesh%x(pesrc%points(ip), 1:dim)
+    er(1:dim) = xx(1:dim)/sqrt(dot_product(xx(1:dim), xx(1:dim)))
+
+    vp = M_ZERO
+    do il = 1, hm%ep%no_lasers
+      call laser_field(hm%ep%lasers(il), vp(1:dim), iter*dt)
+    end do
+    vp(1:dim) = -vp(1:dim)
+
+    pesrc%domega(ii) = pesrc%domega(ii) + dot_product(vp(1:dim), vp(1:dim)) / (M_TWO * P_C**M_TWO) * dt
+    pesrc%dq(ip, ii) = pesrc%dq(ip, ii) + dot_product(er(1:dim), vp(1:dim))/P_C * dt
+
+    POP_SUB(PES_rc_calc_rcphase)
+  end subroutine PES_rc_calc_rcphase
 
 end module pes_rc_m
 
