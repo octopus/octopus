@@ -101,17 +101,14 @@ contains
 
     PUSH_SUB(X(states_orthogonalization_full).cholesky_serial)
 
-    if(st%parallel_in_states) then
-      message(1) = 'The cholesky_serial orthogonalization method cannot work with state-parallelization.'
-      call messages_fatal(1, only_root_writes = .true.)
-    end if
-
     SAFE_ALLOCATE(ss(1:nst, 1:nst))
 
     ss = M_ZERO
 
     call X(states_calc_overlap)(st, mesh, ik, ss)
 
+    call MPI_Barrier(mpi_world%comm, mpi_err)
+    
     bof = .false.
     ! calculate the Cholesky decomposition
     call lalg_cholesky(nst, ss, bof = bof, err_code = ierr)
@@ -300,12 +297,12 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
   type(cl_kernel) :: kernel_ref
   type(profile_t), save :: prof_copy
 #endif
-  type(profile_t), save :: prof
+  type(profile_t), save :: prof, prof_comm
 
   PUSH_SUB(X(states_trsm))
   call profiling_in(prof, "STATES_TRSM")
 
-  if(associated(st%X(dontusepsi)) .and. .not. states_are_packed(st)) then
+  if(associated(st%X(dontusepsi)) .and. .not. states_are_packed(st) .and. .not. st%parallel_in_states) then
 
     do idim = 1, st%d%dim
       ! multiply by the inverse of ss
@@ -326,10 +323,19 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
 
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
+
+      if(st%parallel_in_states) psicopy = CNST(0.0)
       
       do ib = st%group%block_start, st%group%block_end
         call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psicopy)
       end do
+
+      ! we should use allgather here
+      if(st%parallel_in_states) then
+        call profiling_in(prof_comm, "STATES_TRSM_COMM")
+        call comm_allreduce(st%mpi_grp%comm, psicopy)
+        call profiling_out(prof_comm)
+      end if
       
       do idim = 1, st%d%dim
         
@@ -1237,9 +1243,12 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
   R_TYPE,            intent(out)   :: overlap(:, :)
   R_TYPE, optional,  intent(in)    :: psi2(:, :, :) !< if present it calculates <psi2|psi>
 
-  integer       :: ip, ib, jb, block_size, sp, size, ist, jst
+  integer :: ip, ib, jb, block_size, sp, size
+#ifndef R_TREAL
+  integer :: ist, jst
+#endif
   type(batch_t) :: psib, psi2b
-  type(profile_t), save :: prof
+  type(profile_t), save :: prof, prof_comm
   FLOAT :: vol
   R_TYPE, allocatable :: psi(:, :, :)
 #ifdef HAVE_CLAMDBLAS
@@ -1251,7 +1260,7 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
 
   call profiling_in(prof, "STATES_OVERLAP")
 
-  if(associated(st%X(dontusepsi)) .and. .not. states_are_packed(st)) then
+  if(associated(st%X(dontusepsi)) .and. .not. states_are_packed(st) .and. .not. st%parallel_in_states) then
 
     call batch_init(psib, st%d%dim, 1, st%nst, st%X(dontusepsi)(:, :, :, ik))
 
@@ -1284,10 +1293,20 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
 
+      if(st%parallel_in_states) psi = CNST(0.0)
+      
       do ib = st%group%block_start, st%group%block_end
         call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psi)
       end do
 
+      !this should really be an allgather, we use the simpler allreduce
+      !for the moment to get it working
+      if(st%parallel_in_states) then
+        call profiling_in(prof_comm, "STATES_OVERLAP_COMM")
+        call comm_allreduce(st%mpi_grp%comm, psi)
+        call profiling_out(prof_comm)
+      end if
+      
       if(mesh%use_curvilinear) then
         do ip = sp, sp + size - 1
           vol = sqrt(mesh%vol_pp(ip))
@@ -1323,7 +1342,8 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
   else if(opencl_is_enabled()) then
 
     ASSERT(ubound(overlap, dim = 1) == st%nst)
-
+    ASSERT(.not. st%parallel_in_states)
+    
     call opencl_create_buffer(overlap_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%nst)
     call opencl_set_buffer_to_zero(overlap_buffer, R_TYPE_VAL, st%nst*st%nst)
 
