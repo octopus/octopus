@@ -107,8 +107,6 @@ contains
 
     call X(states_calc_overlap)(st, mesh, ik, ss)
 
-    call MPI_Barrier(mpi_world%comm, mpi_err)
-    
     bof = .false.
     ! calculate the Cholesky decomposition
     call lalg_cholesky(nst, ss, bof = bof, err_code = ierr)
