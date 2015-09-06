@@ -563,8 +563,11 @@ subroutine X(scdm_rotate_states)(st,mesh,scdm)
     end if
     ! use reduce to send temp_state to all procs, without knowing the sending rank
     temp_state_global(1:mesh%np_global,1) = M_ZERO
+#ifdef HAVE_MPI
     call MPI_Allreduce(temp_state, temp_state_global, mesh%np_global, R_MPITYPE, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
-
+#else
+    temp_state_global = temp_state
+#endif
     ! copy into the domains of the st object
     call vec_scatter(mesh%vp,0, temp_state_global(1:mesh%np_global,1), st%X(psi)(1:mesh%np,1,ist,1))
 
