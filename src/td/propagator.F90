@@ -531,7 +531,7 @@ contains
 
     ! to work on SCDM states we rotate the states in st to the localized SCDM,
     !i.e. we perform the SCDM procedure and overwrite the states in st
-    if(hm%scdm%psi_scdm) then
+    if(hm%scdm_EXX .and. hm%scdm%psi_scdm) then
       call scdm_init(st,gr%der,psolver%cube, hm%scdm)
       call scdm_rotate_states(st,gr%mesh,hm%scdm)
     endif
