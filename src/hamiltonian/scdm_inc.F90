@@ -572,9 +572,11 @@ subroutine X(scdm_rotate_states)(st,mesh,scdm)
 #else
     temp_state_global = temp_state
 #endif
-    ! copy into the domains of the st object
+    ! copy into the domains of the st object (AFAIU vec_statter does not do what you want, XA)
+#ifdef HAVE_MPI
     call vec_scatter(mesh%vp, 0, temp_state_global(1:mesh%np_global,1), st%X(dontusepsi)(1:mesh%np,1,ist,1))
-
+#endif
+    
   end do
   SAFE_DEALLOCATE_A(temp_state)
   SAFE_DEALLOCATE_A(temp_state_global)
