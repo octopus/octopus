@@ -1356,10 +1356,6 @@ contains
     !%Option mgs 3
     !% Modified Gram-Schmidt orthogonalization.
     !% Can be used with domain parallelization but not state parallelization.
-    !%Option qr 4
-    !% (Experimental) Orthogonalization is performed based on a QR
-    !% decomposition with LAPACK or ScaLAPACK.
-    !% Compatible with states parallelization.
     !%End
 
     if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
