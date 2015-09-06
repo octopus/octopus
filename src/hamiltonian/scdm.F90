@@ -192,7 +192,7 @@ contains
     !% on the domain defined by <tt>SCDMCutoffRadius<tt> (as opposed to the full simulation cell).
     !%End 
     call parse_variable('SCDM_reorthonormalize', .false., scdm%re_ortho_normalize)
-    if (scdm%re_ortho_normalize) scdm%st%d%orth_method = ORTH_CHOLESKY_SERIAL
+    if (scdm%re_ortho_normalize) scdm%st%d%orth_method = OPTION__STATESORTHOGONALIZATION__CHOLESKY_SERIAL
 
     !%Variable SCDM_verbose
     !%Type logical

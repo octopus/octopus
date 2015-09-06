@@ -71,13 +71,6 @@ module states_dim_m
     SPIN_DOWN = 1,              &
     SPIN_UP   = 2
 
-  !> Orthogonalization methods
-  integer, public, parameter ::    &
-    ORTH_CHOLESKY_SERIAL   = 1,    &
-    ORTH_CHOLESKY_PARALLEL = 2,    &
-    ORTH_MGS               = 3,    &
-    ORTH_QR                = 4
-
   type states_dim_t
     integer :: dim                  !< Dimension of the state (one, or two for spinors)
     integer :: nik                  !< Number of irreducible subspaces

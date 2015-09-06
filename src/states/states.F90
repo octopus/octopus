@@ -1359,18 +1359,15 @@ contains
     !%End
 
     if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
-      default = ORTH_CHOLESKY_PARALLEL
+      default = OPTION__STATESORTHOGONALIZATION__CHOLESKY_PARALLEL
     else
-      default = ORTH_CHOLESKY_SERIAL
+      default = OPTION__STATESORTHOGONALIZATION__CHOLESKY_SERIAL
     end if
 
     call parse_variable('StatesOrthogonalization', default, st%d%orth_method)
 
     if(.not.varinfo_valid_option('StatesOrthogonalization', st%d%orth_method)) call messages_input_error('StatesOrthogonalization')
     call messages_print_var_option(stdout, 'StatesOrthogonalization', st%d%orth_method)
-
-    if(st%d%orth_method == ORTH_QR) call messages_experimental("QR Orthogonalization")
-
 
     !%Variable StatesCLDeviceMemory
     !%Type float

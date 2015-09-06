@@ -74,13 +74,13 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
   nst = st%nst
 
   select case(st%d%orth_method)
-  case(ORTH_CHOLESKY_SERIAL)
+  case(OPTION__STATESORTHOGONALIZATION__CHOLESKY_SERIAL)
     call cholesky_serial()
 
-  case(ORTH_CHOLESKY_PARALLEL)
+  case(OPTION__STATESORTHOGONALIZATION__CHOLESKY_PARALLEL)
     call cholesky_parallel()
 
-  case(ORTH_MGS)
+  case(OPTION__STATESORTHOGONALIZATION__MGS)
     call mgs()
 
   case default
