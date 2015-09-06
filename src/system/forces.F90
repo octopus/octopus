@@ -180,7 +180,7 @@ contains
     do ist = 1, psi%nst
       do ik = 1, psi%d%nik
         derpsi_ = M_z0
-        call zderivatives_grad(gr%der, psi%zpsi(:, 1, ist, ik), derpsi_(:, :, 1))
+        call zderivatives_grad(gr%der, psi%zdontusepsi(:, 1, ist, ik), derpsi_(:, :, 1))
         do iatom = 1, geo%natoms
           do j = 1, gr%sb%dim
             call force1(geo%atom(iatom)%x(j) + dq, forceks1p, pdot3p)
@@ -243,11 +243,11 @@ contains
     geo_%atom(iatom_)%x(j_) = q
     SAFE_ALLOCATE(viapsi(1:gr_%mesh%np_part, 1:psi_%d%dim))
     viapsi = M_z0
-    call zhamiltonian_apply_atom (hm_, geo_, gr_, iatom_, psi_%zpsi(:, :, ist_, ik_), viapsi)
+    call zhamiltonian_apply_atom (hm_, geo_, gr_, iatom_, psi_%zdontusepsi(:, :, ist_, ik_), viapsi)
     do m = 1, ubound(res, 1)
       res(m) = real( zmf_dotp(gr_%mesh, viapsi(:, 1), derpsi_(:, m, 1)) , REAL_PRECISION)
     end do
-    pdot3 = real(M_zI * zmf_dotp(gr_%mesh, chi_%zpsi(:, 1, ist_, ik_), viapsi(:, 1)), REAL_PRECISION)
+    pdot3 = real(M_zI * zmf_dotp(gr_%mesh, chi_%zdontusepsi(:, 1, ist_, ik_), viapsi(:, 1)), REAL_PRECISION)
     geo_%atom(iatom_)%x(j_) = qold
     SAFE_DEALLOCATE_A(viapsi)
   end subroutine force1

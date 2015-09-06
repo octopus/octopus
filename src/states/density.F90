@@ -543,13 +543,13 @@ contains
         do ist = staux%st_start, staux%st_end
           if(ist <= n) cycle
           if(.not.state_is_local(st, ist-n)) then
-            call mpi_send(staux%zpsi(1, 1, ist, ik), gr%mesh%np_part*st%d%dim, MPI_CMPLX, staux%node(ist), &
+            call MPI_Send(staux%zdontusepsi(1, 1, ist, ik), gr%mesh%np_part*st%d%dim, MPI_CMPLX, staux%node(ist), &
               ist, st%mpi_grp%comm, mpi_err)
 
-            call mpi_recv(st%zpsi(1, 1, ist-n, ik), gr%mesh%np_part*st%d%dim, MPI_CMPLX, st%node(ist-n), &
+            call MPI_Recv(st%zdontusepsi(1, 1, ist-n, ik), gr%mesh%np_part*st%d%dim, MPI_CMPLX, st%node(ist-n), &
               ist, st%mpi_grp%comm, status, mpi_err)
           else
-            st%zpsi(:, :, ist-n, ik) = staux%zpsi(:, :, ist, ik)
+            st%zdontusepsi(:, :, ist-n, ik) = staux%zdontusepsi(:, :, ist, ik)
           end if
    
         end do
@@ -558,7 +558,7 @@ contains
      do ik = st%d%kpt%start, st%d%kpt%end
        do ist = staux%st_start, staux%st_end
          if(ist <= n) cycle
-         st%zpsi(:, :, ist-n, ik) = staux%zpsi(:, :, ist, ik)
+         st%zdontusepsi(:, :, ist-n, ik) = staux%zdontusepsi(:, :, ist, ik)
        end do
      end do
    end if
@@ -567,7 +567,7 @@ contains
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
-        st%zpsi(:, :, ist, ik) = staux%zpsi(:, :, n + ist, ik)
+        st%zdontusepsi(:, :, ist, ik) = staux%zdontusepsi(:, :, n + ist, ik)
       end do
     end do
 

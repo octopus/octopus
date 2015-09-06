@@ -38,8 +38,8 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
   SAFE_ALLOCATE(sqphi(1:mesh%np, 1:st%d%dim, 1:st%nst))
 
   do ist = st%st_start, st%st_end
-    sqphi(1:mesh%np, 1:st%d%dim, ist) = R_REAL (st%X(psi)(1:mesh%np, 1:st%d%dim, ist, is))**2 + &
-                                        R_AIMAG(st%X(psi)(1:mesh%np, 1:st%d%dim, ist, is))**2
+    sqphi(1:mesh%np, 1:st%d%dim, ist) = R_REAL (st%X(dontusepsi)(1:mesh%np, 1:st%d%dim, ist, is))**2 + &
+                                        R_AIMAG(st%X(dontusepsi)(1:mesh%np, 1:st%d%dim, ist, is))**2
   end do
 
   do ip = 1, mesh%np
@@ -61,7 +61,7 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
     oep%vxc(ip,1) = M_ZERO
     do ist = st%st_start, st%st_end
       oep%vxc(ip,1) = oep%vxc(ip,1) + oep%socc * st%occ(ist, is) * &
-        R_REAL(oep%X(lxc)(ip, ist, is) * st%X(psi)(ip, 1, ist, is))
+        R_REAL(oep%X(lxc)(ip, ist, is) * st%X(dontusepsi)(ip, 1, ist, is))
     end do
     oep%vxc(ip,1) = oep%vxc(ip,1) / rho_sigma(ip)
   end do

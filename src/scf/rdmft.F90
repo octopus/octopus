@@ -137,10 +137,10 @@ contains
       call mesh_r(gr%mesh, ip, rr, species_charge_center)
       do ist = 1, st%nst
         if (st%eigenval(ist, 1) < M_ZERO) then
-          st%dpsi(ip,1,ist,1) = st%dpsi(ip,1,ist,1) * exp((-(sqrt(-M_TWO*st%eigenval(int(st%qtot*M_HALF),1))) & 
+          st%ddontusepsi(ip,1,ist,1) = st%ddontusepsi(ip,1,ist,1) * exp((-(sqrt(-M_TWO*st%eigenval(int(st%qtot*M_HALF),1))) & 
                                 + sqrt(-M_TWO*st%eigenval(ist,1)))*rr)
         else
-          st%dpsi(ip,1,ist,1) = st%dpsi(ip,1,ist,1) * exp(-(sqrt(-M_TWO*st%eigenval(int(st%qtot*M_HALF),1)))*rr)
+          st%ddontusepsi(ip,1,ist,1) = st%ddontusepsi(ip,1,ist,1) * exp(-(sqrt(-M_TWO*st%eigenval(int(st%qtot*M_HALF),1)))*rr)
         end if
       end do
     end do
@@ -681,9 +681,9 @@ contains
     occ = st%occ
 
     do ist = 1, st%nst
-      if (abs(dmf_dotp(gr%mesh,st%dpsi(:,1,ist,1),psi2%dpsi(:,1,ist,1))) < M_HALF) then
+      if (abs(dmf_dotp(gr%mesh,st%ddontusepsi(:,1,ist,1),psi2%ddontusepsi(:,1,ist,1))) < M_HALF) then
         do jst = 1, st%nst 
-          if (abs(dmf_dotp(gr%mesh,st%dpsi(:,1,ist,1),psi2%dpsi(:,1,jst,1))) >= M_HALF) then
+          if (abs(dmf_dotp(gr%mesh,st%ddontusepsi(:,1,ist,1),psi2%ddontusepsi(:,1,jst,1))) >= M_HALF) then
             occ(ist,1) = st%occ(jst,1)
           end if 
         end do

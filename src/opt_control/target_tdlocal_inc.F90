@@ -120,7 +120,7 @@
 
     !We assume that there is no time-independent operator.
     forall(ik = 1:chi_out%d%nik, ist = chi_out%st_start:chi_out%st_end, idim = 1:chi_out%d%dim, ip = 1:gr%mesh%np)
-      chi_out%zpsi(ip, idim, ist, ik) = M_z0
+      chi_out%zdontusepsi(ip, idim, ist, ik) = M_z0
     end forall
 
 
@@ -151,11 +151,11 @@
       opsi = M_z0
       do ist  = psi%st_start, psi%st_end
         do ip = 1, gr%mesh%np
-          opsi(ip, 1) = tg%rho(ip) * psi%zpsi(ip, 1, ist, 1)
+          opsi(ip, 1) = tg%rho(ip)*psi%zdontusepsi(ip, 1, ist, 1)
         end do
         tg%td_fitness(time) = &
           tg%td_fitness(time) + psi%occ(ist, 1) * &
-          real(zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, ist, 1), opsi(:, :)), REAL_PRECISION)
+          real(zmf_dotp(gr%mesh, psi%d%dim, psi%zdontusepsi(:, :, ist, 1), opsi(:, :)), REAL_PRECISION)
       end do
       SAFE_DEALLOCATE_A(opsi)
     case(SPIN_POLARIZED)

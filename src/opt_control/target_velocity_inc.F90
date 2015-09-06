@@ -234,7 +234,7 @@
 
     !we have a time-dependent target --> Chi(T)=0
     forall(ip=1:gr%mesh%np, idim=1:chi_out%d%dim, ist=chi_out%st_start:chi_out%st_end, ik=1:chi_out%d%nik)
-       chi_out%zpsi(ip, idim, ist, ik) = M_z0
+       chi_out%zdontusepsi(ip, idim, ist, ik) = M_z0
     end forall
 
     SAFE_ALLOCATE(x(1:geo%natoms, 1:geo%space%dim))
@@ -286,9 +286,9 @@
       do ik = 1, psi%d%nik
         do ist = 1, psi%nst
           do idim = 1, gr%sb%dim
-            opsi(1:gr%mesh%np, 1) = tg%grad_local_pot(iatom, 1:gr%mesh%np, idim) * psi%zpsi(1:gr%mesh%np, 1, ist, ik)
+            opsi(1:gr%mesh%np, 1) = tg%grad_local_pot(iatom, 1:gr%mesh%np, idim)*psi%zdontusepsi(1:gr%mesh%np, 1, ist, ik)
             geo%atom(iatom)%f(idim) = geo%atom(iatom)%f(idim) + real(psi%occ(ist, ik) * &
-              zmf_dotp(gr%mesh, psi%d%dim, opsi, psi%zpsi(:, :, ist, ik)), REAL_PRECISION)
+              zmf_dotp(gr%mesh, psi%d%dim, opsi, psi%zdontusepsi(:, :, ist, ik)), REAL_PRECISION)
           end do
         end do
       end do

@@ -101,8 +101,8 @@
     do ik = 1, psi%d%nik
       do ist = psi%st_start, psi%st_end
         j1 = j1 + &
-          abs(zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, ist, ik), &
-              tg%st%zpsi(:, :, ist, ik)))**2
+          abs(zmf_dotp(gr%mesh, psi%d%dim, psi%zdontusepsi(:, :, ist, ik), &
+              tg%st%zdontusepsi(:, :, ist, ik)))**2
       end do
     end do
 
@@ -124,8 +124,8 @@
 
     do ik = 1, psi_in%d%nik
       do ist = psi_in%st_start, psi_in%st_end
-        olap = zmf_dotp(gr%mesh, tg%st%zpsi(:, 1, ist, ik), psi_in%zpsi(:, 1, ist, ik))
-        chi_out%zpsi(:, :, ist, ik) = olap * tg%st%zpsi(:, :, ist, ik)
+        olap = zmf_dotp(gr%mesh, tg%st%zdontusepsi(:, 1, ist, ik), psi_in%zdontusepsi(:, 1, ist, ik))
+        chi_out%zdontusepsi(:, :, ist, ik) = olap*tg%st%zdontusepsi(:, :, ist, ik)
       end do
     end do
 

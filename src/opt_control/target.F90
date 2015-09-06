@@ -460,27 +460,27 @@ contains
     case(oct_tg_td_local)
       call target_build_tdlocal(tg, gr, time)
       forall(ik = 1:inh%d%nik, ist = inh%st_start:inh%st_end, idim = 1:inh%d%dim, ip = 1:gr%mesh%np)
-        inh%zpsi(ip, idim, ist, ik) = - psi%occ(ist, ik) * tg%rho(ip) * psi%zpsi(ip, idim, ist, ik)
+        inh%zdontusepsi(ip, idim, ist, ik) = -psi%occ(ist, ik)*tg%rho(ip)*psi%zdontusepsi(ip, idim, ist, ik)
       end forall
 
     case(oct_tg_hhgnew)
       gvec(1:gr%sb%dim) = real(tg%gvec(iter+1, 1:gr%sb%dim), REAL_PRECISION)
       forall(ik = 1:inh%d%nik, ist = inh%st_start:inh%st_end, idim = 1:inh%d%dim, ip = 1:gr%mesh%np)
-        inh%zpsi(ip, idim, ist, ik) = &
-           - psi%occ(ist, ik) * M_TWO * sum(tg%grad_local_pot(1, ip, 1:gr%sb%dim) * gvec(1:gr%sb%dim)) * &
-           psi%zpsi(ip, idim, ist, ik)
+        inh%zdontusepsi(ip, idim, ist, ik) = &
+           - psi%occ(ist, ik)*M_TWO*sum(tg%grad_local_pot(1, ip, 1:gr%sb%dim)*gvec(1:gr%sb%dim))* &
+           psi%zdontusepsi(ip, idim, ist, ik)
       end forall
 
     case(oct_tg_velocity)
       forall(ik = 1:inh%d%nik, ist = inh%st_start:inh%st_end, idim = 1:inh%d%dim, ip = 1:gr%mesh%np)
-         inh%zpsi(ip, idim, ist, ik) = - psi%occ(ist, ik) * tg%rho(ip) * psi%zpsi(ip, idim, ist, ik)
+         inh%zdontusepsi(ip, idim, ist, ik) = -psi%occ(ist, ik)*tg%rho(ip)*psi%zdontusepsi(ip, idim, ist, ik)
       end forall
    
     case(oct_tg_jdensity)
       if (abs(nint(time/tg%dt)) >= tg%strt_iter_curr_tg) then
-        inh%zpsi =  -chi_current(tg, gr, psi)
+        inh%zdontusepsi =  -chi_current(tg, gr, psi)
       else
-        inh%zpsi = M_ZERO
+        inh%zdontusepsi = M_ZERO
       end if     
 
     case default

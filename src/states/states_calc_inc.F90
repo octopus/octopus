@@ -38,12 +38,12 @@ subroutine X(states_rotate)(mesh, st, stin, uu)
     call messages_not_implemented("states_rotate parallel in states")
   ! FIXME: use pblas_gemm for parallel in states, like in subspace_inc.F90
 
-  ASSERT(associated(st%X(psi)))
-  ASSERT(associated(stin%X(psi)))
+  ASSERT(associated(st%X(dontusepsi)))
+  ASSERT(associated(stin%X(dontusepsi)))
   
   do ik = st%d%kpt%start, st%d%kpt%end
-    call lalg_gemm(mesh%np_part*st%d%dim, st%nst, stin%nst, R_TOTYPE(M_ONE), stin%X(psi)(:, :, 1:stin%nst, ik), &
-      transpose(uu(:, :)), R_TOTYPE(M_ZERO), st%X(psi)(:, :, :, ik))
+    call lalg_gemm(mesh%np_part*st%d%dim, st%nst, stin%nst, R_TOTYPE(M_ONE), stin%X(dontusepsi)(:, :, 1:stin%nst, ik), &
+      transpose(uu(:, :)), R_TOTYPE(M_ZERO), st%X(dontusepsi)(:, :, :, ik))
   end do
   
   POP_SUB(X(states_rotate))
@@ -162,16 +162,16 @@ contains
 #ifdef HAVE_SCALAPACK
     call states_blacs_blocksize(st, mesh, psi_block, total_np)
 
-    ASSERT(associated(st%X(psi)))
+    ASSERT(associated(st%X(dontusepsi)))
     ! We need to set to zero some extra parts of the array
     if(st%d%dim == 1) then
-     st%X(psi)(mesh%np + 1:psi_block(1), 1:st%d%dim, st%st_start:st%st_end, ik) = M_ZERO
+     st%X(dontusepsi)(mesh%np + 1:psi_block(1), 1:st%d%dim, st%st_start:st%st_end, ik) = M_ZERO
     else
-     st%X(psi)(mesh%np + 1:mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, ik) = M_ZERO
+     st%X(dontusepsi)(mesh%np + 1:mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, ik) = M_ZERO
     end if
 
     call descinit(psi_desc(1), total_np, st%nst, psi_block(1), psi_block(2), 0, 0, st%dom_st_proc_grid%context, &
-      st%d%dim*ubound(st%X(psi), dim = 1), info)
+      st%d%dim*ubound(st%X(dontusepsi), dim = 1), info)
 
     if(info /= 0) then
       write(message(1),'(3a,i6)') "descinit for psi failed in ", TOSTRING(X(states_orthogonalization_full)), &
@@ -196,7 +196,7 @@ contains
     ss = M_ZERO
 
     call pblas_herk(uplo = 'U', trans = 'C', n = st%nst, k = total_np, &
-      alpha = R_TOTYPE(mesh%vol_pp(1)), a = st%X(psi)(1, 1, st%st_start, ik), ia = 1, ja = 1, desca = psi_desc(1), &
+      alpha = R_TOTYPE(mesh%vol_pp(1)), a = st%X(dontusepsi)(1, 1, st%st_start, ik), ia = 1, ja = 1, desca = psi_desc(1), &
       beta = R_TOTYPE(M_ZERO), c = ss(1, 1), ic = 1, jc = 1, descc = ss_desc(1))
 
     ! calculate the Cholesky decomposition
@@ -210,7 +210,7 @@ contains
 
     call pblas_trsm(side = 'R', uplo = 'U', transa = 'N', diag = 'N', m = total_np, n = st%nst, &
       alpha = R_TOTYPE(M_ONE), a = ss(1, 1), ia = 1, ja = 1, desca = ss_desc(1), &
-      b = st%X(psi)(1, 1, st%st_start, ik), ib = 1, jb = 1, descb = psi_desc(1))
+      b = st%X(dontusepsi)(1, 1, st%st_start, ik), ib = 1, jb = 1, descb = psi_desc(1))
 
     call profiling_count_operations(dble(mesh%np)*dble(nst)**2*(R_ADD + R_MUL))
 
@@ -246,12 +246,12 @@ contains
 
       call states_blacs_blocksize(st, mesh, psi_block, total_np)
 
-      ASSERT(associated(st%X(psi)))
+      ASSERT(associated(st%X(dontusepsi)))
       ! We need to set to zero some extra parts of the array
       if(st%d%dim == 1) then
-        st%X(psi)(mesh%np + 1:psi_block(1), 1:st%d%dim, st%st_start:st%st_end, ik) = M_ZERO
+        st%X(dontusepsi)(mesh%np + 1:psi_block(1), 1:st%d%dim, st%st_start:st%st_end, ik) = M_ZERO
       else
-        st%X(psi)(mesh%np + 1:mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, ik) = M_ZERO
+        st%X(dontusepsi)(mesh%np + 1:mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, ik) = M_ZERO
       end if
 
       ! DISTRIBUTE THE MATRIX ON THE PROCESS GRID
@@ -269,14 +269,15 @@ contains
       tau = M_ZERO
 
       ! calculate the QR decomposition
-      call scalapack_geqrf(total_np, nst, st%X(psi)(1, 1, st%st_start, ik), 1, 1, psi_desc(1), tau(1), tmp, -1, blacs_info)
+      call scalapack_geqrf(total_np, nst, st%X(dontusepsi)(1, 1, st%st_start, ik), 1, 1, psi_desc(1), tau(1), tmp, -1, blacs_info)
       if(blacs_info /= 0) then
         write(message(1),'(a,i6)') 'scalapack geqrf workspace query failed with error code: ', blacs_info
         call messages_fatal(1)
       end if
       wsize = nint(R_REAL(tmp))
       SAFE_ALLOCATE(work(1:wsize))
-      call scalapack_geqrf(total_np, nst, st%X(psi)(1, 1, st%st_start, ik), 1, 1, psi_desc(1), tau(1), work(1), wsize, blacs_info)
+      call scalapack_geqrf(total_np, nst, st%X(dontusepsi)(1, 1, st%st_start, ik), &
+        1, 1, psi_desc(1), tau(1), work(1), wsize, blacs_info)
       if(blacs_info /= 0) then
         write(message(1),'(a,i6)') 'scalapack geqrf call failed with error code: ', blacs_info
         call messages_fatal(1)
@@ -284,14 +285,15 @@ contains
       SAFE_DEALLOCATE_A(work)
 
       ! now calculate Q
-      call scalapack_orgqr(total_np, nst, nref, st%X(psi)(1, 1, st%st_start, ik), 1, 1, psi_desc(1), tau(1), tmp, -1, blacs_info)
+      call scalapack_orgqr(total_np, nst, nref, st%X(dontusepsi)(1, 1, st%st_start, ik), &
+        1, 1, psi_desc(1), tau(1), tmp, -1, blacs_info)
       if(blacs_info /= 0) then
         write(message(1),'(a,i6)') 'scalapack orgqr workspace query failed with error code: ', blacs_info
         call messages_fatal(1)
       end if
       wsize = nint(R_REAL(tmp))
       SAFE_ALLOCATE(work(1:wsize))
-      call scalapack_orgqr(total_np, nst, nref, st%X(psi)(1, 1, st%st_start, ik), &
+      call scalapack_orgqr(total_np, nst, nref, st%X(dontusepsi)(1, 1, st%st_start, ik), &
         1, 1, psi_desc(1), tau(1), work(1), wsize, blacs_info)
       if(blacs_info /= 0) then
         write(message(1),'(a,i6)') 'scalapack orgqr call failed with error code: ', blacs_info
@@ -307,14 +309,14 @@ contains
     else
 
       total_np = mesh%np + mesh%np_part*(st%d%dim - 1)
-      st%X(psi)(mesh%np + 1:mesh%np_part, 1:(st%d%dim - 1), st%st_start:st%st_end, ik) = M_ZERO
+      st%X(dontusepsi)(mesh%np + 1:mesh%np_part, 1:(st%d%dim - 1), st%st_start:st%st_end, ik) = M_ZERO
 
       nref = min(nst, total_np)
       SAFE_ALLOCATE(tau(1:nref))
       tau = M_ZERO
 
       ! get the optimal size of the work array
-      call lapack_geqrf(total_np, nst, st%X(psi)(1, 1, st%st_start, ik), mesh%np_part*st%d%dim, tau(1), tmp, -1, info)
+      call lapack_geqrf(total_np, nst, st%X(dontusepsi)(1, 1, st%st_start, ik), mesh%np_part*st%d%dim, tau(1), tmp, -1, info)
       if(info /= 0) then
         write(message(1),'(a,i6)') 'lapack geqrf workspace query failed with error code: ', info
         call messages_fatal(1)
@@ -323,7 +325,8 @@ contains
 
       ! calculate the QR decomposition
       SAFE_ALLOCATE(work(1:wsize))
-      call lapack_geqrf(total_np, nst, st%X(psi)(1, 1, st%st_start, ik), mesh%np_part*st%d%dim, tau(1), work(1), wsize, info)
+      call lapack_geqrf(total_np, nst, st%X(dontusepsi)(1, 1, st%st_start, ik), &
+        mesh%np_part*st%d%dim, tau(1), work(1), wsize, info)
       if(info /= 0) then
         write(message(1),'(a,i6)') 'lapack geqrf call failed with error code: ', info
         call messages_fatal(1)
@@ -331,7 +334,7 @@ contains
       SAFE_DEALLOCATE_A(work)
 
       ! get the optimal size of the work array
-      call lapack_orgqr(total_np, nst, nref, st%X(psi)(1, 1, st%st_start, ik), mesh%np_part*st%d%dim, tau(1), tmp, -1, info)
+      call lapack_orgqr(total_np, nst, nref, st%X(dontusepsi)(1, 1, st%st_start, ik), mesh%np_part*st%d%dim, tau(1), tmp, -1, info)
       if(info /= 0) then
         write(message(1),'(a,i6)') 'lapack orgqr workspace query failed with error code: ', info
         call messages_fatal(1)
@@ -340,7 +343,8 @@ contains
 
       ! now calculate Q
       SAFE_ALLOCATE(work(1:wsize))
-      call lapack_orgqr(total_np, nst, nref, st%X(psi)(1, 1, st%st_start, ik), mesh%np_part*st%d%dim, tau(1), work(1), wsize, info)
+      call lapack_orgqr(total_np, nst, nref, st%X(dontusepsi)(1, 1, st%st_start, ik), &
+        mesh%np_part*st%d%dim, tau(1), work(1), wsize, info)
       if(info /= 0) then
         write(message(1),'(a,i6)') 'lapack orgqr call failed with error code: ', info
         call messages_fatal(1)
@@ -351,8 +355,8 @@ contains
     SAFE_DEALLOCATE_A(tau)
 
     ! we need to scale by the volume element to get the proper normalization
-    st%X(psi)(1:mesh%np, 1:st%d%dim, st%st_start:st%st_end, ik) = &
-      st%X(psi)(1:mesh%np, 1:st%d%dim, st%st_start:st%st_end, ik)/sqrt(mesh%volume_element)
+    st%X(dontusepsi)(1:mesh%np, 1:st%d%dim, st%st_start:st%st_end, ik) = &
+      st%X(dontusepsi)(1:mesh%np, 1:st%d%dim, st%st_start:st%st_end, ik)/sqrt(mesh%volume_element)
 
     POP_SUB(X(states_orthogonalization_full).qr)
 
@@ -376,17 +380,18 @@ contains
 
     SAFE_ALLOCATE(bb(1:nst))
 
-    ASSERT(associated(st%X(psi)))
+    ASSERT(associated(st%X(dontusepsi)))
     ! normalize the initial vectors
     do ist = 1, nst
-      bb(ist) = TOFLOAT(X(mf_dotp)(mesh, st%d%dim, st%X(psi)(:, :, ist, ik), st%X(psi)(:, :, ist, ik), reduce = .false.))
+      bb(ist) = &
+        TOFLOAT(X(mf_dotp)(mesh, st%d%dim, st%X(dontusepsi)(:, :, ist, ik), st%X(dontusepsi)(:, :, ist, ik), reduce = .false.))
     end do
 
     if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, bb, dim = nst)
 
     do ist = 1, nst      
       do idim = 1, st%d%dim
-        call lalg_scal(mesh%np, M_ONE/sqrt(bb(ist)), st%X(psi)(:, idim, ist, ik))
+        call lalg_scal(mesh%np, M_ONE/sqrt(bb(ist)), st%X(dontusepsi)(:, idim, ist, ik))
       end do
     end do
 
@@ -397,7 +402,7 @@ contains
     do ist = 1, nst
       ! calculate the projections
       do jst = 1, ist - 1
-        aa(jst) = X(mf_dotp)(mesh, st%d%dim, st%X(psi)(:, :, jst, ik), st%X(psi)(:, :, ist, ik), reduce = .false.)
+        aa(jst) = X(mf_dotp)(mesh, st%d%dim, st%X(dontusepsi)(:, :, jst, ik), st%X(dontusepsi)(:, :, ist, ik), reduce = .false.)
       end do
 
       if(mesh%parallel_in_domains .and. ist > 1) call comm_allreduce(mesh%mpi_grp%comm, aa, dim = ist - 1)
@@ -405,14 +410,14 @@ contains
       ! subtract the projections
       do jst = 1, ist - 1
         do idim = 1, st%d%dim
-          call lalg_axpy(mesh%np, -aa(jst), st%X(psi)(:, idim, jst, ik), st%X(psi)(:, idim, ist, ik))
+          call lalg_axpy(mesh%np, -aa(jst), st%X(dontusepsi)(:, idim, jst, ik), st%X(dontusepsi)(:, idim, ist, ik))
         end do
       end do
 
       ! renormalize
-      cc = TOFLOAT(X(mf_dotp)(mesh, st%d%dim, st%X(psi)(:, :, ist, ik), st%X(psi)(:, :, ist, ik)))
+      cc = TOFLOAT(X(mf_dotp)(mesh, st%d%dim, st%X(dontusepsi)(:, :, ist, ik), st%X(dontusepsi)(:, :, ist, ik)))
       do idim = 1, st%d%dim
-        call lalg_scal(mesh%np, M_ONE/sqrt(cc), st%X(psi)(:, idim, ist, ik))
+        call lalg_scal(mesh%np, M_ONE/sqrt(cc), st%X(dontusepsi)(:, idim, ist, ik))
       end do
     end do
 
@@ -445,12 +450,12 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
   PUSH_SUB(X(states_trsm))
   call profiling_in(prof, "STATES_TRSM")
 
-  if(associated(st%X(psi)) .and. .not. states_are_packed(st)) then
+  if(associated(st%X(dontusepsi)) .and. .not. states_are_packed(st)) then
 
     do idim = 1, st%d%dim
       ! multiply by the inverse of ss
       call blas_trsm('R', 'U', 'N', 'N', mesh%np, st%nst, R_TOTYPE(M_ONE), ss(1, 1), st%nst, &
-        st%X(psi)(1, idim, 1, ik), ubound(st%X(psi), dim = 1)*st%d%dim)
+        st%X(dontusepsi)(1, idim, 1, ik), ubound(st%X(dontusepsi), dim = 1)*st%d%dim)
 
     end do
 
@@ -1050,8 +1055,8 @@ subroutine X(states_matrix)(mesh, st1, st2, aa)
   PUSH_SUB(X(states_matrix))
 
   dim = st1%d%dim
-  ASSERT(associated(st1%X(psi)))
-  ASSERT(associated(st2%X(psi)))
+  ASSERT(associated(st1%X(dontusepsi)))
+  ASSERT(associated(st2%X(dontusepsi)))
 
   do ik = st1%d%kpt%start, st1%d%kpt%end
 
@@ -1063,7 +1068,7 @@ subroutine X(states_matrix)(mesh, st1, st2, aa)
     do ist = st1%st_start, st1%st_end
       do jj = 0, st1%mpi_grp%size - 1
         if(st1%mpi_grp%rank /= jj) then
-          call MPI_Isend(st2%X(psi)(1, 1, ist, ik), st1%d%dim*mesh%np, R_MPITYPE, &
+          call MPI_Isend(st2%X(dontusepsi)(1, 1, ist, ik), st1%d%dim*mesh%np, R_MPITYPE, &
             jj, ist, st1%mpi_grp%comm, request, mpi_err)
         end if
       end do
@@ -1077,10 +1082,10 @@ subroutine X(states_matrix)(mesh, st1, st2, aa)
         call MPI_Irecv(phi2(1, 1), st1%d%dim*mesh%np, R_MPITYPE, ll, jj, st1%mpi_grp%comm, request, mpi_err)
         call MPI_Wait(request, status, mpi_err)
       else
-        phi2(:, :) = st2%X(psi)(:, :, jj, ik)
+        phi2(:, :) = st2%X(dontusepsi)(:, :, jj, ik)
       end if
       do ist = st1%st_start, st1%st_end
-        aa(ist, jj, ik) = X(mf_dotp)(mesh, dim, st1%X(psi)(:, :, ist, ik), phi2(:, :))
+        aa(ist, jj, ik) = X(mf_dotp)(mesh, dim, st1%X(dontusepsi)(:, :, ist, ik), phi2(:, :))
       end do
     end do
     SAFE_DEALLOCATE_A(phi2)
@@ -1103,7 +1108,7 @@ subroutine X(states_matrix)(mesh, st1, st2, aa)
 
     do ii = st1%st_start, st1%st_end
       do jj = st2%st_start, st2%st_end
-        aa(ii, jj, ik) = X(mf_dotp)(mesh, dim, st1%X(psi)(:, :, ii, ik), st2%X(psi)(:, :, jj, ik))
+        aa(ii, jj, ik) = X(mf_dotp)(mesh, dim, st1%X(dontusepsi)(:, :, ii, ik), st2%X(dontusepsi)(:, :, jj, ik))
       end do
     end do
   end if
@@ -1253,9 +1258,9 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
   
   call profiling_in(prof, "STATES_ROTATE")
 
-  if(associated(st%X(psi)) .and. .not. states_are_packed(st)) then
+  if(associated(st%X(dontusepsi)) .and. .not. states_are_packed(st)) then
 
-    call batch_init(psib, st%d%dim, 1, st%nst, st%X(psi)(:, :, :, ik))
+    call batch_init(psib, st%d%dim, 1, st%nst, st%X(dontusepsi)(:, :, :, ik))
     call X(mesh_batch_rotate)(mesh, psib, uu)
     call batch_end(psib)
 
@@ -1391,9 +1396,9 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
 
   call profiling_in(prof, "STATES_OVERLAP")
 
-  if(associated(st%X(psi)) .and. .not. states_are_packed(st)) then
+  if(associated(st%X(dontusepsi)) .and. .not. states_are_packed(st)) then
 
-    call batch_init(psib, st%d%dim, 1, st%nst, st%X(psi)(:, :, :, ik))
+    call batch_init(psib, st%d%dim, 1, st%nst, st%X(dontusepsi)(:, :, :, ik))
 
     if(.not. present(psi2)) then
 

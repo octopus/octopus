@@ -159,7 +159,7 @@ contains
         do j = 1, phi(i)%nst
           do k = 1, phi(i)%nst
             do n = 1, gr%mesh%np
-              rho(n) = phi(i)%dpsi(n, 1, j, 1)*phi(i)%dpsi(n, 1, k, 1)
+              rho(n) = phi(i)%ddontusepsi(n, 1, j, 1)*phi(i)%ddontusepsi(n, 1, k, 1)
             end do
             ! FIXME: most poisson solves here should probably be all_nodes = .false.
             call dpoisson_solve(psolver, vh, rho)
@@ -192,8 +192,8 @@ contains
 
         call states_copy(opst, phi(j))
         do k = 1, phi(j)%nst
-          opst%dpsi(:, :, k, 1) = M_ZERO
-          call dhamiltonian_apply(hm, gr%der, phi(j)%dpsi(:, :, k, 1), opst%dpsi(:, :, k, 1), ist = k, ik = 1, &
+          opst%ddontusepsi(:, :, k, 1) = M_ZERO
+          call dhamiltonian_apply(hm, gr%der, phi(j)%ddontusepsi(:, :, k, 1), opst%ddontusepsi(:, :, k, 1), ist = k, ik = 1, &
             terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL)
         end do
         kij = dstates_mpmatrixelement(gr%mesh, phi(i), phi(j), opst)
@@ -285,7 +285,7 @@ contains
       rho = M_ZERO
       vh = M_ZERO
       do k = 1, gr%mesh%np
-        rho(k) = st1%dpsi(k, 1, 1, 1) * st2%dpsi(k, 1, 1, 1)
+        rho(k) = st1%ddontusepsi(k, 1, 1, 1) * st2%ddontusepsi(k, 1, 1, 1)
       end do
       call dpoisson_solve(psolver, vh, rho)
       st1opst2 =  dmf_integrate(gr%mesh, vh(:) * rho(:))
@@ -305,13 +305,13 @@ contains
       do k1 = 1, nst
         do l1 = 1, nst
           do i = 1, gr%mesh%np
-            rho(i) = st1%dpsi(i, 1, k1, 1)*st2%dpsi(i, 1, l1, 1)
+            rho(i) = st1%ddontusepsi(i, 1, k1, 1)*st2%ddontusepsi(i, 1, l1, 1)
           end do
           call dpoisson_solve(psolver, vh, rho)
           do k2 = 1, nst
             do l2 = 1, nst
               do i = 1, gr%mesh%np
-                rho(i) = st1%dpsi(i, 1, k2, 1)*st2%dpsi(i, 1, l2, 1)
+                rho(i) = st1%ddontusepsi(i, 1, k2, 1)*st2%ddontusepsi(i, 1, l2, 1)
               end do
               mat(k1, l1, k2, l2) = dmf_integrate(gr%mesh, vh(:)*rho(:))
             end do

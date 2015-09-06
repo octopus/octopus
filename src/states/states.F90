@@ -145,8 +145,8 @@ module states_m
 
     logical                  :: only_userdef_istates  !< only use user-defined states as initial states in propagation
     !> pointers to the wavefunctions
-    FLOAT, pointer           :: dpsi(:,:,:,:)         !< dpsi(sys%gr%mesh%np_part, st%d%dim, st%nst, st%d%nik)
-    CMPLX, pointer           :: zpsi(:,:,:,:)         !< zpsi(sys%gr%mesh%np_part, st%d%dim, st%nst, st%d%nik)
+    FLOAT, pointer           :: ddontusepsi(:,:,:,:)         !< ddontusepsi(sys%gr%mesh%np_part, st%d%dim, st%nst, st%d%nik)
+    CMPLX, pointer           :: zdontusepsi(:,:,:,:)         !< zdontusepsi(sys%gr%mesh%np_part, st%d%dim, st%nst, st%d%nik)
    
    
      
@@ -279,7 +279,7 @@ contains
     nullify(st%Imrho_core, st%Imfrozen_rho)
     nullify(st%psibL)
 
-    nullify(st%dpsi, st%zpsi)
+    nullify(st%ddontusepsi, st%zdontusepsi)
     
     nullify(st%user_def_states)
     nullify(st%rho, st%current)
@@ -547,7 +547,7 @@ contains
     call mpi_grp_init(st%mpi_grp, -1)
     st%parallel_in_states = .false.
 
-    nullify(st%dpsi, st%zpsi)
+    nullify(st%ddontusepsi, st%zdontusepsi)
 
     call distributed_nullify(st%d%kpt, st%d%nik)
 
@@ -962,7 +962,7 @@ contains
 
     PUSH_SUB(states_allocate_wfns)
 
-    if(associated(st%dpsi).or.associated(st%zpsi)) then
+    if(associated(st%ddontusepsi).or.associated(st%zdontusepsi)) then
       call messages_write('Trying to allocate wavefunctions that are already allocated.')
       call messages_fatal()
     end if
@@ -1002,10 +1002,10 @@ contains
     if(.not. st%d%pack_states) then
 
       if (states_are_real(st)) then
-        SAFE_ALLOCATE(st%dpsi(1:np_part, 1:st%d%dim, st1:st2, k1:k2))
+        SAFE_ALLOCATE(st%ddontusepsi(1:np_part, 1:st%d%dim, st1:st2, k1:k2))
       else        
         SAFE_ALLOCATE(st%psi%zR(1:np_part, 1:st%d%dim, st1:st2, k1:k2))  
-        st%zpsi => st%psi%zR
+        st%zdontusepsi => st%psi%zR
         if(st%cmplxscl%space) then 
           if (st%have_left_states) then
             SAFE_ALLOCATE(st%psi%zL(1:np_part, 1:st%d%dim, st1:st2, k1:k2))  
@@ -1099,16 +1099,18 @@ contains
           st%group%block_is_local(ib, iqn) = .true.
 
           if (states_are_real(st)) then
-            if(associated(st%dpsi)) then
-              call batch_init(st%group%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), st%dpsi(:, :, bstart(ib):bend(ib), iqn))
+            if(associated(st%ddontusepsi)) then
+              call batch_init(st%group%psib(ib, iqn), &
+                st%d%dim, bstart(ib), bend(ib), st%ddontusepsi(:, :, bstart(ib):bend(ib), iqn))
             else
               ASSERT(present(mesh))
               call batch_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
               call dbatch_allocate(st%group%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
             end if
           else
-            if(associated(st%zpsi)) then
-              call batch_init(st%group%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), st%zpsi(:, :, bstart(ib):bend(ib), iqn))
+            if(associated(st%zdontusepsi)) then
+              call batch_init(st%group%psib(ib, iqn), &
+                st%d%dim, bstart(ib), bend(ib), st%zdontusepsi(:, :, bstart(ib):bend(ib), iqn))
             else
               ASSERT(present(mesh))
               call batch_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
@@ -1230,9 +1232,9 @@ contains
     end if
 
     if (states_are_real(st)) then
-      SAFE_DEALLOCATE_P(st%dpsi)
+      SAFE_DEALLOCATE_P(st%ddontusepsi)
     else
-      nullify(st%zpsi)
+      nullify(st%zdontusepsi)
       if(associated(st%psi%zL,target=st%psi%zR )) then
         nullify(st%psi%zL)
       else          
@@ -1435,11 +1437,11 @@ contains
     end if
 
     if(.not. exclude_wfns_) then
-      call loct_pointer_copy(stout%dpsi, stin%dpsi)
+      call loct_pointer_copy(stout%ddontusepsi, stin%ddontusepsi)
 
       !cmplxscl
       call loct_pointer_copy(stout%psi%zR, stin%psi%zR)
-      stout%zpsi => stout%psi%zR
+      stout%zdontusepsi => stout%psi%zR
       if(associated(stout%subsys_st))then
         call ssys_states_get(stout%subsys_st, density)
         ASSERT(associated(density))

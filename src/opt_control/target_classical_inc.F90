@@ -211,7 +211,7 @@
     chi => opt_control_point_qs(qcchi)
     !We assume that there is no time-independent operator.
     forall(ik = 1:chi%d%nik, ist = chi%st_start:chi%st_end)
-      chi%zpsi(:, :, ist, ik) = M_z0
+      chi%zdontusepsi(:, :, ist, ik) = M_z0
     end forall
 
     nullify(tq)

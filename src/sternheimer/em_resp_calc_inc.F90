@@ -104,16 +104,16 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
 
         do idim = 1, st%d%dim
 
-          call X(derivatives_grad)(gr%der, st%X(psi)   (:, idim, ist, is), gpsi)
+          call X(derivatives_grad)(gr%der, st%X(dontusepsi)   (:, idim, ist, is), gpsi)
           call X(derivatives_grad)(gr%der, lr%X(dl_psi)(:, idim, ist, is), gdl_psi)
 
           ! sum over states to obtain the spin-density
-          rho(1:gr%mesh%np) = rho(1:gr%mesh%np) + ik_weight * abs(st%X(psi)(1:gr%mesh%np, idim, ist, is))**2
+          rho(1:gr%mesh%np) = rho(1:gr%mesh%np) + ik_weight * abs(st%X(dontusepsi)(1:gr%mesh%np, idim, ist, is))**2
 
           !the gradient of the density
           do idir = 1, gr%mesh%sb%dim
             grho(1:gr%mesh%np, idir) = grho(1:gr%mesh%np, idir) + &
-                 ik_weight * M_TWO * R_REAL(R_CONJ(st%X(psi)(1:gr%mesh%np, idim, ist, is)) * gpsi(1:gr%mesh%np, idir))
+                 ik_weight*M_TWO*R_REAL(R_CONJ(st%X(dontusepsi)(1:gr%mesh%np, idim, ist, is))*gpsi(1:gr%mesh%np, idir))
           end do
 
           !the variation of the density and its gradient
@@ -122,16 +122,16 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
 
             call X(derivatives_grad)(gr%der, lr_m%X(dl_psi)(:, idim, ist, is), gdl_psi_m)
 
-            dl_rho(1:gr%mesh%np) = dl_rho(1:gr%mesh%np) + ik_weight * ( &
-                 R_CONJ(st%X(psi)(1:gr%mesh%np, idim, ist, is)) * lr%X(dl_psi)(1:gr%mesh%np, idim, ist, is)+ & 
-                 st%X(psi)(1:gr%mesh%np, idim, ist, is) * R_CONJ(lr_m%X(dl_psi)(1:gr%mesh%np, idim, ist, is)) )
+            dl_rho(1:gr%mesh%np) = dl_rho(1:gr%mesh%np) + ik_weight*( &
+                 R_CONJ(st%X(dontusepsi)(1:gr%mesh%np, idim, ist, is))*lr%X(dl_psi)(1:gr%mesh%np, idim, ist, is) + &
+                 st%X(dontusepsi)(1:gr%mesh%np, idim, ist, is)*R_CONJ(lr_m%X(dl_psi)(1:gr%mesh%np, idim, ist, is)))
 
             do idir = 1, gr%mesh%sb%dim
 
               gdl_rho(1:gr%mesh%np, idir) = gdl_rho(1:gr%mesh%np, idir) + ik_weight * ( &
-                   R_CONJ(st%X(psi)(1:gr%mesh%np, idim, ist, is)) * gdl_psi(1:gr%mesh%np, idir) +      &
+                   R_CONJ(st%X(dontusepsi)(1:gr%mesh%np, idim, ist, is)) * gdl_psi(1:gr%mesh%np, idir) +      &
                    R_CONJ(gpsi(1:gr%mesh%np, idir))* lr%X(dl_psi)(1:gr%mesh%np, idim, ist, is)  +      &
-                   st%X(psi)(1:gr%mesh%np, idim, ist, is) * R_CONJ(gdl_psi_m(1:gr%mesh%np, idir)) +      &
+                   st%X(dontusepsi)(1:gr%mesh%np, idim, ist, is) * R_CONJ(gdl_psi_m(1:gr%mesh%np, idir)) +      &
                    gpsi(1:gr%mesh%np, idir) * R_CONJ(lr_m%X(dl_psi)(1:gr%mesh%np, idim, ist, is))  )
 
             end do
@@ -139,12 +139,12 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
           else
             
             dl_rho(1:gr%mesh%np) = dl_rho(1:gr%mesh%np) + ik_weight*M_TWO* &
-                 R_REAL(R_CONJ(st%X(psi)(1:gr%mesh%np, idim, ist, is))*lr%X(dl_psi)(1:gr%mesh%np, idim, ist, is))
+                 R_REAL(R_CONJ(st%X(dontusepsi)(1:gr%mesh%np, idim, ist, is))*lr%X(dl_psi)(1:gr%mesh%np, idim, ist, is))
 
             do idir = 1, gr%mesh%sb%dim
-              gdl_rho(1:gr%mesh%np, idir) = gdl_rho(1:gr%mesh%np, idir) + ik_weight * M_TWO * ( &
-                   R_CONJ(st%X(psi)(1:gr%mesh%np, idim, ist, is)) * gdl_psi(1:gr%mesh%np, idir) + &
-                   gpsi(1:gr%mesh%np, idir)*R_CONJ(lr%X(dl_psi)(1:gr%mesh%np, idim, ist, is))  )
+              gdl_rho(1:gr%mesh%np, idir) = gdl_rho(1:gr%mesh%np, idir) + ik_weight*M_TWO*(&
+                   R_CONJ(st%X(dontusepsi)(1:gr%mesh%np, idim, ist, is))*gdl_psi(1:gr%mesh%np, idir) + &
+                   gpsi(1:gr%mesh%np, idir)*R_CONJ(lr%X(dl_psi)(1:gr%mesh%np, idim, ist, is)))
             end do
 
           end if
@@ -162,7 +162,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
         ik_weight = st%d%kweights(ik) * st%occ(ist, ik) / spin_factor
         do idim = 1, st%d%dim
 
-          call X(derivatives_grad)(gr%der, st%X(psi)   (:, idim, ist, is), gpsi)
+          call X(derivatives_grad)(gr%der, st%X(dontusepsi)   (:, idim, ist, is), gpsi)
           call X(derivatives_grad)(gr%der, lr%X(dl_psi)(:, idim, ist, is), gdl_psi)
 
           if(present(lr_m)) then 
@@ -351,14 +351,14 @@ subroutine X(calc_polarizability_finite)(sys, hm, lr, nsigma, perturbation, zpol
     do dir2 = 1, sys%gr%sb%dim
       call pert_setup_dir(perturbation, dir1)
       zpol(dir1, dir2) = -X(pert_expectation_value)(perturbation, sys%gr, sys%geo, hm, &
-        sys%st, sys%st%X(psi), lr(dir2, 1)%X(dl_psi))
+        sys%st, sys%st%X(dontusepsi), lr(dir2, 1)%X(dl_psi))
 
       if(nsigma == 1) then
         zpol(dir1, dir2) = zpol(dir1, dir2) + R_CONJ(zpol(dir1, dir2))
       else
         zpol(dir1, dir2) = zpol(dir1, dir2) &
           - X(pert_expectation_value)(perturbation, sys%gr, sys%geo, hm, &
-          sys%st, lr(dir2, 2)%X(dl_psi), sys%st%X(psi))
+          sys%st, lr(dir2, 2)%X(dl_psi), sys%st%X(dontusepsi))
       end if
     end do
   end do
@@ -390,20 +390,20 @@ subroutine X(lr_calc_susceptibility)(sys, hm, lr, nsigma, perturbation, chi_para
 
       call pert_setup_dir(perturbation, dir1, dir2)
 
-      trace = X(pert_expectation_value)(perturbation, sys%gr, sys%geo, hm, sys%st, sys%st%X(psi), lr(dir2, 1)%X(dl_psi))
+      trace = X(pert_expectation_value)(perturbation, sys%gr, sys%geo, hm, sys%st, sys%st%X(dontusepsi), lr(dir2, 1)%X(dl_psi))
       
       if (nsigma == 1) then 
         trace = trace + R_CONJ(trace)
       else
         trace = trace + &
-          X(pert_expectation_value)(perturbation, sys%gr, sys%geo, hm, sys%st, lr(dir2, 2)%X(dl_psi), sys%st%X(psi))
+          X(pert_expectation_value)(perturbation, sys%gr, sys%geo, hm, sys%st, lr(dir2, 2)%X(dl_psi), sys%st%X(dontusepsi))
       end if
      
       ! first the paramagnetic term 
       chi_para(dir1, dir2) = chi_para(dir1, dir2) + trace
 
-      chi_dia(dir1, dir2) = chi_dia(dir1, dir2) + &
-        X(pert_expectation_value)(perturbation, sys%gr, sys%geo, hm, sys%st, sys%st%X(psi), sys%st%X(psi), pert_order=2)
+      chi_dia(dir1, dir2) = chi_dia(dir1, dir2) + X(pert_expectation_value)(perturbation, &
+        sys%gr, sys%geo, hm, sys%st, sys%st%X(dontusepsi), sys%st%X(dontusepsi), pert_order=2)
 
     end do
   end do
@@ -660,15 +660,15 @@ contains
                   forall (idim = 1:st%d%dim, ip = 1:np) ppsi(ip, idim) = kdotp_lr(ii)%X(dl_psi)(ip, idim, ist, ik)
                 end if
               else
-                call X(pert_apply)(dipole, sys%gr, sys%geo, hm, ik, st%X(psi)(:, :, ist, ik), ppsi)
+                call X(pert_apply)(dipole, sys%gr, sys%geo, hm, ik, st%X(dontusepsi)(:, :, ist, ik), ppsi)
               end if
 
               isigma = 1
               forall (idim = 1:st%d%dim, ip = 1:np)
-                ppsi(ip, idim) = ppsi(ip, idim) + hvar(ip, ispin, isigma, idim, ii, ifreq)*st%X(psi)(ip, idim, ist, ik)
+                ppsi(ip, idim) = ppsi(ip, idim) + hvar(ip, ispin, isigma, idim, ii, ifreq)*st%X(dontusepsi)(ip, idim, ist, ik)
               end forall
 
-              me010(ist2, ist, ii, ifreq, ik) = X(mf_dotp)(mesh, st%d%dim, st%X(psi)(:, :, ist2, ik), ppsi)
+              me010(ist2, ist, ii, ifreq, ik) = X(mf_dotp)(mesh, st%d%dim, st%X(dontusepsi)(:, :, ist2, ik), ppsi)
 
               if (present(kdotp_lr) .and. ii <= sys%gr%sb%periodic_dim .and. ist == ist2) then
                 me010(ist, ist, ii, ifreq, ik) = me010(ist, ist, ii, ifreq, ik) + dl_eig(ist, ik, ii)
@@ -975,24 +975,24 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, lr_e, &
           do ist = 1, sys%st%nst
             if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
             
-              call X(pert_apply)(pert_e1, sys%gr, sys%geo, hm, ik, sys%st%X(psi)(:,:,ist,ik), pertpsi_e1(:,:))
-              call X(pert_apply)(pert_e2, sys%gr, sys%geo, hm, ik, sys%st%X(psi)(:,:,ist,ik), pertpsi_e2(:,:))
-              call X(pert_apply)(pert_m, sys%gr, sys%geo, hm, ik, sys%st%X(psi)(:,:,ist,ik), pertpsi_b(:,:))
+              call X(pert_apply)(pert_e1, sys%gr, sys%geo, hm, ik, sys%st%X(dontusepsi)(:,:,ist,ik), pertpsi_e1(:,:))
+              call X(pert_apply)(pert_e2, sys%gr, sys%geo, hm, ik, sys%st%X(dontusepsi)(:,:,ist,ik), pertpsi_e2(:,:))
+              call X(pert_apply)(pert_m, sys%gr, sys%geo, hm, ik, sys%st%X(dontusepsi)(:,:,ist,ik), pertpsi_b(:,:))
               do idim = 1, hm%d%dim
                 do ip = 1, sys%gr%mesh%np
-                  pertpsi_e1(ip,idim) = pertpsi_e1(ip,idim) + hvar_e1(dir1,ip,ispin,1) * sys%st%X(psi)(ip,idim,ist,ik)
-                  pertpsi_e2(ip,idim) = pertpsi_e2(ip,idim) + hvar_e2(dir2,ip,ispin,nsigma) * sys%st%X(psi)(ip,idim,ist,ik)
-                  pertpsi_b(ip,idim) = pertpsi_b(ip,idim) + hvar_b(dir3,ip,ispin,1) * sys%st%X(psi)(ip,idim,ist,ik)
+                  pertpsi_e1(ip,idim) = pertpsi_e1(ip,idim) + hvar_e1(dir1,ip,ispin,1)*sys%st%X(dontusepsi)(ip,idim,ist,ik)
+                  pertpsi_e2(ip,idim) = pertpsi_e2(ip,idim) + hvar_e2(dir2,ip,ispin,nsigma)*sys%st%X(dontusepsi)(ip,idim,ist,ik)
+                  pertpsi_b(ip,idim) = pertpsi_b(ip,idim) + hvar_b(dir3,ip,ispin,1)*sys%st%X(dontusepsi)(ip,idim,ist,ik)
                 end do
               end do
               do ist_occ = 1, sys%st%nst
                 if(abs(sys%st%occ(ist_occ, ik)) .gt. M_EPSILON) then
                   chi(dir1, dir2, dir3) = chi(dir1, dir2, dir3) - weight * (&
-                    X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, sys%st%X(psi)(:,:,ist_occ,ik), pertpsi_e1(:,:))&
+                    X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, sys%st%X(dontusepsi)(:,:,ist_occ,ik), pertpsi_e1(:,:))&
                     *(prod_eb2%X(matrix)(ist,ist_occ) + prod_be2%X(matrix)(ist,ist_occ))&
-                    + X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, sys%st%X(psi)(:,:,ist_occ,ik), pertpsi_e2(:,:))&
+                    + X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, sys%st%X(dontusepsi)(:,:,ist_occ,ik), pertpsi_e2(:,:))&
                     *(prod_eb1%X(matrix)(ist,ist_occ) + prod_be1%X(matrix)(ist,ist_occ))&
-                    + X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, sys%st%X(psi)(:,:,ist_occ,ik), pertpsi_b(:,:))&
+                    + X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, sys%st%X(dontusepsi)(:,:,ist_occ,ik), pertpsi_b(:,:))&
                     *(prod_ee1%X(matrix)(ist,ist_occ) + prod_ee2%X(matrix)(ist,ist_occ)))
                 end if
               end do
@@ -1127,7 +1127,7 @@ subroutine X(lr_calc_magneto_optics_periodic)(sys, hm, nsigma, &
       do ist = 1, sys%st%nst
         if (abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
           call X(pert_apply)(pert_kdotp, sys%gr, sys%geo, hm, ik,&
-            sys%st%X(psi)(:,:,ist,ik), gpsi(:,:,ist))
+            sys%st%X(dontusepsi)(:,:,ist,ik), gpsi(:,:,ist))
           do idir2 = 1, ndir
             call X(pert_apply)(pert_kdotp, sys%gr, sys%geo, hm, ik,&
               lr_k(idir2)%X(dl_psi)(:,:,ist,ik), gdl_k(idir2,:,:))
@@ -1154,8 +1154,8 @@ subroutine X(lr_calc_magneto_optics_periodic)(sys, hm, nsigma, &
               do idim = 1, ndim 
                 zpol(idir1,idir2,idir3) = zpol(idir1,idir2,idir3) + weight * M_HALF / P_C *&
                   (X(mf_dotp)(sys%gr%mesh, lr_be(idir3,idir2,nsigma)%X(dl_psi)(:,idim,ist,ik), factor0 * gpsi(:,idim,ist))&
-                  + X(mf_dotp)(sys%gr%mesh, factor * gdl_be(:,idim,nsigma), sys%st%X(psi)(:,idim,ist,ik))&
-                  + X(mf_dotp)(sys%gr%mesh, sys%st%X(psi)(:,idim,ist,ik), factor * gdl_be(:,idim,1)) &
+                  + X(mf_dotp)(sys%gr%mesh, factor * gdl_be(:,idim,nsigma), sys%st%X(dontusepsi)(:,idim,ist,ik))&
+                  + X(mf_dotp)(sys%gr%mesh, sys%st%X(dontusepsi)(:,idim,ist,ik), factor * gdl_be(:,idim,1)) &
                   + X(mf_dotp)(sys%gr%mesh, factor0 * gpsi(:,idim,ist), lr_be(idir3,idir2,1)%X(dl_psi)(:,idim,ist,ik)))
                 
                 zpol(idir1,idir2,idir3) = zpol(idir1,idir2,idir3) + weight * M_HALF / P_C * factor_e * &
@@ -1187,7 +1187,7 @@ subroutine X(lr_calc_magneto_optics_periodic)(sys, hm, nsigma, &
         end if
       end do
       call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
-        sys%st%X(psi)(:,:,:,ik),factor*gpsi(:,:,:),mat_g%X(matrix))
+        sys%st%X(dontusepsi)(:,:,:,ik),factor*gpsi(:,:,:),mat_g%X(matrix))
 
       do idir2 = 1, ndir
         do idir3 = 1, ndir
@@ -1733,7 +1733,7 @@ subroutine X(inhomog_per_component)(sys, hm, idir, &
     do ist = 1, sys%st%nst
       if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
         call X(pert_apply)(pert_kdotp, sys%gr, sys%geo, hm, ik, &  
-          sys%st%X(psi)(:,:,ist,ik),f_out) 
+          sys%st%X(dontusepsi)(:,:,ist,ik),f_out) 
         do idim = 1, hm%d%dim
           do ip = 1, sys%gr%mesh%np
             vel(ip,idim,ist) = factor * f_out(ip,idim)
@@ -1743,7 +1743,7 @@ subroutine X(inhomog_per_component)(sys, hm, idir, &
     end do  
     
     call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
-      sys%st%X(psi)(:,:,:,ik), vel(:,:,:), vel_mat%X(matrix))
+      sys%st%X(dontusepsi)(:,:,:,ik), vel(:,:,:), vel_mat%X(matrix))
 
     do ist = 1, sys%st%nst
       if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
@@ -1825,7 +1825,7 @@ subroutine X(inhomog_per_component_2nd_order)(sys, hm, idir, &
     do ist = 1, sys%st%nst
       if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
         call X(pert_apply)(pert_kdotp, sys%gr, sys%geo, hm, ik, &  
-          sys%st%X(psi)(:,:,ist,ik),f_out)
+          sys%st%X(dontusepsi)(:,:,ist,ik),f_out)
         do idim = 1, hm%d%dim
           do ip = 1, sys%gr%mesh%np
             vel(ip,idim,ist) = factor * f_out(ip,idim)
@@ -2001,7 +2001,7 @@ contains
           if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
             do idim = 1, hm%d%dim
               do ip = 1, sys%gr%mesh%np
-                psi(ip, idim, ist) = factor_e * hvar(ip, ispin, isigma) * sys%st%X(psi)(ip,idim,ist,ik)
+                psi(ip, idim, ist) = factor_e * hvar(ip, ispin, isigma) * sys%st%X(dontusepsi)(ip,idim,ist,ik)
               end do
             end do
            end if
@@ -2020,7 +2020,7 @@ contains
                 do idim = 1, hm%d%dim
                   do ip = 1, sys%gr%mesh%np
                     psi_out(ip,idim,ist,ik,isigma) = psi_out(ip,idim,ist,ik,isigma)+ factor_tot * factor0 * (&
-                      prod_mat%X(matrix)(ist1,ist) * factor_e * hvar(ip,ispin,isigma) * sys%st%X(psi)(ip,idim,ist1,ik) - &
+                      prod_mat%X(matrix)(ist1,ist) * factor_e * hvar(ip,ispin,isigma) * sys%st%X(dontusepsi)(ip,idim,ist1,ik) - &
                       prod_mat2%X(matrix)(ist1,ist) * factor_k * tlr_k2%X(dl_psi)(ip,idim,ist1,ik))
                   end do
                 end do
@@ -2220,7 +2220,7 @@ contains
             do ip = 1, sys%gr%mesh%np
               do isigma = 1, nsigma
                 psi_out(ip,idim,ist,ik,isigma) = psi_out(ip,idim,ist,ik,isigma) &
-                  - M_HALF * factor * kvar(ip,ispin,isigma) * sys%st%X(psi)(ip,idim,ist,ik)
+                  - M_HALF * factor * kvar(ip,ispin,isigma) * sys%st%X(dontusepsi)(ip,idim,ist,ik)
               end do
             end do
           end do
@@ -2303,7 +2303,7 @@ subroutine X(inhomog_K2)(sh, sys, hm, idir1, idir2, &
     do ist = 1, sys%st%nst
       if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then 
         call X(pert_apply_order_2)(pert_kdotp2, sys%gr, sys%geo, hm, ik, &  
-          sys%st%X(psi)(:,:,ist,ik), f_out)
+          sys%st%X(dontusepsi)(:,:,ist,ik), f_out)
         if(idir1 == idir2) f_out(:,:) = M_HALF * f_out(:,:)
         do idim = 1, hm%d%dim
           do ip = 1, sys%gr%mesh%np	
@@ -2397,20 +2397,20 @@ subroutine X(inhomog_KB)(sh, sys, hm, idir, idir1, idir2, &
 
         call pert_setup_dir(pert_kdotp2, idir, idir1)
         call X(pert_apply_order_2)(pert_kdotp2, sys%gr, sys%geo, hm, ik, &  
-          sys%st%X(psi)(:,:,ist,ik), f_out1(:,:,ist))
+          sys%st%X(dontusepsi)(:,:,ist,ik), f_out1(:,:,ist))
         if(idir .ne. idir1) f_out1(:,:,ist) = M_TWO*f_out1(:,:,ist)  
         call pert_setup_dir(pert_kdotp2, idir, idir2)
         call X(pert_apply_order_2)(pert_kdotp2, sys%gr, sys%geo, hm, ik, &  
-          sys%st%X(psi)(:,:,ist,ik), f_out2(:,:,ist))
+          sys%st%X(dontusepsi)(:,:,ist,ik), f_out2(:,:,ist))
         if(idir .ne. idir2) f_out2(:,:,ist) = M_TWO * f_out2(:,:,ist)
       end if
     end do
     
     call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
-      sys%st%X(psi)(:,:,:,ik), f_out1(:,:,:), vel_mat1%X(matrix))
+      sys%st%X(dontusepsi)(:,:,:,ik), f_out1(:,:,:), vel_mat1%X(matrix))
 
     call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
-      sys%st%X(psi)(:,:,:,ik), f_out2(:,:,:), vel_mat2%X(matrix))
+      sys%st%X(dontusepsi)(:,:,:,ik), f_out2(:,:,:), vel_mat2%X(matrix))
 
     do ist = 1, sys%st%nst
       if(abs(sys%st%occ(ist,ik)) .gt. M_EPSILON) then
@@ -2627,8 +2627,8 @@ subroutine X(calc_rho)(sh, sys, hm, factor, factor_sum, factor_e, &
             do idim = 1, hm%d%dim
               do ip = 1, sys%gr%mesh%np
                 lr0%X(dl_rho)(ip, ispin) = lr0%X(dl_rho)(ip, ispin) - factor * factor_sum * weight * &
-                  mat%X(matrix)(ist,ist_occ) * sys%st%X(psi)(ip,idim,ist,ik) * &
-                  R_CONJ(sys%st%X(psi)(ip,idim,ist_occ,ik))
+                  mat%X(matrix)(ist,ist_occ) * sys%st%X(dontusepsi)(ip,idim,ist,ik) * &
+                  R_CONJ(sys%st%X(dontusepsi)(ip,idim,ist_occ,ik))
               end do
             end do
           end if
@@ -2670,7 +2670,7 @@ subroutine X(calc_hvar_psi)(sh, sys, hm, nsigma, lr, psi_out)
           do idim = 1, hm%d%dim
             do ip = 1, sys%gr%mesh%np
               psi_out(ip, idim, ist, ik, isigma) = psi_out(ip, idim, ist, ik, isigma) &
-                - hvar(ip, ispin, isigma) * sys%st%X(psi)(ip,idim,ist,ik)
+                - hvar(ip, ispin, isigma) * sys%st%X(dontusepsi)(ip,idim,ist,ik)
             end do
           end do
         end do
@@ -2718,14 +2718,14 @@ subroutine X(calc_hvar_lr)(sh, sys, hm, nsigma1, nsigma2, lr1, lr2, &
               do ip = 1, sys%gr%mesh%np
                 psi_out(ip, idim, ist, ik, isigma) = psi_out(ip, idim, ist, ik, isigma) &
                   - factor1 * hvar(ip, ispin, isigma) * factor2 * lr2(1)%X(dl_psi)(ip,idim,ist,ik)
-                psi(ip, idim, ist) = factor1 * hvar(ip, ispin, isigma) * sys%st%X(psi)(ip,idim,ist,ik)
+                psi(ip, idim, ist) = factor1 * hvar(ip, ispin, isigma) * sys%st%X(dontusepsi)(ip,idim,ist,ik)
               end do
             end do
           end if
         end do
 
         call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
-          sys%st%X(psi)(:,:,:,ik), psi(:,:,:), mat%X(matrix))
+          sys%st%X(dontusepsi)(:,:,:,ik), psi(:,:,:), mat%X(matrix))
         
         do ist  = 1, sys%st%nst
           if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
@@ -2734,7 +2734,7 @@ subroutine X(calc_hvar_lr)(sh, sys, hm, nsigma1, nsigma2, lr1, lr2, &
                 do idim = 1, hm%d%dim
                   do ip = 1, sys%gr%mesh%np
                     psi_out(ip,idim,ist,ik,isigma) = psi_out(ip,idim,ist,ik,isigma) + &
-                      mat%X(matrix)(ist1,ist) * factor2 * lr2(1)%X(dl_psi)(ip,idim,ist1,ik)
+                      mat%X(matrix)(ist1,ist)*factor2*lr2(1)%X(dl_psi)(ip,idim,ist1,ik)
                   end do
                 end do
               end if 
@@ -2749,15 +2749,15 @@ subroutine X(calc_hvar_lr)(sh, sys, hm, nsigma1, nsigma2, lr1, lr2, &
             do idim = 1, hm%d%dim
               do ip = 1, sys%gr%mesh%np
                 psi_out(ip, idim, ist, ik, isigma) = psi_out(ip, idim, ist, ik, isigma) &
-                  - factor1 * hvar(ip, ispin, 1) * factor2 * lr2(isigma)%X(dl_psi)(ip,idim,ist,ik)
-                psi(ip, idim, ist) = factor1 * hvar(ip, ispin, 1) * sys%st%X(psi)(ip,idim,ist,ik)
+                  - factor1*hvar(ip, ispin, 1)*factor2*lr2(isigma)%X(dl_psi)(ip,idim,ist,ik)
+                psi(ip, idim, ist) = factor1*hvar(ip, ispin, 1)*sys%st%X(dontusepsi)(ip,idim,ist,ik)
               end do
             end do
           end if
         end do
 
         call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
-          sys%st%X(psi)(:,:,:,ik), psi(:,:,:), mat%X(matrix))
+          sys%st%X(dontusepsi)(:,:,:,ik), psi(:,:,:), mat%X(matrix))
 
         do ist  = 1, sys%st%nst
           if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then

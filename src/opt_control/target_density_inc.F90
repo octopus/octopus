@@ -403,7 +403,7 @@
 
     no_electrons = -nint(psi_in%val_charge)
 
-    chi_out%zpsi = M_ZERO
+    chi_out%zdontusepsi = M_ZERO
 
     if( tg%density_weight > M_ZERO ) then
 
@@ -413,18 +413,18 @@
 
       if(no_electrons  ==  1) then
         do ip = 1, gr%mesh%np
-          chi_out%zpsi(ip, 1, 1, 1) = sqrt(tg%rho(ip)) * &
-            exp(M_zI * atan2(aimag(psi_in%zpsi(ip, 1, 1, 1)), &
-                              real(psi_in%zpsi(ip, 1, 1, 1) )) )
+          chi_out%zdontusepsi(ip, 1, 1, 1) = sqrt(tg%rho(ip)) * &
+            exp(M_zI * atan2(aimag(psi_in%zdontusepsi(ip, 1, 1, 1)), &
+                              real(psi_in%zdontusepsi(ip, 1, 1, 1) )) )
         end do
       else
         do ist = psi_in%st_start, psi_in%st_end
           do ip = 1, gr%mesh%np
             if(psi_in%rho(ip, 1) > CNST(1.0e-8)) then
-              chi_out%zpsi(ip, 1, ist, 1) = psi_in%occ(ist, 1) * sqrt(tg%rho(ip) / psi_in%rho(ip, 1)) * &
-                psi_in%zpsi(ip, 1, ist, 1)
+              chi_out%zdontusepsi(ip, 1, ist, 1) = psi_in%occ(ist, 1) * sqrt(tg%rho(ip) / psi_in%rho(ip, 1)) * &
+                psi_in%zdontusepsi(ip, 1, ist, 1)
             else
-              chi_out%zpsi(ip, 1, ist, 1) = M_ZERO !sqrt(tg%rho(ip))
+              chi_out%zdontusepsi(ip, 1, ist, 1) = M_ZERO !sqrt(tg%rho(ip))
             end if
           end do
         end do
@@ -442,7 +442,7 @@
 
     if(tg%curr_functional /= oct_no_curr) then
       if (target_mode(tg)  ==  oct_targetmode_static ) then
-        chi_out%zpsi = chi_out%zpsi + chi_current(tg, gr, psi_in)
+        chi_out%zdontusepsi = chi_out%zdontusepsi + chi_current(tg, gr, psi_in)
       end if
     end if 
 
@@ -538,7 +538,7 @@
     type(target_t),    intent(in)    :: tg
     type(grid_t),      intent(in)    :: gr
     type(states_t),    intent(inout) :: psi_in
-    CMPLX                            :: chi( size(psi_in%zpsi,1), 1, size(psi_in%zpsi,3), 1)
+    CMPLX                            :: chi( size(psi_in%zdontusepsi,1), 1, size(psi_in%zdontusepsi,3), 1)
         
     CMPLX, allocatable :: grad_psi_in(:,:,:)
     FLOAT, allocatable :: div_curr_psi_in(:,:)   
@@ -575,13 +575,13 @@
       
       ! the boundary condition  
       do ist = psi_in%st_start, psi_in%st_end
-        call zderivatives_grad(gr%der, psi_in%zpsi(1:gr%der%mesh%np_part,1, ist, 1), & 
+        call zderivatives_grad(gr%der, psi_in%zdontusepsi(1:gr%der%mesh%np_part,1, ist, 1), & 
                                grad_psi_in(1:gr%der%mesh%np_part, 1:gr%der%mesh%sb%dim,1))
             
         do ip = 1, gr%mesh%np 
           chi(ip, 1, ist, 1) =  -M_zI * tg%curr_weight  * &
                ( M_TWO * sum(psi_in%current(ip, 1:gr%sb%dim, 1) * grad_psi_in(ip, 1:gr%sb%dim, 1))+ &
-               div_curr_psi_in(ip,1) * psi_in%zpsi(ip, 1, ist, 1) )
+               div_curr_psi_in(ip,1) * psi_in%zdontusepsi(ip, 1, ist, 1) )
         end do
       end do
       SAFE_DEALLOCATE_A(div_curr_psi_in)
@@ -591,7 +591,7 @@
       if( is_spatial_curr_wgt(tg) ) then
 
         do ist = psi_in%st_start, psi_in%st_end
-          call zderivatives_grad(gr%der, psi_in%zpsi(:,1, ist, 1), grad_psi_in(:,:,1))
+          call zderivatives_grad(gr%der, psi_in%zdontusepsi(:,1, ist, 1), grad_psi_in(:,:,1))
           do ip = 1, gr%mesh%np 
             chi(ip, 1, ist, 1) =  M_zI * tg%curr_weight * tg%spatial_curr_wgt(ip) * &
                  ( grad_psi_in(ip, 1, 1)  * gr%mesh%x(ip,2) - &
@@ -602,7 +602,7 @@
       else
 
         do ist = psi_in%st_start, psi_in%st_end
-          call zderivatives_grad(gr%der, psi_in%zpsi(:,1, ist, 1), grad_psi_in(:,:,1))
+          call zderivatives_grad(gr%der, psi_in%zdontusepsi(:,1, ist, 1), grad_psi_in(:,:,1))
           do ip = 1, gr%mesh%np 
             chi(ip, 1, ist, 1) =  M_zI * tg%curr_weight * &
                  ( grad_psi_in(ip, 1, 1)  * gr%mesh%x(ip,2) - &

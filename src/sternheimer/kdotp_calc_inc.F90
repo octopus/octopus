@@ -63,7 +63,7 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, degen_t
       do idir1 = 1, pdim
         call pert_setup_dir(perturbation, idir1)
         call X(pert_apply)(perturbation, sys%gr, sys%geo, hm, ik, &
-          sys%st%X(psi)(:, :, ist, ik), pertpsi(:, :, idir1))
+          sys%st%X(dontusepsi)(:, :, ist, ik), pertpsi(:, :, idir1))
       end do
 
       do idir2 = 1, pdim
@@ -81,8 +81,8 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, degen_t
           do ist2 = 1, sys%st%nst
 !              alternate direct method
 !              if (abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres) then
-!                   proj_dl_psi(1:mesh%np) = proj_dl_psi(1:mesh%np) - sys%st%X(psi)(1:mesh%np, 1, ist2, ik) * &
-!                     X(mf_dotp)(m, sys%st%X(psi)(1:mesh%np, 1, ist2, ik), proj_dl_psi(1:mesh%np))
+!                   proj_dl_psi(1:mesh%np) = proj_dl_psi(1:mesh%np) - sys%st%X(dontusepsi)(1:mesh%np, 1, ist2, ik) * &
+!                     X(mf_dotp)(m, sys%st%X(dontusepsi)(1:mesh%np, 1, ist2, ik), proj_dl_psi(1:mesh%np))
             orth_mask(ist2) = .not. (abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres)
             ! mask == .false. means do projection; .true. means do not
           end do
@@ -97,9 +97,9 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, degen_t
 
           call pert_setup_dir(perturbation, idir1, idir2)
           call X(pert_apply_order_2)(perturbation, sys%gr, sys%geo, hm, ik, &
-            sys%st%X(psi)(1:mesh%np, 1:hm%d%dim, ist, ik), pertpsi2(1:mesh%np, 1:hm%d%dim))
+            sys%st%X(dontusepsi)(1:mesh%np, 1:hm%d%dim, ist, ik), pertpsi2(1:mesh%np, 1:hm%d%dim))
           eff_mass_inv(idir1, idir2, ist, ik) = eff_mass_inv(idir1, idir2, ist, ik) - &
-            R_REAL(X(mf_dotp)(mesh, hm%d%dim, sys%st%X(psi)(1:mesh%np, 1:hm%d%dim, ist, ik), pertpsi2(1:mesh%np, 1:hm%d%dim)))
+            R_REAL(X(mf_dotp)(mesh, hm%d%dim, sys%st%X(dontusepsi)(:, :, ist, ik), pertpsi2))
 
         end do !idir2
       end do !idir1
@@ -155,7 +155,7 @@ subroutine X(kdotp_add_occ)(sys, hm, pert, kdotp_lr, degen_thres)
     do ist = 1, sys%st%nst
 
       call X(pert_apply)(pert, sys%gr, sys%geo, hm, ik, &
-        sys%st%X(psi)(:, :, ist, ik), pertpsi(:, :))
+        sys%st%X(dontusepsi)(:, :, ist, ik), pertpsi(:, :))
 
       do ist2 = ist + 1, sys%st%nst
         ! avoid dividing by zero below; these contributions are arbitrary anyway
@@ -164,14 +164,14 @@ subroutine X(kdotp_add_occ)(sys, hm, pert, kdotp_lr, degen_thres)
         ! the unoccupied subspace was handled by the Sternheimer equation
         if(sys%st%occ(ist2, ik) < M_HALF) cycle
         
-        mtxel = X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, sys%st%X(psi)(:, :, ist2, ik), pertpsi(:, :))
+        mtxel = X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, sys%st%X(dontusepsi)(:, :, ist2, ik), pertpsi(:, :))
 
         kdotp_lr%X(dl_psi)(:, :, ist, ik) = kdotp_lr%X(dl_psi)(:, :, ist, ik) + &
-          sys%st%X(psi)(:, :, ist2, ik) * mtxel / (sys%st%eigenval(ist, ik) - sys%st%eigenval(ist2, ik))
+          sys%st%X(dontusepsi)(:, :, ist2, ik) * mtxel / (sys%st%eigenval(ist, ik) - sys%st%eigenval(ist2, ik))
 
         ! note: there is a minus sign here, because the perturbation is an anti-Hermitian operator
         kdotp_lr%X(dl_psi)(:, :, ist2, ik) = kdotp_lr%X(dl_psi)(:, :, ist2, ik) + &
-          sys%st%X(psi)(:, :, ist, ik) * R_CONJ(-mtxel) / (sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik))
+          sys%st%X(dontusepsi)(:, :, ist, ik) * R_CONJ(-mtxel) / (sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik))
 
       end do
     end do
@@ -202,11 +202,11 @@ subroutine X(kdotp_add_diagonal)(sys, hm, em_pert, kdotp_lr)
     call pert_setup_dir(em_pert, idir)
     do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
       do ist = 1, sys%st%nst
-        call X(pert_apply)(em_pert, sys%gr, sys%geo, hm, ik, sys%st%X(psi)(:, :, ist, ik), ppsi)
-        expectation = X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, sys%st%X(psi)(:, :, ist, ik), ppsi)
+        call X(pert_apply)(em_pert, sys%gr, sys%geo, hm, ik, sys%st%X(dontusepsi)(:, :, ist, ik), ppsi)
+        expectation = X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, sys%st%X(dontusepsi)(:, :, ist, ik), ppsi)
         kdotp_lr(idir)%X(dl_psi)(1:sys%gr%mesh%np, 1:sys%st%d%dim, ist, ik) = &
           kdotp_lr(idir)%X(dl_psi)(1:sys%gr%mesh%np, 1:sys%st%d%dim, ist, ik) + &
-          expectation * sys%st%X(psi)(1:sys%gr%mesh%np, 1:sys%st%d%dim, ist, ik)
+          expectation*sys%st%X(dontusepsi)(1:sys%gr%mesh%np, 1:sys%st%d%dim, ist, ik)
       end do
     end do
   end do

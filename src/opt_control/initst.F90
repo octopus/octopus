@@ -195,11 +195,11 @@ contains
                   call parse_expression(psi_re, psi_im, &
                     sys%gr%sb%dim, xx, rr, M_ZERO, psi%user_def_states(id, is, ik))
                   ! fill state
-                  psi%zpsi(ip, id, is, ik) = psi_re + M_zI * psi_im
+                  psi%zdontusepsi(ip, id, is, ik) = psi_re + M_zI * psi_im
                 end do
                 ! normalize orbital
                 call zstates_normalize_orbital(sys%gr%mesh, psi%d%dim, &
-                  psi%zpsi(:,:, is, ik))
+                  psi%zdontusepsi(:,:, is, ik))
               end do
             end do
           end do

@@ -255,17 +255,17 @@ contains
     ! root process holds all states NOTE: this is not great... clearly ... but will go away when SCDM procedure is parallel
     if (.not.states_are_real(st)) then
       if (scdm%root) then
-        SAFE_ALLOCATE(scdm%st%zpsi(1:der%mesh%np_global,1:scdm%st%d%dim,1:scdm%st%nst,1:scdm%st%d%nik))
+        SAFE_ALLOCATE(scdm%st%zdontusepsi(1:der%mesh%np_global,1:scdm%st%d%dim,1:scdm%st%nst,1:scdm%st%d%nik))
       else
-        SAFE_ALLOCATE(scdm%st%zpsi(1:der%mesh%np_global,1:scdm%st%d%dim,1:scdm%lnst,1:scdm%st%d%nik))
+        SAFE_ALLOCATE(scdm%st%zdontusepsi(1:der%mesh%np_global,1:scdm%st%d%dim,1:scdm%lnst,1:scdm%st%d%nik))
       end if
       ! localized SCDM states 
       SAFE_ALLOCATE(scdm%zpsi(1:scdm%full_box,1:scdm%lnst))
     else ! real
       if (scdm%root) then
-        SAFE_ALLOCATE(scdm%st%dpsi(1:der%mesh%np_global, 1:scdm%st%d%dim, 1:scdm%st%nst, 1:scdm%st%d%nik))
+        SAFE_ALLOCATE(scdm%st%ddontusepsi(1:der%mesh%np_global, 1:scdm%st%d%dim, 1:scdm%st%nst, 1:scdm%st%d%nik))
       else
-        SAFE_ALLOCATE(scdm%st%dpsi(1:der%mesh%np_global, 1:scdm%st%d%dim, 1:scdm%lnst, 1:scdm%st%d%nik))
+        SAFE_ALLOCATE(scdm%st%ddontusepsi(1:der%mesh%np_global, 1:scdm%st%d%dim, 1:scdm%lnst, 1:scdm%st%d%nik))
       end if
       ! localized SCDM states
       SAFE_ALLOCATE(scdm%dpsi(1:scdm%full_box,1:scdm%lnst))

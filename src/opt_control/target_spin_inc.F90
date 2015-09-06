@@ -85,7 +85,7 @@
     j1 = M_ZERO
     do i = 1, 2
       do j = 1, 2
-        j1 = j1 + tg%spin_matrix(i,j) * zmf_dotp(gr%mesh, psi%zpsi(:, i, 1, 1), psi%zpsi(:, j, 1, 1))
+        j1 = j1 + tg%spin_matrix(i,j) * zmf_dotp(gr%mesh, psi%zdontusepsi(:, i, 1, 1), psi%zdontusepsi(:, j, 1, 1))
       end do
     end do
     
@@ -106,10 +106,10 @@
 
     PUSH_SUB(target_chi_spin)
     
-    chi_out%zpsi(:, :, 1, 1) = M_ZERO
+    chi_out%zdontusepsi(:, :, 1, 1) = M_ZERO
     do i = 1, 2
       do j = 1, 2
-        chi_out%zpsi(:, i, 1, 1) = chi_out%zpsi(:, i, 1, 1) + tg%spin_matrix(i,j) * psi_in%zpsi(:, j, 1, 1)
+        chi_out%zdontusepsi(:, i, 1, 1) = chi_out%zdontusepsi(:, i, 1, 1) + tg%spin_matrix(i, j)*psi_in%zdontusepsi(:, j, 1, 1)
       end do
     end do
 

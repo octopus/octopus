@@ -54,7 +54,7 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
   do iter = 1, maxiter
 
     do ist = conv + 1, st%nst
-      call exponentiate(st%X(psi)(:, :, ist, ik), j)
+      call exponentiate(st%X(dontusepsi)(:, :, ist, ik), j)
       matvec = matvec + j
     end do
 
@@ -62,7 +62,7 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
     ! [Comp. Mat. Science 34, 188 (2005)]
     do i = 1, st%nst
       do j = i, st%nst
-        m(i, j) = X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, i, ik), st%X(psi)(:, :, j, ik) )
+        m(i, j) = X(mf_dotp)(gr%mesh, st%d%dim, st%X(dontusepsi)(:, :, i, ik), st%X(dontusepsi)(:, :, j, ik) )
       end do
     end do
     c = m
@@ -72,16 +72,16 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
     end do
     
     call lalg_gemm(gr%mesh%np_part * st%d%dim, st%nst, st%nst, R_TOTYPE(M_ONE), &
-         st%X(psi)(:, :, :, ik), c, R_TOTYPE(M_ZERO), phi)
+         st%X(dontusepsi)(:, :, :, ik), c, R_TOTYPE(M_ZERO), phi)
     do i = 1, st%nst
-      st%X(psi)(1:gr%mesh%np, :, i, ik) = phi(1:gr%mesh%np, :, st%nst -i + 1)
+      st%X(dontusepsi)(1:gr%mesh%np, :, i, ik) = phi(1:gr%mesh%np, :, st%nst -i + 1)
     end do
 
     ! Get the eigenvalues and the residues.
     do ist = conv + 1, st%nst
-      call X(hamiltonian_apply)(hm, gr%der, st%X(psi)(:, :, ist, ik), hpsi, ist, ik)
-      st%eigenval(ist, ik) = real(X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), hpsi), REAL_PRECISION)
-      diff(ist) = X(states_residue)(gr%mesh, st%d%dim, hpsi, st%eigenval(ist, ik), st%X(psi)(:, :, ist, ik))
+      call X(hamiltonian_apply)(hm, gr%der, st%X(dontusepsi)(:, :, ist, ik), hpsi, ist, ik)
+      st%eigenval(ist, ik) = real(X(mf_dotp)(gr%mesh, st%d%dim, st%X(dontusepsi)(:, :, ist, ik), hpsi), REAL_PRECISION)
+      diff(ist) = X(states_residue)(gr%mesh, st%d%dim, hpsi, st%eigenval(ist, ik), st%X(dontusepsi)(:, :, ist, ik))
 
       if(in_debug_mode) then
         write(message(1), '(a,i4,a,i4,a,i4,a,es12.6)') 'Debug: Evolution Eigensolver - ik', ik, &
@@ -91,7 +91,7 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
     end do
 
     ! Reordering.... (maybe this is unnecessary since the orthonormalization already orders them...)
-    if(st%nst > 1) call sort(st%eigenval(1:st%nst, ik), st%X(psi)(:, :, 1:st%nst, ik))
+    if(st%nst > 1) call sort(st%eigenval(1:st%nst, ik), st%X(dontusepsi)(:, :, 1:st%nst, ik))
 
     ! And check for convergence. Note that they must be converged *in order*, so that they can be frozen.
     do ist = conv + 1, st%nst

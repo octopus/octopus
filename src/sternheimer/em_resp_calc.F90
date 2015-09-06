@@ -130,7 +130,7 @@ contains
         do idim = 1, st%d%dim
 
           call zderivatives_grad(gr%der, lr%zdl_psi(:, idim, ist, ispin), gdl_psi)
-          call zderivatives_grad(gr%der, st%zpsi(:, idim, ist, ispin), gpsi)
+          call zderivatives_grad(gr%der, st%zdontusepsi(:, idim, ist, ispin), gpsi)
 
           if(present(lr_m)) then               
 
@@ -139,8 +139,8 @@ contains
             do idir = 1, gr%mesh%sb%dim 
 
               lr%dl_j(1:np, idir, ispin) = lr%dl_j(1:np, idir, ispin) + (           &
-                + conjg(st%zpsi(1:np, idim, ist, ispin)) *       gdl_psi  (1:np, idir)   &
-                -       st%zpsi(1:np, idim, ist, ispin)  * conjg(gdl_psi_m(1:np, idir))  &
+                + conjg(st%zdontusepsi(1:np, idim, ist, ispin)) *       gdl_psi  (1:np, idir)   &
+                -       st%zdontusepsi(1:np, idim, ist, ispin)  * conjg(gdl_psi_m(1:np, idir))  &
                 + conjg(lr_m%zdl_psi(1:np, idim, ist, ispin)) *       gpsi(1:np, idir)   & 
                 -       lr%zdl_psi  (1:np, idim, ist, ispin)  * conjg(gpsi(1:np, idir))  &
                 ) / (M_TWO * M_zI)
@@ -151,8 +151,8 @@ contains
             do idir = 1, gr%mesh%sb%dim 
 
               lr%dl_j(1:np, idir, ispin) = lr%dl_j(1:np, idir, ispin) + (           &
-                + conjg(st%zpsi(1:np, idim, ist, ispin)) *       gdl_psi(1:np, idir)   &
-                -       st%zpsi(1:np, idim, ist, ispin)  * conjg(gdl_psi(1:np, idir))  &
+                + conjg(st%zdontusepsi(1:np, idim, ist, ispin)) *       gdl_psi(1:np, idir)   &
+                -       st%zdontusepsi(1:np, idim, ist, ispin)  * conjg(gdl_psi(1:np, idir))  &
                 + conjg(lr%zdl_psi(1:np, idim, ist, ispin)) *       gpsi(1:np, idir)   & 
                 -       lr%zdl_psi(1:np, idim, ist, ispin)  * conjg(gpsi(1:np, idir))  &
                 ) / (M_TWO * M_zI)

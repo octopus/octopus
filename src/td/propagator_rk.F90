@@ -190,9 +190,9 @@ contains
     ! Stage 2.
 
     !
-    stphi%zpsi = zphi - M_HALF * M_zI * dt * hst%zpsi
+    stphi%zdontusepsi = zphi - M_HALF * M_zI * dt * hst%zdontusepsi
     if(propagate_chi) then
-      stchi%zpsi = zchi - M_HALF * M_zI * dt * hchi%zpsi
+      stchi%zdontusepsi = zchi - M_HALF * M_zI * dt * hchi%zdontusepsi
     end if
     if(ion_dynamics_ions_move(ions)) then
       pos = pos0 + M_HALF * posk
@@ -212,9 +212,9 @@ contains
     ! Stage 3.
 
     !
-    stphi%zpsi = zphi - M_HALF * M_zI * dt * hst%zpsi
+    stphi%zdontusepsi = zphi - M_HALF * M_zI * dt * hst%zdontusepsi
     if(propagate_chi) then
-      stchi%zpsi = zchi - M_HALF * M_zI * dt * hchi%zpsi
+      stchi%zdontusepsi = zchi - M_HALF * M_zI * dt * hchi%zdontusepsi
     end if
     if(ion_dynamics_ions_move(ions)) then
       pos = pos0 + M_HALF * posk
@@ -235,9 +235,9 @@ contains
     ! Stage 4.
 
     !
-    stphi%zpsi = zphi - M_zI *dt * hst%zpsi
+    stphi%zdontusepsi = zphi - M_zI *dt * hst%zdontusepsi
     if(propagate_chi) then
-      stchi%zpsi = zchi - M_zI *dt * hchi%zpsi
+      stchi%zdontusepsi = zchi - M_zI *dt * hchi%zdontusepsi
     end if
     if(ion_dynamics_ions_move(ions)) then
       pos = pos0 + posk
@@ -421,9 +421,9 @@ contains
     subroutine update_state(epsilon)
       FLOAT, intent(in) :: epsilon
 
-      st%zpsi = st%zpsi - M_zI * dt * hst%zpsi * epsilon
+      st%zdontusepsi = st%zdontusepsi - M_zI * dt * hst%zdontusepsi * epsilon
       if(propagate_chi) then
-        chi%zpsi = chi%zpsi - M_zI * dt * hchi%zpsi * epsilon
+        chi%zdontusepsi = chi%zdontusepsi - M_zI * dt * hchi%zdontusepsi * epsilon
       end if
       if(ion_dynamics_ions_move(ions)) then
         posfinal = posfinal + posk * epsilon

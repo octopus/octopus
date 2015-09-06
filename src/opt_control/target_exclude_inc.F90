@@ -94,7 +94,7 @@
     do ist = 1, tg%st%nst
       if(loct_isinstringlist(ist, tg%excluded_states_list)) then
         j1 = j1 - abs(zmf_dotp(gr%mesh, psi%d%dim, &
-          tg%st%zpsi(:, :, ist, 1), psi%zpsi(:, :, 1, 1)))**2
+          tg%st%zdontusepsi(:, :, ist, 1), psi%zdontusepsi(:, :, 1, 1)))**2
       end if
     end do
 
@@ -114,11 +114,11 @@
     CMPLX :: olap
     PUSH_SUB(target_chi_exclude)
 
-    chi_out%zpsi(:, :, 1, 1) = psi_in%zpsi(:, :, 1, 1)
+    chi_out%zdontusepsi(:, :, 1, 1) = psi_in%zdontusepsi(:, :, 1, 1)
     do ist = 1, tg%st%nst
       if(loct_isinstringlist(ist, tg%excluded_states_list)) then
-        olap = zmf_dotp(gr%mesh, psi_in%d%dim, tg%st%zpsi(:, :, ist, 1), psi_in%zpsi(:, :, 1, 1))
-        chi_out%zpsi(:, :, 1, 1) = chi_out%zpsi(:, :, 1, 1) - olap * tg%st%zpsi(:, :, ist, 1)
+        olap = zmf_dotp(gr%mesh, psi_in%d%dim, tg%st%zdontusepsi(:, :, ist, 1), psi_in%zdontusepsi(:, :, 1, 1))
+        chi_out%zdontusepsi(:, :, 1, 1) = chi_out%zdontusepsi(:, :, 1, 1) - olap*tg%st%zdontusepsi(:, :, ist, 1)
       end if
     end do
 

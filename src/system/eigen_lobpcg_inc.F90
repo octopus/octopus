@@ -72,12 +72,12 @@ subroutine X(eigensolver_lobpcg)(gr, st, hm, pre, tol, niter, converged, ik, dif
     n_matvec = maxiter
     
     if(constr_end >= constr_start) then
-      call X(lobpcg)(gr, st, hm, psi_start, psi_end, st%X(psi)(:, :, psi_start:psi_end, ik), &
+      call X(lobpcg)(gr, st, hm, psi_start, psi_end, st%X(dontusepsi)(:, :, psi_start:psi_end, ik), &
         constr_start, constr_end, &
         ik, pre, tol, n_matvec, conv, diff, &
-        constr = st%X(psi)(:, :, constr_start:constr_end, ik))
+        constr = st%X(dontusepsi)(:, :, constr_start:constr_end, ik))
     else
-      call X(lobpcg)(gr, st, hm, psi_start, psi_end, st%X(psi)(:, :, psi_start:psi_end, ik), &
+      call X(lobpcg)(gr, st, hm, psi_start, psi_end, st%X(dontusepsi)(:, :, psi_start:psi_end, ik), &
         constr_start, constr_end, ik, pre, tol, n_matvec, conv, diff)
     end if
     
@@ -287,7 +287,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   end if
 
   ! Get initial Ritz-values and -vectors.
-  call batch_init(psib, st%d%dim, st_start, st_end, st%X(psi)(:, :, st_start:, ik))
+  call batch_init(psib, st%d%dim, st_start, st_end, st%X(dontusepsi)(:, :, st_start:, ik))
   call batch_init(hpsib, st%d%dim, st_start, st_end, h_psi(:, :, st_start:))
 
   call X(hamiltonian_apply_batch)(hm, gr%der, psib, hpsib, ik)

@@ -1324,8 +1324,8 @@ contains
         do idir = 1, gr%sb%dim
           call pert_setup_dir(angular_momentum, idir)
           dic = dic &
-               + zpert_expectation_value(angular_momentum, gr, geo, hm, st, st%zpsi, em_vars%lr(idir, 1, ifactor)%zdl_psi) &
-               + zpert_expectation_value(angular_momentum, gr, geo, hm, st, em_vars%lr(idir, 2, ifactor)%zdl_psi, st%zpsi)
+            + zpert_expectation_value(angular_momentum, gr, geo, hm, st, st%zdontusepsi, em_vars%lr(idir, 1, ifactor)%zdl_psi) &
+            + zpert_expectation_value(angular_momentum, gr, geo, hm, st, em_vars%lr(idir, 2, ifactor)%zdl_psi, st%zdontusepsi)
         end do
         
         call pert_end(angular_momentum)

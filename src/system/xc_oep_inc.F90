@@ -86,7 +86,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
     ! calculate uxc_bar for the occupied states
     do ist = st%st_start, st%st_end
       oep%uxc_bar(ist,is) = &
-        R_REAL(X(mf_dotp)(gr%mesh, R_CONJ(st%X(psi)(1:gr%mesh%np, idm, ist, isp)), oep%X(lxc)(1:gr%mesh%np, ist, is)))
+        R_REAL(X(mf_dotp)(gr%mesh, R_CONJ(st%X(dontusepsi)(1:gr%mesh%np, idm, ist, isp)), oep%X(lxc)(1:gr%mesh%np, ist, is)))
     end do
   end do spin
 #if defined(HAVE_MPI) 
@@ -173,9 +173,9 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
     ss = M_ZERO
     do ist = 1, st%nst
       ! evaluate right-hand side
-      vxc_bar = dmf_dotp(gr%mesh, (R_ABS(st%X(psi)(1:gr%mesh%np, 1, ist, is)))**2, oep%vxc(1:gr%mesh%np,1))
+      vxc_bar = dmf_dotp(gr%mesh, (R_ABS(st%X(dontusepsi)(1:gr%mesh%np, 1, ist, is)))**2, oep%vxc(1:gr%mesh%np,1))
       bb(1:gr%mesh%np, 1) = -(oep%vxc(1:gr%mesh%np,1) - (vxc_bar - oep%uxc_bar(ist,is))) * &
-        R_CONJ(st%X(psi)(1:gr%mesh%np, 1, ist, is)) + oep%X(lxc)(1:gr%mesh%np, ist, is) 
+        R_CONJ(st%X(dontusepsi)(1:gr%mesh%np, 1, ist, is)) + oep%X(lxc)(1:gr%mesh%np, ist, is) 
 
       call X(lr_orth_vector) (gr%mesh, st, bb, ist, is, R_TOTYPE(M_ZERO))
 
@@ -186,14 +186,14 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
 
       ! calculate this funny function ss
       ss(1:gr%mesh%np) = ss(1:gr%mesh%np) + &
-        M_TWO*R_REAL(oep%lr%X(dl_psi)(1:gr%mesh%np, 1, ist, is)*st%X(psi)(1:gr%mesh%np, 1, ist, is))
+        M_TWO*R_REAL(oep%lr%X(dl_psi)(1:gr%mesh%np, 1, ist, is)*st%X(dontusepsi)(1:gr%mesh%np, 1, ist, is))
     end do
 
     oep%vxc(1:gr%mesh%np,1) = oep%vxc(1:gr%mesh%np,1) + oep%mixing*ss(1:gr%mesh%np)
 
     do ist = 1, st%nst
       if(oep%eigen_type(ist) == 2) then
-        vxc_bar = dmf_dotp(gr%mesh, (R_ABS(st%X(psi)(1:gr%mesh%np, 1, ist, is)))**2, oep%vxc(1:gr%mesh%np,1))
+        vxc_bar = dmf_dotp(gr%mesh, (R_ABS(st%X(dontusepsi)(1:gr%mesh%np, 1, ist, is)))**2, oep%vxc(1:gr%mesh%np,1))
         oep%vxc(1:gr%mesh%np,1) = oep%vxc(1:gr%mesh%np,1) - (vxc_bar - oep%uxc_bar(ist,is))
       end if
     end do

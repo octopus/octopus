@@ -128,7 +128,7 @@
       do idim = 1, psi_in%d%dim
         do ist = psi_in%st_start, psi_in%st_end
           do ip = 1, gr%mesh%np
-            chi_out%zpsi(ip, idim, ist, ik) = psi_in%occ(ist, ik) * tg%rho(ip) * psi_in%zpsi(ip, idim, ist, ik)
+            chi_out%zdontusepsi(ip, idim, ist, ik) = psi_in%occ(ist, ik)*tg%rho(ip)*psi_in%zdontusepsi(ip, idim, ist, ik)
           end do
         end do
       end do

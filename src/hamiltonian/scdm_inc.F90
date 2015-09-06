@@ -74,9 +74,9 @@ subroutine X(scdm_localize)(st,mesh,scdm)
 
     count = 0
     do ii = 1, nval
-      ! KSt(i,:) = st%dpsi(:,st%d%dim,i,st%d%nik)
+      ! KSt(i,:) = st%ddontusepsi(:,st%d%dim,i,st%d%nik)
 #ifdef HAVE_MPI
-      call vec_gather(mesh%vp, 0, state_global, st%X(psi)(1:mesh%np,1,ii,st%d%nik))
+      call vec_gather(mesh%vp, 0, state_global, st%X(dontusepsi)(1:mesh%np,1,ii,st%d%nik))
       call MPI_Bcast(state_global,mesh%np_global , R_MPITYPE, 0, mesh%mpi_grp%comm, mpi_err)
 #endif
       if (scdm%root) then
@@ -177,13 +177,13 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     call cpu_time(t2)
     if(scdm%verbose) call messages_print_var_value(stdout, 'time: transpose invert:',t2-t1)
     ! form orthogonal SCDM
-    scdm%st%X(psi)(1:mesh%np_global,1:st%d%dim,:,1:st%d%nik) = M_ZERO
+    scdm%st%X(dontusepsi)(1:mesh%np_global,1:st%d%dim,:,1:st%d%nik) = M_ZERO
     do jj = 1, nval
       count = 0
       do vv = 1, nval
         if (vv >= scdm%st_start .and. vv <= scdm%st_end) then
           count = count + 1
-          scdm%st%X(psi)(1:mesh%np_global,1,count,1) = scdm%st%X(psi)(1:mesh%np_global,1,count,1) + &
+          scdm%st%X(dontusepsi)(1:mesh%np_global,1,count,1) = scdm%st%X(dontusepsi)(1:mesh%np_global,1,count,1) + &
                SCDM_temp(1:mesh%np_global,jj)*Pcc(jj, vv)
         end if
       end do
@@ -194,9 +194,9 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     if (scdm%verbose) call messages_print_var_value(stdout,  'time: explicit matmul3',t1-t2)
     ! normalise SCDM states
     do vv = 1, scdm%lnst
-      scdm%st%X(psi)(1:mesh%np_global,1,vv,1) = scdm%st%X(psi)(1:mesh%np_global,1,vv,1)/&
-                      (sqrt(dot_product(scdm%st%X(psi)(:,1,vv,1),scdm%st%X(psi)(:,1,vv,1))*mesh%volume_element))
-      !this should be used ../X(mf_nrm2)(mesh,scdm%st%X(psi)(:,1,v,1))
+      scdm%st%X(dontusepsi)(1:mesh%np_global,1,vv,1) = scdm%st%X(dontusepsi)(1:mesh%np_global,1,vv,1)/&
+                      (sqrt(dot_product(scdm%st%X(dontusepsi)(:,1,vv,1),scdm%st%X(dontusepsi)(:,1,vv,1))*mesh%volume_element))
+      !this should be used ../X(mf_nrm2)(mesh,scdm%st%X(dontusepsi)(:,1,v,1))
       ! but doesnt work with parallelization
     end do
     call cpu_time(t2)
@@ -206,14 +206,15 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     !print *, 'orthonrmality: ================'
     !do j=1,nval
     !   do i=1,nval
-    !      print *, i,j, dot_product(scdm%st%X(psi)(1:mesh%np,1,i,1),scdm%st%X(psi)(1:mesh%np,1,j,1))*mesh%volume_element
-    !      print *, i,j, dot_product(st%X(psi)(1:mesh%np,1,i,1),st%X(psi)(1:mesh%np,1,j,1))*mesh%volume_element
+    !      print *, i,j, &
+    !        dot_product(scdm%st%X(dontusepsi)(1:mesh%np,1,i,1),scdm%st%X(dontusepsi)(1:mesh%np,1,j,1))*mesh%volume_element
+    !      print *, i,j, dot_product(st%X(dontusepsi)(1:mesh%np,1,i,1),st%X(dontusepsi)(1:mesh%np,1,j,1))*mesh%volume_element
     !   end do
     !end do
     !print *, '=============================='
 
     ! write cube files
-    !call X(io_function_output)(io_function_fill_how('Cube'), ".", "SCDM_1", mesh, scdm%st%X(psi)(:,1,1,1), &
+    !call X(io_function_output)(io_function_fill_how('Cube'), ".", "SCDM_1", mesh, scdm%st%X(dontusepsi)(:,1,1,1), &
     !                            unit_one, info,geo=scdm_geo)
 
     call cpu_time(t1)
@@ -228,8 +229,8 @@ subroutine X(scdm_localize)(st,mesh,scdm)
       if (vv >= scdm%st_start .and. vv <= scdm%st_end) then
         count = count + 1
         do ii = 1, 3
-          scdm%center(ii,vv) = sum(scdm%st%X(psi)(:,st%d%dim,count,scdm%st%d%nik)*&
-               R_CONJ(scdm%st%X(psi)(:,st%d%dim,count,scdm%st%d%nik))*&
+          scdm%center(ii,vv) = sum(scdm%st%X(dontusepsi)(:,st%d%dim,count,scdm%st%d%nik)*&
+               R_CONJ(scdm%st%X(dontusepsi)(:,st%d%dim,count,scdm%st%d%nik))*&
                mesh%idx%lxyz(1:mesh%np_global,ii)*mesh%spacing(ii))*mesh%volume_element
         end do
       end if
@@ -372,7 +373,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
         do ll = 1, scdm%box_size*2+1
           ! map into the box
           ip = (jj-1)*((scdm%box_size*2+1))**2+(kk-1)*((scdm%box_size*2+1)) + ll
-          scdm%X(psi)(ip,count) = scdm%st%X(psi)(scdm%box(jj,kk,ll,count),st%d%dim,count,scdm%st%d%nik)
+          scdm%X(psi)(ip,count) = scdm%st%X(dontusepsi)(scdm%box(jj,kk,ll,count),st%d%dim,count,scdm%st%d%nik)
         end do
       end do
     end do
@@ -385,12 +386,12 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     !    scdm%X(psi)(:,count) = scdm%X(psi)(:,count)/(dot_product(scdm%X(psi)(:,count),scdm%X(psi)(:,count))*mesh%volume_element)
     !    !
     !    ! for testing zero outside the box
-    !    scdm%st%X(psi)(:,st%d%dim,vv,scdm%st%d%nik) = 0.
+    !    scdm%st%X(dontusepsi)(:,st%d%dim,vv,scdm%st%d%nik) = 0.
     !    do jj=1,scdm%box_size*2+1
     !       do kk=1,scdm%box_size*2+1
     !          do ll=1,scdm%box_size*2+1
     !             ip = (jj-1)*((scdm%box_size*2+1))**2+(kk-1)*((scdm%box_size*2+1)) + ll
-    !             scdm%st%X(psi)(scdm%box(jj,kk,ll,vv),st%d%dim,vv,scdm%st%d%nik) = scdm%X(psi)(ip,count)
+    !             scdm%st%X(dontusepsi)(scdm%box(jj,kk,ll,vv),st%d%dim,vv,scdm%st%d%nik) = scdm%X(psi)(ip,count)
     !          end do
     !       end do
     !    end do
@@ -416,7 +417,8 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   !   print *, 'orthonrmality in boxes: ================'
   !   do j=1,nval
   !      do i=1,nval
-  !         print *, i,j, dot_product(scdm%st%X(psi)(1:mesh%np,1,i,1),scdm%st%X(psi)(1:mesh%np,1,j,1))*mesh%volume_element
+  !         print *, i,j, &
+  !           dot_product(scdm%st%X(dontusepsi)(1:mesh%np,1,i,1),scdm%st%X(dontusepsi)(1:mesh%np,1,j,1))*mesh%volume_element
   !      end do
   !   end do
   !   print *, '=============================='
@@ -438,17 +440,17 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   !          do k=1,scdm%box_size*2+1
   !             do l=1,scdm%box_size*2+1
   !                ip = (j-1)*(2*(scdm%box_size*2+1))**2+(k-1)*(2*(scdm%box_size*2+1)) + l
-  !                scdm%X(psi)(ip,count) = scdm%st%X(psi)(scdm%box(j,k,l,count),st%d%dim,count,scdm%st%d%nik)
+  !                scdm%X(psi)(ip,count) = scdm%st%X(dontusepsi)(scdm%box(j,k,l,count),st%d%dim,count,scdm%st%d%nik)
   !             end do
   !          end do
   !       end do
   !       ! and set to zero outside again
-  !       scdm%st%X(psi)(:,st%d%dim,v,scdm%st%d%nik) = 0.
+  !       scdm%st%X(dontusepsi)(:,st%d%dim,v,scdm%st%d%nik) = 0.
   !       do j=1,scdm%box_size*2+1
   !          do k=1,scdm%box_size*2+1
   !             do l=1,scdm%box_size*2+1
   !                ip = (j-1)*(2*(scdm%box_size*2+1))**2+(k-1)*(2*(scdm%box_size*2+1)) + l
-  !                scdm%st%X(psi)(scdm%box(j,k,l,v),st%d%dim,v,scdm%st%d%nik) = scdm%X(psi)(ip,count)
+  !                scdm%st%X(dontusepsi)(scdm%box(j,k,l,v),st%d%dim,v,scdm%st%d%nik) = scdm%X(psi)(ip,count)
   !             end do
   !          end do
   !       end do
@@ -458,7 +460,8 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   !print *, 'orthonrmality in boxes after re-ortho: ================'
   !do j=1,nval
   !   do i=1,nval
-  !      print *, i,j, dot_product(scdm%st%X(psi)(1:mesh%np,1,i,1),scdm%st%X(psi)(1:mesh%np,1,j,1))*mesh%volume_element
+  !      print*, i,j, &
+  !        dot_product(scdm%st%X(dontusepsi)(1:mesh%np,1,i,1),scdm%st%X(dontusepsi)(1:mesh%np,1,j,1))*mesh%volume_element
   !   end do
   !end do
   !print *, '======================================================'
@@ -473,7 +476,8 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   !   state_global(:) = M_ZERO
   !   do i=1,nval
   !      state_global(:) = state_global(:) + &
-  !           dot_product(scdm%st%X(psi)(:,1,i,1),st%X(psi)(1:mesh%np,1,j,1))*scdm%st%X(psi)(:,1,i,1)*mesh%volume_element
+  !           dot_product(scdm%st%X(dontusepsi)(:,1,i,1),st%X(dontusepsi)(1:mesh%np,1,j,1))&
+  !           *scdm%st%X(dontusepsi)(:,1,i,1)*mesh%volume_element
   !   end do
   !   print *, j, M_ONE - X(mf_nrm2)(mesh, state_global)
   !end do
@@ -504,8 +508,8 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   !         temp(:) = (scdm%center(:,i)- scdm%center(:,j))/mesh%spacing(:)
   !!          if(sqrt(dot_product(temp,temp)).le.2.*scdm%rcut) then
   !            !
-  !            rho(:) = scdm%st%X(psi)(:,st%d%dim,i,scdm%st%d%nik)*scdm%st%X(psi)(:,st%d%dim,j,scdm%st%d%nik)
-  !!rho(:) = st%X(psi)(:,st%d%dim,i,scdm%st%d%nik)*st%X(psi)(:,st%d%dim,j,scdm%st%d%nik)
+  !            rho(:) = scdm%st%X(dontusepsi)(:,st%d%dim,i,scdm%st%d%nik)*scdm%st%X(dontusepsi)(:,st%d%dim,j,scdm%st%d%nik)
+  !!rho(:) = st%X(dontusepsi)(:,st%d%dim,i,scdm%st%d%nik)*st%X(dontusepsi)(:,st%d%dim,j,scdm%st%d%nik)
   !            rho2(:) = rho(:)
   !            pot(:) = 0.
   !            call X(poisson_solve)(psolver, pot, rho, all_nodes = .false.)
@@ -559,7 +563,7 @@ subroutine X(scdm_rotate_states)(st,mesh,scdm)
     ! find process that holds the full scdm state
     if (ist >= scdm%st_start .and. ist <= scdm%st_end) then
       count = count + 1
-      temp_state(1:mesh%np_global,1) = scdm%st%X(psi)(1:mesh%np_global,st%d%dim,count,scdm%st%d%nik)
+      temp_state(1:mesh%np_global,1) = scdm%st%X(dontusepsi)(1:mesh%np_global,st%d%dim,count,scdm%st%d%nik)
     end if
     ! use reduce to send temp_state to all procs, without knowing the sending rank
     temp_state_global(1:mesh%np_global,1) = M_ZERO
@@ -569,7 +573,7 @@ subroutine X(scdm_rotate_states)(st,mesh,scdm)
     temp_state_global = temp_state
 #endif
     ! copy into the domains of the st object
-    call vec_scatter(mesh%vp,0, temp_state_global(1:mesh%np_global,1), st%X(psi)(1:mesh%np,1,ist,1))
+    call vec_scatter(mesh%vp, 0, temp_state_global(1:mesh%np_global,1), st%X(dontusepsi)(1:mesh%np,1,ist,1))
 
   end do
   SAFE_DEALLOCATE_A(temp_state)

@@ -664,7 +664,7 @@ contains
         ! successive propagations of half time step.
         call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, tg, par, psi, sys%geo)
 
-        st_ref%zpsi = psi%zpsi
+        st_ref%zdontusepsi = psi%zdontusepsi
         vhxc(:, :) = hm%vhxc(:, :)
         call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, i-1, td%ions, sys%geo)
 
@@ -674,7 +674,7 @@ contains
           call hamiltonian_epot_generate(hm, gr, sys%geo, psi, time = abs((i-1)*td%dt))
         end if
 
-        st_ref%zpsi = M_HALF * (st_ref%zpsi + psi%zpsi)
+        st_ref%zdontusepsi = M_HALF * (st_ref%zdontusepsi + psi%zdontusepsi)
         hm%vhxc(:, :) = M_HALF * (hm%vhxc(:, :) + vhxc(:, :))
         call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, tg, par, sys%geo, st_ref, qtildehalf)
         freeze = ion_dynamics_freeze(td%ions)
@@ -770,14 +770,15 @@ contains
     if(ion_dynamics_ions_move(td%ions)) then
       call states_copy(inh, st)
       SAFE_ALLOCATE(dvpsi(1:gr%mesh%np_part, 1:st%d%dim, 1:gr%sb%dim))
-      inh%zpsi = M_z0
+      inh%zdontusepsi = M_z0
       do ist = 1, st%nst
         do ik = 1, st%d%nik
           do iatom = 1, geo%natoms
             call zhamiltonian_dervexternal(hm, geo, gr, iatom, &
-              st%d%dim, st%zpsi(:, :, ist, ik), dvpsi)
+              st%d%dim, st%zdontusepsi(:, :, ist, ik), dvpsi)
             do idim = 1, gr%sb%dim
-              inh%zpsi(:, :, ist, ik) = inh%zpsi(:, :, ist, ik) + st%occ(ist, ik) * qtildehalf(iatom, idim) * dvpsi(:, :, idim)
+              inh%zdontusepsi(:, :, ist, ik) = &
+                inh%zdontusepsi(:, :, ist, ik) + st%occ(ist, ik)*qtildehalf(iatom, idim)*dvpsi(:, :, idim)
             end do
           end do
         end do
@@ -873,16 +874,16 @@ contains
       dl(j) = M_z0
       do ik = 1, psi%d%nik
         do p = 1, psi%nst
-          oppsi%zpsi(:, :, p, ik) = M_z0
+          oppsi%zdontusepsi(:, :, p, ik) = M_z0
           if(associated(hm%ep%a_static)) then
-            call zvlaser_operator_linear(hm%ep%lasers(j), gr%der, hm%d, psi%zpsi(:, :, p, ik), &
-              oppsi%zpsi(:, :, p, ik), ik, hm%ep%gyromagnetic_ratio, hm%ep%a_static)
+            call zvlaser_operator_linear(hm%ep%lasers(j), gr%der, hm%d, psi%zdontusepsi(:, :, p, ik), &
+              oppsi%zdontusepsi(:, :, p, ik), ik, hm%ep%gyromagnetic_ratio, hm%ep%a_static)
           else
-            call zvlaser_operator_linear(hm%ep%lasers(j), gr%der, hm%d, psi%zpsi(:, :, p, ik), &
-              oppsi%zpsi(:, :, p, ik), ik, hm%ep%gyromagnetic_ratio)
+            call zvlaser_operator_linear(hm%ep%lasers(j), gr%der, hm%d, psi%zdontusepsi(:, :, p, ik), &
+              oppsi%zdontusepsi(:, :, p, ik), ik, hm%ep%gyromagnetic_ratio)
           end if
-          dl(j) = dl(j) + zmf_dotp(gr%mesh, psi%d%dim, chi%zpsi(:, :, p, ik), &
-            oppsi%zpsi(:, :, p, ik))
+          dl(j) = dl(j) + zmf_dotp(gr%mesh, psi%d%dim, chi%zdontusepsi(:, :, p, ik), &
+            oppsi%zdontusepsi(:, :, p, ik))
         end do
       end do
       call states_end(oppsi)
@@ -893,11 +894,11 @@ contains
         dq(j) = M_z0
         do ik = 1, psi%d%nik
           do p = 1, psi%nst
-            oppsi%zpsi(:, :, p, ik) = M_z0
+            oppsi%zdontusepsi(:, :, p, ik) = M_z0
             call zvlaser_operator_quadratic(hm%ep%lasers(j), gr%der, &
-              psi%zpsi(:, :, p, ik), oppsi%zpsi(:, :, p, ik))
+              psi%zdontusepsi(:, :, p, ik), oppsi%zdontusepsi(:, :, p, ik))
             dq(j) = dq(j) + zmf_dotp(gr%mesh, psi%d%dim, &
-              chi%zpsi(:, :, p, ik), oppsi%zpsi(:, :, p, ik))
+              chi%zdontusepsi(:, :, p, ik), oppsi%zdontusepsi(:, :, p, ik))
           end do
         end do
         call states_end(oppsi)
@@ -958,7 +959,7 @@ contains
     call calculate_g(gr, hm, psi, chi, dl, dq)
     d1 = M_z1
     if(zbr98_) then
-      d1 = zmf_dotp(gr%mesh, psi%d%dim, psi%zpsi(:, :, 1, 1), chi%zpsi(:, :, 1, 1))
+      d1 = zmf_dotp(gr%mesh, psi%d%dim, psi%zdontusepsi(:, :, 1, 1), chi%zdontusepsi(:, :, 1, 1))
       forall(j = 1:no_parameters) d(j) = aimag(d1*dl(j)) / controlfunction_alpha(cp, j) 
     elseif(gradients_) then
       forall(j = 1:no_parameters) d(j) = M_TWO * aimag(dl(j))

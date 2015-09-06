@@ -55,16 +55,16 @@ subroutine X(eigensolver_mg) (der, st, hm, sdiag, niter, ik, diff)
 
       cc(ist, ist) = M_ONE
       do ist2 = 1, ist - 1
-        cc(ist, ist2) = X(mf_dotp)(der%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), st%X(psi)(:, :, ist2, ik))
+        cc(ist, ist2) = X(mf_dotp)(der%mesh, st%d%dim, st%X(dontusepsi)(:, :, ist, ik), st%X(dontusepsi)(:, :, ist2, ik))
       end do
 
     end do
 
-    call X(coordinate_relaxation)(der, hm, st%nst, 10, ik, st%X(psi)(:, :, :, ik), aa, cc)
+    call X(coordinate_relaxation)(der, hm, st%nst, 10, ik, st%X(dontusepsi)(:, :, :, ik), aa, cc)
 
     ! normalize
     do ist = 1, st%nst      
-      call lalg_scal(der%mesh%np, CNST(1.0)/sqrt(cc(ist, ist)), st%X(psi)(:, 1, ist, ik))
+      call lalg_scal(der%mesh%np, CNST(1.0)/sqrt(cc(ist, ist)), st%X(dontusepsi)(:, 1, ist, ik))
     end do
 
   end do

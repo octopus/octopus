@@ -170,13 +170,13 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
       
       if(nsigma == 1) then  ! either omega purely real or purely imaginary
         do ip = 1, mesh%np
-          dd = weight*st%X(psi)(ip, 1, ist, ik)*R_CONJ(lr(1)%X(dl_psi)(ip, 1, ist, ik))
+          dd = weight*st%X(dontusepsi)(ip, 1, ist, ik)*R_CONJ(lr(1)%X(dl_psi)(ip, 1, ist, ik))
           lr(1)%X(dl_rho)(ip, ispin) = lr(1)%X(dl_rho)(ip, ispin) + dd + R_CONJ(dd)
         end do
       else
         do ip = 1, mesh%np
-          cc = weight*(R_CONJ(st%X(psi)(ip, 1, ist, ik))*lr(1)%X(dl_psi)(ip, 1, ist, ik) + &
-            st%X(psi)(ip, 1, ist, ik)*R_CONJ(lr(2)%X(dl_psi)(ip, 1, ist, ik)))
+          cc = weight*(R_CONJ(st%X(dontusepsi)(ip, 1, ist, ik))*lr(1)%X(dl_psi)(ip, 1, ist, ik) + &
+            st%X(dontusepsi)(ip, 1, ist, ik)*R_CONJ(lr(2)%X(dl_psi)(ip, 1, ist, ik)))
           lr(1)%X(dl_rho)(ip, ispin) = lr(1)%X(dl_rho)(ip, ispin) + cc
           lr(2)%X(dl_rho)(ip, ispin) = lr(2)%X(dl_rho)(ip, ispin) + R_CONJ(cc)
         end do
@@ -209,7 +209,7 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
         do ist  = st%st_start, st%st_end
           xx = (st%smear%e_fermi - st%eigenval(ist, ik) + CNST(1e-14))/dsmear
           do ip = 1, mesh%np
-            lr(isigma)%X(dl_rho)(ip, ispin) = lr(isigma)%X(dl_rho)(ip, ispin) + abs(st%X(psi)(ip, 1, ist, ik))**2 &
+            lr(isigma)%X(dl_rho)(ip, ispin) = lr(isigma)%X(dl_rho)(ip, ispin) + abs(st%X(dontusepsi)(ip, 1, ist, ik))**2 &
               * ef_shift * st%d%kweights(ik) * smear_delta_function(st%smear, xx) * st%smear%el_per_state
           end do
         end do

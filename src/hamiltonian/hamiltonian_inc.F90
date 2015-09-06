@@ -412,10 +412,10 @@ subroutine X(hamiltonian_apply_all) (hm, xc, der, st, hst, time, Imtime)
   end if
 
   if(hamiltonian_oct_exchange(hm)) then
-    call hamiltonian_prepare_oct_exchange(hm, der%mesh, st%zpsi, xc)
+    call hamiltonian_prepare_oct_exchange(hm, der%mesh, st%zdontusepsi, xc)
     do ik = 1, st%d%nik
       do ist = 1, st%nst
-        call X(oct_exchange_operator)(hm, der, hst%X(psi)(:, :, ist, ik), ist, ik)
+        call X(oct_exchange_operator)(hm, der, hst%X(dontusepsi)(:, :, ist, ik), ist, ik)
       end do
     end do
   end if

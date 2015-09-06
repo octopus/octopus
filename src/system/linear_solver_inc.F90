@@ -265,9 +265,9 @@ subroutine X(linear_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, shift, tol,
 
   !re-orthogonalize r, this helps considerably with convergence
   if (occ_response) then
-    alpha = X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), r)
+    alpha = X(mf_dotp)(gr%mesh, st%d%dim, st%X(dontusepsi)(:, :, ist, ik), r)
     do idim = 1, st%d%dim
-      call lalg_axpy(gr%mesh%np, -alpha, st%X(psi)(:, idim, ist, ik), r(:, idim))
+      call lalg_axpy(gr%mesh%np, -alpha, st%X(dontusepsi)(:, idim, ist, ik), r(:, idim))
     end do
   else
     ! project RHS onto the unoccupied states
@@ -399,7 +399,8 @@ subroutine X(linear_solver_multigrid) (ls, hm, gr, st, ist, ik, x, y, shift, tol
     if(residue < tol) exit
 
     if(in_debug_mode) then 
-      write(message(1), *)  "Multigrid: iter ", iter,  residue, abs(X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, ist, ik), x))
+      write(message(1), *)  "Multigrid: iter ", iter,  residue, &
+        abs(X(mf_dotp)(gr%mesh, st%d%dim, st%X(dontusepsi)(:, :, ist, ik), x))
       call messages_info(1)
     end if
 
@@ -481,9 +482,9 @@ subroutine X(linear_solver_operator) (hm, gr, st, ist, ik, shift, x, hx)
     alpha_j = lr_alpha_j(st, jst, ik)
     if(alpha_j == M_ZERO) cycle
     
-    proj = X(mf_dotp) (gr%mesh, st%d%dim, st%X(psi)(:, :, jst, ik), x)
+    proj = X(mf_dotp) (gr%mesh, st%d%dim, st%X(dontusepsi)(:, :, jst, ik), x)
     do idim = 1, st%d%dim
-      call lalg_axpy(gr%mesh%np, alpha_j * proj, st%X(psi)(:, idim, jst, ik), Hx(:, idim))
+      call lalg_axpy(gr%mesh%np, alpha_j * proj, st%X(dontusepsi)(:, idim, jst, ik), Hx(:, idim))
     end do
 
   end do
@@ -651,14 +652,14 @@ subroutine X(linear_solver_sos) (hm, gr, st, ist, ik, x, y, shift, residue, iter
   do jst = 1, st%nst
     if(ist == jst) cycle
 
-    aa = X(mf_dotp)(gr%mesh, st%d%dim, st%X(psi)(:, :, jst, ik), y)
+    aa = X(mf_dotp)(gr%mesh, st%d%dim, st%X(dontusepsi)(:, :, jst, ik), y)
     aa = aa/(st%eigenval(jst, ik) + lr_alpha_j(st, jst, ik) + shift)
     ! Normally the expression in perturbation theory would have here
     ! denominator = st%eigenval(jst, ik) - st%eigenval(ist, ik)
     ! For solving this type of problem, -st%eigenval(ist, ik) is included in shift
 
     do idim = 1, st%d%dim
-      call lalg_axpy(gr%mesh%np, aa, st%X(psi)(:, idim, jst, ik), x(:, idim))
+      call lalg_axpy(gr%mesh%np, aa, st%X(dontusepsi)(:, idim, jst, ik), x(:, idim))
     end do
   end do
 

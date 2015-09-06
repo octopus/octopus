@@ -167,7 +167,7 @@
       ASSERT(chi_out%d%nik  ==  2)
       do ik = 1, kpoints
         do ist = chi_out%st_start, chi_out%st_end
-          chi_out%zpsi(:, :, ist, ik) = M_z0
+          chi_out%zdontusepsi(:, :, ist, ik) = M_z0
           do ia = 1, n_pairs
             if(ik /= tg%est%pair(ia)%kk) cycle
             if(abs(dI(ia)) < CNST(1.0e-12)) cycle
@@ -176,9 +176,9 @@
               mk = M_z0
               do jst = 1, nst
                 if(jst  ==  tg%est%pair(ib)%i) jj = tg%est%pair(ia)%a
-                mk(:, :) = mk(:, :) + conjg(mm(ist, jst, ik, ib)) * tg%est%st%zpsi(:, :, jj, ik)
+                mk(:, :) = mk(:, :) + conjg(mm(ist, jst, ik, ib))*tg%est%st%zdontusepsi(:, :, jj, ik)
               end do
-              call lalg_axpy(gr%mesh%np_part, psi_in%d%dim, M_z1, lambda(ib, ia) * mk(:, :), chi_out%zpsi(:, :, ist, ik))
+              call lalg_axpy(gr%mesh%np_part, psi_in%d%dim, M_z1, lambda(ib, ia)*mk(:, :), chi_out%zdontusepsi(:, :, ist, ik))
             end do
           end do
         end do
@@ -188,7 +188,7 @@
       ASSERT(chi_out%d%nik  ==  1)
 
       do ist = chi_out%st_start, chi_out%st_end
-        chi_out%zpsi(:, :, ist, 1) = M_z0
+        chi_out%zdontusepsi(:, :, ist, 1) = M_z0
 
         do ia = 1, n_pairs
           if(abs(dI(ia)) < CNST(1.0e-12)) cycle
@@ -199,10 +199,10 @@
             mk = M_z0
             do jst = 1, nst
               if(jst  ==  tg%est%pair(ib)%i) jj = tg%est%pair(ia)%a
-              mk(:, :) = mk(:, :) + conjg(mm(ist, jst, 1, ib)) * tg%est%st%zpsi(:, :, jj, 1)
+              mk(:, :) = mk(:, :) + conjg(mm(ist, jst, 1, ib)) * tg%est%st%zdontusepsi(:, :, jj, 1)
             end do
 
-            call lalg_axpy(gr%mesh%np_part, 2, M_z1, lambda(ib, ia) * mk(:, :), chi_out%zpsi(:, :, ist, 1))
+            call lalg_axpy(gr%mesh%np_part, 2, M_z1, lambda(ib, ia) * mk(:, :), chi_out%zdontusepsi(:, :, ist, 1))
           end do
         end do
       end do
