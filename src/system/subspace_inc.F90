@@ -34,16 +34,21 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
   call profiling_in(diagon_prof, "SUBSPACE_DIAG")
 
   select case(this%method)
-  case(SD_SCALAPACK)
+    
+  case(OPTION__SUBSPACEDIAGONALIZATION__SCALAPACK)
     ASSERT(associated(st%X(dontusepsi)))
     psi => st%X(dontusepsi)(:, :, :, ik)
     call X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
-  case(SD_STANDARD)
+    
+  case(OPTION__SUBSPACEDIAGONALIZATION__STANDARD)
     call X(subspace_diag_standard)(der, st, hm, ik, eigenval, diff)
-  case(SD_NONE)
+    
+  case(OPTION__SUBSPACEDIAGONALIZATION__NONE)
     ! do nothing
+
   case default
     ASSERT(.false.)
+    
   end select
 
   call profiling_out(diagon_prof)

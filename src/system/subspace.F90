@@ -63,11 +63,6 @@ module subspace_m
     dsubspace_diag,     &
     zsubspace_diag
 
-  integer, parameter ::        &
-    SD_NONE      = 0,          &
-    SD_STANDARD  = 1,          &
-    SD_SCALAPACK = 3
-  
   type subspace_t
     integer :: method
   end type subspace_t
@@ -87,7 +82,7 @@ contains
 
     if(no_sd) then
 
-      this%method = SD_NONE
+      this%method = OPTION__SUBSPACEDIAGONALIZATION__NONE
 
     else
 
@@ -109,11 +104,11 @@ contains
       !% Octopus was compiled with ScaLAPACK support.)
       !%End
 
-      default = SD_STANDARD
+      default = OPTION__SUBSPACEDIAGONALIZATION__STANDARD
 
       if(st%parallel_in_states) then
 #ifdef HAVE_SCALAPACK
-        default = SD_SCALAPACK
+        default = OPTION__SUBSPACEDIAGONALIZATION__SCALAPACK
 #else
         message(1) = 'Parallelization in states of the ground state requires scalapack.'
         call messages_fatal(1, only_root_writes = .true.)
@@ -128,7 +123,7 @@ contains
     call messages_print_var_option(stdout, 'SubspaceDiagonalization', this%method)
 
     ! some checks for ingenious users
-    if(this%method == SD_SCALAPACK) then
+    if(this%method == OPTION__SUBSPACEDIAGONALIZATION__SCALAPACK) then
 #ifndef HAVE_MPI
       message(1) = 'The scalapack subspace diagonalization can only be used in parallel.'
       call messages_fatal(1, only_root_writes = .true.)
@@ -150,7 +145,7 @@ contains
     end if
 
 #ifdef HAVE_MPI
-    if(this%method == SD_STANDARD .and. st%parallel_in_states) then
+    if(this%method == OPTION__SUBSPACEDIAGONALIZATION__STANDARD .and. st%parallel_in_states) then
       message(1) = 'The standard subspace diagonalization cannot work with state parallelization.'
       call messages_fatal(1, only_root_writes = .true.)
     end if
