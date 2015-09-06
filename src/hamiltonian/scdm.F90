@@ -75,7 +75,8 @@ module scdm_m
        scdm_t,            &
        scdm_init,         &
        dscdm_localize,    &
-       zscdm_localize
+       zscdm_localize,    &
+       scdm_rotate_states
   
   type scdm_t
     type(states_t)   :: st          !< localized orthogonal states
@@ -102,7 +103,8 @@ module scdm_m
 
     logical          :: re_ortho_normalize=.false. !< orthonormalize the scdm states
     logical          :: verbose     !< write info about SCDM procedure
-
+    logical          :: psi_scdm    !< Hamiltonian is applied to an SCDM state
+    
     ! parallelization of scdm states
     logical          :: root        !< this is a redundat flag equal to mesh%vp%rank==0
     integer          :: nst
@@ -133,6 +135,7 @@ contains
     
     type(cmplxscl_t) :: cmplxscl
     integer :: ii, jj, kk, ip, rank
+    integer :: inp_calc_mode
     !debug
     integer :: temp(3)
     
@@ -154,6 +157,16 @@ contains
     if (der%mesh%sb%periodic_dim > 0 .and. der%mesh%sb%periodic_dim /= 3) &
          call messages_not_implemented("SCDM with mixed-periodicity")  
 
+    ! determine whether we can apply scdm exchange operator to scdm states
+    ! NOTE: this should be always the case, but for now only in td
+    call parse_variable('CalculationMode', 0, inp_calc_mode)
+    if(inp_calc_mode == 3) then
+      scdm%psi_scdm = .true.
+    else
+      scdm%psi_scdm = .false.
+    end if
+    
+    
 #ifdef HAVE_MPI
     call MPI_Comm_Rank( der%mesh%mpi_grp%comm, rank, mpi_err)
 #endif
@@ -341,6 +354,26 @@ contains
     POP_SUB(scdm_init)
   end subroutine scdm_init
 
+  !> wrapper routine to rotate  KS states into their SCDM representation
+  subroutine scdm_rotate_states(st,mesh,scdm)
+    type(states_t), intent(inout)  :: st
+    type(mesh_t), intent(in)       :: mesh
+    type(scdm_t), intent(inout)    :: scdm
+
+    PUSH_SUB(scdm_rotate_states)
+
+    if (.not.states_are_real(st)) then
+      call zscdm_rotate_states(st,mesh,scdm)
+    else
+      call dscdm_rotate_states(st,mesh,scdm)
+    end if
+
+    POP_SUB(scdm_rotate_states)
+
+  end subroutine scdm_rotate_states
+
+  
+  
   !> wrapper routine for real rank-revealing QR decompisition
   !! of the n*np matrix kst, returning the pivot vector jpvt
   subroutine dRRQR(nn, np, kst, jpvt)

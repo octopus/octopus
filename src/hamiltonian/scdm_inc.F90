@@ -530,6 +530,53 @@ subroutine X(scdm_localize)(st,mesh,scdm)
 
 end subroutine X(scdm_localize)
 
+!> rotate states from KS to SCDM representation and construct SCDM states
+subroutine X(scdm_rotate_states)(st,mesh,scdm)
+  type(states_t), intent(inout)  :: st
+  type(mesh_t), intent(in)       :: mesh
+  type(scdm_t), intent(inout)    :: scdm
+
+  integer   :: ist, jst, count, ip
+  R_TYPE, allocatable    :: temp_state(:,:), temp_state_global(:,:)
+
+  PUSH_SUB(X(scdm_rotate_states))
+
+  ASSERT(st%st_start==scdm%st%st_start)
+  ASSERT(st%st_end==scdm%st%st_end)
+
+  SAFE_ALLOCATE(temp_state(1:mesh%np_global,1))
+  SAFE_ALLOCATE(temp_state_global(1:mesh%np_global,1))
+
+  ! create localized SCDM representation of the states in st
+  scdm_is_local = .false.
+  call X(scdm_localize)(st,mesh,scdm)
+
+  ! the output state object holds the rotated states
+  ! copy only local domains
+  count = 0
+  do ist=1, st%nst
+    temp_state(1:mesh%np_global,1) = M_ZERO
+    ! find process that holds the full scdm state
+    if (ist >= scdm%st_start .and. ist <= scdm%st_end) then
+      count = count + 1
+      temp_state(1:mesh%np_global,1) = scdm%st%X(psi)(1:mesh%np_global,st%d%dim,count,scdm%st%d%nik)
+    end if
+    ! use reduce to send temp_state to all procs, without knowing the sending rank
+    temp_state_global(1:mesh%np_global,1) = M_ZERO
+    call MPI_Allreduce(temp_state, temp_state_global, mesh%np_global, R_MPITYPE, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
+
+    ! copy into the domains of the st object
+    call vec_scatter(mesh%vp,0, temp_state_global(1:mesh%np_global,1), st%X(psi)(1:mesh%np,1,ist,1))
+
+  end do
+  SAFE_DEALLOCATE_A(temp_state)
+  SAFE_DEALLOCATE_A(temp_state_global)
+
+  POP_SUB(X(scdm_rotate_states))
+
+end subroutine X(scdm_rotate_states)
+
+
 !> stupid routine to invert with LAPACK
 !! is very redundant here, shoudl be replaced by something smart
 subroutine X(invert)(nn, A)

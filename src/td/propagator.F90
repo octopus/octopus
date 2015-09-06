@@ -36,6 +36,7 @@ module propagator_m
   use multicomm_m
   use opt_control_state_m
   use output_m
+  use poisson_m
   use potential_interpolation_m
   use profiling_m
   use propagator_base_m
@@ -45,6 +46,7 @@ module propagator_m
   use propagator_magnus_m
   use propagator_qoct_m
   use propagator_rk_m
+  use scdm_m
   use scf_m
   use sparskit_m
   use states_m
@@ -527,6 +529,13 @@ contains
       call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, hm%vhxc)
     end if
 
+    ! to work on SCDM states we rotate the states in st to the localized SCDM,
+    !i.e. we perform the SCDM procedure and overwrite the states in st
+    if(hm%scdm%psi_scdm) then
+      call scdm_init(st,gr%der,psolver%cube, hm%scdm)
+      call scdm_rotate_states(st,gr%mesh,hm%scdm)
+    endif
+    
     select case(tr%method)
     case(PROP_ETRS)
       call td_etrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_, gauge_force)

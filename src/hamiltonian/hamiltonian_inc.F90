@@ -171,8 +171,13 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
       ASSERT(.not. batch_is_packed(hpsib))
 
       if(hm%scdm_EXX)  then
-        call scdm_init(hm%hf_st, der,psolver%cube, hm%scdm)
-        call X(scdm_localize)(hm%hf_st, der%mesh, hm%scdm)
+        ! check if we are operating on an scdm state in which case the basis already exists
+        ! if not contruct the SCDM basis
+        if(.not. hm%scdm%psi_scdm) then
+          call scdm_init(hm%hf_st, der,psolver%cube, hm%scdm)
+          call X(scdm_localize)(hm%hf_st, der%mesh, hm%scdm)
+        endif
+
         ! to apply the scdm exact exchange we need the state on the global mesh
         SAFE_ALLOCATE(psi_global(1:der%mesh%np_global,1:hm%hf_st%d%dim))
         ! global hpsi, should not be neccesary once mesh and scdm state parallelization coincide
@@ -499,10 +504,10 @@ subroutine X(scdm_exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
   FLOAT,               intent(in)    :: exx_coef
 
   integer :: jst, ip, idim, ik2
-  FLOAT :: ff
+  FLOAT :: ff, rr(3), dist
   ! 
   R_TYPE, allocatable :: rho_l(:), pot_l(:)
-  integer :: jj,kk,ll, count
+  integer :: ii,jj,kk,ll, count
   R_TYPE  :: temp_state_global(der%mesh%np_global,hm%hf_st%d%dim)
 
   PUSH_SUB(X(scdm_exchange_operator))
@@ -520,6 +525,17 @@ subroutine X(scdm_exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
       count = count +1
       if(hm%hf_st%occ(jst, ik2) < M_EPSILON) cycle
 
+      ! for psi in scdm representation check if it overlaps with the box of jst
+      ! NOTE: this can be faster by building an array with overlapping index pairs
+      !       within the radius of scdm%box_size
+      if(hm%scdm%psi_scdm) then
+        do ii = 1, 3
+          rr(1:3) = hm%scdm%center(ii,ist)-hm%scdm%center(ii,jst)
+        end do
+        dist = sqrt(dot_product(rr,rr))
+        if(dist.gt.hm%scdm%box_size) cycle
+      end if
+      
       ! in Hartree we just remove the self-interaction
       if(hm%theory_level == HARTREE .and. jst /= ist) cycle
 
