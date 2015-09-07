@@ -33,6 +33,7 @@ module subspace_m
   use global_m
   use grid_m
   use hamiltonian_m
+  use hardware_m
   use lalg_adv_m
   use lalg_basic_m
   use math_m
