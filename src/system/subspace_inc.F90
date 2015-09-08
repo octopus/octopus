@@ -71,8 +71,6 @@ subroutine X(subspace_diag_standard)(der, st, hm, ik, eigenval, diff)
 
   PUSH_SUB(X(subspace_diag_standard))
 
-  ASSERT(.not. st%parallel_in_states)
-
   SAFE_ALLOCATE(hmss(1:st%nst, 1:st%nst))
   
   call X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
@@ -319,8 +317,6 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
   PUSH_SUB(X(subspace_diag_hamiltonian))
   call profiling_in(hamiltonian_prof, "SUBSPACE_HAMILTONIAN")
 
-  ASSERT(.not. st%parallel_in_states)
-
   SAFE_ALLOCATE(hpsib(st%group%block_start:st%group%block_end))
   
   do ib = st%group%block_start, st%group%block_end
@@ -413,6 +409,11 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
         call batch_get_points(hpsib(ib), sp, sp + size - 1, hpsi)
       end do
 
+      if(st%parallel_in_states) then
+        call states_gather(st, (/st%d%dim, size/), psi)
+        call states_gather(st, (/st%d%dim, size/), hpsi)
+      end if
+      
       if(der%mesh%use_curvilinear) then
         do ip = 1, size
           psi(1:st%nst, 1:st%d%dim, ip) = psi(1:st%nst, 1:st%d%dim, ip)*der%mesh%vol_pp(sp + ip - 1)
@@ -439,6 +440,7 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
   do ib = st%group%block_start, st%group%block_end
     call batch_end(hpsib(ib), copy = .false.)
   end do
+  
   SAFE_DEALLOCATE_A(hpsib)
     
   if(der%mesh%parallel_in_domains) call comm_allreduce(der%mesh%mpi_grp%comm, hmss, dim = (/st%nst, st%nst/))

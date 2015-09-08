@@ -102,8 +102,13 @@ module states_calc_m
     dstates_calc_overlap,           &
     zstates_calc_overlap,           &
     states_orthogonalize_cproduct,  &
-    states_sort_complex
+    states_sort_complex,            &
+    states_gather
 
+  interface states_gather
+    module procedure dstates_gather, zstates_gather
+  end interface states_gather
+  
 contains
 
   ! ---------------------------------------------------------

@@ -326,7 +326,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
         call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psicopy)
       end do
 
-      if(st%parallel_in_states) call X(states_gather)(st, (/st%d%dim, size/), psicopy)      
+      if(st%parallel_in_states) call states_gather(st, (/st%d%dim, size/), psicopy)      
       
       do idim = 1, st%d%dim
         
@@ -1110,7 +1110,7 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
   
   call profiling_in(prof, "STATES_ROTATE")
 
-  if(associated(st%X(dontusepsi)) .and. .not. states_are_packed(st)) then
+  if(associated(st%X(dontusepsi)) .and. .not. states_are_packed(st) .and. .not. st%parallel_in_states) then
 
     call batch_init(psib, st%d%dim, 1, st%nst, st%X(dontusepsi)(:, :, :, ik))
     call X(mesh_batch_rotate)(mesh, psib, uu)
@@ -1133,6 +1133,8 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
       do ib = st%group%block_start, st%group%block_end
         call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psicopy)
       end do
+
+      call states_gather(st, (/st%d%dim, size/), psicopy)
       
       do idim = 1, st%d%dim
         
@@ -1288,7 +1290,7 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
         call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psi)
       end do
 
-      if(st%parallel_in_states) call X(states_gather)(st, (/st%d%dim, size/), psi)
+      if(st%parallel_in_states) call states_gather(st, (/st%d%dim, size/), psi)
       
       if(mesh%use_curvilinear) then
         do ip = sp, sp + size - 1

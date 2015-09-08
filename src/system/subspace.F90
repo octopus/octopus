@@ -107,14 +107,9 @@ contains
 
       default = OPTION__SUBSPACEDIAGONALIZATION__STANDARD
 
-      if(st%parallel_in_states) then
 #ifdef HAVE_SCALAPACK
-        default = OPTION__SUBSPACEDIAGONALIZATION__SCALAPACK
-#else
-        message(1) = 'Parallelization in states of the ground state requires scalapack.'
-        call messages_fatal(1, only_root_writes = .true.)
+      if(st%parallel_in_states) default = OPTION__SUBSPACEDIAGONALIZATION__SCALAPACK
 #endif
-      end if
 
       call parse_variable('SubspaceDiagonalization', default, this%method)
 
@@ -144,13 +139,6 @@ contains
       end if
 #endif
     end if
-
-#ifdef HAVE_MPI
-    if(this%method == OPTION__SUBSPACEDIAGONALIZATION__STANDARD .and. st%parallel_in_states) then
-      message(1) = 'The standard subspace diagonalization cannot work with state parallelization.'
-      call messages_fatal(1, only_root_writes = .true.)
-    end if
-#endif
 
     POP_SUB(subspace_init)
   end subroutine subspace_init
