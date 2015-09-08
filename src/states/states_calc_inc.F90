@@ -295,7 +295,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
   type(cl_kernel) :: kernel_ref
   type(profile_t), save :: prof_copy
 #endif
-  type(profile_t), save :: prof, prof_comm
+  type(profile_t), save :: prof
 
   PUSH_SUB(X(states_trsm))
   call profiling_in(prof, "STATES_TRSM")
@@ -322,18 +322,11 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
 
-      if(st%parallel_in_states) psicopy = CNST(0.0)
-      
       do ib = st%group%block_start, st%group%block_end
         call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psicopy)
       end do
 
-      ! we should use allgather here
-      if(st%parallel_in_states) then
-        call profiling_in(prof_comm, "STATES_TRSM_COMM")
-        call comm_allreduce(st%mpi_grp%comm, psicopy)
-        call profiling_out(prof_comm)
-      end if
+      if(st%parallel_in_states) call X(states_gather)(st, (/st%d%dim, size/), psicopy)      
       
       do idim = 1, st%d%dim
         
@@ -1246,7 +1239,7 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
   integer :: ist, jst
 #endif
   type(batch_t) :: psib, psi2b
-  type(profile_t), save :: prof, prof_comm
+  type(profile_t), save :: prof
   FLOAT :: vol
   R_TYPE, allocatable :: psi(:, :, :)
 #ifdef HAVE_CLAMDBLAS
@@ -1291,19 +1284,11 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
 
-      if(st%parallel_in_states) psi = CNST(0.0)
-      
       do ib = st%group%block_start, st%group%block_end
         call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psi)
       end do
 
-      !this should really be an allgather, we use the simpler allreduce
-      !for the moment to get it working
-      if(st%parallel_in_states) then
-        call profiling_in(prof_comm, "STATES_OVERLAP_COMM")
-        call comm_allreduce(st%mpi_grp%comm, psi)
-        call profiling_out(prof_comm)
-      end if
+      if(st%parallel_in_states) call X(states_gather)(st, (/st%d%dim, size/), psi)
       
       if(mesh%use_curvilinear) then
         do ip = sp, sp + size - 1
@@ -1429,6 +1414,31 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
 
   POP_SUB(X(states_calc_overlap))
 end subroutine X(states_calc_overlap)
+
+!-------------------------------------------------
+
+subroutine X(states_gather)(st, dims, psi)
+  type(states_t), intent(in)    :: st
+  integer,        intent(in)    :: dims(2)
+  R_TYPE,         intent(out)   :: psi(:, :, :)
+
+  type(profile_t), save :: prof
+
+  !no PUSH_SUB, called too often
+  
+  call profiling_in(prof, 'STATES_GATHER')
+
+  if(st%parallel_in_states) then
+    !this should really be an allgather, we use the simpler allreduce
+    !for the moment to get it working
+    psi(1:st%st_start - 1, 1:dims(1), 1:dims(2)) = CNST(0.0)
+    psi(st%st_end + 1:st%nst, 1:dims(1), 1:dims(2)) = CNST(0.0)
+    call comm_allreduce(st%mpi_grp%comm, psi)
+  end if
+
+  call profiling_out(prof)
+  
+end subroutine X(states_gather)
 
 !! Local Variables:
 !! mode: f90
