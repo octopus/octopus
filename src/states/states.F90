@@ -1358,12 +1358,13 @@ contains
     !% Can be used with domain parallelization but not state parallelization.
     !%End
 
+    default = OPTION__STATESORTHOGONALIZATION__CHOLESKY_SERIAL
+#ifdef HAVE_SCALAPACK
     if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
       default = OPTION__STATESORTHOGONALIZATION__CHOLESKY_PARALLEL
-    else
-      default = OPTION__STATESORTHOGONALIZATION__CHOLESKY_SERIAL
     end if
-
+#endif
+    
     call parse_variable('StatesOrthogonalization', default, st%d%orth_method)
 
     if(.not.varinfo_valid_option('StatesOrthogonalization', st%d%orth_method)) call messages_input_error('StatesOrthogonalization')

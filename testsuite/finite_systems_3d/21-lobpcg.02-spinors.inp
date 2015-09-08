@@ -40,3 +40,4 @@ StatesBlockSize = 5
 
 FilterPotentials = filter_none
 
+ExperimentalFeatures = yes

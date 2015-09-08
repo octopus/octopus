@@ -56,10 +56,9 @@ contains
   subroutine ground_state_run_init()
 
     PUSH_SUB(ground_state_run_init)
-
 #ifdef HAVE_SCALAPACK
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-#endif
+#endif    
     call calc_mode_par_set_scalapack_compat()
 
     POP_SUB(ground_state_run_init)
@@ -80,6 +79,10 @@ contains
     call messages_write('Info: Allocating ground state wave-functions')
     call messages_info()
 
+    if(sys%st%parallel_in_states) then
+      call messages_experimental('State parallelization for ground state calculations')
+    end if
+    
     call states_allocate_wfns(sys%st, sys%gr%mesh)
 
 #ifdef HAVE_MPI

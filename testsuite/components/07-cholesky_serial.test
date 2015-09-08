@@ -1,10 +1,12 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 
-Test       : Cholesky (serial) orthogonalization
+Test       : Cholesky orthogonalization
 Program    : oct-test
 TestGroups : short-run, components
 Enabled    : Yes
+
+Processors: 4
 
 Precision : 1.0e-13
 Input: 07-cholesky_serial.01-real.inp
