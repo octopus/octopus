@@ -74,11 +74,6 @@ module lcao_m
     lcao_is_available,  &
     lcao_num_orbitals
 
-  integer, public, parameter ::     &
-    LCAO_START_NONE    = 0, &
-    LCAO_START_STATES  = 2, &
-    LCAO_START_FULL    = 3
-
   type lcao_t
     private
     integer           :: mode
@@ -174,8 +169,8 @@ contains
 
     ! The initial LCAO calculation is done by default if we have species representing atoms.
     ! Otherwise, it is not the default value and has to be enforced in the input file.
-    mode_default = LCAO_START_FULL
-    if(geo%only_user_def) mode_default = LCAO_START_NONE
+    mode_default = OPTION__LCAOSTART__LCAO_FULL
+    if(geo%only_user_def) mode_default = OPTION__LCAOSTART__LCAO_NONE
     
     !%Variable LCAOStart
     !%Type integer
@@ -224,7 +219,7 @@ contains
 
     call messages_print_var_option(stdout, 'LCAOStart', this%mode)
 
-    if(this%mode == LCAO_START_NONE) then
+    if(this%mode == OPTION__LCAOSTART__LCAO_NONE) then
       POP_SUB(lcao_init)
       return
     end if
@@ -325,7 +320,7 @@ contains
       if(this%maxorbs == 0) then
         call messages_write('The are no atomic orbitals available, cannot do LCAO.')
         call messages_warning()
-        this%mode = LCAO_START_NONE
+        this%mode = OPTION__LCAOSTART__LCAO_NONE
         POP_SUB(lcao_init)
         return
       end if
@@ -756,7 +751,7 @@ contains
         call states_write_eigenvalues(stdout, min(sys%st%nst, lcao%norbs), sys%st, sys%gr%sb)
 
         ! Update the density and the Hamiltonian
-        if (lcao%mode == LCAO_START_FULL) then
+        if (lcao%mode == OPTION__LCAOSTART__LCAO_FULL) then
           call system_h_setup(sys, hm, calc_eigenval = .false.)
           if(sys%st%d%ispin > UNPOLARIZED) then
             ASSERT(present(lmm_r))
@@ -882,7 +877,7 @@ contains
 
     PUSH_SUB(lcao_is_available)
 
-    available = this%initialized .and. this%mode /= LCAO_START_NONE
+    available = this%initialized .and. this%mode /= OPTION__LCAOSTART__LCAO_NONE
 
     POP_SUB(lcao_is_available)
   end function lcao_is_available
