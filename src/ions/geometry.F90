@@ -739,7 +739,7 @@ contains
     if (present(comment)) then
       write(iunit, '(1x,a)') comment
     else
-      write(iunit, '(1x,a,a)') 'units: ', trim(units_abbrev(units_out%length))
+      write(iunit, '(1x,a,a)') 'units: ', trim(units_abbrev(units_out%length_xyz_file))
     end if
     do iatom = 1, geo%natoms
       call atom_write_xyz(geo%atom(iatom), geo%space%dim, iunit)

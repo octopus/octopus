@@ -48,6 +48,7 @@ module unit_system_m
 
   type unit_system_t
     type(unit_t) :: length
+    type(unit_t) :: length_xyz_file
     type(unit_t) :: energy
     type(unit_t) :: time
     type(unit_t) :: velocity
@@ -63,6 +64,7 @@ module unit_system_m
 
   !> some special units required for particular quantities
   type(unit_t),        public :: unit_one           !< For unitless quantities and arithmetics with units.
+  type(unit_t),        public :: unit_angstrom      !< For XYZ files.
   type(unit_t),        public :: unit_ppm           !< Parts per million.
   type(unit_t),        public :: unit_debye         !< For dipoles.
   type(unit_t),        public :: unit_invcm         !< For vibrational frequencies.
@@ -81,7 +83,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine unit_system_init()
-    integer :: cc, cinp, cout
+    integer :: cc, cinp, cout, xyz_units
 
     PUSH_SUB(unit_system_init)
 
@@ -169,6 +171,10 @@ contains
     unit_one%abbrev = '1'
     unit_one%name   = 'one'
 
+    unit_angstrom%factor = P_Ang  ! 1 a.u. = 0.529 A
+    unit_angstrom%abbrev = "A"
+    unit_angstrom%name   = "Angstrom"
+
     unit_ppm%factor = CNST(1e-6)
     unit_ppm%abbrev = 'ppm a.u.'
     unit_ppm%name   = 'parts per million'
@@ -220,6 +226,44 @@ contains
 
     if(cinp/2 == 1) units_inp%time = unit_femtosecond
     if(cout/2 == 1) units_out%time = unit_femtosecond
+
+
+    !%Variable UnitsXYZFiles
+    !%Type integer
+    !%Default octopus_units
+    !%Section Execution::Units
+    !%Description
+    !% This variable selects in which units I/O of XYZ files should be
+    !% performed. 
+    !%Option octopus_units 0
+    !% The XYZ will be assumed to be in the same units that Octopus is
+    !% using for the input file based on the Units, UnitsInput, and
+    !% UnitsOutput variables.
+    !%Option angstrom   1
+    !% XYZ files will be assumed to be always in Angstrom,
+    !% independently of the units used by Octopus. This ensures
+    !% compatibility with most programs, that assume XYZ files have
+    !% coordinates in Angstrom.
+    !%End
+
+    call parse_variable('UnitsXYZFiles', OPTION__UNITSXYZFILES__OCTOPUS_UNITS, xyz_units)
+
+    if(.not.varinfo_valid_option('UnitsXYZFiles', xyz_units)) call messages_input_error('UnitsXYZFiles', 'Invalid option')
+
+    select case(xyz_units)
+
+    case(OPTION__UNITSXYZFILES__OCTOPUS_UNITS)
+      units_inp%length_xyz_file = units_inp%length
+      units_out%length_xyz_file = units_out%length
+
+    case(OPTION__UNITSXYZFILES__ANGSTROM)
+      call messages_experimental('UnitsXYZFiles = angstrom')
+      units_inp%length_xyz_file = unit_angstrom
+      units_out%length_xyz_file = unit_angstrom
+
+    case default
+      ASSERT(.false.)
+    end select
 
     POP_SUB(unit_system_init)
 

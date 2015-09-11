@@ -198,7 +198,13 @@ contains
     !% indicating the number of atoms. The second can contain comments that are simply ignored by
     !% <tt>Octopus</tt>. Then there follows one line per atom, containing the chemical species and
     !% the Cartesian coordinates of the atom.
-    !% NOTE: The coordinates are treated in the units specified by <tt>Units</tt> and/or <tt>UnitsInput</tt>.
+    !%
+    !% WARNING: By default the coordinates are treated in the units
+    !% specified by <tt>Units</tt> and/or <tt>UnitsInput</tt>, which
+    !% means Octopus might expect xyz files to be in atomic units. If
+    !% you want the XYZ file to be read in Angstrom, as most codes do,
+    !% you can set the variable <tt>UnitsXYZFiles</tt> to
+    !% <tt>angstrom</tt>.
     !%End
 
     if(parse_is_defined('XYZ'//trim(what))) then ! read an xyz file
@@ -489,7 +495,13 @@ contains
         do jdir = space%dim + 1, MAX_DIM
           gf%atom(ia)%x(jdir) = M_ZERO
         end do
-        gf%atom(ia)%x = units_to_atomic(units_inp%length, gf%atom(ia)%x)
+
+        if(gf%source == READ_COORDS_XYZ) then
+          gf%atom(ia)%x = units_to_atomic(units_inp%length_xyz_file, gf%atom(ia)%x)
+        else
+          gf%atom(ia)%x = units_to_atomic(units_inp%length, gf%atom(ia)%x)
+        end if
+        
       end do
     end if
 
