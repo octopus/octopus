@@ -365,6 +365,12 @@ contains
       call scf_init(td%scf, sys%gr, sys%geo, sys%st, hm)
     end if
 
+    if(hm%scdm_EXX) then
+      call scdm_init(st,gr%der,psolver%cube, hm%scdm,operate_on_scdm=.true.)
+      ! make sure scdm is constructed as soon as it is needed
+      scdm_is_local = .false.
+    end if
+    
     if (gauge_field_is_applied(hm%ep%gfield)) then
       !if the gauge field is applied, we need to tell v_ks to calculate the current
       call v_ks_calculate_current(sys%ks, .true.)

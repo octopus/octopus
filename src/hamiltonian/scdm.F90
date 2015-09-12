@@ -127,16 +127,18 @@ contains
   !! A. Damle, L. Lin, L. Ying: Compressed representation of Kohn-Sham orbitals via 
   !!                            selected columns of the density matrix
   !! http://arxiv.org/abs/1408.4926 (accepted in JCTC as of 17th March 2015)
-  subroutine scdm_init(st,der,fullcube,scdm)
+  subroutine scdm_init(st,der,fullcube,scdm,operate_on_scdm)
     
     type(states_t), intent(in)  :: st !< this contains the KS set (for now from hm%hf_st which is confusing)
     type(derivatives_t) :: der
     type(cube_t) :: fullcube !< cube of the full cell
     type(scdm_t) :: scdm
+    logical, optional :: operate_on_scdm  !< apply exchange to SCDM states by performing a basis rotation on the st object
     
     type(cmplxscl_t) :: cmplxscl
     integer :: ii, jj, kk, ip, rank
     integer :: inp_calc_mode
+    logical :: operate_on_scdm_
     !debug
     integer :: temp(3)
     
@@ -158,16 +160,17 @@ contains
     if (der%mesh%sb%periodic_dim > 0 .and. der%mesh%sb%periodic_dim /= 3) &
          call messages_not_implemented("SCDM with mixed-periodicity")  
 
-    ! determine whether we can apply scdm exchange operator to scdm states
+    ! determine whether we are applying the scdm exchange operator to scdm states
     ! NOTE: this should be always the case, but for now only in td
-    call parse_variable('CalculationMode', 0, inp_calc_mode)
-    if(inp_calc_mode == 3) then
-      scdm%psi_scdm = .true.
+    ! set default
+    if(present(operate_on_scdm)) then
+      operate_on_scdm_ = operate_on_scdm
     else
-      scdm%psi_scdm = .false.
+      operate_on_scdm_ = .false.
     end if
     
-    
+    scdm%psi_scdm = operate_on_scdm_
+
 #ifdef HAVE_MPI
     call MPI_Comm_Rank( der%mesh%mpi_grp%comm, rank, mpi_err)
 #endif
