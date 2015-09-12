@@ -129,9 +129,9 @@ subroutine X(scdm_localize)(st,mesh,scdm)
                  KSt_original(vv,1:mesh%np_global)*R_CONJ( KSt_original(vv,JPVT(ii)) )
     end do
   end do
-#ifdef HAVE_MPI
-  call MPI_Allreduce(MPI_IN_PLACE, SCDM_temp(1,1), mesh%np_global*nval, R_MPITYPE, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
-#endif
+  
+  call comm_allreduce(mesh%mpi_grp%comm, SCDM_temp, (/mesh%np_global, nval/))
+
   call cpu_time(t1)
   if (scdm%verbose) call messages_print_var_value(stdout, 'time: explicit matmul1:',t1-t2)
 
@@ -237,10 +237,9 @@ subroutine X(scdm_localize)(st,mesh,scdm)
       !write(127,*) scdm%center(:,vv)
     end do
     !close(127)
-#ifdef HAVE_MPI
-    ! globalize center
-    call MPI_Allreduce(MPI_IN_PLACE,scdm%center(1,1),size(scdm%center) ,MPI_FLOAT, MPI_SUM,mesh%mpi_grp%comm, mpi_err)
-#endif
+
+    call comm_allreduce(mesh%mpi_grp%comm, scdm%center)
+
     call cpu_time(t2)
     if (scdm%verbose) call messages_print_var_value(stdout, 'time: find centers',t2-t1)
 
