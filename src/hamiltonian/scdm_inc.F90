@@ -562,7 +562,8 @@ subroutine X(scdm_rotate_states)(st,mesh,scdm)
     ! find process that holds the full scdm state
     if (ist >= scdm%st_start .and. ist <= scdm%st_end) then
       count = count + 1
-      call states_get_state(scdm%st, mesh, count, scdm%st%d%nik, temp_state)
+      !      call states_get_state(scdm%st, mesh, count, scdm%st%d%nik, temp_state)
+      temp_state(1:mesh%np_global,1) = scdm%st%X(dontusepsi)(1:mesh%np_global,st%d%dim,count,scdm%st%d%nik)
     end if
     ! use reduce to send temp_state to all procs, without knowing the sending rank
     temp_state_global(1:mesh%np_global,1) = M_ZERO
