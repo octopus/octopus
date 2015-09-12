@@ -332,10 +332,10 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
     call opencl_create_buffer(hmss_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%nst)
     call opencl_set_buffer_to_zero(hmss_buffer, R_TYPE_VAL, st%nst*st%nst)
 
-    if(st%group%block_start == st%group%block_end) then
+    if(.not. st%parallel_in_states .and. st%group%block_start == st%group%block_end) then
       ! all the states are stored in one block
       ! we can use blas directly
-
+      
       call aX(clAmdblas,gemmEx)(order = clAmdBlasColumnMajor, transA = clAmdBlasNoTrans, transB = clAmdBlasConjTrans, &
         M = int(st%nst, 8), N = int(st%nst, 8), K = int(der%mesh%np, 8), &
         alpha = R_TOTYPE(der%mesh%volume_element), &
@@ -349,8 +349,10 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
       if(ierr /= clAmdBlasSuccess) call clblas_print_error(ierr, 'clAmdBlasXgemmEx')
 
     else
-      ! we have to copy the blocks to a temporary array
 
+      ASSERT(.not. st%parallel_in_states)
+
+      ! we have to copy the blocks to a temporary array
       block_size = batch_points_block_size(st%group%psib(st%group%block_start, ik))
 
       call opencl_create_buffer(psi_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
