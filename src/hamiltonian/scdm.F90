@@ -27,6 +27,7 @@ module scdm_m
   use cl
 #endif
   use cmplxscl_m
+  use comm_m
   use cube_m
   use cube_function_m
   use derivatives_m
