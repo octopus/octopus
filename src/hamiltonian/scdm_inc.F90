@@ -68,15 +68,17 @@ subroutine X(scdm_localize)(st,mesh,scdm)
 
   !NOTE: not sure how to proceed if dim!=1 or nik!=1
   if (st%d%nik /= 1 .or. st%d%dim /= 1) call messages_not_implemented("SCDM with k-points or dims")
-  ! gather states in case of domain paralleization
+  ! gather states in case of domain parallelization
   if (mesh%parallel_in_domains) then
+    SAFE_ALLOCATE(temp_state(1:mesh%np,1))
     SAFE_ALLOCATE(state_global(1:mesh%np_global))
 
     count = 0
     do ii = 1, nval
-      ! KSt(i,:) = st%ddontusepsi(:,st%d%dim,i,st%d%nik)
+      ! KSt(i,:) = st%psi(:,dim,i,nik)
 #ifdef HAVE_MPI
-      call vec_gather(mesh%vp, 0, state_global, st%X(dontusepsi)(1:mesh%np,1,ii,st%d%nik))
+      call states_get_state(st, mesh, ii, st%d%nik, temp_state)
+      call vec_gather(mesh%vp, 0, state_global, temp_state(1:mesh%np,1))  
       call MPI_Bcast(state_global,mesh%np_global , R_MPITYPE, 0, mesh%mpi_grp%comm, mpi_err)
 #endif
       if (scdm%root) then
@@ -90,6 +92,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
       end if
     end do
     SAFE_DEALLOCATE_A(state_global)
+    SAFE_DEALLOCATE_A(temp_state)
   else
     ! serial
     SAFE_ALLOCATE(temp_state(1:mesh%np,1))
@@ -554,6 +557,8 @@ subroutine X(scdm_rotate_states)(st,mesh,scdm)
   scdm_is_local = .false.
   call X(scdm_localize)(st,mesh,scdm)
 
+  ! NOTE: the following should be done by a simple states_copy_state() call
+  !       but requires the scdm%st object to have the same layout as the st object ... TODO
   ! the output state object holds the rotated states
   ! copy only local domains
   count = 0
@@ -569,13 +574,12 @@ subroutine X(scdm_rotate_states)(st,mesh,scdm)
     temp_state_global(1:mesh%np_global,1) = M_ZERO
 #ifdef HAVE_MPI
     call MPI_Allreduce(temp_state, temp_state_global, mesh%np_global, R_MPITYPE, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
-#else
-    temp_state_global = temp_state
+
+    ! copy into the domains of the st object
+    call vec_scatter(mesh%vp, 0, temp_state_global(1:mesh%np_global,1), temp_state(1:mesh%np,1))
 #endif
-    ! copy into the domains of the st object (AFAIU vec_statter does not do what you want, XA)
-#ifdef HAVE_MPI
-    call vec_scatter(mesh%vp, 0, temp_state_global(1:mesh%np_global,1), st%X(dontusepsi)(1:mesh%np,1,ist,1))
-#endif
+    call states_set_state(st, mesh, ist, scdm%st%d%nik, temp_state(1:mesh%np,:))
+
     
   end do
   SAFE_DEALLOCATE_A(temp_state)
