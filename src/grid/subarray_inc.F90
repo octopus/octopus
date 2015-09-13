@@ -25,20 +25,20 @@ subroutine X(subarray_gather)(this, array, subarray)
   R_TYPE,              intent(out) :: subarray(:)
 
   type(profile_t), save :: prof
-  integer :: iblock, ii, isa
+  integer :: iblock, ii
 
   call profiling_in(prof, "SUBARRAY_GATHER")
 
-  isa = 0
   do iblock = 1, this%nblocks
-    forall(ii = 1:this%blength(iblock)) subarray(isa + ii) = array(this%offsets(iblock) + ii - 1)
-    isa = isa + this%blength(iblock)
+    forall(ii = 1:this%blength(iblock)) subarray(this%dest(iblock) + ii) = array(this%offsets(iblock) + ii - 1)
   end do
 
   call profiling_count_transfers(this%npoints, array(1))
 
   call profiling_out(prof)
 end subroutine X(subarray_gather)
+
+! ---------------------------------------------------
 
 #if defined(R_TREAL) || defined(R_TCOMPLEX)
 subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
@@ -47,7 +47,7 @@ subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
   type(batch_t),       intent(inout) :: subarrayb
 
   type(profile_t), save :: prof
-  integer :: iblock, ii, isa, ist
+  integer :: iblock, ii, ist
   R_TYPE  :: aa
 #ifdef HAVE_OPENCL
   type(opencl_mem_t) :: blength_buff
@@ -81,26 +81,22 @@ subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
     call opencl_release_buffer(offsets_buff)
 #endif
   case(BATCH_PACKED)
-    isa = 0
     do iblock = 1, this%nblocks
       forall(ii = 1:this%blength(iblock))
         forall(ist = 1:arrayb%pack%size(1))
-          subarrayb%pack%X(psi)(ist, isa + ii) = arrayb%pack%X(psi)(ist, this%offsets(iblock) + ii - 1)
+          subarrayb%pack%X(psi)(ist, this%dest(iblock) + ii) = arrayb%pack%X(psi)(ist, this%offsets(iblock) + ii - 1)
         end forall
       end forall
-      isa = isa + this%blength(iblock)
     end do
     
   case(BATCH_NOT_PACKED)
-    !$omp parallel do private(isa, iblock, ii)
+    !$omp parallel do private(iblock, ii)
     do ist = 1, arrayb%nst_linear
-      isa = 0
       do iblock = 1, this%nblocks
         forall(ii = 1:this%blength(iblock))
-          subarrayb%states_linear(ist)%X(psi)(isa + ii) = &
+          subarrayb%states_linear(ist)%X(psi)(this%dest(iblock) + ii) = &
             arrayb%states_linear(ist)%X(psi)(this%offsets(iblock) + ii - 1)
         end forall
-        isa = isa + this%blength(iblock)
       end do
     end do
     

@@ -49,13 +49,13 @@ module subarray_m
        dsubarray_gather_batch,   &
        zsubarray_gather_batch,   &       
        ssubarray_gather_batch,   &
-       csubarray_gather_batch,   &
-       get_blocks
+       csubarray_gather_batch
   
   type subarray_t
     private
     integer, pointer :: offsets(:)
     integer, pointer :: blength(:)
+    integer, pointer :: dest(:)
     integer          :: nblocks
     integer          :: npoints
   end type subarray_t
@@ -103,11 +103,14 @@ contains
 
   end subroutine get_blocks
 
+  !---------------------------------------------------------------------
+
   subroutine subarray_init(this, total, positions)
     type(subarray_t),    intent(out) :: this
     integer,             intent(in)  :: total
     integer,             intent(in)  :: positions(:)
 
+    integer :: iblock
     integer, allocatable :: bltmp(:), ostmp(:)
 
     PUSH_SUB(subarray_init)
@@ -121,16 +124,24 @@ contains
     
     SAFE_ALLOCATE(this%blength(1:this%nblocks))
     SAFE_ALLOCATE(this%offsets(1:this%nblocks))
-
+    SAFE_ALLOCATE(this%dest(1:this%nblocks))
+    
     this%blength(1:this%nblocks) = bltmp(1:this%nblocks)
     this%offsets(1:this%nblocks) = ostmp(1:this%nblocks)
 
+    this%dest(1) = 0
+    do iblock = 2, this%nblocks
+      this%dest(iblock) = this%dest(iblock - 1) + this%blength(iblock - 1)
+    end do
+    
     SAFE_DEALLOCATE_A(bltmp)
     SAFE_DEALLOCATE_A(ostmp)
 
     POP_SUB(subarray_init)
   end subroutine subarray_init
 
+  !---------------------------------------------------------------------
+  
   subroutine subarray_end(this)
     type(subarray_t), intent(inout) :: this
     
