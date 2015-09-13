@@ -26,10 +26,10 @@
 __kernel void X(density_gradient)(const int idir,
 				  const int nst,
 				  const int np,
-				  __constant double * weights,
-				  const __global rtype * grad_psi,
-				  const __global rtype * psi, const int ldpsi,
-				  __global double * grad_density){
+				  __constant double * restrict weights,
+				  const __global rtype * restrict grad_psi,
+				  const __global rtype * restrict psi, const int ldpsi,
+				  __global double * restrict grad_density){
   
   int ip    = get_global_id(0);
 

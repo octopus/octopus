@@ -24,9 +24,9 @@
 __kernel void density_real(const int nst,
 			   const int np,
 			   const int offset,
-			   __constant double * weights,
-			   const __global double * psi, const int ldpsi,
-			   __global double * density){
+			   __constant double * restrict weights,
+			   const __global double * restrict psi, const int ldpsi,
+			   __global double * restrict density){
   
   int ip  = get_global_id(0);
   if(ip >= np) return;
@@ -45,9 +45,9 @@ __kernel void density_real(const int nst,
 __kernel void density_complex(const int nst,
 			      const int np,
 			      const int offset,
-			      __constant double * weights,
-			      const __global double2 * psi, const int ldpsi,
-			      __global double * density){
+			      __constant double * restrict weights,
+			      const __global double2 * restrict psi, const int ldpsi,
+			      __global double * restrict density){
   
   int ip  = get_global_id(0);
   if(ip >= np) return;

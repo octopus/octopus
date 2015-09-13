@@ -32,7 +32,7 @@ __kernel void operate(const int nn,
 		      __global int const * imax,
 		      __constant double * restrict weights,
 		      __global double const * restrict fi, const int ldfi,
-		      __global double * fo, const int ldfo){
+		      __global double * restrict fo, const int ldfo){
   
   const int ist = get_global_id(0);
   const int nst = get_global_size(0);

@@ -21,11 +21,11 @@
 
 #include <cl_global.h>
 
-__kernel void subarray_gather(const __global int * blength,
-			      const __global int * offsets,
-			      const __global int * dest,
-			      const __global double * array, const int ldarray,
-			      __global double * subarray, const int ldsubarray){
+__kernel void subarray_gather(const __global int * restrict blength,
+			      const __global int * restrict offsets,
+			      const __global int * restrict dest,
+			      const __global double * restrict array, const int ldarray,
+			      __global double * restrict subarray, const int ldsubarray){
 
   const int ist = get_global_id(0);
   const int ii0 = get_local_id(1);

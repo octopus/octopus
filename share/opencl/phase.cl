@@ -27,8 +27,8 @@
 #endif
 
 __kernel void phase(const int offset, 
-		    const __global double * phase, 
-		    __global double2 * psi, const int ldpsi){
+		    const __global double * restrict phase, 
+		    __global double2 * restrict psi, const int ldpsi){
 
   const int ist = get_global_id(0);
   const int ip  = get_global_id(1);
