@@ -21,20 +21,19 @@
 
 #include <cl_global.h>
 
-__kernel void subarray_gather(const int nblocks,
-			      const __global int * blength,
+__kernel void subarray_gather(const __global int * blength,
 			      const __global int * offsets,
+			      const __global int * dest,
 			      const __global double * array, const int ldarray,
 			      __global double * subarray, const int ldsubarray){
 
-  int ist = get_global_id(0);
-  int isa = 0;
+  const int ist = get_global_id(0);
+  const int ii0 = get_local_id(1);
+  const int dii = get_local_size(1);
+  const int ibl = get_global_id(2);
 
-  for(int iblock = 0; iblock < nblocks; iblock++){
-    for(int ii = 0; ii < blength[iblock]; ii++){
-      subarray[((isa + ii)<<ldsubarray) + ist] = array[((offsets[iblock] - 1 + ii)<<ldarray) + ist];
-    }
-    isa += blength[iblock];
+  for(int ii = ii0; ii < blength[ibl]; ii += dii){
+    subarray[((dest[ibl] + ii)<<ldsubarray) + ist] = array[((offsets[ibl] - 1 + ii)<<ldarray) + ist];
   }
 
 }
