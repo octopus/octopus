@@ -150,6 +150,13 @@ subroutine X(vec_allgather)(vp, v, v_local)
 
   PUSH_SUB(X(vec_allgather))
   call profiling_in(prof_allgather, "VEC_ALLGATHER")
+
+  ! Skip the MPI call if domain parallelization is not used.
+  if(vp%npart < 2) then
+    v(1:vp%np_global) = v_local(1:vp%np_global)
+    POP_SUB(X(vec_allgather))
+    return
+  end if
   
   ! Unfortunately, vp%xlocal_vec ist not quite the required
   ! displacement vector.
