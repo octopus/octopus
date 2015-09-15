@@ -190,7 +190,9 @@ subroutine X(scdm_localize)(st,mesh,scdm)
       do jj = 1, nval
         state_global(1:mesh%np_global) = state_global(1:mesh%np_global) + SCDM_temp(1:mesh%np_global,jj)*Pcc(jj, vv)
       end do
+#ifdef HAVE_MPI
       call vec_scatter(mesh%vp, 0, state_global, temp_state(1:mesh%np,1))
+#endif
       call states_set_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
     end do
     
@@ -237,7 +239,9 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     SAFE_ALLOCATE(lxyz_local(1:mesh%np))
     do ii=1,3
       lxyz_global(1:mesh%np_global) = mesh%idx%lxyz(1:mesh%np_global,ii)
+#ifdef HAVE_MPI
       call vec_scatter(mesh%vp, 0, lxyz_global, lxyz_local)
+#endif
       lxyz_domains(1:mesh%np,ii) = lxyz_local(1:mesh%np)
     end do
     
@@ -380,8 +384,8 @@ subroutine X(scdm_localize)(st,mesh,scdm)
 
     ! to copy the scdm state in the box, we need the global state
     call states_get_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
-    call vec_gather(mesh%vp, 0, state_global, temp_state(1:mesh%np,1))
 #ifdef HAVE_MPI
+    call vec_gather(mesh%vp, 0, state_global, temp_state(1:mesh%np,1))
     call MPI_Bcast(state_global,mesh%np_global , R_MPITYPE, 0, mesh%mpi_grp%comm, mpi_err)
 #endif    
     ! copy points to box
