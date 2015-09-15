@@ -521,7 +521,7 @@ subroutine X(scdm_exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
     if(states_dim_get_spin_index(hm%d, ik2) /= states_dim_get_spin_index(hm%d, ik)) cycle
     count = 0
     do jst = hm%scdm%st_start, hm%scdm%st_end
-      count = count +1
+      count = jst!count +1
       if(hm%hf_st%occ(jst, ik2) < M_EPSILON) cycle
 
       ! for psi in scdm representation check if it overlaps with the box of jst

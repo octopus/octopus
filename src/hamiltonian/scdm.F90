@@ -176,16 +176,11 @@ contains
 #endif
     scdm%root = (rank ==0)
 
-    ! inherit some indices from st
-    scdm%st%d%dim = st%d%dim
-    scdm%st%nst   = st%nst
     scdm%nst   = st%nst
-    scdm%st%d%nik = st%d%nik
-    scdm%st%d     = st%d
     scdm%cmplxscl = st%cmplxscl
-    scdm%st%st_start = st%st_start
-    scdm%st%st_end = st%st_end
-    scdm%st%lnst = st%lnst
+
+    ! initialize state object for the SCDM states by copying
+    call states_copy(scdm%st,st)
 
     !%Variable SCDM_reorthonormalize
     !%Type logical
@@ -244,7 +239,9 @@ contains
     if (scdm%root .and. scdm%verbose) call messages_print_var_value(stdout, 'SCDM fullbox[Ang]', dummy)
     SAFE_ALLOCATE(scdm%box(1:scdm%box_size*2+1,1:scdm%box_size*2+1,1:scdm%box_size*2+1,scdm%st%nst))
 
+    ! TODO
     ! the localzied states defined in the box are distributed over state index
+    ! but using group of domain parallelization
     SAFE_ALLOCATE(istart(1:der%mesh%mpi_grp%size))
     SAFE_ALLOCATE(iend(1:der%mesh%mpi_grp%size))
     SAFE_ALLOCATE(ilsize(1:der%mesh%mpi_grp%size))
@@ -254,25 +251,12 @@ contains
     scdm%st_end = iend(der%mesh%vp%rank+1)
     scdm%lnst = ilsize(der%mesh%vp%rank+1)
 
-    ! allocate local chunk of states
-    ! localized SCDM states in full box (not really needed, but convenient for distribution)
-    ! root process holds all states NOTE: this is not great... clearly ... but will go away when SCDM procedure is parallel
-    if (.not.states_are_real(st)) then
-      if (scdm%root) then
-        SAFE_ALLOCATE(scdm%st%zdontusepsi(1:der%mesh%np_global,1:scdm%st%d%dim,1:scdm%st%nst,1:scdm%st%d%nik))
-      else
-        SAFE_ALLOCATE(scdm%st%zdontusepsi(1:der%mesh%np_global,1:scdm%st%d%dim,1:scdm%lnst,1:scdm%st%d%nik))
-      end if
+    ! allocate local boxes for the SCDM states
+     if (.not.states_are_real(st)) then
       ! localized SCDM states 
-      SAFE_ALLOCATE(scdm%zpsi(1:scdm%full_box,1:scdm%lnst))
+      SAFE_ALLOCATE(scdm%zpsi(1:scdm%full_box,1:scdm%nst)) !needs distribution
     else ! real
-      if (scdm%root) then
-        SAFE_ALLOCATE(scdm%st%ddontusepsi(1:der%mesh%np_global, 1:scdm%st%d%dim, 1:scdm%st%nst, 1:scdm%st%d%nik))
-      else
-        SAFE_ALLOCATE(scdm%st%ddontusepsi(1:der%mesh%np_global, 1:scdm%st%d%dim, 1:scdm%lnst, 1:scdm%st%d%nik))
-      end if
-      ! localized SCDM states
-      SAFE_ALLOCATE(scdm%dpsi(1:scdm%full_box,1:scdm%lnst))
+      SAFE_ALLOCATE(scdm%dpsi(1:scdm%full_box,1:scdm%nst)) ! needs distribution
     end if
     
     SAFE_ALLOCATE(scdm%periodic(1:scdm%lnst))
@@ -319,6 +303,8 @@ contains
         end do
       end do
     end do
+
+    scdm%boxmesh%parallel_in_domains = .false.
     
     call mesh_cube_map_init(scdm%boxmesh%cube_map, scdm%boxmesh%idx, scdm%boxmesh%np_global)
 
@@ -345,6 +331,7 @@ contains
     SAFE_ALLOCATE(scdm%poisson%der)
     SAFE_ALLOCATE(scdm%poisson%der%mesh)
     scdm%poisson%der%mesh = scdm%boxmesh
+    scdm%poisson%der%mesh%vp%npart = 1
     scdm%poisson%method = POISSON_FFT
     scdm%poisson%kernel = POISSON_FFT_KERNEL_SPH
     scdm%poisson%cube = scdm%boxcube

@@ -38,7 +38,8 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   integer,  allocatable :: temp_box(:,:,:)
   integer :: ix(3), nr(3,2)
   logical :: out_of_index_range(3), out_of_mesh(3)
-
+  FLOAT, allocatable :: lxyz_domains(:,:),  lxyz_global(:), lxyz_local(:)
+  
   FLOAT :: t0,t1, t2, t3, t4
   FLOAT :: temp(3)
   character(len=50) :: name
@@ -122,7 +123,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
 
   SAFE_DEALLOCATE_A(KSt)
 
-  ! form SCDM, Note: This could be done in one step together with the orhtogonalization
+  ! form SCDM, Note: This could be done in one step together with the orthogonalization
   !                  to save this allocation
   SAFE_ALLOCATE(SCDM_temp(1:mesh%np_global,1:nval))
   SCDM_temp(:,:) = M_ZERO
@@ -179,28 +180,30 @@ subroutine X(scdm_localize)(st,mesh,scdm)
 #endif
     call cpu_time(t2)
     if(scdm%verbose) call messages_print_var_value(stdout, 'time: transpose invert:',t2-t1)
+
     ! form orthogonal SCDM
-    scdm%st%X(dontusepsi)(1:mesh%np_global,1:st%d%dim,:,1:st%d%nik) = M_ZERO
-    do jj = 1, nval
-      count = 0
-      do vv = 1, nval
-        if (vv >= scdm%st_start .and. vv <= scdm%st_end) then
-          count = count + 1
-          scdm%st%X(dontusepsi)(1:mesh%np_global,1,count,1) = scdm%st%X(dontusepsi)(1:mesh%np_global,1,count,1) + &
-               SCDM_temp(1:mesh%np_global,jj)*Pcc(jj, vv)
-        end if
+    ! NOTE: this needs state parallelization
+    SAFE_ALLOCATE(temp_state(1:mesh%np,1))
+    SAFE_ALLOCATE(state_global(1:mesh%np_global))
+    do vv = 1, nval ! st%start ... st%end do only local state distributed part of the product
+      state_global(:) = M_ZERO
+      do jj = 1, nval
+        state_global(1:mesh%np_global) = state_global(1:mesh%np_global) + SCDM_temp(1:mesh%np_global,jj)*Pcc(jj, vv)
       end do
+      call vec_scatter(mesh%vp, 0, state_global, temp_state(1:mesh%np,1))
+      call states_set_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
     end do
- 
+    
     SAFE_DEALLOCATE_A(SCDM_temp)
+    
     call cpu_time(t1)
     if (scdm%verbose) call messages_print_var_value(stdout,  'time: explicit matmul3',t1-t2)
+
     ! normalise SCDM states
-    do vv = 1, scdm%lnst
-      scdm%st%X(dontusepsi)(1:mesh%np_global,1,vv,1) = scdm%st%X(dontusepsi)(1:mesh%np_global,1,vv,1)/&
-                      (sqrt(dot_product(scdm%st%X(dontusepsi)(:,1,vv,1),scdm%st%X(dontusepsi)(:,1,vv,1))*mesh%volume_element))
-      !this should be used ../X(mf_nrm2)(mesh,scdm%st%X(dontusepsi)(:,1,v,1))
-      ! but doesnt work with parallelization
+    do vv = 1, nval!scdm%lnst ! this needs state parallelization
+      call states_get_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
+      temp_state(1:mesh%np,:) = temp_state(1:mesh%np,:)/X(mf_nrm2)(mesh,temp_state(1:mesh%np,1))
+      call states_set_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
     end do
     call cpu_time(t2)
     if(scdm%verbose) call messages_print_var_value(stdout,  'time: norms',t2-t1)
@@ -228,21 +231,28 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     ! find centers, by computing center of mass of |psi|^2
     scdm%center(:,:) = 0
     count = 0
-    do vv = 1, nval
-      if (vv >= scdm%st_start .and. vv <= scdm%st_end) then
-        count = count + 1
-        do ii = 1, 3
-          scdm%center(ii,vv) = sum(scdm%st%X(dontusepsi)(:,st%d%dim,count,scdm%st%d%nik)*&
-               R_CONJ(scdm%st%X(dontusepsi)(:,st%d%dim,count,scdm%st%d%nik))*&
-               mesh%idx%lxyz(1:mesh%np_global,ii)*mesh%spacing(ii))*mesh%volume_element
-        end do
-      end if
-      !write(127,*) scdm%center(:,vv)
+    ! get domains of mesh%idx%lxyz
+    SAFE_ALLOCATE(lxyz_domains(1:mesh%np,3))
+    SAFE_ALLOCATE(lxyz_global(1:mesh%np_global))
+    SAFE_ALLOCATE(lxyz_local(1:mesh%np))
+    do ii=1,3
+      lxyz_global(1:mesh%np_global) = mesh%idx%lxyz(1:mesh%np_global,ii)
+      call vec_scatter(mesh%vp, 0, lxyz_global, lxyz_local)
+      lxyz_domains(1:mesh%np,ii) = lxyz_local(1:mesh%np)
     end do
-    !close(127)
-
+    
+    do vv = 1, nval
+      call states_get_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
+      do ii=1,3
+        scdm%center(ii,vv) = sum(temp_state(1:mesh%np,1)*R_CONJ(temp_state(1:mesh%np,1))*&
+                          lxyz_domains(1:mesh%np,ii)*mesh%spacing(ii))*mesh%volume_element
+      end do
+    end do
     call comm_allreduce(mesh%mpi_grp%comm, scdm%center)
 
+    SAFE_DEALLOCATE_A(lxyz_domains)
+    SAFE_DEALLOCATE_A(lxyz_global)
+    SAFE_DEALLOCATE_A(lxyz_local)
     call cpu_time(t2)
     if (scdm%verbose) call messages_print_var_value(stdout, 'time: find centers',t2-t1)
 
@@ -257,7 +267,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   error_tmp = M_ZERO
   scdm%X(psi)(:,:) =  M_ZERO
   SAFE_ALLOCATE(temp_box(1:2*scdm%box_size+1,1:2*scdm%box_size+1,1:2*scdm%box_size+1))
-  do vv = scdm%st_start, scdm%st_end
+  do vv = 1,nval! Needs state distribution: scdm%st_start, scdm%st_end
     count = count + 1
     ! find integer index of center
     do ii = 1, 3
@@ -368,6 +378,12 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     
     scdm%box(:,:,:,count) = temp_box(:,:,:)
 
+    ! to copy the scdm state in the box, we need the global state
+    call states_get_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
+    call vec_gather(mesh%vp, 0, state_global, temp_state(1:mesh%np,1))
+#ifdef HAVE_MPI
+    call MPI_Bcast(state_global,mesh%np_global , R_MPITYPE, 0, mesh%mpi_grp%comm, mpi_err)
+#endif    
     ! copy points to box
     ! this box refers to the global mesh
     do jj = 1, scdm%box_size*2+1
@@ -375,7 +391,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
         do ll = 1, scdm%box_size*2+1
           ! map into the box
           ip = (jj-1)*((scdm%box_size*2+1))**2+(kk-1)*((scdm%box_size*2+1)) + ll
-          scdm%X(psi)(ip,count) = scdm%st%X(dontusepsi)(scdm%box(jj,kk,ll,count),st%d%dim,count,scdm%st%d%nik)
+          scdm%X(psi)(ip,count) = state_global(scdm%box(jj,kk,ll,count))
         end do
       end do
     end do
@@ -542,48 +558,14 @@ subroutine X(scdm_rotate_states)(st,mesh,scdm)
   type(mesh_t), intent(in)       :: mesh
   type(scdm_t), intent(inout)    :: scdm
 
-  integer   :: ist, jst, count, ip
-  R_TYPE, allocatable    :: temp_state(:,:), temp_state_global(:,:)
-
   PUSH_SUB(X(scdm_rotate_states))
-
-  ASSERT(st%st_start==scdm%st%st_start)
-  ASSERT(st%st_end==scdm%st%st_end)
-
-  SAFE_ALLOCATE(temp_state(1:mesh%np_global,1))
-  SAFE_ALLOCATE(temp_state_global(1:mesh%np_global,1))
 
   ! create localized SCDM representation of the states in st
   scdm_is_local = .false.
   call X(scdm_localize)(st,mesh,scdm)
 
-  ! NOTE: the following should be done by a simple states_copy_state() call
-  !       but requires the scdm%st object to have the same layout as the st object ... TODO
-  ! the output state object holds the rotated states
-  ! copy only local domains
-  count = 0
-  do ist=1, st%nst
-    temp_state(1:mesh%np_global,1) = M_ZERO
-    ! find process that holds the full scdm state
-    if (ist >= scdm%st_start .and. ist <= scdm%st_end) then
-      count = count + 1
-      !      call states_get_state(scdm%st, mesh, count, scdm%st%d%nik, temp_state)
-      temp_state(1:mesh%np_global,1) = scdm%st%X(dontusepsi)(1:mesh%np_global,st%d%dim,count,scdm%st%d%nik)
-    end if
-    ! use reduce to send temp_state to all procs, without knowing the sending rank
-    temp_state_global(1:mesh%np_global,1) = M_ZERO
-#ifdef HAVE_MPI
-    call MPI_Allreduce(temp_state, temp_state_global, mesh%np_global, R_MPITYPE, MPI_SUM, mesh%mpi_grp%comm, mpi_err)
-
-    ! copy into the domains of the st object
-    call vec_scatter(mesh%vp, 0, temp_state_global(1:mesh%np_global,1), temp_state(1:mesh%np,1))
-#endif
-    call states_set_state(st, mesh, ist, scdm%st%d%nik, temp_state(1:mesh%np,:))
-
-    
-  end do
-  SAFE_DEALLOCATE_A(temp_state)
-  SAFE_DEALLOCATE_A(temp_state_global)
+  ! overwrite state object with the scdm states
+  call states_copy(st,scdm%st)
 
   POP_SUB(X(scdm_rotate_states))
 
