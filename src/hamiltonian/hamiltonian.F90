@@ -29,6 +29,7 @@ module hamiltonian_m
   use cl
 #endif  
   use cmplxscl_m
+  use comm_m
   use derivatives_m
   use energy_m
   use hamiltonian_base_m

@@ -100,18 +100,23 @@ module scdm_m
     type(poisson_t)  :: poisson     !< solver used to compute exchange with localized scdm states
     type(poisson_fft_t) :: poisson_fft !< used for above poisson solver
     type(cmplxscl_t)    :: cmplxscl
-    logical, pointer :: periodic(:) !< tracks which scdm states are split by the periodic boundary conditions
 
     logical          :: re_ortho_normalize=.false. !< orthonormalize the scdm states
     logical          :: verbose     !< write info about SCDM procedure
     logical          :: psi_scdm    !< Hamiltonian is applied to an SCDM state
+
+    integer          :: nst         !< total number of states, copy os st%nst
     
     ! parallelization of scdm states
-    logical          :: root        !< this is a redundat flag equal to mesh%vp%rank==0
-    integer          :: nst
-    integer          :: st_start    !< the distributed index
-    integer          :: st_end      ! .
-    integer          :: lnst        ! .
+    type(mpi_grp_t)  :: st_grp      !< MPI group for states parallelization, inherited from st
+    type(mpi_grp_t)  :: dom_grp     !< MPI group for domain parallelization, inherited from mesh
+    type(mpi_grp_t)  :: st_exx_grp  !< MPI group for state parallelization in the exchange operator
+                                    !! this is a copy of the domain group, i.e. the domain group is
+                                    !! used for states parallelization in the exchange operator
+    integer          :: st_exx_start!< index of state distribution in the exchange operator
+    integer          :: st_exx_end  !.
+    integer          :: lnst_exx    !.
+    logical          :: root        !< this is a redundat flag equal to mpi_world%rank==0
 
   end type scdm_t
 
@@ -155,7 +160,6 @@ contains
       return
     end if
     
-    if (st%lnst /= st%nst) call messages_not_implemented("SCDM with state parallelization")
     if (st%d%nik > 1) call messages_not_implemented("SCDM with k-point sampling")
     if (der%mesh%sb%periodic_dim > 0 .and. der%mesh%sb%periodic_dim /= 3) &
          call messages_not_implemented("SCDM with mixed-periodicity")  
@@ -171,10 +175,13 @@ contains
     
     scdm%psi_scdm = operate_on_scdm_
 
-#ifdef HAVE_MPI
-    call MPI_Comm_Rank( der%mesh%mpi_grp%comm, rank, mpi_err)
-#endif
-    scdm%root = (rank ==0)
+    ! set mpi groups
+    scdm%st_grp     = st%mpi_grp
+    scdm%dom_grp    = der%mesh%mpi_grp
+    scdm%st_exx_grp = der%mesh%mpi_grp ! this is used only when the exchange operator is applied
+    
+
+    scdm%root = (mpi_world%rank ==0)
 
     scdm%nst   = st%nst
     scdm%cmplxscl = st%cmplxscl
@@ -237,29 +244,27 @@ contains
     end if
     dummy = 2*(2*scdm%box_size+1)*der%mesh%spacing(1)*0.529177249
     if (scdm%root .and. scdm%verbose) call messages_print_var_value(stdout, 'SCDM fullbox[Ang]', dummy)
-    SAFE_ALLOCATE(scdm%box(1:scdm%box_size*2+1,1:scdm%box_size*2+1,1:scdm%box_size*2+1,scdm%st%nst))
+    SAFE_ALLOCATE(scdm%box(1:scdm%box_size*2+1,1:scdm%box_size*2+1,1:scdm%box_size*2+1,1:scdm%st%nst))
 
-    ! TODO
-    ! the localzied states defined in the box are distributed over state index
-    ! but using group of domain parallelization
-    SAFE_ALLOCATE(istart(1:der%mesh%mpi_grp%size))
-    SAFE_ALLOCATE(iend(1:der%mesh%mpi_grp%size))
-    SAFE_ALLOCATE(ilsize(1:der%mesh%mpi_grp%size))
+    
+    ! the localzied states defined in the box are distributed over state index for the exchange operator
+    ! but using group of domain parallelization, here call st_exx_grp
+    SAFE_ALLOCATE(istart(1:scdm%st_exx_grp%size))
+    SAFE_ALLOCATE(iend(1:scdm%st_exx_grp%size))
+    SAFE_ALLOCATE(ilsize(1:scdm%st_exx_grp%size))
 
-    call multicomm_divide_range(st%nst, der%mesh%mpi_grp%size, istart, iend, lsize=ilsize)
-    scdm%st_start = istart(der%mesh%vp%rank+1)
-    scdm%st_end = iend(der%mesh%vp%rank+1)
-    scdm%lnst = ilsize(der%mesh%vp%rank+1)
+    call multicomm_divide_range(st%nst, scdm%st_exx_grp%size, istart, iend, lsize=ilsize)
+    scdm%st_exx_start = istart(scdm%st_exx_grp%rank+1)
+    scdm%st_exx_end = iend(scdm%st_exx_grp%rank+1)
+    scdm%lnst_exx = ilsize(scdm%st_exx_grp%rank+1)
 
     ! allocate local boxes for the SCDM states
      if (.not.states_are_real(st)) then
       ! localized SCDM states 
-      SAFE_ALLOCATE(scdm%zpsi(1:scdm%full_box,1:scdm%nst)) !needs distribution
+      SAFE_ALLOCATE(scdm%zpsi(1:scdm%full_box,1:scdm%nst)) ! this can be distributed in memory 
     else ! real
-      SAFE_ALLOCATE(scdm%dpsi(1:scdm%full_box,1:scdm%nst)) ! needs distribution
+      SAFE_ALLOCATE(scdm%dpsi(1:scdm%full_box,1:scdm%nst)) ! this can be distributed in memory  
     end if
-    
-    SAFE_ALLOCATE(scdm%periodic(1:scdm%lnst))
     
     ! create a mesh object for the small box (for now each scdm state is in the same box, should be dynamic)
     ! only initialize values needed in the following (e.g. by poisson_fft_init)
@@ -311,11 +316,6 @@ contains
     ! create a cube object for the small box, with double size for coulomb truncation
     box(1:3) = scdm%boxmesh%idx%ll(1:3)*2
     call cube_init(scdm%boxcube, box, scdm%boxmesh%sb,fft_type=FFT_REAL, fft_library=FFTLIB_FFTW)
-    
-    ! Joseba recommends including this
-    !if (der%mesh%parallel_in_domains .and. this%cube%parallel_in_domains) then
-    !    call mesh_cube_parallel_map_init(this%mesh_cube_map, der%mesh, this%cube)
-    !end if
     
     ! set up poisson solver used for the exchange operator with scdm states
     ! this replictaes poisson_kernel_init()
