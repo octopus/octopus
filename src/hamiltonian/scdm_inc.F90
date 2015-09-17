@@ -40,7 +40,6 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   logical :: out_of_index_range(3), out_of_mesh(3)
   FLOAT, allocatable :: lxyz_domains(:,:),  lxyz_global(:), lxyz_local(:)
   
-  FLOAT :: t0,t1, t2, t3, t4
   FLOAT :: temp(3)
   character(len=50) :: name
   type(cube_function_t) :: cf
@@ -53,7 +52,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     return
   end if
 
-  call cpu_time(t0)
+  call profiling_in(prof_scdm,"SCDM")
 
   nval = st%nst ! TODO: check that this is really the number of valence states
 
@@ -117,24 +116,19 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   ! possibly redundant copy
   KSt_original(:,:) = KSt(:,:)
 
-  call cpu_time(t1)
-
-  if(scdm%root) then
-
-    call X(RRQR)(nval,mesh%np_global,KSt,JPVT)
-    call cpu_time(t2)
-    if(scdm%verbose) call messages_print_var_value(stdout, 'time: RRQR:', t2-t1)
-    
-  end if
+  call profiling_in(prof_scdm_QR,"SCDM_QR")
+  if(scdm%root) call X(RRQR)(nval,mesh%np_global,KSt,JPVT)
 #ifdef HAVE_MPI
   call MPI_Bcast(JPVT,mesh%np_global , MPI_INTEGER, 0, mpi_world%comm, mpi_err)
 #endif
+  call profiling_out(prof_scdm_QR)
 
   SAFE_DEALLOCATE_A(KSt)
 
   ! form SCDM, Note: This could be done in one step together with the orthogonalization
   !                  to save this allocation
   ! Note: this could be done vector by vector to obtain memory distribution, but require more global communication
+   call profiling_in(prof_scdm_matmul1,"SCDM_matmul1")
   SAFE_ALLOCATE(SCDM_temp(1:mesh%np_global,1:nval))
   SCDM_temp(:,:) = M_ZERO
   do ii = 1, nval
@@ -145,9 +139,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   end do
   
   call comm_allreduce(scdm%st_grp%comm, SCDM_temp, (/mesh%np_global, nval/))
-
-  call cpu_time(t1)
-  if (scdm%verbose) call messages_print_var_value(stdout, 'time: explicit matmul1:',t1-t2)
+  call profiling_out(prof_scdm_matmul1)
 
     ! --- Orthogoalization ----
     ! form lower triangle of Pcc
@@ -163,8 +155,6 @@ subroutine X(scdm_localize)(st,mesh,scdm)
         end do
       end do
 
-      call cpu_time(t2)
-      if(scdm%verbose) call messages_print_var_value(stdout, 'time: explicit matmul2:',t2-t1)
       ! Cholesky fact.
       call X(POTRF)("L", nval, Pcc, nval, info )
       if (info /= 0) then
@@ -178,8 +168,6 @@ subroutine X(scdm_localize)(st,mesh,scdm)
         stop
       end if
 
-      call cpu_time(t1)
-      if(scdm%verbose) call messages_print_var_value(stdout, 'time: cholesky:',t1-t2)
       ! transpose
       Pcc(:,:) = transpose(R_CONJ(Pcc(:,:)))
       ! invert
@@ -188,9 +176,8 @@ subroutine X(scdm_localize)(st,mesh,scdm)
 #ifdef HAVE_MPI
     call MPI_Bcast(Pcc,nval*nval , R_MPITYPE, 0, mpi_world%comm, mpi_err)
 #endif
-    call cpu_time(t2)
-    if(scdm%verbose) call messages_print_var_value(stdout, 'time: transpose invert:',t2-t1)
 
+    call profiling_in(prof_scdm_matmul3,"SCDM_matmul3")
     ! form orthogonal SCDM
     SAFE_ALLOCATE(temp_state(1:mesh%np,1))
     SAFE_ALLOCATE(state_global(1:mesh%np_global))
@@ -208,8 +195,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     
     SAFE_DEALLOCATE_A(SCDM_temp)
     
-    call cpu_time(t1)
-    if (scdm%verbose) call messages_print_var_value(stdout,  'time: explicit matmul3',t1-t2)
+    call profiling_out(prof_scdm_matmul3)
 
     ! normalise SCDM states
     do vv = scdm%st%st_start,scdm%st%st_end
@@ -217,8 +203,6 @@ subroutine X(scdm_localize)(st,mesh,scdm)
       temp_state(1:mesh%np,:) = temp_state(1:mesh%np,:)/X(mf_nrm2)(mesh,temp_state(1:mesh%np,1))
       call states_set_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
     end do
-    call cpu_time(t2)
-    if(scdm%verbose) call messages_print_var_value(stdout,  'time: norms',t2-t1)
 
     ! check orthonormality
     !print *, 'orthonrmality: ================'
@@ -234,9 +218,6 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     ! write cube files
     !call X(io_function_output)(io_function_fill_how('Cube'), ".", "SCDM_1", mesh, scdm%st%X(dontusepsi)(:,1,1,1), &
     !                            unit_one, info,geo=scdm_geo)
-
-    call cpu_time(t1)
-    !       print *, 'time: output',t1-t2
 
     ! end of SCDM procedure
     
@@ -268,13 +249,10 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     SAFE_DEALLOCATE_A(lxyz_domains)
     SAFE_DEALLOCATE_A(lxyz_global)
     SAFE_DEALLOCATE_A(lxyz_local)
-    call cpu_time(t2)
-    if (scdm%verbose) call messages_print_var_value(stdout, 'time: find centers',t2-t1)
 
     ! -------------- end of SCDM procedure -----------------
 
   ! ------------ copy local box of state ---------------------
-  call cpu_time(t1)
  
   error = M_ZERO
   scdm%X(psi)(:,:) =  M_ZERO
@@ -443,9 +421,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     
   if (scdm%root .and. scdm%verbose) call messages_print_var_value(stdout, 'SCDM localization error:', error/st%nst)
   !
-  call cpu_time(t2)
-  if (scdm%root .and. scdm%verbose) call messages_print_var_value(stdout, 'time: copy box',t2-t1)
-  
+
   !if(scdm%re_ortho_normalize) then
   !   ! check orthonormality
   !   print *, 'orthonrmality in boxes: ================'
@@ -523,8 +499,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   SAFE_DEALLOCATE_A(KSt)
   SAFE_DEALLOCATE_A(scdm_temp)
 
-  call cpu_time(t1)
-  if (scdm%root .and. scdm%verbose) call messages_print_var_value(stdout,  'time: all SCDM',t1-t0)
+  call profiling_out(prof_scdm)
 
   !    return
 

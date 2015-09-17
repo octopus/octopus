@@ -122,6 +122,8 @@ module scdm_m
 
   logical,public    :: scdm_is_init=.false.  ! is initialized
   logical,public    :: scdm_is_local=.false.  ! is localized
+
+  type(profile_t), save :: prof_scdm, prof_scdm_QR, prof_scdm_matmul1, prof_scdm_matmul3
   
   !> debug stuff
   type(geometry_t), public   :: scdm_geo
