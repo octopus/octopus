@@ -193,7 +193,6 @@ integer :: jj
 #endif
           ! call with global hpsi
           call X(scdm_exchange_operator)(hm, der,  psi_global, hpsi_global, psib%states(ii)%ist, ik, hm%exx_coef)
-           !call X(exchange_operator)(hm, der,  psi_global, hpsi_global, psib%states(ii)%ist, ik, hm%exx_coef) 
 #ifdef HAVE_MPI
           call vec_scatter(der%mesh%vp,0, hpsi_global(1:der%mesh%np_global,1), hpsib%states(ii)%X(psi)(:,1))
 #endif
@@ -458,8 +457,6 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
       rho = R_TOTYPE(M_ZERO)
 
       call states_get_state(hm%hf_st, der%mesh, jst, ik2, psi2)
-! for testting: full scdm state
-!psi2(1:der%mesh%np,1) = hm%scdm%st%X(psi)(1:der%mesh%np,1,jst,1)
 
       if(hm%cmplxscl%space) psi2 = R_CONJ(psi2)
 
@@ -515,7 +512,7 @@ subroutine X(scdm_exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
   SAFE_ALLOCATE(rho_l(1:hm%scdm%full_box))
   SAFE_ALLOCATE(pot_l(1:hm%scdm%full_box))
 
-  ! accumalte exchange contributino to Hpsi in a temp array and add at the end hpsi
+  ! accumulate exchange contributino to Hpsi in a temp array and add to Hpsi at the end
   temp_state_global(:,:) = M_ZERO
   
   do ik2 = 1, hm%d%nik
@@ -533,7 +530,7 @@ subroutine X(scdm_exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
           rr(1:3) = hm%scdm%center(ii,ist)-hm%scdm%center(ii,jst)
         end do
         dist = sqrt(dot_product(rr,rr))
-!        if(dist.gt.hm%scdm%box_size) cycle
+        if(dist.gt.hm%scdm%box_size) cycle
       end if
       
       ! in Hartree we just remove the self-interaction

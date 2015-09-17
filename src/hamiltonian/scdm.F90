@@ -130,358 +130,340 @@ module scdm_m
 
 contains
 
-  !> this initializes the states and solver to compute exact exchange using the method described in
-  !! A. Damle, L. Lin, L. Ying: Compressed representation of Kohn-Sham orbitals via 
-  !!                            selected columns of the density matrix
-  !! http://arxiv.org/abs/1408.4926 (accepted in JCTC as of 17th March 2015)
-  subroutine scdm_init(st,der,fullcube,scdm,operate_on_scdm)
+!> this initializes the states and solver to compute exact exchange using the method described in
+!! A. Damle, L. Lin, L. Ying: Compressed representation of Kohn-Sham orbitals via 
+!!                            selected columns of the density matrix
+!! http://arxiv.org/abs/1408.4926 (accepted in JCTC as of 17th March 2015)
+subroutine scdm_init(st,der,fullcube,scdm,operate_on_scdm)
     
-    type(states_t), intent(in)  :: st !< this contains the KS set (for now from hm%hf_st which is confusing)
-    type(derivatives_t) :: der
-    type(cube_t) :: fullcube !< cube of the full cell
-    type(scdm_t) :: scdm
-    logical, optional :: operate_on_scdm  !< apply exchange to SCDM states by performing a basis rotation on the st object
-    
-    type(cmplxscl_t) :: cmplxscl
-    integer :: ii, jj, kk, ip, rank
-    integer :: inp_calc_mode
-    logical :: operate_on_scdm_
-    !debug
-    integer :: temp(3)
-    
-    integer,  allocatable:: istart(:)
-    integer,  allocatable:: iend(:)
-    integer,  allocatable:: ilsize(:)
-    integer :: box(3)
-    FLOAT :: dummy, enlarge(3)
-    
-    PUSH_SUB(scdm_init)
-    ! check if already initialized
-    if (scdm_is_init) then
-      POP_SUB(scdm_init)
-      return
-    end if
-    
-    if (st%d%nik > 1) call messages_not_implemented("SCDM with k-point sampling")
-    if (der%mesh%sb%periodic_dim > 0 .and. der%mesh%sb%periodic_dim /= 3) &
-         call messages_not_implemented("SCDM with mixed-periodicity")  
-
-    ! determine whether we are applying the scdm exchange operator to scdm states
-    ! NOTE: this should be always the case, but for now only in td
-    ! set default
-    if(present(operate_on_scdm)) then
-      operate_on_scdm_ = operate_on_scdm
-    else
-      operate_on_scdm_ = .false.
-    end if
-    
-    scdm%psi_scdm = operate_on_scdm_
-
-    ! set mpi groups
-    scdm%st_grp     = st%mpi_grp
-    scdm%dom_grp    = der%mesh%mpi_grp
-    scdm%st_exx_grp = der%mesh%mpi_grp ! this is used only when the exchange operator is applied
-    
-
-    scdm%root = (mpi_world%rank ==0)
-
-    scdm%nst   = st%nst
-    scdm%cmplxscl = st%cmplxscl
-
-    ! initialize state object for the SCDM states by copying
-    call states_copy(scdm%st,st)
-
-    !%Variable SCDM_reorthonormalize
-    !%Type logical
-    !%Default no
-    !%Section Hamiltonian
-    !%Description
-    !% If set to yes, and <tt>scdm_EXX = yes</tt>, the SCDM states are orthonormalized 
-    !% on the domain defined by <tt>SCDMCutoffRadius<tt> (as opposed to the full simulation cell).
-    !%End 
-    call parse_variable('SCDM_reorthonormalize', .false., scdm%re_ortho_normalize)
-    if (scdm%re_ortho_normalize) scdm%st%d%orth_method = OPTION__STATESORTHOGONALIZATION__CHOLESKY_SERIAL
-
-    !%Variable SCDM_verbose
-    !%Type logical
-    !%Default no
-    !%Section Hamiltonian
-    !%Description
-    !% Output detailed information on SCDM procedure.
-    !%End
-    call parse_variable('SCDM_verbose', .false., scdm%verbose)
-
-    scdm%full_cube_n = fullcube%rs_n_global
-
-    ! allocate centers
-    SAFE_ALLOCATE(scdm%center(1:3,1:scdm%st%nst))
-
-    ! make a cube around the center points
-    ! with side length NOTE: this should be dynamic
-
-    !%Variable SCDMCutoffRadius
-    !%Type float
-    !%Default 3. Ang
-    !%Section Hamiltonian
-    !%Description
-    !% Controls the size of the box on which the SCDM states are defined (box size = 2*radius).
-    !%End  
-    call parse_variable('SCDMCutoffRadius', 3._8, scdm%rcut, units_inp%length)
-    if (scdm%root.and.scdm%verbose) call messages_print_var_value(stdout, 'SCDM cutoff', scdm%rcut)
-    ! box_size is half the size of the  box
-    scdm%box_size = 0
-    do ii = 1, 3
-      scdm%box_size = max(scdm%box_size,ceiling(scdm%rcut/der%mesh%spacing(ii)))
-    end do
-
-    if (scdm%root .and. scdm%verbose) then
-      call messages_print_var_value(stdout,'SCDM box_size', scdm%box_size)
-      call messages_print_var_value(stdout,'SCDM box_size[Ang]', scdm%box_size*der%mesh%spacing(1)*0.529177249)
-    end if
-    scdm%full_box = (2*scdm%box_size+1)**3
-    !check if scdm is not bigger than fft-grid of full simualtion cell  
-    if (scdm%full_box > der%mesh%np_global) then
-      message(1) = 'SCDM box larger than mesh, no point in using it'
-      call messages_fatal(1,only_root_writes = .true.)
-    end if
-    dummy = 2*(2*scdm%box_size+1)*der%mesh%spacing(1)*0.529177249
-    if (scdm%root .and. scdm%verbose) call messages_print_var_value(stdout, 'SCDM fullbox[Ang]', dummy)
-    SAFE_ALLOCATE(scdm%box(1:scdm%box_size*2+1,1:scdm%box_size*2+1,1:scdm%box_size*2+1,1:scdm%st%nst))
-
-    
-    ! the localzied states defined in the box are distributed over state index for the exchange operator
-    ! but using group of domain parallelization, here call st_exx_grp
-    SAFE_ALLOCATE(istart(1:scdm%st_exx_grp%size))
-    SAFE_ALLOCATE(iend(1:scdm%st_exx_grp%size))
-    SAFE_ALLOCATE(ilsize(1:scdm%st_exx_grp%size))
-
-    call multicomm_divide_range(st%nst, scdm%st_exx_grp%size, istart, iend, lsize=ilsize)
-    scdm%st_exx_start = istart(scdm%st_exx_grp%rank+1)
-    scdm%st_exx_end = iend(scdm%st_exx_grp%rank+1)
-    scdm%lnst_exx = ilsize(scdm%st_exx_grp%rank+1)
-
-    ! allocate local boxes for the SCDM states
-     if (.not.states_are_real(st)) then
-      ! localized SCDM states 
-      SAFE_ALLOCATE(scdm%zpsi(1:scdm%full_box,1:scdm%nst)) ! this can be distributed in memory 
-    else ! real
-      SAFE_ALLOCATE(scdm%dpsi(1:scdm%full_box,1:scdm%nst)) ! this can be distributed in memory  
-    end if
-    
-    ! create a mesh object for the small box (for now each scdm state is in the same box, should be dynamic)
-    ! only initialize values needed in the following (e.g. by poisson_fft_init)
-    scdm%boxmesh%spacing(:) = minval(der%mesh%spacing(:))
-    SAFE_ALLOCATE(scdm%boxmesh%sb)
-    scdm%boxmesh%sb%periodic_dim = 0
-    scdm%boxmesh%sb%dim = 3
-    scdm%boxmesh%sb%klattice_primitive(1:3,1:3) = reshape((/1.,0.,0.,0.,1.,0.,0.,0.,1./),(/3,3/))
-    scdm%boxmesh%sb%rlattice_primitive(1:3,1:3) = reshape((/1.,0.,0.,0.,1.,0.,0.,0.,1./),(/3,3/))
-
-    !set mesh points 
-    scdm%boxmesh%np = scdm%full_box
-    scdm%boxmesh%np_global = scdm%boxmesh%np
-    scdm%boxmesh%np_part = scdm%boxmesh%np_global
-    scdm%boxmesh%np_part_global = scdm%boxmesh%np_global
-    ! set index type of mesh
-    scdm%boxmesh%idx%is_hypercube = .false.
-    ! mesh has to be centered around zero with left overhang otherwise mesh_cub_map does not seem to work
-    scdm%boxmesh%idx%nr(1,:) = -(scdm%box_size)
-    scdm%boxmesh%idx%nr(2,:) =  (scdm%box_size) 
-
-    scdm%boxmesh%idx%dim = 3
-    scdm%boxmesh%idx%ll(:) = scdm%boxmesh%idx%nr(2,:) - scdm%boxmesh%idx%nr(1,:) + 1
-!?
-    scdm%boxmesh%idx%enlarge(:) = 0
-    SAFE_ALLOCATE(scdm%boxmesh%idx%lxyz(1:scdm%boxmesh%np,1:scdm%boxmesh%idx%dim))
-    ! need to copy indices because otherwise line gets too long (precompiler?)
-    ii = -(scdm%box_size)
-    jj = (scdm%box_size)
-    SAFE_ALLOCATE(scdm%boxmesh%idx%lxyz_inv(ii:jj,ii:jj,ii:jj))
-    !
-    ip = 0
-    do ii = scdm%boxmesh%idx%nr(1,1),scdm%boxmesh%idx%nr(2,1)
-      do jj = scdm%boxmesh%idx%nr(1,2),scdm%boxmesh%idx%nr(2,2)
-        do kk = scdm%boxmesh%idx%nr(1,3),scdm%boxmesh%idx%nr(2,3)
-          ip = ip +1
-          scdm%boxmesh%idx%lxyz(ip,1) = ii
-          scdm%boxmesh%idx%lxyz(ip,2) = jj
-          scdm%boxmesh%idx%lxyz(ip,3) = kk
-          scdm%boxmesh%idx%lxyz_inv(ii,jj,kk) = ip
-        end do
-      end do
-    end do
-
-    scdm%boxmesh%parallel_in_domains = .false.
-    
-    call mesh_cube_map_init(scdm%boxmesh%cube_map, scdm%boxmesh%idx, scdm%boxmesh%np_global)
-
-    ! create a cube object for the small box, with double size for coulomb truncation
-    box(1:3) = scdm%boxmesh%idx%ll(1:3)*2
-    call cube_init(scdm%boxcube, box, scdm%boxmesh%sb,fft_type=FFT_REAL, fft_library=FFTLIB_FFTW)
-    
-    ! set up poisson solver used for the exchange operator with scdm states
-    ! this replictaes poisson_kernel_init()
-    scdm%poisson%poisson_soft_coulomb_param = M_ZERO
-    if (der%mesh%sb%periodic_dim.eq.3) then
-      call poisson_fft_init(scdm%poisson_fft, scdm%boxmesh, scdm%boxcube, &
-                            kernel=POISSON_FFT_KERNEL_HOCKNEY,fullcube=fullcube)
-    else !non periodic case
-      call poisson_fft_init(scdm%poisson_fft, scdm%boxmesh, scdm%boxcube, kernel=POISSON_FFT_KERNEL_SPH)
-    end if
-
-    ! create poisson object
-    SAFE_ALLOCATE(scdm%poisson%der)
-    SAFE_ALLOCATE(scdm%poisson%der%mesh)
-    scdm%poisson%der%mesh = scdm%boxmesh
-    scdm%poisson%der%mesh%vp%npart = 1
-    scdm%poisson%method = POISSON_FFT
-    scdm%poisson%kernel = POISSON_FFT_KERNEL_SPH
-    scdm%poisson%cube = scdm%boxcube
-    scdm%poisson%fft_solver = scdm%poisson_fft
-
-    ! set flag to do this only once
-    scdm_is_init = .true.
-
-    call messages_write('done SCDM init')
-
+  type(states_t), intent(in)  :: st !< this contains the KS set (for now from hm%hf_st which is confusing)
+  type(derivatives_t) :: der
+  type(cube_t) :: fullcube !< cube of the full cell
+  type(scdm_t) :: scdm
+  logical, optional :: operate_on_scdm  !< apply exchange to SCDM states by performing a basis rotation on the st object
+  
+  type(cmplxscl_t) :: cmplxscl
+  integer :: ii, jj, kk, ip, rank
+  integer :: inp_calc_mode
+  logical :: operate_on_scdm_
+  !debug
+  integer :: temp(3)
+  
+  integer,  allocatable:: istart(:)
+  integer,  allocatable:: iend(:)
+  integer,  allocatable:: ilsize(:)
+  integer :: box(3)
+  FLOAT :: dummy, enlarge(3)
+  
+  PUSH_SUB(scdm_init)
+  ! check if already initialized
+  if (scdm_is_init) then
     POP_SUB(scdm_init)
-  end subroutine scdm_init
-
-  !> wrapper routine to rotate  KS states into their SCDM representation
-  subroutine scdm_rotate_states(st,mesh,scdm)
-    type(states_t), intent(inout)  :: st
-    type(mesh_t), intent(in)       :: mesh
-    type(scdm_t), intent(inout)    :: scdm
-
-    PUSH_SUB(scdm_rotate_states)
-
-    if (.not.states_are_real(st)) then
-      call zscdm_rotate_states(st,mesh,scdm)
-    else
-      call dscdm_rotate_states(st,mesh,scdm)
-    end if
-
-    POP_SUB(scdm_rotate_states)
-
-  end subroutine scdm_rotate_states
-
+    return
+  end if
   
+  if (st%d%nik > 1) call messages_not_implemented("SCDM with k-point sampling")
+  if (der%mesh%sb%periodic_dim > 0 .and. der%mesh%sb%periodic_dim /= 3) &
+       call messages_not_implemented("SCDM with mixed-periodicity")  
   
-  !> wrapper routine for real rank-revealing QR decompisition
-  !! of the n*np matrix kst, returning the pivot vector jpvt
-  subroutine dRRQR(nn, np, kst, jpvt)
-    integer, intent(in)  :: nn
-    integer, intent(in)  :: np
-    FLOAT, intent(inout) :: kst(:,:)
-    integer, intent(out) :: jpvt(np)
+  ! determine whether we are applying the scdm exchange operator to scdm states
+  ! NOTE: this should be always the case, but for now only in td
+  ! set default
+  if(present(operate_on_scdm)) then
+    operate_on_scdm_ = operate_on_scdm
+  else
+    operate_on_scdm_ = .false.
+  end if
+  
+  scdm%psi_scdm = operate_on_scdm_
+  
+  ! set mpi groups
+  scdm%st_grp     = st%mpi_grp
+  scdm%dom_grp    = der%mesh%mpi_grp
+  scdm%st_exx_grp = der%mesh%mpi_grp ! this is used only when the exchange operator is applied
 
-    integer            :: lwork, info
-    FLOAT              :: tau(nn)
-    FLOAT, allocatable :: work(:)
+  scdm%root = (mpi_world%rank ==0)
+  
+  scdm%nst   = st%nst
+  scdm%cmplxscl = st%cmplxscl
+  
+  ! initialize state object for the SCDM states by copying
+  call states_copy(scdm%st,st)
+  
+  !%Variable SCDM_verbose
+  !%Type logical
+  !%Default no
+  !%Section Hamiltonian
+  !%Description
+  !% Output detailed information on SCDM procedure.
+  !%End
+  call parse_variable('SCDM_verbose', .false., scdm%verbose)
+  
+  scdm%full_cube_n = fullcube%rs_n_global
+  
+  ! allocate centers
+  SAFE_ALLOCATE(scdm%center(1:3,1:scdm%st%nst))
+  
+  ! make a cube around the center points
+  ! with side length NOTE: this should be dynamic
+  
+  !%Variable SCDMCutoffRadius
+  !%Type float
+  !%Default 3. Ang
+  !%Section Hamiltonian
+  !%Description
+  !% Controls the size of the box on which the SCDM states are defined (box size = 2*radius).
+  !%End  
+  call parse_variable('SCDMCutoffRadius', 3._8, scdm%rcut, units_inp%length)
+  if (scdm%root.and.scdm%verbose) call messages_print_var_value(stdout, 'SCDM cutoff', scdm%rcut)
+  ! box_size is half the size of the  box
+  scdm%box_size = 0
+  do ii = 1, 3
+    scdm%box_size = max(scdm%box_size,ceiling(scdm%rcut/der%mesh%spacing(ii)))
+  end do
+  
+  if (scdm%root .and. scdm%verbose) then
+    call messages_print_var_value(stdout,'SCDM box_size', scdm%box_size)
+    call messages_print_var_value(stdout,'SCDM box_size[Ang]', scdm%box_size*der%mesh%spacing(1)*0.529177249)
+  end if
+  scdm%full_box = (2*scdm%box_size+1)**3
+  !check if scdm is not bigger than fft-grid of full simualtion cell  
+  if (scdm%full_box > der%mesh%np_global) then
+    message(1) = 'SCDM box larger than mesh, no point in using it'
+    call messages_fatal(1,only_root_writes = .true.)
+  end if
+  dummy = 2*(2*scdm%box_size+1)*der%mesh%spacing(1)*0.529177249
+  if (scdm%root .and. scdm%verbose) call messages_print_var_value(stdout, 'SCDM fullbox[Ang]', dummy)
+  SAFE_ALLOCATE(scdm%box(1:scdm%box_size*2+1,1:scdm%box_size*2+1,1:scdm%box_size*2+1,1:scdm%st%nst))
+  
+  ! the localzied states defined in the box are distributed over state index for the exchange operator
+  ! but using group of domain parallelization, here named st_exx_grp
+  SAFE_ALLOCATE(istart(1:scdm%st_exx_grp%size))
+  SAFE_ALLOCATE(iend(1:scdm%st_exx_grp%size))
+  SAFE_ALLOCATE(ilsize(1:scdm%st_exx_grp%size))
+  
+  call multicomm_divide_range(st%nst, scdm%st_exx_grp%size, istart, iend, lsize=ilsize)
+  scdm%st_exx_start = istart(scdm%st_exx_grp%rank+1)
+  scdm%st_exx_end = iend(scdm%st_exx_grp%rank+1)
+  scdm%lnst_exx = ilsize(scdm%st_exx_grp%rank+1)
+  
+  ! allocate local boxes for the SCDM states
+  if (.not.states_are_real(st)) then
+    ! localized SCDM states 
+    SAFE_ALLOCATE(scdm%zpsi(1:scdm%full_box,1:scdm%nst)) ! this can be distributed in memory 
+  else ! real
+    SAFE_ALLOCATE(scdm%dpsi(1:scdm%full_box,1:scdm%nst)) ! this can be distributed in memory  
+  end if
+  
+  ! create a mesh object for the small box (for now each scdm state is in the same box, should be dynamic)
+  ! only initialize values needed in the following (e.g. by poisson_fft_init)
+  scdm%boxmesh%spacing(:) = minval(der%mesh%spacing(:))
+  SAFE_ALLOCATE(scdm%boxmesh%sb)
+  scdm%boxmesh%sb%periodic_dim = 0
+  scdm%boxmesh%sb%dim = 3
+  scdm%boxmesh%sb%klattice_primitive(1:3,1:3) = reshape((/1.,0.,0.,0.,1.,0.,0.,0.,1./),(/3,3/))
+  scdm%boxmesh%sb%rlattice_primitive(1:3,1:3) = reshape((/1.,0.,0.,0.,1.,0.,0.,0.,1./),(/3,3/))
+  
+  !set mesh points 
+  scdm%boxmesh%np = scdm%full_box
+  scdm%boxmesh%np_global = scdm%boxmesh%np
+  scdm%boxmesh%np_part = scdm%boxmesh%np_global
+  scdm%boxmesh%np_part_global = scdm%boxmesh%np_global
+  ! set index type of mesh
+  scdm%boxmesh%idx%is_hypercube = .false.
+  ! mesh has to be centered around zero with left overhang otherwise mesh_cub_map does not seem to work
+  scdm%boxmesh%idx%nr(1,:) = -(scdm%box_size)
+  scdm%boxmesh%idx%nr(2,:) =  (scdm%box_size) 
+  
+  scdm%boxmesh%idx%dim = 3
+  scdm%boxmesh%idx%ll(:) = scdm%boxmesh%idx%nr(2,:) - scdm%boxmesh%idx%nr(1,:) + 1
+  scdm%boxmesh%idx%enlarge(:) = 0
+  SAFE_ALLOCATE(scdm%boxmesh%idx%lxyz(1:scdm%boxmesh%np,1:scdm%boxmesh%idx%dim))
+  ! need to copy indices because otherwise line gets too long (precompiler?)
+  ii = -(scdm%box_size)
+  jj = (scdm%box_size)
+  SAFE_ALLOCATE(scdm%boxmesh%idx%lxyz_inv(ii:jj,ii:jj,ii:jj))
 
-    PUSH_SUB(dRRQR)
-    ! dummy call to obtain dimension of work
-    SAFE_ALLOCATE(work(1:1))
-    call DGEQP3(nn, np, kst, nn, jpvt, tau, work, -1, info )
-    if (info /= 0) then
-      write(message(1),'(A28,I2)') 'Illegal argument in DGEQP3: ', info
-      call messages_fatal(1)
-    end if
-    ! Note: scalapack routine is called P?GEQPF()
-
-    lwork = work(1)
-    SAFE_DEALLOCATE_A(work)
-    SAFE_ALLOCATE(work(1:lwork))
-
-    jpvt(:) = 0
-    tau(:) = 0.
-    ! actual call
-    call DGEQP3(nn, np, kst, nn, jpvt, tau, work, lwork, info)
-    if (info /= 0) then
-      write(message(1),'(A28,I2)') 'Illegal argument in DGEQP3: ', info
-      call messages_fatal(1)
-    end if
-
-    POP_SUB(dRRQR)
-  end subroutine dRRQR
-
-  !> wrapper routine for complex rank-revealing QR decomposition
-  !! of the n*np matrix kst, returning the pivot vector jpvt
-  subroutine zRRQR(nn, np, kst, jpvt)
-    integer, intent(in)  :: nn
-    integer, intent(in)  :: np
-    CMPLX, intent(inout) :: kst(:,:)
-    integer, intent(out) :: jpvt(np)
-
-    integer            :: lwork,info
-    CMPLX              :: tau(nn)
-    CMPLX, allocatable :: work(:)
-    FLOAT              :: rwork(2*np)
-
-    PUSH_SUB(zRRQR)
-    ! dummy call to obtain dimension of work
-    SAFE_ALLOCATE(work(1:1))
-    call ZGEQP3(nn, np, kst, nn, jpvt, tau, work, -1, rwork, info)
-    if (info /= 0) then
-      write(message(1),'(A28,I2)') 'Illegal argument in ZGEQP3: ', info
-      call messages_fatal(1)
-    end if
-    ! Note: scalapack routine is called P?GEQPF()
-
-    lwork = work(1)
-    SAFE_DEALLOCATE_A(work)
-    SAFE_ALLOCATE(work(1:lwork))
-
-    jpvt(:) = 0
-    tau(:) = 0.
-    ! actual call
-    call ZGEQP3(nn, np, kst, nn, jpvt, tau, work, lwork, rwork, info)
-    if (info /= 0)then
-      write(message(1),'(A28,I2)') 'Illegal argument in ZGEQP3: ', info
-      call messages_fatal(1)
-    end if
-
-    POP_SUB(zRRQR)
-  end subroutine zRRQR
-
-  !> check if there are points outside index range of idx by
-  !! checking the corners only. This is intended for rectangular cells
-  !! should be generalized to arbitrary shapes (but then need to check the faces)
-  subroutine check_box_in_index(idx,center,size,out)
-    type(index_t),    intent(in)  :: idx
-    integer, intent(in)           :: center(:)
-    integer, intent(in)           :: size
-    logical, intent(out)          :: out(3)
-
-    ! internal
-    integer :: ix(3), corner(3,8), i1, idim
-
-    PUSH_SUB(check_box_in_index)
-    out(1:3) = .false.
-
-    ! make the sign pattern for corners
-    corner(:,1) = (/1,1,1/)
-    corner(:,2) = (/1,1,-1/)
-    corner(:,3) = (/1,-1,1/)
-    corner(:,4) = (/-1,1,1/)
-    corner(:,5) = (/1,-1,-1/)
-    corner(:,6) = (/-1,1,-1/)
-    corner(:,7) = (/-1,-1,1/)
-    corner(:,8) = (/-1,-1,-1/)
-
-    do idim=1,3
-      do i1=1,8
-        ix(:)=center(:) + size*corner(:,i1)
-        if (ix(idim).lt.idx%nr(1,idim).or.ix(idim).gt.idx%nr(2,idim)) then
-          out(idim) = .true. 
-          exit
-        end if
+  ip = 0
+  do ii = scdm%boxmesh%idx%nr(1,1),scdm%boxmesh%idx%nr(2,1)
+    do jj = scdm%boxmesh%idx%nr(1,2),scdm%boxmesh%idx%nr(2,2)
+      do kk = scdm%boxmesh%idx%nr(1,3),scdm%boxmesh%idx%nr(2,3)
+        ip = ip +1
+        scdm%boxmesh%idx%lxyz(ip,1) = ii
+        scdm%boxmesh%idx%lxyz(ip,2) = jj
+        scdm%boxmesh%idx%lxyz(ip,3) = kk
+        scdm%boxmesh%idx%lxyz_inv(ii,jj,kk) = ip
       end do
     end do
-    POP_SUB(check_box_in_index)
-  end subroutine check_box_in_index
+  end do
+  
+  scdm%boxmesh%parallel_in_domains = .false.
+  
+  call mesh_cube_map_init(scdm%boxmesh%cube_map, scdm%boxmesh%idx, scdm%boxmesh%np_global)
+  
+  ! create a cube object for the small box, with double size for coulomb truncation
+  box(1:3) = scdm%boxmesh%idx%ll(1:3)*2
+  call cube_init(scdm%boxcube, box, scdm%boxmesh%sb,fft_type=FFT_REAL, fft_library=FFTLIB_FFTW)
+  
+  ! set up poisson solver used for the exchange operator with scdm states
+  ! this replicates poisson_kernel_init()
+  scdm%poisson%poisson_soft_coulomb_param = M_ZERO
+  if (der%mesh%sb%periodic_dim.eq.3) then
+    call poisson_fft_init(scdm%poisson_fft, scdm%boxmesh, scdm%boxcube, &
+         kernel=POISSON_FFT_KERNEL_HOCKNEY,fullcube=fullcube)
+  else !non periodic case
+    call poisson_fft_init(scdm%poisson_fft, scdm%boxmesh, scdm%boxcube, kernel=POISSON_FFT_KERNEL_SPH)
+  end if
+  
+  ! create poisson object
+  SAFE_ALLOCATE(scdm%poisson%der)
+  SAFE_ALLOCATE(scdm%poisson%der%mesh)
+  scdm%poisson%der%mesh = scdm%boxmesh
+  scdm%poisson%der%mesh%vp%npart = 1
+  scdm%poisson%method = POISSON_FFT
+  scdm%poisson%kernel = POISSON_FFT_KERNEL_SPH
+  scdm%poisson%cube = scdm%boxcube
+  scdm%poisson%fft_solver = scdm%poisson_fft
+  
+  ! set flag to do this only once
+  scdm_is_init = .true.
+  
+  call messages_write('done SCDM init')
+  
+  POP_SUB(scdm_init)
+end subroutine scdm_init
 
+!> wrapper routine to rotate  KS states into their SCDM representation
+subroutine scdm_rotate_states(st,mesh,scdm)
+  type(states_t), intent(inout)  :: st
+  type(mesh_t), intent(in)       :: mesh
+  type(scdm_t), intent(inout)    :: scdm
+  
+  PUSH_SUB(scdm_rotate_states)
+  
+  if (.not.states_are_real(st)) then
+    call zscdm_rotate_states(st,mesh,scdm)
+  else
+    call dscdm_rotate_states(st,mesh,scdm)
+  end if
+  
+  POP_SUB(scdm_rotate_states)
+  
+end subroutine scdm_rotate_states
+  
+!> wrapper routine for real rank-revealing QR decompisition
+!! of the n*np matrix kst, returning the pivot vector jpvt
+subroutine dRRQR(nn, np, kst, jpvt)
+  integer, intent(in)  :: nn
+  integer, intent(in)  :: np
+  FLOAT, intent(inout) :: kst(:,:)
+  integer, intent(out) :: jpvt(np)
+  
+  integer            :: lwork, info
+  FLOAT              :: tau(nn)
+  FLOAT, allocatable :: work(:)
+  
+  PUSH_SUB(dRRQR)
+  ! dummy call to obtain dimension of work
+  SAFE_ALLOCATE(work(1:1))
+  call DGEQP3(nn, np, kst, nn, jpvt, tau, work, -1, info )
+  if (info /= 0) then
+    write(message(1),'(A28,I2)') 'Illegal argument in DGEQP3: ', info
+    call messages_fatal(1)
+  end if
+  ! Note: scalapack routine is called P?GEQPF()
+  
+  lwork = work(1)
+  SAFE_DEALLOCATE_A(work)
+  SAFE_ALLOCATE(work(1:lwork))
+  
+  jpvt(:) = 0
+  tau(:) = 0.
+  ! actual call
+  call DGEQP3(nn, np, kst, nn, jpvt, tau, work, lwork, info)
+  if (info /= 0) then
+    write(message(1),'(A28,I2)') 'Illegal argument in DGEQP3: ', info
+    call messages_fatal(1)
+  end if
+  
+  POP_SUB(dRRQR)
+end subroutine dRRQR
 
+!> wrapper routine for complex rank-revealing QR decomposition
+!! of the n*np matrix kst, returning the pivot vector jpvt
+subroutine zRRQR(nn, np, kst, jpvt)
+  integer, intent(in)  :: nn
+  integer, intent(in)  :: np
+  CMPLX, intent(inout) :: kst(:,:)
+  integer, intent(out) :: jpvt(np)
+  
+  integer            :: lwork,info
+  CMPLX              :: tau(nn)
+  CMPLX, allocatable :: work(:)
+  FLOAT              :: rwork(2*np)
+  
+  PUSH_SUB(zRRQR)
+  ! dummy call to obtain dimension of work
+  SAFE_ALLOCATE(work(1:1))
+  call ZGEQP3(nn, np, kst, nn, jpvt, tau, work, -1, rwork, info)
+  if (info /= 0) then
+    write(message(1),'(A28,I2)') 'Illegal argument in ZGEQP3: ', info
+    call messages_fatal(1)
+  end if
+  ! Note: scalapack routine is called P?GEQPF()
+  
+  lwork = work(1)
+  SAFE_DEALLOCATE_A(work)
+  SAFE_ALLOCATE(work(1:lwork))
+  
+  jpvt(:) = 0
+  tau(:) = 0.
+  ! actual call
+  call ZGEQP3(nn, np, kst, nn, jpvt, tau, work, lwork, rwork, info)
+  if (info /= 0)then
+    write(message(1),'(A28,I2)') 'Illegal argument in ZGEQP3: ', info
+    call messages_fatal(1)
+  end if
+  
+  POP_SUB(zRRQR)
+end subroutine zRRQR
+
+!> check if there are points outside index range of idx by
+!! checking the corners only. This is intended for rectangular cells
+!! should be generalized to arbitrary shapes (but then need to check the faces)
+subroutine check_box_in_index(idx,center,size,out)
+  type(index_t),    intent(in)  :: idx
+  integer, intent(in)           :: center(:)
+  integer, intent(in)           :: size
+  logical, intent(out)          :: out(3)
+  
+  ! internal
+  integer :: ix(3), corner(3,8), i1, idim
+  
+  PUSH_SUB(check_box_in_index)
+  out(1:3) = .false.
+  
+  ! make the sign pattern for corners
+  corner(:,1) = (/1,1,1/)
+  corner(:,2) = (/1,1,-1/)
+  corner(:,3) = (/1,-1,1/)
+  corner(:,4) = (/-1,1,1/)
+  corner(:,5) = (/1,-1,-1/)
+  corner(:,6) = (/-1,1,-1/)
+  corner(:,7) = (/-1,-1,1/)
+  corner(:,8) = (/-1,-1,-1/)
+  
+  do idim=1,3
+    do i1=1,8
+      ix(:)=center(:) + size*corner(:,i1)
+      if (ix(idim).lt.idx%nr(1,idim).or.ix(idim).gt.idx%nr(2,idim)) then
+        out(idim) = .true. 
+        exit
+      end if
+    end do
+  end do
+  POP_SUB(check_box_in_index)
+end subroutine check_box_in_index
 
 #include "undef.F90"
 #include "real.F90"

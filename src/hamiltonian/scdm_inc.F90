@@ -127,8 +127,8 @@ subroutine X(scdm_localize)(st,mesh,scdm)
 
   ! form SCDM, Note: This could be done in one step together with the orthogonalization
   !                  to save this allocation
-  ! Note: this could be done vector by vector to obtain memory distribution, but require more global communication
-   call profiling_in(prof_scdm_matmul1,"SCDM_matmul1")
+  ! Note: this could be done vector by vector to obtain memory distribution, but requires more global communication
+  call profiling_in(prof_scdm_matmul1,"SCDM_matmul1")
   SAFE_ALLOCATE(SCDM_temp(1:mesh%np_global,1:nval))
   SCDM_temp(:,:) = M_ZERO
   do ii = 1, nval
@@ -141,125 +141,110 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   call comm_allreduce(scdm%st_grp%comm, SCDM_temp, (/mesh%np_global, nval/))
   call profiling_out(prof_scdm_matmul1)
 
-    ! --- Orthogoalization ----
-    ! form lower triangle of Pcc
-    SAFE_ALLOCATE(Pcc(1:nval,1:nval))
-    Pcc(:,:) = M_ZERO
-    ! work only on root process, because its the only one that holds the full KSt_original
-    if(scdm%root) then
-      do ii = 1, nval
-        do jj = 1, ii
-          do vv = 1, nval
-            Pcc(ii,jj) = Pcc(ii,jj)+ KSt_original(vv,JPVT(ii))*R_CONJ(KSt_original(vv,JPVT(jj)))
-          end do
+  ! --- Orthogoalization ----
+  ! form lower triangle of Pcc
+  SAFE_ALLOCATE(Pcc(1:nval,1:nval))
+  Pcc(:,:) = M_ZERO
+  ! work only on root process, because its the only one that holds the full KSt_original
+  if(scdm%root) then
+    do ii = 1, nval
+      do jj = 1, ii
+        do vv = 1, nval
+          Pcc(ii,jj) = Pcc(ii,jj)+ KSt_original(vv,JPVT(ii))*R_CONJ(KSt_original(vv,JPVT(jj)))
         end do
       end do
-
-      ! Cholesky fact.
-      call X(POTRF)("L", nval, Pcc, nval, info )
-      if (info /= 0) then
-        if (info < 0) then
-          write(message(1),'(A28,I2)') 'Illegal argument in DPOTRF: ', info
-          call messages_fatal(1)
-        else
-          message(1) = 'Fail of Cholesky, not pos-semi-def '
-          call messages_fatal(1)
-        end if
-        stop
+    end do
+    
+    ! Cholesky fact.
+    call X(POTRF)("L", nval, Pcc, nval, info )
+    if (info /= 0) then
+      if (info < 0) then
+        write(message(1),'(A28,I2)') 'Illegal argument in DPOTRF: ', info
+        call messages_fatal(1)
+      else
+        message(1) = 'Fail of Cholesky, not pos-semi-def '
+        call messages_fatal(1)
       end if
-
-      ! transpose
-      Pcc(:,:) = transpose(R_CONJ(Pcc(:,:)))
-      ! invert
-      call X(invert)(nval,Pcc)
+      stop
     end if
+    
+    ! transpose
+    Pcc(:,:) = transpose(R_CONJ(Pcc(:,:)))
+    ! invert
+    call X(invert)(nval,Pcc)
+  end if
 #ifdef HAVE_MPI
-    call MPI_Bcast(Pcc,nval*nval , R_MPITYPE, 0, mpi_world%comm, mpi_err)
+  call MPI_Bcast(Pcc,nval*nval , R_MPITYPE, 0, mpi_world%comm, mpi_err)
 #endif
-
-    call profiling_in(prof_scdm_matmul3,"SCDM_matmul3")
-    ! form orthogonal SCDM
-    SAFE_ALLOCATE(temp_state(1:mesh%np,1))
-    SAFE_ALLOCATE(state_global(1:mesh%np_global))
-
-    do vv=scdm%st%st_start,scdm%st%st_end
-      state_global(:) = M_ZERO
-      do jj = 1, nval
-        state_global(1:mesh%np_global) = state_global(1:mesh%np_global) + SCDM_temp(1:mesh%np_global,jj)*Pcc(jj, vv)
-      end do
+  
+  call profiling_in(prof_scdm_matmul3,"SCDM_matmul3")
+  ! form orthogonal SCDM
+  SAFE_ALLOCATE(temp_state(1:mesh%np,1))
+  SAFE_ALLOCATE(state_global(1:mesh%np_global))
+  
+  do vv=scdm%st%st_start,scdm%st%st_end
+    state_global(:) = M_ZERO
+    do jj = 1, nval
+      state_global(1:mesh%np_global) = state_global(1:mesh%np_global) + SCDM_temp(1:mesh%np_global,jj)*Pcc(jj, vv)
+    end do
 #ifdef HAVE_MPI
-      call vec_scatter(mesh%vp, 0, state_global, temp_state(1:mesh%np,1))
+    call vec_scatter(mesh%vp, 0, state_global, temp_state(1:mesh%np,1))
 #endif
-      call states_set_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
-    end do
-    
-    SAFE_DEALLOCATE_A(SCDM_temp)
-    
-    call profiling_out(prof_scdm_matmul3)
-
-    ! normalise SCDM states
-    do vv = scdm%st%st_start,scdm%st%st_end
-      call states_get_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
-      temp_state(1:mesh%np,:) = temp_state(1:mesh%np,:)/X(mf_nrm2)(mesh,temp_state(1:mesh%np,1))
-      call states_set_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
-    end do
-
-    ! check orthonormality
-    !print *, 'orthonrmality: ================'
-    !do j=1,nval
-    !   do i=1,nval
-    !      print *, i,j, &
-    !        dot_product(scdm%st%X(dontusepsi)(1:mesh%np,1,i,1),scdm%st%X(dontusepsi)(1:mesh%np,1,j,1))*mesh%volume_element
-    !      print *, i,j, dot_product(st%X(dontusepsi)(1:mesh%np,1,i,1),st%X(dontusepsi)(1:mesh%np,1,j,1))*mesh%volume_element
-    !   end do
-    !end do
-    !print *, '=============================='
-
-    ! write cube files
-    !call X(io_function_output)(io_function_fill_how('Cube'), ".", "SCDM_1", mesh, scdm%st%X(dontusepsi)(:,1,1,1), &
-    !                            unit_one, info,geo=scdm_geo)
-
-    ! end of SCDM procedure
-    
-    ! find centers, by computing center of mass of |psi|^2
-    scdm%center(:,:) = M_ZERO
-    count = 0
-    ! get domains of mesh%idx%lxyz
-    SAFE_ALLOCATE(lxyz_domains(1:mesh%np,3))
-    SAFE_ALLOCATE(lxyz_global(1:mesh%np_global))
-    SAFE_ALLOCATE(lxyz_local(1:mesh%np))
+    call states_set_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
+  end do
+  
+  SAFE_DEALLOCATE_A(SCDM_temp)
+  
+  call profiling_out(prof_scdm_matmul3)
+  
+  ! normalise SCDM states
+  do vv = scdm%st%st_start,scdm%st%st_end
+    call states_get_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
+    temp_state(1:mesh%np,:) = temp_state(1:mesh%np,:)/X(mf_nrm2)(mesh,temp_state(1:mesh%np,1))
+    call states_set_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
+  end do
+  
+  ! end of SCDM procedure
+  
+  ! find centers, by computing center of mass of |psi|^2
+  scdm%center(:,:) = M_ZERO
+  count = 0
+  ! get domains of mesh%idx%lxyz
+  SAFE_ALLOCATE(lxyz_domains(1:mesh%np,3))
+  SAFE_ALLOCATE(lxyz_global(1:mesh%np_global))
+  SAFE_ALLOCATE(lxyz_local(1:mesh%np))
+  do ii=1,3
+    lxyz_global(1:mesh%np_global) = mesh%idx%lxyz(1:mesh%np_global,ii)
+#ifdef HAVE_MPI
+    call vec_scatter(mesh%vp, 0, lxyz_global, lxyz_local)
+#endif
+    lxyz_domains(1:mesh%np,ii) = lxyz_local(1:mesh%np)
+  end do
+  
+  do vv = scdm%st%st_start,scdm%st%st_end
+    call states_get_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
     do ii=1,3
-      lxyz_global(1:mesh%np_global) = mesh%idx%lxyz(1:mesh%np_global,ii)
-#ifdef HAVE_MPI
-      call vec_scatter(mesh%vp, 0, lxyz_global, lxyz_local)
-#endif
-      lxyz_domains(1:mesh%np,ii) = lxyz_local(1:mesh%np)
+      scdm%center(ii,vv) = sum(temp_state(1:mesh%np,1)*R_CONJ(temp_state(1:mesh%np,1))*&
+           lxyz_domains(1:mesh%np,ii)*mesh%spacing(ii))*mesh%volume_element
     end do
-    
-    do vv = scdm%st%st_start,scdm%st%st_end
-      call states_get_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
-      do ii=1,3
-        scdm%center(ii,vv) = sum(temp_state(1:mesh%np,1)*R_CONJ(temp_state(1:mesh%np,1))*&
-                          lxyz_domains(1:mesh%np,ii)*mesh%spacing(ii))*mesh%volume_element
-      end do
-    end do
+  end do
     ! reduce to world, since the above can be state+domain distribution
-    call comm_allreduce(mpi_world%comm, scdm%center)
-
-    SAFE_DEALLOCATE_A(lxyz_domains)
-    SAFE_DEALLOCATE_A(lxyz_global)
-    SAFE_DEALLOCATE_A(lxyz_local)
-
-    ! -------------- end of SCDM procedure -----------------
-
+  call comm_allreduce(mpi_world%comm, scdm%center)
+  
+  SAFE_DEALLOCATE_A(lxyz_domains)
+  SAFE_DEALLOCATE_A(lxyz_global)
+  SAFE_DEALLOCATE_A(lxyz_local)
+  
+  ! -------------- end of SCDM procedure -----------------
+  
   ! ------------ copy local box of state ---------------------
- 
+  
   error = M_ZERO
   scdm%X(psi)(:,:) =  M_ZERO
   scdm%box(:,:,:,:) =  M_ZERO
   SAFE_ALLOCATE(temp_box(1:2*scdm%box_size+1,1:2*scdm%box_size+1,1:2*scdm%box_size+1))
   do vv = scdm%st%st_start,scdm%st%st_end
- 
+    
     ! find integer index of center
     do ii = 1, 3
       icenter(ii) = scdm%center(ii,vv)/mesh%spacing(ii)
@@ -299,7 +284,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
       end do
       
     end if
-    !
+
     ! in case there are periodic replica go through every point
     ! NOTE: in principle this would be needed only for the periodic 
     !       dimensions, because above we have made sure that in 
@@ -320,7 +305,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
           nr(idim,2) =  nn(idim)/2
         end if
       end do
-
+      
       do  i1 = -scdm%box_size, scdm%box_size
         do i2 = -scdm%box_size, scdm%box_size
           do i3 = -scdm%box_size, scdm%box_size
@@ -352,23 +337,15 @@ subroutine X(scdm_localize)(st,mesh,scdm)
       end do!i1
       
     end if
-
+    
     ! check that box is well defined now
     if(minval(temp_box) <= 0.or.maxval(temp_box) > mesh%np_global ) then
-      !print *, vv, minval(temp_box), maxval(temp_box),  mesh%np_global
-      !do i1=1,scdm%box_size*2+1
-      !  do i2=1,scdm%box_size*2+1
-      !    do i3=1,scdm%box_size*2+1
-      !      write(333,*) real(temp_box(i1,i2,i3))
-      !    end do
-      !  end do
-      !end do
       message(1) = 'SCDM box mapping failed'
       call messages_fatal(1)
     end if
     
     scdm%box(:,:,:,vv) = temp_box(:,:,:)
-
+    
     ! to copy the scdm state in the box, we need the global state (this is still in state distribution)
     call states_get_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
 #ifdef HAVE_MPI
@@ -390,22 +367,6 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     ! compute localization error
     error = error + M_ONE - dot_product(scdm%X(psi)(:,vv),scdm%X(psi)(:,vv))*mesh%volume_element
 
-    ! re-normalize inside box
-    ! if(scdm%re_ortho_normalize) then
-    !    scdm%X(psi)(:,count) = scdm%X(psi)(:,count)/(dot_product(scdm%X(psi)(:,count),scdm%X(psi)(:,count))*mesh%volume_element)
-    !    !
-    !    ! for testing zero outside the box
-    !    scdm%st%X(dontusepsi)(:,st%d%dim,vv,scdm%st%d%nik) = 0.
-    !    do jj=1,scdm%box_size*2+1
-    !       do kk=1,scdm%box_size*2+1
-    !          do ll=1,scdm%box_size*2+1
-    !             ip = (jj-1)*((scdm%box_size*2+1))**2+(kk-1)*((scdm%box_size*2+1)) + ll
-    !             scdm%st%X(dontusepsi)(scdm%box(jj,kk,ll,vv),st%d%dim,vv,scdm%st%d%nik) = scdm%X(psi)(ip,count)
-    !          end do
-    !       end do
-    !    end do
-    ! end if
-    
   end do
 
   SAFE_DEALLOCATE_A(temp_box)
@@ -420,77 +381,6 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   call comm_allreduce(scdm%st_grp%comm, error)
     
   if (scdm%root .and. scdm%verbose) call messages_print_var_value(stdout, 'SCDM localization error:', error/st%nst)
-  !
-
-  !if(scdm%re_ortho_normalize) then
-  !   ! check orthonormality
-  !   print *, 'orthonrmality in boxes: ================'
-  !   do j=1,nval
-  !      do i=1,nval
-  !         print *, i,j, &
-  !           dot_product(scdm%st%X(dontusepsi)(1:mesh%np,1,i,1),scdm%st%X(dontusepsi)(1:mesh%np,1,j,1))*mesh%volume_element
-  !      end do
-  !   end do
-  !   print *, '=============================='
-  !   ! and re-orthogonalize-----------------------------------------------------
-  !   call X(states_orthogonalization_full)(scdm%st, mesh, 1)
-  !   ! and cut again
-  !   count = 0
-  !   scdm%X(psi)(:,:) =  M_ZERO
-  !   do v=scdm%st_start,scdm%st_end
-  !      count = count +1
-  !       do i=1,3
-  !          icenter(i) = scdm%center(i,v)/mesh%spacing(i)
-  !       end do
-  !       ind_center = mesh%idx%lxyz_inv(icenter(1),icenter(2),icenter(3))
-  !       scdm%box(:,:,:,count) =  mesh%idx%lxyz_inv(icenter(1)-scdm%box_size:icenter(1)+scdm%box_size, &
-  !                                              icenter(2)-scdm%box_size:icenter(2)+scdm%box_size, &
-  !                                              icenter(3)-scdm%box_size:icenter(3)+scdm%box_size)
-  !       do j=1,scdm%box_size*2+1
-  !          do k=1,scdm%box_size*2+1
-  !             do l=1,scdm%box_size*2+1
-  !                ip = (j-1)*(2*(scdm%box_size*2+1))**2+(k-1)*(2*(scdm%box_size*2+1)) + l
-  !                scdm%X(psi)(ip,count) = scdm%st%X(dontusepsi)(scdm%box(j,k,l,count),st%d%dim,count,scdm%st%d%nik)
-  !             end do
-  !          end do
-  !       end do
-  !       ! and set to zero outside again
-  !       scdm%st%X(dontusepsi)(:,st%d%dim,v,scdm%st%d%nik) = 0.
-  !       do j=1,scdm%box_size*2+1
-  !          do k=1,scdm%box_size*2+1
-  !             do l=1,scdm%box_size*2+1
-  !                ip = (j-1)*(2*(scdm%box_size*2+1))**2+(k-1)*(2*(scdm%box_size*2+1)) + l
-  !                scdm%st%X(dontusepsi)(scdm%box(j,k,l,v),st%d%dim,v,scdm%st%d%nik) = scdm%X(psi)(ip,count)
-  !             end do
-  !          end do
-  !       end do
-  !       !
-  !    end do
-  !!--------------------------------------------------------------------------
-  !print *, 'orthonrmality in boxes after re-ortho: ================'
-  !do j=1,nval
-  !   do i=1,nval
-  !      print*, i,j, &
-  !        dot_product(scdm%st%X(dontusepsi)(1:mesh%np,1,i,1),scdm%st%X(dontusepsi)(1:mesh%np,1,j,1))*mesh%volume_element
-  !   end do
-  !end do
-  !print *, '======================================================'
-  !end if
-  !
-
-  ! check span
-  !SAFEx_ALLOCATE(state_global(1:mesh%np_global))
-  !state_global(:) = M_ZERO
-  !print *, 'quality of projector:'
-  !do j=1,nval
-  !   state_global(:) = M_ZERO
-  !   do i=1,nval
-  !      state_global(:) = state_global(:) + &
-  !           dot_product(scdm%st%X(dontusepsi)(:,1,i,1),st%X(dontusepsi)(1:mesh%np,1,j,1))&
-  !           *scdm%st%X(dontusepsi)(:,1,i,1)*mesh%volume_element
-  !   end do
-  !   print *, j, M_ONE - X(mf_nrm2)(mesh, state_global)
-  !end do
 
   ! set flag to do this only once
   scdm_is_local = .true.
@@ -500,44 +390,6 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   SAFE_DEALLOCATE_A(scdm_temp)
 
   call profiling_out(prof_scdm)
-
-  !    return
-
-  !-----------------------------------------------------------------------
-  !-----------------------------------------------------------------------
-  !
-  ! this is to comupte exchange energy, in priciple... not operational
-  !   SxAFE_ALLOCATE(rho(1:mesh%np_part))
-  !   SxAFE_ALLOCATE(rho2(1:mesh%np_part))
-  !   SxAFE_ALLOCATE(pot(1:mesh%np_part))
-  !   !
-  !   exx = 0.
-  !   do i=1,nval
-  !      do j=1,i
-  !         temp(:) = (scdm%center(:,i)- scdm%center(:,j))/mesh%spacing(:)
-  !!          if(sqrt(dot_product(temp,temp)).le.2.*scdm%rcut) then
-  !            !
-  !            rho(:) = scdm%st%X(dontusepsi)(:,st%d%dim,i,scdm%st%d%nik)*scdm%st%X(dontusepsi)(:,st%d%dim,j,scdm%st%d%nik)
-  !!rho(:) = st%X(dontusepsi)(:,st%d%dim,i,scdm%st%d%nik)*st%X(dontusepsi)(:,st%d%dim,j,scdm%st%d%nik)
-  !            rho2(:) = rho(:)
-  !            pot(:) = 0.
-  !            call X(poisson_solve)(psolver, pot, rho, all_nodes = .false.)
-  !            !
-  !            ! catch diagonals for double counting
-  !            if(i.ne.j) then
-  !               exx = exx - 0.5*dot_product(pot(:),rho2(:))*mesh%volume_element
-  !            else
-  !               exx = exx - 0.25*dot_product(pot(:),rho2(:))*mesh%volume_element
-  !            end if
-  !!          end if
-  !         !
-  !      end do
-  !   end do
-  !   !
-  !   call messages_print_var_value(stdout,'exx[eV] = ', exx*27.211396132)
-  !   SxAFE_DEALLOCATE_A(rho)
-  !   SxAFE_DEALLOCATE_A(rho2)
-  !   SxAFE_DEALLOCATE_A(pot)
 
   POP_SUB(X(scdm_localize))
 
@@ -592,7 +444,7 @@ subroutine X(invert)(nn, A)
     call messages_fatal(1)
   end if
   deallocate(work)
-
+  
   POP_SUB(X(invert))
 
 end subroutine X(invert)
