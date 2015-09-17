@@ -258,7 +258,7 @@ contains
 
       if(rrj > CNST(1e-12)) then 
         do idir = 1, this%mesh%sb%dim
-          grad(ip, idir) = -rri*3*atom_dens*tdensity*atom_der/this%total_density(ip)**2&
+          grad(ip, idir) = -rri**3*atom_dens*tdensity*atom_der/this%total_density(ip)**2&
             *(this%mesh%x(ip, idir) - this%geo%atom(jatom)%x(idir))/rrj
         end do
       else
@@ -268,7 +268,7 @@ contains
       if(iatom == jatom) then
         
         do idir = 1, this%mesh%sb%dim
-          grad(ip, idir) =  grad(ip, idir) + (CNST(3.0)*rri*atom_dens + rri**2*atom_der)&
+          grad(ip, idir) = grad(ip, idir) + (CNST(3.0)*rri*atom_dens + rri**2*atom_der)&
             *tdensity/this%total_density(ip)*(this%mesh%x(ip, idir) - this%geo%atom(iatom)%x(idir))
         end do
 
@@ -276,7 +276,7 @@ contains
     end do
     
     do idir = 1, this%mesh%sb%dim
-      dposition(idir) = -dmf_integrate(this%mesh, grad(:, idir))/this%free_volume(iatom)
+      dposition(idir) = dmf_integrate(this%mesh, grad(:, idir))/this%free_volume(iatom)
     end do
     
     SAFE_DEALLOCATE_A(atom_density)
