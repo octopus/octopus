@@ -30,11 +30,12 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   integer :: icenter(3), ind_center
 
   integer :: nn(3)
-  R_TYPE, allocatable :: KSt(:,:), KSt_original(:,:)
-  R_TYPE, allocatable :: SCDM_temp(:,:), Pcc(:,:)
+  R_TYPE, allocatable :: KSt(:,:)
+  R_TYPE, allocatable :: SCDM_temp(:,:), Pcc(:,:), SCDM_matrix(:,:)
   R_TYPE, allocatable :: rho(:), pot(:), rho2(:)
   FLOAT  :: exx, error, error_tmp
-  R_TYPE, allocatable :: state_global(:), temp_state(:,:)
+  R_TYPE, allocatable ::  state_global(:), temp_state(:,:)
+  R_TYPE, allocatable :: column_global(:), temp_column(:,:)
   integer,  allocatable :: temp_box(:,:,:)
   integer :: ix(3), nr(3,2)
   logical :: out_of_index_range(3), out_of_mesh(3)
@@ -59,12 +60,6 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   ! build transpose of KS set on which RRQR is performed
   if (scdm%root) then
     SAFE_ALLOCATE(KSt(1:nval,1:mesh%np_global))
-    ! keep a copy of this NOTE: maybe too expensive in memory?
-    SAFE_ALLOCATE(KSt_original(1:nval,1:mesh%np_global))
-  else
-    ! non root processes hold their part of the Kohn-Sham states for distributed sum
-    SAFE_ALLOCATE(KSt(scdm%st%lnst,mesh%np_global))
-    SAFE_ALLOCATE(KSt_original(scdm%st%lnst,mesh%np_global))
   end if
 
   !NOTE: not sure how to proceed if dim!=1 or nik!=1
@@ -90,15 +85,8 @@ subroutine X(scdm_localize)(st,mesh,scdm)
       call MPI_Bcast(state_global,mesh%np_global , R_MPITYPE, sender, mpi_world%comm, mpi_err)
 
 #endif
-      if (scdm%root) then
-        KSt(ii,1:mesh%np_global)  = st%occ(ii,1)*state_global(1:mesh%np_global)
-      else
-        ! on non-root processes keep only local number of Kohn-Sham states
-        if (ii >= scdm%st%st_start .and. ii <= scdm%st%st_end) then
-          count = count + 1
-          KSt(count,1:mesh%np_global) = st%occ(ii,1)*state_global(1:mesh%np_global)
-        end if
-      end if
+      ! keep full Kohn-Sham matrix only on root
+      if (scdm%root)  KSt(ii,1:mesh%np_global)  = st%occ(ii,1)*state_global(1:mesh%np_global)
     end do
     SAFE_DEALLOCATE_A(state_global)
     SAFE_DEALLOCATE_A(temp_state)
@@ -113,9 +101,6 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     SAFE_DEALLOCATE_A(temp_state)
   end if
 
-  ! possibly redundant copy
-  KSt_original(:,:) = KSt(:,:)
-
   call profiling_in(prof_scdm_QR,"SCDM_QR")
   if(scdm%root) call X(RRQR)(nval,mesh%np_global,KSt,JPVT)
 #ifdef HAVE_MPI
@@ -125,57 +110,84 @@ subroutine X(scdm_localize)(st,mesh,scdm)
 
   SAFE_DEALLOCATE_A(KSt)
 
-  ! form SCDM, Note: This could be done in one step together with the orthogonalization
-  !                  to save this allocation
-  ! Note: this could be done vector by vector to obtain memory distribution, but requires more global communication
-  call profiling_in(prof_scdm_matmul1,"SCDM_matmul1")
-  SAFE_ALLOCATE(SCDM_temp(1:mesh%np_global,1:nval))
-  SCDM_temp(:,:) = M_ZERO
-  do ii = 1, nval
-    do vv = 1, scdm%st%lnst ! KSt_original has local index
-      SCDM_temp(1:mesh%np_global,ii) = SCDM_temp(1:mesh%np_global,ii) + &
-                 KSt_original(vv,1:mesh%np_global)*R_CONJ( KSt_original(vv,JPVT(ii)) )
+  !form SCDM_matrix rows for states that are local in the scdm%st_grp
+  SAFE_ALLOCATE(SCDM_matrix(1:scdm%st%lnst,nval))
+  SAFE_ALLOCATE(temp_state(1:mesh%np,1))
+  SAFE_ALLOCATE(state_global(1:mesh%np_global))
+  count = 0
+  do vv = scdm%st%st_start, scdm%st%st_end
+    count = count +1
+    call states_get_state(st, mesh, vv, st%d%nik, temp_state)
+    call vec_allgather(mesh%vp, state_global, temp_state(1:mesh%np,1))
+    ! loop over JPVT to copy columns of the density matrix
+    do ii=1,nval
+      SCDM_matrix(count,ii) = state_global(JPVT(ii))
     end do
   end do
   
+  call profiling_in(prof_scdm_matmul1,"SCDM_matmul1")
+
+  SAFE_ALLOCATE(SCDM_temp(1:mesh%np_global,1:nval))
+  SAFE_ALLOCATE(column_global(1:mesh%np_global))
+  SAFE_ALLOCATE(temp_column(1:mesh%np,1))
+  SCDM_temp(:,:) = M_ZERO
+  do ii = 1, nval
+    ! form the SCDM states in by performing the sum over
+    ! SCDM elements respecting domain and state distribution
+    temp_column(1:mesh%np,1) = M_ZERO
+    count = 0
+    do vv = scdm%st%st_start,scdm%st%st_end
+      count = count +1
+      call states_get_state(st, mesh, vv, st%d%nik, temp_state)
+      temp_column(1:mesh%np,1) = temp_column(1:mesh%np,1) + &
+                                  temp_state(1:mesh%np,1)* R_CONJ(SCDM_matrix(count,ii))
+    end do
+    ! gather the domains
+    column_global(1:mesh%np_global) = M_ZERO
+    call vec_allgather(mesh%vp, column_global, temp_column(1:mesh%np,1))
+    ! copy the partially summed global column into its place
+    SCDM_temp(1:mesh%np_global,ii) = column_global(1:mesh%np_global) 
+  end do
+  ! the above is a prtial sum in states distribution  
   call comm_allreduce(scdm%st_grp%comm, SCDM_temp, (/mesh%np_global, nval/))
   call profiling_out(prof_scdm_matmul1)
-
+  
+  SAFE_DEALLOCATE_A(temp_state)
+  SAFE_DEALLOCATE_A(state_global)
+  SAFE_DEALLOCATE_A(temp_column)
+  SAFE_DEALLOCATE_A(column_global)
+   
   ! --- Orthogoalization ----
   ! form lower triangle of Pcc
   SAFE_ALLOCATE(Pcc(1:nval,1:nval))
   Pcc(:,:) = M_ZERO
-  ! work only on root process, because its the only one that holds the full KSt_original
-  if(scdm%root) then
-    do ii = 1, nval
-      do jj = 1, ii
-        do vv = 1, nval
-          Pcc(ii,jj) = Pcc(ii,jj)+ KSt_original(vv,JPVT(ii))*R_CONJ(KSt_original(vv,JPVT(jj)))
-        end do
+  do ii = 1, nval
+    do jj = 1, ii
+      do vv = 1,scdm%st%lnst
+        Pcc(ii,jj) = Pcc(ii,jj)+ SCDM_matrix(vv,ii)*R_CONJ(SCDM_matrix(vv,jj))
       end do
     end do
+  end do
+  call comm_allreduce(scdm%st_grp%comm,Pcc)
+  SAFE_DEALLOCATE_A(SCDM_matrix)
     
-    ! Cholesky fact.
-    call X(POTRF)("L", nval, Pcc, nval, info )
-    if (info /= 0) then
-      if (info < 0) then
-        write(message(1),'(A28,I2)') 'Illegal argument in DPOTRF: ', info
-        call messages_fatal(1)
-      else
-        message(1) = 'Fail of Cholesky, not pos-semi-def '
-        call messages_fatal(1)
-      end if
-      stop
+  ! Cholesky fact.
+  call X(POTRF)("L", nval, Pcc, nval, info )
+  if (info /= 0) then
+    if (info < 0) then
+      write(message(1),'(A28,I2)') 'Illegal argument in DPOTRF: ', info
+      call messages_fatal(1)
+    else
+      message(1) = 'Fail of Cholesky, not pos-semi-def '
+      call messages_fatal(1)
     end if
-    
-    ! transpose
-    Pcc(:,:) = transpose(R_CONJ(Pcc(:,:)))
-    ! invert
-    call X(invert)(nval,Pcc)
+    stop
   end if
-#ifdef HAVE_MPI
-  call MPI_Bcast(Pcc,nval*nval , R_MPITYPE, 0, mpi_world%comm, mpi_err)
-#endif
+    
+  ! transpose
+  Pcc(:,:) = transpose(R_CONJ(Pcc(:,:)))
+  ! invert
+  call X(invert)(nval,Pcc)
   
   call profiling_in(prof_scdm_matmul3,"SCDM_matmul3")
   ! form orthogonal SCDM
@@ -386,7 +398,6 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   scdm_is_local = .true.
 
   SAFE_DEALLOCATE_A(Pcc)
-  SAFE_DEALLOCATE_A(KSt)
   SAFE_DEALLOCATE_A(scdm_temp)
 
   call profiling_out(prof_scdm)
