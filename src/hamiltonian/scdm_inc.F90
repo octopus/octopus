@@ -118,7 +118,11 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   do vv = scdm%st%st_start, scdm%st%st_end
     count = count +1
     call states_get_state(st, mesh, vv, st%d%nik, temp_state)
+#ifdef HAVE_MPI
     call vec_allgather(mesh%vp, state_global, temp_state(1:mesh%np,1))
+#else
+    state_global(1:mesh%np)=temp_state(1:mesh%np,1)
+#endif
     ! loop over JPVT to copy columns of the density matrix
     do ii=1,nval
       SCDM_matrix(count,ii) = state_global(JPVT(ii))
@@ -144,7 +148,11 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     end do
     ! gather the domains
     column_global(1:mesh%np_global) = M_ZERO
+#ifdef HAVE_MPI
     call vec_allgather(mesh%vp, column_global, temp_column(1:mesh%np,1))
+#else
+     column_global(1:mesh%np)=temp_column(1:mesh%np,1)
+#endif
     ! copy the partially summed global column into its place
     SCDM_temp(1:mesh%np_global,ii) = column_global(1:mesh%np_global) 
   end do
