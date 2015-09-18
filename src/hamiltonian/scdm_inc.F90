@@ -34,8 +34,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   R_TYPE, allocatable :: SCDM_temp(:,:), Pcc(:,:), SCDM_matrix(:,:)
   R_TYPE, allocatable :: rho(:), pot(:), rho2(:)
   FLOAT  :: exx, error, error_tmp
-  R_TYPE, allocatable ::  state_global(:), temp_state(:,:)
-  R_TYPE, allocatable :: column_global(:), temp_column(:,:)
+  R_TYPE, allocatable ::  state_global(:), temp_state(:,:),  temp_column(:) !< work arrays
   integer,  allocatable :: temp_box(:,:,:)
   integer :: ix(3), nr(3,2)
   logical :: out_of_index_range(3), out_of_mesh(3)
@@ -131,39 +130,29 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   
   call profiling_in(prof_scdm_matmul1,"SCDM_matmul1")
 
-  SAFE_ALLOCATE(SCDM_temp(1:mesh%np_global,1:nval))
-  SAFE_ALLOCATE(column_global(1:mesh%np_global))
-  SAFE_ALLOCATE(temp_column(1:mesh%np,1))
+  SAFE_ALLOCATE(SCDM_temp(1:mesh%np,1:nval))
+  SAFE_ALLOCATE(temp_column(1:mesh%np))
   SCDM_temp(:,:) = M_ZERO
   do ii = 1, nval
     ! form the SCDM states in by performing the sum over
     ! SCDM elements respecting domain and state distribution
-    temp_column(1:mesh%np,1) = M_ZERO
+    temp_column(1:mesh%np) = M_ZERO
     count = 0
     do vv = scdm%st%st_start,scdm%st%st_end
       count = count +1
       call states_get_state(st, mesh, vv, st%d%nik, temp_state)
-      temp_column(1:mesh%np,1) = temp_column(1:mesh%np,1) + &
+      temp_column(1:mesh%np) = temp_column(1:mesh%np) + &
                                   temp_state(1:mesh%np,1)* R_CONJ(SCDM_matrix(count,ii))
     end do
-    ! gather the domains
-    column_global(1:mesh%np_global) = M_ZERO
-#ifdef HAVE_MPI
-    call vec_allgather(mesh%vp, column_global, temp_column(1:mesh%np,1))
-#else
-     column_global(1:mesh%np)=temp_column(1:mesh%np,1)
-#endif
-    ! copy the partially summed global column into its place
-    SCDM_temp(1:mesh%np_global,ii) = column_global(1:mesh%np_global) 
+    SCDM_temp(1:mesh%np,ii) = temp_column(1:mesh%np)    
   end do
   ! the above is a prtial sum in states distribution  
-  call comm_allreduce(scdm%st_grp%comm, SCDM_temp, (/mesh%np_global, nval/))
+  call comm_allreduce(scdm%st_grp%comm, SCDM_temp, (/mesh%np, nval/))
   call profiling_out(prof_scdm_matmul1)
   
   SAFE_DEALLOCATE_A(temp_state)
   SAFE_DEALLOCATE_A(state_global)
   SAFE_DEALLOCATE_A(temp_column)
-  SAFE_DEALLOCATE_A(column_global)
    
   ! --- Orthogoalization ----
   ! form lower triangle of Pcc
@@ -200,19 +189,15 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   call profiling_in(prof_scdm_matmul3,"SCDM_matmul3")
   ! form orthogonal SCDM
   SAFE_ALLOCATE(temp_state(1:mesh%np,1))
-  SAFE_ALLOCATE(state_global(1:mesh%np_global))
-  
   do vv=scdm%st%st_start,scdm%st%st_end
-    state_global(:) = M_ZERO
+    temp_state(1:mesh%np,:)= M_ZERO
     do jj = 1, nval
-      state_global(1:mesh%np_global) = state_global(1:mesh%np_global) + SCDM_temp(1:mesh%np_global,jj)*Pcc(jj, vv)
+      temp_state(1:mesh%np,1) = temp_state(1:mesh%np,1) + SCDM_temp(1:mesh%np,jj)*Pcc(jj, vv)
     end do
-#ifdef HAVE_MPI
-    call vec_scatter(mesh%vp, 0, state_global, temp_state(1:mesh%np,1))
-#endif
     call states_set_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
   end do
   
+  SAFE_DEALLOCATE_A(Pcc)
   SAFE_DEALLOCATE_A(SCDM_temp)
   
   call profiling_out(prof_scdm_matmul3)
@@ -263,6 +248,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   scdm%X(psi)(:,:) =  M_ZERO
   scdm%box(:,:,:,:) =  M_ZERO
   SAFE_ALLOCATE(temp_box(1:2*scdm%box_size+1,1:2*scdm%box_size+1,1:2*scdm%box_size+1))
+  SAFE_ALLOCATE(state_global(1:mesh%np_global))
   do vv = scdm%st%st_start,scdm%st%st_end
     
     ! find integer index of center
@@ -390,6 +376,8 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   end do
 
   SAFE_DEALLOCATE_A(temp_box)
+  SAFE_DEALLOCATE_A(temp_state)
+  SAFE_DEALLOCATE_A(state_global)
   
   ! the boxed SCDM states as well as their mapping boxes need to be available globally
   ! NOTE: strictly speaking only within their respective scdm%st_exx_grp, but that requires
@@ -404,9 +392,6 @@ subroutine X(scdm_localize)(st,mesh,scdm)
 
   ! set flag to do this only once
   scdm_is_local = .true.
-
-  SAFE_DEALLOCATE_A(Pcc)
-  SAFE_DEALLOCATE_A(scdm_temp)
 
   call profiling_out(prof_scdm)
 
