@@ -2038,7 +2038,7 @@ contains
         do ist = max(gs_st%st_start, st%st_start), st%st_end
           call states_get_state(st, gr%mesh, ist, ik, psi)
           do uist = gs_st%st_start, gs_st%st_end
-            call states_get_state(gs_st, gr%mesh, ist, ik, gspsi)
+            call states_get_state(gs_st, gr%mesh, uist, ik, gspsi)
             projections(ist, uist, ik) = zmf_dotp(gr%mesh, st%d%dim, psi, gspsi)
           end do
         end do
