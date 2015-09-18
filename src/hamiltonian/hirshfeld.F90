@@ -259,7 +259,7 @@ contains
       if(rrj > CNST(1e-12)) then 
         do idir = 1, this%mesh%sb%dim
           grad(ip, idir) = -rri**3*atom_dens*tdensity*atom_der/this%total_density(ip)**2&
-            *(this%mesh%x(ip, idir) - this%geo%atom(jatom)%x(idir))/rrj
+            *(this%geo%atom(jatom)%x(idir) - this%mesh%x(ip, idir))/rrj
         end do
       else
         grad(ip, 1:this%mesh%sb%dim) = CNST(0.0)
@@ -269,7 +269,7 @@ contains
         
         do idir = 1, this%mesh%sb%dim
           grad(ip, idir) = grad(ip, idir) + (CNST(3.0)*rri*atom_dens + rri**2*atom_der)&
-            *tdensity/this%total_density(ip)*(this%mesh%x(ip, idir) - this%geo%atom(iatom)%x(idir))
+            *tdensity/this%total_density(ip)*(this%geo%atom(iatom)%x(idir) - this%mesh%x(ip, idir))
         end do
 
       end if
