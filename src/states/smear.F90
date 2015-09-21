@@ -309,7 +309,7 @@ contains
       
       do iter = 1, nst * nik
         weight = int(kweights(k_list(reorder(iter))) * this%nik_factor + M_HALF)
-        ASSERT(weight > 0)
+        if(.not. weight > 0) cycle 
         this%e_fermi = eigenval_list(iter)
         this%ef_occ  = (sumq_int + sumq_frac) / (weight * this%el_per_state)
 

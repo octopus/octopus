@@ -68,6 +68,7 @@ module kpoints_m
 
     logical        :: use_symmetries
     logical        :: use_time_reversal
+    integer        :: nik_skip=0 !< number of user defined points with zero weight
 
     !> For the modified Monkhorst-Pack scheme
     integer        :: nik_axis(MAX_DIM)    !< number of MP divisions
@@ -480,9 +481,29 @@ contains
       end if
       call parse_block_end(blk)
 
-      if(any(this%full%weight(:) < -M_ZERO)) then
-        message(1) = "k-point weights must be non-negative."
-        call messages_fatal(1)
+      this%nik_skip = 0
+      if(any(this%full%weight(:) < M_EPSILON)) then
+        call messages_experimental('K-points with zero weight')
+        message(1) = "Found k-points with zero weight. They are excluded from density calculation"
+        call messages_warning(1)
+        ! count k-points with zero weight and  make sure the points are given in
+        ! a block after all regular k-points. This is for convenience, so they can be skipped
+        ! easily and not a big restraint for the user who has to provide the k-points
+        ! explicitly anyway.
+        do ik=1,this%full%npoints
+          if(this%full%weight(ik) < M_EPSILON) then
+            ! check there are no points with positive weight following a zero weighted one
+            if(ik < this%full%npoints) then
+              if(this%full%weight(ik+1) > M_EPSILON) then
+                message(1) = "K-points with zero weight must follow all regular k-points in a block"
+                call messages_fatal(1)
+              endif
+            end if
+            this%nik_skip = this%nik_skip + 1
+            ! set to machine zero
+            this%full%weight(ik) = M_ZERO
+          end if
+        end do
       end if
       ! renormalize weights
       weight_sum = sum(this%full%weight(1:this%full%npoints))
@@ -943,16 +964,19 @@ contains
   integer function kpoints_kweight_denominator(this)
     type(kpoints_t),    intent(in) :: this
 
-    integer :: denom
+    integer :: denom, nik, nik_skip
 
     PUSH_SUB(kpoints_kweight_denominator)
 
+    nik = this%full%npoints
+    nik_skip = this%nik_skip
+    
     if(this%method == KPOINTS_MONKH_PACK) then
       kpoints_kweight_denominator = this%full%npoints
     else
       kpoints_kweight_denominator = 0
       do denom = 1, 100000
-        if(all(abs(int(this%full%weight(:) * denom) - this%full%weight(:) * denom) < CNST(10)*M_EPSILON)) then
+        if(all(abs(int(this%full%weight(1:nik-nik_skip)*denom)-this%full%weight(1:nik-nik_skip)*denom) < CNST(10)*M_EPSILON)) then
           kpoints_kweight_denominator = denom
           exit
         end if
