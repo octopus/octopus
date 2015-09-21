@@ -65,6 +65,7 @@ module pes_rc_m
     integer          :: nomega                    !< number of frequencies of the spectrum
     logical          :: onfly                     !< spectrum is calculated on-the-fly when true
     integer          :: save_iter                 !< output interval and size of arrays 
+    logical          :: interpolation             !< use a an interpolated scheme for sample points
   end type PES_rc_t
 
   integer, parameter :: &
@@ -85,6 +86,7 @@ contains
     FLOAT         :: xx(MAX_DIM)
     FLOAT         :: dmin
     integer       :: rankmin
+    logical       :: fromblk
 
     PUSH_SUB(PES_rc_init)
 
@@ -105,8 +107,20 @@ contains
     !% </tt>
     !%End
     call messages_obsolete_variable('PES_rc_points', 'PhotoElectronSpectrumPoints')
+    fromblk = .true.
     if (parse_block('PhotoElectronSpectrumPoints', blk) < 0) then
-      message(1) = 'The PhotoElectronSpectrumPoints block is required when PhotoElectronSpectrum = pes_rc'
+      fromblk = .false.
+    end if
+
+    if(fromblk) then
+      message(1) = 'Info: Using PhotoElectronSpectrumPoints from block.'
+    else
+      message(1) = 'Info: Using spherical grid with interpolation.'
+    end if
+    call messages_info(1)
+
+    if(.not.fromblk) then
+      message(1) = 'Interpolation scheme not yet implemented.'
       call messages_fatal(1)
     end if
 
@@ -159,44 +173,52 @@ contains
       call messages_print_var_value(stdout, "PES_rc_DelOmega", pesrc%delomega)
     end if
 
-    pesrc%npoints = parse_block_n(blk)
+    if(fromblk) then
+      pesrc%interpolation = .false.
+      pesrc%npoints = parse_block_n(blk)
+    else
+      pesrc%interpolation = .true.
+    end if
 
     call messages_print_var_value(stdout, "Number of PhotoElectronSpectrumPoints", pesrc%npoints)
 
     SAFE_ALLOCATE(pesrc%coords(1:mesh%sb%dim, 1:pesrc%npoints))
 
-    SAFE_ALLOCATE(pesrc%points(1:pesrc%npoints))
-    SAFE_ALLOCATE(pesrc%points_global(1:pesrc%npoints))
-    SAFE_ALLOCATE(pesrc%rankmin(1:pesrc%npoints))
-    pesrc%points_global = 0
+    if(fromblk) then
+      SAFE_ALLOCATE(pesrc%points(1:pesrc%npoints))
+      SAFE_ALLOCATE(pesrc%points_global(1:pesrc%npoints))
+      SAFE_ALLOCATE(pesrc%rankmin(1:pesrc%npoints))
+      pesrc%points_global = 0
 
-   ! read points from input file
-    do ip = 1, pesrc%npoints
-      call parse_block_float(blk, ip - 1, 0, xx(1), units_inp%length)
-      call parse_block_float(blk, ip - 1, 1, xx(2), units_inp%length)
-      call parse_block_float(blk, ip - 1, 2, xx(3), units_inp%length)
-      pesrc%coords(1:mesh%sb%dim, ip) = xx(1:mesh%sb%dim)
-    end do
-    call parse_block_end(blk)
+      ! read points from input file
+      do ip = 1, pesrc%npoints
+        call parse_block_float(blk, ip - 1, 0, xx(1), units_inp%length)
+        call parse_block_float(blk, ip - 1, 1, xx(2), units_inp%length)
+        call parse_block_float(blk, ip - 1, 2, xx(3), units_inp%length)
+        pesrc%coords(1:mesh%sb%dim, ip) = xx(1:mesh%sb%dim)
+      end do
+      call parse_block_end(blk)
 
-    message(1) = 'Info: Calculating nearest points.'
-    call messages_info(1)
+      message(1) = 'Info: Calculating nearest points.'
+      call messages_info(1)
 
-    do ip = 1, pesrc%npoints
-      ! nearest point
-      pesrc%points(ip) = mesh_nearest_point(mesh, pesrc%coords(1:mesh%sb%dim, ip), dmin, rankmin)
-      pesrc%rankmin(ip)= rankmin
+      do ip = 1, pesrc%npoints
+        ! nearest point
+        pesrc%points(ip)  = mesh_nearest_point(mesh, pesrc%coords(1:mesh%sb%dim, ip), dmin, rankmin)
+        pesrc%rankmin(ip) = rankmin
 
-      if(mesh%parallel_in_domains) then
+        if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)
-        if(mesh%mpi_grp%rank == rankmin) &
-          pesrc%points_global(ip) = mesh%vp%local(mesh%vp%xlocal + pesrc%points(ip) - 1)
-        call comm_allreduce(mesh%mpi_grp%comm, pesrc%points_global)
+          if(mesh%mpi_grp%rank == rankmin) &
+            pesrc%points_global(ip) = mesh%vp%local(mesh%vp%xlocal + pesrc%points(ip) - 1)
+          call comm_allreduce(mesh%mpi_grp%comm, pesrc%points_global)
 #endif
-      else
-        pesrc%points_global(ip) = pesrc%points(ip)
-      end if
-    end do
+        else
+          pesrc%points_global(ip) = pesrc%points(ip)
+        end if
+      end do
+
+    end if
 
     SAFE_ALLOCATE(pesrc%wf(1:st%nst, 1:st%d%dim, 1:st%d%nik, 1:pesrc%npoints, 0:save_iter-1))
 
@@ -271,7 +293,10 @@ contains
     kptend = st%d%kpt%end
     dim    = st%d%dim
 
-    SAFE_ALLOCATE(psi(1:st%nst, dim, 1:1, 1:st%d%nik))
+    if(pesrc%interpolation) then
+    else
+      SAFE_ALLOCATE(psi(1:st%nst, dim, 1:1, 1:st%d%nik))
+    end if
 
     if(pesrc%onfly) then
       SAFE_ALLOCATE(wfftact(1:st%nst, dim, 1:st%d%nik, 1:pesrc%npoints, 1:pesrc%nomega))
@@ -285,28 +310,32 @@ contains
     ! needed for allreduce, otherwise it will take values from previous cycle
     pesrc%wf(:,:,:,:,ii) = M_z0
 
-    contains_ip = .true.
+    if(pesrc%interpolation) then
+    else ! pesrc%interpolation = .false.
 
-    do ip = 1, pesrc%npoints
+      contains_ip = .true.
+
+      do ip = 1, pesrc%npoints
 
 #if defined(HAVE_MPI)
-      if(mesh%parallel_in_domains) then
-        if(mesh%mpi_grp%rank  ==  pesrc%rankmin(ip)) then ! needed if mesh%parallel_in_domains is true
-          contains_ip = .true.
-        else
-          contains_ip = .false.
+        if(mesh%parallel_in_domains) then
+          if(mesh%mpi_grp%rank  ==  pesrc%rankmin(ip)) then ! needed if mesh%parallel_in_domains is true
+            contains_ip = .true.
+          else
+            contains_ip = .false.
+          end if
         end if
-      end if
 #endif
 
-      if(contains_ip) then
-        call states_get_points(st, pesrc%points(ip), pesrc%points(ip), psi)
-        pesrc%wf(stst:stend, dim, kptst:kptend, ip, ii) = psi(stst:stend, dim, 1, kptst:kptend)
-      end if
-    end do
+        if(contains_ip) then
+          call states_get_points(st, pesrc%points(ip), pesrc%points(ip), psi)
+          pesrc%wf(stst:stend, dim, kptst:kptend, ip, ii) = psi(stst:stend, dim, 1, kptst:kptend)
+        end if
+      end do
 #if defined(HAVE_MPI)
-    call comm_allreduce(mpi_world%comm, pesrc%wf(:,:,:,:,ii))
+      call comm_allreduce(mpi_world%comm, pesrc%wf(:,:,:,:,ii))
 #endif
+    end if
 
     if(pesrc%recipe == M_PHASE) then
       call pes_rc_calc_rcphase(pesrc, mesh, iter, dt, hm, ii)
