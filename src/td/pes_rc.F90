@@ -84,9 +84,6 @@ contains
     integer       :: ip
     FLOAT         :: xx(MAX_DIM)
     FLOAT         :: dmin
-#if defined(HAVE_MPI)
-    integer       :: buf
-#endif
     integer       :: rankmin
 
     PUSH_SUB(PES_rc_init)
@@ -171,6 +168,7 @@ contains
     SAFE_ALLOCATE(pesrc%points(1:pesrc%npoints))
     SAFE_ALLOCATE(pesrc%points_global(1:pesrc%npoints))
     SAFE_ALLOCATE(pesrc%rankmin(1:pesrc%npoints))
+    pesrc%points_global = 0
 
    ! read points from input file
     do ip = 1, pesrc%npoints
@@ -181,6 +179,9 @@ contains
     end do
     call parse_block_end(blk)
 
+    message(1) = 'Info: Calculating nearest points.'
+    call messages_info(1)
+
     do ip = 1, pesrc%npoints
       ! nearest point
       pesrc%points(ip) = mesh_nearest_point(mesh, pesrc%coords(1:mesh%sb%dim, ip), dmin, rankmin)
@@ -188,12 +189,9 @@ contains
 
       if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)
-        if(mesh%mpi_grp%rank == rankmin) then
-          buf = mesh%vp%local(mesh%vp%xlocal + pesrc%points(ip) - 1)
-        else
-          buf = 0
-        end if
-        call MPI_Allreduce(buf, pesrc%points_global(ip), 1, MPI_INTEGER, mpi_sum, mpi_comm_world, mpi_err)
+        if(mesh%mpi_grp%rank == rankmin) &
+          pesrc%points_global(ip) = mesh%vp%local(mesh%vp%xlocal + pesrc%points(ip) - 1)
+        call comm_allreduce(mesh%mpi_grp%comm, pesrc%points_global)
 #endif
       else
         pesrc%points_global(ip) = pesrc%points(ip)
@@ -201,7 +199,6 @@ contains
     end do
 
     SAFE_ALLOCATE(pesrc%wf(1:st%nst, 1:st%d%dim, 1:st%d%nik, 1:pesrc%npoints, 0:save_iter-1))
-    pesrc%wf = M_z0
 
     if(pesrc%recipe == M_PHASE) then
       SAFE_ALLOCATE(pesrc%dq(1:pesrc%npoints, 0:save_iter-1))
@@ -252,11 +249,12 @@ contains
     integer,             intent(in)    :: iter
     type(hamiltonian_t), intent(in)    :: hm
 
-    CMPLX, allocatable :: psi(:,:,:,:), wfact(:,:,:,:), wfftact(:,:,:,:,:)
+    CMPLX, allocatable :: psi(:,:,:,:), wfftact(:,:,:,:,:)
     integer            :: ip, ii
     integer            :: dim, stst, stend, kptst, kptend
     logical            :: contains_ip
-    CMPLX              :: cfac
+    CMPLX              :: rawfac
+    CMPLX, allocatable :: phasefac(:)
 #if defined(HAVE_MPI)
     integer            :: isdim
 #endif
@@ -279,6 +277,10 @@ contains
       SAFE_ALLOCATE(wfftact(1:st%nst, dim, 1:st%d%nik, 1:pesrc%npoints, 1:pesrc%nomega))
       wfftact = M_z0
     endif
+
+    if(pesrc%recipe == M_PHASE) then
+      SAFE_ALLOCATE(phasefac(1:pesrc%npoints))
+    end if
 
     ! needed for allreduce, otherwise it will take values from previous cycle
     pesrc%wf(:,:,:,:,ii) = M_z0
@@ -306,43 +308,39 @@ contains
     call comm_allreduce(mpi_world%comm, pesrc%wf(:,:,:,:,ii))
 #endif
 
-    do ip = 1, pesrc%npoints
-      if(pesrc%recipe == M_PHASE) then
-        call PES_rc_calc_rcphase(pesrc, mesh, iter, dt, hm, ip, ii)
-      end if
-
-      if(pesrc%onfly) then
-        do iom = 1, pesrc%nomega
-          omega = iom*pesrc%delomega
-          cfac = exp(M_zI * omega * iter * dt) * dt
-
-          if(pesrc%recipe == M_PHASE) then
-            cfac = cfac * exp(M_zI * (pesrc%domega(ii) - sqrt(M_TWO * omega) * pesrc%dq(ip, ii)))
-          end if
-
-          wfftact(stst:stend, dim, kptst:kptend, ip, iom) = &
-            pesrc%wf(stst:stend, dim, kptst:kptend, ip, ii) * cfac + pesrc%wfft(stst:stend, dim, kptst:kptend, ip, iom)
-        end do
-      end if
-    end do
-
-#if defined(HAVE_MPI)
-    isdim = st%nst * dim * st%d%nik * pesrc%npoints
+    if(pesrc%recipe == M_PHASE) then
+      call pes_rc_calc_rcphase(pesrc, mesh, iter, dt, hm, ii)
+    end if
 
     if(pesrc%onfly) then
       do iom = 1, pesrc%nomega
-        call MPI_Allreduce(wfftact(:,:,:,:,iom), pesrc%wfft(:,:,:,:,iom), isdim, MPI_CMPLX, mpi_sum, mpi_comm_world, &
-          mpi_err)
-      end do
-    end if
+        omega = iom*pesrc%delomega
+        rawfac = exp(M_zI * omega * iter * dt) * dt
 
-#else
-    if(pesrc%onfly) then
-      pesrc%wfft = wfftact
-    end if
+        select case(pesrc%recipe)
+        case(M_RAW)
+          wfftact(stst:stend, 1:dim, kptst:kptend, :, iom) = pesrc%wf(stst:stend, 1:dim, kptst:kptend, :, ii) * rawfac
+        case(M_PHASE)
+          phasefac(:) = exp(M_zI * (pesrc%domega(ii) - sqrt(M_TWO * omega) * pesrc%dq(:, ii)))
+
+          do ik = kptst, kptend
+            do ist = stst, stend
+              do idim = 1, dim
+                wfftact(ist, idim, ik, :, iom) = pesrc%wf(ist, idim, ik, :, ii) * phasefac(:) * rawfac
+              end do
+            end do
+          end do
+        end select
+#if defined(HAVE_MPI)
+        call comm_allreduce(mpi_world%comm, wfftact(:,:,:,:,iom))
 #endif
+      end do
+
+      pesrc%wfft = pesrc%wfft + wfftact
+    end if
 
     SAFE_DEALLOCATE_A(psi)
+    SAFE_DEALLOCATE_A(phasefac)
 
     SAFE_DEALLOCATE_A(wfftact)
 
@@ -437,9 +435,7 @@ contains
 
     end do
 
-    if(pesrc%onfly) then
-      SAFE_DEALLOCATE_A(wffttot)
-    end if
+    SAFE_DEALLOCATE_A(wffttot)
 
     POP_SUB(PES_rc_output)
   end subroutine PES_rc_output
@@ -493,7 +489,7 @@ contains
     POP_SUB(PES_rc_init_write)
   end subroutine PES_rc_init_write
 
-! ---------------------------------------------------------
+  ! ---------------------------------------------------------
   subroutine pes_rc_dump(restart, pesrc, st, ierr)
     type(restart_t), intent(in)  :: restart    
     type(pes_rc_t),  intent(in)  :: pesrc
@@ -537,7 +533,7 @@ contains
     POP_SUB(pes_rc_dump)
   end subroutine pes_rc_dump
 
-! ---------------------------------------------------------
+  ! ---------------------------------------------------------
   subroutine pes_rc_load(restart, pesrc, st, ierr)
     type(restart_t), intent(in)    :: restart    
     type(pes_rc_t),  intent(inout) :: pesrc
@@ -583,16 +579,15 @@ contains
   end subroutine pes_rc_load 
 
   ! ---------------------------------------------------------
-  subroutine PES_rc_calc_rcphase(pesrc, mesh, iter, dt, hm, ip, ii)
+  subroutine PES_rc_calc_rcphase(pesrc, mesh, iter, dt, hm, ii)
     type(PES_rc_t),      intent(inout) :: pesrc
     type(mesh_t),        intent(in)    :: mesh
     type(hamiltonian_t), intent(in)    :: hm
     integer,             intent(in)    :: iter
-    integer,             intent(in)    :: ip
     FLOAT,               intent(in)    :: dt
     integer,             intent(in)    :: ii
     
-    integer :: dim, il
+    integer :: dim, il, ip
     FLOAT   :: vp(1:MAX_DIM)
     FLOAT   :: xx(MAX_DIM), er(MAX_DIM)
 
@@ -600,17 +595,19 @@ contains
 
     dim = mesh%sb%dim
 
-    xx(1:dim) = mesh%x(pesrc%points(ip), 1:dim)
-    er(1:dim) = xx(1:dim)/sqrt(dot_product(xx(1:dim), xx(1:dim)))
-
     vp = M_ZERO
     do il = 1, hm%ep%no_lasers
       call laser_field(hm%ep%lasers(il), vp(1:dim), iter*dt)
     end do
     vp(1:dim) = -vp(1:dim)
 
+    do ip = 1, pesrc%npoints
+      xx(1:dim) = pesrc%coords(1:dim, ip)
+      er(1:dim) = xx(1:dim)/sqrt(dot_product(xx(1:dim), xx(1:dim)))
+      pesrc%dq(ip, ii) = pesrc%dq(ip, ii) + dot_product(er(1:dim), vp(1:dim))/P_C * dt
+    end do
+
     pesrc%domega(ii) = pesrc%domega(ii) + dot_product(vp(1:dim), vp(1:dim)) / (M_TWO * P_C**M_TWO) * dt
-    pesrc%dq(ip, ii) = pesrc%dq(ip, ii) + dot_product(er(1:dim), vp(1:dim))/P_C * dt
 
     POP_SUB(PES_rc_calc_rcphase)
   end subroutine PES_rc_calc_rcphase
