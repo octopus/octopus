@@ -225,7 +225,7 @@ module hamiltonian_m
     RDMFT                 = 7
 
   type(profile_t), save :: prof_hamiltonian, prof_kinetic_start, prof_kinetic_finish
-  type(profile_t), save :: prof_exx, prof_exx_scdm,prof_exx_scdm2,prof_exx_scdm3,prof_exx_scdm4, prof_exx_scdm5
+  type(profile_t), save :: prof_exx, prof_exx_scdm
 
 contains
 

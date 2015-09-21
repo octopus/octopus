@@ -521,7 +521,6 @@ subroutine X(scdm_exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
     do jst = hm%scdm%st_exx_start, hm%scdm%st_exx_end
   
       if(hm%hf_st%occ(jst, ik2) < M_EPSILON) cycle
-      call profiling_in(prof_exx_scdm3,"SCDM_EXX_OP_1")
       ! for psi in scdm representation check if it overlaps with the box of jst
       ! NOTE: this can be faster by building an array with overlapping index pairs
       !       within the radius of scdm%box_size
@@ -548,13 +547,9 @@ subroutine X(scdm_exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
           end do
         end do
       end do
-      call profiling_out(prof_exx_scdm3)
 
-      call profiling_in(prof_exx_scdm2,"SCDM_EXX_POISSON")
       call X(poisson_solve)(hm%scdm%poisson, pot_l, rho_l, all_nodes=.false.)
-      call profiling_out(prof_exx_scdm2)
       
-      call profiling_in(prof_exx_scdm4,"SCDM_EXX_OP_2")
       ff = hm%hf_st%occ(jst, ik2)
       if(hm%d%ispin == UNPOLARIZED) ff = M_HALF*ff
 
@@ -571,17 +566,14 @@ subroutine X(scdm_exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
         end do
 
       end do
-      call profiling_out(prof_exx_scdm4)
-
+ 
     end do
   end do
 
-  call profiling_in(prof_exx_scdm5,"SCDM_EXX_OP_3")
   ! sum contributions to hpsi from all processes in the st_exx_grp group
   call comm_allreduce(hm%scdm%st_exx_grp%comm,temp_state_global)
   ! add exchange contribution to the input state
   hpsi(1:der%mesh%np_global,1) =  hpsi(1:der%mesh%np_global,1) +  temp_state_global(1:der%mesh%np_global,1)
-  call profiling_out(prof_exx_scdm5)
   call profiling_out(prof_exx_scdm)
  
  POP_SUB(X(scdm_exchange_operator))
