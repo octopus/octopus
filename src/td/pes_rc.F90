@@ -92,7 +92,7 @@ contains
     integer       :: rankmin
     logical       :: fromblk
     FLOAT         :: phi, theta, radius
-    integer       :: iph, ith, iphi
+    integer       :: iph, ith
 
     PUSH_SUB(PES_rc_init)
 
@@ -492,7 +492,7 @@ contains
     integer,        intent(in) :: iter
     FLOAT,          intent(in) :: dt
 
-    integer            :: ip, ii, jj, ik, ist, idim, iom, iph, ith
+    integer            :: ip, ii, jj, ik, ist, idim, iom, iph, ith, iphi
     integer            :: iunit, iunitone, iunittwo
     CMPLX              :: vfu
     character(len=4)   :: filenr
