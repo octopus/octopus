@@ -49,25 +49,25 @@ module pes_rc_m
     pes_rc_load
 
   type PES_rc_t
-    integer          :: npoints                 !< how many points we store the wf
-    integer, pointer :: points(:)               !< which points to use (local index)
-    integer, pointer :: points_global(:)        !< global index of the points
-    CMPLX, pointer   :: wf(:,:,:,:,:)           !< wavefunctions at sample points
-    integer, pointer :: rankmin(:)              !< partition of the mesh containing the points
-    FLOAT, pointer   :: dq(:,:)                 !< part 1 of Volkov phase (type PHASES) 
-    FLOAT, pointer   :: domega(:)               !< part 2 of Volkov phase (type PHASES)
-    integer          :: recipe                  !< type of calculation (RAW/PHASES)
-    CMPLX, pointer   :: wfft(:,:,:,:,:)         !< Fourier transform of wavefunction
-    FLOAT            :: omegamax                !< maximum frequency of the spectrum
-    FLOAT            :: delomega                !< frequency spacing of the spectrum
-    integer          :: komega                  !< number of frequencies of the spectrum
-    logical          :: onfly                   !< spectrum is calculated on-the-fly when true
-    integer          :: save_iter               !< output interval and size of arrays 
+    integer          :: npoints                   !< how many points we store the wf
+    integer, pointer :: points(:)                 !< which points to use (local index)
+    integer, pointer :: points_global(:)          !< global index of the points
+    CMPLX, pointer   :: wf(:,:,:,:,:)   => NULL() !< wavefunctions at sample points
+    integer, pointer :: rankmin(:)                !< partition of the mesh containing the points
+    FLOAT, pointer   :: dq(:,:)         => NULL() !< part 1 of Volkov phase (recipe phase) 
+    FLOAT, pointer   :: domega(:)       => NULL() !< part 2 of Volkov phase (recipe phase)
+    integer          :: recipe                    !< type of calculation (RAW/PHASE)
+    CMPLX, pointer   :: wfft(:,:,:,:,:) => NULL() !< Fourier transform of wavefunction
+    FLOAT            :: omegamax                  !< maximum frequency of the spectrum
+    FLOAT            :: delomega                  !< frequency spacing of the spectrum
+    integer          :: nomega                    !< number of frequencies of the spectrum
+    logical          :: onfly                     !< spectrum is calculated on-the-fly when true
+    integer          :: save_iter                 !< output interval and size of arrays 
   end type PES_rc_t
 
   integer, parameter :: &
-    M_RAW    = 1,       &
-    M_PHASES = 2
+    M_RAW   = 1,        &
+    M_PHASE = 2
 
 contains
 
@@ -120,15 +120,45 @@ contains
     !%Option raw 1
     !% Calculate the photoelectron spectrum according to A. Pohl, P.-G. Reinhard, and 
     !% E. Suraud, <i>Phys. Rev. Lett.</i> <b>84</b>, 5090 (2000).
-    !%Option phases 2
+    !%Option phase 2
     !% Calculate the photoelectron spectrum by including the Volkov phase (approximately), see
     !% P. M. Dinh, P. Romaniello, P.-G. Reinhard, and E. Suraud, <i>Phys. Rev. A.</i> <b>87</b>, 032514 (2013).
     !%End
     call parse_variable('PES_rc_recipe', M_RAW, pesrc%recipe)
-    if(.not.varinfo_valid_option('PES_rc_recipe', pesrc%recipe, is_flag = .true.)) then 
+    if(.not.varinfo_valid_option('PES_rc_recipe', pesrc%recipe, is_flag = .true.)) &
       call messages_input_error('PES_rc_recipe')
-    end if
     call messages_print_var_option(stdout, "PES_rc_recipe", pesrc%recipe)
+
+    !%Variable PES_rc_OmegaMax
+    !%Type float
+    !%Default 0.0
+    !%Section Time-Dependent::PhotoElectronSpectrum
+    !%Description
+    !% If PES_rc_OmegaMax > 0, the photoelectron spectrum is directly calculated during 
+    !% time-propagation, evaluated by the PES_rc method. PES_rc_OmegaMax is then the maximum frequency 
+    !% (approximate kinetic energy) and PES_rc_DelOmega the spacing in frequency domain of the spectrum.
+    !%End
+    call parse_variable('PES_rc_OmegaMax', units_to_atomic(units_inp%energy, M_ZERO), pesrc%omegamax)
+    pesrc%onfly = .false.
+    if(pesrc%omegamax > M_ZERO) then
+      pesrc%onfly = .true.
+      message(1) = 'Info: Calculating PES during time propagation.'
+      call messages_info(1)
+      call messages_print_var_value(stdout, "PES_rc_OmegaMax", pesrc%omegamax)
+    end if
+ 
+    !%Variable PES_rc_DelOmega
+    !%Type float
+    !%Default 0.005
+    !%Section Time-Dependent::PhotoElectronSpectrum
+    !%Description
+    !% The spacing in frequency domain for the photoelectron spectrum (if PES_rc_OmegaMax > 0).
+    !%End
+    call parse_variable('PES_rc_DelOmega', units_to_atomic(units_inp%energy, CNST(0.005)), pesrc%delomega)
+    if(pesrc%onfly) then
+      if(pesrc%delomega <= M_ZERO) call messages_input_error('PES_rc_DelOmega')
+      call messages_print_var_value(stdout, "PES_rc_DelOmega", pesrc%delomega)
+    end if
 
     pesrc%npoints = parse_block_n(blk)
 
@@ -164,46 +194,17 @@ contains
     SAFE_ALLOCATE(pesrc%wf(1:st%nst, 1:st%d%dim, 1:st%d%nik, 1:pesrc%npoints, 0:save_iter-1))
     pesrc%wf = M_z0
 
-    !%Variable PES_rc_OmegaMax
-    !%Type float
-    !%Default 0.0
-    !%Section Time-Dependent::PhotoElectronSpectrum
-    !%Description
-    !% If non-zero, the photoelectron spectrum is directly calculated during time-propagation, 
-    !% evaluated by the PES_rc method. PES_rc_OmegaMax is then the maximum frequency (approximate 
-    !% kinetic energy) and PES_rc_DelOmega the spacing in frequency domain of the spectrum. 
-    !%End
-    call parse_variable('PES_rc_OmegaMax', units_to_atomic(units_inp%energy, M_ZERO), pesrc%omegamax)
-    pesrc%onfly = .false.
-    if(pesrc%omegamax /= M_ZERO) then
-      pesrc%onfly = .true.
-      message(1) = 'Info: Calculating PES during time propagation.'
-      call messages_info(1)
-      call messages_print_var_value(stdout, "PES_rc_OmegaMax", pesrc%omegamax)
-    end if
- 
-    !%Variable PES_rc_DelOmega
-    !%Type float
-    !%Default 0.001
-    !%Section Time-Dependent::PhotoElectronSpectrum
-    !%Description
-    !% The spacing in frequency domain for the photoelectron spectrum (if PES_rc_OmegaMax is non-zero).
-    !%End
-    if(pesrc%onfly) then
-      call parse_variable('PES_rc_DelOmega', units_to_atomic(units_inp%energy, CNST(0.001)), pesrc%delomega)
-      call messages_print_var_value(stdout, "PES_rc_DelOmega", pesrc%delomega)
-
-      pesrc%komega = nint(pesrc%omegamax/pesrc%delomega)
-
-      SAFE_ALLOCATE(pesrc%wfft(1:st%nst, 1:st%d%dim, 1:st%d%nik, 1:pesrc%npoints, 1:pesrc%komega))
-      pesrc%wfft = M_z0
-    end if
-
-    if(pesrc%recipe == M_PHASES) then
+    if(pesrc%recipe == M_PHASE) then
       SAFE_ALLOCATE(pesrc%dq(1:pesrc%npoints, 0:save_iter-1))
       SAFE_ALLOCATE(pesrc%domega(0:save_iter-1))
       pesrc%dq = M_ZERO
       pesrc%domega = M_ZERO
+    end if
+
+    if(pesrc%onfly) then
+      pesrc%nomega = nint(pesrc%omegamax/pesrc%delomega)
+      SAFE_ALLOCATE(pesrc%wfft(1:st%nst, 1:st%d%dim, 1:st%d%nik, 1:pesrc%npoints, 1:pesrc%nomega))
+      pesrc%wfft = M_z0
     end if
 
     pesrc%save_iter = save_iter
@@ -218,21 +219,15 @@ contains
 
     PUSH_SUB(PES_rc_end)
 
-    if(associated(pesrc%points)) then
-      SAFE_DEALLOCATE_P(pesrc%points)
-      SAFE_DEALLOCATE_P(pesrc%points_global)
-      SAFE_DEALLOCATE_P(pesrc%wf)
-      SAFE_DEALLOCATE_P(pesrc%rankmin)
+    SAFE_DEALLOCATE_P(pesrc%points)
+    SAFE_DEALLOCATE_P(pesrc%points_global)
+    SAFE_DEALLOCATE_P(pesrc%wf)
+    SAFE_DEALLOCATE_P(pesrc%rankmin)
 
-      if(pesrc%onfly) then
-        SAFE_DEALLOCATE_P(pesrc%wfft)
-      end if
+    SAFE_DEALLOCATE_P(pesrc%wfft)
 
-      if(pesrc%recipe == M_PHASES) then
-        SAFE_DEALLOCATE_P(pesrc%dq)
-        SAFE_DEALLOCATE_P(pesrc%domega)
-      end if
-    end if
+    SAFE_DEALLOCATE_P(pesrc%dq)
+    SAFE_DEALLOCATE_P(pesrc%domega)
 
     POP_SUB(PES_rc_end)
   end subroutine PES_rc_end
@@ -275,12 +270,12 @@ contains
     wfact = M_z0
 
     if(pesrc%onfly) then
-      SAFE_ALLOCATE(wfftact(1:st%nst, dim, 1:st%d%nik, 1:pesrc%npoints, 1:pesrc%komega))
+      SAFE_ALLOCATE(wfftact(1:st%nst, dim, 1:st%d%nik, 1:pesrc%npoints, 1:pesrc%nomega))
       wfftact = M_z0
     endif
 
 #if defined(HAVE_MPI)
-    if(pesrc%recipe == M_PHASES) then
+    if(pesrc%recipe == M_PHASE) then
       SAFE_ALLOCATE(buf(1:pesrc%npoints))
       buf = M_ZERO
     end if
@@ -304,16 +299,16 @@ contains
         call states_get_points(st, pesrc%points(ip), pesrc%points(ip), psi)
         wfact(stst:stend, dim, kptst:kptend, ip) = psi(stst:stend, dim, 1, kptst:kptend)
 
-        if(pesrc%recipe == M_PHASES) then
+        if(pesrc%recipe == M_PHASE) then
           call PES_rc_calc_rcphase(pesrc, mesh, iter, dt, hm, ip, ii)
         end if
 
         if(pesrc%onfly) then
-          do iom = 1, pesrc%komega
+          do iom = 1, pesrc%nomega
             omega = iom*pesrc%delomega
             cfac = exp(M_zI * omega * iter * dt) * dt
 
-            if(pesrc%recipe == M_PHASES) then
+            if(pesrc%recipe == M_PHASE) then
               cfac = cfac * exp(M_zI * (pesrc%domega(ii) - sqrt(M_TWO * omega) * pesrc%dq(ip, ii)))
             end if
 
@@ -329,7 +324,7 @@ contains
     isdim = st%nst * dim * st%d%nik * pesrc%npoints
     call MPI_Allreduce(wfact(:,:,:,:), pesrc%wf(:,:,:,:,ii), isdim, MPI_CMPLX, mpi_sum, mpi_comm_world, mpi_err)
 
-    if(pesrc%recipe == M_PHASES) then
+    if(pesrc%recipe == M_PHASE) then
       call MPI_Allreduce(pesrc%dq(:,ii), buf(:), pesrc%npoints, MPI_FLOAT, mpi_sum, mpi_comm_world, mpi_err)
       pesrc%dq(:,ii) = buf(:)
 
@@ -337,7 +332,7 @@ contains
     end if
 
     if(pesrc%onfly) then
-      do iom = 1, pesrc%komega
+      do iom = 1, pesrc%nomega
         call MPI_Allreduce(wfftact(:,:,:,:,iom), pesrc%wfft(:,:,:,:,iom), isdim, MPI_CMPLX, mpi_sum, mpi_comm_world, &
           mpi_err)
       end do
@@ -354,9 +349,7 @@ contains
     SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(wfact)
 
-    if(pesrc%onfly) then
-      SAFE_DEALLOCATE_A(wfftact)
-    end if
+    SAFE_DEALLOCATE_A(wfftact)
 
     POP_SUB(PES_rc_calc)
   end subroutine PES_rc_calc
@@ -371,7 +364,7 @@ contains
 
     integer            :: ip, iunit, ii, jj, ik, ist, idim, iom
     CMPLX              :: vfu
-    character(len=2)   :: filenr
+    character(len=4)   :: filenr
     FLOAT              :: wfu, omega
     FLOAT, allocatable :: wffttot(:)
     integer            :: save_iter
@@ -381,11 +374,11 @@ contains
     save_iter = pesrc%save_iter
 
     if(pesrc%onfly) then
-      SAFE_ALLOCATE(wffttot(1:pesrc%komega))
+      SAFE_ALLOCATE(wffttot(1:pesrc%nomega))
     end if
 
     do ip = 1, pesrc%npoints
-      write(filenr, '(i2.2)') ip
+      write(filenr, '(i4.4)') ip
 
       iunit = io_open('td.general/'//'PES_rc.'//filenr//'.wavefunctions.out', action='write', position='append')
       do ii = 1, save_iter - mod(iter, save_iter)
@@ -404,8 +397,8 @@ contains
       end do
       call io_close(iunit)
 
-      if(pesrc%recipe == M_PHASES) then
-        iunit = io_open('td.general/'//'PES_rc.'//filenr//'.phases.out', action='write', position='append')
+      if(pesrc%recipe == M_PHASE) then
+        iunit = io_open('td.general/'//'PES_rc.'//filenr//'.phase.out', action='write', position='append')
         do ii = 1, save_iter - mod(iter, save_iter)
           jj = iter - save_iter + ii + mod(save_iter - mod(iter, save_iter), save_iter)
           write(iunit, '(e17.10)', advance='no') units_from_atomic(units_inp%time, jj * dt)
@@ -418,7 +411,7 @@ contains
 
       if(pesrc%onfly) then
         wffttot = M_ZERO
-        do iom = 1, pesrc%komega
+        do iom = 1, pesrc%nomega
           do ik = 1, st%d%nik
             do ist = 1, st%nst
               do idim = 1, st%d%dim
@@ -431,7 +424,7 @@ contains
 
         iunit = io_open('td.general/'//'PES_rc.'//filenr//'.spectrum.out', action='write', position='rewind')
         write(iunit, '(a44)') '# frequency, total spectrum, orbital spectra'
-        do iom = 1, pesrc%komega 
+        do iom = 1, pesrc%nomega 
           omega = iom*pesrc%delomega
           write(iunit, '(e17.10, 1x, e17.10)', advance='no') omega, wffttot(iom)
           do ik = 1, st%d%nik
@@ -464,14 +457,14 @@ contains
 
     integer          :: ip,ik,ist,idim,iunit
     FLOAT            :: xx(MAX_DIM)
-    character(len=2) :: filenr
+    character(len=4) :: filenr
 
     PUSH_SUB(PES_rc_init_write)
 
     xx = M_ZERO
     if(mpi_grp_is_root(mpi_world)) then
       do ip = 1, pesrc%npoints
-        write(filenr, '(i2.2)') ip
+        write(filenr, '(i4.4)') ip
 
         iunit = io_open('td.general/'//'PES_rc.'//filenr//'.wavefunctions.out', action='write')
         xx = mesh_x_global(mesh, pesrc%points_global(ip))
@@ -494,8 +487,8 @@ contains
 
         call io_close(iunit)
 
-        if(pesrc%recipe == M_PHASES) then
-          iunit = io_open('td.general/'//'PES_rc.'//filenr//'.phases.out', action='write')
+        if(pesrc%recipe == M_PHASE) then
+          iunit = io_open('td.general/'//'PES_rc.'//filenr//'.phase.out', action='write')
           write(iunit,'(a24)') '# time, dq(t), dOmega(t)'
           call io_close(iunit)
         end if
@@ -529,12 +522,12 @@ contains
     end if
 
     if(pesrc%onfly) then 
-      call zrestart_write_binary(restart, 'pesrc', pesrc%npoints*st%d%dim*st%nst*st%d%nik*pesrc%komega, &
+      call zrestart_write_binary(restart, 'pesrc', pesrc%npoints*st%d%dim*st%nst*st%d%nik*pesrc%nomega, &
         pesrc%wfft, err) 
     end if
 
-    if(pesrc%recipe == M_PHASES) then
-      iunit = restart_open(restart, 'rcphases')
+    if(pesrc%recipe == M_PHASE) then
+      iunit = restart_open(restart, 'rcphase')
       write(iunit, *)  pesrc%domega(:), pesrc%dq(:,:)
       call restart_close(restart, iunit)
     end if
@@ -574,12 +567,12 @@ contains
     end if
 
     if(pesrc%onfly) then
-      call zrestart_read_binary(restart, 'pesrc', pesrc%npoints*st%d%dim*st%nst*st%d%nik*pesrc%komega, &
+      call zrestart_read_binary(restart, 'pesrc', pesrc%npoints*st%d%dim*st%nst*st%d%nik*pesrc%nomega, &
         pesrc%wfft, err)
     end if
 
-    if(pesrc%recipe == M_PHASES) then
-      iunit = restart_open(restart, 'rcphases')
+    if(pesrc%recipe == M_PHASE) then
+      iunit = restart_open(restart, 'rcphase')
       read(iunit, *)  pesrc%domega(:), pesrc%dq(:,:)
       call restart_close(restart, iunit)
     end if
