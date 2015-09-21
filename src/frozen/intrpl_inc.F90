@@ -17,26 +17,10 @@
 
   type :: TEMPLATE(intrpl_t)
     private
-    type(TEMPLATE(t)), pointer :: self =>null()
+    type(EXTERNAL(t)), pointer :: self =>null()
     type(intrpl_t)             :: intrp
   end type TEMPLATE(intrpl_t)
 
-#if 0
-
-  interface TEMPLATE(_init__)
-    module procedure TEMPLATE(intrpl_init)
-  end interface TEMPLATE(_init__)
-
-  interface TEMPLATE(_copy__)
-    module procedure TEMPLATE(intrpl_copy)
-  end interface TEMPLATE(_copy__)
-
-  interface TEMPLATE(_end__)
-    module procedure TEMPLATE(intrpl_end)
-  end interface TEMPLATE(_end__)
-
-#endif
-  
   interface TEMPLATE(init)
     module procedure TEMPLATE(intrpl_init)
   end interface TEMPLATE(init)
@@ -64,7 +48,7 @@
   ! ---------------------------------------------------------
   subroutine TEMPLATE(intrpl_init)(this, that, type)
     type(TEMPLATE(intrpl_t)),  intent(out) :: this
-    type(TEMPLATE(t)), target, intent(in)  :: that
+    type(EXTERNAL(t)), target, intent(in)  :: that
     integer,         optional, intent(in)  :: type
 
     type(storage_t), pointer :: data
@@ -72,8 +56,8 @@
     PUSH_SUB(TEMPLATE(intrpl_init))
 
     nullify(data)
-    this%self=>that
-    call TEMPLATE(get)(that, data)
+    this%self => that
+    call EXTERNAL(get)(that, data)
     ASSERT(associated(data))
     call intrpl_init(this%intrp, data, type=type)
     nullify(data)
@@ -90,8 +74,8 @@
 
     PUSH_SUB(INTERNAL(intrpl_eval_1d))
 
-    ierr=TEMPLATE(INTRPL_NI)
-    if(associated(this%self))call intrpl_eval(this%intrp, x, v, ierr)
+    ierr = TEMPLATE(INTRPL_NI)
+    if(associated(this%self)) call intrpl_eval(this%intrp, x, v, ierr)
 
     POP_SUB(INTERNAL(intrpl_eval_1d))
   end subroutine INTERNAL(intrpl_eval_1d)
@@ -105,8 +89,8 @@
 
     PUSH_SUB(INTERNAL(intrpl_eval_md))
 
-    ierr=TEMPLATE(INTRPL_NI)
-    if(associated(this%self))call intrpl_eval(this%intrp, x, v, ierr)
+    ierr = TEMPLATE(INTRPL_NI)
+    if(associated(this%self)) call intrpl_eval(this%intrp, x, v, ierr)
 
     POP_SUB(INTERNAL(intrpl_eval_md))
   end subroutine INTERNAL(intrpl_eval_md)
@@ -114,13 +98,12 @@
   ! ---------------------------------------------------------
   subroutine TEMPLATE(intrpl_get)(this, that)
     type(TEMPLATE(intrpl_t)), intent(in) :: this
-    type(TEMPLATE(t)),       pointer     :: that
+    type(EXTERNAL(t)),       pointer     :: that
 
     PUSH_SUB(TEMPLATE(intrpl_get))
 
     nullify(that)
-    if(associated(this%self))&
-      that=>this%self
+    if(associated(this%self)) that => this%self
 
     POP_SUB(TEMPLATE(intrpl_get))
   end subroutine TEMPLATE(intrpl_get)
@@ -134,7 +117,7 @@
 
     call TEMPLATE(intrpl_end)(this)
     if(associated(that%self))then
-      this%self=>that%self
+      this%self => that%self
       call intrpl_copy(this%intrp, that%intrp)
     end if
 
@@ -155,6 +138,8 @@
   end subroutine TEMPLATE(intrpl_end)
 
 #endif
+
+#undef TEMPLATE_PREFIX
 
 !! Local Variables:
 !! mode: f90

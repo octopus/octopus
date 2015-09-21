@@ -2,34 +2,17 @@
 
 module frozen_external_m
 
+  use base_potential_m
+  use basis_m
+  use fio_external_m
   use global_m
+  use json_m
+  use kinds_m
+  use mesh_m
   use messages_m
   use profiling_m
-
-  use json_m,  only: JSON_OK, json_object_t, json_get
-  use json_m,  only: json_array_t, json_array_iterator_t, json_init, json_next, json_end
-  use kinds_m, only: wp
-  use mesh_m,  only: mesh_t
-  use space_m, only: space_t
-
-  use basis_m, only: basis_t, basis_init, basis_to_internal, basis_end
-
-  use simulation_m, only: &
-    simulation_t
-
-  use simulation_m, only: &
-    simulation_get
-
-  use fio_external_m, only: &
-    fio_external_t
-
-  use fio_external_m, only: &
-    fio_external_init,      &
-    fio_external_eval,      &
-    fio_external_end
-
-  use fio_external_m, only: &
-    fio_external_intrpl_t
+  use simulation_m
+  use space_m
 
   use base_potential_m, only:              &
     frozen_external_t => base_potential_t
@@ -40,6 +23,7 @@ module frozen_external_m
   implicit none
 
   private
+
   public ::            &
     frozen_external_t
 
@@ -96,7 +80,7 @@ contains
   ! ---------------------------------------------------------
   subroutine frozen_external__acc__(this, that, config)
     type(frozen_external_t), intent(inout) :: this
-    type(fio_external_t),    intent(in)    :: that
+    type(frozen_external_t), intent(in)    :: that !> fio
     type(json_object_t),     intent(in)    :: config
 
     type(json_object_t), pointer :: cnfg

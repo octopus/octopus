@@ -2,29 +2,27 @@
 
 module fio_config_m
 
-  use global_m
-  use messages_m
-  use profiling_m
+  use base_config_m
+  use base_hamiltonian_m
   use curvilinear_m
+  use fio_handle_m
+  use global_m
   use intrpl_m
   use io_m
   use json_m
-  use json_m
-  use json_m
-  use json_parser_m
   use json_parser_m
   use kinds_m
   use loct_m
+  use messages_m
   use parser_m
   use path_m
+  use profiling_m
   use species_m
-  use base_hamiltonian_m
-  use base_config_m
-  use fio_handle_m
 
   implicit none
 
   private
+
   public ::           &
     fio_config_parse
 
@@ -47,27 +45,28 @@ contains
     character(len=*), intent(in)  :: topdir
     character(len=*), intent(in)  :: reldir
     character(len=*), intent(out) :: outdir
-    !
+
     character(len=max_path_len) :: apth, bpth
     logical                     :: exst
-    !
+
     PUSH_SUB(fio_config_parse_get_dir)
+
     call path_realpath(reldir, outdir)
     if(.not.path_isabs(reldir))then
        call path_realpath(topdir, apth)
        call path_join(apth, reldir, bpth)
        call path_realpath(bpth, outdir)
-       exst=loct_dir_exists(outdir)
+       exst = loct_dir_exists(outdir)
        if(.not.exst)then
           call path_getcwd(apth)
           call path_join(apth, reldir, bpth)
           call path_realpath(bpth, outdir)
-          exst=loct_dir_exists(outdir)
-          if(.not.exst)call path_realpath(topdir, outdir)
+          exst = loct_dir_exists(outdir)
+          if(.not.exst) call path_realpath(topdir, outdir)
        end if
     end if
+
     POP_SUB(fio_config_parse_get_dir)
-    return
   end subroutine fio_config_parse_get_dir
 
   ! ---------------------------------------------------------
@@ -76,11 +75,12 @@ contains
     character(len=*), intent(in)  :: reldir
     character(len=*), intent(out) :: outdir
     character(len=*), intent(in)  :: file
-    !
+
     character(len=max_path_len) :: fpth
     logical                     :: exst
-    !
+
     PUSH_SUB(fio_config_parse_get_file)
+
     call fio_config_parse_get_dir(topdir, reldir, outdir)
     call path_join(outdir, file, fpth)
     inquire(file=trim(adjustl(fpth)), exist=exst)
@@ -89,80 +89,91 @@ contains
       call path_join(outdir, file, fpth)
       inquire(file=trim(adjustl(fpth)), exist=exst)
       if(.not.exst)then
-        message(1)="Could not find the file: '"//trim(adjustl(file))//"',"
-        message(2)="at directory: '"//trim(adjustl(reldir))//"."
+        message(1) = "Could not find the file: '"//trim(adjustl(file))//"',"
+        message(2) = "at directory: '"//trim(adjustl(reldir))//"."
         call messages_fatal(2)
       end if
     end if
+
     POP_SUB(fio_config_parse_get_file)
-    return
   end subroutine fio_config_parse_get_file
 
   ! ---------------------------------------------------------
   subroutine fio_config_parse_simul_box(this, dirname)
     type(json_object_t), intent(inout) :: this
     character(len=*),    intent(in)    :: dirname
-    !
+
     character(len=MAX_PATH_LEN) :: idir, odir, file
     integer                     :: idim, ierr
-    !
+
+    PUSH_SUB(fio_config_parse_simul_box)
+
     call json_get(this, "dimensions", idim, ierr)
-    if(ierr/=JSON_OK)call json_set(this, "dimensions", default_ndim)
+    if(ierr/=JSON_OK) call json_set(this, "dimensions", default_ndim)
     call json_get(this, "dir", idir, ierr)
-    if(ierr/=JSON_OK)idir=input_mesh_dir
+    if(ierr/=JSON_OK) idir = input_mesh_dir
     call json_get(this, "file", file, ierr)
-    if(ierr/=JSON_OK)file=input_mesh_file
+    if(ierr/=JSON_OK) file = input_mesh_file
     call fio_config_parse_get_file(dirname, idir, odir, file)
     call json_set(this, "dir", trim(adjustl(odir)))
     call json_set(this, "file", trim(adjustl(file)))
-    return
+
+    POP_SUB(fio_config_parse_simul_box)
   end subroutine fio_config_parse_simul_box
 
   ! ---------------------------------------------------------
   subroutine fio_config_parse_curvilinear(this)
     type(json_object_t), intent(inout) :: this
-    !
+
     integer :: mthd, ierr
-    !
+
+    PUSH_SUB(fio_config_parse_curvilinear)
+
     call json_get(this, "method", mthd, ierr)
     if(ierr/=JSON_OK)call json_set(this, "method", CURV_METHOD_UNIFORM)
     call json_get(this, "method", mthd, ierr)
     ASSERT(ierr==JSON_OK)
     ASSERT(mthd==CURV_METHOD_UNIFORM)
-    return
+
+    POP_SUB(fio_config_parse_curvilinear)
   end subroutine fio_config_parse_curvilinear
 
   ! ---------------------------------------------------------
   subroutine fio_config_parse_mesh(this, dirname)
     type(json_object_t), intent(inout) :: this
     character(len=*),    intent(in)    :: dirname
-    !
+
     type(json_array_t), pointer :: list
     character(len=MAX_PATH_LEN) :: idir, odir, file
     integer                     :: ierr
-    !
+
+    PUSH_SUB(fio_config_parse_mesh)
+
     nullify(list)
     call json_get(this, "spacing", list, ierr)
     ASSERT(ierr==JSON_OK)
     nullify(list)
     call json_get(this, "dir", idir, ierr)
-    if(ierr/=JSON_OK)idir=input_mesh_dir
+    if(ierr/=JSON_OK) idir = input_mesh_dir
     call json_get(this, "file", file, ierr)
-    if(ierr/=JSON_OK)file=input_mesh_file
+    if(ierr/=JSON_OK) file = input_mesh_file
     call fio_config_parse_get_file(dirname, idir, odir, file)
     call json_set(this, "dir", trim(adjustl(odir)))
     call json_set(this, "file", trim(adjustl(file)))
-    return
+
+    POP_SUB(fio_config_parse_mesh)
   end subroutine fio_config_parse_mesh
 
   ! ---------------------------------------------------------
   subroutine fio_config_parse_grid(this, dirname)
     type(json_object_t), intent(inout) :: this
     character(len=*),    intent(in)    :: dirname
-    !
+
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
-    !
+
+    PUSH_SUB(fio_config_parse_grid)
+
     nullify(cnfg)
     call json_get(this, "simul_box", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
@@ -176,53 +187,65 @@ contains
     ASSERT(ierr==JSON_OK)
     call fio_config_parse_mesh(cnfg, dirname)
     nullify(cnfg)
-    return
+
+    POP_SUB(fio_config_parse_grid)
   end subroutine fio_config_parse_grid
 
   ! ---------------------------------------------------------
   subroutine fio_config_parse_simulation(this, dirname)
     type(json_object_t), intent(inout) :: this
     character(len=*),    intent(in)    :: dirname
-    !
+
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
-    !
+
+    PUSH_SUB(fio_config_parse_simulation)
+
     nullify(cnfg)
     call json_get(this, "grid", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
     call fio_config_parse_grid(cnfg, dirname)
     nullify(cnfg)
-    return
+
+    POP_SUB(fio_config_parse_simulation)
   end subroutine fio_config_parse_simulation
 
   ! ---------------------------------------------------------
   subroutine fio_config_parse_space(this)
     type(json_object_t), intent(inout) :: this
-    !
+
     integer :: idim, ierr
-    !
+
+    PUSH_SUB(fio_config_parse_space)
+
     call json_get(this, "dimensions", idim, ierr)
     if(ierr/=JSON_OK)call json_set(this, "dimensions", default_ndim)
-    return
+
+    POP_SUB(fio_config_parse_space)
   end subroutine fio_config_parse_space
 
   ! ---------------------------------------------------------
   subroutine fio_config_parse_species(this)
     type(json_object_t), intent(inout) :: this
-    !
+
+    PUSH_SUB(fio_config_parse_species)
+
     call json_set(this, "type", SPECIES_FROZEN)
-    return
+
+    POP_SUB(fio_config_parse_species)
   end subroutine fio_config_parse_species
 
   ! ---------------------------------------------------------
   subroutine fio_config_parse_geometry(this)
     type(json_object_t), intent(inout) :: this
-    !
+
     type(json_object_t), pointer :: cnfg
     type(json_array_t),  pointer :: list
     type(json_array_iterator_t)  :: iter
     integer                      :: n, ierr
-    !
+
+    PUSH_SUB(fio_config_parse_geometry)
+
     nullify(cnfg, list)
     call json_get(this, "nspecies", n, ierr)
     ASSERT((ierr==JSON_OK).and.(n>0))
@@ -248,25 +271,34 @@ contains
       ASSERT((ierr==JSON_OK).and.(json_len(list)==n))
       nullify(list)
     end if
-    return
+
+    POP_SUB(fio_config_parse_geometry)
   end subroutine fio_config_parse_geometry
 
   ! ---------------------------------------------------------
-  subroutine fio_config_parse_density(this, dirname)
+  subroutine fio_config_parse_density(this, dirname, usedensity)
     type(json_object_t), intent(inout) :: this
     character(len=*),    intent(in)    :: dirname
-    !
+    logical,   optional, intent(in)    :: usedensity
+
     type(json_array_t), pointer :: list
     character(len=MAX_PATH_LEN) :: idir, odir, file
     integer                     :: indx, nspin, ierr
-    !
+    logical                     :: userho
+
+    PUSH_SUB(fio_config_parse_density)
+
     nullify(list)
     call json_get(this, "nspin", nspin, ierr)
     if(ierr/=JSON_OK)nspin=default_nspin
     ASSERT(nspin>0)
     call json_set(this, "nspin", nspin)
+    call json_get(this, "use", userho, ierr)
+    if(ierr/=JSON_OK) userho = .true.
+    if(present(usedensity)) userho = usedensity
+    call json_set(this, "use", userho)
     call json_get(this, "dir", idir, ierr)
-    if(ierr/=JSON_OK)idir=input_static_dir
+    if(ierr/=JSON_OK) idir = input_static_dir
     call json_get(this, "files", list, ierr)
     if(ierr/=JSON_OK)then
       SAFE_ALLOCATE(list)
@@ -282,7 +314,7 @@ contains
       end if
     end if
     ASSERT(json_len(list)==nspin)
-    do indx=1, nspin
+    do indx = 1, nspin
       call json_get(list, indx, file, ierr)
       ASSERT(ierr==JSON_OK)
       call fio_config_parse_get_file(dirname, idir, odir, file)
@@ -291,37 +323,45 @@ contains
     end do
     call json_set(this, "dir", trim(adjustl(odir)))
     nullify(list)
-    return
+
+    POP_SUB(fio_config_parse_density)
   end subroutine fio_config_parse_density
 
   ! ---------------------------------------------------------
-  subroutine fio_config_parse_states(this, dirname)
+  subroutine fio_config_parse_states(this, dirname, usedensity)
     type(json_object_t), intent(inout) :: this
     character(len=*),    intent(in)    :: dirname
-    !
+    logical,   optional, intent(in)    :: usedensity
+
     type(json_object_t), pointer :: cnfg
     real(kind=wp)                :: charge
     integer                      :: ierr
-    !
+
+    PUSH_SUB(fio_config_parse_states)
+
     nullify(cnfg)
     call json_get(this, "charge", charge, ierr)
     ASSERT(ierr==JSON_OK)
     ASSERT(charge>0.0_wp)
     call json_get(this, "density", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call fio_config_parse_density(cnfg, dirname)
+    call fio_config_parse_density(cnfg, dirname, usedensity)
     nullify(cnfg)
-    return
+
+    POP_SUB(fio_config_parse_states)
   end subroutine fio_config_parse_states
 
   ! ---------------------------------------------------------
-  subroutine fio_config_parse_system(this, dirname)
+  subroutine fio_config_parse_system(this, dirname, usedensity)
     type(json_object_t), intent(inout) :: this
     character(len=*),    intent(in)    :: dirname
-    !
+    logical,   optional, intent(in)    :: usedensity
+
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
-    !
+
+    PUSH_SUB(fio_config_parse_system)
+
     nullify(cnfg)
     call json_get(this, "space", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
@@ -333,39 +373,54 @@ contains
     nullify(cnfg)
     call json_get(this, "states", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call fio_config_parse_states(cnfg, dirname)
+    call fio_config_parse_states(cnfg, dirname, usedensity)
     nullify(cnfg)
-    return
+
+    POP_SUB(fio_config_parse_system)
   end subroutine fio_config_parse_system
 
   ! ---------------------------------------------------------
-  subroutine fio_config_parse_external(this, dirname)
+  subroutine fio_config_parse_external(this, dirname, usepotential)
     type(json_object_t), intent(inout) :: this
     character(len=*),    intent(in)    :: dirname
-    !
+    logical,   optional, intent(in)    :: usepotential
+
     character(len=MAX_PATH_LEN) :: idir, odir, file
-    integer                     :: type, ierr
-    !
+    integer                     :: type, nspin, ierr
+    logical                     :: usepot
+
+    PUSH_SUB(fio_config_parse_external)
+
     call json_get(this, "type", type, ierr)
     if(ierr/=JSON_OK)call json_set(this, "type", HMLT_TYPE_POTN)
+    call json_get(this, "nspin", nspin, ierr)
+    if(ierr/=JSON_OK)call json_set(this, "nspin", 1)
+    call json_get(this, "use", usepot, ierr)
+    if(ierr/=JSON_OK) usepot = .true.
+    if(present(usepotential)) usepot = usepotential
     call json_get(this, "dir", idir, ierr)
-    if(ierr/=JSON_OK)idir=input_static_dir
+    if(ierr/=JSON_OK) idir = input_static_dir
     call json_get(this, "file", file, ierr)
-    if(ierr/=JSON_OK)file=input_external_file
+    if(ierr/=JSON_OK) file = input_external_file
     call fio_config_parse_get_file(dirname, idir, odir, file)
+    call json_set(this, "use", usepot)
     call json_set(this, "dir", trim(adjustl(odir)))
     call json_set(this, "file", trim(adjustl(file)))
-    return
+
+    POP_SUB(fio_config_parse_external)
   end subroutine fio_config_parse_external
 
   ! ---------------------------------------------------------
-  subroutine fio_config_parse_hamiltonian(this, dirname)
+  subroutine fio_config_parse_hamiltonian(this, dirname, usepotential)
     type(json_object_t), intent(inout) :: this
     character(len=*),    intent(in)    :: dirname
-    !
+    logical,   optional, intent(in)    :: usepotential
+
     type(json_object_t), pointer :: cnfg
     integer                      :: type, ierr
-    !
+
+    PUSH_SUB(fio_config_parse_hamiltonian)
+
     nullify(cnfg)
     call json_get(this, "type", type, ierr)
     if(ierr/=JSON_OK)call json_set(this, "type", HMLT_TYPE_HMLT)
@@ -375,20 +430,24 @@ contains
       call json_init(cnfg)
       call json_set(this, "external", cnfg)
     end if
-    call fio_config_parse_external(cnfg, dirname)
+    call fio_config_parse_external(cnfg, dirname, usepotential)
     nullify(cnfg)
-    return
+
+    POP_SUB(fio_config_parse_hamiltonian)
   end subroutine fio_config_parse_hamiltonian
 
   ! ---------------------------------------------------------
-  subroutine fio_config_parse_model(this, dirname)
+  subroutine fio_config_parse_model(this, dirname, usepotential, usedensity)
     type(json_object_t), intent(inout) :: this
     character(len=*),    intent(in)    :: dirname
-    !
+    logical,   optional, intent(in)    :: usepotential
+    logical,   optional, intent(in)    :: usedensity
+
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
-    !
+
     PUSH_SUB(fio_config_parse_model)
+
     nullify(cnfg)
     call json_get(this, "simulation", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
@@ -396,26 +455,27 @@ contains
     nullify(cnfg)
     call json_get(this, "system", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call fio_config_parse_system(cnfg, dirname)
+    call fio_config_parse_system(cnfg, dirname, usedensity)
     nullify(cnfg)
     call json_get(this, "hamiltonian", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call fio_config_parse_hamiltonian(cnfg, dirname)
+    call fio_config_parse_hamiltonian(cnfg, dirname, usepotential)
     nullify(cnfg)
+
     POP_SUB(fio_config_parse_model)
-    return
   end subroutine fio_config_parse_model
 
   ! ---------------------------------------------------------
   subroutine fio_config_parse_read(this, dirname)
     type(json_object_t), intent(out) :: this
     character(len=*),    intent(in)  :: dirname
-    !
+
     type(json_parser_t)         :: parser
     character(len=MAX_PATH_LEN) :: dir, file
     integer                     :: iunit, ierr
-    !
+
     PUSH_SUB(fio_config_parse_read)
+
     call json_init(this)
     call fio_config_parse_get_file(dirname, input_static_dir, dir, "config.json")
     call path_join(dir, "config.json", file)
@@ -428,33 +488,40 @@ contains
       call json_parser_error(parser, fatal=.true.)
     call json_parser_end(parser)
     call io_close(iunit)
+
     POP_SUB(fio_config_parse_read)
-    return
   end subroutine fio_config_parse_read
 
   ! ---------------------------------------------------------
-  subroutine fio_config_parse_dir(this, dirname)
+  subroutine fio_config_parse_dir(this, dirname, interpolation, usepotential, usedensity)
     type(json_object_t), intent(out) :: this
     character(len=*),    intent(in)  :: dirname
-    !
+    integer,   optional, intent(in)  :: interpolation
+    logical,   optional, intent(in)  :: usepotential
+    logical,   optional, intent(in)  :: usedensity
+
     type(json_object_t)          :: that
     type(json_object_t), pointer :: cnfg
-    integer                      :: ierr
-    !
+    integer                      :: intrp, ierr
+
     PUSH_SUB(fio_config_parse_dir)
+
     nullify(cnfg)
     call base_config_parse(this)
     call json_set(this, "name", "fio")
     call json_set(this, "type", HNDL_TYPE_FNIO)
+    intrp = NEAREST
+    if(present(interpolation))intrp=interpolation
+    call json_set(this, "interpolation", intrp)
     call fio_config_parse_read(that, dirname)
     call json_get(this, "model", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
     call json_update(cnfg, that)
     call json_end(that)
-    call fio_config_parse_model(cnfg, dirname)
+    call fio_config_parse_model(cnfg, dirname, usepotential, usedensity)
     nullify(cnfg)
+
     POP_SUB(fio_config_parse_dir)
-    return
   end subroutine fio_config_parse_dir
 
   ! ---------------------------------------------------------
@@ -464,19 +531,23 @@ contains
     integer,             intent(in)  :: line
     integer,             intent(in)  :: icol
     integer,             intent(in)  :: ncol
-    !
+
     character(len=MAX_PATH_LEN)  :: dirname
     integer                      :: intrp
-    !
+    logical                      :: usepot, userho
+
     PUSH_SUB(fio_config_parse_block)
+
     call parse_block_string(block, line, icol, dirname)
-    call fio_config_parse(this, dirname)
-    if(ncol>(icol+1))then
-      call parse_block_integer(block, line, icol+1, intrp)
-      call json_set(this, "interpolation", intrp)
-    end if
+    intrp = NEAREST
+    usepot = .true.
+    userho = .true.
+    if(ncol>(icol+1))call parse_block_integer(block, line, icol+1, intrp)
+    if(ncol>(icol+2))call parse_block_logical(block, line, icol+2, usepot)
+    if(ncol>(icol+3))call parse_block_logical(block, line, icol+3, userho)
+    call fio_config_parse(this, dirname, intrp, usepot, userho)
+
     POP_SUB(fio_config_parse_block)
-    return
   end subroutine fio_config_parse_block
 
 end module fio_config_m

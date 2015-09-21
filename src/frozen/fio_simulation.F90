@@ -2,40 +2,20 @@
 
 module fio_simulation_m
 
+  use base_geom_m
+  use fio_grid_m
+  use geometry_m
   use global_m
+  use grid_m
+  use json_m
   use messages_m
+  use mpi_m
   use profiling_m
-
-  use geometry_m, only: geometry_t
-  use json_m,     only: JSON_OK, json_object_t, json_get
-  use mpi_m,      only: mpi_grp_t
-
-  use base_geom_m, only: &
-    base_geom_t
-
-  use base_geom_m, only: &
-    base_geom_get
-
-  use fio_grid_m, only: &
-    fio_grid_t
-
-  use fio_grid_m, only: &
-    fio_grid_init,      &
-    fio_grid_start,     &
-    fio_grid_stop,      &
-    fio_grid_end
-
-  use simulation_m, only:             &
-    fio_simulation_t => simulation_t
-
-  use simulation_m, only: &
-    simulation_get
+  use simulation_m
 
   implicit none
 
   private
-  public ::           &
-    fio_simulation_t
 
   public ::                  &
     fio_simulation__new__,   &
@@ -47,9 +27,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine fio_simulation__new__(this, grid, geom)
-    type(fio_simulation_t), intent(in) :: this
-    type(fio_grid_t),      pointer     :: grid
-    type(base_geom_t),      intent(in) :: geom
+    type(simulation_t), intent(in) :: this
+    type(grid_t),      pointer     :: grid
+    type(base_geom_t),  intent(in) :: geom
 
     type(json_object_t), pointer :: scfg, gcfg
     type(geometry_t),    pointer :: pgeo
@@ -73,9 +53,9 @@ contains
   
   ! ---------------------------------------------------------
   subroutine fio_simulation__del__(this)
-    type(fio_simulation_t), intent(in) :: this
+    type(simulation_t), intent(in) :: this
 
-    type(fio_grid_t), pointer :: grid
+    type(grid_t), pointer :: grid
 
     PUSH_SUB(fio_simulation__del__)
 
@@ -91,15 +71,14 @@ contains
   
   ! ---------------------------------------------------------
   subroutine fio_simulation__start__(this, grid, mpi_grp)
-    type(fio_simulation_t), intent(in)    :: this
-    type(fio_grid_t),       intent(inout) :: grid
-    type(mpi_grp_t),        intent(in)    :: mpi_grp
+    type(simulation_t), intent(in)    :: this
+    type(grid_t),       intent(inout) :: grid
+    type(mpi_grp_t),    intent(in)    :: mpi_grp
 
     type(json_object_t), pointer :: scfg, gcfg
     integer                      :: ierr
 
     PUSH_SUB(fio_simulation__start__)
-
 
     nullify(scfg, gcfg)
     call simulation_get(this, scfg)
@@ -114,9 +93,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine fio_simulation__stop__(this)
-    type(fio_simulation_t), intent(in) :: this
+    type(simulation_t), intent(in) :: this
 
-    type(fio_grid_t), pointer :: grid
+    type(grid_t), pointer :: grid
 
     PUSH_SUB(fio_simulation__stop__)
 

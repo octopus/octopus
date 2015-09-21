@@ -2,37 +2,18 @@
 
 module frozen_density_m
 
+  use base_density_m
+  use basis_m
+  use fio_density_m
   use global_m
+  use intrpl_m
+  use json_m
+  use kinds_m
+  use mesh_m
   use messages_m
   use profiling_m
-
-  use json_m,  only: JSON_OK, json_object_t, json_get
-  use json_m,  only: json_array_t, json_array_iterator_t, json_len, json_init, json_next, json_end
-  use kinds_m, only: wp
-  use mesh_m,  only: mesh_t
-  use space_m, only: space_t
-
-  use basis_m, only: basis_t, basis_init, basis_to_internal, basis_end
-
-  use intrpl_m, only: NEAREST
-
-  use simulation_m, only: &
-    simulation_t
-
-  use simulation_m, only: &
-    simulation_get
-
-  use fio_density_m, only: &
-    fio_density_t
-
-  use fio_density_m, only: &
-    fio_density_init,      &
-    fio_density_eval,      &
-    fio_density_get,       &
-    fio_density_end
-
-  use fio_density_m, only: &
-    fio_density_intrpl_t
+  use simulation_m
+  use space_m
 
   use base_density_m, only:             &
     frozen_density_t => base_density_t
@@ -104,7 +85,7 @@ contains
   ! ---------------------------------------------------------
   subroutine frozen_density__acc__(this, that, config)
     type(frozen_density_t), intent(inout) :: this
-    type(fio_density_t),    intent(in)    :: that
+    type(frozen_density_t), intent(in)    :: that !> fio
     type(json_object_t),    intent(in)    :: config
 
     type(json_object_t), pointer :: cnfg

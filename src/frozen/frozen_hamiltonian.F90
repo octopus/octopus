@@ -2,47 +2,25 @@
 
 module frozen_hamiltonian_m
 
+  use base_hamiltonian_m
+  use base_potential_m
+  use base_system_m
+  use frozen_external_m
+  use frozen_system_m !> remove
   use global_m
+  use json_m
+  use kinds_m
   use messages_m
   use profiling_m
-
-  use json_m,  only: json_object_t
-  use kinds_m, only: wp
-
-  use simulation_m, only: &
-    simulation_t
-
-  use fio_external_m, only: &
-    fio_external_t
-
-  use fio_hamiltonian_m, only: &
-    fio_hamiltonian_t
-
-  use fio_hamiltonian_m, only: &
-    fio_hamiltonian_get
-
-  use frozen_system_m, only: &
-    frozen_system_t
-
-  use frozen_external_m, only: &
-    frozen_external__acc__
-
-  use frozen_external_m, only: &
-    frozen_external_t
+  use simulation_m
 
   use base_hamiltonian_m, only:                 &
     frozen_hamiltonian_t => base_hamiltonian_t
 
-  use base_hamiltonian_m, only: &
-    base_hamiltonian__get__
-
-  use base_hamiltonian_m, only: &
-    base_hamiltonian_set,       &
-    base_hamiltonian_get
-
   implicit none
 
   private
+
   public ::               &
     frozen_hamiltonian_t
 
@@ -65,11 +43,11 @@ contains
   ! ---------------------------------------------------------
   subroutine frozen_hamiltonian__acc__(this, that, config)
     type(frozen_hamiltonian_t), intent(inout) :: this
-    type(fio_hamiltonian_t),    intent(in)    :: that
+    type(frozen_hamiltonian_t), intent(in)    :: that !> fio
     type(json_object_t),        intent(in)    :: config
 
     type(frozen_external_t), pointer :: mept
-    type(fio_external_t),    pointer :: sept
+    type(base_potential_t),  pointer :: sept !> fio
     real(kind=wp)                    :: energy, enrg
 
     PUSH_SUB(frozen_hamiltonian__acc__)
@@ -80,7 +58,7 @@ contains
     nullify(mept, sept)
     call frozen_hamiltonian_get(this, mept)
     ASSERT(associated(mept))
-    call fio_hamiltonian_get(that, sept)
+    call base_hamiltonian__get__(that, "external", sept)
     ASSERT(associated(sept))
     call frozen_external__acc__(mept, sept, config)
     nullify(mept, sept)

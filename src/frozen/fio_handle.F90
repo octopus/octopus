@@ -2,52 +2,28 @@
 
 module fio_handle_m
 
+  use base_handle_m
+  use base_model_m
+  use fio_model_m
   use global_m
+  use json_m
   use messages_m
+  use mpi_m
   use profiling_m
-
-  use json_m, only: json_object_t
-  use mpi_m,  only: mpi_grp_t
-
-  use base_model_m, only: &
-    base_model_t
-
-  use fio_model_m, only: &
-    fio_model__load__
-
-  use fio_model_m, only: &
-    fio_model_start,     &
-    fio_model_stop,      &
-    fio_model_end
-
-  use base_handle_m, only:         &
-    fio_handle_t => base_handle_t
-
-  use base_handle_m, only: &
-    base_handle__init__
-
-  use base_handle_m, only:                  &
-    fio_handle_copy => base_handle__copy__
-
-  use base_handle_m, only:             &
-    fio_handle_get => base_handle_get
 
   implicit none
 
   private
-  public ::       &
-    fio_handle_t
+
+  public ::         &
+    HNDL_TYPE_FNIO
 
   public ::            &
     fio_handle_init,   &
     fio_handle_start,  &
     fio_handle_stop,   &
-    fio_handle_get,    &
     fio_handle_copy,   &
     fio_handle_end
-
-  public ::         &
-    HNDL_TYPE_FNIO
 
   integer, parameter :: HNDL_TYPE_FNIO = 1
 
@@ -55,7 +31,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine fio_handle_init(this, config)
-    type(fio_handle_t),  intent(out) :: this
+    type(base_handle_t), intent(out) :: this
     type(json_object_t), intent(in)  :: config
 
     integer :: type
@@ -63,7 +39,7 @@ contains
     PUSH_SUB(fio_handle_init)
 
     call base_handle__init__(this, config)
-    call fio_handle_get(this, type)
+    call base_handle_get(this, type)
     ASSERT(type==HNDL_TYPE_FNIO)
     call base_handle__init__(this)
 
@@ -72,15 +48,15 @@ contains
 
   ! ---------------------------------------------------------
   subroutine fio_handle_start(this, mpi_grp)
-    type(fio_handle_t), intent(inout) :: this
-    type(mpi_grp_t),    intent(in)    :: mpi_grp
+    type(base_handle_t), intent(inout) :: this
+    type(mpi_grp_t),     intent(in)    :: mpi_grp
 
     type(base_model_t), pointer :: mdl
 
     PUSH_SUB(fio_handle_start)
 
     nullify(mdl)
-    call fio_handle_get(this, mdl)
+    call base_handle_get(this, mdl)
     ASSERT(associated(mdl))
     call fio_model_start(mdl, mpi_grp)
     nullify(mdl)
@@ -91,14 +67,14 @@ contains
 
   ! ---------------------------------------------------------
   subroutine fio_handle__load__(this)
-    type(fio_handle_t), intent(inout) :: this
+    type(base_handle_t), intent(inout) :: this
 
     type(base_model_t), pointer :: mdl
 
     PUSH_SUB(fio_handle__load__)
 
     nullify(mdl)
-    call fio_handle_get(this, mdl)
+    call base_handle_get(this, mdl)
     ASSERT(associated(mdl))
     call fio_model__load__(mdl)
     nullify(mdl)
@@ -108,14 +84,14 @@ contains
 
   ! ---------------------------------------------------------
   subroutine fio_handle_stop(this)
-    type(fio_handle_t), intent(inout) :: this
+    type(base_handle_t), intent(inout) :: this
 
     type(base_model_t), pointer :: mdl
 
     PUSH_SUB(fio_handle_stop)
 
     nullify(mdl)
-    call fio_handle_get(this, mdl)
+    call base_handle_get(this, mdl)
     ASSERT(associated(mdl))
     call fio_model_stop(mdl)
     nullify(mdl)
@@ -124,15 +100,27 @@ contains
   end subroutine fio_handle_stop
 
   ! ---------------------------------------------------------
+  subroutine fio_handle_copy(this, that)
+    type(base_handle_t), intent(inout) :: this
+    type(base_handle_t), intent(in)    :: that
+
+    PUSH_SUB(fio_handle_copy)
+
+    call base_handle__copy__(this, that)
+
+    POP_SUB(fio_handle_copy)
+  end subroutine fio_handle_copy
+
+  ! ---------------------------------------------------------
   subroutine fio_handle_end(this)
-    type(fio_handle_t), intent(inout) :: this
+    type(base_handle_t), intent(inout) :: this
 
     type(base_model_t), pointer :: mdl
 
     PUSH_SUB(fio_handle_end)
 
     nullify(mdl)
-    call fio_handle_get(this, mdl)
+    call base_handle_get(this, mdl)
     ASSERT(associated(mdl))
     call fio_model_end(mdl)
     nullify(mdl)

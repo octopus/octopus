@@ -24,9 +24,14 @@
 
 module base_density_m
 
+  use config_dict_m    
   use global_m
+  use json_m
+  use kinds_m
   use messages_m
   use profiling_m
+  use simulation_m
+  use storage_m
 
 #define LIST_TEMPLATE_NAME base_density
 #define LIST_INCLUDE_PREFIX
@@ -44,15 +49,10 @@ module base_density_m
 #undef INCLUDE_PREFIX
 #undef TEMPLATE_PREFIX
 
-  use json_m
-  use kinds_m
-  use config_dict_m    
-  use simulation_m
-  use storage_m
-
   implicit none
 
   private
+
   public ::         &
     base_density_t
 
@@ -228,9 +228,9 @@ contains
     PUSH_SUB(base_density__init__density)
 
     call base_density__inull__(this)
-    this%config=>config
+    this%config => config
     call json_get(this%config, "nspin", nspin, ierr)
-    if(ierr/=JSON_OK)nspin=default_nspin
+    if(ierr/=JSON_OK) nspin = default_nspin
     ASSERT(nspin>0)
     ASSERT(nspin<3)
     call json_get(this%config, "allocate", alloc, ierr)
@@ -239,7 +239,7 @@ contains
       SAFE_ALLOCATE(this%total)
       call storage_init(this%total, allocate=alloc)
     else
-      this%total=>this%data
+      this%total => this%data
     end if
     call storage_init(this%data, nspin, allocate=alloc)
     call config_dict_init(this%dict)
@@ -312,7 +312,7 @@ contains
 
     ASSERT(associated(this%config))
     ASSERT(.not.associated(this%sim))
-    this%sim=>sim
+    this%sim => sim
     if(.not.associated(this%total,this%data))&
       call storage_start(this%total, sim, fine=.true.)
     call storage_start(this%data, sim, fine=.true.)
@@ -535,15 +535,16 @@ contains
   end subroutine base_density_get_density_by_name
 
   ! ---------------------------------------------------------
-  subroutine base_density_get_info(this, size, nspin, fine)
+  subroutine base_density_get_info(this, size, nspin, fine, use)
     type(base_density_t), intent(in)  :: this
     integer,    optional, intent(out) :: size
     integer,    optional, intent(out) :: nspin
     logical,    optional, intent(out) :: fine
+    logical,    optional, intent(out) :: use
 
     PUSH_SUB(base_density_get_info)
 
-    call storage_get(this%data, size=size, dim=nspin, fine=fine)
+    call storage_get(this%data, size=size, dim=nspin, fine=fine, alloc=use)
 
     POP_SUB(base_density_get_info)
   end subroutine base_density_get_info
@@ -555,7 +556,7 @@ contains
 
     PUSH_SUB(base_density_get_config)
 
-    that=>null()
+    nullify(that)
     if(associated(this%config)) that=>this%config
 
     POP_SUB(base_density_get_config)
@@ -568,7 +569,7 @@ contains
 
     PUSH_SUB(base_density_get_simulation)
 
-    that=>null()
+    nullify(that)
     if(associated(this%sim)) that => this%sim
 
     POP_SUB(base_density_get_simulation)
@@ -585,7 +586,7 @@ contains
     PUSH_SUB(base_density_get_storage)
 
     nullify(that)
-    itotal=.false.
+    itotal = .false.
     if(present(total)) itotal = total
     if(itotal)then
       if(associated(this%total)) that => this%total
@@ -607,7 +608,7 @@ contains
     PUSH_SUB(base_density_get_density_1d)
 
     nullify(that)
-    itotal=.false.
+    itotal = .false.
     if(present(total)) itotal = total
     if(itotal)then
       call storage_get(this%total, that)
