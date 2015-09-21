@@ -2,28 +2,30 @@
 
 module functional_m
 
+  use derivatives_m
   use global_m
+  use grid_m
+  use interface_xc_m
+  use json_m
+  use kinds_m
+  use mesh_m
+  use mesh_function_m
   use messages_m
   use profiling_m
-
-  use derivatives_m,   only: derivatives_t
-  use grid_m,          only: grid_t
-  use json_m,          only: JSON_OK, json_object_t, json_get
-  use kinds_m,         only: wp
-  use mesh_m,          only: mesh_t
-  use mesh_function_m, only: dmf_integrate
-
-  use simulation_m, only: &
-    simulation_t,         &
-    simulation_get
-
-  use interface_xc_m
+  use simulation_m
+  use XC_F90(lib_m)
 
   implicit none
 
   private
+
   public ::           &
-    functional_t,     &
+    FUNCT_XC_NONE
+
+  public ::       &
+    functional_t
+
+  public ::           &
     functional_init,  &
     functional_start, &
     functional_calc,  &
@@ -31,8 +33,7 @@ module functional_m
     functional_copy,  &
     functional_end
 
-  public ::           &
-    FUNCT_XC_NONE
+  integer, parameter :: FUNCT_XC_NONE = XC_NONE
 
   type :: functional_t
     private
@@ -52,8 +53,6 @@ module functional_m
     module procedure functional_calc_potential
     module procedure functional_calc_energy_and_potential
   end interface functional_calc
-
-  integer, parameter :: FUNCT_XC_NONE = XC_NONE
 
 contains
 

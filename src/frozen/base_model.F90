@@ -24,9 +24,19 @@
 
 module base_model_m
 
+  use base_geom_m
+  use base_hamiltonian_m
+  use base_system_m
+  use config_dict_m
+  use domain_m
+  use geometry_m
   use global_m
+  use grid_m
+  use json_m
   use messages_m
   use profiling_m
+  use simulation_m
+  use space_m
 
 #define LIST_TEMPLATE_NAME base_model
 #define LIST_INCLUDE_PREFIX
@@ -37,17 +47,6 @@ module base_model_m
 #define HASH_INCLUDE_PREFIX
 #include "thash_inc.F90"
 #undef HASH_INCLUDE_PREFIX
-
-  use grid_m
-  use json_m
-
-  use config_dict_m
-  use space_m
-  use geometry_m
-  use simulation_m
-  use base_geom_m
-  use base_system_m
-  use base_hamiltonian_m
 
 #define TEMPLATE_PREFIX base_model
 #define INCLUDE_PREFIX
@@ -160,32 +159,35 @@ contains
   subroutine base_model_new(this, that)
     type(base_model_t),  target, intent(inout) :: this
     type(base_model_t), pointer                :: that
-    !
+
     PUSH_SUB(base_model_new)
+
     nullify(that)
     SAFE_ALLOCATE(that)
     that%prnt=>this
     call base_model_list_push(this%list, that)
+
     POP_SUB(base_model_new)
-    return
   end subroutine base_model_new
 
   ! ---------------------------------------------------------
   subroutine base_model__idel__(this)
     type(base_model_t), pointer :: this
-    !
+
     PUSH_SUB(base_model__idel__)
+
     SAFE_DEALLOCATE_P(this)
     nullify(this)
+
     POP_SUB(base_model__idel__)
-    return
   end subroutine base_model__idel__
 
   ! ---------------------------------------------------------
   subroutine base_model_del(this)
     type(base_model_t), pointer :: this
-    !
+
     PUSH_SUB(base_model_del)
+
     if(associated(this))then
       if(associated(this%prnt))then
         call base_model_list_del(this%prnt%list, this)
@@ -193,45 +195,48 @@ contains
         call base_model__idel__(this)
       end if
     end if
+
     POP_SUB(base_model_del)
-    return
   end subroutine base_model_del
 
   ! ---------------------------------------------------------
   subroutine base_model__inull__(this)
     type(base_model_t), intent(inout) :: this
-    !
+
     PUSH_SUB(base_model__inull__)
+
     nullify(this%config, this%prnt)
+
     POP_SUB(base_model__inull__)
-    return
   end subroutine base_model__inull__
 
   ! ---------------------------------------------------------
   subroutine base_model__iinit__(this, config)
     type(base_model_t),          intent(out) :: this
     type(json_object_t), target, intent(in)  :: config
-    !
+
     PUSH_SUB(base_model__iinit__)
+
     call base_model__inull__(this)
-    this%config=>config
+    this%config => config
     call config_dict_init(this%dict)
     call base_model_hash_init(this%hash)
     call base_model_list_init(this%list)
+
     POP_SUB(base_model__iinit__)
-    return
   end subroutine base_model__iinit__
 
   ! ---------------------------------------------------------
   subroutine base_model__init__begin(this, config)
     type(base_model_t),  intent(out) :: this
     type(json_object_t), intent(in)  :: config
-    !
+
     type(json_object_t), pointer :: cnfg
     type(space_t),       pointer :: space
     integer                      :: ierr
-    !
+
     PUSH_SUB(base_model__init__begin)
+
     nullify(cnfg, space)
     call base_model__iinit__(this, config)
     call json_get(this%config, "system", cnfg, ierr)
@@ -242,22 +247,23 @@ contains
     ASSERT(associated(space))
     call json_get(this%config, "simulation", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call simulation__init__(this%sim, space, cnfg)
+    call simulation_init(this%sim, space, cnfg)
     nullify(cnfg, space)
+
     POP_SUB(base_model__init__begin)
-    return
   end subroutine base_model__init__begin
 
   ! ---------------------------------------------------------
   subroutine base_model__init__finish(this)
     type(base_model_t), intent(inout) :: this
-    !
+
     type(json_object_t), pointer :: cnfg
     type(base_model_iterator_t)  :: iter
     type(base_model_t),  pointer :: subs
     integer                      :: ierr
-    !
+
     PUSH_SUB(base_model__init__finish)
+
     nullify(cnfg, subs)
     call base_system__init__(this%sys)
     call json_get(this%config, "hamiltonian", cnfg, ierr)
@@ -273,47 +279,50 @@ contains
     end do
     call base_model_end(iter)
     nullify(cnfg, subs)
+
     POP_SUB(base_model__init__finish)
-    return
   end subroutine base_model__init__finish
 
   ! ---------------------------------------------------------
   subroutine base_model__init__copy(this, that)
     type(base_model_t), intent(out) :: this
     type(base_model_t), intent(in)  :: that
-    !
+
     PUSH_SUB(base_model__init__copy)
+
     ASSERT(associated(that%config))
     call base_model__iinit__(this, that%config)
-    call simulation__init__(this%sim, that%sim)
+    call simulation_init(this%sim, that%sim)
     call base_system__init__(this%sys, that%sys)
+
     POP_SUB(base_model__init__copy)
-    return
   end subroutine base_model__init__copy
 
   ! ---------------------------------------------------------
   subroutine base_model_init_model(this, config)
     type(base_model_t),  intent(out) :: this
     type(json_object_t), intent(in)  :: config
-    !
+
     PUSH_SUB(base_model_init_model)
+
     call base_model__init__begin(this, config)
     call base_model__init__finish(this)
+
     POP_SUB(base_model_init_model)
-    return
   end subroutine base_model_init_model
 
   ! ---------------------------------------------------------
   recursive subroutine base_model_init_copy(this, that)
     type(base_model_t), intent(out) :: this
     type(base_model_t), intent(in)  :: that
-    !
+
     type(base_model_iterator_t)  :: iter
     type(base_model_t),  pointer :: osub, isub
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
-    !
+
     PUSH_SUB(base_model_init_copy)
+
     nullify(cnfg, osub, isub)
     call base_model__init__(this, that)
     call base_model_init(iter, that)
@@ -328,29 +337,31 @@ contains
     call base_model_end(iter)
     call base_model__init__(this)
     nullify(cnfg, osub, isub)
+
     POP_SUB(base_model_init_copy)
-    return
   end subroutine base_model_init_copy
 
   ! ---------------------------------------------------------
   subroutine base_model__istart__(this)
     type(base_model_t), intent(inout) :: this
-    !
+
     PUSH_SUB(base_model__istart__)
+
     ASSERT(associated(this%config))
+
     POP_SUB(base_model__istart__)
-    return
   end subroutine base_model__istart__
 
   ! ---------------------------------------------------------
   subroutine base_model__start__(this, grid)
     type(base_model_t), intent(inout) :: this
     type(grid_t),       intent(in)    :: grid
-    !
+
     type(base_geom_t), pointer :: geom
     type(geometry_t),  pointer :: geo
-    !
+
     PUSH_SUB(base_model__start__)
+
     nullify(geom, geo)
     call base_model__istart__(this)
     call base_system_get(this%sys, geom)
@@ -358,24 +369,25 @@ contains
     call base_geom_get(geom, geo)
     ASSERT(associated(geo))
     nullify(geom)
-    call simulation__start__(this%sim, grid, geo)
+    call simulation_start(this%sim, grid, geo)
     nullify(geo)
     call base_system__start__(this%sys, this%sim)
     call base_hamiltonian__start__(this%hm, this%sim)
+
     POP_SUB(base_model__start__)
-    return
   end subroutine base_model__start__
 
   ! ---------------------------------------------------------
   recursive subroutine base_model_start(this, grid)
     type(base_model_t),     intent(inout) :: this
     type(grid_t),       intent(in)    :: grid
-    !
+
     type(base_model_iterator_t) :: iter
     type(base_model_t), pointer :: subs
     integer                     :: ierr
-    !
+
     PUSH_SUB(base_model_start)
+
     nullify(subs)
     call base_model_init(iter, this)
     do
@@ -387,30 +399,32 @@ contains
     call base_model_end(iter)
     nullify(subs)
     call base_model__start__(this, grid)
+
     POP_SUB(base_model_start)
-    return
   end subroutine base_model_start
 
   ! ---------------------------------------------------------
   subroutine base_model__update__(this)
     type(base_model_t), intent(inout) :: this
-    !
+
     PUSH_SUB(base_model__update__)
+
     call base_system__update__(this%sys)
     call base_hamiltonian__update__(this%hm)
+
     POP_SUB(base_model__update__)
-    return
   end subroutine base_model__update__
 
   ! ---------------------------------------------------------
   recursive subroutine base_model_update(this)
     type(base_model_t), intent(inout) :: this
-    !
+
     type(base_model_iterator_t) :: iter
     type(base_model_t), pointer :: subs
     integer                     :: ierr
-    !
+
     PUSH_SUB(base_model_update)
+
     nullify(subs)
     call base_model_init(iter, this)
     do
@@ -422,30 +436,32 @@ contains
     call base_model_end(iter)
     nullify(subs)
     call base_model__update__(this)
+
     POP_SUB(base_model_update)
-    return
   end subroutine base_model_update
 
   ! ---------------------------------------------------------
   subroutine base_model__stop__(this)
     type(base_model_t), intent(inout) :: this
-    !
+
     PUSH_SUB(base_model__stop__)
+
     call base_system__stop__(this%sys)
     call base_hamiltonian__stop__(this%hm)
+
     POP_SUB(base_model__stop__)
-    return
   end subroutine base_model__stop__
 
   ! ---------------------------------------------------------
   recursive subroutine base_model_stop(this)
     type(base_model_t), intent(inout) :: this
-    !
+
     type(base_model_iterator_t) :: iter
     type(base_model_t), pointer :: subs
     integer                     :: ierr
-    !
+
     PUSH_SUB(base_model_stop)
+
     nullify(subs)
     call base_model_init(iter, this)
     do
@@ -457,31 +473,33 @@ contains
     call base_model_end(iter)
     nullify(subs)
     call base_model__stop__(this)
+
     POP_SUB(base_model_stop)
-    return
   end subroutine base_model_stop
 
   ! ---------------------------------------------------------
   subroutine base_model__reset__(this)
     type(base_model_t), intent(inout) :: this
-    !
+
     PUSH_SUB(base_model__reset__)
+
     call base_system__reset__(this%sys)
     call base_hamiltonian__reset__(this%hm)
+
     POP_SUB(base_model__reset__)
-    return
   end subroutine base_model__reset__
 
   ! ---------------------------------------------------------
   subroutine base_model__acc__(this, that)
     type(base_model_t), intent(inout) :: this
     type(base_model_t), intent(in)    :: that
-    !
+
     PUSH_SUB(base_model__acc__)
+
     call base_system__acc__(this%sys, that%sys)
     call base_hamiltonian__acc__(this%hm, that%hm)
+
     POP_SUB(base_model__acc__)
-    return
   end subroutine base_model__acc__
 
   ! ---------------------------------------------------------
@@ -489,20 +507,25 @@ contains
     type(base_model_t),  intent(inout) :: this
     type(base_model_t),  intent(in)    :: that
     type(json_object_t), intent(in)    :: config
-    !
+
     character(len=CONFIG_DICT_NAME_LEN) :: name
+    type(domain_t),             pointer :: domain
     integer                             :: ierr
-    !
+
     PUSH_SUB(base_model__add__)
+
     ASSERT(associated(this%config))
+    nullify(domain)
     call json_get(config, "name", name, ierr)
     ASSERT(ierr==JSON_OK)
     call config_dict_set(this%dict, trim(adjustl(name)), config)
     call base_model_hash_set(this%hash, config, that)
-    call simulation__add__(this%sim, that%sim, config)
+    call simulation_get(that%sim, domain)
+    ASSERT(associated(domain))
+    call simulation_extend(this%sim, domain, config)
     call base_system__add__(this%sys, that%sys, config)
+
     POP_SUB(base_model__add__)
-    return
   end subroutine base_model__add__
 
   ! ---------------------------------------------------------
@@ -510,16 +533,17 @@ contains
     type(base_model_t),  intent(in) :: this
     type(json_object_t), intent(in) :: config
     type(base_model_t), pointer     :: that
-    !
+
     integer :: ierr
-    !
+
     PUSH_SUB(base_model_get_model_by_config)
+
     nullify(that)
     ASSERT(associated(this%config))
     call base_model_hash_get(this%hash, config, that, ierr)
     if(ierr/=BASE_MODEL_OK)nullify(that)
+
     POP_SUB(base_model_get_model_by_config)
-    return
   end subroutine base_model_get_model_by_config
 
   ! ---------------------------------------------------------
@@ -527,105 +551,113 @@ contains
     type(base_model_t),  intent(in) :: this
     character(len=*),    intent(in) :: name
     type(base_model_t), pointer     :: that
-    !
+
     type(json_object_t), pointer :: config
     integer                      :: ierr
-    !
+
     PUSH_SUB(base_model_get_model_by_name)
+
     nullify(that)
     ASSERT(associated(this%config))
     call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
     if(ierr==CONFIG_DICT_OK)&
       call base_model_get(this, config, that)
+
     POP_SUB(base_model_get_model_by_name)
-    return
   end subroutine base_model_get_model_by_name
 
   ! ---------------------------------------------------------
   subroutine base_model_get_config(this, that)
     type(base_model_t),   target, intent(in) :: this
     type(json_object_t), pointer             :: that
-    !
+
     PUSH_SUB(base_model_get_config)
+
     nullify(that)
     if(associated(this%config))&
       that=>this%config
+
     POP_SUB(base_model_get_config)
-    return
   end subroutine base_model_get_config
 
   ! ---------------------------------------------------------
   subroutine base_model_get_simulation(this, that)
     type(base_model_t),  target, intent(in) :: this
     type(simulation_t), pointer             :: that
-    !
+
     PUSH_SUB(base_model_get_simulation)
-    that=>this%sim
+
+    that => this%sim
+
     POP_SUB(base_model_get_simulation)
-    return
   end subroutine base_model_get_simulation
 
   ! ---------------------------------------------------------
   subroutine base_model_get_system(this, that)
     type(base_model_t),   target, intent(in) :: this
     type(base_system_t), pointer             :: that
-    !
+
     PUSH_SUB(base_model_get_system)
-    that=>this%sys
+
+    that => this%sys
+
     POP_SUB(base_model_get_system)
-    return
   end subroutine base_model_get_system
 
   ! ---------------------------------------------------------
   subroutine base_model_get_hamiltonian(this, that)
     type(base_model_t),        target, intent(in) :: this
     type(base_hamiltonian_t), pointer             :: that
-    !
+
     PUSH_SUB(base_model_get_hamiltonian)
-    that=>this%hm
+
+    that => this%hm
+
     POP_SUB(base_model_get_hamiltonian)
-    return
   end subroutine base_model_get_hamiltonian
 
   ! ---------------------------------------------------------
   subroutine base_model__icopy__(this, that)
     type(base_model_t), intent(inout) :: this
     type(base_model_t), intent(in)    :: that
-    !
+
     PUSH_SUB(base_model__icopy__)
+
     call base_model__iend__(this)
     if(associated(that%config))then
       call base_model__iinit__(this, that%config)
       call base_model__istart__(this)
     end if
+
     POP_SUB(base_model__icopy__)
-    return
   end subroutine base_model__icopy__
 
   ! ---------------------------------------------------------
   subroutine base_model__copy__begin(this, that)
     type(base_model_t), intent(inout) :: this
     type(base_model_t), intent(in)    :: that
-    !
+
     PUSH_SUB(base_model__copy__begin)
+
     call base_model__icopy__(this, that)
-    call simulation__copy__(this%sim, that%sim)
+    call simulation_copy(this%sim, that%sim)
     call base_system__copy__(this%sys, that%sys)
     call base_hamiltonian__copy__(this%hm, that%hm)
+
     POP_SUB(base_model__copy__begin)
-    return
   end subroutine base_model__copy__begin
 
   ! ---------------------------------------------------------
   subroutine base_model__copy__finish(this)
     type(base_model_t), intent(inout) :: this
-    !
+
     type(json_object_t), pointer :: cnfg
     type(base_model_iterator_t)  :: iter
     type(base_model_t),  pointer :: subs
     integer                      :: ierr
-    !
+
     PUSH_SUB(base_model__copy__finish)
+
     nullify(cnfg, subs)
     call base_system__copy__(this%sys)
     call base_model_init(iter, this)
@@ -637,21 +669,22 @@ contains
     end do
     call base_model_end(iter)
     nullify(cnfg, subs)
+
     POP_SUB(base_model__copy__finish)
-    return
   end subroutine base_model__copy__finish
 
   ! ---------------------------------------------------------
   recursive subroutine base_model_copy_model(this, that)
     type(base_model_t), intent(inout) :: this
     type(base_model_t), intent(in)    :: that
-    !
+
     type(base_model_iterator_t)  :: iter
     type(base_model_t),  pointer :: osub, isub
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
-    !
+
     PUSH_SUB(base_model_copy_model)
+
     nullify(cnfg, osub, isub)
     call base_model_end(this)
     call base_model__copy__(this, that)
@@ -667,43 +700,46 @@ contains
     call base_model_end(iter)
     call base_model__copy__(this)
     nullify(cnfg, osub, isub)
+
     POP_SUB(base_model_copy_model)
-    return
   end subroutine base_model_copy_model
 
   ! ---------------------------------------------------------
   subroutine base_model__iend__(this)
     type(base_model_t), intent(inout) :: this
-    !
+
     PUSH_SUB(base_model__iend__)
+
     call base_model__inull__(this)
     call config_dict_end(this%dict)
     call base_model_hash_end(this%hash)
     call base_model_list_end(this%list)
+
     POP_SUB(base_model__iend__)
-    return
   end subroutine base_model__iend__
 
   ! ---------------------------------------------------------
   subroutine base_model__end__(this)
     type(base_model_t), intent(inout) :: this
-    !
+
     PUSH_SUB(base_model__end__)
+
     call base_model__iend__(this)
     call base_hamiltonian__end__(this%hm)
     call base_system__end__(this%sys)
-    call simulation__end__(this%sim)
+    call simulation_end(this%sim)
+
     POP_SUB(base_model__end__)
-    return
   end subroutine base_model__end__
 
   ! ---------------------------------------------------------
   recursive subroutine base_model_end_model(this)
     type(base_model_t), intent(inout) :: this
-    !
+
     type(base_model_t), pointer :: subs
-    !
+
     PUSH_SUB(base_model_end_model)
+
     do
       nullify(subs)
       call base_model_list_pop(this%list, subs)
@@ -713,8 +749,8 @@ contains
     end do
     nullify(subs)
     call base_model__end__(this)
+
     POP_SUB(base_model_end_model)
-    return
   end subroutine base_model_end_model
 
 #define TEMPLATE_PREFIX base_model

@@ -2,34 +2,25 @@
 
 module interface_xc_m
 
+  use derivatives_m
   use global_m
+  use grid_m
+  use kinds_m
+  use mesh_m
   use messages_m
   use profiling_m
-
-  use derivatives_m, only: derivatives_t, dderivatives_grad, dderivatives_div
-  use grid_m,        only: grid_t
-  use kinds_m,       only: wp
-  use mesh_m,        only: mesh_t
-
   use XC_F90(lib_m)
 
   private
+
+  public ::     &
+    XC_UNKNOWN, &
+    XC_NONE
+
   public ::         &
-    XC_POLARIZED,   &
-    XC_UNPOLARIZED
-
-  public ::                  &
-    XC_EXCHANGE,             &
-    XC_CORRELATION,          &
-    XC_EXCHANGE_CORRELATION, &
-    XC_KINETIC              
-
-  public ::        &
-    XC_FAMILY_LDA, &
-    XC_FAMILY_GGA
+    interface_xc_t
 
   public ::                      &
-    interface_xc_t,              &
     interface_xc_init,           &
     interface_xc_start,          &
     interface_xc_get,            &
@@ -42,8 +33,8 @@ module interface_xc_m
     interface_xc_copy,           &
     interface_xc_end
 
-  integer, public, parameter :: XC_UNKNOWN =-1
-  integer, public, parameter :: XC_NONE    = 0
+  integer, parameter :: XC_UNKNOWN =-1
+  integer, parameter :: XC_NONE    = 0
 
   integer, parameter :: BLOCK_SIZE = 1000
 
@@ -82,22 +73,22 @@ contains
 
     PUSH_SUB(interface_xc_init)
 
-    this%id=id
+    this%id = id
     ASSERT(this%id>XC_UNKNOWN)
     if(this%id>XC_NONE)then
-      this%family=XC_F90(family_from_id)(this%id)
+      this%family = XC_F90(family_from_id)(this%id)
       ASSERT(this%family>XC_NONE)
-      this%nblock=BLOCK_SIZE
-      if(present(blocksize))this%nblock=blocksize
+      this%nblock = BLOCK_SIZE
+      if(present(blocksize)) this%nblock = blocksize
       ASSERT(this%nblock>0)
-      this%nspin=nspin
+      this%nspin = nspin
       ASSERT(this%nspin>0)
       ASSERT(this%nspin<3)
-      this%spin=XC_UNPOLARIZED
-      if(this%nspin>1)this%spin=XC_POLARIZED
+      this%spin = XC_UNPOLARIZED
+      if(this%nspin>1) this%spin = XC_POLARIZED
       call XC_F90(func_init)(this%conf, this%info, this%id, this%spin)
-      this%kind=XC_F90(info_kind)(this%info)
-      this%flags=XC_F90(info_flags)(this%info)
+      this%kind = XC_F90(info_kind)(this%info)
+      this%flags = XC_F90(info_flags)(this%info)
     end if
 
     POP_SUB(interface_xc_init)
@@ -113,9 +104,9 @@ contains
 
     ASSERT(.not.associated(this%mesh))
     ASSERT(.not.associated(this%der))
-    this%mesh=>mesh
-    this%der=>der
-    this%ndim=this%mesh%sb%dim
+    this%mesh => mesh
+    this%der => der
+    this%ndim = this%mesh%sb%dim
     if(this%id>XC_NONE)then
       if(iand(this%flags,xc_flags_nd(this%ndim))==0)then
         write(unit=message(1), fmt="(a,i1.1,a2)") "Cannot use the specified functional in ", this%ndim, "D."
@@ -180,9 +171,9 @@ contains
     real(kind=wp), intent(out) :: orho
 
     if(irho<0.0_wp)then
-      orho=0.0_wp
+      orho = 0.0_wp
     else
-      orho=irho
+      orho = irho
     end if
 
   end subroutine interface_xc_density
@@ -213,10 +204,10 @@ contains
 
     sigma = 0.0_wp
     do ip = 1, nb
-      sigma(1,ip)=dot_product(gradient(ip,:,1),gradient(ip,:,1))
+      sigma(1,ip) = dot_product(gradient(ip,:,1),gradient(ip,:,1))
       if(ns==3)then
-        sigma(2,ip)=dot_product(gradient(ip,:,1),gradient(ip,:,2))
-        sigma(3,ip)=dot_product(gradient(ip,:,2),gradient(ip,:,2))
+        sigma(2,ip) = dot_product(gradient(ip,:,1),gradient(ip,:,2))
+        sigma(3,ip) = dot_product(gradient(ip,:,2),gradient(ip,:,2))
       end if
     end do
 
@@ -247,10 +238,10 @@ contains
     integer :: ip
 
     do ip = 1, nb
-      dedgd(ip,:,1)=2.0_wp*vsigma(1,ip)*grad(ip,:,1)
+      dedgd(ip,:,1) = 2.0_wp * vsigma(1,ip) * grad(ip,:,1)
       if(ns==3)then
-        dedgd(ip,:,1)=dedgd(ip,:,1)+vsigma(2,ip)*grad(ip,:,2)
-        dedgd(ip,:,2)=2.0_wp*vsigma(3,ip)*grad(ip,:,2)+vsigma(2,ip)*grad(ip,:,1)
+        dedgd(ip,:,1) = dedgd(ip,:,1) + vsigma(2,ip) * grad(ip,:,2)
+        dedgd(ip,:,2) = 2.0_wp * vsigma(3,ip) * grad(ip,:,2) + vsigma(2,ip) * grad(ip,:,1)
       end if
     end do
 
@@ -271,10 +262,10 @@ contains
     exc = 0.0_wp
     if((this%id>XC_NONE).and.(iand(this%flags, XC_FLAGS_HAVE_EXC)/=0))then
       do ip = 1, this%mesh%np, this%nblock
-        nb=min(this%mesh%np-ip+1, this%nblock)
+        nb = min(this%mesh%np-ip+1, this%nblock)
         call interface_xc_block_density(nb, density(ip:,:), l_dens)
         call XC_F90(lda_exc)(this%conf, nb, l_dens(1,1), l_zk(1))
-        exc(ip:ip+nb-1)=l_zk(1:nb)
+        exc(ip:ip+nb-1) = l_zk(1:nb)
       end do
     end if
 
@@ -320,7 +311,9 @@ contains
 
     exc = 0.0_wp
     vxc = 0.0_wp
-    if((this%id>XC_NONE).and.(iand(this%flags,XC_FLAGS_HAVE_EXC)/=0).and.(iand(this%flags,XC_FLAGS_HAVE_VXC)/=0))then
+    if((this%id>XC_NONE)                           &
+      .and.(iand(this%flags,XC_FLAGS_HAVE_EXC)/=0) &
+      .and.(iand(this%flags,XC_FLAGS_HAVE_VXC)/=0))then
       do ip = 1, this%mesh%np, this%nblock
         nb = min(this%mesh%np-ip+1, this%nblock)
         call interface_xc_block_density(nb, density(ip:,:), l_dens)
@@ -412,7 +405,9 @@ contains
 
     exc = 0.0_wp
     vxc = 0.0_wp
-    if((this%id>XC_NONE).and.(iand(this%flags,XC_FLAGS_HAVE_EXC)/=0).and.(iand(this%flags,XC_FLAGS_HAVE_VXC)/=0))then
+    if((this%id>XC_NONE)                           &
+      .and.(iand(this%flags,XC_FLAGS_HAVE_EXC)/=0) &
+      .and.(iand(this%flags,XC_FLAGS_HAVE_VXC)/=0))then
       ns = 2 * this%spin - 1
       do ip = 1, this%mesh%np, this%nblock
         nb = min(this%mesh%np-ip+1, this%nblock)
@@ -443,7 +438,7 @@ contains
     ! the gradient of the density.
     do is = 1, this%spin
       call dderivatives_div(this%der, dedg(:,:,is), div)
-      vxc(:,is)=vxc(:,is)-div
+      vxc(:,is) = vxc(:,is) - div
     end do
 
     POP_SUB(interface_xc_gga_vxc_correction)
@@ -488,7 +483,7 @@ contains
       call dderivatives_grad(this%der, dens(:,isp), grad(:,:,isp))
     end do
     call interface_xc_block_gga_vxc(this, dens, grad, vxc, dedg)
-    dedg(this%mesh%np+1:,:,:)=0.0_wp
+    dedg(this%mesh%np+1:,:,:) = 0.0_wp
     call interface_xc_gga_vxc_correction(this, dedg, vxc)
 
     POP_SUB(interface_xc_gga_vxc)
@@ -513,7 +508,7 @@ contains
       call dderivatives_grad(this%der, dens(:,isp), grad(:,:,isp))
     end do
     call interface_xc_block_gga_exc_vxc(this, dens, grad, exc, vxc, dedg)
-    dedg(this%mesh%np+1:,:,:)=0.0_wp
+    dedg(this%mesh%np+1:,:,:) = 0.0_wp
     call interface_xc_gga_vxc_correction(this, dedg, vxc)
 
     POP_SUB(interface_xc_gga_exc_vxc)
