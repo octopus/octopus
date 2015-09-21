@@ -36,6 +36,7 @@ module pes_rc_m
   use hamiltonian_m
   use lasers_m
   use varinfo_m
+  use mesh_interpolation_m
 
   private
 
@@ -50,22 +51,25 @@ module pes_rc_m
     pes_rc_load
 
   type PES_rc_t
-    integer          :: npoints                   !< how many points we store the wf
-    integer, pointer :: points(:)                 !< which points to use (local index)
-    integer, pointer :: points_global(:)          !< global index of the points
-    FLOAT, pointer   :: coords(:,:)               !< coordinates of the sample points
-    CMPLX, pointer   :: wf(:,:,:,:,:)   => NULL() !< wavefunctions at sample points
-    integer, pointer :: rankmin(:)                !< partition of the mesh containing the points
-    FLOAT, pointer   :: dq(:,:)         => NULL() !< part 1 of Volkov phase (recipe phase) 
-    FLOAT, pointer   :: domega(:)       => NULL() !< part 2 of Volkov phase (recipe phase)
-    integer          :: recipe                    !< type of calculation (RAW/PHASE)
-    CMPLX, pointer   :: wfft(:,:,:,:,:) => NULL() !< Fourier transform of wavefunction
-    FLOAT            :: omegamax                  !< maximum frequency of the spectrum
-    FLOAT            :: delomega                  !< frequency spacing of the spectrum
-    integer          :: nomega                    !< number of frequencies of the spectrum
-    logical          :: onfly                     !< spectrum is calculated on-the-fly when true
-    integer          :: save_iter                 !< output interval and size of arrays 
-    logical          :: interpolation             !< use a an interpolated scheme for sample points
+    integer                    :: npoints                   !< how many points we store the wf
+    integer, pointer           :: points(:)                 !< which points to use (local index)
+    integer, pointer           :: points_global(:)          !< global index of the points
+    FLOAT, pointer             :: coords(:,:)               !< coordinates of the sample points
+    CMPLX, pointer             :: wf(:,:,:,:,:)   => NULL() !< wavefunctions at sample points
+    integer, pointer           :: rankmin(:)                !< partition of the mesh containing the points
+    FLOAT, pointer             :: dq(:,:)         => NULL() !< part 1 of Volkov phase (recipe phase) 
+    FLOAT, pointer             :: domega(:)       => NULL() !< part 2 of Volkov phase (recipe phase)
+    integer                    :: recipe                    !< type of calculation (RAW/PHASE)
+    CMPLX, pointer             :: wfft(:,:,:,:,:) => NULL() !< Fourier transform of wavefunction
+    FLOAT                      :: omegamax                  !< maximum frequency of the spectrum
+    FLOAT                      :: delomega                  !< frequency spacing of the spectrum
+    integer                    :: nomega                    !< number of frequencies of the spectrum
+    logical                    :: onfly                     !< spectrum is calculated on-the-fly when true
+    integer                    :: save_iter                 !< output interval and size of arrays 
+    logical                    :: interpolation             !< use a an interpolated scheme for sample points
+    integer                    :: nstepsphi, nstepstheta
+    FLOAT                      :: thetamin
+    type(mesh_interpolation_t) :: interp
   end type PES_rc_t
 
   integer, parameter :: &
@@ -87,6 +91,8 @@ contains
     FLOAT         :: dmin
     integer       :: rankmin
     logical       :: fromblk
+    FLOAT         :: phi, theta, radius
+    integer       :: iph, ith, iphi
 
     PUSH_SUB(PES_rc_init)
 
@@ -118,11 +124,6 @@ contains
       message(1) = 'Info: Using spherical grid with interpolation.'
     end if
     call messages_info(1)
-
-    if(.not.fromblk) then
-      message(1) = 'Interpolation scheme not yet implemented.'
-      call messages_fatal(1)
-    end if
 
     !%Variable PES_rc_recipe
     !%Type integer
@@ -173,11 +174,74 @@ contains
       call messages_print_var_value(stdout, "PES_rc_DelOmega", pesrc%delomega)
     end if
 
+    !%Variable PES_rc_ThetaSteps
+    !%Type integer
+    !%Section Time-Dependent::PhotoElectronSpectrum
+    !%Description
+    !% Number of steps in theta (0 <= theta <= pi) for the spherical grid (if no 
+    !% PhotoElectronSpectrumPoints are given).
+    !%End
+    call parse_variable('PES_rc_ThetaSteps', 45, pesrc%nstepstheta)
+    if(.not.fromblk .and. pesrc%nstepstheta < 0) call messages_input_error('PES_rc_ThetaSteps')
+
+    !%Variable PES_rc_PhiSteps
+    !%Type integer
+    !%Section Time-Dependent::PhotoElectronSpectrum
+    !%Description
+    !% Number of steps in phi (0 <= phi <= 2 pi) for the spherical grid (if no
+    !% PhotoElectronSpectrumPoints are given).
+    !%End
+    call parse_variable('PES_rc_PhiSteps', 90, pesrc%nstepsphi)
+    if(.not.fromblk) then
+      if(pesrc%nstepsphi < 0)  call messages_input_error('PES_rc_PhiSteps')
+      if(pesrc%nstepsphi == 0) pesrc%nstepsphi = 1
+    end if
+
+    !%Variable PES_rc_Radius
+    !%Type float
+    !%Section Time-Dependent::PhotoElectronSpectrum
+    !%Description
+    !% The radius of the sphere for the interpolation (if no PhotoElectronSpectrumPoints
+    !% are given).
+    !%End
+    ! fix minval
+    call parse_variable('PES_rc_Radius', minval(mesh%sb%lsize(1:mesh%sb%dim)), radius)
+    if(.not.fromblk) then
+      if(radius <= M_ZERO) call messages_input_error('PES_rc_Radius')
+      call messages_print_var_value(stdout, "PES_rc_Radius", radius)
+    end if
+
     if(fromblk) then
       pesrc%interpolation = .false.
       pesrc%npoints = parse_block_n(blk)
     else
       pesrc%interpolation = .true.
+      call mesh_interpolation_init(pesrc%interp, mesh)
+
+      ! setting values for spherical grid 
+      select case(mesh%sb%dim)
+      case(1)
+        pesrc%thetamin = M_PI / M_TWO
+        pesrc%nstepstheta   = 0
+        pesrc%nstepsphi     = 2
+        pesrc%npoints  = pesrc%nstepsphi
+
+      case(2)
+        pesrc%thetamin = M_PI / M_TWO
+        pesrc%nstepstheta   = 0
+        pesrc%npoints  = pesrc%nstepsphi
+
+        call messages_print_var_value(stdout, "PES_rc_StepsPhi", pesrc%nstepsphi)
+
+      case(3)
+        pesrc%thetamin = M_ZERO
+        if(pesrc%nstepstheta <= 1) pesrc%nstepsphi = 1
+        pesrc%npoints  = pesrc%nstepsphi * (pesrc%nstepstheta - 1) + 2
+
+        call messages_print_var_value(stdout, "PES_rc_StepsPhi", pesrc%nstepsphi)
+        call messages_print_var_value(stdout, "PES_rc_StepsTheta", pesrc%nstepstheta)
+
+      end select
     end if
 
     call messages_print_var_value(stdout, "Number of PhotoElectronSpectrumPoints", pesrc%npoints)
@@ -216,6 +280,33 @@ contains
         else
           pesrc%points_global(ip) = pesrc%points(ip)
         end if
+      end do
+
+    else ! fromblk == .false.
+
+      message(1) = 'Info: Initializing spherical grid.'
+      call messages_info(1)
+
+      ! initializing spherical grid
+      ip = 0
+      do ith = 0, pesrc%nstepstheta
+        if(ith == 0) then
+          theta = pesrc%thetamin     ! pi/2 for 1d and 2d. zero for 3d.
+        else
+          theta = ith * M_PI / pesrc%nstepstheta
+        end if
+        do iph = 0, pesrc%nstepsphi - 1
+          if(iph == 0) then
+            phi = M_ZERO
+          else
+            phi = iph * M_TWO * M_PI / pesrc%nstepsphi
+          end if
+          ip = ip + 1
+                               pesrc%coords(1, ip) = radius * cos(phi) * sin(theta)
+          if(mesh%sb%dim >= 2) pesrc%coords(2, ip) = radius * sin(phi) * sin(theta)
+          if(mesh%sb%dim == 3) pesrc%coords(3, ip) = radius * cos(theta)
+          if(theta == M_ZERO .or. theta == M_PI) exit
+        end do
       end do
 
     end if
@@ -271,7 +362,7 @@ contains
     integer,             intent(in)    :: iter
     type(hamiltonian_t), intent(in)    :: hm
 
-    CMPLX, allocatable :: psi(:,:,:,:), wfftact(:,:,:,:,:)
+    CMPLX, allocatable :: psi(:,:,:,:), psistate(:), wfftact(:,:,:,:,:)
     integer            :: ip, ii
     integer            :: dim, stst, stend, kptst, kptend
     logical            :: contains_ip
@@ -282,6 +373,7 @@ contains
 #endif
     FLOAT              :: omega
     integer            :: iom
+    CMPLX, allocatable :: interp_values(:)
 
     PUSH_SUB(PES_rc_calc)
 
@@ -294,6 +386,8 @@ contains
     dim    = st%d%dim
 
     if(pesrc%interpolation) then
+      SAFE_ALLOCATE(psistate(1:mesh%np_part))
+      SAFE_ALLOCATE(interp_values(1:pesrc%npoints))
     else
       SAFE_ALLOCATE(psi(1:st%nst, dim, 1:1, 1:st%d%nik))
     end if
@@ -311,7 +405,21 @@ contains
     pesrc%wf(:,:,:,:,ii) = M_z0
 
     if(pesrc%interpolation) then
-    else ! pesrc%interpolation = .false.
+      do ik = kptst, kptend 
+        do ist = stst, stend
+          do idim = 1, dim
+            call states_get_state(st, mesh, idim, ist, ik, psistate(1:mesh%np_part))
+            call mesh_interpolation_evaluate(pesrc%interp, pesrc%npoints, psistate(1:mesh%np_part), &
+              pesrc%coords(1:mesh%sb%dim, 1:pesrc%npoints), interp_values(1:pesrc%npoints))
+            pesrc%wf(ist, idim, ik, :, ii) = interp_values(:)
+          end do
+        end do
+      end do
+#if defined(HAVE_MPI)
+      ! interpolated values have already been communicated over domains
+      call comm_allreduce(st%st_kpt_mpi_grp%comm, pesrc%wf(:,:,:,:,ii))
+#endif
+    else ! pesrc%interpolation == .false.
 
       contains_ip = .true.
 
@@ -368,6 +476,8 @@ contains
       pesrc%wfft = pesrc%wfft + wfftact
     end if
 
+    SAFE_DEALLOCATE_A(psistate)
+    SAFE_DEALLOCATE_A(interp_values)
     SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(phasefac)
 
