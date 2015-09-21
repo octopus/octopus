@@ -13,47 +13,32 @@ module frozen_handle_m
   use mpi_m
   use profiling_m
 
-  use base_handle_m, only:            &
-    frozen_handle_t => base_handle_t
-
-  use base_handle_m, only:                     &
-    frozen_handle_stop => base_handle__stop__
-
-  use base_handle_m, only:                   &
-    frozen_handle_get  => base_handle_get,   &
-    frozen_handle_copy => base_handle_copy,  &
-    frozen_handle_end  => base_handle_end
-
   implicit none
 
   private
 
-  public ::          &
-    frozen_handle_t
+  public ::         &
+    HNDL_TYPE_FRZN
 
   public ::              &
     frozen_handle_init,  &
-    frozen_handle_start, &
-    frozen_handle_stop,  &
-    frozen_handle_get,   &
-    frozen_handle_copy,  &
-    frozen_handle_end
+    frozen_handle_start
 
-  integer, public, parameter :: HNDL_TYPE_FRZN = 2
+  integer, parameter :: HNDL_TYPE_FRZN = 2
 
 contains
 
   ! ---------------------------------------------------------
   subroutine frozen_handle_init(this, config)
-    type(frozen_handle_t), intent(out) :: this
-    type(json_object_t),   intent(in)  :: config
+    type(base_handle_t), intent(out) :: this
+    type(json_object_t), intent(in)  :: config
 
     integer :: type
 
     PUSH_SUB(frozen_handle_init)
 
     call base_handle_init(this, config, fio_handle_init)
-    call frozen_handle_get(this, type)
+    call base_handle_get(this, type)
     ASSERT(type==HNDL_TYPE_FRZN)
 
     POP_SUB(frozen_handle_init)
@@ -61,13 +46,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine frozen_handle_start(this, grid)
-    type(frozen_handle_t), intent(inout) :: this
-    type(grid_t),          intent(in)    :: grid
+    type(base_handle_t), intent(inout) :: this !> frozen
+    type(grid_t),        intent(in)    :: grid
 
-    type(base_handle_iterator_t)   :: iter
-    type(frozen_handle_t), pointer :: hndl !> fio
-    type(json_object_t),   pointer :: cnfg
-    integer                        :: ierr
+    type(base_handle_iterator_t) :: iter
+    type(base_handle_t), pointer :: hndl !> fio
+    type(json_object_t), pointer :: cnfg
+    integer                      :: ierr
 
     PUSH_SUB(frozen_handle_start)
 
@@ -83,7 +68,7 @@ contains
       call frozen_handle__acc__(this, hndl, cnfg)
       call fio_handle_stop(hndl)
     end do
-    call frozen_handle_end(iter)
+    call base_handle_end(iter)
     call base_handle__update__(this)
     nullify(hndl, cnfg)
 
@@ -92,19 +77,19 @@ contains
 
   ! ---------------------------------------------------------
   subroutine frozen_handle__acc__(this, that, config)
-    type(frozen_handle_t), intent(inout) :: this
-    type(frozen_handle_t), intent(in)    :: that !> fio
-    type(json_object_t),   intent(in)    :: config
+    type(base_handle_t), intent(inout) :: this !> frozen
+    type(base_handle_t), intent(in)    :: that !> fio
+    type(json_object_t), intent(in)    :: config
 
-    type(base_model_t), pointer :: mmdl
-    type(base_model_t), pointer :: smdl
+    type(base_model_t), pointer :: mmdl !> frozen
+    type(base_model_t), pointer :: smdl !> fio
 
     PUSH_SUB(frozen_handle__acc__)
 
     nullify(mmdl, smdl)
-    call frozen_handle_get(this, mmdl)
+    call base_handle_get(this, mmdl)
     ASSERT(associated(mmdl))
-    call frozen_handle_get(that, smdl)
+    call base_handle_get(that, smdl)
     ASSERT(associated(smdl))
     call frozen_model__acc__(mmdl, smdl, config)
     nullify(mmdl, smdl)

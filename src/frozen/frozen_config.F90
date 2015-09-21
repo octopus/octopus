@@ -2,27 +2,18 @@
 
 module frozen_config_m
 
+  use base_config_m
+  use base_hamiltonian_m
+  use frozen_handle_m
   use global_m
+  use json_m
   use messages_m
   use profiling_m
-
-  use json_m, only: JSON_OK, json_object_t
-  use json_m, only: json_init, json_set, json_get, json_del
-
-  use base_hamiltonian_m, only: &
-    HMLT_TYPE_TERM,             &
-    HMLT_TYPE_POTN,             &
-    HMLT_TYPE_HMLT
-
-  use base_config_m, only: &
-    base_config_parse
-
-  use frozen_handle_m, only: &
-    HNDL_TYPE_FRZN
 
   implicit none
 
   private
+
   public ::              &
     frozen_config_parse
 
@@ -31,43 +22,56 @@ contains
   ! ---------------------------------------------------------
   subroutine frozen_config_parse_simulation(this)
     type(json_object_t), intent(inout) :: this
-    !
+
     integer :: ierr
-    !
+
+    PUSH_SUB(frozen_config_parse_simulation)
+
     call json_del(this, "grid", ierr)
     ASSERT(ierr==JSON_OK)
-    return
+
+    POP_SUB(frozen_config_parse_simulation)
   end subroutine frozen_config_parse_simulation
 
   ! ---------------------------------------------------------
   subroutine frozen_config_parse_external(this)
     type(json_object_t), intent(inout) :: this
-    !
-    integer :: type, ierr
-    !
+
+    integer :: type, nspin, ierr
+
+    PUSH_SUB(frozen_config_parse_external)
+
     call json_get(this, "type", type, ierr)
     if(ierr/=JSON_OK)call json_set(this, "type", HMLT_TYPE_POTN)
-    return
+    call json_get(this, "nspin", nspin, ierr)
+    if(ierr/=JSON_OK)call json_set(this, "nspin", 1)
+
+    POP_SUB(frozen_config_parse_external)
   end subroutine frozen_config_parse_external
 
   ! ---------------------------------------------------------
   subroutine frozen_config_parse_ionic(this)
     type(json_object_t), intent(inout) :: this
-    !
+
     integer :: type, ierr
-    !
+
+    PUSH_SUB(frozen_config_parse_ionic)
+
     call json_get(this, "type", type, ierr)
     if(ierr/=JSON_OK)call json_set(this, "type", HMLT_TYPE_TERM)
-    return
+
+    POP_SUB(frozen_config_parse_ionic)
   end subroutine frozen_config_parse_ionic
 
   ! ---------------------------------------------------------
   subroutine frozen_config_parse_hamiltonian(this)
     type(json_object_t), intent(inout) :: this
-    !
+
     type(json_object_t), pointer :: cnfg
     integer                      :: type, ierr
-    !
+
+    PUSH_SUB(frozen_config_parse_hamiltonian)
+
     nullify(cnfg)
     call json_get(this, "type", type, ierr)
     if(ierr/=JSON_OK)call json_set(this, "type", HMLT_TYPE_HMLT)
@@ -87,16 +91,19 @@ contains
     end if
     call frozen_config_parse_ionic(cnfg)
     nullify(cnfg)
-    return
+
+    POP_SUB(frozen_config_parse_hamiltonian)
   end subroutine frozen_config_parse_hamiltonian
 
   ! ---------------------------------------------------------
   subroutine frozen_config_parse_model(this)
     type(json_object_t), intent(inout) :: this
-    !
+
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
-    !
+
+    PUSH_SUB(frozen_config_parse_model)
+
     nullify(cnfg)
     call json_get(this, "simulation", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
@@ -106,7 +113,8 @@ contains
     ASSERT(ierr==JSON_OK)
     call frozen_config_parse_hamiltonian(cnfg)
     nullify(cnfg)
-    return
+
+    POP_SUB(frozen_config_parse_model)
   end subroutine frozen_config_parse_model
 
   ! ---------------------------------------------------------
@@ -114,10 +122,12 @@ contains
     type(json_object_t), intent(out) :: this
     integer,             intent(in)  :: ndim
     integer,             intent(in)  :: nspin
-    !
+
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
-    !
+
+    PUSH_SUB(frozen_config_parse)
+
     nullify(cnfg)
     call base_config_parse(this, ndim, nspin)
     call json_set(this, "type", HNDL_TYPE_FRZN)
@@ -126,7 +136,8 @@ contains
     ASSERT(ierr==JSON_OK)
     call frozen_config_parse_model(cnfg)
     nullify(cnfg)
-    return
+
+    POP_SUB(frozen_config_parse)
   end subroutine frozen_config_parse
 
 end module frozen_config_m

@@ -6,7 +6,6 @@ module frozen_hamiltonian_m
   use base_potential_m
   use base_system_m
   use frozen_external_m
-  use frozen_system_m !> remove
   use global_m
   use json_m
   use kinds_m
@@ -14,49 +13,32 @@ module frozen_hamiltonian_m
   use profiling_m
   use simulation_m
 
-  use base_hamiltonian_m, only:                 &
-    frozen_hamiltonian_t => base_hamiltonian_t
-
   implicit none
 
   private
 
-  public ::               &
-    frozen_hamiltonian_t
-
   public ::                    &
     frozen_hamiltonian__acc__
-
-  public ::                 &
-    frozen_hamiltonian_get
-  
-  interface frozen_hamiltonian_get
-    module procedure frozen_hamiltonian_get_info
-    module procedure frozen_hamiltonian_get_config
-    module procedure frozen_hamiltonian_get_simulation
-    module procedure frozen_hamiltonian_get_system
-    module procedure frozen_hamiltonian_get_external
-  end interface frozen_hamiltonian_get
 
 contains
 
   ! ---------------------------------------------------------
   subroutine frozen_hamiltonian__acc__(this, that, config)
-    type(frozen_hamiltonian_t), intent(inout) :: this
-    type(frozen_hamiltonian_t), intent(in)    :: that !> fio
-    type(json_object_t),        intent(in)    :: config
+    type(base_hamiltonian_t), intent(inout) :: this !> frozen
+    type(base_hamiltonian_t), intent(in)    :: that !> fio
+    type(json_object_t),      intent(in)    :: config
 
-    type(frozen_external_t), pointer :: mept
-    type(base_potential_t),  pointer :: sept !> fio
-    real(kind=wp)                    :: energy, enrg
+    type(base_potential_t), pointer :: mept !> frozen
+    type(base_potential_t), pointer :: sept !> fio
+    real(kind=wp)                   :: energy, enrg
 
     PUSH_SUB(frozen_hamiltonian__acc__)
 
-    call frozen_hamiltonian_get(this, energy=energy)
-    call frozen_hamiltonian_get(that, energy=enrg)
+    call base_hamiltonian_get(this, energy=energy)
+    call base_hamiltonian_get(that, energy=enrg)
     call base_hamiltonian_set(this, energy=(energy+enrg))
     nullify(mept, sept)
-    call frozen_hamiltonian_get(this, mept)
+    call base_hamiltonian__get__(this, "external", mept)
     ASSERT(associated(mept))
     call base_hamiltonian__get__(that, "external", sept)
     ASSERT(associated(sept))
@@ -65,68 +47,6 @@ contains
 
     POP_SUB(frozen_hamiltonian__acc__)
   end subroutine frozen_hamiltonian__acc__
-
-  ! ---------------------------------------------------------
-  subroutine frozen_hamiltonian_get_info(this, size, nspin, energy)
-    type(frozen_hamiltonian_t), intent(in)  :: this
-    integer,          optional, intent(out) :: size
-    integer,          optional, intent(out) :: nspin
-    real(kind=wp),    optional, intent(out) :: energy
-
-    PUSH_SUB(frozen_hamiltonian_get_info)
-
-    call base_hamiltonian_get(this, size=size, nspin=nspin, energy=energy)
-
-    POP_SUB(base_hamiltonian_get_info)
-  end subroutine frozen_hamiltonian_get_info
-
-  ! ---------------------------------------------------------
-  subroutine frozen_hamiltonian_get_config(this, that)
-    type(frozen_hamiltonian_t), intent(in) :: this
-    type(json_object_t),    pointer     :: that
-
-    PUSH_SUB(frozen_hamiltonian_get_config)
-
-    call base_hamiltonian_get(this, that)
-
-    POP_SUB(frozen_hamiltonian_get_config)
-  end subroutine frozen_hamiltonian_get_config
-
-  ! ---------------------------------------------------------
-  subroutine frozen_hamiltonian_get_system(this, that)
-    type(frozen_hamiltonian_t), intent(in) :: this
-    type(frozen_system_t),     pointer     :: that
-
-    PUSH_SUB(frozen_hamiltonian_get_system)
-
-    call base_hamiltonian_get(this, that)
-
-    POP_SUB(frozen_hamiltonian_get_system)
-  end subroutine frozen_hamiltonian_get_system
-
-  ! ---------------------------------------------------------
-  subroutine frozen_hamiltonian_get_simulation(this, that)
-    type(frozen_hamiltonian_t), intent(in) :: this
-    type(simulation_t),        pointer     :: that
-
-    PUSH_SUB(frozen_hamiltonian_get_simulation)
-
-    call base_hamiltonian_get(this, that)
-
-    POP_SUB(frozen_hamiltonian_get_simulation)
-  end subroutine frozen_hamiltonian_get_simulation
-
-  ! ---------------------------------------------------------
-  subroutine frozen_hamiltonian_get_external(this, that)
-    type(frozen_hamiltonian_t), intent(in) :: this
-    type(frozen_external_t),   pointer     :: that
-
-    PUSH_SUB(frozen_hamiltonian_get_external)
-
-    call base_hamiltonian__get__(this, "external", that)
-
-    POP_SUB(frozen_hamiltonian_get_external)
-  end subroutine frozen_hamiltonian_get_external
 
 end module frozen_hamiltonian_m
 
