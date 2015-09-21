@@ -120,7 +120,7 @@ fio_curvilinear.o 	: fio_curvilinear.F90 fio_simul_box.o
 fio_mesh.o 		: fio_mesh.F90 fio_simul_box.o
 fio_grid.o 		: fio_grid.F90 fio_curvilinear.o fio_mesh.o fio_simul_box.o
 fio_simulation.o 	: fio_simulation.F90 fio_grid.o base_geom.o simulation.o
-fio_density.o 		: fio_density.F90 simulation.o base_density.o intrpl.o
+fio_density.o 		: fio_density.F90 fio_simulation.o base_density.o intrpl.o
 fio_states.o 		: fio_states.F90 fio_density.o base_states.o
 fio_system.o 		: fio_system.F90 fio_states.o base_system.o
 fio_external.o 		: fio_external.F90 fio_system.o simulation.o base_potential.o base_geom.o intrpl.o
