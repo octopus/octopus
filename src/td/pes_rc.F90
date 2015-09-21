@@ -52,6 +52,7 @@ module pes_rc_m
     integer          :: npoints                   !< how many points we store the wf
     integer, pointer :: points(:)                 !< which points to use (local index)
     integer, pointer :: points_global(:)          !< global index of the points
+    FLOAT, pointer   :: coords(:,:)               !< coordinates of the sample points
     CMPLX, pointer   :: wf(:,:,:,:,:)   => NULL() !< wavefunctions at sample points
     integer, pointer :: rankmin(:)                !< partition of the mesh containing the points
     FLOAT, pointer   :: dq(:,:)         => NULL() !< part 1 of Volkov phase (recipe phase) 
@@ -162,17 +163,26 @@ contains
 
     pesrc%npoints = parse_block_n(blk)
 
-    ! read points
-    SAFE_ALLOCATE(pesrc%points   (1:pesrc%npoints))
-    SAFE_ALLOCATE(pesrc%points_global(1:pesrc%npoints))
-    SAFE_ALLOCATE(pesrc%rankmin   (1:pesrc%npoints))
+    call messages_print_var_value(stdout, "Number of PhotoElectronSpectrumPoints", pesrc%npoints)
 
+    SAFE_ALLOCATE(pesrc%coords(1:mesh%sb%dim, 1:pesrc%npoints))
+
+    SAFE_ALLOCATE(pesrc%points(1:pesrc%npoints))
+    SAFE_ALLOCATE(pesrc%points_global(1:pesrc%npoints))
+    SAFE_ALLOCATE(pesrc%rankmin(1:pesrc%npoints))
+
+   ! read points from input file
     do ip = 1, pesrc%npoints
       call parse_block_float(blk, ip - 1, 0, xx(1), units_inp%length)
       call parse_block_float(blk, ip - 1, 1, xx(2), units_inp%length)
       call parse_block_float(blk, ip - 1, 2, xx(3), units_inp%length)
+      pesrc%coords(1:mesh%sb%dim, ip) = xx(1:mesh%sb%dim)
+    end do
+    call parse_block_end(blk)
 
-      pesrc%points(ip) = mesh_nearest_point(mesh, xx, dmin, rankmin)
+    do ip = 1, pesrc%npoints
+      ! nearest point
+      pesrc%points(ip) = mesh_nearest_point(mesh, pesrc%coords(1:mesh%sb%dim, ip), dmin, rankmin)
       pesrc%rankmin(ip)= rankmin
 
       if(mesh%parallel_in_domains) then
@@ -188,8 +198,6 @@ contains
         pesrc%points_global(ip) = pesrc%points(ip)
       end if
     end do
-
-    call parse_block_end(blk)
 
     SAFE_ALLOCATE(pesrc%wf(1:st%nst, 1:st%d%dim, 1:st%d%nik, 1:pesrc%npoints, 0:save_iter-1))
     pesrc%wf = M_z0
@@ -223,6 +231,7 @@ contains
     SAFE_DEALLOCATE_P(pesrc%points_global)
     SAFE_DEALLOCATE_P(pesrc%wf)
     SAFE_DEALLOCATE_P(pesrc%rankmin)
+    SAFE_DEALLOCATE_P(pesrc%coords)
 
     SAFE_DEALLOCATE_P(pesrc%wfft)
 
@@ -467,7 +476,7 @@ contains
         write(filenr, '(i4.4)') ip
 
         iunit = io_open('td.general/'//'PES_rc.'//filenr//'.wavefunctions.out', action='write')
-        xx = mesh_x_global(mesh, pesrc%points_global(ip))
+        xx(1:mesh%sb%dim) = pesrc%coords(1:mesh%sb%dim, ip) 
         write(iunit,'(a1)') '#'
         write(iunit, '(a7,f17.6,a1,f17.6,a1,f17.6,5a)') &
           '# R = (',xx(1),' ,',xx(2),' ,',xx(3), &
