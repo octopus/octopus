@@ -365,12 +365,10 @@ contains
     CMPLX, allocatable :: psi(:,:,:,:), psistate(:), wfftact(:,:,:,:,:)
     integer            :: ip, ii
     integer            :: dim, stst, stend, kptst, kptend
+    integer            :: ik, ist, idim
     logical            :: contains_ip
     CMPLX              :: rawfac
     CMPLX, allocatable :: phasefac(:)
-#if defined(HAVE_MPI)
-    integer            :: isdim
-#endif
     FLOAT              :: omega
     integer            :: iom
     CMPLX, allocatable :: interp_values(:)
