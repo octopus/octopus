@@ -25,6 +25,7 @@ module pes_rc_m
   use mesh_m
   use messages_m
   use mpi_m
+  use comm_m
   use parser_m
   use profiling_m
   use restart_m
@@ -257,7 +258,6 @@ contains
     logical            :: contains_ip
     CMPLX              :: cfac
 #if defined(HAVE_MPI)
-    FLOAT, allocatable :: buf(:)
     integer            :: isdim
 #endif
     FLOAT              :: omega
@@ -275,20 +275,13 @@ contains
 
     SAFE_ALLOCATE(psi(1:st%nst, dim, 1:1, 1:st%d%nik))
 
-    SAFE_ALLOCATE(wfact(1:st%nst, dim, 1:st%d%nik, 1:pesrc%npoints))
-    wfact = M_z0
-
     if(pesrc%onfly) then
       SAFE_ALLOCATE(wfftact(1:st%nst, dim, 1:st%d%nik, 1:pesrc%npoints, 1:pesrc%nomega))
       wfftact = M_z0
     endif
 
-#if defined(HAVE_MPI)
-    if(pesrc%recipe == M_PHASE) then
-      SAFE_ALLOCATE(buf(1:pesrc%npoints))
-      buf = M_ZERO
-    end if
-#endif
+    ! needed for allreduce, otherwise it will take values from previous cycle
+    pesrc%wf(:,:,:,:,ii) = M_z0
 
     contains_ip = .true.
 
@@ -296,7 +289,7 @@ contains
 
 #if defined(HAVE_MPI)
       if(mesh%parallel_in_domains) then
-        if(mesh%mpi_grp%rank  ==  pesrc%rankmin(ip)) then !needed if mesh%parallel_in_domains is true
+        if(mesh%mpi_grp%rank  ==  pesrc%rankmin(ip)) then ! needed if mesh%parallel_in_domains is true
           contains_ip = .true.
         else
           contains_ip = .false.
@@ -306,39 +299,35 @@ contains
 
       if(contains_ip) then
         call states_get_points(st, pesrc%points(ip), pesrc%points(ip), psi)
-        wfact(stst:stend, dim, kptst:kptend, ip) = psi(stst:stend, dim, 1, kptst:kptend)
+        pesrc%wf(stst:stend, dim, kptst:kptend, ip, ii) = psi(stst:stend, dim, 1, kptst:kptend)
+      end if
+    end do
+#if defined(HAVE_MPI)
+    call comm_allreduce(mpi_world%comm, pesrc%wf(:,:,:,:,ii))
+#endif
 
-        if(pesrc%recipe == M_PHASE) then
-          call PES_rc_calc_rcphase(pesrc, mesh, iter, dt, hm, ip, ii)
-        end if
+    do ip = 1, pesrc%npoints
+      if(pesrc%recipe == M_PHASE) then
+        call PES_rc_calc_rcphase(pesrc, mesh, iter, dt, hm, ip, ii)
+      end if
 
-        if(pesrc%onfly) then
-          do iom = 1, pesrc%nomega
-            omega = iom*pesrc%delomega
-            cfac = exp(M_zI * omega * iter * dt) * dt
+      if(pesrc%onfly) then
+        do iom = 1, pesrc%nomega
+          omega = iom*pesrc%delomega
+          cfac = exp(M_zI * omega * iter * dt) * dt
 
-            if(pesrc%recipe == M_PHASE) then
-              cfac = cfac * exp(M_zI * (pesrc%domega(ii) - sqrt(M_TWO * omega) * pesrc%dq(ip, ii)))
-            end if
+          if(pesrc%recipe == M_PHASE) then
+            cfac = cfac * exp(M_zI * (pesrc%domega(ii) - sqrt(M_TWO * omega) * pesrc%dq(ip, ii)))
+          end if
 
-            wfftact(stst:stend, dim, kptst:kptend, ip, iom) = &
-              wfact(stst:stend, dim, kptst:kptend, ip) * cfac + pesrc%wfft(stst:stend, dim, kptst:kptend, ip, iom)
-          end do
-        end if
-
+          wfftact(stst:stend, dim, kptst:kptend, ip, iom) = &
+            pesrc%wf(stst:stend, dim, kptst:kptend, ip, ii) * cfac + pesrc%wfft(stst:stend, dim, kptst:kptend, ip, iom)
+        end do
       end if
     end do
 
 #if defined(HAVE_MPI)
     isdim = st%nst * dim * st%d%nik * pesrc%npoints
-    call MPI_Allreduce(wfact(:,:,:,:), pesrc%wf(:,:,:,:,ii), isdim, MPI_CMPLX, mpi_sum, mpi_comm_world, mpi_err)
-
-    if(pesrc%recipe == M_PHASE) then
-      call MPI_Allreduce(pesrc%dq(:,ii), buf(:), pesrc%npoints, MPI_FLOAT, mpi_sum, mpi_comm_world, mpi_err)
-      pesrc%dq(:,ii) = buf(:)
-
-      SAFE_DEALLOCATE_A(buf)
-    end if
 
     if(pesrc%onfly) then
       do iom = 1, pesrc%nomega
@@ -348,15 +337,12 @@ contains
     end if
 
 #else
-    pesrc%wf(:,:,:,:,ii) = wfact(:,:,:,:)
-
     if(pesrc%onfly) then
       pesrc%wfft = wfftact
     end if
 #endif
 
     SAFE_DEALLOCATE_A(psi)
-    SAFE_DEALLOCATE_A(wfact)
 
     SAFE_DEALLOCATE_A(wfftact)
 
