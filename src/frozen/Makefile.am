@@ -62,7 +62,6 @@ libfrozen_a_SOURCES =		\
 	frozen_model.F90	\
 	frozen_handle.F90	\
 	frozen_config.F90	\
-	live_hamiltonian.F90	\
 	live_handle.F90		\
 	live_config.F90		\
 	ssys_density.F90	\
@@ -138,7 +137,6 @@ frozen_model.o		: frozen_model.F90 frozen_hamiltonian.o frozen_system.o fio_mode
 frozen_handle.o 	: frozen_handle.F90 frozen_model.o fio_handle.o base_handle.o base_model.o
 frozen_config.o 	: frozen_config.F90 frozen_handle.o base_hamiltonian.o base_config.o
 
-live_hamiltonian.o	: live_hamiltonian.F90 base_hamiltonian.o base_potential.o base_system.o simulation.o
 live_handle.o		: live_handle.F90 base_handle.o
 live_config.o		: live_config.F90 live_handle.o base_hamiltonian.o base_config.o functional.o
 

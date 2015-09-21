@@ -2,32 +2,22 @@
 
 module live_config_m
 
+  use base_config_m
+  use base_hamiltonian_m
+  use functional_m
+  use geometry_m
   use global_m
+  use json_m
+  use kinds_m
+  use live_handle_m
   use messages_m
+  use parser_m
   use profiling_m
-
-  use functional_m, only: FUNCT_XC_NONE
-  use geometry_m,   only: geometry_t, geometry_create_data_object
-  use json_m,       only: JSON_OK, json_object_t
-  use json_m,       only: json_init, json_set, json_get, json_del
-  use kinds_m,      only: wp
-  use parser_m,     only: parse_variable
-
-  use base_hamiltonian_m, only: &
-    HMLT_TYPE_TERM,             &
-    HMLT_TYPE_POTN,             &
-    HMLT_TYPE_FNCT,             &
-    HMLT_TYPE_HMLT
-
-  use base_config_m, only: &
-    base_config_parse
-
-  use live_handle_m, only: &
-    HNDL_TYPE_LIVE
 
   implicit none
 
   private
+
   public ::           &
     live_config_parse
 
