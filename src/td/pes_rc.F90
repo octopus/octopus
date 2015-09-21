@@ -492,85 +492,135 @@ contains
     integer,        intent(in) :: iter
     FLOAT,          intent(in) :: dt
 
-    integer            :: ip, iunit, ii, jj, ik, ist, idim, iom
+    integer            :: ip, ii, jj, ik, ist, idim, iom, iph, ith
+    integer            :: iunit, iunitone, iunittwo
     CMPLX              :: vfu
     character(len=4)   :: filenr
     FLOAT              :: wfu, omega
-    FLOAT, allocatable :: wffttot(:)
+    FLOAT, allocatable :: wffttot(:,:)
+    FLOAT              :: wffttotsave
     integer            :: save_iter
+    FLOAT              :: theta, phi
 
     PUSH_SUB(PES_rc_output)
 
     save_iter = pesrc%save_iter
 
     if(pesrc%onfly) then
-      SAFE_ALLOCATE(wffttot(1:pesrc%nomega))
-    end if
+      SAFE_ALLOCATE(wffttot(1:pesrc%nomega, 1:pesrc%npoints))
+      wffttot = M_ZERO
 
-    do ip = 1, pesrc%npoints
-      write(filenr, '(i4.4)') ip
-
-      iunit = io_open('td.general/'//'PES_rc.'//filenr//'.wavefunctions.out', action='write', position='append')
-      do ii = 1, save_iter - mod(iter, save_iter)
-        jj = iter - save_iter + ii + mod(save_iter - mod(iter, save_iter), save_iter)
-        write(iunit, '(e17.10)', advance='no') units_from_atomic(units_inp%time, jj * dt)
+      ! calculate total spectrum
+      do iom = 1, pesrc%nomega
         do ik = 1, st%d%nik
           do ist = 1, st%nst
             do idim = 1, st%d%dim
-              vfu = units_from_atomic(sqrt(units_out%length**(-3)), pesrc%wf(ist, idim, ik, ip, ii-1))
-              write(iunit, '(1x,e18.10E3,1x,e18.10E3)', advance='no') &
-                real(vfu),  aimag(vfu) 
+              wffttot(iom, :) = real(pesrc%wfft(ist, idim, ik, :, iom))**2 + aimag(pesrc%wfft(ist, idim, ik,:, iom))**2 &
+                + wffttot(iom, :)
             end do
           end do
         end do
-        write(iunit, '(1x)', advance='yes')
       end do
-      call io_close(iunit)
+    end if
 
-      if(pesrc%recipe == M_PHASE) then
-        iunit = io_open('td.general/'//'PES_rc.'//filenr//'.phase.out', action='write', position='append')
+    if(.not.pesrc%interpolation .or. in_debug_mode) then   ! too much output for interpolation
+      do ip = 1, pesrc%npoints
+        write(filenr, '(i4.4)') ip
+   
+        iunitone = io_open('td.general/'//'PES_rc.'//filenr//'.wavefunctions.out', action='write', position='append')
+        if(pesrc%recipe == M_PHASE) &
+          iunittwo = io_open('td.general/'//'PES_rc.'//filenr//'.phase.out', action='write', position='append')
+   
         do ii = 1, save_iter - mod(iter, save_iter)
           jj = iter - save_iter + ii + mod(save_iter - mod(iter, save_iter), save_iter)
-          write(iunit, '(e17.10)', advance='no') units_from_atomic(units_inp%time, jj * dt)
-          write(iunit, '(1x,e18.10E3,1x,e18.10E3)', advance='no') &
-            pesrc%domega(ii-1), pesrc%dq(ip, ii-1)
-          write(iunit, '(1x)', advance='yes')
-        end do
-        call io_close(iunit)
-      end if
-
-      if(pesrc%onfly) then
-        wffttot = M_ZERO
-        do iom = 1, pesrc%nomega
+          write(iunitone, '(e17.10)', advance='no') units_from_atomic(units_inp%time, jj * dt)
           do ik = 1, st%d%nik
             do ist = 1, st%nst
               do idim = 1, st%d%dim
-                wffttot(iom) = real(pesrc%wfft(ist, idim, ik, ip, iom))**2 + aimag(pesrc%wfft(ist, idim, ik, ip, iom))**2 &
-                  + wffttot(iom)
+                vfu = units_from_atomic(sqrt(units_out%length**(-3)), pesrc%wf(ist, idim, ik, ip, ii-1))
+                write(iunitone, '(1x,e18.10E3,1x,e18.10E3)', advance='no') &
+                  real(vfu),  aimag(vfu) 
               end do
             end do
           end do
-        end do
+          write(iunitone, '(1x)', advance='yes')
 
-        iunit = io_open('td.general/'//'PES_rc.'//filenr//'.spectrum.out', action='write', position='rewind')
-        write(iunit, '(a44)') '# frequency, total spectrum, orbital spectra'
-        do iom = 1, pesrc%nomega 
-          omega = iom*pesrc%delomega
-          write(iunit, '(e17.10, 1x, e17.10)', advance='no') omega, wffttot(iom)
-          do ik = 1, st%d%nik
-            do ist = 1, st%nst 
-              do idim = 1, st%d%dim
-                wfu = real(pesrc%wfft(ist, idim, ik, ip, iom))**2 + aimag(pesrc%wfft(ist, idim, ik, ip, iom))**2
-                write(iunit,'(1x,e18.10e3)', advance='no') wfu
+          if(pesrc%recipe == M_PHASE) then
+            write(iunittwo, '(e17.10)', advance='no') units_from_atomic(units_inp%time, jj * dt)
+            write(iunittwo, '(1x,e18.10E3,1x,e18.10E3)', advance='no') &
+              pesrc%domega(ii-1), pesrc%dq(ip, ii-1)
+            write(iunittwo, '(1x)', advance='yes')
+          end if
+        end do
+        call io_close(iunitone)
+        if(pesrc%recipe == M_PHASE) call io_close(iunittwo)
+
+        if(pesrc%onfly) then
+          iunit = io_open('td.general/'//'PES_rc.'//filenr//'.spectrum.out', action='write', position='rewind')
+          write(iunit, '(a44)') '# frequency, total spectrum, orbital spectra'
+          do iom = 1, pesrc%nomega 
+            omega = iom*pesrc%delomega
+            write(iunit, '(e17.10, 1x, e17.10)', advance='no') omega, wffttot(iom, ip)
+            do ik = 1, st%d%nik
+              do ist = 1, st%nst 
+                do idim = 1, st%d%dim
+                  wfu = real(pesrc%wfft(ist, idim, ik, ip, iom))**2 + aimag(pesrc%wfft(ist, idim, ik, ip, iom))**2
+                  write(iunit,'(1x,e18.10e3)', advance='no') wfu
+                end do
               end do
             end do
+          write(iunit,'(1x)', advance='yes')
           end do
-        write(iunit,'(1x)', advance='yes')
-        end do
-        call io_close(iunit)
-      end if
+          call io_close(iunit)
+        end if
+   
+      end do
+    end if
 
-    end do
+    if(pesrc%onfly .and. pesrc%interpolation) then
+      iunit = io_open('td.general/'//'PES_rc.distribution.out', action='write', position='rewind')
+      write(iunit, '(a33)') '# omega, theta, phi, distribution'
+
+      do iom = 1, pesrc%nomega
+        omega = iom * pesrc%delomega
+        ip = 0
+        do ith = 0, pesrc%nstepstheta
+          if(ith == 0) then
+            theta = pesrc%thetamin     ! pi/2 for 1d and 2d. zero for 3d.
+          else
+            theta = ith * M_PI / pesrc%nstepstheta
+          end if
+          do iph = 0, pesrc%nstepsphi - 1
+            ip = ip + 1
+            if(iph == 0) then
+              wffttotsave = wffttot(iom, ip)
+              phi = M_ZERO
+            else
+              phi = iph * M_TWO * M_PI / pesrc%nstepsphi
+            end if
+            write(iunit,'(5(1x,e18.10E3))') omega, theta, phi, wffttot(iom, ip)
+
+            ! just repeat the result for output
+            if(iph == (pesrc%nstepsphi - 1)) then
+              write(iunit,'(5(1x,e18.10E3))') omega, theta, M_TWO * M_PI, wffttotsave
+            end if
+             
+            ! just repeat the result for output
+            if(theta == M_ZERO .or. theta == M_PI) then
+              do iphi = 1, pesrc%nstepsphi
+                phi = iphi * M_TWO * M_PI / pesrc%nstepsphi
+                write(iunit,'(5(1x,e18.10E3))') omega, theta, phi, wffttot(iom, ip)
+              end do
+              exit
+            end if
+          end do
+          if(pesrc%nstepsphi > 0) write(iunit, '(1x)', advance='yes')
+        end do
+        if(pesrc%nstepsphi == 0) write(iunit, '(1x)', advance='yes')
+      end do
+      call io_close(iunit)
+
+    end if
 
     SAFE_DEALLOCATE_A(wffttot)
 
@@ -591,36 +641,38 @@ contains
 
     xx = M_ZERO
     if(mpi_grp_is_root(mpi_world)) then
-      do ip = 1, pesrc%npoints
-        write(filenr, '(i4.4)') ip
-
-        iunit = io_open('td.general/'//'PES_rc.'//filenr//'.wavefunctions.out', action='write')
-        xx(1:mesh%sb%dim) = pesrc%coords(1:mesh%sb%dim, ip) 
-        write(iunit,'(a1)') '#'
-        write(iunit, '(a7,f17.6,a1,f17.6,a1,f17.6,5a)') &
-          '# R = (',xx(1),' ,',xx(2),' ,',xx(3), &
-          ' )  [', trim(units_abbrev(units_inp%length)), ']'
-
-        write(iunit,'(a1)') '#'  
-        write(iunit, '(a3,14x)', advance='no') '# t' 
-        do ik = 1, st%d%nik
-          do ist = 1, st%nst
-            do idim = 1, st%d%dim
-              write(iunit, '(3x,a8,i3,a7,i3,a8,i3,3x)', advance='no') &
-                "ik = ", ik, " ist = ", ist, " idim = ", idim
+      if(.not.pesrc%interpolation .or. in_debug_mode) then   ! too much output for interpolation
+        do ip = 1, pesrc%npoints
+          write(filenr, '(i4.4)') ip
+   
+          iunit = io_open('td.general/'//'PES_rc.'//filenr//'.wavefunctions.out', action='write')
+          xx(1:mesh%sb%dim) = pesrc%coords(1:mesh%sb%dim, ip)
+          write(iunit,'(a1)') '#'
+          write(iunit, '(a7,f17.6,a1,f17.6,a1,f17.6,5a)') &
+            '# R = (',xx(1),' ,',xx(2),' ,',xx(3), &
+            ' )  [', trim(units_abbrev(units_inp%length)), ']'
+   
+          write(iunit,'(a1)') '#'  
+          write(iunit, '(a3,14x)', advance='no') '# t' 
+          do ik = 1, st%d%nik
+            do ist = 1, st%nst
+              do idim = 1, st%d%dim
+                write(iunit, '(3x,a8,i3,a7,i3,a8,i3,3x)', advance='no') &
+                  "ik = ", ik, " ist = ", ist, " idim = ", idim
+              end do
             end do
           end do
-        end do
-        write(iunit, '(1x)', advance='yes')
-
-        call io_close(iunit)
-
-        if(pesrc%recipe == M_PHASE) then
-          iunit = io_open('td.general/'//'PES_rc.'//filenr//'.phase.out', action='write')
-          write(iunit,'(a24)') '# time, dq(t), dOmega(t)'
+          write(iunit, '(1x)', advance='yes')
+   
           call io_close(iunit)
-        end if
-      end do
+   
+          if(pesrc%recipe == M_PHASE) then
+            iunit = io_open('td.general/'//'PES_rc.'//filenr//'.phase.out', action='write')
+            write(iunit,'(a24)') '# time, dq(t), dOmega(t)'
+            call io_close(iunit)
+          end if
+        end do
+      end if
     end if
 
     POP_SUB(PES_rc_init_write)
