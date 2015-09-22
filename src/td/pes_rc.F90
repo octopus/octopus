@@ -413,10 +413,12 @@ contains
           end do
         end do
       end do
+      if(st%parallel_in_states .or. st%d%kpt%parallel) then
 #if defined(HAVE_MPI)
-      ! interpolated values have already been communicated over domains
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, pesrc%wf(:,:,:,:,ii))
+        ! interpolated values have already been communicated over domains
+        call comm_allreduce(st%st_kpt_mpi_grp%comm, pesrc%wf(:,:,:,:,ii))
 #endif
+      end if
     else ! pesrc%interpolation == .false.
 
       contains_ip = .true.
@@ -466,9 +468,11 @@ contains
             end do
           end do
         end select
+        if(st%parallel_in_states .or. st%d%kpt%parallel) then
 #if defined(HAVE_MPI)
-        call comm_allreduce(mpi_world%comm, wfftact(:,:,:,:,iom))
+          call comm_allreduce(st%st_kpt_mpi_grp%comm, wfftact(:,:,:,:,iom))
 #endif
+        end if
       end do
 
       pesrc%wfft = pesrc%wfft + wfftact
