@@ -6,7 +6,8 @@
 #endif
 
 /* Function to retrieve Van der Waals parameters of the free atoms. */
-void get_vdw_params (const int zatom, double * c6, double * alpha, double * r0) {
+void get_vdw_params (const int zatom, 
+		     double * c6, double * alpha, double * r0) {
   
   switch(zatom) {
     
@@ -390,7 +391,8 @@ void get_vdw_params (const int zatom, double * c6, double * alpha, double * r0) 
 
 
 /* Damping function. */
-void fdamp (double rr, double r0ab, double * ff, double * dffdrab, double * dffdr0) {
+void fdamp (const double rr, const double r0ab, 
+	    double * ff, double * dffdrab, double * dffdr0) {
 
   const double dd = 20.0;
   const double sr = 0.94; // Value for PBE. Should be 0.96 for PBE0.
@@ -412,7 +414,8 @@ void fdamp (double rr, double r0ab, double * ff, double * dffdrab, double * dffd
 
 
 /* Calculation of the square of separations. */
-void distance (const int iatom, const int jatom, const double * coordinates, double * rr, double * rr2, double * rr6, double *rr7) {
+void distance (const int iatom, const int jatom, const double coordinates[], 
+	       double * rr, double * rr2, double * rr6, double *rr7) {
   
   double x_ij = coordinates[3*iatom + 0] - coordinates[3*jatom + 0];
   double y_ij = coordinates[3*iatom + 1] - coordinates[3*jatom + 1];
@@ -432,7 +435,7 @@ void distance (const int iatom, const int jatom, const double * coordinates, dou
 
 
 /* Function to calculate the Van der Waals energy... and forces */
-void vdw_calculate (const int natoms, const int * zatom, const double * coordinates, const double * volume_ratio, const double * volume_ratio_derivative, double * energy, double * force, double * potential_coeff) {
+void vdw_calculate (const int natoms, const int zatom[], const double coordinates[], const double volume_ratio[], const double volume_ratio_derivative[], double * energy, double force[], double potential_coeff[]) {
   
   *energy = 0.0; // THIS SHOULD BE THE SELF-CONSISTENT FIELD ENERGY.
   // *force[] = 0.0;  // THIS SHOULD BE THE SELF-CONSISTENT FIELD FORCE.
@@ -470,8 +473,6 @@ void vdw_calculate (const int natoms, const int * zatom, const double * coordina
     potential_coeff[iatom] = 0.0;
 
   }
-
-
 
   // Loop to calculate the pair-wise Van der Waals energy correction.
   for (iatom = 0; iatom < natoms; iatom++) {
@@ -556,7 +557,8 @@ void vdw_calculate (const int natoms, const int * zatom, const double * coordina
 
 #ifndef _TEST
 /* This is a wrapper to be called from Fortran. */
-void FC_FUNC_(f90_vdw_calculate, F90_VDW_CALCULATE) (const int * natoms, const int * zatom, const double * coordinates, const double * volume_ratio,  const double * volume_ratio_derivative, double * energy, double * force, double * potential_coeff) {
+void FC_FUNC_(f90_vdw_calculate, F90_VDW_CALCULATE) (const int * natoms, const int zatom[], const double coordinates[], const double volume_ratio[],  const double volume_ratio_derivative[], 
+						     double * energy, double force[], double potential_coeff[]) {
   vdw_calculate(*natoms, zatom, coordinates, volume_ratio, volume_ratio_derivative, energy, force, potential_coeff);
 }
 #endif
