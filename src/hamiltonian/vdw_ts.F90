@@ -125,22 +125,21 @@ contains
     FLOAT,               intent(out)   :: force(:, :)
 
     interface 
-     subroutine f90_vdw_calculate(natoms, zatom, coordinates, volume_ratio, volume_ratio_derivative, &
-       energy, force, potential_coeff)
+     subroutine f90_vdw_calculate(natoms, zatom, coordinates, volume_ratio, &
+       energy, force, derivative_coeff)
         integer, intent(in)  :: natoms
         integer, intent(in)  :: zatom
         real(8), intent(in)  :: coordinates
         real(8), intent(in)  :: volume_ratio
-        real(8), intent(in)  :: volume_ratio_derivative
         real(8), intent(out) :: energy
         real(8), intent(out) :: force
-        real(8), intent(out) :: potential_coeff
+        real(8), intent(out) :: derivative_coeff
       end subroutine f90_vdw_calculate
     end interface
 
     integer :: iatom, jatom, ispecies, jspecies, ip, idir
     FLOAT :: rr, c6ab, c6abfree, ff, dffdrr, dffdr0
-    FLOAT, allocatable :: c6(:), r0(:), volume_ratio(:), dvadens(:), dvadrr(:, :, :), coordinates(:,:), potential_coeff(:)
+    FLOAT, allocatable :: c6(:), r0(:), volume_ratio(:), dvadens(:), dvadrr(:), coordinates(:,:), derivative_coeff(:)
 
     integer, allocatable :: zatom(:)
 
@@ -151,9 +150,9 @@ contains
     SAFE_ALLOCATE(volume_ratio(1:geo%natoms))
     SAFE_ALLOCATE(coordinates(1:3, 1:geo%natoms))
     SAFE_ALLOCATE(zatom(1:geo%natoms))
-    SAFE_ALLOCATE(potential_coeff(1:geo%natoms))
+    SAFE_ALLOCATE(derivative_coeff(1:geo%natoms))
     SAFE_ALLOCATE(dvadens(1:der%mesh%np))
-    SAFE_ALLOCATE(dvadrr(1:3, 1:geo%natoms, 1:geo%natoms))
+    SAFE_ALLOCATE(dvadrr(1:3))
     
     do iatom = 1, geo%natoms
       ispecies = species_index(geo%atom(iatom)%species)
@@ -170,21 +169,28 @@ contains
       zatom(iatom) = species_z(geo%atom(iatom)%species)
       !print*, species_label(geo%atom(iatom)%species),zatom(iatom)
 
-      do jatom = 1, geo%natoms
-        call hirshfeld_position_derivative(this%hirshfeld, der, iatom, jatom, density, dvadrr(:, iatom, jatom))
-      end do
+    end do
+      
+    call f90_vdw_calculate(geo%natoms, zatom(1), coordinates(1, 1), volume_ratio(1), &
+      energy, force(1, 1), derivative_coeff(1))
 
+    ! add the extra term to the force
+    force = CNST(0.0)
+    do jatom = 1, geo%natoms
+      do iatom = 1, geo%natoms
+        call hirshfeld_position_derivative(this%hirshfeld, der, iatom, jatom, density, dvadrr)
+        force(1:3, jatom) = force(1:3, jatom) - derivative_coeff(iatom)*dvadrr(1:3)
+      end do
     end do
 
-    call f90_vdw_calculate(geo%natoms, zatom(1), coordinates(1, 1), volume_ratio(1), dvadrr(1, 1, 1), &
-      energy, force(1, 1), potential_coeff(1))
-
+    ! and calculate the potential
     potential = CNST(0.0)
-
     do iatom = 1, geo%natoms
       call hirshfeld_density_derivative(this%hirshfeld, iatom, dvadens)
-      potential(1:der%mesh%np) = potential(1:der%mesh%np) + potential_coeff(iatom)*dvadens(1:der%mesh%np)
+      potential(1:der%mesh%np) = potential(1:der%mesh%np) + derivative_coeff(iatom)*dvadens(1:der%mesh%np)
     end do
+
+!    print*, "fxx", energy, force(1, 1)
 
 #if 0
     call dio_function_output(1, "./", "vvdw", der%mesh, potential, unit_one, ip)

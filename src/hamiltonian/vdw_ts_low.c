@@ -435,7 +435,8 @@ void distance (const int iatom, const int jatom, const double coordinates[],
 
 
 /* Function to calculate the Van der Waals energy... and forces */
-void vdw_calculate (const int natoms, const int zatom[], const double coordinates[], const double volume_ratio[], const double volume_ratio_derivative[], double * energy, double force[], double potential_coeff[]) {
+void vdw_calculate (const int natoms, const int zatom[], const double coordinates[], const double volume_ratio[], 
+		    double * energy, double force[], double derivative_coeff[]) {
   
   *energy = 0.0; // THIS SHOULD BE THE SELF-CONSISTENT FIELD ENERGY.
   // *force[] = 0.0;  // THIS SHOULD BE THE SELF-CONSISTENT FIELD FORCE.
@@ -470,7 +471,7 @@ void vdw_calculate (const int natoms, const int zatom[], const double coordinate
     force[3*iatom + 1] = 0.0;
     force[3*iatom + 2] = 0.0;
 
-    potential_coeff[iatom] = 0.0;
+    derivative_coeff[iatom] = 0.0;
 
   }
 
@@ -532,17 +533,7 @@ void vdw_calculate (const int natoms, const int zatom[], const double coordinate
       force[3*iatom + 1] += -deabdrab*(coordinates[3*iatom + 1] - coordinates[3*jatom + 1])/rr;
       force[3*iatom + 2] += -deabdrab*(coordinates[3*iatom + 2] - coordinates[3*jatom + 2])/rr;
       
-      potential_coeff[iatom] += deabdvra;
-      
-      int katom;
-      for (katom = 0; katom < natoms; katom++) {
-        
-        // Calculation of the correction to the force.
-        force[3*katom + 0] += -deabdvra*volume_ratio_derivative[3*(natoms*katom + iatom) + 0];
-        force[3*katom + 1] += -deabdvra*volume_ratio_derivative[3*(natoms*katom + iatom) + 1];
-        force[3*katom + 2] += -deabdvra*volume_ratio_derivative[3*(natoms*katom + iatom) + 2];
-      
-      }
+      derivative_coeff[iatom] += deabdvra;
       
       // Print information controls.
       //printf("Distance between atoms %i and %i = %f.\n", iatom+1, jatom+1, rr);
@@ -557,9 +548,9 @@ void vdw_calculate (const int natoms, const int zatom[], const double coordinate
 
 #ifndef _TEST
 /* This is a wrapper to be called from Fortran. */
-void FC_FUNC_(f90_vdw_calculate, F90_VDW_CALCULATE) (const int * natoms, const int zatom[], const double coordinates[], const double volume_ratio[],  const double volume_ratio_derivative[], 
-						     double * energy, double force[], double potential_coeff[]) {
-  vdw_calculate(*natoms, zatom, coordinates, volume_ratio, volume_ratio_derivative, energy, force, potential_coeff);
+void FC_FUNC_(f90_vdw_calculate, F90_VDW_CALCULATE) (const int * natoms, const int zatom[], const double coordinates[], const double volume_ratio[],
+						     double * energy, double force[], double derivative_coeff[]) {
+  vdw_calculate(*natoms, zatom, coordinates, volume_ratio, energy, force, derivative_coeff);
 }
 #endif
 
@@ -569,21 +560,20 @@ int main () {
   const int natoms = 3;
   const int zatom[] = {23, 29, 31};
   const double volume_ratio[] = {1.0, 1.0, 1.0};
-  const double volume_ratio_derivative[] = {};
   double energy;
   double force[natoms*3];
-  double potential_coeff[natoms];
+  double derivative_coeff[natoms];
   
   double x;
   for(x = 0.1; x < 10; x += 0.1) {
     double coordinates[] = {0.2, -0.3, 0.5,  -0.7, 1.1, -1.3,  x, 0.0, 0.0};
     
-    vdw_calculate(natoms, zatom, coordinates, volume_ratio, volume_ratio_derivative, &energy, force, potential_coeff);
+    vdw_calculate(natoms, zatom, coordinates, volume_ratio, &energy, force, derivative_coeff);
         
     coordinates[5] += 0.001;
     double energy_2;
     
-    vdw_calculate(natoms, zatom, coordinates, volume_ratio, volume_ratio_derivative, &energy_2, force, potential_coeff);
+    vdw_calculate(natoms, zatom, coordinates, volume_ratio, &energy_2, force, derivative_coeff);
     printf("%f %f %f %f\n", x, energy, force[5], -(energy_2-energy)/0.001);
   }
 }
