@@ -263,10 +263,37 @@ contains
     end if
 
 
-    ! Documentation in convert.F90. Variable names changed to avoid conflict with convert utility.
+    !%Variable LDIterateFolder
+    !%Type logical
+    !%Default false
+    !%Section Utilities::oct-local_multipoles
+    !%Description
+    !% This variable decides if a folder is going to be iterated.
+    !%End
     call parse_variable('LDIterateFolder', .false., iterate)
+    !%Variable LDStart
+    !%Type integer
+    !%Default 0
+    !%Section Utilities::oct-local_multipoles
+    !%Description
+    !% The starting number of the filename or folder.
+    !%End
     call parse_variable('LDStart', 0, l_start)
+    !%Variable LDEnd
+    !%Type integer
+    !%Default 0
+    !%Section Utilities::oct-local_multipoles
+    !%Description
+    !% The last number of the filename or folder.
+    !%End
     call parse_variable('LDEnd', 0, l_end)
+    !%Variable LDStep
+    !%Type integer
+    !%Default 1
+    !%Section Utilities::oct-local_multipoles
+    !%Description
+    !% The padding between the filenames or folder.
+    !%End
     call parse_variable('LDStep', 1, l_step)
 
     message(1) = 'Info: Computing local multipoles'
@@ -373,7 +400,7 @@ contains
 
     PUSH_SUB(local_init)
 
-    !%Variable LocalDomain
+    !%Variable LocalDomains
     !%Type block
     !%Section Utilities::oct-local_multipoles
     !%Description
