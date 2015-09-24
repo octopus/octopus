@@ -791,9 +791,9 @@ contains
     FLOAT,               intent(in)    :: dt
     integer,             intent(in)    :: ii
     
-    integer :: dim, il, ip
+    integer :: dim, il, ip, iprev
     FLOAT   :: vp(1:MAX_DIM)
-    FLOAT   :: xx(MAX_DIM), er(MAX_DIM)
+    FLOAT   :: rr
 
     PUSH_SUB(PES_rc_calc_rcphase)
 
@@ -805,13 +805,17 @@ contains
     end do
     vp(1:dim) = -vp(1:dim)
 
+    iprev = ii - 1
+    if(ii == 0) iprev = pesrc%save_iter - 1
+
     do ip = 1, pesrc%npoints
-      xx(1:dim) = pesrc%coords(1:dim, ip)
-      er(1:dim) = xx(1:dim)/sqrt(dot_product(xx(1:dim), xx(1:dim)))
-      pesrc%dq(ip, ii) = pesrc%dq(ip, ii) + dot_product(er(1:dim), vp(1:dim))/P_C * dt
+      rr = sqrt(dot_product(pesrc%coords(1:dim, ip), pesrc%coords(1:dim, ip)))
+      pesrc%dq(ip, ii) = pesrc%dq(ip, iprev) &
+        + dot_product(pesrc%coords(1:dim, ip), vp(1:dim)) / (P_C * rr) * dt
     end do
 
-    pesrc%domega(ii) = pesrc%domega(ii) + dot_product(vp(1:dim), vp(1:dim)) / (M_TWO * P_C**M_TWO) * dt
+    pesrc%domega(ii) = pesrc%domega(iprev) &
+      + dot_product(vp(1:dim), vp(1:dim)) / (M_TWO * P_C**M_TWO) * dt
 
     POP_SUB(PES_rc_calc_rcphase)
   end subroutine PES_rc_calc_rcphase
