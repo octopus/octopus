@@ -176,6 +176,7 @@ contains
 
     !%Variable PES_rc_ThetaSteps
     !%Type integer
+    !%Default 45
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
     !% Number of steps in theta (0 <= theta <= pi) for the spherical grid (if no 
@@ -186,6 +187,7 @@ contains
 
     !%Variable PES_rc_PhiSteps
     !%Type integer
+    !%Default 90
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
     !% Number of steps in phi (0 <= phi <= 2 pi) for the spherical grid (if no
