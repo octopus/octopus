@@ -271,6 +271,7 @@ contains
     !% This variable decides if a folder is going to be iterated.
     !%End
     call parse_variable('LDIterateFolder', .false., iterate)
+
     !%Variable LDStart
     !%Type integer
     !%Default 0
@@ -279,6 +280,7 @@ contains
     !% The starting number of the filename or folder.
     !%End
     call parse_variable('LDStart', 0, l_start)
+
     !%Variable LDEnd
     !%Type integer
     !%Default 0
@@ -287,6 +289,7 @@ contains
     !% The last number of the filename or folder.
     !%End
     call parse_variable('LDEnd', 0, l_end)
+
     !%Variable LDStep
     !%Type integer
     !%Default 1
@@ -400,6 +403,7 @@ contains
 
     PUSH_SUB(local_init)
 
+    !TODO: use same strategy used in %Species block to define variables
     !%Variable LocalDomains
     !%Type block
     !%Section Utilities::oct-local_multipoles
@@ -611,7 +615,7 @@ contains
         do ia = 1, sys%geo%natoms
           if(loct_isinstringlist(ia, clist))then
             bcenter(1:dim) = sys%geo%atom(ia)%x(1:dim)
-            bsize(:) = species_def_rsize(sys%geo%atom(ia)%species)
+            bsize(:) = species_def_h(sys%geo%atom(ia)%species)
             call box_create(boxes(ibox), bshape, dim, bsize, bcenter)
             ibox = ibox + 1
           end if
@@ -919,7 +923,7 @@ contains
     SAFE_ALLOCATE(sumw(1:nd)); sumw(:) = M_ZERO
     do ia = 1, geo%natoms
       do  id = 1, nd
-        if (box_union_inside(dom(id),geo%atom(ia)%x)) then
+        if (box_union_inside(dom(id), geo%atom(ia)%x)) then
           center(1:geo%space%dim,id) = center(1:geo%space%dim,id) &
                    + geo%atom(ia)%x(1:geo%space%dim)*species_mass(geo%atom(ia)%species)     
           sumw(id) = sumw(id) + species_mass(geo%atom(ia)%species)
