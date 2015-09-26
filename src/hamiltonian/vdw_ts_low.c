@@ -456,71 +456,53 @@ void distance (const int iatom, const int jatom, const double coordinates[],
 void vdw_calculate (const int natoms, const int zatom[], const double coordinates[], const double volume_ratio[], 
 		    double * energy, double force[], double derivative_coeff[]) {
   
-  *energy = 0.0; // THIS SHOULD BE THE SELF-CONSISTENT FIELD ENERGY.
-  // *force[] = 0.0;  // THIS SHOULD BE THE SELF-CONSISTENT FIELD FORCE.
-  
   // Print information controls.
   //printf("There are %d atoms in this system.\n", natoms);
 
-  int iatom, jatom;
+  int ia, ib;
   double alpha, r0, c6;
 
-  // Coordinates and VdW parameters print, for control.
-  for (iatom = 0; iatom < natoms; iatom++) {
-    
-    // Print the nuclear charge and coordinates of atom i.
-    //printf("Atom %d has nuclear charge = %d.\n", iatom+1, zatom[iatom]);
-    //printf("Coordinates: %f %f %f\n", coordinates[3*iatom + 0], coordinates[3*iatom + 1], coordinates[3*iatom + 2]);
-
-    // Call to the function that retrieves the free atom Van der Waals parameters.
-    get_vdw_params(zatom[iatom], &c6, &alpha, &r0);
-
-    // Print information controls.
-    //printf("Alpha = %f.\n", alpha);
-    //printf("c6 = %f.\n", c6);
-    //printf("r0 = %f.\n", r0);
-
-  }
-
+  *energy = 0.0;
+ 
   // Loop to initialize the force and the potential coefficients to zero.
-  for (iatom = 0; iatom < natoms; iatom++) {
+  for (ia = 0; ia < natoms; ia++) {
     
-    force[3*iatom + 0] = 0.0;
-    force[3*iatom + 1] = 0.0;
-    force[3*iatom + 2] = 0.0;
+    force[3*ia + 0] = 0.0;
+    force[3*ia + 1] = 0.0;
+    force[3*ia + 2] = 0.0;
 
-    derivative_coeff[iatom] = 0.0;
+    derivative_coeff[ia] = 0.0;
 
   }
 
   // Loop to calculate the pair-wise Van der Waals energy correction.
-  for (iatom = 0; iatom < natoms; iatom++) {
+  for (ia = 0; ia < natoms; ia++) {
     
-    double c6_ispecies, alpha_ispecies, r0_ispecies;
-    double c6_jspecies, alpha_jspecies, r0_jspecies;
+    double c6_a, alpha_a, r0_a;
+    double c6_b, alpha_b, r0_b;
     
-    get_vdw_params(zatom[iatom], &c6_ispecies, &alpha_ispecies, &r0_ispecies);
+    get_vdw_params(zatom[ia], &c6_a, &alpha_a, &r0_a);
     
-    for (jatom = 0; jatom < natoms; jatom++) {
-      if (iatom == jatom) continue;
+    for (ib = 0; ib < natoms; ib++) {
+      if (ia == ib) continue;
 
       // Pair-wise calculation of separations.
       double rr, rr2, rr6, rr7;
-      distance(iatom, jatom, coordinates, &rr, &rr2, &rr6, &rr7);
+      distance(ia, ib, coordinates, &rr, &rr2, &rr6, &rr7);
       
-      get_vdw_params(zatom[jatom], &c6_jspecies, &alpha_jspecies, &r0_jspecies);
+      get_vdw_params(zatom[ib], &c6_b, &alpha_b, &r0_b);
       
       // Determination of c6abfree, for isolated atoms a and b.
-      double num = 2.0*c6_ispecies*c6_jspecies;
-      double den = (alpha_jspecies/alpha_ispecies)*c6_ispecies + (alpha_ispecies/alpha_jspecies)*c6_jspecies;
+      double num = 2.0*c6_a*c6_b;
+      double den = (alpha_b/alpha_a)*c6_a + (alpha_a/alpha_b)*c6_b;
 
       double c6abfree = num/den;
 
       // Determination of c6ab, for bonded atoms a and b.
-      double c6ab = volume_ratio[iatom]*volume_ratio[jatom]*c6abfree;
+      double c6ab = volume_ratio[ia]*volume_ratio[ib]*c6abfree;
       
       // Determination of the effective radius of atom a.
-      double r0ab = cbrt(volume_ratio[iatom])*r0_ispecies + cbrt(volume_ratio[jatom])*r0_jspecies;
+      double r0ab = cbrt(volume_ratio[ia])*r0_a + cbrt(volume_ratio[ib])*r0_b;
 
       // Pair-wise calculation of the damping coefficient
       double ff;
@@ -537,7 +519,7 @@ void vdw_calculate (const int natoms, const int zatom[], const double coordinate
       
       // Derivative of the AB van der Waals separation with respect to the volume ratio of atom A.
       double dr0dvra;
-      dr0dvra = r0_ispecies/(3.0*pow(volume_ratio[iatom], 2.0/3.0));
+      dr0dvra = r0_a/(3.0*pow(volume_ratio[ia], 2.0/3.0));
       
       // Derivative of the damping function with respecto to the volume ratio of atom A.
       double dffdvra;
@@ -545,19 +527,19 @@ void vdw_calculate (const int natoms, const int zatom[], const double coordinate
       
       // Calculation of the pair-wise partial energy derivative with respect to the volume ratio of atom A.
       double deabdvra;
-      deabdvra = -dffdvra*c6ab/rr6 - ff*(c6ab/volume_ratio[iatom])/rr6;
+      deabdvra = -dffdvra*c6ab/rr6 - ff*volume_ratio[ib]*c6abfree/rr6;
       
-      force[3*iatom + 0] += -deabdrab*(coordinates[3*iatom + 0] - coordinates[3*jatom + 0])/rr;
-      force[3*iatom + 1] += -deabdrab*(coordinates[3*iatom + 1] - coordinates[3*jatom + 1])/rr;
-      force[3*iatom + 2] += -deabdrab*(coordinates[3*iatom + 2] - coordinates[3*jatom + 2])/rr;
+      force[3*ia + 0] += -deabdrab*(coordinates[3*ia + 0] - coordinates[3*ib + 0])/rr;
+      force[3*ia + 1] += -deabdrab*(coordinates[3*ia + 1] - coordinates[3*ib + 1])/rr;
+      force[3*ia + 2] += -deabdrab*(coordinates[3*ia + 2] - coordinates[3*ib + 2])/rr;
       
-      derivative_coeff[iatom] += deabdvra;
+      derivative_coeff[ia] += deabdvra;
       
       // Print information controls.
-      //printf("Distance between atoms %i and %i = %f.\n", iatom+1, jatom+1, rr);
-      //printf("Atom %i, c6= %f, alpha= %f, r0= %f.\n", iatom+1, c6_ispecies, alpha_ispecies, r0_ispecies);
-      //printf("Atom %i, c6= %f, alpha= %f, r0= %f.\n", jatom+1, c6_jspecies, alpha_jspecies, r0_jspecies);
-      //printf("For atoms %i and %i, c6ab= %f.\n", iatom+1, jatom+1, c6abfree);
+      //printf("Distance between atoms %i and %i = %f.\n", ia+1, ib+1, rr);
+      //printf("Atom %i, c6= %f, alpha= %f, r0= %f.\n", ia+1, c6_a, alpha_a, r0_a);
+      //printf("Atom %i, c6= %f, alpha= %f, r0= %f.\n", ib+1, c6_b, alpha_b, r0_b);
+      //printf("For atoms %i and %i, c6ab= %f.\n", ia+1, ib+1, c6abfree);
     }
   }
   //printf("THE FINAL VAN DER WAALS ENERGY CORRECTION IS = %f.\n", *energy);
