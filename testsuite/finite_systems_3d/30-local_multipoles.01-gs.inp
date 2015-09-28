@@ -1,0 +1,14 @@
+CalculationMode = gs
+
+%Coordinates
+ 'H' |  0.717157 | 0 | 0
+ 'H' | -0.717157 | 0 | 0
+%
+
+Radius = 10.
+Spacing = 0.4
+
+SCFCalculatePartialCharges = yes
+
+ExperimentalFeatures = yes
+

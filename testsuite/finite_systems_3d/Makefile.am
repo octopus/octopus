@@ -102,6 +102,9 @@ dist_share_DATA = \
 	27-fine_mesh.01-gs.inp \
         29-pcm_chlorine_anion.01-ground_state.inp \
         29-pcm_chlorine_anion.02-td_prop.inp      \
-        29-pcm_chlorine_anion.test
+        29-pcm_chlorine_anion.test \
+        30-local_multipoles.01-gs.inp \
+        30-local_multipoles.02-multipoles.inp \
+        30-local_multipoles.test
 
 CLEANFILES = *~ *.bak

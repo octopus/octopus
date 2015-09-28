@@ -1,0 +1,36 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: $
+
+Test       : Local Multipoles analysis (ld)
+Program    : octopus
+TestGroups : short-run, finite_systems_3d
+Enabled    : Yes
+Processors : 1
+
+Input      : 30-local_multipoles.01-gs.inp
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;    -1.13848906
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;     0.69719741
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;    -0.74875933
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;     1.28457695
+match ; Int[n*v_xc]        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.84468321
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ;    -0.55310083
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;    -0.09393256
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;     1.05670421
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;    -3.52993397 
+match ; Partial charge  1  ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2)  ; 1.000
+
+Program    : oct-local_multipoles
+Input      : 30-local_multipoles.02-multipoles.inp
+match ; Electrons 1     ; GREPFIELD(local.general/multipoles/H1.multipoles, 'Electrons', 3, 2) ;  1.235842756321e+00
+match ; Multipole x 1   ; GREPFIELD(local.general/multipoles/H1.multipoles, '\<x\>', 4, 3)     ; -4.210243520428e-02 
+match ; Start Arrow 1   ; GREPFIELD(local.general/multipoles/H1/H1.0000000.bld, 'arrow', 2)  ;  0.759259
+match ; End Arrow 1     ; GREPFIELD(local.general/multipoles/H1/H1.0000000.bld, 'arrow', 5)  ;  0.675055
+match ; Electrons 2     ; GREPFIELD(local.general/multipoles/H2.multipoles, 'Electrons', 3, 2) ;  7.641572436792e-01
+match ; Multipole x 2   ; GREPFIELD(local.general/multipoles/H2.multipoles, '\<x\>', 4, 3)     ;  4.210243518632e-02 
+match ; Start Arrow 2   ; GREPFIELD(local.general/multipoles/H2/H2.0000000.bld, 'arrow', 2)  ; -0.759259
+match ; End Arrow 2     ; GREPFIELD(local.general/multipoles/H2/H2.0000000.bld, 'arrow', 5)  ; -0.675055
+match ; Restart ld      ; GREPFIELD(restart/ld/ldomains.info, 'Number of local domains', 6)  ;  2
+match ; Restart shape 1 ; GREPFIELD(restart/ld/ldomains.info, 'H1', 3)  ;  512
+match ; Restart center1 ; GREPFIELD(restart/ld/ldomains.info, 'H1', 5)  ;  0.717157
+match ; Restart shape 2 ; GREPFIELD(restart/ld/ldomains.info, 'H2', 3)  ;  512
+match ; Restart center2 ; GREPFIELD(restart/ld/ldomains.info, 'H2', 5)  ; -0.717157
