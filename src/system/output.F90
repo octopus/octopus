@@ -546,7 +546,7 @@ contains
       call messages_experimental("Frozen output")
       outp%what = ior(outp%what, OPTION__OUTPUT__POTENTIAL)
       outp%what = ior(outp%what, OPTION__OUTPUT__DENSITY)
-      outp%how  = ior(outp%how,  C_OUTPUT_HOW_BINARY)
+      outp%how  = ior(outp%how,  OPTION__OUTPUTHOW__BINARY)
     end if
 
     if(iand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
@@ -606,20 +606,20 @@ contains
     call output_current_flow(gr, st, dir, outp)
 
     if(iand(outp%what, OPTION__OUTPUT__GEOMETRY) /= 0) then
-      if(iand(outp%how, C_OUTPUT_HOW_XCRYSDEN) /= 0) then        
+      if(iand(outp%how, OPTION__OUTPUTHOW__XCRYSDEN) /= 0) then        
         call write_xsf_geometry_file(dir, "geometry", geo, gr%mesh)
       end if
-      if(iand(outp%how, C_OUTPUT_HOW_XYZ) /= 0) then
+      if(iand(outp%how, OPTION__OUTPUTHOW__XYZ) /= 0) then
         call geometry_write_xyz(geo, trim(dir)//'/geometry')
         if(simul_box_is_periodic(gr%sb))  call periodic_write_crystal(gr%sb, geo, dir)
       end if
-      if(iand(outp%how, C_OUTPUT_HOW_OPENSCAD) /= 0) then
+      if(iand(outp%how, OPTION__OUTPUTHOW__OPENSCAD) /= 0) then
         call geometry_write_openscad(geo, trim(dir)//'/geometry')
       end if
     end if
 
     if(iand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
-      if(iand(outp%how, C_OUTPUT_HOW_BILD) /= 0) then
+      if(iand(outp%how, OPTION__OUTPUTHOW__BILD) /= 0) then
         call write_bild_forces_file(dir, "forces", geo, gr%mesh)
       else
         call write_xsf_geometry_file(dir, "forces", geo, gr%mesh, write_forces = .true.)
@@ -630,7 +630,7 @@ contains
       call output_me(outp%me, dir, st, gr, geo, hm)
     end if
 
-    if (iand(outp%how, C_OUTPUT_HOW_ETSF) /= 0) then
+    if (iand(outp%how, OPTION__OUTPUTHOW__ETSF) /= 0) then
       call output_etsf(st, gr, geo, dir, outp)
     end if
 

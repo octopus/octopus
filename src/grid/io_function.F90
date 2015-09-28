@@ -72,31 +72,6 @@ module io_function_m
     zout_cf_netcdf
 #endif
 
-
-  integer, parameter, public ::   &
-    C_OUTPUT_HOW_AXIS_X          =       1,    &
-    C_OUTPUT_HOW_AXIS_Y          =       2,    &
-    C_OUTPUT_HOW_AXIS_Z          =       4,    &
-    C_OUTPUT_HOW_PLANE_X         =       8,    &
-    C_OUTPUT_HOW_PLANE_Y         =      16,    &
-    C_OUTPUT_HOW_PLANE_Z         =      32,    &
-    C_OUTPUT_HOW_DX              =      64,    &
-    C_OUTPUT_HOW_NETCDF          =     128,    &
-    C_OUTPUT_HOW_MESH_INDEX      =     512,    &
-    C_OUTPUT_HOW_XCRYSDEN        =    1024,    &
-    C_OUTPUT_HOW_MATLAB          =    2048,    &
-    C_OUTPUT_HOW_MESHGRID        =    4096,    &
-    C_OUTPUT_HOW_BOUNDARY_POINTS =    8192,    &
-    C_OUTPUT_HOW_BINARY          =   16384,    &
-    C_OUTPUT_HOW_ETSF            =   32768,    &
-    C_OUTPUT_HOW_XYZ             =   65536,    &
-    C_OUTPUT_HOW_CUBE            =  131072,    &
-    C_OUTPUT_HOW_OPENSCAD        =  262144,    &
-    C_OUTPUT_HOW_JSON            =  524288,    &
-    C_OUTPUT_HOW_BILD            = 1048576,    &
-    C_OUTPUT_HOW_VTK             = 2097152
-    
-
   !> doutput_kind => real variables; zoutput_kind => complex variables.
   integer, parameter, private ::  &
     DOUTPUT_KIND      =    1,     &
@@ -220,44 +195,44 @@ contains
 
     ! some modes are not available in some circumstances
     if(sb%dim == 1) then
-      if(iand(how, C_OUTPUT_HOW_AXIS_Y) /= 0) then
+      if(iand(how, OPTION__OUTPUTHOW__AXIS_Y) /= 0) then
         message(1) = "OutputHow = axis_y not available with Dimensions = 1."
         call messages_fatal(1)
       end if
-      if(iand(how, C_OUTPUT_HOW_PLANE_Z) /= 0) then
+      if(iand(how, OPTION__OUTPUTHOW__PLANE_Z) /= 0) then
         message(1) = "OutputHow = plane_z not available with Dimensions = 1."
         call messages_fatal(1)
       end if
-      if(iand(how, C_OUTPUT_HOW_XCRYSDEN) /= 0) then
+      if(iand(how, OPTION__OUTPUTHOW__XCRYSDEN) /= 0) then
         message(1) = "OutputHow = xcrysden not available with Dimensions = 1."
         call messages_fatal(1)
       end if
     end if
 
     if(sb%dim <= 2) then
-      if(iand(how, C_OUTPUT_HOW_AXIS_Z) /= 0) then
+      if(iand(how, OPTION__OUTPUTHOW__AXIS_Z) /= 0) then
         message(1) = "OutputHow = axis_z not available with Dimensions <= 2."
         call messages_fatal(1)
       end if
-      if(iand(how, C_OUTPUT_HOW_PLANE_X) /= 0) then
+      if(iand(how, OPTION__OUTPUTHOW__PLANE_X) /= 0) then
         message(1) = "OutputHow = plane_x not available with Dimensions <= 2."
         call messages_fatal(1)
       end if
-      if(iand(how, C_OUTPUT_HOW_PLANE_Y) /= 0) then
+      if(iand(how, OPTION__OUTPUTHOW__PLANE_Y) /= 0) then
         message(1) = "OutputHow = plane_y not available with Dimensions <= 2."
         call messages_fatal(1)
       end if
-      if(iand(how, C_OUTPUT_HOW_DX) /= 0) then
+      if(iand(how, OPTION__OUTPUTHOW__DX) /= 0) then
         message(1) = "OutputHow = dx not available with Dimensions <= 2."
         call messages_fatal(1)
       end if
-      if(iand(how, C_OUTPUT_HOW_CUBE) /= 0) then
+      if(iand(how, OPTION__OUTPUTHOW__CUBE) /= 0) then
         message(1) = "OutputHow = cube not available with Dimensions <= 2."
         call messages_fatal(1)
       end if
     end if
 
-    if(iand(how, C_OUTPUT_HOW_OPENSCAD) /= 0) then
+    if(iand(how, OPTION__OUTPUTHOW__OPENSCAD) /= 0) then
       if(sb%dim /= 3) then
         write(message(1),'(a)') "OutputHow = OpenSCAD only available with Dimensions = 3."
         call messages_fatal(1)
@@ -266,14 +241,14 @@ contains
     endif
     
 #if !defined(HAVE_NETCDF)
-    if (iand(how, C_OUTPUT_HOW_NETCDF) /= 0) then
+    if (iand(how, OPTION__OUTPUTHOW__NETCDF) /= 0) then
       message(1) = 'Octopus was compiled without NetCDF support.'
       message(2) = 'It is not possible to write output in NetCDF format.'
       call messages_fatal(2)
     end if
 #endif
 #if !defined(HAVE_ETSF_IO)
-    if (iand(how, C_OUTPUT_HOW_ETSF) /= 0) then
+    if (iand(how, OPTION__OUTPUTHOW__ETSF) /= 0) then
       message(1) = 'Octopus was compiled without ETSF_IO support.'
       message(2) = 'It is not possible to write output in ETSF format.'
       call messages_fatal(2)
@@ -294,23 +269,23 @@ contains
     PUSH_SUB(io_function_fill_how)
 
     how = 0
-    if(index(where, "AxisX")     /= 0) how = ior(how, C_OUTPUT_HOW_AXIS_X)
-    if(index(where, "AxisY")     /= 0) how = ior(how, C_OUTPUT_HOW_AXIS_Y)
-    if(index(where, "AxisZ")     /= 0) how = ior(how, C_OUTPUT_HOW_AXIS_Z)
-    IF(INDEX(WHERE, "PlaneX")    /= 0) how = ior(how, C_OUTPUT_HOW_PLANE_X)
-    if(index(where, "PlaneY")    /= 0) how = ior(how, C_OUTPUT_HOW_PLANE_Y)
-    if(index(where, "PlaneZ")    /= 0) how = ior(how, C_OUTPUT_HOW_PLANE_Z)
-    if(index(where, "DX")        /= 0) how = ior(how, C_OUTPUT_HOW_DX)
-    if(index(where, "XCrySDen")  /= 0) how = ior(how, C_OUTPUT_HOW_XCRYSDEN)
-    if(index(where, "Binary")    /= 0) how = ior(how, C_OUTPUT_HOW_BINARY)
-    if(index(where, "MeshIndex") /= 0) how = ior(how, C_OUTPUT_HOW_MESH_INDEX)
-    if(index(where, "XYZ")       /= 0) how = ior(how, C_OUTPUT_HOW_XYZ)
+    if(index(where, "AxisX")     /= 0) how = ior(how, OPTION__OUTPUTHOW__AXIS_X)
+    if(index(where, "AxisY")     /= 0) how = ior(how, OPTION__OUTPUTHOW__AXIS_Y)
+    if(index(where, "AxisZ")     /= 0) how = ior(how, OPTION__OUTPUTHOW__AXIS_Z)
+    IF(INDEX(WHERE, "PlaneX")    /= 0) how = ior(how, OPTION__OUTPUTHOW__PLANE_X)
+    if(index(where, "PlaneY")    /= 0) how = ior(how, OPTION__OUTPUTHOW__PLANE_Y)
+    if(index(where, "PlaneZ")    /= 0) how = ior(how, OPTION__OUTPUTHOW__PLANE_Z)
+    if(index(where, "DX")        /= 0) how = ior(how, OPTION__OUTPUTHOW__DX)
+    if(index(where, "XCrySDen")  /= 0) how = ior(how, OPTION__OUTPUTHOW__XCRYSDEN)
+    if(index(where, "Binary")    /= 0) how = ior(how, OPTION__OUTPUTHOW__BINARY)
+    if(index(where, "MeshIndex") /= 0) how = ior(how, OPTION__OUTPUTHOW__MESH_INDEX)
+    if(index(where, "XYZ")       /= 0) how = ior(how, OPTION__OUTPUTHOW__XYZ)
 #if defined(HAVE_NETCDF)
-    if(index(where, "NETCDF")    /= 0) how = ior(how, C_OUTPUT_HOW_NETCDF)
+    if(index(where, "NETCDF")    /= 0) how = ior(how, OPTION__OUTPUTHOW__NETCDF)
 #endif
-    if(index(where, "Cube")      /= 0) how = ior(how, C_OUTPUT_HOW_CUBE)
-    if(index(where, "OpenSCAD")  /= 0) how = ior(how, C_OUTPUT_HOW_OPENSCAD)
-    if(index(where, "VTK")       /= 0) how = ior(how, C_OUTPUT_HOW_VTK)
+    if(index(where, "Cube")      /= 0) how = ior(how, OPTION__OUTPUTHOW__CUBE)
+    if(index(where, "OpenSCAD")  /= 0) how = ior(how, OPTION__OUTPUTHOW__OPENSCAD)
+    if(index(where, "VTK")       /= 0) how = ior(how, OPTION__OUTPUTHOW__VTK)
 
     POP_SUB(io_function_fill_how)
   end function io_function_fill_how

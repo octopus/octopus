@@ -637,10 +637,10 @@ contains
       end if
     end do
 
-!    call dio_function_output(C_OUTPUT_HOW_MESH_INDEX, ".", "surface", mesh, &
+!    call dio_function_output(OPTION__OUTPUTHOW__MESH_INDEX, ".", "surface", mesh, &
 !      dble(which_surface), unit_one, ierr)
 
-!    call dio_function_output(C_OUTPUT_HOW_PLANE_Z, ".", "surface", mesh, &
+!    call dio_function_output(OPTION__OUTPUTHOW__PLANE_Z, ".", "surface", mesh, &
 !      dble(which_surface), unit_one, ierr)
 
     SAFE_DEALLOCATE_A(which_surface)

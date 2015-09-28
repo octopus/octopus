@@ -579,7 +579,7 @@ contains
     call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
 #endif
     ! write the output files
-    if (outp%how /= C_OUTPUT_HOW_BINARY ) then
+    if (outp%how /= OPTION__OUTPUTHOW__BINARY ) then
       do i_energy = e_start+1, e_end+1
         write(filename,'(a14,i0.7,a1)')'wd.general/wd.',i_energy-1,'/'
         call io_binary_read(trim(filename)//'density.obf', mesh%np, read_rff, ierr)

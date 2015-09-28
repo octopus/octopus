@@ -362,9 +362,9 @@ contains
 
       call dpoisson_solve(psolver, potential, charge)
 
-      call dio_function_output(C_OUTPUT_HOW_PLANE_X, "./continuity", "potential", der%mesh, potential, unit_one, ierr)
-      call dio_function_output(C_OUTPUT_HOW_PLANE_Z, "./continuity", "potential", der%mesh, potential, unit_one, ierr)
-      call dio_function_output(C_OUTPUT_HOW_AXIS_Z, "./continuity", "potential", der%mesh, potential, unit_one, ierr)
+      call dio_function_output(OPTION__OUTPUTHOW__PLANE_X, "./continuity", "potential", der%mesh, potential, unit_one, ierr)
+      call dio_function_output(OPTION__OUTPUTHOW__PLANE_Z, "./continuity", "potential", der%mesh, potential, unit_one, ierr)
+      call dio_function_output(OPTION__OUTPUTHOW__AXIS_Z, "./continuity", "potential", der%mesh, potential, unit_one, ierr)
 
       call dderivatives_grad(der, potential, current(:, :, 1))
 
@@ -469,9 +469,9 @@ contains
 
       call dpoisson_solve(psolver, potential, charge)
 
-!      call dio_function_output(C_OUTPUT_HOW_PLANE_X, "./continuity", "potential", der%mesh, potential, unit_one, ierr)
-!      call dio_function_output(C_OUTPUT_HOW_PLANE_Z, "./continuity", "potential", der%mesh, potential, unit_one, ierr)
-!      call dio_function_output(C_OUTPUT_HOW_AXIS_Z, "./continuity", "potential", der%mesh, potential, unit_one, ierr)
+!      call dio_function_output(OPTION__OUTPUTHOW__PLANE_X, "./continuity", "potential", der%mesh, potential, unit_one, ierr)
+!      call dio_function_output(OPTION__OUTPUTHOW__PLANE_Z, "./continuity", "potential", der%mesh, potential, unit_one, ierr)
+!      call dio_function_output(OPTION__OUTPUTHOW__AXIS_Z, "./continuity", "potential", der%mesh, potential, unit_one, ierr)
 
       call dderivatives_grad(der, potential, current2)
 

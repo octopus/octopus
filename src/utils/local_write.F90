@@ -686,7 +686,7 @@ contains
     end if
 
    ! Write multipoles in BILD format
-    if(iand(how, C_OUTPUT_HOW_BILD) /= 0 )then
+    if(iand(how, OPTION__OUTPUTHOW__BILD) /= 0 )then
       !FIXME: to include spin larger than 1.
       is = 1
       do id = 1, nd
