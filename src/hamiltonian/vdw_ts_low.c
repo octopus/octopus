@@ -418,16 +418,14 @@ void fdamp (const double rr, const double r0ab,
   // Calculate the damping coefficient.
   double ee = exp(-dd*((rr/(sr*r0ab)) - 1.0));
   *ff = 1.0/(1.0 + ee);
+  double dee = ee*(*ff)*(*ff);
   
   // Calculate the derivative of the damping function with respect to the distance between atoms A and B coefficient.
-  *dffdrab = (dd/(sr*r0ab))*(ee/((1 + ee)*(1 + ee)));
+  *dffdrab = (dd/(sr*r0ab))*dee;
   
   // Calculate the derivative of the damping function with respect to the distance between atoms A and B coefficient.
-  *dffdr0 = dd*rr*ee/(r0ab*r0ab*sr*(1 + ee)*(1 + ee)); // NEEDS TO BE DOUBLE-CHECKED.
+  *dffdr0 = -dd*rr/(sr*r0ab*r0ab)*dee;
 
-  // Print information controls.
-  //printf("R0_(%i-%i)= %f\n", iatom, jatom, r0ab);
-  //printf("ff_(%i-%i)= %f\n", iatom, jatom, *ff);
 }
 
 
