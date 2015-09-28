@@ -438,6 +438,47 @@ end subroutine X(io_function_input_global)
 
 
 ! ---------------------------------------------------------
+subroutine X(io_function_output_vector)(how, dir, fname, mesh, ff, vector_dim, unit, ierr, &
+  geo, grp, root, is_global, vector_dim_labels)
+  integer,                    intent(in)  :: how
+  character(len=*),           intent(in)  :: dir
+  character(len=*),           intent(in)  :: fname
+  type(mesh_t),               intent(in)  :: mesh
+  R_TYPE,           target,   intent(in)  :: ff(:, :)
+  integer,                    intent(in)  :: vector_dim
+  type(unit_t),               intent(in)  :: unit
+  integer,                    intent(out) :: ierr
+  type(geometry_t), optional, intent(in)  :: geo
+  type(mpi_grp_t),  optional, intent(in)  :: grp !< the group that shares the same data, must contain the domains group
+  integer,          optional, intent(in)  :: root !< which process is going to write the data
+  logical,          optional, intent(in)  :: is_global !< Input data is mesh%np_global? And, thus, it has not be gathered
+  character(len=*), optional, intent(in)  :: vector_dim_labels(:)
+
+  integer :: ivd
+  character(len=MAX_PATH_LEN) :: full_fname
+
+  PUSH_SUB(X(io_function_output_vector))
+
+  if(present(vector_dim_labels)) then
+    ASSERT(ubound(vector_dim_labels, dim = 1) >= vector_dim)
+  end if
+
+  ASSERT(vector_dim < 10)
+
+  do ivd = 1, vector_dim
+    if(present(vector_dim_labels)) then
+      full_fname = trim(fname)//'-'//vector_dim_labels(ivd)
+    else
+      write(full_fname, '(2a,i1)') trim(fname)//'-'//vector_dim_labels(ivd)
+    end if
+
+    call X(io_function_output)(how, dir, full_fname, mesh, ff(:, ivd), unit, ierr, geo, grp, root, is_global)
+  end do
+
+  POP_SUB(X(io_function_output_vector))
+end subroutine X(io_function_output_vector)
+
+! ---------------------------------------------------------
 subroutine X(io_function_output) (how, dir, fname, mesh, ff, unit, ierr, geo, grp, root, is_global)
   integer,                    intent(in)  :: how
   character(len=*),           intent(in)  :: dir

@@ -61,6 +61,7 @@ module io_function_m
     zio_function_input,           &
     dio_function_output,          &
     zio_function_output,          &
+    io_function_output_vector,    &
     dout_cf_vtk,                  &
     zout_cf_vtk,                  &
     dout_cf_vts
@@ -82,6 +83,10 @@ module io_function_m
     index2label(3) = (/ 're ', 'im ', 'abs' /)
 
   type(profile_t), save :: read_prof, write_prof
+
+  interface io_function_output_vector
+    module procedure dio_function_output_vector, zio_function_output_vector
+  end interface io_function_output_vector
 
 contains
 

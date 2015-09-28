@@ -177,16 +177,17 @@
         SAFE_ALLOCATE(current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:hm%d%nspin))
         call current_calculate(outp%current_calculator, der, hm, geo, st, current)
         do is = 1, hm%d%nspin
-          do idir = 1, der%mesh%sb%dim
-            if(st%d%nspin == 1) then
-              write(fname, '(2a)') 'current-', index2axis(idir)
-            else
-              write(fname, '(a,i1,2a)') 'current-sp', is, '-', index2axis(idir)
-            end if
-            call dio_function_output(outp%how, dir, fname, der%mesh, &
-              current(:, idir, is), (unit_one / units_out%time) * units_out%length**(1-der%mesh%sb%dim), err, &
-              geo = geo, grp = st%dom_st_kpt_mpi_grp)
-          end do
+
+          if(st%d%nspin == 1) then
+            write(fname, '(2a)') 'current'
+          else
+            write(fname, '(a,i1)') 'current-sp', is
+          end if
+          
+          call io_function_output_vector(outp%how, dir, fname, der%mesh, &
+            current(:, :, is), der%mesh%sb%dim, (unit_one/units_out%time)*units_out%length**(1 - der%mesh%sb%dim), err, &
+            geo = geo, grp = st%dom_st_kpt_mpi_grp, vector_dim_labels = (/'x', 'y', 'z'/))
+
         end do
         SAFE_DEALLOCATE_A(current)
       else
