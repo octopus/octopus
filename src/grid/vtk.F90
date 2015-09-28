@@ -47,6 +47,8 @@ module vtk_m
   public ::                       &
     dvtk_out_cf,                  &
     zvtk_out_cf,                  &
+    dvtk_out_cf_vector,           &
+    zvtk_out_cf_vector,           &
     dvtk_out_cf_structured
 
 contains

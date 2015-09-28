@@ -465,17 +465,58 @@ subroutine X(io_function_output_vector)(how, dir, fname, mesh, ff, vector_dim, u
 
   ASSERT(vector_dim < 10)
 
+  if(iand(how, OPTION__OUTPUTHOW__VTK) /= 0) call out_vtk()
+
   do ivd = 1, vector_dim
     if(present(vector_dim_labels)) then
       full_fname = trim(fname)//'-'//vector_dim_labels(ivd)
     else
-      write(full_fname, '(2a,i1)') trim(fname)//'-'//vector_dim_labels(ivd)
+      write(full_fname, '(2a,i1)') trim(fname), '-', ivd
     end if
 
     call X(io_function_output)(how, dir, full_fname, mesh, ff(:, ivd), unit, ierr, geo, grp, root, is_global)
   end do
 
   POP_SUB(X(io_function_output_vector))
+
+contains
+  
+  subroutine out_vtk()
+    type(cube_t) :: cube
+    type(cube_function_t), allocatable :: cf(:)
+    character(len=MAX_PATH_LEN) :: filename
+    FLOAT :: dk(3)  
+    integer :: ii
+    
+    PUSH_SUB(X(io_function_output_vector).out_vtk)
+
+    call cube_init(cube, mesh%idx%ll, mesh%sb)
+
+    SAFE_ALLOCATE(cf(1:vector_dim))
+    
+    do ivd = 1, vector_dim
+      call cube_function_null(cf(ivd))
+      call X(cube_function_alloc_RS)(cube, cf(ivd))
+      call X(mesh_to_cube)(mesh, ff(:, ivd), cube, cf(ivd))
+    end do
+    
+    filename = io_workpath(trim(dir)//'/'//trim(fname)//".vtk")
+
+    forall (ii = 1:3) dk(ii)= units_from_atomic(units_out%length, mesh%spacing(ii))
+     
+    call X(vtk_out_cf_vector)(filename, ierr, cf, vector_dim, cube, dk, unit)
+    
+    do ivd = 1, vector_dim
+      call X(cube_function_free_RS)(cube, cf(ivd))
+    end do
+
+    call cube_end(cube)
+
+    SAFE_DEALLOCATE_A(cf)
+
+    POP_SUB(X(io_function_output_vector).out_vtk)    
+  end subroutine out_vtk
+  
 end subroutine X(io_function_output_vector)
 
 ! ---------------------------------------------------------
@@ -595,12 +636,9 @@ subroutine X(io_function_output_global) (how, dir, fname, mesh, ff, unit, ierr, 
   mformat2   = '(i12,99es34.24E3)'
   mfmtheader = '(a,a10,5a23)'
 
-  if(how <= 0) then
-    message(1) = "Internal error: cannot call io_function with outp%how <= 0."
-    call messages_fatal(1)
-  end if
-
+  ASSERT(how > 0)
   ASSERT(ubound(ff, dim = 1) >= mesh%np_global)
+
   np_max = mesh%np_global
   ! should we output boundary points?
   if(iand(how, OPTION__OUTPUTHOW__BOUNDARY_POINTS) /= 0) then
