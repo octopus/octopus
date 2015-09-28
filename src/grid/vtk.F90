@@ -1,0 +1,81 @@
+!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!!
+!! This program is free software; you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation; either version 2, or (at your option)
+!! any later version.
+!!
+!! This program is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with this program; if not, write to the Free Software
+!! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+!! 02110-1301, USA.
+!!
+!! $Id$
+
+#include "global.h"
+
+module vtk_m
+  use cube_function_m
+  use cube_m
+  use geometry_m
+  use global_m
+  use index_m
+  use io_m
+  use io_binary_m
+  use io_csv_m
+  use mesh_m
+  use messages_m
+  use mpi_m
+  use mpi_debug_m
+  use parser_m
+  use profiling_m
+  use simul_box_m
+  use species_m
+  use unit_m
+  use unit_system_m
+  use utils_m
+  use varinfo_m
+
+  implicit none
+
+  private
+  public ::                       &
+    dvtk_out_cf,                  &
+    zvtk_out_cf,                  &
+    dvtk_out_cf_structured
+
+contains
+
+  !< check endianness
+  !< Logical output: true is the running architecture uses little endian ordering, false otherwise.
+  logical pure function is_little_endian() result(is_little)
+    implicit none
+    integer, parameter:: I4P  = selected_int_kind(9)  
+    integer, parameter:: I1P  = selected_int_kind(2)
+    integer(I1P) :: int1(1:4) !< One byte integer array for casting 4 bytes integer.
+
+    int1 = transfer(1_I4P, int1)
+    is_little = (int1(1) == 1_I1P)
+    return
+  end function is_little_endian
+  
+#include "undef.F90"
+#include "real.F90"
+#include "vtk_inc.F90"
+
+#include "undef.F90"
+#include "complex.F90"
+#include "vtk_inc.F90"
+#include "undef.F90"
+
+end module vtk_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

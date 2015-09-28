@@ -66,7 +66,8 @@ libgrid_a_SOURCES =       \
 	symmetrizer.F90         \
 	transfer_table.F90      \
 	hilbert.c               \
-	mesh_interpolation.F90
+	mesh_interpolation.F90  \
+	vtk.F90
 
 noinst_HEADERS =                   \
 	batch_inc.F90              \
@@ -87,7 +88,8 @@ noinst_HEADERS =                   \
 	submesh_inc.F90            \
 	symmetrizer_inc.F90        \
 	batch_ops_inc.F90          \
-	mesh_interpolation_inc.F90 
+	mesh_interpolation_inc.F90 \
+	vtk_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -111,7 +113,7 @@ fourier_space.o : fourier_space.F90 fourier_space_inc.F90 cube_function.o mesh.o
 grid.o : grid.F90  multigrid.o mesh.o double_grid.o curvilinear.o mesh_init.o nl_operator.o
 hypercube.o : hypercube.F90
 index.o : index.F90 hypercube.o
-io_function.o : io_function.F90 io_function_inc.F90 par_vec.o mesh.o mesh_function.o cube_function.o 
+io_function.o : io_function.F90 io_function_inc.F90 par_vec.o mesh.o mesh_function.o cube_function.o vtk.o
 mesh_batch.o : mesh_batch.F90 mesh_batch_inc.F90 mesh.o mesh_function.o
 mesh_cube_map.o : mesh_cube_map.F90 index.o partition_transfer.o cube.o
 mesh_cube_parallel_map.o : mesh_cube_parallel_map.F90 partition_transfer.o mesh.o cube.o
@@ -136,5 +138,5 @@ submesh.o : submesh.F90 submesh_inc.F90  mesh.o batch.o
 symmetrizer.o : symmetrizer.F90 symmetrizer_inc.F90 mesh.o par_vec.o
 transfer_table.o : transfer_table.F90
 mesh_interpolation.o : mesh_interpolation.F90 mesh_interpolation_inc.F90 mesh.o
-
+vtk.o : vtk_inc.F90 mesh.o cube_function.o
 
