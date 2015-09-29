@@ -80,6 +80,7 @@ module output_m
   use utils_m
   use varinfo_m
   use v_ks_m
+  use vtk_m
 #if defined(HAVE_BERKELEYGW)
   use wfn_rho_vxc_io_m
 #endif
@@ -616,6 +617,9 @@ contains
       if(iand(outp%how, OPTION__OUTPUTHOW__OPENSCAD) /= 0) then
         call geometry_write_openscad(geo, trim(dir)//'/geometry')
       end if
+      if(iand(outp%how, OPTION__OUTPUTHOW__VTK) /= 0) then
+        call vtk_output_geometry(trim(dir)//'/geometry', geo)
+      end if     
     end if
 
     if(iand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then

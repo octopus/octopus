@@ -180,9 +180,9 @@ subroutine X(vtk_out_cf_structured)(filename, ierr, cf_in, cube, unit, points, a
 
   integer :: iunit
   type(cube_function_t) :: cf_out
-  integer :: i1,i2,i3,np,nn(3)
+  integer :: i1,i2,i3,np
 
-  FLOAT, allocatable :: pnts(:), pnts1(:,:,:,:)
+  FLOAT, allocatable :: pnts1(:,:,:,:)
 
   PUSH_SUB(X(vtk_out_cf_structured))
 
