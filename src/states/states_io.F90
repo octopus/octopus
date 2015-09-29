@@ -70,7 +70,7 @@ contains
     integer :: ik, ikk, ist, ns, is, idir, st_start_, iflat, iqn, homo_index, not_printed
     logical :: print_eigenval
     FLOAT :: kpoint(1:MAX_DIM), max_error
-    character(len=80) :: tmp_str(max(MAX_DIM, 3)), cspin
+    character(len=120) :: tmp_str(max(MAX_DIM, 3)), cspin
 
     FLOAT, allocatable :: flat_eigenval(:)
     integer, allocatable :: flat_indices(:, :)
