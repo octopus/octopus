@@ -653,7 +653,7 @@ contains
     call spline_end(ps%core)
 
     if(allocated(ps%density)) call spline_end(ps%density)
-    call spline_end(ps%density_der)
+    if(allocated(ps%density_der)) call spline_end(ps%density_der)
 
     call logrid_end(ps%g)
 
