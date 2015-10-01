@@ -19,6 +19,7 @@
 
 !> this performs the SCDM localization, transforming the original set of states KS (Kohn-Sham)
 !! into the set SCDM, by first performing RRQR and then Cholesky for orthogonalization
+
 subroutine X(scdm_localize)(st,mesh,scdm)
 
   type(states_t), intent(in) :: st !< this contains the non-localize set KS (for now from hm%hf_st which is confusing)
@@ -26,7 +27,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   type(scdm_t) :: scdm
 
   integer :: ii, jj, kk, ll, vv, count, ip, nval, info,i1, i2, i3, idim, j1, j2, j3
-  integer :: JPVT(mesh%np_global)
+  integer, allocatable :: JPVT(:)
   integer :: icenter(3), ind_center
 
   integer :: nn(3)
@@ -39,7 +40,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   integer :: ix(3), nr(3,2)
   logical :: out_of_index_range(3), out_of_mesh(3)
   FLOAT, allocatable :: lxyz_domains(:,:),  lxyz_global(:), lxyz_local(:)
-  
+
   FLOAT :: temp(3)
   character(len=50) :: name
   type(cube_function_t) :: cf
@@ -56,58 +57,10 @@ subroutine X(scdm_localize)(st,mesh,scdm)
 
   nval = st%nst ! TODO: check that this is really the number of valence states
 
-  ! build transpose of KS set on which RRQR is performed
-  if (scdm%root) then
-    SAFE_ALLOCATE(KSt(1:nval,1:mesh%np_global))
-  end if
-
-  !NOTE: not sure how to proceed if dim!=1 or nik!=1
   if (st%d%nik /= 1 .or. st%d%dim /= 1) call messages_not_implemented("SCDM with k-points or dims")
-  ! gather states in case of domain parallelization
-  if (mesh%parallel_in_domains.or.st%parallel_in_states) then
-    SAFE_ALLOCATE(temp_state(1:mesh%np,1))
-    SAFE_ALLOCATE(state_global(1:mesh%np_global))
 
-    count = 0
-    do ii = 1, nval
-      !we are copying states like this:  KSt(i,:) = st%psi(:,dim,i,nik)
-      state_global(1:mesh%np_global) = M_ZERO
-#ifdef HAVE_MPI
-      sender = 0
-      if(state_is_local(st,ii)) then
-        call states_get_state(st, mesh, ii, st%d%nik, temp_state)
-        call vec_gather(mesh%vp, 0, state_global, temp_state(1:mesh%np,1))
-        if(mesh%mpi_grp%rank ==0) sender = mpi_world%rank
-      end if
-
-      call comm_allreduce(mpi_world%comm,sender)
-      call MPI_Bcast(state_global,mesh%np_global , R_MPITYPE, sender, mpi_world%comm, mpi_err)
-
-#endif
-      ! keep full Kohn-Sham matrix only on root
-      if (scdm%root)  KSt(ii,1:mesh%np_global)  = st%occ(ii,1)*state_global(1:mesh%np_global)
-    end do
-    SAFE_DEALLOCATE_A(state_global)
-    SAFE_DEALLOCATE_A(temp_state)
-  else
-    ! serial
-    SAFE_ALLOCATE(temp_state(1:mesh%np,1))
-    do ii = 1, nval
-      ! this call is necessary becasue we want to have only np not np_part
-      call states_get_state(st, mesh, ii, st%d%nik, temp_state)
-      KSt(ii,:) = st%occ(ii,1)*temp_state(:,1)
-    end do
-    SAFE_DEALLOCATE_A(temp_state)
-  end if
-
-  call profiling_in(prof_scdm_QR,"SCDM_QR")
-  if(scdm%root) call X(RRQR)(nval,mesh%np_global,KSt,JPVT)
-#ifdef HAVE_MPI
-  call MPI_Bcast(JPVT,mesh%np_global , MPI_INTEGER, 0, mpi_world%comm, mpi_err)
-#endif
-  call profiling_out(prof_scdm_QR)
-
-  SAFE_DEALLOCATE_A(KSt)
+  SAFE_ALLOCATE(JPVT(1:mesh%np_global))
+  call X(scdm_rrqr)(st,scdm, mesh, nval,scdm%root, jpvt)
 
   !form SCDM_matrix rows for states that are local in the scdm%st_grp
   SAFE_ALLOCATE(SCDM_matrix(1:scdm%st%lnst,nval))
@@ -127,7 +80,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
       SCDM_matrix(count,ii) = state_global(JPVT(ii))
     end do
   end do
-  
+
   call profiling_in(prof_scdm_matmul1,"SCDM_matmul1")
 
   SAFE_ALLOCATE(SCDM_temp(1:mesh%np,1:nval))
@@ -144,16 +97,16 @@ subroutine X(scdm_localize)(st,mesh,scdm)
       temp_column(1:mesh%np) = temp_column(1:mesh%np) + &
                                   temp_state(1:mesh%np,1)* R_CONJ(SCDM_matrix(count,ii))
     end do
-    SCDM_temp(1:mesh%np,ii) = temp_column(1:mesh%np)    
+    SCDM_temp(1:mesh%np,ii) = temp_column(1:mesh%np)
   end do
-  ! the above is a prtial sum in states distribution  
+  ! the above is a prtial sum in states distribution
   call comm_allreduce(scdm%st_grp%comm, SCDM_temp, (/mesh%np, nval/))
   call profiling_out(prof_scdm_matmul1)
-  
+
   SAFE_DEALLOCATE_A(temp_state)
   SAFE_DEALLOCATE_A(state_global)
   SAFE_DEALLOCATE_A(temp_column)
-   
+
   ! --- Orthogoalization ----
   ! form lower triangle of Pcc
   SAFE_ALLOCATE(Pcc(1:nval,1:nval))
@@ -167,7 +120,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   end do
   call comm_allreduce(scdm%st_grp%comm,Pcc)
   SAFE_DEALLOCATE_A(SCDM_matrix)
-    
+
   ! Cholesky fact.
   call X(POTRF)("L", nval, Pcc, nval, info )
   if (info /= 0) then
@@ -180,12 +133,12 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     end if
     stop
   end if
-    
+
   ! transpose
   Pcc(:,:) = transpose(R_CONJ(Pcc(:,:)))
   ! invert
   call X(invert)(nval,Pcc)
-  
+
   call profiling_in(prof_scdm_matmul3,"SCDM_matmul3")
   ! form orthogonal SCDM
   SAFE_ALLOCATE(temp_state(1:mesh%np,1))
@@ -196,21 +149,21 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     end do
     call states_set_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
   end do
-  
+
   SAFE_DEALLOCATE_A(Pcc)
   SAFE_DEALLOCATE_A(SCDM_temp)
-  
+
   call profiling_out(prof_scdm_matmul3)
-  
+
   ! normalise SCDM states
   do vv = scdm%st%st_start,scdm%st%st_end
     call states_get_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
     temp_state(1:mesh%np,:) = temp_state(1:mesh%np,:)/X(mf_nrm2)(mesh,temp_state(1:mesh%np,1))
     call states_set_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
   end do
-  
+
   ! end of SCDM procedure
-  
+
   ! find centers, by computing center of mass of |psi|^2
   scdm%center(:,:) = M_ZERO
   count = 0
@@ -225,7 +178,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
 #endif
     lxyz_domains(1:mesh%np,ii) = lxyz_local(1:mesh%np)
   end do
-  
+
   do vv = scdm%st%st_start,scdm%st%st_end
     call states_get_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
     do ii=1,3
@@ -235,22 +188,22 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   end do
     ! reduce to world, since the above can be state+domain distribution
   call comm_allreduce(mpi_world%comm, scdm%center)
-  
+
   SAFE_DEALLOCATE_A(lxyz_domains)
   SAFE_DEALLOCATE_A(lxyz_global)
   SAFE_DEALLOCATE_A(lxyz_local)
-  
+
   ! -------------- end of SCDM procedure -----------------
-  
+
   ! ------------ copy local box of state ---------------------
-  
+
   error = M_ZERO
   scdm%X(psi)(:,:) =  M_ZERO
   scdm%box(:,:,:,:) =  M_ZERO
   SAFE_ALLOCATE(temp_box(1:2*scdm%box_size+1,1:2*scdm%box_size+1,1:2*scdm%box_size+1))
   SAFE_ALLOCATE(state_global(1:mesh%np_global))
   do vv = scdm%st%st_start,scdm%st%st_end
-    
+
     ! find integer index of center
     do ii = 1, 3
       icenter(ii) = scdm%center(ii,vv)/mesh%spacing(ii)
@@ -258,9 +211,9 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     ! find index of center in the mesh
     ind_center = mesh%idx%lxyz_inv(icenter(1),icenter(2),icenter(3))
 
-    ! make sure that box does not fall out of range of the index structure 
+    ! make sure that box does not fall out of range of the index structure
     call check_box_in_index(mesh%idx,icenter(:),scdm%box_size,out_of_index_range)
-    
+
     ! only periodic dimensions can be out of range
     do idim=1,3
       if(out_of_index_range(idim).and.idim > mesh%sb%periodic_dim) then
@@ -274,7 +227,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
       temp_box(:,:,:) =  mesh%idx%lxyz_inv(icenter(1)-scdm%box_size:icenter(1)+scdm%box_size, &
            icenter(2)-scdm%box_size:icenter(2)+scdm%box_size, &
            icenter(3)-scdm%box_size:icenter(3)+scdm%box_size)
-      
+
       ! check if all indices are within the mesh
       out_of_mesh(1:3) = .false.
       do idim=1,3
@@ -288,16 +241,16 @@ subroutine X(scdm_localize)(st,mesh,scdm)
           end if
         end if
       end do
-      
+
     end if
 
     ! in case there are periodic replica go through every point
-    ! NOTE: in principle this would be needed only for the periodic 
-    !       dimensions, because above we have made sure that in 
-    !       all other directions there are no points out of the mesh 
+    ! NOTE: in principle this would be needed only for the periodic
+    !       dimensions, because above we have made sure that in
+    !       all other directions there are no points out of the mesh
     if(any(out_of_mesh        .eqv. (/.true.,.true.,.true./)) .or. &
        any(out_of_index_range .eqv. (/.true.,.true.,.true./)) ) then
-      
+
       ! dimension of full simulation box
       nn = scdm%full_cube_n
       ! limits of the indices that are on the mesh
@@ -311,7 +264,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
           nr(idim,2) =  nn(idim)/2
         end if
       end do
-      
+
       do  i1 = -scdm%box_size, scdm%box_size
         do i2 = -scdm%box_size, scdm%box_size
           do i3 = -scdm%box_size, scdm%box_size
@@ -325,7 +278,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
                 ix(idim) = ix(idim) - nn(idim)
               end if
             end do
-            
+
             ! indices of box are 1-based
             j1 = i1 + scdm%box_size + 1
             j2 = i2 + scdm%box_size + 1
@@ -337,27 +290,27 @@ subroutine X(scdm_localize)(st,mesh,scdm)
             !  print *, nr
             ! print *, ix
             !end if
-            
+
           end do!i3
         end do!i2
       end do!i1
-      
+
     end if
-    
+
     ! check that box is well defined now
     if(minval(temp_box) <= 0.or.maxval(temp_box) > mesh%np_global ) then
       message(1) = 'SCDM box mapping failed'
       call messages_fatal(1)
     end if
-    
+
     scdm%box(:,:,:,vv) = temp_box(:,:,:)
-    
+
     ! to copy the scdm state in the box, we need the global state (this is still in state distribution)
     call states_get_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
 #ifdef HAVE_MPI
     state_global(1:mesh%np_global) = M_ZERO
     call vec_allgather(mesh%vp, state_global, temp_state(1:mesh%np,1))
-#endif    
+#endif
     ! copy points to box
     ! this box refers to the global mesh
     do jj = 1, scdm%box_size*2+1
@@ -378,7 +331,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   SAFE_DEALLOCATE_A(temp_box)
   SAFE_DEALLOCATE_A(temp_state)
   SAFE_DEALLOCATE_A(state_global)
-  
+
   ! the boxed SCDM states as well as their mapping boxes need to be available globally
   ! NOTE: strictly speaking only within their respective scdm%st_exx_grp, but that requires
   !       some more complicated communication, so for now this is global
@@ -387,7 +340,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
 
   ! sum of the error of the norm of SCDM states by truncating them
   call comm_allreduce(scdm%st_grp%comm, error)
-    
+
   if (scdm%root .and. scdm%verbose) call messages_print_var_value(stdout, 'SCDM localization error:', error/st%nst)
 
   ! set flag to do this only once
@@ -448,10 +401,236 @@ subroutine X(invert)(nn, A)
     call messages_fatal(1)
   end if
   deallocate(work)
-  
+
   POP_SUB(X(invert))
 
 end subroutine X(invert)
+
+!> Perform RRQR on the transpose states stored in the states object
+!! and return the pivot vector 
+!! This is not an all-purose routien for RRQR, but only operates on the
+!! specific set stored in st
+subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
+  type(states_t), intent(in)   :: st
+  type(scdm_t), intent(in)     :: scdm  !< this is only needed for the proc_grid
+  type(mesh_t), intent(in)     :: mesh
+  integer, intent(in)          :: nst
+  logical, intent(in)          :: root !< this is needed for serial 
+  integer, intent(out)         :: jpvt(:)
+
+  integer :: total_np, nref, info, wsize
+  R_TYPE, allocatable :: tau(:), work(:)
+  R_TYPE :: tmp
+  FLOAT, allocatable :: rwork(:)
+  R_TYPE, allocatable ::  state_global(:), temp_state(:,:)
+  R_TYPE, allocatable :: KSt(:,:)
+  integer :: ii,ist,  count, sender, ik, jj, lnst
+
+#ifdef HAVE_SCALAPACK
+  integer :: psi_block(2), psi_desc(BLACS_DLEN), blacs_info
+  logical :: do_serial
+  FLOAT :: tmp2
+  integer, allocatable :: ipiv(:)
+  integer :: rwsize, np_start
+#endif
+
+  PUSH_SUB(X(scdm_rrqr))
+  call profiling_in(prof_scdm_QR,"SCDM_QR")
+
+  ASSERT(.not. mesh%use_curvilinear)
+  ASSERT(nst == st%nst)
+
+  lnst = st%lnst
+
+  ! decide whether we can use ScaLAPACK
+  do_serial = .false.
+  if(mesh%parallel_in_domains .or. st%parallel_in_states) then
+#ifndef HAVE_SCALAPACK
+     message(1) = 'The RRQR is performed in serial. Try linking ScaLAPCK'
+     call messages_warning(1)
+     do_serial = .true.
+#else
+     if(.not.st%scalapack_compatible) then
+        message(1) = 'The RRQR is performed in serial. Try setting ScaLAPACKCompatible = yes'
+        call messages_warning(1)
+        do_serial = .true.
+     end if
+#endif
+  else
+     do_serial = .true.
+  endif
+
+  if(.not.do_serial) then
+#ifdef HAVE_SCALAPACK
+    
+    call states_blacs_blocksize(st, mesh, psi_block, total_np)
+
+    ASSERT(associated(st%X(dontusepsi)))
+    ik = 1
+    ! We need to set to zero some extra parts of the array
+    if(st%d%dim == 1) then
+       st%X(dontusepsi)(mesh%np + 1:psi_block(1), 1:st%d%dim, st%st_start:st%st_end, ik) = M_ZERO
+    else
+       st%X(dontusepsi)(mesh%np + 1:mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, ik) = M_ZERO
+    end if
+
+    ! allocate local part of transpose state matrix
+    SAFE_ALLOCATE(KSt(1:lnst,1:total_np))
+    ! copy states into the transpose matrix
+    count = 0
+    do ist = st%st_start,st%st_end
+       count = count + 1
+       KSt(count,1:total_np) =  st%X(dontusepsi)(1:total_np, 1, ist, ik)
+    end do
+
+    ! DISTRIBUTE THE MATRIX ON THE PROCESS GRID
+    ! Initialize the descriptor array for the main matrices (ScaLAPACK)
+    call descinit(psi_desc(1), nst, total_np, psi_block(2), psi_block(1), 0, 0, &
+                  scdm%proc_grid%context, lnst, blacs_info)
+
+    if(blacs_info /= 0) then
+       write(message(1),'(a,i6)') 'descinit failed with error code: ', blacs_info
+       call messages_fatal(1)
+    end if
+    
+    nref = min(nst, total_np)
+    SAFE_ALLOCATE(tau(1:nref))
+    tau = M_ZERO
+
+    ! calculate the QR decomposition
+    SAFE_ALLOCATE(ipiv(1:total_np))
+    ipiv(1:total_np) = 0
+    ! Note: lapack routine has different number of arguments depending on type
+#ifndef R_TREAL
+    call pzgeqpf(nst, total_np, KSt(1,1), 1, 1, psi_desc(1), ipiv(1), tau(1), tmp, -1, tmp2, -1, blacs_info) 
+#else 
+    call pdgeqpf( nst, total_np, KSt(1,1), 1, 1, psi_desc(1), ipiv(1), tau(1), tmp, -1, blacs_info)
+#endif
+
+    if(blacs_info /= 0) then
+      write(message(1),'(a,i6)') 'scalapack geqrf workspace query failed with error code: ', blacs_info
+      call messages_fatal(1)
+    end if
+     
+    wsize = nint(R_REAL(tmp))
+    SAFE_ALLOCATE(work(1:wsize))
+#ifndef R_TREAL
+    rwsize = max(1,nint(R_REAL(tmp2)))
+    SAFE_ALLOCATE(rwork(1:rwsize))
+    call pzgeqpf(nst, total_np, KSt(1,1), 1, 1, psi_desc(1), ipiv(1), tau(1), work(1), wsize, rwork(1), rwsize, blacs_info)
+    SAFE_DEALLOCATE_A(rwork)
+#else
+    call pdgeqpf(nst, total_np, KSt(1,1), 1, 1, psi_desc(1), ipiv(1), tau(1), work(1), wsize,  blacs_info)
+#endif
+
+    if(blacs_info /= 0) then
+      write(message(1),'(a,i6)') 'scalapack geqrf call failed with error code: ', blacs_info
+      call messages_fatal(1)
+    end if
+    SAFE_DEALLOCATE_A(work)
+     
+     ! copy the first nst global elements of ipiv into jpvt
+     ! bcast is at the end of the routine
+!     if(mpi_world%rank==0)  then
+!        do ist =1,nst
+!           write(123,*) ipiv(ist)
+!        end do
+!     end if
+    jpvt(1:nst) =  ipiv(1:nst)
+
+#endif
+     
+  else
+    ! first gather states into one array on the root process
+    ! build transpose of KS set on which RRQR is performed
+    if(root) then
+       SAFE_ALLOCATE(KSt(1:nst,1:mesh%np_global))
+    end if
+    
+    ! gather states in case of domain parallelization
+    if (mesh%parallel_in_domains.or.st%parallel_in_states) then
+      SAFE_ALLOCATE(temp_state(1:mesh%np,1))
+      SAFE_ALLOCATE(state_global(1:mesh%np_global))
+      
+      count = 0
+      do ii = 1,nst
+        !we are copying states like this:  KSt(i,:) = st%psi(:,dim,i,nik)
+        state_global(1:mesh%np_global) = M_ZERO
+#ifdef HAVE_MPI
+        sender = 0
+        if(state_is_local(st,ii)) then
+          call states_get_state(st, mesh, ii, st%d%nik, temp_state)
+          call vec_gather(mesh%vp, 0, state_global, temp_state(1:mesh%np,1))
+          if(mesh%mpi_grp%rank ==0) sender = mpi_world%rank
+        end if
+        call comm_allreduce(mpi_world%comm,sender)
+        call MPI_Bcast(state_global,mesh%np_global , R_MPITYPE, sender, mpi_world%comm, mpi_err)
+#endif
+        ! keep full Kohn-Sham matrix only on root
+        if (root)  KSt(ii,1:mesh%np_global)  = st%occ(ii,1)*state_global(1:mesh%np_global)
+      end do
+      SAFE_DEALLOCATE_A(state_global)
+      SAFE_DEALLOCATE_A(temp_state)
+    else
+      ! serial
+      SAFE_ALLOCATE(temp_state(1:mesh%np,1))
+      do ii = 1, nst
+        ! this call is necessary becasue we want to have only np not np_part
+        call states_get_state(st, mesh, ii, st%d%nik, temp_state)
+        KSt(ii,:) = st%occ(ii,1)*temp_state(:,1)
+      end do
+      SAFE_DEALLOCATE_A(temp_state)
+    end if
+
+    ! now perform serial RRQR
+    ! dummy call to obtain dimension of work
+    ! Note: the lapack routine has different number of arguments depending on type
+    if(root) then
+      SAFE_ALLOCATE(work(1:1))
+      SAFE_ALLOCATE(tau(1:nst))
+      if(.not.states_are_real(st)) then
+         SAFE_ALLOCATE(rwork(1:2*mesh%np_global))
+         call zgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, -1, rwork, info)
+      else
+         call dgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, -1, info)
+      endif
+      if (info /= 0) then
+         write(message(1),'(A28,I2)') 'Illegal argument in ZGEQP3: ', info
+         call messages_fatal(1)
+      end if
+
+      wsize = work(1)
+      SAFE_DEALLOCATE_A(work)
+      SAFE_ALLOCATE(work(1:wsize))
+
+      jpvt(:) = 0
+      tau(:) = 0.
+      ! actual call
+      if(.not.states_are_real(st)) then
+         call zgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, wsize, rwork, info)
+      else
+         call dgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, wsize, info)
+      endif
+      if (info /= 0)then
+         write(message(1),'(A28,I2)') 'Illegal argument in ZGEQP3: ', info
+         call messages_fatal(1)
+      end if
+      SAFE_DEALLOCATE_A(work)
+    endif
+
+    SAFE_DEALLOCATE_A(temp_state)
+    SAFE_DEALLOCATE_A(state_global)
+    
+   endif
+
+#ifdef HAVE_MPI
+    call MPI_Bcast(JPVT,nst, MPI_INTEGER, 0, mpi_world%comm, mpi_err)
+#endif
+
+   call profiling_out(prof_scdm_QR)
+   POP_SUB(X(scdm_rrqr))
+
+end subroutine X(scdm_rrqr)
 
 !! Local Variables:
 !! mode: f90

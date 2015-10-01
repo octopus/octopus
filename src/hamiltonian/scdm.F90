@@ -22,6 +22,7 @@
 module scdm_m
   use batch_m
   use batch_ops_m
+  use blacs_proc_grid_m
   use blas_m
 #ifdef HAVE_OPENCL
   use cl
@@ -117,7 +118,9 @@ module scdm_m
     integer          :: st_exx_end  !.
     integer          :: lnst_exx    !.
     logical          :: root        !< this is a redundat flag equal to mpi_world%rank==0
-
+#ifdef HAVE_SCALAPACK 
+    type(blacs_proc_grid_t) :: proc_grid  !< blacs context for RRQR on transpose states with scalapack
+#endif
   end type scdm_t
 
   logical,public    :: scdm_is_init=.false.  ! is initialized
@@ -324,7 +327,15 @@ subroutine scdm_init(st,der,fullcube,scdm,operate_on_scdm)
   scdm%poisson%kernel = POISSON_FFT_KERNEL_SPH
   scdm%poisson%cube = scdm%boxcube
   scdm%poisson%fft_solver = scdm%poisson_fft
-  
+
+#ifdef HAVE_SCALAPACK
+  ! create a blacs context with the transpose row and col numbers
+  scdm%proc_grid%npcol = st%dom_st_proc_grid%nprow
+  scdm%proc_grid%nprow = st%dom_st_proc_grid%npcol
+  CALL blacs_get( -1, 0, scdm%proc_grid%context )
+  CALL blacs_gridinit(scdm%proc_grid%context, 'Row-major', scdm%proc_grid%nprow, scdm%proc_grid%npcol )
+  CALL blacs_gridinfo(scdm%proc_grid%context,scdm%proc_grid%nprow,scdm%proc_grid%npcol,scdm%proc_grid%myrow,scdm%proc_grid%mycol)
+#endif
   ! set flag to do this only once
   scdm_is_init = .true.
   
@@ -351,86 +362,6 @@ subroutine scdm_rotate_states(st,mesh,scdm)
   
 end subroutine scdm_rotate_states
   
-!> wrapper routine for real rank-revealing QR decompisition
-!! of the n*np matrix kst, returning the pivot vector jpvt
-subroutine dRRQR(nn, np, kst, jpvt)
-  integer, intent(in)  :: nn
-  integer, intent(in)  :: np
-  FLOAT, intent(inout) :: kst(:,:)
-  integer, intent(out) :: jpvt(np)
-  
-  integer            :: lwork, info
-  FLOAT              :: tau(nn)
-  FLOAT, allocatable :: work(:)
-  
-  PUSH_SUB(dRRQR)
-  ! dummy call to obtain dimension of work
-  SAFE_ALLOCATE(work(1:1))
-  call DGEQP3(nn, np, kst, nn, jpvt, tau, work, -1, info )
-  if (info /= 0) then
-    write(message(1),'(A28,I2)') 'Illegal argument in DGEQP3: ', info
-    call messages_fatal(1)
-  end if
-  ! Note: scalapack routine is called P?GEQPF()
-  
-  lwork = work(1)
-  SAFE_DEALLOCATE_A(work)
-  SAFE_ALLOCATE(work(1:lwork))
-  
-  jpvt(:) = 0
-  tau(:) = 0.
-  ! actual call
-  call DGEQP3(nn, np, kst, nn, jpvt, tau, work, lwork, info)
-  if (info /= 0) then
-    write(message(1),'(A28,I2)') 'Illegal argument in DGEQP3: ', info
-    call messages_fatal(1)
-  end if
-  
-  POP_SUB(dRRQR)
-end subroutine dRRQR
-
-!> wrapper routine for complex rank-revealing QR decomposition
-!! of the n*np matrix kst, returning the pivot vector jpvt
-subroutine zRRQR(nn, np, kst, jpvt)
-  integer, intent(in)  :: nn
-  integer, intent(in)  :: np
-  CMPLX, intent(inout) :: kst(:,:)
-  integer, intent(out) :: jpvt(np)
-  
-  integer            :: lwork,info
-  CMPLX              :: tau(nn)
-  CMPLX, allocatable :: work(:)
-  FLOAT              :: rwork(2*np)
-  
-  PUSH_SUB(zRRQR)
-  ! dummy call to obtain dimension of work
-  SAFE_ALLOCATE(work(1:1))
-  call ZGEQP3(nn, np, kst, nn, jpvt, tau, work, -1, rwork, info)
-  if (info /= 0) then
-    write(message(1),'(A28,I2)') 'Illegal argument in ZGEQP3: ', info
-    call messages_fatal(1)
-  end if
-  ! Note: scalapack routine is called P?GEQPF()
-  
-  lwork = work(1)
-  SAFE_DEALLOCATE_A(work)
-  SAFE_ALLOCATE(work(1:lwork))
-  
-  jpvt(:) = 0
-  tau(:) = 0.
-  ! actual call
-  call ZGEQP3(nn, np, kst, nn, jpvt, tau, work, lwork, rwork, info)
-  if (info /= 0)then
-    write(message(1),'(A28,I2)') 'Illegal argument in ZGEQP3: ', info
-    call messages_fatal(1)
-  end if
-  
-  POP_SUB(zRRQR)
-end subroutine zRRQR
-
-!> check if there are points outside index range of idx by
-!! checking the corners only. This is intended for rectangular cells
-!! should be generalized to arbitrary shapes (but then need to check the faces)
 subroutine check_box_in_index(idx,center,size,out)
   type(index_t),    intent(in)  :: idx
   integer, intent(in)           :: center(:)
