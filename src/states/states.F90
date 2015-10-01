@@ -1500,6 +1500,8 @@ contains
     call blacs_proc_grid_copy(stin%dom_st_proc_grid, stout%dom_st_proc_grid)
 #endif
 
+    stout%scalapack_compatible = stin%scalapack_compatible
+
     stout%lnst       = stin%lnst
     stout%st_start   = stin%st_start
     stout%st_end     = stin%st_end
