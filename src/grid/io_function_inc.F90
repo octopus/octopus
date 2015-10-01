@@ -454,7 +454,7 @@ subroutine X(io_function_output_vector)(how, dir, fname, mesh, ff, vector_dim, u
   logical,          optional, intent(in)  :: is_global !< Input data is mesh%np_global? And, thus, it has not be gathered
   character(len=*), optional, intent(in)  :: vector_dim_labels(:)
 
-  integer :: ivd
+  integer :: ivd, how_seq
   character(len=MAX_PATH_LEN) :: full_fname
   R_TYPE, pointer :: ff_global(:, :)
   logical :: i_am_root, is_global_
@@ -522,8 +522,11 @@ subroutine X(io_function_output_vector)(how, dir, fname, mesh, ff, vector_dim, u
 
   if(i_am_root) then
 
+    how_seq = how
+    
     if(iand(how, OPTION__OUTPUTHOW__VTK) /= 0) call out_vtk()
-
+    how_seq = iand(how_seq, not(OPTION__OUTPUTHOW__VTK)) ! remove from the list of formats
+    
     do ivd = 1, vector_dim
       if(present(vector_dim_labels)) then
         full_fname = trim(fname)//'-'//vector_dim_labels(ivd)
@@ -531,7 +534,7 @@ subroutine X(io_function_output_vector)(how, dir, fname, mesh, ff, vector_dim, u
         write(full_fname, '(2a,i1)') trim(fname), '-', ivd
       end if
 
-      call X(io_function_output_global)(how, dir, full_fname, mesh, ff_global(:, ivd), unit, ierr, geo)
+      call X(io_function_output_global)(how_seq, dir, full_fname, mesh, ff_global(:, ivd), unit, ierr, geo)
     end do
 
   end if
