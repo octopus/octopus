@@ -425,10 +425,10 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
   R_TYPE, allocatable ::  state_global(:), temp_state(:,:)
   R_TYPE, allocatable :: KSt(:,:)
   integer :: ii,ist,  count, sender, ik, jj, lnst
+  logical :: do_serial
 
 #ifdef HAVE_SCALAPACK
   integer :: psi_block(2), psi_desc(BLACS_DLEN), blacs_info
-  logical :: do_serial
   FLOAT :: tmp2
   integer, allocatable :: ipiv(:)
   integer :: rwsize, np_start
