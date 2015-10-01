@@ -478,7 +478,9 @@ subroutine X(io_function_output_vector)(how, dir, fname, mesh, ff, vector_dim, u
   end if
 
   i_am_root = .true.
+#ifdef HAVE_MPI
   comm = MPI_COMM_NULL
+#endif
   root_ = optional_default(root, 0)
 
   if(mesh%parallel_in_domains) then
@@ -501,7 +503,9 @@ subroutine X(io_function_output_vector)(how, dir, fname, mesh, ff, vector_dim, u
       !lives
 
       do ivd = 1, vector_dim
+#ifdef HAVE_MPI        
         call vec_gather(mesh%vp, root_, ff_global(:, ivd), ff(:, ivd))
+#endif
       end do
       
     else
@@ -532,13 +536,15 @@ subroutine X(io_function_output_vector)(how, dir, fname, mesh, ff, vector_dim, u
 
   end if
 
+#ifdef HAVE_MPI
   if(comm /= MPI_COMM_NULL .and. comm /= 0 .and. .not. is_global_) then
     ! I have to broadcast the error code
     call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, comm, mpi_err)
     ! Add a barrier to ensure that the process are synchronized
     call MPI_Barrier(comm, mpi_err)
   end if
-
+#endif
+  
   if(mesh%parallel_in_domains .and. .not. is_global_) then
     SAFE_DEALLOCATE_P(ff_global)
   else
@@ -572,17 +578,13 @@ contains
 
     forall (ii = 1:3) dk(ii)= units_from_atomic(units_out%length, mesh%spacing(ii))
 
-    call X(vtk_out_cf_vector)(filename, ierr, cf, vector_dim, cube, dk, unit)
+    call X(vtk_out_cf_vector)(filename, fname, ierr, cf, vector_dim, cube, dk, unit)
 
     do ivd = 1, vector_dim
       call X(cube_function_free_RS)(cube, cf(ivd))
     end do
 
     call cube_end(cube)
-
-    ASSERT(present(geo))
-
-    call vtk_output_geometry(filename, geo, ascii = .false., append = .true.)
 
     SAFE_DEALLOCATE_A(cf)
 

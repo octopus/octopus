@@ -95,8 +95,9 @@ end subroutine X(vtk_out_cf)
 !>  Writes a cube_function in VTK legacy format
 !!  see http://www.vtk.org/VTK/img/file-formats.pdf
 ! ---------------------------------------------------------
-subroutine X(vtk_out_cf_vector)(filename, ierr, cf_in, vector_dim, cube, spacing, unit)
+subroutine X(vtk_out_cf_vector)(filename, fieldname, ierr, cf_in, vector_dim, cube, spacing, unit)
   character(len=*),      intent(in) :: filename        !< the file name
+  character(len=*),      intent(in) :: fieldname       !< the name of the field
   integer,               intent(out):: ierr            !< error message   
   type(cube_function_t), intent(in) :: cf_in(:)        !< the cube_function to be written
   integer,               intent(in) :: vector_dim
@@ -106,7 +107,7 @@ subroutine X(vtk_out_cf_vector)(filename, ierr, cf_in, vector_dim, cube, spacing
 
   integer :: iunit, np
   integer :: i1, i2, i3, ivd
-  R_TYPE, allocatable :: cfout(:, :, :, :)
+  FLOAT, allocatable :: cfout(:, :, :, :)
 
   PUSH_SUB(X(vtk_out_cf_vector))
 
@@ -126,18 +127,24 @@ subroutine X(vtk_out_cf_vector)(filename, ierr, cf_in, vector_dim, cube, spacing
     - int(cube%rs_n_global(3)/2)* spacing(3)
   write(iunit, '(1a,3f12.6)') 'SPACING ', spacing(1), spacing(2), spacing(3)
   write(iunit, '(1a,1i9)') 'POINT_DATA ', np
-  write(iunit, '(1a,i1)') 'SCALARS Re double ', vector_dim
+
+#ifdef R_TCOMPLEX  
+  write(iunit, '(3a,i1)') 'SCALARS Re', trim(fieldname), ' double ', vector_dim
+#else
+  write(iunit, '(3a,i1)') 'SCALARS ', trim(fieldname), ' double ', vector_dim
+#endif
+
   write(iunit, '(1a)') 'LOOKUP_TABLE default'
   call io_close(iunit)
 
   SAFE_ALLOCATE(cfout(1:vector_dim, 1:cube%rs_n_global(1), 1:cube%rs_n_global(2), 1:cube%rs_n_global(3)))
 
   forall(ivd = 1:vector_dim, i1 = 1:cube%rs_n_global(1), i2 = 1:cube%rs_n_global(2), i3 = 1:cube%rs_n_global(3)) 
-    cfout(ivd, i1,i2,i3) = units_from_atomic(unit, cf_in(ivd)%X(RS)(i1,i2,i3))
+    cfout(ivd, i1,i2,i3) = R_REAL(units_from_atomic(unit, cf_in(ivd)%X(RS)(i1,i2,i3)))
   end forall
 
   ! Paraview likes BigEndian binaries
-  call io_binary_write(trim(filename), vector_dim*np, R_REAL(cfout(:, :, :, :)), ierr, &
+  call io_binary_write(trim(filename), vector_dim*np, cfout(:, :, :, :), ierr, &
     nohead = .true., fendian = is_little_endian())
 
 #ifdef R_TCOMPLEX
@@ -145,12 +152,16 @@ subroutine X(vtk_out_cf_vector)(filename, ierr, cf_in, vector_dim, cube, spacing
   iunit = io_open(trim(filename), action='write', position = 'append')
 
   write(iunit, '(1a)') ' '
-  write(iunit, '(1a)') 'SCALARS Im double 1'
+  write(iunit, '(3a,i1)') 'SCALARS Im', trim(fieldname), ' double ', vector_dim
   write(iunit, '(1a)') 'LOOKUP_TABLE default'
 
   call io_close(iunit)
 
-  call io_binary_write(trim(filename), vector_dim*np, R_AIMAG(cfout(:, :, :, :)), ierr, &
+  forall(ivd = 1:vector_dim, i1 = 1:cube%rs_n_global(1), i2 = 1:cube%rs_n_global(2), i3 = 1:cube%rs_n_global(3)) 
+    cfout(ivd, i1,i2,i3) = R_AIMAG(units_from_atomic(unit, cf_in(ivd)%X(RS)(i1,i2,i3)))
+  end forall
+  
+  call io_binary_write(trim(filename), vector_dim*np, cfout(:, :, :, :), ierr, &
     nohead = .true., fendian = is_little_endian())
 
 #endif
