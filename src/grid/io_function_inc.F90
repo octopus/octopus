@@ -456,6 +456,9 @@ subroutine X(io_function_output_vector)(how, dir, fname, mesh, ff, vector_dim, u
 
   integer :: ivd
   character(len=MAX_PATH_LEN) :: full_fname
+  R_TYPE, pointer :: ff_global(:, :)
+  logical :: i_am_root, is_global_
+  integer :: root_, comm
 
   PUSH_SUB(X(io_function_output_vector))
 
@@ -465,58 +468,127 @@ subroutine X(io_function_output_vector)(how, dir, fname, mesh, ff, vector_dim, u
 
   ASSERT(vector_dim < 10)
 
-  if(iand(how, OPTION__OUTPUTHOW__VTK) /= 0) call out_vtk()
+  ierr = 0
+  is_global_ = optional_default(is_global, .false.)
 
-  do ivd = 1, vector_dim
-    if(present(vector_dim_labels)) then
-      full_fname = trim(fname)//'-'//vector_dim_labels(ivd)
+  if (is_global_) then
+    ASSERT(ubound(ff, dim = 1) == mesh%np_global .or. ubound(ff, dim = 1) == mesh%np_part_global)
+  else
+    ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
+  end if
+
+  i_am_root = .true.
+  comm = MPI_COMM_NULL
+  root_ = optional_default(root, 0)
+
+  if(mesh%parallel_in_domains) then
+    comm = mesh%vp%comm
+
+    i_am_root = (mesh%vp%rank == root_)
+
+    if (.not. is_global_) then
+      if(iand(how, OPTION__OUTPUTHOW__BOUNDARY_POINTS) /= 0) then
+        call messages_not_implemented("OutputHow = boundary_points with domain parallelization")
+        SAFE_ALLOCATE(ff_global(1:mesh%np_part_global, 1:vector_dim))
+        ! FIXME: needs version of vec_gather that includes boundary points. See ticket #127
+      else
+        SAFE_ALLOCATE(ff_global(1:mesh%np_global, 1:vector_dim))
+      end if
+
+      !note: here we are gathering data that we won`t write if grp is
+      !present, but to avoid it we will have to find out all if the
+      !processes are members of the domain line where the root of grp
+      !lives
+
+      do ivd = 1, vector_dim
+        call vec_gather(mesh%vp, root_, ff_global(:, ivd), ff(:, ivd))
+      end do
+      
     else
-      write(full_fname, '(2a,i1)') trim(fname), '-', ivd
+      ff_global => ff
     end if
+  else
+    ff_global => ff
+  end if
 
-    call X(io_function_output)(how, dir, full_fname, mesh, ff(:, ivd), unit, ierr, geo, grp, root, is_global)
-  end do
+  if(present(grp)) then
+    i_am_root = i_am_root .and. (grp%rank == root_)
+    comm = grp%comm
+  end if
+
+  if(i_am_root) then
+
+    if(iand(how, OPTION__OUTPUTHOW__VTK) /= 0) call out_vtk()
+
+    do ivd = 1, vector_dim
+      if(present(vector_dim_labels)) then
+        full_fname = trim(fname)//'-'//vector_dim_labels(ivd)
+      else
+        write(full_fname, '(2a,i1)') trim(fname), '-', ivd
+      end if
+
+      call X(io_function_output_global)(how, dir, full_fname, mesh, ff_global(:, ivd), unit, ierr, geo)
+    end do
+
+  end if
+
+  if(comm /= MPI_COMM_NULL .and. comm /= 0 .and. .not. is_global_) then
+    ! I have to broadcast the error code
+    call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, comm, mpi_err)
+    ! Add a barrier to ensure that the process are synchronized
+    call MPI_Barrier(comm, mpi_err)
+  end if
+
+  if(mesh%parallel_in_domains .and. .not. is_global_) then
+    SAFE_DEALLOCATE_P(ff_global)
+  else
+    nullify(ff_global)
+  end if
 
   POP_SUB(X(io_function_output_vector))
 
 contains
-  
+
   subroutine out_vtk()
     type(cube_t) :: cube
     type(cube_function_t), allocatable :: cf(:)
     character(len=MAX_PATH_LEN) :: filename
     FLOAT :: dk(3)  
     integer :: ii
-    
+
     PUSH_SUB(X(io_function_output_vector).out_vtk)
 
     call cube_init(cube, mesh%idx%ll, mesh%sb)
 
     SAFE_ALLOCATE(cf(1:vector_dim))
-    
+
     do ivd = 1, vector_dim
       call cube_function_null(cf(ivd))
       call X(cube_function_alloc_RS)(cube, cf(ivd))
-      call X(mesh_to_cube)(mesh, ff(:, ivd), cube, cf(ivd))
+      call X(mesh_to_cube)(mesh, ff_global(:, ivd), cube, cf(ivd))
     end do
-    
+
     filename = io_workpath(trim(dir)//'/'//trim(fname)//".vtk")
 
     forall (ii = 1:3) dk(ii)= units_from_atomic(units_out%length, mesh%spacing(ii))
-     
+
     call X(vtk_out_cf_vector)(filename, ierr, cf, vector_dim, cube, dk, unit)
-    
+
     do ivd = 1, vector_dim
       call X(cube_function_free_RS)(cube, cf(ivd))
     end do
 
     call cube_end(cube)
 
+    ASSERT(present(geo))
+
+    call vtk_output_geometry(filename, geo, ascii = .false., append = .true.)
+
     SAFE_DEALLOCATE_A(cf)
 
     POP_SUB(X(io_function_output_vector).out_vtk)    
   end subroutine out_vtk
-  
+
 end subroutine X(io_function_output_vector)
 
 ! ---------------------------------------------------------
@@ -1216,7 +1288,7 @@ contains
 #endif /*defined(HAVE_NETCDF)*/
  
   subroutine out_openscad()
-    integer :: ip, ii, jp, jj, kk, ll, npoly
+    integer :: ip, ii, jj, kk, ll, npoly
     type(openscad_file_t) :: cad_file
     type(polyhedron_t) :: poly
     FLOAT :: isosurface_value
