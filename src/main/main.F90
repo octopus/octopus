@@ -94,9 +94,6 @@ program octopus
   !% Obsolete. Use <tt>gs</tt> with <tt>MaximumIter = 0</tt> instead.
   !%Option kdotp 15
   !% Calculation of effective masses by <math>\vec{k} \cdot \vec{p}</math> perturbation theory (experimental).
-  !%Option gcm 16
-  !% Generator-Coordinates Method calculation (experimental).
-  !% Ref. K. Capelle, <i>J. Chem. Phys.</i> <b>119</b>, 1285 (2003).
   !%Option dummy 17
   !% This calculation mode does nothing. Useful for debugging, testing and benchmarking.  
   !%Option invert_ks 18

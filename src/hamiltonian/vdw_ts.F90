@@ -170,12 +170,12 @@ contains
       !print*, species_label(geo%atom(iatom)%species),zatom(iatom)
 
     end do
-      
+ 
     call f90_vdw_calculate(geo%natoms, zatom(1), coordinates(1, 1), volume_ratio(1), &
       energy, force(1, 1), derivative_coeff(1))
 
     ! add the extra term to the force
-    force = CNST(0.0)
+!    force = CNST(0.0)
     do jatom = 1, geo%natoms
       do iatom = 1, geo%natoms
         call hirshfeld_position_derivative(this%hirshfeld, der, iatom, jatom, density, dvadrr)
@@ -190,7 +190,7 @@ contains
       potential(1:der%mesh%np) = potential(1:der%mesh%np) + derivative_coeff(iatom)*dvadens(1:der%mesh%np)
     end do
 
-!    print*, "fxx", energy, force(1, 1)
+    print*, "fxx", energy, force(1, 1), volume_ratio(1),  derivative_coeff(1)
 
 #if 0
     call dio_function_output(1, "./", "vvdw", der%mesh, potential, unit_one, ip)

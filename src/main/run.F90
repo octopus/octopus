@@ -39,7 +39,6 @@ module run_m
   use phonons_lr_m
   use poisson_m
   use kdotp_m
-  use gcm_m
   use profiling_m
   use pulpo_m
   use restart_m
@@ -78,7 +77,6 @@ module run_m
     CM_PHONONS_LR         =  12,  &
     CM_ONE_SHOT           =  14,  &
     CM_KDOTP              =  15,  &
-    CM_GCM                =  16,  &
     CM_DUMMY              =  17,  &
     CM_INVERTKDS          =  18,  &
     CM_PULPO_A_FEIRA      =  99
@@ -260,8 +258,6 @@ contains
       case(CM_KDOTP)
         call kdotp_lr_run(sys, hm, fromScratch)
       case(CM_DUMMY)
-      case(CM_GCM)
-        call gcm_run(sys, hm)
       case(CM_INVERTKDS)
         call invert_ks_run(sys, hm)
       case(CM_PULPO_A_FEIRA)
