@@ -80,7 +80,7 @@ contains
     FLOAT,                intent(inout) :: rho(:, :) !< (mesh%np, spin_channels)
 
     integer :: isp, ip, in_points, nn, icell
-    FLOAT :: rr, x, pos(1:MAX_DIM), nrm
+    FLOAT :: rr, x, pos(1:MAX_DIM), nrm, rmax
     FLOAT :: xx(MAX_DIM), yy(MAX_DIM), rerho, imrho
     type(species_t), pointer :: species
     type(ps_t), pointer :: ps
@@ -221,8 +221,12 @@ contains
 
         ASSERT(allocated(ps%density))
 
-        call periodic_copy_init(pp, sb, atom%x, &
-          range = spline_cutoff_radius(ps%Ur(1, 1), ps%projectors_sphere_threshold))
+        rmax = CNST(0.0)
+        do isp = 1, spin_channels
+          rmax = max(rmax, spline_cutoff_radius(ps%density(isp), ps%projectors_sphere_threshold))
+        end do
+        
+        call periodic_copy_init(pp, sb, atom%x, rmax)
 
         do icell = 1, periodic_copy_num(pp)
           pos(1:sb%dim) = periodic_copy_position(pp, sb, icell)
