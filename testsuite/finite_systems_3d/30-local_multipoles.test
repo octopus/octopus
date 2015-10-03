@@ -19,7 +19,7 @@ match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;     1.
 match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;    -3.52993397 
 match ; Partial charge  1  ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2)  ; 1.000
 
-Program    : oct-local_multipoles
+Util       : oct-local_multipoles
 Input      : 30-local_multipoles.02-multipoles.inp
 match ; Electrons 1     ; GREPFIELD(local.general/multipoles/H1.multipoles, 'Electrons', 3, 2) ;  1.235842756321e+00
 match ; Multipole x 1   ; GREPFIELD(local.general/multipoles/H1.multipoles, '\<x\>', 4, 3)     ; -4.210243520428e-02 
