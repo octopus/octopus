@@ -217,8 +217,9 @@ contains
       pos(1:MAX_DIM) = M_ZERO
       ps => species_ps(species)
 
-      if(ps_niwfs(ps) > 0 .and. &
-        ps_type(species_ps(species)) /= PS_TYPE_CPI .and. ps_type(species_ps(species)) /= PS_TYPE_CPI) then
+      if(ps_has_density(ps)) then
+
+        ASSERT(allocated(ps%density))
 
         call periodic_copy_init(pp, sb, atom%x, &
           range = spline_cutoff_radius(ps%Ur(1, 1), ps%projectors_sphere_threshold))
