@@ -75,10 +75,8 @@ contains
     this%dim = 0
     this%nr = 0
     this%ll = 0
-    SAFE_DEALLOCATE_P(this%lxyz)
-    nullify(this%lxyz)
-    SAFE_DEALLOCATE_P(this%lxyz_inv)
-    nullify(this%lxyz_inv)
+    SAFE_DEALLOCATE_A(this%lxyz)
+    SAFE_DEALLOCATE_A(this%lxyz_inv)
     this%enlarge = 0
     this%checksum = int(0, kind=kind(this%checksum))
 
@@ -116,7 +114,6 @@ contains
       call mesh_read_fingerprint(this, dir, "grid", mpi_grp, ia, ib, ierr)
       ASSERT((ia==0).and.(ib==0).and.(ierr==0))
       this%use_curvilinear = (this%cv%method/=CURV_METHOD_UNIFORM) .or. this%sb%mr_flag
-      nullify(this%resolution)
       SAFE_ALLOCATE(this%x(this%np_part_global,MAX_DIM))
       do i=1, this%np_part_global
         this%x(i,:) = mesh_x_global(this, i, .true.)

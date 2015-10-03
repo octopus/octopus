@@ -200,9 +200,6 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
     call hypercube_init(mesh%idx%hypercube, sb%dim, mesh%idx%nr, mesh%idx%enlarge(1))
     mesh%np_part_global = hypercube_number_total_points(mesh%idx%hypercube)
     mesh%np_global      = hypercube_number_inner_points(mesh%idx%hypercube)
-    nullify(mesh%resolution)
-    nullify(mesh%idx%lxyz_inv)
-    nullify(mesh%idx%lxyz)
     call profiling_out(mesh_init_prof)
     POP_SUB(mesh_init_stage_2)
     return
@@ -216,8 +213,6 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   if(sb%mr_flag) then 
     SAFE_ALLOCATE(mesh%resolution(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
     mesh%resolution(:,:,:) = 0
-  else
-    nullify(mesh%resolution)
   end if
 
   mesh%idx%lxyz_inv(:,:,:) = 0

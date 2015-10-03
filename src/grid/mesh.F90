@@ -77,8 +77,8 @@ module mesh_m
   !! These four are defined for all the points the node is responsible for.
   type mesh_t
     type(simul_box_t),   pointer :: sb  !< simulation box
-    type(curvilinear_t), pointer :: cv  !< DOCUMENTATION NEEDED
-    type(index_t)                :: idx !< DOCUMENTATION NEEDED
+    type(curvilinear_t), pointer :: cv  
+    type(index_t)                :: idx 
     logical :: use_curvilinear
     
     FLOAT :: spacing(MAX_DIM)         !< the (constant) spacing between the points
@@ -98,10 +98,10 @@ module mesh_m
     type(partition_t) :: inner_partition   !< describes how the inner points are assigned to the domains
     type(partition_t) :: bndry_partition   !< describes how the boundary points are assigned to the domains
 
-    FLOAT, pointer :: x(:,:)            !< The (local) \b points
-    integer, pointer :: resolution(:, :, :)
-    FLOAT            :: volume_element    !< The global volume element.
-    FLOAT, pointer   :: vol_pp(:)         !< Element of volume for curvilinear coordinates.
+    FLOAT,   allocatable :: x(:,:)            !< The (local) \b points
+    integer, allocatable :: resolution(:, :, :)
+    FLOAT                :: volume_element    !< The global volume element.
+    FLOAT,   allocatable :: vol_pp(:)         !< Element of volume for curvilinear coordinates.
 
     type(mesh_cube_map_t) :: cube_map
   end type mesh_t
@@ -131,15 +131,6 @@ module mesh_m
     FLOAT :: spacing
     integer :: nu, mu
   end type mesh_line_t
-  
-  integer, parameter, public ::      &
-    LEFT_BOUNDARY_X   =  1,          &
-    RIGHT_BOUNDARY_X  =  2,          &
-    LEFT_BOUNDARY_Y   =  3,          &
-    RIGHT_BOUNDARY_Y  =  4,          &
-    LEFT_BOUNDARY_Z   =  5,          &
-    RIGHT_BOUNDARY_Z  =  6,          &
-    MAX_BOUNDARY_DIM  = RIGHT_BOUNDARY_Z
   
   character(len=17), parameter :: dump_tag = '*** mesh_dump ***'
   
@@ -466,7 +457,6 @@ contains
           read(lines(2), '(a20,1i10)') str, mesh%np_part
           read(lines(3), '(a20,1i10)') str, mesh%np_global
           read(lines(4), '(a20,1i10)') str, mesh%np_part_global
-          nullify(mesh%x, mesh%vol_pp, mesh%resolution)
           mesh%parallel_in_domains = .false.
         end if
       end if
@@ -636,7 +626,7 @@ contains
 
         ! the grid is different, so we read the coordinates.
         SAFE_ALLOCATE(read_lxyz(1:read_np_part, 1:mesh%sb%dim))
-        ASSERT(associated(mesh%idx%lxyz))
+        ASSERT(allocated(mesh%idx%lxyz))
         call io_binary_read(trim(dir)//'/lxyz.obf', read_np_part*mesh%sb%dim, read_lxyz, err)
         if (err /= 0) then
           ierr = ierr + 4
@@ -678,11 +668,11 @@ contains
 
     if(mesh%idx%is_hypercube) call hypercube_end(mesh%idx%hypercube)
 
-    SAFE_DEALLOCATE_P(mesh%resolution)
-    SAFE_DEALLOCATE_P(mesh%idx%lxyz)
-    SAFE_DEALLOCATE_P(mesh%idx%lxyz_inv)
-    SAFE_DEALLOCATE_P(mesh%x)
-    SAFE_DEALLOCATE_P(mesh%vol_pp)
+    SAFE_DEALLOCATE_A(mesh%resolution)
+    SAFE_DEALLOCATE_A(mesh%idx%lxyz)
+    SAFE_DEALLOCATE_A(mesh%idx%lxyz_inv)
+    SAFE_DEALLOCATE_A(mesh%x)
+    SAFE_DEALLOCATE_A(mesh%vol_pp)
 
     if(mesh%parallel_in_domains) then
 #if defined(HAVE_MPI)

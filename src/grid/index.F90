@@ -43,15 +43,15 @@ module index_m
     index_subset_indices
 
   type index_t
-    type(hypercube_t) :: hypercube
-    logical           :: is_hypercube     !< true if the box shape is an hypercube
-    integer           :: dim              !< the dimension
-    integer           :: nr(2, MAX_DIM)   !< dimensions of the box where the points are contained
-    integer           :: ll(MAX_DIM)      !< literally nr(2,:) - nr(1,:) + 1 - 2*enlarge(:)
-    integer, pointer  :: lxyz(:,:)        !< return x, y and z for each point
-    integer, pointer  :: lxyz_inv(:,:,:)  !< return points # for each xyz
-    integer           :: enlarge(MAX_DIM) !< number of points to add for boundary conditions
-    integer(8)        :: checksum
+    type(hypercube_t)    :: hypercube
+    logical              :: is_hypercube     !< true if the box shape is an hypercube
+    integer              :: dim              !< the dimension
+    integer              :: nr(2, MAX_DIM)   !< dimensions of the box where the points are contained
+    integer              :: ll(MAX_DIM)      !< literally nr(2,:) - nr(1,:) + 1 - 2*enlarge(:)
+    integer, allocatable :: lxyz(:,:)        !< return x, y and z for each point
+    integer, allocatable :: lxyz_inv(:,:,:)  !< return points # for each xyz
+    integer              :: enlarge(MAX_DIM) !< number of points to add for boundary conditions
+    integer(8)           :: checksum
   end type index_t
 
 
@@ -81,6 +81,7 @@ contains
     
   end function index_from_coords
 
+  ! -----------------------------------------------------------------
 
   subroutine index_from_coords_vec(idx, npoints, ix, index)
     type(index_t), intent(in)    :: idx
@@ -267,7 +268,7 @@ contains
     if (.not. idx%is_hypercube) then
       if (mpi_grp_is_root(mpi_grp)) then
         ! lxyz is a global function and only root will write
-        ASSERT(associated(idx%lxyz))
+        ASSERT(allocated(idx%lxyz))
         call io_binary_write(trim(dir)//"/lxyz.obf", np*idx%dim, idx%lxyz, err)
         if (err /= 0) then
           ierr = ierr + 1
@@ -302,7 +303,7 @@ contains
     ierr = 0
 
     if (.not. idx%is_hypercube) then
-      ASSERT(associated(idx%lxyz))
+      ASSERT(allocated(idx%lxyz))
 
       if (mpi_grp_is_root(mpi_grp)) then
         ! lxyz is a global function and only root will write
