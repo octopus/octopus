@@ -18,12 +18,12 @@ match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  713.85748322
 match ; Free energy        ; GREPFIELD(static/info, 'Free        =', 3) ;  713.85748322
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;  326.74770817
-match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -198.67062408
-match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; -524.27947261
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -198.67050830
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; -524.27936356
 match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -174.81774097
 match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;  -24.25113377
-match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  516.48040933
-match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;  593.97791645
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  516.48055412
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;  593.97768047
 match ; Entropy            ; GREPFIELD(static/info, 'Entropy     =', 3) ;    0.0
 match ; Fermi energy       ; GREPFIELD(static/info, 'Fermi energy =', 4);   -1.383534
 
