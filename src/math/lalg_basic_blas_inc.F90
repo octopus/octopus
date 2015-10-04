@@ -627,12 +627,11 @@ subroutine FNAME(gemmt_1)(m, n, k, alpha, a, b, beta, c)
   TYPE1,   intent(in)    :: a(:,:)  !< a(k, m)
   TYPE1,   intent(in)    :: b(:,:)  !< b(k, n)
   TYPE1,   intent(inout) :: c(:,:)  !< c(m, n)
-
-  PUSH_SUB(FNAME(gemmt_1))
+  
+  ! no PUSH_SUB, called too often
 
   call blas_gemm('C', 'N', m, n, k, alpha, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), beta, c(1, 1), lead_dim(c))
 
-  POP_SUB(FNAME(gemmt_1))
 end subroutine FNAME(gemmt_1)
 
 subroutine FNAME(gemmt_2)(m, n, k, alpha, a, b, beta, c)
