@@ -566,23 +566,25 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
   end if
 #endif
 
-#ifdef HAVE_OPENCL
   if(batch_is_packed(vpsib) .and. opencl_is_enabled()) then
 
     if(mesh%parallel_in_domains) then
+#ifdef HAVE_OPENCL
       call opencl_write_buffer(projection%buff_projection, &
         this%full_projection_size*vpsib%pack%size_real(1), projection%X(projection))
-      SAFE_DEALLOCATE_P(projection%X(projection))
+#endif
+      SAFE_DEALLOCATE_A(projection%X(projection))
     end if
 
+#ifdef HAVE_OPENCL
     call finish_opencl()
     call opencl_release_buffer(projection%buff_projection)
-
+#endif
+    
     POP_SUB(X(hamiltonian_base_nlocal_finish))
     call profiling_out(prof_vnlpsi_finish)
     return
   end if
-#endif
 
   ASSERT(allocated(projection%X(projection)))
 
