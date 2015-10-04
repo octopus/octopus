@@ -33,7 +33,7 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
       psib, vpsib, potential_opencl = this%potential_opencl)
 #endif
   else
-    if(associated(this%Impotential)) then
+    if(allocated(this%Impotential)) then
       call X(hamiltonian_base_local_sub)(this%potential, mesh, std, ispin, &
         psib, vpsib, Impotential = this%Impotential)
     else
@@ -247,7 +247,7 @@ subroutine X(hamiltonian_base_rashba)(this, der, std, psib, vpsib)
       call X(derivatives_grad)(der, psi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
     end do
  
-    if(associated(this%vector_potential)) then
+    if(allocated(this%vector_potential)) then
       forall(ip = 1:der%mesh%np)
         vpsi(ip, 1) = vpsi(ip, 1) + &
           (this%rashba_coupling) * (this%vector_potential(2, ip) + M_zI * this%vector_potential(1, ip)) * psi(ip, 2)
@@ -301,7 +301,7 @@ subroutine X(hamiltonian_base_magnetic)(this, der, std, ep, ispin, psib, vpsib)
       call X(derivatives_grad)(der, psi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
     end do
  
-    if(associated(this%vector_potential)) then
+    if(allocated(this%vector_potential)) then
       forall (idim = 1:std%dim, ip = 1:der%mesh%np)
         vpsi(ip, idim) = vpsi(ip, idim) + (M_HALF / this%mass) * &
           sum(this%vector_potential(1:der%mesh%sb%dim, ip)**2)*psi(ip, idim) &
@@ -309,7 +309,7 @@ subroutine X(hamiltonian_base_magnetic)(this, der, std, ep, ispin, psib, vpsib)
       end forall
     end if
 
-    if(associated(this%uniform_magnetic_field).and. std%ispin /= UNPOLARIZED) then
+    if(allocated(this%uniform_magnetic_field).and. std%ispin /= UNPOLARIZED) then
       ! Zeeman term
       cc = M_HALF/P_C*ep%gyromagnetic_ratio*M_HALF
       bb(1:max(der%mesh%sb%dim, 3)) = this%uniform_magnetic_field(1:max(der%mesh%sb%dim, 3))
@@ -381,7 +381,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
     
     call profiling_in(cl_prof, "CL_PROJ_BRA")
 
-    if(associated(this%projector_phases)) then
+    if(allocated(this%projector_phases)) then
       call octcl_kernel_start_call(ker_proj_bra_phase, 'projector.cl', 'projector_bra_phase')
       kernel = octcl_kernel_get_ref(ker_proj_bra_phase)
       size = psib%pack%size(1)
@@ -402,7 +402,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
     call opencl_set_kernel_arg(kernel, 7, projection%buff_projection)
     call opencl_set_kernel_arg(kernel, 8, log2(size))
 
-    if(associated(this%projector_phases)) then
+    if(allocated(this%projector_phases)) then
       call opencl_set_kernel_arg(kernel, 9, this%buff_projector_phases)
       call opencl_set_kernel_arg(kernel, 10, (ik - std%kpt%start)*this%total_points)
     end if
@@ -477,7 +477,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 
       end if
 
-      if(associated(this%projector_phases)) then
+      if(allocated(this%projector_phases)) then
 
         !$omp parallel do private(ip, ist, phase)
         do ip = 1, npoints
@@ -584,7 +584,7 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
   end if
 #endif
 
-  ASSERT(associated(projection%X(projection)))
+  ASSERT(allocated(projection%X(projection)))
 
   iprojection = 0
   do imat = 1, this%nprojector_matrices
@@ -607,7 +607,7 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
 
       call profiling_in(prof_scatter, "PROJ_MAT_SCATTER")
 
-      if(associated(this%projector_phases)) then
+      if(allocated(this%projector_phases)) then
         !$omp parallel do private(ip, ist, phase)
         do ip = 1, npoints
           phase = conjg(this%projector_phases(ip, imat, ik))
@@ -649,7 +649,7 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
     INCR(iprojection, nprojs)
   end do
   
-  SAFE_DEALLOCATE_P(projection%X(projection))
+  SAFE_DEALLOCATE_A(projection%X(projection))
   
   POP_SUB(X(hamiltonian_base_nlocal_finish))
   call profiling_out(prof_vnlpsi_finish)
@@ -671,7 +671,7 @@ contains
 
     call profiling_in(cl_prof, "CL_PROJ_KET")
 
-    if(associated(this%projector_phases)) then
+    if(allocated(this%projector_phases)) then
       call octcl_kernel_start_call(ker_proj_ket_phase, 'projector.cl', 'projector_ket_phase')
       kernel = octcl_kernel_get_ref(ker_proj_ket_phase)
       size = vpsib%pack%size(1)
@@ -694,7 +694,7 @@ contains
       call opencl_set_kernel_arg(kernel, 7, vpsib%pack%buffer)
       call opencl_set_kernel_arg(kernel, 8, log2(size))
 
-      if(associated(this%projector_phases)) then
+      if(allocated(this%projector_phases)) then
         call opencl_set_kernel_arg(kernel, 9, this%buff_projector_phases)
         call opencl_set_kernel_arg(kernel, 10, (ik - std%kpt%start)*this%total_points)
       end if
@@ -795,7 +795,7 @@ subroutine X(hamiltonian_base_nlocal_force)(this, mesh, st, geo, iqn, ndim, psi1
         end forall
       end if
 
-      if(associated(this%projector_phases)) then
+      if(allocated(this%projector_phases)) then
         forall(ip = 1:npoints)
           forall(ist = 1:nst)
             forall(idir = 0:ndim)

@@ -89,41 +89,41 @@ module hamiltonian_base_m
   !! can be represented by different types of potentials.
 
   type hamiltonian_base_t
-    integer                           :: nspin
-    FLOAT                             :: mass  !< Needed to compute the magnetic terms, if the mass is not one.
-    FLOAT                             :: rashba_coupling
-    type(nl_operator_t),      pointer :: kinetic
-    type(projector_matrix_t), pointer :: projector_matrices(:) 
-    FLOAT,                    pointer :: potential(:, :)
-    FLOAT,                    pointer :: Impotential(:, :)!cmplxscl
-    FLOAT,                    pointer :: uniform_magnetic_field(:)
-    FLOAT,                    pointer :: uniform_vector_potential(:)
-    FLOAT,                    pointer :: vector_potential(:, :)
-    integer                           :: nprojector_matrices
-    logical                           :: apply_projector_matrices
-    integer                           :: full_projection_size
-    integer                           :: max_npoints
-    integer                           :: total_points
-    integer                           :: max_nprojs
-    CMPLX,                    pointer :: projector_phases(:, :, :)
-    integer,                  pointer :: projector_to_atom(:)
-    integer                           :: nregions
-    integer,                  pointer :: regions(:)
+    integer                               :: nspin
+    FLOAT                                 :: mass  !< Needed to compute the magnetic terms, if the mass is not one.
+    FLOAT                                 :: rashba_coupling
+    type(nl_operator_t),      pointer     :: kinetic
+    type(projector_matrix_t), allocatable :: projector_matrices(:) 
+    FLOAT,                    allocatable :: potential(:, :)
+    FLOAT,                    allocatable :: Impotential(:, :)!cmplxscl
+    FLOAT,                    allocatable :: uniform_magnetic_field(:)
+    FLOAT,                    allocatable :: uniform_vector_potential(:)
+    FLOAT,                    allocatable :: vector_potential(:, :)
+    integer                               :: nprojector_matrices
+    logical                               :: apply_projector_matrices
+    integer                               :: full_projection_size
+    integer                               :: max_npoints
+    integer                               :: total_points
+    integer                               :: max_nprojs
+    CMPLX,                    allocatable :: projector_phases(:, :, :)
+    integer,                  allocatable :: projector_to_atom(:)
+    integer                               :: nregions
+    integer,                  allocatable :: regions(:)
 #ifdef HAVE_OPENCL
-    type(opencl_mem_t)                :: potential_opencl
-    type(opencl_mem_t)                :: buff_offsets
-    type(opencl_mem_t)                :: buff_matrices
-    type(opencl_mem_t)                :: buff_maps
-    type(opencl_mem_t)                :: buff_scals
-    type(opencl_mem_t)                :: buff_pos
-    type(opencl_mem_t)                :: buff_invmap
-    type(opencl_mem_t)                :: buff_projector_phases
+    type(opencl_mem_t)                    :: potential_opencl
+    type(opencl_mem_t)                    :: buff_offsets
+    type(opencl_mem_t)                    :: buff_matrices
+    type(opencl_mem_t)                    :: buff_maps
+    type(opencl_mem_t)                    :: buff_scals
+    type(opencl_mem_t)                    :: buff_pos
+    type(opencl_mem_t)                    :: buff_invmap
+    type(opencl_mem_t)                    :: buff_projector_phases
 #endif
   end type hamiltonian_base_t
 
   type projection_t
-    FLOAT, pointer     :: dprojection(:, :)
-    CMPLX, pointer     :: zprojection(:, :)
+    FLOAT, allocatable     :: dprojection(:, :)
+    CMPLX, allocatable     :: zprojection(:, :)
 #ifdef HAVE_OPENCL
     type(opencl_mem_t) :: buff_projection
 #endif
@@ -163,13 +163,6 @@ contains
     this%mass  = mass
     this%rashba_coupling = rashba_coupling
 
-    nullify(this%potential)
-    nullify(this%Impotential)!cmplxscl
-    nullify(this%uniform_magnetic_field)
-    nullify(this%uniform_vector_potential)
-    nullify(this%vector_potential)
-    nullify(this%projector_matrices)
-    nullify(this%regions)
     this%apply_projector_matrices = .false.
     this%nprojector_matrices = 0
 
@@ -182,17 +175,17 @@ contains
 
     PUSH_SUB(hamiltonian_base_end)
 
+    if(allocated(this%potential) .and. opencl_is_enabled()) then
 #ifdef HAVE_OPENCL
-    if(associated(this%potential) .and. opencl_is_enabled()) then
       call opencl_release_buffer(this%potential_opencl)
-    end if
 #endif
+    end if
     
-    SAFE_DEALLOCATE_P(this%potential)
-    SAFE_DEALLOCATE_P(this%Impotential)!cmplxscl
-    SAFE_DEALLOCATE_P(this%vector_potential)
-    SAFE_DEALLOCATE_P(this%uniform_vector_potential)
-    SAFE_DEALLOCATE_P(this%uniform_magnetic_field)
+    SAFE_DEALLOCATE_A(this%potential)
+    SAFE_DEALLOCATE_A(this%Impotential)!cmplxscl
+    SAFE_DEALLOCATE_A(this%vector_potential)
+    SAFE_DEALLOCATE_A(this%uniform_vector_potential)
+    SAFE_DEALLOCATE_A(this%uniform_magnetic_field)
     call hamiltonian_base_destroy_proj(this)
 
     POP_SUB(hamiltonian_base_end)
@@ -208,11 +201,11 @@ contains
 
     PUSH_SUB(hamiltonian_clear)
 
-    if(associated(this%potential))                this%potential = M_ZERO
-    if(associated(this%Impotential))              this%Impotential = M_ZERO!cmplxscl
-    if(associated(this%uniform_vector_potential)) this%uniform_vector_potential = M_ZERO
-    if(associated(this%vector_potential))         this%vector_potential = M_ZERO
-    if(associated(this%uniform_magnetic_field))   this%uniform_magnetic_field = M_ZERO
+    if(allocated(this%potential))                this%potential = M_ZERO
+    if(allocated(this%Impotential))              this%Impotential = M_ZERO!cmplxscl
+    if(allocated(this%uniform_vector_potential)) this%uniform_vector_potential = M_ZERO
+    if(allocated(this%vector_potential))         this%vector_potential = M_ZERO
+    if(allocated(this%uniform_magnetic_field))   this%uniform_magnetic_field = M_ZERO
 
     POP_SUB(hamiltonian_clear)
   end subroutine hamiltonian_base_clear
@@ -229,7 +222,7 @@ contains
     PUSH_SUB(hamiltonian_base_allocate)
 
     if(iand(FIELD_POTENTIAL, field) /= 0) then 
-      if(.not. associated(this%potential)) then
+      if(.not. allocated(this%potential)) then
         SAFE_ALLOCATE(this%potential(1:mesh%np, 1:this%nspin))
         this%potential = M_ZERO
         if(cmplxscl) then
@@ -245,21 +238,21 @@ contains
     end if
 
     if(iand(FIELD_UNIFORM_VECTOR_POTENTIAL, field) /= 0) then 
-      if(.not. associated(this%uniform_vector_potential)) then
+      if(.not. allocated(this%uniform_vector_potential)) then
         SAFE_ALLOCATE(this%uniform_vector_potential(1:mesh%sb%dim))
         this%uniform_vector_potential = M_ZERO
       end if
     end if
 
     if(iand(FIELD_VECTOR_POTENTIAL, field) /= 0) then 
-      if(.not. associated(this%vector_potential)) then
+      if(.not. allocated(this%vector_potential)) then
         SAFE_ALLOCATE(this%vector_potential(1:mesh%sb%dim, 1:mesh%np))
         this%vector_potential = M_ZERO
       end if
     end if
 
     if(iand(FIELD_UNIFORM_MAGNETIC_FIELD, field) /= 0) then 
-      if(.not. associated(this%uniform_magnetic_field)) then
+      if(.not. allocated(this%uniform_magnetic_field)) then
         SAFE_ALLOCATE(this%uniform_magnetic_field(1:max(mesh%sb%dim, 3)))
         this%uniform_magnetic_field = M_ZERO
       end if
@@ -285,12 +278,12 @@ contains
 
     PUSH_SUB(hamiltonian_base_update)
 
-    if(associated(this%uniform_vector_potential) .and. associated(this%vector_potential)) then
+    if(allocated(this%uniform_vector_potential) .and. allocated(this%vector_potential)) then
       call unify_vector_potentials()
     end if
 
 #ifdef HAVE_OPENCL
-    if(associated(this%potential) .and. opencl_is_enabled()) then
+    if(allocated(this%potential) .and. opencl_is_enabled()) then
 
       offset = 0
       do ispin = 1, this%nspin
@@ -317,7 +310,7 @@ contains
       end forall
       
       ! and deallocate
-      SAFE_DEALLOCATE_P(this%uniform_vector_potential)
+      SAFE_DEALLOCATE_A(this%uniform_vector_potential)
       POP_SUB(hamiltonian_base_update.unify_vector_potentials)      
     end subroutine unify_vector_potentials
 
@@ -332,7 +325,7 @@ contains
 
     PUSH_SUB(hamiltonian_base_destroy_proj)
 
-    if(associated(this%projector_matrices)) then
+    if(allocated(this%projector_matrices)) then
 
 #ifdef HAVE_OPENCL
       if(opencl_is_enabled()) then
@@ -342,17 +335,17 @@ contains
         call opencl_release_buffer(this%buff_scals)
         call opencl_release_buffer(this%buff_pos)
         call opencl_release_buffer(this%buff_invmap)
-        if(associated(this%projector_phases)) call opencl_release_buffer(this%buff_projector_phases)
+        if(allocated(this%projector_phases)) call opencl_release_buffer(this%buff_projector_phases)
       end if
 #endif
 
       do iproj = 1, this%nprojector_matrices
         call projector_matrix_deallocate(this%projector_matrices(iproj))
       end do
-      SAFE_DEALLOCATE_P(this%regions)
-      SAFE_DEALLOCATE_P(this%projector_matrices)
-      SAFE_DEALLOCATE_P(this%projector_phases)
-      SAFE_DEALLOCATE_P(this%projector_to_atom)
+      SAFE_DEALLOCATE_A(this%regions)
+      SAFE_DEALLOCATE_A(this%projector_matrices)
+      SAFE_DEALLOCATE_A(this%projector_phases)
+      SAFE_DEALLOCATE_A(this%projector_to_atom)
     end if
 
     POP_SUB(hamiltonian_base_destroy_proj)
@@ -555,8 +548,6 @@ contains
       INCR(this%total_points, pmat%npoints)
     end do
 
-    nullify(this%projector_phases)
-
 #ifdef HAVE_OPENCL
     if(opencl_is_enabled()) call build_opencl()
 #endif
@@ -681,8 +672,8 @@ contains
   logical pure function hamiltonian_base_has_magnetic(this) result(has_magnetic)
     type(hamiltonian_base_t), intent(in) :: this
     
-    has_magnetic = associated(this%vector_potential) &
-      .or. associated(this%uniform_magnetic_field)
+    has_magnetic = allocated(this%vector_potential) &
+      .or. allocated(this%uniform_magnetic_field)
     
   end function hamiltonian_base_has_magnetic
 

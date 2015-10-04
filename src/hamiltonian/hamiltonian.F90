@@ -999,7 +999,7 @@ contains
 
       PUSH_SUB(hamiltonian_update.build_phase)
 
-      if(simul_box_is_periodic(mesh%sb) .or. associated(this%hm_base%uniform_vector_potential)) then
+      if(simul_box_is_periodic(mesh%sb) .or. allocated(this%hm_base%uniform_vector_potential)) then
 
         call profiling_in(prof_phases, 'UPDATE_PHASES')
         ! now regenerate the phases for the pseudopotentials
@@ -1011,7 +1011,7 @@ contains
 
       end if
 
-      if(associated(this%hm_base%uniform_vector_potential)) then
+      if(allocated(this%hm_base%uniform_vector_potential)) then
         if(.not. associated(this%phase)) then
           SAFE_ALLOCATE(this%phase(1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
 #ifdef HAVE_OPENCL
@@ -1041,9 +1041,9 @@ contains
       nmat = this%hm_base%nprojector_matrices
 
 
-      if(associated(this%phase) .and. associated(this%hm_base%projector_matrices)) then
+      if(associated(this%phase) .and. allocated(this%hm_base%projector_matrices)) then
 
-        if(.not. associated(this%hm_base%projector_phases)) then
+        if(.not. allocated(this%hm_base%projector_phases)) then
           SAFE_ALLOCATE(this%hm_base%projector_phases(1:max_npoints, nmat, this%d%kpt%start:this%d%kpt%end))
 #ifdef HAVE_OPENCL
           if(opencl_is_enabled()) then
