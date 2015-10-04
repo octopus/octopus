@@ -71,7 +71,7 @@ program oct_local_multipoles
 
 
   ! Initialize stuff
-  call global_init(is_serial = .true.)
+  call global_init(is_serial = .false.)
 
   call messages_init()
 
