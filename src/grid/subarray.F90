@@ -53,11 +53,11 @@ module subarray_m
   
   type subarray_t
     private
-    integer, pointer :: offsets(:)
-    integer, pointer :: blength(:)
-    integer, pointer :: dest(:)
-    integer          :: nblocks
-    integer          :: npoints
+    integer, allocatable :: offsets(:)
+    integer, allocatable :: blength(:)
+    integer, allocatable :: dest(:)
+    integer              :: nblocks
+    integer              :: npoints
   end type subarray_t
   
 contains
@@ -147,8 +147,9 @@ contains
     
     PUSH_SUB(subarray_end)
 
-    SAFE_DEALLOCATE_P(this%offsets)
-    SAFE_DEALLOCATE_P(this%blength)
+    SAFE_DEALLOCATE_A(this%offsets)
+    SAFE_DEALLOCATE_A(this%blength)
+    SAFE_DEALLOCATE_A(this%dest)
 
     POP_SUB(subarray_end)
   end subroutine subarray_end
