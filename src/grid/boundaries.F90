@@ -46,12 +46,10 @@ module boundaries_m
     type(mesh_t), pointer :: mesh
     integer          :: nper             !< the number of points that correspond to pbc
     integer, pointer :: per_points(:, :) !< (1:2, 1:nper) the list of points that correspond to pbc 
-#ifdef HAVE_MPI
     integer, pointer :: per_send(:, :)
     integer, pointer :: per_recv(:, :)
     integer, pointer :: nsend(:)
     integer, pointer :: nrecv(:)
-#endif
     type(opencl_mem_t) :: buff_per_points
     type(opencl_mem_t) :: buff_per_send
     type(opencl_mem_t) :: buff_per_recv

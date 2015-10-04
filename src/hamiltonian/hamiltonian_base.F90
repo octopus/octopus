@@ -109,7 +109,6 @@ module hamiltonian_base_m
     integer,                  allocatable :: projector_to_atom(:)
     integer                               :: nregions
     integer,                  allocatable :: regions(:)
-#ifdef HAVE_OPENCL
     type(opencl_mem_t)                    :: potential_opencl
     type(opencl_mem_t)                    :: buff_offsets
     type(opencl_mem_t)                    :: buff_matrices
@@ -118,15 +117,12 @@ module hamiltonian_base_m
     type(opencl_mem_t)                    :: buff_pos
     type(opencl_mem_t)                    :: buff_invmap
     type(opencl_mem_t)                    :: buff_projector_phases
-#endif
   end type hamiltonian_base_t
 
   type projection_t
     FLOAT, allocatable     :: dprojection(:, :)
     CMPLX, allocatable     :: zprojection(:, :)
-#ifdef HAVE_OPENCL
-    type(opencl_mem_t) :: buff_projection
-#endif
+    type(opencl_mem_t)     :: buff_projection
   end type projection_t
 
   integer, parameter, public ::          &

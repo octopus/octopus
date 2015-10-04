@@ -111,7 +111,6 @@ module nl_operator_m
     type(nl_operator_index_t) :: inner
     type(nl_operator_index_t) :: outer
 
-#ifdef HAVE_OPENCL
     type(octcl_kernel_t) :: kernel
     type(opencl_mem_t) :: buff_imin
     type(opencl_mem_t) :: buff_imax
@@ -120,7 +119,6 @@ module nl_operator_m
     type(opencl_mem_t) :: buff_stencil
     type(opencl_mem_t) :: buff_ip_to_xyz
     type(opencl_mem_t) :: buff_xyz_to_ip
-#endif
   end type nl_operator_t
 
   integer, parameter :: &
@@ -129,12 +127,10 @@ module nl_operator_m
        OP_MIN     = OP_FORTRAN, &
        OP_MAX     = OP_VEC
 
-#ifdef HAVE_OPENCL
   integer, parameter ::     &
     OP_INVMAP    = 1,       &
     OP_MAP       = 2,       &
     OP_NOMAP     = 3
-#endif
 
   integer, public, parameter :: OP_ALL = 3, OP_INNER = 1, OP_OUTER = 2
 
@@ -152,12 +148,9 @@ module nl_operator_m
   integer :: zfunction_global = -1
   integer :: sfunction_global = -1
   integer :: cfunction_global = -1  
-#ifdef HAVE_OPENCL
   integer :: function_opencl
-#endif
 
   type(profile_t), save :: operate_batch_prof
-
 
 contains
   
@@ -238,7 +231,6 @@ contains
     call parse_variable('OperateComplexSingle', OP_FORTRAN, cfunction_global)
     if(.not.varinfo_valid_option('OperateComplexSingle', cfunction_global)) call messages_input_error('OperateComplexSingle')
 
-#ifdef HAVE_OPENCL
     if(opencl_is_enabled()) then
 
       !%Variable OperateOpenCL
@@ -258,7 +250,6 @@ contains
       call parse_variable('OperateOpenCL',  OP_MAP, function_opencl)
 
     end if
-#endif
 
     !%Variable NLOperatorCompactBoundaries
     !%Type logical
@@ -377,19 +368,15 @@ contains
     integer :: ii, jj, p1(MAX_DIM), time, current, size
     integer, allocatable :: st1(:), st2(:), st1r(:), stencil(:, :)
     integer :: nn
-#ifdef HAVE_MPI
     integer :: ir, maxp, iinner, iouter
-#endif
     logical :: change, force_change
     character(len=200) :: flags
 
     PUSH_SUB(nl_operator_build)
 
-#ifdef HAVE_MPI
     if(mesh%parallel_in_domains .and. .not. const_w) then
       call messages_experimental('Domain parallelization with curvilinear coordinates')
     end if
-#endif
 
     ASSERT(np > 0)
 
@@ -547,8 +534,6 @@ contains
       nn = op%rimap_inv(jj + 1) - op%rimap_inv(jj)
     end do
 
-
-#ifdef HAVE_MPI
     if(op%mesh%parallel_in_domains) then
       !now build the arrays required to apply the nl_operator by parts
 
@@ -606,7 +591,6 @@ contains
       end do
       
     end if
-#endif
 
 #ifdef HAVE_OPENCL
     if(opencl_is_enabled() .and. op%const_w) then

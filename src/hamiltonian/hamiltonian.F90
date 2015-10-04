@@ -1014,11 +1014,11 @@ contains
       if(allocated(this%hm_base%uniform_vector_potential)) then
         if(.not. associated(this%phase)) then
           SAFE_ALLOCATE(this%phase(1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
-#ifdef HAVE_OPENCL
           if(opencl_is_enabled()) then
+#ifdef HAVE_OPENCL
             call opencl_create_buffer(this%buff_phase, CL_MEM_READ_ONLY, TYPE_CMPLX, mesh%np_part*this%d%kpt%nlocal)
-          end if
 #endif
+          end if
         end if
 
         kpoint(1:mesh%sb%dim) = M_ZERO
@@ -1030,11 +1030,11 @@ contains
               + this%hm_base%uniform_vector_potential(1:mesh%sb%dim))))
           end forall
         end do
-#ifdef HAVE_OPENCL
         if(opencl_is_enabled()) then
+#ifdef HAVE_OPENCL
           call opencl_write_buffer(this%buff_phase, mesh%np_part*this%d%kpt%nlocal, this%phase)
-        end if
 #endif
+        end if
       end if
 
       max_npoints = this%hm_base%max_npoints
@@ -1045,12 +1045,12 @@ contains
 
         if(.not. allocated(this%hm_base%projector_phases)) then
           SAFE_ALLOCATE(this%hm_base%projector_phases(1:max_npoints, nmat, this%d%kpt%start:this%d%kpt%end))
-#ifdef HAVE_OPENCL
           if(opencl_is_enabled()) then
+#ifdef HAVE_OPENCL
             call opencl_create_buffer(this%hm_base%buff_projector_phases, CL_MEM_READ_ONLY, &
               TYPE_CMPLX, this%hm_base%total_points*this%d%kpt%nlocal)
-          end if
 #endif
+          end if
         end if
 
         offset = 0
@@ -1061,12 +1061,12 @@ contains
               this%hm_base%projector_phases(ip, imat, ik) = this%ep%proj(iatom)%phase(ip, ik)
             end do
 
-#ifdef HAVE_OPENCL
             if(opencl_is_enabled() .and. this%hm_base%projector_matrices(imat)%npoints > 0) then
+#ifdef HAVE_OPENCL
               call opencl_write_buffer(this%hm_base%buff_projector_phases, &
                 this%hm_base%projector_matrices(imat)%npoints, this%hm_base%projector_phases(1:, imat, ik), offset = offset)
-            end if
 #endif
+            end if
             offset = offset + this%hm_base%projector_matrices(imat)%npoints
           end do
         end do

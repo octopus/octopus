@@ -41,7 +41,8 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
   integer :: terms_
   type(projection_t) :: projection
   R_TYPE, allocatable :: psi_global(:,:), hpsi_global(:,:)
-integer :: jj
+  integer :: jj
+  
   call profiling_in(prof_hamiltonian, "HAMILTONIAN")
   PUSH_SUB(X(hamiltonian_apply_batch))
 
