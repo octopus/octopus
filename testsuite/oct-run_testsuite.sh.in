@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright (C) 2005-2006 Heiko Appel
+# Copyright (C) 2005-2015 Heiko Appel, David Strubbe, Xavier Andrade
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -41,7 +41,7 @@ NUM=0
 function usage() {
     cat <<EOF
 
- Copyright (C) 2005-2006 by Heiko Appel
+ Copyright (C) 2005-2015 Heiko Appel, David Strubbe, Xavier Andrade
 
 Usage: oct-run_testsuite.sh [options]
     
