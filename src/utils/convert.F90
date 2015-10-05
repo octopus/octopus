@@ -22,6 +22,7 @@
 #include "global.h"
 
 program oct_convert
+  use batch_m
   use calc_mode_par_m
   use command_line_m
   use fft_m
@@ -31,6 +32,7 @@ program oct_convert
   use io_m
   use io_function_m
   use io_binary_m
+  use kick_m
   use loct_m
   use messages_m
   use mesh_m
@@ -39,6 +41,7 @@ program oct_convert
   use parser_m
   use poisson_m
   use profiling_m
+  use spectrum_m
   use string_m
   use system_m
   use restart_m
@@ -383,17 +386,25 @@ contains
     character(len=*), intent(inout) :: ref_name       !< Reference file name 
     character(len=*), intent(inout) :: ref_folder     !< Reference folder name
 
-    integer             :: ierr, ii, i_space, i_time, nn(1:3), optimize_parity(1:3)
-    integer             :: i_energy, e_end, e_start, e_point, chunk_size, read_count
-    logical             :: optimize(1:3)
-    character(MAX_PATH_LEN)       :: filename, ref_filename, folder
-    FLOAT               :: fdefault, w_max
-    FLOAT, allocatable  :: read_ft(:), read_rff(:), point_tmp(:,:)
-    CMPLX, allocatable  :: out_fft(:)
-    type(fft_t)         :: fft
-    type(profile_t), save :: prof_fftw, prof_io
+    integer                 :: ierr, ii, i_space, i_time, nn(1:3), optimize_parity(1:3)
+    integer                 :: i_energy, e_end, e_start, e_point, chunk_size, read_count
+    logical                 :: optimize(1:3)
+    character(MAX_PATH_LEN) :: filename, ref_filename, folder
+    FLOAT                   :: fdefault, w_max
+    FLOAT, allocatable      :: read_ft(:), read_rff(:), point_tmp(:,:)
 
-    type(restart_t)    :: restart
+    integer, parameter      :: FAST_FOURIER = 1, STANDARD_FOURIER = 2
+    type(kick_t)            :: kick
+    integer                 :: ft_method
+    type(spectrum_t)        :: spectrum
+    type(batch_t)           :: tdrho_b, wdrho_b 
+    FLOAT, allocatable      :: tdrho_a(:,:,:), wdrho_a(:,:,:)
+    type(fft_t)             :: fft
+    type(profile_t), save   :: prof_fftw, prof_io
+
+    type(restart_t)         :: restart
+    CMPLX, allocatable      :: out_fft(:)
+
     FLOAT   :: start_time          !< start time for the transform
     integer :: time_steps          !< number of time steps
     FLOAT   :: dt                  !< step in time mesh
@@ -417,8 +428,8 @@ contains
     nn(2) = 1
     nn(3) = 1
     start_time = M_ZERO
+    !TODO: check if e_point can be used instead of e_point+1
     SAFE_ALLOCATE(read_ft(1:e_point+1))
-    SAFE_ALLOCATE(out_fft(1:e_point+1))
     SAFE_ALLOCATE(read_rff(1:mesh%np))
 
     !%Variable ConvertEnergyMin
@@ -444,7 +455,7 @@ contains
     ! Calculate the limits in frequency space.
     start_time = c_start * dt
     dt = dt * c_step
-    time_steps = (c_end - c_start)/c_step 
+    time_steps = (c_end - c_start) / c_step 
     w_max = M_TWO * M_PI / dt 
 
     !%Variable ConvertEnergyMax
@@ -466,10 +477,57 @@ contains
       max_energy = w_max
     end if
 
-    optimize = .false.
-    optimize_parity = -1
-    call fft_init(fft, nn, 1, FFT_REAL, FFTLIB_FFTW, optimize, optimize_parity)
-    dw = M_TWO*M_PI / (dt * time_steps)
+    !%Variable ConvertFTMethod
+    !%Type integer
+    !%Default FAST_FOURIER
+    !%Section Utilities::oct-convert
+    !%Description
+    !% Describes the method used to perform the Fourier Transform
+    !%Option fast_fourier 1
+    !% Uses Fast Fourier Transform as implemented in the external library.
+    !%Option standard_fourier 2
+    !% Uses polinomial approach to the computation of discrete Fourier Transform.
+    !% It uses the same variable described in how to obtain spectrum from
+    !% a time-propagation calculation. 
+    !%End
+    call parse_variable('ConvertFTMethod', 1, ft_method)
+
+    dw = M_TWO * M_PI / (dt * time_steps)
+
+    select case(ft_method)
+      case (FAST_FOURIER)
+        SAFE_ALLOCATE(out_fft(1:e_point+1))
+        optimize = .false.
+        optimize_parity = -1
+        call fft_init(fft, nn, 1, FFT_REAL, FFTLIB_FFTW, optimize, optimize_parity)
+      case (STANDARD_FOURIER)
+        !%Variable ConvertEnergyStep
+        !%Type float
+        !%Default <math>2 \pi / T</math>, where <math>T</math> is the total propagation time
+        !%Section Utilities::oct-convert
+        !%Description
+        !% Energy step to output from Fourier transform.
+        !% Sampling rate for the Fourier transform. If you supply a number equal or smaller than zero, then
+        !% the sampling rate will be <math>2 \pi / T</math>, where <math>T</math> is the total propagation time.
+        !%End
+        fdefault = M_TWO * M_PI / (dt * time_steps)
+        call parse_variable('ConvertEnergyStep',fdefault, dw, units_inp%energy)
+        if (dw <= M_ZERO) dw = M_TWO * M_PI / (dt * time_steps)
+        
+        call spectrum_init(spectrum, dw, w_max)
+        ! Manually setting already defined variables on spectrum.
+        spectrum%start_time = c_start * dt
+        spectrum%end_time = c_end * dt 
+        spectrum%energy_step =  dw
+        spectrum%max_energy = w_max
+        SAFE_ALLOCATE(tdrho_a(1:e_point + 1, 1, 1))
+        SAFE_ALLOCATE(wdrho_a(1:e_point + 1, 1, 1))
+    end select
+
+    !TODO: set system variable common for all the program in 
+    !      order to use call kick_init(kick, sy%st%d%nspin, sys%space%dim, sys%geo%periodic_dim)
+    call kick_init(kick, 1, mesh%sb%dim, geo%periodic_dim)
+
     e_start = int(min_energy / dw)
     e_end   = int(max_energy / dw)
     write(message(1),'(a,1x,i0.7,a,f12.7,a,i0.7,a,f12.7,a)')'Frequency index:',e_start,'(',&
@@ -507,7 +565,7 @@ contains
     !For each mesh point, open density file and read corresponding point.  
     if (mpi_world%rank == 0) call loct_progress_bar(-1, mesh%np)
 
-    SAFE_ALLOCATE(point_tmp(1:chunk_size+1,1:e_point+1))
+    SAFE_ALLOCATE(point_tmp(1:chunk_size+1, 1:e_point+1))
     read_count = 0
     ! Space
     do i_space = 1, mesh%np
@@ -535,9 +593,9 @@ contains
         if (i_time == c_start) read_count = read_count + 1
         call profiling_out(prof_io)
         if (subtract_file) then
-          read_ft(e_point) =  point_tmp(read_count,e_point) - read_rff(ii)
+          read_ft(e_point) =  point_tmp(read_count, e_point) - read_rff(ii)
         else
-          read_ft(e_point) = point_tmp(read_count,e_point)
+          read_ft(e_point) = point_tmp(read_count, e_point)
         end if
         if (ierr /= 0 .and. i_space == 1) then
           write(message(1), '(a,a,2i10)') "Error reading the file ", trim(filename), ii, i_time
@@ -548,10 +606,25 @@ contains
         end if
       end do ! Time
 
-      call profiling_in(prof_fftw, "CONVERT_FFTW")
-      call fftw_execute_dft_r2c(fft%planf, read_ft(1), out_fft(1))
-      call profiling_out(prof_fftw)
-      point_tmp(read_count, 1:e_point+1) = dble(out_fft(1:e_point+1))
+      select case (ft_method)
+      case (FAST_FOURIER)
+        call profiling_in(prof_fftw, "CONVERT_FFTW")
+        call fftw_execute_dft_r2c(fft%planf, read_ft(1), out_fft(1))
+        call profiling_out(prof_fftw)
+        point_tmp(read_count, 1:e_point+1) = IMAGPART(out_fft(1:e_point+1))
+      case (STANDARD_FOURIER)
+        tdrho_a(1:e_point+1, 1, 1) = read_ft(1:e_point+1)
+        call batch_init(tdrho_b, 1, 1, 1, tdrho_a)
+        call batch_init(wdrho_b, 1, 1, 1, wdrho_a)
+        call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, c_start + 1, c_start + time_steps + 2, & 
+                                  kick%time, dt, tdrho_b)
+        call spectrum_fourier_transform(spectrum%method, spectrum%transform, spectrum%noise, &
+              c_start+1, c_start + time_steps + 2, kick%time, dt, tdrho_b, e_start + 1, e_end + 1, &
+              spectrum%energy_step, wdrho_b, spectrum%cmplxscl)
+        call batch_end(tdrho_b)
+        call batch_end(wdrho_b)
+        point_tmp(read_count, 1:e_point+1) = wdrho_a(1:e_point+1, 1, 1)
+      end select
 
       if (mod(i_space-1, 1000) == 0 .and. mpi_world%rank == 0) then
         call loct_progress_bar(i_space-1, mesh%np) 
@@ -562,6 +635,7 @@ contains
         write(message(1),'(a)') ""
         write(message(2),'(a,i0)') "Writing binary output: step ", i_space/chunk_size
         call messages_info(2)
+        !TODO: check if the extra 1 can be removed.
         do i_energy = e_start+1, e_end+1
           write(filename,'(a14,i0.7,a12)')'wd.general/wd.',i_energy-1,'/density.obf'
           ! If it is the first time entering here, write the header. But, only once
@@ -590,8 +664,16 @@ contains
     
     SAFE_DEALLOCATE_A(point_tmp)
     SAFE_DEALLOCATE_A(read_ft)
-    SAFE_DEALLOCATE_A(out_fft)
     SAFE_DEALLOCATE_A(read_rff)
+
+    select case (ft_method)
+    case (FAST_FOURIER)
+      SAFE_DEALLOCATE_A(out_fft)
+    case (STANDARD_FOURIER)
+      call kick_end(kick)
+      SAFE_DEALLOCATE_A(tdrho_a)
+      SAFE_DEALLOCATE_A(wdrho_a)
+    end select
 
     POP_SUB(convert_transform)
   end subroutine convert_transform
