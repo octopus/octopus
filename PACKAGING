@@ -2,27 +2,39 @@ How to build:
   Standard ./configure; make; make install
 
 Dependencies:
-  perl
-  FFTW >= 3
   BLAS
-  LAPACK
+  FFTW >= 3
   GSL >= 1.9
+  LAPACK
   libxc >= 2.0
-  Zoltan (internal)
+  perl
+  bpdn (internal)
+  ISF (internal)
+  Qshep (internal)
   Spglib (internal)
-  Metis (internal/optional)
-  Newuoa (internal/optional)
-  Qshep (internal/optional)
+  yaml (internal)
+  arpack (optional)
+  BerkeleyGW (optional)
+  clBLAS (optional)
+  clFFT (optional)
+  ETSF_IO (optional)
+  feast (optional)
+  FortranCL (internal/optinal)
   GD (optional)
+  libISF (internal/optional)
+  Metis (internal/optional)
   MPI (optional)
   NetCDF (optional)
-  Sparskit (optional)
-  BLACS/ScaLAPACK (optional)
-  PFFT-Chemnitz (optional)
+  Newuoa (internal/optional)
   NFFT (optional)
-  LibFM (optional)
-  ETSF_IO (optional)
-  BerkeleyGW (optional)
+  OpenCL (optional)
+  PAPI (optional
+  PFFT-Chemnitz (optional)
+  PNFFT (optional)
+  pspio (optional)
+  ScaLAPACK/BLACS (optional)
+  Parmetis (optional)
+  Sparskit (optional)
   
 Website:
   http://www.tddft.org/programs/octopus/
