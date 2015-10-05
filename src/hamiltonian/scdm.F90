@@ -329,12 +329,14 @@ subroutine scdm_init(st,der,fullcube,scdm,operate_on_scdm)
   scdm%poisson%fft_solver = scdm%poisson_fft
 
 #ifdef HAVE_SCALAPACK
-  ! create a blacs context with the transpose row and col numbers
-  scdm%proc_grid%npcol = st%dom_st_proc_grid%nprow
-  scdm%proc_grid%nprow = st%dom_st_proc_grid%npcol
-  CALL blacs_get( -1, 0, scdm%proc_grid%context )
-  CALL blacs_gridinit(scdm%proc_grid%context, 'Row-major', scdm%proc_grid%nprow, scdm%proc_grid%npcol )
-  CALL blacs_gridinfo(scdm%proc_grid%context,scdm%proc_grid%nprow,scdm%proc_grid%npcol,scdm%proc_grid%myrow,scdm%proc_grid%mycol)
+  if(st%scalapack_compatible) then
+    ! create a blacs context with the transpose row and col numbers
+    scdm%proc_grid%npcol = st%dom_st_proc_grid%nprow
+    scdm%proc_grid%nprow = st%dom_st_proc_grid%npcol
+    CALL blacs_get( -1, 0, scdm%proc_grid%context )
+    CALL blacs_gridinit(scdm%proc_grid%context, 'Row-major', scdm%proc_grid%nprow, scdm%proc_grid%npcol )
+    CALL blacs_gridinfo(scdm%proc_grid%context,scdm%proc_grid%nprow,scdm%proc_grid%npcol,scdm%proc_grid%myrow,scdm%proc_grid%mycol)
+ end if
 #endif
   ! set flag to do this only once
   scdm_is_init = .true.
