@@ -1,16 +1,39 @@
 The main development team of this program consists of (alphabetical
 order):
 
- * Alberto Castro       (alberto.castro@tddft.org)
- * Angel Rubio          (arubio@sc.ehu.es)
- * Axel Thimm           (Axel.Thimm@physik.fu-berlin.de)
- * Carlo Andrea Rozzi   (rozzi@unimo.it)
- * David Strubbe        (dstrubbe@civet.berkeley.edu)
- * Florian Lorenzen     (lorenzen@physik.fu-berlin.de)
- * Heiko Appel          (appel@physik.fu-berlin.de)
- * Micael Oliveira      (micael@teor.fis.uc.pt)
- * Miguel A. L. Marques (marques@tddft.org)
- * Xavier Andrade       (andrade@mirto.polytechnique.fr)
+ * Joseba Alberdi
+ * Xavien Andrade
+ * Alberto Castro
+ * Umberto De Giovannini
+ * Alain Delgado
+ * Nicole Helbig
+ * Joaquim Jornet-Somoza
+ * Ask Larsen
+ * Miguel A. L. Marques
+ * Fernando Nogueira
+ * Micael Oliveira
+ * Carlo Andrea Rozzi
+ * Angel Rubio
+ * Jose R. F. Sousa
+ * David Strubbe
+ * Iris Theophilou
+ * Alejandro Varas
+ * Matthieu Verstraete
+
+Former developers
+
+ * Heiko Appel
+ * Fulvio Berardi
+ * Johanna Fuks
+ * David Kammerlander
+ * Kevin Krieger
+ * Florian Lorenzen
+ * Danilo Nitsche
+ * Roberto Olivares-Amaya
+ * Arto Sakko
+ * Axel Thimm
+ * Jessica Walkenhorst
+ * Jan Werschnik
 
 octopus is based on a fixed-nucleus code written by:
 
@@ -19,6 +42,5 @@ octopus is based on a fixed-nucleus code written by:
 
 Other contributors are:
 
-  * Sebastien Hamel    - parallel version of oct-excite
-  * Eugene S. Kadantsev (ekadants@mjs1.phy.queensu.ca)
-                       - linear response code
+  * Sebastien Hamel     - parallel version of oct-excite
+  * Eugene S. Kadantsev - linear response code
