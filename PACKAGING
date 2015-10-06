@@ -12,7 +12,7 @@ Dependencies:
   ISF (internal)
   Qshep (internal)
   Spglib (internal)
-  yaml (internal)
+  yaml (optional)
   arpack (optional)
   BerkeleyGW (optional)
   clBLAS (optional)
