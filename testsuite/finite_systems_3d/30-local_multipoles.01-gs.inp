@@ -10,5 +10,7 @@ Spacing = 0.4
 
 SCFCalculatePartialCharges = yes
 
+MeshPartitionPackage = metis
+
 ExperimentalFeatures = yes
 

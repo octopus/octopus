@@ -9,6 +9,8 @@ FromScratch = yes
 Radius = 10.
 Spacing = 0.4
 
+MeshPartitionPackage = metis
+
 %LocalDomains
  'H1' | Bader | '1'
  'H2' | Bader | '2'
