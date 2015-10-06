@@ -19,7 +19,7 @@ Dependencies:
   clFFT (optional)
   ETSF_IO (optional)
   feast (optional)
-  FortranCL (internal/optinal)
+  FortranCL (internal/optional)
   GD (optional)
   libISF (internal/optional)
   Metis (internal/optional)
