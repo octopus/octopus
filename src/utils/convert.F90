@@ -611,7 +611,7 @@ contains
         call profiling_in(prof_fftw, "CONVERT_FFTW")
         call fftw_execute_dft_r2c(fft%planf, read_ft(1), out_fft(1))
         call profiling_out(prof_fftw)
-        point_tmp(read_count, 1:e_point+1) = IMAGPART(out_fft(1:e_point+1))
+        point_tmp(read_count, 1:e_point+1) = AIMAG(out_fft(1:e_point+1))
       case (STANDARD_FOURIER)
         tdrho_a(1:e_point+1, 1, 1) = read_ft(1:e_point+1)
         call batch_init(tdrho_b, 1, 1, 1, tdrho_a)
@@ -623,7 +623,7 @@ contains
               spectrum%energy_step, wdrho_b, spectrum%cmplxscl)
         call batch_end(tdrho_b)
         call batch_end(wdrho_b)
-        point_tmp(read_count, 1:e_point+1) = wdrho_a(1:e_point+1, 1, 1)
+        point_tmp(read_count, 1:e_point+1) = - wdrho_a(1:e_point+1, 1, 1)
       end select
 
       if (mod(i_space-1, 1000) == 0 .and. mpi_world%rank == 0) then
