@@ -62,6 +62,7 @@ else
 fi
 
 AC_PROG_CC($octopus_default_cc)
+AC_PROG_CC_C99
 
 # optimizations extensions supported by the compiler
 AC_C_INLINE
