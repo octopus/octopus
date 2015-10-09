@@ -252,7 +252,7 @@ dnl set the default extension for the programs
 EXEEXT="${MYEXT}${EXEEXT}"
 
 dnl can turn off build of utilities
-AC_ARG_ENABLE(utils, AS_HELP_STRING([--disable-utils], [Build utilities]))
+AC_ARG_ENABLE(utils, AS_HELP_STRING([--disable-utils], [Do not build utilities]))
 
 dnl we only generate the utilities if single precision is off
 if test \( -z "${SINGLE_PRECISION}" \) -a \( x"$enable_utils" != x"no" \); then
