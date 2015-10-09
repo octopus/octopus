@@ -188,13 +188,13 @@ contains
     !% The idea is to make use of time-reversal symmetry from the beginning:
     !%
     !% <math>
-    !%   \exp \left(-i\delta t/2 H_{n}\right)\psi_n = exp \left(i\delta t/2 H_{n+1}\right)\psi_{n+1},
+    !%   \exp \left(-i\delta t H_{n} / 2 \right)\psi_n = \exp \left(i\delta t H_{n+1} / 2 \right)\psi_{n+1},
     !% </math>
     !%
     !% and then invert to obtain:
     !%
     !% <math>
-    !%   \psi_{n+1} = \exp \left(-i\delta t/2 H_{n+1}\right) exp \left(-i\delta t/2 H_{n}\right)\psi_{n}.
+    !%   \psi_{n+1} = \exp \left(-i\delta t H_{n+1} / 2 \right) \exp \left(-i\delta t H_{n} / 2 \right)\psi_{n}.
     !% </math>
     !%
     !% But we need to know <math>H_{n+1}</math>, which can only be known exactly through the solution
@@ -206,7 +206,6 @@ contains
     !% A modification of previous method to make it faster.
     !% It is based on extrapolation of the time-dependent potentials. It is faster
     !% by about 40%.
-    !%
     !% The only difference is the procedure to estimate <math>H_{n+1}</math>: in this case
     !% it is extrapolated via a second-order polynomial by making use of the
     !% Hamiltonian at time <math>t-2\delta t</math>, <math>t-\delta t</math> and <math>t</math>.
@@ -220,23 +219,20 @@ contains
     !% it is unitary (if the exponential is performed correctly) and preserves
     !% time-reversal symmetry (if the self-consistency problem is dealt with correctly).
     !% It is defined as:
-    !%
     !% <math>
     !%   U_{\rm EM}(t+\delta t, t) = \exp \left( -i\delta t H_{t+\delta t/2}\right)\,.
     !% </math>
     !%Option crank_nicholson 5
     !%Option crank_nicolson 5
     !% Classical Crank-Nicolson propagator.
-    !%
     !% <math>
-    !%  (1 + i\delta t/2 H_{n+1/2}) \psi_{n+1} = (1 - i\delta t/2 H_{n+1/2}) \psi_{n}  
+    !%  (1 + i\delta t H_{n+1/2} / 2) \psi_{n+1} = (1 - i\delta t H_{n+1/2} / 2) \psi_{n}  
     !% </math>
     !%Option crank_nicholson_sparskit 6
     !%Option crank_nicolson_sparskit 6
     !% Classical Crank-Nicolson propagator. Requires the SPARSKIT library.
-    !%
     !% <math>
-    !%  (1 + i\delta t/2 H_{n+1/2}) \psi_{n+1} = (1 - i\delta t/2 H_{n+1/2}) \psi_{n}  
+    !%  (1 + i\delta t H_{n+1/2} / 2) \psi_{n+1} = (1 - i\delta t H_{n+1/2} / 2) \psi_{n}  
     !% </math>
     !%Option magnus 7
     !% Magnus Expansion (M4).

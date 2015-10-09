@@ -372,15 +372,15 @@ contains
       !% of electron-hole pairs. Each line in the file, after an optional header, has four
       !% columns:
       !%
-      !% <i>i  a  sigma  weight</i>
+      !% <i>i  a  <math>\sigma</math> weight</i>
       !% 
-      !% where <i>i</i> should be an occupied state, <i>a</i> an unoccupied one, and <i>sigma</i>
+      !% where <i>i</i> should be an occupied state, <i>a</i> an unoccupied one, and <math>\sigma</math>
       !% the spin of the corresponding orbital. This pair is then associated with a
-      !% creation-annihilation pair <math>a^{\dagger}_{a,sigma} a_{i,sigma}</math>, so that the
+      !% creation-annihilation pair <math>a^{\dagger}_{a,\sigma} a_{i,\sigma}</math>, so that the
       !% excited state will be a linear combination in the form:
       !% 
       !% <math>\left|{\rm ExcitedState}\right> =
-      !% \sum [ weight(i,a,sigma) a^{\dagger}_{a,sigma} a_{i,sigma} \left|{\rm GroundState}\right> ]</math>
+      !% \sum weight(i,a,\sigma) a^{\dagger}_{a,\sigma} a_{i,\sigma} \left|{\rm GroundState}\right></math>
       !%
       !% where <i>weight</i> is the number in the fourth column.
       !% These weights should be normalized to one; otherwise the routine
