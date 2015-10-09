@@ -35,11 +35,11 @@ else
     [Directory where external METIS library was installed (must be single-precision)])])
 
   case $with_metis_prefix in
-    no ) acx_external_metis=disabled ;;
+    no ) acx_external_metis=no ;;
     "") with_metis_prefix="/usr" ;;
   esac
 
-  if test x"$acx_external_metis" != xdisabled; then
+  if test x"$acx_external_metis" != xno; then
   
     dnl Backup CFLAGS and LIBS
     acx_metis_save_CFLAGS="$CFLAGS"
@@ -86,13 +86,17 @@ METIS_SetDefaultOptions(options);
 
     CFLAGS="$acx_metis_save_CFLAGS"
     LIBS="$acx_metis_save_LIBS"
+  else
+    AC_MSG_RESULT([disabled])
   fi
 
   if test x"$acx_external_metis" = xno ; then
     dnl METIS was not found to link with, but is included in the distribution
   
     dnl We disable METIS support only if the user is requesting this explicitly
-    AC_ARG_ENABLE(metis, AS_HELP_STRING([--disable-metis], [Do not compile with internal METIS domain-partitioning library.]),[acx_internal_metis=$enableval],[acx_internal_metis=yes])
+    AC_ARG_ENABLE(metis, AS_HELP_STRING([--disable-metis],
+    			 [Do not compile with internal METIS domain-partitioning library.]),
+			 [acx_internal_metis=$enableval],[acx_internal_metis=yes])
   
     AC_MSG_CHECKING([whether METIS included in Octopus is enabled])
   
