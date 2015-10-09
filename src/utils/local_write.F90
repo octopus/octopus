@@ -123,11 +123,11 @@ contains
     !%Option density 2
     !% If set, <tt>octopus</tt> outputs the densities corresponding to the local domains to 
     !% the folder <tt>ld.general/densities</tt>. 
-    !% The output format is set by the <tt>LDOutputHow</tt> input variable.
+    !% The output format is set by the <tt>LDOutputFormat</tt> input variable.
     !%Option local_v 4
     !% If set, <tt>octopus</tt> outputs the different components of the potential
     !% to the folder <tt>ld.general/potential</tt>. 
-    !% The output format is set by the <tt>LDOutputHow</tt> input variable.
+    !% The output format is set by the <tt>LDOutputFormat</tt> input variable.
     !%Option energy 128
     !% If set, <tt>octopus</tt> outputs the different components of the energy of the local domains
     !% to the folder <tt>ld.general/energy</tt>.
@@ -144,17 +144,19 @@ contains
       writ%out(iout,:)%write = (iand(flags, 2**(iout - 1)) /= 0)
     end do
 
-    !%Variable LDOutputHow
+    call messages_obsolete_variable('LDOutputHow', 'LDOutputFormat')
+    
+    !%Variable LDOutputFormat
     !%Type flag
     !%Default none
     !%Section Utilities::oct-local_multipoles
     !%Description
     !% Describes the format of the output files (see <tt>LDOutput</tt>).
-    !% It can take the same values as <tt>OutputHow</tt> flag.
+    !% It can take the same values as <tt>OutputFormat</tt> flag.
     !%End
-    call parse_variable('LDOutputHow', 0, writ%how)
-    if(.not.varinfo_valid_option('OutputHow', writ%how, is_flag=.true.)) then
-      call messages_input_error('LDOutputHow')
+    call parse_variable('LDOutputFormat', 0, writ%how)
+    if(.not.varinfo_valid_option('OutputFormat', writ%how, is_flag=.true.)) then
+      call messages_input_error('LDOutputFormat')
     end if
 
     !%Variable LDMultipoleLmax
@@ -686,7 +688,7 @@ contains
     end if
 
    ! Write multipoles in BILD format
-    if(iand(how, OPTION__OUTPUTHOW__BILD) /= 0 )then
+    if(iand(how, OPTION__OUTPUTFORMAT__BILD) /= 0 )then
       !FIXME: to include spin larger than 1.
       is = 1
       do id = 1, nd

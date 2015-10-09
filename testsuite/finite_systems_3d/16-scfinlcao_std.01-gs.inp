@@ -32,7 +32,7 @@ XCFunctional = gga_x_pbe + gga_c_pbe
 SCFinLCAO = yes
 ExperimentalFeatures = yes
 Output = geometry + density
-OutputHow = openscad + matlab + plane_z
+OutputFormat = openscad + matlab + plane_z
 
 FilterPotentials = filter_none
 

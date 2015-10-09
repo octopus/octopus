@@ -89,7 +89,7 @@ contains
 
   ! -------------
   !> Reads an binary file and writes the equivalent files, 
-  !! defined with OutputHow.
+  !! defined with OutputFormat.
   !! This is a high-level interface that reads the input file and
   !! calls the proper function.
   subroutine convert()
@@ -114,7 +114,7 @@ contains
     !%Section Utilities::oct-convert
     !%Description
     !% Input filename. The original filename which is going to be converted in the format
-    !% specified in <tt>OutputHow</tt>. It is going to convert various files, it should 
+    !% specified in <tt>OutputFormat</tt>. It is going to convert various files, it should 
     !% only contain the beginning of the name. For instance, in the case of the restart 
     !% files, it should be one space ' '.
     !%End
@@ -653,7 +653,7 @@ contains
     call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
 #endif
     ! write the output files
-    if (outp%how /= OPTION__OUTPUTHOW__BINARY ) then
+    if (outp%how /= OPTION__OUTPUTFORMAT__BINARY ) then
       do i_energy = e_start+1, e_end+1
         write(filename,'(a14,i0.7,a1)')'wd.general/wd.',i_energy-1,'/'
         call io_binary_read(trim(filename)//'density.obf', mesh%np, read_rff, ierr)

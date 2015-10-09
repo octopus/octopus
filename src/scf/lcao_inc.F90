@@ -155,7 +155,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
 #ifdef LCAO_DEBUG
       if(this%debug .and. mpi_grp_is_root(mpi_world)) then
         write(filename, '(a,i4.4,a,i1)') 'lcao-orb', n1, '-sp', ispin
-        call X(io_function_output)(OPTION__OUTPUTHOW__XCRYSDEN, "./static", filename, gr%mesh, lcaopsi(:, 1, ispin), &
+        call X(io_function_output)(OPTION__OUTPUTFORMAT__XCRYSDEN, "./static", filename, gr%mesh, lcaopsi(:, 1, ispin), &
           sqrt(units_out%length**(-gr%mesh%sb%dim)), ierr, geo = geo)
       end if
 #endif
@@ -606,7 +606,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
 #ifdef LCAO_DEBUG
                 if(this%debug .and. mpi_grp_is_root(mpi_world)) then
                   write(filename, '(a,i4.4,a,i1)') 'lcao-orb', n1
-                  call X(io_function_output)(OPTION__OUTPUTHOW__XCRYSDEN, "./static", filename, gr%mesh, psii(:, 1, iorb), &
+                  call X(io_function_output)(OPTION__OUTPUTFORMAT__XCRYSDEN, "./static", filename, gr%mesh, psii(:, 1, iorb), &
                     sqrt(units_out%length**(-gr%mesh%sb%dim)), ierr, geo = geo)
                 end if
 #endif

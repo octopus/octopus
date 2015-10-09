@@ -97,8 +97,10 @@ contains
     PUSH_SUB(io_function_read_how)
 
     how = 0
-
-    !%Variable OutputHow
+    
+    call messages_obsolete_variable('OutputHow', 'OutputFormat')
+    
+    !%Variable OutputFormat
     !%Type flag
     !%Default 0
     !%Section Output
@@ -186,72 +188,72 @@ contains
     !%Option vtk 2097152
     !% Generates output in <a href=http://www.vtk.org/VTK/img/file-formats.pdf>VTK legacy format</a>.
     !%End
-    call parse_variable('OutputHow', 0, how)
-    if(.not.varinfo_valid_option('OutputHow', how, is_flag=.true.)) then
-      call messages_input_error('OutputHow')
+    call parse_variable('OutputFormat', 0, how)
+    if(.not.varinfo_valid_option('OutputFormat', how, is_flag=.true.)) then
+      call messages_input_error('OutputFormat')
     end if
 
     if(how  ==  0 .and. .not. optional_default(ignore_error, .false.)) then
-      write(message(1), '(a)') 'Must specify output method with variable OutputHow.'
+      write(message(1), '(a)') 'Must specify output method with variable OutputFormat.'
       call messages_fatal(1, only_root_writes = .true.)
      end if
 
     ! some modes are not available in some circumstances
     if(sb%dim == 1) then
-      if(iand(how, OPTION__OUTPUTHOW__AXIS_Y) /= 0) then
-        message(1) = "OutputHow = axis_y not available with Dimensions = 1."
+      if(iand(how, OPTION__OUTPUTFORMAT__AXIS_Y) /= 0) then
+        message(1) = "OutputFormat = axis_y not available with Dimensions = 1."
         call messages_fatal(1)
       end if
-      if(iand(how, OPTION__OUTPUTHOW__PLANE_Z) /= 0) then
-        message(1) = "OutputHow = plane_z not available with Dimensions = 1."
+      if(iand(how, OPTION__OUTPUTFORMAT__PLANE_Z) /= 0) then
+        message(1) = "OutputFormat = plane_z not available with Dimensions = 1."
         call messages_fatal(1)
       end if
-      if(iand(how, OPTION__OUTPUTHOW__XCRYSDEN) /= 0) then
-        message(1) = "OutputHow = xcrysden not available with Dimensions = 1."
+      if(iand(how, OPTION__OUTPUTFORMAT__XCRYSDEN) /= 0) then
+        message(1) = "OutputFormat = xcrysden not available with Dimensions = 1."
         call messages_fatal(1)
       end if
     end if
 
     if(sb%dim <= 2) then
-      if(iand(how, OPTION__OUTPUTHOW__AXIS_Z) /= 0) then
-        message(1) = "OutputHow = axis_z not available with Dimensions <= 2."
+      if(iand(how, OPTION__OUTPUTFORMAT__AXIS_Z) /= 0) then
+        message(1) = "OutputFormat = axis_z not available with Dimensions <= 2."
         call messages_fatal(1)
       end if
-      if(iand(how, OPTION__OUTPUTHOW__PLANE_X) /= 0) then
-        message(1) = "OutputHow = plane_x not available with Dimensions <= 2."
+      if(iand(how, OPTION__OUTPUTFORMAT__PLANE_X) /= 0) then
+        message(1) = "OutputFormat = plane_x not available with Dimensions <= 2."
         call messages_fatal(1)
       end if
-      if(iand(how, OPTION__OUTPUTHOW__PLANE_Y) /= 0) then
-        message(1) = "OutputHow = plane_y not available with Dimensions <= 2."
+      if(iand(how, OPTION__OUTPUTFORMAT__PLANE_Y) /= 0) then
+        message(1) = "OutputFormat = plane_y not available with Dimensions <= 2."
         call messages_fatal(1)
       end if
-      if(iand(how, OPTION__OUTPUTHOW__DX) /= 0) then
-        message(1) = "OutputHow = dx not available with Dimensions <= 2."
+      if(iand(how, OPTION__OUTPUTFORMAT__DX) /= 0) then
+        message(1) = "OutputFormat = dx not available with Dimensions <= 2."
         call messages_fatal(1)
       end if
-      if(iand(how, OPTION__OUTPUTHOW__CUBE) /= 0) then
-        message(1) = "OutputHow = cube not available with Dimensions <= 2."
+      if(iand(how, OPTION__OUTPUTFORMAT__CUBE) /= 0) then
+        message(1) = "OutputFormat = cube not available with Dimensions <= 2."
         call messages_fatal(1)
       end if
     end if
 
-    if(iand(how, OPTION__OUTPUTHOW__OPENSCAD) /= 0) then
+    if(iand(how, OPTION__OUTPUTFORMAT__OPENSCAD) /= 0) then
       if(sb%dim /= 3) then
-        write(message(1),'(a)') "OutputHow = OpenSCAD only available with Dimensions = 3."
+        write(message(1),'(a)') "OutputFormat = OpenSCAD only available with Dimensions = 3."
         call messages_fatal(1)
       endif
-      call messages_experimental("OutputHow = OpenSCAD")
+      call messages_experimental("OutputFormat = OpenSCAD")
     endif
     
 #if !defined(HAVE_NETCDF)
-    if (iand(how, OPTION__OUTPUTHOW__NETCDF) /= 0) then
+    if (iand(how, OPTION__OUTPUTFORMAT__NETCDF) /= 0) then
       message(1) = 'Octopus was compiled without NetCDF support.'
       message(2) = 'It is not possible to write output in NetCDF format.'
       call messages_fatal(2)
     end if
 #endif
 #if !defined(HAVE_ETSF_IO)
-    if (iand(how, OPTION__OUTPUTHOW__ETSF) /= 0) then
+    if (iand(how, OPTION__OUTPUTFORMAT__ETSF) /= 0) then
       message(1) = 'Octopus was compiled without ETSF_IO support.'
       message(2) = 'It is not possible to write output in ETSF format.'
       call messages_fatal(2)
@@ -272,23 +274,23 @@ contains
     PUSH_SUB(io_function_fill_how)
 
     how = 0
-    if(index(where, "AxisX")     /= 0) how = ior(how, OPTION__OUTPUTHOW__AXIS_X)
-    if(index(where, "AxisY")     /= 0) how = ior(how, OPTION__OUTPUTHOW__AXIS_Y)
-    if(index(where, "AxisZ")     /= 0) how = ior(how, OPTION__OUTPUTHOW__AXIS_Z)
-    IF(INDEX(WHERE, "PlaneX")    /= 0) how = ior(how, OPTION__OUTPUTHOW__PLANE_X)
-    if(index(where, "PlaneY")    /= 0) how = ior(how, OPTION__OUTPUTHOW__PLANE_Y)
-    if(index(where, "PlaneZ")    /= 0) how = ior(how, OPTION__OUTPUTHOW__PLANE_Z)
-    if(index(where, "DX")        /= 0) how = ior(how, OPTION__OUTPUTHOW__DX)
-    if(index(where, "XCrySDen")  /= 0) how = ior(how, OPTION__OUTPUTHOW__XCRYSDEN)
-    if(index(where, "Binary")    /= 0) how = ior(how, OPTION__OUTPUTHOW__BINARY)
-    if(index(where, "MeshIndex") /= 0) how = ior(how, OPTION__OUTPUTHOW__MESH_INDEX)
-    if(index(where, "XYZ")       /= 0) how = ior(how, OPTION__OUTPUTHOW__XYZ)
+    if(index(where, "AxisX")     /= 0) how = ior(how, OPTION__OUTPUTFORMAT__AXIS_X)
+    if(index(where, "AxisY")     /= 0) how = ior(how, OPTION__OUTPUTFORMAT__AXIS_Y)
+    if(index(where, "AxisZ")     /= 0) how = ior(how, OPTION__OUTPUTFORMAT__AXIS_Z)
+    IF(index(where, "PlaneX")    /= 0) how = ior(how, OPTION__OUTPUTFORMAT__PLANE_X)
+    if(index(where, "PlaneY")    /= 0) how = ior(how, OPTION__OUTPUTFORMAT__PLANE_Y)
+    if(index(where, "PlaneZ")    /= 0) how = ior(how, OPTION__OUTPUTFORMAT__PLANE_Z)
+    if(index(where, "DX")        /= 0) how = ior(how, OPTION__OUTPUTFORMAT__DX)
+    if(index(where, "XCrySDen")  /= 0) how = ior(how, OPTION__OUTPUTFORMAT__XCRYSDEN)
+    if(index(where, "Binary")    /= 0) how = ior(how, OPTION__OUTPUTFORMAT__BINARY)
+    if(index(where, "MeshIndex") /= 0) how = ior(how, OPTION__OUTPUTFORMAT__MESH_INDEX)
+    if(index(where, "XYZ")       /= 0) how = ior(how, OPTION__OUTPUTFORMAT__XYZ)
 #if defined(HAVE_NETCDF)
-    if(index(where, "NETCDF")    /= 0) how = ior(how, OPTION__OUTPUTHOW__NETCDF)
+    if(index(where, "NETCDF")    /= 0) how = ior(how, OPTION__OUTPUTFORMAT__NETCDF)
 #endif
-    if(index(where, "Cube")      /= 0) how = ior(how, OPTION__OUTPUTHOW__CUBE)
-    if(index(where, "OpenSCAD")  /= 0) how = ior(how, OPTION__OUTPUTHOW__OPENSCAD)
-    if(index(where, "VTK")       /= 0) how = ior(how, OPTION__OUTPUTHOW__VTK)
+    if(index(where, "Cube")      /= 0) how = ior(how, OPTION__OUTPUTFORMAT__CUBE)
+    if(index(where, "OpenSCAD")  /= 0) how = ior(how, OPTION__OUTPUTFORMAT__OPENSCAD)
+    if(index(where, "VTK")       /= 0) how = ior(how, OPTION__OUTPUTFORMAT__VTK)
 
     POP_SUB(io_function_fill_how)
   end function io_function_fill_how

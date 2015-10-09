@@ -49,7 +49,7 @@ TDExpOrder = 16
 TDTimeStep = dt
 
 Output = density
-OutputHow = xcrysden
+OutputFormat = xcrysden
 OutputInterval = 25
 TDOutput = energy + multipoles + spin
 

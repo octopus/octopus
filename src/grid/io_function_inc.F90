@@ -489,8 +489,8 @@ subroutine X(io_function_output_vector)(how, dir, fname, mesh, ff, vector_dim, u
     i_am_root = (mesh%vp%rank == root_)
 
     if (.not. is_global_) then
-      if(iand(how, OPTION__OUTPUTHOW__BOUNDARY_POINTS) /= 0) then
-        call messages_not_implemented("OutputHow = boundary_points with domain parallelization")
+      if(iand(how, OPTION__OUTPUTFORMAT__BOUNDARY_POINTS) /= 0) then
+        call messages_not_implemented("OutputFormat = boundary_points with domain parallelization")
         SAFE_ALLOCATE(ff_global(1:mesh%np_part_global, 1:vector_dim))
         ! FIXME: needs version of vec_gather that includes boundary points. See ticket #127
       else
@@ -524,8 +524,8 @@ subroutine X(io_function_output_vector)(how, dir, fname, mesh, ff, vector_dim, u
 
     how_seq = how
     
-    if(iand(how, OPTION__OUTPUTHOW__VTK) /= 0) call out_vtk()
-    how_seq = iand(how_seq, not(OPTION__OUTPUTHOW__VTK)) ! remove from the list of formats
+    if(iand(how, OPTION__OUTPUTFORMAT__VTK) /= 0) call out_vtk()
+    how_seq = iand(how_seq, not(OPTION__OUTPUTFORMAT__VTK)) ! remove from the list of formats
 
     if(how_seq /= 0) then !perhaps there is nothing left to do
       do ivd = 1, vector_dim
@@ -637,8 +637,8 @@ subroutine X(io_function_output) (how, dir, fname, mesh, ff, unit, ierr, geo, gr
     comm = mesh%vp%comm
     i_am_root = (mesh%vp%rank == root_)
     if (.not. is_global_) then
-      if(iand(how, OPTION__OUTPUTHOW__BOUNDARY_POINTS) /= 0) then
-        call messages_not_implemented("OutputHow = boundary_points with domain parallelization")
+      if(iand(how, OPTION__OUTPUTFORMAT__BOUNDARY_POINTS) /= 0) then
+        call messages_not_implemented("OutputFormat = boundary_points with domain parallelization")
         SAFE_ALLOCATE(ff_global(1:mesh%np_part_global))
         ! FIXME: needs version of vec_gather that includes boundary points. See ticket #127
       else
@@ -720,7 +720,7 @@ subroutine X(io_function_output_global) (how, dir, fname, mesh, ff, unit, ierr, 
 
   np_max = mesh%np_global
   ! should we output boundary points?
-  if(iand(how, OPTION__OUTPUTHOW__BOUNDARY_POINTS) /= 0) then
+  if(iand(how, OPTION__OUTPUTFORMAT__BOUNDARY_POINTS) /= 0) then
     if(ubound(ff, dim = 1) >= mesh%np_part_global) then
       np_max = mesh%np_part_global
     else
@@ -730,47 +730,47 @@ subroutine X(io_function_output_global) (how, dir, fname, mesh, ff, unit, ierr, 
     endif
   endif
 
-  if(iand(how, OPTION__OUTPUTHOW__BINARY)     /= 0) call out_binary()
-  if(iand(how, OPTION__OUTPUTHOW__AXIS_X)     /= 0) call out_axis (1, 2, 3) ! x ; y=0,z=0
-  if(iand(how, OPTION__OUTPUTHOW__AXIS_Y)     /= 0) call out_axis (2, 1, 3) ! y ; x=0,z=0
-  if(iand(how, OPTION__OUTPUTHOW__AXIS_Z)     /= 0) call out_axis (3, 1, 2) ! z ; x=0,y=0
-  if(iand(how, OPTION__OUTPUTHOW__PLANE_X)    /= 0) call out_plane(1, 2, 3) ! x=0; y; z;
-  if(iand(how, OPTION__OUTPUTHOW__PLANE_Y)    /= 0) call out_plane(2, 1, 3) ! y=0; x; z;
-  if(iand(how, OPTION__OUTPUTHOW__PLANE_Z)    /= 0) call out_plane(3, 1, 2) ! z=0; x; y;
-  if(iand(how, OPTION__OUTPUTHOW__MESH_INDEX) /= 0) call out_mesh_index()
-  if(iand(how, OPTION__OUTPUTHOW__DX)         /= 0) call out_dx()
-  if(iand(how, OPTION__OUTPUTHOW__XCRYSDEN)   /= 0) then
+  if(iand(how, OPTION__OUTPUTFORMAT__BINARY)     /= 0) call out_binary()
+  if(iand(how, OPTION__OUTPUTFORMAT__AXIS_X)     /= 0) call out_axis (1, 2, 3) ! x ; y=0,z=0
+  if(iand(how, OPTION__OUTPUTFORMAT__AXIS_Y)     /= 0) call out_axis (2, 1, 3) ! y ; x=0,z=0
+  if(iand(how, OPTION__OUTPUTFORMAT__AXIS_Z)     /= 0) call out_axis (3, 1, 2) ! z ; x=0,y=0
+  if(iand(how, OPTION__OUTPUTFORMAT__PLANE_X)    /= 0) call out_plane(1, 2, 3) ! x=0; y; z;
+  if(iand(how, OPTION__OUTPUTFORMAT__PLANE_Y)    /= 0) call out_plane(2, 1, 3) ! y=0; x; z;
+  if(iand(how, OPTION__OUTPUTFORMAT__PLANE_Z)    /= 0) call out_plane(3, 1, 2) ! z=0; x; y;
+  if(iand(how, OPTION__OUTPUTFORMAT__MESH_INDEX) /= 0) call out_mesh_index()
+  if(iand(how, OPTION__OUTPUTFORMAT__DX)         /= 0) call out_dx()
+  if(iand(how, OPTION__OUTPUTFORMAT__XCRYSDEN)   /= 0) then
     call out_xcrysden(.true.)
 #ifdef R_TCOMPLEX
     call out_xcrysden(.false.)
 #endif
   end if
-  if(iand(how, OPTION__OUTPUTHOW__CUBE)       /= 0) call out_cube()
+  if(iand(how, OPTION__OUTPUTFORMAT__CUBE)       /= 0) call out_cube()
 
-  if(iand(how, OPTION__OUTPUTHOW__MATLAB) /= 0) then
+  if(iand(how, OPTION__OUTPUTFORMAT__MATLAB) /= 0) then
 #if defined(R_TCOMPLEX)
     do jj = 1, 3 ! re, im, abs
 #else
     do jj = 1, 1 ! only real part
 #endif
-      if(iand(how, OPTION__OUTPUTHOW__PLANE_X) /= 0) call out_matlab(how, 1, 2, 3, jj) ! x=0; y; z; 
-      if(iand(how, OPTION__OUTPUTHOW__PLANE_Y) /= 0) call out_matlab(how, 2, 1, 3, jj) ! y=0; x; z;
-      if(iand(how, OPTION__OUTPUTHOW__PLANE_Z) /= 0) call out_matlab(how, 3, 1, 2, jj) ! z=0; x; y;
+      if(iand(how, OPTION__OUTPUTFORMAT__PLANE_X) /= 0) call out_matlab(how, 1, 2, 3, jj) ! x=0; y; z; 
+      if(iand(how, OPTION__OUTPUTFORMAT__PLANE_Y) /= 0) call out_matlab(how, 2, 1, 3, jj) ! y=0; x; z;
+      if(iand(how, OPTION__OUTPUTFORMAT__PLANE_Z) /= 0) call out_matlab(how, 3, 1, 2, jj) ! z=0; x; y;
     end do
-    if(iand(how, OPTION__OUTPUTHOW__MESHGRID) /= 0) then
+    if(iand(how, OPTION__OUTPUTFORMAT__MESHGRID) /= 0) then
       do jj = 4, 5 ! meshgrid
-        if(iand(how, OPTION__OUTPUTHOW__PLANE_X) /= 0) call out_matlab(how, 1, 2, 3, jj) ! x=0; y; z; 
-        if(iand(how, OPTION__OUTPUTHOW__PLANE_Y) /= 0) call out_matlab(how, 2, 1, 3, jj) ! y=0; x; z;
-        if(iand(how, OPTION__OUTPUTHOW__PLANE_Z) /= 0) call out_matlab(how, 3, 1, 2, jj) ! z=0; x; y;
+        if(iand(how, OPTION__OUTPUTFORMAT__PLANE_X) /= 0) call out_matlab(how, 1, 2, 3, jj) ! x=0; y; z; 
+        if(iand(how, OPTION__OUTPUTFORMAT__PLANE_Y) /= 0) call out_matlab(how, 2, 1, 3, jj) ! y=0; x; z;
+        if(iand(how, OPTION__OUTPUTFORMAT__PLANE_Z) /= 0) call out_matlab(how, 3, 1, 2, jj) ! z=0; x; y;
       end do
     end if
   end if
 
 #if defined(HAVE_NETCDF)
-  if(iand(how, OPTION__OUTPUTHOW__NETCDF)     /= 0) call out_netcdf()
+  if(iand(how, OPTION__OUTPUTFORMAT__NETCDF)     /= 0) call out_netcdf()
 #endif
-  if(iand(how, OPTION__OUTPUTHOW__OPENSCAD) /= 0) call out_openscad()
-  if(iand(how, OPTION__OUTPUTHOW__VTK) /= 0) call out_vtk()
+  if(iand(how, OPTION__OUTPUTFORMAT__OPENSCAD) /= 0) call out_openscad()
+  if(iand(how, OPTION__OUTPUTFORMAT__VTK) /= 0) call out_vtk()
 
   POP_SUB(X(io_function_output_global))
   call profiling_out(write_prof)
@@ -901,7 +901,7 @@ contains
     min_d3 = mesh%idx%nr(1, d3) + mesh%idx%enlarge(d3)
     max_d3 = mesh%idx%nr(2, d3) - mesh%idx%enlarge(d3)    
     
-    if(iand(how, OPTION__OUTPUTHOW__BOUNDARY_POINTS) /= 0) then
+    if(iand(how, OPTION__OUTPUTFORMAT__BOUNDARY_POINTS) /= 0) then
       min_d2 = mesh%idx%nr(1, d2)
       max_d2 = mesh%idx%nr(2, d2)
       min_d3 = mesh%idx%nr(1, d3)
@@ -1325,7 +1325,7 @@ contains
     !%Default (max+min)/2
     !%Section Output
     !%Description
-    !% The value for the isosurface in OpenSCAD, when writing output of a field with <tt>OutputHow = openscad</tt>.
+    !% The value for the isosurface in OpenSCAD, when writing output of a field with <tt>OutputFormat = openscad</tt>.
     !% It is expressed in <tt>UnitsOutput</tt> for the relevant quantity. For complex fields, the isovalue is
     !% for the magnitude of the field.
     !%End

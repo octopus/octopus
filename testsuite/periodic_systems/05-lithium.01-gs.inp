@@ -30,7 +30,7 @@ KPointsUseSymmetries = no
 ParallelizationStrategy = par_kpoints
 
 Output = density
-OutputHow = xcrysden
+OutputFormat = xcrysden
 
 FilterPotentials = filter_none
 

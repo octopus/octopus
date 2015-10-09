@@ -38,7 +38,7 @@ k=1.0
 %
 
 Output = mmb_den + mmb_wfs
-OutputHow = plane_z + axis_x
+OutputFormat = plane_z + axis_x
 
 TDTimeStep = 0.01
 TDMaxSteps = 200

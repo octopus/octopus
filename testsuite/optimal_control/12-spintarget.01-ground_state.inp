@@ -248,7 +248,7 @@ electric_field | 1 | 1 | 0 | 0.0 | "envelope_function"
 # Output
 #*********************************************************
 #Output = wfs + potential
-#OutputHow = plane_z + axis_x
+#OutputFormat = plane_z + axis_x
 #TDOutput = laser + spin
 
 

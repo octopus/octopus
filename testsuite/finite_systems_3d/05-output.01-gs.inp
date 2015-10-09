@@ -14,7 +14,7 @@ Spacing = 0.5
 %
 
 Output = density + geometry + wfs + bader + potential + forces + el_pressure + ELF
-OutputHow = axis_x + plane_x + dx + xyz + xcrysden + mesh_index
+OutputFormat = axis_x + plane_x + dx + xyz + xcrysden + mesh_index
 OutputInterval = 4
 OutputDuringSCF = yes
 # for Bader parallel in domains

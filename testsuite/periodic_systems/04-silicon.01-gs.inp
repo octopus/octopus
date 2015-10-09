@@ -34,7 +34,7 @@ ExtraStates = 1
 ConvRelDens = 1e-7
 
 Output = geometry + dos
-OutputHow = xyz
+OutputFormat = xyz
 
 OutputBandsGnuplotMode = yes
 OutputBandsGraceMode = yes

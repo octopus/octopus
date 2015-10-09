@@ -714,9 +714,10 @@ contains
       call parse_variable('LDExtraWrite', .false., extra_write)
       call bader_union_inside(basins, lcl%nd, lcl%domain, lcl%lab, lcl%dshape, lcl%inside) 
       if (extra_write) then
-        call parse_variable('LDOutputHow', 0, how)
-        if(.not.varinfo_valid_option('OutputHow', how, is_flag=.true.)) then
-          call messages_input_error('LDOutputHow')
+        call messages_obsolete_variable('LDOutputHow', 'LDOutputFormat')
+        call parse_variable('LDOutputFormat', 0, how)
+        if(.not.varinfo_valid_option('LDOutputFormat', how, is_flag=.true.)) then
+          call messages_input_error('LDOutputFormat')
         end if
         filename = 'basinsmap'
         call dio_function_output(how, &
@@ -848,9 +849,9 @@ contains
     call parse_variable('LDExtraWrite', .false., extra_write)
 
     if (extra_write) then
-      call parse_variable('LDOutputHow', 0, how)
-      if(.not.varinfo_valid_option('OutputHow', how, is_flag=.true.)) then
-        call messages_input_error('LDOutputHow')
+      call parse_variable('LDOutputFormat', 0, how)
+      if(.not.varinfo_valid_option('OutputFormat', how, is_flag=.true.)) then
+        call messages_input_error('LDOutputFormat')
       end if
       SAFE_ALLOCATE(dble_domain_map(1:nd, 1:sys%gr%mesh%np))
       SAFE_ALLOCATE(domain_mesh(1:sys%gr%mesh%np))

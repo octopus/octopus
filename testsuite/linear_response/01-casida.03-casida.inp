@@ -29,7 +29,7 @@ CasidaCalcForces = yes
 CasidaKohnShamStates = "3-10"
 
 CasidaTransitionDensities = "3-4"
-OutputHow = xcrysden
+OutputFormat = xcrysden
 
 PoissonSolver = fft
 PoissonFFTKernel = multipole_correction

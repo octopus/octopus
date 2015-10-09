@@ -10,7 +10,7 @@ Spacing = 0.5
   "H" | 0 | 0 | 0
 %
 
-OutputHow = dx
+OutputFormat = dx
 Output = density
 ConvertFolder = 'restart/gs'
 ConvertFilename = 'density'

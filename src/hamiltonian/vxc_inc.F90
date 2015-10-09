@@ -739,9 +739,9 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, delt
   call dderivatives_lapl(der, lrvxc, nxc)
 
   if(in_debug_mode) then
-    call dio_function_output(OPTION__OUTPUTHOW__AXIS_X, "./static", "rho", der%mesh, density(:, 1), unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTHOW__AXIS_X, "./static", "vxcorig", der%mesh, refvx(:), unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTHOW__AXIS_X, "./static", "nxc", der%mesh, nxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "rho", der%mesh, density(:, 1), unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "vxcorig", der%mesh, refvx(:), unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "nxc", der%mesh, nxc, unit_one, ierr)
   end if
 
   if(xcs%xcd_optimize_cutoff) then
@@ -835,7 +835,7 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, delt
   end do
 
   if(in_debug_mode) then
-    call dio_function_output(OPTION__OUTPUTHOW__AXIS_X, "./static", "nxcmod", der%mesh, nxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "nxcmod", der%mesh, nxc, unit_one, ierr)
   
     if(mpi_world%rank == 0) then
       print*, "Iter",    iter, ncutoff, qxcfin
@@ -851,12 +851,12 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, delt
   end if
 
   if(in_debug_mode) then
-    call dio_function_output(OPTION__OUTPUTHOW__AXIS_X, "./static", "fulldiffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTHOW__AXIS_Y, "./static", "fulldiffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTHOW__AXIS_Z, "./static", "fulldiffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTHOW__PLANE_X, "./static", "fulldiffvxc.pl", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTHOW__PLANE_Y, "./static", "fulldiffvxc.pl", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTHOW__PLANE_Z, "./static", "fulldiffvxc.pl", der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "fulldiffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Y, "./static", "fulldiffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Z, "./static", "fulldiffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_X, "./static", "fulldiffvxc.pl", der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_Y, "./static", "fulldiffvxc.pl", der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_Z, "./static", "fulldiffvxc.pl", der%mesh, lrvxc, unit_one, ierr)
   end if
 
   forall(ip = 1:der%mesh%np) 
@@ -878,9 +878,9 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, delt
   end do
 
   if(in_debug_mode) then
-    call dio_function_output(OPTION__OUTPUTHOW__AXIS_X, "./static", "diffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTHOW__AXIS_Y, "./static", "diffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTHOW__AXIS_Z, "./static", "diffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "diffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Y, "./static", "diffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Z, "./static", "diffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
   end if
   
   dd = dmf_integrate(der%mesh, lrvxc)/vol
@@ -894,7 +894,7 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, delt
   if(present(deltaxc)) deltaxc = -CNST(2.0)*dd
 
   if(in_debug_mode) then
-    call dio_function_output(OPTION__OUTPUTHOW__AXIS_X, "./static", "fnxc", der%mesh, nxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "fnxc", der%mesh, nxc, unit_one, ierr)
   end if
   
   call profiling_out(prof)

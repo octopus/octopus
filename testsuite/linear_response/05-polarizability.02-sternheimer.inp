@@ -12,7 +12,7 @@ ExtraStates = 3
 %
 
 Output = pol_density
-OutputHow = xcrysden
+OutputFormat = xcrysden
 
 FilterPotentials = filter_none
 

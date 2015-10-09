@@ -397,7 +397,7 @@ subroutine pes_mask_output_full_mapM(pesK, file, Lk, ll, how, sb, pmesh)
   
 #if defined(HAVE_NETCDF)  
   
-  if(iand(how, OPTION__OUTPUTHOW__NETCDF) /= 0) then
+  if(iand(how, OPTION__OUTPUTFORMAT__NETCDF) /= 0) then
     filename = trim(file)//".ncdf"
     write(message(1), '(a)') 'Writing netcdf format file: '
     call messages_info(1)
@@ -409,7 +409,7 @@ subroutine pes_mask_output_full_mapM(pesK, file, Lk, ll, how, sb, pmesh)
 
 #endif
   
-  if(iand(how, OPTION__OUTPUTHOW__VTK) /= 0)  then
+  if(iand(how, OPTION__OUTPUTFORMAT__VTK) /= 0)  then
     filename = trim(file)//".vtk"
     write(message(1), '(a)') 'Writing vtk format file: '
     call messages_info(1)

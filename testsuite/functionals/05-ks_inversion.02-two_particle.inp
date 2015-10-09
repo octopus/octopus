@@ -33,7 +33,7 @@ InvertKSTargetDensity = "static/density.y=0,z=0"
 InvertKSstabilizer = 1.0d-20
 InvertKSVerbosity = 1
 Output = potential
-OutputHow = axis_x
+OutputFormat = axis_x
 
 FilterPotentials = filter_none
 

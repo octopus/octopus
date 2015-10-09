@@ -194,11 +194,11 @@ contains
     !% The output file is called <tt>sqm-wf-</tt>. For linear response, the filename is <tt>sqm_lr_wf-</tt>.
     !%Option geometry bit(4)
     !% Outputs file containing the coordinates of the atoms treated within quantum mechanics.
-    !% If <tt>OutputHow = xyz</tt>, the file is called <tt>geometry.xyz</tt>; a
+    !% If <tt>OutputFormat = xyz</tt>, the file is called <tt>geometry.xyz</tt>; a
     !% file <tt>crystal.xyz</tt> is written with a supercell geometry if the system is periodic;
     !% if point charges were defined in the PDB file (see <tt>PDBCoordinates</tt>), they will be output
     !% in the file <tt>geometry_classical.xyz</tt>.
-    !% If <tt>OutputHow = xcrysden</tt>, a file called <tt>geometry.xsf</tt> is written.
+    !% If <tt>OutputFormat = xcrysden</tt>, a file called <tt>geometry.xsf</tt> is written.
     !%Option current bit(5)
     !% Outputs paramagnetic current density. The output file is called <tt>current-</tt>.
     !% For linear response, the filename is <tt>lr_current-</tt>.
@@ -505,7 +505,7 @@ contains
     !%Description
     !% The name of the directory where <tt>Octopus</tt> stores information
     !% such as the density, forces, etc. requested by variable <tt>Output</tt>
-    !% in the format specified by <tt>OutputHow</tt>.
+    !% in the format specified by <tt>OutputFormat</tt>.
     !% This information is written while iterating <tt>CalculationMode = gs</tt>, <tt>unocc</tt>, or <tt>td</tt>,
     !% according to <tt>OutputInterval</tt>, and has nothing to do with the restart information.
     !%End
@@ -547,7 +547,7 @@ contains
       call messages_experimental("Frozen output")
       outp%what = ior(outp%what, OPTION__OUTPUT__POTENTIAL)
       outp%what = ior(outp%what, OPTION__OUTPUT__DENSITY)
-      outp%how  = ior(outp%how,  OPTION__OUTPUTHOW__BINARY)
+      outp%how  = ior(outp%how,  OPTION__OUTPUTFORMAT__BINARY)
     end if
 
     if(iand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
@@ -607,23 +607,23 @@ contains
     call output_current_flow(gr, st, dir, outp)
 
     if(iand(outp%what, OPTION__OUTPUT__GEOMETRY) /= 0) then
-      if(iand(outp%how, OPTION__OUTPUTHOW__XCRYSDEN) /= 0) then        
+      if(iand(outp%how, OPTION__OUTPUTFORMAT__XCRYSDEN) /= 0) then        
         call write_xsf_geometry_file(dir, "geometry", geo, gr%mesh)
       end if
-      if(iand(outp%how, OPTION__OUTPUTHOW__XYZ) /= 0) then
+      if(iand(outp%how, OPTION__OUTPUTFORMAT__XYZ) /= 0) then
         call geometry_write_xyz(geo, trim(dir)//'/geometry')
         if(simul_box_is_periodic(gr%sb))  call periodic_write_crystal(gr%sb, geo, dir)
       end if
-      if(iand(outp%how, OPTION__OUTPUTHOW__OPENSCAD) /= 0) then
+      if(iand(outp%how, OPTION__OUTPUTFORMAT__OPENSCAD) /= 0) then
         call geometry_write_openscad(geo, trim(dir)//'/geometry')
       end if
-      if(iand(outp%how, OPTION__OUTPUTHOW__VTK) /= 0) then
+      if(iand(outp%how, OPTION__OUTPUTFORMAT__VTK) /= 0) then
         call vtk_output_geometry(trim(dir)//'/geometry', geo)
       end if     
     end if
 
     if(iand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
-      if(iand(outp%how, OPTION__OUTPUTHOW__BILD) /= 0) then
+      if(iand(outp%how, OPTION__OUTPUTFORMAT__BILD) /= 0) then
         call write_bild_forces_file(dir, "forces", geo, gr%mesh)
       else
         call write_xsf_geometry_file(dir, "forces", geo, gr%mesh, write_forces = .true.)
@@ -634,7 +634,7 @@ contains
       call output_me(outp%me, dir, st, gr, geo, hm)
     end if
 
-    if (iand(outp%how, OPTION__OUTPUTHOW__ETSF) /= 0) then
+    if (iand(outp%how, OPTION__OUTPUTFORMAT__ETSF) /= 0) then
       call output_etsf(st, gr, geo, dir, outp)
     end if
 

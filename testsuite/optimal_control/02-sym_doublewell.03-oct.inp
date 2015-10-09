@@ -88,7 +88,7 @@ electric_field | 1 | 0 | 0 | freq | "envelope_function"
 #-----------------------------
 
 Output = potential + density + wfs
-OutputHow = axis_x
+OutputFormat = axis_x
 TDOutput = laser + td_occup 
 
 

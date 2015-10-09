@@ -16,7 +16,7 @@ MeshPartitionPackage = metis
  'H2' | Bader | '2'
 %
 LDOutput = multipole
-LDOutputHow = bild
+LDOutputFormat = bild
 LDFolder = "restart/gs"
 
 ExperimentalFeatures = yes
