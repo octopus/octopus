@@ -67,7 +67,8 @@ libgrid_a_SOURCES =       \
 	transfer_table.F90      \
 	hilbert.c               \
 	mesh_interpolation.F90  \
-	vtk.F90
+	vtk.F90                 \
+	sphericalmesh.F90
 
 noinst_HEADERS =                   \
 	batch_inc.F90              \
@@ -139,4 +140,4 @@ symmetrizer.o : symmetrizer.F90 symmetrizer_inc.F90 mesh.o par_vec.o
 transfer_table.o : transfer_table.F90
 mesh_interpolation.o : mesh_interpolation.F90 mesh_interpolation_inc.F90 mesh.o
 vtk.o : vtk_inc.F90 mesh.o cube_function.o
-
+sphericalmesh.o : sphericalmesh.F90
