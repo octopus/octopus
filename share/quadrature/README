@@ -1,0 +1,41 @@
+ SPHERE_LEBEDEV_RULE
+Quadrature Rules for the Sphere
+
+SPHERE_LEBEDEV_RULE is a dataset directory which contains files
+defining Lebedev rules on the unit sphere, which can be used for
+quadrature, and have a known precision.
+
+A Lebedev rule of precision p can be used to correctly integrate any
+polynomial for which the highest degree term xiyjzk satisfies i+j+k <=
+p.
+
+The approximation to the integral of f(x) has the form Integral
+f(x,y,z) = 4 * pi * sum ( 1 <= i < n ) wi * f(xi,yi,zi) where
+
+        xi = cos ( thetai ) * sin ( phii )
+        yi = sin ( thetai ) * sin ( phii )
+        zi =                  cos ( phii )
+      
+
+The data file for an n point rule includes n lines, where the i-th
+line lists the values of
+
+        thetai phii wi
+      
+
+The angles are measured in degrees, and chosen so that:
+
+        - 180 <= thetai <= + 180
+            0 <= phii <= + 180
+      
+
+and the weights wi should sum to 1.
+
+Licensing:
+
+The computer code and data files described and made available on this
+web page are distributed under the GNU LGPL license.
+
+Downloaded from:
+
+http://people.sc.fsu.edu/~jburkardt/datasets/sphere_lebedev_rule/sphere_lebedev_rule.html
