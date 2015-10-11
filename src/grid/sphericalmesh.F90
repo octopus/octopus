@@ -43,8 +43,8 @@ module sphericalmesh_m
     integer            :: np
     FLOAT, allocatable :: x(:, :)
     FLOAT, allocatable :: weight(:)
-    integer, private   :: nangular
-    integer, private   :: nradial
+    integer            :: nangular
+    integer            :: nradial
   end type sphericalmesh_t
     
 contains
