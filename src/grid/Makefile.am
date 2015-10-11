@@ -140,4 +140,4 @@ symmetrizer.o : symmetrizer.F90 symmetrizer_inc.F90 mesh.o par_vec.o
 transfer_table.o : transfer_table.F90
 mesh_interpolation.o : mesh_interpolation.F90 mesh_interpolation_inc.F90 mesh.o
 vtk.o : vtk_inc.F90 mesh.o cube_function.o
-sphericalmesh.o : sphericalmesh.F90
+sphericalmesh.o : sphericalmesh.F90 mesh.o mesh_interpolation.o

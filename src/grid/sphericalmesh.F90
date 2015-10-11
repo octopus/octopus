@@ -23,10 +23,12 @@ module sphericalmesh_m
   use global_m
   use io_m
   use math_m
+  use mesh_m
+  use mesh_interpolation_m
   use messages_m
   use parser_m
   use profiling_m
-
+  
   implicit none
   
   private
@@ -34,7 +36,8 @@ module sphericalmesh_m
     sphericalmesh_t,               &
     sphericalmesh_init,            &
     sphericalmesh_end,             &
-    sphericalmesh_integrate
+    sphericalmesh_integrate,       &
+    sphericalmesh_from_mesh
   
   type sphericalmesh_t
     integer            :: np
@@ -132,7 +135,7 @@ contains
 
     print*, "NP", this%np
     
-    SAFE_ALLOCATE(this%x(1:this%np, 1:3))
+    SAFE_ALLOCATE(this%x(1:3, 1:this%np))
     SAFE_ALLOCATE(this%weight(1:this%np))
 
     ii = 1
@@ -141,14 +144,14 @@ contains
       theta = angular(2, ia)
       do ir = 1, this%nradial
         rr = radial(1, ir)
-        this%x(ii, 1:3) = center(1:3) + (/rr*sin(theta)*cos(phi), rr*sin(theta)*sin(phi), rr*cos(theta)/)
-        this%weight(ii) = CNST(4.0)*M_PI*rr**2*radial(2, ir)*angular(3, ia)
+        this%x(1:3, ii) = center(1:3) + (/rr*sin(theta)*cos(phi), rr*sin(theta)*sin(phi), rr*cos(theta)/)
+        this%weight(ii) = CNST(4.0)*M_PI*radial(2, ir)*angular(3, ia)
         ii = ii + 1
       end do
     end do
 
     do ii = 1, this%np
-      write(12, *) this%x(ii, 1:3)
+      write(12, *) this%x(1:3, ii)
     end do
     
     SAFE_DEALLOCATE_A(angular)
@@ -160,8 +163,10 @@ contains
 
     subroutine radial_init()
       integer :: ir
-      FLOAT   :: factor, xi
+      FLOAT   :: factor, xi, dr
 
+#if 0
+      
       ! this is the radial grid described in:
       ! Becke and Dickson JCP 89 2993-2997 (1988) http://dx.doi.org/10.1063/1.455005
       
@@ -170,10 +175,30 @@ contains
       do ir = 1, this%nradial
         xi = cos(factor*ir)
         radial(1, ir) = radius*(CNST(1.0) + xi)/(CNST(1.0) - xi)
-        radial(2, ir) = radius*CNST(2.0)*factor*sin(factor*ir)/(xi - CNST(1.0))**2
+        radial(2, ir) = radius*CNST(2.0)*factor*sin(factor*ir)/(xi - CNST(1.0))**2*radial(1, ir)**2
         !        print*, radial(:, ir)
       end do
 
+#else
+      ! this is a uniform grid
+      
+      dr = radius/this%nradial
+      do ir = 1, this%nradial
+        radial(1, ir) = dr*ir
+        radial(2, ir) = dr !*radial(1, ir)**2
+        print*, radial(:, ir)
+      end do
+
+      radial(2, 1) = CNST(1.5)*radial(2, 1)
+      radial(2, this%nradial) = CNST(0.5)*radial(2, this%nradial)
+
+      print*, "RADIAL SUM", sum(radial(2, :))
+      
+      do ir = 1, this%nradial
+        print*, radial(:, ir)
+      end do
+#endif
+      
     end subroutine radial_init
     
   end subroutine sphericalmesh_init
@@ -204,6 +229,33 @@ contains
     POP_SUB(sphericalmesh_integrate)
   end function sphericalmesh_integrate
 
+  ! -------------------------------------------------------------
+
+  subroutine sphericalmesh_from_mesh(this, mesh, meshff, sphff)
+    type(sphericalmesh_t), intent(in)    :: this
+    type(mesh_t),          intent(in)    :: mesh
+    FLOAT,                 intent(in)    :: meshff(:)
+    FLOAT,                 intent(inout) :: sphff(:)
+
+    type(profile_t), save :: prof
+    type(mesh_interpolation_t) :: interp
+    
+    PUSH_SUB(sphericalmesh_from_mesh)
+
+    call profiling_in(prof, 'TO_SPHERICAL')
+    
+    call mesh_interpolation_init(interp, mesh)
+
+    call mesh_interpolation_evaluate(interp, this%np, meshff, this%x, sphff)
+    
+    call mesh_interpolation_end(interp)
+
+    call profiling_out(prof)
+    
+    POP_SUB(sphericalmesh_from_mesh)
+  end subroutine sphericalmesh_from_mesh
+  
+  
 end module sphericalmesh_m
 
 
