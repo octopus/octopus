@@ -51,8 +51,12 @@ module TEMPLATE(single_m)
 
   private
 
+  public ::             &
+    TEMPLATE(single_t)
+
   public ::                      &
-    TEMPLATE(single_t),          &
+    TEMPLATE(single_new),        &
+    TEMPLATE(single_del),        &
     TEMPLATE(single_init),       &
     TEMPLATE(single_associated), &
     TEMPLATE(single_set),        &
@@ -68,21 +72,17 @@ module TEMPLATE(single_m)
     type(SINGLE_TYPE_NAME), pointer :: value =>null()
   end type TEMPLATE(single_t)
 
-  interface TEMPLATE(single_init)
-    module procedure INTERNAL(single_init_value)
-    module procedure INTERNAL(single_init_single)
-  end interface TEMPLATE(single_init)
+  interface TEMPLATE(single_new)
+    module procedure INTERNAL(single_new_single)
+    module procedure INTERNAL(single_new_init)
+    module procedure INTERNAL(single_new_copy)
+  end interface TEMPLATE(single_new)
 
   interface TEMPLATE(single_associated)
     module procedure INTERNAL(single_associated)
     module procedure INTERNAL(single_value_associated)
     module procedure INTERNAL(single_single_associated)
   end interface TEMPLATE(single_associated)
-
-  interface TEMPLATE(single_set)
-    module procedure INTERNAL(single_set_null)
-    module procedure INTERNAL(single_set_value)
-  end interface TEMPLATE(single_set)
 
 #endif
 #if defined(SINGLE_INCLUDE_MODULE)
@@ -92,118 +92,152 @@ contains
 #endif
 #if defined(SINGLE_INCLUDE_BODY) || defined(SINGLE_INCLUDE_MODULE)
 
-  ! -----------------------------------------------------	
-  subroutine INTERNAL(single_init_value)(this, that)
-    type(TEMPLATE(single_t)),         intent(out) :: this
-    type(SINGLE_TYPE_NAME), optional, intent(in)  :: that
-    !
-    PUSH_SUB(INTERNAL(single_init_value))
-    call TEMPLATE(single_end)(this)
-    if(present(that))&
-      call TEMPLATE(single_set)(this, that)
-    POP_SUB(INTERNAL(single_init_value))
-    return
-  end subroutine INTERNAL(single_init_value)
+  ! -----------------------------------------------------
+  subroutine INTERNAL(single_new_single)(this)
+    type(TEMPLATE(single_t)), pointer :: this
+
+    PUSH_SUB(INTERNAL(single_new_single))
+
+    nullify(this)
+    SAFE_ALLOCATE(this)
+
+    POP_SUB(INTERNAL(single_new_single))
+  end subroutine INTERNAL(single_new_single)
+
+  ! -----------------------------------------------------
+  subroutine INTERNAL(single_new_init)(this, that)
+    type(TEMPLATE(single_t)), pointer     :: this
+    type(SINGLE_TYPE_NAME),    intent(in) :: that
+
+    PUSH_SUB(INTERNAL(single_new_init))
+
+    call INTERNAL(single_new_single)(this)
+    call TEMPLATE(single_init)(this, that)
+
+    POP_SUB(INTERNAL(single_new_init))
+  end subroutine INTERNAL(single_new_init)
+
+  ! -----------------------------------------------------
+  subroutine INTERNAL(single_new_copy)(this, that)
+    type(TEMPLATE(single_t)), pointer     :: this
+    type(TEMPLATE(single_t)),  intent(in) :: that
+
+    PUSH_SUB(INTERNAL(single_new_copy))
+
+    call INTERNAL(single_new_single)(this)
+    call TEMPLATE(single_copy)(this, that)
+
+    POP_SUB(INTERNAL(single_new_copy))
+  end subroutine INTERNAL(single_new_copy)
+
+  ! -----------------------------------------------------
+  subroutine TEMPLATE(single_del)(this)
+    type(TEMPLATE(single_t)), pointer :: this
+
+    PUSH_SUB(TEMPLATE(single_del))
+
+    if(associated(this))then
+      call TEMPLATE(single_end)(this)
+      SAFE_DEALLOCATE_P(this)
+    end if
+    nullify(this)
+
+    POP_SUB(TEMPLATE(single_del))
+  end subroutine TEMPLATE(single_del)
 
   ! -----------------------------------------------------	
-  subroutine INTERNAL(single_init_single)(this, that)
+  subroutine TEMPLATE(single_init)(this, that)
     type(TEMPLATE(single_t)), intent(out) :: this
-    type(TEMPLATE(single_t)), intent(in)  :: that
-    !
-    PUSH_SUB(INTERNAL(single_init_single))
-    call TEMPLATE(single_end)(this)
-    call TEMPLATE(single_copy)(this, that)
-    POP_SUB(INTERNAL(single_init_single))
-    return
-  end subroutine INTERNAL(single_init_single)
+    type(SINGLE_TYPE_NAME),   intent(in)  :: that
+
+    PUSH_SUB(TEMPLATE(single_init))
+
+    call TEMPLATE(single_set)(this, that)
+
+    POP_SUB(TEMPLATE(single_init))
+  end subroutine TEMPLATE(single_init)
 
   ! -----------------------------------------------------
   elemental function INTERNAL(single_associated)(this) result(eqv)
     type(TEMPLATE(single_t)), intent(in) :: this
-    !
+
     logical :: eqv
-    !
-    eqv=(associated(this%value))
-    return
+
+    eqv = (associated(this%value))
+
   end function INTERNAL(single_associated)
   
   ! -----------------------------------------------------
   elemental function INTERNAL(single_value_associated)(this, that) result(eqv)
     type(TEMPLATE(single_t)),       intent(in) :: this
     type(SINGLE_TYPE_NAME), target, intent(in) :: that
-    !
+
     logical :: eqv
-    !
-    eqv=.false.
-    if(INTERNAL(single_associated)(this))&
-      eqv=associated(this%value, that)
-    return
+
+    eqv = .false.
+    if(associated(this%value))&
+      eqv = associated(this%value, that)
+
   end function INTERNAL(single_value_associated)
   
   ! -----------------------------------------------------
   elemental function INTERNAL(single_single_associated)(this, that) result(eqv)
     type(TEMPLATE(single_t)), intent(in) :: this
     type(TEMPLATE(single_t)), intent(in) :: that
-    !
+
     logical :: eqv
-    !
-    eqv=.false.
-    if(INTERNAL(single_associated)(that))&
-      eqv=INTERNAL(single_value_associated)(this, that%value)
-    return
+
+    eqv = .false.
+    if(associated(that%value))&
+      eqv = INTERNAL(single_value_associated)(this, that%value)
+
   end function INTERNAL(single_single_associated)
 
   ! -----------------------------------------------------
-  subroutine INTERNAL(single_set_null)(this)
-    type(TEMPLATE(single_t)), intent(inout) :: this
-    !
-    PUSH_SUB(INTERNAL(single_set_null))
-    nullify(this%value)
-    POP_SUB(INTERNAL(single_set_null))
-    return
-  end subroutine INTERNAL(single_set_null)
-
-  ! -----------------------------------------------------
-  subroutine INTERNAL(single_set_value)(this, that)
+  subroutine TEMPLATE(single_set)(this, that)
     type(TEMPLATE(single_t)),       intent(inout) :: this
     type(SINGLE_TYPE_NAME), target, intent(in)    :: that
-    !
-    PUSH_SUB(INTERNAL(single_set_value))
-    this%value=>that
-    POP_SUB(INTERNAL(single_set_value))
-    return
-  end subroutine INTERNAL(single_set_value)
+
+    PUSH_SUB(TEMPLATE(single_set))
+
+    this%value => that
+
+    POP_SUB(TEMPLATE(single_set))
+  end subroutine TEMPLATE(single_set)
 
   ! -----------------------------------------------------
   subroutine TEMPLATE(single_get)(this, that)
     type(TEMPLATE(single_t)), intent(in) :: this
     type(SINGLE_TYPE_NAME),  pointer     :: that
-    !
+
     PUSH_SUB(TEMPLATE(single_get))
+
     nullify(that)
-    if(INTERNAL(single_associated)(this))&
-      that=>this%value
+    if(associated(this%value)) that => this%value
+
     POP_SUB(TEMPLATE(single_get))
-    return
   end subroutine TEMPLATE(single_get)
 
   ! -----------------------------------------------------
   subroutine TEMPLATE(single_copy)(this, that)
     type(TEMPLATE(single_t)), intent(inout) :: this
     type(TEMPLATE(single_t)), intent(in)    :: that
-    !
+
     PUSH_SUB(TEMPLATE(single_copy))
-    call TEMPLATE(single_set)(this, that%value)
+
+    call TEMPLATE(single_end)(this)
+    if(associated(that%value))&
+      call TEMPLATE(single_set)(this, that%value)
+
     POP_SUB(TEMPLATE(single_copy))
-    return
   end subroutine TEMPLATE(single_copy)
 
   ! -----------------------------------------------------
   elemental subroutine TEMPLATE(single_end)(this)
     type(TEMPLATE(single_t)), intent(inout) :: this
-    !
+
     nullify(this%value)
-    return
+
   end subroutine TEMPLATE(single_end)
 
 #endif

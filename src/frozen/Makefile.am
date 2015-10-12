@@ -80,6 +80,7 @@ noinst_HEADERS =		\
 	util.h			\
 	template.h		\
 	tsingle_inc.F90		\
+	tpair_inc.F90		\
 	tdarr_inc.F90		\
 	tlist_inc.F90		\
 	thash_inc.F90		\

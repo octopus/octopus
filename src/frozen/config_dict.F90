@@ -56,8 +56,6 @@ module config_dict_m
 #include "tdict_inc.F90"
 #undef DICT_INCLUDE_HEADER
 
-  integer, parameter :: CONFIG_DICT_NAME_LEN = 63
-
 contains
 
 #define DICT_INCLUDE_BODY
