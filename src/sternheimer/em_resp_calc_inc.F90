@@ -840,6 +840,7 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, lr_e, &
   FLOAT :: weight
   R_TYPE, allocatable :: hpol_density(:), hvar_e1(:,:,:,:), hvar_e2(:,:,:,:), hvar_b(:,:,:,:)
   type(matrix_t) :: prod_eb1, prod_eb2, prod_be1, prod_be2, prod_ee1, prod_ee2 
+  R_TYPE, allocatable :: psi(:,:), psi1(:,:)
     
   PUSH_SUB(X(lr_calc_magneto_optics_finite))
 
@@ -860,6 +861,8 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, lr_e, &
   SAFE_ALLOCATE(hvar_e1(1:sys%gr%sb%dim, 1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:nsigma))
   SAFE_ALLOCATE(hvar_e2(1:sys%gr%sb%dim,1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:nsigma))
   SAFE_ALLOCATE(hvar_b(1:sys%gr%sb%dim, 1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:1))
+  SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
+  SAFE_ALLOCATE(psi1(1:sys%gr%mesh%np, 1:sys%st%d%dim))
 
   chi = M_ZERO
 
@@ -874,6 +877,8 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, lr_e, &
   hvar_e2(:,:,:,:) = M_ZERO
   hvar_e1(:,:,:,:) = M_ZERO
   hvar_b(:,:,:,:) = M_ZERO
+  psi(:,:) = M_ZERO
+  psi1(:,:) = M_ZERO
   
   do dir1 = 1, sys%gr%sb%dim
     call X(sternheimer_calc_hvar)(sh, sys, lr_e(dir1,:), nsigma, hvar_e2(dir1,:,:,:))
@@ -974,25 +979,27 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, lr_e, &
          
           do ist = 1, sys%st%nst
             if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+              call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
             
-              call X(pert_apply)(pert_e1, sys%gr, sys%geo, hm, ik, sys%st%X(dontusepsi)(:,:,ist,ik), pertpsi_e1(:,:))
-              call X(pert_apply)(pert_e2, sys%gr, sys%geo, hm, ik, sys%st%X(dontusepsi)(:,:,ist,ik), pertpsi_e2(:,:))
-              call X(pert_apply)(pert_m, sys%gr, sys%geo, hm, ik, sys%st%X(dontusepsi)(:,:,ist,ik), pertpsi_b(:,:))
+              call X(pert_apply)(pert_e1, sys%gr, sys%geo, hm, ik, psi, pertpsi_e1(:,:))
+              call X(pert_apply)(pert_e2, sys%gr, sys%geo, hm, ik, psi, pertpsi_e2(:,:))
+              call X(pert_apply)(pert_m, sys%gr, sys%geo, hm, ik, psi, pertpsi_b(:,:))
               do idim = 1, hm%d%dim
                 do ip = 1, sys%gr%mesh%np
-                  pertpsi_e1(ip,idim) = pertpsi_e1(ip,idim) + hvar_e1(dir1,ip,ispin,1)*sys%st%X(dontusepsi)(ip,idim,ist,ik)
-                  pertpsi_e2(ip,idim) = pertpsi_e2(ip,idim) + hvar_e2(dir2,ip,ispin,nsigma)*sys%st%X(dontusepsi)(ip,idim,ist,ik)
-                  pertpsi_b(ip,idim) = pertpsi_b(ip,idim) + hvar_b(dir3,ip,ispin,1)*sys%st%X(dontusepsi)(ip,idim,ist,ik)
+                  pertpsi_e1(ip,idim) = pertpsi_e1(ip,idim) + hvar_e1(dir1,ip,ispin,1)*psi(ip,idim)
+                  pertpsi_e2(ip,idim) = pertpsi_e2(ip,idim) + hvar_e2(dir2,ip,ispin,nsigma)*psi(ip,idim)
+                  pertpsi_b(ip,idim) = pertpsi_b(ip,idim) + hvar_b(dir3,ip,ispin,1)*psi(ip,idim)
                 end do
               end do
               do ist_occ = 1, sys%st%nst
                 if(abs(sys%st%occ(ist_occ, ik)) .gt. M_EPSILON) then
+                  call states_get_state(sys%st, sys%gr%mesh, ist_occ, ik, psi1)
                   chi(dir1, dir2, dir3) = chi(dir1, dir2, dir3) - weight * (&
-                    X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, sys%st%X(dontusepsi)(:,:,ist_occ,ik), pertpsi_e1(:,:))&
+                    X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, psi1, pertpsi_e1(:,:))&
                     *(prod_eb2%X(matrix)(ist,ist_occ) + prod_be2%X(matrix)(ist,ist_occ))&
-                    + X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, sys%st%X(dontusepsi)(:,:,ist_occ,ik), pertpsi_e2(:,:))&
+                    + X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, psi1, pertpsi_e2(:,:))&
                     *(prod_eb1%X(matrix)(ist,ist_occ) + prod_be1%X(matrix)(ist,ist_occ))&
-                    + X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, sys%st%X(dontusepsi)(:,:,ist_occ,ik), pertpsi_b(:,:))&
+                    + X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, psi1, pertpsi_b(:,:))&
                     *(prod_ee1%X(matrix)(ist,ist_occ) + prod_ee2%X(matrix)(ist,ist_occ)))
                 end if
               end do
@@ -1012,6 +1019,8 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, lr_e, &
   SAFE_DEALLOCATE_P(prod_ee1%X(matrix))
   SAFE_DEALLOCATE_P(prod_ee2%X(matrix))
   
+  SAFE_DEALLOCATE_A(psi)
+  SAFE_DEALLOCATE_A(psi1)
   SAFE_DEALLOCATE_A(pertpsi_e1)
   SAFE_DEALLOCATE_A(pertpsi_e2)
   SAFE_DEALLOCATE_A(pertpsi_b)
@@ -1072,6 +1081,7 @@ subroutine X(lr_calc_magneto_optics_periodic)(sys, hm, nsigma, &
   type(matrix_t) :: mat_g,  mat_be, mat_eb
   type(matrix_t), allocatable:: mat_kek(:,:), mat_kke(:,:)
   type(pert_t)  :: pert_kdotp
+  R_TYPE, allocatable :: psi(:,:,:)
  
 #ifdef HAVE_MPI
   CMPLX :: zpol_temp(1:MAX_DIM,1:MAX_DIM,1:MAX_DIM)
@@ -1107,6 +1117,7 @@ subroutine X(lr_calc_magneto_optics_periodic)(sys, hm, nsigma, &
   SAFE_ALLOCATE(mat_g%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
   SAFE_ALLOCATE(mat_eb%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
   SAFE_ALLOCATE(mat_be%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
+  SAFE_ALLOCATE(psi(1:np, 1:ndim, 1:sys%st%nst))
   
   do idir1 = 1, ndir
     do idir2 = 1, ndir
@@ -1116,18 +1127,20 @@ subroutine X(lr_calc_magneto_optics_periodic)(sys, hm, nsigma, &
   end do
 
   zpol(:,:,:) = M_ZERO 
-  gpsi(:,:,:) = M_ZERO
   
   call pert_init(pert_kdotp, PERTURBATION_KDOTP, sys%gr, sys%geo)
   
   do idir1 = 1, ndir
   call pert_setup_dir(pert_kdotp, idir1)
     do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
+      gpsi(:,:,:) = M_ZERO 
+      psi(:,:,:) = M_ZERO
       weight = sys%st%d%kweights(ik)*sys%st%smear%el_per_state
       do ist = 1, sys%st%nst
         if (abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+          call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi(:,:,ist))
           call X(pert_apply)(pert_kdotp, sys%gr, sys%geo, hm, ik,&
-            sys%st%X(dontusepsi)(:,:,ist,ik), gpsi(:,:,ist))
+            psi(:,:,ist), gpsi(:,:,ist))
           do idir2 = 1, ndir
             call X(pert_apply)(pert_kdotp, sys%gr, sys%geo, hm, ik,&
               lr_k(idir2)%X(dl_psi)(:,:,ist,ik), gdl_k(idir2,:,:))
@@ -1154,8 +1167,8 @@ subroutine X(lr_calc_magneto_optics_periodic)(sys, hm, nsigma, &
               do idim = 1, ndim 
                 zpol(idir1,idir2,idir3) = zpol(idir1,idir2,idir3) + weight * M_HALF / P_C *&
                   (X(mf_dotp)(sys%gr%mesh, lr_be(idir3,idir2,nsigma)%X(dl_psi)(:,idim,ist,ik), factor0 * gpsi(:,idim,ist))&
-                  + X(mf_dotp)(sys%gr%mesh, factor * gdl_be(:,idim,nsigma), sys%st%X(dontusepsi)(:,idim,ist,ik))&
-                  + X(mf_dotp)(sys%gr%mesh, sys%st%X(dontusepsi)(:,idim,ist,ik), factor * gdl_be(:,idim,1)) &
+                  + X(mf_dotp)(sys%gr%mesh, factor * gdl_be(:,idim,nsigma), psi(:,idim,ist))&
+                  + X(mf_dotp)(sys%gr%mesh, psi(:,idim,ist), factor * gdl_be(:,idim,1)) &
                   + X(mf_dotp)(sys%gr%mesh, factor0 * gpsi(:,idim,ist), lr_be(idir3,idir2,1)%X(dl_psi)(:,idim,ist,ik)))
                 
                 zpol(idir1,idir2,idir3) = zpol(idir1,idir2,idir3) + weight * M_HALF / P_C * factor_e * &
@@ -1187,7 +1200,7 @@ subroutine X(lr_calc_magneto_optics_periodic)(sys, hm, nsigma, &
         end if
       end do
       call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
-        sys%st%X(dontusepsi)(:,:,:,ik),factor*gpsi(:,:,:),mat_g%X(matrix))
+        psi(:,:,:),factor*gpsi(:,:,:),mat_g%X(matrix))
 
       do idir2 = 1, ndir
         do idir3 = 1, ndir
@@ -1257,6 +1270,7 @@ subroutine X(lr_calc_magneto_optics_periodic)(sys, hm, nsigma, &
   SAFE_DEALLOCATE_A(gdl_b)
   SAFE_DEALLOCATE_A(gdl_ke)
   SAFE_DEALLOCATE_A(gdl_be)
+  SAFE_DEALLOCATE_A(psi)
 
 #ifdef HAVE_MPI
   if(sys%st%parallel_in_states) then
@@ -1710,12 +1724,14 @@ subroutine X(inhomog_per_component)(sys, hm, idir, &
   integer :: ip, ik, ist, idim, ist_occ
   type(matrix_t):: vel_mat
   type(pert_t)  :: pert_kdotp
+  R_TYPE, allocatable :: psi(:,:,:)
 
   PUSH_SUB(X(inhomog_per_component))
   
   SAFE_ALLOCATE(f_out(1:sys%gr%mesh%np,1:hm%d%dim))
   SAFE_ALLOCATE(vel(1:sys%gr%mesh%np,1:hm%d%dim, 1:sys%st%nst))
   SAFE_ALLOCATE(vel_mat%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
+  SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim, 1:sys%st%nst))
   
 #if defined(R_TCOMPLEX)
   factor = -M_zI
@@ -1724,16 +1740,18 @@ subroutine X(inhomog_per_component)(sys, hm, idir, &
 #endif
 
   f_out(:,:) = M_ZERO
-  vel(:,:,:) = M_ZERO
   
   call pert_init(pert_kdotp, PERTURBATION_KDOTP, sys%gr, sys%geo)
   call pert_setup_dir(pert_kdotp, idir)
   
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
+    vel(:,:,:) = M_ZERO
+    psi(:,:,:) = M_ZERO
     do ist = 1, sys%st%nst
       if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+        call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi(:,:,ist))
         call X(pert_apply)(pert_kdotp, sys%gr, sys%geo, hm, ik, &  
-          sys%st%X(dontusepsi)(:,:,ist,ik),f_out) 
+          psi(:,:,ist),f_out) 
         do idim = 1, hm%d%dim
           do ip = 1, sys%gr%mesh%np
             vel(ip,idim,ist) = factor * f_out(ip,idim)
@@ -1743,7 +1761,7 @@ subroutine X(inhomog_per_component)(sys, hm, idir, &
     end do  
     
     call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
-      sys%st%X(dontusepsi)(:,:,:,ik), vel(:,:,:), vel_mat%X(matrix))
+      psi(:,:,:), vel(:,:,:), vel_mat%X(matrix))
 
     do ist = 1, sys%st%nst
       if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
@@ -1777,6 +1795,7 @@ subroutine X(inhomog_per_component)(sys, hm, idir, &
  
   SAFE_DEALLOCATE_A(f_out)
   SAFE_DEALLOCATE_A(vel)
+  SAFE_DEALLOCATE_A(psi)
   POP_SUB(X(inhomog_per_component))
 end subroutine X(inhomog_per_component)
 
@@ -1801,6 +1820,7 @@ subroutine X(inhomog_per_component_2nd_order)(sys, hm, idir, &
   integer :: ip, ik, ist, idim, ist_occ
   type(matrix_t):: vel_mat, prod_mat
   type(pert_t)  :: pert_kdotp
+  R_TYPE, allocatable :: psi(:,:)
 
   PUSH_SUB(X(inhomog_per_component_2nd_order))
 
@@ -1808,6 +1828,7 @@ subroutine X(inhomog_per_component_2nd_order)(sys, hm, idir, &
   SAFE_ALLOCATE(vel(1:sys%gr%mesh%np,1:hm%d%dim, 1:sys%st%nst))
   SAFE_ALLOCATE(vel_mat%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
   SAFE_ALLOCATE(prod_mat%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
+  SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
     
 #if defined(R_TCOMPLEX)
   factor = -M_zI
@@ -1815,17 +1836,18 @@ subroutine X(inhomog_per_component_2nd_order)(sys, hm, idir, &
   factor = M_ONE
 #endif
 
-  vel(:,:,:) = M_ZERO
   f_out(:,:) = M_ZERO
   
   call pert_init(pert_kdotp, PERTURBATION_KDOTP, sys%gr, sys%geo)
   call pert_setup_dir(pert_kdotp, idir)
 
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
+    vel(:,:,:) = M_ZERO
     do ist = 1, sys%st%nst
       if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+        call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
         call X(pert_apply)(pert_kdotp, sys%gr, sys%geo, hm, ik, &  
-          sys%st%X(dontusepsi)(:,:,ist,ik),f_out)
+          psi, f_out)
         do idim = 1, hm%d%dim
           do ip = 1, sys%gr%mesh%np
             vel(ip,idim,ist) = factor * f_out(ip,idim)
@@ -1864,6 +1886,7 @@ subroutine X(inhomog_per_component_2nd_order)(sys, hm, idir, &
   SAFE_DEALLOCATE_P(prod_mat%X(matrix))
   SAFE_DEALLOCATE_A(f_out)
   SAFE_DEALLOCATE_A(vel)
+  SAFE_DEALLOCATE_A(psi)
   POP_SUB(X(inhomog_per_component_2nd_order))
 end subroutine X(inhomog_per_component_2nd_order)
 
@@ -1973,7 +1996,7 @@ contains
     type(lr_t),   intent(in) :: tlr_k1, tlr_k2
     R_TYPE,       intent(in) :: factor_tot
     
-    R_TYPE, allocatable :: psi(:,:,:)
+    R_TYPE, allocatable :: psi(:,:,:), psi0(:,:)
     integer :: ip, ik, ist, ispin, idim, ist1
     R_TYPE :: factor0, factor_k, factor_k0
     type(matrix_t):: prod_mat2, prod_mat
@@ -1991,17 +2014,18 @@ contains
     SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, hm%d%dim, 1:sys%st%nst))
     SAFE_ALLOCATE(prod_mat%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
     SAFE_ALLOCATE(prod_mat2%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
-
-    psi(:,:,:) = M_ZERO
+    SAFE_ALLOCATE(psi0(1:sys%gr%mesh%np, 1:sys%st%d%dim))
   
     do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
       ispin = states_dim_get_spin_index(sys%st%d, ik)
+      psi(:,:,:) = M_ZERO
       do isigma = 1, nsigma
         do ist = 1, sys%st%nst
           if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+            call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi0)
             do idim = 1, hm%d%dim
               do ip = 1, sys%gr%mesh%np
-                psi(ip, idim, ist) = factor_e * hvar(ip, ispin, isigma) * sys%st%X(dontusepsi)(ip,idim,ist,ik)
+                psi(ip, idim, ist) = factor_e * hvar(ip, ispin, isigma) * psi0(ip,idim)
               end do
             end do
            end if
@@ -2013,14 +2037,15 @@ contains
         call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
           factor_k * tlr_k1%X(dl_psi)(:,:,:,ik), psi(:,:,:), prod_mat2%X(matrix))
   
-        do ist = 1, sys%st%nst
-          if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
-            do ist1  = 1, sys%st%nst
-              if(abs(sys%st%occ(ist1, ik)) .gt. M_EPSILON) then
+        do ist1 = 1, sys%st%nst
+          if(abs(sys%st%occ(ist1, ik)) .gt. M_EPSILON) then
+            call states_get_state(sys%st, sys%gr%mesh, ist1, ik, psi0)
+            do ist  = 1, sys%st%nst
+              if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
                 do idim = 1, hm%d%dim
                   do ip = 1, sys%gr%mesh%np
                     psi_out(ip,idim,ist,ik,isigma) = psi_out(ip,idim,ist,ik,isigma)+ factor_tot * factor0 * (&
-                      prod_mat%X(matrix)(ist1,ist) * factor_e * hvar(ip,ispin,isigma) * sys%st%X(dontusepsi)(ip,idim,ist1,ik) - &
+                      prod_mat%X(matrix)(ist1,ist) * factor_e * hvar(ip,ispin,isigma) * psi0(ip,idim) - &
                       prod_mat2%X(matrix)(ist1,ist) * factor_k * tlr_k2%X(dl_psi)(ip,idim,ist1,ik))
                   end do
                 end do
@@ -2034,6 +2059,7 @@ contains
     SAFE_DEALLOCATE_P(prod_mat%X(matrix))
     SAFE_DEALLOCATE_P(prod_mat2%X(matrix))
     SAFE_DEALLOCATE_A(psi)
+    SAFE_DEALLOCATE_A(psi0)
   
     POP_SUB(X(inhomog_EB).calc_hvar_lr2)
   end subroutine calc_hvar_lr2
@@ -2205,22 +2231,25 @@ contains
     R_TYPE,        intent(in) :: factor
     
     R_TYPE, allocatable :: kvar(:,:,:) 
+    R_TYPE, allocatable :: psi(:,:)
     integer :: ik, ist, idim
     
     PUSH_SUB(X(inhomog_BE).calc_kvar_b)
   
     SAFE_ALLOCATE(kvar(1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:nsigma))
+    SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
   
     call X(calc_kvar)(sh2, sys, lr1(1)%X(dl_rho), lr2(1)%X(dl_rho), nsigma, kvar)
     do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
       ispin = states_dim_get_spin_index(sys%st%d, ik)
       do ist = 1, sys%st%nst
         if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+          call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
           do idim = 1, hm%d%dim
             do ip = 1, sys%gr%mesh%np
               do isigma = 1, nsigma
                 psi_out(ip,idim,ist,ik,isigma) = psi_out(ip,idim,ist,ik,isigma) &
-                  - M_HALF * factor * kvar(ip,ispin,isigma) * sys%st%X(dontusepsi)(ip,idim,ist,ik)
+                  - M_HALF * factor * kvar(ip,ispin,isigma) * psi(ip,idim)
               end do
             end do
           end do
@@ -2229,6 +2258,7 @@ contains
     end do
   
     SAFE_DEALLOCATE_A(kvar)
+    SAFE_DEALLOCATE_A(psi)
   
     POP_SUB(X(inhomog_BE).calc_kvar_b)
   end subroutine calc_kvar_b
@@ -2277,12 +2307,13 @@ subroutine X(inhomog_K2)(sh, sys, hm, idir1, idir2, &
 
   R_TYPE :: factor_plus, factor_magn, factor_k
   integer :: ip, ik, ist, idim
-  R_TYPE, allocatable :: f_out(:,:)
+  R_TYPE, allocatable :: f_out(:,:), psi(:,:)
   type(pert_t) :: pert_kdotp2
   
   PUSH_SUB(X(inhomog_K2))
 
   SAFE_ALLOCATE(f_out(1:sys%gr%mesh%np, 1:hm%d%dim))
+  SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
 
   factor_plus = M_ONE
 #if defined(R_TCOMPLEX)
@@ -2301,9 +2332,10 @@ subroutine X(inhomog_K2)(sh, sys, hm, idir1, idir2, &
   
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
     do ist = 1, sys%st%nst
-      if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then 
+      if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+        call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi) 
         call X(pert_apply_order_2)(pert_kdotp2, sys%gr, sys%geo, hm, ik, &  
-          sys%st%X(dontusepsi)(:,:,ist,ik), f_out)
+          psi, f_out)
         if(idir1 == idir2) f_out(:,:) = M_HALF * f_out(:,:)
         do idim = 1, hm%d%dim
           do ip = 1, sys%gr%mesh%np	
@@ -2317,6 +2349,7 @@ subroutine X(inhomog_K2)(sh, sys, hm, idir1, idir2, &
 
   call pert_end(pert_kdotp2)
   SAFE_DEALLOCATE_A(f_out)
+  SAFE_DEALLOCATE_A(psi)
 
   POP_SUB(X(inhomog_K2))
 end subroutine X(inhomog_K2)
@@ -2339,6 +2372,7 @@ subroutine X(inhomog_KB)(sh, sys, hm, idir, idir1, idir2, &
   R_TYPE, allocatable :: f_out1(:,:,:), f_out2(:,:,:)
   type(matrix_t):: vel_mat1, vel_mat2
   type(pert_t)  :: pert_kdotp2
+  R_TYPE, allocatable :: psi(:,:,:)
 
   PUSH_SUB(X(inhomog_KB))
   
@@ -2349,7 +2383,8 @@ subroutine X(inhomog_KB)(sh, sys, hm, idir, idir1, idir2, &
   SAFE_ALLOCATE(f_out2(1:sys%gr%mesh%np,1:hm%d%dim, 1:sys%st%nst))
   SAFE_ALLOCATE(vel_mat1%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
   SAFE_ALLOCATE(vel_mat2%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
-
+  SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim, 1:sys%st%nst))
+  
 #if defined(R_TCOMPLEX)
   factor_plus = M_zI * M_HALF
   factor_minus = -M_zI * M_HALF
@@ -2359,8 +2394,7 @@ subroutine X(inhomog_KB)(sh, sys, hm, idir, idir1, idir2, &
   factor_minus = -M_HALF
   factor_k = M_ONE
 #endif
-  f_out1(:,:,:) = M_ZERO
-  f_out2(:,:,:) = M_ZERO
+
   factor_magn = -M_ONE
   factor = M_ONE
 
@@ -2377,8 +2411,12 @@ subroutine X(inhomog_KB)(sh, sys, hm, idir, idir1, idir2, &
   call pert_setup_dir(pert_kdotp2, idir1, idir2)
 
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
+    f_out1(:,:,:) = M_ZERO
+    f_out2(:,:,:) = M_ZERO
+    psi(:,:,:) = M_ZERO
     do ist = 1, sys%st%nst
       if(abs(sys%st%occ(ist,ik)) .gt. M_EPSILON) then
+        call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi(:,:,ist))
         call pert_setup_dir(pert_kdotp2,idir,idir1)
         call X(pert_apply_order_2)(pert_kdotp2, sys%gr, sys%geo, hm, ik,  &  
           lr_k2(1)%X(dl_psi)(:,:,ist,ik), f_out1(:,:,ist))
@@ -2397,20 +2435,20 @@ subroutine X(inhomog_KB)(sh, sys, hm, idir, idir1, idir2, &
 
         call pert_setup_dir(pert_kdotp2, idir, idir1)
         call X(pert_apply_order_2)(pert_kdotp2, sys%gr, sys%geo, hm, ik, &  
-          sys%st%X(dontusepsi)(:,:,ist,ik), f_out1(:,:,ist))
+          psi(:,:,ist), f_out1(:,:,ist))
         if(idir .ne. idir1) f_out1(:,:,ist) = M_TWO*f_out1(:,:,ist)  
         call pert_setup_dir(pert_kdotp2, idir, idir2)
         call X(pert_apply_order_2)(pert_kdotp2, sys%gr, sys%geo, hm, ik, &  
-          sys%st%X(dontusepsi)(:,:,ist,ik), f_out2(:,:,ist))
+          psi(:,:,ist), f_out2(:,:,ist))
         if(idir .ne. idir2) f_out2(:,:,ist) = M_TWO * f_out2(:,:,ist)
       end if
     end do
     
     call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
-      sys%st%X(dontusepsi)(:,:,:,ik), f_out1(:,:,:), vel_mat1%X(matrix))
+      psi, f_out1(:,:,:), vel_mat1%X(matrix))
 
     call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
-      sys%st%X(dontusepsi)(:,:,:,ik), f_out2(:,:,:), vel_mat2%X(matrix))
+      psi, f_out2(:,:,:), vel_mat2%X(matrix))
 
     do ist = 1, sys%st%nst
       if(abs(sys%st%occ(ist,ik)) .gt. M_EPSILON) then
@@ -2435,6 +2473,7 @@ subroutine X(inhomog_KB)(sh, sys, hm, idir, idir1, idir2, &
   SAFE_DEALLOCATE_P(vel_mat2%X(matrix))
   SAFE_DEALLOCATE_A(f_out1)
   SAFE_DEALLOCATE_A(f_out2)
+  SAFE_DEALLOCATE_A(psi)
   
   POP_SUB(X(inhomog_KB))
 end subroutine X(inhomog_KB)
@@ -2603,10 +2642,13 @@ subroutine X(calc_rho)(sh, sys, hm, factor, factor_sum, factor_e, &
   integer :: ip, ik, ist, idim, ist_occ, ispin
   FLOAT :: weight
   type(matrix_t):: mat
+  R_TYPE, allocatable :: psi(:,:), psi1(:,:)
 
   PUSH_SUB(X(calc_rho))
 
   SAFE_ALLOCATE(mat%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
+  SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
+  SAFE_ALLOCATE(psi1(1:sys%gr%mesh%np, 1:sys%st%d%dim))
 
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
     ispin = states_dim_get_spin_index(sys%st%d, ik)
@@ -2615,6 +2657,7 @@ subroutine X(calc_rho)(sh, sys, hm, factor, factor_sum, factor_e, &
 
     do ist  = 1, sys%st%nst
       if (sys%st%occ(ist, ik) .gt. M_EPSILON) then
+        call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
         weight = sys%st%d%kweights(ik) * sys%st%smear%el_per_state
         do idim = 1, hm%d%dim
           do ip = 1, sys%gr%mesh%np
@@ -2624,11 +2667,12 @@ subroutine X(calc_rho)(sh, sys, hm, factor, factor_sum, factor_e, &
         end do
         do ist_occ  = 1, sys%st%nst
           if (sys%st%occ(ist_occ, ik) .gt. M_EPSILON) then
+            call states_get_state(sys%st, sys%gr%mesh, ist_occ, ik, psi1)
             do idim = 1, hm%d%dim
               do ip = 1, sys%gr%mesh%np
                 lr0%X(dl_rho)(ip, ispin) = lr0%X(dl_rho)(ip, ispin) - factor * factor_sum * weight * &
-                  mat%X(matrix)(ist,ist_occ) * sys%st%X(dontusepsi)(ip,idim,ist,ik) * &
-                  R_CONJ(sys%st%X(dontusepsi)(ip,idim,ist_occ,ik))
+                  mat%X(matrix)(ist,ist_occ) * psi(ip,idim) * &
+                  R_CONJ(psi1(ip,idim))
               end do
             end do
           end if
@@ -2638,6 +2682,8 @@ subroutine X(calc_rho)(sh, sys, hm, factor, factor_sum, factor_e, &
   end do
 
   SAFE_DEALLOCATE_P(mat%X(matrix))
+  SAFE_DEALLOCATE_A(psi)
+  SAFE_DEALLOCATE_A(psi1)
 
   POP_SUB(X(calc_rho))
 end subroutine X(calc_rho)
@@ -2654,23 +2700,25 @@ subroutine X(calc_hvar_psi)(sh, sys, hm, nsigma, lr, psi_out)
   type(lr_t),           intent(inout) :: lr(:) 
   R_TYPE,                intent(inout):: psi_out(:,:,:,:,:)   
     
-  R_TYPE, allocatable :: hvar(:,:,:) 
+  R_TYPE, allocatable :: hvar(:,:,:), psi(:,:)
   integer :: ip, ik, ist, ispin, idim, isigma
     
   PUSH_SUB(X(calc_hvar_psi))
 
   SAFE_ALLOCATE(hvar(1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:nsigma))
+  SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
   
   call X(sternheimer_calc_hvar)(sh, sys, lr, nsigma, hvar)
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
     ispin = states_dim_get_spin_index(sys%st%d, ik)
     do ist = 1, sys%st%nst
       if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+        call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
         do isigma = 1, nsigma
           do idim = 1, hm%d%dim
             do ip = 1, sys%gr%mesh%np
               psi_out(ip, idim, ist, ik, isigma) = psi_out(ip, idim, ist, ik, isigma) &
-                - hvar(ip, ispin, isigma) * sys%st%X(dontusepsi)(ip,idim,ist,ik)
+                - hvar(ip, ispin, isigma) * psi(ip,idim)
             end do
           end do
         end do
@@ -2679,6 +2727,7 @@ subroutine X(calc_hvar_psi)(sh, sys, hm, nsigma, lr, psi_out)
   end do
   
   SAFE_DEALLOCATE_A(hvar)
+  SAFE_DEALLOCATE_A(psi)
   
   POP_SUB(X(calc_hvar_psi))
 end subroutine X(calc_hvar_psi)
@@ -2695,37 +2744,40 @@ subroutine X(calc_hvar_lr)(sh, sys, hm, nsigma1, nsigma2, lr1, lr2, &
   R_TYPE,               intent(in)    :: factor1, factor2
   R_TYPE,               intent(inout) :: psi_out(:,:,:,:,:)
     
-  R_TYPE, allocatable :: hvar(:,:,:),psi(:,:,:)
+  R_TYPE, allocatable :: hvar(:,:,:), psi(:,:,:)
   integer :: ip, ik, ist, ispin, idim, isigma, ist1
   type(matrix_t):: mat
+  R_TYPE, allocatable :: psi0(:,:,:)
     
   PUSH_SUB(X(calc_hvar_lr))
   
   SAFE_ALLOCATE(hvar(1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:nsigma1))
   SAFE_ALLOCATE(psi(1:sys%gr%mesh%np,1:hm%d%dim, 1:sys%st%nst))
   SAFE_ALLOCATE(mat%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
-
-  psi(1:sys%gr%mesh%np,1:hm%d%dim, 1:sys%st%nst) = M_ZERO
+  SAFE_ALLOCATE(psi0(1:sys%gr%mesh%np, 1:sys%st%d%dim, 1:sys%st%nst))
 
   call X(sternheimer_calc_hvar)(sh, sys, lr1, nsigma1, hvar)
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
+    psi(:,:,:) = M_ZERO
+    psi0(:,:,:) = M_ZERO
     ispin = states_dim_get_spin_index(sys%st%d, ik)
     if(nsigma1 > 1) then 
       do isigma = 1, nsigma1
         do ist = 1, sys%st%nst
           if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+            call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi0(:,:,ist))
             do idim = 1, hm%d%dim
               do ip = 1, sys%gr%mesh%np
                 psi_out(ip, idim, ist, ik, isigma) = psi_out(ip, idim, ist, ik, isigma) &
                   - factor1 * hvar(ip, ispin, isigma) * factor2 * lr2(1)%X(dl_psi)(ip,idim,ist,ik)
-                psi(ip, idim, ist) = factor1 * hvar(ip, ispin, isigma) * sys%st%X(dontusepsi)(ip,idim,ist,ik)
+                psi(ip, idim, ist) = factor1 * hvar(ip, ispin, isigma) * psi0(ip,idim,ist)
               end do
             end do
           end if
         end do
 
         call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
-          sys%st%X(dontusepsi)(:,:,:,ik), psi(:,:,:), mat%X(matrix))
+          psi0, psi(:,:,:), mat%X(matrix))
         
         do ist  = 1, sys%st%nst
           if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
@@ -2746,18 +2798,19 @@ subroutine X(calc_hvar_lr)(sh, sys, hm, nsigma1, nsigma2, lr1, lr2, &
       do isigma = 1, nsigma2
         do ist = 1, sys%st%nst
           if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
+            call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi0(:,:,ist))
             do idim = 1, hm%d%dim
               do ip = 1, sys%gr%mesh%np
                 psi_out(ip, idim, ist, ik, isigma) = psi_out(ip, idim, ist, ik, isigma) &
                   - factor1*hvar(ip, ispin, 1)*factor2*lr2(isigma)%X(dl_psi)(ip,idim,ist,ik)
-                psi(ip, idim, ist) = factor1*hvar(ip, ispin, 1)*sys%st%X(dontusepsi)(ip,idim,ist,ik)
+                psi(ip, idim, ist) = factor1*hvar(ip, ispin, 1)*psi0(ip,idim,ist)
               end do
             end do
           end if
         end do
 
         call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
-          sys%st%X(dontusepsi)(:,:,:,ik), psi(:,:,:), mat%X(matrix))
+          psi0(:,:,:), psi(:,:,:), mat%X(matrix))
 
         do ist  = 1, sys%st%nst
           if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
@@ -2780,6 +2833,7 @@ subroutine X(calc_hvar_lr)(sh, sys, hm, nsigma1, nsigma2, lr1, lr2, &
   SAFE_DEALLOCATE_P(mat%X(matrix))
   SAFE_DEALLOCATE_A(hvar)
   SAFE_DEALLOCATE_A(psi)
+  SAFE_DEALLOCATE_A(psi0)
   
   POP_SUB(X(calc_hvar_lr))
 end subroutine X(calc_hvar_lr)
