@@ -25,12 +25,11 @@ module simulation_m
     simulation_get,    &
     simulation_copy,   & 
     simulation_end
-  
+
   type, public :: simulation_t
     private
     type(json_object_t), pointer :: config =>null()
     type(space_t),       pointer :: space  =>null()
-    type(geometry_t),    pointer :: geo    =>null()
     type(grid_t),        pointer :: grid   =>null()
     type(domain_t)               :: domain
   end type simulation_t
@@ -44,7 +43,6 @@ module simulation_m
     module procedure simulation_get_config
     module procedure simulation_get_info
     module procedure simulation_get_space
-    module procedure simulation_get_geometry
     module procedure simulation_get_simul_box
     module procedure simulation_get_mesh
     module procedure simulation_get_derivatives
@@ -97,19 +95,16 @@ contains
   end subroutine simulation_init_copy
 
   ! ---------------------------------------------------------
-  subroutine simulation__start__(this, grid, geo)
-    type(simulation_t),       intent(inout) :: this
-    type(grid_t),     target, intent(in)    :: grid
-    type(geometry_t), target, intent(in)    :: geo
+  subroutine simulation__start__(this, grid)
+    type(simulation_t),   intent(inout) :: this
+    type(grid_t), target, intent(in)    :: grid
 
     PUSH_SUB(simulation__start__)
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%space))
-    ASSERT(.not.associated(this%geo))
     ASSERT(.not.associated(this%grid))
     this%grid => grid
-    this%geo => geo
     ASSERT(this%grid%sb%dim==this%space%dim)
 
     POP_SUB(simulation__start__)
@@ -124,8 +119,8 @@ contains
 
     PUSH_SUB(simulation_start)
 
-    call simulation__start__(this, grid, geo)
-    call domain_start(this%domain, this%grid%sb, this%geo)
+    call simulation__start__(this, grid)
+    call domain_start(this%domain, this%grid%sb, geo)
 
     POP_SUB(simulation_start)
   end subroutine simulation_start
@@ -146,7 +141,6 @@ contains
     ASSERT(associated(this%config))
     ASSERT(associated(this%space))
     ASSERT(.not.associated(this%grid))
-    ASSERT(.not.associated(this%geo))
     nullify(cnfg, list)
     call json_get(config, "positions", list, ierr)
     ASSERT(ierr==JSON_OK)
@@ -206,19 +200,6 @@ contains
 
     POP_SUB(simulation_get_space)
   end subroutine simulation_get_space
-
-  ! ---------------------------------------------------------
-  subroutine simulation_get_geometry(this, that)
-    type(simulation_t), target, intent(in) :: this
-    type(geometry_t),  pointer             :: that
-
-    PUSH_SUB(simulation_get_geometry)
-
-    nullify(that)
-    if(associated(this%geo)) that => this%geo
-
-    POP_SUB(simulation_get_geometry)
-  end subroutine simulation_get_geometry
 
   ! ---------------------------------------------------------
   subroutine simulation_get_simul_box(this, that)
@@ -316,8 +297,7 @@ contains
     call simulation_end(this)
     if(associated(that%config).and.associated(that%space))then
       call simulation__init__(this, that%space, that%config)
-      if(associated(that%grid).and.associated(that%geo))&
-        call simulation__start__(this, that%grid, that%geo)
+      if(associated(that%grid)) call simulation__start__(this, that%grid)
     end if
     call domain_copy(this%domain, that%domain)
 
@@ -330,7 +310,7 @@ contains
 
     PUSH_SUB(simulation_end)
 
-    nullify(this%config, this%space, this%geo, this%grid)
+    nullify(this%config, this%space, this%grid)
     call domain_end(this%domain)
 
     POP_SUB(simulation_end)
