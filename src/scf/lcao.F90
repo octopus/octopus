@@ -213,11 +213,19 @@ contains
     !% guess density and a new KS potential.
     !% Using the LCAO density as a new guess density may improve the convergence, but can
     !% also slow it down or yield wrong results (especially for spin-polarized calculations).
+    !%Option lcao_simple 4
+    !% States are initialized using atomic orbitals. This produces a
+    !% less optimal starting point, but it is faster and uses less
+    !% memory than other methods.
     !%End
     call parse_variable('LCAOStart', mode_default, this%mode)
     if(.not.varinfo_valid_option('LCAOStart', this%mode)) call messages_input_error('LCAOStart')
 
     call messages_print_var_option(stdout, 'LCAOStart', this%mode)
+
+    if(this%mode == OPTION__LCAOSTART__LCAO_SIMPLE) then
+      call messages_experimental('LCAOStart = lcao_simple')
+    end if
 
     if(this%mode == OPTION__LCAOSTART__LCAO_NONE) then
       POP_SUB(lcao_init)
@@ -744,9 +752,17 @@ contains
         call messages_info(1)
       end if
 
-      call lcao_wf(lcao, sys%st, sys%gr, sys%geo, hm, start = st_start)
+      if(lcao%mode == OPTION__LCAOSTART__LCAO_SIMPLE) then
+        if (states_are_real(sys%st)) then
+          call dlcao_simple(lcao, sys%st, sys%gr, sys%geo, hm, start = st_start)
+        else
+          call zlcao_simple(lcao, sys%st, sys%gr, sys%geo, hm, start = st_start)
+        end if
+      else
+        call lcao_wf(lcao, sys%st, sys%gr, sys%geo, hm, start = st_start)
+      end if
 
-      if (.not. present(st_start)) then
+      if (lcao%mode /= OPTION__LCAOSTART__LCAO_SIMPLE .and. .not. present(st_start)) then
         call states_fermi(sys%st, sys%gr%mesh)
         call states_write_eigenvalues(stdout, min(sys%st%nst, lcao%norbs), sys%st, sys%gr%sb)
 

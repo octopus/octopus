@@ -79,8 +79,58 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel)
 
 end subroutine X(lcao_atomic_orbital)
 
+! ---------------------------------------------------------
+
+subroutine X(lcao_simple)(this, st, gr, geo, hm, start)
+  type(lcao_t),        intent(inout) :: this
+  type(states_t),      intent(inout) :: st
+  type(grid_t),        intent(inout) :: gr
+  type(geometry_t),    intent(in)    :: geo
+  type(hamiltonian_t), intent(in)    :: hm
+  integer, optional,   intent(in)    :: start
+
+  integer :: lcao_start, ist, iqn, iorb, ispin
+  R_TYPE, allocatable :: orbital(:, :)
+
+  PUSH_SUB(X(lcao_simple))
+
+  lcao_start = optional_default(start, 1)
+
+  call messages_write('Info: Initializing states using atomic orbitals.')
+  call messages_info()
+
+  SAFE_ALLOCATE(orbital(1:gr%mesh%np, 1:st%d%dim))
+
+  do iqn = st%d%kpt%start, st%d%kpt%end
+    ispin = states_dim_get_spin_index(st%d, iqn)
+
+    do ist = 1, st%nst
+      if(ist > this%norbs) exit
+
+      if(ist < st%st_start) cycle
+      if(ist > st%st_end) cycle
+      if(ist < lcao_start) cycle
+
+      call X(lcao_atomic_orbital)(this, ist, gr%mesh, st, geo, orbital, ispin)
+      call states_set_state(st, gr%mesh, ist, iqn, orbital)
+
+    end do
+
+    ! if we don't have all states we can't orthogonalize right now
+    if(st%nst <= this%norbs) then
+      call X(states_orthogonalization_full)(st, gr%mesh, iqn)
+    end if
+
+  end do
+
+
+  SAFE_DEALLOCATE_A(orbital)
+
+  POP_SUB(X(lcao_simple))
+end subroutine X(lcao_simple)
 
 ! ---------------------------------------------------------
+
 subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
   type(lcao_t),        intent(inout) :: this
   type(states_t),      intent(inout) :: st
