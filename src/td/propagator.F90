@@ -347,7 +347,7 @@ contains
 
     !%Variable TDStepsWithSelfConsistency
     !%Type integer
-    !%Default 3
+    !%Default 0
     !%Section Time-Dependent::Propagation
     !%Description
     !% Since the KS propagator is non-linear, each propagation step
@@ -358,16 +358,14 @@ contains
     !%
     !% The special value <tt>all_steps</tt> forces self-consistency to
     !% be imposed on all propagation steps. A value of 0 means that
-    !% self-consistency will not be imposed.  The default is 3, which
-    !% means that self-consistency is only enforced during the first three
-    !% steps.
+    !% self-consistency will not be imposed.  The default is 0.
     !%Option all_steps -1
     !% Self-consistency is imposed for all propagation steps.
     !%End
 
-    call parse_variable('TDStepsWithSelfConsistency', 3, tr%scf_propagation_steps)
+    call parse_variable('TDStepsWithSelfConsistency', 0, tr%scf_propagation_steps)
     if(tr%scf_propagation_steps == -1) tr%scf_propagation_steps = HUGE(tr%scf_propagation_steps)
-    if(tr%scf_propagation_steps < 0) call messages_input_error('TDStepsWithSelfConsistency')
+    if(tr%scf_propagation_steps < 0) call messages_input_error('TDStepsWithSelfConsistency', 'Cannot be negative')
 
     !%Variable TDSCFThreshold
     !%Type float

@@ -35,3 +35,4 @@ TDEnergyUpdateIter = 25
 
 FilterPotentials = filter_none
 
+TDStepsWithSelfConsistency = 3
