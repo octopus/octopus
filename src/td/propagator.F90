@@ -143,7 +143,6 @@ contains
     !! or a gauge field).
     logical,             intent(in)    :: have_fields 
 
-    integer :: default_propagator
     logical :: cmplxscl
     
     PUSH_SUB(propagator_init)
@@ -254,9 +253,7 @@ contains
     !%End
     call messages_obsolete_variable('TDEvolutionMethod', 'TDPropagator')
 
-    default_propagator = PROP_ETRS
-
-    call parse_variable('TDPropagator', default_propagator, tr%method)
+    call parse_variable('TDPropagator', PROP_ETRS, tr%method)
     if(.not.varinfo_valid_option('TDPropagator', tr%method)) call messages_input_error('TDPropagator')
 
     select case(tr%method)
@@ -364,15 +361,25 @@ contains
     !%End
 
     call parse_variable('TDStepsWithSelfConsistency', 0, tr%scf_propagation_steps)
+
     if(tr%scf_propagation_steps == -1) tr%scf_propagation_steps = HUGE(tr%scf_propagation_steps)
     if(tr%scf_propagation_steps < 0) call messages_input_error('TDStepsWithSelfConsistency', 'Cannot be negative')
 
+    if(tr%scf_propagation_steps /= 0) then
+      call messages_experimental('TDStepsWithSelfConsistency')
+
+      if(tr%method /= PROP_ETRS) then
+        call messages_write('TDStepsWithSelfConsistency only works with the ETRS propagator')
+        call messages_fatal()
+      end if
+    end if
+
     !%Variable TDSCFThreshold
     !%Type float
-    !%Default 1.0e-3
+    !%Default 1.0e-6
     !%Section Time-Dependent::Propagation
     !%Description
-    !% Since the KS propagator is non-linear, each propagation stepp
+    !% Since the KS propagator is non-linear, each propagation step
     !% should be performed self-consistently.  In practice, for most
     !% purposes this is not necessary, except perhaps in the first
     !% iterations. This variable holds the number of propagation steps
@@ -381,7 +388,7 @@ contains
     !% The self consistency has to be measured against some accuracy 
     !% threshold. This variable controls the value of that threshold.
     !%End
-    call parse_variable('TDSCFThreshold', CNST(1.0e-3), tr%scf_threshold)
+    call parse_variable('TDSCFThreshold', CNST(1.0e-6), tr%scf_threshold)
 
     POP_SUB(propagator_init)
   end subroutine propagator_init
@@ -507,10 +514,17 @@ contains
     ! to work on SCDM states we rotate the states in st to the localized SCDM,
     !i.e. we perform the SCDM procedure and overwrite the states in st
     if(hm%scdm_EXX) call scdm_rotate_states(st,gr%mesh,hm%scdm)
-    
+
+    if(present(scsteps)) scsteps = 1
+   
     select case(tr%method)
     case(PROP_ETRS)
-      call td_etrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_, gauge_force)
+      if(self_consistent_step()) then
+        call td_etrs_sc(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_, tr%scf_threshold, &
+          gauge_force, scsteps)
+      else
+        call td_etrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_, gauge_force)
+      end if
     case(PROP_AETRS, PROP_CAETRS)
       call td_aetrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_, gauge_force)
     case(PROP_EXPONENTIAL_MIDPOINT)
@@ -534,8 +548,6 @@ contains
         call td_explicit_runge_kutta4(ks, hm, gr, st, time, dt, ions, geo)
       end if
     end select
-
-    if(present(scsteps)) scsteps = 1
 
     generate = .false.
     if(update_energy_ .and. ion_dynamics_ions_move(ions)) then
@@ -576,16 +588,7 @@ contains
 
     ! ---------------------------------------------------------
     logical pure function self_consistent_step() result(scs)
-      scs = .false.
-      if( hm%theory_level /= INDEPENDENT_PARTICLES .and. &
-          tr%method /= PROP_CAETRS .and. &
-          tr%method /= PROP_RUNGE_KUTTA4 .and. &
-          tr%method /= PROP_EXPLICIT_RUNGE_KUTTA4 .and. &
-          tr%method /= PROP_RUNGE_KUTTA2 ) then
-        if(time <= tr%scf_propagation_steps*abs(dt) + M_EPSILON) then
-          scs = .true.
-        end if
-      end if
+      scs = (hm%theory_level /= INDEPENDENT_PARTICLES) .and. (time <= tr%scf_propagation_steps*abs(dt) + M_EPSILON)
     end function self_consistent_step
     ! ---------------------------------------------------------
 
