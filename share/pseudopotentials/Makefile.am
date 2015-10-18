@@ -19,7 +19,7 @@
 ##
 ## $Id$
 
-SUBDIRS = PSF HGH UPF CPI FHI sg15 hscv
+SUBDIRS = PSF HGH extra sg15 hscv
 
 ppdir = $(pkgdatadir)/pseudopotentials
 

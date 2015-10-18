@@ -22,25 +22,17 @@
 psfdir = $(pkgdatadir)/pseudopotentials/PSF
 
 dist_psf_DATA = \
-	Ar.psf \
-	As.psf \
-	Au.psf \
 	Cd.psf \
 	C.psf  \
-	Cl.psf \
-	Ga.psf \
 	H.psf  \
 	Li.psf \
 	Na.psf \
-	Ne.psf \
 	N.psf  \
 	O.psf  \
 	Se.psf \
 	Si.psf \
 	S.psf  \
-	Ti.psf \
-	Xe.psf
-
+	Ti.psf
 
 # In order to get `make check' working with a `VPATH' build (e. g. to use
 # the `distcheck' target) the pseudopotential files have to be accessible

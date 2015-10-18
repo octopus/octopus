@@ -385,9 +385,7 @@ AC_CONFIG_FILES([Makefile
   share/pseudopotentials/Makefile
   share/pseudopotentials/PSF/Makefile
   share/pseudopotentials/HGH/Makefile
-  share/pseudopotentials/UPF/Makefile
-  share/pseudopotentials/CPI/Makefile
-  share/pseudopotentials/FHI/Makefile
+  share/pseudopotentials/extra/Makefile
   share/pseudopotentials/sg15/Makefile
   share/pseudopotentials/hscv/Makefile
   share/pseudopotentials/hscv/lda/Makefile

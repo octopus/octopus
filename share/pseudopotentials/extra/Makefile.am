@@ -19,17 +19,26 @@
 ##
 ## $Id: Makefile.am 2789 2007-03-24 12:47:37Z lorenzen $
 
-upfdir = $(pkgdatadir)/pseudopotentials/FHI
+extradir = $(pkgdatadir)/pseudopotentials/extra
 
-dist_upf_DATA = \
-        C.fhi
-
+dist_extra_DATA = \
+        Xe.UPF    \
+	F.UPF     \
+	C.cpi     \
+	C.fhi     \
+	Ar.psf    \
+	As.psf    \
+	Au.psf    \
+	Cl.psf    \
+	Ga.psf    \
+	Ne.psf    \
+	Xe.psf
 
 # In order to get `make check' working with a `VPATH' build (e. g. to use
 # the `distcheck' target) the pseudopotential files have to be accessible
 # in the build tree.
 check:
-	for f in $(dist_upf_DATA); do \
+	for f in $(dist_extra_DATA); do \
 	  if [ ! -e $$f -o $$f -ot $(srcdir)/$$f ]; then \
 	    cp $(srcdir)/$$f $$f; \
 	  fi \
@@ -40,7 +49,7 @@ check-long: check
 
 clean-local:
 	@if [ -n "$(top_builddir)" -a "$(top_builddir)" != "$(top_srcdir)" ]; then \
-	  rm -f $(dist_upf_DATA); \
+	  rm -f $(dist_extra_DATA); \
 	fi
 
 .PHONY: check check-short check-long
