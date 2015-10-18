@@ -36,7 +36,10 @@ dist_share_DATA =                      \
 	02-propagators.02-cnsparskit.inp \
 	02-propagators.03-rungekutta2.inp \
 	02-propagators.04-rungekutta4.inp \
-        05-time_propagation.01-gs.inp                                 \
+	03-td_self_consistent.test                                    \
+	03-td_self_consistent.01-gs.inp                               \
+	03-td_self_consistent.02-etrs.inp                             \
+	05-time_propagation.01-gs.inp                                 \
 	05-time_propagation.02-td_domains.inp                         \
 	05-time_propagation.03-td_domains_states.inp                  \
 	05-time_propagation.04-td_md.inp                              \

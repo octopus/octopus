@@ -1,0 +1,38 @@
+CalculationMode = td
+
+FromScratch = yes
+
+bond_length = 2.8
+
+%Coordinates
+"C" |  -bond_length/2 |  0.0 |  0.0 
+"C" |   bond_length/2 |  0.0 |  0.0 
+%
+
+# We use the default values for Carbon, except the nuclear mass, that is
+# divided by 1000.
+%Species
+"C" | species_pseudo | lmax | 1 | lloc| 0 | max_spacing | 0.43463 | min_radius | 7.5589 | mass | 0.0120107000 | db_file | "PSF/C.psf"
+%
+
+Spacing = 0.6
+
+Radius = 6
+
+MoveIons = yes
+
+TDPropagator = etrs
+
+TDStepsWithSelfConsistency = all_steps
+
+TDMaxSteps = 20
+TDTimeStep = 0.1
+
+TDDeltaStrength = 0.01
+TDPolarizationDirection = 1
+
+TDEnergyUpdateIter = 1
+
+ExperimentalFeatures = yes
+
+
