@@ -31,7 +31,3 @@ TDOutput = energy + angular
 MagneticGaugeCorrection = gipaw
 
 TDEnergyUpdateIter = 25
-
-FilterPotentials = filter_none
-
-TDStepsWithSelfConsistency = 3
