@@ -484,11 +484,7 @@ contains
     logical,              optional,  intent(in)    :: update_energy
     type(opt_control_state_t), optional, target, intent(inout) :: qcchi
 
-    integer :: is, iter, ik, ist
-    FLOAT   :: d, d_max
     logical :: cmplxscl, generate, update_energy_
-    CMPLX, allocatable :: zpsi1(:, :, :, :)
-    FLOAT, allocatable :: dtmp(:), vaux(:, :), imvaux(:, :)
     type(profile_t), save :: prof
 
     call profiling_in(prof, "TD_PROPAGATOR")
@@ -500,21 +496,6 @@ contains
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
       ASSERT(present(gauge_force))
-    end if
-
-    if(self_consistent_step()) then
-      SAFE_ALLOCATE(zpsi1(1:gr%mesh%np, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
-      do ik = st%d%kpt%start, st%d%kpt%end
-        do ist = st%st_start, st%st_end
-           call states_get_state(st, gr%mesh, ist, ik, zpsi1(:, :, ist, ik))
-        end do
-      end do
-      SAFE_ALLOCATE(vaux(1:gr%mesh%np, 1:st%d%nspin))
-      vaux(1:gr%mesh%np, 1:st%d%nspin) = hm%vhxc(1:gr%mesh%np, 1:st%d%nspin)
-      if (cmplxscl) then
-        SAFE_ALLOCATE(Imvaux(1:gr%mesh%np, 1:st%d%nspin))
-        Imvaux(1:gr%mesh%np, 1:st%d%nspin) = hm%Imvhxc(1:gr%mesh%np, 1:st%d%nspin)
-      end if 
     end if
 
     if(cmplxscl) then
@@ -556,70 +537,6 @@ contains
 
     if(present(scsteps)) scsteps = 1
 
-    if(self_consistent_step()) then
-
-      ! First, compare the new potential to the extrapolated one.
-      call v_ks_calc(ks, hm, st, geo, time = time - dt)
-      call potential_interpolation_diff(tr%vksold, gr, st%d%nspin, hm%vhxc, 0, d_max)
-
-      if(d_max > tr%scf_threshold) then
-
-        ! We do a maximum of 10 iterations. If it still not converged, probably the propagation
-        ! will not be good anyways.
-        do iter = 1, 10
-          if(present(scsteps)) INCR(scsteps, 1)
-
-          do ik = st%d%kpt%start, st%d%kpt%end
-            do ist = st%st_start, st%st_end
-              call states_set_state(st, gr%mesh, ist, ik, zpsi1(:, :, ist, ik))
-            end do
-          end do
-          call potential_interpolation_set(tr%vksold, gr%mesh%np, st%d%nspin, 0, hm%vhxc)
-          vaux(:, :) = hm%vhxc(:, :)
-
-          select case(tr%method)
-          case(PROP_ETRS)
-            call td_etrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_, gauge_force)
-          case(PROP_AETRS, PROP_CAETRS)
-            call td_aetrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_, gauge_force)
-          case(PROP_EXPONENTIAL_MIDPOINT)
-            call exponential_midpoint(hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_, gauge_force)
-          case(PROP_CRANK_NICOLSON)
-            call td_crank_nicolson(hm, gr, st, tr, time, dt, ions, geo, .false.)
-          case(PROP_RUNGE_KUTTA4)
-            call td_runge_kutta4(ks, hm, gr, st, tr, time, dt, ions, geo)
-          case(PROP_RUNGE_KUTTA2)
-            call td_runge_kutta2(ks, hm, gr, st, tr, time, dt, ions, geo)
-          case(PROP_CRANK_NICOLSON_SPARSKIT)
-            call td_crank_nicolson(hm, gr, st, tr, time, dt, ions, geo, .true.)
-          case(PROP_MAGNUS)
-            call td_magnus(hm, gr, st, tr, time, dt)
-          case(PROP_QOCT_TDDFT_PROPAGATOR)
-            call td_qoct_tddft_propagator(hm, ks%xc, gr, st, tr, time, dt, ions, geo)
-          case(PROP_EXPLICIT_RUNGE_KUTTA4)
-            call td_explicit_runge_kutta4(ks, hm, gr, st, time, dt, ions, geo)
-          end select
-
-          call v_ks_calc(ks, hm, st, geo, time = time - dt)
-          SAFE_ALLOCATE(dtmp(1:gr%mesh%np))
-          d_max = M_ZERO
-          do is = 1, st%d%nspin
-            dtmp(1:gr%mesh%np) = hm%vhxc(1:gr%mesh%np, is) - vaux(1:gr%mesh%np, is)
-            d = dmf_nrm2(gr%mesh, dtmp)
-            if(d > d_max) d_max = d
-          end do
-          SAFE_DEALLOCATE_A(dtmp)
-
-          if(d_max < tr%scf_threshold) exit
-        end do
-        
-      end if
-
-      SAFE_DEALLOCATE_A(zpsi1)
-      SAFE_DEALLOCATE_A(vaux)
-      SAFE_DEALLOCATE_A(Imvaux)
-    end if
-    
     generate = .false.
     if(update_energy_ .and. ion_dynamics_ions_move(ions)) then
       if(.not. propagator_ions_are_propagated(tr)) then
