@@ -66,6 +66,7 @@ contains
     type(block_t)     :: blk
     FLOAT             :: xx(MAX_DIM), rr, psi_re, psi_im
     type(restart_t) :: restart
+    CMPLX, allocatable :: zpsi(:, :)
 
     type(states_t), pointer :: psi
 
@@ -165,6 +166,8 @@ contains
       !%  
       !%End
       if(parse_block('OCTInitialUserdefined', blk) == 0) then
+
+        SAFE_ALLOCATE(zpsi(1:sys%gr%mesh%np, 1:psi%d%dim))
         
         no_states = parse_block_n(blk)
         do ib = 1, no_states
@@ -195,16 +198,22 @@ contains
                   call parse_expression(psi_re, psi_im, &
                     sys%gr%sb%dim, xx, rr, M_ZERO, psi%user_def_states(id, is, ik))
                   ! fill state
-                  psi%zdontusepsi(ip, id, is, ik) = psi_re + M_zI * psi_im
+                  zpsi(ip, id) = cmplx(psi_re, psi_im, REAL_PRECISION)
                 end do
-                ! normalize orbital
-                call zstates_normalize_orbital(sys%gr%mesh, psi%d%dim, &
-                  psi%zdontusepsi(:,:, is, ik))
+                call states_set_state(psi, sys%gr%mesh, id, is, ik, zpsi(:, id))
               end do
             end do
           end do
         end do
         call parse_block_end(blk)
+        do ik = 1, psi%d%nik
+          do is = psi%st_start, psi%st_end
+            call states_get_state(psi, sys%gr%mesh, is, ik, zpsi)
+            call zstates_normalize_orbital(sys%gr%mesh, psi%d%dim, zpsi)
+            call states_set_state(psi, sys%gr%mesh, is, ik, zpsi)
+          end do
+        end do
+        SAFE_DEALLOCATE_A(zpsi)
       else
         message(1) = '"OCTInitialUserdefined" has to be specified as block.'
         call messages_fatal(1)

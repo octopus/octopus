@@ -20,6 +20,7 @@
 #include "global.h"
 
 module propagation_m
+  use batch_ops_m
   use controlfunction_m
   use density_m
   use energy_calc_m
@@ -565,7 +566,7 @@ contains
     type(oct_prop_t),                  intent(inout) :: prop_chi
     type(oct_prop_t),                  intent(inout) :: prop_psi
 
-    integer :: i, ierr
+    integer :: i, ierr, ik, ib, j
     logical :: freeze
     type(grid_t), pointer :: gr
     type(propagator_t) :: tr_chi
@@ -664,7 +665,12 @@ contains
         ! successive propagations of half time step.
         call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, tg, par, psi, sys%geo)
 
-        st_ref%zdontusepsi = psi%zdontusepsi
+        do ik = psi%d%kpt%start, psi%d%kpt%end
+          do ib = psi%group%block_start, psi%group%block_end
+            call batch_copy_data(sys%gr%mesh%np, psi%group%psib(ib, ik), st_ref%group%psib(ib, ik))
+          end do
+        end do
+
         vhxc(:, :) = hm%vhxc(:, :)
         call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, i-1, td%ions, sys%geo)
 
@@ -674,7 +680,15 @@ contains
           call hamiltonian_epot_generate(hm, gr, sys%geo, psi, time = abs((i-1)*td%dt))
         end if
 
-        st_ref%zdontusepsi = M_HALF * (st_ref%zdontusepsi + psi%zdontusepsi)
+        do ik = psi%d%kpt%start, psi%d%kpt%end
+          do ib = psi%group%block_start, psi%group%block_end
+            call batch_scal(sys%gr%mesh%np, (/ (cmplx(M_HALF, M_ZERO, REAL_PRECISION), j = 1, sys%gr%mesh%np) /), &
+              st_ref%group%psib(ib, ik))
+            call batch_axpy(sys%gr%mesh%np, cmplx(M_HALF, M_ZERO, REAL_PRECISION), &
+              psi%group%psib(ib, ik), st_ref%group%psib(ib, ik))
+          end do
+        end do
+
         hm%vhxc(:, :) = M_HALF * (hm%vhxc(:, :) + vhxc(:, :))
         call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, tg, par, sys%geo, st_ref, qtildehalf)
         freeze = ion_dynamics_freeze(td%ions)
@@ -755,8 +769,8 @@ contains
 
     type(states_t) :: inh
     integer :: j, iatom, idim
-    CMPLX, allocatable :: dvpsi(:, :, :)
-    integer :: ist, ik
+    CMPLX, allocatable :: dvpsi(:, :, :), zpsi(:, :), inhzpsi(:, :)
+    integer :: ist, ik, ib
 
     PUSH_SUB(update_hamiltonian_chi)
 
@@ -770,19 +784,31 @@ contains
     if(ion_dynamics_ions_move(td%ions)) then
       call states_copy(inh, st)
       SAFE_ALLOCATE(dvpsi(1:gr%mesh%np_part, 1:st%d%dim, 1:gr%sb%dim))
-      inh%zdontusepsi = M_z0
-      do ist = 1, st%nst
-        do ik = 1, st%d%nik
-          do iatom = 1, geo%natoms
-            call zhamiltonian_dervexternal(hm, geo, gr, iatom, &
-              st%d%dim, st%zdontusepsi(:, :, ist, ik), dvpsi)
-            do idim = 1, gr%sb%dim
-              inh%zdontusepsi(:, :, ist, ik) = &
-                inh%zdontusepsi(:, :, ist, ik) + st%occ(ist, ik)*qtildehalf(iatom, idim)*dvpsi(:, :, idim)
-            end do
-          end do
+      do ik = inh%d%kpt%start, inh%d%kpt%end
+        do ib = inh%group%block_start, inh%group%block_end
+          call batch_set_zero(inh%group%psib(ib, ik))
         end do
       end do
+      SAFE_ALLOCATE(zpsi(1:gr%mesh%np_part, 1:st%d%dim))
+      SAFE_ALLOCATE(inhzpsi(1:gr%mesh%np_part, 1:st%d%dim))
+      do ist = 1, st%nst
+        do ik = 1, st%d%nik
+
+          call states_get_state(st, gr%mesh, ist, ik, zpsi)
+          call states_get_state(inh, gr%mesh, ist, ik, inhzpsi)
+
+          do iatom = 1, geo%natoms
+            call zhamiltonian_dervexternal(hm, geo, gr, iatom, st%d%dim, zpsi, dvpsi)
+            do idim = 1, gr%sb%dim
+              inhzpsi(:,  :)  = &
+                inhzpsi(:, :) + st%occ(ist, ik)*qtildehalf(iatom, idim)*dvpsi(:, :, idim)
+            end do
+          end do
+          call states_set_state(inh, gr%mesh, ist, ik, inhzpsi)
+        end do
+      end do
+      SAFE_DEALLOCATE_A(zpsi)
+      SAFE_DEALLOCATE_A(inhzpsi)
       SAFE_DEALLOCATE_A(dvpsi)
       call hamiltonian_set_inh(hm, inh)
       call states_end(inh)
