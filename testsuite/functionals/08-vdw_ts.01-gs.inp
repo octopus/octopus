@@ -20,3 +20,4 @@ VDWSelfConsistent = no
 
 ExperimentalFeatures = yes
 
+MixField = density

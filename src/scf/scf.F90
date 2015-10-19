@@ -267,24 +267,19 @@ contains
     !% No mixing is done. This is the default for independent
     !% particles.
     !%Option potential 1
-    !% The Kohn-Sham potential is mixed. This is the default for OEP
-    !% or (hybrid) MGGA calculations, or if <tt>StaticElectricField</tt> is applied in
-    !% a periodic direction.
+    !% The Kohn-Sham potential is mixed. This is the default for other cases.
     !%Option density 2
-    !% Mix the density. This is the default for other cases, including
-    !% LDA/GGA calculations.
+    !% Mix the density.
     !%End
 
-    mixdefault = MIXDENS
+    mixdefault = MIXPOT
     if(hm%theory_level==INDEPENDENT_PARTICLES) mixdefault = MIXNONE
-    if(iand(hm%xc_family, XC_FAMILY_OEP + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) mixdefault = MIXPOT
-    if(associated(hm%vberry)) mixdefault = MIXPOT
 
     call parse_variable('MixField', mixdefault, scf%mix_field)
     if(.not.varinfo_valid_option('MixField', scf%mix_field)) call messages_input_error('MixField')
     call messages_print_var_option(stdout, 'MixField', scf%mix_field, "what to mix during SCF cycles")
 
-    if (scf%mix_field == MIXPOT.and.hm%theory_level==INDEPENDENT_PARTICLES) then
+    if (scf%mix_field == MIXPOT .and. hm%theory_level==INDEPENDENT_PARTICLES) then
       message(1) = "Input: Cannot mix the potential for non-interacting particles."
       call messages_fatal(1)
     end if

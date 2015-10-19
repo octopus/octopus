@@ -37,3 +37,4 @@ OutputFormat = axis_x
 
 FilterPotentials = filter_none
 
+MixField = density

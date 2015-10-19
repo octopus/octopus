@@ -38,3 +38,4 @@ ParallelizationStrategy = par_domains + par_other
 %ParallelizationGroupRanks
  2 | 1 | 1 | 2
 %
+MixField = density

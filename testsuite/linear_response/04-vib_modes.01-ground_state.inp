@@ -13,3 +13,4 @@ Radius = 6
   "H"  | 0 | 0 | 0.053910
   "Li" | 0 | 0 | 3.058523
 %
+MixField = density

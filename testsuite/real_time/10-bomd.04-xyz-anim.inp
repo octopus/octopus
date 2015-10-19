@@ -9,3 +9,4 @@ bond_length = 2.4
 
 FilterPotentials = filter_none
 
+MixField = density

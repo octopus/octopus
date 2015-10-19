@@ -24,3 +24,4 @@ TDMaxSteps = 8
 
 ParallelizationStrategy = par_domains
 
+MixField = density

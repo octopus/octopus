@@ -27,3 +27,5 @@ TDMaxSteps = 4
 ScaLAPACKCompatible = yes
 ParallelizationStrategy = par_states
 
+MixField = density
+

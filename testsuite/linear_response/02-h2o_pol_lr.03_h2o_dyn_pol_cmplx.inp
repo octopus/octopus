@@ -25,3 +25,4 @@ EMEta = 0.01
 
 FilterPotentials = filter_none
 
+MixField = density

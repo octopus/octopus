@@ -21,3 +21,4 @@ LDFolder = "restart/gs"
 
 ExperimentalFeatures = yes
 
+MixField = density

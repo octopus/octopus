@@ -44,3 +44,4 @@ BornChargeSumRuleCorrection = no
 
 FilterPotentials = filter_none
 
+MixField = density

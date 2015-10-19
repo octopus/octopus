@@ -18,3 +18,4 @@ SpinComponents = spin_polarized
 
 FilterPotentials = filter_none
 
+MixField = density

@@ -15,3 +15,4 @@ ParallelizationStrategy=par_domains
 
 FilterPotentials = filter_none
 
+MixField = density

@@ -12,3 +12,4 @@ FromScratch = yes
 
 FilterPotentials = filter_none
 
+MixField = density

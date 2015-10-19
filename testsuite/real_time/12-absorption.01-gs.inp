@@ -16,3 +16,4 @@ Radius = 6.0
 
 FilterPotentials = filter_none
 
+MixField = density

@@ -26,3 +26,4 @@ PoissonFFTKernel = multipole_correction
 
 ParallelizationStrategy=par_domains
 
+MixField = density

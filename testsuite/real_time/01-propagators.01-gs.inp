@@ -36,3 +36,4 @@ TDEnergyUpdateIter = 1
 
 FilterPotentials = filter_none
 
+MixField = density

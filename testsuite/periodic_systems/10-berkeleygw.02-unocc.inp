@@ -34,3 +34,4 @@ BerkeleyGW_CalcExchange = yes
 
 FilterPotentials = filter_none
 
+MixField = density

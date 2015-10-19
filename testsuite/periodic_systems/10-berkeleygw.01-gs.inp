@@ -37,3 +37,4 @@ Output = BerkeleyGW
 
 FilterPotentials = filter_none
 
+MixField = density

@@ -18,3 +18,4 @@ RDMConvEner=1e-2
 
 FilterPotentials = filter_none
 
+MixField = density
