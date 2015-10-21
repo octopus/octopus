@@ -22,9 +22,9 @@ noinst_LIBRARIES = libfrozen.a
 
 libfrozen_a_SOURCES =		\
 	basis.F90		\
+	strng.F90		\
 	geo_intrf.F90		\
 	geo_build.F90		\
-	strng.F90		\
 	interface_xc.F90	\
 	config_dict.F90		\
 	domain.F90		\
@@ -100,9 +100,9 @@ depend:
 	@makedepf90 $(libfrozen_a_SOURCES)
 
 basis.o 	: basis.F90
+strng.o		: strng.F90
 geo_intrf.o	: geo_intrf.F90
-geo_build.o	: geo_build.F90
-strng.o 	: strng.F90
+geo_build.o	: geo_build.F90 strng.o
 interface_xc.o	: interface_xc.F90
 config_dict.o	: config_dict.F90 strng.o 
 domain.o 	: domain.F90 config_dict.o
