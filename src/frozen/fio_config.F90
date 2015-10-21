@@ -236,7 +236,7 @@ contains
   end subroutine fio_config_parse_species
 
   ! ---------------------------------------------------------
-  subroutine fio_config_parse_geometry(this)
+  subroutine fio_config_parse_molecule(this)
     type(json_object_t), intent(inout) :: this
 
     type(json_object_t), pointer :: cnfg
@@ -244,7 +244,7 @@ contains
     type(json_array_iterator_t)  :: iter
     integer                      :: n, ierr
 
-    PUSH_SUB(fio_config_parse_geometry)
+    PUSH_SUB(fio_config_parse_molecule)
 
     nullify(cnfg, list)
     call json_get(this, "nspecies", n, ierr)
@@ -271,6 +271,28 @@ contains
       ASSERT((ierr==JSON_OK).and.(json_len(list)==n))
       nullify(list)
     end if
+
+    POP_SUB(fio_config_parse_molecule)
+  end subroutine fio_config_parse_molecule
+
+  ! ---------------------------------------------------------
+  subroutine fio_config_parse_geometry(this)
+    type(json_object_t), intent(inout) :: this
+
+    type(json_object_t), pointer :: cnfg
+    integer                      :: ierr
+
+    PUSH_SUB(fio_config_parse_geometry)
+
+    nullify(cnfg)
+    call json_get(this, "molecule", cnfg, ierr)
+    if(ierr/=JSON_OK)then
+      SAFE_ALLOCATE(cnfg)
+      call json_init(cnfg)
+      call json_set(this, "molecule", cnfg)
+    end if
+    call fio_config_parse_molecule(cnfg)
+    nullify(cnfg)
 
     POP_SUB(fio_config_parse_geometry)
   end subroutine fio_config_parse_geometry

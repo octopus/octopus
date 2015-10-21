@@ -5,7 +5,6 @@ module live_config_m
   use base_config_m
   use base_hamiltonian_m
   use functional_m
-  use geometry_m
   use global_m
   use json_m
   use kinds_m
@@ -36,37 +35,6 @@ contains
 
     POP_SUB(live_config_parse_simulation)
   end subroutine live_config_parse_simulation
-
-  ! ---------------------------------------------------------
-  subroutine live_config_parse_geometry(this, geo)
-    type(json_object_t), intent(inout) :: this
-    type(geometry_t),    intent(in)    :: geo
-
-    PUSH_SUB(live_config_parse_geometry)
-
-    call geometry_create_data_object(geo, this)
-
-    POP_SUB(live_config_parse_geometry)
-  end subroutine live_config_parse_geometry
-
-  ! ---------------------------------------------------------
-  subroutine live_config_parse_system(this, geo)
-    type(json_object_t), intent(inout) :: this
-    type(geometry_t),    intent(in)    :: geo
-
-    type(json_object_t), pointer :: cnfg
-    integer                      :: ierr
-
-    PUSH_SUB(live_config_parse_system)
-
-    nullify(cnfg)
-    call json_get(this, "geometry", cnfg, ierr)
-    ASSERT(ierr==JSON_OK)
-    call live_config_parse_geometry(cnfg, geo)
-    nullify(cnfg)
-
-    POP_SUB(live_config_parse_system)
-  end subroutine live_config_parse_system
 
   ! ---------------------------------------------------------
   subroutine live_config_parse_external(this)
@@ -158,9 +126,8 @@ contains
   end subroutine live_config_parse_hamiltonian
 
   ! ---------------------------------------------------------
-  subroutine live_config_parse_model(this, geo)
+  subroutine live_config_parse_model(this)
     type(json_object_t), intent(inout) :: this
-    type(geometry_t),    intent(in)    :: geo
 
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
@@ -172,10 +139,6 @@ contains
     ASSERT(ierr==JSON_OK)
     call live_config_parse_simulation(cnfg)
     nullify(cnfg)
-    call json_get(this, "system", cnfg, ierr)
-    ASSERT(ierr==JSON_OK)
-    call live_config_parse_system(cnfg, geo)
-    nullify(cnfg)
     call json_get(this, "hamiltonian", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
     call live_config_parse_hamiltonian(cnfg)
@@ -185,9 +148,8 @@ contains
   end subroutine live_config_parse_model
 
   ! ---------------------------------------------------------
-  subroutine live_config_parse(this, geo, ndim, nspin)
+  subroutine live_config_parse(this, ndim, nspin)
     type(json_object_t), intent(out) :: this
-    type(geometry_t),    intent(in)  :: geo
     integer,             intent(in)  :: ndim
     integer,             intent(in)  :: nspin
 
@@ -202,7 +164,7 @@ contains
     call json_set(this, "type", HNDL_TYPE_LIVE)
     call json_get(this, "model", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call live_config_parse_model(cnfg, geo)
+    call live_config_parse_model(cnfg)
     nullify(cnfg)
 
     POP_SUB(live_config_parse)

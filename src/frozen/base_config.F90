@@ -14,6 +14,7 @@ module base_config_m
   implicit none
 
   private
+
   public ::            &
     base_config_parse
 
@@ -29,12 +30,15 @@ contains
 
     integer :: idim
 
+    PUSH_SUB(base_config_parse_simul_box)
+
     idim = default_ndim
     if(present(ndim))idim = ndim
     ASSERT(idim>0)
     call json_init(this)
     call json_set(this, "dimensions", idim)
 
+    POP_SUB(base_config_parse_simul_box)
   end subroutine base_config_parse_simul_box
 
   ! ---------------------------------------------------------
@@ -44,11 +48,14 @@ contains
 
     integer :: mthd
 
+    PUSH_SUB(base_config_parse_curvilinear)
+
     mthd = CURV_METHOD_UNIFORM
     if(present(method))mthd = method
     call json_init(this)
     call json_set(this, "method", mthd)
 
+    POP_SUB(base_config_parse_curvilinear)
   end subroutine base_config_parse_curvilinear
 
   ! ---------------------------------------------------------
@@ -57,6 +64,8 @@ contains
     
     type(json_array_t), pointer :: list
 
+    PUSH_SUB(base_config_parse_mesh)
+
     nullify(list)
     call json_init(this)
     SAFE_ALLOCATE(list)
@@ -64,6 +73,7 @@ contains
     call json_set(this, "spacing", list)
     nullify(list)
 
+    POP_SUB(base_config_parse_mesh)
   end subroutine base_config_parse_mesh
 
   ! ---------------------------------------------------------
@@ -72,6 +82,8 @@ contains
     integer,   optional, intent(in)  :: ndim
 
     type(json_object_t), pointer :: cnfg
+
+    PUSH_SUB(base_config_parse_grid)
 
     nullify(cnfg)
     call json_init(this)
@@ -88,6 +100,7 @@ contains
     call json_set(this, "mesh", cnfg)
     nullify(cnfg)
 
+    POP_SUB(base_config_parse_grid)
   end subroutine base_config_parse_grid
 
   ! ---------------------------------------------------------
@@ -97,6 +110,8 @@ contains
 
     type(json_object_t), pointer :: cnfg
 
+    PUSH_SUB(base_config_parse_simulation)
+
     nullify(cnfg)
     call json_init(this)
     SAFE_ALLOCATE(cnfg)
@@ -104,6 +119,7 @@ contains
     call json_set(this, "grid", cnfg)
     nullify(cnfg)
 
+    POP_SUB(base_config_parse_simulation)
   end subroutine base_config_parse_simulation
 
   ! ---------------------------------------------------------
@@ -113,37 +129,44 @@ contains
 
     integer :: idim
 
+    PUSH_SUB(base_config_parse_space)
+
     idim = default_ndim
     if(present(ndim))idim = ndim
     ASSERT(idim>0)
     call json_init(this)
     call json_set(this, "dimensions", idim)
 
+    POP_SUB(base_config_parse_space)
   end subroutine base_config_parse_space
+
+  ! ---------------------------------------------------------
+  subroutine base_config_parse_molecule(this)
+    type(json_object_t), intent(out) :: this
+
+    PUSH_SUB(base_config_parse_molecule)
+
+    call json_init(this)
+
+    POP_SUB(base_config_parse_molecule)
+  end subroutine base_config_parse_molecule
 
   ! ---------------------------------------------------------
   subroutine base_config_parse_geometry(this)
     type(json_object_t), intent(out) :: this
 
-    type(json_array_t), pointer :: list
+    type(json_object_t), pointer :: cnfg
 
+    PUSH_SUB(base_config_parse_geometry)
+
+    nullify(cnfg)
     call json_init(this)
-    call json_set(this, "nspecies", 0)
-    SAFE_ALLOCATE(list)
-    call json_init(list)
-    call json_set(this, "species", list)
-    nullify(list)
-    call json_set(this, "natoms", 0)
-    SAFE_ALLOCATE(list)
-    call json_init(list)
-    call json_set(this, "atom", list)
-    nullify(list)
-    call json_set(this, "ncatoms", 0)
-    SAFE_ALLOCATE(list)
-    call json_init(list)
-    call json_set(this, "catom", list)
-    nullify(list)
+    SAFE_ALLOCATE(cnfg)
+    call base_config_parse_molecule(cnfg)
+    call json_set(this, "molecule", cnfg)
+    nullify(cnfg)
 
+    POP_SUB(base_config_parse_geometry)
   end subroutine base_config_parse_geometry
 
   ! ---------------------------------------------------------
@@ -153,12 +176,15 @@ contains
 
     integer :: ispin
 
+    PUSH_SUB(base_config_parse_density)
+
     ispin = default_nspin
     if(present(nspin)) ispin = nspin
     ASSERT(ispin>0)
     call json_init(this)
     call json_set(this, "nspin", ispin)
 
+    POP_SUB(base_config_parse_density)
   end subroutine base_config_parse_density
 
   ! ---------------------------------------------------------
@@ -168,6 +194,8 @@ contains
 
     type(json_object_t), pointer :: cnfg
 
+    PUSH_SUB(base_config_parse_states)
+
     nullify(cnfg)
     call json_init(this)
     SAFE_ALLOCATE(cnfg)
@@ -175,6 +203,7 @@ contains
     call json_set(this, "density", cnfg)
     nullify(cnfg)
 
+    POP_SUB(base_config_parse_states)
   end subroutine base_config_parse_states
 
   ! ---------------------------------------------------------
@@ -184,6 +213,8 @@ contains
     integer,   optional, intent(in)  :: nspin
 
     type(json_object_t), pointer :: cnfg
+
+    PUSH_SUB(base_config_parse_system)
 
     nullify(cnfg)
     call json_init(this)
@@ -200,15 +231,19 @@ contains
     call json_set(this, "states", cnfg)
     nullify(cnfg)
 
+    POP_SUB(base_config_parse_system)
   end subroutine base_config_parse_system
 
   ! ---------------------------------------------------------
   subroutine base_config_parse_hamiltonian(this)
     type(json_object_t), intent(out) :: this
 
+    PUSH_SUB(base_config_parse_hamiltonian)
+
     call json_init(this)
     call json_set(this, "type", HMLT_TYPE_HMLT)
 
+    POP_SUB(base_config_parse_hamiltonian)
   end subroutine base_config_parse_hamiltonian
 
   ! ---------------------------------------------------------

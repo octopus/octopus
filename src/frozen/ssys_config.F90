@@ -2,59 +2,30 @@
 
 module ssys_config_m
 
+  use base_config_m
+  use base_hamiltonian_m
+  use base_handle_m
+  use fio_config_m
+  use fio_handle_m
+  use frozen_config_m
+  use frozen_handle_m
+  use functional_m
   use global_m
+  use json_m
+  use kinds_m
+  use live_config_m
+  use live_handle_m
   use messages_m
+  use parser_m
   use profiling_m
-
-  use functional_m,  only: FUNCT_XC_NONE
-  use geometry_m,    only: geometry_t
-  use json_m,        only: JSON_OK
-  use json_m,        only: json_object_t, json_object_iterator_t
-  use json_m,        only: json_array_t, json_array_iterator_t, json_len
-  use json_m,        only: json_init, json_set, json_get, json_append, json_next, json_copy, json_end
-  use kinds_m,       only: wp
-  use parser_m,      only: block_t, parse_block, parse_is_defined, parse_block_end, parse_block_n, parse_block_cols
-  use parser_m,      only: parse_block_integer, parse_block_float, parse_block_string
-  use parser_m,      only: parse_variable
-  use unit_m,        only: units_to_atomic
-  use unit_system_m, only: units_inp
-
-  use base_hamiltonian_m, only: &
-    HMLT_TYPE_TERM,             &
-    HMLT_TYPE_POTN,             &
-    HMLT_TYPE_FNCT,             &
-    HMLT_TYPE_HMLT
-
-  use base_handle_m, only: &
-    BASE_HANDLE_NAME_LEN
-
-  use base_config_m, only: &
-    base_config_parse
-
-  use fio_handle_m, only: &
-    HNDL_TYPE_FNIO
-
-  use fio_config_m, only: &
-    fio_config_parse
-
-  use frozen_handle_m, only: &
-    HNDL_TYPE_FRZN
-
-  use frozen_config_m, only: &
-    frozen_config_parse
-
-  use live_handle_m, only: &
-    HNDL_TYPE_LIVE
-
-  use live_config_m, only: &
-    live_config_parse
-
-  use ssys_handle_m, only: &
-    HNDL_TYPE_SSYS
+  use ssys_handle_m
+  use unit_m
+  use unit_system_m
 
   implicit none
 
   private
+
   public ::                &
     ssys_config_parse_use, &
     ssys_config_parse
@@ -414,9 +385,8 @@ contains
   end function ssys_config_parse_use
 
   ! ---------------------------------------------------------
-  subroutine ssys_config_parse(this, geo, ndim, nspin)
+  subroutine ssys_config_parse(this, ndim, nspin)
     type(json_object_t), intent(out) :: this
-    type(geometry_t),    intent(in)  :: geo
     integer,             intent(in)  :: ndim
     integer,             intent(in)  :: nspin
 
@@ -438,7 +408,7 @@ contains
     ASSERT(ierr==JSON_OK)
     call ssys_config_parse_systems(list, ndim, nspin)
     SAFE_ALLOCATE(cnfg)
-    call live_config_parse(cnfg, geo, ndim, nspin)
+    call live_config_parse(cnfg, ndim, nspin)
     call json_append(list, cnfg)
     nullify(cnfg, list)
 
