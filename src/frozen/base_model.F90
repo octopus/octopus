@@ -24,7 +24,7 @@
 
 module base_model_m
 
-  use base_geom_m
+  use base_geometry_m
   use base_hamiltonian_m
   use base_system_m
   use config_dict_m
@@ -357,18 +357,14 @@ contains
     type(base_model_t), intent(inout) :: this
     type(grid_t),       intent(in)    :: grid
 
-    type(base_geom_t), pointer :: geom
-    type(geometry_t),  pointer :: geo
+    type(geometry_t), pointer :: geo
 
     PUSH_SUB(base_model__start__)
 
-    nullify(geom, geo)
+    nullify(geo)
     call base_model__istart__(this)
-    call base_system_get(this%sys, geom)
-    ASSERT(associated(geom))
-    call base_geom_get(geom, geo)
+    call base_system_get(this%sys, geo)
     ASSERT(associated(geo))
-    nullify(geom)
     call simulation_start(this%sim, grid, geo)
     nullify(geo)
     call base_system__start__(this%sys, this%sim)

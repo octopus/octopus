@@ -2,30 +2,14 @@
 
 module ssys_ionic_m
 
+  use base_geometry_m
+  use base_system_m
+  use atom_m
   use global_m
+  use kinds_m
   use messages_m
   use profiling_m
-
-  use atom_m,    only: atom_t, atom_distance
-  use kinds_m,   only: wp
-  use species_m, only: species_zval
-
-  use base_geom_m, only: &
-    base_geom_t
-
-  use base_geom_m, only:  &
-    base_geom_iterator_t
-
-  use base_geom_m, only: &
-    base_geom_init,      &
-    base_geom_next,      &
-    base_geom_end
-
-  use base_system_m, only: &
-    base_system_t
-
-  use base_system_m, only: &
-    base_system_get
+  use species_m
 
   use base_term_m, only:         &
     ssys_ionic_t => base_term_t
@@ -61,6 +45,7 @@ module ssys_ionic_m
   implicit none
 
   private
+
   public ::       &
     ssys_ionic_t
 
@@ -166,11 +151,11 @@ contains
   subroutine ssys_ionic__calc__(this)
     type(ssys_ionic_t), intent(inout) :: this
 
-    type(base_system_t), pointer :: sys
-    type(base_geom_t),   pointer :: geom
-    type(atom_t),        pointer :: iatom, jatom
-    type(base_geom_iterator_t)   :: iiter, jiter
-    real(kind=wp)                :: energy, enrg
+    type(base_system_t),   pointer :: sys
+    type(base_geometry_t), pointer :: geom
+    type(atom_t),          pointer :: iatom, jatom
+    type(base_geometry_iterator_t) :: iiter, jiter
+    real(kind=wp)                  :: energy, enrg
 
     PUSH_SUB(ssys_ionic__calc__)
 
@@ -181,22 +166,22 @@ contains
     ASSERT(associated(sys))
     call base_system_get(sys, geom)
     ASSERT(associated(geom))
-    call base_geom_init(iiter, geom)
+    call base_geometry_init(iiter, geom)
     do
       nullify(iatom)
-      call base_geom_next(iiter, iatom)
+      call base_geometry_next(iiter, iatom)
       if(.not.associated(iatom))exit
-      call base_geom_init(jiter, iiter)
+      call base_geometry_init(jiter, iiter)
       do
         nullify(jatom)
-        call base_geom_next(jiter, jatom)
+        call base_geometry_next(jiter, jatom)
         if(.not.associated(jatom))exit
         call ssys_ionic__atom_interaction__(iatom, jatom, enrg)
         energy=energy+enrg
       end do
-      call base_geom_end(jiter)
+      call base_geometry_end(jiter)
     end do
-    call base_geom_end(iiter)
+    call base_geometry_end(iiter)
     nullify(sys, geom, iatom, jatom)
     call base_term_set(this, energy=energy)
     call base_term__update__(this)
@@ -236,9 +221,9 @@ contains
     real(kind=wp), dimension(:), intent(out) :: force
 
     type(base_system_t),          pointer :: sys
-    type(base_geom_t),            pointer :: geom
+    type(base_geometry_t),        pointer :: geom
     type(atom_t),                 pointer :: iatom
-    type(base_geom_iterator_t)            :: iter
+    type(base_geometry_iterator_t)        :: iter
     real(kind=wp), dimension(size(force)) :: frc
 
     PUSH_SUB(ssys_ionic__interaction__)
@@ -249,15 +234,15 @@ contains
     ASSERT(associated(sys))
     call base_system_get(sys, geom)
     ASSERT(associated(geom))
-    call base_geom_init(iter, geom)
+    call base_geometry_init(iter, geom)
     do
       nullify(iatom)
-      call base_geom_next(iter, iatom)
+      call base_geometry_next(iter, iatom)
       if(.not.associated(iatom))exit
       call ssys_ionic__atom_interaction__(iatom, atom, frc)
       force=force+frc
     end do
-    call base_geom_end(iter)
+    call base_geometry_end(iter)
     nullify(sys, geom, iatom)
 
     POP_SUB(ssys_ionic__interaction__)

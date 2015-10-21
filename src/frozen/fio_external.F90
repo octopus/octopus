@@ -8,7 +8,7 @@
 module fio_external_m
 
   use atom_m
-  use base_geom_m
+  use base_geometry_m
   use base_potential_m
   use base_system_m
   use fio_simulation_m
@@ -35,44 +35,43 @@ module fio_external_m
     fio_external__load__
 
   public ::            &
-    fio_external_eval
-
-  public ::            &
     fio_external_init, &
+    fio_external_eval, &
+    fio_external_get,  &
     fio_external_copy, &
     fio_external_end
+
+  interface fio_external_init
+    module procedure fio_external_init_type
+    module procedure fio_external_init_copy
+  end interface fio_external_init
+
+  interface fio_external_copy
+    module procedure fio_external_copy_type
+  end interface fio_external_copy
+
+  interface fio_external_end
+    module procedure fio_external_end_type
+  end interface fio_external_end
 
 #define INCLUDE_HEADER
 #include "intrpl_inc.F90"
 #undef INCLUDE_HEADER
 
-  interface fio_external_init
-    module procedure fio_external_init_potential
-    module procedure fio_external_init_copy
-  end interface fio_external_init
-
-  interface fio_external_copy
-    module procedure fio_external_copy_potential
-  end interface fio_external_copy
-
-  interface fio_external_end
-    module procedure fio_external_end_potential
-  end interface fio_external_end
-
 contains
 
   ! ---------------------------------------------------------
-  subroutine fio_external_init_potential(this, sys, config)
+  subroutine fio_external_init_type(this, sys, config)
     type(base_potential_t), intent(out) :: this
     type(base_system_t),    intent(out) :: sys
     type(json_object_t),    intent(in)  :: config
 
-    PUSH_SUB(fio_external_init_potential)
+    PUSH_SUB(fio_external_init_type)
 
     call base_potential__init__(this, sys, config)
 
-    POP_SUB(fio_external_init_potential)
-  end subroutine fio_external_init_potential
+    POP_SUB(fio_external_init_type)
+  end subroutine fio_external_init_type
 
   ! ---------------------------------------------------------
   subroutine fio_external_init_copy(this, that)
@@ -144,27 +143,27 @@ contains
   end subroutine fio_external__load__
 
   ! ---------------------------------------------------------
-  subroutine fio_external_copy_potential(this, that)
+  subroutine fio_external_copy_type(this, that)
     type(base_potential_t), intent(inout) :: this
     type(base_potential_t), intent(in)    :: that
 
-    PUSH_SUB(fio_external_copy_potential)
+    PUSH_SUB(fio_external_copy_type)
 
     call base_potential__copy__(this, that)
 
-    POP_SUB(fio_external_copy_potential)
-  end subroutine fio_external_copy_potential
+    POP_SUB(fio_external_copy_type)
+  end subroutine fio_external_copy_type
 
   ! ---------------------------------------------------------
-  subroutine fio_external_end_potential(this)
+  subroutine fio_external_end_type(this)
     type(base_potential_t), intent(inout) :: this
 
-    PUSH_SUB(fio_external_end_potential)
+    PUSH_SUB(fio_external_end_type)
 
     call base_potential__end__(this)
 
-    POP_SUB(fio_external_end_potential)
-  end subroutine fio_external_end_potential
+    POP_SUB(fio_external_end_type)
+  end subroutine fio_external_end_type
 
   ! ---------------------------------------------------------
   pure function fio_external_calc(x, y, c) result(v)
@@ -189,10 +188,10 @@ contains
     real(kind=wp),               intent(out) :: v
 
     type(base_system_t),    pointer :: sys
-    type(base_geom_t),      pointer :: geom
+    type(base_geometry_t),  pointer :: geom
     type(atom_t),           pointer :: atom
     !type(atom_classical_t), pointer :: catom
-    type(base_geom_iterator_t)      :: iter
+    type(base_geometry_iterator_t)  :: iter
 
     PUSH_SUB(fio_external_classical)
 
@@ -202,11 +201,12 @@ contains
     ASSERT(associated(sys))
     call base_system_get(sys, geom)
     ASSERT(associated(geom))
-    call base_geom_init(iter, geom)
+    call base_geometry_init(iter, geom)
     do
       nullify(atom)
-      call base_geom_next(iter, atom)
+      call base_geometry_next(iter, atom)
       if(.not.associated(atom))exit
+      ASSERT(associated(atom%species))
       v = v + fio_external_calc(x, atom%x, species_zval(atom%species))
     end do
     nullify(atom)
@@ -216,7 +216,7 @@ contains
     !  if(.not.associated(catom))exit
     !  v=v+fio_external_calc(x, catom%x, catom%charge)
     !end do
-    call base_geom_end(iter)
+    call base_geometry_end(iter)
     !nullify(catom)
     nullify(sys, geom)
 
@@ -234,10 +234,10 @@ contains
 
     PUSH_SUB(fio_external_eval)
 
-    call fio_external_intrpl_eval(this, x, v, ierr)
+    call fio_external_intrpl__eval__(this, x, v, ierr)
     if(ierr/=FIO_EXTERNAL_INTRPL_OK) call fio_external_classical(this%self, x, v)
 
-    POP_SUB(fio_external_intrpl_eval)
+    POP_SUB(fio_external_eval)
   end subroutine fio_external_eval
 
 #define INCLUDE_BODY

@@ -29,10 +29,9 @@ module fio_density_m
     fio_density__load__
 
   public ::           &
-    fio_density_eval
-
-  public ::           &
     fio_density_init, &
+    fio_density_eval, &
+    fio_density_get,  &
     fio_density_copy, &
     fio_density_end
 
@@ -41,7 +40,7 @@ module fio_density_m
 #undef INCLUDE_HEADER
 
   interface fio_density_init
-    module procedure fio_density_init_density
+    module procedure fio_density_init_type
     module procedure fio_density_init_copy
   end interface fio_density_init
 
@@ -51,26 +50,26 @@ module fio_density_m
   end interface fio_density_eval
 
   interface fio_density_copy
-    module procedure fio_density_copy_density
+    module procedure fio_density_copy_type
   end interface fio_density_copy
 
   interface fio_density_end
-    module procedure fio_density_end_density
+    module procedure fio_density_end_type
   end interface fio_density_end
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine fio_density_init_density(this, config)
+  subroutine fio_density_init_type(this, config)
     type(base_density_t), intent(out) :: this
     type(json_object_t),  intent(in)  :: config
 
-    PUSH_SUB(fio_density_init_density)
+    PUSH_SUB(fio_density_init_type)
 
     call base_density__init__(this, config)
 
-    POP_SUB(fio_density_init_density)
-  end subroutine fio_density_init_density
+    POP_SUB(fio_density_init_type)
+  end subroutine fio_density_init_type
 
   ! ---------------------------------------------------------
   subroutine fio_density_init_copy(this, that)
@@ -156,27 +155,27 @@ contains
   end subroutine fio_density__load__
 
   ! ---------------------------------------------------------
-  subroutine fio_density_copy_density(this, that)
+  subroutine fio_density_copy_type(this, that)
     type(base_density_t), intent(inout) :: this
     type(base_density_t), intent(in)    :: that
 
-    PUSH_SUB(fio_density_copy_density)
+    PUSH_SUB(fio_density_copy_type)
 
     call base_density__copy__(this, that)
 
-    POP_SUB(fio_density_copy_density)
-  end subroutine fio_density_copy_density
+    POP_SUB(fio_density_copy_type)
+  end subroutine fio_density_copy_type
 
   ! ---------------------------------------------------------
-  subroutine fio_density_end_density(this)
+  subroutine fio_density_end_type(this)
     type(base_density_t), intent(inout) :: this
 
-    PUSH_SUB(fio_density_end_density)
+    PUSH_SUB(fio_density_end_type)
 
     call base_density__end__(this)
 
-    POP_SUB(fio_density_end_density)
-  end subroutine fio_density_end_density
+    POP_SUB(fio_density_end_type)
+  end subroutine fio_density_end_type
 
   ! ---------------------------------------------------------
   subroutine fio_density_eval_1d(this, x, val)
@@ -188,7 +187,7 @@ contains
 
     PUSH_SUB(fio_density_eval_1d)
 
-    call fio_density_intrpl_eval(this, x, val, ierr)
+    call fio_density_intrpl__eval__(this, x, val, ierr)
     if(ierr/=FIO_DENSITY_INTRPL_OK) val = 0.0_wp
 
     POP_SUB(fio_density_eval_1d)
@@ -202,9 +201,9 @@ contains
 
     integer :: ierr
 
-    PUSH_SUB(fio_density_eval_md)
+    PUSH_SUB(fio_density_intrpl_eval_md)
 
-    call fio_density_intrpl_eval(this, x, val, ierr)
+    call fio_density_intrpl__eval__(this, x, val, ierr)
     if(ierr/=FIO_DENSITY_INTRPL_OK) val = 0.0_wp
 
     POP_SUB(fio_density_eval_md)

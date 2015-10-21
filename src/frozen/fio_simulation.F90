@@ -2,7 +2,7 @@
 
 module fio_simulation_m
 
-  use base_geom_m
+  use base_geometry_m
   use fio_grid_m
   use geometry_m
   use global_m
@@ -27,9 +27,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine fio_simulation__new__(this, grid, geom)
-    type(simulation_t), intent(in) :: this
-    type(grid_t),      pointer     :: grid
-    type(base_geom_t),  intent(in) :: geom
+    type(simulation_t),    intent(in) :: this
+    type(grid_t),         pointer     :: grid
+    type(base_geometry_t), intent(in) :: geom
 
     type(json_object_t), pointer :: scfg, gcfg
     type(geometry_t),    pointer :: pgeo
@@ -40,7 +40,7 @@ contains
     nullify(grid, scfg, gcfg, pgeo)
     call simulation_get(this, scfg)
     ASSERT(associated(scfg))
-    call base_geom_get(geom, pgeo)
+    call base_geometry_get(geom, pgeo)
     ASSERT(associated(pgeo))
     call json_get(scfg, "grid", gcfg, ierr)
     ASSERT(ierr==JSON_OK)

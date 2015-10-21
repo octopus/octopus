@@ -2,7 +2,7 @@
 
 module fio_model_m
 
-  use base_geom_m
+  use base_geometry_m
   use base_hamiltonian_m
   use base_model_m
   use base_system_m
@@ -38,10 +38,10 @@ contains
     type(base_model_t), intent(inout) :: this
     type(mpi_grp_t),    intent(in)    :: mpi_grp
 
-    type(base_system_t), pointer :: sys
-    type(base_geom_t),   pointer :: geom
-    type(simulation_t),  pointer :: sim
-    type(grid_t),        pointer :: grid
+    type(base_system_t),   pointer :: sys
+    type(base_geometry_t), pointer :: geom
+    type(simulation_t),    pointer :: sim
+    type(grid_t),          pointer :: grid
 
     PUSH_SUB(fio_model_start)
 

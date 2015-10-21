@@ -72,22 +72,30 @@ module basis_m
     module procedure basis_init_json
   end interface basis_init
 
+  interface basis_to_internal
+    module procedure basis_to_internal_1
+    module procedure basis_to_internal_2
+  end interface basis_to_internal
+
+  interface basis_to_external
+    module procedure basis_to_external_1
+    module procedure basis_to_external_2
+  end interface basis_to_external
+
 contains
   
   ! ---------------------------------------------------------
   subroutine translation_init(this, r)
-    type(translation_t),                   intent(out) :: this
-    real(kind=wp), dimension(:), optional, intent(in)  :: r
+    type(translation_t),         intent(out) :: this
+    real(kind=wp), dimension(:), intent(in)  :: r
 
     PUSH_SUB(translation_init)
 
-    if(present(r))then
-      if(any(abs(r)>eps))then
-        this%do = .true.
-        this%n = size(r)
-        SAFE_ALLOCATE(this%r(this%n))
-        this%r(1:this%n) = r
-      end if
+    if(any(abs(r)>eps))then
+      this%do = .true.
+      this%n = size(r)
+      SAFE_ALLOCATE(this%r(this%n))
+      this%r(1:this%n) = r
     end if
 
     POP_SUB(translation_init)
@@ -143,20 +151,17 @@ contains
 
   ! ---------------------------------------------------------
   elemental subroutine rotation_init(this, theta)
-    type(rotation_t),        intent(out) :: this
-    real(kind=wp), optional, intent(in)  :: theta
+    type(rotation_t), intent(out) :: this
+    real(kind=wp),    intent(in)  :: theta
 
     real(kind=wp) :: ang
 
-    call rotation_end(this)
-    if(present(theta))then
-      ang = modulo(theta, 2.0_wp*M_PI)
-      if(ang<0.0_wp) ang = ang + 2.0_wp * M_PI
-      if(ang>eps)then
-        this%do = .true.
-        this%c = cos(theta)
-        this%s = sin(theta)
-      end if
+    ang = modulo(theta, 2.0_wp*M_PI)
+    if(ang<0.0_wp) ang = ang + 2.0_wp * M_PI
+    if(ang>eps)then
+      this%do = .true.
+      this%c = cos(theta)
+      this%s = sin(theta)
     end if
 
   end subroutine rotation_init
@@ -177,8 +182,8 @@ contains
 
   ! ---------------------------------------------------------
   elemental subroutine rotation_copy(this, that)
-    type(rotation_t), intent(out) :: this
-    type(rotation_t), intent(in)  :: that
+    type(rotation_t), intent(inout) :: this
+    type(rotation_t), intent(in)    :: that
 
     call rotation_end(this)
     if(that%do)then
@@ -201,24 +206,20 @@ contains
 
   ! ---------------------------------------------------------
   subroutine rotations_init(this, theta)
-    type(rotations_t),                     intent(out) :: this
-    real(kind=wp), dimension(:), optional, intent(in)  :: theta
+    type(rotations_t),           intent(out) :: this
+    real(kind=wp), dimension(:), intent(in)  :: theta
 
     integer :: idx
 
     PUSH_SUB(rotations_init)
 
-    this%do = .false.
-    this%n = 0
-    if(present(theta))then
-      this%n = size(theta)
-      SAFE_ALLOCATE(this%r(this%n))
-      do idx = 1, this%n
-        call rotation_init(this%r(idx), theta(idx))
-      end do
-      this%do = any(this%r%do)
-    end if
-
+    this%n = size(theta)
+    SAFE_ALLOCATE(this%r(this%n))
+    do idx = 1, this%n
+      call rotation_init(this%r(idx), theta(idx))
+    end do
+    this%do = any(this%r%do)
+ 
     POP_SUB(rotations_init)
   end subroutine rotations_init
 
@@ -245,8 +246,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine rotations_copy(this, that)
-    type(rotations_t), intent(out) :: this
-    type(rotations_t), intent(in)  :: that
+    type(rotations_t), intent(inout) :: this
+    type(rotations_t), intent(in)    :: that
 
     integer :: idx
 
@@ -292,26 +293,19 @@ contains
     real(kind=wp), dimension(:), optional, intent(in)  :: r
     real(kind=wp), dimension(:), optional, intent(in)  :: theta
 
+    integer :: ns
+
     PUSH_SUB(basis_init_array)
 
     this%dim = space%dim
+    ASSERT(this%dim>0)
     if(present(r))then
-      if(this%dim<size(r))then
-        call translation_init(this%trn, r(1:this%dim))
-      else
-        call translation_init(this%trn, r)
-      end if
-    else
-      call translation_init(this%trn)
+      ns = min(this%dim, size(r))
+      call translation_init(this%trn, r(1:ns))
     end if
     if(present(theta))then
-      if(this%dim<size(theta))then
-        call rotations_init(this%rot, theta(1:this%dim))
-      else
-        call rotations_init(this%rot, theta)
-      end if
-    else
-      call rotations_init(this%rot)
+      ns = min(this%dim, size(theta))
+      call rotations_init(this%rot, theta(1:ns))
     end if
     this%do = ( this%trn%do .or. this%rot%do )
 
@@ -331,42 +325,36 @@ contains
     PUSH_SUB(basis_init_json)
 
     call json_get(config, "dim", nd, ierr)
-    if(ierr==JSON_OK)then
-      ASSERT(nd<=space%dim)
-    else
-      nd = space%dim
-    end if
+    if(ierr/=JSON_OK) nd = space%dim
+    ASSERT(nd>0)
     nr = json_len(config, "r")
     if(nr>0)then
       SAFE_ALLOCATE(r(nr))
       r = 0.0_wp
       call json_get(config, "r", r, ierr)
-      if(ierr/=JSON_OK)then
-        nr = 0
-        SAFE_DEALLOCATE_A(r)
-      end if
+      ASSERT(ierr==JSON_OK)
     end if
     nt = json_len(config, "theta")
     if(nt>0)then
       SAFE_ALLOCATE(theta(nt))
       theta = 0.0_wp
       call json_get(config, "theta", theta, ierr)
-      if(ierr/=JSON_OK)then
-        nt = 0
-        SAFE_DEALLOCATE_A(theta)
-      end if
+      ASSERT(ierr==JSON_OK)
     end if
-    nr = min(nr, nd)
-    nt = min(nt, nd)
+    nr = min(nr, nd, space%dim)
+    nt = min(nt, nd, space%dim)
     if(nr>0)then
       if(nt>0)then
         call basis_init_array(this, space, r=r(1:nr), theta=theta(1:nt))
+        SAFE_DEALLOCATE_A(theta)
       else
         call basis_init_array(this, space, r=r(1:nr))
       end if
+      SAFE_DEALLOCATE_A(r)
     else
       if(nt>0)then
         call basis_init_array(this, space, theta=theta(1:nt))
+        SAFE_DEALLOCATE_A(theta)
       else
         call basis_init_array(this, space)
       end if
@@ -444,19 +432,14 @@ contains
   end subroutine basis_neg_rot
 
   ! ---------------------------------------------------------
-  pure subroutine basis_to_internal(this, x, y)
-    type(basis_t),               intent(in)  :: this
-    real(kind=wp), dimension(:), intent(in)  :: x
-    real(kind=wp), dimension(:), intent(out) :: y
+  pure subroutine basis_to_internal_1(this, y)
+    type(basis_t),               intent(in)    :: this
+    real(kind=wp), dimension(:), intent(inout) :: y
 
     integer :: idx, jdx, kdx
 
     kdx = 0
-    if(this%trn%do)then
-      y = x - this%trn%r
-    else
-      y = x
-    end if
+    if(this%trn%do) y = y - this%trn%r
     do idx = 1, this%rot%n-1
       do jdx = idx+1, this%rot%n
         kdx = kdx + 1
@@ -464,18 +447,27 @@ contains
       end do
     end do
 
-  end subroutine basis_to_internal
+  end subroutine basis_to_internal_1
 
   ! ---------------------------------------------------------
-  pure subroutine basis_to_external(this, y, x)
+  pure subroutine basis_to_internal_2(this, x, y)
     type(basis_t),               intent(in)  :: this
-    real(kind=wp), dimension(:), intent(in)  :: y
-    real(kind=wp), dimension(:), intent(out) :: x
+    real(kind=wp), dimension(:), intent(in)  :: x
+    real(kind=wp), dimension(:), intent(out) :: y
+
+    y = x
+    call basis_to_internal_1(this, y)
+
+  end subroutine basis_to_internal_2
+
+  ! ---------------------------------------------------------
+  pure subroutine basis_to_external_1(this, x)
+    type(basis_t),               intent(in)    :: this
+    real(kind=wp), dimension(:), intent(inout) :: x
 
     integer :: idx, jdx, kdx
 
     kdx = 0
-    x = y
     do idx = 1, this%rot%n-1
       do jdx = idx+1, this%rot%n
         kdx = kdx + 1
@@ -484,7 +476,18 @@ contains
     end do
     if(this%trn%do) x = x + this%trn%r
 
-  end subroutine basis_to_external
+  end subroutine basis_to_external_1
+
+  ! ---------------------------------------------------------
+  pure subroutine basis_to_external_2(this, y, x)
+    type(basis_t),               intent(in)  :: this
+    real(kind=wp), dimension(:), intent(in)  :: y
+    real(kind=wp), dimension(:), intent(out) :: x
+
+    x = y
+    call basis_to_external_1(this, x)
+
+  end subroutine basis_to_external_2
 
   ! ---------------------------------------------------------
   subroutine basis_copy(this, that)
