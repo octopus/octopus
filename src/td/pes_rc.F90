@@ -163,12 +163,12 @@ contains
  
     !%Variable PES_rc_DelOmega
     !%Type float
-    !%Default 0.005
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
     !% The spacing in frequency domain for the photoelectron spectrum (if PES_rc_OmegaMax > 0).
+    !% By default is set to PES_rc_OmegaMax/500. 
     !%End
-    call parse_variable('PES_rc_DelOmega', units_to_atomic(units_inp%energy, CNST(0.005)), pesrc%delomega)
+    call parse_variable('PES_rc_DelOmega', units_to_atomic(units_inp%energy, pesrc%omegamax/CNST(500)), pesrc%delomega)
     if(pesrc%onfly) then
       if(pesrc%delomega <= M_ZERO) call messages_input_error('PES_rc_DelOmega')
       call messages_print_var_value(stdout, "PES_rc_DelOmega", pesrc%delomega)
@@ -706,6 +706,7 @@ contains
     
     PUSH_SUB(pes_rc_dump)
 
+    err = 0 
     ierr = 0
     
     if (restart_skip(restart)) then
@@ -750,6 +751,7 @@ contains
     
     PUSH_SUB(pes_rc_load)
     
+    err = 0
     ierr = 0
     
     if (restart_skip(restart)) then
