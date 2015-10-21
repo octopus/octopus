@@ -414,7 +414,7 @@ contains
     call io_close(cav_unit_test)
 
     write(pcm%info_unit,'(A1)')'#'  
-    write(pcm%info_unit,'(A1,4X,A4,9X,A4,15X,A4,15X,A4,15X,A4,15X,A8,12X,A5,15X,A5)') &
+    write(pcm%info_unit,'(A1,4X,A4,14X,A4,21X,A4,21X,A4,21X,A4,21X,A8,17X,A5,20X,A5)') &
          '#','iter', 'E_ee', 'E_en', 'E_nn', 'E_ne', 'E_M-solv', 'Q_M^e','Q_M^n'
     pcm%counter = 0
     

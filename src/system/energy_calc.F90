@@ -144,7 +144,7 @@ contains
                                              hm%energy%int_ne_pcm, hm%energy%int_nn_pcm)
        hm%pcm%counter = hm%pcm%counter + 1
 
-       write(hm%pcm%info_unit,'(3X,I5,5X,F14.8,5X,F14.8,5X,F14.8,5X,F14.8,5X,F14.8,5X,F14.8,5X,F14.8)') &
+       write(hm%pcm%info_unit,'(3X,I5,5X,F20.8,5X,F20.8,5X,F20.8,5X,F20.8,5X,F20.8,5X,F20.8,5X,F20.8)') &
                               hm%pcm%counter, &
                               units_from_atomic(units_out%energy, hm%energy%int_ee_pcm ), & 
                               units_from_atomic(units_out%energy, hm%energy%int_en_pcm ), &
