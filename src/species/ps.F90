@@ -497,8 +497,10 @@ contains
 
       if(ps_has_density(ps)) then
         do ispin = 1, ps%ispin
-          rmax = spline_cutoff_radius(ps%density(ispin), ps%projectors_sphere_threshold)
-          call spline_filter_mask(ps%density(ispin), 0, rmax, gmax, alpha, gamma)
+          if(abs(spline_integral(ps%density(ispin))) > CNST(1.0e-12)) then
+            rmax = spline_cutoff_radius(ps%density(ispin), ps%projectors_sphere_threshold)
+            call spline_filter_mask(ps%density(ispin), 0, rmax, gmax, alpha, gamma)
+          end if
         end do
       end if
 
