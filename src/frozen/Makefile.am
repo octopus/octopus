@@ -102,11 +102,11 @@ depend:
 basis.o 	: basis.F90
 strng.o		: strng.F90
 geo_intrf.o	: geo_intrf.F90
-geo_build.o	: geo_build.F90 strng.o
+geo_build.o	: geo_build.F90 strng.o basis.o
 interface_xc.o	: interface_xc.F90
 config_dict.o	: config_dict.F90 strng.o 
-domain.o 	: domain.F90 config_dict.o
-simulation.o	: simulation.F90 domain.o config_dict.o
+domain.o 	: domain.F90 config_dict.o basis.o
+simulation.o	: simulation.F90 domain.o
 functional.o 	: functional.F90 simulation.o interface_xc.o
 storage.o 	: storage.F90 simulation.o
 intrpl.o 	: intrpl.F90 storage.o simulation.o domain.o

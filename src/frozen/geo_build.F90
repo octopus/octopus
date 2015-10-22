@@ -1,5 +1,7 @@
 #include "global.h"
 
+#if 0
+
 #undef LIST_TEMPLATE_NAME
 #undef LIST_TYPE_NAME
 #undef LIST_TYPE_MODULE_NAME
@@ -22,10 +24,12 @@
 #include "tdict_inc.F90"
 #undef DICT_TEMPLATE_NAME
 
+#endif
+
 module geo_build_m
 
   use atom_m
-  use atom_list_m
+  !use atom_list_m
   use basis_m
   use geometry_m
   use global_m
@@ -33,7 +37,7 @@ module geo_build_m
   use kinds_m
   use space_m
   use species_m
-  use species_dict_m
+  !use species_dict_m
   use messages_m
   use profiling_m
 
@@ -71,15 +75,15 @@ module geo_build_m
   type :: geo_build_t
     private
     type(space_t), pointer :: space  =>null()
-    type(atom_list_t)      :: list
-    type(species_dict_t)   :: dict
+    !type(atom_list_t)      :: list
+    !type(species_dict_t)   :: dict
   end type geo_build_t
 
   type :: geo_build_iterator_t
     private
     type(geo_build_t),    pointer :: self =>null()
-    type(atom_list_iterator_t)    :: aitr
-    type(species_dict_iterator_t) :: sitr
+    !type(atom_list_iterator_t)    :: aitr
+    !type(species_dict_iterator_t) :: sitr
   end type geo_build_iterator_t
 
   interface geo_build__new__
@@ -145,9 +149,13 @@ contains
 
     PUSH_SUB(geo_build__new__species)
 
+#if 0
+
     nullify(spec)
     SAFE_ALLOCATE(spec)
     call species_dict_set(this%dict, trim(adjustl(label)), spec)
+
+#endif
 
     POP_SUB(geo_build__new__species)
   end subroutine geo_build__new__species
@@ -158,12 +166,16 @@ contains
 
     PUSH_SUB(geo_build__idel__species)
 
+#if 0
+
     if(associated(spec))then
       call species_end(spec)
       SAFE_DEALLOCATE_P(spec)
     end if
     nullify(spec)
     SAFE_ALLOCATE(spec)
+
+#endif
 
     POP_SUB(geo_build__idel__species)
   end subroutine geo_build__idel__species
@@ -178,6 +190,8 @@ contains
 
     PUSH_SUB(geo_build__del__species)
 
+#if 0
+
     nullify(ispc)
     if(associated(spec))then
       call species_dict_del(this%dict, species_label(spec), ispc, ierr)
@@ -189,6 +203,8 @@ contains
     end if
     nullify(spec)
 
+#endif
+
     POP_SUB(geo_build__del__species)
   end subroutine geo_build__del__species
 
@@ -199,9 +215,13 @@ contains
 
     PUSH_SUB(geo_build_new_atom)
 
+#if 0
+
     nullify(atom)
     SAFE_ALLOCATE(atom)
     call atom_list_append(this%list, atom)
+
+#endif
 
     POP_SUB(geo_build__new__atom)
   end subroutine geo_build__new__atom
@@ -212,11 +232,15 @@ contains
 
     PUSH_SUB(geo_build__idel__atom)
 
+#if 0
+
     if(associated(atom))then
       call atom_end(atom)
       SAFE_DEALLOCATE_P(atom)
     end if
     nullify(atom)
+
+#endif
 
     POP_SUB(geo_build__idel__atom)
   end subroutine geo_build__idel__atom
@@ -231,6 +255,8 @@ contains
 
     PUSH_SUB(geo_build__del__atom)
 
+#if 0
+
     nullify(iatm)
     if(associated(atom))then
       call atom_list_del(this%list, atom, ierr)
@@ -238,6 +264,8 @@ contains
       call geo_build__idel__(atom)
     end if
     nullify(atom)
+
+#endif
 
     POP_SUB(geo_build__del__atom)
   end subroutine geo_build__del__atom
@@ -253,6 +281,8 @@ contains
 
     PUSH_SUB(geo_build_iadd_species_from_config)
 
+#if 0
+
     nullify(spec)
     call json_get(config, "label", label, ierr)
     ASSERT(ierr==JSON_OK)
@@ -261,6 +291,8 @@ contains
       call species_init_from_data_object(spec, 0, config)
       nullify(spec)
     end if
+
+#endif
 
     POP_SUB(geo_build_iadd_species_from_config)
   end subroutine geo_build_iadd_species_from_config
@@ -274,6 +306,8 @@ contains
 
     PUSH_SUB(geo_build_iadd_species_from_species)
 
+#if 0 
+
     nullify(spec)
     if(.not.species_dict_has_key(this%dict, species_label(that)))then
       call geo_build__new__(this, species_label(that), spec)
@@ -281,6 +315,8 @@ contains
       call species_copy(spec, that)
       nullify(spec)
     end if
+
+#endif
 
     POP_SUB(geo_build_iadd_species_from_species)
   end subroutine geo_build_iadd_species_from_species
@@ -298,6 +334,8 @@ contains
 
     PUSH_SUB(geo_build_iadd_atom_from_config)
 
+#if 0
+
     nullify(atom, spec)
     call json_get(config, "label", label, ierr)
     ASSERT(ierr==JSON_OK)
@@ -307,6 +345,8 @@ contains
     call geo_build__new__(this, atom)
     call atom_init_from_data_object(atom, spec, config)
     if(present(basis)) call basis_to_external(basis, atom%x)
+
+#endif
 
     POP_SUB(geo_build_iadd_atom_from_config)
   end subroutine geo_build_iadd_atom_from_config
@@ -324,6 +364,8 @@ contains
 
     PUSH_SUB(geo_build_iadd_atom_from_atom)
 
+#if 0
+
     nullify(atom, spec)
     call species_dict_get(this%dict, that%label, spec, ierr)
     ASSERT(ierr==SPECIES_DICT_OK)
@@ -335,6 +377,8 @@ contains
       x = that%x
     end if
     call atom_init(atom, trim(adjustl(that%label)), x, species=spec)
+
+#endif
  
     POP_SUB(geo_build_iadd_atom_from_atom)
   end subroutine geo_build_iadd_atom_from_atom
@@ -351,6 +395,8 @@ contains
     integer                    :: ierr
 
     PUSH_SUB(geo_build__extend__geo)
+
+#if 0
 
     ASSERT(this%space==that%space)
     call geo_build_init(iter, that)
@@ -372,6 +418,8 @@ contains
     nullify(atom)
     call geo_build_end(iter)
 
+#endif
+
     POP_SUB(geo_build__extend__geo)
   end subroutine geo_build__extend__geo
 
@@ -385,6 +433,8 @@ contains
 
     PUSH_SUB(geo_build__extend__geometry)
 
+#if 0
+
     ASSERT(this%space==that%space)
     do indx = 1, that%nspecies
       call geo_build_iadd_species_from_species(this, that%species(indx))
@@ -392,6 +442,8 @@ contains
     do indx = 1, that%natoms
       call geo_build_iadd_atom_from_atom(this, that%atom(indx), basis)
     end do
+
+#endif
 
     POP_SUB(geo_build__extend__geometry)
   end subroutine geo_build__extend__geometry
@@ -408,6 +460,8 @@ contains
     integer                      :: nitm, ierr
 
     PUSH_SUB(geo_build__extend__config)
+
+#if 0
 
     nullify(cnfg, list)
     call json_get(config, "nspecies", nitm, ierr)
@@ -439,6 +493,8 @@ contains
     call json_end(iter)
     nullify(cnfg, list)
 
+#endif
+
     POP_SUB(geo_build__extend__config)
   end subroutine geo_build__extend__config
 
@@ -448,7 +504,11 @@ contains
 
     integer :: len
 
+#if 0
+
     len = atom_list_len(this%list)
+
+#endif
 
   end function geo_build_len
 
@@ -459,9 +519,13 @@ contains
 
     PUSH_SUB(geo_build_init_geo)
 
+#if 0
+
     this%space => space
     call atom_list_init(this%list)
     call species_dict_init(this%dict)
+
+#endif
 
     POP_SUB(geo_build_init_geo)
   end subroutine geo_build_init_geo
@@ -473,8 +537,12 @@ contains
 
     PUSH_SUB(geo_build_init_copy)
 
+#if 0
+
     ASSERT(associated(that%space))
     call geo_build_init(this, that%space)
+
+#endif
 
     POP_SUB(geo_build_init_copy)
   end subroutine geo_build_init_copy
@@ -489,6 +557,8 @@ contains
 
     PUSH_SUB(geo_build_extend_geo)
 
+#if 0
+
     if(present(config))then
       call basis_init(base, this%space, config)
       call geo_build__extend__(this, that, base)
@@ -496,6 +566,8 @@ contains
     else
       call geo_build__extend__(this, that)
     end if
+
+#endif
 
     POP_SUB(geo_build_extend_geo)
   end subroutine geo_build_extend_geo
@@ -510,6 +582,8 @@ contains
 
     PUSH_SUB(geo_build_extend_geometry)
 
+#if 0
+
     if(present(config))then
       call basis_init(base, this%space, config)
       call geo_build__extend__(this, that, base)
@@ -517,6 +591,8 @@ contains
     else
       call geo_build__extend__(this, that)
     end if
+
+#endif
 
     POP_SUB(geo_build_extend_geometry)
   end subroutine geo_build_extend_geometry
@@ -531,6 +607,8 @@ contains
 
     PUSH_SUB(geo_build_extend_config)
 
+#if 0
+
     if(present(config))then
       call basis_init(base, this%space, config)
       call geo_build__extend__(this, that, base)
@@ -538,6 +616,8 @@ contains
     else
       call geo_build__extend__(this, that)
     end if
+
+#endif
 
     POP_SUB(geo_build_extend_config)
   end subroutine geo_build_extend_config
@@ -553,6 +633,8 @@ contains
     integer                    :: indx, jndx, ierr
 
     PUSH_SUB(geo_build_export)
+
+#if 0
 
     call geometry_nullify(that)
     that%space => this%space
@@ -589,6 +671,8 @@ contains
     call geo_build_end(iter)
     nullify(atom, spec)
 
+#endif
+
     POP_SUB(geo_build_export)
   end subroutine geo_build_export
 
@@ -599,8 +683,12 @@ contains
 
     PUSH_SUB(geo_build_get_space)
 
+#if 0
+
     nullify(that)
     if(associated(this%space)) that => this%space
+
+#endif
 
     POP_SUB(geo_build_get_space)
   end subroutine geo_build_get_space
@@ -612,14 +700,20 @@ contains
 
     PUSH_SUB(geo_build_copy_geo)
 
+#if 0
+
     call geo_build_end(this)
     if(associated(that%space))then
       call geo_build_init(this, that%space)
       call geo_build_extend(this, that)
     end if
 
+#endif
+
     POP_SUB(geo_build_copy_geo)
   end subroutine geo_build_copy_geo
+
+#if 0
 
   ! ---------------------------------------------------------
   subroutine geo_build__end__list(this)
@@ -661,15 +755,21 @@ contains
     POP_SUB(geo_build__end__dict)
   end subroutine geo_build__end__dict
 
+#endif
+
   ! ---------------------------------------------------------
   subroutine geo_build_end_geo(this)
     type(geo_build_t), target, intent(inout) :: this
 
     PUSH_SUB(geo_build_end_geo)
 
+#if 0
+
     nullify(this%space)
     call geo_build__end__list(this%list)
     call geo_build__end__dict(this%dict)
+
+#endif
 
     POP_SUB(geo_build_end_geo)
   end subroutine geo_build_end_geo
@@ -681,9 +781,13 @@ contains
 
     PUSH_SUB(geo_build_iterator_init_geo)
 
+#if 0
+
     this%self => that
     call atom_list_init(this%aitr, that%list)
     call species_dict_init(this%sitr, that%dict)
+
+#endif
 
     POP_SUB(geo_build_iterator_init_geo)
   end subroutine geo_build_iterator_init_geo
@@ -695,7 +799,7 @@ contains
 
     PUSH_SUB(geo_build_iterator_init_iterator)
 
-    call geo_build_iterator_copy(this, that)
+    !call geo_build_iterator_copy(this, that)
 
     POP_SUB(geo_build_iterator_init_iterator)
   end subroutine geo_build_iterator_init_iterator
@@ -708,7 +812,7 @@ contains
 
     PUSH_SUB(geo_build_iterator_next_atom)
 
-    call atom_list_next(this%aitr, atom, ierr)
+    !call atom_list_next(this%aitr, atom, ierr)
 
     POP_SUB(geo_build_iterator_next_atom)
   end subroutine geo_build_iterator_next_atom
@@ -721,7 +825,7 @@ contains
 
     PUSH_SUB(geo_build_iterator_next_species)
 
-    call species_dict_next(this%sitr, spec, ierr)
+    !call species_dict_next(this%sitr, spec, ierr)
 
     POP_SUB(geo_build_iterator_next_species)
   end subroutine geo_build_iterator_next_species
@@ -733,9 +837,13 @@ contains
     !
     PUSH_SUB(geo_build_iterator_copy)
 
+#if 0
+
     this%self => that%self
     call atom_list_copy(this%aitr, that%aitr)
     call species_dict_copy(this%sitr, that%sitr)
+
+#endif
 
     POP_SUB(geo_build_iterator_copy)
   end subroutine geo_build_iterator_copy
@@ -746,10 +854,14 @@ contains
 
     PUSH_SUB(geo_build_iterator_end)
 
+#if 0
+
     nullify(this%self)
     call species_dict_end(this%sitr)
     call atom_list_end(this%aitr)
     call species_dict_end(this%sitr)
+
+#endif
 
     POP_SUB(geo_build_iterator_end)
   end subroutine geo_build_iterator_end
