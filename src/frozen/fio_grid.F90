@@ -37,18 +37,6 @@ module fio_grid_m
 contains
   
   ! ---------------------------------------------------------
-  subroutine multigrid_level_nullify(this)
-    type(multigrid_level_t), intent(out) :: this
-
-    PUSH_SUB(multigrid_level_nullify)
-
-    call transfer_table_nullify(this%tt)
-    nullify(this%mesh, this%der)
-
-    POP_SUB(multigrid_level_nullify)
-  end subroutine multigrid_level_nullify
-
-  ! ---------------------------------------------------------
   subroutine boundaries_nullify(this)
     type(boundaries_t), intent(out) :: this
 

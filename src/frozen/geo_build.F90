@@ -500,11 +500,7 @@ contains
 
     integer :: len
 
-#if 0
-
     len = atom_list_len(this%list)
-
-#endif
 
   end function geo_build_len
 
@@ -515,13 +511,9 @@ contains
 
     PUSH_SUB(geo_build_init_geo)
 
-#if 0
-
     this%space => space
     call atom_list_init(this%list)
     call species_dict_init(this%dict)
-
-#endif
 
     POP_SUB(geo_build_init_geo)
   end subroutine geo_build_init_geo
@@ -533,12 +525,8 @@ contains
 
     PUSH_SUB(geo_build_init_copy)
 
-#if 0
-
     ASSERT(associated(that%space))
     call geo_build_init(this, that%space)
-
-#endif
 
     POP_SUB(geo_build_init_copy)
   end subroutine geo_build_init_copy
@@ -679,12 +667,8 @@ contains
 
     PUSH_SUB(geo_build_get_space)
 
-#if 0
-
     nullify(that)
     if(associated(this%space)) that => this%space
-
-#endif
 
     POP_SUB(geo_build_get_space)
   end subroutine geo_build_get_space
@@ -696,15 +680,11 @@ contains
 
     PUSH_SUB(geo_build_copy_geo)
 
-#if 0
-
     call geo_build_end(this)
     if(associated(that%space))then
       call geo_build_init(this, that%space)
       call geo_build_extend(this, that)
     end if
-
-#endif
 
     POP_SUB(geo_build_copy_geo)
   end subroutine geo_build_copy_geo
@@ -717,8 +697,6 @@ contains
 
     PUSH_SUB(geo_build__end__list)
 
-#if 0
-
     do
       nullify(atom)
       call atom_list_pop(this, atom)
@@ -727,8 +705,6 @@ contains
     end do
     nullify(atom)
     call atom_list_end(this)
-
-#endif
 
     POP_SUB(geo_build__end__list)
   end subroutine geo_build__end__list
@@ -741,8 +717,6 @@ contains
 
     PUSH_SUB(geo_build__end__dict)
 
-#if 0
-
     do
       nullify(spec)
       call species_dict_pop(this, spec)
@@ -751,8 +725,6 @@ contains
     end do
     nullify(spec)
     call species_dict_end(this)
-
-#endif
 
     POP_SUB(geo_build__end__dict)
   end subroutine geo_build__end__dict
@@ -763,13 +735,9 @@ contains
 
     PUSH_SUB(geo_build_end_geo)
 
-#if 0
-
     nullify(this%space)
     call geo_build__end__list(this%list)
     call geo_build__end__dict(this%dict)
-
-#endif
 
     POP_SUB(geo_build_end_geo)
   end subroutine geo_build_end_geo
@@ -781,13 +749,9 @@ contains
 
     PUSH_SUB(geo_build_iterator_init_geo)
 
-#if 0
-
     this%self => that
     call atom_list_init(this%aitr, that%list)
     call species_dict_init(this%sitr, that%dict)
-
-#endif
 
     POP_SUB(geo_build_iterator_init_geo)
   end subroutine geo_build_iterator_init_geo
@@ -799,7 +763,7 @@ contains
 
     PUSH_SUB(geo_build_iterator_init_iterator)
 
-    !call geo_build_iterator_copy(this, that)
+    call geo_build_iterator_copy(this, that)
 
     POP_SUB(geo_build_iterator_init_iterator)
   end subroutine geo_build_iterator_init_iterator
@@ -812,7 +776,7 @@ contains
 
     PUSH_SUB(geo_build_iterator_next_atom)
 
-    !call atom_list_next(this%aitr, atom, ierr)
+    call atom_list_next(this%aitr, atom, ierr)
 
     POP_SUB(geo_build_iterator_next_atom)
   end subroutine geo_build_iterator_next_atom
@@ -825,7 +789,7 @@ contains
 
     PUSH_SUB(geo_build_iterator_next_species)
 
-    !call species_dict_next(this%sitr, spec, ierr)
+    call species_dict_next(this%sitr, spec, ierr)
 
     POP_SUB(geo_build_iterator_next_species)
   end subroutine geo_build_iterator_next_species
@@ -837,13 +801,9 @@ contains
     !
     PUSH_SUB(geo_build_iterator_copy)
 
-#if 0
-
     this%self => that%self
     call atom_list_copy(this%aitr, that%aitr)
     call species_dict_copy(this%sitr, that%sitr)
-
-#endif
 
     POP_SUB(geo_build_iterator_copy)
   end subroutine geo_build_iterator_copy
@@ -854,14 +814,10 @@ contains
 
     PUSH_SUB(geo_build_iterator_end)
 
-#if 0
-
     nullify(this%self)
     call species_dict_end(this%sitr)
     call atom_list_end(this%aitr)
     call species_dict_end(this%sitr)
-
-#endif
 
     POP_SUB(geo_build_iterator_end)
   end subroutine geo_build_iterator_end

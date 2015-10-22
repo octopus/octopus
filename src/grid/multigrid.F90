@@ -41,6 +41,7 @@ module multigrid_m
   public ::                         &
     multigrid_level_t,              &
     multigrid_t,                    &
+    multigrid_level_nullify,        &
     multigrid_init,                 &
     multigrid_end,                  &
     multigrid_mesh_half,            &
@@ -75,6 +76,15 @@ module multigrid_m
   type(profile_t), save :: interp_prof, injection_prof, restrict_prof
 
 contains
+
+  ! ---------------------------------------------------------
+  elemental subroutine multigrid_level_nullify(this)
+    type(multigrid_level_t), intent(out) :: this
+
+    call transfer_table_nullify(this%tt)
+    nullify(this%mesh, this%der)
+
+  end subroutine multigrid_level_nullify
 
   ! ---------------------------------------------------------
   subroutine multigrid_init(mgrid, geo, cv, mesh, der, stencil)
