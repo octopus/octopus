@@ -89,10 +89,10 @@ module batch_m
   type batch_pack_t
     integer                        :: size(1:2)
     integer                        :: size_real(1:2)
-    FLOAT,      pointer            :: dpsi(:, :)
-    CMPLX,      pointer            :: zpsi(:, :)
-    real(4),    pointer            :: spsi(:, :)
-    complex(4), pointer            :: cpsi(:, :)
+    FLOAT,      allocatable        :: dpsi(:, :)
+    CMPLX,      allocatable        :: zpsi(:, :)
+    real(4),    allocatable        :: spsi(:, :)
+    complex(4), allocatable        :: cpsi(:, :)
     type(opencl_mem_t)             :: buffer
   end type batch_pack_t
   
@@ -252,11 +252,6 @@ contains
     this%in_buffer_count = 0
     this%status = BATCH_NOT_PACKED
 
-    nullify(this%pack%dpsi)
-    nullify(this%pack%zpsi)
-    nullify(this%pack%spsi)
-    nullify(this%pack%cpsi)    
-
     this%ndims = 2
     SAFE_ALLOCATE(this%ist_idim_index(1:this%nst_linear, 1:this%ndims))
 
@@ -292,11 +287,6 @@ contains
 
     this%in_buffer_count = 0
     this%status = BATCH_NOT_PACKED
-
-    nullify(this%pack%dpsi)
-    nullify(this%pack%zpsi)
-    nullify(this%pack%spsi)
-    nullify(this%pack%cpsi)    
 
     this%ndims = 1
     SAFE_ALLOCATE(this%ist_idim_index(1:this%nst_linear, 1:this%ndims))
@@ -669,10 +659,10 @@ contains
           call opencl_release_buffer(this%pack%buffer)
 #endif
         else
-          SAFE_DEALLOCATE_P(this%pack%dpsi)
-          SAFE_DEALLOCATE_P(this%pack%zpsi)
-          SAFE_DEALLOCATE_P(this%pack%spsi)
-          SAFE_DEALLOCATE_P(this%pack%cpsi)
+          SAFE_DEALLOCATE_A(this%pack%dpsi)
+          SAFE_DEALLOCATE_A(this%pack%zpsi)
+          SAFE_DEALLOCATE_A(this%pack%spsi)
+          SAFE_DEALLOCATE_A(this%pack%cpsi)
         end if
       end if
       
