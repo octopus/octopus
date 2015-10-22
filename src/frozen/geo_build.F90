@@ -145,13 +145,10 @@ contains
 
     PUSH_SUB(geo_build__new__species)
 
-#if 0
-
     nullify(spec)
     SAFE_ALLOCATE(spec)
     call species_dict_set(this%dict, trim(adjustl(label)), spec)
 
-#endif
 
     POP_SUB(geo_build__new__species)
   end subroutine geo_build__new__species
@@ -162,16 +159,12 @@ contains
 
     PUSH_SUB(geo_build__idel__species)
 
-#if 0
-
     if(associated(spec))then
       call species_end(spec)
       SAFE_DEALLOCATE_P(spec)
     end if
     nullify(spec)
     SAFE_ALLOCATE(spec)
-
-#endif
 
     POP_SUB(geo_build__idel__species)
   end subroutine geo_build__idel__species
@@ -186,8 +179,6 @@ contains
 
     PUSH_SUB(geo_build__del__species)
 
-#if 0
-
     nullify(ispc)
     if(associated(spec))then
       call species_dict_del(this%dict, species_label(spec), ispc, ierr)
@@ -199,8 +190,6 @@ contains
     end if
     nullify(spec)
 
-#endif
-
     POP_SUB(geo_build__del__species)
   end subroutine geo_build__del__species
 
@@ -211,13 +200,9 @@ contains
 
     PUSH_SUB(geo_build_new_atom)
 
-#if 0
-
     nullify(atom)
     SAFE_ALLOCATE(atom)
     call atom_list_append(this%list, atom)
-
-#endif
 
     POP_SUB(geo_build__new__atom)
   end subroutine geo_build__new__atom
@@ -228,15 +213,11 @@ contains
 
     PUSH_SUB(geo_build__idel__atom)
 
-#if 0
-
     if(associated(atom))then
       call atom_end(atom)
       SAFE_DEALLOCATE_P(atom)
     end if
     nullify(atom)
-
-#endif
 
     POP_SUB(geo_build__idel__atom)
   end subroutine geo_build__idel__atom
@@ -251,8 +232,6 @@ contains
 
     PUSH_SUB(geo_build__del__atom)
 
-#if 0
-
     nullify(iatm)
     if(associated(atom))then
       call atom_list_del(this%list, atom, ierr)
@@ -260,8 +239,6 @@ contains
       call geo_build__idel__(atom)
     end if
     nullify(atom)
-
-#endif
 
     POP_SUB(geo_build__del__atom)
   end subroutine geo_build__del__atom
@@ -277,8 +254,6 @@ contains
 
     PUSH_SUB(geo_build_iadd_species_from_config)
 
-#if 0
-
     nullify(spec)
     call json_get(config, "label", label, ierr)
     ASSERT(ierr==JSON_OK)
@@ -287,8 +262,6 @@ contains
       call species_init_from_data_object(spec, 0, config)
       nullify(spec)
     end if
-
-#endif
 
     POP_SUB(geo_build_iadd_species_from_config)
   end subroutine geo_build_iadd_species_from_config
@@ -302,8 +275,6 @@ contains
 
     PUSH_SUB(geo_build_iadd_species_from_species)
 
-#if 0 
-
     nullify(spec)
     if(.not.species_dict_has_key(this%dict, species_label(that)))then
       call geo_build__new__(this, species_label(that), spec)
@@ -311,8 +282,6 @@ contains
       call species_copy(spec, that)
       nullify(spec)
     end if
-
-#endif
 
     POP_SUB(geo_build_iadd_species_from_species)
   end subroutine geo_build_iadd_species_from_species
@@ -330,8 +299,6 @@ contains
 
     PUSH_SUB(geo_build_iadd_atom_from_config)
 
-#if 0
-
     nullify(atom, spec)
     call json_get(config, "label", label, ierr)
     ASSERT(ierr==JSON_OK)
@@ -341,8 +308,6 @@ contains
     call geo_build__new__(this, atom)
     call atom_init_from_data_object(atom, spec, config)
     if(present(basis)) call basis_to_external(basis, atom%x)
-
-#endif
 
     POP_SUB(geo_build_iadd_atom_from_config)
   end subroutine geo_build_iadd_atom_from_config
@@ -360,8 +325,6 @@ contains
 
     PUSH_SUB(geo_build_iadd_atom_from_atom)
 
-#if 0
-
     nullify(atom, spec)
     call species_dict_get(this%dict, that%label, spec, ierr)
     ASSERT(ierr==SPECIES_DICT_OK)
@@ -373,8 +336,6 @@ contains
       x = that%x
     end if
     call atom_init(atom, trim(adjustl(that%label)), x, species=spec)
-
-#endif
  
     POP_SUB(geo_build_iadd_atom_from_atom)
   end subroutine geo_build_iadd_atom_from_atom

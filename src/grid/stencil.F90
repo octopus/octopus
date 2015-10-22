@@ -29,6 +29,7 @@ module stencil_m
   private
   public ::                        &
     stencil_t,                     &
+    stencil_nullify,               &
     stencil_allocate,              &
     stencil_copy,                  &
     stencil_end,                   &
@@ -42,6 +43,16 @@ module stencil_m
   end type stencil_t
 
 contains
+
+  !-------------------------------------------------------  
+  elemental subroutine stencil_nullify(this)
+    type(stencil_t), intent(out) :: this
+
+    this%center = -1
+    this%size = 0
+    nullify(this%points)
+
+  end subroutine stencil_nullify
 
   !-------------------------------------------------------  
   subroutine stencil_allocate(this, size)

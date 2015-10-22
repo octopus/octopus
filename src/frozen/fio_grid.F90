@@ -79,19 +79,6 @@ contains
     POP_SUB(derivatives_nullify)
   end subroutine derivatives_nullify
 
-  !-------------------------------------------------------  
-  subroutine stencil_nullify(this)
-    type(stencil_t), intent(out) :: this
-
-    PUSH_SUB(stencil_nullify)
-
-    this%center = -1
-    this%size = 0
-    nullify(this%points)
-
-    POP_SUB(stencil_nullify)
-  end subroutine stencil_nullify
-
   ! ---------------------------------------------------------
   subroutine fio_grid_init(this, geo, config)
     type(grid_t), target, intent(out) :: this
