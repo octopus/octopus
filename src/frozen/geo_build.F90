@@ -1,7 +1,5 @@
 #include "global.h"
 
-#if 0
-
 #undef LIST_TEMPLATE_NAME
 #undef LIST_TYPE_NAME
 #undef LIST_TYPE_MODULE_NAME
@@ -24,12 +22,10 @@
 #include "tdict_inc.F90"
 #undef DICT_TEMPLATE_NAME
 
-#endif
-
 module geo_build_m
 
   use atom_m
-  !use atom_list_m
+  use atom_list_m
   use basis_m
   use geometry_m
   use global_m
@@ -37,7 +33,7 @@ module geo_build_m
   use kinds_m
   use space_m
   use species_m
-  !use species_dict_m
+  use species_dict_m
   use messages_m
   use profiling_m
 
@@ -75,15 +71,15 @@ module geo_build_m
   type :: geo_build_t
     private
     type(space_t), pointer :: space  =>null()
-    !type(atom_list_t)      :: list
-    !type(species_dict_t)   :: dict
+    type(atom_list_t)      :: list
+    type(species_dict_t)   :: dict
   end type geo_build_t
 
   type :: geo_build_iterator_t
     private
     type(geo_build_t),    pointer :: self =>null()
-    !type(atom_list_iterator_t)    :: aitr
-    !type(species_dict_iterator_t) :: sitr
+    type(atom_list_iterator_t)    :: aitr
+    type(species_dict_iterator_t) :: sitr
   end type geo_build_iterator_t
 
   interface geo_build__new__
@@ -713,8 +709,6 @@ contains
     POP_SUB(geo_build_copy_geo)
   end subroutine geo_build_copy_geo
 
-#if 0
-
   ! ---------------------------------------------------------
   subroutine geo_build__end__list(this)
     type(atom_list_t), intent(inout) :: this
@@ -722,6 +716,8 @@ contains
     type(atom_t), pointer :: atom
 
     PUSH_SUB(geo_build__end__list)
+
+#if 0
 
     do
       nullify(atom)
@@ -731,6 +727,8 @@ contains
     end do
     nullify(atom)
     call atom_list_end(this)
+
+#endif
 
     POP_SUB(geo_build__end__list)
   end subroutine geo_build__end__list
@@ -743,6 +741,8 @@ contains
 
     PUSH_SUB(geo_build__end__dict)
 
+#if 0
+
     do
       nullify(spec)
       call species_dict_pop(this, spec)
@@ -752,10 +752,10 @@ contains
     nullify(spec)
     call species_dict_end(this)
 
+#endif
+
     POP_SUB(geo_build__end__dict)
   end subroutine geo_build__end__dict
-
-#endif
 
   ! ---------------------------------------------------------
   subroutine geo_build_end_geo(this)

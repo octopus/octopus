@@ -4,14 +4,12 @@ module fio_hamiltonian_m
 
   use base_hamiltonian_m
   use base_potential_m
-  use base_system_m
   use fio_external_m
   use global_m
   use json_m
   use kinds_m
   use messages_m
   use profiling_m
-  use simulation_m
 
   implicit none
 

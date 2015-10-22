@@ -125,17 +125,17 @@ base_config.o 		: base_config.F90 base_handle.o base_hamiltonian.o intrpl.o
 
 fio_geometry.o		: fio_geometry.F90 base_geometry.o geo_intrf.o
 fio_simul_box.o 	: fio_simul_box.F90
-fio_curvilinear.o 	: fio_curvilinear.F90 fio_simul_box.o
-fio_mesh.o 		: fio_mesh.F90 fio_simul_box.o
-fio_grid.o 		: fio_grid.F90 fio_curvilinear.o fio_mesh.o fio_simul_box.o
+fio_curvilinear.o 	: fio_curvilinear.F90
+fio_mesh.o 		: fio_mesh.F90
+fio_grid.o 		: fio_grid.F90 fio_mesh.o fio_curvilinear.o fio_simul_box.o
 fio_simulation.o 	: fio_simulation.F90 fio_grid.o base_geometry.o simulation.o
-fio_density.o 		: fio_density.F90 fio_simulation.o base_density.o intrpl.o
-fio_states.o 		: fio_states.F90 fio_density.o base_states.o
-fio_system.o 		: fio_system.F90 fio_states.o fio_geometry.o base_system.o base_states.o base_geometry.o
-fio_external.o 		: fio_external.F90 fio_system.o simulation.o base_potential.o base_geometry.o intrpl.o
-fio_hamiltonian.o       : fio_hamiltonian.F90 fio_external.o fio_system.o base_hamiltonian.o
-fio_model.o             : fio_model.F90 fio_hamiltonian.o fio_system.o fio_simulation.o base_model.o
-fio_handle.o 		: fio_handle.F90 fio_model.o base_handle.o base_model.o base_hamiltonian.o base_system.o base_geometry.o simulation.o 
+fio_density.o 		: fio_density.F90 base_density.o intrpl.o storage.o
+fio_states.o 		: fio_states.F90 fio_density.o base_states.o base_density.o
+fio_system.o 		: fio_system.F90 fio_states.o base_system.o base_states.o
+fio_external.o 		: fio_external.F90 base_potential.o base_geometry.o intrpl.o storage.o
+fio_hamiltonian.o       : fio_hamiltonian.F90 fio_external.o base_hamiltonian.o base_potential.o
+fio_model.o             : fio_model.F90 fio_hamiltonian.o fio_system.o fio_simulation.o base_model.o base_hamiltonian.o base_system.o base_geometry.o simulation.o
+fio_handle.o 		: fio_handle.F90 fio_model.o base_handle.o base_model.o
 fio_config.o 		: fio_config.F90 fio_handle.o base_hamiltonian.o base_config.o intrpl.o
 
 frozen_density.o 	: frozen_density.F90 fio_density.o base_density.o simulation.o intrpl.o basis.o

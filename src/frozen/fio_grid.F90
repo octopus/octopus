@@ -37,23 +37,6 @@ module fio_grid_m
 contains
   
   ! ---------------------------------------------------------
-  subroutine transfer_table_nullify(this)
-    type(transfer_table_t), intent(out) :: this
-
-    PUSH_SUB(transfer_table_nullify)
-
-    this%n_coarse = 0
-    this%n_fine = 0
-    this%n_fine1 = 0
-    this%n_fine2 = 0
-    this%n_fine4 = 0
-    this%n_fine8 = 0
-    nullify(this%to_coarse, this%to_fine1, this%to_fine2, this%to_fine4, this%to_fine8, this%fine_i)
-
-    POP_SUB(transfer_table_nullify)
-  end subroutine transfer_table_nullify
-
-  ! ---------------------------------------------------------
   subroutine multigrid_level_nullify(this)
     type(multigrid_level_t), intent(out) :: this
 

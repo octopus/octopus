@@ -7,7 +7,6 @@
 module fio_density_m
 
   use base_density_m
-  use fio_simulation_m
   use global_m
   use io_binary_m
   use json_m
@@ -15,7 +14,6 @@ module fio_density_m
   use messages_m
   use path_m
   use profiling_m
-  use simulation_m
 
 #define INCLUDE_PREFIX
 #include "intrpl_inc.F90"

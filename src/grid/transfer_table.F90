@@ -25,7 +25,9 @@ module transfer_table_m
 
   private
   public ::                         &
-    transfer_table_t
+    transfer_table_t,               &
+    transfer_table_nullify
+
 
   type transfer_table_t
     integer          ::  n_coarse
@@ -36,6 +38,24 @@ module transfer_table_m
     integer, pointer :: to_fine1(:,:), to_fine2(:,:), to_fine4(:,:), to_fine8(:,:)
     integer, pointer :: fine_i(:)
   end type transfer_table_t
+
+contains
+
+  ! ---------------------------------------------------------
+  elemental subroutine transfer_table_nullify(this)
+    type(transfer_table_t), intent(out) :: this
+
+    this%n_coarse = 0
+    nullify(this%to_coarse)
+    this%n_fine = 0
+    this%n_fine1 = 0
+    this%n_fine2 = 0
+    this%n_fine4 = 0
+    this%n_fine8 = 0
+    nullify(this%to_fine1, this%to_fine2, this%to_fine4, this%to_fine8)
+    nullify(this%fine_i)
+
+  end subroutine transfer_table_nullify
 
 end module transfer_table_m
 
