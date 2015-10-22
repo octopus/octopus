@@ -353,8 +353,6 @@ contains
 
     PUSH_SUB(geo_build__extend__geo)
 
-#if 0
-
     ASSERT(this%space==that%space)
     call geo_build_init(iter, that)
     do
@@ -375,8 +373,6 @@ contains
     nullify(atom)
     call geo_build_end(iter)
 
-#endif
-
     POP_SUB(geo_build__extend__geo)
   end subroutine geo_build__extend__geo
 
@@ -390,8 +386,6 @@ contains
 
     PUSH_SUB(geo_build__extend__geometry)
 
-#if 0
-
     ASSERT(this%space==that%space)
     do indx = 1, that%nspecies
       call geo_build_iadd_species_from_species(this, that%species(indx))
@@ -399,8 +393,6 @@ contains
     do indx = 1, that%natoms
       call geo_build_iadd_atom_from_atom(this, that%atom(indx), basis)
     end do
-
-#endif
 
     POP_SUB(geo_build__extend__geometry)
   end subroutine geo_build__extend__geometry
@@ -417,8 +409,6 @@ contains
     integer                      :: nitm, ierr
 
     PUSH_SUB(geo_build__extend__config)
-
-#if 0
 
     nullify(cnfg, list)
     call json_get(config, "nspecies", nitm, ierr)
@@ -449,8 +439,6 @@ contains
     end do
     call json_end(iter)
     nullify(cnfg, list)
-
-#endif
 
     POP_SUB(geo_build__extend__config)
   end subroutine geo_build__extend__config

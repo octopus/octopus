@@ -49,7 +49,8 @@ module opencl_m
     opencl_init,                  &
     opencl_end,                   &
     opencl_padded_size,           &
-    opencl_mem_t
+    opencl_mem_t,                 &
+    opencl_mem_nullify
 
 #ifdef HAVE_OPENCL
   public ::                       &
@@ -727,6 +728,17 @@ contains
 
     POP_SUB(opencl_end)
   end subroutine opencl_end
+
+  ! ------------------------------------------
+
+  elemental subroutine opencl_mem_nullify(this)
+    type(opencl_mem_t), intent(out) :: this
+
+    !> To be implemented.
+    This%size = 0
+    this%flags = 0
+
+  end subroutine opencl_mem_nullify
 
   ! ------------------------------------------
 

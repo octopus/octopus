@@ -37,26 +37,6 @@ module fio_grid_m
 contains
   
   ! ---------------------------------------------------------
-  subroutine boundaries_nullify(this)
-    type(boundaries_t), intent(out) :: this
-
-    PUSH_SUB(boundaries_nullify)
-
-    nullify(this%mesh, this%per_points)
-    this%nper = 0
-#ifdef HAVE_MPI
-    nullify(this%per_send, this%per_recv, this%nsend, this%nrecv)
-#endif
-    !this%buff_per_points
-    !this%buff_per_send
-    !this%buff_per_recv
-    !this%buff_nsend
-    !this%buff_nrecv
-
-    POP_SUB(boundaries_nullify)
-  end subroutine boundaries_nullify
-
-  ! ---------------------------------------------------------
   subroutine derivatives_nullify(this)
     type(derivatives_t), intent(out) :: this
 
