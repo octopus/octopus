@@ -77,7 +77,7 @@ module states_dim_m
     integer :: ispin                !< spin mode (unpolarized, spin-polarized, spinors)
     integer :: nspin                !< dimension of rho (1, 2 or 4)
     integer :: spin_channels        !< 1 or 2, whether spin is or not considered.
-    FLOAT, pointer :: kweights(:)   !< weights for the k-point integrations
+    FLOAT, allocatable  :: kweights(:)   !< weights for the k-point integrations
     type(distributed_t) :: kpt
     integer :: block_size
     integer :: orth_method
@@ -93,7 +93,6 @@ contains
 
     PUSH_SUB(states_dim_null)
 
-    nullify(this%kweights)
     call distributed_nullify(this%kpt)
 
     POP_SUB(states_dim_null)
@@ -118,7 +117,7 @@ contains
     dout%cl_states_mem  = din%cl_states_mem
 
     SAFE_ALLOCATE(dout%kweights(1:din%nik))
-    dout%kweights(:) = din%kweights(:)
+    dout%kweights(1:din%nik) = din%kweights(1:din%nik)
 
     call distributed_copy(din%kpt, dout%kpt)
 
@@ -134,7 +133,7 @@ contains
 
     call distributed_end(dim%kpt)
 
-    SAFE_DEALLOCATE_P(dim%kweights)
+    SAFE_DEALLOCATE_A(dim%kweights)
 
     POP_SUB(states_dim_end)
   end subroutine states_dim_end
