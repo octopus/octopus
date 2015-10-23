@@ -490,8 +490,6 @@ contains
 
     PUSH_SUB(geo_build_extend_geo)
 
-#if 0
-
     if(present(config))then
       call basis_init(base, this%space, config)
       call geo_build__extend__(this, that, base)
@@ -499,8 +497,6 @@ contains
     else
       call geo_build__extend__(this, that)
     end if
-
-#endif
 
     POP_SUB(geo_build_extend_geo)
   end subroutine geo_build_extend_geo
@@ -515,8 +511,6 @@ contains
 
     PUSH_SUB(geo_build_extend_geometry)
 
-#if 0
-
     if(present(config))then
       call basis_init(base, this%space, config)
       call geo_build__extend__(this, that, base)
@@ -524,8 +518,6 @@ contains
     else
       call geo_build__extend__(this, that)
     end if
-
-#endif
 
     POP_SUB(geo_build_extend_geometry)
   end subroutine geo_build_extend_geometry
@@ -540,8 +532,6 @@ contains
 
     PUSH_SUB(geo_build_extend_config)
 
-#if 0
-
     if(present(config))then
       call basis_init(base, this%space, config)
       call geo_build__extend__(this, that, base)
@@ -549,8 +539,6 @@ contains
     else
       call geo_build__extend__(this, that)
     end if
-
-#endif
 
     POP_SUB(geo_build_extend_config)
   end subroutine geo_build_extend_config

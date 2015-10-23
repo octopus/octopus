@@ -37,29 +37,6 @@ module fio_grid_m
 contains
   
   ! ---------------------------------------------------------
-  subroutine derivatives_nullify(this)
-    type(derivatives_t), intent(out) :: this
-
-    PUSH_SUB(derivatives_nullify)
-
-    call boundaries_nullify(this%boundaries)
-    nullify(this%mesh, this%op, this%lapl, this%grad)
-    nullify(this%finer, this%coarser, this%to_finer, this%to_coarser)
-    this%dim = 0
-    this%order = 0
-    this%stencil_type = 0
-    this%masses = M_ZERO
-    this%np_zero_bc = 0
-    this%lapl_cutoff = M_ZERO
-    this%n_ghost = 0
-#if defined(HAVE_MPI)
-    this%comm_method = 0
-#endif
-
-    POP_SUB(derivatives_nullify)
-  end subroutine derivatives_nullify
-
-  ! ---------------------------------------------------------
   subroutine fio_grid_init(this, geo, config)
     type(grid_t), target, intent(out) :: this
     type(geometry_t),     intent(in)  :: geo
