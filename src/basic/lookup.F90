@@ -30,6 +30,7 @@ module lookup_m
   private
   public ::                &
     lookup_t,              &
+    lookup_nullify,        &
     lookup_init,           &
     lookup_end,            &
     lookup_copy,           &
@@ -44,6 +45,15 @@ module lookup_m
   
 contains
 
+  elemental subroutine lookup_nullify(this)
+    type(lookup_t), intent(out) :: this
+
+    this%nobjs = 0
+    this%dim = 0
+    nullify(this%pos)
+
+  end subroutine lookup_nullify
+  
   subroutine lookup_init(this, dim, nobjs, pos)
     type(lookup_t), intent(out) :: this
     integer,        intent(in)  :: dim

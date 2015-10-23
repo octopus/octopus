@@ -550,32 +550,23 @@ contains
     that%nspecies = species_dict_len(this%dict)
     ASSERT(that%nspecies>0)
     SAFE_ALLOCATE(that%species(that%nspecies))
-
-#if 0
-
-    call geo_build_iterator_init(iter, this)
+    !call geo_build_iterator_init(iter, this)
     do indx = 1, that%nspecies
       nullify(spec)
-      call geo_build_iterator_next(iter, spec, ierr)
+      !call geo_build_iterator_next(iter, spec, ierr)
       ASSERT(ierr==SPECIES_DICT_OK)
       ASSERT(associated(spec))
       call species_init(that%species(indx), "", 0)
       call species_copy(that%species(indx), spec, indx)
     end do
-    call geo_build_iterator_end(iter)
-
-#endif
-
+    !call geo_build_iterator_end(iter)
     that%natoms = atom_list_len(this%list)
     ASSERT(that%natoms>0)
     SAFE_ALLOCATE(that%atom(that%natoms))
-
-#if 0
-
-    call geo_build_iterator_init(iter, this)
+    !call geo_build_iterator_init(iter, this)
     do indx = 1, that%natoms
       nullify(atom, spec)
-      call geo_build_iterator_next(iter, atom, ierr)
+      !call geo_build_iterator_next(iter, atom, ierr)
       ASSERT(ierr==ATOM_LIST_OK)
       ASSERT(associated(atom))
       do jndx = 1, that%nspecies
@@ -586,10 +577,7 @@ contains
       ASSERT(associated(spec))
       call atom_init(that%atom(indx), atom_get_label(atom), atom%x, species=spec)
     end do
-    call geo_build_iterator_end(iter)
-
-#endif
-
+    !call geo_build_iterator_end(iter)
     nullify(atom, spec)
 
     POP_SUB(geo_build_export)
