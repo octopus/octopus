@@ -453,6 +453,7 @@ contains
       call parse_block_string(blk, id-1, 0, local%lab(id))
       call local_read_from_block(blk, id-1, local%domain(id), local%dshape(id), local%clist(id))
     end do block
+    call parse_block_end(blk)
     message(1) = ''
     call messages_info(1)
 
@@ -471,7 +472,7 @@ contains
     do id = 1, local%nd
       call box_union_end(local%domain(id))
     end do
-    call local_write_end(local%writ)
+    call local_write_end(local%writ, local%nd)
     SAFE_DEALLOCATE_A(local%lab)
     SAFE_DEALLOCATE_A(local%domain)
     SAFE_DEALLOCATE_A(local%clist)
@@ -727,6 +728,7 @@ contains
         call io_close(iunit)
       end if
       call local_center_of_mass(lcl%nd, lcl%domain, sys%geo, lcl%dcm)
+      call basins_end(basins)
     else
       do id = 1, lcl%nd
         call box_union_inside_vec(lcl%domain(id), sys%gr%mesh%np, sys%gr%mesh%x, lcl%inside(:,id))

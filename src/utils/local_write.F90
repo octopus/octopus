@@ -211,11 +211,19 @@ contains
   end subroutine local_write_init
 
   ! ---------------------------------------------------------
-  subroutine local_write_end(writ)
+  subroutine local_write_end(writ, nd)
     type(local_write_t), intent(inout) :: writ
+    integer                            :: nd
+
+    integer :: id, iout
     
     PUSH_SUB(local_write_end)
 
+    do id = 1, nd
+      do iout = 1, LOCAL_OUT_MAX
+        if(writ%out(iout, id)%write)  call write_iter_end(writ%out(iout, id)%handle)
+      end do
+    end do
     SAFE_DEALLOCATE_A(writ%out)
 
     POP_SUB(local_write_end)
