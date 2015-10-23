@@ -96,8 +96,9 @@ contains
     type(system_t) :: sys
 
     character(64)  :: basename, folder, ref_name, ref_folder, folder_default
-    integer        :: c_start, c_end, c_step, c_start_default, length
+    integer        :: c_start, c_end, c_step, c_start_default, length, c_how
     logical        :: iterate_folder, subtract_file, fourier_trans
+    integer, parameter :: CONVERT_FORMAT = 1, FOURIER_TRANSFORM = 2, OPERATION = 3 
 
     PUSH_SUB(convert)
 
@@ -127,6 +128,24 @@ contains
         basename = trim(basename(1:length-4))
       end if
     end if
+
+    !%Variable ConvertHow
+    !%Type integer
+    !%Default convert_format
+    !%Section Utilities::oct-convert
+    !%Description
+    !% Select how the mesh function will be converted.
+    !%Option format 1
+    !% The format of the mesh function will be convert from the binary file.obf.
+    !% The format of the output function is set by OutputHow variable.
+    !%Option fourier_transform 2
+    !% A fourier transform of the mesh function will be computed.
+    !% It requieres that ConvertStart and ConvertEnd have to be set.
+    !%Option operation 3
+    !% Convert utility will generate a new mesh function constructed by linear 
+    !% combination of scalar function of different mesh functions,
+    !%End
+    call parse_variable('ConvertHow', CONVERT_FORMAT, c_how)
 
     !%Variable ConvertIterateFolder
     !%Type logical
@@ -219,25 +238,21 @@ contains
     call parse_variable('ConvertSubtractFolder', '.', ref_folder)
     call add_last_slash(folder)
     
-    !%Variable ConvertTransform
-    !%Type logical
-    !%Default false
-    !%Section Utilities::oct-convert
-    !%Description
-    !% Decides if the input files are going to be Fourier-transformed.
-    !%End
-    call parse_variable('ConvertTransform', .false., fourier_trans)
+    select case (c_how)
+    CASE(OPERATION)
+      call convert_operate(sys%gr%mesh, sys%geo, sys%outp)
 
-    ! Compute Fourier transform 
-    if (fourier_trans) then
+    CASE(FOURIER_TRANSFORM)
+      ! Compute Fourier transform 
       call convert_transform(sys%gr%mesh, sys%geo, basename, folder, &
          c_start, c_end, c_step, sys%outp, subtract_file, &
          ref_name, ref_folder)
-    else
+
+    CASE(CONVERT_FORMAT)
       call convert_low(sys%gr%mesh, sys%geo, basename, folder, &
          c_start, c_end, c_step, sys%outp, iterate_folder, &
          subtract_file, ref_name, ref_folder)
-    end if
+    end select
 
     call system_end(sys)
 
@@ -677,6 +692,48 @@ contains
 
     POP_SUB(convert_transform)
   end subroutine convert_transform
+  ! ---------------------------------------------------------
+  !> Given a set of mesh function operations it computes a  
+  !! a resulting mesh function from linear combination of them.
+  subroutine convert_operate(mesh, geo, outp)
+
+    type(mesh_t)    , intent(in)    :: mesh
+    type(geometry_t), intent(in)    :: geo
+    type(output_t)  , intent(in)    :: outp           !< Output object; Decides the kind, what and where to output
+  
+    integer :: i_op, n_operations
+    type(block_t)  :: blk
+
+    PUSH_SUB(convert_operate)
+
+    !%Variable ConvertScalarOperation
+    !%Type block
+    !%Section Utilities::oct-local_multipoles
+    !%Description
+    !% This variable is used to generate a new mesh function as a linear combination
+    !% different mesh function having the same mesh. Each row defines an operation for
+    !% for a single mesh function. 
+    !% The format of the block is the following: <br>
+    !% 'variable name' | 'folder' | 'file' | 'operation'
+    !%End
+    ! First, find out if there is a ConvertScalarOperation block.
+    n_operations = 0
+    if(parse_block('ConvertScalarOperation', blk) == 0) then
+      n_operations = parse_block_n(blk)
+    end if
+
+    if (n_operations == 0) then
+      write(message(1),'(a)')'No operations found. Check the input file'
+      call messages_fatal(1)
+    end if 
+     
+    block: do i_operation = 1, n_operations
+
+    write(message(1),'(a)')'The scalar operation of mesh function is still not implemented'
+    call messages_fatal(1)
+
+    POP_SUB(convert_operate)
+  end subroutine convert_operate
 end program
 
 !! Local Variables:
