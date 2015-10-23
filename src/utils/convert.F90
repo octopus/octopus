@@ -727,8 +727,6 @@ contains
       call messages_fatal(1)
     end if 
      
-    block: do i_operation = 1, n_operations
-
     write(message(1),'(a)')'The scalar operation of mesh function is still not implemented'
     call messages_fatal(1)
 
