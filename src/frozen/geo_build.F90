@@ -115,11 +115,6 @@ module geo_build_m
     module procedure geo_build_get_space
   end interface geo_build_get
 
-  interface geo_build_iterator_init
-    module procedure geo_build_iterator_init_type
-    module procedure geo_build_iterator_init_copy
-  end interface geo_build_iterator_init
-
   interface geo_build_iterator_next
     module procedure geo_build_iterator_next_atom
     module procedure geo_build_iterator_next_species
@@ -550,6 +545,9 @@ contains
     that%nspecies = species_dict_len(this%dict)
     ASSERT(that%nspecies>0)
     SAFE_ALLOCATE(that%species(that%nspecies))
+
+#if 0
+
     !call geo_build_iterator_init(iter, this)
     do indx = 1, that%nspecies
       nullify(spec)
@@ -560,6 +558,9 @@ contains
       call species_copy(that%species(indx), spec, indx)
     end do
     !call geo_build_iterator_end(iter)
+
+#endif
+
     that%natoms = atom_list_len(this%list)
     ASSERT(that%natoms>0)
     SAFE_ALLOCATE(that%atom(that%natoms))
@@ -666,30 +667,18 @@ contains
   end subroutine geo_build_end
 
   ! ---------------------------------------------------------
-  subroutine geo_build_iterator_init_type(this, that)
+  subroutine geo_build_iterator_init(this, that)
     type(geo_build_iterator_t), intent(out) :: this
     type(geo_build_t),  target, intent(in)  :: that
 
-    PUSH_SUB(geo_build_iterator_init_type)
+    PUSH_SUB(geo_build_iterator_init)
 
     this%self => that
     call atom_list_init(this%aitr, that%list)
     call species_dict_init(this%sitr, that%dict)
 
-    POP_SUB(geo_build_iterator_init_type)
-  end subroutine geo_build_iterator_init_type
-
-  ! ---------------------------------------------------------
-  subroutine geo_build_iterator_init_copy(this, that)
-    type(geo_build_iterator_t), intent(out) :: this
-    type(geo_build_iterator_t), intent(in)  :: that
-
-    PUSH_SUB(geo_build_iterator_init_copy)
-
-    call geo_build_iterator_copy(this, that)
-
-    POP_SUB(geo_build_iterator_init_copy)
-  end subroutine geo_build_iterator_init_copy
+    POP_SUB(geo_build_iterator_init)
+  end subroutine geo_build_iterator_init
 
   ! ---------------------------------------------------------
   subroutine geo_build_iterator_next_atom(this, atom, ierr)

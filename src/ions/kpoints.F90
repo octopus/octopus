@@ -39,6 +39,7 @@ module kpoints_m
   public ::                       &
     kpoints_grid_t,               &
     kpoints_t,                    &
+    kpoints_nullify,              &
     kpoints_init,                 &
     kpoints_end,                  &
     kpoints_copy,                 &
@@ -86,6 +87,15 @@ module kpoints_m
 
 contains
 
+  elemental subroutine  kpoints_grid_nullify(this)
+    type(kpoints_grid_t), intent(out) :: this
+
+    nullify(this%point, this%red_point, this%weight)
+    this%npoints = 0
+    this%dim = 0
+
+  end subroutine kpoints_grid_nullify
+
   subroutine kpoints_grid_init(dim, this, npoints)
     integer,              intent(in)  :: dim
     type(kpoints_grid_t), intent(out) :: this
@@ -132,6 +142,22 @@ contains
     POP_SUB(kpoints_grid_copy)
   end subroutine kpoints_grid_copy
 
+
+  elemental subroutine kpoints_nullify(this)
+    type(kpoints_t), intent(out) :: this
+
+    call kpoints_grid_nullify(this%full)
+    call kpoints_grid_nullify(this%reduced)
+    this%method = 0
+    this%use_symmetries = .false.
+    this%use_time_reversal = .false.
+    this%nik_skip = 0
+    this%nik_axis = 0
+    this%shifts = M_ZERO
+    nullify(this%symmetry_ops, this%num_symmetry_ops)
+    nullify(this%klattice)
+
+  end subroutine kpoints_nullify
 
   ! ---------------------------------------------------------
   subroutine kpoints_init(this, symm, dim, rlattice, klattice, only_gamma)
