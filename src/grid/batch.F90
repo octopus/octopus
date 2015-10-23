@@ -325,14 +325,12 @@ contains
 
   !--------------------------------------------------------------
 
-  subroutine batch_copy(bin, bout, reference, pack)
+  subroutine batch_copy(bin, bout, pack)
     type(batch_t), target,   intent(in)    :: bin
     type(batch_t),           intent(out)   :: bout
-    logical,       optional, intent(in)    :: reference !< If .true. (the default) the copy points to the same memory.
-                                                        !! If .false. new memory is allocated.
     logical,       optional, intent(in)    :: pack      !< If .false. the new batch will not be packed
-                                                        !! If .true. the new batch will be packed
-                                                        !! The default is to do the same as bin.
+    !! If .true. the new batch will be packed
+    !! The default is to do the same as bin.
 
     integer :: ii, np
     logical :: pack_
@@ -341,77 +339,46 @@ contains
 
     call batch_init_empty(bout, bin%dim, bin%nst)
 
-    if(optional_default(reference, .true.)) then
-      
-      do ii = 1, bout%nst
-        if(associated(bin%states(ii)%dpsi)) bout%states(ii)%dpsi => bin%states(ii)%dpsi
-        if(associated(bin%states(ii)%zpsi)) bout%states(ii)%zpsi => bin%states(ii)%zpsi
-        if(associated(bin%states(ii)%spsi)) bout%states(ii)%spsi => bin%states(ii)%spsi
-        if(associated(bin%states(ii)%cpsi)) bout%states(ii)%cpsi => bin%states(ii)%cpsi
-      end do
-      
-      do ii = 1, bout%nst_linear
-        if(associated(bin%states_linear(ii)%dpsi)) bout%states_linear(ii)%dpsi => bin%states_linear(ii)%dpsi
-        if(associated(bin%states_linear(ii)%zpsi)) bout%states_linear(ii)%zpsi => bin%states_linear(ii)%zpsi
-        if(associated(bin%states_linear(ii)%spsi)) bout%states_linear(ii)%spsi => bin%states_linear(ii)%spsi
-        if(associated(bin%states_linear(ii)%cpsi)) bout%states_linear(ii)%cpsi => bin%states_linear(ii)%cpsi
+    if(batch_type(bin) == TYPE_FLOAT) then
+
+      np = 0
+      do ii = 1, bin%nst_linear
+        np = max(np, ubound(bin%states_linear(ii)%dpsi, dim = 1))
       end do
 
-      bout%current             = bin%current
-      bout%status              = bin%status
-      bout%in_buffer_count     = bin%in_buffer_count
-      bout%dirty               = bin%dirty
-      bout%pack%size(1:2)      = bin%pack%size(1:2)
-      bout%pack%size_real(1:2) = bin%pack%size_real(1:2)
+      call dbatch_allocate(bout, 1, bin%nst, np)
 
-      if(opencl_is_enabled()) then
-        bout%pack%buffer = bin%pack%buffer
-      end if
+    else if(batch_type(bin) == TYPE_CMPLX) then
+      np = 0
+      do ii = 1, bin%nst_linear
+        np = max(np, ubound(bin%states_linear(ii)%zpsi, dim = 1))
+      end do
 
-    else      
+      call zbatch_allocate(bout, 1, bin%nst, np)
 
-      if(batch_type(bin) == TYPE_FLOAT) then
+    else if(batch_type(bin) == TYPE_FLOAT_SINGLE) then
 
-        np = 0
-        do ii = 1, bin%nst_linear
-          np = max(np, ubound(bin%states_linear(ii)%dpsi, dim = 1))
-        end do
+      np = 0
+      do ii = 1, bin%nst_linear
+        np = max(np, ubound(bin%states_linear(ii)%spsi, dim = 1))
+      end do
 
-        call dbatch_allocate(bout, 1, bin%nst, np)
-        
-      else if(batch_type(bin) == TYPE_CMPLX) then
-        np = 0
-        do ii = 1, bin%nst_linear
-          np = max(np, ubound(bin%states_linear(ii)%zpsi, dim = 1))
-        end do
+      call sbatch_allocate(bout, 1, bin%nst, np)
 
-        call zbatch_allocate(bout, 1, bin%nst, np)
+    else if(batch_type(bin) == TYPE_CMPLX_SINGLE) then
 
-      else if(batch_type(bin) == TYPE_FLOAT_SINGLE) then
+      np = 0
+      do ii = 1, bin%nst_linear
+        np = max(np, ubound(bin%states_linear(ii)%cpsi, dim = 1))
+      end do
 
-        np = 0
-        do ii = 1, bin%nst_linear
-          np = max(np, ubound(bin%states_linear(ii)%spsi, dim = 1))
-        end do
-
-        call sbatch_allocate(bout, 1, bin%nst, np)
-        
-      else if(batch_type(bin) == TYPE_CMPLX_SINGLE) then
-
-        np = 0
-        do ii = 1, bin%nst_linear
-          np = max(np, ubound(bin%states_linear(ii)%cpsi, dim = 1))
-        end do
-
-        call cbatch_allocate(bout, 1, bin%nst, np)
-        
-      end if
-
-      pack_ = batch_is_packed(bin)
-      if(present(pack)) pack_ = pack
-      if(pack_) call batch_pack(bout, copy = .false.)
+      call cbatch_allocate(bout, 1, bin%nst, np)
 
     end if
+
+    pack_ = batch_is_packed(bin)
+    if(present(pack)) pack_ = pack
+    if(pack_) call batch_pack(bout, copy = .false.)
 
     do ii = 1, bout%nst
       bout%states(ii)%ist = bin%states(ii)%ist

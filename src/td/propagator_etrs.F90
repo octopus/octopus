@@ -92,7 +92,7 @@ contains
       do ik = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
 
-          call batch_copy(st%group%psib(ib, ik), zpsib_dt, reference = .false.)
+          call batch_copy(st%group%psib(ib, ik), zpsib_dt)
           if(batch_is_packed(st%group%psib(ib, ik))) call batch_pack(zpsib_dt, copy = .false.)
 
           !propagate the state dt/2 and dt, simultaneously, with H(time - dt)
@@ -207,7 +207,7 @@ contains
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
 
-        call batch_copy(st%group%psib(ib, ik), zpsib_dt, reference = .false.)
+        call batch_copy(st%group%psib(ib, ik), zpsib_dt)
         if(batch_is_packed(st%group%psib(ib, ik))) call batch_pack(zpsib_dt, copy = .false.)
 
         !propagate the state dt/2 and dt, simultaneously, with H(time - dt)
@@ -253,7 +253,7 @@ contains
     ! store the state at half iteration
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
-        call batch_copy(st%group%psib(ib, ik), psi2(ib, ik), reference = .false.)
+        call batch_copy(st%group%psib(ib, ik), psi2(ib, ik))
         if(batch_is_packed(st%group%psib(ib, ik))) call batch_pack(psi2(ib, ik), copy = .false.)
         call batch_copy_data(gr%mesh%np, st%group%psib(ib, ik), psi2(ib, ik))
       end do

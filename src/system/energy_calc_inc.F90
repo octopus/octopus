@@ -90,7 +90,7 @@ subroutine X(calculate_expectation_values)(hm, der, st, eigen, time, terms)
       minst = states_block_min(st, ib)
       maxst = states_block_max(st, ib)
 
-      call batch_copy(st%group%psib(ib, ik), hpsib, reference = .false.)
+      call batch_copy(st%group%psib(ib, ik), hpsib)
 
       if(hamiltonian_apply_packed(hm, der%mesh)) then
         call batch_pack(st%group%psib(ib, ik))

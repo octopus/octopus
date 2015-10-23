@@ -932,7 +932,7 @@ R_TYPE function X(pert_states_expectation_value)(this, gr, geo, hm, st, pert_ord
       minst = states_block_min(st, ib)
       maxst = states_block_max(st, ib)
 
-      call batch_copy(st%group%psib(ib, ik), hpsib, reference = .false.)
+      call batch_copy(st%group%psib(ib, ik), hpsib)
 
       call X(pert_apply_batch)(this, gr, geo, hm, ik, st%group%psib(ib, ik), hpsib)
       call X(mesh_batch_dotp_vector)(gr%der%mesh, st%group%psib(ib, ik), hpsib, tt(minst:maxst))

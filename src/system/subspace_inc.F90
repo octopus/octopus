@@ -100,7 +100,7 @@ subroutine X(subspace_diag_standard)(der, st, hm, ik, eigenval, diff)
       minst = states_block_min(st, ib)
       maxst = states_block_max(st, ib)
 
-      call batch_copy(st%group%psib(ib, ik), hpsib, reference = .false.)
+      call batch_copy(st%group%psib(ib, ik), hpsib)
 
       call X(hamiltonian_apply_batch)(hm, der, st%group%psib(ib, ik), hpsib, ik)
       call batch_axpy(der%mesh%np, -eigenval, st%group%psib(ib, ik), hpsib)
@@ -320,7 +320,7 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
   SAFE_ALLOCATE(hpsib(st%group%block_start:st%group%block_end))
   
   do ib = st%group%block_start, st%group%block_end
-    call batch_copy(st%group%psib(ib, ik), hpsib(ib), reference = .false.)
+    call batch_copy(st%group%psib(ib, ik), hpsib(ib))
     call X(hamiltonian_apply_batch)(hm, der, st%group%psib(ib, ik), hpsib(ib), ik)
   end do
   

@@ -1165,7 +1165,7 @@ contains
 !     if(st%have_left_states) then
 !       do ib = 1, st%nblocks
 !         do iqn = st%d%kpt%start, st%d%kpt%end
-!           call batch_copy(st%group%psib(ib,iqn), st%psibL(ib,iqn), reference = .false.)
+!           call batch_copy(st%group%psib(ib,iqn), st%psibL(ib,iqn))
 !         end do
 !       end do
 !     else

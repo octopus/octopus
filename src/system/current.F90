@@ -171,10 +171,10 @@ contains
 
           call batch_pack(st%group%psib(ib, ik), copy = .true.)
 
-          call batch_copy(st%group%psib(ib, ik), hpsib, reference = .false.)
-          call batch_copy(st%group%psib(ib, ik), rhpsib, reference = .false.)
-          call batch_copy(st%group%psib(ib, ik), rpsib, reference = .false.)
-          call batch_copy(st%group%psib(ib, ik), hrpsib, reference = .false.)
+          call batch_copy(st%group%psib(ib, ik), hpsib)
+          call batch_copy(st%group%psib(ib, ik), rhpsib)
+          call batch_copy(st%group%psib(ib, ik), rpsib)
+          call batch_copy(st%group%psib(ib, ik), hrpsib)
 
           call boundaries_set(der%boundaries, st%group%psib(ib, ik))
           call zhamiltonian_apply_batch(hm, der, st%group%psib(ib, ik), hpsib, ik, set_bc = .false.)
@@ -330,7 +330,7 @@ contains
             
             call batch_pack(st%group%psib(ib, ik), copy = .true.)
             
-            call batch_copy(st%group%psib(ib, ik), hpsib, reference = .false.)
+            call batch_copy(st%group%psib(ib, ik), hpsib)
             
             call zhamiltonian_apply_batch(hm, der, st%group%psib(ib, ik), hpsib, ik)
             
@@ -396,11 +396,11 @@ contains
 
           call batch_pack(st%group%psib(ib, ik), copy = .true.)
 
-          call batch_copy(st%group%psib(ib, ik), hpsib, reference = .false.)
-          call batch_copy(st%group%psib(ib, ik), rhpsib, reference = .false.)
-          call batch_copy(st%group%psib(ib, ik), rpsib, reference = .false.)
-          call batch_copy(st%group%psib(ib, ik), hrpsib, reference = .false.)
-          call batch_copy(st%group%psib(ib, ik), vpsib, reference = .false.)
+          call batch_copy(st%group%psib(ib, ik), hpsib)
+          call batch_copy(st%group%psib(ib, ik), rhpsib)
+          call batch_copy(st%group%psib(ib, ik), rpsib)
+          call batch_copy(st%group%psib(ib, ik), hrpsib)
+          call batch_copy(st%group%psib(ib, ik), vpsib)
 
           call boundaries_set(der%boundaries, st%group%psib(ib, ik))
 
