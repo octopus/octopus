@@ -716,7 +716,7 @@ contains
       if (extra_write) then
         call messages_obsolete_variable('LDOutputHow', 'LDOutputFormat')
         call parse_variable('LDOutputFormat', 0, how)
-        if(.not.varinfo_valid_option('LDOutputFormat', how, is_flag=.true.)) then
+        if(.not.varinfo_valid_option('OutputFormat', how, is_flag=.true.)) then
           call messages_input_error('LDOutputFormat')
         end if
         filename = 'basinsmap'
