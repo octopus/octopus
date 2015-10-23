@@ -51,9 +51,6 @@ module geo_build_m
   public ::      &
     geo_build_t
 
-  public ::               &
-    geo_build_iterator_t
-
   public ::           &
     geo_build_len,    &
     geo_build_init,   &
@@ -104,10 +101,8 @@ module geo_build_m
   end interface geo_build__extend__
 
   interface geo_build_init
-    module procedure geo_build_init_geo
+    module procedure geo_build_init_type
     module procedure geo_build_init_copy
-    module procedure geo_build_iterator_init_geo
-    module procedure geo_build_iterator_init_iterator
   end interface geo_build_init
 
   interface geo_build_extend
@@ -116,24 +111,19 @@ module geo_build_m
     module procedure geo_build_extend_config
   end interface geo_build_extend
 
-  interface geo_build_next
-    module procedure geo_build_iterator_next_atom
-    module procedure geo_build_iterator_next_species
-  end interface geo_build_next
-
   interface geo_build_get
     module procedure geo_build_get_space
   end interface geo_build_get
 
-  interface geo_build_copy
-    module procedure geo_build_copy_geo
-    module procedure geo_build_iterator_copy
-  end interface geo_build_copy
+  interface geo_build_iterator_init
+    module procedure geo_build_iterator_init_type
+    module procedure geo_build_iterator_init_copy
+  end interface geo_build_iterator_init
 
-  interface geo_build_end
-    module procedure geo_build_end_geo
-    module procedure geo_build_iterator_end
-  end interface geo_build_end
+  interface geo_build_iterator_next
+    module procedure geo_build_iterator_next_atom
+    module procedure geo_build_iterator_next_species
+  end interface geo_build_iterator_next
 
 contains
 
@@ -354,10 +344,10 @@ contains
     PUSH_SUB(geo_build__extend__geo)
 
     ASSERT(this%space==that%space)
-    call geo_build_init(iter, that)
+    call geo_build_iterator_init(iter, that)
     do
       nullify(spec)
-      call geo_build_next(iter, spec, ierr)
+      call geo_build_iterator_next(iter, spec, ierr)
       if(ierr/=GEO_BUILD_OK)exit
       ASSERT(associated(spec))
       call geo_build_iadd_species_from_species(this, spec)
@@ -365,13 +355,13 @@ contains
     nullify(spec)
     do
       nullify(atom)
-      call geo_build_next(iter, atom, ierr)
+      call geo_build_iterator_next(iter, atom, ierr)
       if(ierr/=GEO_BUILD_OK)exit
       ASSERT(associated(atom))
       call geo_build_iadd_atom_from_atom(this, atom, basis)
     end do
     nullify(atom)
-    call geo_build_end(iter)
+    call geo_build_iterator_end(iter)
 
     POP_SUB(geo_build__extend__geo)
   end subroutine geo_build__extend__geo
@@ -454,18 +444,18 @@ contains
   end function geo_build_len
 
   ! ---------------------------------------------------------
-  subroutine geo_build_init_geo(this, space)
+  subroutine geo_build_init_type(this, space)
     type(geo_build_t),     intent(out) :: this
     type(space_t), target, intent(in)  :: space
 
-    PUSH_SUB(geo_build_init_geo)
+    PUSH_SUB(geo_build_init_type)
 
     this%space => space
     call atom_list_init(this%list)
     call species_dict_init(this%dict)
 
-    POP_SUB(geo_build_init_geo)
-  end subroutine geo_build_init_geo
+    POP_SUB(geo_build_init_type)
+  end subroutine geo_build_init_type
 
   ! ---------------------------------------------------------
   subroutine geo_build_init_copy(this, that)
@@ -555,30 +545,37 @@ contains
 
     PUSH_SUB(geo_build_export)
 
-#if 0
-
     call geometry_nullify(that)
     that%space => this%space
     that%nspecies = species_dict_len(this%dict)
     ASSERT(that%nspecies>0)
     SAFE_ALLOCATE(that%species(that%nspecies))
-    call geo_build_init(iter, this)
+
+#if 0
+
+    call geo_build_iterator_init(iter, this)
     do indx = 1, that%nspecies
       nullify(spec)
-      call geo_build_next(iter, spec, ierr)
+      call geo_build_iterator_next(iter, spec, ierr)
       ASSERT(ierr==SPECIES_DICT_OK)
       ASSERT(associated(spec))
       call species_init(that%species(indx), "", 0)
       call species_copy(that%species(indx), spec, indx)
     end do
-    call geo_build_end(iter)
+    call geo_build_iterator_end(iter)
+
+#endif
+
     that%natoms = atom_list_len(this%list)
     ASSERT(that%natoms>0)
     SAFE_ALLOCATE(that%atom(that%natoms))
-    call geo_build_init(iter, this)
+
+#if 0
+
+    call geo_build_iterator_init(iter, this)
     do indx = 1, that%natoms
       nullify(atom, spec)
-      call geo_build_next(iter, atom, ierr)
+      call geo_build_iterator_next(iter, atom, ierr)
       ASSERT(ierr==ATOM_LIST_OK)
       ASSERT(associated(atom))
       do jndx = 1, that%nspecies
@@ -589,10 +586,11 @@ contains
       ASSERT(associated(spec))
       call atom_init(that%atom(indx), atom_get_label(atom), atom%x, species=spec)
     end do
-    call geo_build_end(iter)
-    nullify(atom, spec)
+    call geo_build_iterator_end(iter)
 
 #endif
+
+    nullify(atom, spec)
 
     POP_SUB(geo_build_export)
   end subroutine geo_build_export
@@ -611,11 +609,11 @@ contains
   end subroutine geo_build_get_space
 
   ! ---------------------------------------------------------
-  subroutine geo_build_copy_geo(this, that)
+  subroutine geo_build_copy(this, that)
     type(geo_build_t), intent(inout) :: this
     type(geo_build_t), intent(in)    :: that
 
-    PUSH_SUB(geo_build_copy_geo)
+    PUSH_SUB(geo_build_copy)
 
     call geo_build_end(this)
     if(associated(that%space))then
@@ -623,8 +621,8 @@ contains
       call geo_build_extend(this, that)
     end if
 
-    POP_SUB(geo_build_copy_geo)
-  end subroutine geo_build_copy_geo
+    POP_SUB(geo_build_copy)
+  end subroutine geo_build_copy
 
   ! ---------------------------------------------------------
   subroutine geo_build__end__list(this)
@@ -667,43 +665,43 @@ contains
   end subroutine geo_build__end__dict
 
   ! ---------------------------------------------------------
-  subroutine geo_build_end_geo(this)
+  subroutine geo_build_end(this)
     type(geo_build_t), target, intent(inout) :: this
 
-    PUSH_SUB(geo_build_end_geo)
+    PUSH_SUB(geo_build_end)
 
     nullify(this%space)
     call geo_build__end__list(this%list)
     call geo_build__end__dict(this%dict)
 
-    POP_SUB(geo_build_end_geo)
-  end subroutine geo_build_end_geo
+    POP_SUB(geo_build_end)
+  end subroutine geo_build_end
 
   ! ---------------------------------------------------------
-  subroutine geo_build_iterator_init_geo(this, that)
+  subroutine geo_build_iterator_init_type(this, that)
     type(geo_build_iterator_t), intent(out) :: this
     type(geo_build_t),  target, intent(in)  :: that
 
-    PUSH_SUB(geo_build_iterator_init_geo)
+    PUSH_SUB(geo_build_iterator_init_type)
 
     this%self => that
     call atom_list_init(this%aitr, that%list)
     call species_dict_init(this%sitr, that%dict)
 
-    POP_SUB(geo_build_iterator_init_geo)
-  end subroutine geo_build_iterator_init_geo
+    POP_SUB(geo_build_iterator_init_type)
+  end subroutine geo_build_iterator_init_type
 
   ! ---------------------------------------------------------
-  subroutine geo_build_iterator_init_iterator(this, that)
+  subroutine geo_build_iterator_init_copy(this, that)
     type(geo_build_iterator_t), intent(out) :: this
     type(geo_build_iterator_t), intent(in)  :: that
 
-    PUSH_SUB(geo_build_iterator_init_iterator)
+    PUSH_SUB(geo_build_iterator_init_copy)
 
     call geo_build_iterator_copy(this, that)
 
-    POP_SUB(geo_build_iterator_init_iterator)
-  end subroutine geo_build_iterator_init_iterator
+    POP_SUB(geo_build_iterator_init_copy)
+  end subroutine geo_build_iterator_init_copy
 
   ! ---------------------------------------------------------
   subroutine geo_build_iterator_next_atom(this, atom, ierr)

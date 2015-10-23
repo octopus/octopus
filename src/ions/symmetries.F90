@@ -38,6 +38,7 @@ module symmetries_m
   
   public ::                        &
     symmetries_t,                  &
+    symmetries_nullify,            &
     symmetries_init,               &
     symmetries_copy,               &
     symmetries_end,                &
@@ -82,6 +83,16 @@ module symmetries_m
 
 contains
   
+  elemental subroutine symmetries_nullify(this)
+    type(symmetries_t), intent(out) :: this
+
+    nullify(this%ops)
+    this%nops = 0
+    this%breakdir = M_ZERO
+    this%space_group = 0
+
+  end subroutine symmetries_nullify
+
   subroutine symmetries_init(this, geo, dim, periodic_dim, rlattice)
     type(symmetries_t),  intent(out) :: this
     type(geometry_t),    intent(in)  :: geo
