@@ -567,6 +567,9 @@ contains
     !call geo_build_iterator_init(iter, this)
     do indx = 1, that%natoms
       nullify(atom, spec)
+
+#if 0
+
       !call geo_build_iterator_next(iter, atom, ierr)
       ASSERT(ierr==ATOM_LIST_OK)
       ASSERT(associated(atom))
@@ -577,6 +580,9 @@ contains
       end do
       ASSERT(associated(spec))
       call atom_init(that%atom(indx), atom_get_label(atom), atom%x, species=spec)
+
+#endif
+
     end do
     !call geo_build_iterator_end(iter)
     nullify(atom, spec)

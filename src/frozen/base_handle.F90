@@ -24,7 +24,11 @@
 
 module base_handle_m
 
+  use base_model_m
+  use config_dict_m
   use global_m
+  use grid_m
+  use json_m
   use messages_m
   use profiling_m
 
@@ -38,11 +42,6 @@ module base_handle_m
 #include "thash_inc.F90"
 #undef HASH_INCLUDE_PREFIX
 
-  use grid_m
-  use json_m
-  use config_dict_m
-  use base_model_m
-
 #define TEMPLATE_PREFIX base_handle
 #define INCLUDE_PREFIX
 #include "iterator_inc.F90"
@@ -52,6 +51,18 @@ module base_handle_m
   implicit none
 
   private
+
+  public ::         &
+    HNDL_TYPE_NONE
+
+  public ::                  &
+    BASE_HANDLE_OK,          &
+    BASE_HANDLE_KEY_ERROR,   &
+    BASE_HANDLE_EMPTY_ERROR
+
+  public ::        &
+    base_handle_t
+
   public ::                &
     base_handle__init__,   &
     base_handle__start__,  &
@@ -83,9 +94,13 @@ module base_handle_m
 #include "thash_inc.F90"
 #undef HASH_INCLUDE_HEADER
 
-  integer, public, parameter :: HNDL_TYPE_NONE = 0
+  integer, parameter :: HNDL_TYPE_NONE = 0
 
-  type, public :: base_handle_t
+  integer, parameter :: BASE_HANDLE_OK          = BASE_HANDLE_HASH_OK
+  integer, parameter :: BASE_HANDLE_KEY_ERROR   = BASE_HANDLE_HASH_KEY_ERROR
+  integer, parameter :: BASE_HANDLE_EMPTY_ERROR = BASE_HANDLE_HASH_EMPTY_ERROR
+
+  type :: base_handle_t
     private
     type(json_object_t), pointer :: config =>null()
     type(base_handle_t), pointer :: prnt   =>null()
@@ -108,7 +123,7 @@ module base_handle_m
   end interface base_handle__copy__
 
   interface base_handle_init
-    module procedure base_handle_init_handle
+    module procedure base_handle_init_type
     module procedure base_handle_init_pass
     module procedure base_handle_init_copy
   end interface base_handle_init
@@ -122,16 +137,12 @@ module base_handle_m
   end interface base_handle_get
 
   interface base_handle_copy
-    module procedure base_handle_copy_handle
+    module procedure base_handle_copy_type
   end interface base_handle_copy
 
   interface base_handle_end
-    module procedure base_handle_end_handle
+    module procedure base_handle_end_type
   end interface base_handle_end
-
-  integer, public, parameter :: BASE_HANDLE_OK          = BASE_HANDLE_HASH_OK
-  integer, public, parameter :: BASE_HANDLE_KEY_ERROR   = BASE_HANDLE_HASH_KEY_ERROR
-  integer, public, parameter :: BASE_HANDLE_EMPTY_ERROR = BASE_HANDLE_HASH_EMPTY_ERROR
 
 #define TEMPLATE_PREFIX base_handle
 #define INCLUDE_HEADER
@@ -154,32 +165,35 @@ contains
   subroutine base_handle_new(this, that)
     type(base_handle_t),  intent(inout) :: this
     type(base_handle_t), pointer        :: that
-    !
+
     PUSH_SUB(base_handle_new)
+
     nullify(that)
     SAFE_ALLOCATE(that)
     call base_handle__set__(that, this)
     call base_handle_list_push(this%list, that)
+
     POP_SUB(base_handle_new)
-    return
   end subroutine base_handle_new
 
   ! ---------------------------------------------------------
   subroutine base_handle__idel__(this)
     type(base_handle_t), pointer :: this
-    !
+
     PUSH_SUB(base_handle__idel__)
+
     SAFE_DEALLOCATE_P(this)
     nullify(this)
+
     POP_SUB(base_handle__idel__)
-    return
   end subroutine base_handle__idel__
 
   ! ---------------------------------------------------------
   subroutine base_handle_del(this)
     type(base_handle_t), pointer :: this
-    !
+
     PUSH_SUB(base_handle_del)
+
     if(associated(this))then
       if(associated(this%prnt))then
         call base_handle_list_del(this%prnt%list, this)
@@ -187,97 +201,104 @@ contains
         call base_handle__idel__(this)
       end if
     end if
+
     POP_SUB(base_handle_del)
-    return
   end subroutine base_handle_del
 
   ! ---------------------------------------------------------
   subroutine base_handle__inull__(this)
     type(base_handle_t), intent(inout) :: this
-    !
+
     PUSH_SUB(base_handle__inull__)
+
     nullify(this%config, this%prnt)
-    this%type=HNDL_TYPE_NONE
+    this%type = HNDL_TYPE_NONE
+
     POP_SUB(base_handle__inull__)
-    return
   end subroutine base_handle__inull__
 
   ! ---------------------------------------------------------
   subroutine base_handle__iinit__(this, config)
     type(base_handle_t),         intent(out) :: this
     type(json_object_t), target, intent(in)  :: config
-    !
+
     integer :: ierr
-    !
+
     PUSH_SUB(base_handle__iinit__)
+
     call base_handle__inull__(this)
-    this%config=>config
+    this%config => config
     call json_get(this%config, "type", this%type, ierr)
-    if(ierr/=JSON_OK)this%type=HNDL_TYPE_NONE
+    if(ierr/=JSON_OK) this%type = HNDL_TYPE_NONE
     call config_dict_init(this%dict)
     call base_handle_hash_init(this%hash)
     call base_handle_list_init(this%list)
+
     POP_SUB(base_handle__iinit__)
-    return
   end subroutine base_handle__iinit__
 
   ! ---------------------------------------------------------
   subroutine base_handle__init__begin(this, config)
     type(base_handle_t), intent(out) :: this
     type(json_object_t), intent(in)  :: config
-    !
+
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
-    !
+
     PUSH_SUB(base_handle__init__begin)
+
     nullify(cnfg)
     call base_handle__iinit__(this, config)
     call json_get(this%config, "model", cnfg, ierr)
-    if(ierr==JSON_OK)call base_model__init__(this%model, cnfg)
+    ASSERT(ierr==JSON_OK)
+    call base_model__init__(this%model, cnfg)
     nullify(cnfg)
+    
     POP_SUB(base_handle__init__begin)
-    return
   end subroutine base_handle__init__begin
 
   ! ---------------------------------------------------------
   subroutine base_handle__init__finish(this)
     type(base_handle_t), intent(inout) :: this
-    !
+
     PUSH_SUB(base_handle__init__finish)
+
     call base_model__init__(this%model)
+
     POP_SUB(base_handle__init__finish)
-    return
   end subroutine base_handle__init__finish
 
   ! ---------------------------------------------------------
   subroutine base_handle__init__copy(this, that)
     type(base_handle_t), intent(out) :: this
     type(base_handle_t), intent(in)  :: that
-    !
+
     PUSH_SUB(base_handle__init__copy)
-    if(associated(that%config))then
-      call base_handle__iinit__(this, that%config)
-      call base_model__init__(this%model, that%model)
-    end if
+
+    ASSERT(associated(that%config))
+    call base_handle__iinit__(this, that%config)
+    call base_model__init__(this%model, that%model)
+
     POP_SUB(base_handle__init__copy)
-    return
   end subroutine base_handle__init__copy
 
   ! ---------------------------------------------------------
-  recursive subroutine base_handle_init_handle(this, config)
+  recursive subroutine base_handle_init_type(this, config)
     type(base_handle_t), intent(out) :: this
     type(json_object_t), intent(in)  :: config
-    !
-    PUSH_SUB(base_handle_init_handle)
-    call base_handle_init_pass(this, config, base_handle_init_handle)
-    POP_SUB(base_handle_init_handle)
-    return
-  end subroutine base_handle_init_handle
+
+    PUSH_SUB(base_handle_init_type)
+
+    call base_handle_init_pass(this, config, base_handle_init_type)
+
+    POP_SUB(base_handle_init_type)
+  end subroutine base_handle_init_type
 
   ! ---------------------------------------------------------
   recursive subroutine base_handle_init_pass(this, config, handle_init)
     type(base_handle_t), intent(out) :: this
     type(json_object_t), intent(in)  :: config
+
     interface
       subroutine handle_init(this, config)
         use json_m, only: json_object_t
@@ -286,14 +307,15 @@ contains
         type(json_object_t), intent(in)  :: config
       end subroutine handle_init
     end interface
-    !
+
     type(json_array_iterator_t)   :: iter
     type(json_object_t),  pointer :: cnfg
     type(json_array_t),   pointer :: list
     type(base_handle_t),  pointer :: hndl
     integer                       :: ierr
-    !
+
     PUSH_SUB(base_handle_init_pass)
+
     nullify(cnfg, list, hndl)
     call base_handle__init__(this, config)
     call json_get(config, "systems", list, ierr)
@@ -309,24 +331,27 @@ contains
         call base_handle__add__(this, hndl, cnfg)
       end do
       call json_end(iter)
+      nullify(cnfg, hndl)
     end if
     call base_handle__init__(this)
-    nullify(cnfg, list, hndl)
+    call base_handle_build(this)
+    nullify(list)
+
     POP_SUB(base_handle_init_pass)
-    return
   end subroutine base_handle_init_pass
 
   ! ---------------------------------------------------------
   recursive subroutine base_handle_init_copy(this, that)
     type(base_handle_t), intent(out) :: this
     type(base_handle_t), intent(in)  :: that
-    !
+
     type(base_handle_iterator_t) :: iter
     type(base_handle_t), pointer :: osub, isub
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
-    !
+
     PUSH_SUB(base_handle_init_copy)
+
     nullify(cnfg, osub, isub)
     call base_handle__init__(this, that)
     call base_handle_init(iter, that)
@@ -340,43 +365,58 @@ contains
     end do
     call base_handle_end(iter)
     call base_handle__init__(this)
+    call base_handle_build(this)
     nullify(cnfg, osub, isub)
+
     POP_SUB(base_handle_init_copy)
-    return
   end subroutine base_handle_init_copy
+
+  ! ---------------------------------------------------------
+  subroutine base_handle_build(this)
+    type(base_handle_t), intent(inout) :: this
+
+    PUSH_SUB(base_handle_build)
+
+    call base_model_build(this%model)
+
+    POP_SUB(base_handle_build)
+  end subroutine base_handle_build
 
   ! ---------------------------------------------------------
   subroutine base_handle__istart__(this)
     type(base_handle_t), intent(inout) :: this
-    !
+
     PUSH_SUB(base_handle__istart__)
+
     ASSERT(associated(this%config))
+
     POP_SUB(base_handle__istart__)
-    return
   end subroutine base_handle__istart__
 
   ! ---------------------------------------------------------
   subroutine base_handle__start__(this, grid)
-    type(base_handle_t), intent(inout) :: this
-    type(grid_t),        intent(in)    :: grid
-    !
+    type(base_handle_t),    intent(inout) :: this
+    type(grid_t), optional, intent(in)    :: grid
+
     PUSH_SUB(base_handle__start__)
+
     call base_handle__istart__(this)
     call base_model__start__(this%model, grid)
+
     POP_SUB(base_handle__start__)
-    return
   end subroutine base_handle__start__
 
   ! ---------------------------------------------------------
   recursive subroutine base_handle_start(this, grid)
     type(base_handle_t), intent(inout) :: this
     type(grid_t),        intent(in)    :: grid
-    !
+
     type(base_handle_iterator_t) :: iter
     type(base_handle_t), pointer :: subs
     integer                      :: ierr
-    !
+
     PUSH_SUB(base_handle_start)
+
     nullify(subs)
     call base_handle_init(iter, this)
     do
@@ -388,30 +428,32 @@ contains
     call base_handle_end(iter)
     nullify(subs)
     call base_handle__start__(this, grid)
+
     POP_SUB(base_handle_start)
-    return
   end subroutine base_handle_start
 
   ! ---------------------------------------------------------
   subroutine base_handle__update__(this)
     type(base_handle_t), intent(inout) :: this
-    !
+
     PUSH_SUB(base_handle__update__)
+
     ASSERT(associated(this%config))
     call base_model__update__(this%model)
+
     POP_SUB(base_handle__update__)
-    return
   end subroutine base_handle__update__
 
   ! ---------------------------------------------------------
   recursive subroutine base_handle_update(this)
     type(base_handle_t), intent(inout) :: this
-    !
+
     type(base_handle_iterator_t) :: iter
     type(base_handle_t), pointer :: subs
     integer                      :: ierr
-    !
+
     PUSH_SUB(base_handle_update)
+
     nullify(subs)
     call base_handle_init(iter, this)
     do
@@ -423,29 +465,31 @@ contains
     call base_handle_end(iter)
     nullify(subs)
     call base_handle__update__(this)
+
     POP_SUB(base_handle_update)
-    return
   end subroutine base_handle_update
 
   ! ---------------------------------------------------------
   subroutine base_handle__stop__(this)
     type(base_handle_t), intent(inout) :: this
-    !
+
     PUSH_SUB(base_handle__stop__)
+
     call base_model__stop__(this%model)
+
     POP_SUB(base_handle__stop__)
-    return
   end subroutine base_handle__stop__
 
   ! ---------------------------------------------------------
   recursive subroutine base_handle_stop(this)
     type(base_handle_t), intent(inout) :: this
-    !
+
     type(base_handle_iterator_t) :: iter
     type(base_handle_t), pointer :: subs
     integer                      :: ierr
-    !
+
     PUSH_SUB(base_handle_stop)
+
     nullify(subs)
     call base_handle_init(iter, this)
     do
@@ -457,18 +501,19 @@ contains
     call base_handle_end(iter)
     nullify(subs)
     call base_handle__stop__(this)
+
     POP_SUB(base_handle_stop)
-    return
   end subroutine base_handle_stop
 
   ! ---------------------------------------------------------
   subroutine base_handle__reset__(this)
     type(base_handle_t), intent(inout) :: this
-    !
+
     PUSH_SUB(base_handle__reset__)
+
     call base_model__reset__(this%model)
+
     POP_SUB(base_handle__reset__)
-    return
   end subroutine base_handle__reset__
 
   ! ---------------------------------------------------------
@@ -476,30 +521,32 @@ contains
     type(base_handle_t), intent(inout) :: this
     type(base_handle_t), intent(in)    :: that
     type(json_object_t), intent(in)    :: config
-    !
+
     character(len=BASE_HANDLE_NAME_LEN) :: name
     integer                             :: ierr
-    !
+
     PUSH_SUB(base_handle__add__)
+
     ASSERT(associated(this%config))
     call json_get(config, "name", name, ierr)
     ASSERT(ierr==JSON_OK)
     call config_dict_set(this%dict, trim(adjustl(name)), config)
     call base_handle_hash_set(this%hash, config, that)
     call base_model__add__(this%model, that%model, config)
+
     POP_SUB(base_handle__add__)
-    return
   end subroutine base_handle__add__
 
   ! ---------------------------------------------------------
   subroutine base_handle__set__(this, that)
     type(base_handle_t),         intent(inout) :: this
     type(base_handle_t), target, intent(in)    :: that
-    !
+
     PUSH_SUB(base_handle__set__)
-    this%prnt=>that
+
+    this%prnt => that
+
     POP_SUB(base_handle__set__)
-    return
   end subroutine base_handle__set__
 
   ! ---------------------------------------------------------
@@ -507,16 +554,17 @@ contains
     type(base_handle_t),  intent(in) :: this
     type(json_object_t),  intent(in) :: config
     type(base_handle_t), pointer     :: that
-    !
+
     integer :: ierr
-    !
+
     PUSH_SUB(base_handle_get_handle_by_config)
+
     nullify(that)
     ASSERT(associated(this%config))
     call base_handle_hash_get(this%hash, config, that, ierr)
     if(ierr/=BASE_HANDLE_OK)nullify(that)
+
     POP_SUB(base_handle_get_handle_by_config)
-    return
   end subroutine base_handle_get_handle_by_config
 
   ! ---------------------------------------------------------
@@ -524,103 +572,109 @@ contains
     type(base_handle_t),  intent(in) :: this
     character(len=*),     intent(in) :: name
     type(base_handle_t), pointer     :: that
-    !
+
     type(json_object_t), pointer :: config
     integer                      :: ierr
-    !
+
     PUSH_SUB(base_handle_get_handle_by_name)
+
     nullify(that)
     ASSERT(associated(this%config))
     call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
-    if(ierr==CONFIG_DICT_OK)&
-      call base_handle_get(this, config, that)
+    if(ierr==CONFIG_DICT_OK) call base_handle_get(this, config, that)
+
     POP_SUB(base_handle_get_handle_by_name)
-    return
   end subroutine base_handle_get_handle_by_name
 
   ! ---------------------------------------------------------
   subroutine base_handle_get_type(this, that)
     type(base_handle_t), intent(in)  :: this
     integer,             intent(out) :: that
-    !
+
     PUSH_SUB(base_handle_get_type)
-    that=this%type
+
+    that = this%type
+
     POP_SUB(base_handle_get_type)
-    return
   end subroutine base_handle_get_type
 
   ! ---------------------------------------------------------
   subroutine base_handle_get_config(this, that)
     type(base_handle_t),  target, intent(in) :: this
     type(json_object_t), pointer             :: that
-    !
+
     PUSH_SUB(base_handle_get_config)
+
     nullify(that)
-    if(associated(this%config))&
-      that=>this%config
+    if(associated(this%config)) that => this%config
+
     POP_SUB(base_handle_get_config)
-    return
   end subroutine base_handle_get_config
 
   ! ---------------------------------------------------------
   subroutine base_handle_get_model(this, that)
     type(base_handle_t), target, intent(in) :: this
     type(base_model_t), pointer             :: that
-    !
+
     PUSH_SUB(base_handle_get_model)
-    that=>this%model
+
+    that => this%model
+
     POP_SUB(base_handle_get_model)
-    return
   end subroutine base_handle_get_model
 
   ! ---------------------------------------------------------
   subroutine base_handle__icopy__(this, that)
     type(base_handle_t), intent(inout) :: this
     type(base_handle_t), intent(in)    :: that
-    !
+
     PUSH_SUB(base_handle__icopy__)
+
     call base_handle__iend__(this)
     if(associated(that%config))then
       call base_handle__iinit__(this, that%config)
       call base_handle__istart__(this)
     end if
+
     POP_SUB(base_handle__icopy__)
-    return
   end subroutine base_handle__icopy__
 
   ! ---------------------------------------------------------
   subroutine base_handle__copy__begin(this, that)
     type(base_handle_t), intent(inout) :: this
     type(base_handle_t), intent(in)    :: that
-    !
+
     PUSH_SUB(base_handle__copy__begin)
+
     call base_handle__icopy__(this, that)
     call base_model__copy__(this%model, that%model)
+
     POP_SUB(base_handle__copy__begin)
-    return
   end subroutine base_handle__copy__begin
 
   ! ---------------------------------------------------------
   subroutine base_handle__copy__finish(this)
     type(base_handle_t), intent(inout) :: this
-    !
+
     PUSH_SUB(base_handle__copy__finish)
+
     call base_model__copy__(this%model)
+
     POP_SUB(base_handle__copy__finish)
-    return
   end subroutine base_handle__copy__finish
 
   ! ---------------------------------------------------------
-  recursive subroutine base_handle_copy_handle(this, that)
+  recursive subroutine base_handle_copy_type(this, that)
     type(base_handle_t), intent(inout) :: this
     type(base_handle_t), intent(in)    :: that
-    !
+
     type(base_handle_iterator_t) :: iter
     type(base_handle_t), pointer :: osub, isub
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
-    !
-    PUSH_SUB(base_handle_copy_handle)
+
+    PUSH_SUB(base_handle_copy_type)
+
     nullify(cnfg, osub, isub)
     call base_handle_end(this)
     call base_handle__copy__(this, that)
@@ -636,41 +690,44 @@ contains
     call base_handle_end(iter)
     call base_handle__copy__(this)
     nullify(cnfg, osub, isub)
-    POP_SUB(base_handle_copy_handle)
-    return
-  end subroutine base_handle_copy_handle
+
+    POP_SUB(base_handle_copy_type)
+  end subroutine base_handle_copy_type
 
   ! ---------------------------------------------------------
   subroutine base_handle__iend__(this)
     type(base_handle_t), intent(inout) :: this
-    !
+
     PUSH_SUB(base_handle__iend__)
+
     call base_handle__inull__(this)
     call config_dict_end(this%dict)
     call base_handle_hash_end(this%hash)
     call base_handle_list_end(this%list)
+
     POP_SUB(base_handle__iend__)
-    return
   end subroutine base_handle__iend__
 
   ! ---------------------------------------------------------
   subroutine base_handle__end__(this)
     type(base_handle_t), intent(inout) :: this
-    !
+
     PUSH_SUB(base_handle__end__)
+
     call base_handle__iend__(this)
     call base_model__end__(this%model)
+
     POP_SUB(base_handle__end__)
-    return
   end subroutine base_handle__end__
 
   ! ---------------------------------------------------------
-  recursive subroutine base_handle_end_handle(this)
+  recursive subroutine base_handle_end_type(this)
     type(base_handle_t), intent(inout) :: this
-    !
+
     type(base_handle_t), pointer :: subs
-    !
-    PUSH_SUB(base_handle_end_handle)
+
+    PUSH_SUB(base_handle_end_type)
+
     do
       nullify(subs)
       call base_handle_list_pop(this%list, subs)
@@ -680,9 +737,9 @@ contains
     end do
     nullify(subs)
     call base_handle__end__(this)
-    POP_SUB(base_handle_end_handle)
-    return
-  end subroutine base_handle_end_handle
+
+    POP_SUB(base_handle_end_type)
+  end subroutine base_handle_end_type
 
 #define TEMPLATE_PREFIX base_handle
 #define INCLUDE_BODY

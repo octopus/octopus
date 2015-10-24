@@ -24,9 +24,18 @@
 
 module base_functional_m
 
+  use base_density_m
+  use base_states_m
+  use base_system_m
+  use config_dict_m
+  use functional_m
   use global_m
+  use json_m
+  use kinds_m
   use messages_m
   use profiling_m
+  use simulation_m
+  use storage_m
 
 #define LIST_TEMPLATE_NAME base_functional
 #define LIST_INCLUDE_PREFIX
@@ -38,16 +47,6 @@ module base_functional_m
 #include "thash_inc.F90"
 #undef HASH_INCLUDE_PREFIX
 
-  use json_m
-  use kinds_m
-  use config_dict_m
-  use functional_m
-  use storage_m
-  use simulation_m
-  use base_density_m
-  use base_states_m
-  use base_system_m
-
 #define TEMPLATE_PREFIX base_functional
 #define INCLUDE_PREFIX
 #include "iterator_inc.F90"
@@ -57,6 +56,15 @@ module base_functional_m
   implicit none
 
   private
+
+  public ::                      &
+    BASE_FUNCTIONAL_OK,          &
+    BASE_FUNCTIONAL_KEY_ERROR,   &
+    BASE_FUNCTIONAL_EMPTY_ERROR
+
+  public ::            &
+    base_functional_t
+
   public ::                    &
     base_functional__init__,   &
     base_functional__start__,  &
@@ -93,13 +101,17 @@ module base_functional_m
 #include "thash_inc.F90"
 #undef HASH_INCLUDE_HEADER
 
-  type, public :: base_functional_raii_t
+  integer, parameter :: BASE_FUNCTIONAL_OK          = BASE_FUNCTIONAL_HASH_OK
+  integer, parameter :: BASE_FUNCTIONAL_KEY_ERROR   = BASE_FUNCTIONAL_HASH_KEY_ERROR
+  integer, parameter :: BASE_FUNCTIONAL_EMPTY_ERROR = BASE_FUNCTIONAL_HASH_EMPTY_ERROR
+
+  type :: base_functional_raii_t
     private
     type(base_functional_t), pointer :: prnt =>null()
     type(base_functional_list_t)     :: list
   end type base_functional_raii_t
 
-  type, public :: base_functional_t
+  type :: base_functional_t
     private
     type(json_object_t),  pointer :: config  =>null()
     type(base_system_t),  pointer :: sys     =>null()
@@ -156,10 +168,6 @@ module base_functional_m
     module procedure base_functional_end_functional
   end interface base_functional_end
 
-  integer, public, parameter :: BASE_FUNCTIONAL_OK          = BASE_FUNCTIONAL_HASH_OK
-  integer, public, parameter :: BASE_FUNCTIONAL_KEY_ERROR   = BASE_FUNCTIONAL_HASH_KEY_ERROR
-  integer, public, parameter :: BASE_FUNCTIONAL_EMPTY_ERROR = BASE_FUNCTIONAL_HASH_EMPTY_ERROR
-
 #define TEMPLATE_PREFIX base_functional
 #define INCLUDE_HEADER
 #include "iterator_inc.F90"
@@ -182,32 +190,35 @@ contains
   subroutine base_functional_new(this, that)
     type(base_functional_t),  target, intent(inout) :: this
     type(base_functional_t), pointer                :: that
-    !
+
     PUSH_SUB(base_functional_new)
+
     nullify(that)
     SAFE_ALLOCATE(that)
-    that%raii%prnt=>this
+    that%raii%prnt => this
     call base_functional_list_push(this%raii%list, that)
+
     POP_SUB(base_functional_new)
-    return
   end subroutine base_functional_new
 
   ! ---------------------------------------------------------
   subroutine base_functional__idel__(this)
     type(base_functional_t), pointer :: this
-    !
+
     PUSH_SUB(base_functional__idel__)
+
     SAFE_DEALLOCATE_P(this)
     nullify(this)
+
     POP_SUB(base_functional__idel__)
-    return
   end subroutine base_functional__idel__
 
   ! ---------------------------------------------------------
   subroutine base_functional_del(this)
     type(base_functional_t), pointer :: this
-    !
+
     PUSH_SUB(base_functional_del)
+
     if(associated(this))then
       if(associated(this%raii%prnt))then
         call base_functional_list_del(this%raii%prnt%raii%list, this)
@@ -215,20 +226,21 @@ contains
         call base_functional__idel__(this)
       end if
     end if
+
     POP_SUB(base_functional_del)
-    return
   end subroutine base_functional_del
 
   ! ---------------------------------------------------------
   subroutine base_functional__inull__(this)
     type(base_functional_t), intent(inout) :: this
-    !
+
     PUSH_SUB(base_functional__inull__)
+
     nullify(this%config, this%sys, this%sim, this%raii%prnt)
-    this%factor=1.0_wp
-    this%energy=0.0_wp
+    this%factor = 1.0_wp
+    this%energy = 0.0_wp
+
     POP_SUB(base_functional__inull__)
-    return
   end subroutine base_functional__inull__
 
   ! ---------------------------------------------------------
@@ -236,38 +248,40 @@ contains
     type(base_functional_t),     intent(out) :: this
     type(base_system_t), target, intent(in)  :: sys
     type(json_object_t), target, intent(in)  :: config
-    !
+
     integer :: id, nspin, ierr
-    !
+
     PUSH_SUB(base_functional__init__functional)
+
     call base_functional__inull__(this)
-    this%config=>config
-    this%sys=>sys
+    this%config => config
+    this%sys => sys
     call json_get(config, "factor", this%factor, ierr)
-    if(ierr/=JSON_OK)this%factor=1.0_wp
+    if(ierr/=JSON_OK) this%factor = 1.0_wp
     call json_get(config, "functional", id, ierr)
-    if(ierr/=JSON_OK)id=FUNCT_XC_NONE
+    if(ierr/=JSON_OK) id = FUNCT_XC_NONE
     call base_system_get(this%sys, nspin=nspin)
     call functional_init(this%funct, id, nspin)
     call storage_init(this%data, nspin, full=.false.)
     call config_dict_init(this%dict)
     call base_functional_hash_init(this%hash)
     call base_functional_list_init(this%raii%list)
+
     POP_SUB(base_functional__init__functional)
-    return
   end subroutine base_functional__init__functional
 
   ! ---------------------------------------------------------
   subroutine base_functional__init__copy(this, that)
     type(base_functional_t), intent(out) :: this
     type(base_functional_t), intent(in)  :: that
-    !
+
     PUSH_SUB(base_functional__init__copy)
+
     ASSERT(associated(that%config))
     ASSERT(associated(that%sys))
     call base_functional__init__(this, that%sys, that%config)
+
     POP_SUB(base_functional__init__copy)
-    return
   end subroutine base_functional__init__copy
 
   ! ---------------------------------------------------------
@@ -275,24 +289,26 @@ contains
     type(base_functional_t), intent(out) :: this
     type(base_system_t),     intent(in)  :: sys
     type(json_object_t),     intent(in)  :: config
-    !
+
     PUSH_SUB(base_functional_init_functional)
+
     call base_functional__init__(this, sys, config)
+
     POP_SUB(base_functional_init_functional)
-    return
   end subroutine base_functional_init_functional
 
   ! ---------------------------------------------------------
   recursive subroutine base_functional_init_copy(this, that)
     type(base_functional_t), intent(out) :: this
     type(base_functional_t), intent(in)  :: that
-    !
+
     type(base_functional_iterator_t) :: iter
     type(base_functional_t), pointer :: osub, isub
     type(json_object_t),     pointer :: cnfg
     integer                          :: ierr
-    !
+
     PUSH_SUB(base_functional_init_copy)
+
     nullify(cnfg, osub, isub)
     call base_functional__init__(this, that)
     call base_functional_init(iter, that)
@@ -306,31 +322,33 @@ contains
     end do
     call base_functional_end(iter)
     nullify(cnfg, osub, isub)
+
     POP_SUB(base_functional_init_copy)
-    return
   end subroutine base_functional_init_copy
 
   ! ---------------------------------------------------------
   subroutine base_functional__istart__(this, sim)
     type(base_functional_t),    intent(inout) :: this
     type(simulation_t), target, intent(in)    :: sim
-    !
+
     PUSH_SUB(base_functional__istart__)
+
     ASSERT(associated(this%config))
     ASSERT(.not.associated(this%sim))
-    this%sim=>sim
+    this%sim => sim
     call functional_start(this%funct, sim, fine=.true.)
     call storage_start(this%data, sim)
+
     POP_SUB(base_functional__istart__)
-    return
   end subroutine base_functional__istart__
 
   ! ---------------------------------------------------------
   subroutine base_functional__start__(this, sim)
     type(base_functional_t),      intent(inout) :: this
     type(simulation_t), optional, intent(in)    :: sim
-    !
+
     PUSH_SUB(base_functional__start__)
+
     if(present(sim))then
       call base_functional__istart__(this, sim)
     else
@@ -340,20 +358,21 @@ contains
         call base_functional__istart__(this, this%raii%prnt%sim)
       end if
     end if
+
     POP_SUB(base_functional__start__)
-    return
   end subroutine base_functional__start__
 
   ! ---------------------------------------------------------
   recursive subroutine base_functional_start(this, sim)
     type(base_functional_t),      intent(inout) :: this
     type(simulation_t), optional, intent(in)    :: sim
-    !
+
     type(base_functional_iterator_t) :: iter
     type(base_functional_t), pointer :: subs
     integer                          :: ierr
-    !
+
     PUSH_SUB(base_functional_start)
+
     nullify(subs)
     call base_functional_init(iter, this)
     do
@@ -365,31 +384,33 @@ contains
     call base_functional_end(iter)
     nullify(subs)
     call base_functional__start__(this, sim)
+
     POP_SUB(base_functional_start)
-    return
   end subroutine base_functional_start
 
   ! ---------------------------------------------------------
   subroutine base_functional__update__(this)
     type(base_functional_t), intent(inout) :: this
-    !
+
     PUSH_SUB(base_functional__update__)
+
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
     call storage_update(this%data)
+
     POP_SUB(base_functional__update__)
-    return
   end subroutine base_functional__update__
 
   ! ---------------------------------------------------------
   recursive subroutine base_functional_update(this)
     type(base_functional_t), intent(inout) :: this
-    !
+
     type(base_functional_iterator_t) :: iter
     type(base_functional_t), pointer :: subs
     integer                          :: ierr
-    !
+
     PUSH_SUB(base_functional_update)
+
     nullify(subs)
     call base_functional_init(iter, this)
     do
@@ -401,32 +422,34 @@ contains
     call base_functional_end(iter)
     nullify(subs)
     call base_functional__update__(this)
+
     POP_SUB(base_functional_update)
-    return
   end subroutine base_functional_update
 
   ! ---------------------------------------------------------
   subroutine base_functional__stop__(this)
     type(base_functional_t), intent(inout) :: this
-    !
+
     PUSH_SUB(base_functional__stop__)
+
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
     nullify(this%sim)
     call storage_stop(this%data)
+
     POP_SUB(base_functional__stop__)
-    return
   end subroutine base_functional__stop__
 
   ! ---------------------------------------------------------
   recursive subroutine base_functional_stop(this)
     type(base_functional_t), intent(inout) :: this
-    !
+
     type(base_functional_iterator_t) :: iter
     type(base_functional_t), pointer :: subs
     integer                         :: ierr
-    !
+
     PUSH_SUB(base_functional_stop)
+
     nullify(subs)
     call base_functional_init(iter, this)
     do
@@ -438,21 +461,22 @@ contains
     call base_functional_end(iter)
     nullify(subs)
     call base_functional__stop__(this)
+
     POP_SUB(base_functional_stop)
-    return
   end subroutine base_functional_stop
 
   ! ---------------------------------------------------------
   subroutine base_functional__calc__(this)
     type(base_functional_t), intent(inout) :: this
-    !
+
     real(kind=wp), dimension(:,:), pointer :: fptn, potn, dnst
     type(base_density_t),          pointer :: density
     type(storage_t)                        :: data
     integer                                :: kind
     logical                                :: fine
-    !
+
     PUSH_SUB(base_functional__calc__)
+
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
     nullify(fptn, potn, dnst, density)
@@ -487,19 +511,20 @@ contains
       end if
       call base_functional__update__(this)
     end if
+
     POP_SUB(base_functional__calc__)
-    return
   end subroutine base_functional__calc__
 
   ! ---------------------------------------------------------
   recursive subroutine base_functional_calc(this)
     type(base_functional_t), intent(inout) :: this
-    !
+
     type(base_functional_iterator_t) :: iter
     type(base_functional_t), pointer :: subs
     integer                          :: ierr
-    !
+
     PUSH_SUB(base_functional_calc)
+
     nullify(subs)
     call base_functional_init(iter, this)
     do
@@ -511,49 +536,52 @@ contains
     call base_functional_end(iter)
     nullify(subs)
     call base_functional__calc__(this)
+
     POP_SUB(base_functional_calc)
-    return
   end subroutine base_functional_calc
 
   ! ---------------------------------------------------------
   subroutine base_functional__reset__(this)
     type(base_functional_t), intent(inout) :: this
-    !
+
     PUSH_SUB(base_functional__reset__)
+
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
-    this%energy=0.0_wp
+    this%energy = 0.0_wp
     call storage_reset(this%data)
+
     POP_SUB(base_functional__reset__)
-    return
   end subroutine base_functional__reset__
 
   ! ---------------------------------------------------------
   subroutine base_functional__acc__(this, that)
     type(base_functional_t), intent(inout) :: this
     type(base_functional_t), intent(in)    :: that
-    !
+
     PUSH_SUB(base_functional__acc__)
+
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
     this%energy = this%energy + that%energy
     call storage_add(this%data, that%data)
+
     POP_SUB(base_functional__acc__)
-    return
   end subroutine base_functional__acc__
 
   ! ---------------------------------------------------------
   subroutine base_functional__sub__(this, that)
     type(base_functional_t), intent(inout) :: this
     type(base_functional_t), intent(in)    :: that
-    !
+
     PUSH_SUB(base_functional__sub__)
+
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
     this%energy = this%energy - that%energy
     call storage_sub(this%data, that%data)
+
     POP_SUB(base_functional__sub__)
-    return
   end subroutine base_functional__sub__
 
   ! ---------------------------------------------------------
@@ -561,18 +589,19 @@ contains
     type(base_functional_t), intent(inout) :: this
     type(base_functional_t), intent(in)    :: that
     type(json_object_t),    intent(in)    :: config
-    !
+
     character(len=CONFIG_DICT_NAME_LEN) :: name
     integer                             :: ierr
-    !
+
     PUSH_SUB(base_functional__add__)
+
     ASSERT(associated(this%config))
     call json_get(config, "name", name, ierr)
     ASSERT(ierr==JSON_OK)
     call config_dict_set(this%dict, trim(adjustl(name)), config)
     call base_functional_hash_set(this%hash, config, that)
+
     POP_SUB(base_functional__add__)
-    return
   end subroutine base_functional__add__
 
   ! ---------------------------------------------------------
@@ -580,16 +609,17 @@ contains
     type(base_functional_t),  intent(in) :: this
     type(json_object_t),      intent(in) :: config
     type(base_functional_t), pointer     :: that
-    !
+
     integer :: ierr
-    !
+
     PUSH_SUB(base_functional_get_functional_by_config)
+
     nullify(that)
     ASSERT(associated(this%config))
     call base_functional_hash_get(this%hash, config, that, ierr)
-    if(ierr/=BASE_FUNCTIONAL_OK)nullify(that)
+    if(ierr/=BASE_FUNCTIONAL_OK) nullify(that)
+
     POP_SUB(base_functional_get_functional_by_config)
-    return
   end subroutine base_functional_get_functional_by_config
 
   ! ---------------------------------------------------------
@@ -597,30 +627,30 @@ contains
     type(base_functional_t),  intent(in) :: this
     character(len=*),        intent(in) :: name
     type(base_functional_t), pointer     :: that
-    !
+
     type(json_object_t), pointer :: config
     integer                      :: ierr
-    !
+
     PUSH_SUB(base_functional_get_functional_by_name)
+
     nullify(that)
     ASSERT(associated(this%config))
     call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
-    if(ierr==CONFIG_DICT_OK)&
-      call base_functional_get(this, config, that)
+    if(ierr==CONFIG_DICT_OK) call base_functional_get(this, config, that)
+
     POP_SUB(base_functional_get_functional_by_name)
-    return
   end subroutine base_functional_get_functional_by_name
 
   ! ---------------------------------------------------------
   subroutine base_functional_set_info(this, energy)
     type(base_functional_t), intent(inout) :: this
     real(kind=wp), optional, intent(in)    :: energy
-    !
+
     PUSH_SUB(base_functional_set_config)
-    if(present(energy))&
-      this%energy=energy
+
+    if(present(energy)) this%energy = energy
+
     POP_SUB(base_functional_set_config)
-    return
   end subroutine base_functional_set_info
 
   ! ---------------------------------------------------------
@@ -632,136 +662,141 @@ contains
     integer,       optional, intent(out) :: size
     integer,       optional, intent(out) :: nspin
     real(kind=wp), optional, intent(out) :: energy
-    !
+
     PUSH_SUB(base_functional_get_info)
-    if(present(energy))&
-      energy=this%energy
+
+    if(present(energy)) energy = this%energy
     call functional_get(this%funct, id=id, family=family, kind=kind)
     call storage_get(this%data, size=size, dim=nspin)
+
     POP_SUB(base_functional_get_info)
-    return
   end subroutine base_functional_get_info
 
   ! ---------------------------------------------------------
   subroutine base_functional_get_config(this, that)
     type(base_functional_t), target, intent(in) :: this
     type(json_object_t),    pointer             :: that
-    !
+
     PUSH_SUB(base_functional_get_config)
+
     nullify(that)
-    if(associated(this%config))&
-      that=>this%config
+    if(associated(this%config)) that => this%config
+
     POP_SUB(base_functional_get_config)
-    return
   end subroutine base_functional_get_config
 
   ! ---------------------------------------------------------
   subroutine base_functional_get_simulation(this, that)
     type(base_functional_t), target, intent(in) :: this
     type(simulation_t),     pointer             :: that
-    !
+
     PUSH_SUB(base_functional_get_simulation)
+
     nullify(that)
-    if(associated(this%sim))&
-      that=>this%sim
+    if(associated(this%sim)) that => this%sim
+
     POP_SUB(base_functional_get_simulation)
-    return
   end subroutine base_functional_get_simulation
 
   ! ---------------------------------------------------------
   subroutine base_functional_get_storage(this, that)
     type(base_functional_t), target, intent(in) :: this
     type(storage_t),        pointer             :: that
-    !
+
     PUSH_SUB(base_functional_get_storage)
-    that=>this%data
+
+    that => this%data
+
     POP_SUB(base_functional_get_storage)
-    return
   end subroutine base_functional_get_storage
 
   ! ---------------------------------------------------------
   subroutine base_functional_get_system(this, that)
     type(base_functional_t), target, intent(in) :: this
     type(base_system_t),    pointer             :: that
-    !
+
     PUSH_SUB(base_functional_get_system)
+
     nullify(that)
-    if(associated(this%sys))&
-      that=>this%sys
+    if(associated(this%sys)) that => this%sys
+
     POP_SUB(base_functional_get_system)
-    return
   end subroutine base_functional_get_system
 
   ! ---------------------------------------------------------
   subroutine base_functional_get_density(this, that)
     type(base_functional_t), intent(in) :: this
     type(base_density_t),   pointer     :: that
-    !
+
     type(base_states_t), pointer :: st
-    !
+
     PUSH_SUB(base_functional_get_density)
+
     nullify(that)
     if(associated(this%sys))then
       call base_system_get(this%sys, st)
-      if(associated(st))&
-        call base_states_get(st, that)
+      if(associated(st)) call base_states_get(st, that)
     end if
+
     POP_SUB(base_functional_get_density)
-    return
   end subroutine base_functional_get_density
 
   ! ---------------------------------------------------------
   subroutine base_functional_get_functional_1d(this, that)
     type(base_functional_t),      intent(in) :: this
     real(kind=wp), dimension(:), pointer     :: that
-    !
+
     PUSH_SUB(base_functional_get_functional_1d)
+
     call storage_get(this%data, that)
+
     POP_SUB(base_functional_get_functional_1d)
-    return
   end subroutine base_functional_get_functional_1d
 
   ! ---------------------------------------------------------
   subroutine base_functional_get_functional_md(this, that)
     type(base_functional_t),        intent(in) :: this
     real(kind=wp), dimension(:,:), pointer     :: that
-    !
+
     PUSH_SUB(base_functional_get_functional_md)
+
     call storage_get(this%data, that)
+
     POP_SUB(base_functional_get_functional_md)
-    return
   end subroutine base_functional_get_functional_md
 
   ! ---------------------------------------------------------
   subroutine base_functional__copy__functional(this, that)
     type(base_functional_t), intent(inout) :: this
     type(base_functional_t), intent(in)    :: that
-    !
+
     PUSH_SUB(base_functional__copy__functional)
+
     call base_functional__end__(this)
     if(associated(that%config).and.associated(that%sys))then
       call base_functional__init__(this, that%sys, that%config)
-      this%energy=that%energy
+      this%energy = that%energy
       if(associated(that%sim))then
         call base_functional__start__(this, that%sim)
         call storage_copy(this%data, that%data)
       end if
     end if
+
     POP_SUB(base_functional__copy__functional)
-    return
   end subroutine base_functional__copy__functional
 
   ! ---------------------------------------------------------
   recursive subroutine base_functional_copy_functional(this, that)
     type(base_functional_t), intent(inout) :: this
     type(base_functional_t), intent(in)    :: that
-    !
+
     type(base_functional_iterator_t) :: iter
     type(base_functional_t), pointer :: osub, isub
     type(json_object_t),    pointer :: cnfg
     integer                         :: ierr
-    !
+
     PUSH_SUB(base_functional_copy_functional)
+
     nullify(cnfg, osub, isub)
     call base_functional_end(this)
     call base_functional__copy__(this, that)
@@ -776,32 +811,34 @@ contains
     end do
     call base_functional_end(iter)
     nullify(cnfg, osub, isub)
+
     POP_SUB(base_functional_copy_functional)
-    return
   end subroutine base_functional_copy_functional
 
   ! ---------------------------------------------------------
   subroutine base_functional__end__functional(this)
     type(base_functional_t), intent(inout) :: this
-    !
+
     PUSH_SUB(base_functional__end__functional)
+
     call base_functional__inull__(this)
     call functional_end(this%funct)
     call storage_end(this%data)
     call config_dict_end(this%dict)
     call base_functional_hash_end(this%hash)
     call base_functional_list_end(this%raii%list)
+
     POP_SUB(base_functional__end__functional)
-    return
   end subroutine base_functional__end__functional
 
   ! ---------------------------------------------------------
   recursive subroutine base_functional_end_functional(this)
     type(base_functional_t), intent(inout) :: this
-    !
+
     type(base_functional_t), pointer :: subs
-    !
+
     PUSH_SUB(base_functional_end_functional)
+
     do
       nullify(subs)
       call base_functional_list_pop(this%raii%list, subs)
@@ -811,8 +848,8 @@ contains
     end do
     nullify(subs)
     call base_functional__end__(this)
+
     POP_SUB(base_functional_end_functional)
-    return
   end subroutine base_functional_end_functional
 
 #define TEMPLATE_PREFIX base_functional
