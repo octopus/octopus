@@ -7,16 +7,19 @@ module simulation_m
   use geometry_m
   use global_m
   use grid_m
+  use grid_intrf_m
   use json_m
   use mesh_m
   use messages_m
   use profiling_m
-  use simul_box_m
   use space_m
 
   implicit none
 
   private
+
+  public ::       &
+    simulation_t
 
   public ::            &
     simulation_init,   &
@@ -26,27 +29,22 @@ module simulation_m
     simulation_copy,   & 
     simulation_end
 
-  type, public :: simulation_t
+  type :: simulation_t
     private
     type(json_object_t), pointer :: config =>null()
     type(space_t),       pointer :: space  =>null()
-    type(grid_t),        pointer :: grid   =>null()
+    type(grid_intrf_t)           :: igrid
     type(domain_t)               :: domain
   end type simulation_t
-
-  interface simulation_init
-    module procedure simulation_init_simulation
-    module procedure simulation_init_copy
-  end interface simulation_init
 
   interface simulation_get
     module procedure simulation_get_config
     module procedure simulation_get_info
     module procedure simulation_get_space
-    module procedure simulation_get_simul_box
     module procedure simulation_get_mesh
     module procedure simulation_get_derivatives
     module procedure simulation_get_grid
+    module procedure simulation_get_grid_intrf
     module procedure simulation_get_domain
   end interface simulation_get
 
@@ -67,60 +65,53 @@ contains
   end subroutine simulation__init__
 
   ! ---------------------------------------------------------
-  subroutine simulation_init_simulation(this, space, config)
+  subroutine simulation_init(this, geo, space, config)
     type(simulation_t),  intent(out) :: this
+    type(geometry_t),    intent(in)  :: geo
     type(space_t),       intent(in)  :: space
     type(json_object_t), intent(in)  :: config
 
-    PUSH_SUB(simulation_init_simulation)
+    type(json_object_t), pointer :: cnfg
+    integer                      :: ierr
 
+    PUSH_SUB(simulation_init)
+
+    nullify(cnfg)
     call simulation__init__(this, space, config)
+    call json_get(config, "grid", cnfg, ierr)
+    ASSERT(ierr==JSON_OK)
+    call grid_intrf_init(this%igrid, geo, space, cnfg)
+    nullify(cnfg)
     call domain_init(this%domain, space)
 
-    POP_SUB(simulation_init_simulation)
-  end subroutine simulation_init_simulation
-
-  ! ---------------------------------------------------------
-  subroutine simulation_init_copy(this, that)
-    type(simulation_t), intent(out) :: this
-    type(simulation_t), intent(in)  :: that
-
-    PUSH_SUB(simulation_init_copy)
-
-    ASSERT(associated(that%config))
-    ASSERT(associated(that%space))
-    call simulation_init_simulation(this, that%space, that%config)
-
-    POP_SUB(simulation_init_copy)
-  end subroutine simulation_init_copy
+    POP_SUB(simulation_init)
+  end subroutine simulation_init
 
   ! ---------------------------------------------------------
   subroutine simulation__start__(this, grid)
-    type(simulation_t),   intent(inout) :: this
-    type(grid_t), target, intent(in)    :: grid
+    type(simulation_t),     intent(inout) :: this
+    type(grid_t), optional, intent(in)    :: grid
 
     PUSH_SUB(simulation__start__)
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%space))
-    ASSERT(.not.associated(this%grid))
-    this%grid => grid
-    ASSERT(this%grid%sb%dim==this%space%dim)
+    if(present(grid)) call grid_intrf_set(this%igrid, grid)
 
     POP_SUB(simulation__start__)
   end subroutine simulation__start__
 
 
   ! ---------------------------------------------------------
-  subroutine simulation_start(this, grid, geo)
-    type(simulation_t), intent(inout) :: this
-    type(grid_t),       intent(in)    :: grid
-    type(geometry_t),   intent(in)    :: geo
+  subroutine simulation_start(this, grid)
+    type(simulation_t),     intent(inout) :: this
+    type(grid_t), optional, intent(in)    :: grid
 
     PUSH_SUB(simulation_start)
 
     call simulation__start__(this, grid)
-    call domain_start(this%domain, this%grid%sb, geo)
+    call grid_intrf_start(this%igrid)
+    call domain_start(this%domain, this%igrid)
 
     POP_SUB(simulation_start)
   end subroutine simulation_start
@@ -128,7 +119,7 @@ contains
   ! ---------------------------------------------------------
   subroutine simulation_extend(this, that, config)
     type(simulation_t),  intent(inout) :: this
-    type(domain_t),      intent(in)    :: that
+    type(simulation_t),  intent(in)    :: that
     type(json_object_t), intent(in)    :: config
 
     type(json_object_t), pointer :: cnfg
@@ -140,7 +131,6 @@ contains
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%space))
-    ASSERT(.not.associated(this%grid))
     nullify(cnfg, list)
     call json_get(config, "positions", list, ierr)
     ASSERT(ierr==JSON_OK)
@@ -151,12 +141,12 @@ contains
         nullify(cnfg)
         call json_next(iter, cnfg, ierr)
         if(ierr/=JSON_OK)exit
-        call domain_extend(this%domain, that, cnfg)
+        call domain_extend(this%domain, that%domain, cnfg)
       end do
       call json_end(iter)
       nullify(cnfg, list)
     else
-      call domain_extend(this%domain, that)
+      call domain_extend(this%domain, that%domain)
     end if
 
     POP_SUB(simulation_extend)
@@ -202,38 +192,14 @@ contains
   end subroutine simulation_get_space
 
   ! ---------------------------------------------------------
-  subroutine simulation_get_simul_box(this, that)
-    type(simulation_t), intent(in) :: this
-    type(simul_box_t), pointer     :: that
-
-    PUSH_SUB(simulation_get_simul_box)
-
-    nullify(that)
-    if(associated(this%grid)) that => this%grid%sb
-
-    POP_SUB(simulation_get_simul_box)
-  end subroutine simulation_get_simul_box
-
-  ! ---------------------------------------------------------
   subroutine simulation_get_mesh(this, that, fine)
     type(simulation_t), intent(in) :: this
     type(mesh_t),      pointer     :: that
     logical,  optional, intent(in) :: fine
 
-    logical :: fn
-
     PUSH_SUB(simulation_get_mesh)
 
-    fn = .false.
-    nullify(that)
-    if(present(fine)) fn = fine
-    if(associated(this%grid))then
-      if(fn)then
-        that => this%grid%fine%mesh
-      else
-        that => this%grid%mesh
-      end if
-    end if
+    call grid_intrf_get(this%igrid, that, fine)
 
     POP_SUB(simulation_get_mesh)
   end subroutine simulation_get_mesh
@@ -244,36 +210,36 @@ contains
     type(derivatives_t), pointer     :: that
     logical,    optional, intent(in) :: fine
 
-    logical :: fn
-
     PUSH_SUB(simulation_get_derivatives)
 
-    fn = .false.
-    nullify(that)
-    if(present(fine)) fn = fine
-    if(associated(this%grid))then
-      if(fn)then
-        that => this%grid%fine%der
-      else
-        that => this%grid%der
-      end if
-    end if
+    call grid_intrf_get(this%igrid, that, fine)
 
     POP_SUB(simulation_get_derivatives)
   end subroutine simulation_get_derivatives
 
   ! ---------------------------------------------------------
   subroutine simulation_get_grid(this, that)
-    type(simulation_t), target, intent(in) :: this
-    type(grid_t),      pointer             :: that
+    type(simulation_t), intent(in) :: this
+    type(grid_t),      pointer     :: that
 
     PUSH_SUB(simulation_get_grid)
 
-    nullify(that)
-    if(associated(this%grid)) that => this%grid
+    call grid_intrf_get(this%igrid, that)
 
     POP_SUB(simulation_get_grid)
   end subroutine simulation_get_grid
+
+  ! ---------------------------------------------------------
+  subroutine simulation_get_grid_intrf(this, that)
+    type(simulation_t),  target, intent(in) :: this
+    type(grid_intrf_t), pointer             :: that
+
+    PUSH_SUB(simulation_get_grid_intrf)
+
+    that => this%igrid
+
+    POP_SUB(simulation_get_grid_intrf)
+  end subroutine simulation_get_grid_intrf
 
   ! ---------------------------------------------------------
   subroutine simulation_get_domain(this, that)
@@ -295,10 +261,9 @@ contains
     PUSH_SUB(simulation_copy)
 
     call simulation_end(this)
-    if(associated(that%config).and.associated(that%space))then
+    if(associated(that%config).and.associated(that%space))&
       call simulation__init__(this, that%space, that%config)
-      if(associated(that%grid)) call simulation__start__(this, that%grid)
-    end if
+    call grid_intrf_copy(this%igrid, that%igrid)
     call domain_copy(this%domain, that%domain)
 
     POP_SUB(simulation_copy)
@@ -310,7 +275,8 @@ contains
 
     PUSH_SUB(simulation_end)
 
-    nullify(this%config, this%space, this%grid)
+    nullify(this%config, this%space)
+    call grid_intrf_end(this%igrid)
     call domain_end(this%domain)
 
     POP_SUB(simulation_end)

@@ -25,6 +25,7 @@ libfrozen_a_SOURCES =		\
 	strng.F90		\
 	geo_intrf.F90		\
 	geo_build.F90		\
+        grid_intrf.F90          \
 	interface_xc.F90	\
 	config_dict.F90		\
 	domain.F90		\
@@ -32,7 +33,7 @@ libfrozen_a_SOURCES =		\
 	functional.F90		\
 	storage.F90		\
 	intrpl.F90		\
-	base_geometry.F90		\
+	base_geometry.F90	\
 	base_density.F90	\
 	base_states.F90		\
 	base_system.F90		\
@@ -103,6 +104,7 @@ basis.o 	: basis.F90
 strng.o		: strng.F90
 geo_intrf.o	: geo_intrf.F90
 geo_build.o	: geo_build.F90 strng.o basis.o
+grid_intrf.o    : grid_intrf.F90
 interface_xc.o	: interface_xc.F90
 config_dict.o	: config_dict.F90 strng.o 
 domain.o 	: domain.F90 config_dict.o basis.o

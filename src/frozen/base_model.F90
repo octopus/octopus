@@ -274,7 +274,7 @@ contains
     ASSERT(associated(geo))
     call json_get(this%config, "simulation", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    !call simulation_init(this%sim, geo, space, cnfg)
+    call simulation_init(this%sim, geo, space, cnfg)
     nullify(cnfg, space, geo)
     call json_get(this%config, "hamiltonian", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
@@ -359,7 +359,7 @@ contains
       nullify(cnfg, subs)
       call base_model_next(iter, cnfg, subs, ierr)
       if(ierr/=BASE_MODEL_OK)exit
-      !call simulation_extend(this%sim, subs%sim, cnfg)
+      call simulation_extend(this%sim, subs%sim, cnfg)
       call base_hamiltonian__add__(this%hm, subs%hm, cnfg)
     end do
     call base_model_end(iter)
@@ -376,7 +376,7 @@ contains
     PUSH_SUB(base_model__start__)
 
     ASSERT(associated(this%config))
-    !call simulation_start(this%sim, grid)
+    call simulation_start(this%sim, grid)
     call base_system__start__(this%sys, this%sim)
     call base_hamiltonian__start__(this%hm, this%sim)
 

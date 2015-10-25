@@ -545,9 +545,6 @@ contains
     that%nspecies = species_dict_len(this%dict)
     ASSERT(that%nspecies>0)
     SAFE_ALLOCATE(that%species(that%nspecies))
-
-#if 0
-
     !call geo_build_iterator_init(iter, this)
     do indx = 1, that%nspecies
       nullify(spec)
@@ -558,9 +555,6 @@ contains
       call species_copy(that%species(indx), spec, indx)
     end do
     !call geo_build_iterator_end(iter)
-
-#endif
-
     that%natoms = atom_list_len(this%list)
     ASSERT(that%natoms>0)
     SAFE_ALLOCATE(that%atom(that%natoms))

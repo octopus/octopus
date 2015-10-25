@@ -11,6 +11,7 @@ module domain_m
   use basis_m
   use geometry_m
   use global_m
+  use grid_intrf_m
   use json_m
   use kinds_m
   use messages_m
@@ -51,10 +52,9 @@ module domain_m
 
   type :: domain_t
     private
-    type(space_t),     pointer :: space =>null()
-    type(simul_box_t), pointer :: sb    =>null()
-    type(geometry_t),  pointer :: geo   =>null()
-    type(domain_node_list_t)   :: list
+    type(space_t),      pointer :: space =>null()
+    type(grid_intrf_t), pointer :: igrid =>null()
+    type(domain_node_list_t)    :: list
   end type domain_t
 
   interface domain_get
@@ -208,15 +208,14 @@ contains
   end subroutine domain_init
 
   ! ---------------------------------------------------------
-  subroutine domain_start(this, sb, geo)
-    type(domain_t),            intent(inout) :: this
-    type(simul_box_t), target, intent(in)    :: sb
-    type(geometry_t),  target, intent(in)    :: geo
+  subroutine domain_start(this, igrid)
+    type(domain_t),             intent(inout) :: this
+    type(grid_intrf_t), target, intent(in)    :: igrid
 
     PUSH_SUB(domain_start)
     
-    this%sb => sb
-    this%geo => geo
+    ASSERT(associated(this%space))
+    this%igrid => igrid
 
     POP_SUB(domain_start)
   end subroutine domain_start
@@ -235,6 +234,7 @@ contains
     ASSERT(associated(this%space))
     ASSERT(associated(that%space))
     ASSERT(this%space==that%space)
+    ASSERT(.not.associated(this%igrid))
     call domain_new_node(this, node)
     call domain_node_init(node, that, config)
     nullify(node)
@@ -249,12 +249,20 @@ contains
 
     logical :: in
 
+    type(simul_box_t), pointer :: sb
+    type(geometry_t),  pointer :: geo
+
     PUSH_SUB(domain_in)
     
+    nullify(sb, geo)
     ASSERT(associated(this%space))
-    ASSERT(associated(this%sb))
-    ASSERT(associated(this%geo))
-    in = simul_box_in_box(this%sb, this%geo, x)
+    ASSERT(associated(this%igrid))
+    call grid_intrf_get(this%igrid, sb)
+    ASSERT(associated(sb))
+    call grid_intrf_get(this%igrid, geo)
+    ASSERT(associated(geo))
+    in = simul_box_in_box(sb, geo, x)
+    nullify(sb, geo)
 
     POP_SUB(domain_in)
   end function domain_in
@@ -271,32 +279,6 @@ contains
 
     POP_SUB(domain_get_space)
   end subroutine domain_get_space
-
-  ! ---------------------------------------------------------
-  subroutine domain_get_simul_box(this, that)
-    type(domain_t),     target, intent(in) :: this
-    type(simul_box_t), pointer             :: that
-
-    PUSH_SUB(domain_get_simul_box)
-
-    nullify(that)
-    if(associated(this%sb)) that => this%sb
-
-    POP_SUB(domain_get_simul_box)
-  end subroutine domain_get_simul_box
-
-  ! ---------------------------------------------------------
-  subroutine domain_get_geometry(this, that)
-    type(domain_t),    target, intent(in) :: this
-    type(geometry_t), pointer             :: that
-
-    PUSH_SUB(domain_get_geometry)
-
-    nullify(that)
-    if(associated(this%geo)) that => this%geo
-
-    POP_SUB(domain_get_geometry)
-  end subroutine domain_get_geometry
 
   ! ---------------------------------------------------------
   subroutine domain__copy__(this, that)
@@ -336,8 +318,7 @@ contains
     call domain_end(this)
     if(associated(that%space))then
       call domain__copy__(this, that)
-      if(associated(that%sb).and.associated(that%geo))&
-        call domain_start(this, that%sb, that%geo)
+      if(associated(that%igrid)) call domain_start(this, that%igrid)
     end if
 
     POP_SUB(domain_copy)
@@ -359,7 +340,7 @@ contains
     end do
     nullify(node)
     call domain_node_list_end(this%list)
-    nullify(this%space, this%sb, this%geo)
+    nullify(this%space, this%igrid)
 
     POP_SUB(domain_end)
   end subroutine domain_end
