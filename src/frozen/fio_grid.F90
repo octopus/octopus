@@ -20,6 +20,7 @@ module fio_grid_m
   use mpi_m
   use profiling_m
   use simul_box_m
+  use space_m
   use stencil_m
   use transfer_table_m
 
@@ -37,9 +38,10 @@ module fio_grid_m
 contains
   
   ! ---------------------------------------------------------
-  subroutine fio_grid_init(this, geo, config)
+  subroutine fio_grid_init(this, geo, space, config)
     type(grid_t), target, intent(out) :: this
     type(geometry_t),     intent(in)  :: geo
+    type(space_t),        intent(in)  :: space
     type(json_object_t),  intent(in)  :: config
 
     type(json_object_t), pointer :: cnfg
@@ -50,7 +52,7 @@ contains
     nullify(cnfg)
     call json_get(config, "simul_box", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call fio_simul_box_init(this%sb, geo, cnfg)
+    call fio_simul_box_init(this%sb, geo, space, cnfg)
     nullify(cnfg)
     call json_get(config, "curvilinear", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
@@ -108,8 +110,8 @@ contains
 
     ASSERT(.not.that%have_fine_mesh)
     call fio_simul_box_copy(this%sb, that%sb)
-    call fio_mesh_copy(this%mesh, that%mesh)
     call fio_curvilinear_copy(this%cv, that%cv)
+    call fio_mesh_copy(this%mesh, that%mesh)
     call multigrid_level_nullify(this%fine)
     call derivatives_nullify(this%der)
     call double_grid_nullify(this%dgrid)

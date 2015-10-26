@@ -11,7 +11,6 @@ module fio_mesh_m
   use kinds_m
   use mesh_m
   use mesh_cube_map_m
-  use mesh_init_m
   use messages_m
   use mpi_m
   use path_m
@@ -31,15 +30,16 @@ contains
   
   ! ---------------------------------------------------------
   subroutine fio_index_init(this, np, ndim, mpi_grp, config)
-    type(index_t),         intent(out) :: this
-    integer,               intent(in)  :: np
-    integer,               intent(in)  :: ndim
-    type(mpi_grp_t),       intent(in)  :: mpi_grp
-    type(json_object_t),   intent(in)  :: config
+    type(index_t),         intent(inout) :: this
+    integer,               intent(in)    :: np
+    integer,               intent(in)    :: ndim
+    type(mpi_grp_t),       intent(in)    :: mpi_grp
+    type(json_object_t),   intent(in)    :: config
 
-    character(len=MAX_PATH_LEN) :: dir, fpth
-    integer                     :: ierr
-    integer                     :: i11, i21, i12, i22, i13, i23
+    character(len=MAX_PATH_LEN)       :: dir, fpth
+    integer(kind=kind(this%checksum)) :: chksm
+    integer                           :: ierr
+    integer                           :: i11, i21, i12, i22, i13, i23
 
     PUSH_SUB(fio_index_init)
 
@@ -59,7 +59,8 @@ contains
       message(1) = "Error: failed to read file: '"//trim(adjustl(fpth))//"'."
       call messages_fatal(1)
     end if
-    call checksum_calculate(1, np*ndim, this%lxyz(1,1), this%checksum)
+    call checksum_calculate(1, np*ndim, this%lxyz(1,1), chksm)
+    ASSERT(chksm==this%checksum)
 
     POP_SUB(fio_index_init)
   end subroutine fio_index_init
@@ -97,29 +98,33 @@ contains
     PUSH_SUB(fio_mesh_init)
 
     ASSERT(.not.sb%mr_flag)
+    ASSERT(cv%method==CURV_METHOD_UNIFORM)
     this%sb => sb
     this%cv => cv
+    this%use_curvilinear = .false.
     call json_get(config, "dir", dir, ierr)
     ASSERT(ierr==JSON_OK)
     call json_get(config, "file", file, ierr)
     ASSERT(ierr==JSON_OK)
     call mesh_load(this, dir, file, mpi_grp, ierr)
     if(ierr==0)then
+      ASSERT(.not.this%idx%is_hypercube)
+      call fio_index_init(this%idx, this%np_part_global, this%sb%dim, mpi_grp, config)
       this%np = this%np_global
       this%np_part = this%np_part_global
       this%spacing = 0.0_wp
       call json_get(config, "spacing", this%spacing(1:this%sb%dim), ierr=ierr)
       ASSERT(ierr==JSON_OK)
-      call fio_index_init(this%idx, this%np_part_global, this%sb%dim, mpi_grp, config)
-      call mesh_read_fingerprint(this, dir, "grid", mpi_grp, ia, ib, ierr)
-      ASSERT((ia==0).and.(ib==0).and.(ierr==0))
-      this%use_curvilinear = (this%cv%method/=CURV_METHOD_UNIFORM) .or. this%sb%mr_flag
-      SAFE_ALLOCATE(this%x(this%np_part_global,MAX_DIM))
+      SAFE_ALLOCATE(this%vol_pp(1:1))
+      this%vol_pp(1) = product(this%spacing(1:this%sb%dim))
+      this%volume_element = this%vol_pp(1)
+      SAFE_ALLOCATE(this%x(1:this%np_part_global,1:MAX_DIM))
       do i=1, this%np_part_global
         this%x(i,:) = mesh_x_global(this, i, .true.)
       end do
       call mesh_cube_map_init(this%cube_map, this%idx, this%np_global)
-      !call mesh_get_vol_pp(this, sb)
+      call mesh_read_fingerprint(this, dir, "grid", mpi_grp, ia, ib, ierr)
+      ASSERT((ia==0).and.(ib==0).and.(ierr==0))
     else
       message(1)="Could not open the mesh info file: '"//trim(adjustl(file))//"'"
       write(unit=message(2), fmt="(a,i3)") "I/O Error: ", ierr

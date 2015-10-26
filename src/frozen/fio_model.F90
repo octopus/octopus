@@ -2,7 +2,6 @@
 
 module fio_model_m
 
-  use base_geometry_m
   use base_hamiltonian_m
   use base_model_m
   use base_system_m
@@ -20,45 +19,69 @@ module fio_model_m
 
   private
 
-  public ::            &
-    fio_model__load__
+  public ::             &
+    fio_model__init__,  &
+    fio_model__build__, &
+    fio_model__start__, &
+    fio_model__load__,  &
+    fio_model__stop__,  &
+    fio_model__copy__,  &
+    fio_model__end__
 
-  public ::           &
-    !fio_model_init,   &
-    fio_model_start,  &
-    fio_model_stop,   &
-    !fio_model_get,    &
-    !fio_model_copy,   &
-    fio_model_end
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine fio_model_start(this, mpi_grp)
+  subroutine fio_model__init__(this)
+    type(base_model_t), intent(inout) :: this
+
+    type(base_system_t), pointer :: sys
+
+    PUSH_SUB(fio_model__init__)
+
+    nullify(sys)
+    call base_model_get(this, sys)
+    ASSERT(associated(sys))
+    call fio_system__init__(sys)
+    nullify(sys)
+
+    POP_SUB(fio_model__init__)
+  end subroutine fio_model__init__
+
+  ! ---------------------------------------------------------
+  subroutine fio_model__build__(this)
+    type(base_model_t), intent(inout) :: this
+
+    type(simulation_t), pointer :: sim
+
+    PUSH_SUB(fio_model__build__)
+
+    nullify(sim)
+    call base_model_get(this, sim)
+    ASSERT(associated(sim))
+    call fio_simulation__build__(sim)
+    nullify(sim)
+
+    POP_SUB(fio_model__build__)
+  end subroutine fio_model__build__
+
+  ! ---------------------------------------------------------
+  subroutine fio_model__start__(this, mpi_grp)
     type(base_model_t), intent(inout) :: this
     type(mpi_grp_t),    intent(in)    :: mpi_grp
 
-    type(base_system_t),   pointer :: sys
-    type(base_geometry_t), pointer :: geom
-    type(simulation_t),    pointer :: sim
-    type(grid_t),          pointer :: grid
+    type(simulation_t), pointer :: sim
 
-    PUSH_SUB(fio_model_start)
+    PUSH_SUB(fio_model__start__)
 
-    nullify(sys, geom, sim, grid)
-    call base_model_get(this, sys)
-    ASSERT(associated(sys))
-    call base_system_get(sys, geom)
-    ASSERT(associated(geom))
+    nullify(sim)
     call base_model_get(this, sim)
     ASSERT(associated(sim))
-    call fio_simulation__new__(sim, grid, geom)
-    call fio_simulation__start__(sim, grid, mpi_grp)
-    nullify(sys, geom, sim)
-    call base_model__start__(this, grid)
+    call fio_simulation__start__(sim, mpi_grp)
+    nullify(sim)
 
-    POP_SUB(fio_model_start)
-  end subroutine fio_model_start
+    POP_SUB(fio_model__start__)
+  end subroutine fio_model__start__
 
   ! ---------------------------------------------------------
   subroutine fio_model__load__(this)
@@ -83,40 +106,58 @@ contains
   end subroutine fio_model__load__
 
   ! ---------------------------------------------------------
-  subroutine fio_model_stop(this)
+  subroutine fio_model__stop__(this)
     type(base_model_t), intent(inout) :: this
 
     type(simulation_t), pointer :: sim
 
-    PUSH_SUB(fio_model_stop)
+    PUSH_SUB(fio_model__stop__)
 
     nullify(sim)
-    call base_model__stop__(this)
     call base_model_get(this, sim)
     ASSERT(associated(sim))
     call fio_simulation__stop__(sim)
     nullify(sim)
 
-    POP_SUB(fio_model_stop)
-  end subroutine fio_model_stop
+    POP_SUB(fio_model__stop__)
+  end subroutine fio_model__stop__
 
   ! ---------------------------------------------------------
-  subroutine fio_model_end(this)
+  subroutine fio_model__copy__(this, that)
+    type(base_model_t), intent(inout) :: this
+    type(base_model_t), intent(in)    :: that
+
+    type(simulation_t), pointer :: osim, isim
+
+    PUSH_SUB(fio_model__copy__)
+
+    nullify(osim, isim)
+    call base_model_get(that, isim)
+    ASSERT(associated(isim))
+    call base_model_get(this, osim)
+    ASSERT(associated(osim))
+    call fio_simulation__copy__(osim, isim)
+    nullify(osim, isim)
+
+    POP_SUB(fio_model__copy__)
+  end subroutine fio_model__copy__
+
+  ! ---------------------------------------------------------
+  subroutine fio_model__end__(this)
     type(base_model_t), intent(inout) :: this
 
     type(simulation_t), pointer :: sim
 
-    PUSH_SUB(fio_model_end)
+    PUSH_SUB(fio_model__end__)
 
     nullify(sim)
     call base_model_get(this, sim)
     ASSERT(associated(sim))
-    call fio_simulation__del__(sim)
+    call fio_simulation__end__(sim)
     nullify(sim)
-    call base_model__end__(this)
 
-    POP_SUB(fio_model_end)
-  end subroutine fio_model_end
+    POP_SUB(fio_model__end__)
+  end subroutine fio_model__end__
 
 end module fio_model_m
 

@@ -45,8 +45,13 @@ module grid_intrf_m
 
   interface grid_intrf_new
     module procedure grid_intrf_new_grid
-    module procedure grid_intrf_new_init
+    module procedure grid_intrf_new_pass
   end interface grid_intrf_new
+
+  interface grid_intrf_del
+    module procedure grid_intrf_del_grid
+    module procedure grid_intrf_del_pass
+  end interface grid_intrf_del
 
   interface grid_intrf_init
     module procedure grid_intrf_init_type
@@ -70,28 +75,42 @@ module grid_intrf_m
 contains
 
   ! ---------------------------------------------------------
+  subroutine grid_intrf__new__(this)
+    type(grid_intrf_t), intent(inout) :: this
+
+    type(grid_t), pointer :: grid
+
+    PUSH_SUB(grid_intrf__new__)
+    
+    nullify(grid)
+    SAFE_ALLOCATE(grid)
+    !call grid_nullify(grid)
+    call grid_intrf_set(this, grid)
+    this%type = GRID_ALLC
+
+    POP_SUB(grid_intrf__new__)
+  end subroutine grid_intrf__new__
+
+  ! ---------------------------------------------------------
   subroutine grid_intrf_new_grid(this, that)
     type(grid_intrf_t), intent(inout) :: this
     type(grid_t),      pointer        :: that
 
     PUSH_SUB(grid_intrf_new_grid)
     
-    nullify(that)
-    SAFE_ALLOCATE(that)
-    !call grid_nullify(that)
-    call grid_intrf_set(this, that)
-    this%type = GRID_ALLC
+    call grid_intrf__new__(this)
+    call grid_intrf_get(this, that)
 
     POP_SUB(grid_intrf_new_grid)
   end subroutine grid_intrf_new_grid
 
   ! ---------------------------------------------------------
-  subroutine grid_intrf_new_init(this, that, grid_init)
+  subroutine grid_intrf_new_pass(this, that, grid_type_init)
     type(grid_intrf_t), intent(inout) :: this
     type(grid_t),      pointer        :: that
 
     interface
-      subroutine grid_init(this, geo, space, config)
+      subroutine grid_type_init(this, geo, space, config)
         use geometry_m
         use grid_m
         use json_m
@@ -100,23 +119,23 @@ contains
         type(geometry_t),    intent(in)  :: geo
         type(space_t),       intent(in)  :: space
         type(json_object_t), intent(in)  :: config
-      end subroutine grid_init
+      end subroutine grid_type_init
     end interface
 
-    PUSH_SUB(grid_intrf_new_init)
+    PUSH_SUB(grid_intrf_new_pass)
     
     nullify(that)
     call grid_intrf_new(this, that)
-    call grid_init(that, this%geo, this%space, this%config)
+    call grid_type_init(that, this%geo, this%space, this%config)
 
-    POP_SUB(grid_intrf_new_init)
-  end subroutine grid_intrf_new_init
+    POP_SUB(grid_intrf_new_pass)
+  end subroutine grid_intrf_new_pass
 
   ! ---------------------------------------------------------
-  subroutine grid_intrf_del(this)
+  subroutine grid_intrf_del_grid(this)
     type(grid_intrf_t), intent(inout) :: this
 
-    PUSH_SUB(grid_intrf_del)
+    PUSH_SUB(grid_intrf_del_grid)
 
     ASSERT(this%type==GRID_ALLC)
     ASSERT(associated(this%grid))
@@ -125,8 +144,29 @@ contains
     nullify(this%grid)
     this%type = GRID_NULL
     
-    POP_SUB(grid_intrf_del)
-  end subroutine grid_intrf_del
+    POP_SUB(grid_intrf_del_grid)
+  end subroutine grid_intrf_del_grid
+
+  ! ---------------------------------------------------------
+  subroutine grid_intrf_del_pass(this, grid_type_end)
+    type(grid_intrf_t), intent(inout) :: this
+
+    interface
+      subroutine grid_type_end(this)
+        use grid_m
+        type(grid_t), intent(inout) :: this
+      end subroutine grid_type_end
+    end interface
+
+    PUSH_SUB(grid_intrf_del_pass)
+
+    ASSERT(this%type==GRID_ALLC)
+    ASSERT(associated(this%grid))
+    call grid_type_end(this%grid)
+    call grid_intrf_del(this)
+    
+    POP_SUB(grid_intrf_del_pass)
+  end subroutine grid_intrf_del_pass
 
   ! ---------------------------------------------------------
   subroutine grid_intrf_init_type(this, geo, space, config)
@@ -312,11 +352,8 @@ contains
     type(grid_intrf_t), intent(inout) :: this
     type(grid_intrf_t), intent(in)    :: that
 
-    type(grid_t), pointer :: grid
-
     PUSH_SUB(grid_intrf_copy)
 
-    nullify(grid)
     call grid_intrf_end(this)
     this%config => that%config
     this%space => that%space
@@ -327,10 +364,8 @@ contains
     case(GRID_ASSC)
       this%grid => that%grid
     case(GRID_ALLC)
-      ASSERT(.false.)
-      call grid_intrf_new(this, grid)
-      !call grid_copy(grid, that%grid)
-      nullify(grid)
+      call grid_intrf__new__(this)
+      !call grid_copy(this%grid, that%grid)
     case default
       ASSERT(.false.)
     end select
@@ -345,10 +380,7 @@ contains
 
     PUSH_SUB(grid_intrf_end)
 
-    if(this%type==GRID_ALLC)then
-      ASSERT(.false.)
-      call grid_intrf_del(this)
-    end if
+    if(this%type==GRID_ALLC) call grid_intrf_del(this)
     nullify(this%config, this%space, this%geo, this%grid)
     this%type = GRID_NULL
 

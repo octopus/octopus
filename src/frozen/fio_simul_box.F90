@@ -10,6 +10,7 @@ module fio_simul_box_m
   use messages_m
   use profiling_m
   use simul_box_m
+  use space_m
   use symmetries_m
 
   implicit none
@@ -24,9 +25,10 @@ module fio_simul_box_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine fio_simul_box_init(this, geo, config)
+  subroutine fio_simul_box_init(this, geo, space, config)
     type(simul_box_t),   intent(out) :: this
     type(geometry_t),    intent(in)  :: geo
+    type(space_t),       intent(in)  :: space
     type(json_object_t), intent(in)  :: config
 
     character(len=MAX_PATH_LEN) :: dir, file
@@ -40,6 +42,7 @@ contains
     ASSERT(ierr==JSON_OK)
     call simul_box_load(this, dir, file, mpi_world, ierr)
     if(ierr==0)then
+      ASSERT(this%dim==space%dim)
       ASSERT(this%box_shape/=HYPERCUBE)
       call simul_box_lookup_init(this, geo)
       ASSERT(.not.this%mr_flag)
