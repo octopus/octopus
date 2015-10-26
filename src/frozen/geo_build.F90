@@ -534,9 +534,10 @@ contains
     type(geometry_t),  intent(out) :: that
 
     type(geo_build_iterator_t) :: iter
+    type(species_dict_t)       :: sdct
     type(atom_t),      pointer :: atom
     type(species_t),   pointer :: spec
-    integer                    :: indx, jndx, ierr
+    integer                    :: indx, ierr
 
     PUSH_SUB(geo_build_export)
 
@@ -545,6 +546,7 @@ contains
     that%nspecies = species_dict_len(this%dict)
     ASSERT(that%nspecies>0)
     SAFE_ALLOCATE(that%species(that%nspecies))
+    call species_dict_init(sdct, that%nspecies)
     call geo_build_iterator_init(iter, this)
     do indx = 1, that%nspecies
       nullify(spec)
@@ -553,6 +555,7 @@ contains
       ASSERT(associated(spec))
       call species_init(that%species(indx), "", 0)
       call species_copy(that%species(indx), spec, indx)
+      call species_dict_set(sdct, species_label(that%species(indx)), that%species(indx))
     end do
     call geo_build_iterator_end(iter)
     that%natoms = atom_list_len(this%list)
@@ -564,6 +567,8 @@ contains
       call geo_build_iterator_next(iter, atom, ierr)
       ASSERT(ierr==ATOM_LIST_OK)
       ASSERT(associated(atom))
+      call species_dict_get(sdct, atom_get_label(atom), spec, ierr)
+      ASSERT(ierr==SPECIES_DICT_OK)
 
 #if 0
 
@@ -579,6 +584,7 @@ contains
       call atom_init(that%atom(indx), atom_get_label(atom), atom%x, species=spec)
     end do
     call geo_build_iterator_end(iter)
+    call species_dict_end(sdct)
     nullify(atom, spec)
 
     POP_SUB(geo_build_export)

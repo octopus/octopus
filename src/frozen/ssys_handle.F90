@@ -4,6 +4,7 @@ module ssys_handle_m
 
   use global_m
   use messages_m
+  use mpi_m
   use profiling_m
 
   use grid_m, only: grid_t
@@ -155,7 +156,7 @@ contains
       call base_handle_get(hndl, type)
       select case(type)
       case(HNDL_TYPE_FRZN)
-        call frozen_handle_start(hndl, grid)
+        call frozen_handle_start(hndl, grid, mpi_world)
       case(HNDL_TYPE_LIVE)
         call live_handle_start(hndl, grid)
       case default

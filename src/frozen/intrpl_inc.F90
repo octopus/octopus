@@ -31,6 +31,7 @@
   end interface TEMPLATE(init)
 
   interface TEMPLATE(get)
+    module procedure TEMPLATE(intrpl_get_info)
     module procedure TEMPLATE(intrpl_get_type)
   end interface TEMPLATE(get)
 
@@ -94,6 +95,20 @@
 
     POP_SUB(INTERNAL(intrpl__eval__md))
   end subroutine INTERNAL(intrpl__eval__md)
+
+  ! ---------------------------------------------------------
+  subroutine TEMPLATE(intrpl_get_info)(this, type, dim, default)
+    type(TEMPLATE(intrpl_t)), intent(in)  :: this
+    integer,        optional, intent(out) :: type
+    integer,        optional, intent(out) :: dim
+    real(kind=wp),  optional, intent(out) :: default
+
+    PUSH_SUB(TEMPLATE(intrpl_get_info))
+
+    call intrpl_get(this%intrp, type, dim, default)
+
+    POP_SUB(TEMPLATE(intrpl_get_info))
+  end subroutine TEMPLATE(intrpl_get_info)
 
   ! ---------------------------------------------------------
   subroutine TEMPLATE(intrpl_get_type)(this, that)

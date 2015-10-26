@@ -6,7 +6,6 @@ module frozen_density_m
   use basis_m
   use fio_density_m
   use global_m
-  use intrpl_m
   use json_m
   use kinds_m
   use mesh_m
@@ -86,7 +85,7 @@ contains
     call base_density_get(this, dnst)
     ASSERT(associated(dnst))
     SAFE_ALLOCATE(x(space%dim))
-    !call base_density_get(intrpl, nspin=nspin)
+    call fio_density_get(intrpl, dim=nspin)
     ASSERT(nspin>0)
     ASSERT(nspin<3)
     SAFE_ALLOCATE(irho(nspin))
@@ -131,8 +130,11 @@ contains
     if(acc)then
       call frozen_density__acc__charge(this, that)
       call json_get(config, "type", type, ierr)
-      if(ierr/=JSON_OK) type = NEAREST
-      call fio_density_init(intrp, that, type)
+      if(ierr==JSON_OK)then
+        call fio_density_init(intrp, that, type)
+      else
+        call fio_density_init(intrp, that)
+      end if
       call json_get(config, "positions", list, ierr)
       ASSERT(ierr==JSON_OK)
       ASSERT(json_len(list)>0)

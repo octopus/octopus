@@ -35,6 +35,7 @@ module intrpl_m
   public ::      &
     intrpl_init, &
     intrpl_eval, &
+    intrpl_get,  &
     intrpl_copy, &
     intrpl_end
 
@@ -68,6 +69,10 @@ module intrpl_m
     module procedure intrpl_eval_1d
     module procedure intrpl_eval_md
   end interface intrpl_eval
+
+  interface intrpl_get
+    module procedure intrpl_get_info
+  end interface intrpl_get
 
 contains
 
@@ -347,6 +352,22 @@ contains
 
     POP_SUB(intrpl_eval_md)
   end subroutine intrpl_eval_md
+
+  ! ---------------------------------------------------------
+  subroutine intrpl_get_info(this, type, dim, default)
+    type(intrpl_t),          intent(in)  :: this
+    integer,       optional, intent(out) :: type
+    integer,       optional, intent(out) :: dim
+    real(kind=wp), optional, intent(out) :: default
+
+    PUSH_SUB(intrpl_get_info)
+
+    if(present(type)) type = this%type
+    if(present(dim)) dim = this%nint
+    if(present(default)) default = this%default
+
+    POP_SUB(intrpl_get_info)
+  end subroutine intrpl_get_info
 
   ! ---------------------------------------------------------
   subroutine intrpl_copy(this, that)
