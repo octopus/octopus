@@ -122,7 +122,7 @@ contains
     nullify(sys%subsys_model, subsys_system, subsys_states)
     if(present(subsys_handle).and.present(config))then
       call ssys_config_parse(config, sys%space%dim, sys%st%d%nspin)
-      call ssys_handle_init(subsys_handle, config)
+      call ssys_handle_init(subsys_handle, sys%geo, config)
       call ssys_handle_start(subsys_handle, sys%gr)
       call ssys_handle_get(subsys_handle, sys%subsys_model)
       ASSERT(associated(sys%subsys_model))

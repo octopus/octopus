@@ -7,6 +7,7 @@ module ssys_handle_m
   use mpi_m
   use profiling_m
 
+  use geometry_m
   use grid_m, only: grid_t
   use json_m, only: JSON_OK, json_object_t, json_array_t, json_get
   use json_m, only: json_array_iterator_t, json_init, json_next, json_end
@@ -91,8 +92,9 @@ module ssys_handle_m
 contains
   
   ! ---------------------------------------------------------
-  subroutine ssys_handle_init_handle(this, config)
+  subroutine ssys_handle_init_handle(this, geo, config)
     type(ssys_handle_t), intent(out) :: this
+    type(geometry_t),    intent(in)  :: geo
     type(json_object_t), intent(in)  :: config
 
     type(json_array_iterator_t)  :: iter
@@ -121,7 +123,7 @@ contains
       case(HNDL_TYPE_FRZN)
         call frozen_handle_init(hndl, cnfg)
       case(HNDL_TYPE_LIVE)
-        call live_handle_init(hndl, cnfg)
+        call live_handle_init(hndl, geo, cnfg)
       case default
         message(1)="Unknown subsystems type."
         call messages_fatal(1)

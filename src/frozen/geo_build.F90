@@ -569,17 +569,6 @@ contains
       ASSERT(associated(atom))
       call species_dict_get(sdct, atom_get_label(atom), spec, ierr)
       ASSERT(ierr==SPECIES_DICT_OK)
-
-#if 0
-
-      do jndx = 1, that%nspecies
-        spec => that%species(jndx)
-        if(trim(adjustl(atom_get_label(atom)))==trim(adjustl(species_label(spec))))exit
-        nullify(spec)
-      end do
-
-#endif
-
       ASSERT(associated(spec))
       call atom_init(that%atom(indx), atom_get_label(atom), atom%x, species=spec)
     end do

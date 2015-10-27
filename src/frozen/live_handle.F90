@@ -3,9 +3,12 @@
 module live_handle_m
 
   use base_handle_m
+  use base_model_m
+  use geometry_m
   use global_m
   use grid_m
   use json_m
+  use live_model_m
   use messages_m
   use profiling_m
 
@@ -28,8 +31,27 @@ module live_handle_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine live_handle_init(this, config)
+  subroutine live_handle__init__(this, geo)
+    type(base_handle_t), intent(inout) :: this
+    type(geometry_t),    intent(in)    :: geo
+
+    type(base_model_t), pointer :: that
+
+    PUSH_SUB(live_handle__init__)
+
+    nullify(that)
+    call base_handle_get(this, that)
+    ASSERT(associated(that))
+    call live_model__init__(that, geo)
+    nullify(that)
+
+    POP_SUB(live_handle__init__)
+  end subroutine live_handle__init__
+
+  ! ---------------------------------------------------------
+  subroutine live_handle_init(this, geo, config)
     type(base_handle_t), intent(out) :: this
+    type(geometry_t),    intent(in)  :: geo
     type(json_object_t), intent(in)  :: config
 
     integer :: type
@@ -39,6 +61,7 @@ contains
     call base_handle__init__(this, config)
     call base_handle_get(this, type)
     ASSERT(type==HNDL_TYPE_LIVE)
+    call live_handle__init__(this, geo)
     call base_handle__init__(this)
 
     POP_SUB(live_handle_init)
@@ -76,6 +99,7 @@ contains
     PUSH_SUB(live_handle_copy)
 
     call base_handle__copy__(this, that)
+    call base_handle__copy__(this)
 
     POP_SUB(live_handle_copy)
   end subroutine live_handle_copy
