@@ -323,11 +323,10 @@ contains
 
     PUSH_SUB(base_model_init_copy)
 
-    nullify(cnfg, osub, isub)
     call base_model__init__(this, that)
     call base_model_init(iter, that)
     do
-      nullify(cnfg, osub, isub)
+      nullify(osub, isub, cnfg)
       call base_model_next(iter, cnfg, isub, ierr)
       if(ierr/=BASE_MODEL_OK)exit
       call base_model_new(this, osub)
@@ -335,7 +334,7 @@ contains
       call base_model__add__(this, osub, cnfg)
     end do
     call base_model_end(iter)
-    nullify(cnfg, osub, isub)
+    nullify(osub, isub, cnfg)
     call base_model__init__(this)
     call base_model_build(this)
 
@@ -346,14 +345,13 @@ contains
   subroutine base_model_build(this)
     type(base_model_t), intent(inout) :: this
 
-    type(json_object_t),   pointer :: cnfg
-    type(base_model_iterator_t)    :: iter
-    type(base_model_t),    pointer :: subs
-    integer                        :: ierr
+    type(json_object_t), pointer :: cnfg
+    type(base_model_iterator_t)  :: iter
+    type(base_model_t),  pointer :: subs
+    integer                      :: ierr
 
     PUSH_SUB(base_model_build)
 
-    nullify(cnfg, subs)
     call base_model_init(iter, this)
     do
       nullify(cnfg, subs)
@@ -394,7 +392,6 @@ contains
 
     PUSH_SUB(base_model_start)
 
-    nullify(subs)
     call base_model_init(iter, this)
     do
       nullify(subs)
@@ -431,7 +428,6 @@ contains
 
     PUSH_SUB(base_model_update)
 
-    nullify(subs)
     call base_model_init(iter, this)
     do
       nullify(subs)
@@ -468,7 +464,6 @@ contains
 
     PUSH_SUB(base_model_stop)
 
-    nullify(subs)
     call base_model_init(iter, this)
     do
       nullify(subs)
@@ -520,11 +515,11 @@ contains
     PUSH_SUB(base_model__add__)
 
     ASSERT(associated(this%config))
+    call base_system__add__(this%sys, that%sys, config)
     call json_get(config, "name", name, ierr)
     ASSERT(ierr==JSON_OK)
     call config_dict_set(this%dict, trim(adjustl(name)), config)
     call base_model_hash_set(this%hash, config, that)
-    call base_system__add__(this%sys, that%sys, config)
 
     POP_SUB(base_model__add__)
   end subroutine base_model__add__
@@ -575,8 +570,7 @@ contains
     PUSH_SUB(base_model_get_config)
 
     nullify(that)
-    if(associated(this%config))&
-      that=>this%config
+    if(associated(this%config)) that => this%config
 
     POP_SUB(base_model_get_config)
   end subroutine base_model_get_config

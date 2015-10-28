@@ -144,7 +144,7 @@ module base_functional_m
   end interface base_functional_init
 
   interface base_functional_set
-    module procedure base_functional_set_info
+    module procedure base_functional_set_energy
   end interface base_functional_set
 
   interface base_functional_get
@@ -625,7 +625,7 @@ contains
   ! ---------------------------------------------------------
   subroutine base_functional_get_functional_by_name(this, name, that)
     type(base_functional_t),  intent(in) :: this
-    character(len=*),        intent(in) :: name
+    character(len=*),         intent(in) :: name
     type(base_functional_t), pointer     :: that
 
     type(json_object_t), pointer :: config
@@ -642,16 +642,16 @@ contains
   end subroutine base_functional_get_functional_by_name
 
   ! ---------------------------------------------------------
-  subroutine base_functional_set_info(this, energy)
+  subroutine base_functional_set_energy(this, that)
     type(base_functional_t), intent(inout) :: this
-    real(kind=wp), optional, intent(in)    :: energy
+    real(kind=wp),           intent(in)    :: that
 
-    PUSH_SUB(base_functional_set_config)
+    PUSH_SUB(base_functional_set_energy)
 
-    if(present(energy)) this%energy = energy
+    this%energy = that
 
-    POP_SUB(base_functional_set_config)
-  end subroutine base_functional_set_info
+    POP_SUB(base_functional_set_energy)
+  end subroutine base_functional_set_energy
 
   ! ---------------------------------------------------------
   subroutine base_functional_get_info(this, id, family, kind, size, nspin, energy)
@@ -665,9 +665,9 @@ contains
 
     PUSH_SUB(base_functional_get_info)
 
-    if(present(energy)) energy = this%energy
     call functional_get(this%funct, id=id, family=family, kind=kind)
     call storage_get(this%data, size=size, dim=nspin)
+    if(present(energy)) energy = this%energy
 
     POP_SUB(base_functional_get_info)
   end subroutine base_functional_get_info

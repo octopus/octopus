@@ -116,7 +116,7 @@ contains
     nullify(density)
     call storage_integrate(pdat, rdat, energy)
     nullify(pdat, rdat)
-    call base_potential_set(this, energy=energy)
+    call base_potential_set(this, energy)
 
     POP_SUB(ssys_external__calc__energy)
   end subroutine ssys_external__calc__energy

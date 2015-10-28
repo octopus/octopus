@@ -249,7 +249,8 @@ contains
     nullify(cnfg)
     call base_states__iinit__(this, config)
     call json_get(this%config, "density", cnfg, ierr)
-    if(ierr==JSON_OK) call base_density__init__(this%density, cnfg)
+    ASSERT(ierr==JSON_OK)
+    call base_density__init__(this%density, cnfg)
     nullify(cnfg)
 
     POP_SUB(base_states__init__states)

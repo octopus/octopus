@@ -301,7 +301,7 @@ contains
 
     interface
       subroutine handle_init(this, config)
-        use json_m, only: json_object_t
+        use json_m
         import :: base_handle_t
         type(base_handle_t), intent(out) :: this
         type(json_object_t), intent(in)  :: config
@@ -352,7 +352,6 @@ contains
 
     PUSH_SUB(base_handle_init_copy)
 
-    nullify(cnfg, osub, isub)
     call base_handle__init__(this, that)
     call base_handle_init(iter, that)
     do
@@ -383,24 +382,13 @@ contains
   end subroutine base_handle_build
 
   ! ---------------------------------------------------------
-  subroutine base_handle__istart__(this)
-    type(base_handle_t), intent(inout) :: this
-
-    PUSH_SUB(base_handle__istart__)
-
-    ASSERT(associated(this%config))
-
-    POP_SUB(base_handle__istart__)
-  end subroutine base_handle__istart__
-
-  ! ---------------------------------------------------------
   subroutine base_handle__start__(this, grid)
     type(base_handle_t),    intent(inout) :: this
     type(grid_t), optional, intent(in)    :: grid
 
     PUSH_SUB(base_handle__start__)
 
-    call base_handle__istart__(this)
+    ASSERT(associated(this%config))
     call base_model__start__(this%model, grid)
 
     POP_SUB(base_handle__start__)
@@ -417,7 +405,6 @@ contains
 
     PUSH_SUB(base_handle_start)
 
-    nullify(subs)
     call base_handle_init(iter, this)
     do
       nullify(subs)
@@ -454,7 +441,6 @@ contains
 
     PUSH_SUB(base_handle_update)
 
-    nullify(subs)
     call base_handle_init(iter, this)
     do
       nullify(subs)
@@ -490,7 +476,6 @@ contains
 
     PUSH_SUB(base_handle_stop)
 
-    nullify(subs)
     call base_handle_init(iter, this)
     do
       nullify(subs)
@@ -631,10 +616,7 @@ contains
     PUSH_SUB(base_handle__icopy__)
 
     call base_handle__iend__(this)
-    if(associated(that%config))then
-      call base_handle__iinit__(this, that%config)
-      call base_handle__istart__(this)
-    end if
+    if(associated(that%config)) call base_handle__iinit__(this, that%config)
 
     POP_SUB(base_handle__icopy__)
   end subroutine base_handle__icopy__

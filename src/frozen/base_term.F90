@@ -65,6 +65,7 @@ module base_term_m
     base_term__update__, &
     base_term__reset__,  &
     base_term__acc__,    &
+    base_term__sub__,    &
     base_term__add__,    &
     base_term__copy__,   &
     base_term__end__
@@ -115,7 +116,7 @@ module base_term_m
   end interface base_term_init
 
   interface base_term_set
-    module procedure base_term_set_info
+    module procedure base_term_set_energy
   end interface base_term_set
 
   interface base_term_get
@@ -344,6 +345,19 @@ contains
   end subroutine base_term__acc__
 
   ! ---------------------------------------------------------
+  subroutine base_term__sub__(this, that)
+    type(base_term_t), intent(inout) :: this
+    type(base_term_t), intent(in)    :: that
+
+    PUSH_SUB(base_term__sub__)
+
+    ASSERT(associated(this%config))
+    this%energy = this%energy - that%energy
+
+    POP_SUB(base_term__sub__)
+  end subroutine base_term__sub__
+
+  ! ---------------------------------------------------------
   subroutine base_term__add__(this, that, config)
     type(base_term_t),   intent(inout) :: this
     type(base_term_t),   intent(in)    :: that
@@ -401,16 +415,16 @@ contains
   end subroutine base_term_get_term_by_name
 
   ! ---------------------------------------------------------
-  subroutine base_term_set_info(this, energy)
-    type(base_term_t),       intent(inout) :: this
-    real(kind=wp), optional, intent(in)    :: energy
+  subroutine base_term_set_energy(this, that)
+    type(base_term_t), intent(inout) :: this
+    real(kind=wp),     intent(in)    :: that
 
-    PUSH_SUB(base_term_set_info)
+    PUSH_SUB(base_term_set_energy)
 
-    if(present(energy)) this%energy = energy
+    this%energy = that
 
-    POP_SUB(base_term_set_info)
-  end subroutine base_term_set_info
+    POP_SUB(base_term_set_energy)
+  end subroutine base_term_set_energy
 
   ! ---------------------------------------------------------
   subroutine base_term_get_info(this, energy)
