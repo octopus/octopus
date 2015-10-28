@@ -701,8 +701,15 @@ contains
     type(geometry_t), intent(in)    :: geo
     type(output_t)  , intent(in)    :: outp           !< Output object; Decides the kind, what and where to output
   
-    integer :: i_op, n_operations
-    type(block_t)  :: blk
+    integer             :: ierr, ip, i_op, length, n_operations
+    type(block_t)       :: blk
+    type(restart_t)     :: restart 
+    type(unit_t)        :: units
+    real(8)             :: f_re, f_im
+    FLOAT, allocatable  :: tmp_ff(:), scalar_ff(:)
+
+    character(len=200) :: var, scalar_expression
+    character(len=MAX_PATH_LEN) :: folder, filename, out_folder, out_filename
 
     PUSH_SUB(convert_operate)
 
@@ -726,9 +733,78 @@ contains
       write(message(1),'(a)')'No operations found. Check the input file'
       call messages_fatal(1)
     end if 
+    
+    !%Variable ConvertOutputFolder
+    !%Type string
+    !%Section Utilities::oct-convert
+    !%Description
+    !% The folder name where the output files will be write. The default is
+    !% <tt>convert</tt>. 
+    !%End
+    call parse_variable('ConvertOutputFolder', "convert", out_folder)
+    call add_last_slash(out_folder)
+    call io_mkdir(out_folder)
+
+    !%Variable ConvertOutputFilename
+    !%Type string
+    !%Default "density"
+    !%Section Utilities::oct-convert
+    !%Description
+    !% Output filename. The name of the file in which the converted mesh function will be 
+    !% written in the format specified in <tt>OutputFormat</tt>. 
+    !%End
+    call parse_variable('ConvertOutputFilename', 'density', out_filename)
+
+    SAFE_ALLOCATE(tmp_ff(1:mesh%np))
+    SAFE_ALLOCATE(scalar_ff(1:mesh%np))
      
-    write(message(1),'(a)')'The scalar operation of mesh function is still not implemented'
-    call messages_fatal(1)
+    do i_op = 1, n_operations
+    !read variable name
+      call parse_block_string(blk, i_op-1, 0, var)
+    !read folder path
+      call parse_block_string(blk, i_op-1, 1, folder)
+      call add_last_slash(folder)
+    !read file
+      call parse_block_string(blk, i_op-1, 2, filename)
+      ! Delete the extension if present
+      length = len_trim(filename)
+      if ( length > 4) then
+        if ( filename(length-3:length) == '.obf' ) then
+          filename = trim(filename(1:length-4))
+        end if
+      end if
+      ! FIXME: why only real functions? Please generalize.
+      ! TODO: check if mesh function are real or complex.
+      call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mesh%mpi_grp, &
+          ierr, dir=trim(folder), mesh = mesh, exact=.true.)
+      if(ierr == 0) then
+        call drestart_read_mesh_function(restart, trim(filename), mesh, tmp_ff, ierr)
+        call restart_end(restart)
+      else
+        write(message(1),'(2a)') "Failed to read from file ", trim(filename)
+        write(message(2), '(2a)') "from folder ", trim(folder)
+        call messages_fatal(2)
+      end if
+    !read scalar expression
+      call parse_block_string(blk, i_op-1, 3, scalar_expression)
+
+      do ip = 1, mesh%np
+       call parse_expression(f_re, f_im, trim(var), real(tmp_ff(ip), 8), trim(scalar_expression))
+      !TODO: implement use of complex functions. 
+       scalar_ff(ip) = scalar_ff(ip) + f_re
+      end do
+    end do
+    call parse_block_end(blk)
+
+    ! Write the corresponding output
+    !TODO: add variable ConvertWhat to select the type(density, wfs, potential, ...) 
+    !      and units of the conversion.
+    units = units_out%length**(-mesh%sb%dim)
+    call dio_function_output(outp%how, trim(out_folder), trim(out_filename), mesh,  & 
+                      scalar_ff, units, ierr, geo = geo)
+
+    SAFE_DEALLOCATE_A(tmp_ff)
+    SAFE_DEALLOCATE_A(scalar_ff)
 
     POP_SUB(convert_operate)
   end subroutine convert_operate
