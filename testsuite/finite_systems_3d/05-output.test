@@ -65,3 +65,10 @@ Input : 05-output.02-convert.inp
 match ; Convert to dx (header)     ; GREPFIELD(restart/gs/density.dx, 'origin', 2, 0) ; -5.000000
 match ; Convert to dx (line 513)   ; LINEFIELD(restart/gs/density.dx, 671, 1) ; 0.000097681638760
 match ; Convert to dx (line 29355) ; LINEFIELD(restart/gs/density.dx, 9048, 1) ; 0.000002915649324
+
+# Convert the density from obf to dx by performing two scalar operations. This utility runs in parallel.
+Program : oct-convert
+Input : 05-output.03-convert-op.inp
+match ; Convert to dx (header)     ; GREPFIELD(convert/density.dx, 'origin', 2, 0) ; -5.000000
+match ; Convert to dx (line 513)   ; LINEFIELD(convert/density.dx, 671, 1) ; 0.000244204088835
+match ; Convert to dx (line 29355) ; LINEFIELD(convert/density.dx, 9048, 1) ; 0.000007289118012
