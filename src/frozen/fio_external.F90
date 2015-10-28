@@ -38,6 +38,10 @@ module fio_external_m
     fio_external_copy, &
     fio_external_end
 
+#define INCLUDE_HEADER
+#include "intrpl_inc.F90"
+#undef INCLUDE_HEADER
+
   interface fio_external_init
     module procedure fio_external_init_type
     module procedure fio_external_init_copy
@@ -50,10 +54,6 @@ module fio_external_m
   interface fio_external_end
     module procedure fio_external_end_type
   end interface fio_external_end
-
-#define INCLUDE_HEADER
-#include "intrpl_inc.F90"
-#undef INCLUDE_HEADER
 
 contains
 

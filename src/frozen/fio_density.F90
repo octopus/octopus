@@ -199,7 +199,7 @@ contains
 
     integer :: ierr
 
-    PUSH_SUB(fio_density_intrpl_eval_md)
+    PUSH_SUB(fio_density_eval_md)
 
     call fio_density_intrpl__eval__(this, x, val, ierr)
     if(ierr/=FIO_DENSITY_INTRPL_OK) val = 0.0_wp

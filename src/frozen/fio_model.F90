@@ -28,7 +28,6 @@ module fio_model_m
     fio_model__copy__,  &
     fio_model__end__
 
-
 contains
 
   ! ---------------------------------------------------------
