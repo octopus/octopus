@@ -80,11 +80,6 @@ module scf_m
     scf_run,            &
     scf_end
 
-  integer, parameter :: &
-    MIXNONE = 0,        &
-    MIXPOT  = 1,        &
-    MIXDENS = 2
-
   integer, public, parameter :: &
     VERB_NO      = 0,   &
     VERB_COMPACT = 1,   &
@@ -272,19 +267,21 @@ contains
     !% Mix the density.
     !%End
 
-    mixdefault = MIXPOT
-    if(hm%theory_level==INDEPENDENT_PARTICLES) mixdefault = MIXNONE
+    mixdefault = OPTION__MIXFIELD__POTENTIAL
+    if(hm%theory_level==INDEPENDENT_PARTICLES) mixdefault = OPTION__MIXFIELD__NONE
 
     call parse_variable('MixField', mixdefault, scf%mix_field)
     if(.not.varinfo_valid_option('MixField', scf%mix_field)) call messages_input_error('MixField')
     call messages_print_var_option(stdout, 'MixField', scf%mix_field, "what to mix during SCF cycles")
 
-    if (scf%mix_field == MIXPOT .and. hm%theory_level==INDEPENDENT_PARTICLES) then
+    if (scf%mix_field == OPTION__MIXFIELD__POTENTIAL .and. hm%theory_level==INDEPENDENT_PARTICLES) then
       message(1) = "Input: Cannot mix the potential for non-interacting particles."
       call messages_fatal(1)
     end if
 
-    if(scf%mix_field == MIXDENS .and. iand(hm%xc_family, XC_FAMILY_OEP + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) then
+    if(scf%mix_field == OPTION__MIXFIELD__DENSITY &
+      .and. iand(hm%xc_family, XC_FAMILY_OEP + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) then
+
       message(1) = "Input: You have selected to mix the density with OEP or MGGA XC functionals."
       message(2) = "       This might produce convergence problems. Mix the potential instead."
       call messages_warning(2)
@@ -292,13 +289,13 @@ contains
 
     ! Handle mixing now...
     select case(scf%mix_field)
-    case(MIXPOT)
+    case(OPTION__MIXFIELD__POTENTIAL)
       scf%mixdim1 = gr%mesh%np
-    case(MIXDENS)
+    case(OPTION__MIXFIELD__DENSITY)
       scf%mixdim1 = gr%fine%mesh%np
     end select
 
-    if(scf%mix_field /= MIXNONE) then
+    if(scf%mix_field /= OPTION__MIXFIELD__NONE) then
       if(.not. st%cmplxscl%space) then
         call mix_init(scf%smix, scf%mixdim1, 1, st%d%nspin)
       else
@@ -407,7 +404,7 @@ contains
     PUSH_SUB(scf_end)
 
     call eigensolver_end(scf%eigens)
-    if(scf%mix_field /= MIXNONE) call mix_end(scf%smix)
+    if(scf%mix_field /= OPTION__MIXFIELD__NONE) call mix_end(scf%smix)
 
     POP_SUB(scf_end)
   end subroutine scf_end
@@ -517,9 +514,9 @@ contains
 
       if (restart_has_flag(restart_load, RESTART_MIX)) then
         select case (scf%mix_field)
-        case (MIXDENS)
+        case (OPTION__MIXFIELD__DENSITY)
           call mix_load(restart_load, scf%smix, gr%fine%mesh, ierr)
-        case (MIXPOT)
+        case (OPTION__MIXFIELD__POTENTIAL)
           call mix_load(restart_load, scf%smix, gr%mesh, ierr)
         end select
         if (ierr /= 0) then
@@ -546,7 +543,7 @@ contains
     end if
 
     select case(scf%mix_field)
-    case(MIXPOT)
+    case(OPTION__MIXFIELD__POTENTIAL)
       SAFE_ALLOCATE(vout(1:gr%mesh%np, 1:1, 1:nspin))
       SAFE_ALLOCATE( vin(1:gr%mesh%np, 1:1, 1:nspin))
       SAFE_ALLOCATE(vnew(1:gr%mesh%np, 1:1, 1:nspin))
@@ -561,7 +558,7 @@ contains
         Imvin(1:gr%mesh%np, 1, 1:nspin) = hm%Imvhxc(1:gr%mesh%np, 1:nspin)
         Imvout = M_ZERO
       end if
-    case(MIXDENS)
+    case(OPTION__MIXFIELD__DENSITY)
       if(.not. cmplxscl) then
         SAFE_ALLOCATE(rhonew(1:gr%fine%mesh%np, 1:1, 1:nspin))
       else
@@ -659,7 +656,7 @@ contains
           M_zI * st%zrho%Im(1:gr%fine%mesh%np, 1:nspin)
       end if
 
-      if (scf%mix_field == MIXPOT) then
+      if (scf%mix_field == OPTION__MIXFIELD__POTENTIAL) then
         call v_ks_calc(ks, hm, st, geo)
         vout(1:gr%mesh%np, 1, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
         if(cmplxscl) Imvout(1:gr%mesh%np, 1, 1:nspin) = hm%Imvhxc(1:gr%mesh%np, 1:nspin)
@@ -726,7 +723,7 @@ contains
 
       ! mixing
       select case (scf%mix_field)
-      case (MIXDENS)
+      case (OPTION__MIXFIELD__DENSITY)
         !set the pointer for dmf_dotp_aux
         call mesh_init_mesh_aux(gr%fine%mesh)
         ! mix input and output densities and compute new potential
@@ -745,7 +742,7 @@ contains
           st%zrho%Im(1:gr%fine%mesh%np, 1:nspin) = aimag(zrhonew(1:gr%fine%mesh%np, 1, 1:nspin))                    
         end if
         call v_ks_calc(ks, hm, st, geo)
-      case (MIXPOT)
+      case (OPTION__MIXFIELD__POTENTIAL)
         !set the pointer for dmf_dotp_aux
         call mesh_init_mesh_aux(gr%mesh)
         ! mix input and output potentials
@@ -756,7 +753,7 @@ contains
           hm%Imvhxc(1:gr%mesh%np, 1:nspin) = Imvnew(1:gr%mesh%np, 1, 1:nspin)
         end if
         call hamiltonian_update(hm, gr%mesh)
-      case(MIXNONE)
+      case(OPTION__MIXFIELD__NONE)
         call v_ks_calc(ks, hm, st, geo)
       end select
 
@@ -785,13 +782,13 @@ contains
           end if
 
           select case (scf%mix_field)
-          case (MIXDENS)
+          case (OPTION__MIXFIELD__DENSITY)
             call mix_dump(restart_dump, scf%smix, gr%fine%mesh, ierr)
             if (ierr /= 0) then
               message(1) = 'Unable to write mixing information.'
               call messages_warning(1)
             end if
-          case (MIXPOT)
+          case (OPTION__MIXFIELD__POTENTIAL)
             call hamiltonian_dump_vhxc(restart_dump, hm, gr%mesh, ierr)
             if (ierr /= 0) then
               message(1) = 'Unable to write Vhxc.'
@@ -831,7 +828,7 @@ contains
         zrhoin(1:gr%fine%mesh%np, 1, 1:nspin) = st%zrho%Re(1:gr%fine%mesh%np, 1:nspin) +&
           M_zI * st%zrho%Im(1:gr%fine%mesh%np, 1:nspin)  
       end if
-      if (scf%mix_field == MIXPOT) then
+      if (scf%mix_field == OPTION__MIXFIELD__POTENTIAL) then
         vin(1:gr%mesh%np, 1, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
         if (cmplxscl) Imvin(1:gr%mesh%np, 1, 1:nspin) = hm%Imvhxc(1:gr%mesh%np, 1:nspin)
       end if
@@ -853,19 +850,19 @@ contains
 
     if(scf%lcao_restricted) call lcao_end(lcao)
 
-    if(scf%max_iter > 0 .and. scf%mix_field == MIXPOT) then
+    if(scf%max_iter > 0 .and. scf%mix_field == OPTION__MIXFIELD__POTENTIAL) then
       call v_ks_calc(ks, hm, st, geo)
     end if
 
     select case(scf%mix_field)
-    case(MIXPOT)
+    case(OPTION__MIXFIELD__POTENTIAL)
       SAFE_DEALLOCATE_A(vout)
       SAFE_DEALLOCATE_A(vin)
       SAFE_DEALLOCATE_A(vnew)
       SAFE_DEALLOCATE_A(Imvout)
       SAFE_DEALLOCATE_A(Imvin)
       SAFE_DEALLOCATE_A(Imvnew)
-    case(MIXDENS)
+    case(OPTION__MIXFIELD__DENSITY)
       SAFE_DEALLOCATE_A(rhonew)
       SAFE_DEALLOCATE_A(zrhonew)
     end select
