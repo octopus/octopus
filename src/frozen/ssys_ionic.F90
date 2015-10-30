@@ -183,7 +183,7 @@ contains
     end do
     call base_geometry_end(iiter)
     nullify(sys, geom, iatom, jatom)
-    call base_term_set(this, energy)
+    call base_term_set(this, energy=energy)
     call base_term__update__(this)
 
     POP_SUB(ssys_ionic__calc__)

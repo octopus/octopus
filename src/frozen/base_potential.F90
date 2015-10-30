@@ -134,7 +134,7 @@ module base_potential_m
   end interface base_potential_init
 
   interface base_potential_set
-    module procedure base_potential_set_energy
+    module procedure base_potential_set_info
   end interface base_potential_set
 
   interface base_potential_get
@@ -221,33 +221,22 @@ contains
   end subroutine base_potential_del
 
   ! ---------------------------------------------------------
-  subroutine base_potential__inull__(this)
-    type(base_potential_t), intent(inout) :: this
-
-    PUSH_SUB(base_potential__inull__)
-
-    nullify(this%config, this%sys, this%sim, this%prnt)
-    this%energy = 0.0_wp
-
-    POP_SUB(base_potential__inull__)
-  end subroutine base_potential__inull__
-
-  ! ---------------------------------------------------------
   subroutine base_potential__init__potential(this, sys, config)
     type(base_potential_t),      intent(out) :: this
     type(base_system_t), target, intent(in)  :: sys
     type(json_object_t), target, intent(in)  :: config
 
     integer :: nspin, ierr
-    logical :: alloc
+    logical :: uspin, alloc
 
     PUSH_SUB(base_potential__init__potential)
 
-    call base_potential__inull__(this)
     this%config => config
     this%sys => sys
-    call json_get(this%config, "nspin", nspin, ierr)
-    if(ierr/=JSON_OK) call base_system_get(this%sys, nspin=nspin)
+    nspin = 1
+    call json_get(this%config, "spin", uspin, ierr)
+    if(ierr/=JSON_OK) uspin = .false.
+    if(uspin) call base_system_get(this%sys, nspin=nspin)
     ASSERT(nspin>0)
     ASSERT(nspin<3)
     call json_get(this%config, "allocate", alloc, ierr)
@@ -557,16 +546,16 @@ contains
   end subroutine base_potential_get_potential_by_name
 
   ! ---------------------------------------------------------
-  subroutine base_potential_set_energy(this, that)
-    type(base_potential_t), intent(inout) :: this
-    real(kind=wp),          intent(in)    :: that
+  subroutine base_potential_set_info(this, energy)
+    type(base_potential_t),  intent(inout) :: this
+    real(kind=wp), optional, intent(in)    :: energy
 
-    PUSH_SUB(base_potential_set_energy)
+    PUSH_SUB(base_potential_set_info)
 
-    this%energy = that
+    if(present(energy)) this%energy = energy
 
-    POP_SUB(base_potential_set_energy)
-  end subroutine base_potential_set_energy
+    POP_SUB(base_potential_set_info)
+  end subroutine base_potential_set_info
  
   ! ---------------------------------------------------------
   subroutine base_potential_get_info(this, size, nspin, energy, use)
@@ -733,7 +722,8 @@ contains
 
     PUSH_SUB(base_potential__end__potential)
 
-    call base_potential__inull__(this)
+    nullify(this%config, this%sys, this%sim, this%prnt)
+    this%energy = 0.0_wp
     call storage_end(this%data)
     call config_dict_end(this%dict)
     call base_potential_hash_end(this%hash)

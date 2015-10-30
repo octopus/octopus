@@ -78,14 +78,15 @@ contains
   subroutine grid_intrf__new__(this)
     type(grid_intrf_t), intent(inout) :: this
 
-    type(grid_t), pointer :: grid
-
     PUSH_SUB(grid_intrf__new__)
     
-    nullify(grid)
-    SAFE_ALLOCATE(grid)
-    !call grid_nullify(grid)
-    call grid_intrf_set(this, grid)
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%space))
+    ASSERT(associated(this%geo))
+    ASSERT(.not.associated(this%grid))
+    nullify(this%grid)
+    SAFE_ALLOCATE(this%grid)
+    !call grid_nullify(this%grid)
     this%type = GRID_ALLC
 
     POP_SUB(grid_intrf__new__)
@@ -137,8 +138,11 @@ contains
 
     PUSH_SUB(grid_intrf_del_grid)
 
-    ASSERT(this%type==GRID_ALLC)
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%space))
+    ASSERT(associated(this%geo))
     ASSERT(associated(this%grid))
+    ASSERT(this%type==GRID_ALLC)
     !call grid_end(this%grid)
     SAFE_DEALLOCATE_P(this%grid)
     nullify(this%grid)
@@ -160,8 +164,11 @@ contains
 
     PUSH_SUB(grid_intrf_del_pass)
 
-    ASSERT(this%type==GRID_ALLC)
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%space))
+    ASSERT(associated(this%geo))
     ASSERT(associated(this%grid))
+    ASSERT(this%type==GRID_ALLC)
     call grid_type_end(this%grid)
     call grid_intrf_del(this)
     
@@ -226,10 +233,12 @@ contains
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%space))
+    ASSERT(this%space%dim==that%sb%dim)
     ASSERT(associated(this%geo))
     ASSERT(.not.associated(this%grid))
-    ASSERT(this%space%dim==that%sb%dim)
+    ASSERT(this%type==GRID_NULL)
     this%grid => that
+    this%type = GRID_ASSC
 
     POP_SUB(grid_intrf_set_grid)
   end subroutine grid_intrf_set_grid

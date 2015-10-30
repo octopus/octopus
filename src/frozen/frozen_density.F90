@@ -34,27 +34,22 @@ contains
 
     PUSH_SUB(frozen_density__acc__charge)
 
-#if 0
-
     call base_density_get(that, nspin=nspin)
     SAFE_ALLOCATE(ichrg(1:nspin))
     do ispin = 1, nspin
-      call base_density_get(that, ispin, ichrg(ispin))
+      call base_density_get(that, ichrg(ispin), ispin)
     end do
     call base_density_get(this, nspin=nspin)
     SAFE_ALLOCATE(ochrg(1:nspin))
     call frozen_density_adjust_spin(ochrg, ichrg)
     SAFE_DEALLOCATE_A(ichrg)
     do ispin = 1, nspin
-      call base_density_get(this, ispin, charge)
-      call base_density_set(this, ispin, (charge+ochrg(ispin)))
+      call base_density_get(this, charge, ispin)
+      call base_density_set(this, (charge+ochrg(ispin)), ispin)
     end do
     SAFE_DEALLOCATE_A(ochrg)
 
-#endif
-
     POP_SUB(frozen_density__acc__charge)
-
   end subroutine frozen_density__acc__charge
 
   ! ---------------------------------------------------------

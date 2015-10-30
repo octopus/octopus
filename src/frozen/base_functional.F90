@@ -144,7 +144,7 @@ module base_functional_m
   end interface base_functional_init
 
   interface base_functional_set
-    module procedure base_functional_set_energy
+    module procedure base_functional_set_info
   end interface base_functional_set
 
   interface base_functional_get
@@ -642,16 +642,16 @@ contains
   end subroutine base_functional_get_functional_by_name
 
   ! ---------------------------------------------------------
-  subroutine base_functional_set_energy(this, that)
+  subroutine base_functional_set_info(this, energy)
     type(base_functional_t), intent(inout) :: this
-    real(kind=wp),           intent(in)    :: that
+    real(kind=wp), optional, intent(in)    :: energy
 
-    PUSH_SUB(base_functional_set_energy)
+    PUSH_SUB(base_functional_set_info)
 
-    this%energy = that
+    if(present(energy)) this%energy = energy
 
-    POP_SUB(base_functional_set_energy)
-  end subroutine base_functional_set_energy
+    POP_SUB(base_functional_set_info)
+  end subroutine base_functional_set_info
 
   ! ---------------------------------------------------------
   subroutine base_functional_get_info(this, id, family, kind, size, nspin, energy)

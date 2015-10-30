@@ -228,7 +228,7 @@ module base_hamiltonian_m
   end interface base_hamiltonian_init
 
   interface base_hamiltonian_set
-    module procedure base_hamiltonian_set_energy
+    module procedure base_hamiltonian_set_info
   end interface base_hamiltonian_set
 
   interface base_hamiltonian_get
@@ -1603,16 +1603,16 @@ contains
   end subroutine base_hamiltonian_get_hamiltonian_by_name
 
   ! ---------------------------------------------------------
-  subroutine base_hamiltonian_set_energy(this, that)
+  subroutine base_hamiltonian_set_info(this, energy)
     type(base_hamiltonian_t), intent(inout) :: this
-    real(kind=wp),            intent(in)    :: that
+    real(kind=wp),  optional, intent(in)    :: energy
 
-    PUSH_SUB(base_hamiltonian_set_energy)
+    PUSH_SUB(base_hamiltonian_set_info)
 
-    this%energy = that
+    if(present(energy)) this%energy = energy
 
-    POP_SUB(base_hamiltonian_set_energy)
-  end subroutine base_hamiltonian_set_energy
+    POP_SUB(base_hamiltonian_set_info)
+  end subroutine base_hamiltonian_set_info
 
   ! ---------------------------------------------------------
   subroutine base_hamiltonian_get_info(this, size, nspin, energy)
@@ -1623,8 +1623,8 @@ contains
 
     PUSH_SUB(base_hamiltonian_get_info)
 
-    if(present(energy)) energy = this%energy
     call storage_get(this%data, size=size, dim=nspin)
+    if(present(energy)) energy = this%energy
 
     POP_SUB(base_hamiltonian_get_info)
   end subroutine base_hamiltonian_get_info

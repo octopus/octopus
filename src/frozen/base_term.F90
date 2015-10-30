@@ -116,7 +116,7 @@ module base_term_m
   end interface base_term_init
 
   interface base_term_set
-    module procedure base_term_set_energy
+    module procedure base_term_set_info
   end interface base_term_set
 
   interface base_term_get
@@ -415,16 +415,16 @@ contains
   end subroutine base_term_get_term_by_name
 
   ! ---------------------------------------------------------
-  subroutine base_term_set_energy(this, that)
-    type(base_term_t), intent(inout) :: this
-    real(kind=wp),     intent(in)    :: that
+  subroutine base_term_set_info(this, energy)
+    type(base_term_t),       intent(inout) :: this
+    real(kind=wp), optional, intent(in)    :: energy
 
-    PUSH_SUB(base_term_set_energy)
+    PUSH_SUB(base_term_set_info)
 
-    this%energy = that
+    if(present(energy)) this%energy = energy
 
-    POP_SUB(base_term_set_energy)
-  end subroutine base_term_set_energy
+    POP_SUB(base_term_set_info)
+  end subroutine base_term_set_info
 
   ! ---------------------------------------------------------
   subroutine base_term_get_info(this, energy)

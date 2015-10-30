@@ -334,7 +334,6 @@ contains
       nullify(cnfg, hndl)
     end if
     call base_handle__init__(this)
-    call base_handle_build(this)
     nullify(list)
 
     POP_SUB(base_handle_init_pass)
@@ -364,22 +363,10 @@ contains
     end do
     call base_handle_end(iter)
     call base_handle__init__(this)
-    call base_handle_build(this)
     nullify(cnfg, osub, isub)
 
     POP_SUB(base_handle_init_copy)
   end subroutine base_handle_init_copy
-
-  ! ---------------------------------------------------------
-  subroutine base_handle_build(this)
-    type(base_handle_t), intent(inout) :: this
-
-    PUSH_SUB(base_handle_build)
-
-    call base_model_build(this%model)
-
-    POP_SUB(base_handle_build)
-  end subroutine base_handle_build
 
   ! ---------------------------------------------------------
   subroutine base_handle__start__(this, grid)

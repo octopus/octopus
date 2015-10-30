@@ -80,7 +80,6 @@ module base_model_m
     base_model_new,    &
     base_model_del,    &
     base_model_init,   &
-    base_model_build,  &
     base_model_start,  &
     base_model_update, &
     base_model_stop,   &
@@ -279,6 +278,7 @@ contains
     call json_get(this%config, "hamiltonian", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
     call base_hamiltonian__init__(this%hm, this%sys, cnfg)
+    call base_model__build__(this)
     nullify(cnfg)
 
     POP_SUB(base_model__init__finish)
@@ -336,13 +336,12 @@ contains
     call base_model_end(iter)
     nullify(osub, isub, cnfg)
     call base_model__init__(this)
-    call base_model_build(this)
 
     POP_SUB(base_model_init_copy)
   end subroutine base_model_init_copy
 
   ! ---------------------------------------------------------
-  subroutine base_model_build(this)
+  subroutine base_model__build__(this)
     type(base_model_t), intent(inout) :: this
 
     type(json_object_t), pointer :: cnfg
@@ -350,7 +349,7 @@ contains
     type(base_model_t),  pointer :: subs
     integer                      :: ierr
 
-    PUSH_SUB(base_model_build)
+    PUSH_SUB(base_model__build__)
 
     call base_model_init(iter, this)
     do
@@ -363,8 +362,8 @@ contains
     call base_model_end(iter)
     nullify(cnfg, subs)
 
-    POP_SUB(base_model_build)
-  end subroutine base_model_build
+    POP_SUB(base_model__build__)
+  end subroutine base_model__build__
 
   ! ---------------------------------------------------------
   subroutine base_model__start__(this, grid)

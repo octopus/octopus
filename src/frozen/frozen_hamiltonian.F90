@@ -36,7 +36,7 @@ contains
 
     call base_hamiltonian_get(this, energy=energy)
     call base_hamiltonian_get(that, energy=enrg)
-    call base_hamiltonian_set(this, (energy+enrg))
+    call base_hamiltonian_set(this, energy=(energy+enrg))
     nullify(mept, sept)
     call base_hamiltonian__get__(this, "external", mept)
     ASSERT(associated(mept))

@@ -340,16 +340,21 @@ contains
     type(json_object_t),   intent(in)    :: config
 
     character(len=CONFIG_DICT_NAME_LEN) :: name
+    type(geometry_t),           pointer :: geo
     integer                             :: ierr
 
     PUSH_SUB(base_geometry__add__)
 
+    nullify(geo)
     ASSERT(associated(this%config))
     call json_get(config, "name", name, ierr)
     ASSERT(ierr==JSON_OK)
     call config_dict_set(this%dict, trim(adjustl(name)), config)
     call base_geometry_hash_set(this%hash, config, that)
-    call geo_build_extend(this%bgeo, that%bgeo, config)
+    call geo_intrf_get(that%igeo, geo)
+    ASSERT(associated(geo))
+    call geo_build_extend(this%bgeo, geo, config)
+    nullify(geo)
 
     POP_SUB(base_geometry__add__)
   end subroutine base_geometry__add__
