@@ -47,7 +47,8 @@ module mix_m
     mix_dump,                   &
     mix_load,                   &
     dmixing,                    &
-    zmixing
+    zmixing,                    &
+    mix_coefficient
 
   integer, parameter, public :: &
     MIX_LINEAR  = 0,            &
@@ -504,7 +505,13 @@ contains
     POP_SUB(mix_load)
   end subroutine mix_load
 
-
+  FLOAT pure function mix_coefficient(this) result(coefficient)
+    type(mix_t), intent(in) :: this
+    
+    coefficient = this%alpha
+  end function mix_coefficient
+  
+  
 #include "undef.F90"
 #include "real.F90"
 

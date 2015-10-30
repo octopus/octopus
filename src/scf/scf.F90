@@ -20,7 +20,8 @@
 #include "global.h"
 
 module scf_m
-  use partial_charges_m
+  use batch_m
+  use batch_ops_m
   use berry_m
   use density_m
   use eigensolver_m
@@ -49,6 +50,7 @@ module scf_m
   use multigrid_m
   use multicomm_m
   use parser_m
+  use partial_charges_m
   use preconditioners_m
   use profiling_m
   use restart_m
@@ -59,6 +61,7 @@ module scf_m
   use states_m
   use states_calc_m
   use states_dim_m
+  use states_group_m
   use states_io_m
   use states_restart_m
   use types_m
@@ -265,28 +268,34 @@ contains
     !% The Kohn-Sham potential is mixed. This is the default for other cases.
     !%Option density 2
     !% Mix the density.
+    !%Option states 3
+    !% (Experimental) Mix the states. In this case, the mixing is always linear.
     !%End
 
     mixdefault = OPTION__MIXFIELD__POTENTIAL
-    if(hm%theory_level==INDEPENDENT_PARTICLES) mixdefault = OPTION__MIXFIELD__NONE
+    if(hm%theory_level == INDEPENDENT_PARTICLES) mixdefault = OPTION__MIXFIELD__NONE
 
     call parse_variable('MixField', mixdefault, scf%mix_field)
     if(.not.varinfo_valid_option('MixField', scf%mix_field)) call messages_input_error('MixField')
     call messages_print_var_option(stdout, 'MixField', scf%mix_field, "what to mix during SCF cycles")
 
-    if (scf%mix_field == OPTION__MIXFIELD__POTENTIAL .and. hm%theory_level==INDEPENDENT_PARTICLES) then
-      message(1) = "Input: Cannot mix the potential for non-interacting particles."
-      call messages_fatal(1)
+    if (scf%mix_field == OPTION__MIXFIELD__POTENTIAL .and. hm%theory_level == INDEPENDENT_PARTICLES) then
+      call messages_write('Input: Cannot mix the potential for non-interacting particles.')
+      call messages_fatal()
     end if
 
     if(scf%mix_field == OPTION__MIXFIELD__DENSITY &
       .and. iand(hm%xc_family, XC_FAMILY_OEP + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) then
 
-      message(1) = "Input: You have selected to mix the density with OEP or MGGA XC functionals."
-      message(2) = "       This might produce convergence problems. Mix the potential instead."
-      call messages_warning(2)
+      call messages_write('Input: You have selected to mix the density with OEP or MGGA XC functionals.', new_line = .true.)
+      call messages_write('       This might produce convergence problems. Mix the potential instead.')
+      call messages_warning()
     end if
 
+    if(scf%mix_field == OPTION__MIXFIELD__STATES) then
+      call messages_experimental('MixField = states')
+    end if
+    
     ! Handle mixing now...
     select case(scf%mix_field)
     case(OPTION__MIXFIELD__POTENTIAL)
@@ -439,7 +448,7 @@ contains
     type(restart_t), optional, intent(in)    :: restart_dump
 
     logical :: finish, gs_run_, berry_conv, cmplxscl
-    integer :: iter, is, iatom, nspin, ierr, iberry, idir, verbosity_
+    integer :: iter, is, iatom, nspin, ierr, iberry, idir, verbosity_, ib, iqn
     FLOAT :: evsum_out, evsum_in, forcetmp, dipole(MAX_DIM), dipole_prev(MAX_DIM)
     real(8) :: etime, itime
     character(len=MAX_PATH_LEN) :: dirname
@@ -450,7 +459,8 @@ contains
     FLOAT, allocatable :: forceout(:,:), forcein(:,:), forcediff(:), tmp(:)
     CMPLX, allocatable :: zrhoout(:,:,:), zrhoin(:,:,:), zrhonew(:,:,:)
     FLOAT, allocatable :: Imvout(:,:,:), Imvin(:,:,:), Imvnew(:,:,:)
-
+    type(batch_t), allocatable :: psioutb(:, :)
+    
     PUSH_SUB(scf_run)
 
     if(scf%forced_finish) then
@@ -564,6 +574,17 @@ contains
       else
         SAFE_ALLOCATE(zrhonew(1:gr%fine%mesh%np, 1:1, 1:nspin))
       end if
+
+    case(OPTION__MIXFIELD__STATES)
+
+      SAFE_ALLOCATE(psioutb(st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
+
+      do iqn = st%d%kpt%start, st%d%kpt%end
+        do ib = st%group%block_start, st%group%block_end
+          call batch_copy(st%group%psib(ib, iqn), psioutb(ib, iqn))
+        end do
+      end do
+      
     end select
 
     evsum_in = states_eigenvalues_sum(st)
@@ -656,11 +677,22 @@ contains
           M_zI * st%zrho%Im(1:gr%fine%mesh%np, 1:nspin)
       end if
 
-      if (scf%mix_field == OPTION__MIXFIELD__POTENTIAL) then
+      select case(scf%mix_field)
+      case(OPTION__MIXFIELD__POTENTIAL)
         call v_ks_calc(ks, hm, st, geo)
         vout(1:gr%mesh%np, 1, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
         if(cmplxscl) Imvout(1:gr%mesh%np, 1, 1:nspin) = hm%Imvhxc(1:gr%mesh%np, 1:nspin)
-      end if
+
+      case(OPTION__MIXFIELD__STATES)
+
+        do iqn = st%d%kpt%start, st%d%kpt%end
+          do ib = st%group%block_start, st%group%block_end
+            call batch_copy_data(gr%mesh%np, st%group%psib(ib, iqn), psioutb(ib, iqn))
+          end do
+        end do
+        
+      end select
+      
       evsum_out = states_eigenvalues_sum(st)
 
       ! recalculate total energy
@@ -753,6 +785,19 @@ contains
           hm%Imvhxc(1:gr%mesh%np, 1:nspin) = Imvnew(1:gr%mesh%np, 1, 1:nspin)
         end if
         call hamiltonian_update(hm, gr%mesh)
+        
+      case(OPTION__MIXFIELD__STATES)
+
+        do iqn = st%d%kpt%start, st%d%kpt%end
+          do ib = st%group%block_start, st%group%block_end
+            call batch_scal(gr%mesh%np, CNST(1.0) - mix_coefficient(scf%smix), st%group%psib(ib, iqn))
+            call batch_axpy(gr%mesh%np, mix_coefficient(scf%smix), psioutb(ib, iqn), st%group%psib(ib, iqn))
+          end do
+        end do
+
+        call density_calc(st, gr, st%rho)
+        call v_ks_calc(ks, hm, st, geo)
+        
       case(OPTION__MIXFIELD__NONE)
         call v_ks_calc(ks, hm, st, geo)
       end select
@@ -865,6 +910,15 @@ contains
     case(OPTION__MIXFIELD__DENSITY)
       SAFE_DEALLOCATE_A(rhonew)
       SAFE_DEALLOCATE_A(zrhonew)
+    case(OPTION__MIXFIELD__STATES)
+
+      do iqn = st%d%kpt%start, st%d%kpt%end
+        do ib = st%group%block_start, st%group%block_end
+          call batch_end(psioutb(ib, iqn))
+        end do
+      end do
+      
+      SAFE_DEALLOCATE_A(psioutb)
     end select
 
     SAFE_DEALLOCATE_A(rhoout)
