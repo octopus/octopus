@@ -35,11 +35,11 @@ else
     [Directory where external METIS library was installed (must be single-precision)])])
 
   case $with_metis_prefix in
-    no ) acx_external_metis=no ;;
+    no ) acx_external_metis=disabled ;;
     "") with_metis_prefix="/usr" ;;
   esac
 
-  if test x"$acx_external_metis" != xno; then
+  if test x"$acx_external_metis" != xdisabled; then
   
     dnl Backup CFLAGS and LIBS
     acx_metis_save_CFLAGS="$CFLAGS"
@@ -88,6 +88,7 @@ METIS_SetDefaultOptions(options);
     LIBS="$acx_metis_save_LIBS"
   else
     AC_MSG_RESULT([disabled])
+    acx_external_metis=no
   fi
 
   if test x"$acx_external_metis" = xno ; then
