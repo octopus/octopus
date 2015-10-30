@@ -168,7 +168,14 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
 
   if (iand(TERM_OTHERS, terms_) /= 0) then
 
-    if(hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) then
+    if(hm%theory_level == HARTREE) then
+      do ii = 1, psib%nst
+        call X(exchange_operator_hartree)(hm, der, epsib%states(ii)%X(psi), &
+          hpsib%states(ii)%X(psi), psib%states(ii)%ist, ik,hm%exx_coef)
+      end do
+    end if
+    
+    if(hm%theory_level == HARTREE_FOCK) then
       ASSERT(.not. batch_is_packed(hpsib))
 
       if(hm%scdm_EXX)  then
@@ -451,9 +458,6 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
     do jst = 1, hm%hf_st%nst
       if(hm%hf_st%occ(jst, ik2) < M_EPSILON) cycle
 
-      ! in Hartree we just remove the self-interaction
-      if(hm%theory_level == HARTREE .and. jst /= ist) cycle
-
       pot = R_TOTYPE(M_ZERO)
       rho = R_TOTYPE(M_ZERO)
 
@@ -487,6 +491,68 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
 
   POP_SUB(X(exchange_operator))
 end subroutine X(exchange_operator)
+
+! ---------------------------------------------------------
+
+subroutine X(exchange_operator_hartree) (hm, der, psi, hpsi, ist, ik, exx_coef)
+  type(hamiltonian_t), intent(in)    :: hm
+  type(derivatives_t), intent(in)    :: der
+  R_TYPE,              intent(inout) :: psi(:,:)
+  R_TYPE,              intent(inout) :: hpsi(:,:)
+  integer,             intent(in)    :: ist
+  integer,             intent(in)    :: ik
+  FLOAT,               intent(in)    :: exx_coef
+
+  integer :: ip, idim, ik2
+  FLOAT                              :: ff
+  R_TYPE, allocatable :: rho(:), pot(:), psi2(:, :)
+
+  PUSH_SUB(X(exchange_operator))
+
+  if(der%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points")
+  if(hm%hf_st%parallel_in_states) call messages_not_implemented("exchange operator parallel in states")
+
+  SAFE_ALLOCATE(rho(1:der%mesh%np))
+  SAFE_ALLOCATE(pot(1:der%mesh%np))
+  SAFE_ALLOCATE(psi2(1:der%mesh%np, 1:hm%d%dim))
+
+  do ik2 = 1, hm%d%nik
+    if(states_dim_get_spin_index(hm%d, ik2) /= states_dim_get_spin_index(hm%d, ik)) cycle
+    
+    if(hm%hf_st%occ(ist, ik2) < M_EPSILON) cycle
+    
+    pot = R_TOTYPE(M_ZERO)
+    rho = R_TOTYPE(M_ZERO)
+    
+    call states_get_state(hm%hf_st, der%mesh, ist, ik2, psi2)
+    
+    if(hm%cmplxscl%space) psi2(1:der%mesh%np, 1:hm%d%dim) = R_CONJ(psi2(1:der%mesh%np, 1:hm%d%dim))
+    
+    do idim = 1, hm%hf_st%d%dim
+      forall(ip = 1:der%mesh%np)
+        rho(ip) = rho(ip) + R_CONJ(psi2(ip, idim))*psi(ip, idim)
+      end forall
+    end do
+    
+    call X(poisson_solve)(psolver, pot, rho, all_nodes = .false.)
+    
+    ff = hm%hf_st%occ(ist, ik2)
+    if(hm%d%ispin == UNPOLARIZED) ff = M_HALF*ff
+    
+    do idim = 1, hm%hf_st%d%dim
+      forall(ip = 1:der%mesh%np)
+        hpsi(ip, idim) = hpsi(ip, idim) - exx_coef*ff*psi2(ip, idim)*pot(ip)
+      end forall
+    end do
+    
+  end do
+
+  SAFE_DEALLOCATE_A(rho)
+  SAFE_DEALLOCATE_A(pot)
+  SAFE_DEALLOCATE_A(psi2)
+
+  POP_SUB(X(exchange_operator))
+end subroutine X(exchange_operator_hartree)
 
 ! scdm_EXX
 ! ---------------------------------------------------------
