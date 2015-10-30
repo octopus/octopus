@@ -23,10 +23,12 @@ module output_fio_m
   use space_m
   use species_m
   use states_m
+  use states_dim_m
   
   implicit none
 
   private
+
   public ::     &
     output_fio
   
@@ -34,17 +36,15 @@ contains
 
   ! ---------------------------------------------------------
   subroutine output_parse_config_simul_box(this, sb)
-    type(json_object_t), intent(inout) :: this
-    type(simul_box_t),   intent(in)    :: sb
-
-    integer :: idim, ierr
+    type(json_object_t), intent(out) :: this
+    type(simul_box_t),   intent(in)  :: sb
 
     !This routine is not compatible anymore with the current restart machinery and should be rewritten.
     PUSH_SUB(output_parse_config_simul_box)
 
-    call json_get(this, "dimensions", idim, ierr)
-    ASSERT(ierr==JSON_OK)
-    ASSERT(idim==sb%dim)
+    ASSERT(sb%dim>0)
+    call json_init(this)
+    call json_set(this, "dimensions", sb%dim)
     call json_set(this, "dir", input_mesh_dir)
     call json_set(this, "file", input_mesh_file)
 
@@ -53,11 +53,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine output_parse_config_curvilinear(this, cv)
-    type(json_object_t), intent(inout) :: this
-    type(curvilinear_t), intent(in)    :: cv
+    type(json_object_t), intent(out) :: this
+    type(curvilinear_t), intent(in)  :: cv
 
     PUSH_SUB(output_parse_config_curvilinear)
 
+    ASSERT(cv%method==CURV_METHOD_UNIFORM)
+    call json_init(this)
     call json_set(this, "method", cv%method)
 
     POP_SUB(output_parse_config_curvilinear)
@@ -65,21 +67,14 @@ contains
 
   ! ---------------------------------------------------------
   subroutine output_parse_config_mesh(this, mesh)
-    type(json_object_t), intent(inout) :: this
-    type(mesh_t),        intent(in)    :: mesh
-
-    type(json_array_t), pointer :: list
-    integer                     :: indx, ierr
+    type(json_object_t), intent(out) :: this
+    type(mesh_t),        intent(in)  :: mesh
 
     !This routine is not compatible anymore with the current restart machinery and should be rewritten.
     PUSH_SUB(output_parse_config_mesh)
 
-    nullify(list)
-    call json_get(this, "spacing", list, ierr)
-    ASSERT(ierr==JSON_OK)
-    do indx=1, mesh%sb%dim
-      call json_append(list, mesh%spacing(indx))
-    end do
+    call json_init(this)
+    call json_set(this, "spacing", mesh%spacing)
     call json_set(this, "dir", input_mesh_dir)
     call json_set(this, "file", input_mesh_file)
 
@@ -92,22 +87,21 @@ contains
     type(grid_t),        intent(in)    :: grid
 
     type(json_object_t), pointer :: cnfg
-    integer                      :: ierr
 
     PUSH_SUB(output_parse_config_grid)
 
     nullify(cnfg)
-    call json_get(this, "simul_box", cnfg, ierr)
-    ASSERT(ierr==JSON_OK)
+    SAFE_ALLOCATE(cnfg)
     call output_parse_config_simul_box(cnfg, grid%sb)
+    call json_set(this, "simul_box", cnfg)
     nullify(cnfg)
-    call json_get(this, "curvilinear", cnfg, ierr)
-    ASSERT(ierr==JSON_OK)
+    SAFE_ALLOCATE(cnfg)
     call output_parse_config_curvilinear(cnfg, grid%cv)
+    call json_set(this, "curvilinear", cnfg)
     nullify(cnfg)
-    call json_get(this, "mesh", cnfg, ierr)
-    ASSERT(ierr==JSON_OK)
+    SAFE_ALLOCATE(cnfg)
     call output_parse_config_mesh(cnfg, grid%mesh)
+    call json_set(this, "mesh", cnfg)
     nullify(cnfg)
 
     POP_SUB(output_parse_config_grid)
@@ -131,18 +125,6 @@ contains
 
     POP_SUB(output_parse_config_simulation)
   end subroutine output_parse_config_simulation
-
-  ! ---------------------------------------------------------
-  subroutine output_parse_config_space(this, space)
-    type(json_object_t), intent(inout) :: this
-    type(space_t),       intent(in)    :: space
-
-    PUSH_SUB(output_parse_config_space)
-
-    call space_create_data_object(space, this)
-
-    POP_SUB(output_parse_config_space)
-  end subroutine output_parse_config_space
 
   ! ---------------------------------------------------------
   subroutine output_parse_config_species(this)
@@ -197,7 +179,6 @@ contains
     nullify(cnfg)
     call json_get(this, "molecule", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call json_end(cnfg)
     call output_parse_config_molecule(cnfg, geo)
     nullify(cnfg)
     
@@ -205,33 +186,77 @@ contains
   end subroutine output_parse_config_geometry
 
   ! ---------------------------------------------------------
+  subroutine output_parse_config_density_charge(this, st)
+    type(json_array_t), intent(inout) :: this
+    type(states_t),     intent(in)    :: st
+
+    real(kind=wp) :: chrg, qtot
+    integer       :: ispn, ik, ierr
+
+    PUSH_SUB(output_parse_config_density_charge)
+
+    qtot = 0.0_wp
+    do ispn = 1, st%d%nspin
+      chrg = 0.0_wp
+      do ik = 1, st%d%nik
+        if(ispn==states_dim_get_spin_index(st%d, ik))&
+          chrg = chrg + st%d%kweights(ik) * sum(st%occ(:,ik))
+      end do
+      call json_set(this, ispn, chrg, ierr)
+      ASSERT(ierr==JSON_OK)
+      qtot = qtot + chrg
+    end do
+    ASSERT(.not.abs(1.0_wp-min(st%qtot,qtot)/max(st%qtot,qtot))>epsilon(qtot))
+
+    POP_SUB(output_parse_config_density_charge)
+  end subroutine output_parse_config_density_charge
+
+  ! ---------------------------------------------------------
+  subroutine output_parse_config_density_files(this, st)
+    type(json_array_t), intent(out) :: this
+    type(states_t),     intent(in)  :: st
+
+    character(len=MAX_PATH_LEN) :: file
+    integer                     :: ispn
+
+    PUSH_SUB(output_parse_config_density_files)
+
+    call json_init(this)
+    do ispn = 1, st%d%nspin
+      if(st%d%nspin>1) then
+        write(unit=file, fmt="(a,i1,a)") "density-sp", ispn, ".obf"
+      else
+        file="density.obf"
+      end if
+      call json_append(this, trim(adjustl(file)))
+    end do
+
+    POP_SUB(output_parse_config_density_files)
+  end subroutine output_parse_config_density_files
+
+  ! ---------------------------------------------------------
   subroutine output_parse_config_density(this, st, dir)
     type(json_object_t), intent(inout) :: this
     type(states_t),      intent(in)    :: st
     character(len=*),    intent(in)    :: dir
 
-    character(len=MAX_PATH_LEN) :: file
     type(json_array_t), pointer :: list
-    integer                     :: ispn, nspin, ierr
+    integer                     :: ierr
 
     PUSH_SUB(output_parse_config_density)
 
     nullify(list)
-    call json_get(this, "nspin", nspin, ierr)
+    ASSERT(st%d%nspin>0)
+    ASSERT(st%d%nspin<3)
+    call json_get(this, "charge", list, ierr)
     ASSERT(ierr==JSON_OK)
-    ASSERT(nspin==st%d%nspin)
+    ASSERT(st%d%nspin==json_len(list))
+    call output_parse_config_density_charge(list, st)
+    nullify(list)
     call json_set(this, "dir", trim(adjustl(dir)))
     SAFE_ALLOCATE(list)
-    call json_init(list)
+    call output_parse_config_density_files(list, st)
     call json_set(this, "files", list)
-    if(st%d%nspin>1) then
-      do ispn = 1, st%d%nspin
-        write(unit=file, fmt="(a,i1,a)") "density-sp", ispn, ".obf"
-        call json_append(list, trim(adjustl(file)))
-      end do
-    else
-      call json_append(list, "density.obf")
-    end if
     nullify(list)
 
     POP_SUB(output_parse_config_density)
@@ -249,6 +274,7 @@ contains
     PUSH_SUB(output_parse_config_states)
 
     nullify(cnfg)
+    ASSERT(st%qtot>0.0_wp)
     call json_set(this, "charge", st%qtot)
     call json_get(this, "density", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
@@ -271,11 +297,6 @@ contains
     PUSH_SUB(output_parse_config_system)
 
     nullify(cnfg)
-    call json_get(this, "space", cnfg, ierr)
-    ASSERT(ierr==JSON_OK)
-    call json_end(cnfg)
-    call output_parse_config_space(cnfg, geo%space)
-    nullify(cnfg)
     call json_get(this, "geometry", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
     call output_parse_config_geometry(cnfg, geo)
@@ -290,16 +311,14 @@ contains
 
   ! ---------------------------------------------------------
   subroutine output_parse_config_external(this, epot, dir)
-    type(json_object_t), intent(inout) :: this
-    type(epot_t),        intent(in)    :: epot
-    character(len=*),    intent(in)    :: dir
-
-    integer :: type, ierr
+    type(json_object_t), intent(out) :: this
+    type(epot_t),        intent(in)  :: epot
+    character(len=*),    intent(in)  :: dir
 
     PUSH_SUB(output_parse_config_external)
 
-    call json_get(this, "type", type, ierr)
-    if(ierr/=JSON_OK)call json_set(this, "type", HMLT_TYPE_POTN)
+    call json_init(this)
+    call json_set(this, "type", HMLT_TYPE_POTN)
     call json_set(this, "dir", trim(adjustl(dir)))
     call json_set(this, "file", input_external_file)
 
@@ -313,20 +332,13 @@ contains
     character(len=*),    intent(in)    :: dir
 
     type(json_object_t), pointer :: cnfg
-    integer                      :: type, ierr
 
     PUSH_SUB(output_parse_config_hamiltonian)
 
     nullify(cnfg)
-    call json_get(this, "type", type, ierr)
-    if(ierr/=JSON_OK)call json_set(this, "type", HMLT_TYPE_HMLT)
-    call json_get(this, "external", cnfg, ierr)
-    if(ierr/=JSON_OK)then
-      SAFE_ALLOCATE(cnfg)
-      call json_init(cnfg)
-      call json_set(this, "external", cnfg)
-    end if
+    SAFE_ALLOCATE(cnfg)
     call output_parse_config_external(cnfg, hm%ep, dir)
+    call json_set(this, "external", cnfg)
     nullify(cnfg)
 
     POP_SUB(output_parse_config_hamiltonian)
@@ -381,7 +393,7 @@ contains
 
     nullify(cnfg)
     call path_join(dir, file, fnam)
-    iunit=io_open(fnam, action='write')
+    iunit = io_open(fnam, action='write')
     if(iunit>0)then
       call base_config_parse(config, geo%space%dim, st%d%nspin)
       call json_get(config, "model", cnfg, ierr)
@@ -392,7 +404,7 @@ contains
       call json_end(config)
       call io_close(iunit)
     else
-      message(1)="Could not write the output file: '"//trim(adjustl(fnam))//"'"
+      message(1) = "Could not write the output file: '"//trim(adjustl(fnam))//"'"
       write(unit=message(2), fmt="(a,i3)") "I/O Error: ", iunit
       call messages_fatal(2)
     end if

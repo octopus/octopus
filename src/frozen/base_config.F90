@@ -4,10 +4,10 @@ module base_config_m
 
   use base_hamiltonian_m
   use base_handle_m
-  use curvilinear_m
   use global_m
   use intrpl_m
   use json_m
+  use kinds_m
   use messages_m
   use profiling_m
 
@@ -24,89 +24,19 @@ module base_config_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine base_config_parse_simul_box(this, ndim)
+  subroutine base_config_parse_grid(this)
     type(json_object_t), intent(out) :: this
-    integer,   optional, intent(in)  :: ndim
-
-    integer :: idim
-
-    PUSH_SUB(base_config_parse_simul_box)
-
-    idim = default_ndim
-    if(present(ndim))idim = ndim
-    ASSERT(idim>0)
-    call json_init(this)
-    call json_set(this, "dimensions", idim)
-
-    POP_SUB(base_config_parse_simul_box)
-  end subroutine base_config_parse_simul_box
-
-  ! ---------------------------------------------------------
-  subroutine base_config_parse_curvilinear(this, method)
-    type(json_object_t), intent(out) :: this
-    integer,   optional, intent(in)  :: method
-
-    integer :: mthd
-
-    PUSH_SUB(base_config_parse_curvilinear)
-
-    mthd = CURV_METHOD_UNIFORM
-    if(present(method))mthd = method
-    call json_init(this)
-    call json_set(this, "method", mthd)
-
-    POP_SUB(base_config_parse_curvilinear)
-  end subroutine base_config_parse_curvilinear
-
-  ! ---------------------------------------------------------
-  subroutine base_config_parse_mesh(this)
-    type(json_object_t), intent(out) :: this
-    
-    type(json_array_t), pointer :: list
-
-    PUSH_SUB(base_config_parse_mesh)
-
-    nullify(list)
-    call json_init(this)
-    SAFE_ALLOCATE(list)
-    call json_init(list)
-    call json_set(this, "spacing", list)
-    nullify(list)
-
-    POP_SUB(base_config_parse_mesh)
-  end subroutine base_config_parse_mesh
-
-  ! ---------------------------------------------------------
-  subroutine base_config_parse_grid(this, ndim)
-    type(json_object_t), intent(out) :: this
-    integer,   optional, intent(in)  :: ndim
-
-    type(json_object_t), pointer :: cnfg
 
     PUSH_SUB(base_config_parse_grid)
 
-    nullify(cnfg)
     call json_init(this)
-    SAFE_ALLOCATE(cnfg)
-    call base_config_parse_simul_box(cnfg, ndim)
-    call json_set(this, "simul_box", cnfg)
-    nullify(cnfg)
-    SAFE_ALLOCATE(cnfg)
-    call base_config_parse_curvilinear(cnfg)
-    call json_set(this, "curvilinear", cnfg)
-    nullify(cnfg)
-    SAFE_ALLOCATE(cnfg)
-    call base_config_parse_mesh(cnfg)
-    call json_set(this, "mesh", cnfg)
-    nullify(cnfg)
 
     POP_SUB(base_config_parse_grid)
   end subroutine base_config_parse_grid
 
   ! ---------------------------------------------------------
-  subroutine base_config_parse_simulation(this, ndim)
+  subroutine base_config_parse_simulation(this)
     type(json_object_t), intent(out) :: this
-    integer,   optional, intent(in)  :: ndim
 
     type(json_object_t), pointer :: cnfg
 
@@ -115,7 +45,7 @@ contains
     nullify(cnfg)
     call json_init(this)
     SAFE_ALLOCATE(cnfg)
-    call base_config_parse_grid(cnfg, ndim)
+    call base_config_parse_grid(cnfg)
     call json_set(this, "grid", cnfg)
     nullify(cnfg)
 
@@ -132,7 +62,7 @@ contains
     PUSH_SUB(base_config_parse_space)
 
     idim = default_ndim
-    if(present(ndim))idim = ndim
+    if(present(ndim)) idim = ndim
     ASSERT(idim>0)
     call json_init(this)
     call json_set(this, "dimensions", idim)
@@ -174,15 +104,20 @@ contains
     type(json_object_t), intent(out) :: this
     integer,   optional, intent(in)  :: nspin
 
-    integer :: ispin
+    real(kind=wp), dimension(:), allocatable :: chrg
+    integer                                  :: ispin
 
     PUSH_SUB(base_config_parse_density)
 
     ispin = default_nspin
     if(present(nspin)) ispin = nspin
     ASSERT(ispin>0)
+    SAFE_ALLOCATE(chrg(1:ispin))
+    chrg = 0.0_wp
     call json_init(this)
     call json_set(this, "nspin", ispin)
+    call json_set(this, "charge", chrg)
+    SAFE_DEALLOCATE_A(chrg)
 
     POP_SUB(base_config_parse_density)
   end subroutine base_config_parse_density
@@ -198,6 +133,7 @@ contains
 
     nullify(cnfg)
     call json_init(this)
+    call json_set(this, "charge", 0.0_wp)
     SAFE_ALLOCATE(cnfg)
     call base_config_parse_density(cnfg, nspin)
     call json_set(this, "density", cnfg)
@@ -259,7 +195,7 @@ contains
     nullify(cnfg)
     call json_init(this)
     SAFE_ALLOCATE(cnfg)
-    call base_config_parse_simulation(cnfg, ndim)
+    call base_config_parse_simulation(cnfg)
     call json_set(this, "simulation", cnfg)
     nullify(cnfg)
     SAFE_ALLOCATE(cnfg)

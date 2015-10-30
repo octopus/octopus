@@ -4,13 +4,10 @@ module live_config_m
 
   use base_config_m
   use base_hamiltonian_m
-  use functional_m
   use global_m
   use json_m
-  use kinds_m
   use live_handle_m
   use messages_m
-  use parser_m
   use profiling_m
 
   implicit none
@@ -23,111 +20,102 @@ module live_config_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine live_config_parse_simulation(this)
+  subroutine live_config_parse_density(this, nspin)
     type(json_object_t), intent(inout) :: this
+    integer,             intent(in)    :: nspin
 
-    integer :: ierr
+    PUSH_SUB(live_config_parse_density)
 
-    PUSH_SUB(live_config_parse_simulation)
+    POP_SUB(live_config_parse_density)
+  end subroutine live_config_parse_density
 
-    call json_del(this, "grid", ierr)
+  ! ---------------------------------------------------------
+  subroutine live_config_parse_states(this, nspin)
+    type(json_object_t), intent(inout) :: this
+    integer,             intent(in)    :: nspin
+
+    type(json_object_t), pointer :: cnfg
+    integer                      :: ierr
+
+    PUSH_SUB(live_config_parse_states)
+
+    nullify(cnfg)
+    call json_get(this, "density", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
+    call live_config_parse_density(cnfg, nspin)
+    nullify(cnfg)
 
-    POP_SUB(live_config_parse_simulation)
-  end subroutine live_config_parse_simulation
+    POP_SUB(live_config_parse_states)
+  end subroutine live_config_parse_states
+
+  ! ---------------------------------------------------------
+  subroutine live_config_parse_system(this, nspin)
+    type(json_object_t), intent(inout) :: this
+    integer,             intent(in)    :: nspin
+
+    type(json_object_t), pointer :: cnfg
+    integer                      :: ierr
+
+    PUSH_SUB(live_config_parse_system)
+
+    nullify(cnfg)
+    call json_get(this, "states", cnfg, ierr)
+    ASSERT(ierr==JSON_OK)
+    call live_config_parse_states(cnfg, nspin)
+    nullify(cnfg)
+
+    POP_SUB(live_config_parse_system)
+  end subroutine live_config_parse_system
 
   ! ---------------------------------------------------------
   subroutine live_config_parse_external(this)
-    type(json_object_t), intent(inout) :: this
-
-    integer :: type, ierr
+    type(json_object_t), intent(out) :: this
 
     PUSH_SUB(live_config_parse_external)
 
-    call json_get(this, "type", type, ierr)
-    if(ierr/=JSON_OK)call json_set(this, "type", HMLT_TYPE_POTN)
+    call json_init(this)
+    call json_set(this, "type", HMLT_TYPE_POTN)
 
     POP_SUB(live_config_parse_external)
   end subroutine live_config_parse_external
 
   ! ---------------------------------------------------------
   subroutine live_config_parse_ionic(this)
-    type(json_object_t), intent(inout) :: this
-
-    integer :: type, ierr
+    type(json_object_t), intent(out) :: this
 
     PUSH_SUB(live_config_parse_ionic)
 
-    call json_get(this, "type", type, ierr)
-    if(ierr/=JSON_OK)call json_set(this, "type", HMLT_TYPE_TERM)
+    call json_init(this)
+    call json_set(this, "type", HMLT_TYPE_TERM)
 
     POP_SUB(live_config_parse_ionic)
   end subroutine live_config_parse_ionic
-
-  ! ---------------------------------------------------------
-  subroutine live_config_parse_tnadd(this)
-    type(json_object_t), intent(inout) :: this
-
-    real(kind=wp) :: factor
-    integer       :: type, id, ierr
-
-    PUSH_SUB(live_config_parse_tnadd)
-
-    call json_get(this, "type", type, ierr)
-    if(ierr/=JSON_OK)call json_set(this, "type", HMLT_TYPE_FNCT)
-    call parse_variable("TnaddFunctional", FUNCT_XC_NONE, id)
-    call json_set(this, "functional", id)
-    if(id>FUNCT_XC_NONE)then
-      call parse_variable("TnaddFactor", 1.0_wp, factor)
-      call json_set(this, "factor", factor)
-    end if
-
-    POP_SUB(live_config_parse_tnadd)
-  end subroutine live_config_parse_tnadd
 
   ! ---------------------------------------------------------
   subroutine live_config_parse_hamiltonian(this)
     type(json_object_t), intent(inout) :: this
 
     type(json_object_t), pointer :: cnfg
-    integer                      :: type, ierr
 
     PUSH_SUB(live_config_parse_hamiltonian)
 
     nullify(cnfg)
-    call json_get(this, "type", type, ierr)
-    if(ierr/=JSON_OK)call json_set(this, "type", HMLT_TYPE_HMLT)
-    call json_get(this, "external", cnfg, ierr)
-    if(ierr/=JSON_OK)then
-      SAFE_ALLOCATE(cnfg)
-      call json_init(cnfg)
-      call json_set(this, "external", cnfg)
-    end if
+    SAFE_ALLOCATE(cnfg)
     call live_config_parse_external(cnfg)
+    call json_set(this, "external", cnfg)
     nullify(cnfg)
-    call json_get(this, "ionic", cnfg, ierr)
-    if(ierr/=JSON_OK)then
-      SAFE_ALLOCATE(cnfg)
-      call json_init(cnfg)
-      call json_set(this, "ionic", cnfg)
-    end if
+    SAFE_ALLOCATE(cnfg)
     call live_config_parse_ionic(cnfg)
-    nullify(cnfg)
-    call json_get(this, "tnadd", cnfg, ierr)
-    if(ierr/=JSON_OK)then
-      SAFE_ALLOCATE(cnfg)
-      call json_init(cnfg)
-      call json_set(this, "tnadd", cnfg)
-    end if
-    call live_config_parse_tnadd(cnfg)
+    call json_set(this, "ionic", cnfg)
     nullify(cnfg)
 
     POP_SUB(live_config_parse_hamiltonian)
   end subroutine live_config_parse_hamiltonian
 
   ! ---------------------------------------------------------
-  subroutine live_config_parse_model(this)
+  subroutine live_config_parse_model(this, nspin)
     type(json_object_t), intent(inout) :: this
+    integer,             intent(in)    :: nspin
 
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
@@ -135,9 +123,9 @@ contains
     PUSH_SUB(live_config_parse_model)
 
     nullify(cnfg)
-    call json_get(this, "simulation", cnfg, ierr)
+    call json_get(this, "system", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call live_config_parse_simulation(cnfg)
+    call live_config_parse_system(cnfg, nspin)
     nullify(cnfg)
     call json_get(this, "hamiltonian", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
@@ -160,11 +148,11 @@ contains
 
     nullify(cnfg)
     call base_config_parse(this, ndim, nspin)
-    call json_set(this, "name", "live")
     call json_set(this, "type", HNDL_TYPE_LIVE)
+    call json_set(this, "name", "live")
     call json_get(this, "model", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call live_config_parse_model(cnfg)
+    call live_config_parse_model(cnfg, nspin)
     nullify(cnfg)
 
     POP_SUB(live_config_parse)

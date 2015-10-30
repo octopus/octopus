@@ -38,8 +38,8 @@ contains
 
     integer :: that
 
-    that=1
-    if(this>2)that=(this*(this-1))/2
+    that = 1
+    if(this>2) that = (this * (this - 1)) / 2
 
   end function ssys_calc_nrot
 
@@ -58,19 +58,19 @@ contains
     PUSH_SUB(ssys_config_parse_coordinates)
 
     SAFE_ALLOCATE(array(ndim))
-    array=0.0_wp
+    array = 0.0_wp
     call json_init(this)
     call json_set(this, "dim", ndim)
-    do iclm=1, min(ndim, cols-icol)
+    do iclm = 1, min(ndim, cols-icol)
       call parse_block_float(block, line, iclm+icol-1, array(iclm))
     end do
-    array(1:ndim)=units_to_atomic(units_inp%length, array(1:ndim))
+    array(1:ndim) = units_to_atomic(units_inp%length, array(1:ndim))
     call json_set(this, "r", array)
     SAFE_DEALLOCATE_A(array)
-    irot=ssys_calc_nrot(ndim)
+    irot = ssys_calc_nrot(ndim)
     SAFE_ALLOCATE(array(irot))
-    array=0.0_wp
-    do iclm=1, min(irot, cols-icol-ndim)
+    array = 0.0_wp
+    do iclm = 1, min(irot, cols-icol-ndim)
       call parse_block_float(block, line, iclm+icol+ndim-1, array(iclm))
     end do
     call json_set(this, "theta", array)
@@ -110,15 +110,15 @@ contains
 
     nullify(cnfg, list, pstn)
     if(parse_block('SubSystemCoordinates',block)==0) then
-      nlin=parse_block_n(block)
+      nlin = parse_block_n(block)
       if(nlin>0)then
-        do ilin=1, nlin
+        do ilin = 1, nlin
           ncls=parse_block_cols(block, ilin-1)
           ASSERT(ncls>0)
           call parse_block_string(block, ilin-1, 0, name)
           call json_get(this, trim(adjustl(name)), cnfg, ierr)
           if(ierr/=JSON_OK)then
-            message(1)="Subsystem '"//trim(adjustl(name))//"' was not specified in the SubSystems block."
+            message(1) = "Subsystem '"//trim(adjustl(name))//"' was not specified in the SubSystems block."
             call messages_fatal(1)
           end if
           call json_get(cnfg, "positions", list, ierr)
@@ -173,13 +173,13 @@ contains
     nullify(cnfg)
     call json_init(this)
     if(parse_block('SubSystems',block)==0) then
-      nlin=parse_block_n(block)
+      nlin = parse_block_n(block)
       if(nlin>0)then
-        do ilin=1, nlin
+        do ilin = 1, nlin
           ncls=parse_block_cols(block, ilin-1)
           ASSERT(ncls>0)
           if(ncls<2)then
-            message(1)="In the SubSystems block at least subsystem name and type must be specified."
+            message(1) = "In the SubSystems block at least subsystem name and type must be specified."
             call messages_fatal(1)
           end if
           call parse_block_string(block, ilin-1, 0, name)
@@ -242,7 +242,7 @@ contains
         end if
         call json_append(frzn, ocfg)
       case default
-        message(1)="Unknown subsystems type."
+        message(1) = "Unknown subsystems type."
         call messages_fatal(1)
       end select
     end do
@@ -255,35 +255,31 @@ contains
 
   ! ---------------------------------------------------------
   subroutine ssys_config_parse_external(this)
-    type(json_object_t), intent(inout) :: this
-
-    integer :: type, ierr
+    type(json_object_t), intent(out) :: this
 
     PUSH_SUB(ssys_config_parse_external)
 
-    call json_get(this, "type", type, ierr)
-    if(ierr/=JSON_OK)call json_set(this, "type", HMLT_TYPE_POTN)
+    call json_init(this)
+    call json_set(this, "type", HMLT_TYPE_POTN)
 
     POP_SUB(ssys_config_parse_external)
   end subroutine ssys_config_parse_external
 
   ! ---------------------------------------------------------
   subroutine ssys_config_parse_ionic(this)
-    type(json_object_t), intent(inout) :: this
-
-    integer :: type, ierr
+    type(json_object_t), intent(out) :: this
 
     PUSH_SUB(ssys_config_parse_ionic)
 
-    call json_get(this, "type", type, ierr)
-    if(ierr/=JSON_OK)call json_set(this, "type", HMLT_TYPE_TERM)
+    call json_init(this)
+    call json_set(this, "type", HMLT_TYPE_TERM)
 
     POP_SUB(ssys_config_parse_ionic)
   end subroutine ssys_config_parse_ionic
 
   ! ---------------------------------------------------------
   subroutine ssys_config_parse_tnadd(this)
-    type(json_object_t), intent(inout) :: this
+    type(json_object_t), intent(out) :: this
 
     real(kind=wp) :: factor
     integer       :: type, id, ierr
@@ -298,14 +294,14 @@ contains
 
     PUSH_SUB(ssys_config_parse_tnadd)
 
-    call json_get(this, "type", type, ierr)
-    if(ierr/=JSON_OK)call json_set(this, "type", HMLT_TYPE_FNCT)
+    call json_init(this)
+    call json_set(this, "type", HMLT_TYPE_FNCT)
     call parse_variable('TnaddFunctional', FUNCT_XC_NONE, id)
     call json_set(this, "functional", id)
     if(id>FUNCT_XC_NONE)then
       call parse_variable('TnaddFactor', 1.0_wp, factor)
       if(abs(factor)<1.0e-7_wp)then
-        message(1)="The 'TnaddFactor' value specified may be too small."
+        message(1) = "The 'TnaddFactor' value specified may be too small."
         call messages_warning(1)
       end if
       call json_set(this, "factor", factor)
@@ -324,31 +320,17 @@ contains
     PUSH_SUB(ssys_config_parse_hamiltonian)
 
     nullify(cnfg)
-    call json_get(this, "type", type, ierr)
-    if(ierr/=JSON_OK)call json_set(this, "type", HMLT_TYPE_HMLT)
-    call json_get(this, "external", cnfg, ierr)
-    if(ierr/=JSON_OK)then
-      SAFE_ALLOCATE(cnfg)
-      call json_init(cnfg)
-      call json_set(this, "external", cnfg)
-    end if
+    SAFE_ALLOCATE(cnfg)
     call ssys_config_parse_external(cnfg)
+    call json_set(this, "external", cnfg)
     nullify(cnfg)
-    call json_get(this, "ionic", cnfg, ierr)
-    if(ierr/=JSON_OK)then
-      SAFE_ALLOCATE(cnfg)
-      call json_init(cnfg)
-      call json_set(this, "ionic", cnfg)
-    end if
+    SAFE_ALLOCATE(cnfg)
     call ssys_config_parse_ionic(cnfg)
+    call json_set(this, "ionic", cnfg)
     nullify(cnfg)
-    call json_get(this, "tnadd", cnfg, ierr)
-    if(ierr/=JSON_OK)then
-      SAFE_ALLOCATE(cnfg)
-      call json_init(cnfg)
-      call json_set(this, "tnadd", cnfg)
-    end if
+    SAFE_ALLOCATE(cnfg)
     call ssys_config_parse_tnadd(cnfg)
+    call json_set(this, "tnadd", cnfg)
     nullify(cnfg)
 
     POP_SUB(ssys_config_parse_hamiltonian)
@@ -379,7 +361,7 @@ contains
 
     PUSH_SUB(ssys_config_parse_use)
 
-    that=parse_is_defined("SubSystems")
+    that = parse_is_defined("SubSystems")
 
     POP_SUB(ssys_config_parse_use)
   end function ssys_config_parse_use

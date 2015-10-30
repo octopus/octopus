@@ -20,45 +20,25 @@ module frozen_config_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine frozen_config_parse_simulation(this)
-    type(json_object_t), intent(inout) :: this
-
-    integer :: ierr
-
-    PUSH_SUB(frozen_config_parse_simulation)
-
-    call json_del(this, "grid", ierr)
-    ASSERT(ierr==JSON_OK)
-
-    POP_SUB(frozen_config_parse_simulation)
-  end subroutine frozen_config_parse_simulation
-
-  ! ---------------------------------------------------------
   subroutine frozen_config_parse_external(this)
-    type(json_object_t), intent(inout) :: this
-
-    integer :: type, nspin, ierr
+    type(json_object_t), intent(out) :: this
 
     PUSH_SUB(frozen_config_parse_external)
 
-    call json_get(this, "type", type, ierr)
-    if(ierr/=JSON_OK)call json_set(this, "type", HMLT_TYPE_POTN)
-    call json_get(this, "nspin", nspin, ierr)
-    if(ierr/=JSON_OK)call json_set(this, "nspin", 1)
+    call json_init(this)
+    call json_set(this, "type", HMLT_TYPE_POTN)
 
     POP_SUB(frozen_config_parse_external)
   end subroutine frozen_config_parse_external
 
   ! ---------------------------------------------------------
   subroutine frozen_config_parse_ionic(this)
-    type(json_object_t), intent(inout) :: this
-
-    integer :: type, ierr
+    type(json_object_t), intent(out) :: this
 
     PUSH_SUB(frozen_config_parse_ionic)
 
-    call json_get(this, "type", type, ierr)
-    if(ierr/=JSON_OK)call json_set(this, "type", HMLT_TYPE_TERM)
+    call json_init(this)
+    call json_set(this, "type", HMLT_TYPE_TERM)
 
     POP_SUB(frozen_config_parse_ionic)
   end subroutine frozen_config_parse_ionic
@@ -68,28 +48,17 @@ contains
     type(json_object_t), intent(inout) :: this
 
     type(json_object_t), pointer :: cnfg
-    integer                      :: type, ierr
 
     PUSH_SUB(frozen_config_parse_hamiltonian)
 
     nullify(cnfg)
-    call json_get(this, "type", type, ierr)
-    if(ierr/=JSON_OK)call json_set(this, "type", HMLT_TYPE_HMLT)
-    call json_get(this, "external", cnfg, ierr)
-    if(ierr/=JSON_OK)then
-      SAFE_ALLOCATE(cnfg)
-      call json_init(cnfg)
-      call json_set(this, "external", cnfg)
-    end if
+    SAFE_ALLOCATE(cnfg)
     call frozen_config_parse_external(cnfg)
+    call json_set(this, "external", cnfg)
     nullify(cnfg)
-    call json_get(this, "ionic", cnfg, ierr)
-    if(ierr/=JSON_OK)then
-      SAFE_ALLOCATE(cnfg)
-      call json_init(cnfg)
-      call json_set(this, "ionic", cnfg)
-    end if
+    SAFE_ALLOCATE(cnfg)
     call frozen_config_parse_ionic(cnfg)
+    call json_set(this, "ionic", cnfg)
     nullify(cnfg)
 
     POP_SUB(frozen_config_parse_hamiltonian)
@@ -104,10 +73,6 @@ contains
 
     PUSH_SUB(frozen_config_parse_model)
 
-    nullify(cnfg)
-    call json_get(this, "simulation", cnfg, ierr)
-    ASSERT(ierr==JSON_OK)
-    call frozen_config_parse_simulation(cnfg)
     nullify(cnfg)
     call json_get(this, "hamiltonian", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
