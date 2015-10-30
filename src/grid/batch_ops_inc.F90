@@ -241,6 +241,29 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
   POP_SUB(X(batch_axpy_vec))
 end subroutine X(batch_axpy_vec)
 
+! --------------------------------------------------------------
+
+subroutine X(batch_scal_const)(np, aa, xx, a_start, a_full)
+  integer,           intent(in)    :: np
+  R_TYPE,            intent(in)    :: aa
+  type(batch_t),     intent(inout) :: xx
+  integer, optional, intent(in)    :: a_start
+  logical, optional, intent(in)    :: a_full
+
+  R_TYPE, allocatable :: aavec(:)
+  
+  PUSH_SUB(X(batch_scal_const))
+
+  SAFE_ALLOCATE(aavec(1:xx%nst))
+
+  aavec(1:xx%nst) = aa
+
+  call X(batch_scal_vec)(np, aavec, xx, a_start, a_full)
+  
+  SAFE_DEALLOCATE_A(aavec)
+  
+  POP_SUB(X(batch_scal_const))
+end subroutine X(batch_scal_const)
 
 ! --------------------------------------------------------------
 

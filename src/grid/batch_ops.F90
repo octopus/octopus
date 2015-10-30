@@ -69,6 +69,8 @@ module batch_ops_m
   end interface batch_axpy
 
   interface batch_scal
+    module procedure dbatch_scal_const
+    module procedure zbatch_scal_const
     module procedure dbatch_scal_vec
     module procedure zbatch_scal_vec
   end interface batch_scal
