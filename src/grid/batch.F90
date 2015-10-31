@@ -943,28 +943,28 @@ subroutine batch_remote_access_start(this, mpi_grp, rma_win)
     if(batch_type(this) == TYPE_CMPLX) then
 #ifdef HAVE_MPI2
       call MPI_Win_create(this%pack%zpsi(1, 1), int(product(this%pack%size)*types_get_size(batch_type(this)), MPI_ADDRESS_KIND), &
-        types_get_size(batch_type(this)), 0, mpi_grp%comm, rma_win, mpi_err)
+        types_get_size(batch_type(this)), MPI_INFO_NULL, mpi_grp%comm, rma_win, mpi_err)
 #endif
     end if
     
     if(batch_type(this) == TYPE_FLOAT) then
 #ifdef HAVE_MPI2
       call MPI_Win_create(this%pack%dpsi(1, 1), int(product(this%pack%size)*types_get_size(batch_type(this)), MPI_ADDRESS_KIND), &
-        types_get_size(batch_type(this)), 0, mpi_grp%comm, rma_win, mpi_err)
+        types_get_size(batch_type(this)), MPI_INFO_NULL, mpi_grp%comm, rma_win, mpi_err)
 #endif
     end if
     
    if(batch_type(this) == TYPE_CMPLX_SINGLE) then
 #ifdef HAVE_MPI2
       call MPI_Win_create(this%pack%cpsi(1, 1), int(product(this%pack%size)*types_get_size(batch_type(this)), MPI_ADDRESS_KIND), &
-        types_get_size(batch_type(this)), 0, mpi_grp%comm, rma_win, mpi_err)
+        types_get_size(batch_type(this)), MPI_INFO_NULL, mpi_grp%comm, rma_win, mpi_err)
 #endif
     end if
 
     if(batch_type(this) == TYPE_FLOAT_SINGLE) then
 #ifdef HAVE_MPI2
       call MPI_Win_create(this%pack%spsi(1, 1), int(product(this%pack%size)*types_get_size(batch_type(this)), MPI_ADDRESS_KIND), &
-        types_get_size(batch_type(this)), 0, mpi_grp%comm, rma_win, mpi_err)
+        types_get_size(batch_type(this)), MPI_INFO_NULL, mpi_grp%comm, rma_win, mpi_err)
 #endif
     end if
 
