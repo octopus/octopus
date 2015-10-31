@@ -446,8 +446,9 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
 
   PUSH_SUB(X(exchange_operator))
 
+  ASSERT(associated(hm%hf_st))
+  
   if(der%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points")
-  if(hm%hf_st%parallel_in_states) call messages_not_implemented("exchange operator parallel in states")
 
   SAFE_ALLOCATE(rho(1:der%mesh%np))
   SAFE_ALLOCATE(pot(1:der%mesh%np))
@@ -458,7 +459,7 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
 
     do ib = 1, hm%hf_st%group%nblocks
 
-      psi2b => hm%hf_st%group%psib(ib, ik2)
+      call states_get_block(hm%hf_st, der%mesh, ib, ik2, psi2b)
       
       do ii = 1, psi2b%nst
 
@@ -491,6 +492,8 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
         end do
 
       end do
+
+      call states_release_block(hm%hf_st, ib, ik2, psi2b)
 
     end do
   end do

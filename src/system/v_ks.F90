@@ -609,6 +609,7 @@ contains
     if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) then
       SAFE_ALLOCATE(ks%calc%hf_st)
       call states_copy(ks%calc%hf_st, st)
+      if(st%parallel_in_states) call states_remote_access_start(ks%calc%hf_st)
     end if
 
     ! Calculate the vector potential induced by the electronic current.
@@ -1079,8 +1080,12 @@ contains
       if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) then
 
         ! swap the states object
-        call states_end(hm%hf_st)
-        SAFE_DEALLOCATE_P(hm%hf_st)
+        if(associated(hm%hf_st)) then
+          if(hm%hf_st%parallel_in_states) call states_remote_access_stop(hm%hf_st)
+          call states_end(hm%hf_st)
+          SAFE_DEALLOCATE_P(hm%hf_st)
+        end if
+        
         hm%hf_st => ks%calc%hf_st
 
         select case(ks%theory_level)

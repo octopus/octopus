@@ -461,14 +461,7 @@ contains
         call parse_block_end(blk)
     end if
 
-
-
-    if(hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK .or. hm%theory_level == RDMFT) then
-      SAFE_ALLOCATE(hm%hf_st)
-      call states_null(hm%hf_st)
-    else
-      nullify(hm%hf_st)
-    end if
+    nullify(hm%hf_st)
 
     hm%inh_term = .false.
     call hamiltonian_remove_oct_exchange(hm)
@@ -514,6 +507,15 @@ contains
        call messages_info(1)
     end if
 
+    if(hm%theory_level == HARTREE_FOCK .and. st%parallel_in_states) then
+#ifdef HAVE_MPI2
+      call messages_experimental('Hartree-Fock parallel in states')
+#else
+      call messages_write('Hartree-Fock parallel in states required MPI 2')
+      call messages_fatal()
+#endif
+    end if
+        
     call profiling_out(prof)
     POP_SUB(hamiltonian_init)
 

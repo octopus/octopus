@@ -33,6 +33,7 @@ module batch_m
   use parser_m
   use math_m
   use messages_m
+  use mpi_m
   use opencl_m
   use profiling_m
   use types_m
@@ -68,8 +69,10 @@ module batch_m
     batch_linear_to_ist,            &
     batch_linear_to_idim,           &
     batch_pack_size,                &
-    batch_is_sync
-
+    batch_is_sync,                  &
+    batch_remote_access_start,      &
+    batch_remote_access_stop
+  
   !--------------------------------------------------------------
   type batch_state_t
     FLOAT,      pointer :: dpsi(:, :)
@@ -924,6 +927,71 @@ logical pure function batch_is_sync(this) result(sync)
   sync = .not. this%dirty
 
 end function batch_is_sync
+
+! ------------------------------------------------------
+
+subroutine batch_remote_access_start(this, mpi_grp, rma_win)
+  type(batch_t),   intent(inout) :: this
+  type(mpi_grp_t), intent(in)    :: mpi_grp
+  integer,         intent(out)   :: rma_win
+
+  PUSH_SUB(batch_remote_access_start)
+
+  if(mpi_grp%size > 1) then
+    call batch_pack(this)
+    
+    if(batch_type(this) == TYPE_CMPLX) then
+#ifdef HAVE_MPI2
+      call MPI_Win_create(this%pack%zpsi(1, 1), int(product(this%pack%size)*types_get_size(batch_type(this)), MPI_ADDRESS_KIND), &
+        types_get_size(batch_type(this)), 0, mpi_grp%comm, rma_win, mpi_err)
+#endif
+    end if
+    
+    if(batch_type(this) == TYPE_FLOAT) then
+#ifdef HAVE_MPI2
+      call MPI_Win_create(this%pack%dpsi(1, 1), int(product(this%pack%size)*types_get_size(batch_type(this)), MPI_ADDRESS_KIND), &
+        types_get_size(batch_type(this)), 0, mpi_grp%comm, rma_win, mpi_err)
+#endif
+    end if
+    
+   if(batch_type(this) == TYPE_CMPLX_SINGLE) then
+#ifdef HAVE_MPI2
+      call MPI_Win_create(this%pack%cpsi(1, 1), int(product(this%pack%size)*types_get_size(batch_type(this)), MPI_ADDRESS_KIND), &
+        types_get_size(batch_type(this)), 0, mpi_grp%comm, rma_win, mpi_err)
+#endif
+    end if
+
+    if(batch_type(this) == TYPE_FLOAT_SINGLE) then
+#ifdef HAVE_MPI2
+      call MPI_Win_create(this%pack%spsi(1, 1), int(product(this%pack%size)*types_get_size(batch_type(this)), MPI_ADDRESS_KIND), &
+        types_get_size(batch_type(this)), 0, mpi_grp%comm, rma_win, mpi_err)
+#endif
+    end if
+
+  else
+    rma_win = -1
+  end if
+  
+  POP_SUB(batch_remote_access_start)
+end subroutine batch_remote_access_start
+
+! ------------------------------------------------------
+
+subroutine batch_remote_access_stop(this, rma_win)
+  type(batch_t),     intent(inout) :: this
+  integer,           intent(inout) :: rma_win
+  
+  PUSH_SUB(batch_remote_access_stop)
+
+  if(rma_win /= -1) then
+#ifdef HAVE_MPI2
+    call MPI_Win_free(rma_win, mpi_err)
+#endif
+    call batch_unpack(this)
+  end if
+  
+  POP_SUB(batch_remote_access_stop)
+end subroutine batch_remote_access_stop
 
 #include "real.F90"
 #include "batch_inc.F90"

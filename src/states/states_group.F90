@@ -24,6 +24,7 @@ module states_group_m
   use batch_ops_m
   use global_m
   use messages_m
+  use mpi_m
   use profiling_m
 
   implicit none
@@ -43,6 +44,8 @@ module states_group_m
     integer, pointer         :: block_range(:, :)     !< Each block contains states from block_range(:, 1) to block_range(:, 2)
     integer, pointer         :: block_size(:)         !< The number of states in each block.
     logical, pointer         :: block_is_local(:, :)  !< It is true if the block is in this node.
+    integer, allocatable     :: block_node(:)         !< The node that contains each block
+    integer, allocatable     :: rma_win(:, :)         !< The MPI window for one side communication
     logical                  :: block_initialized     !< For keeping track of the blocks to avoid memory leaks
   end type states_group_t
 

@@ -117,7 +117,11 @@ module states_m
     cmplx_array2_t,                   &
     states_wfs_t,                     &
     states_count_pairs,               &
-    occupied_states
+    occupied_states,                  &
+    states_remote_access_start,       &
+    states_remote_access_stop,        &
+    states_get_block,                 &
+    states_release_block
 
   !> cmplxscl: Left and Right eigenstates
   type states_wfs_t    
@@ -1054,6 +1058,7 @@ contains
     SAFE_ALLOCATE(bstart(1:st%nst))
     SAFE_ALLOCATE(bend(1:st%nst))
     SAFE_ALLOCATE(st%group%iblock(1:st%nst, 1:st%d%nik))
+
     st%group%iblock = 0
 
     verbose_ = optional_default(verbose, .true.)
@@ -1086,6 +1091,8 @@ contains
     if(st%have_left_states) then
       SAFE_ALLOCATE(st%psibL(1:st%group%nblocks, 1:st%d%nik))
     end if
+
+
     SAFE_ALLOCATE(st%group%block_is_local(1:st%group%nblocks, 1:st%d%nik))
     st%group%block_is_local = .false.
     st%group%block_start  = -1
@@ -1135,13 +1142,20 @@ contains
 
     SAFE_ALLOCATE(st%group%block_range(1:st%group%nblocks, 1:2))
     SAFE_ALLOCATE(st%group%block_size(1:st%group%nblocks))
-
+    
     st%group%block_range(1:st%group%nblocks, 1) = bstart(1:st%group%nblocks)
     st%group%block_range(1:st%group%nblocks, 2) = bend(1:st%group%nblocks)
     st%group%block_size(1:st%group%nblocks) = bend(1:st%group%nblocks) - bstart(1:st%group%nblocks) + 1
 
     st%group%block_initialized = .true.
 
+    SAFE_ALLOCATE(st%group%block_node(1:st%group%nblocks))
+
+    do ib = 1, st%group%nblocks
+      st%group%block_node(ib) = st%node(st%group%block_range(ib, 1))
+      ASSERT(st%group%block_node(ib) == st%node(st%group%block_range(ib, 2)))
+    end do
+    
     if(verbose_) then
       call messages_write('Info: Blocks of states')
       call messages_info()
@@ -1228,6 +1242,7 @@ contains
        SAFE_DEALLOCATE_P(st%group%block_range)
        SAFE_DEALLOCATE_P(st%group%block_size)
        SAFE_DEALLOCATE_P(st%group%block_is_local)
+       SAFE_DEALLOCATE_A(st%group%block_node)
        st%group%block_initialized = .false.
     end if
 
@@ -2674,6 +2689,128 @@ contains
     POP_SUB(occupied_states)
   end subroutine occupied_states
 
+  ! ---------------------------------------------------------
+
+  subroutine states_remote_access_start(this)
+    type(states_t),       intent(inout) :: this
+    
+    integer :: ib, iqn
+    
+    PUSH_SUB(states_remote_access_start)
+
+    ASSERT(associated(this%group%psib))
+
+    SAFE_ALLOCATE(this%group%rma_win(1:this%group%nblocks, 1:this%d%nik))
+    
+    do iqn = this%d%kpt%start, this%d%kpt%end
+      do ib = 1, this%group%nblocks
+        if(this%group%block_is_local(ib, iqn)) then
+          call batch_remote_access_start(this%group%psib(ib, iqn), this%mpi_grp, this%group%rma_win(ib, iqn))
+        else
+#ifdef HAVE_MPI2
+          ! create an empty window
+          call MPI_Win_create(0, int(0, MPI_ADDRESS_KIND), 1, 0, this%mpi_grp%comm, this%group%rma_win(ib, iqn), mpi_err)
+#endif
+        end if
+      end do
+    end do
+    
+    POP_SUB(states_remote_access_start)
+  end subroutine states_remote_access_start
+
+    ! ---------------------------------------------------------
+
+  subroutine states_remote_access_stop(this)
+    type(states_t),       intent(inout) :: this
+    
+    integer :: ib, iqn
+    
+    PUSH_SUB(states_remote_access_stop)
+
+    ASSERT(associated(this%group%psib))
+    
+    do iqn = this%d%kpt%start, this%d%kpt%end
+      do ib = 1, this%group%nblocks
+        if(this%group%block_is_local(ib, iqn)) then
+          call batch_remote_access_stop(this%group%psib(ib, iqn), this%group%rma_win(ib, iqn))
+        else
+#ifdef HAVE_MPI2
+          call MPI_Win_free(this%group%rma_win(ib, iqn), mpi_err)
+#endif
+        end if
+      end do
+    end do
+
+    SAFE_DEALLOCATE_A(this%group%rma_win)
+    
+    POP_SUB(states_remote_access_stop)
+  end subroutine states_remote_access_stop
+
+  ! --------------------------------------
+
+  subroutine states_get_block(this, mesh, ib, iqn, psib)
+    type(states_t), target, intent(in) :: this
+    type(mesh_t),           intent(in) :: mesh
+    integer,                intent(in) :: ib
+    integer,                intent(in) :: iqn
+    type(batch_t),          pointer    :: psib
+
+    PUSH_SUB(states_get_block)
+        
+    if(this%group%block_is_local(ib, iqn)) then
+      psib => this%group%psib(ib, iqn)
+    else
+      SAFE_ALLOCATE(psib)
+      call batch_init(psib, this%d%dim, this%group%block_size(ib))
+
+      if(states_are_real(this)) then
+        call dbatch_allocate(psib, this%group%block_range(ib, 1), this%group%block_range(ib, 2), mesh%np_part)
+      else
+        call zbatch_allocate(psib, this%group%block_range(ib, 1), this%group%block_range(ib, 2), mesh%np_part)
+      end if
+      
+      call batch_pack(psib, copy = .false.)
+      
+#ifdef HAVE_MPI2
+      call MPI_Win_lock(MPI_LOCK_SHARED, this%group%block_node(ib), 0, this%group%rma_win(ib, iqn),  mpi_err)
+
+      if(states_are_real(this)) then
+        call MPI_Get(psib%pack%dpsi(1, 1), product(psib%pack%size), MPI_FLOAT, &
+          this%group%block_node(ib), int(0, MPI_ADDRESS_KIND), product(psib%pack%size), MPI_FLOAT, &
+          this%group%rma_win(ib, iqn), mpi_err)
+      else
+        call MPI_Get(psib%pack%zpsi(1, 1), product(psib%pack%size), MPI_CMPLX, &
+          this%group%block_node(ib), int(0, MPI_ADDRESS_KIND), product(psib%pack%size), MPI_CMPLX, &
+          this%group%rma_win(ib, iqn), mpi_err)
+      end if
+        
+      call MPI_Win_unlock(this%group%block_node(ib), this%group%rma_win(ib, iqn),  mpi_err)
+#endif
+    end if
+
+    POP_SUB(states_get_block)
+  end subroutine states_get_block
+
+  ! --------------------------------------
+
+  subroutine states_release_block(this, ib, iqn, psib)
+    type(states_t), target, intent(in) :: this
+    integer,                intent(in) :: ib
+    integer,                intent(in) :: iqn
+    type(batch_t),          pointer    :: psib
+
+    PUSH_SUB(states_release_block)
+
+    if(this%group%block_is_local(ib, iqn)) then
+      nullify(psib)
+    else
+      call batch_end(psib)
+      SAFE_DEALLOCATE_P(psib)
+    end if
+    
+    POP_SUB(states_release_block)
+  end subroutine states_release_block
+  
 #include "undef.F90"
 #include "real.F90"
 #include "states_inc.F90"
