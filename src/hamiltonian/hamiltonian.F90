@@ -633,7 +633,10 @@ contains
     SAFE_DEALLOCATE_P(hm%ab_pot)
 
     call states_dim_end(hm%d) 
-    if(hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK .or. hm%theory_level == RDMFT) then
+
+    ! this is a bit ugly, hf_st is initialized in v_ks_calc but deallocated here.
+    if(associated(hm%hf_st))  then
+      if(hm%hf_st%parallel_in_states) call states_remote_access_stop(hm%hf_st)
       call states_end(hm%hf_st)
       SAFE_DEALLOCATE_P(hm%hf_st)
     end if
