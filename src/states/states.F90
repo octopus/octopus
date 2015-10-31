@@ -2755,8 +2755,12 @@ contains
     integer,                intent(in) :: iqn
     type(batch_t),          pointer    :: psib
 
+    type(profile_t), save :: prof
+    
     PUSH_SUB(states_get_block)
-        
+
+    call profiling_in(prof, "STATES_GET_BLOCK")
+    
     if(this%group%block_is_local(ib, iqn)) then
       psib => this%group%psib(ib, iqn)
     else
@@ -2788,6 +2792,8 @@ contains
 #endif
     end if
 
+    call profiling_out(prof)
+    
     POP_SUB(states_get_block)
   end subroutine states_get_block
 
