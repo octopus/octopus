@@ -1151,6 +1151,8 @@ contains
 
     SAFE_ALLOCATE(st%group%block_node(1:st%group%nblocks))
 
+    ASSERT(associated(st%node))
+    
     do ib = 1, st%group%nblocks
       st%group%block_node(ib) = st%node(st%group%block_range(ib, 1))
       ASSERT(st%group%block_node(ib) == st%node(st%group%block_range(ib, 2)))
@@ -1445,6 +1447,8 @@ contains
       end if
     end if
 
+    call loct_pointer_copy(stout%node, stin%node)
+
     if(.not. exclude_wfns_) then
       call loct_pointer_copy(stout%ddontusepsi, stin%ddontusepsi)
 
@@ -1465,7 +1469,6 @@ contains
         call loct_pointer_copy(stout%zrho%Im, stin%zrho%Im)           
       end if
 
-      call loct_pointer_copy(stout%node, stin%node)
     end if
 
     if(.not. optional_default(exclude_eigenval, .false.)) then
