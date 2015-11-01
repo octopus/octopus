@@ -150,13 +150,9 @@ contains
 
     ! ---------------------------------------------------------
     subroutine parallel_init()
-      integer :: index_dim, index_range(4)
+      integer :: index_range(4)
 
       PUSH_SUB(system_init.parallel_init)
-
-      ! for the moment we need communicators for domains plus three
-      ! index-dimensions: states, k-points, and others
-      index_dim = 4
 
       ! store the ranges for these two indices (serves as initial guess
       ! for parallelization strategy)
@@ -167,7 +163,7 @@ contains
 
       ! create index and domain communicators
       call multicomm_init(sys%mc, mpi_world, calc_mode_par_parallel_mask(), calc_mode_par_default_parallel_mask(), &
-        mpi_world%size, index_dim, index_range, (/ 5000, 1, 1, 1 /))
+        mpi_world%size, index_range, (/ 5000, 1, 1, 1 /))
 
       POP_SUB(system_init.parallel_init)
     end subroutine parallel_init

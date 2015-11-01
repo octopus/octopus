@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2002-2015 M. Marques, A. Castro, A. Rubio, G. Bertsch, X. Andrade
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -97,7 +97,7 @@ module multicomm_m
   
   integer, public, parameter ::      &
     PAR_AUTO            = -1,        &
-    PAR_NO              = 0
+    PAR_NO              =  0
   
   integer,           parameter :: n_par_types = 4
   character(len=11), parameter :: par_types(0:n_par_types) = &
@@ -114,7 +114,6 @@ module multicomm_m
   !> Stores all communicators and groups
   type multicomm_t
     integer          :: n_node           !< Total number of nodes.
-    integer          :: n_index          !< Number of parallel indices.
 
     integer          :: par_strategy     !< What kind of parallelization strategy should we use?
 
@@ -164,10 +163,12 @@ contains
 
   ! ---------------------------------------------------------
   !> create index and domain communicators
-  subroutine multicomm_init(mc, base_grp, parallel_mask, default_mask, n_node, n_index, index_range, min_range)
+  subroutine multicomm_init(mc, base_grp, parallel_mask, default_mask, n_node, index_range, min_range)
     type(multicomm_t), intent(out)   :: mc
     type(mpi_grp_t),   intent(inout) :: base_grp
-    integer,           intent(in)    :: parallel_mask, default_mask, n_node, n_index
+    integer,           intent(in)    :: parallel_mask
+    integer,           intent(in)    :: default_mask
+    integer,           intent(in)    :: n_node
     integer,           intent(inout) :: index_range(:)
     integer,           intent(in)    :: min_range(:)
 
@@ -177,10 +178,7 @@ contains
 
     PUSH_SUB(multicomm_init)
 
-    ASSERT(n_index <= n_par_types)
-
     mc%n_node  = n_node
-    mc%n_index = n_index  ! size(index_range)
 
     call messages_print_stress(stdout, "Parallelization")
 
@@ -297,7 +295,7 @@ contains
     mc%have_slaves = .false.
 
     if(mc%par_strategy /= P_STRATEGY_SERIAL) then
-      SAFE_ALLOCATE(mc%group_sizes(1:mc%n_index))
+      SAFE_ALLOCATE(mc%group_sizes(1:P_STRATEGY_MAX))
 
       mc%group_sizes = 1
 
@@ -339,7 +337,7 @@ contains
       end if
 
       ! clear parallel strategies that were available but will not be used
-      do ii = 1, mc%n_index
+      do ii = 1, P_STRATEGY_MAX
         if(mc%group_sizes(ii) == 1) mc%par_strategy = ibclr(mc%par_strategy, ii - 1)
       end do
 
@@ -428,17 +426,17 @@ contains
 
       PUSH_SUB(multicomm_init.assign_nodes)
 
-      SAFE_ALLOCATE(n_group_max(1:mc%n_index))
+      SAFE_ALLOCATE(n_group_max(1:P_STRATEGY_MAX))
 
       ! this is the maximum number of processors in each group
-      n_group_max(1:mc%n_index) = max(index_range(1:mc%n_index), 1)
-      do kk = 1, mc%n_index
+      n_group_max(1:P_STRATEGY_MAX) = max(index_range(1:P_STRATEGY_MAX), 1)
+      do kk = 1, P_STRATEGY_MAX
         if(.not. multicomm_strategy_is_parallel(mc, kk)) n_group_max(kk) = 1
       end do
 
       if(in_debug_mode) then
         call messages_write('Debug info: Allowable group ranks:', new_line = .true.)
-        do kk = 1, mc%n_index
+        do kk = 1, P_STRATEGY_MAX
           call messages_write(par_types(kk), fmt = '2x,a12,":",1x')
           call messages_write(n_group_max(kk), new_line = .true.)
         end do
@@ -447,7 +445,7 @@ contains
 
       nn = mc%n_node
       
-      do ipar = mc%n_index, 1, -1
+      do ipar = P_STRATEGY_MAX, 1, -1
 
         if(mc%group_sizes(ipar) > n_group_max(ipar)) then
           call messages_write('The number of processors specified for '//par_types(ipar)//'(')
@@ -516,7 +514,7 @@ contains
 
       ! print out some info
       ii = 0
-      do kk = mc%n_index, 1, -1
+      do kk = P_STRATEGY_MAX, 1, -1
         real_group_sizes(kk) = mc%group_sizes(kk)
         if(.not. multicomm_strategy_is_parallel(mc, kk)) cycle
         ii = ii + 1
@@ -527,22 +525,22 @@ contains
       call messages_info(ii)
 
       ! do we have the correct number of processors
-      if(product(mc%group_sizes(1:mc%n_index)) /= base_grp%size) then
+      if(product(mc%group_sizes(1:P_STRATEGY_MAX)) /= base_grp%size) then
         write(message(1),'(a)') 'Inconsistent number of processors:'
         write(message(2),'(a,i6)') '  MPI processes      = ', base_grp%size
-        write(message(3),'(a,i6)') '  Required processes = ', product(mc%group_sizes(1:mc%n_index))
+        write(message(3),'(a,i6)') '  Required processes = ', product(mc%group_sizes(1:P_STRATEGY_MAX))
         message(4) = ''
         message(5) = 'You probably have a problem in the ParDomains, ParStates, ParKPoints or ParOther.'
         call messages_fatal(5, only_root_writes = .true.)
       end if
 
-      if(any(real_group_sizes(1:mc%n_index) > index_range(1:mc%n_index))) then
+      if(any(real_group_sizes(1:P_STRATEGY_MAX) > index_range(1:P_STRATEGY_MAX))) then
         message(1) = "Could not distribute nodes in parallel job. Most likely you are trying to"
         message(2) = "use too many nodes for the job."
         call messages_fatal(2, only_root_writes = .true.)
       end if
 
-      if(any(index_range(1:mc%n_index) / real_group_sizes(1:mc%n_index) < min_range(1:mc%n_index))) then
+      if(any(index_range(1:P_STRATEGY_MAX) / real_group_sizes(1:P_STRATEGY_MAX) < min_range(1:P_STRATEGY_MAX))) then
         message(1) = "I have fewer elements in a parallel group than recommended."
         message(2) = "Maybe you should reduce the number of nodes."
         call messages_warning(2)
@@ -550,7 +548,7 @@ contains
 
       ! calculate fraction of idle time
       frac = M_ONE
-      do ii = 1, mc%n_index
+      do ii = 1, P_STRATEGY_MAX
         n_max = ceiling(real(index_range(ii), REAL_PRECISION) / real(real_group_sizes(ii), REAL_PRECISION))
         kk = n_max*real_group_sizes(ii)
         frac = frac*(M_ONE - real(kk - index_range(ii), REAL_PRECISION) / real(kk, REAL_PRECISION))
@@ -583,8 +581,8 @@ contains
 
       mc%node_type = P_MASTER
 
-      SAFE_ALLOCATE(mc%group_comm(1:mc%n_index))
-      SAFE_ALLOCATE(mc%who_am_i(1:mc%n_index))
+      SAFE_ALLOCATE(mc%group_comm(1:P_STRATEGY_MAX))
+      SAFE_ALLOCATE(mc%who_am_i(1:P_STRATEGY_MAX))
 
 #if defined(HAVE_MPI)
       mc%full_comm = MPI_COMM_NULL
@@ -604,12 +602,12 @@ contains
         periodic_mask(P_STRATEGY_STATES)  = multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)
 
         ! We allow reordering of ranks. 
-        call MPI_Cart_create(base_grp%comm, mc%n_index, mc%group_sizes, periodic_mask, reorder, mc%full_comm, mpi_err)
+        call MPI_Cart_create(base_grp%comm, P_STRATEGY_MAX, mc%group_sizes, periodic_mask, reorder, mc%full_comm, mpi_err)
 
         call MPI_Comm_rank(mc%full_comm, mc%full_comm_rank, mpi_err)
 
         ! get the coordinates of the current processor
-        call MPI_Cart_coords(mc%full_comm, mc%full_comm_rank, mc%n_index, coords, mpi_err)
+        call MPI_Cart_coords(mc%full_comm, mc%full_comm_rank, P_STRATEGY_MAX, coords, mpi_err)
 
         ! find out what type of node this is
         if(coords(slave_level) >= mc%group_sizes(slave_level) - num_slaves) then
@@ -632,7 +630,7 @@ contains
           call MPI_Barrier(mpi_world%comm, mpi_err)
           ASSERT(product(mc%group_sizes(:)) == new_comm_size)
         endif
-        call MPI_Cart_create(new_comm, mc%n_index, mc%group_sizes, periodic_mask, reorder, mc%master_comm, mpi_err)
+        call MPI_Cart_create(new_comm, P_STRATEGY_MAX, mc%group_sizes, periodic_mask, reorder, mc%master_comm, mpi_err)
         ASSERT(mc%master_comm /= MPI_COMM_NULL)
         
         call MPI_Comm_free(new_comm, mpi_err)
@@ -641,7 +639,7 @@ contains
 
         ! The "lines" of the Cartesian grid.
         ! Initialize all the communicators, even if they are not parallelized
-        do i_strategy = 1, mc%n_index
+        do i_strategy = 1, P_STRATEGY_MAX
             dim_mask             = .false.
             dim_mask(i_strategy) = .true.
             call MPI_Cart_sub(mc%master_comm, dim_mask, mc%group_comm(i_strategy), mpi_err)
@@ -726,7 +724,7 @@ contains
       ! create the intercommunicators to communicate with slaves
 
       ! get the coordinates of the current processor
-      call MPI_Cart_coords(mc%full_comm, mc%full_comm_rank, mc%n_index, coords, mpi_err)
+      call MPI_Cart_coords(mc%full_comm, mc%full_comm_rank, P_STRATEGY_MAX, coords, mpi_err)
       
       !now get the rank of the remote_leader
       if(mc%node_type == P_SLAVE) then
@@ -760,7 +758,7 @@ contains
     if(mc%par_strategy /= P_STRATEGY_SERIAL) then
 #if defined(HAVE_MPI)
       ! Delete communicators.
-      do ii = 1, mc%n_index
+      do ii = 1, P_STRATEGY_MAX
         ! initialized even if not parallelized
         call MPI_Comm_free(mc%group_comm(ii), mpi_err)
       end do
