@@ -39,5 +39,4 @@ noinst_HEADERS = \
 
 AM_CPPFLAGS = -I$(top_srcdir)/external_libs/metis-5.1/GKlib/ -I$(top_srcdir)/external_libs/metis-5.1/include -DNDEBUG -DNDEBUG2 
 
-CLEANFILES = *~ *.bak
-
+CLEANFILES = *.a *~ *.bak
