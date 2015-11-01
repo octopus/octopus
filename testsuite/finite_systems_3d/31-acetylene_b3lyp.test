@@ -1,0 +1,27 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 10-fullerene.test 14159 2015-05-30 17:07:56Z xavier $
+
+Test       : Acetylene - B3LYP
+Program    : octopus
+TestGroups : long-run, finite_systems_3d
+Enabled    : Yes
+
+Processors: 4
+Input: 31-acetylene_b3lyp.01-gs.inp
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3)    ; -12.58670316
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3)    ;  13.15759358
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3)    ;  -4.81606470
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3)    ;  22.66288250
+match ; Int[n*v_xc]        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ;  -4.36954843
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3)    ;   0.00000000
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3)    ;  -3.38793546
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3)    ;   9.51759174
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3)    ; -53.78386283
+
+match ; Eigenvalue  1     ; GREPFIELD(static/info, '  1   --', 3) ; -0.757230
+match ; Eigenvalue  2     ; GREPFIELD(static/info, '  2   --', 3) ; -0.567946
+match ; Eigenvalue  3     ; GREPFIELD(static/info, '  3   --', 3) ; -0.484653
+match ; Eigenvalue  4     ; GREPFIELD(static/info, '  4   --', 3) ; -0.299085
+match ; Eigenvalue  5     ; GREPFIELD(static/info, '  5   --', 3) ; -0.299085
+match ; Eigenvalue  6     ; GREPFIELD(static/info, '  6   --', 3) ;  0.028061
+match ; Eigenvalue  7     ; GREPFIELD(static/info, '  7   --', 3) ;  0.028061

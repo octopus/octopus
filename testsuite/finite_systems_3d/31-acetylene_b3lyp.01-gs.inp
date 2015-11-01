@@ -1,0 +1,27 @@
+CalculationMode = gs
+
+PseudopotentialSet = hscv_pbe
+
+%Coordinates 
+ 'C' |  1.128442 | 0.000000 | 0.000000
+ 'C' | -1.128442 | 0.000000 | 0.000000
+ 'H' |  3.116852 | 0.000000 | 0.000000
+ 'H' | -3.116852 | 0.000000 | 0.000000
+%
+
+Radius = 5.5
+Spacing = 0.45
+
+FromScratch = yes
+
+XCFunctional = hyb_gga_xc_b3lyp
+
+ExperimentalFeatures = yes
+
+ParStates = auto
+
+ExtraStates = 2
+
+EigenSolver = rmmdiis
+
+ProfilingMode = yes
