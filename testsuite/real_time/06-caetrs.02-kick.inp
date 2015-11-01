@@ -25,14 +25,11 @@ TDMaxSteps = 20
 
 TDPropagator = caetrs
 
-ParallelizationStrategy = par_domains + par_states
+ParDomains = 2
 
-%ParallelizationGroupRanks
- 2 | 2
-%
+ParStates = 2
 
 FromScratch = yes
-
 
 TDDeltaStrength = 0.2
 

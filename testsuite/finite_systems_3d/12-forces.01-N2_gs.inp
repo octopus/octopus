@@ -24,6 +24,4 @@ EigenSolverTolerance = 1e-4
 PoissonSolver = fft
 PoissonFFTKernel = multipole_correction
 
-ParallelizationStrategy=par_domains
-
 MixField = density

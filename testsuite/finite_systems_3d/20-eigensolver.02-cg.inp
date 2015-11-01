@@ -20,8 +20,6 @@ Spacing = 0.25
 
 EigenSolver = cg
 
-ParallelizationStrategy = par_domains
-
 FilterPotentials = filter_none
 
 SCFCalculatePartialCharges = yes

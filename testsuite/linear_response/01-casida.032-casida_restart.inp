@@ -30,8 +30,7 @@ CasidaCalcForces = yes
 PoissonSolver = fft
 PoissonFFTKernel = multipole_correction
 
-ParallelizationStrategy = par_domains + par_other
-%ParallelizationGroupRanks
- 2 | 1 | 1 | 2
-%
+ParDomains = 2
+ParOther = 2
+
 MixField = density

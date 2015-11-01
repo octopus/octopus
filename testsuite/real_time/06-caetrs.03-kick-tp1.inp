@@ -25,10 +25,7 @@ TDMaxSteps = 20
 
 TDPropagator = caetrs
 
-ParallelizationStrategy = par_domains + par_states
-
 FromScratch = yes
-
 
 TDDeltaStrength = 0.2
 
@@ -40,9 +37,8 @@ TDEnergyUpdateIter = 5
 
 ParallelizationNumberSlaves = 1
 
-%ParallelizationGroupRanks
- 2 | 3
-%
+ParDomains = 2
+ParStates = 3
 
 ExperimentalFeatures = yes
 ProfilingMode = prof_memory_full

@@ -28,7 +28,9 @@ lz = 4.0
 
 KPointsUseSymmetries = yes
 SymmetrizeDensity = yes
-ParallelizationStrategy = par_kpoints
+
+ParDomains = no
+ParKPoints = auto
 
 %KPointsGrid
   2 | 2 | 1

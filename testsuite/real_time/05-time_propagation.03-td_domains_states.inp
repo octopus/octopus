@@ -21,15 +21,11 @@ Spacing=0.55
 
 Radius=8
 
-ParallelizationStrategy = par_domains + par_states
-
 TDTimeStep = 0.1
 TDMaxSteps = 10
 
-
-%ParallelizationGroupRanks
-2 | 2
-%
+ParDomains = 2
+ParStates = 2
 
 TDEnergyUpdateIter = 5
 

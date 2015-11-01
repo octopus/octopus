@@ -37,7 +37,8 @@ XCFunctional = mgga_x_tb09 + lda_c_pz
 
 ConvRelEv = 1e-8
 
-ParallelizationStrategy = par_kpoints
+ParDomains = no
+ParKPoints = auto
 
 XCUseGaugeIndependentKED = no
 

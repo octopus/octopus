@@ -6,8 +6,6 @@ FromScratch = yes
 
 CalculationMode = gs
 
-ParallelizationStrategy = par_domains
-
 Dimensions = 1
 Spacing = 0.2
 Radius = 50.0

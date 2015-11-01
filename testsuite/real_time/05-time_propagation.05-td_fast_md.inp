@@ -36,16 +36,13 @@ Spacing=0.55
 
 Radius=8
 
-ParallelizationStrategy = par_domains + par_states
-
 TDIonicTimeScale = 10
 
 TDTimeStep = 0.1 * TDIonicTimeScale
 TDMaxSteps = 20
 
-%ParallelizationGroupRanks
-2 | 2
-%
+ParDomains = 2
+ParStates = 2
 
 FilterPotentials = filter_none
 

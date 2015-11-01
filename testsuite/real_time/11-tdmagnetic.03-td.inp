@@ -4,7 +4,8 @@ ExperimentalFeatures = yes
 Dimensions = 2
 
 ExtraStates = 1
-ParallelizationStrategy = par_domains
+
+ParStates = no
 
 omega0 = 1.0
 dist = 3.0
@@ -28,6 +29,7 @@ magfield = 3.0
 
 # P_c is the speed of light in atomic units.
 P_c = 137.036
+
 %StaticMagneticField
 0 | 0 | magfield*P_c
 %
@@ -58,7 +60,3 @@ TDTimeStep = dt
 OutputInterval = 200
 
 AbsorbingBoundaries = no
-
-
-
-

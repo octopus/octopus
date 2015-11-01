@@ -36,7 +36,8 @@ TDMaxSteps = 20
 
 ExperimentalFeatures = yes
 
-ParallelizationStrategy = par_kpoints
+ParDomains = no
+ParKPoints = auto
 
 TDEnergyUpdateIter = 5
 

@@ -4,7 +4,7 @@
 
 CalculationMode = gs
 
-ParallelizationStrategy = par_domains
+ParStates = no
 
 Dimensions = 1
 Spacing = 0.2

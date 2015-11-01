@@ -24,11 +24,8 @@ TDMaxSteps = 20
 
 TDPropagator = crank_nicolson
 
-ParallelizationStrategy = par_domains + par_states
-
-%ParallelizationGroupRanks
- 2 | 2
-%
+ParDomains = 2
+ParStates = 2
 
 FromScratch = yes
 

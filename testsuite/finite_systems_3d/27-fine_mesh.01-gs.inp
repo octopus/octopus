@@ -30,7 +30,9 @@ ProfilingMode = prof_time
 LCAOAlternative = yes
 
 EigenSolver = rmmdiis
-ParallelizationStrategy = par_states
+
+ParDomains = no
+ParStates = auto
 
 ConvRelDens = 1e-6
 

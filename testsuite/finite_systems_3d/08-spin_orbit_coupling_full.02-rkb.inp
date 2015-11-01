@@ -28,8 +28,6 @@ GuessMagnetDensity = user_defined
  0.0 | 0.0 | 1.0
 %
 
-ParallelizationStrategy=par_domains
-
 ConvRelDens = 0.0
 ConvAbsEv = 1e-6
 ConvAbsForces = 1e-6

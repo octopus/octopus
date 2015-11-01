@@ -22,6 +22,6 @@ TDTimeStep = 10.0
 
 TDMaxSteps = 8
 
-ParallelizationStrategy = par_domains
+ParStates = no
 
 MixField = density

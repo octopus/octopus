@@ -88,20 +88,25 @@ module multicomm_m
     P_STRATEGY_DOMAINS = 1,          & !< parallelization in domains
     P_STRATEGY_STATES  = 2,          & !< parallelization in states
     P_STRATEGY_KPOINTS = 3,          & !< parallelization in k-points
-    P_STRATEGY_OTHER   = 4             !< something else like e-h pairs
+    P_STRATEGY_OTHER   = 4,          &   !< something else like e-h pairs
+    P_STRATEGY_MAX     = 4 
 
   integer, public, parameter ::      &
     P_MASTER           = 1,          &
     P_SLAVE            = 2
   
+  integer, public, parameter ::      &
+    PAR_AUTO            = -1,        &
+    PAR_NO              = 0
+  
   integer,           parameter :: n_par_types = 4
   character(len=11), parameter :: par_types(0:n_par_types) = &
-    (/                               &
-    "serial     ",                   &
-    "par_domains",                   &
-    "par_states ",                   &
-    "par_kpoints",                   &
-    "par_other  "                    &
+    (/                              &
+    "serial    ",                   &
+    "ParDomains",                   &
+    "ParStates ",                   &
+    "ParKPoints",                   &
+    "ParOther  "                    &
     /)
 
   integer, parameter :: MAX_INDEX = 5
@@ -166,8 +171,9 @@ contains
     integer,           intent(inout) :: index_range(:)
     integer,           intent(in)    :: min_range(:)
 
-    integer :: ii, num_slaves, slave_level
+    integer :: ii, num_slaves, slave_level, ipar
     type(block_t) :: blk
+    integer :: parse(1:P_STRATEGY_MAX), default(1:P_STRATEGY_MAX)
 
     PUSH_SUB(multicomm_init)
 
@@ -178,6 +184,113 @@ contains
 
     call messages_print_stress(stdout, "Parallelization")
 
+    call messages_obsolete_variable('ParallelizationStrategy')
+    call messages_obsolete_variable('ParallelizationGroupRanks')
+    
+    do ipar = 1, P_STRATEGY_MAX
+      default(ipar) = PAR_NO
+      if(iand(default_mask, ibset(0, ipar - 1)) /= 0) then
+        default(ipar) = PAR_AUTO
+      end if
+    end do
+    
+    !%Variable ParDomains
+    !%Type integer
+    !%Default auto
+    !%Section Execution::Parallelization
+    !%Description
+    !% This variable controls the number of processors used for the
+    !% parallelization in domains.
+    !% The special value <tt>auto</tt>, the default, lets Octopus
+    !% decide how many processors will be assigned for this
+    !% strategy. To disable parallelization in domains, you can use
+    !% <tt>ParDomains = no</tt> (or set the number of processors to
+    !% 1).
+    !%
+    !% The total number of processors required is the multiplication
+    !% of the processors assigned to each parallelization strategy.
+    !%Option auto -1
+    !% The number of processors is assigned automatically.
+    !%Option no 0
+    !% This parallelization strategy is not used.    
+    !%End
+    call parse_variable('ParDomains', default(P_STRATEGY_DOMAINS), parse(P_STRATEGY_DOMAINS))
+
+    !%Variable ParStates
+    !%Type integer
+    !%Section Execution::Parallelization
+    !%Description
+    !% This variable controls the number of processors used for the
+    !% parallelization in states. The special value <tt>auto</tt> lets
+    !% Octopus decide how many processors will be assigned for this
+    !% strategy. To disable parallelization in states, you can use
+    !% <tt>ParStates = no</tt> (or set the number of processors to 1).
+    !%
+    !% The default value depends on the <tt>CalculationMode</tt>. For
+    !% <tt>CalculationMode = td</tt> the default is <tt>auto</tt>, while
+    !% for for other modes the default is <tt>no</tt>.
+    !%
+    !% The total number of processors required is the multiplication
+    !% of the processors assigned to each parallelization strategy.
+    !%Option auto -1
+    !% The number of processors is assigned automatically.
+    !%Option no 0
+    !% This parallelization strategy is not used.    
+    !%End
+    call parse_variable('ParStates', default(P_STRATEGY_STATES), parse(P_STRATEGY_STATES))
+
+    !%Variable ParKPoints
+    !%Type integer
+    !%Default no
+    !%Section Execution::Parallelization
+    !%Description
+    !% This variable controls the number of processors used for the
+    !% parallelization in K-Points and/or spin.
+    !% The special value <tt>auto</tt> lets Octopus decide how many processors will be
+    !% assigned for this strategy. To disable parallelization in
+    !% KPoints, you can use <tt>ParKPoints = no</tt> (or set the
+    !% number of processors to 1).
+    !%
+    !% The total number of processors required is the multiplication
+    !% of the processors assigned to each parallelization strategy.
+    !%Option auto -1
+    !% The number of processors is assigned automatically.
+    !%Option no 0
+    !% This parallelization strategy is not used.    
+    !%End
+    call parse_variable('ParKPoints', default(P_STRATEGY_KPOINTS), parse(P_STRATEGY_KPOINTS))
+
+    !%Variable ParOther
+    !%Type integer
+    !%Default auto
+    !%Section Execution::Parallelization
+    !%Description
+    !% This variable controls the number of processors used for the
+    !% 'other' parallelization mode, that is CalculatioMode
+    !% dependent. For <tt>CalculationMode = casida</tt>, it means
+    !% parallelization in electron-hole pairs.
+    !%
+    !% The special value <tt>auto</tt>,
+    !% the default, lets Octopus decide how many processors will be
+    !% assigned for this strategy. To disable parallelization in
+    !% Other, you can use <tt>ParOther = no</tt> (or set the
+    !% number of processors to 1).
+    !%
+    !% The total number of processors required is the multiplication
+    !% of the processors assigned to each parallelization strategy.
+    !%Option auto -1
+    !% The number of processors is assigned automatically.
+    !%Option no 0
+    !% This parallelization strategy is not used.    
+    !%End
+    call parse_variable('ParOther', default(P_STRATEGY_OTHER), parse(P_STRATEGY_OTHER))
+
+    do ipar = 1, P_STRATEGY_MAX
+      if(parse(ipar) == PAR_NO) parse(ipar) = 1
+    end do
+
+    if(base_grp%rank == 0) print*, "PARSE", parse
+    
     call strategy()
 
     nullify(mc%group_sizes)
@@ -185,34 +298,22 @@ contains
 
     if(mc%par_strategy /= P_STRATEGY_SERIAL) then
       SAFE_ALLOCATE(mc%group_sizes(1:mc%n_index))
-      mc%group_sizes(:) = 1
 
-      !%Variable ParallelizationGroupRanks
-      !%Type block
-      !%Section Execution::Parallelization
-      !%Description
-      !% Specifies the size of the groups used for the
-      !% parallelization, as one number each for domains, states, <i>k</i>-points, and other.
-      !% For example (n_d, n_s, n_k, n_o) means we have
-      !% <i>n_d*n_s*n_k*n_o</i> processors and that electron-hole pairs (only for <tt>CalculationMode = casida</tt>)
-      !% will be divided into <i>n_o</i> groups, the <i>k</i>-points should be
-      !% divided into <i>n_k</i> groups, the states into <i>n_s</i> groups, and the grid
-      !% points into <i>n_d</i> domains. You can pass the value <tt>fill</tt> to one
-      !% field: it will be replaced by the value required to complete
-      !% the number of processors in the run. Any value for the column corresponding to
-      !% a parallelization strategy unavailable for the current <tt>CalculationMode</tt> will be ignored.
-      !% If this option is not set, the groups will be set automatically, choosing divisors of the number
-      !% of available processors, and using the largest numbers for the groups in this order:
-      !% other, <i>k</i>-points, states, domains (<i>i.e.</i> from right to left of how they are laid out in this block).
-      !%Option fill -1
-      !% Replaced by the value required to complete the number of processors.
-      !%End
-      if(parse_block('ParallelizationGroupRanks', blk) == 0) then
-        call read_block(blk)
-        call parse_block_end(blk)
-      else
-        call assign_nodes()
-      end if
+      mc%group_sizes = 1
+
+      do ipar = 1, P_STRATEGY_MAX
+        if(multicomm_strategy_is_parallel(mc, ipar)) then
+          mc%group_sizes(ipar) = parse(ipar)
+        else if(parse(ipar) /= 1) then
+          call messages_write('Ignoring specification for ' // par_types(ipar))
+          call messages_new_line()
+          call messages_write('This parallelization strategy is not available.')
+          call messages_warning()
+        end if
+      end do
+
+      call assign_nodes()
+
 
       !%Variable ParallelizationNumberSlaves
       !%Type integer
@@ -256,51 +357,30 @@ contains
 
     ! ---------------------------------------------------------
     subroutine strategy()
-      integer :: jj
+      integer :: jj, ipar
 
       PUSH_SUB(multicomm_init.strategy)
 
-      !%Variable ParallelizationStrategy
-      !%Type flag
-      !%Section Execution::Parallelization
-      !%Description
-      !% Specifies what kind of parallelization strategy <tt>Octopus</tt> should use.
-      !% The values can be combined: for example, <tt>par_domains + par_states</tt>
-      !% means a combined parallelization in domains and states.
-      !% Default: <tt>par_domains + par_states</tt> for <tt>CalculationMode = td</tt>,
-      !% otherwise <tt>par_domains</tt>.
-      !%Option serial 0
-      !% <tt>Octopus</tt> will run in serial.
-      !%Option par_domains 1
-      !% <tt>Octopus</tt> will run parallel in domains.
-      !%Option par_states  2
-      !% <tt>Octopus</tt> will run parallel in states.
-      !%Option par_kpoints 4
-      !% <tt>Octopus</tt> will run parallel in <i>k</i>-points/spin.
-      !%Option par_other   8
-      !% For <tt>CalculationMode = casida</tt>, it means parallelization in electron-hole pairs.
-      !%End
+      if(base_grp%size > 1) then
 
-      ! defaults are set ultimately by calc_mode_par_init,
-      ! modified with calc_mode_par_set_parallelization by some calculation modes
+        mc%par_strategy = 0
 
-     if(base_grp%size > 1) then
-
-        call parse_variable('ParallelizationStrategy', default_mask, mc%par_strategy)
-
-        if(.not.varinfo_valid_option('ParallelizationStrategy', mc%par_strategy, is_flag=.true.)) then
-          call messages_input_error('ParallelizationStrategy')
-        end if
+        do ipar = 1, P_STRATEGY_MAX
+          if(parse(ipar) == PAR_AUTO .or. parse(ipar) > 1) then
+            mc%par_strategy = ibset(mc%par_strategy, ipar - 1)
+          end if
+        end do
 
         if(mc%par_strategy /= iand(mc%par_strategy, parallel_mask)) then
-          message(1) = "Parallelization strategies unavailable for this run mode are being discarded."
-          call messages_warning(1)
+          call messages_write('Parallelization strategies unavailable for this run mode are being discarded.')
+          call messages_warning()
         end if
+        
         mc%par_strategy = iand(mc%par_strategy, parallel_mask)
         
         if(mc%par_strategy == P_STRATEGY_SERIAL) then
           message(1) = "More than one node is available, but this run mode cannot run with the requested parallelization."
-          message(2) = "Please select a ParallelizationStrategy compatible with"
+          message(2) = "Please select a parallelization strategy compatible with"
           jj = 2
           do ii = 1, n_par_types
             if(iand(parallel_mask, 2**(ii - 1)) /= 0) then
@@ -340,56 +420,15 @@ contains
       POP_SUB(multicomm_init.strategy)
     end subroutine strategy
 
-
     ! ---------------------------------------------------------
-    subroutine read_block(blk)
-      type(block_t), intent(inout) :: blk
-
-      integer :: ii, nn, temp
-      logical :: fill_used
-
-      PUSH_SUB(multicomm_init.read_block)
-
-      nn = parse_block_cols(blk, 0)
-
-      mc%group_sizes = 1
-      do ii = 1, min(nn, mc%n_index)
-        call parse_block_integer(blk, 0, ii - 1, temp)
-        if(multicomm_strategy_is_parallel(mc, ii)) then
-          mc%group_sizes(ii) = temp
-        else if(temp /= 1) then
-          message(1) = 'In ParallelizationGroupRanks, ignoring specification for ' // par_types(ii)
-          message(2) = 'This parallelization strategy is not available.'
-          call messages_warning(2)
-        end if
-      end do
-
-      fill_used = .false.
-      do ii = 1, mc%n_index
-        if(mc%group_sizes(ii) == -1) then
-          if(fill_used) then
-            message(1) = "The 'fill' value can be used only once in ParallelizationGroupRanks."
-            call messages_fatal(1, only_root_writes = .true.)
-          end if
-          mc%group_sizes(ii) = -base_grp%size / product(mc%group_sizes)
-          fill_used = .true.
-        end if
-      end do
-
-      POP_SUB(multicomm_init.read_block)
-    end subroutine read_block
-
-    ! ---------------------------------------------------------
+    
     subroutine assign_nodes()
-      integer :: ii, nn, kk, n_divisors, divisors(50)
+      integer :: ii, nn, kk, n_divisors, divisors(1:50)
       integer, allocatable :: n_group_max(:)
-      FLOAT   :: ff
 
       PUSH_SUB(multicomm_init.assign_nodes)
 
       SAFE_ALLOCATE(n_group_max(1:mc%n_index))
-
-      nn = mc%n_node
 
       ! this is the maximum number of processors in each group
       n_group_max(1:mc%n_index) = max(index_range(1:mc%n_index), 1)
@@ -406,33 +445,44 @@ contains
         call messages_info()
       end if
 
-      ! for each index
-      do kk = 1, mc%n_index
-        if(n_group_max(kk) == 1) then ! not parallel in this group
-          mc%group_sizes(kk) = 1
-          cycle
+      nn = mc%n_node
+      
+      do ipar = mc%n_index, 1, -1
+
+        if(mc%group_sizes(ipar) > n_group_max(ipar)) then
+          call messages_write('The number of processors specified for '//par_types(ipar)//'(')
+          call messages_write(mc%group_sizes(ipar))
+          call messages_write(')', new_line = .true.)
+          call messages_write('is larger than the degrees of freedom for that level (')
+          call messages_write(n_group_max(ipar))
+          call messages_write(').')
+          call messages_warning()
+        end if
+        
+        if(mc%group_sizes(ipar) == PAR_AUTO) then
+          n_divisors = ubound(divisors, dim = 1)
+          call get_divisors(nn, n_divisors, divisors)
+
+          mc%group_sizes(ipar) = nn
+          do ii = 2, n_divisors
+            if(divisors(ii) > n_group_max(ipar)) then
+              mc%group_sizes(ipar) = divisors(ii - 1)
+              exit
+            end if
+          end do
         end if
 
-        ! distribute the nodes so that domains is the last
-        ff = real(nn, REAL_PRECISION)
-        do ii = kk + 1, mc%n_index
-          ff = ff / real(n_group_max(ii), REAL_PRECISION)
-        end do
+        if(mod(nn, mc%group_sizes(ipar)) /= 0) then
+          call messages_write('The number of processors specified for '//par_types(ii)//'(')
+          call messages_write(mc%group_sizes(ipar))
+          call messages_write(')', new_line = .true.)
+          call messages_write('is not a divisor of the number of processors (')
+          call messages_write(mc%n_node)
+          call messages_write(').')
+          call messages_fatal()
+        end if
 
-        ! get divisors of nn
-        n_divisors = 50 ! maximum number of divisors
-        call get_divisors(nn, n_divisors, divisors)
-
-        ! get the divisor of nn >= ff
-        mc%group_sizes(kk) = nn
-        do ii = 1, n_divisors
-          if(real(divisors(ii), REAL_PRECISION) >= ff) then
-            mc%group_sizes(kk) = divisors(ii)
-            exit
-          end if
-        end do
-
-        nn = nn / mc%group_sizes(kk)
+        nn = nn/mc%group_sizes(ipar)
       end do
 
       SAFE_DEALLOCATE_A(n_group_max)
@@ -452,6 +502,7 @@ contains
 
       if(num_slaves > 0) then
 
+        print*, mc%group_sizes(slave_level), num_slaves
         if(mc%group_sizes(slave_level) < num_slaves + 1) then
           message(1) = 'Too many nodes assigned to task parallelization.'
           call messages_fatal(1)
@@ -481,7 +532,7 @@ contains
         write(message(2),'(a,i6)') '  MPI processes      = ', base_grp%size
         write(message(3),'(a,i6)') '  Required processes = ', product(mc%group_sizes(1:mc%n_index))
         message(4) = ''
-        message(5) = 'You probably have a problem in the ParallelizationGroupRanks block or ParallelizationStrategy.'
+        message(5) = 'You probably have a problem in the ParDomains, ParStates, ParKPoints or ParOther.'
         call messages_fatal(5, only_root_writes = .true.)
       end if
 

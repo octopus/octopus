@@ -21,8 +21,6 @@ Spacing = 0.25
 EigenSolver = plan
 EigenSolverTolerance = 1e-5
 
-ParallelizationStrategy = par_domains
-
 FilterPotentials = filter_none
 
 SCFCalculatePartialCharges = yes

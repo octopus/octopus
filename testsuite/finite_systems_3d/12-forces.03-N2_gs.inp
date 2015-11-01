@@ -22,6 +22,4 @@ EigenSolver = cg_new
 EigenSolverTolerance = 1e-4
 EigenSolverMaxIter = 20
 
-ParallelizationStrategy=par_domains
-
 MixField = density

@@ -83,9 +83,6 @@ StatesPack = yes
 'C'| -6.291688| -0.839777 | 2.141966
 %
 
-ParallelizationStrategy = par_domains
-
-
 FilterPotentials = filter_none
 
 MixField = density

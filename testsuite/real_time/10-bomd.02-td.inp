@@ -25,7 +25,8 @@ TDTimeStep = 10.0
 TDMaxSteps = 4
 
 ScaLAPACKCompatible = yes
-ParallelizationStrategy = par_states
+
+ParDomains = no
 
 MixField = density
 

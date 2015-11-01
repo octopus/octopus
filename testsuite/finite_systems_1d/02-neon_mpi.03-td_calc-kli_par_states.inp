@@ -6,7 +6,7 @@ FromScratch = yes
 
 CalculationMode = td
 
-ParallelizationStrategy = par_states
+ParDomains = no
 
 Dimensions = 1
 Spacing = 0.2

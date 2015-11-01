@@ -40,4 +40,7 @@ ParallelizationNumberSlaves = 3
 
 ExperimentalFeatures = yes
 
-ParallelizationStrategy = par_states
+ParDomains = no
+ParStates = 5
+
+

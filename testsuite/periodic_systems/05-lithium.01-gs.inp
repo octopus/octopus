@@ -27,7 +27,8 @@ BoxShape = parallelepiped
 
 KPointsUseSymmetries = no
 
-ParallelizationStrategy = par_kpoints
+ParDomains = no
+ParKPoints = auto
 
 Output = density
 OutputFormat = xcrysden

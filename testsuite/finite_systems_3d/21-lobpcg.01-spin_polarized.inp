@@ -4,10 +4,7 @@
 # This input file is the same as 01-carbon_atom.01-ground_state.inp
 # except for the use of parallel LOBPCG.
 
-ParallelizationStrategy = par_domains + par_states
-%ParallelizationGroupRanks
-fill | 2 | 1 | 1
-%
+ParStates = 2
 
 CalculationMode = gs
 fromScratch = yes
@@ -37,9 +34,6 @@ ConvRelDens = 1e-6
 
 PoissonSolver = fft
 PoissonFFTKernel = multipole_correction
-
-
-
 
 FilterPotentials = filter_none
 

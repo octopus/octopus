@@ -14,9 +14,5 @@ StatesOrthogonalization = cholesky_serial
 
 TestType = real
 
-ParallelizationStrategy = par_domains + par_states
-
-%ParallelizationGroupRanks
- fill | 2
-%
-
+ParDomains = auto
+ParStates = 2
