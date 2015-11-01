@@ -72,7 +72,6 @@ module base_potential_m
     base_potential__reset__,  &
     base_potential__acc__,    &
     base_potential__sub__,    &
-    base_potential__add__,    &
     base_potential__copy__,   &
     base_potential__end__
 
@@ -83,6 +82,8 @@ module base_potential_m
     base_potential_start,  &
     base_potential_update, &
     base_potential_stop,   &
+    base_potential_sets,   &
+    base_potential_gets,   &
     base_potential_set,    &
     base_potential_get,    &
     base_potential_copy,   &
@@ -116,20 +117,12 @@ module base_potential_m
   end type base_potential_t
 
   interface base_potential__init__
-    module procedure base_potential__init__potential
+    module procedure base_potential__init__type
     module procedure base_potential__init__copy
   end interface base_potential__init__
 
-  interface base_potential__copy__
-    module procedure base_potential__copy__potential
-  end interface base_potential__copy__
-
-  interface base_potential__end__
-    module procedure base_potential__end__potential
-  end interface base_potential__end__
-
   interface base_potential_init
-    module procedure base_potential_init_potential
+    module procedure base_potential_init_type
     module procedure base_potential_init_copy
   end interface base_potential_init
 
@@ -137,9 +130,12 @@ module base_potential_m
     module procedure base_potential_set_info
   end interface base_potential_set
 
+  interface base_potential_gets
+    module procedure base_potential_gets_config
+    module procedure base_potential_gets_name
+  end interface base_potential_gets
+
   interface base_potential_get
-    module procedure base_potential_get_potential_by_config
-    module procedure base_potential_get_potential_by_name
     module procedure base_potential_get_info
     module procedure base_potential_get_config
     module procedure base_potential_get_system
@@ -151,11 +147,11 @@ module base_potential_m
   end interface base_potential_get
 
   interface base_potential_copy
-    module procedure base_potential_copy_potential
+    module procedure base_potential_copy_type
   end interface base_potential_copy
 
   interface base_potential_end
-    module procedure base_potential_end_potential
+    module procedure base_potential_end_type
   end interface base_potential_end
 
 #define TEMPLATE_PREFIX base_potential
@@ -221,7 +217,7 @@ contains
   end subroutine base_potential_del
 
   ! ---------------------------------------------------------
-  subroutine base_potential__init__potential(this, sys, config)
+  subroutine base_potential__init__type(this, sys, config)
     type(base_potential_t),      intent(out) :: this
     type(base_system_t), target, intent(in)  :: sys
     type(json_object_t), target, intent(in)  :: config
@@ -229,7 +225,7 @@ contains
     integer :: nspin, ierr
     logical :: uspin, alloc
 
-    PUSH_SUB(base_potential__init__potential)
+    PUSH_SUB(base_potential__init__type)
 
     this%config => config
     this%sys => sys
@@ -246,8 +242,8 @@ contains
     call base_potential_hash_init(this%hash)
     call base_potential_list_init(this%list)
 
-    POP_SUB(base_potential__init__potential)
-  end subroutine base_potential__init__potential
+    POP_SUB(base_potential__init__type)
+  end subroutine base_potential__init__type
 
   ! ---------------------------------------------------------
   subroutine base_potential__init__copy(this, that)
@@ -264,17 +260,17 @@ contains
   end subroutine base_potential__init__copy
 
   ! ---------------------------------------------------------
-  subroutine base_potential_init_potential(this, sys, config)
+  subroutine base_potential_init_type(this, sys, config)
     type(base_potential_t), intent(out) :: this
     type(base_system_t),    intent(in)  :: sys
     type(json_object_t),    intent(in)  :: config
 
-    PUSH_SUB(base_potential_init_potential)
+    PUSH_SUB(base_potential_init_type)
 
     call base_potential__init__(this, sys, config)
 
-    POP_SUB(base_potential_init_potential)
-  end subroutine base_potential_init_potential
+    POP_SUB(base_potential_init_type)
+  end subroutine base_potential_init_type
 
   ! ---------------------------------------------------------
   recursive subroutine base_potential_init_copy(this, that)
@@ -297,7 +293,7 @@ contains
       if(ierr/=BASE_POTENTIAL_OK)exit
       call base_potential_new(this, osub)
       call base_potential_init(osub, isub)
-      call base_potential__add__(this, osub, cnfg)
+      call base_potential_sets(this, osub, cnfg)
     end do
     call base_potential_end(iter)
     nullify(cnfg, osub, isub)
@@ -488,7 +484,7 @@ contains
   end subroutine base_potential__sub__
 
   ! ---------------------------------------------------------
-  subroutine base_potential__add__(this, that, config)
+  subroutine base_potential_sets(this, that, config)
     type(base_potential_t), intent(inout) :: this
     type(base_potential_t), intent(in)    :: that
     type(json_object_t),    intent(in)    :: config
@@ -496,7 +492,7 @@ contains
     character(len=CONFIG_DICT_NAME_LEN) :: name
     integer                             :: ierr
 
-    PUSH_SUB(base_potential__add__)
+    PUSH_SUB(base_potential_sets)
 
     ASSERT(associated(this%config))
     call json_get(config, "name", name, ierr)
@@ -504,29 +500,29 @@ contains
     call config_dict_set(this%dict, trim(adjustl(name)), config)
     call base_potential_hash_set(this%hash, config, that)
 
-    POP_SUB(base_potential__add__)
-  end subroutine base_potential__add__
+    POP_SUB(base_potential_sets)
+  end subroutine base_potential_sets
 
   ! ---------------------------------------------------------
-  subroutine base_potential_get_potential_by_config(this, config, that)
+  subroutine base_potential_gets_config(this, config, that)
     type(base_potential_t),  intent(in) :: this
     type(json_object_t),     intent(in) :: config
     type(base_potential_t), pointer     :: that
 
     integer :: ierr
 
-    PUSH_SUB(base_potential_get_potential_by_config)
+    PUSH_SUB(base_potential_gets_config)
 
     nullify(that)
     ASSERT(associated(this%config))
     call base_potential_hash_get(this%hash, config, that, ierr)
-    if(ierr/=BASE_POTENTIAL_OK)nullify(that)
+    if(ierr/=BASE_POTENTIAL_OK) nullify(that)
 
-    POP_SUB(base_potential_get_potential_by_config)
-  end subroutine base_potential_get_potential_by_config
+    POP_SUB(base_potential_gets_config)
+  end subroutine base_potential_gets_config
 
   ! ---------------------------------------------------------
-  subroutine base_potential_get_potential_by_name(this, name, that)
+  subroutine base_potential_gets_name(this, name, that)
     type(base_potential_t),  intent(in) :: this
     character(len=*),        intent(in) :: name
     type(base_potential_t), pointer     :: that
@@ -534,16 +530,15 @@ contains
     type(json_object_t), pointer :: config
     integer                      :: ierr
 
-    PUSH_SUB(base_potential_get_potential_by_name)
+    PUSH_SUB(base_potential_gets_name)
 
     nullify(that)
     ASSERT(associated(this%config))
     call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
-    if(ierr==CONFIG_DICT_OK)&
-      call base_potential_get(this, config, that)
+    if(ierr==CONFIG_DICT_OK) call base_potential_gets(this, config, that)
 
-    POP_SUB(base_potential_get_potential_by_name)
-  end subroutine base_potential_get_potential_by_name
+    POP_SUB(base_potential_gets_name)
+  end subroutine base_potential_gets_name
 
   ! ---------------------------------------------------------
   subroutine base_potential_set_info(this, energy)
@@ -667,11 +662,11 @@ contains
   end subroutine base_potential_get_potential_md
 
   ! ---------------------------------------------------------
-  subroutine base_potential__copy__potential(this, that)
+  subroutine base_potential__copy__(this, that)
     type(base_potential_t), intent(inout) :: this
     type(base_potential_t), intent(in)    :: that
 
-    PUSH_SUB(base_potential__copy__potential)
+    PUSH_SUB(base_potential__copy__)
 
     call base_potential__end__(this)
     if(associated(that%config).and.associated(that%sys))then
@@ -683,11 +678,11 @@ contains
       end if
     end if
 
-    POP_SUB(base_potential__copy__potential)
-  end subroutine base_potential__copy__potential
+    POP_SUB(base_potential__copy__)
+  end subroutine base_potential__copy__
 
   ! ---------------------------------------------------------
-  recursive subroutine base_potential_copy_potential(this, that)
+  recursive subroutine base_potential_copy_type(this, that)
     type(base_potential_t), intent(inout) :: this
     type(base_potential_t), intent(in)    :: that
 
@@ -696,7 +691,7 @@ contains
     type(json_object_t),    pointer :: cnfg
     integer                         :: ierr
 
-    PUSH_SUB(base_potential_copy_potential)
+    PUSH_SUB(base_potential_copy_type)
 
     nullify(cnfg, osub, isub)
     call base_potential_end(this)
@@ -708,19 +703,19 @@ contains
       if(ierr/=BASE_POTENTIAL_OK)exit
       call base_potential_new(this, osub)
       call base_potential_copy(osub, isub)
-      call base_potential__add__(this, osub, cnfg)
+      call base_potential_sets(this, osub, cnfg)
     end do
     call base_potential_end(iter)
     nullify(cnfg, osub, isub)
 
-    POP_SUB(base_potential_copy_potential)
-  end subroutine base_potential_copy_potential
+    POP_SUB(base_potential_copy_type)
+  end subroutine base_potential_copy_type
 
   ! ---------------------------------------------------------
-  subroutine base_potential__end__potential(this)
+  subroutine base_potential__end__(this)
     type(base_potential_t), intent(inout) :: this
 
-    PUSH_SUB(base_potential__end__potential)
+    PUSH_SUB(base_potential__end__)
 
     nullify(this%config, this%sys, this%sim, this%prnt)
     this%energy = 0.0_wp
@@ -729,16 +724,16 @@ contains
     call base_potential_hash_end(this%hash)
     call base_potential_list_end(this%list)
 
-    POP_SUB(base_potential__end__potential)
-  end subroutine base_potential__end__potential
+    POP_SUB(base_potential__end__)
+  end subroutine base_potential__end__
 
   ! ---------------------------------------------------------
-  recursive subroutine base_potential_end_potential(this)
+  recursive subroutine base_potential_end_type(this)
     type(base_potential_t), intent(inout) :: this
 
     type(base_potential_t), pointer :: subs
 
-    PUSH_SUB(base_potential_end_potential)
+    PUSH_SUB(base_potential_end_type)
 
     do
       nullify(subs)
@@ -750,8 +745,8 @@ contains
     nullify(subs)
     call base_potential__end__(this)
 
-    POP_SUB(base_potential_end_potential)
-  end subroutine base_potential_end_potential
+    POP_SUB(base_potential_end_type)
+  end subroutine base_potential_end_type
 
 #define TEMPLATE_PREFIX base_potential
 #define INCLUDE_BODY

@@ -288,7 +288,7 @@ contains
 
     PUSH_SUB(ssys_ionic_get_term_by_name)
 
-    call base_term_get(this, name, that)
+    !call base_term_gets(this, name, that)
 
     POP_SUB(ssys_ionic_get_term_by_name)
   end subroutine ssys_ionic_get_term_by_name
@@ -310,7 +310,7 @@ contains
     if(present(except))then
       do indx = 1, size(except)
         nullify(subs)
-        call base_term_get(this, trim(adjustl(except(indx))), subs)
+        !call base_term_gets(this, trim(adjustl(except(indx))), subs)
         ASSERT(associated(subs))
         call base_term_get(subs, energy=enrg)
         energy=energy-enrg

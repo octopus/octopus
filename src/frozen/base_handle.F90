@@ -69,7 +69,6 @@ module base_handle_m
     base_handle__update__, &
     base_handle__stop__,   &
     base_handle__reset__,  &
-    base_handle__add__,    &
     base_handle__copy__,   &
     base_handle__end__
 
@@ -80,6 +79,8 @@ module base_handle_m
     base_handle_start,  &
     base_handle_update, &
     base_handle_stop,   &
+    base_handle_sets,   &
+    base_handle_gets,   &
     base_handle_get,    &
     base_handle_copy,   &
     base_handle_end
@@ -128,10 +129,13 @@ module base_handle_m
     module procedure base_handle_init_copy
   end interface base_handle_init
 
+  interface base_handle_gets
+    module procedure base_handle_gets_config
+    module procedure base_handle_gets_name
+  end interface base_handle_gets
+
   interface base_handle_get
-    module procedure base_handle_get_handle_by_config
-    module procedure base_handle_get_handle_by_name
-    module procedure base_handle_get_type
+    module procedure base_handle_get_info
     module procedure base_handle_get_config
     module procedure base_handle_get_model
   end interface base_handle_get
@@ -328,7 +332,7 @@ contains
         call base_handle_new(this, hndl)
         call handle_init(hndl, cnfg)
         call base_handle__set__(hndl, this)
-        call base_handle__add__(this, hndl, cnfg)
+        call base_handle_sets(this, hndl, cnfg)
       end do
       call json_end(iter)
       nullify(cnfg, hndl)
@@ -359,7 +363,7 @@ contains
       if(ierr/=BASE_HANDLE_OK)exit
       call base_handle_new(this, osub)
       call base_handle_init(osub, isub)
-      call base_handle__add__(this, osub, cnfg)
+      call base_handle_sets(this, osub, cnfg)
     end do
     call base_handle_end(iter)
     call base_handle__init__(this)
@@ -489,27 +493,6 @@ contains
   end subroutine base_handle__reset__
 
   ! ---------------------------------------------------------
-  subroutine base_handle__add__(this, that, config)
-    type(base_handle_t), intent(inout) :: this
-    type(base_handle_t), intent(in)    :: that
-    type(json_object_t), intent(in)    :: config
-
-    character(len=BASE_HANDLE_NAME_LEN) :: name
-    integer                             :: ierr
-
-    PUSH_SUB(base_handle__add__)
-
-    ASSERT(associated(this%config))
-    call json_get(config, "name", name, ierr)
-    ASSERT(ierr==JSON_OK)
-    call config_dict_set(this%dict, trim(adjustl(name)), config)
-    call base_handle_hash_set(this%hash, config, that)
-    call base_model__add__(this%model, that%model, config)
-
-    POP_SUB(base_handle__add__)
-  end subroutine base_handle__add__
-
-  ! ---------------------------------------------------------
   subroutine base_handle__set__(this, that)
     type(base_handle_t),         intent(inout) :: this
     type(base_handle_t), target, intent(in)    :: that
@@ -522,25 +505,59 @@ contains
   end subroutine base_handle__set__
 
   ! ---------------------------------------------------------
-  subroutine base_handle_get_handle_by_config(this, config, that)
+  subroutine base_handle__sets__(this, that, config)
+    type(base_handle_t), intent(inout) :: this
+    type(base_handle_t), intent(in)    :: that
+    type(json_object_t), intent(in)    :: config
+
+    PUSH_SUB(base_handle__sets__)
+
+    call base_model_sets(this%model, that%model, config)
+
+    POP_SUB(base_handle__sets__)
+  end subroutine base_handle__sets__
+
+  ! ---------------------------------------------------------
+  subroutine base_handle_sets(this, that, config)
+    type(base_handle_t), intent(inout) :: this
+    type(base_handle_t), intent(in)    :: that
+    type(json_object_t), intent(in)    :: config
+
+    character(len=BASE_HANDLE_NAME_LEN) :: name
+    integer                             :: ierr
+
+    PUSH_SUB(base_handle_sets)
+
+    ASSERT(associated(this%config))
+    call json_get(config, "name", name, ierr)
+    ASSERT(ierr==JSON_OK)
+    call config_dict_set(this%dict, trim(adjustl(name)), config)
+    call base_handle_hash_set(this%hash, config, that)
+    call base_handle__sets__(this, that, config)
+
+    POP_SUB(base_handle_sets)
+  end subroutine base_handle_sets
+
+  ! ---------------------------------------------------------
+  subroutine base_handle_gets_config(this, config, that)
     type(base_handle_t),  intent(in) :: this
     type(json_object_t),  intent(in) :: config
     type(base_handle_t), pointer     :: that
 
     integer :: ierr
 
-    PUSH_SUB(base_handle_get_handle_by_config)
+    PUSH_SUB(base_handle_gets_config)
 
     nullify(that)
     ASSERT(associated(this%config))
     call base_handle_hash_get(this%hash, config, that, ierr)
-    if(ierr/=BASE_HANDLE_OK)nullify(that)
+    if(ierr/=BASE_HANDLE_OK) nullify(that)
 
-    POP_SUB(base_handle_get_handle_by_config)
-  end subroutine base_handle_get_handle_by_config
+    POP_SUB(base_handle_gets_config)
+  end subroutine base_handle_gets_config
 
   ! ---------------------------------------------------------
-  subroutine base_handle_get_handle_by_name(this, name, that)
+  subroutine base_handle_gets_name(this, name, that)
     type(base_handle_t),  intent(in) :: this
     character(len=*),     intent(in) :: name
     type(base_handle_t), pointer     :: that
@@ -548,27 +565,27 @@ contains
     type(json_object_t), pointer :: config
     integer                      :: ierr
 
-    PUSH_SUB(base_handle_get_handle_by_name)
+    PUSH_SUB(base_handle_gets_name)
 
     nullify(that)
     ASSERT(associated(this%config))
     call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
-    if(ierr==CONFIG_DICT_OK) call base_handle_get(this, config, that)
+    if(ierr==CONFIG_DICT_OK) call base_handle_gets(this, config, that)
 
-    POP_SUB(base_handle_get_handle_by_name)
-  end subroutine base_handle_get_handle_by_name
+    POP_SUB(base_handle_gets_name)
+  end subroutine base_handle_gets_name
 
   ! ---------------------------------------------------------
-  subroutine base_handle_get_type(this, that)
+  subroutine base_handle_get_info(this, type)
     type(base_handle_t), intent(in)  :: this
-    integer,             intent(out) :: that
+    integer,  optional,  intent(out) :: type
 
     PUSH_SUB(base_handle_get_type)
 
-    that = this%type
+    if(present(type)) type = this%type
 
-    POP_SUB(base_handle_get_type)
-  end subroutine base_handle_get_type
+    POP_SUB(base_handle_get_info)
+  end subroutine base_handle_get_info
 
   ! ---------------------------------------------------------
   subroutine base_handle_get_config(this, that)
@@ -654,7 +671,7 @@ contains
       if(ierr/=BASE_HANDLE_OK)exit
       call base_handle_new(this, osub)
       call base_handle_copy(osub, isub)
-      call base_handle__add__(this, osub, cnfg)
+      call base_handle_sets(this, osub, cnfg)
     end do
     call base_handle_end(iter)
     call base_handle__copy__(this)

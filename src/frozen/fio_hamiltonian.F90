@@ -29,7 +29,7 @@ contains
     PUSH_SUB(fio_hamiltonian__load__)
 
     nullify(epot)
-    call base_hamiltonian__get__(this, "external", epot)
+    call base_hamiltonian_get(this, "external", epot)
     ASSERT(associated(epot))
     call fio_external__load__(epot)
     nullify(epot)

@@ -29,8 +29,7 @@ module ssys_handle_m
   use base_handle_m, only: &
     base_handle__init__,   &
     base_handle__start__,  &
-    base_handle__update__, &
-    base_handle__add__
+    base_handle__update__
 
   use base_handle_m, only: &
     base_handle_t
@@ -128,7 +127,7 @@ contains
         message(1)="Unknown subsystems type."
         call messages_fatal(1)
       end select
-      call base_handle__add__(this, hndl, cnfg)
+      !call base_handle_sets(this, hndl, cnfg)
     end do
     call json_end(iter)
     nullify(cnfg, list, hndl)

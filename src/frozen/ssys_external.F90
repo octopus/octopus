@@ -157,7 +157,7 @@ contains
     
     PUSH_SUB(ssys_external_get_potential_by_name)
     
-    call base_potential_get(this, name, that)
+    !call base_potential_gets(this, name, that)
     
     POP_SUB(ssys_external_get_potential_by_name)
   end subroutine ssys_external_get_potential_by_name
@@ -179,7 +179,7 @@ contains
     if(present(except))then
       do indx = 1, size(except)
         nullify(subs)
-        call base_potential_get(this, trim(adjustl(except(indx))), subs)
+        !call base_potential_gets(this, trim(adjustl(except(indx))), subs)
         ASSERT(associated(subs))
         call base_potential_get(subs, energy=enrg)
         energy=energy-enrg

@@ -136,8 +136,7 @@
 
     nullify(config, that)
     call config_dict_next(this%iter, name, config, jerr)
-    if(jerr==CONFIG_DICT_OK)&
-      call TEMPLATE(get)(this%self, config, that)
+    if(jerr==CONFIG_DICT_OK) call TEMPLATE(gets)(this%self, config, that)
     if(present(ierr)) ierr = jerr
 
     POP_SUB(TEMPLATE(iterator_next_name_config_that))
@@ -156,8 +155,7 @@
 
     nullify(config, that)
     call config_dict_next(this%iter, config, jerr)
-    if(jerr==CONFIG_DICT_OK)&
-      call TEMPLATE(get)(this%self, config, that)
+    if(jerr==CONFIG_DICT_OK) call TEMPLATE(gets)(this%self, config, that)
     if(present(ierr)) ierr = jerr
 
     POP_SUB(TEMPLATE(iterator_next_config_that))
@@ -177,8 +175,7 @@
 
     nullify(config, that)
     call config_dict_next(this%iter, name, config, jerr)
-    if(jerr==CONFIG_DICT_OK)&
-      call TEMPLATE(get)(this%self, config, that)
+    if(jerr==CONFIG_DICT_OK) call TEMPLATE(gets)(this%self, config, that)
     if(present(ierr)) ierr = jerr
 
     POP_SUB(TEMPLATE(iterator_next_name_that))
@@ -197,8 +194,7 @@
 
     nullify(config, that)
     call config_dict_next(this%iter, config, jerr)
-    if(jerr==CONFIG_DICT_OK)&
-      call TEMPLATE(get)(this%self, config, that)
+    if(jerr==CONFIG_DICT_OK) call TEMPLATE(gets)(this%self, config, that)
     if(present(ierr)) ierr = jerr
 
     POP_SUB(TEMPLATE(iterator_next_that))

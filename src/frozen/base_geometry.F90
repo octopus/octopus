@@ -63,7 +63,6 @@ module base_geometry_m
 
   public ::                &
     base_geometry__init__, &
-    base_geometry__add__,  &
     base_geometry__copy__, &
     base_geometry__end__
 
@@ -71,6 +70,8 @@ module base_geometry_m
     base_geometry_new,  &
     base_geometry_del,  &
     base_geometry_init, &
+    base_geometry_sets, &
+    base_geometry_gets, &
     base_geometry_get,  &
     base_geometry_copy, &
     base_geometry_end
@@ -133,9 +134,12 @@ module base_geometry_m
     module procedure base_geometry_iterator_next_geometry
   end interface base_geometry_next
 
+  interface base_geometry_gets
+    module procedure base_geometry_gets_config
+    module procedure base_geometry_gets_name
+  end interface base_geometry_gets
+
   interface base_geometry_get
-    module procedure base_geometry_get_type_by_config
-    module procedure base_geometry_get_type_by_name
     module procedure base_geometry_get_config
     module procedure base_geometry_get_space
     module procedure base_geometry_get_geometry
@@ -324,7 +328,7 @@ contains
       if(ierr/=BASE_GEOMETRY_OK)exit
       call base_geometry_new(this, osub)
       call base_geometry_init(osub, isub)
-      call base_geometry__add__(this, osub, cnfg)
+      call base_geometry_sets(this, osub, cnfg)
     end do
     call base_geometry_end(iter)
     call base_geometry__init__(this)
@@ -334,51 +338,65 @@ contains
   end subroutine base_geometry_init_copy
 
   ! ---------------------------------------------------------
-  subroutine base_geometry__add__(this, that, config)
+  subroutine base_geometry__sets__(this, that, config)
     type(base_geometry_t), intent(inout) :: this
     type(base_geometry_t), intent(in)    :: that
     type(json_object_t),   intent(in)    :: config
 
-    character(len=CONFIG_DICT_NAME_LEN) :: name
-    type(geometry_t),           pointer :: geo
-    integer                             :: ierr
+    type(geometry_t), pointer :: geo
 
-    PUSH_SUB(base_geometry__add__)
+    PUSH_SUB(base_geometry__sets__)
 
     nullify(geo)
-    ASSERT(associated(this%config))
-    call json_get(config, "name", name, ierr)
-    ASSERT(ierr==JSON_OK)
-    call config_dict_set(this%dict, trim(adjustl(name)), config)
-    call base_geometry_hash_set(this%hash, config, that)
     call geo_intrf_get(that%igeo, geo)
     ASSERT(associated(geo))
     call geo_build_extend(this%bgeo, geo, config)
     nullify(geo)
 
-    POP_SUB(base_geometry__add__)
-  end subroutine base_geometry__add__
+    POP_SUB(base_geometry__sets__)
+  end subroutine base_geometry__sets__
 
   ! ---------------------------------------------------------
-  subroutine base_geometry_get_type_by_config(this, config, that)
+  subroutine base_geometry_sets(this, that, config)
+    type(base_geometry_t), intent(inout) :: this
+    type(base_geometry_t), intent(in)    :: that
+    type(json_object_t),   intent(in)    :: config
+
+    character(len=CONFIG_DICT_NAME_LEN) :: name
+    integer                             :: ierr
+
+    PUSH_SUB(base_geometry_sets)
+
+    ASSERT(associated(this%config))
+    call json_get(config, "name", name, ierr)
+    ASSERT(ierr==JSON_OK)
+    call config_dict_set(this%dict, trim(adjustl(name)), config)
+    call base_geometry_hash_set(this%hash, config, that)
+    call base_geometry__sets__(this, that, config)
+
+    POP_SUB(base_geometry_sets)
+  end subroutine base_geometry_sets
+
+  ! ---------------------------------------------------------
+  subroutine base_geometry_gets_config(this, config, that)
     type(base_geometry_t),  intent(in) :: this
     type(json_object_t),    intent(in) :: config
     type(base_geometry_t), pointer     :: that
 
     integer :: ierr
 
-    PUSH_SUB(base_geometry_get_type_by_config)
+    PUSH_SUB(base_geometry_gets_config)
 
     nullify(that)
     ASSERT(associated(this%config))
     call base_geometry_hash_get(this%hash, config, that, ierr)
-    if(ierr/=BASE_GEOMETRY_OK)nullify(that)
+    if(ierr/=BASE_GEOMETRY_OK) nullify(that)
 
-    POP_SUB(base_geometry_get_type_by_config)
-  end subroutine base_geometry_get_type_by_config
+    POP_SUB(base_geometry_gets_config)
+  end subroutine base_geometry_gets_config
 
   ! ---------------------------------------------------------
-  subroutine base_geometry_get_type_by_name(this, name, that)
+  subroutine base_geometry_gets_name(this, name, that)
     type(base_geometry_t),  intent(in) :: this
     character(len=*),       intent(in) :: name
     type(base_geometry_t), pointer     :: that
@@ -386,16 +404,15 @@ contains
     type(json_object_t), pointer :: config
     integer                      :: ierr
 
-    PUSH_SUB(base_geometry_get_type_by_name)
+    PUSH_SUB(base_geometry_gets_name)
 
     nullify(that)
     ASSERT(associated(this%config))
     call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
-    if(ierr==CONFIG_DICT_OK)&
-      call base_geometry_get(this, config, that)
+    if(ierr==CONFIG_DICT_OK) call base_geometry_gets(this, config, that)
 
-    POP_SUB(base_geometry_get_type_by_name)
-  end subroutine base_geometry_get_type_by_name
+    POP_SUB(base_geometry_gets_name)
+  end subroutine base_geometry_gets_name
 
   ! ---------------------------------------------------------
   subroutine base_geometry_get_config(this, that)
@@ -496,7 +513,7 @@ contains
       if(ierr/=BASE_GEOMETRY_OK)exit
       call base_geometry_new(this, osub)
       call base_geometry_copy(osub, isub)
-      call base_geometry__add__(this, osub, cnfg)
+      call base_geometry_sets(this, osub, cnfg)
     end do
     call base_geometry_end(iter)
     call base_geometry__copy__(this)

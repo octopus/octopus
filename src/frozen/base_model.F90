@@ -72,7 +72,6 @@ module base_model_m
     base_model__stop__,   &
     base_model__reset__,  &
     base_model__acc__,    &
-    base_model__add__,    &
     base_model__copy__,   &
     base_model__end__
 
@@ -83,6 +82,8 @@ module base_model_m
     base_model_start,  &
     base_model_update, &
     base_model_stop,   &
+    base_model_sets,   &
+    base_model_gets,   &
     base_model_get,    &
     base_model_copy,   &
     base_model_end
@@ -129,9 +130,12 @@ module base_model_m
     module procedure base_model_init_copy
   end interface base_model_init
 
+  interface base_model_gets
+    module procedure base_model_gets_config
+    module procedure base_model_gets_name
+  end interface base_model_gets
+
   interface base_model_get
-    module procedure base_model_get_model_by_config
-    module procedure base_model_get_model_by_name
     module procedure base_model_get_config
     module procedure base_model_get_simulation
     module procedure base_model_get_system
@@ -331,7 +335,7 @@ contains
       if(ierr/=BASE_MODEL_OK)exit
       call base_model_new(this, osub)
       call base_model_init(osub, isub)
-      call base_model__add__(this, osub, cnfg)
+      call base_model_sets(this, osub, cnfg)
     end do
     call base_model_end(iter)
     nullify(osub, isub, cnfg)
@@ -357,7 +361,7 @@ contains
       call base_model_next(iter, cnfg, subs, ierr)
       if(ierr/=BASE_MODEL_OK)exit
       call simulation_extend(this%sim, subs%sim, cnfg)
-      call base_hamiltonian__add__(this%hm, subs%hm, cnfg)
+      call base_hamiltonian_sets(this%hm, subs%hm, cnfg)
     end do
     call base_model_end(iter)
     nullify(cnfg, subs)
@@ -503,7 +507,20 @@ contains
   end subroutine base_model__acc__
 
   ! ---------------------------------------------------------
-  subroutine base_model__add__(this, that, config)
+  subroutine base_model__sets__(this, that, config)
+    type(base_model_t),  intent(inout) :: this
+    type(base_model_t),  intent(in)    :: that
+    type(json_object_t), intent(in)    :: config
+
+    PUSH_SUB(base_model__sets__)
+
+    call base_system_sets(this%sys, that%sys, config)
+
+    POP_SUB(base_model__sets__)
+  end subroutine base_model__sets__
+
+  ! ---------------------------------------------------------
+  subroutine base_model_sets(this, that, config)
     type(base_model_t),  intent(inout) :: this
     type(base_model_t),  intent(in)    :: that
     type(json_object_t), intent(in)    :: config
@@ -511,38 +528,38 @@ contains
     character(len=CONFIG_DICT_NAME_LEN) :: name
     integer                             :: ierr
 
-    PUSH_SUB(base_model__add__)
+    PUSH_SUB(base_model_sets)
 
     ASSERT(associated(this%config))
-    call base_system__add__(this%sys, that%sys, config)
     call json_get(config, "name", name, ierr)
     ASSERT(ierr==JSON_OK)
     call config_dict_set(this%dict, trim(adjustl(name)), config)
     call base_model_hash_set(this%hash, config, that)
+    call base_model__sets__(this, that, config)
 
-    POP_SUB(base_model__add__)
-  end subroutine base_model__add__
+    POP_SUB(base_model_sets)
+  end subroutine base_model_sets
 
   ! ---------------------------------------------------------
-  subroutine base_model_get_model_by_config(this, config, that)
+  subroutine base_model_gets_config(this, config, that)
     type(base_model_t),  intent(in) :: this
     type(json_object_t), intent(in) :: config
     type(base_model_t), pointer     :: that
 
     integer :: ierr
 
-    PUSH_SUB(base_model_get_model_by_config)
+    PUSH_SUB(base_model_gets_config)
 
     nullify(that)
     ASSERT(associated(this%config))
     call base_model_hash_get(this%hash, config, that, ierr)
-    if(ierr/=BASE_MODEL_OK)nullify(that)
+    if(ierr/=BASE_MODEL_OK) nullify(that)
 
-    POP_SUB(base_model_get_model_by_config)
-  end subroutine base_model_get_model_by_config
+    POP_SUB(base_model_gets_config)
+  end subroutine base_model_gets_config
 
   ! ---------------------------------------------------------
-  subroutine base_model_get_model_by_name(this, name, that)
+  subroutine base_model_gets_name(this, name, that)
     type(base_model_t),  intent(in) :: this
     character(len=*),    intent(in) :: name
     type(base_model_t), pointer     :: that
@@ -550,16 +567,15 @@ contains
     type(json_object_t), pointer :: config
     integer                      :: ierr
 
-    PUSH_SUB(base_model_get_model_by_name)
+    PUSH_SUB(base_model_gets_name)
 
     nullify(that)
     ASSERT(associated(this%config))
     call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
-    if(ierr==CONFIG_DICT_OK)&
-      call base_model_get(this, config, that)
+    if(ierr==CONFIG_DICT_OK) call base_model_gets(this, config, that)
 
-    POP_SUB(base_model_get_model_by_name)
-  end subroutine base_model_get_model_by_name
+    POP_SUB(base_model_gets_name)
+  end subroutine base_model_gets_name
 
   ! ---------------------------------------------------------
   subroutine base_model_get_config(this, that)
@@ -656,7 +672,7 @@ contains
       nullify(cnfg, subs)
       call base_model_next(iter, cnfg, subs, ierr)
       if(ierr/=BASE_MODEL_OK)exit
-      call base_hamiltonian__add__(this%hm, subs%hm, cnfg)
+      call base_hamiltonian_sets(this%hm, subs%hm, cnfg)
     end do
     call base_model_end(iter)
     nullify(cnfg, subs)
@@ -686,7 +702,7 @@ contains
       if(ierr/=BASE_MODEL_OK)exit
       call base_model_new(this, osub)
       call base_model_copy(osub, isub)
-      call base_model__add__(this, osub, cnfg)
+      call base_model_sets(this, osub, cnfg)
     end do
     call base_model_end(iter)
     call base_model__copy__(this)

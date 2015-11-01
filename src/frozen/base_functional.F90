@@ -74,7 +74,6 @@ module base_functional_m
     base_functional__reset__,  &
     base_functional__acc__,    &
     base_functional__sub__,    &
-    base_functional__add__,    &
     base_functional__copy__,   &
     base_functional__end__
 
@@ -86,6 +85,8 @@ module base_functional_m
     base_functional_update, &
     base_functional_stop,   &
     base_functional_calc,   &
+    base_functional_sets,   &
+    base_functional_gets,   &
     base_functional_set,    &
     base_functional_get,    &
     base_functional_copy,   &
@@ -126,20 +127,12 @@ module base_functional_m
   end type base_functional_t
 
   interface base_functional__init__
-    module procedure base_functional__init__functional
+    module procedure base_functional__init__type
     module procedure base_functional__init__copy
   end interface base_functional__init__
 
-  interface base_functional__copy__
-    module procedure base_functional__copy__functional
-  end interface base_functional__copy__
-
-  interface base_functional__end__
-    module procedure base_functional__end__functional
-  end interface base_functional__end__
-
   interface base_functional_init
-    module procedure base_functional_init_functional
+    module procedure base_functional_init_type
     module procedure base_functional_init_copy
   end interface base_functional_init
 
@@ -147,9 +140,12 @@ module base_functional_m
     module procedure base_functional_set_info
   end interface base_functional_set
 
+  interface base_functional_gets
+    module procedure base_functional_gets_config
+    module procedure base_functional_gets_name
+  end interface base_functional_gets
+
   interface base_functional_get
-    module procedure base_functional_get_functional_by_config
-    module procedure base_functional_get_functional_by_name
     module procedure base_functional_get_info
     module procedure base_functional_get_config
     module procedure base_functional_get_system
@@ -161,11 +157,11 @@ module base_functional_m
   end interface base_functional_get
 
   interface base_functional_copy
-    module procedure base_functional_copy_functional
+    module procedure base_functional_copy_type
   end interface base_functional_copy
 
   interface base_functional_end
-    module procedure base_functional_end_functional
+    module procedure base_functional_end_type
   end interface base_functional_end
 
 #define TEMPLATE_PREFIX base_functional
@@ -231,29 +227,15 @@ contains
   end subroutine base_functional_del
 
   ! ---------------------------------------------------------
-  subroutine base_functional__inull__(this)
-    type(base_functional_t), intent(inout) :: this
-
-    PUSH_SUB(base_functional__inull__)
-
-    nullify(this%config, this%sys, this%sim, this%raii%prnt)
-    this%factor = 1.0_wp
-    this%energy = 0.0_wp
-
-    POP_SUB(base_functional__inull__)
-  end subroutine base_functional__inull__
-
-  ! ---------------------------------------------------------
-  subroutine base_functional__init__functional(this, sys, config)
+  subroutine base_functional__init__type(this, sys, config)
     type(base_functional_t),     intent(out) :: this
     type(base_system_t), target, intent(in)  :: sys
     type(json_object_t), target, intent(in)  :: config
 
     integer :: id, nspin, ierr
 
-    PUSH_SUB(base_functional__init__functional)
+    PUSH_SUB(base_functional__init__type)
 
-    call base_functional__inull__(this)
     this%config => config
     this%sys => sys
     call json_get(config, "factor", this%factor, ierr)
@@ -267,8 +249,8 @@ contains
     call base_functional_hash_init(this%hash)
     call base_functional_list_init(this%raii%list)
 
-    POP_SUB(base_functional__init__functional)
-  end subroutine base_functional__init__functional
+    POP_SUB(base_functional__init__type)
+  end subroutine base_functional__init__type
 
   ! ---------------------------------------------------------
   subroutine base_functional__init__copy(this, that)
@@ -285,17 +267,17 @@ contains
   end subroutine base_functional__init__copy
 
   ! ---------------------------------------------------------
-  subroutine base_functional_init_functional(this, sys, config)
+  subroutine base_functional_init_type(this, sys, config)
     type(base_functional_t), intent(out) :: this
     type(base_system_t),     intent(in)  :: sys
     type(json_object_t),     intent(in)  :: config
 
-    PUSH_SUB(base_functional_init_functional)
+    PUSH_SUB(base_functional_init_type)
 
     call base_functional__init__(this, sys, config)
 
-    POP_SUB(base_functional_init_functional)
-  end subroutine base_functional_init_functional
+    POP_SUB(base_functional_init_type)
+  end subroutine base_functional_init_type
 
   ! ---------------------------------------------------------
   recursive subroutine base_functional_init_copy(this, that)
@@ -318,7 +300,7 @@ contains
       if(ierr/=BASE_FUNCTIONAL_OK)exit
       call base_functional_new(this, osub)
       call base_functional_init(osub, isub)
-      call base_functional__add__(this, osub, cnfg)
+      call base_functional_sets(this, osub, cnfg)
     end do
     call base_functional_end(iter)
     nullify(cnfg, osub, isub)
@@ -585,7 +567,7 @@ contains
   end subroutine base_functional__sub__
 
   ! ---------------------------------------------------------
-  subroutine base_functional__add__(this, that, config)
+  subroutine base_functional_sets(this, that, config)
     type(base_functional_t), intent(inout) :: this
     type(base_functional_t), intent(in)    :: that
     type(json_object_t),    intent(in)    :: config
@@ -593,7 +575,7 @@ contains
     character(len=CONFIG_DICT_NAME_LEN) :: name
     integer                             :: ierr
 
-    PUSH_SUB(base_functional__add__)
+    PUSH_SUB(base_functional_sets)
 
     ASSERT(associated(this%config))
     call json_get(config, "name", name, ierr)
@@ -601,29 +583,29 @@ contains
     call config_dict_set(this%dict, trim(adjustl(name)), config)
     call base_functional_hash_set(this%hash, config, that)
 
-    POP_SUB(base_functional__add__)
-  end subroutine base_functional__add__
+    POP_SUB(base_functional_sets)
+  end subroutine base_functional_sets
 
   ! ---------------------------------------------------------
-  subroutine base_functional_get_functional_by_config(this, config, that)
+  subroutine base_functional_gets_config(this, config, that)
     type(base_functional_t),  intent(in) :: this
     type(json_object_t),      intent(in) :: config
     type(base_functional_t), pointer     :: that
 
     integer :: ierr
 
-    PUSH_SUB(base_functional_get_functional_by_config)
+    PUSH_SUB(base_functional_gets_config)
 
     nullify(that)
     ASSERT(associated(this%config))
     call base_functional_hash_get(this%hash, config, that, ierr)
     if(ierr/=BASE_FUNCTIONAL_OK) nullify(that)
 
-    POP_SUB(base_functional_get_functional_by_config)
-  end subroutine base_functional_get_functional_by_config
+    POP_SUB(base_functional_gets_config)
+  end subroutine base_functional_gets_config
 
   ! ---------------------------------------------------------
-  subroutine base_functional_get_functional_by_name(this, name, that)
+  subroutine base_functional_gets_name(this, name, that)
     type(base_functional_t),  intent(in) :: this
     character(len=*),         intent(in) :: name
     type(base_functional_t), pointer     :: that
@@ -631,15 +613,15 @@ contains
     type(json_object_t), pointer :: config
     integer                      :: ierr
 
-    PUSH_SUB(base_functional_get_functional_by_name)
+    PUSH_SUB(base_functional_gets_name)
 
     nullify(that)
     ASSERT(associated(this%config))
     call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
-    if(ierr==CONFIG_DICT_OK) call base_functional_get(this, config, that)
+    if(ierr==CONFIG_DICT_OK) call base_functional_gets(this, config, that)
 
-    POP_SUB(base_functional_get_functional_by_name)
-  end subroutine base_functional_get_functional_by_name
+    POP_SUB(base_functional_gets_name)
+  end subroutine base_functional_gets_name
 
   ! ---------------------------------------------------------
   subroutine base_functional_set_info(this, energy)
@@ -766,11 +748,11 @@ contains
   end subroutine base_functional_get_functional_md
 
   ! ---------------------------------------------------------
-  subroutine base_functional__copy__functional(this, that)
+  subroutine base_functional__copy__(this, that)
     type(base_functional_t), intent(inout) :: this
     type(base_functional_t), intent(in)    :: that
 
-    PUSH_SUB(base_functional__copy__functional)
+    PUSH_SUB(base_functional__copy__)
 
     call base_functional__end__(this)
     if(associated(that%config).and.associated(that%sys))then
@@ -782,11 +764,11 @@ contains
       end if
     end if
 
-    POP_SUB(base_functional__copy__functional)
-  end subroutine base_functional__copy__functional
+    POP_SUB(base_functional__copy__)
+  end subroutine base_functional__copy__
 
   ! ---------------------------------------------------------
-  recursive subroutine base_functional_copy_functional(this, that)
+  recursive subroutine base_functional_copy_type(this, that)
     type(base_functional_t), intent(inout) :: this
     type(base_functional_t), intent(in)    :: that
 
@@ -795,7 +777,7 @@ contains
     type(json_object_t),    pointer :: cnfg
     integer                         :: ierr
 
-    PUSH_SUB(base_functional_copy_functional)
+    PUSH_SUB(base_functional_copy_type)
 
     nullify(cnfg, osub, isub)
     call base_functional_end(this)
@@ -807,37 +789,39 @@ contains
       if(ierr/=BASE_FUNCTIONAL_OK)exit
       call base_functional_new(this, osub)
       call base_functional_copy(osub, isub)
-      call base_functional__add__(this, osub, cnfg)
+      call base_functional_sets(this, osub, cnfg)
     end do
     call base_functional_end(iter)
     nullify(cnfg, osub, isub)
 
-    POP_SUB(base_functional_copy_functional)
-  end subroutine base_functional_copy_functional
+    POP_SUB(base_functional_copy_type)
+  end subroutine base_functional_copy_type
 
   ! ---------------------------------------------------------
-  subroutine base_functional__end__functional(this)
+  subroutine base_functional__end__(this)
     type(base_functional_t), intent(inout) :: this
 
-    PUSH_SUB(base_functional__end__functional)
+    PUSH_SUB(base_functional__end__)
 
-    call base_functional__inull__(this)
+    nullify(this%config, this%sys, this%sim, this%raii%prnt)
+    this%factor = 1.0_wp
+    this%energy = 0.0_wp
     call functional_end(this%funct)
     call storage_end(this%data)
     call config_dict_end(this%dict)
     call base_functional_hash_end(this%hash)
     call base_functional_list_end(this%raii%list)
 
-    POP_SUB(base_functional__end__functional)
-  end subroutine base_functional__end__functional
+    POP_SUB(base_functional__end__)
+  end subroutine base_functional__end__
 
   ! ---------------------------------------------------------
-  recursive subroutine base_functional_end_functional(this)
+  recursive subroutine base_functional_end_type(this)
     type(base_functional_t), intent(inout) :: this
 
     type(base_functional_t), pointer :: subs
 
-    PUSH_SUB(base_functional_end_functional)
+    PUSH_SUB(base_functional_end_type)
 
     do
       nullify(subs)
@@ -849,8 +833,8 @@ contains
     nullify(subs)
     call base_functional__end__(this)
 
-    POP_SUB(base_functional_end_functional)
-  end subroutine base_functional_end_functional
+    POP_SUB(base_functional_end_type)
+  end subroutine base_functional_end_type
 
 #define TEMPLATE_PREFIX base_functional
 #define INCLUDE_BODY

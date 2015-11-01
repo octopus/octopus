@@ -98,8 +98,6 @@ module base_hamiltonian_m
     base_hamiltonian__reset__,  &
     base_hamiltonian__acc__,    &
     base_hamiltonian__sub__,    &
-    base_hamiltonian__add__,    &
-    base_hamiltonian__get__,    &
     base_hamiltonian__copy__,   &
     base_hamiltonian__end__
 
@@ -110,6 +108,8 @@ module base_hamiltonian_m
     base_hamiltonian_start,  &
     base_hamiltonian_update, &
     base_hamiltonian_stop,   &
+    base_hamiltonian_sets,   &
+    base_hamiltonian_gets,   &
     base_hamiltonian_set,    &
     base_hamiltonian_get,    &
     base_hamiltonian_copy,   &
@@ -178,7 +178,7 @@ module base_hamiltonian_m
   end type base_hamiltonian_t
 
   interface hterm__init__
-    module procedure hterm__init__hterm
+    module procedure hterm__init__type
     module procedure hterm__init__copy
   end interface hterm__init__
 
@@ -190,7 +190,7 @@ module base_hamiltonian_m
   end interface hterm__get__
 
   interface base_hamiltonian__init__
-    module procedure base_hamiltonian__init__hamiltonian
+    module procedure base_hamiltonian__init__type
     module procedure base_hamiltonian__init__copy
   end interface base_hamiltonian__init__
 
@@ -200,13 +200,6 @@ module base_hamiltonian_m
     module procedure base_hamiltonian__new__fnct
     module procedure base_hamiltonian__new__hmlt
   end interface base_hamiltonian__new__
-
-  interface base_hamiltonian__get__
-    module procedure base_hamiltonian__get__term
-    module procedure base_hamiltonian__get__potn
-    module procedure base_hamiltonian__get__fnct
-    module procedure base_hamiltonian__get__hmlt
-  end interface base_hamiltonian__get__
 
   interface base_hamiltonian__acc__
     module procedure base_hamiltonian__acc__term
@@ -231,13 +224,20 @@ module base_hamiltonian_m
     module procedure base_hamiltonian_set_info
   end interface base_hamiltonian_set
 
+  interface base_hamiltonian_gets
+    module procedure base_hamiltonian_gets_config
+    module procedure base_hamiltonian_gets_name
+  end interface base_hamiltonian_gets
+
   interface base_hamiltonian_get
-    module procedure base_hamiltonian_get_hamiltonian_by_config
-    module procedure base_hamiltonian_get_hamiltonian_by_name
     module procedure base_hamiltonian_get_info
     module procedure base_hamiltonian_get_config
     module procedure base_hamiltonian_get_system
     module procedure base_hamiltonian_get_simulation
+    module procedure base_hamiltonian_get_term
+    module procedure base_hamiltonian_get_potn
+    module procedure base_hamiltonian_get_fnct
+    module procedure base_hamiltonian_get_hmlt
     module procedure base_hamiltonian_get_hamiltonian_1d
     module procedure base_hamiltonian_get_hamiltonian_md
   end interface base_hamiltonian_get
@@ -448,14 +448,14 @@ contains
   end subroutine hterm__iinit__
 
   ! ---------------------------------------------------------
-  recursive subroutine hterm__init__hterm(this, sys, config)
+  recursive subroutine hterm__init__type(this, sys, config)
     type(hterm_t),               intent(out) :: this
     type(base_system_t), target, intent(in)  :: sys
     type(json_object_t),         intent(in)  :: config
 
     integer :: type, ierr
 
-    PUSH_SUB(hterm__init__hterm)
+    PUSH_SUB(hterm__init__type)
 
     call json_get(config, "type", type, ierr)
     ASSERT(ierr==JSON_OK)
@@ -475,8 +475,8 @@ contains
       call messages_fatal(1)
     end select
 
-    POP_SUB(hterm__init__hterm)
-  end subroutine hterm__init__hterm
+    POP_SUB(hterm__init__type)
+  end subroutine hterm__init__type
 
   ! ---------------------------------------------------------
   recursive subroutine hterm__init__copy(this, that)
@@ -652,31 +652,31 @@ contains
   end subroutine hterm__sub__
 
   ! ---------------------------------------------------------
-  recursive subroutine hterm__add__(this, that, config)
+  recursive subroutine hterm__sets__(this, that, config)
     type(hterm_t),       intent(inout) :: this
     type(hterm_t),       intent(in)    :: that
     type(json_object_t), intent(in)    :: config
 
-    PUSH_SUB(hterm__add__)
+    PUSH_SUB(hterm__sets__)
 
     ASSERT(this%type==that%type)
     select case(this%type)
     case(HMLT_TYPE_NONE)
     case(HMLT_TYPE_TERM)
-      call base_term__add__(this%term, that%term, config)
+      call base_term_sets(this%term, that%term, config)
     case(HMLT_TYPE_POTN)
-      call base_potential__add__(this%potn, that%potn, config)
+      call base_potential_sets(this%potn, that%potn, config)
     case(HMLT_TYPE_FNCT)
-      call base_functional__add__(this%fnct, that%fnct, config)
+      call base_functional_sets(this%fnct, that%fnct, config)
     case(HMLT_TYPE_HMLT)
-      call base_hamiltonian__add__(this%hmlt, that%hmlt, config)
+      call base_hamiltonian_sets(this%hmlt, that%hmlt, config)
     case default
       message(1)="Unknown Hamiltonian term type."
       call messages_fatal(1)
     end select
 
-    POP_SUB(hterm__add__)
-  end subroutine hterm__add__
+    POP_SUB(hterm__sets__)
+  end subroutine hterm__sets__
 
   ! ---------------------------------------------------------
   subroutine hterm__get__term(this, that)
@@ -1038,7 +1038,7 @@ contains
   end subroutine base_hamiltonian__iinit__
 
   ! ---------------------------------------------------------
-  recursive subroutine base_hamiltonian__init__hamiltonian(this, sys, config)
+  recursive subroutine base_hamiltonian__init__type(this, sys, config)
     type(base_hamiltonian_t), intent(out) :: this
     type(base_system_t),      intent(in)  :: sys
     type(json_object_t),      intent(in)  :: config
@@ -1050,7 +1050,7 @@ contains
     character(len=CONFIG_DICT_NAME_LEN) :: attr, sysn
     integer                             :: ierr
 
-    PUSH_SUB(base_hamiltonian__init__hamiltonian)
+    PUSH_SUB(base_hamiltonian__init__type)
 
     nullify(cnfg, psys, htrm)
     call base_hamiltonian__iinit__(this, sys, config)
@@ -1062,7 +1062,7 @@ contains
       if(ierr/=JSON_OK)exit
       psys => this%sys
       call json_get(cnfg, "system", sysn, ierr)
-      if(ierr==JSON_OK)call base_system_get(sys, sysn, psys)
+      if(ierr==JSON_OK) call base_system_gets(sys, sysn, psys)
       ASSERT(associated(psys))
       call base_hamiltonian__inew__(this, attr, htrm)
       call hterm__init__(htrm, psys, cnfg)
@@ -1070,8 +1070,8 @@ contains
     call json_end(iter)
     nullify(cnfg, psys, htrm)
 
-    POP_SUB(base_hamiltonian__init__hamiltonian)
-  end subroutine base_hamiltonian__init__hamiltonian
+    POP_SUB(base_hamiltonian__init__type)
+  end subroutine base_hamiltonian__init__type
 
   ! ---------------------------------------------------------
   recursive subroutine base_hamiltonian__init__copy(this, that)
@@ -1137,7 +1137,7 @@ contains
       if(ierr/=BASE_HAMILTONIAN_OK)exit
       call base_hamiltonian_new(this, osub)
       call base_hamiltonian_init(osub, isub)
-      call base_hamiltonian__add__(this, osub, cnfg)
+      call base_hamiltonian_sets(this, osub, cnfg)
     end do
     call base_hamiltonian_end(iter)
     nullify(cnfg, osub, isub)
@@ -1533,19 +1533,18 @@ contains
   end subroutine base_hamiltonian__sub__hmlt
 
   ! ---------------------------------------------------------
-  recursive subroutine base_hamiltonian__add__(this, that, config)
+  recursive subroutine base_hamiltonian__sets__(this, that, config)
     type(base_hamiltonian_t), intent(inout) :: this
     type(json_object_t),      intent(in)    :: config
     type(base_hamiltonian_t), intent(in)    :: that
 
     type(hterm_dict_iterator_t)         :: iter
-    type(hterm_t),              pointer :: mhtr, shtr
     character(len=CONFIG_DICT_NAME_LEN) :: name
+    type(hterm_t),              pointer :: mhtr, shtr
     integer                             :: ierr
 
-    PUSH_SUB(base_hamiltonian__add__)
+    PUSH_SUB(base_hamiltonian__sets__)
 
-    ASSERT(associated(this%config))
     call hterm_dict_init(iter, that%hdct)
     do
       nullify(mhtr, shtr)
@@ -1553,38 +1552,55 @@ contains
       if(ierr/=HTERM_DICT_OK)exit
       call hterm_dict_get(this%hdct, name, mhtr, ierr)
       if(ierr/=HTERM_DICT_OK)cycle
-      call hterm__add__(mhtr, shtr, config)
+      call hterm__sets__(mhtr, shtr, config)
     end do
     call hterm_dict_end(iter)
     nullify(mhtr, shtr)
+
+    POP_SUB(base_hamiltonian__sets__)
+  end subroutine base_hamiltonian__sets__
+
+  ! ---------------------------------------------------------
+  recursive subroutine base_hamiltonian_sets(this, that, config)
+    type(base_hamiltonian_t), intent(inout) :: this
+    type(json_object_t),      intent(in)    :: config
+    type(base_hamiltonian_t), intent(in)    :: that
+
+    character(len=CONFIG_DICT_NAME_LEN) :: name
+    integer                             :: ierr
+
+    PUSH_SUB(base_hamiltonian_sets)
+
+    ASSERT(associated(this%config))
     call json_get(config, "name", name, ierr)
     ASSERT(ierr==JSON_OK)
     call config_dict_set(this%dict, trim(adjustl(name)), config)
     call base_hamiltonian_hash_set(this%hash, config, that)
+    call base_hamiltonian__sets__(this, that, config)
 
-    POP_SUB(base_hamiltonian__add__)
-  end subroutine base_hamiltonian__add__
+    POP_SUB(base_hamiltonian_sets)
+  end subroutine base_hamiltonian_sets
 
   ! ---------------------------------------------------------
-  subroutine base_hamiltonian_get_hamiltonian_by_config(this, config, that)
+  subroutine base_hamiltonian_gets_config(this, config, that)
     type(base_hamiltonian_t),  intent(in) :: this
     type(json_object_t),       intent(in) :: config
     type(base_hamiltonian_t), pointer     :: that
 
     integer :: ierr
 
-    PUSH_SUB(base_hamiltonian_get_hamiltonian_by_config)
+    PUSH_SUB(base_hamiltonian_gets_config)
 
     nullify(that)
     ASSERT(associated(this%config))
     call base_hamiltonian_hash_get(this%hash, config, that, ierr)
-    if(ierr/=BASE_HAMILTONIAN_OK)nullify(that)
+    if(ierr/=BASE_HAMILTONIAN_OK) nullify(that)
 
-    POP_SUB(base_hamiltonian_get_hamiltonian_by_config)
-  end subroutine base_hamiltonian_get_hamiltonian_by_config
+    POP_SUB(base_hamiltonian_gets_config)
+  end subroutine base_hamiltonian_gets_config
 
   ! ---------------------------------------------------------
-  subroutine base_hamiltonian_get_hamiltonian_by_name(this, name, that)
+  subroutine base_hamiltonian_gets_name(this, name, that)
     type(base_hamiltonian_t),  intent(in) :: this
     character(len=*),          intent(in) :: name
     type(base_hamiltonian_t), pointer     :: that
@@ -1592,15 +1608,15 @@ contains
     type(json_object_t), pointer :: config
     integer                      :: ierr
 
-    PUSH_SUB(base_hamiltonian_get_hamiltonian_by_name)
+    PUSH_SUB(base_hamiltonian_gets_name)
 
     nullify(config, that)
     ASSERT(associated(this%config))
     call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
-    if(ierr==CONFIG_DICT_OK) call base_hamiltonian_get(this, config, that)
+    if(ierr==CONFIG_DICT_OK) call base_hamiltonian_gets(this, config, that)
 
-    POP_SUB(base_hamiltonian_get_hamiltonian_by_name)
-  end subroutine base_hamiltonian_get_hamiltonian_by_name
+    POP_SUB(base_hamiltonian_gets_name)
+  end subroutine base_hamiltonian_gets_name
 
   ! ---------------------------------------------------------
   subroutine base_hamiltonian_set_info(this, energy)
@@ -1669,6 +1685,95 @@ contains
   end subroutine base_hamiltonian_get_simulation
 
   ! ---------------------------------------------------------
+  subroutine base_hamiltonian__get__(this, name, that)
+    type(base_hamiltonian_t), intent(in) :: this
+    character(len=*),         intent(in) :: name
+    type(hterm_t),           pointer     :: that
+
+    integer :: ierr
+
+    PUSH_SUB(base_hamiltonian__get__)
+
+    nullify(that)
+    call hterm_dict_get(this%hdct, name, that, ierr)
+    if(ierr/=HTERM_DICT_OK) nullify(that)
+
+    POP_SUB(base_hamiltonian__get__)
+  end subroutine base_hamiltonian__get__
+
+  ! ---------------------------------------------------------
+  subroutine base_hamiltonian_get_term(this, name, that)
+    type(base_hamiltonian_t), intent(in) :: this
+    character(len=*),         intent(in) :: name
+    type(base_term_t),       pointer     :: that
+
+    type(hterm_t), pointer :: htrm
+
+    PUSH_SUB(base_hamiltonian_get_term)
+
+    nullify(that, htrm)
+    call base_hamiltonian__get__(this, name, htrm)
+    if(associated(htrm)) call hterm__get__(htrm, that)
+    nullify(htrm)
+
+    POP_SUB(base_hamiltonian_get_term)
+  end subroutine base_hamiltonian_get_term
+
+  ! ---------------------------------------------------------
+  subroutine base_hamiltonian_get_potn(this, name, that)
+    type(base_hamiltonian_t), intent(in) :: this
+    character(len=*),         intent(in) :: name
+    type(base_potential_t),  pointer     :: that
+
+    type(hterm_t), pointer :: htrm
+
+    PUSH_SUB(base_hamiltonian_get_potn)
+
+    nullify(that, htrm)
+    call base_hamiltonian__get__(this, name, htrm)
+    if(associated(htrm)) call hterm__get__(htrm, that)
+    nullify(htrm)
+
+    POP_SUB(base_hamiltonian_get_potn)
+  end subroutine base_hamiltonian_get_potn
+
+  ! ---------------------------------------------------------
+  subroutine base_hamiltonian_get_fnct(this, name, that)
+    type(base_hamiltonian_t), intent(in) :: this
+    character(len=*),         intent(in) :: name
+    type(base_functional_t), pointer     :: that
+
+    type(hterm_t), pointer :: htrm
+
+    PUSH_SUB(base_hamiltonian_get_fnct)
+
+    nullify(that, htrm)
+    call base_hamiltonian__get__(this, name, htrm)
+    if(associated(htrm)) call hterm__get__(htrm, that)
+    nullify(htrm)
+
+    POP_SUB(base_hamiltonian_get_fnct)
+  end subroutine base_hamiltonian_get_fnct
+
+  ! ---------------------------------------------------------
+  subroutine base_hamiltonian_get_hmlt(this, name, that)
+    type(base_hamiltonian_t),  intent(in) :: this
+    character(len=*),          intent(in) :: name
+    type(base_hamiltonian_t), pointer     :: that
+
+    type(hterm_t), pointer :: htrm
+
+    PUSH_SUB(base_hamiltonian_get_hmlt)
+
+    nullify(that, htrm)
+    call base_hamiltonian__get__(this, name, htrm)
+    if(associated(htrm)) call hterm__get__(htrm, that)
+    nullify(htrm)
+
+    POP_SUB(base_hamiltonian_get_hmlt)
+  end subroutine base_hamiltonian_get_hmlt
+
+  ! ---------------------------------------------------------
   subroutine base_hamiltonian_get_hamiltonian_1d(this, that)
     type(base_hamiltonian_t),     intent(in) :: this
     real(kind=wp), dimension(:), pointer     :: that
@@ -1691,95 +1796,6 @@ contains
 
     POP_SUB(base_hamiltonian_get_hamiltonian_md)
   end subroutine base_hamiltonian_get_hamiltonian_md
-
-  ! ---------------------------------------------------------
-  subroutine base_hamiltonian__iget__(this, name, that)
-    type(base_hamiltonian_t), intent(in) :: this
-    character(len=*),         intent(in) :: name
-    type(hterm_t),           pointer     :: that
-
-    integer :: ierr
-
-    PUSH_SUB(base_hamiltonian__iget__)
-
-    nullify(that)
-    call hterm_dict_get(this%hdct, name, that, ierr)
-    if(ierr/=HTERM_DICT_OK) nullify(that)
-
-    POP_SUB(base_hamiltonian__iget__)
-  end subroutine base_hamiltonian__iget__
-
-  ! ---------------------------------------------------------
-  subroutine base_hamiltonian__get__term(this, name, that)
-    type(base_hamiltonian_t), intent(in) :: this
-    character(len=*),         intent(in) :: name
-    type(base_term_t),       pointer     :: that
-
-    type(hterm_t), pointer :: htrm
-
-    PUSH_SUB(base_hamiltonian__get__term)
-
-    nullify(that, htrm)
-    call base_hamiltonian__iget__(this, name, htrm)
-    if(associated(htrm)) call hterm__get__(htrm, that)
-    nullify(htrm)
-
-    POP_SUB(base_hamiltonian__get__term)
-  end subroutine base_hamiltonian__get__term
-
-  ! ---------------------------------------------------------
-  subroutine base_hamiltonian__get__potn(this, name, that)
-    type(base_hamiltonian_t), intent(in) :: this
-    character(len=*),         intent(in) :: name
-    type(base_potential_t),  pointer     :: that
-
-    type(hterm_t), pointer :: htrm
-
-    PUSH_SUB(base_hamiltonian__get__potn)
-
-    nullify(that, htrm)
-    call base_hamiltonian__iget__(this, name, htrm)
-    if(associated(htrm)) call hterm__get__(htrm, that)
-    nullify(htrm)
-
-    POP_SUB(base_hamiltonian__get__potn)
-  end subroutine base_hamiltonian__get__potn
-
-  ! ---------------------------------------------------------
-  subroutine base_hamiltonian__get__fnct(this, name, that)
-    type(base_hamiltonian_t), intent(in) :: this
-    character(len=*),         intent(in) :: name
-    type(base_functional_t), pointer     :: that
-
-    type(hterm_t), pointer :: htrm
-
-    PUSH_SUB(base_hamiltonian__get__fnct)
-
-    nullify(that, htrm)
-    call base_hamiltonian__iget__(this, name, htrm)
-    if(associated(htrm)) call hterm__get__(htrm, that)
-    nullify(htrm)
-
-    POP_SUB(base_hamiltonian__get__fnct)
-  end subroutine base_hamiltonian__get__fnct
-
-  ! ---------------------------------------------------------
-  subroutine base_hamiltonian__get__hmlt(this, name, that)
-    type(base_hamiltonian_t),  intent(in) :: this
-    character(len=*),          intent(in) :: name
-    type(base_hamiltonian_t), pointer     :: that
-
-    type(hterm_t), pointer :: htrm
-
-    PUSH_SUB(base_hamiltonian__get__hmlt)
-
-    nullify(that, htrm)
-    call base_hamiltonian__iget__(this, name, htrm)
-    if(associated(htrm)) call hterm__get__(htrm, that)
-    nullify(htrm)
-
-    POP_SUB(base_hamiltonian__get__hmlt)
-  end subroutine base_hamiltonian__get__hmlt
 
   ! ---------------------------------------------------------
   subroutine base_hamiltonian__icopy__(this, that)
@@ -1850,7 +1866,7 @@ contains
       if(ierr/=BASE_HAMILTONIAN_OK)exit
       call base_hamiltonian_new(this, osub)
       call base_hamiltonian_copy(osub, isub)
-      call base_hamiltonian__add__(this, osub, cnfg)
+      call base_hamiltonian_sets(this, osub, cnfg)
     end do
     call base_hamiltonian_end(iter)
     nullify(cnfg, osub, isub)

@@ -51,7 +51,7 @@ contains
 
     nullify(live)
     call base_functional_calc(this)
-    call ssys_tnadd_get(this, "live", live)
+    !call base_functional_gets(this, "live", live)
     ASSERT(associated(live))
     call base_functional__sub__(this, live)
     nullify(live)

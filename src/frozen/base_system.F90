@@ -71,7 +71,6 @@ module base_system_m
     base_system__stop__,   &
     base_system__reset__,  &
     base_system__acc__,    &
-    base_system__add__,    &
     base_system__copy__,   &
     base_system__end__
 
@@ -82,6 +81,8 @@ module base_system_m
     base_system_start,  &
     base_system_update, &
     base_system_stop,   &
+    base_system_sets,   &
+    base_system_gets,   &
     base_system_set,    &
     base_system_get,    &
     base_system_copy,   &
@@ -134,9 +135,12 @@ module base_system_m
     module procedure base_system_set_simulation
   end interface base_system_set
 
+  interface base_system_gets
+    module procedure base_system_gets_config
+    module procedure base_system_gets_name
+  end interface base_system_gets
+
   interface base_system_get
-    module procedure base_system_get_system_by_config
-    module procedure base_system_get_system_by_name
     module procedure base_system_get_info
     module procedure base_system_get_config
     module procedure base_system_get_simulation
@@ -335,7 +339,7 @@ contains
       if(ierr/=BASE_SYSTEM_OK)exit
       call base_system_new(this, osub)
       call base_system_init(osub, isub)
-      call base_system__add__(this, osub, cnfg)
+      call base_system_sets(this, osub, cnfg)
     end do
     call base_system_end(iter)
     call base_system__init__(this)
@@ -509,7 +513,22 @@ contains
   end subroutine base_system__acc__
 
   ! ---------------------------------------------------------
-  subroutine base_system__add__(this, that, config)
+  subroutine base_system__sets__(this, that, config)
+    type(base_system_t), intent(inout) :: this
+    type(base_system_t), intent(in)    :: that
+    type(json_object_t), intent(in)    :: config
+
+    PUSH_SUB(base_system__sets__)
+
+    ASSERT(this%space==that%space)
+    call base_geometry_sets(this%geom, that%geom, config)
+    call base_states_sets(this%st, that%st, config)
+
+    POP_SUB(base_system__sets__)
+  end subroutine base_system__sets__
+
+  ! ---------------------------------------------------------
+  subroutine base_system_sets(this, that, config)
     type(base_system_t), intent(inout) :: this
     type(base_system_t), intent(in)    :: that
     type(json_object_t), intent(in)    :: config
@@ -517,39 +536,38 @@ contains
     character(len=CONFIG_DICT_NAME_LEN) :: name
     integer                             :: ierr
 
-    PUSH_SUB(base_system__add__)
+    PUSH_SUB(base_system_sets)
 
-    ASSERT(this%space==that%space)
+    ASSERT(associated(this%config))
     call json_get(config, "name", name, ierr)
     ASSERT(ierr==JSON_OK)
     call config_dict_set(this%dict, trim(adjustl(name)), config)
     call base_system_hash_set(this%hash, config, that)
-    call base_geometry__add__(this%geom, that%geom, config)
-    call base_states__add__(this%st, that%st, config)
+    call base_system__sets__(this, that, config)
 
-    POP_SUB(base_system__add__)
-  end subroutine base_system__add__
+    POP_SUB(base_system_sets)
+  end subroutine base_system_sets
 
   ! ---------------------------------------------------------
-  subroutine base_system_get_system_by_config(this, config, that)
+  subroutine base_system_gets_config(this, config, that)
     type(base_system_t),  intent(in) :: this
     type(json_object_t),  intent(in) :: config
     type(base_system_t), pointer     :: that
 
     integer :: ierr
 
-    PUSH_SUB(base_system_get_system_by_config)
+    PUSH_SUB(base_system_gets_config)
 
     nullify(that)
     ASSERT(associated(this%config))
     call base_system_hash_get(this%hash, config, that, ierr)
-    if(ierr/=BASE_SYSTEM_OK)nullify(that)
+    if(ierr/=BASE_SYSTEM_OK) nullify(that)
 
-    POP_SUB(base_system_get_system_by_config)
-  end subroutine base_system_get_system_by_config
+    POP_SUB(base_system_gets_config)
+  end subroutine base_system_gets_config
 
   ! ---------------------------------------------------------
-  subroutine base_system_get_system_by_name(this, name, that)
+  subroutine base_system_gets_name(this, name, that)
     type(base_system_t),  intent(in) :: this
     character(len=*),     intent(in) :: name
     type(base_system_t), pointer     :: that
@@ -557,15 +575,15 @@ contains
     type(json_object_t), pointer :: config
     integer                      :: ierr
 
-    PUSH_SUB(base_system_get_system_by_name)
+    PUSH_SUB(base_system_gets_name)
 
     nullify(that)
     ASSERT(associated(this%config))
     call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
-    if(ierr==CONFIG_DICT_OK) call base_system_get(this, config, that)
+    if(ierr==CONFIG_DICT_OK) call base_system_gets(this, config, that)
 
-    POP_SUB(base_system_get_system_by_name)
-  end subroutine base_system_get_system_by_name
+    POP_SUB(base_system_gets_name)
+  end subroutine base_system_gets_name
 
   ! ---------------------------------------------------------
   subroutine base_system_set_simulation(this, that)
@@ -730,7 +748,7 @@ contains
       if(ierr/=BASE_SYSTEM_OK)exit
       call base_system_new(this, osub)
       call base_system_copy(osub, isub)
-      call base_system__add__(this, osub, cnfg)
+      call base_system_sets(this, osub, cnfg)
     end do
     call base_system_end(iter)
     call base_system__copy__(this)

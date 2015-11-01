@@ -30,8 +30,7 @@ module ssys_hamiltonian_m
   use base_hamiltonian_m, only: &
     base_hamiltonian__update__, &
     base_hamiltonian__reset__,  &
-    base_hamiltonian__acc__,    &
-    base_hamiltonian__get__
+    base_hamiltonian__acc__
 
   use base_hamiltonian_m, only: &
     base_hamiltonian_get
@@ -172,7 +171,7 @@ contains
 
     PUSH_SUB(ssys_hamiltonian_get_external)
 
-    call base_hamiltonian__get__(this, "external", that)
+    call base_hamiltonian_get(this, "external", that)
 
     POP_SUB(ssys_hamiltonian_get_external)
   end subroutine ssys_hamiltonian_get_external
@@ -184,7 +183,7 @@ contains
 
     PUSH_SUB(ssys_hamiltonian_get_ionic)
 
-    call base_hamiltonian__get__(this, "ionic", that)
+    call base_hamiltonian_get(this, "ionic", that)
 
     POP_SUB(ssys_hamiltonian_get_ionic)
   end subroutine ssys_hamiltonian_get_ionic
@@ -196,7 +195,7 @@ contains
 
     PUSH_SUB(ssys_hamiltonian_get_tnadd)
 
-    call base_hamiltonian__get__(this, "tnadd", that)
+    call base_hamiltonian_get(this, "tnadd", that)
 
     POP_SUB(ssys_hamiltonian_get_tnadd)
   end subroutine ssys_hamiltonian_get_tnadd

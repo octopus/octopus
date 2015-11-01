@@ -107,7 +107,7 @@ contains
       this%total_density => density
       call ssys_states_get(this%st%subsys_st, this%subsys_density)
       ASSERT(associated(this%subsys_density))
-      call ssys_density_get(this%subsys_density, "live", live_density)
+      !call ssys_density_get(this%subsys_density, "live", live_density)
       ASSERT(associated(live_density))
       call ssys_density_get(live_density, this%density)
       ASSERT(associated(this%density))
