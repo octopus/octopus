@@ -287,8 +287,6 @@ contains
       if(parse(ipar) == PAR_NO) parse(ipar) = 1
     end do
 
-    if(base_grp%rank == 0) print*, "PARSE", parse
-    
     call strategy()
 
     nullify(mc%group_sizes)
@@ -500,7 +498,6 @@ contains
 
       if(num_slaves > 0) then
 
-        print*, mc%group_sizes(slave_level), num_slaves
         if(mc%group_sizes(slave_level) < num_slaves + 1) then
           message(1) = 'Too many nodes assigned to task parallelization.'
           call messages_fatal(1)
