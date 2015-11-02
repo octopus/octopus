@@ -420,11 +420,9 @@ contains
     
     subroutine assign_nodes()
       integer :: ii, nn, kk, n_divisors, divisors(1:50)
-      integer, allocatable :: n_group_max(:)
+      integer :: n_group_max(1:P_STRATEGY_MAX)
 
       PUSH_SUB(multicomm_init.assign_nodes)
-
-      SAFE_ALLOCATE(n_group_max(1:P_STRATEGY_MAX))
 
       ! this is the maximum number of processors in each group
       n_group_max(1:P_STRATEGY_MAX) = max(index_range(1:P_STRATEGY_MAX), 1)
@@ -442,8 +440,11 @@ contains
       end if
 
       nn = mc%n_node
-      
+
+      ! first loop, check the processors assigned by the user
       do ipar = P_STRATEGY_MAX, 1, -1
+        
+        if(mc%group_sizes(ipar) == PAR_AUTO) cycle
 
         if(mc%group_sizes(ipar) > n_group_max(ipar)) then
           call messages_write('The number of processors specified for '//par_types(ipar)//'(')
@@ -454,22 +455,9 @@ contains
           call messages_write(').')
           call messages_warning()
         end if
-        
-        if(mc%group_sizes(ipar) == PAR_AUTO) then
-          n_divisors = ubound(divisors, dim = 1)
-          call get_divisors(nn, n_divisors, divisors)
-
-          mc%group_sizes(ipar) = nn
-          do ii = 2, n_divisors
-            if(divisors(ii) > n_group_max(ipar)) then
-              mc%group_sizes(ipar) = divisors(ii - 1)
-              exit
-            end if
-          end do
-        end if
 
         if(mod(nn, mc%group_sizes(ipar)) /= 0) then
-          call messages_write('The number of processors specified for '//par_types(ii)//'(')
+          call messages_write('The number of processors specified for '//par_types(ipar)//'(')
           call messages_write(mc%group_sizes(ipar))
           call messages_write(')', new_line = .true.)
           call messages_write('is not a divisor of the number of processors (')
@@ -477,11 +465,30 @@ contains
           call messages_write(').')
           call messages_fatal()
         end if
-
+        
         nn = nn/mc%group_sizes(ipar)
+
       end do
 
-      SAFE_DEALLOCATE_A(n_group_max)
+      ! second loop, now assign the rest automatically
+      do ipar = P_STRATEGY_MAX, 1, -1
+
+        if(mc%group_sizes(ipar) /= PAR_AUTO) cycle
+        
+        n_divisors = ubound(divisors, dim = 1)
+        call get_divisors(nn, n_divisors, divisors)
+        
+        mc%group_sizes(ipar) = nn
+        do ii = 2, n_divisors
+          if(divisors(ii) > n_group_max(ipar)) then
+            mc%group_sizes(ipar) = divisors(ii - 1)
+            exit
+          end if
+        end do
+        
+        nn = nn/mc%group_sizes(ipar)
+        
+      end do
 
       POP_SUB(multicomm_init.assign_nodes)
     end subroutine assign_nodes
