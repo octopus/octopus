@@ -150,7 +150,7 @@ contains
     !%Description
     !% If PES_rc_OmegaMax > 0, the photoelectron spectrum is directly calculated during 
     !% time-propagation, evaluated by the PES_rc method. PES_rc_OmegaMax is then the maximum frequency 
-    !% (approximate kinetic energy) and PES_rc_DelOmega the spacing in frequency domain of the spectrum.
+    !% (approximate kinetic energy) and PES_rc_DeltaOmega the spacing in frequency domain of the spectrum.
     !%End
     call parse_variable('PES_rc_OmegaMax', units_to_atomic(units_inp%energy, M_ZERO), pesrc%omegamax)
     pesrc%onfly = .false.
@@ -161,17 +161,17 @@ contains
       call messages_print_var_value(stdout, "PES_rc_OmegaMax", pesrc%omegamax)
     end if
  
-    !%Variable PES_rc_DelOmega
+    !%Variable PES_rc_DeltaOmega
     !%Type float
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
     !% The spacing in frequency domain for the photoelectron spectrum (if PES_rc_OmegaMax > 0).
     !% By default is set to PES_rc_OmegaMax/500. 
     !%End
-    call parse_variable('PES_rc_DelOmega', units_to_atomic(units_inp%energy, pesrc%omegamax/CNST(500)), pesrc%delomega)
+    call parse_variable('PES_rc_DeltaOmega', units_to_atomic(units_inp%energy, pesrc%omegamax/CNST(500)), pesrc%delomega)
     if(pesrc%onfly) then
-      if(pesrc%delomega <= M_ZERO) call messages_input_error('PES_rc_DelOmega')
-      call messages_print_var_value(stdout, "PES_rc_DelOmega", pesrc%delomega)
+      if(pesrc%delomega <= M_ZERO) call messages_input_error('PES_rc_DeltaOmega')
+      call messages_print_var_value(stdout, "PES_rc_DeltaOmega", pesrc%delomega)
     end if
 
     !%Variable PES_rc_ThetaSteps
