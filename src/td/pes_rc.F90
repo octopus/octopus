@@ -174,7 +174,7 @@ contains
       call messages_print_var_value(stdout, "PES_rc_DeltaOmega", pesrc%delomega)
     end if
 
-    !%Variable PES_rc_ThetaSteps
+    !%Variable PES_rc_StepsThetaR
     !%Type integer
     !%Default 45
     !%Section Time-Dependent::PhotoElectronSpectrum
@@ -182,10 +182,10 @@ contains
     !% Number of steps in theta (0 <= theta <= pi) for the spherical grid (if no 
     !% PhotoElectronSpectrumPoints are given).
     !%End
-    call parse_variable('PES_rc_ThetaSteps', 45, pesrc%nstepstheta)
-    if(.not.fromblk .and. pesrc%nstepstheta < 0) call messages_input_error('PES_rc_ThetaSteps')
+    call parse_variable('PES_rc_StepsThetaR', 45, pesrc%nstepstheta)
+    if(.not.fromblk .and. pesrc%nstepstheta < 0) call messages_input_error('PES_rc_StepsThetaR')
 
-    !%Variable PES_rc_PhiSteps
+    !%Variable PES_rc_StepsPhiR
     !%Type integer
     !%Default 90
     !%Section Time-Dependent::PhotoElectronSpectrum
@@ -193,9 +193,9 @@ contains
     !% Number of steps in phi (0 <= phi <= 2 pi) for the spherical grid (if no
     !% PhotoElectronSpectrumPoints are given).
     !%End
-    call parse_variable('PES_rc_PhiSteps', 90, pesrc%nstepsphi)
+    call parse_variable('PES_rc_StepsPhiR', 90, pesrc%nstepsphi)
     if(.not.fromblk) then
-      if(pesrc%nstepsphi < 0)  call messages_input_error('PES_rc_PhiSteps')
+      if(pesrc%nstepsphi < 0)  call messages_input_error('PES_rc_StepsPhiR')
       if(pesrc%nstepsphi == 0) pesrc%nstepsphi = 1
     end if
 
@@ -245,15 +245,15 @@ contains
         pesrc%nstepstheta   = 0
         pesrc%npoints  = pesrc%nstepsphi
 
-        call messages_print_var_value(stdout, "PES_rc_StepsPhi", pesrc%nstepsphi)
+        call messages_print_var_value(stdout, "PES_rc_StepsPhiR", pesrc%nstepsphi)
 
       case(3)
         pesrc%thetamin = M_ZERO
         if(pesrc%nstepstheta <= 1) pesrc%nstepsphi = 1
         pesrc%npoints  = pesrc%nstepsphi * (pesrc%nstepstheta - 1) + 2
 
-        call messages_print_var_value(stdout, "PES_rc_StepsPhi", pesrc%nstepsphi)
-        call messages_print_var_value(stdout, "PES_rc_StepsTheta", pesrc%nstepstheta)
+        call messages_print_var_value(stdout, "PES_rc_StepsPhiR", pesrc%nstepsphi)
+        call messages_print_var_value(stdout, "PES_rc_StepsThetaR", pesrc%nstepstheta)
 
       end select
     end if
