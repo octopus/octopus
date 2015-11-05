@@ -53,7 +53,6 @@ module pes_rc_m
   type PES_rc_t
     integer                    :: npoints                   !< how many points we store the wf
     integer, pointer           :: points(:)                 !< which points to use (local index)
-    integer, pointer           :: points_global(:)          !< global index of the points
     FLOAT, pointer             :: coords(:,:)               !< coordinates of the sample points
     CMPLX, pointer             :: wf(:,:,:,:,:)   => NULL() !< wavefunctions at sample points
     integer, pointer           :: rankmin(:)                !< partition of the mesh containing the points
@@ -264,9 +263,7 @@ contains
 
     if(fromblk) then
       SAFE_ALLOCATE(pesrc%points(1:pesrc%npoints))
-      SAFE_ALLOCATE(pesrc%points_global(1:pesrc%npoints))
       SAFE_ALLOCATE(pesrc%rankmin(1:pesrc%npoints))
-      pesrc%points_global = 0
 
       ! read points from input file
       do ip = 1, pesrc%npoints
@@ -284,16 +281,6 @@ contains
         ! nearest point
         pesrc%points(ip)  = mesh_nearest_point(mesh, pesrc%coords(1:mesh%sb%dim, ip), dmin, rankmin)
         pesrc%rankmin(ip) = rankmin
-
-        if(mesh%parallel_in_domains) then
-#if defined(HAVE_MPI)
-          if(mesh%mpi_grp%rank == rankmin) &
-            pesrc%points_global(ip) = mesh%vp%local(mesh%vp%xlocal + pesrc%points(ip) - 1)
-          call comm_allreduce(mesh%mpi_grp%comm, pesrc%points_global)
-#endif
-        else
-          pesrc%points_global(ip) = pesrc%points(ip)
-        end if
       end do
 
     else ! fromblk == .false.
@@ -353,7 +340,6 @@ contains
     PUSH_SUB(PES_rc_end)
 
     SAFE_DEALLOCATE_P(pesrc%points)
-    SAFE_DEALLOCATE_P(pesrc%points_global)
     SAFE_DEALLOCATE_P(pesrc%wf)
     SAFE_DEALLOCATE_P(pesrc%rankmin)
     SAFE_DEALLOCATE_P(pesrc%coords)

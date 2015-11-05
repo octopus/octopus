@@ -78,7 +78,6 @@ contains
     !
     PUSH_SUB(pes_rc_nullify)
     this%points        =>null()
-    this%points_global =>null()
     this%wf            =>null()
     this%rankmin       =>null()
     POP_SUB(pes_rc_nullify)
