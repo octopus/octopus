@@ -53,7 +53,7 @@ module pes_rc_m
   type PES_rc_t
     integer                    :: npoints                   !< how many points we store the wf
     integer, pointer           :: points(:)                 !< which points to use (local index)
-    FLOAT, pointer             :: coords(:,:)               !< coordinates of the sample points
+    FLOAT, pointer             :: rcoords(:,:)              !< coordinates of the sample points
     CMPLX, pointer             :: wf(:,:,:,:,:)   => NULL() !< wavefunctions at sample points
     integer, pointer           :: rankmin(:)                !< partition of the mesh containing the points
     FLOAT, pointer             :: dq(:,:)         => NULL() !< part 1 of Volkov phase (recipe phase) 
@@ -259,7 +259,7 @@ contains
 
     call messages_print_var_value(stdout, "Number of PhotoElectronSpectrumPoints", pesrc%npoints)
 
-    SAFE_ALLOCATE(pesrc%coords(1:mesh%sb%dim, 1:pesrc%npoints))
+    SAFE_ALLOCATE(pesrc%rcoords(1:mesh%sb%dim, 1:pesrc%npoints))
 
     if(fromblk) then
       SAFE_ALLOCATE(pesrc%points(1:pesrc%npoints))
@@ -270,7 +270,7 @@ contains
         call parse_block_float(blk, ip - 1, 0, xx(1), units_inp%length)
         call parse_block_float(blk, ip - 1, 1, xx(2), units_inp%length)
         call parse_block_float(blk, ip - 1, 2, xx(3), units_inp%length)
-        pesrc%coords(1:mesh%sb%dim, ip) = xx(1:mesh%sb%dim)
+        pesrc%rcoords(1:mesh%sb%dim, ip) = xx(1:mesh%sb%dim)
       end do
       call parse_block_end(blk)
 
@@ -279,7 +279,7 @@ contains
 
       do ip = 1, pesrc%npoints
         ! nearest point
-        pesrc%points(ip)  = mesh_nearest_point(mesh, pesrc%coords(1:mesh%sb%dim, ip), dmin, rankmin)
+        pesrc%points(ip)  = mesh_nearest_point(mesh, pesrc%rcoords(1:mesh%sb%dim, ip), dmin, rankmin)
         pesrc%rankmin(ip) = rankmin
       end do
 
@@ -303,9 +303,9 @@ contains
             phi = iph * M_TWO * M_PI / pesrc%nstepsphi
           end if
           ip = ip + 1
-                               pesrc%coords(1, ip) = radius * cos(phi) * sin(theta)
-          if(mesh%sb%dim >= 2) pesrc%coords(2, ip) = radius * sin(phi) * sin(theta)
-          if(mesh%sb%dim == 3) pesrc%coords(3, ip) = radius * cos(theta)
+                               pesrc%rcoords(1, ip) = radius * cos(phi) * sin(theta)
+          if(mesh%sb%dim >= 2) pesrc%rcoords(2, ip) = radius * sin(phi) * sin(theta)
+          if(mesh%sb%dim == 3) pesrc%rcoords(3, ip) = radius * cos(theta)
           if(theta == M_ZERO .or. theta == M_PI) exit
         end do
       end do
@@ -342,7 +342,7 @@ contains
     SAFE_DEALLOCATE_P(pesrc%points)
     SAFE_DEALLOCATE_P(pesrc%wf)
     SAFE_DEALLOCATE_P(pesrc%rankmin)
-    SAFE_DEALLOCATE_P(pesrc%coords)
+    SAFE_DEALLOCATE_P(pesrc%rcoords)
 
     SAFE_DEALLOCATE_P(pesrc%wfft)
 
@@ -408,7 +408,7 @@ contains
           do idim = 1, dim
             call states_get_state(st, mesh, idim, ist, ik, psistate(1:mesh%np_part))
             call mesh_interpolation_evaluate(pesrc%interp, pesrc%npoints, psistate(1:mesh%np_part), &
-              pesrc%coords(1:mesh%sb%dim, 1:pesrc%npoints), interp_values(1:pesrc%npoints))
+              pesrc%rcoords(1:mesh%sb%dim, 1:pesrc%npoints), interp_values(1:pesrc%npoints))
             pesrc%wf(ist, idim, ik, :, ii) = interp_values(:)
           end do
         end do
@@ -650,7 +650,7 @@ contains
           write(filenr, '(i4.4)') ip
    
           iunit = io_open('td.general/'//'PES_rc.'//filenr//'.wavefunctions.out', action='write')
-          xx(1:mesh%sb%dim) = pesrc%coords(1:mesh%sb%dim, ip)
+          xx(1:mesh%sb%dim) = pesrc%rcoords(1:mesh%sb%dim, ip)
           write(iunit,'(a1)') '#'
           write(iunit, '(a7,f17.6,a1,f17.6,a1,f17.6,5a)') &
             '# R = (',xx(1),' ,',xx(2),' ,',xx(3), &
@@ -800,9 +800,9 @@ contains
     if(ii == 0) iprev = pesrc%save_iter - 1
 
     do ip = 1, pesrc%npoints
-      rr = sqrt(dot_product(pesrc%coords(1:dim, ip), pesrc%coords(1:dim, ip)))
+      rr = sqrt(dot_product(pesrc%rcoords(1:dim, ip), pesrc%rcoords(1:dim, ip)))
       pesrc%dq(ip, ii) = pesrc%dq(ip, iprev) &
-        + dot_product(pesrc%coords(1:dim, ip), vp(1:dim)) / (P_C * rr) * dt
+        + dot_product(pesrc%rcoords(1:dim, ip), vp(1:dim)) / (P_C * rr) * dt
     end do
 
     pesrc%domega(ii) = pesrc%domega(iprev) &
