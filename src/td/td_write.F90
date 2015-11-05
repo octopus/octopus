@@ -330,14 +330,17 @@ contains
       SAFE_ALLOCATE(writ%gs_st%occ(1:writ%gs_st%nst, 1:writ%gs_st%d%nik))
       SAFE_ALLOCATE(writ%gs_st%zeigenval%Re(1:writ%gs_st%nst, 1:writ%gs_st%d%nik))
       writ%gs_st%eigenval => writ%gs_st%zeigenval%Re
+
       SAFE_ALLOCATE(writ%gs_st%node(1:writ%gs_st%nst))
+      writ%gs_st%node(:)  = 0
+
       writ%gs_st%eigenval = huge(writ%gs_st%eigenval)
       writ%gs_st%occ      = M_ZERO
       if(writ%gs_st%d%ispin == SPINORS) then
         SAFE_ALLOCATE(writ%gs_st%spin(1:3, 1:writ%gs_st%nst, 1:writ%gs_st%d%nik))
       end if
+      
       call states_allocate_wfns(writ%gs_st, gr%mesh, TYPE_CMPLX)
-      writ%gs_st%node(:)  = 0
       call states_load(restart_gs, writ%gs_st, gr, ierr, label = ': gs for TDOutput')
       if(ierr /= 0 .and. ierr /= (writ%gs_st%st_end-writ%gs_st%st_start+1)*writ%gs_st%d%nik*writ%gs_st%d%dim) then
         message(1) = "Unable to read wavefunctions for TDOutput."

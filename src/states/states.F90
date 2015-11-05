@@ -1152,6 +1152,7 @@ contains
     SAFE_ALLOCATE(st%group%block_node(1:st%group%nblocks))
 
     ASSERT(associated(st%node))
+    ASSERT(all(st%node >= 0) .and. all(st%node < st%mpi_grp%size))
     
     do ib = 1, st%group%nblocks
       st%group%block_node(ib) = st%node(st%group%block_range(ib, 1))
