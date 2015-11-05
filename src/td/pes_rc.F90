@@ -91,7 +91,7 @@ contains
     FLOAT         :: dmin
     integer       :: rankmin
     logical       :: fromblk
-    FLOAT         :: phi, theta, radius, default_radius
+    FLOAT         :: phi, theta, radius
     integer       :: iph, ith
 
     PUSH_SUB(PES_rc_init)
@@ -207,21 +207,22 @@ contains
     !% are given).
     !%End
     if(.not.fromblk) then
-      select case(mesh%sb%box_shape)
-      case(PARALLELEPIPED)
-        default_radius = minval(mesh%sb%lsize(1:mesh%sb%dim))
-      case(SPHERE)
-        default_radius = mesh%sb%rsize
-      case default
-        message(1) = "Spherical grid not implemented for this box shape."
-        message(2) = "Specify sample points with block PhotoElectronSpectrumPoints."
-        call messages_fatal(2)
-      end select
-    end if
-    call parse_variable('PES_rc_Radius', default_radius, radius)
-    if(.not.fromblk) then
-      if(radius <= M_ZERO) call messages_input_error('PES_rc_Radius')
-      call messages_print_var_value(stdout, "PES_rc_Radius", radius)
+      if(parse_is_defined('PES_rc_Radius')) then
+        call parse_variable('PES_rc_Radius', M_ZERO, radius)
+        if(radius <= M_ZERO) call messages_input_error('PES_rc_Radius')
+        call messages_print_var_value(stdout, "PES_rc_Radius", radius)
+      else
+        select case(mesh%sb%box_shape)
+        case(PARALLELEPIPED)
+          radius = minval(mesh%sb%lsize(1:mesh%sb%dim))
+        case(SPHERE)
+          radius = mesh%sb%rsize
+        case default
+          message(1) = "Spherical grid not implemented for this box shape."
+          message(2) = "Specify sample points with block PhotoElectronSpectrumPoints."
+          call messages_fatal(2)
+        end select
+      end if
     end if
 
     if(fromblk) then
