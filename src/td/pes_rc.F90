@@ -65,7 +65,7 @@ module pes_rc_m
     integer                    :: nomega                    !< number of frequencies of the spectrum
     logical                    :: onfly                     !< spectrum is calculated on-the-fly when true
     integer                    :: save_iter                 !< output interval and size of arrays 
-    logical                    :: interpolation             !< use a an interpolated scheme for sample points
+    logical                    :: sphgrid                   !< use a spherical grid (instead of sample points from input)
     integer                    :: nstepsphi, nstepstheta
     FLOAT                      :: thetamin
     type(mesh_interpolation_t) :: interp
@@ -89,7 +89,6 @@ contains
     FLOAT         :: xx(MAX_DIM)
     FLOAT         :: dmin
     integer       :: rankmin
-    logical       :: fromblk
     FLOAT         :: phi, theta, radius
     integer       :: iph, ith
 
@@ -112,15 +111,15 @@ contains
     !% </tt>
     !%End
     call messages_obsolete_variable('PES_rc_points', 'PhotoElectronSpectrumPoints')
-    fromblk = .true.
+    pesrc%sphgrid = .false.
     if (parse_block('PhotoElectronSpectrumPoints', blk) < 0) then
-      fromblk = .false.
+      pesrc%sphgrid = .true.
     end if
 
-    if(fromblk) then
-      message(1) = 'Info: Using PhotoElectronSpectrumPoints from block.'
-    else
+    if(pesrc%sphgrid) then
       message(1) = 'Info: Using spherical grid with interpolation.'
+    else
+      message(1) = 'Info: Using PhotoElectronSpectrumPoints from block.'
     end if
     call messages_info(1)
 
@@ -182,7 +181,7 @@ contains
     !% PhotoElectronSpectrumPoints are given).
     !%End
     call parse_variable('PES_rc_StepsThetaR', 45, pesrc%nstepstheta)
-    if(.not.fromblk .and. pesrc%nstepstheta < 0) call messages_input_error('PES_rc_StepsThetaR')
+    if(pesrc%sphgrid .and. pesrc%nstepstheta < 0) call messages_input_error('PES_rc_StepsThetaR')
 
     !%Variable PES_rc_StepsPhiR
     !%Type integer
@@ -193,7 +192,7 @@ contains
     !% PhotoElectronSpectrumPoints are given).
     !%End
     call parse_variable('PES_rc_StepsPhiR', 90, pesrc%nstepsphi)
-    if(.not.fromblk) then
+    if(pesrc%sphgrid) then
       if(pesrc%nstepsphi < 0)  call messages_input_error('PES_rc_StepsPhiR')
       if(pesrc%nstepsphi == 0) pesrc%nstepsphi = 1
     end if
@@ -205,7 +204,7 @@ contains
     !% The radius of the sphere for the interpolation (if no PhotoElectronSpectrumPoints
     !% are given).
     !%End
-    if(.not.fromblk) then
+    if(pesrc%sphgrid) then
       if(parse_is_defined('PES_rc_Radius')) then
         call parse_variable('PES_rc_Radius', M_ZERO, radius)
         if(radius <= M_ZERO) call messages_input_error('PES_rc_Radius')
@@ -224,11 +223,9 @@ contains
       end if
     end if
 
-    if(fromblk) then
-      pesrc%interpolation = .false.
+    if(.not. pesrc%sphgrid) then
       pesrc%npoints = parse_block_n(blk)
     else
-      pesrc%interpolation = .true.
       call mesh_interpolation_init(pesrc%interp, mesh)
 
       ! setting values for spherical grid 
@@ -261,7 +258,7 @@ contains
 
     SAFE_ALLOCATE(pesrc%rcoords(1:mesh%sb%dim, 1:pesrc%npoints))
 
-    if(fromblk) then
+    if(.not. pesrc%sphgrid) then
       SAFE_ALLOCATE(pesrc%points(1:pesrc%npoints))
       SAFE_ALLOCATE(pesrc%rankmin(1:pesrc%npoints))
 
@@ -283,7 +280,7 @@ contains
         pesrc%rankmin(ip) = rankmin
       end do
 
-    else ! fromblk == .false.
+    else ! pesrc%sphgrid == .true.
 
       message(1) = 'Info: Initializing spherical grid.'
       call messages_info(1)
@@ -383,7 +380,7 @@ contains
     kptend = st%d%kpt%end
     dim    = st%d%dim
 
-    if(pesrc%interpolation) then
+    if(pesrc%sphgrid) then
       SAFE_ALLOCATE(psistate(1:mesh%np_part))
       SAFE_ALLOCATE(interp_values(1:pesrc%npoints))
     else
@@ -402,7 +399,7 @@ contains
     ! needed for allreduce, otherwise it will take values from previous cycle
     pesrc%wf(:,:,:,:,ii) = M_z0
 
-    if(pesrc%interpolation) then
+    if(pesrc%sphgrid) then
       do ik = kptst, kptend 
         do ist = stst, stend
           do idim = 1, dim
@@ -419,7 +416,7 @@ contains
         call comm_allreduce(st%st_kpt_mpi_grp%comm, pesrc%wf(:,:,:,:,ii))
 #endif
       end if
-    else ! pesrc%interpolation == .false.
+    else ! pesrc%sphgrid == .false.
 
       contains_ip = .true.
 
@@ -527,7 +524,7 @@ contains
       end do
     end if
 
-    if(.not.pesrc%interpolation .or. in_debug_mode) then   ! too much output for interpolation
+    if(.not. pesrc%sphgrid .or. in_debug_mode) then   ! too much output for interpolation
       do ip = 1, pesrc%npoints
         write(filenr, '(i4.4)') ip
    
@@ -581,7 +578,7 @@ contains
       end do
     end if
 
-    if(pesrc%onfly .and. pesrc%interpolation) then
+    if(pesrc%onfly .and. pesrc%sphgrid) then
       iunit = io_open('td.general/'//'PES_rc.distribution.out', action='write', position='rewind')
       write(iunit, '(a33)') '# omega, theta, phi, distribution'
 
@@ -645,7 +642,7 @@ contains
 
     xx = M_ZERO
     if(mpi_grp_is_root(mpi_world)) then
-      if(.not.pesrc%interpolation .or. in_debug_mode) then   ! too much output for interpolation
+      if(.not. pesrc%sphgrid .or. in_debug_mode) then   ! too much output for interpolation
         do ip = 1, pesrc%npoints
           write(filenr, '(i4.4)') ip
    
