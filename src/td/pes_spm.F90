@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module pes_rc_m
+module pes_spm_m
   use global_m
   use io_m
   use mesh_m
@@ -41,16 +41,16 @@ module pes_rc_m
   private
 
   public ::                             &
-    pes_rc_t,                           &
-    pes_rc_init,                        &
-    pes_rc_init_write,                  &
-    pes_rc_output,                      &
-    pes_rc_calc,                        &
-    pes_rc_end,                         &
-    pes_rc_dump,                        &
-    pes_rc_load
+    pes_spm_t,                           &
+    pes_spm_init,                        &
+    pes_spm_init_write,                  &
+    pes_spm_output,                      &
+    pes_spm_calc,                        &
+    pes_spm_end,                         &
+    pes_spm_dump,                        &
+    pes_spm_load
 
-  type PES_rc_t
+  type pes_spm_t
     integer                    :: npoints                   !< how many points we store the wf
     FLOAT, pointer             :: rcoords(:,:)              !< coordinates of the sample points
     CMPLX, pointer             :: wf(:,:,:,:,:)   => NULL() !< wavefunctions at sample points
@@ -67,7 +67,7 @@ module pes_rc_m
     integer                    :: nstepsphi, nstepstheta
     FLOAT                      :: thetamin
     type(mesh_interpolation_t) :: interp
-  end type PES_rc_t
+  end type pes_spm_t
 
   integer, parameter :: &
     M_RAW   = 1,        &
@@ -76,11 +76,11 @@ module pes_rc_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine PES_rc_init(pesrc, mesh, st, save_iter)
-    type(PES_rc_t), intent(out) :: pesrc
-    type(mesh_t),   intent(in)  :: mesh
-    type(states_t), intent(in)  :: st
-    integer,        intent(in)  :: save_iter
+  subroutine pes_spm_init(this, mesh, st, save_iter)
+    type(pes_spm_t), intent(out) :: this
+    type(mesh_t),    intent(in)  :: mesh
+    type(states_t),  intent(in)  :: st
+    integer,         intent(in)  :: save_iter
 
     type(block_t) :: blk
     integer       :: ip
@@ -90,38 +90,38 @@ contains
     FLOAT         :: phi, theta, radius
     integer       :: iph, ith
 
-    PUSH_SUB(PES_rc_init)
+    PUSH_SUB(pes_spm_init)
 
-    message(1) = 'Info: Calculating PES using rc technique.'
+    message(1) = 'Info: Calculating PES using sample point technique.'
     call messages_info(1)
 
-    !%Variable PhotoElectronSpectrumPoints
+    !%Variable PES_spm_points
     !%Type block
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
     !% List of points at which to calculate the photoelectron spectrum by Suraud method.
-    !% Required when <tt>PhotoElectronSpectrum = pes_rc</tt>.
+    !% Required when <tt>PhotoElectronSpectrum = pes_spm</tt>.
     !% The exact syntax is:
     !%
-    !% <tt>%PhotoElectronSpectrumPoints
+    !% <tt>%PES_spm_points
     !% <br>&nbsp;&nbsp;x1 | y1 | z1
     !% <br>%
     !% </tt>
     !%End
-    call messages_obsolete_variable('PES_rc_points', 'PhotoElectronSpectrumPoints')
-    pesrc%sphgrid = .false.
-    if (parse_block('PhotoElectronSpectrumPoints', blk) < 0) then
-      pesrc%sphgrid = .true.
+    call messages_obsolete_variable('PhotoElectronSpectrumPoints', 'PES_spm_points')
+    this%sphgrid = .false.
+    if (parse_block('PES_spm_points', blk) < 0) then
+      this%sphgrid = .true.
     end if
 
-    if(pesrc%sphgrid) then
+    if(this%sphgrid) then
       message(1) = 'Info: Using spherical grid.'
     else
-      message(1) = 'Info: Using PhotoElectronSpectrumPoints from block.'
+      message(1) = 'Info: Using sample points from block.'
     end if
     call messages_info(1)
 
-    !%Variable PES_rc_recipe
+    !%Variable PES_spm_recipe
     !%Type integer
     !%Default raw
     !%Section Time-Dependent::PhotoElectronSpectrum
@@ -134,79 +134,79 @@ contains
     !% Calculate the photoelectron spectrum by including the Volkov phase (approximately), see
     !% P. M. Dinh, P. Romaniello, P.-G. Reinhard, and E. Suraud, <i>Phys. Rev. A.</i> <b>87</b>, 032514 (2013).
     !%End
-    call parse_variable('PES_rc_recipe', M_RAW, pesrc%recipe)
-    if(.not.varinfo_valid_option('PES_rc_recipe', pesrc%recipe, is_flag = .true.)) &
-      call messages_input_error('PES_rc_recipe')
-    call messages_print_var_option(stdout, "PES_rc_recipe", pesrc%recipe)
+    call parse_variable('PES_spm_recipe', M_RAW, this%recipe)
+    if(.not.varinfo_valid_option('PES_spm_recipe', this%recipe, is_flag = .true.)) &
+      call messages_input_error('PES_spm_recipe')
+    call messages_print_var_option(stdout, "PES_spm_recipe", this%recipe)
 
-    !%Variable PES_rc_OmegaMax
+    !%Variable PES_spm_OmegaMax
     !%Type float
     !%Default 0.0
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
-    !% If PES_rc_OmegaMax > 0, the photoelectron spectrum is directly calculated during 
-    !% time-propagation, evaluated by the PES_rc method. PES_rc_OmegaMax is then the maximum frequency 
-    !% (approximate kinetic energy) and PES_rc_DeltaOmega the spacing in frequency domain of the spectrum.
+    !% If PES_spm_OmegaMax > 0, the photoelectron spectrum is directly calculated during 
+    !% time-propagation, evaluated by the PES_spm method. PES_spm_OmegaMax is then the maximum frequency 
+    !% (approximate kinetic energy) and PES_spm_DeltaOmega the spacing in frequency domain of the spectrum.
     !%End
-    call parse_variable('PES_rc_OmegaMax', units_to_atomic(units_inp%energy, M_ZERO), pesrc%omegamax)
-    pesrc%onfly = .false.
-    if(pesrc%omegamax > M_ZERO) then
-      pesrc%onfly = .true.
+    call parse_variable('PES_spm_OmegaMax', units_to_atomic(units_inp%energy, M_ZERO), this%omegamax)
+    this%onfly = .false.
+    if(this%omegamax > M_ZERO) then
+      this%onfly = .true.
       message(1) = 'Info: Calculating PES during time propagation.'
       call messages_info(1)
-      call messages_print_var_value(stdout, "PES_rc_OmegaMax", pesrc%omegamax)
+      call messages_print_var_value(stdout, "PES_spm_OmegaMax", this%omegamax)
     end if
  
-    !%Variable PES_rc_DeltaOmega
+    !%Variable PES_spm_DeltaOmega
     !%Type float
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
-    !% The spacing in frequency domain for the photoelectron spectrum (if PES_rc_OmegaMax > 0).
-    !% By default is set to PES_rc_OmegaMax/500. 
+    !% The spacing in frequency domain for the photoelectron spectrum (if PES_spm_OmegaMax > 0).
+    !% By default is set to PES_spm_OmegaMax/500. 
     !%End
-    call parse_variable('PES_rc_DeltaOmega', units_to_atomic(units_inp%energy, pesrc%omegamax/CNST(500)), pesrc%delomega)
-    if(pesrc%onfly) then
-      if(pesrc%delomega <= M_ZERO) call messages_input_error('PES_rc_DeltaOmega')
-      call messages_print_var_value(stdout, "PES_rc_DeltaOmega", pesrc%delomega)
+    call parse_variable('PES_spm_DeltaOmega', units_to_atomic(units_inp%energy, this%omegamax/CNST(500)), this%delomega)
+    if(this%onfly) then
+      if(this%delomega <= M_ZERO) call messages_input_error('PES_spm_DeltaOmega')
+      call messages_print_var_value(stdout, "PES_spm_DeltaOmega", this%delomega)
     end if
 
-    !%Variable PES_rc_StepsThetaR
+    !%Variable PES_spm_StepsThetaR
     !%Type integer
     !%Default 45
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
     !% Number of steps in theta (0 <= theta <= pi) for the spherical grid (if no 
-    !% PhotoElectronSpectrumPoints are given).
+    !% PES_spm_points are given).
     !%End
-    call parse_variable('PES_rc_StepsThetaR', 45, pesrc%nstepstheta)
-    if(pesrc%sphgrid .and. pesrc%nstepstheta < 0) call messages_input_error('PES_rc_StepsThetaR')
+    call parse_variable('PES_spm_StepsThetaR', 45, this%nstepstheta)
+    if(this%sphgrid .and. this%nstepstheta < 0) call messages_input_error('PES_spm_StepsThetaR')
 
-    !%Variable PES_rc_StepsPhiR
+    !%Variable PES_spm_StepsPhiR
     !%Type integer
     !%Default 90
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
     !% Number of steps in phi (0 <= phi <= 2 pi) for the spherical grid (if no
-    !% PhotoElectronSpectrumPoints are given).
+    !% PES_spm_points are given).
     !%End
-    call parse_variable('PES_rc_StepsPhiR', 90, pesrc%nstepsphi)
-    if(pesrc%sphgrid) then
-      if(pesrc%nstepsphi < 0)  call messages_input_error('PES_rc_StepsPhiR')
-      if(pesrc%nstepsphi == 0) pesrc%nstepsphi = 1
+    call parse_variable('PES_spm_StepsPhiR', 90, this%nstepsphi)
+    if(this%sphgrid) then
+      if(this%nstepsphi < 0)  call messages_input_error('PES_spm_StepsPhiR')
+      if(this%nstepsphi == 0) this%nstepsphi = 1
     end if
 
-    !%Variable PES_rc_Radius
+    !%Variable PES_spm_Radius
     !%Type float
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
-    !% The radius of the sphere for the spherical grid (if no PhotoElectronSpectrumPoints
+    !% The radius of the sphere for the spherical grid (if no PES_spm_points
     !% are given).
     !%End
-    if(pesrc%sphgrid) then
-      if(parse_is_defined('PES_rc_Radius')) then
-        call parse_variable('PES_rc_Radius', M_ZERO, radius)
-        if(radius <= M_ZERO) call messages_input_error('PES_rc_Radius')
-        call messages_print_var_value(stdout, "PES_rc_Radius", radius)
+    if(this%sphgrid) then
+      if(parse_is_defined('PES_spm_Radius')) then
+        call parse_variable('PES_spm_Radius', M_ZERO, radius)
+        if(radius <= M_ZERO) call messages_input_error('PES_spm_Radius')
+        call messages_print_var_value(stdout, "PES_spm_Radius", radius)
       else
         select case(mesh%sb%box_shape)
         case(PARALLELEPIPED)
@@ -215,132 +215,132 @@ contains
           radius = mesh%sb%rsize
         case default
           message(1) = "Spherical grid not implemented for this box shape."
-          message(2) = "Specify sample points with block PhotoElectronSpectrumPoints."
+          message(2) = "Specify sample points with block PES_spm_points."
           call messages_fatal(2)
         end select
       end if
     end if
 
-    call mesh_interpolation_init(pesrc%interp, mesh)
+    call mesh_interpolation_init(this%interp, mesh)
 
-    if(.not. pesrc%sphgrid) then
-      pesrc%npoints = parse_block_n(blk)
+    if(.not. this%sphgrid) then
+      this%npoints = parse_block_n(blk)
     else
       ! setting values for spherical grid 
       select case(mesh%sb%dim)
       case(1)
-        pesrc%thetamin = M_PI / M_TWO
-        pesrc%nstepstheta   = 0
-        pesrc%nstepsphi     = 2
-        pesrc%npoints  = pesrc%nstepsphi
+        this%thetamin = M_PI / M_TWO
+        this%nstepstheta   = 0
+        this%nstepsphi     = 2
+        this%npoints  = this%nstepsphi
 
       case(2)
-        pesrc%thetamin = M_PI / M_TWO
-        pesrc%nstepstheta   = 0
-        pesrc%npoints  = pesrc%nstepsphi
+        this%thetamin = M_PI / M_TWO
+        this%nstepstheta   = 0
+        this%npoints  = this%nstepsphi
 
-        call messages_print_var_value(stdout, "PES_rc_StepsPhiR", pesrc%nstepsphi)
+        call messages_print_var_value(stdout, "PES_spm_StepsPhiR", this%nstepsphi)
 
       case(3)
-        pesrc%thetamin = M_ZERO
-        if(pesrc%nstepstheta <= 1) pesrc%nstepsphi = 1
-        pesrc%npoints  = pesrc%nstepsphi * (pesrc%nstepstheta - 1) + 2
+        this%thetamin = M_ZERO
+        if(this%nstepstheta <= 1) this%nstepsphi = 1
+        this%npoints  = this%nstepsphi * (this%nstepstheta - 1) + 2
 
-        call messages_print_var_value(stdout, "PES_rc_StepsPhiR", pesrc%nstepsphi)
-        call messages_print_var_value(stdout, "PES_rc_StepsThetaR", pesrc%nstepstheta)
+        call messages_print_var_value(stdout, "PES_spm_StepsPhiR", this%nstepsphi)
+        call messages_print_var_value(stdout, "PES_spm_StepsThetaR", this%nstepstheta)
 
       end select
     end if
 
-    call messages_print_var_value(stdout, "Number of PhotoElectronSpectrumPoints", pesrc%npoints)
+    call messages_print_var_value(stdout, "Number of sample points", this%npoints)
 
-    SAFE_ALLOCATE(pesrc%rcoords(1:mesh%sb%dim, 1:pesrc%npoints))
+    SAFE_ALLOCATE(this%rcoords(1:mesh%sb%dim, 1:this%npoints))
 
-    if(.not. pesrc%sphgrid) then
+    if(.not. this%sphgrid) then
 
       message(1) = 'Info: Reading sample points.'
       call messages_info(1)
 
       ! read points from input file
-      do ip = 1, pesrc%npoints
+      do ip = 1, this%npoints
         call parse_block_float(blk, ip - 1, 0, xx(1), units_inp%length)
         call parse_block_float(blk, ip - 1, 1, xx(2), units_inp%length)
         call parse_block_float(blk, ip - 1, 2, xx(3), units_inp%length)
-        pesrc%rcoords(1:mesh%sb%dim, ip) = xx(1:mesh%sb%dim)
+        this%rcoords(1:mesh%sb%dim, ip) = xx(1:mesh%sb%dim)
       end do
       call parse_block_end(blk)
 
-    else ! pesrc%sphgrid == .true.
+    else ! this%sphgrid == .true.
 
       message(1) = 'Info: Initializing spherical grid.'
       call messages_info(1)
 
       ! initializing spherical grid
       ip = 0
-      do ith = 0, pesrc%nstepstheta
+      do ith = 0, this%nstepstheta
         if(ith == 0) then
-          theta = pesrc%thetamin     ! pi/2 for 1d and 2d. zero for 3d.
+          theta = this%thetamin     ! pi/2 for 1d and 2d. zero for 3d.
         else
-          theta = ith * M_PI / pesrc%nstepstheta
+          theta = ith * M_PI / this%nstepstheta
         end if
-        do iph = 0, pesrc%nstepsphi - 1
+        do iph = 0, this%nstepsphi - 1
           if(iph == 0) then
             phi = M_ZERO
           else
-            phi = iph * M_TWO * M_PI / pesrc%nstepsphi
+            phi = iph * M_TWO * M_PI / this%nstepsphi
           end if
           ip = ip + 1
-                               pesrc%rcoords(1, ip) = radius * cos(phi) * sin(theta)
-          if(mesh%sb%dim >= 2) pesrc%rcoords(2, ip) = radius * sin(phi) * sin(theta)
-          if(mesh%sb%dim == 3) pesrc%rcoords(3, ip) = radius * cos(theta)
+                               this%rcoords(1, ip) = radius * cos(phi) * sin(theta)
+          if(mesh%sb%dim >= 2) this%rcoords(2, ip) = radius * sin(phi) * sin(theta)
+          if(mesh%sb%dim == 3) this%rcoords(3, ip) = radius * cos(theta)
           if(theta == M_ZERO .or. theta == M_PI) exit
         end do
       end do
 
     end if
 
-    SAFE_ALLOCATE(pesrc%wf(1:st%nst, 1:st%d%dim, 1:st%d%nik, 1:pesrc%npoints, 0:save_iter-1))
+    SAFE_ALLOCATE(this%wf(1:st%nst, 1:st%d%dim, 1:st%d%nik, 1:this%npoints, 0:save_iter-1))
 
-    if(pesrc%recipe == M_PHASE) then
-      SAFE_ALLOCATE(pesrc%dq(1:pesrc%npoints, 0:save_iter-1))
-      SAFE_ALLOCATE(pesrc%domega(0:save_iter-1))
-      pesrc%dq = M_ZERO
-      pesrc%domega = M_ZERO
+    if(this%recipe == M_PHASE) then
+      SAFE_ALLOCATE(this%dq(1:this%npoints, 0:save_iter-1))
+      SAFE_ALLOCATE(this%domega(0:save_iter-1))
+      this%dq = M_ZERO
+      this%domega = M_ZERO
     end if
 
-    if(pesrc%onfly) then
-      pesrc%nomega = nint(pesrc%omegamax/pesrc%delomega)
-      SAFE_ALLOCATE(pesrc%wfft(1:st%nst, 1:st%d%dim, 1:st%d%nik, 1:pesrc%npoints, 1:pesrc%nomega))
-      pesrc%wfft = M_z0
+    if(this%onfly) then
+      this%nomega = nint(this%omegamax/this%delomega)
+      SAFE_ALLOCATE(this%wfft(1:st%nst, 1:st%d%dim, 1:st%d%nik, 1:this%npoints, 1:this%nomega))
+      this%wfft = M_z0
     end if
 
-    pesrc%save_iter = save_iter
+    this%save_iter = save_iter
 
-    POP_SUB(PES_rc_init)
-  end subroutine PES_rc_init
+    POP_SUB(pes_spm_init)
+  end subroutine pes_spm_init
 
 
   ! ---------------------------------------------------------
-  subroutine PES_rc_end(pesrc)
-    type(PES_rc_t), intent(inout) :: pesrc
+  subroutine pes_spm_end(this)
+    type(pes_spm_t), intent(inout) :: this
 
-    PUSH_SUB(PES_rc_end)
+    PUSH_SUB(pes_spm_end)
 
-    SAFE_DEALLOCATE_P(pesrc%wf)
-    SAFE_DEALLOCATE_P(pesrc%rcoords)
+    SAFE_DEALLOCATE_P(this%wf)
+    SAFE_DEALLOCATE_P(this%rcoords)
 
-    SAFE_DEALLOCATE_P(pesrc%wfft)
+    SAFE_DEALLOCATE_P(this%wfft)
 
-    SAFE_DEALLOCATE_P(pesrc%dq)
-    SAFE_DEALLOCATE_P(pesrc%domega)
+    SAFE_DEALLOCATE_P(this%dq)
+    SAFE_DEALLOCATE_P(this%domega)
 
-    POP_SUB(PES_rc_end)
-  end subroutine PES_rc_end
+    POP_SUB(pes_spm_end)
+  end subroutine pes_spm_end
 
 
   ! ---------------------------------------------------------
-  subroutine PES_rc_calc(pesrc, st, mesh, dt, iter, hm)
-    type(PES_rc_t),      intent(inout) :: pesrc
+  subroutine pes_spm_calc(this, st, mesh, dt, iter, hm)
+    type(pes_spm_t),     intent(inout) :: this
     type(states_t),      intent(in)    :: st
     type(mesh_t),        intent(in)    :: mesh
     FLOAT,               intent(in)    :: dt
@@ -358,9 +358,9 @@ contains
     integer            :: iom
     CMPLX, allocatable :: interp_values(:)
 
-    PUSH_SUB(PES_rc_calc)
+    PUSH_SUB(pes_spm_calc)
 
-    ii = mod(iter-1, pesrc%save_iter)
+    ii = mod(iter-1, this%save_iter)
 
     stst   = st%st_start
     stend  = st%st_end
@@ -369,56 +369,56 @@ contains
     dim    = st%d%dim
 
     SAFE_ALLOCATE(psistate(1:mesh%np_part))
-    SAFE_ALLOCATE(interp_values(1:pesrc%npoints))
+    SAFE_ALLOCATE(interp_values(1:this%npoints))
 
-    if(pesrc%onfly) then
-      SAFE_ALLOCATE(wfftact(1:st%nst, dim, 1:st%d%nik, 1:pesrc%npoints, 1:pesrc%nomega))
+    if(this%onfly) then
+      SAFE_ALLOCATE(wfftact(1:st%nst, dim, 1:st%d%nik, 1:this%npoints, 1:this%nomega))
       wfftact = M_z0
     endif
 
-    if(pesrc%recipe == M_PHASE) then
-      SAFE_ALLOCATE(phasefac(1:pesrc%npoints))
+    if(this%recipe == M_PHASE) then
+      SAFE_ALLOCATE(phasefac(1:this%npoints))
     end if
 
     ! needed for allreduce, otherwise it will take values from previous cycle
-    pesrc%wf(:,:,:,:,ii) = M_z0
+    this%wf(:,:,:,:,ii) = M_z0
 
     do ik = kptst, kptend 
       do ist = stst, stend
         do idim = 1, dim
           call states_get_state(st, mesh, idim, ist, ik, psistate(1:mesh%np_part))
-          call mesh_interpolation_evaluate(pesrc%interp, pesrc%npoints, psistate(1:mesh%np_part), &
-            pesrc%rcoords(1:mesh%sb%dim, 1:pesrc%npoints), interp_values(1:pesrc%npoints))
-          pesrc%wf(ist, idim, ik, :, ii) = interp_values(:)
+          call mesh_interpolation_evaluate(this%interp, this%npoints, psistate(1:mesh%np_part), &
+            this%rcoords(1:mesh%sb%dim, 1:this%npoints), interp_values(1:this%npoints))
+          this%wf(ist, idim, ik, :, ii) = interp_values(:)
         end do
       end do
     end do
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
 #if defined(HAVE_MPI)
       ! interpolated values have already been communicated over domains
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, pesrc%wf(:,:,:,:,ii))
+      call comm_allreduce(st%st_kpt_mpi_grp%comm, this%wf(:,:,:,:,ii))
 #endif
     end if
 
-    if(pesrc%recipe == M_PHASE) then
-      call pes_rc_calc_rcphase(pesrc, mesh, iter, dt, hm, ii)
+    if(this%recipe == M_PHASE) then
+      call pes_spm_calc_rcphase(this, mesh, iter, dt, hm, ii)
     end if
 
-    if(pesrc%onfly) then
-      do iom = 1, pesrc%nomega
-        omega = iom*pesrc%delomega
+    if(this%onfly) then
+      do iom = 1, this%nomega
+        omega = iom*this%delomega
         rawfac = exp(M_zI * omega * iter * dt) * dt
 
-        select case(pesrc%recipe)
+        select case(this%recipe)
         case(M_RAW)
-          wfftact(stst:stend, 1:dim, kptst:kptend, :, iom) = pesrc%wf(stst:stend, 1:dim, kptst:kptend, :, ii) * rawfac
+          wfftact(stst:stend, 1:dim, kptst:kptend, :, iom) = this%wf(stst:stend, 1:dim, kptst:kptend, :, ii) * rawfac
         case(M_PHASE)
-          phasefac(:) = exp(M_zI * (pesrc%domega(ii) - sqrt(M_TWO * omega) * pesrc%dq(:, ii)))
+          phasefac(:) = exp(M_zI * (this%domega(ii) - sqrt(M_TWO * omega) * this%dq(:, ii)))
 
           do ik = kptst, kptend
             do ist = stst, stend
               do idim = 1, dim
-                wfftact(ist, idim, ik, :, iom) = pesrc%wf(ist, idim, ik, :, ii) * phasefac(:) * rawfac
+                wfftact(ist, idim, ik, :, iom) = this%wf(ist, idim, ik, :, ii) * phasefac(:) * rawfac
               end do
             end do
           end do
@@ -430,7 +430,7 @@ contains
         end if
       end do
 
-      pesrc%wfft = pesrc%wfft + wfftact
+      this%wfft = this%wfft + wfftact
     end if
 
     SAFE_DEALLOCATE_A(psistate)
@@ -439,16 +439,16 @@ contains
 
     SAFE_DEALLOCATE_A(wfftact)
 
-    POP_SUB(PES_rc_calc)
-  end subroutine PES_rc_calc
+    POP_SUB(pes_spm_calc)
+  end subroutine pes_spm_calc
 
 
   ! ---------------------------------------------------------
-  subroutine PES_rc_output(pesrc, st, iter, dt)
-    type(PES_rc_t), intent(in) :: pesrc
-    type(states_t), intent(in) :: st
-    integer,        intent(in) :: iter
-    FLOAT,          intent(in) :: dt
+  subroutine pes_spm_output(this, st, iter, dt)
+    type(pes_spm_t), intent(in) :: this
+    type(states_t),  intent(in) :: st
+    integer,         intent(in) :: iter
+    FLOAT,           intent(in) :: dt
 
     integer            :: ip, ii, jj, ik, ist, idim, iom, iph, ith, iphi
     integer            :: iunit, iunitone, iunittwo
@@ -460,20 +460,20 @@ contains
     integer            :: save_iter
     FLOAT              :: theta, phi
 
-    PUSH_SUB(PES_rc_output)
+    PUSH_SUB(pes_spm_output)
 
-    save_iter = pesrc%save_iter
+    save_iter = this%save_iter
 
-    if(pesrc%onfly) then
-      SAFE_ALLOCATE(wffttot(1:pesrc%nomega, 1:pesrc%npoints))
+    if(this%onfly) then
+      SAFE_ALLOCATE(wffttot(1:this%nomega, 1:this%npoints))
       wffttot = M_ZERO
 
       ! calculate total spectrum
-      do iom = 1, pesrc%nomega
+      do iom = 1, this%nomega
         do ik = 1, st%d%nik
           do ist = 1, st%nst
             do idim = 1, st%d%dim
-              wffttot(iom, :) = real(pesrc%wfft(ist, idim, ik, :, iom))**2 + aimag(pesrc%wfft(ist, idim, ik,:, iom))**2 &
+              wffttot(iom, :) = real(this%wfft(ist, idim, ik, :, iom))**2 + aimag(this%wfft(ist, idim, ik,:, iom))**2 &
                 + wffttot(iom, :)
             end do
           end do
@@ -481,13 +481,13 @@ contains
       end do
     end if
 
-    if(.not. pesrc%sphgrid .or. in_debug_mode) then   ! too much output for spherical grid
-      do ip = 1, pesrc%npoints
+    if(.not. this%sphgrid .or. in_debug_mode) then   ! too much output for spherical grid
+      do ip = 1, this%npoints
         write(filenr, '(i4.4)') ip
    
-        iunitone = io_open('td.general/'//'PES_rc.'//filenr//'.wavefunctions.out', action='write', position='append')
-        if(pesrc%recipe == M_PHASE) &
-          iunittwo = io_open('td.general/'//'PES_rc.'//filenr//'.phase.out', action='write', position='append')
+        iunitone = io_open('td.general/'//'PES_spm.'//filenr//'.wavefunctions.out', action='write', position='append')
+        if(this%recipe == M_PHASE) &
+          iunittwo = io_open('td.general/'//'PES_spm.'//filenr//'.phase.out', action='write', position='append')
    
         do ii = 1, save_iter - mod(iter, save_iter)
           jj = iter - save_iter + ii + mod(save_iter - mod(iter, save_iter), save_iter)
@@ -495,7 +495,7 @@ contains
           do ik = 1, st%d%nik
             do ist = 1, st%nst
               do idim = 1, st%d%dim
-                vfu = units_from_atomic(sqrt(units_out%length**(-3)), pesrc%wf(ist, idim, ik, ip, ii-1))
+                vfu = units_from_atomic(sqrt(units_out%length**(-3)), this%wf(ist, idim, ik, ip, ii-1))
                 write(iunitone, '(1x,e18.10E3,1x,e18.10E3)', advance='no') &
                   real(vfu),  aimag(vfu) 
               end do
@@ -503,26 +503,26 @@ contains
           end do
           write(iunitone, '(1x)', advance='yes')
 
-          if(pesrc%recipe == M_PHASE) then
+          if(this%recipe == M_PHASE) then
             write(iunittwo, '(e17.10)', advance='no') units_from_atomic(units_inp%time, jj * dt)
             write(iunittwo, '(1x,e18.10E3,1x,e18.10E3)', advance='no') &
-              pesrc%domega(ii-1), pesrc%dq(ip, ii-1)
+              this%domega(ii-1), this%dq(ip, ii-1)
             write(iunittwo, '(1x)', advance='yes')
           end if
         end do
         call io_close(iunitone)
-        if(pesrc%recipe == M_PHASE) call io_close(iunittwo)
+        if(this%recipe == M_PHASE) call io_close(iunittwo)
 
-        if(pesrc%onfly) then
-          iunit = io_open('td.general/'//'PES_rc.'//filenr//'.spectrum.out', action='write', position='rewind')
+        if(this%onfly) then
+          iunit = io_open('td.general/'//'PES_spm.'//filenr//'.spectrum.out', action='write', position='rewind')
           write(iunit, '(a44)') '# frequency, total spectrum, orbital spectra'
-          do iom = 1, pesrc%nomega 
-            omega = iom*pesrc%delomega
+          do iom = 1, this%nomega 
+            omega = iom*this%delomega
             write(iunit, '(e17.10, 1x, e17.10)', advance='no') omega, wffttot(iom, ip)
             do ik = 1, st%d%nik
               do ist = 1, st%nst 
                 do idim = 1, st%d%dim
-                  wfu = real(pesrc%wfft(ist, idim, ik, ip, iom))**2 + aimag(pesrc%wfft(ist, idim, ik, ip, iom))**2
+                  wfu = real(this%wfft(ist, idim, ik, ip, iom))**2 + aimag(this%wfft(ist, idim, ik, ip, iom))**2
                   write(iunit,'(1x,e18.10e3)', advance='no') wfu
                 end do
               end do
@@ -535,46 +535,46 @@ contains
       end do
     end if
 
-    if(pesrc%onfly .and. pesrc%sphgrid) then
-      iunit = io_open('td.general/'//'PES_rc.distribution.out', action='write', position='rewind')
+    if(this%onfly .and. this%sphgrid) then
+      iunit = io_open('td.general/'//'PES_spm.distribution.out', action='write', position='rewind')
       write(iunit, '(a33)') '# omega, theta, phi, distribution'
 
-      do iom = 1, pesrc%nomega
-        omega = iom * pesrc%delomega
+      do iom = 1, this%nomega
+        omega = iom * this%delomega
         ip = 0
-        do ith = 0, pesrc%nstepstheta
+        do ith = 0, this%nstepstheta
           if(ith == 0) then
-            theta = pesrc%thetamin     ! pi/2 for 1d and 2d. zero for 3d.
+            theta = this%thetamin     ! pi/2 for 1d and 2d. zero for 3d.
           else
-            theta = ith * M_PI / pesrc%nstepstheta
+            theta = ith * M_PI / this%nstepstheta
           end if
-          do iph = 0, pesrc%nstepsphi - 1
+          do iph = 0, this%nstepsphi - 1
             ip = ip + 1
             if(iph == 0) then
               wffttotsave = wffttot(iom, ip)
               phi = M_ZERO
             else
-              phi = iph * M_TWO * M_PI / pesrc%nstepsphi
+              phi = iph * M_TWO * M_PI / this%nstepsphi
             end if
             write(iunit,'(5(1x,e18.10E3))') omega, theta, phi, wffttot(iom, ip)
 
             ! just repeat the result for output
-            if(iph == (pesrc%nstepsphi - 1)) then
+            if(iph == (this%nstepsphi - 1)) then
               write(iunit,'(5(1x,e18.10E3))') omega, theta, M_TWO * M_PI, wffttotsave
             end if
              
             ! just repeat the result for output
             if(theta == M_ZERO .or. theta == M_PI) then
-              do iphi = 1, pesrc%nstepsphi
-                phi = iphi * M_TWO * M_PI / pesrc%nstepsphi
+              do iphi = 1, this%nstepsphi
+                phi = iphi * M_TWO * M_PI / this%nstepsphi
                 write(iunit,'(5(1x,e18.10E3))') omega, theta, phi, wffttot(iom, ip)
               end do
               exit
             end if
           end do
-          if(pesrc%nstepsphi > 0) write(iunit, '(1x)', advance='yes')
+          if(this%nstepsphi > 0) write(iunit, '(1x)', advance='yes')
         end do
-        if(pesrc%nstepsphi == 0) write(iunit, '(1x)', advance='yes')
+        if(this%nstepsphi == 0) write(iunit, '(1x)', advance='yes')
       end do
       call io_close(iunit)
 
@@ -582,29 +582,29 @@ contains
 
     SAFE_DEALLOCATE_A(wffttot)
 
-    POP_SUB(PES_rc_output)
-  end subroutine PES_rc_output
+    POP_SUB(pes_spm_output)
+  end subroutine pes_spm_output
 
   ! ---------------------------------------------------------
-  subroutine PES_rc_init_write(pesrc, mesh, st)
-    type(PES_rc_t), intent(in) :: pesrc
-    type(mesh_t),   intent(in) :: mesh
-    type(states_t), intent(in) :: st
+  subroutine pes_spm_init_write(this, mesh, st)
+    type(PES_spm_t), intent(in) :: this
+    type(mesh_t),    intent(in) :: mesh
+    type(states_t),  intent(in) :: st
 
     integer          :: ip,ik,ist,idim,iunit
     FLOAT            :: xx(MAX_DIM)
     character(len=4) :: filenr
 
-    PUSH_SUB(PES_rc_init_write)
+    PUSH_SUB(pes_spm_init_write)
 
     xx = M_ZERO
     if(mpi_grp_is_root(mpi_world)) then
-      if(.not. pesrc%sphgrid .or. in_debug_mode) then   ! too much output for spherical grid
-        do ip = 1, pesrc%npoints
+      if(.not. this%sphgrid .or. in_debug_mode) then   ! too much output for spherical grid
+        do ip = 1, this%npoints
           write(filenr, '(i4.4)') ip
    
-          iunit = io_open('td.general/'//'PES_rc.'//filenr//'.wavefunctions.out', action='write')
-          xx(1:mesh%sb%dim) = pesrc%rcoords(1:mesh%sb%dim, ip)
+          iunit = io_open('td.general/'//'PES_spm.'//filenr//'.wavefunctions.out', action='write')
+          xx(1:mesh%sb%dim) = this%rcoords(1:mesh%sb%dim, ip)
           write(iunit,'(a1)') '#'
           write(iunit, '(a7,f17.6,a1,f17.6,a1,f17.6,5a)') &
             '# R = (',xx(1),' ,',xx(2),' ,',xx(3), &
@@ -624,8 +624,8 @@ contains
    
           call io_close(iunit)
    
-          if(pesrc%recipe == M_PHASE) then
-            iunit = io_open('td.general/'//'PES_rc.'//filenr//'.phase.out', action='write')
+          if(this%recipe == M_PHASE) then
+            iunit = io_open('td.general/'//'PES_spm.'//filenr//'.phase.out', action='write')
             write(iunit,'(a24)') '# time, dq(t), dOmega(t)'
             call io_close(iunit)
           end if
@@ -633,103 +633,103 @@ contains
       end if
     end if
 
-    POP_SUB(PES_rc_init_write)
-  end subroutine PES_rc_init_write
+    POP_SUB(pes_spm_init_write)
+  end subroutine pes_spm_init_write
 
   ! ---------------------------------------------------------
-  subroutine pes_rc_dump(restart, pesrc, st, ierr)
+  subroutine pes_spm_dump(restart, this, st, ierr)
     type(restart_t), intent(in)  :: restart    
-    type(pes_rc_t),  intent(in)  :: pesrc
+    type(pes_spm_t), intent(in)  :: this
     type(states_t),  intent(in)  :: st
     integer,         intent(out) :: ierr
     
     integer :: err, iunit
     
-    PUSH_SUB(pes_rc_dump)
+    PUSH_SUB(pes_spm_dump)
 
     err = 0 
     ierr = 0
     
     if (restart_skip(restart)) then
-      POP_SUB(pes_rc_dump)
+      POP_SUB(pes_spm_dump)
       return
     end if
     
     if (in_debug_mode) then
-      message(1) = "Debug: Writing pes_rc restart."
+      message(1) = "Debug: Writing PES_spm restart."
       call messages_info(1)
     end if
 
-    if(pesrc%onfly) then 
-      call zrestart_write_binary(restart, 'pesrc', pesrc%npoints*st%d%dim*st%nst*st%d%nik*pesrc%nomega, &
-        pesrc%wfft, err) 
+    if(this%onfly) then 
+      call zrestart_write_binary(restart, 'this', this%npoints*st%d%dim*st%nst*st%d%nik*this%nomega, &
+        this%wfft, err) 
     end if
 
-    if(pesrc%recipe == M_PHASE) then
+    if(this%recipe == M_PHASE) then
       iunit = restart_open(restart, 'rcphase')
-      write(iunit, *)  pesrc%domega(:), pesrc%dq(:,:)
+      write(iunit, *)  this%domega(:), this%dq(:,:)
       call restart_close(restart, iunit)
     end if
 
     if (err /= 0) ierr = ierr + 1
     
     if (in_debug_mode) then
-      message(1) = "Debug: Writing pes_rc restart done."
+      message(1) = "Debug: Writing PES_spm restart done."
       call messages_info(1)
     end if
     
-    POP_SUB(pes_rc_dump)
-  end subroutine pes_rc_dump
+    POP_SUB(pes_spm_dump)
+  end subroutine pes_spm_dump
 
   ! ---------------------------------------------------------
-  subroutine pes_rc_load(restart, pesrc, st, ierr)
+  subroutine pes_spm_load(restart, this, st, ierr)
     type(restart_t), intent(in)    :: restart    
-    type(pes_rc_t),  intent(inout) :: pesrc
+    type(pes_spm_t), intent(inout) :: this
     type(states_t),  intent(inout) :: st
     integer,         intent(out)   :: ierr
     
     integer :: err, iunit
     
-    PUSH_SUB(pes_rc_load)
+    PUSH_SUB(pes_spm_load)
     
     err = 0
     ierr = 0
     
     if (restart_skip(restart)) then
       ierr = -1
-      POP_SUB(pes_rc_load)
+      POP_SUB(pes_spm_load)
       return
     end if
     
     if (in_debug_mode) then
-      message(1) = "Debug: Reading pes_rc restart."
+      message(1) = "Debug: Reading PES_spm restart."
       call messages_info(1)
     end if
 
-    if(pesrc%onfly) then
-      call zrestart_read_binary(restart, 'pesrc', pesrc%npoints*st%d%dim*st%nst*st%d%nik*pesrc%nomega, &
-        pesrc%wfft, err)
+    if(this%onfly) then
+      call zrestart_read_binary(restart, 'this', this%npoints*st%d%dim*st%nst*st%d%nik*this%nomega, &
+        this%wfft, err)
     end if
 
-    if(pesrc%recipe == M_PHASE) then
+    if(this%recipe == M_PHASE) then
       iunit = restart_open(restart, 'rcphase')
-      read(iunit, *)  pesrc%domega(:), pesrc%dq(:,:)
+      read(iunit, *)  this%domega(:), this%dq(:,:)
       call restart_close(restart, iunit)
     end if
 
     if (err /= 0) ierr = ierr + 1
     
     if(in_debug_mode) then
-      message(1) = "Debug: Reading pes_rc restart done."
+      message(1) = "Debug: Reading PES_spm restart done."
       call messages_info(1)
     end if
     
-    POP_SUB(pes_rc_load)
-  end subroutine pes_rc_load 
+    POP_SUB(pes_spm_load)
+  end subroutine pes_spm_load 
 
   ! ---------------------------------------------------------
-  subroutine PES_rc_calc_rcphase(pesrc, mesh, iter, dt, hm, ii)
-    type(PES_rc_t),      intent(inout) :: pesrc
+  subroutine pes_spm_calc_rcphase(this, mesh, iter, dt, hm, ii)
+    type(pes_spm_t),     intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
     type(hamiltonian_t), intent(in)    :: hm
     integer,             intent(in)    :: iter
@@ -740,7 +740,7 @@ contains
     FLOAT   :: vp(1:MAX_DIM)
     FLOAT   :: rr
 
-    PUSH_SUB(PES_rc_calc_rcphase)
+    PUSH_SUB(pes_spm_calc_rcphase)
 
     dim = mesh%sb%dim
 
@@ -751,21 +751,21 @@ contains
     vp(1:dim) = -vp(1:dim)
 
     iprev = ii - 1
-    if(ii == 0) iprev = pesrc%save_iter - 1
+    if(ii == 0) iprev = this%save_iter - 1
 
-    do ip = 1, pesrc%npoints
-      rr = sqrt(dot_product(pesrc%rcoords(1:dim, ip), pesrc%rcoords(1:dim, ip)))
-      pesrc%dq(ip, ii) = pesrc%dq(ip, iprev) &
-        + dot_product(pesrc%rcoords(1:dim, ip), vp(1:dim)) / (P_C * rr) * dt
+    do ip = 1, this%npoints
+      rr = sqrt(dot_product(this%rcoords(1:dim, ip), this%rcoords(1:dim, ip)))
+      this%dq(ip, ii) = this%dq(ip, iprev) &
+        + dot_product(this%rcoords(1:dim, ip), vp(1:dim)) / (P_C * rr) * dt
     end do
 
-    pesrc%domega(ii) = pesrc%domega(iprev) &
+    this%domega(ii) = this%domega(iprev) &
       + dot_product(vp(1:dim), vp(1:dim)) / (M_TWO * P_C**M_TWO) * dt
 
-    POP_SUB(PES_rc_calc_rcphase)
-  end subroutine PES_rc_calc_rcphase
+    POP_SUB(pes_spm_calc_rcphase)
+  end subroutine pes_spm_calc_rcphase
 
-end module pes_rc_m
+end module pes_spm_m
 
 !! Local Variables:
 !! mode: f90

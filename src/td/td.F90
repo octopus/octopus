@@ -38,7 +38,7 @@ module td_m
   use modelmb_exchange_syms_m
   use mpi_m
   use parser_m
-  use PES_m
+  use pes_m
   use poisson_m
   use potential_interpolation_m
   use profiling_m
@@ -237,7 +237,7 @@ contains
     end if
 
     ! now the photoelectron stuff
-    call PES_init(td%PESv, sys%gr%mesh, sys%gr%sb, sys%st, sys%outp%restart_write_interval, hm, td%max_iter, td%dt)
+    call pes_init(td%pesv, sys%gr%mesh, sys%gr%sb, sys%st, sys%outp%restart_write_interval, hm, td%max_iter, td%dt)
 
     !%Variable TDDynamics
     !%Type integer
@@ -317,7 +317,7 @@ contains
 
     PUSH_SUB(td_end)
 
-    call PES_end(td%PESv)
+    call pes_end(td%pesv)
     call propagator_end(td%tr)  ! clean the evolution method
     call ion_dynamics_end(td%ions)
 
@@ -421,7 +421,7 @@ contains
     call messages_print_stress(stdout, "Time-Dependent Simulation")
     call print_header()
 
-    if(td%pesv%calc_rc .or. td%pesv%calc_mask .and. fromScratch) then
+    if(td%pesv%calc_spm .or. td%pesv%calc_mask .and. fromScratch) then
       call pes_init_write(td%pesv,gr%mesh,st)
     end if
 
@@ -464,7 +464,7 @@ contains
       end select
 
       !Photoelectron stuff 
-      if(td%pesv%calc_rc .or. td%pesv%calc_mask .or. td%pesv%calc_flux) &
+      if(td%pesv%calc_spm .or. td%pesv%calc_mask .or. td%pesv%calc_flux) &
         call pes_calc(td%pesv, gr%mesh, st, td%dt, iter, td%max_iter, gr, hm)
 
       call td_write_iter(write_handler, gr, st, hm, geo, hm%ep%kick, td%dt, iter)
@@ -959,7 +959,7 @@ contains
     if (err2 /= 0) ierr = ierr + 2
 
     ! read PES restart
-    if (td%pesv%calc_rc .or. td%pesv%calc_mask .or. td%pesv%calc_flux) then
+    if (td%pesv%calc_spm .or. td%pesv%calc_mask .or. td%pesv%calc_flux) then
       call pes_load(restart, td%pesv, st, gr%mesh, err)
       if (err /= 0) ierr = ierr + 4
     end if
