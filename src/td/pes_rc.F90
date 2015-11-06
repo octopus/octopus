@@ -52,10 +52,8 @@ module pes_rc_m
 
   type PES_rc_t
     integer                    :: npoints                   !< how many points we store the wf
-    integer, pointer           :: points(:)                 !< which points to use (local index)
     FLOAT, pointer             :: rcoords(:,:)              !< coordinates of the sample points
     CMPLX, pointer             :: wf(:,:,:,:,:)   => NULL() !< wavefunctions at sample points
-    integer, pointer           :: rankmin(:)                !< partition of the mesh containing the points
     FLOAT, pointer             :: dq(:,:)         => NULL() !< part 1 of Volkov phase (recipe phase) 
     FLOAT, pointer             :: domega(:)       => NULL() !< part 2 of Volkov phase (recipe phase)
     integer                    :: recipe                    !< type of calculation (RAW/PHASE)
@@ -117,7 +115,7 @@ contains
     end if
 
     if(pesrc%sphgrid) then
-      message(1) = 'Info: Using spherical grid with interpolation.'
+      message(1) = 'Info: Using spherical grid.'
     else
       message(1) = 'Info: Using PhotoElectronSpectrumPoints from block.'
     end if
@@ -201,7 +199,7 @@ contains
     !%Type float
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
-    !% The radius of the sphere for the interpolation (if no PhotoElectronSpectrumPoints
+    !% The radius of the sphere for the spherical grid (if no PhotoElectronSpectrumPoints
     !% are given).
     !%End
     if(pesrc%sphgrid) then
@@ -223,11 +221,11 @@ contains
       end if
     end if
 
+    call mesh_interpolation_init(pesrc%interp, mesh)
+
     if(.not. pesrc%sphgrid) then
       pesrc%npoints = parse_block_n(blk)
     else
-      call mesh_interpolation_init(pesrc%interp, mesh)
-
       ! setting values for spherical grid 
       select case(mesh%sb%dim)
       case(1)
@@ -259,8 +257,9 @@ contains
     SAFE_ALLOCATE(pesrc%rcoords(1:mesh%sb%dim, 1:pesrc%npoints))
 
     if(.not. pesrc%sphgrid) then
-      SAFE_ALLOCATE(pesrc%points(1:pesrc%npoints))
-      SAFE_ALLOCATE(pesrc%rankmin(1:pesrc%npoints))
+
+      message(1) = 'Info: Reading sample points.'
+      call messages_info(1)
 
       ! read points from input file
       do ip = 1, pesrc%npoints
@@ -270,15 +269,6 @@ contains
         pesrc%rcoords(1:mesh%sb%dim, ip) = xx(1:mesh%sb%dim)
       end do
       call parse_block_end(blk)
-
-      message(1) = 'Info: Calculating nearest points.'
-      call messages_info(1)
-
-      do ip = 1, pesrc%npoints
-        ! nearest point
-        pesrc%points(ip)  = mesh_nearest_point(mesh, pesrc%rcoords(1:mesh%sb%dim, ip), dmin, rankmin)
-        pesrc%rankmin(ip) = rankmin
-      end do
 
     else ! pesrc%sphgrid == .true.
 
@@ -336,9 +326,7 @@ contains
 
     PUSH_SUB(PES_rc_end)
 
-    SAFE_DEALLOCATE_P(pesrc%points)
     SAFE_DEALLOCATE_P(pesrc%wf)
-    SAFE_DEALLOCATE_P(pesrc%rankmin)
     SAFE_DEALLOCATE_P(pesrc%rcoords)
 
     SAFE_DEALLOCATE_P(pesrc%wfft)
@@ -359,7 +347,7 @@ contains
     integer,             intent(in)    :: iter
     type(hamiltonian_t), intent(in)    :: hm
 
-    CMPLX, allocatable :: psi(:,:,:,:), psistate(:), wfftact(:,:,:,:,:)
+    CMPLX, allocatable :: psistate(:), wfftact(:,:,:,:,:)
     integer            :: ip, ii
     integer            :: dim, stst, stend, kptst, kptend
     integer            :: ik, ist, idim
@@ -380,12 +368,8 @@ contains
     kptend = st%d%kpt%end
     dim    = st%d%dim
 
-    if(pesrc%sphgrid) then
-      SAFE_ALLOCATE(psistate(1:mesh%np_part))
-      SAFE_ALLOCATE(interp_values(1:pesrc%npoints))
-    else
-      SAFE_ALLOCATE(psi(1:st%nst, dim, 1:1, 1:st%d%nik))
-    end if
+    SAFE_ALLOCATE(psistate(1:mesh%np_part))
+    SAFE_ALLOCATE(interp_values(1:pesrc%npoints))
 
     if(pesrc%onfly) then
       SAFE_ALLOCATE(wfftact(1:st%nst, dim, 1:st%d%nik, 1:pesrc%npoints, 1:pesrc%nomega))
@@ -399,46 +383,20 @@ contains
     ! needed for allreduce, otherwise it will take values from previous cycle
     pesrc%wf(:,:,:,:,ii) = M_z0
 
-    if(pesrc%sphgrid) then
-      do ik = kptst, kptend 
-        do ist = stst, stend
-          do idim = 1, dim
-            call states_get_state(st, mesh, idim, ist, ik, psistate(1:mesh%np_part))
-            call mesh_interpolation_evaluate(pesrc%interp, pesrc%npoints, psistate(1:mesh%np_part), &
-              pesrc%rcoords(1:mesh%sb%dim, 1:pesrc%npoints), interp_values(1:pesrc%npoints))
-            pesrc%wf(ist, idim, ik, :, ii) = interp_values(:)
-          end do
+    do ik = kptst, kptend 
+      do ist = stst, stend
+        do idim = 1, dim
+          call states_get_state(st, mesh, idim, ist, ik, psistate(1:mesh%np_part))
+          call mesh_interpolation_evaluate(pesrc%interp, pesrc%npoints, psistate(1:mesh%np_part), &
+            pesrc%rcoords(1:mesh%sb%dim, 1:pesrc%npoints), interp_values(1:pesrc%npoints))
+          pesrc%wf(ist, idim, ik, :, ii) = interp_values(:)
         end do
       end do
-      if(st%parallel_in_states .or. st%d%kpt%parallel) then
+    end do
+    if(st%parallel_in_states .or. st%d%kpt%parallel) then
 #if defined(HAVE_MPI)
-        ! interpolated values have already been communicated over domains
-        call comm_allreduce(st%st_kpt_mpi_grp%comm, pesrc%wf(:,:,:,:,ii))
-#endif
-      end if
-    else ! pesrc%sphgrid == .false.
-
-      contains_ip = .true.
-
-      do ip = 1, pesrc%npoints
-
-#if defined(HAVE_MPI)
-        if(mesh%parallel_in_domains) then
-          if(mesh%mpi_grp%rank  ==  pesrc%rankmin(ip)) then ! needed if mesh%parallel_in_domains is true
-            contains_ip = .true.
-          else
-            contains_ip = .false.
-          end if
-        end if
-#endif
-
-        if(contains_ip) then
-          call states_get_points(st, pesrc%points(ip), pesrc%points(ip), psi)
-          pesrc%wf(stst:stend, dim, kptst:kptend, ip, ii) = psi(stst:stend, dim, 1, kptst:kptend)
-        end if
-      end do
-#if defined(HAVE_MPI)
-      call comm_allreduce(mpi_world%comm, pesrc%wf(:,:,:,:,ii))
+      ! interpolated values have already been communicated over domains
+      call comm_allreduce(st%st_kpt_mpi_grp%comm, pesrc%wf(:,:,:,:,ii))
 #endif
     end if
 
@@ -477,7 +435,6 @@ contains
 
     SAFE_DEALLOCATE_A(psistate)
     SAFE_DEALLOCATE_A(interp_values)
-    SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(phasefac)
 
     SAFE_DEALLOCATE_A(wfftact)
@@ -524,7 +481,7 @@ contains
       end do
     end if
 
-    if(.not. pesrc%sphgrid .or. in_debug_mode) then   ! too much output for interpolation
+    if(.not. pesrc%sphgrid .or. in_debug_mode) then   ! too much output for spherical grid
       do ip = 1, pesrc%npoints
         write(filenr, '(i4.4)') ip
    
@@ -642,7 +599,7 @@ contains
 
     xx = M_ZERO
     if(mpi_grp_is_root(mpi_world)) then
-      if(.not. pesrc%sphgrid .or. in_debug_mode) then   ! too much output for interpolation
+      if(.not. pesrc%sphgrid .or. in_debug_mode) then   ! too much output for spherical grid
         do ip = 1, pesrc%npoints
           write(filenr, '(i4.4)') ip
    

@@ -77,9 +77,7 @@ contains
     type(pes_rc_t), intent(out) :: this
     !
     PUSH_SUB(pes_rc_nullify)
-    this%points        =>null()
     this%wf            =>null()
-    this%rankmin       =>null()
     POP_SUB(pes_rc_nullify)
     return
   end subroutine pes_rc_nullify
