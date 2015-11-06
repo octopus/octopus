@@ -53,7 +53,8 @@ AC_DEFUN([AX_PATH_GSL],
     fi
 
     AC_MSG_RESULT($gsl_major_version.$gsl_minor_version.$gsl_micro_version)
-    if test $gsl_major_version -lt $min_gsl_major_version -o $gsl_minor_version -lt $min_gsl_minor_version; then
+    if test $gsl_major_version -lt $min_gsl_major_version -o \
+            $gsl_major_version -eq $min_gsl_major_version -a $gsl_minor_version -lt $min_gsl_minor_version; then
       ifelse([$4], , :, [$4])
     fi
 
