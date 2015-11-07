@@ -90,7 +90,7 @@ contains
     
     integer :: iter, icount, ip, ist, iatom
     FLOAT :: energy, energy_dif, energy_old, energy_occ, xpos, xneg, sum_charge, rr
-    FLOAT, allocatable :: species_charge_center(:)
+    FLOAT, allocatable :: species_charge_center(:), psi(:, :)
     logical :: conv
     
     PUSH_SUB(scf_rdmft)
@@ -133,18 +133,24 @@ contains
 
     !Localize the starting orbitals so that they decay with the HOMO energy
 
-    do ip = 1, gr%mesh%np
-      call mesh_r(gr%mesh, ip, rr, species_charge_center)
-      do ist = 1, st%nst
+    SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
+    
+    do ist = 1, st%nst
+      call states_get_state(st, gr%mesh, ist, 1, psi)
+      do ip = 1, gr%mesh%np
+        call mesh_r(gr%mesh, ip, rr, species_charge_center)
         if (st%eigenval(ist, 1) < M_ZERO) then
-          st%ddontusepsi(ip,1,ist,1) = st%ddontusepsi(ip,1,ist,1) * exp((-(sqrt(-M_TWO*st%eigenval(int(st%qtot*M_HALF),1))) & 
-                                + sqrt(-M_TWO*st%eigenval(ist,1)))*rr)
+          psi(ip, 1) = psi(ip, 1)&
+            *exp((-(sqrt(-M_TWO*st%eigenval(int(st%qtot*M_HALF), 1))) + sqrt(-M_TWO*st%eigenval(ist, 1)))*rr)
         else
-          st%ddontusepsi(ip,1,ist,1) = st%ddontusepsi(ip,1,ist,1) * exp(-(sqrt(-M_TWO*st%eigenval(int(st%qtot*M_HALF),1)))*rr)
+          psi(ip, 1) = psi(ip, 1)*exp(-(sqrt(-M_TWO*st%eigenval(int(st%qtot*M_HALF), 1)))*rr)
         end if
       end do
+      call states_set_state(st, gr%mesh, ist, 1, psi)
     end do
 
+    SAFE_DEALLOCATE_A(psi)
+    
     ! Orthogonalize the resulting orbitals
     call dstates_orthogonalization_full(st,gr%mesh,1)
 
