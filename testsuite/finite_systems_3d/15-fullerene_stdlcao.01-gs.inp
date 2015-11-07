@@ -1,4 +1,4 @@
-41;281;0cCalculationMode = gs
+CalculationMode = gs
 
 FromScratch = yes
 
@@ -82,3 +82,5 @@ ParStates = 2
 FilterPotentials = filter_none
 
 MixField = density
+
+ExperimentalFeatures = yes
