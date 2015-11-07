@@ -13,22 +13,23 @@ Enabled    : Yes
 Processors : 1
 Input      : 02-propagators.01-gs.inp
 Precision  : 1.0e-6
-match ; Initial energy ; GREPFIELD(static/info, 'Total       =', 3) ; -11.00353072
+match ; Initial energy ; GREPFIELD(static/info, 'Total       =', 3) ; -11.003530715
 
 Processors : 4
 Input      : 02-propagators.02-cnsparskit.inp
 Precision  : 1.0e-6
-match ; Forces [step  1] ; LINEFIELD(td.general/coordinates, -21, 15) ; 1.700891414518e-01
-match ; Forces [step 20] ; LINEFIELD(td.general/coordinates, -1, 15) ; 1.458982795902e-01
+match ; Forces [step  1] ; LINEFIELD(td.general/coordinates, -21, 15) ; 0.17008915222385
+match ; Forces [step 20] ; LINEFIELD(td.general/coordinates, -1, 15) ;  0.1458998393478
 
 Processors : 4
 Input      : 02-propagators.03-rungekutta2.inp
 Precision  : 1.0e-6
-match ; Forces [step  1] ; LINEFIELD(td.general/coordinates, -21, 15) ; 1.700891414518e-01
-match ; Forces [step 20] ; LINEFIELD(td.general/coordinates, -1, 15) ; 1.459099074503e-01
+match ; Forces [step  1] ; LINEFIELD(td.general/coordinates, -21, 15) ; 0.17008915222385
+match ; Forces [step 20] ; LINEFIELD(td.general/coordinates, -1, 15) ;  0.1459098720553
 
 Processors : 4
 Input      : 02-propagators.04-rungekutta4.inp
 Precision  : 1.0e-6
-match ; Forces [step  1] ; LINEFIELD(td.general/coordinates, -21, 15) ; 1.700891414518e-01
-match ; Forces [step 20] ; LINEFIELD(td.general/coordinates, -1, 15) ; 1.459099074503e-01
+match ; Forces [step  1] ; LINEFIELD(td.general/coordinates, -21, 15) ; 0.17008915222385 
+match ; Forces [step 20] ; LINEFIELD(td.general/coordinates, -1, 15) ;  0.14591124458305
+
