@@ -629,6 +629,6 @@ sub die255 {
 }
 
 sub skip_exit {
-    print "Status: skipped\n";
+    print "Status: skipped\n\n";
     exit 254;  
 }
