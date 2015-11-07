@@ -713,8 +713,13 @@ contains
     type(profile_t), intent(in) :: this
 
     PUSH_SUB(profile_throughput)
-    profile_throughput = this%op_count / this%total_time / CNST(1.0e6)
 
+    if(this%total_time > epsilon(this%total_time)) then
+      profile_throughput = this%op_count/this%total_time*CNST(1.0e-6)
+    else
+      profile_throughput = CNST(0.0)
+    end if
+      
     POP_SUB(profile_throughput)
   end function profile_throughput
 
@@ -724,7 +729,12 @@ contains
     type(profile_t), intent(in) :: this
 
     PUSH_SUB(profile_bandwidth)
-    profile_bandwidth = this%tr_count / (this%total_time*CNST(1024.0)**2)
+
+    if(this%total_time > epsilon(this%total_time)) then
+      profile_bandwidth = this%tr_count/(this%total_time*CNST(1024.0)**2)
+    else
+      profile_bandwidth = CNST(0.0)
+    end if
 
     POP_SUB(profile_bandwidth)
   end function profile_bandwidth
