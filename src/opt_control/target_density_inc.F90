@@ -26,11 +26,11 @@
     type(td_t),       intent(in)    :: td
     type(restart_t),  intent(inout) :: restart
 
-    integer             :: ip, ist, jst, cstr_dim(MAX_DIM), ib, idim, jj, no_constraint, no_ptpair
+    integer             :: ip, ist, jst, cstr_dim(MAX_DIM), ib, idim, jj, no_constraint, no_ptpair, iqn
     type(block_t)       :: blk
     FLOAT               :: psi_re, psi_im, xx(MAX_DIM), rr, fact, xend, xstart
     FLOAT, allocatable  :: xp(:), tmp_box(:, :)
-    CMPLX, allocatable  :: rotation_matrix(:, :)
+    CMPLX, allocatable  :: rotation_matrix(:, :), psi(:, :)
     type(states_t)      :: tmp_st
     character(len=1024) :: expression
 
@@ -81,24 +81,44 @@
           call states_copy(tmp_st, tg%st)
           call states_deallocate_wfns(tmp_st)
           call states_look_and_load(restart, tmp_st, gr)
-          SAFE_ALLOCATE(rotation_matrix(1:tg%st%nst, 1:tmp_st%nst))
+
+          SAFE_ALLOCATE(rotation_matrix(1:tmp_st%nst, 1:tmp_st%nst))
+
           rotation_matrix = M_z0
+
+          forall(ist = 1:tmp_st%nst) rotation_matrix(ist, ist) = CNST(1.0)
+          
           do ist = 1, tg%st%nst
             do jst = 1, parse_block_cols(blk, ist - 1)
-              call parse_block_cmplx(blk, ist - 1, jst - 1, rotation_matrix(ist, jst))
+              call parse_block_cmplx(blk, ist - 1, jst - 1, rotation_matrix(jst, ist))
             end do
           end do
-          if(states_are_real(tg%st)) then
-            call dstates_rotate(gr%mesh, tg%st, tmp_st, real(rotation_matrix, REAL_PRECISION))
-          else
-            call zstates_rotate(gr%mesh, tg%st, tmp_st, rotation_matrix)
-          end if
+
+          SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:tg%st%d%dim))
+        
+          do iqn = tg%st%d%kpt%start, tg%st%d%kpt%end
+            
+            if(states_are_real(tg%st)) then
+              call dstates_rotate_in_place(gr%mesh, tmp_st, real(rotation_matrix, REAL_PRECISION), iqn)
+            else
+              call zstates_rotate_in_place(gr%mesh, tmp_st, rotation_matrix, iqn)
+            end if
+
+            do ist = tg%st%st_start, tg%st%st_end 
+              call states_get_state(tmp_st, gr%mesh, ist, iqn, psi)
+              call states_set_state(tg%st, gr%mesh, ist, iqn, psi)
+            end do
+
+          end do
+            
           SAFE_DEALLOCATE_A(rotation_matrix)
+          SAFE_DEALLOCATE_A(psi)
+          call states_end(tmp_st)
+
           call density_calc(tg%st, gr, tg%st%rho)
           do ip = 1, gr%mesh%np
             tg%rho(ip) = sum(tg%st%rho(ip, 1:tg%st%d%spin_channels))
           end do
-          call states_end(tmp_st)
           call parse_block_end(blk)
         else
           message(1) = '"OCTTargetDensityState" has to be specified as block.'
