@@ -17,38 +17,6 @@
 !!
 !! $Id$
 
-!> ---------------------------------------------------------
-!! This routine transforms the orbitals of state "st", according
-!! to the transformation matrix "uu".
-!!
-!! Each row of u contains the coefficients of the new orbitals
-!! in terms of the old ones.
-!! ---------------------------------------------------------
-subroutine X(states_rotate)(mesh, st, stin, uu)
-  type(mesh_t),      intent(in)    :: mesh
-  type(states_t),    intent(inout) :: st
-  type(states_t),    intent(in)    :: stin
-  R_TYPE,            intent(in)    :: uu(:, :) !< (nst, nst)
-  
-  integer :: ik
-  
-  PUSH_SUB(X(states_rotate))
-
-  if(st%parallel_in_states) &
-    call messages_not_implemented("states_rotate parallel in states")
-  ! FIXME: use pblas_gemm for parallel in states, like in subspace_inc.F90
-
-  ASSERT(associated(st%X(dontusepsi)))
-  ASSERT(associated(stin%X(dontusepsi)))
-  
-  do ik = st%d%kpt%start, st%d%kpt%end
-    call lalg_gemm(mesh%np_part*st%d%dim, st%nst, stin%nst, R_TOTYPE(M_ONE), stin%X(dontusepsi)(:, :, 1:stin%nst, ik), &
-      transpose(uu(:, :)), R_TOTYPE(M_ZERO), st%X(dontusepsi)(:, :, :, ik))
-  end do
-  
-  POP_SUB(X(states_rotate))
-end subroutine X(states_rotate)
-
 ! ---------------------------------------------------------
 !> Orthonormalizes nst orbitals in mesh (honours state parallelization).
 subroutine X(states_orthogonalization_full)(st, mesh, ik)
@@ -1107,7 +1075,7 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
   type(profile_t), save :: prof
 
   PUSH_SUB(X(states_rotate_in_place))
-  
+
   call profiling_in(prof, "STATES_ROTATE")
 
   if(associated(st%X(dontusepsi)) .and. .not. states_are_packed(st) .and. .not. st%parallel_in_states) then
