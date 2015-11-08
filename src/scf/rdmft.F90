@@ -668,7 +668,7 @@ contains
     
     type(states_t)   :: psi2
     FLOAT, allocatable :: occ(:,:), psii(:, :), psij(:, :)
-    integer :: ist, jst
+    integer :: ist, jst, iqn
 
     PUSH_SUB(assign_eigenfunctions)
     
@@ -677,12 +677,15 @@ contains
     occ = M_ZERO
 
     call states_copy(psi2, st)
-    if(states_are_real(st)) then
-      call dstates_rotate(gr%mesh, st, psi2, transpose(lambda))
-    else
-      call zstates_rotate(gr%mesh, st, psi2, M_z0 * transpose(lambda))
-    end if
- 
+
+    do iqn = st%d%kpt%start, st%d%kpt%end
+      if(states_are_real(st)) then
+        call dstates_rotate_in_place(gr%mesh, st, lambda, iqn)
+      else
+        call zstates_rotate_in_place(gr%mesh, st, M_z1*lambda, iqn)
+      end if
+    end do
+    
    ! reordering occupation numbers if needed
     occ = st%occ
 
