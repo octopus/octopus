@@ -5,11 +5,9 @@ acx_berkeleygw_ok=no
 
 dnl Check if the library was given in the command line
 AC_ARG_WITH(berkeleygw-prefix, [AS_HELP_STRING([--with-berkeleygw-prefix=DIR], [Directory where BerkeleyGW was installed.])])
-case $with_berkeleygw_prefix in
-  no ) acx_berkeleygw_ok=disabled ;;
-  *) LIBS_BERKELEYGW="-L$with_berkeleygw_prefix/library -lBGW_wfn"; 
-     FCFLAGS_BERKELEYGW="$ax_cv_f90_modflag$with_berkeleygw_prefix/library" ;;
-esac
+if test "x$with_berkeleygw_prefix" = xno; then
+  acx_berkeleygw_ok=disabled
+fi
 
 dnl Backup LIBS and FCFLAGS
 acx_berkeleygw_save_LIBS="$LIBS"
@@ -18,12 +16,22 @@ acx_berkeleygw_save_FCFLAGS="$FCFLAGS"
 dnl The tests
 AC_MSG_CHECKING([for BerkeleyGW])
 if test "$acx_berkeleygw_ok" != disabled; then
-  FCFLAGS="$FCFLAGS_BERKELEYGW $acx_berkeleygw_save_FCFLAGS"
-  LIBS="$LIBS_BERKELEYGW $acx_berkeleygw_save_LIBS"
-  AC_LINK_IFELSE(AC_LANG_PROGRAM([],[
-    use wfn_rho_vxc_io_m
-    call bgw_conf_test()
-    ]), [acx_berkeleygw_ok=yes], [])
+  for location in "source" "install"; do
+    if test "$location" = "source"; then
+      LIBS_BERKELEYGW="-L$with_berkeleygw_prefix/library -lBGW_wfn"; 
+      FCFLAGS_BERKELEYGW="$ax_cv_f90_modflag$with_berkeleygw_prefix/library";
+    else
+      LIBS_BERKELEYGW="-L$with_berkeleygw_prefix/lib -lBGW_wfn"; 
+      FCFLAGS_BERKELEYGW="$ax_cv_f90_modflag$with_berkeleygw_prefix/include";
+    fi
+	
+    FCFLAGS="$FCFLAGS_BERKELEYGW $acx_berkeleygw_save_FCFLAGS"
+    LIBS="$LIBS_BERKELEYGW $acx_berkeleygw_save_LIBS"
+    AC_LINK_IFELSE(AC_LANG_PROGRAM([],[
+      use wfn_rho_vxc_io_m
+      call bgw_conf_test()
+      ]), [acx_berkeleygw_ok=yes; break], [])
+  done
 fi
 AC_MSG_RESULT([$acx_berkeleygw_ok ($FCFLAGS_BERKELEYGW $LIBS_BERKELEYGW)])
 
