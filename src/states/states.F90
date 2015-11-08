@@ -121,7 +121,8 @@ module states_m
     states_remote_access_start,       &
     states_remote_access_stop,        &
     states_get_block,                 &
-    states_release_block
+    states_release_block,             &
+    states_type
 
   !> cmplxscl: Left and Right eigenstates
   type states_wfs_t    
@@ -1993,6 +1994,17 @@ contains
 
   end function states_are_real
 
+  ! ---------------------------------------------------------
+
+
+  pure type(type_t) function states_type(st)
+    type(states_t),    intent(in) :: st
+    
+    states_type = st%priv%wfs_type
+    
+  end function states_type
+  
+  
   ! ---------------------------------------------------------
   !
   !> This function can calculate several quantities that depend on
