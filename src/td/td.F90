@@ -861,9 +861,9 @@ contains
 
         do iqn = st%d%kpt%start, st%d%kpt%end
           if(states_are_real(st)) then
-            call dstates_rotate_in_place(gr%mesh, stin, real(rotation_matrix, REAL_PRECISION), iqn)
+            call states_rotate(gr%mesh, stin, real(rotation_matrix, REAL_PRECISION), iqn)
           else
-            call zstates_rotate_in_place(gr%mesh, stin, rotation_matrix, iqn)
+            call states_rotate(gr%mesh, stin, rotation_matrix, iqn)
           end if
 
           do ist = st%st_start, st%st_end 

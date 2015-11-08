@@ -78,8 +78,7 @@ module states_calc_m
   public ::                         &
     states_orthogonalize,           &
     states_degeneracy_matrix,       &
-    dstates_rotate_in_place,        &
-    zstates_rotate_in_place,        &
+    states_rotate,                  &
     dstates_calc_orth_test,         &
     zstates_calc_orth_test,         &
     dstates_orthogonalization,      &
@@ -106,6 +105,10 @@ module states_calc_m
   interface states_gather
     module procedure dstates_gather, zstates_gather
   end interface states_gather
+
+  interface states_rotate
+    module procedure dstates_rotate, zstates_rotate
+  end interface states_rotate
   
 contains
 

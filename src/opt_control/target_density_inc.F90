@@ -99,9 +99,9 @@
           do iqn = tg%st%d%kpt%start, tg%st%d%kpt%end
             
             if(states_are_real(tg%st)) then
-              call dstates_rotate_in_place(gr%mesh, tmp_st, real(rotation_matrix, REAL_PRECISION), iqn)
+              call states_rotate(gr%mesh, tmp_st, real(rotation_matrix, REAL_PRECISION), iqn)
             else
-              call zstates_rotate_in_place(gr%mesh, tmp_st, rotation_matrix, iqn)
+              call states_rotate(gr%mesh, tmp_st, rotation_matrix, iqn)
             end if
 
             do ist = tg%st%st_start, tg%st%st_end 

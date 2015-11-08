@@ -1057,7 +1057,7 @@ end subroutine X(states_calc_orth_test)
 
 ! ---------------------------------------------------------
 
-subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
+subroutine X(states_rotate)(mesh, st, uu, ik)
   type(mesh_t),      intent(in)    :: mesh
   type(states_t),    intent(inout) :: st
   R_TYPE,            intent(in)    :: uu(:, :)
@@ -1074,10 +1074,12 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
 #endif
   type(profile_t), save :: prof
 
-  PUSH_SUB(X(states_rotate_in_place))
+  PUSH_SUB(X(states_rotate))
 
   call profiling_in(prof, "STATES_ROTATE")
 
+  ASSERT(R_TYPE_VAL == states_type(st))
+  
   if(associated(st%X(dontusepsi)) .and. .not. states_are_packed(st) .and. .not. st%parallel_in_states) then
 
     call batch_init(psib, st%d%dim, 1, st%nst, st%X(dontusepsi)(:, :, :, ik))
@@ -1192,8 +1194,8 @@ subroutine X(states_rotate_in_place)(mesh, st, uu, ik)
   end if
 
   call profiling_out(prof)
-  POP_SUB(X(states_rotate_in_place))
-end subroutine X(states_rotate_in_place)
+  POP_SUB(X(states_rotate))
+end subroutine X(states_rotate)
 
 ! ---------------------------------------------------------
 

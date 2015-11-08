@@ -88,7 +88,7 @@ subroutine X(subspace_diag_standard)(der, st, hm, ik, eigenval, diff)
 
   ! Calculate the new eigenfunctions as a linear combination of the
   ! old ones.
-  call X(states_rotate_in_place)(der%mesh, st, hmss, ik)
+  call states_rotate(der%mesh, st, hmss, ik)
   
   ! Recalculate the residues if requested by the diff argument.
   if(present(diff)) then 

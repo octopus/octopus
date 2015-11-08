@@ -680,9 +680,9 @@ contains
 
     do iqn = st%d%kpt%start, st%d%kpt%end
       if(states_are_real(st)) then
-        call dstates_rotate_in_place(gr%mesh, st, lambda, iqn)
+        call states_rotate(gr%mesh, st, lambda, iqn)
       else
-        call zstates_rotate_in_place(gr%mesh, st, M_z1*lambda, iqn)
+        call states_rotate(gr%mesh, st, M_z1*lambda, iqn)
       end if
     end do
     
