@@ -794,8 +794,8 @@ contains
 
     type(states_t) :: stin
     type(block_t) :: blk
-    CMPLX, allocatable :: rotation_matrix(:,:)
-    integer :: ist, jst, ncols
+    CMPLX, allocatable :: rotation_matrix(:,:), psi(:, :)
+    integer :: ist, jst, ncols, iqn
     character(len=256) :: block_name
     
     PUSH_SUB(transform_states)
@@ -837,9 +837,14 @@ contains
         end if
         call states_copy(stin, st, exclude_wfns = .true.)
         call states_look_and_load(restart, stin, gr)
+
         ! FIXME: rotation matrix should be R_TYPE
-        SAFE_ALLOCATE(rotation_matrix(1:st%nst, 1:stin%nst))
+        SAFE_ALLOCATE(rotation_matrix(1:stin%nst, 1:stin%nst))
+        SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
+        
         rotation_matrix = M_z0
+        forall(ist = 1:stin%nst) rotation_matrix(ist, ist) = CNST(1.0)
+        
         do ist = 1, st%nst
           ncols = parse_block_cols(blk, ist-1)
           if(ncols /= stin%nst) then            
@@ -848,22 +853,35 @@ contains
             call messages_fatal(1)
           end if
           do jst = 1, stin%nst
-            call parse_block_cmplx(blk, ist-1, jst-1, rotation_matrix(ist, jst))
+            call parse_block_cmplx(blk, ist - 1, jst - 1, rotation_matrix(jst, ist))
           end do
         end do
+
         call parse_block_end(blk)
-        if(states_are_real(st)) then
-          call dstates_rotate(gr%mesh, st, stin, real(rotation_matrix, REAL_PRECISION))
-        else
-          call zstates_rotate(gr%mesh, st, stin, rotation_matrix)
-        end if
+
+        do iqn = st%d%kpt%start, st%d%kpt%end
+          if(states_are_real(st)) then
+            call dstates_rotate_in_place(gr%mesh, stin, real(rotation_matrix, REAL_PRECISION), iqn)
+          else
+            call zstates_rotate_in_place(gr%mesh, stin, rotation_matrix, iqn)
+          end if
+
+          do ist = st%st_start, st%st_end 
+            call states_get_state(stin, gr%mesh, ist, iqn, psi)
+            call states_set_state(st, gr%mesh, ist, iqn, psi)
+          end do
+
+        end do
+
         SAFE_DEALLOCATE_A(rotation_matrix)
+        SAFE_DEALLOCATE_A(psi)
+
         call states_end(stin)
+
       else
-        message(1) = '"' // trim(block_name) // '" has to be specified as block.'
-        call messages_info(1)
-        call messages_input_error(trim(block_name))
+        call messages_input_error(trim(block_name), '"' // trim(block_name) // '" has to be specified as block.')
       end if
+      
     end if
 
     POP_SUB(transform_states)
