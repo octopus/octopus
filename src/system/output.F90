@@ -534,7 +534,7 @@ contains
 
     ! these kinds of Output do not have a how
     what_no_how = OPTION__OUTPUT__MATRIX_ELEMENTS + OPTION__OUTPUT__BERKELEYGW + OPTION__OUTPUT__DOS + &
-      OPTION__OUTPUT__TPA + OPTION__OUTPUT__MMB_DEN + OPTION__OUTPUT__J_FLOW
+      OPTION__OUTPUT__TPA + OPTION__OUTPUT__MMB_DEN + OPTION__OUTPUT__J_FLOW + OPTION__OUTPUT__FROZEN_SYSTEM
 
     ! we are using a what that has a how.
     if(iand(outp%what, not(what_no_how)) /= 0) then
@@ -545,9 +545,6 @@ contains
 
     if(iand(outp%what, OPTION__OUTPUT__FROZEN_SYSTEM) /= 0) then
       call messages_experimental("Frozen output")
-      outp%what = ior(outp%what, OPTION__OUTPUT__POTENTIAL)
-      outp%what = ior(outp%what, OPTION__OUTPUT__DENSITY)
-      outp%how  = ior(outp%how,  OPTION__OUTPUTFORMAT__BINARY)
     end if
 
     if(iand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
@@ -643,7 +640,7 @@ contains
     end if
     
     if(iand(outp%what, OPTION__OUTPUT__FROZEN_SYSTEM) /= 0) then
-      call output_fio(gr, geo, st, hm, trim(adjustl(dir)), "config.json")
+      call output_fio(gr, geo, st, hm, trim(adjustl(dir)), mpi_world)
     end if
 
     POP_SUB(output_all)

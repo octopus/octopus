@@ -23,6 +23,10 @@ module fio_config_m
 
   private
 
+  public ::              &
+    input_frozen_dir,    &
+    input_frozen_config
+
   public ::           &
     fio_config_parse
 
@@ -31,10 +35,10 @@ module fio_config_m
     module procedure fio_config_parse_block
   end interface fio_config_parse
 
-  character(len=*), public, parameter :: input_mesh_dir      = "./restart/"//GS_DIR
-  character(len=*), public, parameter :: input_mesh_file     = "mesh"
-  character(len=*), public, parameter :: input_static_dir    = "./"//STATIC_DIR
-  character(len=*), public, parameter :: input_external_file = "v0.obf"
+  character(len=*), parameter :: input_static_dir = "./"//STATIC_DIR
+
+  character(len=*), parameter :: input_frozen_dir    = "./frozen"
+  character(len=*), parameter :: input_frozen_config = "config.json"
 
 contains
 
@@ -68,17 +72,19 @@ contains
   end subroutine fio_config_parse_get_dir
 
   ! ---------------------------------------------------------
-  subroutine fio_config_parse_get_file(topdir, reldir, outdir, file)
+  subroutine fio_config_parse_get_file(topdir, reldir, outdir, file, ierr)
     character(len=*), intent(in)  :: topdir
     character(len=*), intent(in)  :: reldir
     character(len=*), intent(out) :: outdir
     character(len=*), intent(in)  :: file
+    integer,          intent(out) :: ierr
 
     character(len=max_path_len) :: fpth
     logical                     :: exst
 
     PUSH_SUB(fio_config_parse_get_file)
 
+    ierr = 0
     call fio_config_parse_get_dir(topdir, reldir, outdir)
     call path_join(outdir, file, fpth)
     inquire(file=trim(adjustl(fpth)), exist=exst)
@@ -86,11 +92,7 @@ contains
       call path_realpath(topdir, outdir)
       call path_join(outdir, file, fpth)
       inquire(file=trim(adjustl(fpth)), exist=exst)
-      if(.not.exst)then
-        message(1) = "Could not find the file: '"//trim(adjustl(file))//"',"
-        message(2) = "at directory: '"//trim(adjustl(reldir))//"."
-        call messages_fatal(2)
-      end if
+      if(.not.exst) ierr = -1
     end if
 
     POP_SUB(fio_config_parse_get_file)
@@ -110,7 +112,12 @@ contains
     ASSERT(ierr==JSON_OK)
     call json_get(this, "file", file, ierr)
     ASSERT(ierr==JSON_OK)
-    call fio_config_parse_get_file(dirname, idir, odir, file)
+    call fio_config_parse_get_file(dirname, idir, odir, file, ierr)
+    if(ierr/=0)then
+      message(1) = "Could not find the input file: '"//trim(adjustl(file))//"',"
+      message(2) = "in the directory: '"//trim(adjustl(odir))//"',"
+      call messages_fatal(2)
+    end if
     call json_set(this, "dir", trim(adjustl(odir)))
     call json_set(this, "file", trim(adjustl(file)))
 
@@ -118,12 +125,45 @@ contains
   end subroutine fio_config_parse_simul_box
 
   ! ---------------------------------------------------------
+  subroutine fio_config_parse_index(this, dirname)
+    type(json_object_t), intent(inout) :: this
+    character(len=*),    intent(in)    :: dirname
+
+    character(len=MAX_PATH_LEN)  :: idir, odir, file
+    integer :: ierr
+
+    PUSH_SUB(fio_config_parse_index)
+
+    call json_get(this, "dir", idir, ierr)
+    ASSERT(ierr==JSON_OK)
+    call json_get(this, "file", file, ierr)
+    ASSERT(ierr==JSON_OK)
+    call fio_config_parse_get_file(dirname, idir, odir, file, ierr)
+    if(ierr/=0)then
+      message(1) = "Could not find the input file: '"//trim(adjustl(file))//"',"
+      message(2) = "in the directory: '"//trim(adjustl(odir))//"',"
+      call messages_fatal(2)
+    end if
+    call fio_config_parse_get_file(dirname, idir, odir, "lxyz.obf", ierr)
+    if(ierr/=0)then
+      message(1) = "Could not find the input file: 'lxyz.obf',"
+      message(2) = "in the directory: '"//trim(adjustl(odir))//"',"
+      call messages_fatal(2)
+    end if
+    call json_set(this, "dir", trim(adjustl(odir)))
+    call json_set(this, "file", trim(adjustl(file)))
+
+    POP_SUB(fio_config_parse_index)
+  end subroutine fio_config_parse_index
+
+  ! ---------------------------------------------------------
   subroutine fio_config_parse_mesh(this, dirname)
     type(json_object_t), intent(inout) :: this
     character(len=*),    intent(in)    :: dirname
 
-    character(len=MAX_PATH_LEN) :: idir, odir, file
-    integer                     :: ierr
+    type(json_object_t), pointer :: cnfg
+    character(len=MAX_PATH_LEN)  :: idir, odir, file
+    integer                      :: ierr
 
     PUSH_SUB(fio_config_parse_mesh)
 
@@ -131,9 +171,19 @@ contains
     ASSERT(ierr==JSON_OK)
     call json_get(this, "file", file, ierr)
     ASSERT(ierr==JSON_OK)
-    call fio_config_parse_get_file(dirname, idir, odir, file)
+    call fio_config_parse_get_file(dirname, idir, odir, file, ierr)
+    if(ierr/=0)then
+      message(1) = "Could not find the input file: '"//trim(adjustl(file))//"',"
+      message(2) = "in the directory: '"//trim(adjustl(odir))//"',"
+      call messages_fatal(2)
+    end if
     call json_set(this, "dir", trim(adjustl(odir)))
     call json_set(this, "file", trim(adjustl(file)))
+    nullify(cnfg)
+    call json_get(this, "index", cnfg, ierr)
+    ASSERT(ierr==JSON_OK)
+    call fio_config_parse_index(cnfg, dirname)
+    nullify(cnfg)
 
     POP_SUB(fio_config_parse_mesh)
   end subroutine fio_config_parse_mesh
@@ -204,7 +254,13 @@ contains
     do indx = 1, nspin
       call json_get(list, indx, file, ierr)
       ASSERT(ierr==JSON_OK)
-      call fio_config_parse_get_file(dirname, idir, odir, file)
+      file = trim(adjustl(file))//".obf"
+      call fio_config_parse_get_file(dirname, idir, odir, file, ierr)
+      if(ierr/=0)then
+        message(1) = "Could not find the input file: '"//trim(adjustl(file))//"',"
+        message(2) = "in the directory: '"//trim(adjustl(odir))//"',"
+        call messages_fatal(2)
+      end if
       call json_set(list, indx, trim(adjustl(file)), ierr)
       ASSERT(ierr==JSON_OK)
     end do
@@ -270,7 +326,13 @@ contains
     ASSERT(ierr==JSON_OK)
     call json_get(this, "file", file, ierr)
     ASSERT(ierr==JSON_OK)
-    call fio_config_parse_get_file(dirname, idir, odir, file)
+    file = trim(adjustl(file))//".obf"
+    call fio_config_parse_get_file(dirname, idir, odir, file, ierr)
+    if(ierr/=0)then
+      message(1) = "Could not find the input file: '"//trim(adjustl(file))//"',"
+      message(2) = "in the directory: '"//trim(adjustl(odir))//"',"
+      call messages_fatal(2)
+    end if
     call json_set(this, "dir", trim(adjustl(odir)))
     call json_set(this, "file", trim(adjustl(file)))
 
@@ -298,9 +360,10 @@ contains
   end subroutine fio_config_parse_hamiltonian
 
   ! ---------------------------------------------------------
-  subroutine fio_config_parse_read(this, dirname)
+  subroutine fio_config_parse_read(this, dirname, outdir)
     type(json_object_t), intent(out) :: this
     character(len=*),    intent(in)  :: dirname
+    character(len=*),    intent(out) :: outdir
 
     type(json_parser_t)         :: parser
     character(len=MAX_PATH_LEN) :: dir, file
@@ -309,8 +372,19 @@ contains
     PUSH_SUB(fio_config_parse_read)
 
     call json_init(this)
-    call fio_config_parse_get_file(dirname, input_static_dir, dir, "config.json")
-    call path_join(dir, "config.json", file)
+    call fio_config_parse_get_file(dirname, ".", outdir, input_frozen_config, ierr)
+    if(ierr/=0)then
+      call fio_config_parse_get_file(dirname, input_frozen_dir, outdir, input_frozen_config, ierr)
+      if(ierr/=0)then
+        call path_join(input_static_dir, input_frozen_dir, dir)
+        call fio_config_parse_get_file(dirname, dir, outdir, input_frozen_config, ierr)
+        if(ierr/=0)then
+          message(1) = "Could not find the file: '"//trim(adjustl(input_frozen_config))//"'"
+          call messages_fatal(1)
+        end if
+      end if
+    end if
+    call path_join(outdir, input_frozen_config, file)
     iunit = io_open(file, action='read', status="old")
     ASSERT(iunit>0)
     call json_parser_init(parser, iunit, ierr)
@@ -331,6 +405,7 @@ contains
     logical,   optional, intent(in)    :: usepotential
     logical,   optional, intent(in)    :: usedensity
 
+    character(len=MAX_PATH_LEN)  :: outdir
     type(json_object_t), pointer :: cnfg
     type(json_object_t)          :: modl
     integer                      :: ierr
@@ -338,20 +413,20 @@ contains
     PUSH_SUB(fio_config_parse_model)
 
     nullify(cnfg)
-    call fio_config_parse_read(modl, dirname)
+    call fio_config_parse_read(modl, dirname, outdir)
     call json_update(this, modl)
     call json_end(modl)
     call json_get(this, "simulation", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call fio_config_parse_simulation(cnfg, dirname)
+    call fio_config_parse_simulation(cnfg, outdir)
     nullify(cnfg)
     call json_get(this, "system", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call fio_config_parse_system(cnfg, dirname, usedensity)
+    call fio_config_parse_system(cnfg, outdir, usedensity)
     nullify(cnfg)
     call json_get(this, "hamiltonian", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call fio_config_parse_hamiltonian(cnfg, dirname, usepotential)
+    call fio_config_parse_hamiltonian(cnfg, outdir, usepotential)
     nullify(cnfg)
 
     POP_SUB(fio_config_parse_model)
@@ -374,6 +449,7 @@ contains
     call base_config_parse(this)
     call json_set(this, "type", HNDL_TYPE_FNIO)
     call json_set(this, "name", "fio")
+    if(present(interpolation)) call json_set(this, "interpolation", interpolation)
     call json_get(this, "model", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
     call fio_config_parse_model(cnfg, dirname, usepotential, usedensity)

@@ -12,12 +12,14 @@ module fio_external_m
   use base_potential_m
   use base_system_m
   use global_m
-  use io_binary_m
+  use io_function_m
   use json_m
   use kinds_m
+  use mesh_m
   use messages_m
   use path_m
   use profiling_m
+  use simulation_m
   use species_m
 
 #define INCLUDE_PREFIX
@@ -89,24 +91,31 @@ contains
     character(len=*),       intent(in)    :: file
 
     real(kind=wp), dimension(:), pointer :: potn
+    type(simulation_t),          pointer :: sim
+    type(mesh_t),                pointer :: mesh
     character(len=MAX_PATH_LEN)          :: fpth
-    integer                              :: np, ierr
+    integer                              :: ierr
 
     PUSH_SUB(fio_external__read__)
 
-    nullify(potn)
+    nullify(potn, sim, mesh)
+    call path_join(dir, file, fpth)
+    call base_potential_get(this, sim)
+    ASSERT(associated(sim))
+    call simulation_get(sim, mesh)
+    ASSERT(associated(mesh))
+    nullify(sim)
     call base_potential_get(this, potn)
     ASSERT(associated(potn))
-    call base_potential_get(this, size=np)
-    call path_join(dir, file, fpth)
-    call io_binary_read(fpth, np, potn, ierr, offset=0)
+    call dio_function_input(fpth, mesh, potn, ierr)
+    nullify(potn, mesh)
     if(ierr/=0)then
       call fio_external_end(this)
-      message(1) = "Could not read the potential file: '"//trim(adjustl(fpth))//"'"
-      write(unit=message(2), fmt="(a,i3)") "I/O Error: ", ierr
-      call messages_fatal(2)
+      message(1) = "Could not read the input file: '"//trim(adjustl(file))//".obf'"
+      message(2) = "in the directory: '"//trim(adjustl(dir))//"'"
+      write(unit=message(3), fmt="(a,i3)") "I/O Error: ", ierr
+      call messages_fatal(3)
     end if
-    nullify(potn)
 
     POP_SUB(fio_external__read__)
   end subroutine fio_external__read__

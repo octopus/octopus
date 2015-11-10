@@ -8,12 +8,14 @@ module fio_density_m
 
   use base_density_m
   use global_m
-  use io_binary_m
+  use io_function_m
   use json_m
   use kinds_m
+  use mesh_m
   use messages_m
   use path_m
   use profiling_m
+  use simulation_m
 
 #define INCLUDE_PREFIX
 #include "intrpl_inc.F90"
@@ -89,24 +91,31 @@ contains
     integer,              intent(in)    :: ispin
 
     real(kind=wp), dimension(:,:), pointer :: dnst
+    type(simulation_t),            pointer :: sim
+    type(mesh_t),                  pointer :: mesh
     character(len=MAX_PATH_LEN)            :: fpth
-    integer                                :: np, ierr
+    integer                                :: ierr
 
     PUSH_SUB(fio_density__read__)
 
-    nullify(dnst)
+    nullify(dnst, sim, mesh)
+    call path_join(dir, file, fpth)
+    call base_density_get(this, sim)
+    ASSERT(associated(sim))
+    call simulation_get(sim, mesh, fine=.true.)
+    ASSERT(associated(mesh))
+    nullify(sim)
     call base_density_get(this, dnst)
     ASSERT(associated(dnst))
-    call base_density_get(this, size=np)
-    call path_join(dir, file, fpth)
-    call io_binary_read(fpth, np, dnst(:,ispin), ierr, offset=0)
+    call dio_function_input(fpth, mesh, dnst(:,ispin), ierr)
+    nullify(dnst, mesh)
     if(ierr/=0)then
       call fio_density_end(this)
-      message(1) = "Could not read the density file: '"//trim(adjustl(fpth))//"'"
-      write(unit=message(2), fmt="(a,i3)") "I/O Error: ", ierr
-      call messages_fatal(2)
+      message(1) = "Could not read the input file: '"//trim(adjustl(file))//".obf'"
+      message(2) = "in the directory: '"//trim(adjustl(dir))//"'"
+      write(unit=message(3), fmt="(a,i3)") "I/O Error: ", ierr
+      call messages_fatal(3)
     end if
-    nullify(dnst)
 
     POP_SUB(fio_density__read__)
   end subroutine fio_density__read__

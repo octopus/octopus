@@ -248,12 +248,11 @@ contains
 
     PUSH_SUB(intrpl_in_domain)
 
-    in = .true.
-    if(associated(this%domain))&
-      in = domain_in(this%domain, x)
+    ASSERT(associated(this%domain))
+    in = domain_in(this%domain, x)
     if(in)then
       n = intrpl_nearest_index(this, x)
-      in = ( (0<n) .and. (n<=size(this%intr(1)%vals)) )
+      in = ( (0<n) .and. (n<=this%mesh%np) )
     end if
 
     POP_SUB(intrpl_in_domain)
@@ -272,7 +271,7 @@ contains
 
     dm = this%mesh%sb%dim
     np = intrpl_nearest_index(this, x)
-    tol = 0.51_wp * sqrt(sum(this%mesh%spacing(1:dm)**2))
+    tol = minval(this%mesh%spacing(1:dm))
     dlt = sqrt(sum((x(1:dm)-this%mesh%x(np,1:dm))**2))
     ASSERT(dlt<tol)
     forall(ix=1:this%nint) val(ix) = this%intr(ix)%vals(np)
@@ -377,6 +376,7 @@ contains
     integer :: idx
 
     PUSH_SUB(intrpl_copy)
+
     this%sim => that%sim
     this%mesh => that%mesh
     this%domain => that%domain

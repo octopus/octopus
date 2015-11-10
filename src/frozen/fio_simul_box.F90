@@ -51,10 +51,8 @@ contains
       call symmetries_init(this%symm, geo, this%dim, this%periodic_dim, this%rlattice)
       call kpoints_init(this%kpoints, this%symm, this%dim, this%rlattice, this%klattice, .true.)
     else
-      message(1) = "Error reading the simulation box info file: '"//trim(adjustl(file))//"'"
-      message(2) = "from the directory: '"//trim(adjustl(dir))//"'"
-      write(unit=message(3), fmt="(a,i10)") "I/O Error: ", ierr
-      call messages_fatal(3)
+      message(1) = "Could not read from the input file."
+      call messages_fatal(1)
     end if
 
     POP_SUB(fio_simul_box_init)
