@@ -626,7 +626,8 @@ contains
         call profiling_in(prof_fftw, "CONVERT_FFTW")
         call fftw_execute_dft_r2c(fft%planf, read_ft(1), out_fft(1))
         call profiling_out(prof_fftw)
-        point_tmp(read_count, 1:e_point+1) = AIMAG(out_fft(1:e_point+1))
+        ! Should the value be multiplied by dt ??? as in standard discrete Fourier Transform ?
+        point_tmp(read_count, 1:e_point+1) = AIMAG(out_fft(1:e_point+1)) * dt
       case (STANDARD_FOURIER)
         tdrho_a(1:e_point+1, 1, 1) = read_ft(1:e_point+1)
         call batch_init(tdrho_b, 1, 1, 1, tdrho_a)
@@ -779,7 +780,6 @@ contains
           ierr, dir=trim(folder), mesh = mesh, exact=.true.)
       if(ierr == 0) then
         call drestart_read_mesh_function(restart, trim(filename), mesh, tmp_ff, ierr)
-        call restart_end(restart)
       else
         write(message(1),'(2a)') "Failed to read from file ", trim(filename)
         write(message(2), '(2a)') "from folder ", trim(folder)
@@ -793,11 +793,15 @@ contains
       !TODO: implement use of complex functions. 
        scalar_ff(ip) = scalar_ff(ip) + f_re
       end do
+      call restart_end(restart)
     end do
     call parse_block_end(blk)
 
+#ifdef HAVE_MPI
+    call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
+#endif
     ! Write the corresponding output
-    !TODO: add variable ConvertWhat to select the type(density, wfs, potential, ...) 
+    !TODO: add variable ConvertFunctionType to select the type(density, wfs, potential, ...) 
     !      and units of the conversion.
     units = units_out%length**(-mesh%sb%dim)
     call dio_function_output(outp%how, trim(out_folder), trim(out_filename), mesh,  & 
