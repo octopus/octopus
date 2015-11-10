@@ -75,7 +75,7 @@ subroutine X(run_sternheimer)()
                 end if
               end do
             end if
-            if((pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) .and. use_kdotp) then
+            if((pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC .or. em_vars%calc_magnetooptics) .and. use_kdotp) then
               if (sigma == 1) then 
                 do ipert = PK2, PKB
                   do idir2 = 1, sys%gr%sb%dim 
