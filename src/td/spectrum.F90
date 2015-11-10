@@ -98,6 +98,7 @@ module spectrum_m
     integer :: method              !< Fourier transform or compressed sensing 
     FLOAT   :: noise               !< the level of noise that is assumed in the time series for compressed sensing 
     type(cmplxscl_t) :: cmplxscl   !< the complex scaling parameters
+    logical :: sigma_diag          !< diagonalize sigma tensor
   end type spectrum_t
 
   !> Module variables, necessary to compute the function hsfunction, called by
@@ -298,6 +299,17 @@ contains
     call parse_variable('PropagationSpectrumDampFactor', CNST(0.15), spectrum%damp_factor, units_inp%time**(-1))
     call messages_print_var_value(stdout, 'PropagationSpectrumDampFactor', spectrum%damp_factor, unit = units_out%time**(-1))
 
+    !%Variable PropagationSpectrumSigmaDiagonalization
+    !%Type logical
+    !%Default .false.
+    !%Section Utilities::oct-propagation_spectrum
+    !%Description
+    !% If <tt>PropagationSpectrumSigmaDiagonalization = yes</tt>, the polarizability tensor is diagonalizied.
+    !% This variable is only used if the cross_section_tensor is computed. 
+    !%End
+    call parse_variable('PropagationSpectrumSigmaDiagonalization', .false., spectrum%sigma_diag)
+    call messages_print_var_value(stdout, 'PropagationSpectrumSigmaDiagonalization', spectrum%sigma_diag)
+
     call messages_print_stress(stdout)
 
     POP_SUB(spectrum_init)
@@ -445,6 +457,9 @@ contains
         sigma(:, :, ie, is) = matmul( transpose(ip), matmul(sigmap(:, :, ie, is), ip) )
       end do
     end do
+    ! Diagonalize sigma tensor
+    if (spectrum%sigma_diag) &
+    call spectrum_sigma_diagonalize(sigma, nspin, spectrum%energy_step, energy_steps, kick)
 
     ! Finally, write down the result
     call spectrum_cross_section_tensor_write(out_file, sigma, nspin, spectrum%energy_step, energy_steps, kick)
@@ -2287,6 +2302,78 @@ contains
     POP_SUB(fourier_transform)
 
   end subroutine spectrum_fourier_transform
+
+  ! ---------------------------------------------------------
+  subroutine spectrum_sigma_diagonalize(sigma, nspin, energy_step, energy_steps, kick)
+    FLOAT,                  intent(in) :: sigma(:, :, 0:, :) !< (3, 3, energy_steps, nspin) already converted to units
+    integer,                intent(in) :: nspin
+    FLOAT,                  intent(in) :: energy_step
+    integer,                intent(in) :: energy_steps
+    type(kick_t), optional, intent(in) :: kick !< if present, will write itself and nspin
+
+    integer :: is, idir, jdir, ie, ii, info, out_file, rwork
+    FLOAT, allocatable :: work(:,:) 
+    CMPLX, allocatable :: w(:)
+    character(len=20) :: header_string
+
+    PUSH_SUB(spectrum_sigma_diagonalize)
+
+    out_file = io_open('cross_section_diagonal-sigma', action='write')
+
+    write(out_file, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)
+    do is = 1, nspin
+      do idir = 1, 3
+        write(out_file, '(a20)', advance = 'no') str_center("Real part", 20)
+        write(out_file, '(a20)', advance = 'no') str_center("Imaginary part", 20)
+        do jdir = 1, 3
+          write(header_string,'(a7,i1,a1,i1,a1,i1,a1)') 'vector(', idir, ',', jdir, ',', is, ')'
+          write(out_file, '(a20)', advance = 'no') str_center(trim(header_string), 20)
+        end do
+      end do
+    end do
+    write(out_file, '(1x)')
+    write(out_file, '(a1,a20)', advance = 'no') '#', str_center('[' // trim(units_abbrev(units_out%energy)) // ']', 20)
+
+    do ii = 1, nspin 
+      do idir = 1, 3
+        write(out_file, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
+        write(out_file, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
+        do jdir = 1, 3
+          write(out_file, '(a20)', advance = 'no')  str_center('[ - ]', 20)
+        end do
+      end do
+    end do
+    write(out_file, '(1x)')
+
+    SAFE_ALLOCATE(w(1:3))
+    SAFE_ALLOCATE(work(1:3, 1:3))
+    do ie = 0, energy_steps
+      write(out_file,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, (ie * energy_step))
+      do is = 1, nspin
+        work(1:3, 1:3) = sigma(1:3, 1:3, ie, is)
+        call lalg_eigensolve_nonh(3, work, w, err_code = info, sort_eigenvectors = .true.)
+      ! Note that the cross-section elements do not have to be transformed to the proper units, since
+      ! they have been read from the "cross_section_vector.x", where they are already in the proper units.
+        do idir = 3, 1, -1
+          write(out_file,'(2e20.8)', advance = 'no') w(idir)
+        
+          do jdir = 1, 3
+            write(out_file,'(e20.8)', advance = 'no') work(jdir, idir)
+          end do
+        end do 
+        write(out_file, '(1x)')
+      end do
+    end do
+
+    call io_close(out_file)
+
+    SAFE_DEALLOCATE_A(w)
+    SAFE_DEALLOCATE_A(work)
+
+    POP_SUB(spectrum_sigma_diagonalize)
+  end subroutine spectrum_sigma_diagonalize
+
+
 
 end module spectrum_m
 
