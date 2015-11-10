@@ -199,9 +199,11 @@ contains
 
 
 ! ---------------------------------------------------------
-  character(len=100) function em_rho_tag(freq, dir) result(str)
-    FLOAT,   intent(in) :: freq
-    integer, intent(in) :: dir
+  character(len=100) function em_rho_tag(freq, dir, dir2, ipert) result(str)
+    FLOAT,             intent(in) :: freq
+    integer,           intent(in) :: dir
+    integer, optional, intent(in) :: dir2
+    integer, optional, intent(in) :: ipert
 
     character(len=12) :: str_tmp
 
@@ -211,6 +213,8 @@ contains
 
     str_tmp = freq2str(freq)
     write(str, '(3a,i1)') 'rho_', trim(str_tmp), '_', dir
+    if(present(dir2)) write(str, '(2a,i1)') trim(str), "_", dir2
+    if(present(ipert)) write(str, '(3a)') trim(str), "_", index2pert(ipert) 
 
     POP_SUB(em_rho_tag)
 

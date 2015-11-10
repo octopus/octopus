@@ -167,36 +167,54 @@ subroutine X(run_sternheimer)()
       if((em_vars%nfactor > 1) .or. (iomega == 1)) then
         !search for the density of the closest frequency, including negative
         closest_omega = em_vars%freq_factor(ifactor) * em_vars%omega(iomega)
-        call loct_search_file_lr(closest_omega, idir, ierr, trim(restart_dir(restart_load)))
+        call loct_search_file_lr(closest_omega, idir, ierr_e(idir), trim(restart_dir(restart_load)))
     
         !attempt to read 
-        if(ierr == 0) then 
+        if(ierr_e(idir) == 0) then 
           sigma_alt = 1
           if(closest_omega * frequency < M_ZERO) opp_freq = .true.
           if(opp_freq .and. em_vars%nsigma == 2) sigma_alt = 2
       
           call X(lr_load_rho)(em_vars%lr(idir, sigma_alt, ifactor)%X(dl_rho), sys%gr%mesh, sys%st%d%nspin, &
-            restart_load, em_rho_tag(closest_omega, idir), ierr)
+            restart_load, em_rho_tag(closest_omega, idir), ierr_e(idir))
       
-          if (ierr == 0) then 
+          if (ierr_e(idir) == 0) then 
             message(1) = "Read response density '"//trim(em_rho_tag(closest_omega, idir))//"'."
           else
             message(1) = "Unable to read response density '"//trim(em_rho_tag(closest_omega, idir))//"'."
           end if
           call messages_info(1)
 
-          if (ierr == 0 .and. &
+          if (ierr_e(idir) == 0 .and. &
             abs(abs(closest_omega) - abs(frequency)) <= CNST(1e-4)) then
             ! the frequencies are written to four decimals in the restart directory, so we cannot expect higher precision
-            exact_freq = .true.
+            exact_freq(idir) = .true.
           end if
         end if
     
-        if (ierr == 0 .and. em_vars%nsigma == 2) then 
+        if (ierr_e(idir) == 0 .and. em_vars%nsigma == 2) then 
           sigma_alt = 1
           if(opp_freq) sigma_alt = 2
       
           em_vars%lr(idir, swap_sigma(sigma_alt), ifactor)%X(dl_rho) = R_CONJ(em_vars%lr(idir, sigma_alt, ifactor)%X(dl_rho))
+        end if
+       
+        if(ierr_e(idir) == 0 .and. em_vars%calc_magnetooptics .and. use_kdotp) then
+          do idir2 = 1, sys%gr%sb%dim 
+            call X(lr_load_rho)(be_lr(idir2, idir, sigma_alt)%X(dl_rho), sys%gr%mesh, sys%st%d%nspin, &
+              restart_load, em_rho_tag(closest_omega, idir2, idir, ipert = PBE), ierr_be(idir2, idir))
+      
+            if (ierr_be(idir2, idir) == 0) then 
+              message(1) = "Read response density '"//trim(em_rho_tag(closest_omega, idir2, idir, ipert = PBE))//"'."
+            else
+              message(1) = "Unable to read response density '"//trim(em_rho_tag(closest_omega, idir2, idir, ipert = PBE))//"'."
+            end if
+            call messages_info(1)
+
+            if (ierr_be(idir2, idir) == 0 .and. em_vars%nsigma == 2) then       
+              be_lr(idir2, idir, swap_sigma(sigma_alt))%X(dl_rho) = R_CONJ(be_lr(idir2, idir, sigma_alt)%X(dl_rho))
+            end if
+          end do
         end if
       end if
     end do
@@ -222,7 +240,7 @@ subroutine X(run_sternheimer)()
       call X(sternheimer_solve)(sh, sys, hm, em_vars%lr(idir, 1:1, ifactor), 1, &
         R_TOPREC(frequency_zero), pert2_none, restart_dump, &
         em_rho_tag(abs(em_vars%freq_factor(ifactor) * em_vars%omega(iomega)), idir), &
-        em_wfs_tag(idir, ifactor), have_restart_rho = (ierr == 0), have_exact_freq = exact_freq)
+        em_wfs_tag(idir, ifactor), have_restart_rho = (ierr_e(idir) == 0), have_exact_freq = exact_freq(idir))
       call sternheimer_unset_inhomog(sh)
       em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh)	
     end do
@@ -276,7 +294,7 @@ subroutine X(run_sternheimer)()
       call X(sternheimer_solve)(sh, sys, hm, em_vars%lr(idir, 1:nsigma_eff, ifactor), nsigma_eff, &
         R_TOPREC(frequency_eta), em_vars%perturbation, restart_dump, &
         em_rho_tag(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)), idir), &
-        em_wfs_tag(idir, ifactor), have_restart_rho=(ierr==0), have_exact_freq = exact_freq)
+        em_wfs_tag(idir, ifactor), have_restart_rho=(ierr_e(idir)==0), have_exact_freq = exact_freq(idir))
   
       if(nsigma_eff == 1 .and. em_vars%nsigma == 2) then
         em_vars%lr(idir, 2, ifactor)%X(dl_psi) = em_vars%lr(idir, 1, ifactor)%X(dl_psi)
@@ -419,8 +437,10 @@ subroutine X(run_sternheimer)()
                   ke_lr(magn_dir(idir, 2), idir2, :), inhomog)
                 call X(sternheimer_set_inhomog)(sh, inhomog)   
                 call X(sternheimer_solve)(sh, sys, hm, be_lr(idir, idir2, 1:nsigma_eff), nsigma_eff, &
-                  R_TOPREC(frequency_eta), pert2_none, restart_dump, "null", &
-                  em_wfs_tag(idir, ifactor, idir2, ipert), have_restart_rho = .true., have_exact_freq = .true.)
+                  R_TOPREC(frequency_eta), pert2_none, restart_dump, &
+                  em_rho_tag(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)), idir, idir2, ipert), &
+                  em_wfs_tag(idir, ifactor, idir2, ipert), have_restart_rho=(ierr_be(idir, idir2)==0), &
+                  have_exact_freq = exact_freq(idir2))
                 if(nsigma_eff == 1 .and. em_vars%nsigma == 2) then
                   be_lr(idir, idir2, 2)%X(dl_psi) = be_lr(idir, idir2, 1)%X(dl_psi)
                   be_lr(idir, idir2, 2)%X(dl_rho) = R_CONJ(be_lr(idir, idir2, 1)%X(dl_rho))

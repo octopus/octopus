@@ -123,8 +123,9 @@ contains
     type(pert_t)            :: pert_kdotp, pert2_none, pert_b
 
     integer :: sigma, sigma_alt, ndim, idir, idir2, ierr, iomega, ifactor, nsigma_eff, ipert
+    integer :: ierr_e(3), ierr_be(3,3) 
     character(len=100) :: dirname_output, str_tmp
-    logical :: complex_response, have_to_calculate, use_kdotp, opp_freq, exact_freq, complex_wfs
+    logical :: complex_response, have_to_calculate, use_kdotp, opp_freq, exact_freq(3), complex_wfs
 
     FLOAT :: closest_omega, last_omega, frequency
     FLOAT, allocatable :: dl_eig(:,:,:)
@@ -404,6 +405,8 @@ contains
         end if
 
         ierr = 0
+        ierr_e(:) = 0
+        ierr_be(:,:) = 0
 
         have_to_calculate = .true.
         opp_freq = .false.
@@ -508,7 +511,7 @@ contains
 
         if(have_to_calculate) then 
 
-          exact_freq = .false.
+          exact_freq(:) = .false.
 
           if(states_are_real(sys%st)) then
             call drun_sternheimer()
