@@ -240,7 +240,7 @@ contains
 
     if(pes%calc_mask) call pes_mask_output (pes%mask, mesh, st,outp, "td.general/PESM", gr, geo,iter)
 
-    if(pes%calc_flux) call pes_flux_output(pes%flux, mesh%sb, dt)
+    if(pes%calc_flux) call pes_flux_output(pes%flux, mesh, mesh%sb, st, dt)
 
     POP_SUB(pes_output)
   end subroutine pes_output
@@ -273,7 +273,7 @@ contains
     end if
 
     if (pes%calc_flux) then
-      call pes_flux_dump(restart, pes%flux, mesh, ierr)
+      call pes_flux_dump(restart, pes%flux, mesh, st, ierr)
     end if
 
     if (pes%calc_spm) then
@@ -317,7 +317,7 @@ contains
     end if
 
     if(pes%calc_flux) then
-      call pes_flux_load(restart, pes%flux, mesh, ierr)
+      call pes_flux_load(restart, pes%flux, mesh, st, ierr)
     end if
 
     if (pes%calc_spm) then
