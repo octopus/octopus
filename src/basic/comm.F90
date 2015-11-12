@@ -39,6 +39,7 @@ module comm_m
     module procedure dcomm_allreduce_2, zcomm_allreduce_2, scomm_allreduce_2, ccomm_allreduce_2, icomm_allreduce_2
     module procedure dcomm_allreduce_3, zcomm_allreduce_3, scomm_allreduce_3, ccomm_allreduce_3, icomm_allreduce_3
     module procedure dcomm_allreduce_4, zcomm_allreduce_4, scomm_allreduce_4, ccomm_allreduce_4, icomm_allreduce_4
+    module procedure dcomm_allreduce_5, zcomm_allreduce_5, scomm_allreduce_5, ccomm_allreduce_5, icomm_allreduce_5
   end interface
 
 contains
