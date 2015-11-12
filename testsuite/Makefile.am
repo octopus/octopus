@@ -31,7 +31,8 @@ SUBDIRS = \
 	periodic_systems \
         photo_electron   \
         complex_scaling  \
-	pseudopotentials
+	pseudopotentials \
+	frozen
 
 bin_SCRIPTS = oct-run_regression_test.pl oct-run_testsuite.sh
 
