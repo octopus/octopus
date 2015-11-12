@@ -51,7 +51,7 @@ module pes_spm_m
     pes_spm_load
 
   type pes_spm_t
-    integer                    :: npoints                   !< how many points we store the wf
+    integer                    :: nspoints                  !< how many points we store the wf
     FLOAT, pointer             :: rcoords(:,:)              !< coordinates of the sample points
     CMPLX, pointer             :: wf(:,:,:,:,:)   => NULL() !< wavefunctions at sample points
     FLOAT, pointer             :: dq(:,:)         => NULL() !< part 1 of Volkov phase (recipe phase) 
@@ -83,14 +83,16 @@ contains
     integer,         intent(in)  :: save_iter
 
     type(block_t) :: blk
-    integer       :: ip
+    integer       :: sdim, mdim
+    integer       :: isp
+    integer       :: ith, iph
+    FLOAT         :: theta, phi, radius
     FLOAT         :: xx(MAX_DIM)
-    FLOAT         :: dmin
-    integer       :: rankmin
-    FLOAT         :: phi, theta, radius
-    integer       :: iph, ith
 
     PUSH_SUB(pes_spm_init)
+
+    sdim = st%d%dim
+    mdim = mesh%sb%dim
 
     message(1) = 'Info: Calculating PES using sample point technique.'
     call messages_info(1)
@@ -210,7 +212,7 @@ contains
       else
         select case(mesh%sb%box_shape)
         case(PARALLELEPIPED)
-          radius = minval(mesh%sb%lsize(1:mesh%sb%dim))
+          radius = minval(mesh%sb%lsize(1:mdim))
         case(SPHERE)
           radius = mesh%sb%rsize
         case default
@@ -224,27 +226,27 @@ contains
     call mesh_interpolation_init(this%interp, mesh)
 
     if(.not. this%sphgrid) then
-      this%npoints = parse_block_n(blk)
+      this%nspoints = parse_block_n(blk)
     else
       ! setting values for spherical grid 
-      select case(mesh%sb%dim)
+      select case(mdim)
       case(1)
         this%thetamin = M_PI / M_TWO
         this%nstepstheta   = 0
         this%nstepsphi     = 2
-        this%npoints  = this%nstepsphi
+        this%nspoints  = this%nstepsphi
 
       case(2)
         this%thetamin = M_PI / M_TWO
         this%nstepstheta   = 0
-        this%npoints  = this%nstepsphi
+        this%nspoints  = this%nstepsphi
 
         call messages_print_var_value(stdout, "PES_spm_StepsPhiR", this%nstepsphi)
 
       case(3)
         this%thetamin = M_ZERO
         if(this%nstepstheta <= 1) this%nstepsphi = 1
-        this%npoints  = this%nstepsphi * (this%nstepstheta - 1) + 2
+        this%nspoints  = this%nstepsphi * (this%nstepstheta - 1) + 2
 
         call messages_print_var_value(stdout, "PES_spm_StepsPhiR", this%nstepsphi)
         call messages_print_var_value(stdout, "PES_spm_StepsThetaR", this%nstepstheta)
@@ -252,9 +254,9 @@ contains
       end select
     end if
 
-    call messages_print_var_value(stdout, "Number of sample points", this%npoints)
+    call messages_print_var_value(stdout, "Number of sample points", this%nspoints)
 
-    SAFE_ALLOCATE(this%rcoords(1:mesh%sb%dim, 1:this%npoints))
+    SAFE_ALLOCATE(this%rcoords(1:mdim, 1:this%nspoints))
 
     if(.not. this%sphgrid) then
 
@@ -262,11 +264,11 @@ contains
       call messages_info(1)
 
       ! read points from input file
-      do ip = 1, this%npoints
-        call parse_block_float(blk, ip - 1, 0, xx(1), units_inp%length)
-        call parse_block_float(blk, ip - 1, 1, xx(2), units_inp%length)
-        call parse_block_float(blk, ip - 1, 2, xx(3), units_inp%length)
-        this%rcoords(1:mesh%sb%dim, ip) = xx(1:mesh%sb%dim)
+      do isp = 1, this%nspoints
+        call parse_block_float(blk, isp - 1, 0, xx(1), units_inp%length)
+        call parse_block_float(blk, isp - 1, 1, xx(2), units_inp%length)
+        call parse_block_float(blk, isp - 1, 2, xx(3), units_inp%length)
+        this%rcoords(1:mdim, isp) = xx(1:mdim)
       end do
       call parse_block_end(blk)
 
@@ -276,7 +278,7 @@ contains
       call messages_info(1)
 
       ! initializing spherical grid
-      ip = 0
+      isp = 0
       do ith = 0, this%nstepstheta
         if(ith == 0) then
           theta = this%thetamin     ! pi/2 for 1d and 2d. zero for 3d.
@@ -289,20 +291,20 @@ contains
           else
             phi = iph * M_TWO * M_PI / this%nstepsphi
           end if
-          ip = ip + 1
-                               this%rcoords(1, ip) = radius * cos(phi) * sin(theta)
-          if(mesh%sb%dim >= 2) this%rcoords(2, ip) = radius * sin(phi) * sin(theta)
-          if(mesh%sb%dim == 3) this%rcoords(3, ip) = radius * cos(theta)
+          isp = isp + 1
+                        this%rcoords(1, isp) = radius * cos(phi) * sin(theta)
+          if(mdim >= 2) this%rcoords(2, isp) = radius * sin(phi) * sin(theta)
+          if(mdim == 3) this%rcoords(3, isp) = radius * cos(theta)
           if(theta == M_ZERO .or. theta == M_PI) exit
         end do
       end do
 
     end if
 
-    SAFE_ALLOCATE(this%wf(1:st%nst, 1:st%d%dim, 1:st%d%nik, 1:this%npoints, 0:save_iter-1))
+    SAFE_ALLOCATE(this%wf(1:st%nst, 1:sdim, 1:st%d%nik, 1:this%nspoints, 0:save_iter-1))
 
     if(this%recipe == M_PHASE) then
-      SAFE_ALLOCATE(this%dq(1:this%npoints, 0:save_iter-1))
+      SAFE_ALLOCATE(this%dq(1:this%nspoints, 0:save_iter-1))
       SAFE_ALLOCATE(this%domega(0:save_iter-1))
       this%dq = M_ZERO
       this%domega = M_ZERO
@@ -310,7 +312,7 @@ contains
 
     if(this%onfly) then
       this%nomega = nint(this%omegamax/this%delomega)
-      SAFE_ALLOCATE(this%wfft(1:st%nst, 1:st%d%dim, 1:st%d%nik, 1:this%npoints, 1:this%nomega))
+      SAFE_ALLOCATE(this%wfft(1:st%nst, 1:sdim, 1:st%d%nik, 1:this%nspoints, 1:this%nomega))
       this%wfft = M_z0
     end if
 
@@ -347,15 +349,15 @@ contains
     integer,             intent(in)    :: iter
     type(hamiltonian_t), intent(in)    :: hm
 
+    integer            :: stst, stend, kptst, kptend, sdim, mdim
+    integer            :: ist, ik, isdim
+    integer            :: ii
+
     CMPLX, allocatable :: psistate(:), wfftact(:,:,:,:,:)
-    integer            :: ip, ii
-    integer            :: dim, stst, stend, kptst, kptend
-    integer            :: ik, ist, idim
-    logical            :: contains_ip
     CMPLX              :: rawfac
     CMPLX, allocatable :: phasefac(:)
-    FLOAT              :: omega
     integer            :: iom
+    FLOAT              :: omega
     CMPLX, allocatable :: interp_values(:)
 
     PUSH_SUB(pes_spm_calc)
@@ -366,18 +368,19 @@ contains
     stend  = st%st_end
     kptst  = st%d%kpt%start
     kptend = st%d%kpt%end
-    dim    = st%d%dim
+    sdim   = st%d%dim
+    mdim   = mesh%sb%dim
 
     SAFE_ALLOCATE(psistate(1:mesh%np_part))
-    SAFE_ALLOCATE(interp_values(1:this%npoints))
+    SAFE_ALLOCATE(interp_values(1:this%nspoints))
 
     if(this%onfly) then
-      SAFE_ALLOCATE(wfftact(1:st%nst, dim, 1:st%d%nik, 1:this%npoints, 1:this%nomega))
+      SAFE_ALLOCATE(wfftact(1:st%nst, 1:sdim, 1:st%d%nik, 1:this%nspoints, 1:this%nomega))
       wfftact = M_z0
     endif
 
     if(this%recipe == M_PHASE) then
-      SAFE_ALLOCATE(phasefac(1:this%npoints))
+      SAFE_ALLOCATE(phasefac(1:this%nspoints))
     end if
 
     ! needed for allreduce, otherwise it will take values from previous cycle
@@ -385,11 +388,11 @@ contains
 
     do ik = kptst, kptend 
       do ist = stst, stend
-        do idim = 1, dim
-          call states_get_state(st, mesh, idim, ist, ik, psistate(1:mesh%np_part))
-          call mesh_interpolation_evaluate(this%interp, this%npoints, psistate(1:mesh%np_part), &
-            this%rcoords(1:mesh%sb%dim, 1:this%npoints), interp_values(1:this%npoints))
-          this%wf(ist, idim, ik, :, ii) = interp_values(:)
+        do isdim = 1, sdim
+          call states_get_state(st, mesh, isdim, ist, ik, psistate(1:mesh%np_part))
+          call mesh_interpolation_evaluate(this%interp, this%nspoints, psistate(1:mesh%np_part), &
+            this%rcoords(1:mdim, 1:this%nspoints), interp_values(1:this%nspoints))
+          this%wf(ist, isdim, ik, :, ii) = interp_values(:)
         end do
       end do
     end do
@@ -411,14 +414,14 @@ contains
 
         select case(this%recipe)
         case(M_RAW)
-          wfftact(stst:stend, 1:dim, kptst:kptend, :, iom) = this%wf(stst:stend, 1:dim, kptst:kptend, :, ii) * rawfac
+          wfftact(stst:stend, 1:sdim, kptst:kptend, :, iom) = this%wf(stst:stend, 1:sdim, kptst:kptend, :, ii) * rawfac
         case(M_PHASE)
           phasefac(:) = exp(M_zI * (this%domega(ii) - sqrt(M_TWO * omega) * this%dq(:, ii)))
 
           do ik = kptst, kptend
             do ist = stst, stend
-              do idim = 1, dim
-                wfftact(ist, idim, ik, :, iom) = this%wf(ist, idim, ik, :, ii) * phasefac(:) * rawfac
+              do isdim = 1, sdim
+                wfftact(ist, isdim, ik, :, iom) = this%wf(ist, isdim, ik, :, ii) * phasefac(:) * rawfac
               end do
             end do
           end do
@@ -450,30 +453,32 @@ contains
     integer,         intent(in) :: iter
     FLOAT,           intent(in) :: dt
 
-    integer            :: ip, ii, jj, ik, ist, idim, iom, iph, ith, iphi
-    integer            :: iunit, iunitone, iunittwo
+    integer            :: ist, ik, isdim
+    integer            :: ii, jj
+    integer            :: isp, save_iter
+    integer            :: iom, ith, iph, iphi
+    FLOAT              :: omega, theta, phi
     CMPLX              :: vfu
-    character(len=4)   :: filenr
-    FLOAT              :: wfu, omega
+    FLOAT              :: wfu
     FLOAT, allocatable :: wffttot(:,:)
     FLOAT              :: wffttotsave
-    integer            :: save_iter
-    FLOAT              :: theta, phi
+    character(len=4)   :: filenr
+    integer            :: iunit, iunitone, iunittwo
 
     PUSH_SUB(pes_spm_output)
 
     save_iter = this%save_iter
 
     if(this%onfly) then
-      SAFE_ALLOCATE(wffttot(1:this%nomega, 1:this%npoints))
+      SAFE_ALLOCATE(wffttot(1:this%nomega, 1:this%nspoints))
       wffttot = M_ZERO
 
       ! calculate total spectrum
       do iom = 1, this%nomega
         do ik = 1, st%d%nik
           do ist = 1, st%nst
-            do idim = 1, st%d%dim
-              wffttot(iom, :) = real(this%wfft(ist, idim, ik, :, iom))**2 + aimag(this%wfft(ist, idim, ik,:, iom))**2 &
+            do isdim = 1, st%d%dim
+              wffttot(iom, :) = real(this%wfft(ist, isdim, ik, :, iom))**2 + aimag(this%wfft(ist, isdim, ik,:, iom))**2 &
                 + wffttot(iom, :)
             end do
           end do
@@ -482,8 +487,8 @@ contains
     end if
 
     if(.not. this%sphgrid .or. in_debug_mode) then   ! too much output for spherical grid
-      do ip = 1, this%npoints
-        write(filenr, '(i4.4)') ip
+      do isp = 1, this%nspoints
+        write(filenr, '(i4.4)') isp
    
         iunitone = io_open('td.general/'//'PES_spm.'//filenr//'.wavefunctions.out', action='write', position='append')
         if(this%recipe == M_PHASE) &
@@ -494,10 +499,10 @@ contains
           write(iunitone, '(e17.10)', advance='no') units_from_atomic(units_inp%time, jj * dt)
           do ik = 1, st%d%nik
             do ist = 1, st%nst
-              do idim = 1, st%d%dim
-                vfu = units_from_atomic(sqrt(units_out%length**(-3)), this%wf(ist, idim, ik, ip, ii-1))
+              do isdim = 1, st%d%dim
+                vfu = units_from_atomic(sqrt(units_out%length**(-3)), this%wf(ist, isdim, ik, isp, ii-1))
                 write(iunitone, '(1x,e18.10E3,1x,e18.10E3)', advance='no') &
-                  real(vfu),  aimag(vfu) 
+                  real(vfu),  aimag(vfu)
               end do
             end do
           end do
@@ -506,7 +511,7 @@ contains
           if(this%recipe == M_PHASE) then
             write(iunittwo, '(e17.10)', advance='no') units_from_atomic(units_inp%time, jj * dt)
             write(iunittwo, '(1x,e18.10E3,1x,e18.10E3)', advance='no') &
-              this%domega(ii-1), this%dq(ip, ii-1)
+              this%domega(ii-1), this%dq(isp, ii-1)
             write(iunittwo, '(1x)', advance='yes')
           end if
         end do
@@ -518,11 +523,11 @@ contains
           write(iunit, '(a44)') '# frequency, total spectrum, orbital spectra'
           do iom = 1, this%nomega 
             omega = iom*this%delomega
-            write(iunit, '(e17.10, 1x, e17.10)', advance='no') omega, wffttot(iom, ip)
+            write(iunit, '(e17.10, 1x, e17.10)', advance='no') omega, wffttot(iom, isp)
             do ik = 1, st%d%nik
               do ist = 1, st%nst 
-                do idim = 1, st%d%dim
-                  wfu = real(this%wfft(ist, idim, ik, ip, iom))**2 + aimag(this%wfft(ist, idim, ik, ip, iom))**2
+                do isdim = 1, st%d%dim
+                  wfu = real(this%wfft(ist, isdim, ik, isp, iom))**2 + aimag(this%wfft(ist, isdim, ik, isp, iom))**2
                   write(iunit,'(1x,e18.10e3)', advance='no') wfu
                 end do
               end do
@@ -541,7 +546,7 @@ contains
 
       do iom = 1, this%nomega
         omega = iom * this%delomega
-        ip = 0
+        isp = 0
         do ith = 0, this%nstepstheta
           if(ith == 0) then
             theta = this%thetamin     ! pi/2 for 1d and 2d. zero for 3d.
@@ -549,14 +554,14 @@ contains
             theta = ith * M_PI / this%nstepstheta
           end if
           do iph = 0, this%nstepsphi - 1
-            ip = ip + 1
+            isp = isp + 1
             if(iph == 0) then
-              wffttotsave = wffttot(iom, ip)
+              wffttotsave = wffttot(iom, isp)
               phi = M_ZERO
             else
               phi = iph * M_TWO * M_PI / this%nstepsphi
             end if
-            write(iunit,'(5(1x,e18.10E3))') omega, theta, phi, wffttot(iom, ip)
+            write(iunit,'(5(1x,e18.10E3))') omega, theta, phi, wffttot(iom, isp)
 
             ! just repeat the result for output
             if(iph == (this%nstepsphi - 1)) then
@@ -567,7 +572,7 @@ contains
             if(theta == M_ZERO .or. theta == M_PI) then
               do iphi = 1, this%nstepsphi
                 phi = iphi * M_TWO * M_PI / this%nstepsphi
-                write(iunit,'(5(1x,e18.10E3))') omega, theta, phi, wffttot(iom, ip)
+                write(iunit,'(5(1x,e18.10E3))') omega, theta, phi, wffttot(iom, isp)
               end do
               exit
             end if
@@ -591,20 +596,22 @@ contains
     type(mesh_t),    intent(in) :: mesh
     type(states_t),  intent(in) :: st
 
-    integer          :: ip,ik,ist,idim,iunit
+    integer          :: ist, ik, isdim
+    integer          :: isp
     FLOAT            :: xx(MAX_DIM)
     character(len=4) :: filenr
+    integer          :: iunit
 
     PUSH_SUB(pes_spm_init_write)
 
     xx = M_ZERO
     if(mpi_grp_is_root(mpi_world)) then
       if(.not. this%sphgrid .or. in_debug_mode) then   ! too much output for spherical grid
-        do ip = 1, this%npoints
-          write(filenr, '(i4.4)') ip
+        do isp = 1, this%nspoints
+          write(filenr, '(i4.4)') isp
    
           iunit = io_open('td.general/'//'PES_spm.'//filenr//'.wavefunctions.out', action='write')
-          xx(1:mesh%sb%dim) = this%rcoords(1:mesh%sb%dim, ip)
+          xx(1:mesh%sb%dim) = this%rcoords(1:mesh%sb%dim, isp)
           write(iunit,'(a1)') '#'
           write(iunit, '(a7,f17.6,a1,f17.6,a1,f17.6,5a)') &
             '# R = (',xx(1),' ,',xx(2),' ,',xx(3), &
@@ -614,9 +621,9 @@ contains
           write(iunit, '(a3,14x)', advance='no') '# t' 
           do ik = 1, st%d%nik
             do ist = 1, st%nst
-              do idim = 1, st%d%dim
+              do isdim = 1, st%d%dim
                 write(iunit, '(3x,a8,i3,a7,i3,a8,i3,3x)', advance='no') &
-                  "ik = ", ik, " ist = ", ist, " idim = ", idim
+                  "ik = ", ik, " ist = ", ist, " idim = ", isdim
               end do
             end do
           end do
@@ -661,7 +668,7 @@ contains
     end if
 
     if(this%onfly) then 
-      call zrestart_write_binary(restart, 'this', this%npoints*st%d%dim*st%nst*st%d%nik*this%nomega, &
+      call zrestart_write_binary(restart, 'this', this%nspoints*st%d%dim*st%nst*st%d%nik*this%nomega, &
         this%wfft, err) 
     end if
 
@@ -707,7 +714,7 @@ contains
     end if
 
     if(this%onfly) then
-      call zrestart_read_binary(restart, 'this', this%npoints*st%d%dim*st%nst*st%d%nik*this%nomega, &
+      call zrestart_read_binary(restart, 'this', this%nspoints*st%d%dim*st%nst*st%d%nik*this%nomega, &
         this%wfft, err)
     end if
 
@@ -736,31 +743,33 @@ contains
     FLOAT,               intent(in)    :: dt
     integer,             intent(in)    :: ii
     
-    integer :: dim, il, ip, iprev
+    integer :: mdim
+    integer :: isp
+    integer :: il, iprev
     FLOAT   :: vp(1:MAX_DIM)
     FLOAT   :: rr
 
     PUSH_SUB(pes_spm_calc_rcphase)
 
-    dim = mesh%sb%dim
+    mdim = mesh%sb%dim
 
     vp = M_ZERO
     do il = 1, hm%ep%no_lasers
-      call laser_field(hm%ep%lasers(il), vp(1:dim), iter*dt)
+      call laser_field(hm%ep%lasers(il), vp(1:mdim), iter*dt)
     end do
-    vp(1:dim) = -vp(1:dim)
+    vp(1:mdim) = -vp(1:mdim)
 
     iprev = ii - 1
     if(ii == 0) iprev = this%save_iter - 1
 
-    do ip = 1, this%npoints
-      rr = sqrt(dot_product(this%rcoords(1:dim, ip), this%rcoords(1:dim, ip)))
-      this%dq(ip, ii) = this%dq(ip, iprev) &
-        + dot_product(this%rcoords(1:dim, ip), vp(1:dim)) / (P_C * rr) * dt
+    do isp = 1, this%nspoints
+      rr = sqrt(dot_product(this%rcoords(1:mdim, isp), this%rcoords(1:mdim, isp)))
+      this%dq(isp, ii) = this%dq(isp, iprev) &
+        + dot_product(this%rcoords(1:mdim, isp), vp(1:mdim)) / (P_C * rr) * dt
     end do
 
     this%domega(ii) = this%domega(iprev) &
-      + dot_product(vp(1:dim), vp(1:dim)) / (M_TWO * P_C**M_TWO) * dt
+      + dot_product(vp(1:mdim), vp(1:mdim)) / (M_TWO * P_C**M_TWO) * dt
 
     POP_SUB(pes_spm_calc_rcphase)
   end subroutine pes_spm_calc_rcphase

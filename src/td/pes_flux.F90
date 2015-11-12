@@ -120,8 +120,8 @@ contains
     integer            :: imdim
     integer            :: isp, ikp
     integer            :: il
-    integer            :: ikk, ith, iph
-    FLOAT              :: kmax, thetak, phik
+    integer            :: ikk, ith, iph, iomk
+    FLOAT              :: kmax, kact, thetak, phik
 
     FLOAT, allocatable :: k_dot_aux(:)
     integer            :: nstepsphir, nstepsthetar
@@ -129,8 +129,6 @@ contains
     integer            :: mpisize, mpirank
 #endif
     integer            :: ll, mm
-    FLOAT              :: kact
-    integer            :: iomk
 
     PUSH_SUB(pes_flux_init)
 
@@ -405,7 +403,7 @@ contains
 
       SAFE_ALLOCATE(this%ylm_k(0:this%lmax, -this%lmax:this%lmax, 1:this%nstepsomegak))
       SAFE_ALLOCATE(this%j_l(0:this%lmax, 1:this%nk))
-      SAFE_ALLOCATE(this%kcoords_sph(1:this%nk, 1:this%nstepsomegak, 1:3))
+      SAFE_ALLOCATE(this%kcoords_sph(1:3, 1:this%nk, 1:this%nstepsomegak))
 
       this%ylm_k = M_z0
       this%kcoords_sph = M_ZERO
@@ -423,9 +421,9 @@ contains
               call ylmr(cos(phik) * sin(thetak), sin(phik) * sin(thetak), cos(thetak), ll, mm, this%ylm_k(ll, mm, iomk))
             end do
           end do
-          this%kcoords_sph(this%nk_start:this%nk_end, iomk, 1) = cos(phik) * sin(thetak)
-          this%kcoords_sph(this%nk_start:this%nk_end, iomk, 2) = sin(phik) * sin(thetak)
-          this%kcoords_sph(this%nk_start:this%nk_end, iomk, 3) = cos(thetak)
+          this%kcoords_sph(1, this%nk_start:this%nk_end, iomk) = cos(phik) * sin(thetak)
+          this%kcoords_sph(2, this%nk_start:this%nk_end, iomk) = sin(phik) * sin(thetak)
+          this%kcoords_sph(3, this%nk_start:this%nk_end, iomk) = cos(thetak)
           if(ith == 0 .or. ith == this%nstepsthetak) exit
         end do
       end do
@@ -437,7 +435,7 @@ contains
           this%j_l(ll, ikk) = loct_sph_bessel(ll, kact * this%radius) * &
                               M_TWO * M_PI / (M_TWO * M_PI)**M_THREE/M_TWO
         end do
-        this%kcoords_sph(ikk, :, :) = kact * this%kcoords_sph(ikk, :, :)
+        this%kcoords_sph(:, ikk, :) = kact * this%kcoords_sph(:, ikk, :)
       end do
 #if defined(HAVE_MPI)
       call comm_allreduce(mpi_world%comm, this%kcoords_sph)
@@ -456,7 +454,7 @@ contains
         write(*,*) 'Info: Number of k-points (total):', this%nkpnts
       end if
 
-      SAFE_ALLOCATE(this%kcoords_cub(1:this%nkpnts, 1:mdim))
+      SAFE_ALLOCATE(this%kcoords_cub(1:mdim, 1:this%nkpnts))
       this%kcoords_cub = M_ZERO
 
       thetak = M_PI / M_TWO
@@ -468,9 +466,9 @@ contains
             ikp = ikp + 1
             phik = iph * M_TWO * M_PI / this%nstepsphik
             kact = ikk * this%dk
-                          this%kcoords_cub(ikp, 1) = kact * cos(phik) * sin(thetak)
-            if(mdim >= 2) this%kcoords_cub(ikp, 2) = kact * sin(phik) * sin(thetak)
-            if(mdim == 3) this%kcoords_cub(ikp, 3) = kact * cos(thetak)
+                          this%kcoords_cub(1, ikp) = kact * cos(phik) * sin(thetak)
+            if(mdim >= 2) this%kcoords_cub(2, ikp) = kact * sin(phik) * sin(thetak)
+            if(mdim == 3) this%kcoords_cub(3, ikp) = kact * cos(thetak)
             if(thetak == M_ZERO .or. thetak == M_PI) exit
           end do
         end do
@@ -495,7 +493,11 @@ contains
     if(this%shape == M_CUBIC) then
       call parse_variable('PES_Flux_TDSteps', 1, this%tdsteps)
     else
+#if defined(HAVE_MPI)
       this%tdsteps = mpisize
+#else
+      this%tdsteps = M_ONE
+#endif
     end if
 
     ! -----------------------------------------------------------------
@@ -515,7 +517,7 @@ contains
     SAFE_ALLOCATE(this%gwf(1:st%nst, 1:sdim, 1:st%d%nik, 1:this%nsrfcpnts, 1:this%tdsteps, 1:mdim))
     this%gwf = M_z0
 
-    SAFE_ALLOCATE(this%veca(1:this%tdsteps, 1:mdim))
+    SAFE_ALLOCATE(this%veca(1:mdim, 1:this%tdsteps))
     this%veca = M_ZERO
 
     if(this%shape == M_SPHERICAL) then
@@ -540,7 +542,7 @@ contains
         do isp = this%nsrfcpnts_start, this%nsrfcpnts_end
           k_dot_aux = M_ZERO
           do imdim = 1, mdim
-            k_dot_aux(:) = k_dot_aux(:) + this%kcoords_cub(:, imdim) * this%rcoords(imdim, isp)
+            k_dot_aux(:) = k_dot_aux(:) + this%kcoords_cub(imdim, :) * this%rcoords(imdim, isp)
           end do
           this%conjgplanewf_cub(:, isp) = exp(-M_zI * k_dot_aux(:)) / (M_TWO * M_PI)**(mdim/M_TWO)
         end do
@@ -618,7 +620,7 @@ contains
       kptend = st%d%kpt%end
       sdim   = st%d%dim
       mdim   = mesh%sb%dim
-   
+
       SAFE_ALLOCATE(psi(1:mesh%np_part))
       SAFE_ALLOCATE(gpsi(1:mesh%np_part, 1:mdim))
 
@@ -641,9 +643,9 @@ contains
 
       ! get and save current laser field
       do il = 1, hm%ep%no_lasers
-        call laser_field(hm%ep%lasers(il), this%veca(itstep, 1:mdim), iter*dt)
+        call laser_field(hm%ep%lasers(il), this%veca(1:mdim, itstep), iter*dt)
       end do
-      this%veca(itstep, :) = - this%veca(itstep, :)
+      this%veca(:, itstep) = - this%veca(:, itstep)
 
       ! save wavefunctions & gradients
       do ik = kptst, kptend
@@ -775,7 +777,7 @@ contains
     conjgphase_cub(:, 0) = this%conjgphase_prev_cub(:)
     do ikp = ikp_start, ikp_end
       do itstep = 1, this%tdsteps
-        vec = sum((this%kcoords_cub(ikp, 1:mdim) - this%veca(itstep, 1:mdim) / P_c)**2)
+        vec = sum((this%kcoords_cub(1:mdim, ikp) - this%veca(1:mdim, itstep) / P_c)**2)
         conjgphase_cub(ikp, itstep) = conjgphase_cub(ikp, itstep - 1) * exp(M_zI * vec * dt * this%tdstepsinterval / M_TWO)
       end do
     end do
@@ -788,14 +790,14 @@ contains
     do isp = isp_start, isp_end 
       do idir = 1, mdim
         ! calculate flux only along the surface normal
-        if(this%srfcnrml(isp, idir) == M_ZERO) cycle
+        if(this%srfcnrml(idir, isp) == M_ZERO) cycle
 
         Jk_cub = M_z0
 
         if(.not. this%usememory) then
           k_dot_aux(:) = M_ZERO
           do imdim = 1, mdim
-            k_dot_aux(:) = k_dot_aux(:) + this%kcoords_cub(:, imdim) * this%rcoords(imdim, isp)
+            k_dot_aux(:) = k_dot_aux(:) + this%kcoords_cub(imdim, :) * this%rcoords(imdim, isp)
           end do
           conjgplanewf_cub(:) = exp(-M_zI * k_dot_aux(:)) / (M_TWO * M_PI)**(mdim/M_TWO)
         end if
@@ -808,7 +810,7 @@ contains
                 Jk_cub(ist, isdim, ik, 1:this%nkpnts) = &
                   Jk_cub(ist, isdim, ik, 1:this%nkpnts) + conjgphase_cub(1:this%nkpnts, itstep) * &
                   (this%wf(ist, isdim, ik, isp, itstep) * &
-                   (M_TWO * this%veca(itstep, idir) / P_c - this%kcoords_cub(1:this%nkpnts,idir)) + &
+                   (M_TWO * this%veca(idir, itstep) / P_c - this%kcoords_cub(idir, 1:this%nkpnts)) + &
                    this%gwf(ist, isdim, ik, isp, itstep, idir) * M_zI)
               end do
 
@@ -823,7 +825,7 @@ contains
             end do
           end do
         end do
-        spctramp_cub(:,:,:,:) = spctramp_cub(:,:,:,:) + Jk_cub(:,:,:,:) * this%srfcnrml(isp, idir)
+        spctramp_cub(:,:,:,:) = spctramp_cub(:,:,:,:) + Jk_cub(:,:,:,:) * this%srfcnrml(idir, isp)
       end do
     end do
 
@@ -884,7 +886,7 @@ contains
     do ikk = ikk_start, ikk_end
       do iomk = 1, this%nstepsomegak
         do itstep = 1, this%tdsteps
-          vec = sum((this%kcoords_sph(ikk, iomk, 1:3) - this%veca(itstep, 1:3) / P_c)**2)
+          vec = sum((this%kcoords_sph(1:3, ikk, iomk) - this%veca(1:3, itstep) / P_c)**2)
           conjgphase_sph(ikk, iomk, itstep) = conjgphase_sph(ikk, iomk, itstep - 1) * &
             exp(M_zI * vec * dt * this%tdstepsinterval / M_TWO)
         end do
@@ -913,11 +915,11 @@ contains
               do mm = -ll, ll
                 do imdim = 1, 3 
                   sigma1(imdim, :) = &
-                    this%ylm_r(ll, mm, :) * this%srfcnrml(:, imdim) * &
+                    this%ylm_r(ll, mm, :) * this%srfcnrml(imdim, :) * &
                     this%wf(ist, isdim, ik, :, itstep)
 
                   sigma2(imdim, :) = &
-                    this%ylm_r(ll, mm, :) * this%srfcnrml(:, imdim) * &
+                    this%ylm_r(ll, mm, :) * this%srfcnrml(imdim, :) * &
                     this%gwf(ist, isdim, ik, :, itstep, imdim)
 
                   ! surface integral
@@ -984,7 +986,7 @@ contains
             do imdim = 1, 3
               spctramp_sph(ist, isdim, ik, :,:) = spctramp_sph(ist, isdim, ik, :,:) + &
                 conjgphase_sph(:,:, itstep) * (integ12_t(:,:, imdim) * &
-                 (M_TWO * this%veca(itstep, imdim)  / P_c - this%kcoords_sph(:,:, imdim)))
+                 (M_TWO * this%veca(imdim, itstep)  / P_c - this%kcoords_sph(imdim, :,:)))
             end do
               spctramp_sph(ist, isdim, ik, :, :) = spctramp_sph(ist, isdim, ik, :,:) + &
                 conjgphase_sph(:,:, itstep) * integ22_t(:,:) * M_zI
@@ -1071,7 +1073,7 @@ contains
 #endif
 
     SAFE_ALLOCATE(this%srfcpnt(1:this%nsrfcpnts))
-    SAFE_ALLOCATE(this%srfcnrml(1:this%nsrfcpnts, 1:mdim))
+    SAFE_ALLOCATE(this%srfcnrml(1:mdim, 1:this%nsrfcpnts))
     SAFE_ALLOCATE(this%rcoords(1:mdim, 1:this%nsrfcpnts))
     SAFE_ALLOCATE(this%rankmin(1:this%nsrfcpnts))
 
@@ -1088,11 +1090,11 @@ contains
         this%rankmin(isp) = rankmin
         ! surface normal
         idir = abs(which_surface(ip_global))
-        this%srfcnrml(isp, idir) = sign(1, which_surface(ip_global))
+        this%srfcnrml(idir, isp) = sign(1, which_surface(ip_global))
         ! add the surface element (of directions orthogonal to the normal vector)
         do imdim = 1, mdim
           if(imdim == idir) cycle
-          this%srfcnrml(isp, idir) = this%srfcnrml(isp, idir) * mesh%spacing(imdim)
+          this%srfcnrml(idir, isp) = this%srfcnrml(idir, isp) * mesh%spacing(imdim)
         end do
       end if
     end do
@@ -1140,7 +1142,7 @@ contains
   
     end select
 
-    SAFE_ALLOCATE(this%srfcnrml(1:this%nsrfcpnts, 1:mdim))
+    SAFE_ALLOCATE(this%srfcnrml(1:mdim, 1:this%nsrfcpnts))
     SAFE_ALLOCATE(this%rcoords(1:mdim, 1:this%nsrfcpnts))
 
     ! initializing spherical grid
@@ -1170,12 +1172,12 @@ contains
       do iph = 0, nstepsphir - 1     ! 2*pi is the same than zero
         isp = isp + 1
         phir = iph * M_TWO * M_PI / nstepsphir
-                      this%srfcnrml(isp, 1) = cos(phir) * sin(thetar)
-        if(mdim >= 2) this%srfcnrml(isp, 2) = sin(phir) * sin(thetar)
-        if(mdim == 3) this%srfcnrml(isp, 3) = cos(thetar)
-        this%rcoords(1:mdim, isp) = this%radius * this%srfcnrml(isp, 1:mdim) 
+                      this%srfcnrml(1, isp) = cos(phir) * sin(thetar)
+        if(mdim >= 2) this%srfcnrml(2, isp) = sin(phir) * sin(thetar)
+        if(mdim == 3) this%srfcnrml(3, isp) = cos(thetar)
+        this%rcoords(1:mdim, isp) = this%radius * this%srfcnrml(1:mdim, isp)
         ! here we also include the surface elements
-        this%srfcnrml(isp, 1:mdim) = weight * this%srfcnrml(isp, 1:mdim)
+        this%srfcnrml(1:mdim, isp) = weight * this%srfcnrml(1:mdim, isp)
         if(thetar == M_ZERO .or. thetar == M_PI) exit
       end do
     end do
@@ -1396,8 +1398,8 @@ contains
 #if defined(HAVE_MPI)
     integer, allocatable :: dimrank(:)
     integer              :: mpisize, mpirank, irest, irank
-#endif
     integer              :: inumber
+#endif
 
     PUSH_SUB(pes_flux_distribute)
 
