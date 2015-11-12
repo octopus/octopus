@@ -166,7 +166,7 @@ contains
     !% Choose the location of the surface with variable PES_Flux_Lsize.
     !%Option sph 2
     !% Constructs a sphere with radius PES_Flux_Radius. Points on the sphere 
-    !% are interpolated by triangular interpolation.
+    !% are interpolated by trilinear interpolation.
     !%End
     call parse_variable('PES_Flux_Shape', M_SPHERICAL, this%shape)
     if(.not.varinfo_valid_option('PES_Flux_Shape', this%shape, is_flag = .true.)) &
@@ -177,6 +177,12 @@ contains
     !%Type block
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
+    !% Shifts the surface for PES_Flux_Shape = cub. The syntax is:
+    !%
+    !% <tt>%PES_Flux_Offset
+    !% <br>&nbsp;&nbsp;xshift | yshift | zshift
+    !% <br>%
+    !% </tt>
     !%End
     offset = M_ZERO
     if(parse_block('PES_Flux_Offset', blk) == 0) then
@@ -208,6 +214,15 @@ contains
     !%Type block
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
+    !% Sets the location of the surface for PES_Flux_Shape = cub. The syntax is:
+    !%
+    !% <tt>%PES_Flux_Lsize
+    !% <br>&nbsp;&nbsp;xsize | ysize | zsize
+    !% <br>%
+    !% </tt>
+    !%
+    !% where xsize, ysize, and zsize are with respect to the origin. The surface can 
+    !% be shifted with PES_Flux_Offset.
     !%End
     if(this%shape == M_CUBIC) then
       if(parse_block('PES_Flux_Lsize', blk) == 0) then
@@ -343,6 +358,7 @@ contains
     !%Default 0.002
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
+    !% Spacing of the k-mesh in |k| (equidistant).
     !%End
     call parse_variable('PES_Flux_DeltaK', CNST(0.002), this%dk)
     if(this%dk <= M_ZERO) call messages_input_error('PES_Flux_DeltaK')
