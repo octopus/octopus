@@ -224,6 +224,7 @@ contains
     PUSH_SUB(output_parse_config_molecule)
 
     nullify(cnfg, list)
+    call json_end(this)
     call geometry_create_data_object(geo, this)
     call json_get(this, "species", list, ierr)
     ASSERT(ierr==JSON_OK)
