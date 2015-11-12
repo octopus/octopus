@@ -149,7 +149,7 @@ contains
       end if
     end do
 
-    message(1) = 'Info: Calculation PES using t-surff technique.'
+    message(1) = 'Info: Calculating PES using t-surff technique.'
     call messages_info(1)
 
     ! -----------------------------------------------------------------

@@ -101,8 +101,8 @@ contains
     !%Type block
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
-    !% List of points at which to calculate the photoelectron spectrum by Suraud method.
-    !% Required when <tt>PhotoElectronSpectrum = pes_spm</tt>.
+    !% List of points at which to calculate the photoelectron spectrum by the sample point 
+    !% method. If no points are given, a spherical grid is generated automatically.
     !% The exact syntax is:
     !%
     !% <tt>%PES_spm_points
@@ -125,7 +125,7 @@ contains
 
     !%Variable PES_spm_recipe
     !%Type integer
-    !%Default raw
+    !%Default phase
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
     !% The type for calculating the photoelectron spectrum in the sample point method.
