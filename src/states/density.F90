@@ -20,6 +20,8 @@
 #include "global.h"
 
 module density_m
+  use base_density_m
+  use base_states_m
   use blas_m
   use batch_m
   use batch_ops_m
@@ -49,8 +51,6 @@ module density_m
   use smear_m
   use states_m
   use states_dim_m
-  use ssys_density_m
-  use ssys_states_m
   use symmetrizer_m
   use types_m
   use unit_m
@@ -79,7 +79,7 @@ module density_m
     FLOAT,                pointer :: total_density(:, :)
     type(states_t),       pointer :: st
     type(grid_t),         pointer :: gr
-    type(ssys_density_t), pointer :: subsys_density
+    type(base_density_t), pointer :: subsys_density
     type(opencl_mem_t)            :: buff_density
     integer                       :: pnp
     logical                       :: packed
@@ -94,7 +94,7 @@ contains
     FLOAT,                target,   intent(out)   :: density(:, :)
     FLOAT, optional,      target,   intent(out)   :: Imdensity(:, :)
 
-    type(ssys_density_t), pointer :: live_density
+    type(base_density_t), pointer :: live_density
 
     PUSH_SUB(density_calc_init)
 
@@ -105,11 +105,11 @@ contains
       !> Set the pointers to the total and live densities.
       ASSERT(.not.present(Imdensity))
       this%total_density => density
-      call ssys_states_get(this%st%subsys_st, this%subsys_density)
+      call base_states_get(this%st%subsys_st, this%subsys_density)
       ASSERT(associated(this%subsys_density))
-      !call ssys_density_get(this%subsys_density, "live", live_density)
+      call base_density_gets(this%subsys_density, "live", live_density)
       ASSERT(associated(live_density))
-      call ssys_density_get(live_density, this%density)
+      call base_density_get(live_density, this%density)
       ASSERT(associated(this%density))
     else
       this%density => density
@@ -341,8 +341,8 @@ contains
 
     type(symmetrizer_t) :: symmetrizer
     FLOAT, allocatable :: tmpdensity(:)
-    type(ssys_density_iterator_t)   :: iter
-    type(ssys_density_t),   pointer :: ssys_density
+    type(base_density_iterator_t)   :: iter
+    type(base_density_t),   pointer :: ssys_density
     FLOAT,  dimension(:,:), pointer :: pdensity
     integer :: ispin, ip, ierr
     type(profile_t), save :: reduce_prof
@@ -401,13 +401,13 @@ contains
     if(associated(this%subsys_density))then
       !> Calculate the total density.
       this%total_density=M_ZERO
-      call ssys_density_init(iter, this%subsys_density)
+      call base_density_init(iter, this%subsys_density)
       do
         nullify(ssys_density, pdensity)
-        call ssys_density_next(iter, ssys_density, ierr)
-        if(ierr/=SSYS_DENSITY_OK)exit
+        call base_density_next(iter, ssys_density, ierr)
+        if(ierr/=BASE_DENSITY_OK)exit
         ASSERT(associated(ssys_density))
-        call ssys_density_get(ssys_density, pdensity)
+        call base_density_get(ssys_density, pdensity)
         ASSERT(associated(pdensity))
         do ispin = 1, this%st%d%nspin
           forall(ip=1:this%gr%fine%mesh%np)
@@ -415,7 +415,7 @@ contains
           end forall
         end do
       end do
-      call ssys_density_end(iter)
+      call base_density_end(iter)
       nullify(ssys_density, pdensity)
     end if
 

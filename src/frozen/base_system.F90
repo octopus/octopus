@@ -192,16 +192,16 @@ contains
   end subroutine base_system_new
 
   ! ---------------------------------------------------------
-  subroutine base_system__idel__(this)
+  subroutine base_system__del__(this)
     type(base_system_t), pointer :: this
 
-    PUSH_SUB(base_system__idel__)
+    PUSH_SUB(base_system__del__)
 
     SAFE_DEALLOCATE_P(this)
     nullify(this)
 
-    POP_SUB(base_system__idel__)
-  end subroutine base_system__idel__
+    POP_SUB(base_system__del__)
+  end subroutine base_system__del__
 
   ! ---------------------------------------------------------
   subroutine base_system_del(this)
@@ -213,7 +213,7 @@ contains
       if(associated(this%prnt))then
         call base_system_list_del(this%prnt%list, this)
         call base_system_end(this)
-        call base_system__idel__(this)
+        call base_system__del__(this)
       end if
     end if
 
@@ -221,44 +221,9 @@ contains
   end subroutine base_system_del
 
   ! ---------------------------------------------------------
-  subroutine base_system__inull__(this)
-    type(base_system_t), intent(inout) :: this
-
-    PUSH_SUB(base_system__inull__)
-
-    nullify(this%config, this%sim, this%prnt)
-
-    POP_SUB(base_system__inull__)
-  end subroutine base_system__inull__
-
-  ! ---------------------------------------------------------
-  subroutine base_system__iinit__(this, config)
+  subroutine base_system__init__begin(this, config)
     type(base_system_t),         intent(out) :: this
     type(json_object_t), target, intent(in)  :: config
-
-    type(json_object_t), pointer :: cnfg
-    integer                      :: ierr
-
-    PUSH_SUB(base_system__iinit__)
-
-    nullify(cnfg)
-    call base_system__inull__(this)
-    this%config => config
-    call json_get(this%config, "space", cnfg, ierr)
-    ASSERT(ierr==JSON_OK)
-    call space_init(this%space, cnfg)
-    nullify(cnfg)
-    call config_dict_init(this%dict)
-    call base_system_hash_init(this%hash)
-    call base_system_list_init(this%list)
-
-    POP_SUB(base_system__iinit__)
-  end subroutine base_system__iinit__
-
-  ! ---------------------------------------------------------
-  subroutine base_system__init__begin(this, config)
-    type(base_system_t), intent(out) :: this
-    type(json_object_t), intent(in)  :: config
 
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
@@ -266,7 +231,11 @@ contains
     PUSH_SUB(base_system__init__begin)
 
     nullify(cnfg)
-    call base_system__iinit__(this, config)
+    this%config => config
+    call json_get(this%config, "space", cnfg, ierr)
+    ASSERT(ierr==JSON_OK)
+    call space_init(this%space, cnfg)
+    nullify(cnfg)
     call json_get(this%config, "geometry", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
     call base_geometry__init__(this%geom, this%space, cnfg)
@@ -275,6 +244,9 @@ contains
     ASSERT(ierr==JSON_OK)
     call base_states__init__(this%st, cnfg)
     nullify(cnfg)
+    call config_dict_init(this%dict)
+    call base_system_hash_init(this%hash)
+    call base_system_list_init(this%list)
 
     POP_SUB(base_system__init__begin)
   end subroutine base_system__init__begin
@@ -298,9 +270,8 @@ contains
     PUSH_SUB(base_system__init__copy)
 
     ASSERT(associated(that%config))
-    call base_system__iinit__(this, that%config)
-    call base_geometry__init__(this%geom, that%geom)
-    call base_states__init__(this%st, that%st)
+    call base_system__init__(this, that%config)
+    if(associated(that%sim)) call base_system__start__(this, that%sim)
 
     POP_SUB(base_system__init__copy)
   end subroutine base_system__init__copy
@@ -312,8 +283,8 @@ contains
 
     PUSH_SUB(base_system_init_system)
 
-    call base_system__init__begin(this, config)
-    call base_system__init__finish(this)
+    call base_system__init__(this, config)
+    call base_system__init__(this)
 
     POP_SUB(base_system_init_system)
   end subroutine base_system_init_system
@@ -349,35 +320,15 @@ contains
   end subroutine base_system_init_copy
 
   ! ---------------------------------------------------------
-  subroutine base_system__istart__(this, sim)
+  subroutine base_system__start__(this, sim)
     type(base_system_t),        intent(inout) :: this
     type(simulation_t), target, intent(in)    :: sim
 
-    PUSH_SUB(base_system__istart__)
+    PUSH_SUB(base_system__start__)
 
     ASSERT(associated(this%config))
     ASSERT(.not.associated(this%sim))
     this%sim => sim
-
-    POP_SUB(base_system__istart__)
-  end subroutine base_system__istart__
-
-  ! ---------------------------------------------------------
-  subroutine base_system__start__(this, sim)
-    type(base_system_t),          intent(inout) :: this
-    type(simulation_t), optional, intent(in)    :: sim
-
-    PUSH_SUB(base_system__start__)
-
-    if(present(sim))then
-      call base_system__istart__(this, sim)
-    else
-      if(.not.associated(this%sim))then
-        ASSERT(associated(this%prnt))
-        ASSERT(associated(this%prnt%sim))
-        call base_system__istart__(this, this%prnt%sim)
-      end if
-    end if
     call base_states__start__(this%st, sim)
 
     POP_SUB(base_system__start__)
@@ -686,31 +637,18 @@ contains
   end subroutine base_system_get_states
 
   ! ---------------------------------------------------------
-  subroutine base_system__icopy__(this, that)
-    type(base_system_t), intent(inout) :: this
-    type(base_system_t), intent(in)    :: that
-
-    PUSH_SUB(base_system__icopy__)
-
-    call base_system__iend__(this)
-    if(associated(that%config))then
-      call base_system__iinit__(this, that%config)
-      if(associated(that%sim)) call base_system__istart__(this, that%sim)
-    end if
-
-    POP_SUB(base_system__icopy__)
-  end subroutine base_system__icopy__
-
-  ! ---------------------------------------------------------
   subroutine base_system__copy__begin(this, that)
     type(base_system_t), intent(inout) :: this
     type(base_system_t), intent(in)    :: that
 
     PUSH_SUB(base_system__copy__begin)
 
-    call base_system__icopy__(this, that)
-    call base_geometry__copy__(this%geom, that%geom)
-    call base_states__copy__(this%st, that%st)
+    call base_system__end__(this)
+    if(associated(that%config))then
+      call base_system__init__(this, that%config)
+      call base_geometry__copy__(this%geom, that%geom)
+      call base_states__copy__(this%st, that%st)
+    end if
 
     POP_SUB(base_system__copy__begin)
   end subroutine base_system__copy__begin
@@ -758,29 +696,18 @@ contains
   end subroutine base_system_copy_system
 
   ! ---------------------------------------------------------
-  subroutine base_system__iend__(this)
-    type(base_system_t), intent(inout) :: this
-
-    PUSH_SUB(base_system__iend__)
-
-    call base_system__inull__(this)
-    call space_end(this%space)
-    call config_dict_end(this%dict)
-    call base_system_hash_end(this%hash)
-    call base_system_list_end(this%list)
-
-    POP_SUB(base_system__iend__)
-  end subroutine base_system__iend__
-
-  ! ---------------------------------------------------------
   subroutine base_system__end__(this)
     type(base_system_t), intent(inout) :: this
 
     PUSH_SUB(base_system__end__)
 
-    call base_system__iend__(this)
+    nullify(this%config, this%sim, this%prnt)
+    call space_end(this%space)
     call base_geometry__end__(this%geom)
     call base_states__end__(this%st)
+    call config_dict_end(this%dict)
+    call base_system_hash_end(this%hash)
+    call base_system_list_end(this%list)
 
     POP_SUB(base_system__end__)
   end subroutine base_system__end__
@@ -798,7 +725,7 @@ contains
       call base_system_list_pop(this%list, subs)
       if(.not.associated(subs))exit
       call base_system_end(subs)
-      call base_system__idel__(subs)
+      call base_system__del__(subs)
     end do
     nullify(subs)
     call base_system__end__(this)

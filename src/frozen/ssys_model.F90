@@ -6,9 +6,6 @@ module ssys_model_m
   use messages_m
   use profiling_m
 
-  use ssys_system_m, only: &
-    ssys_system_t
-
   use ssys_hamiltonian_m, only: &
     ssys_hamiltonian_t
 

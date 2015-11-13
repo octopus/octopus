@@ -179,23 +179,23 @@ contains
 
     nullify(that)
     SAFE_ALLOCATE(that)
-    that%prnt=>this
+    that%prnt => this
     call base_density_list_push(this%list, that)
 
     POP_SUB(base_density_new)
   end subroutine base_density_new
 
   ! ---------------------------------------------------------
-  subroutine base_density__idel__(this)
+  subroutine base_density__del__(this)
     type(base_density_t), pointer :: this
 
-    PUSH_SUB(base_density__idel__)
+    PUSH_SUB(base_density__del__)
 
     SAFE_DEALLOCATE_P(this)
     nullify(this)
 
-    POP_SUB(base_density__idel__)
-  end subroutine base_density__idel__
+    POP_SUB(base_density__del__)
+  end subroutine base_density__del__
 
   ! ---------------------------------------------------------
   subroutine base_density_del(this)
@@ -207,7 +207,7 @@ contains
       if(associated(this%prnt))then
         call base_density_list_del(this%prnt%list, this)
         call base_density_end(this)
-        call base_density__idel__(this)
+        call base_density__del__(this)
       end if
     end if
 
@@ -257,6 +257,7 @@ contains
 
     ASSERT(associated(that%config))
     call base_density__init__(this, that%config)
+    if(associated(that%sim)) call base_density__start__(this, that%sim)
 
     POP_SUB(base_density__init__copy)
   end subroutine base_density__init__copy
@@ -303,11 +304,11 @@ contains
   end subroutine base_density_init_copy
 
   ! ---------------------------------------------------------
-  subroutine base_density__istart__(this, sim)
+  subroutine base_density__start__(this, sim)
     type(base_density_t),       intent(inout) :: this
     type(simulation_t), target, intent(in)    :: sim
 
-    PUSH_SUB(base_density__istart__)
+    PUSH_SUB(base_density__start__)
 
     ASSERT(associated(this%config))
     ASSERT(.not.associated(this%sim))
@@ -315,33 +316,13 @@ contains
     if(this%nspin>1) call storage_start(this%total, this%sim, fine=.true.)
     call storage_start(this%data, this%sim, fine=.true.)
 
-    POP_SUB(base_density__istart__)
-  end subroutine base_density__istart__
-
-  ! ---------------------------------------------------------
-  subroutine base_density__start__(this, sim)
-    type(base_density_t),         intent(inout) :: this
-    type(simulation_t), optional, intent(in)    :: sim
-
-    PUSH_SUB(base_density__start__)
-
-    if(present(sim))then
-      call base_density__istart__(this, sim)
-    else
-      if(.not.associated(this%sim))then
-        ASSERT(associated(this%prnt))
-        ASSERT(associated(this%prnt%sim))
-        call base_density__istart__(this, this%prnt%sim)
-      end if
-    end if
-
     POP_SUB(base_density__start__)
   end subroutine base_density__start__
 
   ! ---------------------------------------------------------
   recursive subroutine base_density_start(this, sim)
-    type(base_density_t),         intent(inout) :: this
-    type(simulation_t), optional, intent(in)    :: sim
+    type(base_density_t), intent(inout) :: this
+    type(simulation_t),   intent(in)    :: sim
 
     type(base_density_iterator_t) :: iter
     type(base_density_t), pointer :: subs
@@ -373,6 +354,8 @@ contains
 
     PUSH_SUB(base_density__norm__)
 
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
     do ispn = 1, this%nspin
       if(this%charge(ispn)>0.0_wp)then
         call storage_integrate(this%data, ispn, intg)
@@ -409,7 +392,6 @@ contains
 
     PUSH_SUB(base_density_update)
 
-    nullify(subs)
     call base_density_init(iter, this)
     do
       nullify(subs)
@@ -448,7 +430,6 @@ contains
 
     PUSH_SUB(base_density_stop)
 
-    nullify(subs)
     call base_density_init(iter, this)
     do
       nullify(subs)
@@ -702,10 +683,9 @@ contains
 
     call base_density__end__(this)
     if(associated(that%config))then
-      call base_density__init__(this, that%config)
+      call base_density__init__(this, that)
       this%charge(:) = that%charge(:)
       if(associated(that%sim)) then
-        call base_density__start__(this, that%sim)
         call storage_copy(this%data, that%data)
         call base_density__update__(this)
       end if
@@ -778,7 +758,7 @@ contains
       call base_density_list_pop(this%list, subs)
       if(.not.associated(subs))exit
       call base_density_end(subs)
-      call base_density__idel__(subs)
+      call base_density__del__(subs)
     end do
     nullify(subs)
     call base_density__end__(this)

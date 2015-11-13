@@ -20,6 +20,8 @@
 #include "global.h"
 
 module system_m
+  use base_states_m
+  use base_system_m
   use calc_mode_par_m
   use density_m
   use elf_m
@@ -49,8 +51,6 @@ module system_m
   use ssys_config_m
   use ssys_handle_m
   use ssys_model_m
-  use ssys_states_m
-  use ssys_system_m
   use states_m
   use states_dim_m
   use unit_m
@@ -85,8 +85,8 @@ contains
     type(ssys_handle_t), optional, intent(inout) :: subsys_handle
     type(json_object_t), optional, intent(inout) :: config
 
-    type(ssys_system_t), pointer :: subsys_system
-    type(ssys_states_t), pointer :: subsys_states
+    type(base_system_t), pointer :: subsys_system
+    type(base_states_t), pointer :: subsys_states
 
     type(profile_t), save :: prof
     PUSH_SUB(system_init)
@@ -128,7 +128,7 @@ contains
       ASSERT(associated(sys%subsys_model))
       call ssys_model_get(sys%subsys_model, subsys_system)
       ASSERT(associated(subsys_system))
-      call ssys_system_get(subsys_system, subsys_states)
+      call base_system_get(subsys_system, subsys_states)
       ASSERT(associated(subsys_states))
       call states_add_substates(sys%st, subsys_states)
       nullify(subsys_system, subsys_states)

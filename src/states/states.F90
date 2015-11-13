@@ -20,6 +20,8 @@
 #include "global.h"
 
 module states_m
+  use base_density_m
+  use base_states_m
   use blacs_proc_grid_m
   use calc_mode_par_m
 #ifdef HAVE_OPENCL
@@ -61,8 +63,6 @@ module states_m
   use smear_m
   use states_group_m
   use states_dim_m
-  use ssys_density_m
-  use ssys_states_m
   use symmetrizer_m
   use types_m
   use unit_m
@@ -193,7 +193,7 @@ module states_m
     FLOAT, pointer :: frozen_rho(:, :)
 
     !> Subsystem states.
-    type(ssys_states_t), pointer :: subsys_st
+    type(base_states_t), pointer :: subsys_st
     
     FLOAT, pointer :: eigenval(:,:) !< obviously the eigenvalues
     logical        :: fixed_occ     !< should the occupation numbers be fixed?
@@ -597,7 +597,7 @@ contains
   ! ---------------------------------------------------------
   subroutine states_add_substates(this, st)
     type(states_t),              intent(inout) :: this
-    type(ssys_states_t), target, intent(in)    :: st
+    type(base_states_t), target, intent(in)    :: st
 
     PUSH_SUB(states_add_substates)
 
@@ -1272,16 +1272,15 @@ contains
     type(grid_t),           intent(in)    :: gr
     type(geometry_t),       intent(in)    :: geo
 
-    type(ssys_density_t), pointer :: density
+    type(base_density_t), pointer :: density
     FLOAT                         :: fsize
 
     PUSH_SUB(states_densities_init)
 
     if(associated(st%subsys_st))then
-      call ssys_states_start(st%subsys_st)
-      call ssys_states_get(st%subsys_st, density)
+      call base_states_get(st%subsys_st, density)
       ASSERT(associated(density))
-      call ssys_density_get(density, st%zrho%Re)
+      call base_density_get(density, st%zrho%Re)
       ASSERT(associated(st%zrho%Re))
     else
       SAFE_ALLOCATE(st%zrho%Re(1:gr%fine%mesh%np_part, 1:st%d%nspin))
@@ -1416,7 +1415,7 @@ contains
     logical, optional,      intent(in)    :: exclude_wfns !< do not copy wavefunctions, densities, node
     logical, optional,      intent(in)    :: exclude_eigenval !< do not copy eigenvalues, occ, spin
 
-    type(ssys_density_t), pointer :: density
+    type(base_density_t), pointer :: density
     logical                       :: exclude_wfns_
 
     PUSH_SUB(states_copy)
@@ -1441,11 +1440,11 @@ contains
 
     if(associated(stin%subsys_st))then
       !> Allocate and copy substates.
-      call ssys_states_new(stout%subsys_st, stin%subsys_st)
+      call base_states_new(stout%subsys_st, stin%subsys_st)
       if(exclude_wfns_)then
-        call ssys_states_init(stout%subsys_st, stin%subsys_st)
+        call base_states_init(stout%subsys_st, stin%subsys_st)
       else
-        call ssys_states_copy(stout%subsys_st, stin%subsys_st)
+        call base_states_copy(stout%subsys_st, stin%subsys_st)
       end if
     end if
 
@@ -1458,9 +1457,9 @@ contains
       call loct_pointer_copy(stout%psi%zR, stin%psi%zR)
       stout%zdontusepsi => stout%psi%zR
       if(associated(stout%subsys_st))then
-        call ssys_states_get(stout%subsys_st, density)
+        call base_states_get(stout%subsys_st, density)
         ASSERT(associated(density))
-        call ssys_density_get(density, stout%zrho%Re)
+        call base_density_get(density, stout%zrho%Re)
         ASSERT(associated(stout%zrho%Re))
       else
         call loct_pointer_copy(stout%zrho%Re, stin%zrho%Re)
@@ -1599,7 +1598,7 @@ contains
     SAFE_DEALLOCATE_P(st%frozen_rho)
     
     !> Deallocates or nullifies pointer.
-    call ssys_states_del(st%subsys_st)
+    call base_states_del(st%subsys_st)
 
     SAFE_DEALLOCATE_P(st%occ)
     SAFE_DEALLOCATE_P(st%spin)

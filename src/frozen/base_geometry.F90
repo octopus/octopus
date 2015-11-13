@@ -190,16 +190,16 @@ contains
   end subroutine base_geometry_new
 
   ! ---------------------------------------------------------
-  subroutine base_geometry__idel__(this)
+  subroutine base_geometry__del__(this)
     type(base_geometry_t), pointer :: this
 
-    PUSH_SUB(base_geometry__idel__)
+    PUSH_SUB(base_geometry__del__)
 
     SAFE_DEALLOCATE_P(this)
     nullify(this)
 
-    POP_SUB(base_geometry__idel__)
-  end subroutine base_geometry__idel__
+    POP_SUB(base_geometry__del__)
+  end subroutine base_geometry__del__
 
   ! ---------------------------------------------------------
   subroutine base_geometry_del(this)
@@ -211,7 +211,7 @@ contains
       if(associated(this%prnt))then
         call base_geometry_list_del(this%prnt%list, this)
         call base_geometry_end(this)
-        call base_geometry__idel__(this)
+        call base_geometry__del__(this)
       end if
     end if
 
@@ -219,39 +219,25 @@ contains
   end subroutine base_geometry_del
 
   ! ---------------------------------------------------------
-  subroutine base_geometry__iinit__(this, space, config)
+  subroutine base_geometry__init__begin(this, space, config)
     type(base_geometry_t),       intent(out) :: this
     type(space_t),       target, intent(in)  :: space
     type(json_object_t), target, intent(in)  :: config
-
-    PUSH_SUB(base_geometry__iinit__)
-
-    this%config => config
-    this%space => space
-    call geo_build_init(this%bgeo, space)
-    call config_dict_init(this%dict)
-    call base_geometry_hash_init(this%hash)
-    call base_geometry_list_init(this%list)
-
-    POP_SUB(base_geometry__iinit__)
-  end subroutine base_geometry__iinit__
-
-  ! ---------------------------------------------------------
-  subroutine base_geometry__init__begin(this, space, config)
-    type(base_geometry_t), intent(out) :: this
-    type(space_t),         intent(in)  :: space
-    type(json_object_t),   intent(in)  :: config
 
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
 
     PUSH_SUB(base_geometry__init__begin)
 
-    call base_geometry__iinit__(this, space, config)
+    this%config => config
+    this%space => space
     call json_get(config, "molecule", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    ASSERT(associated(cnfg))
     call geo_intrf_init(this%igeo, space, cnfg)
+    call geo_build_init(this%bgeo, space)
+    call config_dict_init(this%dict)
+    call base_geometry_hash_init(this%hash)
+    call base_geometry_list_init(this%list)
 
     POP_SUB(base_geometry__init__begin)
   end subroutine base_geometry__init__begin
@@ -287,8 +273,7 @@ contains
 
     ASSERT(associated(that%config))
     ASSERT(associated(that%space))
-    call base_geometry__iinit__(this, that%space, that%config)
-    call geo_intrf_init(this%igeo, that%igeo)
+    call base_geometry__init__(this, that%space, that%config)
 
     POP_SUB(base_geometry__init__copy)
   end subroutine base_geometry__init__copy
@@ -474,8 +459,7 @@ contains
 
     call base_geometry__end__(this)
     if(associated(that%config).and.associated(that%space))&
-      call base_geometry__iinit__(this, that%space, that%config)
-    call geo_intrf_init(this%igeo, that%igeo)
+      call base_geometry__init__(this, that%space, that%config)
 
     POP_SUB(base_geometry__copy__begin)
   end subroutine base_geometry__copy__begin
@@ -529,8 +513,8 @@ contains
     PUSH_SUB(base_geometry__end__)
 
     nullify(this%config, this%prnt)
-    call geo_build_end(this%bgeo)
     call geo_intrf_end(this%igeo)
+    call geo_build_end(this%bgeo)
     call config_dict_end(this%dict)
     call base_geometry_hash_end(this%hash)
     call base_geometry_list_end(this%list)
@@ -551,7 +535,7 @@ contains
       call base_geometry_list_pop(this%list, subs)
       if(.not.associated(subs))exit
       call base_geometry_end(subs)
-      call base_geometry__idel__(subs)
+      call base_geometry__del__(subs)
     end do
     nullify(subs)
     call base_geometry__end__(this)

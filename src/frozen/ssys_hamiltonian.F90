@@ -2,6 +2,7 @@
 
 module ssys_hamiltonian_m
 
+  use base_system_m
   use global_m
   use messages_m
   use profiling_m
@@ -11,9 +12,6 @@ module ssys_hamiltonian_m
 
   use simulation_m, only: &
     simulation_t
-
-  use ssys_system_m, only: &
-    ssys_system_t
 
   use ssys_external_m, only: &
     ssys_external_t
@@ -143,7 +141,7 @@ contains
   ! ---------------------------------------------------------
   subroutine ssys_hamiltonian_get_system(this, that)
     type(ssys_hamiltonian_t), intent(in) :: this
-    type(ssys_system_t),     pointer     :: that
+    type(base_system_t),     pointer     :: that
 
     PUSH_SUB(ssys_hamiltonian_get_system)
 

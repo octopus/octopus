@@ -95,10 +95,8 @@ contains
     this%alloc = .true.
     if(present(allocate)) this%alloc = allocate
     this%ndim = 1
-    if(present(ndim))then
-      ASSERT(ndim>0)
-      this%ndim = ndim
-    end if
+    if(present(ndim)) this%ndim = ndim
+    ASSERT(ndim>0)
     this%size = 0
     this%default = 0.0_wp
     if(present(default)) this%default = default
@@ -115,6 +113,8 @@ contains
 
     ASSERT(that%ndim>0)
     call storage_init_simple(this, that%ndim, that%default, that%full, that%alloc)
+    if(associated(that%sim).and.associated(that%mesh))&
+      call storage_start(this, that%sim, that%fine)
 
     POP_SUB(storage_init_copy)
   end subroutine storage_init_copy
@@ -646,9 +646,8 @@ contains
 
     call storage_end(this)
     if(that%ndim>0)then
-      call storage_init_simple(this, that%ndim, that%default, that%full, that%alloc)
+      call storage_init(this, that)
       if(associated(that%sim).and.associated(that%mesh))then
-        call storage_start(this, that%sim, that%fine)
         if(that%alloc)then
           this%data(1:this%mesh%np,:) = that%data(1:this%mesh%np,:)
           call storage_update(this)

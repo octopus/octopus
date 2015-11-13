@@ -28,10 +28,10 @@ subroutine output_states(st, gr, geo, dir, outp)
   integer :: ik, ist, idim, idir, is, ierr, ip, nspin
   character(len=MAX_PATH_LEN) :: fname
   type(unit_t) :: fn_unit
-  type(ssys_density_iterator_t)        :: iter
-  type(ssys_density_t),        pointer :: subsys_density
-  type(ssys_density_t),        pointer :: base_density
-  character(len=SSYS_DENSITY_NAME_LEN) :: name
+  type(base_density_iterator_t)        :: iter
+  type(base_density_t),        pointer :: subsys_density
+  type(base_density_t),        pointer :: base_density
+  character(len=BASE_DENSITY_NAME_LEN) :: name
   FLOAT, pointer :: pdensity(:, :)
   FLOAT, allocatable :: dtmp(:), elf(:,:), polarization(:, :)
   CMPLX, allocatable :: ztmp(:)
@@ -59,17 +59,17 @@ subroutine output_states(st, gr, geo, dir, outp)
       end if
     end do
     if(associated(st%subsys_st))then
-      call ssys_states_get(st%subsys_st, subsys_density)
+      call base_states_get(st%subsys_st, subsys_density)
       ASSERT(associated(subsys_density))
-      call ssys_density_init(iter, subsys_density)
+      call base_density_init(iter, subsys_density)
       do
         nullify(base_density, pdensity)
-        call ssys_density_next(iter, name, base_density, ierr)
-        if(ierr/=SSYS_DENSITY_OK)exit
+        call base_density_next(iter, name, base_density, ierr)
+        if(ierr/=BASE_DENSITY_OK)exit
         ASSERT(associated(base_density))
-        call ssys_density_get(base_density, pdensity)
+        call base_density_get(base_density, pdensity)
         ASSERT(associated(pdensity))
-        call ssys_density_get(base_density, nspin=nspin)
+        call base_density_get(base_density, nspin=nspin)
         ASSERT(nspin>0)
         do is = 1, nspin
           if(nspin>1) then
@@ -81,7 +81,7 @@ subroutine output_states(st, gr, geo, dir, outp)
             pdensity(:,is), fn_unit, ierr, geo=geo, grp=st%dom_st_kpt_mpi_grp)
         end do
       end do 
-      call ssys_density_end(iter)
+      call base_density_end(iter)
       nullify(subsys_density, base_density, pdensity)
     end if    
   end if
