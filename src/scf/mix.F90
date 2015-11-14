@@ -50,11 +50,6 @@ module mix_m
     zmixing,                    &
     mix_coefficient
 
-  integer, parameter, public :: &
-    MIX_LINEAR  = 0,            &
-    MIX_GRPULAY = 1,            &
-    MIX_BROYDEN = 2
-
   type mix_t
     private
     integer :: scheme           !< the mixing scheme used (linear, broyden, etc)
@@ -98,7 +93,7 @@ contains
 
     PUSH_SUB(mix_init)
 
-    def = MIX_BROYDEN
+    def = OPTION__MIXINGSCHEME__BROYDEN
     if(present(def_)) def = def_
     if(present(func_type)) then 
       smix%func_type = func_type
@@ -142,7 +137,7 @@ contains
     !% Both the linear and the Broyden scheme depend on a "mixing parameter", set by this variable. 
     !% Must be 0 < <tt>Mixing</tt> <= 1.
     !%End
-    if (smix%scheme == MIX_LINEAR .or. smix%scheme == MIX_BROYDEN) then
+    if (smix%scheme == OPTION__MIXINGSCHEME__LINEAR .or. smix%scheme == OPTION__MIXINGSCHEME__BROYDEN) then
       call parse_variable(trim(prefix)+'Mixing', CNST(0.3), smix%alpha)
       if(smix%alpha <= M_ZERO .or. smix%alpha > M_ONE) call messages_input_error('Mixing')
     end if
@@ -156,7 +151,7 @@ contains
     !% from the values of the densities/potentials of a given number of previous iterations.
     !% This number is set by this variable. Must be greater than 1.
     !%End
-    if (smix%scheme == MIX_GRPULAY .or. smix%scheme == MIX_BROYDEN) then
+    if (smix%scheme == OPTION__MIXINGSCHEME__BOWLER_GILLAN .or. smix%scheme == OPTION__MIXINGSCHEME__BROYDEN) then
       call parse_variable(trim(prefix)//'MixNumberSteps', 3, smix%ns)
       if(smix%ns <= 1) call messages_input_error('MixNumberSteps')
     else
@@ -179,13 +174,13 @@ contains
     smix%d2 = d2
     smix%d3 = d3
     select case (smix%scheme)
-    case (MIX_LINEAR, MIX_BROYDEN)
+    case (OPTION__MIXINGSCHEME__LINEAR, OPTION__MIXINGSCHEME__BROYDEN)
       smix%d4 = smix%ns
-    case (MIX_GRPULAY)
+    case (OPTION__MIXINGSCHEME__BOWLER_GILLAN)
       smix%d4 = smix%ns + 1
     end select
 
-    if (smix%scheme /= MIX_LINEAR) then
+    if (smix%scheme /= OPTION__MIXINGSCHEME__LINEAR) then
       if(smix%func_type == TYPE_FLOAT) then 
         SAFE_ALLOCATE(     smix%ddf(1:d1, 1:d2, 1:d3, 1:smix%d4))
         SAFE_ALLOCATE(smix%dvin_old(1:d1, 1:d2, 1:d3))
@@ -211,7 +206,7 @@ contains
     
     PUSH_SUB(mix_clear)
 
-    if (smix%scheme /= MIX_LINEAR) then
+    if (smix%scheme /= OPTION__MIXINGSCHEME__LINEAR) then
       if(smix%func_type == TYPE_FLOAT) then 
         smix%ddf = M_ZERO
         smix%ddv = M_ZERO
@@ -239,7 +234,7 @@ contains
     PUSH_SUB(mix_end)
 
     ! Arrays got allocated for all mixing schemes, except linear mixing
-    if (smix%scheme /= MIX_LINEAR) then
+    if (smix%scheme /= OPTION__MIXINGSCHEME__LINEAR) then
       SAFE_DEALLOCATE_P(smix%ddf)
       SAFE_DEALLOCATE_P(smix%ddv)
       SAFE_DEALLOCATE_P(smix%dvin_old)
@@ -262,7 +257,7 @@ contains
 
     PUSH_SUB(mix_set_mixing)
     
-    if(smix%scheme == MIX_LINEAR) then
+    if(smix%scheme == OPTION__MIXINGSCHEME__LINEAR) then
       smix%alpha = newmixing
     else
     !  message(1) = "Mixing can only be adjusted in linear mixing scheme."
@@ -319,7 +314,7 @@ contains
     ! Now we write the different functions. 
     ! These are not needed when using linear mixing, so we will make sure we skip this step in that case.
     err2 = 0
-    if (smix%scheme /= MIX_LINEAR) then
+    if (smix%scheme /= OPTION__MIXINGSCHEME__LINEAR) then
       do id2 = 1, smix%d2
         do id3 = 1, smix%d3
           do id4 = 1, smix%d4
@@ -444,7 +439,7 @@ contains
     ! Now we read the different functions.
     ! Note that we may have more or less functions than the ones needed (d4 /= smix%d4)
     if (ierr == 0) then
-      if (smix%scheme /= MIX_LINEAR) then
+      if (smix%scheme /= OPTION__MIXINGSCHEME__LINEAR) then
         err2 = 0
         do id2 = 1, smix%d2
           do id3 = 1, smix%d3

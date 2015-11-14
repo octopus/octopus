@@ -35,13 +35,13 @@ subroutine X(mixing)(smix, vin, vout, vnew, dotp)
   smix%iter = smix%iter + 1
   
   select case (smix%scheme)
-  case (MIX_LINEAR)
+  case (OPTION__MIXINGSCHEME__LINEAR)
     call X(mixing_linear)(smix%alpha, smix%d1, smix%d2, smix%d3, vin, vout, vnew)
     
-  case (MIX_BROYDEN)
+  case (OPTION__MIXINGSCHEME__BROYDEN)
     call X(mixing_broyden)(smix, vin, vout, vnew, smix%iter, dotp)
     
-  case (MIX_GRPULAY)
+  case (OPTION__MIXINGSCHEME__BOWLER_GILLAN)
     call X(mixing_grpulay)(smix, vin, vout, vnew, smix%iter, dotp)
     
   end select
