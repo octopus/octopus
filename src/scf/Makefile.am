@@ -21,12 +21,13 @@
 
 noinst_LIBRARIES = libscf.a
 
-libscf_a_SOURCES =       \
-	mix.F90          \
-	lcao.F90         \
-        scf.F90          \
-        rdmft.F90        \
-	ground_state.F90
+libscf_a_SOURCES =        \
+	mix.F90           \
+	lcao.F90          \
+        scf.F90           \
+        rdmft.F90         \
+	ground_state.F90  \
+	mixing_metric.F90
 
 noinst_HEADERS =     \
 	mix_inc.F90  \
@@ -39,8 +40,7 @@ depend:
 
 mix.o : mix.F90 mix_inc.F90
 lcao.o: lcao.F90 lcao_inc.F90
-scf.o: scf.F90 mix.o lcao.o
+scf.o: scf.F90 mix.o lcao.o mixing_metric.o
 rdmft.o: rdmft.F90 
 ground_state.o: ground_state.F90 scf.o rdmft.o lcao.o 
-
-
+mixing_metric.o : mixing_metric.F90
