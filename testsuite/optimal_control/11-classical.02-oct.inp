@@ -32,7 +32,7 @@ EigenSolverTolerance = 1.0e-12
 SCFCalculateForces = yes
 
 Mixing = 1.0
-TypeOfMixing = linear
+MixingScheme = linear
 
 MoveIons = yes
 

@@ -33,7 +33,7 @@ SpinComponents = spin_polarized
 ConvRelDens = 5e-5
 LCAOStart = lcao_none
 
-TypeOfMixing = linear
+MixingScheme = linear
 Mixing = 1.0
 
 

@@ -108,8 +108,9 @@ contains
     prefix = ""
     if(present(prefix_)) prefix = prefix_
 
-
-    !%Variable TypeOfMixing
+    call messages_obsolete_variable('TypeOfMixing', 'MixingScheme')
+    
+    !%Variable MixingScheme
     !%Type integer
     !%Default broyden
     !%Section SCF::Mixing
@@ -129,9 +130,9 @@ contains
     !% For complex functions (e.g. Sternheimer with <tt>EMEta</tt> > 0), we use the generalization
     !% with a complex dot product.
     !%End
-    call parse_variable(trim(prefix)//'TypeOfMixing', def, smix%scheme)
-    if(.not.varinfo_valid_option('TypeOfMixing', smix%scheme)) call messages_input_error('TypeOfMixing')
-    call messages_print_var_option(stdout, "TypeOfMixing", smix%scheme)
+    call parse_variable(trim(prefix)//'MixingScheme', def, smix%scheme)
+    if(.not.varinfo_valid_option('MixingScheme', smix%scheme)) call messages_input_error('MixingScheme')
+    call messages_print_var_option(stdout, "MixingScheme", smix%scheme)
 
     !%Variable Mixing
     !%Type float

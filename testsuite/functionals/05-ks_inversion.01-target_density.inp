@@ -23,7 +23,7 @@ a=1.0
 
 XCFunctional = lda_x_1d + lda_c_1d_csc
 
-TypeOfMixing = linear
+MixingScheme = linear
 
 Output = density
 OutputFormat = Axis_X

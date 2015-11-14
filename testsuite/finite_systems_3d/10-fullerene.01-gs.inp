@@ -20,7 +20,7 @@ StatesBlocksize = 32
 
 ReportMemory = yes
 
-TypeOfMixing = bowler_gillan
+MixingScheme = bowler_gillan
 
 %Coordinates
 'C'| 5.465626 | -3.656647 | -1.274761

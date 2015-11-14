@@ -139,7 +139,7 @@ RashbaSpinOrbitCoupling = lambda
 EigenSolver = cg
 #EigenSolverTolerance = 1.0e-6
 Mixing = 1.0
-TypeOfMixing = linear
+MixingScheme = linear
 
 
 #*********************************************************
