@@ -119,9 +119,10 @@ contains
     !% of the input and output densities of previous iterations.
     !%Option linear 0
     !% Simple linear mixing.
-    !%Option gr_pulay 1
-    !% "Guaranteed-reduction" Pulay scheme [D. R. Bowler and M. J. Gillan, <i>Chem. Phys. 
-    !% Lett.</i> <b>325</b>, 473 (2000)].
+    !%Option bowler_gillan 1
+    !% The Guaranteed-reduction modification of the Pulay scheme by
+    !% Bowler and Gillan [D. R. Bowler and M. J. Gillan,
+    !% <i>Chem. Phys.  Lett.</i> <b>325</b>, 473 (2000)].
     !%Option broyden 2
     !% Broyden scheme [C. G Broyden, <i>Math. Comp.</i> <b>19</b>, 577 (1965); 
     !% D. D. Johnson, <i>Phys. Rev. B</i> <b>38</b>, 12807 (1988)].
@@ -150,7 +151,7 @@ contains
     !%Default 3
     !%Section SCF::Mixing
     !%Description
-    !% In the Broyden and GR-Pulay schemes, the new input density or potential is constructed
+    !% In the Broyden and Bowler_Gillan schemes, the new input density or potential is constructed
     !% from the values of the densities/potentials of a given number of previous iterations.
     !% This number is set by this variable. Must be greater than 1.
     !%End
