@@ -21,6 +21,8 @@
 
 module output_m
   use base_density_m
+  use base_hamiltonian_m
+  use base_potential_m
   use base_states_m
   use basins_m
   use batch_m
@@ -65,9 +67,6 @@ module output_m
   use profiling_m
   use simul_box_m
   use smear_m
-  use ssys_external_m
-  use ssys_hamiltonian_m
-  use ssys_tnadd_m
   use string_m
   use species_m
   use states_m

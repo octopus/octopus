@@ -29,10 +29,10 @@
 
     integer :: is, err, idir
     character(len=MAX_PATH_LEN) :: fname
-    type(ssys_external_iterator_t)        :: iter
-    type(ssys_external_t),        pointer :: subsys_external
-    type(ssys_tnadd_t),           pointer :: subsys_tnadd
-    character(len=SSYS_EXTERNAL_NAME_LEN) :: name
+    type(base_potential_iterator_t)        :: iter
+    type(base_potential_t),        pointer :: subsys_external
+    type(base_hamiltonian_t),      pointer :: subsys_tnadd
+    character(len=BASE_POTENTIAL_NAME_LEN) :: name
     FLOAT,        dimension(:),   pointer :: xpot
     FLOAT,        dimension(:,:), pointer :: tpot
     FLOAT, allocatable :: v0(:,:), nxc(:)
@@ -57,19 +57,19 @@
 
       nullify(subsys_external, xpot)
       if(associated(hm%ep%subsys_external))then
-        call ssys_external_init(iter, hm%ep%subsys_external)
+        call base_potential_init(iter, hm%ep%subsys_external)
         do
           nullify(subsys_external, xpot)
-          call ssys_external_next(iter, name, subsys_external, err)
-          if(err/=SSYS_EXTERNAL_OK)exit
+          call base_potential_next(iter, name, subsys_external, err)
+          if(err/=BASE_POTENTIAL_OK)exit
           ASSERT(associated(subsys_external))
-          call ssys_external_get(subsys_external, xpot)
+          call base_potential_get(subsys_external, xpot)
           ASSERT(associated(xpot))
           write(fname, "(a,'-',a)") "v0", trim(adjustl(name))
           call dio_function_output(outp%how, dir, fname, der%mesh, &
             xpot, units_out%energy, err, geo = geo, grp = grp)
         end do
-        call ssys_external_end(iter)
+        call base_potential_end(iter)
         nullify(subsys_external, xpot)
       end if
 
@@ -83,9 +83,9 @@
 
         nullify(subsys_tnadd, tpot)
         if(associated(hm%subsys_hm))then
-          call ssys_hamiltonian_get(hm%subsys_hm, subsys_tnadd)
+          call base_hamiltonian_get(hm%subsys_hm, "tnadd", subsys_tnadd)
           ASSERT(associated(subsys_tnadd))
-          call ssys_tnadd_get(subsys_tnadd, tpot)
+          call base_hamiltonian_get(subsys_tnadd, tpot)
           ASSERT(associated(tpot))
           do is = 1, min(hm%d%ispin, 2)
             if(hm%d%ispin == 1) then

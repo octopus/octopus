@@ -336,8 +336,8 @@ contains
 
   ! ---------------------------------------------------------
   recursive subroutine base_system_start(this, sim)
-    type(base_system_t),          intent(inout) :: this
-    type(simulation_t), optional, intent(in)    :: sim
+    type(base_system_t), intent(inout) :: this
+    type(simulation_t),  intent(in)    :: sim
 
     type(base_system_iterator_t) :: iter
     type(base_system_t), pointer :: subs

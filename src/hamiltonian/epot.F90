@@ -21,6 +21,9 @@
 
 module epot_m
   use atom_m
+  use base_hamiltonian_m
+  use base_potential_m
+  use base_term_m
   use comm_m
   use derivatives_m
   use double_grid_m
@@ -56,8 +59,6 @@ module epot_m
   use splines_m
   use spline_filter_m
   use ssys_external_m
-  use ssys_hamiltonian_m
-  use ssys_ionic_m
   use states_m
   use states_dim_m
   use submesh_m
@@ -93,7 +94,7 @@ module epot_m
     FLOAT, pointer :: Vclassical(:) !< We use it to store the potential of the classical charges
 
     ! Subsystems external potential.
-    type(ssys_external_t), pointer :: subsys_external
+    type(base_potential_t), pointer :: subsys_external
 
     ! Ions
     FLOAT,             pointer :: vpsl(:)       !< the local part of the pseudopotentials
@@ -155,10 +156,10 @@ contains
     integer,                            intent(in)    :: ispin
     integer,                            intent(in)    :: nik
     logical,                            intent(in)    :: cmplxscl
-    type(ssys_hamiltonian_t), optional, intent(in)    :: subsys_hm
+    type(base_hamiltonian_t), optional, intent(in)    :: subsys_hm
 
 
-    type(ssys_ionic_t), pointer :: subsys_ionic
+    type(base_term_t), pointer :: subsys_ionic
     integer :: ispec, ip, idir, ia, gauge_2d, ierr
     type(block_t) :: blk
     FLOAT, allocatable :: grx(:)
@@ -197,14 +198,14 @@ contains
     nullify(ep%subsys_external)
     if(present(subsys_hm))then
       ASSERT(.not.cmplxscl)
-      call ssys_hamiltonian_get(subsys_hm, ep%subsys_external)
+      call base_hamiltonian_get(subsys_hm, "external", ep%subsys_external)
       ASSERT(associated(ep%subsys_external))
     end if
 
     ! Local part of the pseudopotentials
     if(associated(ep%subsys_external))then
       ! Sets the pointer to the subsystems total potential.
-      call ssys_external_get(ep%subsys_external, ep%vpsl)
+      call base_potential_get(ep%subsys_external, ep%vpsl)
       ASSERT(associated(ep%vpsl))
     else
       SAFE_ALLOCATE(ep%vpsl(1:gr%mesh%np))
@@ -538,7 +539,7 @@ contains
     nullify(subsys_ionic)
     if(present(subsys_hm))then
       ASSERT(.not.cmplxscl)
-      call ssys_hamiltonian_get(subsys_hm, subsys_ionic)
+      call base_hamiltonian_get(subsys_hm, "ionic", subsys_ionic)
       ASSERT(associated(subsys_ionic))
       call ion_interaction_add_subsys_ionic(ep%ion_interaction, subsys_ionic)
       nullify(subsys_ionic)
@@ -651,8 +652,8 @@ contains
     type(mesh_t),      pointer :: mesh
     type(simul_box_t), pointer :: sb
     type(profile_t), save :: epot_generate_prof
-    type(ssys_external_t), pointer :: live_external
-    FLOAT, dimension(:),   pointer :: vpsl
+    type(base_potential_t), pointer :: live_external
+    FLOAT, dimension(:),    pointer :: vpsl
     FLOAT,    allocatable :: density(:)
     FLOAT,    allocatable :: Imdensity(:)
     FLOAT,    allocatable :: tmp(:)
@@ -678,9 +679,9 @@ contains
     nullify(live_external, vpsl)
     if(associated(ep%subsys_external))then
       ! Sets the vpsl pointer to the "live" part of the subsystem potential.
-      call ssys_external_get(ep%subsys_external, "live", live_external)
+      call base_potential_gets(ep%subsys_external, "live", live_external)
       ASSERT(associated(live_external))
-      call ssys_external_get(live_external, vpsl)
+      call base_potential_get(live_external, vpsl)
       ASSERT(associated(vpsl))
     else
       ! Sets the vpsl pointer to the total potential.

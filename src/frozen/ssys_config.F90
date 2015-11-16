@@ -278,11 +278,28 @@ contains
   end subroutine ssys_config_parse_ionic
 
   ! ---------------------------------------------------------
+  subroutine ssys_config_parse_functional(this, id, factor)
+    type(json_object_t), intent(out) :: this
+    integer,             intent(in)  :: id
+    real(kind=wp),       intent(in)  :: factor
+
+    PUSH_SUB(ssys_config_parse_functional)
+
+    call json_init(this)
+    call json_set(this, "type", HMLT_TYPE_FNCT)
+    call json_set(this, "functional", id)
+    if(id>FUNCT_XC_NONE) call json_set(this, "factor", factor)
+
+    POP_SUB(ssys_config_parse_functional)
+  end subroutine ssys_config_parse_functional
+
+  ! ---------------------------------------------------------
   subroutine ssys_config_parse_tnadd(this)
     type(json_object_t), intent(out) :: this
 
-    real(kind=wp) :: factor
-    integer       :: type, id, ierr
+    type(json_object_t), pointer :: cnfg
+    real(kind=wp)                :: factor
+    integer                      :: id
 
     !%Variable TnaddFactor
     !%Type float
@@ -294,18 +311,25 @@ contains
 
     PUSH_SUB(ssys_config_parse_tnadd)
 
+    nullify(cnfg)
     call json_init(this)
-    call json_set(this, "type", HMLT_TYPE_FNCT)
+    call json_set(this, "type", HMLT_TYPE_HMLT)
+    call json_set(this, "allocate", .true.)
     call parse_variable('TnaddFunctional', FUNCT_XC_NONE, id)
-    call json_set(this, "functional", id)
-    if(id>FUNCT_XC_NONE)then
-      call parse_variable('TnaddFactor', 1.0_wp, factor)
-      if(abs(factor)<1.0e-7_wp)then
-        message(1) = "The 'TnaddFactor' value specified may be too small."
-        call messages_warning(1)
-      end if
-      call json_set(this, "factor", factor)
+    call parse_variable('TnaddFactor', 1.0_wp, factor)
+    if(abs(factor)<1.0e-7_wp)then
+      message(1) = "The 'TnaddFactor' value specified may be too small."
+      call messages_warning(1)
     end if
+    SAFE_ALLOCATE(cnfg)
+    call ssys_config_parse_functional(cnfg, id, factor)
+    call json_set(this, "total", cnfg)
+    nullify(cnfg)
+    SAFE_ALLOCATE(cnfg)
+    call ssys_config_parse_functional(cnfg, id, factor)
+    call json_set(cnfg, "system", "live")
+    call json_set(this, "live", cnfg)
+    nullify(cnfg)
 
     POP_SUB(ssys_config_parse_tnadd)
   end subroutine ssys_config_parse_tnadd
@@ -315,7 +339,6 @@ contains
     type(json_object_t), intent(inout) :: this
 
     type(json_object_t), pointer :: cnfg
-    integer                      :: type, ierr
 
     PUSH_SUB(ssys_config_parse_hamiltonian)
 

@@ -21,6 +21,7 @@
 
 module hamiltonian_m
   use base_hamiltonian_m
+  use base_potential_m
   use batch_m
   use batch_ops_m
   use blas_m
@@ -64,9 +65,6 @@ module hamiltonian_m
   use simul_box_m
   use smear_m
   use species_m
-  use ssys_external_m
-  use ssys_hamiltonian_m
-  use ssys_tnadd_m
   use states_m
   use states_dim_m
   use types_m
@@ -872,8 +870,8 @@ contains
 
     integer :: ispin, ip, idir, iatom, ilaser
     type(profile_t), save :: prof, prof_phases
-    type(ssys_tnadd_t),    pointer :: subsys_tnadd
-    FLOAT, dimension(:,:), pointer :: potential
+    type(base_hamiltonian_t), pointer :: subsys_tnadd
+    FLOAT, dimension(:,:),    pointer :: potential
     FLOAT :: aa(1:MAX_DIM)
     FLOAT, allocatable :: vp(:,:)
 
@@ -912,9 +910,9 @@ contains
     ! Add subsystem kinetic non-additive term
     nullify(subsys_tnadd, potential)
     if(associated(this%subsys_hm))then
-      call ssys_hamiltonian_get(this%subsys_hm, subsys_tnadd)
+      call base_hamiltonian_get(this%subsys_hm, "tnadd", subsys_tnadd)
       ASSERT(associated(subsys_tnadd))
-      call ssys_tnadd_get(subsys_tnadd, potential)
+      call base_hamiltonian_get(subsys_tnadd, potential)
       ASSERT(associated(potential))
       do ispin = 1, this%d%nspin
         forall (ip = 1:mesh%np) 

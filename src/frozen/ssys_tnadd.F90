@@ -2,59 +2,41 @@
 
 module ssys_tnadd_m
 
+  use base_functional_m
+  use base_hamiltonian_m
   use global_m
   use messages_m
   use profiling_m
 
-  use kinds_m, only: wp
-
-  use base_functional_m, only:         &
-    ssys_tnadd_t => base_functional_t
-
-  use base_functional_m, only: &
-    base_functional__sub__
-
-  use base_functional_m, only: &
-    base_functional_calc,      &
-    base_functional_set
-
-  use base_functional_m, only:               &
-    ssys_tnadd_init => base_functional_init, &
-    ssys_tnadd_get  => base_functional_get,  &
-    ssys_tnadd_copy => base_functional_copy, &
-    ssys_tnadd_end  => base_functional_end
-
   implicit none
 
   private
-  public ::       &
-    ssys_tnadd_t
 
   public ::          &
     ssys_tnadd_calc
-
-  public ::            &
-    ssys_tnadd_init,   &
-    ssys_tnadd_get,    &
-    ssys_tnadd_copy,   &
-    ssys_tnadd_end
 
 contains
 
   ! ---------------------------------------------------------
   subroutine ssys_tnadd_calc(this)
-    type(ssys_tnadd_t), intent(inout) :: this
+    type(base_hamiltonian_t), intent(inout) :: this
 
-    type(ssys_tnadd_t), pointer :: live
+    type(base_functional_t), pointer :: func
 
     PUSH_SUB(ssys_tnadd_calc)
 
-    nullify(live)
-    call base_functional_calc(this)
-    !call base_functional_gets(this, "live", live)
-    ASSERT(associated(live))
-    call base_functional__sub__(this, live)
-    nullify(live)
+    nullify(func)
+    call base_hamiltonian__reset__(this)
+    call base_hamiltonian_get(this, "total", func)
+    ASSERT(associated(func))
+    call base_functional_calc(func)
+    call base_hamiltonian__acc__(this, func)
+    nullify(func)
+    call base_hamiltonian_get(this, "live", func)
+    ASSERT(associated(func))
+    call base_functional_calc(func)
+    call base_hamiltonian__sub__(this, func)
+    nullify(func)
 
     POP_SUB(ssys_tnadd_calc)
   end subroutine ssys_tnadd_calc

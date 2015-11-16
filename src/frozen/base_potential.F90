@@ -137,6 +137,7 @@ module base_potential_m
 
   interface base_potential_get
     module procedure base_potential_get_info
+    module procedure base_potential_get_energy
     module procedure base_potential_get_config
     module procedure base_potential_get_system
     module procedure base_potential_get_density
@@ -181,23 +182,23 @@ contains
 
     nullify(that)
     SAFE_ALLOCATE(that)
-    that%prnt=>this
+    that%prnt => this
     call base_potential_list_push(this%list, that)
 
     POP_SUB(base_potential_new)
   end subroutine base_potential_new
 
   ! ---------------------------------------------------------
-  subroutine base_potential__idel__(this)
+  subroutine base_potential__del__(this)
     type(base_potential_t), pointer :: this
 
-    PUSH_SUB(base_potential__idel__)
+    PUSH_SUB(base_potential__del__)
 
     SAFE_DEALLOCATE_P(this)
     nullify(this)
 
-    POP_SUB(base_potential__idel__)
-  end subroutine base_potential__idel__
+    POP_SUB(base_potential__del__)
+  end subroutine base_potential__del__
 
   ! ---------------------------------------------------------
   subroutine base_potential_del(this)
@@ -209,7 +210,7 @@ contains
       if(associated(this%prnt))then
         call base_potential_list_del(this%prnt%list, this)
         call base_potential_end(this)
-        call base_potential__idel__(this)
+        call base_potential__del__(this)
       end if
     end if
 
@@ -255,6 +256,7 @@ contains
     ASSERT(associated(that%config))
     ASSERT(associated(that%sys))
     call base_potential__init__(this, that%sys, that%config)
+    if(associated(that%sim)) call base_potential__start__(this, that%sim)
 
     POP_SUB(base_potential__init__copy)
   end subroutine base_potential__init__copy
@@ -302,44 +304,24 @@ contains
   end subroutine base_potential_init_copy
 
   ! ---------------------------------------------------------
-  subroutine base_potential__istart__(this, sim)
+  subroutine base_potential__start__(this, sim)
     type(base_potential_t),     intent(inout) :: this
     type(simulation_t), target, intent(in)    :: sim
 
-    PUSH_SUB(base_potential__istart__)
+    PUSH_SUB(base_potential__start__)
 
     ASSERT(associated(this%config))
     ASSERT(.not.associated(this%sim))
-    this%sim=>sim
+    this%sim => sim
     call storage_start(this%data, sim)
-
-    POP_SUB(base_potential__istart__)
-  end subroutine base_potential__istart__
-
-  ! ---------------------------------------------------------
-  subroutine base_potential__start__(this, sim)
-    type(base_potential_t),       intent(inout) :: this
-    type(simulation_t), optional, intent(in)    :: sim
-
-    PUSH_SUB(base_potential__start__)
-
-    if(present(sim))then
-      call base_potential__istart__(this, sim)
-    else
-      if(.not.associated(this%sim))then
-        ASSERT(associated(this%prnt))
-        ASSERT(associated(this%prnt%sim))
-        call base_potential__istart__(this, this%prnt%sim)
-      end if
-    end if
 
     POP_SUB(base_potential__start__)
   end subroutine base_potential__start__
 
   ! ---------------------------------------------------------
   recursive subroutine base_potential_start(this, sim)
-    type(base_potential_t),       intent(inout) :: this
-    type(simulation_t), optional, intent(in)    :: sim
+    type(base_potential_t), intent(inout) :: this
+    type(simulation_t),     intent(in)    :: sim
 
     type(base_potential_iterator_t) :: iter
     type(base_potential_t), pointer :: subs
@@ -347,7 +329,6 @@ contains
 
     PUSH_SUB(base_potential_start)
 
-    nullify(subs)
     call base_potential_init(iter, this)
     do
       nullify(subs)
@@ -385,7 +366,6 @@ contains
 
     PUSH_SUB(base_potential_update)
 
-    nullify(subs)
     call base_potential_init(iter, this)
     do
       nullify(subs)
@@ -424,7 +404,6 @@ contains
 
     PUSH_SUB(base_potential_stop)
 
-    nullify(subs)
     call base_potential_init(iter, this)
     do
       nullify(subs)
@@ -553,20 +532,30 @@ contains
   end subroutine base_potential_set_info
  
   ! ---------------------------------------------------------
-  subroutine base_potential_get_info(this, size, nspin, energy, use)
-    type(base_potential_t),  intent(in)  :: this
-    integer,       optional, intent(out) :: size
-    integer,       optional, intent(out) :: nspin
-    real(kind=wp), optional, intent(out) :: energy
-    logical,       optional, intent(out) :: use
+  subroutine base_potential_get_info(this, size, nspin, use)
+    type(base_potential_t), intent(in)  :: this
+    integer,      optional, intent(out) :: size
+    integer,      optional, intent(out) :: nspin
+    logical,      optional, intent(out) :: use
 
     PUSH_SUB(base_potential_get_info)
 
-    if(present(energy)) energy = this%energy
     call storage_get(this%data, size=size, dim=nspin, alloc=use)
 
     POP_SUB(base_potential_get_info)
   end subroutine base_potential_get_info
+
+  ! ---------------------------------------------------------
+  subroutine base_potential_get_energy(this, energy)
+    type(base_potential_t),  intent(in)  :: this
+    real(kind=wp),           intent(out) :: energy
+
+    PUSH_SUB(base_potential_get_energy)
+
+    energy = this%energy
+
+    POP_SUB(base_potential_get_energy)
+  end subroutine base_potential_get_energy
 
   ! ---------------------------------------------------------
   subroutine base_potential_get_config(this, that)
@@ -670,12 +659,9 @@ contains
 
     call base_potential__end__(this)
     if(associated(that%config).and.associated(that%sys))then
-      call base_potential__init__(this, that%sys, that%config)
-      this%energy=that%energy
-      if(associated(that%sim))then
-        call base_potential__start__(this, that%sim)
-        call storage_copy(this%data, that%data)
-      end if
+      call base_potential__init__(this, that)
+      this%energy = that%energy
+      if(associated(that%sim)) call storage_copy(this%data, that%data)
     end if
 
     POP_SUB(base_potential__copy__)
@@ -740,7 +726,7 @@ contains
       call base_potential_list_pop(this%list, subs)
       if(.not.associated(subs))exit
       call base_potential_end(subs)
-      call base_potential__idel__(subs)
+      call base_potential__del__(subs)
     end do
     nullify(subs)
     call base_potential__end__(this)

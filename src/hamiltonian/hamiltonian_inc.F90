@@ -279,8 +279,8 @@ subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
   type(batch_t),               intent(in)    :: psib
   type(batch_t),               intent(inout) :: vpsib
 
-  type(ssys_external_t), pointer :: live_external
-  FLOAT, dimension(:),   pointer :: vpsl
+  type(base_potential_t), pointer :: live_external
+  FLOAT, dimension(:),    pointer :: vpsl
   FLOAT, allocatable :: vpsl_spin(:,:), Imvpsl_spin(:,:)
 #ifdef HAVE_OPENCL
   integer :: pnp, offset, ispin
@@ -294,9 +294,9 @@ subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
   nullify(live_external, vpsl)
   if(associated(this%ep%subsys_external))then
     ! Sets the vpsl pointer to the "live" part of the subsystem potential.
-    call ssys_external_get(this%ep%subsys_external, "live", live_external)
+    call base_potential_gets(this%ep%subsys_external, "live", live_external)
     ASSERT(associated(live_external))
-    call ssys_external_get(live_external, vpsl)
+    call base_potential_get(live_external, vpsl)
     ASSERT(associated(vpsl))
   else
     ! Sets the vpsl pointer to the total potential.

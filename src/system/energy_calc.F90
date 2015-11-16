@@ -20,6 +20,8 @@
 #include "global.h"
 
 module energy_calc_m
+  use base_hamiltonian_m
+  use base_potential_m
   use batch_m
   use berry_m
   use comm_m
@@ -42,8 +44,6 @@ module energy_calc_m
   use simul_box_m
   use smear_m
   use ssys_external_m
-  use ssys_hamiltonian_m
-  use ssys_tnadd_m
   use states_m
   use unit_m
   use unit_system_m
@@ -72,9 +72,9 @@ contains
     integer, optional,   intent(in)    :: iunit
     logical, optional,   intent(in)    :: full
 
-    type(ssys_tnadd_t),    pointer :: subsys_tnadd
-    type(ssys_external_t), pointer :: subsys_external
-    FLOAT                          :: tnadd_energy, external_energy
+    type(base_hamiltonian_t), pointer :: subsys_tnadd
+    type(base_potential_t),   pointer :: subsys_external
+    FLOAT                             :: tnadd_energy, external_energy
     logical :: full_, cmplxscl
     FLOAT :: evxctau, Imevxctau
     CMPLX :: etmp
@@ -100,11 +100,11 @@ contains
         external_energy = M_ZERO
         nullify(subsys_tnadd, subsys_external)
         if(associated(hm%subsys_hm))then
-          call ssys_hamiltonian_get(hm%subsys_hm, subsys_tnadd)
+          call base_hamiltonian_get(hm%subsys_hm, "tnadd", subsys_tnadd)
           ASSERT(associated(subsys_tnadd))
-          call ssys_tnadd_get(subsys_tnadd, energy=tnadd_energy)
+          call base_hamiltonian_get(subsys_tnadd, energy=tnadd_energy)
           nullify(subsys_tnadd)
-          call ssys_hamiltonian_get(hm%subsys_hm, subsys_external)
+          call base_hamiltonian_get(hm%subsys_hm, "external", subsys_external)
           ASSERT(associated(subsys_external))
           call ssys_external_calc(subsys_external)
           call ssys_external_get(subsys_external, energy=external_energy, except=(/"live"/))

@@ -20,6 +20,7 @@
 #include "global.h"
 
 module run_m
+  use base_hamiltonian_m
   use casida_m
   use em_resp_m
   use fft_m
@@ -45,7 +46,6 @@ module run_m
   use ssys_config_m
   use ssys_handle_m
   use ssys_model_m
-  use ssys_hamiltonian_m
   use static_pol_m
   use system_m
   use td_m
@@ -131,7 +131,7 @@ contains
     logical :: fromScratch
 
     type(ssys_model_t),       pointer :: subsys_model
-    type(ssys_hamiltonian_t), pointer :: subsys_hm
+    type(base_hamiltonian_t), pointer :: subsys_hm
     
     PUSH_SUB(run)
 

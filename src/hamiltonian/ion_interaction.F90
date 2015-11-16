@@ -20,6 +20,7 @@
 #include "global.h"
 
 module ion_interaction_m
+  use base_term_m
   use comm_m
   use geometry_m
   use global_m
@@ -47,8 +48,8 @@ module ion_interaction_m
     ion_interaction_test
 
   type ion_interaction_t
-    type(ssys_ionic_t), pointer :: subsys_ionic !< Subsystems ionic term.
-    FLOAT                       :: alpha
+    type(base_term_t), pointer :: subsys_ionic !< Subsystems ionic term.
+    FLOAT                      :: alpha
   end type ion_interaction_t
 
   integer, parameter ::            &
@@ -98,8 +99,8 @@ contains
   ! ---------------------------------------------------------
   
   subroutine ion_interaction_add_subsys_ionic(this, subsys_ionic)
-    type(ion_interaction_t),    intent(inout) :: this
-    type(ssys_ionic_t), target, intent(in)    :: subsys_ionic
+    type(ion_interaction_t),   intent(inout) :: this
+    type(base_term_t), target, intent(in)    :: subsys_ionic
     
     PUSH_SUB(ion_interaction_add_subsys_ionic)
     

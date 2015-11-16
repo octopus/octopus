@@ -173,16 +173,16 @@ contains
   end subroutine base_term_new
 
   ! ---------------------------------------------------------
-  subroutine base_term__idel__(this)
+  subroutine base_term__del__(this)
     type(base_term_t), pointer :: this
 
-    PUSH_SUB(base_term__idel__)
+    PUSH_SUB(base_term__del__)
 
     SAFE_DEALLOCATE_P(this)
     nullify(this)
 
-    POP_SUB(base_term__idel__)
-  end subroutine base_term__idel__
+    POP_SUB(base_term__del__)
+  end subroutine base_term__del__
 
   ! ---------------------------------------------------------
   subroutine base_term_del(this)
@@ -194,24 +194,12 @@ contains
       if(associated(this%prnt))then
         call base_term_list_del(this%prnt%list, this)
         call base_term_end(this)
-        call base_term__idel__(this)
+        call base_term__del__(this)
       end if
     end if
 
     POP_SUB(base_term_del)
   end subroutine base_term_del
-
-  ! ---------------------------------------------------------
-  subroutine base_term__inull__(this)
-    type(base_term_t), intent(inout) :: this
-
-    PUSH_SUB(base_term__inull__)
-
-    nullify(this%config, this%sys, this%prnt)
-    this%energy = 0.0_wp
-
-    POP_SUB(base_term__inull__)
-  end subroutine base_term__inull__
 
   ! ---------------------------------------------------------
   subroutine base_term__init__term(this, sys, config)
@@ -221,7 +209,6 @@ contains
 
     PUSH_SUB(base_term__init__term)
 
-    call base_term__inull__(this)
     this%config => config
     this%sys => sys
     call config_dict_init(this%dict)
@@ -522,7 +509,8 @@ contains
 
     PUSH_SUB(base_term__end__)
 
-    call base_term__inull__(this)
+    nullify(this%config, this%sys, this%prnt)
+    this%energy = 0.0_wp
     call config_dict_end(this%dict)
     call base_term_hash_end(this%hash)
     call base_term_list_end(this%list)
@@ -543,7 +531,7 @@ contains
       call base_term_list_pop(this%list, subs)
       if(.not.associated(subs))exit
       call base_term_end(subs)
-      call base_term__idel__(subs)
+      call base_term__del__(subs)
     end do
     nullify(subs)
     call base_term__end__(this)

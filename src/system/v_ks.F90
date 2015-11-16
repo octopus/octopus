@@ -20,6 +20,7 @@
 #include "global.h"
  
 module v_ks_m
+  use base_hamiltonian_m
   use berry_m
   use current_m
   use density_m
@@ -45,7 +46,6 @@ module v_ks_m
   use profiling_m
   use pcm_m 
   use simul_box_m
-  use ssys_hamiltonian_m
   use ssys_tnadd_m
   use states_m
   use states_dim_m
@@ -953,8 +953,8 @@ contains
     type(v_ks_t), target, intent(inout) :: ks
     type(hamiltonian_t),  intent(inout) :: hm
 
-    type(ssys_tnadd_t), pointer :: subsys_tnadd
-    integer                     :: ip, ispin
+    type(base_hamiltonian_t), pointer :: subsys_tnadd
+    integer                           :: ip, ispin
 
     PUSH_SUB(v_ks_calc_finish)
 
@@ -1057,7 +1057,7 @@ contains
       ! Calculate subsystem kinetic non-additive term
       nullify(subsys_tnadd)
       if(associated(hm%subsys_hm))then
-        call ssys_hamiltonian_get(hm%subsys_hm, subsys_tnadd)
+        call base_hamiltonian_get(hm%subsys_hm, "tnadd", subsys_tnadd)
         ASSERT(associated(subsys_tnadd))
         call ssys_tnadd_calc(subsys_tnadd)
         nullify(subsys_tnadd)

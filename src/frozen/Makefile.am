@@ -162,7 +162,7 @@ ssys_states.o		: ssys_states.F90 base_states.o
 ssys_system.o		: ssys_system.F90 ssys_states.o base_system.o
 ssys_ionic.o		: ssys_ionic.F90 ssys_system.o base_term.o base_geometry.o
 ssys_external.o		: ssys_external.F90 ssys_density.o base_potential.o storage.o
-ssys_tnadd.o		: ssys_tnadd.F90 base_functional.o
+ssys_tnadd.o		: ssys_tnadd.F90 base_hamiltonian.o
 ssys_hamiltonian.o	: ssys_hamiltonian.F90 ssys_tnadd.o ssys_external.o ssys_ionic.o ssys_system.o base_hamiltonian.o simulation.o
 ssys_model.o		: ssys_model.F90 ssys_hamiltonian.o ssys_system.o base_model.o
 ssys_handle.o		: ssys_handle.F90 live_handle.o frozen_handle.o base_handle.o

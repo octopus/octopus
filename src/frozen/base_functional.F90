@@ -198,16 +198,16 @@ contains
   end subroutine base_functional_new
 
   ! ---------------------------------------------------------
-  subroutine base_functional__idel__(this)
+  subroutine base_functional__del__(this)
     type(base_functional_t), pointer :: this
 
-    PUSH_SUB(base_functional__idel__)
+    PUSH_SUB(base_functional__del__)
 
     SAFE_DEALLOCATE_P(this)
     nullify(this)
 
-    POP_SUB(base_functional__idel__)
-  end subroutine base_functional__idel__
+    POP_SUB(base_functional__del__)
+  end subroutine base_functional__del__
 
   ! ---------------------------------------------------------
   subroutine base_functional_del(this)
@@ -219,7 +219,7 @@ contains
       if(associated(this%raii%prnt))then
         call base_functional_list_del(this%raii%prnt%raii%list, this)
         call base_functional_end(this)
-        call base_functional__idel__(this)
+        call base_functional__del__(this)
       end if
     end if
 
@@ -262,6 +262,7 @@ contains
     ASSERT(associated(that%config))
     ASSERT(associated(that%sys))
     call base_functional__init__(this, that%sys, that%config)
+    if(associated(that%sim)) call base_functional__start__(this, that%sim)
 
     POP_SUB(base_functional__init__copy)
   end subroutine base_functional__init__copy
@@ -309,11 +310,11 @@ contains
   end subroutine base_functional_init_copy
 
   ! ---------------------------------------------------------
-  subroutine base_functional__istart__(this, sim)
+  subroutine base_functional__start__(this, sim)
     type(base_functional_t),    intent(inout) :: this
     type(simulation_t), target, intent(in)    :: sim
 
-    PUSH_SUB(base_functional__istart__)
+    PUSH_SUB(base_functional__start__)
 
     ASSERT(associated(this%config))
     ASSERT(.not.associated(this%sim))
@@ -321,33 +322,13 @@ contains
     call functional_start(this%funct, sim, fine=.true.)
     call storage_start(this%data, sim)
 
-    POP_SUB(base_functional__istart__)
-  end subroutine base_functional__istart__
-
-  ! ---------------------------------------------------------
-  subroutine base_functional__start__(this, sim)
-    type(base_functional_t),      intent(inout) :: this
-    type(simulation_t), optional, intent(in)    :: sim
-
-    PUSH_SUB(base_functional__start__)
-
-    if(present(sim))then
-      call base_functional__istart__(this, sim)
-    else
-      if(.not.associated(this%sim))then
-        ASSERT(associated(this%raii%prnt))
-        ASSERT(associated(this%raii%prnt%sim))
-        call base_functional__istart__(this, this%raii%prnt%sim)
-      end if
-    end if
-
     POP_SUB(base_functional__start__)
   end subroutine base_functional__start__
 
   ! ---------------------------------------------------------
   recursive subroutine base_functional_start(this, sim)
-    type(base_functional_t),      intent(inout) :: this
-    type(simulation_t), optional, intent(in)    :: sim
+    type(base_functional_t), intent(inout) :: this
+    type(simulation_t),      intent(in)    :: sim
 
     type(base_functional_iterator_t) :: iter
     type(base_functional_t), pointer :: subs
@@ -756,12 +737,9 @@ contains
 
     call base_functional__end__(this)
     if(associated(that%config).and.associated(that%sys))then
-      call base_functional__init__(this, that%sys, that%config)
+      call base_functional__init__(this, that)
       this%energy = that%energy
-      if(associated(that%sim))then
-        call base_functional__start__(this, that%sim)
-        call storage_copy(this%data, that%data)
-      end if
+      if(associated(that%sim)) call storage_copy(this%data, that%data)
     end if
 
     POP_SUB(base_functional__copy__)
@@ -828,7 +806,7 @@ contains
       call base_functional_list_pop(this%raii%list, subs)
       if(.not.associated(subs))exit
       call base_functional_end(subs)
-      call base_functional__idel__(subs)
+      call base_functional__del__(subs)
     end do
     nullify(subs)
     call base_functional__end__(this)
