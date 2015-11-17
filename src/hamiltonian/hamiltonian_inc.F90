@@ -399,7 +399,8 @@ subroutine X(hamiltonian_apply_all) (hm, xc, der, st, hst, time, Imtime)
   FLOAT, optional,     intent(in)    :: Imtime
 
   integer :: ik, ib, ist
-
+  R_TYPE, allocatable :: psi(:, :)
+  
   PUSH_SUB(X(hamiltonian_apply_all))
 
   if(present(Imtime)) then
@@ -418,11 +419,18 @@ subroutine X(hamiltonian_apply_all) (hm, xc, der, st, hst, time, Imtime)
 
   if(hamiltonian_oct_exchange(hm)) then
     call hamiltonian_prepare_oct_exchange(hm, der%mesh, st%zdontusepsi, xc)
+
+    SAFE_ALLOCATE(psi(der%mesh%np_part, 1:hst%d%dim))
+    
     do ik = 1, st%d%nik
       do ist = 1, st%nst
-        call X(oct_exchange_operator)(hm, der, hst%X(dontusepsi)(:, :, ist, ik), ist, ik)
+        call states_get_state(hst, der%mesh, ist, ik, psi)
+        call X(oct_exchange_operator)(hm, der, psi, ist, ik)
+        call states_set_state(hst, der%mesh, ist, ik, psi)
       end do
     end do
+
+    SAFE_DEALLOCATE_A(psi)
   end if
 
   POP_SUB(X(hamiltonian_apply_all))
