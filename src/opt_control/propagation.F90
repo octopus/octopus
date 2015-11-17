@@ -888,51 +888,63 @@ contains
     type(states_t),                 intent(inout) :: chi
     CMPLX,                          intent(inout) :: dl(:), dq(:)
 
-    type(states_t) :: oppsi
+    CMPLX, allocatable :: zpsi(:, :), zoppsi(:, :)
     integer :: no_parameters, j, ik, p
 
     PUSH_SUB(calculate_g)
 
     no_parameters = hm%ep%no_lasers
 
+    SAFE_ALLOCATE(zpsi(1:gr%mesh%np_part, 1:chi%d%dim))
+    SAFE_ALLOCATE(zoppsi(1:gr%mesh%np_part, 1:chi%d%dim))
+    
     do j = 1, no_parameters
-      call states_copy(oppsi, psi)
+
       dl(j) = M_z0
       do ik = 1, psi%d%nik
         do p = 1, psi%nst
-          oppsi%zdontusepsi(:, :, p, ik) = M_z0
+
+          call states_get_state(psi, gr%mesh, p, ik, zpsi)
+          
+          zoppsi = M_z0
           if(associated(hm%ep%a_static)) then
-            call zvlaser_operator_linear(hm%ep%lasers(j), gr%der, hm%d, psi%zdontusepsi(:, :, p, ik), &
-              oppsi%zdontusepsi(:, :, p, ik), ik, hm%ep%gyromagnetic_ratio, hm%ep%a_static)
+            call zvlaser_operator_linear(hm%ep%lasers(j), gr%der, hm%d, zpsi, &
+              zoppsi, ik, hm%ep%gyromagnetic_ratio, hm%ep%a_static)
           else
-            call zvlaser_operator_linear(hm%ep%lasers(j), gr%der, hm%d, psi%zdontusepsi(:, :, p, ik), &
-              oppsi%zdontusepsi(:, :, p, ik), ik, hm%ep%gyromagnetic_ratio)
+            call zvlaser_operator_linear(hm%ep%lasers(j), gr%der, hm%d, zpsi, &
+              zoppsi, ik, hm%ep%gyromagnetic_ratio)
           end if
-          dl(j) = dl(j) + zmf_dotp(gr%mesh, psi%d%dim, chi%zdontusepsi(:, :, p, ik), &
-            oppsi%zdontusepsi(:, :, p, ik))
+
+          call states_get_state(chi, gr%mesh, p, ik, zpsi)
+          dl(j) = dl(j) + zmf_dotp(gr%mesh, psi%d%dim, zpsi, zoppsi)
         end do
       end do
-      call states_end(oppsi)
 
       ! The quadratic part should only be computed if necessary.
       if(laser_kind(hm%ep%lasers(j)) == E_FIELD_MAGNETIC ) then
-        call states_copy(oppsi, psi)
+
         dq(j) = M_z0
         do ik = 1, psi%d%nik
           do p = 1, psi%nst
-            oppsi%zdontusepsi(:, :, p, ik) = M_z0
-            call zvlaser_operator_quadratic(hm%ep%lasers(j), gr%der, &
-              psi%zdontusepsi(:, :, p, ik), oppsi%zdontusepsi(:, :, p, ik))
-            dq(j) = dq(j) + zmf_dotp(gr%mesh, psi%d%dim, &
-              chi%zdontusepsi(:, :, p, ik), oppsi%zdontusepsi(:, :, p, ik))
+            zoppsi = M_z0
+
+            call states_get_state(psi, gr%mesh, p, ik, zpsi)
+            call zvlaser_operator_quadratic(hm%ep%lasers(j), gr%der, zpsi, zoppsi)
+
+            call states_get_state(chi, gr%mesh, p, ik, zpsi)
+            dq(j) = dq(j) + zmf_dotp(gr%mesh, psi%d%dim, zpsi, zoppsi)
+            
           end do
         end do
-        call states_end(oppsi)
+
       else
         dq(j) = M_z0
       end if
     end do
 
+    SAFE_DEALLOCATE_A(zpsi)
+    SAFE_DEALLOCATE_A(zoppsi)
+    
     POP_SUB(calculate_g)
   end subroutine calculate_g
   ! ---------------------------------------------------------
