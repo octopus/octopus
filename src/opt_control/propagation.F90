@@ -976,7 +976,7 @@ contains
     character(len=1),          intent(in)    :: dir
 
     CMPLX :: d1, pol(MAX_DIM)
-    CMPLX, allocatable  :: dl(:), dq(:)
+    CMPLX, allocatable  :: dl(:), dq(:), zpsi(:, :), zchi(:, :)
     FLOAT, allocatable :: d(:)
     integer :: j, no_parameters, iatom
     type(states_t), pointer :: psi, chi
@@ -997,8 +997,18 @@ contains
     call calculate_g(gr, hm, psi, chi, dl, dq)
     d1 = M_z1
     if(zbr98_) then
-      d1 = zmf_dotp(gr%mesh, psi%d%dim, psi%zdontusepsi(:, :, 1, 1), chi%zdontusepsi(:, :, 1, 1))
-      forall(j = 1:no_parameters) d(j) = aimag(d1*dl(j)) / controlfunction_alpha(cp, j) 
+      SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:psi%d%dim))
+      SAFE_ALLOCATE(zchi(1:gr%mesh%np, 1:chi%d%dim))
+
+      call states_get_state(psi, gr%mesh, 1, 1, zpsi)
+      call states_get_state(chi, gr%mesh, 1, 1, zchi)
+      
+      d1 = zmf_dotp(gr%mesh, psi%d%dim, zpsi, zchi)
+      forall(j = 1:no_parameters) d(j) = aimag(d1*dl(j)) / controlfunction_alpha(cp, j)
+
+      SAFE_DEALLOCATE_A(zpsi)
+      SAFE_DEALLOCATE_A(zchi)
+      
     elseif(gradients_) then
       forall(j = 1:no_parameters) d(j) = M_TWO * aimag(dl(j))
     else
