@@ -172,7 +172,7 @@
     type(opt_control_state_t), intent(inout) :: qcchi
     type(geometry_t), intent(in)    :: geo
 
-    integer :: ist, jst, ik
+    integer :: ist, jst, ik, ib, iqn
     character(len=1024) :: temp_string
     FLOAT :: df_dv, dummy(3)
     FLOAT, pointer :: q(:, :), p(:, :), tq(:, :), tp(:, :)
@@ -209,10 +209,13 @@
     end do
 
     chi => opt_control_point_qs(qcchi)
+
     !We assume that there is no time-independent operator.
-    forall(ik = 1:chi%d%nik, ist = chi%st_start:chi%st_end)
-      chi%zdontusepsi(:, :, ist, ik) = M_z0
-    end forall
+    do iqn = chi%d%kpt%start, chi%d%kpt%end
+      do ib = chi%group%block_start, chi%group%block_end
+        call batch_set_zero(chi%group%psib(ib, iqn))
+      end do
+    end do
 
     nullify(tq)
     nullify(tp)
