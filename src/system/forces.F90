@@ -129,7 +129,7 @@ contains
     integer, target :: j, ist, ik, iatom
     FLOAT :: r, w2r_, w1r_, xx(MAX_DIM), dq, pdot3p, pdot3m, pdot3p2, pdot3m2, dforce1, dforce2
     type(profile_t), save :: forces_prof
-
+    CMPLX, allocatable :: zpsi(:, :)
     FLOAT, allocatable :: forceks1p(:), forceks1m(:), forceks1p2(:), forceks1m2(:), dforceks1(:)
 
     call profiling_in(forces_prof, "FORCES")
@@ -176,11 +176,13 @@ contains
     SAFE_ALLOCATE(forceks1p2(1:gr%sb%dim))
     SAFE_ALLOCATE(forceks1m2(1:gr%sb%dim))
     SAFE_ALLOCATE(dforceks1(1:gr%sb%dim))
+    SAFE_ALLOCATE(zpsi(1:gr%mesh%np_part, 1:psi%d%dim))
     
     do ist = 1, psi%nst
       do ik = 1, psi%d%nik
         derpsi_ = M_z0
-        call zderivatives_grad(gr%der, psi%zdontusepsi(:, 1, ist, ik), derpsi_(:, :, 1))
+        call states_get_state(psi, gr%mesh, ist, ik, zpsi)
+        call zderivatives_grad(gr%der, zpsi(:, 1), derpsi_(:, :, 1))
         do iatom = 1, geo%natoms
           do j = 1, gr%sb%dim
             call force1(geo%atom(iatom)%x(j) + dq, forceks1p, pdot3p)
@@ -196,6 +198,7 @@ contains
       end do
     end do
 
+    SAFE_DEALLOCATE_A(zpsi)
     SAFE_DEALLOCATE_A(forceks1p)
     SAFE_DEALLOCATE_A(forceks1m)
     SAFE_DEALLOCATE_A(forceks1p2)
@@ -237,17 +240,22 @@ contains
 
     integer :: m
     FLOAT :: qold
-    CMPLX, allocatable :: viapsi(:, :)
+    CMPLX, allocatable :: viapsi(:, :), zpsi(:, :)
 
     qold = geo_%atom(iatom_)%x(j_)
     geo_%atom(iatom_)%x(j_) = q
     SAFE_ALLOCATE(viapsi(1:gr_%mesh%np_part, 1:psi_%d%dim))
+    SAFE_ALLOCATE(zpsi(1:gr_%mesh%np_part, 1:psi_%d%dim))
     viapsi = M_z0
-    call zhamiltonian_apply_atom (hm_, geo_, gr_, iatom_, psi_%zdontusepsi(:, :, ist_, ik_), viapsi)
+    call states_get_state(psi_, gr_%mesh, ist_, ik_, zpsi)
+    call zhamiltonian_apply_atom (hm_, geo_, gr_, iatom_, zpsi, viapsi)
+    
     do m = 1, ubound(res, 1)
       res(m) = real( zmf_dotp(gr_%mesh, viapsi(:, 1), derpsi_(:, m, 1)) , REAL_PRECISION)
     end do
-    pdot3 = real(M_zI * zmf_dotp(gr_%mesh, chi_%zdontusepsi(:, 1, ist_, ik_), viapsi(:, 1)), REAL_PRECISION)
+
+    call states_get_state(chi_, gr_%mesh, ist_, ik_, zpsi)
+    pdot3 = real(M_zI * zmf_dotp(gr_%mesh, zpsi(:, 1), viapsi(:, 1)), REAL_PRECISION)
     geo_%atom(iatom_)%x(j_) = qold
     SAFE_DEALLOCATE_A(viapsi)
   end subroutine force1
