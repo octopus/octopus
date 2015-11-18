@@ -28,7 +28,8 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
   integer :: ist, ip, jst, eigen_n, kssi, kssj, proc
   FLOAT, allocatable :: rho_sigma(:), v_bar_S(:), sqphi(:, :, :), dd(:)
   FLOAT, allocatable :: Ma(:,:), xx(:,:), yy(:,:)
-
+  R_TYPE, allocatable :: psi(:, :)
+  
   call profiling_in(C_PROFILING_XC_KLI, 'XC_KLI')
   
   PUSH_SUB(X(xc_KLI_solve))
@@ -36,10 +37,11 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
   ! vxc contains the Slater part!
   SAFE_ALLOCATE(rho_sigma(1:mesh%np))
   SAFE_ALLOCATE(sqphi(1:mesh%np, 1:st%d%dim, 1:st%nst))
+  SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
 
   do ist = st%st_start, st%st_end
-    sqphi(1:mesh%np, 1:st%d%dim, ist) = R_REAL (st%X(dontusepsi)(1:mesh%np, 1:st%d%dim, ist, is))**2 + &
-                                        R_AIMAG(st%X(dontusepsi)(1:mesh%np, 1:st%d%dim, ist, is))**2
+    call states_get_state(st, mesh, ist, is, psi)
+    sqphi(1:mesh%np, 1:st%d%dim, ist) = abs(psi(1:mesh%np, 1:st%d%dim))**2
   end do
 
   do ip = 1, mesh%np
@@ -60,11 +62,14 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
   do ip = 1, mesh%np
     oep%vxc(ip,1) = M_ZERO
     do ist = st%st_start, st%st_end
-      oep%vxc(ip,1) = oep%vxc(ip,1) + oep%socc * st%occ(ist, is) * &
-        R_REAL(oep%X(lxc)(ip, ist, is) * st%X(dontusepsi)(ip, 1, ist, is))
+      call states_get_state(st, mesh, ist, is, psi)
+      oep%vxc(ip,1) = oep%vxc(ip,1) + oep%socc*st%occ(ist, is)*R_REAL(oep%X(lxc)(ip, ist, is)*psi(ip, 1))
     end do
     oep%vxc(ip,1) = oep%vxc(ip,1) / rho_sigma(ip)
   end do
+
+  SAFE_DEALLOCATE_A(psi)
+  
 #if defined(HAVE_MPI)
   if(st%parallel_in_states) then
     call MPI_Allreduce(oep%vxc(1,1), dd(1), mesh%np, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
@@ -72,6 +77,7 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
     SAFE_DEALLOCATE_A(dd)
   end if
 #endif
+  
   if(oep%level == XC_OEP_SLATER) then
     SAFE_DEALLOCATE_A(rho_sigma)
     SAFE_DEALLOCATE_A(sqphi)
