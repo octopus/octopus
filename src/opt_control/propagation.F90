@@ -682,7 +682,7 @@ contains
 
         do ik = psi%d%kpt%start, psi%d%kpt%end
           do ib = psi%group%block_start, psi%group%block_end
-            call batch_scal(sys%gr%mesh%np, (/ (cmplx(M_HALF, M_ZERO, REAL_PRECISION), j = 1, sys%gr%mesh%np) /), &
+            call batch_scal(sys%gr%mesh%np, cmplx(M_HALF, M_ZERO, REAL_PRECISION), &
               st_ref%group%psib(ib, ik))
             call batch_axpy(sys%gr%mesh%np, cmplx(M_HALF, M_ZERO, REAL_PRECISION), &
               psi%group%psib(ib, ik), st_ref%group%psib(ib, ik))

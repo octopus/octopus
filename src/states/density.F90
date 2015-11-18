@@ -549,7 +549,8 @@ contains
             call states_get_state(staux, gr%mesh, ist, ik, psi(:, :, 1))
 
             ! I think this can cause a deadlock. XA
-            call MPI_Send(psi(1, 1, 1), gr%mesh%np_part*st%d%dim, MPI_CMPLX, staux%node(ist), ist, st%mpi_grp%comm, mpi_err)
+            call MPI_Send(psi(1, 1, 1), gr%mesh%np_part*st%d%dim, MPI_CMPLX, staux%node(ist), ist, &
+              st%mpi_grp%comm, mpi_err)
 
             call MPI_Recv(psi(1, 1, 1), gr%mesh%np_part*st%d%dim, MPI_CMPLX, st%node(ist - n), &
               ist, st%mpi_grp%comm, status, mpi_err)
