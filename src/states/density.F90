@@ -536,6 +536,8 @@ contains
     call states_distribute_nodes(st, mc)
     call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
 
+    SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim, 1))
+    
 #if defined(HAVE_MPI) 
 
     if(staux%parallel_in_states) then
@@ -543,13 +545,20 @@ contains
         do ist = staux%st_start, staux%st_end
           if(ist <= n) cycle
           if(.not.state_is_local(st, ist-n)) then
-            call MPI_Send(staux%zdontusepsi(1, 1, ist, ik), gr%mesh%np_part*st%d%dim, MPI_CMPLX, staux%node(ist), &
-              ist, st%mpi_grp%comm, mpi_err)
 
-            call MPI_Recv(st%zdontusepsi(1, 1, ist-n, ik), gr%mesh%np_part*st%d%dim, MPI_CMPLX, st%node(ist-n), &
+            call states_get_state(staux, gr%mesh, ist, ik, psi(:, :, 1))
+
+            ! I think this can cause a deadlock. XA
+            call MPI_Send(psi(1, 1, 1), gr%mesh%np_part*st%d%dim, MPI_CMPLX, staux%node(ist), ist, st%mpi_grp%comm, mpi_err)
+
+            call MPI_Recv(psi(1, 1, 1), gr%mesh%np_part*st%d%dim, MPI_CMPLX, st%node(ist - n), &
               ist, st%mpi_grp%comm, status, mpi_err)
+
+            call states_set_state(st, gr%mesh, ist - n, ik, psi(:, :, 1))
+            
           else
-            st%zdontusepsi(:, :, ist-n, ik) = staux%zdontusepsi(:, :, ist, ik)
+            call states_get_state(staux, gr%mesh, ist, ik, psi(:, :, 1))
+            call states_set_state(st, gr%mesh, ist - n, ik, psi(:, :, 1))
           end if
    
         end do
@@ -558,7 +567,8 @@ contains
      do ik = st%d%kpt%start, st%d%kpt%end
        do ist = staux%st_start, staux%st_end
          if(ist <= n) cycle
-         st%zdontusepsi(:, :, ist-n, ik) = staux%zdontusepsi(:, :, ist, ik)
+         call states_get_state(staux, gr%mesh, ist, ik, psi(:, :, 1))
+         call states_set_state(st, gr%mesh, ist - n, ik, psi(:, :, 1))
        end do
      end do
    end if
@@ -567,12 +577,15 @@ contains
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
-        st%zdontusepsi(:, :, ist, ik) = staux%zdontusepsi(:, :, n + ist, ik)
+        call states_get_state(staux, gr%mesh, ist + n, ik, psi(:, :, 1))
+        call states_set_state(st, gr%mesh, ist, ik, psi(:, :, 1))
       end do
     end do
 
 #endif
 
+    SAFE_DEALLOCATE_A(psi)
+    
     ! Change the smearing method by fixing the occupations to 
     ! that of the ground-state such that the unfrozen states inherit 
     ! those values.
