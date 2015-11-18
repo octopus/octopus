@@ -1476,21 +1476,41 @@ contains
   subroutine out_vtk()
     type(cube_t) :: cube
     type(cube_function_t) :: cf
-    FLOAT :: dk(3)  
-    integer :: i 
+    FLOAT :: dk(3), pnt(3)
+    integer :: i, i1, i2, i3 
+    FLOAT, ALLOCATABLE :: points(:,:,:,:)
     
     PUSH_SUB(X(io_function_output_global).out_vtk)
 
-    call cube_init(cube, mesh%idx%ll, mesh%sb)
+    forall (i = 1:3) dk(i)= units_from_atomic(units_out%length, mesh%spacing(i))
+    
+    call cube_init(cube, mesh%idx%ll, mesh%sb, spacing = dk )
     call cube_function_null(cf)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 
     filename = io_workpath(trim(dir)//'/'//trim(fname)//".vtk")
+   
 
-    forall (i = 1:3) dk(i)= units_from_atomic(units_out%length, mesh%spacing(i))
-     
-    call X(vtk_out_cf)(filename, ierr, cf, cube, dk(:), unit)
+    if(mesh%sb%nonorthogonal) then
+      ! non-orthogonal grid
+      SAFE_ALLOCATE(points(cube%rs_n_global(1),cube%rs_n_global(2),cube%rs_n_global(3),3))
+      
+      do i1 =1 , cube%rs_n_global(1)
+        do i2 =1 , cube%rs_n_global(2)
+          do i3 =1 , cube%rs_n_global(3)
+            pnt(1:3) =(/cube%Lrs(i1, 1),cube%Lrs(i2, 2),cube%Lrs(i3, 3)/)
+            points(i1,i2,i3, 1:3) = matmul(mesh%sb%rlattice_primitive(1:3,1:3), pnt(1:3))
+          end do
+        end do
+      end do
+      
+      call X(vtk_out_cf_structured)(filename, ierr, cf, cube, unit, points)     
+      SAFE_DEALLOCATE_A(points) 
+    else  
+      !Ordinary grid
+      call X(vtk_out_cf)(filename, ierr, cf, cube, dk(:), unit)
+    end if  
 
     call X(cube_function_free_RS)(cube, cf)
     call cube_end(cube)

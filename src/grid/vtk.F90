@@ -50,6 +50,7 @@ module vtk_m
     dvtk_out_cf_vector,           &
     zvtk_out_cf_vector,           &
     dvtk_out_cf_structured,       &
+    zvtk_out_cf_structured,       &    
     vtk_output_geometry
 
 contains
