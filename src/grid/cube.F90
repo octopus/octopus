@@ -225,6 +225,9 @@ contains
       call fft_get_dims(cube%fft, cube%rs_n_global, cube%fs_n_global, cube%rs_n, cube%fs_n, &
            cube%rs_istart, cube%fs_istart)
 
+      if(present(tp_enlarge) .or. present(spacing)) then 
+        call cube_init_coords(cube, tp_enlarge_, spacing, fft_library_)
+      end if
 
       if(fft_library_ == FFTLIB_NFFT .or. fft_library_ == FFTLIB_PNFFT) then 
         call fft_init_stage1(cube%fft, cube%Lrs, cube%rs_n_global)
@@ -235,9 +238,11 @@ contains
 
     end if
 
-    if(present(tp_enlarge) .or. present(spacing)) then 
+    if(present(spacing) .and. .not. associated(cube%Lrs)) then 
       call cube_init_coords(cube, tp_enlarge_, spacing, fft_library_)
     end if
+
+
     
     cube%center(1:3) = cube%rs_n_global(1:3)/2 + 1
     
