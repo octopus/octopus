@@ -42,7 +42,8 @@ module states_parallel_m
     states_parallel_gather
 
   interface states_parallel_gather
-    module procedure dstates_parallel_gather, zstates_parallel_gather
+    module procedure dstates_parallel_gather_1, zstates_parallel_gather_1
+    module procedure dstates_parallel_gather_3, zstates_parallel_gather_3
   end interface states_parallel_gather
 
   type(profile_t), save:: prof_gather

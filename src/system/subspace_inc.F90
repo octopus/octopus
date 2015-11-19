@@ -29,8 +29,6 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
   FLOAT, optional,        intent(out)   :: diff(:)
 
   R_TYPE, pointer :: psi(:, :, :)
-  FLOAT, allocatable :: ldiff(:)
-  integer :: tmp
     
   PUSH_SUB(X(subspace_diag))
   call profiling_in(diagon_prof, "SUBSPACE_DIAG")
@@ -54,12 +52,7 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
   end select
 
   if(present(diff) .and. st%parallel_in_states) then
-    SAFE_ALLOCATE(ldiff(1:st%lnst))
-
-    ldiff = diff(st%st_start:st%st_end)
-    call lmpi_gen_allgatherv(st%lnst, ldiff, tmp, diff, st%mpi_grp)
-
-    SAFE_DEALLOCATE_A(ldiff)
+    call states_parallel_gather(st, diff)
   end if
 
   call profiling_out(diagon_prof)

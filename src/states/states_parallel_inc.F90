@@ -17,7 +17,7 @@
 !!
 !! $Id$
 
-subroutine X(states_parallel_gather)(st, dims, psi)
+subroutine X(states_parallel_gather_3)(st, dims, psi)
   type(states_t), intent(in)    :: st
   integer,        intent(in)    :: dims(2)
   R_TYPE,         intent(inout) :: psi(:, :, :)
@@ -65,7 +65,41 @@ subroutine X(states_parallel_gather)(st, dims, psi)
   end if
 
   call profiling_out(prof_gather)
-end subroutine X(states_parallel_gather)
+end subroutine X(states_parallel_gather_3)
+
+!---------------------------------------------------
+
+subroutine X(states_parallel_gather_1)(st, aa)
+  type(states_t), intent(in)    :: st
+  R_TYPE,         intent(inout) :: aa(:)
+
+  !no PUSH_SUB, called too often
+
+  R_TYPE, allocatable :: sendaa(:)
+  integer, allocatable :: displs(:)
+  
+  call profiling_in(prof_gather, 'STATES_GATHER')
+
+  if(st%parallel_in_states) then
+
+    SAFE_ALLOCATE(sendaa(st%st_start:st%st_end))
+    SAFE_ALLOCATE(displs(0:st%mpi_grp%size - 1))
+    
+    sendaa(st%st_start:st%st_end) = aa(st%st_start:st%st_end)
+    displs(0:st%mpi_grp%size - 1) = st%st_range(1, 0:st%mpi_grp%size - 1) - 1
+    
+#ifdef HAVE_MPI
+    call MPI_Allgatherv(sendaa(st%st_start), st%lnst, R_MPITYPE, &
+      aa(1), st%st_num(0), displs(0), R_MPITYPE, st%mpi_grp%comm, mpi_err)
+#endif
+
+    SAFE_DEALLOCATE_A(sendaa)
+    SAFE_DEALLOCATE_A(displs)
+    
+  end if
+
+  call profiling_out(prof_gather)
+end subroutine X(states_parallel_gather_1)
 
 !! Local Variables:
 !! mode: f90
