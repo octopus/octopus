@@ -416,8 +416,8 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
       end do
 
       if(st%parallel_in_states) then
-        call states_gather(st, (/st%d%dim, size/), psi)
-        call states_gather(st, (/st%d%dim, size/), hpsi)
+        call states_parallel_gather(st, (/st%d%dim, size/), psi)
+        call states_parallel_gather(st, (/st%d%dim, size/), hpsi)
       end if
       
       if(der%mesh%use_curvilinear) then

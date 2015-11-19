@@ -294,7 +294,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
         call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psicopy)
       end do
 
-      if(st%parallel_in_states) call states_gather(st, (/st%d%dim, size/), psicopy)      
+      if(st%parallel_in_states) call states_parallel_gather(st, (/st%d%dim, size/), psicopy)      
       
       do idim = 1, st%d%dim
         
@@ -1104,7 +1104,7 @@ subroutine X(states_rotate)(mesh, st, uu, ik)
         call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psicopy)
       end do
 
-      call states_gather(st, (/st%d%dim, size/), psicopy)
+      call states_parallel_gather(st, (/st%d%dim, size/), psicopy)
       
       do idim = 1, st%d%dim
         
@@ -1260,7 +1260,7 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
         call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psi)
       end do
 
-      if(st%parallel_in_states) call states_gather(st, (/st%d%dim, size/), psi)
+      if(st%parallel_in_states) call states_parallel_gather(st, (/st%d%dim, size/), psi)
       
       if(mesh%use_curvilinear) then
         do ip = sp, sp + size - 1
@@ -1386,31 +1386,6 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap, psi2)
 
   POP_SUB(X(states_calc_overlap))
 end subroutine X(states_calc_overlap)
-
-!-------------------------------------------------
-
-subroutine X(states_gather)(st, dims, psi)
-  type(states_t), intent(in)    :: st
-  integer,        intent(in)    :: dims(2)
-  R_TYPE,         intent(out)   :: psi(:, :, :)
-
-  type(profile_t), save :: prof
-
-  !no PUSH_SUB, called too often
-  
-  call profiling_in(prof, 'STATES_GATHER')
-
-  if(st%parallel_in_states) then
-    !this should really be an allgather, we use the simpler allreduce
-    !for the moment to get it working
-    psi(1:st%st_start - 1, 1:dims(1), 1:dims(2)) = CNST(0.0)
-    psi(st%st_end + 1:st%nst, 1:dims(1), 1:dims(2)) = CNST(0.0)
-    call comm_allreduce(st%mpi_grp%comm, psi)
-  end if
-
-  call profiling_out(prof)
-  
-end subroutine X(states_gather)
 
 !! Local Variables:
 !! mode: f90

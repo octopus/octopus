@@ -21,6 +21,7 @@
 
 module states_parallel_m
   use batch_m
+  use comm_m
   use global_m
   use mesh_m
   use messages_m
@@ -37,8 +38,15 @@ module states_parallel_m
     states_parallel_remote_access_start,       &
     states_parallel_remote_access_stop,        &
     states_parallel_get_block,                 &
-    states_parallel_release_block
+    states_parallel_release_block,             &
+    states_parallel_gather
 
+  interface states_parallel_gather
+    module procedure dstates_parallel_gather, zstates_parallel_gather
+  end interface states_parallel_gather
+
+  type(profile_t), save:: prof_gather
+  
 contains
 
   subroutine states_parallel_blacs_blocksize(st, mesh, blocksize, total_np)
@@ -217,6 +225,18 @@ contains
     
     POP_SUB(states_parallel_release_block)
   end subroutine states_parallel_release_block
+
+  ! --------------------------------------
+  
+#include "undef.F90"
+#include "real.F90"
+#include "states_parallel_inc.F90"
+
+#include "undef.F90"
+#include "complex.F90"
+#include "states_parallel_inc.F90"
+#include "undef.F90"
+  
   
 end module states_parallel_m
 
