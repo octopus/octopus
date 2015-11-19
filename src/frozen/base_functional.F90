@@ -117,6 +117,7 @@ module base_functional_m
     type(json_object_t),  pointer :: config  =>null()
     type(base_system_t),  pointer :: sys     =>null()
     type(simulation_t),   pointer :: sim     =>null()
+    integer                       :: nspin   = 0
     real(kind=wp)                 :: factor  = 1.0_wp
     real(kind=wp)                 :: energy  = 0.0_wp
     type(functional_t)            :: funct
@@ -147,6 +148,7 @@ module base_functional_m
 
   interface base_functional_get
     module procedure base_functional_get_info
+    module procedure base_functional_get_energy
     module procedure base_functional_get_config
     module procedure base_functional_get_system
     module procedure base_functional_get_density
@@ -232,19 +234,25 @@ contains
     type(base_system_t), target, intent(in)  :: sys
     type(json_object_t), target, intent(in)  :: config
 
-    integer :: id, nspin, ierr
+    integer :: id, ierr
+    logical :: uspn
 
     PUSH_SUB(base_functional__init__type)
 
     this%config => config
     this%sys => sys
+    call base_system_get(this%sys, nspin=this%nspin)
+    call json_get(this%config, "spin", uspn, ierr)
+    if(ierr/=JSON_OK) uspn = .true.
+    if(.not.uspn) this%nspin = 1
+    ASSERT(this%nspin>0)
+    ASSERT(this%nspin<3)
     call json_get(config, "factor", this%factor, ierr)
     if(ierr/=JSON_OK) this%factor = 1.0_wp
     call json_get(config, "functional", id, ierr)
     if(ierr/=JSON_OK) id = FUNCT_XC_NONE
-    call base_system_get(this%sys, nspin=nspin)
-    call functional_init(this%funct, id, nspin)
-    call storage_init(this%data, nspin, full=.false.)
+    call functional_init(this%funct, id, this%nspin)
+    call storage_init(this%data, ndim=this%nspin, full=.false.)
     call config_dict_init(this%dict)
     call base_functional_hash_init(this%hash)
     call base_functional_list_init(this%raii%list)
@@ -432,7 +440,7 @@ contains
   subroutine base_functional__calc__(this)
     type(base_functional_t), intent(inout) :: this
 
-    real(kind=wp), dimension(:,:), pointer :: fptn, potn, dnst
+    real(kind=wp), dimension(:,:), pointer :: potn, dnst
     type(base_density_t),          pointer :: density
     type(storage_t)                        :: data
     integer                                :: kind
@@ -442,35 +450,37 @@ contains
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
-    nullify(fptn, potn, dnst, density)
+    nullify(potn, dnst, density)
     call base_functional__reset__(this)
     call base_functional_get(this, kind=kind)
     if(kind>FUNCT_XC_NONE)then
       call storage_get(this%data, potn)
       ASSERT(associated(potn))
-      fptn=>potn
       call base_functional_get(this, density)
       ASSERT(associated(density))
       call base_density_get(density, fine=fine)
       if(fine)then
         call storage_init(data, this%data)
         call storage_start(data, this%sim, fine)
-        call storage_get(data, fptn)
-        ASSERT(associated(fptn))
+        call storage_get(data, potn)
+        ASSERT(associated(potn))
       end if
-      call base_density_get(density, dnst)
+      if(this%nspin>1)then
+        call base_density_get(density, dnst)
+      else
+        call base_density_get(density, dnst, total=.true.)
+      end if
       ASSERT(associated(dnst))
       nullify(density)
-      call functional_calc(this%funct, dnst, this%energy, fptn)
+      call functional_calc(this%funct, dnst, this%energy, potn)
+      nullify(potn, dnst)
       if(fine)then
         call storage_transfer(this%data, data)
         call storage_end(data)
-        nullify(fptn)
-        fptn=>potn
       end if
       if(abs(this%factor-1.0_wp)>epsilon(this%factor))then
-        this%energy=this%factor*this%energy
-        fptn=this%factor*fptn
+        this%energy = this%factor * this%energy
+        call storage_mlt(this%data, this%factor)
       end if
       call base_functional__update__(this)
     end if
@@ -617,23 +627,34 @@ contains
   end subroutine base_functional_set_info
 
   ! ---------------------------------------------------------
-  subroutine base_functional_get_info(this, id, family, kind, size, nspin, energy)
+  subroutine base_functional_get_info(this, id, family, kind, size, nspin)
     type(base_functional_t), intent(in)  :: this
     integer,       optional, intent(out) :: id
     integer,       optional, intent(out) :: family
     integer,       optional, intent(out) :: kind
     integer,       optional, intent(out) :: size
     integer,       optional, intent(out) :: nspin
-    real(kind=wp), optional, intent(out) :: energy
 
     PUSH_SUB(base_functional_get_info)
 
+    if(present(nspin)) nspin = this%nspin
     call functional_get(this%funct, id=id, family=family, kind=kind)
-    call storage_get(this%data, size=size, dim=nspin)
-    if(present(energy)) energy = this%energy
+    call storage_get(this%data, size=size)
 
     POP_SUB(base_functional_get_info)
   end subroutine base_functional_get_info
+
+  ! ---------------------------------------------------------
+  subroutine base_functional_get_energy(this, energy)
+    type(base_functional_t),  intent(in)  :: this
+    real(kind=wp),           intent(out) :: energy
+    
+    PUSH_SUB(base_functional_get_energy)
+    
+    energy = this%energy
+    
+    POP_SUB(base_functional_get_energy)
+  end subroutine base_functional_get_energy
 
   ! ---------------------------------------------------------
   subroutine base_functional_get_config(this, that)
@@ -782,6 +803,7 @@ contains
     PUSH_SUB(base_functional__end__)
 
     nullify(this%config, this%sys, this%sim, this%raii%prnt)
+    this%nspin = 0
     this%factor = 1.0_wp
     this%energy = 0.0_wp
     call functional_end(this%funct)

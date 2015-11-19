@@ -406,6 +406,7 @@ contains
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
+    nullify(this%sim)
     call base_states__stop__(this%st)
 
     POP_SUB(base_system__stop__)

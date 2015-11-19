@@ -109,6 +109,7 @@ module base_potential_m
     type(base_system_t),    pointer :: sys    =>null()
     type(simulation_t),     pointer :: sim    =>null()
     type(base_potential_t), pointer :: prnt   =>null()
+    integer                         :: nspin  = 0
     real(kind=wp)                   :: energy = 0.0_wp
     type(storage_t)                 :: data
     type(config_dict_t)             :: dict
@@ -223,22 +224,22 @@ contains
     type(base_system_t), target, intent(in)  :: sys
     type(json_object_t), target, intent(in)  :: config
 
-    integer :: nspin, ierr
-    logical :: uspin, alloc
+    integer :: ierr
+    logical :: uspn, allc
 
     PUSH_SUB(base_potential__init__type)
 
     this%config => config
     this%sys => sys
-    nspin = 1
-    call json_get(this%config, "spin", uspin, ierr)
-    if(ierr/=JSON_OK) uspin = .false.
-    if(uspin) call base_system_get(this%sys, nspin=nspin)
-    ASSERT(nspin>0)
-    ASSERT(nspin<3)
-    call json_get(this%config, "allocate", alloc, ierr)
-    if(ierr/=JSON_OK) alloc = .true.
-    call storage_init(this%data, nspin, full=.false., allocate=alloc)
+    this%nspin = 1
+    call json_get(this%config, "spin", uspn, ierr)
+    if(ierr/=JSON_OK) uspn = .false.
+    if(uspn) call base_system_get(this%sys, nspin=this%nspin)
+    ASSERT(this%nspin>0)
+    ASSERT(this%nspin<3)
+    call json_get(this%config, "allocate", allc, ierr)
+    if(ierr/=JSON_OK) allc = .true.
+    call storage_init(this%data, ndim=this%nspin, full=.false., allocate=allc)
     call config_dict_init(this%dict)
     call base_potential_hash_init(this%hash)
     call base_potential_list_init(this%list)
@@ -540,7 +541,8 @@ contains
 
     PUSH_SUB(base_potential_get_info)
 
-    call storage_get(this%data, size=size, dim=nspin, alloc=use)
+    if(present(nspin)) nspin = this%nspin
+    call storage_get(this%data, size=size, alloc=use)
 
     POP_SUB(base_potential_get_info)
   end subroutine base_potential_get_info
@@ -704,6 +706,7 @@ contains
     PUSH_SUB(base_potential__end__)
 
     nullify(this%config, this%sys, this%sim, this%prnt)
+    this%nspin = 0
     this%energy = 0.0_wp
     call storage_end(this%data)
     call config_dict_end(this%dict)

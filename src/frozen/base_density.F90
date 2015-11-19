@@ -220,7 +220,7 @@ contains
     type(json_object_t),  target, intent(in)  :: config
 
     integer :: ierr
-    logical :: alloc
+    logical :: allc
 
     PUSH_SUB(base_density__init__type)
 
@@ -232,15 +232,15 @@ contains
     SAFE_ALLOCATE(this%charge(1:this%nspin))
     call json_get(this%config, "charge", this%charge, ierr)
     if(ierr/=JSON_OK) this%charge = 0.0_wp
-    call json_get(this%config, "allocate", alloc, ierr)
-    if(ierr/=JSON_OK) alloc = .true.
+    call json_get(this%config, "allocate", allc, ierr)
+    if(ierr/=JSON_OK) allc = .true.
     if(this%nspin>1)then
       SAFE_ALLOCATE(this%total)
-      call storage_init(this%total, allocate=alloc)
+      call storage_init(this%total, allocate=allc)
     else
       this%total => this%data
     end if
-    call storage_init(this%data, this%nspin, allocate=alloc)
+    call storage_init(this%data, this%nspin, allocate=allc)
     call config_dict_init(this%dict)
     call base_density_hash_init(this%hash)
     call base_density_list_init(this%list)
@@ -414,6 +414,7 @@ contains
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
+    nullify(this%sim)
     if(this%nspin>1) call storage_stop(this%total)
     call storage_stop(this%data)
 
@@ -560,7 +561,8 @@ contains
 
     PUSH_SUB(base_density_get_info)
 
-    call storage_get(this%data, size=size, dim=nspin, fine=fine, alloc=use)
+    if(present(nspin)) nspin = this%nspin
+    call storage_get(this%data, size=size, fine=fine, alloc=use)
 
     POP_SUB(base_density_get_info)
   end subroutine base_density_get_info

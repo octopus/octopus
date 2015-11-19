@@ -374,6 +374,7 @@ contains
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
+    nullify(this%sim)
     call base_density__stop__(this%density)
 
     POP_SUB(base_states__stop__)

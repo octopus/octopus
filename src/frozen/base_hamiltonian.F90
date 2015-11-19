@@ -231,6 +231,7 @@ module base_hamiltonian_m
 
   interface base_hamiltonian_get
     module procedure base_hamiltonian_get_info
+    module procedure base_hamiltonian_get_energy
     module procedure base_hamiltonian_get_config
     module procedure base_hamiltonian_get_system
     module procedure base_hamiltonian_get_simulation
@@ -989,8 +990,8 @@ contains
     type(base_system_t), target, intent(in)  :: sys
     type(json_object_t), target, intent(in)  :: config
 
-    integer :: type, nspin, ierr
-    logical :: alloc
+    integer :: type, nspn, ierr
+    logical :: allc
 
     PUSH_SUB(base_hamiltonian__iinit__)
 
@@ -999,10 +1000,10 @@ contains
     call json_get(this%config, "type", type, ierr)
     ASSERT(ierr==JSON_OK)
     ASSERT(type==HMLT_TYPE_HMLT)
-    call base_system_get(this%sys, nspin=nspin)
-    call json_get(this%config, "allocate", alloc, ierr)
-    if(ierr/=JSON_OK) alloc = .false.
-    call storage_init(this%data, nspin, full=.false., allocate=alloc)
+    call base_system_get(this%sys, nspin=nspn)
+    call json_get(this%config, "allocate", allc, ierr)
+    if(ierr/=JSON_OK) allc = .false.
+    call storage_init(this%data, ndim=nspn, full=.false., allocate=allc)
     call hterm_dict_init(this%hdct)
     call config_dict_init(this%dict)
     call base_hamiltonian_hash_init(this%hash)
@@ -1237,6 +1238,7 @@ contains
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
+    nullify(this%sim)
     call hterm_dict_init(iter, this%hdct)
     do
       nullify(htrm)
@@ -1582,19 +1584,29 @@ contains
   end subroutine base_hamiltonian_set_info
 
   ! ---------------------------------------------------------
-  subroutine base_hamiltonian_get_info(this, size, nspin, energy)
+  subroutine base_hamiltonian_get_info(this, size, nspin)
     type(base_hamiltonian_t), intent(in)  :: this
     integer,        optional, intent(out) :: size
     integer,        optional, intent(out) :: nspin
-    real(kind=wp),  optional, intent(out) :: energy
 
     PUSH_SUB(base_hamiltonian_get_info)
 
     call storage_get(this%data, size=size, dim=nspin)
-    if(present(energy)) energy = this%energy
 
     POP_SUB(base_hamiltonian_get_info)
   end subroutine base_hamiltonian_get_info
+
+  ! ---------------------------------------------------------
+  subroutine base_hamiltonian_get_energy(this, energy)
+    type(base_hamiltonian_t), intent(in)  :: this
+    real(kind=wp),            intent(out) :: energy
+    
+    PUSH_SUB(base_hamiltonian_get_energy)
+    
+    energy = this%energy
+    
+    POP_SUB(base_hamiltonian_get_energy)
+  end subroutine base_hamiltonian_get_energy
 
   ! ---------------------------------------------------------
   subroutine base_hamiltonian_get_config(this, that)
