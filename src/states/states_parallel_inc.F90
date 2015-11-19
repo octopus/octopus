@@ -22,16 +22,46 @@ subroutine X(states_parallel_gather)(st, dims, psi)
   integer,        intent(in)    :: dims(2)
   R_TYPE,         intent(inout) :: psi(:, :, :)
 
+  integer :: maxst, ist, i1, i2
+  R_TYPE, allocatable :: sendpsi(:, :, :), recvpsi(:, :, :)
+  
   !no PUSH_SUB, called too often
   
   call profiling_in(prof_gather, 'STATES_GATHER')
 
   if(st%parallel_in_states) then
-    !this should really be an allgather, we use the simpler allreduce
-    !for the moment to get it working
-    psi(1:st%st_start - 1, 1:dims(1), 1:dims(2)) = CNST(0.0)
-    psi(st%st_end + 1:st%nst, 1:dims(1), 1:dims(2)) = CNST(0.0)
-    call comm_allreduce(st%mpi_grp%comm, psi)
+
+    maxst = maxval(st%st_num(0:st%mpi_grp%size - 1))
+    
+    SAFE_ALLOCATE(sendpsi(1:dims(1), 1:dims(2), 1:maxst))
+    SAFE_ALLOCATE(recvpsi(1:dims(1), 1:dims(2), 1:maxst*st%mpi_grp%size))
+
+    ! We have to use a temporary array to make the data contiguous
+    
+    do ist = 1, st%lnst
+      do i1 = 1, dims(1)
+        do i2 = 1, dims(2)
+          sendpsi(i1, i2, ist) = psi(st%st_start + ist - 1, i1, i2)
+        end do
+      end do
+    end do
+
+#ifdef HAVE_MPI
+    call MPI_Allgather(sendpsi(1, 1, 1), product(dims(1:2))*maxst, R_MPITYPE, &
+      recvpsi(1, 1, 1), product(dims(1:2))*maxst, R_MPITYPE, st%mpi_grp%comm, mpi_err)
+#endif
+
+    do ist = 1, st%nst
+      do i1 = 1, dims(1)
+        do i2 = 1, dims(2)
+          psi(ist, i1, i2) = recvpsi(i1, i2, ist)
+        end do
+      end do
+    end do
+
+    SAFE_DEALLOCATE_A(sendpsi)
+    SAFE_DEALLOCATE_A(recvpsi)
+    
   end if
 
   call profiling_out(prof_gather)
