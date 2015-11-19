@@ -426,13 +426,10 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
   R_TYPE, allocatable :: KSt(:,:)
   integer :: ii,ist,  count, sender, ik, jj, lnst
   logical :: do_serial
-
-#ifdef HAVE_SCALAPACK
   integer :: psi_block(2), psi_desc(BLACS_DLEN), blacs_info
   FLOAT :: tmp2
   integer, allocatable :: ipiv(:)
   integer :: rwsize, np_start
-#endif
 
   PUSH_SUB(X(scdm_rrqr))
   call profiling_in(prof_scdm_QR,"SCDM_QR")
@@ -461,10 +458,9 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
   endif
 
   if(.not.do_serial) then
-#ifdef HAVE_SCALAPACK
     
-    call states_blacs_blocksize(st, mesh, psi_block, total_np)
-
+    call states_parallel_blacs_blocksize(st, mesh, psi_block, total_np)
+    
     ASSERT(associated(st%X(dontusepsi)))
     ik = 1
     ! We need to set to zero some extra parts of the array
@@ -479,15 +475,17 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
     ! copy states into the transpose matrix
     count = 0
     do ist = st%st_start,st%st_end
-       count = count + 1
-       KSt(count,1:total_np) =  st%X(dontusepsi)(1:total_np, 1, ist, ik)
+      count = count + 1
+      KSt(count,1:total_np) =  st%X(dontusepsi)(1:total_np, 1, ist, ik)
     end do
-
+     
     ! DISTRIBUTE THE MATRIX ON THE PROCESS GRID
     ! Initialize the descriptor array for the main matrices (ScaLAPACK)
+#ifdef HAVE_SCALAPACK
     call descinit(psi_desc(1), nst, total_np, psi_block(2), psi_block(1), 0, 0, &
-                  scdm%proc_grid%context, lnst, blacs_info)
-
+      scdm%proc_grid%context, lnst, blacs_info)
+#endif
+     
     if(blacs_info /= 0) then
        write(message(1),'(a,i6)') 'descinit failed with error code: ', blacs_info
        call messages_fatal(1)
@@ -500,13 +498,16 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
     ! calculate the QR decomposition
     SAFE_ALLOCATE(ipiv(1:total_np))
     ipiv(1:total_np) = 0
+
     ! Note: lapack routine has different number of arguments depending on type
+#ifdef HAVE_SCALAPACK
 #ifndef R_TREAL
     call pzgeqpf(nst, total_np, KSt(1,1), 1, 1, psi_desc(1), ipiv(1), tau(1), tmp, -1, tmp2, -1, blacs_info) 
 #else 
     call pdgeqpf( nst, total_np, KSt(1,1), 1, 1, psi_desc(1), ipiv(1), tau(1), tmp, -1, blacs_info)
 #endif
-
+#endif
+    
     if(blacs_info /= 0) then
       write(message(1),'(a,i6)') 'scalapack geqrf workspace query failed with error code: ', blacs_info
       call messages_fatal(1)
@@ -514,6 +515,7 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
      
     wsize = nint(R_REAL(tmp))
     SAFE_ALLOCATE(work(1:wsize))
+#ifdef HAVE_SCALAPACK
 #ifndef R_TREAL
     rwsize = max(1,nint(R_REAL(tmp2)))
     SAFE_ALLOCATE(rwork(1:rwsize))
@@ -521,6 +523,7 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
     SAFE_DEALLOCATE_A(rwork)
 #else
     call pdgeqpf(nst, total_np, KSt(1,1), 1, 1, psi_desc(1), ipiv(1), tau(1), work(1), wsize,  blacs_info)
+#endif
 #endif
 
     if(blacs_info /= 0) then
@@ -537,8 +540,6 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
 !        end do
 !     end if
     jpvt(1:nst) =  ipiv(1:nst)
-
-#endif
      
   else
     ! first gather states into one array on the root process

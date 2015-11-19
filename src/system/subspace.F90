@@ -50,6 +50,7 @@ module subspace_m
   use scalapack_m
   use states_m
   use states_calc_m
+  use states_parallel_m
   use types_m
   use opencl_m
   use varinfo_m

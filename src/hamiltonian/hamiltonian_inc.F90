@@ -467,7 +467,7 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
 
     do ib = 1, hm%hf_st%group%nblocks
 
-      call states_get_block(hm%hf_st, der%mesh, ib, ik2, psi2b)
+      call states_parallel_get_block(hm%hf_st, der%mesh, ib, ik2, psi2b)
       
       do ii = 1, psi2b%nst
 
@@ -501,7 +501,7 @@ subroutine X(exchange_operator) (hm, der, psi, hpsi, ist, ik, exx_coef)
 
       end do
 
-      call states_release_block(hm%hf_st, ib, ik2, psi2b)
+      call states_parallel_release_block(hm%hf_st, ib, ik2, psi2b)
 
     end do
   end do

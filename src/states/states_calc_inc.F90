@@ -96,9 +96,10 @@ contains
   ! -----------------------------------------------------------------------------------------------
   subroutine cholesky_parallel()
 
+    integer             :: psi_block(1:2), total_np
 #ifdef HAVE_SCALAPACK
     integer             :: info, nbl, nrow, ncol
-    integer             :: psi_block(1:2), total_np, psi_desc(BLACS_DLEN), ss_desc(BLACS_DLEN)
+    integer             :: psi_desc(BLACS_DLEN), ss_desc(BLACS_DLEN)
 #endif
 
     PUSH_SUB(X(states_orthogonalization_full).cholesky_parallel)
@@ -118,10 +119,9 @@ contains
     end if
 #endif
 
+    call states_parallel_blacs_blocksize(st, mesh, psi_block, total_np)
 
 #ifdef HAVE_SCALAPACK
-    call states_blacs_blocksize(st, mesh, psi_block, total_np)
-
     ASSERT(associated(st%X(dontusepsi)))
     ! We need to set to zero some extra parts of the array
     if(st%d%dim == 1) then

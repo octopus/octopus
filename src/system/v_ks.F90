@@ -49,6 +49,7 @@ module v_ks_m
   use ssys_tnadd_m
   use states_m
   use states_dim_m
+  use states_parallel_m
   use unit_system_m
   use varinfo_m
   use vdw_ts_m
@@ -609,7 +610,7 @@ contains
     if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) then
       SAFE_ALLOCATE(ks%calc%hf_st)
       call states_copy(ks%calc%hf_st, st)
-      if(st%parallel_in_states) call states_remote_access_start(ks%calc%hf_st)
+      if(st%parallel_in_states) call states_parallel_remote_access_start(ks%calc%hf_st)
     end if
 
     ! Calculate the vector potential induced by the electronic current.
@@ -1081,7 +1082,7 @@ contains
 
         ! swap the states object
         if(associated(hm%hf_st)) then
-          if(hm%hf_st%parallel_in_states) call states_remote_access_stop(hm%hf_st)
+          if(hm%hf_st%parallel_in_states) call states_parallel_remote_access_stop(hm%hf_st)
           call states_end(hm%hf_st)
           SAFE_DEALLOCATE_P(hm%hf_st)
         end if

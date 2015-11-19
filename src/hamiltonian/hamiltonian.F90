@@ -67,6 +67,7 @@ module hamiltonian_m
   use species_m
   use states_m
   use states_dim_m
+  use states_parallel_m
   use types_m
   use unit_m
   use unit_system_m
@@ -634,7 +635,7 @@ contains
 
     ! this is a bit ugly, hf_st is initialized in v_ks_calc but deallocated here.
     if(associated(hm%hf_st))  then
-      if(hm%hf_st%parallel_in_states) call states_remote_access_stop(hm%hf_st)
+      if(hm%hf_st%parallel_in_states) call states_parallel_remote_access_stop(hm%hf_st)
       call states_end(hm%hf_st)
       SAFE_DEALLOCATE_P(hm%hf_st)
     end if

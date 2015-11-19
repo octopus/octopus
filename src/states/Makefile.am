@@ -39,7 +39,8 @@ libstates_a_SOURCES =                \
 	density.F90                  \
 	states_io.F90                \
 	cmplxscl.F90                 \
-        opt_control_state.F90
+        opt_control_state.F90        \
+	states_parallel.F90
 
 noinst_HEADERS = \
 	physics_op_inc.F90 \
@@ -61,10 +62,11 @@ modelmb_density_matrix.o : modelmb_density_matrix.F90 modelmb_density_matrix_inc
 modelmb_exchange_syms.o : modelmb_exchange_syms.F90 modelmb_exchange_syms_inc.F90 modelmb_density_matrix.o modelmb_particles.o states.o
 modelmb_particles.o : modelmb_particles.F90
 physics_op.o : physics_op.F90 physics_op_inc.F90
+states_parallel.o : states_parallel.F90 states.o
 states.o : states.F90 states_group.o states_inc.F90 states_dim.o restart.o modelmb_particles.o smear.o cmplxscl.o
 states_dim.o : states_dim.F90
 states_group.o : states_group.F90
-states_calc.o : states_calc.F90 states_calc_inc.F90 states.o states_block.o smear.o cmplxscl.o physics_op.o states_dim.o
+states_calc.o : states_calc.F90 states_calc_inc.F90 states.o states_block.o smear.o cmplxscl.o physics_op.o states_dim.o states_parallel.o
 states_block.o : states_block.F90 states_block_inc.F90 states.o
 states_restart.o : states_restart.F90 linear_response.o restart.o smear.o states.o states_calc.o states_dim.o states_io.o
 excited_states.o : excited_states.F90 excited_states_inc.F90 states.o states_calc.o states_dim.o

@@ -100,7 +100,6 @@ module states_m
     states_are_complex,               &
     states_are_real,                  &
     states_set_complex,               &
-    states_blacs_blocksize,           &
     states_get_state,                 &
     states_set_state,                 &
     states_get_points,                &
@@ -118,10 +117,6 @@ module states_m
     states_wfs_t,                     &
     states_count_pairs,               &
     occupied_states,                  &
-    states_remote_access_start,       &
-    states_remote_access_stop,        &
-    states_get_block,                 &
-    states_release_block,             &
     states_type
 
   !> cmplxscl: Left and Right eigenstates
@@ -2299,56 +2294,6 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine states_blacs_blocksize(st, mesh, blocksize, total_np)
-    type(states_t),  intent(in)    :: st
-    type(mesh_t),    intent(in)    :: mesh
-    integer,         intent(out)   :: blocksize(2)
-    integer,         intent(out)   :: total_np
-
-    PUSH_SUB(states_blacs_blocksize)
-
-#ifdef HAVE_SCALAPACK
-    ! We need to select the block size of the decomposition. This is
-    ! tricky, since not all processors have the same number of
-    ! points.
-    !
-    ! What we do for now is to use the maximum of the number of
-    ! points and we set to zero the remaining points.
-
-    if(.not. st%scalapack_compatible) then
-      message(1) = "Attempt to use ScaLAPACK when processes have not been distributed in compatible layout."
-      message(2) = "You need to set ScaLAPACKCompatible = yes in the input file and re-run."
-      call messages_fatal(2, only_root_writes = .true.)
-    end if
-    
-    if (mesh%parallel_in_domains) then
-      blocksize(1) = maxval(mesh%vp%np_local_vec) + (st%d%dim - 1) * &
-       maxval(mesh%vp%np_local_vec + mesh%vp%np_bndry + mesh%vp%np_ghost)
-    else
-      blocksize(1) = mesh%np + (st%d%dim - 1)*mesh%np_part
-    end if
-
-    if (st%parallel_in_states) then
-      blocksize(2) = maxval(st%st_num)
-    else
-      blocksize(2) = st%nst
-    end if
-
-    total_np = blocksize(1)*st%dom_st_proc_grid%nprow
-
-
-    ASSERT(st%d%dim*mesh%np_part >= blocksize(1))
-#else
-    blocksize(1) = 0
-    blocksize(2) = 0
-    total_np = 0
-#endif
-
-    POP_SUB(states_blacs_blocksize)
-  end subroutine states_blacs_blocksize
-
-  ! ------------------------------------------------------------
-
   subroutine states_pack(st, copy)
     type(states_t),    intent(inout) :: st
     logical, optional, intent(in)    :: copy
@@ -2703,135 +2648,6 @@ contains
 
     POP_SUB(occupied_states)
   end subroutine occupied_states
-
-  ! ---------------------------------------------------------
-
-  subroutine states_remote_access_start(this)
-    type(states_t),       intent(inout) :: this
-    
-    integer :: ib, iqn
-    
-    PUSH_SUB(states_remote_access_start)
-
-    ASSERT(associated(this%group%psib))
-
-    SAFE_ALLOCATE(this%group%rma_win(1:this%group%nblocks, 1:this%d%nik))
-    
-    do iqn = this%d%kpt%start, this%d%kpt%end
-      do ib = 1, this%group%nblocks
-        if(this%group%block_is_local(ib, iqn)) then
-          call batch_remote_access_start(this%group%psib(ib, iqn), this%mpi_grp, this%group%rma_win(ib, iqn))
-        else
-#ifdef HAVE_MPI2
-          ! create an empty window
-          call MPI_Win_create(0, int(0, MPI_ADDRESS_KIND), 1, &
-            MPI_INFO_NULL, this%mpi_grp%comm, this%group%rma_win(ib, iqn), mpi_err)
-#endif
-        end if
-      end do
-    end do
-    
-    POP_SUB(states_remote_access_start)
-  end subroutine states_remote_access_start
-
-    ! ---------------------------------------------------------
-
-  subroutine states_remote_access_stop(this)
-    type(states_t),       intent(inout) :: this
-    
-    integer :: ib, iqn
-    
-    PUSH_SUB(states_remote_access_stop)
-
-    ASSERT(associated(this%group%psib))
-    
-    do iqn = this%d%kpt%start, this%d%kpt%end
-      do ib = 1, this%group%nblocks
-        if(this%group%block_is_local(ib, iqn)) then
-          call batch_remote_access_stop(this%group%psib(ib, iqn), this%group%rma_win(ib, iqn))
-        else
-#ifdef HAVE_MPI2
-          call MPI_Win_free(this%group%rma_win(ib, iqn), mpi_err)
-#endif
-        end if
-      end do
-    end do
-
-    SAFE_DEALLOCATE_A(this%group%rma_win)
-    
-    POP_SUB(states_remote_access_stop)
-  end subroutine states_remote_access_stop
-
-  ! --------------------------------------
-
-  subroutine states_get_block(this, mesh, ib, iqn, psib)
-    type(states_t), target, intent(in) :: this
-    type(mesh_t),           intent(in) :: mesh
-    integer,                intent(in) :: ib
-    integer,                intent(in) :: iqn
-    type(batch_t),          pointer    :: psib
-
-    type(profile_t), save :: prof
-    
-    PUSH_SUB(states_get_block)
-
-    call profiling_in(prof, "STATES_GET_BLOCK")
-    
-    if(this%group%block_is_local(ib, iqn)) then
-      psib => this%group%psib(ib, iqn)
-    else
-      SAFE_ALLOCATE(psib)
-      call batch_init(psib, this%d%dim, this%group%block_size(ib))
-
-      if(states_are_real(this)) then
-        call dbatch_allocate(psib, this%group%block_range(ib, 1), this%group%block_range(ib, 2), mesh%np_part)
-      else
-        call zbatch_allocate(psib, this%group%block_range(ib, 1), this%group%block_range(ib, 2), mesh%np_part)
-      end if
-      
-      call batch_pack(psib, copy = .false.)
-      
-#ifdef HAVE_MPI2
-      call MPI_Win_lock(MPI_LOCK_SHARED, this%group%block_node(ib), 0, this%group%rma_win(ib, iqn),  mpi_err)
-
-      if(states_are_real(this)) then
-        call MPI_Get(psib%pack%dpsi(1, 1), product(psib%pack%size), MPI_FLOAT, &
-          this%group%block_node(ib), int(0, MPI_ADDRESS_KIND), product(psib%pack%size), MPI_FLOAT, &
-          this%group%rma_win(ib, iqn), mpi_err)
-      else
-        call MPI_Get(psib%pack%zpsi(1, 1), product(psib%pack%size), MPI_CMPLX, &
-          this%group%block_node(ib), int(0, MPI_ADDRESS_KIND), product(psib%pack%size), MPI_CMPLX, &
-          this%group%rma_win(ib, iqn), mpi_err)
-      end if
-        
-      call MPI_Win_unlock(this%group%block_node(ib), this%group%rma_win(ib, iqn),  mpi_err)
-#endif
-    end if
-
-    call profiling_out(prof)
-    
-    POP_SUB(states_get_block)
-  end subroutine states_get_block
-
-  ! --------------------------------------
-
-  subroutine states_release_block(this, ib, iqn, psib)
-    type(states_t), target, intent(in) :: this
-    integer,                intent(in) :: ib
-    integer,                intent(in) :: iqn
-    type(batch_t),          pointer    :: psib
-
-    PUSH_SUB(states_release_block)
-
-    if(this%group%block_is_local(ib, iqn)) then
-      nullify(psib)
-    else
-      call batch_end(psib)
-      SAFE_DEALLOCATE_P(psib)
-    end if
-    
-    POP_SUB(states_release_block)
-  end subroutine states_release_block
   
 #include "undef.F90"
 #include "real.F90"
