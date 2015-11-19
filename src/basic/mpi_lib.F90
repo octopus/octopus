@@ -42,6 +42,8 @@ module mpi_lib_m
     module procedure dlmpi_gen_allgatherv, zlmpi_gen_allgatherv, ilmpi_gen_allgatherv
   end interface lmpi_gen_allgatherv
 #endif
+  
+  type(profile_t), save :: prof_allgatherv
 
 contains
 

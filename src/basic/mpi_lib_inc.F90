@@ -34,7 +34,8 @@ subroutine X(lmpi_gen_allgatherv)(incount, in, outcount, out, mpi_grp)
   integer, allocatable :: rdispls(:), recvbuf(:), recvcnts(:)
 
   PUSH_SUB(X(lmpi_gen_allgatherv))
-
+  call profiling_in(prof_allgatherv, 'LMPI_GEN_ALLGATHERV')
+  
   SAFE_ALLOCATE( rdispls(1:mpi_grp%size))
   SAFE_ALLOCATE( recvbuf(1:mpi_grp%size))
   SAFE_ALLOCATE(recvcnts(1:mpi_grp%size))
@@ -66,6 +67,7 @@ subroutine X(lmpi_gen_allgatherv)(incount, in, outcount, out, mpi_grp)
   SAFE_DEALLOCATE_A(recvbuf)
   SAFE_DEALLOCATE_A(recvcnts)
 
+  call profiling_out(prof_allgatherv)
   POP_SUB(X(lmpi_gen_allgatherv))
 end subroutine X(lmpi_gen_allgatherv)
 
