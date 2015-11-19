@@ -59,13 +59,19 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
 
   ! Comparing to KLI paper 1990, oep%vxc corresponds to V_{x \sigma}^S in Eq. 8
   ! The n_{i \sigma} in Eq. 8 is partitioned in this code into \psi^{*} (included in lxc) and \psi (explicitly below)
-  do ip = 1, mesh%np
-    oep%vxc(ip,1) = M_ZERO
-    do ist = st%st_start, st%st_end
-      call states_get_state(st, mesh, ist, is, psi)
-      oep%vxc(ip,1) = oep%vxc(ip,1) + oep%socc*st%occ(ist, is)*R_REAL(oep%X(lxc)(ip, ist, is)*psi(ip, 1))
+  
+  oep%vxc(1:mesh%np, 1) = CNST(0.0)
+
+  do ist = st%st_start, st%st_end
+    call states_get_state(st, mesh, ist, is, psi)
+    
+    do ip = 1, mesh%np
+      oep%vxc(ip, 1) = oep%vxc(ip, 1) + oep%socc*st%occ(ist, is)*R_REAL(oep%X(lxc)(ip, ist, is)*psi(ip, 1))
     end do
-    oep%vxc(ip,1) = oep%vxc(ip,1) / rho_sigma(ip)
+  end do
+
+  do ip = 1, mesh%np
+    oep%vxc(ip, 1) = oep%vxc(ip, 1)/rho_sigma(ip)
   end do
 
   SAFE_DEALLOCATE_A(psi)
