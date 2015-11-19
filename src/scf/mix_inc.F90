@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2002-2015 M. Marques, A. Castro, A. Rubio, G. Bertsch, X. Andrade
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -41,6 +41,9 @@ subroutine X(mixing)(smix, vin, vout, vnew, dotp)
   case (OPTION__MIXINGSCHEME__BROYDEN)
     call X(mixing_broyden)(smix, vin, vout, vnew, smix%iter, dotp)
     
+  case (OPTION__MIXINGSCHEME__DIIS)
+    call X(mixing_diis)(smix, vin, vout, vnew, smix%iter, dotp)
+
   case (OPTION__MIXINGSCHEME__BOWLER_GILLAN)
     call X(mixing_grpulay)(smix, vin, vout, vnew, smix%iter, dotp)
     
@@ -211,6 +214,121 @@ subroutine X(broyden_extrapolation)(alpha, d1, d2, d3, vin, vnew, iter_used, f, 
   POP_SUB(X(broyden_extrapolation))
 end subroutine X(broyden_extrapolation)
 
+!--------------------------------------------------------------------
+
+subroutine X(mixing_diis)(this, vin, vout, vnew, iter, dotp)
+  type(mix_t), intent(inout) :: this
+  R_TYPE,      intent(in)    :: vin(:, :, :)
+  R_TYPE,      intent(in)    :: vout(:, :, :)
+  R_TYPE,      intent(out)   :: vnew(:, :, :)
+  integer,     intent(in)    :: iter
+  interface
+    R_TYPE function dotp(x, y) result(res)
+      implicit none
+      R_TYPE, intent(in) :: x(:)
+      R_TYPE, intent(in) :: y(:)
+    end function dotp
+  end interface
+
+  integer :: size, ii, jj, kk, ll
+  FLOAT :: sumaa
+  FLOAT, allocatable :: aa(:, :), alpha(:)
+  
+  PUSH_SUB(X(mixing_diis))
+
+  print*, "ITER", iter
+  
+  if(iter <= this%d4) then
+
+    size = iter
+    
+  else
+
+    size = this%d4
+
+    do ii = 2, size
+      call lalg_copy(this%d1, this%d2, this%d3, this%X(dv)(:, :, :, ii), this%X(dv)(:, :, :, ii - 1))
+      call lalg_copy(this%d1, this%d2, this%d3, this%X(df)(:, :, :, ii), this%X(df)(:, :, :, ii - 1))
+    end do
+    
+  end if
+
+  call lalg_copy(this%d1, this%d2, this%d3, vin, this%X(dv)(:, :, :, size))
+  this%X(df)(1:this%d1, 1:this%d2, 1:this%d3, size) = vout(1:this%d1, 1:this%d2, 1:this%d3) - vin(1:this%d1, 1:this%d2, 1:this%d3)
+
+  if(iter == 1) then
+
+    vnew(1:this%d1, 1:this%d2, 1:this%d3) = (CNST(1.0) - this%alpha)*vin(1:this%d1, 1:this%d2, 1:this%d3) &
+      + this%alpha*vout(1:this%d1, 1:this%d2, 1:this%d3)
+
+!    vnew(1:this%d1, 1:this%d2, 1:this%d3) = vin(1:this%d1, 1:this%d2, 1:this%d3)
+    
+    POP_SUB(X(mixing_diis))
+    return
+  end if
+ 
+
+  print*, "res ", dotp(this%X(df)(:, 1, 1, size), this%X(df)(:, 1, 1, size))
+  
+  SAFE_ALLOCATE(aa(1:size, 1:size))
+  SAFE_ALLOCATE(alpha(1:size))
+  
+  do ii = 1, size
+    do jj = 1, size
+
+      aa(ii, jj) = CNST(0.0)
+      do kk = 1, this%d2
+        do ll = 1, this%d3
+          aa(ii, jj) = aa(ii, jj) + dotp(this%X(df)(:, kk, ll, jj), this%X(df)(:, kk, ll, ii))
+        end do
+      end do
+      
+    end do
+  end do
+
+  print*, "============"
+
+  do ii = 1, size
+    print*, aa(ii, :)
+  end do
+  
+  sumaa = lalg_inverter(size, aa)
+
+  print*, "============"
+  
+  do ii = 1, size
+    print*, aa(ii, :)
+  end do
+
+  print*, "SUM", sumaa
+
+  if(abs(sumaa) > CNST(1e-8)) then
+    
+    sumaa = sum(aa(1:size, 1:size))
+    
+    do ii = 1, size
+      alpha(ii) = sum(aa(1:size, ii))/sumaa
+    end do
+
+  else
+
+    alpha(1:size - 1) = CNST(0.0)
+    alpha(size) = CNST(1.0)
+    
+  end if
+
+  print*, "---------------"
+  print*, alpha, "sum = ", sum(alpha)
+  print*, "---------------"
+
+  vnew(1:this%d1, 1:this%d2, 1:this%d3) = CNST(0.0)
+  do ii = 1, size
+    vnew(1:this%d1, 1:this%d2, 1:this%d3) = &
+      vnew(1:this%d1, 1:this%d2, 1:this%d3) + alpha(ii)*this%X(dv)(1:this%d1, 1:this%d2, 1:this%d3, ii)
+  end do
+  
+  POP_SUB(X(mixing_diis))
+end subroutine X(mixing_diis)
 
 ! ---------------------------------------------------------
 ! Guaranteed-reduction Pulay

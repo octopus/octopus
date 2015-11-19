@@ -115,20 +115,27 @@ contains
     !% of the input and output densities of previous iterations.
     !%Option linear 0
     !% Simple linear mixing.
-    !%Option bowler_gillan 1
-    !% The Guaranteed-reduction modification of the Pulay scheme by
-    !% Bowler and Gillan [D. R. Bowler and M. J. Gillan,
-    !% <i>Chem. Phys.  Lett.</i> <b>325</b>, 473 (2000)].
     !%Option broyden 2
     !% Broyden scheme [C. G Broyden, <i>Math. Comp.</i> <b>19</b>, 577 (1965); 
     !% D. D. Johnson, <i>Phys. Rev. B</i> <b>38</b>, 12807 (1988)].
     !% For complex functions (e.g. Sternheimer with <tt>EMEta</tt> > 0), we use the generalization
     !% with a complex dot product.
+    !%Option diis 9
+    !% Direct inversion in the iterative subspace (diis)
+    !% scheme [P. Pulay, <i>Chem. Phys. Lett.</i>, <b>73</b>, 393
+    !% (1980)] as described in [G. Kresse, and J. Hurthmueller,
+    !% <i>Phys. Rev. B</i> <b>54</b>, 11169 (1996)].
+    !%Option bowler_gillan 1
+    !% The Guaranteed-reduction modification of the Pulay scheme by
+    !% Bowler and Gillan [D. R. Bowler and M. J. Gillan,
+    !% <i>Chem. Phys.  Lett.</i> <b>325</b>, 473 (2000)].
     !%End
     call parse_variable(trim(prefix)//'MixingScheme', def, smix%scheme)
-    if(.not.varinfo_valid_option('MixingScheme', smix%scheme)) call messages_input_error('MixingScheme')
+    if(.not.varinfo_valid_option('MixingScheme', smix%scheme)) call messages_input_error('MixingScheme', 'invalid option')
     call messages_print_var_option(stdout, "MixingScheme", smix%scheme)
 
+    if(smix%scheme == OPTION__MIXINGSCHEME__DIIS) call messages_experimental('MixingScheme = diis')
+    
     !%Variable Mixing
     !%Type float
     !%Default 0.3
@@ -137,11 +144,9 @@ contains
     !% Both the linear and the Broyden scheme depend on a "mixing parameter", set by this variable. 
     !% Must be 0 < <tt>Mixing</tt> <= 1.
     !%End
-    if (smix%scheme == OPTION__MIXINGSCHEME__LINEAR .or. smix%scheme == OPTION__MIXINGSCHEME__BROYDEN) then
-      call parse_variable(trim(prefix)+'Mixing', CNST(0.3), smix%alpha)
-      if(smix%alpha <= M_ZERO .or. smix%alpha > M_ONE) call messages_input_error('Mixing')
-    end if
-
+    call parse_variable(trim(prefix)+'Mixing', CNST(0.3), smix%alpha)
+    if(smix%alpha <= M_ZERO .or. smix%alpha > M_ONE) call messages_input_error('Mixing')
+    
     !%Variable MixNumberSteps
     !%Type integer
     !%Default 3
@@ -151,7 +156,7 @@ contains
     !% from the values of the densities/potentials of a given number of previous iterations.
     !% This number is set by this variable. Must be greater than 1.
     !%End
-    if (smix%scheme == OPTION__MIXINGSCHEME__BOWLER_GILLAN .or. smix%scheme == OPTION__MIXINGSCHEME__BROYDEN) then
+    if (smix%scheme /= OPTION__MIXINGSCHEME__LINEAR) then
       call parse_variable(trim(prefix)//'MixNumberSteps', 3, smix%ns)
       if(smix%ns <= 1) call messages_input_error('MixNumberSteps')
     else
@@ -174,7 +179,7 @@ contains
     smix%d2 = d2
     smix%d3 = d3
     select case (smix%scheme)
-    case (OPTION__MIXINGSCHEME__LINEAR, OPTION__MIXINGSCHEME__BROYDEN)
+    case (OPTION__MIXINGSCHEME__LINEAR, OPTION__MIXINGSCHEME__BROYDEN, OPTION__MIXINGSCHEME__DIIS)
       smix%d4 = smix%ns
     case (OPTION__MIXINGSCHEME__BOWLER_GILLAN)
       smix%d4 = smix%ns + 1
