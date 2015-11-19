@@ -29,7 +29,9 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
   FLOAT, optional,        intent(out)   :: diff(:)
 
   R_TYPE, pointer :: psi(:, :, :)
-
+  FLOAT, allocatable :: ldiff(:)
+  integer :: tmp
+    
   PUSH_SUB(X(subspace_diag))
   call profiling_in(diagon_prof, "SUBSPACE_DIAG")
 
@@ -50,6 +52,15 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
     ASSERT(.false.)
     
   end select
+
+  if(present(diff) .and. st%parallel_in_states) then
+    SAFE_ALLOCATE(ldiff(1:st%lnst))
+
+    ldiff = diff(st%st_start:st%st_end)
+    call lmpi_gen_allgatherv(st%lnst, ldiff, tmp, diff, st%mpi_grp)
+
+    SAFE_DEALLOCATE_A(ldiff)
+  end if
 
   call profiling_out(diagon_prof)
   POP_SUB(X(subspace_diag))
@@ -113,7 +124,7 @@ subroutine X(subspace_diag_standard)(der, st, hm, ik, eigenval, diff)
     end do
 
     SAFE_DEALLOCATE_A(rdiff)
-
+    
   end if
 
   SAFE_DEALLOCATE_A(hmss)
@@ -138,8 +149,7 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
 #ifdef HAVE_SCALAPACK
   R_TYPE, allocatable  :: hs(:, :), hpsi(:, :, :), evectors(:, :), work(:)
   R_TYPE               :: rttmp
-  integer              :: tmp, ist, lwork, size
-  FLOAT                :: ldiff(st%lnst)
+  integer              :: ist, lwork, size
   integer :: psi_block(1:2), total_np, psi_desc(BLACS_DLEN), hs_desc(BLACS_DLEN), info
   integer :: nbl, nrow, ncol
   type(batch_t) :: psib, hpsib
@@ -280,12 +290,6 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
       call X(hamiltonian_apply)(hm, der, psi(:, :, ist) , hpsi(:, :, st%st_start), ist, ik)
       diff(ist) = X(states_residue)(der%mesh, st%d%dim, hpsi(:, :, st%st_start), eigenval(ist), psi(:, :, ist))
     end do
-
-    if(st%parallel_in_states) then
-      ldiff = diff(st%st_start:st%st_end)
-      call lmpi_gen_allgatherv(st%lnst, ldiff, tmp, diff(:), st%mpi_grp)
-    end if
-
   end if
   
   SAFE_DEALLOCATE_A(hpsi)
