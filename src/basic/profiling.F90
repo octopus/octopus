@@ -291,15 +291,13 @@ contains
 
       PUSH_SUB(profiling_init.get_output_dir)
 
-      dirnum  = 'ser '
       prof_vars%file_number = '0000'
-#if defined(HAVE_MPI)
+
       if(mpi_world%size > 1) then
-        write(dirnum, '(i6.6)') mpi_world%size
         write(prof_vars%file_number, '(i6.6)') mpi_world%rank
       end if
-#endif
-      prof_vars%output_dir = 'profiling.'//trim(dirnum)
+
+      prof_vars%output_dir = 'profiling'
 
       if(mpi_grp_is_root(mpi_world)) call io_mkdir(trim(prof_vars%output_dir))
 
