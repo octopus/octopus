@@ -302,6 +302,9 @@ contains
       scf%mixdim1 = gr%mesh%np
     case(OPTION__MIXFIELD__DENSITY)
       scf%mixdim1 = gr%fine%mesh%np
+    case(OPTION__MIXFIELD__STATES)
+      ! we do not really need the mixer, except for the value of the mixing coefficient
+      scf%mixdim1 = 1
     end select
 
     if(scf%mix_field /= OPTION__MIXFIELD__NONE) then
