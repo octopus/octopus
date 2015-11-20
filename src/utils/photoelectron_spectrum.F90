@@ -55,8 +55,9 @@ program photoelectron_spectrum
   FLOAT, pointer       :: Lk(:,:), RR(:)
   FLOAT, allocatable   :: pesk(:,:,:), pmesh(:,:,:,:)
   integer, allocatable :: Lp(:,:,:,:,:)
-  logical              :: interpol, need_pmesh
-  integer              :: ii, i1,i2,i3, idxZero(1:3)
+  logical              :: interpol, need_pmesh, resolve_states
+  integer              :: ii, i1,i2,i3, idxZero(1:3), st_range(2)
+  type(block_t)        :: blk
   
   type(space_t)     :: space
   type(geometry_t)  :: geo
@@ -116,17 +117,21 @@ program photoelectron_spectrum
   pvec = (/1,0,0/)
   Emin = M_ZERO
   Emax = M_ZERO
+
+  call get_laser_polarization(pol)
+  ! if there is no laser set pol along the z-axis
+  if (sum(pol(1:3)**2) <= M_EPSILON) pol = (/0,0,1/) 
+
   
   if(simul_box_is_periodic(sb)) then
     mode = 7
 !     if(sb%dim == 2 ) mode = 3
 !     if(sb%dim == 3 ) mode = 7
+    if (sb%dim == 2) pol = (/0,1,0/) 
+    if (sb%dim == 3) pol = (/0,0,1/) 
   end if
 
   
-  call get_laser_polarization(pol)
-  ! if there is no laser set pol along the z-axis
-  if (sum(pol(1:3)**2) <= M_EPSILON) pol = (/0,0,1/) 
   
   
   call getopt_photoelectron_spectrum(mode,interp,uEstep, uEspan,&
@@ -152,6 +157,33 @@ program photoelectron_spectrum
     message(1) = "Unable to read time-dependent restart information."
     call messages_fatal(1)
   end if
+  
+  !%Variable PhotoelectronSpectrumResolveStates
+  !%Type block
+  !%Default 
+  !%Section Utilities::oct-photoelectron_spectrum
+  !%Description
+  !% If </tt>yes</tt> calculate the photoelectron spectrum resolved in each K.S. state. 
+  !% Optionally a range of states can be given as two slot block where the 
+  !% first slot is the lower state index and the second is the highest one. 
+  !% For example to calculate the spectra from state i to state j:
+  !%
+  !% <tt>%PhotoelectronSpectrumResolveStates
+  !% <br> i | j
+  !% <br>%</tt>
+  !%End
+  st_range(1:2)=(/1, st%nst/)
+  if(parse_block('PhotoelectronSpectrumResolveStates', blk) == 0) then
+    if(parse_block_cols(blk,0) < 2) call messages_input_error('PhotoelectronSpectrumResolveStates')
+    do idim = 1, 2
+      call parse_block_integer(blk, 0, idim - 1, st_range(idim))
+    end do
+    call parse_block_end(blk)
+  else
+    call parse_variable('PhotoelectronSpectrumResolveStates', .false., resolve_states)
+  end if
+  
+  
   
   SAFE_ALLOCATE(Lp(1:ll(1),1:ll(2),1:ll(3),kpoints_number(sb%kpoints),1:3))
 
