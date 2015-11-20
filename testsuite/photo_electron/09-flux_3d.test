@@ -1,0 +1,20 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id$
+
+Test       : Photoelectron linear regime (flux 3D)
+Program    : octopus
+TestGroups : short-run, photo_electron
+Enabled    : Yes
+
+
+# Na groundstate
+Processors : 2
+Input      : 09-flux_3d.01-Na_gs.inp
+
+# Na photoemission
+# Processors : 2
+Input      : 09-flux_3d.02-Na_td.inp
+match ; PES [val  1] ; LINEFIELD(td.general/PES_flux.power.sum, 29, 2) ; 0.2732014360E-011
+match ; PES [val  2] ; LINEFIELD(td.general/PES_flux.power.sum, 25, 2) ; 0.3329845413E-013
+match ; PES [val  3] ; LINEFIELD(td.general/PES_flux.power.sum, 33, 2) ; 0.7080571716E-014
+
