@@ -1218,6 +1218,7 @@ contains
     integer            :: iunit
     FLOAT, allocatable :: spctrout_cub(:), spctrout_sph(:,:)
     FLOAT              :: spctroutsave
+    FLOAT              :: weight, spctrsum
 
     PUSH_SUB(pes_flux_output)
 
@@ -1310,6 +1311,41 @@ contains
             if(this%nstepsphik > 0) write(iunit, '(1x)', advance='yes')
           end do
           if(this%nstepsphik == 0) write(iunit, '(1x)', advance='yes')
+        end do
+      end if
+      call io_close(iunit)
+    end if
+
+    if(mpi_grp_is_root(mpi_world)) then
+      iunit = io_open('td.general/PES_flux.power.sum', action='write', position='rewind')
+      write(iunit, '(a29)') '# E,  distribution'
+
+      if(this%shape == M_SPHERICAL) then
+        do ikk = 1, this%nk
+          kact = ikk * this%dk
+          iomk = 0
+          spctrsum = M_ZERO
+
+          do ith = 0, this%nstepsthetak
+            thetak = ith * this%dthetak
+
+            if(ith == 0 .or. ith == this%nstepsthetak) then
+              weight = (M_ONE - cos(this%dthetak/M_TWO)) * M_TWO * M_PI
+            else
+              weight = abs(cos(thetak - this%dthetak/M_TWO) - cos(thetak + this%dthetak/M_TWO)) &
+                * M_TWO * M_PI / this%nstepsphik
+            end if
+
+            do iph = 0, this%nstepsphik - 1
+              iomk = iomk + 1
+              spctrsum = spctrsum + spctrout_sph(ikk, iomk) * weight
+
+              if(thetak == M_ZERO .or. thetak == M_PI) exit
+
+            end do
+          end do
+
+          write(iunit,'(2(1x,e18.10E3))') kact**M_TWO / M_TWO, spctrsum * kact
         end do
       end if
       call io_close(iunit)
