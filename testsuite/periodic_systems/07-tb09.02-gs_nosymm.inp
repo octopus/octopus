@@ -41,5 +41,3 @@ ParDomains = no
 ParKPoints = auto
 
 FilterPotentials = filter_none
-
-MixField = density

@@ -44,4 +44,3 @@ XCUseGaugeIndependentKED = no
 
 FilterPotentials = filter_none
 
-MixField = density
