@@ -31,31 +31,42 @@ module matrix_m
   public ::                        &
     matrix_t,                      &
     matrix_init,                   &
-    matrix_end
-
+    matrix_end,                    &
+    matrix_set_zero,               &
+    matrix_set_block,              &
+    matrix_print
+  
   type matrix_t
     private
-    integer        :: dim(1:2)
-    FLOAT, pointer :: dmat(:, :)
-    FLOAT, pointer :: zmat(:, :)
+    integer            :: dim(1:2)
+    FLOAT, allocatable :: dmat(:, :)
+    FLOAT, allocatable :: zmat(:, :)
+    type(type_t)       :: type    
   end type matrix_t
 
+  interface matrix_init
+    module procedure matrix_init_empty, dmatrix_init_data, zmatrix_init_data
+  end interface matrix_init
+
+  interface matrix_set_block
+    module procedure dmatrix_set_block, zmatrix_set_block
+  end interface matrix_set_block
+  
 contains
 
   ! ---------------------------------------------------------
-  subroutine matrix_init(this, dim1, dim2, type)
+  subroutine matrix_init_empty(this, dim1, dim2, type)
     type(matrix_t),             intent(out) :: this
     integer,                    intent(in)  :: dim1
     integer,                    intent(in)  :: dim2
     type(type_t),               intent(in)  :: type
 
-    PUSH_SUB(matrix_init)
+    PUSH_SUB(matrix_init_empty)
 
     this%dim(1:2) = (/dim1, dim2/)
 
-    nullify(this%dmat)
-    nullify(this%zmat)
-
+    this%type = type
+    
     ASSERT(type == TYPE_FLOAT .or. type == TYPE_CMPLX)
 
     if(type == TYPE_FLOAT) then
@@ -64,8 +75,8 @@ contains
       SAFE_ALLOCATE(this%zmat(1:dim1, 1:dim2))
     end if
 
-    POP_SUB(matrix_init)
-  end subroutine matrix_init
+    POP_SUB(matrix_init_empty)
+  end subroutine matrix_init_empty
 
   ! ---------------------------------------------------------
 
@@ -74,14 +85,48 @@ contains
     
     PUSH_SUB(matrix_end)
 
-    SAFE_DEALLOCATE_P(this%dmat)
-    SAFE_DEALLOCATE_P(this%zmat)
+    SAFE_DEALLOCATE_A(this%dmat)
+    SAFE_DEALLOCATE_A(this%zmat)
 
     POP_SUB(matrix_end)
   end subroutine matrix_end
 
   ! ---------------------------------------------------------
 
+  subroutine matrix_set_zero(this)
+    type(matrix_t), intent(inout) :: this
+
+    PUSH_SUB(matrix_set_zero)
+
+    if(this%type == TYPE_FLOAT) then
+      this%dmat = CNST(0.0)
+    else
+      this%zmat = CNST(0.0)
+    end if
+    
+    POP_SUB(matrix_set_zero)
+  end subroutine matrix_set_zero
+
+  ! ---------------------------------------------------------
+
+  subroutine matrix_print(this)
+    type(matrix_t), intent(in) :: this
+
+    integer :: ii
+    
+    PUSH_SUB(matrix_print)
+
+    do ii = 1, this%dim(1)
+      if(this%type == TYPE_FLOAT) then
+        print*, this%dmat(ii, 1:this%dim(2))
+      else
+        print*, this%zmat(ii, 1:this%dim(2))
+      end if
+    end do
+    
+    POP_SUB(matrix_print)
+  end subroutine matrix_print
+  
 #include "undef.F90"
 #include "real.F90"
 
