@@ -1,4 +1,4 @@
-!! Copyright (C) 2011 X. Andrade
+!! Copyright (C) 2011-2015 X. Andrade
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -18,12 +18,13 @@
 !! $Id$
 
   ! ---------------------------------------------------------
-  subroutine X(matrix_init_data)(this, dim1, dim2, data)
+  subroutine X(matrix_init_data)(this, dim1, dim2, data, mpi_grp)
     type(matrix_t),             intent(out) :: this
     integer,                    intent(in)  :: dim1
     integer,                    intent(in)  :: dim2
     R_TYPE,                     intent(in)  :: data(:, :)
-
+    type(mpi_grp_t),            intent(in)  :: mpi_grp !< the group of processors that shares this matrix
+    
     PUSH_SUB(X(matrix_init_data))
 
     ASSERT(all(ubound(data) == (/dim1, dim2/)))
@@ -31,6 +32,8 @@
     this%dim(1:2) = (/dim1, dim2/)
 
     this%type = R_TYPE_VAL
+
+    this%mpi_grp = mpi_grp
     
     ASSERT(this%type == TYPE_FLOAT .or. this%type == TYPE_CMPLX)
     
@@ -52,10 +55,11 @@
     R_TYPE,                     intent(in)    :: data(:, :)
     
     PUSH_SUB(X(matrix_init_data))
+    
+    !    print*, min1, max1, this%dim(1)
+    !    print*, min2, max2, this%dim(2)
 
-    print*, min1, max1, this%dim(1)
-    print*, min2, max2, this%dim(2)
-
+    ASSERT(this%type == R_TYPE_VAL)
     ASSERT(min1 <= max1)
     ASSERT(min2 <= max2)
     ASSERT(0 < min1 .and. min1 <= this%dim(1))
