@@ -9,10 +9,10 @@ Enabled    : Yes
 
 # Mask method with bare fft
 Processors : 2
-Input      : 07-flux.h1d_lin.inp
-match ; PES [val  1] ; LINEFIELD(td.general/PES_flux.distribution.out, 567, 4) ; 0.6788509480E-002
-match ; PES [val  2] ; LINEFIELD(td.general/PES_flux.distribution.out, 583, 4) ; 0.3727246396E-002
-match ; PES [val  3] ; LINEFIELD(td.general/PES_flux.distribution.out, 555, 4) ; 0.3325540584E-002 
+Input      : 07-flux_1d.h1d_lin.inp
+match ; PES [val  1] ; LINEFIELD(td.general/PES_flux.distribution.out, 567, 4) ; 0.6919585874E-002 
+match ; PES [val  2] ; LINEFIELD(td.general/PES_flux.distribution.out, 583, 4) ; 0.3265978435E-002
+match ; PES [val  3] ; LINEFIELD(td.general/PES_flux.distribution.out, 555, 4) ; 0.3537136104E-002 
 
 # BackAction method with bare fft
 # Processors : 2
