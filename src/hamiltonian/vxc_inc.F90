@@ -94,7 +94,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   end if
 
   ! is there anything to do ?
-  families = XC_FAMILY_LDA + XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA
+  families = XC_FAMILY_LDA + XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA + XC_FAMILY_LIBVDWXC
   if(iand(xcs%family, families) == 0) then
     POP_SUB(xc_get_vxc)
     call profiling_out(prof)
@@ -108,7 +108,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   end do
   
   ! initialize a couple of handy variables
-  gga  = iand(xcs%family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0
+  gga  = iand(xcs%family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA + XC_FAMILY_LIBVDWXC) /= 0
   mgga = iand(xcs%family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0
 
   !Read the spin channels
@@ -182,7 +182,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
       if(calc_energy .and. iand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC) /= 0) then
         ! we get the xc energy and potential
         select case(functl(ixc)%family)
-        case(XC_FAMILY_LDA)
+        case(XC_FAMILY_LDA, XC_FAMILY_LIBVDWXC)
           call XC_F90(lda_exc_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_zk(1), l_dedd(1,1))
 
         case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
@@ -201,7 +201,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
         l_zk(:) = M_ZERO
 
         select case(functl(ixc)%family)
-        case(XC_FAMILY_LDA)
+        case(XC_FAMILY_LDA, XC_FAMILY_LIBVDWXC)
           call XC_F90(lda_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_dedd(1,1))
 
         case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
@@ -301,6 +301,14 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   end do space_loop
 
   call local_deallocate()
+
+  if(functl(FUNC_C)%family == XC_FAMILY_LIBVDWXC) then
+    functl(FUNC_C)%libvdwxc%energy = M_ZERO
+    call libvdwxc_calculate(functl(FUNC_C)%libvdwxc, dens, gdens, dedd, dedgd)
+    if(calc_energy) then
+      ec = ec + functl(FUNC_C)%libvdwxc%energy
+    end if
+  end if
 
   ! Definition of tau in libxc is different, so we need to divide vtau by a factor of two
   if (present(vtau)) vtau = vtau / M_TWO
@@ -647,7 +655,7 @@ contains
     if(gga .or. xcs%xc_density_correction == LR_X) then
       ii = 1
       if(ispin /= UNPOLARIZED) ii = 3
-      
+
       allocate(l_sigma(1:ii, 1:N_BLOCK_MAX))
       allocate(l_vsigma(1:ii, 1:N_BLOCK_MAX))
     end if

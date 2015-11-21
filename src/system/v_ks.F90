@@ -35,6 +35,7 @@ module v_ks_m
   use index_m
   use io_function_m
   use lalg_basic_m
+  use libvdwxc_m
   use magnetic_m
   use mesh_function_m
   use messages_m
@@ -248,17 +249,21 @@ contains
     call messages_obsolete_variable('CFunctional', 'XCFunctional')
 
     ! initialize XC modules
-    
+
     ! This is a bit ugly, theory_level might not be Hartree-Fock now
     ! but it might become Hartree-Fock later. This is safe because it
     ! becomes Hartree-Fock in the cases where the functional is hybrid
     ! and the ifs inside check for both conditions.
     call xc_init(ks%xc, gr%mesh%sb%dim, gr%mesh%sb%periodic_dim, st%qtot, &
       x_id, c_id, xk_id, ck_id, hartree_fock = ks%theory_level == HARTREE_FOCK)
-    
+
+    if(iand(ks%xc%family, XC_FAMILY_LIBVDWXC) /= 0) then
+      call libvdwxc_set_geometry(ks%xc%functional(FUNC_C,1)%libvdwxc, gr%mesh)
+    end if
+
     ks%xc_family = ks%xc%family
-    
-    if(.not. parsed_theory_level) then 
+
+    if(.not. parsed_theory_level) then
       default = KOHN_SHAM_DFT
 
       ! the functional is a hybrid, use Hartree-Fock as theory level by default

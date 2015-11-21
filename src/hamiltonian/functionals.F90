@@ -22,6 +22,7 @@
 module xc_functl_m
   use global_m
   use parser_m
+  use libvdwxc_m
   use messages_m
   use XC_F90(lib_m)
 
@@ -40,17 +41,21 @@ module xc_functl_m
   integer, public, parameter :: &
     XC_KS_INVERSION = 801,      &  !< inversion of Kohn-Sham potential
     XC_OEP_X = 901,             &  !< Exact exchange
-    XC_LDA_XC_CMPLX = 701,      &  !< complex-scaled LDA exchange and correlation 
+    XC_LDA_XC_CMPLX = 701,      &  !< complex-scaled LDA exchange and correlation
     XC_PBE_XC_CMPLX = 702,      &  !< complex-scaled PBE exchange and correlation
     XC_LB94_XC_CMPLX = 703,     &  !< complex-scaled LB94 exchange and correlation
     XC_HALF_HARTREE = 917,      &  !< half-Hartree exchange for two electrons (supports complex scaling)
+    XC_VDW_C_VDWDF = 918,       &  !< vdw-df correlation from libvdwxc
+    XC_VDW_C_VDWDF2 = 919,      &  !< vdw-df2 correlation from libvdwxc
+    XC_VDW_C_VDWDFCX = 920,     &  !< vdw-df-cx correlation from libvdwxc
     XC_RDMFT_XC_M = 601            !< RDMFT Mueller functional
 
   !> declaring 'family' constants for 'functionals' not handled by libxc
   !! careful not to use a value defined in libxc for another family!
   integer, public, parameter :: &
     XC_FAMILY_KS_INVERSION = 1024, &
-    XC_FAMILY_RDMFT = 2048
+    XC_FAMILY_RDMFT = 2048, &
+    XC_FAMILY_LIBVDWXC = 4096
 
 #ifndef HAVE_LIBXC_HYB_MGGA
   integer, public, parameter :: XC_FAMILY_HYB_MGGA = 64
@@ -66,6 +71,7 @@ module xc_functl_m
 
     type(XC_F90(pointer_t)) :: conf         !< the pointer used to call the library
     type(XC_F90(pointer_t)) :: info         !< information about the functional
+    type(libvdwxc_t)        :: libvdwxc     !< libvdwxc data for van der Waals functionals
 
     integer         :: LB94_modified     !< should I use a special version of LB94 that
     FLOAT           :: LB94_threshold    !< needs to be handled specially
@@ -89,7 +95,7 @@ contains
   end subroutine xc_functl_init
 
   ! ---------------------------------------------------------
- 
+
  subroutine xc_functl_init_functl(functl, id, ndim, nel, spin_channels)
     type(xc_functl_t), intent(out) :: functl
     integer,           intent(in)  :: id
@@ -108,14 +114,14 @@ contains
     call xc_functl_init(functl, spin_channels)
 
     functl%id = id
-    
+
     if(functl%id == 0) then
       functl%family = XC_FAMILY_NONE
     else
       ! get the family of the functional
       functl%family = XC_F90(family_from_id)(functl%id)
       ! this also ensures it is actually a functional defined by the linked version of libxc
-      
+
       if(functl%family == XC_FAMILY_UNKNOWN) then
         if(functl%id == XC_OEP_X) then
           functl%family = XC_FAMILY_OEP
@@ -133,8 +139,12 @@ contains
         else if(functl%id == XC_LB94_XC_CMPLX) then
           call messages_experimental("complex-scaled LB94 exchange and correlation")
           functl%family = XC_FAMILY_GGA
+        else if(functl%id == XC_VDW_C_VDWDF .or. functl%id == XC_VDW_C_VDWDF2 .or. functl%id == XC_VDW_C_VDWDFCX) then
+          call messages_experimental("van der Waals functionals from libvdwxc")
+          functl%family = XC_FAMILY_LIBVDWXC
+          !functl%flags = functl%flags + XC_FLAGS_HAVE_VXC + XC_FLAGS_HAVE_EXC
         else if (functl%id == XC_RDMFT_XC_M) then
-          functl%family = XC_FAMILY_RDMFT  
+          functl%family = XC_FAMILY_RDMFT
         else
           call messages_input_error('XCFunctional', 'Unknown functional')
         end if
@@ -147,6 +157,12 @@ contains
     else if(functl%family == XC_FAMILY_KS_INVERSION .or. functl%family == XC_FAMILY_RDMFT) then
       functl%type = XC_EXCHANGE_CORRELATION
 
+    else if(functl%family == XC_FAMILY_LIBVDWXC) then
+      call XC_F90(func_init)(functl%conf, functl%info, XC_LDA_C_PW, spin_channels)
+      functl%type = XC_F90(info_kind)(functl%info)
+      functl%flags = XC_F90(info_flags)(functl%info)
+      ! Convert Octopus code for functional into corresponding libvdwxc code:
+      call libvdwxc_init(functl%libvdwxc, (functl%id - XC_VDW_C_VDWDF) / 1000 + 1)
     else if(functl%id == XC_LDA_XC_CMPLX &
       .or. functl%id == XC_PBE_XC_CMPLX &
       .or. functl%id == XC_LB94_XC_CMPLX) then
@@ -312,6 +328,10 @@ contains
       call XC_F90(func_end)(functl%conf)
     end if
 
+    if(functl%family == XC_FAMILY_LIBVDWXC) then
+      call libvdwxc_end(functl%libvdwxc)
+    end if
+
     POP_SUB(xc_functl_end)
   end subroutine xc_functl_end
 
@@ -345,14 +365,17 @@ contains
         write(message(2), '(4x,a)') '  KS Inversion'
         call messages_info(2, iunit)
       end select
-      
+
+    else if(functl%family == XC_FAMILY_LIBVDWXC) then
+      call libvdwxc_write_info(functl%libvdwxc, iunit)
+
     else if(functl%id == XC_LDA_XC_CMPLX) then
       ! this is handled separately for the moment
       ! we will include it in libxc when done with the tests
       write(message(1), '(2x,a)') 'Exchange-Correlation:'
       write(message(2), '(4x,a)') 'Complex-scaled LDA'
       call messages_info(2, iunit)
-        
+
     else if(functl%id == XC_HALF_HARTREE) then
       write(message(1), '(2x,a)') 'Exchange-Correlation:'
       write(message(2), '(4x,a)') 'Half-Hartree two-electron exchange'

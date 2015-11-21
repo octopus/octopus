@@ -364,6 +364,22 @@
 !% Schmider-Becke 98 parameterization 2c
 !%Option hyb_gga_x_sogga11_x               426
 !% Hybrid based on SOGGA11 form
+!%Option hyb_gga_xc_hse03               427000
+!% the 2003 version of the screened hybrid HSE
+!%Option hyb_gga_xc_hse06               428000
+!% the 2006 version of the screened hybrid HSE
+!%Option hyb_gga_xc_hjs_pbe               429000
+!% HJS hybrid screened exchange PBE version
+!%Option hyb_gga_xc_hjs_pbe_sol               430000
+!% HJS hybrid screened exchange PBE_SOL version
+!%Option hyb_gga_xc_hjs_b88               431000
+!% HJS hybrid screened exchange B88 version
+!%Option hyb_gga_xc_hjs_b97x               432000
+!% HJS hybrid screened exchange B97x version
+!%Option hyb_gga_xc_cam_b3lyp               433000
+!% CAM version of B3LYP
+!%Option hyb_gga_xc_tuned_cam_b3lyp               434000
+!% CAM version of B3LYP tunes for excitations
 !%Option hyb_gga_xc_bhandh               435000
 !% Becke half-and-half
 !%Option hyb_gga_xc_bhandhlyp               436000
@@ -458,7 +474,7 @@
 !% M06-2X functional of Minnesota
 !%Option oep_x                    901
 !% OEP: Exact exchange (not from libxc).
-!%Option ks_inversion             801 
+!%Option ks_inversion             801
 !% Inversion of KS potential (not from libxc).
 !%Option lda_xc_cmplx             701
 !% Complex-scaled LDA exchange and correlation (not from libxc).
@@ -471,6 +487,12 @@
 !%Option xc_half_hartree          917
 !% Half-Hartree exchange for two electrons (supports complex scaling) (not from libxc).
 !% Defined by <math>v_{xc}(r) = v_H(r) / 2</math>.
+!%Option vdw_c_vdwdf      918000
+!% van der Waals density functional vdW-DF correlation from libvdwxc (not from libxc).  Use with gga_x_pbe_r.
+!%Option vdw_c_vdwdf2     919000
+!% van der Waals density functional vdW-DF2 correlation from libvdwxc (not from libxc).  Use with gga_x_rpw86.
+!%Option vdw_c_vdwdfcx    920000
+!% van der Waals density functional vdW-DF-CX correlation from libvdwxc (not from libxc).  Still lacks GGA exchange.
 !%Option none                       0
 !% Exchange and correlation set to zero (not from libxc).
 !%End
