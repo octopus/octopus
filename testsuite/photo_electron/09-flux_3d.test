@@ -3,7 +3,7 @@
 
 Test       : Photoelectron linear regime (flux 3D)
 Program    : octopus
-TestGroups : short-run, photo_electron
+TestGroups : long-run, photo_electron
 Enabled    : Yes
 
 
