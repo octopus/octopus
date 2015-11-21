@@ -687,6 +687,7 @@ contains
     integer :: ii, jj, divisor, ik, idir, npoints
     integer, allocatable :: ix(:), lk123_(:,:),idx(:)
     FLOAT, allocatable :: nrm(:), shell(:), coords(:, :)
+    logical, allocatable :: move_to_minus_half(:)
 
     PUSH_SUB(kpoints_grid_generate)
    
@@ -694,6 +695,7 @@ contains
 
     npoints = product(naxis(1:dim))
 
+    SAFE_ALLOCATE(move_to_minus_half(1:dim))
     SAFE_ALLOCATE(ix(1:dim))
     
     if (present(lk123)) then
@@ -701,6 +703,8 @@ contains
       SAFE_ALLOCATE(idx(1:npoints))
     end if
 
+    move_to_minus_half(1:dim) = .true.
+    
     do ii = 0, npoints - 1
 
       ik = npoints - ii
@@ -718,9 +722,14 @@ contains
           kpoints(idir, ik) = kpoints(idir, ik) - dx(idir)
         end if
   
-        !bring back point to first Brillouin zone, except for points at 1/2 that would be sent to -1/2
-        if ( kpoints(idir,ik) /= M_HALF )  kpoints(idir, ik) = mod(kpoints(idir, ik) + M_HALF, M_ONE) - M_HALF
-
+        !bring back point to first Brillouin zone, except for points at 1/2
+        if ( abs(kpoints(idir, ik) - CNST(0.5)) > CNST(1e-14) )  then
+          kpoints(idir, ik) = mod(kpoints(idir, ik) + M_HALF, M_ONE) - M_HALF
+        else
+          ! alternate the assignation of points at 1/2 and -1/2 such that the total sum of k-points is zero.
+          if(move_to_minus_half(idir)) kpoints(idir,ik) = -CNST(0.5)
+          move_to_minus_half(idir) = .not. move_to_minus_half(idir)
+        end if
 
       end do
       if (present(lk123)) then
@@ -776,6 +785,7 @@ contains
     SAFE_DEALLOCATE_A(nrm)
     SAFE_DEALLOCATE_A(shell)
     SAFE_DEALLOCATE_A(coords)
+    SAFE_DEALLOCATE_A(move_to_minus_half)
 
     POP_SUB(kpoints_grid_generate)
   end subroutine kpoints_grid_generate
