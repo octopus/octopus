@@ -56,6 +56,7 @@ libmath_a_SOURCES =                      \
 	pblas.F90                        \
 	sgfft.F90                        \
 	matrix.F90                       \
+	matrix_ops.F90                   \
 	compressed_sensing.F90           \
 	fftw_low.c                       \
 	minimizer.F90                    \
@@ -74,6 +75,7 @@ noinst_HEADERS =                         \
 	sparskit_inc.F90                 \
 	symm_op_inc.F90                  \
 	matrix_inc.F90                   \
+	matrix_ops_inc.F90               \
 	nfft_inc.F90                     \
 	pnfft_inc.F90                    \
 	sort_inc.F90
@@ -116,6 +118,7 @@ young.o : young.F90 math.o
 scalapack.o : scalapack.F90
 pblas.o : pblas.F90
 matrix.o : matrix.F90 matrix_inc.F90
+matrix_ops.o : matrix_ops.F90 matrix_ops_inc.F90 matrix.o lapack.o
 compressed_sensing.o : compressed_sensing.F90 blas.o
 minimizer.o : minimizer.F90 lalg_basic.o
 qshep.o : qshep.F90
