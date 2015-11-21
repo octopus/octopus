@@ -40,8 +40,8 @@ module mixing_metric_m
   ! an extra argument, we need to make this a global information
   ! object.
 
-  type(derivatives_t), pointer :: der_ptr
-  type(nl_operator_t)          :: op
+  type(derivatives_t), pointer, save :: der_ptr
+  type(nl_operator_t), save          :: op
   
 contains
 
