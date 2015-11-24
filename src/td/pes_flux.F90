@@ -1100,7 +1100,8 @@ contains
       if(which_surface(ip_global) /= 0) then
         isp = isp + 1
         ! coordinate of surface point
-        this%rcoords(1:mdim, isp) = mesh_x_global(mesh, ip_global) 
+        xx(1:MAX_DIM) = mesh_x_global(mesh, ip_global)
+        this%rcoords(1:mdim, isp) = xx(1:mdim)
         ! local ip & node which has the surface point
         this%srfcpnt(isp) = mesh_nearest_point(mesh, this%rcoords(1:mdim, isp), dd, rankmin)
         this%rankmin(isp) = rankmin
