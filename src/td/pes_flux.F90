@@ -129,6 +129,7 @@ contains
     integer            :: mpisize, mpirank
 #endif
     integer            :: ll, mm
+    integer            :: default_shape
 
     PUSH_SUB(pes_flux_init)
 
@@ -157,20 +158,26 @@ contains
     ! -----------------------------------------------------------------
     !%Variable PES_Flux_Shape
     !%Type integer
-    !%Default sph
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
     !% The shape of the surface.
     !%Option cub 1
     !% Uses a parallelepiped as surface. All surface points are grid points.
-    !% Choose the location of the surface with variable PES_Flux_Lsize.
+    !% Choose the location of the surface with variable PES_Flux_Lsize 
+    !% (default for 1D and 2D).
     !%Option sph 2
     !% Constructs a sphere with radius PES_Flux_Radius. Points on the sphere 
-    !% are interpolated by trilinear interpolation.
+    !% are interpolated by trilinear interpolation (default for 3D).
     !%End
-    call parse_variable('PES_Flux_Shape', M_SPHERICAL, this%shape)
+    default_shape = M_SPHERICAL
+    if(mdim <= 2) default_shape = M_CUBIC
+    call parse_variable('PES_Flux_Shape', default_shape, this%shape)
     if(.not.varinfo_valid_option('PES_Flux_Shape', this%shape, is_flag = .true.)) &
       call messages_input_error('PES_Flux_Shape')
+    if(this%shape == M_SPHERICAL .and. mdim /= 3) then
+      message(1) = 'Spherical grid works only in 3d.'
+      call messages_fatal(1)
+    end if
     call messages_print_var_option(stdout, 'PES_Flux_Shape', this%shape)
 
     !%Variable PES_Flux_Offset
@@ -294,14 +301,12 @@ contains
       if(nstepsphir < 0) call messages_input_error('PES_Flux_StepsPhiR')
     end if
 
-    ! get the surface points
+    ! -----------------------------------------------------------------
+    ! Get the surface points
+    ! -----------------------------------------------------------------
     if(this%shape == M_CUBIC) then
       call pes_flux_getcube(this, mesh, border, offset)
     else
-      if(mdim /= 3) then
-        message(1) = 'Spherical grid works only in 3d.'
-        call messages_fatal(1)
-      end if
       call mesh_interpolation_init(this%interp, mesh)
       call pes_flux_getsphere(this, mesh, nstepsthetar, nstepsphir, offset)
     end if
