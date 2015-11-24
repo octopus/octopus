@@ -23,8 +23,8 @@ module grid_intrf_m
   public ::            &
     grid_intrf_new,    &
     grid_intrf_del,    &
+    grid_intrf_assoc,  &
     grid_intrf_init,   &
-    grid_intrf_start,  &
     grid_intrf_set,    &
     grid_intrf_get,    &
     grid_intrf_copy,   & 
@@ -176,6 +176,31 @@ contains
   end subroutine grid_intrf_del_pass
 
   ! ---------------------------------------------------------
+  function grid_intrf_assoc(this) result(that)
+    type(grid_intrf_t), intent(in) :: this
+
+    logical :: that
+
+    PUSH_SUB(grid_intrf_assoc)
+
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%space))
+    ASSERT(associated(this%geo))
+    select case(this%type)
+    case(GRID_NULL)
+      ASSERT(.not.associated(this%grid))
+      that = .false.
+    case(GRID_ASSC,GRID_ALLC)
+      ASSERT(associated(this%grid))
+      that = .true.
+    case default
+      ASSERT(.false.)
+    end select
+
+    POP_SUB(grid_intrf_assoc)
+  end function grid_intrf_assoc
+
+  ! ---------------------------------------------------------
   subroutine grid_intrf_init_type(this, geo, space, config)
     type(grid_intrf_t),          intent(out) :: this
     type(geometry_t),    target, intent(in)  :: geo
@@ -207,22 +232,6 @@ contains
 
     POP_SUB(grid_intrf_init_copy)
   end subroutine grid_intrf_init_copy
-
-  ! ---------------------------------------------------------
-  subroutine grid_intrf_start(this)
-    type(grid_intrf_t), intent(in) :: this
-
-    PUSH_SUB(grid_intrf_start)
-
-    ASSERT(associated(this%config))
-    ASSERT(associated(this%space))
-    ASSERT(associated(this%geo))
-    ASSERT(associated(this%grid))
-    ASSERT(this%space%dim==this%grid%sb%dim)
-    ASSERT(this%type/=GRID_NULL)
-
-    POP_SUB(grid_intrf_start)
-  end subroutine grid_intrf_start
 
   ! ---------------------------------------------------------
   subroutine grid_intrf_set_grid(this, that)

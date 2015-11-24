@@ -22,6 +22,7 @@ module simulation_m
     simulation_t
 
   public ::            &
+    simulation_assoc,  &
     simulation_init,   &
     simulation_start,  &
     simulation_extend, &
@@ -49,6 +50,19 @@ module simulation_m
   end interface simulation_get
 
 contains
+
+  ! ---------------------------------------------------------
+  function simulation_assoc(this) result(that)
+    type(simulation_t), intent(in) :: this
+
+    logical :: that
+
+    PUSH_SUB(simulation_assoc)
+
+    that = grid_intrf_assoc(this%igrid)
+
+    POP_SUB(simulation_assoc)
+  end function simulation_assoc
 
   ! ---------------------------------------------------------
   subroutine simulation__init__(this, space, config)
@@ -110,7 +124,7 @@ contains
     PUSH_SUB(simulation_start)
 
     call simulation__start__(this, grid)
-    call grid_intrf_start(this%igrid)
+    ASSERT(grid_intrf_assoc(this%igrid))
     call domain_start(this%domain, this%igrid)
 
     POP_SUB(simulation_start)
