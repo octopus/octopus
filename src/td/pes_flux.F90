@@ -478,22 +478,35 @@ contains
       SAFE_ALLOCATE(this%kcoords_cub(1:mdim, 1:this%nkpnts))
       this%kcoords_cub = M_ZERO
 
-      thetak = M_PI / M_TWO
-      ikp = 0
-      do ikk = 1, this%nk
-        do ith = 0, this%nstepsthetak
-          if(mdim == 3) thetak = ith * this%dthetak
-          do iph = 0, this%nstepsphik - 1
-            ikp = ikp + 1
-            phik = iph * M_TWO * M_PI / this%nstepsphik
-            kact = ikk * this%dk
-                          this%kcoords_cub(1, ikp) = kact * cos(phik) * sin(thetak)
-            if(mdim >= 2) this%kcoords_cub(2, ikp) = kact * sin(phik) * sin(thetak)
-            if(mdim == 3) this%kcoords_cub(3, ikp) = kact * cos(thetak)
-            if(thetak == M_ZERO .or. thetak == M_PI) exit
+      select case(mdim)
+      case(1)
+        ikp = 0
+        do ikk = -this%nk, this%nk
+          if(ikk == M_ZERO) cycle
+          ikp = ikp + 1
+          kact = ikk * this%dk
+          this%kcoords_cub(1, ikp) = kact
+        end do
+
+      case default
+        thetak = M_PI / M_TWO
+        ikp = 0
+        do ikk = 1, this%nk
+          do ith = 0, this%nstepsthetak
+            if(mdim == 3) thetak = ith * this%dthetak
+            do iph = 0, this%nstepsphik - 1
+              ikp = ikp + 1
+              phik = iph * M_TWO * M_PI / this%nstepsphik
+              kact = ikk * this%dk
+                            this%kcoords_cub(1, ikp) = kact * cos(phik) * sin(thetak)
+                            this%kcoords_cub(2, ikp) = kact * sin(phik) * sin(thetak)
+              if(mdim == 3) this%kcoords_cub(3, ikp) = kact * cos(thetak)
+              if(thetak == M_ZERO .or. thetak == M_PI) exit
+            end do
           end do
         end do
-      end do
+      end select
+
     end if
 
     ! -----------------------------------------------------------------
@@ -1288,41 +1301,50 @@ contains
           write(iunit, '(1x)', advance='yes')
         end do
 
-      else
-        thetak = M_PI / M_TWO
-        ikp    = 0
-        do ikk = 1, this%nk
-          kk = ikk * this%dk
-          do ith = 0, this%nstepsthetak
-            if(mdim == 3) thetak = ith * this%dthetak
-            do iph = 0, this%nstepsphik - 1
-              ikp = ikp + 1
-              if(iph == 0) spctroutsave = spctrout_cub(ikp)
-              phik = iph * M_TWO * M_PI / this%nstepsphik
-              write(iunit,'(5(1x,e18.10E3))') kk, thetak, phik, spctrout_cub(ikp)
-   
-              ! just repeat the result for output
-              if(iph == (this%nstepsphik - 1)) &
-                write(iunit,'(5(1x,e18.10E3))') kk, thetak, M_TWO * M_PI, spctroutsave
-               
-              ! just repeat the result for output
-              if(thetak == M_ZERO .or. thetak == M_PI) then
-                do iphi = 1, this%nstepsphik
-                  phik = iphi * M_TWO * M_PI / this%nstepsphik
-                  write(iunit,'(5(1x,e18.10E3))') kk, thetak, phik, spctrout_cub(ikp)
-                end do
-                exit
-              end if
-            end do
-            if(this%nstepsphik > 0) write(iunit, '(1x)', advance='yes')
+      else ! this%shape == M_CUBIC
+        select case(mdim)
+        case(1)
+          ikp = 0
+          do ikk = -this%nk, this%nk
+            if(ikk == M_ZERO) cycle
+            ikp = ikp + 1
+            write(iunit, '(5(1x,e18.10E3))') this%kcoords_cub(1, ikp), spctrout_cub(ikp)
           end do
-          if(this%nstepsphik == 0) write(iunit, '(1x)', advance='yes')
-        end do
+
+        case default
+          thetak = M_PI / M_TWO
+          ikp    = 0
+          do ikk = 1, this%nk
+            kk = ikk * this%dk
+            do ith = 0, this%nstepsthetak
+              if(mdim == 3) thetak = ith * this%dthetak
+              do iph = 0, this%nstepsphik - 1
+                ikp = ikp + 1
+                if(iph == 0) spctroutsave = spctrout_cub(ikp)
+                phik = iph * M_TWO * M_PI / this%nstepsphik
+                write(iunit,'(5(1x,e18.10E3))') kk, thetak, phik, spctrout_cub(ikp)
+     
+                ! just repeat the result for output
+                if(iph == (this%nstepsphik - 1)) &
+                  write(iunit,'(5(1x,e18.10E3))') kk, thetak, M_TWO * M_PI, spctroutsave
+                 
+                ! just repeat the result for output
+                if(thetak == M_ZERO .or. thetak == M_PI) then
+                  do iphi = 1, this%nstepsphik
+                    phik = iphi * M_TWO * M_PI / this%nstepsphik
+                    write(iunit,'(5(1x,e18.10E3))') kk, thetak, phik, spctrout_cub(ikp)
+                  end do
+                  exit
+                end if
+              end do
+              if(this%nstepsphik > 0) write(iunit, '(1x)', advance='yes')
+            end do
+            if(this%nstepsphik == 0) write(iunit, '(1x)', advance='yes')
+          end do
+        end select
       end if
       call io_close(iunit)
-    end if
 
-    if(mpi_grp_is_root(mpi_world)) then
       iunit = io_open('td.general/PES_flux.power.sum', action='write', position='rewind')
       write(iunit, '(a29)') '# E,  distribution'
 
