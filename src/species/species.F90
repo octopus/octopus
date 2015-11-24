@@ -1236,10 +1236,13 @@ contains
     this%filename=that%filename
     this%jradius=that%jradius
     this%jthick=that%jthick
+    nullify(this%ps)
     !> To be implemented.
     !> ps_t has no copy procedure.
-    nullify(this%ps)
-    if(associated(that%ps))this%ps=>that%ps
+    !> if(associated(that%ps))then
+    !>   SAFE_ALLOCATE(this%ps)
+    !>   call ps_copy(this%ps, that%ps)
+    !> end if
     this%nlcc=that%nlcc
     this%sigma=that%sigma
     this%density_formula=that%density_formula

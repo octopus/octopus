@@ -109,6 +109,12 @@ module geo_build_m
     module procedure geo_build_extend_geo
     module procedure geo_build_extend_geometry
     module procedure geo_build_extend_config
+    module procedure geo_build_extend_geo_config
+    module procedure geo_build_extend_geometry_config
+    module procedure geo_build_extend_config_config
+    module procedure geo_build_extend_geo_list
+    module procedure geo_build_extend_geometry_list
+    module procedure geo_build_extend_config_list
   end interface geo_build_extend
 
   interface geo_build_get
@@ -149,7 +155,6 @@ contains
       SAFE_DEALLOCATE_P(spec)
     end if
     nullify(spec)
-    SAFE_ALLOCATE(spec)
 
     POP_SUB(geo_build__idel__species)
   end subroutine geo_build__idel__species
@@ -466,67 +471,166 @@ contains
   end subroutine geo_build_init_copy
 
   ! ---------------------------------------------------------
-  subroutine geo_build_extend_geo(this, that, config)
-    type(geo_build_t),             intent(inout) :: this
-    type(geo_build_t),             intent(in)    :: that
-    type(json_object_t), optional, intent(in)    :: config
-
-    type(basis_t) :: base
+  subroutine geo_build_extend_geo(this, that)
+    type(geo_build_t), intent(inout) :: this
+    type(geo_build_t), intent(in)    :: that
 
     PUSH_SUB(geo_build_extend_geo)
 
-    if(present(config))then
-      call basis_init(base, this%space, config)
-      call geo_build__extend__(this, that, base)
-      call basis_end(base)
-    else
-      call geo_build__extend__(this, that)
-    end if
+    call geo_build__extend__(this, that)
 
     POP_SUB(geo_build_extend_geo)
   end subroutine geo_build_extend_geo
 
   ! ---------------------------------------------------------
-  subroutine geo_build_extend_geometry(this, that, config)
-    type(geo_build_t),             intent(inout) :: this
-    type(geometry_t),              intent(in)    :: that
-    type(json_object_t), optional, intent(in)    :: config
-
-    type(basis_t) :: base
+  subroutine geo_build_extend_geometry(this, that)
+    type(geo_build_t), intent(inout) :: this
+    type(geometry_t),  intent(in)    :: that
 
     PUSH_SUB(geo_build_extend_geometry)
 
-    if(present(config))then
-      call basis_init(base, this%space, config)
-      call geo_build__extend__(this, that, base)
-      call basis_end(base)
-    else
-      call geo_build__extend__(this, that)
-    end if
+    call geo_build__extend__(this, that)
 
     POP_SUB(geo_build_extend_geometry)
   end subroutine geo_build_extend_geometry
 
   ! ---------------------------------------------------------
-  subroutine geo_build_extend_config(this, that, config)
-    type(geo_build_t),             intent(inout) :: this
-    type(json_object_t),           intent(in)    :: that
-    type(json_object_t), optional, intent(in)    :: config
-
-    type(basis_t) :: base
+  subroutine geo_build_extend_config(this, that)
+    type(geo_build_t),   intent(inout) :: this
+    type(json_object_t), intent(in)    :: that
 
     PUSH_SUB(geo_build_extend_config)
 
-    if(present(config))then
-      call basis_init(base, this%space, config)
-      call geo_build__extend__(this, that, base)
-      call basis_end(base)
-    else
-      call geo_build__extend__(this, that)
-    end if
+    call geo_build__extend__(this, that)
 
     POP_SUB(geo_build_extend_config)
   end subroutine geo_build_extend_config
+
+  ! ---------------------------------------------------------
+  subroutine geo_build_extend_geo_config(this, that, config)
+    type(geo_build_t),   intent(inout) :: this
+    type(geo_build_t),   intent(in)    :: that
+    type(json_object_t), intent(in)    :: config
+
+    type(basis_t) :: base
+
+    PUSH_SUB(geo_build_extend_geo_config)
+
+    call basis_init(base, this%space, config)
+    call geo_build__extend__(this, that, base)
+    call basis_end(base)
+
+    POP_SUB(geo_build_extend_geo_config)
+  end subroutine geo_build_extend_geo_config
+
+  ! ---------------------------------------------------------
+  subroutine geo_build_extend_geometry_config(this, that, config)
+    type(geo_build_t),   intent(inout) :: this
+    type(geometry_t),    intent(in)    :: that
+    type(json_object_t), intent(in)    :: config
+
+    type(basis_t) :: base
+
+    PUSH_SUB(geo_build_extend_geometry_config)
+
+    call basis_init(base, this%space, config)
+    call geo_build__extend__(this, that, base)
+    call basis_end(base)
+
+    POP_SUB(geo_build_extend_geometry_config)
+  end subroutine geo_build_extend_geometry_config
+
+  ! ---------------------------------------------------------
+  subroutine geo_build_extend_config_config(this, that, config)
+    type(geo_build_t),   intent(inout) :: this
+    type(json_object_t), intent(in)    :: that
+    type(json_object_t), intent(in)    :: config
+
+    type(basis_t) :: base
+
+    PUSH_SUB(geo_build_extend_config_config)
+
+    call basis_init(base, this%space, config)
+    call geo_build__extend__(this, that, base)
+    call basis_end(base)
+
+    POP_SUB(geo_build_extend_config_config)
+  end subroutine geo_build_extend_config_config
+
+  ! ---------------------------------------------------------
+  subroutine geo_build_extend_geo_list(this, that, list)
+    type(geo_build_t),  intent(inout) :: this
+    type(geo_build_t),  intent(in)    :: that
+    type(json_array_t), intent(in)    :: list
+
+    type(json_object_t), pointer :: cnfg
+    type(json_array_iterator_t)  :: iter
+    integer                      :: ierr
+
+    PUSH_SUB(geo_build_extend_geo_list)
+
+    call json_init(iter, list)
+    do
+      nullify(cnfg)
+      call json_next(iter, cnfg, ierr)
+      if(ierr/=JSON_OK)exit
+      call geo_build_extend(this, that, cnfg)
+    end do
+    call json_end(iter)
+    nullify(cnfg)
+
+    POP_SUB(geo_build_extend_geo_list)
+  end subroutine geo_build_extend_geo_list
+
+  ! ---------------------------------------------------------
+  subroutine geo_build_extend_geometry_list(this, that, list)
+    type(geo_build_t),  intent(inout) :: this
+    type(geometry_t),   intent(in)    :: that
+    type(json_array_t), intent(in)    :: list
+
+    type(json_object_t), pointer :: cnfg
+    type(json_array_iterator_t)  :: iter
+    integer                      :: ierr
+
+    PUSH_SUB(geo_build_extend_geometry_list)
+
+    call json_init(iter, list)
+    do
+      nullify(cnfg)
+      call json_next(iter, cnfg, ierr)
+      if(ierr/=JSON_OK)exit
+      call geo_build_extend(this, that, cnfg)
+    end do
+    call json_end(iter)
+    nullify(cnfg)
+
+    POP_SUB(geo_build_extend_geometry_list)
+  end subroutine geo_build_extend_geometry_list
+
+  ! ---------------------------------------------------------
+  subroutine geo_build_extend_config_list(this, that, list)
+    type(geo_build_t),   intent(inout) :: this
+    type(json_object_t), intent(in)    :: that
+    type(json_array_t),  intent(in)    :: list
+
+    type(json_object_t), pointer :: cnfg
+    type(json_array_iterator_t)  :: iter
+    integer                      :: ierr
+
+    PUSH_SUB(geo_build_extend_config_list)
+
+    call json_init(iter, list)
+    do
+      nullify(cnfg)
+      call json_next(iter, cnfg, ierr)
+      if(ierr/=JSON_OK)exit
+      call geo_build_extend(this, that, cnfg)
+    end do
+    call json_end(iter)
+    nullify(cnfg)
+
+    POP_SUB(geo_build_extend_config_list)
+  end subroutine geo_build_extend_config_list
 
   ! ---------------------------------------------------------
   subroutine geo_build_export(this, that)

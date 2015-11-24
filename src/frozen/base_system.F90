@@ -127,7 +127,7 @@ module base_system_m
   end interface base_system__copy__
 
   interface base_system_init
-    module procedure base_system_init_system
+    module procedure base_system_init_type
     module procedure base_system_init_copy
   end interface base_system_init
 
@@ -151,11 +151,11 @@ module base_system_m
   end interface base_system_get
 
   interface base_system_copy
-    module procedure base_system_copy_system
+    module procedure base_system_copy_type
   end interface base_system_copy
 
   interface base_system_end
-    module procedure base_system_end_system
+    module procedure base_system_end_type
   end interface base_system_end
 
 #define TEMPLATE_PREFIX base_system
@@ -177,19 +177,16 @@ contains
 #undef HASH_INCLUDE_BODY
 
   ! ---------------------------------------------------------
-  subroutine base_system_new(this, that)
-    type(base_system_t),  target, intent(inout) :: this
-    type(base_system_t), pointer                :: that
+  subroutine base_system__new__(this)
+    type(base_system_t), pointer :: this
 
-    PUSH_SUB(base_system_new)
+    PUSH_SUB(base_system__new__)
 
-    nullify(that)
-    SAFE_ALLOCATE(that)
-    that%prnt => this
-    call base_system_list_push(this%list, that)
+    nullify(this)
+    SAFE_ALLOCATE(this)
 
-    POP_SUB(base_system_new)
-  end subroutine base_system_new
+    POP_SUB(base_system__new__)
+  end subroutine base_system__new__
 
   ! ---------------------------------------------------------
   subroutine base_system__del__(this)
@@ -197,11 +194,28 @@ contains
 
     PUSH_SUB(base_system__del__)
 
-    SAFE_DEALLOCATE_P(this)
+    if(associated(this))then
+      SAFE_DEALLOCATE_P(this)
+    end if
     nullify(this)
 
     POP_SUB(base_system__del__)
   end subroutine base_system__del__
+
+  ! ---------------------------------------------------------
+  subroutine base_system_new(this, that)
+    type(base_system_t),  target, intent(inout) :: this
+    type(base_system_t), pointer                :: that
+
+    PUSH_SUB(base_system_new)
+
+    nullify(that)
+    call base_system__new__(that)
+    that%prnt => this
+    call base_system_list_push(this%list, that)
+
+    POP_SUB(base_system_new)
+  end subroutine base_system_new
 
   ! ---------------------------------------------------------
   subroutine base_system_del(this)
@@ -277,17 +291,17 @@ contains
   end subroutine base_system__init__copy
 
   ! ---------------------------------------------------------
-  subroutine base_system_init_system(this, config)
+  subroutine base_system_init_type(this, config)
     type(base_system_t), intent(out) :: this
     type(json_object_t), intent(in)  :: config
 
-    PUSH_SUB(base_system_init_system)
+    PUSH_SUB(base_system_init_type)
 
     call base_system__init__(this, config)
     call base_system__init__(this)
 
-    POP_SUB(base_system_init_system)
-  end subroutine base_system_init_system
+    POP_SUB(base_system_init_type)
+  end subroutine base_system_init_type
 
   ! ---------------------------------------------------------
   recursive subroutine base_system_init_copy(this, that)
@@ -646,9 +660,8 @@ contains
 
     call base_system__end__(this)
     if(associated(that%config))then
-      call base_system__init__(this, that%config)
-      call base_geometry__copy__(this%geom, that%geom)
-      call base_states__copy__(this%st, that%st)
+      call base_system__init__(this, that)
+      if(associated(that%sim)) call base_states__copy__(this%st, that%st)
     end if
 
     POP_SUB(base_system__copy__begin)
@@ -666,7 +679,7 @@ contains
   end subroutine base_system__copy__finish
 
   ! ---------------------------------------------------------
-  recursive subroutine base_system_copy_system(this, that)
+  recursive subroutine base_system_copy_type(this, that)
     type(base_system_t), intent(inout) :: this
     type(base_system_t), intent(in)    :: that
 
@@ -675,7 +688,7 @@ contains
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
 
-    PUSH_SUB(base_system_copy_system)
+    PUSH_SUB(base_system_copy_type)
 
     nullify(cnfg, osub, isub)
     call base_system_end(this)
@@ -693,8 +706,8 @@ contains
     call base_system__copy__(this)
     nullify(cnfg, osub, isub)
 
-    POP_SUB(base_system_copy_system)
-  end subroutine base_system_copy_system
+    POP_SUB(base_system_copy_type)
+  end subroutine base_system_copy_type
 
   ! ---------------------------------------------------------
   subroutine base_system__end__(this)
@@ -714,12 +727,12 @@ contains
   end subroutine base_system__end__
 
   ! ---------------------------------------------------------
-  recursive subroutine base_system_end_system(this)
+  recursive subroutine base_system_end_type(this)
     type(base_system_t), intent(inout) :: this
 
     type(base_system_t), pointer :: subs
 
-    PUSH_SUB(base_system_end_system)
+    PUSH_SUB(base_system_end_type)
 
     do
       nullify(subs)
@@ -731,8 +744,8 @@ contains
     nullify(subs)
     call base_system__end__(this)
 
-    POP_SUB(base_system_end_system)
-  end subroutine base_system_end_system
+    POP_SUB(base_system_end_type)
+  end subroutine base_system_end_type
 
 #define TEMPLATE_PREFIX base_system
 #define INCLUDE_BODY
