@@ -94,10 +94,20 @@ call MPI_Allreduce(MPI_IN_PLACE, aa, 1, MPI_INTEGER, MPI_SUM, MPI_COMM_WORLD, ie
 
 fi
 
+AC_MSG_RESULT([$acx_mpi2_ok])
+
 if test $acx_mpi2_ok = yes; then
   AC_DEFINE(HAVE_MPI2, 1, [Defined if you have an MPI 2 implementation])
+else
+  AC_MSG_ERROR([
+  
+  ******************************************************************
+  
+  ERROR: Octopus requires an MPI implementation with MPI-2 support.
+
+  ******************************************************************
+])
 fi
-AC_MSG_RESULT([$acx_mpi2_ok])
 
 else
 
