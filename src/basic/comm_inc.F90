@@ -203,7 +203,7 @@ subroutine X(comm_allreduce_5)(comm, aa)
     call MPI_Allreduce(MPI_IN_PLACE, aa(1, 1, 1, 1, 1), product(dim_), R_MPITYPE, MPI_SUM, comm, mpi_err)
 
 #elif defined(HAVE_MPI)
-    SAFE_ALLOCATE(aac(1:dim_(1), 1:dim_(2), 1:dim_(3), 1:dim_(4), 1:dim_(5))
+    SAFE_ALLOCATE(aac(1:dim_(1), 1:dim_(2), 1:dim_(3), 1:dim_(4), 1:dim_(5)))
     aac(1:dim_(1), 1:dim_(2), 1:dim_(3), 1:dim_(4), 1:dim_(5)) = &
       aa(1:dim_(1), 1:dim_(2), 1:dim_(3), 1:dim_(4), 1:dim_(5))
     call MPI_Allreduce(aac(1, 1, 1, 1, 1), aa(1, 1, 1, 1, 1), product(dim_), &
