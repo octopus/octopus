@@ -98,8 +98,10 @@ module profiling_m
     real(8)                  :: self_time
     real(8)                  :: op_count_current
     real(8)                  :: op_count
+    real(8)                  :: op_count_child
     real(8)                  :: tr_count_current
     real(8)                  :: tr_count
+    real(8)                  :: tr_count_child
     type(profile_t), pointer :: parent
     integer                  :: count
     logical                  :: initialized = .false.
@@ -378,9 +380,12 @@ contains
     this%self_time  = M_ZERO
     this%entry_time = huge(this%entry_time)
     this%count  = 0
-    this%op_count_current = M_ZERO
-    this%op_count = M_ZERO
-    this%tr_count = M_ZERO
+    this%op_count_current      = M_ZERO
+    this%op_count              = M_ZERO
+    this%op_count_child        = M_ZERO
+    this%tr_count_current      = M_ZERO
+    this%tr_count              = M_ZERO
+    this%tr_count_child        = M_ZERO
     this%active = .false.
     nullify(this%parent)
 
@@ -505,15 +510,15 @@ contains
 
     this%op_count = this%op_count + this%op_count_current
     this%tr_count = this%tr_count + this%tr_count_current
-
+    
     if(associated(this%parent)) then 
       !remove the spent from the self time of our parent
       this%parent%self_time = this%parent%self_time - time_spent
       if(this%exclude) this%parent%total_time = this%parent%total_time - time_spent
 
       ! add the operations to the parent
-      this%parent%op_count_current = this%parent%op_count_current + this%op_count_current
-      this%parent%tr_count_current = this%parent%tr_count_current + this%tr_count_current
+      this%parent%op_count_child = this%parent%op_count_child + this%op_count_current
+      this%parent%tr_count_child = this%parent%tr_count_child + this%tr_count_current
 
       !and set parent as current
       prof_vars%current%p => this%parent
@@ -707,35 +712,68 @@ contains
 
 
   ! ---------------------------------------------------------
-  real(8) function profile_throughput(this)
+  real(8) function profile_total_throughput(this) 
     type(profile_t), intent(in) :: this
 
     PUSH_SUB(profile_throughput)
 
     if(this%total_time > epsilon(this%total_time)) then
-      profile_throughput = this%op_count/this%total_time*CNST(1.0e-6)
+      profile_total_throughput = (this%op_count + this%op_count_child)/this%total_time*CNST(1.0e-6)
     else
-      profile_throughput = CNST(0.0)
+      profile_total_throughput = CNST(0.0)
     end if
       
     POP_SUB(profile_throughput)
-  end function profile_throughput
+  end function profile_total_throughput
 
 
   ! ---------------------------------------------------------
-  real(8) function profile_bandwidth(this)
+  
+  real(8) function profile_total_bandwidth(this)
     type(profile_t), intent(in) :: this
 
     PUSH_SUB(profile_bandwidth)
 
     if(this%total_time > epsilon(this%total_time)) then
-      profile_bandwidth = this%tr_count/(this%total_time*CNST(1024.0)**2)
+      profile_total_bandwidth = (this%tr_count + this%tr_count_child)/(this%total_time*CNST(1024.0)**2)
     else
-      profile_bandwidth = CNST(0.0)
+      profile_total_bandwidth = CNST(0.0)
     end if
 
     POP_SUB(profile_bandwidth)
-  end function profile_bandwidth
+  end function profile_total_bandwidth
+  
+  ! ---------------------------------------------------------
+  
+  real(8) function profile_self_throughput(this)
+    type(profile_t), intent(in) :: this
+
+    PUSH_SUB(profile_throughput)
+
+    if(this%self_time > epsilon(this%self_time)) then
+      profile_self_throughput = this%op_count/this%self_time*CNST(1.0e-6)
+    else
+      profile_self_throughput = CNST(0.0)
+    end if
+      
+    POP_SUB(profile_throughput)
+  end function profile_self_throughput
+
+  ! ---------------------------------------------------------
+
+  real(8) function profile_self_bandwidth(this)
+    type(profile_t), intent(in) :: this
+
+    PUSH_SUB(profile_bandwidth)
+
+    if(this%self_time > epsilon(this%self_time)) then
+      profile_self_bandwidth = this%tr_count/(this%self_time*CNST(1024.0)**2)
+    else
+      profile_self_bandwidth = CNST(0.0)
+    end if
+
+    POP_SUB(profile_bandwidth)
+  end function profile_self_bandwidth
 
 
   ! ---------------------------------------------------------
@@ -796,17 +834,17 @@ contains
     end if
 
     write(iunit, '(2a)')                                                                                    &
-      '                                                                       CUMULATIVE TIME                      ', &
-      '                 |                  SELF TIME'
+      '                                                                            CUMULATIVE TIME                 ', &
+      '                 |                          SELF TIME'
     write(iunit, '(2a)')                                                                                    &
       '                                                    --------------------------------------------------------', &
-      '-----------------|-------------------------------------------'
+      '-----------------|---------------------------------------------------------------'
     write(iunit, '(2a)')                                                                                    &
       'TAG                           NUMBER_OF_CALLS       TOTAL_TIME    TIME_PER_CALL         MIN_TIME   ', &
-      ' MFLOPS  MBYTES/S   %TIME |        TOTAL_TIME    TIME_PER_CALL   %TIME'
+      ' MFLOPS  MBYTES/S   %TIME |        TOTAL_TIME    TIME_PER_CALL    MFLOPS  MBYTES/S   %TIME'
     write(iunit, '(2a)')                                                                    &
       '============================================================================================================', &
-      '=================|==========================================='
+      '=================|==============================================================='
 
     total_time = profile_total_time(C_PROFILING_COMPLETE_RUN)
 
@@ -824,18 +862,20 @@ contains
       
       if(profile_num_calls(prof) == 0) cycle
 
-      write(iunit, '(a,i20,3f17.7,f10.1,f10.1,f8.1,a,2f17.7,f8.1)')     &
+      write(iunit, '(a,i20,3f17.7,2f10.1,f8.1,a,2f17.7,2f10.1,f8.1)')     &
            profile_label(prof),                             & 
            profile_num_calls(prof),                         &
            profile_total_time(prof),                        &
            profile_total_time_per_call(prof),               &
            profile_min_time(prof),                          &
-           profile_throughput(prof),                        &
-           profile_bandwidth(prof),                         &
+           profile_total_throughput(prof),                  &
+           profile_total_bandwidth(prof),                   &
            profile_total_time(prof)/total_time*CNST(100.0), &
            ' | ',                                           &
            profile_self_time(prof),                         &
            profile_self_time_per_call(prof),                &
+           profile_self_throughput(prof),                   &
+           profile_self_bandwidth(prof),                    &           
            profile_self_time(prof)/total_time*CNST(100.0)
     end do
 
