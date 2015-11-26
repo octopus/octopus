@@ -100,9 +100,11 @@ module profiling_m
     real(8)                  :: op_count_current
     real(8)                  :: op_count
     real(8)                  :: op_count_child
+    real(8)                  :: op_count_child_current
     real(8)                  :: tr_count_current
     real(8)                  :: tr_count
     real(8)                  :: tr_count_child
+    real(8)                  :: tr_count_child_current
     type(profile_t), pointer :: parent
     integer                  :: count
     logical                  :: initialized = .false.
@@ -461,6 +463,8 @@ contains
 
     this%op_count_current = M_ZERO
     this%tr_count_current = M_ZERO
+    this%op_count_child_current = M_ZERO
+    this%tr_count_child_current = M_ZERO
 
     prof_vars%current%p => this
     this%entry_time = now
@@ -511,6 +515,8 @@ contains
 
     this%op_count = this%op_count + this%op_count_current
     this%tr_count = this%tr_count + this%tr_count_current
+    this%op_count_child = this%op_count_child + this%op_count_child_current
+    this%tr_count_child = this%tr_count_child + this%tr_count_child_current
     
     if(associated(this%parent)) then 
       !remove the spent from the self time of our parent
@@ -518,8 +524,10 @@ contains
       if(this%exclude) this%parent%total_time = this%parent%total_time - time_spent
 
       ! add the operations to the parent
-      this%parent%op_count_child = this%parent%op_count_child + this%op_count_current
-      this%parent%tr_count_child = this%parent%tr_count_child + this%tr_count_current
+      this%parent%op_count_child_current = this%parent%op_count_child_current &
+        + this%op_count_current + this%op_count_child_current
+      this%parent%tr_count_child_current = this%parent%tr_count_child_current &
+        + this%tr_count_current + this%tr_count_child_current
 
       !and set parent as current
       prof_vars%current%p => this%parent
@@ -865,7 +873,7 @@ contains
     do ii = 1, prof_vars%last_profile
       prof =>  prof_vars%profile_list(position(ii))%p
       if(.not. prof%initialized) then
-        write(message(1),'(a,i6,a)') "Internal error: Profile number ", ii, " is not initialized."
+        write(message(1),'(a,i6,a)') "Internal error: Profile number ", position(ii), " is not initialized."
         call messages_fatal(1)
       end if
       if(prof%active) then
