@@ -1090,21 +1090,18 @@ contains
   end function species_is_local
   ! ---------------------------------------------------------
 
-
-
   logical function species_represents_real_atom(spec)
     type(species_t), intent(in) :: spec
     
     integer :: type
     species_represents_real_atom = .true.
 
-    PUSH_SUB(species_represents_real_atom)
+    ! NO PUSH_SUB, called too often
     
     type = species_type(spec)
     species_represents_real_atom = (type /= SPECIES_USDEF .and. type /= SPECIES_CHARGE_DENSITY &
       .and. type /= SPECIES_FROM_FILE .and. type /= SPECIES_JELLIUM_SLAB)
     
-    POP_SUB(species_represents_real_atom)
   end function species_represents_real_atom
 
   ! ---------------------------------------------------------

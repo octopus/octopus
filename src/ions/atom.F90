@@ -163,12 +163,10 @@ contains
     type(atom_t),    target,  intent(in)  :: this
     type(species_t), pointer, intent(out) :: species
 
-    PUSH_SUB(atom_get_species)
+    ! NO PUSH_SUB, called too often
 
-    species=>null()
-    if(associated(this%species))species=>this%species
-
-    POP_SUB(atom_get_species)
+    species => null()
+    if(associated(this%species)) species => this%species
 
   end subroutine atom_get_species
   
