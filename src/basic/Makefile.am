@@ -74,7 +74,8 @@ libbasic_a_SOURCES =     \
 	polyhedron.F90       \
 	xml.F90              \
 	xml_low.c            \
-	test_parameters.F90
+	test_parameters.F90  \
+	sort.F90
 
 if COMPILE_PAPI
 libbasic_a_SOURCES += papi.c papi_f.F90
@@ -88,7 +89,8 @@ noinst_HEADERS =               \
 	io_binary.h            \
 	comm_inc.F90           \
 	opencl_inc.F90         \
-        io_binary_f_inc.F90
+        io_binary_f_inc.F90    \
+	sort_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -118,7 +120,8 @@ unit.o : unit.F90 global.o
 parser.o : parser.F90 mpi.o loct.o global.o unit.o varinfo.F90
 messages.o : messages.F90 varinfo.o string.o mpi.o parser.o loct.o global.o  unit.o
 papi_f.o : papi_f.F90
-profiling.o : profiling.F90 mpi.o messages.o loct.o io.o global.o papi_f.o types.o
+sort.o : sort.F90 sort_inc.F90 messages.o global.o
+profiling.o : profiling.F90 mpi.o messages.o loct.o io.o global.o papi_f.o types.o sort.o
 
 command_line.o : command_line.F90 messages.o profiling.o
 io.o : io.F90 mpi.o messages.o parser.o loct.o global.o  

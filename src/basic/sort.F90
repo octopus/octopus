@@ -24,7 +24,6 @@
 module sort_om
   use global_m
   use messages_m
-  use profiling_m
 
   implicit none
 
@@ -200,9 +199,9 @@ contains
     imthr_ = CNST(1E-6)
     if(present(imthr)) imthr_ = imthr
 
-    SAFE_ALLOCATE(table(1:dim))
-    SAFE_ALLOCATE(temp(1:dim))
-    SAFE_ALLOCATE(tempI(1:dim))
+    allocate(table(1:dim))
+    allocate(temp(1:dim))
+    allocate(tempI(1:dim))
 
     tempI = Imvec
     call sort(tempI,table)
@@ -228,7 +227,7 @@ contains
 
     !first zero img parts
     if (n0 > 0) then
-      SAFE_ALLOCATE(idx0(1:n0))
+      allocate(idx0(1:n0))
       call sort(temp(n2+1:n2+n0),idx0(:))
     end if
 
@@ -237,7 +236,7 @@ contains
       Imvec  (i) = tempI(n2 + idx0(i))
       reorder(i) = table(n2 + idx0(i))
     end do
-    SAFE_DEALLOCATE_A(idx0)
+    deallocate(idx0)
 
     !negative Img parts
     do i =  1, n1
@@ -253,9 +252,9 @@ contains
       reorder(n0 + n1 + i) = table(n2 + 1 -i)
     end do
 
-    SAFE_DEALLOCATE_A(tempI)  
-    SAFE_DEALLOCATE_A(temp)
-    SAFE_DEALLOCATE_A(table)
+    deallocate(tempI)  
+    deallocate(temp)
+    deallocate(table)
 
     POP_SUB(sort_complex)
   end subroutine sort_complex

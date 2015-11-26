@@ -30,7 +30,7 @@ subroutine X(shellsort1)(a, x)
 
   n = size(a)
   m = size(x, 1)
-  SAFE_ALLOCATE(b(1:m))
+  allocate(b(1:m))
 
   inc = 1
   do
@@ -58,7 +58,7 @@ subroutine X(shellsort1)(a, x)
     if (inc <= 1) exit
   end do
 
-  SAFE_DEALLOCATE_A(b)
+  deallocate(b)
   POP_SUB(X(shellsort1))
 end subroutine X(shellsort1)
 
@@ -77,7 +77,7 @@ subroutine X(shellsort2)(a, x)
   n = size(a)
   p = size(x, 1)
   q = size(x, 2)
-  SAFE_ALLOCATE(b(1:p, 1:q))
+  allocate(b(1:p, 1:q))
 
   inc = 1
   do
@@ -105,7 +105,7 @@ subroutine X(shellsort2)(a, x)
     if (inc <= 1) exit
   end do
 
-  SAFE_DEALLOCATE_A(b)
+  deallocate(b)
   POP_SUB(X(shellsort2))
 end subroutine X(shellsort2)
 
@@ -124,10 +124,10 @@ subroutine X(matrix_sort)(np, matrix, eigenvals)
 
   PUSH_SUB(X(matrix_sort))
 
-  SAFE_ALLOCATE( abs_e(1:np) )
-  SAFE_ALLOCATE( index(1:np) )
-  SAFE_ALLOCATE( unsorted_matrix(1:np, 1:np) )
-  SAFE_ALLOCATE( unsorted_eigenvals(1:np) )
+  allocate( abs_e(1:np) )
+  allocate( index(1:np) )
+  allocate( unsorted_matrix(1:np, 1:np) )
+  allocate( unsorted_eigenvals(1:np) )
 
   unsorted_matrix(:, :) = matrix(:, :)
   unsorted_eigenvals(:) = eigenvals(:)
@@ -137,10 +137,10 @@ subroutine X(matrix_sort)(np, matrix, eigenvals)
     eigenvals(i) = unsorted_eigenvals(index(i))
     matrix(:, i) = unsorted_matrix(:, index(i))
   end do
-  SAFE_DEALLOCATE_A(abs_e)
-  SAFE_DEALLOCATE_A(index)
-  SAFE_DEALLOCATE_A(unsorted_matrix)
-  SAFE_DEALLOCATE_A(unsorted_eigenvals)
+  deallocate(abs_e)
+  deallocate(index)
+  deallocate(unsorted_matrix)
+  deallocate(unsorted_eigenvals)
 
   POP_SUB(X(matrix_sort))
 end subroutine X(matrix_sort)
