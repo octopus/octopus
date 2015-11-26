@@ -72,7 +72,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   integer :: ib, ip, isp, families, ixc, spin_channels, is
   FLOAT   :: rr
   logical :: gga, mgga
-  type(profile_t), save :: prof
+  type(profile_t), save :: prof, prof_libxc
   logical :: calc_energy
   type(xc_functl_t), pointer :: functl(:)
   type(symmetrizer_t) :: symmetrizer
@@ -179,6 +179,8 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
 
       if(functl(ixc)%family == XC_FAMILY_NONE) cycle
 
+      call profiling_in(prof_libxc, "LIBXC")
+
       if(calc_energy .and. iand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC) /= 0) then
         ! we get the xc energy and potential
         select case(functl(ixc)%family)
@@ -223,17 +225,19 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
         case default
           cycle
         end select
-
+        
       end if
+
+      call profiling_out(prof_libxc)
 
       if(calc_energy) then
         if(functl(ixc)%type == XC_EXCHANGE) then
           do ib = 1, n_block
-            ex_per_vol(ib + ip - 1) = ex_per_vol(ib + ip - 1) + sum(l_dens(1:spin_channels, ib)) * l_zk(ib)
+            ex_per_vol(ib + ip - 1) = ex_per_vol(ib + ip - 1) + sum(l_dens(1:spin_channels, ib))*l_zk(ib)
           end do
         else
           do ib = 1, n_block
-            ec_per_vol(ib + ip - 1) = ec_per_vol(ib + ip - 1) + sum(l_dens(1:spin_channels, ib)) * l_zk(ib)
+            ec_per_vol(ib + ip - 1) = ec_per_vol(ib + ip - 1) + sum(l_dens(1:spin_channels, ib))*l_zk(ib)
           end do
         end if
       end if
