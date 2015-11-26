@@ -63,6 +63,7 @@ module profiling_m
 #ifdef HAVE_PAPI
   use papi_m
 #endif
+  use sort_om
   use string_m
   use types_m
   use varinfo_m
@@ -805,13 +806,16 @@ contains
   !!
   !! The last column gives the average time consumed between in and out
   !! (only, if pass_in and pass_out are equal).
-  subroutine profiling_output
-    integer          :: ii
+  subroutine profiling_output()
+    
+    integer          :: ii, jj
     integer          :: iunit
     real(8)          :: total_time
     type(profile_t), pointer :: prof
     character(len=256) :: filename
-
+    FLOAT,   allocatable :: selftime(:)
+    integer, allocatable :: position(:)
+    
     if(.not.in_profiling_mode) return
     PUSH_SUB(profiling_output)
 
@@ -848,8 +852,18 @@ contains
 
     total_time = profile_total_time(C_PROFILING_COMPLETE_RUN)
 
+    SAFE_ALLOCATE(selftime(1:prof_vars%last_profile))
+    SAFE_ALLOCATE(position(1:prof_vars%last_profile))
+
     do ii = 1, prof_vars%last_profile
-      prof =>  prof_vars%profile_list(ii)%p
+      selftime(ii) = -profile_self_time(prof_vars%profile_list(ii)%p)
+      position(ii) = ii
+    end do
+
+    call sort(selftime, position)    
+    
+    do ii = 1, prof_vars%last_profile
+      prof =>  prof_vars%profile_list(position(ii))%p
       if(.not. prof%initialized) then
         write(message(1),'(a,i6,a)') "Internal error: Profile number ", ii, " is not initialized."
         call messages_fatal(1)
@@ -881,6 +895,9 @@ contains
 
     call io_close(iunit)
 
+    SAFE_DEALLOCATE_A(selftime)
+    SAFE_DEALLOCATE_A(position)
+    
     POP_SUB(profiling_output)
   end subroutine profiling_output
 
