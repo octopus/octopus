@@ -198,24 +198,22 @@ subroutine X(ghost_update_batch_finish)(handle)
 
 #ifdef HAVE_MPI
   SAFE_ALLOCATE(status(1:MPI_STATUS_SIZE, 1:handle%nnb))
-  call MPI_Waitall(handle%nnb, handle%requests, status, mpi_err)
+  call MPI_Waitall(handle%nnb, handle%requests(1), status(1, 1), mpi_err)
 #endif
 
   SAFE_DEALLOCATE_A(status)
   SAFE_DEALLOCATE_P(handle%requests)
 
-#ifdef HAVE_OPENCL
   if(batch_status(handle%v_local) == BATCH_CL_PACKED) then
+#ifdef HAVE_OPENCL
     call opencl_write_buffer(handle%v_local%pack%buffer, handle%v_local%pack%size(1)*handle%vp%np_ghost, &
       handle%X(recv_buffer), offset = handle%v_local%pack%size(1)*handle%vp%np_local)
-
+#endif
     SAFE_DEALLOCATE_P(handle%X(send_buffer))
     SAFE_DEALLOCATE_P(handle%X(recv_buffer))
   end if
-#endif
 
-  if(batch_is_packed(handle%ghost_send)) call batch_unpack(handle%ghost_send, copy = .false.)
-  call batch_end(handle%ghost_send)
+  call batch_end(handle%ghost_send, copy = .false.)
 
   call profiling_out(prof_wait)
   POP_SUB(X(ghost_update_batch_finish))
