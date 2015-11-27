@@ -630,37 +630,41 @@ contains
 
       case(OP_MAP)
 
-        SAFE_ALLOCATE(inner_points(1:op%mesh%np))
-        SAFE_ALLOCATE(outer_points(1:op%mesh%np))
-        SAFE_ALLOCATE(all_points(1:op%mesh%np))
-
-        op%ninner = 0
-        op%nouter = 0
-
-        do ii = 1, op%mesh%np
-          all_points(ii) = ii - 1
-          maxp = ii + maxval(op%ri(1:op%stencil%size, op%rimap(ii)))
-          if(maxp <= op%mesh%np) then
-            op%ninner = op%ninner + 1
-            inner_points(op%ninner) = ii - 1
-          else
-            op%nouter = op%nouter + 1
-            outer_points(op%nouter) = ii - 1
-          end if
-        end do
-
         call opencl_create_buffer(op%buff_map, CL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%mesh%np, opencl_max_workgroup_size()))
         call opencl_write_buffer(op%buff_map, op%mesh%np, (op%rimap - 1)*op%stencil%size)
 
-        call opencl_create_buffer(op%buff_all, CL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%mesh%np, opencl_max_workgroup_size()))
-        call opencl_write_buffer(op%buff_all, op%mesh%np, all_points)
+        if(op%mesh%parallel_in_domains) then
+          
+          SAFE_ALLOCATE(inner_points(1:op%mesh%np))
+          SAFE_ALLOCATE(outer_points(1:op%mesh%np))
+          SAFE_ALLOCATE(all_points(1:op%mesh%np))
+          
+          op%ninner = 0
+          op%nouter = 0
+          
+          do ii = 1, op%mesh%np
+            all_points(ii) = ii - 1
+            maxp = ii + maxval(op%ri(1:op%stencil%size, op%rimap(ii)))
+            if(maxp <= op%mesh%np) then
+              op%ninner = op%ninner + 1
+              inner_points(op%ninner) = ii - 1
+            else
+              op%nouter = op%nouter + 1
+              outer_points(op%nouter) = ii - 1
+            end if
+          end do
+          
+          call opencl_create_buffer(op%buff_all, CL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%mesh%np, opencl_max_workgroup_size()))
+          call opencl_write_buffer(op%buff_all, op%mesh%np, all_points)
         
-        call opencl_create_buffer(op%buff_inner, CL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%ninner, opencl_max_workgroup_size()))
-        call opencl_write_buffer(op%buff_inner, op%ninner, inner_points)
+          call opencl_create_buffer(op%buff_inner, CL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%ninner, opencl_max_workgroup_size()))
+          call opencl_write_buffer(op%buff_inner, op%ninner, inner_points)
+          
+          call opencl_create_buffer(op%buff_outer, CL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%nouter, opencl_max_workgroup_size()))
+          call opencl_write_buffer(op%buff_outer, op%nouter, outer_points)
 
-        call opencl_create_buffer(op%buff_outer, CL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%nouter, opencl_max_workgroup_size()))
-        call opencl_write_buffer(op%buff_outer, op%nouter, outer_points)
-
+        end if
+        
         SAFE_DEALLOCATE_A(inner_points)
         SAFE_DEALLOCATE_A(outer_points)
         
