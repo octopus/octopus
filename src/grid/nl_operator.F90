@@ -107,7 +107,10 @@ module nl_operator_m
     integer, pointer :: ri(:,:)
     integer, pointer :: rimap(:)
     integer, pointer :: rimap_inv(:)
-    
+
+    integer                   :: ninner
+    integer                   :: nouter
+
     type(nl_operator_index_t) :: inner
     type(nl_operator_index_t) :: outer
 
@@ -116,6 +119,9 @@ module nl_operator_m
     type(opencl_mem_t) :: buff_imax
     type(opencl_mem_t) :: buff_ri
     type(opencl_mem_t) :: buff_map
+    type(opencl_mem_t) :: buff_all
+    type(opencl_mem_t) :: buff_inner
+    type(opencl_mem_t) :: buff_outer
     type(opencl_mem_t) :: buff_stencil
     type(opencl_mem_t) :: buff_ip_to_xyz
     type(opencl_mem_t) :: buff_xyz_to_ip
@@ -371,7 +377,10 @@ contains
     integer :: ir, maxp, iinner, iouter
     logical :: change, force_change
     character(len=200) :: flags
-
+#ifdef HAVE_OPENCL
+    integer, allocatable :: inner_points(:), outer_points(:), all_points(:)    
+#endif
+    
     PUSH_SUB(nl_operator_build)
 
     if(mesh%parallel_in_domains .and. .not. const_w) then
@@ -598,6 +607,8 @@ contains
       write(flags, '(i5)') op%stencil%size
       flags='-DNDIM=3 -DSTENCIL_SIZE='//trim(adjustl(flags))
 
+      if(op%mesh%parallel_in_domains) flags = '-DINDIRECT '//trim(flags)
+      
       select case(function_opencl)
       case(OP_INVMAP)
         call octcl_kernel_build(op%kernel, 'operate.cl', 'operate', flags)
@@ -618,9 +629,41 @@ contains
         call opencl_write_buffer(op%buff_imax, op%nri, op%rimap_inv(2:))
 
       case(OP_MAP)
+
+        SAFE_ALLOCATE(inner_points(1:op%mesh%np))
+        SAFE_ALLOCATE(outer_points(1:op%mesh%np))
+        SAFE_ALLOCATE(all_points(1:op%mesh%np))
+
+        op%ninner = 0
+        op%nouter = 0
+
+        do ii = 1, op%mesh%np
+          all_points(ii) = ii - 1
+          maxp = ii + maxval(op%ri(1:op%stencil%size, op%rimap(ii)))
+          if(maxp <= op%mesh%np) then
+            op%ninner = op%ninner + 1
+            inner_points(op%ninner) = ii - 1
+          else
+            op%nouter = op%nouter + 1
+            outer_points(op%nouter) = ii - 1
+          end if
+        end do
+
         call opencl_create_buffer(op%buff_map, CL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%mesh%np, opencl_max_workgroup_size()))
         call opencl_write_buffer(op%buff_map, op%mesh%np, (op%rimap - 1)*op%stencil%size)
 
+        call opencl_create_buffer(op%buff_all, CL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%mesh%np, opencl_max_workgroup_size()))
+        call opencl_write_buffer(op%buff_all, op%mesh%np, all_points)
+        
+        call opencl_create_buffer(op%buff_inner, CL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%ninner, opencl_max_workgroup_size()))
+        call opencl_write_buffer(op%buff_inner, op%ninner, inner_points)
+
+        call opencl_create_buffer(op%buff_outer, CL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%nouter, opencl_max_workgroup_size()))
+        call opencl_write_buffer(op%buff_outer, op%nouter, outer_points)
+
+        SAFE_DEALLOCATE_A(inner_points)
+        SAFE_DEALLOCATE_A(outer_points)
+        
       case(OP_NOMAP)
 
         ASSERT(op%mesh%sb%dim == 3)
@@ -1099,6 +1142,11 @@ contains
 
       case(OP_MAP)
         call opencl_release_buffer(op%buff_map)
+        if(op%mesh%parallel_in_domains) then
+          call opencl_release_buffer(op%buff_all)
+          call opencl_release_buffer(op%buff_inner)
+          call opencl_release_buffer(op%buff_outer)
+        end if
 
       case(OP_NOMAP)
         call opencl_release_buffer(op%buff_map)
