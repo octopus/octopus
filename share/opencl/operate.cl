@@ -61,17 +61,26 @@ __kernel void operate_map(const int nn,
 #ifdef SHARED_MEM
 			  , __local int * indexl
 #endif
+#ifdef INDIRECT
+			  , __global int * restrict indirect
+#endif			  
 			  ){
 
   const int ist = get_global_id(0);
   const int nst = get_global_size(0);
-  const int ip  = get_global_id(1);
+  const int ipd = get_global_id(1);
   const int lip = get_local_id(1);
+    
+#ifdef INDIRECT
+  const int ip  = indirect[ipd];
+#else
+#define ip ipd
+#endif
 
 #ifdef SHARED_MEM
   __local int * index = indexl + nn*lip;
 
-  if(ip < np){
+  if(ipd < np){
     for(int j = ist; j < nn; j += nst){
       index[j] = ri[map[ip] + j];
     }
@@ -82,7 +91,7 @@ __kernel void operate_map(const int nn,
 #define INDEX(j) index[(j)]
 #endif
 
-  if(ip < np) {
+  if(ipd < np) {
 
 #ifndef SHARED_MEM
     const int mip = map[ip];

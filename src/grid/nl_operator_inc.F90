@@ -357,7 +357,7 @@ contains
 
       if(opencl_use_shared_mem()) then
         iarg = iarg + 1
-        call opencl_set_kernel_arg(kernel_operate, 9, TYPE_INTEGER, isize*op%stencil%size)
+        call opencl_set_kernel_arg(kernel_operate, iarg, TYPE_INTEGER, isize*op%stencil%size)
       end if
 
       if(op%mesh%parallel_in_domains) then
