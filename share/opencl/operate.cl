@@ -77,10 +77,10 @@ __kernel void operate_map(const int np,
 #endif
 
 #ifdef SHARED_MEM
-  __local int * index = indexl + nn*lip;
+  __local int * index = indexl + STENCIL_SIZE*lip;
 
   if(ipd < np){
-    for(int j = ist; j < nn; j += nst){
+    for(int j = ist; j < STENCIL_SIZE; j += nst){
       index[j] = ri[map[ip] + j];
     }
   }
@@ -89,7 +89,7 @@ __kernel void operate_map(const int np,
 
 #define INDEX(j) index[(j)]
 #endif
-
+  
   if(ipd < np) {
 
 #ifndef SHARED_MEM
@@ -102,13 +102,13 @@ __kernel void operate_map(const int np,
     double a0 = (double) (0.0);
     double a1 = (double) (0.0);
     
-    for(int j = 0; j < nn - 2 + 1; j += 2){
+    for(int j = 0; j < STENCIL_SIZE - 2 + 1; j += 2){
       a0 += weights[j    ]*fi[((INDEX(j    ) + ip)<<ldfi) + ist];
       a1 += weights[j + 1]*fi[((INDEX(j + 1) + ip)<<ldfi) + ist];
     }
     
-    // if nn is odd, we still have to do the last iteration
-    if(nn & 1) a0 += weights[nn - 1]*fi[((INDEX(nn - 1) + ip)<<ldfi) + ist];
+    // if STENCIL_SIZE is odd, we still have to do the last iteration
+    if(STENCIL_SIZE & 1) a0 += weights[STENCIL_SIZE - 1]*fi[((INDEX(STENCIL_SIZE - 1) + ip)<<ldfi) + ist];
     
     fo[(ip<<ldfo) + ist] = a0 + a1;
     
