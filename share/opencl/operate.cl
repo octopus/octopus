@@ -51,8 +51,7 @@ __kernel void operate(const int nn,
   
 }
 
-__kernel void operate_map(const int nn,
-		 	  const int np,
+__kernel void operate_map(const int np,
 			  __global int const * restrict ri,
 			  __global int const * restrict map,
 			  __constant double * restrict weights,

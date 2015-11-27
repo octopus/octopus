@@ -328,16 +328,15 @@ contains
       call opencl_kernel_run(kernel_operate, (/eff_size, pnri/), (/eff_size, bsize/eff_size/))
 
     case(OP_MAP)
-      call opencl_set_kernel_arg(kernel_operate, 0, op%stencil%size)
-      call opencl_set_kernel_arg(kernel_operate, 1, op%mesh%np)
-      call opencl_set_kernel_arg(kernel_operate, 2, op%buff_ri)
-      call opencl_set_kernel_arg(kernel_operate, 3, op%buff_map)
-      call opencl_set_kernel_arg(kernel_operate, 4, buff_weights)
-      call opencl_set_kernel_arg(kernel_operate, 5, fi%pack%buffer)
-      call opencl_set_kernel_arg(kernel_operate, 6, log2(eff_size))
-      call opencl_set_kernel_arg(kernel_operate, 7, fo%pack%buffer)
-      call opencl_set_kernel_arg(kernel_operate, 8, log2(eff_size))
-      iarg = 8
+      call opencl_set_kernel_arg(kernel_operate, 0, op%mesh%np)
+      call opencl_set_kernel_arg(kernel_operate, 1, op%buff_ri)
+      call opencl_set_kernel_arg(kernel_operate, 2, op%buff_map)
+      call opencl_set_kernel_arg(kernel_operate, 3, buff_weights)
+      call opencl_set_kernel_arg(kernel_operate, 4, fi%pack%buffer)
+      call opencl_set_kernel_arg(kernel_operate, 5, log2(eff_size))
+      call opencl_set_kernel_arg(kernel_operate, 6, fo%pack%buffer)
+      call opencl_set_kernel_arg(kernel_operate, 7, log2(eff_size))
+      iarg = 7
       
       call clGetDeviceInfo(opencl%device, CL_DEVICE_LOCAL_MEM_SIZE, local_mem_size, cl_status)
       isize = int(dble(local_mem_size)/(op%stencil%size*types_get_size(TYPE_INTEGER)))
@@ -364,10 +363,10 @@ contains
         iarg = iarg + 1
         select case(points_)
         case(OP_INNER)
-          call opencl_set_kernel_arg(kernel_operate, 1, op%ninner)
+          call opencl_set_kernel_arg(kernel_operate, 0, op%ninner)
           call opencl_set_kernel_arg(kernel_operate, iarg, op%buff_inner)
         case(OP_OUTER)                          
-          call opencl_set_kernel_arg(kernel_operate, 1, op%nouter)
+          call opencl_set_kernel_arg(kernel_operate, 0, op%nouter)
           call opencl_set_kernel_arg(kernel_operate, iarg, op%buff_outer)
         case(OP_ALL)
           call opencl_set_kernel_arg(kernel_operate, iarg, op%buff_all)
