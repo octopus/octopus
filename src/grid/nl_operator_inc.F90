@@ -30,7 +30,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
 
   integer :: ist, points_
   real(8) :: cop
-  logical :: ghost_update_, profile_
+  logical :: ghost_update_, profile_, use_opencl
   integer :: nri, nri_loc, ini
   integer, pointer :: imin(:), imax(:), ri(:, :)
   R_TYPE,  pointer :: pfi(:), pfo(:)
@@ -101,7 +101,9 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
       end if
     end if
   end if
-    
+
+  use_opencl = .false.
+  
   if(nri > 0) then
     if(.not.op%const_w) then
       call operate_non_const_weights()
@@ -109,6 +111,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
       call operate_const_weights()
 #ifdef HAVE_OPENCL
     else if(opencl_is_enabled() .and. batch_is_packed(fi) .and. batch_is_packed(fo)) then
+      use_opencl = .true.
       call operate_opencl()
 #endif
     else
@@ -140,7 +143,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
     end if
 
     ! count operations
-    if(profile_) then
+    if(profile_ .and. .not. use_opencl) then
       if(op%cmplx_op) then
         cop = fi%nst_linear*dble(imax(nri) - imin(1))*op%stencil%size*(R_ADD + R_MUL)
       else
@@ -421,7 +424,20 @@ contains
         call profiling_count_transfers(op%mesh%np_part*op%stencil%size + op%mesh%np, R_TOTYPE(M_ONE))
       end do
     end select
-
+    
+    if(profile_) then
+      select case(points_)
+      case(OP_INNER)
+        call profiling_count_operations(fi%nst_linear*dble(op%ninner)*op%stencil%size*2*R_ADD)
+      case(OP_OUTER)
+        call profiling_count_operations(fi%nst_linear*dble(op%nouter)*op%stencil%size*2*R_ADD)
+      case(OP_ALL)
+        call profiling_count_operations(fi%nst_linear*dble(op%mesh%np)*op%stencil%size*2*R_ADD)
+      case default
+        ASSERT(.false.)
+      end select
+    end if
+    
     call opencl_finish()
 
     call opencl_release_buffer(buff_weights)
