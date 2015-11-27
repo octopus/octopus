@@ -108,10 +108,9 @@ subroutine X(derivatives_batch_finish)(handle)
 
   if(.not. done) then
     if(handle%factor_present) then
-      call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, &
-        ghost_update = handle%ghost_update, factor = handle%factor)
+      call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, ghost_update = .false., factor = handle%factor)
     else
-      call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, ghost_update = handle%ghost_update)
+      call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, ghost_update = .false.)
     end if
   end if
 

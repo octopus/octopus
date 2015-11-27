@@ -44,6 +44,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   
   PUSH_SUB(X(nl_operator_operate_batch))
 
+  ASSERT(batch_status(fi) == batch_status(fo))
   ASSERT(batch_type(fi) == R_TYPE_VAL)
   ASSERT(batch_type(fo) == R_TYPE_VAL)
 
@@ -66,13 +67,15 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   ghost_update_ = .true.
   if(present(ghost_update)) ghost_update_ = ghost_update
 
-#ifdef HAVE_MPI
   if(op%mesh%parallel_in_domains .and. ghost_update_) then
+    ASSERT(.not. batch_is_packed(fi))
+    
     do ist = 1, fi%nst_linear
+#ifdef HAVE_MPI
       call X(vec_ghost_update)(op%mesh%vp, fi%states_linear(ist)%X(psi)(:))
+#endif
     end do
   end if
-#endif
 
 #ifdef R_TREAL
   if(op%cmplx_op) then
