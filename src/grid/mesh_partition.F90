@@ -573,8 +573,11 @@ contains
 
     integer :: err
     character(len=6) :: numstring
+    type(profile_t), save :: prof
 
     PUSH_SUB(mesh_partition_dump)
+
+    call profiling_in(prof, "PARTITION_WRITE")
 
     ierr = 0
 
@@ -587,6 +590,8 @@ contains
 
     call partition_dump(mesh%bndry_partition, trim(dir)//'/bndry_partition_'//trim(numstring)//'.obf', err)
     if (err /= 0) ierr = ierr + 4
+
+    call profiling_out(prof)
 
     POP_SUB(mesh_partition_dump)
   end subroutine mesh_partition_dump
