@@ -21,6 +21,7 @@
 
 module xc_m
   use distributed_m
+  use comm_m
   use cube_m
   use cube_function_m
   use derivatives_m

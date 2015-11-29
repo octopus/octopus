@@ -70,7 +70,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   FLOAT, allocatable :: unp_dens(:), unp_dedd(:)
 
   integer :: ib, ip, isp, families, ixc, spin_channels, is, idir, ipstart, ipend
-  FLOAT   :: rr
+  FLOAT   :: rr, energy(1:2)
   logical :: gga, mgga
   type(profile_t), save :: prof, prof_libxc
   logical :: calc_energy
@@ -317,14 +317,40 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
 
   call local_deallocate()
 
+  ! calculate the energy, we do the integrals directly so when the data
+  ! is fully distributed we do not need to allgather first
+  if(calc_energy) then
+
+    energy(1:2) = CNST(0.0)
+    
+    if(der%mesh%use_curvilinear) then
+      do ip = ipstart, ipend
+        energy(1) = energy(1) + ex_per_vol(ip)*der%mesh%vol_pp(ip)
+        energy(2) = energy(2) + ec_per_vol(ip)*der%mesh%vol_pp(ip)
+      end do
+    else
+      do ip = ipstart, ipend
+        energy(1) = energy(1) + ex_per_vol(ip)
+        energy(2) = energy(2) + ec_per_vol(ip)
+      end do
+    end if
+    
+    energy(1:2) = energy(1:2)*der%mesh%volume_element
+
+    if(xcs%parallel) then
+      call comm_allreduce(st%dom_st_kpt_mpi_grp%comm, energy)
+    else
+      call comm_allreduce(der%mesh%mpi_grp%comm, energy)
+    end if
+
+    ex = energy(1)
+    ec = energy(2)
+    
+  end if
+
   if(xcs%parallel) then
     if(distribution%parallel) then
       call profiling_in(prof_gather, "XC_GATHER")
-      
-      if(calc_energy) then
-        call distributed_allgather(distribution, ex_per_vol)
-        call distributed_allgather(distribution, ec_per_vol)
-      end if
       
       do isp = 1, spin_channels
         call distributed_allgather(distribution, dedd(:, isp))
@@ -376,23 +402,18 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
       ! contains the correction applied to the xc potential.
       do is = 1, spin_channels
         do ip = 1, der%mesh%np
-          ex_per_vol(ip) = ex_per_vol(ip) &
-            + vx(ip)*(CNST(3.0)*rho(ip, is) + sum(der%mesh%x(ip, 1:der%mesh%sb%dim)*gdens(ip, 1:der%mesh%sb%dim, is)))
+          ex_per_vol(ip) = vx(ip)*(CNST(3.0)*rho(ip, is) + sum(der%mesh%x(ip, 1:der%mesh%sb%dim)*gdens(ip, 1:der%mesh%sb%dim, is)))
         end do
       end do
     end if
+
+    if(calc_energy) ex = ex + dmf_integrate(der%mesh, ex_per_vol)
   end if
 
   ! this has to be done in inverse order
   if(mgga) call mgga_process()
   if( gga) call  gga_process()
   call lda_process()
-
-  if(calc_energy) then
-    ! integrate energies per unit volume
-    ex = ex + dmf_integrate(der%mesh, ex_per_vol)
-    ec = ec + dmf_integrate(der%mesh, ec_per_vol)
-  end if
 
   ! clean up allocated memory
   call lda_end()
