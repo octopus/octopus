@@ -291,7 +291,7 @@ contains
 
   ! ------------------------------------------
   subroutine operate_opencl()
-    integer    :: pnri, bsize, isize, ist, eff_size, iarg
+    integer    :: pnri, bsize, isize, ist, eff_size, iarg, npoints
     integer(8) :: local_mem_size
     type(opencl_mem_t) :: buff_weights
     type(profile_t), save :: prof
@@ -362,13 +362,16 @@ contains
         call opencl_set_kernel_arg(kernel_operate, iarg, TYPE_INTEGER, isize*op%stencil%size)
       end if
 
+      npoints = op%mesh%np
       if(op%mesh%parallel_in_domains) then
         iarg = iarg + 1
         select case(points_)
         case(OP_INNER)
+          npoints = op%ninner
           call opencl_set_kernel_arg(kernel_operate, 0, op%ninner)
           call opencl_set_kernel_arg(kernel_operate, iarg, op%buff_inner)
-        case(OP_OUTER)                          
+        case(OP_OUTER)
+          npoints = op%nouter
           call opencl_set_kernel_arg(kernel_operate, 0, op%nouter)
           call opencl_set_kernel_arg(kernel_operate, iarg, op%buff_outer)
         case(OP_ALL)
@@ -380,11 +383,8 @@ contains
       
       call opencl_kernel_run(kernel_operate, (/eff_size, pad(op%mesh%np, bsize)/), (/eff_size, isize/))
 
-      call profiling_count_transfers(op%stencil%size*op%mesh%np + op%mesh%np, isize)
-
-      do ist = 1, fi%nst_linear
-        call profiling_count_transfers(op%mesh%np_part*op%stencil%size + op%mesh%np, R_TOTYPE(M_ONE))
-      end do
+      call profiling_count_transfers(npoints*(op%stencil%size + 2), isize)
+      call profiling_count_transfers(fi%nst_linear*npoints*(op%stencil%size + 1), R_TOTYPE(M_ONE))
 
     case(OP_NOMAP)
       ASSERT(points_ == OP_ALL)
