@@ -34,7 +34,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   ! Formerly vxc was optional, but I removed this since we always pass vxc, and this simplifies the routine
   ! and avoids some optimization problems. --DAS
 
-  integer, parameter :: N_BLOCK_MAX = 1000
+  integer, parameter :: N_BLOCK_MAX = 10000
   integer :: n_block
 
   ! Local blocks (with the correct memory order for libxc):
@@ -438,6 +438,7 @@ contains
 
     PUSH_SUB(xc_get_vxc.copy_global_to_local)
 
+    !$omp parallel do
     do ib = 1, n_block
       local(1:spin_channels, ib) = global(ib + ip - 1, 1:spin_channels)
     end do
@@ -457,6 +458,7 @@ contains
 
     PUSH_SUB(xc_get_vxc.copy_local_to_global)
 
+    !$omp parallel do
     do ib = 1, n_block
       global(ib + ip - 1, 1:spin_channels) = global(ib + ip - 1, 1:spin_channels) + local(1:spin_channels, ib)
     end do
@@ -526,12 +528,14 @@ contains
 
     select case(ispin)
     case(UNPOLARIZED)
+      !$omp parallel do
       do ii = 1, der%mesh%np
         dedd(ii, 1) = CNST(0.0)
         dens(ii, 1) = max(rho(ii, 1), M_ZERO)
       end do
 
     case(SPIN_POLARIZED)
+      !$omp parallel do
       do ii = 1, der%mesh%np
         dedd(ii, 1:2) = CNST(0.0)
         dens(ii, 1) = max(rho(ii, 1), M_ZERO)
