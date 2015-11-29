@@ -523,25 +523,33 @@ contains
     end if
 
     SAFE_ALLOCATE(dedd(1:der%mesh%np_part, 1:spin_channels))
-    dedd = M_ZERO
-    
-    do ii = 1, der%mesh%np
-      d(1:spin_channels) = rho(ii, 1:spin_channels)
 
-      select case(ispin)
-      case(UNPOLARIZED)
-        dens(ii, 1) = max(d(1), M_ZERO)
-      case(SPIN_POLARIZED)
-        dens(ii, 1) = max(d(1), M_ZERO)
-        dens(ii, 2) = max(d(2), M_ZERO)
-      case(SPINORS)
+    select case(ispin)
+    case(UNPOLARIZED)
+      do ii = 1, der%mesh%np
+        dedd(ii, 1) = CNST(0.0)
+        dens(ii, 1) = max(rho(ii, 1), M_ZERO)
+      end do
+
+    case(SPIN_POLARIZED)
+      do ii = 1, der%mesh%np
+        dedd(ii, 1:2) = CNST(0.0)
+        dens(ii, 1) = max(rho(ii, 1), M_ZERO)
+        dens(ii, 2) = max(rho(ii, 2), M_ZERO)
+      end do
+
+    case(SPINORS)
+      do ii = 1, der%mesh%np
+        dedd(ii, 1:spin_channels) = CNST(0.0)
+        d(1:spin_channels) = rho(ii, 1:spin_channels)
         dtot = d(1) + d(2)
         dpol = sqrt((d(1) - d(2))**2 + &
           M_FOUR*(rho(ii, 3)**2 + rho(ii, 4)**2))
         dens(ii, 1) = max(M_HALF*(dtot + dpol), M_ZERO)
         dens(ii, 2) = max(M_HALF*(dtot - dpol), M_ZERO)
-      end select
-    end do
+      end do
+
+    end select
 
     POP_SUB(xc_get_vxc.lda_init)
   end subroutine lda_init
