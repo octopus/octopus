@@ -887,13 +887,13 @@ contains
 
       !%Variable MeshPartitionWrite
       !%Type logical
-      !%Default true
+      !%Default false
       !%Section Execution::Parallelization
       !%Description
       !% If set to yes (the default), <tt>Octopus</tt> will write the mesh
       !% partition of the current run to directory <tt>MeshPartitionDir</tt>.
       !%End
-      call parse_variable('MeshPartitionWrite', .true., write_partition)
+      call parse_variable('MeshPartitionWrite', .false., write_partition)
 
       if (mpi_grp_is_root(mesh%mpi_grp)) then
         call io_mkdir(trim(partition_dir), parents=.true.)
