@@ -9,6 +9,7 @@ module frozen_config_m
   use json_m
   use messages_m
   use profiling_m
+  use storage_m
 
   implicit none
 
@@ -23,10 +24,17 @@ contains
   subroutine frozen_config_parse_external(this)
     type(json_object_t), intent(out) :: this
 
+    type(json_object_t), pointer :: cnfg
+
     PUSH_SUB(frozen_config_parse_external)
 
+    nullify(cnfg)
     call json_init(this)
     call json_set(this, "type", HMLT_TYPE_POTN)
+    SAFE_ALLOCATE(cnfg)
+    call storage_init(cnfg, full=.false.)
+    call json_set(this, "storage", cnfg)
+    nullify(cnfg)
 
     POP_SUB(frozen_config_parse_external)
   end subroutine frozen_config_parse_external

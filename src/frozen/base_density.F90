@@ -171,19 +171,16 @@ contains
 #undef HASH_INCLUDE_BODY
 
   ! ---------------------------------------------------------
-  subroutine base_density_new(this, that)
-    type(base_density_t),  target, intent(inout) :: this
-    type(base_density_t), pointer                :: that
+  subroutine base_density__new__(this)
+    type(base_density_t), pointer :: this
 
-    PUSH_SUB(base_density_new)
+    PUSH_SUB(base_density__new__)
 
-    nullify(that)
-    SAFE_ALLOCATE(that)
-    that%prnt => this
-    call base_density_list_push(this%list, that)
+    nullify(this)
+    SAFE_ALLOCATE(this)
 
-    POP_SUB(base_density_new)
-  end subroutine base_density_new
+    POP_SUB(base_density__new__)
+  end subroutine base_density__new__
 
   ! ---------------------------------------------------------
   subroutine base_density__del__(this)
@@ -191,11 +188,28 @@ contains
 
     PUSH_SUB(base_density__del__)
 
-    SAFE_DEALLOCATE_P(this)
+    if(associated(this))then
+      SAFE_DEALLOCATE_P(this)
+    end if
     nullify(this)
 
     POP_SUB(base_density__del__)
   end subroutine base_density__del__
+
+  ! ---------------------------------------------------------
+  subroutine base_density_new(this, that)
+    type(base_density_t),  target, intent(inout) :: this
+    type(base_density_t), pointer                :: that
+
+    PUSH_SUB(base_density_new)
+
+    nullify(that)
+    call base_density__new__(that)
+    that%prnt => this
+    call base_density_list_push(this%list, that)
+
+    POP_SUB(base_density_new)
+  end subroutine base_density_new
 
   ! ---------------------------------------------------------
   subroutine base_density_del(this)
@@ -219,11 +233,12 @@ contains
     type(base_density_t), target, intent(out) :: this
     type(json_object_t),  target, intent(in)  :: config
 
-    integer :: ierr
-    logical :: allc
+    type(json_object_t), pointer :: cnfg
+    integer                      :: ierr
 
     PUSH_SUB(base_density__init__type)
 
+    nullify(cnfg)
     this%config => config
     call json_get(this%config, "nspin", this%nspin, ierr)
     if(ierr/=JSON_OK) this%nspin = default_nspin
@@ -232,15 +247,18 @@ contains
     SAFE_ALLOCATE(this%charge(1:this%nspin))
     call json_get(this%config, "charge", this%charge, ierr)
     if(ierr/=JSON_OK) this%charge = 0.0_wp
-    call json_get(this%config, "allocate", allc, ierr)
-    if(ierr/=JSON_OK) allc = .true.
+    call json_get(this%config, "storage", cnfg, ierr)
+    ASSERT(ierr==JSON_OK)
+    call json_set(cnfg, "fine", .true.)
+    call json_set(cnfg, "dimensions", this%nspin)
     if(this%nspin>1)then
       SAFE_ALLOCATE(this%total)
-      call storage_init(this%total, allocate=allc)
+      call storage_init(this%total, cnfg)
     else
       this%total => this%data
     end if
-    call storage_init(this%data, this%nspin, allocate=allc)
+    call storage_init(this%data, cnfg)
+    nullify(cnfg)
     call config_dict_init(this%dict)
     call base_density_hash_init(this%hash)
     call base_density_list_init(this%list)
@@ -313,8 +331,8 @@ contains
     ASSERT(associated(this%config))
     ASSERT(.not.associated(this%sim))
     this%sim => sim
-    if(this%nspin>1) call storage_start(this%total, this%sim, fine=.true.)
-    call storage_start(this%data, this%sim, fine=.true.)
+    if(this%nspin>1) call storage_start(this%total, this%sim, ndim=1)
+    call storage_start(this%data, this%sim)
 
     POP_SUB(base_density__start__)
   end subroutine base_density__start__

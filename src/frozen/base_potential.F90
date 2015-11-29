@@ -175,19 +175,16 @@ contains
 #undef HASH_INCLUDE_BODY
 
   ! ---------------------------------------------------------
-  subroutine base_potential_new(this, that)
-    type(base_potential_t),  target, intent(inout) :: this
-    type(base_potential_t), pointer                :: that
+  subroutine base_potential__new__(this)
+    type(base_potential_t), pointer :: this
 
-    PUSH_SUB(base_potential_new)
+    PUSH_SUB(base_potential__new__)
 
-    nullify(that)
-    SAFE_ALLOCATE(that)
-    that%prnt => this
-    call base_potential_list_push(this%list, that)
+    nullify(this)
+    SAFE_ALLOCATE(this)
 
-    POP_SUB(base_potential_new)
-  end subroutine base_potential_new
+    POP_SUB(base_potential__new__)
+  end subroutine base_potential__new__
 
   ! ---------------------------------------------------------
   subroutine base_potential__del__(this)
@@ -195,11 +192,28 @@ contains
 
     PUSH_SUB(base_potential__del__)
 
-    SAFE_DEALLOCATE_P(this)
+    if(associated(this))then
+      SAFE_DEALLOCATE_P(this)
+    end if
     nullify(this)
 
     POP_SUB(base_potential__del__)
   end subroutine base_potential__del__
+
+  ! ---------------------------------------------------------
+  subroutine base_potential_new(this, that)
+    type(base_potential_t),  target, intent(inout) :: this
+    type(base_potential_t), pointer                :: that
+
+    PUSH_SUB(base_potential_new)
+
+    nullify(that)
+    call base_potential__new__(that)
+    that%prnt => this
+    call base_potential_list_push(this%list, that)
+
+    POP_SUB(base_potential_new)
+  end subroutine base_potential_new
 
   ! ---------------------------------------------------------
   subroutine base_potential_del(this)
@@ -224,11 +238,13 @@ contains
     type(base_system_t), target, intent(in)  :: sys
     type(json_object_t), target, intent(in)  :: config
 
-    integer :: ierr
-    logical :: uspn, allc
+    type(json_object_t), pointer :: cnfg
+    integer                      :: ierr
+    logical                      :: uspn
 
     PUSH_SUB(base_potential__init__type)
 
+    nullify(cnfg)
     this%config => config
     this%sys => sys
     this%nspin = 1
@@ -237,9 +253,12 @@ contains
     if(uspn) call base_system_get(this%sys, nspin=this%nspin)
     ASSERT(this%nspin>0)
     ASSERT(this%nspin<3)
-    call json_get(this%config, "allocate", allc, ierr)
-    if(ierr/=JSON_OK) allc = .true.
-    call storage_init(this%data, ndim=this%nspin, full=.false., allocate=allc)
+    call json_get(this%config, "storage", cnfg, ierr)
+    ASSERT(ierr==JSON_OK)
+    call json_set(cnfg, "full", .false.)
+    call json_set(cnfg, "dimensions", this%nspin)
+    call storage_init(this%data, cnfg)
+    nullify(cnfg)
     call config_dict_init(this%dict)
     call base_potential_hash_init(this%hash)
     call base_potential_list_init(this%list)

@@ -27,6 +27,7 @@ module output_fio_m
   use species_m
   use states_m
   use states_dim_m
+  use storage_m
   use unit_m
   use unit_system_m
   
@@ -415,10 +416,12 @@ contains
     character(len=*),    intent(in)  :: dir
     type(mpi_grp_t),     intent(in)  :: group
 
-    integer :: ierr
+    type(json_object_t), pointer :: cnfg
+    integer                      :: ierr
 
     PUSH_SUB(output_parse_config_external)
 
+    nullify(cnfg)
     call json_init(this)
     call json_set(this, "type", HMLT_TYPE_POTN)
     call json_set(this, "dir", trim(adjustl(dir)))
@@ -431,6 +434,10 @@ contains
       write(unit=message(3), fmt="(a,i3)") "I/O Error: ", ierr
       call messages_fatal(3)
     end if
+    SAFE_ALLOCATE(cnfg)
+    call storage_init(cnfg, full=.false.)
+    call json_set(this, "storage", cnfg)
+    nullify(cnfg)
 
     POP_SUB(output_parse_config_external)
   end subroutine output_parse_config_external

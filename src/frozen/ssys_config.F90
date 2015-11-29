@@ -19,6 +19,7 @@ module ssys_config_m
   use parser_m
   use profiling_m
   use ssys_handle_m
+  use storage_m
   use unit_m
   use unit_system_m
 
@@ -257,10 +258,17 @@ contains
   subroutine ssys_config_parse_external(this)
     type(json_object_t), intent(out) :: this
 
+    type(json_object_t), pointer :: cnfg
+
     PUSH_SUB(ssys_config_parse_external)
 
+    nullify(cnfg)
     call json_init(this)
     call json_set(this, "type", HMLT_TYPE_POTN)
+    SAFE_ALLOCATE(cnfg)
+    call storage_init(cnfg, full=.false.)
+    call json_set(this, "storage", cnfg)
+    nullify(cnfg)
 
     POP_SUB(ssys_config_parse_external)
   end subroutine ssys_config_parse_external
@@ -283,12 +291,22 @@ contains
     integer,             intent(in)  :: id
     real(kind=wp),       intent(in)  :: factor
 
+    type(json_object_t), pointer :: cnfg
+
     PUSH_SUB(ssys_config_parse_functional)
 
     call json_init(this)
     call json_set(this, "type", HMLT_TYPE_FNCT)
     call json_set(this, "functional", id)
-    if(id>FUNCT_XC_NONE) call json_set(this, "factor", factor)
+    call json_set(this, "factor", factor)
+    SAFE_ALLOCATE(cnfg)
+    if(id>FUNCT_XC_NONE)then
+      call storage_init(cnfg, full=.false.)
+    else
+      call storage_init(cnfg, full=.false., allocate=.false.)
+    end if
+    call json_set(this, "storage", cnfg)
+    nullify(cnfg)
 
     POP_SUB(ssys_config_parse_functional)
   end subroutine ssys_config_parse_functional
@@ -299,7 +317,7 @@ contains
 
     type(json_object_t), pointer :: cnfg
     real(kind=wp)                :: factor
-    integer                      :: id
+    integer                      :: id, ierr
 
     !%Variable TnaddFactor
     !%Type float
@@ -314,7 +332,10 @@ contains
     nullify(cnfg)
     call json_init(this)
     call json_set(this, "type", HMLT_TYPE_HMLT)
-    call json_set(this, "allocate", .true.)
+    SAFE_ALLOCATE(cnfg)
+    call storage_init(cnfg, full=.false., allocate=.true.)
+    call json_set(this, "storage", cnfg)
+    nullify(cnfg)
     call parse_variable('TnaddFunctional', FUNCT_XC_NONE, id)
     call parse_variable('TnaddFactor', 1.0_wp, factor)
     if(abs(factor)<1.0e-7_wp)then

@@ -112,12 +112,12 @@ module base_states_m
   end type base_states_t
 
   interface base_states__init__
-    module procedure base_states__init__states
+    module procedure base_states__init__type
     module procedure base_states__init__copy
   end interface base_states__init__
 
   interface base_states_init
-    module procedure base_states_init_states
+    module procedure base_states_init_type
     module procedure base_states_init_copy
   end interface base_states_init
 
@@ -139,11 +139,11 @@ module base_states_m
   end interface base_states_get
 
   interface base_states_copy
-    module procedure base_states_copy_states
+    module procedure base_states_copy_type
   end interface base_states_copy
 
   interface base_states_end
-    module procedure base_states_end_states
+    module procedure base_states_end_type
   end interface base_states_end
 
 #define TEMPLATE_PREFIX base_states
@@ -165,19 +165,16 @@ contains
 #undef HASH_INCLUDE_BODY
 
   ! ---------------------------------------------------------
-  subroutine base_states_new(this, that)
-    type(base_states_t),  target, intent(inout) :: this
-    type(base_states_t), pointer                :: that
+  subroutine base_states__new__(this)
+    type(base_states_t), pointer :: this
 
-    PUSH_SUB(base_states_new)
+    PUSH_SUB(base_states__new__)
 
-    nullify(that)
-    SAFE_ALLOCATE(that)
-    that%prnt => this
-    call base_states_list_push(this%list, that)
+    nullify(this)
+    SAFE_ALLOCATE(this)
 
-    POP_SUB(base_states_new)
-  end subroutine base_states_new
+    POP_SUB(base_states__new__)
+  end subroutine base_states__new__
 
   ! ---------------------------------------------------------
   subroutine base_states__del__(this)
@@ -185,11 +182,28 @@ contains
 
     PUSH_SUB(base_states__del__)
 
-    SAFE_DEALLOCATE_P(this)
+    if(associated(this))then
+      SAFE_DEALLOCATE_P(this)
+    end if
     nullify(this)
 
     POP_SUB(base_states__del__)
   end subroutine base_states__del__
+
+  ! ---------------------------------------------------------
+  subroutine base_states_new(this, that)
+    type(base_states_t),  target, intent(inout) :: this
+    type(base_states_t), pointer                :: that
+
+    PUSH_SUB(base_states_new)
+
+    nullify(that)
+    call base_states__new__(that)
+    that%prnt => this
+    call base_states_list_push(this%list, that)
+
+    POP_SUB(base_states_new)
+  end subroutine base_states_new
 
   ! ---------------------------------------------------------
   subroutine base_states_del(this)
@@ -209,14 +223,14 @@ contains
   end subroutine base_states_del
 
   ! ---------------------------------------------------------
-  subroutine base_states__init__states(this, config)
+  subroutine base_states__init__type(this, config)
     type(base_states_t),         intent(out) :: this
     type(json_object_t), target, intent(in)  :: config
 
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
 
-    PUSH_SUB(base_states__init__states)
+    PUSH_SUB(base_states__init__type)
 
     nullify(cnfg)
     this%config => config
@@ -230,8 +244,8 @@ contains
     call base_states_hash_init(this%hash)
     call base_states_list_init(this%list)
 
-    POP_SUB(base_states__init__states)
-  end subroutine base_states__init__states
+    POP_SUB(base_states__init__type)
+  end subroutine base_states__init__type
     
   ! ---------------------------------------------------------
   subroutine base_states__init__copy(this, that)
@@ -248,16 +262,16 @@ contains
   end subroutine base_states__init__copy
     
   ! ---------------------------------------------------------
-  subroutine base_states_init_states(this, config)
+  subroutine base_states_init_type(this, config)
     type(base_states_t), intent(out) :: this
     type(json_object_t), intent(in)  :: config
 
-    PUSH_SUB(base_states_init_states)
+    PUSH_SUB(base_states_init_type)
 
     call base_states__init__(this, config)
 
-    POP_SUB(base_states_init_states)
-  end subroutine base_states_init_states
+    POP_SUB(base_states_init_type)
+  end subroutine base_states_init_type
     
   ! ---------------------------------------------------------
   recursive subroutine base_states_init_copy(this, that)
@@ -593,14 +607,14 @@ contains
     if(associated(that%config))then
       call base_states__init__(this, that)
       this%charge = that%charge
+      if(associated(that%sim)) call base_density__copy__(this%density, that%density)
     end if
-    call base_density__copy__(this%density, that%density)
 
     POP_SUB(base_states__copy__)
   end subroutine base_states__copy__
     
   ! ---------------------------------------------------------
-  recursive subroutine base_states_copy_states(this, that)
+  recursive subroutine base_states_copy_type(this, that)
     type(base_states_t), intent(inout) :: this
     type(base_states_t), intent(in)    :: that
 
@@ -609,7 +623,7 @@ contains
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
 
-    PUSH_SUB(base_states_copy_states)
+    PUSH_SUB(base_states_copy_type)
 
     nullify(cnfg, osub, isub)
     call base_states_end(this)
@@ -626,8 +640,8 @@ contains
     call base_states_end(iter)
     nullify(cnfg, osub, isub)
 
-    POP_SUB(base_states_copy_states)
-  end subroutine base_states_copy_states
+    POP_SUB(base_states_copy_type)
+  end subroutine base_states_copy_type
 
   ! ---------------------------------------------------------
   subroutine base_states__end__(this)
@@ -637,21 +651,21 @@ contains
 
     nullify(this%config, this%sim, this%prnt)
     this%charge = 0.0_wp
+    call base_density__end__(this%density)
     call config_dict_end(this%dict)
     call base_states_hash_end(this%hash)
     call base_states_list_end(this%list)
-    call base_density__end__(this%density)
 
     POP_SUB(base_states__end__)
   end subroutine base_states__end__
     
   ! ---------------------------------------------------------
-  recursive subroutine base_states_end_states(this)
+  recursive subroutine base_states_end_type(this)
     type(base_states_t), intent(inout) :: this
 
     type(base_states_t), pointer :: subs
 
-    PUSH_SUB(base_states_end_states)
+    PUSH_SUB(base_states_end_type)
 
     do
       nullify(subs)
@@ -663,8 +677,8 @@ contains
     nullify(subs)
     call base_states__end__(this)
 
-    POP_SUB(base_states_end_states)
-  end subroutine base_states_end_states
+    POP_SUB(base_states_end_type)
+  end subroutine base_states_end_type
 
 #define TEMPLATE_PREFIX base_states
 #define INCLUDE_BODY

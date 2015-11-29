@@ -10,6 +10,7 @@ module base_config_m
   use kinds_m
   use messages_m
   use profiling_m
+  use storage_m
 
   implicit none
 
@@ -104,11 +105,13 @@ contains
     type(json_object_t), intent(out) :: this
     integer,   optional, intent(in)  :: nspin
 
+    type(json_object_t),             pointer :: cnfg
     real(kind=wp), dimension(:), allocatable :: chrg
     integer                                  :: ispin
 
     PUSH_SUB(base_config_parse_density)
 
+    nullify(cnfg)
     ispin = default_nspin
     if(present(nspin)) ispin = nspin
     ASSERT(ispin>0)
@@ -118,6 +121,10 @@ contains
     call json_set(this, "nspin", ispin)
     call json_set(this, "charge", chrg)
     SAFE_DEALLOCATE_A(chrg)
+    SAFE_ALLOCATE(cnfg)
+    call storage_init(cnfg, ndim=ispin, fine=.true.)
+    call json_set(this, "storage", cnfg)
+    nullify(cnfg)
 
     POP_SUB(base_config_parse_density)
   end subroutine base_config_parse_density
@@ -174,10 +181,17 @@ contains
   subroutine base_config_parse_hamiltonian(this)
     type(json_object_t), intent(out) :: this
 
+    type(json_object_t), pointer :: cnfg
+
     PUSH_SUB(base_config_parse_hamiltonian)
 
+    nullify(cnfg)
     call json_init(this)
     call json_set(this, "type", HMLT_TYPE_HMLT)
+    SAFE_ALLOCATE(cnfg)
+    call storage_init(cnfg, full=.false., allocate=.false.)
+    call json_set(this, "storage", cnfg)
+    nullify(cnfg)
 
     POP_SUB(base_config_parse_hamiltonian)
   end subroutine base_config_parse_hamiltonian

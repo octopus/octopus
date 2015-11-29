@@ -24,6 +24,7 @@
 
 module base_system_m
 
+  use base_density_m
   use base_geometry_m
   use base_states_m
   use config_dict_m
@@ -148,6 +149,7 @@ module base_system_m
     module procedure base_system_get_geom
     module procedure base_system_get_geometry
     module procedure base_system_get_states
+    module procedure base_system_get_density
   end interface base_system_get
 
   interface base_system_copy
@@ -650,6 +652,18 @@ contains
 
     POP_SUB(base_system_get_states)
   end subroutine base_system_get_states
+
+  ! ---------------------------------------------------------
+  subroutine base_system_get_density(this, that)
+    type(base_system_t),   intent(in) :: this
+    type(base_density_t), pointer     :: that
+
+    PUSH_SUB(base_system_get_density)
+
+    call base_states_get(this%st, that)
+
+    POP_SUB(base_system_get_density)
+  end subroutine base_system_get_density
 
   ! ---------------------------------------------------------
   subroutine base_system__copy__begin(this, that)

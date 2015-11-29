@@ -936,6 +936,20 @@ contains
   end subroutine base_hamiltonian__del__
 
   ! ---------------------------------------------------------
+  subroutine base_hamiltonian__idel__(this)
+    type(base_hamiltonian_t), pointer :: this
+
+    PUSH_SUB(base_hamiltonian__idel__)
+
+    if(associated(this))then
+      SAFE_DEALLOCATE_P(this)
+    end if
+    nullify(this)
+
+    POP_SUB(base_hamiltonian__idel__)
+  end subroutine base_hamiltonian__idel__
+
+  ! ---------------------------------------------------------
   subroutine base_hamiltonian_new(this, that)
     type(base_hamiltonian_t),  target, intent(inout) :: this
     type(base_hamiltonian_t), pointer                :: that
@@ -949,18 +963,6 @@ contains
 
     POP_SUB(base_hamiltonian_new)
   end subroutine base_hamiltonian_new
-
-  ! ---------------------------------------------------------
-  subroutine base_hamiltonian__idel__(this)
-    type(base_hamiltonian_t), pointer :: this
-
-    PUSH_SUB(base_hamiltonian__idel__)
-
-    SAFE_DEALLOCATE_P(this)
-    nullify(this)
-
-    POP_SUB(base_hamiltonian__idel__)
-  end subroutine base_hamiltonian__idel__
 
   ! ---------------------------------------------------------
   subroutine base_hamiltonian_del(this)
@@ -990,20 +992,24 @@ contains
     type(base_system_t), target, intent(in)  :: sys
     type(json_object_t), target, intent(in)  :: config
 
-    integer :: type, nspn, ierr
-    logical :: allc
+    type(json_object_t), pointer :: cnfg
+    integer                      :: type, nspn, ierr
 
     PUSH_SUB(base_hamiltonian__iinit__)
 
+    nullify(cnfg)
     this%config => config
     this%sys => sys
     call json_get(this%config, "type", type, ierr)
     ASSERT(ierr==JSON_OK)
     ASSERT(type==HMLT_TYPE_HMLT)
     call base_system_get(this%sys, nspin=nspn)
-    call json_get(this%config, "allocate", allc, ierr)
-    if(ierr/=JSON_OK) allc = .false.
-    call storage_init(this%data, ndim=nspn, full=.false., allocate=allc)
+    call json_get(this%config, "storage", cnfg, ierr)
+    ASSERT(ierr==JSON_OK)
+    call json_set(cnfg, "full", .false.)
+    call json_set(cnfg, "dimensions", nspn)
+    call storage_init(this%data, cnfg)
+    nullify(cnfg)
     call hterm_dict_init(this%hdct)
     call config_dict_init(this%dict)
     call base_hamiltonian_hash_init(this%hash)
@@ -1023,7 +1029,7 @@ contains
     type(base_system_t),        pointer :: psys
     type(hterm_t),              pointer :: htrm
     character(len=CONFIG_DICT_NAME_LEN) :: attr, sysn
-    integer                             :: ierr
+    integer                             :: type, ierr
 
     PUSH_SUB(base_hamiltonian__init__type)
 
@@ -1035,6 +1041,8 @@ contains
       call json_next(iter, attr, cnfg, ierr)
       if(ierr==JSON_TYPE_ERROR)cycle
       if(ierr/=JSON_OK)exit
+      call json_get(cnfg, "type", type, ierr)
+      if(ierr/=JSON_OK)cycle
       psys => this%sys
       call json_get(cnfg, "system", sysn, ierr)
       if(ierr==JSON_OK) call base_system_gets(sys, sysn, psys)

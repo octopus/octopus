@@ -17,7 +17,6 @@ module fio_config_m
   use parser_m
   use path_m
   use profiling_m
-  use species_m
 
   implicit none
 
@@ -97,6 +96,18 @@ contains
 
     POP_SUB(fio_config_parse_get_file)
   end subroutine fio_config_parse_get_file
+
+  ! ---------------------------------------------------------
+  subroutine fio_config_parse_storage(this, allocate)
+    type(json_object_t), intent(inout) :: this
+    logical,   optional, intent(in)    :: allocate
+
+    PUSH_SUB(fio_config_parse_external)
+
+    if(present(allocate)) call json_set(this, "allocate", allocate)
+
+    POP_SUB(fio_config_parse_storage)
+  end subroutine fio_config_parse_storage
 
   ! ---------------------------------------------------------
   subroutine fio_config_parse_simul_box(this, dirname)
@@ -236,16 +247,16 @@ contains
     character(len=*),    intent(in)    :: dirname
     logical,   optional, intent(in)    :: usedensity
 
-    type(json_array_t), pointer :: list
-    character(len=MAX_PATH_LEN) :: idir, odir, file
-    integer                     :: indx, nspin, ierr
+    type(json_object_t), pointer :: cnfg
+    type(json_array_t),  pointer :: list
+    character(len=MAX_PATH_LEN)  :: idir, odir, file
+    integer                      :: indx, nspin, ierr
 
     PUSH_SUB(fio_config_parse_density)
 
-    nullify(list)
+    nullify(cnfg, list)
     call json_get(this, "nspin", nspin, ierr)
     ASSERT(ierr==JSON_OK)
-    if(present(usedensity)) call json_set(this, "allocate", usedensity)
     call json_get(this, "dir", idir, ierr)
     ASSERT(ierr==JSON_OK)
     call json_get(this, "files", list, ierr)
@@ -266,6 +277,10 @@ contains
     end do
     call json_set(this, "dir", trim(adjustl(odir)))
     nullify(list)
+    call json_get(this, "storage", cnfg, ierr)
+    ASSERT(ierr==JSON_OK)
+    call fio_config_parse_storage(cnfg, usedensity)
+    nullify(cnfg)
 
     POP_SUB(fio_config_parse_density)
   end subroutine fio_config_parse_density
@@ -316,12 +331,13 @@ contains
     character(len=*),    intent(in)    :: dirname
     logical,   optional, intent(in)    :: usepotential
 
-    character(len=MAX_PATH_LEN) :: idir, odir, file
-    integer                     :: ierr
+    type(json_object_t), pointer :: cnfg
+    character(len=MAX_PATH_LEN)  :: idir, odir, file
+    integer                      :: ierr
 
     PUSH_SUB(fio_config_parse_external)
 
-    if(present(usepotential)) call json_set(this, "allocate", usepotential)
+    nullify(cnfg)
     call json_get(this, "dir", idir, ierr)
     ASSERT(ierr==JSON_OK)
     call json_get(this, "file", file, ierr)
@@ -335,6 +351,10 @@ contains
     end if
     call json_set(this, "dir", trim(adjustl(odir)))
     call json_set(this, "file", trim(adjustl(file)))
+    call json_get(this, "storage", cnfg, ierr)
+    ASSERT(ierr==JSON_OK)
+    call fio_config_parse_storage(cnfg, usepotential)
+    nullify(cnfg)
 
     POP_SUB(fio_config_parse_external)
   end subroutine fio_config_parse_external
@@ -371,7 +391,6 @@ contains
 
     PUSH_SUB(fio_config_parse_read)
 
-    call json_init(this)
     call fio_config_parse_get_file(dirname, ".", outdir, input_frozen_config, ierr)
     if(ierr/=0)then
       call fio_config_parse_get_file(dirname, input_frozen_dir, outdir, input_frozen_config, ierr)
