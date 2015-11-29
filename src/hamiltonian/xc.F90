@@ -20,6 +20,7 @@
 #include "global.h"
 
 module xc_m
+  use distributed_m
   use cube_m
   use cube_function_m
   use derivatives_m
@@ -79,6 +80,7 @@ module xc_m
     FLOAT   :: xcd_ncutoff
     logical :: xcd_minimum
     logical :: xcd_normalize
+    logical :: parallel
   end type xc_t
 
   FLOAT, parameter :: tiny      = CNST(1.0e-12)
@@ -296,10 +298,21 @@ contains
         !% the XC potential.
         !%End
         call parse_variable('XCDensityCorrectionNormalize', .true., xcs%xcd_normalize)
-  
+
       end if
 
+      !%Variable XCParallel
+      !%Type logical
+      !%Default false
+      !%Section Execution::Parallelization
+      !%Description
+      !% (Experimental) When enabled, additional parallelization
+      !% will be used for the calculation of the XC functional.
+      !%End
+      call parse_variable('XCParallel', .false., xcs%parallel)
 
+      if(xcs%parallel) call messages_experimental('XCParallel')
+      
       POP_SUB(xc_init.parse)
     end subroutine parse
 

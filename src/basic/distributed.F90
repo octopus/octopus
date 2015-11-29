@@ -39,7 +39,8 @@ module distributed_m
        distributed_nullify,         &
        distributed_init,            &
        distributed_copy,            &
-       distributed_end
+       distributed_end,             &
+       distributed_allgather
   
 
   type distributed_t
@@ -81,24 +82,20 @@ contains
 
   ! ---------------------------------------------------------
   subroutine distributed_init(this, total, comm, tag, scalapack_compat)
-    type(distributed_t), intent(out) :: this
-    integer,             intent(in)  :: total
-    integer,             intent(in)  :: comm
-    character(len=*),    intent(in)  :: tag
-    logical, optional,   intent(in)  :: scalapack_compat
+    type(distributed_t),        intent(out) :: this
+    integer,                    intent(in)  :: total
+    integer,                    intent(in)  :: comm
+    character(len=*), optional, intent(in)  :: tag
+    logical,          optional, intent(in)  :: scalapack_compat
 
-#ifdef HAVE_MPI
     integer :: kk
-#endif
 
     PUSH_SUB(distributed_init)
     
     this%nglobal = total
 
-#ifdef HAVE_MPI
     call mpi_grp_init(this%mpi_grp, comm)
     if(this%mpi_grp%size == 1 .or. this%nglobal == 1) then
-#endif
       
       SAFE_ALLOCATE(this%node(1:total))
       ! Defaults.
@@ -111,7 +108,6 @@ contains
       nullify(this%range, this%num)
       call mpi_grp_init(this%mpi_grp, -1)
       
-#ifdef HAVE_MPI
     else
 
       this%parallel = .true.
@@ -123,16 +119,22 @@ contains
       call multicomm_divide_range(this%nglobal, this%mpi_grp%size, this%range(1, :), this%range(2, :), &
         lsize = this%num, scalapack_compat = scalapack_compat)
 
-      message(1) = 'Info: Parallelization in ' // trim(tag)
-      call messages_info(1)
+      if(present(tag)) then
+        message(1) = 'Info: Parallelization in ' // trim(tag)
+        call messages_info(1)
+      end if
 
       do kk = 1, this%mpi_grp%size
-        write(message(1),'(a,i4,a,i6,a)') 'Info: Node in group ', kk - 1, &
-             ' will manage ', this%num(kk - 1), ' '//trim(tag)
-        if(this%num(kk - 1) > 0) then
-          write(message(1),'(a,a,i6,a,i6)') trim(message(1)), ':', this%range(1, kk - 1), " - ", this%range(2, kk - 1)
+
+        if(present(tag)) then
+          write(message(1),'(a,i4,a,i6,a)') 'Info: Node in group ', kk - 1, &
+            ' will manage ', this%num(kk - 1), ' '//trim(tag)
+          if(this%num(kk - 1) > 0) then
+            write(message(1),'(a,a,i6,a,i6)') trim(message(1)), ':', this%range(1, kk - 1), " - ", this%range(2, kk - 1)
+          end if
+          call messages_info(1)
         end if
-        call messages_info(1)
+        
         if(this%mpi_grp%rank  ==  kk - 1) then
           this%start  = this%range(1, kk - 1)
           this%end    = this%range(2, kk - 1)
@@ -144,7 +146,6 @@ contains
       end do
       
     end if
-#endif
     
     POP_SUB(distributed_init)
   end subroutine distributed_init
@@ -202,6 +203,32 @@ contains
 
     POP_SUB(distributed_end)
   end subroutine distributed_end
+
+  ! --------------------------------------------------------
+
+  subroutine distributed_allgather(this, aa)
+    type(distributed_t), intent(in)    :: this
+    FLOAT,               intent(inout) :: aa(:)
+
+    integer, allocatable :: displs(:)
+
+    if(.not. this%parallel) return
+    
+    PUSH_SUB(distributed_allgather)
+
+    SAFE_ALLOCATE(displs(0:this%mpi_grp%size - 1))
+
+    displs(0:this%mpi_grp%size - 1) = this%range(1, 0:this%mpi_grp%size - 1) - 1
+
+#ifdef HAVE_MPI    
+    call MPI_Allgatherv(MPI_IN_PLACE, this%nlocal, MPI_FLOAT, &
+      aa(1), this%num(0), displs(0), MPI_FLOAT, this%mpi_grp%comm, mpi_err)
+#endif
+    
+    SAFE_DEALLOCATE_A(displs)
+    
+    POP_SUB(distributed_allgather)
+  end subroutine distributed_allgather
 
 end module distributed_m
 

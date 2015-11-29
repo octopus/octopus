@@ -69,14 +69,16 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   FLOAT, allocatable :: vx(:)
   FLOAT, allocatable :: unp_dens(:), unp_dedd(:)
 
-  integer :: ib, ip, isp, families, ixc, spin_channels, is
+  integer :: ib, ip, isp, families, ixc, spin_channels, is, idir, ipstart, ipend
   FLOAT   :: rr
   logical :: gga, mgga
   type(profile_t), save :: prof, prof_libxc
   logical :: calc_energy
   type(xc_functl_t), pointer :: functl(:)
   type(symmetrizer_t) :: symmetrizer
-
+  type(distributed_t) :: distribution
+  type(profile_t), save :: prof_gather
+  
   PUSH_SUB(xc_get_vxc)
   call profiling_in(prof, "XC_LOCAL")
 
@@ -168,11 +170,20 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
 
   end if
 
+  if(xcs%parallel) then
+    call distributed_init(distribution, der%mesh%np, st%st_kpt_mpi_grp%comm)
+    ipstart = distribution%start
+    ipend = distribution%end
+  else
+    ipstart = 1
+    ipend = der%mesh%np
+  end if
+
   call local_allocate()
+ 
+  space_loop: do ip = ipstart, ipend, N_BLOCK_MAX
 
-  space_loop: do ip = 1, der%mesh%np, N_BLOCK_MAX
-
-    call space_loop_init(n_block)
+    call space_loop_init(ip, ipend, n_block)
 
     ! Calculate the potential/gradient density in local reference frame.
     functl_loop: do ixc = FUNC_X, FUNC_C
@@ -306,6 +317,44 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
 
   call local_deallocate()
 
+  if(xcs%parallel) then
+    if(distribution%parallel) then
+      call profiling_in(prof_gather, "XC_GATHER")
+      
+      if(calc_energy) then
+        call distributed_allgather(distribution, ex_per_vol)
+        call distributed_allgather(distribution, ec_per_vol)
+      end if
+      
+      do isp = 1, spin_channels
+        call distributed_allgather(distribution, dedd(:, isp))
+      end do
+      
+      if(xcs%xc_density_correction == LR_X) then
+        call distributed_allgather(distribution, vx)
+      end if
+      
+      if(gga .or. mgga) then
+        do idir = 1, der%mesh%sb%dim
+          do isp = 1, spin_channels
+            call distributed_allgather(distribution, dedgd(:, idir, isp))
+          end do
+        end do
+      end if
+      
+      if(mgga) then
+        do isp = 1, spin_channels
+          call distributed_allgather(distribution, dedldens(:, isp))
+          call distributed_allgather(distribution, vtau(:, isp))
+        end do
+      end if
+      
+      call profiling_out(prof_gather)
+    end if
+  
+    call distributed_end(distribution)
+  end if
+  
   if(functl(FUNC_C)%family == XC_FAMILY_LIBVDWXC) then
     functl(FUNC_C)%libvdwxc%energy = M_ZERO
     call libvdwxc_calculate(functl(FUNC_C)%libvdwxc, dens, gdens, dedd, dedgd)
@@ -395,14 +444,16 @@ contains
   end subroutine copy_local_to_global
 
   ! ---------------------------------------------------------
-  subroutine space_loop_init(nblock)
+  subroutine space_loop_init(ip, np, nblock)
+    integer, intent(in)  :: ip
+    integer, intent(in)  :: np
     integer, intent(out) :: nblock
 
     PUSH_SUB(xc_get_vxc.space_loop_init)
 
     !Resize the dimension of the last block when the number of the mesh points
     !it is not a perfect divisor of the dimension of the blocks.
-    nblock = min(der%mesh%np - ip + 1, N_BLOCK_MAX)
+    nblock = min(np - ip + 1, N_BLOCK_MAX)
 
     ! make a local copy with the correct memory order for libxc
     call copy_global_to_local(dens, l_dens, nblock, spin_channels, ip)
