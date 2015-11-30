@@ -4,7 +4,6 @@ module interface_xc_m
 
   use derivatives_m
   use global_m
-  use grid_m
   use kinds_m
   use mesh_m
   use messages_m
@@ -23,6 +22,7 @@ module interface_xc_m
   public ::                      &
     interface_xc_init,           &
     interface_xc_start,          &
+    interface_xc_stop,           &
     interface_xc_get,            &
     interface_xc_lda_exc,        &
     interface_xc_lda_vxc,        &
@@ -46,7 +46,6 @@ module interface_xc_m
     type(derivatives_t), pointer :: der    =>null()
     integer                      :: nblock = 0
     integer                      :: ndim   = 0
-    integer                      :: nspin  = 0
     integer                      :: id     = XC_NONE ! identifier
     integer                      :: family = XC_NONE ! LDA, GGA, etc.
     integer                      :: spin   = XC_NONE ! XC_UNPOLARIZED | XC_POLARIZED
@@ -65,11 +64,13 @@ module interface_xc_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine interface_xc_init(this, id, nspin, blocksize)
+  subroutine interface_xc_init(this, id, polarized, blocksize)
     type(interface_xc_t), intent(out) :: this
     integer,              intent(in)  :: id
-    integer,              intent(in)  :: nspin
+    logical,    optional, intent(in)  :: polarized
     integer,    optional, intent(in)  :: blocksize
+
+    logical :: plrz
 
     PUSH_SUB(interface_xc_init)
 
@@ -81,11 +82,10 @@ contains
       this%nblock = BLOCK_SIZE
       if(present(blocksize)) this%nblock = blocksize
       ASSERT(this%nblock>0)
-      this%nspin = nspin
-      ASSERT(this%nspin>0)
-      ASSERT(this%nspin<3)
+      plrz = .true.
+      if(present(polarized)) plrz = polarized
       this%spin = XC_UNPOLARIZED
-      if(this%nspin>1) this%spin = XC_POLARIZED
+      if(plrz) this%spin = XC_POLARIZED
       call XC_F90(func_init)(this%conf, this%info, this%id, this%spin)
       this%kind = XC_F90(info_kind)(this%info)
       this%flags = XC_F90(info_flags)(this%info)
@@ -107,6 +107,7 @@ contains
     this%mesh => mesh
     this%der => der
     this%ndim = this%mesh%sb%dim
+    ASSERT(this%ndim>0)
     if(this%id>XC_NONE)then
       if(iand(this%flags,xc_flags_nd(this%ndim))==0)then
         write(unit=message(1), fmt="(a,i1.1,a2)") "Cannot use the specified functional in ", this%ndim, "D."
@@ -118,23 +119,37 @@ contains
   end subroutine interface_xc_start
 
   ! ---------------------------------------------------------
-  subroutine interface_xc_get_info(this, id, family, kind, nspin, polarized, ndim)
+  subroutine interface_xc_stop(this)
+    type(interface_xc_t), intent(inout) :: this
+
+    PUSH_SUB(interface_xc_stop)
+
+    ASSERT(associated(this%mesh))
+    ASSERT(associated(this%der))
+    nullify(this%mesh, this%der)
+    this%ndim = 0
+
+    POP_SUB(interface_xc_stop)
+  end subroutine interface_xc_stop
+
+  ! ---------------------------------------------------------
+  subroutine interface_xc_get_info(this, id, family, kind, polarized, ndim, use)
     type(interface_xc_t), intent(in)  :: this
     integer,    optional, intent(out) :: id
     integer,    optional, intent(out) :: family
     integer,    optional, intent(out) :: kind
-    integer,    optional, intent(out) :: nspin
     logical,    optional, intent(out) :: polarized
     integer,    optional, intent(out) :: ndim
+    logical,    optional, intent(out) :: use
 
     PUSH_SUB(interface_xc_get_info)
 
     if(present(id)) id = this%id
     if(present(family)) family = this%family
     if(present(kind)) kind = this%kind
-    if(present(nspin)) nspin = this%nspin
     if(present(polarized)) polarized = (this%spin==XC_POLARIZED)
     if(present(ndim)) ndim = this%ndim
+    if(present(use)) use = (this%id>XC_NONE)
 
     POP_SUB(interface_xc_get_info)
   end subroutine interface_xc_get_info
@@ -519,14 +534,16 @@ contains
     type(interface_xc_t), intent(inout) :: this
     type(interface_xc_t), intent(in)    :: that
 
+    logical :: plrz
+
     PUSH_SUB(interface_xc_copy)
 
     call interface_xc_end(this)
     if(that%id>XC_NONE)then
-      call interface_xc_init(this, that%id, that%nspin, that%nblock)
-      if(that%ndim>0)then
+      plrz = (that%spin==XC_POLARIZED)
+      call interface_xc_init(this, that%id, plrz, that%nblock)
+      if(associated(that%mesh).and.associated(that%der))&
         call interface_xc_start(this, that%mesh, that%der)
-      end if
     end if
 
     POP_SUB(interface_xc_copy)
@@ -541,7 +558,6 @@ contains
     nullify(this%mesh,this%der)
     this%nblock = 0
     this%ndim = 0
-    this%nspin = 0
     if(this%id>XC_NONE)call XC_F90(func_end)(this%conf)
     this%id = XC_NONE
     this%family = XC_NONE

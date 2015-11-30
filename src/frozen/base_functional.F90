@@ -250,32 +250,40 @@ contains
     type(json_object_t), target, intent(in)  :: config
 
     type(json_object_t), pointer :: cnfg
-    integer                      :: id, ierr
-    logical                      :: uspn
+    type(storage_t),     pointer :: dnst
+    integer                      :: ierr
+    logical                      :: plrz, fuse
 
     PUSH_SUB(base_functional__init__type)
 
-    nullify(cnfg)
+    nullify(cnfg, dnst)
     this%config => config
     this%sys => sys
     call base_system_get(this%sys, this%density)
     ASSERT(associated(this%density))
-    call base_system_get(this%sys, nspin=this%nspin)
-    call json_get(this%config, "spin", uspn, ierr)
-    if(ierr/=JSON_OK) uspn = .true.
-    if(.not.uspn) this%nspin = 1
+    call base_density_get(this%density, nspin=this%nspin)
     ASSERT(this%nspin>0)
     ASSERT(this%nspin<3)
     call json_get(this%config, "factor", this%factor, ierr)
     if(ierr/=JSON_OK) this%factor = 1.0_wp
-    call json_get(this%config, "functional", id, ierr)
-    if(ierr/=JSON_OK) id = FUNCT_XC_NONE
-    call functional_init(this%funct, id, this%nspin)
+    plrz = .false.
+    if(this%nspin>1)then
+      call json_get(this%config, "spin", plrz, ierr)
+      if(ierr/=JSON_OK) plrz = .true.
+    end if
+    call json_get(this%config, "functional", cnfg, ierr)
+    ASSERT(ierr==JSON_OK)
+    call json_set(cnfg, "polarized", plrz)
+    call base_density_get(this%density, dnst, total=(.not.plrz))
+    ASSERT(associated(dnst))
+    call functional_init(this%funct, dnst, cnfg)
+    nullify(dnst, cnfg)
     call json_get(this%config, "storage", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
     call json_set(cnfg, "full", .false.)
-    call json_set(cnfg, "dimensions", this%nspin)
-    if(id<=FUNCT_XC_NONE) call json_set(cnfg, "allocate", .false.)
+    if(plrz) call json_set(cnfg, "dimensions", this%nspin)
+    call functional_get(this%funct, use=fuse)
+    if(.not.fuse) call json_set(cnfg, "allocate", .false.)
     call storage_init(this%data, cnfg)
     nullify(cnfg)
     call config_dict_init(this%dict)
@@ -347,15 +355,12 @@ contains
     type(base_functional_t),    intent(inout) :: this
     type(simulation_t), target, intent(in)    :: sim
 
-    logical :: fine
-
     PUSH_SUB(base_functional__start__)
 
     ASSERT(associated(this%config))
     ASSERT(.not.associated(this%sim))
     this%sim => sim
-    call base_density_get(this%density, fine=fine)
-    call functional_start(this%funct, this%sim, fine=fine)
+    call functional_start(this%funct, this%sim)
     call storage_start(this%data, this%sim)
 
     POP_SUB(base_functional__start__)
@@ -434,6 +439,7 @@ contains
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
     nullify(this%sim)
+    call functional_stop(this%funct)
     call storage_stop(this%data)
 
     POP_SUB(base_functional__stop__)
@@ -466,45 +472,18 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_functional__calc__(this)
-    type(base_functional_t), intent(inout) :: this
+    type(base_functional_t), target, intent(inout) :: this
 
-    real(kind=wp), dimension(:,:), pointer :: potn, dnst
-    type(base_density_t),          pointer :: density
-    type(storage_t)                        :: data
-    integer                                :: id
-    logical                                :: fine
+    logical :: fuse
 
     PUSH_SUB(base_functional__calc__)
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
-    nullify(potn, dnst, density)
     call base_functional__reset__(this)
-    call base_functional_get(this, id=id)
-    if(id>FUNCT_XC_NONE)then
-      call storage_get(this%data, potn)
-      ASSERT(associated(potn))
-      call base_functional_get(this, density)
-      ASSERT(associated(density))
-      call base_density_get(density, fine=fine)
-      if(fine)then
-        call storage_init(data, this%data, fine=fine)
-        call storage_get(data, potn)
-        ASSERT(associated(potn))
-      end if
-      if(this%nspin>1)then
-        call base_density_get(density, dnst)
-      else
-        call base_density_get(density, dnst, total=.true.)
-      end if
-      ASSERT(associated(dnst))
-      nullify(density)
-      call functional_calc(this%funct, dnst, this%energy, potn)
-      nullify(potn, dnst)
-      if(fine)then
-        call storage_transfer(this%data, data)
-        call storage_end(data)
-      end if
+    call base_functional_get(this, use=fuse)
+    if(fuse)then
+      call functional_calc(this%funct, this%energy, this%data)
       if(abs(this%factor-1.0_wp)>epsilon(this%factor))then
         this%energy = this%factor * this%energy
         call storage_mlt(this%data, this%factor)
@@ -654,19 +633,21 @@ contains
   end subroutine base_functional_set_info
 
   ! ---------------------------------------------------------
-  subroutine base_functional_get_info(this, id, family, kind, size, nspin)
+  subroutine base_functional_get_info(this, id, family, kind, size, nspin, polarized, use)
     type(base_functional_t), intent(in)  :: this
     integer,       optional, intent(out) :: id
     integer,       optional, intent(out) :: family
     integer,       optional, intent(out) :: kind
     integer,       optional, intent(out) :: size
     integer,       optional, intent(out) :: nspin
+    logical,       optional, intent(out) :: polarized
+    logical,       optional, intent(out) :: use
 
     PUSH_SUB(base_functional_get_info)
 
     if(present(nspin)) nspin = this%nspin
-    call functional_get(this%funct, id=id, family=family, kind=kind)
-    call storage_get(this%data, size=size)
+    call functional_get(this%funct, id=id, family=family, kind=kind, polarized=polarized)
+    call storage_get(this%data, size=size, alloc=use)
 
     POP_SUB(base_functional_get_info)
   end subroutine base_functional_get_info

@@ -295,10 +295,14 @@ contains
 
     PUSH_SUB(ssys_config_parse_functional)
 
+    nullify(cnfg)
     call json_init(this)
     call json_set(this, "type", HMLT_TYPE_FNCT)
-    call json_set(this, "functional", id)
     call json_set(this, "factor", factor)
+    SAFE_ALLOCATE(cnfg)
+    call functional_init(cnfg, id=id)
+    call json_set(this, "functional", cnfg)
+    nullify(cnfg)
     SAFE_ALLOCATE(cnfg)
     if(id>FUNCT_XC_NONE)then
       call storage_init(cnfg, full=.false.)
@@ -317,7 +321,7 @@ contains
 
     type(json_object_t), pointer :: cnfg
     real(kind=wp)                :: factor
-    integer                      :: id, ierr
+    integer                      :: id
 
     !%Variable TnaddFactor
     !%Type float
