@@ -207,6 +207,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
             l_zk(1), l_dedd(1,1), l_vsigma(1,1), l_dedldens(1,1), l_dedtau(1,1))
 
         case default
+          call profiling_out(prof_libxc)
           cycle
         end select
 
@@ -234,6 +235,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
             l_dedd(1,1), l_vsigma(1,1), l_dedldens(1,1), l_dedtau(1,1))
 
         case default
+          call profiling_out(prof_libxc)
           cycle
         end select
         
@@ -343,8 +345,8 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
       call comm_allreduce(der%mesh%mpi_grp%comm, energy)
     end if
 
-    ex = energy(1)
-    ec = energy(2)
+    ex = ex + energy(1)
+    ec = ec + energy(2)
     
   end if
 
