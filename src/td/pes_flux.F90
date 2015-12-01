@@ -1433,13 +1433,21 @@ contains
     type(states_t),   intent(in)  :: st
     integer,          intent(out) :: ierr
 
-    integer :: err, mdim, sdim, rstdim
+    integer          :: stst, stend, kptst, kptend, sdim, mdim
+    integer          :: ist, ik, isdim
+    integer          :: rstdim, err
+    character(len=8) :: filename
 
     PUSH_SUB(pes_flux_dump)
 
-    mdim   = mesh%sb%dim
+    stst   = st%st_start
+    stend  = st%st_end
+    kptst  = st%d%kpt%start
+    kptend = st%d%kpt%end
     sdim   = st%d%dim
-    rstdim = st%nst * sdim * st%d%nik
+    mdim   = mesh%sb%dim
+
+    rstdim = (stend - stst + 1) * sdim * (kptend - kptst + 1)
 
     if(restart_skip(restart)) then
       POP_SUB(pes_flux_dump)
@@ -1451,10 +1459,37 @@ contains
       call messages_info(1)
     end if
 
-!    call zrestart_write_binary(restart, 'pesflux1', rstdim * this%nkpnts, this%spctramp, err)
-!    call zrestart_write_binary(restart, 'pesflux2', rstdim * this%nsrfcpnts * this%tdsteps, this%wf, err)
-!    call zrestart_write_binary(restart, 'pesflux3', rstdim * this%nsrfcpnts * this%tdsteps * mdim, this%gwf, err)
-!    call zrestart_write_binary(restart, 'pesflux4', (this%tdsteps + 1) * this%nkpnts, this%conjgphase, err)
+    if(mpi_grp_is_root(mesh%mpi_grp)) then
+      do ik = kptst, kptend
+        do ist = stst, stend
+          do isdim = 1, sdim
+            write(filename, '(i2.2, a, i2.2, a, i2.2)') ik, '.', ist, '.', isdim
+  
+            if(this%shape == M_SPHERICAL) then
+              call io_binary_write('restart/td/pesflux1.'//trim(filename), rstdim * this%nk * this%nstepsomegak, &
+                this%spctramp_sph, err)
+            else
+              call io_binary_write('restart/td/pesflux1.'//trim(filename), rstdim * this%nkpnts, &
+                this%spctramp_cub, err)
+            end if
+
+            call io_binary_write('restart/td/pesflux2.'//trim(filename), rstdim * this%nsrfcpnts * this%tdsteps, &
+              this%wf, err)
+            call io_binary_write('restart/td/pesflux3.'//trim(filename), rstdim * this%nsrfcpnts * this%tdsteps * mdim, &
+              this%gwf, err)
+          end do
+        end do
+      end do
+    end if
+
+    if(mpi_grp_is_root(mpi_world)) then
+      if(this%shape == M_SPHERICAL) then
+        call io_binary_write('restart/td/pesflux4', this%nk * this%nstepsomegak, this%conjgphase_prev_sph, err)
+      else
+        call io_binary_write('restart/td/pesflux4', this%nkpnts, this%conjgphase_prev_cub, err)
+      end if
+      call io_binary_write('restart/td/pesflux5', this%tdsteps * mdim, this%veca, err) 
+    end if
 
     if(err /= 0) ierr = ierr + 1
 
@@ -1474,13 +1509,21 @@ contains
     type(states_t),      intent(in)    :: st
     integer,             intent(out)   :: ierr
 
-    integer :: err, mdim, sdim, rstdim
+    integer          :: stst, stend, kptst, kptend, sdim, mdim
+    integer          :: ist, ik, isdim
+    integer          :: rstdim, err
+    character(len=8) :: filename
 
     PUSH_SUB(pes_flux_load)
 
-    mdim   = mesh%sb%dim
+    stst   = st%st_start
+    stend  = st%st_end
+    kptst  = st%d%kpt%start
+    kptend = st%d%kpt%end
     sdim   = st%d%dim
-    rstdim = st%nst * sdim * st%d%nik
+    mdim   = mesh%sb%dim
+
+    rstdim = (stend - stst + 1) * sdim * (kptend - kptst + 1)
 
     if(restart_skip(restart)) then
       ierr = -1
@@ -1493,10 +1536,34 @@ contains
       call messages_info(1)
     end if
 
-!    call zrestart_read_binary(restart, 'pesflux1', rstdim * this%nkpnts, this%spctramp, err)
-!    call zrestart_read_binary(restart, 'pesflux2', rstdim * this%nsrfcpnts * this%tdsteps, this%wf, err)
-!    call zrestart_read_binary(restart, 'pesflux3', rstdim * this%nsrfcpnts * this%tdsteps * mdim, this%gwf, err)
-!    call zrestart_read_binary(restart, 'pesflux4', (this%tdsteps + 1) * this%nkpnts, this%conjgphase, err)
+    do ik = kptst, kptend
+      do ist = stst, stend
+        do isdim = 1, sdim
+          write(filename, '(i2.2, a, i2.2, a, i2.2)') ik, '.', ist, '.', isdim
+  
+          if(this%shape == M_SPHERICAL) then
+            call io_binary_read('restart/td/pesflux1.'//trim(filename), rstdim * this%nk * this%nstepsomegak, &
+              this%spctramp_sph, err)
+          else
+            call io_binary_read('restart/td/pesflux1.'//trim(filename), rstdim * this%nkpnts, &
+              this%spctramp_cub, err)
+          end if
+
+          call io_binary_read('restart/td/pesflux2.'//trim(filename), rstdim * this%nsrfcpnts * this%tdsteps, &
+            this%wf, err)
+          call io_binary_read('restart/td/pesflux3.'//trim(filename), rstdim * this%nsrfcpnts * this%tdsteps * mdim, &
+            this%gwf, err)
+        end do
+      end do
+    end do
+
+    if(this%shape == M_SPHERICAL) then
+      call io_binary_read('restart/td/pesflux4', this%nk * this%nstepsomegak, this%conjgphase_prev_sph, err)
+    else
+      call io_binary_read('restart/td/pesflux4', this%nkpnts, this%conjgphase_prev_cub, err)
+    end if
+
+    call io_binary_read('restart/td/pesflux5', this%tdsteps * mdim, this%veca, err)
 
     if(err /= 0) ierr = ierr + 1
    
