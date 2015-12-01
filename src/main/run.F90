@@ -21,6 +21,8 @@
 
 module run_m
   use base_hamiltonian_m
+  use base_handle_m
+  use base_model_m
   use casida_m
   use em_resp_m
   use fft_m
@@ -45,7 +47,6 @@ module run_m
   use restart_m
   use ssys_config_m
   use ssys_handle_m
-  use ssys_model_m
   use static_pol_m
   use system_m
   use td_m
@@ -127,10 +128,10 @@ contains
     type(hamiltonian_t) :: hm
     type(profile_t), save :: calc_mode_prof
     type(json_object_t) :: config
-    type(ssys_handle_t) :: subsys_handle
+    type(base_handle_t) :: subsys_handle
     logical :: fromScratch
 
-    type(ssys_model_t),       pointer :: subsys_model
+    type(base_model_t),       pointer :: subsys_model
     type(base_hamiltonian_t), pointer :: subsys_hm
     
     PUSH_SUB(run)
@@ -154,9 +155,9 @@ contains
       nullify(subsys_model, subsys_hm)
       if(ssys_config_parse_use())then
         call system_init(sys, subsys_handle, config)
-        call ssys_handle_get(subsys_handle, subsys_model)
+        call base_handle_get(subsys_handle, subsys_model)
         ASSERT(associated(subsys_model))
-        call ssys_model_get(subsys_model, subsys_hm)
+        call base_model_get(subsys_model, subsys_hm)
         ASSERT(associated(subsys_hm))
         call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, subsys_hm)
         nullify(subsys_model, subsys_hm)

@@ -20,6 +20,8 @@
 #include "global.h"
 
 module system_m
+  use base_handle_m
+  use base_model_m
   use base_states_m
   use base_system_m
   use calc_mode_par_m
@@ -50,7 +52,6 @@ module system_m
   use sort_om
   use ssys_config_m
   use ssys_handle_m
-  use ssys_model_m
   use states_m
   use states_dim_m
   use unit_m
@@ -71,7 +72,7 @@ module system_m
     type(geometry_t)            :: geo
     type(grid_t),       pointer :: gr    !< the mesh
     type(states_t),     pointer :: st    !< the states
-    type(ssys_model_t), pointer :: subsys_model !< the Subsystems model pointer.
+    type(base_model_t), pointer :: subsys_model !< the Subsystems model pointer.
     type(v_ks_t)                :: ks    !< the Kohn-Sham potentials
     type(output_t)              :: outp  !< the output
     type(multicomm_t)           :: mc    !< index and domain communicators
@@ -82,7 +83,7 @@ contains
   !----------------------------------------------------------
   subroutine system_init(sys, subsys_handle, config)
     type(system_t),                intent(out)   :: sys
-    type(ssys_handle_t), optional, intent(inout) :: subsys_handle
+    type(base_handle_t), optional, intent(inout) :: subsys_handle
     type(json_object_t), optional, intent(inout) :: config
 
     type(base_system_t), pointer :: subsys_system
@@ -124,9 +125,9 @@ contains
       call ssys_config_parse(config, sys%space%dim, sys%st%d%nspin)
       call ssys_handle_init(subsys_handle, sys%geo, config)
       call ssys_handle_start(subsys_handle, sys%gr)
-      call ssys_handle_get(subsys_handle, sys%subsys_model)
+      call base_handle_get(subsys_handle, sys%subsys_model)
       ASSERT(associated(sys%subsys_model))
-      call ssys_model_get(sys%subsys_model, subsys_system)
+      call base_model_get(sys%subsys_model, subsys_system)
       ASSERT(associated(subsys_system))
       call base_system_get(subsys_system, subsys_states)
       ASSERT(associated(subsys_states))

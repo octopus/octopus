@@ -486,7 +486,7 @@ contains
 
     call base_geometry__end__(this)
     if(associated(that%config).and.associated(that%space))&
-      call base_geometry__init__(this, that%space, that%config)
+      call base_geometry__init__(this, that)
 
     POP_SUB(base_geometry__copy__begin)
   end subroutine base_geometry__copy__begin
@@ -497,7 +497,8 @@ contains
 
     PUSH_SUB(base_geometry__copy__finish)
 
-    if(associated(this%config)) call base_geometry__init__(this)
+    if(associated(this%config).and.associated(this%space))&
+      call base_geometry__init__(this)
 
     POP_SUB(base_geometry__copy__finish)
   end subroutine base_geometry__copy__finish

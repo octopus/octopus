@@ -1592,14 +1592,16 @@ contains
   end subroutine base_hamiltonian_set_info
 
   ! ---------------------------------------------------------
-  subroutine base_hamiltonian_get_info(this, size, nspin)
+  subroutine base_hamiltonian_get_info(this, size, nspin, use)
     type(base_hamiltonian_t), intent(in)  :: this
     integer,        optional, intent(out) :: size
     integer,        optional, intent(out) :: nspin
+    logical,        optional, intent(out) :: use
 
     PUSH_SUB(base_hamiltonian_get_info)
 
-    call storage_get(this%data, size=size, dim=nspin)
+    call base_system_get(this%sys, nspin=nspin)
+    call storage_get(this%data, size=size, alloc=use)
 
     POP_SUB(base_hamiltonian_get_info)
   end subroutine base_hamiltonian_get_info
