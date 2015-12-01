@@ -628,7 +628,7 @@ contains
         end do
       end select
       call io_close(iunittwo)
-      call io_close(iunitone)
+      if(mdim >= 2) call io_close(iunitone)
 
     end if
 
