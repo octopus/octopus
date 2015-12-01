@@ -38,6 +38,8 @@ module pes_spm_m
   use varinfo_m
   use mesh_interpolation_m
 
+  implicit none
+
   private
 
   public ::                             &
@@ -462,7 +464,7 @@ contains
     CMPLX              :: vfu
     FLOAT              :: wfu
     FLOAT, allocatable :: wffttot(:,:)
-    FLOAT              :: spctrsum
+    FLOAT              :: spctrsum, weight
     character(len=4)   :: filenr
     integer            :: iunitone, iunittwo
     integer            :: mdim
