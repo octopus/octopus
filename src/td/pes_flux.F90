@@ -116,7 +116,7 @@ contains
     type(block_t)      :: blk
     FLOAT              :: border(MAX_DIM)       ! distance of surface from border
     FLOAT              :: offset(MAX_DIM)       ! offset for border
-    integer            :: sdim, mdim
+    integer            :: stst, stend, kptst, kptend, sdim, mdim
     integer            :: imdim
     integer            :: isp, ikp
     integer            :: il
@@ -133,13 +133,12 @@ contains
 
     PUSH_SUB(pes_flux_init)
 
+    stst   = st%st_start
+    stend  = st%st_end
+    kptst  = st%d%kpt%start
+    kptend = st%d%kpt%end
     sdim   = st%d%dim
     mdim   = mesh%sb%dim
-
-#if defined(HAVE_MPI)
-    call mpi_comm_size(mpi_comm_world, mpisize, mpi_err)
-    call mpi_comm_rank(mpi_comm_world, mpirank, mpi_err)
-#endif
 
     call messages_experimental("PhotoElectronSpectrum with t-surff")
 
@@ -313,7 +312,7 @@ contains
 
     ! distribute the surface points on nodes,
     ! since mesh domains may have different numbers of surface points.
-    call pes_flux_distribute(1, this%nsrfcpnts, this%nsrfcpnts_start, this%nsrfcpnts_end)
+    call pes_flux_distribute(1, this%nsrfcpnts, this%nsrfcpnts_start, this%nsrfcpnts_end, mesh%mpi_grp%comm)
 #if defined(HAVE_MPI)
     call MPI_Barrier(mpi_world%comm, mpi_err)
     write(*,*) &
@@ -419,8 +418,8 @@ contains
 
     if(this%shape == M_SPHERICAL) then
       ! we split the k-mesh in radial & angular part
-      call pes_flux_distribute(1, this%nk, this%nk_start, this%nk_end)
-      call pes_flux_distribute(1, this%nstepsomegak, this%nstepsomegak_start, this%nstepsomegak_end)
+      call pes_flux_distribute(1, this%nk, this%nk_start, this%nk_end, mpi_world%comm)
+      call pes_flux_distribute(1, this%nstepsomegak, this%nstepsomegak_start, this%nstepsomegak_end, mpi_world%comm)
 
       SAFE_ALLOCATE(this%ylm_k(0:this%lmax, -this%lmax:this%lmax, 1:this%nstepsomegak))
       SAFE_ALLOCATE(this%j_l(0:this%lmax, 1:this%nk))
@@ -464,7 +463,7 @@ contains
 #endif
     else
       ! we do not split the k-mesh
-      call pes_flux_distribute(1, this%nkpnts, this%nkpnts_start, this%nkpnts_end)
+      call pes_flux_distribute(1, this%nkpnts, this%nkpnts_start, this%nkpnts_end, mpi_world%comm)
 #if defined(HAVE_MPI)
       call MPI_Barrier(mpi_world%comm, mpi_err)
       write(*,*) &
@@ -527,10 +526,9 @@ contains
     if(this%shape == M_CUBIC) then
       call parse_variable('PES_Flux_TDSteps', 1, this%tdsteps)
     else
-#if defined(HAVE_MPI)
-      this%tdsteps = mpisize
-#else
       this%tdsteps = M_ONE
+#if defined(HAVE_MPI)
+      if(mesh%parallel_in_domains) this%tdsteps = mesh%mpi_grp%size
 #endif
     end if
 
@@ -545,24 +543,24 @@ contains
     if(this%shape == M_CUBIC) &
       call parse_variable('PES_Flux_UseMemory', .true., this%usememory)
 
-    SAFE_ALLOCATE(this%wf(1:st%nst, 1:sdim, 1:st%d%nik, 1:this%nsrfcpnts, 1:this%tdsteps))
+    SAFE_ALLOCATE(this%wf(stst:stend, 1:sdim, kptst:kptend, 1:this%nsrfcpnts, 1:this%tdsteps))
     this%wf = M_z0
 
-    SAFE_ALLOCATE(this%gwf(1:st%nst, 1:sdim, 1:st%d%nik, 1:this%nsrfcpnts, 1:this%tdsteps, 1:mdim))
+    SAFE_ALLOCATE(this%gwf(stst:stend, 1:sdim, kptst:kptend, 1:this%nsrfcpnts, 1:this%tdsteps, 1:mdim))
     this%gwf = M_z0
 
     SAFE_ALLOCATE(this%veca(1:mdim, 1:this%tdsteps))
     this%veca = M_ZERO
 
     if(this%shape == M_SPHERICAL) then
-      SAFE_ALLOCATE(this%spctramp_sph(1:st%nst, 1:sdim, 1:st%d%nik, 1:this%nk, 1:this%nstepsomegak))
+      SAFE_ALLOCATE(this%spctramp_sph(stst:stend, 1:sdim, kptst:kptend, 1:this%nk, 1:this%nstepsomegak))
       this%spctramp_sph = M_z0
 
-      SAFE_ALLOCATE(this%conjgphase_prev_sph(1:this%nk, 1:this%nstepsomegak))
+      SAFE_ALLOCATE(this%conjgphase_prev_sph(this%nk, 1:this%nstepsomegak))
       this%conjgphase_prev_sph = M_z1
 
     else
-      SAFE_ALLOCATE(this%spctramp_cub(1:st%nst, 1:sdim, 1:st%d%nik, 1:this%nkpnts))
+      SAFE_ALLOCATE(this%spctramp_cub(stst:stend, 1:sdim, kptst:kptend, 1:this%nkpnts))
       this%spctramp_cub = M_z0
 
       SAFE_ALLOCATE(this%conjgphase_prev_cub(1:this%nkpnts))
@@ -719,32 +717,18 @@ contains
                     st%occ(ist, ik) * gpsi(ip_local, 1:mdim) ! * mesh%spacing(1:mdim) ?
                 end if
               end do
+              if(mesh%parallel_in_domains) then
+#if defined(HAVE_MPI)
+                call comm_allreduce(mesh%mpi_grp%comm, this%wf(ist, isdim, ik, :, itstep))
+                do imdim = 1, mdim
+                  call comm_allreduce(mesh%mpi_grp%comm, this%gwf(ist, isdim, ik, :, itstep, imdim))
+                end do
+#endif
+              end if
             end if
           end do
         end do
       end do
-
-      if(this%shape == M_SPHERICAL) then 
-
-        if(st%parallel_in_states .or. st%d%kpt%parallel) then
-#if defined(HAVE_MPI)
-          do isp = 1, this%nsrfcpnts
-            call comm_allreduce(st%st_kpt_mpi_grp%comm, this%wf(:,:,:, isp, itstep))
-            do imdim = 1, mdim
-              call comm_allreduce(st%st_kpt_mpi_grp%comm, this%gwf(:,:,:, isp, itstep, imdim))
-            end do
-          end do
-#endif
-        endif
-
-      else
-#if defined(HAVE_MPI)
-        call comm_allreduce(mpi_world%comm, this%wf(:,:,:,:, itstep))
-        do imdim = 1, mdim
-          call comm_allreduce(mpi_world%comm, this%gwf(:,:,:,:, itstep, imdim))
-        end do
-#endif
-      end if
 
       SAFE_DEALLOCATE_A(psi)
       SAFE_DEALLOCATE_A(gpsi)
@@ -771,7 +755,7 @@ contains
     type(states_t),      intent(inout) :: st
     FLOAT,               intent(in)    :: dt
 
-    integer            :: sdim, mdim
+    integer            :: stst, stend, kptst, kptend, sdim, mdim
     integer            :: ist, ik, isdim, imdim
     integer            :: isp, ikp, itstep
     integer            :: idir
@@ -787,17 +771,23 @@ contains
     ! this routine is parallelized over surface points since the number of 
     ! states is in most cases less than the number of surface points
 
+    stst      = st%st_start
+    stend     = st%st_end
+    kptst     = st%d%kpt%start
+    kptend    = st%d%kpt%end
     sdim      = st%d%dim
     mdim      = mesh%sb%dim
+
     ikp_start = this%nkpnts_start
     ikp_end   = this%nkpnts_end
     isp_start = this%nsrfcpnts_start
     isp_end   = this%nsrfcpnts_end
 
+
     SAFE_ALLOCATE(k_dot_aux(1:this%nkpnts))
 
-    SAFE_ALLOCATE(Jk_cub(1:st%nst, 1:sdim, 1:st%d%nik, 1:this%nkpnts))
-    SAFE_ALLOCATE(spctramp_cub(1:st%nst, 1:sdim, 1:st%d%nik, 1:this%nkpnts))
+    SAFE_ALLOCATE(Jk_cub(stst:stend, 1:sdim, kptst:kptend, 1:this%nkpnts))
+    SAFE_ALLOCATE(spctramp_cub(stst:stend, 1:sdim, kptst:kptend, 1:this%nkpnts))
     spctramp_cub = M_z0
 
     if(.not. this%usememory) then
@@ -821,7 +811,7 @@ contains
     this%conjgphase_prev_cub(:) = conjgphase_cub(:, this%tdsteps)
 
     ! integrate over time & surface (on node)
-    do isp = isp_start, isp_end 
+    do isp = isp_start, isp_end
       do idir = 1, mdim
         ! calculate flux only along the surface normal
         if(this%srfcnrml(idir, isp) == M_ZERO) cycle
@@ -836,8 +826,8 @@ contains
           conjgplanewf_cub(:) = exp(-M_zI * k_dot_aux(:)) / (M_TWO * M_PI)**(mdim/M_TWO)
         end if
 
-        do ik = 1, st%d%nik 
-          do ist = 1, st%nst
+        do ik = kptst, kptend
+          do ist = stst, stend
             do isdim = 1, sdim
 
               do itstep = 1, this%tdsteps
@@ -864,7 +854,7 @@ contains
     end do
 
 #if defined(HAVE_MPI)
-    call comm_allreduce(mpi_world%comm, spctramp_cub)
+    call comm_allreduce(mesh%mpi_grp%comm, spctramp_cub)
 #endif
 
     this%spctramp_cub = this%spctramp_cub + spctramp_cub
@@ -885,7 +875,7 @@ contains
     type(states_t),      intent(inout) :: st
     FLOAT,               intent(in)    :: dt
 
-    integer            :: sdim
+    integer            :: stst, stend, kptst, kptend, sdim
     integer            :: ist, ik, isdim, imdim
     integer            :: itstep, lmax
     integer            :: ll, mm 
@@ -905,9 +895,13 @@ contains
 
     ! this routine is parallelized over time steps
 
-    call pes_flux_distribute(1, this%tdsteps, tdsteps_start, tdsteps_end)
+    call pes_flux_distribute(1, this%tdsteps, tdsteps_start, tdsteps_end, mesh%mpi_grp%comm)
 
-    sdim = st%d%dim
+    stst   = st%st_start
+    stend  = st%st_end
+    kptst  = st%d%kpt%start
+    kptend = st%d%kpt%end
+    sdim   = st%d%dim
 
     lmax       = this%lmax
     ikk_start  = this%nk_start
@@ -950,11 +944,11 @@ contains
     SAFE_ALLOCATE(sigma2(1:3, 1:this%nsrfcpnts))
     SAFE_ALLOCATE(sigma3(1:3))
 
-    SAFE_ALLOCATE(integ1_s(1:st%nst, 1:sdim, 1:st%d%nik, 0:lmax, -lmax:lmax, 1:3, tdsteps_start:tdsteps_end))
-    SAFE_ALLOCATE(integ2_s(1:st%nst, 1:sdim, 1:st%d%nik, 0:lmax, -lmax:lmax, tdsteps_start:tdsteps_end))
+    SAFE_ALLOCATE(integ1_s(stst:stend, 1:sdim, kptst:kptend, 0:lmax, -lmax:lmax, 1:3, tdsteps_start:tdsteps_end))
+    SAFE_ALLOCATE(integ2_s(stst:stend, 1:sdim, kptst:kptend, 0:lmax, -lmax:lmax, tdsteps_start:tdsteps_end))
 
-    do ik = 1, st%d%nik
-      do ist = 1, st%nst
+    do ik = kptst, kptend
+      do ist = stst, stend
         do isdim = 1, sdim
 
           do itstep = tdsteps_start, tdsteps_end
@@ -996,11 +990,11 @@ contains
     SAFE_ALLOCATE(integ12_t(1:this%nk, 1:this%nstepsomegak, 1:3))
     SAFE_ALLOCATE(integ22_t(1:this%nk, 1:this%nstepsomegak))
 
-    SAFE_ALLOCATE(spctramp_sph(1:st%nst, 1:sdim, 1:st%d%nik, 1:this%nk, 1:this%nstepsomegak))
+    SAFE_ALLOCATE(spctramp_sph(stst:stend, 1:sdim, kptst:kptend, 1:this%nk, 1:this%nstepsomegak))
     spctramp_sph = M_z0
 
-    do ik = 1, st%d%nik
-      do ist = 1, st%nst
+    do ik = kptst, kptend
+      do ist = stst, stend
         do isdim = 1, sdim
   
           do itstep = tdsteps_start, tdsteps_end
@@ -1056,7 +1050,7 @@ contains
 
     ! sum over time
 #if defined(HAVE_MPI)
-    call comm_allreduce(mpi_world%comm, spctramp_sph)
+    if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, spctramp_sph)
 #endif
     this%spctramp_sph = this%spctramp_sph + spctramp_sph
 
@@ -1084,7 +1078,7 @@ contains
 
     mdim = mesh%sb%dim
 
-    call pes_flux_distribute(1, mesh%np_global, ip_start, ip_end)
+    call pes_flux_distribute(1, mesh%np_global, ip_start, ip_end, mpi_world%comm)
 
     SAFE_ALLOCATE(which_surface(1:mesh%np_global))
     which_surface = 0
@@ -1242,7 +1236,7 @@ contains
     type(states_t),      intent(in)    :: st
     FLOAT,               intent(in)    :: dt
 
-    integer            :: sdim, mdim
+    integer            :: stst, stend, kptst, kptend, sdim, mdim
     integer            :: ist, ik, isdim
     integer            :: ikp, iomk, ikp_save, iomk_save
     integer            :: ikk, ith, iph, iphi
@@ -1254,6 +1248,10 @@ contains
 
     PUSH_SUB(pes_flux_output)
 
+    stst   = st%st_start
+    stend  = st%st_end
+    kptst  = st%d%kpt%start
+    kptend = st%d%kpt%end
     sdim   = st%d%dim
     mdim   = mesh%sb%dim
 
@@ -1266,8 +1264,8 @@ contains
     end if
 
     ! calculate the total spectrum
-    do ik = 1, st%d%nik
-      do ist = 1, st%nst
+    do ik = kptst, kptend
+      do ist = stst, stend
         do isdim = 1, sdim
           if(this%shape == M_SPHERICAL) then
             spctrout_sph(1:this%nk, 1:this%nstepsomegak) = spctrout_sph(1:this%nk, 1:this%nstepsomegak) + &
@@ -1279,6 +1277,16 @@ contains
         end do
       end do
     end do
+
+    if(st%parallel_in_states .or. st%d%kpt%parallel) then
+#if defined(HAVE_MPI)
+      if(this%shape == M_SPHERICAL) then
+        call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrout_sph)
+      else
+        call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrout_cub)
+      end if
+#endif
+    end if
 
     if(mpi_grp_is_root(mpi_world)) then
       iunittwo = io_open('td.general/PES_flux.distribution.out', action='write', position='rewind')
@@ -1501,11 +1509,12 @@ contains
   end subroutine pes_flux_load
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_distribute(istart_global, iend_global, istart, iend)
+  subroutine pes_flux_distribute(istart_global, iend_global, istart, iend, comm)
     integer,          intent(in)    :: istart_global
     integer,          intent(in)    :: iend_global
     integer,          intent(inout) :: istart
     integer,          intent(inout) :: iend
+    integer,          intent(in)    :: comm
 
 #if defined(HAVE_MPI)
     integer, allocatable :: dimrank(:)
@@ -1516,8 +1525,8 @@ contains
     PUSH_SUB(pes_flux_distribute)
 
 #if defined(HAVE_MPI)
-    call mpi_comm_size(mpi_comm_world, mpisize, mpi_err)
-    call mpi_comm_rank(mpi_comm_world, mpirank, mpi_err)
+    call mpi_comm_size(comm, mpisize, mpi_err)
+    call mpi_comm_rank(comm, mpirank, mpi_err)
 
     SAFE_ALLOCATE(dimrank(0:mpisize-1))
 
