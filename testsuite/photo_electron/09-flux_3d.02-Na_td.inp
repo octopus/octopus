@@ -34,10 +34,11 @@ ABHeight = -1.0
 PhotoElectronSpectrum = pes_flux
 
 PES_Flux_Kmax = 2.0
-PES_Flux_DeltaK = 0.05
-PES_Flux_Shape = sph
+PES_Flux_DeltaK = 0.01
+PES_Flux_StepsThetaK = 30
+PES_Flux_StepsPhiK = 30
 PES_Flux_Radius = 15
-PES_Flux_Lmax = 5
+PES_Flux_Lmax = 2
 
 ##########################
 #LASER
