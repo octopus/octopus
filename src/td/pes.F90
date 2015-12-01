@@ -235,7 +235,7 @@ contains
     PUSH_SUB(pes_output)
     
     if(mpi_grp_is_root(mpi_world)) then
-      if(pes%calc_spm) call pes_spm_output(pes%spm, st, iter, dt)
+      if(pes%calc_spm) call pes_spm_output(pes%spm, mesh, st, iter, dt)
     end if
 
     if(pes%calc_mask) call pes_mask_output (pes%mask, mesh, st,outp, "td.general/PESM", gr, geo,iter)
