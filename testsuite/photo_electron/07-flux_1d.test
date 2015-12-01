@@ -7,17 +7,10 @@ TestGroups : short-run, photo_electron
 Enabled    : Yes
 
 
-# Mask method with bare fft
+# 1d hydrogen
 Processors : 2
 Input      : 07-flux_1d.h1d_lin.inp
 match ; PES [val  1] ; LINEFIELD(td.general/PES_flux.distribution.out, 360, 2) ; 0.6919585874E-002 
 match ; PES [val  2] ; LINEFIELD(td.general/PES_flux.distribution.out, 356, 2) ; 0.3265978435E-002
 match ; PES [val  3] ; LINEFIELD(td.general/PES_flux.distribution.out, 363, 2) ; 0.3537136104E-002 
-
-# BackAction method with bare fft
-# Processors : 2
-# Input      : 01-h1d_lin.02-ba.inp
-# match ; PES [val  1] ; LINEFIELD(td.general/PESM_power.sum, 41, 2) ; 1.176406119607E-03
-# match ; PES [val  2] ; LINEFIELD(td.general/PESM_power.sum, 51, 2) ; 4.792053525371E-05
-# match ; PES [val  3] ; LINEFIELD(td.general/PESM_power.sum, 71, 2) ; 2.486856180514E-06
 
