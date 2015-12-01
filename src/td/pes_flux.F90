@@ -897,6 +897,7 @@ contains
     integer            :: ikk, ikk_start, ikk_end
     integer            :: iomk
     CMPLX, allocatable :: conjgphase_sph(:,:,:)
+    CMPLX, allocatable :: phase_act(:,:), phase_prev(:,:)
     FLOAT              :: vec
     integer            :: tdsteps_start, tdsteps_end
 
@@ -912,24 +913,37 @@ contains
     ikk_start  = this%nk_start
     ikk_end    = this%nk_end
 
-    SAFE_ALLOCATE(conjgphase_sph(1:this%nk, 1:this%nstepsomegak, 0:this%tdsteps))
+    SAFE_ALLOCATE(conjgphase_sph(1:this%nk, 1:this%nstepsomegak, tdsteps_start:tdsteps_end))
     conjgphase_sph = M_z0
 
+    SAFE_ALLOCATE(phase_act(1:this%nk, 1:this%nstepsomegak))
+    SAFE_ALLOCATE(phase_prev(ikk_start:ikk_end, 1:this%nstepsomegak))
+
     ! calculate Volkov phase using the previous time step
-    conjgphase_sph(:,:, 0) = this%conjgphase_prev_sph(:,:)
-    do ikk = ikk_start, ikk_end
-      do iomk = 1, this%nstepsomegak
-        do itstep = 1, this%tdsteps
+    do itstep = 1, this%tdsteps
+      if(itstep == 1) then
+        phase_prev(ikk_start:ikk_end,:) = this%conjgphase_prev_sph(ikk_start:ikk_end,:)
+      else
+        phase_prev(ikk_start:ikk_end, :) = phase_act(ikk_start:ikk_end, :)
+      end if
+
+      phase_act = M_z0
+
+      do ikk = ikk_start, ikk_end
+        do iomk = 1, this%nstepsomegak
           vec = sum((this%kcoords_sph(1:3, ikk, iomk) - this%veca(1:3, itstep) / P_c)**2)
-          conjgphase_sph(ikk, iomk, itstep) = conjgphase_sph(ikk, iomk, itstep - 1) * &
-            exp(M_zI * vec * dt * this%tdstepsinterval / M_TWO)
+          phase_act(ikk, iomk) = phase_prev(ikk, iomk) * exp(M_zI * vec * dt * this%tdstepsinterval / M_TWO)
         end do
       end do
-    end do
 #if defined(HAVE_MPI)
-    call comm_allreduce(mpi_world%comm, conjgphase_sph)
+      call comm_allreduce(mpi_world%comm, phase_act)
 #endif
-    this%conjgphase_prev_sph(:,:) = conjgphase_sph(:,:, this%tdsteps)
+      if(itstep >= tdsteps_start .and. itstep <= tdsteps_end) conjgphase_sph(:,:, itstep) = phase_act(:,:)
+      if(itstep == this%tdsteps) this%conjgphase_prev_sph(:, :) = phase_act(:, :)
+    end do
+
+    SAFE_DEALLOCATE_A(phase_act)
+    SAFE_DEALLOCATE_A(phase_prev)
 
     ! surface integral S_lm (for time range)
     SAFE_ALLOCATE(sigma1(1:3, 1:this%nsrfcpnts))
