@@ -5,11 +5,13 @@ module fio_handle_m
   use base_handle_m
   use base_model_m
   use fio_model_m
+  use fio_simulation_m
   use global_m
   use json_m
   use messages_m
   use mpi_m
   use profiling_m
+  use simulation_m
 
   implicit none
 
@@ -47,23 +49,6 @@ contains
   end subroutine fio_handle__init__
 
   ! ---------------------------------------------------------
-  subroutine fio_handle__build__(this)
-    type(base_handle_t), intent(inout) :: this
-
-    type(base_model_t), pointer :: modl
-
-    PUSH_SUB(fio_handle__build__)
-
-    nullify(modl)
-    call base_handle_get(this, modl)
-    ASSERT(associated(modl))
-    call fio_model__build__(modl)
-    nullify(modl)
-
-    POP_SUB(fio_handle__build__)
-  end subroutine fio_handle__build__
-
-  ! ---------------------------------------------------------
   subroutine fio_handle_init(this, config)
     type(base_handle_t), intent(out) :: this
     type(json_object_t), intent(in)  :: config
@@ -77,7 +62,6 @@ contains
     ASSERT(type==HNDL_TYPE_FNIO)
     call fio_handle__init__(this)
     call base_handle__init__(this)
-    call fio_handle__build__(this)
 
     POP_SUB(fio_handle_init)
   end subroutine fio_handle_init
@@ -87,15 +71,16 @@ contains
     type(base_handle_t), intent(inout) :: this
     type(mpi_grp_t),     intent(in)    :: mpi_grp
 
-    type(base_model_t), pointer :: mdl
+    type(simulation_t), pointer :: sim
 
     PUSH_SUB(fio_handle__start__)
 
-    nullify(mdl)
-    call base_handle_get(this, mdl)
-    ASSERT(associated(mdl))
-    call fio_model__start__(mdl, mpi_grp)
-    nullify(mdl)
+    nullify(sim)
+    call base_handle_get(this, sim)
+    ASSERT(associated(sim))
+    if(.not.simulation_assoc(sim)) call fio_simulation__init__(sim)
+    call fio_simulation__start__(sim, mpi_grp)
+    nullify(sim)
 
     POP_SUB(fio_handle__start__)
   end subroutine fio_handle__start__
@@ -135,15 +120,15 @@ contains
   subroutine fio_handle__stop__(this)
     type(base_handle_t), intent(inout) :: this
 
-    type(base_model_t), pointer :: mdl
+    type(simulation_t), pointer :: sim
 
-    PUSH_SUB(fio_handle_stop)
+    PUSH_SUB(fio_handle__stop__)
 
-    nullify(mdl)
-    call base_handle_get(this, mdl)
-    ASSERT(associated(mdl))
-    call fio_model__stop__(mdl)
-    nullify(mdl)
+    nullify(sim)
+    call base_handle_get(this, sim)
+    ASSERT(associated(sim))
+    call fio_simulation__stop__(sim)
+    nullify(sim)
 
     POP_SUB(fio_handle__stop__)
   end subroutine fio_handle__stop__
@@ -165,17 +150,17 @@ contains
     type(base_handle_t), intent(inout) :: this
     type(base_handle_t), intent(in)    :: that
 
-    type(base_model_t), pointer :: omdl, imdl
+    type(simulation_t), pointer :: osim, isim
 
     PUSH_SUB(fio_handle__copy__)
 
-    nullify(omdl, imdl)
-    call base_handle_get(that, imdl)
-    ASSERT(associated(imdl))
-    call base_handle_get(this, omdl)
-    ASSERT(associated(omdl))
-    call fio_model__copy__(omdl, imdl)
-    nullify(omdl, imdl)
+    nullify(osim, isim)
+    call base_handle_get(that, isim)
+    ASSERT(associated(isim))
+    call base_handle_get(this, osim)
+    ASSERT(associated(osim))
+    call fio_simulation__copy__(osim, isim)
+    nullify(osim, isim)
 
     POP_SUB(fio_handle__copy__)
   end subroutine fio_handle__copy__
@@ -198,15 +183,15 @@ contains
   subroutine fio_handle__end__(this)
     type(base_handle_t), intent(inout) :: this
 
-    type(base_model_t), pointer :: mdl
+    type(simulation_t), pointer :: sim
 
     PUSH_SUB(fio_handle__end__)
 
-    nullify(mdl)
-    call base_handle_get(this, mdl)
-    ASSERT(associated(mdl))
-    call fio_model__end__(mdl)
-    nullify(mdl)
+    nullify(sim)
+    call base_handle_get(this, sim)
+    ASSERT(associated(sim))
+    call fio_simulation__end__(sim)
+    nullify(sim)
 
     POP_SUB(fio_handle__end__)
   end subroutine fio_handle__end__

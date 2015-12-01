@@ -54,6 +54,7 @@ module grid_intrf_m
   end interface grid_intrf_del
 
   interface grid_intrf_init
+    module procedure grid_intrf_init_config
     module procedure grid_intrf_init_type
     module procedure grid_intrf_init_copy
   end interface grid_intrf_init
@@ -199,6 +200,17 @@ contains
 
     POP_SUB(grid_intrf_assoc)
   end function grid_intrf_assoc
+
+  ! ---------------------------------------------------------
+  subroutine grid_intrf_init_config(this)
+    type(json_object_t), intent(out) :: this
+
+    PUSH_SUB(grid_intrf_init_config)
+
+    call json_init(this)
+
+    POP_SUB(grid_intrf_init_config)
+  end subroutine grid_intrf_init_config
 
   ! ---------------------------------------------------------
   subroutine grid_intrf_init_type(this, geo, space, config)

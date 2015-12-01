@@ -39,13 +39,14 @@ contains
     POP_SUB(fio_geometry__init__)
   end subroutine fio_geometry__init__
 
+  ! ---------------------------------------------------------
   subroutine geometry__init__(this, space, config)
     type(geometry_t),    intent(out) :: this
     type(space_t),       intent(in)  :: space
     type(json_object_t), intent(in)  :: config
 
     PUSH_SUB(geometry__init__)
-
+    
     call geometry_init_from_data_object(this, space, config)
 
     POP_SUB(geometry__init__)

@@ -137,11 +137,35 @@ contains
   end subroutine frozen_handle_copy
 
   ! ---------------------------------------------------------
+  subroutine frozen_handle__end__(this)
+    type(base_handle_t), intent(inout) :: this
+
+    type(base_handle_iterator_t) :: iter
+    type(base_handle_t), pointer :: hndl
+    integer                      :: ierr
+
+    PUSH_SUB(frozen_handle__end__)
+
+    call base_handle_init(iter, this)
+    do
+      nullify(hndl)
+      call base_handle_next(iter, hndl, ierr)
+      if(ierr/=BASE_HANDLE_OK)exit
+      call fio_handle_end(hndl)
+    end do
+    call base_handle_end(iter)
+    nullify(hndl)
+
+    POP_SUB(frozen_handle__end__)
+  end subroutine frozen_handle__end__
+
+  ! ---------------------------------------------------------
   subroutine frozen_handle_end(this)
     type(base_handle_t), intent(inout) :: this
 
     PUSH_SUB(frozen_handle_end)
 
+    call frozen_handle__end__(this)
     call base_handle_end(this)
 
     POP_SUB(frozen_handle_end)

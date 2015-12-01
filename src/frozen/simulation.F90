@@ -38,6 +38,11 @@ module simulation_m
     type(domain_t)               :: domain
   end type simulation_t
 
+  interface simulation_init
+    module procedure simulation_init_config
+    module procedure simulation_init_type
+  end interface simulation_init
+
   interface simulation_get
     module procedure simulation_get_config
     module procedure simulation_get_info
@@ -79,7 +84,25 @@ contains
   end subroutine simulation__init__
 
   ! ---------------------------------------------------------
-  subroutine simulation_init(this, geo, space, config)
+  subroutine simulation_init_config(this)
+    type(json_object_t), intent(out) :: this
+
+    type(json_object_t), pointer :: cnfg
+
+    PUSH_SUB(simulation_init_config)
+
+    nullify(cnfg)
+    call json_init(this)
+    SAFE_ALLOCATE(cnfg)
+    call grid_intrf_init(cnfg)
+    call json_set(this, "grid", cnfg)
+    nullify(cnfg)
+
+    POP_SUB(simulation_init_config)
+  end subroutine simulation_init_config
+
+  ! ---------------------------------------------------------
+  subroutine simulation_init_type(this, geo, space, config)
     type(simulation_t),  intent(out) :: this
     type(geometry_t),    intent(in)  :: geo
     type(space_t),       intent(in)  :: space
@@ -88,7 +111,7 @@ contains
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
 
-    PUSH_SUB(simulation_init)
+    PUSH_SUB(simulation_init_type)
 
     nullify(cnfg)
     call simulation__init__(this, space, config)
@@ -98,8 +121,8 @@ contains
     nullify(cnfg)
     call domain_init(this%domain, space)
 
-    POP_SUB(simulation_init)
-  end subroutine simulation_init
+    POP_SUB(simulation_init_type)
+  end subroutine simulation_init_type
 
   ! ---------------------------------------------------------
   subroutine simulation__start__(this, grid)

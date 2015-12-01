@@ -10,6 +10,7 @@ module base_config_m
   use kinds_m
   use messages_m
   use profiling_m
+  use simulation_m
   use storage_m
 
   implicit none
@@ -23,35 +24,6 @@ module base_config_m
   integer, parameter :: default_nspin = 1
 
 contains
-
-  ! ---------------------------------------------------------
-  subroutine base_config_parse_grid(this)
-    type(json_object_t), intent(out) :: this
-
-    PUSH_SUB(base_config_parse_grid)
-
-    call json_init(this)
-
-    POP_SUB(base_config_parse_grid)
-  end subroutine base_config_parse_grid
-
-  ! ---------------------------------------------------------
-  subroutine base_config_parse_simulation(this)
-    type(json_object_t), intent(out) :: this
-
-    type(json_object_t), pointer :: cnfg
-
-    PUSH_SUB(base_config_parse_simulation)
-
-    nullify(cnfg)
-    call json_init(this)
-    SAFE_ALLOCATE(cnfg)
-    call base_config_parse_grid(cnfg)
-    call json_set(this, "grid", cnfg)
-    nullify(cnfg)
-
-    POP_SUB(base_config_parse_simulation)
-  end subroutine base_config_parse_simulation
 
   ! ---------------------------------------------------------
   subroutine base_config_parse_space(this, ndim)
@@ -209,10 +181,6 @@ contains
     nullify(cnfg)
     call json_init(this)
     SAFE_ALLOCATE(cnfg)
-    call base_config_parse_simulation(cnfg)
-    call json_set(this, "simulation", cnfg)
-    nullify(cnfg)
-    SAFE_ALLOCATE(cnfg)
     call base_config_parse_system(cnfg, ndim, nspin)
     call json_set(this, "system", cnfg)
     nullify(cnfg)
@@ -240,6 +208,10 @@ contains
     call json_set(this, "type", HNDL_TYPE_NONE)
     call json_set(this, "name", "base")
     call json_set(this, "interpolation", NEAREST)
+    SAFE_ALLOCATE(cnfg)
+    call simulation_init(cnfg)
+    call json_set(this, "simulation", cnfg)
+    nullify(cnfg)
     SAFE_ALLOCATE(cnfg)
     call base_config_parse_model(cnfg, ndim, nspin)
     call json_set(this, "model", cnfg)

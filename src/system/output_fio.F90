@@ -7,6 +7,7 @@ module output_fio_m
   use curvilinear_m
   use epot_m
   use fio_config_m
+  use fio_handle_m
   use geometry_m
   use global_m
   use grid_m
@@ -480,10 +481,6 @@ contains
     PUSH_SUB(output_parse_config_model)
 
     nullify(cnfg)
-    call json_get(this, "simulation", cnfg, ierr)
-    ASSERT(ierr==JSON_OK)
-    call output_parse_config_simulation(cnfg, gr, dir, group)
-    nullify(cnfg)
     call json_get(this, "system", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
     call output_parse_config_system(cnfg, geo, st, gr, dir, group)
@@ -519,11 +516,17 @@ contains
     iunit = io_open(fnam, action='write')
     if(iunit>0)then
       call base_config_parse(config, geo%space%dim, st%d%nspin)
+      call json_set(config, "type", HNDL_TYPE_FNIO)
+      call json_set(config, "name", "fio")
+      call json_get(config, "simulation", cnfg, ierr)
+      ASSERT(ierr==JSON_OK)
+      call output_parse_config_simulation(cnfg, gr, dnam, group)
+      nullify(cnfg)
       call json_get(config, "model", cnfg, ierr)
       ASSERT(ierr==JSON_OK)
       call output_parse_config_model(cnfg, gr, geo, st, hm, dnam, group)
-      call json_write(cnfg, iunit)
       nullify(cnfg)
+      call json_write(config, iunit)
       call json_end(config)
       call io_close(iunit)
     else

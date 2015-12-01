@@ -19,7 +19,7 @@ module fio_simulation_m
   private
 
   public ::                  &
-    fio_simulation__build__, &
+    fio_simulation__init__,  &
     fio_simulation__start__, &
     fio_simulation__stop__,  &
     fio_simulation__copy__,  &
@@ -42,13 +42,13 @@ contains
   end subroutine grid__init__
 
   ! ---------------------------------------------------------
-  subroutine fio_simulation__build__(this)
+  subroutine fio_simulation__init__(this)
     type(simulation_t), intent(inout) :: this
 
     type(grid_intrf_t), pointer :: igrd
     type(grid_t),       pointer :: grid
 
-    PUSH_SUB(fio_simulation__build__)
+    PUSH_SUB(fio_simulation__init__)
 
     nullify(igrd, grid)
     call simulation_get(this, igrd)
@@ -57,8 +57,8 @@ contains
     ASSERT(associated(grid))
     nullify(igrd, grid)
 
-    POP_SUB(fio_simulation__build__)
-  end subroutine fio_simulation__build__
+    POP_SUB(fio_simulation__init__)
+  end subroutine fio_simulation__init__
 
   ! ---------------------------------------------------------
   subroutine fio_simulation__start__(this, mpi_grp)
