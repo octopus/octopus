@@ -1,0 +1,21 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id$
+
+Test       : Photoelectron linear regime (spm 3D)
+Program    : octopus
+TestGroups : long-run, photo_electron
+Enabled    : Yes
+
+
+# Na groundstate
+Processors : 2
+Input      : 12-spm_3d.01-Na_gs.inp
+
+# Na photoemission
+# Processors : 2
+Precision  : 1.0e-13
+Input      : 12-spm_3d.02-Na_td.inp
+match ; PES [val  2] ; LINEFIELD(td.general/PES_spm.power.sum, 25, 2) ; 0.8301612858E-008
+match ; PES [val  1] ; LINEFIELD(td.general/PES_spm.power.sum, 29, 2) ; 0.1143547196E-007
+match ; PES [val  3] ; LINEFIELD(td.general/PES_spm.power.sum, 33, 2) ; 0.9498263584E-008
+
