@@ -715,7 +715,7 @@ contains
     end if
 
     if(this%onfly) then 
-      call zrestart_write_binary(restart, 'this', this%nspoints*st%d%dim*st%nst*st%d%nik*this%nomega, &
+      call zrestart_write_binary(restart, 'pesspm', this%nspoints*st%d%dim*st%nst*st%d%nik*this%nomega, &
         this%wfft, err) 
     end if
 
@@ -761,7 +761,7 @@ contains
     end if
 
     if(this%onfly) then
-      call zrestart_read_binary(restart, 'this', this%nspoints*st%d%dim*st%nst*st%d%nik*this%nomega, &
+      call zrestart_read_binary(restart, 'pesspm', this%nspoints*st%d%dim*st%nst*st%d%nik*this%nomega, &
         this%wfft, err)
     end if
 
