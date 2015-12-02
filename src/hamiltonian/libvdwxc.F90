@@ -15,6 +15,9 @@ module libvdwxc_m
   use mesh_m
   use mesh_cube_parallel_map_m
   use messages_m
+  use mpi_m
+  use parser_m
+  use pfft_m
   use profiling_m
 
   implicit none
@@ -57,9 +60,12 @@ module libvdwxc_m
   interface
     subroutine vdwxc_calculate(vdw, rho, sigma, dedn, dedsigma, energy)
       integer, pointer, intent(inout) :: vdw
-      ! XXX libvdwxc actually adjusts annoying (<1e-20) values of density so inout for now.
-      ! These parameters are really arrays
-      real(8), intent(inout) :: rho(:,:,:), sigma(:,:,:), dedn(:,:,:), dedsigma(:,:,:), energy
+      real(8),          intent(in)    :: rho(:,:,:)
+      real(8),          intent(in)    :: sigma(:,:,:)
+      real(8),          intent(inout) :: dedn(:,:,:)
+      real(8),          intent(inout) :: dedsigma(:,:,:)
+      real(8),          intent(inout) :: energy
+      !real(8), intent(inout) :: rho, sigma, dedn, dedsigma, energy
     end subroutine vdwxc_calculate
   end interface
 
@@ -78,21 +84,23 @@ module libvdwxc_m
     end subroutine vdwxc_init_serial
   end interface
 
-!  interface
-!    subroutine vdwxc_init_mpi(vdw, comm)
-!      integer, pointer, intent(inout) :: vdw
-!      integer,          intent(in)    :: comm
-!    end subroutine vdwxc_init_mpi
-!  end interface
+#ifdef HAVE_MPI
+  interface
+    subroutine vdwxc_init_mpi(vdw, comm)
+      integer, pointer, intent(inout) :: vdw
+      integer,          intent(in)    :: comm
+    end subroutine vdwxc_init_mpi
+  end interface
 
-!  interface
-!    subroutine vdwxc_init_pfft(vdw, comm, ncpu1, ncpu2)
-!      integer, pointer, intent(inout) :: vdw
-!      integer,          intent(in)    :: comm
-!      integer,          intent(in)    :: ncpu1
-!      integer,          intent(in)    :: ncpu2
-!    end subroutine vdwxc_init_pfft
-!  end interface
+  interface
+    subroutine vdwxc_init_pfft(vdw, comm, ncpu1, ncpu2)
+      integer, pointer, intent(inout) :: vdw
+      integer,          intent(in)    :: comm
+      integer,          intent(in)    :: ncpu1
+      integer,          intent(in)    :: ncpu2
+    end subroutine vdwxc_init_pfft
+  end interface
+#endif
 
   interface
     subroutine vdwxc_finalize(vdw)
@@ -108,7 +116,6 @@ contains
     integer,          intent(in)  :: functional
 
     PUSH_SUB(libvdwxc_init)
-    !ASSERT(.not.associated(libvdwxc%libvdwxc_ptr))
 #ifdef HAVE_LIBVDWXC
     call vdwxc_new(functional, libvdwxc%libvdwxc_ptr)
 #else
@@ -151,38 +158,71 @@ contains
     type(libvdwxc_t), intent(inout) :: this
     type(mesh_t),     intent(inout)    :: mesh
 
-    integer :: fft_library
+    integer :: pfftx, pffty
+    integer :: adjusted_leading_dim
+    integer :: fft_lib
+    logical :: use_pfft
 
     PUSH_SUB(libvdwxc_set_geometry)
     this%mesh = mesh
-    ! XXX will not work with all FFTLlibraries.  We will do FFTW(/MPI) for now.
-    !call parse_variable('FFTLibrary', FFTLIB_FFTW, fft_library)
-    call cube_init(this%cube, mesh%idx%ll, mesh%sb, fft_type = FFT_REAL, verbose = .true., &
-      need_partition=.not.mesh%parallel_in_domains)
-    fft_library = cube_getFFTLibrary(this%cube)
 
-    if (this%cube%parallel_in_domains) then
-      call mesh_cube_parallel_map_init(this%mesh_cube_map, mesh, this%cube)
+    ! libvdwxc can use either FFTW-MPI or PFFT and Octopus should not
+    ! care too much, as long as this particular cube is properly
+    ! configured.  Unfortunately most of the args to cube_init are
+    ! very entangled with FFT libraries.  All we want and need is to
+    ! specify our own decomposition and pass that to libvdwxc, but
+    ! we can only say "we want to use PFFT" and then it does the
+    ! decomposition.
+
+    call parse_variable('FFTLibrary', FFTLIB_NONE, fft_lib)
+
+    if(fft_lib == FFTLIB_PFFT) then
+      use_pfft = .true.
+    else if(fft_lib == FFTLIB_NONE) then
+      use_pfft = mesh%parallel_in_domains
+    else
+      write(message(1), '(a)') 'libvdwxc/fftlib conflict'
+      call messages_fatal(1)
     end if
 
-    ASSERT(this%cube%parallel_in_domains .eqv. (fft_library == FFTLIB_PFFT))
+    if(use_pfft) then
+      ! For parallel libvdwxc one needs PFFT as of now.
+      ! Passing FFTLIB_PFFT causes reasonable error if library is not present
+      call cube_init(this%cube, mesh%idx%ll, mesh%sb, mpi_grp = mesh%mpi_grp, &
+        fft_type = FFT_REAL, fft_library = FFTLIB_PFFT, need_partition = .true.)
+      call mesh_cube_parallel_map_init(this%mesh_cube_map, mesh, this%cube)
+      ASSERT(this%cube%parallel_in_domains)
+    else
+      call cube_init(this%cube, mesh%idx%ll, mesh%sb)
+    end if
+
+    ! There is some low-level implementation issue where with PFFT,
+    ! the leading dimension is one smaller than normal for some reason.
+    ! We therefore use rs_n as the global size.  (We never parallelize
+    ! over the leading dimension anyway)
+    adjusted_leading_dim = this%cube%rs_n(1)
 
 #ifdef HAVE_LIBVDWXC
     ! XXX need to be sure that we get the correct physical cell
     call vdwxc_set_unit_cell(this%libvdwxc_ptr, &
-      this%cube%rs_n_global(3), this%cube%rs_n_global(2), this%cube%rs_n_global(1), &
+      this%cube%rs_n_global(3), this%cube%rs_n_global(2), adjusted_leading_dim, &
       mesh%spacing(3) * this%cube%rs_n_global(3), 0.0_8, 0.0_8, &
       0.0_8, mesh%spacing(2) * this%cube%rs_n_global(2), 0.0_8, &
       0.0_8, 0.0_8, mesh%spacing(1) * this%cube%rs_n_global(1))
 
-    !if(mesh%parallel_in_domains) then
-      !call vdwxc_init_mpi(this%libvdwxc_ptr, mesh%mpi_grp%comm)
-    !else
-    call vdwxc_init_serial(this%libvdwxc_ptr)
-    !end if
-    !call vdwxc_print(this%libvdwxc_ptr)
-#else
-    ASSERT(.false.)
+    if(use_pfft) then
+#ifdef HAVE_MPI
+#ifdef HAVE_PFFT
+      ASSERT(adjusted_leading_dim == this%cube%rs_n_global(1) - 1)
+      call pfft_decompose(mesh%mpi_grp%size, pfftx, pffty)
+      call vdwxc_init_pfft(this%libvdwxc_ptr, mesh%mpi_grp%comm, pfftx, pffty)
+#endif
+#endif
+    else
+      ASSERT(adjusted_leading_dim == this%cube%rs_n_global(1))
+      call vdwxc_init_serial(this%libvdwxc_ptr)
+    end if
+    call vdwxc_print(this%libvdwxc_ptr)
 #endif
     POP_SUB(libvdwxc_set_geometry)
   end subroutine libvdwxc_set_geometry
@@ -194,10 +234,12 @@ contains
     FLOAT, dimension(:,:),    intent(inout) :: dedd
     FLOAT, dimension(:,:,:),  intent(inout) :: dedgd
 
-    type(cube_function_t) :: rhocf, sigmacf, dedrhocf, dedsigmacf
+    type(cube_function_t) :: cf!rhocf, sigmacf, dedrhocf, dedsigmacf
 
     real(8), allocatable :: workbuffer(:)
-    integer :: ii
+    real(8), allocatable :: cube_rho(:,:,:), cube_sigma(:,:,:), cube_dedrho(:,:,:), cube_dedsigma(:,:,:)
+    real(8), dimension(1) :: tmp_energy
+    integer :: ii, ierr, magic
 
     PUSH_SUB(libvdwxc_calculate)
 
@@ -206,52 +248,85 @@ contains
     ASSERT(size(dedd, 2) == 1)
     ASSERT(size(dedgd, 3) == 1)
 
+    ! Well.  I thought we would be using four different cube functions
+    ! for rho, sigma, dedrho and dedsigma.
+    !
+    ! But since the cube has PFFT associated, any attempt to use it
+    ! results in some kind of behind-the-scenes use of a possibly
+    ! global FFT-related buffer.
+    !
+    ! cube functions take a force_alloc variable which appears to make
+    ! them allocate their own buffer (like we want), but then Octopus
+    ! segfaults on cube function free, which I suspect is a bug in the
+    ! code, or at the very least due to something so undocumented that
+    ! I cannot reasonably figure it out.
+    !
+    ! We could just disable PFFT for the cube (since we will never
+    ! actually call any FFT from Octopus) and do our own
+    ! redistribution, but the redistribution code is loaded with
+    ! references to FFT library, so this would probably be a bit
+    ! optimistic.
+    !
+    ! So we create here our own arrays over which we have reasonable control.
+
     SAFE_ALLOCATE(workbuffer(1:this%mesh%np))
+    magic = this%cube%rs_n(1)! + 1
+    SAFE_ALLOCATE(cube_rho(1:magic, 1:this%cube%rs_n(2), 1:this%cube%rs_n(3)))
+    SAFE_ALLOCATE(cube_sigma(1:magic, 1:this%cube%rs_n(2), 1:this%cube%rs_n(3)))
+    SAFE_ALLOCATE(cube_dedrho(1:magic, 1:this%cube%rs_n(2), 1:this%cube%rs_n(3)))
+    SAFE_ALLOCATE(cube_dedsigma(1:magic, 1:this%cube%rs_n(2), 1:this%cube%rs_n(3)))
     ! This is sigma, the absolute-squared density gradient:
     workbuffer(:) = sum(gradrho(:, :, 1)**2, 2)
 
-    !call libvdwxc_print(this)
+    cube_rho = M_ZERO
+    cube_sigma = M_ZERO
+    cube_dedrho = M_ZERO
+    cube_dedsigma = M_ZERO
 
-    call cube_function_null(rhocf)
-    call cube_function_null(sigmacf)
-    call cube_function_null(dedrhocf)
-    call cube_function_null(dedsigmacf)
+    call cube_function_null(cf)
+    call dcube_function_alloc_RS(this%cube, cf, in_device = .false.)
 
-    call dcube_function_alloc_RS(this%cube, rhocf, in_device = .false.)
-    call dcube_function_alloc_RS(this%cube, sigmacf, in_device = .false.)
-    call dcube_function_alloc_RS(this%cube, dedrhocf, in_device = .false.)
-    call dcube_function_alloc_RS(this%cube, dedsigmacf, in_device = .false.)
-
-    call tocube(rho(:, 1), rhocf)
-    call tocube(workbuffer, sigmacf)
+    call tocube(rho(:, 1), cube_rho)
+    call tocube(workbuffer, cube_sigma)
 
     this%energy = M_ZERO
 #ifdef HAVE_LIBVDWXC
-    call vdwxc_calculate(this%libvdwxc_ptr, rhocf%dRS, sigmacf%dRS, dedrhocf%dRS, dedsigmacf%dRS, this%energy)
+    !print*, 'inp sum', sum(cube_rho), sum(cube_sigma)
+    call vdwxc_calculate(this%libvdwxc_ptr, cube_rho, cube_sigma, cube_dedrho, cube_dedsigma, this%energy)
+    !print*, 'pot sum', sum(cube_dedrho), sum(cube_dedsigma)
+    !print*, 'energy', this%energy
+#endif
+#ifdef HAVE_MPI
+    !if(this%cube%parallel_in_domains) then
+      !tmp_energy(1) = this%energy
+      !call MPI_Allreduce(MPI_IN_PLACE, tmp_energy, 1, MPI_FLOAT, MPI_SUM, this%mesh%mpi_grp%comm, ierr) ! XXX check ierr?
+      !this%energy = tmp_energy(1)
+    !end if
 #endif
     ! XXXXXXX energy may require MPI sum
-
-    call fromcube(dedrhocf, workbuffer)
+    call fromcube(cube_dedrho, workbuffer)
     ! dedd is 1:mesh%np_part for some reason
     dedd(1:this%mesh%np, 1) = dedd(1:this%mesh%np, 1) + workbuffer
-    call fromcube(dedsigmacf, workbuffer)
+    call fromcube(cube_dedsigma, workbuffer)
     do ii=1, this%mesh%np
       dedgd(ii, :, 1) = dedgd(ii, :, 1) + M_TWO * workbuffer(ii) * gradrho(ii, :, 1)
     end do
 
     SAFE_DEALLOCATE_A(workbuffer)
-    call dcube_function_free_RS(this%cube, rhocf)
-    call dcube_function_free_RS(this%cube, sigmacf)
-    call dcube_function_free_RS(this%cube, dedrhocf)
-    call dcube_function_free_RS(this%cube, dedsigmacf)
+    SAFE_DEALLOCATE_A(cube_rho)
+    SAFE_DEALLOCATE_A(cube_sigma)
+    SAFE_DEALLOCATE_A(cube_dedrho)
+    SAFE_DEALLOCATE_A(cube_dedsigma)
+    call dcube_function_free_RS(this%cube, cf)
 
     POP_SUB(libvdwxc_calculate)
 
     contains
 
-      subroutine tocube(array, cf)
+      subroutine tocube(array, cubearray)
         FLOAT,                 intent(in)    :: array(:)
-        type(cube_function_t), intent(inout) :: cf
+        FLOAT,                 intent(out)   :: cubearray(:,:,:)
+        !type(cube_function_t), intent(inout) :: cf
 
         PUSH_SUB(libvdwxc_calculate.tocube)
 
@@ -264,14 +339,17 @@ contains
             call dmesh_to_cube(this%mesh, array, this%cube, cf)
           end if
         end if
+        cubearray(1:magic,:,:) = cf%dRS
         POP_SUB(libvdwxc_calculate.tocube)
       end subroutine tocube
 
-      subroutine fromcube(cf, array)
-        type(cube_function_t), intent(in)  :: cf
+      subroutine fromcube(cubearray, array)
+        FLOAT,                 intent(in)  :: cubearray(:,:,:)
+        !type(cube_function_t), intent(in)  :: cf
         FLOAT,                 intent(out) :: array(:)
 
         PUSH_SUB(libvdwxc_calculate.fromcube)
+        cf%dRS = cubearray
         if (this%cube%parallel_in_domains) then
           call dcube_to_mesh_parallel(this%cube, cf, this%mesh, array, this%mesh_cube_map)
         else
