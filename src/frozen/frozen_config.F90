@@ -91,10 +91,10 @@ contains
   end subroutine frozen_config_parse_model
 
   ! ---------------------------------------------------------
-  subroutine frozen_config_parse(this, ndim, nspin)
+  subroutine frozen_config_parse(this, nspin, ndim)
     type(json_object_t), intent(out) :: this
-    integer,             intent(in)  :: ndim
     integer,             intent(in)  :: nspin
+    integer,             intent(in)  :: ndim
 
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
@@ -102,7 +102,7 @@ contains
     PUSH_SUB(frozen_config_parse)
 
     nullify(cnfg)
-    call base_config_parse(this, ndim, nspin)
+    call base_config_parse(this, nspin, ndim)
     call json_set(this, "type", HNDL_TYPE_FRZN)
     call json_set(this, "name", "frozen")
     call json_get(this, "model", cnfg, ierr)

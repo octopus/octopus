@@ -452,16 +452,12 @@ contains
 
     character(len=MAX_PATH_LEN)  :: outdir
     type(json_object_t), pointer :: cnfg
-    type(json_object_t)          :: hndl
     integer                      :: ierr
 
     PUSH_SUB(fio_config_parse_dir)
 
     nullify(cnfg)
-    call base_config_parse(this)
-    call fio_config_parse_read(hndl, dirname, outdir)
-    call json_update(this, hndl)
-    call json_end(hndl)
+    call fio_config_parse_read(this, dirname, outdir)
     call json_set(this, "type", HNDL_TYPE_FNIO)
     call json_set(this, "name", "fio")
     if(present(interpolation)) call json_set(this, "interpolation", interpolation)

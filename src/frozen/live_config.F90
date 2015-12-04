@@ -144,10 +144,10 @@ contains
   end subroutine live_config_parse_model
 
   ! ---------------------------------------------------------
-  subroutine live_config_parse(this, ndim, nspin)
+  subroutine live_config_parse(this, nspin, ndim)
     type(json_object_t), intent(out) :: this
-    integer,             intent(in)  :: ndim
     integer,             intent(in)  :: nspin
+    integer,             intent(in)  :: ndim
 
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
@@ -155,7 +155,7 @@ contains
     PUSH_SUB(live_config_parse)
 
     nullify(cnfg)
-    call base_config_parse(this, ndim, nspin)
+    call base_config_parse(this, nspin, ndim)
     call json_set(this, "type", HNDL_TYPE_LIVE)
     call json_set(this, "name", "live")
     call json_get(this, "model", cnfg, ierr)

@@ -13,8 +13,6 @@ module ssys_config_m
   use global_m
   use json_m
   use kinds_m
-  use live_config_m
-  use live_handle_m
   use messages_m
   use parser_m
   use profiling_m
@@ -27,8 +25,9 @@ module ssys_config_m
 
   private
 
-  public ::                &
-    ssys_config_parse_use, &
+  public ::            &
+    ssys_config_use,   &
+    ssys_config_add,   &
     ssys_config_parse
 
 contains
@@ -206,10 +205,10 @@ contains
   end subroutine ssys_config_parse_subsystems_block
 
   ! ---------------------------------------------------------
-  subroutine ssys_config_parse_systems(this, ndim, nspin)
+  subroutine ssys_config_parse_systems(this, nspin, ndim)
     type(json_array_t), intent(inout) :: this
-    integer,            intent(in)    :: ndim
     integer,            intent(in)    :: nspin
+    integer,            intent(in)    :: ndim
 
     type(json_object_t)                 :: dict
     type(json_object_t),        pointer :: cnfg, ocfg, icfg
@@ -235,7 +234,7 @@ contains
       case(HNDL_TYPE_FNIO)
         if(.not.associated(frzn))then
           SAFE_ALLOCATE(cnfg)
-          call frozen_config_parse(cnfg, ndim, nspin)
+          call frozen_config_parse(cnfg, nspin, ndim)
           call json_append(this, cnfg)
           call json_get(cnfg, "systems", frzn, ierr)
           ASSERT(ierr==JSON_OK)
@@ -403,22 +402,41 @@ contains
   end subroutine ssys_config_parse_model
 
   ! ---------------------------------------------------------
-  function ssys_config_parse_use() result(that)
+  function ssys_config_use() result(that)
 
     logical :: that
 
-    PUSH_SUB(ssys_config_parse_use)
+    PUSH_SUB(ssys_config_use)
 
     that = parse_is_defined("SubSystems")
 
-    POP_SUB(ssys_config_parse_use)
-  end function ssys_config_parse_use
+    POP_SUB(ssys_config_use)
+  end function ssys_config_use
 
   ! ---------------------------------------------------------
-  subroutine ssys_config_parse(this, ndim, nspin)
+  subroutine ssys_config_add(this, that)
+    type(json_object_t), intent(inout) :: this
+    type(json_object_t), intent(in)    :: that
+
+    type(json_array_t), pointer :: list
+    integer                     :: ierr
+
+    PUSH_SUB(ssys_config_add)
+
+    nullify(list)
+    call json_get(this, "systems", list, ierr)
+    ASSERT(ierr==JSON_OK)
+    call json_append(list, that)
+    nullify(list)
+
+    POP_SUB(ssys_config_add)
+  end subroutine ssys_config_add
+
+  ! ---------------------------------------------------------
+  subroutine ssys_config_parse(this, nspin, ndim)
     type(json_object_t), intent(out) :: this
-    integer,             intent(in)  :: ndim
     integer,             intent(in)  :: nspin
+    integer,             intent(in)  :: ndim
 
     type(json_object_t), pointer :: cnfg
     type(json_array_t),  pointer :: list
@@ -427,7 +445,7 @@ contains
     PUSH_SUB(ssys_config_parse)
 
     nullify(cnfg, list)
-    call base_config_parse(this, ndim, nspin)
+    call base_config_parse(this, nspin, ndim)
     call json_set(this, "type", HNDL_TYPE_SSYS)
     call json_set(this, "name", "main")
     call json_get(this, "model", cnfg, ierr)
@@ -436,10 +454,7 @@ contains
     nullify(cnfg)
     call json_get(this, "systems", list, ierr)
     ASSERT(ierr==JSON_OK)
-    call ssys_config_parse_systems(list, ndim, nspin)
-    SAFE_ALLOCATE(cnfg)
-    call live_config_parse(cnfg, ndim, nspin)
-    call json_append(list, cnfg)
+    call ssys_config_parse_systems(list, nspin, ndim)
     nullify(cnfg, list)
 
     POP_SUB(ssys_config_parse)

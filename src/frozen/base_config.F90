@@ -122,10 +122,10 @@ contains
   end subroutine base_config_parse_states
 
   ! ---------------------------------------------------------
-  subroutine base_config_parse_system(this, ndim, nspin)
+  subroutine base_config_parse_system(this, nspin, ndim)
     type(json_object_t), intent(out) :: this
-    integer,   optional, intent(in)  :: ndim
     integer,   optional, intent(in)  :: nspin
+    integer,   optional, intent(in)  :: ndim
 
     type(json_object_t), pointer :: cnfg
 
@@ -169,10 +169,10 @@ contains
   end subroutine base_config_parse_hamiltonian
 
   ! ---------------------------------------------------------
-  subroutine base_config_parse_model(this, ndim, nspin)
+  subroutine base_config_parse_model(this, nspin, ndim)
     type(json_object_t), intent(out) :: this
-    integer,   optional, intent(in)  :: ndim
     integer,   optional, intent(in)  :: nspin
+    integer,   optional, intent(in)  :: ndim
 
     type(json_object_t), pointer :: cnfg
 
@@ -181,7 +181,7 @@ contains
     nullify(cnfg)
     call json_init(this)
     SAFE_ALLOCATE(cnfg)
-    call base_config_parse_system(cnfg, ndim, nspin)
+    call base_config_parse_system(cnfg, nspin, ndim)
     call json_set(this, "system", cnfg)
     nullify(cnfg)
     SAFE_ALLOCATE(cnfg)
@@ -193,10 +193,10 @@ contains
   end subroutine base_config_parse_model
 
   ! ---------------------------------------------------------
-  subroutine base_config_parse(this, ndim, nspin)
+  subroutine base_config_parse(this, nspin, ndim)
     type(json_object_t), intent(out) :: this
-    integer,   optional, intent(in)  :: ndim
     integer,   optional, intent(in)  :: nspin
+    integer,   optional, intent(in)  :: ndim
 
     type(json_object_t), pointer :: cnfg
     type(json_array_t),  pointer :: list
@@ -213,7 +213,7 @@ contains
     call json_set(this, "simulation", cnfg)
     nullify(cnfg)
     SAFE_ALLOCATE(cnfg)
-    call base_config_parse_model(cnfg, ndim, nspin)
+    call base_config_parse_model(cnfg, nspin, ndim)
     call json_set(this, "model", cnfg)
     nullify(cnfg)
     SAFE_ALLOCATE(list)

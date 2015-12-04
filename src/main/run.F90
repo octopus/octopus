@@ -153,7 +153,7 @@ contains
       call unit_system_init()
 
       nullify(subsys_model, subsys_hm)
-      if(ssys_config_parse_use())then
+      if(ssys_config_use())then
         call system_init(sys, subsys_handle, config)
         call base_handle_get(subsys_handle, subsys_model)
         ASSERT(associated(subsys_model))
@@ -274,7 +274,7 @@ contains
 
       call hamiltonian_end(hm)
       call system_end(sys)
-      if(ssys_config_parse_use()) then
+      if(ssys_config_use()) then
         call ssys_handle_end(subsys_handle)
         call json_end(config)
       end if
