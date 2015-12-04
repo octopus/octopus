@@ -20,7 +20,6 @@
 #include "global.h"
 
 module states_m
-  use base_density_m
   use base_states_m
   use blacs_proc_grid_m
   use calc_mode_par_m
@@ -599,7 +598,7 @@ contains
     !> Substates are not compatible with complex scaling for now.
     ASSERT(.not.(this%cmplxscl%space.or.this%cmplxscl%time))
     ASSERT(.not.associated(this%subsys_st))
-    this%subsys_st=>st
+    this%subsys_st => st
 
     POP_SUB(states_add_substates)
   end subroutine states_add_substates
@@ -1267,15 +1266,12 @@ contains
     type(grid_t),           intent(in)    :: gr
     type(geometry_t),       intent(in)    :: geo
 
-    type(base_density_t), pointer :: density
-    FLOAT                         :: fsize
+    FLOAT :: fsize
 
     PUSH_SUB(states_densities_init)
 
     if(associated(st%subsys_st))then
-      call base_states_get(st%subsys_st, density)
-      ASSERT(associated(density))
-      call base_density_get(density, st%zrho%Re)
+      call base_states_gets(st%subsys_st, "live", st%zrho%Re)
       ASSERT(associated(st%zrho%Re))
     else
       SAFE_ALLOCATE(st%zrho%Re(1:gr%fine%mesh%np_part, 1:st%d%nspin))
@@ -1410,8 +1406,7 @@ contains
     logical, optional,      intent(in)    :: exclude_wfns !< do not copy wavefunctions, densities, node
     logical, optional,      intent(in)    :: exclude_eigenval !< do not copy eigenvalues, occ, spin
 
-    type(base_density_t), pointer :: density
-    logical                       :: exclude_wfns_
+    logical :: exclude_wfns_
 
     PUSH_SUB(states_copy)
 
@@ -1452,9 +1447,7 @@ contains
       call loct_pointer_copy(stout%psi%zR, stin%psi%zR)
       stout%zdontusepsi => stout%psi%zR
       if(associated(stout%subsys_st))then
-        call base_states_get(stout%subsys_st, density)
-        ASSERT(associated(density))
-        call base_density_get(density, stout%zrho%Re)
+        call base_states_gets(stout%subsys_st, "live", stout%zrho%Re)
         ASSERT(associated(stout%zrho%Re))
       else
         call loct_pointer_copy(stout%zrho%Re, stin%zrho%Re)

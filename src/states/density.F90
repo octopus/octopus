@@ -20,7 +20,6 @@
 #include "global.h"
 
 module density_m
-  use base_density_m
   use base_states_m
   use blas_m
   use batch_m
@@ -49,6 +48,7 @@ module density_m
   use profiling_m
   use simul_box_m
   use smear_m
+  use ssys_states_m
   use states_m
   use states_dim_m
   use symmetrizer_m
@@ -76,10 +76,8 @@ module density_m
   type density_calc_t
     FLOAT,                pointer :: density(:, :)
     FLOAT,                pointer :: Imdensity(:, :)
-    FLOAT,                pointer :: total_density(:, :)
     type(states_t),       pointer :: st
     type(grid_t),         pointer :: gr
-    type(base_density_t), pointer :: subsys_density
     type(opencl_mem_t)            :: buff_density
     integer                       :: pnp
     logical                       :: packed
@@ -94,26 +92,12 @@ contains
     FLOAT,                target,   intent(out)   :: density(:, :)
     FLOAT, optional,      target,   intent(out)   :: Imdensity(:, :)
 
-    type(base_density_t), pointer :: live_density
-
     PUSH_SUB(density_calc_init)
 
     this%st => st
     this%gr => gr
-    nullify(this%density, this%Imdensity, this%total_density, this%subsys_density, live_density)
-    if(associated(this%st%subsys_st))then
-      !> Set the pointers to the total and live densities.
-      ASSERT(.not.present(Imdensity))
-      this%total_density => density
-      call base_states_get(this%st%subsys_st, this%subsys_density)
-      ASSERT(associated(this%subsys_density))
-      call base_density_gets(this%subsys_density, "live", live_density)
-      ASSERT(associated(live_density))
-      call base_density_get(live_density, this%density)
-      ASSERT(associated(this%density))
-    else
-      this%density => density
-    end if
+
+    this%density => density
     this%density = M_ZERO
 
     if(present(Imdensity)) then
@@ -341,10 +325,7 @@ contains
 
     type(symmetrizer_t) :: symmetrizer
     FLOAT, allocatable :: tmpdensity(:)
-    type(base_density_iterator_t)   :: iter
-    type(base_density_t),   pointer :: ssys_density
-    FLOAT,  dimension(:,:), pointer :: pdensity
-    integer :: ispin, ip, ierr
+    integer :: ispin, ip
     type(profile_t), save :: reduce_prof
 #ifdef HAVE_OPENCL
     FLOAT, allocatable :: fdensity(:)
@@ -397,27 +378,8 @@ contains
       SAFE_DEALLOCATE_A(tmpdensity)
     end if
 
-    nullify(ssys_density, pdensity)
-    if(associated(this%subsys_density))then
-      !> Calculate the total density.
-      this%total_density=M_ZERO
-      call base_density_init(iter, this%subsys_density)
-      do
-        nullify(ssys_density, pdensity)
-        call base_density_next(iter, ssys_density, ierr)
-        if(ierr/=BASE_DENSITY_OK)exit
-        ASSERT(associated(ssys_density))
-        call base_density_get(ssys_density, pdensity)
-        ASSERT(associated(pdensity))
-        do ispin = 1, this%st%d%nspin
-          forall(ip=1:this%gr%fine%mesh%np)
-            this%total_density(ip,ispin)=this%total_density(ip,ispin)+pdensity(ip,ispin)
-          end forall
-        end do
-      end do
-      call base_density_end(iter)
-      nullify(ssys_density, pdensity)
-    end if
+    !> Calculate the total density.
+    if(associated(this%st%subsys_st)) call ssys_states_acc(this%st%subsys_st)
 
     POP_SUB(density_calc_end)
   end subroutine density_calc_end
@@ -637,9 +599,10 @@ contains
     FLOAT,           intent(out) :: rho(:,:)
     FLOAT, optional, pointer, intent(out) :: Imrho(:,:)
 
+    FLOAT, dimension(:,:), pointer :: density
     integer :: is, ip
     logical :: cmplxscl
-    
+
     PUSH_SUB(states_total_density)
 
     cmplxscl = .false.
@@ -648,9 +611,17 @@ contains
       cmplxscl = .true.
     end if
 
+    nullify(density)
+    if(associated(st%subsys_st))then
+      call base_states_get(st%subsys_st, density)
+    else
+      density => st%rho
+    end if
+    ASSERT(associated(density))
+
     if(.not. cmplxscl) then
       forall(ip = 1:mesh%np, is = 1:st%d%nspin)
-        rho(ip, is) = st%rho(ip, is)
+        rho(ip, is) = density(ip, is)
       end forall
 
       if(associated(st%rho_core)) then
