@@ -123,12 +123,14 @@ module base_states_m
 
   interface base_states_set
     module procedure base_states_set_info
-    module procedure base_states_set_simulation
   end interface base_states_set
 
   interface base_states_gets
     module procedure base_states_gets_config
-    module procedure base_states_gets_name
+    module procedure base_states_gets_type
+    module procedure base_states_gets_density
+    module procedure base_states_gets_density_1d
+    module procedure base_states_gets_density_2d
   end interface base_states_gets
 
   interface base_states_get
@@ -136,6 +138,8 @@ module base_states_m
     module procedure base_states_get_config
     module procedure base_states_get_simulation
     module procedure base_states_get_density
+    module procedure base_states_get_density_1d
+    module procedure base_states_get_density_2d
   end interface base_states_get
 
   interface base_states_copy
@@ -218,6 +222,7 @@ contains
         call base_states__del__(this)
       end if
     end if
+    nullify(this)
 
     POP_SUB(base_states_del)
   end subroutine base_states_del
@@ -375,7 +380,7 @@ contains
     end do
     call base_states_end(iter)
     nullify(subs)
-    call base_states__update__(this)
+    if(associated(this%sim)) call base_states__update__(this)
 
     POP_SUB(base_states_update)
   end subroutine base_states_update
@@ -440,7 +445,9 @@ contains
     PUSH_SUB(base_states__acc__)
 
     ASSERT(associated(this%config))
+    ASSERT(associated(that%config))
     ASSERT(associated(this%sim))
+    ASSERT(associated(that%sim))
     this%charge = this%charge + that%charge
     call base_density__acc__(this%density, that%density)
 
@@ -500,7 +507,7 @@ contains
   end subroutine base_states_gets_config
 
   ! ---------------------------------------------------------
-  subroutine base_states_gets_name(this, name, that)
+  subroutine base_states_gets_type(this, name, that)
     type(base_states_t),  intent(in) :: this
     character(len=*),     intent(in) :: name
     type(base_states_t), pointer     :: that
@@ -508,15 +515,68 @@ contains
     type(json_object_t), pointer :: config
     integer                      :: ierr
 
-    PUSH_SUB(base_states_gets_name)
+    PUSH_SUB(base_states_gets_type)
 
     nullify(that)
     ASSERT(associated(this%config))
     call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
     if(ierr==CONFIG_DICT_OK) call base_states_gets(this, config, that)
 
-    POP_SUB(base_states_gets_name)
-  end subroutine base_states_gets_name
+    POP_SUB(base_states_gets_type)
+  end subroutine base_states_gets_type
+
+  ! ---------------------------------------------------------
+  subroutine base_states_gets_density(this, name, that)
+    type(base_states_t),   intent(in) :: this
+    character(len=*),      intent(in) :: name
+    type(base_density_t), pointer     :: that
+
+    type(base_states_t), pointer :: subs
+
+    PUSH_SUB(base_states_gets_density)
+
+    nullify(that, subs)
+    call base_states_gets(this, name, subs)
+    if(associated(subs)) call base_states_get(subs, that)
+
+    POP_SUB(base_states_gets_density)
+  end subroutine base_states_gets_density
+    
+  ! ---------------------------------------------------------
+  subroutine base_states_gets_density_1d(this, name, that, total)
+    type(base_states_t),          intent(in) :: this
+    character(len=*),             intent(in) :: name
+    real(kind=wp), dimension(:), pointer     :: that
+    logical,            optional, intent(in) :: total
+
+    type(base_density_t), pointer :: dnst
+
+    PUSH_SUB(base_states_gets_density_1d)
+
+    nullify(that, dnst)
+    call base_states_gets(this, name, dnst)
+    if(associated(dnst)) call base_density_get(dnst, that, total)
+
+    POP_SUB(base_states_gets_density_1d)
+  end subroutine base_states_gets_density_1d
+
+  ! ---------------------------------------------------------
+  subroutine base_states_gets_density_2d(this, name, that, total)
+    type(base_states_t),            intent(in) :: this
+    character(len=*),               intent(in) :: name
+    real(kind=wp), dimension(:,:), pointer     :: that
+    logical,              optional, intent(in) :: total
+
+    type(base_density_t), pointer :: dnst
+
+    PUSH_SUB(density_gets_base_states_2d)
+
+    nullify(that, dnst)
+    call base_states_gets(this, name, dnst)
+    if(associated(dnst)) call base_density_get(dnst, that, total)
+
+    POP_SUB(base_states_gets_density_2d)
+  end subroutine base_states_gets_density_2d
 
   ! ---------------------------------------------------------
   subroutine base_states_set_info(this, charge)
@@ -531,28 +591,16 @@ contains
   end subroutine base_states_set_info
     
   ! ---------------------------------------------------------
-  subroutine base_states_set_simulation(this, that)
-    type(base_states_t),        intent(inout) :: this
-    type(simulation_t), target, intent(in)    :: that
-
-    PUSH_SUB(base_states_set_simulation)
-
-    ASSERT(associated(this%config))
-    ASSERT(.not.associated(this%sim))
-    this%sim => that
-
-    POP_SUB(base_states_set_simulation)
-  end subroutine base_states_set_simulation
-    
-  ! ---------------------------------------------------------
-  subroutine base_states_get_info(this, charge, nspin)
+  subroutine base_states_get_info(this, charge, nspin, use)
     type(base_states_t),     intent(in)  :: this
     real(kind=wp), optional, intent(out) :: charge
     integer,       optional, intent(out) :: nspin
+    logical,       optional, intent(out) :: use
 
     PUSH_SUB(base_states_get_info)
 
     if(present(charge)) charge = this%charge
+    if(present(use)) use = associated(this%sim)
     call base_density_get(this%density, nspin=nspin)
 
     POP_SUB(base_states_get_info)
@@ -596,6 +644,34 @@ contains
     POP_SUB(base_states_get_density)
   end subroutine base_states_get_density
     
+  ! ---------------------------------------------------------
+  subroutine base_states_get_density_1d(this, that, total)
+    type(base_states_t),          intent(in) :: this
+    real(kind=wp), dimension(:), pointer     :: that
+    logical,            optional, intent(in) :: total
+
+    PUSH_SUB(base_states_get_density_1d)
+
+    nullify(that)
+    call base_density_get(this%density, that, total)
+
+    POP_SUB(base_states_get_density_1d)
+  end subroutine base_states_get_density_1d
+
+  ! ---------------------------------------------------------
+  subroutine base_states_get_density_2d(this, that, total)
+    type(base_states_t),            intent(in) :: this
+    real(kind=wp), dimension(:,:), pointer     :: that
+    logical,              optional, intent(in) :: total
+
+    PUSH_SUB(density_get_base_states_2d)
+
+    nullify(that)
+    call base_density_get(this%density, that, total)
+
+    POP_SUB(base_states_get_density_2d)
+  end subroutine base_states_get_density_2d
+
   ! ---------------------------------------------------------
   subroutine base_states__copy__(this, that)
     type(base_states_t), intent(inout) :: this

@@ -133,7 +133,9 @@ module base_potential_m
 
   interface base_potential_gets
     module procedure base_potential_gets_config
-    module procedure base_potential_gets_name
+    module procedure base_potential_gets_type
+    module procedure base_potential_gets_potential_1d
+    module procedure base_potential_gets_potential_md
   end interface base_potential_gets
 
   interface base_potential_get
@@ -395,7 +397,7 @@ contains
     end do
     call base_potential_end(iter)
     nullify(subs)
-    call base_potential__update__(this)
+    if(associated(this%sim)) call base_potential__update__(this)
 
     POP_SUB(base_potential_update)
   end subroutine base_potential_update
@@ -446,7 +448,7 @@ contains
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
-    this%energy=0.0_wp
+    this%energy = 0.0_wp
     call storage_reset(this%data)
 
     POP_SUB(base_potential__reset__)
@@ -460,7 +462,9 @@ contains
     PUSH_SUB(base_potential__acc__)
 
     ASSERT(associated(this%config))
+    ASSERT(associated(that%config))
     ASSERT(associated(this%sim))
+    ASSERT(associated(that%sim))
     this%energy = this%energy + that%energy
     call storage_add(this%data, that%data)
 
@@ -475,7 +479,9 @@ contains
     PUSH_SUB(base_potential__sub__)
 
     ASSERT(associated(this%config))
+    ASSERT(associated(that%config))
     ASSERT(associated(this%sim))
+    ASSERT(associated(that%sim))
     this%energy = this%energy - that%energy
     call storage_sub(this%data, that%data)
 
@@ -521,7 +527,7 @@ contains
   end subroutine base_potential_gets_config
 
   ! ---------------------------------------------------------
-  subroutine base_potential_gets_name(this, name, that)
+  subroutine base_potential_gets_type(this, name, that)
     type(base_potential_t),  intent(in) :: this
     character(len=*),        intent(in) :: name
     type(base_potential_t), pointer     :: that
@@ -529,15 +535,49 @@ contains
     type(json_object_t), pointer :: config
     integer                      :: ierr
 
-    PUSH_SUB(base_potential_gets_name)
+    PUSH_SUB(base_potential_gets_type)
 
     nullify(that)
     ASSERT(associated(this%config))
     call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
     if(ierr==CONFIG_DICT_OK) call base_potential_gets(this, config, that)
 
-    POP_SUB(base_potential_gets_name)
-  end subroutine base_potential_gets_name
+    POP_SUB(base_potential_gets_type)
+  end subroutine base_potential_gets_type
+
+  ! ---------------------------------------------------------
+  subroutine base_potential_gets_potential_1d(this, name, that)
+    type(base_potential_t),       intent(in) :: this
+    character(len=*),             intent(in) :: name
+    real(kind=wp), dimension(:), pointer     :: that
+
+    type(base_potential_t), pointer :: subs
+
+    PUSH_SUB(base_potential_gets_potential_1d)
+
+    nullify(that, subs)
+    call base_potential_gets(this, name, subs)
+    if(associated(subs)) call base_potential_get(subs, that)
+
+    POP_SUB(base_potential_gets_potential_1d)
+  end subroutine base_potential_gets_potential_1d
+
+  ! ---------------------------------------------------------
+  subroutine base_potential_gets_potential_md(this, name, that)
+    type(base_potential_t),         intent(in) :: this
+    character(len=*),               intent(in) :: name
+    real(kind=wp), dimension(:,:), pointer     :: that
+
+    type(base_potential_t), pointer :: subs
+
+    PUSH_SUB(base_potential_gets_potential_md)
+
+    nullify(that, subs)
+    call base_potential_gets(this, name, subs)
+    if(associated(subs)) call base_potential_get(subs, that)
+
+    POP_SUB(base_potential_gets_potential_md)
+  end subroutine base_potential_gets_potential_md
 
   ! ---------------------------------------------------------
   subroutine base_potential_set_info(this, energy)
@@ -561,7 +601,8 @@ contains
     PUSH_SUB(base_potential_get_info)
 
     if(present(nspin)) nspin = this%nspin
-    call storage_get(this%data, size=size, alloc=use)
+    if(present(use)) use = associated(this%sim)
+    call storage_get(this%data, size=size)
 
     POP_SUB(base_potential_get_info)
   end subroutine base_potential_get_info
