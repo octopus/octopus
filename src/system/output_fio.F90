@@ -515,7 +515,7 @@ contains
     call path_join(dnam, input_frozen_config, fnam)
     iunit = io_open(fnam, action='write')
     if(iunit>0)then
-      call base_config_parse(config, geo%space%dim, st%d%nspin)
+      call base_config_parse(config, st%d%nspin, geo%space%dim)
       call json_set(config, "type", HNDL_TYPE_FNIO)
       call json_set(config, "name", "fio")
       call json_get(config, "simulation", cnfg, ierr)

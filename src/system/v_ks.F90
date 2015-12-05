@@ -21,6 +21,7 @@
  
 module v_ks_m
   use base_hamiltonian_m
+  use base_states_m
   use berry_m
   use current_m
   use density_m
@@ -801,6 +802,7 @@ contains
       CMPLX :: ctmp
       integer :: ispin
       FLOAT, allocatable :: vvdw(:)
+      FLOAT, dimension(:,:), pointer :: density
       
       PUSH_SUB(v_ks_calc_start.v_a_xc)
       call profiling_in(prof, "XC")
@@ -930,6 +932,13 @@ contains
 
         if(hm%d%ispin == SPINORS .and. cmplxscl) &
           call messages_not_implemented('Complex Scaling with SPINORS')
+        nullify(density)
+        if(associated(st%subsys_st))then
+          call base_states_get(st%subsys_st, density)
+          ASSERT(associated(density))
+        else
+          density => st%rho
+        end if
         do ispin = 1, hm%d%nspin
           if(ispin <= 2) then
             factor = M_ONE
@@ -938,7 +947,7 @@ contains
           end if
           if (.not. cmplxscl) then
             ks%calc%energy%intnvxc = ks%calc%energy%intnvxc + &
-              factor*dmf_dotp(ks%gr%fine%mesh, st%rho(:, ispin), ks%calc%vxc(:, ispin))
+              factor*dmf_dotp(ks%gr%fine%mesh, density(:, ispin), ks%calc%vxc(:, ispin))
           else
             ctmp = factor * zmf_dotp(ks%gr%fine%mesh, st%zrho%Re(:, ispin) + M_zI * st%zrho%Im(:, ispin), &
               ks%calc%vxc(:, ispin) + M_zI * ks%calc%Imvxc(:, ispin), dotu = .true.)
@@ -960,6 +969,7 @@ contains
     type(hamiltonian_t),  intent(inout) :: hm
 
     type(base_hamiltonian_t), pointer :: subsys_tnadd
+    FLOAT, dimension(:,:),    pointer :: potential
     integer                           :: ip, ispin
 
     PUSH_SUB(v_ks_calc_finish)
@@ -1060,13 +1070,22 @@ contains
         forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 1) = hm%vhxc(ip, 1) + hm%vberry(ip, 1)
       end if
 
-      ! Calculate subsystem kinetic non-additive term
-      nullify(subsys_tnadd)
+      ! Calculate and add subsystem kinetic non-additive term
+      nullify(subsys_tnadd, potential)
       if(associated(hm%subsys_hm))then
         call base_hamiltonian_get(hm%subsys_hm, "tnadd", subsys_tnadd)
         ASSERT(associated(subsys_tnadd))
         call ssys_tnadd_calc(subsys_tnadd)
+        call base_hamiltonian_get(subsys_tnadd, nspin=ispin)
+        ASSERT(ispin<=hm%d%ispin)
+        call base_hamiltonian_get(subsys_tnadd, potential)
+        ASSERT(associated(potential))
         nullify(subsys_tnadd)
+        forall (ip = 1:ks%gr%mesh%np) hm%vhxc(ip,1) = hm%vhxc(ip,1) + potential(ip,1)
+        if(hm%d%ispin>UNPOLARIZED)then
+          forall (ip = 1:ks%gr%mesh%np) hm%vhxc(ip,2) = hm%vhxc(ip,2) + potential(ip,ispin)
+        end if
+        nullify(potential)
       end if
 
       if(hm%d%ispin > UNPOLARIZED) then
