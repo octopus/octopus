@@ -71,7 +71,6 @@ libfrozen_a_SOURCES =		\
 	live_system.F90		\
 	live_model.F90		\
 	live_handle.F90		\
-	live_config.F90		\
 	ssys_density.F90	\
 	ssys_states.F90		\
 	ssys_system.F90		\
@@ -155,7 +154,6 @@ live_geometry.o		: live_geometry.F90 base_geometry.o geo_intrf.o
 live_system.o		: live_system.F90 live_geometry.o base_system.o base_geometry.o
 live_model.o		: live_model.F90 live_system.o base_model.o base_system.o
 live_handle.o		: live_handle.F90 live_model.o base_handle.o base_model.o
-live_config.o		: live_config.F90 live_handle.o base_hamiltonian.o base_config.o functional.o
 
 ssys_density.o		: ssys_density.F90 base_density.o
 ssys_states.o		: ssys_states.F90 base_states.o
@@ -166,6 +164,6 @@ ssys_tnadd.o		: ssys_tnadd.F90 base_hamiltonian.o
 ssys_hamiltonian.o	: ssys_hamiltonian.F90 ssys_tnadd.o ssys_external.o ssys_ionic.o ssys_system.o base_hamiltonian.o simulation.o
 ssys_model.o		: ssys_model.F90 ssys_hamiltonian.o ssys_system.o base_model.o
 ssys_handle.o		: ssys_handle.F90 live_handle.o frozen_handle.o base_handle.o
-ssys_config.o		: ssys_config.F90 ssys_handle.o live_config.o live_handle.o frozen_config.o frozen_handle.o fio_config.F90 fio_handle.o base_config.o base_handle.o base_hamiltonian.o functional.o
+ssys_config.o		: ssys_config.F90 ssys_handle.o frozen_config.o frozen_handle.o fio_config.F90 fio_handle.o base_config.o base_handle.o base_hamiltonian.o functional.o
 
 

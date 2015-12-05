@@ -31,7 +31,6 @@ module run_m
   use ground_state_m
   use hamiltonian_m
   use invert_ks_m
-  use json_m
   use parser_m
   use messages_m
   use mpi_debug_m
@@ -45,8 +44,6 @@ module run_m
   use profiling_m
   use pulpo_m
   use restart_m
-  use ssys_config_m
-  use ssys_handle_m
   use static_pol_m
   use system_m
   use td_m
@@ -127,11 +124,8 @@ contains
     type(system_t)      :: sys
     type(hamiltonian_t) :: hm
     type(profile_t), save :: calc_mode_prof
-    type(json_object_t) :: config
-    type(base_handle_t) :: subsys_handle
     logical :: fromScratch
 
-    type(base_model_t),       pointer :: subsys_model
     type(base_hamiltonian_t), pointer :: subsys_hm
     
     PUSH_SUB(run)
@@ -152,15 +146,14 @@ contains
 
       call unit_system_init()
 
-      nullify(subsys_model, subsys_hm)
-      if(ssys_config_use())then
-        call system_init(sys, subsys_handle, config)
-        call base_handle_get(subsys_handle, subsys_model)
-        ASSERT(associated(subsys_model))
-        call base_model_get(subsys_model, subsys_hm)
+      call system_init(sys)
+      
+      nullify(subsys_hm)
+      if(associated(sys%subsys_handle))then
+        call subsystems_get(sys%subsys_handle, subsys_hm)
         ASSERT(associated(subsys_hm))
         call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, subsys_hm)
-        nullify(subsys_model, subsys_hm)
+        nullify(subsys_hm)
 
         ! At present, PCM calculations in parallel must have ParallelizationStrategy = par_states
         if (hm%pcm%run_pcm) then 
@@ -170,7 +163,6 @@ contains
            endif
         endif
       else
-        call system_init(sys)
         call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family)
 
         ! At present, PCM calculations in parallel must have ParallelizationStrategy = par_states
@@ -274,10 +266,6 @@ contains
 
       call hamiltonian_end(hm)
       call system_end(sys)
-      if(ssys_config_use()) then
-        call ssys_handle_end(subsys_handle)
-        call json_end(config)
-      end if
       call fft_all_end()
     end if
 
@@ -306,6 +294,25 @@ contains
     end subroutine calc_mode_init
 
   end subroutine run
+
+  ! ---------------------------------------------------------
+  subroutine subsystems_get(this, subsys_hm)
+    type(base_handle_t),       intent(in) :: this
+    type(base_hamiltonian_t), pointer     :: subsys_hm
+
+    type(base_model_t), pointer :: subsys_model
+    
+    PUSH_SUB(subsystems_get)
+
+    nullify(subsys_hm, subsys_model)
+    call base_handle_get(this, subsys_model)
+    ASSERT(associated(subsys_model))
+    call base_model_get(subsys_model, subsys_hm)
+    nullify(subsys_model)
+      
+    POP_SUB(subsystems_get)
+  end subroutine subsystems_get
+
 
 end module run_m
 

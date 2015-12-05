@@ -34,6 +34,7 @@ libsystem_a_SOURCES =         \
 	xc_oep.F90            \
 	xc_ks_inversion.F90   \
 	v_ks.F90              \
+	live_config.F90       \
 	output_fio.F90        \
 	output_me.F90         \
 	output.F90            \
@@ -91,9 +92,10 @@ eigen_feast.o: eigen_feast.F90 linear_solver.o
 xc_oep.o : xc_oep.F90 xc_oep_inc.F90 xc_oep_sic_inc.F90 xc_oep_x_inc.F90 xc_kli_inc.F90 xc_kli_pauli_inc.F90 linear_solver.o 
 xc_ks_inversion.o : eigensolver.o
 v_ks.o : v_ks.F90 xc_oep.o energy_calc.o magnetic.o xc_ks_inversion.o current.o
-system.o : system.F90 v_ks.o energy_calc.o elf.o output.o
+system.o : system.F90 v_ks.o energy_calc.o elf.o output.o live_config.o
 pert.o : pert.F90 pert_inc.F90
 output.o : output.F90 output_states_inc.F90 output_h_inc.F90 output_linear_response_inc.F90 output_etsf_inc.F90 output_berkeleygw_inc.F90 output_modelmb_inc.F90 output_me.o output_fio.o elf.o magnetic.o v_ks.o current.o
+live_config.o : live_config.F90
 output_fio.o: output_fio.F90
 output_me.o: output_me_inc.F90
 exponential.o : exponential.F90

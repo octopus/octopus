@@ -6,9 +6,13 @@ module live_config_m
   use base_hamiltonian_m
   use global_m
   use json_m
+  use kinds_m
   use live_handle_m
   use messages_m
   use profiling_m
+  use space_m
+  use states_m
+  use states_dim_m
   use storage_m
 
   implicit none
@@ -21,19 +25,43 @@ module live_config_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine live_config_parse_density(this, nspin)
+  subroutine live_config_parse_density(this, st)
     type(json_object_t), intent(inout) :: this
-    integer,             intent(in)    :: nspin
+    type(states_t),      intent(in)    :: st
+
+    type(json_array_t), pointer :: list
+    real(kind=wp)               :: chrg, qtot
+    integer                     :: ispn, ik, ierr
 
     PUSH_SUB(live_config_parse_density)
+
+    nullify(list)
+    ASSERT(st%d%nspin>0)
+    ASSERT(st%d%nspin<3)
+    call json_get(this, "charge", list, ierr)
+    ASSERT(ierr==JSON_OK)
+    ASSERT(st%d%nspin==json_len(list))
+    qtot = 0.0_wp
+    do ispn = 1, st%d%nspin
+      chrg = 0.0_wp
+      do ik = 1, st%d%nik
+        if(ispn==states_dim_get_spin_index(st%d, ik))&
+          chrg = chrg + st%d%kweights(ik) * sum(st%occ(:,ik))
+      end do
+      call json_set(list, ispn, chrg, ierr)
+      ASSERT(ierr==JSON_OK)
+      qtot = qtot + chrg
+    end do
+    ASSERT(.not.abs(1.0_wp-min(st%qtot,qtot)/max(st%qtot,qtot))>epsilon(qtot))
+    nullify(list)
 
     POP_SUB(live_config_parse_density)
   end subroutine live_config_parse_density
 
   ! ---------------------------------------------------------
-  subroutine live_config_parse_states(this, nspin)
+  subroutine live_config_parse_states(this, st)
     type(json_object_t), intent(inout) :: this
-    integer,             intent(in)    :: nspin
+    type(states_t),      intent(in)    :: st
 
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
@@ -41,18 +69,19 @@ contains
     PUSH_SUB(live_config_parse_states)
 
     nullify(cnfg)
+    call json_set(this, "charge", st%qtot)
     call json_get(this, "density", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call live_config_parse_density(cnfg, nspin)
+    call live_config_parse_density(cnfg, st)
     nullify(cnfg)
 
     POP_SUB(live_config_parse_states)
   end subroutine live_config_parse_states
 
   ! ---------------------------------------------------------
-  subroutine live_config_parse_system(this, nspin)
+  subroutine live_config_parse_system(this, st)
     type(json_object_t), intent(inout) :: this
-    integer,             intent(in)    :: nspin
+    type(states_t),      intent(in)    :: st
 
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
@@ -62,7 +91,7 @@ contains
     nullify(cnfg)
     call json_get(this, "states", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call live_config_parse_states(cnfg, nspin)
+    call live_config_parse_states(cnfg, st)
     nullify(cnfg)
 
     POP_SUB(live_config_parse_system)
@@ -121,9 +150,9 @@ contains
   end subroutine live_config_parse_hamiltonian
 
   ! ---------------------------------------------------------
-  subroutine live_config_parse_model(this, nspin)
+  subroutine live_config_parse_model(this, st)
     type(json_object_t), intent(inout) :: this
-    integer,             intent(in)    :: nspin
+    type(states_t),      intent(in)    :: st
 
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
@@ -133,7 +162,7 @@ contains
     nullify(cnfg)
     call json_get(this, "system", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call live_config_parse_system(cnfg, nspin)
+    call live_config_parse_system(cnfg, st)
     nullify(cnfg)
     call json_get(this, "hamiltonian", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
@@ -144,10 +173,10 @@ contains
   end subroutine live_config_parse_model
 
   ! ---------------------------------------------------------
-  subroutine live_config_parse(this, nspin, ndim)
+  subroutine live_config_parse(this, st, space)
     type(json_object_t), intent(out) :: this
-    integer,             intent(in)  :: nspin
-    integer,             intent(in)  :: ndim
+    type(states_t),      intent(in)  :: st
+    type(space_t),       intent(in)  :: space
 
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
@@ -155,12 +184,12 @@ contains
     PUSH_SUB(live_config_parse)
 
     nullify(cnfg)
-    call base_config_parse(this, nspin, ndim)
+    call base_config_parse(this, st%d%nspin, space%dim)
     call json_set(this, "type", HNDL_TYPE_LIVE)
     call json_set(this, "name", "live")
     call json_get(this, "model", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call live_config_parse_model(cnfg, nspin)
+    call live_config_parse_model(cnfg, st)
     nullify(cnfg)
 
     POP_SUB(live_config_parse)
