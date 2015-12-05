@@ -302,7 +302,7 @@ contains
     if(present(subsys_hm))then
       ! Set Subsystems Hamiltonian pointer.
       ASSERT(.not.hm%cmplxscl%space)
-      hm%subsys_hm=>subsys_hm
+      hm%subsys_hm => subsys_hm
     end if
 
     ! allocate potentials and density of the cores
@@ -871,8 +871,6 @@ contains
 
     integer :: ispin, ip, idir, iatom, ilaser
     type(profile_t), save :: prof, prof_phases
-    type(base_hamiltonian_t), pointer :: subsys_tnadd
-    FLOAT, dimension(:,:),    pointer :: potential
     FLOAT :: aa(1:MAX_DIM)
     FLOAT, allocatable :: vp(:,:)
 
@@ -908,21 +906,6 @@ contains
       end if
     end do
 
-    ! Add subsystem kinetic non-additive term
-    nullify(subsys_tnadd, potential)
-    if(associated(this%subsys_hm))then
-      call base_hamiltonian_get(this%subsys_hm, "tnadd", subsys_tnadd)
-      ASSERT(associated(subsys_tnadd))
-      call base_hamiltonian_get(subsys_tnadd, potential)
-      ASSERT(associated(potential))
-      do ispin = 1, this%d%nspin
-        forall (ip = 1:mesh%np) 
-          this%hm_base%potential(ip,ispin) = this%hm_base%potential(ip,ispin) + potential(ip,ispin)
-        end forall
-      end do
-      nullify(subsys_tnadd, potential)
-    end if
- 
     ! the lasers
     if (present(time)) then
 

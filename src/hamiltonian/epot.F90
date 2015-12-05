@@ -652,8 +652,7 @@ contains
     type(mesh_t),      pointer :: mesh
     type(simul_box_t), pointer :: sb
     type(profile_t), save :: epot_generate_prof
-    type(base_potential_t), pointer :: live_external
-    FLOAT, dimension(:),    pointer :: vpsl
+    FLOAT, dimension(:), pointer :: vpsl
     FLOAT,    allocatable :: density(:)
     FLOAT,    allocatable :: Imdensity(:)
     FLOAT,    allocatable :: tmp(:)
@@ -676,16 +675,14 @@ contains
     end if
 
     ! Local part
-    nullify(live_external, vpsl)
+    nullify(vpsl)
     if(associated(ep%subsys_external))then
       ! Sets the vpsl pointer to the "live" part of the subsystem potential.
-      call base_potential_gets(ep%subsys_external, "live", live_external)
-      ASSERT(associated(live_external))
-      call base_potential_get(live_external, vpsl)
+      call base_potential_gets(ep%subsys_external, "live", vpsl)
       ASSERT(associated(vpsl))
     else
       ! Sets the vpsl pointer to the total potential.
-      vpsl=>ep%vpsl
+      vpsl => ep%vpsl
     end if
     vpsl = M_ZERO
     if(associated(ep%Imvpsl)) ep%Imvpsl = M_ZERO
@@ -787,10 +784,8 @@ contains
     if (ep%classical_pot > 0)   vpsl(1:mesh%np) = vpsl(1:mesh%np) + ep%Vclassical(1:mesh%np)
     if (associated(ep%e_field) .and. sb%periodic_dim < sb%dim) vpsl(1:mesh%np) = vpsl(1:mesh%np) + ep%v_static(1:mesh%np)
 
-    if(associated(ep%subsys_external))then
-      ! Calculates the total potential by summing all the subsystem contributions.
-      call ssys_external_calc(ep%subsys_external)
-    end if
+    ! Calculates the total potential by summing all the subsystem contributions.
+    if(associated(ep%subsys_external)) call ssys_external_calc(ep%subsys_external)
   
     POP_SUB(epot_generate)
     call profiling_out(epot_generate_prof)
