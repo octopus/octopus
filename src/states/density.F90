@@ -48,7 +48,6 @@ module density_m
   use profiling_m
   use simul_box_m
   use smear_m
-  use ssys_states_m
   use states_m
   use states_dim_m
   use symmetrizer_m
@@ -377,9 +376,6 @@ contains
       call symmetrizer_end(symmetrizer)
       SAFE_DEALLOCATE_A(tmpdensity)
     end if
-
-    !> Calculate the total density.
-    if(associated(this%st%subsys_st)) call ssys_states_acc(this%st%subsys_st)
 
     POP_SUB(density_calc_end)
   end subroutine density_calc_end

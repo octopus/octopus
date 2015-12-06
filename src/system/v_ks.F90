@@ -48,6 +48,7 @@ module v_ks_m
   use profiling_m
   use pcm_m 
   use simul_box_m
+  use ssys_states_m
   use ssys_tnadd_m
   use states_m
   use states_dim_m
@@ -642,9 +643,11 @@ contains
 
       ! get density taking into account non-linear core corrections
       SAFE_ALLOCATE(ks%calc%density(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
+      !> Calculate the subsystems total density.
+      if(associated(st%subsys_st)) call ssys_states_acc(st%subsys_st)
       if (.not. cmplxscl) then
         call states_total_density(st, ks%gr%fine%mesh, ks%calc%density)
-      else 
+      else
         SAFE_ALLOCATE(ks%calc%Imdensity(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
         call states_total_density(st, ks%gr%fine%mesh, ks%calc%density, ks%calc%Imdensity)
       end if
