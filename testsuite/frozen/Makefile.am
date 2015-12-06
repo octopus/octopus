@@ -20,8 +20,13 @@
 
 sharedir = $(pkgdatadir)/testsuite/frozen
 
-dist_share_DATA =		\
-	01-output.frozen.inp	\
-	01-output.frozen.test
+dist_share_DATA =			\
+	01-output.frozen.inp		\
+	01-output.frozen.test		\
+	02-Na2.mixpot.01.frozen.inp	\
+	02-Na2.mixpot.02.frozen.inp	\
+	02-Na2.mixpot.03.frozen.inp	\
+	02-Na2.mixrho.frozen.inp	\
+	02-Na2.frozen.test
 
 CLEANFILES = *~ *.bak

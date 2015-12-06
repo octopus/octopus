@@ -3,7 +3,7 @@
 Test       : Frozen - Output
 Program    : octopus
 TestGroups : short-run, frozen
-Enabled    : No
+Enabled    : Yes
 
 Input: 01-output.frozen.inp
 
