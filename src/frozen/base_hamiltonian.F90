@@ -394,7 +394,7 @@ contains
   end subroutine hterm__new__
 
   ! ---------------------------------------------------------
-  subroutine hterm__del__(this)
+  recursive subroutine hterm__del__(this)
     type(hterm_t), pointer :: this
 
     PUSH_SUB(hterm__del__)
