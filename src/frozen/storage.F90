@@ -193,13 +193,11 @@ contains
 
     PUSH_SUB(storage_update_aux)
 
-    if(this%full)then
-      do indx = this%mesh%np+1, this%size
-        this%data(indx,dim) = 0.0_wp
-      end do
-    end if
+    do indx = this%mesh%np+1, this%size
+      this%data(indx,dim) = 0.0_wp
+    end do
 #if defined(HAVE_MPI)
-    call dvec_ghost_update(this%mesh%vp, this%data(:,dim))
+    if(this%mesh%parallel_in_domains) call dvec_ghost_update(this%mesh%vp, this%data(:,dim))
 #endif
 
     POP_SUB(storage_update_aux)
@@ -215,7 +213,7 @@ contains
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
-    if(this%alloc)then
+    if(this%alloc.and.this%full)then
       do indx = 1, this%ndim
         call storage_update_aux(this, indx)
       end do
@@ -465,7 +463,7 @@ contains
     do indx = 1, this%mesh%np
       this%data(indx,dim) = mlt * this%data(indx,dim)
     end do
-    call storage_update_aux(this, dim)
+    if(this%full) call storage_update_aux(this, dim)
 
     POP_SUB(storage_mlt_aux)
   end subroutine storage_mlt_aux
@@ -529,7 +527,7 @@ contains
         do indx = 1, this%mesh%np
           this%data(indx,jndx) = this%data(indx,jndx) + that%data(indx,jndx)
         end do
-        call storage_update_aux(this, jndx)
+        if(this%full) call storage_update_aux(this, jndx)
       end do
     end if
 
@@ -558,7 +556,7 @@ contains
         do indx = 1, this%mesh%np
           this%data(indx,jndx) = this%data(indx,jndx) - that%data(indx,jndx)
         end do
-        call storage_update_aux(this, jndx)
+        if(this%full) call storage_update_aux(this, jndx)
       end do
     end if
 
@@ -582,7 +580,7 @@ contains
         this%data(indx,1) = this%data(indx,1) + that%data(indx,jndx)
       end do
     end do
-    call storage_update_aux(this, 1)
+    if(this%full) call storage_update_aux(this, 1)
 
     POP_SUB(storage_reduce_aux)
   end subroutine storage_reduce_aux
@@ -740,7 +738,7 @@ contains
       end do
       call dmultigrid_coarse2fine(this%grid%fine%tt, this%grid%der, this%mesh, &
         buff(:), this%data(:,indx), order=2)
-      call storage_update_aux(this, indx)
+      if(this%full) call storage_update_aux(this, indx)
     end do
 
     POP_SUB(storage_transfer_c2f)
@@ -765,7 +763,7 @@ contains
       end do
       call dmultigrid_fine2coarse(this%grid%fine%tt, this%grid%fine%der, this%mesh, &
         buff(:), this%data(:,indx), INJECTION)
-      call storage_update_aux(this, indx)
+      if(this%full) call storage_update_aux(this, indx)
     end do
 
     POP_SUB(storage_transfer_f2c)
@@ -813,7 +811,7 @@ contains
       do indx = 1, that%mesh%np
         this%data(indx,jndx) = that%data(indx,jndx)
       end do
-      call storage_update_aux(this, jndx)
+      if(this%full) call storage_update_aux(this, jndx)
     end do
 
     POP_SUB(storage_copy_aux)

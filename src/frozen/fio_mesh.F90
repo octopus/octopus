@@ -56,8 +56,8 @@ contains
     this%np = this%np_global
     this%np_part = this%np_part_global
     this%parallel_in_domains = .false.
-    this%spacing = 0.0_wp
     call json_get(config, "spacing", this%spacing(1:this%sb%dim), ierr=ierr)
+    if(size(this%spacing)>this%sb%dim) this%spacing(this%sb%dim+1:) = 0.0_wp
     ASSERT(ierr==JSON_OK)
     SAFE_ALLOCATE(this%vol_pp(1:1))
     this%vol_pp(1) = product(this%spacing(1:this%sb%dim))

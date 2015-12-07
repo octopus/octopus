@@ -180,8 +180,10 @@ contains
     real(kind=wp) :: v
 
     real(kind=wp) :: r
+    integer       :: n
 
-    r = sqrt(sum((x-y)**2))
+    n = min(size(x), size(y))
+    r = sqrt(sum((x(1:n)-y(1:n))**2))
     if(r<r_small) r = r_small
     v = -c / r
 

@@ -474,7 +474,7 @@ contains
         call basis_pos_rot( x(idx), x(jdx), this%rot%r(kdx))
       end do
     end do
-    if(this%trn%do) x = x + this%trn%r
+    if(this%trn%do) x(1:this%trn%n) = x(1:this%trn%n) + this%trn%r
 
   end subroutine basis_to_external_1
 

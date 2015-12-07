@@ -45,9 +45,9 @@ contains
     case(CURV_METHOD_BRIGGS)
       call curv_briggs_init(this%briggs, sb)
     case(CURV_METHOD_MODINE)
-      call json_get(config, "spacing", spcng, ierr)
+      call json_get(config, "spacing", spcng(1:sb%dim), ierr)
       ASSERT(ierr==JSON_OK)
-      if(sb%dim<MAX_DIM) spcng(sb%dim+1:) = 0.0_wp
+      if(size(spcng)>sb%dim) spcng(sb%dim+1:) = 0.0_wp
       call curv_modine_init(this%modine, sb, geo, spcng)
     end select
 

@@ -41,10 +41,10 @@ contains
 
     integer :: indx
 
-    in=.false.
+    in = .false.
     if(present(list))then
       do indx = 1, size(list)
-        in=(trim(adjustl(name))==trim(adjustl(list(indx))))
+        in = (trim(adjustl(name))==trim(adjustl(list(indx))))
         if(in)exit
       end do
     end if
@@ -61,11 +61,11 @@ contains
 
     PUSH_SUB(ssys_ionic__atom_interaction__energy)
 
-    zi=species_zval(iatom%species)
-    zj=species_zval(jatom%species)
-    rr=atom_distance(iatom, jatom)
+    zi = species_zval(iatom%species)
+    zj = species_zval(jatom%species)
+    rr = atom_distance(iatom, jatom)
     ASSERT(rr>1.0e-16_wp)
-    energy=zi*zj/rr
+    energy = zi * zj / rr
 
     POP_SUB(ssys_ionic__atom_interaction__energy)
   end subroutine ssys_ionic__atom_interaction__energy
@@ -76,19 +76,22 @@ contains
     type(atom_t),                intent(in)  :: jatom
     real(kind=wp), dimension(:), intent(out) :: force
 
-    real(kind=wp), dimension(size(force)) :: r
-    real(kind=wp)                         :: rr, zi, zj, dd
+    real(kind=wp), dimension(MAX_DIM) :: r
+    real(kind=wp)                     :: rr, zi, zj, dd
+    integer                           :: nd
 
     PUSH_SUB(ssys_ionic__atom_interaction__force)
 
-    force=0.0_wp
-    zi=species_zval(iatom%species)
-    zj=species_zval(jatom%species)
-    r=jatom%x-iatom%x
-    rr=sqrt(sum(r**2))
+    force = 0.0_wp
+    zi = species_zval(iatom%species)
+    zj = species_zval(jatom%species)
+    r = jatom%x - iatom%x
+    rr = sqrt(sum(r**2))
     ASSERT(rr>1.0e-16_wp)
-    dd=zi*zj/rr
-    force=(dd/rr**2)*r
+    dd = zi * zj / rr
+    nd = size(force)
+    ASSERT(nd<=MAX_DIM)
+    force = ( dd / rr**2 ) * r(1:nd)
 
     POP_SUB(ssys_ionic__atom_interaction__force)
   end subroutine ssys_ionic__atom_interaction__force
@@ -105,7 +108,7 @@ contains
 
     PUSH_SUB(ssys_ionic__calc__)
 
-    energy=0.0_wp
+    energy = 0.0_wp
     nullify(sys, geom, iatom, jatom)
     call base_term__reset__(this)
     call base_term_get(this, sys)
@@ -141,7 +144,7 @@ contains
 
     type(base_term_iterator_t) :: iter
     type(base_term_t), pointer :: subs
-    integer                     :: ierr
+    integer                    :: ierr
 
     PUSH_SUB(ssys_ionic_calc)
 
@@ -162,7 +165,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine ssys_ionic__interaction__(this, atom, force)
-    type(base_term_t),          intent(in)  :: this
+    type(base_term_t),           intent(in)  :: this
     type(atom_t),                intent(in)  :: atom
     real(kind=wp), dimension(:), intent(out) :: force
 
@@ -174,7 +177,7 @@ contains
 
     PUSH_SUB(ssys_ionic__interaction__)
 
-    force=0.0_wp
+    force = 0.0_wp
     nullify(sys, geom, iatom)
     call base_term_get(this, sys)
     ASSERT(associated(sys))
@@ -186,7 +189,7 @@ contains
       call base_geometry_next(iter, iatom)
       if(.not.associated(iatom))exit
       call ssys_ionic__atom_interaction__(iatom, atom, frc)
-      force=force+frc
+      force = force + frc
     end do
     call base_geometry_end(iter)
     nullify(sys, geom, iatom)
@@ -196,7 +199,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine ssys_ionic_interaction(this, atom, force, except)
-    type(base_term_t),                       intent(in)  :: this
+    type(base_term_t),                        intent(in)  :: this
     type(atom_t),                             intent(in)  :: atom
     real(kind=wp),    dimension(:),           intent(out) :: force
     character(len=*), dimension(:), optional, intent(in)  :: except
@@ -209,7 +212,7 @@ contains
 
     PUSH_SUB(ssys_ionic_interaction)
 
-    force=0.0_wp
+    force = 0.0_wp
     nullify(subs)
     call base_term_init(iter, this)
     do
@@ -218,7 +221,7 @@ contains
       if(ierr/=BASE_TERM_OK)exit
       if(ssys_ionic__in__(name, except))cycle
       call ssys_ionic__interaction__(subs, atom, frce)
-      force=force+frce
+      force = force + frce
     end do
     call base_term_end(iter)
     nullify(subs)
@@ -241,13 +244,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine ssys_ionic_get_info(this, energy, except)
-    type(base_term_t),                       intent(in)  :: this
+    type(base_term_t),                        intent(in)  :: this
     real(kind=wp),                            intent(out) :: energy
     character(len=*), dimension(:), optional, intent(in)  :: except
 
     type(base_term_t), pointer :: subs
-    real(kind=wp)               :: enrg
-    integer                     :: indx
+    real(kind=wp)              :: enrg
+    integer                    :: indx
     
     PUSH_SUB(ssys_ionic_get_info)
 
@@ -259,7 +262,7 @@ contains
         call base_term_gets(this, trim(adjustl(except(indx))), subs)
         ASSERT(associated(subs))
         call base_term_get(subs, energy=enrg)
-        energy=energy-enrg
+        energy = energy - enrg
       end do
       nullify(subs)
     end if

@@ -136,7 +136,7 @@ contains
     call json_set(this, "localfullsize", mesh%np_part)
     call json_set(this, "globalsize", mesh%np_global)
     call json_set(this, "globalfullsize", mesh%np_part_global)
-    call json_set(this, "spacing", mesh%spacing)
+    call json_set(this, "spacing", mesh%spacing(1:mesh%sb%dim))
     call mesh_write_fingerprint(mesh, dir, file, group, ierr)
     if(ierr/=0)then
       message(1) = "Could not write to the output file."
