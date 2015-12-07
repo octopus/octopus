@@ -43,14 +43,14 @@ module json_m
   integer, public, parameter :: JSON_STOP_ERROR  =-5
   integer, public, parameter :: JSON_KEY_ERROR   =-6
 
-  integer, parameter :: JSON_UNDEF_TYPE   =-1
-  integer, parameter :: JSON_NULL_TYPE    = 0
-  integer, parameter :: JSON_LOGICAL_TYPE = 1
-  integer, parameter :: JSON_INTEGER_TYPE = 2
-  integer, parameter :: JSON_REAL_TYPE    = 3
-  integer, parameter :: JSON_STRING_TYPE  = 4
-  integer, parameter :: JSON_ARRAY_TYPE   = 5
-  integer, parameter :: JSON_OBJECT_TYPE  = 6
+  integer, parameter :: JSON_UNDEF_TYPE   = 0
+  integer, parameter :: JSON_NULL_TYPE    = 1
+  integer, parameter :: JSON_LOGICAL_TYPE = 2
+  integer, parameter :: JSON_INTEGER_TYPE = 3
+  integer, parameter :: JSON_REAL_TYPE    = 4
+  integer, parameter :: JSON_STRING_TYPE  = 5
+  integer, parameter :: JSON_ARRAY_TYPE   = 6
+  integer, parameter :: JSON_OBJECT_TYPE  = 7
 
   character, parameter :: backslash=achar(92)
   character, parameter :: space=achar(32)
@@ -4245,8 +4245,6 @@ contains
     logical :: is
     !
     select case(this%type)
-    case(JSON_UNDEF_TYPE)
-      is=.false.
     case(JSON_NULL_TYPE)
       is=json_null_isdef(this%jnull)
     case(JSON_LOGICAL_TYPE)
@@ -4261,6 +4259,8 @@ contains
       is=json_array_isdef(this%array)
     case(JSON_OBJECT_TYPE)
       is=json_object_isdef(this%object)
+    case default
+      is=.false.
     end select
     return
   end function json_value_isdef
@@ -4793,12 +4793,12 @@ contains
     logical :: is
     !
     select case(this%type)
-    case(JSON_UNDEF_TYPE)
-      is=.false.
     case(JSON_ARRAY_TYPE)
       is=json_array_isdef(this%array)
     case(JSON_OBJECT_TYPE)
       is=json_object_isdef(this%object)
+    case default
+      is=.false.
     end select
     return
   end function json_json_isdef
