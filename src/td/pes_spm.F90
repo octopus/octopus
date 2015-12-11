@@ -548,23 +548,21 @@ contains
 
     if(this%onfly .and. this%sphgrid) then
       iunittwo = io_open('td.general/'//'PES_spm.distribution.out', action='write', position='rewind')
-      if(mdim >= 2) then
-        iunitone = io_open('td.general/'//'PES_spm.power.sum', action='write', position='rewind')
-        write(iunitone, '(a23)') '# omega, total spectrum'
-      end if
+      iunitone = io_open('td.general/'//'PES_spm.power.sum', action='write', position='rewind')
+      write(iunitone, '(a23)') '# omega, total spectrum'
 
       select case(mdim)
       case(1)
-        write(iunittwo, '(a56)') '# omega, distribution (left/right point), total spectrum'
+        write(iunittwo, '(a40)') '# omega, distribution (left/right point)'
 
         do iom = 1, this%nomega
           omega = iom * this%delomega
-          write(iunittwo, '(5(1x,e18.10E3))') omega, wffttot(iom, 2), wffttot(iom, 1), sum(wffttot(iom, :)) / M_TWO
+          write(iunittwo, '(5(1x,e18.10E3))') omega, wffttot(iom, 2), wffttot(iom, 1)
+          write(iunitone, '(2(1x,e18.10E3))') omega, sum(wffttot(iom, :)) / M_TWO
         end do
 
       case(2)
         write(iunittwo, '(a26)') '# omega, phi, distribution'
-        write(iunitone, '(a23)') '# omega, total spectrum'
 
         do iom = 1, this%nomega
           omega = iom * this%delomega
@@ -628,7 +626,7 @@ contains
         end do
       end select
       call io_close(iunittwo)
-      if(mdim >= 2) call io_close(iunitone)
+      call io_close(iunitone)
 
     end if
 

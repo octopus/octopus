@@ -71,7 +71,7 @@ module pes_flux_m
 
     integer          :: shape                          !< shape of the surface (= cubic/spherical)
     integer          :: nsrfcpnts                      !< total number of surface points
-    integer          :: nsrfcpnts_start, nsrfcpnts_end !< number of surface points on node
+    integer          :: nsrfcpnts_start, nsrfcpnts_end !< for cubic surface: number of surface points on node
     FLOAT, pointer   :: srfcnrml(:,:)                  !< vectors normal to the surface (includes surface element)
     FLOAT, pointer   :: rcoords(:,:)                   !< coordinates of the surface points
     integer, pointer :: srfcpnt(:)                     !< for cubic surface: returns index of the surface points
@@ -126,7 +126,7 @@ contains
     FLOAT, allocatable :: k_dot_aux(:)
     integer            :: nstepsphir, nstepsthetar
 #if defined(HAVE_MPI)
-    integer            :: mpisize, mpirank
+    integer            :: mpirank
 #endif
     integer            :: ll, mm
     integer            :: default_shape
@@ -305,20 +305,21 @@ contains
     ! -----------------------------------------------------------------
     if(this%shape == M_CUBIC) then
       call pes_flux_getcube(this, mesh, border, offset)
+
+      ! distribute the surface points on nodes,
+      ! since mesh domains may have different numbers of surface points.
+      call pes_flux_distribute(1, this%nsrfcpnts, this%nsrfcpnts_start, this%nsrfcpnts_end, mesh%mpi_grp%comm)
+#if defined(HAVE_MPI)
+      call MPI_Barrier(mpi_world%comm, mpi_err)
+      write(*,*) &
+        'Number of surface points on node ', mesh%mpi_grp%rank, ' : ', this%nsrfcpnts_end - this%nsrfcpnts_start + 1
+      call MPI_Barrier(mpi_world%comm, mpi_err)
+#endif
     else
       call mesh_interpolation_init(this%interp, mesh)
       call pes_flux_getsphere(this, mesh, nstepsthetar, nstepsphir, offset)
     end if
 
-    ! distribute the surface points on nodes,
-    ! since mesh domains may have different numbers of surface points.
-    call pes_flux_distribute(1, this%nsrfcpnts, this%nsrfcpnts_start, this%nsrfcpnts_end, mesh%mpi_grp%comm)
-#if defined(HAVE_MPI)
-    call MPI_Barrier(mpi_world%comm, mpi_err)
-    write(*,*) &
-      'Number of surface points on node ', mpirank, ' : ', this%nsrfcpnts_end - this%nsrfcpnts_start + 1
-    call MPI_Barrier(mpi_world%comm, mpi_err)
-#endif
     if(mpi_grp_is_root(mpi_world)) then
       write(*,*) 'Info: Number of surface points (total):', this%nsrfcpnts
       do isp = 1, this%nsrfcpnts
@@ -466,6 +467,7 @@ contains
       call pes_flux_distribute(1, this%nkpnts, this%nkpnts_start, this%nkpnts_end, mpi_world%comm)
 #if defined(HAVE_MPI)
       call MPI_Barrier(mpi_world%comm, mpi_err)
+      call MPI_Comm_rank(mpi_world%comm, mpirank, mpi_err)
       write(*,*) &
         'Number of k-points on node ', mpirank, ' : ', this%nkpnts_end - this%nkpnts_start + 1
       call MPI_Barrier(mpi_world%comm, mpi_err)
@@ -1290,10 +1292,8 @@ contains
 
     if(mpi_grp_is_root(mpi_world)) then
       iunittwo = io_open('td.general/PES_flux.distribution.out', action='write', position='rewind')
-      if(mdim >= 2) then
-        iunitone = io_open('td.general/'//'PES_flux.power.sum', action='write', position='rewind')
-        write(iunitone, '(a19)') '# E, total spectrum'
-      end if
+      iunitone = io_open('td.general/'//'PES_flux.power.sum', action='write', position='rewind')
+      write(iunitone, '(a19)') '# E, total spectrum'
 
       if(this%shape == M_SPHERICAL) then
         write(iunittwo, '(a29)') '# k, theta, phi, distribution'
@@ -1342,11 +1342,14 @@ contains
         select case(mdim)
         case(1)
           write(iunittwo, '(a17)') '# k, distribution'
-          ikp = 0
-          do ikk = -this%nk, this%nk
-            if(ikk == M_ZERO) cycle
-            ikp = ikp + 1
+          do ikp = 1, this%nkpnts
             write(iunittwo, '(5(1x,e18.10E3))') this%kcoords_cub(1, ikp), spctrout_cub(ikp)
+          end do
+
+          do ikp = this%nk + 1, this%nkpnts
+            kact = this%kcoords_cub(1, ikp)
+            write(iunitone, '(2(1x,e18.10E3))') kact**M_TWO / M_TWO, &
+              (spctrout_cub(ikp) + spctrout_cub(this%nkpnts + 1 - ikp)) / M_TWO * kact
           end do
 
         case(2)
@@ -1416,7 +1419,7 @@ contains
       end if
 
       call io_close(iunittwo)
-      if(mdim >= 2) call io_close(iunitone)
+      call io_close(iunitone)
     end if
 
     SAFE_DEALLOCATE_A(spctrout_cub)
