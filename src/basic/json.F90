@@ -1147,11 +1147,14 @@ contains
     !
     character(len=string%len) :: buff
     integer                   :: ierr
+    logical                   :: lbck
     !
     i=0
+    lbck=.false.
+    if(present(back))lbck=back
     if(json_string_isdef(string))then
       call json_string_get_string(string, buff, ierr=ierr)
-      if(ierr==JSON_OK) i=scan(buff, set, back)
+      if(ierr==JSON_OK) i=scan(buff, set, lbck)
     end if
     return
   end function json_string_scan_string_char
