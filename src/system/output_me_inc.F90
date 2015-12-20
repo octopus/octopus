@@ -348,14 +348,13 @@ subroutine X(one_body) (dir, gr, geo, st, hm)
   POP_SUB(X(one_body))
 end subroutine X(one_body)
 
-
 ! ---------------------------------------------------------
 subroutine X(two_body) (dir, gr, st)
   character(len=*), intent(in)    :: dir
   type(grid_t),     intent(inout) :: gr
   type(states_t),   intent(in)    :: st
 
-  integer ist, jst, kst, lst, iunit
+  integer ist, jst, kst, lst, ijst, klst, iunit
   R_TYPE :: me
   R_TYPE, allocatable :: nn(:), vv(:)
   R_TYPE, allocatable :: psii(:, :), psij(:, :), psik(:, :), psil(:, :)
@@ -373,26 +372,29 @@ subroutine X(two_body) (dir, gr, st)
   SAFE_ALLOCATE(psik(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(psil(1:gr%mesh%np, 1:st%d%dim))
 
+  ijst=0
   do ist = 1, st%nst
 
     call states_get_state(st, gr%mesh, ist, 1, psii)
 
     do jst = 1, st%nst
       if(jst > ist) cycle
+      ijst=ijst+1
 
       call states_get_state(st, gr%mesh, jst, 1, psij)
 
       nn(1:gr%mesh%np) = R_CONJ(psii(1:gr%mesh%np, 1))*psij(1:gr%mesh%np, 1)
       call X(poisson_solve)(psolver, vv, nn, all_nodes=.false.)
 
+      klst=0
       do kst = 1, st%nst
-        if(kst > ist) cycle
-        
+ 
         call states_get_state(st, gr%mesh, kst, 1, psik)
 
         do lst = 1, st%nst
           if(lst > kst) cycle
-          if(lst > jst) cycle
+          klst=klst+1
+          if(klst > ijst) cycle
 
           call states_get_state(st, gr%mesh, lst, 1, psil)
 
