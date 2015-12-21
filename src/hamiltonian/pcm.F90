@@ -125,6 +125,7 @@ contains
     integer :: pcmmat_gamess_unit
     integer :: iunit
     integer :: ip
+    integer :: subdivider
 
     integer, parameter :: mxts = 10000
 
@@ -330,8 +331,18 @@ contains
             pcm%spheres(pcm%n_spheres)%r*P_a_B
      end do
 
+     !%Variable PCMTessSubdivider
+     !%Type integer
+     !%Default 1
+     !%Section Hamiltonian::PCM
+     !%Description
+     !% Allows to subdivide further each tessera. Can take only two values, 1 or 4.
+     !% 1 => 60 tesserae/sphere; 4 => 240 tesserae/sphere.
+     !%End
+     call parse_variable('PCMTessSubdivider', 1, subdivider)
+
      !> Counting the number of tesserae
-     call cav_gen(0, 1, pcm%n_spheres, pcm%spheres, pcm%n_tesserae, dum2, pcm%info_unit)
+     call cav_gen(0, subdivider, pcm%n_spheres, pcm%spheres, pcm%n_tesserae, dum2, pcm%info_unit)
 
      SAFE_ALLOCATE(pcm%tess(1:pcm%n_tesserae))
 
@@ -343,7 +354,7 @@ contains
      end do
     
      !> Generating the Van der Waals discretized surface of the solute system
-     call cav_gen(1, 1, pcm%n_spheres, pcm%spheres, pcm%n_tesserae, pcm%tess, pcm%info_unit)
+     call cav_gen(1, subdivider, pcm%n_spheres, pcm%spheres, pcm%n_tesserae, pcm%tess, pcm%info_unit)
 
      message(1) = "Info: van der Waals surface has been calculated"
      call messages_info(1)

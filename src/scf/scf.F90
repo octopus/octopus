@@ -284,6 +284,13 @@ contains
       call messages_fatal()
     end if
 
+    if (scf%mix_field == OPTION__MIXFIELD__POTENTIAL .and. hm%pcm%run_pcm) then
+      call messages_write('Input: You have selected to mix the potential.', new_line = .true.)
+      call messages_write('       This might produce convergence problems for solvated systems.', new_line = .true.)
+      call messages_write('       Mix the Density instead.')
+      call messages_warning()
+    end if
+
     if(scf%mix_field == OPTION__MIXFIELD__DENSITY &
       .and. iand(hm%xc_family, XC_FAMILY_OEP + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) then
 
