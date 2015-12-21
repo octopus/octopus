@@ -50,7 +50,6 @@ module boundary_op_m
     type(cube_function_t)   :: cf        !< The mask-function on the cube
     logical                 :: ab_user_def
     FLOAT, pointer          :: ab_ufn(:)
-    FLOAT                   :: abheight
   end type bc_t    
 
   integer, public, parameter :: &
@@ -77,6 +76,7 @@ contains
     character(len=1024) :: user_def_expr
 
     FLOAT, allocatable  :: mf(:)
+    FLOAT               :: abheight
     type(block_t)       :: blk
 
     character(len=50)   :: str
@@ -119,7 +119,7 @@ contains
     !% When <tt>AbsorbingBoundaries = sin2</tt>, this is the height of the imaginary potential.
     !%End
     if(this%abtype == IMAGINARY_ABSORBING) then
-      call parse_variable('ABHeight', -CNST(0.2), this%abheight, units_inp%energy)
+      call parse_variable('ABHeight', -CNST(0.2), abheight, units_inp%energy)
     end if
    
     !%Variable ABShape
@@ -216,7 +216,7 @@ contains
     if(this%abtype == MASK_ABSORBING) then
       this%mf = M_ONE - mf
     else if(this%abtype == IMAGINARY_ABSORBING) then
-      this%mf(:) = this%abheight * mf(:)
+      this%mf(:) = abheight * mf(:)
     end if
    
     if(in_debug_mode) call bc_write_info(this, mesh)
