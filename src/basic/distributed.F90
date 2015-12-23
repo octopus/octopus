@@ -98,6 +98,9 @@ contains
     if(this%mpi_grp%size == 1 .or. this%nglobal == 1) then
       
       SAFE_ALLOCATE(this%node(1:total))
+      SAFE_ALLOCATE(this%range(1:2, 0:this%mpi_grp%size - 1))
+      SAFE_ALLOCATE(this%num(0:this%mpi_grp%size - 1))
+      
       ! Defaults.
       this%node(1:total)   = 0
       this%start           = 1
@@ -105,7 +108,10 @@ contains
       this%nlocal          = total
       this%nglobal         = total
       this%parallel        = .false.
-      nullify(this%range, this%num)
+      this%range(1, 0)     = 1
+      this%range(2, 0)     = total
+      this%num(0)          = total
+      
       call mpi_grp_init(this%mpi_grp, -1)
       
     else

@@ -1898,7 +1898,7 @@ contains
       calc_mode_par_scalapack_compat() .and. .not. st%d%kpt%parallel, st%scalapack_compatible)
     if((calc_mode_par_scalapack_compat() .and. .not. st%d%kpt%parallel) .neqv. st%scalapack_compatible) &
       call messages_experimental('Setting ScaLAPACKCompatible to other than default')
-    
+
     if(st%scalapack_compatible) then
       if(multicomm_have_slaves(mc)) &
         call messages_not_implemented("ScaLAPACK usage with task parallelization (slaves)")
@@ -1910,54 +1910,33 @@ contains
     st%scalapack_compatible = .false.
 #endif
 
-#if defined(HAVE_MPI)
     if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
-      st%parallel_in_states = .true.
 
+#ifdef HAVE_MPI
       call multicomm_create_all_pairs(st%mpi_grp, st%ap)
-
-     if(st%nst < st%mpi_grp%size) then
-       message(1) = "Have more processors than necessary"
-       write(message(2),'(i4,a,i4,a)') st%mpi_grp%size, " processors and ", st%nst, " states."
-       call messages_fatal(2)
-     end if
-
-     call distributed_init(st%dist, st%nst, st%mpi_grp%comm, "states", scalapack_compat = st%scalapack_compatible)
-
-     SAFE_ALLOCATE(st%st_range(1:2, 0:st%mpi_grp%size-1))
-     SAFE_ALLOCATE(st%st_num(0:st%mpi_grp%size-1))
-
-     call multicomm_divide_range(st%nst, st%mpi_grp%size, st%st_range(1, :), st%st_range(2, :), &
-       lsize = st%st_num, scalapack_compat = st%scalapack_compatible)
-
-     message(1) = "Info: Parallelization in states"
-     call messages_info(1)
-
-     do inode = 0, st%mpi_grp%size - 1
-       write(message(1),'(a,i4,a,i5,a)') &
-            'Info: Nodes in states-group ', inode, ' will manage ', st%st_num(inode), ' states'
-       if(st%st_num(inode) > 0) then
-         write(message(1),'(a,a,i6,a,i6)') trim(message(1)), ':', &
-           st%st_range(1, inode), " - ", st%st_range(2, inode)
-       end if
-       call messages_info(1)
-
-       do ist = st%st_range(1, inode), st%st_range(2, inode)
-         st%node(ist) = inode
-       end do
-     end do
-
-     if(any(st%st_num(:) == 0)) then
-       message(1) = "Cannot run with empty states-groups. Select a smaller number of processors so none are idle."
-       call messages_fatal(1, only_root_writes = .true.)
-     end if
-
-     st%st_start = st%st_range(1, st%mpi_grp%rank)
-     st%st_end   = st%st_range(2, st%mpi_grp%rank)
-     st%lnst     = st%st_num(st%mpi_grp%rank)
-
-   end if
 #endif
+
+      if(st%nst < st%mpi_grp%size) then
+        message(1) = "Have more processors than necessary"
+        write(message(2),'(i4,a,i4,a)') st%mpi_grp%size, " processors and ", st%nst, " states."
+        call messages_fatal(2)
+      end if
+
+      call distributed_init(st%dist, st%nst, st%mpi_grp%comm, "states", scalapack_compat = st%scalapack_compatible)
+
+      SAFE_ALLOCATE(st%st_range(1:2, 0:st%mpi_grp%size-1))
+      SAFE_ALLOCATE(st%st_num(0:st%mpi_grp%size-1))
+
+      st%st_start = st%dist%start
+      st%st_end   = st%dist%end
+      st%lnst     = st%dist%nlocal
+      st%node(1:st%nst) = st%dist%node(1:st%nst)
+      st%st_range(1:2, 0:st%mpi_grp%size - 1) = st%dist%range(1:2, 0:st%mpi_grp%size - 1)
+      st%st_num(0:st%mpi_grp%size - 1) = st%dist%num(0:st%mpi_grp%size - 1)
+      
+      st%parallel_in_states = st%dist%parallel
+
+    end if
 
     POP_SUB(states_distribute_nodes)
   end subroutine states_distribute_nodes
