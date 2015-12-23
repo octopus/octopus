@@ -218,6 +218,7 @@ module states_m
 #ifdef HAVE_SCALAPACK
     type(blacs_proc_grid_t)     :: dom_st_proc_grid   !< The BLACS process grid for the domains-states plane
 #endif
+    type(distributed_t)         :: dist
     logical                     :: scalapack_compatible !< Whether the states parallelization uses ScaLAPACK layout
     integer                     :: lnst               !< Number of states on local node.
     integer                     :: st_start, st_end   !< Range of states processed by local node.
@@ -260,7 +261,8 @@ contains
 
     call states_dim_null(st%d)
     call states_group_null(st%group)
-
+    call distributed_nullify(st%dist)
+    
     st%d%orth_method = 0
     call modelmb_particles_nullify(st%modelmbparticles)
     nullify(st%mmb_nspindown)
@@ -1507,6 +1509,8 @@ contains
     call blacs_proc_grid_copy(stin%dom_st_proc_grid, stout%dom_st_proc_grid)
 #endif
 
+    call distributed_copy(stin%dist, stout%dist)
+    
     stout%scalapack_compatible = stin%scalapack_compatible
 
     stout%lnst       = stin%lnst
@@ -1594,6 +1598,9 @@ contains
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_end(st%dom_st_proc_grid)
 #endif
+
+    call distributed_end(st%dist)
+
     SAFE_DEALLOCATE_P(st%node)
     SAFE_DEALLOCATE_P(st%st_range)
     SAFE_DEALLOCATE_P(st%st_num)
@@ -1914,6 +1921,8 @@ contains
        write(message(2),'(i4,a,i4,a)') st%mpi_grp%size, " processors and ", st%nst, " states."
        call messages_fatal(2)
      end if
+
+     call distributed_init(st%dist, st%nst, st%mpi_grp%comm, "states", scalapack_compat = st%scalapack_compatible)
 
      SAFE_ALLOCATE(st%st_range(1:2, 0:st%mpi_grp%size-1))
      SAFE_ALLOCATE(st%st_num(0:st%mpi_grp%size-1))
