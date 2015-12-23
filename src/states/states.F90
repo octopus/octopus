@@ -228,9 +228,6 @@ module states_m
     !! i. e. st_start = st_range(1, r) and
     !! st_end = st_range(2, r) on node r.
     integer, pointer            :: st_range(:, :)  
-    !> Number of states on node r, i. e.
-    !! st_num(r) = st_num(2, r)-st_num(1, r).
-    integer, pointer            :: st_num(:)         
     type(multicomm_all_pairs_t) :: ap                 !< All-pairs schedule.
 
     logical                     :: symmetrize_density
@@ -292,7 +289,7 @@ contains
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_nullify(st%dom_st_proc_grid)
 #endif
-    nullify(st%node,st%st_range, st%st_num)
+    nullify(st%node,st%st_range)
     nullify(st%ap%schedule)
 
     st%packed = .false.
@@ -1517,7 +1514,6 @@ contains
     stout%st_start   = stin%st_start
     stout%st_end     = stin%st_end
     call loct_pointer_copy(stout%st_range, stin%st_range)
-    call loct_pointer_copy(stout%st_num, stin%st_num)
 
     if(stin%parallel_in_states) call multicomm_all_pairs_copy(stout%ap, stin%ap)
 
@@ -1603,7 +1599,6 @@ contains
 
     SAFE_DEALLOCATE_P(st%node)
     SAFE_DEALLOCATE_P(st%st_range)
-    SAFE_DEALLOCATE_P(st%st_num)
 
     if(st%parallel_in_states) then
       SAFE_DEALLOCATE_P(st%ap%schedule)
@@ -1925,14 +1920,12 @@ contains
       call distributed_init(st%dist, st%nst, st%mpi_grp%comm, "states", scalapack_compat = st%scalapack_compatible)
 
       SAFE_ALLOCATE(st%st_range(1:2, 0:st%mpi_grp%size-1))
-      SAFE_ALLOCATE(st%st_num(0:st%mpi_grp%size-1))
 
       st%st_start = st%dist%start
       st%st_end   = st%dist%end
       st%lnst     = st%dist%nlocal
       st%node(1:st%nst) = st%dist%node(1:st%nst)
       st%st_range(1:2, 0:st%mpi_grp%size - 1) = st%dist%range(1:2, 0:st%mpi_grp%size - 1)
-      st%st_num(0:st%mpi_grp%size - 1) = st%dist%num(0:st%mpi_grp%size - 1)
       
       st%parallel_in_states = st%dist%parallel
 

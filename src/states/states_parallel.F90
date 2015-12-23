@@ -80,7 +80,7 @@ contains
     end if
 
     if (st%parallel_in_states) then
-      blocksize(2) = maxval(st%st_num)
+      blocksize(2) = maxval(st%dist%num)
     else
       blocksize(2) = st%nst
     end if

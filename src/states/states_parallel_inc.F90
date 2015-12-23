@@ -31,7 +31,7 @@ subroutine X(states_parallel_gather_3)(st, dims, psi)
 
   if(st%parallel_in_states) then
 
-    maxst = maxval(st%st_num(0:st%mpi_grp%size - 1))
+    maxst = maxval(st%dist%num(0:st%mpi_grp%size - 1))
     
     SAFE_ALLOCATE(sendpsi(1:dims(1), 1:dims(2), 1:maxst))
     SAFE_ALLOCATE(recvpsi(1:dims(1), 1:dims(2), 1:maxst*st%mpi_grp%size))
@@ -90,7 +90,7 @@ subroutine X(states_parallel_gather_1)(st, aa)
     
 #ifdef HAVE_MPI
     call MPI_Allgatherv(sendaa(st%st_start), st%lnst, R_MPITYPE, &
-      aa(1), st%st_num(0), displs(0), R_MPITYPE, st%mpi_grp%comm, mpi_err)
+      aa(1), st%dist%num(0), displs(0), R_MPITYPE, st%mpi_grp%comm, mpi_err)
 #endif
 
     SAFE_DEALLOCATE_A(sendaa)
