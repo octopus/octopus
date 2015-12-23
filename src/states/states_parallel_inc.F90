@@ -86,7 +86,7 @@ subroutine X(states_parallel_gather_1)(st, aa)
     SAFE_ALLOCATE(displs(0:st%mpi_grp%size - 1))
     
     sendaa(st%st_start:st%st_end) = aa(st%st_start:st%st_end)
-    displs(0:st%mpi_grp%size - 1) = st%st_range(1, 0:st%mpi_grp%size - 1) - 1
+    displs(0:st%mpi_grp%size - 1) = st%dist%range(1, 0:st%mpi_grp%size - 1) - 1
     
 #ifdef HAVE_MPI
     call MPI_Allgatherv(sendaa(st%st_start), st%lnst, R_MPITYPE, &
