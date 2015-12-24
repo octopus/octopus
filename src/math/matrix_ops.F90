@@ -47,9 +47,9 @@ contains
     FLOAT, allocatable :: work(:)
     CMPLX, allocatable :: zwork(:)
     integer :: info
-    
+
     PUSH_SUB(matrix_diagonalize_hermitian)
-    
+
     ASSERT(ubound(eigenvalues, dim = 1) == this%dim(1))
     ASSERT(this%dim(1) == this%dim(2))
 
@@ -57,59 +57,76 @@ contains
       ASSERT(all(this%dim(1:2) == metric%dim(1:2)))
     end if
 
+    if(this%mpi_grp%rank == 0) then
 
-    if(present(metric)) then
-      
-      if(matrix_type(this) == TYPE_FLOAT) then
-        
-        call dsygv(1, 'V', 'U', this%dim(1), this%dmat(1, 1), this%dim(1), metric%dmat(1, 1), metric%dim(1), &
-          eigenvalues(1), worksize, -1, info)
-        
-        SAFE_ALLOCATE(work(1:int(worksize)))
-        
-        call dsygv(1, 'V', 'U', this%dim(1), this%dmat(1, 1), this%dim(1), metric%dmat(1, 1), metric%dim(1), &
-          eigenvalues(1), work(1), int(worksize), info)
-        
+      if(present(metric)) then
+
+        if(matrix_type(this) == TYPE_FLOAT) then
+
+          call dsygv(1, 'V', 'U', this%dim(1), this%dmat(1, 1), this%dim(1), metric%dmat(1, 1), metric%dim(1), &
+            eigenvalues(1), worksize, -1, info)
+
+          SAFE_ALLOCATE(work(1:int(worksize)))
+
+          call dsygv(1, 'V', 'U', this%dim(1), this%dmat(1, 1), this%dim(1), metric%dmat(1, 1), metric%dim(1), &
+            eigenvalues(1), work(1), int(worksize), info)
+
+        else
+
+          SAFE_ALLOCATE(work(1:3*this%dim(1) -2 ))
+
+          call zhegv(1, 'V', 'U', this%dim(1), this%zmat(1, 1), this%dim(1), metric%zmat(1, 1), metric%dim(1), &
+            eigenvalues(1), zworksize, -1, work(1), info)
+
+          SAFE_ALLOCATE(zwork(1:int(zworksize)))
+
+          call zhegv(1, 'V', 'U', this%dim(1), this%zmat(1, 1), this%dim(1), metric%zmat(1, 1), metric%dim(1), &
+            eigenvalues(1), zwork(1), int(zworksize), work(1), info)
+
+        end if
+
       else
 
-        SAFE_ALLOCATE(work(1:3*this%dim(1) -2 ))
-        
-        call zhegv(1, 'V', 'U', this%dim(1), this%zmat(1, 1), this%dim(1), metric%zmat(1, 1), metric%dim(1), &
-          eigenvalues(1), zworksize, -1, work(1), info)
-        
-        SAFE_ALLOCATE(zwork(1:int(zworksize)))
-        
-        call zhegv(1, 'V', 'U', this%dim(1), this%zmat(1, 1), this%dim(1), metric%zmat(1, 1), metric%dim(1), &
-          eigenvalues(1), zwork(1), int(zworksize), work(1), info)
-        
+        if(matrix_type(this) == TYPE_FLOAT) then
+
+          call dsyev('V', 'U', this%dim(1), this%dmat(1, 1), this%dim(1), eigenvalues(1), worksize, -1, info)
+
+          SAFE_ALLOCATE(work(1:int(worksize)))
+
+          call dsyev('V', 'U', this%dim(1), this%dmat(1, 1), this%dim(1), eigenvalues(1), work(1), int(worksize), info)
+
+        else
+
+          SAFE_ALLOCATE(work(1:3*this%dim(1) - 2))
+
+          call zheev('V', 'U', this%dim(1), this%zmat(1, 1), this%dim(1), eigenvalues(1), zworksize, -1, work(1), info)
+
+          SAFE_ALLOCATE(zwork(1:int(zworksize)))
+
+          call zheev('V', 'U', this%dim(1), this%zmat(1, 1), this%dim(1), eigenvalues(1), zwork(1), int(zworksize), work(1), info)
+
+        end if
+
       end if
 
-    else
-
-      if(matrix_type(this) == TYPE_FLOAT) then
-
-        call dsyev('V', 'U', this%dim(1), this%dmat(1, 1), this%dim(1), eigenvalues(1), worksize, -1, info)
-
-        SAFE_ALLOCATE(work(1:int(worksize)))
-
-        call dsyev('V', 'U', this%dim(1), this%dmat(1, 1), this%dim(1), eigenvalues(1), work(1), int(worksize), info)
-        
-      else
-
-        SAFE_ALLOCATE(work(1:3*this%dim(1) - 2))
-        
-        call zheev('V', 'U', this%dim(1), this%zmat(1, 1), this%dim(1), eigenvalues(1), zworksize, -1, work(1), info)
-
-        SAFE_ALLOCATE(zwork(1:int(zworksize)))
-
-        call zheev('V', 'U', this%dim(1), this%zmat(1, 1), this%dim(1), eigenvalues(1), zwork(1), int(zworksize), work(1), info)
-        
-      end if
+      SAFE_DEALLOCATE_A(work)
+      SAFE_DEALLOCATE_A(zwork)
       
     end if
 
-    SAFE_DEALLOCATE_A(work)
-    SAFE_DEALLOCATE_A(zwork)
+    if(this%mpi_grp%size > 1) then
+#ifdef HAVE_MPI
+      if(matrix_type(this) == TYPE_FLOAT) then
+        call MPI_Bcast(this%dmat(1, 1), product(this%dim(1:2)), MPI_FLOAT, 0, this%mpi_grp%comm, mpi_err)
+        call MPI_Barrier(this%mpi_grp%comm, mpi_err)
+      else
+        call MPI_Bcast(this%zmat(1, 1), product(this%dim(1:2)), MPI_CMPLX, 0, this%mpi_grp%comm, mpi_err)
+        call MPI_Barrier(this%mpi_grp%comm, mpi_err)
+      end if
+      call MPI_Bcast(eigenvalues(1), this%dim(1), MPI_FLOAT, 0, this%mpi_grp%comm, mpi_err)
+      call MPI_Barrier(this%mpi_grp%comm, mpi_err)
+#endif
+    end if
     
     POP_SUB(matrix_diagonalize_hermitian)
   end subroutine matrix_diagonalize_hermitian
