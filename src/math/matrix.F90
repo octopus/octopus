@@ -35,6 +35,7 @@ module matrix_m
     matrix_end,                    &
     matrix_set_zero,               &
     matrix_set_block,              &
+    matrix_get_block,              &
     matrix_print,                  &
     matrix_type
   
@@ -53,6 +54,10 @@ module matrix_m
   interface matrix_set_block
     module procedure dmatrix_set_block, zmatrix_set_block
   end interface matrix_set_block
+
+  interface matrix_get_block
+    module procedure dmatrix_get_block, zmatrix_get_block
+  end interface matrix_get_block
   
 contains
 

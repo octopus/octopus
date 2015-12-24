@@ -72,7 +72,7 @@ contains
         
       else
 
-        SAFE_ALLOCATE(work(1:3*this%dim(1) -2))
+        SAFE_ALLOCATE(work(1:3*this%dim(1) -2 ))
         
         call zhegv(1, 'V', 'U', this%dim(1), this%zmat(1, 1), this%dim(1), metric%zmat(1, 1), metric%dim(1), &
           eigenvalues(1), zworksize, -1, work(1), info)
@@ -84,9 +84,32 @@ contains
         
       end if
 
-      SAFE_DEALLOCATE_A(work)
+    else
+
+      if(matrix_type(this) == TYPE_FLOAT) then
+
+        call dsyev('V', 'U', this%dim(1), this%dmat(1, 1), this%dim(1), eigenvalues(1), worksize, -1, info)
+
+        SAFE_ALLOCATE(work(1:int(worksize)))
+
+        call dsyev('V', 'U', this%dim(1), this%dmat(1, 1), this%dim(1), eigenvalues(1), work(1), int(worksize), info)
+        
+      else
+
+        SAFE_ALLOCATE(work(1:3*this%dim(1) - 2))
+        
+        call zheev('V', 'U', this%dim(1), this%zmat(1, 1), this%dim(1), eigenvalues(1), zworksize, -1, work(1), info)
+
+        SAFE_ALLOCATE(zwork(1:int(zworksize)))
+
+        call zheev('V', 'U', this%dim(1), this%zmat(1, 1), this%dim(1), eigenvalues(1), zwork(1), int(zworksize), work(1), info)
+        
+      end if
       
     end if
+
+    SAFE_DEALLOCATE_A(work)
+    SAFE_DEALLOCATE_A(zwork)
     
     POP_SUB(matrix_diagonalize_hermitian)
   end subroutine matrix_diagonalize_hermitian

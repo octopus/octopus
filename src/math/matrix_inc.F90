@@ -71,6 +71,34 @@
     
     POP_SUB(X(matrix_init_data))
   end subroutine X(matrix_set_block)
+
+  ! ---------------------------------------------------------
+
+  subroutine X(matrix_get_block)(this, min1, max1, min2, max2, data)
+    type(matrix_t),             intent(in)    :: this
+    integer,                    intent(in)    :: min1
+    integer,                    intent(in)    :: max1
+    integer,                    intent(in)    :: min2
+    integer,                    intent(in)    :: max2  
+    R_TYPE,                     intent(inout) :: data(:, :)
+    
+    PUSH_SUB(X(matrix_init_data))
+    
+    !    print*, min1, max1, this%dim(1)
+    !    print*, min2, max2, this%dim(2)
+
+    ASSERT(this%type == R_TYPE_VAL)
+    ASSERT(min1 <= max1)
+    ASSERT(min2 <= max2)
+    ASSERT(0 < min1 .and. min1 <= this%dim(1))
+    ASSERT(0 < max1 .and. max1 <= this%dim(1))
+    ASSERT(0 < min2 .and. min2 <= this%dim(2))
+    ASSERT(0 < max2 .and. max2 <= this%dim(2))
+
+    data(1:max1 - min1 + 1, 1:max2 - min2 + 1) = this%X(mat)(min1:max1, min2:max2)
+    
+    POP_SUB(X(matrix_init_data))
+  end subroutine X(matrix_get_block)
   
 !! Local Variables:
 !! mode: f90
