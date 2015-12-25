@@ -4,7 +4,9 @@ module output_fio_m
 
   use base_config_m
   use base_hamiltonian_m  
+  use batch_m
   use curvilinear_m
+  use density_m
   use epot_m
   use fio_config_m
   use fio_handle_m
@@ -21,6 +23,7 @@ module output_fio_m
   use mesh_m
   use messages_m
   use mpi_m
+  use parser_m
   use path_m
   use profiling_m
   use simul_box_m
@@ -43,7 +46,156 @@ module output_fio_m
 
   character(len=*), parameter :: grid_dump_file = "grid"
 
+  integer, parameter :: TYPE_NULL = 0
+  integer, parameter :: TYPE_ASSC = 1
+  integer, parameter :: TYPE_ALLC = 2
+
+  type :: density_batch_t
+    private
+    integer                                         :: type = TYPE_NULL
+    type(batch_t),                          pointer :: psib =>null()
+    real(kind=wp),    dimension(:,:,:), allocatable :: dpsi
+    complex(kind=wp), dimension(:,:,:), allocatable :: zpsi
+  end type density_batch_t
+
+  type :: density_acc_t
+    private
+    integer                 :: nst  = 0
+    type(states_t), pointer :: st   =>null()
+    type(grid_t),   pointer :: grid =>null()
+    type(density_calc_t)    :: calc
+  end type density_acc_t
+
 contains
+
+  ! ---------------------------------------------------------
+  subroutine density_batch_init(this, st, grid, ik, ib, nst)
+    type(density_batch_t), intent(out) :: this
+    type(states_t),        intent(in)  :: st
+    type(grid_t),          intent(in)  :: grid
+    integer,               intent(in)  :: ik
+    integer,               intent(in)  :: ib
+    integer,               intent(in)  :: nst
+
+    integer :: ist, nblk
+
+    PUSH_SUB(density_batch_init)
+
+    this%type = TYPE_NULL
+    nullify(this%psib)
+    if(states_block_min(st,ib)<=nst)then
+      if(states_block_max(st,ib)<=nst)then
+        this%type = TYPE_ASSC
+        this%psib => st%group%psib(ib,ik)
+      else
+        this%type = TYPE_ALLC
+        SAFE_ALLOCATE(this%psib)
+        nblk = nst - states_block_min(st,ib) + 1
+        call batch_init(this%psib, st%d%dim, nblk)
+        if(states_are_real(st))then
+          SAFE_ALLOCATE(this%dpsi(1:grid%mesh%np,1:st%d%dim,states_block_min(st,ib):nst))
+          do ist = states_block_min(st,ib), nst
+            call states_get_state(st, grid%mesh, ist, ik, this%dpsi(:,:,ist))
+            call batch_add_state(this%psib, ist, this%dpsi(:,:,ist))
+          end do
+        else
+          SAFE_ALLOCATE(this%zpsi(1:grid%mesh%np,1:st%d%dim,states_block_min(st,ib):nst))
+          do ist = states_block_min(st,ib), nst
+            call states_get_state(st, grid%mesh, ist, ik, this%zpsi(:,:,ist))
+            call batch_add_state(this%psib, ist, this%zpsi(:,:,ist))
+          end do
+        end if
+      end if
+    end if
+
+    POP_SUB(density_batch_init)
+  end subroutine density_batch_init
+
+  ! ---------------------------------------------------------
+  subroutine density_batch_get(this, that)
+    type(density_batch_t), intent(in) :: this
+    type(batch_t),        pointer     :: that
+
+    PUSH_SUB(density_batch_get)
+
+    nullify(that)
+    if(associated(this%psib)) that => this%psib
+
+    POP_SUB(density_batch_get)
+  end subroutine density_batch_get
+
+  ! ---------------------------------------------------------
+  subroutine density_batch_end(this)
+    type(density_batch_t), intent(inout) :: this
+
+    PUSH_SUB(density_batch_end)
+
+    if(this%type==TYPE_ALLC)then
+      call batch_end(this%psib)
+      SAFE_DEALLOCATE_P(this%psib)
+      if(allocated(this%dpsi))then
+        SAFE_DEALLOCATE_A(this%dpsi)
+      else
+        SAFE_DEALLOCATE_A(this%zpsi)
+      end if
+    end if
+    nullify(this%psib)
+    this%type = TYPE_NULL
+
+    POP_SUB(density_batch_end)
+  end subroutine density_batch_end
+
+  ! ---------------------------------------------------------
+  subroutine density_acc_init(this, st, grid, nst, density)
+    type(density_acc_t),           intent(out) :: this
+    type(states_t),        target, intent(in)  :: st
+    type(grid_t),          target, intent(in)  :: grid
+    integer,                       intent(in)  :: nst
+    real(kind=wp), dimension(:,:), intent(out) :: density
+
+    PUSH_SUB(density_acc_init)
+
+    this%nst = nst
+    this%st => st
+    this%grid => grid
+    call density_calc_init(this%calc, this%st, this%grid, density)
+
+    POP_SUB(density_acc_init)
+  end subroutine density_acc_init
+
+  ! ---------------------------------------------------------
+  subroutine density_acc(this, ik, ib)
+    type(density_acc_t), intent(inout) :: this
+    integer,             intent(in)    :: ik
+    integer,             intent(in)    :: ib
+
+    type(density_batch_t)  :: btch
+    type(batch_t), pointer :: psib
+
+    PUSH_SUB(density_acc)
+
+    nullify(psib)
+    call density_batch_init(btch, this%st, this%grid, ik, ib, this%nst)
+    call density_batch_get(btch, psib)
+    if(associated(psib)) call density_calc_accumulate(this%calc, ik, psib)
+    nullify(psib)
+    call density_batch_end(btch)
+
+    POP_SUB(density_acc)
+  end subroutine density_acc
+
+  ! ---------------------------------------------------------
+  subroutine density_acc_end(this)
+    type(density_acc_t), intent(inout) :: this
+
+    PUSH_SUB(density_acc_end)
+
+    this%nst = 0
+    nullify(this%st, this%grid)
+    call density_calc_end(this%calc)
+
+    POP_SUB(density_acc_end)
+  end subroutine density_acc_end
 
   ! ---------------------------------------------------------
   subroutine output_parse_config_simul_box(this, sb, dir, file, group)
@@ -263,9 +415,11 @@ contains
   end subroutine output_parse_config_geometry
 
   ! ---------------------------------------------------------
-  subroutine output_parse_config_density_charge(this, st)
+  subroutine output_parse_config_density_charge(this, st, nst, charge)
     type(json_array_t), intent(inout) :: this
     type(states_t),     intent(in)    :: st
+    integer,            intent(in)    :: nst
+    real(kind=wp),      intent(in)    :: charge
 
     real(kind=wp) :: chrg, qtot
     integer       :: ispn, ik, ierr
@@ -277,34 +431,63 @@ contains
       chrg = 0.0_wp
       do ik = 1, st%d%nik
         if(ispn==states_dim_get_spin_index(st%d, ik))&
-          chrg = chrg + st%d%kweights(ik) * sum(st%occ(:,ik))
+          chrg = chrg + st%d%kweights(ik) * sum(st%occ(1:nst,ik))
       end do
       call json_set(this, ispn, chrg, ierr)
       ASSERT(ierr==JSON_OK)
       qtot = qtot + chrg
     end do
-    ASSERT(.not.abs(1.0_wp-min(st%qtot,qtot)/max(st%qtot,qtot))>epsilon(qtot))
+    ASSERT(.not.abs(1.0_wp-min(charge,qtot)/max(charge,qtot))>epsilon(qtot))
 
     POP_SUB(output_parse_config_density_charge)
   end subroutine output_parse_config_density_charge
 
   ! ---------------------------------------------------------
-  subroutine output_parse_config_density_files(this, st, gr, geo, dir, group)
-    type(json_array_t), intent(out) :: this
-    type(states_t),     intent(in)  :: st
-    type(grid_t),       intent(in)  :: gr
-    type(geometry_t),   intent(in)  :: geo
-    character(len=*),   intent(in)  :: dir
-    type(mpi_grp_t),    intent(in)  :: group
+  subroutine output_parse_config_density_calc(st, grid, nst, density)
+    type(states_t),                intent(inout) :: st
+    type(grid_t),                  intent(in)    :: grid
+    integer,                       intent(in)    :: nst
+    real(kind=wp), dimension(:,:), intent(out)   :: density
 
-    character(len=MAX_PATH_LEN) :: file
-    type(unit_t)                :: unts
-    integer                     :: ispn, ierr
+    type(density_acc_t) :: calc
+    integer             :: ik, ib
+
+    PUSH_SUB(output_parse_config_density_calc)
+
+    call density_acc_init(calc, st, grid, nst, density)
+    if((st%st_start<=nst).and.(nst<=st%st_end))then
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do ib = st%group%block_start, st%group%block_end
+          call density_acc(calc, ik, ib)
+        end do
+      end do
+    end if
+    call density_acc_end(calc)
+
+    POP_SUB(output_parse_config_density_calc)
+  end subroutine output_parse_config_density_calc
+
+  ! ---------------------------------------------------------
+  subroutine output_parse_config_density_files(this, st, grid, geo, nst, dir, group)
+    type(json_array_t), intent(out)   :: this
+    type(states_t),     intent(inout) :: st
+    type(grid_t),       intent(in)    :: grid
+    type(geometry_t),   intent(in)    :: geo
+    integer,            intent(in)    :: nst
+    character(len=*),   intent(in)    :: dir
+    type(mpi_grp_t),    intent(in)    :: group
+
+    real(kind=wp), dimension(:,:), allocatable :: density
+    character(len=MAX_PATH_LEN)                :: file
+    type(unit_t)                               :: unts
+    integer                                    :: ispn, ierr
 
     PUSH_SUB(output_parse_config_density_files)
 
     call json_init(this)
-    unts = units_out%length**(-gr%mesh%sb%dim)
+    unts = units_out%length**(-grid%mesh%sb%dim)
+    SAFE_ALLOCATE(density(1:grid%fine%mesh%np_part,1:st%d%nspin))
+    call output_parse_config_density_calc(st, grid, nst, density)
     do ispn = 1, st%d%nspin
       if(st%d%nspin>1) then
         write(unit=file, fmt="(a,i1)") "density-sp", ispn
@@ -312,8 +495,8 @@ contains
         file="density"
       end if
       call json_append(this, trim(adjustl(file)))
-      call dio_function_output(output_format, dir, file, gr%fine%mesh, &
-        st%rho(:,ispn), unts, ierr, geo = geo, grp = group)
+      call dio_function_output(output_format, dir, file, grid%fine%mesh, &
+        density(:,ispn), unts, ierr, geo = geo, grp = group)
       if(ierr/=0)then
         message(1) = "Could not write to the output file: '"//trim(adjustl(file))//".obf'"
         message(2) = "in the directory: '"//trim(adjustl(dir))//"'"
@@ -321,16 +504,19 @@ contains
         call messages_fatal(3)
       end if
     end do
+    SAFE_DEALLOCATE_A(density)
 
     POP_SUB(output_parse_config_density_files)
   end subroutine output_parse_config_density_files
 
   ! ---------------------------------------------------------
-  subroutine output_parse_config_density(this, st, gr, geo, dir, group)
+  subroutine output_parse_config_density(this, st, grid, geo, nst, charge, dir, group)
     type(json_object_t), intent(inout) :: this
-    type(states_t),      intent(in)    :: st
-    type(grid_t),        intent(in)    :: gr
+    type(states_t),      intent(inout) :: st
+    type(grid_t),        intent(in)    :: grid
     type(geometry_t),    intent(in)    :: geo
+    integer,             intent(in)    :: nst
+    real(kind=wp),       intent(in)    :: charge
     character(len=*),    intent(in)    :: dir
     type(mpi_grp_t),     intent(in)    :: group
 
@@ -345,11 +531,11 @@ contains
     call json_get(this, "charge", list, ierr)
     ASSERT(ierr==JSON_OK)
     ASSERT(st%d%nspin==json_len(list))
-    call output_parse_config_density_charge(list, st)
+    call output_parse_config_density_charge(list, st, nst, charge)
     nullify(list)
     call json_set(this, "dir", trim(adjustl(dir)))
     SAFE_ALLOCATE(list)
-    call output_parse_config_density_files(list, st, gr, geo, dir, group)
+    call output_parse_config_density_files(list, st, grid, geo, nst, dir, group)
     call json_set(this, "files", list)
     nullify(list)
 
@@ -357,36 +543,58 @@ contains
   end subroutine output_parse_config_density
 
   ! ---------------------------------------------------------
-  subroutine output_parse_config_states(this, st, gr, geo, dir, group)
+  subroutine output_parse_config_states(this, st, grid, geo, dir, group)
     type(json_object_t), intent(inout) :: this
-    type(states_t),      intent(in)    :: st
-    type(grid_t),        intent(in)    :: gr
+    type(states_t),      intent(inout) :: st
+    type(grid_t),        intent(in)    :: grid
     type(geometry_t),    intent(in)    :: geo
     character(len=*),    intent(in)    :: dir
     type(mpi_grp_t),     intent(in)    :: group
 
     type(json_object_t), pointer :: cnfg
-    integer                      :: ierr
+    real(kind=wp)                :: chrg
+    integer                      :: fnst, ierr
+    integer                      :: indx, jndx
 
     PUSH_SUB(output_parse_config_states)
 
     nullify(cnfg)
     ASSERT(st%qtot>0.0_wp)
-    call json_set(this, "charge", st%qtot)
+    !%Variable FrozenStates
+    !%Type integer
+    !%Default Number of States
+    !%Section Output
+    !%Description
+    !% Subdirectory of static/frozen where <tt>Octopus</tt> will write the frozen system.
+    !%End
+    call parse_variable('FrozenStates', st%nst, fnst)
+    if(fnst<0) fnst = fnst + st%nst
+    if((fnst>st%nst).or.(fnst<1))then
+      write(message(1),'(a,i6,a)') "Can not freeze ", fnst, " states."
+      write(message(2),'(a,i6,a)') "Can not freeze less than 1 or more than ", st%nst, "states."
+      call messages_fatal(2)
+    end if
+    chrg = 0.0_wp
+    do indx = 1, fnst
+      do jndx = 1, st%d%nik
+        chrg = chrg + st%occ(indx,jndx) * st%d%kweights(jndx)
+      end do
+    end do
+    call json_set(this, "charge", chrg)
     call json_get(this, "density", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call output_parse_config_density(cnfg, st, gr, geo, dir, group)
+    call output_parse_config_density(cnfg, st, grid, geo, fnst, chrg, dir, group)
     nullify(cnfg)
 
     POP_SUB(output_parse_config_states)
   end subroutine output_parse_config_states
 
   ! ---------------------------------------------------------
-  subroutine output_parse_config_system(this, geo, st, gr, dir, group)
+  subroutine output_parse_config_system(this, geo, st, grid, dir, group)
     type(json_object_t), intent(inout) :: this
     type(geometry_t),    intent(in)    :: geo
-    type(states_t),      intent(in)    :: st
-    type(grid_t),        intent(in)    :: gr
+    type(states_t),      intent(inout) :: st
+    type(grid_t),        intent(in)    :: grid
     character(len=*),    intent(in)    :: dir
     type(mpi_grp_t),     intent(in)    :: group
 
@@ -402,17 +610,17 @@ contains
     nullify(cnfg)
     call json_get(this, "states", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call output_parse_config_states(cnfg, st, gr, geo, dir, group)
+    call output_parse_config_states(cnfg, st, grid, geo, dir, group)
     nullify(cnfg)
 
     POP_SUB(output_parse_config_system)
   end subroutine output_parse_config_system
 
   ! ---------------------------------------------------------
-  subroutine output_parse_config_external(this, epot, gr, geo, dir, group)
+  subroutine output_parse_config_external(this, epot, grid, geo, dir, group)
     type(json_object_t), intent(out) :: this
     type(epot_t),        intent(in)  :: epot
-    type(grid_t),        intent(in)  :: gr
+    type(grid_t),        intent(in)  :: grid
     type(geometry_t),    intent(in)  :: geo
     character(len=*),    intent(in)  :: dir
     type(mpi_grp_t),     intent(in)  :: group
@@ -428,7 +636,7 @@ contains
     call json_set(this, "dir", trim(adjustl(dir)))
     call json_set(this, "file", "v0")
     call dio_function_output(output_format, dir, "v0", &
-      gr%mesh, epot%vpsl, units_out%energy, ierr, geo = geo, grp = group)
+      grid%mesh, epot%vpsl, units_out%energy, ierr, geo = geo, grp = group)
     if(ierr/=0)then
       message(1) = "Could not write to the output file: 'v0.obf'"
       message(2) = "in the directory: '"//trim(adjustl(dir))//"'"
@@ -444,10 +652,10 @@ contains
   end subroutine output_parse_config_external
 
   ! ---------------------------------------------------------
-  subroutine output_parse_config_hamiltonian(this, hm, gr, geo, dir, group)
+  subroutine output_parse_config_hamiltonian(this, hm, grid, geo, dir, group)
     type(json_object_t), intent(inout) :: this
     type(hamiltonian_t), intent(in)    :: hm
-    type(grid_t),        intent(in)    :: gr
+    type(grid_t),        intent(in)    :: grid
     type(geometry_t),    intent(in)    :: geo
     character(len=*),    intent(in)    :: dir
     type(mpi_grp_t),     intent(in)    :: group
@@ -458,7 +666,7 @@ contains
 
     nullify(cnfg)
     SAFE_ALLOCATE(cnfg)
-    call output_parse_config_external(cnfg, hm%ep, gr, geo, dir, group)
+    call output_parse_config_external(cnfg, hm%ep, grid, geo, dir, group)
     call json_set(this, "external", cnfg)
     nullify(cnfg)
 
@@ -466,11 +674,11 @@ contains
   end subroutine output_parse_config_hamiltonian
 
   ! ---------------------------------------------------------
-  subroutine output_parse_config_model(this, gr, geo, st, hm, dir, group)
+  subroutine output_parse_config_model(this, grid, geo, st, hm, dir, group)
     type(json_object_t), intent(inout) :: this
-    type(grid_t),        intent(in)    :: gr
+    type(grid_t),        intent(in)    :: grid
     type(geometry_t),    intent(in)    :: geo
-    type(states_t),      intent(in)    :: st
+    type(states_t),      intent(inout) :: st
     type(hamiltonian_t), intent(in)    :: hm
     character(len=*),    intent(in)    :: dir
     type(mpi_grp_t),     intent(in)    :: group
@@ -483,36 +691,50 @@ contains
     nullify(cnfg)
     call json_get(this, "system", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call output_parse_config_system(cnfg, geo, st, gr, dir, group)
+    call output_parse_config_system(cnfg, geo, st, grid, dir, group)
     nullify(cnfg)
     call json_get(this, "hamiltonian", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call output_parse_config_hamiltonian(cnfg, hm, gr, geo, dir, group)
+    call output_parse_config_hamiltonian(cnfg, hm, grid, geo, dir, group)
     nullify(cnfg)
 
     POP_SUB(output_parse_config_model)
   end subroutine output_parse_config_model
 
   ! ---------------------------------------------------------
-  subroutine output_fio(gr, geo, st, hm, dir, group)
-    type(grid_t),        intent(in) :: gr
-    type(geometry_t),    intent(in) :: geo
-    type(states_t),      intent(in) :: st
-    type(hamiltonian_t), intent(in) :: hm
-    character(len=*),    intent(in) :: dir
-    type(mpi_grp_t),     intent(in) :: group
+  subroutine output_fio(grid, geo, st, hm, dir, group)
+    type(grid_t),        intent(in)    :: grid
+    type(geometry_t),    intent(in)    :: geo
+    type(states_t),      intent(inout) :: st
+    type(hamiltonian_t), intent(in)    :: hm
+    character(len=*),    intent(in)    :: dir
+    type(mpi_grp_t),     intent(in)    :: group
 
     type(json_object_t)          :: config
     type(json_object_t), pointer :: cnfg
-    character(len=MAX_PATH_LEN)  :: dnam, fnam
+    character(len=MAX_PATH_LEN)  :: tdir, bdir, fdir, odir, fnam
     integer                      :: iunit, ierr
 
     PUSH_SUB(output_fio)
 
     nullify(cnfg)
-    call path_join(dir, input_frozen_dir, dnam)
-    call io_mkdir(dnam)
-    call path_join(dnam, input_frozen_config, fnam)
+    call path_realpath(dir, bdir)
+    !%Variable FrozenDir
+    !%Type string
+    !%Default "static/frozen"
+    !%Section Output
+    !%Description
+    !% Subdirectory of static/ where <tt>Octopus</tt> will write the frozen system.
+    !%End
+    call parse_variable('FrozenDir', input_frozen_dir, tdir)
+    if(path_isabs(tdir))then
+      fdir = tdir
+    else
+      call path_join(bdir, tdir, fdir)
+    end if
+    call io_mkdir(fdir)
+    call path_realpath(fdir, odir)
+    call path_join(odir, input_frozen_config, fnam)
     iunit = io_open(fnam, action='write')
     if(iunit>0)then
       call base_config_parse(config, st%d%nspin, geo%space%dim)
@@ -520,18 +742,18 @@ contains
       call json_set(config, "name", "fio")
       call json_get(config, "simulation", cnfg, ierr)
       ASSERT(ierr==JSON_OK)
-      call output_parse_config_simulation(cnfg, gr, dnam, group)
+      call output_parse_config_simulation(cnfg, grid, odir, group)
       nullify(cnfg)
       call json_get(config, "model", cnfg, ierr)
       ASSERT(ierr==JSON_OK)
-      call output_parse_config_model(cnfg, gr, geo, st, hm, dnam, group)
+      call output_parse_config_model(cnfg, grid, geo, st, hm, odir, group)
       nullify(cnfg)
       call json_write(config, iunit)
       call json_end(config)
       call io_close(iunit)
     else
       message(1) = "Could not write to the output file: '"//trim(adjustl(input_frozen_config))//"'"
-      message(2) = "in the directory: '"//trim(adjustl(dnam))//"'"
+      message(2) = "in the directory: '"//trim(adjustl(odir))//"'"
       write(unit=message(3), fmt="(a,i3)") "I/O Error: ", iunit
       call messages_fatal(3)
     end if

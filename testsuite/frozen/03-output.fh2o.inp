@@ -1,0 +1,21 @@
+CalculationMode = gs
+ExperimentalFeatures = yes
+FromScratch = yes
+Units = eV_Angstrom
+BoxShape = Sphere
+radius = 3.0
+spacing = 0.15
+PseudopotentialSet = standard
+%Species
+        "O" | species_pseudo | db_file | "PSF/O.psf"
+        "H" | species_pseudo | db_file | "PSF/H.psf"
+%
+%Coordinates
+        "O" | 0.0000 |  0.0000 | 0.0 | no
+        "H" | 0.5865 |  0.7572 | 0.0 | no
+        "H" | 0.5865 | -0.7572 | 0.0 | no
+%
+FrozenDir = "fh2o"
+FrozenStates = -1
+Output = frozen_system
+

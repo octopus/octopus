@@ -27,6 +27,11 @@ dist_share_DATA =			\
 	02-Na2.mixpot.02.frozen.inp	\
 	02-Na2.mixpot.03.frozen.inp	\
 	02-Na2.mixrho.frozen.inp	\
-	02-Na2.frozen.test
+	02-Na2.frozen.test		\
+	03-output.fh2o.inp		\
+	03-LiH2O.01.frozen.inp		\
+	03-LiH2O.02.frozen.inp		\
+	03-LiH2O.03.frozen.inp		\
+	03-LiH2O.frozen.test
 
 CLEANFILES = *~ *.bak

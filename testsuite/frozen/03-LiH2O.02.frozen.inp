@@ -1,0 +1,26 @@
+CalculationMode = gs
+ExperimentalFeatures = yes
+FromScratch = yes
+Units = eV_Angstrom
+ConvAbsDens = 1e-6
+BoxShape = parallelepiped
+%Lsize
+	3.0 | 4.0 | 3.0
+%
+spacing = 0.3
+ExcessCharge = -1
+PseudopotentialSet = standard
+%Species
+    'Li' | species_pseudo | db_file | 'PSF/Li.psf' 
+%
+%Coordinates
+    'Li' | 0.0 | -2.0 | 0.0 | no 
+%
+TnaddFunctional = lda_k_tf
+%SubSystems
+    'H2O' | frozen | 'static/fh2o' | qshep
+%
+%SubSystemCoordinates
+    'H2O' | 0.0 | 1.0000 | 0.0 | -pi/2.0
+%
+

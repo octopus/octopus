@@ -34,9 +34,9 @@ module fio_config_m
     module procedure fio_config_parse_block
   end interface fio_config_parse
 
-  character(len=*), parameter :: input_static_dir = "./"//STATIC_DIR
+  character(len=*), parameter :: input_static_dir = STATIC_DIR
 
-  character(len=*), parameter :: input_frozen_dir    = "./frozen"
+  character(len=*), parameter :: input_frozen_dir    = "frozen"
   character(len=*), parameter :: input_frozen_config = "config.json"
 
 contains
