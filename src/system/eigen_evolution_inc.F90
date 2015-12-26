@@ -30,7 +30,7 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
   FLOAT,                       intent(in)    :: tau
 
   integer :: ist, iter, maxiter, conv, matvec, i, j
-  R_TYPE, allocatable :: hpsi(:, :), c(:, :)
+  R_TYPE, allocatable :: hpsi(:, :), c(:, :), psi(:, :)
   FLOAT, allocatable :: eig(:)
   type(exponential_t) :: te
 
@@ -41,6 +41,7 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
 
   call exponential_init(te)
 
+  SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(hpsi(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(c(1:st%nst, 1:st%nst))
   SAFE_ALLOCATE(eig(1:st%nst))
@@ -52,7 +53,10 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
   do iter = 1, maxiter
 
     do ist = conv + 1, st%nst
-      call exponentiate(st%X(dontusepsi)(:, :, ist, ik), j)
+      call states_get_state(st, gr%mesh, ist, ik, psi)
+      !TODO: convert this opperation to batched versions 
+      call exponentiate(psi, j)
+      call states_set_state(st, gr%mesh, ist, ik, psi)
       matvec = matvec + j
     end do
 
@@ -70,9 +74,11 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
     
     ! Get the eigenvalues and the residues.
     do ist = conv + 1, st%nst
-      call X(hamiltonian_apply)(hm, gr%der, st%X(dontusepsi)(:, :, ist, ik), hpsi, ist, ik)
-      st%eigenval(ist, ik) = real(X(mf_dotp)(gr%mesh, st%d%dim, st%X(dontusepsi)(:, :, ist, ik), hpsi), REAL_PRECISION)
-      diff(ist) = X(states_residue)(gr%mesh, st%d%dim, hpsi, st%eigenval(ist, ik), st%X(dontusepsi)(:, :, ist, ik))
+      call states_get_state(st, gr%mesh, ist, ik, psi)
+      !TODO: convert these opperations to batched versions 
+      call X(hamiltonian_apply)(hm, gr%der, psi, hpsi, ist, ik)
+      st%eigenval(ist, ik) = real(X(mf_dotp)(gr%mesh, st%d%dim, psi, hpsi), REAL_PRECISION)
+      diff(ist) = X(states_residue)(gr%mesh, st%d%dim, hpsi, st%eigenval(ist, ik), psi)
 
       if(in_debug_mode) then
         write(message(1), '(a,i4,a,i4,a,i4,a,es12.6)') 'Debug: Evolution Eigensolver - ik', ik, &
@@ -92,6 +98,8 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
 
   niter = matvec
   call exponential_end(te)
+
+  SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(hpsi)
   SAFE_DEALLOCATE_A(c)
   SAFE_DEALLOCATE_A(eig)
