@@ -238,7 +238,7 @@ subroutine X(linear_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, shift, tol,
   integer,               intent(out)   :: iter_used
   logical,               intent(in)    :: occ_response
 
-  R_TYPE, allocatable :: r(:,:), Hp(:,:), rs(:,:), Hs(:,:), p(:,:), s(:,:)
+  R_TYPE, allocatable :: r(:,:), Hp(:,:), rs(:,:), Hs(:,:), p(:,:), s(:,:), psi(:, :)
   R_TYPE, pointer :: phat(:,:), shat(:,:)
   R_TYPE  :: alpha, beta, w, rho_1, rho_2
   logical :: conv_last, conv
@@ -265,10 +265,16 @@ subroutine X(linear_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, shift, tol,
 
   !re-orthogonalize r, this helps considerably with convergence
   if (occ_response) then
-    alpha = X(mf_dotp)(gr%mesh, st%d%dim, st%X(dontusepsi)(:, :, ist, ik), r)
+    SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
+
+    call states_get_state(st, gr%mesh, ist, ik, psi)
+    
+    alpha = X(mf_dotp)(gr%mesh, st%d%dim, psi, r)
     do idim = 1, st%d%dim
-      call lalg_axpy(gr%mesh%np, -alpha, st%X(dontusepsi)(:, idim, ist, ik), r(:, idim))
+      call lalg_axpy(gr%mesh%np, -alpha, psi(:, idim), r(:, idim))
     end do
+
+    SAFE_DEALLOCATE_A(psi)
   else
     ! project RHS onto the unoccupied states
     call X(lr_orth_vector)(gr%mesh, st, r, ist, ik, shift + st%eigenval(ist, ik))
@@ -373,7 +379,7 @@ subroutine X(linear_solver_multigrid) (ls, hm, gr, st, ist, ik, x, y, shift, tol
   FLOAT,                 intent(out)   :: residue
   integer,               intent(out)   :: iter_used
 
-  R_TYPE, allocatable :: diag(:,:), hx(:,:), res(:,:)
+  R_TYPE, allocatable :: diag(:,:), hx(:,:), res(:,:), psi(:, :)
   integer :: iter
 
   PUSH_SUB(X(linear_solver_multigrid))
@@ -398,10 +404,16 @@ subroutine X(linear_solver_multigrid) (ls, hm, gr, st, ist, ik, x, y, shift, tol
 
     if(residue < tol) exit
 
-    if(in_debug_mode) then 
-      write(message(1), *)  "Multigrid: iter ", iter,  residue, &
-        abs(X(mf_dotp)(gr%mesh, st%d%dim, st%X(dontusepsi)(:, :, ist, ik), x))
+    if(in_debug_mode) then
+
+      SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
+      
+      call states_get_state(st, gr%mesh, ist, ik, psi)
+      write(message(1), *)  "Multigrid: iter ", iter,  residue, abs(X(mf_dotp)(gr%mesh, st%d%dim, psi, x))
       call messages_info(1)
+
+      SAFE_DEALLOCATE_A(psi)
+      
     end if
 
   end do
@@ -461,6 +473,7 @@ subroutine X(linear_solver_operator) (hm, gr, st, ist, ik, shift, x, hx)
   integer :: idim, jst
   FLOAT   :: alpha_j
   R_TYPE  :: proj
+  R_TYPE, allocatable :: psi(:, :)
 
   PUSH_SUB(X(linear_solver_operator))
 
@@ -481,12 +494,18 @@ subroutine X(linear_solver_operator) (hm, gr, st, ist, ik, shift, x, hx)
   do jst = 1, st%nst
     alpha_j = lr_alpha_j(st, jst, ik)
     if(alpha_j == M_ZERO) cycle
+
+    SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
+
+    call states_get_state(st, gr%mesh, jst, ik, psi)
     
-    proj = X(mf_dotp) (gr%mesh, st%d%dim, st%X(dontusepsi)(:, :, jst, ik), x)
+    proj = X(mf_dotp)(gr%mesh, st%d%dim, psi, x)
     do idim = 1, st%d%dim
-      call lalg_axpy(gr%mesh%np, alpha_j * proj, st%X(dontusepsi)(:, idim, jst, ik), Hx(:, idim))
+      call lalg_axpy(gr%mesh%np, alpha_j*proj, psi(:, idim), Hx(:, idim))
     end do
 
+    SAFE_DEALLOCATE_A(psi)
+    
   end do
 
   POP_SUB(X(linear_solver_operator))
@@ -644,24 +663,31 @@ subroutine X(linear_solver_sos) (hm, gr, st, ist, ik, x, y, shift, residue, iter
   integer :: jst, idim
   R_TYPE  :: aa
   R_TYPE, allocatable  :: rr(:, :)
-
+  R_TYPE, allocatable :: psi(:, :)
+  
   PUSH_SUB(X(linear_solver_sos))
 
   x(1:gr%mesh%np, 1:st%d%dim) = M_ZERO
+
+  SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
   
   do jst = 1, st%nst
     if(ist == jst) cycle
 
-    aa = X(mf_dotp)(gr%mesh, st%d%dim, st%X(dontusepsi)(:, :, jst, ik), y)
+    call states_get_state(st, gr%mesh, jst, ik, psi)
+    
+    aa = X(mf_dotp)(gr%mesh, st%d%dim, psi, y)
     aa = aa/(st%eigenval(jst, ik) + lr_alpha_j(st, jst, ik) + shift)
     ! Normally the expression in perturbation theory would have here
     ! denominator = st%eigenval(jst, ik) - st%eigenval(ist, ik)
     ! For solving this type of problem, -st%eigenval(ist, ik) is included in shift
 
     do idim = 1, st%d%dim
-      call lalg_axpy(gr%mesh%np, aa, st%X(dontusepsi)(:, idim, jst, ik), x(:, idim))
+      call lalg_axpy(gr%mesh%np, aa, psi(:, idim), x(:, idim))
     end do
   end do
+
+  SAFE_DEALLOCATE_A(psi)
 
   ! calculate the residual
   SAFE_ALLOCATE(rr(1:gr%mesh%np, 1:st%d%dim))
