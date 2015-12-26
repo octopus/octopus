@@ -30,7 +30,7 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
   FLOAT,                       intent(in)    :: tau
 
   integer :: ist, iter, maxiter, conv, matvec, i, j
-  R_TYPE, allocatable :: hpsi(:, :), m(:, :), c(:, :)
+  R_TYPE, allocatable :: hpsi(:, :), c(:, :)
   FLOAT, allocatable :: eig(:)
   type(exponential_t) :: te
 
@@ -42,7 +42,6 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
   call exponential_init(te)
 
   SAFE_ALLOCATE(hpsi(1:gr%mesh%np_part, 1:st%d%dim))
-  SAFE_ALLOCATE(m(1:st%nst, 1:st%nst))
   SAFE_ALLOCATE(c(1:st%nst, 1:st%nst))
   SAFE_ALLOCATE(eig(1:st%nst))
 
@@ -59,15 +58,12 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
 
     ! This is the orthonormalization suggested by Aichinger and Krotschek
     ! [Comp. Mat. Science 34, 188 (2005)]
-    do i = 1, st%nst
-      do j = i, st%nst
-        m(i, j) = X(mf_dotp)(gr%mesh, st%d%dim, st%X(dontusepsi)(:, :, i, ik), st%X(dontusepsi)(:, :, j, ik) )
-      end do
-    end do
-    c = m
+    call X(states_calc_overlap)(st, gr%mesh, ik, c)
+
     call lalg_eigensolve(st%nst, c, eig)
+
     do i = 1, st%nst
-      c(:, i) = c(:, i) / sqrt(eig(i))
+      c(1:st%nst, i) = c(1:st%nst, i)/sqrt(eig(i))
     end do
 
     call states_rotate(gr%mesh, st, c, ik)
@@ -85,9 +81,6 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
       end if
     end do
 
-    ! Reordering.... (maybe this is unnecessary since the orthonormalization already orders them...)
-    if(st%nst > 1) call sort(st%eigenval(1:st%nst, ik), st%X(dontusepsi)(:, :, 1:st%nst, ik))
-
     ! And check for convergence. Note that they must be converged *in order*, so that they can be frozen.
     do ist = conv + 1, st%nst
       if( (diff(ist) < tol) .and. (ist == conv + 1) ) conv = conv + 1
@@ -100,7 +93,6 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
   niter = matvec
   call exponential_end(te)
   SAFE_DEALLOCATE_A(hpsi)
-  SAFE_DEALLOCATE_A(m)
   SAFE_DEALLOCATE_A(c)
   SAFE_DEALLOCATE_A(eig)
 
