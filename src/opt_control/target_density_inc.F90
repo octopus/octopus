@@ -417,13 +417,18 @@
     type(states_t),    intent(inout) :: psi_in
     type(states_t),    intent(inout) :: chi_out
 
-    integer :: no_electrons, ip, ist
-
+    integer :: no_electrons, ip, ist, ib, ik
+    CMPLX, allocatable :: zpsi(:, :)
+    
     PUSH_SUB(target_chi_density)
 
+    do ik = chi_out%d%kpt%start, chi_out%d%kpt%end
+      do ib = chi_out%group%block_start, chi_out%group%block_end
+        call batch_set_zero(chi_out%group%psib(ib, ik))
+      end do
+    end do
+        
     no_electrons = -nint(psi_in%val_charge)
-
-    chi_out%zdontusepsi = M_ZERO
 
     if( tg%density_weight > M_ZERO ) then
 
@@ -431,22 +436,33 @@
     case(UNPOLARIZED)
       ASSERT(psi_in%d%nik  ==  1)
 
+      SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:1))
+
       if(no_electrons  ==  1) then
+
+        call states_get_state(psi_in, gr%mesh, 1, 1, zpsi)
+
         do ip = 1, gr%mesh%np
-          chi_out%zdontusepsi(ip, 1, 1, 1) = sqrt(tg%rho(ip)) * &
-            exp(M_zI * atan2(aimag(psi_in%zdontusepsi(ip, 1, 1, 1)), &
-                              real(psi_in%zdontusepsi(ip, 1, 1, 1) )) )
+          zpsi(ip, 1) = sqrt(tg%rho(ip))*exp(M_zI*atan2(aimag(zpsi(ip, 1)), real(zpsi(ip, 1))))
         end do
+
+        call states_set_state(chi_out, gr%mesh, 1, 1, zpsi)
+        
       else
         do ist = psi_in%st_start, psi_in%st_end
+
+          call states_get_state(psi_in, gr%mesh, ist, 1, zpsi)
+          
           do ip = 1, gr%mesh%np
             if(psi_in%rho(ip, 1) > CNST(1.0e-8)) then
-              chi_out%zdontusepsi(ip, 1, ist, 1) = psi_in%occ(ist, 1) * sqrt(tg%rho(ip) / psi_in%rho(ip, 1)) * &
-                psi_in%zdontusepsi(ip, 1, ist, 1)
+              zpsi(ip, 1) = psi_in%occ(ist, 1)*sqrt(tg%rho(ip)/psi_in%rho(ip, 1))*zpsi(ip, 1)
             else
-              chi_out%zdontusepsi(ip, 1, ist, 1) = M_ZERO !sqrt(tg%rho(ip))
+              zpsi(ip, 1) = M_ZERO !sqrt(tg%rho(ip))
             end if
           end do
+
+          call states_set_state(chi_out, gr%mesh, ist, 1, zpsi)
+          
         end do
       end if
 
