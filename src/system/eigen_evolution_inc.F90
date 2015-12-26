@@ -30,7 +30,7 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
   FLOAT,                       intent(in)    :: tau
 
   integer :: ist, iter, maxiter, conv, matvec, i, j
-  R_TYPE, allocatable :: hpsi(:, :), m(:, :), c(:, :), phi(:, :, :)
+  R_TYPE, allocatable :: hpsi(:, :), m(:, :), c(:, :)
   FLOAT, allocatable :: eig(:)
   type(exponential_t) :: te
 
@@ -45,7 +45,6 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
   SAFE_ALLOCATE(m(1:st%nst, 1:st%nst))
   SAFE_ALLOCATE(c(1:st%nst, 1:st%nst))
   SAFE_ALLOCATE(eig(1:st%nst))
-  SAFE_ALLOCATE(phi(1:gr%mesh%np_part, 1:st%d%dim, 1:st%nst))
 
   ! Warning: it seems that the algorithm is improved if some extra states are added -- states
   ! whose convergence should not be checked.
@@ -70,13 +69,9 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
     do i = 1, st%nst
       c(:, i) = c(:, i) / sqrt(eig(i))
     end do
-    
-    call lalg_gemm(gr%mesh%np_part * st%d%dim, st%nst, st%nst, R_TOTYPE(M_ONE), &
-         st%X(dontusepsi)(:, :, :, ik), c, R_TOTYPE(M_ZERO), phi)
-    do i = 1, st%nst
-      st%X(dontusepsi)(1:gr%mesh%np, :, i, ik) = phi(1:gr%mesh%np, :, st%nst -i + 1)
-    end do
 
+    call states_rotate(gr%mesh, st, c, ik)
+    
     ! Get the eigenvalues and the residues.
     do ist = conv + 1, st%nst
       call X(hamiltonian_apply)(hm, gr%der, st%X(dontusepsi)(:, :, ist, ik), hpsi, ist, ik)
@@ -108,7 +103,6 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
   SAFE_DEALLOCATE_A(m)
   SAFE_DEALLOCATE_A(c)
   SAFE_DEALLOCATE_A(eig)
-  SAFE_DEALLOCATE_A(phi)
 
   POP_SUB(X(eigensolver_evolution))
 contains
@@ -117,6 +111,7 @@ contains
   subroutine exponentiate(psi, order)
     R_TYPE, target, intent(inout) :: psi(:, :)
     integer,        intent(out)   :: order
+    
     CMPLX,          pointer       :: zpsi(:, :)
 
     PUSH_SUB(X(eigensolver_evolution).exponentiate)
