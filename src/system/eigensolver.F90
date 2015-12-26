@@ -94,7 +94,6 @@ module eigensolver_m
   integer, public, parameter :: &
        RS_PLAN    = 11,         &
        RS_CG      =  5,         &
-       RS_MG      =  7,         &
        RS_CG_NEW  =  6,         &
        RS_EVO     =  9,         &
        RS_LOBPCG  =  8,         &
@@ -306,8 +305,6 @@ contains
     !% Note: with <tt>unocc</tt>, you will need to stop the calculation
     !% by hand, since the highest states will probably never converge.
     !% Usage with more than one block of states per node is experimental, unfortunately.
-    !%Option multigrid 7
-    !% (Experimental) Multigrid eigensolver.
     !%Option arpack 12
     !% (Experimental) Implicitly Restarted Arnoldi Method. Requires the ARPACK package.
     !%Option feast 13
@@ -339,8 +336,6 @@ contains
 
     select case(eigens%es_type)
     case(RS_CG_NEW)
-    case(RS_MG)
-      call messages_experimental("multigrid eigensolver")
     case(RS_CG)
     case(RS_PLAN)
     case(RS_EVO)
@@ -601,8 +596,6 @@ contains
         case(RS_LOBPCG)
           call deigensolver_lobpcg(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
-        case(RS_MG)
-          call deigensolver_mg(gr%der, st, hm, eigens%sdiag, maxiter, ik, eigens%diff(:, ik))
         case(RS_RMMDIIS)
           if(iter <= eigens%rmmdiis_minimization_iter) then
             call deigensolver_rmmdiis_min(gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
@@ -640,8 +633,6 @@ contains
         case(RS_LOBPCG)
           call zeigensolver_lobpcg(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
-        case(RS_MG)
-          call zeigensolver_mg(gr%der, st, hm, eigens%sdiag, maxiter, ik, eigens%diff(:, ik))
         case(RS_RMMDIIS)
           if(iter <= eigens%rmmdiis_minimization_iter) then
             call zeigensolver_rmmdiis_min(gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
@@ -764,13 +755,11 @@ contains
 
 #include "undef.F90"
 #include "real.F90"
-#include "eigen_mg_inc.F90"
 #include "eigen_plan_inc.F90"
 #include "eigen_evolution_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
-#include "eigen_mg_inc.F90"
 #include "eigen_plan_inc.F90"
 #include "eigen_evolution_inc.F90"
 

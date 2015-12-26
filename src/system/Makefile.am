@@ -62,7 +62,6 @@ noinst_HEADERS =                        \
 	eigen_plan_inc.F90              \
 	eigen_evolution_inc.F90         \
 	eigen_lobpcg_inc.F90            \
-	eigen_mg_inc.F90                \
 	eigen_rmmdiis_inc.F90           \
 	subspace_inc.F90                \
 	output_h_inc.F90                \
@@ -85,7 +84,7 @@ subspace.o : preconditioners.o subspace_inc.F90
 linear_solver.o : linear_solver.F90 linear_solver_inc.F90 preconditioners.o 
 eigen_cg.o: eigen_cg.F90 eigen_cg_inc.F90 preconditioners.o
 eigen_lobpcg.o: eigen_cg.F90 eigen_lobpcg_inc.F90 preconditioners.o
-eigensolver.o: eigensolver.F90 eigen_evolution_inc.F90 eigen_plan_inc.F90 eigen_mg_inc.F90 eigen_cg.o subspace.o eigen_lobpcg.o eigen_rmmdiis.o exponential.o eigen_arpack.o eigen_feast.o
+eigensolver.o: eigensolver.F90 eigen_evolution_inc.F90 eigen_plan_inc.F90 eigen_cg.o subspace.o eigen_lobpcg.o eigen_rmmdiis.o exponential.o eigen_arpack.o eigen_feast.o
 eigen_rmmdiis.o: eigen_rmmdiis.F90 eigen_rmmdiis_inc.F90 subspace.o
 eigen_arpack.o: eigen_arpack.F90 eigen_arpack_inc.F90
 eigen_feast.o: eigen_feast.F90 linear_solver.o
