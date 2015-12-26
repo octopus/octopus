@@ -491,19 +491,29 @@ contains
       end do
 
     case(oct_tg_velocity)
-      forall(ik = 1:inh%d%nik, ist = inh%st_start:inh%st_end, idim = 1:inh%d%dim, ip = 1:gr%mesh%np)
-         inh%zdontusepsi(ip, idim, ist, ik) = -psi%occ(ist, ik)*tg%rho(ip)*psi%zdontusepsi(ip, idim, ist, ik)
-      end forall
-   
-    case(oct_tg_jdensity)
-      if (abs(nint(time/tg%dt)) >= tg%strt_iter_curr_tg) then
-        inh%zdontusepsi =  -chi_current(tg, gr, psi)
-      else
-        do ik = inh%d%kpt%start, inh%d%kpt%end
-          do ib = inh%group%block_start, inh%group%block_end
-            call batch_set_zero(inh%group%psib(ib, ik))
+
+      do ik = inh%d%kpt%start, inh%d%kpt%end
+        do ist = inh%st_start, inh%st_end
+          do idim = 1, inh%d%dim
+            call states_get_state(psi, gr%mesh, idim, ist, ik, zpsi)
+            forall(ip = 1:gr%mesh%np)
+              zpsi(ip) = -psi%occ(ist, ik)*tg%rho(ip)*zpsi(ip)
+            end forall
+            call states_set_state(inh, gr%mesh, idim, ist, ik, zpsi)
           end do
         end do
+      end do
+   
+    case(oct_tg_jdensity)
+
+      do ik = inh%d%kpt%start, inh%d%kpt%end
+        do ib = inh%group%block_start, inh%group%block_end
+          call batch_set_zero(inh%group%psib(ib, ik))
+        end do
+      end do
+        
+      if (abs(nint(time/tg%dt)) >= tg%strt_iter_curr_tg) then
+        call chi_current(tg, gr, CNST(-1.0), psi, inh)
       end if     
 
     case default

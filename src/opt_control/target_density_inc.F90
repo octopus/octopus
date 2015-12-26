@@ -462,7 +462,7 @@
 
     if(tg%curr_functional /= oct_no_curr) then
       if (target_mode(tg)  ==  oct_targetmode_static ) then
-        chi_out%zdontusepsi = chi_out%zdontusepsi + chi_current(tg, gr, psi_in)
+        call chi_current(tg, gr, CNST(1.0), psi_in, chi_out)
       end if
     end if 
 
@@ -554,29 +554,28 @@
   ! ----------------------------------------------------------------------
   ! Calculates current-specific boundary condition
   !-----------------------------------------------------------------------
-  function chi_current(tg, gr, psi_in) result(chi)
+ subroutine chi_current(tg, gr, factor, psi_in, chi)
     type(target_t),    intent(in)    :: tg
     type(grid_t),      intent(in)    :: gr
+    FLOAT,             intent(in)    :: factor
     type(states_t),    intent(inout) :: psi_in
-    CMPLX                            :: chi( size(psi_in%zdontusepsi,1), 1, size(psi_in%zdontusepsi,3), 1)
-        
-    CMPLX, allocatable :: grad_psi_in(:,:,:)
+    type(states_t),    intent(inout) :: chi
+
+    CMPLX, allocatable :: grad_psi_in(:,:,:), zpsi(:, :), zchi(:, :)
     FLOAT, allocatable :: div_curr_psi_in(:,:)   
     integer :: ip, ist, idim
 
     PUSH_SUB(chi_current)
 
-    chi = M_ZERO    
-
     SAFE_ALLOCATE(grad_psi_in(1:gr%der%mesh%np_part, 1:gr%der%mesh%sb%dim, 1))
 
-    if(target_mode(tg)  ==  oct_targetmode_td ) then 
+    if(target_mode(tg) == oct_targetmode_td ) then 
       call states_calc_quantities(gr%der, psi_in, paramagnetic_current=psi_in%current) 
     end if
 
     select case(tg%curr_functional)
     case(oct_no_curr)
-      chi(:, 1, :, 1) = M_ZERO
+      !nothing to do
 
     case(oct_curr_square,oct_curr_square_td)
        ! components current weighted by its position in the mesh, np_part included,
@@ -589,48 +588,72 @@
         end do
       end if
       
-      SAFE_ALLOCATE(div_curr_psi_in(1:gr%der%mesh%np_part,1))
+      SAFE_ALLOCATE(div_curr_psi_in(1:gr%der%mesh%np_part, 1))
+      SAFE_ALLOCATE(zpsi(1:gr%der%mesh%np_part, 1:psi_in%d%dim))
+      SAFE_ALLOCATE(zchi(1:gr%der%mesh%np_part, 1:psi_in%d%dim))
+      
       call dderivatives_div(gr%der, psi_in%current(1:gr%der%mesh%np_part, 1:gr%mesh%sb%dim, 1), &
                                     div_curr_psi_in(1:gr%der%mesh%np_part,1)) 
       
       ! the boundary condition  
       do ist = psi_in%st_start, psi_in%st_end
-        call zderivatives_grad(gr%der, psi_in%zdontusepsi(1:gr%der%mesh%np_part,1, ist, 1), & 
-                               grad_psi_in(1:gr%der%mesh%np_part, 1:gr%der%mesh%sb%dim,1))
-            
-        do ip = 1, gr%mesh%np 
-          chi(ip, 1, ist, 1) =  -M_zI * tg%curr_weight  * &
-               ( M_TWO * sum(psi_in%current(ip, 1:gr%sb%dim, 1) * grad_psi_in(ip, 1:gr%sb%dim, 1))+ &
-               div_curr_psi_in(ip,1) * psi_in%zdontusepsi(ip, 1, ist, 1) )
-        end do
-      end do
-      SAFE_DEALLOCATE_A(div_curr_psi_in)
 
+        call states_get_state(psi_in, gr%der%mesh, ist, 1, zpsi)
+        call states_get_state(chi, gr%der%mesh, ist, 1, zchi)
+        
+        call zderivatives_grad(gr%der, zpsi(:, 1), grad_psi_in(1:gr%der%mesh%np_part, 1:gr%der%mesh%sb%dim,1))
+
+        do idim = 1, psi_in%d%dim
+          do ip = 1, gr%mesh%np
+            zchi(ip, idim) = zchi(ip, idim) - factor*M_zI*tg%curr_weight* &
+              (M_TWO*sum(psi_in%current(ip, 1:gr%sb%dim, 1)*grad_psi_in(ip, 1:gr%sb%dim, 1)) + &
+              div_curr_psi_in(ip, 1)*zpsi(ip, idim))
+          end do
+        end do
+
+        call states_set_state(chi, gr%der%mesh, ist, 1, zchi)
+        
+      end do
+      
+      SAFE_DEALLOCATE_A(div_curr_psi_in)
+      SAFE_DEALLOCATE_A(zpsi)
+      SAFE_DEALLOCATE_A(zchi)
+      
     case(oct_max_curr_ring)
 
-      if( is_spatial_curr_wgt(tg) ) then
-
-        do ist = psi_in%st_start, psi_in%st_end
-          call zderivatives_grad(gr%der, psi_in%zdontusepsi(:,1, ist, 1), grad_psi_in(:,:,1))
-          do ip = 1, gr%mesh%np 
-            chi(ip, 1, ist, 1) =  M_zI * tg%curr_weight * tg%spatial_curr_wgt(ip) * &
-                 ( grad_psi_in(ip, 1, 1)  * gr%mesh%x(ip,2) - &
-                 grad_psi_in(ip, 2, 1)  * gr%mesh%x(ip,1)   ) 
+      SAFE_ALLOCATE(zpsi(1:gr%der%mesh%np_part, 1:psi_in%d%dim))
+      SAFE_ALLOCATE(zchi(1:gr%der%mesh%np_part, 1:psi_in%d%dim))
+      
+      do ist = psi_in%st_start, psi_in%st_end
+        
+        call states_get_state(psi_in, gr%der%mesh, ist, 1, zpsi)
+        call states_get_state(chi, gr%der%mesh, ist, 1, zchi)
+        
+        call zderivatives_grad(gr%der, zpsi(:, 1), grad_psi_in(:, :, 1))
+        
+        if( is_spatial_curr_wgt(tg) ) then
+          
+          do ip = 1, gr%mesh%np
+            zchi(ip, 1) = zchi(ip, 1) + factor*M_zI*tg%curr_weight*tg%spatial_curr_wgt(ip)* &
+              (grad_psi_in(ip, 1, 1)*gr%mesh%x(ip,2) - grad_psi_in(ip, 2, 1)*gr%mesh%x(ip, 1))
           end do
-        end do
+          
+        else
 
-      else
-
-        do ist = psi_in%st_start, psi_in%st_end
-          call zderivatives_grad(gr%der, psi_in%zdontusepsi(:,1, ist, 1), grad_psi_in(:,:,1))
-          do ip = 1, gr%mesh%np 
-            chi(ip, 1, ist, 1) =  M_zI * tg%curr_weight * &
-                 ( grad_psi_in(ip, 1, 1)  * gr%mesh%x(ip,2) - &
-                 grad_psi_in(ip, 2, 1)  * gr%mesh%x(ip,1)   ) 
+          do ip = 1, gr%mesh%np
+            zchi(ip, 1) = zchi(ip, 1) + factor*M_zI*tg%curr_weight* &
+              (grad_psi_in(ip, 1, 1)*gr%mesh%x(ip,2) - grad_psi_in(ip, 2, 1)*gr%mesh%x(ip, 1))
           end do
-        end do
-      end if
-
+          
+        end if
+        
+        call states_set_state(chi, gr%der%mesh, ist, 1, zchi)
+        
+      end do
+      
+      SAFE_DEALLOCATE_A(zpsi)
+      SAFE_DEALLOCATE_A(zchi)
+      
     case default
       message(1) = 'Error in target.chi_current: chosen target does not exist'
       call messages_fatal(1)
@@ -638,7 +661,7 @@
 
     SAFE_DEALLOCATE_A(grad_psi_in)       
     POP_SUB(chi_current)
-  end function chi_current
+  end subroutine chi_current
   ! ----------------------------------------------------------------------
 
 
