@@ -138,6 +138,7 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
   FLOAT   :: weight, xx, dsmear, dos_ef, ef_shift
   R_TYPE  :: cc, dd, avg_dl_rho
   logical :: is_ef_shift
+  R_TYPE, allocatable :: psi(:, :)
 
   PUSH_SUB(X(lr_build_dl_rho))
 
@@ -162,21 +163,26 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
   dos_ef = M_ZERO
   dsmear = max(CNST(1e-14), st%smear%dsmear)
 
+  SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
+  
   ! calculate density
   do ik = st%d%kpt%start, st%d%kpt%end
     ispin = states_dim_get_spin_index(st%d, ik)
     do ist  = st%st_start, st%st_end
+
+      call states_get_state(st, mesh, ist, ik, psi)
+      
       weight = st%d%kweights(ik)*st%smear%el_per_state
       
       if(nsigma == 1) then  ! either omega purely real or purely imaginary
         do ip = 1, mesh%np
-          dd = weight*st%X(dontusepsi)(ip, 1, ist, ik)*R_CONJ(lr(1)%X(dl_psi)(ip, 1, ist, ik))
+          dd = weight*psi(ip, 1)*R_CONJ(lr(1)%X(dl_psi)(ip, 1, ist, ik))
           lr(1)%X(dl_rho)(ip, ispin) = lr(1)%X(dl_rho)(ip, ispin) + dd + R_CONJ(dd)
         end do
       else
         do ip = 1, mesh%np
-          cc = weight*(R_CONJ(st%X(dontusepsi)(ip, 1, ist, ik))*lr(1)%X(dl_psi)(ip, 1, ist, ik) + &
-            st%X(dontusepsi)(ip, 1, ist, ik)*R_CONJ(lr(2)%X(dl_psi)(ip, 1, ist, ik)))
+          cc = weight*(R_CONJ(psi(ip, 1))*lr(1)%X(dl_psi)(ip, 1, ist, ik) + &
+            psi(ip, 1)*R_CONJ(lr(2)%X(dl_psi)(ip, 1, ist, ik)))
           lr(1)%X(dl_rho)(ip, ispin) = lr(1)%X(dl_rho)(ip, ispin) + cc
           lr(2)%X(dl_rho)(ip, ispin) = lr(2)%X(dl_rho)(ip, ispin) + R_CONJ(cc)
         end do
@@ -208,14 +214,20 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
         ispin = states_dim_get_spin_index(st%d, ik)
         do ist  = st%st_start, st%st_end
           xx = (st%smear%e_fermi - st%eigenval(ist, ik) + CNST(1e-14))/dsmear
+
+          call states_get_state(st, mesh, ist, ik, psi)
+          
           do ip = 1, mesh%np
-            lr(isigma)%X(dl_rho)(ip, ispin) = lr(isigma)%X(dl_rho)(ip, ispin) + abs(st%X(dontusepsi)(ip, 1, ist, ik))**2 &
-              * ef_shift * st%d%kweights(ik) * smear_delta_function(st%smear, xx) * st%smear%el_per_state
+            lr(isigma)%X(dl_rho)(ip, ispin) = lr(isigma)%X(dl_rho)(ip, ispin) + abs(psi(ip, 1))**2 &
+              *ef_shift*st%d%kweights(ik)*smear_delta_function(st%smear, xx)*st%smear%el_per_state
           end do
+          
         end do
       end do
     end do
   end if
+
+  SAFE_DEALLOCATE_A(psi)  
       
   POP_SUB(X(lr_build_dl_rho))
 end subroutine X(lr_build_dl_rho)
