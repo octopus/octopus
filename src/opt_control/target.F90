@@ -452,25 +452,43 @@ contains
     type(states_t),    intent(inout)     :: inh
     integer,           intent(in)        :: iter
  
-    integer :: ik, ist, ip, idim
+    integer :: ik, ist, ip, idim, ib
+    CMPLX, allocatable :: zpsi(:)
     CMPLX :: gvec(MAX_DIM)
 
     PUSH_SUB(target_inh)
 
+    SAFE_ALLOCATE(zpsi(1:gr%mesh%np))
+    
     select case(tg%type)
     case(oct_tg_td_local)
-      call target_build_tdlocal(tg, gr, time)
-      forall(ik = 1:inh%d%nik, ist = inh%st_start:inh%st_end, idim = 1:inh%d%dim, ip = 1:gr%mesh%np)
-        inh%zdontusepsi(ip, idim, ist, ik) = -psi%occ(ist, ik)*tg%rho(ip)*psi%zdontusepsi(ip, idim, ist, ik)
-      end forall
 
+      call target_build_tdlocal(tg, gr, time)
+
+      do ik = inh%d%kpt%start, inh%d%kpt%end
+        do ist = inh%st_start, inh%st_end
+          do idim = 1, inh%d%dim
+            call states_get_state(psi, gr%mesh, idim, ist, ik, zpsi)
+            zpsi(1:gr%mesh%np) = -psi%occ(ist, ik)*tg%rho(1:gr%mesh%np)*zpsi(1:gr%mesh%np)
+            call states_set_state(inh, gr%mesh, idim, ist, ik, zpsi)
+          end do
+        end do
+      end do
+      
     case(oct_tg_hhgnew)
-      gvec(1:gr%sb%dim) = real(tg%gvec(iter+1, 1:gr%sb%dim), REAL_PRECISION)
-      forall(ik = 1:inh%d%nik, ist = inh%st_start:inh%st_end, idim = 1:inh%d%dim, ip = 1:gr%mesh%np)
-        inh%zdontusepsi(ip, idim, ist, ik) = &
-           - psi%occ(ist, ik)*M_TWO*sum(tg%grad_local_pot(1, ip, 1:gr%sb%dim)*gvec(1:gr%sb%dim))* &
-           psi%zdontusepsi(ip, idim, ist, ik)
-      end forall
+      gvec(1:gr%sb%dim) = real(tg%gvec(iter + 1, 1:gr%sb%dim), REAL_PRECISION)
+
+      do ik = inh%d%kpt%start, inh%d%kpt%end
+        do ist = inh%st_start, inh%st_end
+          do idim = 1, inh%d%dim
+            call states_get_state(psi, gr%mesh, idim, ist, ik, zpsi)
+            forall(ip = 1:gr%mesh%np)
+              zpsi(ip) = -psi%occ(ist, ik)*M_TWO*sum(tg%grad_local_pot(1, ip, 1:gr%sb%dim)*gvec(1:gr%sb%dim))*zpsi(ip)
+            end forall
+            call states_set_state(inh, gr%mesh, idim, ist, ik, zpsi)
+          end do
+        end do
+      end do
 
     case(oct_tg_velocity)
       forall(ik = 1:inh%d%nik, ist = inh%st_start:inh%st_end, idim = 1:inh%d%dim, ip = 1:gr%mesh%np)
@@ -481,7 +499,11 @@ contains
       if (abs(nint(time/tg%dt)) >= tg%strt_iter_curr_tg) then
         inh%zdontusepsi =  -chi_current(tg, gr, psi)
       else
-        inh%zdontusepsi = M_ZERO
+        do ik = inh%d%kpt%start, inh%d%kpt%end
+          do ib = inh%group%block_start, inh%group%block_end
+            call batch_set_zero(inh%group%psib(ib, ik))
+          end do
+        end do
       end if     
 
     case default
@@ -490,6 +512,8 @@ contains
   
     end select
 
+    SAFE_DEALLOCATE_A(zpsi)
+    
     POP_SUB(target_inh)
   end subroutine target_inh
   !----------------------------------------------------------
