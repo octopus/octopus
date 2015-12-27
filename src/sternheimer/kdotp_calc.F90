@@ -131,10 +131,13 @@ subroutine zcalc_dipole_periodic(sys, lr, dipole)
   integer idir, ist, ik, idim
   type(mesh_t), pointer :: mesh
   CMPLX :: term, moment
+  CMPLX, allocatable :: psi(:, :)
   mesh => sys%gr%mesh
 
   PUSH_SUB(zcalc_dipole_periodic)
 
+  SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
+  
   do idir = 1, sys%gr%sb%periodic_dim
     moment = M_ZERO
 
@@ -142,20 +145,24 @@ subroutine zcalc_dipole_periodic(sys, lr, dipole)
       term = M_ZERO
 
       do ist = 1, sys%st%nst
+
+        call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
+        
         do idim = 1, sys%st%d%dim
-          term = term + zmf_dotp(mesh, sys%st%zdontusepsi(1:mesh%np, idim, ist, ik), &
-            lr(1, idir)%zdl_psi(1:mesh%np, idim, ist, ik))
+          term = term + zmf_dotp(mesh, psi(1:mesh%np, idim), lr(1, idir)%zdl_psi(1:mesh%np, idim, ist, ik))
         end do
+        
       end do
 
-      moment = moment + term * sys%st%d%kweights(ik) * sys%st%smear%el_per_state
+      moment = moment + term*sys%st%d%kweights(ik)*sys%st%smear%el_per_state
     end do
 
     dipole(idir) = -moment
   end do
 
-  POP_SUB(zcalc_dipole_periodic)
+  SAFE_DEALLOCATE_A(psi)
 
+  POP_SUB(zcalc_dipole_periodic)
 end subroutine zcalc_dipole_periodic
 
 #include "undef.F90"

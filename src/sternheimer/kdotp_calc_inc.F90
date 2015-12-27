@@ -31,6 +31,7 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, degen_t
 
   integer :: ik, ist, ist2, idir1, idir2, pdim
   R_TYPE :: term
+  R_TYPE, allocatable   :: psi(:, :)
   R_TYPE, allocatable   :: pertpsi(:,:,:)     ! H`i|psi0>
   R_TYPE, allocatable   :: pertpsi2(:,:)      ! H2i|psi0>
   R_TYPE, allocatable   :: proj_dl_psi(:,:)   ! (1-Pn`)|psi`j>
@@ -45,6 +46,7 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, degen_t
   mesh => sys%gr%mesh
   pdim = sys%gr%sb%periodic_dim
 
+  SAFE_ALLOCATE(psi(1:mesh%np_part, 1:hm%d%dim))
   SAFE_ALLOCATE(pertpsi(1:mesh%np, 1:hm%d%dim, 1:pdim))
   SAFE_ALLOCATE(pertpsi2(1:mesh%np, 1:hm%d%dim))
   SAFE_ALLOCATE(proj_dl_psi(1:mesh%np, 1:hm%d%dim))
@@ -59,11 +61,12 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, degen_t
 
     do ist = sys%st%st_start, sys%st%st_end
 
+      call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
+      
       ! start by computing all the wavefunctions acted on by perturbation
       do idir1 = 1, pdim
         call pert_setup_dir(perturbation, idir1)
-        call X(pert_apply)(perturbation, sys%gr, sys%geo, hm, ik, &
-          sys%st%X(dontusepsi)(:, :, ist, ik), pertpsi(:, :, idir1))
+        call X(pert_apply)(perturbation, sys%gr, sys%geo, hm, ik, psi, pertpsi(:, :, idir1))
       end do
 
       do idir2 = 1, pdim
@@ -81,8 +84,8 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, degen_t
           do ist2 = 1, sys%st%nst
 !              alternate direct method
 !              if (abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres) then
-!                   proj_dl_psi(1:mesh%np) = proj_dl_psi(1:mesh%np) - sys%st%X(dontusepsi)(1:mesh%np, 1, ist2, ik) * &
-!                     X(mf_dotp)(m, sys%st%X(dontusepsi)(1:mesh%np, 1, ist2, ik), proj_dl_psi(1:mesh%np))
+!                   proj_dl_psi(1:mesh%np) = proj_dl_psi(1:mesh%np) - sys%st%X(psi)(1:mesh%np, 1, ist2, ik) * &
+!                     X(mf_dotp)(m, sys%st%X(psi)(1:mesh%np, 1, ist2, ik), proj_dl_psi(1:mesh%np))
             orth_mask(ist2) = .not. (abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres)
             ! mask == .false. means do projection; .true. means do not
           end do
@@ -96,10 +99,9 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, degen_t
           eff_mass_inv(idir1, idir2, ist, ik) = M_TWO * R_REAL(term)
 
           call pert_setup_dir(perturbation, idir1, idir2)
-          call X(pert_apply_order_2)(perturbation, sys%gr, sys%geo, hm, ik, &
-            sys%st%X(dontusepsi)(1:mesh%np, 1:hm%d%dim, ist, ik), pertpsi2(1:mesh%np, 1:hm%d%dim))
-          eff_mass_inv(idir1, idir2, ist, ik) = eff_mass_inv(idir1, idir2, ist, ik) - &
-            R_REAL(X(mf_dotp)(mesh, hm%d%dim, sys%st%X(dontusepsi)(:, :, ist, ik), pertpsi2))
+          call X(pert_apply_order_2)(perturbation, sys%gr, sys%geo, hm, ik, psi, pertpsi2(1:mesh%np, 1:hm%d%dim))
+          eff_mass_inv(idir1, idir2, ist, ik) = &
+            eff_mass_inv(idir1, idir2, ist, ik) - R_REAL(X(mf_dotp)(mesh, hm%d%dim, psi, pertpsi2))
 
         end do !idir2
       end do !idir1
@@ -120,6 +122,7 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, degen_t
   SAFE_DEALLOCATE_A(eff_mass_inv_temp)
 #endif
 
+  SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(pertpsi)
   SAFE_DEALLOCATE_A(pertpsi2)
   SAFE_DEALLOCATE_A(proj_dl_psi)
@@ -139,9 +142,9 @@ subroutine X(kdotp_add_occ)(sys, hm, pert, kdotp_lr, degen_thres)
   type(lr_t),          intent(inout) :: kdotp_lr
   FLOAT,               intent(in)    :: degen_thres
 
-  integer :: ist, ist2, ik
+  integer :: ip, idim, ist, ist2, ik
   R_TYPE :: mtxel
-  R_TYPE, allocatable :: pertpsi(:, :)
+  R_TYPE, allocatable :: pertpsi(:, :), psi1(:, :), psi2(:, :)
 
   PUSH_SUB(X(kdotp_add_occ))
 
@@ -149,34 +152,46 @@ subroutine X(kdotp_add_occ)(sys, hm, pert, kdotp_lr, degen_thres)
     call messages_not_implemented("kdotp_add_occ parallel in states")
   end if
 
+  SAFE_ALLOCATE(psi1(1:sys%gr%mesh%np_part, 1:sys%st%d%dim))
+  SAFE_ALLOCATE(psi2(1:sys%gr%mesh%np_part, 1:sys%st%d%dim))
   SAFE_ALLOCATE(pertpsi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
 
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
     do ist = 1, sys%st%nst
 
-      call X(pert_apply)(pert, sys%gr, sys%geo, hm, ik, &
-        sys%st%X(dontusepsi)(:, :, ist, ik), pertpsi(:, :))
-
+      call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi1)
+      
+      call X(pert_apply)(pert, sys%gr, sys%geo, hm, ik, psi1, pertpsi)
+      
       do ist2 = ist + 1, sys%st%nst
+
+        call states_get_state(sys%st, sys%gr%mesh, ist2, ik, psi2)
+        
         ! avoid dividing by zero below; these contributions are arbitrary anyway
         if (abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres) cycle
 
         ! the unoccupied subspace was handled by the Sternheimer equation
         if(sys%st%occ(ist2, ik) < M_HALF) cycle
         
-        mtxel = X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, sys%st%X(dontusepsi)(:, :, ist2, ik), pertpsi(:, :))
+        mtxel = X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, psi2, pertpsi(:, :))
 
-        kdotp_lr%X(dl_psi)(:, :, ist, ik) = kdotp_lr%X(dl_psi)(:, :, ist, ik) + &
-          sys%st%X(dontusepsi)(:, :, ist2, ik) * mtxel / (sys%st%eigenval(ist, ik) - sys%st%eigenval(ist2, ik))
-
-        ! note: there is a minus sign here, because the perturbation is an anti-Hermitian operator
-        kdotp_lr%X(dl_psi)(:, :, ist2, ik) = kdotp_lr%X(dl_psi)(:, :, ist2, ik) + &
-          sys%st%X(dontusepsi)(:, :, ist, ik) * R_CONJ(-mtxel) / (sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik))
-
+        do idim = 1, sys%st%d%dim
+          do ip = 1, sys%gr%mesh%np
+            kdotp_lr%X(dl_psi)(ip, idim, ist, ik) = kdotp_lr%X(dl_psi)(ip, idim, ist, ik) + &
+              psi2(ip, idim)*mtxel/(sys%st%eigenval(ist, ik) - sys%st%eigenval(ist2, ik))
+            
+            ! note: there is a minus sign here, because the perturbation is an anti-Hermitian operator
+            kdotp_lr%X(dl_psi)(ip, idim, ist2, ik) = kdotp_lr%X(dl_psi)(ip, idim, ist2, ik) + &
+              psi1(ip, idim)*R_CONJ(-mtxel)/(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik))
+          end do
+        end do
+        
       end do
     end do
   end do
 
+  SAFE_DEALLOCATE_A(psi1)
+  SAFE_DEALLOCATE_A(psi2)
   SAFE_DEALLOCATE_A(pertpsi)
 
   POP_SUB(X(kdotp_add_occ))
@@ -191,27 +206,35 @@ subroutine X(kdotp_add_diagonal)(sys, hm, em_pert, kdotp_lr)
   type(lr_t),          intent(inout) :: kdotp_lr(:)
 
   integer :: ik, ist, idir
-  R_TYPE, allocatable :: ppsi(:,:)
+  R_TYPE, allocatable :: psi(:, :), ppsi(:,:)
   R_TYPE :: expectation
 
   PUSH_SUB(X(kdotp_add_diagonal))
 
   SAFE_ALLOCATE(ppsi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
+  SAFE_ALLOCATE(psi(1:sys%gr%mesh%np_part, 1:sys%st%d%dim))
 
   do idir = 1, sys%gr%sb%periodic_dim
     call pert_setup_dir(em_pert, idir)
     do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
       do ist = 1, sys%st%nst
-        call X(pert_apply)(em_pert, sys%gr, sys%geo, hm, ik, sys%st%X(dontusepsi)(:, :, ist, ik), ppsi)
-        expectation = X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, sys%st%X(dontusepsi)(:, :, ist, ik), ppsi)
+
+        call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
+        
+        call X(pert_apply)(em_pert, sys%gr, sys%geo, hm, ik, psi, ppsi)
+        
+        expectation = X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, psi, ppsi)
+        
         kdotp_lr(idir)%X(dl_psi)(1:sys%gr%mesh%np, 1:sys%st%d%dim, ist, ik) = &
-          kdotp_lr(idir)%X(dl_psi)(1:sys%gr%mesh%np, 1:sys%st%d%dim, ist, ik) + &
-          expectation*sys%st%X(dontusepsi)(1:sys%gr%mesh%np, 1:sys%st%d%dim, ist, ik)
+          kdotp_lr(idir)%X(dl_psi)(1:sys%gr%mesh%np, 1:sys%st%d%dim, ist, ik) + expectation*psi(1:sys%gr%mesh%np, 1:sys%st%d%dim)
+        
       end do
     end do
   end do
 
-  SAFE_DEALLOCATE_A(ppsi) 
+  SAFE_DEALLOCATE_A(psi)
+  SAFE_DEALLOCATE_A(ppsi)
+  
   POP_SUB(X(kdotp_add_diagonal))
 end subroutine X(kdotp_add_diagonal)
 
