@@ -106,7 +106,7 @@ contains
 
     integer :: idir, ist, ispin, idim, ndim, np
 
-    CMPLX, allocatable :: gpsi(:,:), gdl_psi(:,:), gdl_psi_m(:,:)
+    CMPLX, allocatable :: psi(:, :), gpsi(:,:), gdl_psi(:,:), gdl_psi_m(:,:)
 
     PUSH_SUB(lr_calc_current)
 
@@ -117,7 +117,8 @@ contains
     np = gr%mesh%np
     ndim = gr%mesh%sb%dim
 
-    SAFE_ALLOCATE(   gpsi(1:np, 1:ndim))
+    SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:ndim))
+    SAFE_ALLOCATE(gpsi(1:np, 1:ndim))
     SAFE_ALLOCATE(gdl_psi(1:np, 1:ndim))
     if(present(lr_m)) then
       SAFE_ALLOCATE(gdl_psi_m(1:np, 1:ndim))
@@ -127,20 +128,23 @@ contains
 
     do ispin = 1, st%d%nspin
       do ist = 1, st%nst
+
+        call states_set_state(st, gr%mesh, ist, ispin, psi)
+        
         do idim = 1, st%d%dim
 
           call zderivatives_grad(gr%der, lr%zdl_psi(:, idim, ist, ispin), gdl_psi)
-          call zderivatives_grad(gr%der, st%zdontusepsi(:, idim, ist, ispin), gpsi)
+          call zderivatives_grad(gr%der, psi(:, idim), gpsi)
 
-          if(present(lr_m)) then               
+          if(present(lr_m)) then
 
             call zderivatives_grad(gr%der, lr_m%zdl_psi(:, idim, ist, ispin), gdl_psi_m)
 
             do idir = 1, gr%mesh%sb%dim 
 
               lr%dl_j(1:np, idir, ispin) = lr%dl_j(1:np, idir, ispin) + (           &
-                + conjg(st%zdontusepsi(1:np, idim, ist, ispin)) *       gdl_psi  (1:np, idir)   &
-                -       st%zdontusepsi(1:np, idim, ist, ispin)  * conjg(gdl_psi_m(1:np, idir))  &
+                + conjg(psi(1:np, idim))*gdl_psi(1:np, idir)   &
+                -       psi(1:np, idim)*conjg(gdl_psi_m(1:np, idir))  &
                 + conjg(lr_m%zdl_psi(1:np, idim, ist, ispin)) *       gpsi(1:np, idir)   & 
                 -       lr%zdl_psi  (1:np, idim, ist, ispin)  * conjg(gpsi(1:np, idir))  &
                 ) / (M_TWO * M_zI)
@@ -151,8 +155,8 @@ contains
             do idir = 1, gr%mesh%sb%dim 
 
               lr%dl_j(1:np, idir, ispin) = lr%dl_j(1:np, idir, ispin) + (           &
-                + conjg(st%zdontusepsi(1:np, idim, ist, ispin)) *       gdl_psi(1:np, idir)   &
-                -       st%zdontusepsi(1:np, idim, ist, ispin)  * conjg(gdl_psi(1:np, idir))  &
+                + conjg(psi(1:np, idim))*gdl_psi(1:np, idir)   &
+                -       psi(1:np, idim)*conjg(gdl_psi(1:np, idir))  &
                 + conjg(lr%zdl_psi(1:np, idim, ist, ispin)) *       gpsi(1:np, idir)   & 
                 -       lr%zdl_psi(1:np, idim, ist, ispin)  * conjg(gpsi(1:np, idir))  &
                 ) / (M_TWO * M_zI)
@@ -165,6 +169,7 @@ contains
       end do
     end do
 
+    SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(gpsi)
     SAFE_DEALLOCATE_A(gdl_psi)
     if(present(lr_m)) then
