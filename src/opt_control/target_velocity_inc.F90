@@ -226,16 +226,18 @@
     type(states_t),   intent(inout) :: chi_out
     type(geometry_t), intent(in)    :: geo
 
-    integer :: ip, idim, ist, jst, ik
+    integer :: ip, idim, ist, jst, ik, ib
     character(len=1024) :: temp_string
     FLOAT :: df_dv, dummy(3)
     FLOAT, allocatable :: x(:, :)
     PUSH_SUB(target_chi_velocity)
 
     !we have a time-dependent target --> Chi(T)=0
-    forall(ip=1:gr%mesh%np, idim=1:chi_out%d%dim, ist=chi_out%st_start:chi_out%st_end, ik=1:chi_out%d%nik)
-       chi_out%zdontusepsi(ip, idim, ist, ik) = M_z0
-    end forall
+    do ik = chi_out%d%kpt%start, chi_out%d%kpt%end
+      do ib = chi_out%group%block_start, chi_out%group%block_end
+        call batch_set_zero(chi_out%group%psib(ib, ik))
+      end do
+    end do
 
     SAFE_ALLOCATE(x(1:geo%natoms, 1:geo%space%dim))
     forall(ip=1: geo%natoms) x(ip, 1:geo%space%dim) = geo%atom(ip)%v(1:geo%space%dim)
@@ -271,13 +273,14 @@
     integer,             intent(in)    :: time
     integer,             intent(in)    :: max_time
 
-    CMPLX, allocatable :: opsi(:, :)
+    CMPLX, allocatable :: opsi(:, :), zpsi(:, :)
     integer :: iatom, ik, ist, idim
     FLOAT :: dt
     PUSH_SUB(target_tdcalc_velocity)
 
     tg%td_fitness(time) = M_ZERO
 
+    SAFE_ALLOCATE(zpsi(1:gr%mesh%np_part, 1:1))
     SAFE_ALLOCATE(opsi(1:gr%mesh%np_part, 1:1))
     opsi = M_z0
     ! WARNING This does not work for spinors.
@@ -286,15 +289,17 @@
       do ik = 1, psi%d%nik
         do ist = 1, psi%nst
           do idim = 1, gr%sb%dim
-            opsi(1:gr%mesh%np, 1) = tg%grad_local_pot(iatom, 1:gr%mesh%np, idim)*psi%zdontusepsi(1:gr%mesh%np, 1, ist, ik)
-            geo%atom(iatom)%f(idim) = geo%atom(iatom)%f(idim) + real(psi%occ(ist, ik) * &
-              zmf_dotp(gr%mesh, psi%d%dim, opsi, psi%zdontusepsi(:, :, ist, ik)), REAL_PRECISION)
+            call states_get_state(psi, gr%mesh, ist, ik, zpsi)
+            opsi(1:gr%mesh%np, 1) = tg%grad_local_pot(iatom, 1:gr%mesh%np, idim)*zpsi(1:gr%mesh%np, 1)
+            geo%atom(iatom)%f(idim) = geo%atom(iatom)%f(idim) &
+              + real(psi%occ(ist, ik)*zmf_dotp(gr%mesh, psi%d%dim, opsi, zpsi), REAL_PRECISION)
           end do
         end do
       end do
     end do
     SAFE_DEALLOCATE_A(opsi)
-
+    SAFE_DEALLOCATE_A(zpsi)
+    
     dt = tg%dt
     if( (time  ==  0) .or. (time  ==  max_time) ) dt = tg%dt * M_HALF
     do iatom = 1, geo%natoms
