@@ -738,13 +738,12 @@ subroutine X(ionic_perturbation_order_2) (gr, geo, hm, ik, f_in, f_out, iatom, i
 end subroutine X(ionic_perturbation_order_2)
 
 ! --------------------------------------------------------------------------
-subroutine X(ionic_pert_matrix_elements_2)(gr, geo, hm, ik, st, psi, vib, factor, matrix)
+subroutine X(ionic_pert_matrix_elements_2)(gr, geo, hm, ik, st, vib, factor, matrix)
   type(grid_t),        intent(inout) :: gr
   type(geometry_t),    intent(in)    :: geo
   type(hamiltonian_t), intent(inout) :: hm
   integer,             intent(in)    :: ik
   type(states_t),      intent(in)    :: st
-  R_TYPE,              intent(inout) :: psi(:, :, :)
   type(vibrations_t),  intent(in)    :: vib
   FLOAT,               intent(in)    :: factor
   FLOAT,               intent(inout) :: matrix(:, :) !< this is an expectation value of a Hermitian operator
@@ -752,19 +751,23 @@ subroutine X(ionic_pert_matrix_elements_2)(gr, geo, hm, ik, st, psi, vib, factor
   integer :: ist, idim, ip
   integer :: imat, jmat, iatom, idir, jdir
   FLOAT, allocatable :: vloc(:)
-  R_TYPE, allocatable :: gpsi(:, :, :), g2psi(:, :, :, :), tmp1(:, :)
+  R_TYPE, allocatable :: gpsi(:, :, :), g2psi(:, :, :, :), tmp1(:, :), psi(:, :)
   FLOAT :: dot
 
   PUSH_SUB(X(ionic_pert_matrix_elements_2))
 
   SAFE_ALLOCATE( vloc(1:gr%mesh%np))
+  SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE( gpsi(1:gr%mesh%np_part, 1:st%d%dim, 1:gr%sb%dim))
   SAFE_ALLOCATE(g2psi(1:gr%mesh%np_part, 1:st%d%dim, 1:gr%sb%dim, 1:gr%sb%dim))
   SAFE_ALLOCATE( tmp1(1:gr%mesh%np, 1:st%d%dim))
 
   do ist = 1, st%nst
+
+    call states_get_state(st, gr%der%mesh, ist, ik, psi)
+    
     do idim = 1, st%d%dim
-      call X(derivatives_grad)(gr%der, psi(:, idim, ist), gpsi(:, idim, :))
+      call X(derivatives_grad)(gr%der, psi(:, idim), gpsi(:, idim, :))
       do idir = 1, gr%sb%dim
         call X(derivatives_grad)(gr%der, gpsi(:, idim, idir), g2psi(:, idim, idir, :))
       end do
@@ -789,8 +792,8 @@ subroutine X(ionic_pert_matrix_elements_2)(gr, geo, hm, ik, st, psi, vib, factor
         dot = dot + M_TWO*R_REAL(X(mf_dotp)(gr%mesh, st%d%dim, gpsi(:, :, jdir), tmp1))
 
         !2<f|di^T dj^T v |f> 
-        forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np) tmp1(ip, idim) = vloc(ip)*psi(ip, idim, ist)
-        call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, st%d%dim, psi(:, :, ist), tmp1, ik)
+        forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np) tmp1(ip, idim) = vloc(ip)*psi(ip, idim)
+        call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, st%d%dim, psi, tmp1, ik)
         dot = dot + M_TWO*R_REAL(X(mf_dotp)(gr%mesh, st%d%dim, g2psi(:, :, idir, jdir), tmp1))
 
         matrix(jmat, imat) = matrix(jmat, imat) + dot*st%occ(ist, ik)*factor

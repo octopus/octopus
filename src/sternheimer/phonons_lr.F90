@@ -209,9 +209,9 @@ contains
 
     !the  <phi0 | v2 | phi0> term
     if(states_are_real(st)) then
-      call dionic_pert_matrix_elements_2(sys%gr, sys%geo, hm, 1, st, st%ddontusepsi(:, :, :, 1), vib, CNST(-1.0), vib%dyn_matrix)
+      call dionic_pert_matrix_elements_2(sys%gr, sys%geo, hm, 1, st, vib, CNST(-1.0), vib%dyn_matrix)
     else
-      call zionic_pert_matrix_elements_2(sys%gr, sys%geo, hm, 1, st, st%zdontusepsi(:, :, :, 1), vib, CNST(-1.0), vib%dyn_matrix)
+      call zionic_pert_matrix_elements_2(sys%gr, sys%geo, hm, 1, st, vib, CNST(-1.0), vib%dyn_matrix)
     end if
 
     call pert_init(ionic_pert, PERTURBATION_IONIC, gr, geo)
