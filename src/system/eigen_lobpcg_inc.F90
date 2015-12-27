@@ -35,8 +35,9 @@ subroutine X(eigensolver_lobpcg)(gr, st, hm, pre, tol, niter, converged, ik, dif
   FLOAT,                  intent(out)   :: diff(:) !< (1:st%nst)
   integer,                intent(in)    :: block_size
   
-  integer            :: ib, psi_start, psi_end, constr_start, constr_end, bs
+  integer            :: ib, psi_start, psi_end, constr_start, constr_end, bs, ist
   integer            :: n_matvec, conv, maxiter, iblock
+  R_TYPE, allocatable :: psi(:, :, :), psi_constr(:, :, :)
 #ifdef HAVE_MPI
   integer            :: outcount
   FLOAT, allocatable :: ldiff(:)
@@ -70,16 +71,36 @@ subroutine X(eigensolver_lobpcg)(gr, st, hm, pre, tol, niter, converged, ik, dif
     constr_end   = ib-1
     
     n_matvec = maxiter
+
+    SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim, psi_start:psi_end))
+
+    do ist = psi_start, psi_end
+      call states_get_state(st, gr%mesh, ist, ik, psi(:, :, ist))
+    end do
     
     if(constr_end >= constr_start) then
-      call X(lobpcg)(gr, st, hm, psi_start, psi_end, st%X(dontusepsi)(:, :, psi_start:psi_end, ik), &
-        constr_start, constr_end, &
-        ik, pre, tol, n_matvec, conv, diff, &
-        constr = st%X(dontusepsi)(:, :, constr_start:constr_end, ik))
+
+      SAFE_ALLOCATE(psi_constr(1:gr%mesh%np_part, 1:st%d%dim, constr_start:constr_end))
+
+      do ist = constr_start, constr_end
+        call states_get_state(st, gr%mesh, ist, ik, psi_constr(:, :, ist))
+      end do
+    
+      call X(lobpcg)(gr, st, hm, psi_start, psi_end, psi, constr_start, constr_end, &
+        ik, pre, tol, n_matvec, conv, diff, constr = psi_constr)
+
+      SAFE_DEALLOCATE_A(psi_constr)
+      
     else
-      call X(lobpcg)(gr, st, hm, psi_start, psi_end, st%X(dontusepsi)(:, :, psi_start:psi_end, ik), &
+      call X(lobpcg)(gr, st, hm, psi_start, psi_end, psi, &
         constr_start, constr_end, ik, pre, tol, n_matvec, conv, diff)
     end if
+
+    do ist = psi_start, psi_end
+      call states_set_state(st, gr%mesh, ist, ik, psi(:, :, ist))
+    end do
+
+    SAFE_DEALLOCATE_A(psi)
     
     niter     = niter + n_matvec
     converged = converged + conv  
@@ -287,7 +308,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   end if
 
   ! Get initial Ritz-values and -vectors.
-  call batch_init(psib, st%d%dim, st_start, st_end, st%X(dontusepsi)(:, :, st_start:, ik))
+  call batch_init(psib, st%d%dim, st_start, st_end, psi(:, :, st_start:))
   call batch_init(hpsib, st%d%dim, st_start, st_end, h_psi(:, :, st_start:))
 
   call X(hamiltonian_apply_batch)(hm, gr%der, psib, hpsib, ik)
