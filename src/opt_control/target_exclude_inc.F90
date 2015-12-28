@@ -88,15 +88,25 @@
     type(states_t),   intent(inout) :: psi
 
     integer :: ist
+    CMPLX, allocatable :: zpsi1(:, :), zpsi(:, :)
+    
     PUSH_SUB(target_j1_local)
 
+    SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:tg%st%d%dim))
+    SAFE_ALLOCATE(zpsi1(1:gr%mesh%np, 1:tg%st%d%dim))
+
+    call states_get_state(psi, gr%mesh, 1, 1, zpsi1)
+    
     j1 = M_ONE
     do ist = 1, tg%st%nst
       if(loct_isinstringlist(ist, tg%excluded_states_list)) then
-        j1 = j1 - abs(zmf_dotp(gr%mesh, psi%d%dim, &
-          tg%st%zdontusepsi(:, :, ist, 1), psi%zdontusepsi(:, :, 1, 1)))**2
+        call states_get_state(tg%st, gr%mesh, ist, 1, zpsi)
+        j1 = j1 - abs(zmf_dotp(gr%mesh, psi%d%dim, zpsi, zpsi1))**2
       end if
     end do
+
+    SAFE_DEALLOCATE_A(zpsi)
+    SAFE_DEALLOCATE_A(zpsi1)
 
     POP_SUB(target_j1_exclude)
   end function target_j1_exclude
@@ -110,18 +120,36 @@
     type(states_t),    intent(inout) :: psi_in
     type(states_t),    intent(inout) :: chi_out
 
-    integer :: ist
+    integer :: ist, ib
     CMPLX :: olap
+    CMPLX, allocatable :: zpsi(:, :), zst(:, :), zchi(:, :)
     PUSH_SUB(target_chi_exclude)
 
-    chi_out%zdontusepsi(:, :, 1, 1) = psi_in%zdontusepsi(:, :, 1, 1)
+    do ib = chi_out%group%block_start, chi_out%group%block_end 
+      call batch_copy_data(gr%mesh%np, psi_in%group%psib(ib, 1), chi_out%group%psib(ib, 1))
+    end do
+
+    SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:tg%st%d%dim))
+    SAFE_ALLOCATE(zst(1:gr%mesh%np, 1:tg%st%d%dim))
+    SAFE_ALLOCATE(zchi(1:gr%mesh%np, 1:tg%st%d%dim))
+
+    call states_get_state(chi_out, gr%mesh, 1, 1, zchi)
+    
     do ist = 1, tg%st%nst
       if(loct_isinstringlist(ist, tg%excluded_states_list)) then
-        olap = zmf_dotp(gr%mesh, psi_in%d%dim, tg%st%zdontusepsi(:, :, ist, 1), psi_in%zdontusepsi(:, :, 1, 1))
-        chi_out%zdontusepsi(:, :, 1, 1) = chi_out%zdontusepsi(:, :, 1, 1) - olap*tg%st%zdontusepsi(:, :, ist, 1)
+        call states_get_state(psi_in, gr%mesh, ist, 1, zpsi)
+        call states_get_state(tg%st, gr%mesh, ist, 1, zst)
+        olap = zmf_dotp(gr%mesh, psi_in%d%dim, zst, zpsi)
+        zchi(1:gr%mesh%np, 1:tg%st%d%dim) = zchi(1:gr%mesh%np, 1:tg%st%d%dim) - olap*zst(1:gr%mesh%np, 1:tg%st%d%dim)
       end if
     end do
 
+    call states_set_state(chi_out, gr%mesh, 1, 1, zchi)
+
+    SAFE_DEALLOCATE_A(zpsi)
+    SAFE_DEALLOCATE_A(zst)
+    SAFE_DEALLOCATE_A(zchi)
+    
     POP_SUB(target_chi_exclude)
   end subroutine target_chi_exclude
 
