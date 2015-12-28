@@ -115,14 +115,16 @@
     type(grid_t),      intent(inout) :: gr
     type(states_t),    intent(inout) :: chi_out
 
-    integer :: ik, idim, ist, ip
+    integer :: ik, ib
     PUSH_SUB(target_chi_tdlocal)
 
     !We assume that there is no time-independent operator.
-    forall(ik = 1:chi_out%d%nik, ist = chi_out%st_start:chi_out%st_end, idim = 1:chi_out%d%dim, ip = 1:gr%mesh%np)
-      chi_out%zdontusepsi(ip, idim, ist, ik) = M_z0
-    end forall
-
+    
+    do ik = chi_out%d%kpt%start, chi_out%d%kpt%end
+      do ib = chi_out%group%block_start, chi_out%group%block_end
+        call batch_set_zero(chi_out%group%psib(ib, ik))
+      end do
+    end do
 
     POP_SUB(target_chi_tdlocal)
   end subroutine target_chi_tdlocal
@@ -137,12 +139,14 @@
     type(states_t),      intent(inout) :: psi
     integer,             intent(in)    :: time
 
-    CMPLX, allocatable :: opsi(:, :)
+    CMPLX, allocatable :: opsi(:, :), zpsi(:, :)
     integer :: ist, ip
     PUSH_SUB(target_tdcalc_tdlocal)
 
     tg%td_fitness(time) = M_ZERO
 
+    SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:psi%d%dim))
+    
     !!!! WARNING Here one should build the time-dependent target.
     select case(psi%d%ispin)
     case(UNPOLARIZED)
@@ -150,12 +154,15 @@
       SAFE_ALLOCATE(opsi(1:gr%mesh%np_part, 1:1))
       opsi = M_z0
       do ist  = psi%st_start, psi%st_end
+
+        call states_get_state(psi, gr%mesh, ist, 1, zpsi)
+        
         do ip = 1, gr%mesh%np
-          opsi(ip, 1) = tg%rho(ip)*psi%zdontusepsi(ip, 1, ist, 1)
+          opsi(ip, 1) = tg%rho(ip)*zpsi(ip, 1)
         end do
-        tg%td_fitness(time) = &
-          tg%td_fitness(time) + psi%occ(ist, 1) * &
-          real(zmf_dotp(gr%mesh, psi%d%dim, psi%zdontusepsi(:, :, ist, 1), opsi(:, :)), REAL_PRECISION)
+        
+        tg%td_fitness(time) = tg%td_fitness(time) + psi%occ(ist, 1)*real(zmf_dotp(gr%mesh, psi%d%dim, zpsi, opsi), REAL_PRECISION)
+
       end do
       SAFE_DEALLOCATE_A(opsi)
     case(SPIN_POLARIZED)
@@ -165,6 +172,8 @@
       message(1) = 'Error in target.target_tdcalc: spinors.'
       call messages_fatal(1)
     end select
+
+    SAFE_DEALLOCATE_A(zpsi)
 
     POP_SUB(target_tdcalc_tdlocal)
   end subroutine target_tdcalc_tdlocal
