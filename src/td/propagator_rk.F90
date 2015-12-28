@@ -76,7 +76,7 @@ contains
     type(states_t), pointer :: chi
     FLOAT, pointer :: q(:, :), p(:, :)
 
-    integer :: np_part, np, kp1, kp2, st1, st2, nspin, ik, ist, iatom
+    integer :: np_part, np, kp1, kp2, st1, st2, nspin, ik, ist, iatom, ib
     CMPLX, allocatable :: zphi(:, :, :, :), zchi(:, :, :, :), dvpsi(:, :, :)
     type(states_t) :: hst, stphi, inh, hchi, stchi
     logical :: propagate_chi
@@ -188,12 +188,21 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Stage 2.
-
-    !
-    stphi%zdontusepsi = zphi - M_HALF * M_zI * dt * hst%zdontusepsi
+    
+    call states_set_state(stphi, gr%mesh, zphi)
     if(propagate_chi) then
-      stchi%zdontusepsi = zchi - M_HALF * M_zI * dt * hchi%zdontusepsi
+      call states_set_state(stchi, gr%mesh, zchi)    
     end if
+    
+    do ik = stphi%d%kpt%start, stphi%d%kpt%end
+      do ib = stphi%group%block_start, stphi%group%block_end
+        call batch_axpy(gr%mesh%np, -CNST(0.5)*M_zI*dt, hst%group%psib(ib, ik), stphi%group%psib(ib, ik))
+        if(propagate_chi) then
+          call batch_axpy(gr%mesh%np, -CNST(0.5)*M_zI*dt, hchi%group%psib(ib, ik), hchi%group%psib(ib, ik))
+        end if
+      end do
+    end do
+        
     if(ion_dynamics_ions_move(ions)) then
       pos = pos0 + M_HALF * posk
       vel = vel0 + M_HALF * velk
@@ -211,11 +220,20 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Stage 3.
 
-    !
-    stphi%zdontusepsi = zphi - M_HALF * M_zI * dt * hst%zdontusepsi
+    call states_set_state(stphi, gr%mesh, zphi)
     if(propagate_chi) then
-      stchi%zdontusepsi = zchi - M_HALF * M_zI * dt * hchi%zdontusepsi
+      call states_set_state(stchi, gr%mesh, zchi)    
     end if
+    
+    do ik = stphi%d%kpt%start, stphi%d%kpt%end
+      do ib = stphi%group%block_start, stphi%group%block_end
+        call batch_axpy(gr%mesh%np, -CNST(0.5)*M_zI*dt, hst%group%psib(ib, ik), stphi%group%psib(ib, ik))
+        if(propagate_chi) then
+          call batch_axpy(gr%mesh%np, -CNST(0.5)*M_zI*dt, hchi%group%psib(ib, ik), hchi%group%psib(ib, ik))
+        end if
+      end do
+    end do
+
     if(ion_dynamics_ions_move(ions)) then
       pos = pos0 + M_HALF * posk
       vel = vel0 + M_HALF * velk
@@ -234,11 +252,20 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Stage 4.
 
-    !
-    stphi%zdontusepsi = zphi - M_zI *dt * hst%zdontusepsi
+    call states_set_state(stphi, gr%mesh, zphi)
     if(propagate_chi) then
-      stchi%zdontusepsi = zchi - M_zI *dt * hchi%zdontusepsi
+      call states_set_state(stchi, gr%mesh, zchi)    
     end if
+    
+    do ik = stphi%d%kpt%start, stphi%d%kpt%end
+      do ib = stphi%group%block_start, stphi%group%block_end
+        call batch_axpy(gr%mesh%np, -M_zI*dt, hst%group%psib(ib, ik), stphi%group%psib(ib, ik))
+        if(propagate_chi) then
+          call batch_axpy(gr%mesh%np, -M_zI*dt, hchi%group%psib(ib, ik), hchi%group%psib(ib, ik))
+        end if
+      end do
+    end do
+
     if(ion_dynamics_ions_move(ions)) then
       pos = pos0 + posk
       vel = vel0 + velk
@@ -421,10 +448,15 @@ contains
     subroutine update_state(epsilon)
       FLOAT, intent(in) :: epsilon
 
-      st%zdontusepsi = st%zdontusepsi - M_zI * dt * hst%zdontusepsi * epsilon
-      if(propagate_chi) then
-        chi%zdontusepsi = chi%zdontusepsi - M_zI * dt * hchi%zdontusepsi * epsilon
-      end if
+      do ik = stphi%d%kpt%start, stphi%d%kpt%end
+        do ib = stphi%group%block_start, stphi%group%block_end
+          call batch_axpy(gr%mesh%np, -M_zI*dt*epsilon, hst%group%psib(ib, ik), st%group%psib(ib, ik))
+          if(propagate_chi) then
+            call batch_axpy(gr%mesh%np, -M_zI*dt*epsilon, hchi%group%psib(ib, ik), chi%group%psib(ib, ik))
+          end if
+        end do
+      end do
+      
       if(ion_dynamics_ions_move(ions)) then
         posfinal = posfinal + posk * epsilon
         velfinal = velfinal + velk * epsilon
