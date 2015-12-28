@@ -81,16 +81,26 @@
     type(states_t),   intent(inout) :: psi
 
     integer :: ist, ik
+    CMPLX, allocatable :: zpsi(:, :), zst(:, :)
+    
     PUSH_SUB(target_j1_groundstate)
 
+    SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:tg%st%d%dim))
+    SAFE_ALLOCATE(zst(1:gr%mesh%np, 1:tg%st%d%dim))
+    
     do ik = 1, psi%d%nik
       do ist = psi%st_start, psi%st_end
-        j1 = j1 + psi%occ(ist, ik) * &
-          abs(zmf_dotp(gr%mesh, psi%d%dim, psi%zdontusepsi(:, :, ist, ik), &
-              tg%st%zdontusepsi(:, :, ist, ik)))**2
+        call states_get_state(psi, gr%mesh, ist, ik, zpsi)
+        call states_get_state(tg%st, gr%mesh, ist, ik, zst)
+        
+        j1 = j1 + psi%occ(ist, ik)*abs(zmf_dotp(gr%mesh, psi%d%dim, zpsi, zst))**2
+
       end do
     end do
 
+    SAFE_DEALLOCATE_A(zpsi)
+    SAFE_DEALLOCATE_A(zst)
+    
     POP_SUB(target_j1_groundstate)
   end function target_j1_groundstate
 
@@ -105,15 +115,32 @@
 
     integer :: ik, ist
     CMPLX :: olap
+    CMPLX, allocatable :: zpsi(:, :), zst(:, :), zchi(:, :)
+    
     PUSH_SUB(target_chi_groundstate)
 
+    SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:tg%st%d%dim))
+    SAFE_ALLOCATE(zst(1:gr%mesh%np, 1:tg%st%d%dim))
+    SAFE_ALLOCATE(zchi(1:gr%mesh%np, 1:tg%st%d%dim))
+    
     do ik = 1, psi_in%d%nik
       do ist = psi_in%st_start, psi_in%st_end
-        olap = zmf_dotp(gr%mesh, tg%st%zdontusepsi(:, 1, ist, ik), psi_in%zdontusepsi(:, 1, ist, ik))
-        chi_out%zdontusepsi(:, :, ist, ik) = olap*tg%st%zdontusepsi(:, :, ist, ik)
+
+        call states_get_state(psi_in, gr%mesh, ist, ik, zpsi)
+        call states_get_state(tg%st, gr%mesh, ist, ik, zst)
+        
+        olap = zmf_dotp(gr%mesh, zst(:, 1), zpsi(:, 1))
+        zchi(1:gr%mesh%np, 1:tg%st%d%dim) = olap*zst(1:gr%mesh%np, 1:tg%st%d%dim)
+
+        call states_set_state(chi_out, gr%mesh, ist, ik, zchi)
+
       end do
     end do
 
+    SAFE_DEALLOCATE_A(zpsi)
+    SAFE_DEALLOCATE_A(zst)
+    SAFE_DEALLOCATE_A(zchi)
+    
     POP_SUB(target_chi_groundstate)
   end subroutine target_chi_groundstate
 
