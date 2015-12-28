@@ -122,17 +122,25 @@
     type(states_t),    intent(inout) :: chi_out
 
     integer :: ik, idim, ist, ip
+    CMPLX, allocatable :: zpsi(:, :)
+    
     PUSH_SUB(target_chi_local)
 
+    SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:psi_in%d%dim))
+    
     do ik = 1, psi_in%d%nik
       do idim = 1, psi_in%d%dim
         do ist = psi_in%st_start, psi_in%st_end
+          call states_get_state(psi_in, gr%mesh, ist, ik, zpsi)
           do ip = 1, gr%mesh%np
-            chi_out%zdontusepsi(ip, idim, ist, ik) = psi_in%occ(ist, ik)*tg%rho(ip)*psi_in%zdontusepsi(ip, idim, ist, ik)
+            zpsi(ip, idim) = psi_in%occ(ist, ik)*tg%rho(ip)*zpsi(ip, idim)
           end do
+          call states_set_state(chi_out, gr%mesh, ist, ik, zpsi)
         end do
       end do
     end do
+
+    SAFE_DEALLOCATE_A(zpsi)
 
     POP_SUB(target_chi_local)
   end subroutine target_chi_local

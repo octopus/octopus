@@ -123,13 +123,17 @@
 
     CMPLX :: zdet
     CMPLX, allocatable :: cI(:), dI(:), mat(:, :, :), mm(:, :, :, :), mk(:, :), lambda(:, :)
-    integer :: ik, ist, jst, ia, ib, n_pairs, nst, kpoints, jj
+    CMPLX, allocatable :: zpsi(:, :), zchi(:, :)
+    integer :: ik, ist, jst, ia, ib, n_pairs, nst, kpoints, jj, idim, ip
     PUSH_SUB(target_chi_excited)
 
     n_pairs = tg%est%n_pairs
     kpoints = psi_in%d%nik
     nst = psi_in%nst
 
+    
+    SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:psi_in%d%dim))
+    SAFE_ALLOCATE(zchi(1:gr%mesh%np, 1:psi_in%d%dim))
     SAFE_ALLOCATE(cI(1:n_pairs))
     SAFE_ALLOCATE(dI(1:n_pairs))
     SAFE_ALLOCATE(mat(1:tg%est%st%nst, 1:nst, 1:psi_in%d%nik))
@@ -165,22 +169,37 @@
 
     case(SPIN_POLARIZED)
       ASSERT(chi_out%d%nik  ==  2)
+      
       do ik = 1, kpoints
         do ist = chi_out%st_start, chi_out%st_end
-          chi_out%zdontusepsi(:, :, ist, ik) = M_z0
+          
+          zchi(1:gr%mesh%np, 1:psi_in%d%dim) = M_z0
+
           do ia = 1, n_pairs
             if(ik /= tg%est%pair(ia)%kk) cycle
             if(abs(dI(ia)) < CNST(1.0e-12)) cycle
             do ib = 1, n_pairs
               if(abs(dI(ib)) < CNST(1.0e-12)) cycle
               mk = M_z0
+
               do jst = 1, nst
                 if(jst  ==  tg%est%pair(ib)%i) jj = tg%est%pair(ia)%a
-                mk(:, :) = mk(:, :) + conjg(mm(ist, jst, ik, ib))*tg%est%st%zdontusepsi(:, :, jj, ik)
+                call states_get_state(tg%est%st, gr%mesh, jj, ik, zpsi)
+
+                do idim = 1, psi_in%d%dim
+                  do ip = 1, gr%mesh%np
+                    mk(ip, idim) = mk(ip, idim) + conjg(mm(ist, jst, ik, ib))*zpsi(ip, idim)
+                  end do
+                end do
               end do
-              call lalg_axpy(gr%mesh%np_part, psi_in%d%dim, M_z1, lambda(ib, ia)*mk(:, :), chi_out%zdontusepsi(:, :, ist, ik))
+
+              call lalg_axpy(gr%mesh%np_part, psi_in%d%dim, M_z1, lambda(ib, ia)*mk(:, :), zchi)
+
             end do
           end do
+
+          call states_set_state(chi_out, gr%mesh, ist, ik, zchi)
+          
         end do
       end do
         
@@ -188,8 +207,9 @@
       ASSERT(chi_out%d%nik  ==  1)
 
       do ist = chi_out%st_start, chi_out%st_end
-        chi_out%zdontusepsi(:, :, ist, 1) = M_z0
-
+        
+        zchi(1:gr%mesh%np, 1:psi_in%d%dim) = M_z0
+        
         do ia = 1, n_pairs
           if(abs(dI(ia)) < CNST(1.0e-12)) cycle
 
@@ -199,16 +219,27 @@
             mk = M_z0
             do jst = 1, nst
               if(jst  ==  tg%est%pair(ib)%i) jj = tg%est%pair(ia)%a
-              mk(:, :) = mk(:, :) + conjg(mm(ist, jst, 1, ib)) * tg%est%st%zdontusepsi(:, :, jj, 1)
+              call states_get_state(tg%est%st, gr%mesh, jj, ik, zpsi)
+              
+              do idim = 1, psi_in%d%dim
+                do ip = 1, gr%mesh%np
+                  mk(ip, idim) = mk(ip, idim) + conjg(mm(ist, jst, 1, ib))*zpsi(ip, idim)
+                end do
+              end do
             end do
 
-            call lalg_axpy(gr%mesh%np_part, 2, M_z1, lambda(ib, ia) * mk(:, :), chi_out%zdontusepsi(:, :, ist, 1))
+            call lalg_axpy(gr%mesh%np_part, 2, M_z1, lambda(ib, ia)*mk(:, :), zchi)
           end do
         end do
+
+        call states_set_state(chi_out, gr%mesh, ist, ik, zchi)
+        
       end do
 
     end select
 
+    SAFE_DEALLOCATE_A(zpsi)
+    SAFE_DEALLOCATE_A(zchi)
     SAFE_DEALLOCATE_A(cI)
     SAFE_DEALLOCATE_A(dI)
     SAFE_DEALLOCATE_A(mat)
