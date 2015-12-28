@@ -79,17 +79,23 @@
     type(states_t),   intent(inout) :: psi
     
     integer :: i, j
-
+    CMPLX, allocatable :: zpsi(:, :)
+    
     PUSH_SUB(target_j1_spin)
 
+    SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:tg%st%d%dim))
+    
+    call states_get_state(psi, gr%mesh, 1, 1, zpsi)
+    
     j1 = M_ZERO
     do i = 1, 2
       do j = 1, 2
-        j1 = j1 + tg%spin_matrix(i,j) * zmf_dotp(gr%mesh, psi%zdontusepsi(:, i, 1, 1), psi%zdontusepsi(:, j, 1, 1))
+        j1 = j1 + tg%spin_matrix(i,j)*zmf_dotp(gr%mesh, zpsi(:, i), zpsi(:, j))
       end do
     end do
-    
 
+    SAFE_DEALLOCATE_A(zpsi)
+    
     POP_SUB(target_j1_spin)
   end function target_j1_spin
 
@@ -97,22 +103,35 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_chi_spin(tg, psi_in, chi_out)
+  subroutine target_chi_spin(tg, gr, psi_in, chi_out)
     type(target_t),    intent(inout) :: tg
+    type(grid_t),      intent(inout) :: gr
     type(states_t),    intent(inout) :: psi_in
     type(states_t),    intent(inout) :: chi_out
     
     integer :: i, j
-
-    PUSH_SUB(target_chi_spin)
+    CMPLX, allocatable :: zpsi(:, :), zchi(:, :)
     
-    chi_out%zdontusepsi(:, :, 1, 1) = M_ZERO
+    PUSH_SUB(target_chi_spin)
+
+    SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:tg%st%d%dim))
+    SAFE_ALLOCATE(zchi(1:gr%mesh%np, 1:tg%st%d%dim))
+
+    call states_get_state(psi_in, gr%mesh, 1, 1, zpsi)
+    
+    zchi(1:gr%mesh%np, 1:tg%st%d%dim) = CNST(0.0)
+
     do i = 1, 2
       do j = 1, 2
-        chi_out%zdontusepsi(:, i, 1, 1) = chi_out%zdontusepsi(:, i, 1, 1) + tg%spin_matrix(i, j)*psi_in%zdontusepsi(:, j, 1, 1)
+        zchi(1:gr%mesh%np, i) = zchi(1:gr%mesh%np, i) + tg%spin_matrix(i, j)*zpsi(1:gr%mesh%np, j)
       end do
     end do
 
+    call states_set_state(chi_out, gr%mesh, 1, 1, zchi)
+    
+    SAFE_DEALLOCATE_A(zpsi)
+    SAFE_DEALLOCATE_A(zchi)
+    
     POP_SUB(target_chi_spin)
   end subroutine target_chi_spin
 
