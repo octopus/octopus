@@ -424,6 +424,7 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
   FLOAT, allocatable :: rwork(:)
   R_TYPE, allocatable ::  state_global(:), temp_state(:,:)
   R_TYPE, allocatable :: KSt(:,:)
+  R_TYPE, allocatable :: psi(:, :)
   integer :: ii,ist,  count, sender, ik, jj, lnst
   logical :: do_serial
   integer :: psi_block(2), psi_desc(BLACS_DLEN), blacs_info
@@ -461,23 +462,30 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
     
     call states_parallel_blacs_blocksize(st, mesh, psi_block, total_np)
     
-    ASSERT(associated(st%X(dontusepsi)))
     ik = 1
-    ! We need to set to zero some extra parts of the array
-    if(st%d%dim == 1) then
-       st%X(dontusepsi)(mesh%np + 1:psi_block(1), 1:st%d%dim, st%st_start:st%st_end, ik) = M_ZERO
-    else
-       st%X(dontusepsi)(mesh%np + 1:mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, ik) = M_ZERO
-    end if
 
     ! allocate local part of transpose state matrix
     SAFE_ALLOCATE(KSt(1:lnst,1:total_np))
+    SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
+    
     ! copy states into the transpose matrix
     count = 0
     do ist = st%st_start,st%st_end
       count = count + 1
-      KSt(count,1:total_np) =  st%X(dontusepsi)(1:total_np, 1, ist, ik)
+
+      call states_get_state(st, mesh, ist, ik, psi)
+      
+      ! We need to set to zero some extra parts of the array
+      if(st%d%dim == 1) then
+        psi(mesh%np + 1:psi_block(1), 1:st%d%dim) = M_ZERO
+      else
+        psi(mesh%np + 1:mesh%np_part, 1:st%d%dim) = M_ZERO
+      end if
+
+      KSt(count, 1:total_np) = psi(1:total_np, 1)
     end do
+
+    SAFE_DEALLOCATE_A(psi)
      
     ! DISTRIBUTE THE MATRIX ON THE PROCESS GRID
     ! Initialize the descriptor array for the main matrices (ScaLAPACK)
