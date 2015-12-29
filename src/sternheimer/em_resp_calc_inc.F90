@@ -357,7 +357,7 @@ subroutine X(calc_polarizability_finite)(sys, hm, lr, nsigma, perturbation, zpol
     if(doalldirs) startdir = 1
   end if
 
-  SAFE_ALLOCATE(psi(sys%gr%mesh%np_part, 1:sys%st%d%dim, sys%st%st_start:sys%st%st_end, sys%st%d%kpt%start:sys%st%d%kpt%end))
+  SAFE_ALLOCATE(psi(1:sys%gr%mesh%np,1:sys%st%d%dim,sys%st%st_start:sys%st%st_end,sys%st%d%kpt%start:sys%st%d%kpt%end))
 
   call states_get_state(sys%st, sys%gr%mesh, psi)
   
@@ -384,7 +384,7 @@ end subroutine X(calc_polarizability_finite)
 
 ! ---------------------------------------------------------
 subroutine X(lr_calc_susceptibility)(sys, hm, lr, nsigma, perturbation, chi_para, chi_dia)
-  type(system_t),         intent(inout) :: sys
+  type(system_t),         intent(in)    :: sys
   type(hamiltonian_t),    intent(inout) :: hm
   type(lr_t),             intent(inout) :: lr(:,:)
   integer,                intent(in)    :: nsigma
@@ -400,7 +400,7 @@ subroutine X(lr_calc_susceptibility)(sys, hm, lr, nsigma, perturbation, chi_para
   chi_para = M_ZERO
   chi_dia  = M_ZERO
 
-  SAFE_ALLOCATE(psi(sys%gr%mesh%np_part, 1:sys%st%d%dim, sys%st%st_start:sys%st%st_end, sys%st%d%kpt%start:sys%st%d%kpt%end))
+  SAFE_ALLOCATE(psi(1:sys%gr%mesh%np,1:sys%st%d%dim,sys%st%st_start:sys%st%st_end,sys%st%d%kpt%start:sys%st%d%kpt%end))
 
   call states_get_state(sys%st, sys%gr%mesh, psi)
 
