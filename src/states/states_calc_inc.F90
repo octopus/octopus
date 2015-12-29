@@ -96,6 +96,7 @@ contains
   ! -----------------------------------------------------------------------------------------------
   subroutine cholesky_parallel()
 
+    R_TYPE, allocatable :: psi(:, :, :)
     integer             :: psi_block(1:2), total_np
 #ifdef HAVE_SCALAPACK
     integer             :: info, nbl, nrow, ncol
@@ -121,17 +122,21 @@ contains
 
     call states_parallel_blacs_blocksize(st, mesh, psi_block, total_np)
 
-#ifdef HAVE_SCALAPACK
-    ASSERT(associated(st%X(dontusepsi)))
+    SAFE_ALLOCATE(psi(1:mesh%np_part, 1:st%d%dim, st%st_start:st%st_end))
+
+    call states_get_state(st, mesh, ik, psi)
+    
     ! We need to set to zero some extra parts of the array
     if(st%d%dim == 1) then
-     st%X(dontusepsi)(mesh%np + 1:psi_block(1), 1:st%d%dim, st%st_start:st%st_end, ik) = M_ZERO
+     psi(mesh%np + 1:psi_block(1), 1:st%d%dim, st%st_start:st%st_end) = M_ZERO
     else
-     st%X(dontusepsi)(mesh%np + 1:mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, ik) = M_ZERO
+     psi(mesh%np + 1:mesh%np_part, 1:st%d%dim, st%st_start:st%st_end) = M_ZERO
     end if
 
+#ifdef HAVE_SCALAPACK
+    
     call descinit(psi_desc(1), total_np, st%nst, psi_block(1), psi_block(2), 0, 0, st%dom_st_proc_grid%context, &
-      st%d%dim*ubound(st%X(dontusepsi), dim = 1), info)
+      st%d%dim*ubound(psi, dim = 1), info)
 
     if(info /= 0) then
       write(message(1),'(3a,i6)') "descinit for psi failed in ", TOSTRING(X(states_orthogonalization_full)), &
@@ -156,7 +161,7 @@ contains
     ss = M_ZERO
 
     call pblas_herk(uplo = 'U', trans = 'C', n = st%nst, k = total_np, &
-      alpha = R_TOTYPE(mesh%vol_pp(1)), a = st%X(dontusepsi)(1, 1, st%st_start, ik), ia = 1, ja = 1, desca = psi_desc(1), &
+      alpha = R_TOTYPE(mesh%vol_pp(1)), a = psi(1, 1, st%st_start), ia = 1, ja = 1, desca = psi_desc(1), &
       beta = R_TOTYPE(M_ZERO), c = ss(1, 1), ic = 1, jc = 1, descc = ss_desc(1))
 
     ! calculate the Cholesky decomposition
@@ -170,13 +175,16 @@ contains
 
     call pblas_trsm(side = 'R', uplo = 'U', transa = 'N', diag = 'N', m = total_np, n = st%nst, &
       alpha = R_TOTYPE(M_ONE), a = ss(1, 1), ia = 1, ja = 1, desca = ss_desc(1), &
-      b = st%X(dontusepsi)(1, 1, st%st_start, ik), ib = 1, jb = 1, descb = psi_desc(1))
+      b = psi(1, 1, st%st_start), ib = 1, jb = 1, descb = psi_desc(1))
+
+#endif
 
     call profiling_count_operations(dble(mesh%np)*dble(nst)**2*(R_ADD + R_MUL))
 
     SAFE_DEALLOCATE_A(ss)
-#endif
 
+    call states_set_state(st, mesh, ik, psi)
+    
     POP_SUB(X(states_orthogonalization_full).cholesky_parallel)
   end subroutine cholesky_parallel
 
