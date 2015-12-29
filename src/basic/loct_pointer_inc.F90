@@ -42,7 +42,6 @@ subroutine SUBNAME(loct_pointer_copy_1)(pout, pin)
   POP_SUB(SUBNAME(loct_pointer_copy_1))
 end subroutine SUBNAME(loct_pointer_copy_1)
 
-
 ! ---------------------------------------------------------
 subroutine SUBNAME(loct_pointer_copy_2)(pout, pin)
   TYPE, pointer, intent(out) :: pout(:, :)
@@ -122,6 +121,100 @@ subroutine SUBNAME(loct_pointer_copy_4)(pout, pin)
 
   POP_SUB(SUBNAME(loct_pointer_copy_4))
 end subroutine SUBNAME(loct_pointer_copy_4)
+
+! ---------------------------------------------------------
+subroutine SUBNAME(loct_allocatable_copy_1)(pout, pin)
+  TYPE, allocatable, intent(out) :: pout(:)
+  TYPE, allocatable, intent(in)  :: pin(:)
+
+  integer :: nl1, nu1
+  integer :: i1
+
+  PUSH_SUB(SUBNAME(loct_allocatable_copy_1))
+
+  if(allocated(pin)) then
+    nl1 = lbound(pin, 1)
+    nu1 = ubound(pin, 1)
+    allocate(pout(nl1:nu1))
+    forall (i1 = nl1:nu1) pout(i1) = pin(i1)
+  end if
+
+  POP_SUB(SUBNAME(loct_allocatable_copy_1))
+end subroutine SUBNAME(loct_allocatable_copy_1)
+
+! ---------------------------------------------------------
+subroutine SUBNAME(loct_allocatable_copy_2)(pout, pin)
+  TYPE, allocatable, intent(out) :: pout(:, :)
+  TYPE, allocatable, intent(in)  :: pin(:, :)
+
+  integer :: nl1, nu1, nl2, nu2
+  integer :: i1, i2
+
+  PUSH_SUB(SUBNAME(loct_allocatable_copy_2))
+
+  if(allocated(pin)) then
+    nl1 = lbound(pin, 1)
+    nu1 = ubound(pin, 1)
+    nl2 = lbound(pin, 2)
+    nu2 = ubound(pin, 2)
+    allocate(pout(nl1:nu1, nl2:nu2))
+    forall (i1 = nl1:nu1, i2 = nl2:nu2) pout(i1, i2) = pin(i1, i2)
+  end if
+
+  POP_SUB(SUBNAME(loct_allocatable_copy_2))
+end subroutine SUBNAME(loct_allocatable_copy_2)
+
+
+! ---------------------------------------------------------
+subroutine SUBNAME(loct_allocatable_copy_3)(pout, pin)
+  TYPE, allocatable, intent(out) :: pout(:, :, :)
+  TYPE, allocatable, intent(in)  :: pin(:, :, :)
+
+  integer :: nl1, nu1, nl2, nu2, nl3, nu3
+  integer :: i1, i2, i3
+
+  PUSH_SUB(SUBNAME(loct_allocatable_copy_3))
+
+  if(allocated(pin)) then
+    nl1 = lbound(pin, 1)
+    nu1 = ubound(pin, 1)
+    nl2 = lbound(pin, 2)
+    nu2 = ubound(pin, 2)
+    nl3 = lbound(pin, 3)
+    nu3 = ubound(pin, 3)
+    allocate(pout(nl1:nu1, nl2:nu2, nl3:nu3))
+    forall (i1 = nl1:nu1, i2 = nl2:nu2, i3 = nl3:nu3) pout(i1, i2, i3) = pin(i1, i2, i3)
+  end if
+
+  POP_SUB(SUBNAME(loct_allocatable_copy_3))
+end subroutine SUBNAME(loct_allocatable_copy_3)
+
+
+! ---------------------------------------------------------
+subroutine SUBNAME(loct_allocatable_copy_4)(pout, pin)
+  TYPE, allocatable, intent(out) :: pout(:, :, :, :)
+  TYPE, allocatable, intent(in)  :: pin(:, :, :, :)
+
+  integer :: nl1, nu1, nl2, nu2, nl3, nu3, nl4, nu4
+  integer :: i1, i2, i3, i4
+  
+  PUSH_SUB(SUBNAME(loct_allocatable_copy_4))
+
+  if(allocated(pin)) then
+    nl1 = lbound(pin, 1)
+    nu1 = ubound(pin, 1)
+    nl2 = lbound(pin, 2)
+    nu2 = ubound(pin, 2)
+    nl3 = lbound(pin, 3)
+    nu3 = ubound(pin, 3)
+    nl4 = lbound(pin, 4)
+    nu4 = ubound(pin, 4)
+    allocate(pout(nl1:nu1, nl2:nu2, nl3:nu3, nl4:nu4))
+    forall (i1 = nl1:nu1, i2 = nl2:nu2, i3 = nl3:nu3, i4 = nl4:nu4) pout(i1, i2, i3, i4) = pin(i1, i2, i3, i4)
+  end if
+
+  POP_SUB(SUBNAME(loct_allocatable_copy_4))
+end subroutine SUBNAME(loct_allocatable_copy_4)
 
 !! Local Variables:
 !! mode: f90

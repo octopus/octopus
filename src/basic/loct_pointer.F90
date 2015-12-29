@@ -58,6 +58,34 @@ module loct_pointer_m
     module procedure lloct_pointer_copy_2
     module procedure lloct_pointer_copy_3
     module procedure lloct_pointer_copy_4
+    module procedure sloct_allocatable_copy_1
+    module procedure sloct_allocatable_copy_2
+    module procedure sloct_allocatable_copy_3
+    module procedure sloct_allocatable_copy_4
+    module procedure dloct_allocatable_copy_1
+    module procedure dloct_allocatable_copy_2
+    module procedure dloct_allocatable_copy_3
+    module procedure dloct_allocatable_copy_4
+    module procedure cloct_allocatable_copy_1
+    module procedure cloct_allocatable_copy_2
+    module procedure cloct_allocatable_copy_3
+    module procedure cloct_allocatable_copy_4
+    module procedure zloct_allocatable_copy_1
+    module procedure zloct_allocatable_copy_2
+    module procedure zloct_allocatable_copy_3
+    module procedure zloct_allocatable_copy_4
+    module procedure iloct_allocatable_copy_1
+    module procedure iloct_allocatable_copy_2
+    module procedure iloct_allocatable_copy_3
+    module procedure iloct_allocatable_copy_4
+    module procedure aloct_allocatable_copy_1
+    module procedure aloct_allocatable_copy_2
+    module procedure aloct_allocatable_copy_3
+    module procedure aloct_allocatable_copy_4
+    module procedure lloct_allocatable_copy_1
+    module procedure lloct_allocatable_copy_2
+    module procedure lloct_allocatable_copy_3
+    module procedure lloct_allocatable_copy_4
   end interface loct_pointer_copy
 
 contains
