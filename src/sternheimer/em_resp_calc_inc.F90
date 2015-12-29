@@ -345,7 +345,8 @@ subroutine X(calc_polarizability_finite)(sys, hm, lr, nsigma, perturbation, zpol
   integer, optional,      intent(in)    :: ndir
 
   integer :: dir1, dir2, ndir_, startdir
-
+  R_TYPE, pointer :: psi(:, :, :, :)
+  
   PUSH_SUB(X(calc_polarizability_finite))
 
   ndir_ = sys%gr%sb%dim
@@ -356,22 +357,26 @@ subroutine X(calc_polarizability_finite)(sys, hm, lr, nsigma, perturbation, zpol
     if(doalldirs) startdir = 1
   end if
 
+  SAFE_ALLOCATE(psi(sys%gr%mesh%np_part, 1:sys%st%d%dim, sys%st%st_start:sys%st%st_end, sys%st%d%kpt%start:sys%st%d%kpt%end))
+
+  call states_get_state(sys%st, sys%gr%mesh, psi)
+  
   do dir1 = startdir, ndir_
     do dir2 = 1, sys%gr%sb%dim
       call pert_setup_dir(perturbation, dir1)
-      zpol(dir1, dir2) = -X(pert_expectation_value)(perturbation, sys%gr, sys%geo, hm, &
-        sys%st, sys%st%X(dontusepsi), lr(dir2, 1)%X(dl_psi))
+      zpol(dir1, dir2) = -X(pert_expectation_value)(perturbation, sys%gr, sys%geo, hm, sys%st, psi, lr(dir2, 1)%X(dl_psi))
 
       if(nsigma == 1) then
         zpol(dir1, dir2) = zpol(dir1, dir2) + R_CONJ(zpol(dir1, dir2))
       else
         zpol(dir1, dir2) = zpol(dir1, dir2) &
-          - X(pert_expectation_value)(perturbation, sys%gr, sys%geo, hm, &
-          sys%st, lr(dir2, 2)%X(dl_psi), sys%st%X(dontusepsi))
+          - X(pert_expectation_value)(perturbation, sys%gr, sys%geo, hm, sys%st, lr(dir2, 2)%X(dl_psi), psi)
       end if
     end do
   end do
 
+  SAFE_DEALLOCATE_P(psi)
+  
   POP_SUB(X(calc_polarizability_finite))
 
 end subroutine X(calc_polarizability_finite)
@@ -388,36 +393,42 @@ subroutine X(lr_calc_susceptibility)(sys, hm, lr, nsigma, perturbation, chi_para
 
   integer :: dir1, dir2
   R_TYPE  :: trace
-
+  R_TYPE, pointer :: psi(:, :, :, :)
+  
   PUSH_SUB(X(lr_calc_susceptibility))
 
   chi_para = M_ZERO
   chi_dia  = M_ZERO
+
+  SAFE_ALLOCATE(psi(sys%gr%mesh%np_part, 1:sys%st%d%dim, sys%st%st_start:sys%st%st_end, sys%st%d%kpt%start:sys%st%d%kpt%end))
+
+  call states_get_state(sys%st, sys%gr%mesh, psi)
 
   do dir1 = 1, sys%gr%sb%dim
     do dir2 = 1, sys%gr%sb%dim
 
       call pert_setup_dir(perturbation, dir1, dir2)
 
-      trace = X(pert_expectation_value)(perturbation, sys%gr, sys%geo, hm, sys%st, sys%st%X(dontusepsi), lr(dir2, 1)%X(dl_psi))
+      trace = X(pert_expectation_value)(perturbation, sys%gr, sys%geo, hm, sys%st, psi, lr(dir2, 1)%X(dl_psi))
       
       if (nsigma == 1) then 
         trace = trace + R_CONJ(trace)
       else
         trace = trace + &
-          X(pert_expectation_value)(perturbation, sys%gr, sys%geo, hm, sys%st, lr(dir2, 2)%X(dl_psi), sys%st%X(dontusepsi))
+          X(pert_expectation_value)(perturbation, sys%gr, sys%geo, hm, sys%st, lr(dir2, 2)%X(dl_psi), psi)
       end if
      
       ! first the paramagnetic term 
       chi_para(dir1, dir2) = chi_para(dir1, dir2) + trace
 
       chi_dia(dir1, dir2) = chi_dia(dir1, dir2) + X(pert_expectation_value)(perturbation, &
-        sys%gr, sys%geo, hm, sys%st, sys%st%X(dontusepsi), sys%st%X(dontusepsi), pert_order=2)
+        sys%gr, sys%geo, hm, sys%st, psi, psi, pert_order=2)
 
     end do
   end do
-
-
+  
+  SAFE_DEALLOCATE_P(psi)
+  
   ! We now add the minus sign from the definition of the susceptibility (chi = -d^2 E /d B^2)
   chi_para(:,:) = -chi_para(:,:)/P_C**2
   chi_dia (:,:) = -chi_dia (:,:)/P_C**2

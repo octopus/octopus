@@ -1308,12 +1308,14 @@ contains
   ! ---------------------------------------------------------
   !> See D Varsano, LA Espinosa Leal, Xavier Andrade, MAL Marques, Rosa di Felice, Angel Rubio,
   !! Phys. Chem. Chem. Phys. 11, 4481 (2009)
-    subroutine out_circular_dichroism
+    subroutine out_circular_dichroism()
+      
       type(pert_t) :: angular_momentum
       integer :: idir
       FLOAT :: ff
       CMPLX :: dic
-
+      R_TYPE, pointer :: psi(:, :, :, :)
+  
       PUSH_SUB(em_resp_output.out_circular_dichroism)
 
       if(states_are_complex(st) .and. em_vars%nsigma == 2) then       
@@ -1323,13 +1325,19 @@ contains
 
         call pert_init(angular_momentum, PERTURBATION_MAGNETIC, gr, geo)
         
+        SAFE_ALLOCATE(psi(gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
+
+        call states_get_state(st, gr%mesh, psi)
+
         dic = M_ZERO
         do idir = 1, gr%sb%dim
           call pert_setup_dir(angular_momentum, idir)
           dic = dic &
-            + zpert_expectation_value(angular_momentum, gr, geo, hm, st, st%zdontusepsi, em_vars%lr(idir, 1, ifactor)%zdl_psi) &
-            + zpert_expectation_value(angular_momentum, gr, geo, hm, st, em_vars%lr(idir, 2, ifactor)%zdl_psi, st%zdontusepsi)
+            + zpert_expectation_value(angular_momentum, gr, geo, hm, st, psi, em_vars%lr(idir, 1, ifactor)%zdl_psi) &
+            + zpert_expectation_value(angular_momentum, gr, geo, hm, st, em_vars%lr(idir, 2, ifactor)%zdl_psi, psi)
         end do
+
+        SAFE_DEALLOCATE_P(psi)
         
         call pert_end(angular_momentum)
         
