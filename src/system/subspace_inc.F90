@@ -28,7 +28,8 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
   FLOAT,                  intent(out)   :: eigenval(:)
   FLOAT, optional,        intent(out)   :: diff(:)
 
-  R_TYPE, pointer :: psi(:, :, :)
+  integer :: ist
+  R_TYPE, allocatable :: psi(:, :, :)
     
   PUSH_SUB(X(subspace_diag))
   call profiling_in(diagon_prof, "SUBSPACE_DIAG")
@@ -36,9 +37,20 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
   select case(this%method)
     
   case(OPTION__SUBSPACEDIAGONALIZATION__SCALAPACK)
-    ASSERT(associated(st%X(dontusepsi)))
-    psi => st%X(dontusepsi)(:, :, :, ik)
+
+    SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end))
+
+    do ist = st%st_start, st%st_end
+      call states_get_state(st, der%mesh, ist, ik, psi(:, :, ist))
+    end do
+
     call X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
+
+    do ist = st%st_start, st%st_end
+      call states_set_state(st, der%mesh, ist, ik, psi(:, :, ist))
+    end do
+    
+    SAFE_DEALLOCATE_A(psi)
     
   case(OPTION__SUBSPACEDIAGONALIZATION__STANDARD)
     call X(subspace_diag_standard)(der, st, hm, ik, eigenval, diff)
