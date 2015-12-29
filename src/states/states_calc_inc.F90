@@ -283,16 +283,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
   PUSH_SUB(X(states_trsm))
   call profiling_in(prof, "STATES_TRSM")
 
-  if(associated(st%X(dontusepsi)) .and. .not. states_are_packed(st) .and. .not. st%parallel_in_states) then
-
-    do idim = 1, st%d%dim
-      ! multiply by the inverse of ss
-      call blas_trsm('R', 'U', 'N', 'N', mesh%np, st%nst, R_TOTYPE(M_ONE), ss(1, 1), st%nst, &
-        st%X(dontusepsi)(1, idim, 1, ik), ubound(st%X(dontusepsi), dim = 1)*st%d%dim)
-
-    end do
-
-  else if(.not. (states_are_packed(st) .and. opencl_is_enabled())) then
+  if(.not. (states_are_packed(st) .and. opencl_is_enabled())) then
 
 #ifdef R_TREAL  
     block_size = max(40, hardware%l2%size/(2*8*st%nst))
@@ -1113,13 +1104,7 @@ subroutine X(states_rotate)(mesh, st, uu, ik)
 
   ASSERT(R_TYPE_VAL == states_type(st))
   
-  if(associated(st%X(dontusepsi)) .and. .not. states_are_packed(st) .and. .not. st%parallel_in_states) then
-
-    call batch_init(psib, st%d%dim, 1, st%nst, st%X(dontusepsi)(:, :, :, ik))
-    call X(mesh_batch_rotate)(mesh, psib, uu)
-    call batch_end(psib)
-
-  else if(.not. states_are_packed(st) .or. .not. opencl_is_enabled()) then
+  if(.not. states_are_packed(st) .or. .not. opencl_is_enabled()) then
     
 #ifdef R_TREAL  
     block_size = max(40, hardware%l2%size/(2*8*st%nst))
@@ -1255,13 +1240,7 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
 
   call profiling_in(prof, "STATES_OVERLAP")
 
-  if(associated(st%X(dontusepsi)) .and. .not. states_are_packed(st) .and. .not. st%parallel_in_states) then
-
-    call batch_init(psib, st%d%dim, 1, st%nst, st%X(dontusepsi)(:, :, :, ik))
-    call X(mesh_batch_dotp_self)(mesh, psib, overlap)
-    call batch_end(psib)
-
-  else if(.not. states_are_packed(st) .or. .not. opencl_is_enabled()) then
+  if(.not. states_are_packed(st) .or. .not. opencl_is_enabled()) then
 
 #ifdef R_TREAL  
     block_size = max(80, hardware%l2%size/(8*st%nst))
