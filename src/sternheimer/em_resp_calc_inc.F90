@@ -388,7 +388,7 @@ end subroutine X(calc_polarizability_finite)
 
 ! ---------------------------------------------------------
 subroutine X(lr_calc_susceptibility)(sys, hm, lr, nsigma, perturbation, chi_para, chi_dia)
-  type(system_t), target, intent(in)    :: sys
+  type(system_t), target, intent(inout) :: sys
   type(hamiltonian_t),    intent(inout) :: hm
   type(lr_t),             intent(inout) :: lr(:,:)
   integer,                intent(in)    :: nsigma
