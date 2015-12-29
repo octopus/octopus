@@ -335,7 +335,7 @@ end subroutine X(calc_polarizability_periodic)
 !> alpha_ij(w) = - sum(m occ) [<psi_m(0)|r_i|psi_mj(1)(w)> + <psi_mj(1)(-w)|r_i|psi_m(0)>]
 !! minus sign is from electronic charge -e
 subroutine X(calc_polarizability_finite)(sys, hm, lr, nsigma, perturbation, zpol, doalldirs, ndir)
-  type(system_t),         intent(inout) :: sys
+  type(system_t), target, intent(inout) :: sys
   type(hamiltonian_t),    intent(inout) :: hm
   type(lr_t),             intent(inout) :: lr(:,:)
   integer,                intent(in)    :: nsigma
@@ -344,11 +344,15 @@ subroutine X(calc_polarizability_finite)(sys, hm, lr, nsigma, perturbation, zpol
   logical, optional,      intent(in)    :: doalldirs
   integer, optional,      intent(in)    :: ndir
 
-  integer :: dir1, dir2, ndir_, startdir
+  type(states_t), pointer :: st
+  integer :: dir1, dir2, ndir_, startdir, np
   R_TYPE, pointer :: psi(:, :, :, :)
   
   PUSH_SUB(X(calc_polarizability_finite))
 
+  st => sys%st
+  np = sys%gr%mesh%np
+  
   ndir_ = sys%gr%sb%dim
   if(present(ndir)) ndir_ = ndir
 
@@ -357,7 +361,7 @@ subroutine X(calc_polarizability_finite)(sys, hm, lr, nsigma, perturbation, zpol
     if(doalldirs) startdir = 1
   end if
 
-  SAFE_ALLOCATE(psi(1:sys%gr%mesh%np,1:sys%st%d%dim,sys%st%st_start:sys%st%st_end,sys%st%d%kpt%start:sys%st%d%kpt%end))
+  SAFE_ALLOCATE(psi(1:np, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
 
   call states_get_state(sys%st, sys%gr%mesh, psi)
   
@@ -384,23 +388,27 @@ end subroutine X(calc_polarizability_finite)
 
 ! ---------------------------------------------------------
 subroutine X(lr_calc_susceptibility)(sys, hm, lr, nsigma, perturbation, chi_para, chi_dia)
-  type(system_t),         intent(in)    :: sys
+  type(system_t), target, intent(in)    :: sys
   type(hamiltonian_t),    intent(inout) :: hm
   type(lr_t),             intent(inout) :: lr(:,:)
   integer,                intent(in)    :: nsigma
   type(pert_t),           intent(inout) :: perturbation
   CMPLX,                  intent(out)   :: chi_para(:,:), chi_dia(:,:)
 
-  integer :: dir1, dir2
+  type(states_t), pointer :: st
+  integer :: dir1, dir2, np
   R_TYPE  :: trace
   R_TYPE, pointer :: psi(:, :, :, :)
   
   PUSH_SUB(X(lr_calc_susceptibility))
 
+  st => sys%st
+  np = sys%gr%mesh%np
+  
   chi_para = M_ZERO
   chi_dia  = M_ZERO
 
-  SAFE_ALLOCATE(psi(1:sys%gr%mesh%np,1:sys%st%d%dim,sys%st%st_start:sys%st%st_end,sys%st%d%kpt%start:sys%st%d%kpt%end))
+  SAFE_ALLOCATE(psi(1:np, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
 
   call states_get_state(sys%st, sys%gr%mesh, psi)
 
