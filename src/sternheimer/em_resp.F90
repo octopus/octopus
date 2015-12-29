@@ -1325,7 +1325,7 @@ contains
 
         call pert_init(angular_momentum, PERTURBATION_MAGNETIC, gr, geo)
         
-        SAFE_ALLOCATE(psi(gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
+        SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
 
         call states_get_state(st, gr%mesh, psi)
 
