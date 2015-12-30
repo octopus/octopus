@@ -107,8 +107,8 @@ contains
     call loct_pointer_copy(group_out%block_range, group_in%block_range)
     call loct_pointer_copy(group_out%block_size, group_in%block_size)
     call loct_pointer_copy(group_out%block_is_local, group_in%block_is_local)
-    call loct_pointer_copy(group_out%block_node, group_in%block_node)
-    call loct_pointer_copy(group_out%rma_win, group_in%rma_win)
+    call loct_allocatable_copy(group_out%block_node, group_in%block_node)
+    call loct_allocatable_copy(group_out%rma_win, group_in%rma_win)
     
     POP_SUB(states_group_copy)
   end subroutine states_group_copy

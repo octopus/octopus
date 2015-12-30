@@ -27,7 +27,9 @@ module loct_pointer_m
   implicit none
 
   private
-  public :: loct_pointer_copy
+  public ::                       &
+    loct_pointer_copy,           &
+    loct_allocatable_copy
 
   interface loct_pointer_copy
     module procedure sloct_pointer_copy_1
@@ -58,6 +60,9 @@ module loct_pointer_m
     module procedure lloct_pointer_copy_2
     module procedure lloct_pointer_copy_3
     module procedure lloct_pointer_copy_4
+  end interface loct_pointer_copy
+  
+  interface loct_allocatable_copy
     module procedure sloct_allocatable_copy_1
     module procedure sloct_allocatable_copy_2
     module procedure sloct_allocatable_copy_3
@@ -86,7 +91,7 @@ module loct_pointer_m
     module procedure lloct_allocatable_copy_2
     module procedure lloct_allocatable_copy_3
     module procedure lloct_allocatable_copy_4
-  end interface loct_pointer_copy
+  end interface loct_allocatable_copy
 
 contains
 
