@@ -143,11 +143,6 @@ module states_m
     integer                  :: nst                   !< Number of states in each irreducible subspace
 
     logical                  :: only_userdef_istates  !< only use user-defined states as initial states in propagation
-    !> pointers to the wavefunctions
-    FLOAT, pointer           :: ddontusepsi(:,:,:,:)         !< ddontusepsi(sys%gr%mesh%np_part, st%d%dim, st%nst, st%d%nik)
-    CMPLX, pointer           :: zdontusepsi(:,:,:,:)         !< zdontusepsi(sys%gr%mesh%np_part, st%d%dim, st%nst, st%d%nik)
-   
-   
      
     type(cmplxscl_t)         :: cmplxscl              !< contain the cmplxscl parameters                 
     !> Pointers to complexified quantities. 
@@ -272,8 +267,6 @@ contains
     nullify(st%Imrho_core, st%Imfrozen_rho)
     nullify(st%psibL)
 
-    nullify(st%ddontusepsi, st%zdontusepsi)
-    
     nullify(st%user_def_states)
     nullify(st%rho, st%current)
     nullify(st%rho_core, st%frozen_rho)
@@ -539,8 +532,6 @@ contains
 
     call mpi_grp_init(st%mpi_grp, -1)
     st%parallel_in_states = .false.
-
-    nullify(st%ddontusepsi, st%zdontusepsi)
 
     call distributed_nullify(st%d%kpt, st%d%nik)
 
@@ -955,11 +946,6 @@ contains
 
     PUSH_SUB(states_allocate_wfns)
 
-    if(associated(st%ddontusepsi).or.associated(st%zdontusepsi)) then
-      call messages_write('Trying to allocate wavefunctions that are already allocated.')
-      call messages_fatal()
-    end if
-
     if (present(wfs_type)) then
       ASSERT(wfs_type == TYPE_FLOAT .or. wfs_type == TYPE_CMPLX)
       st%priv%wfs_type = wfs_type
@@ -985,30 +971,6 @@ contains
     call parse_variable('ForceComplex', .false., force)
 
     if(force) call states_set_complex(st)
-
-    st1 = st%st_start
-    st2 = st%st_end
-    k1 = st%d%kpt%start
-    k2 = st%d%kpt%end
-    np_part = mesh%np_part
-
-    if(.not. st%d%pack_states) then
-
-      if (states_are_real(st)) then
-        SAFE_ALLOCATE(st%ddontusepsi(1:np_part, 1:st%d%dim, st1:st2, k1:k2))
-      else        
-        SAFE_ALLOCATE(st%psi%zR(1:np_part, 1:st%d%dim, st1:st2, k1:k2))  
-        st%zdontusepsi => st%psi%zR
-        if(st%cmplxscl%space) then 
-          if (st%have_left_states) then
-            SAFE_ALLOCATE(st%psi%zL(1:np_part, 1:st%d%dim, st1:st2, k1:k2))  
-          else
-            st%psi%zL => st%psi%zR  
-          end if          
-        end if
-      end if
-
-    end if
 
     call states_init_block(st, mesh)
     call states_set_zero(st)
@@ -1095,31 +1057,23 @@ contains
           st%group%block_is_local(ib, iqn) = .true.
 
           if (states_are_real(st)) then
-            if(associated(st%ddontusepsi)) then
-              call batch_init(st%group%psib(ib, iqn), &
-                st%d%dim, bstart(ib), bend(ib), st%ddontusepsi(:, :, bstart(ib):bend(ib), iqn))
-            else
-              call batch_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
-              call dbatch_allocate(st%group%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
-            end if
+            call batch_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
+            call dbatch_allocate(st%group%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
           else
-            if(associated(st%zdontusepsi)) then
-              call batch_init(st%group%psib(ib, iqn), &
-                st%d%dim, bstart(ib), bend(ib), st%zdontusepsi(:, :, bstart(ib):bend(ib), iqn))
-            else
-              call batch_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
-              call zbatch_allocate(st%group%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
-            end if
+            call batch_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
+            call zbatch_allocate(st%group%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
+
             if(st%have_left_states) then !cmplxscl
               if(associated(st%psi%zL)) then
                 call batch_init(st%psibL(ib, iqn), st%d%dim, bstart(ib), bend(ib), st%psi%zL(:, :, bstart(ib):bend(ib), iqn))
               else
                 call batch_init(st%psibL(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
                 call zbatch_allocate(st%psibL(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
-              end if 
+              end if
             else
               st%psibL => st%group%psib                           
-            end if            
+            end if
+
           end if
           
         end do
@@ -1235,17 +1189,14 @@ contains
        st%group%block_initialized = .false.
     end if
 
-    if (states_are_real(st)) then
-      SAFE_DEALLOCATE_P(st%ddontusepsi)
-    else
-      nullify(st%zdontusepsi)
-      if(associated(st%psi%zL,target=st%psi%zR )) then
-        nullify(st%psi%zL)
-      else          
-        SAFE_DEALLOCATE_P(st%psi%zL) ! cmplxscl
-      end if
-      SAFE_DEALLOCATE_P(st%psi%zR) ! cmplxscl      
+
+    if(associated(st%psi%zL,target=st%psi%zR )) then
+      nullify(st%psi%zL)
+    else          
+      SAFE_DEALLOCATE_P(st%psi%zL) ! cmplxscl
     end if
+
+    SAFE_DEALLOCATE_P(st%psi%zR) ! cmplxscl      
 
     POP_SUB(states_deallocate_wfns)
   end subroutine states_deallocate_wfns
@@ -1432,11 +1383,10 @@ contains
     call loct_pointer_copy(stout%node, stin%node)
 
     if(.not. exclude_wfns_) then
-      call loct_pointer_copy(stout%ddontusepsi, stin%ddontusepsi)
-
+      
       !cmplxscl
       call loct_pointer_copy(stout%psi%zR, stin%psi%zR)
-      stout%zdontusepsi => stout%psi%zR
+      
       if(associated(stout%subsys_st))then
         call base_states_gets(stout%subsys_st, "live", stout%zrho%Re)
         ASSERT(associated(stout%zrho%Re))
@@ -1462,7 +1412,6 @@ contains
     end if
 
     stout%have_left_states = stin%have_left_states
-
     
     ! the call to init_block is done at the end of this subroutine
     ! it allocates iblock, psib, block_is_local
