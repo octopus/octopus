@@ -20,6 +20,7 @@
 #include "global.h"
 
 module propagation_m
+  use batch_m
   use batch_ops_m
   use controlfunction_m
   use density_m

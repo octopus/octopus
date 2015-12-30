@@ -48,7 +48,6 @@ module batch_ops_m
     batch_axpy,                     &
     batch_scal,                     &
     batch_xpay,                     &
-    batch_copy_data,                &
     batch_set_state,                &
     batch_get_state,                &
     batch_get_points,               &
@@ -154,66 +153,6 @@ contains
 
     POP_SUB(batch_set_zero)
   end subroutine batch_set_zero
-
-! --------------------------------------------------------------
-
-subroutine batch_copy_data(np, xx, yy)
-  integer,           intent(in)    :: np
-  type(batch_t),     intent(in)    :: xx
-  type(batch_t),     intent(inout) :: yy
-
-  integer :: ist
-  type(profile_t), save :: prof
-#ifdef HAVE_OPENCL
-  integer :: localsize
-#endif
-
-  PUSH_SUB(batch_copy_data)
-  call profiling_in(prof, "BATCH_COPY_DATA")
-
-  ASSERT(batch_type(yy) == batch_type(xx))
-  ASSERT(xx%nst_linear == yy%nst_linear)
-  ASSERT(batch_status(xx) == batch_status(yy))
-
-  select case(batch_status(xx))
-  case(BATCH_CL_PACKED)
-
-#ifdef HAVE_OPENCL
-    call opencl_set_kernel_arg(kernel_copy, 0, xx%pack%buffer)
-    call opencl_set_kernel_arg(kernel_copy, 1, log2(xx%pack%size_real(1)))
-    call opencl_set_kernel_arg(kernel_copy, 2, yy%pack%buffer)
-    call opencl_set_kernel_arg(kernel_copy, 3, log2(yy%pack%size_real(1)))
-    
-    localsize = opencl_max_workgroup_size()/yy%pack%size_real(1)
-    call opencl_kernel_run(kernel_copy, (/yy%pack%size_real(1), pad(np, localsize)/), (/yy%pack%size_real(1), localsize/))
-    
-    call opencl_finish()
-#endif
-
-  case(BATCH_PACKED)
-    if(batch_type(yy) == TYPE_FLOAT) then
-      call blas_copy(np*xx%pack%size(1), xx%pack%dpsi(1, 1), 1, yy%pack%dpsi(1, 1), 1)
-    else
-      call blas_copy(np*xx%pack%size(1), xx%pack%zpsi(1, 1), 1, yy%pack%zpsi(1, 1), 1)
-    end if
-
-  case(BATCH_NOT_PACKED)
-    !$omp parallel do private(ist)
-    do ist = 1, yy%nst_linear
-      if(batch_type(yy) == TYPE_CMPLX) then
-        call blas_copy(np, xx%states_linear(ist)%zpsi(1), 1, yy%states_linear(ist)%zpsi(1), 1)
-      else
-        call blas_copy(np, xx%states_linear(ist)%dpsi(1), 1, yy%states_linear(ist)%dpsi(1), 1)
-      end if
-    end do
-
-  end select
-
-  call batch_pack_was_modified(yy)
-
-  call profiling_out(prof)
-  POP_SUB(batch_copy_data)
-end subroutine batch_copy_data
 
 ! --------------------------------------------------------------
 

@@ -20,6 +20,7 @@
 #include "global.h"
 
 module target_m
+  use batch_m
   use batch_ops_m
   use density_m
   use derivatives_m
