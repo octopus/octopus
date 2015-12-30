@@ -1035,7 +1035,7 @@ contains
   !! The set of batches st\%psib(1:st\%nblocks) contains the blocks themselves.
   subroutine states_init_block(st, mesh, verbose)
     type(states_t),           intent(inout) :: st
-    type(mesh_t),   optional, intent(in)    :: mesh
+    type(mesh_t),             intent(in)    :: mesh
     logical, optional,        intent(in)    :: verbose
 
     integer :: ib, iqn, ist
@@ -1099,7 +1099,6 @@ contains
               call batch_init(st%group%psib(ib, iqn), &
                 st%d%dim, bstart(ib), bend(ib), st%ddontusepsi(:, :, bstart(ib):bend(ib), iqn))
             else
-              ASSERT(present(mesh))
               call batch_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
               call dbatch_allocate(st%group%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
             end if
@@ -1108,7 +1107,6 @@ contains
               call batch_init(st%group%psib(ib, iqn), &
                 st%d%dim, bstart(ib), bend(ib), st%zdontusepsi(:, :, bstart(ib):bend(ib), iqn))
             else
-              ASSERT(present(mesh))
               call batch_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
               call zbatch_allocate(st%group%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
             end if
@@ -1116,7 +1114,6 @@ contains
               if(associated(st%psi%zL)) then
                 call batch_init(st%psibL(ib, iqn), st%d%dim, bstart(ib), bend(ib), st%psi%zL(:, :, bstart(ib):bend(ib), iqn))
               else
-                ASSERT(present(mesh))
                 call batch_init(st%psibL(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
                 call zbatch_allocate(st%psibL(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
               end if 
@@ -1513,12 +1510,7 @@ contains
 
     stout%symmetrize_density = stin%symmetrize_density
 
-    if(.not. exclude_wfns_) then
-      stout%group%block_initialized = .false.
-      if(stin%group%block_initialized) then
-        call states_init_block(stout, verbose = .false.)
-      end if
-    end if
+    if(.not. exclude_wfns_) call states_group_copy(stin%group, stout%group)
 
     stout%packed = stin%packed
 
