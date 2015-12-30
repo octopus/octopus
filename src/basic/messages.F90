@@ -978,7 +978,7 @@ contains
       integer,  intent(in) :: iunit_out
 
       integer :: ii
-      character(len=200) :: tmpstr
+      character(len=1000) :: tmpstr
 
       write(tmpstr,'(a,i6,a,i6.6,f20.6,i8,a)') "* I ", &
         sec, '.', usec, &
@@ -1044,7 +1044,7 @@ contains
       integer, intent(in) :: iunit_out
 
       integer :: ii
-      character(len=200) :: tmpstr
+      character(len=1000) :: tmpstr
 
       write(tmpstr,'(a,i6,a,i6.6,f20.6,i8, a)') "* O ", &
         sec, '.', usec, &

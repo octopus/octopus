@@ -1231,7 +1231,8 @@ contains
 
     SAFE_DEALLOCATE_A(zpsi)
     SAFE_DEALLOCATE_A(opzpsi)
-    PUSH_SUB(td_rk2op)
+    
+    POP_SUB(td_rk2op)
   end subroutine td_rk2op
   ! ---------------------------------------------------------
 
