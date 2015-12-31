@@ -243,12 +243,10 @@ end subroutine X(batch_axpy_vec)
 
 ! --------------------------------------------------------------
 
-subroutine X(batch_scal_const)(np, aa, xx, a_start, a_full)
+subroutine X(batch_scal_const)(np, aa, xx)
   integer,           intent(in)    :: np
   R_TYPE,            intent(in)    :: aa
   type(batch_t),     intent(inout) :: xx
-  integer, optional, intent(in)    :: a_start
-  logical, optional, intent(in)    :: a_full
 
   R_TYPE, allocatable :: aavec(:)
   
@@ -258,7 +256,7 @@ subroutine X(batch_scal_const)(np, aa, xx, a_start, a_full)
 
   aavec(1:xx%nst) = aa
 
-  call X(batch_scal_vec)(np, aavec, xx, a_start, a_full)
+  call X(batch_scal_vec)(np, aavec, xx, a_full = .false.)
   
   SAFE_DEALLOCATE_A(aavec)
   
