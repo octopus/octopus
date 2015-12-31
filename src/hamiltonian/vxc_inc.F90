@@ -341,7 +341,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
 
     if(xcs%parallel) then
       call comm_allreduce(st%dom_st_kpt_mpi_grp%comm, energy)
-    else
+    else if(der%mesh%parallel_in_domains) then
       call comm_allreduce(der%mesh%mpi_grp%comm, energy)
     end if
 
