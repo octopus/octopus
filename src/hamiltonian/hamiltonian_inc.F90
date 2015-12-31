@@ -31,8 +31,6 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
 
   integer :: nst, bs, sp
   R_TYPE, pointer     :: epsi(:)
-  R_TYPE, allocatable :: psi_copy(:, :, :)
-
   logical :: apply_phase, pack
   integer :: ii, ist, ip
   R_TYPE, pointer :: hpsi(:)
@@ -84,13 +82,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
 
   if(apply_phase) then
     SAFE_ALLOCATE(epsib)
-    SAFE_ALLOCATE(psi_copy(1:der%mesh%np_part, 1:hm%d%dim, 1:psib%nst))
-    call batch_init(epsib, hm%d%dim, psib%nst)
-    do ii = 1, psib%nst
-      call batch_add_state(epsib, psib%states(ii)%ist, psi_copy(:, :, ii))
-    end do
-    ASSERT(batch_is_ok(epsib))
-    if(batch_is_packed(psib)) call batch_pack(epsib, copy = .false.)
+    call batch_copy(psib, epsib)
   else
     epsib => psib
   end if
@@ -239,7 +231,6 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
 
   if(apply_phase) then
     call X(hamiltonian_phase)(hm, der, der%mesh%np, ik, .true., hpsib)
-    if(batch_is_packed(epsib)) call batch_unpack(epsib, copy = .false.)
     call batch_end(epsib)
     SAFE_DEALLOCATE_P(epsib)
   end if
