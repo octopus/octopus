@@ -220,13 +220,8 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
     
   end if
 
-  if (iand(TERM_MGGA, terms_) /= 0 .and. &
-    (iand(hm%xc_family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0)) then
-    ASSERT(.not. batch_is_packed(hpsib))
-    do ii = 1, nst
-      call set_pointers()
-      call X(h_mgga_terms)(hm, der, epsi, hpsi, ik)
-    end do
+  if (iand(TERM_MGGA, terms_) /= 0 .and. (iand(hm%xc_family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0)) then
+    call X(h_mgga_terms)(hm, der, ik, epsib, hpsib)
   end if
 
   if(apply_phase) then
@@ -782,37 +777,54 @@ end subroutine X(vborders)
 
 
 ! ---------------------------------------------------------
-subroutine X(h_mgga_terms) (hm, der, psi, hpsi, ik)
+subroutine X(h_mgga_terms) (hm, der, ik, psib, hpsib)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
-  R_TYPE,              intent(inout) :: psi(:)
-  R_TYPE,              intent(inout) :: hpsi(:)
   integer,             intent(in)    :: ik
+  type(batch_t),       intent(inout) :: psib
+  type(batch_t),       intent(inout) :: hpsib
 
-  integer :: ispace, ispin
-  R_TYPE, allocatable :: cgrad(:,:), diverg(:), grad(:, :)
-
+  integer :: ispin, ii, idir
+  R_TYPE, allocatable :: grad(:,:), diverg(:)
+  type(batch_t) :: divb
+  type(batch_t), allocatable :: gradb(:)
+  
   PUSH_SUB(X(h_mgga_terms))
-
+  
   ispin = states_dim_get_spin_index(hm%d, ik)
 
   SAFE_ALLOCATE(grad(1:der%mesh%np_part, 1:der%mesh%sb%dim))
-  SAFE_ALLOCATE(cgrad(1:der%mesh%np_part, 1:der%mesh%sb%dim))
   SAFE_ALLOCATE(diverg(1:der%mesh%np))
 
-  call X(derivatives_grad)(der, psi, grad, ghost_update = .false., set_bc = .false.)
+  SAFE_ALLOCATE(gradb(1:der%mesh%sb%dim))
 
-  do ispace = 1, der%mesh%sb%dim
-    cgrad(1:der%mesh%np, ispace) = grad(1:der%mesh%np, ispace)*hm%vtau(1:der%mesh%np, ispin)
+  call batch_copy(hpsib, divb)
+  
+  do idir = 1, der%mesh%sb%dim
+    call batch_copy(hpsib, gradb(idir))
+    call X(derivatives_batch_perform)(der%grad(idir), der, psib, gradb(idir), ghost_update = .false., set_bc = .false.)
+  end do
+  
+  do ii = 1, psib%nst_linear
+
+    do idir = 1, der%mesh%sb%dim
+      call batch_get_state(gradb(idir), ii, der%mesh%np, grad(:, idir))
+    end do
+    
+    do idir = 1, der%mesh%sb%dim
+      grad(1:der%mesh%np, idir) = grad(1:der%mesh%np, idir)*hm%vtau(1:der%mesh%np, ispin)
+    end do
+    
+    call X(derivatives_div)(der, grad, diverg)
+
+    call batch_set_state(divb, ii, der%mesh%np, diverg)
+
   end do
 
-  diverg(1:der%mesh%np) = M_ZERO
-  call X(derivatives_div)(der, cgrad, diverg)
+  call batch_axpy(der%mesh%np, CNST(-1.0), divb, hpsib)
 
-  hpsi(1:der%mesh%np) = hpsi(1:der%mesh%np) - diverg(1:der%mesh%np)
-
+  SAFE_DEALLOCATE_A(gradb)
   SAFE_DEALLOCATE_A(grad)
-  SAFE_DEALLOCATE_A(cgrad)
   SAFE_DEALLOCATE_A(diverg)
 
   POP_SUB(X(h_mgga_terms))
