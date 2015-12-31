@@ -226,14 +226,6 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
       end do
     end if
     
-    if(hm%ab == IMAGINARY_ABSORBING) then
-      ASSERT(.not. batch_is_packed(hpsib))
-      do ii = 1, nst
-        call set_pointers()
-        if(present(time)) call X(vborders)(der, hm, epsi, hpsi)
-      end do
-    end if
-    
   end if
 
   if (iand(TERM_MGGA, terms_) /= 0 .and. &
@@ -793,7 +785,7 @@ subroutine X(vborders) (der, hm, psi, hpsi)
   if(hm%ab == IMAGINARY_ABSORBING) then
     forall(ip = 1:der%mesh%np) hpsi(ip) = hpsi(ip) + M_zI*hm%ab_pot(ip)*psi(ip)
   end if
-
+   
   POP_SUB(X(vborders))
 end subroutine X(vborders)
 

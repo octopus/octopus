@@ -564,7 +564,7 @@ contains
       !%End
       call parse_variable('ABWidth', CNST(0.4), hm%ab_width, units_inp%length)
 
-      if(hm%ab == 1) then
+      if(hm%ab == IMAGINARY_ABSORBING) then
         !%Variable ABHeight
         !%Type float
         !%Default -0.2 a.u.
@@ -886,7 +886,13 @@ contains
     call hamiltonian_base_clear(this%hm_base)
 
     ! the xc, hartree and external potentials
-    call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_POTENTIAL, this%cmplxscl%space)
+    call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_POTENTIAL, &
+      complex_potential = this%cmplxscl%space .or. this%ab == IMAGINARY_ABSORBING)
+
+    if(this%d%nspin > 2 .and. this%ab == IMAGINARY_ABSORBING) then
+      call messages_not_implemented('AbsorbingBoundaries = sin2 for spinors')
+    end if
+    
     do ispin = 1, this%d%nspin
       if(ispin <= 2) then
         forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
@@ -899,11 +905,21 @@ contains
         end if
 
         if(this%cmplxscl%space) then
-          forall (ip = 1:mesh%np) this%hm_base%Impotential(ip, ispin) = this%Imvhxc(ip, ispin) +  this%ep%Imvpsl(ip)
+          forall (ip = 1:mesh%np)
+            this%hm_base%Impotential(ip, ispin) = &
+              this%hm_base%Impotential(ip, ispin) + this%Imvhxc(ip, ispin) +  this%ep%Imvpsl(ip)
+          end forall
         end if
       else
         forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin)
       end if
+
+      if(this%ab == IMAGINARY_ABSORBING) then
+        forall (ip = 1:mesh%np)
+          this%hm_base%Impotential(ip, ispin) = this%hm_base%Impotential(ip, ispin) + this%ab_pot(ip)
+        end forall
+      end if
+
     end do
 
     ! the lasers

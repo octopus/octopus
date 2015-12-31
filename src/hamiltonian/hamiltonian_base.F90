@@ -209,11 +209,11 @@ contains
 
   ! ---------------------------------------------------------------
   !> This function ensures that the corresponding field is allocated.
-  subroutine hamiltonian_base_allocate(this, mesh, field, cmplxscl)
+  subroutine hamiltonian_base_allocate(this, mesh, field, complex_potential)
     type(hamiltonian_base_t), intent(inout) :: this
     type(mesh_t),             intent(in)    :: mesh
     integer,                  intent(in)    :: field
-    logical,                  intent(in)    :: cmplxscl
+    logical,                  intent(in)    :: complex_potential
 
     PUSH_SUB(hamiltonian_base_allocate)
 
@@ -221,7 +221,7 @@ contains
       if(.not. allocated(this%potential)) then
         SAFE_ALLOCATE(this%potential(1:mesh%np, 1:this%nspin))
         this%potential = M_ZERO
-        if(cmplxscl) then
+        if(complex_potential) then
           SAFE_ALLOCATE(this%Impotential(1:mesh%np, 1:this%nspin))
           this%Impotential = M_ZERO
         end if
