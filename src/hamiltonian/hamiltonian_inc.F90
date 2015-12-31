@@ -810,6 +810,12 @@ subroutine X(h_mgga_terms) (hm, der, ik, psib, hpsib)
 
   call batch_axpy(der%mesh%np, CNST(-1.0), divb, hpsib)
 
+  do idir = 1, der%mesh%sb%dim
+    call batch_end(gradb(idir))
+  end do
+
+  call batch_end(divb)
+  
   SAFE_DEALLOCATE_A(gradb)
   SAFE_DEALLOCATE_A(grad)
   SAFE_DEALLOCATE_A(diverg)
