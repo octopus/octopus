@@ -232,13 +232,8 @@ contains
 
     PUSH_SUB(grid_init_stage_2)
 
-    if(multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)) then
-      call mpi_grp_init(grp, mc%group_comm(P_STRATEGY_DOMAINS))
-      call mesh_init_stage_3(gr%mesh, gr%stencil, grp)
-    else
-      call mpi_grp_init(grp, mc%group_comm(P_STRATEGY_DOMAINS))
-      call mesh_init_stage_3(gr%mesh, mpi_grp=grp)
-    end if
+    call mpi_grp_init(grp, mc%group_comm(P_STRATEGY_DOMAINS))
+    call mesh_init_stage_3(gr%mesh, gr%stencil, grp)
 
     call nl_operator_global_init()
     if(gr%have_fine_mesh) then
@@ -421,11 +416,7 @@ contains
 
     call grid_init_stage_1(grout, geo)
 
-    if(grin%mesh%parallel_in_domains) then
-      call mesh_init_stage_3(grout%mesh, grout%stencil, grin%mesh%mpi_grp)
-    else
-      call mesh_init_stage_3(grout%mesh)
-    end if
+    call mesh_init_stage_3(grout%mesh, grout%stencil, grin%mesh%mpi_grp)
 
     call derivatives_build(grout%der, grout%mesh)
 

@@ -441,8 +441,8 @@ end subroutine mesh_init_stage_2
 ! ---------------------------------------------------------
 subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
   type(mesh_t),              intent(inout) :: mesh
-  type(stencil_t), optional, intent(in)    :: stencil
-  type(mpi_grp_t), optional, intent(in)    :: mpi_grp
+  type(stencil_t),           intent(in)    :: stencil
+  type(mpi_grp_t),           intent(in)    :: mpi_grp
   type(mesh_t),    optional, intent(in)    :: parent
 
   integer :: ip
@@ -451,11 +451,7 @@ subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
   call profiling_in(mesh_init_prof, "MESH_INIT")
 
   ! check if we are running in parallel in domains
-  mesh%parallel_in_domains = .false.
-  if(present(mpi_grp)) then
-    if (mpi_grp%size > 1) mesh%parallel_in_domains = .true.
-  end if
-
+  mesh%parallel_in_domains = (mpi_grp%size > 1)
 
   if(.not. mesh%parallel_in_domains) then
     ! When running parallel, x is computed later.
@@ -470,20 +466,13 @@ subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
     end do
   end if
 
+  mesh%mpi_grp = mpi_grp 
+  
   if(mesh%parallel_in_domains) then
-    ASSERT(present(stencil))
-    
+
     call do_partition()
+
   else
-#ifdef HAVE_MPI
-    if (present(mpi_grp)) then
-      mesh%mpi_grp = mpi_grp 
-    else
-      call mpi_grp_init(mesh%mpi_grp, MPI_COMM_WORLD)
-    end if
-#else
-    call mpi_grp_init(mesh%mpi_grp, -1)
-#endif
 
     ! When running serially those two are the same.
     mesh%np      = mesh%np_global
@@ -807,8 +796,6 @@ contains
     character(len=80) :: partition_dir
 
     PUSH_SUB(mesh_init_stage_3.do_partition)
-
-    mesh%mpi_grp = mpi_grp
 
     !%Variable MeshPartitionDir
     !%Type string
