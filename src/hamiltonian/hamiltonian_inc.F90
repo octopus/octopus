@@ -30,10 +30,8 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
   logical, optional,     intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
 
   integer :: nst, bs, sp
-  R_TYPE, pointer     :: epsi(:)
   logical :: apply_phase, pack
   integer :: ii, ist, ip
-  R_TYPE, pointer :: hpsi(:)
   type(batch_t), pointer :: epsib
   type(derivatives_handle_batch_t) :: handle
   integer :: terms_
@@ -112,22 +110,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
     call X(derivatives_batch_finish)(handle)
     call profiling_out(prof_kinetic_finish)
 
-    ! FIXME: need to handle OpenCL case here.
-    if(hm%cmplxscl%space) then !cmplxscl
-    !complex scale the laplacian
-      do sp = 1, der%mesh%np, bs
-        if(batch_is_packed(hpsib)) then
-          forall (ist = 1:hpsib%nst_linear, ip = sp:min(sp + bs - 1, der%mesh%np))
-            hpsib%pack%X(psi)(ist, ip) = exp(-M_TWO*M_zI*hm%cmplxscl%theta)*hpsib%pack%X(psi)(ist, ip)
-          end forall
-        else
-          do ii = 1, nst
-            call set_pointers()
-            forall(ip = sp:min(sp + bs - 1, der%mesh%np)) hpsi(ip) = exp(-M_TWO*M_zI*hm%cmplxscl%theta)*hpsi(ip)
-          end do
-        end if
-      end do
-    end if
+    if(hm%cmplxscl%space) call batch_scal(der%mesh%np, exp(-M_TWO*M_zI*hm%cmplxscl%theta), hpsib)
   else
     call batch_set_zero(hpsib)
   end if
@@ -153,7 +136,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
     call X(hamiltonian_base_magnetic)(hm%hm_base, der, hm%d, hm%ep, &
              states_dim_get_spin_index(hm%d, ik), epsib, hpsib)
   end if
-
+  
   if (iand(TERM_OTHERS, terms_) /= 0 ) then
     call X(hamiltonian_base_rashba)(hm%hm_base, der, hm%d, epsib, hpsib)
   end if
@@ -237,15 +220,6 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
 
   POP_SUB(X(hamiltonian_apply_batch))
   call profiling_out(prof_hamiltonian)
-
-contains
-
-  subroutine set_pointers
-    ! no push_sub since called very frequently
-
-    epsi => epsib%states_linear(ii)%X(psi)
-    hpsi => hpsib%states_linear(ii)%X(psi)
-  end subroutine set_pointers
 
 end subroutine X(hamiltonian_apply_batch)
 
