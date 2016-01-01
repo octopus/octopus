@@ -1126,9 +1126,6 @@ contains
     if(mesh%use_curvilinear) apply = .false.
     if(hamiltonian_base_has_magnetic(this%hm_base)) apply = .false.
     if(this%rashba_coupling**2 > M_ZERO) apply = .false.
-    if(this%ab  ==  IMAGINARY_ABSORBING) apply = .false.
-    if(this%theory_level == HARTREE .or. this%theory_level == HARTREE_FOCK .or. this%theory_level == RDMFT) apply = .false.
-    if(iand(this%xc_family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0)  apply = .false.
     if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) apply = .false.
 
   end function hamiltonian_apply_packed
