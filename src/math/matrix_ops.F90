@@ -156,9 +156,9 @@ contains
     type(blacs_proc_grid_t) :: proc_grid
     integer :: desc(BLACS_DLEN)
     FLOAT, allocatable :: da(:, :), devec(:, :), dwork(:)
-    CMPLX, allocatable :: za(:, :), zevec(:, :), zwork(:)
+    CMPLX, allocatable :: za(:, :), zevec(:, :), zwork(:), rwork(:)
     FLOAT :: dworksize
-    CMPLX :: zworksize
+    CMPLX :: zworksize, lrwork
     
     PUSH_SUB(matrix_diagonalize_hermitian_scalapack)
 
@@ -214,6 +214,39 @@ contains
       SAFE_DEALLOCATE_A(da)
       SAFE_DEALLOCATE_A(devec)      
       
+    else if(matrix_type(this) == TYPE_CMPLX) then
+
+      SAFE_ALLOCATE(za(1:nr1, 1:nr2))
+      SAFE_ALLOCATE(zevec(1:nr1, 1:nr2))
+      
+      call zto_submatrix(this, (/nb1, nb2/), (/proc_grid%myrow, proc_grid%mycol/), (/proc_grid%nprow, proc_grid%npcol/), za)
+
+      lrwork = M_z0
+      
+      call pzheev(jobz = 'V', uplo = 'U', n = this%dim(1), a = za(1, 1) , ia = 1, ja = 1, desca = desc(1), &
+        w = eigenvalues(1), z = zevec(1, 1), iz = 1, jz = 1, descz = desc(1), work = zworksize, lwork = -1, &
+        rwork = lrwork, lrwork = -1, info = info)
+      
+      if(info /= 0) then
+        write(message(1),'(a,i6)') "ScaLAPACK pdsyev workspace query failure, error code = ", info
+        call messages_fatal(1)
+      end if
+
+      SAFE_ALLOCATE(zwork(1:int(zworksize)))
+      SAFE_ALLOCATE(rwork(1:int(lrwork)))
+
+      call pzheev(jobz = 'V', uplo = 'U', n = this%dim(1), a = za(1, 1) , ia = 1, ja = 1, desca = desc(1), &
+        w = eigenvalues(1), z = zevec(1, 1), iz = 1, jz = 1, descz = desc(1), work = zwork(1), lwork = int(zworksize), &
+        rwork = rwork(1), lrwork = int(lrwork), info = info)
+      
+      SAFE_DEALLOCATE_A(zwork)
+      SAFE_DEALLOCATE_A(rwork)
+
+      call zmatrix_gather(this, (/nb1, nb2/), proc_grid, zevec)
+
+      SAFE_DEALLOCATE_A(za)
+      SAFE_DEALLOCATE_A(zevec)      
+
     else
 
       ASSERT(.false.)
