@@ -36,6 +36,8 @@ module matrix_ops_m
   private
   public ::                          &
     matrix_diagonalize_hermitian
+
+  type(profile_t), save :: prof_gather
   
 contains
 
@@ -149,13 +151,12 @@ contains
     FLOAT,                    intent(out)   :: eigenvalues(:)  !< The eigenvalues of the matrix
     type(matrix_t), optional, intent(inout) :: metric          !< If present, a generalized eigenvalue problem is solved
 
-    integer :: ndiv, np1, np2, info, ib1, ib2, i1, i2, ic1, ic2, ip1, ip2
-    integer :: nb1, nb2, nr1, nr2, iproc, nr1r, nr2r
+    integer :: ndiv, np1, np2, info, nb1, nb2, nr1, nr2
     integer, allocatable :: div(:)
     type(blacs_proc_grid_t) :: proc_grid
     integer :: desc(BLACS_DLEN)
-    FLOAT, allocatable :: da(:, :), devec(:, :), devec_rem(:, :), dwork(:)
-    CMPLX, allocatable :: za(:, :), zevec(:, :), zevec_rem(:, :), zwork(:)
+    FLOAT, allocatable :: da(:, :), devec(:, :), dwork(:)
+    CMPLX, allocatable :: za(:, :), zevec(:, :), zwork(:)
     FLOAT :: dworksize
     CMPLX :: zworksize
     
@@ -208,33 +209,7 @@ contains
       
       SAFE_DEALLOCATE_A(dwork)
 
-      do ip1 = 1, proc_grid%nprow      
-        do ip2 = 1, proc_grid%npcol
-
-          nr1r = numroc(this%dim(1), nb1, ip1 - 1, 0, proc_grid%nprow)
-          nr2r = numroc(this%dim(2), nb2, ip2 - 1, 0, proc_grid%npcol)
-
-          if(nr1r == 0 .or. nr2r == 0) cycle
-          
-          SAFE_ALLOCATE(devec_rem(1:nr1r, 1:nr2r))
-
-          if(ip1 - 1 == proc_grid%myrow .and. ip2 - 1 == proc_grid%mycol) then
-            ASSERT(nr1r == nr1)
-            ASSERT(nr2r == nr2)
-            devec_rem(1:nr1r, 1:nr2r) = devec(1:nr1r, 1:nr2r)
-          end if
-
-          iproc = proc_grid%usermap(ip1, ip2)
-          
-          call MPI_Bcast(devec_rem(1, 1), nr1r*nr2r, MPI_FLOAT, iproc, this%mpi_grp%comm, mpi_err)
-          call MPI_Barrier(this%mpi_grp%comm, mpi_err)
-
-          call dfrom_submatrix(this, (/nb1, nb2/), (/ip1, ip2/) - 1, (/proc_grid%nprow, proc_grid%npcol/), devec_rem)
-          
-          SAFE_DEALLOCATE_A(devec_rem)
-        
-        end do
-      end do
+      call dmatrix_gather(this, (/nb1, nb2/), proc_grid, devec)
 
       SAFE_DEALLOCATE_A(da)
       SAFE_DEALLOCATE_A(devec)      
