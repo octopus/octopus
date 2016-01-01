@@ -136,32 +136,25 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
 
   if (iand(TERM_OTHERS, terms_) /= 0) then
 
+    call profiling_in(prof_exx, "EXCHANGE_OPERATOR")
     select case(hm%theory_level)
 
     case(HARTREE)
-      
       call X(exchange_operator_hartree)(hm, der, ik, hm%exx_coef, epsib, hpsib)
 
     case(HARTREE_FOCK)
-
       if(hm%scdm_EXX)  then
-
         call X(scdm_exchange_operator)(hm, der, epsib, hpsib, ik, hm%exx_coef)
-
       else
         ! standard HF 
         call X(exchange_operator)(hm, der, ik, hm%exx_coef, epsib, hpsib)
-
-      end if!theory levels
+      end if
 
     case(RDMFT)
-      
-      ASSERT(.not. batch_is_packed(hpsib))
-      do ii = 1, psib%nst
-        call X(rdmft_exchange_operator)(hm, der, epsib%states(ii)%X(psi), hpsib%states(ii)%X(psi), psib%states(ii)%ist)
-      end do
+      call X(rdmft_exchange_operator)(hm, der, ik, epsib, hpsib)
 
     end select
+    call profiling_out(prof_exx)
     
   end if
 
@@ -1034,48 +1027,61 @@ subroutine X(hamiltonian_phase)(this, der, np, iqn, conjugate, psib, src)
 end subroutine X(hamiltonian_phase)
 
 ! ---------------------------------------------------------
-subroutine X(rdmft_exchange_operator) (hm, der, psi, hpsi, ist)
+subroutine X(rdmft_exchange_operator) (hm, der, ik, psib, hpsib)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
-  R_TYPE,              intent(inout) :: psi(:,:)
-  R_TYPE,              intent(inout) :: hpsi(:,:)
-  integer,             intent(in)    :: ist
+  integer,             intent(in)    :: ik
+  type(batch_t),       intent(inout) :: psib
+  type(batch_t),       intent(inout) :: hpsib
 
-  R_TYPE, allocatable :: rho(:), pot(:), psi1(:,:), hpsi1(:)
-  integer :: jst, ip
+  R_TYPE, allocatable :: rho(:), pot(:), psi1(:,:), hpsi1(:), psi(:, :), hpsi(:, :)
+  integer :: jst, ip, ist, ibatch
 
   PUSH_SUB(X(rdmft_exchange_operator))
 
   if(der%mesh%sb%kpoints%reduced%npoints > 1) call messages_not_implemented("exchange operator with k-points")
 
+  SAFE_ALLOCATE(psi(1:der%mesh%np, 1:hm%d%dim))
+  SAFE_ALLOCATE(hpsi(1:der%mesh%np, 1:hm%d%dim))
   SAFE_ALLOCATE(rho(1:der%mesh%np))
   SAFE_ALLOCATE(pot(1:der%mesh%np))
   SAFE_ALLOCATE(psi1(1:der%mesh%np,1:hm%d%dim))
   SAFE_ALLOCATE(hpsi1(1:der%mesh%np))
 
-  hpsi1 = R_TOTYPE(M_ZERO)
+  do ibatch = 1, psib%nst
+    ist = psib%states(ibatch)%ist
+    call batch_get_state(psib, ibatch, der%mesh%np, psi)
+    call batch_get_state(hpsib, ibatch, der%mesh%np, hpsi)
 
-  do jst = 1,hm%hf_st%nst
-    pot = R_TOTYPE(M_ZERO)
-    psi1 = M_ZERO
-    rho = R_TOTYPE(M_ZERO)
-    call states_get_state(hm%hf_st, der%mesh, jst, 1 , psi1)
+    hpsi1 = R_TOTYPE(M_ZERO)
+
+    do jst = 1,hm%hf_st%nst
+      pot = R_TOTYPE(M_ZERO)
+      psi1 = M_ZERO
+      rho = R_TOTYPE(M_ZERO)
+      call states_get_state(hm%hf_st, der%mesh, jst, 1 , psi1)
+      forall(ip = 1:der%mesh%np)
+        rho(ip) =  R_CONJ(psi(ip, 1))*psi1(ip, 1)
+      end forall
+      call X(poisson_solve)(psolver, pot, rho)
+      forall(ip = 1:der%mesh%np)
+        pot(ip) = pot(ip)*R_CONJ(psi1(ip, 1))*sqrt(hm%hf_st%occ(jst, 1)) !Mueller functional
+      end forall
+      forall(ip = 1:der%mesh%np)
+        hpsi1(ip) = hpsi1(ip) - pot(ip)
+      end forall
+    end do
+
     forall(ip = 1:der%mesh%np)
-      rho(ip) =  R_CONJ(psi(ip,1))*psi1(ip, 1)
+      hpsi(ip, hm%d%ispin) = hpsi1(ip)
     end forall
-    call X(poisson_solve)(psolver, pot, rho)
-    forall(ip = 1:der%mesh%np)
-      pot(ip) = pot(ip)*R_CONJ(psi1(ip,1))*sqrt(hm%hf_st%occ(jst, 1)) !Mueller functional
-    end forall
-    forall(ip = 1:der%mesh%np)
-      hpsi1(ip) = hpsi1(ip) - pot(ip)
-    end forall
+
+    call batch_set_state(hpsib, ibatch, der%mesh%np, hpsi)
+
   end do
 
-  forall(ip = 1:der%mesh%np)
-    hpsi(ip,hm%d%ispin)=hpsi1(ip)
-  end forall
-
+  SAFE_DEALLOCATE_A(psi)
+  SAFE_DEALLOCATE_A(hpsi)
   SAFE_DEALLOCATE_A(rho)
   SAFE_DEALLOCATE_A(pot)
   SAFE_DEALLOCATE_A(psi1)
