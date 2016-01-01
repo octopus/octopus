@@ -115,9 +115,11 @@ subroutine X(matrix_gather)(this, bsize, proc_grid, submatrix)
 
       iproc = proc_grid%usermap(ip1, ip2)
 
+#ifdef HAVE_MPI
       call MPI_Bcast(submatrix_rem(1, 1), nr1r*nr2r, R_MPITYPE, iproc, this%mpi_grp%comm, mpi_err)
       call MPI_Barrier(this%mpi_grp%comm, mpi_err)
-
+#endif
+      
       call X(from_submatrix)(this, bsize, (/ip1, ip2/) - 1, (/proc_grid%nprow, proc_grid%npcol/), submatrix_rem)
 
       SAFE_DEALLOCATE_A(submatrix_rem)
