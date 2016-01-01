@@ -30,7 +30,6 @@ module blacs_proc_grid_m
 
   private
 
-#ifdef HAVE_SCALAPACK
   public ::                      &
     blacs_proc_grid_t,           &
     blacs_proc_grid_nullify,     &
@@ -70,10 +69,13 @@ contains
   !!
   !! \Warning: For the moment this function only works if mpi_grp holds
   !! all the nodes of mpi_world.
-  subroutine blacs_proc_grid_init(this, mpi_grp)
-    type(blacs_proc_grid_t), intent(out) :: this
-    type(mpi_grp_t),         intent(in)  :: mpi_grp
+  subroutine blacs_proc_grid_init(this, mpi_grp, procdim)
+    type(blacs_proc_grid_t),           intent(out) :: this
+    type(mpi_grp_t),                   intent(in)  :: mpi_grp
+    integer,                 optional, intent(in)  :: procdim(:)
 
+#ifdef HAVE_SCALAPACK
+    
     integer, parameter :: maxdims = 2
     integer :: dims(1:2), topo, coords(1:2), ix, iy, id, xy(2)
     logical :: periods(1:2)
@@ -87,8 +89,13 @@ contains
 
     if(topo /= MPI_CART) then
       ! We create a new communicator with Cartesian topology
-      dims(1) = mpi_grp%size
-      dims(2) = 1
+      if(present(procdim)) then
+        dims(1) = procdim(1)
+        dims(2) = procdim(2)
+      else
+        dims(1) = mpi_grp%size
+        dims(2) = 1
+      end if
       periods = .false.
       reorder = .false.
       call MPI_Cart_create(mpi_grp%comm, 2, dims, periods, reorder, comm, mpi_err)
@@ -97,7 +104,7 @@ contains
     end if
 
     call blacs_pinfo(this%iam, this%nprocs)
-
+    
     ! The process ID from ScaLAPACK is not always the
     ! same as MPI, so we need to construct a map.
     SAFE_ALLOCATE(procmap(0:mpi_grp%size - 1))
@@ -108,9 +115,9 @@ contains
 
     dims = 1
     coords = 0
-    
-    call MPI_Cart_get(comm, maxdims, dims, periods, coords, mpi_err)
 
+    call MPI_Cart_get(comm, maxdims, dims, periods, coords, mpi_err)
+    
     SAFE_ALLOCATE(this%usermap(1:dims(1), 1:dims(2)))
     
     do ix = 1, dims(1)
@@ -142,8 +149,9 @@ contains
     end if
 
     SAFE_DEALLOCATE_A(procmap)
-
+    
     POP_SUB(blacs_proc_grid_init)
+#endif
   end subroutine blacs_proc_grid_init
   
   ! ----------------------------------------------------
@@ -196,9 +204,6 @@ contains
     blacs_proc_grid_null = this%context == -1
   end function blacs_proc_grid_null
   
-
-#endif
-
 end module blacs_proc_grid_m
 
 
