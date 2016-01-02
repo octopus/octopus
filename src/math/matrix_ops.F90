@@ -140,7 +140,7 @@ contains
       call MPI_Barrier(this%mpi_grp%comm, mpi_err)
 #endif
     end if
-    
+
     POP_SUB(matrix_diagonalize_hermitian)
   end subroutine matrix_diagonalize_hermitian
 
@@ -206,6 +206,12 @@ contains
 
       call pdsyev(jobz = 'V', uplo = 'U', n = this%dim(1), a = da(1, 1) , ia = 1, ja = 1, desca = desc(1), &
         w = eigenvalues(1), z = devec(1, 1), iz = 1, jz = 1, descz = desc(1), work = dwork(1), lwork = int(dworksize), info = info)
+
+      if(info /= 0) then
+        call messages_write('ScaLAPACK pdsyev call failure, error code = ')
+        call messages_write(info)
+        call messages_fatal()
+      end if
       
       SAFE_DEALLOCATE_A(dwork)
 
@@ -238,6 +244,12 @@ contains
       call pzheev(jobz = 'V', uplo = 'U', n = this%dim(1), a = za(1, 1) , ia = 1, ja = 1, desca = desc(1), &
         w = eigenvalues(1), z = zevec(1, 1), iz = 1, jz = 1, descz = desc(1), work = zwork(1), lwork = int(zworksize), &
         rwork = rwork(1), lrwork = int(lrwork), info = info)
+
+      if(info /= 0) then
+        call messages_write('ScaLAPACK pzheev call failure, error code = ')
+        call messages_write(info)
+        call messages_fatal()
+      end if
       
       SAFE_DEALLOCATE_A(zwork)
       SAFE_DEALLOCATE_A(rwork)
