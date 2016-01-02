@@ -113,19 +113,10 @@ module states_m
     states_block_size,                &
     zstates_eigenvalues_sum,          &
     cmplx_array2_t,                   &
-    states_wfs_t,                     &
     states_count_pairs,               &
     occupied_states,                  &
     states_type
 
-  !> cmplxscl: Left and Right eigenstates
-  type states_wfs_t    
-    CMPLX, pointer     :: zL(:, :, :, :) !< (np, st%d%dim, st%nst, st%d%nik)
-    CMPLX, pointer     :: zR(:, :, :, :) !< (np, st%d%dim, st%nst, st%d%nik)
-    FLOAT, pointer     :: dL(:, :, :, :) !< (np, st%d%dim, st%nst, st%d%nik)
-    FLOAT, pointer     :: dR(:, :, :, :) !< (np, st%d%dim, st%nst, st%d%nik)
-  end type states_wfs_t
-  
   !>cmplxscl: complex 2D matrices 
   type cmplx_array2_t    
     FLOAT, pointer     :: Re(:, :) !< Real components 
@@ -151,12 +142,9 @@ module states_m
     !! both density and eigenvalues become complex.
     !! In order to modify the code to include this changes we allocate the general structures and 
     !! make the restricted quantities point to a part of the structure.
-    ! For instance for the orbitals we allocate psi and make zpsi to point only to Right states as follows:
-    !! zpsi => psi%zR
-    !! Similarly for density and eigenvalues we make the old quantities to point to the real part:
+    !! For density and eigenvalues we make the old quantities to point to the real part:
     !! rho => zrho%Re
     !! eigenval => zeigenval%Re  
-    type(states_wfs_t)       :: psi          !< cmplxscl: Left psi%zL(:,:,:,:) and Right psi%zR(:,:,:,:) orbitals    
     type(cmplx_array2_t)     :: zrho         !< cmplxscl: the complexified density <psi%zL(:,:,:,:)|psi%zR(:,:,:,:)>
     type(cmplx_array2_t)     :: zeigenval    !< cmplxscl: the complexified eigenvalues 
     FLOAT,           pointer :: Imrho_core(:)  
@@ -260,8 +248,6 @@ contains
 
     st%cmplxscl%space = .false.
     !cmplxscl
-    nullify(st%psi%dL, st%psi%dR)
-    nullify(st%psi%zL, st%psi%zR)     
     nullify(st%zeigenval%Re, st%zeigenval%Im) 
     nullify(st%zrho%Re, st%zrho%Im)
     nullify(st%Imrho_core, st%Imfrozen_rho)
@@ -1064,12 +1050,8 @@ contains
             call zbatch_allocate(st%group%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
 
             if(st%have_left_states) then !cmplxscl
-              if(associated(st%psi%zL)) then
-                call batch_init(st%psibL(ib, iqn), st%d%dim, bstart(ib), bend(ib), st%psi%zL(:, :, bstart(ib):bend(ib), iqn))
-              else
-                call batch_init(st%psibL(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
-                call zbatch_allocate(st%psibL(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
-              end if
+              call batch_init(st%psibL(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
+              call zbatch_allocate(st%psibL(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
             else
               st%psibL => st%group%psib                           
             end if
@@ -1188,15 +1170,6 @@ contains
        SAFE_DEALLOCATE_A(st%group%block_node)
        st%group%block_initialized = .false.
     end if
-
-
-    if(associated(st%psi%zL,target=st%psi%zR )) then
-      nullify(st%psi%zL)
-    else          
-      SAFE_DEALLOCATE_P(st%psi%zL) ! cmplxscl
-    end if
-
-    SAFE_DEALLOCATE_P(st%psi%zR) ! cmplxscl      
 
     POP_SUB(states_deallocate_wfns)
   end subroutine states_deallocate_wfns
@@ -1385,7 +1358,6 @@ contains
     if(.not. exclude_wfns_) then
       
       !cmplxscl
-      call loct_pointer_copy(stout%psi%zR, stin%psi%zR)
       
       if(associated(stout%subsys_st))then
         call base_states_gets(stout%subsys_st, "live", stout%zrho%Re)
@@ -1393,9 +1365,10 @@ contains
       else
         call loct_pointer_copy(stout%zrho%Re, stin%zrho%Re)
       end if
+      
       stout%rho => stout%zrho%Re
+
       if(stin%cmplxscl%space) then
-        call loct_pointer_copy(stout%psi%zL, stin%psi%zL)         
         call loct_pointer_copy(stout%zrho%Im, stin%zrho%Im)           
       end if
 
