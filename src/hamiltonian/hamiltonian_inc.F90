@@ -351,6 +351,35 @@ end subroutine X(hamiltonian_apply_all)
 
 
 ! ---------------------------------------------------------
+
+subroutine X(exchange_operator_single)(hm, der, ist, ik, exx_coef, psi, hpsi)
+  type(hamiltonian_t), intent(in)    :: hm
+  type(derivatives_t), intent(in)    :: der
+  integer,             intent(in)    :: ist
+  integer,             intent(in)    :: ik
+  FLOAT,               intent(in)    :: exx_coef
+  R_TYPE,              intent(inout) :: psi(:, :)
+  R_TYPE,              intent(inout) :: hpsi(:, :)
+
+  type(batch_t) :: psib, hpsib
+
+  PUSH_SUB(X(exchange_operator_single))
+
+  call batch_init(psib, hm%d%dim, 1)
+  call batch_add_state(psib, ist, psi)
+  call batch_init(hpsib, hm%d%dim, 1)
+  call batch_add_state(hpsib, ist, hpsi)
+
+  call X(exchange_operator)(hm, der, ik, exx_coef, psib, hpsib)
+
+  call batch_end(psib)
+  call batch_end(hpsib)
+
+  POP_SUB(X(exchange_operator_single))
+end subroutine X(exchange_operator_single)
+
+! ---------------------------------------------------------
+
 subroutine X(exchange_operator)(hm, der, ik, exx_coef, psib, hpsib)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der

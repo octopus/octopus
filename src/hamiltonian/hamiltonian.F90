@@ -110,10 +110,10 @@ module hamiltonian_m
     hamiltonian_update,              &
     hamiltonian_get_time,            &
     hamiltonian_apply_packed,        &
-    dexchange_operator,              &
-    zexchange_operator,              &
-    dscdm_exchange_operator,              &
-    zscdm_exchange_operator,              &
+    dexchange_operator_single,       &
+    zexchange_operator_single,       &
+    dscdm_exchange_operator,         &
+    zscdm_exchange_operator,         &
     dhamiltonian_phase,              &
     zhamiltonian_phase,              &
     zhamiltonian_dervexternal,       &
