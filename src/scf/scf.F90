@@ -627,12 +627,8 @@ contains
       call profiling_in(prof, "SCF_CYCLE")
 
       ! reset scdm flag
-       scdm_is_local = .false.
-       ! this is stupid should be done in init and isnt even neede, except for .cube files
-       scdm_geo = geo
- 
-
-
+      scdm_is_local = .false.
+       
       ! this initialization seems redundant but avoids improper optimization at -O3 by PGI 7 on chum,
       ! which would cause a failure of testsuite/linear_response/04-vib_modes.03-vib_modes_fd.inp
       scf%eigens%converged = 0
