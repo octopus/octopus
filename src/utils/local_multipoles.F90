@@ -92,9 +92,9 @@ program oct_local_multipoles
 
   call local_domains()
 
+  call hamiltonian_end(hm)
   call simul_box_end(sb)
-  call geometry_end(sys%geo)
-  call space_end(sys%space)
+  call system_end(sys)
   call profiling_output()
   call profiling_end()
   call io_end()
