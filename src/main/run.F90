@@ -127,7 +127,7 @@ contains
     logical :: fromScratch
 
     type(base_hamiltonian_t), pointer :: subsys_hm
-    
+
     PUSH_SUB(run)
 
     calc_mode_id = cm
@@ -138,57 +138,60 @@ contains
 
     call calc_mode_init()
 
-    if(calc_mode_id /= CM_PULPO_A_FEIRA) then
-      call restart_module_init()
-
-      ! initialize FFTs
-      call fft_all_init()
-
-      call unit_system_init()
-
-      call system_init(sys)
-      
-      nullify(subsys_hm)
-      if(associated(sys%subsys_handle))then
-        call subsystems_get(sys%subsys_handle, subsys_hm)
-        ASSERT(associated(subsys_hm))
-        call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, subsys_hm)
-        nullify(subsys_hm)
-
-        ! At present, PCM calculations in parallel must have ParallelizationStrategy = par_states
-        if (hm%pcm%run_pcm) then 
-           if ( (sys%mc%par_strategy /= P_STRATEGY_SERIAL).and.(sys%mc%par_strategy /= P_STRATEGY_STATES) ) then
-            message(1) = "Parallel calculations with PCM are only possible with ParallelizationStrategy=par_states"
-            call messages_fatal(1)
-           endif
-        endif
-      else
-        call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family)
-
-        ! At present, PCM calculations in parallel must have ParallelizationStrategy = par_states
-        if (hm%pcm%run_pcm) then 
-           if ( (sys%mc%par_strategy /= P_STRATEGY_SERIAL).and.(sys%mc%par_strategy /= P_STRATEGY_STATES) ) then
-            message(1) = "Parallel calculations with PCM are only possible with ParallelizationStrategy=par_states"
-            call messages_fatal(1)
-           endif
-        endif
-      end if
-      
-      call messages_print_stress(stdout, 'Approximate memory requirements')
-      call memory_run(sys)
-      call messages_print_stress(stdout)
-
-      if(calc_mode_id /= CM_DUMMY) then
-        message(1) = "Info: Generating external potential"
-        call messages_info(1)
-        call hamiltonian_epot_generate(hm, sys%gr, sys%geo, sys%st)
-        message(1) = "      done."
-        call messages_info(1)
-      end if
+    if(calc_mode_id == CM_PULPO_A_FEIRA) then
+      call pulpo_print()
+      POP_SUB(run)
+      return
     end if
 
-    if(calc_mode_id /= CM_PULPO_A_FEIRA .and. &
-      sys%ks%theory_level/=INDEPENDENT_PARTICLES) then
+    call restart_module_init()
+
+    ! initialize FFTs
+    call fft_all_init()
+
+    call unit_system_init()
+
+    call system_init(sys)
+
+    nullify(subsys_hm)
+    if(associated(sys%subsys_handle))then
+      call subsystems_get(sys%subsys_handle, subsys_hm)
+      ASSERT(associated(subsys_hm))
+      call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, subsys_hm)
+      nullify(subsys_hm)
+
+      ! At present, PCM calculations in parallel must have ParallelizationStrategy = par_states
+      if (hm%pcm%run_pcm) then 
+        if ( (sys%mc%par_strategy /= P_STRATEGY_SERIAL).and.(sys%mc%par_strategy /= P_STRATEGY_STATES) ) then
+          message(1) = "Parallel calculations with PCM are only possible with ParallelizationStrategy=par_states"
+          call messages_fatal(1)
+        endif
+      endif
+    else
+      call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family)
+
+      ! At present, PCM calculations in parallel must have ParallelizationStrategy = par_states
+      if (hm%pcm%run_pcm) then 
+        if ( (sys%mc%par_strategy /= P_STRATEGY_SERIAL).and.(sys%mc%par_strategy /= P_STRATEGY_STATES) ) then
+          message(1) = "Parallel calculations with PCM are only possible with ParallelizationStrategy=par_states"
+          call messages_fatal(1)
+        endif
+      endif
+    end if
+
+    call messages_print_stress(stdout, 'Approximate memory requirements')
+    call memory_run(sys)
+    call messages_print_stress(stdout)
+
+    if(calc_mode_id /= CM_DUMMY) then
+      message(1) = "Info: Generating external potential"
+      call messages_info(1)
+      call hamiltonian_epot_generate(hm, sys%gr, sys%geo, sys%st)
+      message(1) = "      done."
+      call messages_info(1)
+    end if
+
+    if(sys%ks%theory_level /= INDEPENDENT_PARTICLES) then
       call poisson_async_init(sys%ks%hartree_solver, sys%mc)
       ! slave nodes do not call the calculation routine
       if(multicomm_is_slave(sys%mc))then
@@ -254,20 +257,17 @@ contains
       case(CM_INVERTKDS)
         call invert_ks_run(sys, hm)
       case(CM_PULPO_A_FEIRA)
-        call pulpo_print()
+        ASSERT(.false.) !this is handled before, if we get here, it is an error
       end select
 
       call profiling_out(calc_mode_prof)
     end if
-    
-    if(calc_mode_id /= CM_PULPO_A_FEIRA) then
-      if(sys%ks%theory_level/=INDEPENDENT_PARTICLES) &
-        call poisson_async_end(sys%ks%hartree_solver, sys%mc)
 
-      call hamiltonian_end(hm)
-      call system_end(sys)
-      call fft_all_end()
-    end if
+    if(sys%ks%theory_level /= INDEPENDENT_PARTICLES) call poisson_async_end(sys%ks%hartree_solver, sys%mc)
+    
+    call hamiltonian_end(hm)
+    call system_end(sys)
+    call fft_all_end()
 
 #ifdef HAVE_MPI
     call mpi_debug_statistics()
