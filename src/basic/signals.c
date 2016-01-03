@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2006 X. Andrade
+ Copyright (C) 2016 X. Andrade
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -53,3 +53,18 @@ void FC_FUNC_(unblock_signals, UNBLOCK_SIGNALS)(){
 #endif
 }
 
+void  FC_FUNC_(dump_call_stack, DUMP_CALL_STACK)(void);
+
+void FC_FUNC_(trap_segfault, TRAP_SEGFAULT)(){
+#if defined(HAVE_SIGACTION) && defined(HAVE_SIGNAL_H)
+  struct sigaction act;
+
+  sigemptyset(&act.sa_mask);
+  act.sa_sigaction = FC_FUNC_(dump_call_stack, DUMP_CALL_STACK);
+  act.sa_flags = SA_SIGINFO;
+
+  sigaction(SIGSEGV, &act, 0);
+  sigaction(SIGABRT, &act, 0);
+  
+#endif
+}

@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2002-20016 M. Marques, A. Castro, A. Rubio, G. Bertsch, X. Andrade
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -61,7 +61,8 @@ module messages_m
     messages_not_implemented,   &
     messages_new_line,          &
     messages_write,             &
-    messages_clean_path
+    messages_clean_path,        &
+    messages_dump_stack
 
   integer, parameter :: max_lines = 20
   character(len=256), dimension(max_lines), public :: message    !< to be output by fatal, warning
@@ -162,7 +163,9 @@ contains
     end if
     
     warnings = 0
-    experimentals = 0    
+    experimentals = 0
+
+    call trap_segfault()
 
     call messages_reset_lines()
 
@@ -1329,6 +1332,27 @@ contains
     clean_path = filename(start:)
   end function messages_clean_path
 
+  subroutine messages_dump_stack()
+
+    integer :: ii
+    
+    if(in_debug_mode) then
+      call flush_msg(stderr, shyphens)
+      
+      write(msg, '(a)') 'Octopus call stack: '
+      call flush_msg(stderr, msg, 'no')
+      do ii = 1, no_sub_stack
+        write(msg, '(a,a)') ' > ', trim(sub_stack(ii))
+        call flush_msg(stderr, msg, 'no')
+      end do
+      call flush_msg(stderr, " ")
+    else
+      write(msg, '(a)') 'Octopus call stack not available.'
+      call flush_msg(stderr, msg)
+    end if
+
+  end subroutine messages_dump_stack
+  
 end module messages_m
 
 ! ---------------------------------------------------------
@@ -1360,6 +1384,14 @@ subroutine assert_die(s, f, l)
 
 end subroutine assert_die
 
+!-------------------------------------------------------
+
+subroutine dump_call_stack()
+  use messages_m
+
+  call messages_dump_stack()
+  
+end subroutine dump_call_stack
 
 
 !! Local Variables:
