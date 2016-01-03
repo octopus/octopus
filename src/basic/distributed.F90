@@ -1,4 +1,4 @@
-!! Copyright (C) 2008 X. Andrade
+!! Copyright (C) 2008-2016 X. Andrade
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -44,15 +44,15 @@ module distributed_m
   
 
   type distributed_t
-    integer :: start
-    integer :: end
-    integer :: nlocal
-    integer :: nglobal
-    logical :: parallel
-    integer, pointer :: node(:)
-    integer, pointer :: range(:, :)
-    integer, pointer :: num(:)
-    type(mpi_grp_t)  :: mpi_grp
+    integer              :: start
+    integer              :: end
+    integer              :: nlocal
+    integer              :: nglobal
+    logical              :: parallel
+    integer, allocatable :: node(:)
+    integer, allocatable :: range(:, :)
+    integer, allocatable :: num(:)
+    type(mpi_grp_t)      :: mpi_grp
   end type distributed_t
   
 contains
@@ -73,7 +73,7 @@ contains
     end if
 
     this%parallel        = .false.
-    nullify(this%node, this%range, this%num)
+
     call mpi_grp_init(this%mpi_grp, -1)
 
     POP_SUB(distributed_nullify)
@@ -176,19 +176,17 @@ contains
 
     call mpi_grp_init(out%mpi_grp, in%mpi_grp%comm)
     
-    nullify(out%node, out%range, out%num)
-
-    if(associated(in%node)) then
+    if(allocated(in%node)) then
       SAFE_ALLOCATE(out%node(1:in%nglobal))
       out%node(1:in%nglobal) = in%node(1:in%nglobal)
     end if
 
-    if(associated(in%range)) then
+    if(allocated(in%range)) then
       SAFE_ALLOCATE(out%range(1:2, 0:size - 1))
       out%range(1:2, 0:size - 1) = in%range(1:2, 0:size - 1)
     end if
 
-    if(associated(in%num)) then
+    if(allocated(in%num)) then
       SAFE_ALLOCATE(out%num(0:size - 1))
       out%num(0:size - 1) = in%num(0:size - 1)
     end if
@@ -203,9 +201,9 @@ contains
     
     PUSH_SUB(distributed_end)
 
-    SAFE_DEALLOCATE_P(this%node)
-    SAFE_DEALLOCATE_P(this%range)
-    SAFE_DEALLOCATE_P(this%num)
+    SAFE_DEALLOCATE_A(this%node)
+    SAFE_DEALLOCATE_A(this%range)
+    SAFE_DEALLOCATE_A(this%num)
 
     POP_SUB(distributed_end)
   end subroutine distributed_end
