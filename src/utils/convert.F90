@@ -95,10 +95,10 @@ contains
   subroutine convert()
     type(system_t) :: sys
 
-    character(64)  :: basename, folder, ref_name, ref_folder, folder_default
-    integer        :: c_start, c_end, c_step, c_start_default, length, c_how
-    logical        :: iterate_folder, subtract_file, fourier_trans
-    integer, parameter :: CONVERT_FORMAT = 1, FOURIER_TRANSFORM = 2, OPERATION = 3 
+    character(MAX_PATH_LEN)  :: basename, folder, ref_name, ref_folder, folder_default
+    integer                  :: c_start, c_end, c_step, c_start_default, length, c_how
+    logical                  :: iterate_folder, subtract_file
+    integer, parameter       :: CONVERT_FORMAT = 1, FOURIER_TRANSFORM = 2, OPERATION = 3 
 
     PUSH_SUB(convert)
 
@@ -278,10 +278,10 @@ contains
     character(len=*), intent(inout) :: ref_name       !< Reference file name 
     character(len=*), intent(inout) :: ref_folder     !< Reference folder name
 
-    type(restart_t)    :: restart
-    integer            :: ierr, ii, folder_index
-    character(64)      :: filename, out_name, folder, frmt, restart_folder
-    FLOAT, allocatable :: read_ff(:), read_rff(:), pot(:)
+    type(restart_t)          :: restart
+    integer                  :: ierr, ii, folder_index
+    character(MAX_PATH_LEN)  :: filename, out_name, folder, frmt, restart_folder
+    FLOAT, allocatable       :: read_ff(:), read_rff(:), pot(:)
 
     PUSH_SUB(convert_low)
 
@@ -404,7 +404,7 @@ contains
     integer                 :: ierr, ii, i_space, i_time, nn(1:3), optimize_parity(1:3)
     integer                 :: i_energy, e_end, e_start, e_point, chunk_size, read_count
     logical                 :: optimize(1:3)
-    character(MAX_PATH_LEN) :: filename, ref_filename, folder
+    character(MAX_PATH_LEN) :: filename, folder
     FLOAT                   :: fdefault, w_max
     FLOAT, allocatable      :: read_ft(:), read_rff(:), point_tmp(:,:)
 
@@ -701,7 +701,7 @@ contains
     type(mesh_t)    , intent(in)    :: mesh
     type(geometry_t), intent(in)    :: geo
     type(output_t)  , intent(in)    :: outp           !< Output object; Decides the kind, what and where to output
-  
+
     integer             :: ierr, ip, i_op, length, n_operations
     type(block_t)       :: blk
     type(restart_t)     :: restart 
@@ -733,8 +733,8 @@ contains
     if (n_operations == 0) then
       write(message(1),'(a)')'No operations found. Check the input file'
       call messages_fatal(1)
-    end if 
-    
+    end if
+
     !%Variable ConvertOutputFolder
     !%Type string
     !%Section Utilities::oct-convert
@@ -758,14 +758,14 @@ contains
 
     SAFE_ALLOCATE(tmp_ff(1:mesh%np))
     SAFE_ALLOCATE(scalar_ff(1:mesh%np))
-     
+
     do i_op = 1, n_operations
-    !read variable name
+      !read variable name
       call parse_block_string(blk, i_op-1, 0, var)
-    !read folder path
+      !read folder path
       call parse_block_string(blk, i_op-1, 1, folder)
       call add_last_slash(folder)
-    !read file
+      !read file
       call parse_block_string(blk, i_op-1, 2, filename)
       ! Delete the extension if present
       length = len_trim(filename)
@@ -777,7 +777,7 @@ contains
       ! FIXME: why only real functions? Please generalize.
       ! TODO: check if mesh function are real or complex.
       call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mesh%mpi_grp, &
-          ierr, dir=trim(folder), mesh = mesh, exact=.true.)
+        ierr, dir=trim(folder), mesh = mesh, exact=.true.)
       if(ierr == 0) then
         call drestart_read_mesh_function(restart, trim(filename), mesh, tmp_ff, ierr)
       else
@@ -785,16 +785,19 @@ contains
         write(message(2), '(2a)') "from folder ", trim(folder)
         call messages_fatal(2)
       end if
-    !read scalar expression
+      !read scalar expression
       call parse_block_string(blk, i_op-1, 3, scalar_expression)
 
       do ip = 1, mesh%np
-       call parse_expression(f_re, f_im, trim(var), real(tmp_ff(ip), 8), trim(scalar_expression))
-      !TODO: implement use of complex functions. 
-       scalar_ff(ip) = f_re
+        call parse_expression(f_re, f_im, trim(var), real(tmp_ff(ip), 8), trim(scalar_expression))
+        !TODO: implement use of complex functions. 
+        scalar_ff(ip) = f_re
       end do
+      
       call restart_end(restart)
+
     end do
+
     call parse_block_end(blk)
 
 #ifdef HAVE_MPI
@@ -805,7 +808,7 @@ contains
     !      and units of the conversion.
     units = units_out%length**(-mesh%sb%dim)
     call dio_function_output(outp%how, trim(out_folder), trim(out_filename), mesh,  & 
-                      scalar_ff, units, ierr, geo = geo)
+      scalar_ff, units, ierr, geo = geo)
 
     SAFE_DEALLOCATE_A(tmp_ff)
     SAFE_DEALLOCATE_A(scalar_ff)
