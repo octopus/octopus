@@ -76,25 +76,29 @@ contains
 
         if(matrix_type(this) == TYPE_FLOAT) then
 
-          call dsygv(1, 'V', 'U', this%dim(1), this%dmat(1, 1), this%dim(1), metric%dmat(1, 1), metric%dim(1), &
-            eigenvalues(1), worksize, -1, info)
+          call dsygv(itype = 1, jobz = 'V', uplo = 'U', n = this%dim(1), a = this%dmat(1, 1), lda = this%dim(1), &
+            b = metric%dmat(1, 1), ldb = metric%dim(1), &
+            w = eigenvalues(1), work = worksize, lwork = -1, info = info)
 
           SAFE_ALLOCATE(work(1:int(worksize)))
 
-          call dsygv(1, 'V', 'U', this%dim(1), this%dmat(1, 1), this%dim(1), metric%dmat(1, 1), metric%dim(1), &
-            eigenvalues(1), work(1), int(worksize), info)
+          call dsygv(itype = 1, jobz = 'V', uplo = 'U', n = this%dim(1), a = this%dmat(1, 1), lda = this%dim(1), &
+            b = metric%dmat(1, 1), ldb = metric%dim(1), &
+            w = eigenvalues(1), work = work(1), lwork = int(worksize), info = info)
 
         else
 
           SAFE_ALLOCATE(work(1:3*this%dim(1) -2 ))
 
-          call zhegv(1, 'V', 'U', this%dim(1), this%zmat(1, 1), this%dim(1), metric%zmat(1, 1), metric%dim(1), &
-            eigenvalues(1), zworksize, -1, work(1), info)
+          call zhegv(itype = 1, jobz = 'V', uplo = 'U', n = this%dim(1), a = this%zmat(1, 1), lda = this%dim(1), &
+            b = metric%zmat(1, 1), ldb = metric%dim(1), &
+            w = eigenvalues(1), work = zworksize, lwork = -1, rwork = work(1), info = info)
 
           SAFE_ALLOCATE(zwork(1:int(zworksize)))
 
-          call zhegv(1, 'V', 'U', this%dim(1), this%zmat(1, 1), this%dim(1), metric%zmat(1, 1), metric%dim(1), &
-            eigenvalues(1), zwork(1), int(zworksize), work(1), info)
+          call zhegv(itype = 1, jobz = 'V', uplo = 'U', n = this%dim(1), a = this%zmat(1, 1), lda = this%dim(1), &
+            b = metric%zmat(1, 1), ldb = metric%dim(1), &
+            w = eigenvalues(1), work = zwork(1), lwork = int(zworksize), rwork = work(1), info = info)
 
         end if
 
@@ -102,21 +106,25 @@ contains
 
         if(matrix_type(this) == TYPE_FLOAT) then
 
-          call dsyev('V', 'U', this%dim(1), this%dmat(1, 1), this%dim(1), eigenvalues(1), worksize, -1, info)
+          call dsyev(jobz = 'V', uplo = 'U', n = this%dim(1), a = this%dmat(1, 1), lda = this%dim(1), &
+            w = eigenvalues(1), work = worksize, lwork = -1, info = info)
 
           SAFE_ALLOCATE(work(1:int(worksize)))
 
-          call dsyev('V', 'U', this%dim(1), this%dmat(1, 1), this%dim(1), eigenvalues(1), work(1), int(worksize), info)
+          call dsyev(jobz = 'V', uplo = 'U', n = this%dim(1), a = this%dmat(1, 1), lda = this%dim(1), &
+            w = eigenvalues(1), work = work(1), lwork = int(worksize), info = info)
 
         else
 
           SAFE_ALLOCATE(work(1:3*this%dim(1) - 2))
 
-          call zheev('V', 'U', this%dim(1), this%zmat(1, 1), this%dim(1), eigenvalues(1), zworksize, -1, work(1), info)
+          call zheev(jobz = 'V', uplo = 'U', n = this%dim(1), a = this%zmat(1, 1), lda = this%dim(1), &
+            w = eigenvalues(1), work = zworksize, lwork = -1, rwork = work(1), info = info)
 
           SAFE_ALLOCATE(zwork(1:int(zworksize)))
 
-          call zheev('V', 'U', this%dim(1), this%zmat(1, 1), this%dim(1), eigenvalues(1), zwork(1), int(zworksize), work(1), info)
+          call zheev(jobz = 'V', uplo = 'U', n = this%dim(1), a = this%zmat(1, 1), lda = this%dim(1), &
+            w = eigenvalues(1), work = zwork(1), lwork = int(zworksize), rwork = work(1), info = info)
 
         end if
 
