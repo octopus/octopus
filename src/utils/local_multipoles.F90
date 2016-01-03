@@ -137,8 +137,8 @@ contains
     call parse_variable('LDFolder', folder_default, folder)
 
     ! Check if the folder is finished by an /
-    if (index(folder, '/', .true.) /= len_trim(folder)) then
-      write(folder,'(a,a1)') trim(folder), '/'
+    if(index(folder, '/', back = .true.) /= len_trim(folder)) then
+      folder = trim(folder)//'/'
     end if
 
     default_dt = M_ZERO
