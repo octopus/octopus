@@ -60,14 +60,14 @@ match ; XCrySDen wf 4    ; LINEFIELD(static/wf-st0001.xsf, 8546, 1) ; 0.00723840
 #match ; Basin 1 population ; GREPFIELD(static/bader_basins-sp1.info, "population =",       3) ;  0.227759
 
 # Convert the density from obf to dx format and check it. This utility runs in parallel.
-Util  : oct-convert
+Program : oct-convert
 Input : 05-output.02-convert.inp
 match ; Convert to dx (header)     ; GREPFIELD(restart/gs/density.dx, 'origin', 2, 0) ; -5.000000
 match ; Convert to dx (line 513)   ; LINEFIELD(restart/gs/density.dx, 671, 1) ; 0.000097681638760
 match ; Convert to dx (line 29355) ; LINEFIELD(restart/gs/density.dx, 9048, 1) ; 0.000002915649324
 
 # Convert the density from obf to dx by performing two scalar operations. This utility runs in parallel.
-Util  : oct-convert
+Program : oct-convert
 Input : 05-output.03-convert-op.inp
 Precision : 1.0e-9
 match ; Convert to dx (header)     ; GREPFIELD(convert/density.dx, 'origin', 2, 0) ; -5.000000
