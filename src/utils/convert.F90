@@ -791,7 +791,7 @@ contains
       do ip = 1, mesh%np
        call parse_expression(f_re, f_im, trim(var), real(tmp_ff(ip), 8), trim(scalar_expression))
       !TODO: implement use of complex functions. 
-       scalar_ff(ip) = scalar_ff(ip) + f_re
+       scalar_ff(ip) = f_re
       end do
       call restart_end(restart)
     end do
