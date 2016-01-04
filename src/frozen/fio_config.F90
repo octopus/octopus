@@ -106,7 +106,7 @@ contains
 
     if(present(allocate)) call json_set(this, "allocate", allocate)
 
-    POP_SUB(fio_config_parse_storage)
+    POP_SUB(fio_config_parse_external)
   end subroutine fio_config_parse_storage
 
   ! ---------------------------------------------------------
