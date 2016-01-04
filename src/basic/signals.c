@@ -75,8 +75,6 @@ void FC_FUNC_(trap_segfault, TRAP_SEGFAULT)(){
 
   sigaction(SIGSEGV, &act, 0);
   sigaction(SIGABRT, &act, 0);
-
-  sleep(1000);
   
 #endif
 }
