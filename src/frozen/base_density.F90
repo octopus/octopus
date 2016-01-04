@@ -583,7 +583,7 @@ contains
 
     type(base_density_t), pointer :: subs
 
-    PUSH_SUB(density_gets_base_density_2d)
+    PUSH_SUB(base_density_gets_density_2d)
 
     nullify(that, subs)
     call base_density_gets(this, name, subs)
@@ -721,7 +721,7 @@ contains
 
     logical :: itotal
 
-    PUSH_SUB(density_get_base_density_2d)
+    PUSH_SUB(base_density_get_density_2d)
 
     nullify(that)
     itotal = .false.

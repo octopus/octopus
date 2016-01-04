@@ -569,7 +569,7 @@ contains
 
     type(base_density_t), pointer :: dnst
 
-    PUSH_SUB(density_gets_base_states_2d)
+    PUSH_SUB(base_states_gets_density_2d)
 
     nullify(that, dnst)
     call base_states_gets(this, name, dnst)
@@ -664,7 +664,7 @@ contains
     real(kind=wp), dimension(:,:), pointer     :: that
     logical,              optional, intent(in) :: total
 
-    PUSH_SUB(density_get_base_states_2d)
+    PUSH_SUB(base_states_get_density_2d)
 
     nullify(that)
     call base_density_get(this%density, that, total)

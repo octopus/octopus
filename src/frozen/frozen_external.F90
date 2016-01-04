@@ -77,7 +77,7 @@ contains
     type(fio_external_intrpl_t)  :: intrp
     integer                      :: type, ierr
 
-    PUSH_SUB(frozen_external__update__)
+    PUSH_SUB(frozen_external__acc__)
 
     nullify(cnfg, list)
     call base_potential_get(that, cnfg)

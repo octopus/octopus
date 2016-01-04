@@ -79,7 +79,7 @@
     ASSERT(associated(that%self))
     call TEMPLATE(iterator_copy)(this, that)
 
-    POP_SUB(TEMPLATE(iterator_init_type))
+    POP_SUB(TEMPLATE(iterator_init_copy))
   end subroutine TEMPLATE(iterator_init_copy)
 
   ! ---------------------------------------------------------
@@ -151,7 +151,7 @@
 
     integer :: jerr
 
-    PUSH_SUB(TEMPLATE(iterator_next_name_config_that))
+    PUSH_SUB(TEMPLATE(iterator_next_config_that))
 
     nullify(config, that)
     call config_dict_next(this%iter, config, jerr)

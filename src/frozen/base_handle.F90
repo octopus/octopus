@@ -645,7 +645,7 @@ contains
     type(base_handle_t), intent(in)  :: this
     integer,  optional,  intent(out) :: type
 
-    PUSH_SUB(base_handle_get_type)
+    PUSH_SUB(base_handle_get_info)
 
     if(present(type)) type = this%type
 

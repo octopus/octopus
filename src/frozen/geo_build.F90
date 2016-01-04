@@ -188,7 +188,7 @@ contains
     type(geo_build_t), intent(inout) :: this
     type(atom_t),     pointer        :: atom
 
-    PUSH_SUB(geo_build_new_atom)
+    PUSH_SUB(geo_build__new__atom)
 
     nullify(atom)
     SAFE_ALLOCATE(atom)
