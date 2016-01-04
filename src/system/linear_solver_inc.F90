@@ -520,7 +520,7 @@ subroutine X(linear_solver_operator_batch) (hm, gr, st, ik, shift, xb, hxb)
   integer,               intent(in)    :: ik
   R_TYPE,                intent(in)    :: shift(:)
   type(batch_t),         intent(inout) :: xb   
-  type(batch_t),         intent(out)   :: hxb  
+  type(batch_t),         intent(inout) :: hxb  
 
   integer :: ii
   R_TYPE, allocatable :: shift_ist_indexed(:)
