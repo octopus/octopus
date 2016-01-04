@@ -320,8 +320,6 @@ contains
         all_assoc(4) = all_assoc(4) .and. associated(this%states_linear(ist)%cpsi)
       end do
 
-      ASSERT(count(all_assoc, dim = 1) <= 1)
-      
       ok = ok .and. (count(all_assoc, dim = 1) == 1)
    end if
 
