@@ -492,7 +492,7 @@ contains
       end do
     end if
 
-    if(.not. this%sphgrid .or. in_debug_mode) then   ! too much output for spherical grid
+    if(.not. this%sphgrid .or. debug%info) then   ! too much output for spherical grid
       do isp = 1, this%nspoints
         write(filenr, '(i4.4)') isp
    
@@ -651,7 +651,7 @@ contains
 
     xx = M_ZERO
     if(mpi_grp_is_root(mpi_world)) then
-      if(.not. this%sphgrid .or. in_debug_mode) then   ! too much output for spherical grid
+      if(.not. this%sphgrid .or. debug%info) then   ! too much output for spherical grid
         do isp = 1, this%nspoints
           write(filenr, '(i4.4)') isp
    
@@ -707,7 +707,7 @@ contains
       return
     end if
     
-    if (in_debug_mode) then
+    if (debug%info) then
       message(1) = "Debug: Writing PES_spm restart."
       call messages_info(1)
     end if
@@ -725,7 +725,7 @@ contains
 
     if (err /= 0) ierr = ierr + 1
     
-    if (in_debug_mode) then
+    if (debug%info) then
       message(1) = "Debug: Writing PES_spm restart done."
       call messages_info(1)
     end if
@@ -753,7 +753,7 @@ contains
       return
     end if
     
-    if (in_debug_mode) then
+    if (debug%info) then
       message(1) = "Debug: Reading PES_spm restart."
       call messages_info(1)
     end if
@@ -771,7 +771,7 @@ contains
 
     if (err /= 0) ierr = ierr + 1
     
-    if(in_debug_mode) then
+    if(debug%info) then
       message(1) = "Debug: Reading PES_spm restart done."
       call messages_info(1)
     end if

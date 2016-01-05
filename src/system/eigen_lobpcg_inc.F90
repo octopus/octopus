@@ -54,7 +54,7 @@ subroutine X(eigensolver_lobpcg)(gr, st, hm, pre, tol, niter, converged, ik, dif
   
   iblock = 0
   
-  if(mpi_grp_is_root(mpi_world) .and. .not. in_debug_mode) then
+  if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
     call loct_progress_bar(st%nst*(ik - 1), st%nst*st%d%nik)
   end if
   
@@ -105,7 +105,7 @@ subroutine X(eigensolver_lobpcg)(gr, st, hm, pre, tol, niter, converged, ik, dif
     niter     = niter + n_matvec
     converged = converged + conv  
     
-    if(mpi_grp_is_root(mpi_world) .and. .not. in_debug_mode) then
+    if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
       call loct_progress_bar(st%nst*(ik - 1) + psi_end, st%nst*st%d%nik)
     end if
   end do
@@ -637,7 +637,7 @@ contains
       ist = luc(i)
       diff(ist) = X(mf_nrm2)(gr%mesh, st%d%dim, res(:, :, ist))
 
-      if(in_debug_mode) then
+      if(debug%info) then
         write(message(1), '(a,i4,a,i4,a,i4,a,es12.6)') &
           'Debug: LOBPCG Eigensolver - ik', ik, ' ist ', ist, ' iter ', iter, ' res ', diff(ist)
         call messages_info(1)

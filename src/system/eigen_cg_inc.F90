@@ -121,7 +121,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff)
         st%eigenval(ist, ik) = es(1)
         res = sqrt(abs(gg))
 
-        if(in_debug_mode) then
+        if(debug%info) then
           write(message(1), '(a,i4,a,i4,a,i4,a,es12.6,a,i4)') 'Debug: CG Eigensolver - ik', ik, &
                ' ist ', ist, ' iter ', iter, ' res ', res, " max ", maxter
           call messages_info(1)
@@ -194,7 +194,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff)
 
       res = X(states_residue)(gr%mesh, st%d%dim, h_psi, st%eigenval(ist, ik), psi)
 
-      if(in_debug_mode) then
+      if(debug%info) then
         write(message(1), '(a,i4,a,i4,a,i4,a,es12.6,a,i4)') 'Debug: CG Eigensolver - ik', ik, ' ist ', ist, &
              ' iter ', iter, ' res ', res, " max ", maxter
         call messages_info(1)
@@ -216,7 +216,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff)
       diff(ist) = res
     end if
 
-    if(mpi_grp_is_root(mpi_world) .and. .not. in_debug_mode) then
+    if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
       call loct_progress_bar(st%nst*(ik - 1) +  ist, st%nst*st%d%nik)
     end if
 
@@ -316,7 +316,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff)
       ! Check convergence
       res = X(states_residue)(gr%mesh, dim, phi, lambda, psi)
 
-      if(in_debug_mode) then
+      if(debug%info) then
         write(message(1), '(a,i4,a,i4,a,i4,a,es12.6)') 'Debug: CG New Eigensolver - ik', ik, &
           ' ist ', ist, ' iter ', i + 1, ' res ', res
         call messages_info(1)
@@ -397,7 +397,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff)
 
     st%eigenval(ist, ik) = lambda
 
-    if(mpi_grp_is_root(mpi_world) .and. .not. in_debug_mode) then
+    if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
       call loct_progress_bar(st%nst*(ik - 1) + ist, st%nst*st%d%nik)
     end if
 

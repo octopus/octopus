@@ -272,7 +272,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
         end do
       end do ordering
 
-      if(in_debug_mode) then
+      if(debug%info) then
         do ist = 1, st%nst
           ! there do not seem to be counted iterations here
           write(message(1), '(a,i4,a,i4,a,es12.6)') &

@@ -112,7 +112,7 @@ contains
     integer :: j
     real(8) :: usec_call(C_NUM_MPI_ROUTINES)
 
-    if(.not.in_debug_mode) return
+    if(.not.debug%info) return
 
     message(1) = ''
     message(2) = hyphens
@@ -139,7 +139,7 @@ contains
   subroutine mpi_debug_in(comm, index)
     integer, intent(in) :: comm, index
 
-    if(.not.in_debug_mode) return
+    if(.not.debug%info) return
 
     call_counter(index) = call_counter(index) + 1
     sec_in              = MPI_Wtime()
@@ -156,7 +156,7 @@ contains
 
     real(8) :: sec_out, sec_diff
 
-    if(.not.in_debug_mode) return
+    if(.not.debug%info) return
 
     sec_out = MPI_Wtime()
     call mpi_time_accum(index, sec_out, sec_diff)

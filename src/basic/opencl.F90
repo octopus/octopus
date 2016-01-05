@@ -1003,7 +1003,7 @@ contains
       string = trim(string)//' '//trim(flags)
     end if
 
-    if(in_debug_mode) then
+    if(debug%info) then
       call messages_write("Debug info: compilation flags '"//trim(string), new_line = .true.)
       call messages_write('  '//trim(share_string)//"'.")
       call messages_info()

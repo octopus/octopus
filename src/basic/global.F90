@@ -106,8 +106,6 @@ module global_m
   real(8), public                    :: time_stack(50)
   integer, public                    :: no_sub_stack = 0
 
-  !> should we run in debug mode
-  logical, public :: in_debug_mode = .false.
   !> Same for profiling mode.
   logical, public :: in_profiling_mode = .false.
 

@@ -263,7 +263,7 @@ contains
       return
     end if
 
-    if (in_debug_mode) then
+    if (debug%info) then
       message(1) = "Debug: Writing PES restart."
       call messages_info(1)
     end if
@@ -280,7 +280,7 @@ contains
       call pes_spm_dump(restart, pes%spm, st, ierr)
     end if
 
-    if (in_debug_mode) then
+    if (debug%info) then
       message(1) = "Debug: Writing PES restart done."
       call messages_info(1)
     end if
@@ -307,7 +307,7 @@ contains
       return
     end if
 
-    if (in_debug_mode) then
+    if (debug%info) then
       message(1) = "Debug: Reading PES restart."
       call messages_info(1)
     end if
@@ -324,7 +324,7 @@ contains
       call pes_spm_load(restart, pes%spm, st, ierr)
     end if
 
-    if (in_debug_mode) then
+    if (debug%info) then
       message(1) = "Debug: Reading PES restart done."
       call messages_info(1)
     end if

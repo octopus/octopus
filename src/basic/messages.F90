@@ -427,7 +427,7 @@ contains
     end if
 
     do il = 1, no_lines_
-      if(.not. present(verbose_limit) .or. in_debug_mode) then
+      if(.not. present(verbose_limit) .or. debug%info) then
         write(msg, '(a)') trim(message(il))
         call flush_msg(iu, msg)
       end if
@@ -453,7 +453,7 @@ contains
 
     integer             :: il, iunit
 
-    if(.not. in_debug_mode) return
+    if(.not. debug%info) return
 
     if(flush_messages .and. mpi_grp_is_root(mpi_world)) then
       open(unit=iunit_out, file='messages.stdout', &
@@ -480,7 +480,7 @@ contains
 
     integer             :: il, iunit
 
-    if(.not. in_debug_mode) return
+    if(.not. debug%info) return
     if(mpi_grp_is_root(mpi_world)) return
 
     if(flush_messages) then
@@ -504,7 +504,7 @@ contains
   subroutine messages_debug_marker(no)
     integer, intent(in) :: no
 
-    if(.not. in_debug_mode) return
+    if(.not. debug%info) return
 
     write(message(1), '(a,i3)') 'debug marker #', no
     call messages_debug(1)
@@ -1319,7 +1319,7 @@ contains
 
     integer :: ii
     
-    if(in_debug_mode) then
+    if(debug%info) then
       call flush_msg(stderr, shyphens)
       
       write(msg, '(a)') 'Octopus call stack: '

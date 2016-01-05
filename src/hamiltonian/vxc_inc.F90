@@ -836,7 +836,7 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, delt
   forall(ip = 1:der%mesh%np) lrvxc(ip) = CNST(-1.0)/(CNST(4.0)*M_PI)*refvx(ip)
   call dderivatives_lapl(der, lrvxc, nxc)
 
-  if(in_debug_mode) then
+  if(debug%info) then
     call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "rho", der%mesh, density(:, 1), unit_one, ierr)
     call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "vxcorig", der%mesh, refvx(:), unit_one, ierr)
     call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "nxc", der%mesh, nxc, unit_one, ierr)
@@ -850,7 +850,7 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, delt
     done = .false.
 
     INCR(iter, 1)
-    if(in_debug_mode) then
+    if(debug%info) then
       if(mpi_world%rank == 0) then
         write(number, '(i4)') iter
         iunit = io_open('qxc.'//trim(adjustl(number)), action='write')
@@ -863,7 +863,7 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, delt
       end if
 
       x1 = x1*CNST(1.01)
-      if(in_debug_mode) then
+      if(debug%info) then
         if(mpi_world%rank == 0) then
           write(iunit, *) x1, qxc
         end if
@@ -932,7 +932,7 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, delt
     end if
   end do
 
-  if(in_debug_mode) then
+  if(debug%info) then
     call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "nxcmod", der%mesh, nxc, unit_one, ierr)
   
     if(mpi_world%rank == 0) then
@@ -948,7 +948,7 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, delt
     end do
   end if
 
-  if(in_debug_mode) then
+  if(debug%info) then
     call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "fulldiffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
     call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Y, "./static", "fulldiffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
     call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Z, "./static", "fulldiffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
@@ -975,7 +975,7 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, delt
     end if
   end do
 
-  if(in_debug_mode) then
+  if(debug%info) then
     call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "diffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
     call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Y, "./static", "diffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
     call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Z, "./static", "diffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
@@ -983,7 +983,7 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, delt
   
   dd = dmf_integrate(der%mesh, lrvxc)/vol
 
-  if(in_debug_mode) then
+  if(debug%info) then
     if(mpi_world%rank == 0) then
       print*, "DD",  -CNST(2.0)*dd, -CNST(2.0)*mindd, -CNST(2.0)*maxdd
     end if
@@ -991,7 +991,7 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, delt
   
   if(present(deltaxc)) deltaxc = -CNST(2.0)*dd
 
-  if(in_debug_mode) then
+  if(debug%info) then
     call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "fnxc", der%mesh, nxc, unit_one, ierr)
   end if
   

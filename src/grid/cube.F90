@@ -637,7 +637,7 @@ contains
     
     PUSH_SUB(cube_partition_messages_debug)
 
-    if(in_debug_mode) then
+    if(debug%info) then
       SAFE_ALLOCATE(part(1:cube%mpi_grp%size))
       call cube_partition(cube, part)
   

@@ -909,7 +909,7 @@ contains
       return
     end if
 
-    if (in_debug_mode) then
+    if (debug%info) then
       message(1) = "Debug: Writing td restart."
       call messages_info(1)
     end if
@@ -930,7 +930,7 @@ contains
       call gauge_field_dump(restart, hm%ep%gfield, ierr)
     end if
 
-    if (in_debug_mode) then
+    if (debug%info) then
       message(1) = "Debug: Writing td restart done."
       call messages_info(1)
     end if
@@ -959,7 +959,7 @@ contains
       return
     end if
 
-    if (in_debug_mode) then
+    if (debug%info) then
       message(1) = "Debug: Reading td restart."
       call messages_info(1)
     end if
@@ -992,7 +992,7 @@ contains
       end if
     end if
 
-    if (in_debug_mode) then
+    if (debug%info) then
       message(1) = "Debug: Reading td restart done."
       call messages_info(1)
     end if

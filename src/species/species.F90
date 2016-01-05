@@ -782,7 +782,7 @@ contains
         call messages_warning()
       end if
 
-      if(in_debug_mode) then
+      if(debug%info) then
         write(dirname, '(a)') 'debug/geometry'
         call io_mkdir(dirname)
         call species_debug(trim(dirname), this)
@@ -1348,7 +1348,7 @@ contains
     if (spec%type /= SPECIES_USDEF ) write(iunit, '(a,i3)')    'lloc  = ', spec%lloc
 
     if(species_is_ps(spec)) then
-       if(in_debug_mode) call ps_debug(spec%ps, trim(dirname))
+       if(debug%info) call ps_debug(spec%ps, trim(dirname))
     end if
 
     call io_close(iunit)

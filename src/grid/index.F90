@@ -381,7 +381,7 @@ contains
     PUSH_SUB(index_subset_indices)
 
     ! In debug mode, check for valid indices in from, to first.
-    if(in_debug_mode) then
+    if(debug%info) then
       if(.not.index_valid(idx, from).or..not.index_valid(idx, to)) then
         message(1) = 'Failed assertion:'
         message(2) = 'mesh.mesh_subset_indices has been passed points outside the box:'

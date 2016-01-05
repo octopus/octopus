@@ -570,7 +570,7 @@ contains
     SAFE_DEALLOCATE_A(size_v)
 
     ! lxyz is not set for hypercube.
-    if(in_debug_mode .and. .not. idx%is_hypercube) then
+    if(debug%info .and. .not. idx%is_hypercube) then
       ! Write numbers and coordinates of each process` ghost points
       ! to a single file (like in mesh_partition_init) called
       ! debug/mesh_partition/ghost_points.###.

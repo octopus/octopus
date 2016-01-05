@@ -511,7 +511,7 @@ contains
       mask%fs_n_global = mask%cube%fs_n_global 
     end if 
 
-    if(in_debug_mode) then
+    if(debug%info) then
       print *,mpi_world%rank, "mask%ll                  ", mask%ll(:)
       print *,mpi_world%rank, "mask%cube%fs_n_global(:) ", mask%cube%fs_n_global(:)      
       print *,mpi_world%rank, "mask%cube%fs_n(:)        ", mask%cube%fs_n(:)

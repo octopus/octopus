@@ -66,7 +66,7 @@ subroutine X(io_function_input)(filename, mesh, ff, ierr, map)
       SAFE_ALLOCATE(ff_global(1:mesh%np_global))
       call X(io_function_input_global)(filename, mesh, ff_global, ierr, map)
     end if
-    if(in_debug_mode) call messages_debug_newlines(2)
+    if(debug%info) call messages_debug_newlines(2)
 
     ! Only root knows if the file was successfully read.
     ! Now, it tells everybody else.

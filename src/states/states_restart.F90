@@ -822,7 +822,7 @@ contains
       return
     end if
 
-    if (in_debug_mode) then
+    if (debug%info) then
       message(1) = "Debug: Writing density restart."
       call messages_info(1)
     end if
@@ -894,7 +894,7 @@ contains
     end if
     call restart_close(restart, iunit)
 
-    if (in_debug_mode) then
+    if (debug%info) then
       message(1) = "Debug: Writing density restart done."
       call messages_info(1)
     end if
@@ -925,7 +925,7 @@ contains
       return
     end if
 
-    if (in_debug_mode) then
+    if (debug%info) then
       message(1) = "Debug: Reading density restart."
       call messages_info(1)
     end if
@@ -991,7 +991,7 @@ contains
       SAFE_DEALLOCATE_A(zrho)
     end if
 
-    if (in_debug_mode) then
+    if (debug%info) then
       message(1) = "Debug: Reading density restart done."
       call messages_info(1)
     end if

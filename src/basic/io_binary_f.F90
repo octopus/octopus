@@ -168,7 +168,7 @@ contains
     call get_info_binary(read_np, number_type, file_size, ierr, fname)
     ! if the type of the file is real, then read real numbers and convert to complex
     if (number_type /= TYPE_DOUBLE_COMPLEX) then
-      if (in_debug_mode) then
+      if (debug%info) then
         write(message(1),'(a,i2,a,i2)') "Debug: Found type = ", number_type, " instead of ", TYPE_DOUBLE_COMPLEX
         call messages_info(1)
       end if
@@ -203,7 +203,7 @@ contains
     call get_info_binary(read_np, number_type, file_size, ierr, fname)
     ! if the type of the file is real, then read real numbers and convert to complex
     if (number_type /= TYPE_DOUBLE_COMPLEX) then
-      if (in_debug_mode) then
+      if (debug%info) then
         write(message(1),'(a,i2,a,i2)') "Debug: Found type = ", number_type, " instead of ", TYPE_DOUBLE_COMPLEX
         call messages_info(1)
       end if

@@ -404,7 +404,7 @@ subroutine X(linear_solver_multigrid) (ls, hm, gr, st, ist, ik, x, y, shift, tol
 
     if(residue < tol) exit
 
-    if(in_debug_mode) then
+    if(debug%info) then
 
       SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
       

@@ -418,7 +418,7 @@ contains
     SAFE_DEALLOCATE_A(atom_counted)
     SAFE_DEALLOCATE_A(region_count)
 
-    if(in_debug_mode) then
+    if(debug%info) then
       call messages_write('The atoms can be separated in ')
       call messages_write(nregion)
       call messages_write(' non-overlapping groups.')

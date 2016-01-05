@@ -334,7 +334,7 @@ contains
     PUSH_SUB(grid_write_info)
 
     if(.not.mpi_grp_is_root(mpi_world)) then
-      if(in_debug_mode) call messages_debug_newlines(6)
+      if(debug%info) call messages_debug_newlines(6)
       POP_SUB(grid_write_info)
       return
     end if

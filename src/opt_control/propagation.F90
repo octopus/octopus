@@ -1158,7 +1158,7 @@ contains
       return
     end if
 
-    if (in_debug_mode) then
+    if (debug%info) then
       message(1) = "Debug: Writing OCT propagation states restart."
       call messages_info(1)
     end if
@@ -1177,7 +1177,7 @@ contains
       end if
     end do
 
-    if (in_debug_mode) then
+    if (debug%info) then
       message(1) = "Debug: Writing OCT propagation states restart done."
       call messages_info(1)
     end if
@@ -1208,7 +1208,7 @@ contains
       return
     end if
 
-    if (in_debug_mode) then
+    if (debug%info) then
       message(1) = "Debug: Reading OCT propagation states restart."
       call messages_info(1)
     end if
@@ -1227,7 +1227,7 @@ contains
       end if
     end do
 
-    if (in_debug_mode) then
+    if (debug%info) then
       message(1) = "Debug: Reading OCT propagation states restart done."
       call messages_info(1)
     end if

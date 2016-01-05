@@ -39,7 +39,7 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time)
     return
   end if
 
-  if(in_debug_mode) then
+  if(debug%info) then
     write(message(1), '(a)') 'Debug: Calculating eigenvalues.'
     call messages_info(1)
   end if

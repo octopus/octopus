@@ -216,7 +216,7 @@ contains
 
       if(resnorm < this%threshold) exit
 
-      if(in_debug_mode) then
+      if(debug%info) then
         write(message(1), '(a,i5,a,e13.6)') "Multigrid: base level: iter ", iter, " res ", resnorm
         call messages_info(1)
       end if

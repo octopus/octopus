@@ -502,7 +502,7 @@ contains
 
     PUSH_SUB(pnfft_messages_debug)
 
-    if(in_debug_mode) then
+    if(debug%info) then
   
       if(mpi_grp_is_root(mpi_world)) then
         call io_mkdir('debug/PNFFT')

@@ -244,7 +244,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       SAFE_DEALLOCATE_A(eval)      
       SAFE_DEALLOCATE_A(evec)
 
-      if(in_debug_mode) then
+      if(debug%info) then
         call X(mesh_batch_dotp_vector)(gr%der%mesh, resb(iter)%batch, resb(iter)%batch, eigen)
 
         do ist = minst, maxst
@@ -301,7 +301,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     if(pack) call batch_unpack(st%group%psib(ib, ik))
 
     prog = prog + bsize
-    if(mpi_grp_is_root(mpi_world) .and. .not. in_debug_mode) then
+    if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
       call loct_progress_bar(st%nst*(ik - 1) + prog, st%nst*st%d%nik)
     end if
     
@@ -390,7 +390,7 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
 
   niter = 0
 
-  if(in_debug_mode) then
+  if(debug%info) then
     SAFE_ALLOCATE(diff(1:st%d%block_size))
   end if
 
@@ -416,7 +416,7 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
  
       call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), st%group%psib(ib, ik), resb)
 
-      if(in_debug_mode) then
+      if(debug%info) then
         call X(mesh_batch_dotp_vector)(gr%der%mesh, resb, resb, diff)
 
         do ist = minst, maxst
@@ -459,13 +459,13 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
     call batch_end(resb, copy = .false.)
     call batch_end(kresb, copy = .false.)
 
-    if(mpi_grp_is_root(mpi_world) .and. .not. in_debug_mode) then
+    if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
       call loct_progress_bar(st%nst*(ik - 1) +  maxst, st%nst*st%d%nik)
     end if
 
   end do
 
-  if(in_debug_mode) then
+  if(debug%info) then
     SAFE_DEALLOCATE_A(diff)
   end if
 

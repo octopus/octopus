@@ -343,7 +343,7 @@ contains
       return
     end if
 
-    if (in_debug_mode) then
+    if (debug%info) then
       message(1) = "Debug: Writing gauge field restart."
       call messages_info(1)
     end if
@@ -357,7 +357,7 @@ contains
     SAFE_DEALLOCATE_A(vecpot)
     if (err /= 0) ierr = ierr + 1
 
-    if (in_debug_mode) then
+    if (debug%info) then
       message(1) = "Debug: Writing gauge field restart done."
       call messages_info(1)
     end if
@@ -385,7 +385,7 @@ contains
       return
     end if
 
-    if (in_debug_mode) then
+    if (debug%info) then
       message(1) = "Debug: Reading gauge field restart."
       call messages_info(1)
     end if
@@ -398,7 +398,7 @@ contains
     call gauge_field_set_vec_pot_vel(gfield, vecpot(:,2))
     SAFE_DEALLOCATE_A(vecpot)
     
-    if (in_debug_mode) then
+    if (debug%info) then
       message(1) = "Debug: Reading gauge field restart done."
       call messages_info(1)
     end if

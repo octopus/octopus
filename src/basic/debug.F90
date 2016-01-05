@@ -72,9 +72,7 @@ contains
     !%End
     call parse_variable('Debug', OPTION__DEBUG__NO, this%bits)
 
-    this%info = (iand(this%bits, OPTION__DEBUG__INFO) /= 0)
-    in_debug_mode = this%info
-
+    this%info       = (iand(this%bits, OPTION__DEBUG__INFO) /= 0)
     this%trace_term = (iand(this%bits, OPTION__DEBUG__TRACE_TERM) /= 0)
     this%trace_file = (iand(this%bits, OPTION__DEBUG__TRACE_FILE) /= 0)
     this%trace      = (iand(this%bits, OPTION__DEBUG__TRACE)      /= 0) .or. this%trace_term .or. this%trace_file
@@ -105,9 +103,7 @@ contains
   subroutine debug_disable(this)
     type(debug_t), intent(inout) :: this
     
-    this%info = (iand(this%bits, OPTION__DEBUG__INFO) /= 0)
-    in_debug_mode = this%info
-
+    this%info       = (iand(this%bits, OPTION__DEBUG__INFO) /= 0)
     this%trace_term = (iand(this%bits, OPTION__DEBUG__TRACE_TERM) /= 0)
     this%trace_file = (iand(this%bits, OPTION__DEBUG__TRACE_FILE) /= 0)
     this%trace      = (iand(this%bits, OPTION__DEBUG__TRACE)      /= 0) .or. this%trace_term .or. this%trace_file

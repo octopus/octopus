@@ -217,7 +217,7 @@ contains
       dd%kweights(iq) = kpoints_get_weight(sb%kpoints, ik)
     end do
 
-    if(in_debug_mode) call print_kpoints_debug
+    if(debug%info) call print_kpoints_debug
     POP_SUB(states_choose_kpoints)
 
   contains

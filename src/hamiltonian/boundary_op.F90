@@ -219,7 +219,7 @@ contains
       this%mf(:) = abheight * mf(:)
     end if
    
-    if(in_debug_mode) call bc_write_info(this, mesh)
+    if(debug%info) call bc_write_info(this, mesh)
    
     SAFE_DEALLOCATE_A(mf)
 

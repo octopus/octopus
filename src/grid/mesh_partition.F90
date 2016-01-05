@@ -246,7 +246,7 @@ contains
     xadj(nv+1) = ne + 1
 
 
-    if (in_debug_mode .or. library == METIS) then
+    if (debug%info .or. library == METIS) then
       !Gather the global xadj and adjncy arrays
       SAFE_ALLOCATE(rcounts(1:npart))
       SAFE_ALLOCATE(rdispls(1:npart))
@@ -283,7 +283,7 @@ contains
     end if
 
 
-    if(in_debug_mode) then
+    if(debug%info) then
       ! DEBUG output. Write graph to file mesh_graph.txt.
       message(1) = 'Info: Adjacency lists of the graph representing the grid'
       message(2) = 'Info: are stored in debug/mesh_partition/mesh_graph.txt.'
@@ -393,7 +393,7 @@ contains
     ASSERT(all(part(1:nv) <= vsize))
     call partition_set(mesh%inner_partition, part)
 
-    if (in_debug_mode .or. library == METIS) then
+    if (debug%info .or. library == METIS) then
       SAFE_DEALLOCATE_A(xadj_global)
       SAFE_DEALLOCATE_A(adjncy_global)
     end if
@@ -800,7 +800,7 @@ contains
     integer              :: iunit          ! For debug output to files.
     character(len=6)     :: filenum
 
-    if(.not. in_debug_mode) return
+    if(.not. debug%info) return
 
     PUSH_SUB(mesh_partition_messages_debug)
 

@@ -50,7 +50,7 @@ subroutine X(eigensolver_arpack)(arpack, gr, st, hm, tolerance, current_rel_dens
   ASSERT(st%d%dim == 1)
 
   !Enable debug info
-  if(in_debug_mode) call arpack_debug()
+  if(debug%info) call arpack_debug()
   
   mpi_comm = mpi_world%comm
   if (gr%mesh%parallel_in_domains) mpi_comm = gr%mesh%mpi_grp%comm

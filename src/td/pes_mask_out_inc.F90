@@ -610,7 +610,7 @@ subroutine pes_mask_output_full_mapM_cut(pesK, file, ll, dim, pol, dir, integrat
     ! We set the z-axis along the pol vector 
     call generate_rotation_matrix(rotation, (/M_ZERO, M_ZERO, M_ONE/), pol )
 
-    if(in_debug_mode) then
+    if(debug%info) then
       print *,"Rotate z-axis over the zenith axis"
       print *,rotation(1,:)
       print *,rotation(2,:)
@@ -1701,7 +1701,7 @@ subroutine pes_mask_dump(restart, mask, st, ierr)
     return
   end if
 
-  if (in_debug_mode) then
+  if (debug%info) then
     message(1) = "Debug: Writing PES mask restart."
     call messages_info(1)
   end if
@@ -1769,7 +1769,7 @@ subroutine pes_mask_dump(restart, mask, st, ierr)
   end do
   if (err2 /= 0) ierr = ierr + 2
 
-  if (in_debug_mode) then
+  if (debug%info) then
     message(1) = "Debug: Writing PES mask restart done."
     call messages_info(1)
   end if
@@ -1802,7 +1802,7 @@ subroutine pes_mask_load(restart, mask, st, ierr)
     return
   end if
 
-  if (in_debug_mode) then
+  if (debug%info) then
     message(1) = "Debug: Reading PES mask restart."
     call messages_info(1)
   end if
@@ -1859,7 +1859,7 @@ subroutine pes_mask_load(restart, mask, st, ierr)
 
   SAFE_DEALLOCATE_A(rr)
 
-  if (in_debug_mode) then
+  if (debug%info) then
     message(1) = "Debug: Reading PES mask restart done."
     call messages_info(1)
   end if

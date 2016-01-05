@@ -1245,7 +1245,7 @@ contains
       return
     end if
 
-    if (in_debug_mode) then
+    if (debug%info) then
       message(1) = "Debug: Writing Vhxc restart."
       call messages_info(1)
     end if
@@ -1319,7 +1319,7 @@ contains
 
     call restart_close(restart, iunit)
 
-    if (in_debug_mode) then
+    if (debug%info) then
       message(1) = "Debug: Writing Vhxc restart done."
       call messages_info(1)
     end if
@@ -1349,7 +1349,7 @@ contains
       return
     end if
 
-    if (in_debug_mode) then
+    if (debug%info) then
       message(1) = "Debug: Reading Vhxc restart."
       call messages_info(1)
     end if
@@ -1406,7 +1406,7 @@ contains
       SAFE_DEALLOCATE_A(zv)
     end if
 
-    if (in_debug_mode) then
+    if (debug%info) then
       message(1) = "Debug: Reading Vhxc restart done."
       call messages_info(1)
     end if

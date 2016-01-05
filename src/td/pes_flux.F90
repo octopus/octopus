@@ -1455,7 +1455,7 @@ contains
       return
     end if
 
-    if(in_debug_mode) then
+    if(debug%info) then
       message(1) = "Debug: Writing pes_flux restart."
       call messages_info(1)
     end if
@@ -1493,7 +1493,7 @@ contains
 
     if(err /= 0) ierr = ierr + 1
 
-    if(in_debug_mode) then
+    if(debug%info) then
       message(1) = "Debug: Writing pes_flux restart done."
       call messages_info(1)
     end if
@@ -1529,7 +1529,7 @@ contains
       return
     end if
 
-    if(in_debug_mode) then
+    if(debug%info) then
       message(1) = "Debug: Reading pes_flux restart."
       call messages_info(1)
     end if
@@ -1565,7 +1565,7 @@ contains
 
     if(err /= 0) ierr = ierr + 1
    
-    if(in_debug_mode) then
+    if(debug%info) then
       message(1) = "Debug: Reading pes_flux restart done."
       call messages_info(1)
     end if

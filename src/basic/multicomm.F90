@@ -430,7 +430,7 @@ contains
         if(.not. multicomm_strategy_is_parallel(mc, kk)) n_group_max(kk) = 1
       end do
 
-      if(in_debug_mode) then
+      if(debug%info) then
         call messages_write('Debug info: Allowable group ranks:', new_line = .true.)
         do kk = 1, P_STRATEGY_MAX
           call messages_write(par_types(kk), fmt = '2x,a12,":",1x')
@@ -681,7 +681,7 @@ contains
       end if
 
       ! This is temporary debugging information.
-      if(in_debug_mode .and. mc%par_strategy /= P_STRATEGY_SERIAL) then
+      if(debug%info .and. mc%par_strategy /= P_STRATEGY_SERIAL) then
         write(message(1),'(a)') 'Debug: MPI Task Assignment to MPI Groups'
         write(message(2),'(5a10)') 'World', 'Domains', 'States', 'K-Points', 'Other'
         call messages_info(1)
