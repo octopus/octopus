@@ -94,7 +94,7 @@ contains
     call spline_end(splw)
     call spline_cut(spl, rcut, beta_rs)
 
-    PUSH_SUB(spline_filter_bessel)
+    POP_SUB(spline_filter_bessel)
   end subroutine spline_filter_bessel
 
 
