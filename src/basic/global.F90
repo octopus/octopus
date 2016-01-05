@@ -46,7 +46,6 @@ module global_m
   integer, public, parameter :: MAX_PATH_LEN=256
 
   type conf_t
-    integer :: debug_level   !< How much debug should print
     logical :: devel_version !< If true then allow unstable parts of the code
     logical :: report_memory
     character(len=256) :: share       !< Name of the share dir

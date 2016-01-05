@@ -11,7 +11,7 @@
 Radius = 8.0
 Spacing = 0.4
 fromScratch = yes
-DebugLevel = 1
+Debug = info + trace
 
 TheoryLevel = independent_particles
 

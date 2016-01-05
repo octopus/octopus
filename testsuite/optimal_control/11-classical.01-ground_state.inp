@@ -2,7 +2,6 @@ CalculationMode = gs
 #CalculationMode = td
 #CalculationMode = opt_control
 
-DebugLevel = 0
 ExperimentalFeatures = yes
 
 Dimensions = 2

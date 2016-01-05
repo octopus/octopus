@@ -21,6 +21,7 @@
 
 module messages_m
   use global_m
+  use debug_m
   use loct_m
   use mpi_m
   use parser_m
@@ -131,36 +132,10 @@ contains
     !% <a href=http://www.tddft.org/programs/octopus/experimental_features>wiki page</a>.
     !%End
     call parse_variable('ExperimentalFeatures', .false., conf%devel_version)
+    
+    call messages_obsolete_variable('DebugLevel', 'Debug')
 
-    !%Variable DebugLevel
-    !%Type integer
-    !%Default 0
-    !%Section Execution::Debug
-    !%Description
-    !% This variable decides whether or not to enter debug mode.
-    !% If it is greater than 0, different amounts of additional information
-    !% are written to standard output and additional assertion checks are performed.
-    !%Option 0
-    !% (default) <tt>Octopus</tt> does not enter debug mode.
-    !%Option 1
-    !% Moderate amount of debug output; assertion checks enabled.
-    !%Option 2
-    !% The code prints a stack trace as it enters end exits subroutines.
-    !% This is useful for developers and you should include this output when
-    !% submitting a bug report.
-    !%Option 99
-    !% The debug output is additionally written to files in the <tt>debug</tt>
-    !% directory. For each node (when running in parallel) there is a file called
-    !% <tt>debug_trace.&lt;rank&gt;</tt>. Writing these files slows down the code by a huge factor and
-    !% it is usually only necessary for parallel runs. In the serial case all
-    !% the information can be obtained from standard out.
-    !%End
-    call parse_variable('DebugLevel', 0, conf%debug_level)
-    if(conf%debug_level>0) then
-      in_debug_mode = .true.
-    else
-      in_debug_mode = .false.
-    end if
+    call debug_init()
     
     warnings = 0
     experimentals = 0
@@ -323,7 +298,7 @@ contains
     ! We only dump the stack in debug mode because subroutine invocations
     ! are only recorded in debug mode (via push_sub/pop_sub). Otherwise,
     ! it is a bit confusing that the stack seems to be empty.
-    if(in_debug_mode) then
+    if(debug%trace) then
       call flush_msg(stderr, shyphens)
 
       write(msg, '(a)') '* Stack: '
@@ -474,7 +449,7 @@ contains
 
     integer             :: il, iunit
 
-    if(.not.in_debug_mode) return
+    if(.not. in_debug_mode) return
 
     if(flush_messages .and. mpi_grp_is_root(mpi_world)) then
       open(unit=iunit_out, file='messages.stdout', &
@@ -950,7 +925,7 @@ contains
 
     integer iunit, sec, usec
 
-    if(.not. in_debug_mode) return
+    if(.not. debug%trace) return
 
     call loct_gettimeofday(sec, usec)
     call epoch_time_diff(sec, usec)
@@ -965,12 +940,14 @@ contains
     sub_stack(no_sub_stack)  = trim(messages_clean_path(sub_name))
     time_stack(no_sub_stack) = loct_clock()
 
-    if(conf%debug_level >= 99) then
+    if(debug%trace_file) then
       call open_debug_trace(iunit)
       call push_sub_write(iunit)
       ! close file to ensure flushing
       close(iunit)
-    else if(conf%debug_level > 1 .and. mpi_grp_is_root(mpi_world)) then
+    end if
+
+    if(debug%trace_term .and. mpi_grp_is_root(mpi_world)) then
       ! write to stderr if we are node 0
       call push_sub_write(stderr)
     end if
@@ -1006,7 +983,7 @@ contains
 
     integer iunit, sec, usec
 
-    if(.not. in_debug_mode) return
+    if(.not. debug%trace) return
 
     call loct_gettimeofday(sec, usec)
     call epoch_time_diff(sec, usec)
@@ -1029,12 +1006,14 @@ contains
       call messages_fatal(3)
     end if
 
-    if(conf%debug_level >= 99) then
+    if(debug%trace_file) then
       call open_debug_trace(iunit)
       call pop_sub_write(iunit)
       ! close file to ensure flushing
       close(iunit)
-    else if (conf%debug_level > 1 .and. mpi_grp_is_root(mpi_world)) then
+    end if
+
+    if (debug%trace_term .and. mpi_grp_is_root(mpi_world)) then
       ! write to stderr if we are node 0
       call pop_sub_write(stderr)
     end if
