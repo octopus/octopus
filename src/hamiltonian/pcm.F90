@@ -36,20 +36,20 @@ module pcm_m
 
   private
 
-  public :: &
-    pcm_t,                &
-    pcm_init,             &
-    pcm_end,              &
-    pcm_charges,          &
-    pcm_pot_rs,           &
-    pcm_elect_energy,     &
-    v_nuclei_cav,         &
-    v_electrons_cav_li
+  public ::                 &
+    pcm_t,                  &
+    pcm_init,               &
+    pcm_end,                &
+    pcm_charges,            &
+    pcm_pot_rs,             &
+    pcm_elect_energy,       &
+    pcm_v_nuclei_cav,       &
+    pcm_v_electrons_cav_li
 
 
   !> The cavity hosting the solute molecule is built from a set of 
   !! interlocking spheres with optimized radii centered at the nuclear positions.  
-  type, public :: sphere_t  
+  type :: sphere_t  
     FLOAT :: x !
     FLOAT :: y !< center of the sphere
     FLOAT :: z !
@@ -58,7 +58,8 @@ module pcm_m
 
   !> The resulting cavity is discretized by a set of tesserae defined in 3d.  
   integer, parameter :: pcm_dim_space = 3
-  type, public :: tessera_t
+
+  type :: tessera_t
     FLOAT :: point(1:pcm_dim_space)  !< representative point of the tessera  
     FLOAT :: area                    !< area of the tessera
     FLOAT :: normal(1:pcm_dim_space) !< unitary outgoing vector normal to the tessera surface  
@@ -99,14 +100,8 @@ module pcm_m
   FLOAT, allocatable :: Sigma(:,:)     !< S_E matrix
   FLOAT, allocatable :: Delta(:,:)     !< D_E matrix in JCP 139, 024105 (2013).
 
-  integer :: nearest_idx_unit   
-  integer :: idx_from_coord_unit
-
   FLOAT, allocatable :: mat_gamess(:,:) !< PCM matrix formatted to be inputed to GAMESS
   FLOAT, allocatable :: sr_dist(:,:)    !< Table storing the distances between tesserae and grid points.
-
-  !> End of variable declaration.
-  !! ----------------------------
 
 contains
 
@@ -117,15 +112,8 @@ contains
     type(grid_t), intent(in)     :: grid
     type(pcm_t), intent(out)     :: pcm
 
-    integer :: ia
-    integer :: itess
-    integer :: jtess
-    integer :: cav_unit_test
-    integer :: pcmmat_unit
-    integer :: pcmmat_gamess_unit
-    integer :: iunit
-    integer :: ip
-    integer :: subdivider
+    integer :: ia, itess, jtess, cav_unit_test, subdivider
+    integer :: pcmmat_unit, pcmmat_gamess_unit, iunit, ip
 
     integer, parameter :: mxts = 10000
 
@@ -187,7 +175,7 @@ contains
         message(1) = "PCM is only available for BoxShape = minimum and 3d calculations"
         call messages_fatal(1)
       else 
-        call messages_experimental("polarizable continuum model")
+        call messages_experimental("Polarizable Continuum Model")
       end if
     else
       POP_SUB(pcm_init)
@@ -298,9 +286,9 @@ contains
         z_ia = species_z(spci)
 
         if ( (INT(z_ia) < 1).or.(INT(z_ia) > upto_Xe) ) then
-          write(message(1),'(a,a)') "the van der Waals radius is missing for element ", geo%atom(ia)%label
+          write(message(1),'(a,a)') "The van der Waals radius is missing for element ", geo%atom(ia)%label
           call messages_fatal(1)       
-        endif
+        end if
 
         pcm%spheres(pcm%n_spheres)%r = vdw_radii(INT(z_ia))*P_Ang*pcm%scale_r     
       end do
@@ -368,7 +356,7 @@ contains
       if (pcm%n_tesserae.gt.mxts) then
         write(message(1),'(a,I5,a,I5)') "total number of tesserae", pcm%n_tesserae, ">",mxts
         call messages_warning(1)     
-      endif
+      end if
 
       SAFE_ALLOCATE(pcm%tess(1:pcm%n_tesserae))
 
@@ -406,7 +394,7 @@ contains
       call io_close(iunit)
       message(1) = "Info: van der Waals surface has been read from " // trim(pcm%input_cavity)
       call messages_info(1)
-    endif
+    end if
 
     cav_unit_test = io_open(PCM_DIR//'cavity_mol.xyz', action='write')
 
@@ -503,23 +491,20 @@ contains
     POP_SUB(pcm_init)
   end subroutine pcm_init
 
+  ! -----------------------------------------------------------------------------
+
   !> Calculates the Hartree potential at the tessera representative points by doing 
   !! a 3D linear interpolation. 
-  subroutine v_electrons_cav_li(v_e_cav, v_hartree, pcm)
+  subroutine pcm_v_electrons_cav_li(v_e_cav, v_hartree, pcm)
     type(pcm_t), intent(in)  :: pcm
     FLOAT, intent(in)        :: v_hartree(:) !< (1:mesh%np)
     FLOAT, intent(out)       :: v_e_cav(:)   !< (1:n_tess)
 
     integer :: ia
 
-    FLOAT :: C_00
-    FLOAT :: C_10
-    FLOAT :: C_01
-    FLOAT :: C_11
-    FLOAT :: C_0
-    FLOAT :: C_1
+    FLOAT :: C_00, C_10, C_01, C_11, C_0, C_1
 
-    PUSH_SUB(v_electrons_cav_li)    
+    PUSH_SUB(pcm_v_electrons_cav_li)    
 
     v_e_cav = M_ZERO
 
@@ -545,26 +530,23 @@ contains
 
     end do
 
-    POP_SUB(v_electrons_cav_li)
-  end subroutine v_electrons_cav_li
+    POP_SUB(pcm_v_electrons_cav_li)
+  end subroutine pcm_v_electrons_cav_li
 
+  !--------------------------------------------------------------------------------
+  
   !> Calculates the classical electrostatic potential geneated by the nuclei at the tesserae.
   !! v_n_cav(ik) = \sum_{I=1}^{natoms} Z_val / |s_{ik} - R_I|
-  subroutine v_nuclei_cav(v_n_cav, geo, tess, n_tess)
-    FLOAT, intent(out)           :: v_n_cav(:) !< (1:n_tess)
-    type(geometry_t), intent(in) :: geo
-    type(tessera_t), intent(in)  :: tess(:)    !< (1:n_tess)
-    integer, intent(in)          :: n_tess
+  subroutine pcm_v_nuclei_cav(v_n_cav, geo, tess, n_tess)
+    FLOAT,               intent(out)   :: v_n_cav(:) !< (1:n_tess)
+    type(geometry_t),    intent(in)    :: geo
+    type(tessera_t),     intent(in)    :: tess(:)    !< (1:n_tess)
+    integer,             intent(in)    :: n_tess
 
-    FLOAT   :: diff(1:pcm_dim_space)
-    FLOAT   :: dist
-    FLOAT   :: z_ia
-    integer :: ik
-    integer :: ia
-
+    FLOAT   :: diff(1:pcm_dim_space), dist, z_ia, ik, ia
     type(species_t), pointer :: spci 
 
-    PUSH_SUB(v_nuclei_cav)
+    PUSH_SUB(pcm_v_nuclei_cav)
 
     diff = M_ZERO
     v_n_cav = M_ZERO
@@ -585,25 +567,24 @@ contains
 
     v_n_cav = -v_n_cav
 
-    POP_SUB(v_nuclei_cav)
-  end subroutine v_nuclei_cav
+    POP_SUB(pcm_v_nuclei_cav)
+  end subroutine pcm_v_nuclei_cav
 
+  ! -----------------------------------------------------------------------------
+  
   !> Calculates the solute-solvent electrostatic interaction energy
   !! E_M-solv = \sum{ik=1}^n_tess { [VHartree(ik) + Vnuclei(ik)]*[q_e(ik) + q_n(ik)] }   
   subroutine pcm_elect_energy(geo, pcm, E_int_ee, E_int_en, E_int_ne, E_int_nn)
-    type(geometry_t), intent(in) :: geo
-    type(pcm_t), intent(in)      :: pcm
-    FLOAT, intent(out)           :: E_int_ee 
-    FLOAT, intent(out)           :: E_int_en 
-    FLOAT, intent(out)           :: E_int_ne 
-    FLOAT, intent(out)           :: E_int_nn 
+    type(geometry_t), intent(in)    :: geo
+    type(pcm_t),      intent(in)    :: pcm
+    FLOAT,            intent(out)   :: E_int_ee 
+    FLOAT,            intent(out)   :: E_int_en 
+    FLOAT,            intent(out)   :: E_int_ne 
+    FLOAT,            intent(out)   :: E_int_nn 
 
     FLOAT   :: diff(1:pcm_dim_space)
-    FLOAT   :: dist
-    FLOAT   :: z_ia
-    integer :: ik
-    integer :: ia
-
+    FLOAT   :: dist, z_ia
+    integer :: ik, ia
     type(species_t), pointer :: spci 
 
     PUSH_SUB(pcm_elect_energy)
@@ -643,6 +624,8 @@ contains
     POP_SUB(pcm_elect_energy)
   end subroutine pcm_elect_energy
 
+  ! -----------------------------------------------------------------------------
+  
   !> Creating the list of the nearest 8 cube vertices in real-space 
   !! to calculate the Hartree potential at 'point'
   subroutine nearest_cube_vertices(point, mesh, vert_idx, weight_li)
@@ -714,21 +697,21 @@ contains
     vert_idx(8) = index_from_coords(mesh%idx, point_f)
 
     POP_SUB(nearest_cube_vertices)    
-
   end subroutine nearest_cube_vertices
 
+  ! -----------------------------------------------------------------------------
+  
   !> Calculates the polarization charges at each tessera by using the response matrix 'pcm_mat',
   !! provided the value of the molecular electrostatic potential at 
   !! the tesserae: q_pcm(ia) = \sum_{ib}^{n_tess} pcm_mat(ia,ib)*v_cav(ib).
   subroutine pcm_charges(q_pcm, q_pcm_tot, v_cav, pcm_mat, n_tess)
-    FLOAT, intent(out)   :: q_pcm(:)     !< (1:n_tess)
-    FLOAT, intent(out)   :: q_pcm_tot
-    FLOAT, intent(in)    :: v_cav(:)     !< (1:n_tess)
-    FLOAT, intent(in)    :: pcm_mat(:,:) !< (1:n_tess, 1:n_tess)
-    integer, intent(in)  :: n_tess
+    FLOAT,   intent(out)   :: q_pcm(:)     !< (1:n_tess)
+    FLOAT,   intent(out)   :: q_pcm_tot
+    FLOAT,   intent(in)    :: v_cav(:)     !< (1:n_tess)
+    FLOAT,   intent(in)    :: pcm_mat(:,:) !< (1:n_tess, 1:n_tess)
+    integer, intent(in)    :: n_tess
 
-    integer :: ia
-    integer :: ib
+    integer :: ia, ib
 
     PUSH_SUB(pcm_charges)
 
@@ -745,6 +728,8 @@ contains
     POP_SUB(pcm_charges)
   end subroutine pcm_charges
 
+  ! -----------------------------------------------------------------------------
+  
   !> Generates the potential 'v_pcm' in real-space.
   subroutine pcm_pot_rs(v_pcm, q_pcm, tess, n_tess, mesh, width_factor)
     FLOAT,           intent(out) :: v_pcm(:)!< (1:mesh%np) running serially np=np_global
@@ -790,6 +775,8 @@ contains
     POP_SUB(pcm_pot_rs)
   end subroutine pcm_pot_rs
 
+  ! -----------------------------------------------------------------------------
+  
   !> Generates the PCM response matrix. J. Tomassi et al. Chem. Rev. 105, 2999 (2005). 
   subroutine pcm_matrix(eps, tess, n_tess, pcm_mat )
     FLOAT, intent(in)           :: eps
@@ -797,10 +784,8 @@ contains
     integer, intent(in)         :: n_tess
     FLOAT, intent(out)          :: pcm_mat(:,:) !< (1:n_tess, 1:n_tess)
 
-    integer :: i
-    integer :: info
+    integer :: i, info
     integer, allocatable :: iwork(:)
-
     FLOAT, allocatable :: mat_tmp(:,:)
 
     PUSH_SUB(pcm_matrix)
@@ -891,9 +876,11 @@ contains
 
   end subroutine pcm_matrix
 
+  ! -----------------------------------------------------------------------------
+  
   subroutine s_i_matrix(n_tess, tess)
-    integer, intent(in)         :: n_tess
-    type(tessera_t), intent(in) :: tess(:)
+    integer,         intent(in)    :: n_tess
+    type(tessera_t), intent(in)    :: tess(:)
 
     integer :: ii, jj
 
@@ -910,9 +897,11 @@ contains
 
   end subroutine s_i_matrix
 
+  ! -----------------------------------------------------------------------------
+
   subroutine d_i_matrix(n_tess, tess)
-    integer, intent(in)         :: n_tess
-    type(tessera_t), intent(in) :: tess(:)
+    integer,         intent(in)    :: n_tess
+    type(tessera_t), intent(in)    :: tess(:)
 
     integer :: ii, jj
 
@@ -927,6 +916,8 @@ contains
     end do
 
   end subroutine d_i_matrix
+
+  ! -----------------------------------------------------------------------------
 
   !> electrostatic Green function in vacuo:
   !! G_I(r,r^\prime) = 1 / | r - r^\prime |
@@ -964,6 +955,8 @@ contains
     end if
 
   end function s_mat_elem_I
+
+  ! -----------------------------------------------------------------------------
 
   !> Gradient of the Green function in vacuo GRAD[G_I(r,r^\prime)]
   FLOAT function d_mat_elem_I(tessi, tessj)
@@ -1005,6 +998,8 @@ contains
     end if
 
   end function d_mat_elem_I
+
+  ! -----------------------------------------------------------------------------
 
   !> It builds the solute cavity surface and calculates the vertices,
   !! representative points and areas of the tesserae by using the 
@@ -1148,8 +1143,8 @@ contains
         write(unit_pcminfo,'(A1)')  '#' 
         write(unit_pcminfo,'(A35)') '# Number of tesserae / sphere = 240' 
         write(unit_pcminfo,'(A1)')  '#' 
-      endif
-    endif
+      end if
+    end if
 
     !> geometrical data are converted to Angstrom and back transformed
     !! to Bohr at the end of the subroutine.
@@ -1198,8 +1193,8 @@ contains
         cv(ii,1) = sth*cos(fi)
         cv(ii,2) = sth*sin(fi)
         cv(ii,3) = cth
-      enddo
-    enddo
+      end do
+    end do
 
     !> Controls whether the tessera is covered or need to be reshaped it
     nn = 0
@@ -1237,8 +1232,8 @@ contains
               n1 = jvt1(2,its)
               n2 = jvt1(6,its)
               n3 = jvt1(5,its)
-            endif
-          endif
+            end if
+          end if
 
           pts(1,1) = cv(n1,1)*ren + xen
           pts(2,1) = cv(n1,3)*ren + yen
@@ -1267,8 +1262,8 @@ contains
           ast(tess_sphere*(its-1) + i_tes)     = area
           isfet(tess_sphere*(its-1) + i_tes)   = nsfe
 
-        enddo
-      enddo !> loop through the tesseare on the sphere 'nsfe'
+        end do
+      end do !> loop through the tesseare on the sphere 'nsfe'
 
       do its = 1, n_tess_sphere*tess_sphere
 
@@ -1278,7 +1273,7 @@ contains
         if (nn > mxts) then !> check the total number of tessera
           write(message(1),'(a,I5,a,I5)') "total number of tesserae", nn, ">",mxts
           call messages_warning(1)     
-        endif
+        end if
 
         if (i_count ==  1) then
           cts(nn)%point(1)  = xctst(its)
@@ -1287,10 +1282,10 @@ contains
           cts(nn)%normal(:) = nctst(:,its)
           cts(nn)%area      = ast(its)
           cts(nn)%r_sphere  = sfe(isfet(its))%r
-        endif
+        end if
 
-      enddo
-    enddo !> loop through the spheres
+      end do
+    end do !> loop through the spheres
 
     nts = nn
 
@@ -1348,14 +1343,14 @@ contains
             !> deleting tessera ja
             do ii = ja+1, nts
               cts(ii-1) = cts(ii)
-            enddo
+            end do
             nts = nts -1 
             band_iter = .false.
             exit loop_ia
 
-          enddo loop_ja
-        enddo loop_ia
-      enddo !> while loop
+          end do loop_ja
+        end do loop_ia
+      end do !> while loop
 
       !> Calculates the cavity volume: vol = \sum_{its=1}^nts A_{its} s*n/3.
       vol = M_ZERO
@@ -1363,7 +1358,7 @@ contains
         prod = dot_product( cts(its)%point, cts(its)%normal ) 
         vol  = vol + cts(its)%area * prod / M_THREE
         stot = stot + cts(its)%area
-      enddo
+      end do
 
       write(unit_pcminfo, '(A2)')  '# '
       write(unit_pcminfo, '(A29,I4)')    '# Total number of tesserae = ', nts
@@ -1377,7 +1372,7 @@ contains
       cts(:)%point(2) = cts(:)%point(2)*P_Ang
       cts(:)%point(3) = cts(:)%point(3)*P_Ang
       cts(:)%r_sphere = cts(:)%r_sphere*P_Ang
-    endif
+    end if
 
     sfe(:)%x=sfe(:)%x*P_Ang
     sfe(:)%y=sfe(:)%y*P_Ang
@@ -1387,6 +1382,10 @@ contains
     
     POP_SUB(cav_gen)
   end subroutine cav_gen
+
+  
+  ! -----------------------------------------------------------------------------
+
 
   !> find the uncovered region for each tessera and computes the area,
   !! the representative point (pp) and the unitary normal vector (pp1)
@@ -1454,7 +1453,7 @@ contains
       ccc(1,jj) = sfe(ns)%x
       ccc(2,jj) = sfe(ns)%y
       ccc(3,jj) = sfe(ns)%z
-    enddo
+    end do
 
     intsph = ns
     do nsfe1 = 1, nesf 
@@ -1463,7 +1462,7 @@ contains
         intscr(jj) = intsph(jj)
         pscr(:,jj) = pts(:,jj)
         cccp(:,jj) = ccc(:,jj)
-      enddo
+      end do
 
       icop = 0
       ind = 0
@@ -1476,8 +1475,8 @@ contains
         if (delr < sfe(nsfe1)%r) then
           ind(ii) = 1
           icop = icop + 1
-        endif
-      enddo
+        end if
+      end do
 
       if (icop == nv) return
 
@@ -1510,17 +1509,17 @@ contains
               ltyp(ll) = 3
               pointl(:,ll) = point
               exit
-            endif
+            end if
 
-          enddo
-        endif
-      enddo
+          end do
+        end if
+      end do
 
       icut = 0
       do ll = 1, nv
         if ( (ltyp(ll) == 1) .or. (ltyp(ll) == 2) ) icut = icut + 1
         if (ltyp(ll) == 3) icut = icut + 2
-      enddo
+      end do
       icut = icut / 2
       if (icut > 1) return
 
@@ -1558,7 +1557,7 @@ contains
 
           intsph(na) = nsfe1
           na = na + 1
-        endif
+        end if
 
         if (ltyp(ll) == 2) then
           p1 = pscr(:,iv1)
@@ -1570,7 +1569,7 @@ contains
           ccc(:,na) = cccp(:,iv1)
           intsph(na) = intscr(iv1)
           na = na + 1
-        endif
+        end if
 
         if (ltyp(ll) == 3) then
           pts(:,na) = pscr(:,iv1)
@@ -1607,27 +1606,29 @@ contains
           ccc(:,na) = cccp(:,iv1)
           intsph(na) = intscr(iv1)
           na = na + 1
-        endif
+        end if
 
         if (ltyp(ll) == 4) then
           pts(:,na) = pscr(:,iv1)
           ccc(:,na) = cccp(:,iv1)
           intsph(na) = intscr(iv1)
           na = na + 1
-        endif
-      enddo
+        end if
+      end do
 
       nv = na - 1
       if (nv > 10) then
         message(1) = "Too many vertices on the tessera"
         call messages_fatal(1)     
-      endif
-    enddo
+      end if
+    end do
 
     call gaubon( sfe, nv, ns, pts, ccc, pp, pp1, area, intsph)
     
     POP_SUB(subtessera)
   end subroutine subtessera
+  
+  ! -----------------------------------------------------------------------------
 
   !    !> Finds the point 'p4', on the arc 'p1'-'p2' developed from 'p3',
   !    !! which is on the surface of sphere 'ns'. p4 is a linear combination 
@@ -1638,7 +1639,6 @@ contains
     FLOAT, intent(in)          :: p2(:)  !< (1:pcm_dim_space)
     FLOAT, intent(in)          :: p3(:)  !< (1:pcm_dim_space)
     FLOAT, intent(out)         :: p4(:)  !< (1:pcm_dim_space)
-
     integer, intent(in) :: ns
     integer, intent(in) :: ia
 
@@ -1651,7 +1651,6 @@ contains
     FLOAT  :: dnorm
     FLOAT  :: diff
     FLOAT  :: diff_vec(1:pcm_dim_space)
-
     logical :: band_iter
 
     diff_vec = M_ZERO
@@ -1668,7 +1667,7 @@ contains
       if (m_iter > 1000) then
         message(1) = "Too many iterations inside subrotuine inter"
         call messages_fatal(1)     
-      endif
+      end if
 
       band_iter = .true.
 
@@ -1688,18 +1687,19 @@ contains
         if (diff < M_ZERO) delta = -M_ONE/(M_TWO**(m_iter+1))
         m_iter = m_iter + 1
         band_iter = .false.
-      endif
+      end if
 
       if (ia == 1) then
         if (diff > M_ZERO) delta = -M_ONE/(M_TWO**(m_iter+1))
         if (diff < M_ZERO) delta =  M_ONE/(M_TWO**(m_iter+1))
         m_iter = m_iter + 1
         band_iter = .false.
-      endif
-    enddo
-
+      end if
+    end do
     
   end subroutine inter
+
+  ! -----------------------------------------------------------------------------
 
   !> Use the Gauss-Bonnet theorem to calculate the area of the 
   !! tessera with vertices 'pts(3,nv)'. 
@@ -1718,31 +1718,12 @@ contains
     integer, intent(in)        :: nv
     integer, intent(in)        :: ns
 
-    FLOAT :: p1(1:pcm_dim_space)
-    FLOAT :: p2(1:pcm_dim_space)
-    FLOAT :: p3(1:pcm_dim_space)
-    FLOAT :: u1(1:pcm_dim_space)
-    FLOAT :: u2(1:pcm_dim_space)
-    FLOAT :: point_1(1:pcm_dim_space)
-    FLOAT :: point_2(1:pcm_dim_space)
-
-    FLOAT :: tpi
-    FLOAT :: sum1
-    FLOAT :: dnorm
-    FLOAT :: dnorm1
-    FLOAT :: dnorm2
-    FLOAT :: cosphin
-    FLOAT :: phin
-    FLOAT :: costn
-    FLOAT :: sum2
-    FLOAT :: betan
-
-    integer :: nsfe1
-    integer :: ia
-    integer :: nn
-    integer :: n0
-    integer :: n1
-    integer :: n2
+    FLOAT :: p1(1:pcm_dim_space), p2(1:pcm_dim_space), p3(1:pcm_dim_space)
+    FLOAT :: u1(1:pcm_dim_space), u2(1:pcm_dim_space)
+    FLOAT :: point_1(1:pcm_dim_space), point_2(1:pcm_dim_space)
+    FLOAT :: tpi, sum1, dnorm, dnorm1, dnorm2
+    FLOAT :: cosphin, phin, costn, sum2, betan
+    integer :: nsfe1, ia, nn, n0, n1, n2
 
     PUSH_SUB(gaubon)
 
@@ -1762,7 +1743,7 @@ contains
         point_2 = pts(:,nn+1) - ccc(:,nn)
       else
         point_2 = pts(:,1) - ccc(:,nn)
-      endif
+      end if
 
       dnorm1 = sqrt( dot_product(point_1, point_1) )
       dnorm2 = sqrt( dot_product(point_2, point_2) )
@@ -1790,7 +1771,7 @@ contains
 
       costn  = dot_product(point_1, point_2)/(dnorm1*dnorm2)
       sum1 = sum1 + phin * costn
-    enddo
+    end do
 
     sum2 = M_ZERO
     !> Loop over the vertices
@@ -1823,7 +1804,7 @@ contains
 
       betan = acos( dot_product(u1, u2) )
       sum2 = sum2 + (M_Pi - betan)
-    enddo
+    end do
 
     !> computes the area of the tessera
     area = sfe(ns)%r*sfe(ns)%r*(tpi + sum1 - sum2)
@@ -1835,7 +1816,7 @@ contains
       pp(1) = pp(1) + ( pts(1,ia) - sfe(ns)%x )
       pp(2) = pp(2) + ( pts(2,ia) - sfe(ns)%y )
       pp(3) = pp(3) + ( pts(3,ia) - sfe(ns)%z )
-    enddo
+    end do
 
     dnorm = M_ZERO
     dnorm = sqrt( dot_product(pp,pp) )
@@ -1855,6 +1836,8 @@ contains
     
     POP_SUB(gaubon)
   end subroutine gaubon
+
+  ! -----------------------------------------------------------------------------
 
   !> calculates the vectorial product p3 = p1 x p2
   subroutine vecp(p1, p2, p3, dnorm)

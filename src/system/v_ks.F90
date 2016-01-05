@@ -1209,7 +1209,7 @@ contains
     !> PCM reaction field due to the electronic density
     if (hm%pcm%run_pcm) then
     !> Generates the real-space PCM potential due to electrons during the SCF calculation.
-        call v_electrons_cav_li(hm%pcm%v_e, pot, hm%pcm)
+        call pcm_v_electrons_cav_li(hm%pcm%v_e, pot, hm%pcm)
         call pcm_charges(hm%pcm%q_e, hm%pcm%qtot_e, hm%pcm%v_e, hm%pcm%matrix, hm%pcm%n_tesserae) 
         call pcm_pot_rs( hm%pcm%v_e_rs, hm%pcm%q_e, hm%pcm%tess, hm%pcm%n_tesserae, ks%gr%mesh, hm%pcm%gaussian_width )
 
