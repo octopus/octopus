@@ -37,6 +37,7 @@ module debug_m
     logical :: trace
     logical :: trace_term
     logical :: trace_file
+    logical :: extra_checks
     integer :: bits    
   end type debug_t
 
@@ -67,15 +68,14 @@ contains
     !% The trace is written to files in the <tt>debug</tt>
     !% directory. For each node (when running in parallel) there is a file called
     !% <tt>debug_trace.&lt;rank&gt;</tt>. Writing these files slows down the code by a huge factor and
-    !% it is usually only necessary for parallel runs. In the serial case all
-    !% the information can be obtained from standard out.
+    !% it is usually only necessary for parallel runs.
+    !%Option extra_checks 16
+    !% This enables Octopus to perform some extra checks, to ensure
+    !% code correctness, that might be too costly for regular runs.
     !%End
     call parse_variable('Debug', OPTION__DEBUG__NO, this%bits)
 
-    this%info       = (iand(this%bits, OPTION__DEBUG__INFO) /= 0)
-    this%trace_term = (iand(this%bits, OPTION__DEBUG__TRACE_TERM) /= 0)
-    this%trace_file = (iand(this%bits, OPTION__DEBUG__TRACE_FILE) /= 0)
-    this%trace      = (iand(this%bits, OPTION__DEBUG__TRACE)      /= 0) .or. this%trace_term .or. this%trace_file
+    call from_bits(this)
     
   end subroutine debug_init
 
@@ -103,12 +103,22 @@ contains
   subroutine debug_disable(this)
     type(debug_t), intent(inout) :: this
     
-    this%info       = (iand(this%bits, OPTION__DEBUG__INFO) /= 0)
-    this%trace_term = (iand(this%bits, OPTION__DEBUG__TRACE_TERM) /= 0)
-    this%trace_file = (iand(this%bits, OPTION__DEBUG__TRACE_FILE) /= 0)
-    this%trace      = (iand(this%bits, OPTION__DEBUG__TRACE)      /= 0) .or. this%trace_term .or. this%trace_file
+    call from_bits(this)
     
   end subroutine debug_disable
+
+  !--------------------------------------------------
+
+  subroutine from_bits(this)
+    type(debug_t), intent(inout) :: this
+    
+    this%info         = (iand(this%bits, OPTION__DEBUG__INFO)         /= 0)
+    this%trace_term   = (iand(this%bits, OPTION__DEBUG__TRACE_TERM)   /= 0)
+    this%trace_file   = (iand(this%bits, OPTION__DEBUG__TRACE_FILE)   /= 0)
+    this%trace        = (iand(this%bits, OPTION__DEBUG__TRACE)        /= 0) .or. this%trace_term .or. this%trace_file
+    this%extra_checks = (iand(this%bits, OPTION__DEBUG__EXTRA_CHECKS) /= 0) .or. this%trace_term .or. this%trace_file
+
+  end subroutine from_bits
   
 end module debug_m
 
