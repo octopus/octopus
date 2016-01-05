@@ -28,9 +28,9 @@ module debug_m
   public ::             &
     debug_t,            &
     debug_init,         &
+    debug_end,          &
     debug_enable,       &
-    debug_disable,      &
-    debug
+    debug_disable
 
   type debug_t
     logical :: info
@@ -40,11 +40,10 @@ module debug_m
     integer :: bits    
   end type debug_t
 
-  type(debug_t), save :: debug
-  
 contains
   
-  subroutine debug_init()
+  subroutine debug_init(this)
+    type(debug_t), intent(out) :: this
 
     !%Variable Debug
     !%Type flag
@@ -71,41 +70,49 @@ contains
     !% it is usually only necessary for parallel runs. In the serial case all
     !% the information can be obtained from standard out.
     !%End
-    call parse_variable('Debug', OPTION__DEBUG__NO, debug%bits)
+    call parse_variable('Debug', OPTION__DEBUG__NO, this%bits)
 
-    debug%info = (iand(debug%bits, OPTION__DEBUG__INFO) /= 0)
-    in_debug_mode = debug%info
+    this%info = (iand(this%bits, OPTION__DEBUG__INFO) /= 0)
+    in_debug_mode = this%info
 
-    debug%trace_term = (iand(debug%bits, OPTION__DEBUG__TRACE_TERM) /= 0)
-    debug%trace_file = (iand(debug%bits, OPTION__DEBUG__TRACE_FILE) /= 0)
-    debug%trace      = (iand(debug%bits, OPTION__DEBUG__TRACE)      /= 0) .or. debug%trace_term .or. debug%trace_file
+    this%trace_term = (iand(this%bits, OPTION__DEBUG__TRACE_TERM) /= 0)
+    this%trace_file = (iand(this%bits, OPTION__DEBUG__TRACE_FILE) /= 0)
+    this%trace      = (iand(this%bits, OPTION__DEBUG__TRACE)      /= 0) .or. this%trace_term .or. this%trace_file
     
   end subroutine debug_init
 
   !--------------------------------------------------
-  
-  subroutine debug_enable()
 
-    debug%info       = .true.
-    debug%trace      = .true.
-    debug%trace_term = .true.
-    debug%trace_file = .true.
+  subroutine debug_end(this)
+    type(debug_t), intent(inout) :: this
+
+  end subroutine debug_end
+
+  !--------------------------------------------------
+  
+  subroutine debug_enable(this)
+    type(debug_t), intent(inout) :: this
+    
+    this%info       = .true.
+    this%trace      = .true.
+    this%trace_term = .true.
+    this%trace_file = .true.
     
   end subroutine debug_enable
 
   !--------------------------------------------------
   
-  subroutine debug_disable()
+  subroutine debug_disable(this)
+    type(debug_t), intent(inout) :: this
+    
+    this%info = (iand(this%bits, OPTION__DEBUG__INFO) /= 0)
+    in_debug_mode = this%info
 
-    debug%info = (iand(debug%bits, OPTION__DEBUG__INFO) /= 0)
-    in_debug_mode = debug%info
-
-    debug%trace_term = (iand(debug%bits, OPTION__DEBUG__TRACE_TERM) /= 0)
-    debug%trace_file = (iand(debug%bits, OPTION__DEBUG__TRACE_FILE) /= 0)
-    debug%trace      = (iand(debug%bits, OPTION__DEBUG__TRACE)      /= 0) .or. debug%trace_term .or. debug%trace_file
+    this%trace_term = (iand(this%bits, OPTION__DEBUG__TRACE_TERM) /= 0)
+    this%trace_file = (iand(this%bits, OPTION__DEBUG__TRACE_FILE) /= 0)
+    this%trace      = (iand(this%bits, OPTION__DEBUG__TRACE)      /= 0) .or. this%trace_term .or. this%trace_file
     
   end subroutine debug_disable
-    
   
 end module debug_m
 

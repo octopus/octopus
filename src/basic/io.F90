@@ -558,7 +558,7 @@ contains
     ! only root node performs the check
     if(mpi_grp_is_root(mpi_world)) then
       if(io_file_exists('enable_debug_mode', msg='Enabling DebugMode')) then
-        call debug_enable()
+        call debug_enable(debug)
         ! this call does not hurt if the directory is already there
         ! but is otherwise required
         call io_mkdir('debug')
@@ -575,7 +575,7 @@ contains
       end if
 
       if(io_file_exists('disable_debug_mode', msg='Disabling DebugMode')) then
-        call debug_disable()
+        call debug_disable(debug)
         ! we have been notified by the user, so we can cleanup the file
         call loct_rm('disable_debug_mode')
       end if

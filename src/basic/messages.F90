@@ -112,6 +112,8 @@ module messages_m
   integer :: experimentals
   integer :: current_line
 
+  type(debug_t), save :: debug
+  
 contains
 
   ! ---------------------------------------------------------
@@ -136,7 +138,7 @@ contains
     
     call messages_obsolete_variable('DebugLevel', 'Debug')
 
-    call debug_init()
+    call debug_init(debug)
     
     warnings = 0
     experimentals = 0
@@ -207,6 +209,7 @@ contains
     end if
 
     call parser_end()
+    call debug_end(debug)
   
   end subroutine messages_end
 
