@@ -1086,7 +1086,7 @@ contains
 
     logical :: band_iter
 
-    PUSH_SUB(gen_cav)
+    PUSH_SUB(cav_gen)
 
     !> Angles corresponding to the vertices and centres of a polyhedron
     !! within a sphere of unitary radius and centered at the origin
@@ -1384,7 +1384,7 @@ contains
     sfe(:)%z=sfe(:)%z*P_Ang
     sfe(:)%r=sfe(:)%r*P_Ang
 
-    return
+    
     POP_SUB(cav_gen)
   end subroutine cav_gen
 
@@ -1625,7 +1625,7 @@ contains
     enddo
 
     call gaubon( sfe, nv, ns, pts, ccc, pp, pp1, area, intsph)
-    return
+    
     POP_SUB(subtessera)
   end subroutine subtessera
 
@@ -1698,7 +1698,7 @@ contains
       endif
     enddo
 
-    return
+    
   end subroutine inter
 
   !> Use the Gauss-Bonnet theorem to calculate the area of the 
@@ -1852,7 +1852,7 @@ contains
     !> If the area of the tessera is negative (0^-), due to numerical errors, is discarded
     if (area < M_ZERO) area = M_ZERO
 
-    return
+    
     POP_SUB(gaubon)
   end subroutine gaubon
 
@@ -1870,7 +1870,7 @@ contains
 
     dnorm = M_ZERO
     dnorm = sqrt( dot_product(p3, p3) )
-    return
+    
   end subroutine vecp
 
   subroutine pcm_end(pcm)
