@@ -63,7 +63,8 @@ module messages_m
     messages_new_line,          &
     messages_write,             &
     messages_clean_path,        &
-    messages_dump_stack
+    messages_dump_stack,        &
+    debug
 
   integer, parameter :: max_lines = 20
   character(len=256), dimension(max_lines), public :: message    !< to be output by fatal, warning

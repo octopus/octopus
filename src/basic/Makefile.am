@@ -117,7 +117,7 @@ string.o : string.F90 loct.o
 loct.o : loct.F90
 loct_pointer.o : loct_pointer.F90 loct_pointer_inc.F90 global.o messages.o profiling.o
 global.o : global.F90 mpi.o loct.o hardware.o varinfo.o Makefile
-debug.o : debug.F90 global.o 
+debug.o : debug.F90 global.o parser.o
 unit.o : unit.F90 global.o
 parser.o : parser.F90 mpi.o loct.o global.o unit.o varinfo.F90
 messages.o : messages.F90 varinfo.o string.o mpi.o parser.o loct.o global.o unit.o debug.o
