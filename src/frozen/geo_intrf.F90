@@ -200,7 +200,7 @@ contains
     type(geo_intrf_t), intent(out) :: this
     type(geo_intrf_t), intent(in)  :: that
 
-    PUSH_SUB(geo_intrf_init_type)
+    PUSH_SUB(geo_intrf_init_copy)
     
     ASSERT(associated(that%config))
     ASSERT(associated(that%space))

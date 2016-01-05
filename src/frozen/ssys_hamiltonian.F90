@@ -39,7 +39,7 @@ contains
     nullify(subs)
     call base_hamiltonian__update__(this)
 
-    POP_SUB(ssys_hamiltonian_update)
+    POP_SUB(ssys_hamiltonian_acc)
   end subroutine ssys_hamiltonian_acc
 
 end module ssys_hamiltonian_m

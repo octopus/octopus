@@ -39,7 +39,7 @@ contains
     nullify(subs)
     call base_model__update__(this)
 
-    POP_SUB(ssys_model_update)
+    POP_SUB(ssys_model_acc)
   end subroutine ssys_model_acc
 
 end module ssys_model_m

@@ -652,7 +652,7 @@ contains
 
     type(base_states_t), pointer :: st
 
-    PUSH_SUB(base_potential_get_)
+    PUSH_SUB(base_potential_get_density)
 
     nullify(that)
     if(associated(this%sys))then
@@ -660,7 +660,7 @@ contains
       if(associated(st)) call base_states_get(st, that)
     end if
 
-    POP_SUB(base_potential_get_)
+    POP_SUB(base_potential_get_density)
   end subroutine base_potential_get_density
 
   ! ---------------------------------------------------------

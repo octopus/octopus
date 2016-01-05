@@ -102,11 +102,11 @@ contains
     type(json_object_t), intent(inout) :: this
     logical,   optional, intent(in)    :: allocate
 
-    PUSH_SUB(fio_config_parse_external)
+    PUSH_SUB(fio_config_parse_storage)
 
     if(present(allocate)) call json_set(this, "allocate", allocate)
 
-    POP_SUB(fio_config_parse_external)
+    POP_SUB(fio_config_parse_storage)
   end subroutine fio_config_parse_storage
 
   ! ---------------------------------------------------------

@@ -371,7 +371,7 @@ contains
     character(len=CONFIG_DICT_NAME_LEN) :: name
     integer                             :: ierr
 
-    PUSH_SUB(base_term_init_sets)
+    PUSH_SUB(base_term_sets)
 
     ASSERT(associated(this%config))
     call json_get(config, "name", name, ierr)
@@ -379,7 +379,7 @@ contains
     call config_dict_set(this%dict, trim(adjustl(name)), config)
     call base_term_hash_set(this%hash, config, that)
 
-    POP_SUB(base_term_init_sets)
+    POP_SUB(base_term_sets)
   end subroutine base_term_sets
 
   ! ---------------------------------------------------------

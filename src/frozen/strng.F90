@@ -190,7 +190,7 @@ contains
     real(kind=wp) :: tmp
     integer       :: pwr
 
-    PUSH_SUB(strng_init_size)
+    PUSH_SUB(strng_allocate)
 
     call strng_nullify(this)
     this%size = STRNG_INIT_LEN
@@ -204,7 +204,7 @@ contains
     end if
     SAFE_ALLOCATE(this%value(this%size))
 
-    POP_SUB(strng_init_size)
+    POP_SUB(strng_allocate)
   end subroutine strng_allocate
 
   ! ---------------------------------------------------------

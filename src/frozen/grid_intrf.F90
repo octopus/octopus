@@ -235,7 +235,7 @@ contains
     type(grid_intrf_t), intent(out) :: this
     type(grid_intrf_t), intent(in)  :: that
 
-    PUSH_SUB(grid_intrf_init_type)
+    PUSH_SUB(grid_intrf_init_copy)
     
     ASSERT(associated(that%config))
     ASSERT(associated(that%space))

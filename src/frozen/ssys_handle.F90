@@ -158,11 +158,11 @@ contains
     type(base_handle_t), intent(inout) :: this
     type(base_handle_t), intent(in)    :: that
 
-    PUSH_SUB(ssys_handle_copy_type)
+    PUSH_SUB(ssys_handle_copy)
 
     call base_handle_copy(this, that)
 
-    POP_SUB(ssys_handle_copy_type)
+    POP_SUB(ssys_handle_copy)
   end subroutine ssys_handle_copy
 
   ! ---------------------------------------------------------

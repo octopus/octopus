@@ -84,7 +84,7 @@ contains
   subroutine live_handle_stop(this)
     type(base_handle_t), intent(inout) :: this
 
-    PUSH_SUB(live_handle_start)
+    PUSH_SUB(live_handle_stop)
 
     call base_handle__stop__(this)
 
