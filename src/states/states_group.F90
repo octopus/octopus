@@ -82,34 +82,36 @@ contains
 
     call states_group_null(group_out)
 
-    qn_start = lbound(group_in%psib, dim = 2)
-    qn_end   = ubound(group_in%psib, dim = 2)
-
     
     group_out%nblocks           = group_in%nblocks
     group_out%block_start       = group_in%block_start
     group_out%block_end         = group_in%block_end
     group_out%block_initialized = group_in%block_initialized
 
-    SAFE_ALLOCATE(group_out%psib(1:group_out%nblocks, qn_start:qn_end))
+    if(group_out%block_initialized) then
 
-    if(associated(group_in%psib)) then
-      
+      ASSERT(associated(group_in%psib))
+
+      qn_start = lbound(group_in%psib, dim = 2)
+      qn_end   = ubound(group_in%psib, dim = 2)
+
+      SAFE_ALLOCATE(group_out%psib(1:group_out%nblocks, qn_start:qn_end))
+
       do iqn = qn_start, qn_end
         do ib = group_out%block_start, group_out%block_end
           call batch_copy(group_in%psib(ib, iqn), group_out%psib(ib, iqn), copy_data = .true.)
         end do
       end do
-
+      
+      call loct_pointer_copy(group_out%iblock, group_in%iblock)
+      call loct_pointer_copy(group_out%block_range, group_in%block_range)
+      call loct_pointer_copy(group_out%block_size, group_in%block_size)
+      call loct_pointer_copy(group_out%block_is_local, group_in%block_is_local)
+      call loct_allocatable_copy(group_out%block_node, group_in%block_node)
+      call loct_allocatable_copy(group_out%rma_win, group_in%rma_win)
+    
     end if
 
-    call loct_pointer_copy(group_out%iblock, group_in%iblock)
-    call loct_pointer_copy(group_out%block_range, group_in%block_range)
-    call loct_pointer_copy(group_out%block_size, group_in%block_size)
-    call loct_pointer_copy(group_out%block_is_local, group_in%block_is_local)
-    call loct_allocatable_copy(group_out%block_node, group_in%block_node)
-    call loct_allocatable_copy(group_out%rma_win, group_in%rma_win)
-    
     POP_SUB(states_group_copy)
   end subroutine states_group_copy
   
