@@ -543,7 +543,8 @@ contains
     type(tessera_t),     intent(in)    :: tess(:)    !< (1:n_tess)
     integer,             intent(in)    :: n_tess
 
-    FLOAT   :: diff(1:pcm_dim_space), dist, z_ia, ik, ia
+    FLOAT   :: diff(1:pcm_dim_space), dist, z_ia
+    integer :: ik, ia
     type(species_t), pointer :: spci 
 
     PUSH_SUB(pcm_v_nuclei_cav)
