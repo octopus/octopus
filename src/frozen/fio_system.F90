@@ -26,14 +26,19 @@ contains
     type(base_system_t), intent(inout) :: this
 
     type(base_geometry_t), pointer :: geom
+    type(base_states_t),   pointer :: stat
 
     PUSH_SUB(fio_system__init__)
 
-    nullify(geom)
+    nullify(geom, stat)
     call base_system_get(this, geom)
     ASSERT(associated(geom))
     call fio_geometry__init__(geom)
     nullify(geom)
+    call base_system_get(this, stat)
+    ASSERT(associated(stat))
+    call fio_states__init__(stat)
+    nullify(stat)
 
     POP_SUB(fio_system__init__)
   end subroutine fio_system__init__

@@ -55,7 +55,7 @@ contains
     SAFE_ALLOCATE(x(space%dim))
     do indx = 1, np
       call basis_to_internal(basis, mesh%x(indx,1:space%dim), x)
-      call fio_external_eval(intrpl, x, pot)
+      call fio_external_intrpl_eval(intrpl, x, pot)
       potn(indx) = potn(indx) + pot
     end do
     SAFE_DEALLOCATE_A(x)
@@ -84,9 +84,9 @@ contains
     ASSERT(associated(cnfg))
     call json_get(config, "type", type, ierr)
     if(ierr==JSON_OK)then
-      call fio_external_init(intrp, that, type)
+      call fio_external_intrpl_init(intrp, that, type)
     else
-      call fio_external_init(intrp, that)
+      call fio_external_intrpl_init(intrp, that)
     end if
     call json_get(config, "positions", list, ierr)
     ASSERT(ierr==JSON_OK)
@@ -99,7 +99,7 @@ contains
     end do
     call json_end(iter)
     nullify(cnfg, list)
-    call fio_external_end(intrp)
+    call fio_external_intrpl_end(intrp)
 
     POP_SUB(frozen_external__acc__)
   end subroutine frozen_external__acc__

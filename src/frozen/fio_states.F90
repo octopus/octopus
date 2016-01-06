@@ -14,10 +14,28 @@ module fio_states_m
   private
 
   public ::             &
+    fio_states__init__, &
     fio_states__load__
 
 contains
 
+  ! ---------------------------------------------------------
+  subroutine fio_states__init__(this)
+    type(base_states_t), intent(inout) :: this
+
+    type(base_density_t), pointer :: dnst
+
+    PUSH_SUB(fio_states__init__)
+
+    nullify(dnst)
+    call base_states_get(this, dnst)
+    ASSERT(associated(dnst))
+    call fio_density__init__(dnst)
+    nullify(dnst)
+
+    POP_SUB(fio_states__init__)
+  end subroutine fio_states__init__
+    
   ! ---------------------------------------------------------
   subroutine fio_states__load__(this)
     type(base_states_t), intent(inout) :: this

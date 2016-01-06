@@ -482,7 +482,7 @@ contains
     ASSERT(associated(this%sim))
     call base_functional__reset__(this)
     call base_functional_get(this, use=fuse)
-    if(fuse)then
+    if(fuse.and.(abs(this%factor)>epsilon(this%factor)))then
       call functional_calc(this%funct, this%energy, this%data)
       if(abs(this%factor-1.0_wp)>epsilon(this%factor))then
         this%energy = this%factor * this%energy

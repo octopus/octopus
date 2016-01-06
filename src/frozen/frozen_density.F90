@@ -80,7 +80,7 @@ contains
     call base_density_get(this, dnst)
     ASSERT(associated(dnst))
     SAFE_ALLOCATE(x(space%dim))
-    call fio_density_get(intrpl, dim=nspin)
+    call fio_density_intrpl_get(intrpl, dim=nspin)
     ASSERT(nspin>0)
     ASSERT(nspin<3)
     SAFE_ALLOCATE(irho(nspin))
@@ -90,7 +90,7 @@ contains
     SAFE_ALLOCATE(orho(nspin))
     do indx = 1, np
       call basis_to_internal(basis, mesh%x(indx,1:space%dim), x)
-      call fio_density_eval(intrpl, x, irho)
+      call fio_density_intrpl_eval(intrpl, x, irho)
       call frozen_density_adjust_spin(orho, irho)
       do jndx = 1, nspin
         dnst(indx,jndx) = dnst(indx,jndx) + orho(jndx)
@@ -126,9 +126,9 @@ contains
       call frozen_density__acc__charge(this, that)
       call json_get(config, "type", type, ierr)
       if(ierr==JSON_OK)then
-        call fio_density_init(intrp, that, type)
+        call fio_density_intrpl_init(intrp, that, type)
       else
-        call fio_density_init(intrp, that)
+        call fio_density_intrpl_init(intrp, that)
       end if
       call json_get(config, "positions", list, ierr)
       ASSERT(ierr==JSON_OK)
@@ -142,7 +142,7 @@ contains
       end do
       call json_end(iter)
       nullify(cnfg, list)
-      call fio_density_end(intrp)
+      call fio_density_intrpl_end(intrp)
       call base_density__update__(this)
     end if
 

@@ -1,10 +1,5 @@
 #include "global.h"
 
-#define EXTERNAL_LEVEL base
-#define TEMPLATE_LEVEL fio
-#define EXTERNAL_NAME potential
-#define TEMPLATE_NAME external
-
 module fio_external_m
 
   use atom_m
@@ -12,6 +7,7 @@ module fio_external_m
   use base_potential_m
   use base_system_m
   use global_m
+  use intrpl_m
   use io_function_m
   use json_m
   use kinds_m
@@ -21,10 +17,7 @@ module fio_external_m
   use profiling_m
   use simulation_m
   use species_m
-
-#define INCLUDE_PREFIX
-#include "intrpl_inc.F90"
-#undef INCLUDE_PREFIX
+  use storage_m
 
   implicit none
 
@@ -33,56 +26,28 @@ module fio_external_m
   public ::               &
     fio_external__load__
 
-  public ::            &
-    fio_external_init, &
-    fio_external_eval, &
-    fio_external_get,  &
-    fio_external_copy, &
-    fio_external_end
+  public ::                &
+    fio_external_intrpl_t
 
-#define INCLUDE_HEADER
-#include "intrpl_inc.F90"
-#undef INCLUDE_HEADER
+  public ::                   &
+    fio_external_intrpl_init, &
+    fio_external_intrpl_eval, &
+    fio_external_intrpl_get,  &
+    fio_external_intrpl_copy, &
+    fio_external_intrpl_end
 
-  interface fio_external_init
-    module procedure fio_external_init_type
-    module procedure fio_external_init_copy
-  end interface fio_external_init
+  type :: fio_external_intrpl_t
+    private
+    type(base_potential_t), pointer :: self =>null()
+    type(intrpl_t)                  :: intrp
+  end type fio_external_intrpl_t
 
-  interface fio_external_copy
-    module procedure fio_external_copy_type
-  end interface fio_external_copy
-
-  interface fio_external_end
-    module procedure fio_external_end_type
-  end interface fio_external_end
+  interface fio_external_intrpl_get
+    module procedure fio_external_intrpl_get_info
+    module procedure fio_external_intrpl_get_type
+  end interface fio_external_intrpl_get
 
 contains
-
-  ! ---------------------------------------------------------
-  subroutine fio_external_init_type(this, sys, config)
-    type(base_potential_t), intent(out) :: this
-    type(base_system_t),    intent(out) :: sys
-    type(json_object_t),    intent(in)  :: config
-
-    PUSH_SUB(fio_external_init_type)
-
-    call base_potential__init__(this, sys, config)
-
-    POP_SUB(fio_external_init_type)
-  end subroutine fio_external_init_type
-
-  ! ---------------------------------------------------------
-  subroutine fio_external_init_copy(this, that)
-    type(base_potential_t), intent(out) :: this
-    type(base_potential_t), intent(in)  :: that
-
-    PUSH_SUB(fio_external_init_copy)
-
-    call base_potential__init__(this, that)
-
-    POP_SUB(fio_external_init_copy)
-  end subroutine fio_external_init_copy
 
   ! ---------------------------------------------------------
   subroutine fio_external__read__(this, dir, file)
@@ -110,7 +75,7 @@ contains
     call dio_function_input(fpth, mesh, potn, ierr)
     nullify(potn, mesh)
     if(ierr/=0)then
-      call fio_external_end(this)
+      call base_potential_end(this)
       message(1) = "Could not read the input file: '"//trim(adjustl(file))//".obf'"
       message(2) = "in the directory: '"//trim(adjustl(dir))//"'"
       write(unit=message(3), fmt="(a,i3)") "I/O Error: ", ierr
@@ -149,27 +114,24 @@ contains
   end subroutine fio_external__load__
 
   ! ---------------------------------------------------------
-  subroutine fio_external_copy_type(this, that)
-    type(base_potential_t), intent(inout) :: this
-    type(base_potential_t), intent(in)    :: that
+  subroutine fio_external_intrpl_init(this, that, type)
+    type(fio_external_intrpl_t),    intent(out) :: this
+    type(base_potential_t), target, intent(in)  :: that
+    integer,              optional, intent(in)  :: type
 
-    PUSH_SUB(fio_external_copy_type)
+    type(storage_t), pointer :: data
 
-    call base_potential__copy__(this, that)
+    PUSH_SUB(fio_external_intrpl_init)
 
-    POP_SUB(fio_external_copy_type)
-  end subroutine fio_external_copy_type
+    nullify(data)
+    this%self => that
+    call base_potential_get(that, data)
+    ASSERT(associated(data))
+    call intrpl_init(this%intrp, data, type=type)
+    nullify(data)
 
-  ! ---------------------------------------------------------
-  subroutine fio_external_end_type(this)
-    type(base_potential_t), intent(inout) :: this
-
-    PUSH_SUB(fio_external_end_type)
-
-    call base_potential__end__(this)
-
-    POP_SUB(fio_external_end_type)
-  end subroutine fio_external_end_type
+    POP_SUB(fio_external_intrpl_init)
+  end subroutine fio_external_intrpl_init
 
   ! ---------------------------------------------------------
   pure function fio_external_calc(x, y, c) result(v)
@@ -232,32 +194,78 @@ contains
   end subroutine fio_external_classical
 
   ! ---------------------------------------------------------
-  subroutine fio_external_eval(this, x, v)
+  subroutine fio_external_intrpl_eval(this, x, val)
     type(fio_external_intrpl_t), intent(in)  :: this
     real(kind=wp), dimension(:), intent(in)  :: x
-    real(kind=wp),               intent(out) :: v
-
+    real(kind=wp),               intent(out) :: val
 
     integer :: ierr
 
-    PUSH_SUB(fio_external_eval)
+    PUSH_SUB(fio_external_intrpl_eval)
 
-    call fio_external_intrpl__eval__(this, x, v, ierr)
-    if(ierr/=FIO_EXTERNAL_INTRPL_OK) call fio_external_classical(this%self, x, v)
+    ierr = INTRPL_NI
+    if(associated(this%self)) call intrpl_eval(this%intrp, x, val, ierr)
+    if(ierr/=INTRPL_OK) call fio_external_classical(this%self, x, val)
 
-    POP_SUB(fio_external_eval)
-  end subroutine fio_external_eval
+    POP_SUB(fio_external_intrpl_eval)
+  end subroutine fio_external_intrpl_eval
 
-#define INCLUDE_BODY
-#include "intrpl_inc.F90"
-#undef INCLUDE_BODY
+  ! ---------------------------------------------------------
+  subroutine fio_external_intrpl_get_info(this, type, dim, default)
+    type(fio_external_intrpl_t), intent(in)  :: this
+    integer,           optional, intent(out) :: type
+    integer,           optional, intent(out) :: dim
+    real(kind=wp),     optional, intent(out) :: default
+
+    PUSH_SUB(fio_external_intrpl_get_info)
+
+    call intrpl_get(this%intrp, type, dim, default)
+
+    POP_SUB(fio_external_intrpl_get_info)
+  end subroutine fio_external_intrpl_get_info
+
+  ! ---------------------------------------------------------
+  subroutine fio_external_intrpl_get_type(this, that)
+    type(fio_external_intrpl_t), intent(in) :: this
+    type(base_potential_t),     pointer     :: that
+
+    PUSH_SUB(fio_external_intrpl_get_type)
+
+    nullify(that)
+    if(associated(this%self)) that => this%self
+
+    POP_SUB(fio_external_intrpl_get_type)
+  end subroutine fio_external_intrpl_get_type
+
+  ! ---------------------------------------------------------
+  subroutine fio_external_intrpl_copy(this, that)
+    type(fio_external_intrpl_t), intent(out) :: this
+    type(fio_external_intrpl_t), intent(in)  :: that
+
+    PUSH_SUB(fio_external_intrpl_copy)
+
+    call fio_external_intrpl_end(this)
+    if(associated(that%self))then
+      this%self => that%self
+      call intrpl_copy(this%intrp, that%intrp)
+    end if
+
+    POP_SUB(fio_external_intrpl_copy)
+  end subroutine fio_external_intrpl_copy
+
+  ! ---------------------------------------------------------
+  subroutine fio_external_intrpl_end(this)
+    type(fio_external_intrpl_t), intent(inout) :: this
+
+    PUSH_SUB(fio_external_intrpl_end)
+
+    if(associated(this%self)) call intrpl_end(this%intrp)
+    nullify(this%self)
+
+    POP_SUB(fio_external_intrpl_end)
+  end subroutine fio_external_intrpl_end
 
 end module fio_external_m
-
-#undef EXTERNAL_LEVEL
-#undef TEMPLATE_LEVEL
-#undef EXTERNAL_NAME
-#undef TEMPLATE_NAME
 
 !! Local Variables:
 !! mode: f90

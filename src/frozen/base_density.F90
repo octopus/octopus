@@ -381,6 +381,9 @@ contains
         call storage_integrate(this%data, ispn, intg)
         ASSERT(.not.(intg<0.0_wp))
         if(intg>0.0_wp)call storage_mlt(this%data, ispn, this%charge(ispn)/intg)
+      else
+        this%charge(ispn) = 0.0_wp
+        call storage_reset(this%data, ispn)
       end if
     end do
 
@@ -485,6 +488,8 @@ contains
     type(base_density_t), intent(inout) :: this
     type(base_density_t), intent(in)    :: that
 
+    integer :: ispn
+
     PUSH_SUB(base_density__acc__)
 
     ASSERT(associated(this%config))
@@ -492,8 +497,12 @@ contains
     ASSERT(associated(this%sim))
     ASSERT(associated(that%sim))
     ASSERT(this%nspin==that%nspin)
-    this%charge(:) = this%charge(:) + that%charge(:)
-    call storage_add(this%data, that%data)
+    do ispn = 1, this%nspin
+      if(that%charge(ispn)>0.0_wp)then
+        this%charge(ispn) = this%charge(ispn) + that%charge(ispn)
+        call storage_add(this%data, that%data, ispn)
+      end if
+    end do
     call base_density__update__(this)
 
     POP_SUB(base_density__acc__)

@@ -169,6 +169,7 @@ module base_hamiltonian_m
     type(json_object_t),      pointer :: config =>null()
     type(base_system_t),      pointer :: sys    =>null()
     type(simulation_t),       pointer :: sim    =>null()
+    integer                           :: nspin  = 0
     real(kind=wp)                     :: energy = 0.0_wp
     type(storage_t)                   :: data
     type(hterm_dict_t)                :: hdct
@@ -993,7 +994,8 @@ contains
     type(json_object_t), target, intent(in)  :: config
 
     type(json_object_t), pointer :: cnfg
-    integer                      :: type, nspn, ierr
+    integer                      :: type, ierr
+    logical                      :: uspn
 
     PUSH_SUB(base_hamiltonian__iinit__)
 
@@ -1003,11 +1005,16 @@ contains
     call json_get(this%config, "type", type, ierr)
     ASSERT(ierr==JSON_OK)
     ASSERT(type==HMLT_TYPE_HMLT)
-    call base_system_get(this%sys, nspin=nspn)
+    call base_system_get(this%sys, nspin=this%nspin)
+    call json_get(this%config, "spin", uspn, ierr)
+    if(ierr/=JSON_OK) uspn = .true.
+    if(.not.uspn) this%nspin = 1
+    ASSERT(this%nspin>0)
+    ASSERT(this%nspin<3)
     call json_get(this%config, "storage", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
     call json_set(cnfg, "full", .false.)
-    call json_set(cnfg, "dimensions", nspn)
+    call json_set(cnfg, "dimensions", this%nspin)
     call storage_init(this%data, cnfg)
     nullify(cnfg)
     call hterm_dict_init(this%hdct)
@@ -1600,8 +1607,9 @@ contains
 
     PUSH_SUB(base_hamiltonian_get_info)
 
-    call base_system_get(this%sys, nspin=nspin)
-    call storage_get(this%data, size=size, alloc=use)
+    if(present(nspin)) nspin = this%nspin
+    if(present(use)) use = associated(this%sim)
+    call storage_get(this%data, size=size)
 
     POP_SUB(base_hamiltonian_get_info)
   end subroutine base_hamiltonian_get_info
@@ -1851,6 +1859,7 @@ contains
       call hterm__del__(htrm)
     end do
     nullify(htrm)
+    this%nspin = 0
     this%energy = 0.0_wp
     call storage_end(this%data)
     call hterm_dict_end(this%hdct)

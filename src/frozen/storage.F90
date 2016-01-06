@@ -60,10 +60,20 @@ module storage_m
     module procedure storage_init_copy
   end interface storage_init
 
+  interface storage_add
+    module procedure storage_add_dim
+    module procedure storage_add_all
+  end interface storage_add
+
   interface storage_mlt
     module procedure storage_mlt_dim
     module procedure storage_mlt_all
   end interface storage_mlt
+
+  interface storage_reset
+    module procedure storage_reset_dim
+    module procedure storage_reset_all
+  end interface storage_reset
 
   interface storage_integrate
     module procedure storage_integrate_intg_dim
@@ -297,25 +307,57 @@ contains
   end subroutine storage_realloc
 
   ! ---------------------------------------------------------
-  subroutine storage_reset(this, default)
+  subroutine storage_reset_aux(this, dim, default)
     type(storage_t),         intent(inout) :: this
+    integer,                 intent(in)    :: dim
     real(kind=wp), optional, intent(in)    :: default
 
     real(kind=wp) :: dflt
 
-    PUSH_SUB(storage_reset)
+    PUSH_SUB(storage_reset_aux)
+
+    dflt = this%default
+    if(present(default)) dflt = default
+    this%data(1:this%mesh%np,dim) = dflt
+    if(this%full) call storage_update_aux(this, dim)
+
+    POP_SUB(storage_reset_aux)
+  end subroutine storage_reset_aux
+
+  ! ---------------------------------------------------------
+  subroutine storage_reset_dim(this, dim, default)
+    type(storage_t),         intent(inout) :: this
+    integer,                 intent(in)    :: dim
+    real(kind=wp), optional, intent(in)    :: default
+
+    PUSH_SUB(storage_reset_dim)
+
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
+    if(this%alloc) call storage_reset_aux(this, dim, default)
+
+    POP_SUB(storage_reset_dim)
+  end subroutine storage_reset_dim
+
+  ! ---------------------------------------------------------
+  subroutine storage_reset_all(this, default)
+    type(storage_t),         intent(inout) :: this
+    real(kind=wp), optional, intent(in)    :: default
+
+    integer :: indx
+
+    PUSH_SUB(storage_reset_all)
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
     if(this%alloc)then
-      dflt = this%default
-      if(present(default)) dflt = default
-      this%data(1:this%mesh%np,:) = dflt
-      call storage_update(this)
+      do indx = 1, this%ndim
+        call storage_reset_aux(this, indx, default)
+      end do
     end if
 
-    POP_SUB(storage_reset)
-  end subroutine storage_reset
+    POP_SUB(storage_reset_all)
+  end subroutine storage_reset_all
 
   ! ---------------------------------------------------------
   subroutine storage_integrate_intg_dim(this, dim, value)
@@ -506,13 +548,52 @@ contains
   end subroutine storage_mlt_all
 
   ! ---------------------------------------------------------
-  subroutine storage_add(this, that)
+  subroutine storage_add_aux(this, that, dim)
+    type(storage_t), intent(inout) :: this
+    type(storage_t), intent(in)    :: that
+    integer,         intent(in)    :: dim
+
+    integer :: indx
+
+    PUSH_SUB(storage_add_aux)
+
+    do indx = 1, this%mesh%np
+      this%data(indx,dim) = this%data(indx,dim) + that%data(indx,dim)
+    end do
+    if(this%full) call storage_update_aux(this, dim)
+
+    POP_SUB(storage_add_aux)
+  end subroutine storage_add_aux
+
+  ! ---------------------------------------------------------
+  subroutine storage_add_dim(this, that, dim)
+    type(storage_t), intent(inout) :: this
+    type(storage_t), intent(in)    :: that
+    integer,         intent(in)    :: dim
+
+    PUSH_SUB(storage_add_dim)
+
+    ASSERT(associated(this%config))
+    ASSERT(associated(that%config))
+    ASSERT(associated(this%sim))
+    ASSERT(associated(that%sim))
+    ASSERT(associated(this%mesh,that%mesh))
+    ASSERT(this%ndim==that%ndim)
+    ASSERT(this%size==that%size)
+    ASSERT(this%default.equal.that%default)
+    if(this%alloc.and.that%alloc) call storage_add_aux(this, that, dim)
+
+    POP_SUB(storage_add_dim)
+  end subroutine storage_add_dim
+
+  ! ---------------------------------------------------------
+  subroutine storage_add_all(this, that)
     type(storage_t), intent(inout) :: this
     type(storage_t), intent(in)    :: that
 
-    integer :: indx, jndx
+    integer :: indx
 
-    PUSH_SUB(storage_add)
+    PUSH_SUB(storage_add_all)
 
     ASSERT(associated(this%config))
     ASSERT(associated(that%config))
@@ -523,16 +604,13 @@ contains
     ASSERT(this%size==that%size)
     ASSERT(this%default.equal.that%default)
     if(this%alloc.and.that%alloc)then
-      do jndx = 1, this%ndim
-        do indx = 1, this%mesh%np
-          this%data(indx,jndx) = this%data(indx,jndx) + that%data(indx,jndx)
-        end do
-        if(this%full) call storage_update_aux(this, jndx)
+      do indx = 1, this%ndim
+        call storage_add_aux(this, that, indx)
       end do
     end if
 
-    POP_SUB(storage_add)
-  end subroutine storage_add
+    POP_SUB(storage_add_all)
+  end subroutine storage_add_all
 
   ! ---------------------------------------------------------
   subroutine storage_sub(this, that)

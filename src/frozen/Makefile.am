@@ -92,8 +92,7 @@ noinst_HEADERS =		\
 	tlist_inc.F90		\
 	thash_inc.F90		\
 	tdict_inc.F90		\
-	iterator_inc.F90	\
-	intrpl_inc.F90		
+	iterator_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -173,13 +172,10 @@ fio_index.o 		: fio_index.F90
 fio_mesh.o 		: fio_mesh.F90 fio_index.o 
 fio_grid.o 		: fio_grid.F90 fio_mesh.o fio_curvilinear.o fio_simul_box.o
 fio_simulation.o 	: fio_simulation.F90 fio_grid.o base_geometry.o simulation.o
-fio_density.o 		: fio_density.F90 base_density.o simulation.o intrpl.o storage.o		\
-	intrpl_inc.F90 template.h util.h
+fio_density.o 		: fio_density.F90 base_density.o simulation.o intrpl.o storage.o
 fio_states.o 		: fio_states.F90 fio_density.o base_states.o base_density.o
 fio_system.o 		: fio_system.F90 fio_states.o base_system.o base_states.o
-fio_external.o 		: fio_external.F90 							\
-	base_potential.o base_geometry.o intrpl.o storage.o		\
-	intrpl_inc.F90 template.h util.h
+fio_external.o 		: fio_external.F90 base_potential.o base_geometry.o intrpl.o storage.o
 fio_hamiltonian.o       : fio_hamiltonian.F90 fio_external.o base_hamiltonian.o base_potential.o
 fio_model.o             : fio_model.F90 								\
 	fio_hamiltonian.o fio_system.o fio_simulation.o 						\

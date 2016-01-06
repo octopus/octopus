@@ -444,8 +444,8 @@ contains
     real(kind=wp), dimension(:,:,:), intent(inout) :: dedg !Should be intent in only
     real(kind=wp), dimension(:,:),   intent(inout) :: vxc
 
-    real(kind=wp), dimension(this%mesh%np_part) :: div
-    integer                                     :: is
+    real(kind=wp), dimension(this%mesh%np) :: div
+    integer                                :: ip, is
 
     PUSH_SUB(interface_xc_gga_vxc_correction)
 
@@ -453,7 +453,9 @@ contains
     ! the gradient of the density.
     do is = 1, this%spin
       call dderivatives_div(this%der, dedg(:,:,is), div)
-      vxc(:,is) = vxc(:,is) - div
+      do ip = 1, this%mesh%np
+        vxc(ip,is) = vxc(ip,is) - div(ip)
+      end do
     end do
 
     POP_SUB(interface_xc_gga_vxc_correction)

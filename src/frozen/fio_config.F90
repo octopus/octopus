@@ -242,10 +242,11 @@ contains
   end subroutine fio_config_parse_simulation
 
   ! ---------------------------------------------------------
-  subroutine fio_config_parse_density(this, dirname, usedensity)
+  subroutine fio_config_parse_density(this, dirname, usedensity, invertpol)
     type(json_object_t), intent(inout) :: this
     character(len=*),    intent(in)    :: dirname
     logical,   optional, intent(in)    :: usedensity
+    logical,   optional, intent(in)    :: invertpol
 
     type(json_object_t), pointer :: cnfg
     type(json_array_t),  pointer :: list
@@ -277,6 +278,7 @@ contains
     end do
     call json_set(this, "dir", trim(adjustl(odir)))
     nullify(list)
+    call json_set(this, "invertpolarization", invertpol)
     call json_get(this, "storage", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
     call fio_config_parse_storage(cnfg, usedensity)
@@ -286,10 +288,11 @@ contains
   end subroutine fio_config_parse_density
 
   ! ---------------------------------------------------------
-  subroutine fio_config_parse_states(this, dirname, usedensity)
+  subroutine fio_config_parse_states(this, dirname, usedensity, invertpol)
     type(json_object_t), intent(inout) :: this
     character(len=*),    intent(in)    :: dirname
     logical,   optional, intent(in)    :: usedensity
+    logical,   optional, intent(in)    :: invertpol
 
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
@@ -299,17 +302,18 @@ contains
     nullify(cnfg)
     call json_get(this, "density", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call fio_config_parse_density(cnfg, dirname, usedensity)
+    call fio_config_parse_density(cnfg, dirname, usedensity, invertpol)
     nullify(cnfg)
 
     POP_SUB(fio_config_parse_states)
   end subroutine fio_config_parse_states
 
   ! ---------------------------------------------------------
-  subroutine fio_config_parse_system(this, dirname, usedensity)
+  subroutine fio_config_parse_system(this, dirname, usedensity, invertpol)
     type(json_object_t), intent(inout) :: this
     character(len=*),    intent(in)    :: dirname
     logical,   optional, intent(in)    :: usedensity
+    logical,   optional, intent(in)    :: invertpol
 
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
@@ -319,7 +323,7 @@ contains
     nullify(cnfg)
     call json_get(this, "states", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call fio_config_parse_states(cnfg, dirname, usedensity)
+    call fio_config_parse_states(cnfg, dirname, usedensity, invertpol)
     nullify(cnfg)
 
     POP_SUB(fio_config_parse_system)
@@ -380,11 +384,12 @@ contains
   end subroutine fio_config_parse_hamiltonian
 
   ! ---------------------------------------------------------
-  subroutine fio_config_parse_model(this, dirname, usepotential, usedensity)
+  subroutine fio_config_parse_model(this, dirname, usepotential, usedensity, invertpol)
     type(json_object_t), intent(inout) :: this
     character(len=*),    intent(in)    :: dirname
     logical,   optional, intent(in)    :: usepotential
     logical,   optional, intent(in)    :: usedensity
+    logical,   optional, intent(in)    :: invertpol
 
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
@@ -394,7 +399,7 @@ contains
     nullify(cnfg)
     call json_get(this, "system", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call fio_config_parse_system(cnfg, dirname, usedensity)
+    call fio_config_parse_system(cnfg, dirname, usedensity, invertpol)
     nullify(cnfg)
     call json_get(this, "hamiltonian", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
@@ -443,12 +448,13 @@ contains
   end subroutine fio_config_parse_read
 
   ! ---------------------------------------------------------
-  subroutine fio_config_parse_dir(this, dirname, interpolation, usepotential, usedensity)
+  subroutine fio_config_parse_dir(this, dirname, interpolation, usepotential, usedensity, invertpol)
     type(json_object_t), intent(out) :: this
     character(len=*),    intent(in)  :: dirname
     integer,   optional, intent(in)  :: interpolation
     logical,   optional, intent(in)  :: usepotential
     logical,   optional, intent(in)  :: usedensity
+    logical,   optional, intent(in)  :: invertpol
 
     character(len=MAX_PATH_LEN)  :: outdir
     type(json_object_t), pointer :: cnfg
@@ -467,7 +473,7 @@ contains
     nullify(cnfg)
     call json_get(this, "model", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call fio_config_parse_model(cnfg, outdir, usepotential, usedensity)
+    call fio_config_parse_model(cnfg, outdir, usepotential, usedensity, invertpol)
     nullify(cnfg)
 
     POP_SUB(fio_config_parse_dir)
@@ -483,7 +489,7 @@ contains
 
     character(len=MAX_PATH_LEN)  :: dirname
     integer                      :: intrp
-    logical                      :: usepot, userho
+    logical                      :: usepot, userho, invpol
 
     PUSH_SUB(fio_config_parse_block)
 
@@ -491,10 +497,12 @@ contains
     intrp = NEAREST
     usepot = .true.
     userho = .true.
+    invpol = .false.
     if(ncol>(icol+1))call parse_block_integer(block, line, icol+1, intrp)
     if(ncol>(icol+2))call parse_block_logical(block, line, icol+2, usepot)
     if(ncol>(icol+3))call parse_block_logical(block, line, icol+3, userho)
-    call fio_config_parse(this, dirname, intrp, usepot, userho)
+    if(ncol>(icol+4))call parse_block_logical(block, line, icol+4, invpol)
+    call fio_config_parse(this, dirname, intrp, usepot, userho, invpol)
 
     POP_SUB(fio_config_parse_block)
   end subroutine fio_config_parse_block
