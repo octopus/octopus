@@ -563,7 +563,7 @@ contains
     !%Variable FrozenStates
     !%Type integer
     !%Default Number of States
-    !%Section Output
+    !%Section Output::Subsystems
     !%Description
     !% Subdirectory of static/frozen where <tt>Octopus</tt> will write the frozen system.
     !%End
@@ -722,7 +722,7 @@ contains
     !%Variable FrozenDir
     !%Type string
     !%Default "static/frozen"
-    !%Section Output
+    !%Section Output::Subsystems
     !%Description
     !% Subdirectory of static/ where <tt>Octopus</tt> will write the frozen system.
     !%End

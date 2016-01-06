@@ -2,7 +2,7 @@
 !
 !%Variable TnaddFunctional
 !%Type integer
-!%Section Subsystems::Hamiltonian
+!%Section Hamiltonian::Subsystems
 !%Description
 !% Defines the Kinetic Functional to be used in a Subsystem calculation,
 !% For more information on the functionals, see

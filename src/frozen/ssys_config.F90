@@ -92,7 +92,7 @@ contains
 
     !%Variable SubSystemCoordinates
     !%Type block
-    !%Section Subsystems::System
+    !%Section System::Subsystems
     !%Description
     !% Lists the name of the subsystem, the coordinates and the rotation to apply uppon reading.
     !% A subsystem can figure multiple times.
@@ -147,7 +147,7 @@ contains
 
     !%Variable SubSystems
     !%Type block
-    !%Section Subsystems::System
+    !%Section System::Subsystems
     !%Description
     !% Lists the name, the subsystem type, the directory and the optional parameters to be used on the subsystem calculation.
     !%
@@ -339,7 +339,7 @@ contains
     !%Variable TnaddFactor
     !%Type float
     !%Default 1.0
-    !%Section Subsystems::Hamiltonian
+    !%Section Hamiltonian::Subsystems
     !%Description
     !% Chooses the Kinetic Functional amplification factor.
     !%End
@@ -351,7 +351,7 @@ contains
     !%Variable TnaddPolarized
     !%Type logical
     !%Default yes
-    !%Section Subsystems::Hamiltonian
+    !%Section Hamiltonian::Subsystems
     !%Description
     !% Calculates the Kinetic Functional with spin polarization or not.
     !%End
