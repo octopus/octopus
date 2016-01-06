@@ -21,17 +21,18 @@
 sharedir = $(pkgdatadir)/testsuite/frozen
 
 dist_share_DATA =			\
-	01-output.frozen.inp		\
-	01-output.frozen.test		\
-	02-Na2.mixpot.01.frozen.inp	\
-	02-Na2.mixpot.02.frozen.inp	\
-	02-Na2.mixpot.03.frozen.inp	\
-	02-Na2.mixrho.frozen.inp	\
-	02-Na2.frozen.test		\
-	03-output.fh2o.inp		\
-	03-LiH2O.01.frozen.inp		\
-	03-LiH2O.02.frozen.inp		\
-	03-LiH2O.03.frozen.inp		\
-	03-LiH2O.frozen.test
+	01-output_frozen.inp            \
+	01-output_frozen.test           \
+	02-na2.00-output_frozen.inp     \
+	02-na2.01-mixpot.inp            \
+	02-na2.02-mixpot.inp            \
+	02-na2.03-mixpot.inp            \
+	02-na2.04-mixrho.inp            \
+	02-na2.test                     \
+	03-lih2o.00-output.inp          \
+	03-lih2o.01.inp                 \
+	03-lih2o.02.inp                 \
+	03-lih2o.03.inp                 \
+	03-lih2o.test
 
 CLEANFILES = *~ *.bak
