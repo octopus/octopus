@@ -75,8 +75,6 @@ program oct_local_multipoles
 
   call messages_init()
 
-  call messages_experimental("oct-local_multipoles utility")
-
   call io_init()
   call profiling_init()
  
@@ -84,6 +82,8 @@ program oct_local_multipoles
   call messages_print_stress(stdout, "Local Domains mode")
   call messages_print_stress(stdout)
     
+  call messages_experimental("oct-local_multipoles utility")
+
   call unit_system_init()
   call restart_module_init()
   call system_init(sys)
