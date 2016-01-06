@@ -58,7 +58,7 @@ print OUT <<"EndOfHeader";
 !
 !%Variable TnaddFunctional
 !%Type integer
-!%Section Hamiltonian
+!%Section Subsystems::Hamiltonian
 !%Description
 !% Defines the Kinetic Functional to be used in a Subsystem calculation,
 !% For more information on the functionals, see

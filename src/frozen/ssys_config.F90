@@ -92,7 +92,7 @@ contains
 
     !%Variable SubSystemCoordinates
     !%Type block
-    !%Section System
+    !%Section Subsystems::System
     !%Description
     !% Lists the name of the subsystem, the coordinates and the rotation to apply uppon reading.
     !% A subsystem can figure multiple times.
@@ -147,7 +147,7 @@ contains
 
     !%Variable SubSystems
     !%Type block
-    !%Section System
+    !%Section Subsystems::System
     !%Description
     !% Lists the name, the subsystem type, the directory and the optional parameters to be used on the subsystem calculation.
     !%
@@ -285,10 +285,11 @@ contains
   end subroutine ssys_config_parse_ionic
 
   ! ---------------------------------------------------------
-  subroutine ssys_config_parse_functional(this, id, factor)
+  subroutine ssys_config_parse_functional(this, id, factor, polarized)
     type(json_object_t), intent(out) :: this
     integer,             intent(in)  :: id
     real(kind=wp),       intent(in)  :: factor
+    logical,             intent(in)  :: polarized
 
     type(json_object_t), pointer :: cnfg
 
@@ -298,6 +299,7 @@ contains
     call json_init(this)
     call json_set(this, "type", HMLT_TYPE_FNCT)
     call json_set(this, "factor", factor)
+    call json_set(this, "spin", polarized)
     SAFE_ALLOCATE(cnfg)
     call functional_init(cnfg, id=id)
     call json_set(this, "functional", cnfg)
@@ -315,20 +317,14 @@ contains
   end subroutine ssys_config_parse_functional
 
   ! ---------------------------------------------------------
-  subroutine ssys_config_parse_tnadd(this)
+  subroutine ssys_config_parse_tnadd(this, nspin)
     type(json_object_t), intent(out) :: this
-
+    integer,             intent(in)  :: nspin
+ 
     type(json_object_t), pointer :: cnfg
     real(kind=wp)                :: factor
     integer                      :: id
-
-    !%Variable TnaddFactor
-    !%Type float
-    !%Default 1.0
-    !%Section Hamiltonian
-    !%Description
-    !% Chooses the Kinetic Functional amplification factor.
-    !%End
+    logical                      :: plrz
 
     PUSH_SUB(ssys_config_parse_tnadd)
 
@@ -340,17 +336,33 @@ contains
     call json_set(this, "storage", cnfg)
     nullify(cnfg)
     call parse_variable('TnaddFunctional', FUNCT_XC_NONE, id)
+    !%Variable TnaddFactor
+    !%Type float
+    !%Default 1.0
+    !%Section Subsystems::Hamiltonian
+    !%Description
+    !% Chooses the Kinetic Functional amplification factor.
+    !%End
     call parse_variable('TnaddFactor', 1.0_wp, factor)
     if(abs(factor)<1.0e-7_wp)then
       message(1) = "The 'TnaddFactor' value specified may be too small."
       call messages_warning(1)
     end if
+    !%Variable TnaddPolarized
+    !%Type logical
+    !%Default yes
+    !%Section Subsystems::Hamiltonian
+    !%Description
+    !% Calculates the Kinetic Functional with spin polarization or not.
+    !%End
+    call parse_variable('TnaddPolarized', (nspin>1), plrz)
+    call json_set(this, "spin", plrz)
     SAFE_ALLOCATE(cnfg)
-    call ssys_config_parse_functional(cnfg, id, factor)
+    call ssys_config_parse_functional(cnfg, id, factor, plrz)
     call json_set(this, "total", cnfg)
     nullify(cnfg)
     SAFE_ALLOCATE(cnfg)
-    call ssys_config_parse_functional(cnfg, id, factor)
+    call ssys_config_parse_functional(cnfg, id, factor, plrz)
     call json_set(cnfg, "system", "live")
     call json_set(this, "live", cnfg)
     nullify(cnfg)
@@ -359,8 +371,9 @@ contains
   end subroutine ssys_config_parse_tnadd
 
   ! ---------------------------------------------------------
-  subroutine ssys_config_parse_hamiltonian(this)
+  subroutine ssys_config_parse_hamiltonian(this, nspin)
     type(json_object_t), intent(inout) :: this
+    integer,             intent(in)    :: nspin
 
     type(json_object_t), pointer :: cnfg
 
@@ -376,7 +389,7 @@ contains
     call json_set(this, "ionic", cnfg)
     nullify(cnfg)
     SAFE_ALLOCATE(cnfg)
-    call ssys_config_parse_tnadd(cnfg)
+    call ssys_config_parse_tnadd(cnfg, nspin)
     call json_set(this, "tnadd", cnfg)
     nullify(cnfg)
 
@@ -384,8 +397,9 @@ contains
   end subroutine ssys_config_parse_hamiltonian
 
   ! ---------------------------------------------------------
-  subroutine ssys_config_parse_model(this)
+  subroutine ssys_config_parse_model(this, nspin)
     type(json_object_t), intent(inout) :: this
+    integer,             intent(in)    :: nspin
 
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
@@ -395,7 +409,7 @@ contains
     nullify(cnfg)
     call json_get(this, "hamiltonian", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call ssys_config_parse_hamiltonian(cnfg)
+    call ssys_config_parse_hamiltonian(cnfg, nspin)
     nullify(cnfg)
 
     POP_SUB(ssys_config_parse_model)
@@ -450,7 +464,7 @@ contains
     call json_set(this, "name", "main")
     call json_get(this, "model", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call ssys_config_parse_model(cnfg)
+    call ssys_config_parse_model(cnfg, nspin)
     nullify(cnfg)
     call json_get(this, "systems", list, ierr)
     ASSERT(ierr==JSON_OK)

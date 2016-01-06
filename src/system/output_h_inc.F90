@@ -27,7 +27,7 @@
     type(geometry_t),          intent(in)    :: geo
     type(mpi_grp_t), optional, intent(in)    :: grp !< the group that shares the same data, must contain the domains group
 
-    integer :: is, err, idir
+    integer :: is, err, idir, ispin
     character(len=MAX_PATH_LEN) :: fname
     type(base_potential_iterator_t)        :: iter
     type(base_potential_t),        pointer :: subsys_external
@@ -85,9 +85,19 @@
         if(associated(hm%subsys_hm))then
           call base_hamiltonian_get(hm%subsys_hm, "tnadd", subsys_tnadd)
           ASSERT(associated(subsys_tnadd))
+          call base_hamiltonian_get(subsys_tnadd, nspin=ispin)
           call base_hamiltonian_get(subsys_tnadd, tnadd_potential)
           ASSERT(associated(tnadd_potential))
           nullify(subsys_tnadd)
+          do is = 1, min(ispin, 2)
+            if(ispin == 1) then
+              write(fname, '(a)') 'tnadd'
+            else
+              write(fname, '(a,i1)') 'tnadd-sp', is
+            end if
+            call dio_function_output(outp%how, dir, fname, der%mesh, &
+              tnadd_potential(:,is), units_out%energy, err, geo = geo, grp = grp)
+          end do
         end if
         
         SAFE_ALLOCATE(potential(1:der%mesh%np))
@@ -104,19 +114,9 @@
               hm%vxc(:, is) + M_zI *  hm%Imvxc(:, is), units_out%energy, err, geo = geo, grp = grp)
           end if
           
-          if(associated(tnadd_potential))then
-            if(hm%d%ispin == 1) then
-              write(fname, '(a)') 'tnadd'
-            else
-              write(fname, '(a,i1)') 'tnadd-sp', is
-            end if
-            call dio_function_output(outp%how, dir, fname, der%mesh, &
-              tnadd_potential(:,is), units_out%energy, err, geo = geo, grp = grp)
-          end if
-        
           ! finally the full KS potential (without non-local PP contributions)
           if(associated(tnadd_potential))then
-            potential = hm%ep%vpsl + hm%vhxc(:, is) - tnadd_potential(:, is)
+            potential = hm%ep%vpsl + hm%vhxc(:, is) - tnadd_potential(:, min(is,ispin))
           else
             potential = hm%ep%vpsl + hm%vhxc(:, is)
           end if
