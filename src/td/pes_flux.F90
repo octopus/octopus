@@ -252,6 +252,8 @@ contains
         call messages_print_var_value(stdout, 'PES_Flux_Lsize', border(1:mdim))
       end if
 
+      call parse_block_end(blk)
+
     else
 
       if(parse_is_defined('PES_Flux_Radius')) then
