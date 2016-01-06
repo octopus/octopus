@@ -150,6 +150,30 @@ contains
 
     PUSH_SUB(ps_init)
 
+    ! Fix the threshold to calculate the radius of the projector-function localization spheres:
+
+    call messages_obsolete_variable('SpecieProjectorSphereThreshold', 'SpeciesProjectorSphereThreshold')
+
+    !%Variable SpeciesProjectorSphereThreshold
+    !%Type float
+    !%Default 0.001
+    !%Section System::Species
+    !%Description
+    !% The pseudopotentials may be composed of a local part, and a linear combination of nonlocal
+    !% operators. These nonlocal projectors have "projector" form, <math> \left| v \right> \left< v \right| </math>
+    !% (or, more generally speaking, <math> \left| u \right> \left< v \right| </math>).
+    !% These projectors are localized in real space -- that is, the function <math>v</math>
+    !% has a finite support around the nucleus. This region where the projectors are localized should
+    !% be small or else the computation time required to operate with them will be very large.
+    !% 
+    !% In practice, this localization is fixed by requiring the definition of the projectors to be
+    !% contained in a sphere of a certain radius. This radius is computed by making sure that the 
+    !% absolute value of the projector functions, at points outside the localization sphere, is 
+    !% below a certain threshold. This threshold is set by <tt>SpeciesProjectorSphereThreshold</tt>.
+    !%End
+    call parse_variable('SpeciesProjectorSphereThreshold', CNST(0.001), ps%projectors_sphere_threshold)
+    if(ps%projectors_sphere_threshold <= M_ZERO) call messages_input_error('SpeciesProjectorSphereThreshold')
+   
     ! Sets the flavour, label, and number of spin channels.
     ps%flavour = ps_get_type(filename)
     ps%label   = label
@@ -338,30 +362,6 @@ contains
         call spline_der(ps%density(is), ps%density_der(is))
       end do
     end if
-
-    ! Fix the threshold to calculate the radius of the projector-function localization spheres:
-
-    call messages_obsolete_variable('SpecieProjectorSphereThreshold', 'SpeciesProjectorSphereThreshold')
-
-    !%Variable SpeciesProjectorSphereThreshold
-    !%Type float
-    !%Default 0.001
-    !%Section System::Species
-    !%Description
-    !% The pseudopotentials may be composed of a local part, and a linear combination of nonlocal
-    !% operators. These nonlocal projectors have "projector" form, <math> \left| v \right> \left< v \right| </math>
-    !% (or, more generally speaking, <math> \left| u \right> \left< v \right| </math>).
-    !% These projectors are localized in real space -- that is, the function <math>v</math>
-    !% has a finite support around the nucleus. This region where the projectors are localized should
-    !% be small or else the computation time required to operate with them will be very large.
-    !% 
-    !% In practice, this localization is fixed by requiring the definition of the projectors to be
-    !% contained in a sphere of a certain radius. This radius is computed by making sure that the 
-    !% absolute value of the projector functions, at points outside the localization sphere, is 
-    !% below a certain threshold. This threshold is set by <tt>SpeciesProjectorSphereThreshold</tt>.
-    !%End
-    call parse_variable('SpeciesProjectorSphereThreshold', CNST(0.001), ps%projectors_sphere_threshold)
-    if(ps%projectors_sphere_threshold <= M_ZERO) call messages_input_error('SpeciesProjectorSphereThreshold')
 
     ps%has_long_range = .true.
 
