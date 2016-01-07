@@ -818,6 +818,8 @@ subroutine X(h_mgga_terms) (hm, der, ik, psib, hpsib)
   type(batch_t), allocatable :: gradb(:)
   
   PUSH_SUB(X(h_mgga_terms))
+
+  ASSERT(.not. batch_is_packed(psib))
   
   ispin = states_dim_get_spin_index(hm%d, ik)
 
