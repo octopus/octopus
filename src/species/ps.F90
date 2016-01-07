@@ -118,8 +118,8 @@ module ps_m
                                   !< local potential in terms of r^2, to avoid the sqrt
     type(spline_t) :: nlr         !< the charge density associated with the long-range part
     
-    type(spline_t), allocatable :: density(:)      !< the atomic density for each spin
-    type(spline_t), allocatable :: density_der(:)  !< the radial derivative for the atomic density for each spin
+    type(spline_t), pointer :: density(:)      !< the atomic density for each spin
+    type(spline_t), pointer :: density_der(:)  !< the radial derivative for the atomic density for each spin
     
     logical :: is_separated
     logical :: local
@@ -654,8 +654,8 @@ contains
     call spline_end(ps%vl)
     call spline_end(ps%core)
 
-    if(allocated(ps%density)) call spline_end(ps%density)
-    if(allocated(ps%density_der)) call spline_end(ps%density_der)
+    if(associated(ps%density)) call spline_end(ps%density)
+    if(associated(ps%density_der)) call spline_end(ps%density_der)
 
     call logrid_end(ps%g)
 
@@ -665,8 +665,8 @@ contains
     SAFE_DEALLOCATE_P(ps%ur_sq)
     SAFE_DEALLOCATE_P(ps%h)
     SAFE_DEALLOCATE_P(ps%k)
-    SAFE_DEALLOCATE_A(ps%density)
-    SAFE_DEALLOCATE_A(ps%density_der)
+    SAFE_DEALLOCATE_P(ps%density)
+    SAFE_DEALLOCATE_P(ps%density_der)
 
     POP_SUB(ps_end)
   end subroutine ps_end
