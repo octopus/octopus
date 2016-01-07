@@ -1,0 +1,66 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Frozen - LiH2O(+) - frozen Li
+Program    : octopus
+TestGroups : short-run, frozen
+Enabled    : Yes
+
+Input: 05-lih2o.00-output.inp
+
+# Frozen Li
+match ; Eigenvalue   ; GREPFIELD(static/info, '1   --',        3) ; -0.651012
+match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -3.71207634
+
+Input: 05-lih2o.01.inp
+
+# Frozen Li + H2O(+)
+match ; Total       ; GREPFIELD(static/info, 'Total       =',     3) ;  -414.96890688
+match ; Ion-ion     ; GREPFIELD(static/info, 'Ion-ion     =',     3) ;   226.57807735
+match ; Eigenvalues ; GREPFIELD(static/info, 'Eigenvalues =',     3) ;   -79.29025048
+match ; Hartree     ; GREPFIELD(static/info, 'Hartree     =',     3) ;   594.54741867
+match ; Int[n*v_xc] ; GREPFIELD(static/info, 'Int\[n\*v\_xc\] =', 3) ;  -137.23330378
+match ; Exchange    ; GREPFIELD(static/info, 'Exchange    =',     3) ;   -91.32103059
+match ; Correlation ; GREPFIELD(static/info, 'Correlation =',     3) ;   -13.62158827
+match ; Kinetic     ; GREPFIELD(static/info, 'Kinetic     =',     3) ;   211.15474217
+match ; External    ; GREPFIELD(static/info, 'External    =',     3) ; -1340.93228815
+ 
+Input: 05-lih2o.02.inp
+
+# Frozen Li(+) + H2O
+match ; Total       ; GREPFIELD(static/info, 'Total       =',     3) ;  -408.47076110
+match ; Ion-ion     ; GREPFIELD(static/info, 'Ion-ion     =',     3) ;   226.57807735
+match ; Eigenvalues ; GREPFIELD(static/info, 'Eigenvalues =',     3) ;  -172.69650740
+match ; Hartree     ; GREPFIELD(static/info, 'Hartree     =',     3) ;   492.04022260
+match ; Int[n*v_xc] ; GREPFIELD(static/info, 'Int\[n\*v\_xc\] =', 3) ;  -125.95542197
+match ; Exchange    ; GREPFIELD(static/info, 'Exchange    =',     3) ;   -84.46307271
+match ; Correlation ; GREPFIELD(static/info, 'Correlation =',     3) ;   -11.80445771
+match ; Kinetic     ; GREPFIELD(static/info, 'Kinetic     =',     3) ;   206.32449451
+match ; External    ; GREPFIELD(static/info, 'External    =',     3) ; -1237.14589117
+ 
+Input: 05-lih2o.03.inp
+
+# Frozen Li + H2O(+) (Coulomb potential)
+match ; Total       ; GREPFIELD(static/info, 'Total       =',     3) ;  -422.47085270
+match ; Ion-ion     ; GREPFIELD(static/info, 'Ion-ion     =',     3) ;   226.57807735
+match ; Eigenvalues ; GREPFIELD(static/info, 'Eigenvalues =',     3) ;   -95.63109074
+match ; Hartree     ; GREPFIELD(static/info, 'Hartree     =',     3) ;   586.47522625
+match ; Int[n*v_xc] ; GREPFIELD(static/info, 'Int\[n\*v\_xc\] =', 3) ;  -140.48397196
+match ; Exchange    ; GREPFIELD(static/info, 'Exchange    =',     3) ;   -93.57064307
+match ; Correlation ; GREPFIELD(static/info, 'Correlation =',     3) ;   -13.85594194
+match ; Kinetic     ; GREPFIELD(static/info, 'Kinetic     =',     3) ;   221.47928834
+match ; External    ; GREPFIELD(static/info, 'External    =',     3) ; -1346.92159566
+ 
+Input: 05-lih2o.04.inp
+
+# Frozen Li(+) + H2O (Coulomb potential)
+match ; Total       ; GREPFIELD(static/info, 'Total       =',     3) ;  -409.28664760
+match ; Ion-ion     ; GREPFIELD(static/info, 'Ion-ion     =',     3) ;   226.57807735
+match ; Eigenvalues ; GREPFIELD(static/info, 'Eigenvalues =',     3) ;  -191.63383479
+match ; Hartree     ; GREPFIELD(static/info, 'Hartree     =',     3) ;   473.44095411
+match ; Int[n*v_xc] ; GREPFIELD(static/info, 'Int\[n\*v\_xc\] =', 3) ;  -123.95540395
+match ; Exchange    ; GREPFIELD(static/info, 'Exchange    =',     3) ;   -83.04876541
+match ; Correlation ; GREPFIELD(static/info, 'Correlation =',     3) ;   -11.69657458
+match ; Kinetic     ; GREPFIELD(static/info, 'Kinetic     =',     3) ;   208.93417767
+match ; External    ; GREPFIELD(static/info, 'External    =',     3) ; -1223.49324466
+
+

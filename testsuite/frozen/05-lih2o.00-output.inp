@@ -1,0 +1,15 @@
+CalculationMode = gs
+Units = eV_Angstrom
+ExperimentalFeatures = yes
+FromScratch = yes
+radius = 3.0
+spacing = 0.15
+PseudopotentialSet = standard
+%Species
+	'Li' | species_pseudo | db_file | 'PSF/Li.psf'
+%
+%Coordinates
+        'Li' | 0.0 |  0.0 | 0.0 | no
+%
+Output = frozen_system
+

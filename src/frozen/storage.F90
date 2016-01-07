@@ -706,7 +706,7 @@ contains
       if(associated(this%mesh)) size = this%mesh%np
     end if
     if(present(fine)) fine = this%fine
-    if(present(alloc)) alloc = this%alloc
+    if(present(alloc)) alloc = this%alloc .and. associated(this%sim)
     if(present(default)) default = this%default
 
     POP_SUB(storage_get_info)

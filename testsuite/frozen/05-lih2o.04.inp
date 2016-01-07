@@ -1,0 +1,26 @@
+CalculationMode = gs
+Units = eV_Angstrom
+FromScratch = yes
+BoxShape = parallelepiped
+%Lsize
+        4.0 | 3.0 | 3.0
+%
+spacing = 0.3
+PseudopotentialSet = standard
+%Species
+    'O' | species_pseudo | db_file | 'PSF/O.psf'
+    'H' | species_pseudo | db_file | 'PSF/H.psf'
+%
+%Coordinates
+    'O' | 1.0000 |  0.0000 | 0.0 | no
+    'H' | 1.5865 |  0.7572 | 0.0 | no
+    'H' | 1.5865 | -0.7572 | 0.0 | no
+%
+TnaddFunctional = lda_k_tf
+%SubSystems
+    'Li+' | frozen | './static/frozen' | qshep | no | no
+%
+%SubSystemCoordinates
+    'Li+' | -2.0 
+%
+

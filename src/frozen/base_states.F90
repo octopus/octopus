@@ -591,16 +591,14 @@ contains
   end subroutine base_states_set_info
     
   ! ---------------------------------------------------------
-  subroutine base_states_get_info(this, charge, nspin, use)
+  subroutine base_states_get_info(this, charge, nspin)
     type(base_states_t),     intent(in)  :: this
     real(kind=wp), optional, intent(out) :: charge
     integer,       optional, intent(out) :: nspin
-    logical,       optional, intent(out) :: use
 
     PUSH_SUB(base_states_get_info)
 
     if(present(charge)) charge = this%charge
-    if(present(use)) use = associated(this%sim)
     call base_density_get(this%density, nspin=nspin)
 
     POP_SUB(base_states_get_info)

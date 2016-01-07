@@ -629,8 +629,7 @@ contains
     PUSH_SUB(base_density_get_info)
 
     if(present(nspin)) nspin = this%nspin
-    if(present(use)) use = associated(this%sim)
-    call storage_get(this%data, size=size, fine=fine)
+    call storage_get(this%data, size=size, fine=fine, alloc=use)
 
     POP_SUB(base_density_get_info)
   end subroutine base_density_get_info

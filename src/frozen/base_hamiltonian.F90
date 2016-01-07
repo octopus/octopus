@@ -1608,8 +1608,7 @@ contains
     PUSH_SUB(base_hamiltonian_get_info)
 
     if(present(nspin)) nspin = this%nspin
-    if(present(use)) use = associated(this%sim)
-    call storage_get(this%data, size=size)
+    call storage_get(this%data, size=size, alloc=use)
 
     POP_SUB(base_hamiltonian_get_info)
   end subroutine base_hamiltonian_get_info

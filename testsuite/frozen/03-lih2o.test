@@ -1,12 +1,13 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
-Test       : Frozen - LiH2O(+)
+Test       : Frozen - LiH2O(+) - frozen H2O
 Program    : octopus
 TestGroups : short-run, frozen
 Enabled    : Yes
 
 Input: 03-lih2o.00-output.inp
 
+# Frozen H2O
 # info
 match ; Eigenvalue   ; GREPFIELD(static/info, '1   --',        3) ;  -38.378722
 match ; Eigenvalue   ; GREPFIELD(static/info, '2   --',        3) ;  -12.586136
