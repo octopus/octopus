@@ -1,0 +1,76 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Frozen - Na2-spin
+Program    : octopus
+TestGroups : short-run, frozen
+Enabled    : Yes
+
+Input: 04-na2-spin.00-output.inp
+
+# Frozen
+match ; Eigenvalue   ; GREPFIELD(static/info, '1   up',        3) ; -3.073100
+match ; Eigenvalue   ; GREPFIELD(static/info, '1   dn',        3) ; -1.563794
+match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -5.24382051
+
+Input: 04-na2-spin.01-mixpot.inp
+
+# Frozen
+match ; Eigenvalue  ; GREPFIELD(static/info, '1   up',            3) ;  -1.006206
+match ; Eigenvalue  ; GREPFIELD(static/info, '1   dn',            3) ;  -3.759051
+match ; Total       ; GREPFIELD(static/info, 'Total       =',     3) ;  -7.81075783
+match ; Ion-ion     ; GREPFIELD(static/info, 'Ion-ion     =',     3) ;   5.75985766
+match ; Eigenvalues ; GREPFIELD(static/info, 'Eigenvalues =',     3) ;  -3.75905087
+match ; Hartree     ; GREPFIELD(static/info, 'Hartree     =',     3) ;  11.89919195
+match ; Int[n*v_xc] ; GREPFIELD(static/info, 'Int\[n\*v\_xc\] =', 3) ;  -8.95160816
+match ; Exchange    ; GREPFIELD(static/info, 'Exchange    =',     3) ;  -5.52947606
+match ; Correlation ; GREPFIELD(static/info, 'Correlation =',     3) ;  -1.33450477
+match ; Kinetic     ; GREPFIELD(static/info, 'Kinetic     =',     3) ;   6.92874139
+match ; External    ; GREPFIELD(static/info, 'External    =',     3) ; -33.12197872
+ 
+Input: 04-na2-spin.02-mixpot.inp
+
+# Frozen
+match ; Eigenvalue  ; GREPFIELD(static/info, '1   up',            3) ;  -3.759051
+match ; Eigenvalue  ; GREPFIELD(static/info, '1   dn',            3) ;  -1.006206
+match ; Total       ; GREPFIELD(static/info, 'Total       =',     3) ;  -7.81075783
+match ; Ion-ion     ; GREPFIELD(static/info, 'Ion-ion     =',     3) ;   5.75985766
+match ; Eigenvalues ; GREPFIELD(static/info, 'Eigenvalues =',     3) ;  -3.75905087
+match ; Hartree     ; GREPFIELD(static/info, 'Hartree     =',     3) ;  11.89919195
+match ; Int[n*v_xc] ; GREPFIELD(static/info, 'Int\[n\*v\_xc\] =', 3) ;  -8.95160816
+match ; Exchange    ; GREPFIELD(static/info, 'Exchange    =',     3) ;  -5.52947606
+match ; Correlation ; GREPFIELD(static/info, 'Correlation =',     3) ;  -1.33450477
+match ; Kinetic     ; GREPFIELD(static/info, 'Kinetic     =',     3) ;   6.92874139
+match ; External    ; GREPFIELD(static/info, 'External    =',     3) ; -33.12197872
+ 
+Input: 04-na2-spin.03-mixrho.inp
+
+# Frozen
+match ; Eigenvalue  ; GREPFIELD(static/info, '1   up',            3) ;  -1.006206
+match ; Eigenvalue  ; GREPFIELD(static/info, '1   dn',            3) ;  -3.759051
+match ; Total       ; GREPFIELD(static/info, 'Total       =',     3) ;  -7.81075783
+match ; Ion-ion     ; GREPFIELD(static/info, 'Ion-ion     =',     3) ;   5.75985766
+match ; Eigenvalues ; GREPFIELD(static/info, 'Eigenvalues =',     3) ;  -3.75905087
+match ; Hartree     ; GREPFIELD(static/info, 'Hartree     =',     3) ;  11.89919195
+match ; Int[n*v_xc] ; GREPFIELD(static/info, 'Int\[n\*v\_xc\] =', 3) ;  -8.95160816
+match ; Exchange    ; GREPFIELD(static/info, 'Exchange    =',     3) ;  -5.52947606
+match ; Correlation ; GREPFIELD(static/info, 'Correlation =',     3) ;  -1.33450477
+match ; Kinetic     ; GREPFIELD(static/info, 'Kinetic     =',     3) ;   6.92874139
+match ; External    ; GREPFIELD(static/info, 'External    =',     3) ; -33.12197872
+ 
+Input: 04-na2-spin.04-mixrho.inp
+
+# Frozen
+match ; Eigenvalue  ; GREPFIELD(static/info, '1   up',            3) ;  -3.759051
+match ; Eigenvalue  ; GREPFIELD(static/info, '1   dn',            3) ;  -1.006206
+match ; Total       ; GREPFIELD(static/info, 'Total       =',     3) ;  -7.81075783
+match ; Ion-ion     ; GREPFIELD(static/info, 'Ion-ion     =',     3) ;   5.75985766
+match ; Eigenvalues ; GREPFIELD(static/info, 'Eigenvalues =',     3) ;  -3.75905087
+match ; Hartree     ; GREPFIELD(static/info, 'Hartree     =',     3) ;  11.89919195
+match ; Int[n*v_xc] ; GREPFIELD(static/info, 'Int\[n\*v\_xc\] =', 3) ;  -8.95160816
+match ; Exchange    ; GREPFIELD(static/info, 'Exchange    =',     3) ;  -5.52947606
+match ; Correlation ; GREPFIELD(static/info, 'Correlation =',     3) ;  -1.33450477
+match ; Kinetic     ; GREPFIELD(static/info, 'Kinetic     =',     3) ;   6.92874139
+match ; External    ; GREPFIELD(static/info, 'External    =',     3) ; -33.12197872
+ 
+
+

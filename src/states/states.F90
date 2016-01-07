@@ -20,6 +20,7 @@
 #include "global.h"
 
 module states_m
+  use base_density_m
   use base_states_m
   use blacs_proc_grid_m
   use calc_mode_par_m
@@ -1618,6 +1619,35 @@ contains
   end subroutine states_generate_random
 
   ! ---------------------------------------------------------
+  subroutine substates_set_charge(this, st)
+    type(base_states_t), intent(inout) :: this
+    type(states_t),      intent(in)    :: st
+
+    type(base_density_t), pointer :: dnst
+    FLOAT                         :: chrg, qtot
+    integer                       :: ispn, ik, ierr
+
+    PUSH_SUB(substates_set_charge)
+
+    nullify(dnst)
+    call base_states_gets(this, "live", dnst)
+    ASSERT(associated(dnst))
+    qtot = M_ZERO
+    do ispn = 1, st%d%nspin
+      chrg = M_ZERO
+      do ik = 1, st%d%nik
+        if(ispn==states_dim_get_spin_index(st%d, ik))&
+          chrg = chrg + st%d%kweights(ik) * sum(st%occ(:,ik))
+      end do
+      call base_density_set(dnst, chrg, ispn)
+      qtot = qtot + chrg
+    end do
+    ASSERT(.not.abs(M_ONE-min(st%qtot,qtot)/max(st%qtot,qtot))>epsilon(qtot))
+    
+    POP_SUB(substates_set_charge)
+  end subroutine substates_set_charge
+  
+  ! ---------------------------------------------------------
   subroutine states_fermi(st, mesh)
     type(states_t), intent(inout) :: st
     type(mesh_t),   intent(in)    :: mesh
@@ -1661,6 +1691,9 @@ contains
       end if
     end if
 
+    !> Update the charge of the live subsystem.
+    if(associated(st%subsys_st)) call substates_set_charge(st%subsys_st, st)
+ 
     if(st%d%ispin == SPINORS) then
       ASSERT(states_are_complex(st))
       
