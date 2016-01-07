@@ -94,11 +94,9 @@ case $with_clblas_include in
   *)  CFLAGS_CLBLAS="-I$with_clblas_include" ;;
 esac
 
-CFLAGS="$CFLAGS_CLBLAS $acx_clblas_save_CFLAGS"
-
 AC_MSG_CHECKING([for clblas])
 
-CFLAGS="$CFLAGS_CLBLAS $acx_clblas_save_CFLAGS"
+CFLAGS="$CFLAGS_CLBLAS $CL_CFLAGS $acx_clblas_save_CFLAGS"
 
 if test ! -z "$LIBS_CLBLAS"; then
   LIBS="$LIBS_CLBLAS $acx_clblas_save_LIBS"
@@ -110,7 +108,7 @@ fi
 if test ! -z "$with_clblas_prefix"; then
   if test x"$acx_clblas_ok" = xno; then
     LIBS_CLBLAS="-L$with_clblas_prefix/lib64/ -lclBLAS"
-    LIBS="$LIBS_CLBLAS $acx_clblas_save_LIBS"
+    LIBS="$LIBS_CLBLAS $CL_LIBS $acx_clblas_save_LIBS"
     AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <clBLAS.h>]],[[
     cl_uint cl_major, cl_minor, cl_patch;
     clblasGetVersion(&cl_major, &cl_minor, &cl_patch);]])], [acx_clblas_ok=yes], [])
@@ -118,7 +116,7 @@ if test ! -z "$with_clblas_prefix"; then
 
   if test x"$acx_clblas_ok" = xno; then
     LIBS_CLBLAS="-L$with_clblas_prefix/lib/ -lclBLAS"
-    LIBS="$LIBS_CLBLAS $acx_clblas_save_LIBS"
+    LIBS="$LIBS_CLBLAS $CL_LIBS $acx_clblas_save_LIBS"
     AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <clBLAS.h>]],[[
     cl_uint cl_major, cl_minor, cl_patch;
     clblasGetVersion(&cl_major, &cl_minor, &cl_patch);]])], [acx_clblas_ok=yes], [])    
@@ -140,3 +138,4 @@ AC_SUBST([LIBS_CLBLAS])
 CFLAGS="$acx_clblas_save_CFLAGS"
 LIBS="$acx_clblas_save_LIBS"
 ])dnl ACX_CLBLAS
+
