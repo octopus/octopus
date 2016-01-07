@@ -546,7 +546,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
 
 
   if(.not. this%parallel) then
-    if (mpi_grp_is_root(mpi_world)) then
+    if (mpi_grp_is_root(gr%mesh%mpi_grp)) then
       SAFE_ALLOCATE(hamiltonian(1:this%norbs, 1:this%norbs))
       SAFE_ALLOCATE(overlap(1:this%norbs, 1:this%norbs))
     end if
@@ -594,7 +594,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
 
       call profiling_in(prof_matrix, "LCAO_MATRIX")
 
-      if(.not. this%parallel .and. mpi_grp_is_root(mpi_world)) then
+      if(.not. this%parallel .and. mpi_grp_is_root(gr%mesh%mpi_grp)) then
         hamiltonian = R_TOTYPE(M_ZERO)
         overlap = R_TOTYPE(M_ZERO)
       end if
@@ -649,7 +649,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
           !now, store the result in the matrix
 
           if (.not. this%parallel) then
-            if (mpi_grp_is_root(mpi_world)) then
+            if (mpi_grp_is_root(gr%mesh%mpi_grp)) then
               do iorb = 1, norbs
                 n1 = ibasis - 1 + iorb
 
@@ -724,7 +724,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
         SAFE_ALLOCATE(levec(1:this%lsize(1), 1:this%lsize(2)))
         SAFE_ALLOCATE(evec(1:this%norbs, st%st_start:min(st%st_end, this%norbs)))
       else 
-        if (mpi_grp_is_root(mpi_world)) then 
+        if (mpi_grp_is_root(gr%mesh%mpi_grp)) then 
           SAFE_ALLOCATE(evec(1:this%norbs, 1:this%norbs))
         end if
       end if
@@ -760,7 +760,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
           
           SAFE_ALLOCATE(block_evec(1:this%norbs, 1:block_evec_size))
 
-          if (mpi_grp_is_root(mpi_world)) then
+          if (mpi_grp_is_root(gr%mesh%mpi_grp)) then
             block_evec(1:this%norbs, 1:block_evec_size) = &
                  evec(1:this%norbs, states_block_min(st, ib):block_evec_max)
           end if
@@ -797,7 +797,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
           SAFE_DEALLOCATE_A(block_evec)
         end do
 
-        if (mpi_grp_is_root(mpi_world)) then
+        if (mpi_grp_is_root(gr%mesh%mpi_grp)) then
           SAFE_DEALLOCATE_A(evec)
         end if
 
@@ -841,7 +841,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
     call batch_end(this%orbitals(iatom))
   end do
 
-  if (this%parallel .or. mpi_grp_is_root(mpi_world)) then
+  if (this%parallel .or. mpi_grp_is_root(gr%mesh%mpi_grp)) then
     SAFE_DEALLOCATE_A(hamiltonian)
     SAFE_DEALLOCATE_A(overlap)
   end if
@@ -1069,6 +1069,9 @@ contains
       if (mpi_grp_is_root(gr%mesh%mpi_grp)) then
         SAFE_ALLOCATE(ifail(1:this%norbs))
         SAFE_ALLOCATE(iwork(1:5*this%norbs))
+
+        ASSERT(allocated(hamiltonian))
+        ASSERT(allocated(overlap))
 
 #ifdef R_TREAL    
         call lapack_sygvx(itype = 1, jobz = 'V', range = 'I', uplo = 'U', &
