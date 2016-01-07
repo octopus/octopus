@@ -1319,7 +1319,7 @@ contains
 
     integer :: ii
     
-    if(debug%info) then
+    if(debug%trace) then
       call flush_msg(stderr, shyphens)
       
       write(msg, '(a)') 'Octopus call stack: '
