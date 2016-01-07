@@ -1322,15 +1322,15 @@ contains
     if(debug%trace) then
       call flush_msg(stderr, shyphens)
       
-      write(msg, '(a)') 'Octopus call stack: '
-      call flush_msg(stderr, msg, 'no')
+      write(msg, '(a)') 'Octopus debug trace: '
+      call flush_msg(stderr, msg)
       do ii = 1, no_sub_stack
         write(msg, '(a,a)') ' > ', trim(sub_stack(ii))
         call flush_msg(stderr, msg, 'no')
       end do
       call flush_msg(stderr, " ")
     else
-      write(msg, '(a)') 'Octopus call stack not available.'
+      write(msg, '(a)') " Octopus debug trace not available. You can enable it with 'Debug = trace'."
       call flush_msg(stderr, msg)
     end if
 
