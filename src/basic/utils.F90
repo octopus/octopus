@@ -269,7 +269,7 @@ contains
 #ifdef HAVE_BERKELEYGW
     get_optional_libraries = trim(get_optional_libraries)//' berkeleygw'
 #endif
-#ifdef HAVE_CLAMDFFT
+#ifdef HAVE_CLFFT
     get_optional_libraries = trim(get_optional_libraries)//' clamdfft'
 #endif
 #ifdef HAVE_CLBLAS

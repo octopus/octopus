@@ -229,7 +229,7 @@ contains
     
     if(der%mesh%sb%dim > 3) default_solver = POISSON_CG_CORRECTED
 
-#ifdef HAVE_CLAMDFFT
+#ifdef HAVE_CLFFT
     ! this is disabled, since the difference between solvers are big
     ! enough to cause problems with the tests.
     ! if(opencl_is_enabled()) default_solver = POISSON_FFT

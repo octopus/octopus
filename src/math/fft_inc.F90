@@ -28,7 +28,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
 
     integer :: ii, jj, kk, slot, n1, n2, n3
     type(profile_t), save :: prof_fw
-#ifdef HAVE_CLAMDFFT
+#ifdef HAVE_CLFFT
     CMPLX, allocatable :: cin(:, :, :)
     type(opencl_mem_t) :: rsbuffer, fsbuffer
 #endif
@@ -82,7 +82,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
       call pfft_execute(fft_array(slot)%planf)
 #endif
     case(FFTLIB_CLAMD)
-#ifdef HAVE_CLAMDFFT
+#ifdef HAVE_CLFFT
 
       SAFE_ALLOCATE(cin(1:fft_array(slot)%rs_n(1), 1:fft_array(slot)%rs_n(2), 1:fft_array(slot)%rs_n(3)))
 
@@ -129,7 +129,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
 
     integer :: slot
     type(profile_t), save :: prof_fw
-#ifdef HAVE_CLAMDFFT
+#ifdef HAVE_CLFFT
     type(opencl_mem_t)         :: tmp_buf
     integer                    :: bsize
     integer(8)                 :: tmp_buf_size
@@ -142,7 +142,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
     slot = fft%slot
     ASSERT(fft_array(slot)%library == FFTLIB_CLAMD)
 
-#ifdef HAVE_CLAMDFFT
+#ifdef HAVE_CLFFT
 
     call clAmdFftGetTmpBufSize(fft_array(slot)%cl_plan_bw, tmp_buf_size, cl_status)
     if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clAmdFftGetTmpBufSize')
@@ -204,7 +204,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
     FLOAT :: scaling_factor
     type(profile_t), save :: prof_bw
     logical :: scale
-#ifdef HAVE_CLAMDFFT
+#ifdef HAVE_CLFFT
     CMPLX, allocatable :: cout(:, :, :)
     type(opencl_mem_t) :: rsbuffer, fsbuffer
 #endif
@@ -246,7 +246,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
       call pfft_execute(fft_array(slot)%planb)
 #endif
     case(FFTLIB_CLAMD)
-#ifdef HAVE_CLAMDFFT
+#ifdef HAVE_CLFFT
 
       call opencl_create_buffer(rsbuffer, CL_MEM_READ_WRITE, TYPE_CMPLX, product(fft_array(slot)%rs_n(1:3)))
       call opencl_create_buffer(fsbuffer, CL_MEM_READ_WRITE, TYPE_CMPLX, product(fft_array(slot)%fs_n(1:3)))
@@ -310,7 +310,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
 
     integer :: slot
     type(profile_t), save :: prof_bw
-#ifdef HAVE_CLAMDFFT
+#ifdef HAVE_CLFFT
     integer                    :: bsize
     integer(8)                 :: tmp_buf_size
     type(opencl_mem_t)         :: tmp_buf
@@ -323,7 +323,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
     slot = fft%slot
     ASSERT(fft_array(slot)%library == FFTLIB_CLAMD)
 
-#ifdef HAVE_CLAMDFFT
+#ifdef HAVE_CLFFT
     
     call clAmdFftGetTmpBufSize(fft_array(slot)%cl_plan_bw, tmp_buf_size, cl_status)
     if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clAmdFftGetTmpBufSize')

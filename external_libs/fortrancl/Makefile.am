@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-## Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
+## Copyright (C) 2002-2016 M. Marques, A. Castro, A. Rubio, G. Bertsch, X. Andrade
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -38,7 +38,7 @@ libfortrancl_a_SOURCES =       \
 	cl_event.f90           \
 	cl.f90                 \
 	clblas.f90          \
-	clamdfft.f90
+	clfft.f90
 
 if COMPILE_OPENCL
  libfortrancl_a_SOURCES +=           \
@@ -52,7 +52,7 @@ if COMPILE_OPENCL
 	cl_program_low.c             \
 	cl_event_low.c               \
 	clblas_low.c              \
-	clamdfft_low.c
+	clfft_low.c
 endif
 
 noinst_HEADERS =               \
@@ -71,7 +71,7 @@ cl_buffer.o    : cl_buffer.f90  cl_types.o
 cl_event.o     : cl_event.f90  cl_types.o
 cl.o           : cl.f90 cl_constants.o cl_types.o cl_device.o cl_kernel.o cl_program.o cl_platform.o cl_context.o cl_command_queue.o cl_buffer.o cl_event.o
 clblas.o       : clblas.f90 cl.o
-clamdfft.o     : clamdfft.f90 cl.o
+clfft.o        : clfft.f90 cl.o
 
 CLEANFILES = *~ *.bak *.mod *.MOD *.il *.d *.pc* ifc*
 

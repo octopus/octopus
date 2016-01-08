@@ -58,7 +58,7 @@ AC_MSG_RESULT([$acx_clfft_ok ($CFLAGS_CLFFT $LIBS_CLFFT)])
 
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_clfft_ok" = xyes; then
-  AC_DEFINE(HAVE_CLAMDFFT, 1, [Defined if you have the CLFFT library.])
+  AC_DEFINE(HAVE_CLFFT, 1, [Defined if you have the CLFFT library.])
 else
   AC_MSG_ERROR([Could not find the required clfft library.])
 fi

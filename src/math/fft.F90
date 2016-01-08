@@ -27,7 +27,7 @@ module fft_m
   use,intrinsic :: iso_c_binding
 #ifdef HAVE_OPENCL  
   use cl
-#ifdef HAVE_CLAMDFFT
+#ifdef HAVE_CLFFT
   use clAmdFft
 #endif
 #endif
@@ -124,7 +124,7 @@ module fft_m
     FLOAT, pointer :: drs_data(:,:,:) !< array used to store the function in real space that is passed to PFFT.
     CMPLX, pointer :: zrs_data(:,:,:) !< array used to store the function in real space that is passed to PFFT.
     CMPLX, pointer ::  fs_data(:,:,:) !< array used to store the function in fourier space that is passed to PFFT
-#ifdef HAVE_CLAMDFFT
+#ifdef HAVE_CLFFT
     !> data for clAmdFft
     type(clAmdFftPlanHandle) :: cl_plan_fw 
     type(clAmdFftPlanHandle) :: cl_plan_bw !< for real transforms we need a different plan, so we always use 2
@@ -279,7 +279,7 @@ contains
     integer :: library_
     type(mpi_grp_t) :: mpi_grp_
 
-#ifdef HAVE_CLAMDFFT
+#ifdef HAVE_CLFFT
     real(8) :: scale
 #endif
 
@@ -551,7 +551,7 @@ contains
 #endif
 
     case(FFTLIB_CLAMD)
-#ifdef HAVE_CLAMDFFT
+#ifdef HAVE_CLFFT
 
       ! create the plans
       call clAmdFftCreateDefaultPlan(fft_array(jj)%cl_plan_fw, opencl%context, fft_dim, int(fft_array(jj)%rs_n_global, 8), status)
@@ -819,7 +819,7 @@ contains
           SAFE_DEALLOCATE_P(fft_array(ii)%drs_data)
           SAFE_DEALLOCATE_P(fft_array(ii)%zrs_data)
           SAFE_DEALLOCATE_P(fft_array(ii)%fs_data)
-#ifdef HAVE_CLAMDFFT
+#ifdef HAVE_CLFFT
         case(FFTLIB_CLAMD)
           call clAmdFftDestroyPlan(fft_array(ii)%cl_plan_fw, status)
           call clAmdFftDestroyPlan(fft_array(ii)%cl_plan_bw, status)

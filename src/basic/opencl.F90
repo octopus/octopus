@@ -26,7 +26,7 @@ module opencl_m
 #ifdef HAVE_CLBLAS
   use clblas
 #endif
-#ifdef HAVE_CLAMDFFT
+#ifdef HAVE_CLFFT
   use clAmdFft
 #endif
   use global_m
@@ -505,7 +505,7 @@ contains
     if(cl_status /= clblasSuccess) call clblas_print_error(cl_status, 'clblasSetup')
 #endif
 
-#ifdef HAVE_CLAMDFFT
+#ifdef HAVE_CLFFT
     call clAmdFftSetup(cl_status)
     if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clAmdFftSetup')
 #endif
@@ -683,7 +683,7 @@ contains
     call clblasTearDown()
 #endif
 
-#ifdef HAVE_CLAMDFFT
+#ifdef HAVE_CLFFT
     call clAmdFftTearDown()
 #endif
 
@@ -1208,7 +1208,7 @@ contains
     character(len=40) :: errcode
 
     PUSH_SUB(clfft_print_error)
-#ifdef HAVE_CLAMDFFT
+#ifdef HAVE_CLFFT
     select case(ierr)
     case(CLFFT_INVALID_GLOBAL_WORK_SIZE);          errcode = 'CLFFT_INVALID_GLOBAL_WORK_SIZE' 
     case(CLFFT_INVALID_MIP_LEVEL);                 errcode = 'CLFFT_INVALID_MIP_LEVEL' 

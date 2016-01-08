@@ -163,7 +163,7 @@ contains
         !% (experimental) Uses clAmdFft (GPU) library, which has to be linked.
         !%End
         default_lib = FFTLIB_FFTW
-#ifdef HAVE_CLAMDFFT
+#ifdef HAVE_CLFFT
         ! disabled by default since there are some problems for dim != 3
         ! if(opencl_is_enabled() .and. sb%dim == 3) default_lib = FFTLIB_CLAMD
 #endif
@@ -178,7 +178,7 @@ contains
 #endif
 
       if (fft_library_ == FFTLIB_CLAMD) then
-#ifndef HAVE_CLAMDFFT
+#ifndef HAVE_CLFFT
         call messages_write('You have selected the OpenCL FFT, but Octopus was compiled', new_line = .true.)
         call messages_write('without clAmdFft (or OpenCL) support.')
         call messages_fatal()

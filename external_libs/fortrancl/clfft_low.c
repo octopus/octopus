@@ -1,6 +1,6 @@
 #include <config.h>
 
-#ifdef HAVE_CLAMDFFT
+#ifdef HAVE_CLFFT
 
 #include <clFFT.h>
 
