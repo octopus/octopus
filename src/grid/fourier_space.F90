@@ -109,7 +109,7 @@ contains
         allocated = .true.
         SAFE_ALLOCATE(cf%fs(1:n3, 1:n1, 1:n2))
       end if
-    case(FFTLIB_CLAMD)
+    case(FFTLIB_OPENCL)
 #ifdef HAVE_OPENCL
       if(cf%in_device_memory) then
         allocated = .true.
@@ -146,7 +146,7 @@ contains
         deallocated = .true.
         nullify(cf%fs)
       end if
-    case(FFTLIB_CLAMD)
+    case(FFTLIB_OPENCL)
 #ifdef HAVE_OPENCL
       if(cf%in_device_memory) then
         deallocated = .true.

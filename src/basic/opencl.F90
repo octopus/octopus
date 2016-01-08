@@ -27,7 +27,7 @@ module opencl_m
   use clblas
 #endif
 #ifdef HAVE_CLFFT
-  use clAmdFft
+  use clfft
 #endif
   use global_m
   use io_m
@@ -506,8 +506,8 @@ contains
 #endif
 
 #ifdef HAVE_CLFFT
-    call clAmdFftSetup(cl_status)
-    if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clAmdFftSetup')
+    call clfftSetup(cl_status)
+    if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clfftSetup')
 #endif
 
     call profiling_out(prof_init)
@@ -684,7 +684,7 @@ contains
 #endif
 
 #ifdef HAVE_CLFFT
-    call clAmdFftTearDown()
+    call clfftTearDown()
 #endif
 
     if(opencl_is_enabled()) then
@@ -1271,7 +1271,7 @@ contains
     end select
 #endif
 
-    message(1) = 'clAmdFft '//trim(name)//' '//trim(errcode)
+    message(1) = 'clfft '//trim(name)//' '//trim(errcode)
     call messages_fatal(1)
 
     POP_SUB(clfft_print_error)

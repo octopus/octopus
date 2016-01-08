@@ -81,7 +81,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
 #ifdef HAVE_PFFT
       call pfft_execute(fft_array(slot)%planf)
 #endif
-    case(FFTLIB_CLAMD)
+    case(FFTLIB_OPENCL)
 #ifdef HAVE_CLFFT
 
       SAFE_ALLOCATE(cin(1:fft_array(slot)%rs_n(1), 1:fft_array(slot)%rs_n(2), 1:fft_array(slot)%rs_n(3)))
@@ -96,9 +96,9 @@ subroutine X(fft_forward)(fft, in, out, norm)
 
       call opencl_finish()
 
-      call clAmdFftEnqueueTransform(fft_array(slot)%cl_plan_fw, CLFFT_FORWARD, opencl%command_queue, &
+      call clfftEnqueueTransform(fft_array(slot)%cl_plan_fw, CLFFT_FORWARD, opencl%command_queue, &
         rsbuffer%mem, fsbuffer%mem, cl_status)
-      if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clAmdFftEnqueueTransform')
+      if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clfftEnqueueTransform')
 
       call opencl_finish()
 
@@ -140,26 +140,26 @@ subroutine X(fft_forward)(fft, in, out, norm)
     call profiling_in(prof_fw, "FFT_FORWARD_CL")
 
     slot = fft%slot
-    ASSERT(fft_array(slot)%library == FFTLIB_CLAMD)
+    ASSERT(fft_array(slot)%library == FFTLIB_OPENCL)
 
 #ifdef HAVE_CLFFT
 
-    call clAmdFftGetTmpBufSize(fft_array(slot)%cl_plan_bw, tmp_buf_size, cl_status)
-    if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clAmdFftGetTmpBufSize')
+    call clfftGetTmpBufSize(fft_array(slot)%cl_plan_bw, tmp_buf_size, cl_status)
+    if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clfftGetTmpBufSize')
 
     if(tmp_buf_size > 0) then
       call opencl_create_buffer(tmp_buf, CL_MEM_READ_WRITE, TYPE_BYTE, int(tmp_buf_size, 4))
     end if
 
     if(tmp_buf_size > 0) then
-      call clAmdFftEnqueueTransform(fft_array(slot)%cl_plan_fw, CLFFT_FORWARD, opencl%command_queue, &
+      call clfftEnqueueTransform(fft_array(slot)%cl_plan_fw, CLFFT_FORWARD, opencl%command_queue, &
         in%mem, out%mem, tmp_buf%mem, cl_status)
     else
-      call clAmdFftEnqueueTransform(fft_array(slot)%cl_plan_fw, CLFFT_FORWARD, opencl%command_queue, &
+      call clfftEnqueueTransform(fft_array(slot)%cl_plan_fw, CLFFT_FORWARD, opencl%command_queue, &
         in%mem, out%mem, cl_status)
     end if
     
-    if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clAmdFftEnqueueTransform')
+    if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clfftEnqueueTransform')
     
     call fft_operation_count(fft)
 
@@ -245,7 +245,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
 #ifdef HAVE_PFFT
       call pfft_execute(fft_array(slot)%planb)
 #endif
-    case(FFTLIB_CLAMD)
+    case(FFTLIB_OPENCL)
 #ifdef HAVE_CLFFT
 
       call opencl_create_buffer(rsbuffer, CL_MEM_READ_WRITE, TYPE_CMPLX, product(fft_array(slot)%rs_n(1:3)))
@@ -255,9 +255,9 @@ subroutine X(fft_forward)(fft, in, out, norm)
 
       call opencl_finish()
 
-      call clAmdFftEnqueueTransform(fft_array(slot)%cl_plan_bw, CLFFT_FORWARD, opencl%command_queue, &
+      call clfftEnqueueTransform(fft_array(slot)%cl_plan_bw, CLFFT_FORWARD, opencl%command_queue, &
         fsbuffer%mem, rsbuffer%mem, cl_status)
-      if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clAmdFftEnqueueTransform')
+      if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clfftEnqueueTransform')
 
       call opencl_finish()
 
@@ -321,26 +321,26 @@ subroutine X(fft_forward)(fft, in, out, norm)
     call profiling_in(prof_bw,"FFT_BACKWARD_CL")
 
     slot = fft%slot
-    ASSERT(fft_array(slot)%library == FFTLIB_CLAMD)
+    ASSERT(fft_array(slot)%library == FFTLIB_OPENCL)
 
 #ifdef HAVE_CLFFT
     
-    call clAmdFftGetTmpBufSize(fft_array(slot)%cl_plan_bw, tmp_buf_size, cl_status)
-    if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clAmdFftGetTmpBufSize')
+    call clfftGetTmpBufSize(fft_array(slot)%cl_plan_bw, tmp_buf_size, cl_status)
+    if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clfftGetTmpBufSize')
 
     if(tmp_buf_size > 0) then
       call opencl_create_buffer(tmp_buf, CL_MEM_READ_WRITE, TYPE_BYTE, int(tmp_buf_size, 4))
     end if
 
     if(tmp_buf_size > 0) then
-      call clAmdFftEnqueueTransform(fft_array(slot)%cl_plan_bw, CLFFT_FORWARD, opencl%command_queue, &
+      call clfftEnqueueTransform(fft_array(slot)%cl_plan_bw, CLFFT_FORWARD, opencl%command_queue, &
         in%mem, out%mem, tmp_buf%mem, cl_status)
     else
-      call clAmdFftEnqueueTransform(fft_array(slot)%cl_plan_bw, CLFFT_FORWARD, opencl%command_queue, &
+      call clfftEnqueueTransform(fft_array(slot)%cl_plan_bw, CLFFT_FORWARD, opencl%command_queue, &
         in%mem, out%mem, cl_status)
     end if
     
-    if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clAmdFftEnqueueTransform')
+    if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clfftEnqueueTransform')
     
     call fft_operation_count(fft)
 

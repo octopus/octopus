@@ -160,12 +160,12 @@ contains
         !%Option pfft 2
         !% (experimental) Uses PFFT library, which has to be linked.
         !%Option clfft 3
-        !% (experimental) Uses clAmdFft (GPU) library, which has to be linked.
+        !% (experimental) Uses clfft (GPU) library, which has to be linked.
         !%End
         default_lib = FFTLIB_FFTW
 #ifdef HAVE_CLFFT
         ! disabled by default since there are some problems for dim != 3
-        ! if(opencl_is_enabled() .and. sb%dim == 3) default_lib = FFTLIB_CLAMD
+        ! if(opencl_is_enabled() .and. sb%dim == 3) default_lib = FFTLIB_OPENCL
 #endif
         call parse_variable('FFTLibrary', default_lib, fft_library_)
         if(optional_default(verbose, .false.)) call messages_print_var_option(stdout, 'FFTLibrary', fft_library_)
@@ -177,10 +177,10 @@ contains
       end if
 #endif
 
-      if (fft_library_ == FFTLIB_CLAMD) then
+      if (fft_library_ == FFTLIB_OPENCL) then
 #ifndef HAVE_CLFFT
         call messages_write('You have selected the OpenCL FFT, but Octopus was compiled', new_line = .true.)
-        call messages_write('without clAmdFft (or OpenCL) support.')
+        call messages_write('without clfft (or OpenCL) support.')
         call messages_fatal()
 #endif
         if(.not. opencl_is_enabled()) then
@@ -407,7 +407,7 @@ contains
   ! ---------------------------------------------------------
   !> Returns the FFT library of the cube.
   !! Possible values are FFTLIB_NONE, FFTLIB_FFTW, FFTLIB_PFFT 
-  !! FFTLIB_CLAMD, FFTLIB_NFFT and FFTLIB_PNFFT 
+  !! FFTLIB_OPENCL, FFTLIB_NFFT and FFTLIB_PNFFT 
   !! (defined in fft.F90)
   integer function cube_getFFTLibrary(cube) result(fft_library)
     type(cube_t), intent(in)  :: cube

@@ -4,7 +4,7 @@
 
 #include <clFFT.h>
 
-void FC_FUNC_(clamdfftgetversion_low, CLAMDFFTGETVERSION_LOW)(int * major, int * minor, int * patch, int * status){
+void FC_FUNC_(clfftgetversion_low, CLFFTGETVERSION_LOW)(int * major, int * minor, int * patch, int * status){
   cl_uint cl_major, cl_minor, cl_patch;
 
   *status = clfftGetVersion(&cl_major, &cl_minor, &cl_patch);
@@ -15,7 +15,7 @@ void FC_FUNC_(clamdfftgetversion_low, CLAMDFFTGETVERSION_LOW)(int * major, int *
 
 /**************************************************/
 
-void FC_FUNC_(clamdfftsetup_low, CLAMDFFTSETUP_LOW)(int * status){
+void FC_FUNC_(clfftsetup_low, CLFFTSETUP_LOW)(int * status){
   clfftSetupData setup_data;
 
   *status = clfftInitSetupData(&setup_data);
@@ -24,13 +24,13 @@ void FC_FUNC_(clamdfftsetup_low, CLAMDFFTSETUP_LOW)(int * status){
 
 /**************************************************/
 
-void FC_FUNC_(clamdfftteardown_low, CLAMDFFTTEARDOWN_LOW)(){
+void FC_FUNC_(clfftteardown_low, CLFFTTEARDOWN_LOW)(){
   clfftTeardown();
 }
 
 /**************************************************/
 
-void FC_FUNC_(clamdfftcreatedefaultplan_low, CLAMDFFTCREATEDEFAULTPLAN_LOW)
+void FC_FUNC_(clfftcreatedefaultplan_low, CLFFTCREATEDEFAULTPLAN_LOW)
      (clfftPlanHandle ** plHandle, cl_context * context, const int * dim, const cl_long * clLengths, int * status){
   size_t * lengths_size_t;
   int i;
@@ -51,7 +51,7 @@ void FC_FUNC_(clamdfftcreatedefaultplan_low, CLAMDFFTCREATEDEFAULTPLAN_LOW)
 
 /**************************************************/
 
-void FC_FUNC_(clamdfftdestroyplan_low, CLAMDFFTDESTROYPLAN_LOW)
+void FC_FUNC_(clfftdestroyplan_low, CLFFTDESTROYPLAN_LOW)
      (clfftPlanHandle ** plHandle, int * status){
 
   *status = clfftDestroyPlan(*plHandle);
@@ -60,7 +60,7 @@ void FC_FUNC_(clamdfftdestroyplan_low, CLAMDFFTDESTROYPLAN_LOW)
 
 /**************************************************/
 
-void FC_FUNC_(clamdfftenqueuetransform_low, CLAMDFFTENQUEUETRANSFORM_LOW)(clfftPlanHandle ** plHandle, 
+void FC_FUNC_(clfftenqueuetransform_low, CLFFTENQUEUETRANSFORM_LOW)(clfftPlanHandle ** plHandle, 
 									  const int * dir, 
 									  cl_command_queue * commQueues,
 									  cl_mem * inputBuffers, 
@@ -73,7 +73,7 @@ void FC_FUNC_(clamdfftenqueuetransform_low, CLAMDFFTENQUEUETRANSFORM_LOW)(clfftP
 
 /**************************************************/
 
-void FC_FUNC_(clamdfftenqueuetransform_tmpbuf_low, CLAMDFFTENQUEUETRANSFORM_TMPBUF_LOW)(clfftPlanHandle ** plHandle, 
+void FC_FUNC_(clfftenqueuetransform_tmpbuf_low, CLFFTENQUEUETRANSFORM_TMPBUF_LOW)(clfftPlanHandle ** plHandle, 
 											const int * dir, 
 											cl_command_queue * commQueues,
 											cl_mem * inputBuffers, 
@@ -87,7 +87,7 @@ void FC_FUNC_(clamdfftenqueuetransform_tmpbuf_low, CLAMDFFTENQUEUETRANSFORM_TMPB
 
 /**************************************************/
 
-void FC_FUNC_(clamdfftsetplanprecision_low, CLAMDFFTSETPLANPRECISION_LOW)(clfftPlanHandle ** plHandle, 
+void FC_FUNC_(clfftsetplanprecision_low, CLFFTSETPLANPRECISION_LOW)(clfftPlanHandle ** plHandle, 
 									  const int * precision, 
 									  int * status){
 
@@ -99,7 +99,7 @@ void FC_FUNC_(clamdfftsetplanprecision_low, CLAMDFFTSETPLANPRECISION_LOW)(clfftP
 /**************************************************/
 
 
-void FC_FUNC_(clamdfftsetplanbatchsize_low, CLAMDFFTSETPLANBATCHSIZE_LOW)(clfftPlanHandle ** plHandle, 
+void FC_FUNC_(clfftsetplanbatchsize_low, CLFFTSETPLANBATCHSIZE_LOW)(clfftPlanHandle ** plHandle, 
 									  const cl_long * batchSize, 
 									  int * status){
 
@@ -109,7 +109,7 @@ void FC_FUNC_(clamdfftsetplanbatchsize_low, CLAMDFFTSETPLANBATCHSIZE_LOW)(clfftP
 
 /**************************************************/
 
-void FC_FUNC_(clamdfftsetlayout_low, CLAMDFFTSETLAYOUT_LOW)(clfftPlanHandle ** plHandle, 
+void FC_FUNC_(clfftsetlayout_low, CLFFTSETLAYOUT_LOW)(clfftPlanHandle ** plHandle, 
 							    const int * iLayout,
 							    const int * oLayout,
 							    int * status){
@@ -121,7 +121,7 @@ void FC_FUNC_(clamdfftsetlayout_low, CLAMDFFTSETLAYOUT_LOW)(clfftPlanHandle ** p
 
 /**************************************************/
 
-void FC_FUNC_(clamdfftsetresultlocation_low, CLAMDFFTSETRESULTLOCATION_LOW)(clfftPlanHandle ** plHandle, 
+void FC_FUNC_(clfftsetresultlocation_low, CLFFTSETRESULTLOCATION_LOW)(clfftPlanHandle ** plHandle, 
 									    const int * placeness, 
 									    int * status){
 
@@ -132,7 +132,7 @@ void FC_FUNC_(clamdfftsetresultlocation_low, CLAMDFFTSETRESULTLOCATION_LOW)(clff
 
 /**************************************************/
 
-void FC_FUNC_(clamdfftsetplaninstride_low, CLAMDFFTSETPLANINSTRIDE_LOW)(clfftPlanHandle ** plHandle, 
+void FC_FUNC_(clfftsetplaninstride_low, CLFFTSETPLANINSTRIDE_LOW)(clfftPlanHandle ** plHandle, 
 									const int * dim, 
 									const cl_long * clStrides, 
 									int * status){
@@ -154,7 +154,7 @@ void FC_FUNC_(clamdfftsetplaninstride_low, CLAMDFFTSETPLANINSTRIDE_LOW)(clfftPla
 
 /**************************************************/
 
-void FC_FUNC_(clamdfftsetplanoutstride_low, CLAMDFFTSETPLANOUTSTRIDE_LOW)(clfftPlanHandle ** plHandle, 
+void FC_FUNC_(clfftsetplanoutstride_low, CLFFTSETPLANOUTSTRIDE_LOW)(clfftPlanHandle ** plHandle, 
 									const int * dim, 
 									const cl_long * clStrides, 
 									int * status){
@@ -176,7 +176,7 @@ void FC_FUNC_(clamdfftsetplanoutstride_low, CLAMDFFTSETPLANOUTSTRIDE_LOW)(clfftP
 
 /**************************************************/
 
-void FC_FUNC_(clamdfftgetplaninstride_low, CLAMDFFTGETPLANINSTRIDE_LOW)(clfftPlanHandle ** plHandle, 
+void FC_FUNC_(clfftgetplaninstride_low, CLFFTGETPLANINSTRIDE_LOW)(clfftPlanHandle ** plHandle, 
 									const int * dim, 
 									cl_long * clStrides, 
 									int * status){
@@ -198,7 +198,7 @@ void FC_FUNC_(clamdfftgetplaninstride_low, CLAMDFFTGETPLANINSTRIDE_LOW)(clfftPla
 
 /**************************************************/
 
-void FC_FUNC_(clamdfftgetplanoutstride_low, CLAMDFFTGETPLANOUTSTRIDE_LOW)(clfftPlanHandle ** plHandle, 
+void FC_FUNC_(clfftgetplanoutstride_low, CLFFTGETPLANOUTSTRIDE_LOW)(clfftPlanHandle ** plHandle, 
 									  const int * dim, 
 									  cl_long * clStrides, 
 									  int * status){
@@ -220,7 +220,7 @@ void FC_FUNC_(clamdfftgetplanoutstride_low, CLAMDFFTGETPLANOUTSTRIDE_LOW)(clfftP
 
 /**************************************************/
 
-void FC_FUNC_(clamdfftsetplanscale_low, CLAMDFFTSETPLANSCALE_LOW)(clfftPlanHandle ** plHandle, 
+void FC_FUNC_(clfftsetplanscale_low, CLFFTSETPLANSCALE_LOW)(clfftPlanHandle ** plHandle, 
 								  const int * dir, 
 								  const double * scale,
 								  int * status){
@@ -231,7 +231,7 @@ void FC_FUNC_(clamdfftsetplanscale_low, CLAMDFFTSETPLANSCALE_LOW)(clfftPlanHandl
 
 /**************************************************/
 
-void FC_FUNC_(clamdfftgetplanscale_low, CLAMDFFTGETPLANSCALE_LOW)(clfftPlanHandle ** plHandle, 
+void FC_FUNC_(clfftgetplanscale_low, CLFFTGETPLANSCALE_LOW)(clfftPlanHandle ** plHandle, 
 								  const int * dir, 
 								  double * scale,
 								  int * status){
@@ -245,7 +245,7 @@ void FC_FUNC_(clamdfftgetplanscale_low, CLAMDFFTGETPLANSCALE_LOW)(clfftPlanHandl
 
 /**************************************************/
 
-void FC_FUNC_(clamdfftbakeplan_low, CLAMDFFTBAKEPLAN_LOW)(clfftPlanHandle ** plHandle,
+void FC_FUNC_(clfftbakeplan_low, CLFFTBAKEPLAN_LOW)(clfftPlanHandle ** plHandle,
 							  cl_command_queue * commQueue,
 							  int * status){
 
@@ -256,7 +256,7 @@ void FC_FUNC_(clamdfftbakeplan_low, CLAMDFFTBAKEPLAN_LOW)(clfftPlanHandle ** plH
 
 /**************************************************/
 
-void FC_FUNC_(clamdfftgettmpbufsize_low, CLAMDFFTGETTMPBUFSIZE_LOW)(const clfftPlanHandle ** plHandle, 
+void FC_FUNC_(clfftgettmpbufsize_low, CLFFTGETTMPBUFSIZE_LOW)(const clfftPlanHandle ** plHandle, 
 								    cl_long * buffersize,
 								    int * status){
 
