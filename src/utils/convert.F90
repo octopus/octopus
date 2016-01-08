@@ -758,6 +758,7 @@ contains
 
     SAFE_ALLOCATE(tmp_ff(1:mesh%np))
     SAFE_ALLOCATE(scalar_ff(1:mesh%np))
+    scalar_ff = M_ZERO
 
     do i_op = 1, n_operations
       !read variable name
@@ -791,7 +792,7 @@ contains
       do ip = 1, mesh%np
         call parse_expression(f_re, f_im, trim(var), real(tmp_ff(ip), 8), trim(scalar_expression))
         !TODO: implement use of complex functions. 
-        scalar_ff(ip) = f_re
+        scalar_ff(ip) = scalar_ff(ip) + f_re
       end do
       
       call restart_end(restart)

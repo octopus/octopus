@@ -71,5 +71,5 @@ Program : oct-convert
 Input : 05-output.03-convert-op.inp
 Precision : 1.0e-9
 match ; Convert to dx (header)     ; GREPFIELD(convert/density.dx, 'origin', 2, 0) ; -5.000000
-match ; Convert to dx (line 513)   ; LINEFIELD(convert/density.dx, 671, 1) ; 0.000048840817809
-match ; Convert to dx (line 29355) ; LINEFIELD(convert/density.dx, 9048, 1) ; 0.000001457823867
+match ; Convert to dx (line 513)   ; LINEFIELD(convert/density.dx, 671, 1) ; 0.000244204088835
+match ; Convert to dx (line 29355) ; LINEFIELD(convert/density.dx, 9048, 1) ; 0.000007289118012
