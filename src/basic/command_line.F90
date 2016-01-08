@@ -161,10 +161,9 @@ module command_line_m
       character(len=*), intent(inout) :: name
     end subroutine getopt_help
     
-    subroutine getopt_photoelectron_spectrum(mode, interp, estep, espan, &
+    subroutine getopt_photoelectron_spectrum(interp, estep, espan, &
       thstep, thspan, phstep, phspan, pol, center, pvec, integrate)
       implicit none
-      integer, intent(inout) :: mode
       integer, intent(inout) :: interp
       real(8), intent(inout) :: estep
       real(8), intent(inout) :: espan(2)

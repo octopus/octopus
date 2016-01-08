@@ -677,34 +677,6 @@ void photoelectron_spectrum_help(){
   printf("Options:\n");
   printf("  -h, --help          Prints this help and exits.\n");
   printf("  -v, --version       Prints octopus version.\n");
-  printf("  -m, --mode=mode     Extract the photoelectron spectrum information from the P-space   \n");
-  printf("                      matrix. When we use polar coordinates the zenith axis is set     \n");
-  printf("                      by vec (by default the field polarization direction), theta is the   \n");  
-  printf("                      inclination angle measured from vec (ranging from 0 to \\pi),     \n");    
-  printf("                      and phi is the azimuthal angle on a plane perpendicular to vec    \n");      
-  printf("                      (ranging from 0 to 2\\pi).\n");        
-  printf("                      The options are:\n");
-  printf("                      \n");
-  printf("                      - 1D\n");
-  printf("                         '1' : (E). Energy-resolved ionization probability (default).\n");
-  printf("                      \n");
-  printf("                      - 2D\n");
-  printf("                         '2' : (theta, E). Angle- and energy-resolved ionization probability.\n");
-  printf("                              The values are integrated in phi.\n");
-  printf("                         '3' : (px, py). Velocity map on a plane orthogonal to pvec (only x,y,z=0 planes).\n");
-  printf("                              The space is oriented so that the z-axis is along vec (by default the \n");
-  printf("                              polarization axis). Support the -I option.\n");
-  printf("                         '4' : (Ex, Ey). Angle- and energy-resolved on the inclination plane.\n");
-  printf("                              The values are integrated in phi.\n");
-  printf("                         '5' : (theta, phi). Ionization probability integrated on spherical cuts with\n");
-  printf("                              energy bounds given by -E.\n");  
-  printf("                        Output is in gnuplot-friendly format.\n");
-  printf("                      \n");
-  printf("                      - 3D\n");
-  printf("                         '6' : (px, py, pz). Full momentum-resolved ionization probability.\n");
-  printf("                             The output format is controlled by OutputHow in the input file.\n");
-  printf("                             Possible formats include ncdf and vtk (default). \n");
-  printf("                         '7' : ARPES.\n");
   printf("  -i, --int=Y/N       Interpolate the output. Default is Yes.\n");
   printf("  -V, --vec=x,y,z     The polar zenith direction in comma-separated format \n");
   printf("                      (without spaces). Default is the laser polarization. \n");
@@ -728,7 +700,7 @@ void photoelectron_spectrum_help(){
 }
 
 void FC_FUNC_(getopt_photoelectron_spectrum, GETOPT_PHOTOELECTRON_SPECTRUM)
-     ( int *m, int *interp, double *estep, double *espan, double *thstep, 
+     ( int *interp, double *estep, double *espan, double *thstep, 
        double *thspan, double *phstep, double *phspan, double *pol, 
        double *center, double *pvec, int *integrate)
 {
@@ -751,7 +723,6 @@ void FC_FUNC_(getopt_photoelectron_spectrum, GETOPT_PHOTOELECTRON_SPECTRUM)
     {
       {"help", no_argument, 0, 'h'},
       {"version", no_argument, 0, 'v'},
-      {"mode", required_argument, 0, 'm'},
       {"int", required_argument, 0, 'i'},
       {"integr", required_argument, 0, 'I'},
       {"de", required_argument, 0, 'e'},
@@ -770,9 +741,9 @@ void FC_FUNC_(getopt_photoelectron_spectrum, GETOPT_PHOTOELECTRON_SPECTRUM)
   while (1) {
     int option_index = 0;
 #if defined(HAVE_GETOPT_LONG)
-    c = getopt_long(argc, argv, "hvm:i:e:E:P:p:T:t:V:C:u:I:", long_options, &option_index);
+    c = getopt_long(argc, argv, "hvi:e:E:P:p:T:t:V:C:u:I:", long_options, &option_index);
 #else
-    c = getopt(argc, argv, "hvm:i:e:E:P:p:T:t:V:C:u:I:");
+    c = getopt(argc, argv, "hvi:e:E:P:p:T:t:V:C:u:I:");
 #endif
     if (c == -1) break;
     switch (c) {
@@ -786,10 +757,6 @@ void FC_FUNC_(getopt_photoelectron_spectrum, GETOPT_PHOTOELECTRON_SPECTRUM)
       exit(0);
     break;
 
-
-    case 'm':
-      *m = (int)atoi(optarg);
-      break;
 
     case 'i':
       if ((strcmp(optarg,"y") == 0)|| (strcmp(optarg,"yes")== 0))  *interp = 1;

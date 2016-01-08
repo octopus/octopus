@@ -51,7 +51,8 @@ module kpoints_m
     kpoints_get_symmetry_ops,     &
     kpoints_get_num_symmetry_ops, &
     kpoints_kweight_denominator,  &
-    kpoints_grid_generate
+    kpoints_grid_generate,        &
+    kpoints_have_zero_weight_path
 
   type kpoints_grid_t
     FLOAT, pointer :: point(:, :)
@@ -1023,6 +1024,18 @@ contains
 
     POP_SUB(kpoints_kweight_denominator)
   end function kpoints_kweight_denominator
+
+  !--------------------------------------------------------
+  logical  pure function kpoints_have_zero_weight_path(this) result(have_zerow)
+    type(kpoints_t),    intent(in) :: this
+    
+    if (this%nik_skip > 0) then
+      have_zerow = .true.
+    else 
+      have_zerow = .false.
+    end if
+
+  end function kpoints_have_zero_weight_path
 
 end module kpoints_m
 

@@ -83,7 +83,9 @@ module pes_mask_m
     pes_mask_output_power_totalm,         &
     pes_mask_load,                      &
     pes_mask_dump,                      &
-    pes_mask_output
+    pes_mask_output,                    &
+    pes_mask_pmesh,                     &
+    pes_mask_map_from_states
     
   
   type pes_mask_t
