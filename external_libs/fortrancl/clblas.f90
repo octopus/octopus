@@ -14,7 +14,9 @@ module clblas
     clblasDgemmEx,        &
     clblasZgemmEx,        &
     clblasDsyrkEx,        &
-    clblasZherkEx
+    clblasZherkEx,        &
+    clblasDdot,           &
+    clblasZdotc
 
   integer, public, parameter ::     &
     clblasRowMajor        = 0,   &
@@ -265,5 +267,53 @@ module clblas
       integer,                intent(out)   :: status
     end subroutine clblasZherkEx_low
   end interface clblasZherkEx
+
+
+  ! --------------------------------------------------
+
+  interface clblasDdot
+    subroutine clblasDdot_low(N, dotProduct, offDP, X, offx, incx, Y, offY, incy, scratchBuff, CommandQueue, status)
+      use cl
+
+      implicit none
+
+      integer(8),             intent(in)    :: N
+      type(cl_mem),           intent(inout) :: dotProduct
+      integer(8),             intent(in)    :: offDP
+      type(cl_mem),           intent(in)    :: X
+      integer(8),             intent(in)    :: offX
+      integer,                intent(in)    :: incx
+      type(cl_mem),           intent(in)    :: Y
+      integer(8),             intent(in)    :: offy
+      integer,                intent(in)    :: incy
+      type(cl_mem),           intent(inout) :: scratchBuff
+      type(cl_command_queue), intent(inout) :: CommandQueue 
+      integer,                intent(out)   :: status
+    end subroutine clblasDdot_low
+  end interface clblasDdot
+
+
+  ! --------------------------------------------------
+
+  interface clblasZdotc
+    subroutine clblasZdotc_low(N, dotProduct, offDP, X, offx, incx, Y, offY, incy, scratchBuff, CommandQueue, status)
+      use cl
+
+      implicit none
+
+      integer(8),             intent(in)    :: N
+      type(cl_mem),           intent(inout) :: dotProduct
+      integer(8),             intent(in)    :: offDP
+      type(cl_mem),           intent(in)    :: X
+      integer(8),             intent(in)    :: offX
+      integer,                intent(in)    :: incx
+      type(cl_mem),           intent(in)    :: Y
+      integer(8),             intent(in)    :: offy
+      integer,                intent(in)    :: incy
+      type(cl_mem),           intent(inout) :: scratchBuff
+      type(cl_command_queue), intent(inout) :: CommandQueue 
+      integer,                intent(out)   :: status
+    end subroutine clblasZdotc_low
+  end interface clblasZdotc
 
 end module clblas

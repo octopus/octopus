@@ -176,4 +176,43 @@ void FC_FUNC_(clblaszherkex_low, CLBLASZHERKEX_LOW)(int * order,
 			1, CommandQueue, 0, NULL, NULL);
 }
 
+
+clblasStatus FC_FUNC_(clblasddot_low, CLBLASDDOT_LOW)(cl_long * N,
+						      cl_mem * dotProduct,
+						      cl_long * offDP,
+						      const cl_mem *X,
+						      cl_long * offx,
+						      int *incx,
+						      const cl_mem * Y,
+						      cl_long * offy,
+						      int * incy,
+						      cl_mem * scratchBuff,
+						      cl_command_queue * CommandQueue,
+						      int * status){
+
+  
+  *status = clblasDdot((size_t) *N, *dotProduct, (size_t) *offDP, *X, (size_t) *offx, *incx,
+		       *Y, (size_t) *offy, *incy, *scratchBuff, 1, CommandQueue, 0, NULL, NULL);
+
+}
+
+
+clblasStatus FC_FUNC_(clblaszdotc_low, CLBLASZDOTC_LOW)(cl_long * N,
+							cl_mem * dotProduct,
+							cl_long * offDP,
+							const cl_mem *X,
+							cl_long * offx,
+							int *incx,
+							const cl_mem * Y,
+							cl_long * offy,
+							int * incy,
+							cl_mem * scratchBuff,
+							cl_command_queue * CommandQueue,
+							int * status){
+
+  
+  *status = clblasZdotc((size_t) *N, *dotProduct, (size_t) *offDP, *X, (size_t) *offx, *incx,
+			*Y, (size_t) *offy, *incy, *scratchBuff, 1, CommandQueue, 0, NULL, NULL);
+
+}
 #endif
