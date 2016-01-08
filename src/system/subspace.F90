@@ -24,7 +24,7 @@ module subspace_m
   use batch_ops_m
   use blas_m
   use blacs_proc_grid_m
-#ifdef HAVE_CLAMDBLAS
+#ifdef HAVE_CLBLAS
   use cl
   use clblas
 #endif

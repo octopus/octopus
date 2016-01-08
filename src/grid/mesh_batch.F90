@@ -25,7 +25,7 @@ module mesh_batch_m
   use iso_c_binding
 #ifdef HAVE_OPENCL
   use cl
-#ifdef HAVE_CLAMDBLAS
+#ifdef HAVE_CLBLAS
   use clblas
 #endif
 #endif

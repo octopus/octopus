@@ -350,7 +350,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
         call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psicopy_buffer, st%nst)
       end do
 
-#if defined(HAVE_CLAMDBLAS) && defined(R_TREAL)
+#if defined(HAVE_CLBLAS) && defined(R_TREAL)
 
       call aX(clblas,trsmEx)(order = clblasColumnMajor, side = clblasLeft, &
         uplo = clblasUpper, transA = clblasTrans, diag = clblasNonUnit, &
@@ -1171,7 +1171,7 @@ subroutine X(states_rotate)(mesh, st, uu, ik)
         call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psicopy_buffer, st%nst)
       end do
 
-#ifdef HAVE_CLAMDBLAS
+#ifdef HAVE_CLBLAS
 
       call aX(clblas,gemmEx)(order = clblasColumnMajor, transA = clblasTrans, transB = clblasNoTrans, &
         M = int(st%nst, 8), N = int(size, 8), K = int(st%nst, 8), alpha = R_TOTYPE(M_ONE), &
@@ -1239,7 +1239,7 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
   type(profile_t), save :: prof
   FLOAT :: vol
   R_TYPE, allocatable :: psi(:, :, :)
-#ifdef HAVE_CLAMDBLAS
+#ifdef HAVE_CLBLAS
   integer :: ierr
   type(opencl_mem_t) :: psi_buffer, overlap_buffer
 #endif
@@ -1299,7 +1299,7 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
 
     SAFE_DEALLOCATE_A(psi)
 
-#ifdef HAVE_CLAMDBLAS
+#ifdef HAVE_CLBLAS
 
   else if(opencl_is_enabled()) then
 

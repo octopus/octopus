@@ -23,7 +23,7 @@ module opencl_m
 #ifdef HAVE_OPENCL
   use cl
 #endif
-#ifdef HAVE_CLAMDBLAS
+#ifdef HAVE_CLBLAS
   use clblas
 #endif
 #ifdef HAVE_CLAMDFFT
@@ -500,7 +500,7 @@ contains
     call opencl_create_kernel(zzmul, prog, "zzmul")
     call opencl_release_program(prog)
 
-#ifdef HAVE_CLAMDBLAS
+#ifdef HAVE_CLBLAS
     call clblasSetup(cl_status)
     if(cl_status /= clblasSuccess) call clblas_print_error(cl_status, 'clblasSetup')
 #endif
@@ -679,7 +679,7 @@ contains
 
     PUSH_SUB(opencl_end)
 
-#ifdef HAVE_CLAMDBLAS
+#ifdef HAVE_CLBLAS
     call clblasTearDown()
 #endif
 
@@ -1156,7 +1156,7 @@ contains
     character(len=40) :: errcode
 
     PUSH_SUB(clblas_print_error)
-#ifdef HAVE_CLAMDBLAS
+#ifdef HAVE_CLBLAS
     select case(ierr)
     case(clblasSuccess);                    errcode = 'clblasSuccess'
     case(clblasInvalidValue);               errcode = 'clblasInvalidValue'

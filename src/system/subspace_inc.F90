@@ -319,7 +319,7 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
   R_TYPE, allocatable :: psi(:, :, :), hpsi(:, :, :)
   type(batch_t), allocatable :: hpsib(:)
   integer :: sp, ep, size, block_size, ierr
-#ifdef HAVE_CLAMDBLAS
+#ifdef HAVE_CLBLAS
   type(opencl_mem_t) :: psi_buffer, hpsi_buffer, hmss_buffer
 #endif
 
@@ -337,7 +337,7 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
 
     ASSERT(ubound(hmss, dim = 1) == st%nst)
 
-#ifdef HAVE_CLAMDBLAS
+#ifdef HAVE_CLBLAS
     call opencl_create_buffer(hmss_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%nst)
     call opencl_set_buffer_to_zero(hmss_buffer, R_TYPE_VAL, st%nst*st%nst)
 

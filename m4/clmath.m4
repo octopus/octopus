@@ -128,7 +128,7 @@ AC_MSG_RESULT([$acx_clblas_ok ($CFLAGS_CLBLAS $LIBS_CLBLAS)])
 
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_clblas_ok" = xyes; then
-  AC_DEFINE(HAVE_CLAMDBLAS, 1, [Defined if you have the CLBLAS library.])
+  AC_DEFINE(HAVE_CLBLAS, 1, [Defined if you have the CLBLAS library.])
 else
   AC_MSG_ERROR([Could not find the required clblas library.])
 fi

@@ -149,7 +149,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 
     call profiling_in(prof_gemmcl, "DOTP_BATCH_CL_GEMM")
 
-#ifdef HAVE_CLAMDBLAS
+#ifdef HAVE_CLBLAS
     
     call aX(clblas,gemmEx)(order = clblasColumnMajor, transA = clblasNoTrans, transB = clblasTrans, &
       M = int(aa%nst, 8), N = int(bb%nst, 8), K = int(mesh%np, 8), alpha = R_TOTYPE(M_ONE), &

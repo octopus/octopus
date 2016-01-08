@@ -1,6 +1,6 @@
 #include <config.h>
 
-#ifdef HAVE_CLAMDBLAS
+#ifdef HAVE_CLBLAS
 
 #include <clBLAS.h>
 
