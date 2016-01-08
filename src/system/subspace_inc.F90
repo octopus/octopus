@@ -345,7 +345,7 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
       ! all the states are stored in one block
       ! we can use blas directly
       
-      call aX(clAmdblas,gemmEx)(order = clAmdBlasColumnMajor, transA = clAmdBlasNoTrans, transB = clAmdBlasConjTrans, &
+      call aX(clblas,gemmEx)(order = clblasColumnMajor, transA = clblasNoTrans, transB = clblasConjTrans, &
         M = int(st%nst, 8), N = int(st%nst, 8), K = int(der%mesh%np, 8), &
         alpha = R_TOTYPE(der%mesh%volume_element), &
         A = st%group%psib(st%group%block_start, ik)%pack%buffer%mem, offA = 0_8, &
@@ -355,7 +355,7 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
         beta = R_TOTYPE(CNST(0.0)), &
         C = hmss_buffer%mem, offC = 0_8, ldc = int(st%nst, 8), &
         CommandQueue = opencl%command_queue, status = ierr)
-      if(ierr /= clAmdBlasSuccess) call clblas_print_error(ierr, 'clAmdBlasXgemmEx')
+      if(ierr /= clblasSuccess) call clblas_print_error(ierr, 'clblasXgemmEx')
 
     else
 
@@ -376,14 +376,14 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
           call batch_get_points(hpsib(ib), sp, sp + size - 1, hpsi_buffer, st%nst)
         end do
 
-        call aX(clAmdblas,gemmEx)(order = clAmdBlasColumnMajor, transA = clAmdBlasNoTrans, transB = clAmdBlasConjTrans, &
+        call aX(clblas,gemmEx)(order = clblasColumnMajor, transA = clblasNoTrans, transB = clblasConjTrans, &
           M = int(st%nst, 8), N = int(st%nst, 8), K = int(size, 8), &
           alpha = R_TOTYPE(der%mesh%volume_element), &
           A = psi_buffer%mem, offA = 0_8, lda = int(st%nst, 8), &
           B = hpsi_buffer%mem, offB = 0_8, ldb = int(st%nst, 8), beta = R_TOTYPE(CNST(1.0)), & 
           C = hmss_buffer%mem, offC = 0_8, ldc = int(st%nst, 8), &
           CommandQueue = opencl%command_queue, status = ierr)
-        if(ierr /= clAmdBlasSuccess) call clblas_print_error(ierr, 'clAmdBlasXgemmEx')
+        if(ierr /= clblasSuccess) call clblas_print_error(ierr, 'clblasXgemmEx')
 
         call opencl_finish()
 

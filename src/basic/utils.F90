@@ -273,7 +273,7 @@ contains
     get_optional_libraries = trim(get_optional_libraries)//' clamdfft'
 #endif
 #ifdef HAVE_CLAMDBLAS
-    get_optional_libraries = trim(get_optional_libraries)//' clamdblas'
+    get_optional_libraries = trim(get_optional_libraries)//' clblas'
 #endif
 #ifdef HAVE_ETSF_IO
     get_optional_libraries = trim(get_optional_libraries)//' etsf_io'

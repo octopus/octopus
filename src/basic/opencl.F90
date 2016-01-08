@@ -24,7 +24,7 @@ module opencl_m
   use cl
 #endif
 #ifdef HAVE_CLAMDBLAS
-  use clAmdBlas
+  use clblas
 #endif
 #ifdef HAVE_CLAMDFFT
   use clAmdFft
@@ -501,8 +501,8 @@ contains
     call opencl_release_program(prog)
 
 #ifdef HAVE_CLAMDBLAS
-    call clAmdBlasSetup(cl_status)
-    if(cl_status /= clAmdBlasSuccess) call clblas_print_error(cl_status, 'clAmdBlasSetup')
+    call clblasSetup(cl_status)
+    if(cl_status /= clblasSuccess) call clblas_print_error(cl_status, 'clblasSetup')
 #endif
 
 #ifdef HAVE_CLAMDFFT
@@ -680,7 +680,7 @@ contains
     PUSH_SUB(opencl_end)
 
 #ifdef HAVE_CLAMDBLAS
-    call clAmdBlasTearDown()
+    call clblasTearDown()
 #endif
 
 #ifdef HAVE_CLAMDFFT
@@ -1158,43 +1158,43 @@ contains
     PUSH_SUB(clblas_print_error)
 #ifdef HAVE_CLAMDBLAS
     select case(ierr)
-    case(clAmdBlasSuccess);                    errcode = 'clAmdBlasSuccess'
-    case(clAmdBlasInvalidValue);               errcode = 'clAmdBlasInvalidValue'
-    case(clAmdBlasInvalidCommandQueue);        errcode = 'clAmdBlasInvalidCommandQueue'
-    case(clAmdBlasInvalidContext);             errcode = 'clAmdBlasInvalidContext'
-    case(clAmdBlasInvalidMemObject);           errcode = 'clAmdBlasInvalidMemObject'
-    case(clAmdBlasInvalidDevice);              errcode = 'clAmdBlasInvalidDevice'
-    case(clAmdBlasInvalidEventWaitList);       errcode = 'clAmdBlasInvalidEventWaitList'
-    case(clAmdBlasOutOfResources);             errcode = 'clAmdBlasOutOfResources'
-    case(clAmdBlasOutOfHostMemory);            errcode = 'clAmdBlasOutOfHostMemory'
-    case(clAmdBlasInvalidOperation);           errcode = 'clAmdBlasInvalidOperation'
-    case(clAmdBlasCompilerNotAvailable);       errcode = 'clAmdBlasCompilerNotAvailable'
-    case(clAmdBlasBuildProgramFailure );       errcode = 'clAmdBlasBuildProgramFailure'
-    case(clAmdBlasNotImplemented);             errcode = 'clAmdBlasNotImplemented'
-    case(clAmdBlasNotInitialized);             errcode = 'clAmdBlasNotInitialized'
-    case(clAmdBlasInvalidMatA);                errcode = 'clAmdBlasInvalidMatA'
-    case(clAmdBlasInvalidMatB);                errcode = 'clAmdBlasInvalidMatB'
-    case(clAmdBlasInvalidMatC);                errcode = 'clAmdBlasInvalidMatC'
-    case(clAmdBlasInvalidVecX);                errcode = 'clAmdBlasInvalidVecX'
-    case(clAmdBlasInvalidVecY);                errcode = 'clAmdBlasInvalidVecY'
-    case(clAmdBlasInvalidDim);                 errcode = 'clAmdBlasInvalidDim'
-    case(clAmdBlasInvalidLeadDimA);            errcode = 'clAmdBlasInvalidLeadDimA'
-    case(clAmdBlasInvalidLeadDimB);            errcode = 'clAmdBlasInvalidLeadDimB'
-    case(clAmdBlasInvalidLeadDimC);            errcode = 'clAmdBlasInvalidLeadDimC'
-    case(clAmdBlasInvalidIncX);                errcode = 'clAmdBlasInvalidIncX'
-    case(clAmdBlasInvalidIncY);                errcode = 'clAmdBlasInvalidIncY'
-    case(clAmdBlasInsufficientMemMatA);        errcode = 'clAmdBlasInsufficientMemMatA'
-    case(clAmdBlasInsufficientMemMatB);        errcode = 'clAmdBlasInsufficientMemMatB'
-    case(clAmdBlasInsufficientMemMatC);        errcode = 'clAmdBlasInsufficientMemMatC'
-    case(clAmdBlasInsufficientMemVecX);        errcode = 'clAmdBlasInsufficientMemVecX'
-    case(clAmdBlasInsufficientMemVecY);        errcode = 'clAmdBlasInsufficientMemVecY'
+    case(clblasSuccess);                    errcode = 'clblasSuccess'
+    case(clblasInvalidValue);               errcode = 'clblasInvalidValue'
+    case(clblasInvalidCommandQueue);        errcode = 'clblasInvalidCommandQueue'
+    case(clblasInvalidContext);             errcode = 'clblasInvalidContext'
+    case(clblasInvalidMemObject);           errcode = 'clblasInvalidMemObject'
+    case(clblasInvalidDevice);              errcode = 'clblasInvalidDevice'
+    case(clblasInvalidEventWaitList);       errcode = 'clblasInvalidEventWaitList'
+    case(clblasOutOfResources);             errcode = 'clblasOutOfResources'
+    case(clblasOutOfHostMemory);            errcode = 'clblasOutOfHostMemory'
+    case(clblasInvalidOperation);           errcode = 'clblasInvalidOperation'
+    case(clblasCompilerNotAvailable);       errcode = 'clblasCompilerNotAvailable'
+    case(clblasBuildProgramFailure );       errcode = 'clblasBuildProgramFailure'
+    case(clblasNotImplemented);             errcode = 'clblasNotImplemented'
+    case(clblasNotInitialized);             errcode = 'clblasNotInitialized'
+    case(clblasInvalidMatA);                errcode = 'clblasInvalidMatA'
+    case(clblasInvalidMatB);                errcode = 'clblasInvalidMatB'
+    case(clblasInvalidMatC);                errcode = 'clblasInvalidMatC'
+    case(clblasInvalidVecX);                errcode = 'clblasInvalidVecX'
+    case(clblasInvalidVecY);                errcode = 'clblasInvalidVecY'
+    case(clblasInvalidDim);                 errcode = 'clblasInvalidDim'
+    case(clblasInvalidLeadDimA);            errcode = 'clblasInvalidLeadDimA'
+    case(clblasInvalidLeadDimB);            errcode = 'clblasInvalidLeadDimB'
+    case(clblasInvalidLeadDimC);            errcode = 'clblasInvalidLeadDimC'
+    case(clblasInvalidIncX);                errcode = 'clblasInvalidIncX'
+    case(clblasInvalidIncY);                errcode = 'clblasInvalidIncY'
+    case(clblasInsufficientMemMatA);        errcode = 'clblasInsufficientMemMatA'
+    case(clblasInsufficientMemMatB);        errcode = 'clblasInsufficientMemMatB'
+    case(clblasInsufficientMemMatC);        errcode = 'clblasInsufficientMemMatC'
+    case(clblasInsufficientMemVecX);        errcode = 'clblasInsufficientMemVecX'
+    case(clblasInsufficientMemVecY);        errcode = 'clblasInsufficientMemVecY'
     case default
       write(errcode, '(i10)') ierr
       errcode = 'UNKNOWN ERROR CODE ('//trim(adjustl(errcode))//')'
     end select
 #endif
 
-    message(1) = 'clAmdBlas '//trim(name)//' '//trim(errcode)
+    message(1) = 'clblas '//trim(name)//' '//trim(errcode)
     call messages_fatal(1)
 
     POP_SUB(clblas_print_error)

@@ -1,4 +1,4 @@
-module clAmdBlas
+module clblas
   use cl
 
   implicit none
@@ -6,101 +6,101 @@ module clAmdBlas
   private
 
   public ::                  &
-    clAmdBlasGetVersion,     &
-    clAmdBlasSetup,          &
-    clAmdBlasTeardown,       &
-    clAmdBlasDtrsmEx,        &
-    clAmdBlasZtrsmEx,        &
-    clAmdBlasDgemmEx,        &
-    clAmdBlasZgemmEx,        &
-    clAmdBlasDsyrkEx,        &
-    clAmdBlasZherkEx
+    clblasGetVersion,     &
+    clblasSetup,          &
+    clblasTeardown,       &
+    clblasDtrsmEx,        &
+    clblasZtrsmEx,        &
+    clblasDgemmEx,        &
+    clblasZgemmEx,        &
+    clblasDsyrkEx,        &
+    clblasZherkEx
 
   integer, public, parameter ::     &
-    clAmdBlasRowMajor        = 0,   &
-    clAmdBlasColumnMajor     = 1
+    clblasRowMajor        = 0,   &
+    clblasColumnMajor     = 1
 
   integer, public, parameter ::     &
-    clAmdBlasNoTrans         = 0,   &
-    clAmdBlasTrans           = 1,   &
-    clAmdBlasConjTrans       = 2
+    clblasNoTrans         = 0,   &
+    clblasTrans           = 1,   &
+    clblasConjTrans       = 2
 
   integer, public, parameter ::     &
-    clAmdBlasUpper           = 0,   &
-    clAmdBlasLower           = 1
+    clblasUpper           = 0,   &
+    clblasLower           = 1
 
   integer, public, parameter ::     &
-    clAmdBlasUnit            = 0,   &
-    clAmdBlasNonUnit         = 1
+    clblasUnit            = 0,   &
+    clblasNonUnit         = 1
 
   integer, public, parameter ::     &
-    clAmdBlasLeft            = 0,   &
-    clAmdBlasRight           = 1
+    clblasLeft            = 0,   &
+    clblasRight           = 1
 
   integer, public, parameter ::                                  &
-    clAmdBlasSuccess               = CL_SUCCESS,                 &
-    clAmdBlasInvalidValue          = CL_INVALID_VALUE,           &
-    clAmdBlasInvalidCommandQueue   = CL_INVALID_COMMAND_QUEUE,   &
-    clAmdBlasInvalidContext        = CL_INVALID_CONTEXT,         &
-    clAmdBlasInvalidMemObject      = CL_INVALID_MEM_OBJECT,      &
-    clAmdBlasInvalidDevice         = CL_INVALID_DEVICE,          &
-    clAmdBlasInvalidEventWaitList  = CL_INVALID_EVENT_WAIT_LIST, &
-    clAmdBlasOutOfResources        = CL_OUT_OF_RESOURCES,        &
-    clAmdBlasOutOfHostMemory       = CL_OUT_OF_HOST_MEMORY,      &
-    clAmdBlasInvalidOperation      = CL_INVALID_OPERATION,       &
-    clAmdBlasCompilerNotAvailable  = CL_COMPILER_NOT_AVAILABLE,  &
-    clAmdBlasBuildProgramFailure   = CL_BUILD_PROGRAM_FAILURE
+    clblasSuccess               = CL_SUCCESS,                 &
+    clblasInvalidValue          = CL_INVALID_VALUE,           &
+    clblasInvalidCommandQueue   = CL_INVALID_COMMAND_QUEUE,   &
+    clblasInvalidContext        = CL_INVALID_CONTEXT,         &
+    clblasInvalidMemObject      = CL_INVALID_MEM_OBJECT,      &
+    clblasInvalidDevice         = CL_INVALID_DEVICE,          &
+    clblasInvalidEventWaitList  = CL_INVALID_EVENT_WAIT_LIST, &
+    clblasOutOfResources        = CL_OUT_OF_RESOURCES,        &
+    clblasOutOfHostMemory       = CL_OUT_OF_HOST_MEMORY,      &
+    clblasInvalidOperation      = CL_INVALID_OPERATION,       &
+    clblasCompilerNotAvailable  = CL_COMPILER_NOT_AVAILABLE,  &
+    clblasBuildProgramFailure   = CL_BUILD_PROGRAM_FAILURE
 
   integer, public, parameter ::             &
-    clAmdBlasNotImplemented        = -1024, &
-    clAmdBlasNotInitialized        = -1023, &
-    clAmdBlasInvalidMatA           = -1022, &
-    clAmdBlasInvalidMatB           = -1021, &
-    clAmdBlasInvalidMatC           = -1020, &
-    clAmdBlasInvalidVecX           = -1019, &
-    clAmdBlasInvalidVecY           = -1018, &
-    clAmdBlasInvalidDim            = -1017, &
-    clAmdBlasInvalidLeadDimA       = -1016, &
-    clAmdBlasInvalidLeadDimB       = -1015, &
-    clAmdBlasInvalidLeadDimC       = -1014, &
-    clAmdBlasInvalidIncX           = -1013, &
-    clAmdBlasInvalidIncY           = -1012, &
-    clAmdBlasInsufficientMemMatA   = -1011, &
-    clAmdBlasInsufficientMemMatB   = -1010, &
-    clAmdBlasInsufficientMemMatC   = -1009, &
-    clAmdBlasInsufficientMemVecX   = -1008, &
-    clAmdBlasInsufficientMemVecY   = -1007
+    clblasNotImplemented        = -1024, &
+    clblasNotInitialized        = -1023, &
+    clblasInvalidMatA           = -1022, &
+    clblasInvalidMatB           = -1021, &
+    clblasInvalidMatC           = -1020, &
+    clblasInvalidVecX           = -1019, &
+    clblasInvalidVecY           = -1018, &
+    clblasInvalidDim            = -1017, &
+    clblasInvalidLeadDimA       = -1016, &
+    clblasInvalidLeadDimB       = -1015, &
+    clblasInvalidLeadDimC       = -1014, &
+    clblasInvalidIncX           = -1013, &
+    clblasInvalidIncY           = -1012, &
+    clblasInsufficientMemMatA   = -1011, &
+    clblasInsufficientMemMatB   = -1010, &
+    clblasInsufficientMemMatC   = -1009, &
+    clblasInsufficientMemVecX   = -1008, &
+    clblasInsufficientMemVecY   = -1007
 
   ! SUPPORT FUNCTIONS
 
-  interface clAmdBlasGetVersion 
-    subroutine clamdblasgetversion_low(major, minor, patch, status)
+  interface clblasGetVersion 
+    subroutine clblasgetversion_low(major, minor, patch, status)
       implicit none
 
       integer, intent(out) :: major
       integer, intent(out) :: minor
       integer, intent(out) :: patch
       integer, intent(out) :: status
-    end subroutine clamdblasgetversion_low
-  end interface clAmdBlasGetVersion
+    end subroutine clblasgetversion_low
+  end interface clblasGetVersion
 
-  interface clAmdBlasSetup
-    subroutine clamdblassetup_low(status)
+  interface clblasSetup
+    subroutine clblassetup_low(status)
       implicit none
 
       integer, intent(out) :: status
-    end subroutine clamdblassetup_low
-  end interface clAmdBlasSetup
+    end subroutine clblassetup_low
+  end interface clblasSetup
 
-  interface clAmdBlasTeardown
-    subroutine clamdblasteardown_low()
-    end subroutine clamdblasteardown_low
-  end interface clAmdBlasTeardown
+  interface clblasTeardown
+    subroutine clblasteardown_low()
+    end subroutine clblasteardown_low
+  end interface clblasTeardown
 
   ! -------------------------------------------------
 
-  interface clAmdBlasDtrsmEx
-    subroutine clamdblasdtrsmex_low(order, side, uplo, transA, diag, M, N, alpha, A, offA, lda, B, offB, ldb, commandQueue, status)
+  interface clblasDtrsmEx
+    subroutine clblasdtrsmex_low(order, side, uplo, transA, diag, M, N, alpha, A, offA, lda, B, offB, ldb, commandQueue, status)
       use cl
 
       implicit none
@@ -121,13 +121,13 @@ module clAmdBlas
       integer(8),             intent(in)    :: ldb 
       type(cl_command_queue), intent(inout) :: CommandQueue 
       integer,                intent(out)   :: status
-    end subroutine clamdblasdtrsmex_low
-  end interface clAmdBlasDtrsmEx
+    end subroutine clblasdtrsmex_low
+  end interface clblasDtrsmEx
   
   ! -------------------------------------------------
 
-  interface clAmdBlasZtrsmEx
-    subroutine clamdblasztrsmex_low(order, side, uplo, transA, diag, M, N, alpha, A, offA, lda, B, offB, ldb, commandQueue, status)
+  interface clblasZtrsmEx
+    subroutine clblasztrsmex_low(order, side, uplo, transA, diag, M, N, alpha, A, offA, lda, B, offB, ldb, commandQueue, status)
       use cl
 
       implicit none
@@ -148,13 +148,13 @@ module clAmdBlas
       integer(8),             intent(in)    :: ldb 
       type(cl_command_queue), intent(inout) :: CommandQueue 
       integer,                intent(out)   :: status
-    end subroutine clamdblasztrsmex_low
-  end interface clAmdBlasZtrsmEx
+    end subroutine clblasztrsmex_low
+  end interface clblasZtrsmEx
 
   ! -------------------------------------------------
 
-  interface clAmdBlasDgemmEx
-    subroutine clAmdBlasDgemmEx_low(order, transA, transB, M, N, K, &
+  interface clblasDgemmEx
+    subroutine clblasDgemmEx_low(order, transA, transB, M, N, K, &
       alpha, A, offA, lda, B, offB, ldb, beta, C, offC, ldc, commandQueue, status)
       use cl
 
@@ -179,13 +179,13 @@ module clAmdBlas
       integer(8),             intent(in)    :: ldc
       type(cl_command_queue), intent(inout) :: CommandQueue 
       integer,                intent(out)   :: status
-    end subroutine clAmdBlasDgemmEx_low
-  end interface clAmdBlasDgemmEx
+    end subroutine clblasDgemmEx_low
+  end interface clblasDgemmEx
 
   ! -------------------------------------------------
 
-  interface clAmdBlasZgemmEx
-    subroutine clAmdBlasZgemmEx_low(order, transA, transB, M, N, K, &
+  interface clblasZgemmEx
+    subroutine clblasZgemmEx_low(order, transA, transB, M, N, K, &
       alpha, A, offA, lda, B, offB, ldb, beta, C, offC, ldc, commandQueue, status)
       use cl
 
@@ -210,13 +210,13 @@ module clAmdBlas
       integer(8),             intent(in)    :: ldc
       type(cl_command_queue), intent(inout) :: CommandQueue 
       integer,                intent(out)   :: status
-    end subroutine clAmdBlasZgemmEx_low
-  end interface clAmdBlasZgemmEx
+    end subroutine clblasZgemmEx_low
+  end interface clblasZgemmEx
 
   ! -------------------------------------------------
 
-  interface clAmdBlasDsyrkEx
-    subroutine clAmdBlasDsyrkEx_low(order, uplo, transA, N, K, &
+  interface clblasDsyrkEx
+    subroutine clblasDsyrkEx_low(order, uplo, transA, N, K, &
       alpha, A, offA, lda, beta, C, offC, ldc, commandQueue, status)
       use cl
 
@@ -237,12 +237,12 @@ module clAmdBlas
       integer(8),             intent(in)    :: ldc
       type(cl_command_queue), intent(inout) :: CommandQueue 
       integer,                intent(out)   :: status
-    end subroutine clAmdBlasDsyrkEx_low
-  end interface clAmdBlasDsyrkEx
+    end subroutine clblasDsyrkEx_low
+  end interface clblasDsyrkEx
   ! -------------------------------------------------
 
-  interface clAmdBlasZherkEx
-    subroutine clAmdBlasZherkEx_low(order, uplo, transA, N, K, &
+  interface clblasZherkEx
+    subroutine clblasZherkEx_low(order, uplo, transA, N, K, &
       alpha, A, offA, lda, beta, C, offC, ldc, commandQueue, status)
       use cl
 
@@ -263,7 +263,7 @@ module clAmdBlas
       integer(8),             intent(in)    :: ldc
       type(cl_command_queue), intent(inout) :: CommandQueue 
       integer,                intent(out)   :: status
-    end subroutine clAmdBlasZherkEx_low
-  end interface clAmdBlasZherkEx
+    end subroutine clblasZherkEx_low
+  end interface clblasZherkEx
 
-end module clAmdBlas
+end module clblas

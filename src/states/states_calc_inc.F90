@@ -352,13 +352,13 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
 
 #if defined(HAVE_CLAMDBLAS) && defined(R_TREAL)
 
-      call aX(clAmdblas,trsmEx)(order = clAmdBlasColumnMajor, side = clAmdBlasLeft, &
-        uplo = clAmdBlasUpper, transA = clAmdBlasTrans, diag = clAmdBlasNonUnit, &
+      call aX(clblas,trsmEx)(order = clblasColumnMajor, side = clblasLeft, &
+        uplo = clblasUpper, transA = clblasTrans, diag = clblasNonUnit, &
         M = int(st%nst, 8), N = int(size, 8), alpha = R_TOTYPE(M_ONE), &
         A = ss_buffer%mem, offA = 0_8, lda = int(ubound(ss, dim = 1), 8), &
         B = psicopy_buffer%mem, offB = 0_8, ldb = int(st%nst, 8), &
         CommandQueue = opencl%command_queue, status = ierr)
-      if(ierr /= clAmdBlasSuccess) call clblas_print_error(ierr, 'clAmdBlasXtrsmEx')
+      if(ierr /= clblasSuccess) call clblas_print_error(ierr, 'clblasXtrsmEx')
 
 #else
 
@@ -1173,13 +1173,13 @@ subroutine X(states_rotate)(mesh, st, uu, ik)
 
 #ifdef HAVE_CLAMDBLAS
 
-      call aX(clAmdblas,gemmEx)(order = clAmdBlasColumnMajor, transA = clAmdBlasTrans, transB = clAmdBlasNoTrans, &
+      call aX(clblas,gemmEx)(order = clblasColumnMajor, transA = clblasTrans, transB = clblasNoTrans, &
         M = int(st%nst, 8), N = int(size, 8), K = int(st%nst, 8), alpha = R_TOTYPE(M_ONE), &
         A = uu_buffer%mem, offA = 0_8, lda = int(ubound(uu, dim = 1), 8), &
         B = psicopy_buffer%mem, offB = 0_8, ldb = int(st%nst, 8), beta = R_TOTYPE(M_ZERO), &
         C = psinew_buffer%mem, offC = 0_8, ldc = int(st%nst, 8), &
         CommandQueue = opencl%command_queue, status = ierr)
-      if(ierr /= clAmdBlasSuccess) call clblas_print_error(ierr, 'clAmdBlasXgemmEx')
+      if(ierr /= clblasSuccess) call clblas_print_error(ierr, 'clblasXgemmEx')
       
 #else
 
@@ -1324,18 +1324,18 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
       end do
 
 #ifdef R_TREAL
-      call clAmdblasDsyrkEx &
+      call clblasDsyrkEx &
 #else
-      call clAmdblasZherkEx &
+      call clblasZherkEx &
 #endif
-      (order = clAmdBlasColumnMajor, uplo = clAmdBlasUpper, transA = clAmdBlasNoTrans, &
+      (order = clblasColumnMajor, uplo = clblasUpper, transA = clblasNoTrans, &
         N = int(st%nst, 8), K = int(size, 8), &
         alpha = real(mesh%volume_element, 8), &
         A = psi_buffer%mem, offA = 0_8, lda = int(st%nst, 8), &
         beta = 1.0_8, &
         C = overlap_buffer%mem, offC = 0_8, ldc = int(st%nst, 8), &
         CommandQueue = opencl%command_queue, status = ierr)
-      if(ierr /= clAmdBlasSuccess) call clblas_print_error(ierr, 'clAmdBlasDsyrkEx/clAmdBlasZherkEx')
+      if(ierr /= clblasSuccess) call clblas_print_error(ierr, 'clblasDsyrkEx/clblasZherkEx')
 
     end do
 

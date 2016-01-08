@@ -26,7 +26,7 @@ module subspace_m
   use blacs_proc_grid_m
 #ifdef HAVE_CLAMDBLAS
   use cl
-  use clamdblas
+  use clblas
 #endif
   use comm_m
   use derivatives_m

@@ -4,7 +4,7 @@
 
 #include <clBLAS.h>
 
-void FC_FUNC_(clamdblasgetversion_low, CLAMDBLASGETVERSION_LOW)(int * major, int * minor, int * patch, int * status){
+void FC_FUNC_(clblasgetversion_low, CLBLASGETVERSION_LOW)(int * major, int * minor, int * patch, int * status){
   cl_uint cl_major, cl_minor, cl_patch;
 
   *status = clblasGetVersion(&cl_major, &cl_minor, &cl_patch);
@@ -13,15 +13,15 @@ void FC_FUNC_(clamdblasgetversion_low, CLAMDBLASGETVERSION_LOW)(int * major, int
   *patch = cl_patch;
 }
 
-void FC_FUNC_(clamdblassetup_low, CLAMDBLASSETUP_LOW)(int * status){
+void FC_FUNC_(clblassetup_low, CLBLASSETUP_LOW)(int * status){
   *status = clblasSetup();
 }
 
-void FC_FUNC_(clamdblasteardown_low, CLAMDBLASTEARDOWN_LOW)(){
+void FC_FUNC_(clblasteardown_low, CLBLASTEARDOWN_LOW)(){
   clblasTeardown();
 }
 
-void FC_FUNC_(clamdblasdtrsmex_low, CLAMDBLASDTRSMEX_LOW)(int * order,
+void FC_FUNC_(clblasdtrsmex_low, CLBLASDTRSMEX_LOW)(int * order,
 							  int * side,
 							  int * uplo,
 							  int * transA,
@@ -48,7 +48,7 @@ void FC_FUNC_(clamdblasdtrsmex_low, CLAMDBLASDTRSMEX_LOW)(int * order,
 }
 
 
-void FC_FUNC_(clamdblasztrsmex_low, CLAMDBLASZTRSMEX_LOW)(int * order,
+void FC_FUNC_(clblasztrsmex_low, CLBLASZTRSMEX_LOW)(int * order,
 							  int * side,
 							  int * uplo,
 							  int * transA,
@@ -74,7 +74,7 @@ void FC_FUNC_(clamdblasztrsmex_low, CLAMDBLASZTRSMEX_LOW)(int * order,
 			1, CommandQueue, 0, NULL, NULL);
 }
 
-void FC_FUNC_(clamdblasdgemmex_low, CLAMDBLASDGEMMEX_LOW)(int * order,
+void FC_FUNC_(clblasdgemmex_low, CLBLASDGEMMEX_LOW)(int * order,
 							  int * transA, 
 							  int * transB, 
 							  cl_long * M,
@@ -102,7 +102,7 @@ void FC_FUNC_(clamdblasdgemmex_low, CLAMDBLASDGEMMEX_LOW)(int * order,
 			1, CommandQueue, 0, NULL, NULL);
 }
 
-void FC_FUNC_(clamdblaszgemmex_low, CLAMDBLASDGEMMEX_LOW)(int * order,
+void FC_FUNC_(clblaszgemmex_low, CLBLASDGEMMEX_LOW)(int * order,
 							  int * transA, 
 							  int * transB, 
 							  cl_long * M,
@@ -130,7 +130,7 @@ void FC_FUNC_(clamdblaszgemmex_low, CLAMDBLASDGEMMEX_LOW)(int * order,
 			1, CommandQueue, 0, NULL, NULL);
 }
 
-void FC_FUNC_(clamdblasdsyrkex_low, CLAMDBLASDSYRKEX_LOW)(int * order,
+void FC_FUNC_(clblasdsyrkex_low, CLBLASDSYRKEX_LOW)(int * order,
 							  int * uplo, 
 							  int * transA, 
 							  cl_long * N,
@@ -153,7 +153,7 @@ void FC_FUNC_(clamdblasdsyrkex_low, CLAMDBLASDSYRKEX_LOW)(int * order,
 			1, CommandQueue, 0, NULL, NULL);
 }
 
-void FC_FUNC_(clamdblaszherkex_low, CLAMDBLASZHERKEX_LOW)(int * order,
+void FC_FUNC_(clblaszherkex_low, CLBLASZHERKEX_LOW)(int * order,
 							  int * uplo, 
 							  int * transA, 
 							  cl_long * N,

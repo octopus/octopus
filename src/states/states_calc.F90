@@ -29,7 +29,7 @@ module states_calc_m
 #ifdef HAVE_OPENCL
   use cl
 #ifdef HAVE_CLAMDBLAS
-  use clAmdBlas
+  use clblas
 #endif
 #endif
   use cmplxscl_m

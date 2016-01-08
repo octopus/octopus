@@ -26,7 +26,7 @@ module mesh_batch_m
 #ifdef HAVE_OPENCL
   use cl
 #ifdef HAVE_CLAMDBLAS
-  use clamdblas
+  use clblas
 #endif
 #endif
   use octcl_kernel_m
