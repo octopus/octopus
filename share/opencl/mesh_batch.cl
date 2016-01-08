@@ -22,68 +22,6 @@
 #include <cl_global.h>
 #include <cl_complex.h>
 
-__kernel void ddot_vector(const int np,
-			  const int npblock,
-			  const __global double * restrict xx, const int ldxx,
-			  const __global double * restrict yy, const int ldyy,
-			  __global double * restrict dot,
-			  __local double * restrict lsum){
-  
-  const int ist = get_global_id(0);
-  const int lip = get_local_id(1);
-  const int nlp = get_local_size(1);
-  const int startp = npblock*get_global_id(2);
-  const int endp = (startp + npblock < np)?startp + npblock:np;
-
-  double tmp;
-
-  tmp = 0.0;
-  for(int ip = lip + startp; ip < endp; ip += nlp){
-    tmp += xx[(ip<<ldxx) + ist]*yy[(ip<<ldyy) + ist];
-  }
-
-  lsum[(lip<<ldyy) + ist] = tmp;
-
-  barrier(CLK_LOCAL_MEM_FENCE);
-
-  if(lip == 0){
-    tmp = 0.0;
-    for(int ip = 0; ip < nlp; ip++) tmp += lsum[(ip<<ldyy) + ist];
-    dot[ist + (get_global_id(2)<<ldyy)] = tmp;
-  }
-}
-
-__kernel void zdot_vector(const int np,
-			  const int npblock,
-			  const __global double2 * restrict xx, const int ldxx,
-			  const __global double2 * restrict yy, const int ldyy,
-			  __global double2 * restrict dot,
-			  __local double2 * restrict lsum){
-  
-  const int ist = get_global_id(0);
-  const int lip = get_local_id(1);
-  const int nlp = get_local_size(1);
-  const int startp = npblock*get_global_id(2);
-  const int endp = (startp + npblock < np)?startp + npblock:np;
-
-  double2 tmp;
-
-  tmp = 0.0;
-  for(int ip = lip + startp; ip < endp; ip += nlp){
-    tmp += complex_mul(complex_conj(xx[(ip<<ldxx) + ist]), yy[(ip<<ldyy) + ist]);
-  }
-
-  lsum[(lip<<ldyy) + ist] = tmp;
-
-  barrier(CLK_LOCAL_MEM_FENCE);
-
-  if(lip == 0){
-    tmp = 0.0;
-    for(int ip = 0; ip < nlp; ip++) tmp += lsum[(ip<<ldyy) + ist];
-    dot[ist + (get_global_id(2)<<ldyy)] = tmp;
-  }
-}
-
 
 __kernel void ddot_matrix(const int np,
 			  __global double const * restrict xx, const int ldxx,
