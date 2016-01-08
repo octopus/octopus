@@ -986,10 +986,10 @@ contains
 
     share_string='-I'//trim(conf%share)//'/opencl/'
 
-    if (f90_cl_device_has_extension(opencl%device, "cl_amd_fp64")) then
-      string = trim(string)//' -DEXT_AMD_FP64'
-    else if(f90_cl_device_has_extension(opencl%device, "cl_khr_fp64")) then
+    if (f90_cl_device_has_extension(opencl%device, "cl_khr_fp64")) then
       string = trim(string)//' -DEXT_KHR_FP64'
+    else if(f90_cl_device_has_extension(opencl%device, "cl_amd_fp64")) then
+      string = trim(string)//' -DEXT_AMD_FP64'
     else
       call messages_write('Octopus requires an OpenCL device with double-precision support.')
       call messages_fatal()
