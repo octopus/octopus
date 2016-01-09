@@ -67,6 +67,7 @@ if test $acx_arpack_ok = no; then
   fi
   if test $acx_arpack_ok = no; then
     AC_MSG_RESULT([$acx_arpack_ok])
+    LIBS_ARPACK=""
   else
     AC_MSG_RESULT([$acx_arpack_ok ($LIBS_ARPACK)])
   fi

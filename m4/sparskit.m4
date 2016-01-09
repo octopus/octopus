@@ -40,6 +40,7 @@ if test $acx_sparskit_ok = no; then
   AC_LINK_IFELSE($testprog, [acx_sparskit_ok=yes; LIBS_SPARSKIT="$LIBS_SPARSKIT -lskit"], [])
   if test $acx_sparskit_ok = no; then
     AC_MSG_RESULT([$acx_sparskit_ok])
+    LIBS_SPARSKIT=""
   else
     AC_MSG_RESULT([$acx_sparskit_ok ($LIBS_SPARSKIT)])
   fi
