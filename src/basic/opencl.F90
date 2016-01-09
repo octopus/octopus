@@ -115,7 +115,6 @@ module opencl_m
   type(cl_kernel), public :: dkernel_dot_matrix
   type(cl_kernel), public :: zkernel_dot_matrix
   type(cl_kernel), public :: zkernel_dot_matrix_spinors
-  type(cl_kernel), public :: kernel_nrm2_vector
   type(cl_kernel), public :: dzmul
   type(cl_kernel), public :: zzmul
 
@@ -485,7 +484,6 @@ contains
     call opencl_create_kernel(dkernel_dot_matrix, prog, "ddot_matrix")
     call opencl_create_kernel(zkernel_dot_matrix, prog, "zdot_matrix")
     call opencl_create_kernel(zkernel_dot_matrix_spinors, prog, "zdot_matrix_spinors")
-    call opencl_create_kernel(kernel_nrm2_vector, prog, "nrm2_vector")
     call opencl_release_program(prog)
 
     call opencl_build_program(prog, trim(conf%share)//'/opencl/mul.cl', flags = '-DRTYPE_DOUBLE')

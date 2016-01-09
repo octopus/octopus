@@ -81,33 +81,6 @@ __kernel void zdot_matrix_spinors(const int np,
   dot[ist + lddot*jst] = tmp1 + tmp2;
 }
 
-
-__kernel void nrm2_vector(const int np,
-			  const __global double * restrict xx, const int ldxx,
-			  __global double * restrict nrm2){
-  
-  const int ist = get_global_id(0);
-  const int ir  = get_global_id(1);
-  const int nr  = get_global_size(1);
-
-  double ssq, scale;
-
-  ssq = 1.0;
-  scale = 0.0;
-  for(int ip = ir; ip < np; ip += nr){
-    double a0 = xx[(ip<<ldxx) + ist];
-    if(a0 == 0.0) continue;
-    a0 = (a0 > 0.0)?a0:-a0;
-    if(scale < a0){
-      ssq = 1.0 + ssq*(scale/a0)*(scale/a0);
-      scale = a0;
-    } else {
-      ssq = ssq + (a0/scale)*(a0/scale);
-    }
-  }
-  nrm2[ist + (ir<<ldxx)] = scale*scale*ssq;
-}
-
 /*
  Local Variables:
  mode: c
