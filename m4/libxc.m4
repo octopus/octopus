@@ -1,5 +1,6 @@
 AC_DEFUN([ACX_LIBXC], [
 acx_libxc_ok=no
+acx_libxc_v3=no
 
 dnl Check if the library was given in the command line
 dnl if not, use environment variables or defaults
@@ -33,6 +34,14 @@ testprog="AC_LANG_PROGRAM([],[
   integer :: minor
   call xc_f90_version(major, minor)])"
 
+testprog3="AC_LANG_PROGRAM([],[
+  use xc_f90_lib_m
+  implicit none
+  integer :: major
+  integer :: minor
+  integer :: micro
+  call xc_f90_version(major, minor, micro)])"
+
 FCFLAGS="$FCFLAGS_LIBXC $acx_libxc_save_FCFLAGS"
 
 # set from environment variable, if not blank
@@ -42,6 +51,13 @@ if test ! -z "$LIBS_LIBXC"; then
 fi
 
 if test ! -z "$with_libxc_prefix"; then
+  # static linkage, version 3
+  if test x"$acx_libxc_ok" = xno; then
+    LIBS_LIBXC="$with_libxc_prefix/lib/libxcf90.a $with_libxc_prefix/lib/libxc.a"
+    LIBS="$LIBS_LIBXC $acx_libxc_save_LIBS"
+    AC_LINK_IFELSE($testprog3, [acx_libxc_ok=yes; acx_libxc_v3=yes], [])
+  fi
+
   # static linkage, separate Fortran interface (libxc 2.2.0 and later)
   if test x"$acx_libxc_ok" = xno; then
     LIBS_LIBXC="$with_libxc_prefix/lib/libxcf90.a $with_libxc_prefix/lib/libxc.a"
@@ -55,6 +71,18 @@ if test ! -z "$with_libxc_prefix"; then
     LIBS="$LIBS_LIBXC $acx_libxc_save_LIBS"
     AC_LINK_IFELSE($testprog, [acx_libxc_ok=yes], [])
   fi
+fi
+
+# dynamic linkage, version 3
+if test x"$acx_libxc_ok" = xno; then
+  if test ! -z "$with_libxc_prefix"; then
+    LIBS_LIBXC="-L$with_libxc_prefix/lib"
+  else
+    LIBS_LIBXC=""
+  fi
+  LIBS_LIBXC="$LIBS_LIBXC -lxcf90 -lxc"
+  LIBS="$LIBS_LIBXC $acx_libxc_save_LIBS"
+  AC_LINK_IFELSE($testprog3, [acx_libxc_ok=yes; acx_libxc_v3=yes], [])
 fi
 
 # dynamic linkage, separate Fortran interface (libxc 2.2.0 and later)
@@ -83,11 +111,21 @@ fi
 
 AC_MSG_RESULT([$acx_libxc_ok ($FCFLAGS_LIBXC $LIBS_LIBXC)])
 
+AC_MSG_CHECKING([whether libxc version is > 2.2])
+AC_MSG_RESULT([$acx_libxc_v3])
+
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_libxc_ok" = xyes; then
   AC_DEFINE(HAVE_LIBXC, 1, [Defined if you have the LIBXC library.])
 else
   AC_MSG_ERROR([Could not find required libxc library ( >= v 2.0.0).])
+fi
+
+AC_MSG_CHECKING([whether libxc version is > 2.2])
+AC_MSG_RESULT([$acx_libxc_v3])
+
+if test x"$acx_libxc_v3" = xyes; then
+  AC_DEFINE(HAVE_LIBXC3, 1, [Defined if you have version 3 of the LIBXC library.])
 fi
 
 acx_libxc_hyb_mgga_ok=no

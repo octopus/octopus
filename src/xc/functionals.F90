@@ -395,11 +395,19 @@ contains
       call messages_info(2, iunit)
       
       ii = 0
+#ifdef HAVE_LIBXC3 
+      call XC_F90(info_refs)(functl%info, ii, s1) 
+#else 
       call XC_F90(info_refs)(functl%info, ii, str, s1)
+#endif
       do while(ii >= 0)
         write(message(1), '(4x,a,i1,2a)') '[', ii, '] ', trim(s1)
         call messages_info(1, iunit)
+#ifdef HAVE_LIBXC3
+        call XC_F90(info_refs)(functl%info, ii, s1)
+#else
         call XC_F90(info_refs)(functl%info, ii, str, s1)
+#endif
       end do
     end if
 
