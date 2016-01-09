@@ -280,11 +280,7 @@ contains
       
       call derivatives_init(gr%fine%der, gr%mesh%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
       
-      if(gr%mesh%parallel_in_domains) then
-        call mesh_init_stage_3(gr%fine%mesh, gr%stencil, gr%mesh%mpi_grp)
-      else
-        call mesh_init_stage_3(gr%fine%mesh)
-      end if
+      call mesh_init_stage_3(gr%fine%mesh, gr%stencil, gr%mesh%mpi_grp)
       
       call multigrid_get_transfer_tables(gr%fine%tt, gr%fine%mesh, gr%mesh)
       
