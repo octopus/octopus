@@ -150,6 +150,7 @@ contains
     integer :: ierr
     !
     PUSH_SUB(json_parser_get_char)
+    iostat=0
     if(parser%bpos>json_len(parser%buff)) call json_parser_readline(parser, iostat)
     if(iostat==0)then
       call json_get(parser%buff, parser%bpos, char, ierr)
