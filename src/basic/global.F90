@@ -36,8 +36,9 @@ module global_m
     global_init,      &
     global_end,       & 
     optional_default, &
-    assert_die
-
+    assert_die,       &
+    operator(+)
+  
   integer, public, parameter :: MAX_PATH_LEN=256
 
   type conf_t
@@ -127,6 +128,10 @@ module global_m
     end subroutine assert_die
   end interface
 
+  interface operator (+)
+    module procedure cat
+  end interface operator (+)
+  
 contains
 
   ! ---------------------------------------------------------
@@ -229,6 +234,17 @@ FCFLAGS
     if(present(opt)) val = opt
   end function soptional_default
 
+  !-----------------------------------------------------------
+
+  function cat(str1, str2)
+    character(len=*), intent(in) :: str1
+    character(len=*), intent(in) :: str2
+
+    character(len=len(str1) + len(str2)) :: cat
+    cat = str1//str2
+    
+  end function cat
+  
 end module global_m
 
 !! Local Variables:
