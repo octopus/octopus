@@ -195,8 +195,8 @@ contains
     message(1) = 'Configuration options  : ' // trim(get_config_opts())
     message(2) = 'Optional libraries     :'  // trim(get_optional_libraries())
 
-    message(3) = &
-         'Architecture           : '// TOSTRING(OCT_ARCH)
+    message(3) = 'Architecture           : ' + TOSTRING(OCT_ARCH)
+
     call messages_info(3)
 
     message(1) = &

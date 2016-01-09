@@ -167,8 +167,8 @@ contains
       st%d%dim*ubound(st%X(psi), dim = 1), info)
 
     if(info /= 0) then
-      write(message(1),'(a,i6)') "descinit for psi failed in " // TOSTRING(X(states_orthogonalization_full)) &
-        // ".cholesky_parallel with error ", info
+      write(message(1),'(a,i6)') "descinit for psi failed in "+TOSTRING(X(states_orthogonalization_full)) &
+        +".cholesky_parallel with error ", info
       call messages_fatal(1)
     end if
 
@@ -181,8 +181,8 @@ contains
     call descinit(ss_desc(1), st%nst, st%nst, nbl, nbl, 0, 0, st%dom_st_proc_grid%context, ubound(ss, dim = 1), info)
 
     if(info /= 0) then
-      write(message(1),'(a,i6)') "descinit for ss failed in " // TOSTRING(X(states_orthogonalization_full)) &
-        // ".cholesky_parallel with error ", info
+      write(message(1),'(a,i6)') "descinit for ss failed in "+TOSTRING(X(states_orthogonalization_full)) &
+        +".cholesky_parallel with error ", info
       call messages_fatal(1)
     end if
 
@@ -197,7 +197,7 @@ contains
 
     if(info /= 0) then
       write(message(1),'(a,i6)') &
-        "cholesky_parallel orthogonalization with " // TOSTRING(pX(potrf)) // " failed with error ", info
+        "cholesky_parallel orthogonalization with "+TOSTRING(pX(potrf))+" failed with error ", info
       call messages_fatal(1)
     end if
 

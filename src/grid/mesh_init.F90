@@ -172,9 +172,9 @@ subroutine mesh_read_lead(ob_grid, mesh)
     mm%sb => mesh%sb
     mm%cv => mesh%cv
     mm%parallel_in_domains = mesh%parallel_in_domains
-    call mesh_load(mm, trim(ob_grid%lead(il)%info%restart_dir)//'/'//GS_DIR, 'mesh', mpi_world, ierr)
+    call mesh_load(mm, trim(ob_grid%lead(il)%info%restart_dir)+'/'+GS_DIR, 'mesh', mpi_world, ierr)
     if (ierr /= 0) then
-      message(1) = "Unable to read mesh from '"//trim(ob_grid%lead(il)%info%restart_dir)//"/"//GS_DIR//"/mesh'."
+      message(1) = "Unable to read mesh from '"+trim(ob_grid%lead(il)%info%restart_dir)+"/"+GS_DIR+"/mesh'."
       call messages_fatal(1)
     end if
 
@@ -182,9 +182,9 @@ subroutine mesh_read_lead(ob_grid, mesh)
     nr = mm%idx%nr
     SAFE_ALLOCATE(mm%idx%lxyz(1:mm%np_part, 1:3))
     SAFE_ALLOCATE(mm%idx%lxyz_inv(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
-    call index_load_lxyz(mm%idx, mm%np_part, trim(ob_grid%lead(il)%info%restart_dir)//'/'//GS_DIR, mpi_world, ierr)
+    call index_load_lxyz(mm%idx, mm%np_part, trim(ob_grid%lead(il)%info%restart_dir)+'/'+GS_DIR, mpi_world, ierr)
     if (ierr /= 0) then
-      message(1) = "Unable to read index map from '"//trim(ob_grid%lead(il)%info%restart_dir)//"/"//GS_DIR//"'."
+      message(1) = "Unable to read index map from '"+trim(ob_grid%lead(il)%info%restart_dir)+"/"+GS_DIR+"'."
       call messages_fatal(1)
     end if
   end do

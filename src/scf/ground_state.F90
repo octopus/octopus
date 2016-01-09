@@ -95,7 +95,7 @@ contains
     if(sys%st%open_boundaries) then
       call restart_init(restart_ob, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
                         ierr, mesh=sys%gr%ob_grid%lead(LEFT)%mesh, &
-                        dir=trim(sys%gr%ob_grid%lead(LEFT)%info%restart_dir)//"/"//GS_DIR)
+                        dir=trim(sys%gr%ob_grid%lead(LEFT)%info%restart_dir)+"/"+GS_DIR)
       if(ierr == 0) &
         call states_load_free_states(restart_ob, sys%st, sys%gr, ierr)
       if (ierr /= 0) then

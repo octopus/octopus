@@ -1513,9 +1513,9 @@ contains
     PUSH_SUB(ob_read_lead_unit_cells)
 
     do il = 1, NLEADS
-      call simul_box_load(lead_sb(il), trim(dir(il))//'/'//GS_DIR, 'mesh', mpi_world, ierr)
+      call simul_box_load(lead_sb(il), trim(dir(il)) + '/' + GS_DIR, 'mesh', mpi_world, ierr)
       if (ierr /= 0) then
-        message(1) = "Unable to read simulation box information from '"//trim(dir(il))//"/"//GS_DIR//"/mesh'."
+        message(1) = "Unable to read simulation box information from '"+trim(dir(il))+"/"+GS_DIR+"/mesh'."
         call messages_fatal(1)
       end if
 

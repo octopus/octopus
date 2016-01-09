@@ -123,10 +123,10 @@ contains
     ! Read each of the Slater determinants.
     do i = 1, ndeterminants
       call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, phi(i)%dom_st_kpt_mpi_grp, &
-                        ierr, mesh=gr%mesh, dir=trim(slatdetnames(i))//"/"//GS_DIR)
+                        ierr, mesh=gr%mesh, dir=trim(slatdetnames(i))+"/"+GS_DIR)
       if(ierr == 0) call states_load(restart, phi(i), gr, ierr)
       if (ierr /= 0) then
-        message(1) = "Unable to read wavefunctions from '"//trim(slatdetnames(i))//"/"//GS_DIR//"'."
+        message(1) = "Unable to read wavefunctions from '"+trim(slatdetnames(i))+"/"+GS_DIR+"'."
         call messages_fatal(1)
       end if
       call restart_end(restart)

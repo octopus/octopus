@@ -247,7 +247,7 @@ contains
 
     iunit = io_open(this%filename_dynmat, action='write') ! start at the beginning
     write(iunit, '(2(a8, a6), a25)') 'atom', 'dir', 'atom', 'dir', &
-      '[' // trim(units_abbrev(UNITDYNMAT)) // ']'
+      '[' + trim(units_abbrev(UNITDYNMAT)) + ']'
     call io_close(iunit)
 
     POP_SUB(vibrations_out_dyn_matrix_header)

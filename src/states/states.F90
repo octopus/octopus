@@ -442,7 +442,7 @@ contains
       SAFE_ALLOCATE(ob_st(1:NLEADS))
       SAFE_ALLOCATE( ob_d(1:NLEADS))
       do il = 1, NLEADS
-        restart_dir = trim(gr%ob_grid%lead(il)%info%restart_dir)//"/"//GS_DIR
+        restart_dir = trim(gr%ob_grid%lead(il)%info%restart_dir)+"/"+GS_DIR
         call restart_init(ob_restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mpi_world, ierr, dir=restart_dir)
         ! first get nst and kpoints of all states
         if(ierr == 0) call states_look(ob_restart, ob_k(il), ob_d(il), ob_st(il), ierr)
@@ -696,7 +696,7 @@ contains
 
       PUSH_SUB(states_init.read_ob_eigenval_and_occ)
 
-      restart_dir = trim(gr%ob_grid%lead(LEFT)%info%restart_dir)//"/"//GS_DIR
+      restart_dir = trim(gr%ob_grid%lead(LEFT)%info%restart_dir)+"/"+GS_DIR
       call restart_init(ob_restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mpi_world, err, dir=restart_dir)
       if(err /= 0) then
         message(1) = 'Could not read open-boundaries eigenvalues and occupations.'

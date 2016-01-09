@@ -126,9 +126,9 @@ subroutine X(eigensolve_scalapack)(n, a, eigenvalues, bof, proc_grid, err_code)
   if(info /= 0) then
     if(bof_) then
 #ifdef RT_REAL
-      write(message(1),'(3a,i5)') 'In ' // TOSTRING(X(scalapack_eigensolve)) // ' ScaLAPACK pdsyevx returned error message ', info
+      write(message(1),'(3a,i5)') 'In '+TOSTRING(X(scalapack_eigensolve))+' ScaLAPACK pdsyevx returned error message ', info
 #else
-      write(message(1),'(3a,i5)') 'In ' // TOSTRING(X(scalapack_eigensolve)) // ' ScaLAPACK pzheevx returned error message ', info
+      write(message(1),'(3a,i5)') 'In '+TOSTRING(X(scalapack_eigensolve))+' ScaLAPACK pzheevx returned error message ', info
 #endif
       call messages_fatal(1)
     else
