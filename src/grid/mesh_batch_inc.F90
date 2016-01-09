@@ -420,7 +420,6 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
   type(profile_t), save :: prof, profcomm
   R_TYPE, allocatable :: tmp(:), cltmp(:, :)
 #ifdef HAVE_OPENCL
-  integer :: wgsize, local_mem_size
   type(opencl_mem_t)  :: dot_buffer, scratch_buffer
   type(profile_t), save :: prof_copy
 #endif
@@ -786,8 +785,6 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
   FLOAT, allocatable :: scal(:), ssq(:)
 #ifdef HAVE_OPENCL
   type(opencl_mem_t)  :: nrm2_buffer, scratch_buffer
-  integer  :: redsize, lredsize
-  FLOAT, allocatable :: ssqred(:, :)
 #endif
   type(profile_t), save :: prof
 
