@@ -30,7 +30,7 @@ sub usage {
 
   print <<EndOfUsage;
 
- Copyright (C) 2005-2014 H. Appel, M. Marques, X. Andrade, D. Strubbe
+ Copyright (C) 2005-2016 H. Appel, M. Marques, X. Andrade, D. Strubbe
 
 Usage: oct-run_regression_test.pl [options]
 
@@ -171,7 +171,10 @@ $test_succeeded = 1;
 
 $pwd = get_env("PWD");
 if (!$opt_m) {
-    $workdir = tempdir("$tempdirpath/octopus.XXXXXX");
+    my $name = $opt_f;
+    $name =~ s/\.\.\///g;
+    $name =~ s/\//-/g;
+    $workdir = tempdir("$tempdirpath/octopus" . "-" . $name . ".XXXXXX");
     chomp($workdir);
 
     system ("rm -rf $workdir");
