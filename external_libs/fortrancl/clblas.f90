@@ -16,7 +16,9 @@ module clblas
     clblasDsyrkEx,        &
     clblasZherkEx,        &
     clblasDdot,           &
-    clblasZdotc
+    clblasZdotc,          &
+    clblasDnrm2,          &
+    clblasDznrm2
 
   integer, public, parameter ::     &
     clblasRowMajor        = 0,   &
@@ -315,5 +317,45 @@ module clblas
       integer,                intent(out)   :: status
     end subroutine clblasZdotc_low
   end interface clblasZdotc
+
+  ! --------------------------------------------------
+
+  interface clblasDnrm2
+    subroutine clblasDnrm2_low(N, NRM2, offNRM2, X, offx, incx, scratchBuff, CommandQueue, status)
+      use cl
+
+      implicit none
+
+      integer(8),             intent(in)    :: N
+      type(cl_mem),           intent(inout) :: NRM2
+      integer(8),             intent(in)    :: offNRM2
+      type(cl_mem),           intent(in)    :: X
+      integer(8),             intent(in)    :: offX
+      integer,                intent(in)    :: incx
+      type(cl_mem),           intent(inout) :: scratchBuff
+      type(cl_command_queue), intent(inout) :: CommandQueue 
+      integer,                intent(out)   :: status
+    end subroutine clblasDnrm2_low
+  end interface clblasDnrm2
+
+  ! --------------------------------------------------
+
+  interface clblasDznrm2
+    subroutine clblasDznrm2_low(N, NRM2, offNRM2, X, offx, incx, scratchBuff, CommandQueue, status)
+      use cl
+
+      implicit none
+
+      integer(8),             intent(in)    :: N
+      type(cl_mem),           intent(inout) :: NRM2
+      integer(8),             intent(in)    :: offNRM2
+      type(cl_mem),           intent(in)    :: X
+      integer(8),             intent(in)    :: offX
+      integer,                intent(in)    :: incx
+      type(cl_mem),           intent(inout) :: scratchBuff
+      type(cl_command_queue), intent(inout) :: CommandQueue 
+      integer,                intent(out)   :: status
+    end subroutine clblasDznrm2_low
+  end interface clblasDznrm2
 
 end module clblas

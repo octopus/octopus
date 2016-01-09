@@ -215,4 +215,38 @@ clblasStatus FC_FUNC_(clblaszdotc_low, CLBLASZDOTC_LOW)(cl_long * N,
 			*Y, (size_t) *offy, *incy, *scratchBuff, 1, CommandQueue, 0, NULL, NULL);
 
 }
+
+
+clblasStatus FC_FUNC_(clblasdnrm2_low, CLBLASDNRM2_LOW)(cl_long * N,
+							cl_mem * NRM2,
+							cl_long * offNRM2,
+							const cl_mem *X,
+							cl_long * offx,
+							int *incx,
+							cl_mem * scratchBuff,
+							cl_command_queue * CommandQueue,
+							int * status){
+
+  
+  *status = clblasDnrm2((size_t) *N, *NRM2, (size_t) *offNRM2, *X, (size_t) *offx, *incx,
+			*scratchBuff, 1, CommandQueue, 0, NULL, NULL);
+
+}
+
+clblasStatus FC_FUNC_(clblasdznrm2_low, CLBLASDZNRM2_LOW)(cl_long * N,
+							  cl_mem * NRM2,
+							  cl_long * offNRM2,
+							  const cl_mem *X,
+							  cl_long * offx,
+							  int *incx,
+							  cl_mem * scratchBuff,
+							  cl_command_queue * CommandQueue,
+							  int * status){
+  
+  
+  *status = clblasDznrm2((size_t) *N, *NRM2, (size_t) *offNRM2, *X, (size_t) *offx, *incx,
+			 *scratchBuff, 1, CommandQueue, 0, NULL, NULL);
+  
+}
+
 #endif

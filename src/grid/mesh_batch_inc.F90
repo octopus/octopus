@@ -510,7 +510,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
 #ifdef HAVE_OPENCL
 
     call opencl_create_buffer(dot_buffer, CL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%pack%size(1))
-    call opencl_create_buffer(scratch_buffer, CL_MEM_WRITE_ONLY, R_TYPE_VAL, mesh%np)
+    call opencl_create_buffer(scratch_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, mesh%np)
 
     do ist = 1, aa%nst_linear
 
@@ -781,11 +781,11 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
   type(batch_t),           intent(in)    :: aa
   FLOAT,                   intent(out)   :: nrm2(:)
 
-  integer :: ist, idim, indb, ip
+  integer :: ist, idim, indb, ip, status
   R_TYPE :: a0
   FLOAT, allocatable :: scal(:), ssq(:)
 #ifdef HAVE_OPENCL
-  type(opencl_mem_t)  :: nrm2_buffer
+  type(opencl_mem_t)  :: nrm2_buffer, scratch_buffer
   integer  :: redsize, lredsize
   FLOAT, allocatable :: ssqred(:, :)
 #endif
@@ -856,44 +856,42 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
 
     ASSERT(.not. mesh%use_curvilinear)
 
-    SAFE_ALLOCATE(ssq(1:aa%pack%size_real(1)))
+    SAFE_ALLOCATE(ssq(1:aa%pack%size(1)))
+
 #ifdef HAVE_OPENCL
+    call opencl_create_buffer(nrm2_buffer, CL_MEM_WRITE_ONLY, TYPE_FLOAT, aa%pack%size(1))
+    call opencl_create_buffer(scratch_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, 2*mesh%np)
 
-    lredsize = opencl_kernel_workgroup_size(kernel_nrm2_vector)/aa%pack%size_real(1)
-    redsize = pad(1000, lredsize)
+    do ist = 1, aa%nst_linear
 
-    SAFE_ALLOCATE(ssqred(1:aa%pack%size_real(1), 1:redsize))
-    call opencl_create_buffer(nrm2_buffer, CL_MEM_WRITE_ONLY, TYPE_FLOAT, aa%pack%size_real(1)*redsize)
-
-    call opencl_set_kernel_arg(kernel_nrm2_vector, 0, mesh%np)
-    call opencl_set_kernel_arg(kernel_nrm2_vector, 1, aa%pack%buffer)
-    call opencl_set_kernel_arg(kernel_nrm2_vector, 2, log2(aa%pack%size_real(1)))
-    call opencl_set_kernel_arg(kernel_nrm2_vector, 3, nrm2_buffer)
-    
-    call opencl_kernel_run(kernel_nrm2_vector, (/aa%pack%size_real(1), redsize/), (/aa%pack%size_real(1), lredsize/))
-    
-    call opencl_finish()
-
-    call opencl_read_buffer(nrm2_buffer, aa%pack%size_real(1)*redsize, ssqred)
-    call opencl_release_buffer(nrm2_buffer)
-
-    do indb = 1, aa%pack%size_real(1)
-      ssq(indb) = blas_nrm2(redsize, ssqred(indb, 1), aa%pack%size_real(1))
+#ifdef R_TREAL
+      call clblasDnrm2(N = int(mesh%np, 8), NRM2 = nrm2_buffer%mem, offNRM2 = int(ist - 1, 8), &
+        X = aa%pack%buffer%mem, offx = int(ist - 1, 8), incx = aa%pack%size(1), &
+        scratchBuff = scratch_buffer%mem, CommandQueue = opencl%command_queue, status = status)
+      if(status /= clblasSuccess) call clblas_print_error(status, 'clblasDdot')
+#else
+      call clblasDznrm2(N = int(mesh%np, 8), NRM2 = nrm2_buffer%mem, offNRM2 = int(ist - 1, 8), &
+        X = aa%pack%buffer%mem, offx = int(ist - 1, 8), incx = aa%pack%size(1), &
+        scratchBuff = scratch_buffer%mem, CommandQueue = opencl%command_queue, status = status)
+      if(status /= clblasSuccess) call clblas_print_error(status, 'clblasDdot')
+#endif
+      
     end do
+
+    call opencl_read_buffer(nrm2_buffer, aa%pack%size(1), ssq)
+
+    call opencl_release_buffer(nrm2_buffer)
+    call opencl_release_buffer(scratch_buffer)
+
+#endif
 
     do ist = 1, aa%nst
       nrm2(ist) = M_ZERO
       do idim = 1, aa%dim
         indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
-#ifdef R_TREAL
-        nrm2(ist) = hypot(nrm2(ist), sqrt(mesh%volume_element*ssq(indb)))
-#else
-        nrm2(ist) = hypot(nrm2(ist), sqrt(mesh%volume_element*ssq(2*(indb - 1) + 1)))
-        nrm2(ist) = hypot(nrm2(ist), sqrt(mesh%volume_element*ssq(2*(indb - 1) + 2)))
-#endif
+        nrm2(ist) = hypot(nrm2(ist), sqrt(mesh%volume_element)*ssq(indb))
       end do
     end do
-#endif
 
     SAFE_DEALLOCATE_A(ssq)
 
