@@ -580,8 +580,10 @@ contains
 
     integer :: idir, ierr
     character(len=80) :: fname
+    type(profile_t), save :: prof
     
     PUSH_SUB(output_all)
+    call profiling_in(prof, "OUTPUT_ALL")
 
     if(outp%what /= 0) then
       message(1) = "Info: Writing output to " // trim(dir)
@@ -642,6 +644,7 @@ contains
       call output_fio(gr, geo, st, hm, trim(adjustl(dir)), mpi_world)
     end if
 
+    call profiling_out(prof)
     POP_SUB(output_all)
   end subroutine output_all
 
