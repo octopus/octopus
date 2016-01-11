@@ -68,7 +68,7 @@ contains
 
     !%Variable EwaldAlpha
     !%Type float
-    !%Default 1.1313708
+    !%Default 0.21
     !%Section Hamiltonian
     !%Description
     !% The value 'Alpha' that controls the splitting of the Coulomb
