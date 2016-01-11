@@ -117,6 +117,8 @@ module ps_m
     type(spline_t) :: vlr_sq      !< the long-range part of the
                                   !< local potential in terms of r^2, to avoid the sqrt
     type(spline_t) :: nlr         !< the charge density associated with the long-range part
+
+    FLOAT :: sigma_erf            !< the a constant in erf(r/(sqrt(2)*sigma))/r
     
     type(spline_t), pointer :: density(:)      !< the atomic density for each spin
     type(spline_t), pointer :: density_der(:)  !< the radial derivative for the atomic density for each spin
@@ -379,7 +381,6 @@ contains
     FLOAT, allocatable :: vsr(:), vlr(:), nlr(:)
     FLOAT :: r
     integer :: ii
-    FLOAT, parameter :: sigma_erf = CNST(0.625) ! This is hard-coded to a reasonable value
     
     PUSH_SUB(ps_separate)
 
@@ -388,16 +389,18 @@ contains
     SAFE_ALLOCATE(vsr(1:ps%g%nrval))
     SAFE_ALLOCATE(vlr(1:ps%g%nrval))
     SAFE_ALLOCATE(nlr(1:ps%g%nrval))
+
+    ps%sigma_erf = CNST(0.625) ! This is hard-coded to a reasonable value
     
-    vlr(1) = -ps%z_val*M_TWO/(sqrt(M_TWO*M_PI)*sigma_erf)
+    vlr(1) = -ps%z_val*M_TWO/(sqrt(M_TWO*M_PI)*ps%sigma_erf)
 
     do ii = 1, ps%g%nrval
       r = ps%g%rofi(ii)
       if (ii > 1) then
-        vlr(ii)  = -ps%z_val*loct_erf(r/(sigma_erf*sqrt(M_TWO)))/r
+        vlr(ii)  = -ps%z_val*loct_erf(r/(ps%sigma_erf*sqrt(M_TWO)))/r
       end if
       vsr(ii) = spline_eval(ps%vl, r) - vlr(ii)
-      nlr(ii) = -ps%z_val*M_ONE/(sigma_erf*sqrt(M_TWO*M_PI))**3*exp(-M_HALF*r**2/sigma_erf**2)
+      nlr(ii) = -ps%z_val*M_ONE/(ps%sigma_erf*sqrt(M_TWO*M_PI))**3*exp(-M_HALF*r**2/ps%sigma_erf**2)
     end do
     
     call spline_init(ps%vlr)

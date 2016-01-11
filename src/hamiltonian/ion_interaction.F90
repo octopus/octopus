@@ -31,6 +31,7 @@ module ion_interaction_m
   use parser_m
   use periodic_copy_m
   use profiling_m
+  use ps_m
   use simul_box_m
   use species_m
   use ssys_ionic_m
@@ -294,7 +295,7 @@ contains
     FLOAT, optional,           intent(out)   :: energy_components(:)
     FLOAT, optional,           intent(out)   :: force_components(:, :, :)
 
-    FLOAT :: rr, xi(1:MAX_DIM), zi, zj, ereal, efourier, eself, erfc, rcut
+    FLOAT :: rr, xi(1:MAX_DIM), zi, zj, ereal, efourier, eself, erfc, rcut, epseudo
     integer :: iatom, jatom, icopy
     type(periodic_copy_t) :: pc
     integer :: ix, iy, iz, isph, ss, idim
@@ -303,6 +304,7 @@ contains
     CMPLX   :: sumatoms, tmp(1:MAX_DIM), aa
     CMPLX, allocatable :: phase(:)
     type(profile_t), save :: prof_short, prof_long
+    type(ps_t) :: spec_ps
 
     PUSH_SUB(ion_interaction_periodic)
 
@@ -449,6 +451,20 @@ contains
     end if
 
     energy = ereal + efourier + eself
+	
+    ! Previously unaccounted G = 0 term from pseudopotentials. 
+    ! See J. Ihm, A. Zunger, M.L. Cohen, J. Phys. C 12, 4409 (1979)
+    epseudo = M_ZERO
+    do iatom = 1, geo%natoms
+      if(species_is_ps(geo%atom(iatom)%species)) then
+        zi = species_zval(geo%atom(iatom)%species)
+        spec_ps = species_ps(geo%atom(iatom)%species)
+        epseudo = epseudo + M_PI*zi*&
+          (spec_ps%sigma_erf*sqrt(M_TWO))**2/sb%rcell_volume*charge
+      end if
+    end do
+
+    energy = energy + epseudo
     
     call profiling_out(prof_long)
     
