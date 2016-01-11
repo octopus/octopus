@@ -111,9 +111,6 @@ fi
 
 AC_MSG_RESULT([$acx_libxc_ok ($FCFLAGS_LIBXC $LIBS_LIBXC)])
 
-AC_MSG_CHECKING([whether libxc version is > 2.2])
-AC_MSG_RESULT([$acx_libxc_v3])
-
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_libxc_ok" = xyes; then
   AC_DEFINE(HAVE_LIBXC, 1, [Defined if you have the LIBXC library.])
