@@ -12,7 +12,7 @@ Dependencies:
   ISF (internal)
   Qshep (internal)
   Spglib (internal)
-  yaml (internal)
+  yaml (internal/optional)
   arpack (optional)
   BerkeleyGW (optional)
   clBLAS (optional)
@@ -40,6 +40,7 @@ Website:
   http://www.tddft.org/programs/octopus/
 
 New releases:
+  2016/01/11 Version 5.0.1
   2015/10/07 Version 5.0.0
   2013/11/18 Version 4.1.2
   2013/09/03 Version 4.1.1
