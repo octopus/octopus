@@ -412,7 +412,7 @@ contains
     if(this%onfly) then
       do iom = 1, this%nomega
         omega = iom*this%delomega
-        rawfac = exp(M_zI * omega * iter * dt) * dt
+        rawfac = exp(M_zI * omega * iter * dt) * dt * sqrt(M_TWO * omega) / (M_TWO * M_PI)**(mdim/M_TWO)
 
         select case(this%recipe)
         case(M_RAW)
@@ -484,8 +484,7 @@ contains
         do ik = 1, st%d%nik
           do ist = 1, st%nst
             do isdim = 1, st%d%dim
-              wffttot(iom, :) = real(this%wfft(ist, isdim, ik, :, iom))**2 + aimag(this%wfft(ist, isdim, ik,:, iom))**2 &
-                + wffttot(iom, :)
+              wffttot(iom, :) = abs(this%wfft(ist, isdim, ik, :, iom))**M_TWO + wffttot(iom, :)
             end do
           end do
         end do
@@ -533,7 +532,7 @@ contains
             do ik = 1, st%d%nik
               do ist = 1, st%nst 
                 do isdim = 1, st%d%dim
-                  wfu = real(this%wfft(ist, isdim, ik, isp, iom))**2 + aimag(this%wfft(ist, isdim, ik, isp, iom))**2
+                  wfu = abs(this%wfft(ist, isdim, ik, isp, iom))**M_TWO
                   write(iunitone,'(1x,e18.10e3)', advance='no') wfu
                 end do
               end do
@@ -558,7 +557,7 @@ contains
         do iom = 1, this%nomega
           omega = iom * this%delomega
           write(iunittwo, '(5(1x,e18.10E3))') omega, wffttot(iom, 2), wffttot(iom, 1)
-          write(iunitone, '(2(1x,e18.10E3))') omega, sum(wffttot(iom, :)) / M_TWO
+          write(iunitone, '(2(1x,e18.10E3))') omega, sum(wffttot(iom, :)) / M_TWO * sqrt(M_TWO * omega)
         end do
 
       case(2)
