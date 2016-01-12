@@ -568,14 +568,14 @@ contains
 
           spctrsum = M_ZERO
           do iph = 0, this%nstepsphi - 1
-            spctrsum = spctrsum + wffttot(iom, iph + 1) * this%nstepsphi / M_TWO / M_PI
+            spctrsum = spctrsum + wffttot(iom, iph + 1) * M_TWO * M_PI / this%nstepsphi
             phi = iph * M_TWO * M_PI / this%nstepsphi
             write(iunittwo,'(5(1x,e18.10E3))') omega, phi, wffttot(iom, iph + 1)
           end do
           ! just repeat the result for output
           write(iunittwo,'(5(1x,e18.10E3))') omega, M_TWO * M_PI, wffttot(iom, 1)
           write(iunittwo, '(1x)', advance='yes')
-          write(iunitone, '(2(1x,e18.10E3))') omega, spctrsum
+          write(iunitone, '(2(1x,e18.10E3))') omega, spctrsum * sqrt(M_TWO * omega)
         end do
 
       case(3)

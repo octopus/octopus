@@ -1364,7 +1364,7 @@ contains
             do iph = 0, this%nstepsphik - 1
               ikp = ikp + 1
               if(iph == 0) ikp_save = ikp
-              spctrsum = spctrsum + spctrout_cub(ikp) * this%nstepsphik / M_TWO / M_PI
+              spctrsum = spctrsum + spctrout_cub(ikp) * M_TWO * M_PI / this%nstepsphik
               phik = iph * M_TWO * M_PI / this%nstepsphik
               write(iunittwo,'(5(1x,e18.10E3))') kact, phik, spctrout_cub(ikp)
             end do
