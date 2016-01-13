@@ -73,7 +73,7 @@ else
 
     AC_LINK_IFELSE([AC_LANG_PROGRAM([
 #include <metis.h>
-#ifdef METIS_USE_DOUBLEPRECISION
+#if defined(METIS_USE_DOUBLEPRECISION) || REALTYPEWIDTH == 64
   #error METIS must be compiled in single precision for Octopus.
 #endif
 ],[
