@@ -11,8 +11,8 @@ Input      : 09-etsf_io.01-gs.inp
 
 match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 2
 
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -33.79531187
-match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -33.79951714
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -31.42700114
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -31.43120280
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.47845966
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; 2.48288919
 match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -8.24466526
