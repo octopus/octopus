@@ -203,6 +203,8 @@ module hamiltonian_m
     !> For the Rashba spin-orbit coupling
     FLOAT :: rashba_coupling
     type(scdm_t)  :: scdm
+
+    logical :: time_zero
   end type hamiltonian_t
 
   integer, public, parameter :: &
@@ -514,7 +516,20 @@ contains
       call messages_fatal()
 #endif
     end if
-        
+
+    !%Variable TimeZero
+    !%Type logical
+    !%Default no
+    !%Section Hamiltonian
+    !%Description
+    !% (Experimental) If set to yes, the ground state and other time
+    !% dependent calculation will assume that they are done at time
+    !% zero, so that all time depedent field at that time will be
+    !% included.
+    !%End
+    call parse_variable('TimeZero', .false., hm%time_zero)
+    if(hm%time_zero) call messages_experimental('TimeZero')
+
     call profiling_out(prof)
     POP_SUB(hamiltonian_init)
 
@@ -871,7 +886,7 @@ contains
 
     integer :: ispin, ip, idir, iatom, ilaser
     type(profile_t), save :: prof, prof_phases
-    FLOAT :: aa(1:MAX_DIM)
+    FLOAT :: aa(1:MAX_DIM), time_
     FLOAT, allocatable :: vp(:,:)
 
     PUSH_SUB(hamiltonian_update)
@@ -881,6 +896,8 @@ contains
     this%Imcurrent_time = M_ZERO !cmplxscl
     if(present(time)) this%current_time = time
     if(present(Imtime)) this%Imcurrent_time = Imtime !cmplxscl
+
+    time_ = optional_default(time, CNST(0.0))
 
     ! set everything to zero
     call hamiltonian_base_clear(this%hm_base)
@@ -892,7 +909,7 @@ contains
     if(this%d%nspin > 2 .and. this%ab == IMAGINARY_ABSORBING) then
       call messages_not_implemented('AbsorbingBoundaries = sin2 for spinors')
     end if
-    
+
     do ispin = 1, this%d%nspin
       if(ispin <= 2) then
         forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
@@ -900,7 +917,7 @@ contains
         if (this%pcm%run_pcm) then
           forall (ip = 1:mesh%np)  
             this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
-                 this%pcm%v_e_rs(ip) + this%pcm%v_n_rs(ip)
+              this%pcm%v_e_rs(ip) + this%pcm%v_n_rs(ip)
           end forall
         end if
 
@@ -923,13 +940,13 @@ contains
     end do
 
     ! the lasers
-    if (present(time)) then
+    if (present(time) .or. this%time_zero) then
 
       do ilaser = 1, this%ep%no_lasers
         select case(laser_kind(this%ep%lasers(ilaser)))
         case(E_FIELD_SCALAR_POTENTIAL, E_FIELD_ELECTRIC)
           do ispin = 1, this%d%spin_channels
-            call laser_potential(this%ep%lasers(ilaser), mesh,  this%hm_base%potential(:, ispin), time)
+            call laser_potential(this%ep%lasers(ilaser), mesh,  this%hm_base%potential(:, ispin), time_)
           end do
         case(E_FIELD_MAGNETIC)
           call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_VECTOR_POTENTIAL + FIELD_UNIFORM_MAGNETIC_FIELD, &
@@ -937,40 +954,38 @@ contains
           ! get the vector potential
           SAFE_ALLOCATE(vp(1:mesh%np, 1:mesh%sb%dim))
           vp(1:mesh%np, 1:mesh%sb%dim) = M_ZERO
-          call laser_vector_potential(this%ep%lasers(ilaser), mesh, vp, time)
+          call laser_vector_potential(this%ep%lasers(ilaser), mesh, vp, time_)
           forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np)
             this%hm_base%vector_potential(idir, ip) = this%hm_base%vector_potential(idir, ip) - vp(ip, idir)/P_C
           end forall
           ! and the magnetic field
-          call laser_field(this%ep%lasers(ilaser), this%hm_base%uniform_magnetic_field(1:mesh%sb%dim), time)
+          call laser_field(this%ep%lasers(ilaser), this%hm_base%uniform_magnetic_field(1:mesh%sb%dim), time_)
           SAFE_DEALLOCATE_A(vp)
         case(E_FIELD_VECTOR_POTENTIAL)
           call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL, this%cmplxscl%space)
           ! get the uniform vector potential associated with a magnetic field
           aa = M_ZERO
-          call laser_field(this%ep%lasers(ilaser), aa(1:mesh%sb%dim), time)
+          call laser_field(this%ep%lasers(ilaser), aa(1:mesh%sb%dim), time_)
           this%hm_base%uniform_vector_potential(1:mesh%sb%dim) = this%hm_base%uniform_vector_potential(1:mesh%sb%dim) &
             - aa(1:mesh%sb%dim)/P_C
         end select
       end do
 
+      ! the gauge field
+      if(gauge_field_is_applied(this%ep%gfield)) then
+        call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL, this%cmplxscl%space)
+        call gauge_field_get_vec_pot(this%ep%gfield, this%hm_base%uniform_vector_potential)
+        this%hm_base%uniform_vector_potential(1:mesh%sb%dim) = this%hm_base%uniform_vector_potential(1:mesh%sb%dim)/P_c
+      end if
+
+      ! the electric field for a periodic system through the gauge field
+      if(associated(this%ep%e_field) .and. gauge_field_is_applied(this%ep%gfield)) then
+        this%hm_base%uniform_vector_potential(1:mesh%sb%periodic_dim) = &
+          this%hm_base%uniform_vector_potential(1:mesh%sb%periodic_dim) - time_*this%ep%e_field(1:mesh%sb%periodic_dim)
+      end if
+      
     end if
 
-    ! the gauge field
-    if(gauge_field_is_applied(this%ep%gfield)) then
-      call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL, this%cmplxscl%space)
-      call gauge_field_get_vec_pot(this%ep%gfield, this%hm_base%uniform_vector_potential)
-      this%hm_base%uniform_vector_potential(1:mesh%sb%dim) = this%hm_base%uniform_vector_potential(1:mesh%sb%dim)/P_c
-    end if
-    
-    ! the electric field for a periodic system through the gauge field
-    if(associated(this%ep%e_field) .and. gauge_field_is_applied(this%ep%gfield)) then
-      if(present(time)) then
-        this%hm_base%uniform_vector_potential(1:mesh%sb%periodic_dim) = &
-          this%hm_base%uniform_vector_potential(1:mesh%sb%periodic_dim) - time*this%ep%e_field(1:mesh%sb%periodic_dim)
-      end if
-    end if
-    
     ! the vector potential of a static magnetic field
     if(associated(this%ep%a_static)) then
       call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_VECTOR_POTENTIAL, this%cmplxscl%space)

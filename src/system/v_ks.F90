@@ -132,6 +132,7 @@ module v_ks_m
     integer                  :: vdw_correction
     logical                  :: vdw_self_consistent
     type(vdw_ts_t)           :: vdw_ts
+    logical                  :: include_td_field
   end type v_ks_t
 
 contains
@@ -541,11 +542,12 @@ contains
       call messages_info(1)
     end if
 
+    ks%calc%time_present = present(time) 
+
     if(present(time)) then
       ks%calc%time = time
-    else
-      ks%calc%time = M_ZERO
     end if
+
     ks%calc%calc_energy = optional_default(calc_energy, .true.)
 
     nullify(ks%calc%vberry)
@@ -1135,7 +1137,11 @@ contains
       hm%ep%vdw_forces(1:ks%gr%sb%dim, 1:ks%calc%geo%natoms) = CNST(0.0)      
     end if
 
-    call hamiltonian_update(hm, ks%gr%mesh, time = ks%calc%time)
+    if(ks%calc%time_present) then
+      call hamiltonian_update(hm, ks%gr%mesh, time = ks%calc%time)
+    else
+      call hamiltonian_update(hm, ks%gr%mesh)
+    end if
 
     SAFE_DEALLOCATE_P(ks%calc%density)
     SAFE_DEALLOCATE_P(ks%calc%Imdensity)

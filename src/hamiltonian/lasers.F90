@@ -265,6 +265,10 @@ contains
     !% The block <tt>TDExternalFields</tt> describes the type and shape of time-dependent 
     !% external perturbations that are applied to the system.
     !%
+    !% Note: This perturbations are only applied for time-dependent runs. If
+    !% you want the value of the perturbation at time zero to be
+    !% applied for time-independent runs, use <tt>TimeZero = yes</tt>.
+    !%
     !% Each line of the block describes an external field; this way you can actually have more
     !% than one laser (<i>e.g.</i> a "pump" and a "probe").
     !%
