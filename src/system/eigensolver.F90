@@ -566,7 +566,7 @@ contains
     eigens%matvec = 0
 
     if(mpi_grp_is_root(mpi_world) .and. eigensolver_has_progress_bar(eigens) .and. .not. debug%info) then
-      call loct_progress_bar(-1, st%nst*st%d%nik)
+      call loct_progress_bar(-1, st%lnst*st%d%kpt%nlocal)
     end if
 
     ik_loop: do ik = st%d%kpt%start, st%d%kpt%end

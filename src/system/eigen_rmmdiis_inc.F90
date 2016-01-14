@@ -460,7 +460,7 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
     call batch_end(kresb, copy = .false.)
 
     if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
-      call loct_progress_bar(st%nst*(ik - 1) +  maxst, st%nst*st%d%nik)
+      call loct_progress_bar(st%lnst*(ik - 1) +  maxst, st%lnst*st%d%kpt%nlocal)
     end if
 
   end do
