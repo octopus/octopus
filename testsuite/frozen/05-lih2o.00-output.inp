@@ -1,6 +1,7 @@
 CalculationMode = gs
 Units = eV_Angstrom
 ExperimentalFeatures = yes
+ConvAbsDens = 1e-6
 FromScratch = yes
 radius = 3.0
 spacing = 0.15
