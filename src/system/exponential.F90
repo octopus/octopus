@@ -160,7 +160,7 @@ contains
       !% the order to which the exponential is expanded. For the Lanczos approximation, 
       !% it is the Lanczos-subspace dimension.
       !%End
-      call parse_variable('TDExpOrder', 4, te%exp_order)
+      call parse_variable('TDExpOrder', DEFAULT__TDEXPORDER, te%exp_order)
       if (te%exp_order < 2) call messages_input_error('TDExpOrder')
 
     end if

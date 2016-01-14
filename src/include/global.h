@@ -19,7 +19,8 @@
 
 #include "config_F90.h"
 #include "options.h"  
-
+#include "defaults.h"
+  
 ! If the compiler accepts long Fortran lines, it is better to use that
 ! capacity, and build all the preprocessor definitions in one line. In
 ! this way, the debuggers will provide the right line numbers.
