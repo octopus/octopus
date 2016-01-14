@@ -38,6 +38,8 @@ module pcm_m
 
   public ::                 &
     pcm_t,                  &
+    pcm_sphere_t,           &
+    pcm_tessera_t,          &
     pcm_init,               &
     pcm_end,                &
     pcm_charges,            &
@@ -49,29 +51,29 @@ module pcm_m
 
   !> The cavity hosting the solute molecule is built from a set of 
   !! interlocking spheres with optimized radii centered at the nuclear positions.  
-  type :: sphere_t  
+  type :: pcm_sphere_t  
     FLOAT :: x !
     FLOAT :: y !< center of the sphere
     FLOAT :: z !
     FLOAT :: r !< radius of the sphere (different for each species)
-  end type sphere_t
+  end type pcm_sphere_t
 
   !> The resulting cavity is discretized by a set of tesserae defined in 3d.  
   integer, parameter :: pcm_dim_space = 3
 
-  type :: tessera_t
+  type :: pcm_tessera_t
     FLOAT :: point(1:pcm_dim_space)  !< representative point of the tessera  
     FLOAT :: area                    !< area of the tessera
     FLOAT :: normal(1:pcm_dim_space) !< unitary outgoing vector normal to the tessera surface  
     FLOAT :: r_sphere                !< radius of the sphere to which the tessera belongs
-  end type tessera_t
+  end type pcm_tessera_t
 
   type pcm_t
     logical                      :: run_pcm       !< If .true., PCM calculation is enabled
     integer                      :: n_spheres     !< Number of spheres used to build the VdW cavity
     integer                      :: n_tesserae    !< Total number of tesserae
-    type(sphere_t), allocatable  :: spheres(:)    !< See type sphere_t
-    type(tessera_t), allocatable :: tess(:)       !< See type tessera_t
+    type(pcm_sphere_t), allocatable  :: spheres(:)    !< See type pcm_sphere_t
+    type(pcm_tessera_t), allocatable :: tess(:)       !< See type pcm_tessera_t
     FLOAT                        :: scale_r       !< scaling factor for the radii of the spheres used in PCM
     FLOAT, allocatable           :: matrix(:,:)   !< PCM response matrix
     FLOAT, allocatable           :: q_e(:)        !< polarization charges due to the solute electrons        
@@ -147,7 +149,7 @@ contains
      !In	          Sn           Sb           Te           I            Xe
       CNST(1.672), CNST(1.804), CNST(1.881), CNST(1.892), CNST(1.892), CNST(1.881)  /
 
-    type(tessera_t) :: dum2(1)
+    type(pcm_tessera_t) :: dum2(1)
 
     logical :: band
     logical :: add_spheres_h
@@ -540,7 +542,7 @@ contains
   subroutine pcm_v_nuclei_cav(v_n_cav, geo, tess, n_tess)
     FLOAT,               intent(out)   :: v_n_cav(:) !< (1:n_tess)
     type(geometry_t),    intent(in)    :: geo
-    type(tessera_t),     intent(in)    :: tess(:)    !< (1:n_tess)
+    type(pcm_tessera_t),     intent(in)    :: tess(:)    !< (1:n_tess)
     integer,             intent(in)    :: n_tess
 
     FLOAT   :: diff(1:pcm_dim_space), dist, z_ia
@@ -738,7 +740,7 @@ contains
     FLOAT,           intent(in)  :: width_factor
     integer,         intent(in)  :: n_tess  
     type(mesh_t),    intent(in)  :: mesh
-    type(tessera_t), intent(in)  :: tess(:) !< (1:n_tess)
+    type(pcm_tessera_t), intent(in)  :: tess(:) !< (1:n_tess)
 
     FLOAT, parameter :: p_1 = CNST(0.119763)
     FLOAT, parameter :: p_2 = CNST(0.205117)
@@ -781,7 +783,7 @@ contains
   !> Generates the PCM response matrix. J. Tomassi et al. Chem. Rev. 105, 2999 (2005). 
   subroutine pcm_matrix(eps, tess, n_tess, pcm_mat )
     FLOAT, intent(in)           :: eps
-    type(tessera_t), intent(in) :: tess(:)      !< (1:n_tess)
+    type(pcm_tessera_t), intent(in) :: tess(:)      !< (1:n_tess)
     integer, intent(in)         :: n_tess
     FLOAT, intent(out)          :: pcm_mat(:,:) !< (1:n_tess, 1:n_tess)
 
@@ -881,7 +883,7 @@ contains
   
   subroutine s_i_matrix(n_tess, tess)
     integer,         intent(in)    :: n_tess
-    type(tessera_t), intent(in)    :: tess(:)
+    type(pcm_tessera_t), intent(in)    :: tess(:)
 
     integer :: ii, jj
 
@@ -902,7 +904,7 @@ contains
 
   subroutine d_i_matrix(n_tess, tess)
     integer,         intent(in)    :: n_tess
-    type(tessera_t), intent(in)    :: tess(:)
+    type(pcm_tessera_t), intent(in)    :: tess(:)
 
     integer :: ii, jj
 
@@ -923,8 +925,8 @@ contains
   !> electrostatic Green function in vacuo:
   !! G_I(r,r^\prime) = 1 / | r - r^\prime |
   FLOAT function s_mat_elem_I(tessi, tessj)
-    type(tessera_t), intent(in) :: tessi
-    type(tessera_t), intent(in) :: tessj
+    type(pcm_tessera_t), intent(in) :: tessi
+    type(pcm_tessera_t), intent(in) :: tessj
 
     FLOAT, parameter :: M_SD_DIAG    = CNST(1.0694)
     FLOAT, parameter :: M_DIST_MIN   = CNST(0.1)
@@ -961,8 +963,8 @@ contains
 
   !> Gradient of the Green function in vacuo GRAD[G_I(r,r^\prime)]
   FLOAT function d_mat_elem_I(tessi, tessj)
-    type(tessera_t), intent(in) :: tessi
-    type(tessera_t), intent(in) :: tessj
+    type(pcm_tessera_t), intent(in) :: tessi
+    type(pcm_tessera_t), intent(in) :: tessj
 
     FLOAT, parameter :: M_SD_DIAG    = CNST(1.0694)
     FLOAT, parameter :: M_DIST_MIN   = CNST(0.04)
@@ -1006,14 +1008,14 @@ contains
   !! representative points and areas of the tesserae by using the 
   !! Gauss-Bonnet theorem.
   subroutine cav_gen(i_count, tess_sphere, nesf, sfe, nts, cts, unit_pcminfo)
-    integer, intent(in)  :: i_count
-    integer, intent(in)  :: tess_sphere
-    integer, intent(in)  :: nesf
-    integer, intent(out) :: nts
-    integer, intent(in)  :: unit_pcminfo
+    integer,              intent(in)    :: i_count
+    integer,              intent(in)    :: tess_sphere
+    type(pcm_sphere_t),   intent(inout) :: sfe(:) !< (1:pcm%n_spheres)
+    integer,              intent(in)    :: nesf
+    integer,              intent(out)   :: nts
+    type(pcm_tessera_t),  intent(out)   :: cts(:) !< (1:pcm%n_tesserae)
+    integer,              intent(in)    :: unit_pcminfo
 
-    type(sphere_t),   intent(inout) :: sfe(:) !< (1:pcm%n_spheres)
-    type(tessera_t),  intent(out)   :: cts(:) !< (1:pcm%n_tesserae)
 
     integer, parameter :: dim_angles = 24
     integer, parameter :: dim_ten = 10
@@ -1391,7 +1393,7 @@ contains
   !> find the uncovered region for each tessera and computes the area,
   !! the representative point (pp) and the unitary normal vector (pp1)
   subroutine subtessera(sfe, ns, nesf, nv, pts, ccc, pp, pp1, area)
-    type(sphere_t), intent(in) :: sfe(:) !< (1:nesf)
+    type(pcm_sphere_t), intent(in) :: sfe(:) !< (1:nesf)
     integer, intent(in)        :: ns 
     integer, intent(in)        :: nesf
     integer, intent(inout)     :: nv
@@ -1635,7 +1637,7 @@ contains
   !    !! which is on the surface of sphere 'ns'. p4 is a linear combination 
   !! of p1 and p2 with the 'alpha' parameter optimized iteratively.
   subroutine inter( sfe, p1, p2, p3, p4, ns, ia)
-    type(sphere_t), intent(in) :: sfe(:) !< (1:nesf)
+    type(pcm_sphere_t), intent(in) :: sfe(:) !< (1:nesf)
     FLOAT, intent(in)          :: p1(:)  !< (1:pcm_dim_space)
     FLOAT, intent(in)          :: p2(:)  !< (1:pcm_dim_space)
     FLOAT, intent(in)          :: p3(:)  !< (1:pcm_dim_space)
@@ -1709,7 +1711,7 @@ contains
   !! T(n): azimuthal angle for the side 'n'
   !! Beta(n): external angle respect to vertex 'n'.
   subroutine gaubon( sfe, nv, ns, pts, ccc, pp, pp1, area, intsph )
-    type(sphere_t), intent(in) :: sfe(:)    !< (1:nesf)
+    type(pcm_sphere_t), intent(in) :: sfe(:)    !< (1:nesf)
     FLOAT, intent(in)          :: pts(:,:)  !< (1:pcm_dim_space,1:dim_ten) 
     FLOAT, intent(in)          :: ccc(:,:)  !< (1:pcm_dim_space,1:dim_ten)
     FLOAT, intent(inout)       :: pp(:)     !< (1:pcm_dim_space)
