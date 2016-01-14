@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2002-2016 M. Marques, A. Castro, A. Rubio, G. Bertsch, X. Andrade
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -156,9 +156,9 @@ contains
     integer,    optional, intent(in)  :: st_start_writing
     logical,    optional, intent(in)  :: verbose
 
-    integer :: iunit_wfns, iunit_occs, iunit_states, root, chunk, iwt
+    integer :: iunit_wfns, iunit_occs, iunit_states, root
     integer :: err, err2(2), ik, idir, ist, idim, itot
-    character(len=MAX_PATH_LEN) :: filename, filename1, filename_tmp
+    character(len=MAX_PATH_LEN) :: filename, filename1
     character(len=300) :: lines(3)
     logical :: lr_wfns_are_associated, should_write, cmplxscl, verbose_
     FLOAT   :: kpoint(1:MAX_DIM)
@@ -232,7 +232,6 @@ contains
 
     itot = 1
     root = 0
-    chunk = 0
     err2 = 0
     do ik = 1, st%d%nik
       kpoint = M_ZERO
@@ -240,12 +239,8 @@ contains
 
       do ist = 1, st%nst
         do idim = 1, st%d%dim
-          chunk = chunk + 1
-          root = mod(itot-1,gr%mesh%mpi_grp%size)
+          root = mod(itot - 1, gr%mesh%mpi_grp%size)
           write(filename,'(i10.10)') itot
-          if (root == gr%mesh%mpi_grp%rank) then
-            filename_tmp = filename
-          end if
           
           if (st%have_left_states) filename1 = 'L'//trim(filename) !cmplxscl
 
@@ -284,15 +279,7 @@ contains
                   else
                     rff_global = dpsi
                   end if
-                  if (chunk == gr%mesh%mpi_grp%size .or. ist*ik == st%d%nik*st%nst*st%d%dim) then
-                    do iwt = 1, chunk
-                      if (iwt-1 == gr%mesh%mpi_grp%rank) then
-                        call drestart_write_mesh_function(restart, trim(filename_tmp), &
-                             gr%mesh, rff_global, err, root = iwt-1, is_global = .true.)
-                      end if
-                    end do
-                    chunk = 0
-                  end if
+                  call drestart_write_mesh_function(restart, filename, gr%mesh, rff_global, err, root = root, is_global = .true.)
                 else
                   call states_get_state(st, gr%mesh, idim, ist, ik, zpsi)
                   if (gr%mesh%parallel_in_domains) then
