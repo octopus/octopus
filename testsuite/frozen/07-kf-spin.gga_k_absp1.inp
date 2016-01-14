@@ -1,0 +1,24 @@
+CalculationMode = gs
+Units = eV_Angstrom
+ExperimentalFeatures = yes
+FromScratch = yes
+ConvEigenError = yes
+ConvAbsDens = 1.0e-6
+BoxShape = Sphere
+radius = 8.0
+spacing = 0.4
+SpinComponents = spin_polarized
+PseudopotentialSet = standard
+%Species
+	'Na'| species_pseudo | db_file | 'PSF/Na.psf'
+%
+%Coordinates
+        'Na' | 1.25 | 0.0 | 0.0 | no
+%
+TnaddFunctional = gga_k_absp1
+%SubSystems
+        'Na' | frozen | '../none/static/frozen' | qshep
+%
+%SubSystemCoordinates
+        'Na' | -1.25
+%
