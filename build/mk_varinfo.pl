@@ -197,9 +197,9 @@ sub print_defaults_header{
 #####################################################
 # prints %opt_value to src/include/options.h
 sub print_options_header{
-  open(OUT, ">$include/defaults.h");
+  open(OUT, ">$include/options.h");
   my $key;
-  foreach $key (sort(keys %default_varopt)) {
+  foreach $key (sort(keys %varopt)) {
     print OUT "#define OPTION__", uc $key, " (", $varopt{"$key"}, ")\n";
   }
 
