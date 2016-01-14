@@ -1042,9 +1042,8 @@ end function get_qxc
 !> Subroutine to stitch discontinuous values of a multiple-valued function
 !! together to a single continuous, single-valued function by smoothly
 !! joining at the branch cuts.
+!! Each value of the parameter 'branch' corresponds to one such value.
 subroutine stitch(get_branch, functionvalues, startpoint)
-  ! Function for getting values of multiple-valued functions.
-  ! Each value of the parameter 'branch' corresponds to one such value.
   interface
     CMPLX function get_branch(x, branch)
       implicit none
@@ -1061,18 +1060,18 @@ subroutine stitch(get_branch, functionvalues, startpoint)
   imax = size(functionvalues, 1)
   jmax = size(functionvalues, 2)
 
-  call stitchline(get_branch, functionvalues, startpoint, 1)
+  call stitchline(get_branch, functionvalues, startpoint(1), startpoint(2), startpoint(3), 1)
   do i=1, imax
-    call stitchline(get_branch, functionvalues, (/i, startpoint(2), startpoint(3)/), 2)
+    call stitchline(get_branch, functionvalues, i, startpoint(2), startpoint(3), 2)
     do j=1, jmax
-      call stitchline(get_branch, functionvalues, (/i, j, startpoint(3)/), 3)
+      call stitchline(get_branch, functionvalues, i, j, startpoint(3), 3)
     end do
   end do
 end subroutine stitch
 
 
 !> Like stitch, but stitches along one line only.
-subroutine stitchline(get_branch, functionvalues, startpoint, direction, startbranch)
+subroutine stitchline(get_branch, functionvalues, startpoint1, startpoint2, startpoint3, direction, startbranch)
   
   ! Function for getting values of multiple-valued functions.
   ! Each value of the parameter 'branch' corresponds to one such value.
@@ -1085,20 +1084,21 @@ subroutine stitchline(get_branch, functionvalues, startpoint, direction, startbr
   end interface
 
   CMPLX,             intent(inout) :: functionvalues(:, :, :)
-  integer,           intent(in)    :: startpoint(3)
+  integer,           intent(in)    :: startpoint1, startpoint2, startpoint3
   integer, optional, intent(in)    :: direction
   integer, optional, intent(in)    :: startbranch
 
   integer :: stitchedpoints, direction_, startbranch_
   
   integer :: currentbranch, npts, i
-  integer :: currentlocation(3)
+  integer :: startpoint(3), currentlocation(3)
   CMPLX :: prev_value
 
   PUSH_SUB(stitchline)
 
   stitchedpoints = 0
 
+  startpoint = (/startpoint1, startpoint2, startpoint3/)
   currentlocation = startpoint
 
   if (present(direction)) then
