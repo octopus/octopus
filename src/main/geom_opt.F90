@@ -276,8 +276,8 @@ contains
       !% forces) which makes it less efficient than other schemes. It is included here
       !% for completeness, since it is free.
       !%Option fire 8
-      !% (Experimental) The FIRE algorithm.
-      !% Ref: E. Bitzek, P. Koskinen, F. Gahler, M. Moseler, and P. Gumbsch <i>Phys. Rev. Lett.</i> <b>97</b>, 170201 (2006).
+      !% (Experimental) The FIRE algorithm. See also <tt>GOFireMass</tt>.
+      !% Ref: E. Bitzek, P. Koskinen, F. Gahler, M. Moseler, and P. Gumbsch, <i>Phys. Rev. Lett.</i> <b>97</b>, 170201 (2006).
       !%End
       call parse_variable('GOMethod', MINMETHOD_STEEPEST_DESCENT, g_opt%method)
       if(.not.varinfo_valid_option('GOMethod', g_opt%method)) call messages_input_error('GOMethod')
@@ -365,12 +365,13 @@ contains
       !%Default 0.0 amu
       !%Section Calculation Modes::Geometry Optimization
       !%Description
-      !% Fire algorithm assumes that all degrees of freedom
+      !% The Fire algorithm (<tt>GOMethod = fire</tt>) assumes that all degrees of freedom
       !% are comparable. All the velocities should be on the same
       !% scale,  which  for  heteronuclear  systems  can  be  roughly
-      !% achieved by setting all the atom masses equala. 
-      !% If GOFireMass is smaller or equal to 0., the masses of each 
-      !% species will be used. 
+      !% achieved by setting all the atom masses equal, to the value
+      !% specified by this variable.
+      !% If <tt>GOFireMass</tt> <= 0, the masses of each 
+      !% species will be used.
       !%End
       call parse_variable('GOFireMass', M_ZERO, g_opt%fire_mass, unit_amu)
 

@@ -167,17 +167,14 @@ contains
     !% evolution becoming unstable.
     !%
     !% The default value is the maximum value that we have found
-    !% empirically that is stable for the spacing Octopus is
-    !% using. However, you might need to adjust this value.
+    !% empirically that is stable for the spacing <math>h</math>:
+    !% <math>dt = 0.0426 - 0.207 h + 0.808 h^2</math>
+    !% (from parabolic fit to Fig. 4 of http://dx.doi.org/10.1021/ct800518j,
+    !% probably valid for 3D systems only).
+    !% However, you might need to adjust this value.
     !%End
 
     spacing = minval(sys%gr%mesh%spacing(1:sys%gr%sb%dim))
-    ! These constants come from adjusting a parabola to values of
-    ! maximum dt for different spacings (Fig. 4 of
-    ! http://dx.doi.org/10.1021/ct800518j ).
-    !
-    ! This is probably valid for 3D systems only.
-    !
     default_dt = CNST(0.0426) - CNST(0.207)*spacing + CNST(0.808)*spacing**2
     default_dt = default_dt*td%mu
 

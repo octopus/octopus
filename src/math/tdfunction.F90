@@ -193,11 +193,12 @@ contains
     !% real part and the imaginary part of the temporal function <i>f</i>(<i>t</i>).
     !%
     !%Option tdf_from_expr 10008
+    !%
     !% <tt>%TDFunctions
     !% <br>&nbsp;&nbsp; "function-name" | tdf_from_expr | "expression"
     !% <br>%</tt>
     !%
-    !% The temporal shape of the field is given as an expression (e.g., "cos(2.0*t)". The 
+    !% The temporal shape of the field is given as an expression (e.g., <tt>cos(2.0*t)</tt>. The 
     !% letter <i>t</i> means time, obviously. The expression is used to construct the function <i>f</i>
     !% that defines the field.
     !%End
