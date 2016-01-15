@@ -103,7 +103,6 @@ module pcm_m
   FLOAT, allocatable :: Delta(:,:)     !< D_E matrix in JCP 139, 024105 (2013).
 
   FLOAT, allocatable :: mat_gamess(:,:) !< PCM matrix formatted to be inputed to GAMESS
-  FLOAT, allocatable :: sr_dist(:,:)    !< Table storing the distances between tesserae and grid points.
 
 contains
 
@@ -428,13 +427,8 @@ contains
 
     !> Creating the list of the nearest grid points to each tessera
     !! to be used to interpolate the Hartree potential at the representative points
-    SAFE_ALLOCATE(sr_dist(1:pcm%n_tesserae, 1:grid%mesh%np)) 
-    sr_dist = M_ZERO
     do ia = 1, pcm%n_tesserae
       call nearest_cube_vertices(pcm%tess(ia)%point, grid%mesh, pcm%ind_vh(ia,:), pcm%arg_li(ia,:))
-      do ip = 1, grid%mesh%np !running serially np=np_global
-        call mesh_r(grid%mesh, ip, sr_dist(ia,ip), origin=pcm%tess(ia)%point)
-      end do
     end do
 
     !>Generating the dynamical PCM matrix
@@ -755,26 +749,22 @@ contains
 
     v_pcm = M_ZERO
 
-    if (width_factor /= M_ZERO) then
-
-      do ia = 1, n_tess
-        do ip = 1, mesh%np !running serially np=np_global
-          arg = sr_dist(ia,ip)/sqrt( tess(ia)%area*width_factor )        
+    do ia = 1, n_tess
+      do ip = 1, mesh%np
+      ! Computing the distances between tesserae and grid points.
+        call mesh_r(mesh, ip, term, origin=tess(ia)%point)
+        if (width_factor /= M_ZERO) then
+          arg = term/sqrt( tess(ia)%area*width_factor )        
           term = ( 1 + p_1*arg + p_2*arg**2 )/( 1 + q_1*arg + q_2*arg**2 + p_2*arg**3 )
           v_pcm(ip) = v_pcm(ip) + q_pcm(ia)*term/sqrt( tess(ia)%area*width_factor ) !< regularized PCM field
-        end do
+        else
+          v_pcm(ip) = v_pcm(ip) + q_pcm(ia)/term !< standard PCM field
+        end if
       end do
-      v_pcm = M_TWO*v_pcm/sqrt(M_Pi)
+    end do
 
-    else
+    if ( width_factor /= M_ZERO ) v_pcm = M_TWO*v_pcm/sqrt(M_Pi)
 
-      do ia = 1, n_tess
-        do ip = 1, mesh%np !running serially np=np_global
-          v_pcm(ip) = v_pcm(ip) + q_pcm(ia)/sr_dist(ia,ip) !< standard PCM field
-        end do
-      end do
-
-    end if
     POP_SUB(pcm_pot_rs)
   end subroutine pcm_pot_rs
 
@@ -1875,7 +1865,6 @@ contains
     SAFE_DEALLOCATE_A(pcm%v_n_rs)
     SAFE_DEALLOCATE_A(pcm%ind_vh)
     SAFE_DEALLOCATE_A(pcm%arg_li)
-    SAFE_DEALLOCATE_A(sr_dist) 
 
     call io_close(pcm%info_unit)
 
