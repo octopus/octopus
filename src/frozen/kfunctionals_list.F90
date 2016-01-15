@@ -7,7 +7,7 @@
 !% Defines the Kinetic Functional to be used in a Subsystem calculation,
 !% For more information on the functionals, see
 !% <a href=http://www.tddft.org/programs/octopus/wiki/index.php/Libxc:manual#Available_functionals>
-!% Libxc documentation</a>. The list provided here is from libxc 2.2.1; if you have
+!% Libxc documentation</a>. The list provided here is from libxc 2.0.3; if you have
 !% linked against a different libxc version, you may have a somewhat different set
 !% of available functionals.
 !% <br>Default: <tt>none</tt>
@@ -15,16 +15,6 @@
 !% Thomas-Fermi kinetic energy functional
 !%Option lda_k_lp               51
 !% Lee and Parr Gaussian ansatz
-!%Option gga_k_tfvw               52
-!% Thomas-Fermi plus von Weiszaecker correction
-!%Option gga_k_revapbeint               53
-!% interpolated version of REVAPBE
-!%Option gga_k_apbeint               54
-!% interpolated version of APBE
-!%Option gga_k_revapbe               55
-!% revised APBE
-!%Option gga_k_meyer               57
-!% Meyer,  Wang, and Young
 !%Option gga_k_apbe               185
 !% mu fixed from the semiclassical neutral atom
 !%Option gga_k_tw1               187
@@ -47,9 +37,9 @@
 !% TF-lambda-vW form by Baltin (l = 5/9)
 !%Option gga_k_lieb               505
 !% TF-lambda-vW form by Lieb (l = 0.185909191)
-!%Option gga_k_absp1               506
+!%Option gga_k_absr1               506
 !% gamma-TFvW form by Acharya et al [g = 1 - 1.412/N^(1/3)]
-!%Option gga_k_absp2               507
+!%Option gga_k_absr2               507
 !% gamma-TFvW form by Acharya et al [g = 1 - 1.332/N^(1/3)]
 !%Option gga_k_gr               508
 !% gamma-TFvW form by Gázquez and Robles

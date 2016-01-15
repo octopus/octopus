@@ -40,10 +40,17 @@ EndOfUsage
 $top_srcdir = ($opt_s ? $opt_s : ".");
 
 $src   = "$top_srcdir/src/frozen";
+$vrsn  = "$opt_I/xc_version.h";
 $funct = "$opt_I/xc_funcs.h";
+
 
 if(!-d $src) {
     print STDERR "Cannot find directory '$src'. Run from top-level directory or set -s option appropriately.\n";
+    exit(1);
+}
+
+if(!-f $vrsn) {
+    print STDERR "Cannot find file '$vrsn'. Set -I option appropriately.\n";
     exit(1);
 }
 
@@ -51,6 +58,15 @@ if(!-f $funct) {
     print STDERR "Cannot find file '$funct'. Set -I option appropriately.\n";
     exit(1);
 }
+
+open(IN, "<$vrsn");
+while($_ = <IN>){
+    if(/\#define\s+XC\_VERSION\s+\"(\S+)\"/){
+	$version  = $1;
+	last;
+    }
+}
+close(IN);
 
 open(OUT, ">$src/kfunctionals_list.F90");
 print OUT <<"EndOfHeader";
@@ -63,7 +79,7 @@ print OUT <<"EndOfHeader";
 !% Defines the Kinetic Functional to be used in a Subsystem calculation,
 !% For more information on the functionals, see
 !% <a href=http://www.tddft.org/programs/octopus/wiki/index.php/Libxc:manual#Available_functionals>
-!% Libxc documentation</a>. The list provided here is from libxc 2.2.1; if you have
+!% Libxc documentation</a>. The list provided here is from libxc $version; if you have
 !% linked against a different libxc version, you may have a somewhat different set
 !% of available functionals.
 !% <br>Default: <tt>none</tt>
