@@ -13,8 +13,8 @@ Input      : 10-berkeleygw.01-gs.inp
 
 match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 8
 
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -34.14778536
-match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -33.79951714
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -31.7794479
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -31.4312028
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -1.06745253
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; 2.21105822
 match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -8.13952857
