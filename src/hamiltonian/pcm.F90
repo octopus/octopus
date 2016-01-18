@@ -27,6 +27,7 @@ module pcm_m
   use index_m
   use messages_m
   use mesh_m 
+  use mpi_m
   use parser_m
   use profiling_m
   use simul_box_m
@@ -102,7 +103,8 @@ module pcm_m
   FLOAT, allocatable :: Sigma(:,:)     !< S_E matrix
   FLOAT, allocatable :: Delta(:,:)     !< D_E matrix in JCP 139, 024105 (2013).
 
-  FLOAT, allocatable :: mat_gamess(:,:) !< PCM matrix formatted to be inputed to GAMESS
+  logical            :: gamess_benchmark !< Decide to output pcm_matrix in a GAMESS format 
+  FLOAT, allocatable :: mat_gamess(:,:)  !< PCM matrix formatted to be inputed to GAMESS
 
 contains
 
@@ -184,6 +186,16 @@ contains
     !% take PCMDynamicEpsilon = PCMStaticEpsilon (default). 
     !%End
     call parse_variable('PCMDynamicEpsilon', pcm%epsilon_0, pcm%epsilon_infty)
+
+    !%Variable PCMGamessBenchmark
+    !%Type logical
+    !%Default .false.
+    !%Section Hamiltonian::PCM
+    !%Description
+    !% If PCMGamessBenchmark is set to "yes", the pcm_matrix is also written in a Gamess format.
+    !% for benchamarking purposes.
+    !%End
+    call parse_variable('PCMGamessBenchmark', .false., gamess_benchmark)
 
     !%Variable PCMSmearingFactor
     !%Type float
@@ -398,43 +410,54 @@ contains
     end do
 
     !>Generating the dynamical PCM matrix
-    SAFE_ALLOCATE( mat_gamess(1:pcm%n_tesserae, 1:pcm%n_tesserae) )
-    mat_gamess = M_ZERO
+    if ( gamess_benchmark ) then
+      SAFE_ALLOCATE( mat_gamess(1:pcm%n_tesserae, 1:pcm%n_tesserae) )
+      mat_gamess = M_ZERO
+    end if
 
     SAFE_ALLOCATE( pcm%matrix(1:pcm%n_tesserae, 1:pcm%n_tesserae) )
     pcm%matrix = M_ZERO
 
     call pcm_matrix(pcm%epsilon_infty, pcm%tess, pcm%n_tesserae, pcm%matrix) 
 
-    pcmmat_gamess_unit = io_open(PCM_DIR//'pcm_matrix_gamess_dyn.out', action='write')
+    if ( gamess_benchmark .and. mpi_grp_is_root(mpi_world)) then 
+      pcmmat_gamess_unit = io_open(PCM_DIR//'pcm_matrix_gamess_dyn.out', action='write')
 
-    do jtess = 1, pcm%n_tesserae
-      do itess = 1, pcm%n_tesserae
-        write(pcmmat_gamess_unit,*) mat_gamess(itess,jtess) !< for benchmarking with GAMESS
+      do jtess = 1, pcm%n_tesserae
+        do itess = 1, pcm%n_tesserae
+          write(pcmmat_gamess_unit,*) mat_gamess(itess,jtess) !< for benchmarking with GAMESS
+        end do
       end do
-    end do
 
-    call io_close(pcmmat_gamess_unit)
+      call io_close(pcmmat_gamess_unit)
+      mat_gamess = M_ZERO
+    end if
 
     pcm%matrix = M_ZERO
-    mat_gamess = M_ZERO
 
     call pcm_matrix(pcm%epsilon_0, pcm%tess, pcm%n_tesserae, pcm%matrix) 
     message(1) = "Info: PCM response matrix has been evaluated"
     call messages_info(1)
 
-    pcmmat_unit = io_open(PCM_DIR//'pcm_matrix.out', action='write')
-    pcmmat_gamess_unit = io_open(PCM_DIR//'pcm_matrix_gamess.out', action='write')
+    if (mpi_grp_is_root(mpi_world)) then
+      pcmmat_unit = io_open(PCM_DIR//'pcm_matrix.out', action='write')
+      if ( gamess_benchmark ) pcmmat_gamess_unit = io_open(PCM_DIR//'pcm_matrix_gamess.out', action='write')
 
-    do jtess = 1, pcm%n_tesserae
-      do itess = 1, pcm%n_tesserae
-        write(pcmmat_unit,*) pcm%matrix(itess,jtess)
-        write(pcmmat_gamess_unit,*) mat_gamess(itess,jtess) !< for benchmarking with GAMESS
+      do jtess = 1, pcm%n_tesserae
+        do itess = 1, pcm%n_tesserae
+          write(pcmmat_unit,*) pcm%matrix(itess,jtess)
+          if ( gamess_benchmark ) write(pcmmat_gamess_unit,*) mat_gamess(itess,jtess) !< for benchmarking with GAMESS
+        end do
       end do
-    end do
-
-    call io_close(pcmmat_unit)
-    call io_close(pcmmat_gamess_unit)
+      call io_close(pcmmat_unit)
+      if ( gamess_benchmark ) call io_close(pcmmat_gamess_unit)
+    end if
+#ifdef HAVE_MPI
+    call MPI_Barrier(mpi_world%comm, mpi_err)
+#endif
+    if ( gamess_benchmark ) then 
+      SAFE_DEALLOCATE_A ( mat_gamess )
+    end if
 
     SAFE_ALLOCATE( pcm%v_n(1:pcm%n_tesserae) )
     SAFE_ALLOCATE( pcm%q_n(1:pcm%n_tesserae) )
@@ -719,6 +742,7 @@ contains
       do ip = 1, mesh%np
       ! Computing the distances between tesserae and grid points.
         call mesh_r(mesh, ip, term, origin=tess(ia)%point)
+      !TODO: define distance cutoff to avoid some too many iterations.
         if (width_factor /= M_ZERO) then
           arg = term/sqrt( tess(ia)%area*width_factor )        
           term = ( 1 + p_1*arg + p_2*arg**2 )/( 1 + q_1*arg + q_2*arg**2 + p_2*arg**3 )
@@ -827,9 +851,11 @@ contains
     pcm_mat = -pcm_mat
 
     !   Testing
-    do i=1, n_tess
-      mat_gamess(i,:) = pcm_mat(i,:)/tess(i)%area
-    end do
+    if ( gamess_benchmark ) then
+      do i=1, n_tess
+        mat_gamess(i,:) = pcm_mat(i,:)/tess(i)%area
+      end do
+    end if
 
     POP_SUB(pcm_matrix)
 
