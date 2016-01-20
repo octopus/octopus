@@ -70,32 +70,32 @@ module pcm_m
   end type pcm_tessera_t
 
   type pcm_t
-    logical                      :: run_pcm       !< If .true., PCM calculation is enabled
-    integer                      :: n_spheres     !< Number of spheres used to build the VdW cavity
-    integer                      :: n_tesserae    !< Total number of tesserae
-    type(pcm_sphere_t), allocatable  :: spheres(:)    !< See type pcm_sphere_t
+    logical                          :: run_pcm       !< If .true., PCM calculation is enabled
+    integer                          :: n_spheres     !< Number of spheres used to build the VdW cavity
+    integer                          :: n_tesserae    !< Total number of tesserae
+    type(pcm_sphere_t),  allocatable :: spheres(:)    !< See type pcm_sphere_t
     type(pcm_tessera_t), allocatable :: tess(:)       !< See type pcm_tessera_t
-    FLOAT                        :: scale_r       !< scaling factor for the radii of the spheres used in PCM
-    FLOAT, allocatable           :: matrix(:,:)   !< PCM response matrix
-    FLOAT, allocatable           :: q_e(:)        !< polarization charges due to the solute electrons        
-    FLOAT, allocatable           :: q_n(:)        !< polarization charges due to the solute nuclei
-    FLOAT                        :: qtot_e        !< total polarization charge due to electrons
-    FLOAT                        :: qtot_n        !< total polarization charge due to nuclei
-    FLOAT, allocatable           :: v_e(:)        !< Hartree potential at each tessera
-    FLOAT, allocatable           :: v_n(:)        !< Nuclear potential at each tessera
-    FLOAT, allocatable           :: v_e_rs(:)     !< PCM potential in real-space produced by q_e(:) 
-    FLOAT, allocatable           :: v_n_rs(:)     !< PCM potential in real-space produced by q_n(:)
-    FLOAT, allocatable           :: arg_li(:,:)   !< used in the trilinear interpolation to estimate
-    !< the Hartree potential at the tesserae 
-    FLOAT                        :: epsilon_0     !< Static dielectric constant of the solvent 
-    FLOAT                        :: epsilon_infty !< Infinite-frequency dielectric constant of the solvent
-    FLOAT                        :: gaussian_width!< Parameter to change the width of density of polarization charges  
-    integer                      :: n_vertices    !< Number of grid points used to interpolate the Hartree potential
-    !! at the tesserae 
-    integer, allocatable         :: ind_vh(:,:)   !< Grid points used during interpolation 
-    integer                      :: info_unit     !< unit for pcm info file
-    integer                      :: counter       !< used to print the number of SCF or TD iterations in energy_calc  
-    character(len=80)            :: input_cavity  !< file name containing the geometry of the VdW cavity
+    FLOAT                            :: scale_r       !< scaling factor for the radii of the spheres used in PCM
+    FLOAT, allocatable               :: matrix(:,:)   !< PCM response matrix
+    FLOAT, allocatable               :: q_e(:)        !< polarization charges due to the solute electrons        
+    FLOAT, allocatable               :: q_n(:)        !< polarization charges due to the solute nuclei
+    FLOAT                            :: qtot_e        !< total polarization charge due to electrons
+    FLOAT                            :: qtot_n        !< total polarization charge due to nuclei
+    FLOAT, allocatable               :: v_e(:)        !< Hartree potential at each tessera
+    FLOAT, allocatable               :: v_n(:)        !< Nuclear potential at each tessera
+    FLOAT, allocatable               :: v_e_rs(:)     !< PCM potential in real-space produced by q_e(:) 
+    FLOAT, allocatable               :: v_n_rs(:)     !< PCM potential in real-space produced by q_n(:)
+    FLOAT, allocatable               :: arg_li(:,:)   !< used in the trilinear interpolation to estimate
+                                                      !< the Hartree potential at the tesserae 
+    FLOAT                            :: epsilon_0     !< Static dielectric constant of the solvent 
+    FLOAT                            :: epsilon_infty !< Infinite-frequency dielectric constant of the solvent
+    FLOAT                            :: gaussian_width!< Parameter to change the width of density of polarization charges  
+    integer                          :: n_vertices    !< Number of grid points used to interpolate the Hartree potential
+                                                      !! at the tesserae 
+    integer, allocatable             :: ind_vh(:,:)   !< Grid points used during interpolation 
+    integer                          :: info_unit     !< unit for pcm info file
+    integer                          :: counter       !< used to print the number of SCF or TD iterations in energy_calc  
+    character(len=80)                :: input_cavity  !< file name containing the geometry of the VdW cavity
   end type pcm_t
 
   FLOAT, allocatable :: s_mat_act(:,:) !< S_I matrix 
@@ -738,22 +738,30 @@ contains
 
     v_pcm = M_ZERO
 
-    do ia = 1, n_tess
+    if (width_factor /= M_ZERO) then
+     !< regularized PCM field
+     do ia = 1, n_tess
       do ip = 1, mesh%np
-      ! Computing the distances between tesserae and grid points.
+        ! Computing the distances between tesserae and grid points.
         call mesh_r(mesh, ip, term, origin=tess(ia)%point)
-      !TODO: define distance cutoff to avoid some too many iterations.
-        if (width_factor /= M_ZERO) then
-          arg = term/sqrt( tess(ia)%area*width_factor )        
-          term = ( 1 + p_1*arg + p_2*arg**2 )/( 1 + q_1*arg + q_2*arg**2 + p_2*arg**3 )
-          v_pcm(ip) = v_pcm(ip) + q_pcm(ia)*term/sqrt( tess(ia)%area*width_factor ) !< regularized PCM field
-        else
-          v_pcm(ip) = v_pcm(ip) + q_pcm(ia)/term !< standard PCM field
-        end if
+        arg = term/sqrt( tess(ia)%area*width_factor )        
+        term = ( 1 + p_1*arg + p_2*arg**2 )/( 1 + q_1*arg + q_2*arg**2 + p_2*arg**3 )
+        v_pcm(ip) = v_pcm(ip) + q_pcm(ia)*term/sqrt( tess(ia)%area*width_factor )
       end do
-    end do
+     end do
+ 
+     v_pcm = M_TWO*v_pcm/sqrt(M_Pi)
 
-    if ( width_factor /= M_ZERO ) v_pcm = M_TWO*v_pcm/sqrt(M_Pi)
+    else
+     !< standard PCM field
+     do ia = 1, n_tess
+      do ip = 1, mesh%np
+        ! Computing the distances between tesserae and grid points.
+        call mesh_r(mesh, ip, term, origin=tess(ia)%point)
+        v_pcm(ip) = v_pcm(ip) + q_pcm(ia)/term         
+      end do
+     end do     
+    endif
 
     POP_SUB(pcm_pot_rs)
   end subroutine pcm_pot_rs
