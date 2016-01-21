@@ -207,6 +207,8 @@ contains
     !%End
     if(this%shape == M_SPHERICAL) then
       call parse_variable('PES_Flux_Lmax', 1, this%lmax)
+      if(this%lmax < 1) call messages_input_error('PES_Flux_Lmax', 'must be > 0')
+      call messages_print_var_value(stdout, 'PES_Flux_Lmax', this%lmax)
     end if
 
     !%Variable PES_Flux_Radius
@@ -280,26 +282,28 @@ contains
 
     !%Variable PES_Flux_StepsThetaR
     !%Type integer
-    !%Default 45
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
     !% Number of steps in theta (0 <= theta <= pi) for the spherical surface.
+    !% Default: <math>2 * PES_Flux_Lmax + 1</math>
     !%End
     if(this%shape == M_SPHERICAL) then
-      call parse_variable('PES_Flux_StepsThetaR', 45, nstepsthetar)
+      call parse_variable('PES_Flux_StepsThetaR', 2*this%lmax + 1, nstepsthetar)
       if(nstepsthetar < 0) call messages_input_error('PES_Flux_StepsThetaR')
+      call messages_print_var_value(stdout, "PES_Flux_StepsThetaR", nstepsthetar)
     end if
 
     !%Variable PES_Flux_StepsPhiR
     !%Type integer
-    !%Default 90
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
     !% Number of steps in phi (0 <= phi <= 2 pi) for the spherical surface.
+    !% Default: <math>2 * PES_Flux_Lmax + 1</math>
     !%End
     if(this%shape == M_SPHERICAL) then
-      call parse_variable('PES_Flux_StepsPhiR', 90, nstepsphir)
+      call parse_variable('PES_Flux_StepsPhiR', 2*this%lmax + 1, nstepsphir)
       if(nstepsphir < 0) call messages_input_error('PES_Flux_StepsPhiR')
+      call messages_print_var_value(stdout, "PES_Flux_StepsPhiR", nstepsphir)
     end if
 
     ! -----------------------------------------------------------------
@@ -319,11 +323,15 @@ contains
 #endif
     else
       call mesh_interpolation_init(this%interp, mesh)
+      ! equispaced grid in theta & phi (Gauss-Legendre would optimize to nstepsthetar = this%lmax & nstepsphir = 2*this%lmax + 1):
+      ! nstepsthetar = M_TWO * this%lmax + 1
+      ! nstepsphir   = M_TWO * this%lmax + 1
       call pes_flux_getsphere(this, mesh, nstepsthetar, nstepsphir, offset)
     end if
 
     if(mpi_grp_is_root(mpi_world)) then
-      write(*,*) 'Info: Number of surface points (total):', this%nsrfcpnts
+      write(message(1),'(a, i6)') 'Info: Number of surface points (total):', this%nsrfcpnts
+      call messages_info(1) 
       do isp = 1, this%nsrfcpnts
         write(223,*) isp, this%rcoords(:, isp)
       end do
