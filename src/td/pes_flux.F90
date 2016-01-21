@@ -485,7 +485,7 @@ contains
       case(1)
         ikp = 0
         do ikk = -this%nk, this%nk
-          if(ikk == M_ZERO) cycle
+          if(ikk == 0) cycle
           ikp = ikp + 1
           kact = ikk * this%dk
           this%kcoords_cub(1, ikp) = kact
@@ -504,7 +504,7 @@ contains
                             this%kcoords_cub(1, ikp) = kact * cos(phik) * sin(thetak)
                             this%kcoords_cub(2, ikp) = kact * sin(phik) * sin(thetak)
               if(mdim == 3) this%kcoords_cub(3, ikp) = kact * cos(thetak)
-              if(thetak == M_ZERO .or. thetak == M_PI) exit
+              if(mdim == 3 .and. (ith == 0 .or. ith == this%nstepsthetak)) exit
             end do
           end do
         end do
@@ -1225,7 +1225,7 @@ contains
         this%rcoords(1:mdim, isp) = this%radius * this%srfcnrml(1:mdim, isp)
         ! here we also include the surface elements
         this%srfcnrml(1:mdim, isp) = weight * this%srfcnrml(1:mdim, isp)
-        if(thetar == M_ZERO .or. thetar == M_PI) exit
+        if(mdim == 3 .and. (ith == 0 .or. ith == nstepsthetar)) exit
       end do
     end do
 
@@ -1404,7 +1404,7 @@ contains
                   write(iunittwo,'(5(1x,e18.10E3))') kact, thetak, M_TWO * M_PI, spctrout_cub(ikp_save)
 
                 ! just repeat the result for output and exit
-                if(thetak == M_ZERO .or. thetak == M_PI) then
+                if(ith == 0 .or. ith == this%nstepsthetak) then
                   do iphi = 1, this%nstepsphik
                     phik = iphi * M_TWO * M_PI / this%nstepsphik
                     write(iunittwo,'(5(1x,e18.10E3))') kact, thetak, phik, spctrout_cub(ikp)

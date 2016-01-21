@@ -298,7 +298,7 @@ contains
                         this%rcoords(1, isp) = radius * cos(phi) * sin(theta)
           if(mdim >= 2) this%rcoords(2, isp) = radius * sin(phi) * sin(theta)
           if(mdim == 3) this%rcoords(3, isp) = radius * cos(theta)
-          if(theta == M_ZERO .or. theta == M_PI) exit
+          if(mdim == 3 .and. (ith == 0 .or. ith == this%nstepstheta)) exit
         end do
       end do
 
@@ -611,7 +611,7 @@ contains
               end if
                
               ! just repeat the result for output
-              if(theta == M_ZERO .or. theta == M_PI) then
+              if(ith == 0 .or. ith == this%nstepstheta) then
                 do iphi = 1, this%nstepsphi
                   phi = iphi * M_TWO * M_PI / this%nstepsphi
                   write(iunittwo,'(5(1x,e18.10E3))') omega, theta, phi, wffttot(iom, isp)
