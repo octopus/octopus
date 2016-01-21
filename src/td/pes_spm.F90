@@ -86,6 +86,7 @@ contains
 
     type(block_t) :: blk
     integer       :: sdim, mdim
+    integer       :: imdim
     integer       :: isp
     integer       :: ith, iph
     FLOAT         :: theta, phi, radius
@@ -262,14 +263,14 @@ contains
 
     if(.not. this%sphgrid) then
 
-      message(1) = 'Info: Reading sample points.'
+      message(1) = 'Info: Reading sample points from input.'
       call messages_info(1)
 
       ! read points from input file
       do isp = 1, this%nspoints
-        call parse_block_float(blk, isp - 1, 0, xx(1), units_inp%length)
-        call parse_block_float(blk, isp - 1, 1, xx(2), units_inp%length)
-        call parse_block_float(blk, isp - 1, 2, xx(3), units_inp%length)
+        do imdim = 1, mdim
+          call parse_block_float(blk, isp - 1, imdim - 1, xx(imdim), units_inp%length)
+        end do
         this%rcoords(1:mdim, isp) = xx(1:mdim)
       end do
       call parse_block_end(blk)
