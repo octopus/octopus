@@ -139,7 +139,7 @@ contains
     !% Calculate the photoelectron spectrum by including the Volkov phase (approximately), see
     !% P. M. Dinh, P. Romaniello, P.-G. Reinhard, and E. Suraud, <i>Phys. Rev. A.</i> <b>87</b>, 032514 (2013).
     !%End
-    call parse_variable('PES_spm_recipe', M_RAW, this%recipe)
+    call parse_variable('PES_spm_recipe', M_PHASE, this%recipe)
     if(.not.varinfo_valid_option('PES_spm_recipe', this%recipe, is_flag = .true.)) &
       call messages_input_error('PES_spm_recipe')
     call messages_print_var_option(stdout, "PES_spm_recipe", this%recipe)
