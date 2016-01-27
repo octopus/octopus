@@ -65,7 +65,7 @@ module pes_flux_m
     integer          :: nstepsthetak, nstepsphik       !< parameters for k-mesh
     integer          :: nstepsomegak
     integer          :: nstepsomegak_start, nstepsomegak_end
-    FLOAT            :: dk, dthetak                    !< parameters for k-mesh
+    FLOAT            :: dk                             !< parameters for k-mesh
     FLOAT, pointer   :: kcoords_cub(:,:)               !< coordinates of k-points
     FLOAT, pointer   :: kcoords_sph(:,:,:)
 
@@ -398,7 +398,6 @@ contains
     !%End
     call parse_variable('PES_Flux_StepsPhiK', 90, this%nstepsphik)
     if(this%nstepsphik < 0) call messages_input_error('PES_Flux_StepsPhiK')
-
     if(this%nstepsphik == 0) this%nstepsphik = 1
 
     select case(mdim)
@@ -416,7 +415,6 @@ contains
         this%nstepsphik   = 1
         this%nstepsthetak = 1
       end if
-      this%dthetak = M_PI / this%nstepsthetak
       this%nstepsomegak = this%nstepsphik * (this%nstepsthetak - 1) + 2
 
     end select
@@ -426,6 +424,8 @@ contains
 
     this%nk     = nint(kmax/this%dk)
     this%nkpnts = this%nstepsomegak * this%nk
+
+    call messages_print_var_value(stdout, "Number of k-points (total)", this%nkpnts)
 
     if(this%shape == M_SPHERICAL) then
       ! we split the k-mesh in radial & angular part
@@ -443,7 +443,7 @@ contains
       ! spherical harmonics & kcoords_sph
       iomk = 0
       do ith = 0, this%nstepsthetak
-        thetak = ith * this%dthetak
+        thetak = ith * M_PI / this%nstepsthetak
         do iph = 0, this%nstepsphik - 1
           phik = iph * M_TWO * M_PI / this%nstepsphik
           iomk = iomk + 1
@@ -482,10 +482,6 @@ contains
         'Number of k-points on node ', mpirank, ' : ', this%nkpnts_end - this%nkpnts_start + 1
       call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
-      if(mpi_grp_is_root(mpi_world)) then
-        write(*,*) 'Info: Number of k-points (total):', this%nkpnts
-      end if
-
       SAFE_ALLOCATE(this%kcoords_cub(1:mdim, 1:this%nkpnts))
       this%kcoords_cub = M_ZERO
 
@@ -504,7 +500,7 @@ contains
         ikp = 0
         do ikk = 1, this%nk
           do ith = 0, this%nstepsthetak
-            if(mdim == 3) thetak = ith * this%dthetak
+            if(mdim == 3) thetak = ith * M_PI / this%nstepsthetak 
             do iph = 0, this%nstepsphik - 1
               ikp = ikp + 1
               phik = iph * M_TWO * M_PI / this%nstepsphik
@@ -1313,12 +1309,12 @@ contains
           spctrsum = M_ZERO
 
           do ith = 0, this%nstepsthetak
-            thetak = ith * this%dthetak
+            thetak = ith * M_PI / this%nstepsthetak 
 
-            if(ith == 0 .or. ith == this%nstepsphik) then
-              weight = (M_ONE - cos(this%dthetak/M_TWO)) * M_TWO * M_PI
+            if(ith == 0 .or. ith == this%nstepsthetak) then
+              weight = (M_ONE - cos(M_PI / this%nstepsthetak / M_TWO)) * M_TWO * M_PI
             else
-              weight = abs(cos(thetak - this%dthetak/M_TWO) - cos(thetak + this%dthetak/M_TWO)) &
+              weight = abs(cos(thetak - M_PI / this%nstepsthetak / M_TWO) - cos(thetak + M_PI / this%nstepsthetak / M_TWO)) &
                 * M_TWO * M_PI / this%nstepsphik
             end if
 
@@ -1330,20 +1326,22 @@ contains
               write(iunittwo,'(5(1x,e18.10E3))') kact, thetak, phik, spctrout_sph(ikk, iomk)
 
               ! just repeat the result for output
-              if(iph == (this%nstepsphik - 1)) &
+              if(this%nstepsphik > 1 .and. iph == (this%nstepsphik - 1)) &
                 write(iunittwo,'(5(1x,e18.10E3))') kact, thetak, M_TWO * M_PI, spctrout_sph(ikk, iomk_save)
 
               ! just repeat the result for output and exit
               if(ith == 0 .or. ith == this%nstepsthetak) then
-                do iphi = 1, this%nstepsphik
-                  phik = iphi * M_TWO * M_PI / this%nstepsphik
-                  write(iunittwo,'(5(1x,e18.10E3))') kact, thetak, phik, spctrout_sph(ikk, iomk)
-                end do
+                if(this%nstepsphik > 1) then
+                  do iphi = 1, this%nstepsphik
+                    phik = iphi * M_TWO * M_PI / this%nstepsphik
+                    write(iunittwo,'(5(1x,e18.10E3))') kact, thetak, phik, spctrout_sph(ikk, iomk)
+                  end do
+                end if
                 exit
               end if
             end do
 
-            write(iunittwo, '(1x)', advance='yes')
+            if(this%nstepsphik > 1 .or. ith == this%nstepsthetak) write(iunittwo, '(1x)', advance='yes')
           end do
           write(iunitone, '(2(1x,e18.10E3))') kact**M_TWO / M_TWO, spctrsum * kact
         end do

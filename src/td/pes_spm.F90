@@ -66,8 +66,7 @@ module pes_spm_m
     logical                    :: onfly                     !< spectrum is calculated on-the-fly when true
     integer                    :: save_iter                 !< output interval and size of arrays 
     logical                    :: sphgrid                   !< use a spherical grid (instead of sample points from input)
-    integer                    :: nstepsphi, nstepstheta
-    FLOAT                      :: thetamin
+    integer                    :: nstepsphir, nstepsthetar
     type(mesh_interpolation_t) :: interp
   end type pes_spm_t
 
@@ -89,7 +88,7 @@ contains
     integer       :: imdim
     integer       :: isp
     integer       :: ith, iph
-    FLOAT         :: theta, phi, radius
+    FLOAT         :: thetar, phir, radius
     FLOAT         :: xx(MAX_DIM)
 
     PUSH_SUB(pes_spm_init)
@@ -183,8 +182,8 @@ contains
     !% Number of steps in theta (0 <= theta <= pi) for the spherical grid (if no 
     !% PES_spm_points are given).
     !%End
-    call parse_variable('PES_spm_StepsThetaR', 45, this%nstepstheta)
-    if(this%sphgrid .and. this%nstepstheta < 0) call messages_input_error('PES_spm_StepsThetaR')
+    call parse_variable('PES_spm_StepsThetaR', 45, this%nstepsthetar)
+    if(this%sphgrid .and. this%nstepsthetar < 0) call messages_input_error('PES_spm_StepsThetaR')
 
     !%Variable PES_spm_StepsPhiR
     !%Type integer
@@ -194,10 +193,10 @@ contains
     !% Number of steps in phi (0 <= phi <= 2 pi) for the spherical grid (if no
     !% PES_spm_points are given).
     !%End
-    call parse_variable('PES_spm_StepsPhiR', 90, this%nstepsphi)
+    call parse_variable('PES_spm_StepsPhiR', 90, this%nstepsphir)
     if(this%sphgrid) then
-      if(this%nstepsphi < 0)  call messages_input_error('PES_spm_StepsPhiR')
-      if(this%nstepsphi == 0) this%nstepsphi = 1
+      if(this%nstepsphir < 0)  call messages_input_error('PES_spm_StepsPhiR')
+      if(this%nstepsphir == 0) this%nstepsphir = 1
     end if
 
     !%Variable PES_spm_Radius
@@ -234,27 +233,26 @@ contains
       ! setting values for spherical grid 
       select case(mdim)
       case(1)
-        this%thetamin = M_PI / M_TWO
-        this%nstepstheta   = 0
-        this%nstepsphi     = 2
-        this%nspoints  = this%nstepsphi
+        this%nstepsthetar   = 0
+        this%nstepsphir     = 2
+        this%nspoints  = this%nstepsphir
 
       case(2)
-        this%thetamin = M_PI / M_TWO
-        this%nstepstheta   = 0
-        this%nspoints  = this%nstepsphi
-
-        call messages_print_var_value(stdout, "PES_spm_StepsPhiR", this%nstepsphi)
+        this%nstepsthetar   = 0
+        this%nspoints  = this%nstepsphir
 
       case(3)
-        this%thetamin = M_ZERO
-        if(this%nstepstheta <= 1) this%nstepsphi = 1
-        this%nspoints  = this%nstepsphi * (this%nstepstheta - 1) + 2
-
-        call messages_print_var_value(stdout, "PES_spm_StepsPhiR", this%nstepsphi)
-        call messages_print_var_value(stdout, "PES_spm_StepsThetaR", this%nstepstheta)
+        if(this%nstepsthetar <= 1) then
+          this%nstepsphir = 1
+          this%nstepsthetar = 1
+        end if
+        this%nspoints  = this%nstepsphir * (this%nstepsthetar - 1) + 2
 
       end select
+
+      if(mdim == 3) call messages_print_var_value(stdout, "PES_spm_StepsThetaR", this%nstepsthetar)
+      call messages_print_var_value(stdout, "PES_spm_StepsPhiR", this%nstepsphir)
+
     end if
 
     call messages_print_var_value(stdout, "Number of sample points", this%nspoints)
@@ -281,24 +279,17 @@ contains
       call messages_info(1)
 
       ! initializing spherical grid
+      thetar = M_PI / M_TWO
       isp = 0
-      do ith = 0, this%nstepstheta
-        if(ith == 0) then
-          theta = this%thetamin     ! pi/2 for 1d and 2d. zero for 3d.
-        else
-          theta = ith * M_PI / this%nstepstheta
-        end if
-        do iph = 0, this%nstepsphi - 1
-          if(iph == 0) then
-            phi = M_ZERO
-          else
-            phi = iph * M_TWO * M_PI / this%nstepsphi
-          end if
+      do ith = 0, this%nstepsthetar
+        if(mdim == 3) thetar = ith * M_PI / this%nstepsthetar
+        do iph = 0, this%nstepsphir - 1
           isp = isp + 1
-                        this%rcoords(1, isp) = radius * cos(phi) * sin(theta)
-          if(mdim >= 2) this%rcoords(2, isp) = radius * sin(phi) * sin(theta)
-          if(mdim == 3) this%rcoords(3, isp) = radius * cos(theta)
-          if(mdim == 3 .and. (ith == 0 .or. ith == this%nstepstheta)) exit
+          phir = iph * M_TWO * M_PI / this%nstepsphir
+                        this%rcoords(1, isp) = radius * cos(phir) * sin(thetar)
+          if(mdim >= 2) this%rcoords(2, isp) = radius * sin(phir) * sin(thetar)
+          if(mdim == 3) this%rcoords(3, isp) = radius * cos(thetar)
+          if(mdim == 3 .and. (ith == 0 .or. ith == this%nstepsthetar)) exit
         end do
       end do
 
@@ -461,7 +452,7 @@ contains
     integer            :: ii, jj
     integer            :: isp, save_iter, isp_save
     integer            :: iom, ith, iph, iphi
-    FLOAT              :: omega, theta, phi
+    FLOAT              :: omega, thetar, phir
     CMPLX              :: vfu
     FLOAT              :: wfu
     FLOAT, allocatable :: wffttot(:,:)
@@ -568,10 +559,10 @@ contains
           omega = iom * this%delomega
 
           spctrsum = M_ZERO
-          do iph = 0, this%nstepsphi - 1
-            spctrsum = spctrsum + wffttot(iom, iph + 1) * M_TWO * M_PI / this%nstepsphi
-            phi = iph * M_TWO * M_PI / this%nstepsphi
-            write(iunittwo,'(5(1x,e18.10E3))') omega, phi, wffttot(iom, iph + 1)
+          do iph = 0, this%nstepsphir - 1
+            spctrsum = spctrsum + wffttot(iom, iph + 1) * M_TWO * M_PI / this%nstepsphir
+            phir = iph * M_TWO * M_PI / this%nstepsphir
+            write(iunittwo,'(5(1x,e18.10E3))') omega, phir, wffttot(iom, iph + 1)
           end do
           ! just repeat the result for output
           write(iunittwo,'(5(1x,e18.10E3))') omega, M_TWO * M_PI, wffttot(iom, 1)
@@ -587,40 +578,42 @@ contains
           isp = 0
           spctrsum = M_ZERO
 
-          do ith = 0, this%nstepstheta
-            theta = ith * M_PI / this%nstepstheta
+          do ith = 0, this%nstepsthetar
+            thetar = ith * M_PI / this%nstepsthetar
 
-            if(ith == 0 .or. ith == this%nstepstheta) then
-              weight = (M_ONE - cos(M_PI / this%nstepstheta / M_TWO)) * M_TWO * M_PI
+            if(ith == 0 .or. ith == this%nstepsthetar) then
+              weight = (M_ONE - cos(M_PI / this%nstepsthetar / M_TWO)) * M_TWO * M_PI
             else
-              weight = abs(cos(theta - M_PI / this%nstepstheta / M_TWO) - cos(theta + M_PI / this%nstepstheta / M_TWO)) &
-                * M_TWO * M_PI / this%nstepsphi
+              weight = abs(cos(thetar - M_PI / this%nstepsthetar / M_TWO) - cos(thetar + M_PI / this%nstepsthetar / M_TWO)) &
+                * M_TWO * M_PI / this%nstepsphir
             end if
 
-            do iph = 0, this%nstepsphi - 1
+            do iph = 0, this%nstepsphir - 1
               isp = isp + 1
               spctrsum = spctrsum + wffttot(iom, isp) * weight
 
-              phi = iph * M_TWO * M_PI / this%nstepsphi
+              phir = iph * M_TWO * M_PI / this%nstepsphir
               if(iph == 0) isp_save = isp
-              write(iunittwo,'(5(1x,e18.10E3))') omega, theta, phi, wffttot(iom, isp)
+              write(iunittwo,'(5(1x,e18.10E3))') omega, thetar, phir, wffttot(iom, isp)
    
               ! just repeat the result for output
-              if(iph == (this%nstepsphi - 1)) then
-                write(iunittwo,'(5(1x,e18.10E3))') omega, theta, M_TWO * M_PI, wffttot(iom, isp_save)
+              if(this%nstepsphir > 1 .and. iph == (this%nstepsphir - 1)) then
+                write(iunittwo,'(5(1x,e18.10E3))') omega, thetar, M_TWO * M_PI, wffttot(iom, isp_save)
               end if
                
               ! just repeat the result for output
-              if(ith == 0 .or. ith == this%nstepstheta) then
-                do iphi = 1, this%nstepsphi
-                  phi = iphi * M_TWO * M_PI / this%nstepsphi
-                  write(iunittwo,'(5(1x,e18.10E3))') omega, theta, phi, wffttot(iom, isp)
-                end do
+              if(ith == 0 .or. ith == this%nstepsthetar) then
+                if(this%nstepsphir > 1) then
+                  do iphi = 1, this%nstepsphir
+                    phir = iphi * M_TWO * M_PI / this%nstepsphir
+                    write(iunittwo,'(5(1x,e18.10E3))') omega, thetar, phir, wffttot(iom, isp)
+                  end do
+                end if
                 exit
               end if
             end do
 
-            write(iunittwo, '(1x)', advance='yes')
+            if(this%nstepsphir > 1 .or. ith == this%nstepsthetar) write(iunittwo, '(1x)', advance='yes')
           end do
           write(iunitone, '(2(1x,e18.10E3))') omega, spctrsum * this%delomega
         end do
