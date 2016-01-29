@@ -1204,7 +1204,7 @@ contains
     ASSERT(present(geo))
     call write_xsf_geometry(iunit, geo, mesh)
 
-    write(iunit, '(a,i1,a)') 'BEGIN_BLOCK_DATAGRID', mesh%sb%dim, 'D'
+    write(iunit, '(a,i1,a)') 'BEGIN_BLOCK_DATAGRID_', mesh%sb%dim, 'D'
     write(iunit, '(4a)') 'units: coords = ', trim(units_abbrev(units_out%length)), &
                             ', function = ', trim(units_abbrev(unit))
     write(iunit, '(a,i1,a)') 'DATAGRID_', mesh%sb%dim, 'D_function'
@@ -1251,8 +1251,8 @@ contains
       end do
     end do
 
-    write(iunit, '(a,i1,a)') 'END_DATAGRID', mesh%sb%dim, 'D'
-    write(iunit, '(a,i1,a)') 'END_BLOCK_DATAGRID', mesh%sb%dim, 'D'
+    write(iunit, '(a,i1,a)') 'END_DATAGRID_', mesh%sb%dim, 'D'
+    write(iunit, '(a,i1,a)') 'END_BLOCK_DATAGRID_', mesh%sb%dim, 'D'
 
     call io_close(iunit)
 
