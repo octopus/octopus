@@ -401,7 +401,7 @@ contains
     character(len=*), intent(inout) :: ref_name       !< Reference file name 
     character(len=*), intent(inout) :: ref_folder     !< Reference folder name
 
-    integer                 :: ierr, ii, i_space, i_time, nn(1:3), optimize_parity(1:3)
+    integer                 :: ierr, ii, i_space, i_time, nn(1:3), optimize_parity(1:3), wd_info
     integer                 :: i_energy, e_end, e_start, e_point, chunk_size, read_count
     logical                 :: optimize(1:3)
     character(MAX_PATH_LEN) :: filename, folder
@@ -447,6 +447,10 @@ contains
     SAFE_ALLOCATE(read_ft(1:e_point+1))
     SAFE_ALLOCATE(read_rff(1:mesh%np))
 
+    call io_mkdir('wd.general')
+    wd_info = io_open(file='wd.general/wd.info', action='write')
+    call messages_print_stress(wd_info, "Fourier Transform Options")
+
     !%Variable ConvertEnergyMin
     !%Type float
     !%Default 0.0
@@ -455,17 +459,27 @@ contains
     !% Minimum energy to output from Fourier transform.
     !%End
     call parse_variable('ConvertEnergyMin', M_ZERO, min_energy, units_inp%energy)
+    call messages_print_var_value(wd_info, 'ConvertEnergyMin', min_energy, unit = units_out%energy)
 
     !%Variable ConvertReadSize
     !%Type integer
-    !%Default 1
+    !%Default mesh%np
     !%Section Utilities::oct-convert
     !%Description
     !% How many points are read at once. For the parallel run this has not been
     !% yet tested, so it should be one. For the serial run, a number
     !% of 100-1000 will speed-up the execution time by this factor.
     !%End
-    call parse_variable('ConvertReadSize', 1, chunk_size)
+    call parse_variable('ConvertReadSize', mesh%np, chunk_size)
+    call messages_print_var_value(wd_info, 'ConvertReadSize', chunk_size)
+    !Check that default value is set when ConvertReadSize = 0
+    if ( chunk_size == 0) chunk_size = mesh%np
+    ! Parallel version just work in domains and chunk_size equal to mesh%np 
+    if(mesh%mpi_grp%size > 1 .and. chunk_size /= mesh%np) then
+      write(message(1),*)'Incompatible value for ConvertReadSize and Parallelizaion in Domains'
+      write(message(2),*)'Use the default value for ConvertReadSize (or set it to 0)'
+      call messages_fatal(2)
+    end if
     
     ! Calculate the limits in frequency space.
     start_time = c_start * dt
@@ -491,6 +505,7 @@ contains
       call messages_info(3)
       max_energy = w_max
     end if
+    call messages_print_var_value(wd_info, 'ConvertEnergyMax', max_energy, unit = units_out%energy)
 
     !%Variable ConvertFTMethod
     !%Type integer
@@ -506,6 +521,7 @@ contains
     !% a time-propagation calculation. 
     !%End
     call parse_variable('ConvertFTMethod', 1, ft_method)
+    call messages_print_var_option(wd_info, 'ConvertFTMethod', ft_method)
 
     dw = M_TWO * M_PI / (dt * time_steps)
 
@@ -538,6 +554,7 @@ contains
         SAFE_ALLOCATE(tdrho_a(1:e_point + 1, 1, 1))
         SAFE_ALLOCATE(wdrho_a(1:e_point + 1, 1, 1))
     end select
+    call messages_print_var_value(wd_info, 'ConvertEnergyStep', dw, unit = units_out%energy)
 
     !TODO: set system variable common for all the program in 
     !      order to use call kick_init(kick, sy%st%d%nspin, sys%space%dim, sys%geo%periodic_dim)
@@ -567,15 +584,17 @@ contains
       end if
     end if
     
-    call io_mkdir('wd.general')
+    call messages_print_stress(wd_info, "File Information")
     do i_energy = e_start+1, e_end+1
       write(filename,'(a14,i0.7,a1)')'wd.general/wd.',i_energy-1,'/'
       write(message(1),'(a,a,f12.7,a,1x,i7,a)')trim(filename),' w =', &
            units_from_atomic(units_out%energy,(i_energy-1) * dw), & 
            '[' // trim(units_abbrev(units_out%energy)) // ']'
+      write(wd_info,'(a)') message(1)
       call messages_info(1)
       call io_mkdir(trim(filename))
     end do
+    call io_close(wd_info)
 
     !For each mesh point, open density file and read corresponding point.  
     if (mpi_world%rank == 0) call loct_progress_bar(-1, mesh%np)
