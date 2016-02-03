@@ -404,7 +404,8 @@ contains
     integer                 :: ierr, ii, i_space, i_time, nn(1:3), optimize_parity(1:3), wd_info
     integer                 :: i_energy, e_end, e_start, e_point, chunk_size, read_count, t_point
     logical                 :: optimize(1:3)
-    character(MAX_PATH_LEN) :: filename, folder
+    integer                 :: folder_index
+    character(MAX_PATH_LEN) :: filename, folder, restart_folder
     FLOAT                   :: fdefault, w_max
     FLOAT, allocatable      :: read_ft(:), read_rff(:), point_tmp(:,:)
 
@@ -593,47 +594,61 @@ contains
     end do
     call io_close(wd_info)
 
+    if(mesh%parallel_in_domains) then
+      ! Delete the last / and find the previous /, if any
+      folder = in_folder(1:len_trim(in_folder)-1)
+      folder_index = index(folder, '/', .true.)
+      restart_folder = folder(1:folder_index)
+      call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mesh%mpi_grp, &
+                       ierr, dir=trim(restart_folder), mesh = mesh)
+    end if
+   
     !For each mesh point, open density file and read corresponding point.  
     if (mpi_world%rank == 0) call loct_progress_bar(-1, mesh%np)
 
-    SAFE_ALLOCATE(point_tmp(1:chunk_size+1, 0:time_steps))
+    SAFE_ALLOCATE(point_tmp(1:chunk_size, 0:time_steps))
     read_count = 0
     ! Space
     do i_space = 1, mesh%np
       ! Time
       t_point = 0
       do i_time = c_start, c_end, c_step
-        ! Here, we always iterate folders
-        ! Delete the last / and add the corresponding folder number
-        write(folder,'(a,i0.7,a)') in_folder(1:len_trim(in_folder)-1),i_time,"/"
-        write(filename, '(a,a,a,a)') trim(folder), trim(basename), ".obf"
-        if (mesh%mpi_grp%size > 1) then
-          ii = mesh%vp%local(mesh%vp%xlocal + i_space - 1)
+        
+        if (mesh%parallel_in_domains .and. i_space == 1) then
+          write(folder,'(a,i0.7,a)') in_folder(folder_index+1:len_trim(in_folder)-1),i_time,"/"
+          write(filename, '(a,a,a)') trim(folder), trim(basename)
+          call drestart_read_mesh_function(restart, trim(filename), mesh, point_tmp(:, t_point), ierr)
         else
-          ii = i_space
+          ! Here, we always iterate folders
+          ! Delete the last / and add the corresponding folder number
+          write(folder,'(a,i0.7,a)') in_folder(1:len_trim(in_folder)-1),i_time,"/"
+          write(filename, '(a,a,a,a)') trim(folder), trim(basename), ".obf"
+          if (mod(i_space-1, chunk_size) == 0) then
+            call profiling_in(prof_io,"READING")
+            !TODO: check for any error on the whole file before reading by parts.
+            call io_binary_read(trim(filename), chunk_size, point_tmp(1:chunk_size, t_point), ierr, offset = i_space-1)
+            call profiling_out(prof_io)
+            if (i_time == c_start) read_count = 0
+          end if
         end if
-        ! Read the obf files, in multiples of chunk_size
-        if (mod(i_space-1, chunk_size) == 0) then
-          call profiling_in(prof_io,"READING")
-          !TODO: check for any error on the whole file before reading by parts.
-          call io_binary_read(trim(filename), chunk_size, point_tmp(1:chunk_size+1, t_point), ierr, offset = ii-1)
-          call profiling_out(prof_io)
-           if (i_time == c_start) read_count = 0
-        end if
-        if (i_time == c_start) read_count = read_count + 1
+
         call profiling_out(prof_io)
-        if (subtract_file) then
-          read_ft(e_point) =  point_tmp(read_count, t_point) - read_rff(ii)
-        else
-          read_ft(e_point) = point_tmp(read_count, t_point)
-        end if
+
         if (ierr /= 0 .and. i_space == 1) then
-          write(message(1), '(a,a,2i10)') "Error reading the file ", trim(filename), ii, i_time
+          write(message(1), '(a,a,2i10)') "Error reading the file ", trim(filename), i_space, i_time
           write(message(2), '(a)') "Skipping...."
           write(message(3), '(a,i0)') "Error :", ierr
           call messages_warning(3)
           cycle
         end if
+
+        if (i_time == c_start) read_count = read_count + 1
+        if (subtract_file) then
+          read_ft(t_point) =  point_tmp(read_count, t_point) - read_rff(i_space)
+        else
+          read_ft(t_point) = point_tmp(read_count, t_point)
+        end if
+
         t_point = t_point + 1
       end do ! Time
 
@@ -664,20 +679,22 @@ contains
         call loct_progress_bar(i_space-1, mesh%np) 
       end if
       
-      !print out wd densities from (ii-chunksize,ii]
-      if (mod(i_space, chunk_size) == 0) then
-        write(message(1),'(a)') ""
-        write(message(2),'(a,i0)') "Writing binary output: step ", i_space/chunk_size
-        call messages_info(2)
-        do i_energy = e_start, e_end
-          write(filename,'(a14,i0.7,a12)')'wd.general/wd.',i_energy,'/density.obf'
-          ! If it is the first time entering here, write the header. But, only once
-          if (i_space == chunk_size) &
+      !print out wd densities from (ii-chunksize,ii] if running in serial
+      if (mesh%mpi_grp%size == 1) then
+        if (mod(i_space, chunk_size) == 0) then
+          write(message(1),'(a)') ""
+          write(message(2),'(a,i0)') "Writing binary output: step ", i_space/chunk_size
+          call messages_info(2)
+          do i_energy = e_start, e_end
+            write(filename,'(a14,i0.7,a12)')'wd.general/wd.',i_energy,'/density.obf'
+            ! If it is the first time entering here, write the header. But, only once
+            if (i_space == chunk_size) &
                !call write_header(trim(filename), mesh%np_global, ierr)
-               call dwrite_header(trim(filename),mesh%np_global, ierr)
-          call io_binary_write(trim(filename), chunk_size, point_tmp(1:chunk_size, i_energy), ierr, &
-               nohead = .true.)
-        end do
+                call dwrite_header(trim(filename),mesh%np_global, ierr)
+            call io_binary_write(trim(filename), chunk_size, point_tmp(1:chunk_size, i_energy), ierr, &
+                nohead = .true.)
+          end do
+        end if
       end if
     end do ! Space
 
@@ -685,14 +702,24 @@ contains
 #ifdef HAVE_MPI
     call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
 #endif
-    ! write the output files
-    if (outp%how /= OPTION__OUTPUTFORMAT__BINARY ) then
+
+    if(mesh%parallel_in_domains) then
       do i_energy = e_start, e_end
         write(filename,'(a14,i0.7,a1)')'wd.general/wd.',i_energy,'/'
-        call io_binary_read(trim(filename)//'density.obf', mesh%np, read_rff, ierr)
         call dio_function_output(outp%how, trim(filename), & 
-           trim('density'), mesh, read_rff, units_out%length**(-mesh%sb%dim), ierr, geo = geo)
+           trim('density'), mesh, point_tmp(:, i_energy), units_out%length**(-mesh%sb%dim), ierr, geo = geo)
       end do
+      call restart_end(restart)
+    else
+      ! write the output files
+      if (outp%how /= OPTION__OUTPUTFORMAT__BINARY ) then
+        do i_energy = e_start, e_end
+          write(filename,'(a14,i0.7,a1)')'wd.general/wd.',i_energy,'/'
+          call io_binary_read(trim(filename)//'density.obf', mesh%np, read_rff, ierr)
+          call dio_function_output(outp%how, trim(filename), & 
+             trim('density'), mesh, read_rff, units_out%length**(-mesh%sb%dim), ierr, geo = geo)
+        end do
+      end if
     end if
     
     SAFE_DEALLOCATE_A(point_tmp)
