@@ -181,50 +181,80 @@ contains
   end subroutine interface_xc_get_derivatives
 
   ! ---------------------------------------------------------
-  elemental subroutine interface_xc_density(irho, orho)
-    real(kind=wp), intent(in)  :: irho
-    real(kind=wp), intent(out) :: orho
+  pure subroutine interface_xc_density(this, irho, orho)
+    type(interface_xc_t),          intent(in)  :: this
+    real(kind=wp), dimension(:,:), intent(in)  :: irho
+    real(kind=wp), dimension(:,:), intent(out) :: orho
 
-    if(irho<0.0_wp)then
-      orho = 0.0_wp
-    else
-      orho = irho
+    integer :: ip
+
+    do ip = 1, this%mesh%np
+      if(irho(ip,1)<0.0_wp)then
+        orho(ip,1) = 0.0_wp
+      else
+        orho(ip,1) = irho(ip,1)
+      end if
+    end do
+    orho(this%mesh%np+1:,1) = 0.0_wp
+    if(this%spin==XC_POLARIZED)then
+      do ip = 1, this%mesh%np
+        if(irho(ip,2)<0.0_wp)then
+          orho(ip,2) = 0.0_wp
+        else
+          orho(ip,2) = irho(ip,2)
+        end if
+      end do
+      orho(this%mesh%np+1:,2) = 0.0_wp
     end if
 
   end subroutine interface_xc_density
 
   ! ---------------------------------------------------------
-  pure subroutine interface_xc_block_density(nb, irho, orho)
+  pure subroutine interface_xc_block_density(this, nb, irho, orho)
+    type(interface_xc_t),          intent(in)  :: this
     integer,                       intent(in)  :: nb
     real(kind=wp), dimension(:,:), intent(in)  :: irho
     real(kind=wp), dimension(:,:), intent(out) :: orho
 
     integer :: ib
 
-    orho = 0.0_wp
     do ib = 1, nb
-      call interface_xc_density(irho(ib,:),orho(:,ib))
+      if(irho(ib,1)<0.0_wp)then
+        orho(1,ib) = 0.0_wp
+      else
+        orho(1,ib) = irho(ib,1)
+      end if
     end do
+    if(this%spin==XC_POLARIZED)then
+      do ib = 1, nb
+        if(irho(ib,2)<0.0_wp)then
+          orho(2,ib) = 0.0_wp
+        else
+          orho(2,ib) = irho(ib,2)
+        end if
+      end do
+    end if
 
   end subroutine interface_xc_block_density
 
   ! ---------------------------------------------------------
-  pure subroutine interface_xc_block_gradient(nb, ns, gradient, sigma)
+  pure subroutine interface_xc_block_gradient(this, nb, gradient, sigma)
+    type(interface_xc_t),            intent(in)  :: this
     integer,                         intent(in)  :: nb
-    integer,                         intent(in)  :: ns
     real(kind=wp), dimension(:,:,:), intent(in)  :: gradient
     real(kind=wp), dimension(:,:),   intent(out) :: sigma
 
     integer :: ip
 
-    sigma = 0.0_wp
     do ip = 1, nb
       sigma(1,ip) = dot_product(gradient(ip,:,1),gradient(ip,:,1))
-      if(ns==3)then
+    end do
+    if(this%spin==XC_POLARIZED)then
+      do ip = 1, nb
         sigma(2,ip) = dot_product(gradient(ip,:,1),gradient(ip,:,2))
         sigma(3,ip) = dot_product(gradient(ip,:,2),gradient(ip,:,2))
-      end if
-    end do
+      end do
+    end if
 
   end subroutine interface_xc_block_gradient
 
@@ -243,22 +273,43 @@ contains
   end subroutine interface_xc_deblock_vxc
   
   ! ---------------------------------------------------------
-  pure subroutine interface_xc_deblock_dedgd(nb, ns, vsigma, grad, dedgd)
-    integer,                         intent(in)  :: nb
-    integer,                         intent(in)  :: ns
-    real(kind=wp), dimension(:,:),   intent(in)  :: vsigma
-    real(kind=wp), dimension(:,:,:), intent(in)  :: grad
-    real(kind=wp), dimension(:,:,:), intent(out) :: dedgd
+  pure subroutine interface_xc_deblock_exc(nb, iexc, oexc)
+    integer,                     intent(in)  :: nb
+    real(kind=wp), dimension(:), intent(in)  :: iexc
+    real(kind=wp), dimension(:), intent(out) :: oexc
 
     integer :: ip
 
     do ip = 1, nb
-      dedgd(ip,:,1) = 2.0_wp * vsigma(1,ip) * grad(ip,:,1)
-      if(ns==3)then
-        dedgd(ip,:,1) = dedgd(ip,:,1) + vsigma(2,ip) * grad(ip,:,2)
-        dedgd(ip,:,2) = 2.0_wp * vsigma(3,ip) * grad(ip,:,2) + vsigma(2,ip) * grad(ip,:,1)
-      end if
+      oexc(ip) = iexc(ip)
     end do
+
+  end subroutine interface_xc_deblock_exc
+  
+  ! ---------------------------------------------------------
+  pure subroutine interface_xc_deblock_dedgd(this, nb, vsigma, grad, dedgd)
+    type(interface_xc_t),            intent(in)  :: this
+    integer,                         intent(in)  :: nb
+    real(kind=wp), dimension(:,:),   intent(in)  :: vsigma
+    real(kind=wp), dimension(:,:,:), intent(in)  :: grad
+    real(kind=wp), dimension(:,:,:), intent(out) :: dedgd
+
+    real(kind=wp) :: a, b, c
+    integer       :: ip
+
+    if(this%spin==XC_UNPOLARIZED)then
+      do ip = 1, nb
+        dedgd(ip,:,1) = 2.0_wp * vsigma(1,ip) * grad(ip,:,1)
+      end do
+    else
+      do ip = 1, nb
+        a = 2.0_wp * vsigma(1,ip)
+        b = vsigma(2,ip)
+        c = 2.0_wp * vsigma(3,ip)
+        dedgd(ip,:,1) = a * grad(ip,:,1) + b * grad(ip,:,2)
+        dedgd(ip,:,2) = b * grad(ip,:,1) + c * grad(ip,:,2)
+      end do
+    end if
 
   end subroutine interface_xc_deblock_dedgd
 
@@ -278,9 +329,9 @@ contains
     if((this%id>XC_NONE).and.(iand(this%flags, XC_FLAGS_HAVE_EXC)/=0))then
       do ip = 1, this%mesh%np, this%nblock
         nb = min(this%mesh%np-ip+1, this%nblock)
-        call interface_xc_block_density(nb, density(ip:,:), l_dens)
+        call interface_xc_block_density(this, nb, density(ip:,:), l_dens)
         call XC_F90(lda_exc)(this%conf, nb, l_dens(1,1), l_zk(1))
-        exc(ip:ip+nb-1) = l_zk(1:nb)
+        call interface_xc_deblock_exc(nb, l_zk, exc(ip:))
       end do
     end if
 
@@ -302,7 +353,7 @@ contains
     if((this%id>XC_NONE).and.(iand(this%flags, XC_FLAGS_HAVE_VXC)/=0))then
       do ip = 1, this%mesh%np, this%nblock
         nb = min(this%mesh%np-ip+1, this%nblock)
-        call interface_xc_block_density(nb, density(ip:,:), l_dens)
+        call interface_xc_block_density(this, nb, density(ip:,:), l_dens)
         call XC_F90(lda_vxc)(this%conf, nb, l_dens(1,1), l_dedd(1,1))
         call interface_xc_deblock_vxc(nb, l_dedd, vxc(ip:,:))
       end do
@@ -331,10 +382,10 @@ contains
       .and.(iand(this%flags,XC_FLAGS_HAVE_VXC)/=0))then
       do ip = 1, this%mesh%np, this%nblock
         nb = min(this%mesh%np-ip+1, this%nblock)
-        call interface_xc_block_density(nb, density(ip:,:), l_dens)
+        call interface_xc_block_density(this, nb, density(ip:,:), l_dens)
         call XC_F90(lda_exc_vxc)(this%conf, nb, l_dens(1,1), l_zk(1), l_dedd(1,1))
         call interface_xc_deblock_vxc(nb, l_dedd, vxc(ip:,:))
-        exc(ip:ip+nb-1) = l_zk(1:nb)
+        call interface_xc_deblock_exc(nb, l_zk, exc(ip:))
       end do
     end if
 
@@ -351,19 +402,18 @@ contains
     real(kind=wp), dimension(this%spin,    this%nblock) :: l_dens
     real(kind=wp), dimension(2*this%spin-1,this%nblock) :: l_sigma
     real(kind=wp), dimension(              this%nblock) :: l_zk
-    integer                                             :: ip, ns, nb
+    integer                                             :: ip, nb
 
     PUSH_SUB(interface_xc_block_gga_exc)
 
     exc = 0.0_wp
     if((this%id>XC_NONE).and.(iand(this%flags, XC_FLAGS_HAVE_EXC)/=0))then
-      ns = 2 * this%spin - 1
       do ip = 1, this%mesh%np, this%nblock
         nb = min(this%mesh%np-ip+1, this%nblock)
-        call interface_xc_block_density(nb, density(ip:,:), l_dens)
-        call interface_xc_block_gradient(nb, ns, gradient(ip:,:,:), l_sigma)
+        call interface_xc_block_density(this, nb, density(ip:,:), l_dens)
+        call interface_xc_block_gradient(this, nb, gradient(ip:,:,:), l_sigma)
         call XC_F90(gga_exc)(this%conf, nb, l_dens(1,1), l_sigma(1,1), l_zk(1))
-        exc(ip:ip+nb-1) = l_zk(1:nb)
+        call interface_xc_deblock_exc(nb, l_zk, exc(ip:))
       end do
     end if
 
@@ -381,19 +431,18 @@ contains
     real(kind=wp), dimension(this%spin,    this%nblock) :: l_dens, l_dedd
     real(kind=wp), dimension(2*this%spin-1,this%nblock) :: l_sigma
     real(kind=wp), dimension(2*this%spin-1,this%nblock) :: l_vsigma
-    integer                                             :: ip, ns, nb
+    integer                                             :: ip, nb
 
     PUSH_SUB(interface_xc_block_gga_vxc)
 
     vxc = 0.0_wp
     if((this%id>XC_NONE).and.(iand(this%flags, XC_FLAGS_HAVE_VXC)/=0))then
-      ns = 2 * this%spin - 1
       do ip = 1, this%mesh%np, this%nblock
         nb = min(this%mesh%np-ip+1, this%nblock)
-        call interface_xc_block_density(nb, density(ip:,:), l_dens)
-        call interface_xc_block_gradient(nb, ns, gradient(ip:,:,:), l_sigma)
+        call interface_xc_block_density(this, nb, density(ip:,:), l_dens)
+        call interface_xc_block_gradient(this, nb, gradient(ip:,:,:), l_sigma)
         call XC_F90(gga_vxc)(this%conf, nb, l_dens(1,1), l_sigma(1,1), l_dedd(1,1), l_vsigma(1,1))
-        call interface_xc_deblock_dedgd(nb, ns, l_vsigma, gradient(ip:,:,:), dedg(ip:,:,:))
+        call interface_xc_deblock_dedgd(this, nb, l_vsigma, gradient(ip:,:,:), dedg(ip:,:,:))
         call interface_xc_deblock_vxc(nb, l_dedd, vxc(ip:,:))
       end do
     end if
@@ -414,7 +463,7 @@ contains
     real(kind=wp), dimension(2*this%spin-1,this%nblock) :: l_sigma
     real(kind=wp), dimension(2*this%spin-1,this%nblock) :: l_vsigma
     real(kind=wp), dimension(              this%nblock) :: l_zk
-    integer                                             :: ip, ns, nb
+    integer                                             :: ip, nb
 
     PUSH_SUB(interface_xc_block_gga_exc_vxc)
 
@@ -423,15 +472,15 @@ contains
     if((this%id>XC_NONE)                           &
       .and.(iand(this%flags,XC_FLAGS_HAVE_EXC)/=0) &
       .and.(iand(this%flags,XC_FLAGS_HAVE_VXC)/=0))then
-      ns = 2 * this%spin - 1
+
       do ip = 1, this%mesh%np, this%nblock
         nb = min(this%mesh%np-ip+1, this%nblock)
-        call interface_xc_block_density(nb, density(ip:,:), l_dens)
-        call interface_xc_block_gradient(nb, ns, gradient(ip:,:,:), l_sigma)
+        call interface_xc_block_density(this, nb, density(ip:,:), l_dens)
+        call interface_xc_block_gradient(this, nb, gradient(ip:,:,:), l_sigma)
         call XC_F90(gga_exc_vxc)(this%conf, nb, l_dens(1,1), l_sigma(1,1), l_zk(1), l_dedd(1,1), l_vsigma(1,1))
-        call interface_xc_deblock_dedgd(nb, ns, l_vsigma, gradient(ip:,:,:), dedg(ip:,:,:))
+        call interface_xc_deblock_dedgd(this, nb, l_vsigma, gradient(ip:,:,:), dedg(ip:,:,:))
         call interface_xc_deblock_vxc(nb, l_dedd, vxc(ip:,:))
-        exc(ip:ip+nb-1) = l_zk(1:nb)
+        call interface_xc_deblock_exc(nb, l_zk, exc(ip:))
       end do
     end if
 
@@ -467,13 +516,13 @@ contains
     real(kind=wp), dimension(:,:), intent(in)  :: density
     real(kind=wp), dimension(:),   intent(out) :: exc
 
-    real(kind=wp), dimension(this%mesh%np_part,          this%spin) :: dens
-    real(kind=wp), dimension(this%mesh%np_part,this%ndim,this%spin) :: grad
-    integer                                                         :: isp
+    real(kind=wp), dimension(this%mesh%np_part,     this%spin) :: dens
+    real(kind=wp), dimension(this%mesh%np,this%ndim,this%spin) :: grad
+    integer                                                    :: isp
 
     PUSH_SUB(interface_xc_gga_exc)
 
-    call interface_xc_density(density, dens)
+    call interface_xc_density(this, density, dens)
     do isp = 1, this%spin
       call dderivatives_grad(this%der, dens(:,isp), grad(:,:,isp))
     end do
@@ -489,13 +538,13 @@ contains
     real(kind=wp), dimension(:,:), intent(out) :: vxc
 
     real(kind=wp), dimension(this%mesh%np_part,          this%spin) :: dens
-    real(kind=wp), dimension(this%mesh%np_part,this%ndim,this%spin) :: grad
+    real(kind=wp), dimension(this%mesh%np,     this%ndim,this%spin) :: grad
     real(kind=wp), dimension(this%mesh%np_part,this%ndim,this%spin) :: dedg
     integer                                                         :: isp
 
     PUSH_SUB(interface_xc_gga_vxc)
 
-    call interface_xc_density(density, dens)
+    call interface_xc_density(this, density, dens)
     do isp = 1, this%spin
       call dderivatives_grad(this%der, dens(:,isp), grad(:,:,isp))
     end do
@@ -514,13 +563,13 @@ contains
     real(kind=wp), dimension(:,:), intent(out) :: vxc
 
     real(kind=wp), dimension(this%mesh%np_part,          this%spin) :: dens
-    real(kind=wp), dimension(this%mesh%np_part,this%ndim,this%spin) :: grad
+    real(kind=wp), dimension(this%mesh%np,     this%ndim,this%spin) :: grad
     real(kind=wp), dimension(this%mesh%np_part,this%ndim,this%spin) :: dedg
     integer                                                         :: isp
 
     PUSH_SUB(interface_xc_gga_exc_vxc)
 
-    call interface_xc_density(density, dens)
+    call interface_xc_density(this, density, dens)
     do isp = 1, this%spin
       call dderivatives_grad(this%der, dens(:,isp), grad(:,:,isp))
     end do

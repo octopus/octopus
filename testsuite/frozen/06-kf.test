@@ -361,19 +361,19 @@ match ; External    ; GREPFIELD(static/info, 'External    =',     3) ;  -25.1530
 # match ; Kinetic     ; GREPFIELD(static/info, 'Kinetic     =',     3) ;  -163055.60480238
 # match ; External    ; GREPFIELD(static/info, 'External    =',     3) ;  -16.65934127
 
-# Input: 06-kf.gga_k_apbe.inp
+Input: 06-kf.gga_k_apbe.inp
 
 # Frozen gga_k_apbe.
-# match ; Eigenvalue  ; GREPFIELD(static/info, '1   --',            3) ;  -3.223876
-# match ; Total       ; GREPFIELD(static/info, 'Total       =',     3) ;  -6.82881355
-# match ; Ion-ion     ; GREPFIELD(static/info, 'Ion-ion     =',     3) ;  5.75985766
-# match ; Eigenvalues ; GREPFIELD(static/info, 'Eigenvalues =',     3) ;  -3.22387562
-# match ; Hartree     ; GREPFIELD(static/info, 'Hartree     =',     3) ;  11.27857528
-# match ; Int[n*v_xc] ; GREPFIELD(static/info, 'Int\[n\*v\_xc\] =', 3) ;  -8.30267283
-# match ; Exchange    ; GREPFIELD(static/info, 'Exchange    =',     3) ;  -4.89656242
-# match ; Correlation ; GREPFIELD(static/info, 'Correlation =',     3) ;  -1.49233072
-# match ; Kinetic     ; GREPFIELD(static/info, 'Kinetic     =',     3) ;  3.70915415
-# match ; External    ; GREPFIELD(static/info, 'External    =',     3) ;  -25.15486831
+match ; Eigenvalue  ; GREPFIELD(static/info, '1   --',            3) ;  -3.223876
+match ; Total       ; GREPFIELD(static/info, 'Total       =',     3) ;  -6.82881355
+match ; Ion-ion     ; GREPFIELD(static/info, 'Ion-ion     =',     3) ;  5.75985766
+match ; Eigenvalues ; GREPFIELD(static/info, 'Eigenvalues =',     3) ;  -3.22387562
+match ; Hartree     ; GREPFIELD(static/info, 'Hartree     =',     3) ;  11.27857528
+match ; Int[n*v_xc] ; GREPFIELD(static/info, 'Int\[n\*v\_xc\] =', 3) ;  -8.30267283
+match ; Exchange    ; GREPFIELD(static/info, 'Exchange    =',     3) ;  -4.89656242
+match ; Correlation ; GREPFIELD(static/info, 'Correlation =',     3) ;  -1.49233072
+match ; Kinetic     ; GREPFIELD(static/info, 'Kinetic     =',     3) ;  3.70915415
+match ; External    ; GREPFIELD(static/info, 'External    =',     3) ;  -25.15486831
 
 # Input: 06-kf.gga_k_lieb.inp
 
