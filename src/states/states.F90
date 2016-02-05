@@ -1697,29 +1697,23 @@ contains
     if(st%d%ispin == SPINORS) then
       ASSERT(states_are_complex(st))
       
+      st%spin(:,:,:) = M_ZERO
+      
       SAFE_ALLOCATE(zpsi(1:mesh%np, st%d%dim))
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
           call states_get_state(st, mesh, ist, ik, zpsi)
           st%spin(1:3, ist, ik) = state_spin(mesh, zpsi)
         end do
-#if defined(HAVE_MPI)
-        if(st%parallel_in_states) then
-          SAFE_ALLOCATE(lspin (1:st%lnst))
-          SAFE_ALLOCATE(lspin2(1:st%nst))
-          do idir = 1, 3
-            lspin = st%spin(idir, st%st_start:st%st_end, ik)
-            call lmpi_gen_allgatherv(st%lnst, lspin, tmp, lspin2, st%mpi_grp)
-            do ist = 1, st%nst
-              st%spin(idir, ist, ik) = lspin2(ist)
-            end do
-          end do
-          SAFE_DEALLOCATE_A(lspin)
-          SAFE_DEALLOCATE_A(lspin2)
-        end if
-#endif
       end do
       SAFE_DEALLOCATE_A(zpsi)
+
+#if defined(HAVE_MPI)        
+        if(st%parallel_in_states .or. st%d%kpt%parallel) then
+          call comm_allreduce(st%st_kpt_mpi_grp%comm, st%spin)
+        end if
+#endif      
+            
     end if
 
     POP_SUB(states_fermi)
