@@ -586,10 +586,10 @@ contains
     do i_energy = e_start, e_end
       write(filename,'(a14,i0.7,a1)')'wd.general/wd.',i_energy,'/'
       write(message(1),'(a,a,f12.7,a,1x,i7,a)')trim(filename),' w =', &
-           units_from_atomic(units_out%energy,(i_energy) * dw), & 
-           '[' // trim(units_abbrev(units_out%energy)) // ']'
+            units_from_atomic(units_out%energy,(i_energy) * dw), & 
+            '[' // trim(units_abbrev(units_out%energy)) // ']'
       write(wd_info,'(a)') message(1)
-      call messages_info(1)
+      if (mpi_world%rank == 0) call messages_info(1)
       call io_mkdir(trim(filename))
     end do
     call io_close(wd_info)
