@@ -558,8 +558,8 @@ contains
     !      order to use call kick_init(kick, sy%st%d%nspin, sys%space%dim, sys%geo%periodic_dim)
     call kick_init(kick, 1, mesh%sb%dim, geo%periodic_dim)
 
-    e_start = int(min_energy / dw)
-    e_end   = int(max_energy / dw)
+    e_start = nint(min_energy / dw)
+    e_end   = nint(max_energy / dw)
     write(message(1),'(a,1x,i0.7,a,f12.7,a,i0.7,a,f12.7,a)')'Frequency index:',e_start,'(',&
          units_from_atomic(units_out%energy, e_start * dw),')-',e_end,'(',units_from_atomic(units_out%energy, e_end * dw),')' 
     write(message(2),'(a,f12.7,a)')'Frequency Step, dw:  ', units_from_atomic(units_out%energy, dw), &
@@ -586,10 +586,10 @@ contains
     do i_energy = e_start, e_end
       write(filename,'(a14,i0.7,a1)')'wd.general/wd.',i_energy,'/'
       write(message(1),'(a,a,f12.7,a,1x,i7,a)')trim(filename),' w =', &
-            units_from_atomic(units_out%energy,(i_energy) * dw), & 
-            '[' // trim(units_abbrev(units_out%energy)) // ']'
-      write(wd_info,'(a)') message(1)
-      if (mpi_world%rank == 0) call messages_info(1)
+           units_from_atomic(units_out%energy,(i_energy) * dw), & 
+           '[' // trim(units_abbrev(units_out%energy)) // ']'
+      if (mpi_world%rank == 0) write(wd_info,'(a)') message(1)
+      call messages_info(1)
       call io_mkdir(trim(filename))
     end do
     call io_close(wd_info)
