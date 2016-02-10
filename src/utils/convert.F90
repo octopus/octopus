@@ -525,7 +525,7 @@ contains
         nn(1) = time_steps + 1
         nn(2) = 1
         nn(3) = 1
-        SAFE_ALLOCATE(out_fft(0:time_steps))
+        SAFE_ALLOCATE(out_fft(0:time_steps+1))
         optimize = .false.
         optimize_parity = -1
         call fft_init(fft, nn, 1, FFT_REAL, FFTLIB_FFTW, optimize, optimize_parity)
@@ -658,7 +658,7 @@ contains
         call dfft_forward1(fft, read_ft, out_fft)
         call profiling_out(prof_fftw)
         ! Should the value be multiplied by dt ??? as in standard discrete Fourier Transform ?
-        point_tmp(read_count, 0:time_steps) = AIMAG(out_fft(0:time_steps)) * dt
+        point_tmp(read_count, 0:time_steps) = AIMAG(out_fft(1:time_steps+1)) * dt
       case (STANDARD_FOURIER)
         tdrho_a(0:time_steps, 1, 1) = read_ft(0:time_steps)
         call batch_init(tdrho_b, 1, 1, 1, tdrho_a)
@@ -666,7 +666,7 @@ contains
         call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, c_start + 1, c_start + time_steps + 1, & 
                                   kick%time, dt, tdrho_b)
         call spectrum_fourier_transform(spectrum%method, spectrum%transform, spectrum%noise, &
-              c_start + 1, c_start + time_steps + 1, kick%time, dt, tdrho_b, e_start, e_end, &
+              c_start + 1, c_start + time_steps + 1, kick%time, dt, tdrho_b, e_start + 1, e_end + 1, &
               spectrum%energy_step, wdrho_b, spectrum%cmplxscl)
         call batch_end(tdrho_b)
         call batch_end(wdrho_b)
