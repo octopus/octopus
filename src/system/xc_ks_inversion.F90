@@ -258,7 +258,7 @@ contains
       do jj = asym1+1, asym2-1
         vks(jj, ii) = laplace(jj, ii)/(M_TWO*sqrtrho(jj, ii))
       end do
-      aux_hm%vxc(:,ii) = vks(:,ii) - aux_hm%ep%vpsl(:) - aux_hm%vhartree(:)
+      aux_hm%vxc(:,ii) = vks(:,ii) - aux_hm%ep%vpsl(:) - aux_hm%vhartree(1:np)
     end do
 
     !ensure correct asymptotic behavior, only for 1D potentials at the moment
@@ -306,7 +306,7 @@ contains
     end if  
 
     do ii = 1, nspin
-      aux_hm%vhxc(:,ii) = aux_hm%vxc(:,ii) + aux_hm%vhartree(:)
+      aux_hm%vhxc(:,ii) = aux_hm%vxc(:,ii) + aux_hm%vhartree(1:np)
     end do
     
     call hamiltonian_update(aux_hm, gr%mesh)
@@ -453,7 +453,7 @@ contains
       aux_hm%vhxc(1:np,1:nspin) = vhxc(1:np, 1:nspin)
       
       do jj = 1, nspin
-        aux_hm%vxc(:,jj) = vhxc(:,jj) - aux_hm%vhartree(:)
+        aux_hm%vxc(:, jj) = vhxc(:, jj) - aux_hm%vhartree(1:np)
       end do
     end do
 
@@ -494,7 +494,7 @@ contains
     aux_hm%vhxc(1:np,1:nspin) = vhxc(1:np, 1:nspin)
       
     do jj = 1, nspin
-      aux_hm%vxc(:,jj) = vhxc(:,jj) - aux_hm%vhartree(:)
+      aux_hm%vxc(:,jj) = vhxc(:,jj) - aux_hm%vhartree(1:np)
     end do
 
     !calculate final density
@@ -524,10 +524,13 @@ contains
     FLOAT, optional,          intent(in)    :: time
 
     integer :: ii
+    integer :: np
 
     if(ks_inversion%level == XC_KS_INVERSION_NONE) return
 
     PUSH_SUB(X(xc_ks_inversion_calc))
+
+    np = gr%mesh%np
 
     call density_calc(st, gr, st%rho)
     
@@ -552,7 +555,7 @@ contains
 ! no restart data available, start with vhxc = vh, which we know from exact input rho
       do ii = 1, st%d%nspin
         ks_inversion%aux_hm%vxc(:,ii)  = M_ZERO !hm%ep%vpsl(:)
-        ks_inversion%aux_hm%vhxc(:,ii) = ks_inversion%aux_hm%vhartree(:) + ks_inversion%aux_hm%vxc(:,ii)
+        ks_inversion%aux_hm%vhxc(:,ii) = ks_inversion%aux_hm%vhartree(1:np) + ks_inversion%aux_hm%vxc(:,ii)
       end do
 ! TODO: restart data found. Use first KS orbital to invert equation and get starting vhxc
 !      call invertks_2part(ks_inversion%aux_st%rho, st%d%nspin, ks_inversion%aux_hm, gr, &
@@ -580,7 +583,7 @@ contains
     ! ATTENTION: subtracts true external potential not adiabatic one 
     
     do ii = 1, st%d%nspin
-      ks_inversion%aux_hm%vxc(:,ii)  = ks_inversion%aux_hm%vhxc(:,ii) - hm%vhartree(:)
+      ks_inversion%aux_hm%vxc(:,ii)  = ks_inversion%aux_hm%vhxc(:,ii) - hm%vhartree(1:np)
     end do
 
     vxc = ks_inversion%aux_hm%vxc

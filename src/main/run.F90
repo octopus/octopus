@@ -163,20 +163,19 @@ contains
       ! At present, PCM calculations in parallel must have ParallelizationStrategy = par_states
       if (hm%pcm%run_pcm) then 
         if ( (sys%mc%par_strategy /= P_STRATEGY_SERIAL).and.(sys%mc%par_strategy /= P_STRATEGY_STATES) ) then
-          message(1) = "Parallel calculations with PCM are only possible with ParallelizationStrategy=par_states"
-          call messages_fatal(1)
-        endif
-      endif
+          message(1) = "Parallel in domain calculations with PCM"
+          cal messages_experimental(message(1))
+        end if
+      end if
     else
       call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family)
 
-      ! At present, PCM calculations in parallel must have ParallelizationStrategy = par_states
       if (hm%pcm%run_pcm) then 
         if ( (sys%mc%par_strategy /= P_STRATEGY_SERIAL).and.(sys%mc%par_strategy /= P_STRATEGY_STATES) ) then
-          message(1) = "Parallel calculations with PCM are only possible with ParallelizationStrategy=par_states"
-          call messages_fatal(1)
-        endif
-      endif
+          message(1) = "Parallel in domain calculations with PCM"
+          cal messages_experimental(message(1))
+        end if
+      end if
     end if
 
     call messages_print_stress(stdout, 'Approximate memory requirements')

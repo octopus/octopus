@@ -87,7 +87,7 @@ contains
     call dpoisson_solve(sys%ks%hartree_solver, hm%vhartree, rho)
 
     do ii = 1, nspin
-      hm%vhxc(:,ii) = hm%vhartree(:)
+      hm%vhxc(1:np, ii) = hm%vhartree(1:np)
     end do
 
     call hamiltonian_update(hm, sys%gr%mesh)

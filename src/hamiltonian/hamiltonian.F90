@@ -316,7 +316,7 @@ contains
     nullify(hm%vhartree, hm%vxc, hm%vtau, hm%axc)
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
 
-      SAFE_ALLOCATE(hm%vhartree(1:gr%mesh%np))
+      SAFE_ALLOCATE(hm%vhartree(1:gr%mesh%np_part))
       hm%vhartree=M_ZERO
 
       SAFE_ALLOCATE(hm%vxc(1:gr%mesh%np, 1:hm%d%nspin))

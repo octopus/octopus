@@ -27,6 +27,7 @@ module pcm_m
   use index_m
   use messages_m
   use mesh_m 
+  use mesh_interpolation_m 
   use mpi_m
   use parser_m
   use profiling_m
@@ -480,40 +481,29 @@ contains
 
   !> Calculates the Hartree potential at the tessera representative points by doing 
   !! a 3D linear interpolation. 
-  subroutine pcm_v_electrons_cav_li(v_e_cav, v_hartree, pcm)
+  subroutine pcm_v_electrons_cav_li(v_e_cav, v_hartree, pcm, mesh)
     type(pcm_t), intent(in)  :: pcm
+    type(mesh_t), intent(in) :: mesh
     FLOAT, intent(in)        :: v_hartree(:) !< (1:mesh%np)
     FLOAT, intent(out)       :: v_e_cav(:)   !< (1:n_tess)
 
     integer :: ia
 
-    FLOAT :: C_00, C_10, C_01, C_11, C_0, C_1
+    type(mesh_interpolation_t)  :: mesh_interpolation
 
     PUSH_SUB(pcm_v_electrons_cav_li)    
 
     v_e_cav = M_ZERO
+    
+    call mesh_interpolation_init(mesh_interpolation, mesh)
 
     do ia = 1, pcm%n_tesserae
 
-      C_00 = v_hartree( pcm%ind_vh(ia,1) )*( M_ONE - pcm%arg_li(ia,1) ) + &
-        v_hartree( pcm%ind_vh(ia,5) )*( pcm%arg_li(ia,1) )
-
-      C_10 = v_hartree( pcm%ind_vh(ia,2) )*( M_ONE - pcm%arg_li(ia,1) ) + &
-        v_hartree( pcm%ind_vh(ia,6) )*( pcm%arg_li(ia,1) )
-
-      C_01 = v_hartree( pcm%ind_vh(ia,4) )*( M_ONE - pcm%arg_li(ia,1) ) + &
-        v_hartree( pcm%ind_vh(ia,8) )*( pcm%arg_li(ia,1) )
-
-      C_11 = v_hartree( pcm%ind_vh(ia,3) )*( M_ONE - pcm%arg_li(ia,1) ) + &
-        v_hartree( pcm%ind_vh(ia,7) )*( pcm%arg_li(ia,1) )
-
-      C_0 = C_00*( M_ONE - pcm%arg_li(ia,2) ) + C_10*pcm%arg_li(ia,2)
-
-      C_1 = C_01*( M_ONE - pcm%arg_li(ia,2) ) + C_11*pcm%arg_li(ia,2)
-
-      v_e_cav(ia) = C_0*( M_ONE - pcm%arg_li(ia,3) ) + C_1*pcm%arg_li(ia,3)
+      call mesh_interpolation_evaluate(mesh_interpolation, v_hartree, pcm%tess(ia)%point, v_e_cav(ia))
 
     end do
+
+    call mesh_interpolation_end(mesh_interpolation)
 
     POP_SUB(pcm_v_electrons_cav_li)
   end subroutine pcm_v_electrons_cav_li
