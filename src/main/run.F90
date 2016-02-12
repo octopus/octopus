@@ -164,7 +164,7 @@ contains
       if (hm%pcm%run_pcm) then 
         if ( (sys%mc%par_strategy /= P_STRATEGY_SERIAL).and.(sys%mc%par_strategy /= P_STRATEGY_STATES) ) then
           message(1) = "Parallel in domain calculations with PCM"
-          cal messages_experimental(message(1))
+          call messages_experimental(message(1))
         end if
       end if
     else
@@ -173,7 +173,7 @@ contains
       if (hm%pcm%run_pcm) then 
         if ( (sys%mc%par_strategy /= P_STRATEGY_SERIAL).and.(sys%mc%par_strategy /= P_STRATEGY_STATES) ) then
           message(1) = "Parallel in domain calculations with PCM"
-          cal messages_experimental(message(1))
+          call messages_experimental(message(1))
         end if
       end if
     end if
