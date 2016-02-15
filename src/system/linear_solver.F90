@@ -46,16 +46,6 @@ module linear_solver_m
 
   private
 
-  integer, public, parameter :: &
-       LS_CG              = 5,  &
-       LS_BICGSTAB        = 4,  &
-       LS_MULTIGRID       = 7,  &
-       LS_QMR_SYMMETRIC   = 81, &
-       LS_QMR_SYMMETRIZED = 82, &
-       LS_QMR_DOTP        = 83, &
-       LS_QMR_GENERAL     = 84, &
-       LS_SOS             = 9
-
   public ::                              &
        linear_solver_t,                  &
        linear_solver_init,               &
@@ -113,6 +103,9 @@ contains
     !%Option bicgstab 4
     !% Biconjugate gradients stabilized. Slower than <tt>cg</tt>, but more reliable.
     !% General matrices.
+    !%Option bicgstab2 10
+    !% This is the BICGSTAB(2) described in [G.L.G. Sleijpen and D.R. Fokkema, ETNA 1, 11 (1993)].
+    !% It is usually safer and faster than bicgstab.
     !%Option cg 5
     !% Conjugate gradients. Fast but unreliable. Hermitian matrices only
     !% (no eta in Sternheimer).
@@ -144,13 +137,13 @@ contains
       defsolver_ = def_solver
     else
       if(conf%devel_version) then
-        defsolver_ = LS_QMR_DOTP
+        defsolver_ = OPTION__LINEARSOLVER__QMR_DOTP
       else
         if(states_are_real) then
-          defsolver_ = LS_QMR_SYMMETRIC
+          defsolver_ = OPTION__LINEARSOLVER__QMR_SYMMETRIC
           ! in this case, it is equivalent to LS_QMR_DOTP
         else
-          defsolver_ = LS_QMR_SYMMETRIZED
+          defsolver_ = OPTION__LINEARSOLVER__QMR_SYMMETRIZED
         end if
       end if
     end if
@@ -180,28 +173,31 @@ contains
     
     ! solver 
     select case(this%solver)
-      case(LS_CG)
+      case(OPTION__LINEARSOLVER__CG)
         message(1)='Linear Solver: Conjugate Gradients'
 
-      case(LS_BICGSTAB)
+      case(OPTION__LINEARSOLVER__BICGSTAB)
         message(1)='Linear Solver: Biconjugate Gradients Stabilized'
 
-      case(LS_MULTIGRID)
+      case(OPTION__LINEARSOLVER__BICGSTAB2)
+        message(1)='Linear Solver: Biconjugate Gradients Stabilized (2)'
+
+      case(OPTION__LINEARSOLVER__MULTIGRID)
         message(1)='Multigrid (currently only Gauss-Jacobi - EXPERIMENTAL)'
 
-      case(LS_QMR_SYMMETRIC)
+      case(OPTION__LINEARSOLVER__QMR_SYMMETRIC)
         message(1)='Linear Solver: Quasi-Minimal Residual, for symmetric matrix'
 
-      case(LS_QMR_SYMMETRIZED)
+      case(OPTION__LINEARSOLVER__QMR_SYMMETRIZED)
         message(1)='Linear Solver: Quasi-Minimal Residual, for symmetrized matrix'
 
-      case(LS_QMR_DOTP)
+      case(OPTION__LINEARSOLVER__QMR_DOTP)
         message(1)='Linear Solver: Quasi-Minimal Residual, symmetric with conjugated dot product'
 
-      case(LS_QMR_GENERAL)
+      case(OPTION__LINEARSOLVER__QMR_GENERAL)
         message(1)='Linear Solver: Quasi-Minimal Residual, general algorithm'
 
-      case(LS_SOS)
+      case(OPTION__LINEARSOLVER__SOS)
         message(1)='Linear Solver: Sum-over-States'
     end select
 
@@ -209,8 +205,10 @@ contains
     
     call messages_print_stress(stdout)
 
-    if(this%solver == LS_MULTIGRID) call messages_experimental("Multigrid linear solver")
-    if(this%solver == LS_QMR_DOTP)  call messages_experimental("QMR solver (symmetric with conjugated dot product)")
+    if(this%solver == OPTION__LINEARSOLVER__MULTIGRID) &
+      call messages_experimental("Multigrid linear solver")
+    if(this%solver == OPTION__LINEARSOLVER__QMR_DOTP)  &
+      call messages_experimental("QMR solver (symmetric with conjugated dot product)")
 
     POP_SUB(linear_solver_init)
 
@@ -231,7 +229,7 @@ contains
     type(linear_solver_t), intent(inout) :: this
     
     select case(this%solver)
-    case(LS_BICGSTAB)
+    case(OPTION__LINEARSOLVER__BICGSTAB)
       n = 2
     case default ! LS_CG, LS_MULTIGRID, LS_QMR, LS_SOS
       n = 1
@@ -262,6 +260,8 @@ contains
 
 #include "complex.F90"
 #include "linear_solver_inc.F90"
+
+
 
 end module linear_solver_m
 

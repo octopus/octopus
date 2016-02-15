@@ -56,22 +56,31 @@ subroutine X(linear_solver_solve_HXeY) (this, hm, gr, st, ist, ik, x, y, shift, 
 
   select case(this%solver)
 
-  case(LS_CG)
+  case(OPTION__LINEARSOLVER__CG)
     call X(linear_solver_cg)       (this, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used)
 
-  case(LS_BICGSTAB)
+  case(OPTION__LINEARSOLVER__BICGSTAB)
     call X(linear_solver_bicgstab) (this, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used, occ_response_)
 
-  case(LS_MULTIGRID)
+  case(OPTION__LINEARSOLVER__BICGSTAB2)
+#if defined(R_TCOMPLEX)
+    message(1) = 'The BICGSTAB(2) method (LinearSolver = bicgstab2) is not available for complex matrices.'
+    call messages_fatal(1)
+#else
+  
+    call dlinear_solver_bicgstab2 (this, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used, l = 2)
+#endif
+
+  case(OPTION__LINEARSOLVER__MULTIGRID)
     call X(linear_solver_multigrid)(this, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used)
 
-  case(LS_QMR_SYMMETRIC)   
+  case(OPTION__LINEARSOLVER__QMR_SYMMETRIC)   
     ! complex symmetric: for Sternheimer, only if wfns are real
     call X(qmr_sym_gen_dotu)(gr%mesh%np, x(:, 1), y(:, 1), &
       X(linear_solver_operator_na), X(mf_dotu_aux), X(mf_nrm2_aux), X(linear_solver_preconditioner), &
       iter_used, residue = residue, threshold = tol, showprogress = .false.)
 
-  case(LS_QMR_SYMMETRIZED)
+  case(OPTION__LINEARSOLVER__QMR_SYMMETRIZED)
     ! symmetrized equation
     SAFE_ALLOCATE(z(1:gr%mesh%np, 1:1))
     call X(linear_solver_operator_t_na)(y(:, 1), z(:, 1))
@@ -79,19 +88,19 @@ subroutine X(linear_solver_solve_HXeY) (this, hm, gr, st, ist, ik, x, y, shift, 
       X(linear_solver_operator_sym_na), X(mf_dotu_aux), X(mf_nrm2_aux), X(linear_solver_preconditioner), &
       iter_used, residue = residue, threshold = tol, showprogress = .false.)
 
-  case(LS_QMR_DOTP)
+  case(OPTION__LINEARSOLVER__QMR_DOTP)
     ! using conjugated dot product
     call X(qmr_sym_gen_dotu)(gr%mesh%np, x(:, 1), y(:, 1), &
       X(linear_solver_operator_na), X(mf_dotp_aux), X(mf_nrm2_aux), X(linear_solver_preconditioner), &
       iter_used, residue = residue, threshold = tol, showprogress = .false.)
 
-  case(LS_QMR_GENERAL)
+  case(OPTION__LINEARSOLVER__QMR_GENERAL)
     ! general algorithm
     call X(qmr_gen_dotu)(gr%mesh%np, x(:, 1), y(:, 1), X(linear_solver_operator_na), X(linear_solver_operator_t_na), &
       X(mf_dotu_aux), X(mf_nrm2_aux), X(linear_solver_preconditioner), X(linear_solver_preconditioner), &
       iter_used, residue = residue, threshold = tol, showprogress = .false.)
 
-  case(LS_SOS)
+  case(OPTION__LINEARSOLVER__SOS)
     call X(linear_solver_sos)(hm, gr, st, ist, ik, x, y, shift, residue, iter_used)
 
   case default 
@@ -126,7 +135,7 @@ subroutine X(linear_solver_solve_HXeY_batch) (this, hm, gr, st, ik, xb, yb, shif
   PUSH_SUB(X(linear_solver_solve_HXeY_batch))
 
   select case(this%solver)
-  case(LS_QMR_DOTP)
+  case(OPTION__LINEARSOLVER__QMR_DOTP)
     call profiling_in(prof_batch, "LINEAR_SOLVER_BATCH")
     call X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, yb, shift, iter_used, residue, tol)
     call profiling_out(prof_batch)
@@ -219,6 +228,297 @@ subroutine X(linear_solver_cg) (ls, hm, gr, st, ist, ik, x, y, shift, tol, resid
 
   POP_SUB(X(linear_solver_cg))
 end subroutine X(linear_solver_cg)
+
+
+
+#if defined(R_TREAL)
+! ---------------------------------------------------------
+!> BICONJUGATE GRADIENTS STABILIZED(2)
+!>
+!> This is the BICGSTAB(L) described in:
+!> 
+!> * G.L.G. Sleijpen and D.R. Fokkema, BiCGstab(l) for linear equations involving unsymmetric 
+!>   matrices with complex spectrum, Electronic Transactions on Numer. Anal. (ETNA) 1, 11 (1993)
+!>
+!> Only for l=1, and l=2. For l=1 it is not fundamentally different from the bicgstab, although
+!> it seems to break down less. This version contains two enhancements, described in:
+!>
+!> * G.Sleijpen and H.van der Vorst, Maintaining convergence properties of BiCGstab methods in finite 
+!>   precision arithmetic, Numerical Algorithms 10, 203 (1995).
+!> * G.Sleijpen and H.van der Vorst, Reliable updated residuals in hybrid BiCG methods, 
+!>   Computing 56, 141 (1996).
+!> 
+!> This version is based on the bc2g.f routine of M. A. Botchev:
+!> [http://www.staff.science.uu.nl/~vorst102/software.html]
+!>
+subroutine dlinear_solver_bicgstab2 (ls, hm, gr, st, ist, ik, x, rhsy, shift, tol, residue, iter_used, l)
+  type(linear_solver_t), intent(inout) :: ls
+  type(hamiltonian_t),   intent(in)    :: hm
+  type(grid_t),          intent(in)    :: gr
+  type(states_t),        intent(in)    :: st
+  integer,               intent(in)    :: ist
+  integer,               intent(in)    :: ik
+  R_TYPE,                intent(inout) :: x(:, :)    !< x(gr%mesh%np_part, st%d%dim)
+  R_TYPE,                intent(in)    :: rhsy(:, :) !< rhsy(gr%mesh%np, st%d%dim)
+  FLOAT,                 intent(in)    :: shift
+  FLOAT,                 intent(in)    :: tol
+  FLOAT,                 intent(out)   :: residue
+  integer,               intent(out)   :: iter_used
+  integer,               intent(in)       :: l
+
+  integer :: ii, i1, jj, kk, z, zz, y0, yl, y, rr, r, u, xp, bp, n, idim
+  FLOAT, allocatable :: psi(:, :), zeta(:, :), xx(:), rhs(:)
+  logical :: rcmp, xpdt
+  FLOAT :: alpha, beta, hatgamma, kappa0, kappal, mxnrmr, mxnrmx, omega, rho0, rho1, residue0, &
+           sigma, varrho, delta
+
+  PUSH_SUB(dlinear_solver_bicgstab2)
+
+  n = gr%mesh%np * st%d%dim
+  SAFE_ALLOCATE(psi(1:n, 1:2*l+5))
+  SAFE_ALLOCATE(zeta(1:l+1, 1:3+2*(l+1)))
+  SAFE_ALLOCATE(xx(1:n))
+  SAFE_ALLOCATE(rhs(1:n))
+  delta = CNST(1.0e-2)
+
+  do idim = 1, st%d%dim
+    xx((idim-1)*gr%mesh%np+1 : st%d%dim*gr%mesh%np) = x(1:gr%mesh%np, idim)
+    rhs((idim-1)*gr%mesh%np+1 : st%d%dim*gr%mesh%np) = rhsy(1:gr%mesh%np, idim)
+  end do
+
+  rr = 1
+  r = rr + 1
+  u = r + (l+1)
+  xp = u + (l+1)
+  bp = xp + 1
+
+  z = 1
+  zz = z + (l+1)
+  y0 = zz + (l+1)
+  yl = y0 + 1
+  y = yl + 1
+
+  ! Calculation of the initial residual.
+  call op (xx, psi(:, r) )
+  psi(:, r) = rhs(:) - psi(:, r)
+  iter_used = 1
+
+  psi(:, rr) = psi(:, r)
+  psi(:, bp) = psi(:, r)
+  psi(:, xp) = xx(:)
+  xx(:) = M_ZERO
+
+  residue0 = sqrt(dotp(psi(:, r), psi(:, r)))
+  residue = residue0
+
+  mxnrmx = residue0
+  mxnrmr = residue0
+  rcmp = .false.
+  xpdt = .false.
+
+  alpha = M_ZERO
+  omega = M_ONE
+  sigma = M_ONE
+  rho0 =  M_ONE
+
+  main_iteration : do while ( (residue > tol) .and.  (iter_used < ls%max_iter) )
+
+    ! BICG
+    rho0 = -omega * rho0
+    do kk = 1, l
+      rho1 = dotp(psi(:, rr), psi(:, r+kk-1))
+
+      if (rho0 .eq. M_ZERO) then
+        write(message(1), '(a)') "BiCGSTAB solver not converged!"
+        call messages_warning(1)
+        exit main_iteration
+      end if
+      beta = alpha*(rho1/rho0)
+      rho0 = rho1
+      do jj = 0, kk-1
+        psi(:, u+jj) = psi(:, r+jj) - beta * psi(:, u+jj)
+      end do
+
+      call op(psi(:, u+kk-1), psi(:, u+kk))
+      iter_used = iter_used + 1
+      sigma = dotp(psi(:, rr), psi(:, u+kk))
+
+      if (sigma .eq. M_ZERO) then
+        write(message(1), '(a)') "BiCGSTAB solver not converged!"
+        call messages_warning(1)
+        exit main_iteration
+      end if
+
+      alpha = rho1/sigma
+      xx(:) = alpha * psi(:, u) + xx(:)
+
+      do jj = 0, kk-1
+        psi(:, r+jj) = - alpha * psi(:, u+jj+1) + psi(:, r+jj)
+      end do
+
+      call op (psi(:, r+kk-1), psi(:, r+kk))
+      iter_used = iter_used + 1
+
+      residue = sqrt(dotp(psi(:, r), psi(:, r)))
+      mxnrmx = max (mxnrmx, residue)
+      mxnrmr = max (mxnrmr, residue)
+
+    end do
+
+    ! Calculation of the matrix Z = R^* R
+    do i1 = 1, l+1
+      do jj = i1-1, l
+        zeta(jj+1, z+i1-1) = dotp(psi(:, r+jj), psi(:, r+i1-1))
+        zeta(z+i1-1, jj+1) = zeta(jj+1, z+i1-1)
+      end do
+    end do
+
+    do i1 = zz, zz+l
+      do ii = 1, l+1
+        zeta(ii, i1)   = zeta(ii, i1+(z-zz))
+      end do
+    end do
+
+    zeta(1, y0) = - M_ONE
+    zeta(2, y0) = zeta(2, z) / zeta(2, zz+1)
+    zeta(l+1, y0) = M_ZERO
+
+    zeta(1, yl) = M_ZERO
+    zeta(2, yl) = zeta(2, z+l) / zeta(2, zz+1)
+    zeta(l+1, yl) = - M_ONE
+
+    ! Convex combination
+    do ii = 1, l+1
+      zeta(ii, y) = M_ZERO
+    end do
+    do jj = 1, l+1
+      do ii = 1, l+1
+        zeta(ii, y) = zeta(ii, y) + zeta(jj, yl) * zeta(ii, z+jj-1)
+      end do
+    end do
+    kappal = sqrt( dot_product(zeta(1:l+1, yl), zeta(1:l+1, y)) ) 
+
+    do ii = 1, l+1
+      zeta(ii, y) = M_ZERO
+    end do
+    do jj = 1, l+1
+      do ii = 1, l+1
+        zeta(ii, y) = zeta(ii, y) + zeta(jj, y0) * zeta(ii, z+jj-1)
+      end do
+    end do
+    kappa0 = sqrt(dot_product(zeta(1:l+1, y0), zeta(1:l+1, y)))
+
+    varrho = dot_product(zeta(1:l+1, yl), zeta(1:l+1, y))
+    varrho = varrho / (kappa0*kappal)
+
+    hatgamma = sign( M_ONE, varrho) * max(abs(varrho),CNST(0.7)) * (kappa0/kappal)
+
+    do ii=1,l+1
+      zeta(ii, y0) = -hatgamma*zeta(ii, yl) + zeta(ii, y0)
+    end do
+
+    !   Update
+    omega = zeta(l+1,y0)
+    do jj=1,l
+        psi(:, u) = psi(:, u) - zeta(1+jj, y0) * psi(:, u+jj)
+        xx(:)     = xx(:)     + zeta(1+jj, y0) * psi(:, r+jj-1)
+        psi(:,r) = psi(:, r) - zeta(1+jj, y0) * psi(:, r+jj)
+    end do
+
+    do ii = 1, l+1
+      zeta(ii, y) = M_ZERO 
+    end do
+    do jj = 1, l+1
+      do ii = 1, l+1
+        zeta(ii, y) = zeta(ii, y) + zeta(jj, y0) * zeta(ii, z+jj-1)
+      end do
+    end do
+
+    residue = sqrt(dot_product(zeta(1:l+1, y0), zeta(1:l+1, y)))
+
+    ! Reliable update.
+    mxnrmx = max (mxnrmx, residue)
+    mxnrmr = max (mxnrmr, residue)
+    xpdt = (residue < delta*residue0) .and. (residue0 < mxnrmx)
+    rcmp = ( ( (residue < delta*mxnrmr) .and. (residue0 < mxnrmr) ) .or. xpdt)
+    if (rcmp) then
+      call op (xx, psi(:, r) )
+      iter_used = iter_used + 1
+      psi(:, r) = psi(:, bp) - psi(:, r)
+      mxnrmr = residue
+      if (xpdt) then
+        psi(:, xp) = xx(:) + psi(:, xp)
+        xx(:) = M_ZERO
+        psi(:, bp) = psi(:, r)
+        mxnrmx = residue
+      end if
+    end if
+
+  end do main_iteration
+
+  ! End of iterations
+  xx(:) = psi(:, xp) + xx(:)
+
+  ! Computation of the "true" residual
+  ! call op (xx, psi(:, r) )
+  ! psi(:, r) = rhs(:) - psi(:, r)
+  ! residue = sqrt( dotp(psi(:, r), psi(:, r)) )
+
+  if (residue .gt. tol) then 
+    write(message(1), '(a)') "BiCGSTAB solver not converged!"
+    call messages_warning(1)
+  end if
+
+  do idim = 1, st%d%dim
+    x(1:gr%mesh%np, idim) = xx((idim-1)*gr%mesh%np+1 : st%d%dim*gr%mesh%np)
+  end do
+
+  SAFE_DEALLOCATE_A(psi)
+  SAFE_DEALLOCATE_A(zeta)
+  SAFE_DEALLOCATE_A(xx)
+  SAFE_DEALLOCATE_A(rhs)
+  POP_SUB(dlinear_solver_bicgstab2)
+  return
+
+  contains
+
+    FLOAT function dotp(x, y)
+      FLOAT, intent(in) :: x(:)
+      FLOAT, intent(in) :: y(:)
+      integer :: idim
+      dotp = M_ZERO
+      do idim = 1, st%d%dim
+        dotp = dotp + &
+          dmf_dotp(gr%mesh, x((idim-1)*gr%mesh%np+1:st%d%dim*gr%mesh%np), y((idim-1)*gr%mesh%np+1:st%d%dim*gr%mesh%np))
+      end do
+    end function dotp
+
+    subroutine op(x, y)
+      FLOAT, intent(in) :: x(:)
+      FLOAT, intent(out) :: y(:)
+
+      integer :: idim
+      FLOAT, allocatable :: a(:, :), opa(:, :)
+
+      SAFE_ALLOCATE(a(gr%mesh%np_part, st%d%dim))
+      SAFE_ALLOCATE(opa(gr%mesh%np, st%d%dim))
+
+      a = M_ZERO
+      do idim = 1, st%d%dim
+        a(1:gr%mesh%np, idim) = x((idim-1)*gr%mesh%np+1 : st%d%dim*gr%mesh%np)
+      end do
+      call dlinear_solver_operator (hm, gr, st, ist, ik, shift, a, opa)
+      do idim = 1, st%d%dim
+        y((idim-1)*gr%mesh%np+1 : st%d%dim*gr%mesh%np) = opa(1:gr%mesh%np, idim)
+      end do
+
+      SAFE_DEALLOCATE_A(a)
+      SAFE_DEALLOCATE_A(opa)
+    end subroutine op
+
+end subroutine dlinear_solver_bicgstab2
+#endif
+
 
 ! ---------------------------------------------------------
 !> BICONJUGATE GRADIENTS STABILIZED

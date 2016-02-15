@@ -77,7 +77,7 @@ contains
     !%End     
     call parse_variable('FeastMaxIter', 20, this%maxiter)
 
-    call linear_solver_init(this%linear_solver, gr, .false., LS_QMR_SYMMETRIC)
+    call linear_solver_init(this%linear_solver, gr, .false., OPTION__LINEARSOLVER__QMR_SYMMETRIC)
 
     !%Variable FeastContour
     !%Type block

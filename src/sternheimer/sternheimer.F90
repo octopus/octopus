@@ -240,7 +240,7 @@ contains
 
     call linear_solver_init(this%solver, sys%gr, states_are_real(sys%st), set_default_solver)
 
-    if(this%solver%solver == LS_MULTIGRID .or. preconditioner_is_multigrid(this%solver%pre)) then
+    if(this%solver%solver == OPTION__LINEARSOLVER__MULTIGRID .or. preconditioner_is_multigrid(this%solver%pre)) then
       if(.not. associated(sys%gr%mgrid)) then
         SAFE_ALLOCATE(sys%gr%mgrid)
         call multigrid_init(sys%gr%mgrid, sys%geo, sys%gr%cv, sys%gr%mesh, sys%gr%der, sys%gr%stencil)
