@@ -330,7 +330,8 @@ contains
       do ii = 1, fft_dim
         !NFFT likes even grids
         !The underlying FFT grids are optimized inside the nfft_init routine
-        if(int(nn(ii)/2)*2 /= nn(ii)) nn(ii)=nn(ii)+1 
+        if(int(nn(ii)/2)*2 /= nn(ii) .and. (fft_optimize .and. optimize(ii)) )&
+          nn(ii)=nn(ii)+1 
       end do 
 
     case (FFTLIB_PNFFT)
