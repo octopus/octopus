@@ -295,31 +295,34 @@ contains
         pcm%spheres(pcm%n_spheres)%r = vdw_radius*pcm%scale_r     
       end do
 
-      pcm%info_unit = io_open(PCM_DIR//'pcm_info.out', action='write')
-
-      write(pcm%info_unit,'(A35)') '# Configuration: Molecule + Solvent'
-      write(pcm%info_unit,'(A35)') '# ---------------------------------'
-      write(pcm%info_unit,'(A21,F12.3)') '# Epsilon(Solvent) = ', pcm%epsilon_0
-      write(pcm%info_unit,'(A1)')'#' 
-      write(pcm%info_unit,'(A35,I4)') '# Number of interlocking spheres = ', pcm%n_spheres
-      write(pcm%info_unit,'(A1)')'#'  
-
-      write(pcm%info_unit,'(A8,3X,A7,8X,A26,20X,A10)') '# SPHERE', 'ELEMENT', 'CENTER  (X,Y,Z) (A)', 'RADIUS (A)'
-      write(pcm%info_unit,'(A8,3X,A7,4X,A43,7X,A10)') '# ------', '-------', &
-        '-------------------------------------------', '----------'  
-
-      pcm%n_spheres = 0
-      do ia = 1, geo%natoms
-        if (geo%atom(ia)%label == 'H') cycle
-        pcm%n_spheres = pcm%n_spheres + 1       
-
-        write(pcm%info_unit,'(A1,2X,I3,7X,A2,3X,F14.8,2X,F14.8,2X,F14.8,4X,F14.8)')'#', pcm%n_spheres, &
-          geo%atom(ia)%label,          &
-          geo%atom(ia)%x(1)*P_a_B,     &
-          geo%atom(ia)%x(2)*P_a_B,     &
-          geo%atom(ia)%x(3)*P_a_B,     &
-          pcm%spheres(pcm%n_spheres)%r*P_a_B
-      end do
+      if ( mpi_grp_is_root(mpi_world) ) then
+        pcm%info_unit = io_open(PCM_DIR//'pcm_info.out', action='write')
+      
+        write(pcm%info_unit,'(A35)') '# Configuration: Molecule + Solvent'
+        write(pcm%info_unit,'(A35)') '# ---------------------------------'
+        write(pcm%info_unit,'(A21,F12.3)') '# Epsilon(Solvent) = ', pcm%epsilon_0
+        write(pcm%info_unit,'(A1)')'#' 
+        write(pcm%info_unit,'(A35,I4)') '# Number of interlocking spheres = ', pcm%n_spheres
+        write(pcm%info_unit,'(A1)')'#'  
+      
+        write(pcm%info_unit,'(A8,3X,A7,8X,A26,20X,A10)') '# SPHERE', 'ELEMENT', 'CENTER  (X,Y,Z) (A)', 'RADIUS (A)'
+        write(pcm%info_unit,'(A8,3X,A7,4X,A43,7X,A10)') '# ------', '-------', &
+          '-------------------------------------------', '----------'  
+      end if
+      
+        pcm%n_spheres = 0
+        do ia = 1, geo%natoms
+          if (geo%atom(ia)%label == 'H') cycle
+          pcm%n_spheres = pcm%n_spheres + 1       
+      
+          if ( mpi_grp_is_root(mpi_world) ) & 
+            write(pcm%info_unit,'(A1,2X,I3,7X,A2,3X,F14.8,2X,F14.8,2X,F14.8,4X,F14.8)')'#', pcm%n_spheres, &
+              geo%atom(ia)%label,          &
+              geo%atom(ia)%x(1)*P_a_B,     &
+              geo%atom(ia)%x(2)*P_a_B,     &
+              geo%atom(ia)%x(3)*P_a_B,     &
+              pcm%spheres(pcm%n_spheres)%r*P_a_B
+        end do
 
       !%Variable PCMTessSubdivider
       !%Type integer
@@ -398,25 +401,27 @@ contains
       call messages_info(1)
     end if
 
-    cav_unit_test = io_open(PCM_DIR//'cavity_mol.xyz', action='write')
-
-    write (cav_unit_test,'(2X,I4)') pcm%n_tesserae + geo%natoms
-    write (cav_unit_test,'(2X)')
-
-    do ia = 1, pcm%n_tesserae
-      write(cav_unit_test,'(2X,A2,3X,4f15.8,3X,4f15.8,3X,4f15.8)') 'H', pcm%tess(ia)%point*P_a_B
-    end do
-
-    do ia = 1, geo%natoms
-      write(cav_unit_test,'(2X,A2,3X,4f15.8,3X,4f15.8,3X,4f15.8)') geo%atom(ia)%label,      &
-        geo%atom(ia)%x*P_a_B
-    end do
-
-    call io_close(cav_unit_test)
-
-    write(pcm%info_unit,'(A1)')'#'  
-    write(pcm%info_unit,'(A1,4X,A4,14X,A4,21X,A4,21X,A4,21X,A4,21X,A8,17X,A5,20X,A5)') &
-      '#','iter', 'E_ee', 'E_en', 'E_nn', 'E_ne', 'E_M-solv', 'Q_M^e','Q_M^n'
+    if ( mpi_grp_is_root(mpi_world) ) then
+      cav_unit_test = io_open(PCM_DIR//'cavity_mol.xyz', action='write')
+     
+      write (cav_unit_test,'(2X,I4)') pcm%n_tesserae + geo%natoms
+      write (cav_unit_test,'(2X)')
+     
+      do ia = 1, pcm%n_tesserae
+        write(cav_unit_test,'(2X,A2,3X,4f15.8,3X,4f15.8,3X,4f15.8)') 'H', pcm%tess(ia)%point*P_a_B
+      end do
+     
+      do ia = 1, geo%natoms
+        write(cav_unit_test,'(2X,A2,3X,4f15.8,3X,4f15.8,3X,4f15.8)') geo%atom(ia)%label,      &
+          geo%atom(ia)%x*P_a_B
+      end do
+     
+      call io_close(cav_unit_test)
+     
+      write(pcm%info_unit,'(A1)')'#'  
+      write(pcm%info_unit,'(A1,4X,A4,14X,A4,21X,A4,21X,A4,21X,A4,21X,A8,17X,A5,20X,A5)') &
+        '#','iter', 'E_ee', 'E_en', 'E_nn', 'E_ne', 'E_M-solv', 'Q_M^e','Q_M^n'
+    end if
     pcm%counter = 0
 
 !     pcm%n_vertices = 8
@@ -1143,7 +1148,7 @@ contains
       118, 112, 122, 29, 28, 118, 119, 113, 122, 30, 29, 119, 120,   &
       114, 122, 31, 30, 120, 121, 115, 122, 27, 31, 121, 117, 116 /
 
-    if (i_count == 0) then
+    if (i_count == 0 .and.  mpi_grp_is_root(mpi_world)) then
       if (tess_sphere == 1) then
         write(unit_pcminfo,'(A1)')  '#' 
         write(unit_pcminfo,'(A34)') '# Number of tesserae / sphere = 60'
@@ -1324,9 +1329,10 @@ contains
 
             if (rij > test2) cycle
 
-            write(unit_pcminfo,'(A40,I4,A5,I4,A4,F8.4,A13,F8.4,A3)' ) &
-              '# Warning: The distance between tesserae', &
-              ia,' and ', ja,' is ',sqrt(rij),' A, less than', test,' A.'
+            if ( mpi_grp_is_root(mpi_world) ) &
+              write(unit_pcminfo,'(A40,I4,A5,I4,A4,F8.4,A13,F8.4,A3)' ) &
+                '# Warning: The distance between tesserae', &
+                ia,' and ', ja,' is ',sqrt(rij),' A, less than', test,' A.'
 
             !> calculating the coordinates of the new tessera weighted by the areas
             xi = (xi*cts(ia)%area + xj*cts(ja)%area) / (cts(ia)%area + cts(ja)%area)
@@ -1369,11 +1375,13 @@ contains
         stot = stot + cts(its)%area
       end do
 
-      write(unit_pcminfo, '(A2)')  '# '
-      write(unit_pcminfo, '(A29,I4)')    '# Total number of tesserae = ', nts
-      write(unit_pcminfo, '(A30,F12.6)') '# Cavity surface area (A^2) = ' , stot
-      write(unit_pcminfo, '(A24,F12.6)') '# Cavity volume (A^3) = '       , vol
-      write(unit_pcminfo, '(A2)')  '# '
+      if ( mpi_grp_is_root(mpi_world) ) then
+        write(unit_pcminfo, '(A2)')  '# '
+        write(unit_pcminfo, '(A29,I4)')    '# Total number of tesserae = ', nts
+        write(unit_pcminfo, '(A30,F12.6)') '# Cavity surface area (A^2) = ' , stot
+        write(unit_pcminfo, '(A24,F12.6)') '# Cavity volume (A^3) = '       , vol
+        write(unit_pcminfo, '(A2)')  '# '
+      end if
 
       !> transforms results into Bohr.
       cts(:)%area     = cts(:)%area*P_Ang*P_Ang
@@ -1882,7 +1890,7 @@ contains
 !     cSAFE_DEALLOCATE_A(pcm%ind_vh)
 !     cSAFE_DEALLOCATE_A(pcm%arg_li)
 
-    call io_close(pcm%info_unit)
+    if ( mpi_grp_is_root(mpi_world) ) call io_close(pcm%info_unit)
 
     POP_SUB(pcm_end)
   end subroutine pcm_end
