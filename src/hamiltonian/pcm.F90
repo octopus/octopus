@@ -48,7 +48,8 @@ module pcm_m
     pcm_pot_rs,             &
     pcm_elect_energy,       &
     pcm_v_nuclei_cav,       &
-    pcm_v_electrons_cav_li
+    pcm_v_electrons_cav_li, &
+    pcm_update
 
 
   !> The cavity hosting the solute molecule is built from a set of 
@@ -86,17 +87,20 @@ module pcm_m
     FLOAT, allocatable               :: v_n(:)        !< Nuclear potential at each tessera
     FLOAT, allocatable               :: v_e_rs(:)     !< PCM potential in real-space produced by q_e(:) 
     FLOAT, allocatable               :: v_n_rs(:)     !< PCM potential in real-space produced by q_n(:)
-    FLOAT, allocatable               :: arg_li(:,:)   !< used in the trilinear interpolation to estimate
+!     FLOAT, allocatable               :: arg_li(:,:)   !< used in the trilinear interpolation to estimate
                                                       !< the Hartree potential at the tesserae 
     FLOAT                            :: epsilon_0     !< Static dielectric constant of the solvent 
     FLOAT                            :: epsilon_infty !< Infinite-frequency dielectric constant of the solvent
     FLOAT                            :: gaussian_width!< Parameter to change the width of density of polarization charges  
-    integer                          :: n_vertices    !< Number of grid points used to interpolate the Hartree potential
+!     integer                          :: n_vertices    !< Number of grid points used to interpolate the Hartree potential
                                                       !! at the tesserae 
-    integer, allocatable             :: ind_vh(:,:)   !< Grid points used during interpolation 
+!     integer, allocatable             :: ind_vh(:,:)   !< Grid points used during interpolation
     integer                          :: info_unit     !< unit for pcm info file
-    integer                          :: counter       !< used to print the number of SCF or TD iterations in energy_calc  
+    integer                          :: counter       !< used to print the number of SCF or TD iterations in energy_calc
     character(len=80)                :: input_cavity  !< file name containing the geometry of the VdW cavity
+    
+    integer                          :: update_iter   !< how often the pcm potential is updated
+    integer                          :: iter          !< update iteration counter
   end type pcm_t
 
   FLOAT, allocatable :: s_mat_act(:,:) !< S_I matrix 
@@ -133,6 +137,9 @@ contains
     FLOAT :: z_ia
 
     PUSH_SUB(pcm_init)
+    
+    pcm%iter = 0
+    pcm%update_iter = 1
 
     !%Variable PCMCalculation
     !%Type logical
@@ -148,6 +155,7 @@ contains
 
     call parse_variable('PCMCalculation', .false., pcm%run_pcm)
     if (pcm%run_pcm) then
+      call messages_print_stress(stdout, trim('PCM'))
       if ( (grid%sb%box_shape /= MINIMUM).OR.(grid%sb%dim /= pcm_dim_space) ) then
         message(1) = "PCM is only available for BoxShape = minimum and 3d calculations"
         call messages_fatal(1)
@@ -167,6 +175,7 @@ contains
     !% Scales the radii of the spheres used to build the solute cavity surface.
     !%End
     call parse_variable('PCMRadiusScaling', CNST(1.2), pcm%scale_r)
+    call messages_print_var_value(stdout, "PCMRadiusScaling", pcm%scale_r)
 
     !%Variable PCMStaticEpsilon
     !%Type float
@@ -176,6 +185,7 @@ contains
     !% Static dielectric constant of the solvent (<math>\varepsilon_0</math>). 1.0 indicates gas phase.
     !%End
     call parse_variable('PCMStaticEpsilon', M_ONE, pcm%epsilon_0)
+    call messages_print_var_value(stdout, "PCMStaticEpsilon", pcm%epsilon_0)
 
     !%Variable PCMDynamicEpsilon
     !%Type float
@@ -187,6 +197,17 @@ contains
     !% take PCMDynamicEpsilon = PCMStaticEpsilon (default). 
     !%End
     call parse_variable('PCMDynamicEpsilon', pcm%epsilon_0, pcm%epsilon_infty)
+    call messages_print_var_value(stdout, "PCMDynamicEpsilon", pcm%epsilon_infty)
+    
+    !%Variable PCMUpdateIter
+    !%Type integer
+    !%Default 1
+    !%Section Hamiltonian::PCM
+    !%Description
+    !% Defines how often the PCM potential is updated during time propagation.
+    !%End
+    call parse_variable('PCMUpdateIter', 1, pcm%update_iter)
+    call messages_print_var_value(stdout, "PCMUpdateIter", pcm%update_iter)
 
     !%Variable PCMGamessBenchmark
     !%Type logical
@@ -208,6 +229,7 @@ contains
     !% reaction potential in real-space is defined by using point charges.
     !%End
     call parse_variable('PCMSmearingFactor', M_ONE, pcm%gaussian_width)
+    call messages_print_var_value(stdout, "PCMSmearingFactor", pcm%gaussian_width)
 
     if (pcm%gaussian_width == M_ZERO) then
       message(1) = "Info: PCM potential will be defined in terms of polarization point charges"
@@ -397,18 +419,18 @@ contains
       '#','iter', 'E_ee', 'E_en', 'E_nn', 'E_ne', 'E_M-solv', 'Q_M^e','Q_M^n'
     pcm%counter = 0
 
-    pcm%n_vertices = 8
-    SAFE_ALLOCATE(pcm%ind_vh(1:pcm%n_tesserae, 1:pcm%n_vertices))
-    pcm%ind_vh = INT(M_ZERO)
+!     pcm%n_vertices = 8
+!     cSAFE_ALLOCATE(pcm%ind_vh(1:pcm%n_tesserae, 1:pcm%n_vertices))
+!     pcm%ind_vh = INT(M_ZERO)
 
-    SAFE_ALLOCATE(pcm%arg_li(1:pcm%n_tesserae, 1:pcm_dim_space))
-    pcm%arg_li = M_ZERO
+!     cSAFE_ALLOCATE(pcm%arg_li(1:pcm%n_tesserae, 1:pcm_dim_space))
+!     pcm%arg_li = M_ZERO
 
-    !> Creating the list of the nearest grid points to each tessera
-    !! to be used to interpolate the Hartree potential at the representative points
-    do ia = 1, pcm%n_tesserae
-      call nearest_cube_vertices(pcm%tess(ia)%point, grid%mesh, pcm%ind_vh(ia,:), pcm%arg_li(ia,:))
-    end do
+!     !> Creating the list of the nearest grid points to each tessera
+!     !! to be used to interpolate the Hartree potential at the representative points
+!     do ia = 1, pcm%n_tesserae
+!       call nearest_cube_vertices(pcm%tess(ia)%point, grid%mesh, pcm%ind_vh(ia,:), pcm%arg_li(ia,:))
+!     end do
 
     !>Generating the dynamical PCM matrix
     if ( gamess_benchmark ) then
@@ -460,6 +482,9 @@ contains
       SAFE_DEALLOCATE_A ( mat_gamess )
     end if
 
+    if (pcm%run_pcm)  call messages_print_stress(stdout)
+
+
     SAFE_ALLOCATE( pcm%v_n(1:pcm%n_tesserae) )
     SAFE_ALLOCATE( pcm%q_n(1:pcm%n_tesserae) )
     SAFE_ALLOCATE( pcm%v_n_rs(1:grid%mesh%np) )
@@ -476,6 +501,7 @@ contains
 
     POP_SUB(pcm_init)
   end subroutine pcm_init
+
 
   ! -----------------------------------------------------------------------------
 
@@ -1853,13 +1879,33 @@ contains
     SAFE_DEALLOCATE_A(pcm%v_n)
     SAFE_DEALLOCATE_A(pcm%v_e_rs)
     SAFE_DEALLOCATE_A(pcm%v_n_rs)
-    SAFE_DEALLOCATE_A(pcm%ind_vh)
-    SAFE_DEALLOCATE_A(pcm%arg_li)
+!     cSAFE_DEALLOCATE_A(pcm%ind_vh)
+!     cSAFE_DEALLOCATE_A(pcm%arg_li)
 
     call io_close(pcm%info_unit)
 
     POP_SUB(pcm_end)
   end subroutine pcm_end
+
+  ! -----------------------------------------------------------------------------
+  !> Update pcm potential
+  logical function pcm_update(this, time) result(update)
+      type(pcm_t), intent(inout) :: this
+      FLOAT,       intent(in)    :: time
+
+      this%iter = this%iter + 1 
+      update = (this%iter <= 6 .or. mod(this%iter, this%update_iter) == 0)
+      
+      if (debug%info .and. update) then
+        call messages_write(' PCM potential updated')
+        call messages_new_line()
+        call messages_write(' PCM update iteration counter: ')
+        call messages_write(this%iter)
+        call messages_info()
+      end if
+
+    end function pcm_update
+
 
 end module pcm_m
 
