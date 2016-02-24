@@ -198,7 +198,7 @@ contains
       do ib = stphi%group%block_start, stphi%group%block_end
         call batch_axpy(gr%mesh%np, -CNST(0.5)*M_zI*dt, hst%group%psib(ib, ik), stphi%group%psib(ib, ik))
         if(propagate_chi) then
-          call batch_axpy(gr%mesh%np, -CNST(0.5)*M_zI*dt, hchi%group%psib(ib, ik), hchi%group%psib(ib, ik))
+          call batch_axpy(gr%mesh%np, -CNST(0.5)*M_zI*dt, hchi%group%psib(ib, ik), stchi%group%psib(ib, ik))
         end if
       end do
     end do
@@ -229,7 +229,7 @@ contains
       do ib = stphi%group%block_start, stphi%group%block_end
         call batch_axpy(gr%mesh%np, -CNST(0.5)*M_zI*dt, hst%group%psib(ib, ik), stphi%group%psib(ib, ik))
         if(propagate_chi) then
-          call batch_axpy(gr%mesh%np, -CNST(0.5)*M_zI*dt, hchi%group%psib(ib, ik), hchi%group%psib(ib, ik))
+          call batch_axpy(gr%mesh%np, -CNST(0.5)*M_zI*dt, hchi%group%psib(ib, ik), stchi%group%psib(ib, ik))
         end if
       end do
     end do
@@ -261,7 +261,7 @@ contains
       do ib = stphi%group%block_start, stphi%group%block_end
         call batch_axpy(gr%mesh%np, -M_zI*dt, hst%group%psib(ib, ik), stphi%group%psib(ib, ik))
         if(propagate_chi) then
-          call batch_axpy(gr%mesh%np, -M_zI*dt, hchi%group%psib(ib, ik), hchi%group%psib(ib, ik))
+          call batch_axpy(gr%mesh%np, -M_zI*dt, hchi%group%psib(ib, ik), stchi%group%psib(ib, ik))
         end if
       end do
     end do
@@ -381,6 +381,7 @@ contains
       if( hm%theory_level /= INDEPENDENT_PARTICLES) call hamiltonian_set_oct_exchange(hm, stphi, gr%mesh)
       call prepare_inh()
       call hamiltonian_adjoint(hm)
+      call hamiltonian_update(hm, gr%mesh, time = tau)
       call zhamiltonian_apply_all(hm, ks%xc, gr%der, stchi, hchi, tau)
       call hamiltonian_not_adjoint(hm)
 
