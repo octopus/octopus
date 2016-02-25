@@ -4,9 +4,9 @@
 
 AC_DEFUN([AX_PATH_GSL],
 [
-  AC_ARG_WITH(gsl-prefix,[AS_HELP_STRING([--with-gsl-prefix=PFX], [Prefix where GSL is installed (optional)])],
+  AC_ARG_WITH(gsl-prefix,[AS_HELP_STRING([--with-gsl-prefix=PFX], [Prefix where GSL is installed])],
     gsl_prefix="$withval", gsl_prefix="")
-  AC_ARG_WITH(gsl-exec-prefix,[AS_HELP_STRING([--with-gsl-exec-prefix=PFX], [Exec prefix where GSL is installed (optional)])],
+  AC_ARG_WITH(gsl-exec-prefix,[AS_HELP_STRING([--with-gsl-exec-prefix=PFX], [Exec prefix where GSL is installed])],
     gsl_exec_prefix="$withval", gsl_exec_prefix="")
 
   if test "x${GSL_CONFIG+set}" != xset ; then
