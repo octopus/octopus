@@ -77,8 +77,8 @@
         if (.not. hm%cmplxscl%space) then 
           call dio_function_output(outp%how, dir, 'vh', der%mesh, hm%vhartree, units_out%energy, err, geo = geo, grp = grp)
         else
-          call zio_function_output(outp%how, dir, 'vh', der%mesh, & 
-            hm%vhartree + M_zI* hm%Imvhartree, units_out%energy, err, geo = geo, grp = grp)
+          call zio_function_output(outp%how, dir, 'vh', der%mesh, &
+            hm%vhartree(1:der%mesh%np) + M_zI*hm%Imvhartree(1:der%mesh%np), units_out%energy, err, geo = geo, grp = grp)
         end if
 
         nullify(subsys_tnadd, tnadd_potential)
