@@ -247,7 +247,7 @@ end subroutine X(bi_conjugate_gradients)
         R_TYPE, intent(out) :: y(:)
       end subroutine prec
     end interface
-    integer,           intent(inout) :: iter         !< [in] number of max iterations, [out] used iterations
+    integer,           intent(inout) :: iter         !< (in) number of max iterations, (out) used iterations
     FLOAT, optional,   intent(out)   :: residue      !< residue = abs(Ax-b)
     FLOAT, optional,   intent(in)    :: threshold    !< convergence threshold
     logical, optional, intent(in)    :: showprogress !< show progress bar
@@ -295,7 +295,7 @@ end subroutine X(bi_conjugate_gradients)
         R_TYPE, intent(out) :: y(:)
       end subroutine prect
     end interface
-    integer,           intent(inout) :: iter         !< [in] number of max iterations, [out] used iterations
+    integer,           intent(inout) :: iter         !< (in) number of max iterations, (out) used iterations
     FLOAT, optional,   intent(out)   :: residue      !< residue = abs(Ax-b)
     FLOAT, optional,   intent(in)    :: threshold    !< convergence threshold
     logical, optional, intent(in)    :: showprogress !< show progress bar
@@ -358,7 +358,7 @@ end subroutine X(bi_conjugate_gradients)
         R_TYPE, intent(out) :: y(:)
       end subroutine prec
     end interface
-    integer,           intent(inout) :: iter         !< [in] the maximum number of iterations, [out] used iterations
+    integer,           intent(inout) :: iter         !< (in) the maximum number of iterations, (out) used iterations
     FLOAT, optional,   intent(out)   :: residue      !< the residue = abs(Ax-b)
     FLOAT, optional,   intent(in)    :: threshold    !< convergence threshold
     logical, optional, intent(in)    :: showprogress !< should there be a progress bar
@@ -607,7 +607,7 @@ end subroutine X(bi_conjugate_gradients)
         R_TYPE, intent(out) :: y(:)
       end subroutine prect
     end interface
-    integer,           intent(inout) :: iter         !< [in] the maximum number of iterations, [out] used iterations
+    integer,           intent(inout) :: iter         !< (in) the maximum number of iterations, (out) used iterations
     FLOAT, optional,   intent(out)   :: residue      !< the residue = abs(Ax-b)
     FLOAT, optional,   intent(in)    :: threshold    !< convergence threshold
     logical, optional, intent(in)    :: showprogress !< should there be a progress bar
