@@ -713,6 +713,23 @@ contains
     E_int_ne = M_HALF*E_int_ne
     E_int_nn = M_HALF*E_int_nn
 
+! print results of the iteration in pcm_info file
+
+    if ( mpi_grp_is_root(mpi_world) ) &
+      write(pcm%info_unit,'(3X,I5,5X,F20.8,5X,F20.8,5X,F20.8,5X,F20.8,5X,F20.8,5X,F20.8,5X,F20.8)') &
+                              pcm%counter, &
+                              units_from_atomic(units_out%energy, E_int_ee ), & 
+                              units_from_atomic(units_out%energy, E_int_en ), &
+                              units_from_atomic(units_out%energy, E_int_nn ), &
+                              units_from_atomic(units_out%energy, E_int_ne ), &
+                              units_from_atomic(units_out%energy, E_int_ee +  &
+                                                                  E_int_en +  &
+                                                                  E_int_nn +  &
+                                                                  E_int_ne ), &
+                               (pcm%epsilon_0/(pcm%epsilon_0-M_ONE))*pcm%qtot_e, &
+                               (pcm%epsilon_0/(pcm%epsilon_0-M_ONE))*pcm%qtot_n
+
+
     POP_SUB(pcm_elect_energy)
   end subroutine pcm_elect_energy
 
