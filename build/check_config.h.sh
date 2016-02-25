@@ -29,6 +29,9 @@ if [ "x$BRANCH" == "x" ]; then
     BRANCH=trunk
 fi
     
+echo ""
+echo "Checking config.h against reference:"
+
 # show commands in terminal output
 set -x
 
