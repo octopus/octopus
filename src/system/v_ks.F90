@@ -1196,10 +1196,9 @@ contains
         call dpoisson_solve(ks%hartree_solver, pot, ks%calc%total_density)
       else
         ! Solve the Poisson equation for the scaled density and coulomb potential
-        call zpoisson_solve(ks%hartree_solver, zpot,&
-          ks%calc%total_density + M_zI * ks%calc%Imtotal_density)
-        pot   =   real(zpot)
-        Impot =  aimag(zpot)
+        call zpoisson_solve(ks%hartree_solver, zpot, ks%calc%total_density + M_zI*ks%calc%Imtotal_density)
+        pot(1:ks%gr%fine%mesh%np) = real(zpot(1:ks%gr%fine%mesh%np))
+        Impot(1:ks%gr%fine%mesh%np) = aimag(zpot(1:ks%gr%fine%mesh%np))
       end if
     else
       ! The calculation was started by v_ks_calc_start.
@@ -1207,8 +1206,8 @@ contains
         call dpoisson_solve_finish(ks%hartree_solver, pot)
       else
         call zpoisson_solve_finish(ks%hartree_solver, zpot)
-        pot   =   real(zpot)
-        Impot =  aimag(zpot)
+        pot(1:ks%gr%fine%mesh%np) = real(zpot(1:ks%gr%fine%mesh%np))
+        Impot(1:ks%gr%fine%mesh%np) =  aimag(zpot(1:ks%gr%fine%mesh%np))
       end if
     end if
 
