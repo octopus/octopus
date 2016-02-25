@@ -40,7 +40,7 @@ AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 
 dnl check whether mpi is enabled
-AC_ARG_ENABLE(mpi, AS_HELP_STRING([--enable-mpi(=PATH)], [Parallel version]))
+AC_ARG_ENABLE(mpi, AS_HELP_STRING([--enable-mpi(=PATH)], [Parallel version. For ancient versions of MPI, you may need to specify PATH for MPI libs.]))
 case $enable_mpi in
   yes) ;;
   no | "") enable_mpi=no ;;
