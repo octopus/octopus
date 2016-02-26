@@ -205,16 +205,16 @@ contains
 
     !%Variable PCMVdWRadii
     !%Type integer
-    !%Default PCM_VDW_OPTIMIZED
+    !%Default pcm_vdw_optimized
     !%Section Hamiltonian::PCM
     !%Description
-    !% This variable selects which van de Waals radius will be used to generate the solvent cavity.
+    !% This variable selects which van der Waals radius will be used to generate the solvent cavity.
     !%Option pcm_vdw_optimized  1
     !% Use the van der Waals radius optimized by Stefan Grimme in J. Comput. Chem. 27: 1787-1799, 2006, 
     !% except for C, N and O, reported in J. Chem. Phys. 120, 3893 (2004).
     !%Option pcm_vdw_species  2
-    !% The vdW radius are set from share/pseudopotentials/elements file. These values are obtained from 
-    !% Alvarez S., Dalton Trans., 2013, 42, 8617-8636. Values can be changed in the Species block
+    !% The vdW radii are set from the <tt>share/pseudopotentials/elements</tt> file. These values are obtained from 
+    !% Alvarez S., Dalton Trans., 2013, 42, 8617-8636. Values can be changed in the <tt>Species</tt> block.
     !%End
     call parse_variable('PCMVdWRadii', PCM_VDW_OPTIMIZED, pcm_vdw_type)
     call messages_print_var_option(stdout, "PCMVdWRadii", pcm_vdw_type)
@@ -228,13 +228,11 @@ contains
    
     !%Variable PCMRadiusScaling
     !%Type float
-    !%Default default_value
     !%Section Hamiltonian::PCM
     !%Description
     !% Scales the radii of the spheres used to build the solute cavity surface.
-    !% The default value depents on the choise of the vdw radii type. 
-    !% For PCM_VDW_OPTIMIZED the default value for PCMRadiusScaling is 1.2, while 
-    !% the set to 1 for PCMVdWRadii = pcm_vdw_species.
+    !% The default value depends on the choice of <tt>PCMVdWRadii</tt>:
+    !% 1.2 for <tt>pcm_vdw_optimized</tt> and 1.0 for <tt>pcm_vdw_species</tt>.
     !%End
     call parse_variable('PCMRadiusScaling', default_value, pcm%scale_r)
     call messages_print_var_value(stdout, "PCMRadiusScaling", pcm%scale_r)
@@ -256,7 +254,7 @@ contains
     !%Description
     !% High-frequency dielectric constant of the solvent (<math>\varepsilon_d</math>). 1.0 indicates gas phase.
     !% At present, non-equilibrium effects within PCM calculations are not implemented. For td calculations
-    !% take PCMDynamicEpsilon = PCMStaticEpsilon (default). 
+    !% take <tt>PCMDynamicEpsilon = PCMStaticEpsilon</tt> (default). 
     !%End
     call parse_variable('PCMDynamicEpsilon', pcm%epsilon_0, pcm%epsilon_infty)
     call messages_print_var_value(stdout, "PCMDynamicEpsilon", pcm%epsilon_infty)
