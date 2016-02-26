@@ -875,7 +875,7 @@ contains
     call json_set(json, "type", this%type)
     call json_set(json, "z_val", this%z_val)
     call json_set(json, "mass", this%mass)
-    call json_set(json, "vdw_radius", this%mass)
+    call json_set(json, "vdw_radius", this%vdw_radius)
     call json_set(json, "def_rsize", this%def_rsize)
 
     POP_SUB(species_create_data_object)

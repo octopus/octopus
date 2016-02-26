@@ -54,6 +54,7 @@ module pcm_m
     pcm_init,               &
     pcm_end,                &
     pcm_charges,            &
+    pcm_get_vdw_radius,     &
     pcm_pot_rs,             &
     pcm_elect_energy,       &
     pcm_v_nuclei_cav,       &
@@ -126,12 +127,16 @@ module pcm_m
   FLOAT, allocatable :: mat_gamess(:,:)  !< PCM matrix formatted to be inputed to GAMESS
 
   integer, parameter ::     &
-    PCM_ELECTRONS =0,       &
-    PCM_NUCLEI    =1
+    PCM_ELECTRONS = 0,       &
+    PCM_NUCLEI    = 1
 
   integer, parameter ::     &
-    PCM_CALC_DIRECT  =1,    &
-    PCM_CALC_POISSON =2
+    PCM_CALC_DIRECT  = 1,    &
+    PCM_CALC_POISSON = 2
+
+  integer, parameter ::       &
+    PCM_VDW_OPTIMIZED   = 1,   &
+    PCM_VDW_SPECIES     = 2 
     
 
 contains
@@ -145,11 +150,12 @@ contains
     type(pcm_t), intent(out)     :: pcm
 
     integer :: ia, itess, jtess, cav_unit_test, subdivider
+    integer :: pcm_vdw_type
     integer :: pcmmat_unit, pcmmat_gamess_unit, iunit, ip
 
     integer, parameter :: mxts = 10000
 
-    integer, parameter :: upto_Xe = 54
+    FLOAT              :: default_value
     FLOAT              :: vdw_radius
 
     type(pcm_tessera_t) :: dum2(1)
@@ -191,14 +197,40 @@ contains
       return
     end if
 
+    !%Variable PCMVdWRadii
+    !%Type integer
+    !%Default PCM_VDW_OPTIMIZED
+    !%Section Hamiltonian::PCM
+    !%Description
+    !% This variable selects which van de Waals radius will be used to generate the solvent cavity.
+    !%Option pcm_vdw_optimized  1
+    !% Use the van der Waals radius optimized by Stefan Grimme in J. Comput. Chem. 27: 1787-1799, 2006, 
+    !% except for C, N and O, reported in J. Chem. Phys. 120, 3893 (2004).
+    !%Option pcm_vdw_species  2
+    !% The vdW radius are set from share/pseudopotentials/elements file. These values are obtained from 
+    !% Alvarez S., Dalton Trans., 2013, 42, 8617-8636. Values can be changed in the Species block
+    !%End
+    call parse_variable('PCMVdWRadii', PCM_VDW_OPTIMIZED, pcm_vdw_type)
+    call messages_print_var_option(stdout, "PCMVdWRadii", pcm_vdw_type)
+
+    select case (pcm_vdw_type)
+      case (PCM_VDW_OPTIMIZED) 
+         default_value = 1.2d0
+      case (PCM_VDW_SPECIES) 
+         default_value = 1.d0
+    end select 
+   
     !%Variable PCMRadiusScaling
     !%Type float
-    !%Default 1.2
+    !%Default default_value
     !%Section Hamiltonian::PCM
     !%Description
     !% Scales the radii of the spheres used to build the solute cavity surface.
+    !% The default value depents on the choise of the vdw radii type. 
+    !% For PCM_VDW_OPTIMIZED the default value for PCMRadiusScaling is 1.2, while 
+    !% the set to 1 for PCMVdWRadii = pcm_vdw_species.
     !%End
-    call parse_variable('PCMRadiusScaling', CNST(1.2), pcm%scale_r)
+    call parse_variable('PCMRadiusScaling', default_value, pcm%scale_r)
     call messages_print_var_value(stdout, "PCMRadiusScaling", pcm%scale_r)
 
     !%Variable PCMStaticEpsilon
@@ -315,7 +347,7 @@ contains
         pcm%spheres(pcm%n_spheres)%y = geo%atom(ia)%x(2)
         pcm%spheres(pcm%n_spheres)%z = geo%atom(ia)%x(3)
 
-        vdw_radius = species_vdw_radius(geo%atom(ia)%species)
+        vdw_radius = pcm_get_vdw_radius(geo%atom(ia)%species, pcm_vdw_type)
         pcm%spheres(pcm%n_spheres)%r = vdw_radius*pcm%scale_r     
       end do
 
@@ -2215,6 +2247,65 @@ contains
 
     end function pcm_update
 
+  ! -----------------------------------------------------------------------------
+  !> get the vdw radius
+  FLOAT function pcm_get_vdw_radius(species, pcm_vdw_type)  result(vdw_r)
+      type(species_t), intent(in) :: species
+      integer,         intent(in) :: pcm_vdw_type
+  
+      integer            :: ia
+      integer, parameter :: upto_Xe = 54
+      FLOAT              :: vdw_radii(1:upto_Xe) !< van der Waals radii in Angstrom for elements H-Xe reported 
+         !  by Stefan Grimme in J. Comput. Chem. 27: 1787-1799, 2006 
+         !  except for C, N and O, reported in J. Chem. Phys. 120, 3893 (2004). 
+      data (vdw_radii(ia), ia=1, upto_Xe)                                                                                  / &
+       !H                                                                                                       He 
+        CNST(1.001),                                                                                            CNST(1.012), &
+       !Li           Be                        B            C            N            O            F            Ne
+        CNST(0.825), CNST(1.408),              CNST(1.485), CNST(2.000), CNST(1.583), CNST(1.500), CNST(1.287), CNST(1.243), & 
+       !Na           Mg                        Al           Si           P            S            Cl           Ar 
+        CNST(1.144), CNST(1.364),              CNST(1.639), CNST(1.716), CNST(1.705), CNST(1.683), CNST(1.639), CNST(1.595), & 
+       !K            Ca 
+        CNST(1.485), CNST(1.474),                                                                                            & 
+       !>      Sc -- Zn       <!                                        
+        CNST(1.562), CNST(1.562),                                                                    & 
+        CNST(1.562), CNST(1.562),                                                                    & 
+        CNST(1.562), CNST(1.562),                                                                    & 
+        CNST(1.562), CNST(1.562),                                                                    & 
+        CNST(1.562), CNST(1.562),                                                                  & 
+       !Ga           Ge           As           Se           Br           Kr  
+        CNST(1.650), CNST(1.727), CNST(1.760), CNST(1.771), CNST(1.749), CNST(1.727), & 
+                                  !Rb           Sr           !>      Y -- Cd        <!                                        
+        CNST(1.628), CNST(1.606), CNST(1.639), CNST(1.639),                                                                  & 
+        CNST(1.639), CNST(1.639),                                                            & 
+        CNST(1.639), CNST(1.639),                                                            & 
+        CNST(1.639), CNST(1.639),                                                                  & 
+        CNST(1.639), CNST(1.639),                                                                  & 
+       !In                  Sn           Sb           Te           I            Xe 
+        CNST(2.672), CNST(1.804), CNST(1.881), CNST(1.892), CNST(1.892), CNST(1.881)  / 
+
+        select case (pcm_vdw_type)
+
+        case (PCM_VDW_OPTIMIZED)
+          if (species_z(species) > upto_Xe) then
+             write(message(1),'(a,a)') "The van der Waals radius is missing for element ", trim(species_label(species))
+             write(message(2),'(a)') "Use PCMVdWRadii = pcm_vdw_species, for other vdw radii values" 
+             call messages_fatal(2)
+          end if
+          ia = species_z(species)
+          vdw_r = vdw_radii(ia)*P_Ang
+
+        case (PCM_VDW_SPECIES)
+          vdw_r = species_vdw_radius(species)
+          if(vdw_r< CNST(0.0)) then
+            call messages_write('The default vdW radius for species '//trim(species_label(species))//':')
+            call messages_write(' is not defined. ')
+            call messages_write(' Add a positive vdW radius value in %Species block. ')
+            call messages_fatal()
+          end if
+        end select
+
+  end function pcm_get_vdw_radius
 
 end module pcm_m
 
