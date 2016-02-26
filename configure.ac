@@ -260,9 +260,7 @@ ACX_LAPACK([], AC_MSG_ERROR([could not find required LAPACK library]))
 
 dnl check for GSL
 AC_LANG_PUSH(C)
-
-AX_PATH_GSL([1],[9],[], 
-  AC_MSG_ERROR([could not find required GSL library]))
+AX_PATH_GSL
 
 dnl check for GD library
 ACX_GDLIB

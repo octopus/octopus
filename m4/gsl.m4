@@ -19,15 +19,15 @@ AC_DEFUN([AX_PATH_GSL],
   fi
 
   AC_PATH_PROG(GSL_CONFIG, gsl-config, no)
-  min_gsl_major_version=ifelse([$1], ,0.2.5,$1)
-  min_gsl_minor_version=ifelse([$2], ,0.2.5,$2)
+  min_gsl_major_version=1
+  min_gsl_minor_version=9
 
   if test "$GSL_CONFIG" = "no" ; then
     no_gsl=yes
-    echo "*** The gsl-config script installed by GSL could not be found."
-    echo "*** If GSL was installed in PREFIX, make sure PREFIX/bin is in"
-    echo "*** your path, or set the GSL_CONFIG environment variable to the"
-    echo "*** full path to gsl-config."
+    AC_MSG_ERROR([The gsl-config script installed by GSL could not be found.
+    If GSL was installed in PREFIX, make sure PREFIX/bin is in
+    your path, or set the GSL_CONFIG environment variable to the
+    full path to gsl-config.])
   else
     AC_MSG_CHECKING(for GSL - version >= $min_gsl_major_version.$min_gsl_minor_version)
     no_gsl=""
@@ -55,7 +55,7 @@ AC_DEFUN([AX_PATH_GSL],
     AC_MSG_RESULT($gsl_major_version.$gsl_minor_version.$gsl_micro_version)
     if test $gsl_major_version -lt $min_gsl_major_version -o \
             $gsl_major_version -eq $min_gsl_major_version -a $gsl_minor_version -lt $min_gsl_minor_version; then
-      ifelse([$4], , :, [$4])
+      AC_MSG_ERROR([A newer version of GSL is required.])
     fi
 
     AC_MSG_CHECKING(whether GSL can be linked)
@@ -74,16 +74,10 @@ AC_DEFUN([AX_PATH_GSL],
       AC_MSG_RESULT(yes),[
       AC_MSG_RESULT(no)
       no_gsl=yes
-      echo "*** The test program failed to link. See the file config.log for the"
-      echo "*** exact error that occured. This usually means GSL was incorrectly installed"
-      echo "*** or that you have moved GSL since it was installed. In the latter case, you"
-      echo "*** may want to edit the gsl-config script: $GSL_CONFIG" ])
-  fi
-
-  if test "x$no_gsl" = x ; then
-     ifelse([$3], , :, [$3])
-  else
-     ifelse([$4], , :, [$4])
+      AC_MSG_ERROR([The test program failed to link. See the file config.log for the
+      exact error that occured. This usually means GSL was incorrectly installed
+      or that you have moved GSL since it was installed. In the latter case, you
+      can edit the gsl-config script: $GSL_CONFIG.])])
   fi
 
   CFLAGS="$ac_save_CFLAGS"
