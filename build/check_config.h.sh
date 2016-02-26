@@ -40,6 +40,3 @@ svn export --force http://www.tddft.org/svn/octopus/buildbot/config.h/$BRANCH/$B
 
 # these two fields will generally be different, and that is fine
 diff -I '^#define BUILD_TIME' -I '^#define LATEST_SVN' config.h $BUILDER
-
-# this is to make this script succeed regardless, for temporary testing purposes.
-echo "Done with diff"
