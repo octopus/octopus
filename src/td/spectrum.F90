@@ -685,7 +685,7 @@ contains
 
     SAFE_ALLOCATE(sf(0:no_e, nspin))
 
-    if (abs(kick%delta_strength) < 1.d-12) kick%delta_strength = M_ONE
+    if (abs(kick%delta_strength) < CNST(1e-12)) kick%delta_strength = M_ONE
     do ie = 0, no_e
       energy = ie * spectrum%energy_step
       forall(isp = 1:nspin) sf(ie, isp) = sum(sigma(ie, 1:3, isp)*kick%pol(1:3, kick%pol_dir))
