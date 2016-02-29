@@ -29,6 +29,7 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
 
   if(batch_status(psib) == BATCH_CL_PACKED) then
 #ifdef HAVE_OPENCL
+    ASSERT(.not. allocated(this%Impotential))
     call X(hamiltonian_base_local_sub)(this%potential, mesh, std, ispin, &
       psib, vpsib, potential_opencl = this%potential_opencl)
 #endif
