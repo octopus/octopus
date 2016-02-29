@@ -38,7 +38,7 @@ if(length($branch) == 0) {
 
 # options specifying setup for Octopus
 $bbpath = "http://www.tddft.org/programs/octopus/buildbot";
-$shell_num = 3;
+$shell_num = 4;
 
 print "URL: $bbpath\n";
 print "Branch: $branch\n";
