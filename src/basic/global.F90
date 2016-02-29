@@ -259,7 +259,7 @@ FCFLAGS
 #ifdef HAVE_OPENMP
     not_in_openmp = .not. omp_in_parallel()
 #else
-    not_in_openmp = .true.;
+    not_in_openmp = .true.
 #endif
 
   end function not_in_openmp
