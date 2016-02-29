@@ -292,7 +292,6 @@ contains
 
     ! ---------------------------------------------------------
     subroutine get_output_dir()
-      character(len=6) :: dirnum
 
       PUSH_SUB(profiling_init.get_output_dir)
 
@@ -816,7 +815,7 @@ contains
   !! (only, if pass_in and pass_out are equal).
   subroutine profiling_output()
     
-    integer          :: ii, jj
+    integer          :: ii
     integer          :: iunit
     real(8)          :: total_time
     type(profile_t), pointer :: prof
