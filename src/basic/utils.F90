@@ -305,9 +305,6 @@ contains
 #ifdef HAVE_NFFT
     get_optional_libraries = trim(get_optional_libraries)//' nfft'
 #endif
-#ifdef HAVE_PAPI
-    get_optional_libraries = trim(get_optional_libraries)//' papi'
-#endif
 #ifdef HAVE_PARMETIS
     get_optional_libraries = trim(get_optional_libraries)//' parmetis'
 #endif

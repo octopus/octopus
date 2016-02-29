@@ -78,10 +78,6 @@ libbasic_a_SOURCES =     \
 	sort.F90             \
 	debug.F90
 
-if COMPILE_PAPI
-libbasic_a_SOURCES += papi.c papi_f.F90
-endif
-
 noinst_HEADERS =               \
 	mpi_debug_inc.F90      \
 	mpi_lib_inc.F90        \
@@ -121,9 +117,8 @@ debug.o : debug.F90 global.o parser.o
 unit.o : unit.F90 global.o
 parser.o : parser.F90 mpi.o loct.o global.o unit.o varinfo.F90
 messages.o : messages.F90 varinfo.o string.o mpi.o parser.o loct.o global.o unit.o debug.o
-papi_f.o : papi_f.F90
 sort.o : sort.F90 sort_inc.F90 messages.o global.o
-profiling.o : profiling.F90 mpi.o messages.o loct.o io.o global.o papi_f.o types.o sort.o
+profiling.o : profiling.F90 mpi.o messages.o loct.o io.o global.o types.o sort.o
 
 command_line.o : command_line.F90 messages.o profiling.o
 io.o : io.F90 mpi.o messages.o parser.o loct.o global.o  
