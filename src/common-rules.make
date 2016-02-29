@@ -83,6 +83,7 @@ external_LIBS = \
 	$(top_builddir)/external_libs/spglib-1.5.2/src/libspglib.a      \
 	$(top_builddir)/external_libs/bpdn/libbpdn.a \
 	$(top_builddir)/external_libs/yaml-0.1.4/src/libyaml.a
+# we should not have libyaml here if we used an external one...
 
 if COMPILE_OPENCL
   external_LIBS += $(top_builddir)/external_libs/fortrancl/libfortrancl.a @LIBS_CLBLAS@ @LIBS_CLFFT@ @CL_LIBS@
@@ -100,12 +101,12 @@ if COMPILE_NEWUOA
   FCFLAGS_MODS += @F90_MODULE_FLAG@$(top_builddir)/external_libs/newuoa
 endif
 
-# Since ETSF_IO depends on netCDF, it must be first in the list
-# LIBS_ISF depends on LAPACK
+# These must be arranged so if LIB1 depends on LIB2, LIB1 must occur before LIB2.
+# e.g. ETSF_IO depends on netCDF, ISF depends on LAPACK
 outside_LIBS = @LIBS_PSPIO@ @LIBS_ISF@ @LIBS_NFFT@ @LIBS_PNFFT@ @LIBS_PFFT@ \
-  @LIBS_SPARSKIT@ @LIBS_ETSF_IO@ @LIBS_NETCDF@ @LIBS_LIBFM@ @LIBS_MPI@ \
+  @LIBS_SPARSKIT@ @LIBS_ETSF_IO@ @LIBS_NETCDF@ @LIBS_LIBFM@ \
   @LIBS_BERKELEYGW@ @LIBS_PARPACK@ @LIBS_ARPACK@ @GD_LIBS@ \
-  @LIBS_PARMETIS@ @LIBS_METIS@
+  @LIBS_PARMETIS@ @LIBS_METIS@ @LIBS_FEAST@ @LIBS_MPI@
 
 other_LIBS = $(external_LIBS) $(scalapack_LIBS) $(outside_LIBS) $(core_LIBS) 
 all_LIBS = $(octopus_LIBS) $(other_LIBS)
