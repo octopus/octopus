@@ -1696,11 +1696,10 @@ contains
       write(buf, '(a15,i2)')      '# nspin        ', st%d%nspin
       call write_iter_string(out_eigs, buf)
       call write_iter_nl(out_eigs)
-      
 
       ! first line -> column names
       call write_iter_header_start(out_eigs)
-      do is = 1, st%d%nspin
+      do is = 1, st%d%kpt%nglobal
         do ii = 1, st%nst
           write(buf, '(a,i4)') 'Eigenvalue ',ii
           call write_iter_header(out_eigs, buf)
@@ -1711,7 +1710,7 @@ contains
       ! second line: units
       call write_iter_string(out_eigs, '#[Iter n.]')
       call write_iter_header(out_eigs, '[' // trim(units_abbrev(units_out%time)) // ']')
-      do is = 1, st%d%nspin
+      do is = 1, st%d%kpt%nglobal
         do ii = 1, st%nst
           call write_iter_header(out_eigs, '[' // trim(units_abbrev(units_out%energy)) // ']')
         end do
@@ -1721,7 +1720,7 @@ contains
     end if
 
     call write_iter_start(out_eigs)
-    do is = 1, st%d%nspin
+    do is = 1, st%d%kpt%nglobal
       do ii =1 , st%nst
         call write_iter_double(out_eigs, units_from_atomic(units_out%energy, eigs(ii,is)), 1)
       end do
