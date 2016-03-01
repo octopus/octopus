@@ -76,9 +76,7 @@ module current_m
   integer, parameter, public ::           &
     CURRENT_GRADIENT           = 1,       &
     CURRENT_GRADIENT_CORR      = 2,       &
-    CURRENT_HAMILTONIAN        = 3,       &
-    CURRENT_POISSON            = 4,       &
-    CURRENT_POISSON_CORRECTION = 5
+    CURRENT_HAMILTONIAN        = 3
 
 contains
 
@@ -104,10 +102,6 @@ contains
     !%Option hamiltonian 3
     !% The current density is obtained from the commutator of the
     !% Hamiltonian with the position operator.
-    !%Option poisson 4
-    !% Obtain the current from solving the Poisson equation from the continuity equation. (Experimental)
-    !%Option poisson_correction 5
-    !% Obtain the current from the Hamiltonian and then add a correction term by solving the Poisson equation. (Experimental)
     !%End
 
     call parse_variable('CurrentDensity', CURRENT_HAMILTONIAN, this%method)
@@ -273,14 +267,6 @@ contains
         end do
       end do
       
-    case(CURRENT_POISSON)
-
-      call calc_current_poisson()
-
-    case(CURRENT_POISSON_CORRECTION)
-
-      call calc_current_poisson_correction()
-
     case default
 
       ASSERT(.false.)
@@ -308,181 +294,6 @@ contains
 
     call profiling_out(prof)
     POP_SUB(current_calculate)
-
-    contains
-      
-      subroutine calc_current_poisson()
-        
-        FLOAT, allocatable :: charge(:), potential(:)
-        CMPLX, allocatable :: hpsi(:, :)
-
-        PUSH_SUB(current_calculate.calc_current_poisson)
-        
-        SAFE_ALLOCATE(charge(1:der%mesh%np))
-        SAFE_ALLOCATE(potential(1:der%mesh%np_part))
-        SAFE_ALLOCATE(hpsi(1:der%mesh%np, 1:st%d%dim))
-
-        ASSERT(st%d%nspin == 1)
-        ASSERT(st%d%dim == 1)
-
-        do ik = st%d%kpt%start, st%d%kpt%end
-          do ib = st%group%block_start, st%group%block_end
-            
-            call batch_pack(st%group%psib(ib, ik), copy = .true.)
-            
-            call batch_copy(st%group%psib(ib, ik), hpsib)
-            
-            call zhamiltonian_apply_batch(hm, der, st%group%psib(ib, ik), hpsib, ik)
-            
-            do ist = st%st_start, st%st_end
-              
-              do idim = 1, st%d%dim
-                ii = batch_ist_idim_to_linear(st%group%psib(ib, ik), (/ist, idim/))
-                call batch_get_state(st%group%psib(ib, ik), ii, der%mesh%np, psi(:, idim))
-                call batch_get_state(hpsib, ii, der%mesh%np, hpsi(:, idim))
-              end do
-              
-              do idim = 1, st%d%dim
-                !$omp parallel do
-                do ip = 1, der%mesh%np
-                  charge(ip) = charge(ip) &
-                    - st%d%kweights(ik)*st%occ(ist, ik)/(CNST(4.0)*M_PI)&
-                    *aimag(psi(ip, idim)*conjg(hpsi(ip, idim)) - conjg(psi(ip, idim))*hpsi(ip, idim))
-                end do
-                !$omp end parallel do
-              end do
-            end do
-
-          call batch_unpack(st%group%psib(ib, ik), copy = .false.)
-          
-          call batch_end(hpsib)
-          
-        end do
-      end do
-
-      call dpoisson_solve(psolver, potential, charge)
-
-      call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_X, "./continuity", "potential", der%mesh, potential, unit_one, ierr)
-      call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_Z, "./continuity", "potential", der%mesh, potential, unit_one, ierr)
-      call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Z, "./continuity", "potential", der%mesh, potential, unit_one, ierr)
-
-      call dderivatives_grad(der, potential, current(:, :, 1))
-
-      POP_SUB(current_calculate.calc_current_poisson)
-    end subroutine calc_current_poisson
-
-
-    subroutine calc_current_poisson_correction()
-
-      FLOAT, allocatable :: charge(:), potential(:), current2(:, :)
-      type(batch_t) :: vpsib
-
-      PUSH_SUB(current_calculate.calc_current_poisson_correction)
-
-      ASSERT(st%d%nspin == 1)
-      
-      SAFE_ALLOCATE(charge(1:der%mesh%np))
-      SAFE_ALLOCATE(potential(1:der%mesh%np_part))
-      SAFE_ALLOCATE(current2(1:der%mesh%np_part, 1:der%mesh%sb%dim))
-
-      ASSERT(st%d%dim == 1)
-
-      charge = CNST(0.0)
-      current = CNST(0.0)
-
-      do ik = st%d%kpt%start, st%d%kpt%end
-        ispin = states_dim_get_spin_index(st%d, ik)
-        do ib = st%group%block_start, st%group%block_end
-
-          call batch_pack(st%group%psib(ib, ik), copy = .true.)
-
-          call batch_copy(st%group%psib(ib, ik), hpsib)
-          call batch_copy(st%group%psib(ib, ik), rhpsib)
-          call batch_copy(st%group%psib(ib, ik), rpsib)
-          call batch_copy(st%group%psib(ib, ik), hrpsib)
-          call batch_copy(st%group%psib(ib, ik), vpsib)
-
-          call boundaries_set(der%boundaries, st%group%psib(ib, ik))
-
-          call zhamiltonian_apply_batch(hm, der, st%group%psib(ib, ik), hpsib, ik, set_bc = .false., &
-            terms = TERM_KINETIC)
-          call zhamiltonian_apply_batch(hm, der, st%group%psib(ib, ik), vpsib, ik, set_bc = .false., &
-            terms = TERM_NON_LOCAL_POTENTIAL)
-
-          do ist = st%st_start, st%st_end
-            
-            do idim = 1, st%d%dim
-              ii = batch_ist_idim_to_linear(st%group%psib(ib, ik), (/ist, idim/))
-              call batch_get_state(st%group%psib(ib, ik), ii, der%mesh%np, psi(:, idim))
-              call batch_get_state(vpsib, ii, der%mesh%np, hpsi(:, idim))
-            end do
-            
-            do idim = 1, st%d%dim
-              !$omp parallel do
-              do ip = 1, der%mesh%np
-                charge(ip) = charge(ip) &
-                  - st%d%kweights(ik)*st%occ(ist, ik)/(CNST(4.0)*M_PI)&
-                  *aimag(psi(ip, idim)*conjg(hpsi(ip, idim)) - conjg(psi(ip, idim))*hpsi(ip, idim))
-              end do
-              !$omp end parallel do
-            end do
-          end do
-          
-          do idir = 1, der%mesh%sb%dim
-
-            call batch_mul(der%mesh%np, der%mesh%x(:, idir), hpsib, rhpsib)
-            call batch_mul(der%mesh%np_part, der%mesh%x(:, idir), st%group%psib(ib, ik), rpsib)
-
-            call zhamiltonian_apply_batch(hm, der, rpsib, hrpsib, ik, set_bc = .false.)
-
-            do ist = st%st_start, st%st_end
-
-              do idim = 1, st%d%dim
-                ii = batch_ist_idim_to_linear(st%group%psib(ib, ik), (/ist, idim/))
-                call batch_get_state(st%group%psib(ib, ik), ii, der%mesh%np, psi(:, idim))
-                call batch_get_state(hrpsib, ii, der%mesh%np, hrpsi(:, idim))
-                call batch_get_state(rhpsib, ii, der%mesh%np, rhpsi(:, idim))
-              end do
-
-              do idim = 1, st%d%dim
-                !$omp parallel do
-                do ip = 1, der%mesh%np
-                  current(ip, idir, ispin) = current(ip, idir, ispin) &
-                    - st%d%kweights(ik)*st%occ(ist, ik)&
-                    *aimag(conjg(psi(ip, idim))*hrpsi(ip, idim) - conjg(psi(ip, idim))*rhpsi(ip, idim))
-                end do
-                !$omp end parallel do
-              end do
-            end do
-
-          end do
-          call batch_unpack(st%group%psib(ib, ik), copy = .false.)
-
-          call batch_end(hpsib)
-          call batch_end(vpsib)
-          call batch_end(rhpsib)
-          call batch_end(rpsib)
-          call batch_end(hrpsib)
-
-        end do
-      end do
-
-      call dpoisson_solve(psolver, potential, charge)
-
-!      call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_X, "./continuity", "potential", der%mesh, potential, unit_one, ierr)
-!      call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_Z, "./continuity", "potential", der%mesh, potential, unit_one, ierr)
-!      call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Z, "./continuity", "potential", der%mesh, potential, unit_one, ierr)
-
-      call dderivatives_grad(der, potential, current2)
-
-      do idir = 1, der%mesh%sb%dim
-        do ip = 1, der%mesh%np
-          current(ip, idir, 1) = current(ip, idir, 1) + current2(ip, idir)
-        end do
-      end do
-
-      POP_SUB(current_calculate.calc_current_poisson_correction)
-    end subroutine calc_current_poisson_correction
 
   end subroutine current_calculate
 
