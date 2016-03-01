@@ -151,7 +151,7 @@ contains
     type(grid_t), intent(in)     :: grid
     type(pcm_t), intent(out)     :: pcm
 
-    integer :: ia, itess, jtess, cav_unit_test, subdivider
+    integer :: ia, itess, jtess, cav_unit_test, subdivider, ii
     integer :: pcm_vdw_type
     integer :: pcmmat_unit, pcmmat_gamess_unit, iunit, ip
 
@@ -163,7 +163,7 @@ contains
     type(pcm_tessera_t) :: dum2(1)
 
     logical :: band
-    logical :: add_spheres_h
+    logical :: add_spheres_h, changed_default_nn
 
     type(species_t), pointer :: spci 
     FLOAT :: z_ia
@@ -565,6 +565,38 @@ contains
 
 
     if (pcm%calc_method == PCM_CALC_POISSON) then
+
+      max_area = M_EPSILON
+      do ia = 1, pcm%n_tesserae
+        if (pcm%tess(ia)%area > max_area) max_area = pcm%tess(ia)%area
+      end do
+    
+      !default is as many neighbor to contain 2 gaussian width 
+      default_nn=int(2*max_area*pcm%gaussian_width/minval(grid%mesh%spacing(1:grid%mesh%sb%dim)))
+      
+      changed_default_nn = .false.
+
+      do ii=default_nn, 1, -1
+        pcm%tess_nn = ii 
+        if (pcm_nn_in_mesh(pcm,grid%mesh)) then 
+          exit
+        else 
+          changed_default_nn = .true.
+        end if
+      end do
+      if (changed_default_nn) then
+        call messages_write('PCM nearest neighbors have been reduced from ')
+        call messages_write(default_nn)
+        call messages_write(' to ')
+        call messages_write(pcm%tess_nn)
+        call messages_new_line()
+        call messages_write('in order to fit them into the mesh.')        
+        call messages_new_line()
+        call messages_write('This may produce unexpected results. ')        
+        call messages_warning()
+      end if
+      
+
       !%Variable PCMChargeSmearNN
       !%Type integer
       !%Default 2 * max_area * PCMSmearingFactor
@@ -577,15 +609,11 @@ contains
       !% The default value is such that the neighbor mesh contains 2 times the Gaussian 
       !% width used for the smearing.
       !%End
-      max_area = M_EPSILON
-      do ia = 1, pcm%n_tesserae
-        if (pcm%tess(ia)%area > max_area) max_area = pcm%tess(ia)%area
-      end do
-    
-      !default is as many neighbor to contain 2 gaussian width 
-      default_nn=int(2*max_area*pcm%gaussian_width/minval(grid%mesh%spacing(1:grid%mesh%sb%dim)))
-      call parse_variable('PCMChargeSmearNN', default_nn, pcm%tess_nn)
+      
+      call parse_variable('PCMChargeSmearNN', pcm%tess_nn, pcm%tess_nn)
       call messages_print_var_value(stdout, "PCMChargeSmearNN", pcm%tess_nn)
+      
+      call pcm_poisson_sanity_check(pcm, grid%mesh)
       
     end if
     
@@ -900,6 +928,71 @@ contains
     POP_SUB(pcm_charges)
   end subroutine pcm_charges
 
+  ! -----------------------------------------------------------------------------    
+  !> Check wether the nearest neighbor requested are in the mesh or not
+  logical function pcm_nn_in_mesh(pcm, mesh) result(in_mesh)
+      type(pcm_t),     intent(in) :: pcm 
+      type(mesh_t),    intent(in) :: mesh
+
+      integer :: ia, nm(1:MAX_DIM), ipt, npt, i1, i2, i3
+      FLOAT :: posrel(1:MAX_DIM)
+      integer :: pt
+      
+      PUSH_SUB(pcm_nn_in_mesh)
+  
+      in_mesh = .true.
+      do ia = 1, pcm%n_tesserae
+  
+        posrel(1:mesh%sb%dim) = pcm%tess(ia)%point(1:mesh%sb%dim)/mesh%spacing(1:mesh%sb%dim)
+
+        nm(1:mesh%sb%dim) = floor(posrel(1:mesh%sb%dim))
+  
+        ! Get the nearest neighboring points
+        ipt = 0
+        do i1 = -pcm%tess_nn +1 , pcm%tess_nn
+          do i2 = -pcm%tess_nn +1 , pcm%tess_nn
+            do i3 = -pcm%tess_nn +1 , pcm%tess_nn
+              ipt = ipt+1
+              pt = mesh%idx%lxyz_inv(i1 + nm(1), i2 + nm(2), i3 + nm(3))
+
+              if (pt <= 0 .or. pt > mesh%np_part_global) then 
+                in_mesh = .false.
+                POP_SUB(pcm_nn_in_mesh)
+                return 
+              end if 
+          
+            end do
+          end do
+        end do
+      end do 
+
+      POP_SUB(pcm_nn_in_mesh)
+    
+    end function pcm_nn_in_mesh
+  
+  ! -----------------------------------------------------------------------------  
+  !> Check that all the required nearest neighbors are prensent in the mesh
+  subroutine pcm_poisson_sanity_check(pcm, mesh)
+    type(pcm_t),     intent(in) :: pcm 
+    type(mesh_t),    intent(in) :: mesh
+    
+    
+    integer :: ia, nm(1:MAX_DIM), ipt, npt, i1, i2, i3
+    FLOAT :: posrel(1:MAX_DIM)
+    integer :: pt
+    
+    PUSH_SUB(pcm_poisson_sanity_check)
+
+    if ( .not. pcm_nn_in_mesh(pcm, mesh) ) then 
+      message(1) = 'The simulation box is too small to contain all the requested'
+      message(2) = 'nearest neighbors for each tessera.'
+      message(3) = 'Consider using a larger box or reduce PCMChargeSmearNN.'
+      call messages_warning(3)
+    end if 
+    
+    POP_SUB(pcm_poisson_sanity_check)
+    
+  end subroutine pcm_poisson_sanity_check
   
   ! -----------------------------------------------------------------------------  
   !> Generates the polarization charge density smearing the charge with a gaussian 
@@ -938,7 +1031,7 @@ contains
     SAFE_ALLOCATE(pt(1:npt))
     SAFE_ALLOCATE(lrho(1:npt))
 
-    
+    pt = 0 
     rho = M_ZERO
     
     do ia = 1, pcm%n_tesserae
@@ -966,25 +1059,30 @@ contains
       Norm = 0 
       lrho = 0
       do ipt = 1, npt
-
-        if(mesh%parallel_in_domains) then
-          pt(ipt) = vec_global2local(mesh%vp, pt(ipt), mesh%vp%partno)
-          boundary_point = pt(ipt) > mesh%np + mesh%vp%np_ghost
-          inner_point = pt(ipt) > 0 .and. pt(ipt) <= mesh%np
-
-          if(boundary_point .or. inner_point) then
-            XX(1:mesh%sb%dim) = mesh%x(pt(ipt),1:mesh%sb%dim)
-          else 
-            cycle
-          end if
-          
-        else
-          XX(1:mesh%sb%dim) = mesh%x(pt(ipt),1:mesh%sb%dim)
-        end if
         
-        RR = sum((XX(1:mesh%sb%dim) - PP(1:mesh%sb%dim))**2)
-        Norm = Norm + exp(-RR/(pcm%tess(ia)%area*pcm%gaussian_width))
-        lrho(ipt) = lrho(ipt) + exp(-RR/(pcm%tess(ia)%area*pcm%gaussian_width))
+        ! Check the point is inside the mesh skip otherwise
+        if (pt(ipt) > 0 .and. pt(ipt) <= mesh%np_part_global) then
+          
+          if(mesh%parallel_in_domains) then
+            pt(ipt) = vec_global2local(mesh%vp, pt(ipt), mesh%vp%partno)
+            boundary_point = pt(ipt) > mesh%np + mesh%vp%np_ghost
+            inner_point = pt(ipt) > 0 .and. pt(ipt) <= mesh%np
+
+            if(boundary_point .or. inner_point) then
+              XX(1:mesh%sb%dim) = mesh%x(pt(ipt),1:mesh%sb%dim)
+            else 
+              cycle
+            end if
+          
+          else
+            XX(1:mesh%sb%dim) = mesh%x(pt(ipt),1:mesh%sb%dim)
+          end if
+        
+          RR = sum((XX(1:mesh%sb%dim) - PP(1:mesh%sb%dim))**2)
+          Norm = Norm + exp(-RR/(pcm%tess(ia)%area*pcm%gaussian_width))
+          lrho(ipt) = lrho(ipt) + exp(-RR/(pcm%tess(ia)%area*pcm%gaussian_width))
+          
+        end if 
       end do
 
       ! reduce the local density scattered among nodes
@@ -996,15 +1094,20 @@ contains
       lrho(:) = lrho(:) * Norm
 
       ! Add up the local density to the full charge density 
-      if(mesh%parallel_in_domains) then
-        do ipt = 1, npt
-           boundary_point = pt(ipt) > mesh%np + mesh%vp%np_ghost
-           inner_point = pt(ipt) > 0 .and. pt(ipt) <= mesh%np
-           if(boundary_point .or. inner_point) rho(pt(ipt)) = rho(pt(ipt)) + lrho(ipt)
-        end do
-      else
-        forall(ipt = 1:npt) rho(pt(ipt)) = rho(pt(ipt)) + lrho(ipt)
-      end if
+      do ipt = 1, npt
+        
+        if (pt(ipt) > 0 .and. pt(ipt) <= mesh%np_part_global) then
+        
+          if(mesh%parallel_in_domains) then
+               boundary_point = pt(ipt) > mesh%np + mesh%vp%np_ghost
+               inner_point = pt(ipt) > 0 .and. pt(ipt) <= mesh%np
+               if(boundary_point .or. inner_point) rho(pt(ipt)) = rho(pt(ipt)) + lrho(ipt)
+          else
+               rho(pt(ipt)) = rho(pt(ipt)) + lrho(ipt)           
+          end if
+          
+        end if
+      end do
             
     end do 
 
@@ -1857,7 +1960,10 @@ contains
         end if
       end do
 
-      if (icop == nv) return
+      if (icop == nv) then 
+        POP_SUB(subtessera)
+        return
+      end if
 
       do ll = 1, nv
         iv1 = ll
@@ -1900,7 +2006,10 @@ contains
         if (ltyp(ll) == 3) icut = icut + 2
       end do
       icut = icut / 2
-      if (icut > 1) return
+      if (icut > 1) then 
+        POP_SUB(subtessera)
+        return
+      end if
 
       na = 1
       do ll = 1, nv
