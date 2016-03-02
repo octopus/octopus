@@ -210,7 +210,5 @@ ssys_hamiltonian.o	: ssys_hamiltonian.F90 ssys_tnadd.o ssys_external.o ssys_ioni
 ssys_model.o		: ssys_model.F90 ssys_hamiltonian.o ssys_system.o base_model.o
 ssys_handle.o		: ssys_handle.F90 live_handle.o frozen_handle.o base_handle.o
 ssys_config.o		: ssys_config.F90 ssys_handle.o 						\
-	frozen_config.o frozen_handle.o fio_config.F90 fio_handle.o 					\
+	frozen_config.o frozen_handle.o fio_config.o fio_handle.o 					\
 	base_config.o base_handle.o base_hamiltonian.o functional.o
-
-
