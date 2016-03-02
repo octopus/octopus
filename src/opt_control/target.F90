@@ -606,12 +606,6 @@ contains
       call target_chi_excited(tg, gr, psi_in, chi_out)
     case(oct_tg_gstransformation)
       call target_chi_gstransformation(tg, gr, psi_in, chi_out)
-      q => opt_control_point_q(qcchi_out)
-      p => opt_control_point_p(qcchi_out)
-      q = M_ZERO
-      p = M_ZERO
-      nullify(q)
-      nullify(p)
     case(oct_tg_userdefined)
       call target_chi_userdefined(tg, gr, psi_in, chi_out)
     case(oct_tg_jdensity)
@@ -633,6 +627,16 @@ contains
     case(oct_tg_spin)
       call target_chi_spin(tg, gr, psi_in, chi_out)
     end select
+
+    ! Unless the target is "classical", the co-state classical variables are zero at time t=T.
+    if(tg%type .ne. oct_tg_classical ) then
+      q => opt_control_point_q(qcchi_out)
+      p => opt_control_point_p(qcchi_out)
+      q = M_ZERO
+      p = M_ZERO
+      nullify(q)
+      nullify(p)
+    end if
 
     nullify(psi_in)
     nullify(chi_out)
