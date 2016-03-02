@@ -28,7 +28,7 @@ AM_INIT_AUTOMAKE
 AC_CONFIG_HEADERS([config.h])
 
 # Installation prefix by default
-AC_PREFIX_DEFAULT([/opt/etsf])
+AC_PREFIX_DEFAULT([/usr/local])
 
 # who am i
 AC_CANONICAL_HOST
