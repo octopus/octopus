@@ -62,7 +62,7 @@ module symmetries_m
     subroutine symmetries_finite_init(natoms, types, positions, verbosity, point_group)
       integer, intent(in)  :: natoms
       integer, intent(in)  :: types !< (natoms)
-      real*8,  intent(in)  :: positions !< (3, natoms)
+      real(8), intent(in)  :: positions !< (3, natoms)
       integer, intent(in)  :: verbosity
       integer, intent(out) :: point_group
     end subroutine symmetries_finite_init

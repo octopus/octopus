@@ -259,7 +259,7 @@ subroutine X(linear_solver_idrs) (ls, hm, gr, st, ist, ik, x, y, shift, tol, res
 
   s = 4
   info = -1
-  phi = X(idrs)(rhs, s, preconditioner, matrixvector, ddotproduct, zdotproduct, &
+  phi = X(idrs)(rhs, s, X(preconditioner), X(matrixvector), ddotproduct, zdotproduct, &
     tol, ls%max_iter, x0 = x0, iterations = iter_used, flag = info, relres = residue)
 
   x = X(doubledimarray)(gr%mesh%np, st%d%dim, phi(:, 1))
@@ -274,98 +274,6 @@ subroutine X(linear_solver_idrs) (ls, hm, gr, st, ist, ik, x, y, shift, tol, res
   SAFE_DEALLOCATE_A(phi)
   SAFE_DEALLOCATE_A(rhs)
   POP_SUB(dlinear_solver_idrs)
-  contains
-
-     function dsingledimarray(n, a)
-       integer, intent(in) :: n
-       FLOAT, intent(in) :: a(:, :)
-       FLOAT :: dsingledimarray(n)
-       integer :: idim
-       do idim = 1, st%d%dim
-         dsingledimarray((idim-1)*gr%mesh%np+1: idim*gr%mesh%np) = a(1:gr%mesh%np, idim)
-       end do
-     end function dsingledimarray
-
-     function ddoubledimarray(np, dim, a)
-       integer, intent(in) :: np, dim
-       FLOAT, intent(in) :: a(:)
-       FLOAT :: ddoubledimarray(np, dim)
-       integer :: idim
-       do idim = 1, dim
-         ddoubledimarray(1:np, idim) = a((idim-1)*np+1: idim*np)
-       end do
-     end function ddoubledimarray
-
-     function zsingledimarray(n, a)
-       integer, intent(in) :: n
-       CMPLX, intent(in) :: a(:, :)
-       CMPLX :: zsingledimarray(n)
-       integer :: idim
-       do idim = 1, st%d%dim
-         zsingledimarray((idim-1)*gr%mesh%np+1: idim*gr%mesh%np) = a(1:gr%mesh%np, idim)
-       end do
-     end function zsingledimarray
-
-     function zdoubledimarray(np, dim, a)
-       integer, intent(in) :: np, dim
-       CMPLX, intent(in) :: a(:)
-       CMPLX :: zdoubledimarray(np, dim)
-       integer :: idim
-       do idim = 1, dim
-         zdoubledimarray(1:np, idim) = a((idim-1)*np+1: idim*np)
-       end do
-     end function zdoubledimarray
-
-     FLOAT function ddotproduct(a, b)
-       FLOAT, intent(in) :: a(:), b(:)
-       ddotproduct = dmf_dotp(gr%mesh, st%d%dim, &
-         ddoubledimarray(gr%mesh%np, st%d%dim, a), ddoubledimarray(gr%mesh%np, st%d%dim, b))
-     end function ddotproduct
-
-     CMPLX function zdotproduct(a, b)
-       CMPLX, intent(in) :: a(:), b(:)
-       zdotproduct = zmf_dotp(gr%mesh, st%d%dim, &
-         zdoubledimarray(gr%mesh%np, st%d%dim, a), zdoubledimarray(gr%mesh%np, st%d%dim, b))
-     end function zdotproduct
-
-     function preconditioner( v )
-       R_TYPE, dimension(:,:), intent(in)     :: v
-       R_TYPE, dimension(size(v,1),size(v,2)) :: preconditioner
-
-       R_TYPE, allocatable :: phi(:, :)
-       R_TYPE, allocatable :: precphi(:, :)
-
-       SAFE_ALLOCATE(phi(1:gr%mesh%np_part, 1:st%d%dim))
-       SAFE_ALLOCATE(precphi(1:gr%mesh%np, 1:st%d%dim))
-
-       phi = R_TOTYPE(M_ZERO)
-       phi(1:gr%mesh%np, 1:st%d%dim) = X(doubledimarray)(gr%mesh%np, st%d%dim, v(:, 1))
-       call X(preconditioner_apply)(ls%pre, gr, hm, ik, phi, precphi, shift)
-       preconditioner(1:gr%mesh%np*st%d%dim, 1) = X(singledimarray)(gr%mesh%np*st%d%dim, precphi)
-
-       SAFE_DEALLOCATE_A(phi)
-       SAFE_DEALLOCATE_A(precphi)
-     end function preconditioner
-
-     function matrixvector( v ) 
-       R_TYPE, intent(in)       :: v(:,:)
-       R_TYPE                   :: matrixvector(size(v,1),size(v,2))
-
-       R_TYPE, allocatable :: phi(:, :)
-       R_TYPE, allocatable :: hphi(:, :)
-
-       SAFE_ALLOCATE(phi(1:gr%mesh%np_part, 1:st%d%dim))
-       SAFE_ALLOCATE(hphi(1:gr%mesh%np, 1:st%d%dim))
-
-       phi = R_TOTYPE(M_ZERO)
-       phi(1:gr%mesh%np, 1:st%d%dim) = X(doubledimarray)(gr%mesh%np, st%d%dim, v(:, 1))
-       call X(linear_solver_operator) (hm, gr, st, ist, ik, shift, phi, hphi)
-       matrixvector(1:gr%mesh%np*st%d%dim, 1) = X(singledimarray)(gr%mesh%np*st%d%dim, hphi)
-
-       SAFE_DEALLOCATE_A(phi)
-       SAFE_DEALLOCATE_A(hphi)
-     end function matrixvector
-
 end subroutine X(linear_solver_idrs)
 
 
@@ -1131,6 +1039,82 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
 
   POP_SUB(X(linear_solver_qmr_dotp))
 end subroutine X(linear_solver_qmr_dotp)
+
+
+function X(singledimarray)(n, a)
+  integer, intent(in) :: n
+  R_TYPE, intent(in) :: a(:, :)
+  R_TYPE :: X(singledimarray)(n)
+  integer :: idim, np, dim
+  np = args%gr%mesh%np
+  dim = args%st%d%dim
+  do idim = 1, dim
+    X(singledimarray)((idim-1)*np+1: idim*np) = a(1:np, idim)
+  end do
+end function X(singledimarray)
+
+function X(doubledimarray)(np, dim, a)
+  integer, intent(in) :: np, dim
+  R_TYPE, intent(in) :: a(:)
+  R_TYPE :: X(doubledimarray)(np, dim)
+  integer :: idim
+  do idim = 1, dim
+    X(doubledimarray)(1:np, idim) = a((idim-1)*np+1: idim*np)
+  end do
+end function X(doubledimarray)
+
+R_TYPE function X(dotproduct)(a, b)
+  R_TYPE, intent(in) :: a(:), b(:)
+  X(dotproduct) = X(mf_dotp)(args%gr%mesh, args%st%d%dim, &
+    X(doubledimarray)(args%gr%mesh%np, args%st%d%dim, a), &
+    X(doubledimarray)(args%gr%mesh%np, args%st%d%dim, b))
+end function X(dotproduct)
+
+function X(matrixvector)( v ) 
+  R_TYPE, intent(in)       :: v(:, :)
+  R_TYPE                   :: X(matrixvector)(size(v, 1), size(v, 2))
+
+  integer :: np, np_part, dim
+  R_TYPE, allocatable :: phi(:, :)
+  R_TYPE, allocatable :: hphi(:, :)
+
+  np = args%gr%mesh%np
+  np_part = args%gr%mesh%np_part
+  dim = args%st%d%dim
+  SAFE_ALLOCATE(phi(1:np_part, 1:dim))
+  SAFE_ALLOCATE(hphi(1:np, 1:dim))
+  
+  phi = R_TOTYPE(M_ZERO)
+  phi(1:np, 1:dim) = X(doubledimarray)(np, dim, v(:, 1))
+  call X(linear_solver_operator) (args%hm, args%gr, args%st, args%ist, args%ik, args%X(shift), phi, hphi)
+  X(matrixvector)(1:np*dim, 1) = X(singledimarray)(np*dim, hphi)
+
+  SAFE_DEALLOCATE_A(phi)
+  SAFE_DEALLOCATE_A(hphi)
+end function X(matrixvector)
+
+function X(preconditioner)( v )
+  R_TYPE, dimension(:, :), intent(in)     :: v
+  R_TYPE, dimension(size(v, 1), size(v, 2)) :: X(preconditioner)
+
+  integer :: np, np_part, dim
+  R_TYPE, allocatable :: phi(:, :)
+  R_TYPE, allocatable :: precphi(:, :)
+
+  np = args%gr%mesh%np
+  np_part = args%gr%mesh%np_part
+  dim = args%st%d%dim
+  SAFE_ALLOCATE(phi(1:np_part, 1:dim))
+  SAFE_ALLOCATE(precphi(1:np, 1:dim))
+
+  phi = R_TOTYPE(M_ZERO)
+  phi(1:np, 1:dim) = X(doubledimarray)(np, dim, v(:, 1))
+  call X(preconditioner_apply)(args%ls%pre, args%gr, args%hm, args%ik, phi, precphi, args%X(shift))
+  X(preconditioner)(1:np*dim, 1) = X(singledimarray)(np*dim, precphi)
+
+  SAFE_DEALLOCATE_A(phi)
+  SAFE_DEALLOCATE_A(precphi)
+end function X(preconditioner)
 
 
 !! Local Variables:

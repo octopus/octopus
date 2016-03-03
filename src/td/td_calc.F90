@@ -193,8 +193,8 @@ end subroutine td_calc_tvel
 subroutine td_calc_ionch(gr, st, ch, Nch)
   type(grid_t),        intent(in)    :: gr
   type(states_t),      intent(in)    :: st
-  FLOAT,               intent(out)   :: ch(0:Nch)
   integer,             intent(in)    :: Nch
+  FLOAT,               intent(out)   :: ch(0:Nch)
 
   integer :: ik, ist, ii, jj, idim, Nid
   FLOAT   :: prod, prod0

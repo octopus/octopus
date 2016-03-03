@@ -829,7 +829,7 @@ end subroutine X(bi_conjugate_gradients)
     FLOAT, optional, intent(in) :: tolerance 
     integer, optional, intent(in) :: maximum_iterations 
     character(len=8), optional, intent(in) :: variant     
-    ! Optional output parameters:
+   ! Optional output parameters:
     integer, optional, intent(out) :: flag        
     FLOAT, optional, intent(out) :: relres     
     integer, optional, intent(out) :: iterations
@@ -1232,8 +1232,11 @@ end subroutine X(bi_conjugate_gradients)
      FLOAT,    allocatable, intent(in) :: P(:,:,:) 
      R_TYPE, allocatable, intent(in) :: R0(:,:)
      R_TYPE, intent(in)              :: w(:,:)
-     R_TYPE                          :: v(s), X(p_dot)(s)
-     integer                                   :: s, i, j, k, N, low(s), up(s), step, nrhs
+     integer, intent(in)             :: s
+     R_TYPE                          :: X(p_dot)(s)
+
+     R_TYPE                          :: v(s)
+     integer                         :: j, k, N, low(s), up(s), step, nrhs
 
      if ( allocated(P) ) then
        ! Biortho: P has orthogonal random numbers
