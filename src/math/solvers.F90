@@ -44,7 +44,10 @@ module solvers_m
     zqmr_spec_dotu,             &
     dqmr_spec_dotu,             &
     zqmr_gen_dotu,              &
-    dqmr_gen_dotu
+    dqmr_gen_dotu,              &
+    didrs,                      &
+    zidrs
+
 
   !> ---------------------------------------------------------
   !! QMR (quasi-minimal residual) algorithm for complex symmetric matrices

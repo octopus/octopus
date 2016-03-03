@@ -785,6 +785,529 @@ end subroutine X(bi_conjugate_gradients)
     POP_SUB(X(qmr_gen_dotu))
   end subroutine X(qmr_gen_dotu)
 
+
+
+!> This is the "Induced Dimension Reduction", IDR(s) (for s=4). IDR(s) is a robust and efficient short recurrence 
+!> Krylov subspace method for solving large nonsymmetric systems of linear equations. It is described in 
+!> [Peter Sonneveld and Martin B. van Gijzen, SIAM J. Sci. Comput. 31, 1035 (2008)]. 
+!>
+!> We have adapted the code released by M. B. van Gizjen [http://ta.twi.tudelft.nl/nw/users/gijzen/IDR.html].
+!> That code is licenced under the MIT licence, which allows to re-release this modified version under the GPL.
+!> 
+!> The original copyright notice, and licence, follows:
+!>
+!> Copyright (c) July 2015, Martin van Gijzen
+!>
+!> Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated 
+!> documentation files (the "Software"), to deal in the Software without restriction, including without limitation 
+!> the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, 
+!> and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+!>
+!> The above copyright notice and this permission notice shall be included in all copies or substantial 
+!> portions of the Software.
+!>
+!> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED 
+!> TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL 
+!> THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF 
+!> CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
+!> DEALINGS IN THE SOFTWARE.
+  function X(idrs)( b, s, &
+                   preconditioner, matrixvector, &
+                   ddotprod, zdotprod, &
+                   tolerance, maximum_iterations, variant, &
+                   flag, relres, iterations, &
+                   x0, U0, omega, resvec, H)
+
+    implicit none
+
+    ! Required input parameters:
+    R_TYPE, intent(in) :: b(:, :)  ! system rhs
+    integer, intent(in) :: s       ! s parameter
+    ! Solution:
+    R_TYPE :: X(idrs) (size(b,1), size(b,2))
+    ! Optional input parameters:
+    FLOAT, optional, intent(in) :: tolerance 
+    integer, optional, intent(in) :: maximum_iterations 
+    character(len=8), optional, intent(in) :: variant     
+    ! Optional output parameters:
+    integer, optional, intent(out) :: flag        
+    FLOAT, optional, intent(out) :: relres     
+    integer, optional, intent(out) :: iterations
+    ! Optional input arrays:
+    R_TYPE, optional, intent(in) :: x0(:, :)  
+    R_TYPE, optional, intent(in) :: U0(:, :, :) 
+    R_TYPE, optional, intent(in) :: omega(:) 
+    ! Optional output arrays:
+    FLOAT, optional, intent(out) :: resvec(:) 
+    R_TYPE, optional, intent(out) :: H(:, :)   
+
+    interface
+      function preconditioner( v )
+        R_TYPE, dimension(:,:), intent(in)     :: v
+        R_TYPE, dimension(size(v,1),size(v,2)) :: preconditioner
+      end function preconditioner
+      function matrixvector( v ) 
+        R_TYPE, intent(in)       :: v(:,:)
+        R_TYPE                   :: matrixvector(size(v,1),size(v,2))
+      end function matrixvector
+      FLOAT function ddotprod(a, b)
+        FLOAT, intent(in) :: a(:), b(:)
+        FLOAT, allocatable :: apsi(:, :), bpsi(:, :)
+      end function ddotprod
+      CMPLX function zdotprod(a, b)
+        CMPLX, intent(in) :: a(:), b(:)
+        CMPLX, allocatable :: apsi(:, :), bpsi(:, :)
+      end function zdotprod
+    end interface
+    
+    ! Local arrays:
+    FLOAT, allocatable           :: P(:,:,:) 
+    R_TYPE, allocatable          :: R0(:,:) 
+    R_TYPE                       :: x(size(b,1),size(b,2))
+    R_TYPE                       :: G(size(b,1),size(b,2),s)
+    R_TYPE                       :: U(size(b,1),size(b,2),s)
+    R_TYPE                       :: r(size(b,1),size(b,2)) 
+    R_TYPE                       :: v(size(b,1),size(b,2))   
+    R_TYPE                       :: t(size(b,1),size(b,2))  
+    R_TYPE                       :: M(s,s), f(s), mu(s)
+    R_TYPE                       :: alpha(s), beta(s), gamma(s)
+
+    R_TYPE                       :: om, tr    
+    FLOAT                        :: nr, nt, rho, kappa
+
+    ! Declarations:
+    integer               :: n                 ! dimension of the system
+    integer               :: nrhs              ! Number of RHS-vectors
+    integer               :: maxit             ! maximum number of iterations
+    integer               :: method            ! which IDR(s) variant?
+    FLOAT                 :: tol               ! actual tolerance
+    integer               :: info              ! convergence indicator
+    logical               :: out_flag          ! store flag
+    logical               :: out_relres        ! store relres
+    logical               :: out_iterations    ! store number of iterations
+    logical               :: inispace          ! initial search space
+    logical               :: user_omega        ! user defined omega present
+    integer               :: n_omega           ! number of user defined omegas
+    logical               :: out_resvec        ! store residual norms
+    logical               :: out_H             ! store iteration parameters in H
+    integer               :: nritz             ! Number of wanted ritz values
+
+    integer               :: iter              ! number of iterations
+    integer               :: ii                ! inner iterations index
+    integer               :: jj                ! G-space index
+    FLOAT                 :: normb, normr, tolb! for tolerance check
+    integer               :: i,j,k,l           ! loop counters
+
+    ! Problem size:
+    n    = size(b,1)
+    ! Number of right-hand-side vectors:
+    nrhs = size(b,2)
+      
+    ! Check optional input parameters:
+    if ( present(tolerance) ) then
+      if ( tolerance < 0 ) then
+        message(1) = 'The tolerance parameter in idrs routine must be non-negative'
+        call messages_fatal(1)
+      end if
+      tol = tolerance 
+    else
+      tol = CNST(1e-6)
+    endif
+
+    maxit=min(2*n,1000)
+    if ( present(maximum_iterations) ) maxit = maximum_iterations 
+   
+    method = 1 ! biortho   
+    if ( present(variant) ) then
+      if ( variant == 'minsync' ) then
+        method = 2
+      elseif ( variant == 'bicgstab' ) then 
+        method = 3
+      endif
+    endif
+
+    ! Initialize the output variables 
+    out_flag       = present(flag)
+    if ( out_flag )       flag = -1 
+    out_relres     = present(relres)
+    if ( out_relres)      relres = 1. 
+    out_iterations = present(iterations)
+    if ( out_iterations ) iterations = 0 
+
+    ! Check optional input arrays:
+    x = 0.
+    if ( present(x0) ) x = x0
+      
+    U = 0.
+    inispace =  present(U0)
+    if ( inispace ) U = U0
+
+    user_omega = present(omega)
+    if ( user_omega ) then
+      n_omega = size(omega)
+    end if
+
+    ! Check output arrays
+    out_resvec     = present(resvec)
+    if ( out_resvec ) then
+      if ( maxit+1 > size(resvec) ) then
+        message(1) = 'idrs: Length of vector with residual norms too small, should be maxit+1'
+        call messages_fatal(1)
+      end if
+    end if
+
+    out_H = present(H)
+    if ( out_H ) then
+      nritz = size(H,1)-1
+      if ( size(H,2) /= nritz ) then
+        message(1) = 'Second dimension of H incompatible, with first'
+        call messages_fatal(1)
+      end if
+      H = 0.
+    end if
+
+    ! compute initial residual, set absolute tolerance
+    normb = X(frob_norm)(b)
+    ! Originally, the residue was normalized with ||b||, but to be consistent with other methods,
+    ! we remove this feature
+    !tolb = tol * normb
+    tolb = tol
+    r = b - matrixvector(x)
+    normr = X(frob_norm)(r)
+    if ( out_resvec ) resvec(1)= normr
+
+    ! check if the initial solution is not already a solution within the prescribed
+    ! tolerance
+    if (normr <= tolb) then      
+      if ( out_iterations ) iterations = 0               
+      if ( out_flag )       flag  = 0
+      ! Originally, the residue was normalized with ||b||, but to be consistent with other methods,
+      ! we remove this feature
+      !if ( out_relres )     relres = normr/normb
+      if ( out_relres )     relres = normr
+      return
+    end if
+
+    ! Define P and kappa (depending on the method)
+    if ( method == 1 ) then
+      allocate( P(n,nrhs,s) )
+      call RANDOM_SEED
+      call RANDOM_NUMBER(P)
+      do j = 1,s
+         do k = 1,j-1
+            alpha(k) = dtrace_dot( P(:,:,k),P(:,:,j) )
+            P(:,:,j) = P(:,:,j) - alpha(k)*P(:,:,k)
+         end do
+         P(:,:,j) = P(:,:,j)/dfrob_norm(P(:,:,j))
+      end do
+      kappa = 0.7
+    elseif ( method == 2 ) then
+    ! P is piecewise constant, minimum residual for omega
+      kappa = 0.
+    elseif ( method == 3 ) then
+      !if ( s /= 1 ) stop "s=1 is required for variant bicgstab"
+      ASSERT( s .ne. 1 )
+      allocate( R0(n,nrhs) )
+      R0 = r
+      kappa = 0.
+    endif
+
+    ! Initialize local variables:
+    M = 0.
+    om = 1.
+    iter = 0
+    info = -1
+    jj = 0
+    ii = 0
+    
+    ! This concludes the initialisation phase
+
+    ! Main iteration loop, build G-spaces:
+    
+    do while (  info < 0 )  ! start of iteration loop
+     
+!!+++++++++++++++++++++++++++++++++++++++++++++++++++++++
+! Generate s vectors in G_j
+!!+++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+      ! New right-hand side for small system:
+      f = X(p_dot)( P, R0, r, s )
+
+      do k = 1, s
+
+         ! Update inner iteration counter
+         ii = ii + 1
+
+         ! Compute new v
+         v = r 
+         if ( jj > 0 ) then
+
+            ! Solve small system (Note: M is lower triangular) and make v orthogonal to P:
+            do i = k,s
+               gamma(i) = f(i)
+               do j = k, i-1
+                  gamma(i) = gamma(i) - M(i,j)*gamma(j)
+               end do
+               gamma(i) = gamma(i)/M(i,i)
+               v = v - gamma(i)*G(:,:,i)
+            end do
+
+            ! Compute new U(:,:,k)
+            t = om * preconditioner(v)
+            do i = k,s
+               t = t + gamma(i)*U(:,:,i)
+            end do
+            U(:,:,k) = t
+
+            ! Compute Hessenberg matrix?
+            if ( out_H .and. ii <= nritz ) &
+               H(ii-s:ii-k,ii)   = -gamma(k:s)/beta(k:s)
+
+         else if ( .not. inispace ) then
+
+            ! Updates for the first s iterations (in G_0):
+            U(:, :, k) = preconditioner(v)
+
+         end if
+
+         ! Compute new G(:,:,k), G(:,:,k) is in space G_j
+         G(:, :, k) = matrixvector(U(:, :, k))
+        
+         ! Bi-Orthogonalise the new basis vectors: 
+         mu = X(p_dot)( P, R0, G(:,:,k), s )
+         do i = 1,k-1
+            alpha(i) = mu(i)
+            do j = 1, i-1
+               alpha(i) = alpha(i) - M(i,j)*alpha(j)
+            end do
+            alpha(i) = alpha(i)/M(i,i)
+            G(:,:,k) = G(:,:,k) - G(:,:,i)*alpha(i)
+            U(:,:,k) = U(:,:,k) - U(:,:,i)*alpha(i)
+            mu(k:s)  = mu(k:s)  - M(k:s,i)*alpha(i)
+         end do
+         M(k:s,k) = mu(k:s)
+
+         ! Compute Hessenberg matrix?
+         if ( out_H .and. ii <= nritz .and. k  > 1 ) &
+            H(ii-k+1:ii-1,ii) =  alpha(1:k-1)/beta(1:k-1)
+
+         ! Break down?
+         if ( abs(M(k,k)) <= tiny(tol) ) then
+            info = 3
+            exit
+         end if
+
+         ! Make r orthogonal to p_i, i = 1..k, update solution and residual 
+         beta(k) = f(k)/M(k,k)
+         r = r - beta(k)*G(:,:,k)
+         x = x + beta(k)*U(:,:,k)
+
+         ! New f = P(prime) *r (first k  components are zero)
+         if ( k < s ) then
+            f(k+1:s)   = f(k+1:s) - beta(k)*M(k+1:s,k)
+         end if
+
+         ! Compute Hessenberg matrix?
+         if ( out_H .and. ii <= nritz ) then     
+            H(ii,ii) = 1./beta(k)
+            l = max(1,ii-s)
+            H(l+1:ii+1,ii) = (H(l+1:ii+1,ii) - H(l:ii,ii))
+            H(l:ii+1,ii)   = H(l:ii+1,ii)/om
+         end if
+
+         ! Check for convergence
+         normr = X(frob_norm)(r)
+         iter = iter + 1
+         if ( out_resvec ) resvec(iter + 1) = normr
+         if ( normr < tolb ) then
+            info = 0
+            exit
+         elseif ( iter == maxit ) then
+            info = 1
+            exit
+         end if 
+
+      end do ! Now we have computed s+1 vectors in G_j
+      if ( info >= 0 )  then
+         exit
+      end if
+
+!!+++++++++++++++++++++++++++++++++++++++++++++++++++++++
+! Compute first residual in G_j+1
+!!+++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+      ! Update G-space counter
+      jj = jj + 1
+
+      ! Compute first residual in G_j+1
+      ! Note: r is already perpendicular to P so v = r
+ 
+      ! Preconditioning:
+      v = preconditioner(r)
+      t = matrixvector(v)
+
+
+      ! Computation of a new omega
+      if ( user_omega ) then
+        i = mod(jj,n_omega)
+        if ( i == 0 ) i = n_omega
+        om = omega(i)
+      elseif ( kappa == 0. ) then
+
+        ! Minimal residual (same as in Bi-CGSTAB):
+        om = X(trace_dot)(t,r)/X(trace_dot)(t,t)
+      else
+
+        ! 'Maintaining the convergence':
+        nr = X(frob_norm)(r)
+        nt = X(frob_norm)(t)
+        tr = X(trace_dot)(t,r)
+        rho = abs(tr/(nt*nr))
+        om=tr/(nt*nt)
+        if ( rho < kappa ) then
+          om = om*kappa/rho
+        end if
+      end if
+      if ( abs(om) <= epsilon(tol) ) then 
+         info = 3
+         exit
+      end if 
+
+      ! Update solution and residual
+      r = r - om*t 
+      x = x + om*v 
+
+      ! Check for convergence
+      normr = X(frob_norm)(r)
+      iter = iter + 1
+      if ( out_resvec ) resvec(iter + 1) = normr
+      if ( normr < tolb ) then
+        info = 0
+      elseif ( iter == maxit ) then
+        info = 1
+      end if 
+
+    end do ! end of while loop
+
+    ! Set output parameters
+    r = b - matrixvector(x)
+    normr = X(frob_norm)(r)
+
+    if ( info == 0 .and. normr > tolb ) info = 2
+    if ( out_iterations ) iterations = iter
+    ! Originally, the residue was normalized with ||b||, but to be consistent with other methods,
+    ! we remove this feature
+    !if ( out_relres )     relres=normr/normb
+    if ( out_relres )     relres=normr
+    if ( out_flag )       flag = info
+
+    X(idrs) = x
+
+    contains
+
+    function dtrace_dot(v, w)
+      ! Trace inner product of complex matrices
+      FLOAT, intent(in)      :: v(:,:), w(:,:)
+      FLOAT                  :: dtrace_dot
+      integer k
+      dtrace_dot = M_ZERO
+      do k = 1, size(v, 2)
+        dtrace_dot = dtrace_dot + ddotprod(v(:, k), w(:, k))
+      end do
+    end function dtrace_dot
+
+    function ztrace_dot(v, w)
+      ! Trace inner product of complex matrices
+      CMPLX, intent(in)      :: v(:,:), w(:,:)
+      CMPLX                  :: ztrace_dot
+      integer :: k
+      ztrace_dot = M_z0
+      do k = 1, size(v, 2)
+        ztrace_dot = ztrace_dot + zdotprod(v(:, k), w(:, k))
+      end do
+    end function ztrace_dot
+
+    function X(p_dot)(P, R0, w, s)
+     ! P inner product of complex matrices
+     FLOAT,    allocatable, intent(in) :: P(:,:,:) 
+     R_TYPE, allocatable, intent(in) :: R0(:,:)
+     R_TYPE, intent(in)              :: w(:,:)
+     R_TYPE                          :: v(s), X(p_dot)(s)
+     integer                                   :: s, i, j, k, N, low(s), up(s), step, nrhs
+
+     if ( allocated(P) ) then
+       ! Biortho: P has orthogonal random numbers
+       do i = 1, s
+         v(i) = R_TOTYPE(M_ZERO)
+         do k = 1, size(w, 2)
+#if defined(R_TREAL)
+           v(i) = v(i) + ddotprod(P(:, k, i), w(:, k))
+#else
+           v(i) = v(i) + cmplx( ddotprod(P(:, k, i), R_REAL(w(:, k)) ), &
+                                ddotprod(P(:, k, i), R_AIMAG(w(:, k))), &
+                                REAL_PRECISION )
+#endif
+         end do
+       end do
+     else if ( allocated(R0) ) then
+       ! BiCGSTAB: shadow vector equal to initial residual
+       v(1) = R_TOTYPE(M_ZERO)
+       do k = 1, size(w, 2)
+         v(1) = v(1) + X(dotprod)(R0(:, k), w(:, k))
+       end do
+     else
+        ! Minsync: P is piecewise constant 
+        ! WARNING: the integrals are done here in a peculiar way, not consistent with the
+        ! definition of the dot product. So this is probably not working.
+        N    = size(w,1)
+        nrhs = size(w,2)
+        step = N/s
+        low(1) = 1
+        do i = 1,s-1
+            low(i+1) = i*step+1
+            up(i) = i*step
+        end do
+        up(s) = N
+
+        do i = 1,s
+          v(i)  = 0.
+          do j = 1, nrhs
+            v(i) = v(i) + sum( w(low(i):up(i),j) )
+          end do
+        end do
+     end if
+      
+      X(p_dot) = v
+    end function X(p_dot)
+
+    function dfrob_norm(v)
+     ! Frobenius norm of complex matrix
+      FLOAT, intent(in)      :: v(:,:)
+      FLOAT                     :: dfrob_norm
+      integer :: k
+      dfrob_norm = M_ZERO
+      do k = 1, size(v, 2)
+        dfrob_norm = dfrob_norm + ddotprod( v(:, k), v(:, k) )
+      end do
+      dfrob_norm = sqrt( dfrob_norm )
+    end function dfrob_norm
+
+    function zfrob_norm(v)
+      ! Frobenius norm of complex matrix
+      CMPLX, intent(in)      :: v(:,:)
+      FLOAT                  :: zfrob_norm
+      integer :: k
+      zfrob_norm = M_ZERO
+      do k = 1, size(v, 2)
+        zfrob_norm = zfrob_norm + zdotprod( v(:, k), v(:, k) )
+      end do
+      zfrob_norm = sqrt( zfrob_norm )
+    end function zfrob_norm
+   
+  end function X(idrs)
+
+
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

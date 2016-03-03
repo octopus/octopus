@@ -59,17 +59,11 @@ subroutine X(linear_solver_solve_HXeY) (this, hm, gr, st, ist, ik, x, y, shift, 
   case(OPTION__LINEARSOLVER__CG)
     call X(linear_solver_cg)       (this, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used)
 
+  case(OPTION__LINEARSOLVER__IDRS)
+    call X(linear_solver_idrs) (this, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used)
+
   case(OPTION__LINEARSOLVER__BICGSTAB)
     call X(linear_solver_bicgstab) (this, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used, occ_response_)
-
-  case(OPTION__LINEARSOLVER__BICGSTAB2)
-#if defined(R_TCOMPLEX)
-    message(1) = 'The BICGSTAB(2) method (LinearSolver = bicgstab2) is not available for complex matrices.'
-    call messages_fatal(1)
-#else
-  
-    call dlinear_solver_bicgstab2 (this, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used, l = 2)
-#endif
 
   case(OPTION__LINEARSOLVER__MULTIGRID)
     call X(linear_solver_multigrid)(this, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used)
@@ -136,6 +130,7 @@ subroutine X(linear_solver_solve_HXeY_batch) (this, hm, gr, st, ik, xb, yb, shif
 
   select case(this%solver)
   case(OPTION__LINEARSOLVER__QMR_DOTP)
+
     call profiling_in(prof_batch, "LINEAR_SOLVER_BATCH")
     call X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, yb, shift, iter_used, residue, tol)
     call profiling_out(prof_batch)
@@ -230,294 +225,148 @@ subroutine X(linear_solver_cg) (ls, hm, gr, st, ist, ik, x, y, shift, tol, resid
 end subroutine X(linear_solver_cg)
 
 
-
-#if defined(R_TREAL)
 ! ---------------------------------------------------------
-!> BICONJUGATE GRADIENTS STABILIZED(2)
-!>
-!> This is the BICGSTAB(L) described in:
-!> 
-!> * G.L.G. Sleijpen and D.R. Fokkema, BiCGstab(l) for linear equations involving unsymmetric 
-!>   matrices with complex spectrum, Electronic Transactions on Numer. Anal. (ETNA) 1, 11 (1993)
-!>
-!> Only for l=1, and l=2. For l=1 it is not fundamentally different from the bicgstab, although
-!> it seems to break down less. This version contains two enhancements, described in:
-!>
-!> * G.Sleijpen and H.van der Vorst, Maintaining convergence properties of BiCGstab methods in finite 
-!>   precision arithmetic, Numerical Algorithms 10, 203 (1995).
-!> * G.Sleijpen and H.van der Vorst, Reliable updated residuals in hybrid BiCG methods, 
-!>   Computing 56, 141 (1996).
-!> 
-!> This version is based on the bc2g.f routine of M. A. Botchev:
-!> [http://www.staff.science.uu.nl/~vorst102/software.html]
-!>
-subroutine dlinear_solver_bicgstab2 (ls, hm, gr, st, ist, ik, x, rhsy, shift, tol, residue, iter_used, l)
+!> IDRS
+!> This is the "Induced Dimension Reduction", IDR(s) (for s=4). IDR(s) is a robust and efficient short recurrence 
+!> Krylov subspace method for solving large nonsymmetric systems of linear equations. It is described in 
+!> [Peter Sonneveld and Martin B. van Gijzen, SIAM J. Sci. Comput. 31, 1035 (2008)]. We have adapted the code
+!> released by M. B. van Gizjen [http://ta.twi.tudelft.nl/nw/users/gijzen/IDR.html].
+subroutine X(linear_solver_idrs) (ls, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used)
   type(linear_solver_t), intent(inout) :: ls
   type(hamiltonian_t),   intent(in)    :: hm
   type(grid_t),          intent(in)    :: gr
   type(states_t),        intent(in)    :: st
   integer,               intent(in)    :: ist
   integer,               intent(in)    :: ik
-  R_TYPE,                intent(inout) :: x(:, :)    !< x(gr%mesh%np_part, st%d%dim)
-  R_TYPE,                intent(in)    :: rhsy(:, :) !< rhsy(gr%mesh%np, st%d%dim)
-  FLOAT,                 intent(in)    :: shift
+  R_TYPE,                intent(inout) :: x(:,:)   !< x(gr%mesh%np, st%d%dim)
+  R_TYPE,                intent(in)    :: y(:,:)   !< y(gr%mesh%np, st%d%dim)
+  R_TYPE,                intent(in)    :: shift
   FLOAT,                 intent(in)    :: tol
   FLOAT,                 intent(out)   :: residue
   integer,               intent(out)   :: iter_used
-  integer,               intent(in)       :: l
 
-  integer :: ii, i1, jj, kk, z, zz, y0, yl, y, rr, r, u, xp, bp, n, idim
-  FLOAT, allocatable :: psi(:, :), zeta(:, :), xx(:), rhs(:)
-  logical :: rcmp, xpdt
-  FLOAT :: alpha, beta, hatgamma, kappa0, kappal, mxnrmr, mxnrmx, omega, rho0, rho1, residue0, &
-           sigma, varrho, delta
+  integer :: s, info
+  R_TYPE, allocatable :: rhs(:, :), phi(:, :), x0(:, :)
 
-  PUSH_SUB(dlinear_solver_bicgstab2)
+  PUSH_SUB(dlinear_solver_idrs)
 
-  n = gr%mesh%np * st%d%dim
-  SAFE_ALLOCATE(psi(1:n, 1:2*l+5))
-  SAFE_ALLOCATE(zeta(1:l+1, 1:3+2*(l+1)))
-  SAFE_ALLOCATE(xx(1:n))
-  SAFE_ALLOCATE(rhs(1:n))
-  delta = CNST(1.0e-2)
+  SAFE_ALLOCATE(rhs(1:gr%mesh%np*st%d%dim, 1:1))
+  SAFE_ALLOCATE(phi(1:gr%mesh%np*st%d%dim, 1:1))
+  SAFE_ALLOCATE(x0(1:gr%mesh%np*st%d%dim, 1:1))
 
-  do idim = 1, st%d%dim
-    xx((idim-1)*gr%mesh%np+1 : st%d%dim*gr%mesh%np) = x(1:gr%mesh%np, idim)
-    rhs((idim-1)*gr%mesh%np+1 : st%d%dim*gr%mesh%np) = rhsy(1:gr%mesh%np, idim)
-  end do
+  rhs(:, 1) = X(singledimarray)(gr%mesh%np*st%d%dim, y)
+  x0(:, 1)  = X(singledimarray)(gr%mesh%np*st%d%dim, x)
 
-  rr = 1
-  r = rr + 1
-  u = r + (l+1)
-  xp = u + (l+1)
-  bp = xp + 1
+  s = 4
+  info = -1
+  phi = X(idrs)(rhs, s, preconditioner, matrixvector, ddotproduct, zdotproduct, &
+    tol, ls%max_iter, x0 = x0, iterations = iter_used, flag = info, relres = residue)
 
-  z = 1
-  zz = z + (l+1)
-  y0 = zz + (l+1)
-  yl = y0 + 1
-  y = yl + 1
+  x = X(doubledimarray)(gr%mesh%np, st%d%dim, phi(:, 1))
 
-  ! Calculation of the initial residual.
-  call op (xx, psi(:, r) )
-  psi(:, r) = rhs(:) - psi(:, r)
-  iter_used = 1
-
-  psi(:, rr) = psi(:, r)
-  psi(:, bp) = psi(:, r)
-  psi(:, xp) = xx(:)
-  xx(:) = M_ZERO
-
-  residue0 = sqrt(dotp(psi(:, r), psi(:, r)))
-  residue = residue0
-
-  mxnrmx = residue0
-  mxnrmr = residue0
-  rcmp = .false.
-  xpdt = .false.
-
-  alpha = M_ZERO
-  omega = M_ONE
-  sigma = M_ONE
-  rho0 =  M_ONE
-
-  main_iteration : do while ( (residue > tol) .and.  (iter_used < ls%max_iter) )
-
-    ! BICG
-    rho0 = -omega * rho0
-    do kk = 1, l
-      rho1 = dotp(psi(:, rr), psi(:, r+kk-1))
-
-      if (rho0 .eq. M_ZERO) then
-        write(message(1), '(a)') "BiCGSTAB solver not converged!"
-        call messages_warning(1)
-        exit main_iteration
-      end if
-      beta = alpha*(rho1/rho0)
-      rho0 = rho1
-      do jj = 0, kk-1
-        psi(:, u+jj) = psi(:, r+jj) - beta * psi(:, u+jj)
-      end do
-
-      call op(psi(:, u+kk-1), psi(:, u+kk))
-      iter_used = iter_used + 1
-      sigma = dotp(psi(:, rr), psi(:, u+kk))
-
-      if (sigma .eq. M_ZERO) then
-        write(message(1), '(a)') "BiCGSTAB solver not converged!"
-        call messages_warning(1)
-        exit main_iteration
-      end if
-
-      alpha = rho1/sigma
-      xx(:) = alpha * psi(:, u) + xx(:)
-
-      do jj = 0, kk-1
-        psi(:, r+jj) = - alpha * psi(:, u+jj+1) + psi(:, r+jj)
-      end do
-
-      call op (psi(:, r+kk-1), psi(:, r+kk))
-      iter_used = iter_used + 1
-
-      residue = sqrt(dotp(psi(:, r), psi(:, r)))
-      mxnrmx = max (mxnrmx, residue)
-      mxnrmr = max (mxnrmr, residue)
-
-    end do
-
-    ! Calculation of the matrix Z = R^* R
-    do i1 = 1, l+1
-      do jj = i1-1, l
-        zeta(jj+1, z+i1-1) = dotp(psi(:, r+jj), psi(:, r+i1-1))
-        zeta(z+i1-1, jj+1) = zeta(jj+1, z+i1-1)
-      end do
-    end do
-
-    do i1 = zz, zz+l
-      do ii = 1, l+1
-        zeta(ii, i1)   = zeta(ii, i1+(z-zz))
-      end do
-    end do
-
-    zeta(1, y0) = - M_ONE
-    zeta(2, y0) = zeta(2, z) / zeta(2, zz+1)
-    zeta(l+1, y0) = M_ZERO
-
-    zeta(1, yl) = M_ZERO
-    zeta(2, yl) = zeta(2, z+l) / zeta(2, zz+1)
-    zeta(l+1, yl) = - M_ONE
-
-    ! Convex combination
-    do ii = 1, l+1
-      zeta(ii, y) = M_ZERO
-    end do
-    do jj = 1, l+1
-      do ii = 1, l+1
-        zeta(ii, y) = zeta(ii, y) + zeta(jj, yl) * zeta(ii, z+jj-1)
-      end do
-    end do
-    kappal = sqrt( dot_product(zeta(1:l+1, yl), zeta(1:l+1, y)) ) 
-
-    do ii = 1, l+1
-      zeta(ii, y) = M_ZERO
-    end do
-    do jj = 1, l+1
-      do ii = 1, l+1
-        zeta(ii, y) = zeta(ii, y) + zeta(jj, y0) * zeta(ii, z+jj-1)
-      end do
-    end do
-    kappa0 = sqrt(dot_product(zeta(1:l+1, y0), zeta(1:l+1, y)))
-
-    varrho = dot_product(zeta(1:l+1, yl), zeta(1:l+1, y))
-    varrho = varrho / (kappa0*kappal)
-
-    hatgamma = sign( M_ONE, varrho) * max(abs(varrho),CNST(0.7)) * (kappa0/kappal)
-
-    do ii=1,l+1
-      zeta(ii, y0) = -hatgamma*zeta(ii, yl) + zeta(ii, y0)
-    end do
-
-    !   Update
-    omega = zeta(l+1,y0)
-    do jj=1,l
-        psi(:, u) = psi(:, u) - zeta(1+jj, y0) * psi(:, u+jj)
-        xx(:)     = xx(:)     + zeta(1+jj, y0) * psi(:, r+jj-1)
-        psi(:,r) = psi(:, r) - zeta(1+jj, y0) * psi(:, r+jj)
-    end do
-
-    do ii = 1, l+1
-      zeta(ii, y) = M_ZERO 
-    end do
-    do jj = 1, l+1
-      do ii = 1, l+1
-        zeta(ii, y) = zeta(ii, y) + zeta(jj, y0) * zeta(ii, z+jj-1)
-      end do
-    end do
-
-    residue = sqrt(dot_product(zeta(1:l+1, y0), zeta(1:l+1, y)))
-
-    ! Reliable update.
-    mxnrmx = max (mxnrmx, residue)
-    mxnrmr = max (mxnrmr, residue)
-    xpdt = (residue < delta*residue0) .and. (residue0 < mxnrmx)
-    rcmp = ( ( (residue < delta*mxnrmr) .and. (residue0 < mxnrmr) ) .or. xpdt)
-    if (rcmp) then
-      call op (xx, psi(:, r) )
-      iter_used = iter_used + 1
-      psi(:, r) = psi(:, bp) - psi(:, r)
-      mxnrmr = residue
-      if (xpdt) then
-        psi(:, xp) = xx(:) + psi(:, xp)
-        xx(:) = M_ZERO
-        psi(:, bp) = psi(:, r)
-        mxnrmx = residue
-      end if
-    end if
-
-  end do main_iteration
-
-  ! End of iterations
-  xx(:) = psi(:, xp) + xx(:)
-
-  ! Computation of the "true" residual
-  ! call op (xx, psi(:, r) )
-  ! psi(:, r) = rhs(:) - psi(:, r)
-  ! residue = sqrt( dotp(psi(:, r), psi(:, r)) )
-
-  if (residue .gt. tol) then 
-    write(message(1), '(a)') "BiCGSTAB solver not converged!"
-    call messages_warning(1)
+  if(residue > tol .or. info .ne. 0) then
+    write(message(1), '(a)')     "IDRS solver failed."
+    write(message(2), '(a,i3)')  "Flag =,", info
+    call messages_warning(2)
   end if
 
-  do idim = 1, st%d%dim
-    x(1:gr%mesh%np, idim) = xx((idim-1)*gr%mesh%np+1 : st%d%dim*gr%mesh%np)
-  end do
-
-  SAFE_DEALLOCATE_A(psi)
-  SAFE_DEALLOCATE_A(zeta)
-  SAFE_DEALLOCATE_A(xx)
+  SAFE_DEALLOCATE_A(x0)
+  SAFE_DEALLOCATE_A(phi)
   SAFE_DEALLOCATE_A(rhs)
-  POP_SUB(dlinear_solver_bicgstab2)
-  return
-
+  POP_SUB(dlinear_solver_idrs)
   contains
 
-    FLOAT function dotp(x, y)
-      FLOAT, intent(in) :: x(:)
-      FLOAT, intent(in) :: y(:)
-      integer :: idim
-      dotp = M_ZERO
-      do idim = 1, st%d%dim
-        dotp = dotp + &
-          dmf_dotp(gr%mesh, x((idim-1)*gr%mesh%np+1:st%d%dim*gr%mesh%np), y((idim-1)*gr%mesh%np+1:st%d%dim*gr%mesh%np))
-      end do
-    end function dotp
+     function dsingledimarray(n, a)
+       integer, intent(in) :: n
+       FLOAT, intent(in) :: a(:, :)
+       FLOAT :: dsingledimarray(n)
+       integer :: idim
+       do idim = 1, st%d%dim
+         dsingledimarray((idim-1)*gr%mesh%np+1: idim*gr%mesh%np) = a(1:gr%mesh%np, idim)
+       end do
+     end function dsingledimarray
 
-    subroutine op(x, y)
-      FLOAT, intent(in) :: x(:)
-      FLOAT, intent(out) :: y(:)
+     function ddoubledimarray(np, dim, a)
+       integer, intent(in) :: np, dim
+       FLOAT, intent(in) :: a(:)
+       FLOAT :: ddoubledimarray(np, dim)
+       integer :: idim
+       do idim = 1, dim
+         ddoubledimarray(1:np, idim) = a((idim-1)*np+1: idim*np)
+       end do
+     end function ddoubledimarray
 
-      integer :: idim
-      FLOAT, allocatable :: a(:, :), opa(:, :)
+     function zsingledimarray(n, a)
+       integer, intent(in) :: n
+       CMPLX, intent(in) :: a(:, :)
+       CMPLX :: zsingledimarray(n)
+       integer :: idim
+       do idim = 1, st%d%dim
+         zsingledimarray((idim-1)*gr%mesh%np+1: idim*gr%mesh%np) = a(1:gr%mesh%np, idim)
+       end do
+     end function zsingledimarray
 
-      SAFE_ALLOCATE(a(gr%mesh%np_part, st%d%dim))
-      SAFE_ALLOCATE(opa(gr%mesh%np, st%d%dim))
+     function zdoubledimarray(np, dim, a)
+       integer, intent(in) :: np, dim
+       CMPLX, intent(in) :: a(:)
+       CMPLX :: zdoubledimarray(np, dim)
+       integer :: idim
+       do idim = 1, dim
+         zdoubledimarray(1:np, idim) = a((idim-1)*np+1: idim*np)
+       end do
+     end function zdoubledimarray
 
-      a = M_ZERO
-      do idim = 1, st%d%dim
-        a(1:gr%mesh%np, idim) = x((idim-1)*gr%mesh%np+1 : st%d%dim*gr%mesh%np)
-      end do
-      call dlinear_solver_operator (hm, gr, st, ist, ik, shift, a, opa)
-      do idim = 1, st%d%dim
-        y((idim-1)*gr%mesh%np+1 : st%d%dim*gr%mesh%np) = opa(1:gr%mesh%np, idim)
-      end do
+     FLOAT function ddotproduct(a, b)
+       FLOAT, intent(in) :: a(:), b(:)
+       ddotproduct = dmf_dotp(gr%mesh, st%d%dim, &
+         ddoubledimarray(gr%mesh%np, st%d%dim, a), ddoubledimarray(gr%mesh%np, st%d%dim, b))
+     end function ddotproduct
 
-      SAFE_DEALLOCATE_A(a)
-      SAFE_DEALLOCATE_A(opa)
-    end subroutine op
+     CMPLX function zdotproduct(a, b)
+       CMPLX, intent(in) :: a(:), b(:)
+       zdotproduct = zmf_dotp(gr%mesh, st%d%dim, &
+         zdoubledimarray(gr%mesh%np, st%d%dim, a), zdoubledimarray(gr%mesh%np, st%d%dim, b))
+     end function zdotproduct
 
-end subroutine dlinear_solver_bicgstab2
-#endif
+     function preconditioner( v )
+       R_TYPE, dimension(:,:), intent(in)     :: v
+       R_TYPE, dimension(size(v,1),size(v,2)) :: preconditioner
+
+       R_TYPE, allocatable :: phi(:, :)
+       R_TYPE, allocatable :: precphi(:, :)
+
+       SAFE_ALLOCATE(phi(1:gr%mesh%np_part, 1:st%d%dim))
+       SAFE_ALLOCATE(precphi(1:gr%mesh%np, 1:st%d%dim))
+
+       phi = R_TOTYPE(M_ZERO)
+       phi(1:gr%mesh%np, 1:st%d%dim) = X(doubledimarray)(gr%mesh%np, st%d%dim, v(:, 1))
+       call X(preconditioner_apply)(ls%pre, gr, hm, ik, phi, precphi, shift)
+       preconditioner(1:gr%mesh%np*st%d%dim, 1) = X(singledimarray)(gr%mesh%np*st%d%dim, precphi)
+
+       SAFE_DEALLOCATE_A(phi)
+       SAFE_DEALLOCATE_A(precphi)
+     end function preconditioner
+
+     function matrixvector( v ) 
+       R_TYPE, intent(in)       :: v(:,:)
+       R_TYPE                   :: matrixvector(size(v,1),size(v,2))
+
+       R_TYPE, allocatable :: phi(:, :)
+       R_TYPE, allocatable :: hphi(:, :)
+
+       SAFE_ALLOCATE(phi(1:gr%mesh%np_part, 1:st%d%dim))
+       SAFE_ALLOCATE(hphi(1:gr%mesh%np, 1:st%d%dim))
+
+       phi = R_TOTYPE(M_ZERO)
+       phi(1:gr%mesh%np, 1:st%d%dim) = X(doubledimarray)(gr%mesh%np, st%d%dim, v(:, 1))
+       call X(linear_solver_operator) (hm, gr, st, ist, ik, shift, phi, hphi)
+       matrixvector(1:gr%mesh%np*st%d%dim, 1) = X(singledimarray)(gr%mesh%np*st%d%dim, hphi)
+
+       SAFE_DEALLOCATE_A(phi)
+       SAFE_DEALLOCATE_A(hphi)
+     end function matrixvector
+
+end subroutine X(linear_solver_idrs)
 
 
 ! ---------------------------------------------------------

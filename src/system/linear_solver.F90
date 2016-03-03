@@ -103,9 +103,6 @@ contains
     !%Option bicgstab 4
     !% Biconjugate gradients stabilized. Slower than <tt>cg</tt>, but more reliable.
     !% General matrices.
-    !%Option bicgstab2 10
-    !% This is the BICGSTAB(2) described in [G.L.G. Sleijpen and D.R. Fokkema, ETNA 1, 11 (1993)].
-    !% It is usually safer and faster than bicgstab.
     !%Option cg 5
     !% Conjugate gradients. Fast but unreliable. Hermitian matrices only
     !% (no eta in Sternheimer).
@@ -131,6 +128,11 @@ contains
     !% the explicit solution in terms of the ground-state
     !% wavefunctions. You need unoccupied states to use this method.
     !% Unlike the other methods, may not give the correct answer.
+    !%Option idrs 11
+    !% This is the "Induced Dimension Reduction", IDR(s) (for s=4). IDR(s) is a robust and efficient short recurrence 
+    !% Krylov subspace method for solving large nonsymmetric systems of linear equations. It is described in 
+    !% [Peter Sonneveld and Martin B. van Gijzen, SIAM J. Sci. Comput. 31, 1035 (2008)]. We have adapted the code
+    !% released by M. B. van Gizjen [http://ta.twi.tudelft.nl/nw/users/gijzen/IDR.html].
     !%End
 
     if(present(def_solver)) then
@@ -179,8 +181,8 @@ contains
       case(OPTION__LINEARSOLVER__BICGSTAB)
         message(1)='Linear Solver: Biconjugate Gradients Stabilized'
 
-      case(OPTION__LINEARSOLVER__BICGSTAB2)
-        message(1)='Linear Solver: Biconjugate Gradients Stabilized (2)'
+      case(OPTION__LINEARSOLVER__IDRS)
+        message(1)='Linear Solver: IDRS'
 
       case(OPTION__LINEARSOLVER__MULTIGRID)
         message(1)='Multigrid (currently only Gauss-Jacobi - EXPERIMENTAL)'
