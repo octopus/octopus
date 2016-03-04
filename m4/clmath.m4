@@ -22,8 +22,6 @@ case $with_clfft_include in
   *)  CFLAGS_CLFFT="-I$with_clfft_include" ;;
 esac
 
-CFLAGS="$CFLAGS_CLFFT $acx_clfft_save_CFLAGS"
-
 AC_MSG_CHECKING([for clfft])
 
 CFLAGS="$CFLAGS_CLFFT $acx_clfft_save_CFLAGS"
