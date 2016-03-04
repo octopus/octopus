@@ -70,7 +70,8 @@ fi
 
 AC_SUBST(CFLAGS_NFFT)
 AC_SUBST(LIBS_NFFT)
-
+CFLAGS="$acx_nfft_save_CFLAGS"
+LIBS="$acx_nfft_save_LIBS"
 
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_nfft_ok" = xyes; then
