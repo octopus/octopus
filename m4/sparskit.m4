@@ -56,13 +56,11 @@ LIBS="$acx_sparskit_save_LIBS"
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_sparskit_ok" = xyes; then
   AC_DEFINE(HAVE_SPARSKIT,1,[Defined if you have SPARSKIT library.])
-  $1
 else
   if test $acx_sparskit_ok != disable; then
     AC_MSG_WARN([Could not find SPARSKIT library. 
                 *** Will compile without SPARSKIT support])
   fi
-  $2
 fi
 
 ])dnl ACX_SPARSKIT

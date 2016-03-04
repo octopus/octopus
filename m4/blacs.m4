@@ -55,12 +55,10 @@ done
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_blacs_ok" = xyes; then
   AC_DEFINE(HAVE_BLACS,1,[Defined if you have BLACS library.])
-  $1
 else
   AC_MSG_WARN([Could not find BLACS library (required for ScaLAPACK). 
                *** Will compile without ScaLAPACK support])
   LIBS_BLACS=""
-  $2
 fi
 
 AC_SUBST(LIBS_BLACS)

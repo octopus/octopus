@@ -79,10 +79,8 @@ dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_arpack_ok" = xyes; then
   AC_SUBST(LIBS_ARPACK)
   AC_DEFINE(HAVE_ARPACK,1,[Defined if you have ARPACK library.])
-  $1
 else
     AC_MSG_WARN([Could not find ARPACK library. 
                *** Will compile without ARPACK support])
-  $2
 fi
 ])dnl ACX_ARPACK

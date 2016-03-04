@@ -83,7 +83,6 @@ LIBS="$acx_parpack_save_LIBS"
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_parpack_ok" = xyes; then
   AC_DEFINE(HAVE_PARPACK,1,[Defined if you have PARPACK library.])
-  $1
   AC_SUBST(LIBS_PARPACK)
 else
   if test $acx_parpack_ok = nompi; then
@@ -94,7 +93,6 @@ else
   fi   
   AC_MSG_WARN([Could not find PARPACK library. 
               *** Will compile without PARPACK support])
-  $2
 fi
 
 ])dnl ACX_PARPACK

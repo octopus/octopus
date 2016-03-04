@@ -105,7 +105,6 @@ dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_isf_ok" = xyes; then
   AC_DEFINE(HAVE_LIBISF,1,[Defined if you have ISF library.])
 
-  $1
 else
   AC_MSG_WARN([Could not find ISF library. 
                *** Will compile internal ISF taken from BigDFT 1.7.6])
@@ -113,7 +112,6 @@ else
   FCFLAGS_ISF=""  
   HAVE_COMP_ISF=1
   AC_DEFINE(HAVE_COMP_ISF, 1, [This is defined when we link with an external ISF library.])
-  $2
 fi
 
 AC_SUBST(LIBS_ISF)

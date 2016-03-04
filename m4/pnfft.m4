@@ -102,13 +102,11 @@ fi
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_pnfft_ok" = xyes; then
   AC_DEFINE(HAVE_PNFFT,1,[Defined if you have PNFFT library.])
-  $1
 else
   AC_MSG_WARN([Could not find PNFFT library. 
                *** Will compile without PNFFT support])
   LIBS_PNFFT=""
   FCFLAGS_PNFFT=""
-  $2
 fi
 
 AC_SUBST(LIBS_PNFFT)

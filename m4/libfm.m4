@@ -73,10 +73,8 @@ LIBS="$acx_libfm_save_LIBS"
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_libfm_ok" = xyes; then
   AC_DEFINE(HAVE_LIBFM,1,[Defined if you have LIBFM library.])
-  $1
 else
   AC_MSG_WARN([Could not find Libfm library. 
                *** Will compile without Libfm support])
-  $2
 fi
 ])dnl ACX_LIBFM

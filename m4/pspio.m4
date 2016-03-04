@@ -69,10 +69,8 @@ LIBS="$acx_pspio_save_LIBS"
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_pspio_ok" = xyes; then
   AC_DEFINE(HAVE_PSPIO,1,[Defined if you have the PSPIO library.])
-  $1
 else
   LIBS_PSPIO=""
   FCFLAGS_PSPIO=""
-  $2
 fi
 ])dnl ACX_PSPIO

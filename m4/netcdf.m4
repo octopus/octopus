@@ -46,13 +46,11 @@ AC_MSG_RESULT([$acx_netcdf_ok ($FCFLAGS_NETCDF $LIBS_NETCDF)])
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_netcdf_ok" = xyes; then
   AC_DEFINE(HAVE_NETCDF,1,[Defined if you have NETCDF library.])
-  $1
 else
   AC_MSG_WARN([Could not find NetCDF library. 
               *** Will compile without NetCDF and ETSF I/O support])
   FCFLAGS_NETCDF=""
   LIBS_NETCDF=""
-  $2
 fi
 
 AC_SUBST(FCFLAGS_NETCDF)

@@ -51,13 +51,11 @@ AC_MSG_RESULT([$acx_etsf_io_ok ($FCFLAGS_ETSF_IO $LIBS_ETSF_IO)])
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_etsf_io_ok" = xyes; then
   AC_DEFINE(HAVE_ETSF_IO,1,[Defined if you have the ETSF_IO library.])
-  $1
 else
   AC_MSG_WARN([Could not find etsf_io library. 
            *** Will compile without ETSF I/O support])
   FCFLAGS_ETSF_IO=""
   LIBS_ETSF_IO=""
-  $2
 fi
 
 AC_SUBST(FCFLAGS_ETSF_IO)

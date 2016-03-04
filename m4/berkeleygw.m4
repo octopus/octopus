@@ -38,13 +38,11 @@ AC_MSG_RESULT([$acx_berkeleygw_ok ($FCFLAGS_BERKELEYGW $LIBS_BERKELEYGW)])
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_berkeleygw_ok" = xyes; then
   AC_DEFINE(HAVE_BERKELEYGW,1,[Defined if you have the BerkeleyGW library.])
-  $1
 else
   AC_MSG_WARN([Could not find BerkeleyGW library. 
            *** Will compile without BerkeleyGW support])
   FCFLAGS_BERKELEYGW=""
   LIBS_BERKELEYGW=""
-  $2
 fi
 
 AC_SUBST(FCFLAGS_BERKELEYGW)

@@ -100,13 +100,11 @@ fi
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_pfft_ok" = xyes; then
   AC_DEFINE(HAVE_PFFT,1,[Defined if you have PFFT library.])
-  $1
 else
   AC_MSG_WARN([Could not find PFFT library. 
                *** Will compile without PFFT support])
   LIBS_PFFT=""
   FCFLAGS_PFFT=""
-  $2
 fi
 
 AC_SUBST(LIBS_PFFT)
