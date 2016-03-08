@@ -82,7 +82,6 @@ subroutine pes_mask_pmesh(dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp)
 
   integer :: nkpt, kpth_dir
   FLOAT :: zero_thr
-  logical :: kpath_has_gamma
 
 
   PUSH_SUB(pes_mask_pmesh)
@@ -99,7 +98,6 @@ subroutine pes_mask_pmesh(dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp)
   kpt(:) = M_ZERO
       
   zero_thr = M_EPSILON    
-  kpath_has_gamma = .false.
       
   if ( kpoints_have_zero_weight_path(kpoints)) then 
     ! supporting paths only along the kx and ky directions in 
@@ -114,16 +112,10 @@ subroutine pes_mask_pmesh(dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp)
     do ik = 1 , nkpt
       Lkpt(krng(1)+ik-1,kpth_dir) = ik
       kpt(1:dim) = kpoints_get_point(kpoints, krng(1) + ik -1) 
-      if ( sum(kpt(1:dim)**2) <= M_EPSILON )  kpath_has_gamma = .true.
     end do
-    
-    
-    if (.not. kpath_has_gamma) then
-      kpt(1:dim) = kpoints_get_point(kpoints, krng(1))-kpoints_get_point(kpoints, krng(1)+1)
-      zero_thr = sum(kpt(1:dim)**2)
-    end if    
         
   else  
+    
     call kpoints_grid_generate(dim, kpoints%nik_axis(1:dim), kpoints%shifts(1:dim), &
                                kpoints%full%red_point,  Lkpt(:,1:dim))
 
@@ -165,8 +157,12 @@ subroutine pes_mask_pmesh(dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp)
   end do  
   
   if(debug%info) then
-    do j1 = 1, ll(1)
-      print *,j1, "LG = ",LG(j1,1),"LG_ = ",LG_(j1,1), "idx = ", idx(j1,1), "idx_inv = ", idx_inv(j1,1)
+    do idir=1, dim
+      print *, "*** direction =", idir  
+      do j1 = 1, ll(idir)
+        print *,j1, "LG = ",LG(j1,idir),"LG_ = ",LG_(j1,idir), "idx = ", idx(j1,idir), "idx_inv = ", idx_inv(j1,idir)
+      end do
+      print *, "*** *** ***"  
     end do
   end if
 
@@ -242,20 +238,46 @@ subroutine pes_mask_pmesh(dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp)
 !         print *,ip1, "Pmesh", pmesh(ip1, 1, 1, 1)
 !       end do
 
-  if (err == -1) then
-    write(message(1), '(a)') 'Illformed momentum-space mesh: could not find p = 0 coordinate.'
-    call messages_fatal(1)
-  end if 
+  if ( kpoints_have_zero_weight_path(kpoints)) then 
+  ! With a path we just need to get the correct the zero index on the in-plane direction  
+  ! perpendicular to the path since is along this direction that we are going 
+  ! to slice with pes_mask_output_full_mapM_cut. Since on this direction we only 
+  ! have G points I simply need to look for the zero index of the G-grid.
+  ! Note that the G-grid must always include the (0,0,0) point. 
+    do j1 = 1, ll(1) 
+      do j2 = 1, ll(2) 
+        do j3 = 1, ll(3) 
 
-  if (err > 1) then
-    write(message(1), '(a)') 'Illformed momentum-space mesh: more than in point with p = 0 coordinate.'
-    write(message(1), '(a)') 'This can happen only if the kpoint mesh does not contain gamma.'
-    call messages_warning(1)
-  end if 
+          GG(1:3)= (/LG_(j1,1),LG_(j2,2),LG_(j3,3)/)
+          if (sum(GG(1:3)**2)<=M_EPSILON) idxZero(1:3) = (/j1,j2,j3/)
+        
+        end do
+      end do
+    end do
+    
+  else   
+    
+    if (err == -1) then
+      call messages_write('Illformed momentum-space mesh: could not find p = 0 coordinate.')
+      call messages_fatal()
+    end if 
+
+    if (err > 1) then
+      call messages_write('Illformed momentum-space mesh: more than one point with p = 0 coordinate.')
+      call messages_write('This can happen only if the kpoint mesh does not contain gamma.')
+      call messages_warning()
+    end if 
+
+  end if
+
+  if(debug%info) then
+    print * ,"idxZero(1:3)=", idxZero(1:3)
+  end if
+
 
   if (err == -2) then
-    write(message(1), '(a)') 'Illformed momentum-space mesh: two or more points with the same p.'
-    call messages_fatal(1)
+    call messages_write('Illformed momentum-space mesh: two or more points with the same p.')
+    call messages_fatal()
   end if 
   
  
@@ -314,7 +336,7 @@ subroutine pes_mask_map_from_states(restart, st, ll, pesK, krng, Lp, istin)
 
       if (st%d%kweights(ik) < M_EPSILON) then
         ! we have a zero-weight path
-        weight = st%occ(ist, ik)
+        weight = st%occ(ist, ik)!/nkpt
       else
         weight = st%occ(ist, ik) * st%d%kweights(ik)
       end if
