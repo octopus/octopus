@@ -233,7 +233,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine local_write_iter(writ, nd, domain, lab, inside, center, gr, st, & 
-                              hm, ks, mc, geo, kick, iter, dt, l_start, l_end, ldoverwrite)
+                              hm, ks, geo, kick, iter, l_start, ldoverwrite)
     type(local_write_t),    intent(inout) :: writ
     integer,                intent(in)    :: nd 
     type(box_union_t),      intent(in)    :: domain(:)
@@ -244,13 +244,10 @@ contains
     type(states_t),         intent(inout) :: st
     type(hamiltonian_t),    intent(inout) :: hm
     type(v_ks_t),           intent(inout) :: ks
-    type(multicomm_t),      intent(in)    :: mc
     type(geometry_t),       intent(inout) :: geo
     type(kick_t),           intent(inout) :: kick
     integer,                intent(in)    :: iter
-    FLOAT,                  intent(in)    :: dt
     integer,                intent(in)    :: l_start
-    integer,                intent(in)    :: l_end
     logical,                intent(in)    :: ldoverwrite
 
     type(profile_t), save :: prof
@@ -273,12 +270,12 @@ contains
 
     if(any(writ%out(LOCAL_OUT_DENSITY,:)%write).or.any(writ%out(LOCAL_OUT_POTENTIAL,:)%write)) &
       call local_write_density(writ%out(LOCAL_OUT_DENSITY, :), writ%out(LOCAL_OUT_POTENTIAL,:), & 
-                               nd, domain, lab, inside, center, &
-                               gr, geo, st, hm, ks, mc, iter, l_start, ldoverwrite, writ%how)
+                               nd, lab, inside, &
+                               gr, geo, st, hm, ks, iter, writ%how)
     
     if(any(writ%out(LOCAL_OUT_ENERGY, :)%write)) then
-      call local_write_energy(writ%out(LOCAL_OUT_ENERGY, :), nd, domain, lab, inside, center, &
-                               gr, geo, st, hm, ks, mc, iter, l_start, ldoverwrite, writ%how)
+      call local_write_energy(writ%out(LOCAL_OUT_ENERGY, :), nd, lab, inside, &
+                               gr, geo, st, hm, ks, iter, l_start, ldoverwrite)
       if(mpi_grp_is_root(mpi_world)) then
         do id = 1, nd
           call write_iter_flush(writ%out(LOCAL_OUT_ENERGY, id)%handle)
@@ -291,24 +288,19 @@ contains
   end subroutine local_write_iter
 
   ! ---------------------------------------------------------
-  subroutine local_write_density(out_dens, out_pot, nd, domain, lab, inside, center, & 
-                                gr, geo, st, hm, ks, mc, iter, l_start, start, how)
+  subroutine local_write_density(out_dens, out_pot, nd, lab, inside, & 
+                                gr, geo, st, hm, ks, iter, how)
     type(local_write_prop_t),      intent(inout) :: out_dens(:)
     type(local_write_prop_t),      intent(inout) :: out_pot(:)
     integer,                  intent(in)    :: nd 
-    type(box_union_t),        intent(in)    :: domain(:)
     character(len=15),        intent(in)    :: lab(:)
     logical,                  intent(in)    :: inside(:,:)
-    FLOAT,                    intent(in)    :: center(:,:)
     type(grid_t),         intent(inout) :: gr
     type(geometry_t),     intent(inout) :: geo
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(inout) :: hm
     type(v_ks_t),         intent(inout) :: ks
-    type(multicomm_t),    intent(in)    :: mc
     integer,              intent(in) :: iter
-    integer,              intent(in) :: l_start
-    logical,              intent(in) :: start
     integer,              intent(in) :: how
 
     integer            :: id, is, ix, ierr
@@ -360,7 +352,6 @@ contains
     end do
 
     if (any(out_pot(:)%write)) then
-      call v_ks_init(ks, gr, st, geo, mc)
       do is = 1, st%d%nspin
       !Computes Hartree potential
         call dpoisson_solve(psolver, hm%vhartree, st%rho(1:gr%mesh%np, is))
@@ -384,27 +375,23 @@ contains
   end subroutine local_write_density
 
   ! ---------------------------------------------------------
-  subroutine local_write_energy(out_energy, nd, domain, lab, inside, center, & 
-                                gr, geo, st, hm, ks, mc, iter, l_start, start, how)
+  subroutine local_write_energy(out_energy, nd, lab, inside, & 
+                                gr, geo, st, hm, ks, iter, l_start, start)
     type(local_write_prop_t),      intent(inout) :: out_energy(:)
     integer,                  intent(in)    :: nd 
-    type(box_union_t),        intent(in)    :: domain(:)
     character(len=15),        intent(in)    :: lab(:)
     logical,                  intent(in)    :: inside(:,:)
-    FLOAT,                    intent(in)    :: center(:,:)
     type(grid_t),         intent(inout) :: gr
     type(geometry_t),     intent(inout) :: geo
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(inout) :: hm
     type(v_ks_t),         intent(inout) :: ks
-    type(multicomm_t),    intent(in)    :: mc
     integer,              intent(in) :: iter
     integer,              intent(in) :: l_start
     logical,              intent(in) :: start
-    integer,              intent(in) :: how
 
-    integer :: id, ii, is, ix, ierr, jd, mpi_err
-    character(len=120) :: folder, out_name, aux
+    integer :: id, ii, is, ix, jd
+    character(len=120) :: aux
     FLOAT              :: geh, gexc, leh, lexc
     FLOAT, allocatable :: tmp_rhoi(:), st_rho(:)
     FLOAT, allocatable :: hm_vxc(:), hm_vh(:)
@@ -474,9 +461,6 @@ contains
       geh = dmf_integrate(gr%mesh, st_rho(1:gr%mesh%np)*hm%vhartree(1:gr%mesh%np)) 
       gexc = dmf_integrate(gr%mesh, st_rho(1:gr%mesh%np)*hm_vxc(1:gr%mesh%np))
 
-#ifdef HAVE_MPI
-    call MPI_Barrier(gr%mesh%mpi_grp%comm, mpi_err)
-#endif
       do id = 1, nd
         if (mpi_grp_is_root(mpi_world)) then
           call write_iter_set(out_energy(id)%handle, iter)

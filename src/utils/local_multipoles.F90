@@ -380,7 +380,7 @@ contains
       end if
 
       call local_write_iter(local%writ, local%nd, local%domain, local%lab, local%inside, local%dcm, & 
-                              sys%gr, sys%st, hm, sys%ks, sys%mc, sys%geo, kick, iter, dt, l_start, l_end, ldoverwrite)
+                              sys%gr, sys%st, hm, sys%ks, sys%geo, kick, iter, l_start, ldoverwrite)
       call loct_progress_bar(iter-l_start, l_end-l_start) 
     end do
 
