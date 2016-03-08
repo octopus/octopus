@@ -24,6 +24,7 @@ program oct_local_multipoles
   use basins_m
   use box_m
   use box_union_m
+  use calc_mode_par_m
   use command_line_m
   use geometry_m
   use global_m
@@ -72,6 +73,7 @@ program oct_local_multipoles
 
   ! Initialize stuff
   call global_init(is_serial = .false.)
+  call calc_mode_par_init()
 
   call messages_init()
 
@@ -86,6 +88,8 @@ program oct_local_multipoles
 
   call unit_system_init()
   call restart_module_init()
+
+  call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
   call system_init(sys)
   call simul_box_init(sb, sys%geo, sys%space)
   call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family)
@@ -703,6 +707,7 @@ contains
     
     PUSH_SUB(local_inside_domain)
 
+    !TODO: find a parallel algorithm to perform the charge-density fragmentation.
     message(1) = 'Info: Assigning mesh points inside each local domain'
     call messages_info(1)
     SAFE_ALLOCATE(ff2(1:sys%gr%mesh%np,1))
@@ -819,7 +824,7 @@ contains
                 dd = sum((sys%gr%mesh%x(ip, 1:sys%gr%mesh%sb%dim) & 
                       - sys%geo%atom(ia)%x(1:sys%gr%mesh%sb%dim))**2)
                 dd = sqrt(dd)
-                if ( dd < species_def_rsize(sys%geo%atom(ia)%species) ) basins%map(ip) = ion_map(ia)
+                if ( dd <= species_vdw_radius(sys%geo%atom(ia)%species) ) basins%map(ip) = ion_map(ia)
               end do
             end if
           end do
