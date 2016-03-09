@@ -410,6 +410,11 @@ while ($_ = <TESTSUITE>) {
 	set_precision($1);
       }
 
+      elsif ( $_ =~ /^ExtraFile\s*:\s*(.*)\s*$/) {
+        $file_cp = dirname($opt_f)."/".$1;
+        $cp_return = system("cp $file_cp $workdir/");
+      } 
+
       elsif ( $_ =~ /^match/ ) {
 	  # FIXME: should we do matches even when execution failed?
 	  if (!$opt_n && $return_value == 0) {
