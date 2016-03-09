@@ -20,29 +20,34 @@
 #include "global.h"
 
 module pes_flux_m
-  use global_m
-  use messages_m
-  use mesh_m
-  use profiling_m
-  use mpi_m
   use comm_m
+  use derivatives_m
+  use global_m
+  use grid_m
+  use hamiltonian_m
+  use kpoints_m
+  use io_binary_m
+  use io_function_m
+  use io_m
+  use lasers_m
   use loct_m
   use loct_math_m
   use math_m
+  use mesh_interpolation_m
+  use mesh_m
+  use messages_m
+  use mpi_m
   use parser_m
   use par_vec_m
-  use states_m
-  use grid_m
-  use derivatives_m
-  use hamiltonian_m
-  use lasers_m
-  use io_function_m
+  use profiling_m
   use restart_m
-  use io_binary_m
-  use io_m
   use simul_box_m
+  use sort_om
+  use states_m
+  use states_dim_m
+  use unit_m
+  use unit_system_m
   use varinfo_m
-  use mesh_interpolation_m
 
   implicit none
 
@@ -52,10 +57,13 @@ module pes_flux_m
     pes_flux_t,                &
     pes_flux_init,             &
     pes_flux_end,              &
-    pes_flux_save,             &
+    pes_flux_calc,             &
     pes_flux_output,           &
     pes_flux_load,             &
-    pes_flux_dump
+    pes_flux_dump,             &
+    pes_flux_reciprocal_mesh_gen, &
+    pes_flux_pmesh,            &
+    pes_flux_map_from_states
 
   type pes_flux_t
     integer          :: nkpnts                         !< total number of k-points
@@ -66,10 +74,11 @@ module pes_flux_m
     integer          :: nstepsomegak
     integer          :: nstepsomegak_start, nstepsomegak_end
     FLOAT            :: dk                             !< parameters for k-mesh
-    FLOAT, pointer   :: kcoords_cub(:,:)               !< coordinates of k-points
+    FLOAT, pointer   :: kcoords_cub(:,:,:)             !< coordinates of k-points
     FLOAT, pointer   :: kcoords_sph(:,:,:)
+    
 
-    integer          :: shape                          !< shape of the surface (= cubic/spherical)
+    integer          :: shape                          !< shape of the surface (= cube/sphere/planes)
     integer          :: nsrfcpnts                      !< total number of surface points
     integer          :: nsrfcpnts_start, nsrfcpnts_end !< for cubic surface: number of surface points on node
     FLOAT, pointer   :: srfcnrml(:,:)                  !< vectors normal to the surface (includes surface element)
@@ -88,11 +97,14 @@ module pes_flux_m
     CMPLX, pointer   :: wf(:,:,:,:,:)                  !< wavefunction
     CMPLX, pointer   :: gwf(:,:,:,:,:,:)               !< gradient of wavefunction
     FLOAT, pointer   :: veca(:,:)                      !< vector potential
-    CMPLX, pointer   :: conjgphase_prev_cub(:)         !< Volkov phase for all k-points from previous time step
+    CMPLX, pointer   :: conjgphase_prev_cub(:,:)       !< Volkov phase for all k-points from previous time step
     CMPLX, pointer   :: conjgphase_prev_sph(:,:)
-    CMPLX, pointer   :: conjgplanewf_cub(:,:)          !< plane wave factor
+    CMPLX, pointer   :: conjgplanewf_cub(:,:,:)        !< plane wave factor
     CMPLX, pointer   :: spctramp_cub(:,:,:,:)          !< spectral amplitude
     CMPLX, pointer   :: spctramp_sph(:,:,:,:,:)
+
+    integer          :: ll(3)                          !< the dimensions of a cubic mesh containing the momentum-space
+                                                       !< mesh. Used when working with semi-periodic systems 
 
     logical          :: usememory                      !< whether conjgplanewf should be kept in memory
     type(mesh_interpolation_t) :: interp
@@ -101,7 +113,9 @@ module pes_flux_m
 
   integer, parameter ::   &
     M_CUBIC      = 1,     &
-    M_SPHERICAL  = 2
+    M_SPHERICAL  = 2,     &
+    M_PLANES     = 3
+    
 
 contains
 
@@ -116,18 +130,18 @@ contains
     type(block_t)      :: blk
     FLOAT              :: border(MAX_DIM)       ! distance of surface from border
     FLOAT              :: offset(MAX_DIM)       ! offset for border
-    integer            :: stst, stend, kptst, kptend, sdim, mdim
+    integer            :: stst, stend, kptst, kptend, sdim, mdim,pdim
     integer            :: imdim
     integer            :: isp, ikp
-    integer            :: il
+    integer            :: il, ik
     integer            :: ikk, ith, iph, iomk
-    FLOAT              :: kmax, kact, thetak, phik
+    FLOAT              :: kmax, kact, thetak, phik, kpoint(1:3)
 
     FLOAT, allocatable :: k_dot_aux(:)
     integer            :: nstepsphir, nstepsthetar
-#if defined(HAVE_MPI)
-    integer            :: mpirank
-#endif
+! #if defined(HAVE_MPI)
+!     integer            :: mpirank
+! #endif
     integer            :: ll, mm
     integer            :: default_shape
 
@@ -139,6 +153,7 @@ contains
     kptend = st%d%kpt%end
     sdim   = st%d%dim
     mdim   = mesh%sb%dim
+    pdim   = mesh%sb%periodic_dim
 
     call messages_experimental("PhotoElectronSpectrum with t-surff")
 
@@ -167,9 +182,15 @@ contains
     !%Option sph 2
     !% Constructs a sphere with radius PES_Flux_Radius. Points on the sphere 
     !% are interpolated by trilinear interpolation (default for 3D).
+    !%Option pln 3
+    !% This option is for periodic systems. 
+    !% Constructs planes perpendicular to the non-periodic dimension 
+    !% symmetrically placed at positive and negative values of PES_Flux_Lsize. 
     !%End
     default_shape = M_SPHERICAL
     if(mdim <= 2) default_shape = M_CUBIC
+    if (simul_box_is_periodic(mesh%sb)) default_shape = M_PLANES
+    
     call parse_variable('PES_Flux_Shape', default_shape, this%shape)
     if(.not.varinfo_valid_option('PES_Flux_Shape', this%shape, is_flag = .true.)) &
       call messages_input_error('PES_Flux_Shape')
@@ -195,6 +216,8 @@ contains
       call parse_block_float(blk, 0, 0, offset(1))
       call parse_block_float(blk, 0, 1, offset(2))
       call parse_block_float(blk, 0, 2, offset(3))
+
+      call parse_block_end(blk)
     end if
 
     !%Variable PES_Flux_Lmax
@@ -211,52 +234,74 @@ contains
       call messages_print_var_value(stdout, 'PES_Flux_Lmax', this%lmax)
     end if
 
-    !%Variable PES_Flux_Radius
-    !%Type float
-    !%Section Time-Dependent::PhotoElectronSpectrum
-    !%Description
-    !% The radius of the sphere, if PES_Flux_Shape == sph.
-    !%End
 
-    !%Variable PES_Flux_Lsize
-    !%Type block
-    !%Section Time-Dependent::PhotoElectronSpectrum
-    !%Description
-    !% Sets the location of the surface for PES_Flux_Shape = cub. The syntax is:
-    !%
-    !% <tt>%PES_Flux_Lsize
-    !% <br>&nbsp;&nbsp;xsize | ysize | zsize
-    !% <br>%
-    !% </tt>
-    !%
-    !% where xsize, ysize, and zsize are with respect to the origin. The surface can 
-    !% be shifted with PES_Flux_Offset.
-    !%End
-    if(this%shape == M_CUBIC) then
+    
+    if(this%shape == M_CUBIC .or. this%shape == M_PLANES) then
+
+      !%Variable PES_Flux_Lsize
+      !%Type block
+      !%Section Time-Dependent::PhotoElectronSpectrum
+      !%Description
+      !% For PES_Flux_Shape = cub sets the dimensions along each direction. The syntax is:
+      !%
+      !% <tt>%PES_Flux_Lsize
+      !% <br>&nbsp;&nbsp;xsize | ysize | zsize
+      !% <br>%
+      !% </tt>
+      !%
+      !% where xsize, ysize, and zsize are with respect to the origin. The surface can 
+      !% be shifted with PES_Flux_Offset.
+      !% If PES_Flux_Shape = pln specifies the position of two planes perpendicular to 
+      !% the non-periodic dimension symmetrically placed at PES_Flux_Lsize distance from 
+      !% the origin.
+      !%End
+      
       if(parse_block('PES_Flux_Lsize', blk) == 0) then
+
         call parse_block_float(blk, 0, 0, border(1))
         call parse_block_float(blk, 0, 1, border(2))
         call parse_block_float(blk, 0, 2, border(3))
         border(1:mdim) = int(border(1:mdim)/mesh%spacing(1:mdim))*mesh%spacing(1:mdim)
+
+        call parse_block_end(blk)
+
+      else if (simul_box_is_periodic(mesh%sb)) then
+        ! the cube sides along the periodi directions are out of the simulation box
+        border(1:pdim)= mesh%sb%lsize(pdim + 1:mdim) * M_TWO 
+        border(mdim)  = mesh%sb%lsize(mdim) * M_HALF
+        call parse_variable('PES_Flux_Lsize', border(mdim), border(mdim))
+        ! Snap the plane to the closest grid point
+        border(mdim) = floor(border(mdim)/mesh%spacing(mdim))*mesh%spacing(mdim) 
+        call messages_print_var_value(stdout, 'PES_Flux_Lsize', border(mdim))
+        
       else
+
         select case(mesh%sb%box_shape)
         case(PARALLELEPIPED)
-          border(1:mdim) = mesh%sb%lsize(1:mdim)
+          border(1:mdim) = mesh%sb%lsize(1:mdim) * M_HALF
         case(SPHERE)
-          border(1:mdim) = mesh%sb%rsize/sqrt(M_TWO)
+          border(1:mdim) = mesh%sb%rsize/sqrt(M_TWO) * M_HALF
         case default
-          message(1) = 'PES_Flux_Lsize not specified. No default values available for this box shape.'
-          message(2) = 'Specify the location of the parallelepiped with block PES_Flux_Lsize.'
-          call messages_fatal(2)
+          call messages_write('PES_Flux_Lsize not specified. No default values available for this box shape.')
+          call messages_new_line()
+          call messages_write('Specify the location of the parallelepiped with block PES_Flux_Lsize.')
+          call messages_fatal()
         end select
-        message(1) = 'PES_Flux_Lsize not specified. Using default values.'
-        call messages_info(1)
+        call messages_write('PES_Flux_Lsize not specified. Using default values.')
+        call messages_info()
         call messages_print_var_value(stdout, 'PES_Flux_Lsize', border(1:mdim))
+
       end if
 
-      call parse_block_end(blk)
 
     else
+      
+      !%Variable PES_Flux_Radius
+      !%Type float
+      !%Section Time-Dependent::PhotoElectronSpectrum
+      !%Description
+      !% The radius of the sphere, if PES_Flux_Shape == sph.
+      !%End
 
       if(parse_is_defined('PES_Flux_Radius')) then
         call parse_variable('PES_Flux_Radius', M_ZERO, this%radius)
@@ -309,7 +354,9 @@ contains
     ! -----------------------------------------------------------------
     ! Get the surface points
     ! -----------------------------------------------------------------
-    if(this%shape == M_CUBIC) then
+    select case (this%shape)
+    
+    case(M_CUBIC) 
       call pes_flux_getcube(this, mesh, border, offset)
 
       ! distribute the surface points on nodes,
@@ -321,15 +368,25 @@ contains
         'Number of surface points on node ', mesh%mpi_grp%rank, ' : ', this%nsrfcpnts_end - this%nsrfcpnts_start + 1
       call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
-    else
+    case(M_SPHERICAL) 
       call mesh_interpolation_init(this%interp, mesh)
       ! equispaced grid in theta & phi (Gauss-Legendre would optimize to nstepsthetar = this%lmax & nstepsphir = 2*this%lmax + 1):
       ! nstepsthetar = M_TWO * this%lmax + 1
       ! nstepsphir   = M_TWO * this%lmax + 1
       call pes_flux_getsphere(this, mesh, nstepsthetar, nstepsphir, offset)
-    end if
+    
+    case(M_PLANES) 
+            
+      call pes_flux_getcube(this, mesh, border, offset)
+      
+      this%nsrfcpnts_start = 1
+      this%nsrfcpnts_end   = this%nsrfcpnts
+      
+    case default
+      ASSERT(.false.)
+    end select
 
-    if(mpi_grp_is_root(mpi_world)) then
+    if(debug%info .and. mpi_grp_is_root(mpi_world)) then
       write(message(1),'(a, i6)') 'Info: Number of surface points (total):', this%nsrfcpnts
       call messages_info(1) 
       do isp = 1, this%nsrfcpnts
@@ -353,168 +410,9 @@ contains
       end do
     end if
 
-    ! -----------------------------------------------------------------
-    ! Setting up k-mesh
-    ! 1D = 2 points, 2D = polar coordinates, 3D = spherical coordinates
-    ! -----------------------------------------------------------------
-    !%Variable PES_Flux_Kmax
-    !%Type float
-    !%Default 1.0
-    !%Section Time-Dependent::PhotoElectronSpectrum
-    !%Description
-    !% The maximum value of |k|.
-    !%End
-    call parse_variable('PES_Flux_Kmax', M_ONE, kmax)
-    call messages_print_var_value(stdout, "PES_Flux_Kmax", kmax)
-    if(kmax <= M_ZERO) call messages_input_error('PES_Flux_Kmax')
+    ! Generate the reciprocal space mesh grid
+    call pes_flux_reciprocal_mesh_gen(this, mesh%sb, st)
 
-    !%Variable PES_Flux_DeltaK
-    !%Type float
-    !%Default 0.002
-    !%Section Time-Dependent::PhotoElectronSpectrum
-    !%Description
-    !% Spacing of the k-mesh in |k| (equidistant).
-    !%End
-    call parse_variable('PES_Flux_DeltaK', CNST(0.002), this%dk)
-    if(this%dk <= M_ZERO) call messages_input_error('PES_Flux_DeltaK')
-    call messages_print_var_value(stdout, "PES_Flux_DeltaK", this%dk)
-
-    !%Variable PES_Flux_StepsThetaK
-    !%Type integer
-    !%Default 45
-    !%Section Time-Dependent::PhotoElectronSpectrum
-    !%Description
-    !% Number of steps in theta (0 <= theta <= pi) for the spherical grid in k.
-    !%End
-    call parse_variable('PES_Flux_StepsThetaK', 45, this%nstepsthetak)
-    if(this%nstepsthetak < 0) call messages_input_error('PES_Flux_StepsThetaK')
-
-    !%Variable PES_Flux_StepsPhiK
-    !%Type integer
-    !%Default 90
-    !%Section Time-Dependent::PhotoElectronSpectrum
-    !%Description
-    !% Number of steps in phi (0 <= phi <= 2 pi) for the spherical grid in k.
-    !%End
-    call parse_variable('PES_Flux_StepsPhiK', 90, this%nstepsphik)
-    if(this%nstepsphik < 0) call messages_input_error('PES_Flux_StepsPhiK')
-    if(this%nstepsphik == 0) this%nstepsphik = 1
-
-    select case(mdim)
-    case(1)
-      this%nstepsthetak = 0
-      this%nstepsphik   = 2
-      this%nstepsomegak = this%nstepsphik
-
-    case(2)
-      this%nstepsthetak = 0
-      this%nstepsomegak = this%nstepsphik
-
-    case(3)
-      if(this%nstepsthetak <= 1) then
-        this%nstepsphik   = 1
-        this%nstepsthetak = 1
-      end if
-      this%nstepsomegak = this%nstepsphik * (this%nstepsthetak - 1) + 2
-
-    end select
-
-    if(mdim == 3) call messages_print_var_value(stdout, "PES_Flux_StepsThetaK", this%nstepsthetak)
-    call messages_print_var_value(stdout, "PES_Flux_StepsPhiK", this%nstepsphik)
-
-    this%nk     = nint(kmax/this%dk)
-    this%nkpnts = this%nstepsomegak * this%nk
-
-    call messages_print_var_value(stdout, "Number of k-points (total)", this%nkpnts)
-
-    if(this%shape == M_SPHERICAL) then
-      ! we split the k-mesh in radial & angular part
-      call pes_flux_distribute(1, this%nk, this%nk_start, this%nk_end, mpi_world%comm)
-      call pes_flux_distribute(1, this%nstepsomegak, this%nstepsomegak_start, this%nstepsomegak_end, mpi_world%comm)
-
-      SAFE_ALLOCATE(this%ylm_k(0:this%lmax, -this%lmax:this%lmax, 1:this%nstepsomegak))
-      SAFE_ALLOCATE(this%j_l(0:this%lmax, 1:this%nk))
-      SAFE_ALLOCATE(this%kcoords_sph(1:3, 1:this%nk, 1:this%nstepsomegak))
-
-      this%ylm_k = M_z0
-      this%kcoords_sph = M_ZERO
-      this%j_l = M_ZERO
-
-      ! spherical harmonics & kcoords_sph
-      iomk = 0
-      do ith = 0, this%nstepsthetak
-        thetak = ith * M_PI / this%nstepsthetak
-        do iph = 0, this%nstepsphik - 1
-          phik = iph * M_TWO * M_PI / this%nstepsphik
-          iomk = iomk + 1
-          do ll = 0, this%lmax
-            do mm = -ll, ll
-              call ylmr(cos(phik) * sin(thetak), sin(phik) * sin(thetak), cos(thetak), ll, mm, this%ylm_k(ll, mm, iomk))
-            end do
-          end do
-          this%kcoords_sph(1, this%nk_start:this%nk_end, iomk) = cos(phik) * sin(thetak)
-          this%kcoords_sph(2, this%nk_start:this%nk_end, iomk) = sin(phik) * sin(thetak)
-          this%kcoords_sph(3, this%nk_start:this%nk_end, iomk) = cos(thetak)
-          if(ith == 0 .or. ith == this%nstepsthetak) exit
-        end do
-      end do
-
-      ! Bessel functions & kcoords_sph
-      do ikk = this%nk_start, this%nk_end
-        kact = ikk * this%dk
-        do ll = 0, this%lmax
-          this%j_l(ll, ikk) = loct_sph_bessel(ll, kact * this%radius) * &
-                              M_TWO * M_PI / (M_TWO * M_PI)**M_THREE/M_TWO
-        end do
-        this%kcoords_sph(:, ikk, :) = kact * this%kcoords_sph(:, ikk, :)
-      end do
-#if defined(HAVE_MPI)
-      call comm_allreduce(mpi_world%comm, this%kcoords_sph)
-      call comm_allreduce(mpi_world%comm, this%j_l)
-#endif
-    else
-      ! we do not split the k-mesh
-      call pes_flux_distribute(1, this%nkpnts, this%nkpnts_start, this%nkpnts_end, mpi_world%comm)
-#if defined(HAVE_MPI)
-      call MPI_Barrier(mpi_world%comm, mpi_err)
-      call MPI_Comm_rank(mpi_world%comm, mpirank, mpi_err)
-      write(*,*) &
-        'Number of k-points on node ', mpirank, ' : ', this%nkpnts_end - this%nkpnts_start + 1
-      call MPI_Barrier(mpi_world%comm, mpi_err)
-#endif
-      SAFE_ALLOCATE(this%kcoords_cub(1:mdim, 1:this%nkpnts))
-      this%kcoords_cub = M_ZERO
-
-      select case(mdim)
-      case(1)
-        ikp = 0
-        do ikk = -this%nk, this%nk
-          if(ikk == 0) cycle
-          ikp = ikp + 1
-          kact = ikk * this%dk
-          this%kcoords_cub(1, ikp) = kact
-        end do
-
-      case default
-        thetak = M_PI / M_TWO
-        ikp = 0
-        do ikk = 1, this%nk
-          do ith = 0, this%nstepsthetak
-            if(mdim == 3) thetak = ith * M_PI / this%nstepsthetak 
-            do iph = 0, this%nstepsphik - 1
-              ikp = ikp + 1
-              phik = iph * M_TWO * M_PI / this%nstepsphik
-              kact = ikk * this%dk
-                            this%kcoords_cub(1, ikp) = kact * cos(phik) * sin(thetak)
-                            this%kcoords_cub(2, ikp) = kact * sin(phik) * sin(thetak)
-              if(mdim == 3) this%kcoords_cub(3, ikp) = kact * cos(thetak)
-              if(mdim == 3 .and. (ith == 0 .or. ith == this%nstepsthetak)) exit
-            end do
-          end do
-        end do
-      end select
-
-    end if
 
     ! -----------------------------------------------------------------
     ! Options for time integration 
@@ -525,14 +423,16 @@ contains
     !%Description
     !%End
     call parse_variable('PES_Flux_TDStepsInterval', 1, this%tdstepsinterval)
+    call messages_print_var_value(stdout, "PES_Flux_TDStepsInterval", this%tdstepsinterval)
 
     !%Variable PES_Flux_TDSteps
     !%Type float
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
     !%End
-    if(this%shape == M_CUBIC) then
+    if(this%shape == M_CUBIC .or. this%shape == M_PLANES) then
       call parse_variable('PES_Flux_TDSteps', 1, this%tdsteps)
+      call messages_print_var_value(stdout, "PES_Flux_TDSteps", this%tdsteps)      
     else
       this%tdsteps = M_ONE
 #if defined(HAVE_MPI)
@@ -547,9 +447,12 @@ contains
     !%Type logical
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
+    !% Use memory to tabulate Volkov's plane-wave components on the surface.
     !%End
-    if(this%shape == M_CUBIC) &
+    if(this%shape == M_CUBIC .or. this%shape == M_PLANES ) then
       call parse_variable('PES_Flux_UseMemory', .true., this%usememory)
+      call messages_print_var_value(stdout, "PES_Flux_UseMemory", this%usememory)            
+    end if
 
     SAFE_ALLOCATE(this%wf(stst:stend, 1:sdim, kptst:kptend, 1:this%nsrfcpnts, 1:this%tdsteps))
     this%wf = M_z0
@@ -571,21 +474,31 @@ contains
       SAFE_ALLOCATE(this%spctramp_cub(stst:stend, 1:sdim, kptst:kptend, 1:this%nkpnts))
       this%spctramp_cub = M_z0
 
-      SAFE_ALLOCATE(this%conjgphase_prev_cub(1:this%nkpnts))
+      SAFE_ALLOCATE(this%conjgphase_prev_cub(1:this%nkpnts, kptst:kptend))
       this%conjgphase_prev_cub = M_z1
 
       if(this%usememory) then
         SAFE_ALLOCATE(k_dot_aux(1:this%nkpnts))
-        SAFE_ALLOCATE(this%conjgplanewf_cub(1:this%nkpnts, 1:this%nsrfcpnts))
+        SAFE_ALLOCATE(this%conjgplanewf_cub(1:this%nkpnts, 1:this%nsrfcpnts, kptst:kptend))
         this%conjgplanewf_cub = M_z0
 
         do isp = this%nsrfcpnts_start, this%nsrfcpnts_end
-          k_dot_aux = M_ZERO
-          do imdim = 1, mdim
-            k_dot_aux(:) = k_dot_aux(:) + this%kcoords_cub(imdim, :) * this%rcoords(imdim, isp)
+          do ik = kptst, kptend
+            
+            kpoint(:) = M_ZERO
+            if(simul_box_is_periodic(mesh%sb)) then
+              kpoint(1:mdim) = kpoints_get_point(mesh%sb%kpoints, ik)
+            end if
+
+            k_dot_aux = M_ZERO
+            do imdim = 1, mdim
+              k_dot_aux(:) = k_dot_aux(:) + (this%kcoords_cub(imdim, :, ik) - kpoint(imdim)) * this%rcoords(imdim, isp)
+            end do
+
+            this%conjgplanewf_cub(:, isp,ik) = exp(-M_zI * k_dot_aux(:)) / (M_TWO * M_PI)**(mdim/M_TWO)
           end do
-          this%conjgplanewf_cub(:, isp) = exp(-M_zI * k_dot_aux(:)) / (M_TWO * M_PI)**(mdim/M_TWO)
         end do
+        
         SAFE_DEALLOCATE_A(k_dot_aux)
 #if defined(HAVE_MPI)
         call comm_allreduce(mpi_world%comm, this%conjgplanewf_cub)
@@ -631,8 +544,378 @@ contains
     POP_SUB(pes_flux_end)
   end subroutine pes_flux_end
 
+
   ! ---------------------------------------------------------
-  subroutine pes_flux_save(this, mesh, st, gr, hm, iter, maxiter, dt)
+  subroutine pes_flux_reciprocal_mesh_gen(this, sb, st)
+    type(pes_flux_t),  intent(inout) :: this
+    type(simul_box_t), intent(in)    :: sb
+    type(states_t),    intent(in)    :: st
+
+      
+    integer           :: mdim, pdim
+    integer           :: kptst, kptend  
+    integer           :: isp, ikp, ikpt, ibz
+    integer           :: il, ll, mm, idim
+    integer           :: ikk, ith, iph, iomk
+    FLOAT             :: kmax, kmin, kact, thetak, phik
+    type(block_t)     :: blk
+      
+    FLOAT             :: Emin, Emax, DE , kvec(1:3) 
+    integer           :: NBZ(1:2) 
+      
+#if defined(HAVE_MPI)
+    integer           :: mpirank
+#endif
+
+      
+      
+    PUSH_SUB(pes_flux_reciprocal_mesh_gen)  
+
+    kptst  = st%d%kpt%start
+    kptend = st%d%kpt%end
+    mdim   = sb%dim
+    pdim   = sb%periodic_dim
+      
+      
+    if (this%shape == M_SPHERICAL .or. this%shape == M_CUBIC) then
+      ! -----------------------------------------------------------------
+      ! Setting up k-mesh
+      ! 1D = 2 points, 2D = polar coordinates, 3D = spherical coordinates
+      ! -----------------------------------------------------------------
+      !%Variable PES_Flux_Kmax
+      !%Type float
+      !%Default 1.0
+      !%Section Time-Dependent::PhotoElectronSpectrum
+      !%Description
+      !% The maximum value of |k|.
+      !%End
+      call parse_variable('PES_Flux_Kmax', M_ONE, kmax)
+      call messages_print_var_value(stdout, "PES_Flux_Kmax", kmax)
+      if(kmax <= M_ZERO) call messages_input_error('PES_Flux_Kmax')
+
+      !%Variable PES_Flux_DeltaK
+      !%Type float
+      !%Default 0.002
+      !%Section Time-Dependent::PhotoElectronSpectrum
+      !%Description
+      !% Spacing of the k-mesh in |k| (equidistant).
+      !%End
+      call parse_variable('PES_Flux_DeltaK', CNST(0.002), this%dk)
+      if(this%dk <= M_ZERO) call messages_input_error('PES_Flux_DeltaK')
+      call messages_print_var_value(stdout, "PES_Flux_DeltaK", this%dk)
+
+      !%Variable PES_Flux_StepsThetaK
+      !%Type integer
+      !%Default 45
+      !%Section Time-Dependent::PhotoElectronSpectrum
+      !%Description
+      !% Number of steps in theta (0 <= theta <= pi) for the spherical grid in k.
+      !%End
+      call parse_variable('PES_Flux_StepsThetaK', 45, this%nstepsthetak)
+      if(this%nstepsthetak < 0) call messages_input_error('PES_Flux_StepsThetaK')
+
+      !%Variable PES_Flux_StepsPhiK
+      !%Type integer
+      !%Default 90
+      !%Section Time-Dependent::PhotoElectronSpectrum
+      !%Description
+      !% Number of steps in phi (0 <= phi <= 2 pi) for the spherical grid in k.
+      !%End
+      call parse_variable('PES_Flux_StepsPhiK', 90, this%nstepsphik)
+      if(this%nstepsphik < 0) call messages_input_error('PES_Flux_StepsPhiK')
+      if(this%nstepsphik == 0) this%nstepsphik = 1
+
+      select case(mdim)
+      case(1)
+        this%nstepsthetak = 0
+        this%nstepsphik   = 2
+        this%nstepsomegak = this%nstepsphik
+
+      case(2)
+        this%nstepsthetak = 0
+        this%nstepsomegak = this%nstepsphik
+
+      case(3)
+        if(this%nstepsthetak <= 1) then
+          this%nstepsphik   = 1
+          this%nstepsthetak = 1
+        end if
+        this%nstepsomegak = this%nstepsphik * (this%nstepsthetak - 1) + 2
+
+      end select
+
+      if(mdim == 3) call messages_print_var_value(stdout, "PES_Flux_StepsThetaK", this%nstepsthetak)
+      call messages_print_var_value(stdout, "PES_Flux_StepsPhiK", this%nstepsphik)
+
+      this%nk     = nint(kmax/this%dk)
+      this%nkpnts = this%nstepsomegak * this%nk
+
+
+    else 
+      ! PLANES 
+      
+      !%Variable PES_Flux_EnergyGrid
+      !%Type block
+      !%Section Time-Dependent
+      !%Description
+      !% The block <tt>PES_Flux_EnergyGrid</tt> specifies the energy grid to 
+      !% be used.
+      !% <tt>%PES_Flux_EnergyGrid
+      !% <br>&nbsp;&nbsp; Emin | Emax | DeltaE
+      !% <br>%</tt>
+      !%End
+      
+      Emin = 0
+      Emax = 10 
+      De   = 0.1
+    
+      if(parse_block('PES_Flux_EnergyGrid', blk) == 0) then
+
+        call parse_block_float(blk, 0, 0, Emin)
+        call parse_block_float(blk, 0, 1, Emax)
+        call parse_block_float(blk, 0, 2, DE)
+        
+        Emin = units_to_atomic(units_inp%energy, Emin)
+        Emax = units_to_atomic(units_inp%energy, Emax)
+        DE   = units_to_atomic(units_inp%energy, DE)
+        
+        call parse_block_end(blk)
+        
+      end if 
+      
+      call messages_write("Energy grid (Emin, Emax, DE) [") 
+      call messages_write(trim(units_abbrev(units_out%energy)))
+      call messages_write("]:  (")
+      call messages_write(Emin,fmt = '(f8.3)')
+      call messages_write(", ")
+      call messages_write(Emax, fmt = '(f8.3)')
+      call messages_write(", ")
+      call messages_write(DE, fmt = '(e9.2)')
+      call messages_write(")")
+      call messages_info()
+            
+      
+      kmax = sqrt(M_TWO*Emax)
+      kmin = sqrt(M_TWO*Emin)
+      this%dk = sqrt(M_TWO*DE)
+
+      this%nk = nint((kmax-kmin)/this%dk)
+
+    
+    
+      !%Variable PES_Flux_BZones
+      !%Type block
+      !%Section Time-Dependent
+      !%Description
+      !% The block <tt>PES_Flux_BZones</tt> specifies the number of Brillouin
+      !% zones along each periodic dimensions. This value will be used 
+      !% to generate the mesh in reciprocal space.
+      !% <tt>%PES_Flux_EnergyGrid
+      !% <br>&nbsp;&nbsp; NBZx | NBZy  
+      !% <br>%</tt>
+      !% The option can also be specified with the same vale for each direction
+      !% as <tt>PES_Flux_BZones = NBZ</tt>. 
+      !% By default <tt>PES_Flux_BZones = 2</tt>, this means that we will have, 
+      !% on top of the 1st zone, two additional zones at positive and negative 
+      !% reciprocal lattice translation for each periodic dimension. 
+      !%End
+    
+      NBZ(:) = 1
+      NBZ(1:pdim) = 2
+      if(parse_block('PES_Flux_BZones', blk) == 0) then
+
+        call parse_block_integer(blk, 0, 0, NBZ(1))
+        call parse_block_integer(blk, 0, 1, NBZ(2))
+
+        call parse_block_end(blk)
+
+      else
+        call parse_variable('PES_Flux_BZones', 2, NBZ(1))
+        NBZ(:) = NBZ(1)
+
+      end if
+
+
+      ! This information is needed for postprocessing the data
+      this%ll(:)   = 1
+      this%ll(1:pdim) = (NBZ(1:pdim)-1)*2+1
+      this%ll(mdim)   = this%nk * 2
+      
+
+      call messages_write("Number of Brillouin zones = ")
+      do idim = 1 , pdim
+        call messages_write( this%ll(idim) )
+        if (.not. idim == pdim) call messages_write(" x ")        
+      end do 
+      call messages_info()
+      
+      
+      ! Total number of points
+      this%nkpnts = product(this%ll(1:mdim))
+      
+      
+
+    end if    
+
+  
+
+
+    ! Create the grid
+    select case (this%shape)
+
+      case (M_SPHERICAL)
+      ! we split the k-mesh in radial & angular part
+      call pes_flux_distribute(1, this%nk, this%nk_start, this%nk_end, mpi_world%comm)
+      call pes_flux_distribute(1, this%nstepsomegak, this%nstepsomegak_start, this%nstepsomegak_end, mpi_world%comm)
+
+      SAFE_ALLOCATE(this%ylm_k(0:this%lmax, -this%lmax:this%lmax, 1:this%nstepsomegak))
+      SAFE_ALLOCATE(this%j_l(0:this%lmax, 1:this%nk))
+      SAFE_ALLOCATE(this%kcoords_sph(1:3, 1:this%nk, 1:this%nstepsomegak))
+
+      this%ylm_k = M_z0
+      this%kcoords_sph = M_ZERO
+      this%j_l = M_ZERO
+
+      ! spherical harmonics & kcoords_sph
+      iomk = 0
+      do ith = 0, this%nstepsthetak
+        thetak = ith * M_PI / this%nstepsthetak
+        do iph = 0, this%nstepsphik - 1
+          phik = iph * M_TWO * M_PI / this%nstepsphik
+          iomk = iomk + 1
+          do ll = 0, this%lmax
+            do mm = -ll, ll
+              call ylmr(cos(phik) * sin(thetak), sin(phik) * sin(thetak), cos(thetak), ll, mm, this%ylm_k(ll, mm, iomk))
+            end do
+          end do
+          this%kcoords_sph(1, this%nk_start:this%nk_end, iomk) = cos(phik) * sin(thetak)
+          this%kcoords_sph(2, this%nk_start:this%nk_end, iomk) = sin(phik) * sin(thetak)
+          this%kcoords_sph(3, this%nk_start:this%nk_end, iomk) = cos(thetak)
+          if(ith == 0 .or. ith == this%nstepsthetak) exit
+        end do
+      end do
+
+      ! Bessel functions & kcoords_sph
+      do ikk = this%nk_start, this%nk_end
+        kact = ikk * this%dk
+        do ll = 0, this%lmax
+          this%j_l(ll, ikk) = loct_sph_bessel(ll, kact * this%radius) * &
+                              M_TWO * M_PI / (M_TWO * M_PI)**M_THREE/M_TWO
+        end do
+        this%kcoords_sph(:, ikk, :) = kact * this%kcoords_sph(:, ikk, :)
+      end do
+#if defined(HAVE_MPI)
+      call comm_allreduce(mpi_world%comm, this%kcoords_sph)
+      call comm_allreduce(mpi_world%comm, this%j_l)
+#endif
+
+      case (M_CUBIC)
+      ! we do not split the k-mesh
+      call pes_flux_distribute(1, this%nkpnts, this%nkpnts_start, this%nkpnts_end, mpi_world%comm)
+#if defined(HAVE_MPI)
+      call MPI_Barrier(mpi_world%comm, mpi_err)
+      call MPI_Comm_rank(mpi_world%comm, mpirank, mpi_err)
+      write(*,*) &
+        'Number of k-points on node ', mpirank, ' : ', this%nkpnts_end - this%nkpnts_start + 1
+      call MPI_Barrier(mpi_world%comm, mpi_err)
+#endif
+      SAFE_ALLOCATE(this%kcoords_cub(1:mdim, 1:this%nkpnts, kptst:kptend))
+      this%kcoords_cub = M_ZERO
+
+      select case(mdim)
+      case(1)
+        ikp = 0
+        do ikk = -this%nk, this%nk
+          if(ikk == 0) cycle
+          ikp = ikp + 1
+          kact = ikk * this%dk
+          this%kcoords_cub(1, ikp, kptst:kptend) = kact
+        end do
+
+      case default
+        thetak = M_PI / M_TWO
+        ikp = 0
+        do ikk = 1, this%nk
+          do ith = 0, this%nstepsthetak
+            if(mdim == 3) thetak = ith * M_PI / this%nstepsthetak 
+            do iph = 0, this%nstepsphik - 1
+              ikp = ikp + 1
+              phik = iph * M_TWO * M_PI / this%nstepsphik
+              kact = ikk * this%dk
+                            this%kcoords_cub(1, ikp, kptst:kptend) = kact * cos(phik) * sin(thetak)
+                            this%kcoords_cub(2, ikp, kptst:kptend) = kact * sin(phik) * sin(thetak)
+              if(mdim == 3) this%kcoords_cub(3, ikp, kptst:kptend) = kact * cos(thetak)
+              if(mdim == 3 .and. (ith == 0 .or. ith == this%nstepsthetak)) exit
+            end do
+          end do
+        end do
+      end select
+
+      case (M_PLANES)
+      
+!         call pes_flux_distribute(1, this%nkpnts, this%nkpnts_start, this%nkpnts_end, mpi_world%comm)
+
+        this%nkpnts_start = 1 
+        this%nkpnts_end   = this%nkpnts
+        
+      
+        SAFE_ALLOCATE(this%kcoords_cub(1:mdim, 1:this%nkpnts, kptst:kptend))
+        
+!         print *, sb%klattice(:, :)
+!         print *, "mdim = ", mdim, "pdim = ", pdim
+        
+        do ikpt = kptst, kptend
+          ikp = 0
+          do ikk = -this%nk, this%nk
+            if (ikk == 0 ) cycle !this way I have exactly 2*this%nk elements  
+            
+            ! loop over periodic directions
+            do idim = 1, pdim
+              do ibz = -(NBZ(idim)-1), (NBZ(idim)-1) 
+
+                kvec(1:pdim) = ibz * sb%klattice(1:pdim, idim)                
+                
+                ! Fill the non-periodic direction
+                kvec(mdim) = ikk * this%dk + ikk/abs(ikk) * kmin
+            
+                ikp = ikp + 1
+!                 print *, "ikpt, ikk, ibz, ikp", ikpt, ikk, ibz, ikp
+                this%kcoords_cub(1:mdim, ikp, ikpt) =  kvec(1:mdim)
+
+              end do
+            end do
+
+            
+          end do
+        end do
+        
+        if (debug%info .and. mpi_grp_is_root(mpi_world)) then
+          !this doesn't work for parallel in kpoint 
+          ! you need to gather kcoords_pln
+          write(229,*) "#   ikpt,   ikp,   this%kcoords_pln(1:mdim, ikp, ikpt)"
+          do ikpt = kptst, kptend
+            do ikp = 1, this%nkpnts
+              write(229,*) ikpt, ikp, this%kcoords_cub(1:mdim, ikp, ikpt)
+            end do
+          end do
+          flush(229)
+        end if
+
+
+    end select
+    
+    
+    call messages_print_var_value(stdout, "Total number of momentum points = ", this%nkpnts)
+    
+    
+
+    POP_SUB(pes_flux_reciprocal_mesh_gen)
+    
+  end subroutine pes_flux_reciprocal_mesh_gen
+
+
+  ! ---------------------------------------------------------
+  subroutine pes_flux_calc(this, mesh, st, gr, hm, iter, maxiter, dt)
     type(pes_flux_t),    intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
     type(states_t),      intent(inout) :: st
@@ -650,7 +933,7 @@ contains
     CMPLX, allocatable :: interp_values(:)
     logical            :: contains_isp
 
-    PUSH_SUB(pes_flux_save)
+    PUSH_SUB(pes_flux_calc)
 
     if(iter > 0 .and. mod(iter, this%tdstepsinterval) == 0) then
 
@@ -697,11 +980,11 @@ contains
             if(this%shape == M_SPHERICAL) then
               call mesh_interpolation_evaluate(this%interp, this%nsrfcpnts, psi(1:mesh%np_part), &
                 this%rcoords(1:mdim, 1:this%nsrfcpnts), interp_values(1:this%nsrfcpnts))
-              this%wf(ist, isdim, ik, :, itstep) = st%occ(ist, ik) * interp_values(:)
+              this%wf(ist, isdim, ik, :, itstep) = interp_values(:)
               do imdim = 1, mdim
                 call mesh_interpolation_evaluate(this%interp, this%nsrfcpnts, gpsi(1:mesh%np_part, imdim), &
                   this%rcoords(1:mdim, 1:this%nsrfcpnts), interp_values(1:this%nsrfcpnts))
-                this%gwf(ist, isdim, ik, :, itstep, imdim) = st%occ(ist, ik) * interp_values(:)
+                this%gwf(ist, isdim, ik, :, itstep, imdim) = interp_values(:)
               end do
 
             else
@@ -720,9 +1003,8 @@ contains
 
                 if(contains_isp) then
                   ip_local = this%srfcpnt(isp)
-                  this%wf(ist, isdim, ik, isp, itstep) = st%occ(ist, ik) * psi(ip_local)
-                  this%gwf(ist, isdim, ik, isp, itstep, 1:mdim) = &
-                    st%occ(ist, ik) * gpsi(ip_local, 1:mdim) ! * mesh%spacing(1:mdim) ?
+                  this%wf(ist, isdim, ik, isp, itstep) = psi(ip_local)
+                  this%gwf(ist, isdim, ik, isp, itstep, 1:mdim) = gpsi(ip_local, 1:mdim) ! * mesh%spacing(1:mdim) ?
                 end if
               end do
               if(mesh%parallel_in_domains) then
@@ -743,7 +1025,7 @@ contains
 
       if(iter > 0) then
         if(mod(iter, this%tdsteps * this%tdstepsinterval) == 0 .or. iter == maxiter) then
-          if(this%shape == M_CUBIC) then
+          if(this%shape == M_CUBIC .or. this%shape == M_PLANES) then
             call pes_flux_integrate_cub(this, mesh, st, dt)
           else
             call pes_flux_integrate_sph(this, mesh, st, dt)
@@ -753,8 +1035,8 @@ contains
 
     end if
 
-    POP_SUB(pes_flux_save)
-  end subroutine pes_flux_save
+    POP_SUB(pes_flux_calc)
+  end subroutine pes_flux_calc
 
   ! ---------------------------------------------------------
   subroutine pes_flux_integrate_cub(this, mesh, st, dt)
@@ -768,16 +1050,20 @@ contains
     integer            :: isp, ikp, itstep
     integer            :: idir
     CMPLX, allocatable :: Jk_cub(:,:,:,:), spctramp_cub(:,:,:,:)
-    CMPLX, allocatable :: conjgplanewf_cub(:)
-    CMPLX, allocatable :: conjgphase_cub(:,:)
+    CMPLX, allocatable :: conjgplanewf_cub(:,:)
+    CMPLX, allocatable :: conjgphase_cub(:,:,:)
     FLOAT, allocatable :: k_dot_aux(:)
     integer            :: ikp_start, ikp_end, isp_start, isp_end
-    FLOAT              :: vec
+    FLOAT              :: vec, kpoint(1:3)
 
+    type(profile_t), save :: prof_init
+      
     PUSH_SUB(pes_flux_integrate_cub)
 
     ! this routine is parallelized over surface points since the number of 
     ! states is in most cases less than the number of surface points
+
+    call profiling_in(prof_init, 'PES_FLUX_INTEGRATE_CUB') 
 
     stst      = st%st_start
     stend     = st%st_end
@@ -799,24 +1085,36 @@ contains
     spctramp_cub = M_z0
 
     if(.not. this%usememory) then
-      SAFE_ALLOCATE(conjgplanewf_cub(1:this%nkpnts))
+      SAFE_ALLOCATE(conjgplanewf_cub(1:this%nkpnts, kptst:kptend))
     end if
 
-    SAFE_ALLOCATE(conjgphase_cub(1:this%nkpnts, 0:this%tdsteps))
+    SAFE_ALLOCATE(conjgphase_cub(1:this%nkpnts, 0:this%tdsteps, kptst:kptend))
     conjgphase_cub = M_z0
 
     ! calculate Volkov phase using the previous time step
-    conjgphase_cub(:, 0) = this%conjgphase_prev_cub(:)
-    do ikp = ikp_start, ikp_end
-      do itstep = 1, this%tdsteps
-        vec = sum((this%kcoords_cub(1:mdim, ikp) - this%veca(1:mdim, itstep) / P_c)**2)
-        conjgphase_cub(ikp, itstep) = conjgphase_cub(ikp, itstep - 1) * exp(M_zI * vec * dt * this%tdstepsinterval / M_TWO)
+    conjgphase_cub(:, 0,:) = this%conjgphase_prev_cub(:,:)
+    do ik = kptst, kptend
+      
+      kpoint(:) = M_ZERO
+      if(simul_box_is_periodic(mesh%sb)) then
+        kpoint(1:mdim) = kpoints_get_point(mesh%sb%kpoints, ik)
+      end if
+      
+      
+      do ikp = ikp_start, ikp_end
+        do itstep = 1, this%tdsteps
+          vec = sum((this%kcoords_cub(1:mdim, ikp, ik) - kpoint(1:mdim) - this%veca(1:mdim, itstep) / P_c)**2)
+          conjgphase_cub(ikp, itstep, ik) = conjgphase_cub(ikp, itstep - 1, ik) & 
+                                            * exp(M_zI * vec * dt * this%tdstepsinterval / M_TWO)
+        end do
       end do
     end do
 #if defined(HAVE_MPI)
     call comm_allreduce(mpi_world%comm, conjgphase_cub)
 #endif
-    this%conjgphase_prev_cub(:) = conjgphase_cub(:, this%tdsteps)
+    this%conjgphase_prev_cub(:,:) = conjgphase_cub(:, this%tdsteps,:)
+
+
 
     ! integrate over time & surface (on node)
     do isp = isp_start, isp_end
@@ -826,34 +1124,40 @@ contains
 
         Jk_cub = M_z0
 
-        if(.not. this%usememory) then
-          k_dot_aux(:) = M_ZERO
-          do imdim = 1, mdim
-            k_dot_aux(:) = k_dot_aux(:) + this%kcoords_cub(imdim, :) * this%rcoords(imdim, isp)
-          end do
-          conjgplanewf_cub(:) = exp(-M_zI * k_dot_aux(:)) / (M_TWO * M_PI)**(mdim/M_TWO)
-        end if
-
         do ik = kptst, kptend
+
+          if(.not. this%usememory) then
+            kpoint(:) = M_ZERO
+            if(simul_box_is_periodic(mesh%sb)) then
+              kpoint(1:mdim) = kpoints_get_point(mesh%sb%kpoints, ik)
+            end if
+            
+            
+            k_dot_aux(:) = M_ZERO
+            do imdim = 1, mdim
+              k_dot_aux(:) = k_dot_aux(:) + (this%kcoords_cub(imdim, :, ik) - kpoint(imdim)) * this%rcoords(imdim, isp)
+            end do
+            conjgplanewf_cub(:,ik) = exp(-M_zI * k_dot_aux(:)) / (M_TWO * M_PI)**(mdim/M_TWO)
+          end if
+
           do ist = stst, stend
             do isdim = 1, sdim
 
               do itstep = 1, this%tdsteps
                 Jk_cub(ist, isdim, ik, 1:this%nkpnts) = &
-                  Jk_cub(ist, isdim, ik, 1:this%nkpnts) + conjgphase_cub(1:this%nkpnts, itstep) * &
+                  Jk_cub(ist, isdim, ik, 1:this%nkpnts) + conjgphase_cub(1:this%nkpnts, itstep, ik) * &
                   (this%wf(ist, isdim, ik, isp, itstep) * &
-                   (M_TWO * this%veca(idir, itstep) / P_c - this%kcoords_cub(idir, 1:this%nkpnts)) + &
+                   (M_TWO * this%veca(idir, itstep) / P_c - this%kcoords_cub(idir, 1:this%nkpnts, ik)) + &
                    this%gwf(ist, isdim, ik, isp, itstep, idir) * M_zI)
               end do
 
               if(this%usememory) then
                 Jk_cub(ist, isdim, ik, 1:this%nkpnts) = &
-                  Jk_cub(ist, isdim, ik, 1:this%nkpnts) * this%conjgplanewf_cub(1:this%nkpnts, isp)
+                  Jk_cub(ist, isdim, ik, 1:this%nkpnts) * this%conjgplanewf_cub(1:this%nkpnts, isp, ik)
               else
                 Jk_cub(ist, isdim, ik, 1:this%nkpnts) = &
-                  Jk_cub(ist, isdim, ik, 1:this%nkpnts) * conjgplanewf_cub(1:this%nkpnts)
+                  Jk_cub(ist, isdim, ik, 1:this%nkpnts) * conjgplanewf_cub(1:this%nkpnts, ik)
               end if
-
             end do
           end do
         end do
@@ -872,6 +1176,8 @@ contains
     SAFE_DEALLOCATE_A(spctramp_cub)
     SAFE_DEALLOCATE_A(conjgplanewf_cub)
     SAFE_DEALLOCATE_A(conjgphase_cub)
+
+    call profiling_out(prof_init)
 
     POP_SUB(pes_flux_integrate_cub)
   end subroutine pes_flux_integrate_cub
@@ -1236,350 +1542,6 @@ contains
     POP_SUB(pes_flux_getsphere)
   end subroutine pes_flux_getsphere
 
-  ! ---------------------------------------------------------
-  subroutine pes_flux_output(this, mesh, sb, st, dt)
-    type(pes_flux_t), intent(inout)    :: this
-    type(mesh_t),        intent(in)    :: mesh
-    type(simul_box_t),   intent(in)    :: sb
-    type(states_t),      intent(in)    :: st
-    FLOAT,               intent(in)    :: dt
-
-    integer            :: stst, stend, kptst, kptend, sdim, mdim
-    integer            :: ist, ik, isdim
-    integer            :: ikp, iomk, ikp_save, iomk_save
-    integer            :: ikk, ith, iph, iphi
-    FLOAT              :: phik, thetak, kact
-
-    integer            :: iunitone, iunittwo
-    FLOAT, allocatable :: spctrout_cub(:), spctrout_sph(:,:)
-    FLOAT              :: weight, spctrsum
-
-    PUSH_SUB(pes_flux_output)
-
-    stst   = st%st_start
-    stend  = st%st_end
-    kptst  = st%d%kpt%start
-    kptend = st%d%kpt%end
-    sdim   = st%d%dim
-    mdim   = mesh%sb%dim
-
-    if(this%shape == M_SPHERICAL) then
-      SAFE_ALLOCATE(spctrout_sph(1:this%nk, 1:this%nstepsomegak))
-      spctrout_sph = M_ZERO
-    else
-      SAFE_ALLOCATE(spctrout_cub(1:this%nkpnts))
-      spctrout_cub = M_ZERO
-    end if
-
-    ! calculate the total spectrum
-    do ik = kptst, kptend
-      do ist = stst, stend
-        do isdim = 1, sdim
-          if(this%shape == M_SPHERICAL) then
-            spctrout_sph(1:this%nk, 1:this%nstepsomegak) = spctrout_sph(1:this%nk, 1:this%nstepsomegak) + &
-              abs(this%spctramp_sph(ist, isdim, ik, 1:this%nk, 1:this%nstepsomegak))**M_TWO * (dt * this%tdstepsinterval)**M_TWO
-          else
-            spctrout_cub(1:this%nkpnts) = spctrout_cub(1:this%nkpnts) + &
-              abs(this%spctramp_cub(ist, isdim, ik, 1:this%nkpnts))**M_TWO * (dt * this%tdstepsinterval)**M_TWO
-          end if
-        end do
-      end do
-    end do
-
-    if(st%parallel_in_states .or. st%d%kpt%parallel) then
-#if defined(HAVE_MPI)
-      if(this%shape == M_SPHERICAL) then
-        call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrout_sph)
-      else
-        call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrout_cub)
-      end if
-#endif
-    end if
-
-    if(mpi_grp_is_root(mpi_world)) then
-      iunittwo = io_open('td.general/PES_flux.distribution.out', action='write', position='rewind')
-      iunitone = io_open('td.general/'//'PES_flux.power.sum', action='write', position='rewind')
-      write(iunitone, '(a19)') '# E, total spectrum'
-
-      if(this%shape == M_SPHERICAL) then
-        write(iunittwo, '(a29)') '# k, theta, phi, distribution'
-        do ikk = 1, this%nk 
-          kact = ikk * this%dk
-          iomk = 0
-          spctrsum = M_ZERO
-
-          do ith = 0, this%nstepsthetak
-            thetak = ith * M_PI / this%nstepsthetak 
-
-            if(ith == 0 .or. ith == this%nstepsthetak) then
-              weight = (M_ONE - cos(M_PI / this%nstepsthetak / M_TWO)) * M_TWO * M_PI
-            else
-              weight = abs(cos(thetak - M_PI / this%nstepsthetak / M_TWO) - cos(thetak + M_PI / this%nstepsthetak / M_TWO)) &
-                * M_TWO * M_PI / this%nstepsphik
-            end if
-
-            do iph = 0, this%nstepsphik - 1
-              iomk = iomk + 1
-              spctrsum = spctrsum + spctrout_sph(ikk, iomk) * weight 
-              phik = iph * M_TWO * M_PI / this%nstepsphik
-              if(iph == 0) iomk_save = iomk
-              write(iunittwo,'(5(1x,e18.10E3))') kact, thetak, phik, spctrout_sph(ikk, iomk)
-
-              ! just repeat the result for output
-              if(this%nstepsphik > 1 .and. iph == (this%nstepsphik - 1)) &
-                write(iunittwo,'(5(1x,e18.10E3))') kact, thetak, M_TWO * M_PI, spctrout_sph(ikk, iomk_save)
-
-              ! just repeat the result for output and exit
-              if(ith == 0 .or. ith == this%nstepsthetak) then
-                if(this%nstepsphik > 1) then
-                  do iphi = 1, this%nstepsphik
-                    phik = iphi * M_TWO * M_PI / this%nstepsphik
-                    write(iunittwo,'(5(1x,e18.10E3))') kact, thetak, phik, spctrout_sph(ikk, iomk)
-                  end do
-                end if
-                exit
-              end if
-            end do
-
-            if(this%nstepsphik > 1 .or. ith == this%nstepsthetak) write(iunittwo, '(1x)', advance='yes')
-          end do
-          write(iunitone, '(2(1x,e18.10E3))') kact**M_TWO / M_TWO, spctrsum * kact
-        end do
-
-      else ! this%shape == M_CUBIC
-        select case(mdim)
-        case(1)
-          write(iunittwo, '(a17)') '# k, distribution'
-          do ikp = 1, this%nkpnts
-            write(iunittwo, '(5(1x,e18.10E3))') this%kcoords_cub(1, ikp), spctrout_cub(ikp)
-          end do
-
-          do ikp = this%nk + 1, this%nkpnts
-            kact = this%kcoords_cub(1, ikp)
-            write(iunitone, '(2(1x,e18.10E3))') kact**M_TWO / M_TWO, &
-              (spctrout_cub(ikp) + spctrout_cub(this%nkpnts + 1 - ikp)) / M_TWO * kact
-          end do
-
-        case(2)
-          write(iunittwo, '(a29)') '# k, phi, distribution'
-          ikp = 0
-          do ikk = 1, this%nk
-            kact = ikk * this%dk
-            
-            spctrsum = M_ZERO
-            do iph = 0, this%nstepsphik - 1
-              ikp = ikp + 1
-              if(iph == 0) ikp_save = ikp
-              spctrsum = spctrsum + spctrout_cub(ikp) * M_TWO * M_PI / this%nstepsphik
-              phik = iph * M_TWO * M_PI / this%nstepsphik
-              write(iunittwo,'(5(1x,e18.10E3))') kact, phik, spctrout_cub(ikp)
-            end do
-            ! just repeat the result for output
-            write(iunittwo,'(5(1x,e18.10E3))') kact, M_TWO * M_PI, spctrout_cub(ikp_save)
-            write(iunittwo,'(1x)', advance = 'yes')
-            write(iunitone, '(2(1x,e18.10E3))') kact**M_TWO / M_TWO, spctrsum * kact
-          end do
-
-        case(3)
-          write(iunittwo, '(a29)') '# k, theta, phi, distribution'
-          ikp    = 0
-          do ikk = 1, this%nk
-            kact = ikk * this%dk
-            spctrsum = M_ZERO
-
-            do ith = 0, this%nstepsthetak
-              thetak = ith * M_PI / this%nstepsthetak 
-
-              if(ith == 0 .or. ith == this%nstepsthetak) then
-                weight = (M_ONE - cos(M_PI / this%nstepsthetak / M_TWO)) * M_TWO * M_PI
-              else
-                weight = abs(cos(thetak - M_PI / this%nstepsthetak / M_TWO) - cos(thetak + M_PI / this%nstepsthetak / M_TWO)) &
-                  * M_TWO * M_PI / this%nstepsphik
-              end if
-
-              do iph = 0, this%nstepsphik - 1
-                ikp = ikp + 1
-                spctrsum = spctrsum + spctrout_cub(ikp) * weight
-
-                phik = iph * M_TWO * M_PI / this%nstepsphik
-                if(iph == 0) ikp_save = ikp
-                write(iunittwo,'(5(1x,e18.10E3))') kact, thetak, phik, spctrout_cub(ikp)
-
-                ! just repeat the result for output
-                if(iph == (this%nstepsphik - 1)) &
-                  write(iunittwo,'(5(1x,e18.10E3))') kact, thetak, M_TWO * M_PI, spctrout_cub(ikp_save)
-
-                ! just repeat the result for output and exit
-                if(ith == 0 .or. ith == this%nstepsthetak) then
-                  do iphi = 1, this%nstepsphik
-                    phik = iphi * M_TWO * M_PI / this%nstepsphik
-                    write(iunittwo,'(5(1x,e18.10E3))') kact, thetak, phik, spctrout_cub(ikp)
-                  end do
-                  exit
-                end if
-              end do
-
-              write(iunittwo, '(1x)', advance='yes')
-            end do
-            write(iunitone, '(2(1x,e18.10E3))') kact**M_TWO / M_TWO, spctrsum * kact
-          end do
-        end select
-      end if
-
-      call io_close(iunittwo)
-      call io_close(iunitone)
-    end if
-
-    SAFE_DEALLOCATE_A(spctrout_cub)
-    SAFE_DEALLOCATE_A(spctrout_sph)
-
-    POP_SUB(pes_flux_output)
-  end subroutine pes_flux_output
-
-  ! ---------------------------------------------------------
-  subroutine pes_flux_dump(restart, this, mesh, st, ierr)
-    type(restart_t),  intent(in)  :: restart
-    type(pes_flux_t), intent(in)  :: this
-    type(mesh_t),     intent(in)  :: mesh
-    type(states_t),   intent(in)  :: st
-    integer,          intent(out) :: ierr
-
-    integer          :: stst, stend, kptst, kptend, sdim, mdim
-    integer          :: ist, ik, isdim
-    integer          :: err
-    character(len=8) :: filename
-
-    PUSH_SUB(pes_flux_dump)
-
-    stst   = st%st_start
-    stend  = st%st_end
-    kptst  = st%d%kpt%start
-    kptend = st%d%kpt%end
-    sdim   = st%d%dim
-    mdim   = mesh%sb%dim
-
-    if(restart_skip(restart)) then
-      POP_SUB(pes_flux_dump)
-      return
-    end if
-
-    if(debug%info) then
-      message(1) = "Debug: Writing pes_flux restart."
-      call messages_info(1)
-    end if
-
-    if(mpi_grp_is_root(mesh%mpi_grp)) then
-      do ik = kptst, kptend
-        do ist = stst, stend
-          do isdim = 1, sdim
-            write(filename, '(i2.2, a, i2.2, a, i2.2)') ik, '.', ist, '.', isdim
-  
-            if(this%shape == M_SPHERICAL) then
-              call io_binary_write(trim(restart_dir(restart))//"/pesflux1."//trim(filename)//".obf", &
-                this%nk * this%nstepsomegak, this%spctramp_sph(ist, isdim, ik, :, :), err)
-            else
-              call io_binary_write(trim(restart_dir(restart))//"/pesflux1."//trim(filename)//".obf", &
-                this%nkpnts, this%spctramp_cub(ist, isdim, ik, :), err)
-            end if
-
-            call io_binary_write(trim(restart_dir(restart))//"/pesflux2."//trim(filename)//".obf", &
-              this%nsrfcpnts * this%tdsteps, this%wf(ist, isdim, ik, :, :), err)
-            call io_binary_write(trim(restart_dir(restart))//"/pesflux3."//trim(filename)//".obf", &
-              this%nsrfcpnts * this%tdsteps * mdim, this%gwf(ist, isdim, ik, :, :, :), err)
-          end do
-        end do
-      end do
-    end if
-
-    if(this%shape == M_SPHERICAL) then
-      call zrestart_write_binary(restart, 'pesflux4', this%nk * this%nstepsomegak, this%conjgphase_prev_sph, err)
-    else
-      call zrestart_write_binary(restart, 'pesflux4', this%nkpnts, this%conjgphase_prev_cub, err)
-    end if
-
-    call drestart_write_binary(restart, 'pesflux5', this%tdsteps * mdim, this%veca, err) 
-
-    if(err /= 0) ierr = ierr + 1
-
-    if(debug%info) then
-      message(1) = "Debug: Writing pes_flux restart done."
-      call messages_info(1)
-    end if
-
-    POP_SUB(pes_flux_dump)
-  end subroutine pes_flux_dump
-
-  ! ---------------------------------------------------------
-  subroutine pes_flux_load(restart, this, mesh, st, ierr)
-    type(restart_t),     intent(in)    :: restart
-    type(pes_flux_t),    intent(inout) :: this
-    type(mesh_t),        intent(in)    :: mesh
-    type(states_t),      intent(in)    :: st
-    integer,             intent(out)   :: ierr
-
-    integer          :: stst, stend, kptst, kptend, sdim, mdim
-    integer          :: ist, ik, isdim
-    integer          :: err
-    character(len=8) :: filename
-
-    PUSH_SUB(pes_flux_load)
-
-    stst   = st%st_start
-    stend  = st%st_end
-    kptst  = st%d%kpt%start
-    kptend = st%d%kpt%end
-    sdim   = st%d%dim
-    mdim   = mesh%sb%dim
-
-    if(restart_skip(restart)) then
-      ierr = -1
-      POP_SUB(pes_flux_load)
-      return
-    end if
-
-    if(debug%info) then
-      message(1) = "Debug: Reading pes_flux restart."
-      call messages_info(1)
-    end if
-
-    do ik = kptst, kptend
-      do ist = stst, stend
-        do isdim = 1, sdim
-          write(filename, '(i2.2, a, i2.2, a, i2.2)') ik, '.', ist, '.', isdim
-  
-          if(this%shape == M_SPHERICAL) then
-            call io_binary_read(trim(restart_dir(restart))//"/pesflux1."//trim(filename)//".obf", &
-              this%nk * this%nstepsomegak, this%spctramp_sph(ist, isdim, ik, :, :), err)
-          else
-            call io_binary_read(trim(restart_dir(restart))//"/pesflux1."//trim(filename)//".obf", &
-              this%nkpnts, this%spctramp_cub(ist, isdim, ik, :), err)
-          end if
-
-          call io_binary_read(trim(restart_dir(restart))//"/pesflux2."//trim(filename)//".obf", &
-            this%nsrfcpnts * this%tdsteps, this%wf(ist, isdim, ik, :, :), err)
-          call io_binary_read(trim(restart_dir(restart))//"/pesflux3."//trim(filename)//".obf", &
-            this%nsrfcpnts * this%tdsteps * mdim, this%gwf(ist, isdim, ik, :, :, :), err)
-        end do
-      end do
-    end do
-
-    if(this%shape == M_SPHERICAL) then
-      call zrestart_read_binary(restart, 'pesflux4', this%nk * this%nstepsomegak, this%conjgphase_prev_sph, err)
-    else
-      call zrestart_read_binary(restart, 'pesflux4', this%nkpnts, this%conjgphase_prev_cub, err)
-    end if
-
-    call drestart_read_binary(restart, 'pesflux5', this%tdsteps * mdim, this%veca, err) 
-
-    if(err /= 0) ierr = ierr + 1
-   
-    if(debug%info) then
-      message(1) = "Debug: Reading pes_flux restart done."
-      call messages_info(1)
-    end if
-
-    POP_SUB(pes_flux_load)
-  end subroutine pes_flux_load
 
   ! ---------------------------------------------------------
   subroutine pes_flux_distribute(istart_global, iend_global, istart, iend, comm)
@@ -1626,6 +1588,9 @@ contains
 
     POP_SUB(pes_flux_distribute)
   end subroutine pes_flux_distribute
+
+
+#include "pes_flux_out_inc.F90"
 
 end module pes_flux_m
 

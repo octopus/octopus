@@ -215,7 +215,7 @@ contains
 
     if(pes%calc_spm)   call pes_spm_calc  (pes%spm, st, mesh, dt, iter, hm)
     if(pes%calc_mask) call pes_mask_calc(pes%mask, mesh, st, dt, iter)
-    if(pes%calc_flux) call pes_flux_save(pes%flux, mesh, st, gr, hm, iter, maxiter, dt)
+    if(pes%calc_flux) call pes_flux_calc(pes%flux, mesh, st, gr, hm, iter, maxiter, dt)
 
     POP_SUB(pes_calc)
   end subroutine pes_calc

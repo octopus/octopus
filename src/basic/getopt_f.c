@@ -677,7 +677,6 @@ void photoelectron_spectrum_help(){
   printf("Options:\n");
   printf("  -h, --help          Prints this help and exits.\n");
   printf("  -v, --version       Prints octopus version.\n");
-  printf("  -i, --int=Y/N       Interpolate the output. Default is Yes.\n");
   printf("  -V, --vec=x,y,z     The polar zenith direction in comma-separated format \n");
   printf("                      (without spaces). Default is the laser polarization. \n");
   printf("  -u, --pvec=x,y,z    The plane cut vector in comma-separated format.\n");
@@ -700,7 +699,7 @@ void photoelectron_spectrum_help(){
 }
 
 void FC_FUNC_(getopt_photoelectron_spectrum, GETOPT_PHOTOELECTRON_SPECTRUM)
-     ( int *interp, double *estep, double *espan, double *thstep, 
+     ( double *estep, double *espan, double *thstep, 
        double *thspan, double *phstep, double *phspan, double *pol, 
        double *center, double *pvec, int *integrate)
 {
@@ -709,21 +708,11 @@ void FC_FUNC_(getopt_photoelectron_spectrum, GETOPT_PHOTOELECTRON_SPECTRUM)
   char *tok = NULL;
 
 
-  /* *interp = 1;
-   *estep  = -1.;
-   espan[0]  = -1.;
-   espan[1]  = -1.;
-   pol[0] = 1;
-   pol[1] = 0;
-   pol[2] = 0;
-  */
-
 #if defined(HAVE_GETOPT_LONG)
   static struct option long_options[] =
     {
       {"help", no_argument, 0, 'h'},
       {"version", no_argument, 0, 'v'},
-      {"int", required_argument, 0, 'i'},
       {"integr", required_argument, 0, 'I'},
       {"de", required_argument, 0, 'e'},
       {"espan", required_argument, 0, 'E'},
@@ -741,9 +730,9 @@ void FC_FUNC_(getopt_photoelectron_spectrum, GETOPT_PHOTOELECTRON_SPECTRUM)
   while (1) {
     int option_index = 0;
 #if defined(HAVE_GETOPT_LONG)
-    c = getopt_long(argc, argv, "hvi:e:E:P:p:T:t:V:C:u:I:", long_options, &option_index);
+    c = getopt_long(argc, argv, "hve:E:P:p:T:t:V:C:u:I:", long_options, &option_index);
 #else
-    c = getopt(argc, argv, "hvi:e:E:P:p:T:t:V:C:u:I:");
+    c = getopt(argc, argv, "hve:E:P:p:T:t:V:C:u:I:");
 #endif
     if (c == -1) break;
     switch (c) {
@@ -757,11 +746,6 @@ void FC_FUNC_(getopt_photoelectron_spectrum, GETOPT_PHOTOELECTRON_SPECTRUM)
       exit(0);
     break;
 
-
-    case 'i':
-      if ((strcmp(optarg,"y") == 0)|| (strcmp(optarg,"yes")== 0))  *interp = 1;
-      if ((strcmp(optarg,"n") == 0)|| (strcmp(optarg,"no") == 0))  *interp = 0;
-    break;
 
     case 'I':
       if ((strcmp(optarg,"phi") == 0))
