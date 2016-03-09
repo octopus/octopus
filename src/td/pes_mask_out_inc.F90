@@ -803,12 +803,16 @@ subroutine pes_mask_output_full_mapM(pesK, file, Lk, ll, how, sb, pmesh)
   call cube_function_null(cf)
   call dcube_function_alloc_RS(cube, cf, force_alloc = .true.)
   cf%dRS = pesK
-
-  dk(:) = M_ZERO
-  dk(1:sb%dim) = abs(Lk(2,1:sb%dim)-Lk(1,1:sb%dim))
-  do ii = 1, sb%dim
-    dk(ii) = units_from_atomic(sqrt(units_out%energy), dk(ii))
-  end do
+  
+  
+  if (.not. present(pmesh) ) then
+    ! Ignore Lk and use pmesh
+    dk(:) = M_ZERO
+    dk(1:sb%dim) = abs(Lk(2,1:sb%dim)-Lk(1,1:sb%dim))
+    do ii = 1, sb%dim
+      dk(ii) = units_from_atomic(sqrt(units_out%energy), dk(ii))
+    end do
+  end if
   
 #if defined(HAVE_NETCDF)  
   
@@ -837,10 +841,10 @@ subroutine pes_mask_output_full_mapM(pesK, file, Lk, ll, how, sb, pmesh)
         sqrt(units_out%energy)**sb%dim)
     end if        
       
-  else
-    write(message(1), '(a)') 'Writing ASCII format file: '
-    call messages_info(1)
-    call out_ascii()
+!   else
+!     write(message(1), '(a)') 'Writing ASCII format file: '
+!     call messages_info(1)
+!     call out_ascii()
   end if
   
   call cube_end(cube)
