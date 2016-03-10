@@ -53,6 +53,7 @@ dist_share_DATA = \
 	06-restart.test                                \
 	07-spin_orbit_coupling.01-hgh.inp              \
 	07-spin_orbit_coupling.02-rkb.inp              \
+	07-spin_orbit_coupling.02-xe-pseudo.upf        \
 	07-spin_orbit_coupling.test                    \
 	08-spin_orbit_coupling_full.01-hgh.inp         \
 	08-spin_orbit_coupling_full.02-rkb.inp         \

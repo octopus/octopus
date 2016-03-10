@@ -11,7 +11,7 @@ Radius  = 5.0
 Spacing = 0.35
 
 %Species
- "Xe" | species_pseudo | db_file | "extra/Xe.UPF"
+ "Xe" | species_pseudo | file | "07-spin_orbit_coupling.02-xe-pseudo.upf"
 %
 
 %Coordinates
