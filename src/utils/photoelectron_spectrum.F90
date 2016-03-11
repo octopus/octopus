@@ -63,7 +63,7 @@ program photoelectron_spectrum
   FLOAT                :: center(3)
   FLOAT, pointer       :: Lg(:,:), RR(:)
   FLOAT, allocatable   :: pmesh(:,:,:,:)   !< The final momentum-space (p) mesh 
-  integer, allocatable :: Lp(:,:,:,:,:)    !< An index mapping from g- and k-point mesh to p-mesh
+  integer, pointer     :: Lp(:,:,:,:,:)    !< An index mapping from g- and k-point mesh to p-mesh
   logical              :: need_pmesh, resolve_states
   integer              :: ii, i1,i2,i3, idxZero(1:3), st_range(2)
   type(block_t)        :: blk  
@@ -152,7 +152,7 @@ program photoelectron_spectrum
     if (simul_box_is_periodic(sb)) option = OPTION__PES_FLUX_SHAPE__PLN
     
     call parse_variable('PES_Flux_Shape', option, pflux%shape)
-    call pes_flux_reciprocal_mesh_gen(pflux, sb, st)
+    call pes_flux_reciprocal_mesh_gen(pflux, sb, st, post = .true.)
     
     llg(1:dim) = pflux%ll(1:dim)
     need_pmesh = .true.
@@ -282,7 +282,6 @@ program photoelectron_spectrum
   nkpt = krng(2) - krng(1) + 1
 
   
-  SAFE_ALLOCATE(Lp(1:llg(1),1:llg(2),1:llg(3),krng(1):krng(2),1:3))
  
   if (have_zweight_path) then
     llp(kpth_dir) = llg(kpth_dir) * nkpt    
@@ -290,14 +289,19 @@ program photoelectron_spectrum
     llp(1:dim) = llg(1:dim) * sb%kpoints%nik_axis(1:dim)    
   endif  
 
+  print *, "llp(:)= ", llp(:) 
+  print *, "llg(:)= ", llg(:) 
   SAFE_ALLOCATE(pmesh(1:llp(1),1:llp(2),1:llp(3),1:3 + 1))
   SAFE_ALLOCATE(pesP(1:llp(1),1:llp(2),1:llp(3),1:st%d%nspin))
 
   select case (pes_method)
   case (OPTION__PHOTOELECTRONSPECTRUM__PES_MASK)
+    SAFE_ALLOCATE(Lp(1:llg(1),1:llg(2),1:llg(3),krng(1):krng(2),1:3))
     call pes_mask_pmesh(dim, sb%kpoints, llg, Lg, pmesh, idxZero, krng, Lp)  
 
   case (OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)
+    ! Lp is allocated inside pes_flux_pmesh to comply with the 
+    ! declinations of the different surfaces
     call pes_flux_pmesh(pflux, dim, sb%kpoints, llg, Lg, pmesh, idxZero, krng, Lp)    
   end select
    
@@ -430,7 +434,7 @@ program photoelectron_spectrum
   
   SAFE_DEALLOCATE_A(pesP)    
   SAFE_DEALLOCATE_A(pmesh)
-  SAFE_DEALLOCATE_A(Lp)
+  SAFE_DEALLOCATE_P(Lp)
   if (.not. need_pmesh .or. pes_method == OPTION__PHOTOELECTRONSPECTRUM__PES_MASK) then
     SAFE_DEALLOCATE_P(Lg)
   end if
@@ -507,15 +511,29 @@ program photoelectron_spectrum
       
       if(iand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ENERGY_TOT) /= 0) then
         call messages_print_stress(stdout, "Energy-resolved PES")
-        call pes_mask_output_power_totalM(pesP_out,outfile('./PES_power',ist, ispin, 'sum'), &
-                                          Lg, llp, dim, Emax, Estep, interpolate = .true.)
 
+        select case (pes_method)
+        case (OPTION__PHOTOELECTRONSPECTRUM__PES_MASK)
+          call pes_mask_output_power_totalM(pesP_out,outfile('./PES_power',ist, ispin, 'sum'), &
+                                            Lg, llp, dim, Emax, Estep, interpolate = .true.)
+        case (OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)                                     
+          call messages_not_implemented("Energy-resolved PES for the flux method") 
+        end select 
+        
       end if
       
       if(iand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ENERGY_ANGLE) /= 0) then
         call messages_print_stress(stdout, "Angle- and energy-resolved PES")
-        call pes_mask_output_ar_polar_M(pesP_out,outfile('./PES_angle_energy',ist, ispin, 'map'), &
-                                        Lg, llp, dim, pol, Emax, Estep)
+        
+        select case (pes_method)
+        case (OPTION__PHOTOELECTRONSPECTRUM__PES_MASK)
+          call pes_mask_output_ar_polar_M(pesP_out,outfile('./PES_angle_energy',ist, ispin, 'map'), &
+                                          Lg, llp, dim, pol, Emax, Estep)
+        case (OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)                                     
+          call messages_not_implemented("Angle- and energy-resolved PES for the flux method") 
+        end select                       
+                                          
+                                          
       end if
 
       if(iand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__VELOCITY_MAP_CUT) /= 0) then
@@ -564,8 +582,14 @@ program photoelectron_spectrum
           Estep = Emax/size(Lg,1)
         end if
 
-        call pes_mask_output_ar_plane_M(pesP_out,outfile('./PES_energy',ist,ispin,'map'), &
-                                        Lg, llp, dim, pol, Emax, Estep)
+        select case (pes_method)
+        case (OPTION__PHOTOELECTRONSPECTRUM__PES_MASK)
+          call pes_mask_output_ar_plane_M(pesP_out,outfile('./PES_energy',ist,ispin,'map'), &
+                                          Lg, llp, dim, pol, Emax, Estep)
+        case (OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)                                     
+          call messages_not_implemented("Angle and energy-resolved on a plane for the flux method") 
+        end select   
+                                        
       end if
 
       if(iand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ENERGY_TH_PH) /= 0) then
@@ -581,9 +605,16 @@ program photoelectron_spectrum
         else
          Estep = Emax/size(Lg,1)
         end if
+        
+        select case (pes_method)
+        case (OPTION__PHOTOELECTRONSPECTRUM__PES_MASK)
+          call pes_mask_output_ar_spherical_cut_M(pesP_out,outfile('./PES_sphere',ist,ispin,'map'), & 
+                                                  Lg, llp, dim, pol, Emin, Emax, Estep)
 
-        call pes_mask_output_ar_spherical_cut_M(pesP_out,outfile('./PES_sphere',ist,ispin,'map'), & 
-                                                Lg, llp, dim, pol, Emin, Emax, Estep)
+        case (OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)                                     
+          call messages_not_implemented("PES on spherical cuts for the flux method") 
+        end select                                          
+
       end if
 
       if(iand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__VELOCITY_MAP) /= 0) then

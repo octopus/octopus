@@ -546,10 +546,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_reciprocal_mesh_gen(this, sb, st)
+  subroutine pes_flux_reciprocal_mesh_gen(this, sb, st, post)
     type(pes_flux_t),  intent(inout) :: this
     type(simul_box_t), intent(in)    :: sb
     type(states_t),    intent(in)    :: st
+    logical, optional, intent(in)    :: post !< only fill the data needed for postprocessing  
 
       
     integer           :: mdim, pdim
@@ -629,8 +630,8 @@ contains
       case(1)
         this%nstepsthetak = 0
         this%nstepsphik   = 2
-        this%nstepsomegak = this%nstepsphik
-
+        this%nstepsomegak = this%nstepsphik        
+        
       case(2)
         this%nstepsthetak = 0
         this%nstepsomegak = this%nstepsphik
@@ -650,6 +651,10 @@ contains
       this%nk     = nint(kmax/this%dk)
       this%nkpnts = this%nstepsomegak * this%nk
 
+      this%ll(1)      = this%nk  
+      this%ll(2)      = this%nstepsphik
+      this%ll(3)      = this%nstepsthetak - 1
+      this%ll(mdim+1:3) = 1
 
     else 
       ! PLANES 
@@ -763,7 +768,12 @@ contains
     ! Create the grid
     select case (this%shape)
 
-      case (M_SPHERICAL)
+    case (M_SPHERICAL)
+      if(optional_default(post, .false.)) then 
+        POP_SUB(pes_flux_reciprocal_mesh_gen)
+        return 
+      end if
+    
       ! we split the k-mesh in radial & angular part
       call pes_flux_distribute(1, this%nk, this%nk_start, this%nk_end, mpi_world%comm)
       call pes_flux_distribute(1, this%nstepsomegak, this%nstepsomegak_start, this%nstepsomegak_end, mpi_world%comm)
@@ -809,7 +819,7 @@ contains
       call comm_allreduce(mpi_world%comm, this%j_l)
 #endif
 
-      case (M_CUBIC)
+    case (M_CUBIC)
       ! we do not split the k-mesh
       call pes_flux_distribute(1, this%nkpnts, this%nkpnts_start, this%nkpnts_end, mpi_world%comm)
 #if defined(HAVE_MPI)
@@ -851,55 +861,55 @@ contains
         end do
       end select
 
-      case (M_PLANES)
+    case (M_PLANES)
+
+  !         call pes_flux_distribute(1, this%nkpnts, this%nkpnts_start, this%nkpnts_end, mpi_world%comm)
+
+      this%nkpnts_start = 1 
+      this%nkpnts_end   = this%nkpnts
+  
+
+      SAFE_ALLOCATE(this%kcoords_cub(1:mdim, 1:this%nkpnts, kptst:kptend))
+  
+  !         print *, sb%klattice(:, :)
+  !         print *, "mdim = ", mdim, "pdim = ", pdim
+  
+      do ikpt = kptst, kptend
+        ikp = 0
+        do ikk = -this%nk, this%nk
+          if (ikk == 0 ) cycle !this way I have exactly 2*this%nk elements  
       
-!         call pes_flux_distribute(1, this%nkpnts, this%nkpnts_start, this%nkpnts_end, mpi_world%comm)
+          ! loop over periodic directions
+          do idim = 1, pdim
+            do ibz = -(NBZ(idim)-1), (NBZ(idim)-1) 
 
-        this%nkpnts_start = 1 
-        this%nkpnts_end   = this%nkpnts
-        
+              kvec(1:pdim) = ibz * sb%klattice(1:pdim, idim)                
+          
+              ! Fill the non-periodic direction
+              kvec(mdim) = ikk * this%dk + ikk/abs(ikk) * kmin
       
-        SAFE_ALLOCATE(this%kcoords_cub(1:mdim, 1:this%nkpnts, kptst:kptend))
-        
-!         print *, sb%klattice(:, :)
-!         print *, "mdim = ", mdim, "pdim = ", pdim
-        
-        do ikpt = kptst, kptend
-          ikp = 0
-          do ikk = -this%nk, this%nk
-            if (ikk == 0 ) cycle !this way I have exactly 2*this%nk elements  
-            
-            ! loop over periodic directions
-            do idim = 1, pdim
-              do ibz = -(NBZ(idim)-1), (NBZ(idim)-1) 
+              ikp = ikp + 1
+  !                 print *, "ikpt, ikk, ibz, ikp", ikpt, ikk, ibz, ikp
+              this%kcoords_cub(1:mdim, ikp, ikpt) =  kvec(1:mdim)
 
-                kvec(1:pdim) = ibz * sb%klattice(1:pdim, idim)                
-                
-                ! Fill the non-periodic direction
-                kvec(mdim) = ikk * this%dk + ikk/abs(ikk) * kmin
-            
-                ikp = ikp + 1
-!                 print *, "ikpt, ikk, ibz, ikp", ikpt, ikk, ibz, ikp
-                this%kcoords_cub(1:mdim, ikp, ikpt) =  kvec(1:mdim)
-
-              end do
             end do
+          end do
 
-            
+      
+        end do
+      end do
+  
+      if (debug%info .and. mpi_grp_is_root(mpi_world)) then
+        !this doesn't work for parallel in kpoint 
+        ! you need to gather kcoords_pln
+        write(229,*) "#   ikpt,   ikp,   this%kcoords_pln(1:mdim, ikp, ikpt)"
+        do ikpt = kptst, kptend
+          do ikp = 1, this%nkpnts
+            write(229,*) ikpt, ikp, this%kcoords_cub(1:mdim, ikp, ikpt)
           end do
         end do
-        
-        if (debug%info .and. mpi_grp_is_root(mpi_world)) then
-          !this doesn't work for parallel in kpoint 
-          ! you need to gather kcoords_pln
-          write(229,*) "#   ikpt,   ikp,   this%kcoords_pln(1:mdim, ikp, ikpt)"
-          do ikpt = kptst, kptend
-            do ikp = 1, this%nkpnts
-              write(229,*) ikpt, ikp, this%kcoords_cub(1:mdim, ikp, ikpt)
-            end do
-          end do
-          flush(229)
-        end if
+        flush(229)
+      end if
 
 
     end select
@@ -1027,11 +1037,14 @@ contains
         if(mod(iter, this%tdsteps * this%tdstepsinterval) == 0 .or. iter == maxiter) then
           if(this%shape == M_CUBIC .or. this%shape == M_PLANES) then
             call pes_flux_integrate_cub(this, mesh, st, dt)
+!             this%spctramp_cub(:,:,:,:) = this%spctramp_cub(:,:,:,:) * dt * this%tdstepsinterval
           else
             call pes_flux_integrate_sph(this, mesh, st, dt)
+!             this%spctramp_sph(:,:,:,:,:) = this%spctramp_sph(:,:,:,:,:) * dt * this%tdstepsinterval
           end if
         end if
       end if
+
 
     end if
 
