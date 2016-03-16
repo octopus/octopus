@@ -76,7 +76,6 @@ module pes_flux_m
     FLOAT            :: dk                             !< parameters for k-mesh
     FLOAT, pointer   :: kcoords_cub(:,:,:)             !< coordinates of k-points
     FLOAT, pointer   :: kcoords_sph(:,:,:)
-    
 
     integer          :: shape                          !< shape of the surface (= cube/sphere/planes)
     integer          :: nsrfcpnts                      !< total number of surface points
@@ -92,7 +91,7 @@ module pes_flux_m
     FLOAT            :: radius
 
     integer          :: tdsteps                        !<
-    integer          :: tdstepsinterval                !<
+    integer          :: max_iter                       !<
 
     CMPLX, pointer   :: wf(:,:,:,:,:)                  !< wavefunction
     CMPLX, pointer   :: gwf(:,:,:,:,:,:)               !< gradient of wavefunction
@@ -115,22 +114,23 @@ module pes_flux_m
     M_CUBIC      = 1,     &
     M_SPHERICAL  = 2,     &
     M_PLANES     = 3
-    
 
 contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_init(this, mesh, st, hm)
+  subroutine pes_flux_init(this, mesh, st, hm, save_iter, max_iter)
     type(pes_flux_t),    intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
     type(states_t),      intent(in)    :: st
     type(hamiltonian_t), intent(in)    :: hm
+    integer,             intent(in)    :: save_iter
+    integer,             intent(in)    :: max_iter
 
     type(block_t)      :: blk
     FLOAT              :: border(MAX_DIM)       ! distance of surface from border
     FLOAT              :: offset(MAX_DIM)       ! offset for border
-    integer            :: stst, stend, kptst, kptend, sdim, mdim,pdim
+    integer            :: stst, stend, kptst, kptend, sdim, mdim, pdim
     integer            :: imdim
     integer            :: isp, ikp
     integer            :: il, ik
@@ -139,9 +139,6 @@ contains
 
     FLOAT, allocatable :: k_dot_aux(:)
     integer            :: nstepsphir, nstepsthetar
-! #if defined(HAVE_MPI)
-!     integer            :: mpirank
-! #endif
     integer            :: ll, mm
     integer            :: default_shape
 
@@ -189,7 +186,7 @@ contains
     !%End
     default_shape = M_SPHERICAL
     if(mdim <= 2) default_shape = M_CUBIC
-    if (simul_box_is_periodic(mesh%sb)) default_shape = M_PLANES
+    if(simul_box_is_periodic(mesh%sb)) default_shape = M_PLANES
     
     call parse_variable('PES_Flux_Shape', default_shape, this%shape)
     if(.not.varinfo_valid_option('PES_Flux_Shape', this%shape, is_flag = .true.)) &
@@ -213,10 +210,9 @@ contains
     !%End
     offset = M_ZERO
     if(parse_block('PES_Flux_Offset', blk) == 0) then
-      call parse_block_float(blk, 0, 0, offset(1))
-      call parse_block_float(blk, 0, 1, offset(2))
-      call parse_block_float(blk, 0, 2, offset(3))
-
+      do imdim = 1, mdim
+        call parse_block_float(blk, 0, imdim - 1, offset(imdim))
+      end do
       call parse_block_end(blk)
     end if
 
@@ -234,8 +230,6 @@ contains
       call messages_print_var_value(stdout, 'PES_Flux_Lmax', this%lmax)
     end if
 
-
-    
     if(this%shape == M_CUBIC .or. this%shape == M_PLANES) then
 
       !%Variable PES_Flux_Lsize
@@ -255,14 +249,11 @@ contains
       !% the non-periodic dimension symmetrically placed at PES_Flux_Lsize distance from 
       !% the origin.
       !%End
-      
       if(parse_block('PES_Flux_Lsize', blk) == 0) then
-
-        call parse_block_float(blk, 0, 0, border(1))
-        call parse_block_float(blk, 0, 1, border(2))
-        call parse_block_float(blk, 0, 2, border(3))
+        do imdim = 1, mdim
+          call parse_block_float(blk, 0, imdim - 1, border(imdim))
+        end do
         border(1:mdim) = int(border(1:mdim)/mesh%spacing(1:mdim))*mesh%spacing(1:mdim)
-
         call parse_block_end(blk)
 
       else if (simul_box_is_periodic(mesh%sb)) then
@@ -275,7 +266,6 @@ contains
         call messages_print_var_value(stdout, 'PES_Flux_Lsize', border(mdim))
         
       else
-
         select case(mesh%sb%box_shape)
         case(PARALLELEPIPED)
           border(1:mdim) = mesh%sb%lsize(1:mdim) * M_HALF
@@ -290,19 +280,15 @@ contains
         call messages_write('PES_Flux_Lsize not specified. Using default values.')
         call messages_info()
         call messages_print_var_value(stdout, 'PES_Flux_Lsize', border(1:mdim))
-
       end if
 
-
     else
-      
       !%Variable PES_Flux_Radius
       !%Type float
       !%Section Time-Dependent::PhotoElectronSpectrum
       !%Description
       !% The radius of the sphere, if PES_Flux_Shape == sph.
       !%End
-
       if(parse_is_defined('PES_Flux_Radius')) then
         call parse_variable('PES_Flux_Radius', M_ZERO, this%radius)
         if(this%radius <= M_ZERO) call messages_input_error('PES_Flux_Radius')
@@ -356,7 +342,7 @@ contains
     ! -----------------------------------------------------------------
     select case (this%shape)
     
-    case(M_CUBIC) 
+    case(M_CUBIC)
       call pes_flux_getcube(this, mesh, border, offset)
 
       ! distribute the surface points on nodes,
@@ -375,7 +361,7 @@ contains
       ! nstepsphir   = M_TWO * this%lmax + 1
       call pes_flux_getsphere(this, mesh, nstepsthetar, nstepsphir, offset)
     
-    case(M_PLANES) 
+    case(M_PLANES)
             
       call pes_flux_getcube(this, mesh, border, offset)
       
@@ -413,26 +399,13 @@ contains
     ! Generate the reciprocal space mesh grid
     call pes_flux_reciprocal_mesh_gen(this, mesh%sb, st)
 
-
     ! -----------------------------------------------------------------
     ! Options for time integration 
     ! -----------------------------------------------------------------
-    !%Variable PES_Flux_TDStepsInterval
-    !%Type float
-    !%Section Time-Dependent::PhotoElectronSpectrum
-    !%Description
-    !%End
-    call parse_variable('PES_Flux_TDStepsInterval', 1, this%tdstepsinterval)
-    call messages_print_var_value(stdout, "PES_Flux_TDStepsInterval", this%tdstepsinterval)
+    this%max_iter  = max_iter
 
-    !%Variable PES_Flux_TDSteps
-    !%Type float
-    !%Section Time-Dependent::PhotoElectronSpectrum
-    !%Description
-    !%End
     if(this%shape == M_CUBIC .or. this%shape == M_PLANES) then
-      call parse_variable('PES_Flux_TDSteps', 1, this%tdsteps)
-      call messages_print_var_value(stdout, "PES_Flux_TDSteps", this%tdsteps)      
+      this%tdsteps = save_iter
     else
       this%tdsteps = M_ONE
 #if defined(HAVE_MPI)
@@ -447,7 +420,7 @@ contains
     !%Type logical
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
-    !% Use memory to tabulate Volkov's plane-wave components on the surface.
+    !% Use memory to tabulate Volkov plane-wave components on the surface.
     !%End
     if(this%shape == M_CUBIC .or. this%shape == M_PLANES ) then
       call parse_variable('PES_Flux_UseMemory', .true., this%usememory)
@@ -484,7 +457,7 @@ contains
 
         do isp = this%nsrfcpnts_start, this%nsrfcpnts_end
           do ik = kptst, kptend
-            
+
             kpoint(:) = M_ZERO
             if(simul_box_is_periodic(mesh%sb)) then
               kpoint(1:mdim) = kpoints_get_point(mesh%sb%kpoints, ik)
@@ -495,10 +468,9 @@ contains
               k_dot_aux(:) = k_dot_aux(:) + (this%kcoords_cub(imdim, :, ik) - kpoint(imdim)) * this%rcoords(imdim, isp)
             end do
 
-            this%conjgplanewf_cub(:, isp,ik) = exp(-M_zI * k_dot_aux(:)) / (M_TWO * M_PI)**(mdim/M_TWO)
+            this%conjgplanewf_cub(:, isp, ik) = exp(-M_zI * k_dot_aux(:)) / (M_TWO * M_PI)**(mdim/M_TWO)
           end do
         end do
-        
         SAFE_DEALLOCATE_A(k_dot_aux)
 #if defined(HAVE_MPI)
         call comm_allreduce(mpi_world%comm, this%conjgplanewf_cub)
@@ -544,7 +516,6 @@ contains
     POP_SUB(pes_flux_end)
   end subroutine pes_flux_end
 
-
   ! ---------------------------------------------------------
   subroutine pes_flux_reciprocal_mesh_gen(this, sb, st, post)
     type(pes_flux_t),  intent(inout) :: this
@@ -552,7 +523,6 @@ contains
     type(states_t),    intent(in)    :: st
     logical, optional, intent(in)    :: post !< only fill the data needed for postprocessing  
 
-      
     integer           :: mdim, pdim
     integer           :: kptst, kptend  
     integer           :: isp, ikp, ikpt, ibz
@@ -568,15 +538,12 @@ contains
     integer           :: mpirank
 #endif
 
-      
-      
     PUSH_SUB(pes_flux_reciprocal_mesh_gen)  
 
     kptst  = st%d%kpt%start
     kptend = st%d%kpt%end
     mdim   = sb%dim
     pdim   = sb%periodic_dim
-      
       
     if (this%shape == M_SPHERICAL .or. this%shape == M_CUBIC) then
       ! -----------------------------------------------------------------
@@ -900,7 +867,7 @@ contains
       end do
   
       if (debug%info .and. mpi_grp_is_root(mpi_world)) then
-        !this doesn't work for parallel in kpoint 
+        ! this does not work for parallel in kpoint 
         ! you need to gather kcoords_pln
         write(229,*) "#   ikpt,   ikp,   this%kcoords_pln(1:mdim, ikp, ikpt)"
         do ikpt = kptst, kptend
@@ -916,23 +883,18 @@ contains
     
     
     call messages_print_var_value(stdout, "Total number of momentum points = ", this%nkpnts)
-    
-    
 
     POP_SUB(pes_flux_reciprocal_mesh_gen)
-    
   end subroutine pes_flux_reciprocal_mesh_gen
 
-
   ! ---------------------------------------------------------
-  subroutine pes_flux_calc(this, mesh, st, gr, hm, iter, maxiter, dt)
+  subroutine pes_flux_calc(this, mesh, st, gr, hm, iter, dt)
     type(pes_flux_t),    intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
     type(states_t),      intent(inout) :: st
     type(grid_t),        intent(in)    :: gr
     type(hamiltonian_t), intent(in)    :: hm
     integer,             intent(in)    :: iter
-    integer,             intent(in)    :: maxiter
     FLOAT,               intent(in)    :: dt
 
     integer            :: stst, stend, kptst, kptend, sdim, mdim
@@ -945,7 +907,7 @@ contains
 
     PUSH_SUB(pes_flux_calc)
 
-    if(iter > 0 .and. mod(iter, this%tdstepsinterval) == 0) then
+    if(iter > 0) then
 
       stst   = st%st_start
       stend  = st%st_end
@@ -961,10 +923,10 @@ contains
         SAFE_ALLOCATE(interp_values(1:this%nsrfcpnts))
       end if
 
-      if(iter > 0 .and. mod(int(iter/this%tdstepsinterval), this%tdsteps) == 0) then
+      if(iter > 0 .and. mod(iter, this%tdsteps) == 0) then
         itstep = this%tdsteps
       else
-        itstep = mod(int(iter/this%tdstepsinterval), this%tdsteps) 
+        itstep = mod(iter, this%tdsteps) 
       end if
 
       ! clean up fields when a new cycle begins
@@ -1034,17 +996,14 @@ contains
       SAFE_DEALLOCATE_A(gpsi)
 
       if(iter > 0) then
-        if(mod(iter, this%tdsteps * this%tdstepsinterval) == 0 .or. iter == maxiter) then
+        if(mod(iter, this%tdsteps) == 0 .or. iter == this%max_iter) then
           if(this%shape == M_CUBIC .or. this%shape == M_PLANES) then
             call pes_flux_integrate_cub(this, mesh, st, dt)
-!             this%spctramp_cub(:,:,:,:) = this%spctramp_cub(:,:,:,:) * dt * this%tdstepsinterval
           else
             call pes_flux_integrate_sph(this, mesh, st, dt)
-!             this%spctramp_sph(:,:,:,:,:) = this%spctramp_sph(:,:,:,:,:) * dt * this%tdstepsinterval
           end if
         end if
       end if
-
 
     end if
 
@@ -1118,7 +1077,7 @@ contains
         do itstep = 1, this%tdsteps
           vec = sum((this%kcoords_cub(1:mdim, ikp, ik) - kpoint(1:mdim) - this%veca(1:mdim, itstep) / P_c)**2)
           conjgphase_cub(ikp, itstep, ik) = conjgphase_cub(ikp, itstep - 1, ik) & 
-                                            * exp(M_zI * vec * dt * this%tdstepsinterval / M_TWO)
+                                            * exp(M_zI * vec * dt / M_TWO)
         end do
       end do
     end do
@@ -1126,8 +1085,6 @@ contains
     call comm_allreduce(mpi_world%comm, conjgphase_cub)
 #endif
     this%conjgphase_prev_cub(:,:) = conjgphase_cub(:, this%tdsteps,:)
-
-
 
     ! integrate over time & surface (on node)
     do isp = isp_start, isp_end
@@ -1253,7 +1210,7 @@ contains
       do ikk = ikk_start, ikk_end
         do iomk = 1, this%nstepsomegak
           vec = sum((this%kcoords_sph(1:3, ikk, iomk) - this%veca(1:3, itstep) / P_c)**2)
-          phase_act(ikk, iomk) = phase_prev(ikk, iomk) * exp(M_zI * vec * dt * this%tdstepsinterval / M_TWO)
+          phase_act(ikk, iomk) = phase_prev(ikk, iomk) * exp(M_zI * vec * dt / M_TWO)
         end do
       end do
 #if defined(HAVE_MPI)
@@ -1282,7 +1239,7 @@ contains
 
             do ll = 0, lmax 
               do mm = -ll, ll
-                do imdim = 1, 3 
+                do imdim = 1, 3
                   sigma1(imdim, :) = &
                     this%ylm_r(ll, mm, :) * this%srfcnrml(imdim, :) * &
                     this%wf(ist, isdim, ik, :, itstep)
@@ -1323,9 +1280,9 @@ contains
     do ik = kptst, kptend
       do ist = stst, stend
         do isdim = 1, sdim
-  
+
           do itstep = tdsteps_start, tdsteps_end
-  
+
             integ12_t = M_z0
             integ22_t = M_z0
 
@@ -1333,7 +1290,7 @@ contains
 
               integ11_t = M_z0
               integ21_t = M_z0
-  
+
               do mm = -ll, ll
                 ! multiply with spherical harmonics & sum over all mm
                 do imdim = 1, 3
@@ -1380,7 +1337,6 @@ contains
     if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, spctramp_sph)
 #endif
     this%spctramp_sph = this%spctramp_sph + spctramp_sph
-
     SAFE_DEALLOCATE_A(spctramp_sph)
 
     POP_SUB(pes_flux_integrate_sph)
@@ -1492,52 +1448,31 @@ contains
 
     if(nstepsphir == 0) nstepsphir = 1
 
-    select case(mdim)
-    case(1)
-      nstepsthetar = 0
-      nstepsphir   = 2
-      this%nsrfcpnts = nstepsphir
-  
-    case(2)
-      nstepsthetar = 0
-      this%nsrfcpnts = nstepsphir
-  
-    case(3)
-      if(nstepsthetar <= 1) then
-        nstepsphir = 1
-        nstepsthetar = 1
-      end if
-      dthetar = M_PI / nstepsthetar
-      this%nsrfcpnts  = nstepsphir * (nstepsthetar - 1) + 2
-  
-    end select
+    if(nstepsthetar <= 1) then
+      nstepsphir = 1
+      nstepsthetar = 1
+    end if
+    dthetar = M_PI / nstepsthetar
+    this%nsrfcpnts  = nstepsphir * (nstepsthetar - 1) + 2
 
     SAFE_ALLOCATE(this%srfcnrml(1:mdim, 1:this%nsrfcpnts))
     SAFE_ALLOCATE(this%rcoords(1:mdim, 1:this%nsrfcpnts))
 
+    this%srfcnrml = M_ZERO
+    this%rcoords  = M_ZERO
+
     ! initializing spherical grid
-    thetar = M_PI / M_TWO
     isp = 0
     do ith = 0, nstepsthetar
 
-      select case(mdim)
-      case(1)
-        weight = M_ONE
+      thetar  = ith * dthetar
 
-      case(2)
-        weight = M_TWO * M_PI / nstepsphir
-
-      case(3)
-        thetar  = ith * dthetar
-
-        if(ith == 0 .or. ith == nstepsthetar) then
-          weight = (M_ONE - cos(dthetar/M_TWO)) * M_TWO * M_PI
-        else
-          weight = abs(cos(thetar - dthetar/M_TWO) - cos(thetar + dthetar/M_TWO)) &
-            * M_TWO * M_PI / nstepsphir
-        end if
-
-      end select
+      if(ith == 0 .or. ith == nstepsthetar) then
+        weight = (M_ONE - cos(dthetar/M_TWO)) * M_TWO * M_PI
+      else
+        weight = abs(cos(thetar - dthetar/M_TWO) - cos(thetar + dthetar/M_TWO)) &
+          * M_TWO * M_PI / nstepsphir
+      end if
 
       do iph = 0, nstepsphir - 1     ! 2*pi is the same than zero
         isp = isp + 1
@@ -1548,7 +1483,7 @@ contains
         this%rcoords(1:mdim, isp) = this%radius * this%srfcnrml(1:mdim, isp)
         ! here we also include the surface elements
         this%srfcnrml(1:mdim, isp) = weight * this%srfcnrml(1:mdim, isp)
-        if(mdim == 3 .and. (ith == 0 .or. ith == nstepsthetar)) exit
+        if(ith == 0 .or. ith == nstepsthetar) exit
       end do
     end do
 

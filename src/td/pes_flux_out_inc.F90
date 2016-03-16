@@ -777,12 +777,12 @@ subroutine pes_flux_output(this, mesh, sb, st, dt)
       do isdim = 1, sdim
         if(this%shape == M_SPHERICAL) then
           spctrout_sph(1:this%nk, 1:this%nstepsomegak) = spctrout_sph(1:this%nk, 1:this%nstepsomegak) + &
-            abs(this%spctramp_sph(ist, isdim, ik, 1:this%nk, 1:this%nstepsomegak))**M_TWO * (dt * this%tdstepsinterval)**M_TWO &
+            abs(this%spctramp_sph(ist, isdim, ik, 1:this%nk, 1:this%nstepsomegak))**M_TWO * dt**M_TWO &
 !             abs(this%spctramp_sph(ist, isdim, ik, 1:this%nk, 1:this%nstepsomegak))**M_TWO  &
             * st%occ(ist, ik)
         else
           spctrout_cub(1:this%nkpnts) = spctrout_cub(1:this%nkpnts) + &
-            abs(this%spctramp_cub(ist, isdim, ik, 1:this%nkpnts))**M_TWO * (dt * this%tdstepsinterval)**M_TWO &
+            abs(this%spctramp_cub(ist, isdim, ik, 1:this%nkpnts))**M_TWO * dt**M_TWO &
 !             abs(this%spctramp_cub(ist, isdim, ik, 1:this%nkpnts))**M_TWO  &
             * st%occ(ist, ik)
         end if

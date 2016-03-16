@@ -173,8 +173,8 @@ contains
 
     
     if(pes%calc_spm)  call pes_spm_init(pes%spm, mesh, st, save_iter)
-    if(pes%calc_mask) call pes_mask_init(pes%mask, mesh, sb, st,hm,max_iter,dt)
-    if(pes%calc_flux) call pes_flux_init(pes%flux, mesh, st, hm)
+    if(pes%calc_mask) call pes_mask_init(pes%mask, mesh, sb, st, hm, max_iter,dt)
+    if(pes%calc_flux) call pes_flux_init(pes%flux, mesh, st, hm, save_iter, max_iter)
 
 
     !Footer Photoelectron info
@@ -215,7 +215,7 @@ contains
 
     if(pes%calc_spm)   call pes_spm_calc  (pes%spm, st, mesh, dt, iter, hm)
     if(pes%calc_mask) call pes_mask_calc(pes%mask, mesh, st, dt, iter)
-    if(pes%calc_flux) call pes_flux_calc(pes%flux, mesh, st, gr, hm, iter, maxiter, dt)
+    if(pes%calc_flux) call pes_flux_calc(pes%flux, mesh, st, gr, hm, iter, dt)
 
     POP_SUB(pes_calc)
   end subroutine pes_calc
