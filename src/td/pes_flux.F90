@@ -746,12 +746,13 @@ contains
       call pes_flux_distribute(1, this%nstepsomegak, this%nstepsomegak_start, this%nstepsomegak_end, mpi_world%comm)
 
       SAFE_ALLOCATE(this%ylm_k(0:this%lmax, -this%lmax:this%lmax, 1:this%nstepsomegak))
-      SAFE_ALLOCATE(this%j_l(0:this%lmax, 1:this%nk))
-      SAFE_ALLOCATE(this%kcoords_sph(1:3, 1:this%nk, 1:this%nstepsomegak))
-
       this%ylm_k = M_z0
-      this%kcoords_sph = M_ZERO
+
+      SAFE_ALLOCATE(this%j_l(0:this%lmax, 1:this%nk))
       this%j_l = M_ZERO
+
+      SAFE_ALLOCATE(this%kcoords_sph(1:3, 1:this%nk, 1:this%nstepsomegak))
+      this%kcoords_sph = M_ZERO
 
       ! spherical harmonics & kcoords_sph
       iomk = 0
@@ -923,7 +924,7 @@ contains
         SAFE_ALLOCATE(interp_values(1:this%nsrfcpnts))
       end if
 
-      if(iter > 0 .and. mod(iter, this%tdsteps) == 0) then
+      if(mod(iter, this%tdsteps) == 0) then
         itstep = this%tdsteps
       else
         itstep = mod(iter, this%tdsteps) 
@@ -952,11 +953,11 @@ contains
             if(this%shape == M_SPHERICAL) then
               call mesh_interpolation_evaluate(this%interp, this%nsrfcpnts, psi(1:mesh%np_part), &
                 this%rcoords(1:mdim, 1:this%nsrfcpnts), interp_values(1:this%nsrfcpnts))
-              this%wf(ist, isdim, ik, :, itstep) = interp_values(:)
+              this%wf(ist, isdim, ik, 1:this%nsrfcpnts, itstep) = st%occ(ist, ik) * interp_values(1:this%nsrfcpnts)
               do imdim = 1, mdim
                 call mesh_interpolation_evaluate(this%interp, this%nsrfcpnts, gpsi(1:mesh%np_part, imdim), &
                   this%rcoords(1:mdim, 1:this%nsrfcpnts), interp_values(1:this%nsrfcpnts))
-                this%gwf(ist, isdim, ik, :, itstep, imdim) = interp_values(:)
+                this%gwf(ist, isdim, ik, :, itstep, imdim) = st%occ(ist, ik) * interp_values(1:this%nsrfcpnts)
               end do
 
             else
@@ -975,8 +976,9 @@ contains
 
                 if(contains_isp) then
                   ip_local = this%srfcpnt(isp)
-                  this%wf(ist, isdim, ik, isp, itstep) = psi(ip_local)
-                  this%gwf(ist, isdim, ik, isp, itstep, 1:mdim) = gpsi(ip_local, 1:mdim) ! * mesh%spacing(1:mdim) ?
+                  this%wf(ist, isdim, ik, isp, itstep) = st%occ(ist, ik) * psi(ip_local)
+                  this%gwf(ist, isdim, ik, isp, itstep, 1:mdim) = &
+                    st%occ(ist, ik) * gpsi(ip_local, 1:mdim) ! * mesh%spacing(1:mdim) ?
                 end if
               end do
               if(mesh%parallel_in_domains) then
@@ -995,13 +997,11 @@ contains
       SAFE_DEALLOCATE_A(psi)
       SAFE_DEALLOCATE_A(gpsi)
 
-      if(iter > 0) then
-        if(mod(iter, this%tdsteps) == 0 .or. iter == this%max_iter) then
-          if(this%shape == M_CUBIC .or. this%shape == M_PLANES) then
-            call pes_flux_integrate_cub(this, mesh, st, dt)
-          else
-            call pes_flux_integrate_sph(this, mesh, st, dt)
-          end if
+      if(mod(iter, this%tdsteps) == 0 .or. iter == this%max_iter) then
+        if(this%shape == M_CUBIC .or. this%shape == M_PLANES) then
+          call pes_flux_integrate_cub(this, mesh, st, dt)
+        else
+          call pes_flux_integrate_sph(this, mesh, st, dt)
         end if
       end if
 
@@ -1163,23 +1163,25 @@ contains
     integer            :: ist, ik, isdim, imdim
     integer            :: itstep, lmax
     integer            :: ll, mm 
-    CMPLX, allocatable :: sigma1(:,:), sigma2(:,:), sigma3(:)
-    CMPLX, allocatable :: integ1_s(:,:,:,:,:,:,:), integ2_s(:,:,:,:,:,:)
+    CMPLX, allocatable :: integ1_s(:,:,:,:,:,:), integ2_s(:,:,:,:,:)
     CMPLX, allocatable :: integ11_t(:,:), integ12_t(:,:,:)
     CMPLX, allocatable :: integ21_t(:), integ22_t(:,:)
     CMPLX, allocatable :: spctramp_sph(:,:,:,:,:)
     integer            :: ikk, ikk_start, ikk_end
     integer            :: iomk
-    CMPLX, allocatable :: conjgphase_sph(:,:,:)
+    CMPLX, allocatable :: conjgphase_sph(:,:)
     CMPLX, allocatable :: phase_act(:,:), phase_prev(:,:)
     FLOAT              :: vec
-    integer            :: tdsteps_start, tdsteps_end
+    integer            :: tdstep_node
 
     PUSH_SUB(pes_flux_integrate_sph)
 
     ! this routine is parallelized over time steps
 
-    call pes_flux_distribute(1, this%tdsteps, tdsteps_start, tdsteps_end, mesh%mpi_grp%comm)
+    tdstep_node = 1
+#if defined(HAVE_MPI)
+    if(mesh%parallel_in_domains) tdstep_node = mesh%mpi_grp%rank + 1
+#endif
 
     stst   = st%st_start
     stend  = st%st_end
@@ -1191,7 +1193,7 @@ contains
     ikk_start  = this%nk_start
     ikk_end    = this%nk_end
 
-    SAFE_ALLOCATE(conjgphase_sph(1:this%nk, 1:this%nstepsomegak, tdsteps_start:tdsteps_end))
+    SAFE_ALLOCATE(conjgphase_sph(1:this%nk, 1:this%nstepsomegak))
     conjgphase_sph = M_z0
 
     SAFE_ALLOCATE(phase_act(1:this%nk, 1:this%nstepsomegak))
@@ -1216,59 +1218,45 @@ contains
 #if defined(HAVE_MPI)
       call comm_allreduce(mpi_world%comm, phase_act)
 #endif
-      if(itstep >= tdsteps_start .and. itstep <= tdsteps_end) conjgphase_sph(:,:, itstep) = phase_act(:,:)
+      if(itstep == tdstep_node) conjgphase_sph(:,:) = phase_act(:,:)
       if(itstep == this%tdsteps) this%conjgphase_prev_sph(:, :) = phase_act(:, :)
     end do
 
     SAFE_DEALLOCATE_A(phase_act)
     SAFE_DEALLOCATE_A(phase_prev)
 
-    ! surface integral S_lm (for time range)
-    SAFE_ALLOCATE(sigma1(1:3, 1:this%nsrfcpnts))
-    SAFE_ALLOCATE(sigma2(1:3, 1:this%nsrfcpnts))
-    SAFE_ALLOCATE(sigma3(1:3))
+    ! surface integral S_lm (for time step on node      )
+    SAFE_ALLOCATE(integ1_s(stst:stend, 1:sdim, kptst:kptend, 0:lmax, -lmax:lmax, 1:3))
+    integ1_s = M_z0
 
-    SAFE_ALLOCATE(integ1_s(stst:stend, 1:sdim, kptst:kptend, 0:lmax, -lmax:lmax, 1:3, tdsteps_start:tdsteps_end))
-    SAFE_ALLOCATE(integ2_s(stst:stend, 1:sdim, kptst:kptend, 0:lmax, -lmax:lmax, tdsteps_start:tdsteps_end))
+    SAFE_ALLOCATE(integ2_s(stst:stend, 1:sdim, kptst:kptend, 0:lmax, -lmax:lmax))
+    integ2_s = M_z0
 
     do ik = kptst, kptend
       do ist = stst, stend
         do isdim = 1, sdim
 
-          do itstep = tdsteps_start, tdsteps_end
+          do ll = 0, lmax 
+            do mm = -ll, ll
+              do imdim = 1, 3
+                ! surface integrals
+                integ1_s(ist, isdim, ik, ll, mm, imdim) = &
+                  sum(this%ylm_r(ll, mm, :) * this%srfcnrml(imdim, :) * &
+                  this%wf(ist, isdim, ik, :, tdstep_node))
 
-            do ll = 0, lmax 
-              do mm = -ll, ll
-                do imdim = 1, 3
-                  sigma1(imdim, :) = &
-                    this%ylm_r(ll, mm, :) * this%srfcnrml(imdim, :) * &
-                    this%wf(ist, isdim, ik, :, itstep)
-
-                  sigma2(imdim, :) = &
-                    this%ylm_r(ll, mm, :) * this%srfcnrml(imdim, :) * &
-                    this%gwf(ist, isdim, ik, :, itstep, imdim)
-
-                  ! surface integral
-                  integ1_s(ist, isdim, ik, ll, mm, imdim, itstep) = sum(sigma1(imdim, :))
-                  sigma3(imdim) = sum(sigma2(imdim, :))
-                end do
-
-                integ2_s(ist, isdim, ik, ll, mm, itstep) = sum(sigma3)
+                integ2_s(ist, isdim, ik, ll, mm) = integ2_s(ist, isdim, ik, ll, mm) + &
+                  sum(this%ylm_r(ll, mm, :) * this%srfcnrml(imdim, :) * &
+                  this%gwf(ist, isdim, ik, :, tdstep_node, imdim))
 
               end do
             end do
-
           end do
 
         end do
       end do
     end do
 
-    SAFE_DEALLOCATE_A(sigma1)
-    SAFE_DEALLOCATE_A(sigma2)
-    SAFE_DEALLOCATE_A(sigma3)
-
-    ! spectral amplitude for time range
+    ! spectral amplitude for time step on node
     SAFE_ALLOCATE(integ11_t(1:this%nstepsomegak, 1:3))
     SAFE_ALLOCATE(integ21_t(1:this%nstepsomegak))
     SAFE_ALLOCATE(integ12_t(1:this%nk, 1:this%nstepsomegak, 1:3))
@@ -1281,42 +1269,39 @@ contains
       do ist = stst, stend
         do isdim = 1, sdim
 
-          do itstep = tdsteps_start, tdsteps_end
+          integ12_t = M_z0
+          integ22_t = M_z0
 
-            integ12_t = M_z0
-            integ22_t = M_z0
+          do ll = 0, lmax
 
-            do ll = 0, lmax
+            integ11_t = M_z0
+            integ21_t = M_z0
 
-              integ11_t = M_z0
-              integ21_t = M_z0
-
-              do mm = -ll, ll
-                ! multiply with spherical harmonics & sum over all mm
-                do imdim = 1, 3
-                  integ11_t(1:this%nstepsomegak, imdim) = integ11_t(1:this%nstepsomegak, imdim) + &
-                    integ1_s(ist, isdim, ik, ll, mm, imdim, itstep) * this%ylm_k(ll, mm, 1:this%nstepsomegak)
-                end do
-                integ21_t(1:this%nstepsomegak) = integ21_t(1:this%nstepsomegak) + &
-                  integ2_s(ist, isdim, ik, ll, mm, itstep) * this%ylm_k(ll, mm, 1:this%nstepsomegak)
+            do mm = -ll, ll
+              ! multiply with spherical harmonics & sum over all mm
+              do imdim = 1, 3
+                integ11_t(1:this%nstepsomegak, imdim) = integ11_t(1:this%nstepsomegak, imdim) + &
+                  integ1_s(ist, isdim, ik, ll, mm, imdim) * this%ylm_k(ll, mm, 1:this%nstepsomegak)
               end do
-              ! multiply with Bessel function & sum over all ll
-              do ikk = 1, this%nk
-                integ12_t(ikk, 1:this%nstepsomegak, 1:3) = integ12_t(ikk, 1:this%nstepsomegak, 1:3) + &
-                  integ11_t(1:this%nstepsomegak, 1:3) * this%j_l(ll, ikk) * ( - M_zI)**ll
-                integ22_t(ikk, 1:this%nstepsomegak) = integ22_t(ikk, 1:this%nstepsomegak) + &
-                  integ21_t(1:this%nstepsomegak) * this%j_l(ll, ikk) * ( - M_zI)**ll
-              end do
+              integ21_t(1:this%nstepsomegak) = integ21_t(1:this%nstepsomegak) + &
+                integ2_s(ist, isdim, ik, ll, mm) * this%ylm_k(ll, mm, 1:this%nstepsomegak)
             end do
-            ! integrate over time & sum over dimensions
-            do imdim = 1, 3
-              spctramp_sph(ist, isdim, ik, :,:) = spctramp_sph(ist, isdim, ik, :,:) + &
-                conjgphase_sph(:,:, itstep) * (integ12_t(:,:, imdim) * &
-                 (M_TWO * this%veca(imdim, itstep)  / P_c - this%kcoords_sph(imdim, :,:)))
+            ! multiply with Bessel function & sum over all ll
+            do ikk = 1, this%nk
+              integ12_t(ikk, 1:this%nstepsomegak, 1:3) = integ12_t(ikk, 1:this%nstepsomegak, 1:3) + &
+                integ11_t(1:this%nstepsomegak, 1:3) * this%j_l(ll, ikk) * ( - M_zI)**ll
+              integ22_t(ikk, 1:this%nstepsomegak) = integ22_t(ikk, 1:this%nstepsomegak) + &
+                integ21_t(1:this%nstepsomegak) * this%j_l(ll, ikk) * ( - M_zI)**ll
             end do
-              spctramp_sph(ist, isdim, ik, :, :) = spctramp_sph(ist, isdim, ik, :,:) + &
-                conjgphase_sph(:,:, itstep) * integ22_t(:,:) * M_zI
           end do
+          ! integrate over time & sum over dimensions
+          do imdim = 1, 3
+            spctramp_sph(ist, isdim, ik, :,:) = spctramp_sph(ist, isdim, ik, :,:) + &
+              conjgphase_sph(:,:) * (integ12_t(:,:, imdim) * &
+               (M_TWO * this%veca(imdim, tdstep_node)  / P_c - this%kcoords_sph(imdim, :,:)))
+          end do
+          spctramp_sph(ist, isdim, ik, :, :) = spctramp_sph(ist, isdim, ik, :,:) + &
+            conjgphase_sph(:,:) * integ22_t(:,:) * M_zI
 
         end do
       end do
