@@ -999,9 +999,9 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
           end if
 
           call io_binary_write(trim(restart_dir(restart))//"/pesflux2."//trim(filename)//".obf", &
-            this%nsrfcpnts * this%tdsteps, this%wf(ist, isdim, ik, 1:this%nsrfcpnts, :), err)
+            (this%nsrfcpnts + 1)* this%tdsteps, this%wf(ist, isdim, ik, :, :), err)
           call io_binary_write(trim(restart_dir(restart))//"/pesflux3."//trim(filename)//".obf", &
-            this%nsrfcpnts * this%tdsteps * mdim, this%gwf(ist, isdim, ik, 1:this%nsrfcpnts, :, :), err)
+            (this%nsrfcpnts + 1)* this%tdsteps * mdim, this%gwf(ist, isdim, ik, :, :, :), err)
 
         end if
         
@@ -1076,9 +1076,9 @@ subroutine pes_flux_load(restart, this, mesh, st, ierr)
         end if
 
         call io_binary_read(trim(restart_dir(restart))//"/pesflux2."//trim(filename)//".obf", &
-          this%nsrfcpnts * this%tdsteps, this%wf(ist, isdim, ik, 1:this%nsrfcpnts, :), err)
+          (this%nsrfcpnts + 1) * this%tdsteps, this%wf(ist, isdim, ik, :, :), err)
         call io_binary_read(trim(restart_dir(restart))//"/pesflux3."//trim(filename)//".obf", &
-          this%nsrfcpnts * this%tdsteps * mdim, this%gwf(ist, isdim, ik, 1:this%nsrfcpnts, :, :), err)
+          (this%nsrfcpnts + 1) * this%tdsteps * mdim, this%gwf(ist, isdim, ik, :, :, :), err)
       end do
     end do
   end do

@@ -356,7 +356,7 @@ contains
 #if defined(HAVE_MPI)
     call MPI_Barrier(mpi_world%comm, mpi_err)
     write(*,*) &
-      'Number of surface points on node ', mesh%mpi_grp%rank, ' : ', this%nsrfcpnts_end, this%nsrfcpnts_start
+      'Number of surface points on node ', mesh%mpi_grp%rank, ' : ', this%nsrfcpnts_start, this%nsrfcpnts_end
     call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
 
@@ -393,7 +393,7 @@ contains
     end if
 
     ! Generate the reciprocal space mesh grid
-    call pes_flux_reciprocal_mesh_gen(this, mesh%sb, st)
+    call pes_flux_reciprocal_mesh_gen(this, mesh%sb, st, mesh%mpi_grp%comm)
 
     ! -----------------------------------------------------------------
     ! Options for time integration 
@@ -436,7 +436,7 @@ contains
       SAFE_ALLOCATE(this%spctramp_sph(stst:stend, 1:sdim, kptst:kptend, 1:this%nk, 1:this%nstepsomegak))
       this%spctramp_sph = M_z0
 
-      SAFE_ALLOCATE(this%conjgphase_prev_sph(this%nk, 1:this%nstepsomegak))
+      SAFE_ALLOCATE(this%conjgphase_prev_sph(1:this%nk, 1:this%nstepsomegak))
       this%conjgphase_prev_sph = M_z1
 
     else
@@ -513,10 +513,11 @@ contains
   end subroutine pes_flux_end
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_reciprocal_mesh_gen(this, sb, st, post)
+  subroutine pes_flux_reciprocal_mesh_gen(this, sb, st, comm, post)
     type(pes_flux_t),  intent(inout) :: this
     type(simul_box_t), intent(in)    :: sb
     type(states_t),    intent(in)    :: st
+    integer,           intent(in)    :: comm
     logical, optional, intent(in)    :: post !< only fill the data needed for postprocessing  
 
     integer           :: mdim, pdim
@@ -540,7 +541,7 @@ contains
     kptend = st%d%kpt%end
     mdim   = sb%dim
     pdim   = sb%periodic_dim
-      
+
     if (this%shape == M_SPHERICAL .or. this%shape == M_CUBIC) then
       ! -----------------------------------------------------------------
       ! Setting up k-mesh
@@ -738,50 +739,53 @@ contains
       end if
     
       ! we split the k-mesh in radial & angular part
-      call pes_flux_distribute(1, this%nk, this%nk_start, this%nk_end, mpi_world%comm)
-      call pes_flux_distribute(1, this%nstepsomegak, this%nstepsomegak_start, this%nstepsomegak_end, mpi_world%comm)
+      call pes_flux_distribute(1, this%nk, this%nk_start, this%nk_end, comm)
+#if defined(HAVE_MPI)
+      call MPI_Barrier(mpi_world%comm, mpi_err)
+      call MPI_Comm_rank(mpi_world%comm, mpirank, mpi_err)
+      write(*,*) &
+        'k-points on node ', mpirank, ' : ', this%nk_start, this%nk_end
+      call MPI_Barrier(mpi_world%comm, mpi_err)
+#endif
+      SAFE_ALLOCATE(this%j_l(0:this%lmax, this%nk_start:this%nk_end))
+      this%j_l = M_ZERO
+
+      SAFE_ALLOCATE(this%kcoords_sph(1:3, this%nk_start:this%nk_end, 1:this%nstepsomegak))
+      this%kcoords_sph = M_ZERO
 
       SAFE_ALLOCATE(this%ylm_k(0:this%lmax, -this%lmax:this%lmax, 1:this%nstepsomegak))
       this%ylm_k = M_z0
 
-      SAFE_ALLOCATE(this%j_l(0:this%lmax, 1:this%nk))
-      this%j_l = M_ZERO
-
-      SAFE_ALLOCATE(this%kcoords_sph(1:3, 1:this%nk, 1:this%nstepsomegak))
-      this%kcoords_sph = M_ZERO
-
       ! spherical harmonics & kcoords_sph
-      iomk = 0
-      do ith = 0, this%nstepsthetak
-        thetak = ith * M_PI / this%nstepsthetak
-        do iph = 0, this%nstepsphik - 1
-          phik = iph * M_TWO * M_PI / this%nstepsphik
-          iomk = iomk + 1
-          do ll = 0, this%lmax
-            do mm = -ll, ll
-              call ylmr(cos(phik) * sin(thetak), sin(phik) * sin(thetak), cos(thetak), ll, mm, this%ylm_k(ll, mm, iomk))
+      if(this%nk_start > 0) then
+        iomk = 0
+        do ith = 0, this%nstepsthetak
+          thetak = ith * M_PI / this%nstepsthetak
+          do iph = 0, this%nstepsphik - 1
+            phik = iph * M_TWO * M_PI / this%nstepsphik
+            iomk = iomk + 1
+            do ll = 0, this%lmax
+              do mm = -ll, ll
+                call ylmr(cos(phik) * sin(thetak), sin(phik) * sin(thetak), cos(thetak), ll, mm, this%ylm_k(ll, mm, iomk))
+              end do
             end do
+            this%kcoords_sph(1, this%nk_start:this%nk_end, iomk) = cos(phik) * sin(thetak)
+            this%kcoords_sph(2, this%nk_start:this%nk_end, iomk) = sin(phik) * sin(thetak)
+            this%kcoords_sph(3, this%nk_start:this%nk_end, iomk) = cos(thetak)
+            if(ith == 0 .or. ith == this%nstepsthetak) exit
           end do
-          this%kcoords_sph(1, this%nk_start:this%nk_end, iomk) = cos(phik) * sin(thetak)
-          this%kcoords_sph(2, this%nk_start:this%nk_end, iomk) = sin(phik) * sin(thetak)
-          this%kcoords_sph(3, this%nk_start:this%nk_end, iomk) = cos(thetak)
-          if(ith == 0 .or. ith == this%nstepsthetak) exit
         end do
-      end do
 
-      ! Bessel functions & kcoords_sph
-      do ikk = this%nk_start, this%nk_end
-        kact = ikk * this%dk
-        do ll = 0, this%lmax
-          this%j_l(ll, ikk) = loct_sph_bessel(ll, kact * this%radius) * &
-                              M_TWO * M_PI / (M_TWO * M_PI)**M_THREE/M_TWO
+        ! Bessel functions & kcoords_sph
+        do ikk = this%nk_start, this%nk_end
+          kact = ikk * this%dk
+          do ll = 0, this%lmax
+            this%j_l(ll, ikk) = loct_sph_bessel(ll, kact * this%radius) * &
+                                M_TWO * M_PI / (M_TWO * M_PI)**M_THREE/M_TWO
+          end do
+          this%kcoords_sph(:, ikk, :) = kact * this%kcoords_sph(:, ikk, :)
         end do
-        this%kcoords_sph(:, ikk, :) = kact * this%kcoords_sph(:, ikk, :)
-      end do
-#if defined(HAVE_MPI)
-      call comm_allreduce(mpi_world%comm, this%kcoords_sph)
-      call comm_allreduce(mpi_world%comm, this%j_l)
-#endif
+      end if
 
     case (M_CUBIC)
       ! we do not split the k-mesh
@@ -1167,8 +1171,7 @@ contains
     integer            :: ikk, ikk_start, ikk_end
     integer            :: isp_start, isp_end
     integer            :: iomk
-    CMPLX, allocatable :: conjgphase_sph(:,:)
-    CMPLX, allocatable :: phase_act(:,:), phase_prev(:,:)
+    CMPLX, allocatable :: phase_act(:,:)
     FLOAT              :: vec
     integer            :: tdstep_node
 
@@ -1193,38 +1196,6 @@ contains
     isp_start  = this%nsrfcpnts_start
     isp_end    = this%nsrfcpnts_end
 
-    SAFE_ALLOCATE(conjgphase_sph(1:this%nk, 1:this%nstepsomegak))
-    conjgphase_sph = M_z0
-
-    SAFE_ALLOCATE(phase_act(1:this%nk, 1:this%nstepsomegak))
-    SAFE_ALLOCATE(phase_prev(ikk_start:ikk_end, 1:this%nstepsomegak))
-
-    ! calculate Volkov phase using the previous time step
-    do itstep = 1, this%tdsteps
-      if(itstep == 1) then
-        phase_prev(ikk_start:ikk_end,:) = this%conjgphase_prev_sph(ikk_start:ikk_end,:)
-      else
-        phase_prev(ikk_start:ikk_end, :) = phase_act(ikk_start:ikk_end, :)
-      end if
-
-      phase_act = M_z0
-
-      do ikk = ikk_start, ikk_end
-        do iomk = 1, this%nstepsomegak
-          vec = sum((this%kcoords_sph(1:3, ikk, iomk) - this%veca(1:3, itstep) / P_c)**2)
-          phase_act(ikk, iomk) = phase_prev(ikk, iomk) * exp(M_zI * vec * dt / M_TWO)
-        end do
-      end do
-#if defined(HAVE_MPI)
-      call comm_allreduce(mpi_world%comm, phase_act)
-#endif
-      if(itstep == tdstep_node) conjgphase_sph(:,:) = phase_act(:,:)
-      if(itstep == this%tdsteps) this%conjgphase_prev_sph(:, :) = phase_act(:, :)
-    end do
-
-    SAFE_DEALLOCATE_A(phase_act)
-    SAFE_DEALLOCATE_A(phase_prev)
-
     ! surface integral S_lm (for time step on node)
     SAFE_ALLOCATE(s1_node(stst:stend, 1:sdim, kptst:kptend, 0:lmax, -lmax:lmax, 1:3))
     SAFE_ALLOCATE(s2_node(stst:stend, 1:sdim, kptst:kptend, 0:lmax, -lmax:lmax))
@@ -1233,7 +1204,7 @@ contains
     SAFE_ALLOCATE(s2_act(0:lmax, -lmax:lmax))
 
     do itstep = 1, this%tdsteps
-    
+
       do ik = kptst, kptend
         do ist = stst, stend
           do isdim = 1, sdim
@@ -1251,7 +1222,6 @@ contains
                   s2_act(ll, mm) = s2_act(ll, mm) + &
                     sum(this%ylm_r(ll, mm, isp_start:isp_end) * this%srfcnrml(imdim, isp_start:isp_end) * &
                     this%gwf(ist, isdim, ik, isp_start:isp_end, itstep, imdim))
-
                 end do
               end do
             end do
@@ -1263,8 +1233,8 @@ contains
             end if
 #endif
             if(itstep == tdstep_node) then
-               s1_node(ist, isdim, ik, :, :, :) = s1_act(:,:,:)
-               s2_node(ist, isdim, ik, :, :)    = s2_act(:,:)
+              s1_node(ist, isdim, ik, :, :, :) = s1_act(:,:,:)
+              s2_node(ist, isdim, ik, :, :)    = s2_act(:,:)
             end if
 
           end do
@@ -1272,56 +1242,85 @@ contains
       end do
     end do
 
-    ! spectral amplitude for time step on node
+    ! spectral amplitude for k-points on node
     SAFE_ALLOCATE(integ11_t(1:this%nstepsomegak, 1:3))
     SAFE_ALLOCATE(integ21_t(1:this%nstepsomegak))
-    SAFE_ALLOCATE(integ12_t(1:this%nk, 1:this%nstepsomegak, 1:3))
-    SAFE_ALLOCATE(integ22_t(1:this%nk, 1:this%nstepsomegak))
+    SAFE_ALLOCATE(integ12_t(ikk_start:ikk_end, 1:this%nstepsomegak, 1:3))
+    SAFE_ALLOCATE(integ22_t(ikk_start:ikk_end, 1:this%nstepsomegak))
 
-    SAFE_ALLOCATE(spctramp_sph(stst:stend, 1:sdim, kptst:kptend, 1:this%nk, 1:this%nstepsomegak))
+    SAFE_ALLOCATE(spctramp_sph(stst:stend, 1:sdim, kptst:kptend, 0:this%nk, 1:this%nstepsomegak))
     spctramp_sph = M_z0
 
-    do ik = kptst, kptend
-      do ist = stst, stend
-        do isdim = 1, sdim
+    ! get the previous Volkov phase
+    SAFE_ALLOCATE(phase_act(ikk_start:ikk_end, 1:this%nstepsomegak))
+    if(ikk_start > 0) then
+      phase_act(ikk_start:ikk_end, :) = this%conjgphase_prev_sph(ikk_start:ikk_end, :)
+    else
+      phase_act(ikk_start:ikk_end, :) = M_z0
+    end if
 
-          s1_act(:,:,:) = s1_node(ist, isdim, ik, :, :, :)
-          s2_act(:,:) = s2_node(ist, isdim, ik, :, :)
+    do itstep = 1, this%tdsteps
+      ! calculate the current Volkov phase
+      do ikk = ikk_start, ikk_end
+        do iomk = 1, this%nstepsomegak
+          vec = sum((this%kcoords_sph(1:3, ikk, iomk) - this%veca(1:3, itstep) / P_c)**M_TWO)
+          phase_act(ikk, iomk) = phase_act(ikk, iomk) * exp(M_zI * vec * dt / M_TWO)
+        end do
+      end do
 
-          integ12_t = M_z0
-          integ22_t = M_z0
+      do ik = kptst, kptend
+        do ist = stst, stend
+          do isdim = 1, sdim
 
-          do ll = 0, lmax
+            ! communicate the current surface integrals
+            if(itstep == tdstep_node) then
+              s1_act(:,:,:) = s1_node(ist, isdim, ik, :, :, :)
+              s2_act(:,:) = s2_node(ist, isdim, ik, :, :)
+            end if
+#if defined(HAVE_MPI)
+            if(mesh%parallel_in_domains) then
+              call MPI_Bcast(s1_act, (lmax+1)*(2*lmax+1)*3, MPI_CMPLX, itstep - 1, mesh%mpi_grp%comm, mpi_err)
+              call MPI_Bcast(s2_act, (lmax+1)*(2*lmax+1), MPI_CMPLX, itstep - 1, mesh%mpi_grp%comm, mpi_err)
+              call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
+            end if
+#endif
 
-            integ11_t = M_z0
-            integ21_t = M_z0
+            integ12_t = M_z0
+            integ22_t = M_z0
 
-            do mm = -ll, ll
-              ! multiply with spherical harmonics & sum over all mm
-              do imdim = 1, 3
-                integ11_t(1:this%nstepsomegak, imdim) = integ11_t(1:this%nstepsomegak, imdim) + &
-                  s1_act(ll, mm, imdim) * this%ylm_k(ll, mm, 1:this%nstepsomegak)
+            do ll = 0, lmax
+
+              integ11_t = M_z0
+              integ21_t = M_z0
+
+              do mm = -ll, ll
+                ! multiply with spherical harmonics & sum over all mm
+                do imdim = 1, 3
+                  integ11_t(1:this%nstepsomegak, imdim) = integ11_t(1:this%nstepsomegak, imdim) + &
+                    s1_act(ll, mm, imdim) * this%ylm_k(ll, mm, 1:this%nstepsomegak)
+                end do
+                integ21_t(1:this%nstepsomegak) = integ21_t(1:this%nstepsomegak) + &
+                  s2_act(ll, mm) * this%ylm_k(ll, mm, 1:this%nstepsomegak)
               end do
-              integ21_t(1:this%nstepsomegak) = integ21_t(1:this%nstepsomegak) + &
-                s2_act(ll, mm) * this%ylm_k(ll, mm, 1:this%nstepsomegak)
+              ! multiply with Bessel function & sum over all ll
+              do ikk = ikk_start, ikk_end
+                integ12_t(ikk, 1:this%nstepsomegak, 1:3) = integ12_t(ikk, 1:this%nstepsomegak, 1:3) + &
+                  integ11_t(1:this%nstepsomegak, 1:3) * this%j_l(ll, ikk) * ( - M_zI)**ll
+                integ22_t(ikk, 1:this%nstepsomegak) = integ22_t(ikk, 1:this%nstepsomegak) + &
+                  integ21_t(1:this%nstepsomegak) * this%j_l(ll, ikk) * ( - M_zI)**ll
+              end do
             end do
-            ! multiply with Bessel function & sum over all ll
-            do ikk = 1, this%nk
-              integ12_t(ikk, 1:this%nstepsomegak, 1:3) = integ12_t(ikk, 1:this%nstepsomegak, 1:3) + &
-                integ11_t(1:this%nstepsomegak, 1:3) * this%j_l(ll, ikk) * ( - M_zI)**ll
-              integ22_t(ikk, 1:this%nstepsomegak) = integ22_t(ikk, 1:this%nstepsomegak) + &
-                integ21_t(1:this%nstepsomegak) * this%j_l(ll, ikk) * ( - M_zI)**ll
+            ! sum over dimensions
+            do imdim = 1, 3
+              spctramp_sph(ist, isdim, ik, ikk_start:ikk_end, :) = &
+                spctramp_sph(ist, isdim, ik, ikk_start:ikk_end, :) + &
+                phase_act(ikk_start:ikk_end,:) * (integ12_t(ikk_start:ikk_end,:, imdim) * &
+                 (M_TWO * this%veca(imdim, itstep)  / P_c - this%kcoords_sph(imdim, ikk_start:ikk_end,:)))
             end do
+            spctramp_sph(ist, isdim, ik, ikk_start:ikk_end, :) = &
+              spctramp_sph(ist, isdim, ik, ikk_start:ikk_end,:) + &
+              phase_act(ikk_start:ikk_end,:) * integ22_t(ikk_start:ikk_end,:) * M_zI
           end do
-          ! integrate over time & sum over dimensions
-          do imdim = 1, 3
-            spctramp_sph(ist, isdim, ik, :,:) = spctramp_sph(ist, isdim, ik, :,:) + &
-              conjgphase_sph(:,:) * (integ12_t(:,:, imdim) * &
-               (M_TWO * this%veca(imdim, tdstep_node)  / P_c - this%kcoords_sph(imdim, :,:)))
-          end do
-          spctramp_sph(ist, isdim, ik, :, :) = spctramp_sph(ist, isdim, ik, :,:) + &
-            conjgphase_sph(:,:) * integ22_t(:,:) * M_zI
-
         end do
       end do
     end do
@@ -1336,13 +1335,20 @@ contains
     SAFE_DEALLOCATE_A(integ21_t)
     SAFE_DEALLOCATE_A(integ22_t)
 
-    SAFE_DEALLOCATE_A(conjgphase_sph)
+    ! save the Volkov phase and the spectral amplitude
+    this%conjgphase_prev_sph = M_z0
 
-    ! sum over time
+    if(ikk_start > 0) then
+      this%conjgphase_prev_sph(ikk_start:ikk_end, :) = phase_act(ikk_start:ikk_end, :)
+    end if
+    SAFE_DEALLOCATE_A(phase_act)
 #if defined(HAVE_MPI)
-    if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, spctramp_sph)
+    if(mesh%parallel_in_domains) then
+      call comm_allreduce(mesh%mpi_grp%comm, this%conjgphase_prev_sph)
+      call comm_allreduce(mesh%mpi_grp%comm, spctramp_sph)
+    end if
 #endif
-    this%spctramp_sph = this%spctramp_sph + spctramp_sph
+    this%spctramp_sph(:,:,:,1:this%nk,:) = this%spctramp_sph(:,:,:,1:this%nk,:) + spctramp_sph(:,:,:,1:this%nk,:)
     SAFE_DEALLOCATE_A(spctramp_sph)
 
     POP_SUB(pes_flux_integrate_sph)
@@ -1404,8 +1410,8 @@ contains
 #endif
 
     SAFE_ALLOCATE(this%srfcpnt(1:this%nsrfcpnts))
-    SAFE_ALLOCATE(this%srfcnrml(1:mdim, 0:this%nsrfcpnts))
-    SAFE_ALLOCATE(this%rcoords(1:mdim, 0:this%nsrfcpnts))
+    SAFE_ALLOCATE(this%srfcnrml(1:mdim, 1:this%nsrfcpnts))
+    SAFE_ALLOCATE(this%rcoords(1:mdim, 1:this%nsrfcpnts))
     SAFE_ALLOCATE(this%rankmin(1:this%nsrfcpnts))
 
     this%srfcnrml = M_ZERO
@@ -1462,8 +1468,8 @@ contains
     dthetar = M_PI / nstepsthetar
     this%nsrfcpnts  = nstepsphir * (nstepsthetar - 1) + 2
 
-    SAFE_ALLOCATE(this%srfcnrml(1:mdim, 1:this%nsrfcpnts))
-    SAFE_ALLOCATE(this%rcoords(1:mdim, 1:this%nsrfcpnts))
+    SAFE_ALLOCATE(this%srfcnrml(1:mdim, 0:this%nsrfcpnts))
+    SAFE_ALLOCATE(this%rcoords(1:mdim, 0:this%nsrfcpnts))
 
     this%srfcnrml = M_ZERO
     this%rcoords  = M_ZERO
