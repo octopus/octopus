@@ -340,38 +340,31 @@ contains
     ! -----------------------------------------------------------------
     ! Get the surface points
     ! -----------------------------------------------------------------
-    select case (this%shape)
-    
-    case(M_CUBIC)
+    if(this%shape == M_CUBIC .or. this%shape == M_PLANES) then
       call pes_flux_getcube(this, mesh, border, offset)
-
-      ! distribute the surface points on nodes,
-      ! since mesh domains may have different numbers of surface points.
-      call pes_flux_distribute(1, this%nsrfcpnts, this%nsrfcpnts_start, this%nsrfcpnts_end, mesh%mpi_grp%comm)
-#if defined(HAVE_MPI)
-      call MPI_Barrier(mpi_world%comm, mpi_err)
-      write(*,*) &
-        'Number of surface points on node ', mesh%mpi_grp%rank, ' : ', this%nsrfcpnts_end - this%nsrfcpnts_start + 1
-      call MPI_Barrier(mpi_world%comm, mpi_err)
-#endif
-    case(M_SPHERICAL) 
+    else
       call mesh_interpolation_init(this%interp, mesh)
       ! equispaced grid in theta & phi (Gauss-Legendre would optimize to nstepsthetar = this%lmax & nstepsphir = 2*this%lmax + 1):
       ! nstepsthetar = M_TWO * this%lmax + 1
       ! nstepsphir   = M_TWO * this%lmax + 1
       call pes_flux_getsphere(this, mesh, nstepsthetar, nstepsphir, offset)
-    
-    case(M_PLANES)
-            
-      call pes_flux_getcube(this, mesh, border, offset)
-      
+    end if
+
+    ! distribute the surface points on nodes,
+    ! since mesh domains may have different numbers of surface points.
+    call pes_flux_distribute(1, this%nsrfcpnts, this%nsrfcpnts_start, this%nsrfcpnts_end, mesh%mpi_grp%comm)
+#if defined(HAVE_MPI)
+    call MPI_Barrier(mpi_world%comm, mpi_err)
+    write(*,*) &
+      'Number of surface points on node ', mesh%mpi_grp%rank, ' : ', this%nsrfcpnts_end, this%nsrfcpnts_start
+    call MPI_Barrier(mpi_world%comm, mpi_err)
+#endif
+
+    if(this%shape == M_PLANES) then
       this%nsrfcpnts_start = 1
       this%nsrfcpnts_end   = this%nsrfcpnts
+    end if
       
-    case default
-      ASSERT(.false.)
-    end select
-
     if(debug%info .and. mpi_grp_is_root(mpi_world)) then
       write(message(1),'(a, i6)') 'Info: Number of surface points (total):', this%nsrfcpnts
       call messages_info(1) 
@@ -383,17 +376,20 @@ contains
 
     ! get the values of the spherical harmonics for the surface points for M_SPHERICAL
     if(this%shape == M_SPHERICAL) then
-      SAFE_ALLOCATE(this%ylm_r(0:this%lmax, -this%lmax:this%lmax, 1:this%nsrfcpnts))
+      SAFE_ALLOCATE(this%ylm_r(0:this%lmax, -this%lmax:this%lmax, this%nsrfcpnts_start:this%nsrfcpnts_end))
       this%ylm_r = M_z0
 
-      do isp = 1, this%nsrfcpnts
-        do ll = 0, this%lmax
-          do mm = -ll, ll
-            call ylmr(this%rcoords(1, isp), this%rcoords(2, isp), this%rcoords(3, isp), ll, mm, this%ylm_r(ll, mm, isp))
-            this%ylm_r(ll, mm, isp) = conjg(this%ylm_r(ll, mm, isp))
+      if(this%nsrfcpnts_start > 0) then
+        do isp = this%nsrfcpnts_start, this%nsrfcpnts_end
+          do ll = 0, this%lmax
+            do mm = -ll, ll
+              call ylmr(this%rcoords(1, isp), this%rcoords(2, isp), this%rcoords(3, isp), ll, mm, this%ylm_r(ll, mm, isp))
+              this%ylm_r(ll, mm, isp) = conjg(this%ylm_r(ll, mm, isp))
+            end do
           end do
         end do
-      end do
+      end if
+
     end if
 
     ! Generate the reciprocal space mesh grid
@@ -427,10 +423,10 @@ contains
       call messages_print_var_value(stdout, "PES_Flux_UseMemory", this%usememory)            
     end if
 
-    SAFE_ALLOCATE(this%wf(stst:stend, 1:sdim, kptst:kptend, 1:this%nsrfcpnts, 1:this%tdsteps))
+    SAFE_ALLOCATE(this%wf(stst:stend, 1:sdim, kptst:kptend, 0:this%nsrfcpnts, 1:this%tdsteps))
     this%wf = M_z0
 
-    SAFE_ALLOCATE(this%gwf(stst:stend, 1:sdim, kptst:kptend, 1:this%nsrfcpnts, 1:this%tdsteps, 1:mdim))
+    SAFE_ALLOCATE(this%gwf(stst:stend, 1:sdim, kptst:kptend, 0:this%nsrfcpnts, 1:this%tdsteps, 1:mdim))
     this%gwf = M_z0
 
     SAFE_ALLOCATE(this%veca(1:mdim, 1:this%tdsteps))
@@ -957,7 +953,7 @@ contains
               do imdim = 1, mdim
                 call mesh_interpolation_evaluate(this%interp, this%nsrfcpnts, gpsi(1:mesh%np_part, imdim), &
                   this%rcoords(1:mdim, 1:this%nsrfcpnts), interp_values(1:this%nsrfcpnts))
-                this%gwf(ist, isdim, ik, :, itstep, imdim) = st%occ(ist, ik) * interp_values(1:this%nsrfcpnts)
+                this%gwf(ist, isdim, ik, 1:this%nsrfcpnts, itstep, imdim) = st%occ(ist, ik) * interp_values(1:this%nsrfcpnts)
               end do
 
             else
@@ -1163,11 +1159,13 @@ contains
     integer            :: ist, ik, isdim, imdim
     integer            :: itstep, lmax
     integer            :: ll, mm 
-    CMPLX, allocatable :: integ1_s(:,:,:,:,:,:), integ2_s(:,:,:,:,:)
+    CMPLX, allocatable :: s1_node(:,:,:,:,:,:), s1_act(:,:,:)
+    CMPLX, allocatable :: s2_node(:,:,:,:,:), s2_act(:,:)
     CMPLX, allocatable :: integ11_t(:,:), integ12_t(:,:,:)
     CMPLX, allocatable :: integ21_t(:), integ22_t(:,:)
     CMPLX, allocatable :: spctramp_sph(:,:,:,:,:)
     integer            :: ikk, ikk_start, ikk_end
+    integer            :: isp_start, isp_end
     integer            :: iomk
     CMPLX, allocatable :: conjgphase_sph(:,:)
     CMPLX, allocatable :: phase_act(:,:), phase_prev(:,:)
@@ -1192,6 +1190,8 @@ contains
     lmax       = this%lmax
     ikk_start  = this%nk_start
     ikk_end    = this%nk_end
+    isp_start  = this%nsrfcpnts_start
+    isp_end    = this%nsrfcpnts_end
 
     SAFE_ALLOCATE(conjgphase_sph(1:this%nk, 1:this%nstepsomegak))
     conjgphase_sph = M_z0
@@ -1225,33 +1225,49 @@ contains
     SAFE_DEALLOCATE_A(phase_act)
     SAFE_DEALLOCATE_A(phase_prev)
 
-    ! surface integral S_lm (for time step on node      )
-    SAFE_ALLOCATE(integ1_s(stst:stend, 1:sdim, kptst:kptend, 0:lmax, -lmax:lmax, 1:3))
-    integ1_s = M_z0
+    ! surface integral S_lm (for time step on node)
+    SAFE_ALLOCATE(s1_node(stst:stend, 1:sdim, kptst:kptend, 0:lmax, -lmax:lmax, 1:3))
+    SAFE_ALLOCATE(s2_node(stst:stend, 1:sdim, kptst:kptend, 0:lmax, -lmax:lmax))
 
-    SAFE_ALLOCATE(integ2_s(stst:stend, 1:sdim, kptst:kptend, 0:lmax, -lmax:lmax))
-    integ2_s = M_z0
+    SAFE_ALLOCATE(s1_act(0:lmax, -lmax:lmax, 1:3))
+    SAFE_ALLOCATE(s2_act(0:lmax, -lmax:lmax))
 
-    do ik = kptst, kptend
-      do ist = stst, stend
-        do isdim = 1, sdim
+    do itstep = 1, this%tdsteps
+    
+      do ik = kptst, kptend
+        do ist = stst, stend
+          do isdim = 1, sdim
 
-          do ll = 0, lmax 
-            do mm = -ll, ll
-              do imdim = 1, 3
-                ! surface integrals
-                integ1_s(ist, isdim, ik, ll, mm, imdim) = &
-                  sum(this%ylm_r(ll, mm, :) * this%srfcnrml(imdim, :) * &
-                  this%wf(ist, isdim, ik, :, tdstep_node))
+            s2_act = M_z0
 
-                integ2_s(ist, isdim, ik, ll, mm) = integ2_s(ist, isdim, ik, ll, mm) + &
-                  sum(this%ylm_r(ll, mm, :) * this%srfcnrml(imdim, :) * &
-                  this%gwf(ist, isdim, ik, :, tdstep_node, imdim))
+            do ll = 0, lmax 
+              do mm = -ll, ll
+                do imdim = 1, 3
+                  ! surface integrals
+                  s1_act(ll, mm, imdim) = &
+                    sum(this%ylm_r(ll, mm, isp_start:isp_end) * this%srfcnrml(imdim, isp_start:isp_end) * &
+                    this%wf(ist, isdim, ik, isp_start:isp_end, itstep))
 
+                  s2_act(ll, mm) = s2_act(ll, mm) + &
+                    sum(this%ylm_r(ll, mm, isp_start:isp_end) * this%srfcnrml(imdim, isp_start:isp_end) * &
+                    this%gwf(ist, isdim, ik, isp_start:isp_end, itstep, imdim))
+
+                end do
               end do
             end do
-          end do
 
+#if defined(HAVE_MPI)
+            if(mesh%parallel_in_domains) then
+              call comm_allreduce(mesh%mpi_grp%comm, s1_act)
+              call comm_allreduce(mesh%mpi_grp%comm, s2_act)
+            end if
+#endif
+            if(itstep == tdstep_node) then
+               s1_node(ist, isdim, ik, :, :, :) = s1_act(:,:,:)
+               s2_node(ist, isdim, ik, :, :)    = s2_act(:,:)
+            end if
+
+          end do
         end do
       end do
     end do
@@ -1269,6 +1285,9 @@ contains
       do ist = stst, stend
         do isdim = 1, sdim
 
+          s1_act(:,:,:) = s1_node(ist, isdim, ik, :, :, :)
+          s2_act(:,:) = s2_node(ist, isdim, ik, :, :)
+
           integ12_t = M_z0
           integ22_t = M_z0
 
@@ -1281,10 +1300,10 @@ contains
               ! multiply with spherical harmonics & sum over all mm
               do imdim = 1, 3
                 integ11_t(1:this%nstepsomegak, imdim) = integ11_t(1:this%nstepsomegak, imdim) + &
-                  integ1_s(ist, isdim, ik, ll, mm, imdim) * this%ylm_k(ll, mm, 1:this%nstepsomegak)
+                  s1_act(ll, mm, imdim) * this%ylm_k(ll, mm, 1:this%nstepsomegak)
               end do
               integ21_t(1:this%nstepsomegak) = integ21_t(1:this%nstepsomegak) + &
-                integ2_s(ist, isdim, ik, ll, mm) * this%ylm_k(ll, mm, 1:this%nstepsomegak)
+                s2_act(ll, mm) * this%ylm_k(ll, mm, 1:this%nstepsomegak)
             end do
             ! multiply with Bessel function & sum over all ll
             do ikk = 1, this%nk
@@ -1307,8 +1326,10 @@ contains
       end do
     end do
 
-    SAFE_DEALLOCATE_A(integ1_s)
-    SAFE_DEALLOCATE_A(integ2_s)
+    SAFE_DEALLOCATE_A(s1_node)
+    SAFE_DEALLOCATE_A(s2_node)
+    SAFE_DEALLOCATE_A(s1_act)
+    SAFE_DEALLOCATE_A(s2_act)
 
     SAFE_DEALLOCATE_A(integ11_t)
     SAFE_DEALLOCATE_A(integ12_t)
@@ -1383,11 +1404,12 @@ contains
 #endif
 
     SAFE_ALLOCATE(this%srfcpnt(1:this%nsrfcpnts))
-    SAFE_ALLOCATE(this%srfcnrml(1:mdim, 1:this%nsrfcpnts))
-    SAFE_ALLOCATE(this%rcoords(1:mdim, 1:this%nsrfcpnts))
+    SAFE_ALLOCATE(this%srfcnrml(1:mdim, 0:this%nsrfcpnts))
+    SAFE_ALLOCATE(this%rcoords(1:mdim, 0:this%nsrfcpnts))
     SAFE_ALLOCATE(this%rankmin(1:this%nsrfcpnts))
 
     this%srfcnrml = M_ZERO
+    this%rcoords  = M_ZERO
 
     isp = 0
     do ip_global = 1, mesh%np_global
@@ -1511,6 +1533,11 @@ contains
 
     iend   = istart_global + sum(dimrank(:mpirank)) - 1
     istart = iend - dimrank(mpirank) + 1
+
+    if(istart > iend) then
+      iend = 0
+      istart = 0
+    end if
 
     SAFE_DEALLOCATE_A(dimrank)
 
