@@ -744,7 +744,8 @@ subroutine pes_flux_output(this, mesh, sb, st, dt)
 
   integer            :: iunitone, iunittwo
   FLOAT, allocatable :: spctrout_cub(:), spctrout_sph(:,:)
-  FLOAT              :: weight, spctrsum
+  FLOAT, allocatable :: spctrsum(:,:,:,:)
+  FLOAT              :: weight
 
   PUSH_SUB(pes_flux_output)
 
@@ -755,8 +756,10 @@ subroutine pes_flux_output(this, mesh, sb, st, dt)
   sdim   = st%d%dim
   mdim   = mesh%sb%dim
 
-  select case (this%shape)
+  SAFE_ALLOCATE(spctrsum(1:st%nst, 1:sdim, 1:st%d%nik, 1:this%nk))
+  spctrsum = M_ZERO
 
+  select case (this%shape)
   case (M_SPHERICAL)
     SAFE_ALLOCATE(spctrout_sph(1:this%nk, 1:this%nstepsomegak))
     spctrout_sph = M_ZERO
@@ -768,23 +771,95 @@ subroutine pes_flux_output(this, mesh, sb, st, dt)
   case (M_PLANES)
     POP_SUB(pes_flux_output)
     return 
-        
   end select
 
-  ! calculate the total spectrum
+  ! calculate spectra & total distribution
   do ik = kptst, kptend
     do ist = stst, stend
       do isdim = 1, sdim
+
+        ! orbital spectra
         if(this%shape == M_SPHERICAL) then
+
+          do ikk = 1, this%nk 
+            iomk = 0
+
+            do ith = 0, this%nstepsthetak
+              thetak = ith * M_PI / this%nstepsthetak 
+
+              if(ith == 0 .or. ith == this%nstepsthetak) then
+                weight = (M_ONE - cos(M_PI / this%nstepsthetak / M_TWO)) * M_TWO * M_PI
+              else
+                weight = abs(cos(thetak - M_PI / this%nstepsthetak / M_TWO) - cos(thetak + M_PI / this%nstepsthetak / M_TWO)) &
+                  * M_TWO * M_PI / this%nstepsphik
+              end if
+
+              do iph = 0, this%nstepsphik - 1
+                iomk = iomk + 1
+                spctrsum(ist, isdim, ik, ikk) = spctrsum(ist, isdim, ik, ikk) + &
+                  abs(this%spctramp_sph(ist, isdim, ik, ikk, iomk))**M_TWO * dt**M_TWO * weight
+
+                if(ith == 0 .or. ith == this%nstepsthetak) exit
+              end do
+            end do
+          end do
+          ! distribution
           spctrout_sph(1:this%nk, 1:this%nstepsomegak) = spctrout_sph(1:this%nk, 1:this%nstepsomegak) + &
-            abs(this%spctramp_sph(ist, isdim, ik, 1:this%nk, 1:this%nstepsomegak))**M_TWO * dt**M_TWO &
-!             abs(this%spctramp_sph(ist, isdim, ik, 1:this%nk, 1:this%nstepsomegak))**M_TWO  &
-            * st%occ(ist, ik)
-        else
+            abs(this%spctramp_sph(ist, isdim, ik, 1:this%nk, 1:this%nstepsomegak))**M_TWO * dt**M_TWO
+
+        else ! this%shape == M_CUBIC
+
+          select case(mdim)
+          case(1)
+            weight = M_HALF
+
+            ikk = 0
+            do ikp = this%nk + 1, this%nkpnts
+              ikk = ikk + 1
+              spctrsum(ist, isdim, ik, ikk) = spctrsum(ist, isdim, ik, ikk) + &
+                (abs(this%spctramp_cub(ist, isdim, ik, ikp))**M_TWO + &
+                 abs(this%spctramp_cub(ist, isdim, ik, this%nkpnts + 1 - ikp))**M_TWO) * dt**M_TWO * weight
+            end do
+     
+          case(2)
+            weight = M_TWO * M_PI / this%nstepsphik
+
+            ikp = 0
+            do ikk = 1, this%nk
+              do iph = 0, this%nstepsphik - 1
+                ikp = ikp + 1
+                spctrsum(ist, isdim, ik, ikk) = spctrsum(ist, isdim, ik, ikk) + dt**M_TWO * &
+                  abs(this%spctramp_cub(ist, isdim, ik, ikp))**M_TWO * dt**M_TWO * weight
+              end do
+            end do
+     
+          case(3)
+            ikp  = 0
+            do ikk = 1, this%nk
+              do ith = 0, this%nstepsthetak
+                thetak = ith * M_PI / this%nstepsthetak 
+     
+                if(ith == 0 .or. ith == this%nstepsthetak) then
+                  weight = (M_ONE - cos(M_PI / this%nstepsthetak / M_TWO)) * M_TWO * M_PI
+                else
+                  weight = abs(cos(thetak - M_PI / this%nstepsthetak / M_TWO) - cos(thetak + M_PI / this%nstepsthetak / M_TWO)) &
+                    * M_TWO * M_PI / this%nstepsphik
+                end if
+     
+                do iph = 0, this%nstepsphik - 1
+                  ikp = ikp + 1
+                  spctrsum(ist, isdim, ik, ikk) = spctrsum(ist, isdim, ik, ikk) + &
+                    abs(this%spctramp_cub(ist, isdim, ik, ikp))**M_TWO * dt**M_TWO * weight
+     
+                  if(ith == 0 .or. ith == this%nstepsthetak) exit
+                end do
+              end do
+            end do
+          end select
+          ! distribution
           spctrout_cub(1:this%nkpnts) = spctrout_cub(1:this%nkpnts) + &
-            abs(this%spctramp_cub(ist, isdim, ik, 1:this%nkpnts))**M_TWO * dt**M_TWO &
-!             abs(this%spctramp_cub(ist, isdim, ik, 1:this%nkpnts))**M_TWO  &
-            * st%occ(ist, ik)
+            abs(this%spctramp_cub(ist, isdim, ik, 1:this%nkpnts))**M_TWO * dt**M_TWO
+
         end if
       end do
     end do
@@ -792,14 +867,21 @@ subroutine pes_flux_output(this, mesh, sb, st, dt)
 
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
 #if defined(HAVE_MPI)
+    ! total spectrum = sum over all states
     if(this%shape == M_SPHERICAL) then
       call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrout_sph)
     else
       call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrout_cub)
     end if
+
+    ! orbital spectra
+    call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrsum)
 #endif
   end if
 
+  ! -----------------------------------------------------------------
+  ! OUTPUT 
+  ! -----------------------------------------------------------------
   if(mpi_grp_is_root(mpi_world)) then
     iunittwo = io_open('td.general/PES_flux.distribution.out', action='write', position='rewind')
     iunitone = io_open('td.general/'//'PES_flux.power.sum', action='write', position='rewind')
@@ -810,35 +892,26 @@ subroutine pes_flux_output(this, mesh, sb, st, dt)
       do ikk = 1, this%nk 
         kact = ikk * this%dk
         iomk = 0
-        spctrsum = M_ZERO
 
         do ith = 0, this%nstepsthetak
           thetak = ith * M_PI / this%nstepsthetak 
 
-          if(ith == 0 .or. ith == this%nstepsthetak) then
-            weight = (M_ONE - cos(M_PI / this%nstepsthetak / M_TWO)) * M_TWO * M_PI
-          else
-            weight = abs(cos(thetak - M_PI / this%nstepsthetak / M_TWO) - cos(thetak + M_PI / this%nstepsthetak / M_TWO)) &
-              * M_TWO * M_PI / this%nstepsphik
-          end if
-
           do iph = 0, this%nstepsphik - 1
             iomk = iomk + 1
-            spctrsum = spctrsum + spctrout_sph(ikk, iomk) * weight 
             phik = iph * M_TWO * M_PI / this%nstepsphik
             if(iph == 0) iomk_save = iomk
-            write(iunittwo,'(5(1x,e18.10E3))') kact, thetak, phik, spctrout_sph(ikk, iomk)
+            write(iunittwo,'(4(1x,e18.10E3))') kact, thetak, phik, spctrout_sph(ikk, iomk)
 
             ! just repeat the result for output
             if(this%nstepsphik > 1 .and. iph == (this%nstepsphik - 1)) &
-              write(iunittwo,'(5(1x,e18.10E3))') kact, thetak, M_TWO * M_PI, spctrout_sph(ikk, iomk_save)
+              write(iunittwo,'(4(1x,e18.10E3))') kact, thetak, M_TWO * M_PI, spctrout_sph(ikk, iomk_save)
 
             ! just repeat the result for output and exit
             if(ith == 0 .or. ith == this%nstepsthetak) then
               if(this%nstepsphik > 1) then
                 do iphi = 1, this%nstepsphik
                   phik = iphi * M_TWO * M_PI / this%nstepsphik
-                  write(iunittwo,'(5(1x,e18.10E3))') kact, thetak, phik, spctrout_sph(ikk, iomk)
+                  write(iunittwo,'(4(1x,e18.10E3))') kact, thetak, phik, spctrout_sph(ikk, iomk)
                 end do
               end if
               exit
@@ -847,7 +920,16 @@ subroutine pes_flux_output(this, mesh, sb, st, dt)
 
           if(this%nstepsphik > 1 .or. ith == this%nstepsthetak) write(iunittwo, '(1x)', advance='yes')
         end do
-        write(iunitone, '(2(1x,e18.10E3))') kact**M_TWO / M_TWO, spctrsum * kact
+        write(iunitone, '(2(1x,e18.10E3))', advance='no') &
+          kact**M_TWO / M_TWO, sum(sum(sum(spctrsum(:,:,:,ikk),1),1),1) * kact
+        do ik = 1, st%d%nik
+          do ist = 1, st%nst
+            do isdim = 1, st%d%dim
+              write(iunitone, '(1x,e18.10E3)', advance='no') spctrsum(ist, isdim, ik, ikk) * kact
+            end do
+          end do
+        end do
+        write(iunitone, '(1x)', advance='yes')
       end do
 
     else ! this%shape == M_CUBIC
@@ -855,13 +937,22 @@ subroutine pes_flux_output(this, mesh, sb, st, dt)
       case(1)
         write(iunittwo, '(a17)') '# k, distribution'
         do ikp = 1, this%nkpnts
-          write(iunittwo, '(5(1x,e18.10E3))') this%kcoords_cub(1, ikp, 1), spctrout_cub(ikp)
+          write(iunittwo, '(2(1x,e18.10E3))') this%kcoords_cub(1, ikp, 1), spctrout_cub(ikp)
         end do
 
-        do ikp = this%nk + 1, this%nkpnts
-          kact = this%kcoords_cub(1, ikp, 1)
-          write(iunitone, '(2(1x,e18.10E3))') kact**M_TWO / M_TWO, &
-            (spctrout_cub(ikp) + spctrout_cub(this%nkpnts + 1 - ikp)) / M_TWO * kact
+        do ikk = 1, this%nk
+          kact = this%kcoords_cub(1, this%nk + ikk, 1)
+          write(iunitone, '(2(1x,e18.10E3))', advance='no') &
+            kact**M_TWO / M_TWO, sum(sum(sum(spctrsum(:,:,:,ikk),1),1),1) * kact
+          
+          do ik = 1, st%d%nik
+            do ist = 1, st%nst
+              do isdim = 1, st%d%dim
+                write(iunitone, '(1x,e18.10E3)', advance='no') spctrsum(ist, isdim, ik, ikk) * kact
+              end do
+            end do
+          end do
+          write(iunitone, '(1x)', advance='yes')
         end do
 
       case(2)
@@ -870,18 +961,25 @@ subroutine pes_flux_output(this, mesh, sb, st, dt)
         do ikk = 1, this%nk
           kact = ikk * this%dk
           
-          spctrsum = M_ZERO
           do iph = 0, this%nstepsphik - 1
             ikp = ikp + 1
             if(iph == 0) ikp_save = ikp
-            spctrsum = spctrsum + spctrout_cub(ikp) * M_TWO * M_PI / this%nstepsphik
             phik = iph * M_TWO * M_PI / this%nstepsphik
-            write(iunittwo,'(5(1x,e18.10E3))') kact, phik, spctrout_cub(ikp)
+            write(iunittwo,'(3(1x,e18.10E3))') kact, phik, spctrout_cub(ikp)
           end do
           ! just repeat the result for output
-          write(iunittwo,'(5(1x,e18.10E3))') kact, M_TWO * M_PI, spctrout_cub(ikp_save)
-          write(iunittwo,'(1x)', advance = 'yes')
-          write(iunitone, '(2(1x,e18.10E3))') kact**M_TWO / M_TWO, spctrsum * kact
+          write(iunittwo,'(3(1x,e18.10E3))') kact, M_TWO * M_PI, spctrout_cub(ikp_save)
+          write(iunitone, '(2(1x,e18.10E3))', advance='no') &
+            kact**M_TWO / M_TWO, sum(sum(sum(spctrsum(:,:,:,ikk),1),1),1) * kact
+          
+          do ik = 1, st%d%nik
+            do ist = 1, st%nst
+              do isdim = 1, st%d%dim
+                write(iunitone, '(1x,e18.10E3)', advance='no') spctrsum(ist, isdim, ik, ikk) * kact
+              end do
+            end do
+          end do
+          write(iunitone, '(1x)', advance='yes')
         end do
 
       case(3)
@@ -894,30 +992,22 @@ subroutine pes_flux_output(this, mesh, sb, st, dt)
           do ith = 0, this%nstepsthetak
             thetak = ith * M_PI / this%nstepsthetak 
 
-            if(ith == 0 .or. ith == this%nstepsthetak) then
-              weight = (M_ONE - cos(M_PI / this%nstepsthetak / M_TWO)) * M_TWO * M_PI
-            else
-              weight = abs(cos(thetak - M_PI / this%nstepsthetak / M_TWO) - cos(thetak + M_PI / this%nstepsthetak / M_TWO)) &
-                * M_TWO * M_PI / this%nstepsphik
-            end if
-
             do iph = 0, this%nstepsphik - 1
               ikp = ikp + 1
-              spctrsum = spctrsum + spctrout_cub(ikp) * weight
 
               phik = iph * M_TWO * M_PI / this%nstepsphik
               if(iph == 0) ikp_save = ikp
-              write(iunittwo,'(5(1x,e18.10E3))') kact, thetak, phik, spctrout_cub(ikp)
+              write(iunittwo,'(4(1x,e18.10E3))') kact, thetak, phik, spctrout_cub(ikp)
 
               ! just repeat the result for output
               if(iph == (this%nstepsphik - 1)) &
-                write(iunittwo,'(5(1x,e18.10E3))') kact, thetak, M_TWO * M_PI, spctrout_cub(ikp_save)
+                write(iunittwo,'(4(1x,e18.10E3))') kact, thetak, M_TWO * M_PI, spctrout_cub(ikp_save)
 
               ! just repeat the result for output and exit
               if(ith == 0 .or. ith == this%nstepsthetak) then
                 do iphi = 1, this%nstepsphik
                   phik = iphi * M_TWO * M_PI / this%nstepsphik
-                  write(iunittwo,'(5(1x,e18.10E3))') kact, thetak, phik, spctrout_cub(ikp)
+                  write(iunittwo,'(4(1x,e18.10E3))') kact, thetak, phik, spctrout_cub(ikp)
                 end do
                 exit
               end if
@@ -925,7 +1015,16 @@ subroutine pes_flux_output(this, mesh, sb, st, dt)
 
             write(iunittwo, '(1x)', advance='yes')
           end do
-          write(iunitone, '(2(1x,e18.10E3))') kact**M_TWO / M_TWO, spctrsum * kact
+          write(iunitone, '(2(1x,e18.10E3))', advance='no') &
+            kact**M_TWO / M_TWO, sum(sum(sum(spctrsum(:,:,:,ikk),1),1),1) * kact
+          do ik = 1, st%d%nik
+            do ist = 1, st%nst
+              do isdim = 1, st%d%dim
+                write(iunitone, '(1x,e18.10E3)', advance='no') spctrsum(ist, isdim, ik, ikk) * kact
+              end do
+            end do
+          end do
+          write(iunitone, '(1x)', advance='yes')
         end do
       end select
     end if
@@ -934,6 +1033,7 @@ subroutine pes_flux_output(this, mesh, sb, st, dt)
     call io_close(iunitone)
   end if
 
+  SAFE_DEALLOCATE_A(spctrsum)
   SAFE_DEALLOCATE_A(spctrout_cub)
   SAFE_DEALLOCATE_A(spctrout_sph)
 
