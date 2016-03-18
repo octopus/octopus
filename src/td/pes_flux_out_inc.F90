@@ -1089,7 +1089,6 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
         write(filename,'(i10.10)') itot
 
         if(mpi_grp_is_root(mesh%mpi_grp)) then
-
           if(this%shape == M_SPHERICAL) then
             call io_binary_write(trim(restart_dir(restart))//"/pesflux1."//trim(filename)//".obf", &
               this%nk * this%nstepsomegak, this%spctramp_sph(ist, isdim, ik, :, :), err)
@@ -1097,12 +1096,17 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
             call io_binary_write(trim(restart_dir(restart))//"/pesflux1."//trim(filename)//".obf", &
               this%nkpnts, this%spctramp_cub(ist, isdim, ik, :), err)
           end if
-
-          call io_binary_write(trim(restart_dir(restart))//"/pesflux2."//trim(filename)//".obf", &
-            (this%nsrfcpnts + 1)* this%tdsteps, this%wf(ist, isdim, ik, :, :), err)
-          call io_binary_write(trim(restart_dir(restart))//"/pesflux3."//trim(filename)//".obf", &
-            (this%nsrfcpnts + 1)* this%tdsteps * mdim, this%gwf(ist, isdim, ik, :, :, :), err)
-
+        end if
+#if defined(HAVE_MPI)
+        if(mesh%mpi_grp%size > 1) then
+          call MPI_Bcast(err, 1, MPI_INTEGER, 0, mesh%mpi_grp%comm, mpi_err)
+          call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
+        end if
+#endif
+        if (err /= 0) then
+          message(1) = "Unable to write restart information to '"//trim(restart_dir(restart))//"/"//trim(filename)//"'."
+          call messages_warning(1)
+          ierr = ierr + 1
         end if
         
       end do
@@ -1114,10 +1118,7 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
   else
     call zrestart_write_binary(restart, 'pesflux4', this%nkpnts, this%conjgphase_prev_cub, err)
   end if
-
-  call drestart_write_binary(restart, 'pesflux5', this%tdsteps * mdim, this%veca, err) 
-
-  if(err /= 0) ierr = ierr + 1
+  if(err /= 0) ierr = ierr + 2
 
   if(debug%info) then
     message(1) = "Debug: Writing pes_flux restart done."
@@ -1174,11 +1175,12 @@ subroutine pes_flux_load(restart, this, mesh, st, ierr)
           call io_binary_read(trim(restart_dir(restart))//"/pesflux1."//trim(filename)//".obf", &
             this%nkpnts, this%spctramp_cub(ist, isdim, ik, :), err)
         end if
+        if (err /= 0) then
+          message(1) = "Unable to read restart information from '"//trim(restart_dir(restart))//"/"//"pesflux1."
+          call messages_warning(1)
+          ierr = ierr + 1
+        end if
 
-        call io_binary_read(trim(restart_dir(restart))//"/pesflux2."//trim(filename)//".obf", &
-          (this%nsrfcpnts + 1) * this%tdsteps, this%wf(ist, isdim, ik, :, :), err)
-        call io_binary_read(trim(restart_dir(restart))//"/pesflux3."//trim(filename)//".obf", &
-          (this%nsrfcpnts + 1) * this%tdsteps * mdim, this%gwf(ist, isdim, ik, :, :, :), err)
       end do
     end do
   end do
@@ -1188,10 +1190,7 @@ subroutine pes_flux_load(restart, this, mesh, st, ierr)
   else
     call zrestart_read_binary(restart, 'pesflux4', this%nkpnts, this%conjgphase_prev_cub, err)
   end if
-
-  call drestart_read_binary(restart, 'pesflux5', this%tdsteps * mdim, this%veca, err) 
-
-  if(err /= 0) ierr = ierr + 1
+  if(err /= 0) ierr = ierr + 2
  
   if(debug%info) then
     message(1) = "Debug: Reading pes_flux restart done."
