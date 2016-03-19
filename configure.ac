@@ -64,6 +64,9 @@ fi
 AC_PROG_CC($octopus_default_cc)
 AC_PROG_CC_C99
 
+AC_PROG_CXX
+AC_CXX_LIBRARY_LDFLAGS
+
 # optimizations extensions supported by the compiler
 AC_C_INLINE
 AC_C_RESTRICT
@@ -183,6 +186,8 @@ ACX_FCFLAGS
 
 dnl octopus needs the preprocessor. The result goes to FCCPP
 ACX_FCCPP
+
+AC_FC_LIBRARY_LDFLAGS
 
 dnl how Fortran mangles function names
 AC_FC_WRAPPERS
