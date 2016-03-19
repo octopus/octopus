@@ -22,10 +22,10 @@
 !> This module implements a simple associative list for integer keys and
 !! values. It is used by the separate changing hash-table implementation.
 
-module ialist_m
-  use global_m
-  use messages_m
-  use profiling_m
+module ialist_oct_m
+  use global_oct_m
+  use messages_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -221,7 +221,7 @@ contains
     nullify(l%head)
 
   end subroutine ialist_end
-end module ialist_m
+end module ialist_oct_m
 
 
 !! Local Variables:

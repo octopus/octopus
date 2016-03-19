@@ -19,12 +19,12 @@
 
 #include "global.h"
 
-module lalg_basic_m
-  use blas_m
-  use global_m
-  use messages_m
-  use profiling_m
-  use utils_m
+module lalg_basic_oct_m
+  use blas_oct_m
+  use global_oct_m
+  use messages_oct_m
+  use profiling_oct_m
+  use utils_oct_m
 
   implicit none
 
@@ -235,7 +235,7 @@ contains
 #  include "lalg_basic_blas_inc.F90"
 #  undef TYPE
 
-end module lalg_basic_m
+end module lalg_basic_oct_m
 
 
 !! Local Variables:

@@ -19,46 +19,46 @@
 
 #include "global.h"
 
-module partial_charges_m
-  use batch_m
-  use batch_ops_m
-  use comm_m
-  use cube_m
-  use cube_function_m
-  use derivatives_m
-  use gauge_field_m
-  use geometry_m
-  use global_m
-  use grid_m
-  use hamiltonian_m
-  use hamiltonian_base_m
-  use hirshfeld_m
-  use io_m
-  use io_function_m
-  use lalg_basic_m
-  use logrid_m
-  use mesh_m
-  use mesh_function_m
-  use messages_m
-  use mpi_m
-  use parser_m
-  use poisson_m
-  use profiling_m
-  use projector_m
-  use ps_m
-  use restart_m
-  use simul_box_m
-  use species_m
-  use splines_m
-  use states_m
-  use states_dim_m
-  use submesh_m
-  use symmetries_m
-  use symmetrizer_m
-  use symm_op_m
-  use unit_m
-  use unit_system_m
-  use varinfo_m
+module partial_charges_oct_m
+  use batch_oct_m
+  use batch_ops_oct_m
+  use comm_oct_m
+  use cube_oct_m
+  use cube_function_oct_m
+  use derivatives_oct_m
+  use gauge_field_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use hamiltonian_oct_m
+  use hamiltonian_base_oct_m
+  use hirshfeld_oct_m
+  use io_oct_m
+  use io_function_oct_m
+  use lalg_basic_oct_m
+  use logrid_oct_m
+  use mesh_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use parser_oct_m
+  use poisson_oct_m
+  use profiling_oct_m
+  use projector_oct_m
+  use ps_oct_m
+  use restart_oct_m
+  use simul_box_oct_m
+  use species_oct_m
+  use splines_oct_m
+  use states_oct_m
+  use states_dim_oct_m
+  use submesh_oct_m
+  use symmetries_oct_m
+  use symmetrizer_oct_m
+  use symm_op_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -128,7 +128,7 @@ contains
     POP_SUB(partial_charges_end)
   end subroutine partial_charges_end
 
-end module partial_charges_m
+end module partial_charges_oct_m
 
 !! Local Variables:
 !! mode: f90

@@ -19,27 +19,27 @@
 
 #include "global.h"
 
-module spectrum_m
-  use batch_m
+module spectrum_oct_m
+  use batch_oct_m
   use iso_c_binding
-  use cmplxscl_m
-  use compressed_sensing_m
-  use fft_m
-  use global_m
-  use io_m
-  use kick_m
-  use lalg_adv_m
-  use loct_math_m
-  use math_m
-  use messages_m
-  use minimizer_m
-  use parser_m
-  use profiling_m
-  use string_m
-  use types_m
-  use unit_m
-  use unit_system_m
-  use varinfo_m
+  use cmplxscl_oct_m
+  use compressed_sensing_oct_m
+  use fft_oct_m
+  use global_oct_m
+  use io_oct_m
+  use kick_oct_m
+  use lalg_adv_oct_m
+  use loct_math_oct_m
+  use math_oct_m
+  use messages_oct_m
+  use minimizer_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use string_oct_m
+  use types_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -2375,7 +2375,7 @@ contains
 
 
 
-end module spectrum_m
+end module spectrum_oct_m
 
 !! Local Variables:
 !! mode: f90

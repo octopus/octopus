@@ -1,28 +1,28 @@
 #include "global.h"
 
-module fio_grid_m
+module fio_grid_oct_m
 
-  use boundaries_m
-  use curvilinear_m
-  use derivatives_m
-  use double_grid_m
-  use fio_curvilinear_m
-  use fio_mesh_m
-  use fio_simul_box_m
-  use geometry_m
-  use global_m
-  use grid_m
-  use json_m
-  use kinds_m
-  use mesh_m
-  use messages_m
-  use multigrid_m
-  use mpi_m
-  use profiling_m
-  use simul_box_m
-  use space_m
-  use stencil_m
-  use transfer_table_m
+  use boundaries_oct_m
+  use curvilinear_oct_m
+  use derivatives_oct_m
+  use double_grid_oct_m
+  use fio_curvilinear_oct_m
+  use fio_mesh_oct_m
+  use fio_simul_box_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use json_oct_m
+  use kinds_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use multigrid_oct_m
+  use mpi_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
+  use space_oct_m
+  use stencil_oct_m
+  use transfer_table_oct_m
 
   implicit none
 
@@ -143,7 +143,7 @@ contains
     POP_SUB(fio_grid_end)
   end subroutine fio_grid_end
 
-end module fio_grid_m
+end module fio_grid_oct_m
 
 !! Local Variables:
 !! mode: f90

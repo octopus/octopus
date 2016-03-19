@@ -19,15 +19,15 @@
 
 #include "global.h"
 
-module messages_m
-  use global_m
-  use debug_m
-  use loct_m
-  use mpi_m
-  use parser_m
-  use string_m
-  use unit_m
-  use varinfo_m
+module messages_oct_m
+  use global_oct_m
+  use debug_oct_m
+  use loct_oct_m
+  use mpi_oct_m
+  use parser_oct_m
+  use string_oct_m
+  use unit_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -1336,15 +1336,15 @@ contains
 
   end subroutine messages_dump_stack
   
-end module messages_m
+end module messages_oct_m
 
 ! ---------------------------------------------------------
 !> This subroutine is called by the assert macro, it is not in a
 !> module so it can be called from any file. The interface is declared
 !> in global_m.
 subroutine assert_die(s, f, l)
-  use messages_m
-  use mpi_m
+  use messages_oct_m
+  use mpi_oct_m
 
   implicit none
 
@@ -1370,7 +1370,7 @@ end subroutine assert_die
 !-------------------------------------------------------
 
 subroutine dump_call_stack()
-  use messages_m
+  use messages_oct_m
 
   call messages_dump_stack()
   

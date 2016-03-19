@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module loct_m
+module loct_oct_m
 
   implicit none
 
@@ -315,7 +315,7 @@ contains
 
   end function loct_dir_exists
 
-end module loct_m
+end module loct_oct_m
 
 !! Local Variables:
 !! mode: f90

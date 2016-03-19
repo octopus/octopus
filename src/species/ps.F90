@@ -19,28 +19,28 @@
 
 #include "global.h"
 
-module ps_m
-  use atomic_m
-  use global_m
-  use io_m
-  use loct_math_m
-  use parser_m
-  use logrid_m
-  use messages_m
-  use profiling_m
-  use ps_cpi_m
-  use ps_fhi_m
-  use ps_hgh_m
-  use ps_qso_m
-  use ps_in_grid_m
+module ps_oct_m
+  use atomic_oct_m
+  use global_oct_m
+  use io_oct_m
+  use loct_math_oct_m
+  use parser_oct_m
+  use logrid_oct_m
+  use messages_oct_m
+  use profiling_oct_m
+  use ps_cpi_oct_m
+  use ps_fhi_oct_m
+  use ps_hgh_oct_m
+  use ps_qso_oct_m
+  use ps_in_grid_oct_m
 #ifdef HAVE_PSPIO
-  use pspio_f90_lib_m
-  use pspio_f90_types_m
+  use pspio_f90_lib_oct_m
+  use pspio_f90_types_oct_m
 #endif
-  use ps_psf_m
-  use ps_upf_m
-  use splines_m
-  use spline_filter_m
+  use ps_psf_oct_m
+  use ps_upf_oct_m
+  use splines_oct_m
+  use spline_filter_oct_m
   implicit none
 
   private
@@ -1204,7 +1204,7 @@ contains
   
 #include "ps_pspio_inc.F90"
  
-end module ps_m
+end module ps_oct_m
 
 !! Local Variables:
 !! mode: f90

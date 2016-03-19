@@ -19,21 +19,21 @@
 
 #include "global.h"
 
-module mix_m
-  use global_m
-  use io_m
-  use io_function_m
-  use lalg_adv_m
-  use lalg_basic_m
-  use mesh_m
-  use messages_m
-  use mpi_m
-  use parser_m
-  use profiling_m
-  use restart_m
-  use types_m
-  use unit_system_m
-  use varinfo_m
+module mix_oct_m
+  use global_oct_m
+  use io_oct_m
+  use io_function_oct_m
+  use lalg_adv_oct_m
+  use lalg_basic_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use restart_oct_m
+  use types_oct_m
+  use unit_system_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -524,7 +524,7 @@ contains
 
 #include "mix_inc.F90"
 
-end module mix_m
+end module mix_oct_m
 
 !! Local Variables:
 !! mode: f90

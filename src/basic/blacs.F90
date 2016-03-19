@@ -24,7 +24,7 @@
 !! Interfaces are from http://www.netlib.org/blacs/BLACS/QRef.html (entered manually...)
 ! -----------------------------------------------------------------------
 
-module blacs_m
+module blacs_oct_m
 
   implicit none
 
@@ -97,7 +97,7 @@ module blacs_m
     end function numroc
   end interface
 
-end module blacs_m
+end module blacs_oct_m
 
 !! Local Variables:
 !! mode: f90

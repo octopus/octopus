@@ -5,20 +5,20 @@
 !  * Functions that start with libvdwxc_ are public, to be called from other parts of Octopus.
 !  * Interfaces that start with vdwxc_ are actual functions of libvdwxc.
 
-module libvdwxc_m
-  use cube_m
-  use cube_function_m
-  use derivatives_m
-  use fft_m
-  use global_m
-  use grid_m
-  use mesh_m
-  use mesh_cube_parallel_map_m
-  use messages_m
-  use mpi_m
-  use parser_m
-  use pfft_m
-  use profiling_m
+module libvdwxc_oct_m
+  use cube_oct_m
+  use cube_function_oct_m
+  use derivatives_oct_m
+  use fft_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use mesh_oct_m
+  use mesh_cube_parallel_map_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use parser_oct_m
+  use pfft_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -373,7 +373,7 @@ contains
     POP_SUB(libvdwxc_end)
   end subroutine libvdwxc_end
 
-end module libvdwxc_m
+end module libvdwxc_oct_m
 
 !! Local Variables:
 !! mode: f90

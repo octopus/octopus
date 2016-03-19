@@ -19,19 +19,19 @@
 
 #include "global.h"
 
-module poisson_corrections_m
-  use derivatives_m
-  use global_m
-  use lalg_basic_m
-  use loct_math_m
-  use math_m
-  use mesh_function_m
-  use mesh_m
-  use messages_m
-  use nl_operator_m
-  use parser_m
-  use profiling_m
-  use simul_box_m
+module poisson_corrections_oct_m
+  use derivatives_oct_m
+  use global_oct_m
+  use lalg_basic_oct_m
+  use loct_math_oct_m
+  use math_oct_m
+  use mesh_function_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use nl_operator_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
 
   implicit none
 
@@ -352,7 +352,7 @@ contains
     POP_SUB(poisson_boundary_conditions)
   end subroutine poisson_boundary_conditions
 
-end module poisson_corrections_m
+end module poisson_corrections_oct_m
 
 !! Local Variables:
 !! mode: f90

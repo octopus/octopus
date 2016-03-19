@@ -1,17 +1,17 @@
 #include "global.h"
 
-module grid_intrf_m
+module grid_intrf_oct_m
 
-  use derivatives_m
-  use geometry_m
-  use global_m
-  use grid_m
-  use json_m
-  use mesh_m
-  use messages_m
-  use profiling_m
-  use simul_box_m
-  use space_m
+  use derivatives_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use json_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
+  use space_oct_m
 
   implicit none
 
@@ -113,10 +113,10 @@ contains
 
     interface
       subroutine grid_type_init(this, geo, space, config)
-        use geometry_m
-        use grid_m
-        use json_m
-        use space_m
+        use geometry_oct_m
+        use grid_oct_m
+        use json_oct_m
+        use space_oct_m
         type(grid_t),        intent(out) :: this
         type(geometry_t),    intent(in)  :: geo
         type(space_t),       intent(in)  :: space
@@ -158,7 +158,7 @@ contains
 
     interface
       subroutine grid_type_end(this)
-        use grid_m
+        use grid_oct_m
         type(grid_t), intent(inout) :: this
       end subroutine grid_type_end
     end interface
@@ -417,7 +417,7 @@ contains
     POP_SUB(grid_intrf_end)
   end subroutine grid_intrf_end
 
-end module grid_intrf_m
+end module grid_intrf_oct_m
 
 !! Local Variables:
 !! mode: f90

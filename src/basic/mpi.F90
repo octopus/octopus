@@ -19,11 +19,11 @@
 
 #include "global.h"
 
-module mpi_m
+module mpi_oct_m
 #if defined(MPI_MOD)
   use mpi
 #endif
-  use blacs_m
+  use blacs_oct_m
 
   implicit none
 
@@ -147,7 +147,7 @@ contains
   
   ! ---------------------------------------------------------
 
-end module mpi_m
+end module mpi_oct_m
 
 
 !! Local Variables:

@@ -22,8 +22,8 @@
 !> This module is intended to contain "only mathematical" functions
 !! and procedures.
 module sort_om
-  use global_m
-  use messages_m
+  use global_oct_m
+  use messages_oct_m
 
   implicit none
 

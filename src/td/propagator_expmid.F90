@@ -19,20 +19,20 @@
 
 #include "global.h"
 
-module propagator_expmid_m
-  use density_m
-  use exponential_m
-  use gauge_field_m
-  use grid_m
-  use geometry_m
-  use global_m
-  use hamiltonian_m
-  use ion_dynamics_m
-  use math_m
-  use messages_m
-  use potential_interpolation_m
-  use propagator_base_m
-  use states_m
+module propagator_expmid_oct_m
+  use density_oct_m
+  use exponential_oct_m
+  use gauge_field_oct_m
+  use grid_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use hamiltonian_oct_m
+  use ion_dynamics_oct_m
+  use math_oct_m
+  use messages_oct_m
+  use potential_interpolation_oct_m
+  use propagator_base_oct_m
+  use states_oct_m
 
   implicit none
 
@@ -206,7 +206,7 @@ contains
   end subroutine exponential_midpoint
 ! ---------------------------------------------------------
 
-end module propagator_expmid_m
+end module propagator_expmid_oct_m
 
 !! Local Variables:
 !! mode: f90

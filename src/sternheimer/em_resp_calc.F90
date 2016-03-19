@@ -19,32 +19,32 @@
 
 #include "global.h"
 
-module em_resp_calc_m
-  use density_m
-  use derivatives_m
-  use elf_m
-  use geometry_m
-  use grid_m
-  use global_m
-  use hamiltonian_m
-  use linear_response_m
-  use magnetic_m
-  use mesh_m
-  use mesh_function_m
-  use messages_m
-  use mpi_m
-  use parser_m
-  use pert_m
-  use poisson_m
-  use profiling_m
-  use states_m
-  use states_block_m
-  use states_dim_m
-  use sternheimer_m
-  use symmetrizer_m
-  use system_m
-  use utils_m
-  use xc_m
+module em_resp_calc_oct_m
+  use density_oct_m
+  use derivatives_oct_m
+  use elf_oct_m
+  use geometry_oct_m
+  use grid_oct_m
+  use global_oct_m
+  use hamiltonian_oct_m
+  use linear_response_oct_m
+  use magnetic_oct_m
+  use mesh_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use parser_oct_m
+  use pert_oct_m
+  use poisson_oct_m
+  use profiling_oct_m
+  use states_oct_m
+  use states_block_oct_m
+  use states_dim_oct_m
+  use sternheimer_oct_m
+  use symmetrizer_oct_m
+  use system_oct_m
+  use utils_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -308,7 +308,7 @@ contains
 #include "complex.F90"
 #include "em_resp_calc_inc.F90"
 
-end module em_resp_calc_m
+end module em_resp_calc_oct_m
 
 !! Local Variables:
 !! mode: f90

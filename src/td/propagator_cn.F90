@@ -19,23 +19,23 @@
 
 #include "global.h"
 
-module propagator_cn_m
-  use density_m
-  use exponential_m
-  use grid_m
-  use geometry_m
-  use global_m
-  use hamiltonian_m
-  use ion_dynamics_m
-  use loct_pointer_m
-  use mesh_function_m
-  use messages_m
-  use potential_interpolation_m
-  use profiling_m
-  use propagator_base_m
-  use solvers_m
-  use sparskit_m
-  use states_m
+module propagator_cn_oct_m
+  use density_oct_m
+  use exponential_oct_m
+  use grid_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use hamiltonian_oct_m
+  use ion_dynamics_oct_m
+  use loct_pointer_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use potential_interpolation_oct_m
+  use profiling_oct_m
+  use propagator_base_oct_m
+  use solvers_oct_m
+  use sparskit_oct_m
+  use states_oct_m
 
   implicit none
 
@@ -355,7 +355,7 @@ contains
   end subroutine propagator_qmr_prec
   ! ---------------------------------------------------------
 
-end module propagator_cn_m
+end module propagator_cn_oct_m
 
 !! Local Variables:
 !! mode: f90

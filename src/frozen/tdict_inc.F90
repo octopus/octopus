@@ -9,7 +9,7 @@
 #define DICT_TYPE_NAME DECORATE(DICT_TEMPLATE_NAME,t)
 #endif
 #if !defined(DICT_TYPE_MODULE_NAME)
-#define DICT_TYPE_MODULE_NAME DECORATE(DICT_TEMPLATE_NAME,m)
+#define DICT_TYPE_MODULE_NAME DECORATE(DICT_TEMPLATE_NAME, oct_m)
 #endif
 #else
 #error "'DICT_TEMPLATE_NAME' must be defined"
@@ -69,11 +69,11 @@
  
 #if defined(DICT_INCLUDE_MODULE)
 
-module TEMPLATE(dict_m)
+module TEMPLATE(dict_oct_m)
 
-  use global_m
-  use messages_m
-  use profiling_m
+  use global_oct_m
+  use messages_oct_m
+  use profiling_oct_m
 
 #endif
 #if defined(DICT_INCLUDE_PREFIX) || defined(DICT_INCLUDE_MODULE)
@@ -85,7 +85,7 @@ module TEMPLATE(dict_m)
 #define TEMPLATE_PREFIX DICT_TEMPLATE_NAME
 #include "template.h"
  
-  use strng_m
+  use strng_oct_m
 
 #if defined(DICT_TYPE_EXTERNAL) || defined(DICT_INCLUDE_MODULE)
 
@@ -493,7 +493,7 @@ contains
 #endif
 #if defined(DICT_INCLUDE_MODULE)
 
-end module TEMPLATE(dict_m)
+end module TEMPLATE(dict_oct_m)
 
 #endif
 

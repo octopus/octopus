@@ -1,25 +1,25 @@
 #include "global.h"
 
-module ssys_config_m
+module ssys_config_oct_m
 
-  use base_config_m
-  use base_hamiltonian_m
-  use base_handle_m
-  use fio_config_m
-  use fio_handle_m
-  use frozen_config_m
-  use frozen_handle_m
-  use functional_m
-  use global_m
-  use json_m
-  use kinds_m
-  use messages_m
-  use parser_m
-  use profiling_m
-  use ssys_handle_m
-  use storage_m
-  use unit_m
-  use unit_system_m
+  use base_config_oct_m
+  use base_hamiltonian_oct_m
+  use base_handle_oct_m
+  use fio_config_oct_m
+  use fio_handle_oct_m
+  use frozen_config_oct_m
+  use frozen_handle_oct_m
+  use functional_oct_m
+  use global_oct_m
+  use json_oct_m
+  use kinds_oct_m
+  use messages_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use ssys_handle_oct_m
+  use storage_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
 
   implicit none
 
@@ -474,7 +474,7 @@ contains
     POP_SUB(ssys_config_parse)
   end subroutine ssys_config_parse
 
-end module ssys_config_m
+end module ssys_config_oct_m
 
 !! Local Variables:
 !! mode: f90

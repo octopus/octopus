@@ -19,45 +19,45 @@
 
 #include "global.h"
 
-module system_m
-  use base_handle_m
-  use base_model_m
-  use base_states_m
-  use base_system_m
-  use calc_mode_par_m
-  use density_m
-  use elf_m
-  use energy_calc_m
-  use geometry_m
-  use global_m
-  use grid_m
-  use hamiltonian_m
-  use io_function_m
-  use json_m
-  use live_config_m
-  use mesh_m
-  use messages_m
-  use modelmb_particles_m
-  use mpi_m
-  use multicomm_m
-  use octcl_kernel_m
-  use opencl_m
-  use output_m
-  use parser_m
-  use pcm_m
-  use poisson_m
-  use profiling_m
-  use space_m
-  use species_m
-  use simul_box_m
+module system_oct_m
+  use base_handle_oct_m
+  use base_model_oct_m
+  use base_states_oct_m
+  use base_system_oct_m
+  use calc_mode_par_oct_m
+  use density_oct_m
+  use elf_oct_m
+  use energy_calc_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use hamiltonian_oct_m
+  use io_function_oct_m
+  use json_oct_m
+  use live_config_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use modelmb_particles_oct_m
+  use mpi_oct_m
+  use multicomm_oct_m
+  use octcl_kernel_oct_m
+  use opencl_oct_m
+  use output_oct_m
+  use parser_oct_m
+  use pcm_oct_m
+  use poisson_oct_m
+  use profiling_oct_m
+  use space_oct_m
+  use species_oct_m
+  use simul_box_oct_m
   use sort_om
-  use ssys_config_m
-  use ssys_handle_m
-  use states_m
-  use states_dim_m
-  use unit_m
-  use unit_system_m
-  use v_ks_m
+  use ssys_config_oct_m
+  use ssys_handle_oct_m
+  use states_oct_m
+  use states_dim_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use v_ks_oct_m
 
   implicit none
 
@@ -317,7 +317,7 @@ contains
     POP_SUB(system_h_setup)
   end subroutine system_h_setup
 
-end module system_m
+end module system_oct_m
 
 !! Local Variables:
 !! mode: f90

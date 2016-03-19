@@ -20,21 +20,21 @@
 #include "global.h"
 
 program oct_test
-  use calc_mode_par_m
-  use command_line_m
-  use derivatives_m
-  use fft_m
-  use io_m
-  use ion_interaction_m
-  use mesh_interpolation_m
-  use parser_m
-  use poisson_m
-  use profiling_m
-  use states_calc_m
-  use system_m
-  use test_parameters_m
-  use unit_system_m
-  use utils_m
+  use calc_mode_par_oct_m
+  use command_line_oct_m
+  use derivatives_oct_m
+  use fft_oct_m
+  use io_oct_m
+  use ion_interaction_oct_m
+  use mesh_interpolation_oct_m
+  use parser_oct_m
+  use poisson_oct_m
+  use profiling_oct_m
+  use states_calc_oct_m
+  use system_oct_m
+  use test_parameters_oct_m
+  use unit_system_oct_m
+  use utils_oct_m
 
   implicit none
 

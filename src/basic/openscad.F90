@@ -19,12 +19,12 @@
 
 #include "global.h"
 
-module openscad_m
-  use global_m
-  use io_m
-  use messages_m
-  use polyhedron_m
-  use profiling_m
+module openscad_oct_m
+  use global_oct_m
+  use io_oct_m
+  use messages_oct_m
+  use polyhedron_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -257,7 +257,7 @@ contains
   end subroutine openscad_file_comment
 
 
-end module openscad_m
+end module openscad_oct_m
 
 !! Local Variables:
 !! mode: f90

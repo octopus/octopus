@@ -19,43 +19,43 @@
 
 #include "global.h"
 
-module density_m
-  use base_states_m
-  use blas_m
-  use batch_m
-  use batch_ops_m
+module density_oct_m
+  use base_states_oct_m
+  use blas_oct_m
+  use batch_oct_m
+  use batch_ops_oct_m
   use iso_c_binding
 #ifdef HAVE_OPENCL
   use cl
 #endif
-  use comm_m
-  use derivatives_m
-  use global_m
-  use grid_m
-  use io_m
-  use kpoints_m
-  use loct_m
-  use math_m
-  use mesh_m
-  use mesh_function_m
-  use messages_m
-  use multigrid_m
-  use multicomm_m
-  use mpi_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
-  use mpi_lib_m
-  use opencl_m
-  use octcl_kernel_m
-  use profiling_m
-  use simul_box_m
-  use smear_m
-  use states_m
-  use states_dim_m
-  use symmetrizer_m
-  use types_m
-  use unit_m
-  use unit_system_m
-  use utils_m
-  use varinfo_m
+  use comm_oct_m
+  use derivatives_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use io_oct_m
+  use kpoints_oct_m
+  use loct_oct_m
+  use math_oct_m
+  use mesh_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use multigrid_oct_m
+  use multicomm_oct_m
+  use mpi_oct_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
+  use mpi_lib_oct_m
+  use opencl_oct_m
+  use octcl_kernel_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
+  use smear_oct_m
+  use states_oct_m
+  use states_dim_oct_m
+  use symmetrizer_oct_m
+  use types_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use utils_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -668,7 +668,7 @@ contains
 #include "complex.F90"
 #include "density_inc.F90"
 
-end module density_m
+end module density_oct_m
 
 
 !! Local Variables:

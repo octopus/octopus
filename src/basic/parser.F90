@@ -20,7 +20,7 @@
 #include "global.h"
 
 !> This module is only supposed to be used within this file.
-module block_t_m
+module block_t_oct_m
   implicit none
   
   private
@@ -30,23 +30,23 @@ module block_t_m
     integer, pointer :: p
   end type block_t
 
-end module block_t_m
+end module block_t_oct_m
 
 
-module parser_m
-  use block_t_m
-  use global_m
-  use loct_m
-  use mpi_m
-  use unit_m
-  use varinfo_m
+module parser_oct_m
+  use block_t_oct_m
+  use global_oct_m
+  use loct_oct_m
+  use mpi_oct_m
+  use unit_oct_m
+  use varinfo_oct_m
   
   implicit none
 
   ! Define which routines can be seen from the outside.
   private
   public ::              &
-    block_t,             &   ! This is defined in block_t_m above
+    block_t,             &   ! This is defined in block_t_oct_m above
     parser_init,         &
     parser_end,          &
     parse_init,          &
@@ -137,7 +137,7 @@ module parser_m
     end subroutine oct_parse_string
 
     integer function oct_parse_block(name, blk)
-      use block_t_m
+      use block_t_oct_m
       implicit none
       character(len=*), intent(in) :: name
       type(block_t), intent(out) :: blk
@@ -156,7 +156,7 @@ module parser_m
 
   interface parse_block_end
     subroutine oct_parse_block_end(blk)
-      use block_t_m
+      use block_t_oct_m
       implicit none
       type(block_t), intent(inout) :: blk
     end subroutine oct_parse_block_end
@@ -164,7 +164,7 @@ module parser_m
 
   interface parse_block_n
     integer function oct_parse_block_n(blk)
-      use block_t_m
+      use block_t_oct_m
       implicit none
       type(block_t), intent(in) :: blk
     end function oct_parse_block_n
@@ -172,7 +172,7 @@ module parser_m
 
   interface parse_block_cols
     integer function oct_parse_block_cols(blk, line)
-      use block_t_m
+      use block_t_oct_m
       implicit none
       type(block_t), intent(in) :: blk
       integer, intent(in) :: line
@@ -181,7 +181,7 @@ module parser_m
 
   interface parse_block_integer
     subroutine oct_parse_block_int(blk, l, c, res)
-      use block_t_m
+      use block_t_oct_m
       implicit none
       type(block_t), intent(in) :: blk
       integer, intent(in)          :: l, c
@@ -191,7 +191,7 @@ module parser_m
 
   interface parse_block_float
     subroutine oct_parse_block_double(blk, l, c, res)
-      use block_t_m
+      use block_t_oct_m
       implicit none
       type(block_t), intent(in) :: blk
       integer, intent(in)          :: l, c
@@ -204,7 +204,7 @@ module parser_m
 
   interface parse_block_cmplx
     subroutine oct_parse_block_complex(blk, l, c, res)
-      use block_t_m
+      use block_t_oct_m
       implicit none
       type(block_t), intent(in) :: blk
       integer, intent(in)          :: l, c
@@ -215,7 +215,7 @@ module parser_m
 
   interface parse_block_string
     subroutine oct_parse_block_string(blk, l, c, res)
-      use block_t_m
+      use block_t_oct_m
       implicit none
       type(block_t), intent(in) :: blk
       integer, intent(in)          :: l, c
@@ -626,7 +626,7 @@ contains
 
   end subroutine parse_fatal
   
-end module parser_m
+end module parser_oct_m
 
 !! Local Variables:
 !! mode: f90

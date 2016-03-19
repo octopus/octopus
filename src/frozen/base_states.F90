@@ -22,16 +22,16 @@
 #define HASH_KEY_TYPE_NAME json_object_t
 #define HASH_VAL_TEMPLATE_NAME base_states
 
-module base_states_m
+module base_states_oct_m
 
-  use base_density_m
-  use config_dict_m
-  use global_m
-  use json_m
-  use kinds_m
-  use messages_m
-  use profiling_m
-  use simulation_m
+  use base_density_oct_m
+  use config_dict_oct_m
+  use global_oct_m
+  use json_oct_m
+  use kinds_oct_m
+  use messages_oct_m
+  use profiling_oct_m
+  use simulation_oct_m
 
 #define LIST_TEMPLATE_NAME base_states
 #define LIST_INCLUDE_PREFIX
@@ -760,7 +760,7 @@ contains
 #undef INCLUDE_BODY
 #undef TEMPLATE_PREFIX
 
-end module base_states_m
+end module base_states_oct_m
 
 #undef HASH_TEMPLATE_NAME
 #undef HASH_KEY_TEMPLATE_NAME

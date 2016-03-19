@@ -19,16 +19,16 @@
 
 #include "global.h"
 
-module lalg_adv_m
-  use global_m
-  use lapack_m
-  use messages_m
-  use mpi_m
-  use profiling_m
-  use blacs_proc_grid_m
-  use scalapack_m
+module lalg_adv_oct_m
+  use global_oct_m
+  use lapack_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use profiling_oct_m
+  use blacs_proc_grid_oct_m
+  use scalapack_oct_m
   use sort_om
-  use utils_m
+  use utils_oct_m
   
   implicit none
 
@@ -595,7 +595,7 @@ contains
 #include "real.F90"
 #include "lalg_adv_lapack_inc.F90"
 
-end module lalg_adv_m
+end module lalg_adv_oct_m
 
 !! Local Variables:
 !! mode: f90

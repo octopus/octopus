@@ -10,7 +10,7 @@
 #define SINGLE_TYPE_NAME DECORATE(SINGLE_TEMPLATE_NAME,t)
 #endif
 #if !defined(SINGLE_TYPE_MODULE_NAME)
-#define SINGLE_TYPE_MODULE_NAME DECORATE(SINGLE_TEMPLATE_NAME,m)
+#define SINGLE_TYPE_MODULE_NAME DECORATE(SINGLE_TEMPLATE_NAME, oct_m)
 #endif
 #else
 #error "'SINGLE_TEMPLATE_NAME' must be defined"
@@ -41,9 +41,9 @@
 
 module TEMPLATE(single_m)
 
-  use global_m
-  use messages_m
-  use profiling_m
+  use global_oct_m
+  use messages_oct_m
+  use profiling_oct_m
 
   use SINGLE_TYPE_MODULE_NAME
 

@@ -19,21 +19,21 @@
 
 #include "global.h"
 
-module multigrid_m
-  use boundaries_m
-  use curvilinear_m
-  use derivatives_m
-  use geometry_m
-  use global_m
-  use parser_m
-  use math_m
-  use mesh_m
-  use mesh_init_m
-  use messages_m
-  use par_vec_m
-  use stencil_m
-  use transfer_table_m
-  use profiling_m
+module multigrid_oct_m
+  use boundaries_oct_m
+  use curvilinear_oct_m
+  use derivatives_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use parser_oct_m
+  use math_oct_m
+  use mesh_oct_m
+  use mesh_init_oct_m
+  use messages_oct_m
+  use par_vec_oct_m
+  use stencil_oct_m
+  use transfer_table_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -446,7 +446,7 @@ contains
 #include "complex.F90"
 #include "multigrid_inc.F90"
 
-end module multigrid_m
+end module multigrid_oct_m
 
 !! Local Variables:
 !! mode: f90

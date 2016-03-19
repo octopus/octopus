@@ -19,41 +19,41 @@
 
 #include "global.h"
 
-module subspace_m
-  use batch_m
-  use batch_ops_m
-  use blas_m
-  use blacs_proc_grid_m
+module subspace_oct_m
+  use batch_oct_m
+  use batch_ops_oct_m
+  use blas_oct_m
+  use blacs_proc_grid_oct_m
 #ifdef HAVE_CLBLAS
   use cl
   use clblas
 #endif
-  use comm_m
-  use derivatives_m
-  use global_m
-  use grid_m
-  use hamiltonian_m
-  use hardware_m
-  use lalg_adv_m
-  use lalg_basic_m
-  use math_m
-  use mesh_m
-  use mesh_function_m
-  use mesh_batch_m
-  use messages_m
-  use mpi_m
-  use mpi_lib_m
-  use parser_m
-  use pblas_m
-  use preconditioners_m
-  use profiling_m
-  use scalapack_m
-  use states_m
-  use states_calc_m
-  use states_parallel_m
-  use types_m
-  use opencl_m
-  use varinfo_m
+  use comm_oct_m
+  use derivatives_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use hamiltonian_oct_m
+  use hardware_oct_m
+  use lalg_adv_oct_m
+  use lalg_basic_oct_m
+  use math_oct_m
+  use mesh_oct_m
+  use mesh_function_oct_m
+  use mesh_batch_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use mpi_lib_oct_m
+  use parser_oct_m
+  use pblas_oct_m
+  use preconditioners_oct_m
+  use profiling_oct_m
+  use scalapack_oct_m
+  use states_oct_m
+  use states_calc_oct_m
+  use states_parallel_oct_m
+  use types_oct_m
+  use opencl_oct_m
+  use varinfo_oct_m
 
   implicit none
   
@@ -152,7 +152,7 @@ contains
 #include "complex.F90"
 #include "subspace_inc.F90"
 
-end module subspace_m
+end module subspace_oct_m
 
 !! Local Variables:
 !! mode: f90

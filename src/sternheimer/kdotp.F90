@@ -19,42 +19,42 @@
 
 #include "global.h"
 
-module kdotp_m
-  use geometry_m
-  use global_m
-  use grid_m
-  use output_m
-  use hamiltonian_m
-  use io_m
-  use kdotp_calc_m
-  use kpoints_m
-  use lalg_adv_m
-  use lalg_basic_m
-  use linear_response_m
-  use linear_solver_m
-  use math_m
-  use mesh_m
-  use mesh_function_m
-  use messages_m
-  use mix_m
-  use mpi_m
-  use parser_m
-  use pert_m
-  use profiling_m
-  use restart_m
-  use simul_box_m
-  use smear_m
-  use states_m
-  use states_calc_m
-  use states_dim_m
-  use states_restart_m
-  use sternheimer_m
-  use string_m
-  use system_m
-  use unit_m
-  use unit_system_m
-  use utils_m
-  use v_ks_m
+module kdotp_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use output_oct_m
+  use hamiltonian_oct_m
+  use io_oct_m
+  use kdotp_calc_oct_m
+  use kpoints_oct_m
+  use lalg_adv_oct_m
+  use lalg_basic_oct_m
+  use linear_response_oct_m
+  use linear_solver_oct_m
+  use math_oct_m
+  use mesh_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use mix_oct_m
+  use mpi_oct_m
+  use parser_oct_m
+  use pert_oct_m
+  use profiling_oct_m
+  use restart_oct_m
+  use simul_box_oct_m
+  use smear_oct_m
+  use states_oct_m
+  use states_calc_oct_m
+  use states_dim_oct_m
+  use states_restart_oct_m
+  use sternheimer_oct_m
+  use string_oct_m
+  use system_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use utils_oct_m
+  use v_ks_oct_m
   
   implicit none
 
@@ -610,7 +610,7 @@ contains
 
   end function int2str
             
-end module kdotp_m
+end module kdotp_oct_m
 
 !! Local Variables:
 !! mode: f90

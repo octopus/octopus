@@ -19,34 +19,34 @@
 
 #include "global.h"
 
-module species_pot_m
-  use atom_m
-  use curvilinear_m
-  use double_grid_m
-  use geometry_m
-  use global_m
-  use grid_m
-  use io_m
-  use io_function_m
-  use loct_math_m
-  use math_m
-  use mesh_function_m
-  use mesh_m
-  use messages_m
-  use mpi_m
-  use parser_m
-  use periodic_copy_m
-  use poisson_m
-  use profiling_m
-  use ps_m
-  use root_solver_m
-  use simul_box_m
-  use species_m
-  use splines_m
-  use submesh_m
-  use unit_m
-  use unit_system_m
-  use varinfo_m
+module species_pot_oct_m
+  use atom_oct_m
+  use curvilinear_oct_m
+  use double_grid_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use io_oct_m
+  use io_function_oct_m
+  use loct_math_oct_m
+  use math_oct_m
+  use mesh_function_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use parser_oct_m
+  use periodic_copy_oct_m
+  use poisson_oct_m
+  use profiling_oct_m
+  use ps_oct_m
+  use root_solver_oct_m
+  use simul_box_oct_m
+  use species_oct_m
+  use splines_oct_m
+  use submesh_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -152,7 +152,7 @@ contains
 #endif
 
       if(in_points > 0) then
-        ! This probably should be done inside the mesh_function_m module.
+        ! This probably should be done inside the mesh_function_oct_m module.
  
         if (mesh%use_curvilinear) then
           do ip = 1, mesh%np
@@ -190,7 +190,7 @@ contains
 #endif
 
       if(in_points > 0) then
-        ! This probably should be done inside the mesh_function_m module.
+        ! This probably should be done inside the mesh_function_oct_m module.
 
         if (mesh%use_curvilinear) then
           do ip = 1, mesh%np
@@ -790,7 +790,7 @@ contains
 #include "real.F90"
 #include "species_pot_inc.F90"
 
-end module species_pot_m
+end module species_pot_oct_m
 
 !! Local Variables:
 !! mode: f90

@@ -1,14 +1,14 @@
 #include "global.h"
 
-module ssys_external_m
+module ssys_external_oct_m
 
-  use base_density_m
-  use base_potential_m
-  use global_m
-  use kinds_m
-  use messages_m
-  use profiling_m
-  use storage_m
+  use base_density_oct_m
+  use base_potential_oct_m
+  use global_oct_m
+  use kinds_oct_m
+  use messages_oct_m
+  use profiling_oct_m
+  use storage_oct_m
 
   implicit none
 
@@ -132,7 +132,7 @@ contains
     POP_SUB(ssys_external_get_potential_md)
   end subroutine ssys_external_get_potential_md
 
-end module ssys_external_m
+end module ssys_external_oct_m
 
 !! Local Variables:
 !! mode: f90

@@ -18,27 +18,27 @@
 !! $Id$
 #include "global.h"
 
-module species_m
-  use element_m
-  use global_m
-  use iihash_m
-  use io_m
-  use json_m
-  use loct_m
-  use loct_math_m
-  use loct_pointer_m
-  use logrid_m
-  use math_m
-  use messages_m
-  use mpi_m
-  use parser_m
-  use profiling_m
-  use ps_m
-  use space_m
-  use splines_m
-  use string_m
-  use unit_m
-  use unit_system_m
+module species_oct_m
+  use element_oct_m
+  use global_oct_m
+  use iihash_oct_m
+  use io_oct_m
+  use json_oct_m
+  use loct_oct_m
+  use loct_math_oct_m
+  use loct_pointer_oct_m
+  use logrid_oct_m
+  use math_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use ps_oct_m
+  use space_oct_m
+  use splines_oct_m
+  use string_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
 
   implicit none
 
@@ -1911,7 +1911,7 @@ contains
   end subroutine species_iwf_fix_qn
   ! ---------------------------------------------------------
 
-end module species_m
+end module species_oct_m
 
 !! Local Variables:
 !! mode: f90

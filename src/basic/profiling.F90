@@ -53,17 +53,17 @@
   !!incremented. It could be replaced by a linked list, but I don`t
   !!think this is necessary.
   !*/
-module profiling_m
-  use global_m
-  use io_m
-  use loct_m
-  use messages_m
-  use mpi_m
-  use parser_m
+module profiling_oct_m
+  use global_oct_m
+  use io_oct_m
+  use loct_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use parser_oct_m
   use sort_om
-  use string_m
-  use types_m
-  use varinfo_m
+  use string_oct_m
+  use types_oct_m
+  use varinfo_oct_m
 
   implicit none
   private
@@ -1024,7 +1024,7 @@ contains
 
   end subroutine profiling_memory_deallocate
 
-end module profiling_m
+end module profiling_oct_m
 
 !! Local Variables:
 !! mode: f90

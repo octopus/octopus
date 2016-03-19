@@ -1,15 +1,15 @@
 #include "global.h"
 
-module fio_geometry_m
+module fio_geometry_oct_m
 
-  use base_geometry_m
-  use geo_intrf_m
-  use geometry_m
-  use global_m
-  use json_m
-  use messages_m
-  use profiling_m
-  use space_m
+  use base_geometry_oct_m
+  use geo_intrf_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use json_oct_m
+  use messages_oct_m
+  use profiling_oct_m
+  use space_oct_m
 
   implicit none
 
@@ -53,5 +53,5 @@ contains
 
   end subroutine geometry__init__
 
-end module fio_geometry_m
+end module fio_geometry_oct_m
 

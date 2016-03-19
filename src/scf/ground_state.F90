@@ -19,30 +19,30 @@
 
 #include "global.h"
 
-module ground_state_m
-  use calc_mode_par_m
-  use energy_calc_m
-  use global_m
-  use grid_m
-  use hamiltonian_m
-  use lcao_m
-  use mesh_m
-  use messages_m
-  use mpi_m
-  use multicomm_m
-  use parser_m
-  use rdmft_m
-  use restart_m
-  use scf_m
-  use simul_box_m
-  use species_m
-  use states_m
-  use states_calc_m
-  use states_io_m
-  use states_restart_m
-  use system_m
-  use v_ks_m
-  use varinfo_m
+module ground_state_oct_m
+  use calc_mode_par_oct_m
+  use energy_calc_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use hamiltonian_oct_m
+  use lcao_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use multicomm_oct_m
+  use parser_oct_m
+  use rdmft_oct_m
+  use restart_oct_m
+  use scf_oct_m
+  use simul_box_oct_m
+  use species_oct_m
+  use states_oct_m
+  use states_calc_oct_m
+  use states_io_oct_m
+  use states_restart_oct_m
+  use system_oct_m
+  use v_ks_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -164,7 +164,7 @@ contains
     POP_SUB(ground_state_run)
   end subroutine ground_state_run
 
-end module ground_state_m
+end module ground_state_oct_m
 
 !! Local Variables:
 !! mode: f90

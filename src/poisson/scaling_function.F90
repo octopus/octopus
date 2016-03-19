@@ -20,10 +20,10 @@
 
 #include <global.h>
 
-module scaling_function_m
-  use blas_m
-  use global_m
-  use messages_m
+module scaling_function_oct_m
+  use blas_oct_m
+  use global_oct_m
+  use messages_oct_m
 
   implicit none
 
@@ -283,7 +283,7 @@ contains
   end subroutine scf_recursion_8
   !!***
   
-end module scaling_function_m
+end module scaling_function_oct_m
 
 !! Local Variables:
 !! mode: f90

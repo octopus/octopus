@@ -19,27 +19,27 @@
 
 #include "global.h"
 
-module unocc_m
-  use density_m
-  use eigensolver_m
-  use global_m
-  use output_m
-  use hamiltonian_m
-  use io_m
-  use lcao_m
-  use mesh_m
-  use messages_m
-  use mpi_m
-  use parser_m
-  use profiling_m
-  use restart_m
-  use simul_box_m
-  use states_m
-  use states_io_m
-  use states_restart_m
-  use system_m
-  use v_ks_m
-  use xc_m
+module unocc_oct_m
+  use density_oct_m
+  use eigensolver_oct_m
+  use global_oct_m
+  use output_oct_m
+  use hamiltonian_oct_m
+  use io_oct_m
+  use lcao_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use restart_oct_m
+  use simul_box_oct_m
+  use states_oct_m
+  use states_io_oct_m
+  use states_restart_oct_m
+  use system_oct_m
+  use v_ks_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -331,7 +331,7 @@ contains
   end subroutine unocc_run
 
 
-end module unocc_m
+end module unocc_oct_m
 
 !! Local Variables:
 !! mode: f90

@@ -20,36 +20,36 @@
 #include "global.h"
 
 program oct_local_multipoles
-  use atom_m
-  use basins_m
-  use box_m
-  use box_union_m
-  use calc_mode_par_m
-  use command_line_m
-  use geometry_m
-  use global_m
-  use hamiltonian_m
-  use io_m
-  use io_binary_m
-  use io_function_m
-  use kick_m
-  use loct_m
-  use local_write_m
-  use mesh_m
-  use mesh_function_m
-  use messages_m
-  use parser_m
-  use profiling_m
-  use restart_m
-  use space_m
-  use species_m
-  use species_pot_m
-  use simul_box_m
-  use system_m    
-  use unit_m
-  use unit_system_m
-  use utils_m
-  use varinfo_m
+  use atom_oct_m
+  use basins_oct_m
+  use box_oct_m
+  use box_union_oct_m
+  use calc_mode_par_oct_m
+  use command_line_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use hamiltonian_oct_m
+  use io_oct_m
+  use io_binary_oct_m
+  use io_function_oct_m
+  use kick_oct_m
+  use loct_oct_m
+  use local_write_oct_m
+  use mesh_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use restart_oct_m
+  use space_oct_m
+  use species_oct_m
+  use species_pot_oct_m
+  use simul_box_oct_m
+  use system_oct_m    
+  use unit_oct_m
+  use unit_system_oct_m
+  use utils_oct_m
+  use varinfo_oct_m
 
   implicit none
   

@@ -19,17 +19,17 @@
 
 #include "global.h"
 
-module symmetries_m
-  use geometry_m
-  use global_m
-  use messages_m
-  use mpi_m
-  use parser_m
-  use profiling_m
-  use species_m
-  use symm_op_m
+module symmetries_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use species_oct_m
+  use symm_op_oct_m
   use spglib_f08
-  use lalg_adv_m
+  use lalg_adv_oct_m
 
 
   implicit none
@@ -456,7 +456,7 @@ contains
 
   end function symmetries_identity_index
 
-end module symmetries_m
+end module symmetries_oct_m
 
 !! Local Variables:
 !! mode: f90

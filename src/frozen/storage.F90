@@ -1,20 +1,20 @@
 #include "global.h"
 
-module storage_m
+module storage_oct_m
 
 #if defined(HAVE_MPI)
-  use boundaries_m
+  use boundaries_oct_m
 #endif
-  use global_m
-  use grid_m
-  use kinds_m
-  use json_m
-  use mesh_m
-  use mesh_function_m
-  use messages_m
-  use multigrid_m
-  use profiling_m
-  use simulation_m
+  use global_oct_m
+  use grid_oct_m
+  use kinds_oct_m
+  use json_oct_m
+  use mesh_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use multigrid_oct_m
+  use profiling_oct_m
+  use simulation_oct_m
 
   implicit none
 
@@ -938,7 +938,7 @@ contains
     POP_SUB(storage_end)
   end subroutine storage_end
 
-end module storage_m
+end module storage_oct_m
 
 !! Local Variables:
 !! mode: f90

@@ -20,9 +20,9 @@
 #include "global.h"
 #include "io_binary.h"
 
-module io_csv_m
-  use global_m
-  use messages_m
+module io_csv_oct_m
+  use global_oct_m
+  use messages_oct_m
 
   implicit none 
 
@@ -59,7 +59,7 @@ contains
     POP_SUB(io_csv_get_info)
   end subroutine io_csv_get_info
 
-end module io_csv_m
+end module io_csv_oct_m
 
 !! Local Variables:
 !! mode: f90

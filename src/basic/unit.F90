@@ -35,8 +35,8 @@
 
 #include "global.h"
 
-module unit_m
-  use global_m
+module unit_oct_m
+  use global_oct_m
 
   implicit none
 
@@ -245,7 +245,7 @@ contains
 
   end function units_sqrt
 
-end module unit_m
+end module unit_oct_m
 
 !! Local Variables:
 !! mode: f90

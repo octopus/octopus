@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module types_m
+module types_oct_m
   
   implicit none
   
@@ -100,7 +100,7 @@ contains
 
   end function type_is_single
 
-end module types_m
+end module types_oct_m
 
 !! Local Variables:
 !! mode: f90

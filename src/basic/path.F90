@@ -19,12 +19,12 @@
 
 #include "global.h"
 
-module path_m
+module path_oct_m
 
-  use global_m
-  use loct_m
-  use messages_m
-  use profiling_m
+  use global_oct_m
+  use loct_oct_m
+  use messages_oct_m
+  use profiling_oct_m
 
 
   implicit none
@@ -170,7 +170,7 @@ contains
     return
   end subroutine path_getcwd
 
-end module path_m
+end module path_oct_m
 
 !! Local Variables:
 !! mode: f90

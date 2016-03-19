@@ -19,11 +19,11 @@
 
 #include "global.h"
 
-module lookup_m
-  use global_m
-  use loct_pointer_m
-  use messages_m
-  use profiling_m
+module lookup_oct_m
+  use global_oct_m
+  use loct_pointer_oct_m
+  use messages_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -133,7 +133,7 @@ contains
 
   end subroutine lookup_get_list
 
-end module lookup_m
+end module lookup_oct_m
 
 !! Local Variables:
 !! mode: f90

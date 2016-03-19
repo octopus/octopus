@@ -19,12 +19,12 @@
 
 #include "global.h"
 
-module matrix_m
-  use global_m
-  use messages_m
-  use mpi_m
-  use profiling_m
-  use types_m
+module matrix_oct_m
+  use global_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use profiling_oct_m
+  use types_oct_m
 
   implicit none
 
@@ -156,7 +156,7 @@ contains
 
 #include "matrix_inc.F90"
 
-end module matrix_m
+end module matrix_oct_m
 
 !! Local Variables:
 !! mode: f90

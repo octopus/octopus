@@ -19,18 +19,18 @@
 
 #include "global.h"
 
-module propagator_magnus_m
-  use density_m
-  use exponential_m
-  use grid_m
-  use global_m
-  use hamiltonian_m
-  use lasers_m
-  use messages_m
-  use potential_interpolation_m
-  use profiling_m
-  use propagator_base_m
-  use states_m
+module propagator_magnus_oct_m
+  use density_oct_m
+  use exponential_oct_m
+  use grid_oct_m
+  use global_oct_m
+  use hamiltonian_oct_m
+  use lasers_oct_m
+  use messages_oct_m
+  use potential_interpolation_oct_m
+  use profiling_oct_m
+  use propagator_base_oct_m
+  use states_oct_m
 
   implicit none
 
@@ -117,7 +117,7 @@ contains
     POP_SUB(propagator_dt.td_magnus)
   end subroutine td_magnus
 
-end module propagator_magnus_m
+end module propagator_magnus_oct_m
 
 !! Local Variables:
 !! mode: f90

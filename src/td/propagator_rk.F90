@@ -19,27 +19,27 @@
 
 #include "global.h"
 
-module propagator_rk_m
-  use batch_ops_m
-  use comm_m
-  use density_m
-  use forces_m
-  use grid_m
-  use geometry_m
-  use global_m
-  use hamiltonian_m
-  use ion_dynamics_m
-  use mesh_function_m
-  use messages_m
-  use opt_control_state_m
-  use potential_interpolation_m
-  use profiling_m
-  use propagator_base_m
-  use species_m
-  use sparskit_m
-  use states_m
-  use v_ks_m
-  use xc_m
+module propagator_rk_oct_m
+  use batch_ops_oct_m
+  use comm_oct_m
+  use density_oct_m
+  use forces_oct_m
+  use grid_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use hamiltonian_oct_m
+  use ion_dynamics_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use opt_control_state_oct_m
+  use potential_interpolation_oct_m
+  use profiling_oct_m
+  use propagator_base_oct_m
+  use species_oct_m
+  use sparskit_oct_m
+  use states_oct_m
+  use v_ks_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -1334,7 +1334,7 @@ contains
   end subroutine td_rk2opt
   ! ---------------------------------------------------------
 
-end module propagator_rk_m
+end module propagator_rk_oct_m
 
 !! Local Variables:
 !! mode: f90

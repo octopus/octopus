@@ -19,16 +19,16 @@
 
 #include "global.h"
 
-module distributed_m
-  use global_m
-  use io_m
-  use loct_m
-  use messages_m
-  use mpi_m
-  use multicomm_m
-  use parser_m
-  use profiling_m
-  use varinfo_m
+module distributed_oct_m
+  use global_oct_m
+  use io_oct_m
+  use loct_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use multicomm_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -234,7 +234,7 @@ contains
     POP_SUB(distributed_allgather)
   end subroutine distributed_allgather
 
-end module distributed_m
+end module distributed_oct_m
 
 
 !! Local Variables:

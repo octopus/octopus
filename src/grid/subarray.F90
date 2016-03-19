@@ -19,17 +19,17 @@
 
 #include "global.h"
 
-module subarray_m
-  use batch_m
+module subarray_oct_m
+  use batch_oct_m
 #ifdef HAVE_OPENCL
   use cl
 #endif
-  use global_m
-  use math_m
-  use messages_m
-  use opencl_m
-  use types_m
-  use profiling_m
+  use global_oct_m
+  use math_oct_m
+  use messages_oct_m
+  use opencl_oct_m
+  use types_oct_m
+  use profiling_oct_m
 
 
   implicit none
@@ -180,7 +180,7 @@ contains
 #include "complex_single.F90"
 #include "subarray_inc.F90"
 
-end module subarray_m
+end module subarray_oct_m
 
 
 !! Local Variables:

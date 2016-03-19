@@ -19,72 +19,72 @@
 
 #include "global.h"
 
-module output_m
-  use base_density_m
-  use base_hamiltonian_m
-  use base_potential_m
-  use base_states_m
-  use basins_m
-  use batch_m
-  use cube_function_m
-  use cube_m
-  use current_m
-  use density_m
-  use derivatives_m
-  use elf_m
+module output_oct_m
+  use base_density_oct_m
+  use base_hamiltonian_oct_m
+  use base_potential_oct_m
+  use base_states_oct_m
+  use basins_oct_m
+  use batch_oct_m
+  use cube_function_oct_m
+  use cube_oct_m
+  use current_oct_m
+  use density_oct_m
+  use derivatives_oct_m
+  use elf_oct_m
 #if defined(HAVE_ETSF_IO)
   use etsf_io
   use etsf_io_tools
 #endif
-  use fft_m
-  use fourier_shell_m
-  use fourier_space_m
-  use geometry_m
-  use global_m
-  use grid_m
-  use hamiltonian_m
-  use io_m
-  use io_function_m
-  use kick_m
-  use kpoints_m
-  use lasers_m
-  use linear_response_m
-  use loct_m
-  use loct_math_m
-  use magnetic_m
-  use mesh_m
-  use mesh_batch_m
-  use mesh_function_m
-  use messages_m
-  use modelmb_density_matrix_m
-  use modelmb_exchange_syms_m
-  use mpi_m
-  use output_fio_m
-  use output_me_m
-  use parser_m
-  use par_vec_m
-  use periodic_copy_m
-  use profiling_m
-  use simul_box_m
-  use smear_m
-  use string_m
-  use species_m
-  use states_m
-  use states_dim_m
-  use states_io_m
-  use symm_op_m
-  use symmetries_m
-  use unit_m
-  use unit_system_m
-  use utils_m
-  use varinfo_m
-  use v_ks_m
-  use vtk_m
+  use fft_oct_m
+  use fourier_shell_oct_m
+  use fourier_space_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use hamiltonian_oct_m
+  use io_oct_m
+  use io_function_oct_m
+  use kick_oct_m
+  use kpoints_oct_m
+  use lasers_oct_m
+  use linear_response_oct_m
+  use loct_oct_m
+  use loct_math_oct_m
+  use magnetic_oct_m
+  use mesh_oct_m
+  use mesh_batch_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use modelmb_density_matrix_oct_m
+  use modelmb_exchange_syms_oct_m
+  use mpi_oct_m
+  use output_fio_oct_m
+  use output_me_oct_m
+  use parser_oct_m
+  use par_vec_oct_m
+  use periodic_copy_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
+  use smear_oct_m
+  use string_oct_m
+  use species_oct_m
+  use states_oct_m
+  use states_dim_oct_m
+  use states_io_oct_m
+  use symm_op_oct_m
+  use symmetries_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use utils_oct_m
+  use varinfo_oct_m
+  use v_ks_oct_m
+  use vtk_oct_m
 #if defined(HAVE_BERKELEYGW)
   use wfn_rho_vxc_io_m
 #endif
-  use young_m
-  use xc_m
+  use young_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -1329,7 +1329,7 @@ contains
 #endif
 #include "output_modelmb_inc.F90"
 
-end module output_m
+end module output_oct_m
 
 !! Local Variables:
 !! mode: f90

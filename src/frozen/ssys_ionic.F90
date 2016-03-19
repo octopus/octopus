@@ -1,16 +1,16 @@
 #include "global.h"
 
-module ssys_ionic_m
+module ssys_ionic_oct_m
 
-  use base_geometry_m
-  use base_system_m
-  use base_term_m
-  use atom_m
-  use global_m
-  use kinds_m
-  use messages_m
-  use profiling_m
-  use species_m
+  use base_geometry_oct_m
+  use base_system_oct_m
+  use base_term_oct_m
+  use atom_oct_m
+  use global_oct_m
+  use kinds_oct_m
+  use messages_oct_m
+  use profiling_oct_m
+  use species_oct_m
 
   implicit none
 
@@ -270,7 +270,7 @@ contains
     POP_SUB(ssys_ionic_get_info)
   end subroutine ssys_ionic_get_info
 
-end module ssys_ionic_m
+end module ssys_ionic_oct_m
 
 !! Local Variables:
 !! mode: f90

@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module gauss_legendre_m
+module gauss_legendre_oct_m
 
   implicit none
 
@@ -149,7 +149,7 @@ contains
 
   end subroutine gauss_legendre_points
 
-end module gauss_legendre_m
+end module gauss_legendre_oct_m
 
 !! Local Variables:
 !! mode: f90

@@ -19,10 +19,10 @@
 
 #include "global.h"
 
-module hypercube_m
-  use global_m
-  use messages_m
-  use profiling_m
+module hypercube_oct_m
+  use global_oct_m
+  use messages_oct_m
+  use profiling_oct_m
   
   implicit none
 
@@ -276,7 +276,7 @@ contains
     number = sum(this%boxdim)
   end function hypercube_number_total_points
   
-end module hypercube_m
+end module hypercube_oct_m
 
 !! Local Variables:
 !! mode: f90

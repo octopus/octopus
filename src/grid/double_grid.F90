@@ -19,24 +19,24 @@
 
 #include "global.h"
 
-module double_grid_m
+module double_grid_oct_m
 
-  use curvilinear_m
-  use geometry_m
-  use global_m
-  use math_m
-  use mesh_m
-  use messages_m
-  use mesh_function_m
-  use loct_m
-  use parser_m
-  use par_vec_m
-  use profiling_m
-  use simul_box_m
-  use species_m
-  use splines_m
-  use submesh_m
-  use ps_m
+  use curvilinear_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use math_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use mesh_function_oct_m
+  use loct_oct_m
+  use parser_oct_m
+  use par_vec_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
+  use species_oct_m
+  use splines_oct_m
+  use submesh_oct_m
+  use ps_oct_m
 
 #ifdef HAVE_OPENMP
   use omp_lib
@@ -299,7 +299,7 @@ contains
 
 #include "double_grid_apply_inc.F90"
 
-end module double_grid_m
+end module double_grid_oct_m
 
 !! Local Variables:
 !! mode: f90

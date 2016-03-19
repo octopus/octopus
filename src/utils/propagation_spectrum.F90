@@ -20,17 +20,17 @@
 #include "global.h"
 
 program propagation_spectrum
-  use command_line_m
-  use global_m
-  use io_m
-  use kick_m
-  use loct_m
-  use messages_m
-  use parser_m
-  use profiling_m
-  use spectrum_m
-  use unit_m
-  use unit_system_m
+  use command_line_oct_m
+  use global_oct_m
+  use io_oct_m
+  use kick_oct_m
+  use loct_oct_m
+  use messages_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use spectrum_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
 
   implicit none
 

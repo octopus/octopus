@@ -19,13 +19,13 @@
 
 #include "global.h"
  
-module partition_m
-  use global_m
-  use io_binary_m
-  use messages_m
-  use mpi_m
-  use mpi_debug_m
-  use profiling_m
+module partition_oct_m
+  use global_oct_m
+  use io_binary_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use mpi_debug_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -670,7 +670,7 @@ contains
 
     POP_SUB(partition_get_local)
   end subroutine partition_get_local
-end module partition_m
+end module partition_oct_m
 
 !! Local Variables:
 !! mode: f90

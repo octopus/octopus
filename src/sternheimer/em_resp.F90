@@ -19,44 +19,44 @@
 
 #include "global.h"
 
-module em_resp_m
-  use born_charges_m
-  use em_resp_calc_m
-  use forces_m
-  use geometry_m
-  use global_m
-  use grid_m
-  use hamiltonian_m
-  use output_m
-  use io_m
-  use kdotp_m
-  use kdotp_calc_m
-  use lalg_basic_m
-  use linear_response_m
-  use loct_m
-  use mesh_m
-  use mesh_function_m
-  use messages_m
-  use mix_m
-  use mpi_m
-  use parser_m
-  use pert_m
-  use profiling_m
-  use restart_m
-  use simul_box_m
-  use smear_m
+module em_resp_oct_m
+  use born_charges_oct_m
+  use em_resp_calc_oct_m
+  use forces_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use hamiltonian_oct_m
+  use output_oct_m
+  use io_oct_m
+  use kdotp_oct_m
+  use kdotp_calc_oct_m
+  use lalg_basic_oct_m
+  use linear_response_oct_m
+  use loct_oct_m
+  use mesh_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use mix_oct_m
+  use mpi_oct_m
+  use parser_oct_m
+  use pert_oct_m
+  use profiling_oct_m
+  use restart_oct_m
+  use simul_box_oct_m
+  use smear_oct_m
   use sort_om
-  use species_m
-  use states_m
-  use states_dim_m
-  use states_restart_m
-  use sternheimer_m
-  use string_m
-  use system_m
-  use unit_m
-  use unit_system_m
-  use utils_m
-  use v_ks_m
+  use species_oct_m
+  use states_oct_m
+  use states_dim_oct_m
+  use states_restart_oct_m
+  use sternheimer_oct_m
+  use string_oct_m
+  use system_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use utils_oct_m
+  use v_ks_oct_m
   
   implicit none
 
@@ -1621,7 +1621,7 @@ contains
 
   end subroutine out_hyperpolarizability
 
-end module em_resp_m
+end module em_resp_oct_m
 
 !! Local Variables:
 !! mode: f90

@@ -1,17 +1,17 @@
 #include "global.h"
 
-module frozen_handle_m
+module frozen_handle_oct_m
 
-  use base_handle_m
-  use base_model_m
-  use fio_handle_m
-  use frozen_model_m
-  use global_m
-  use grid_m
-  use json_m
-  use messages_m
-  use mpi_m
-  use profiling_m
+  use base_handle_oct_m
+  use base_model_oct_m
+  use fio_handle_oct_m
+  use frozen_model_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use json_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -171,7 +171,7 @@ contains
     POP_SUB(frozen_handle_end)
   end subroutine frozen_handle_end
 
-end module frozen_handle_m
+end module frozen_handle_oct_m
 
 !! Local Variables:
 !! mode: f90

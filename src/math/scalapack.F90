@@ -36,7 +36,7 @@
 !!  "of the global array".
 ! -----------------------------------------------------------------------
 
-module scalapack_m
+module scalapack_oct_m
   implicit none
 #ifdef HAVE_SCALAPACK
 
@@ -428,7 +428,7 @@ module scalapack_m
   end interface scalapack_potrf
 
 #endif
-end module scalapack_m
+end module scalapack_oct_m
 
 !! local Variables:
 !! mode: f90

@@ -19,42 +19,42 @@
 
 #include "global.h"
 
-module propagation_m
-  use batch_m
-  use batch_ops_m
-  use controlfunction_m
-  use density_m
-  use energy_calc_m
-  use epot_m
-  use excited_states_m
-  use forces_m
-  use gauge_field_m
-  use geometry_m
-  use global_m
-  use grid_m
-  use hamiltonian_m
-  use io_m
-  use ion_dynamics_m 
-  use lasers_m
-  use loct_m
-  use mesh_m
-  use mesh_function_m
-  use messages_m
-  use mpi_m
-  use opt_control_state_m
-  use propagator_m
-  use propagator_base_m
-  use profiling_m
-  use restart_m
-  use species_m
-  use states_m
-  use states_restart_m
-  use system_m
-  use target_m
-  use td_m
-  use td_write_m
-  use v_ks_m
-  use varinfo_m
+module propagation_oct_m
+  use batch_oct_m
+  use batch_ops_oct_m
+  use controlfunction_oct_m
+  use density_oct_m
+  use energy_calc_oct_m
+  use epot_oct_m
+  use excited_states_oct_m
+  use forces_oct_m
+  use gauge_field_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use hamiltonian_oct_m
+  use io_oct_m
+  use ion_dynamics_oct_m 
+  use lasers_oct_m
+  use loct_oct_m
+  use mesh_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use opt_control_state_oct_m
+  use propagator_oct_m
+  use propagator_base_oct_m
+  use profiling_oct_m
+  use restart_oct_m
+  use species_oct_m
+  use states_oct_m
+  use states_restart_oct_m
+  use system_oct_m
+  use target_oct_m
+  use td_oct_m
+  use td_write_oct_m
+  use v_ks_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -1237,7 +1237,7 @@ contains
   ! ---------------------------------------------------------
 
 
-end module propagation_m
+end module propagation_oct_m
 
 !! Local Variables:
 !! mode: f90

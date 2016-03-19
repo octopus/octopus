@@ -20,7 +20,7 @@
 #define PAIR_FRST_TYPE_NAME DECORATE(PAIR_FRST_TEMPLATE_NAME,t)
 #endif
 #if !defined(PAIR_FRST_TYPE_MODULE_NAME)
-#define PAIR_FRST_TYPE_MODULE_NAME DECORATE(PAIR_FRST_TEMPLATE_NAME,m)
+#define PAIR_FRST_TYPE_MODULE_NAME DECORATE(PAIR_FRST_TEMPLATE_NAME, oct_m)
 #endif
 #else
 #if !defined(PAIR_FRST_TYPE_NAME)
@@ -33,7 +33,7 @@
 #define PAIR_SCND_TYPE_NAME DECORATE(PAIR_SCND_TEMPLATE_NAME,t)
 #endif
 #if !defined(PAIR_SCND_TYPE_MODULE_NAME)
-#define PAIR_SCND_TYPE_MODULE_NAME DECORATE(PAIR_SCND_TEMPLATE_NAME,m)
+#define PAIR_SCND_TYPE_MODULE_NAME DECORATE(PAIR_SCND_TEMPLATE_NAME, oct_m)
 #endif
 #else
 #if !defined(PAIR_SCND_TYPE_NAME)
@@ -75,9 +75,9 @@
 
 module TEMPLATE(pair_m)
 
-  use global_m
-  use messages_m
-  use profiling_m
+  use global_oct_m
+  use messages_oct_m
+  use profiling_oct_m
 
   use PAIR_FRST_TYPE_MODULE_NAME
 

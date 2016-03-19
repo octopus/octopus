@@ -19,16 +19,16 @@
 
 #include "global.h"
 
-module potential_interpolation_m
-  use grid_m
-  use global_m
-  use lalg_basic_m
-  use loct_pointer_m
-  use math_m
-  use mesh_function_m
-  use messages_m
-  use profiling_m
-  use restart_m
+module potential_interpolation_oct_m
+  use grid_oct_m
+  use global_oct_m
+  use lalg_basic_oct_m
+  use loct_pointer_oct_m
+  use math_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use profiling_oct_m
+  use restart_oct_m
 
   implicit none
 
@@ -359,7 +359,7 @@ contains
   end subroutine potential_interpolation_load
   ! ---------------------------------------------------------
 
-end module potential_interpolation_m
+end module potential_interpolation_oct_m
   
 !! Local Variables:
 !! mode: f90

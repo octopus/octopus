@@ -21,15 +21,15 @@
 
 !>  general module for modelmb particles (e.g. 4 electrons in 1D equiv to
 !!  1 in 4D). Also calculate different densities on request.
-module modelmb_particles_m
-  use global_m
-  use grid_m
-  use hypercube_m
-  use loct_pointer_m
-  use parser_m
-  use mesh_m
-  use messages_m
-  use profiling_m
+module modelmb_particles_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use hypercube_oct_m
+  use loct_pointer_oct_m
+  use parser_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -349,7 +349,7 @@ contains
     
   end subroutine modelmb_copy_masses
   
-end module modelmb_particles_m
+end module modelmb_particles_oct_m
 
 !! Local Variables:
 !! mode: f90

@@ -18,13 +18,13 @@
 #define HASH_KEY_TYPE_NAME DECORATE(HASH_KEY_TEMPLATE_NAME,t)
 #endif
 #if !defined(HASH_KEY_TYPE_MODULE_NAME)
-#define HASH_KEY_TYPE_MODULE_NAME DECORATE(HASH_KEY_TEMPLATE_NAME,m)
+#define HASH_KEY_TYPE_MODULE_NAME DECORATE(HASH_KEY_TEMPLATE_NAME,oct_m)
 #endif
 #if !defined(HASH_KEY_FUNCTION_NAME)
 #define HASH_KEY_FUNCTION_NAME DECORATE(HASH_KEY_TEMPLATE_NAME,hash)
 #endif
 #if !defined(HASH_KEY_FUNCTION_MODULE_NAME)
-#define HASH_KEY_FUNCTION_MODULE_NAME DECORATE(HASH_KEY_TEMPLATE_NAME,m)
+#define HASH_KEY_FUNCTION_MODULE_NAME DECORATE(HASH_KEY_TEMPLATE_NAME,oct_m)
 #endif
 #else
 #error "'HASH_KEY_TEMPLATE_NAME' must be defined"
@@ -35,7 +35,7 @@
 #define HASH_VAL_TYPE_NAME DECORATE(HASH_VAL_TEMPLATE_NAME,t)
 #endif
 #if !defined(HASH_VAL_TYPE_MODULE_NAME)
-#define HASH_VAL_TYPE_MODULE_NAME DECORATE(HASH_VAL_TEMPLATE_NAME,m)
+#define HASH_VAL_TYPE_MODULE_NAME DECORATE(HASH_VAL_TEMPLATE_NAME,oct_m)
 #endif
 #else
 #error "'HASH_VAL_TEMPLATE_NAME' must be defined"
@@ -113,9 +113,9 @@
 
 module TEMPLATE(hash_m)
 
-  use global_m
-  use messages_m
-  use profiling_m
+  use global_oct_m
+  use messages_oct_m
+  use profiling_oct_m
 
 #endif
 #if defined(HASH_INCLUDE_PREFIX) || defined(HASH_INCLUDE_MODULE)
@@ -135,7 +135,7 @@ module TEMPLATE(hash_m)
 #define TEMPLATE_PREFIX IHASH_TMPL_NAME
 #include "template.h"
 
-  use kinds_m
+  use kinds_oct_m
 
   use HASH_KEY_TYPE_MODULE_NAME
 

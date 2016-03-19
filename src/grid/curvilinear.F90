@@ -19,21 +19,21 @@
 
 #include "global.h"
 
-module curvilinear_m
-  use curv_briggs_m
-  use curv_gygi_m
-  use curv_modine_m
-  use geometry_m
-  use global_m
-  use lalg_adv_m
-  use parser_m
-  use math_m
-  use messages_m
-  use profiling_m
-  use simul_box_m
-  use unit_m
-  use unit_system_m
-  use varinfo_m
+module curvilinear_oct_m
+  use curv_briggs_oct_m
+  use curv_gygi_oct_m
+  use curv_modine_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use lalg_adv_oct_m
+  use parser_oct_m
+  use math_oct_m
+  use messages_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -280,7 +280,7 @@ contains
 
   ! ---------------------------------------------------------
 
-end module curvilinear_m
+end module curvilinear_oct_m
 
 !! Local Variables:
 !! mode: f90

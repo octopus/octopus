@@ -19,21 +19,21 @@
 
 #include "global.h"
 
-module lasers_m
-  use derivatives_m
-  use global_m
-  use mpi_m
-  use grid_m
-  use io_m
-  use parser_m
-  use mesh_m
-  use messages_m
-  use profiling_m
-  use simul_box_m
-  use states_dim_m
-  use unit_m
-  use unit_system_m
-  use tdfunction_m
+module lasers_oct_m
+  use derivatives_oct_m
+  use global_oct_m
+  use mpi_oct_m
+  use grid_oct_m
+  use io_oct_m
+  use parser_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
+  use states_dim_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use tdfunction_oct_m
 
   implicit none
 
@@ -713,7 +713,7 @@ contains
 #include "complex.F90"
 #include "lasers_inc.F90"
 
-end module lasers_m
+end module lasers_oct_m
 
 !! Local Variables:
 !! mode: f90

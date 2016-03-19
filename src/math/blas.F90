@@ -23,7 +23,7 @@
 !> This module contains interfaces for BLAS routines
 !! You should not use these routines directly. Please use the lalg_XXXX
 ! -----------------------------------------------------------------------
-module blas_m
+module blas_oct_m
 
   implicit none
 
@@ -676,7 +676,7 @@ module blas_m
     end subroutine ztrsm
   end interface blas_trsm
 
-end module blas_m
+end module blas_oct_m
 
 
 !! Local Variables:

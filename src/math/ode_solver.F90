@@ -19,10 +19,10 @@
 
 #include "global.h"
 
-module ode_solver_m
-  use global_m
-  use messages_m
-  use profiling_m
+module ode_solver_oct_m
+  use global_oct_m
+  use messages_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -43,7 +43,7 @@ module ode_solver_m
     ODE_MAXVAL =  ODE_PD89
 
   type ode_solver_t
-    integer :: solver_type     !< what solver to use (see ODE_* variables above)_m
+    integer :: solver_type     !< what solver to use (see ODE_* variables above)_oct_m
     integer :: nsteps          !< how many steps to use
     integer :: nsize           !< how many odes to solve simultaneously
     integer :: vsize           !< vector size of ode method (used internally)
@@ -642,7 +642,7 @@ end subroutine ode_solver_end
 #include "real.F90"
 #include "ode_solver_inc.F90"
 
-end module ode_solver_m
+end module ode_solver_oct_m
 
 !! Local Variables:
 !! mode: f90

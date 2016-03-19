@@ -19,30 +19,30 @@
 
 #include "global.h"
 
-module mesh_init_m
-  use checksum_interface_m
-  use cube_m
-  use curvilinear_m
-  use geometry_m
-  use global_m
-  use hypercube_m
-  use index_m
-  use io_m
-  use loct_m
-  use math_m
-  use mesh_m
-  use mesh_cube_map_m
-  use mesh_partition_m
-  use messages_m
-  use mpi_m
-  use multicomm_m
-  use par_vec_m
-  use parser_m
-  use partition_m
-  use profiling_m
-  use simul_box_m
-  use stencil_m
-  use subarray_m
+module mesh_init_oct_m
+  use checksum_interface_oct_m
+  use cube_oct_m
+  use curvilinear_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use hypercube_oct_m
+  use index_oct_m
+  use io_oct_m
+  use loct_oct_m
+  use math_oct_m
+  use mesh_oct_m
+  use mesh_cube_map_oct_m
+  use mesh_partition_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use multicomm_oct_m
+  use par_vec_oct_m
+  use parser_oct_m
+  use partition_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
+  use stencil_oct_m
+  use subarray_oct_m
 
   implicit none
   
@@ -1227,7 +1227,7 @@ contains
 
 end subroutine mesh_init_stage_3
 
-end module mesh_init_m
+end module mesh_init_oct_m
 
 !! Local Variables:
 !! mode: f90

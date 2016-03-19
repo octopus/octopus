@@ -19,12 +19,12 @@
 
 #include "global.h"
 
-module space_m
+module space_oct_m
 
-  use global_m
-  use json_m
-  use messages_m
-  use parser_m
+  use global_oct_m
+  use json_oct_m
+  use messages_oct_m
+  use parser_oct_m
 
   implicit none
 
@@ -151,7 +151,7 @@ contains
     this%dim=0
   end subroutine space_end
 
-end module space_m
+end module space_oct_m
 
 !! Local Variables:
 !! mode: f90

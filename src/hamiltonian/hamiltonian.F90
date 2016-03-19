@@ -19,61 +19,61 @@
 
 #include "global.h"
 
-module hamiltonian_m
-  use base_hamiltonian_m
-  use base_potential_m
-  use batch_m
-  use batch_ops_m
-  use blas_m
-  use boundaries_m
+module hamiltonian_oct_m
+  use base_hamiltonian_oct_m
+  use base_potential_oct_m
+  use batch_oct_m
+  use batch_ops_oct_m
+  use blas_oct_m
+  use boundaries_oct_m
 #ifdef HAVE_OPENCL
   use cl
 #endif  
-  use cmplxscl_m
-  use comm_m
-  use derivatives_m
-  use energy_m
-  use hamiltonian_base_m
-  use epot_m
-  use gauge_field_m
-  use geometry_m
-  use global_m
-  use grid_m
-  use hardware_m
-  use io_m
-  use io_function_m
-  use kpoints_m
-  use lalg_basic_m
-  use lasers_m
-  use math_m
-  use mesh_m
-  use mesh_function_m
-  use messages_m
-  use mpi_m
-  use mpi_lib_m
-  use opencl_m
-  use octcl_kernel_m
-  use opencl_m
-  use parser_m
-  use par_vec_m
-  use poisson_m
-  use profiling_m
-  use projector_m
-  use pcm_m
-  use restart_m
-  use scdm_m
-  use simul_box_m
-  use smear_m
-  use species_m
-  use states_m
-  use states_dim_m
-  use states_parallel_m
-  use types_m
-  use unit_m
-  use unit_system_m
-  use varinfo_m
-  use xc_m
-  use xc_functl_m
+  use cmplxscl_oct_m
+  use comm_oct_m
+  use derivatives_oct_m
+  use energy_oct_m
+  use hamiltonian_base_oct_m
+  use epot_oct_m
+  use gauge_field_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use hardware_oct_m
+  use io_oct_m
+  use io_function_oct_m
+  use kpoints_oct_m
+  use lalg_basic_oct_m
+  use lasers_oct_m
+  use math_oct_m
+  use mesh_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use mpi_lib_oct_m
+  use opencl_oct_m
+  use octcl_kernel_oct_m
+  use opencl_oct_m
+  use parser_oct_m
+  use par_vec_oct_m
+  use poisson_oct_m
+  use profiling_oct_m
+  use projector_oct_m
+  use pcm_oct_m
+  use restart_oct_m
+  use scdm_oct_m
+  use simul_box_oct_m
+  use smear_oct_m
+  use species_oct_m
+  use states_oct_m
+  use states_dim_oct_m
+  use states_parallel_oct_m
+  use types_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use varinfo_oct_m
+  use xc_oct_m
+  use xc_functl_oct_m
   use XC_F90(lib_m)
 
   implicit none
@@ -1439,7 +1439,7 @@ contains
 #include "complex.F90"
 #include "hamiltonian_inc.F90"
 
-end module hamiltonian_m
+end module hamiltonian_oct_m
 
 !! Local Variables:
 !! mode: f90

@@ -19,11 +19,11 @@
 
 #include "global.h"
 
-module pulpo_m
-  use global_m
-  use io_m
-  use loct_m
-  use messages_m
+module pulpo_oct_m
+  use global_oct_m
+  use io_oct_m
+  use loct_oct_m
+  use messages_oct_m
 
   implicit none
 
@@ -52,7 +52,7 @@ contains
 
   end subroutine pulpo_print
 
-end module pulpo_m
+end module pulpo_oct_m
 
 !! Local Variables:
 !! mode: f90

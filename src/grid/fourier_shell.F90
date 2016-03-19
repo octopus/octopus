@@ -19,15 +19,15 @@
 
 #include "global.h"
 
-module fourier_shell_m
-  use cube_function_m
-  use cube_m
-  use fft_m
-  use global_m
-  use mesh_m
-  use messages_m
-  use profiling_m
-  use simul_box_m
+module fourier_shell_oct_m
+  use cube_function_oct_m
+  use cube_oct_m
+  use fft_oct_m
+  use global_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
   use sort_om
   
   implicit none
@@ -159,7 +159,7 @@ contains
     POP_SUB(fourier_shell_end)
   end subroutine fourier_shell_end
 
-end module fourier_shell_m
+end module fourier_shell_oct_m
 
 !! Local Variables:
 !! mode: f90

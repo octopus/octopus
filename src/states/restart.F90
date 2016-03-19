@@ -20,23 +20,23 @@
 
 #include "global.h"
 
-module restart_m
-  use batch_m
-  use global_m
-  use index_m
-  use io_m
-  use io_binary_m
-  use io_function_m
-  use loct_m
-  use mesh_m
-  use mesh_batch_m
-  use messages_m
-  use mpi_m
-  use parser_m
-  use par_vec_m
-  use profiling_m
-  use simul_box_m
-  use unit_system_m
+module restart_oct_m
+  use batch_oct_m
+  use global_oct_m
+  use index_oct_m
+  use io_oct_m
+  use io_binary_oct_m
+  use io_function_oct_m
+  use loct_oct_m
+  use mesh_oct_m
+  use mesh_batch_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use parser_oct_m
+  use par_vec_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
+  use unit_system_oct_m
 
   implicit none
 
@@ -895,7 +895,7 @@ contains
 #include "complex.F90"
 #include "restart_inc.F90"
 
-end module restart_m
+end module restart_oct_m
 
 
 !! Local Variables:

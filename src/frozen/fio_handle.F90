@@ -1,17 +1,17 @@
 #include "global.h"
 
-module fio_handle_m
+module fio_handle_oct_m
 
-  use base_handle_m
-  use base_model_m
-  use fio_model_m
-  use fio_simulation_m
-  use global_m
-  use json_m
-  use messages_m
-  use mpi_m
-  use profiling_m
-  use simulation_m
+  use base_handle_oct_m
+  use base_model_oct_m
+  use fio_model_oct_m
+  use fio_simulation_oct_m
+  use global_oct_m
+  use json_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use profiling_oct_m
+  use simulation_oct_m
 
   implicit none
 
@@ -208,7 +208,7 @@ contains
     POP_SUB(fio_handle_end)
   end subroutine fio_handle_end
 
-end module fio_handle_m
+end module fio_handle_oct_m
 
 !! Local Variables:
 !! mode: f90

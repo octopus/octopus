@@ -19,16 +19,16 @@
 
 #include "global.h"
 
-module filter_m  
-  use fft_m
-  use global_m
-  use io_m 
-  use loct_m
-  use parser_m
-  use messages_m
-  use profiling_m
-  use string_m
-  use tdfunction_m
+module filter_oct_m  
+  use fft_oct_m
+  use global_oct_m
+  use io_oct_m 
+  use loct_oct_m
+  use parser_oct_m
+  use messages_oct_m
+  use profiling_oct_m
+  use string_oct_m
+  use tdfunction_oct_m
 
   implicit none
 
@@ -307,7 +307,7 @@ contains
   ! ---------------------------------------------------------
 
 
-end module filter_m
+end module filter_oct_m
 
 !! Local Variables:
 !! mode: f90

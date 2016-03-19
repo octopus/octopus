@@ -19,24 +19,24 @@
 
 #include "global.h"
 
-module preconditioners_m
-  use batch_m
-  use batch_ops_m
-  use derivatives_m
-  use global_m
-  use grid_m
-  use hamiltonian_m
-  use lalg_basic_m
-  use parser_m
-  use mesh_m
-  use messages_m
-  use multigrid_m
-  use nl_operator_m
-  use poisson_m
-  use profiling_m
-  use stencil_star_m
-  use simul_box_m
-  use varinfo_m
+module preconditioners_oct_m
+  use batch_oct_m
+  use batch_ops_oct_m
+  use derivatives_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use hamiltonian_oct_m
+  use lalg_basic_oct_m
+  use parser_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use multigrid_oct_m
+  use nl_operator_oct_m
+  use poisson_oct_m
+  use profiling_oct_m
+  use stencil_star_oct_m
+  use simul_box_oct_m
+  use varinfo_oct_m
 
   implicit none
   private
@@ -209,7 +209,7 @@ contains
 #include "real.F90"
 #include "preconditioners_inc.F90"
 
-end module preconditioners_m
+end module preconditioners_oct_m
 
 !! Local Variables:
 !! mode: f90

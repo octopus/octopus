@@ -19,10 +19,10 @@
 
 #include "global.h"
 
-module propagator_base_m
-  use exponential_m
-  use potential_interpolation_m
-  use sparskit_m
+module propagator_base_oct_m
+  use exponential_oct_m
+  use potential_interpolation_oct_m
+  use sparskit_oct_m
   
   implicit none
 
@@ -57,7 +57,7 @@ module propagator_base_m
     FLOAT               :: scf_threshold
   end type propagator_t
 
-end module propagator_base_m
+end module propagator_base_oct_m
 
 
 !! Local Variables:

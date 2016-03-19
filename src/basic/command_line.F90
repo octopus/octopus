@@ -34,7 +34,7 @@
 !! can be managed in this "standard" way.
 !
 ! ---------------------------------------------------------
-module command_line_m
+module command_line_oct_m
 
   !< ---------------------------------------------------------
   !! The compilation depends on several macros defined at configure time (the m4 code that
@@ -293,7 +293,7 @@ contains
 #endif
 
 
-end module command_line_m
+end module command_line_oct_m
 
 
 

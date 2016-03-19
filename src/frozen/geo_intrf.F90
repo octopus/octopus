@@ -1,15 +1,15 @@
 #include "global.h"
 
-module geo_intrf_m
+module geo_intrf_oct_m
 
-  use atom_m
-  use geometry_m
-  use global_m
-  use json_m
-  use messages_m
-  use profiling_m
-  use space_m
-  use species_m
+  use atom_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use json_oct_m
+  use messages_oct_m
+  use profiling_oct_m
+  use space_oct_m
+  use species_oct_m
 
   implicit none
 
@@ -121,9 +121,9 @@ contains
 
     interface
       subroutine geo_init(this, space, config)
-        use geometry_m
-        use json_m
-        use space_m
+        use geometry_oct_m
+        use json_oct_m
+        use space_oct_m
         type(geometry_t),    intent(out) :: this
         type(space_t),       intent(in)  :: space
         type(json_object_t), intent(in)  :: config
@@ -413,7 +413,7 @@ contains
     POP_SUB(geo_intrf_iterator_end)
   end subroutine geo_intrf_iterator_end
 
-end module geo_intrf_m
+end module geo_intrf_oct_m
 
 !! Local Variables:
 !! mode: f90

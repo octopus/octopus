@@ -19,13 +19,13 @@
 
 #include "global.h"
 
-module memory_m
-  use global_m
-  use mesh_m
-  use messages_m
-  use states_m
-  use system_m
-  use unit_system_m
+module memory_oct_m
+  use global_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use states_oct_m
+  use system_oct_m
+  use unit_system_oct_m
   
   implicit none
 
@@ -83,7 +83,7 @@ contains
 
   end subroutine memory_run
 
-end module memory_m
+end module memory_oct_m
 
 !! Local Variables:
 !! mode: f90

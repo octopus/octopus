@@ -20,21 +20,21 @@
 #include "global.h"
 
 program dielectric_function
-  use batch_m
-  use command_line_m
-  use geometry_m
-  use global_m
-  use io_m
-  use lalg_adv_m
-  use loct_m
-  use messages_m
-  use parser_m
-  use profiling_m
-  use space_m
-  use spectrum_m
-  use simul_box_m
-  use unit_m
-  use unit_system_m
+  use batch_oct_m
+  use command_line_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use io_oct_m
+  use lalg_adv_oct_m
+  use loct_oct_m
+  use messages_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use space_oct_m
+  use spectrum_oct_m
+  use simul_box_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
 
   implicit none
 

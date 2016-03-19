@@ -19,53 +19,53 @@
 
 #include "global.h"
 
-module epot_m
-  use atom_m
-  use base_hamiltonian_m
-  use base_potential_m
-  use base_term_m
-  use comm_m
-  use derivatives_m
-  use double_grid_m
-  use gauge_field_m
-  use geometry_m
-  use global_m
-  use grid_m
-  use index_m
-  use io_m
-  use ion_interaction_m
-  use kick_m
-  use lalg_adv_m
-  use lalg_basic_m
-  use lasers_m
-  use linear_response_m
-  use loct_math_m
-  use logrid_m
-  use mesh_m
-  use mesh_function_m
-  use messages_m
-  use mpi_m
-  use multigrid_m
-  use parser_m
-  use periodic_copy_m
-  use poisson_m
-  use poisson_cutoff_m
-  use profiling_m
-  use projector_m
-  use ps_m
-  use simul_box_m
-  use species_m
-  use species_pot_m
-  use splines_m
-  use spline_filter_m
-  use ssys_external_m
-  use states_m
-  use states_dim_m
-  use submesh_m
-  use tdfunction_m
-  use unit_m
-  use unit_system_m
-  use varinfo_m
+module epot_oct_m
+  use atom_oct_m
+  use base_hamiltonian_oct_m
+  use base_potential_oct_m
+  use base_term_oct_m
+  use comm_oct_m
+  use derivatives_oct_m
+  use double_grid_oct_m
+  use gauge_field_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use index_oct_m
+  use io_oct_m
+  use ion_interaction_oct_m
+  use kick_oct_m
+  use lalg_adv_oct_m
+  use lalg_basic_oct_m
+  use lasers_oct_m
+  use linear_response_oct_m
+  use loct_math_oct_m
+  use logrid_oct_m
+  use mesh_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use multigrid_oct_m
+  use parser_oct_m
+  use periodic_copy_oct_m
+  use poisson_oct_m
+  use poisson_cutoff_oct_m
+  use profiling_oct_m
+  use projector_oct_m
+  use ps_oct_m
+  use simul_box_oct_m
+  use species_oct_m
+  use species_pot_oct_m
+  use splines_oct_m
+  use spline_filter_oct_m
+  use ssys_external_oct_m
+  use states_oct_m
+  use states_dim_oct_m
+  use submesh_oct_m
+  use tdfunction_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -1048,7 +1048,7 @@ contains
     POP_SUB(epot_global_force)
   end subroutine epot_global_force
 
-end module epot_m
+end module epot_oct_m
 
 !! Local Variables:
 !! mode: f90

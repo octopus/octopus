@@ -19,9 +19,9 @@
 
 #include "global.h"
 
-module mesh_batch_m
-  use batch_m
-  use blas_m
+module mesh_batch_oct_m
+  use batch_oct_m
+  use blas_oct_m
   use iso_c_binding
 #ifdef HAVE_OPENCL
   use cl
@@ -29,24 +29,24 @@ module mesh_batch_m
   use clblas
 #endif
 #endif
-  use octcl_kernel_m
-  use comm_m
-  use global_m
-  use hardware_m
-  use index_m
-  use lalg_basic_m
-  use loct_math_m
-  use math_m
-  use mesh_m
-  use mesh_function_m
-  use messages_m
-  use mpi_m
-  use mpi_debug_m
-  use opencl_m
-  use par_vec_m
-  use partition_m
-  use profiling_m
-  use types_m
+  use octcl_kernel_oct_m
+  use comm_oct_m
+  use global_oct_m
+  use hardware_oct_m
+  use index_oct_m
+  use lalg_basic_oct_m
+  use loct_math_oct_m
+  use math_oct_m
+  use mesh_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use mpi_debug_oct_m
+  use opencl_oct_m
+  use par_vec_oct_m
+  use partition_oct_m
+  use profiling_oct_m
+  use types_oct_m
 
   implicit none
 
@@ -99,7 +99,7 @@ contains
 #include "complex.F90"
 #include "mesh_batch_inc.F90"
 
-end module mesh_batch_m
+end module mesh_batch_oct_m
 
 !! Local Variables:
 !! mode: f90

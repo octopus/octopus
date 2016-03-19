@@ -19,22 +19,22 @@
 
 #include "global.h"
 
-module invert_ks_m
-  use density_m
-  use eigensolver_m 
-  use global_m
-  use hamiltonian_m 
-  use output_m 
-  use io_m 
-  use mesh_function_m 
-  use messages_m 
-  use parser_m 
-  use poisson_m
-  use profiling_m 
-  use restart_m
-  use states_restart_m
-  use system_m 
-  use xc_ks_inversion_m 
+module invert_ks_oct_m
+  use density_oct_m
+  use eigensolver_oct_m 
+  use global_oct_m
+  use hamiltonian_oct_m 
+  use output_oct_m 
+  use io_oct_m 
+  use mesh_function_oct_m 
+  use messages_oct_m 
+  use parser_oct_m 
+  use poisson_oct_m
+  use profiling_oct_m 
+  use restart_oct_m
+  use states_restart_oct_m
+  use system_oct_m 
+  use xc_ks_inversion_oct_m 
   
   implicit none
 
@@ -223,7 +223,7 @@ contains
   end subroutine invert_ks_run
 
   
-end module invert_ks_m
+end module invert_ks_oct_m
 
 !! Local Variables:
 !! mode: f90

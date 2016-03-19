@@ -19,27 +19,27 @@
 
 #include "global.h"
 
-module mesh_function_m
-  use batch_m
-  use blas_m
-  use comm_m
-  use cube_function_m
-  use global_m
-  use hardware_m
-  use hypercube_m
-  use index_m
-  use lalg_basic_m
-  use loct_math_m
-  use math_m
-  use mesh_m
-  use messages_m
-  use modelmb_1part_m
-  use mpi_m
-  use par_vec_m
-  use profiling_m
-  use qshep_m
-  use splines_m
-  use box_union_m
+module mesh_function_oct_m
+  use batch_oct_m
+  use blas_oct_m
+  use comm_oct_m
+  use cube_function_oct_m
+  use global_oct_m
+  use hardware_oct_m
+  use hypercube_oct_m
+  use index_oct_m
+  use lalg_basic_oct_m
+  use loct_math_oct_m
+  use math_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use modelmb_1part_oct_m
+  use mpi_oct_m
+  use par_vec_oct_m
+  use profiling_oct_m
+  use qshep_oct_m
+  use splines_oct_m
+  use box_union_oct_m
 
   implicit none
 
@@ -169,7 +169,7 @@ contains
 #include "complex_single.F90"
 #include "mesh_function_inc.F90"
 
-end module mesh_function_m
+end module mesh_function_oct_m
 
 #ifdef HAVE_SPARSKIT
 
@@ -177,11 +177,11 @@ end module mesh_function_m
 !! It expects complex numbers as an array with first real parts, then imaginary parts.
 ! ---------------------------------------------------------
 REAL_DOUBLE function distdot(n, x, ix, y, iy)
-  use comm_m
-  use global_m
-  use messages_m
-  use mesh_function_m
-  use profiling_m
+  use comm_oct_m
+  use global_oct_m
+  use messages_oct_m
+  use mesh_function_oct_m
+  use profiling_oct_m
 
   implicit none
 

@@ -1,19 +1,19 @@
 #include "global.h"
 
-module intrpl_m
+module intrpl_oct_m
 
-  use curvilinear_m
-  use domain_m
-  use global_m
-  use grid_m
-  use index_m
-  use kinds_m
-  use mesh_m
-  use messages_m
-  use profiling_m
-  use qshep_m
-  use simulation_m
-  use storage_m
+  use curvilinear_oct_m
+  use domain_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use index_oct_m
+  use kinds_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use profiling_oct_m
+  use qshep_oct_m
+  use simulation_oct_m
+  use storage_oct_m
 
   implicit none
 
@@ -415,7 +415,7 @@ contains
     POP_SUB(intrpl_end)
   end subroutine intrpl_end
 
-end module intrpl_m
+end module intrpl_oct_m
 
 !! Local Variables:
 !! mode: f90

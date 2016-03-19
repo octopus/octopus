@@ -19,33 +19,33 @@
 
 #include "global.h"
 
-module propagator_etrs_m
+module propagator_etrs_oct_m
 #ifdef HAVE_OPENCL
   use cl
 #endif
-  use batch_m
-  use batch_ops_m
-  use density_m
-  use exponential_m
-  use gauge_field_m
-  use grid_m
-  use geometry_m
-  use global_m
-  use hamiltonian_m
-  use ion_dynamics_m
-  use lalg_basic_m
-  use loct_pointer_m
-  use math_m
-  use messages_m
-  use mesh_function_m
-  use opencl_m
-  use potential_interpolation_m
-  use profiling_m
-  use propagator_base_m
-  use states_dim_m
-  use states_m
-  use types_m
-  use v_ks_m
+  use batch_oct_m
+  use batch_ops_oct_m
+  use density_oct_m
+  use exponential_oct_m
+  use gauge_field_oct_m
+  use grid_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use hamiltonian_oct_m
+  use ion_dynamics_oct_m
+  use lalg_basic_oct_m
+  use loct_pointer_oct_m
+  use math_oct_m
+  use messages_oct_m
+  use mesh_function_oct_m
+  use opencl_oct_m
+  use potential_interpolation_oct_m
+  use profiling_oct_m
+  use propagator_base_oct_m
+  use states_dim_oct_m
+  use states_oct_m
+  use types_oct_m
+  use v_ks_oct_m
 
   implicit none
 
@@ -474,7 +474,7 @@ contains
     POP_SUB(td_aetrs)
   end subroutine td_aetrs
 
-end module propagator_etrs_m
+end module propagator_etrs_oct_m
 
 !! Local Variables:
 !! mode: f90

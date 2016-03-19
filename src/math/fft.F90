@@ -23,7 +23,7 @@
 !> Fast Fourier Transform module.
 !! This module provides a single interface that works with different
 !! FFT implementations.
-module fft_m
+module fft_oct_m
   use,intrinsic :: iso_c_binding
 #ifdef HAVE_OPENCL  
   use cl
@@ -31,27 +31,27 @@ module fft_m
   use clfft
 #endif
 #endif
-  use fftw_m
-  use global_m
-  use lalg_basic_m
-  use loct_math_m
-  use messages_m
-  use mpi_m
+  use fftw_oct_m
+  use global_oct_m
+  use lalg_basic_oct_m
+  use loct_math_oct_m
+  use messages_oct_m
+  use mpi_oct_m
 #if defined(HAVE_NFFT)
-  use nfft_m
+  use nfft_oct_m
 #endif
 #if defined(HAVE_OPENMP) && defined(HAVE_FFTW3_THREADS)
   use omp_lib
 #endif
-  use octcl_kernel_m
-  use opencl_m
-  use parser_m
-  use pfft_m
-  use pnfft_m
-  use profiling_m
-  use types_m
-  use unit_system_m
-  use varinfo_m
+  use octcl_kernel_oct_m
+  use opencl_oct_m
+  use parser_oct_m
+  use pfft_oct_m
+  use pnfft_oct_m
+  use profiling_oct_m
+  use types_oct_m
+  use unit_system_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -989,7 +989,7 @@ contains
 #include "complex.F90"
 #include "fft_inc.F90"
 
-end module fft_m
+end module fft_oct_m
 
 !! Local Variables:
 !! mode: f90

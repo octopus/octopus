@@ -19,16 +19,16 @@
 
 #include "global.h"
 
-module poisson_cg_m
-  use derivatives_m
-  use global_m
-  use lalg_basic_m
-  use math_m
-  use mesh_m
-  use messages_m
-  use poisson_corrections_m
-  use profiling_m
-  use solvers_m
+module poisson_cg_oct_m
+  use derivatives_oct_m
+  use global_oct_m
+  use lalg_basic_oct_m
+  use math_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use poisson_corrections_oct_m
+  use profiling_oct_m
+  use solvers_oct_m
 
   implicit none
 
@@ -151,7 +151,7 @@ contains
     POP_SUB(poisson_cg2)
   end subroutine poisson_cg2
 
-end module poisson_cg_m
+end module poisson_cg_oct_m
 
 !! Local Variables:
 !! mode: f90

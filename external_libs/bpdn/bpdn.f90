@@ -20,7 +20,7 @@
 !!
 !! $Id: bpdn.f90 3550 2007-11-19 14:32:49Z marques $
 
-module bpdn_m
+module bpdn_oct_m
   implicit none
   
   private
@@ -628,4 +628,4 @@ contains
 
   end subroutine calc_grad
 
-end module bpdn_m
+end module bpdn_oct_m

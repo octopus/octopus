@@ -1,15 +1,15 @@
 #include "global.h"
 
-module fio_system_m
+module fio_system_oct_m
 
-  use base_geometry_m
-  use base_states_m
-  use base_system_m
-  use fio_geometry_m
-  use fio_states_m
-  use global_m
-  use messages_m
-  use profiling_m
+  use base_geometry_oct_m
+  use base_states_oct_m
+  use base_system_oct_m
+  use fio_geometry_oct_m
+  use fio_states_oct_m
+  use global_oct_m
+  use messages_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -60,7 +60,7 @@ contains
     POP_SUB(fio_system__load__)
   end subroutine fio_system__load__
     
-end module fio_system_m
+end module fio_system_oct_m
 
 !! Local Variables:
 !! mode: f90

@@ -20,32 +20,32 @@
 #include "global.h"
 
 program photoelectron_spectrum
-  use command_line_m
-  use geometry_m
-  use global_m
-  use grid_m
-  use kpoints_m
-  use io_binary_m
-  use io_function_m
-  use io_m
-  use loct_m
-  use messages_m
-  use parser_m
-  use pes_m  
-  use pes_mask_m  
-  use pes_flux_m  
-  use profiling_m
-  use restart_m
-  use simul_box_m
+  use command_line_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use kpoints_oct_m
+  use io_binary_oct_m
+  use io_function_oct_m
+  use io_oct_m
+  use loct_oct_m
+  use messages_oct_m
+  use parser_oct_m
+  use pes_oct_m  
+  use pes_mask_oct_m  
+  use pes_flux_oct_m  
+  use profiling_oct_m
+  use restart_oct_m
+  use simul_box_oct_m
   use sort_om
-  use space_m
-  use string_m
-  use states_m
-  use states_dim_m
-  use unit_m
-  use unit_system_m
-  use utils_m
-  use varinfo_m
+  use space_oct_m
+  use string_oct_m
+  use states_oct_m
+  use states_dim_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use utils_oct_m
+  use varinfo_oct_m
   
   implicit none
 

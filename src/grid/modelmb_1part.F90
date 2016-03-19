@@ -21,13 +21,13 @@
 
 !>  general module for modelmb particles (eg 4 electrons in 1D equiv to
 !!  1 in 4D). Also calculate different densities on request.
-module modelmb_1part_m
+module modelmb_1part_oct_m
 
-  use global_m
-  use hypercube_m
-  use messages_m
-  use mesh_m
-  use profiling_m
+  use global_oct_m
+  use hypercube_oct_m
+  use messages_oct_m
+  use mesh_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -148,7 +148,7 @@ subroutine modelmb_1part_end(this)
 end subroutine modelmb_1part_end
 
 
-end module modelmb_1part_m
+end module modelmb_1part_oct_m
 
 
 !! Local Variables:

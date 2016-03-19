@@ -19,47 +19,47 @@
 
 #include "global.h"
 
-module forces_m
-  use batch_m
-  use batch_ops_m
-  use born_charges_m
-  use boundaries_m
+module forces_oct_m
+  use batch_oct_m
+  use batch_ops_oct_m
+  use born_charges_oct_m
+  use boundaries_oct_m
 #ifdef HAVE_OPENCL
   use cl
 #endif
-  use comm_m
-  use density_m
-  use derivatives_m
-  use epot_m
-  use geometry_m
-  use global_m
-  use grid_m
-  use hamiltonian_m
-  use hamiltonian_base_m
-  use index_m
-  use io_m
-  use kpoints_m
-  use lalg_basic_m
-  use lasers_m
-  use linear_response_m
-  use loct_math_m
-  use math_m
-  use mesh_m
-  use mesh_function_m
-  use messages_m
-  use mpi_m
-  use profiling_m
-  use projector_m
-  use octcl_kernel_m
-  use opencl_m
-  use simul_box_m
-  use species_m
-  use species_pot_m
-  use states_m
-  use states_dim_m
-  use symm_op_m
-  use symmetrizer_m
-  use types_m
+  use comm_oct_m
+  use density_oct_m
+  use derivatives_oct_m
+  use epot_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use hamiltonian_oct_m
+  use hamiltonian_base_oct_m
+  use index_oct_m
+  use io_oct_m
+  use kpoints_oct_m
+  use lalg_basic_oct_m
+  use lasers_oct_m
+  use linear_response_oct_m
+  use loct_math_oct_m
+  use math_oct_m
+  use mesh_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use profiling_oct_m
+  use projector_oct_m
+  use octcl_kernel_oct_m
+  use opencl_oct_m
+  use simul_box_oct_m
+  use species_oct_m
+  use species_pot_oct_m
+  use states_oct_m
+  use states_dim_oct_m
+  use symm_op_oct_m
+  use symmetrizer_oct_m
+  use types_oct_m
 
   implicit none
 
@@ -397,7 +397,7 @@ contains
 #include "complex.F90"
 #include "forces_inc.F90"
 
-end module forces_m
+end module forces_oct_m
 
 !! Local Variables:
 !! mode: f90

@@ -19,16 +19,16 @@
 
 #include "global.h"
 
-module read_coords_m
-  use global_m
-  use io_m
-  use parser_m
-  use messages_m
-  use profiling_m
-  use space_m
-  use string_m
-  use unit_m
-  use unit_system_m
+module read_coords_oct_m
+  use global_oct_m
+  use io_oct_m
+  use parser_oct_m
+  use messages_oct_m
+  use profiling_oct_m
+  use space_oct_m
+  use string_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
 
   implicit none
 
@@ -580,7 +580,7 @@ contains
     POP_SUB(read_coords_read_PDB)
   end subroutine read_coords_read_PDB
 
-end module read_coords_m
+end module read_coords_oct_m
 
 !! Local Variables:
 !! mode: f90

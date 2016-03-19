@@ -19,45 +19,45 @@
 
 #include "global.h"
 
-module lcao_m
-  use atom_m
-  use batch_m
-  use blacs_proc_grid_m
-  use geometry_m
-  use global_m
-  use grid_m
-  use hamiltonian_m
-  use io_m
-  use io_function_m
-  use lalg_adv_m
-  use lalg_basic_m
-  use lapack_m
-  use loct_m
-  use magnetic_m
-  use math_m
-  use mesh_m
-  use mesh_function_m
-  use messages_m
-  use mpi_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
-  use mpi_debug_m
-  use parser_m
-  use periodic_copy_m
-  use profiling_m
-  use ps_m
-  use simul_box_m
-  use scalapack_m
-  use species_m
-  use species_pot_m
-  use states_m
-  use states_calc_m
-  use states_dim_m
-  use states_io_m
-  use submesh_m
-  use system_m
-  use unit_m
-  use unit_system_m
-  use v_ks_m
-  use varinfo_m
+module lcao_oct_m
+  use atom_oct_m
+  use batch_oct_m
+  use blacs_proc_grid_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use hamiltonian_oct_m
+  use io_oct_m
+  use io_function_oct_m
+  use lalg_adv_oct_m
+  use lalg_basic_oct_m
+  use lapack_oct_m
+  use loct_oct_m
+  use magnetic_oct_m
+  use math_oct_m
+  use mesh_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use mpi_oct_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
+  use mpi_debug_oct_m
+  use parser_oct_m
+  use periodic_copy_oct_m
+  use profiling_oct_m
+  use ps_oct_m
+  use simul_box_oct_m
+  use scalapack_oct_m
+  use species_oct_m
+  use species_pot_oct_m
+  use states_oct_m
+  use states_calc_oct_m
+  use states_dim_oct_m
+  use states_io_oct_m
+  use submesh_oct_m
+  use system_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use v_ks_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -1358,7 +1358,7 @@ contains
 #include "lcao_inc.F90"
 
 
-end module lcao_m
+end module lcao_oct_m
 
 !! Local Variables:
 !! mode: f90

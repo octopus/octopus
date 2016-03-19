@@ -1,11 +1,11 @@
 #include "global.h"
 
-module ssys_model_m
+module ssys_model_oct_m
 
-  use base_model_m
-  use global_m
-  use messages_m
-  use profiling_m
+  use base_model_oct_m
+  use global_oct_m
+  use messages_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -42,7 +42,7 @@ contains
     POP_SUB(ssys_model_acc)
   end subroutine ssys_model_acc
 
-end module ssys_model_m
+end module ssys_model_oct_m
 
 !! Local Variables:
 !! mode: f90

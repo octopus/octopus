@@ -19,18 +19,18 @@
 
 #include "global.h"
 
-module eigen_feast_m
+module eigen_feast_oct_m
 
-  use batch_m
-  use global_m
-  use grid_m
-  use hamiltonian_m
-  use linear_solver_m
-  use math_m ! some linear solvers are in math for some reason
-  use messages_m
-  use parser_m
-  use profiling_m
-  use states_m
+  use batch_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use hamiltonian_oct_m
+  use linear_solver_oct_m
+  use math_oct_m ! some linear solvers are in math for some reason
+  use messages_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use states_oct_m
   
   implicit none
   

@@ -29,11 +29,11 @@
 !! The hash function is simply (key mod size) but size is taken to be a prime
 !! number, i.e. the table is usually slightly larger than the user requests.
 
-module iihash_m
-  use ialist_m
-  use global_m
-  use messages_m
-  use profiling_m
+module iihash_oct_m
+  use ialist_oct_m
+  use global_oct_m
+  use messages_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -211,7 +211,7 @@ contains
       end do
     end subroutine sieve
   end function get_next_prime
-end module iihash_m
+end module iihash_oct_m
 
 !! Local Variables:
 !! mode: f90

@@ -19,23 +19,23 @@
 
 #include "global.h"
 
-module pes_m
-  use geometry_m
-  use global_m
-  use grid_m
-  use hamiltonian_m
-  use mesh_m
-  use messages_m
-  use mpi_m
-  use output_m
-  use parser_m
-  use pes_mask_m
-  use pes_spm_m
-  use pes_flux_m
-  use restart_m
-  use simul_box_m
-  use states_m
-  use varinfo_m
+module pes_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use hamiltonian_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use output_oct_m
+  use parser_oct_m
+  use pes_mask_oct_m
+  use pes_spm_oct_m
+  use pes_flux_oct_m
+  use restart_oct_m
+  use simul_box_oct_m
+  use states_oct_m
+  use varinfo_oct_m
     
   implicit none
 
@@ -353,7 +353,7 @@ contains
 
 
 
-end module pes_m
+end module pes_oct_m
 
 
 !! Local Variables:

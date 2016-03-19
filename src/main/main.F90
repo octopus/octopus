@@ -20,17 +20,17 @@
 #include "global.h"
 
 program octopus
-  use calc_mode_par_m
-  use command_line_m
-  use io_m
-  use loct_m
-  use mpi_m
-  use parser_m
-  use profiling_m
-  use run_m
-  use string_m
-  use utils_m
-  use varinfo_m
+  use calc_mode_par_oct_m
+  use command_line_oct_m
+  use io_oct_m
+  use loct_oct_m
+  use mpi_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use run_oct_m
+  use string_oct_m
+  use utils_oct_m
+  use varinfo_oct_m
 
   implicit none
 

@@ -19,12 +19,12 @@
 
 #include "global.h"
 
-module cmplxscl_m
-  use global_m
-  use opencl_m
-  use parser_m
-  use messages_m
-  use varinfo_m
+module cmplxscl_oct_m
+  use global_oct_m
+  use opencl_oct_m
+  use parser_oct_m
+  use messages_oct_m
+  use varinfo_oct_m
 
   implicit none
   
@@ -270,7 +270,7 @@ contains
     
   end function cmplxscl_energy_ordering_score
 
-end module cmplxscl_m
+end module cmplxscl_oct_m
 
 !! Local Variables:
 !! mode: f90

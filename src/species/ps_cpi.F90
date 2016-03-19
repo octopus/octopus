@@ -19,15 +19,15 @@
 
 #include "global.h"
 
-module ps_cpi_m
-  use atomic_m
-  use global_m
-  use io_m
-  use logrid_m
-  use messages_m
-  use profiling_m
-  use ps_cpi_file_m
-  use ps_in_grid_m
+module ps_cpi_oct_m
+  use atomic_oct_m
+  use global_oct_m
+  use io_oct_m
+  use logrid_oct_m
+  use messages_oct_m
+  use profiling_oct_m
+  use ps_cpi_file_oct_m
+  use ps_in_grid_oct_m
 
   implicit none
 
@@ -149,7 +149,7 @@ contains
     POP_SUB(ps_cpi_process)
   end subroutine ps_cpi_process
 
-end module ps_cpi_m
+end module ps_cpi_oct_m
 
 !! Local Variables:
 !! mode: f90

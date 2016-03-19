@@ -1,22 +1,22 @@
 #include "global.h"
 
-module fio_config_m
+module fio_config_oct_m
 
-  use base_config_m
-  use base_hamiltonian_m
-  use curvilinear_m
-  use fio_handle_m
-  use global_m
-  use intrpl_m
-  use io_m
-  use json_m
-  use json_parser_m
-  use kinds_m
-  use loct_m
-  use messages_m
-  use parser_m
-  use path_m
-  use profiling_m
+  use base_config_oct_m
+  use base_hamiltonian_oct_m
+  use curvilinear_oct_m
+  use fio_handle_oct_m
+  use global_oct_m
+  use intrpl_oct_m
+  use io_oct_m
+  use json_oct_m
+  use json_parser_oct_m
+  use kinds_oct_m
+  use loct_oct_m
+  use messages_oct_m
+  use parser_oct_m
+  use path_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -507,7 +507,7 @@ contains
     POP_SUB(fio_config_parse_block)
   end subroutine fio_config_parse_block
 
-end module fio_config_m
+end module fio_config_oct_m
 
 !! Local Variables:
 !! mode: f90

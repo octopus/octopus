@@ -10,7 +10,7 @@
 #define LIST_TYPE_NAME DECORATE(LIST_TEMPLATE_NAME,t)
 #endif
 #if !defined(LIST_TYPE_MODULE_NAME)
-#define LIST_TYPE_MODULE_NAME DECORATE(LIST_TEMPLATE_NAME,m)
+#define LIST_TYPE_MODULE_NAME DECORATE(LIST_TEMPLATE_NAME,oct_m)
 #endif
 #else
 #error "'LIST_TEMPLATE_NAME' must be defined"
@@ -39,11 +39,11 @@
 
 #if defined(LIST_INCLUDE_MODULE)
 
-module TEMPLATE(list_m)
+module TEMPLATE(list_oct_m)
 
-  use global_m
-  use messages_m
-  use profiling_m
+  use global_oct_m
+  use messages_oct_m
+  use profiling_oct_m
 
   use LIST_TYPE_MODULE_NAME
 
@@ -766,7 +766,7 @@ contains
 #endif
 #if defined(LIST_INCLUDE_MODULE)
 
-end module TEMPLATE(list_m)
+end module TEMPLATE(list_oct_m)
 
 #endif
 

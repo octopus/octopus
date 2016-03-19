@@ -19,21 +19,21 @@
 
 #include "global.h"
 
-module magnetic_m
-  use derivatives_m
-  use geometry_m
-  use global_m
-  use mesh_function_m
-  use mesh_m
-  use messages_m
-  use mpi_m
-  use poisson_m
-  use profiling_m
-  use species_m
-  use states_m
-  use states_dim_m
-  use unit_m
-  use unit_system_m
+module magnetic_oct_m
+  use derivatives_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use mesh_function_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use poisson_oct_m
+  use profiling_oct_m
+  use species_oct_m
+  use states_oct_m
+  use states_dim_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
 
   implicit none
 
@@ -251,7 +251,7 @@ contains
   end subroutine magnetic_induced
 
 
-end module magnetic_m
+end module magnetic_oct_m
 
 !! Local Variables:
 !! mode: f90

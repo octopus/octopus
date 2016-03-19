@@ -19,35 +19,35 @@
 
 #include "global.h"
 
-module io_function_m
-  use cube_function_m
-  use cube_m
-  use geometry_m
-  use global_m
-  use index_m
-  use io_m
-  use io_binary_m
-  use io_csv_m
-  use mesh_m
-  use mesh_function_m
-  use messages_m
-  use mpi_m
-  use mpi_debug_m
+module io_function_oct_m
+  use cube_function_oct_m
+  use cube_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use index_oct_m
+  use io_oct_m
+  use io_binary_oct_m
+  use io_csv_oct_m
+  use mesh_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use mpi_debug_oct_m
 #if defined(HAVE_NETCDF)
   use netcdf
 #endif
-  use openscad_m
-  use par_vec_m
-  use parser_m
-  use polyhedron_m
-  use profiling_m
-  use simul_box_m
-  use species_m
-  use unit_m
-  use unit_system_m
-  use utils_m
-  use varinfo_m
-  use vtk_m
+  use openscad_oct_m
+  use par_vec_oct_m
+  use parser_oct_m
+  use polyhedron_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
+  use species_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use utils_oct_m
+  use varinfo_oct_m
+  use vtk_oct_m
 
   implicit none
 
@@ -506,7 +506,7 @@ contains
 #include "io_function_inc.F90"
 #include "undef.F90"
 
-end module io_function_m
+end module io_function_oct_m
 
 !! Local Variables:
 !! mode: f90

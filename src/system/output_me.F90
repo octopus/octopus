@@ -19,32 +19,32 @@
 
 #include "global.h"
 
-module output_me_m
-  use derivatives_m
-  use geometry_m
-  use global_m
-  use grid_m
-  use hamiltonian_m
-  use io_m
-  use mesh_m
-  use mesh_function_m
-  use messages_m
-  use kpoints_m
-  use loct_math_m
-  use mpi_m
-  use mpi_lib_m
-  use parser_m
-  use poisson_m
-  use profiling_m
-  use projector_m
-  use simul_box_m
-  use states_m
-  use states_calc_m
-  use states_dim_m
-  use unit_m
-  use unit_system_m
-  use utils_m
-  use varinfo_m
+module output_me_oct_m
+  use derivatives_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use hamiltonian_oct_m
+  use io_oct_m
+  use mesh_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use kpoints_oct_m
+  use loct_math_oct_m
+  use mpi_oct_m
+  use mpi_lib_oct_m
+  use parser_oct_m
+  use poisson_oct_m
+  use profiling_oct_m
+  use projector_oct_m
+  use simul_box_oct_m
+  use states_oct_m
+  use states_calc_oct_m
+  use states_dim_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use utils_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -485,7 +485,7 @@ contains
 #include "output_me_inc.F90"
 
 
-end module output_me_m
+end module output_me_oct_m
 
 !! Local Variables:
 !! mode: f90

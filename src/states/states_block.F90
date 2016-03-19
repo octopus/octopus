@@ -24,22 +24,22 @@
 !! THESE ROUTINES ARE DEPRECATED, THEY SHOULD NOT BE USED BY NEW CODE.
 !! They are slow (too many data copies) and they are not maintained.
 
-module states_block_m
-  use batch_m
-  use comm_m
-  use global_m
-  use lalg_basic_m
-  use math_m
-  use mesh_m
-  use mesh_batch_m
-  use mesh_function_m
-  use messages_m
-  use mpi_m
-  use mpi_debug_m
-  use mpi_lib_m
-  use multicomm_m
-  use profiling_m
-  use states_m
+module states_block_oct_m
+  use batch_oct_m
+  use comm_oct_m
+  use global_oct_m
+  use lalg_basic_oct_m
+  use math_oct_m
+  use mesh_oct_m
+  use mesh_batch_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use mpi_debug_oct_m
+  use mpi_lib_oct_m
+  use multicomm_oct_m
+  use profiling_oct_m
+  use states_oct_m
 
   implicit none
 
@@ -138,7 +138,7 @@ contains
 #include "complex.F90"
 #include "states_block_inc.F90"
 #include "undef.F90"
-end module states_block_m
+end module states_block_oct_m
 
 
 !! Local Variables:

@@ -1,18 +1,18 @@
 #include "global.h"
 
-module frozen_density_m
+module frozen_density_oct_m
 
-  use base_density_m
-  use basis_m
-  use fio_density_m
-  use global_m
-  use json_m
-  use kinds_m
-  use mesh_m
-  use messages_m
-  use profiling_m
-  use simulation_m
-  use space_m
+  use base_density_oct_m
+  use basis_oct_m
+  use fio_density_oct_m
+  use global_oct_m
+  use json_oct_m
+  use kinds_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use profiling_oct_m
+  use simulation_oct_m
+  use space_oct_m
 
   implicit none
 
@@ -198,7 +198,7 @@ contains
 
   end subroutine frozen_density_adjust_spin
 
-end module frozen_density_m
+end module frozen_density_oct_m
  
 !! Local Variables:
 !! mode: f90

@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module write_iter_m
+module write_iter_oct_m
 
   implicit none
 
@@ -167,7 +167,7 @@ module write_iter_m
     end subroutine write_iter_int_n
   end interface write_iter_int
 
-end module write_iter_m
+end module write_iter_oct_m
 
 !! Local Variables:
 !! mode: f90

@@ -19,23 +19,23 @@
 
 #include "global.h"
 
-module td_calc_m
+module td_calc_oct_m
   use iso_c_binding 
-  use forces_m
-  use geometry_m
-  use global_m
-  use grid_m
-  use hamiltonian_base_m
-  use hamiltonian_m
-  use lasers_m
-  use loct_math_m
-  use mesh_function_m
-  use messages_m
-  use mpi_m
-  use profiling_m
-  use states_calc_m
-  use states_m
-  use states_dim_m
+  use forces_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use hamiltonian_base_oct_m
+  use hamiltonian_oct_m
+  use lasers_oct_m
+  use loct_math_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use profiling_oct_m
+  use states_calc_oct_m
+  use states_oct_m
+  use states_dim_oct_m
 
   implicit none
 
@@ -336,7 +336,7 @@ subroutine td_calc_ionch(gr, st, ch, Nch)
 end subroutine td_calc_ionch
 
 
-end module td_calc_m
+end module td_calc_oct_m
 
 !! Local Variables:
 !! mode: f90

@@ -19,35 +19,35 @@
 
 #include "global.h"
 
-module geom_opt_m
-  use density_m
-  use energy_calc_m
-  use geometry_m
-  use global_m
-  use hamiltonian_m
-  use io_m
-  use io_function_m
-  use lcao_m
-  use loct_m
-  use parser_m
-  use mesh_m
-  use messages_m
-  use minimizer_m
-  use mpi_m 
-  use output_m
-  use profiling_m
-  use restart_m
-  use scf_m
-  use simul_box_m
-  use species_m
-  use states_m
-  use states_restart_m
-  use system_m
-  use unit_m
-  use unit_system_m
-  use v_ks_m
-  use varinfo_m
-  use xyz_adjust_m
+module geom_opt_oct_m
+  use density_oct_m
+  use energy_calc_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use hamiltonian_oct_m
+  use io_oct_m
+  use io_function_oct_m
+  use lcao_oct_m
+  use loct_oct_m
+  use parser_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use minimizer_oct_m
+  use mpi_oct_m 
+  use output_oct_m
+  use profiling_oct_m
+  use restart_oct_m
+  use scf_oct_m
+  use simul_box_oct_m
+  use species_oct_m
+  use states_oct_m
+  use states_restart_oct_m
+  use system_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use v_ks_oct_m
+  use varinfo_oct_m
+  use xyz_adjust_oct_m
 
   implicit none
 
@@ -683,7 +683,7 @@ contains
     POP_SUB(write_iter_info_ng)
   end subroutine write_iter_info_ng
 
-end module geom_opt_m
+end module geom_opt_oct_m
 
 !! Local Variables:
 !! mode: f90

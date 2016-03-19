@@ -22,7 +22,7 @@
 ! -----------------------------------------------------------------------
 !> This module contains interfaces for routines in operate.c
 ! -----------------------------------------------------------------------
-module operate_f_m
+module operate_f_oct_m
 
   implicit none
 
@@ -73,7 +73,7 @@ module operate_f_m
     end subroutine dgauss_seidel
   end interface
 
-end module operate_f_m
+end module operate_f_oct_m
 
 !! Local Variables:
 !! mode: f90

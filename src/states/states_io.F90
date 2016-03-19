@@ -19,31 +19,31 @@
 
 #include "global.h"
 
-module states_io_m
-  use geometry_m
-  use global_m
-  use grid_m
-  use io_m
-  use kpoints_m
-  use lalg_basic_m
-  use loct_m
-  use math_m
-  use mesh_m
-  use mesh_function_m
-  use messages_m
-  use mpi_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
-  use mpi_lib_m
-  use parser_m
-  use profiling_m
-  use simul_box_m
-  use smear_m
+module states_io_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use io_oct_m
+  use kpoints_oct_m
+  use lalg_basic_oct_m
+  use loct_oct_m
+  use math_oct_m
+  use mesh_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use mpi_oct_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
+  use mpi_lib_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
+  use smear_oct_m
   use sort_om
-  use states_m
-  use states_dim_m
-  use unit_m
-  use unit_system_m
-  use utils_m
-  use varinfo_m
+  use states_oct_m
+  use states_dim_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use utils_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -949,7 +949,7 @@ contains
     POP_SUB(states_write_fermi_for_bands)
   end subroutine states_write_fermi_for_bands
 
-end module states_io_m
+end module states_io_oct_m
 
 
 !! Local Variables:

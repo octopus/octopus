@@ -17,23 +17,23 @@
 
 #include "global.h"
 
-module boundary_op_m
-  use io_m
-  use io_function_m
-  use io_m
-  use cube_function_m
-  use geometry_m
-  use global_m
-  use mesh_function_m
-  use mesh_m
-  use messages_m
-  use mpi_m
-  use parser_m
-  use profiling_m
-  use unit_m
-  use unit_system_m
-  use simul_box_m
-  use varinfo_m
+module boundary_op_oct_m
+  use io_oct_m
+  use io_function_oct_m
+  use io_oct_m
+  use cube_function_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use mesh_function_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use simul_box_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -344,7 +344,7 @@ contains
     POP_SUB(bc_generate_mf)
   end subroutine bc_generate_mf
 
-end module boundary_op_m
+end module boundary_op_oct_m
 
 !! Local Variables:
 !! mode: f90

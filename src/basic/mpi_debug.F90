@@ -21,11 +21,11 @@
 
 #include "global.h"
 
-module mpi_debug_m
-  use global_m
-  use loct_m
-  use messages_m
-  use mpi_m
+module mpi_debug_oct_m
+  use global_oct_m
+  use loct_oct_m
+  use messages_oct_m
+  use mpi_oct_m
 
   implicit none
 
@@ -196,7 +196,7 @@ contains
     neither_is_this_subroutine = 0
   end subroutine this_module_is_not_empty
 #endif
-end module mpi_debug_m
+end module mpi_debug_oct_m
 
 
 !! Local Variables:

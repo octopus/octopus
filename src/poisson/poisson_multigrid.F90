@@ -19,22 +19,22 @@
 
 #include "global.h"
 
-module poisson_multigrid_m
-  use boundaries_m
-  use derivatives_m
-  use global_m
-  use lalg_basic_m
-  use parser_m
-  use math_m
-  use mesh_m
-  use mesh_function_m
-  use messages_m
-  use multigrid_m
-  use operate_f_m
-  use par_vec_m
-  use poisson_corrections_m
-  use profiling_m
-  use varinfo_m
+module poisson_multigrid_oct_m
+  use boundaries_oct_m
+  use derivatives_oct_m
+  use global_oct_m
+  use lalg_basic_oct_m
+  use parser_oct_m
+  use math_oct_m
+  use mesh_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use multigrid_oct_m
+  use operate_f_oct_m
+  use par_vec_oct_m
+  use poisson_corrections_oct_m
+  use profiling_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -369,7 +369,7 @@ contains
 
   end subroutine multigrid_relax
 
-end module poisson_multigrid_m
+end module poisson_multigrid_oct_m
 
 !! Local Variables:
 !! mode: f90

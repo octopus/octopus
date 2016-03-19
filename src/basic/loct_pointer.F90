@@ -19,10 +19,10 @@
 
 #include "global.h"
 
-module loct_pointer_m
-  use global_m
-  use messages_m
-  use profiling_m
+module loct_pointer_oct_m
+  use global_oct_m
+  use messages_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -137,7 +137,7 @@ contains
 #  undef SUBNAME
 #  undef TYPE
 
-end module loct_pointer_m
+end module loct_pointer_oct_m
 
 !! Local Variables:
 !! mode: f90

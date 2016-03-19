@@ -19,33 +19,33 @@
 
 #include "global.h"
 
-module local_write_m
-  use box_union_m
+module local_write_oct_m
+  use box_union_oct_m
   use iso_c_binding
-  use geometry_m
-  use global_m
-  use grid_m
-  use hamiltonian_m
-  use io_m
-  use io_function_m
-  use kick_m
-  use mesh_function_m
-  use mesh_m
-  use messages_m
-  use mpi_m
-  use mpi_debug_m
-  use mpi_lib_m
-  use multicomm_m
-  use parser_m
-  use poisson_m
-  use profiling_m
-  use species_m
-  use states_m
-  use unit_m
-  use unit_system_m
-  use varinfo_m
-  use v_ks_m
-  use write_iter_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use hamiltonian_oct_m
+  use io_oct_m
+  use io_function_oct_m
+  use kick_oct_m
+  use mesh_function_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use mpi_debug_oct_m
+  use mpi_lib_oct_m
+  use multicomm_oct_m
+  use parser_oct_m
+  use poisson_oct_m
+  use profiling_oct_m
+  use species_oct_m
+  use states_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use varinfo_oct_m
+  use v_ks_oct_m
+  use write_iter_oct_m
 
   implicit none
 
@@ -811,7 +811,7 @@ contains
     POP_SUB(local_write_print_header_end)
   end subroutine local_write_print_header_end
 
-end module local_write_m
+end module local_write_oct_m
 
 !! Local Variables:
 !! mode: f90

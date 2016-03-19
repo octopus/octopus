@@ -24,20 +24,20 @@
 !! the lasers module, or in the future in order to define time-dependent
 !! magnetic fields.
 !!--------------------------------------------------------------
-module tdfunction_m
+module tdfunction_oct_m
   use iso_c_binding
-  use fft_m
-  use global_m
-  use io_m
-  use loct_math_m
-  use math_m
-  use messages_m
-  use mpi_m
-  use parser_m
-  use profiling_m
-  use splines_m
-  use unit_m
-  use unit_system_m
+  use fft_oct_m
+  use global_oct_m
+  use io_oct_m
+  use loct_math_oct_m
+  use math_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use splines_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
 
   implicit none
 
@@ -1141,7 +1141,7 @@ contains
   end function tdf_diff
   !------------------------------------------------------------
 
-end module tdfunction_m
+end module tdfunction_oct_m
 
 !! Local Variables:
 !! mode: f90

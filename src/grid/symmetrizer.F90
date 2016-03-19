@@ -19,16 +19,16 @@
 
 #include "global.h"
 
-module symmetrizer_m
-  use global_m
-  use messages_m
-  use mesh_m
-  use mpi_m
-  use par_vec_m
-  use profiling_m
-  use simul_box_m
-  use symm_op_m
-  use symmetries_m
+module symmetrizer_oct_m
+  use global_oct_m
+  use messages_oct_m
+  use mesh_oct_m
+  use mpi_oct_m
+  use par_vec_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
+  use symm_op_oct_m
+  use symmetries_oct_m
 
   implicit none
 
@@ -83,7 +83,7 @@ contains
 #include "complex.F90"
 #include "symmetrizer_inc.F90"
 
-end module symmetrizer_m
+end module symmetrizer_oct_m
 
 !! Local Variables:
 !! mode: f90

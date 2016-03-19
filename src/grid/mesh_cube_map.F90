@@ -19,18 +19,18 @@
 
 #include "global.h"
 
-module mesh_cube_map_m
+module mesh_cube_map_oct_m
 #ifdef HAVE_OPENCL
   use cl
 #endif
-  use global_m
-  use index_m
-  use messages_m
-  use mpi_m
-  use opencl_m
-  use profiling_m
-  use simul_box_m
-  use types_m
+  use global_oct_m
+  use index_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use opencl_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
+  use types_oct_m
 
   implicit none
 
@@ -128,7 +128,7 @@ contains
 
   ! ---------------------------------------------------------
   
-end module mesh_cube_map_m
+end module mesh_cube_map_oct_m
 
 !! Local Variables:
 !! mode: f90

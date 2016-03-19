@@ -1,4 +1,4 @@
-module newuoa_m
+module newuoa_oct_m
 
   private
   public :: NEWUOA
@@ -1483,4 +1483,4 @@ contains
 
 
 
-end module newuoa_m
+end module newuoa_oct_m

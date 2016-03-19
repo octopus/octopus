@@ -19,44 +19,44 @@
 
 #include "global.h"
 
-module sternheimer_m
-  use batch_m
-  use batch_ops_m
-  use density_m
-  use global_m
-  use grid_m
-  use output_m
-  use hamiltonian_m
-  use io_m
-  use lalg_basic_m
-  use linear_response_m
-  use linear_solver_m
-  use parser_m
-  use math_m
-  use mesh_m
-  use mesh_function_m
-  use messages_m
-  use mix_m
-  use multigrid_m
-  use pert_m
-  use poisson_m
-  use preconditioners_m
-  use profiling_m
-  use restart_m
-  use scf_tol_m
-  use simul_box_m
-  use smear_m
-  use states_m
-  use states_calc_m
-  use states_dim_m
-  use states_restart_m
-  use string_m
-  use system_m
-  use unit_m
-  use unit_system_m
-  use types_m
-  use v_ks_m
-  use xc_m
+module sternheimer_oct_m
+  use batch_oct_m
+  use batch_ops_oct_m
+  use density_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use output_oct_m
+  use hamiltonian_oct_m
+  use io_oct_m
+  use lalg_basic_oct_m
+  use linear_response_oct_m
+  use linear_solver_oct_m
+  use parser_oct_m
+  use math_oct_m
+  use mesh_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use mix_oct_m
+  use multigrid_oct_m
+  use pert_oct_m
+  use poisson_oct_m
+  use preconditioners_oct_m
+  use profiling_oct_m
+  use restart_oct_m
+  use scf_tol_oct_m
+  use simul_box_oct_m
+  use smear_oct_m
+  use states_oct_m
+  use states_calc_oct_m
+  use states_dim_oct_m
+  use states_restart_oct_m
+  use string_oct_m
+  use system_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use types_oct_m
+  use v_ks_oct_m
+  use xc_oct_m
   use XC_F90(lib_m)
 
   implicit none
@@ -462,7 +462,7 @@ contains
 #include "real.F90"
 #include "sternheimer_inc.F90"
 
-end module sternheimer_m
+end module sternheimer_oct_m
 
 !! Local Variables:
 !! mode: f90

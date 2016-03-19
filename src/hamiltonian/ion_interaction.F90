@@ -19,23 +19,23 @@
 
 #include "global.h"
 
-module ion_interaction_m
-  use base_term_m
-  use comm_m
-  use geometry_m
-  use global_m
-  use distributed_m
-  use loct_math_m
-  use messages_m
-  use mpi_m
-  use parser_m
-  use periodic_copy_m
-  use profiling_m
-  use ps_m
-  use simul_box_m
-  use species_m
-  use ssys_ionic_m
-  use unit_system_m
+module ion_interaction_oct_m
+  use base_term_oct_m
+  use comm_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use distributed_oct_m
+  use loct_math_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use parser_oct_m
+  use periodic_copy_oct_m
+  use profiling_oct_m
+  use ps_oct_m
+  use simul_box_oct_m
+  use species_oct_m
+  use ssys_ionic_oct_m
+  use unit_system_oct_m
 
   implicit none
 
@@ -547,7 +547,7 @@ contains
     POP_SUB(ion_interaction_test)
   end subroutine ion_interaction_test
     
-end module ion_interaction_m
+end module ion_interaction_oct_m
 
 !! Local Variables:
 !! mode: f90

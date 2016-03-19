@@ -19,33 +19,33 @@
 
 #include "global.h"
 
-module nl_operator_m
-  use batch_m
-  use boundaries_m
+module nl_operator_oct_m
+  use batch_oct_m
+  use boundaries_oct_m
 #ifdef HAVE_OPENCL
   use cl
 #endif
   use iso_c_binding
-  use global_m
-  use io_m
-  use loct_pointer_m
-  use math_m
-  use index_m
-  use mesh_m
-  use messages_m
-  use multicomm_m
-  use mpi_m
-  use octcl_kernel_m
-  use opencl_m
-  use operate_f_m
-  use par_vec_m
-  use parser_m
-  use partition_m
-  use profiling_m
-  use simul_box_m
-  use stencil_m
-  use types_m
-  use varinfo_m
+  use global_oct_m
+  use io_oct_m
+  use loct_pointer_oct_m
+  use math_oct_m
+  use index_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use multicomm_oct_m
+  use mpi_oct_m
+  use octcl_kernel_oct_m
+  use opencl_oct_m
+  use operate_f_oct_m
+  use par_vec_oct_m
+  use parser_oct_m
+  use partition_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
+  use stencil_oct_m
+  use types_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -1234,7 +1234,7 @@ contains
 #include "complex_single.F90"
 #include "nl_operator_inc.F90"  
 
-end module nl_operator_m
+end module nl_operator_oct_m
 
 !! Local Variables:
 !! mode: f90

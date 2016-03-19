@@ -19,35 +19,35 @@
 
 #include "global.h"
 
-module xc_m
-  use distributed_m
-  use comm_m
-  use cube_m
-  use cube_function_m
-  use derivatives_m
-  use global_m
-  use grid_m
-  use index_m
-  use io_m
-  use io_function_m
-  use lalg_basic_m
-  use lalg_adv_m
-  use libvdwxc_m
-  use mesh_m
-  use mesh_function_m
-  use messages_m
-  use mpi_m
-  use par_vec_m
-  use parser_m
-  use poisson_m
-  use profiling_m
-  use states_m
-  use states_dim_m
-  use symmetrizer_m
-  use unit_system_m
-  use varinfo_m
+module xc_oct_m
+  use distributed_oct_m
+  use comm_oct_m
+  use cube_oct_m
+  use cube_function_oct_m
+  use derivatives_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use index_oct_m
+  use io_oct_m
+  use io_function_oct_m
+  use lalg_basic_oct_m
+  use lalg_adv_oct_m
+  use libvdwxc_oct_m
+  use mesh_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use par_vec_oct_m
+  use parser_oct_m
+  use poisson_oct_m
+  use profiling_oct_m
+  use states_oct_m
+  use states_dim_oct_m
+  use symmetrizer_oct_m
+  use unit_system_oct_m
+  use varinfo_oct_m
   use XC_F90(lib_m)
-  use xc_functl_m
+  use xc_functl_oct_m
 
   implicit none
 
@@ -357,7 +357,7 @@ contains
 #include "fxc_inc.F90"
 #include "kxc_inc.F90"
 
-end module xc_m
+end module xc_oct_m
 
 
 !! Local Variables:

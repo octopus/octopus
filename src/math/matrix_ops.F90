@@ -19,17 +19,17 @@
 
 #include "global.h"
 
-module matrix_ops_m
-  use blacs_proc_grid_m
-  use global_m
-  use lapack_m
-  use matrix_m
-  use messages_m
-  use mpi_m
-  use profiling_m
-  use scalapack_m
-  use types_m
-  use utils_m
+module matrix_ops_oct_m
+  use blacs_proc_grid_oct_m
+  use global_oct_m
+  use lapack_oct_m
+  use matrix_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use profiling_oct_m
+  use scalapack_oct_m
+  use types_oct_m
+  use utils_oct_m
 
   implicit none
 
@@ -289,7 +289,7 @@ contains
 
 #include "matrix_ops_inc.F90"
 
-end module matrix_ops_m
+end module matrix_ops_oct_m
 
 !! Local Variables:
 !! mode: f90

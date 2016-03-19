@@ -19,9 +19,9 @@
 
 #include "global.h"
 
-module symm_op_m
-  use global_m
-  use messages_m
+module symm_op_oct_m
+  use global_oct_m
+  use messages_oct_m
 
   implicit none
 
@@ -166,7 +166,7 @@ contains
 #include "complex.F90"
 #include "symm_op_inc.F90"
 
-end module symm_op_m
+end module symm_op_oct_m
 
 !! Local Variables:
 !! mode: f90

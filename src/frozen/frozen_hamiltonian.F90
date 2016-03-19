@@ -1,17 +1,17 @@
 #include "global.h"
 
-module frozen_hamiltonian_m
+module frozen_hamiltonian_oct_m
 
-  use base_hamiltonian_m
-  use base_potential_m
-  use base_system_m
-  use frozen_external_m
-  use global_m
-  use json_m
-  use kinds_m
-  use messages_m
-  use profiling_m
-  use simulation_m
+  use base_hamiltonian_oct_m
+  use base_potential_oct_m
+  use base_system_oct_m
+  use frozen_external_oct_m
+  use global_oct_m
+  use json_oct_m
+  use kinds_oct_m
+  use messages_oct_m
+  use profiling_oct_m
+  use simulation_oct_m
 
   implicit none
 
@@ -48,7 +48,7 @@ contains
     POP_SUB(frozen_hamiltonian__acc__)
   end subroutine frozen_hamiltonian__acc__
 
-end module frozen_hamiltonian_m
+end module frozen_hamiltonian_oct_m
 
 !! Local Variables:
 !! mode: f90

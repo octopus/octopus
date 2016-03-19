@@ -19,21 +19,21 @@
 
 #include "global.h"
 
-module kdotp_calc_m
-  use global_m
-  use hamiltonian_m
-  use linear_response_m
-  use mesh_m
-  use mesh_function_m
-  use messages_m
-  use mpi_m
-  use pert_m
-  use profiling_m
-  use states_m
-  use states_calc_m
-  use sternheimer_m
-  use system_m
-  use utils_m
+module kdotp_calc_oct_m
+  use global_oct_m
+  use hamiltonian_oct_m
+  use linear_response_oct_m
+  use mesh_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use pert_oct_m
+  use profiling_oct_m
+  use states_oct_m
+  use states_calc_oct_m
+  use sternheimer_oct_m
+  use system_oct_m
+  use utils_oct_m
 
   implicit none
 
@@ -173,7 +173,7 @@ end subroutine zcalc_dipole_periodic
 #include "complex.F90"
 #include "kdotp_calc_inc.F90"
 
-end module kdotp_calc_m
+end module kdotp_calc_oct_m
 
 !! Local Variables:
 !! mode: f90

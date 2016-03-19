@@ -19,11 +19,11 @@
 
 #include "global.h"
 
-module polyhedron_m
-  use global_m
-  use messages_m
-  use io_m
-  use profiling_m
+module polyhedron_oct_m
+  use global_oct_m
+  use messages_oct_m
+  use io_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -129,7 +129,7 @@ contains
 
   !------------------------------------------------------
 
-end module polyhedron_m
+end module polyhedron_oct_m
 
 !! Local Variables:
 !! mode: f90

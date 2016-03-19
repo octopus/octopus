@@ -18,7 +18,7 @@
 !! $Id$
 
 #include "global.h"
-module hardware_m
+module hardware_oct_m
   
   private
   
@@ -72,7 +72,7 @@ contains
 
   end subroutine hardware_end
 
-end module hardware_m
+end module hardware_oct_m
 
 !! Local Variables:
 !! mode: f90

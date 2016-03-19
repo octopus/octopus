@@ -19,17 +19,17 @@
 
 #include "global.h"
 
-module ps_hgh_m
+module ps_hgh_oct_m
   !< For information about the Hartwinger-Goedecker-Hutter pseudopotentials, take a look at:
   !!  (1) S. Goedecker, M. Teter and J. Hutter, Phys. Rev. B 54, 1703 (1996).
   !!  (2) C. Hartwinger, S. Goedecker and J. Hutter, Phys. Rev. B 58, 3641 (1998).
-  use atomic_m
-  use global_m
-  use io_m
-  use loct_math_m
-  use logrid_m
-  use messages_m
-  use profiling_m
+  use atomic_oct_m
+  use global_oct_m
+  use io_oct_m
+  use loct_math_oct_m
+  use logrid_oct_m
+  use messages_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -700,7 +700,7 @@ contains
     POP_SUB(hgh_debug)
   end subroutine hgh_debug
 
-end module ps_hgh_m
+end module ps_hgh_oct_m
 
 !! Local Variables:
 !! mode: f90

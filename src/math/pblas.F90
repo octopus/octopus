@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module pblas_m
+module pblas_oct_m
   implicit none
 
   private 
@@ -183,7 +183,7 @@ module pblas_m
 
   end interface pblas_trsm
 
-end module pblas_m
+end module pblas_oct_m
 
 !! Local Variables:
 !! mode: f90

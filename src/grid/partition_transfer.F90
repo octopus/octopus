@@ -19,15 +19,15 @@
 
 #include "global.h"
 
-module partition_transfer_m
-  use global_m
-  use iihash_m
-  use messages_m
-  use mpi_m
-  use mpi_debug_m
-  use par_vec_m
-  use profiling_m
-  use subarray_m
+module partition_transfer_oct_m
+  use global_oct_m
+  use iihash_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use mpi_debug_oct_m
+  use par_vec_oct_m
+  use profiling_oct_m
+  use subarray_oct_m
 
   implicit none
 
@@ -261,7 +261,7 @@ contains
 #include "complex.F90"
 #include "partition_transfer_inc.F90"
   
-end module partition_transfer_m
+end module partition_transfer_oct_m
 
 !! Local Variables:
 !! mode: f90

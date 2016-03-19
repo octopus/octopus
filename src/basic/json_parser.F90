@@ -1,14 +1,14 @@
 #include "global.h"
 
-module json_parser_m
+module json_parser_oct_m
 
-  use global_m
-  use io_m
-  use json_m
-  use kinds_m
-  use messages_m
-  use mpi_m
-  use profiling_m
+  use global_oct_m
+  use io_oct_m
+  use json_oct_m
+  use kinds_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -670,7 +670,7 @@ contains
     return
   end subroutine json_parser_error
 
-end module json_parser_m
+end module json_parser_oct_m
 
 !! Local Variables:
 !! mode: f90

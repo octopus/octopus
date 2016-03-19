@@ -1,17 +1,17 @@
 #include "global.h"
 
-module functional_m
+module functional_oct_m
 
-  use derivatives_m
-  use global_m
-  use interface_xc_m
-  use json_m
-  use kinds_m
-  use mesh_m
-  use messages_m
-  use profiling_m
-  use simulation_m
-  use storage_m
+  use derivatives_oct_m
+  use global_oct_m
+  use interface_xc_oct_m
+  use json_oct_m
+  use kinds_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use profiling_oct_m
+  use simulation_oct_m
+  use storage_oct_m
   use XC_F90(lib_m)
 
   implicit none
@@ -391,7 +391,7 @@ contains
     POP_SUB(functional_end)
   end subroutine functional_end
 
-end module functional_m
+end module functional_oct_m
 
 !! Local Variables:
 !! mode: f90

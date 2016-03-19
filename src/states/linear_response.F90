@@ -19,23 +19,23 @@
 
 #include "global.h"
 
-module linear_response_m
-  use comm_m
-  use global_m
-  use grid_m
-  use lalg_basic_m
-  use loct_m
-  use parser_m
-  use mesh_m
-  use mesh_function_m
-  use messages_m
-  use io_function_m
-  use profiling_m
-  use restart_m
-  use smear_m
-  use states_m
-  use states_calc_m
-  use states_dim_m
+module linear_response_oct_m
+  use comm_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use lalg_basic_oct_m
+  use loct_oct_m
+  use parser_oct_m
+  use mesh_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use io_function_oct_m
+  use profiling_oct_m
+  use restart_oct_m
+  use smear_oct_m
+  use states_oct_m
+  use states_calc_oct_m
+  use states_dim_oct_m
 
   implicit none
 
@@ -248,7 +248,7 @@ contains
 #include "complex.F90"
 #include "linear_response_inc.F90"
 
-end module linear_response_m
+end module linear_response_oct_m
 
 !! Local Variables:
 !! mode: f90

@@ -1,17 +1,17 @@
 #include "global.h"
 
-module ssys_handle_m
+module ssys_handle_oct_m
 
-  use base_handle_m
-  use frozen_handle_m
-  use geometry_m
-  use global_m
-  use grid_m
-  use json_m
-  use live_handle_m
-  use messages_m
-  use mpi_m
-  use profiling_m
+  use base_handle_oct_m
+  use frozen_handle_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use json_oct_m
+  use live_handle_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -198,7 +198,7 @@ contains
     POP_SUB(ssys_handle_end)
   end subroutine ssys_handle_end
 
-end module ssys_handle_m
+end module ssys_handle_oct_m
 
 !! Local Variables:
 !! mode: f90

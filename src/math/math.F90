@@ -21,12 +21,12 @@
 
 !> This module is intended to contain "only mathematical" functions
 !! and procedures.
-module math_m
-  use global_m
-  use lalg_basic_m
-  use loct_math_m
-  use messages_m
-  use profiling_m
+module math_oct_m
+  use global_oct_m
+  use lalg_basic_oct_m
+  use loct_math_oct_m
+  use messages_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -1144,7 +1144,7 @@ contains
 #include "real.F90"
 #include "math_inc.F90"
 
-end module math_m
+end module math_oct_m
 
 !! Local Variables:
 !! mode: f90

@@ -1,14 +1,14 @@
 #include "global.h"
 
-module frozen_states_m
+module frozen_states_oct_m
 
-  use base_density_m
-  use base_states_m
-  use frozen_density_m
-  use global_m
-  use json_m
-  use messages_m
-  use profiling_m
+  use base_density_oct_m
+  use base_states_oct_m
+  use frozen_density_oct_m
+  use global_oct_m
+  use json_oct_m
+  use messages_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -41,7 +41,7 @@ contains
     POP_SUB(frozen_states__acc__)
   end subroutine frozen_states__acc__
 
-end module frozen_states_m
+end module frozen_states_oct_m
 
 !! Local Variables:
 !! mode: f90

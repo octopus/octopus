@@ -19,34 +19,34 @@
 
 #include "global.h"
 
-module projector_m
-  use atom_m
-  use batch_m
-  use comm_m
-  use double_grid_m
-  use geometry_m
-  use global_m
-  use grid_m
-  use hgh_projector_m
-  use io_m
-  use kb_projector_m
-  use kpoints_m
-  use lalg_basic_m
-  use math_m
-  use mesh_function_m
-  use mesh_m
-  use messages_m
-  use mpi_m
-  use multicomm_m
-  use profiling_m
-  use ps_m
-  use rkb_projector_m
-  use simul_box_m
-  use species_m
-  use states_m
-  use states_dim_m
-  use submesh_m
-  use varinfo_m
+module projector_oct_m
+  use atom_oct_m
+  use batch_oct_m
+  use comm_oct_m
+  use double_grid_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use hgh_projector_oct_m
+  use io_oct_m
+  use kb_projector_oct_m
+  use kpoints_oct_m
+  use lalg_basic_oct_m
+  use math_oct_m
+  use mesh_function_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use multicomm_oct_m
+  use profiling_oct_m
+  use ps_oct_m
+  use rkb_projector_oct_m
+  use simul_box_oct_m
+  use species_oct_m
+  use states_oct_m
+  use states_dim_oct_m
+  use submesh_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -365,7 +365,7 @@ contains
 #include "complex.F90"
 #include "projector_inc.F90"
 
-end module projector_m
+end module projector_oct_m
 
 
 

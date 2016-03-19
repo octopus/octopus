@@ -19,34 +19,34 @@
 
 #include "global.h"
 
-module states_restart_m
-  use global_m
-  use grid_m
-  use io_m
-  use io_function_m
-  use kpoints_m
-  use lalg_basic_m
-  use linear_response_m
-  use loct_m
-  use mesh_m
-  use mesh_function_m
-  use messages_m
-  use mpi_m
-  use multigrid_m
-  use parser_m
-  use profiling_m
-  use par_vec_m
-  use restart_m
-  use simul_box_m
-  use smear_m
-  use states_m
-  use states_calc_m
-  use states_dim_m
-  use states_io_m
-  use string_m
-  use unit_m
-  use unit_system_m
-  use types_m
+module states_restart_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use io_oct_m
+  use io_function_oct_m
+  use kpoints_oct_m
+  use lalg_basic_oct_m
+  use linear_response_oct_m
+  use loct_oct_m
+  use mesh_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use multigrid_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use par_vec_oct_m
+  use restart_oct_m
+  use simul_box_oct_m
+  use smear_oct_m
+  use states_oct_m
+  use states_calc_oct_m
+  use states_dim_oct_m
+  use states_io_oct_m
+  use string_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use types_oct_m
 
   implicit none
 
@@ -1181,7 +1181,7 @@ contains
     POP_SUB(states_read_user_def_orbitals)
   end subroutine states_read_user_def_orbitals
 
-end module states_restart_m
+end module states_restart_oct_m
 
 
 !! Local Variables:

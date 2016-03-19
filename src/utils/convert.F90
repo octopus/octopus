@@ -22,32 +22,32 @@
 #include "global.h"
 
 program oct_convert
-  use batch_m
-  use calc_mode_par_m
-  use command_line_m
-  use fft_m
-  use fftw_params_m
-  use geometry_m
-  use global_m
-  use io_m
-  use io_function_m
-  use io_binary_m
-  use kick_m
-  use loct_m
-  use messages_m
-  use mesh_m
-  use mpi_m
-  use output_m
-  use parser_m
-  use poisson_m
-  use profiling_m
-  use spectrum_m
-  use string_m
-  use system_m
-  use restart_m
-  use unit_m
-  use unit_system_m
-  use utils_m
+  use batch_oct_m
+  use calc_mode_par_oct_m
+  use command_line_oct_m
+  use fft_oct_m
+  use fftw_params_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use io_oct_m
+  use io_function_oct_m
+  use io_binary_oct_m
+  use kick_oct_m
+  use loct_oct_m
+  use messages_oct_m
+  use mesh_oct_m
+  use mpi_oct_m
+  use output_oct_m
+  use parser_oct_m
+  use poisson_oct_m
+  use profiling_oct_m
+  use spectrum_oct_m
+  use string_oct_m
+  use system_oct_m
+  use restart_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use utils_oct_m
 
   implicit none
 

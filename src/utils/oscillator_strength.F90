@@ -19,21 +19,21 @@
 
 #include "global.h"
 
-module oscillator_strength_m
-  use global_m
-  use io_m
-  use kick_m
-  use lalg_adv_m
-  use loct_m
-  use loct_math_m
-  use parser_m
-  use messages_m
-  use minimizer_m
-  use profiling_m
-  use spectrum_m
-  use string_m
-  use unit_m
-  use unit_system_m
+module oscillator_strength_oct_m
+  use global_oct_m
+  use io_oct_m
+  use kick_oct_m
+  use lalg_adv_oct_m
+  use loct_oct_m
+  use loct_math_oct_m
+  use parser_oct_m
+  use messages_oct_m
+  use minimizer_oct_m
+  use profiling_oct_m
+  use spectrum_oct_m
+  use string_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
 
   implicit none
 
@@ -1110,17 +1110,17 @@ contains
   end subroutine print_omega_file
   ! ---------------------------------------------------------
   
-end module oscillator_strength_m
+end module oscillator_strength_oct_m
 
 ! ---------------------------------------------------------
 ! ---------------------------------------------------------
 ! ---------------------------------------------------------
 program oscillator_strength
-  use command_line_m
-  use global_m
-  use io_m
-  use messages_m
-  use oscillator_strength_m
+  use command_line_oct_m
+  use global_oct_m
+  use io_oct_m
+  use messages_oct_m
+  use oscillator_strength_oct_m
 
   implicit none
 

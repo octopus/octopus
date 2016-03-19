@@ -9,14 +9,14 @@
 
 #define DICT_TEMPLATE_NAME config
 #define DICT_TYPE_NAME json_object_t
-#define DICT_TYPE_MODULE_NAME json_m
+#define DICT_TYPE_MODULE_NAME json_oct_m
 #define DICT_TYPE_EXTERNAL
 
-module config_dict_m
+module config_dict_oct_m
 
-  use global_m
-  use messages_m
-  use profiling_m
+  use global_oct_m
+  use messages_oct_m
+  use profiling_oct_m
   
 #define DICT_INCLUDE_PREFIX
 #include "tdict_inc.F90"
@@ -62,7 +62,7 @@ contains
 #include "tdict_inc.F90"
 #undef DICT_INCLUDE_BODY
 
-end module config_dict_m
+end module config_dict_oct_m
 
 #undef DICT_TEMPLATE_NAME
 #undef DICT_TYPE_NAME

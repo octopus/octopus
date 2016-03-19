@@ -48,15 +48,15 @@
 !! You can use the routine multicomm_strategy_is_parallel to know if a certain
 !! index is parallelized.
 
-module topology_m
-  use global_m
-  use io_m
-  use loct_m
-  use messages_m
-  use mpi_m
-  use parser_m
-  use profiling_m
-  use utils_m
+module topology_oct_m
+  use global_oct_m
+  use io_oct_m
+  use loct_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use utils_oct_m
 
   implicit none
 
@@ -197,7 +197,7 @@ contains
     POP_SUB(topology_end)
   end subroutine topology_end
   
-end module topology_m
+end module topology_oct_m
 
 !! Local Variables:
 !! mode: f90

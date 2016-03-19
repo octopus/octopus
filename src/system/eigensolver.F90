@@ -19,39 +19,39 @@
 
 #include "global.h"
 
-module eigensolver_m
-  use batch_m
-  use derivatives_m
-  use eigen_arpack_m
-  use eigen_cg_m
-  use eigen_feast_m
-  use eigen_lobpcg_m
-  use eigen_rmmdiis_m
-  use energy_calc_m
-  use exponential_m
-  use global_m
-  use grid_m
-  use hamiltonian_m
-  use lalg_adv_m
-  use lalg_basic_m
-  use loct_m
-  use math_m
-  use mesh_m
-  use mesh_function_m
-  use messages_m
-  use mpi_m
-  use mpi_lib_m
-  use parser_m
-  use preconditioners_m
-  use profiling_m
+module eigensolver_oct_m
+  use batch_oct_m
+  use derivatives_oct_m
+  use eigen_arpack_oct_m
+  use eigen_cg_oct_m
+  use eigen_feast_oct_m
+  use eigen_lobpcg_oct_m
+  use eigen_rmmdiis_oct_m
+  use energy_calc_oct_m
+  use exponential_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use hamiltonian_oct_m
+  use lalg_adv_oct_m
+  use lalg_basic_oct_m
+  use loct_oct_m
+  use math_oct_m
+  use mesh_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use mpi_lib_oct_m
+  use parser_oct_m
+  use preconditioners_oct_m
+  use profiling_oct_m
   use sort_om
-  use states_m
-  use states_calc_m
-  use states_dim_m
-  use subspace_m
-  use unit_m
-  use unit_system_m
-  use varinfo_m
+  use states_oct_m
+  use states_calc_oct_m
+  use states_dim_oct_m
+  use subspace_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -763,7 +763,7 @@ contains
 #include "eigen_plan_inc.F90"
 #include "eigen_evolution_inc.F90"
 
-end module eigensolver_m
+end module eigensolver_oct_m
 
 
 !! Local Variables:

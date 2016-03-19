@@ -1,6 +1,6 @@
 #include "global.h"
 
-module kinds_m
+module kinds_oct_m
 
   implicit none
 
@@ -151,7 +151,7 @@ contains
     return
   end function real_dp_more
   
-end module kinds_m
+end module kinds_oct_m
 
 !! Local Variables:
 !! mode: f90

@@ -1,39 +1,39 @@
 #include "global.h"
 
-module output_fio_m
+module output_fio_oct_m
 
-  use base_config_m
-  use base_hamiltonian_m  
-  use batch_m
-  use curvilinear_m
-  use density_m
-  use epot_m
-  use fio_config_m
-  use fio_handle_m
-  use geometry_m
-  use global_m
-  use grid_m
-  use hamiltonian_m
-  use index_m
-  use io_m
-  use io_function_m
-  use json_m
-  use json_m
-  use kinds_m
-  use mesh_m
-  use messages_m
-  use mpi_m
-  use parser_m
-  use path_m
-  use profiling_m
-  use simul_box_m
-  use space_m
-  use species_m
-  use states_m
-  use states_dim_m
-  use storage_m
-  use unit_m
-  use unit_system_m
+  use base_config_oct_m
+  use base_hamiltonian_oct_m  
+  use batch_oct_m
+  use curvilinear_oct_m
+  use density_oct_m
+  use epot_oct_m
+  use fio_config_oct_m
+  use fio_handle_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use hamiltonian_oct_m
+  use index_oct_m
+  use io_oct_m
+  use io_function_oct_m
+  use json_oct_m
+  use json_oct_m
+  use kinds_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use parser_oct_m
+  use path_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
+  use space_oct_m
+  use species_oct_m
+  use states_oct_m
+  use states_dim_oct_m
+  use storage_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
   
   implicit none
 
@@ -761,7 +761,7 @@ contains
     POP_SUB(output_fio)
   end subroutine output_fio
 
-end module output_fio_m
+end module output_fio_oct_m
 
 !! Local Variables:
 !! mode: f90

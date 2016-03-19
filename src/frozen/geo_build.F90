@@ -22,20 +22,20 @@
 #include "tdict_inc.F90"
 #undef DICT_TEMPLATE_NAME
 
-module geo_build_m
+module geo_build_oct_m
 
-  use atom_m
-  use atom_list_m
-  use basis_m
-  use geometry_m
-  use global_m
-  use json_m
-  use kinds_m
-  use space_m
-  use species_m
-  use species_dict_m
-  use messages_m
-  use profiling_m
+  use atom_oct_m
+  use atom_list_oct_m
+  use basis_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use json_oct_m
+  use kinds_oct_m
+  use space_oct_m
+  use species_oct_m
+  use species_dict_oct_m
+  use messages_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -833,7 +833,7 @@ contains
     POP_SUB(geo_build_iterator_end)
   end subroutine geo_build_iterator_end
 
-end module geo_build_m
+end module geo_build_oct_m
 
 !! Local Variables:
 !! mode: f90

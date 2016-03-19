@@ -19,28 +19,28 @@
 
 #include "global.h"
 
-module geometry_m
-  use atom_m
+module geometry_oct_m
+  use atom_oct_m
   use iso_c_binding
-  use distributed_m
-  use global_m
-  use io_m
-  use json_m
-  use loct_pointer_m
-  use loct_math_m
-  use messages_m
-  use multicomm_m
-  use mpi_m
-  use openscad_m
-  use parser_m
-  use profiling_m
-  use read_coords_m
-  use space_m
-  use species_m
-  use string_m
-  use unit_m
-  use unit_system_m
-  use varinfo_m
+  use distributed_oct_m
+  use global_oct_m
+  use io_oct_m
+  use json_oct_m
+  use loct_pointer_oct_m
+  use loct_math_oct_m
+  use messages_oct_m
+  use multicomm_oct_m
+  use mpi_oct_m
+  use openscad_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use read_coords_oct_m
+  use space_oct_m
+  use species_oct_m
+  use string_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -941,7 +941,7 @@ contains
   end subroutine geometry_set_positions
 
 
-end module geometry_m
+end module geometry_oct_m
 
 !! Local Variables:
 !! mode: f90

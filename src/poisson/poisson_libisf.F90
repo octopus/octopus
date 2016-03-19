@@ -19,18 +19,18 @@
 
 #include "global.h"
 
-module poisson_libisf_m
-  use cube_function_m
-  use cube_m
-  use fourier_space_m
-  use global_m
-  use mesh_cube_parallel_map_m
-  use mesh_m
-  use messages_m
-  use mpi_m
-  use par_vec_m
-  use parser_m
-  use profiling_m
+module poisson_libisf_oct_m
+  use cube_function_oct_m
+  use cube_oct_m
+  use fourier_space_oct_m
+  use global_oct_m
+  use mesh_cube_parallel_map_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use par_vec_oct_m
+  use parser_oct_m
+  use profiling_oct_m
 
 #ifdef HAVE_LIBISF
   !! From BigDFT
@@ -314,7 +314,7 @@ contains
 #endif
   end subroutine poisson_libisf_get_dims
   
-end module poisson_libisf_m
+end module poisson_libisf_oct_m
 
 !! Local Variables:
 !! mode: f90

@@ -19,9 +19,9 @@
 
 #include "global.h"
 
-module varinfo_m
+module varinfo_oct_m
   use iso_c_binding
-  use string_m
+  use string_oct_m
 
   implicit none
 
@@ -311,7 +311,7 @@ contains
   end function varinfo_exists
   
 
-end module varinfo_m
+end module varinfo_oct_m
 
 !! Local Variables:
 !! mode: f90

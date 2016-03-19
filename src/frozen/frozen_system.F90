@@ -1,14 +1,14 @@
 #include "global.h"
 
-module frozen_system_m
+module frozen_system_oct_m
 
-  use base_states_m
-  use base_system_m
-  use frozen_states_m
-  use global_m
-  use json_m
-  use messages_m
-  use profiling_m
+  use base_states_oct_m
+  use base_system_oct_m
+  use frozen_states_oct_m
+  use global_oct_m
+  use json_oct_m
+  use messages_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -41,7 +41,7 @@ contains
     POP_SUB(frozen_system__acc__)
   end subroutine frozen_system__acc__
 
-end module frozen_system_m
+end module frozen_system_oct_m
 
 !! Local Variables:
 !! mode: f90

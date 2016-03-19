@@ -19,28 +19,28 @@
 
 #include "global.h"
 
-module linear_solver_m
-  use batch_m
-  use batch_ops_m
-  use derivatives_m
-  use global_m
-  use grid_m
-  use hamiltonian_m
-  use lalg_basic_m
-  use linear_response_m
-  use loct_m
-  use parser_m
-  use math_m
-  use mesh_m
-  use mesh_batch_m
-  use mesh_function_m
-  use messages_m
-  use profiling_m
-  use preconditioners_m
-  use scf_tol_m
-  use smear_m
-  use solvers_m
-  use states_m
+module linear_solver_oct_m
+  use batch_oct_m
+  use batch_ops_oct_m
+  use derivatives_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use hamiltonian_oct_m
+  use lalg_basic_oct_m
+  use linear_response_oct_m
+  use loct_oct_m
+  use parser_oct_m
+  use math_oct_m
+  use mesh_oct_m
+  use mesh_batch_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use profiling_oct_m
+  use preconditioners_oct_m
+  use scf_tol_oct_m
+  use smear_oct_m
+  use solvers_oct_m
+  use states_oct_m
 
   implicit none
 
@@ -265,7 +265,7 @@ contains
 
 
 
-end module linear_solver_m
+end module linear_solver_oct_m
 
 !! Local Variables:
 !! mode: f90

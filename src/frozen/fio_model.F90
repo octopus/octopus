@@ -1,16 +1,16 @@
 #include "global.h"
 
-module fio_model_m
+module fio_model_oct_m
 
-  use base_hamiltonian_m
-  use base_model_m
-  use base_system_m
-  use fio_hamiltonian_m
-  use fio_system_m
-  use global_m
-  use messages_m
-  use mpi_m
-  use profiling_m
+  use base_hamiltonian_oct_m
+  use base_model_oct_m
+  use base_system_oct_m
+  use fio_hamiltonian_oct_m
+  use fio_system_oct_m
+  use global_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -61,7 +61,7 @@ contains
     POP_SUB(fio_model__load__)
   end subroutine fio_model__load__
 
-end module fio_model_m
+end module fio_model_oct_m
 
 !! Local Variables:
 !! mode: f90

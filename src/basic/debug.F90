@@ -19,9 +19,9 @@
 
 #include "global.h"
 
-module debug_m
-  use global_m
-  use parser_m
+module debug_oct_m
+  use global_oct_m
+  use parser_oct_m
   
   private
   
@@ -120,7 +120,7 @@ contains
 
   end subroutine from_bits
   
-end module debug_m
+end module debug_oct_m
 
 !! Local Variables:
 !! mode: f90

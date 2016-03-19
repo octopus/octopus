@@ -19,14 +19,14 @@
 
 #include "global.h"
 
-module states_group_m
-  use batch_m
-  use batch_ops_m
-  use global_m
-  use loct_pointer_m
-  use messages_m
-  use mpi_m
-  use profiling_m
+module states_group_oct_m
+  use batch_oct_m
+  use batch_ops_oct_m
+  use global_oct_m
+  use loct_pointer_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -115,7 +115,7 @@ contains
     POP_SUB(states_group_copy)
   end subroutine states_group_copy
   
-end module states_group_m
+end module states_group_oct_m
 
 
 !! Local Variables:

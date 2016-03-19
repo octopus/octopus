@@ -19,38 +19,38 @@
 
 #include "global.h"
 
-module derivatives_m
-  use batch_m
-  use boundaries_m
+module derivatives_oct_m
+  use batch_oct_m
+  use boundaries_oct_m
 #ifdef HAVE_OPENCL
   use cl
 #endif
-  use global_m
-  use lalg_adv_m
-  use lalg_basic_m
-  use loct_m
-  use math_m
-  use mesh_m
-  use mesh_function_m
-  use messages_m
-  use mpi_m
-  use mpi_debug_m
-  use nl_operator_m
-  use opencl_m
-  use octcl_kernel_m
-  use par_vec_m
-  use parser_m
-  use profiling_m
-  use simul_box_m
-  use stencil_cube_m
-  use stencil_star_m
-  use stencil_starplus_m
-  use stencil_variational_m
-  use test_parameters_m
-  use transfer_table_m
-  use types_m
-  use utils_m
-  use varinfo_m
+  use global_oct_m
+  use lalg_adv_oct_m
+  use lalg_basic_oct_m
+  use loct_oct_m
+  use math_oct_m
+  use mesh_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use mpi_debug_oct_m
+  use nl_operator_oct_m
+  use opencl_oct_m
+  use octcl_kernel_oct_m
+  use par_vec_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
+  use stencil_cube_oct_m
+  use stencil_star_oct_m
+  use stencil_starplus_oct_m
+  use stencil_variational_oct_m
+  use test_parameters_oct_m
+  use transfer_table_oct_m
+  use types_oct_m
+  use utils_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -709,7 +709,7 @@ contains
 #include "complex_single.F90"
 #include "derivatives_inc.F90"
 
-end module derivatives_m
+end module derivatives_oct_m
 
 !! Local Variables:
 !! mode: f90

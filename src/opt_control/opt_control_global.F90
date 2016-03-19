@@ -23,13 +23,13 @@
 !! contains some of the basic information about how the OCT run will
 !! be done.
 !! The "oct" variable (whose datatype is oct_t) is declared in the main
-!! OCT module, opt_control_m (as a module variable). It is initialized
+!! OCT module, opt_control_oct_m (as a module variable). It is initialized
 !! by calling oct_read_inp, defined below in this module.
-module opt_control_global_m
-  use global_m
-  use messages_m
-  use parser_m
-  use varinfo_m
+module opt_control_global_oct_m
+  use global_oct_m
+  use messages_oct_m
+  use parser_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -304,7 +304,7 @@ contains
   ! ---------------------------------------------------------
 
  
-end module opt_control_global_m
+end module opt_control_global_oct_m
 
 !! Local Variables:
 !! mode: f90

@@ -29,13 +29,13 @@
 !!
 !! 1 au_[mass] = 5.485799110e-4 u
 !!
-module unit_system_m
-  use global_m
-  use io_m
-  use messages_m
-  use parser_m
-  use unit_m
-  use varinfo_m
+module unit_system_oct_m
+  use global_oct_m
+  use io_oct_m
+  use messages_oct_m
+  use parser_oct_m
+  use unit_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -426,7 +426,7 @@ contains
     POP_SUB(unit_system_from_file)
   end subroutine unit_system_from_file
 
-end module unit_system_m
+end module unit_system_oct_m
 
 !! Local Variables:
 !! mode: f90

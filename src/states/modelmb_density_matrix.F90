@@ -19,29 +19,29 @@
 
 #include "global.h"
 
-module modelmb_density_matrix_m
+module modelmb_density_matrix_oct_m
 
-  use batch_m
-  use comm_m
-  use global_m
-  use grid_m
-  use hypercube_m
-  use io_m
-  use index_m
-  use lalg_adv_m
-  use loct_m
-  use mesh_m
-  use mesh_batch_m
-  use mesh_function_m
-  use messages_m
-  use modelmb_particles_m
-  use modelmb_1part_m
-  use mpi_m
-  use mpi_lib_m
-  use par_vec_m
-  use parser_m
-  use profiling_m
-  use states_m
+  use batch_oct_m
+  use comm_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use hypercube_oct_m
+  use io_oct_m
+  use index_oct_m
+  use lalg_adv_oct_m
+  use loct_oct_m
+  use mesh_oct_m
+  use mesh_batch_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use modelmb_particles_oct_m
+  use modelmb_1part_oct_m
+  use mpi_oct_m
+  use mpi_lib_oct_m
+  use par_vec_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use states_oct_m
 
   implicit none
 
@@ -182,7 +182,7 @@ contains
 #include "modelmb_density_matrix_inc.F90"
 #include "undef.F90"
 
-end module modelmb_density_matrix_m
+end module modelmb_density_matrix_oct_m
 
 
 !! Local Variables:

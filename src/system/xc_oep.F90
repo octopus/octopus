@@ -20,29 +20,29 @@
 
 #include "global.h"
 
-module xc_oep_m
-  use comm_m
-  use derivatives_m
-  use global_m
-  use grid_m
-  use hamiltonian_m
-  use lalg_adv_m
-  use linear_response_m
-  use linear_solver_m
-  use mesh_function_m
-  use mesh_m
-  use messages_m
-  use mpi_m
-  use parser_m
-  use poisson_m
-  use profiling_m
-  use states_m
-  use states_dim_m
-  use scf_tol_m
-  use varinfo_m
-  use xc_m
+module xc_oep_oct_m
+  use comm_oct_m
+  use derivatives_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use hamiltonian_oct_m
+  use lalg_adv_oct_m
+  use linear_response_oct_m
+  use linear_solver_oct_m
+  use mesh_function_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use parser_oct_m
+  use poisson_oct_m
+  use profiling_oct_m
+  use states_oct_m
+  use states_dim_oct_m
+  use scf_tol_oct_m
+  use varinfo_oct_m
+  use xc_oct_m
   use XC_F90(lib_m)
-  use xc_functl_m
+  use xc_functl_oct_m
 
   implicit none
 
@@ -317,7 +317,7 @@ contains
 
 #include "undef.F90"
 
-end module xc_oep_m
+end module xc_oep_oct_m
 
 !! Local Variables:
 !! mode: f90

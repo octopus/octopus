@@ -23,7 +23,7 @@
 !> This module contains interfaces for METIS and PARMETIS routines
 ! -----------------------------------------------------------------------
 
-module metis_m
+module metis_oct_m
   implicit none
 
   public
@@ -138,7 +138,7 @@ module metis_m
 #endif
   end interface
 
-end module metis_m
+end module metis_oct_m
 
 !! Local Variables:
 !! mode: f90

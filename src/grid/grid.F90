@@ -19,30 +19,30 @@
 
 #include "global.h"
 
-module grid_m
-  use cube_m
-  use curvilinear_m
-  use derivatives_m
-  use double_grid_m
-  use geometry_m
-  use global_m
-  use index_m
-  use io_m
-  use mesh_m
-  use mesh_init_m
-  use messages_m
-  use mpi_m
-  use multicomm_m
-  use multigrid_m
-  use nl_operator_m
-  use parser_m
-  use profiling_m
-  use space_m
-  use simul_box_m
-  use stencil_m
-  use stencil_cube_m
-  use unit_m
-  use unit_system_m
+module grid_oct_m
+  use cube_oct_m
+  use curvilinear_oct_m
+  use derivatives_oct_m
+  use double_grid_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use index_oct_m
+  use io_oct_m
+  use mesh_oct_m
+  use mesh_init_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use multicomm_oct_m
+  use multigrid_oct_m
+  use nl_operator_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use space_oct_m
+  use simul_box_oct_m
+  use stencil_oct_m
+  use stencil_cube_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
 
   implicit none
 
@@ -426,7 +426,7 @@ contains
     POP_SUB(grid_create_largergrid)
   end subroutine grid_create_largergrid
 
-end module grid_m
+end module grid_oct_m
 
 !! Local Variables:
 !! mode: f90

@@ -1,23 +1,23 @@
 #include "global.h"
 
-module fio_external_m
+module fio_external_oct_m
 
-  use atom_m
-  use base_geometry_m
-  use base_potential_m
-  use base_system_m
-  use global_m
-  use intrpl_m
-  use io_function_m
-  use json_m
-  use kinds_m
-  use mesh_m
-  use messages_m
-  use path_m
-  use profiling_m
-  use simulation_m
-  use species_m
-  use storage_m
+  use atom_oct_m
+  use base_geometry_oct_m
+  use base_potential_oct_m
+  use base_system_oct_m
+  use global_oct_m
+  use intrpl_oct_m
+  use io_function_oct_m
+  use json_oct_m
+  use kinds_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use path_oct_m
+  use profiling_oct_m
+  use simulation_oct_m
+  use species_oct_m
+  use storage_oct_m
 
   implicit none
 
@@ -265,7 +265,7 @@ contains
     POP_SUB(fio_external_intrpl_end)
   end subroutine fio_external_intrpl_end
 
-end module fio_external_m
+end module fio_external_oct_m
 
 !! Local Variables:
 !! mode: f90

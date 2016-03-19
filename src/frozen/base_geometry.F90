@@ -22,19 +22,19 @@
 #define HASH_KEY_TYPE_NAME json_object_t
 #define HASH_VAL_TEMPLATE_NAME base_geometry
 
-module base_geometry_m
+module base_geometry_oct_m
 
-  use atom_m
-  use config_dict_m
-  use geo_build_m
-  use geo_intrf_m
-  use geometry_m
-  use global_m
-  use json_m
-  use messages_m
-  use profiling_m
-  use space_m
-  use species_m
+  use atom_oct_m
+  use config_dict_oct_m
+  use geo_build_oct_m
+  use geo_intrf_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use json_oct_m
+  use messages_oct_m
+  use profiling_oct_m
+  use space_oct_m
+  use species_oct_m
 
 #define LIST_TEMPLATE_NAME base_geometry
 #define LIST_INCLUDE_PREFIX
@@ -659,7 +659,7 @@ contains
 #undef EXTENDED_TYPE
 #undef TEMPLATE_PREFIX
 
-end module base_geometry_m
+end module base_geometry_oct_m
 
 #undef HASH_TEMPLATE_NAME
 #undef HASH_KEY_TEMPLATE_NAME

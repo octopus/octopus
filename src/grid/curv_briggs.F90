@@ -24,11 +24,11 @@
 !!
 !! It assumes that the Oxygen atom is located at x0=0 (see Eq. (12))
 
-module curv_briggs_m
-  use global_m
-  use parser_m
-  use messages_m
-  use simul_box_m
+module curv_briggs_oct_m
+  use global_oct_m
+  use parser_oct_m
+  use messages_oct_m
+  use simul_box_oct_m
 
   implicit none
 
@@ -109,7 +109,7 @@ contains
 
   end subroutine curv_briggs_jacobian_inv
 
-end module curv_briggs_m
+end module curv_briggs_oct_m
 
 !! Local Variables:
 !! mode: f90

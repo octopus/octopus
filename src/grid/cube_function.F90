@@ -19,29 +19,29 @@
 
 #include "global.h"
 
-module cube_function_m
-  use cube_m
+module cube_function_oct_m
+  use cube_oct_m
 #ifdef HAVE_OPENCL
   use cl
 #endif
-  use fft_m
-  use global_m
-  use index_m
-  use math_m
-  use mesh_m
-  use mesh_cube_map_m
-  use mesh_cube_parallel_map_m
-  use messages_m
-  use mpi_m
-  use mpi_debug_m
-  use octcl_kernel_m
-  use opencl_m
-  use parser_m
-  use partition_transfer_m
-  use par_vec_m
-  use profiling_m
-  use simul_box_m
-  use types_m
+  use fft_oct_m
+  use global_oct_m
+  use index_oct_m
+  use math_oct_m
+  use mesh_oct_m
+  use mesh_cube_map_oct_m
+  use mesh_cube_parallel_map_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use mpi_debug_oct_m
+  use octcl_kernel_oct_m
+  use opencl_oct_m
+  use parser_oct_m
+  use partition_transfer_oct_m
+  use par_vec_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
+  use types_oct_m
 
   implicit none
   private
@@ -190,7 +190,7 @@ contains
 #include "complex.F90"
 #include "cube_function_inc.F90"
 
-end module cube_function_m
+end module cube_function_oct_m
 
 
 !! Local Variables:

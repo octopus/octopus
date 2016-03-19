@@ -1,13 +1,13 @@
 #include "global.h"
 
-module fio_states_m
+module fio_states_oct_m
 
-  use base_density_m
-  use base_states_m
-  use fio_density_m
-  use global_m
-  use messages_m
-  use profiling_m
+  use base_density_oct_m
+  use base_states_oct_m
+  use fio_density_oct_m
+  use global_oct_m
+  use messages_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -52,7 +52,7 @@ contains
     POP_SUB(fio_states__load__)
   end subroutine fio_states__load__
 
-end module fio_states_m
+end module fio_states_oct_m
 
 !! Local Variables:
 !! mode: f90

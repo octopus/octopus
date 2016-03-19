@@ -19,29 +19,29 @@
 
 #include "global.h"
 
-module pcm_m
-  use comm_m
-  use global_m
-  use geometry_m
-  use grid_m
-  use io_m
-  use index_m
-  use messages_m
-  use mesh_m 
-  use mesh_interpolation_m 
-  use mpi_m
-  use par_vec_m
-  use parser_m
-  use poisson_m
-  use profiling_m
-  use simul_box_m
-  use species_m
+module pcm_oct_m
+  use comm_oct_m
+  use global_oct_m
+  use geometry_oct_m
+  use grid_oct_m
+  use io_oct_m
+  use index_oct_m
+  use messages_oct_m
+  use mesh_oct_m 
+  use mesh_interpolation_oct_m 
+  use mpi_oct_m
+  use par_vec_oct_m
+  use parser_oct_m
+  use poisson_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
+  use species_oct_m
   
   ! to output debug info
-  use unit_m
-  use unit_system_m
-  use io_function_m
-  use mesh_function_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use io_function_oct_m
+  use mesh_function_oct_m
   
 
   implicit none
@@ -2451,7 +2451,7 @@ contains
 
   end function pcm_get_vdw_radius
 
-end module pcm_m
+end module pcm_oct_m
 
 !! Local Variables:
 !! mode: f90

@@ -1,22 +1,22 @@
 #include "global.h"
 
-module fio_mesh_m
+module fio_mesh_oct_m
 
-  use curvilinear_m
-  use checksum_interface_m
-  use fio_index_m
-  use global_m
-  use hypercube_m
-  use index_m
-  use json_m
-  use kinds_m
-  use mesh_m
-  use mesh_cube_map_m
-  use messages_m
-  use mpi_m
-  use path_m
-  use profiling_m
-  use simul_box_m
+  use curvilinear_oct_m
+  use checksum_interface_oct_m
+  use fio_index_oct_m
+  use global_oct_m
+  use hypercube_oct_m
+  use index_oct_m
+  use json_oct_m
+  use kinds_oct_m
+  use mesh_oct_m
+  use mesh_cube_map_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use path_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
 
   implicit none
 
@@ -108,7 +108,7 @@ contains
     POP_SUB(fio_mesh_end)
   end subroutine fio_mesh_end
 
-end module fio_mesh_m
+end module fio_mesh_oct_m
 
 !! Local Variables:
 !! mode: f90

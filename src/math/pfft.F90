@@ -20,9 +20,9 @@
 #include "global.h"
 
 !> The includes for the PFFT
-module pfft_params_m
+module pfft_params_oct_m
   use, intrinsic :: iso_c_binding
-  use fftw_params_m
+  use fftw_params_oct_m
   implicit none
 
 
@@ -30,17 +30,17 @@ module pfft_params_m
   include "pfft.f03"
 #endif
 
-end module pfft_params_m
+end module pfft_params_oct_m
  
 !> The low level module to work with the PFFT library.
 !! http://www-user.tu-chemnitz.de/~mpip/software.php?lang=en
-module pfft_m
-  use global_m
+module pfft_oct_m
+  use global_oct_m
   use, intrinsic :: iso_c_binding
-  use math_m
-  use messages_m
-  use pfft_params_m
-  use profiling_m
+  use math_oct_m
+  use messages_oct_m
+  use pfft_params_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -238,7 +238,7 @@ contains
 
 #endif
 
-end module pfft_m
+end module pfft_oct_m
 
 !! Local Variables:
 !! mode: f90

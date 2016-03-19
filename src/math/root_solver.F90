@@ -19,13 +19,13 @@
 
 #include "global.h"
 
-module root_solver_m
-  use global_m
-  use lalg_adv_m
-  use messages_m
-  use ode_solver_m
-  use parser_m
-  use profiling_m
+module root_solver_oct_m
+  use global_oct_m
+  use lalg_adv_oct_m
+  use messages_oct_m
+  use ode_solver_oct_m
+  use parser_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -44,7 +44,7 @@ module root_solver_m
 
   type root_solver_t
     private
-    integer :: solver_type    !< what solver to use (see ROOT_* variables above)_m
+    integer :: solver_type    !< what solver to use (see ROOT_* variables above)_oct_m
     integer :: dim            !< dimensionality of the problem
     integer :: maxiter        !< maximal number of iterations
     integer :: usediter       !< number of iterations actually performed
@@ -344,7 +344,7 @@ contains
 #include "root_solver_inc.F90"
 
 
-end module root_solver_m
+end module root_solver_oct_m
 
 !! Local Variables:
 !! mode: f90

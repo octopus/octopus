@@ -19,23 +19,23 @@
 
 #include "global.h"
 
-module elf_m
-  use cube_function_m
-  use cube_m
-  use density_m
-  use derivatives_m
-  use fft_m
-  use fourier_space_m
-  use global_m
-  use grid_m
-  use io_m
-  use mesh_m
-  use messages_m
-  use mpi_m
-  use parser_m
-  use profiling_m
-  use states_m
-  use states_dim_m
+module elf_oct_m
+  use cube_function_oct_m
+  use cube_oct_m
+  use density_oct_m
+  use derivatives_oct_m
+  use fft_oct_m
+  use fourier_space_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use io_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use states_oct_m
+  use states_dim_oct_m
 
   implicit none
 
@@ -350,7 +350,7 @@ contains
 
   end subroutine elf_calc_fs
 
-end module elf_m
+end module elf_oct_m
 
 !! Local Variables:
 !! mode: f90

@@ -19,11 +19,11 @@
 
 #include "global.h"
 
-module sparskit_m
-  use global_m
-  use parser_m
-  use messages_m
-  use profiling_m
+module sparskit_oct_m
+  use global_oct_m
+  use parser_oct_m
+  use messages_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -297,9 +297,9 @@ contains
 
 #endif /* HAVE_SPARSKIT */
 
-! distdot function for dot products is defined in mesh_function_m
+! distdot function for dot products is defined in mesh_function_oct_m
 
-end module sparskit_m
+end module sparskit_oct_m
 
 !! Local Variables:
 !! mode: f90

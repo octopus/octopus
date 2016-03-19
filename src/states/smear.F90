@@ -21,18 +21,18 @@
 
 #include "global.h"
 
-module smear_m
-  use cmplxscl_m
-  use global_m
-  use kpoints_m
-  use loct_math_m
-  use messages_m
-  use parser_m
-  use profiling_m
+module smear_oct_m
+  use cmplxscl_oct_m
+  use global_oct_m
+  use kpoints_oct_m
+  use loct_math_oct_m
+  use messages_oct_m
+  use parser_oct_m
+  use profiling_oct_m
   use sort_om
-  use unit_m
-  use unit_system_m
-  use varinfo_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use varinfo_oct_m
 
   implicit none
   
@@ -672,7 +672,7 @@ contains
     POP_SUB(smear_is_semiconducting)
   end function smear_is_semiconducting
 
-end module smear_m
+end module smear_oct_m
 
 !! Local Variables:
 !! mode: f90

@@ -19,10 +19,10 @@
 
 #include "global.h"
 
-module ps_fhi_file_m
-  use global_m
-  use messages_m
-  use profiling_m
+module ps_fhi_file_oct_m
+  use global_oct_m
+  use messages_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -91,7 +91,7 @@ contains
     POP_SUB(read_file_data)
   end subroutine ps_fhi_file_read
 
-end module ps_fhi_file_m
+end module ps_fhi_file_oct_m
 
 !! Local Variables:
 !! mode: f90

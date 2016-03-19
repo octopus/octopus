@@ -6,18 +6,18 @@
 
 #define LIST_TEMPLATE_NAME domain_node
 
-module domain_m
+module domain_oct_m
 
-  use basis_m
-  use geometry_m
-  use global_m
-  use grid_intrf_m
-  use json_m
-  use kinds_m
-  use messages_m
-  use profiling_m
-  use simul_box_m
-  use space_m
+  use basis_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_intrf_oct_m
+  use json_oct_m
+  use kinds_oct_m
+  use messages_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
+  use space_oct_m
 
 #define LIST_INCLUDE_PREFIX
 #include "tlist_inc.F90"
@@ -345,7 +345,7 @@ contains
     POP_SUB(domain_end)
   end subroutine domain_end
 
-end module domain_m
+end module domain_oct_m
 
 #undef LIST_TEMPLATE_NAME
 

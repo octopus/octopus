@@ -23,27 +23,27 @@
 !! used for OCT runs. 
 !!
 !! In addition, the module also contains the necessary procedures to manipulate these objects.
-module controlfunction_m
-  use epot_m
-  use filter_m
-  use global_m
-  use io_m
-  use lalg_adv_m
-  use lasers_m
-  use loct_math_m
-  use loct_pointer_m
-  use math_m
-  use mesh_m
-  use messages_m
-  use mpi_m
-  use parser_m
-  use profiling_m
-  use states_m
-  use string_m
-  use tdfunction_m
-  use unit_m
-  use unit_system_m
-  use varinfo_m
+module controlfunction_oct_m
+  use epot_oct_m
+  use filter_oct_m
+  use global_oct_m
+  use io_oct_m
+  use lalg_adv_oct_m
+  use lasers_oct_m
+  use loct_math_oct_m
+  use loct_pointer_oct_m
+  use math_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use states_oct_m
+  use string_oct_m
+  use tdfunction_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -1567,7 +1567,7 @@ contains
 
 #include "controlfunction_trans_inc.F90"
 
-end module controlfunction_m
+end module controlfunction_oct_m
 
 !! Local Variables:
 !! mode: f90

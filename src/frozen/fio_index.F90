@@ -1,15 +1,15 @@
 #include "global.h"
 
-module fio_index_m
+module fio_index_oct_m
 
-  use checksum_interface_m
-  use global_m
-  use hypercube_m
-  use index_m
-  use json_m
-  use messages_m
-  use mpi_m
-  use profiling_m
+  use checksum_interface_oct_m
+  use global_oct_m
+  use hypercube_oct_m
+  use index_oct_m
+  use json_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -97,7 +97,7 @@ contains
     POP_SUB(fio_index_end)
   end subroutine fio_index_end
 
-end module fio_index_m
+end module fio_index_oct_m
 
 !! Local Variables:
 !! mode: f90

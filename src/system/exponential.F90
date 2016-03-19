@@ -19,28 +19,28 @@
 
 #include "global.h"
 
-module exponential_m
-  use batch_m
-  use batch_ops_m
-  use blas_m
-  use cube_function_m
-  use derivatives_m
-  use global_m
-  use hardware_m
-  use hamiltonian_m
-  use fourier_space_m
-  use lalg_adv_m
-  use lalg_basic_m
-  use loct_math_m
-  use parser_m
-  use mesh_function_m
-  use messages_m
-  use profiling_m
-  use states_m
-  use states_calc_m
-  use types_m
-  use varinfo_m
-  use xc_m
+module exponential_oct_m
+  use batch_oct_m
+  use batch_ops_oct_m
+  use blas_oct_m
+  use cube_function_oct_m
+  use derivatives_oct_m
+  use global_oct_m
+  use hardware_oct_m
+  use hamiltonian_oct_m
+  use fourier_space_oct_m
+  use lalg_adv_oct_m
+  use lalg_basic_oct_m
+  use loct_math_oct_m
+  use parser_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use profiling_oct_m
+  use states_oct_m
+  use states_calc_oct_m
+  use types_oct_m
+  use varinfo_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -823,7 +823,7 @@ contains
     POP_SUB(exponential_apply_all)
   end subroutine exponential_apply_all
 
-end module exponential_m
+end module exponential_oct_m
 
 !! Local Variables:
 !! mode: f90

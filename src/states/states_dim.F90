@@ -19,30 +19,30 @@
 
 #include "global.h"
 
-module states_dim_m
-  use blas_m
-  use distributed_m
-  use geometry_m
-  use global_m
-  use grid_m
-  use io_m
-  use kpoints_m
-  use lalg_basic_m
-  use loct_pointer_m
-  use math_m
-  use messages_m
-  use mesh_m
-  use mesh_function_m
-  use mpi_m
-  use mpi_lib_m
-  use multicomm_m
-  use parser_m
-  use profiling_m
-  use simul_box_m
-  use species_m
-  use unit_m
-  use unit_system_m
-  use varinfo_m
+module states_dim_oct_m
+  use blas_oct_m
+  use distributed_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use io_oct_m
+  use kpoints_oct_m
+  use lalg_basic_oct_m
+  use loct_pointer_oct_m
+  use math_oct_m
+  use messages_oct_m
+  use mesh_oct_m
+  use mesh_function_oct_m
+  use mpi_oct_m
+  use mpi_lib_oct_m
+  use multicomm_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
+  use species_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -236,7 +236,7 @@ contains
 
   end subroutine states_choose_kpoints
 
-end module states_dim_m
+end module states_dim_oct_m
 
 
 !! Local Variables:

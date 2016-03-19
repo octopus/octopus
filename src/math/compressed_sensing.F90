@@ -17,12 +17,12 @@
   
 #include <global.h>
 
-module compressed_sensing_m
-  use blas_m
-  use bpdn_m
-  use global_m
-  use messages_m
-  use profiling_m
+module compressed_sensing_oct_m
+  use blas_oct_m
+  use bpdn_oct_m
+  use global_oct_m
+  use messages_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -161,7 +161,7 @@ contains
     POP_SUB(compressed_sensing_spectral_analysis)    
   end subroutine compressed_sensing_spectral_analysis
 
-end module compressed_sensing_m
+end module compressed_sensing_oct_m
 
 !! Local Variables:
 !! mode: f90

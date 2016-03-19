@@ -1,5 +1,5 @@
 program octopus_mpi
-  use loct_m
+  use loct_oct_m
 
   write(*, *) "Error: The 'octopus_mpi' command is now obsolete,"
   write(*, *) "       please use the 'octopus' command."

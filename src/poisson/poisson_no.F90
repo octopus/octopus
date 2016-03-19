@@ -19,19 +19,19 @@
 
 #include "global.h"
 
-module poisson_no_m
-  use cube_m
-  use geometry_m
-  use global_m
-  use mesh_function_m
-  use mesh_m
-  use messages_m
-  use mpi_m
-  use parser_m
-  use profiling_m
-  use simul_box_m
-  use unit_m
-  use unit_system_m
+module poisson_no_oct_m
+  use cube_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use mesh_function_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
 
   implicit none
   private
@@ -92,7 +92,7 @@ contains
     POP_SUB(poisson_no_solve)
   end subroutine poisson_no_solve
 
-end module poisson_no_m
+end module poisson_no_oct_m
 
 !! Local Variables:
 !! mode: f90

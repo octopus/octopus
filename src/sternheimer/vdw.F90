@@ -19,38 +19,38 @@
 
 #include "global.h"
 
-module vdw_m
-  use em_resp_m
-  use em_resp_calc_m
-  use gauss_legendre_m
-  use global_m
-  use grid_m
-  use output_m
-  use hamiltonian_m
-  use io_m
-  use lalg_basic_m
-  use linear_response_m
-  use loct_math_m
-  use math_m
-  use mesh_m
-  use mesh_function_m
-  use messages_m
-  use mix_m
-  use mpi_m
-  use parser_m
-  use pert_m
-  use poisson_m
-  use profiling_m
-  use restart_m
-  use simul_box_m
-  use states_m
-  use states_restart_m
-  use sternheimer_m
-  use string_m
-  use system_m
-  use unit_m
-  use unit_system_m
-  use utils_m
+module vdw_oct_m
+  use em_resp_oct_m
+  use em_resp_calc_oct_m
+  use gauss_legendre_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use output_oct_m
+  use hamiltonian_oct_m
+  use io_oct_m
+  use lalg_basic_oct_m
+  use linear_response_oct_m
+  use loct_math_oct_m
+  use math_oct_m
+  use mesh_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use mix_oct_m
+  use mpi_oct_m
+  use parser_oct_m
+  use pert_oct_m
+  use poisson_oct_m
+  use profiling_oct_m
+  use restart_oct_m
+  use simul_box_oct_m
+  use states_oct_m
+  use states_restart_oct_m
+  use sternheimer_oct_m
+  use string_oct_m
+  use system_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use utils_oct_m
 
   implicit none
 
@@ -326,7 +326,7 @@ contains
 
   end subroutine vdw_run
 
-end module vdw_m
+end module vdw_oct_m
 
 !! Local Variables:
 !! mode: f90

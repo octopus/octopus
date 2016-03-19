@@ -19,14 +19,14 @@
 
 #include "global.h"
 
-module mixing_metric_m
-  use derivatives_m
-  use global_m
-  use mesh_function_m
-  use messages_m
-  use nl_operator_m
-  use profiling_m
-  use stencil_cube_m
+module mixing_metric_oct_m
+  use derivatives_oct_m
+  use global_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use nl_operator_oct_m
+  use profiling_oct_m
+  use stencil_cube_oct_m
 
   implicit none
 
@@ -149,5 +149,5 @@ contains
 
   end function mixing_metric_dotp
 
-end module mixing_metric_m
+end module mixing_metric_oct_m
   

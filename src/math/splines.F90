@@ -196,12 +196,12 @@
 ! [14] DIFFERENTIATE A FUNCTION:
 !
 !----------------------------------------------------------------------------*/!
-module splines_m
-  use global_m
+module splines_oct_m
+  use global_oct_m
   use iso_c_binding
-  use loct_math_m
-  use messages_m
-  use profiling_m
+  use loct_math_oct_m
+  use messages_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -1197,7 +1197,7 @@ contains
 
   end function spline_range_max
     
-end module splines_m
+end module splines_oct_m
 
 !! Local Variables:
 !! mode: f90

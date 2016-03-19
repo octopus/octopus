@@ -19,12 +19,12 @@
 
 #include "global.h"
 
-module ps_in_grid_m
-  use atomic_m
-  use global_m
-  use logrid_m
-  use messages_m
-  use profiling_m
+module ps_in_grid_oct_m
+  use atomic_oct_m
+  use global_oct_m
+  use logrid_oct_m
+  use messages_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -353,7 +353,7 @@ contains
     y0 = y1 + mm*(x0 - x1)
   end function linear_extrapolate
 
-end module ps_in_grid_m
+end module ps_in_grid_oct_m
 
 !! Local Variables:
 !! mode: f90

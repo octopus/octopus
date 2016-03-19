@@ -1,11 +1,11 @@
 #include "global.h"
 
-module json_m
+module json_oct_m
 
-  use global_m
-  use kinds_m
-  use messages_m
-  use profiling_m
+  use global_oct_m
+  use kinds_oct_m
+  use messages_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -5016,7 +5016,7 @@ contains
     return
   end subroutine json_json_get_object
 
-end module json_m
+end module json_oct_m
 
 !! Local Variables:
 !! mode: f90

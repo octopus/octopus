@@ -23,33 +23,33 @@
 #include "fcs_fconfig.h"
 #endif
 
-module poisson_fmm_m
-  use boundaries_m 
+module poisson_fmm_oct_m
+  use boundaries_oct_m 
   use iso_c_binding
-  use cube_m
-  use derivatives_m
-  use fft_m
-  use geometry_m
-  use global_m
-  use index_m
-  use io_m
-  use io_function_m
-  use lalg_basic_m
-  use loct_math_m
-  use math_m
-  use mesh_m
-  use mesh_cube_parallel_map_m
-  use mesh_function_m
-  use messages_m
-  use mpi_m
-  use multicomm_m
-  use nl_operator_m
-  use par_vec_m
-  use parser_m
-  use profiling_m
-  use simul_box_m
-  use stencil_star_m
-  use varinfo_m
+  use cube_oct_m
+  use derivatives_oct_m
+  use fft_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use index_oct_m
+  use io_oct_m
+  use io_function_oct_m
+  use lalg_basic_oct_m
+  use loct_math_oct_m
+  use math_oct_m
+  use mesh_oct_m
+  use mesh_cube_parallel_map_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use multicomm_oct_m
+  use nl_operator_oct_m
+  use par_vec_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
+  use stencil_star_oct_m
+  use varinfo_oct_m
 
 #ifdef HAVE_LIBFM
   use fcs_module
@@ -435,7 +435,7 @@ contains
 #endif
   end subroutine poisson_fmm_solve
 
-end module poisson_fmm_m
+end module poisson_fmm_oct_m
 
 !! Local Variables:
 !! mode: f90

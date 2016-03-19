@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module transfer_table_m
+module transfer_table_oct_m
 
   implicit none
 
@@ -57,7 +57,7 @@ contains
 
   end subroutine transfer_table_nullify
 
-end module transfer_table_m
+end module transfer_table_oct_m
 
 !! Local Variables:
 !! mode: f90

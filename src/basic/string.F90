@@ -19,10 +19,10 @@
 
 #include "global.h"
 
-module string_m
+module string_oct_m
   
   use iso_c_binding
-  use loct_m
+  use loct_oct_m
   
   implicit none
 
@@ -199,7 +199,7 @@ contains
   end subroutine conv_to_C_string
 
 
-end module string_m
+end module string_oct_m
 
 !! Local Variables:
 !! mode: f90

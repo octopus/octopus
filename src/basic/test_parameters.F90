@@ -18,7 +18,7 @@
 !! $Id$
 
 #include "global.h"
-module test_parameters_m
+module test_parameters_oct_m
   
   private
   
@@ -31,7 +31,7 @@ module test_parameters_m
     integer :: max_blocksize
   end type test_parameters_t
 
-end module test_parameters_m
+end module test_parameters_oct_m
 
 !! Local Variables:
 !! mode: f90

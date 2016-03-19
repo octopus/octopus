@@ -17,7 +17,7 @@
 !!
 !! $Id$
 
-module checksum_interface_m
+module checksum_interface_oct_m
   
   public ::                 &
     checksum_calculate
@@ -32,7 +32,7 @@ module checksum_interface_m
     end subroutine checksum_calculate
   end interface
 
-end module checksum_interface_m
+end module checksum_interface_oct_m
 
 !! Local Variables:
 !! mode: f90

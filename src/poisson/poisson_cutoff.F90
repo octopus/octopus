@@ -19,10 +19,10 @@
 
 #include "global.h"
 
-module poisson_cutoff_m
-  use global_m
-  use loct_math_m
-  use messages_m
+module poisson_cutoff_oct_m
+  use global_oct_m
+  use loct_math_oct_m
+  use messages_oct_m
 
   implicit none
 
@@ -206,7 +206,7 @@ contains
   end function poisson_cutoff_3D_2D
   ! ---------------------------------------------------------
 
-end module poisson_cutoff_m
+end module poisson_cutoff_oct_m
 
 !! Local Variables:
 !! mode: f90

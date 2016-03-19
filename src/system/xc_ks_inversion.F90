@@ -19,32 +19,32 @@
 
 #include "global.h"
 
-module xc_ks_inversion_m
-  use density_m
-  use derivatives_m
-  use eigensolver_m 
-  use geometry_m 
-  use global_m 
-  use grid_m 
-  use hamiltonian_m 
-  use io_m 
-  use io_function_m
-  use lalg_adv_m 
-  use mesh_function_m 
-  use mesh_m 
-  use messages_m 
-  use multicomm_m
-  use parser_m 
-  use poisson_m 
-  use profiling_m 
-  use states_m 
-  use states_dim_m 
-  use unit_m 
-  use unit_system_m 
-  use varinfo_m 
+module xc_ks_inversion_oct_m
+  use density_oct_m
+  use derivatives_oct_m
+  use eigensolver_oct_m 
+  use geometry_oct_m 
+  use global_oct_m 
+  use grid_oct_m 
+  use hamiltonian_oct_m 
+  use io_oct_m 
+  use io_function_oct_m
+  use lalg_adv_oct_m 
+  use mesh_function_oct_m 
+  use mesh_oct_m 
+  use messages_oct_m 
+  use multicomm_oct_m
+  use parser_oct_m 
+  use poisson_oct_m 
+  use profiling_oct_m 
+  use states_oct_m 
+  use states_dim_oct_m 
+  use unit_oct_m 
+  use unit_system_oct_m 
+  use varinfo_oct_m 
   use XC_F90(lib_m) 
-  use xc_m 
-  use xc_functl_m
+  use xc_oct_m 
+  use xc_functl_oct_m
 
   implicit none
 
@@ -600,7 +600,7 @@ contains
   end subroutine xc_ks_inversion_calc
 
 
-end module xc_ks_inversion_m
+end module xc_ks_inversion_oct_m
 
 !! Local Variables:
 !! mode: f90

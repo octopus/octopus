@@ -19,35 +19,35 @@
 
 #include "global.h"
 
-module pert_m
-  use batch_m
-  use boundaries_m
-  use comm_m
-  use derivatives_m
-  use epot_m
-  use geometry_m
-  use global_m
-  use grid_m
-  use hamiltonian_m
-  use lalg_basic_m
-  use math_m
-  use mesh_m
-  use mesh_batch_m
-  use mesh_function_m
-  use messages_m
-  use mpi_m
-  use nl_operator_m
-  use parser_m
-  use physics_op_m
-  use poisson_m
-  use profiling_m
-  use projector_m
-  use simul_box_m
-  use species_m
-  use states_m
-  use states_dim_m
-  use varinfo_m
-  use vibrations_m
+module pert_oct_m
+  use batch_oct_m
+  use boundaries_oct_m
+  use comm_oct_m
+  use derivatives_oct_m
+  use epot_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use hamiltonian_oct_m
+  use lalg_basic_oct_m
+  use math_oct_m
+  use mesh_oct_m
+  use mesh_batch_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use nl_operator_oct_m
+  use parser_oct_m
+  use physics_op_oct_m
+  use poisson_oct_m
+  use profiling_oct_m
+  use projector_oct_m
+  use simul_box_oct_m
+  use species_oct_m
+  use states_oct_m
+  use states_dim_oct_m
+  use varinfo_oct_m
+  use vibrations_oct_m
 
   implicit none
 
@@ -310,7 +310,7 @@ contains
 #include "complex.F90"
 #include "pert_inc.F90"
 
-end module pert_m
+end module pert_oct_m
 
 !! Local Variables:
 !! mode: f90

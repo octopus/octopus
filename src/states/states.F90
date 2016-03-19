@@ -19,56 +19,56 @@
 
 #include "global.h"
 
-module states_m
-  use base_density_m
-  use base_states_m
-  use blacs_proc_grid_m
-  use calc_mode_par_m
+module states_oct_m
+  use base_density_oct_m
+  use base_states_oct_m
+  use blacs_proc_grid_oct_m
+  use calc_mode_par_oct_m
 #ifdef HAVE_OPENCL
   use cl
 #endif
-  use cmplxscl_m
-  use comm_m
-  use batch_m
-  use batch_ops_m
-  use blas_m
-  use derivatives_m
-  use distributed_m
-  use geometry_m
-  use global_m
-  use grid_m
-  use hardware_m
-  use io_m
-  use kpoints_m
-  use lalg_adv_m
-  use lalg_basic_m
-  use loct_m
-  use loct_pointer_m
-  use math_m
-  use mesh_m
-  use mesh_function_m
-  use messages_m
-  use modelmb_particles_m
-  use mpi_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
-  use mpi_lib_m
-  use multicomm_m
+  use cmplxscl_oct_m
+  use comm_oct_m
+  use batch_oct_m
+  use batch_ops_oct_m
+  use blas_oct_m
+  use derivatives_oct_m
+  use distributed_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use hardware_oct_m
+  use io_oct_m
+  use kpoints_oct_m
+  use lalg_adv_oct_m
+  use lalg_basic_oct_m
+  use loct_oct_m
+  use loct_pointer_oct_m
+  use math_oct_m
+  use mesh_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use modelmb_particles_oct_m
+  use mpi_oct_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
+  use mpi_lib_oct_m
+  use multicomm_oct_m
 #ifdef HAVE_OPENMP
   use omp_lib
 #endif
-  use opencl_m
-  use parser_m
-  use profiling_m
-  use restart_m
-  use simul_box_m
-  use smear_m
-  use states_group_m
-  use states_dim_m
-  use symmetrizer_m
-  use types_m
-  use unit_m
-  use unit_system_m
-  use utils_m
-  use varinfo_m
+  use opencl_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use restart_oct_m
+  use simul_box_oct_m
+  use smear_oct_m
+  use states_group_oct_m
+  use states_dim_oct_m
+  use symmetrizer_oct_m
+  use types_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use utils_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -2562,7 +2562,7 @@ contains
 #include "states_inc.F90"
 #include "undef.F90"
 
-end module states_m
+end module states_oct_m
 
 
 !! Local Variables:

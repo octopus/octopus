@@ -23,7 +23,7 @@
 !> This module contains interfaces for LAPACK routines
 ! -----------------------------------------------------------------------
 
-module lapack_m
+module lapack_oct_m
   implicit none
 
   public ! only interfaces in this module
@@ -496,7 +496,7 @@ module lapack_m
     end subroutine chegvx
   end interface lapack_hegvx
 
-end module lapack_m
+end module lapack_oct_m
 
 !! Local Variables:
 !! mode: f90

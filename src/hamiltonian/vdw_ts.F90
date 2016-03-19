@@ -21,20 +21,20 @@
 
 #include "global.h"
 
-module vdw_ts_m
-  use derivatives_m
-  use geometry_m
-  use global_m
-  use hirshfeld_m
-  use io_function_m
-  use messages_m
-  use mesh_function_m
-  use profiling_m
-  use ps_m
-  use species_m
-  use states_m
-  use unit_m
-  use unit_system_m
+module vdw_ts_oct_m
+  use derivatives_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use hirshfeld_oct_m
+  use io_function_oct_m
+  use messages_oct_m
+  use mesh_function_oct_m
+  use profiling_oct_m
+  use ps_oct_m
+  use species_oct_m
+  use states_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
   
   implicit none
 
@@ -488,7 +488,7 @@ contains
     POP_SUB(get_vdw_param)
   end subroutine get_vdw_param
   
-end module vdw_ts_m
+end module vdw_ts_oct_m
 
 !! Local Variables:
 !! mode: f90

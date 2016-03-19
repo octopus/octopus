@@ -20,42 +20,42 @@
 
 #include "global.h"
 
-module casida_m
-  use batch_m
-  use calc_mode_par_m
-  use comm_m
-  use density_m
-  use excited_states_m
-  use forces_m
-  use gauss_legendre_m
-  use hamiltonian_m
-  use io_m
-  use io_function_m
-  use kpoints_m
-  use lalg_adv_m
-  use loct_m
-  use linear_response_m
-  use mesh_m
-  use mesh_function_m
-  use mpi_m
-  use parser_m
-  use pert_m
-  use poisson_m
-  use profiling_m
-  use restart_m
-  use simul_box_m
+module casida_oct_m
+  use batch_oct_m
+  use calc_mode_par_oct_m
+  use comm_oct_m
+  use density_oct_m
+  use excited_states_oct_m
+  use forces_oct_m
+  use gauss_legendre_oct_m
+  use hamiltonian_oct_m
+  use io_oct_m
+  use io_function_oct_m
+  use kpoints_oct_m
+  use lalg_adv_oct_m
+  use loct_oct_m
+  use linear_response_oct_m
+  use mesh_oct_m
+  use mesh_function_oct_m
+  use mpi_oct_m
+  use parser_oct_m
+  use pert_oct_m
+  use poisson_oct_m
+  use profiling_oct_m
+  use restart_oct_m
+  use simul_box_oct_m
   use sort_om
-  use states_m
-  use states_dim_m
-  use states_restart_m
-  use sternheimer_m
-  use system_m
-  use unit_m
-  use unit_system_m
-  use utils_m
-  use v_ks_m
-  use phonons_lr_m
-  use xc_m
+  use states_oct_m
+  use states_dim_oct_m
+  use states_restart_oct_m
+  use sternheimer_oct_m
+  use system_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use utils_oct_m
+  use v_ks_oct_m
+  use phonons_lr_oct_m
+  use xc_oct_m
   
   implicit none
 
@@ -900,7 +900,7 @@ contains
 #include "complex.F90"
 #include "casida_inc.F90"
 
-end module casida_m
+end module casida_oct_m
 
 !! Local Variables:
 !! mode: f90

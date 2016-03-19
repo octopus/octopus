@@ -19,39 +19,39 @@
 
 #include "global.h"
 
-module propagator_m
-  use energy_calc_m
-  use exponential_m
-  use forces_m
-  use gauge_field_m
-  use grid_m
-  use geometry_m
-  use global_m
-  use hamiltonian_m
-  use ion_dynamics_m
-  use loct_pointer_m
-  use parser_m
-  use mesh_function_m
-  use messages_m
-  use multicomm_m
-  use opt_control_state_m
-  use output_m
-  use poisson_m
-  use potential_interpolation_m
-  use profiling_m
-  use propagator_base_m
-  use propagator_cn_m
-  use propagator_etrs_m
-  use propagator_expmid_m
-  use propagator_magnus_m
-  use propagator_qoct_m
-  use propagator_rk_m
-  use scdm_m
-  use scf_m
-  use sparskit_m
-  use states_m
-  use v_ks_m
-  use varinfo_m
+module propagator_oct_m
+  use energy_calc_oct_m
+  use exponential_oct_m
+  use forces_oct_m
+  use gauge_field_oct_m
+  use grid_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use hamiltonian_oct_m
+  use ion_dynamics_oct_m
+  use loct_pointer_oct_m
+  use parser_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use multicomm_oct_m
+  use opt_control_state_oct_m
+  use output_oct_m
+  use poisson_oct_m
+  use potential_interpolation_oct_m
+  use profiling_oct_m
+  use propagator_base_oct_m
+  use propagator_cn_oct_m
+  use propagator_etrs_oct_m
+  use propagator_expmid_oct_m
+  use propagator_magnus_oct_m
+  use propagator_qoct_oct_m
+  use propagator_rk_oct_m
+  use scdm_oct_m
+  use scf_oct_m
+  use sparskit_oct_m
+  use states_oct_m
+  use v_ks_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -662,7 +662,7 @@ contains
     POP_SUB(propagator_dt_bo)
   end subroutine propagator_dt_bo
 
-end module propagator_m
+end module propagator_oct_m
 
 
 !! Local Variables:

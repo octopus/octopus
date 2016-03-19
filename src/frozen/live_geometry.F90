@@ -1,13 +1,13 @@
 #include "global.h"
 
-module live_geometry_m
+module live_geometry_oct_m
 
-  use base_geometry_m
-  use geo_intrf_m
-  use geometry_m
-  use global_m
-  use messages_m
-  use profiling_m
+  use base_geometry_oct_m
+  use geo_intrf_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use messages_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -36,7 +36,7 @@ contains
     POP_SUB(live_geometry__init__)
   end subroutine live_geometry__init__
 
-end module live_geometry_m
+end module live_geometry_oct_m
 
 !! Local Variables:
 !! mode: f90

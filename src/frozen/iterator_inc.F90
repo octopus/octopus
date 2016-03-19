@@ -1,7 +1,7 @@
 #include "template.h"
 
 #if defined(INCLUDE_PREFIX) && !defined(INCLUDE_HEADER) && !defined(INCLUDE_BODY)
-  use config_dict_m
+  use config_dict_oct_m
 #endif
 
 #if !defined(INCLUDE_PREFIX) && defined(INCLUDE_HEADER) && !defined(INCLUDE_BODY)

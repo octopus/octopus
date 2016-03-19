@@ -21,22 +21,22 @@
 !! mask-function, suitable only for the TD Schroedinger equation, and
 !! complex absorbing potential (CAPs), suitable also for the static case
 
-module boundaries_abs_m
-  use io_function_m
-  use io_m
-  use cube_function_m
-  use global_m
-  use geometry_m
-  use mesh_function_m
-  use mesh_m
-  use messages_m
-  use mpi_m
-  use parser_m
-  use profiling_m
-  use simul_box_m
-  use unit_m
-  use unit_system_m
-  use varinfo_m
+module boundaries_abs_oct_m
+  use io_function_oct_m
+  use io_oct_m
+  use cube_function_oct_m
+  use global_oct_m
+  use geometry_oct_m
+  use mesh_function_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -353,7 +353,7 @@ contains
     POP_SUB(ab_write_info)
   end subroutine ab_write_info
 
-end module boundaries_abs_m
+end module boundaries_abs_oct_m
 
 !! Local Variables:
 !! mode: f90

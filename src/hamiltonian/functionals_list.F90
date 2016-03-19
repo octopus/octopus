@@ -482,7 +482,7 @@
 !% Complex-scaled PBE exchange and correlation (not from libxc).
 !%Option lb94_xc_cmplx            703
 !% Complex-scaled LB94 exchange and correlation (not from libxc).
-!%Option rdmft_xc_m               601
+!%Option rdmft_xc_oct_m               601
 !% RDMFT Mueller functional (not from libxc).
 !%Option xc_half_hartree          917
 !% Half-Hartree exchange for two electrons (supports complex scaling) (not from libxc).

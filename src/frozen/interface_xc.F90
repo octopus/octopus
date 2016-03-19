@@ -1,13 +1,13 @@
 #include "global.h"
 
-module interface_xc_m
+module interface_xc_oct_m
 
-  use derivatives_m
-  use global_m
-  use kinds_m
-  use mesh_m
-  use messages_m
-  use profiling_m
+  use derivatives_oct_m
+  use global_oct_m
+  use kinds_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use profiling_oct_m
   use XC_F90(lib_m)
 
   private
@@ -619,7 +619,7 @@ contains
     POP_SUB(interface_xc_end)
   end subroutine interface_xc_end
 
-end module interface_xc_m
+end module interface_xc_oct_m
 
 !! Local Variables:
 !! mode: f90

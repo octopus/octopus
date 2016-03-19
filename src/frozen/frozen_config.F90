@@ -1,15 +1,15 @@
 #include "global.h"
 
-module frozen_config_m
+module frozen_config_oct_m
 
-  use base_config_m
-  use base_hamiltonian_m
-  use frozen_handle_m
-  use global_m
-  use json_m
-  use messages_m
-  use profiling_m
-  use storage_m
+  use base_config_oct_m
+  use base_hamiltonian_oct_m
+  use frozen_handle_oct_m
+  use global_oct_m
+  use json_oct_m
+  use messages_oct_m
+  use profiling_oct_m
+  use storage_oct_m
 
   implicit none
 
@@ -113,7 +113,7 @@ contains
     POP_SUB(frozen_config_parse)
   end subroutine frozen_config_parse
 
-end module frozen_config_m
+end module frozen_config_oct_m
 
 !! Local Variables:
 !! mode: f90

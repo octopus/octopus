@@ -1,17 +1,17 @@
 #include "global.h"
 
-module fio_simul_box_m
+module fio_simul_box_oct_m
 
-  use geometry_m
-  use global_m
-  use json_m
-  use kpoints_m
-  use mpi_m
-  use messages_m
-  use profiling_m
-  use simul_box_m
-  use space_m
-  use symmetries_m
+  use geometry_oct_m
+  use global_oct_m
+  use json_oct_m
+  use kpoints_oct_m
+  use mpi_oct_m
+  use messages_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
+  use space_oct_m
+  use symmetries_oct_m
 
   implicit none
 
@@ -81,7 +81,7 @@ contains
     POP_SUB(fio_simul_box_end)
   end subroutine fio_simul_box_end
 
-end module fio_simul_box_m
+end module fio_simul_box_oct_m
 
 !! Local Variables:
 !! mode: f90

@@ -19,15 +19,15 @@
 
 #include "global.h"
 
-module states_parallel_m
-  use batch_m
-  use comm_m
-  use global_m
-  use mesh_m
-  use messages_m
-  use mpi_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
-  use profiling_m
-  use states_m
+module states_parallel_oct_m
+  use batch_oct_m
+  use comm_oct_m
+  use global_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use mpi_oct_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
+  use profiling_oct_m
+  use states_oct_m
 
   implicit none
 
@@ -239,7 +239,7 @@ contains
 #include "undef.F90"
   
   
-end module states_parallel_m
+end module states_parallel_oct_m
 
 !! Local Variables:
 !! mode: f90

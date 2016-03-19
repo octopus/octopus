@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module opencl_m
+module opencl_oct_m
 #ifdef HAVE_OPENCL
   use cl
 #endif
@@ -29,15 +29,15 @@ module opencl_m
 #ifdef HAVE_CLFFT
   use clfft
 #endif
-  use global_m
-  use io_m
-  use loct_m
-  use messages_m
-  use mpi_m
-  use types_m
-  use parser_m
-  use profiling_m
-  use unit_system_m
+  use global_oct_m
+  use io_oct_m
+  use loct_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use types_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use unit_system_oct_m
 
   implicit none 
 
@@ -1417,7 +1417,7 @@ contains
 
 #endif
 
-end module opencl_m
+end module opencl_oct_m
 
 !! Local Variables:
 !! mode: f90

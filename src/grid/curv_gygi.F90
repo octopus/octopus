@@ -22,17 +22,17 @@
 !> This module implements the curvilinear coordinates given in
 !! F. Gygi and G. Galli, PRB 52 R2229 (1996).
 
-module curv_gygi_m
-  use geometry_m
-  use global_m
-  use loct_pointer_m
-  use parser_m
-  use messages_m
-  use profiling_m
-  use root_solver_m
-  use simul_box_m
-  use unit_m
-  use unit_system_m
+module curv_gygi_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use loct_pointer_oct_m
+  use parser_oct_m
+  use messages_oct_m
+  use profiling_oct_m
+  use root_solver_oct_m
+  use simul_box_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
 
   implicit none
 
@@ -276,7 +276,7 @@ contains
 
   end subroutine curv_gygi_jacobian
 
-end module curv_gygi_m
+end module curv_gygi_oct_m
 
 !! Local Variables:
 !! mode: f90

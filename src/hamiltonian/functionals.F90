@@ -19,11 +19,11 @@
 
 #include "global.h"
 
-module xc_functl_m
-  use global_m
-  use parser_m
-  use libvdwxc_m
-  use messages_m
+module xc_functl_oct_m
+  use global_oct_m
+  use parser_oct_m
+  use libvdwxc_oct_m
+  use messages_oct_m
   use XC_F90(lib_m)
 
   implicit none
@@ -437,7 +437,7 @@ contains
     POP_SUB(xc_functl_write_info)
   end subroutine xc_functl_write_info
 
-end module xc_functl_m
+end module xc_functl_oct_m
 
 !! Local Variables:
 !! mode: f90

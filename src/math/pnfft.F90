@@ -21,29 +21,29 @@
 
 
 !> The includes for the PNFFT
-module pnfft_params_m
+module pnfft_params_oct_m
   use,intrinsic :: iso_c_binding
-  use pfft_params_m
+  use pfft_params_oct_m
   implicit none
 
 #ifdef HAVE_PNFFT
   include "pnfft.f03"
 #endif
-end module pnfft_params_m
+end module pnfft_params_oct_m
  
 !> The low level module to work with the PNFFT library.
 !! http://www-user.tu-chemnitz.de/~mpip/software.php?lang=en
-module pnfft_m
-  use global_m
-  use io_m
-  use loct_math_m
-  use math_m
-  use messages_m
-  use mpi_m
-  use parser_m
-  use pfft_m
-  use pnfft_params_m
-  use profiling_m
+module pnfft_oct_m
+  use global_oct_m
+  use io_oct_m
+  use loct_math_oct_m
+  use math_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use parser_oct_m
+  use pfft_oct_m
+  use pnfft_params_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -555,7 +555,7 @@ contains
 
 #endif
 
-end module pnfft_m
+end module pnfft_oct_m
 
 !! Local Variables:
 !! mode: f90

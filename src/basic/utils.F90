@@ -22,15 +22,15 @@
 !> This module is intended to contain simple general-purpose utility functions
 !! and procedures.
 
-module utils_m
-  use global_m
-  use io_m
-  use loct_m
-  use messages_m
-  use mpi_m
-  use unit_m
-  use unit_system_m
-  use string_m
+module utils_oct_m
+  use global_oct_m
+  use io_oct_m
+  use loct_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use string_oct_m
 
   implicit none
 
@@ -532,7 +532,7 @@ contains
     lead_dim = ubound(array, dim = 1) * ubound(array, dim = 2)
   end function clead_dim2
 
-end module utils_m
+end module utils_oct_m
 
 !! Local Variables:
 !! mode: f90

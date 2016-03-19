@@ -19,35 +19,35 @@
 
 #include "global.h"
 
-module rdmft_m
-  use density_m
-  use eigensolver_m
-  use energy_m
-  use geometry_m
-  use global_m
-  use grid_m
-  use hamiltonian_m
-  use hamiltonian_base_m
-  use lalg_adv_m
-  use lalg_basic_m
-  use loct_m
-  use loct_math_m 
-  use mesh_m
-  use mesh_function_m
-  use messages_m
-  use minimizer_m
-  use output_m
-  use parser_m
-  use poisson_m
-  use profiling_m
-  use simul_box_m
-  use species_m
-  use states_m
-  use states_calc_m
-  use unit_m
-  use unit_system_m
-  use v_ks_m
-  use xc_oep_m
+module rdmft_oct_m
+  use density_oct_m
+  use eigensolver_oct_m
+  use energy_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use hamiltonian_oct_m
+  use hamiltonian_base_oct_m
+  use lalg_adv_oct_m
+  use lalg_basic_oct_m
+  use loct_oct_m
+  use loct_math_oct_m 
+  use mesh_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use minimizer_oct_m
+  use output_oct_m
+  use parser_oct_m
+  use poisson_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
+  use species_oct_m
+  use states_oct_m
+  use states_calc_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use v_ks_oct_m
+  use xc_oep_oct_m
  
   implicit none
 
@@ -845,7 +845,7 @@ contains
 
   end subroutine rdm_derivatives
 
-end module rdmft_m
+end module rdmft_oct_m
 
 
 !! Local Variables:

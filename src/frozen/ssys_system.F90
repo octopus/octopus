@@ -1,11 +1,11 @@
 #include "global.h"
 
-module ssys_system_m
+module ssys_system_oct_m
 
-  use base_system_m
-  use global_m
-  use messages_m
-  use profiling_m
+  use base_system_oct_m
+  use global_oct_m
+  use messages_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -41,7 +41,7 @@ contains
     POP_SUB(ssys_system_acc)
   end subroutine ssys_system_acc
 
-end module ssys_system_m
+end module ssys_system_oct_m
 
 !! Local Variables:
 !! mode: f90

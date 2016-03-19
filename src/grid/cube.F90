@@ -20,22 +20,22 @@
 
 #include "global.h"
 
-module cube_m
-  use fft_m
-  use global_m
-  use index_m
-  use io_m
-  use messages_m
-  use mpi_m
-  use multicomm_m
-  use nfft_m
-  use opencl_m
-  use parser_m
-  use pfft_m
-  use pnfft_m
-  use profiling_m
-  use simul_box_m
-  use varinfo_m
+module cube_oct_m
+  use fft_oct_m
+  use global_oct_m
+  use index_oct_m
+  use io_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use multicomm_oct_m
+  use nfft_oct_m
+  use opencl_oct_m
+  use parser_oct_m
+  use pfft_oct_m
+  use pnfft_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
+  use varinfo_oct_m
 
   implicit none
   private
@@ -678,7 +678,7 @@ contains
     POP_SUB(cube_partition_messages_debug)
   end subroutine cube_partition_messages_debug
 
-end module cube_m
+end module cube_oct_m
 
 
 !! Local Variables:

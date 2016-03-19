@@ -23,19 +23,19 @@
 ! (and thus allow to calculate shape-resonances energies and lifetimes)
 
 
-module boundaries_ecs_m
-  use io_function_m
-  use io_m
-  use cube_function_m
-  use global_m
-  use mesh_function_m
-  use mesh_m
-  use messages_m
-  use mpi_m
-  use parser_m
-  use profiling_m
-  use simul_box_m
-  use varinfo_m
+module boundaries_ecs_oct_m
+  use io_function_oct_m
+  use io_oct_m
+  use cube_function_oct_m
+  use global_oct_m
+  use mesh_function_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -83,7 +83,7 @@ contains
 
 
 
-end module boundaries_ecs_m
+end module boundaries_ecs_oct_m
 
 
 

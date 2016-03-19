@@ -20,29 +20,29 @@
 
 #include "global.h"
 
-module simul_box_m
-  use atom_m
-  use blas_m
+module simul_box_oct_m
+  use atom_oct_m
+  use blas_oct_m
   use iso_c_binding
-  use geometry_m
-  use global_m
-  use io_m
-  use kpoints_m
-  use lalg_basic_m
-  use loct_m
-  use lookup_m
-  use math_m
-  use messages_m
-  use mpi_m
-  use parser_m
-  use profiling_m
-  use space_m
-  use species_m
-  use string_m
-  use symmetries_m
-  use unit_m
-  use unit_system_m
-  use varinfo_m
+  use geometry_oct_m
+  use global_oct_m
+  use io_oct_m
+  use kpoints_oct_m
+  use lalg_basic_oct_m
+  use loct_oct_m
+  use lookup_oct_m
+  use math_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use space_oct_m
+  use species_oct_m
+  use string_oct_m
+  use symmetries_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -1505,7 +1505,7 @@ contains
     POP_SUB(simul_box_min_distance)
   end function simul_box_min_distance
 
-end module simul_box_m
+end module simul_box_oct_m
 
 !! Local Variables:
 !! mode: f90

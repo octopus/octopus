@@ -1,18 +1,18 @@
 #include "global.h"
 
-module simulation_m
+module simulation_oct_m
 
-  use derivatives_m
-  use domain_m
-  use geometry_m
-  use global_m
-  use grid_m
-  use grid_intrf_m
-  use json_m
-  use mesh_m
-  use messages_m
-  use profiling_m
-  use space_m
+  use derivatives_oct_m
+  use domain_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use grid_intrf_oct_m
+  use json_oct_m
+  use mesh_oct_m
+  use messages_oct_m
+  use profiling_oct_m
+  use space_oct_m
 
   implicit none
 
@@ -319,7 +319,7 @@ contains
     POP_SUB(simulation_end)
   end subroutine simulation_end
 
-end module simulation_m
+end module simulation_oct_m
 
 !! Local Variables:
 !! mode: f90

@@ -12,7 +12,7 @@
 #define DARR_TYPE_NAME DECORATE(DARR_TEMPLATE_NAME,t)
 #endif
 #if !defined(DARR_TYPE_MODULE_NAME)
-#define DARR_TYPE_MODULE_NAME DECORATE(DARR_TEMPLATE_NAME,m)
+#define DARR_TYPE_MODULE_NAME DECORATE(DARR_TEMPLATE_NAME, oct_m)
 #endif
 #else
 #error "'DARR_TEMPLATE_NAME' must be defined"
@@ -60,9 +60,9 @@
 
 module TEMPLATE(darr_m)
 
-  use global_m
-  use messages_m
-  use profiling_m
+  use global_oct_m
+  use messages_oct_m
+  use profiling_oct_m
 
 #endif
 #if defined(DARR_INCLUDE_PREFIX) || defined(DARR_INCLUDE_MODULE)
@@ -71,7 +71,7 @@ module TEMPLATE(darr_m)
 #include "tsingle_inc.F90"
 #undef SINGLE_INCLUDE_PREFIX
 
-  use kinds_m
+  use kinds_oct_m
 
 #endif
 #if defined(DARR_INCLUDE_MODULE)

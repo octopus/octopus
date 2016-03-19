@@ -19,15 +19,15 @@
 
 #include "global.h"
 
-module sphericalmesh_m
-  use global_m
-  use io_m
-  use math_m
-  use mesh_m
-  use mesh_interpolation_m
-  use messages_m
-  use parser_m
-  use profiling_m
+module sphericalmesh_oct_m
+  use global_oct_m
+  use io_oct_m
+  use math_oct_m
+  use mesh_oct_m
+  use mesh_interpolation_oct_m
+  use messages_oct_m
+  use parser_oct_m
+  use profiling_oct_m
   
   implicit none
   
@@ -256,7 +256,7 @@ contains
   end subroutine sphericalmesh_from_mesh
   
   
-end module sphericalmesh_m
+end module sphericalmesh_oct_m
 
 
 !! Local Variables:

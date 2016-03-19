@@ -20,43 +20,43 @@
 
 #include "global.h"
 
-module poisson_m
-  use batch_m
-  use boundaries_m
-  use cube_m
-  use derivatives_m
-  use fft_m
-  use global_m
-  use index_m
-  use io_m
-  use io_function_m
-  use loct_math_m
-  use math_m
-  use mesh_m
-  use mesh_cube_parallel_map_m
-  use mesh_function_m
-  use messages_m
-  use mpi_m
-  use multicomm_m
-  use opencl_m
-  use par_vec_m
-  use parser_m
-  use partition_m
-  use poisson_cg_m
-  use poisson_corrections_m
-  use poisson_isf_m
-  use poisson_fft_m
-  use poisson_fmm_m
-  use poisson_libisf_m
-  use poisson_multigrid_m
-  use poisson_no_m
-  use profiling_m
-  use simul_box_m
-  use test_parameters_m
-  use types_m
-  use unit_m
-  use unit_system_m
-  use varinfo_m
+module poisson_oct_m
+  use batch_oct_m
+  use boundaries_oct_m
+  use cube_oct_m
+  use derivatives_oct_m
+  use fft_oct_m
+  use global_oct_m
+  use index_oct_m
+  use io_oct_m
+  use io_function_oct_m
+  use loct_math_oct_m
+  use math_oct_m
+  use mesh_oct_m
+  use mesh_cube_parallel_map_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use multicomm_oct_m
+  use opencl_oct_m
+  use par_vec_oct_m
+  use parser_oct_m
+  use partition_oct_m
+  use poisson_cg_oct_m
+  use poisson_corrections_oct_m
+  use poisson_isf_oct_m
+  use poisson_fft_oct_m
+  use poisson_fmm_oct_m
+  use poisson_libisf_oct_m
+  use poisson_multigrid_oct_m
+  use poisson_no_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
+  use test_parameters_oct_m
+  use types_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -1155,7 +1155,7 @@ contains
 #include "poisson_inc.F90"
 #include "solver_1d_solve_inc.F90"
 
-end module poisson_m
+end module poisson_oct_m
 
 !! Local Variables:
 !! mode: f90

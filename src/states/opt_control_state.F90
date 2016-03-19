@@ -22,14 +22,14 @@
 
 !> This module holds the "opt_control_state_t" datatype, which contains a quantum-classical
 !! state.
-module opt_control_state_m
-  use geometry_m
-  use global_m
-  use loct_pointer_m
-  use messages_m
-  use profiling_m
-  use species_m
-  use states_m
+module opt_control_state_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use loct_pointer_oct_m
+  use messages_oct_m
+  use profiling_oct_m
+  use species_oct_m
+  use states_oct_m
 
   implicit none
 
@@ -221,4 +221,4 @@ contains
     POP_SUB(opt_control_state_copy)
   end subroutine opt_control_state_copy
 
-end module opt_control_state_m
+end module opt_control_state_oct_m

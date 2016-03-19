@@ -20,19 +20,19 @@
 
 #include "global.h"
 
-module poisson_isf_m
-  use cube_function_m
-  use cube_m
-  use global_m
-  use io_m
-  use messages_m
-  use mesh_m
-  use mpi_m
-  use par_vec_m
-  use parser_m
-  use profiling_m
-  use scaling_function_m
-  use sgfft_m
+module poisson_isf_oct_m
+  use cube_function_oct_m
+  use cube_oct_m
+  use global_oct_m
+  use io_oct_m
+  use messages_oct_m
+  use mesh_oct_m
+  use mpi_oct_m
+  use par_vec_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use scaling_function_oct_m
+  use sgfft_oct_m
 
   implicit none
   
@@ -2066,7 +2066,7 @@ contains
     POP_SUB(gequad)
   end subroutine gequad
 
-end module poisson_isf_m
+end module poisson_isf_oct_m
 
 !! Local Variables:
 !! mode: f90

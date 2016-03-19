@@ -1,18 +1,18 @@
 #include "global.h"
 
-module fio_simulation_m
+module fio_simulation_oct_m
 
-  use fio_grid_m
-  use geometry_m
-  use global_m
-  use grid_m
-  use grid_intrf_m
-  use json_m
-  use messages_m
-  use mpi_m
-  use profiling_m
-  use simulation_m
-  use space_m
+  use fio_grid_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use grid_intrf_oct_m
+  use json_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use profiling_oct_m
+  use simulation_oct_m
+  use space_oct_m
 
   implicit none
 
@@ -145,7 +145,7 @@ contains
     POP_SUB(fio_simulation__end__)
   end subroutine fio_simulation__end__
 
-end module fio_simulation_m
+end module fio_simulation_oct_m
 
 !! Local Variables:
 !! mode: f90

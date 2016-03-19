@@ -19,13 +19,13 @@
 
 #include "global.h"
 
-module io_m
-  use debug_m
-  use global_m
-  use loct_m
-  use messages_m
-  use mpi_m
-  use parser_m
+module io_oct_m
+  use debug_oct_m
+  use global_oct_m
+  use loct_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use parser_oct_m
 
   implicit none
 
@@ -714,7 +714,7 @@ contains
 
   end subroutine io_skip_header
 
-end module io_m
+end module io_oct_m
 
 !! Local Variables:
 !! mode: f90

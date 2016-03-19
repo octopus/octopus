@@ -19,12 +19,12 @@
 
 #include "global.h"
 
-module comm_m
-  use global_m
-  use messages_m
-  use mpi_m
-  use types_m
-  use profiling_m
+module comm_oct_m
+  use global_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use types_oct_m
+  use profiling_oct_m
 
   implicit none 
 
@@ -64,7 +64,7 @@ contains
 #include "integer.F90"
 #include "comm_inc.F90"
 
-end module comm_m
+end module comm_oct_m
 
 !! Local Variables:
 !! mode: f90

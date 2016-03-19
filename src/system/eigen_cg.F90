@@ -19,25 +19,25 @@
 
 #include "global.h"
 
-module eigen_cg_m
-  use comm_m
-  use global_m
-  use grid_m
-  use hamiltonian_m
-  use io_m
-  use lalg_basic_m
-  use lalg_adv_m
-  use loct_m
-  use math_m
-  use mesh_m
-  use mesh_function_m
-  use messages_m
-  use mpi_m
-  use mpi_lib_m
-  use preconditioners_m
-  use profiling_m
-  use states_m
-  use states_calc_m
+module eigen_cg_oct_m
+  use comm_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use hamiltonian_oct_m
+  use io_oct_m
+  use lalg_basic_oct_m
+  use lalg_adv_oct_m
+  use loct_oct_m
+  use math_oct_m
+  use mesh_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use mpi_lib_oct_m
+  use preconditioners_oct_m
+  use profiling_oct_m
+  use states_oct_m
+  use states_calc_oct_m
 
   implicit none
 
@@ -58,7 +58,7 @@ contains
 #include "eigen_cg_inc.F90"
 #include "undef.F90"
 
-end module eigen_cg_m
+end module eigen_cg_oct_m
 
 
 !! Local Variables:

@@ -1,19 +1,19 @@
 #include "global.h"
 
-module live_config_m
+module live_config_oct_m
 
-  use base_config_m
-  use base_hamiltonian_m
-  use global_m
-  use json_m
-  use kinds_m
-  use live_handle_m
-  use messages_m
-  use profiling_m
-  use space_m
-  use states_m
-  use states_dim_m
-  use storage_m
+  use base_config_oct_m
+  use base_hamiltonian_oct_m
+  use global_oct_m
+  use json_oct_m
+  use kinds_oct_m
+  use live_handle_oct_m
+  use messages_oct_m
+  use profiling_oct_m
+  use space_oct_m
+  use states_oct_m
+  use states_dim_oct_m
+  use storage_oct_m
 
   implicit none
 
@@ -195,7 +195,7 @@ contains
     POP_SUB(live_config_parse)
   end subroutine live_config_parse
 
-end module live_config_m
+end module live_config_oct_m
 
 !! Local Variables:
 !! mode: f90

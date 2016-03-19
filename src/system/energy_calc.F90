@@ -19,35 +19,35 @@
 
 #include "global.h"
 
-module energy_calc_m
-  use base_hamiltonian_m
-  use base_potential_m
-  use batch_m
-  use berry_m
-  use comm_m
-  use derivatives_m
-  use energy_m
-  use gauge_field_m
-  use geometry_m
-  use global_m
-  use grid_m
-  use hamiltonian_m
-  use hamiltonian_base_m
-  use io_m
-  use lalg_basic_m
-  use mesh_m
-  use mesh_batch_m
-  use mesh_function_m
-  use messages_m
-  use profiling_m
-  use pcm_m
-  use simul_box_m
-  use smear_m
-  use ssys_external_m
-  use states_m
-  use unit_m
-  use unit_system_m
-  use varinfo_m
+module energy_calc_oct_m
+  use base_hamiltonian_oct_m
+  use base_potential_oct_m
+  use batch_oct_m
+  use berry_oct_m
+  use comm_oct_m
+  use derivatives_oct_m
+  use energy_oct_m
+  use gauge_field_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use hamiltonian_oct_m
+  use hamiltonian_base_oct_m
+  use io_oct_m
+  use lalg_basic_oct_m
+  use mesh_oct_m
+  use mesh_batch_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use profiling_oct_m
+  use pcm_oct_m
+  use simul_box_oct_m
+  use smear_oct_m
+  use ssys_external_oct_m
+  use states_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -324,7 +324,7 @@ contains
 #include "complex.F90"
 #include "energy_calc_inc.F90"
 
-end module energy_calc_m
+end module energy_calc_oct_m
 
 !! Local Variables:
 !! mode: f90

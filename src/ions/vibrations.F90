@@ -19,19 +19,19 @@
 
 #include "global.h"
 
-module vibrations_m
-  use geometry_m
-  use global_m
-  use io_m
-  use lalg_adv_m
-  use loct_m
-  use messages_m
-  use mpi_m
-  use profiling_m
-  use simul_box_m
-  use species_m
-  use unit_m
-  use unit_system_m
+module vibrations_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use io_oct_m
+  use lalg_adv_oct_m
+  use loct_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
+  use species_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
 
   implicit none
 
@@ -351,7 +351,7 @@ contains
     POP_SUB(vibrations_output)
   end subroutine vibrations_output
 
-end module vibrations_m
+end module vibrations_oct_m
 
 !! Local Variables:
 !! mode: f90

@@ -19,26 +19,26 @@
 
 #include "global.h"
 
-module initst_m
-  use density_m
-  use geometry_m
-  use global_m
-  use grid_m
-  use hamiltonian_m
-  use messages_m
-  use opt_control_state_m
-  use parser_m
-  use profiling_m
-  use restart_m
-  use states_m
-  use states_calc_m
-  use states_restart_m
-  use string_m
-  use system_m
-  use td_m
-  use v_ks_m
-  use varinfo_m
-  use types_m
+module initst_oct_m
+  use density_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use hamiltonian_oct_m
+  use messages_oct_m
+  use opt_control_state_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use restart_oct_m
+  use states_oct_m
+  use states_calc_oct_m
+  use states_restart_oct_m
+  use string_oct_m
+  use system_oct_m
+  use td_oct_m
+  use v_ks_oct_m
+  use varinfo_oct_m
+  use types_oct_m
 
   implicit none
 
@@ -254,7 +254,7 @@ contains
     POP_SUB(initial_state_init)
   end subroutine initial_state_init
 
-end module initst_m
+end module initst_oct_m
 
 !! Local Variables:
 !! mode: f90

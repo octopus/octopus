@@ -19,13 +19,13 @@
 
 #include "global.h"
 
-module stencil_star_m
-  use global_m
-  use math_m
-  use messages_m
-  use nl_operator_m
-  use profiling_m
-  use stencil_m
+module stencil_star_oct_m
+  use global_oct_m
+  use math_oct_m
+  use messages_oct_m
+  use nl_operator_oct_m
+  use profiling_oct_m
+  use stencil_oct_m
 
   implicit none
 
@@ -262,7 +262,7 @@ contains
     POP_SUB(stencil_star_coeff_grad)
   end subroutine stencil_star_coeff_grad
 
-end module stencil_star_m
+end module stencil_star_oct_m
 
 !! Local Variables:
 !! mode: f90

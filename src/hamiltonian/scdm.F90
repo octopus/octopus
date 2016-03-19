@@ -19,56 +19,56 @@
 
 #include "global.h"
 
-module scdm_m
-  use batch_m
-  use batch_ops_m
-  use blacs_proc_grid_m
-  use blas_m
+module scdm_oct_m
+  use batch_oct_m
+  use batch_ops_oct_m
+  use blacs_proc_grid_oct_m
+  use blas_oct_m
 #ifdef HAVE_OPENCL
   use cl
 #endif
-  use cmplxscl_m
-  use comm_m
-  use cube_m
-  use cube_function_m
-  use derivatives_m
-  use fft_m
-  use nfft_m
-  use geometry_m
-  use global_m
-  use grid_m
-  use hardware_m
-  use index_m
-  use io_m
-  use io_function_m
-  use kpoints_m
-  use lalg_basic_m
-  use math_m
-  use mesh_m
-  use mesh_cube_map_m
-  use mesh_function_m
-  use messages_m
-  use mpi_m
-  use mpi_lib_m
-  use multicomm_m
-  use opencl_m
-  use opencl_m
-  use par_vec_m
-  use parser_m
-  use poisson_m
-  use poisson_fft_m
-  use profiling_m
-  use simul_box_m
-  use smear_m
-  use states_m
-  use states_calc_m
-  use states_dim_m
-  use states_parallel_m
-  use types_m
-  use unit_m
-  use unit_system_m
-  use varinfo_m
-  use xc_m
+  use cmplxscl_oct_m
+  use comm_oct_m
+  use cube_oct_m
+  use cube_function_oct_m
+  use derivatives_oct_m
+  use fft_oct_m
+  use nfft_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use hardware_oct_m
+  use index_oct_m
+  use io_oct_m
+  use io_function_oct_m
+  use kpoints_oct_m
+  use lalg_basic_oct_m
+  use math_oct_m
+  use mesh_oct_m
+  use mesh_cube_map_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use mpi_oct_m
+  use mpi_lib_oct_m
+  use multicomm_oct_m
+  use opencl_oct_m
+  use opencl_oct_m
+  use par_vec_oct_m
+  use parser_oct_m
+  use poisson_oct_m
+  use poisson_fft_oct_m
+  use profiling_oct_m
+  use simul_box_oct_m
+  use smear_oct_m
+  use states_oct_m
+  use states_calc_oct_m
+  use states_dim_oct_m
+  use states_parallel_oct_m
+  use types_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use varinfo_oct_m
+  use xc_oct_m
   use XC_F90(lib_m)
 
   implicit none
@@ -404,7 +404,7 @@ end subroutine check_box_in_index
 #include "complex.F90"
 #include "scdm_inc.F90"
 
-end module scdm_m
+end module scdm_oct_m
 
 !! Local Variables:
 !! mode: f90

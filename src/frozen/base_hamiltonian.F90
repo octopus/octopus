@@ -24,20 +24,20 @@
 #undef DICT_INCLUDE_HEADER
 #undef DICT_INCLUDE_BODY
 
-module base_hamiltonian_m
+module base_hamiltonian_oct_m
 
-  use base_functional_m
-  use base_potential_m
-  use base_system_m
-  use base_term_m
-  use config_dict_m
-  use global_m
-  use json_m
-  use kinds_m
-  use messages_m
-  use profiling_m
-  use simulation_m
-  use storage_m
+  use base_functional_oct_m
+  use base_potential_oct_m
+  use base_system_oct_m
+  use base_term_oct_m
+  use config_dict_oct_m
+  use global_oct_m
+  use json_oct_m
+  use kinds_oct_m
+  use messages_oct_m
+  use profiling_oct_m
+  use simulation_oct_m
+  use storage_oct_m
 
 #define LIST_TEMPLATE_NAME base_hamiltonian
 #define LIST_INCLUDE_PREFIX
@@ -1896,7 +1896,7 @@ contains
 #undef INCLUDE_BODY
 #undef TEMPLATE_PREFIX
 
-end module base_hamiltonian_m
+end module base_hamiltonian_oct_m
 
 #undef HASH_TEMPLATE_NAME
 #undef HASH_KEY_TEMPLATE_NAME

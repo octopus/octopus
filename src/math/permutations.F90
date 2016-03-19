@@ -19,13 +19,13 @@
 
 #include "global.h"
 
-module permutations_m
+module permutations_oct_m
 
-  use global_m
-  use loct_pointer_m
-  use math_m
-  use messages_m
-  use profiling_m
+  use global_oct_m
+  use loct_pointer_oct_m
+  use math_oct_m
+  use messages_oct_m
+  use profiling_oct_m
 
   implicit none
 
@@ -136,7 +136,7 @@ contains
     POP_SUB(permutations_end)
   end subroutine permutations_end
 
-end module permutations_m
+end module permutations_oct_m
 
 !! Local Variables:
 !! mode: f90
