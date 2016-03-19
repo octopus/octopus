@@ -35,6 +35,11 @@ octopus_SOURCES =                       \
 	run.F90                         \
 	main.F90
 
+#this tell automake that there is a C++ source somewhere
+nodist_EXTRA_octopus_SOURCES = need_not_exist.cc
+nodist_EXTRA_oct_test_SOURCES = need_not_exist.cc
+nodist_EXTRA_octopus_mpi_SOURCES = need_not_exist.cc
+
 octopus_LDADD = $(all_LIBS)
 
 oct_test_SOURCES = test.F90
