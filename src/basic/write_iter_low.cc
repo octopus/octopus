@@ -114,7 +114,7 @@ extern "C" void FC_FUNC_(write_iter_clear, WRITE_ITER_CLEAR)(void **v)
 extern "C" void FC_FUNC_(write_iter_flush, WRITE_ITER_FLUSH)(void **v)
 {
 	int fd;
-	write_iter *w = (write_iter *) v;
+	write_iter *w = (write_iter *) *v;
 	if(!w->buf) return;
 
 	fd = open(w->filename, O_WRONLY | O_CREAT | O_APPEND, 0666);
