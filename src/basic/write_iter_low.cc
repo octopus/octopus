@@ -69,7 +69,7 @@ static char* _str_center(const char *s1, int l2)
 	int i, j, l1;
 	l1 = strlen(s1);
 
-	s2 = malloc(l2 + 8); 	/* we add 8 instead of 1 to avoid problems with sse/avx optimizations and valgrind*/
+	s2 = (char *) malloc(l2 + 8); 	/* we add 8 instead of 1 to avoid problems with sse/avx optimizations and valgrind*/
 	for(i=0; i<(l2-l1)/2; i++) s2[i] = ' ';
 	for(j=0; j<l1 && i<l2; j++, i++) s2[i] = s1[j];
 	for(; i<l2; i++) s2[i] = ' ';
@@ -87,7 +87,7 @@ void write_iter_header_work(write_iter *w, const char *s)
 }
 
 /* Functions called from FORTRAN */
-void FC_FUNC_(write_iter_init, WRITE_ITER_INIT)
+extern "C" void FC_FUNC_(write_iter_init, WRITE_ITER_INIT)
 		 (void **v, const fint *i, const double *d, STR_F_TYPE fname STR_ARG1)
 {
 	write_iter *w;
@@ -101,20 +101,20 @@ void FC_FUNC_(write_iter_init, WRITE_ITER_INIT)
 	*v = w;
 }
 
-void FC_FUNC_(write_iter_clear, WRITE_ITER_CLEAR)(void **v)
+extern "C" void FC_FUNC_(write_iter_clear, WRITE_ITER_CLEAR)(void **v)
 {
-	write_iter *w=*v;
-
-	if(creat(w->filename, 0666) == -1){
-		fprintf(stderr, "Could not create file '%s' (%s)", w->filename, strerror(errno));
-		exit(1);
-	}
+  write_iter *w = (write_iter *) *v;
+  
+  if(creat(w->filename, 0666) == -1){
+    fprintf(stderr, "Could not create file '%s' (%s)", w->filename, strerror(errno));
+    exit(1);
+  }
 }
 
-void FC_FUNC_(write_iter_flush, WRITE_ITER_FLUSH)(void **v)
+extern "C" void FC_FUNC_(write_iter_flush, WRITE_ITER_FLUSH)(void **v)
 {
 	int fd;
-	write_iter *w=*v;
+	write_iter *w = (write_iter *) v;
 	if(!w->buf) return;
 
 	fd = open(w->filename, O_WRONLY | O_CREAT | O_APPEND, 0666);
@@ -129,10 +129,10 @@ void FC_FUNC_(write_iter_flush, WRITE_ITER_FLUSH)(void **v)
 	w->pos = 0;
 }
 
-void FC_FUNC_(write_iter_end, WRITE_ITER_END)
+extern "C" void FC_FUNC_(write_iter_end, WRITE_ITER_END)
 		 (void **v)
 {
-	write_iter *w=*v;
+	write_iter *w = (write_iter *) *v;
 
 	FC_FUNC_(write_iter_flush, WRITE_ITER_FLUSH)(v);
 
@@ -141,7 +141,7 @@ void FC_FUNC_(write_iter_end, WRITE_ITER_END)
 	free(w);
 }
 
-void FC_FUNC_(write_iter_start, WRITE_ITER_START)
+extern "C" void FC_FUNC_(write_iter_start, WRITE_ITER_START)
 		 (void **v)
 {
 	write_iter *w=(write_iter *)*v;
@@ -150,14 +150,14 @@ void FC_FUNC_(write_iter_start, WRITE_ITER_START)
 	w->iter++;
 }
 
-void FC_FUNC_(write_iter_set, WRITE_ITER_SET)
+extern "C" void FC_FUNC_(write_iter_set, WRITE_ITER_SET)
      (void **v, const fint *i)
 {
-        write_iter *w=*v;
+        write_iter *w = (write_iter *) *v;
 	w->iter = *i;
 }
 
-void FC_FUNC_(write_iter_double_1, WRITE_ITER_DOUBLE_1)
+extern "C" void FC_FUNC_(write_iter_double_1, WRITE_ITER_DOUBLE_1)
 		 (void **v, const double *d, const fint *no)
 {
 	write_iter *w=(write_iter *)*v;
@@ -170,7 +170,7 @@ void FC_FUNC_(write_iter_double_1, WRITE_ITER_DOUBLE_1)
 	}
 }
 
-void FC_FUNC_(write_iter_float_1, WRITE_ITER_FLOAT_1)
+extern "C" void FC_FUNC_(write_iter_float_1, WRITE_ITER_FLOAT_1)
 		 (void **v, const float *d, const fint *no)
 {
 	write_iter *w=(write_iter *)*v;
@@ -183,7 +183,7 @@ void FC_FUNC_(write_iter_float_1, WRITE_ITER_FLOAT_1)
 	}
 }
 
-void FC_FUNC_(write_iter_double_n, WRITE_ITER_DOUBLE_N)
+extern "C" void FC_FUNC_(write_iter_double_n, WRITE_ITER_DOUBLE_N)
 		 (void **v, const double *d, const fint *no)
 {
 	write_iter *w=(write_iter *)*v;
@@ -196,7 +196,7 @@ void FC_FUNC_(write_iter_double_n, WRITE_ITER_DOUBLE_N)
 	}
 }
 
-void FC_FUNC_(write_iter_float_n, WRITE_ITER_FLOAT_N)
+extern "C" void FC_FUNC_(write_iter_float_n, WRITE_ITER_FLOAT_N)
 		 (void **v, const float *d, const fint *no)
 {
 	write_iter *w=(write_iter *)*v;
@@ -209,7 +209,7 @@ void FC_FUNC_(write_iter_float_n, WRITE_ITER_FLOAT_N)
 	}
 }
 
-void FC_FUNC_(write_iter_int_1, WRITE_ITER_INT_1)
+extern "C" void FC_FUNC_(write_iter_int_1, WRITE_ITER_INT_1)
 		 (void **v, const fint *d, const fint *no)
 {
 	write_iter *w=(write_iter *)*v;
@@ -222,7 +222,7 @@ void FC_FUNC_(write_iter_int_1, WRITE_ITER_INT_1)
 	}
 }
 
-void FC_FUNC_(write_iter_int_n, WRITE_ITER_INT_N)
+extern "C" void FC_FUNC_(write_iter_int_n, WRITE_ITER_INT_N)
 		 (void **v, const fint *d, const fint *no)
 {
 	write_iter *w=(write_iter *)*v;
@@ -235,7 +235,7 @@ void FC_FUNC_(write_iter_int_n, WRITE_ITER_INT_N)
 	}
 }
 
-void FC_FUNC_(write_iter_string, WRITE_ITER_STRING)
+extern "C" void FC_FUNC_(write_iter_string, WRITE_ITER_STRING)
 		 (void **v, STR_F_TYPE s STR_ARG1)
 {
   char *c;
@@ -245,7 +245,7 @@ void FC_FUNC_(write_iter_string, WRITE_ITER_STRING)
   free(c);
 }
 
-void FC_FUNC_(write_iter_header_start, WRITE_ITER_HEADER_START)
+extern "C" void FC_FUNC_(write_iter_header_start, WRITE_ITER_HEADER_START)
 		 (void **v)
 {
 	write_iter *w=(write_iter *)*v;
@@ -254,7 +254,7 @@ void FC_FUNC_(write_iter_header_start, WRITE_ITER_HEADER_START)
 	write_iter_header_work(w, "t");
 }
 
-void FC_FUNC_(write_iter_header, WRITE_ITER_HEADER)
+extern "C" void FC_FUNC_(write_iter_header, WRITE_ITER_HEADER)
 		 (void **v, STR_F_TYPE s STR_ARG1)
 {
   char *c;
@@ -263,7 +263,7 @@ void FC_FUNC_(write_iter_header, WRITE_ITER_HEADER)
   free(c);
 }
 
-void FC_FUNC_(write_iter_nl, WRITE_ITER_NL)
+extern "C" void FC_FUNC_(write_iter_nl, WRITE_ITER_NL)
 		 (void **v)
 {
 	write_iter_string_work((write_iter *)*v, "\n");

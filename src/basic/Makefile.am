@@ -57,7 +57,7 @@ libbasic_a_SOURCES =     \
 	oct_f.c          \
 	oct_gdlib_f.c    \
 	write_iter.F90   \
-	write_iter_low.c \
+	write_iter_low.cc \
 	varinfo_low.c    \
 	signals.c        \
 	io_binary_f.F90  \
