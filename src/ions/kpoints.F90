@@ -26,7 +26,7 @@ module kpoints_oct_m
   use messages_oct_m
   use parser_oct_m
   use profiling_oct_m
-  use sort_om
+  use sort_oct_m
   use symmetries_oct_m
   use unit_oct_m
   use unit_system_oct_m

@@ -37,7 +37,7 @@ module states_io_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use smear_oct_m
-  use sort_om
+  use sort_oct_m
   use states_oct_m
   use states_dim_oct_m
   use unit_oct_m

@@ -59,7 +59,7 @@ module states_calc_oct_m
   use physics_op_oct_m
   use profiling_oct_m
   use restart_oct_m
-  use sort_om
+  use sort_oct_m
   use scalapack_oct_m
   use simul_box_oct_m
   use smear_oct_m

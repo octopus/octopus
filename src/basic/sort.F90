@@ -21,7 +21,7 @@
 
 !> This module is intended to contain "only mathematical" functions
 !! and procedures.
-module sort_om
+module sort_oct_m
   use global_oct_m
   use messages_oct_m
 
@@ -272,7 +272,7 @@ contains
 #include "integer.F90"
 #include "sort_inc.F90"
 
-end module sort_om
+end module sort_oct_m
 
 !! Local Variables:
 !! mode: f90

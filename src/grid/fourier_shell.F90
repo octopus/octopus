@@ -28,7 +28,7 @@ module fourier_shell_oct_m
   use messages_oct_m
   use profiling_oct_m
   use simul_box_oct_m
-  use sort_om
+  use sort_oct_m
   
   implicit none
 

@@ -60,7 +60,7 @@ module profiling_oct_m
   use messages_oct_m
   use mpi_oct_m
   use parser_oct_m
-  use sort_om
+  use sort_oct_m
   use string_oct_m
   use types_oct_m
   use varinfo_oct_m

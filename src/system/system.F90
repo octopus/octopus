@@ -50,7 +50,7 @@ module system_oct_m
   use space_oct_m
   use species_oct_m
   use simul_box_oct_m
-  use sort_om
+  use sort_oct_m
   use ssys_config_oct_m
   use ssys_handle_oct_m
   use states_oct_m

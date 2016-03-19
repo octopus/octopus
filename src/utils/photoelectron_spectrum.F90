@@ -37,7 +37,7 @@ program photoelectron_spectrum
   use profiling_oct_m
   use restart_oct_m
   use simul_box_oct_m
-  use sort_om
+  use sort_oct_m
   use space_oct_m
   use string_oct_m
   use states_oct_m

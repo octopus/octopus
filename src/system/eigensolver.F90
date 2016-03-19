@@ -44,7 +44,7 @@ module eigensolver_oct_m
   use parser_oct_m
   use preconditioners_oct_m
   use profiling_oct_m
-  use sort_om
+  use sort_oct_m
   use states_oct_m
   use states_calc_oct_m
   use states_dim_oct_m
