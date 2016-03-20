@@ -190,22 +190,6 @@ oct_help_SOURCES = help.F90
 oct_help_LDADD                   = $(top_builddir)/src/basic/libbasic.a \
                                    $(other_LIBS)
 
-#this tell automake that there is a C++ source somewhere
-nodist_EXTRA_oct_propagation_spectrum_SOURCES    = need_not_exist.cc
-nodist_EXTRA_oct_harmonic_spectrum_SOURCES       = need_not_exist.cc
-nodist_EXTRA_oct_casida_spectrum_SOURCES         = need_not_exist.cc
-nodist_EXTRA_oct_vibrational_spectrum_SOURCES    = need_not_exist.cc
-nodist_EXTRA_oct_infrared_spectrum_SOURCES       = need_not_exist.cc
-nodist_EXTRA_oct_xyz_anim_SOURCES                = need_not_exist.cc
-nodist_EXTRA_oct_center_geom_SOURCES             = need_not_exist.cc
-nodist_EXTRA_oct_help_SOURCES                    = need_not_exist.cc
-nodist_EXTRA_oct_oscillator_strength_SOURCES     = need_not_exist.cc
-nodist_EXTRA_oct_dielectric_function_SOURCES     = need_not_exist.cc
-nodist_EXTRA_oct_photoelectron_spectrum_SOURCES  = need_not_exist.cc
-nodist_EXTRA_oct_convert_SOURCES                 = need_not_exist.cc
-nodist_EXTRA_oct_local_multipoles_SOURCES        = need_not_exist.cc
-nodist_EXTRA_oct_conductivity_SOURCES            = need_not_exist.cc
-
 # debug files from MacOS gcc with -g
 clean-local :
 	rm -rf *.dSYM
