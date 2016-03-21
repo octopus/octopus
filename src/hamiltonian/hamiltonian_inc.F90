@@ -796,8 +796,8 @@ subroutine X(vborders) (der, hm, psi, hpsi)
 
   PUSH_SUB(X(vborders))
 
-  if(hm%ab == IMAGINARY_ABSORBING) then
-    forall(ip = 1:der%mesh%np) hpsi(ip) = hpsi(ip) + M_zI*hm%ab_pot(ip)*psi(ip)
+  if(hm%bc%abtype == IMAGINARY_ABSORBING) then
+    forall(ip = 1:der%mesh%np) hpsi(ip) = hpsi(ip) + M_zI*hm%bc%mf(ip)*psi(ip)
   end if
    
   POP_SUB(X(vborders))
@@ -880,12 +880,12 @@ subroutine X(vmask) (gr, hm, st)
 
   SAFE_ALLOCATE(psi(1:gr%mesh%np))
 
-  if(hm%ab == MASK_ABSORBING) then
+  if(hm%bc%abtype == MASK_ABSORBING) then
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
         do idim = 1, st%d%dim
           call states_get_state(st, gr%mesh, idim, ist, ik, psi)
-          psi(1:gr%mesh%np) = psi(1:gr%mesh%np)*(M_ONE - hm%ab_pot(1:gr%mesh%np))
+          psi(1:gr%mesh%np) = psi(1:gr%mesh%np)*hm%bc%mf(1:gr%mesh%np)
           call states_set_state(st, gr%mesh, idim, ist, ik, psi)
         end do
       end do

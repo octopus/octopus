@@ -167,11 +167,11 @@
       end if
     end if
 
-    if( hm%ab  ==  MASK_ABSORBING) then
+    if(hm%bc%abtype == MASK_ABSORBING) then
       if( (oct%algorithm /= oct_algorithm_direct) .and. &
           (oct%algorithm /= oct_algorithm_newuoa) ) then
         write(message(1), '(a)') 'Cannot do QOCT with mask absorbing boundaries. Use either'
-        write(message(2), '(a)') '"AbsorbingBoudaries = sin2" or "AbsorbingBoundaries = no".'
+        write(message(2), '(a)') '"AbsorbingBoundaries = sin2" or "AbsorbingBoundaries = no".'
         call messages_fatal(2)
       end if
     end if

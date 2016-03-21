@@ -22,6 +22,7 @@
 module propagation_oct_m
   use batch_oct_m
   use batch_ops_oct_m
+  use boundary_op_oct_m
   use controlfunction_oct_m
   use density_oct_m
   use energy_calc_oct_m
@@ -227,7 +228,7 @@ contains
       call v_ks_calc(sys%ks, hm, psi, sys%geo, time = istep*td%dt)
       call energy_calc_total(hm, sys%gr, psi)
 
-      if(hm%ab == MASK_ABSORBING) call zvmask(gr, hm, psi)
+      if(hm%bc%abtype == MASK_ABSORBING) call zvmask(gr, hm, psi)
 
       ! if td_target
       call target_tdcalc(tg, hm, gr, sys%geo, psi, istep, td%max_iter)

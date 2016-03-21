@@ -22,6 +22,7 @@
 !> This module contains the main procedure ("opt_control_run") that is 
 !! used when optimal control runs are requested.
 module opt_control_oct_m
+  use boundary_op_oct_m
   use messages_oct_m
   use controlfunction_oct_m
   use exponential_oct_m

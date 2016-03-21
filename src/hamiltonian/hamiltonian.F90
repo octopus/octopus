@@ -26,6 +26,7 @@ module hamiltonian_oct_m
   use batch_ops_oct_m
   use blas_oct_m
   use boundaries_oct_m
+  use boundary_op_oct_m
 #ifdef HAVE_OPENCL
   use cl
 #endif  
@@ -129,7 +130,7 @@ module hamiltonian_oct_m
     type(hamiltonian_base_t) :: hm_base
     type(energy_t), pointer  :: energy
     type(base_hamiltonian_t), pointer :: subsys_hm    !< Subsystems Hamiltonian.
-!    type(bc_t)               :: bc      !< boundaries
+    type(bc_t)               :: bc      !< boundaries
     FLOAT, pointer :: vhartree(:) !< Hartree potential
     FLOAT, pointer :: vxc(:,:)    !< XC potential
     FLOAT, pointer :: vhxc(:,:)   !< XC potential + Hartree potential + Berry potential
@@ -158,10 +159,6 @@ module hamiltonian_oct_m
  
     !> absorbing boundaries
     logical :: adjoint
-    integer  :: ab                !< do we have absorbing boundaries?
-    FLOAT :: ab_width             !< width of the absorbing boundary
-    FLOAT :: ab_height            !< height of the absorbing boundary
-    FLOAT, pointer :: ab_pot(:)   !< where we store the ab potential
 
     !> Spectral range
     FLOAT :: spectral_middle_point
@@ -210,12 +207,6 @@ module hamiltonian_oct_m
   integer, public, parameter :: &
     LENGTH     = 1,             &
     VELOCITY   = 2
-
-  integer, public, parameter :: &
-    NOT_ABSORBING       = 0,    &
-    IMAGINARY_ABSORBING = 1,    &
-    MASK_ABSORBING      = 2,    &
-    EXACT_ABSORBING     = 3
 
   integer, public, parameter ::        &
     INDEPENDENT_PARTICLES = 2, &
@@ -407,31 +398,8 @@ contains
       nullify(hm%a_ind, hm%b_ind)
     end if
 
-    !%Variable AbsorbingBoundaries
-    !%Type integer
-    !%Default not_absorbing
-    !%Section Time-Dependent::Absorbing Boundaries
-    !%Description
-    !% To improve the quality of the spectra by avoiding the formation of
-    !% standing density waves, one can make the boundaries of the simulation
-    !% box absorbing.
-    !%Option not_absorbing 0
-    !% No absorbing boundaries.
-    !%Option sin2 1
-    !% A <math>\sin^2</math> imaginary potential is added at the boundaries.
-    !%Option mask 2
-    !% A mask is applied to the wavefunctions at the boundaries.
-    !%End
-    call parse_variable('AbsorbingBoundaries', NOT_ABSORBING, hm%ab)
-    if(.not.varinfo_valid_option('AbsorbingBoundaries', hm%ab)) call messages_input_error('AbsorbingBoundaries')
-    call messages_print_var_option(stdout, "AbsorbingBoundaries", hm%ab)
-
-    nullify(hm%ab_pot)
-
-    if(hm%ab /= NOT_ABSORBING) call init_abs_boundaries()
-
-!    ! boundaries
-!    call bc_init(hm%bc, gr%mesh, gr%mesh%sb, hm%geo)
+    ! Boundaries
+    call bc_init(hm%bc, gr%mesh, gr%mesh%sb, hm%geo)
 
     !%Variable MassScaling
     !%Type block
@@ -562,48 +530,6 @@ contains
       POP_SUB(hamiltonian_init.init_phase)
     end subroutine init_phase
 
-
-    ! ---------------------------------------------------------
-    subroutine init_abs_boundaries()
-      FLOAT :: dd
-      integer :: ip
-
-      PUSH_SUB(hamiltonian_init.init_abs_boundaries)
-
-      !%Variable ABWidth
-      !%Type float
-      !%Default 0.4 a.u.
-      !%Section Time-Dependent::Absorbing Boundaries
-      !%Description
-      !% Width of the region used to apply the absorbing boundaries.
-      !%End
-      call parse_variable('ABWidth', CNST(0.4), hm%ab_width, units_inp%length)
-
-      if(hm%ab == IMAGINARY_ABSORBING) then
-        !%Variable ABHeight
-        !%Type float
-        !%Default -0.2 a.u.
-        !%Section Time-Dependent::Absorbing Boundaries
-        !%Description
-        !% When <tt>AbsorbingBoundaries = sin2</tt>, this is the height of the imaginary potential.
-        !%End
-        call parse_variable('ABHeight', -CNST(0.2), hm%ab_height, units_inp%energy)
-      else
-        hm%ab_height = M_ONE
-      end if
-
-      ! generate boundary potential...
-      SAFE_ALLOCATE(hm%ab_pot(1:gr%mesh%np))
-      hm%ab_pot = M_ZERO
-      do ip = 1, gr%mesh%np
-        if(mesh_inborder(gr%mesh, hm%geo, ip, dd, hm%ab_width)) then
-          hm%ab_pot(ip) = hm%ab_height * sin(dd * M_PI / (M_TWO * hm%ab_width))**2
-        end if
-      end do
-
-      POP_SUB(hamiltonian_init.init_abs_boundaries)
-    end subroutine init_abs_boundaries
-
   end subroutine hamiltonian_init
 
   
@@ -644,7 +570,7 @@ contains
     call epot_end(hm%ep, hm%geo)
     nullify(hm%geo)
 
-    SAFE_DEALLOCATE_P(hm%ab_pot)
+    call bc_end(hm%bc)
 
     call states_dim_end(hm%d) 
 
@@ -669,7 +595,7 @@ contains
     type(hamiltonian_t), intent(in) :: hm
 
     PUSH_SUB(hamiltonian_hermitian)
-    hamiltonian_hermitian = .not.((hm%ab  ==  IMAGINARY_ABSORBING) .or. &
+    hamiltonian_hermitian = .not.((hm%bc%abtype == IMAGINARY_ABSORBING) .or. &
                                   hamiltonian_oct_exchange(hm)     .or. &
                                   hm%cmplxscl%space)
 
@@ -851,8 +777,8 @@ contains
 
     if(.not.hm%adjoint) then
       hm%adjoint = .true.
-      if(hm%ab  ==  IMAGINARY_ABSORBING) then
-        hm%ab_pot = -hm%ab_pot
+      if(hm%bc%abtype == IMAGINARY_ABSORBING) then
+        hm%bc%mf = -hm%bc%mf
       end if
     end if
 
@@ -868,8 +794,8 @@ contains
 
     if(hm%adjoint) then
       hm%adjoint = .false.
-      if(hm%ab  ==  IMAGINARY_ABSORBING) then
-        hm%ab_pot = -hm%ab_pot
+      if(hm%bc%abtype == IMAGINARY_ABSORBING) then
+        hm%bc%mf = -hm%bc%mf
       end if
     end if
 
@@ -904,9 +830,9 @@ contains
 
     ! the xc, hartree and external potentials
     call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_POTENTIAL, &
-      complex_potential = this%cmplxscl%space .or. this%ab == IMAGINARY_ABSORBING)
+      complex_potential = this%cmplxscl%space .or. this%bc%abtype == IMAGINARY_ABSORBING)
 
-    if(this%d%nspin > 2 .and. this%ab == IMAGINARY_ABSORBING) then
+    if(this%d%nspin > 2 .and. this%bc%abtype == IMAGINARY_ABSORBING) then
       call messages_not_implemented('AbsorbingBoundaries = sin2 for spinors')
     end if
 
@@ -931,9 +857,9 @@ contains
         forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin)
       end if
 
-      if(this%ab == IMAGINARY_ABSORBING) then
+      if(this%bc%abtype == IMAGINARY_ABSORBING) then
         forall (ip = 1:mesh%np)
-          this%hm_base%Impotential(ip, ispin) = this%hm_base%Impotential(ip, ispin) + this%ab_pot(ip)
+          this%hm_base%Impotential(ip, ispin) = this%hm_base%Impotential(ip, ispin) + this%bc%mf(ip)
         end forall
       end if
 
@@ -1141,7 +1067,7 @@ contains
     if(this%rashba_coupling**2 > M_ZERO) apply = .false.
     if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) apply = .false.
     if(iand(this%xc_family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0)  apply = .false. 
-    if(this%ab == IMAGINARY_ABSORBING .and. opencl_is_enabled()) apply = .false.
+    if(this%bc%abtype == IMAGINARY_ABSORBING .and. opencl_is_enabled()) apply = .false.
     
   end function hamiltonian_apply_packed
 

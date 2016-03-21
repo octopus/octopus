@@ -76,7 +76,7 @@ contains
     character(len=1024) :: user_def_expr
 
     FLOAT, allocatable  :: mf(:)
-    FLOAT               :: abheight
+    FLOAT               :: abheight, abwidth
     type(block_t)       :: blk
 
     character(len=50)   :: str
@@ -91,11 +91,11 @@ contains
     !% To improve the quality of the spectra by avoiding the formation of
     !% standing density waves, one can make the boundaries of the simulation
     !% box absorbing and use exterior complex scaling.
-    !%Option not_absorbing_op 0
+    !%Option not_absorbing 0
     !% Reflecting boundaries.
-    !%Option mask_op 1
+    !%Option mask 1
     !% Absorbing boundaries with a mask function.
-    !%Option sin2_op 2
+    !%Option cap 2
     !% Absorbing boundaries with a complex absorbing potential.
     !%Option exterior 3
     !% Exterior complex scaling (not yet implemented).
@@ -111,15 +111,15 @@ contains
     write(str, '(a,i5)') 'Absorbing Boundaries'
     call messages_print_stress(stdout, trim(str))
 
-    !%Variable ABHeight
+    !%Variable ABCapHeight
     !%Type float
     !%Default -0.2 a.u.
     !%Section Time-Dependent::Absorbing Boundaries
     !%Description
-    !% When <tt>AbsorbingBoundaries = sin2</tt>, this is the height of the imaginary potential.
+    !% When <tt>AbsorbingBoundaries = cap</tt>, this is the height of the imaginary potential.
     !%End
     if(this%abtype == IMAGINARY_ABSORBING) then
-      call parse_variable('ABHeight', -CNST(0.2), abheight, units_inp%energy)
+      call parse_variable('ABCapHeight', -CNST(0.2), abheight, units_inp%energy)
     end if
    
     !%Variable ABShape
@@ -142,7 +142,6 @@ contains
     !% If no expression is given, the absorbing zone follows the edges of the 
     !% box (not valid for user-defined box).
     !%End
-    call messages_obsolete_variable('ABWidth', 'ABShape')
    
     cols_abshape_block = 0
     if(parse_block('ABShape', blk) < 0) then
@@ -198,11 +197,23 @@ contains
       end select
     end if
    
+    !%Variable ABWidth
+    !%Type float
+    !%Section Time-Dependent::Absorbing Boundaries
+    !%Description
+    !% Specifies the boundary width. For a finer control over the absorbing boundary 
+    !% shape use ABShape. 
+    !%End
+!     call messages_obsolete_variable('ABWidth', 'ABShape')
+    abwidth = bounds(2)-bounds(1)
+    call parse_variable('ABWidth', abwidth, abwidth, units_inp%length)
+    bounds(1) = bounds(2) - abwidth
+   
     write(message(1),'(a,es10.3,3a)') & 
-      "  val1 = ", units_from_atomic(units_inp%length, bounds(1) ),&
+      "  Lower bound = ", units_from_atomic(units_inp%length, bounds(1) ),&
       ' [', trim(units_abbrev(units_inp%length)), ']'
     write(message(2),'(a,es10.3,3a)') & 
-      "  val2 = ", units_from_atomic(units_inp%length, bounds(2) ),&
+      "  Upper bound = ", units_from_atomic(units_inp%length, bounds(2) ),&
       ' [', trim(units_abbrev(units_inp%length)), ']'
     call messages_info(2)
    
@@ -248,14 +259,14 @@ contains
     PUSH_SUB(bc_write_info)
 
     if(this%abtype == MASK_ABSORBING) then
-      call dio_function_output(OPTION__OUTPUTFORMAT__MESH_INDEX, "./td.general", "mask", mesh, &
+      call dio_function_output(io_function_fill_how("VTK"), "./td.general", "mask", mesh, &
         this%mf(1:mesh%np), unit_one, err)
-      call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_Z, "./td.general", "mask", mesh, &
+      call dio_function_output(io_function_fill_how("PlaneZ"), "./td.general", "mask", mesh, &
         this%mf(1:mesh%np), unit_one, err)
     else if(this%abtype == IMAGINARY_ABSORBING) then
-      call dio_function_output(OPTION__OUTPUTFORMAT__MESH_INDEX, "./td.general", "cap", mesh, &
+      call dio_function_output(io_function_fill_how("VTK"), "./td.general", "cap", mesh, &
         this%mf(1:mesh%np), unit_one, err)
-      call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_Z, "./td.general", "cap", mesh, &
+      call dio_function_output(io_function_fill_how("PlaneZ"), "./td.general", "cap", mesh, &
         this%mf(1:mesh%np), unit_one, err)
     end if
 

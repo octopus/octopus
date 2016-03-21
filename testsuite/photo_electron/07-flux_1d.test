@@ -10,7 +10,7 @@ Enabled    : Yes
 # 1d hydrogen
 Processors : 2
 Input      : 07-flux_1d.h1d_lin.inp
-match ; PES [val  1] ; LINEFIELD(td.general/PES_flux.distribution.out, 356, 2) ; 0.8164946089E-003
+match ; PES [val  1] ; LINEFIELD(td.general/PES_flux.distribution.out, 356, 2) ; 0.9318115990E-003
 match ; PES [val  2] ; LINEFIELD(td.general/PES_flux.distribution.out, 360, 2) ; 0.1729896468E-002 
 match ; PES [val  3] ; LINEFIELD(td.general/PES_flux.distribution.out, 363, 2) ; 0.8842840260E-003
 

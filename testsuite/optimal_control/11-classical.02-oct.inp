@@ -38,7 +38,7 @@ MoveIons = yes
 stime  = 1.0
 dt = stime/100
 
-AbsorbingBoundaries = sin2
+AbsorbingBoundaries = cap
 AbWidth = 2.0
 AbHeight = -3.0
 

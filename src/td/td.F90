@@ -20,6 +20,7 @@
 #include "global.h"
 
 module td_oct_m
+  use boundary_op_oct_m
   use calc_mode_par_oct_m
   use density_oct_m
   use energy_calc_oct_m
@@ -444,9 +445,6 @@ contains
         end if
       end if
 
-      !Apply mask absorbing boundaries
-      if(hm%ab == MASK_ABSORBING) call zvmask(gr, hm, st) 
-
       ! in case use scdm localized states for exact exchange and request a new localization             
       if(hm%scdm_EXX) scdm_is_local = .false.
 
@@ -459,6 +457,9 @@ contains
       case(BO)
         call propagator_dt_bo(td%scf, gr, sys%ks, st, hm, td%gauge_force, geo, sys%mc, sys%outp, iter, td%dt, td%ions, scsteps)
       end select
+
+      !Apply mask absorbing boundaries
+      if(hm%bc%abtype == MASK_ABSORBING) call zvmask(gr, hm, st) 
 
       !Photoelectron stuff 
       if(td%pesv%calc_spm .or. td%pesv%calc_mask .or. td%pesv%calc_flux) &

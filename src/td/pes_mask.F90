@@ -21,6 +21,7 @@
 
 module pes_mask_oct_m
   use batch_oct_m
+  use boundary_op_oct_m
   use comm_oct_m
   use cube_function_oct_m
   use cube_oct_m
@@ -213,7 +214,7 @@ contains
       call messages_warning(2)
     end if
 
-    if( hm%ab  /=  NOT_ABSORBING) then
+    if(hm%bc%abtype /= NOT_ABSORBING) then
       message(1) = 'PhotoElectronSpectrum = pes_mask already contains absorbing boundaries.'
       message(2) = 'Set AbsorbingBoundaries = no and rerun.'
       call messages_fatal(2)

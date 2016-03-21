@@ -81,10 +81,6 @@ TDTimeStep = dt
 
 OutputInterval = 10000
 
-AbsorbingBoundaries = no
-ABWidth = 3.0
-ABHeight = -4.0
-
 
 # The parameters, according to the bibliography, are:
 # mu0 = 7.85 debye / angstrom = 1.634 atomiccharge

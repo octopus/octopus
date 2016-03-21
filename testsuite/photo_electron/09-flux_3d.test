@@ -15,7 +15,7 @@ Input      : 09-flux_3d.01-Na_gs.inp
 # Processors : 2
 Precision  : 1.0e-12
 Input      : 09-flux_3d.02-Na_td.inp
-match ; PES [val  1] ; LINEFIELD(td.general/PES_flux.power.sum, 136, 2) ; 0.1225955270E-011
-match ; PES [val  2] ; LINEFIELD(td.general/PES_flux.power.sum, 141, 2) ; 0.6038818318E-010
-match ; PES [val  3] ; LINEFIELD(td.general/PES_flux.power.sum, 144, 2) ; 0.2005439795E-010
+match ; PES [val  1] ; LINEFIELD(td.general/PES_flux.power.sum, 136, 2) ; 0.1962140759E-012
+match ; PES [val  2] ; LINEFIELD(td.general/PES_flux.power.sum, 141, 2) ; 0.2200683471E-010
+match ; PES [val  3] ; LINEFIELD(td.general/PES_flux.power.sum, 144, 2) ; 0.9374485331E-011
 
