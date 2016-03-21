@@ -21,4 +21,4 @@ Input: 04-box.02-unocc.inp
 # run the optimization with the NLOPT BOBYQA algorithm
 Options : nlopt
 Input: 13-box.03-bobyqa.inp
-match ; J1 1st iteration  ; LINEFIELD(opt-control/convergence, -2, 2) ; 0.62909965
+match ; J1 1st iteration  ; LINEFIELD(opt-control/convergence, -2, 2) ; 0.62909889

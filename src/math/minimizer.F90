@@ -214,8 +214,9 @@ contains
     ! This would set an inequality constraint (TODO)
     !call nlo_add_inequality_constraint(ires, opt, myconstraint, d1, CNST(1.0e-8))
 
-    call nlo_set_xtol_rel(ires, opt, toldr)
+    call nlo_set_xtol_abs(ires, opt, toldr)
     call nlo_set_initial_step1(ires, opt, step)
+    call nlo_set_maxeval(ires, opt, maxiter)
 
     call nlo_optimize(ires, opt, x, minimum)
     ierr = ires
