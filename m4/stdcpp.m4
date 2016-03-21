@@ -118,7 +118,7 @@ ac_save_positional="$[@]"
 set X $ac_cxx_v_output
 while test $[@%:@] != 1; do      
   shift
-  ac_arg=$[1]
+  ac_arg=`echo $[1] | sed -e 's/\"//g' -e's/\\\x27//g'` #remove single and double quotes
   case $ac_arg in   
         [[\\/]]*.a | ?:[[\\/]]*.a)
           _AC_LIST_MEMBER_IF($ac_arg, $ac_cv_cxxlibs, ,
