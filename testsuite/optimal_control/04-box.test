@@ -6,7 +6,8 @@ Program    : octopus
 TestGroups : long-run, optimal_control
 Enabled    : Yes
 
-# The test checks the optimal-control algorithm ZR98/WG05. It calculates the optimal laser field that transfers the ground state to the first excited state. 
+# The test checks several optimal-control algorithm. 
+# It calculates the optimal laser field that transfers the ground state to the first excited state. 
 # 
 # We do the following intermediate steps:
 # First, the two lowest eigenstates of the box

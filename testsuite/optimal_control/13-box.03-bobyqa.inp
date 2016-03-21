@@ -1,0 +1,77 @@
+# -*- coding: utf-8 mode: shell-script -*-
+# $Id: 04-box.06-oct_long.inp 15216 2016-03-21 15:48:22Z acastro $
+
+CalculationMode = opt_control
+ExperimentalFeatures = yes
+
+# ------------------
+# TD RUN Parameters
+# ------------------
+
+stime  = 100.0
+dt = 0.02
+TDPropagator = exp_mid
+TDExponentialMethod = lanczos
+TDExponentialOrder = 30
+TDLanczosTol = 1.0e-4
+TDPropagationTime = stime
+TDTimeStep = dt
+
+
+# --------------
+# OCT parameters
+# --------------
+
+OCTPenalty = 1.0
+OCTEps = 0.000001
+OCTMaxIter = 1
+
+OCTInitialState = oct_is_groundstate
+OCTTargetOperator = oct_tg_gstransformation
+%OCTTargetTransformStates
+0 | 1
+%
+
+OCTScheme = oct_nlopt_bobyqa
+OCTControlFunctionRepresentation = control_fourier_series
+OCTControlFunctionOmegaMax = 0.10
+#OCTFixFluenceTo = -1
+
+OCTDoubleCheck = no
+
+
+
+#----------------------------
+# Laser field = Initial guess
+#-----------------------------
+
+ampl = 0.06
+freq = (2*pi/stime)
+%TDExternalFields
+  electric_field | 1 | 0 | 0 | freq | "envelope_function" 
+%
+
+%TDFunctions
+"envelope_function" | tdf_cw | ampl
+%
+
+Dimensions = 1
+fromScratch = yes
+
+BoxShape = sphere
+Spacing = 0.4
+Radius =  15.0
+
+TheoryLevel = independent_particles
+
+%Species
+"Box1D" | species_user_defined | potential_formula | "-5*step(x+5)*step(5-x)" | valence | 1
+%
+
+%Coordinates
+"Box1D" | 0
+%
+
+
+
+

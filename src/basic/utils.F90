@@ -323,6 +323,9 @@ contains
 #ifdef HAVE_SPARSKIT
     get_optional_libraries = trim(get_optional_libraries)//' sparskit'
 #endif
+#ifdef HAVE_NLOPT
+    get_optional_libraries = trim(get_optional_libraries)//' nlopt'
+#endif
 
   end function get_optional_libraries
 
