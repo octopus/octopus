@@ -32,7 +32,7 @@ OCTTargetOperator = oct_tg_gstransformation
 0 | 1
 %
 
-OCTScheme = oct_algorithm_direct
+OCTScheme = oct_direct
 OCTControlFunctionRepresentation = control_fourier_series
 OCTControlFunctionOmegaMax = 0.10
 #OCTFixFluenceTo = -1

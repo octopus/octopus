@@ -56,7 +56,7 @@ OCTInitialState = oct_is_groundstate
 OCTTargetOperator = oct_tg_jdensity
 OCTTargetDensity = "exp(-(x-1)^2)"
 
-OCTScheme  = oct_algorithm_zr98
+OCTScheme  = oct_zr98
 OCTDoubleCheck = no
 
 #----------------------------

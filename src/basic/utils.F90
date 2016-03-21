@@ -299,9 +299,6 @@ contains
 #ifdef HAVE_NETCDF
     get_optional_libraries = trim(get_optional_libraries)//' netcdf'
 #endif
-#ifdef HAVE_NEWUOA
-    get_optional_libraries = trim(get_optional_libraries)//' newuoa'
-#endif
 #ifdef HAVE_NFFT
     get_optional_libraries = trim(get_optional_libraries)//' nfft'
 #endif

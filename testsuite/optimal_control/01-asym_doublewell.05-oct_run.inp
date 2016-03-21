@@ -61,7 +61,7 @@ xf=2.0
 
 
 
-OCTScheme  = oct_algorithm_zbr98
+OCTScheme  = oct_zbr98
 OCTDoubleCheck = no
 
 

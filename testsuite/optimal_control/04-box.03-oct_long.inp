@@ -33,7 +33,7 @@ OCTTargetOperator = oct_tg_gstransformation
 %
 
 
-OCTScheme  = oct_algorithm_zbr98
+OCTScheme  = oct_zbr98
 OCTDoubleCheck = No	
 gamma1 = 0.1
 gamma2 = 80

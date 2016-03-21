@@ -74,12 +74,12 @@
       call messages_fatal(1)
     end if
 
-    if(oct%algorithm  ==  oct_algorithm_zbr98) then
+    if(oct%algorithm  ==  OPTION__OCTSCHEME__OCT_ZBR98) then
       select case(target_type(oct_target))
       case(oct_tg_groundstate, oct_tg_gstransformation, &
            oct_tg_userdefined)
       case default
-        write(message(1), '(a)') 'The scheme "OCTScheme = oct_algorithm_zbr98 can only be used if'
+        write(message(1), '(a)') 'The scheme "OCTScheme = oct_zbr98 can only be used if'
         write(message(2), '(a)') 'the target state is "OCTTargetOperator = oct_tg_gstransformation"'
         write(message(3), '(a)') 'or "OCTTargetOperator = oct_tg_groundstate"'
         write(message(4), '(a)') 'or "OCTTargetOperator = oct_tg_userdefined".'
@@ -89,7 +89,7 @@
       
     ! Filters only with the WG05 scheme.
     if(filter_number(filter) /= 0) then
-      if(oct%algorithm /= oct_algorithm_wg05) then
+      if(oct%algorithm /= OPTION__OCTSCHEME__OCT_WG05) then
         write(message(1), '(a)') 'Filters can only be used with the WG05 QOCT algorithm.'
         call messages_fatal(1)
       end if
@@ -99,7 +99,7 @@
     if(target_type(oct_target)  ==  oct_tg_local .or. &
        target_type(oct_target)  ==  oct_tg_jdensity .or. &
        target_type(oct_target)  ==  oct_tg_td_local) then
-      if(oct%algorithm  ==  oct_algorithm_zbr98) then
+      if(oct%algorithm  ==  OPTION__OCTSCHEME__OCT_ZBR98) then
         write(message(1), '(a)') 'Cannot use ZBR98 OCT scheme if the target is oct_tg_jdensity,'
         write(message(2), '(a)') 'oct_tg_local or oct_tg_td_local.'
         call messages_fatal(2)
@@ -168,8 +168,8 @@
     end if
 
     if(hm%bc%abtype == MASK_ABSORBING) then
-      if( (oct%algorithm /= oct_algorithm_direct) .and. &
-          (oct%algorithm /= oct_algorithm_newuoa) ) then
+      if( (oct%algorithm /= OPTION__OCTSCHEME__OCT_DIRECT) .and. &
+          (oct%algorithm /= OPTION__OCTSCHEME__OCT_NLOPT_BOBYQA) ) then
         write(message(1), '(a)') 'Cannot do QOCT with mask absorbing boundaries. Use either'
         write(message(2), '(a)') '"AbsorbingBoundaries = sin2" or "AbsorbingBoundaries = no".'
         call messages_fatal(2)
@@ -191,40 +191,40 @@
     end if
     
     if(target_type(oct_target)  ==  oct_tg_velocity) then
-       if( (oct%algorithm /= oct_algorithm_direct) .and. &
-            (oct%algorithm /= oct_algorithm_newuoa) .and. & 
-            (oct%algorithm /= oct_algorithm_bfgs) .and. & 
-            (oct%algorithm /= oct_algorithm_cg) ) then
+       if( (oct%algorithm /= OPTION__OCTSCHEME__OCT_DIRECT) .and. &
+            (oct%algorithm /= OPTION__OCTSCHEME__OCT_NLOPT_BOBYQA) .and. & 
+            (oct%algorithm /= OPTION__OCTSCHEME__OCT_BFGS) .and. & 
+            (oct%algorithm /= OPTION__OCTSCHEME__OCT_CG) ) then
           write(message(1), '(a)') 'If "OCTTargetOperator = oct_tg_velocity", you can only use'
-          write(message(2), '(a)') '"OCTScheme = oct_algorithm_direct" or'
-          write(message(3), '(a)') '"OCTScheme = oct_algorithm_newuoa" or'
-          write(message(4), '(a)') '"OCTScheme = oct_algorithm_cg" for the optimization.'
+          write(message(2), '(a)') '"OCTScheme = oct_direct" or'
+          write(message(3), '(a)') '"OCTScheme = oct_bobyqa" or'
+          write(message(4), '(a)') '"OCTScheme = oct_cg" for the optimization.'
           call messages_fatal(4)
        end if
-       if( ((oct%algorithm  ==  oct_algorithm_cg) .or. (oct%algorithm == oct_algorithm_bfgs)) &
+       if( ((oct%algorithm  ==  OPTION__OCTSCHEME__OCT_CG) .or. (oct%algorithm == OPTION__OCTSCHEME__OCT_BFGS)) &
            .and. target_move_ions(oct_target)) then
           write(message(1), '(a)') 'If "OCTTargetOperator = oct_tg_velocity", and'
-          write(message(2), '(a)') '"OCTScheme = oct_algorithm_cg", or "OCTScheme = oct_algorithm_bfgs",'
+          write(message(2), '(a)') '"OCTScheme = oct_cg", or "OCTScheme = oct_bfgs",'
           write(message(3), '(a)') 'then you have to set "MoveIons = false"'
           call messages_fatal(3)
        end if
     end if
 
     if(target_type(oct_target)  ==  oct_tg_hhgnew) then
-       if( (oct%algorithm /= oct_algorithm_direct) .and. &
-            (oct%algorithm /= oct_algorithm_newuoa) .and. & 
-            (oct%algorithm /= oct_algorithm_bfgs) .and. & 
-            (oct%algorithm /= oct_algorithm_cg) ) then
+       if( (oct%algorithm /= OPTION__OCTSCHEME__OCT_DIRECT) .and. &
+            (oct%algorithm /= OPTION__OCTSCHEME__OCT_NLOPT_BOBYQA) .and. & 
+            (oct%algorithm /= OPTION__OCTSCHEME__OCT_BFGS) .and. & 
+            (oct%algorithm /= OPTION__OCTSCHEME__OCT_CG) ) then
           write(message(1), '(a)') 'If "OCTTargetOperator = oct_tg_hhgnew", you can only use'
-          write(message(2), '(a)') '"OCTScheme = oct_algorithm_direct" or'
-          write(message(3), '(a)') '"OCTScheme = oct_algorithm_newuoa" or'
-          write(message(4), '(a)') '"OCTScheme = oct_algorithm_cg" for the optimization.'
+          write(message(2), '(a)') '"OCTScheme = oct_direct" or'
+          write(message(3), '(a)') '"OCTScheme = oct_bobyqa" or'
+          write(message(4), '(a)') '"OCTScheme = oct_cg" for the optimization.'
           call messages_fatal(4)
        end if
-       if( ((oct%algorithm  ==  oct_algorithm_cg) .or. (oct%algorithm  ==  oct_algorithm_bfgs)) &
+       if( ((oct%algorithm  ==  OPTION__OCTSCHEME__OCT_CG) .or. (oct%algorithm  ==  OPTION__OCTSCHEME__OCT_BFGS)) &
            .and. target_move_ions(oct_target)) then
           write(message(1), '(a)') 'If "OCTTargetOperator = oct_tg_hhgnew", and'
-          write(message(2), '(a)') '"OCTScheme = oct_algorithm_cg", or "OCTScheme = oct_algorithm_cg",'
+          write(message(2), '(a)') '"OCTScheme = oct_cg", or "OCTScheme = oct_bfgs",'
           write(message(3), '(a)') 'then you have to set "MoveIons = false"'
           call messages_fatal(3)
        end if
@@ -245,7 +245,7 @@
     select case(controlfunction_mode())
     case(controlfunction_mode_f)
       if(.not. oct_algorithm_is_direct(oct)) then
-        if(oct%algorithm /= oct_algorithm_cg .and. oct%algorithm /= oct_algorithm_bfgs) then
+        if(oct%algorithm /= OPTION__OCTSCHEME__OCT_CG .and. oct%algorithm /= OPTION__OCTSCHEME__OCT_BFGS) then
           message(1) = 'If you attempt an envelope-only or phase-only optimization, then'
           message(2) = 'you must use either a gradient-free algorithm, oct_algorithm_cg, or'
           message(3) = 'oct_algorithm_bfgs algorithm.'

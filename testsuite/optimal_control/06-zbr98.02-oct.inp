@@ -100,7 +100,7 @@ OCTTargetOperator = oct_tg_gstransformation
 0 | 1
 %
 
-OCTScheme  = oct_algorithm_zbr98
+OCTScheme  = oct_zbr98
 OCTDoubleCheck = no
 
 

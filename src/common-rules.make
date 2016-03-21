@@ -96,16 +96,11 @@ if COMPILE_METIS
   AM_CPPFLAGS += -I$(top_srcdir)/external_libs/metis-5.1/include/
 endif
 
-if COMPILE_NEWUOA
-  external_LIBS += $(top_builddir)/external_libs/newuoa/libnewuoa.a
-  FCFLAGS_MODS += @F90_MODULE_FLAG@$(top_builddir)/external_libs/newuoa
-endif
-
 # These must be arranged so if LIB1 depends on LIB2, LIB1 must occur before LIB2.
 # e.g. ETSF_IO depends on netCDF, ISF depends on LAPACK
 outside_LIBS = @LIBS_PSPIO@ @LIBS_ISF@ @LIBS_NFFT@ @LIBS_PNFFT@ @LIBS_PFFT@ \
   @LIBS_SPARSKIT@ @LIBS_ETSF_IO@ @LIBS_NETCDF@ @LIBS_LIBFM@ \
-  @LIBS_BERKELEYGW@ @LIBS_PARPACK@ @LIBS_ARPACK@ @GD_LIBS@ \
+  @LIBS_BERKELEYGW@ @LIBS_NLOPT@ @LIBS_PARPACK@ @LIBS_ARPACK@ @GD_LIBS@ \
   @LIBS_PARMETIS@ @LIBS_METIS@ @LIBS_FEAST@ @LIBS_MPI@
 
 other_LIBS = $(external_LIBS) $(scalapack_LIBS) $(outside_LIBS) $(core_LIBS) @CXXLIBS@
@@ -124,7 +119,7 @@ SUFFIXES = _oct.f90 .F90 .o
 	@FCCPP@ @CPPFLAGS@ $(AM_CPPFLAGS) -I. $< > $*_oct.f90
 	$(top_srcdir)/build/preprocess.pl $*_oct.f90 \
 	  "@DEBUG@" "@F90_ACCEPTS_LINE_NUMBERS@" "@F90_FORALL@"
-	@FC@ @FCFLAGS@ @FCFLAGS_LIBXC@ @FCFLAGS_PSPIO@ @FCFLAGS_ISF@ @FCFLAGS_FFTW@ @FCFLAGS_PFFT@ @FCFLAGS_PNFFT@ @FCFLAGS_NETCDF@ @FCFLAGS_ETSF_IO@ @FCFLAGS_BERKELEYGW@ @FCFLAGS_LIBFM@ $(FCFLAGS_MODS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
+	@FC@ @FCFLAGS@ @FCFLAGS_LIBXC@ @FCFLAGS_PSPIO@ @FCFLAGS_ISF@ @FCFLAGS_FFTW@ @FCFLAGS_PFFT@ @FCFLAGS_PNFFT@ @FCFLAGS_NETCDF@ @FCFLAGS_ETSF_IO@ @FCFLAGS_BERKELEYGW@ @FCFLAGS_NLOPT@ @FCFLAGS_LIBFM@ $(FCFLAGS_MODS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
 	@rm -f $*_oct.f90
 
 # This rule is basically to create a _oct.f90 file by hand for

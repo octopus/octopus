@@ -38,21 +38,6 @@ module opt_control_global_oct_m
             oct_read_inp,             &
             oct_algorithm_is_direct  
 
-  !> These are the possible QOCT schemes or algorithms; the component "algorithm"
-  !! of the oct_t datatype can get any of these values.
-  integer, parameter, public ::  &
-    oct_algorithm_zbr98              = 1,       &
-    oct_algorithm_zr98               = 2,       &
-    oct_algorithm_wg05               = 3,       &
-    oct_algorithm_mt03               = 4,       &
-    oct_algorithm_krotov             = 5,       &
-    oct_algorithm_str_iter           = 6,       &
-    oct_algorithm_cg                 = 7,       &
-    oct_algorithm_bfgs               = 8,       &
-    oct_algorithm_direct             = 9,       &
-    oct_algorithm_newuoa             = 10
-
-
   !> The oct_t datatype stores the basic information about how the OCT run
   !! is done: which algorithm, how the control funtion is stored, should the
   !! intermediate results be stored for debugging, etc.
@@ -92,26 +77,26 @@ contains
     !%Variable OCTScheme
     !%Type integer
     !%Section Calculation Modes::Optimal Control
-    !%Default oct_algorithm_zbr98
+    !%Default OPTION__OCTSCHEME__ZBR98
     !%Description
     !% Optimal Control Theory can be performed with <tt>Octopus</tt> with a variety of different
     !% algorithms. Not all of them can be used with any choice of target or control function
     !% representation. For example, some algorithms cannot be used if 
     !% <tt>OCTControlRepresentation = control_function_real_time</tt>    
-    !% (<tt>OCTScheme</tt> > <tt>oct_algorithm_straight_iteration</tt>), and others cannot be used 
+    !% (<tt>OCTScheme</tt> > <tt>oct_straight_iteration</tt>), and others cannot be used 
     !% if <tt>OCTControlRepresentation = control_function_parametrized</tt>
-    !% (<tt>OCTScheme</tt>  <  <tt>oct_algorithm_straight_iteration</tt>).
-    !%Option oct_algorithm_zbr98 1 
+    !% (<tt>OCTScheme</tt>  <  <tt>oct_straight_iteration</tt>).
+    !%Option oct_zbr98 1 
     !% Backward-Forward-Backward scheme described in <i>JCP</i> <b>108</b>, 1953 (1998).
     !% Only possible if target operator is a projection operator.
     !% Provides fast, stable and monotonic convergence.
-    !%Option oct_algorithm_zr98  2
+    !%Option oct_zr98  2
     !% Forward-Backward-Forward scheme described in <i>JCP</i> <b>109</b>, 385 (1998).
     !% Works for projection and more general target operators also. The convergence is 
     !% stable but slower than ZBR98. 
     !% Note that local operators show an extremely slow convergence. It ensures monotonic 
     !% convergence.
-    !%Option oct_algorithm_wg05  3
+    !%Option oct_wg05  3
     !% Forward-Backward scheme described in <i>J. Opt. B.</i> <b>7</b>, 300 (2005).
     !% Works for all kinds of target operators, can be used with all kinds of filters, and 
     !% allows a fixed fluence.
@@ -119,21 +104,21 @@ contains
     !% If the restrictions set by the filter and fluence are reasonable, a good overlap can be 
     !% expected within 20 iterations.
     !% No monotonic convergence.
-    !%Option oct_algorithm_mt03 4
+    !%Option oct_mt03 4
     !% Basically an improved and generalized scheme. 
     !% Comparable to ZBR98/ZR98. See [Y. Maday and G. Turinici, <i>J. Chem. Phys.</i> <b>118</b>, 8191 (2003)].
-    !%Option oct_algorithm_krotov 5
+    !%Option oct_krotov 5
     !% The procedure reported in [D. Tannor, V. Kazakov and V.
     !% Orlov, in <i>Time-Dependent Quantum Molecular Dynamics</i>, edited by J. Broeckhove
     !% and L. Lathouweres (Plenum, New York, 1992), pp. 347-360].
-    !%Option oct_algorithm_straight_iteration 6
+    !%Option oct_straight_iteration 6
     !% Straight iteration: one forward and one backward propagation is performed at each
     !% iteration, both with the same control field. An output field is calculated with the
     !% resulting wavefunctions. 
-    !%Option oct_algorithm_cg 7
+    !%Option oct_cg 7
     !% Conjugate-gradients, as implemented in the GNU GSL library. In particular, the
     !% Fletcher-Reeves version.
-    !%Option oct_algorithm_bfgs 8
+    !%Option oct_bfgs 8
     !% The methods use the vector Broyden-Fletcher-Goldfarb-Shanno (BFGS) algorithm.  
     !% Also, it calls the GNU GSL library version of the algorithm. It is a quasi-Newton 
     !% method which builds up an approximation to the second derivatives of the function using
@@ -143,18 +128,17 @@ contains
     !% as GSL calls it, which is supposed to be the most efficient version available, and a faithful 
     !% implementation of the line minimization scheme described in "Practical Methods of Optimization",
     !% (Fletcher), Algorithms 2.6.2 and 2.6.4.  
-    !%Option oct_algorithm_direct 9
+    !%Option oct_direct 9
     !% This is a "direct" optimization scheme. This means that we do not make use of the
     !% "usual" QOCT equations (backward-forward propagations, etc), but we use some gradient-free
     !% maximization algorithm for the function that we want to optimize. In this case, the
     !% maximization algorithm is the Nelder-Mead algorithm as implemeted in the GSL. The function
     !% values are obtained by successive forward propagations.
-    !%Option oct_algorithm_newuoa 10
-    !% This is exactly the same as <tt>oct_algorithm_direct</tt>, except in this case the maximization
-    !% algorithm is the so-called NEWUOA algorithm [M. J. D. Powell, <i>IMA J. Numer. Analysis</i>
-    !% <b>28</b>, 649-664 (2008)].
+    !%Option oct_nlopt_bobyqa 11
+    !% The BOBYQA algorithm, as implemented in the NLOPT library -- therefore, octopus has to
+    !% be compiled with it in order to be able to use this option.
     !%End
-    call parse_variable('OCTScheme', oct_algorithm_zr98, oct%algorithm)
+    call parse_variable('OCTScheme', OPTION__OCTSCHEME__OCT_ZR98, oct%algorithm)
     if(.not.varinfo_valid_option('OCTScheme', oct%algorithm)) call messages_input_error('OCTScheme')
     ! We must check that the algorithm is consistent with OCTControlRepresentation, i.e.
     ! some algorithms only make sense if the control functions are handled directly in real
@@ -162,14 +146,14 @@ contains
     ! This check cannot be here any more, and it should be placed somewhere else.
     call messages_print_var_option(stdout, "OCTScheme", oct%algorithm)
     select case(oct%algorithm)
-    case(oct_algorithm_mt03)
+    case(OPTION__OCTSCHEME__OCT_MT03)
       oct%delta = M_TWO; oct%eta = M_ZERO
       !%Variable OCTEta
       !%Type float
       !%Section Calculation Modes::Optimal Control
       !%Default 1.0
       !%Description 
-      !% If <tt>OCTScheme = oct_algorithm_mt03</tt>, then you can supply the "eta" and "delta" parameters
+      !% If <tt>OCTScheme = oct_mt03</tt>, then you can supply the "eta" and "delta" parameters
       !% described in [Y. Maday and G. Turinici, <i>J. Chem. Phys.</i> <b>118</b>, 8191 (2003)], using the
       !% <tt>OCTEta</tt> and <tt>OCTDelta</tt> variables.
       !%End
@@ -179,35 +163,35 @@ contains
       !%Section Calculation Modes::Optimal Control
       !%Default 0.0
       !%Description 
-      !% If <tt>OCTScheme = oct_algorithm_mt03</tt>, then you can supply the "eta" and "delta" parameters
+      !% If <tt>OCTScheme = oct_mt03</tt>, then you can supply the "eta" and "delta" parameters
       !% described in [Y. Maday and G. Turinici, <i>J. Chem. Phys.</i> <b>118</b>, 8191 (2003)], using the
       !% <tt>OCTEta</tt> and <tt>OCTDelta</tt> variables.
       !%End
       call parse_variable('OCTDelta', M_ZERO, oct%delta)
 
-    case(oct_algorithm_zr98)
+    case(OPTION__OCTSCHEME__OCT_ZR98)
       oct%delta = M_ONE; oct%eta = M_ONE
-    case(oct_algorithm_krotov)
+    case(OPTION__OCTSCHEME__OCT_KROTOV)
       oct%delta = M_ONE; oct%eta = M_ZERO
-    case(oct_algorithm_str_iter)
+    case(OPTION__OCTSCHEME__OCT_STRAIGHT_ITERATION)
       oct%delta = M_ZERO; oct%eta = M_ONE
-    case(oct_algorithm_cg)
+    case(OPTION__OCTSCHEME__OCT_CG)
       oct%delta = M_ZERO; oct%eta = M_ONE
-    case(oct_algorithm_bfgs)
+    case(OPTION__OCTSCHEME__OCT_BFGS)
       oct%delta = M_ZERO; oct%eta = M_ONE
-    case(oct_algorithm_direct)
-      ! The use of these variables for the direct and newuoa schemes remain undocumented for the moment.
+    case(OPTION__OCTSCHEME__OCT_DIRECT)
+      ! The use of these variables for the direct and bobyqa schemes remain undocumented for the moment.
       call parse_variable('OCTEta', M_ONE, oct%eta)
       call parse_variable('OCTDelta', M_ZERO, oct%delta)
-    case(oct_algorithm_newuoa)
-#if defined(HAVE_NEWUOA)
+    case(OPTION__OCTSCHEME__OCT_NLOPT_BOBYQA)
+#if defined(HAVE_NLOPT)
+      !WARNING: not clear if this is needed, probably not.
       call parse_variable('OCTEta', M_ONE, oct%eta)
       call parse_variable('OCTDelta', M_ZERO, oct%delta)
 #else
-      write(message(1), '(a)') '"OCTScheme = oct_algorithm_newuoa" is only possible if the newuoa'
-      write(message(2), '(a)') 'code has been compiled. You must configure octopus passing the'
-      write(message(3), '(a)') 'the "--enable-newuoa" switch.'
-      call messages_fatal(3)
+      write(message(1), '(a)') '"OCTScheme = oct_nlopt_bobyqa" is only possible if the nlopt'
+      write(message(2), '(a)') 'library has been compiled.'
+      call messages_fatal(2)
 #endif
     case default
       oct%delta = M_ONE; oct%eta = M_ONE
@@ -248,7 +232,7 @@ contains
     !%Section Calculation Modes::Optimal Control
     !%Default 0.25
     !%Description 
-    !% If you choose <tt>OCTScheme = oct_algorithm_direct</tt> or <tt>OCTScheme = oct_algorithm_newuoa</tt>,
+    !% If you choose <tt>OCTScheme = oct_direct</tt> or <tt>OCTScheme = oct_nlopt_bobyqa</tt>,
     !% the algorithms necessitate an initial "step" to perform the direct search for the
     !% optimal value. The precise meaning of this "step" differs.
     !%End
@@ -299,7 +283,7 @@ contains
   !! algorithms -- the ones that do not require backwards propagations. Returns .false. otherwise
   logical pure function oct_algorithm_is_direct(oct)
     type(oct_t), intent(in) :: oct
-    oct_algorithm_is_direct = (oct%algorithm >= oct_algorithm_direct)
+    oct_algorithm_is_direct = (oct%algorithm >= OPTION__OCTSCHEME__OCT_DIRECT)
   end function oct_algorithm_is_direct
   ! ---------------------------------------------------------
 

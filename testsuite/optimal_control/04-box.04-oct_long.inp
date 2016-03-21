@@ -31,7 +31,7 @@ OCTTargetOperator = oct_tg_gstransformation
 %OCTTargetTransformStates
 0 | 1
 %
-OCTScheme  = oct_algorithm_zr98
+OCTScheme  = oct_zr98
 OCTDoubleCheck = No	
 
 #----------------------------

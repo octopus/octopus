@@ -54,7 +54,7 @@ OCTTargetOperator = oct_tg_gstransformation
 0 | 1
 %
 
-OCTScheme  = oct_algorithm_wg05
+OCTScheme  = oct_wg05
 OCTDoubleCheck = no
 
 #----------------------------

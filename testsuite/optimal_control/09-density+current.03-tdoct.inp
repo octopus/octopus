@@ -62,7 +62,7 @@ OCTCurrentWeight = -5
 
 OCTDirectStep = 0.1
 OCTNumberCheckPoints = 10
-OCTScheme = oct_algorithm_bfgs
+OCTScheme = oct_bfgs
 #OCTCheckGradient = 0.0000001
 OCTControlFunctionOmegaMax = 20.0
 OCTControlFunctionRepresentation = control_fourier_series

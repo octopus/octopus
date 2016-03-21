@@ -17,6 +17,20 @@
 !!
 !! $Id$
 
+  subroutine opt_control_nlopt_func(val, n, x, grad, need_gradient, f_data)
+    integer :: n, need_gradient
+    FLOAT :: val, x(n), grad(n), f_data
+
+    integer :: getgrad
+    PUSH_SUB(opt_control_nlopt_func)
+
+    getgrad = 0; if(need_gradient.ne.0) getgrad = 1
+    call opt_control_cg_calc(n, x, val, getgrad, grad) 
+
+    POP_SUB(opt_control_nlopt_func)
+  end subroutine opt_control_nlopt_func
+
+
   !> ---------------------------------------------------------
   !! The following routines are to be called by C routines, which in turn
   !! are called by the main procedure of this module, opt_control_run, which

@@ -59,7 +59,7 @@ w0 = 0.1568
 frequency_filter | "exp(-gamma*(w-w0)^2) + exp(-gamma*(w+w0)^2)"
 %
 
-OCTScheme  = oct_algorithm_wg05
+OCTScheme  = oct_wg05
 OCTDoubleCheck = no
 
 #----------------------------
