@@ -76,6 +76,7 @@ libbasic_a_SOURCES =     \
 	xml_low.c            \
 	test_parameters.F90  \
 	sort.F90             \
+	sort_low.cc          \
 	debug.F90
 
 noinst_HEADERS =               \
