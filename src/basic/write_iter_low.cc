@@ -33,9 +33,7 @@
 
 #include <fortran_types.h>
 
-
-#define max(a, b) ((a) > (b) ? (a) : (b))
-#define min(a, b) ((a) < (b) ? (a) : (b))
+#include <iostream>
 
 #define CHUNK 1024
 
@@ -106,27 +104,28 @@ extern "C" void FC_FUNC_(write_iter_clear, WRITE_ITER_CLEAR)(void **v)
   write_iter *w = (write_iter *) *v;
   
   if(creat(w->filename, 0666) == -1){
-    fprintf(stderr, "Could not create file '%s' (%s)", w->filename, strerror(errno));
+    std::cerr << "Could not create file '" << w->filename << "' (" << strerror(errno) << ")" << std::endl;
     exit(1);
   }
 }
 
 extern "C" void FC_FUNC_(write_iter_flush, WRITE_ITER_FLUSH)(void **v)
 {
-	int fd;
-	write_iter *w = (write_iter *) *v;
-	if(!w->buf) return;
+  int fd;
+  write_iter *w = (write_iter *) *v;
+  if(!w->buf) return;
+  
+  fd = open(w->filename, O_WRONLY | O_CREAT | O_APPEND, 0666);
 
-	fd = open(w->filename, O_WRONLY | O_CREAT | O_APPEND, 0666);
-	if(fd == -1){
-		fprintf(stderr, "Could not open file '%s' (%s)", w->filename, strerror(errno));
-		exit(1);
-	}
-	
-	write(fd, w->buf, w->pos);
-	close(fd);
-
-	w->pos = 0;
+  if(fd == -1){
+    std::cerr << "Could not open file '" << w->filename << "' (" << strerror(errno) << ")" << std::endl;
+    exit(1);
+  }
+  
+  write(fd, w->buf, w->pos);
+  close(fd);
+  
+  w->pos = 0;
 }
 
 extern "C" void FC_FUNC_(write_iter_end, WRITE_ITER_END)
