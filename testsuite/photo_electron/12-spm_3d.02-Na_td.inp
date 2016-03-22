@@ -26,7 +26,7 @@ AbsorbingBoundaries = cap
 %ABShape
  15 | Radius
 %
-ABHeight = -1.0
+ABCapHeight = -1.0
 
 #############################
 # PES
