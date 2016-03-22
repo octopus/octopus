@@ -55,7 +55,7 @@ module sort_oct_m
   !!     ! must have the same size as a.
   !!   end subroutine sort
   interface sort
-    module procedure shellsort, ishellsort
+    module procedure dsort, isort
     module procedure dshellsort1, zshellsort1, ishellsort1
     module procedure dshellsort2, zshellsort2, ishellsort2
     module procedure sort_complex
@@ -68,121 +68,38 @@ module sort_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine shellsort(a, ind)
+  subroutine dsort(a, ind)
     FLOAT,             intent(inout) :: a(:)
     integer, optional, intent(out)   :: ind(:)
 
-    integer :: i,j,inc,n, indi, indj
-    FLOAT   :: v
-
-    PUSH_SUB(shellsort)
-
-    n = size(a)
+    PUSH_SUB(dsort)
 
     if(.not. present(ind)) then
-      call dsort1(n, a(1))
-      POP_SUB(shellsort)
-      return
-    end if
-    
-    if(present(ind)) then
-      do i = 1, n
-        ind(i) = i
-      end do
+      call dsort1(size(a), a(1))
+    else
+      call dsort2(size(a), a(1), ind(1))
     end if
 
-    inc = 1
-    do
-      inc=3*inc+1
-      if (inc > n) exit
-    end do
-
-    do
-      inc=inc/3
-      do i=inc+1,n
-        v=a(i)
-        if(present(ind)) indi = ind(i)
-        j=i
-        do
-          if (a(j-inc) <= v) exit
-          !if (a(j-inc) >= v) exit
-          a(j)=a(j-inc)
-
-          !workaround to a bug in itanium ifort
-          !if(present(ind)) ind(j) = ind(j-inc)
-          if(present(ind)) indj = ind(j-inc)
-          if(present(ind)) ind(j) = indj
-
-          j=j-inc
-          if (j <= inc) exit
-        end do
-        a(j)=v
-        if(present(ind)) ind(j) = indi
-      end do
-      if (inc <= 1) exit
-    end do
-
-    POP_SUB(shellsort)
-  end subroutine shellsort
+    POP_SUB(dsort)
+  end subroutine dsort
 
 
   ! ---------------------------------------------------------
   !> Shell sort for integer arrays.
-  subroutine ishellsort(a, ind)
+  subroutine isort(a, ind)
     integer,           intent(inout) :: a(:)
     integer, optional, intent(out)   :: ind(:)
 
-    integer :: i,j,inc,n, indi, indj
-    integer :: v
-
-    PUSH_SUB(ishellsort)
-
-    n = size(a)
+    PUSH_SUB(isort)
 
     if(.not. present(ind)) then
-      call isort1(n, a(1))
-      POP_SUB(shellsort)
-      return
+      call isort1(size(a), a(1))
+    else
+      call isort2(size(a), a(1), ind(1))
     end if
 
-    if(present(ind)) then
-      do i = 1, n
-        ind(i) = i
-      end do
-    end if
-
-    inc = 1
-    do
-      inc=3*inc+1
-      if (inc > n) exit
-    end do
-
-    do
-      inc=inc/3
-      do i=inc+1,n
-        v=a(i)
-        if(present(ind)) indi = ind(i)
-        j=i
-        do
-          if (a(j-inc) <= v) exit
-          !if (a(j-inc) >= v) exit
-          a(j)=a(j-inc)
-          !workaround to a bug in itanium ifort
-          !if(present(ind)) ind(j) = ind(j-inc)
-          if(present(ind)) indj = ind(j-inc)
-          if(present(ind)) ind(j) = indj
-
-          j=j-inc
-          if (j <= inc) exit
-        end do
-        a(j)=v
-        if(present(ind)) ind(j) = indi
-      end do
-      if (inc <= 1) exit
-    end do
-
-    POP_SUB(ishellsort)
-  end subroutine ishellsort
+    POP_SUB(isort)
+  end subroutine isort
 
 
   ! ---------------------------------------------------------

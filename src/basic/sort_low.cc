@@ -21,11 +21,69 @@
 
 #include <fortran_types.h>
 #include <algorithm>
+#include <new>
 
-extern "C" void FC_FUNC_(isort1, ISORT1)(fint * size, fint * array){
+//Functor object that compares indices based on an array
+template <typename TT>
+class compare{
+
+public:
+
+  compare(const TT * array_val){
+    array = array_val;
+  }
+  
+  TT operator()(const fint ii, const fint jj){
+    return array[ii] < array[jj];
+  }
+  
+private:
+  
+  const TT * array;
+
+};
+
+//Worker function that sorts an array and returns the order
+template <typename TT>
+void sort2(const fint size, TT * array, fint * indices){
+
+  // first sort the indices
+  
+  for(fint ii = 0; ii < size; ii++){
+    indices[ii] = ii;
+  }
+
+  std::sort(indices, indices + size, compare<TT>(array));  
+
+
+  // now sort the array
+
+  TT * array_copy = new TT[size];
+  
+  std::copy(array, array + size, array_copy);
+
+  for(fint ii = 0; ii < size; ii++){
+    array[ii] = array_copy[indices[ii]];
+    indices[ii]++; //convert indices to fortran convention
+  }
+
+  delete [] array_copy;
+}
+
+//Fortran interfaces
+
+extern "C" void FC_FUNC_(isort1, ISORT1)(const fint * size, fint * array){
   std::sort(array, array + *size);
 }
 
-extern "C" void FC_FUNC_(dsort1, DSORT1)(fint * size, double * array){
+extern "C" void FC_FUNC_(isort2, ISORT2)(const fint * size, fint * array, fint * indices){
+  sort2<fint>(*size, array, indices);
+}
+
+extern "C" void FC_FUNC_(dsort1, DSORT1)(const fint * size, double * array){
   std::sort(array, array + *size);
+}
+
+extern "C" void FC_FUNC_(dsort2, DSORT2)(const fint * size, double * array, fint * indices){
+  sort2<double>(*size, array, indices);
 }
