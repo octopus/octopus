@@ -80,7 +80,7 @@ contains
     n = size(a)
 
     if(.not. present(ind)) then
-      call isort1(n, a(1))
+      call dsort1(n, a(1))
       POP_SUB(shellsort)
       return
     end if
@@ -138,6 +138,12 @@ contains
     PUSH_SUB(ishellsort)
 
     n = size(a)
+
+    if(.not. present(ind)) then
+      call isort1(n, a(1))
+      POP_SUB(shellsort)
+      return
+    end if
 
     if(present(ind)) then
       do i = 1, n
