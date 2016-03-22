@@ -46,8 +46,8 @@ module minimizer_oct_m
     MINMETHOD_NMSIMPLEX        =  6, &
     MINMETHOD_SD_NATIVE        = -1, &
     MINMETHOD_NLOPT_BOBYQA     =  7, &
-    MINMETHOD_FIRE             =  8
-
+    MINMETHOD_FIRE             =  8, &
+    MINMETHOD_NLOPT_LBFGS      =  9
 
   interface loct_1dminimize
     subroutine oct_1dminimize(a, b, m, f, status)
@@ -205,8 +205,13 @@ contains
     real(8) :: minf
     integer :: ires
     include 'nlopt.f'
- 
-    call nlo_create(opt, NLOPT_LN_BOBYQA, dim)
+
+    select case(method)
+    case(MINMETHOD_NLOPT_BOBYQA)
+      call nlo_create(opt, NLOPT_LN_BOBYQA, dim)
+    case(MINMETHOD_NLOPT_LBFGS)
+      call nlo_create(opt, NLOPT_LD_LBFGS, dim)
+    end select
 
     if(present(lb)) then
       call nlo_set_lower_bounds(ires, opt, lb)

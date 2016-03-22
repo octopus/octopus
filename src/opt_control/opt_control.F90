@@ -136,7 +136,8 @@ contains
     call propagation_mod_init(td%max_iter, oct%eta, oct%delta, oct%number_checkpoints, &
       (oct%algorithm == OPTION__OCTSCHEME__OCT_ZBR98), &
       (oct%algorithm == OPTION__OCTSCHEME__OCT_CG) .or. &
-      (oct%algorithm == OPTION__OCTSCHEME__OCT_BFGS))
+      (oct%algorithm == OPTION__OCTSCHEME__OCT_BFGS) .or. &
+      (oct%algorithm == OPTION__OCTSCHEME__OCT_NLOPT_LBFGS) )
 
 
     ! If filters are to be used, they also have to be initialized.
@@ -200,7 +201,11 @@ contains
       case(OPTION__OCTSCHEME__OCT_NLOPT_BOBYQA)
         message(1) = "Info: Starting OCT iterations using scheme: DIRECT OPTIMIZATION (NLOPT - BOBYQA)"
         call messages_info(1)
-        call scheme_nlopt_bobyqa()
+        call scheme_nlopt()
+      case(OPTION__OCTSCHEME__OCT_NLOPT_LBFGS)
+        message(1) = "Info: Starting OCT iterations using scheme: DIRECT OPTIMIZATION (NLOPT - LBFGS)"
+        call messages_info(1)
+        call scheme_nlopt()
     case default
       call messages_input_error('OCTScheme')
     end select
@@ -485,13 +490,13 @@ contains
 
 
     ! ---------------------------------------------------------
-    subroutine scheme_nlopt_bobyqa()
+    subroutine scheme_nlopt()
 #if defined(HAVE_NLOPT)
       integer :: method, dim, maxiter, ierr
-      FLOAT, allocatable :: x(:), xl(:), xu(:), theta(:)
+      FLOAT, allocatable :: x(:), xl(:), xu(:)
       FLOAT :: step, toldr, minimum, f
       type(opt_control_state_t) :: qcpsi
-      PUSH_SUB(opt_control_run.scheme_nlopt_bobyqa)
+      PUSH_SUB(opt_control_run.scheme_nlopt)
 
       call controlfunction_set_rep(par)
 
@@ -509,7 +514,6 @@ contains
 
       dim = controlfunction_dof(par)
       SAFE_ALLOCATE(x(dim))
-      SAFE_ALLOCATE(theta(1:dim))
       SAFE_ALLOCATE(xl(1:dim))
       SAFE_ALLOCATE(xu(1:dim))
       call controlfunction_bounds(par, xl, xu)
@@ -523,24 +527,32 @@ contains
       hm_       => hm
       td_       => td
 
-      call controlfunction_get_theta(par, theta)
-      x = theta
+      call controlfunction_get_theta(par, x)
 
       maxiter = oct_iterator_maxiter(iterator)
-      step = oct%direct_step * M_PI
-      method = MINMETHOD_NLOPT_BOBYQA
+      step = oct%direct_step
+      select case(oct%algorithm)
+      case(OPTION__OCTSCHEME__OCT_NLOPT_BOBYQA)
+        method = MINMETHOD_NLOPT_BOBYQA
+      case(OPTION__OCTSCHEME__OCT_NLOPT_LBFGS)
+        method = MINMETHOD_NLOPT_LBFGS
+      end select
       toldr = oct_iterator_tolerance(iterator)
 
       call minimize_multidim_nlopt(ierr, method, dim, x, step, toldr, maxiter, opt_control_nlopt_func, minimum, &
         xl, xu)
+      if(ierr < 1 .or. ierr > 4) then
+         message(1) = "The nlopt minimization procedure did not find convergence, or found an error"
+         write(message(2),'(a,i5)') "Error code =", ierr
+         call messages_info(2)
+      end if
 
-      SAFE_DEALLOCATE_A(theta)
       SAFE_DEALLOCATE_A(xl)
       SAFE_DEALLOCATE_A(xu)
       SAFE_DEALLOCATE_A(x)
-      POP_SUB(opt_control_run.scheme_nlopt_bobyqa)
+      POP_SUB(opt_control_run.scheme_nlopt)
 #endif
-    end subroutine scheme_nlopt_bobyqa
+    end subroutine scheme_nlopt
     ! ---------------------------------------------------------
 
   end subroutine opt_control_run

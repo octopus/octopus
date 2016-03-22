@@ -137,6 +137,9 @@ contains
     !%Option oct_nlopt_bobyqa 11
     !% The BOBYQA algorithm, as implemented in the NLOPT library -- therefore, octopus has to
     !% be compiled with it in order to be able to use this option.
+    !%Option oct_nlopt_lbfgs 12
+    !% The local BFGS, as implemented in the NLOPT library -- therefore, octopus has to
+    !% be compiled with it in order to be able to use this option.
     !%End
     call parse_variable('OCTScheme', OPTION__OCTSCHEME__OCT_ZR98, oct%algorithm)
     if(.not.varinfo_valid_option('OCTScheme', oct%algorithm)) call messages_input_error('OCTScheme')
@@ -283,7 +286,8 @@ contains
   !! algorithms -- the ones that do not require backwards propagations. Returns .false. otherwise
   logical pure function oct_algorithm_is_direct(oct)
     type(oct_t), intent(in) :: oct
-    oct_algorithm_is_direct = (oct%algorithm >= OPTION__OCTSCHEME__OCT_DIRECT)
+    oct_algorithm_is_direct = (oct%algorithm == OPTION__OCTSCHEME__OCT_DIRECT) .or. &
+                              (oct%algorithm == OPTION__OCTSCHEME__OCT_NLOPT_BOBYQA)
   end function oct_algorithm_is_direct
   ! ---------------------------------------------------------
 

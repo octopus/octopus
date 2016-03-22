@@ -32,6 +32,7 @@ OCTTargetOperator = oct_tg_gstransformation
 0 | 1
 %
 
+OCTDirectStep = 0.25*pi
 OCTScheme = oct_nlopt_bobyqa
 OCTControlFunctionRepresentation = control_fourier_series
 OCTControlFunctionOmegaMax = 0.10
