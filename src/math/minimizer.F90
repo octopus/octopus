@@ -180,7 +180,8 @@ contains
   end subroutine minimize_multidim_nograd
 
 
-  subroutine minimize_multidim_nlopt(method, dim, x, step, toldr, maxiter, f, minimum, ierr)
+  subroutine minimize_multidim_nlopt(ierr, method, dim, x, step, toldr, maxiter, f, minimum, lb, ub)
+    integer, intent(out)   :: ierr
     integer, intent(in)    :: method
     integer, intent(in)    :: dim
     real(8), intent(inout) :: x(:)
@@ -197,7 +198,7 @@ contains
       end subroutine f
     end interface
     real(8), intent(out)   :: minimum
-    integer, intent(out)   :: ierr
+    real(8), intent(in), optional :: lb(:), ub(:)
 #if defined(HAVE_NLOPT)
 
     integer(8) :: opt
@@ -207,9 +208,13 @@ contains
  
     call nlo_create(opt, NLOPT_LN_BOBYQA, dim)
 
-    ! this would set lower and upper bounds (TODO)
-    !call nlo_set_lower_bounds(ires, opt, lb)
-    !call nlo_set_upper_bounds(ires, opt, lb)
+    if(present(lb)) then
+      call nlo_set_lower_bounds(ires, opt, lb)
+    end if
+    if(present(ub)) then
+      call nlo_set_upper_bounds(ires, opt, ub)
+    end if
+
     call nlo_set_min_objective(ires, opt, f, 0)
     ! This would set an inequality constraint (TODO)
     !call nlo_add_inequality_constraint(ires, opt, myconstraint, d1, CNST(1.0e-8))

@@ -531,7 +531,8 @@ contains
       method = MINMETHOD_NLOPT_BOBYQA
       toldr = oct_iterator_tolerance(iterator)
 
-      call minimize_multidim_nlopt(method, dim, x, step, toldr, maxiter, opt_control_nlopt_func, minimum, ierr)
+      call minimize_multidim_nlopt(ierr, method, dim, x, step, toldr, maxiter, opt_control_nlopt_func, minimum, &
+        xl, xu)
 
       SAFE_DEALLOCATE_A(theta)
       SAFE_DEALLOCATE_A(xl)

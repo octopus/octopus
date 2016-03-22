@@ -1359,13 +1359,16 @@ contains
 
     PUSH_SUB(controlfunction_bounds)
 
-    upper_bounds = M_PI
-    dog = controlfunction_dof(par)
-
-    select case(cf_common%mode)
-    case(controlfunction_mode_epsilon, controlfunction_mode_f)
-      lower_bounds(1:dog - 1) = M_ZERO
-      lower_bounds(dog)       = -M_PI
+    select case(cf_common%representation)
+    case(ctr_zero_fourier_series_h, ctr_fourier_series_h)
+      lower_bounds(1:par%dof-1) = M_ZERO
+      lower_bounds(par%dof) = -M_PI
+      upper_bounds(1:par%dof) = M_PI
+    case default
+      lower_bounds = -huge(M_ZERO)
+      lower_bounds = -huge(M_ZERO)
+      upper_bounds =  huge(M_ZERO)
+      upper_bounds =  huge(M_ZERO)
     end select
 
     POP_SUB(controlfunction_bounds)
