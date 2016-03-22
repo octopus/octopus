@@ -171,7 +171,7 @@
       if( (oct%algorithm /= OPTION__OCTSCHEME__OCT_DIRECT) .and. &
           (oct%algorithm /= OPTION__OCTSCHEME__OCT_NLOPT_BOBYQA) ) then
         write(message(1), '(a)') 'Cannot do QOCT with mask absorbing boundaries. Use either'
-        write(message(2), '(a)') '"AbsorbingBoundaries = sin2" or "AbsorbingBoundaries = no".'
+        write(message(2), '(a)') '"AbsorbingBoundaries = cap" or "AbsorbingBoundaries = no".'
         call messages_fatal(2)
       end if
     end if

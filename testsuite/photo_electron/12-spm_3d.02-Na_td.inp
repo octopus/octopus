@@ -22,7 +22,7 @@ Spacing = 0.7
 #############################
 # Boundaries
 #############################
-AbsorbingBoundaries = sin2
+AbsorbingBoundaries = cap
 %ABShape
  15 | Radius
 %

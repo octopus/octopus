@@ -47,7 +47,7 @@ electric_amplitude = (sqrt(10^14)/sqrt(3.509470*10^16))
 "envelope_function" | tdf_from_expr | "electric_amplitude*(sin(pi/stime*t))^2"
 %
 
-#AbsorbingBoundaries = sin2
+#AbsorbingBoundaries = cap
 AbsorbingBoundaries = mask
 AbWidth = 50
 

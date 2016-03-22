@@ -833,7 +833,7 @@ contains
       complex_potential = this%cmplxscl%space .or. this%bc%abtype == IMAGINARY_ABSORBING)
 
     if(this%d%nspin > 2 .and. this%bc%abtype == IMAGINARY_ABSORBING) then
-      call messages_not_implemented('AbsorbingBoundaries = sin2 for spinors')
+      call messages_not_implemented('AbsorbingBoundaries = cap for spinors')
     end if
 
     do ispin = 1, this%d%nspin

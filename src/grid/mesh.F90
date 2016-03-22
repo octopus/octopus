@@ -308,7 +308,8 @@ contains
       dist = sqrt(dist)
 
     case(BOX_IMAGE, BOX_USDEF)
-      call messages_not_implemented('Absorbing boundaries for user-defined box')
+    ! not implemented
+      dist = -1 
 
     end select
     
