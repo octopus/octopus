@@ -710,15 +710,24 @@ contains
     !TODO: find a parallel algorithm to perform the charge-density fragmentation.
     message(1) = 'Info: Assigning mesh points inside each local domain'
     call messages_info(1)
+
     SAFE_ALLOCATE(ff2(1:sys%gr%mesh%np,1))
     ff2(1:sys%gr%mesh%np,1) = ff(1:sys%gr%mesh%np)
+
     if (any(lcl%dshape(:) == BADER)) then
+
+      if (sys%gr%mesh%parallel_in_domains) then                                                            
+        write(message(1),'(a)') 'Bader volumes can only be computed in serial'                                
+        call messages_fatal(1)
+      end if                                                                               
+
       call add_dens_to_ion_x(ff2,sys%geo)
       call basins_init(basins, sys%gr%mesh)
       call parse_variable('LDBaderThreshold', CNST(0.01), BaderThreshold)
       call basins_analyze(basins, sys%gr%mesh, ff2(:,1), ff2, BaderThreshold)
       call parse_variable('LDExtraWrite', .false., extra_write)
       call bader_union_inside(basins, lcl%nd, lcl%domain, lcl%lab, lcl%dshape, lcl%inside) 
+
       if (extra_write) then
         call messages_obsolete_variable('LDOutputHow', 'LDOutputFormat')
         call parse_variable('LDOutputFormat', 0, how)
@@ -844,7 +853,7 @@ contains
           domain_map(id,ib) = basins%map(ix)
         end do
         do ip = 1, sys%gr%mesh%np
-          if(any( domain_map(id, 1:max_check) == basins%map(ip) ) ) inside(ip,id) = .true.
+          if(any( domain_map(id, 1:box_union_get_nboxes(dom(id))) == basins%map(ip) ) ) inside(ip,id) = .true.
         end do
       end if
     end do
