@@ -24,10 +24,10 @@ esac
 
 AC_MSG_CHECKING([for clfft])
 
-CFLAGS="$CFLAGS_CLFFT $acx_clfft_save_CFLAGS"
+CFLAGS="$CFLAGS_CLFFT $CL_CFLAGS $acx_clfft_save_CFLAGS"
 
 if test ! -z "$LIBS_CLFFT"; then
-  LIBS="$LIBS_CLFFT $acx_clfft_save_LIBS"
+  LIBS="$LIBS_CLFFT $CL_LIBS $acx_clfft_save_LIBS"
   AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <clFFT.h>]],[[
   cl_uint cl_major, cl_minor, cl_patch;
   clfftGetVersion(&cl_major, &cl_minor, &cl_patch);]])], [acx_clfft_ok=yes], [])
@@ -36,7 +36,7 @@ fi
 if test ! -z "$with_clfft_prefix"; then
   if test x"$acx_clfft_ok" = xno; then
     LIBS_CLFFT="-L$with_clfft_prefix/lib64/ -lclFFT"
-    LIBS="$LIBS_CLFFT $acx_clfft_save_LIBS"
+    LIBS="$LIBS_CLFFT $CL_LIBS $acx_clfft_save_LIBS"
     AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <clFFT.h>]],[[
     cl_uint cl_major, cl_minor, cl_patch;
     clfftGetVersion(&cl_major, &cl_minor, &cl_patch);]])], [acx_clfft_ok=yes], [])
@@ -44,7 +44,7 @@ if test ! -z "$with_clfft_prefix"; then
 
   if test x"$acx_clfft_ok" = xno; then
     LIBS_CLFFT="-L$with_clfft_prefix/lib/ -lclFFT"
-    LIBS="$LIBS_CLFFT $acx_clfft_save_LIBS"
+    LIBS="$LIBS_CLFFT $CL_LIBS $acx_clfft_save_LIBS"
     AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <clFFT.h>]],[[
     cl_uint cl_major, cl_minor, cl_patch;
     clfftGetVersion(&cl_major, &cl_minor, &cl_patch);]])], [acx_clfft_ok=yes], [])    
