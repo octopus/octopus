@@ -74,10 +74,14 @@ contains
 
     PUSH_SUB(dsort)
 
-    if(.not. present(ind)) then
-      call dsort1(size(a), a(1))
-    else
-      call dsort2(size(a), a(1), ind(1))
+    if(size(a) > 0) then
+      
+      if(.not. present(ind)) then
+        call dsort1(size(a), a(1))
+      else
+        call dsort2(size(a), a(1), ind(1))
+      end if
+
     end if
 
     POP_SUB(dsort)
@@ -92,10 +96,14 @@ contains
 
     PUSH_SUB(isort)
 
-    if(.not. present(ind)) then
-      call isort1(size(a), a(1))
-    else
-      call isort2(size(a), a(1), ind(1))
+    if(size(a) > 0) then
+      
+      if(.not. present(ind)) then
+        call isort1(size(a), a(1))
+      else
+        call isort2(size(a), a(1), ind(1))
+      end if
+      
     end if
 
     POP_SUB(isort)
