@@ -518,6 +518,7 @@ contains
 
     !TODO: check if e_point can be used instead of e_point+1
     SAFE_ALLOCATE(read_ft(0:time_steps))
+    read_ft = M_ZERO
     SAFE_ALLOCATE(read_rff(1:mesh%np))
 
     select case(ft_method)
@@ -760,7 +761,7 @@ contains
 
     !%Variable ConvertScalarOperation
     !%Type block
-    !%Section Utilities::oct-local_multipoles
+    !%Section Utilities::oct-convert
     !%Description
     !% This variable is used to generate a new mesh function as a linear combination
     !% different mesh function having the same mesh. Each row defines an operation for
