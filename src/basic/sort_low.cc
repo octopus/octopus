@@ -72,18 +72,18 @@ void sort2(const fint size, TT * array, fint * indices){
 
 //Fortran interfaces
 
-extern "C" void FC_FUNC_(isort1, ISORT1)(const fint * size, fint * array){
+extern "C" void FC_FUNC(isort1, ISORT1)(const fint * size, fint * array){
   std::sort(array, array + *size);
 }
 
-extern "C" void FC_FUNC_(isort2, ISORT2)(const fint * size, fint * array, fint * indices){
+extern "C" void FC_FUNC(isort2, ISORT2)(const fint * size, fint * array, fint * indices){
   sort2<fint>(*size, array, indices);
 }
 
-extern "C" void FC_FUNC_(dsort1, DSORT1)(const fint * size, double * array){
+extern "C" void FC_FUNC(dsort1, DSORT1)(const fint * size, double * array){
   std::sort(array, array + *size);
 }
 
-extern "C" void FC_FUNC_(dsort2, DSORT2)(const fint * size, double * array, fint * indices){
+extern "C" void FC_FUNC(dsort2, DSORT2)(const fint * size, double * array, fint * indices){
   sort2<double>(*size, array, indices);
 }
