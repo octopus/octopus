@@ -956,7 +956,7 @@ subroutine pes_flux_output(this, mesh, sb, st, dt)
         end do
 
       case(2)
-        write(iunittwo, '(a29)') '# k, phi, distribution'
+        write(iunittwo, '(a22)') '# k, phi, distribution'
         ikp = 0
         do ikk = 1, this%nk
           kact = ikk * this%dk
@@ -969,6 +969,8 @@ subroutine pes_flux_output(this, mesh, sb, st, dt)
           end do
           ! just repeat the result for output
           write(iunittwo,'(3(1x,e18.10E3))') kact, M_TWO * M_PI, spctrout_cub(ikp_save)
+          write(iunittwo, '(1x)', advance='yes')
+
           write(iunitone, '(2(1x,e18.10E3))', advance='no') &
             kact**M_TWO / M_TWO, sum(sum(sum(spctrsum(:,:,:,ikk),1),1),1) * kact
           

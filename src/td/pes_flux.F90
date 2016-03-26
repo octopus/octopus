@@ -474,7 +474,9 @@ contains
         end do
         SAFE_DEALLOCATE_A(k_dot_aux)
 #if defined(HAVE_MPI)
-        call comm_allreduce(mpi_world%comm, this%conjgplanewf_cub)
+        if(mesh%parallel_in_domains) then
+          call comm_allreduce(mesh%mpi_grp%comm, this%conjgplanewf_cub)
+        end if
 #endif
       end if
     end if
@@ -1136,7 +1138,9 @@ contains
     end do
 
 #if defined(HAVE_MPI)
-    call comm_allreduce(mesh%mpi_grp%comm, spctramp_cub)
+    if(mesh%parallel_in_domains) then
+      call comm_allreduce(mesh%mpi_grp%comm, spctramp_cub)
+    end if
 #endif
 
     this%spctramp_cub = this%spctramp_cub + spctramp_cub
