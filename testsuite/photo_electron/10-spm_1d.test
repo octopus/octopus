@@ -10,12 +10,8 @@ Enabled    : Yes
 # Sample point method
 Processors : 2
 Input      : 10-spm_1d.h1d_lin.inp
-match ; PES [val  1] ; LINEFIELD(td.general/PES_spm.distribution.out, 192, 2) ; 0.6564632461E-003
-match ; PES [val  2] ; LINEFIELD(td.general/PES_spm.distribution.out, 203, 2) ; 0.1665138981E-002
-match ; PES [val  3] ; LINEFIELD(td.general/PES_spm.distribution.out, 218, 2) ; 0.4140099815E-003
-
-match ; PES [val  4] ; LINEFIELD(td.general/PES_spm.distribution.out, 192, 3) ; 0.5712581908E-003
-match ; PES [val  5] ; LINEFIELD(td.general/PES_spm.distribution.out, 203, 3) ; 0.6099673094E-003
-match ; PES [val  6] ; LINEFIELD(td.general/PES_spm.distribution.out, 218, 3) ; 0.5046324289E-003
-
+Precision  : 1.0e-6
+match ; PES [val  1] ; LINEFIELD(td.general/PES_spm.power.sum, 188, 2) ; 0.4720202849E-003
+match ; PES [val  2] ; LINEFIELD(td.general/PES_spm.power.sum, 205, 2) ; 0.1583593472E-002
+match ; PES [val  3] ; LINEFIELD(td.general/PES_spm.power.sum, 219, 2) ; 0.6180372081E-003
 

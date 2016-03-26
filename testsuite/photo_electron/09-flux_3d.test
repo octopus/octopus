@@ -13,9 +13,9 @@ Input      : 09-flux_3d.01-Na_gs.inp
 
 # Na photoemission
 # Processors : 2
-Precision  : 1.0e-12
+Precision  : 1.0e-14
 Input      : 09-flux_3d.02-Na_td.inp
-match ; PES [val  1] ; LINEFIELD(td.general/PES_flux.power.sum, 136, 2) ; 0.1962140759E-012
-match ; PES [val  2] ; LINEFIELD(td.general/PES_flux.power.sum, 141, 2) ; 0.2200683471E-010
-match ; PES [val  3] ; LINEFIELD(td.general/PES_flux.power.sum, 144, 2) ; 0.9374485331E-011
+match ; PES [val  1] ; LINEFIELD(td.general/PES_flux.power.sum, 140, 2) ; 0.3884233829E-011
+match ; PES [val  2] ; LINEFIELD(td.general/PES_flux.power.sum, 142, 2) ; 0.7821266317E-011
+match ; PES [val  3] ; LINEFIELD(td.general/PES_flux.power.sum, 145, 2) ; 0.3085336668E-011
 

@@ -54,9 +54,9 @@ AbsorbingBoundaries = mask
 #############################
 PhotoElectronSpectrum = pes_spm
 
-PES_spm_omegamax = 3.0
-PES_spm_deltaomega = 0.005
-PES_spm_Radius = 20
+PES_SPM_OmegaMax = 3.0
+PES_SPM_DeltaOmega = 0.005
+PES_SPM_Radius = 20
 
 ##########################
 #LASER
@@ -78,6 +78,5 @@ omega = 1.5
 #############################
 OutputInterval = 10000
 RestartWrite = no
-
 
 

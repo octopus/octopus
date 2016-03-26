@@ -33,15 +33,17 @@ ABCapHeight = -1.0
 #############################
 PhotoElectronSpectrum = pes_spm
 
-PES_SPM_OmegaMax = 2.0
-PES_SPM_DeltaOmega = 0.05
+PES_SPM_OmegaMax = 1.5
+PES_SPM_DeltaOmega = 0.025
+PES_SPM_StepsThetaR = 30
+PES_SPM_StepsPhiR = 30
 PES_SPM_Radius = 15
 
 ##########################
 #LASER
 ##########################
 
-amplitude = .7763
+amplitude = 1.1763
 omega = 1.194838
 
 tc = 2*pi/omega
@@ -50,7 +52,7 @@ nu = 2
 ntot = nc + 2*nu
 
 %TDExternalFields
-  vector_potential | 1 | 0 | 0 | omega | "ramp"
+  vector_potential | 0 | 0 | 1 | omega | "ramp"
 %
 
 %TDFunctions
