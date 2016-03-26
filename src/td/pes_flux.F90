@@ -453,7 +453,7 @@ contains
 
       if(this%usememory) then
         SAFE_ALLOCATE(k_dot_aux(1:this%nkpnts))
-        SAFE_ALLOCATE(this%conjgplanewf_cub(1:this%nkpnts, 1:this%nsrfcpnts, kptst:kptend))
+        SAFE_ALLOCATE(this%conjgplanewf_cub(1:this%nkpnts, this%nsrfcpnts_start:this%nsrfcpnts_end, kptst:kptend))
         this%conjgplanewf_cub = M_z0
 
         do isp = this%nsrfcpnts_start, this%nsrfcpnts_end
@@ -473,11 +473,6 @@ contains
           end do
         end do
         SAFE_DEALLOCATE_A(k_dot_aux)
-#if defined(HAVE_MPI)
-        if(mesh%parallel_in_domains) then
-          call comm_allreduce(mesh%mpi_grp%comm, this%conjgplanewf_cub)
-        end if
-#endif
       end if
     end if
 
