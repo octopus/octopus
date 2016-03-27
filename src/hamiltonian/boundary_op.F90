@@ -198,6 +198,8 @@ contains
           message(1) = "Input: ABShape block must have at least 2 columns."
           call messages_fatal(1)
         end select
+
+        call parse_block_end(blk)
       end if
       
       !%Variable ABWidth
