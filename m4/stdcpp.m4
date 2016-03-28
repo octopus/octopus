@@ -70,8 +70,8 @@ ac_cxx_v_output="`echo $ac_cxx_v_output |
         grep 'LPATH is:' |
         sed 's,.*LPATH is\(: *[[^ ]]*\).*,\1,;s,: */, -L/,g'` $ac_cxx_v_output"
 
-# Fix for xlf (in vulcan/sequoia), we need to remove some lines  
-ac_cxx_v_output="`echo $ac_xcc_v_output | grep -v \ failed`"
+# Fix for xlc++ (in vulcan/sequoia), we need to remove some lines  
+ac_cxx_v_output="`echo $ac_cxx_v_output | grep -v \ failed`"
 
 ])# _AC_PROG_CXX_V_OUTPUT
 
