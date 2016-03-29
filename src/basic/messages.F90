@@ -1060,7 +1060,7 @@ contains
         write(message(2), '(a)') ' '
         write(message(3), '(a)') 'Equivalent functionality can be obtained with the '//trim(rep)
         write(message(4), '(a)') 'variable. Check the documentation for details.'
-        write(message(5), '(a)') '(You can use the `oct-help -s '//trim(rep)//'` command).'
+        write(message(5), '(a)') '(You can use the `oct-help -p '//trim(rep)//'` command).'
         call messages_fatal(5, only_root_writes = .true.)
       else
         call messages_fatal(1, only_root_writes = .true.)
