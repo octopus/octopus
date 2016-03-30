@@ -267,9 +267,10 @@ contains
     SAFE_ALLOCATE(sk%sk_b(1:sk%size))
     SAFE_ALLOCATE(sk%sk_y(1:sk%size))
     SAFE_ALLOCATE(sk%sk_work(1:workspace_size))
-    sk%sk_work = M_ZERO
-    sk%sk_y    = M_ZERO
-    sk%sk_b    = M_ZERO
+    
+    sk%sk_work(1:workspace_size) = CNST(0.0)
+    sk%sk_y(1:sk%size)           = CNST(0.0)
+    sk%sk_b(1:sk%size)           = CNST(0.0)
 
     POP_SUB(sparskit_solver_init)
   end subroutine sparskit_solver_init

@@ -109,9 +109,9 @@ contains
     PUSH_SUB(matrix_set_zero)
 
     if(this%type == TYPE_FLOAT) then
-      this%dmat = CNST(0.0)
+      this%dmat(1:this%dim(1), 1:this%dim(2)) = CNST(0.0)
     else
-      this%zmat = CNST(0.0)
+      this%zmat(1:this%dim(1), 1:this%dim(2)) = CNST(0.0)
     end if
     
     POP_SUB(matrix_set_zero)
