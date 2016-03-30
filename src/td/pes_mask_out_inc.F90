@@ -1903,6 +1903,7 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
   if (simul_box_is_periodic(mesh%sb)) then
     ! For periodic systems the results must be obtained using
     ! the oct-photoelectron-spectrum routine
+    call profiling_out(prof)
     POP_SUB(pes_mask_output)
     return
   end if
@@ -2114,11 +2115,6 @@ subroutine pes_mask_dump(restart, mask, st, ierr)
   PUSH_SUB(pes_mask_dump)
 
   ierr = 0
-
-  if (restart_skip(restart)) then
-    POP_SUB(pes_mask_dump)
-    return
-  end if
 
   if (debug%info) then
     message(1) = "Debug: Writing PES mask restart."
