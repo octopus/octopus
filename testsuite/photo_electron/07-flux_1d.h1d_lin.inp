@@ -76,10 +76,5 @@ omega = 1.5
  "ramp" | tdf_trapezoidal | amplitude | 50 | 29.3 | 4.2
 %
 
-#############################
-# Output
-#############################
-OutputInterval = 10000
-RestartWrite = no
 
 

@@ -71,8 +71,3 @@ TDExpOrder = 20
 
 TDPropagationTime = ntot*tc
 
-#############################
-# Output
-#############################
-OutputInterval = 1000
-RestartWrite = no
