@@ -8,8 +8,16 @@ Enabled    : Yes
 
 Input: 28-carbon_big_box.01-ground_state.inp
 Precision: 0.0001
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -4.60602482
-match ; Eigenvalue   [1up] ; GREPFIELD(static/info, '1   up', 3) ; -1.767015
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -10.16393580
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; 0.00000000
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -9.21324662
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; 1.06794125
+match ; Int[n*v_xc]        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.50257493
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.30678691
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.07853595
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 0.15082570
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -10.99738571
+match ; Eigenvalue   [1up] ; GREPFIELD(static/info, '1   up', 3) ; -4.545943
 match ; Occupation   [1up] ; GREPFIELD(static/info, '1   up', 4) ; 1.000000
-match ; Eigenvalue [4down] ; GREPFIELD(static/info, '4   dn', 3) ; -0.035482
+match ; Eigenvalue [4down] ; GREPFIELD(static/info, '4   dn', 3) ; -0.035006
 match ; Occupation [4down] ; GREPFIELD(static/info, '4   dn', 4) ; 0.000000
