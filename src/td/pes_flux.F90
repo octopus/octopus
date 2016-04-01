@@ -537,7 +537,7 @@ contains
     type(block_t)     :: blk
       
     FLOAT             :: Emin, Emax, DE , kvec(1:3) 
-    integer           :: NBZ(1:2) 
+    integer           :: NBZ(1:2), nkp_out, nkmin, nkmax
       
 #if defined(HAVE_MPI)
     integer           :: mpirank
@@ -687,8 +687,9 @@ contains
             
       
       if (this%arpes_grid) then
-        
-        this%nk = nint((Emax-Emin)/DE)
+  
+        nkmax = floor(Emax/DE)
+        nkmin = floor(Emin/DE)
 
       else 
       
@@ -696,10 +697,12 @@ contains
         kmin = sqrt(M_TWO*Emin)
         this%dk = sqrt(M_TWO*DE)
 
-        this%nk = nint((kmax-kmin)/this%dk)
+        nkmax = floor(kmax/this%dk)
+        nkmin = floor(kmin/this%dk)
         
       end if
     
+      this%nk = abs(nkmax - nkmin) + 1
     
       !%Variable PES_Flux_BZones
       !%Type block
@@ -732,12 +735,19 @@ contains
         NBZ(:) = NBZ(1)
 
       end if
-
+      
+      ! If we are using a path in reciprocal space 
+      ! we don't need to replicate the BZ in directions 
+      ! perpendicular to the path
+      if (kpoints_have_zero_weight_path(sb%kpoints)) then
+        call get_kpath_perp_direction(sb%kpoints, idim)
+        if (idim > 0 ) NBZ(idim) = 1
+      end if 
 
       ! This information is needed for postprocessing the data
       this%ll(:)   = 1
       this%ll(1:pdim) = (NBZ(1:pdim)-1)*2+1
-      this%ll(mdim)   = this%nk * 2
+      this%ll(mdim)   = this%nk 
       
 
       call messages_write("Number of Brillouin zones = ")
@@ -758,7 +768,7 @@ contains
     end if    
 
   
-
+    
     this%parallel_in_momentum = .false.
 
     ! Create the grid
@@ -874,20 +884,17 @@ contains
   
 
       SAFE_ALLOCATE(this%kcoords_cub(1:mdim, 1:this%nkpnts, kptst:kptend))
-  
-  !         print *, sb%klattice(:, :)
-  !         print *, "mdim = ", mdim, "pdim = ", pdim
-  
+    
+      
+      nkp_out = 0 
       do ikpt = kptst, kptend
         ikp = 0
-        do ikk = -this%nk, this%nk
-          if (ikk == 0 ) cycle !this way I have 2*this%nk elements  
+        do ikk = nkmin, nkmax
       
           ! loop over periodic directions
           select case (pdim)
             case (1)
             do ibz1 = -(NBZ(1)-1), (NBZ(1)-1) 
-              !                   print *, "ikpt, ikk, ibz1, ikp", ikpt, ikk, ibz1, ikp
 
               kvec(1) = ibz1 * sb%klattice(1, 1)                
               call fill_non_periodic_dimension(this)
@@ -898,8 +905,7 @@ contains
             
             do ibz2 = -(NBZ(2)-1), (NBZ(2)-1) 
               do ibz1 = -(NBZ(1)-1), (NBZ(1)-1) 
-                !                     print *, "ikpt, ikk, ibz1, ibz2, ikp", ikpt, ikk, ibz1, ibz2,ikp
-
+  
                 kvec(1:2) = (/ibz1 * sb%klattice(1, 1), ibz2 * sb%klattice(2, 2)/)                
                 call fill_non_periodic_dimension(this)
 
@@ -925,6 +931,12 @@ contains
         flush(229)
       end if
 
+      call messages_write("Number of points with E<p//^2/2 = ")
+      call messages_write(nkp_out)
+      call messages_write(" [of ")
+      call messages_write(this%nkpnts*kpoints_number(sb%kpoints))
+      call messages_write("]")
+      call messages_info()
 
     end select
 
@@ -942,23 +954,62 @@ contains
       type(pes_flux_t),   intent(inout) :: this
         
       integer :: sign
-      FLOAT   :: kpar(1:pdim), kpoint(1:3)
+      FLOAT   :: kpar(1:pdim), kpoint(1:3), val
 
       ikp = ikp + 1
-              
-      sign = ikk/abs(ikk)        
+      
+      sign = 1         
+      if (ikk /= 0) sign= ikk/abs(ikk)        
       
       if (this%arpes_grid) then
         kpoint = kpoints_get_point(sb%kpoints, ikpt)
-        kpar(1:pdim) = kvec(1:pdim) - kpoint(1:pdim)  
-        kvec(mdim) =  sign * sqrt((abs(ikk)*DE + Emin) * M_TWO - sum(kpar(1:pdim)**2) )
+        kpar(1:pdim) = kvec(1:pdim) - kpoint(1:pdim)
+        val = abs(ikk)*DE * M_TWO - sum(kpar(1:pdim)**2)
+        if (val >= 0) then
+          kvec(mdim) =  sign * sqrt(val)
+        else  ! if E < p//^2/2
+          !FIXME: Should handle the exception setting doing something smarter than this
+          kvec(mdim) = sqrt(val) ! set to NaN
+!           kvec(mdim) = M_HUGE ! set to infinity
+          nkp_out = nkp_out + 1
+        end if
       else         
-        kvec(mdim) = ikk * this%dk + sign * kmin
+        kvec(mdim) = ikk * this%dk 
       end if
-
+      
       this%kcoords_cub(1:mdim, ikp, ikpt) =  kvec(1:mdim)
       
     end subroutine fill_non_periodic_dimension
+         
+          
+    subroutine get_kpath_perp_direction(kpoints, kpth_dir)
+      type(kpoints_t),   intent(in)  :: kpoints 
+      integer,           intent(out) :: kpth_dir
+
+      FLOAT                :: kpt(3)
+      integer              :: ikzero_start
+         
+      ikzero_start = kpoints_number(sb%kpoints) - sb%kpoints%nik_skip  + 1   
+      
+      kpth_dir = -1
+         
+      kpt = M_ZERO
+      kpt(1:mdim) = kpoints_get_point(kpoints, ikzero_start+1)-kpoints_get_point(kpoints, ikzero_start)
+      kpt(1:mdim) = kpt(1:mdim)/sqrt(sum(kpt(1:mdim)**2))  
+           
+      
+      if (sum((kpt(:) - (/1,0,0/))**2) < M_EPSILON) then
+        kpth_dir = 2
+      end if        
+              
+      if (sum((kpt(:) - (/0,1,0/))**2) < M_EPSILON) then 
+        kpth_dir = 1
+      end if
+      
+      
+      
+    end subroutine get_kpath_perp_direction
+          
           
     
   end subroutine pes_flux_reciprocal_mesh_gen
