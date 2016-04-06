@@ -119,19 +119,20 @@ contains
     type(lr_t), allocatable :: kdotp_em_lr2(:, :, :, :)
     type(lr_t), allocatable :: b_lr(:, :), e_lr(:, :)
     type(lr_t), allocatable :: kb_lr(:, :, :), k2_lr(:, :, :)
-    type(lr_t), allocatable :: ke_lr(:, :, :), be_lr(:, :, :)
+    type(lr_t), allocatable :: ke_lr(:, :, :)
     type(pert_t)            :: pert_kdotp, pert2_none, pert_b
 
     integer :: sigma, sigma_alt, ndim, idir, idir2, ierr, iomega, ifactor, nsigma_eff, ipert
-    integer :: ierr_e(3), ierr_be(3,3) 
+    integer :: ierr_e(3), ierr_e1(3), ierr_e2(3) 
     character(len=100) :: dirname_output, str_tmp
-    logical :: complex_response, have_to_calculate, use_kdotp, opp_freq, exact_freq(3), complex_wfs
+    logical :: complex_response, have_to_calculate, use_kdotp, opp_freq, &
+      exact_freq(3), exact_freq1(3), complex_wfs
 
     FLOAT :: closest_omega, last_omega, frequency
     FLOAT, allocatable :: dl_eig(:,:,:)
     CMPLX :: frequency_eta, frequency_zero
     type(restart_t) :: gs_restart, restart_load, restart_dump, kdotp_restart
-    integer, parameter :: PB = 1, PK2 = 2, PKB = 3, PKE = 4, PBE = 5, PE = 6
+    integer, parameter :: PB = 1, PK2 = 2, PKB = 3, PKE = 4, PE = 5
 
     PUSH_SUB(em_resp_run)
 
@@ -359,33 +360,28 @@ contains
       end if
       call messages_experimental("Magneto-optical response")
       SAFE_ALLOCATE(b_lr(1:gr%sb%dim, 1:1))
+      SAFE_ALLOCATE(e_lr(1:gr%sb%dim, 1:em_vars%nsigma))
        do idir = 1, gr%sb%dim
         call lr_init(b_lr(idir, 1))
         call lr_allocate(b_lr(idir, 1), sys%st, sys%gr%mesh)
+          do sigma = 1, em_vars%nsigma
+            call lr_init(e_lr(idir, sigma))
+            call lr_allocate(e_lr(idir, sigma), sys%st, sys%gr%mesh)
+          end do
       end do
       
       if(use_kdotp) then
         SAFE_ALLOCATE(ke_lr(1:gr%sb%dim, 1:gr%sb%dim, 1:em_vars%nsigma))
-        SAFE_ALLOCATE(be_lr(1:gr%sb%dim, 1:gr%sb%dim, 1:em_vars%nsigma))
         do idir = 1, gr%sb%dim
           do idir2 = 1, gr%sb%dim
             do sigma = 1, em_vars%nsigma
               call lr_init(ke_lr(idir, idir2, sigma))
               call lr_allocate(ke_lr(idir, idir2, sigma), sys%st, sys%gr%mesh)
-              call lr_init(be_lr(idir, idir2, sigma))
-              call lr_allocate(be_lr(idir, idir2, sigma), sys%st, sys%gr%mesh)
             end do
           end do
         end do
       else
         call pert_init(pert_b, PERTURBATION_MAGNETIC,  sys%gr, sys%geo)
-        SAFE_ALLOCATE(e_lr(1:gr%sb%dim, 1:em_vars%nsigma))
-        do idir = 1, gr%sb%dim
-          do sigma = 1, em_vars%nsigma
-            call lr_init(e_lr(idir, sigma))
-            call lr_allocate(e_lr(idir, sigma), sys%st, sys%gr%mesh)
-          end do
-        end do
       end if
     end if
 
@@ -406,7 +402,8 @@ contains
 
         ierr = 0
         ierr_e(:) = 0
-        ierr_be(:,:) = 0
+        ierr_e1(:) = 0
+        ierr_e2(:) = 0
 
         have_to_calculate = .true.
         opp_freq = .false.
@@ -512,6 +509,7 @@ contains
         if(have_to_calculate) then 
 
           exact_freq(:) = .false.
+          exact_freq1(:) = .false.
 
           if(states_are_real(sys%st)) then
             call drun_sternheimer()
@@ -598,28 +596,24 @@ contains
       call sternheimer_end(sh_mo)
       do idir = 1, gr%sb%dim
         call lr_dealloc(b_lr(idir, 1))
+        do sigma = 1, em_vars%nsigma
+          call lr_dealloc(e_lr(idir, sigma))
+        end do
       end do
       SAFE_DEALLOCATE_A(b_lr)
+      SAFE_DEALLOCATE_A(e_lr)
       
       if(use_kdotp) then
         do idir = 1, gr%sb%dim 
           do idir2 = 1, gr%sb%dim
             do sigma = 1, em_vars%nsigma
               call lr_dealloc(ke_lr(idir, idir2, sigma))
-              call lr_dealloc(be_lr(idir, idir2, sigma))
             end do
           end do
         end do
-        SAFE_DEALLOCATE_A(be_lr)
         SAFE_DEALLOCATE_A(ke_lr)
       else
         call pert_end(pert_b)
-        do idir = 1, gr%sb%dim
-          do sigma = 1, em_vars%nsigma
-            call lr_dealloc(e_lr(idir, sigma))
-          end do
-        end do
-        SAFE_DEALLOCATE_A(e_lr)
       end if
     end if
 

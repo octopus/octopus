@@ -59,8 +59,6 @@ module em_resp_calc_oct_m
      zcalc_polarizability_periodic,    &
      dinhomog_B,                       &
      zinhomog_B,                       &
-     dinhomog_BE_tot,                  &
-     zinhomog_BE_tot,                  &
      dinhomog_KB_tot,                  &
      zinhomog_KB_tot,                  &
      dinhomog_KE_tot,                  &
@@ -293,8 +291,6 @@ contains
       case(4)
         ch = 'KE'
       case(5)
-        ch = 'BE'
-      case(6)
         ch = 'E'
     end select
 
