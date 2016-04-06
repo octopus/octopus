@@ -489,13 +489,13 @@ contains
       this%pack%size_real = this%pack%size
       if(type_is_complex(batch_type(this))) this%pack%size_real(1) = 2*this%pack%size_real(1)
 
-      if(opencl_is_enabled()) then
 #ifdef HAVE_OPENCL
+      if(opencl_is_enabled()) then
         this%status = BATCH_CL_PACKED
 
         call opencl_create_buffer(this%pack%buffer, CL_MEM_READ_WRITE, batch_type(this), product(this%pack%size))
-#endif
       else
+#endif
         this%status = BATCH_PACKED
         if(batch_type(this) == TYPE_FLOAT) then
           SAFE_ALLOCATE(this%pack%dpsi(1:this%pack%size(1), 1:this%pack%size(2)))
@@ -506,7 +506,9 @@ contains
         else if(batch_type(this) == TYPE_CMPLX_SINGLE) then
           SAFE_ALLOCATE(this%pack%cpsi(1:this%pack%size(1), 1:this%pack%size(2)))
         end if
+#ifdef HAVE_OPENCL
       end if
+#endif
       
       if(copy_) then
         call profiling_in(prof_copy, "BATCH_PACK_COPY")
@@ -626,16 +628,18 @@ contains
         this%status = BATCH_NOT_PACKED
         this%in_buffer_count = 1
 
-        if(opencl_is_enabled()) then
 #ifdef HAVE_OPENCL
+        if(opencl_is_enabled()) then
           call opencl_release_buffer(this%pack%buffer)
-#endif
         else
+#endif
           SAFE_DEALLOCATE_A(this%pack%dpsi)
           SAFE_DEALLOCATE_A(this%pack%zpsi)
           SAFE_DEALLOCATE_A(this%pack%spsi)
           SAFE_DEALLOCATE_A(this%pack%cpsi)
+#ifdef HAVE_OPENCL
         end if
+#endif
       end if
       
       INCR(this%in_buffer_count, -1)

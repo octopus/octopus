@@ -90,12 +90,12 @@ contains
         end do
       end do
 
-      if(opencl_is_enabled()) then
 #ifdef HAVE_OPENCL
+      if(opencl_is_enabled()) then
         call opencl_create_buffer(this%map_buffer, CL_MEM_READ_ONLY, TYPE_INTEGER, this%nmap*5)
         call opencl_write_buffer(this%map_buffer, this%nmap*5, this%map)
-#endif
       end if
+#endif
 
     else
       nullify(this%map)
@@ -114,12 +114,12 @@ contains
     if(associated(this%map)) then
 
       SAFE_DEALLOCATE_P(this%map)
-      
+     
+#ifdef HAVE_OPENCL 
       if(opencl_is_enabled()) then
-#ifdef HAVE_OPENCL
         call opencl_release_buffer(this%map_buffer)
-#endif
       end if
+#endif
 
     end if
 
