@@ -71,7 +71,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
 
   integer :: ib, ip, isp, families, ixc, spin_channels, is, idir, ipstart, ipend
   FLOAT   :: rr, energy(1:2)
-  logical :: gga, mgga
+  logical :: gga, mgga, libvdwxc
   type(profile_t), save :: prof, prof_libxc
   logical :: calc_energy
   type(xc_functl_t), pointer :: functl(:)
@@ -108,14 +108,15 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
       ASSERT(iand(functl(ixc)%flags, XC_FLAGS_HAVE_VXC) /= 0)
     end if
   end do
-  
+
   ! initialize a couple of handy variables
   gga  = iand(xcs%family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA + XC_FAMILY_LIBVDWXC) /= 0
   mgga = iand(xcs%family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0
+  libvdwxc = iand(xcs%family, XC_FAMILY_LIBVDWXC) /= 0
 
   !Read the spin channels
   spin_channels = functl(FUNC_X)%spin_channels
-  
+
   if(xcs%xc_density_correction == LR_X) then
     SAFE_ALLOCATE(vx(1:der%mesh%np))
   end if
@@ -499,6 +500,20 @@ contains
       ! we adjust for the different definition of tau in libxc
       l_tau(1:spin_channels, 1:nblock) = l_tau(1:spin_channels, 1:nblock) / M_TWO
       call copy_global_to_local(ldens, l_ldens, nblock, spin_channels, ip)
+    end if
+
+    if(libvdwxc) then
+      ! libvdwxc implies GGA, so we have l_sigma and so on.  Ordinary
+      ! GGAs rely on libxc to calculate l_vsigma, but libvdwxc only
+      ! calls libxc for the LDA correlation, leaving l_vsigma
+      ! uninitialized in case there is no exchange functional.
+      ! Therefore, we need to set l_vsigma ourselves; we could do this
+      ! within the spaceloop, but that would overwrite legit values
+      ! from the exchange functional when it is there.  Therefore, we
+      ! set it here in space_loop_init and it will work no matter
+      ! what.  Thus, one can run with only correlation without any
+      ! memory corruption - a great day for humanity indeed.
+      l_vsigma = M_ZERO
     end if
 
     POP_SUB(xc_get_vxc.space_loop_init)
