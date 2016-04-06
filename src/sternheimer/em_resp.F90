@@ -361,13 +361,13 @@ contains
       call messages_experimental("Magneto-optical response")
       SAFE_ALLOCATE(b_lr(1:gr%sb%dim, 1:1))
       SAFE_ALLOCATE(e_lr(1:gr%sb%dim, 1:em_vars%nsigma))
-       do idir = 1, gr%sb%dim
+      do idir = 1, gr%sb%dim
         call lr_init(b_lr(idir, 1))
         call lr_allocate(b_lr(idir, 1), sys%st, sys%gr%mesh)
-          do sigma = 1, em_vars%nsigma
-            call lr_init(e_lr(idir, sigma))
-            call lr_allocate(e_lr(idir, sigma), sys%st, sys%gr%mesh)
-          end do
+        do sigma = 1, em_vars%nsigma
+          call lr_init(e_lr(idir, sigma))
+          call lr_allocate(e_lr(idir, sigma), sys%st, sys%gr%mesh)
+        end do
       end do
       
       if(use_kdotp) then
