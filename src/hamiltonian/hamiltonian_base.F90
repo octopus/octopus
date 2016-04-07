@@ -171,11 +171,11 @@ contains
 
     PUSH_SUB(hamiltonian_base_end)
 
-#ifdef HAVE_OPENCL
     if(allocated(this%potential) .and. opencl_is_enabled()) then
+#ifdef HAVE_OPENCL
       call opencl_release_buffer(this%potential_opencl)
-    end if
 #endif
+    end if
     
     SAFE_DEALLOCATE_A(this%potential)
     SAFE_DEALLOCATE_A(this%Impotential)!cmplxscl
