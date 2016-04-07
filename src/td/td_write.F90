@@ -2131,7 +2131,7 @@ contains
 
     integer :: idir, ispin
     character(len=50) :: aux
-    FLOAT :: total_current(1:MAX_DIM)
+    FLOAT :: total_current(1:MAX_DIM), abs_current(1:MAX_DIM)
 
     PUSH_SUB(td_write_total_current)
 
@@ -2143,6 +2143,11 @@ contains
       
       do idir = 1, gr%mesh%sb%dim
         write(aux, '(a2,i1,a1)') 'I(', idir, ')'
+        call write_iter_header(out_total_current, aux)
+      end do
+
+      do idir = 1, gr%mesh%sb%dim
+        write(aux, '(a2,i1,a1)') 'IntAbs(j)(', idir, ')'
         call write_iter_header(out_total_current, aux)
       end do
       
@@ -2161,9 +2166,18 @@ contains
       total_current(idir) = units_from_atomic(units_out%length/units_out%time, total_current(idir))
     end do
 
+    abs_current = CNST(0.0)
+    do idir = 1, gr%sb%dim
+      do ispin = 1, st%d%nspin
+        abs_current(idir) =  abs_current(idir) + dmf_integrate(gr%mesh, abs(st%current(:, idir, ispin)))
+      end do
+      abs_current(idir) = units_from_atomic(units_out%length/units_out%time, abs_current(idir))
+    end do
+
     if(mpi_grp_is_root(mpi_world)) then
       call write_iter_start(out_total_current)
       call write_iter_double(out_total_current, total_current, gr%mesh%sb%dim)
+      call write_iter_double(out_total_current, abs_current, gr%mesh%sb%dim)
       call write_iter_nl(out_total_current)
     end if
       
