@@ -466,12 +466,14 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
     
     if(mesh%use_curvilinear) then
       if(.not. cproduct_) then
+        !$omp parallel do private(ip, ist) reduction(+:tmp)
         do ip = 1, mesh%np
           do ist = 1, aa%nst_linear
             tmp(ist) = tmp(ist) + mesh%vol_pp(ip)*R_CONJ(aa%pack%X(psi)(ist, ip))*bb%pack%X(psi)(ist, ip)
           end do
         end do
       else
+        !$omp parallel do private(ip, ist) reduction(+:tmp)
         do ip = 1, mesh%np
           do ist = 1, aa%nst_linear
             tmp(ist) = tmp(ist) + mesh%vol_pp(ip)*aa%pack%X(psi)(ist, ip)*bb%pack%X(psi)(ist, ip)
@@ -480,12 +482,14 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
       end if
     else
       if(.not. cproduct_) then
+        !$omp parallel do private(ip, ist) reduction(+:tmp)
         do ip = 1, mesh%np
           do ist = 1, aa%nst_linear
             tmp(ist) = tmp(ist) + R_CONJ(aa%pack%X(psi)(ist, ip))*bb%pack%X(psi)(ist, ip)
           end do
         end do
       else
+        !$omp parallel do private(ip, ist) reduction(+:tmp)
         do ip = 1, mesh%np
           do ist = 1, aa%nst_linear
             tmp(ist) = tmp(ist) + aa%pack%X(psi)(ist, ip)*bb%pack%X(psi)(ist, ip)
