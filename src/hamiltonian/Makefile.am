@@ -63,7 +63,7 @@ noinst_HEADERS =                      \
 	vxc_inc.F90                   \
 	fxc_inc.F90                   \
 	kxc_inc.F90                   \
-	oct_exchange.F90
+	oct_exchange_inc.F90
 
 include $(srcdir)/../common-rules.make
 
