@@ -388,6 +388,7 @@ contains
       case(BATCH_PACKED)
 
         do ipart = 1, npart
+          !$omp parallel do private(ip, ip2, ist)
           do ip = 1, boundaries%nsend(ipart)
             ip2 = boundaries%per_send(ip, ipart)
             do ist = 1, ffb%nst_linear
@@ -478,6 +479,7 @@ contains
       case(BATCH_PACKED)
 
         do ipart = 1, npart
+          !$omp parallel do private(ip, ip2, ist)
           do ip = 1, boundaries%nrecv(ipart)
             ip2 = boundaries%per_recv(ip, ipart)
             do ist = 1, ffb%nst_linear
