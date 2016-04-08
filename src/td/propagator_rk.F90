@@ -31,6 +31,7 @@ module propagator_rk_oct_m
   use ion_dynamics_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use oct_exchange_oct_m
   use opt_control_state_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
@@ -350,7 +351,7 @@ contains
         end do
         call hamiltonian_epot_generate(hm, gr, geo, stphi, time = tau)
       end if
-      if(.not.hamiltonian_oct_exchange(hm)) then
+      if(.not.oct_exchange_enabled(hm%oct_exchange)) then
         call density_calc(stphi, gr, stphi%rho)
         call v_ks_calc(ks, hm, stphi, geo)
       end if
@@ -378,7 +379,7 @@ contains
     subroutine f_chi(tau)
       FLOAT, intent(in) :: tau
 
-      if( hm%theory_level /= INDEPENDENT_PARTICLES) call hamiltonian_set_oct_exchange(hm, stphi, gr%mesh)
+      if( hm%theory_level /= INDEPENDENT_PARTICLES) call oct_exchange_set(hm%oct_exchange, stphi, gr%mesh)
       call prepare_inh()
       call hamiltonian_adjoint(hm)
       call hamiltonian_update(hm, gr%mesh, time = tau)
@@ -387,7 +388,7 @@ contains
 
 
       call apply_inh()
-      if( hm%theory_level /= INDEPENDENT_PARTICLES) call hamiltonian_remove_oct_exchange(hm)
+      if( hm%theory_level /= INDEPENDENT_PARTICLES) call oct_exchange_remove(hm%oct_exchange)
       if(ion_dynamics_ions_move(ions)) call hamiltonian_remove_inh(hm)
     end subroutine f_chi
 
@@ -537,7 +538,7 @@ contains
       end do
     end do
 
-    if(hamiltonian_oct_exchange(hm)) call hamiltonian_prepare_oct_exchange(hm, gr%mesh, zphi, ks%xc)
+    if(oct_exchange_enabled(hm%oct_exchange)) call oct_exchange_prepare(hm%oct_exchange, gr%mesh, zphi, ks%xc)
     call hamiltonian_update(hm, gr%mesh, time = time-dt)
     rhs1 = M_z0
     do ik = kp1, kp2
@@ -547,8 +548,8 @@ contains
     end do
     do ik = kp1, kp2
       do ist = st1, st2
-        if(hamiltonian_oct_exchange(hm)) then
-          call zoct_exchange_operator(hm, gr%der, rhs1(:, :, ist, ik), ist, ik)
+        if(oct_exchange_enabled(hm%oct_exchange)) then
+          call zoct_exchange_operator(hm%oct_exchange, gr%der, rhs1(:, :, ist, ik), ist, ik)
         end if
       end do
     end do
@@ -575,7 +576,7 @@ contains
       oldk2 = k2
 
       ! Set the Hamiltonian at the final time of the propagation
-      if(.not.hamiltonian_oct_exchange(hm_p)) then
+      if(.not.oct_exchange_enabled(hm_p%oct_exchange)) then
         do ik = kp1, kp2
           do ist = st1, st2
             call states_set_state(st, gr%mesh, ist, ik, k2(:, :, ist, ik))
@@ -591,7 +592,7 @@ contains
         vpsl1_op = hm%ep%vpsl
       end if
       call hamiltonian_update(hm, gr%mesh, time = time)
-      if(.not.hamiltonian_oct_exchange(hm_p)) then
+      if(.not.oct_exchange_enabled(hm_p%oct_exchange)) then
         if (i==1) then
           call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 0, vhxc1_op)
           i = i + 1
@@ -1179,7 +1180,7 @@ contains
     if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
     call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + dt_op)
 
-    if(hamiltonian_oct_exchange(hm_p)) then
+    if(oct_exchange_enabled(hm_p%oct_exchange)) then
       zpsi_ = M_z0
       j = 1
       do ik = kp1, kp2
@@ -1191,7 +1192,7 @@ contains
           end do
         end do
       end do
-      call hamiltonian_prepare_oct_exchange(hm_p, grid_p%mesh, zpsi_, xc_p)
+      call oct_exchange_prepare(hm_p%oct_exchange, grid_p%mesh, zpsi_, xc_p)
     end if
 
     j = 1
@@ -1211,7 +1212,7 @@ contains
       end do
     end do
 
-    if(hamiltonian_oct_exchange(hm_p)) then
+    if(oct_exchange_enabled(hm_p%oct_exchange)) then
       j = 1
       do ik = kp1, kp2
         do ist = st1, st2
@@ -1221,7 +1222,7 @@ contains
             j = j + np
           end do
           opzpsi = M_z0
-          call zoct_exchange_operator(hm_p, grid_p%der, opzpsi, ist, ik)
+          call zoct_exchange_operator(hm_p%oct_exchange, grid_p%der, opzpsi, ist, ik)
 
           do idim = 1, dim
             yre(jj:jj+np-1) = yre(jj:jj+np-1) + real(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
@@ -1274,7 +1275,7 @@ contains
     if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
     call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + dt_op)
 
-    if(hamiltonian_oct_exchange(hm_p)) then
+    if(oct_exchange_enabled(hm_p%oct_exchange)) then
       zpsi_ = M_z0
       j = 1
       do ik = kp1, kp2
@@ -1286,7 +1287,7 @@ contains
           end do
         end do
       end do
-      call hamiltonian_prepare_oct_exchange(hm_p, grid_p%mesh, zpsi_, xc_p)
+      call oct_exchange_prepare(hm_p%oct_exchange, grid_p%mesh, zpsi_, xc_p)
     end if
 
     j = 1
@@ -1307,7 +1308,7 @@ contains
       end do
     end do
 
-    if(hamiltonian_oct_exchange(hm_p)) then
+    if(oct_exchange_enabled(hm_p%oct_exchange)) then
       j = 1
       do ik = kp1, kp2
         do ist = st1, st2
@@ -1317,7 +1318,7 @@ contains
             j = j + np
           end do
           opzpsi = M_z0
-          call zoct_exchange_operator(hm_p, grid_p%der, opzpsi, ist, ik)
+          call zoct_exchange_operator(hm_p%oct_exchange, grid_p%der, opzpsi, ist, ik)
 
           do idim = 1, dim
             yre(jj:jj+np-1) = yre(jj:jj+np-1) + real(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))

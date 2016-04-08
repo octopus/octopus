@@ -28,6 +28,7 @@ module propagator_qoct_oct_m
   use hamiltonian_oct_m
   use ion_dynamics_oct_m
   use messages_oct_m
+  use oct_exchange_oct_m
   use potential_interpolation_oct_m
   use propagator_base_oct_m
   use states_oct_m
@@ -58,7 +59,7 @@ contains
     PUSH_SUB(td_qoct_tddft_propagator)
 
     if( (hm%theory_level /= INDEPENDENT_PARTICLES) .and. &
-      (.not.hamiltonian_oct_exchange(hm)) ) then
+      (.not. oct_exchange_enabled(hm%oct_exchange)) ) then
       call potential_interpolation_interpolate(tr%vksold, 2, t, dt, t-dt/M_TWO, hm%vhxc)
     end if
 

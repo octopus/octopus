@@ -322,13 +322,13 @@ subroutine X(hamiltonian_apply_all) (hm, xc, der, st, hst, time, Imtime)
     end do
   end if
 
-  if(hamiltonian_oct_exchange(hm)) then
+  if(oct_exchange_enabled(hm%oct_exchange)) then
 
     SAFE_ALLOCATE(psiall(der%mesh%np_part, 1:hst%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
 
     call states_get_state(st, der%mesh, psiall)
     
-    call hamiltonian_prepare_oct_exchange(hm, der%mesh, psiall, xc)
+    call oct_exchange_prepare(hm%oct_exchange, der%mesh, psiall, xc)
 
     SAFE_DEALLOCATE_A(psiall)
     
@@ -337,7 +337,7 @@ subroutine X(hamiltonian_apply_all) (hm, xc, der, st, hst, time, Imtime)
     do ik = 1, st%d%nik
       do ist = 1, st%nst
         call states_get_state(hst, der%mesh, ist, ik, psi)
-        call X(oct_exchange_operator)(hm, der, psi, ist, ik)
+        call X(oct_exchange_operator)(hm%oct_exchange, der, psi, ist, ik)
         call states_set_state(hst, der%mesh, ist, ik, psi)
       end do
     end do
@@ -680,54 +680,7 @@ subroutine X(scdm_exchange_operator) (hm, der, psib, hpsib, ik, exx_coef)
 end subroutine X(scdm_exchange_operator)
 
 ! ---------------------------------------------------------
-subroutine X(oct_exchange_operator) (hm, der, hpsi, ist, ik)
-  type(hamiltonian_t), intent(in)    :: hm
-  type(derivatives_t), intent(in)    :: der
-  R_TYPE,              intent(inout) :: hpsi(:, :)
-  integer,             intent(in)    :: ist
-  integer,             intent(in)    :: ik
 
-  integer :: ik2
-  R_TYPE, allocatable :: psi(:, :), psi2(:, :)
-  integer :: ip
-
-  PUSH_SUB(X(oct_exchange_operator))
-
-  SAFE_ALLOCATE(psi(1:der%mesh%np, 1:hm%d%dim))
-  SAFE_ALLOCATE(psi2(1:der%mesh%np, 1:hm%d%dim))
-
-  select case(hm%d%ispin)
-  case(UNPOLARIZED)
-    ASSERT(hm%d%nik  ==  1)
-    call states_get_state(hm%oct_st, der%mesh, ist, 1, psi2)
-    forall(ip = 1:der%mesh%np)
-      hpsi(ip, 1) = hpsi(ip, 1) + M_TWO*M_zI*psi2(ip, 1)*(hm%oct_pot(ip, 1) + hm%oct_fxc(ip, 1, 1)*hm%oct_rho(ip, 1))
-    end forall
-
-  case(SPIN_POLARIZED)
-    ASSERT(hm%d%nik  ==  2)
-
-    call states_get_state(hm%oct_st, der%mesh, ist, ik, psi2)
-
-    do ik2 = 1, 2
-      forall(ip = 1:der%mesh%np)
-        hpsi(ip, 1) = hpsi(ip, 1) + M_TWO * M_zI * hm%oct_st%occ(ist, ik) * &
-          psi2(ip, 1) * (hm%oct_pot(ip, ik2) + hm%oct_fxc(ip, ik, ik2)*hm%oct_rho(ip, ik2))
-       end forall
-     end do
-
-  case(SPINORS)
-    call messages_not_implemented("Function oct_exchange_operator_all for spin_polarized or spinors")
-  end select
-
-  SAFE_DEALLOCATE_A(psi)
-  SAFE_DEALLOCATE_A(psi2)
-  POP_SUB(X(oct_exchange_operator))
-end subroutine X(oct_exchange_operator)
-
-
-
-! ---------------------------------------------------------
 subroutine X(magnus) (hm, der, psi, hpsi, ik, vmagnus)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
