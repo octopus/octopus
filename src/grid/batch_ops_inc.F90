@@ -459,15 +459,17 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
 #endif
   case(BATCH_PACKED)
     if(batch_type(yy) == TYPE_CMPLX) then
-      do ist = 1, yy%pack%size(1)
-        do ip = 1, np
+      !$omp parallel do private(ip, ist)
+      do ip = 1, np
+        do ist = 1, yy%pack%size(1)
           yy%pack%zpsi(ist, ip) = xx%pack%zpsi(ist, ip) + aa_linear(ist)*yy%pack%zpsi(ist, ip)
         end do
       end do
     else
 #ifdef R_TREAL
-      do ist = 1, yy%pack%size(1)
-        do ip = 1, np
+      !$omp parallel do private(ip, ist)
+      do ip = 1, np
+        do ist = 1, yy%pack%size(1)
           yy%pack%dpsi(ist, ip) = xx%pack%dpsi(ist, ip) + aa_linear(ist)*yy%pack%dpsi(ist, ip)
         end do
       end do
@@ -489,6 +491,8 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
       end if
     end do
   end select
+
+  call profiling_count_operations(xx%nst_linear*np*(R_ADD + R_MUL))
 
   call batch_pack_was_modified(yy)
 
