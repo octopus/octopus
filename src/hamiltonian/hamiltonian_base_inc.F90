@@ -462,7 +462,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
     npoints = pmat%npoints
     nprojs = pmat%nprojs
 
-    if(npoints /= 0) cycle
+    if(npoints == 0) cycle
 
     if(.not. allocated(this%projector_phases)) then
       if(batch_is_packed(psib)) then
