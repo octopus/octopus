@@ -353,7 +353,8 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 
   integer :: ist, ip, iproj, imat, nreal, iprojection
   integer :: npoints, nprojs, nst
-  R_TYPE, allocatable :: psi(:, :)
+  integer, allocatable :: ind(:)
+  R_TYPE :: aa
   CMPLX :: phase
   type(projector_matrix_t), pointer :: pmat
 #ifdef HAVE_OPENCL
@@ -376,10 +377,10 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 
 #ifdef HAVE_OPENCL
   if(batch_is_packed(psib) .and. opencl_is_enabled()) then
-   
+
     call opencl_create_buffer(projection%buff_projection, CL_MEM_READ_WRITE, R_TYPE_VAL, &
       this%full_projection_size*psib%pack%size_real(1))
-    
+
     call profiling_in(cl_prof, "CL_PROJ_BRA")
 
     if(allocated(this%projector_phases)) then
@@ -416,10 +417,10 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 
     do imat = 1, this%nprojector_matrices
       pmat => this%projector_matrices(imat)
-      
+
       npoints = pmat%npoints
       nprojs = pmat%nprojs
-      
+
       call profiling_count_operations(nreal*nprojs*M_TWO*npoints + nst*nprojs)
     end do
 
@@ -441,80 +442,88 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 
   SAFE_ALLOCATE(projection%X(projection)(1:nst, 1:this%full_projection_size))
   projection%X(projection) = M_ZERO
-  iprojection = 0
 
+  SAFE_ALLOCATE(ind(1:this%nprojector_matrices))
+
+  iprojection = 0
   do imat = 1, this%nprojector_matrices
     pmat => this%projector_matrices(imat)
+    npoints = pmat%npoints
+    nprojs = pmat%nprojs
+    ind(imat) = iprojection
+    iprojection = iprojection + nprojs
+    call profiling_count_operations(nprojs*(R_ADD + R_MUL)*npoints + nst*nprojs)
+  end do
 
+  !$omp parallel do private(imat, pmat, iprojection, npoints, nprojs, iproj, ist, aa, ip)
+  do imat = 1, this%nprojector_matrices
+    pmat => this%projector_matrices(imat)
+    iprojection = ind(imat)
     npoints = pmat%npoints
     nprojs = pmat%nprojs
 
-    if(npoints /= 0) then
+    if(npoints /= 0) cycle
 
-      SAFE_ALLOCATE(psi(1:nst, 1:npoints))
-
-      call profiling_in(prof_gather, "PROJ_MAT_GATHER")
-
-      ! collect all the points we need in a continuous array
+    if(.not. allocated(this%projector_phases)) then
       if(batch_is_packed(psib)) then
 
-        !$omp parallel do private(ip, ist)
-        do ip = 1, npoints
-          forall(ist = 1:nst)
-            psi(ist, ip) = psib%pack%X(psi)(ist, pmat%map(ip))
-          end forall
+        do iproj = 1, nprojs
+          do ist = 1, nst
+            aa = CNST(0.0)
+            do ip = 1, npoints
+              aa = aa + pmat%projectors(ip, iproj)*psib%pack%X(psi)(ist, pmat%map(ip))
+            end do
+            projection%X(projection)(ist, iprojection + iproj) = pmat%scal(iproj)*aa
+          end do
         end do
-        !$omp end parallel do
 
       else
 
-        do ist = 1, nst
-          !$omp parallel do
-          do ip = 1, npoints
-            psi(ist, ip) = psib%states_linear(ist)%X(psi)(pmat%map(ip))
+        do iproj = 1, nprojs
+          do ist = 1, nst
+            aa = CNST(0.0)
+            do ip = 1, npoints
+              aa = aa + pmat%projectors(ip, iproj)*psib%states_linear(ist)%X(psi)(pmat%map(ip))
+            end do
+            projection%X(projection)(ist, iprojection + iproj) = pmat%scal(iproj)*aa
           end do
-          !$omp end parallel do 
         end do
 
       end if
 
-      if(allocated(this%projector_phases)) then
+    else
 
-        !$omp parallel do private(ip, ist, phase)
-        do ip = 1, npoints
-          phase = this%projector_phases(ip, imat, ik)
-          forall(ist = 1:nst)
-            psi(ist, ip) = phase*psi(ist, ip)
-          end forall
+      if(batch_is_packed(psib)) then
+
+        do iproj = 1, nprojs
+          do ist = 1, nst
+            aa = CNST(0.0)
+            do ip = 1, npoints
+              aa = aa + pmat%projectors(ip, iproj)*psib%pack%X(psi)(ist, pmat%map(ip))*this%projector_phases(ip, imat, ik)
+            end do
+            projection%X(projection)(ist, iprojection + iproj) = pmat%scal(iproj)*aa
+          end do
         end do
-        !$omp end parallel do
+
+      else
+
+        do iproj = 1, nprojs
+          do ist = 1, nst
+            aa = CNST(0.0)
+            do ip = 1, npoints
+              aa = aa + pmat%projectors(ip, iproj)*psib%states_linear(ist)%X(psi)(pmat%map(ip))*this%projector_phases(ip, imat, ik)
+            end do
+            projection%X(projection)(ist, iprojection + iproj) = pmat%scal(iproj)*aa
+          end do
+        end do
 
       end if
-
-      call profiling_out(prof_gather)
-      
-      ! Now matrix-multiply to calculate the projections.
-      ! the line below does: projection = matmul(psi, pmat%projectors)
-      call blas_gemm('N', 'N', nreal, nprojs, npoints, M_ONE, psi(1, 1), nreal, pmat%projectors(1, 1), npoints, &
-        M_ZERO, projection%X(projection)(1, iprojection + 1), nreal)
-
-      ! apply the scale
-      !$omp parallel do private(iproj, ist)
-      do iproj = 1, nprojs
-        do ist = 1, nst
-          projection%X(projection)(ist, iprojection + iproj) = projection%X(projection)(ist, iprojection + iproj)*pmat%scal(iproj)
-        end do
-      end do
-      !$omp end parallel do
-
-      call profiling_count_operations(nreal*nprojs*M_TWO*npoints + nst*nprojs)
 
     end if
 
-    SAFE_DEALLOCATE_A(psi)
-
-    INCR(iprojection, nprojs)
   end do
+
+  SAFE_DEALLOCATE_A(ind)
 
   POP_SUB(X(hamiltonian_base_nlocal_start))
   call profiling_out(prof_vnlpsi_start)
