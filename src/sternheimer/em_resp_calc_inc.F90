@@ -884,6 +884,8 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, lr_e, &
   R_TYPE, allocatable :: hpol_density(:), hvar_e1(:,:,:,:), hvar_e2(:,:,:,:), hvar_b(:,:,:,:)
   type(matrix_t) :: prod_eb1, prod_eb2, prod_be1, prod_be2, prod_ee1, prod_ee2 
   R_TYPE, allocatable :: psi(:,:), psi1(:,:)
+  CMPLX :: factor 
+  FLOAT :: factor1
     
   PUSH_SUB(X(lr_calc_magneto_optics_finite))
 
@@ -906,6 +908,14 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, lr_e, &
   SAFE_ALLOCATE(hvar_b(1:sys%gr%sb%dim, 1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:1))
   SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
   SAFE_ALLOCATE(psi1(1:sys%gr%mesh%np, 1:sys%st%d%dim))
+
+#if defined(R_TCOMPLEX)
+  factor = M_ONE        
+  factor1 = M_ONE
+#else
+  factor = -M_zI
+  factor1 = -M_ONE
+#endif
 
   chi = M_ZERO
 
@@ -957,9 +967,9 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, lr_e, &
                 end do
               end do
               chi(dir1, dir2, dir3) = chi(dir1, dir2, dir3) + weight * ( &
-                X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,lr_b(dir3,1)%X(dl_psi)(:,:,ist,ik),&
+                factor1 * X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,lr_b(dir3,1)%X(dl_psi)(:,:,ist,ik),&
                   pertpsi_e1(:,:)) &
-                + X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,lr_b(dir3,1)%X(dl_psi)(:,:,ist,ik),&
+                + factor1 * X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,lr_b(dir3,1)%X(dl_psi)(:,:,ist,ik),&
                   pertpsi_e2(:,:)) &
                 + X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,lr_e(dir2, nsigma)%X(dl_psi)(:,:,ist,ik),&
                   pertpsi_b(:,:)))
@@ -1008,12 +1018,12 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, lr_e, &
           call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
             lr_e(dir2,nsigma)%X(dl_psi)(:,:,:,ik), lr_b(dir3,1)%X(dl_psi)(:,:,:,ik), prod_eb2%X(matrix))
           call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
-            lr_b(dir3,1)%X(dl_psi)(:,:,:,ik), lr_e(dir2,1)%X(dl_psi)(:,:,:,ik), prod_be2%X(matrix))
+            factor1 * lr_b(dir3,1)%X(dl_psi)(:,:,:,ik), lr_e(dir2,1)%X(dl_psi)(:,:,:,ik), prod_be2%X(matrix))
 
           call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
             lr_e1(dir1,1)%X(dl_psi)(:,:,:,ik), lr_b(dir3,1)%X(dl_psi)(:,:,:,ik), prod_eb1%X(matrix))
           call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
-            lr_b(dir3,1)%X(dl_psi)(:,:,:,ik), lr_e1(dir1,nsigma)%X(dl_psi)(:,:,:,ik), prod_be1%X(matrix))
+            factor1 * lr_b(dir3,1)%X(dl_psi)(:,:,:,ik), lr_e1(dir1,nsigma)%X(dl_psi)(:,:,:,ik), prod_be1%X(matrix))
 
           call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
             lr_e1(dir1,1)%X(dl_psi)(:,:,:,ik), lr_e(dir2,1)%X(dl_psi)(:,:,:,ik), prod_ee1%X(matrix))
@@ -1053,7 +1063,7 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, lr_e, &
     end do
   end do
   
-  chi(:,:,:) = chi(:,:,:) / P_C
+  chi(:,:,:) = chi(:,:,:) / P_C * factor
     
   SAFE_DEALLOCATE_P(prod_eb1%X(matrix))
   SAFE_DEALLOCATE_P(prod_eb2%X(matrix))
