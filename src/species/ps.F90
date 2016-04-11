@@ -321,7 +321,7 @@ contains
     write(message(1), '(a,i2,a)') "Info: l = ", ps%l_max, " is maximum angular momentum considered."
     call messages_info(1)
 
-    ps%local = ps%l_max == 0
+    ps%local = ps%l_max == 0 .and. ps%l_loc == 0 
 
     ! We allocate all the stuff
     SAFE_ALLOCATE(ps%kb   (0:ps%l_max, 1:ps%kbc))
@@ -1047,6 +1047,10 @@ contains
 
     PUSH_SUB(ps_qso_load)
 
+    if(ps_qso%oncv .and. ps_qso%nchannels == 2) then
+      ps%hamann = .true.
+    end if
+    
     ! no nonlinear core corrections
     ps%nlcc = .false.
 
@@ -1111,6 +1115,7 @@ contains
           dnrm = dnrm + kbprojector(ip)**2*volume_element
           avgv = avgv + kbprojector(ip)*ps_qso%wavefunction(ip, ll)*volume_element
         end do
+
         kbcos = dnrm/(avgv + CNST(1.0e-20))
         kbnorm = M_ONE/(sqrt(dnrm) + CNST(1.0e-20))
 
