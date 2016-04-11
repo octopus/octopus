@@ -39,6 +39,7 @@ module ps_upf_oct_m
   type ps_upf_t
     type(valconf_t)    :: conf
 
+    logical :: version2
     integer :: kb_nc
     integer :: l_local
     FLOAT :: local_radius
@@ -118,12 +119,14 @@ contains
     
     if(ierr == 0) then
       ! tag found, this is version 2
+      ps_upf%version2 = .true.
       call xml_tag_end(tag)
       call messages_experimental('UPF version 2')
       call ps_upf_file_read_version2(upf2_file, ps_upf)
       call xml_file_end(upf2_file)
     else
       ! not found, version 1
+      ps_upf%version2 = .false.
       call xml_file_end(upf2_file)
    
       iunit = io_open(trim(filename), action='read', form='formatted', status='old')

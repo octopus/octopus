@@ -959,12 +959,26 @@ contains
 
       ASSERT(ij <= ps%kbc)
       
-      ps%h(ps_upf%proj_l(i), ij, ij) = ps_upf%e(i)*M_TWO
+      ps%h(ps_upf%proj_l(i), ij, ij) = ps_upf%e(i)
 
+      if(.not. ps_upf%version2) then
+        ! in UPF 1 this value is in Ry^-1
+        ps%h(ps_upf%proj_l(i), ij, ij) = ps%h(ps_upf%proj_l(i), ij, ij)*M_TWO
+      else
+        ! in UPF 2 this value is in Ry
+        ps%h(ps_upf%proj_l(i), ij, ij) = ps%h(ps_upf%proj_l(i), ij, ij)/M_TWO
+      end if
+      
       nrc = logrid_index(ps%g, ps_upf%kb_radius(i)) + 1
-      hato(2:nrc) = ps_upf%proj(2:nrc, i)/ps%g%rofi(2:nrc)/M_TWO ! in upf the projector is given in Rydbergs and is multiplied by r
+      hato(2:nrc) = ps_upf%proj(2:nrc, i)/ps%g%rofi(2:nrc) ! in upf the projector is given in Rydbergs and is multiplied by r
       hato(1) = linear_extrapolate(ps%g%rofi(1), ps%g%rofi(2), ps%g%rofi(3), hato(2), hato(3)) !take care of the point at zero
       hato(nrc+1:ps%g%nrval) = M_ZERO
+
+      if(.not. ps_upf%version2) then
+        ! in UPF 1 the projectors are in Ry.
+        hato(1:nrc) = hato(1:nrc)/M_TWO
+        ! in v2 they are in Bohr^{-1/2}, so no conversion is required
+      end if
 
       call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%kb(ps_upf%proj_l(i), ij))
 
