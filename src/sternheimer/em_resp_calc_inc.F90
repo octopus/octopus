@@ -1084,21 +1084,21 @@ subroutine X(calc_kvar_energy)(sh_mo, sys, lr1, lr2, lr3, hpol_density)
   type(lr_t),             intent(inout) :: lr1, lr2, lr3
   R_TYPE,                 intent(inout) :: hpol_density(:)
     
-    R_TYPE, allocatable :: kvar(:,:,:) 
+  R_TYPE, allocatable :: kvar(:,:,:) 
   integer :: is, ip
     
   PUSH_SUB(X(calc_kvar_energy))
   
-    SAFE_ALLOCATE(kvar(1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:1))
+  SAFE_ALLOCATE(kvar(1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:1))
   
-    call X(calc_kvar)(sh_mo, sys, lr1%X(dl_rho), lr2%X(dl_rho), 1, kvar)
-    do ip = 1, sys%gr%mesh%np
-      do is = 1, sys%st%d%nspin
-        hpol_density(ip) = hpol_density(ip) + kvar(ip,is,1) * lr3%X(dl_rho)(ip,is)
-      end do
+  call X(calc_kvar)(sh_mo, sys, lr1%X(dl_rho), lr2%X(dl_rho), 1, kvar)
+  do ip = 1, sys%gr%mesh%np
+    do is = 1, sys%st%d%nspin
+      hpol_density(ip) = hpol_density(ip) + kvar(ip,is,1) * lr3%X(dl_rho)(ip,is)
     end do
+  end do
   
-    SAFE_DEALLOCATE_A(kvar)
+  SAFE_DEALLOCATE_A(kvar)
   
   POP_SUB(X(calc_kvar_energy))
 end subroutine X(calc_kvar_energy)
@@ -1168,9 +1168,9 @@ subroutine X(lr_calc_magneto_optics_periodic)(sh, sh2, sys, hm, nsigma, &
   SAFE_ALLOCATE(mat_eb%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
   SAFE_ALLOCATE(mat_be%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
   SAFE_ALLOCATE(psi_be(1:np, 1:ndim, 1:sys%st%nst, 1:nsigma))
-  SAFE_ALLOCATE(hvar(1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:nsigma, 1:ndir))
-  SAFE_ALLOCATE(hvar1(1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:nsigma, 1:ndir))
-  SAFE_ALLOCATE(hvar2(1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:1, 1:ndir))
+  SAFE_ALLOCATE(hvar(1:np, 1:sys%st%d%nspin, 1:nsigma, 1:ndir))
+  SAFE_ALLOCATE(hvar1(1:np, 1:sys%st%d%nspin, 1:nsigma, 1:ndir))
+  SAFE_ALLOCATE(hvar2(1:np, 1:sys%st%d%nspin, 1:1, 1:ndir))
   
   do idir1 = 1, ndir
     do isigma = 1, nsigma
@@ -1425,7 +1425,7 @@ contains
     integer,      intent(in)    :: nsigma_h, nsigma_in
     integer,      intent(in)    :: dir, ist0, ik0
     R_TYPE,       intent(in)    :: hvar_in(:, :) 
-    type(lr_t),   intent(in)    :: lr_in(:)  
+    type(lr_t),   intent(inout) :: lr_in(:)  
     R_TYPE,       intent(inout) :: psi_out(:, :, :)  
     
     type(pert_t)  :: pert_kdotp
