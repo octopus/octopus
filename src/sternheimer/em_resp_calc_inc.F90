@@ -889,9 +889,9 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, lr_e, &
     
   PUSH_SUB(X(lr_calc_magneto_optics_finite))
 
-  SAFE_ALLOCATE(pertpsi_e1(1:sys%gr%mesh%np,1:hm%d%dim))
-  SAFE_ALLOCATE(pertpsi_e2(1:sys%gr%mesh%np,1:hm%d%dim))
-  SAFE_ALLOCATE(pertpsi_b(1:sys%gr%mesh%np,1:hm%d%dim))
+  SAFE_ALLOCATE(pertpsi_e1(1:sys%gr%mesh%np, 1:hm%d%dim))
+  SAFE_ALLOCATE(pertpsi_e2(1:sys%gr%mesh%np, 1:hm%d%dim))
+  SAFE_ALLOCATE(pertpsi_b(1:sys%gr%mesh%np, 1:hm%d%dim))
   
   if(sternheimer_add_fxc(sh)) then 
     SAFE_ALLOCATE(hpol_density(1:sys%gr%mesh%np))
@@ -904,7 +904,7 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, lr_e, &
   SAFE_ALLOCATE(prod_ee1%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
   SAFE_ALLOCATE(prod_ee2%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
   SAFE_ALLOCATE(hvar_e1(1:sys%gr%sb%dim, 1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:nsigma))
-  SAFE_ALLOCATE(hvar_e2(1:sys%gr%sb%dim,1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:nsigma))
+  SAFE_ALLOCATE(hvar_e2(1:sys%gr%sb%dim, 1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:nsigma))
   SAFE_ALLOCATE(hvar_b(1:sys%gr%sb%dim, 1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:1))
   SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
   SAFE_ALLOCATE(psi1(1:sys%gr%mesh%np, 1:sys%st%d%dim))
@@ -919,9 +919,9 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, lr_e, &
 
   chi = M_ZERO
 
-  pertpsi_e1(:,:)= M_ZERO
-  pertpsi_e2(:,:)= M_ZERO
-  pertpsi_b(:,:)= M_ZERO
+  pertpsi_e1(:,:) = M_ZERO
+  pertpsi_e2(:,:) = M_ZERO
+  pertpsi_b(:,:) = M_ZERO
   
   call pert_init(pert_m, PERTURBATION_MAGNETIC, sys%gr, sys%geo)
   call pert_init(pert_e2, PERTURBATION_ELECTRIC, sys%gr, sys%geo)
@@ -934,9 +934,9 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, lr_e, &
   psi1(:,:) = M_ZERO
   
   do dir1 = 1, sys%gr%sb%dim
-    call X(sternheimer_calc_hvar)(sh, sys, lr_e(dir1,:), nsigma, hvar_e2(dir1,:,:,:))
-    call X(sternheimer_calc_hvar)(sh, sys, lr_e1(dir1,:), nsigma, hvar_e1(dir1,:,:,:))
-    call X(sternheimer_calc_hvar)(sh_mo, sys, lr_b(dir1,:), 1, hvar_b(dir1,:,:,:))
+    call X(sternheimer_calc_hvar)(sh, sys, lr_e(dir1, :), nsigma, hvar_e2(dir1, :, :, :))
+    call X(sternheimer_calc_hvar)(sh, sys, lr_e1(dir1, :), nsigma, hvar_e1(dir1, :, :, :))
+    call X(sternheimer_calc_hvar)(sh_mo, sys, lr_b(dir1, :), 1, hvar_b(dir1, :, :, :))
   end do
   
   do dir1 = 1, sys%gr%sb%dim
@@ -947,56 +947,56 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, lr_e, &
         call pert_setup_dir(pert_m, dir3)
         do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
           ispin = states_dim_get_spin_index(sys%st%d, ik)
-          weight = sys%st%d%kweights(ik)*sys%st%smear%el_per_state
+          weight = sys%st%d%kweights(ik) * sys%st%smear%el_per_state
           do ist = 1, sys%st%nst
             if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
               call X(pert_apply)(pert_e1, sys%gr, sys%geo, hm, ik,&
-                lr_e(dir2, 1)%X(dl_psi)(:,:,ist,ik), pertpsi_e1(:,:))
+                lr_e(dir2, 1)%X(dl_psi)(:, :, ist, ik), pertpsi_e1(:, :))
               call X(pert_apply)(pert_e2, sys%gr, sys%geo, hm, ik,&
-                lr_e1(dir1, nsigma)%X(dl_psi)(:,:,ist,ik), pertpsi_e2(:,:))
+                lr_e1(dir1, nsigma)%X(dl_psi)(:, :, ist, ik), pertpsi_e2(:, :))
               call X(pert_apply)(pert_m, sys%gr, sys%geo, hm, ik, &
-                lr_e1(dir1, nsigma)%X(dl_psi)(:,:,ist,ik), pertpsi_b(:,:))
+                lr_e1(dir1, nsigma)%X(dl_psi)(:, :, ist, ik), pertpsi_b(:, :))
               do idim = 1, hm%d%dim
                 do ip = 1, sys%gr%mesh%np
-                  pertpsi_e1(ip,idim) = pertpsi_e1(ip,idim) + hvar_e1(dir1,ip,ispin,1) * &
+                  pertpsi_e1(ip, idim) = pertpsi_e1(ip, idim) + hvar_e1(dir1, ip, ispin, 1) * &
                     lr_e(dir2, 1)%X(dl_psi)(ip,idim,ist,ik)
-                  pertpsi_e2(ip,idim) = pertpsi_e2(ip,idim) + hvar_e2(dir2,ip,ispin,nsigma) * &
-                    lr_e1(dir1, nsigma)%X(dl_psi)(ip,idim,ist,ik)
-                  pertpsi_b(ip,idim) = pertpsi_b(ip,idim) + hvar_b(dir3,ip,ispin,1) * &
-                    lr_e1(dir1, nsigma)%X(dl_psi)(ip,idim,ist,ik)
+                  pertpsi_e2(ip, idim) = pertpsi_e2(ip, idim) + hvar_e2(dir2, ip, ispin, nsigma) * &
+                    lr_e1(dir1, nsigma)%X(dl_psi)(ip, idim, ist, ik)
+                  pertpsi_b(ip, idim) = pertpsi_b(ip, idim) + hvar_b(dir3, ip, ispin, 1) * &
+                    lr_e1(dir1, nsigma)%X(dl_psi)(ip, idim, ist, ik)
                 end do
               end do
               chi(dir1, dir2, dir3) = chi(dir1, dir2, dir3) + weight * ( &
-                factor1 * X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,lr_b(dir3,1)%X(dl_psi)(:,:,ist,ik),&
-                  pertpsi_e1(:,:)) &
-                + factor1 * X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,lr_b(dir3,1)%X(dl_psi)(:,:,ist,ik),&
-                  pertpsi_e2(:,:)) &
-                + X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,lr_e(dir2, nsigma)%X(dl_psi)(:,:,ist,ik),&
-                  pertpsi_b(:,:)))
+                factor1 * X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, lr_b(dir3, 1)%X(dl_psi)(:, :, ist, ik),&
+                  pertpsi_e1(:, :)) &
+                + factor1 * X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, lr_b(dir3, 1)%X(dl_psi)(:, :, ist, ik),&
+                  pertpsi_e2(:, :)) &
+                + X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, lr_e(dir2, nsigma)%X(dl_psi)(:, :, ist, ik),&
+                  pertpsi_b(:, :)))
 
-              call X(pert_apply)(pert_e1, sys%gr, sys%geo, hm, ik, lr_b(dir3,1)%X(dl_psi)(:,:,ist,ik), &
-                pertpsi_e1(:,:))
-              call X(pert_apply)(pert_e2, sys%gr, sys%geo, hm, ik, lr_b(dir3,1)%X(dl_psi)(:,:,ist,ik), &
-                pertpsi_e2(:,:))
-              call X(pert_apply)(pert_m, sys%gr, sys%geo, hm, ik, lr_e(dir2, 1)%X(dl_psi)(:,:,ist,ik), &
-                pertpsi_b(:,:))
+              call X(pert_apply)(pert_e1, sys%gr, sys%geo, hm, ik, lr_b(dir3, 1)%X(dl_psi)(:, :, ist, ik), &
+                pertpsi_e1(:, :))
+              call X(pert_apply)(pert_e2, sys%gr, sys%geo, hm, ik, lr_b(dir3,1)%X(dl_psi)(:, :, ist, ik), &
+                pertpsi_e2(:, :))
+              call X(pert_apply)(pert_m, sys%gr, sys%geo, hm, ik, lr_e(dir2, 1)%X(dl_psi)(:, :, ist, ik), &
+                pertpsi_b(:, :))
               do idim = 1, hm%d%dim
                 do ip = 1, sys%gr%mesh%np
-                  pertpsi_e1(ip,idim) = pertpsi_e1(ip,idim) + hvar_e1(dir1,ip,ispin,1) * &
-                    lr_b(dir3,1)%X(dl_psi)(ip,idim,ist,ik)
-                  pertpsi_e2(ip,idim) = pertpsi_e2(ip,idim) + hvar_e2(dir2,ip,ispin,nsigma) * &
-                    lr_b(dir3,1)%X(dl_psi)(ip,idim,ist,ik)
-                  pertpsi_b(ip,idim) = pertpsi_b(ip,idim) + hvar_b(dir3,ip,ispin,1) * &
-                    lr_e(dir2, 1)%X(dl_psi)(ip,idim,ist,ik)
+                  pertpsi_e1(ip, idim) = pertpsi_e1(ip, idim) + hvar_e1(dir1, ip, ispin, 1) * &
+                    lr_b(dir3, 1)%X(dl_psi)(ip, idim, ist, ik)
+                  pertpsi_e2(ip, idim) = pertpsi_e2(ip, idim) + hvar_e2(dir2, ip, ispin, nsigma) * &
+                    lr_b(dir3, 1)%X(dl_psi)(ip, idim, ist, ik)
+                  pertpsi_b(ip, idim) = pertpsi_b(ip, idim) + hvar_b(dir3, ip, ispin, 1) * &
+                    lr_e(dir2, 1)%X(dl_psi)(ip, idim, ist, ik)
                 end do
               end do
               chi(dir1, dir2, dir3) = chi(dir1, dir2, dir3) + weight * ( &
-                X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,&
-                  lr_e(dir2, nsigma)%X(dl_psi)(:,:,ist,ik),pertpsi_e1(:,:)) &
-                + X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,&
-                  lr_e1(dir1, 1)%X(dl_psi)(:,:,ist,ik),pertpsi_e2(:,:)) &
-                + X(mf_dotp)(sys%gr%mesh,sys%st%d%dim,&
-                  lr_e1(dir1, 1)%X(dl_psi)(:,:,ist,ik),pertpsi_b(:,:)))
+                X(mf_dotp)(sys%gr%mesh, sys%st%d%dim,&
+                  lr_e(dir2, nsigma)%X(dl_psi)(:, :, ist, ik), pertpsi_e1(:, :)) &
+                + X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, &
+                  lr_e1(dir1, 1)%X(dl_psi)(:, :, ist, ik), pertpsi_e2(:, :)) &
+                + X(mf_dotp)(sys%gr%mesh, sys%st%d%dim,&
+                  lr_e1(dir1, 1)%X(dl_psi)(:, :, ist, ik), pertpsi_b(:, :)))
             end if
           end do
         end do
@@ -1013,47 +1013,46 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, lr_e, &
         end if
 
         do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
-          weight = sys%st%d%kweights(ik)*sys%st%smear%el_per_state
+          weight = sys%st%d%kweights(ik) * sys%st%smear%el_per_state
  
           call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
-            lr_e(dir2,nsigma)%X(dl_psi)(:,:,:,ik), lr_b(dir3,1)%X(dl_psi)(:,:,:,ik), prod_eb2%X(matrix))
+            lr_e(dir2, nsigma)%X(dl_psi)(:, :, :, ik), lr_b(dir3, 1)%X(dl_psi)(:, :, :, ik), prod_eb2%X(matrix))
           call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
-            factor1 * lr_b(dir3,1)%X(dl_psi)(:,:,:,ik), lr_e(dir2,1)%X(dl_psi)(:,:,:,ik), prod_be2%X(matrix))
+            factor1 * lr_b(dir3, 1)%X(dl_psi)(:, :, :, ik), lr_e(dir2, 1)%X(dl_psi)(:, :, :, ik), prod_be2%X(matrix))
 
           call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
-            lr_e1(dir1,1)%X(dl_psi)(:,:,:,ik), lr_b(dir3,1)%X(dl_psi)(:,:,:,ik), prod_eb1%X(matrix))
+            lr_e1(dir1, 1)%X(dl_psi)(:, :, :, ik), lr_b(dir3, 1)%X(dl_psi)(:, :, :, ik), prod_eb1%X(matrix))
           call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
-            factor1 * lr_b(dir3,1)%X(dl_psi)(:,:,:,ik), lr_e1(dir1,nsigma)%X(dl_psi)(:,:,:,ik), prod_be1%X(matrix))
+            factor1 * lr_b(dir3, 1)%X(dl_psi)(:, :, :, ik), lr_e1(dir1, nsigma)%X(dl_psi)(:, :, :, ik), prod_be1%X(matrix))
 
           call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
-            lr_e1(dir1,1)%X(dl_psi)(:,:,:,ik), lr_e(dir2,1)%X(dl_psi)(:,:,:,ik), prod_ee1%X(matrix))
+            lr_e1(dir1, 1)%X(dl_psi)(:, :, :, ik), lr_e(dir2, 1)%X(dl_psi)(:, :, :, ik), prod_ee1%X(matrix))
           call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
-            lr_e(dir2,nsigma)%X(dl_psi)(:,:,:,ik), lr_e1(dir1,nsigma)%X(dl_psi)(:,:,:,ik), prod_ee2%X(matrix))
+            lr_e(dir2, nsigma)%X(dl_psi)(:, :, :, ik), lr_e1(dir1, nsigma)%X(dl_psi)(:, :, :, ik), prod_ee2%X(matrix))
          
           do ist = 1, sys%st%nst
             if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
               call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
-            
-              call X(pert_apply)(pert_e1, sys%gr, sys%geo, hm, ik, psi, pertpsi_e1(:,:))
-              call X(pert_apply)(pert_e2, sys%gr, sys%geo, hm, ik, psi, pertpsi_e2(:,:))
-              call X(pert_apply)(pert_m, sys%gr, sys%geo, hm, ik, psi, pertpsi_b(:,:))
+              call X(pert_apply)(pert_e1, sys%gr, sys%geo, hm, ik, psi, pertpsi_e1(:, :))
+              call X(pert_apply)(pert_e2, sys%gr, sys%geo, hm, ik, psi, pertpsi_e2(:, :))
+              call X(pert_apply)(pert_m, sys%gr, sys%geo, hm, ik, psi, pertpsi_b(:, :))
               do idim = 1, hm%d%dim
                 do ip = 1, sys%gr%mesh%np
-                  pertpsi_e1(ip,idim) = pertpsi_e1(ip,idim) + hvar_e1(dir1,ip,ispin,1)*psi(ip,idim)
-                  pertpsi_e2(ip,idim) = pertpsi_e2(ip,idim) + hvar_e2(dir2,ip,ispin,nsigma)*psi(ip,idim)
-                  pertpsi_b(ip,idim) = pertpsi_b(ip,idim) + hvar_b(dir3,ip,ispin,1)*psi(ip,idim)
+                  pertpsi_e1(ip, idim) = pertpsi_e1(ip, idim) + hvar_e1(dir1, ip, ispin, 1) * psi(ip, idim)
+                  pertpsi_e2(ip, idim) = pertpsi_e2(ip, idim) + hvar_e2(dir2, ip, ispin, nsigma) * psi(ip, idim)
+                  pertpsi_b(ip, idim) = pertpsi_b(ip, idim) + hvar_b(dir3, ip, ispin, 1) * psi(ip, idim)
                 end do
               end do
               do ist_occ = 1, sys%st%nst
                 if(abs(sys%st%occ(ist_occ, ik)) .gt. M_EPSILON) then
                   call states_get_state(sys%st, sys%gr%mesh, ist_occ, ik, psi1)
                   chi(dir1, dir2, dir3) = chi(dir1, dir2, dir3) - weight * (&
-                    X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, psi1, pertpsi_e1(:,:))&
-                    *(prod_eb2%X(matrix)(ist,ist_occ) + prod_be2%X(matrix)(ist,ist_occ))&
-                    + X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, psi1, pertpsi_e2(:,:))&
-                    *(prod_eb1%X(matrix)(ist,ist_occ) + prod_be1%X(matrix)(ist,ist_occ))&
-                    + X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, psi1, pertpsi_b(:,:))&
-                    *(prod_ee1%X(matrix)(ist,ist_occ) + prod_ee2%X(matrix)(ist,ist_occ)))
+                    X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, psi1, pertpsi_e1(:, :))&
+                    *(prod_eb2%X(matrix)(ist, ist_occ) + prod_be2%X(matrix)(ist, ist_occ))&
+                    + X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, psi1, pertpsi_e2(:, :))&
+                    *(prod_eb1%X(matrix)(ist, ist_occ) + prod_be1%X(matrix)(ist, ist_occ))&
+                    + X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, psi1, pertpsi_b(:, :))&
+                    *(prod_ee1%X(matrix)(ist, ist_occ) + prod_ee2%X(matrix)(ist, ist_occ)))
                 end if
               end do
             end if
