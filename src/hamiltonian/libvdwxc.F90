@@ -12,6 +12,7 @@ module libvdwxc_oct_m
   use fft_oct_m
   use global_oct_m
   use grid_oct_m
+  use io_function_oct_m
   use mesh_oct_m
   use mesh_cube_parallel_map_oct_m
   use messages_oct_m
@@ -19,6 +20,7 @@ module libvdwxc_oct_m
   use parser_oct_m
   use pfft_oct_m
   use profiling_oct_m
+  use unit_system_oct_m
 
   implicit none
 
@@ -47,6 +49,7 @@ module libvdwxc_oct_m
     integer                        :: functional
     logical                        :: debug
     FLOAT                          :: energy
+    FLOAT                          :: vdw_factor
     FLOAT, allocatable             :: rho(:)
     FLOAT, allocatable             :: gradrho(:,:)
   end type libvdwxc_t
@@ -132,7 +135,24 @@ contains
 #endif
     ASSERT(associated(libvdwxc%libvdwxc_ptr))
     libvdwxc%functional = functional
+    !%Variable libvdwxcDebug
+    !%Type logical
+    !%Section Hamiltonian::XC
+    !%Description
+    !% Dump libvdwxc inputs and outputs to files.
+    !%End
+    call parse_variable('libvdwxcDebug', .false., libvdwxc%debug)
     POP_SUB(libvdwxc_init)
+
+    !%Variable libvdwxcVDWFactor
+    !%Type float
+    !%Section Hamiltonian::XC
+    !%Description
+    !% Prefactor of non-local van der Waals functional.
+    !% Setting a prefactor other than one is wrong, but useful
+    !% for debugging.
+    !%End
+    call parse_variable('libvdwxcVDWFactor', M_ONE, libvdwxc%vdw_factor)
   end subroutine libvdwxc_init
 
   subroutine libvdwxc_print(this)
@@ -205,13 +225,6 @@ contains
       end if
     end if
 
-    !%Variable libvdwxcDebug
-    !%Type logical
-    !%Section Hamiltonian::XC
-    !%Description
-    !% Dump libvdwxc inputs and outputs to files
-    !%End
-    call parse_variable('libvdwxcDebug', .false., this%debug)
     ! TODO implement.  Should dump quantities to files.
 
     blocksize = mesh%idx%ll(1) / mesh%mpi_grp%size
@@ -263,7 +276,7 @@ contains
 
     real(8), allocatable :: workbuffer(:)
     real(8), allocatable :: cube_rho(:,:,:), cube_sigma(:,:,:), cube_dedrho(:,:,:), cube_dedsigma(:,:,:)
-    real(8), dimension(1) :: tmp_energy
+    real(8), dimension(3) :: energy_and_integrals_buffer
     integer :: ii, ierr
 
     PUSH_SUB(libvdwxc_calculate)
@@ -303,6 +316,11 @@ contains
     ! This is sigma, the absolute-squared density gradient:
     workbuffer(:) = sum(gradrho(:, :, 1)**2, 2)
 
+    if(this%debug) then
+      call libvdwxc_write_array(rho(:, 1), 'rho')
+      call libvdwxc_write_array(workbuffer, 'gradrho')
+    end if
+
     cube_rho = M_ZERO
     cube_sigma = M_ZERO
     cube_dedrho = M_ZERO
@@ -318,6 +336,10 @@ contains
 #ifdef HAVE_LIBVDWXC
     call vdwxc_calculate(this%libvdwxc_ptr, cube_rho, cube_sigma, cube_dedrho, cube_dedsigma, this%energy)
 #endif
+    this%energy = this%energy * this%vdw_factor
+    cube_dedrho = cube_dedrho * this%vdw_factor
+    cube_dedsigma = cube_dedsigma * this%vdw_factor
+
     call fromcube(cube_dedrho, workbuffer)
     ! dedd is 1:mesh%np_part for some reason
     dedd(1:this%mesh%np, 1) = dedd(1:this%mesh%np, 1) + workbuffer
@@ -326,22 +348,24 @@ contains
       dedgd(ii, :, 1) = dedgd(ii, :, 1) + M_TWO * workbuffer(ii) * gradrho(ii, :, 1)
     end do
 
+    if(this%debug) then
+      call libvdwxc_write_array(dedd(:, 1), 'dedrho')
+      call libvdwxc_write_array(dedgd(:, 1, 1), 'dedgradrho.x')
+      call libvdwxc_write_array(dedgd(:, 2, 1), 'dedgradrho.y')
+      call libvdwxc_write_array(dedgd(:, 3, 1), 'dedgradrho.z')
+    end if
+
+    energy_and_integrals_buffer(1) = this%energy
+    energy_and_integrals_buffer(2) = sum(rho(1:this%mesh%np,:) * dedd(1:this%mesh%np,:)) * this%mesh%volume_element
+    energy_and_integrals_buffer(3) = sum(gradrho(1:this%mesh%np,:,:) * dedgd(1:this%mesh%np,:,:)) * this%mesh%volume_element
+
 #ifdef HAVE_MPI
-    tmp_energy(1) = this%energy
-    call MPI_Allreduce(MPI_IN_PLACE, tmp_energy, 1, MPI_FLOAT, MPI_SUM, this%mesh%mpi_grp%comm, ierr)
-    write(message(1), '(a,f15.12,a)') 'libvdwxc non-local correlation energy: ', tmp_energy, ' Ha'
-    call messages_info(1)
-
-    tmp_energy(1) = sum(rho(1:this%mesh%np,:) * dedd(1:this%mesh%np,:)) * this%mesh%volume_element
-    call MPI_Allreduce(MPI_IN_PLACE, tmp_energy, 1, MPI_FLOAT, MPI_SUM, this%mesh%mpi_grp%comm, ierr)
-    write(message(1), '(a,f15.12)')   '                      n-dedn integral: ', tmp_energy(1)
-    call messages_info(1)
-
-    tmp_energy(1) = sum(gradrho(1:this%mesh%np,:,:) * dedgd(1:this%mesh%np,:,:)) * this%mesh%volume_element
-    call MPI_Allreduce(MPI_IN_PLACE, tmp_energy, 1, MPI_FLOAT, MPI_SUM, this%mesh%mpi_grp%comm, ierr)
-    write(message(1), '(a,f15.12)')   '              gradn-dedgradn integral: ', tmp_energy(1)
-    call messages_info(1)
+    call MPI_Allreduce(MPI_IN_PLACE, energy_and_integrals_buffer, 3, MPI_FLOAT, MPI_SUM, this%mesh%mpi_grp%comm, ierr)
 #endif
+    write(message(1), '(a,f15.12,a)') 'libvdwxc non-local correlation energy: ', energy_and_integrals_buffer(1), ' Ha'
+    write(message(2), '(a,f15.12)')   '                      n-dedn integral: ', energy_and_integrals_buffer(2)
+    write(message(3), '(a,f15.12)')   '              gradn-dedgradn integral: ', energy_and_integrals_buffer(3)
+    call messages_info(3)
 
     SAFE_DEALLOCATE_A(workbuffer)
     SAFE_DEALLOCATE_A(cube_rho)
@@ -391,7 +415,16 @@ contains
         POP_SUB(libvdwxc_calculate.fromcube)
       end subroutine fromcube
 
-  end subroutine libvdwxc_calculate
+      subroutine libvdwxc_write_array(arr, fname)
+        FLOAT,            intent(in) :: arr(:)
+        character(len=*), intent(in) :: fname
+        integer :: ierr
+
+        call dio_function_output(OPTION__OUTPUTFORMAT__DX,  'libvdwxc-debug', &
+          fname, this%mesh, arr, unit_one, ierr)
+      end subroutine libvdwxc_write_array
+
+    end subroutine libvdwxc_calculate
 
   subroutine libvdwxc_end(this)
     type(libvdwxc_t), intent(inout) :: this
