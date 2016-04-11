@@ -105,6 +105,7 @@ module xml_oct_m
     module procedure xml_file_read_float
     module procedure xml_file_read_string
     module procedure xml_tag_get_tag_value_array
+    module procedure xml_tag_get_value_array
   end interface xml_get_tag_value
 
 contains
@@ -192,7 +193,30 @@ contains
     end if
 
   end function xml_tag_get_tag_value_array
+  ! ----------------------------------------------------------------------
 
+  integer function xml_tag_get_value_array(this, size, val) result(ierr)
+    type(xml_tag_t),  intent(in)    :: this
+    integer,          intent(in)    :: size
+    real(8),          intent(out)   :: val(:)
+
+    interface
+      integer function xml_tag_get_value_array_low(this, size, val)
+        import :: xml_tag_t
+        type(xml_tag_t),  intent(in)    :: this
+        integer,          intent(in)    :: size
+        real(8),          intent(out)   :: val
+      end function xml_tag_get_value_array_low
+    end interface
+
+    if(size > 0) then
+      ierr = xml_tag_get_value_array_low(this, size, val(1))
+    else
+      ierr = 0
+    end if
+
+  end function xml_tag_get_value_array
+  
 end module xml_oct_m
 
 !! Local Variables:

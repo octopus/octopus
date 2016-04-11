@@ -37,15 +37,19 @@ module ps_qso_oct_m
     ps_qso_end
 
   type ps_qso_t
+    logical            :: oncv
     integer            :: atomic_number
     FLOAT              :: mass
     FLOAT              :: valence_charge
     integer            :: lmax
     integer            :: llocal
     FLOAT              :: mesh_spacing
+    integer            :: nchannels
     integer            :: grid_size
     FLOAT, allocatable :: potential(:, :)
     FLOAT, allocatable :: wavefunction(:, :)
+    FLOAT, allocatable :: projector(:, :, :)
+    FLOAT, allocatable :: dij(:, :, :)
   end type ps_qso_t
 
 contains
@@ -55,7 +59,7 @@ contains
     type(ps_qso_t),   intent(inout) :: this
     character(len=*), intent(in)    :: filename
 
-    integer :: ll, size, ierr, ii
+    integer :: ll, size, ierr, ii, ic, jc
     type(xml_file_t) :: qso_file
     type(xml_tag_t)  :: tag
     
@@ -68,37 +72,98 @@ contains
       call messages_fatal()
     end if    
 
-    ierr = xml_get_tag_value(qso_file, 'lmax', this%lmax)
-    ierr = xml_get_tag_value(qso_file, 'llocal', this%llocal)
-    ierr = xml_get_tag_value(qso_file, 'mass', this%mass)
     ierr = xml_get_tag_value(qso_file, 'valence_charge', this%valence_charge)
     ierr = xml_get_tag_value(qso_file, 'mesh_spacing', this%mesh_spacing)
+    ierr = xml_get_tag_value(qso_file, 'mass', this%mass)
 
-    do ii = 0, this%lmax
-      ierr = xml_file_tag(qso_file, 'projector', ii, tag)
-      ierr = xml_tag_get_attribute_value(tag, 'l', ll)
-      ierr = xml_tag_get_attribute_value(tag, 'size', size)
+    ierr = xml_get_tag_value(qso_file, 'lmax', this%lmax)
 
-      ASSERT(ll == ii)
+    this%oncv = ierr /= 0
+
+    if(.not. this%oncv) then
+      this%nchannels = 1
       
-      if(ii == 0) then
-        this%grid_size = size
-        SAFE_ALLOCATE(this%potential(1:size, 0:this%lmax))
-        SAFE_ALLOCATE(this%wavefunction(1:size, 0:this%lmax))
-      else
-        ASSERT(size == this%grid_size)
-      end if
+      ierr = xml_get_tag_value(qso_file, 'llocal', this%llocal)
       
-      ierr = xml_get_tag_value(tag, 'radial_potential', size, this%potential(:, ll))
-      ierr = xml_get_tag_value(tag, 'radial_function', size, this%wavefunction(:, ll))
+      do ii = 0, this%lmax
+        ierr = xml_file_tag(qso_file, 'projector', ii, tag)
+        ierr = xml_tag_get_attribute_value(tag, 'l', ll)
+        ierr = xml_tag_get_attribute_value(tag, 'size', size)
+        
+        ASSERT(ll == ii)
+        
+        if(ii == 0) then
+          this%grid_size = size
+          SAFE_ALLOCATE(this%potential(1:size, 0:this%lmax))
+          SAFE_ALLOCATE(this%wavefunction(1:size, 0:this%lmax))
+        else
+          ASSERT(size == this%grid_size)
+        end if
+        
+        ierr = xml_get_tag_value(tag, 'radial_potential', size, this%potential(:, ll))
+        ierr = xml_get_tag_value(tag, 'radial_function', size, this%wavefunction(:, ll))
+        
+        call xml_tag_end(tag)
+        
+      end do
+
+    else
+
+      this%llocal = -1
+      this%lmax = -1
+      this%nchannels = -1
+
+      ierr = xml_file_tag(qso_file, 'local_potential', 0, tag)
+      ASSERT(ierr == 0)
+      
+      ierr = xml_tag_get_attribute_value(tag, 'size', this%grid_size)
+      ASSERT(ierr == 0)
+      
+      SAFE_ALLOCATE(this%potential(1:this%grid_size, -1:-1))
+      
+      ierr = xml_get_tag_value(tag, this%grid_size, this%potential(:, -1))
 
       call xml_tag_end(tag)
 
-    end do
+      SAFE_ALLOCATE(this%projector(1:this%grid_size, 0:3, 1:2))
+      
+      do ii = 0, 7
+       
+        ierr = xml_file_tag(qso_file, 'projector', ii, tag)
 
+        if(ierr /= 0) exit
+
+        ierr = xml_tag_get_attribute_value(tag, 'l', ll)
+        ierr = xml_tag_get_attribute_value(tag, 'i', ic)
+        ierr = xml_tag_get_attribute_value(tag, 'size', size)
+
+        ASSERT(size == this%grid_size)
+        
+        this%lmax = max(this%lmax, ll)
+        this%nchannels = max(this%nchannels, ic)
+
+        ierr = xml_get_tag_value(tag, this%grid_size, this%projector(:, ll, ic))
+
+        call xml_tag_end(tag)
+        
+      end do
+
+      SAFE_ALLOCATE(this%dij(0:this%lmax, 1:this%nchannels, 1:this%nchannels))
+
+      do ii = 0, (this%lmax + 1)*this%nchannels**2 - 1
+        ierr = xml_file_tag(qso_file, 'd_ij', ii, tag)
+        ierr = xml_tag_get_attribute_value(tag, 'l', ll)
+        ierr = xml_tag_get_attribute_value(tag, 'i', ic)
+        ierr = xml_tag_get_attribute_value(tag, 'j', jc)
+        ierr = xml_get_tag_value(tag, 1, this%dij(ll:ll, ic, jc))
+        call xml_tag_end(tag)
+      end do
+      
+    end if
+    
     call xml_file_end(qso_file)
 
-    call ps_qso_check_normalization(this)
+    if(.not. this%oncv) call ps_qso_check_normalization(this)
     
     POP_SUB(ps_qso_init)
   end subroutine ps_qso_init
@@ -142,6 +207,8 @@ contains
 
     SAFE_DEALLOCATE_A(this%potential)
     SAFE_DEALLOCATE_A(this%wavefunction)
+    SAFE_DEALLOCATE_A(this%projector)
+    SAFE_DEALLOCATE_A(this%dij)
 
     POP_SUB(ps_qso_end)
   end subroutine ps_qso_end

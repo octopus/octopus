@@ -47,7 +47,7 @@ static fint seek_tag(FILE ** xml_file, const char * tag, int index, const int en
   while(fgets(buffer, sizeof(buffer), *xml_file)){
 
 #ifdef XML_FILE_DEBUG
-    /*    printf("line: %s\n", buffer); */
+    //    printf("line: %s\n", buffer);
 #endif
     
     /* check for the tag */
@@ -373,7 +373,8 @@ fint FC_FUNC_(xml_tag_get_attribute_string, XML_TAG_GET_ATTRIBUTE_STRING)
 
 fint FC_FUNC_(xml_file_read_integer_low, XML_FILE_READ_INTEGER_LOW)(FILE ** xml_file, STR_F_TYPE tag_f, fint * value STR_ARG1){
   char * tag;
-
+  int ierr;
+  
   TO_C_STR1(tag_f, tag);
 
 #ifdef XML_FILE_DEBUG
@@ -381,8 +382,15 @@ fint FC_FUNC_(xml_file_read_integer_low, XML_FILE_READ_INTEGER_LOW)(FILE ** xml_
 #endif
 
   fseek(*xml_file, 0, SEEK_SET);
-  seek_tag(xml_file, tag, 0, 1);
+  ierr = seek_tag(xml_file, tag, 0, 1);
 
+  if(ierr != 0) {
+#ifdef XML_FILE_DEBUG
+    printf("Not found\n");
+#endif
+    return ierr;
+  }
+  
   fscanf(*xml_file, "%d", value);  
 
 #ifdef XML_FILE_DEBUG
@@ -396,7 +404,8 @@ fint FC_FUNC_(xml_file_read_integer_low, XML_FILE_READ_INTEGER_LOW)(FILE ** xml_
 
 fint FC_FUNC_(xml_file_read_double_low, XML_FILE_READ_DOUBLE_LOW)(FILE ** xml_file, STR_F_TYPE tag_f, double * value STR_ARG1){
   char * tag;
-
+  int ierr;
+  
   TO_C_STR1(tag_f, tag);
 
 #ifdef XML_FILE_DEBUG
@@ -404,8 +413,15 @@ fint FC_FUNC_(xml_file_read_double_low, XML_FILE_READ_DOUBLE_LOW)(FILE ** xml_fi
 #endif
 
   fseek(*xml_file, 0, SEEK_SET);
-  seek_tag(xml_file, tag, 0, 1);
+  ierr = seek_tag(xml_file, tag, 0, 1);
 
+  if(ierr != 0) {
+#ifdef XML_FILE_DEBUG
+    printf("Not found\n");
+#endif
+    return ierr;
+  }
+  
   fscanf(*xml_file, "%lf", value);  
 
 #ifdef XML_FILE_DEBUG
@@ -479,6 +495,28 @@ fint FC_FUNC_(xml_tag_get_tag_value_array_low, XML_TAG_GET_TAG_VALUE_ARRAY_LOW)
   }
   
   free(subtagname);
+  
+  return 0;
+}
+
+fint FC_FUNC_(xml_tag_get_value_array_low, XML_TAG_GET_VALUE_ARRAY_LOW)
+     (tag_t ** tag, const fint * size, double * val){
+
+  fint ii, ierr;
+  char buffer[1000];
+  char * res;
+  double v;
+  
+  fsetpos((*tag)->xml_file, &(*tag)->pos);
+  fgets(buffer, sizeof(buffer), (*tag)->xml_file);
+  res = strstr(buffer, ">");
+
+  fsetpos((*tag)->xml_file, &(*tag)->pos);
+  fseek((*tag)->xml_file, res + 1 - buffer, SEEK_CUR);
+
+  for(ii = 0; ii < *size; ii++){
+    fscanf((*tag)->xml_file, "%lf", val + ii);
+  }
   
   return 0;
 }

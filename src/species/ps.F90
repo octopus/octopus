@@ -288,13 +288,18 @@ contains
 
       ps%z      = z
       ps%conf%z = nint(z)
-      ps%conf%p = ps_qso%lmax + 1
+
+      if(ps_qso%oncv) then
+        ps%conf%p = 0
+      else
+        ps%conf%p = ps_qso%lmax + 1
+      end if
 
       do ll = 0, ps_qso%lmax
         ps%conf%l(ll + 1) = ll
       end do
 
-      ps%kbc    = 1
+      ps%kbc    = ps_qso%nchannels
       ps%l_max  = ps_qso%lmax
       ps%l_loc  = ps_qso%llocal
 
@@ -1022,7 +1027,7 @@ contains
     type(ps_t),     intent(inout) :: ps
     type(ps_qso_t), intent(in)    :: ps_qso
 
-    integer :: ll, ip, is
+    integer :: ll, ip, is, ic, jc
     FLOAT :: rr, kbcos, kbnorm, dnrm, avgv, volume_element
     FLOAT, allocatable :: vlocal(:), kbprojector(:), wavefunction(:)
 
@@ -1056,46 +1061,70 @@ contains
     wavefunction = CNST(0.0)
 
     ! the projectors and the orbitals
-    
+
     do ll = 0, ps_qso%lmax
 
-      ! we need to build the KB projectors
-      ! the procedure was copied from ps_in_grid.F90 (r12967)
-      dnrm = M_ZERO
-      avgv = M_ZERO
-      do ip = 1, ps_qso%grid_size
-        rr = (ip - 1)*ps_qso%mesh_spacing
-        volume_element = rr**2*ps_qso%mesh_spacing
-        kbprojector(ip) = (ps_qso%potential(ip, ll) - ps_qso%potential(ip, ps_qso%llocal))*ps_qso%wavefunction(ip, ll)
-        dnrm = dnrm + kbprojector(ip)**2*volume_element
-        avgv = avgv + kbprojector(ip)*ps_qso%wavefunction(ip, ll)*volume_element
-      end do
-      kbcos = dnrm/(avgv + CNST(1.0e-20))
-      kbnorm = M_ONE/(sqrt(dnrm) + CNST(1.0e-20))
+      if(ps_qso%oncv) then
 
-      if(ll /= ps_qso%llocal) then
-        ps%h(ll, 1, 1) = kbcos        
-        kbprojector = kbprojector*kbnorm
+        do ic = 1, ps_qso%nchannels
+
+          do ip = 1, ps%g%nrval
+            if(ip <= ps_qso%grid_size) then
+              kbprojector(ip) = ps_qso%projector(ip, ll, ic)
+            else
+              kbprojector(ip) = 0.0
+            end if
+          end do
+
+          call spline_fit(ps%g%nrval, ps%g%rofi, kbprojector, ps%kb(ll, ic))
+
+          do jc = 1, ps_qso%nchannels
+            ps%h(ll, ic, jc) = ps_qso%dij(ll, ic, jc)
+          end do
+
+        end do
+
       else
-        ps%h(ll, 1, 1) = CNST(0.0)
-      end if
 
-      call spline_fit(ps%g%nrval, ps%g%rofi, kbprojector, ps%kb(ll, 1))
+        ! we need to build the KB projectors
+        ! the procedure was copied from ps_in_grid.F90 (r12967)
+        dnrm = M_ZERO
+        avgv = M_ZERO
+        do ip = 1, ps_qso%grid_size
+          rr = (ip - 1)*ps_qso%mesh_spacing
+          volume_element = rr**2*ps_qso%mesh_spacing
+          kbprojector(ip) = (ps_qso%potential(ip, ll) - ps_qso%potential(ip, ps_qso%llocal))*ps_qso%wavefunction(ip, ll)
+          dnrm = dnrm + kbprojector(ip)**2*volume_element
+          avgv = avgv + kbprojector(ip)*ps_qso%wavefunction(ip, ll)*volume_element
+        end do
+        kbcos = dnrm/(avgv + CNST(1.0e-20))
+        kbnorm = M_ONE/(sqrt(dnrm) + CNST(1.0e-20))
 
-      ! wavefunctions, for the moment we pad them with zero
-      do ip = 1, ps%g%nrval
-        rr = (ip - 1)*ps_qso%mesh_spacing
-        if(ip <= ps_qso%grid_size) then
-          wavefunction(ip) = ps_qso%wavefunction(ip, ll)
+        if(ll /= ps_qso%llocal) then
+          ps%h(ll, 1, 1) = kbcos        
+          kbprojector = kbprojector*kbnorm
         else
-          wavefunction(ip) = CNST(0.0)
+          ps%h(ll, 1, 1) = CNST(0.0)
         end if
-      end do
-      
-      do is = 1, ps%ispin
-        call spline_fit(ps%g%nrval, ps%g%rofi, wavefunction, ps%ur(ll + 1, is))
-        call spline_fit(ps%g%nrval, ps%g%r2ofi, wavefunction, ps%ur_sq(ll + 1, is))
-      end do
+
+        call spline_fit(ps%g%nrval, ps%g%rofi, kbprojector, ps%kb(ll, 1))
+
+        ! wavefunctions, for the moment we pad them with zero
+        do ip = 1, ps%g%nrval
+          rr = (ip - 1)*ps_qso%mesh_spacing
+          if(ip <= ps_qso%grid_size) then
+            wavefunction(ip) = ps_qso%wavefunction(ip, ll)
+          else
+            wavefunction(ip) = CNST(0.0)
+          end if
+        end do
+
+        do is = 1, ps%ispin
+          call spline_fit(ps%g%nrval, ps%g%rofi, wavefunction, ps%ur(ll + 1, is))
+          call spline_fit(ps%g%nrval, ps%g%r2ofi, wavefunction, ps%ur_sq(ll + 1, is))
+        end do
+
+      end if
 
     end do
 
