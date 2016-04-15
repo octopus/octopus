@@ -93,7 +93,6 @@ module poisson_oct_m
     POISSON_CG_CORRECTED  =  6,         &
     POISSON_MULTIGRID     =  7,         &
     POISSON_ISF           =  8,         &
-    POISSON_SETE          =  9,         &
     POISSON_LIBISF        = 10,         &
     POISSON_NO            = -99,        &
     POISSON_NULL          = -999
@@ -211,8 +210,6 @@ contains
     !% Multigrid method (only for finite systems).
     !%Option isf 8
     !% Interpolating Scaling Functions Poisson solver (only for finite systems).
-    !%Option sete 9
-    !% (Obsolete) SETE solver.
     !%Option libisf 10
     !% Meant to be exactly the same as Interpolating
     !% Scaling Functions (isf) Poisson solver, but using an external
@@ -266,14 +263,12 @@ contains
       str = "multigrid"
     case (POISSON_ISF)
       str = "interpolating scaling functions"
-    case (POISSON_SETE)
-      str = "SETE"
     case (POISSON_LIBISF)
       str = "interpolating scaling functions (from BigDFT)"
     case (POISSON_NO)
       str = "no Poisson solver - Hartree set to 0"
     end select
-    write(message(1),'(a,a,a)') "The chosen Poisson solver is '",trim(str),"'"
+    write(message(1),'(a,a,a)') "The chosen Poisson solver is '", trim(str), "'"
     call messages_info(1)
 
     if(this%method /= POISSON_FFT) then
@@ -431,11 +426,6 @@ contains
         message(3) = 'negligible error. You may want to check that the "fft" or "cg"'
         message(4) = 'solver are providing, in your case, the same results.'
         call messages_warning(4)
-      end if
-
-      if (this%method == POISSON_SETE) then
-        message(1) = 'SETE poisson solver is obsolete and has been removed.'
-        call messages_fatal(1)
       end if
 
       if (this%method == POISSON_FMM) then
