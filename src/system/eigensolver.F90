@@ -572,7 +572,7 @@ contains
     ik_loop: do ik = st%d%kpt%start, st%d%kpt%end
       maxiter = eigens%es_maxiter
 
-      if(eigens%converged(ik) == 0 .and. hm%theory_level /= INDEPENDENT_PARTICLES) then
+      if(eigens%es_type == RS_RMMDIIS .or. (eigens%converged(ik) == 0 .and. hm%theory_level /= INDEPENDENT_PARTICLES)) then
         if (states_are_real(st)) then
           call dsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
         else
@@ -613,7 +613,7 @@ contains
         end select
 
         ! FEAST: subspace diag or not?
-        if(eigens%es_type /= RS_RMMDIIS .and. eigens%es_type /= RS_ARPACK) then
+        if(eigens%es_type /= RS_RMMDIIS .or. eigens%es_type /= RS_ARPACK) then
           call dsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
         end if
 
@@ -649,7 +649,7 @@ contains
           call zeigensolver_feast(eigens%feast, gr, st, hm, eigens%converged(ik), ik, eigens%diff(:, ik))
         end select
 
-        if(eigens%es_type /= RS_RMMDIIS .and.eigens%es_type /= RS_ARPACK) then
+        if(eigens%es_type /= RS_RMMDIIS .or. eigens%es_type /= RS_ARPACK) then
           call zsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
         end if
 
