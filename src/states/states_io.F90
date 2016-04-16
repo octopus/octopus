@@ -78,6 +78,11 @@ contains
 
     PUSH_SUB(states_write_eigenvalues)
 
+    if(.not. st%calc_eigenval) then
+      POP_SUB(states_write_eigenvalues)
+      return
+    end if
+    
     st_start_ = 1
     if(present(st_start)) st_start_ = st_start
     ASSERT(nst <= st%nst)

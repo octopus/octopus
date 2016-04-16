@@ -172,6 +172,8 @@ module states_oct_m
 
     !> Subsystem states.
     type(base_states_t), pointer :: subsys_st
+
+    logical        :: calc_eigenval
     
     FLOAT, pointer :: eigenval(:,:) !< obviously the eigenvalues
     logical        :: fixed_occ     !< should the occupation numbers be fixed?
@@ -327,7 +329,22 @@ contains
     !%End
     call parse_variable('ExcessCharge', M_ZERO, excess_charge)
 
-
+    !%Variable CalcEigenvalues
+    !%Type logical
+    !%Default yes
+    !%Section SCF
+    !%Description
+    !% (Experimental) When this variable is set to <tt>no</tt>,
+    !% Octopus will not calculate the eigenvalues or eigenvectors of
+    !% the Hamiltonian. Instead, Octopus will obtain the occupied
+    !% subspace. The advantage that calculation can be made faster by
+    !% avoiding subspace diagonalization and other calculations.
+    !%
+    !% This mode cannot be used with unoccupied states.    
+    !%End
+    call parse_variable('CalcEigenvalues', .true., st%calc_eigenval)
+    if(.not. st%calc_eigenval) call messages_experimental('CalcEigenvalues = .false.')
+    
     !%Variable TotalStates
     !%Type integer
     !%Default 0
@@ -1375,6 +1392,8 @@ contains
 
     end if
 
+    stout%calc_eigenval = stin%calc_eigenval
+    
     if(.not. optional_default(exclude_eigenval, .false.)) then
       call loct_pointer_copy(stout%zeigenval%Re, stin%zeigenval%Re)
       stout%eigenval => stout%zeigenval%Re

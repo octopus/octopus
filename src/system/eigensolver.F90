@@ -579,13 +579,15 @@ contains
     ik_loop: do ik = st%d%kpt%start, st%d%kpt%end
       maxiter = eigens%es_maxiter
 
-      if(eigens%es_type == RS_RMMDIIS .or. eigens%es_type /= RS_PSD &
-        .or. (eigens%converged(ik) == 0 .and. hm%theory_level /= INDEPENDENT_PARTICLES)) then
-        
-        if (states_are_real(st)) then
-          call dsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
-        else
-          call zsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
+      if(st%calc_eigenval) then
+        if(eigens%es_type == RS_RMMDIIS .or. eigens%es_type /= RS_PSD &
+          .or. (eigens%converged(ik) == 0 .and. hm%theory_level /= INDEPENDENT_PARTICLES)) then
+          
+          if (states_are_real(st)) then
+            call dsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
+          else
+            call zsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
+          end if
         end if
       end if
 
@@ -625,10 +627,12 @@ contains
         end select
 
         ! FEAST: subspace diag or not?
-        if(eigens%es_type /= RS_RMMDIIS .and. eigens%es_type /= RS_ARPACK .and. eigens%es_type /= RS_PSD) then
-          call dsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
+        if(st%calc_eigenval) then
+          if(eigens%es_type /= RS_RMMDIIS .and. eigens%es_type /= RS_ARPACK .and. eigens%es_type /= RS_PSD) then
+            call dsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
+          end if
         end if
-
+        
       else
 
         select case(eigens%es_type)
@@ -664,22 +668,26 @@ contains
           call zeigensolver_rmmdiis_min(gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
         end select
 
-        if(eigens%es_type /= RS_RMMDIIS .and. eigens%es_type /= RS_ARPACK .and. eigens%es_type /= RS_PSD) then
-          call zsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
+        if(st%calc_eigenval) then
+          if(eigens%es_type /= RS_RMMDIIS .and. eigens%es_type /= RS_ARPACK .and. eigens%es_type /= RS_PSD) then
+            call zsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
+          end if
         end if
-
+        
       end if
 
-      ! recheck convergence after subspace diagonalization, since states may have reordered
-      eigens%converged(ik) = 0
-      do ist = 1, st%nst
-        if(eigens%diff(ist, ik) < eigens%tolerance) then
-          eigens%converged(ik) = ist
-        else
-          exit
-        end if
-      end do
-
+      if(st%calc_eigenval) then
+        ! recheck convergence after subspace diagonalization, since states may have reordered
+        eigens%converged(ik) = 0
+        do ist = 1, st%nst
+          if(eigens%diff(ist, ik) < eigens%tolerance) then
+            eigens%converged(ik) = ist
+          else
+            exit
+          end if
+        end do
+      end if
+      
       eigens%matvec = eigens%matvec + maxiter
     end do ik_loop
 
