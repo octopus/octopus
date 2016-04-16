@@ -391,6 +391,7 @@ AC_CONFIG_FILES([Makefile
   share/pseudopotentials/hscv/lda/Makefile
   share/pseudopotentials/hscv/pbe/Makefile  
   share/recipes/Makefile
+  share/recipes/da/Makefile
   share/recipes/en/Makefile
   share/recipes/es/Makefile
   share/recipes/it/Makefile

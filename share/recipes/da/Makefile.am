@@ -17,10 +17,10 @@
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 ## 02110-1301, USA.
 ##
-## $Id$
+## $Id: Makefile.am 10978 2013-07-11 15:28:46Z micael $
 
-SUBDIRS = da en es eu it
+tm2dir = $(pkgdatadir)/recipes/da
 
-tm2dir = $(pkgdatadir)/recipes
-
-dist_tm2_DATA = disclaimer.txt
+dist_tm2_DATA =             \
+	octopus_gallega.txt \
+	sugo_zucchini.txt
