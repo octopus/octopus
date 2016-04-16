@@ -18,8 +18,8 @@ match ; Dipole y     ; GREPFIELD(static/info, '<y>', 3)       ;   0.0
 match ; Dipole z     ; GREPFIELD(static/info, '<z>', 3)       ;   0.0
 
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -37.10266707
-match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -10.90704996
-match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; 31.49102589
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -10.906857955
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; 31.49117774
 match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -11.17459749
 match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -1.62651273
 match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 30.19471301
@@ -42,6 +42,5 @@ match ; Eigenvalue 14      ; GREPFIELD(static/info, '14   --', 3) ; -0.135002
 match ; Eigenvalue 15      ; GREPFIELD(static/info, '15   --', 3) ; -0.117047
 match ; Eigenvalue 16      ; GREPFIELD(static/info, '16   --', 3) ; 0.002866
 match ; Eigenvalue 17      ; GREPFIELD(static/info, '17   --', 3) ; 0.058004
-match ; Eigenvalue 18      ; GREPFIELD(static/info, '18   --', 3) ; 0.065597
-
+match ; Eigenvalue 18      ; GREPFIELD(static/info, '18   --', 3) ; 0.065330
 

@@ -613,7 +613,7 @@ contains
         end select
 
         ! FEAST: subspace diag or not?
-        if(eigens%es_type /= RS_RMMDIIS .or. eigens%es_type /= RS_ARPACK) then
+        if(eigens%es_type /= RS_RMMDIIS .and. eigens%es_type /= RS_ARPACK) then
           call dsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
         end if
 
@@ -649,7 +649,7 @@ contains
           call zeigensolver_feast(eigens%feast, gr, st, hm, eigens%converged(ik), ik, eigens%diff(:, ik))
         end select
 
-        if(eigens%es_type /= RS_RMMDIIS .or. eigens%es_type /= RS_ARPACK) then
+        if(eigens%es_type /= RS_RMMDIIS .and. eigens%es_type /= RS_ARPACK) then
           call zsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
         end if
 

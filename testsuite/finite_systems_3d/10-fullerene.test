@@ -40,7 +40,7 @@ Precision : 0.002
 match ; Partial charge  5 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 6)  ; 4.001
 match ; Partial charge 10 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 11) ; 3.999
 match ; Partial charge 15 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 16) ; 4.000
-match ; Partial charge 20 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 21) ; 3.998
+match ; Partial charge 20 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 21) ; 3.997
 match ; Partial charge 25 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 26) ; 3.998
 match ; Partial charge 30 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 31) ; 4.000
 match ; Partial charge 35 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 36) ; 4.002
