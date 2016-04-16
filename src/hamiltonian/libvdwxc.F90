@@ -50,8 +50,6 @@ module libvdwxc_oct_m
     logical                        :: debug
     FLOAT                          :: energy
     FLOAT                          :: vdw_factor
-    FLOAT, allocatable             :: rho(:)
-    FLOAT, allocatable             :: gradrho(:,:)
   end type libvdwxc_t
 
 #ifdef HAVE_LIBVDWXC
@@ -342,18 +340,17 @@ contains
 
     call fromcube(cube_dedrho, workbuffer)
     ! dedd is 1:mesh%np_part for some reason
+    if(this%debug) then
+      call libvdwxc_write_array(workbuffer, 'dedrho')
+    end if
     dedd(1:this%mesh%np, 1) = dedd(1:this%mesh%np, 1) + workbuffer
     call fromcube(cube_dedsigma, workbuffer)
+    if(this%debug) then
+      call libvdwxc_write_array(workbuffer, 'dedsigma')
+    end if
     do ii=1, this%mesh%np
       dedgd(ii, :, 1) = dedgd(ii, :, 1) + M_TWO * workbuffer(ii) * gradrho(ii, :, 1)
     end do
-
-    if(this%debug) then
-      call libvdwxc_write_array(dedd(:, 1), 'dedrho')
-      call libvdwxc_write_array(dedgd(:, 1, 1), 'dedgradrho.x')
-      call libvdwxc_write_array(dedgd(:, 2, 1), 'dedgradrho.y')
-      call libvdwxc_write_array(dedgd(:, 3, 1), 'dedgradrho.z')
-    end if
 
     energy_and_integrals_buffer(1) = this%energy
     energy_and_integrals_buffer(2) = sum(rho(1:this%mesh%np,:) * dedd(1:this%mesh%np,:)) * this%mesh%volume_element
