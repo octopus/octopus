@@ -110,8 +110,11 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   end do
 
   ! initialize a couple of handy variables
-  gga  = iand(xcs%family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA + XC_FAMILY_LIBVDWXC) /= 0
-  mgga = iand(xcs%family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0
+  gga  = family_is_gga(xcs%family)
+  mgga = family_is_mgga(xcs%family)
+  if(mgga) then
+    ASSERT(gga)
+  end if
   libvdwxc = iand(xcs%family, XC_FAMILY_LIBVDWXC) /= 0
 
   !Read the spin channels
@@ -299,7 +302,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
         SAFE_DEALLOCATE_A(unp_dedd)
       end if
 
-      if(gga .or. mgga) then
+      if(family_is_gga(functl(ixc)%family)) then
         do ib = 1, n_block
           dedgd(ib + ip - 1,:,1) = dedgd(ib + ip - 1,:,1) + M_TWO*l_vsigma(1, ib)*gdens(ib + ip - 1,:,1)
           if(ispin /= UNPOLARIZED) then
@@ -310,7 +313,9 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
         end do
       end if
 
-      if(mgga) then
+      if(family_is_mgga(functl(ixc)%family)) then
+        ! XXXXX does this work correctly when functionals belong to
+        ! different families and only one is mgga?
         call copy_local_to_global(l_dedldens, dedldens, n_block, spin_channels, ip)
         call copy_local_to_global(l_dedtau, vtau, n_block, spin_channels, ip)
       end if
@@ -383,7 +388,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   
     call distributed_end(distribution)
   end if
-  
+
   if(functl(FUNC_C)%family == XC_FAMILY_LIBVDWXC) then
     functl(FUNC_C)%libvdwxc%energy = M_ZERO
     call libvdwxc_calculate(functl(FUNC_C)%libvdwxc, dens, gdens, dedd, dedgd)
@@ -427,6 +432,25 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   call profiling_out(prof)
 
 contains
+
+  function family_is_gga(family)
+    integer, intent(in) :: family
+    logical             :: family_is_gga
+
+    PUSH_SUB(xc_get_vxc.family_is_gga)
+    family_is_gga = iand(family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + &
+      XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA + XC_FAMILY_LIBVDWXC) /= 0
+    POP_SUB(xc_get_vxc.family_is_gga)
+  end function  family_is_gga
+
+  function family_is_mgga(family)
+    integer, intent(in) :: family
+    logical             :: family_is_mgga
+
+    PUSH_SUB(xc_get_vxc.family_is_mgga)
+    family_is_mgga = iand(xcs%family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0
+    POP_SUB(xc_get_vxc.family_is_mgga)
+  end function family_is_mgga
 
   ! ---------------------------------------------------------
   !> make a local copy with the correct memory order for libxc
