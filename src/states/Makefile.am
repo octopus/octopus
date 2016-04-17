@@ -75,7 +75,7 @@ states_restart.o : states_restart.F90 linear_response.o restart.o smear.o states
 excited_states.o : excited_states.F90 excited_states_inc.F90 states.o states_calc.o states_dim.o
 linear_response.o : linear_response.F90 linear_response_inc.F90 states.o states_calc.o states_dim.o smear.o restart.o
 restart.o : restart.F90 restart_inc.F90
-density.o : density.F90 states.o smear.o states_dim.o
+density.o : density.F90 density_inc.F90 states.o smear.o states_dim.o
 states_io.o : states_io.F90 states.o smear.o states_dim.o
 cmplxscl.o : cmplxscl.F90
 smear.o : smear.F90 cmplxscl.o
