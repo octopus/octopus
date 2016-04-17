@@ -174,6 +174,7 @@ module states_oct_m
     type(base_states_t), pointer :: subsys_st
 
     logical        :: calc_eigenval
+    logical        :: uniform_occ   !< .true. if occupations are equal for all states: no empty states, and no smearing
     
     FLOAT, pointer :: eigenval(:,:) !< obviously the eigenvalues
     logical        :: fixed_occ     !< should the occupation numbers be fixed?
@@ -640,7 +641,7 @@ contains
     integer :: ik, ist, ispin, nspin, ncols, nrows, el_per_state, icol, start_pos, spin_n
     type(block_t) :: blk
     FLOAT :: rr, charge
-    logical :: integral_occs
+    logical :: integral_occs, unoccupied_states
     FLOAT, allocatable :: read_occs(:, :)
     FLOAT :: charge_in_block
 
@@ -842,10 +843,11 @@ contains
 
     call smear_init(st%smear, st%d%ispin, st%fixed_occ, integral_occs, kpoints)
 
+    unoccupied_states = (st%d%ispin /= SPINORS .and. st%nst*2 > st%qtot) .or. (st%d%ispin == SPINORS .and. st%nst > st%qtot)
+    
     if(.not. smear_is_semiconducting(st%smear) .and. .not. st%smear%method == SMEAR_FIXED_OCC) then
-      if((st%d%ispin /= SPINORS .and. st%nst * 2  <=  st%qtot) .or. &
-        (st%d%ispin == SPINORS .and. st%nst  <=  st%qtot)) then
-        call messages_write('Smearing needs unoccupied states (via ExtraStates) to be useful.')
+      if(.not. unoccupied_states) then
+        call messages_write('Smearing needs unoccupied states (via ExtraStates or TotalStates) to be useful.')
         call messages_warning()
       end if
     end if
@@ -861,6 +863,14 @@ contains
       call messages_fatal(2, only_root_writes = .true.)
     end if
 
+    st%uniform_occ = smear_is_semiconducting(st%smear) .and. .not. unoccupied_states
+
+    if(.not. st%calc_eigenval .and. .not. st%uniform_occ) then
+      call messages_write('Calculation of the eigenvalues is required with unoccupied states', new_line = .true.)
+      call messages_write('or smearing.')
+      call messages_fatal()
+    end if
+    
     POP_SUB(states_read_initial_occs)
   end subroutine states_read_initial_occs
 
@@ -1393,6 +1403,7 @@ contains
     end if
 
     stout%calc_eigenval = stin%calc_eigenval
+    stout%uniform_occ = stin%uniform_occ
     
     if(.not. optional_default(exclude_eigenval, .false.)) then
       call loct_pointer_copy(stout%zeigenval%Re, stin%zeigenval%Re)
