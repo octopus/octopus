@@ -571,8 +571,8 @@ contains
         if (pcm%tess(ia)%area > max_area) max_area = pcm%tess(ia)%area
       end do
     
-      !default is as many neighbor to contain 2 gaussian width 
-      default_nn=int(2*max_area*pcm%gaussian_width/minval(grid%mesh%spacing(1:grid%mesh%sb%dim)))
+      !default is as many neighbor to contain 1 gaussian width 
+      default_nn=int(max_area*pcm%gaussian_width/minval(grid%mesh%spacing(1:grid%mesh%sb%dim)))
       
       changed_default_nn = .false.
 
@@ -606,8 +606,8 @@ contains
       !% cavity tessera in order to smear the charge when PCMCalcMethod = pcm_poisson.
       !% Setting PCMChargeSmearNN = 1 means first nearest neighbors, PCMChargeSmearNN = 2
       !% second nearest neighbors, and so on.
-      !% The default value is such that the neighbor mesh contains 2 times the Gaussian 
-      !% width used for the smearing.
+      !% The default value is such that the neighbor mesh contains points in a radius 
+      !% equal to the width used for the gaussian smearing.
       !%End
       
       call parse_variable('PCMChargeSmearNN', pcm%tess_nn, pcm%tess_nn)
@@ -1090,7 +1090,11 @@ contains
       
       ! Normalize the integral to the tessera point charge q_pcm(ia)
       Norm = sum(lrho(1:npt)) * mesh%volume_element
-      Norm = q_pcm(ia)/Norm       
+      if (Norm > M_EPSILON) then
+        Norm = q_pcm(ia)/Norm     
+      else   
+        Norm = M_ZERO
+      end if
       lrho(:) = lrho(:) * Norm
 
       ! Add up the local density to the full charge density 
