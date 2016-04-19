@@ -186,14 +186,14 @@ contains
       ! The use of these variables for the direct and bobyqa schemes remain undocumented for the moment.
       call parse_variable('OCTEta', M_ONE, oct%eta)
       call parse_variable('OCTDelta', M_ZERO, oct%delta)
-    case(OPTION__OCTSCHEME__OCT_NLOPT_BOBYQA)
+    case(OPTION__OCTSCHEME__OCT_NLOPT_BOBYQA, OPTION__OCTSCHEME__OCT_NLOPT_LBFGS)
 #if defined(HAVE_NLOPT)
       !WARNING: not clear if this is needed, probably not.
       call parse_variable('OCTEta', M_ONE, oct%eta)
       call parse_variable('OCTDelta', M_ZERO, oct%delta)
 #else
-      write(message(1), '(a)') '"OCTScheme = oct_nlopt_bobyqa" is only possible if the nlopt'
-      write(message(2), '(a)') 'library has been compiled.'
+      write(message(1), '(a)') '"OCTScheme = oct_nlopt_bobyqa" or "OCTScheme = oct_nlopt_lbfgs" are'
+      write(message(2), '(a)') ' only possible if the nlopt library has been compiled.'
       call messages_fatal(2)
 #endif
     case default
