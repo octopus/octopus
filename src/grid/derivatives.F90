@@ -554,7 +554,6 @@ contains
     case(DER_STARGENERAL)    
     
       do i = 1, der%dim        
-        print * , der%op(i)%stencil%size
         SAFE_ALLOCATE(polynomials(1:der%dim, 1:der%op(i)%stencil%size))
         SAFE_ALLOCATE(rhs(1:der%op(i)%stencil%size, 1:1))
         ! use simple star stencil polynomials
