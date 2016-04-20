@@ -1,0 +1,45 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Primitive unit cells
+Program    : octopus
+TestGroups : long-run, periodic_systems
+Enabled    : Yes
+
+Processors : 4
+
+Input      : 13-primitive.01-diamond.inp
+
+match ; k-point 50 (x) ; GREPFIELD(static/info, '#k =  50', 7) ;   0.000000
+match ; k-point 50 (y) ; GREPFIELD(static/info, '#k =  50', 8) ;   0.000000
+match ; k-point 50 (z) ; GREPFIELD(static/info, '#k =  50', 9) ;   0.000000
+match ; Eigenvalue  1  ; GREPFIELD(static/info, '#k =  50', 3, 1) ; -0.556929
+match ; Eigenvalue  2  ; GREPFIELD(static/info, '#k =  50', 3, 2) ; 0.216156
+match ; Eigenvalue  3  ; GREPFIELD(static/info, '#k =  50', 3, 3) ; 0.216161
+match ; Eigenvalue  4  ; GREPFIELD(static/info, '#k =  50', 3, 4) ; 0.216161
+
+match ; k-point 75 (x) ; GREPFIELD(static/info, '#k =  75', 7) ;   0.055556
+match ; k-point 75 (y) ; GREPFIELD(static/info, '#k =  75', 8) ;   0.055556
+match ; k-point 75 (z) ; GREPFIELD(static/info, '#k =  75', 9) ;   0.055556
+match ; Eigenvalue  1 ; GREPFIELD(static/info,  '#k =  75', 3, 1) ; -0.553793
+match ; Eigenvalue  2 ; GREPFIELD(static/info,  '#k =  75', 3, 2) ;  0.195358
+match ; Eigenvalue  3 ; GREPFIELD(static/info,  '#k =  75', 3, 3) ;  0.210654
+match ; Eigenvalue  4 ; GREPFIELD(static/info,  '#k =  75', 3, 4) ;  0.210656
+
+Input      : 13-primitive.02-graphene.inp
+
+match ; k-point 26 (x) ; GREPFIELD(static/info, '#k =  26', 7) ;   0.000000
+match ; k-point 26 (y) ; GREPFIELD(static/info, '#k =  26', 8) ;   0.000000
+match ; k-point 26 (z) ; GREPFIELD(static/info, '#k =  26', 9) ;   0.000000
+match ; Eigenvalue  1  ; GREPFIELD(static/info, '#k =  26', 3, 1) ; -0.874994
+match ; Eigenvalue  2  ; GREPFIELD(static/info, '#k =  26', 3, 2) ; -0.449226
+match ; Eigenvalue  3  ; GREPFIELD(static/info, '#k =  26', 3, 3) ; -0.280948
+match ; Eigenvalue  4  ; GREPFIELD(static/info, '#k =  26', 3, 4) ; -0.280886
+
+# Dirac point 
+match ; k-point 34 (x) ; GREPFIELD(static/info, '#k =  34', 7) ;   0.333333
+match ; k-point 34 (y) ; GREPFIELD(static/info, '#k =  34', 8) ;   0.333333
+match ; k-point 34 (z) ; GREPFIELD(static/info, '#k =  34', 9) ;   0.000000
+match ; Eigenvalue  1 ; GREPFIELD(static/info,  '#k =  34', 3, 1) ; -0.62092
+match ; Eigenvalue  2 ; GREPFIELD(static/info,  '#k =  34', 3, 2) ; -0.620450
+match ; Eigenvalue  3 ; GREPFIELD(static/info,  '#k =  34', 3, 3) ; -0.559445
+match ; Eigenvalue  4 ; GREPFIELD(static/info,  '#k =  34', 3, 4) ; -0.167597
