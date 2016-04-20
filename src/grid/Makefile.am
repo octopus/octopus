@@ -60,6 +60,7 @@ libgrid_a_SOURCES =       \
 	stencil.F90             \
 	stencil_star.F90        \
 	stencil_starplus.F90    \
+	stencil_stargeneral.F90 \
 	stencil_variational.F90 \
 	subarray.F90            \
 	submesh.F90             \
@@ -107,7 +108,7 @@ curv_briggs.o : curv_briggs.F90
 curv_gygi.o : curv_gygi.F90  
 curvilinear.o : curvilinear.F90  curv_modine.o curv_gygi.o curv_briggs.o 
 curv_modine.o : curv_modine.F90  
-derivatives.o : derivatives.F90 derivatives_inc.F90 stencil_variational.o stencil_starplus.o stencil_star.o stencil_cube.o  nl_operator.o mesh.o batch.o transfer_table.o mesh_function.o boundaries.o
+derivatives.o : derivatives.F90 derivatives_inc.F90 stencil_variational.o stencil_starplus.o stencil_stargeneral.o stencil_star.o stencil_cube.o  nl_operator.o mesh.o batch.o transfer_table.o mesh_function.o boundaries.o
 double_grid.o : double_grid.F90 double_grid_apply_inc.F90 submesh.o mesh_function.o mesh.o curvilinear.o 
 fourier_shell.o : fourier_shell.F90 cube_function.o mesh.o
 fourier_space.o : fourier_space.F90 fourier_space_inc.F90 cube_function.o mesh.o 
@@ -133,6 +134,7 @@ stencil_cube.o : stencil_cube.F90 stencil.o
 stencil.o : stencil.F90
 stencil_star.o : stencil_star.F90 nl_operator.o stencil.o
 stencil_starplus.o : stencil_starplus.F90 stencil.o
+stencil_stargeneral.o : stencil_stargeneral.F90 stencil.o
 stencil_variational.o : stencil_variational.F90 nl_operator.o stencil.o
 subarray.o : subarray.F90 subarray_inc.F90 batch.o
 submesh.o : submesh.F90 submesh_inc.F90  mesh.o batch.o

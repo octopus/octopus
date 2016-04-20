@@ -45,6 +45,7 @@ module derivatives_oct_m
   use stencil_cube_oct_m
   use stencil_star_oct_m
   use stencil_starplus_oct_m
+  use stencil_stargeneral_oct_m
   use stencil_variational_oct_m
   use test_parameters_oct_m
   use transfer_table_oct_m
@@ -52,6 +53,13 @@ module derivatives_oct_m
   use utils_oct_m
   use varinfo_oct_m
 
+!   debug purposes 
+!   use io_binary_oct_m
+!   use io_function_oct_m
+!   use io_oct_m
+!   use unit_oct_m
+!   use unit_system_oct_m
+  
   implicit none
 
   private
@@ -95,7 +103,8 @@ module derivatives_oct_m
     DER_STAR         = 1,   &
     DER_VARIATIONAL  = 2,   &
     DER_CUBE         = 3,   &
-    DER_STARPLUS     = 4
+    DER_STARPLUS     = 4,   &
+    DER_STARGENERAL  = 5
 
   integer, parameter ::     &
     BLOCKING = 1,           &
@@ -178,6 +187,7 @@ contains
     logical,                     intent(in)  :: use_curvilinear
 
     integer :: idir
+    integer :: default_stencil
 
     PUSH_SUB(derivatives_init)
 
@@ -204,12 +214,15 @@ contains
     !% A cube of points around each point.
     !%Option stencil_starplus 4
     !% The star, plus a number of off-axis points.
+    !%Option stencil_stargeneral 5
+    !% The general star. Default for non-orthogonal grids.
     !%End
-    if(use_curvilinear) then
-      call parse_variable('DerivativesStencil', DER_STARPLUS, der%stencil_type)
-    else
-      call parse_variable('DerivativesStencil', DER_STAR, der%stencil_type)
-    end if
+    default_stencil = DER_STAR
+    if(use_curvilinear) default_stencil = DER_STARPLUS
+    if(sb%nonorthogonal) default_stencil = DER_STARGENERAL
+
+    call parse_variable('DerivativesStencil', default_stencil, der%stencil_type)
+    
     if(.not.varinfo_valid_option('DerivativesStencil', der%stencil_type)) call messages_input_error('DerivativesStencil')
     call messages_print_var_option(stdout, "DerivativesStencil", der%stencil_type)
 
@@ -269,7 +282,7 @@ contains
     der%grad => der%op
     der%lapl => der%op(der%dim + 1)
 
-    call derivatives_get_stencil_lapl(der)
+    call derivatives_get_stencil_lapl(der, sb)
     call derivatives_get_stencil_grad(der)
 
     ! find out how many ghost points we need in each dimension
@@ -333,6 +346,8 @@ contains
         extent = stencil_cube_extent(dir, der%order)
       case(DER_STARPLUS)
         extent = stencil_cube_extent(dir, der%order)
+      case(DER_STARGENERAL)
+        extent = stencil_cube_extent(dir, der%order)
       end select
       
     POP_SUB(stencil_extent)
@@ -340,8 +355,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine derivatives_get_stencil_lapl(der)
-    type(derivatives_t), intent(inout) :: der
+  subroutine derivatives_get_stencil_lapl(der, sb)
+    type(derivatives_t),      intent(inout) :: der
+    type(simul_box_t), optional,intent(in)  :: sb
 
     PUSH_SUB(derivatives_get_stencil_lapl)
 
@@ -358,6 +374,9 @@ contains
       call stencil_cube_get_lapl(der%lapl%stencil, der%dim, der%order)
     case(DER_STARPLUS)
       call stencil_starplus_get_lapl(der%lapl%stencil, der%dim, der%order)
+    case(DER_STARGENERAL)
+      call stencil_stargeneral_get_arms(der%lapl%stencil, sb)
+      call stencil_stargeneral_get_lapl(der%lapl%stencil, der%dim, der%order)
     end select
 
     POP_SUB(derivatives_get_stencil_lapl)
@@ -386,6 +405,7 @@ contains
   ! ---------------------------------------------------------
   subroutine derivatives_get_stencil_grad(der)
     type(derivatives_t), intent(inout) :: der
+      
 
     integer  :: ii
     character :: dir_label
@@ -409,6 +429,9 @@ contains
         call stencil_cube_get_grad(der%grad(ii)%stencil, der%dim, der%order)
       case(DER_STARPLUS)
         call stencil_starplus_get_grad(der%grad(ii)%stencil, der%dim, ii, der%order)
+      case(DER_STARGENERAL)
+      ! use the simple star stencil
+        call stencil_star_get_grad(der%grad(ii)%stencil, ii, der%order)
       end select
     end do
 
@@ -416,6 +439,18 @@ contains
 
   end subroutine derivatives_get_stencil_grad
 
+
+  ! ---------------------------------------------------------
+  subroutine derivatives_update(der, mesh)
+    type(derivatives_t),    intent(inout) :: der
+    type(mesh_t),   target, intent(in)    :: mesh
+    
+    call derivatives_get_stencil_lapl(der)
+    call derivatives_get_stencil_grad(der)
+    
+    call derivatives_build(der, mesh)
+    
+  end subroutine derivatives_update
 
   ! ---------------------------------------------------------
   subroutine derivatives_build(der, mesh)
@@ -428,13 +463,15 @@ contains
     logical :: const_w_, cmplx_op_
     character(len=32) :: name
     type(nl_operator_t) :: auxop
+    
+!     type(test_parameters_t) :: test_param
 
     PUSH_SUB(derivatives_build)
 
     call boundaries_init(der%boundaries, mesh)
 
     ASSERT(associated(der%op))
-    ASSERT(der%stencil_type>=DER_STAR .and. der%stencil_type<=DER_STARPLUS)
+    ASSERT(der%stencil_type>=DER_STAR .and. der%stencil_type<=DER_STARGENERAL)
     ASSERT(.not.(der%stencil_type==DER_VARIATIONAL .and. mesh%use_curvilinear))
 
     der%mesh => mesh    ! make a pointer to the underlying mesh
@@ -478,6 +515,7 @@ contains
       end do
 
     case(DER_CUBE) ! Laplacian and gradient have similar stencils
+
       SAFE_ALLOCATE(polynomials(1:der%dim, 1:der%op(1)%stencil%size))
       SAFE_ALLOCATE(rhs(1:der%op(1)%stencil%size, 1:der%dim + 1))
       call stencil_cube_polynomials_lapl(der%dim, der%order, polynomials)
@@ -513,11 +551,41 @@ contains
       SAFE_DEALLOCATE_A(polynomials)
       SAFE_DEALLOCATE_A(rhs)
 
+    case(DER_STARGENERAL)    
+    
+      do i = 1, der%dim        
+        print * , der%op(i)%stencil%size
+        SAFE_ALLOCATE(polynomials(1:der%dim, 1:der%op(i)%stencil%size))
+        SAFE_ALLOCATE(rhs(1:der%op(i)%stencil%size, 1:1))
+        ! use simple star stencil polynomials
+        call stencil_star_polynomials_grad(i, der%order, polynomials)
+        call get_rhs_grad(i, rhs(:, 1))
+        name = index2axis(i) // "-gradient"
+        ! For directional derivatives the weights are the same as in the orthogonal case.
+        ! Forcing the orthogonal case avoid incurring in ill-defined cases.
+        ! NOTE: this is not so clean and also am not 100% sure is correct. It has to be tested. UDG
+        call derivatives_make_discretization(der%dim, der%mesh, der%masses, polynomials, rhs, 1,&
+                                              der%op(i:i), name, force_orthogonal = .true.)
+        SAFE_DEALLOCATE_A(polynomials)
+        SAFE_DEALLOCATE_A(rhs)
+      end do
+
+      SAFE_ALLOCATE(polynomials(1:der%dim, 1:der%op(der%dim+1)%stencil%size))
+      SAFE_ALLOCATE(rhs(1:der%op(der%dim+1)%stencil%size, 1:1))
+      call stencil_stargeneral_pol_lapl(der%op(der%dim+1)%stencil, der%dim, der%order, polynomials)
+      call get_rhs_lapl(rhs(:, 1))
+      name = "Laplacian"
+      call derivatives_make_discretization(der%dim, der%mesh, der%masses, polynomials, rhs, 1, der%op(der%dim+1:der%dim+1), name)
+      SAFE_DEALLOCATE_A(polynomials)
+      SAFE_DEALLOCATE_A(rhs)
+
     case(DER_VARIATIONAL)
       ! we have the explicit coefficients
       call stencil_variational_coeff_lapl(der%dim, der%order, mesh%spacing, der%lapl, alpha = der%lapl_cutoff)
 
     end select
+    
+    
 
     ! Here the Laplacian is forced to be self-adjoint, and the gradient to be skew-self-adjoint
     if(mesh%use_curvilinear .and. (.not. der%mesh%sb%mr_flag)) then
@@ -536,6 +604,15 @@ contains
       call nl_operator_copy(der%lapl, auxop)
       call nl_operator_end(auxop)
     end if
+
+    ! useful for debug purposes
+!     test_param%repetitions = 1
+!     test_param%min_blocksize = 1
+!     test_param%max_blocksize = 1
+!
+!     call dderivatives_test(der, test_param)
+!     call exit(1)
+
 
     POP_SUB(derivatives_build)
 
@@ -562,6 +639,7 @@ contains
           if(this_one) rhs(j) = M_TWO
         end do
       end do
+      
 
       POP_SUB(derivatives_build.get_rhs_lapl)
     end subroutine get_rhs_lapl
@@ -594,7 +672,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine derivatives_make_discretization(dim, mesh, masses, pol, rhs, n, op, name)
+  subroutine derivatives_make_discretization(dim, mesh, masses, pol, rhs, n, op, name, force_orthogonal)
     integer,                intent(in)    :: dim
     type(mesh_t),           intent(in)    :: mesh
     FLOAT,                  intent(in)    :: masses(:)
@@ -603,6 +681,7 @@ contains
     FLOAT,                  intent(inout) :: rhs(:,:)
     type(nl_operator_t),    intent(inout) :: op(:)
     character(len=32),      intent(in)    :: name
+    logical, optional,      intent(in)    :: force_orthogonal
 
     integer :: p, p_max, i, j, k, pow_max
     FLOAT   :: x(MAX_DIM)
@@ -615,13 +694,6 @@ contains
 
     message(1) = 'Info: Generating weights for finite-difference discretization of ' // trim(name)
     call messages_info(1)
-
-    ! FIXME: check which stencil we are using and decide from that whether to warn or not
-    if (mesh%sb%nonorthogonal) then
-      message(1) = 'Info: non-orthogonal axes detected for derivatives discretization.'
-      message(2) = '  Need off-diagonal points in stencil - STAR will not work'
-      call messages_info(2)
-    end if
 
     ! use to generate power lookup table
     pow_max = maxval(pol)
@@ -640,9 +712,10 @@ contains
         else
           forall(j = 1:dim) x(j) = real(op(1)%stencil%points(j, i), REAL_PRECISION)*mesh%spacing(j)
           ! TODO : this internal if clause is inefficient - the condition is determined globally
-          if (mesh%sb%nonorthogonal) x(1:dim) = matmul(mesh%sb%rlattice_primitive(1:dim,1:dim), x(1:dim))
+          if (mesh%sb%nonorthogonal .and. .not. optional_default(force_orthogonal, .false.))  & 
+              x(1:dim) = matmul(mesh%sb%rlattice_primitive(1:dim,1:dim), x(1:dim))
         end if
-
+                         
 ! NB: these masses are applied on the cartesian directions. Should add a check for non-orthogonal axes
         forall(j = 1:dim) x(j) = x(j)*sqrt(masses(j))
 
@@ -667,7 +740,10 @@ contains
       do i = 1, n
         op(i)%w_re(:, p) = sol(:, n)
       end do
+              
 
+
+      
     end do
     do i = 1, n
       call nl_operator_update_weights(op(i))

@@ -36,10 +36,19 @@ module stencil_oct_m
     stencil_init_center,           &
     stencil_union
 
+  type stargeneral_arms_t
+    integer          :: arms(1:3,1:3)
+    integer          :: narms  
+  end type stargeneral_arms_t
+
+
   type stencil_t
     integer          :: center
     integer          :: size
     integer, pointer :: points(:, :) 
+    
+    ! The stargeneral arms
+    type(stargeneral_arms_t) :: stargeneral 
   end type stencil_t
 
 contains
