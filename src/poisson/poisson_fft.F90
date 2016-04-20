@@ -190,7 +190,7 @@ contains
     gg(1:3) = gg_in(1:3)
     gg(1:sb%periodic_dim) = gg(1:sb%periodic_dim) + qq(1:sb%periodic_dim)
     gg(1:3) = gg(1:3) * temp(1:3)
-    gg(1:3) = matmul(gg(1:3), sb%klattice_primitive(1:3,1:3))
+    gg(1:3) = matmul(sb%klattice_primitive(1:3,1:3),gg(1:3))
 ! MJV 27 jan 2015 this should not be necessary
 !    do idir = 1, 3
 !      gg(idir) = gg(idir) / lalg_nrm2(3, sb%klattice_primitive(1:3, idir))
