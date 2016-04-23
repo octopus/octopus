@@ -359,14 +359,14 @@ contains
     ! distribute the surface points on nodes,
     ! since mesh domains may have different numbers of surface points.
     call pes_flux_distribute(1, this%nsrfcpnts, this%nsrfcpnts_start, this%nsrfcpnts_end, mesh%mpi_grp%comm)
+    if(debug%info) then
 #if defined(HAVE_MPI)
-    call MPI_Barrier(mpi_world%comm, mpi_err)
-    if (debug%info .and. mpi_grp_is_root(mpi_world)) then
-      write(*,*) &
-        'Number of surface points on node ', mesh%mpi_grp%rank, ' : ', this%nsrfcpnts_start, this%nsrfcpnts_end
-    end if  
-    call MPI_Barrier(mpi_world%comm, mpi_err)    
+      call MPI_Barrier(mpi_world%comm, mpi_err)
+        write(*,*) &
+        'Debug: surface points on node ', mpi_world%rank, ' : ', this%nsrfcpnts_start, this%nsrfcpnts_end
+      call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
+    end if
 
     if(this%shape == M_PLANES) then
       this%nsrfcpnts_start = 1
@@ -374,12 +374,10 @@ contains
     end if
       
     if(debug%info .and. mpi_grp_is_root(mpi_world)) then
-      write(message(1),'(a, i6)') 'Info: Number of surface points, and normals (total):', this%nsrfcpnts
-      call messages_info(1) 
       do isp = 1, this%nsrfcpnts
         write(223,*) isp, this%rcoords(:, isp), this%srfcnrml(:,isp)
       end do
-      flush(223)
+      if(this%nsrfcpnts > 0) flush(223)
     end if
 
     ! get the values of the spherical harmonics for the surface points for M_SPHERICAL
@@ -482,6 +480,14 @@ contains
       end if
     end if
 
+    call messages_write('Info: Total number of surface points = ')
+    call messages_write(this%nsrfcpnts)
+    call messages_info() 
+
+    call messages_write('Info: Total number of momentum points =  ')
+    call messages_write(this%nkpnts)
+    call messages_info()
+
     POP_SUB(pes_flux_init)
   end subroutine pes_flux_init
 
@@ -549,7 +555,7 @@ contains
     kptend = st%d%kpt%end
     mdim   = sb%dim
     pdim   = sb%periodic_dim
-    
+
     
     if (this%shape == M_SPHERICAL .or. this%shape == M_CUBIC) then
       ! -----------------------------------------------------------------
@@ -735,7 +741,7 @@ contains
         NBZ(:) = NBZ(1)
 
       end if
-      
+
       ! If we are using a path in reciprocal space 
       ! we don't need to replicate the BZ in directions 
       ! perpendicular to the path
@@ -762,13 +768,10 @@ contains
       this%nkpnts = product(this%ll(1:mdim))
       
       
-      
-      
 
     end if    
 
   
-    
     this%parallel_in_momentum = .false.
 
     ! Create the grid
@@ -782,15 +785,16 @@ contains
     
       ! we split the k-mesh in radial & angular part
       call pes_flux_distribute(1, this%nk, this%nk_start, this%nk_end, comm)
-      if ( (this%nk_end - this%nk_start + 1 ) < this%nk)  this%parallel_in_momentum = .true.
-      
+      if((this%nk_end - this%nk_start + 1) < this%nk) this%parallel_in_momentum = .true.
+
+      if(debug%info) then
 #if defined(HAVE_MPI)
-      call MPI_Barrier(mpi_world%comm, mpi_err)
-      call MPI_Comm_rank(mpi_world%comm, mpirank, mpi_err)
-      write(*,*) &
-        'k-points on node ', mpirank, ' : ', this%nk_start, this%nk_end
-      call MPI_Barrier(mpi_world%comm, mpi_err)
+        call MPI_Barrier(mpi_world%comm, mpi_err)
+        write(*,*) &
+          'Debug: momentum points on node ', mpi_world%rank, ' : ', this%nk_start, this%nk_end
+        call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
+      end if
       SAFE_ALLOCATE(this%j_l(0:this%lmax, this%nk_start:this%nk_end))
       this%j_l = M_ZERO
 
@@ -834,15 +838,17 @@ contains
     case (M_CUBIC)
       ! we do not split the k-mesh
       call pes_flux_distribute(1, this%nkpnts, this%nkpnts_start, this%nkpnts_end, comm)
-      if ( (this%nkpnts_end - this%nkpnts_start + 1 ) < this%nkpnts)  this%parallel_in_momentum = .true.
-      
+      if((this%nkpnts_end - this%nkpnts_start + 1) < this%nkpnts) this%parallel_in_momentum = .true.
+
+      if(debug%info) then
 #if defined(HAVE_MPI)
-      call MPI_Barrier(mpi_world%comm, mpi_err)
-      call MPI_Comm_rank(mpi_world%comm, mpirank, mpi_err)
-      write(*,*) &
-        'Number of k-points on node ', mpirank, ' : ', this%nkpnts_end - this%nkpnts_start + 1
-      call MPI_Barrier(mpi_world%comm, mpi_err)
+        call MPI_Barrier(mpi_world%comm, mpi_err)
+        write(*,*) &
+          'Debug: momentum points on node ', mpi_world%rank, ' : ', this%nkpnts_start, this%nkpnts_end
+        call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
+      end if
+
       SAFE_ALLOCATE(this%kcoords_cub(1:mdim, 1:this%nkpnts, kptst:kptend))
       this%kcoords_cub = M_ZERO
 
@@ -884,8 +890,8 @@ contains
   
 
       SAFE_ALLOCATE(this%kcoords_cub(1:mdim, 1:this%nkpnts, kptst:kptend))
-    
-      
+
+
       nkp_out = 0 
       do ikpt = kptst, kptend
         ikp = 0
@@ -911,8 +917,7 @@ contains
 
               end do
             end do
-            
-            
+
           end select
 
       
@@ -939,12 +944,7 @@ contains
       call messages_info()
 
     end select
-
     
-    
-    
-    call messages_print_var_value(stdout, "Total number of momentum points", this%nkpnts)
-
     POP_SUB(pes_flux_reciprocal_mesh_gen)
     
   contains 
@@ -1035,7 +1035,7 @@ contains
     PUSH_SUB(pes_flux_calc)
 
     if(iter > 0) then
-      
+
       if (debug%info) then
         call messages_write("Debug: Calculating pes_flux")
         call messages_info()
@@ -1203,7 +1203,7 @@ contains
       if(simul_box_is_periodic(mesh%sb)) then
         kpoint(1:mdim) = kpoints_get_point(mesh%sb%kpoints, ik)
       end if
-            
+
       ! integrate over time
       do itstep = 1, this%tdsteps
         do ikp = ikp_start, ikp_end
@@ -1234,7 +1234,7 @@ contains
           end if
           
 
-          if(.not. this%usememory) then            
+          if(.not. this%usememory) then
             k_dot_aux(:) = M_ZERO
             do imdim = 1, mdim
               k_dot_aux(:) = k_dot_aux(:) + this%kcoords_cub(imdim, :, ik) * this%rcoords(imdim, isp)
@@ -1244,7 +1244,7 @@ contains
 
           do ist = stst, stend
             do isdim = 1, sdim
-              
+
               ! integrate over time
               do itstep = 1, this%tdsteps
                 Jk_cub(ist, isdim, ik, 1:this%nkpnts) = &
@@ -1262,7 +1262,7 @@ contains
                 Jk_cub(ist, isdim, ik, 1:this%nkpnts) = &
                   Jk_cub(ist, isdim, ik, 1:this%nkpnts) * conjgplanewf_cub(1:this%nkpnts, ik)
               end if
-              
+
             end do ! spin-dimension loop
           end do ! states loop
           
