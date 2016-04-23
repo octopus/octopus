@@ -362,7 +362,7 @@ contains
     if(debug%info) then
 #if defined(HAVE_MPI)
       call MPI_Barrier(mpi_world%comm, mpi_err)
-        write(*,*) &
+      write(*,*) &
         'Debug: surface points on node ', mpi_world%rank, ' : ', this%nsrfcpnts_start, this%nsrfcpnts_end
       call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
@@ -536,7 +536,7 @@ contains
 
     integer           :: mdim, pdim
     integer           :: kptst, kptend  
-    integer           :: isp, ikp, ikpt, ibz1,ibz2
+    integer           :: isp, ikp, ikpt, ibz1, ibz2
     integer           :: il, ll, mm, idim
     integer           :: ikk, ith, iph, iomk
     FLOAT             :: kmax, kmin, kact, thetak, phik
@@ -786,12 +786,16 @@ contains
       ! we split the k-mesh in radial & angular part
       call pes_flux_distribute(1, this%nk, this%nk_start, this%nk_end, comm)
       if((this%nk_end - this%nk_start + 1) < this%nk) this%parallel_in_momentum = .true.
+      call pes_flux_distribute(1, this%nstepsomegak, this%nstepsomegak_start, this%nstepsomegak_end, comm)
 
       if(debug%info) then
 #if defined(HAVE_MPI)
         call MPI_Barrier(mpi_world%comm, mpi_err)
         write(*,*) &
           'Debug: momentum points on node ', mpi_world%rank, ' : ', this%nk_start, this%nk_end
+        call MPI_Barrier(mpi_world%comm, mpi_err)
+        write(*,*) &
+          'Debug: momentum directions on node ', mpi_world%rank, ' : ', this%nstepsomegak_start, this%nstepsomegak_end
         call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
       end if
@@ -801,29 +805,33 @@ contains
       SAFE_ALLOCATE(this%kcoords_sph(1:3, this%nk_start:this%nk_end, 1:this%nstepsomegak))
       this%kcoords_sph = M_ZERO
 
-      SAFE_ALLOCATE(this%ylm_k(0:this%lmax, -this%lmax:this%lmax, 1:this%nstepsomegak))
+      SAFE_ALLOCATE(this%ylm_k(0:this%lmax, -this%lmax:this%lmax, this%nstepsomegak_start:this%nstepsomegak_end))
       this%ylm_k = M_z0
 
       ! spherical harmonics & kcoords_sph
-      if(this%nk_start > 0) then
-        iomk = 0
-        do ith = 0, this%nstepsthetak
-          thetak = ith * M_PI / this%nstepsthetak
-          do iph = 0, this%nstepsphik - 1
-            phik = iph * M_TWO * M_PI / this%nstepsphik
-            iomk = iomk + 1
+      iomk = 0
+      do ith = 0, this%nstepsthetak
+        thetak = ith * M_PI / this%nstepsthetak
+        do iph = 0, this%nstepsphik - 1
+          phik = iph * M_TWO * M_PI / this%nstepsphik
+          iomk = iomk + 1
+          if(iomk >= this%nstepsomegak_start .and. iomk <= this%nstepsomegak_end) then
             do ll = 0, this%lmax
               do mm = -ll, ll
                 call ylmr(cos(phik) * sin(thetak), sin(phik) * sin(thetak), cos(thetak), ll, mm, this%ylm_k(ll, mm, iomk))
               end do
             end do
+          end if
+          if(this%nk_start > 0) then
             this%kcoords_sph(1, this%nk_start:this%nk_end, iomk) = cos(phik) * sin(thetak)
             this%kcoords_sph(2, this%nk_start:this%nk_end, iomk) = sin(phik) * sin(thetak)
             this%kcoords_sph(3, this%nk_start:this%nk_end, iomk) = cos(thetak)
-            if(ith == 0 .or. ith == this%nstepsthetak) exit
-          end do
+          end if
+          if(ith == 0 .or. ith == this%nstepsthetak) exit
         end do
+      end do
 
+      if(this%nk_start > 0) then
         ! Bessel functions & kcoords_sph
         do ikk = this%nk_start, this%nk_end
           kact = ikk * this%dk
@@ -1313,7 +1321,7 @@ contains
     CMPLX, allocatable :: spctramp_sph(:,:,:,:,:)
     integer            :: ikk, ikk_start, ikk_end
     integer            :: isp_start, isp_end
-    integer            :: iomk
+    integer            :: iomk, iomk_start, iomk_end
     CMPLX, allocatable :: phase_act(:,:)
     FLOAT              :: vec
     integer            :: tdstep_on_node
@@ -1338,6 +1346,8 @@ contains
     ikk_end    = this%nk_end
     isp_start  = this%nsrfcpnts_start
     isp_end    = this%nsrfcpnts_end
+    iomk_start = this%nstepsomegak_start
+    iomk_end   = this%nstepsomegak_end
 
     ! surface integral S_lm (for time step on node)
     SAFE_ALLOCATE(s1_node(stst:stend, 1:sdim, kptst:kptend, 0:lmax, -lmax:lmax, 1:3))
@@ -1385,8 +1395,8 @@ contains
     end do
 
     ! spectral amplitude for k-points on node
-    SAFE_ALLOCATE(integ11_t(1:this%nstepsomegak, 1:3))
-    SAFE_ALLOCATE(integ21_t(1:this%nstepsomegak))
+    SAFE_ALLOCATE(integ11_t(0:this%nstepsomegak, 1:3))
+    SAFE_ALLOCATE(integ21_t(0:this%nstepsomegak))
     SAFE_ALLOCATE(integ12_t(ikk_start:ikk_end, 1:this%nstepsomegak, 1:3))
     SAFE_ALLOCATE(integ22_t(ikk_start:ikk_end, 1:this%nstepsomegak))
 
@@ -1438,12 +1448,18 @@ contains
               do mm = -ll, ll
                 ! multiply with spherical harmonics & sum over all mm
                 do imdim = 1, 3
-                  integ11_t(1:this%nstepsomegak, imdim) = integ11_t(1:this%nstepsomegak, imdim) + &
-                    s1_act(ll, mm, imdim) * this%ylm_k(ll, mm, 1:this%nstepsomegak)
+                  integ11_t(iomk_start:iomk_end, imdim) = integ11_t(iomk_start:iomk_end, imdim) + &
+                    s1_act(ll, mm, imdim) * this%ylm_k(ll, mm, iomk_start:iomk_end)
                 end do
-                integ21_t(1:this%nstepsomegak) = integ21_t(1:this%nstepsomegak) + &
-                  s2_act(ll, mm) * this%ylm_k(ll, mm, 1:this%nstepsomegak)
+                integ21_t(iomk_start:iomk_end) = integ21_t(iomk_start:iomk_end) + &
+                  s2_act(ll, mm) * this%ylm_k(ll, mm, iomk_start:iomk_end)
               end do
+
+              if(mesh%parallel_in_domains) then
+                call comm_allreduce(mesh%mpi_grp%comm, integ11_t)
+                call comm_allreduce(mesh%mpi_grp%comm, integ21_t)
+              end if
+
               ! multiply with Bessel function & sum over all ll
               do ikk = ikk_start, ikk_end
                 integ12_t(ikk, 1:this%nstepsomegak, 1:3) = integ12_t(ikk, 1:this%nstepsomegak, 1:3) + &

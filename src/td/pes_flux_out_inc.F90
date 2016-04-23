@@ -244,7 +244,7 @@ subroutine pes_flux_pmesh_pln(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, 
           
           GG(:) = M_ZERO 
           ig = flatten_indices(j1,j2,j3, ll) 
-          
+
           GG(1:dim) = this%kcoords_cub(1:dim, ig, ik)
 !           print *, ik, j1, j2, j3, "GG(:) = ", GG(:) , ig
 !           GG(1:3)= (/LG_(j1,1),LG_(j2,2),LG_(j3,3)/)
@@ -290,7 +290,6 @@ subroutine pes_flux_pmesh_pln(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, 
 
     end do 
   end do
-  
   
   if ( kpoints_have_zero_weight_path(kpoints)) then 
   ! With a path we just need to get the correct the zero index on the in-plane direction  
@@ -1148,7 +1147,7 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
   do ik = kptst, kptend
     do ist = stst, stend
       do isdim = 1, sdim
-        
+
         itot = ist + (ik-1) * st%nst+  (isdim-1) * st%nst*st%d%kpt%nglobal
 
         write(filename,'(i10.10)') itot
@@ -1215,9 +1214,9 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
   end do
 
   if(this%shape == M_SPHERICAL) then
-    call zrestart_write_binary(restart, 'pesflux4', this%nk * this%nstepsomegak, this%conjgphase_prev_sph(:,:), err)
+    call zrestart_write_binary(restart, 'pesflux4', this%nk * this%nstepsomegak, this%conjgphase_prev_sph, err)
   else
-    call zrestart_write_binary(restart, 'pesflux4', this%nkpnts, this%conjgphase_prev_cub(:,:), err)
+    call zrestart_write_binary(restart, 'pesflux4', this%nkpnts, this%conjgphase_prev_cub, err)
   end if
   if(err /= 0) ierr = ierr + 2
 
@@ -1225,7 +1224,6 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
     message(1) = "Debug: Writing pes_flux restart done."
     call messages_info(1)
   end if
-  
 
   POP_SUB(pes_flux_dump)
 end subroutine pes_flux_dump
@@ -1287,9 +1285,9 @@ subroutine pes_flux_load(restart, this, mesh, st, ierr)
   end do
 
   if(this%shape == M_SPHERICAL) then
-    call zrestart_read_binary(restart, 'pesflux4', this%nk * this%nstepsomegak, this%conjgphase_prev_sph(:,:), err)
+    call zrestart_read_binary(restart, 'pesflux4', this%nk * this%nstepsomegak, this%conjgphase_prev_sph, err)
   else
-    call zrestart_read_binary(restart, 'pesflux4', this%nkpnts, this%conjgphase_prev_cub(:,:), err)
+    call zrestart_read_binary(restart, 'pesflux4', this%nkpnts, this%conjgphase_prev_cub, err)
   end if
   if(err /= 0) ierr = ierr + 2
  
