@@ -20,6 +20,7 @@
 #include "global.h"
 
 module pes_flux_oct_m
+  use boundary_op_oct_m
   use comm_oct_m
   use derivatives_oct_m
   use global_oct_m
@@ -82,7 +83,7 @@ module pes_flux_oct_m
     integer          :: nsrfcpnts_start, nsrfcpnts_end !< for cubic surface: number of surface points on node
     FLOAT, pointer   :: srfcnrml(:,:)                  !< vectors normal to the surface (includes surface element)
     FLOAT, pointer   :: rcoords(:,:)                   !< coordinates of the surface points
-    integer, pointer :: srfcpnt(:)                     !< for cubic surface: returns index of the surface points
+    integer, pointer :: srfcpnt(:)                     !< for cubic surface: returns local index of the surface points
     integer, pointer :: rankmin(:)                     !< for cubic surface: returns node which has the surface point
     integer          :: lmax                           !< for spherical surface
     CMPLX, pointer   :: ylm_r(:,:,:)                   !< for spherical surface
@@ -109,6 +110,7 @@ module pes_flux_oct_m
                                                        !< mesh. Used when working with semi-periodic systems 
 
     logical          :: usememory                      !< whether conjgplanewf should be kept in memory
+    logical          :: avoid_ab
     type(mesh_interpolation_t) :: interp
       
     logical          :: parallel_in_momentum           !< whether we are parallelizing over the k-mesh  
@@ -236,7 +238,20 @@ contains
       call messages_print_var_value(stdout, 'PES_Flux_Lmax', this%lmax)
     end if
 
+    this%avoid_ab = .false.
     if(this%shape == M_CUBIC .or. this%shape == M_PLANES) then
+      if(hm%bc%abtype /= NOT_ABSORBING) then
+        !%Variable PES_Flux_AvoidAB
+        !%Type logical
+        !%Default yes
+        !%Section Time-Dependent::PhotoElectronSpectrum
+        !%Description
+        !% For PES_Flux_Shape = cub, checks whether surface points are inside the 
+        !% absorbing zone and discards them if set to yes (default).
+        !%End
+        call parse_variable('PES_Flux_AvoidAB', .true., this%avoid_ab)
+        call messages_print_var_value(stdout, 'PES_Flux_AvoidAB', this%avoid_ab)
+      end if
 
       !%Variable PES_Flux_Lsize
       !%Type block
@@ -347,7 +362,7 @@ contains
     ! Get the surface points
     ! -----------------------------------------------------------------
     if(this%shape == M_CUBIC .or. this%shape == M_PLANES) then
-      call pes_flux_getcube(this, mesh, border, offset)
+      call pes_flux_getcube(this, mesh, hm, border, offset)
     else
       call mesh_interpolation_init(this%interp, mesh)
       ! equispaced grid in theta & phi (Gauss-Legendre would optimize to nstepsthetar = this%lmax & nstepsphir = 2*this%lmax + 1):
@@ -545,10 +560,6 @@ contains
     FLOAT             :: Emin, Emax, DE , kvec(1:3) 
     integer           :: NBZ(1:2), nkp_out, nkmin, nkmax
       
-#if defined(HAVE_MPI)
-    integer           :: mpirank
-#endif
-
     PUSH_SUB(pes_flux_reciprocal_mesh_gen)  
 
     kptst  = st%d%kpt%start
@@ -743,7 +754,7 @@ contains
       end if
 
       ! If we are using a path in reciprocal space 
-      ! we don't need to replicate the BZ in directions 
+      ! we do not need to replicate the BZ in directions 
       ! perpendicular to the path
       if (kpoints_have_zero_weight_path(sb%kpoints)) then
         call get_kpath_perp_direction(sb%kpoints, idim)
@@ -1513,37 +1524,51 @@ contains
   end subroutine pes_flux_integrate_sph
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_getcube(this, mesh, border, offset)
+  subroutine pes_flux_getcube(this, mesh, hm, border, offset)
     type(mesh_t),     intent(in)    :: mesh
     type(pes_flux_t), intent(inout) :: this
+    type(hamiltonian_t), intent(in) :: hm
     FLOAT,            intent(in)    :: border(1:MAX_DIM)
     FLOAT,            intent(in)    :: offset(1:MAX_DIM)
 
     integer, allocatable  :: which_surface(:)
     FLOAT                 :: xx(MAX_DIM), dd
     integer               :: mdim, imdim, idir, isp
-    integer               :: ip_global, ip_start, ip_end
+    integer               :: ip_global
     integer               :: rankmin, nsurfaces
+    logical               :: in_ab
+    integer               :: ip_local
 
     PUSH_SUB(pes_flux_getcube)
 
     ! this routine is parallelized over the mesh in any case
 
     mdim = mesh%sb%dim
-
-    call pes_flux_distribute(1, mesh%np_global, ip_start, ip_end, mpi_world%comm)
+    in_ab = .false.
 
     SAFE_ALLOCATE(which_surface(1:mesh%np_global))
     which_surface = 0
 
     ! get the surface points
     this%nsrfcpnts = 0
-    do ip_global = ip_start, ip_end
+    do ip_local = 1, mesh%np
+      ip_global = mesh%vp%local(mesh%vp%xlocal + ip_local - 1)
       nsurfaces = 0
-      xx(1:MAX_DIM) = mesh_x_global(mesh, ip_global) - offset(1:MAX_DIM)
+
+      xx(1:MAX_DIM) = mesh%x(ip_local, 1:MAX_DIM) - offset(1:MAX_DIM)
+
+      ! eventually check whether we are in absorbing zone
+      if(this%avoid_ab) then
+        select case(hm%bc%abtype)
+        case(MASK_ABSORBING)
+          in_ab = (hm%bc%mf(ip_local) /= M_ONE)
+        case(IMAGINARY_ABSORBING)
+          in_ab = (hm%bc%mf(ip_local) /= M_ZERO)
+        end select
+      end if
 
       ! check whether the point is inside the cube
-      if(all(abs(xx(1:mdim)) <= border(1:mdim))) then
+      if(all(abs(xx(1:mdim)) <= border(1:mdim)) .and. .not. in_ab) then
         ! check whether the point is close to any border
         do imdim = 1, mdim
           dd = border(imdim) - abs(xx(imdim))
@@ -1562,10 +1587,10 @@ contains
       end if
     end do
 
-#if defined(HAVE_MPI)
-    call comm_allreduce(mpi_world%comm, this%nsrfcpnts)
-    call comm_allreduce(mpi_world%comm, which_surface)
-#endif
+    if(mesh%parallel_in_domains) then
+      call comm_allreduce(mesh%mpi_grp%comm, this%nsrfcpnts)
+      call comm_allreduce(mesh%mpi_grp%comm, which_surface)
+    end if
 
     SAFE_ALLOCATE(this%srfcpnt(1:this%nsrfcpnts))
     SAFE_ALLOCATE(this%srfcnrml(1:mdim, 0:this%nsrfcpnts))
