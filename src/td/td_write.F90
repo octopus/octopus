@@ -21,6 +21,7 @@
 
 module td_write_oct_m
   use iso_c_binding
+  use comm_oct_m
   use excited_states_oct_m
   use gauge_field_oct_m
   use geometry_oct_m
@@ -95,7 +96,8 @@ module td_write_oct_m
     OUT_ION_CH      = 16, &
     OUT_TOTAL_CURRENT = 17, &
     OUT_PARTIAL_CHARGES = 18, &
-    OUT_MAX         = 18
+    OUT_KP_PROJ = 19, &
+    OUT_MAX         = 19
   
   type td_write_t
     private
@@ -235,6 +237,11 @@ contains
     !% Output the total current.
     !%Option partial_charges 131072
     !% Bader and Hirshfeld partial charges. The output file is called 'td.general/partial_charges'.
+    !%Option td_kpoint_occup 262144                                                                              
+    !% Project propagated Kohn-Sham states to the states at t=0 given in the directory 
+    !% restart_proj (see %RestartOptions). This is an alternative to the option
+    !% td_occup, with a formating more suitable for k-points and works only in 
+    !% k- and/or state parallelization
     !%End
 
     default = 2**(OUT_MULTIPOLES - 1) +  2**(OUT_ENERGY - 1)
@@ -258,6 +265,15 @@ contains
     if(writ%out(OUT_ION_CH)%write) call messages_experimental('TDOutput = ionization_channels')
     if(writ%out(OUT_TOTAL_CURRENT)%write) call messages_experimental('TDOutput = total_current')
     if(writ%out(OUT_PARTIAL_CHARGES)%write) call messages_experimental('TDOutput = partial_charges')
+    if(writ%out(OUT_KP_PROJ)%write) call messages_experimental('TDOutput = td_kpoint_occup')
+
+    if(writ%out(OUT_KP_PROJ)%write) then
+      ! make sure this is not domain distributed
+      if(gr%mesh%np /= gr%mesh%np_global) then
+        message(1) = "TDOutput option td_kpoint_occup does not work with domain parallelization"
+        call messages_fatal(1)
+      end if
+    end if
 
     !%Variable TDMultipoleLmax
     !%Type integer
@@ -287,8 +303,8 @@ contains
     ! This variable is documented in scf/scf.F90
     call parse_variable('LocalMagneticMomentsSphereRadius', rmin*M_HALF, writ%lmm_r, units_inp%length)
 
-    if(writ%out(OUT_PROJ)%write .or. writ%out(OUT_POPULATIONS)%write) then
-      if (st%parallel_in_states) then
+    if(writ%out(OUT_PROJ)%write .or. writ%out(OUT_POPULATIONS)%write.or.writ%out(OUT_KP_PROJ)%write) then
+      if (.not.writ%out(OUT_KP_PROJ)%write.and.st%parallel_in_states) then
         message(1) = "Options TDOutput = td_occup and populations are not implemented for parallel in states."
         call messages_fatal(1)
       end if
@@ -482,6 +498,10 @@ contains
         call write_iter_init(writ%out(OUT_PROJ)%handle, first, &
           units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/projections")))
 
+      if(writ%out(OUT_KP_PROJ)%write) &
+        call write_iter_init(writ%out(OUT_KP_PROJ)%handle, first, &
+          units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/projections")))
+
       if(writ%out(OUT_GAUGE_FIELD)%write) &
         call write_iter_init(writ%out(OUT_GAUGE_FIELD)%handle, &
         first, units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/gauge_field")))
@@ -586,6 +606,9 @@ contains
 
     if(writ%out(OUT_PROJ)%write) &
       call td_write_proj(writ%out(OUT_PROJ)%handle, gr, geo, st, writ%gs_st, kick, iter)
+
+    if(writ%out(OUT_KP_PROJ)%write) &
+      call td_write_proj_kp(writ%out(OUT_KP_PROJ)%handle,hm, gr, st, writ%gs_st, iter)
 
     if(writ%out(OUT_COORDS)%write) &
       call td_write_coordinates(writ%out(OUT_COORDS)%handle, gr, geo, iter)
@@ -2120,6 +2143,109 @@ contains
     end subroutine distribute_projections
 
   end subroutine td_write_proj
+
+  subroutine td_write_proj_kp(out_proj_kp, hm,gr, st, gs_st, iter)
+    type(c_ptr),       intent(inout) :: out_proj_kp
+    type(hamiltonian_t), intent(inout)  :: hm
+    type(grid_t),      intent(inout) :: gr
+    type(states_t),    intent(in)    :: st
+    type(states_t),    intent(inout) :: gs_st
+    integer,           intent(in)    :: iter
+
+    CMPLX, allocatable :: proj(:,:), psi(:,:,:), gs_psi(:,:,:), temp_state(:,:)
+    character(len=80) :: aux, filename1, filename2
+    integer :: ik,ist, jst, file, idim, nk_proj, ip
+    integer, allocatable :: k_proj(:)
+    type(mesh_t) :: mesh
+
+    PUSH_SUB(td_write_proj_kp)
+
+    ! this is slow, so we don't do it every step
+    if(.not.mod(iter,50) == 0) then
+       POP_SUB(td_write_proj_kp)
+       return
+    end if
+
+    mesh = gr%der%mesh
+
+    write(filename1,'(I10)') iter
+    filename1 = 'td.general/projections_iter_'//trim(adjustl(filename1))
+    file = 9845623
+    
+    SAFE_ALLOCATE(proj(1:gs_st%nst, 1:gs_st%nst))
+    SAFE_ALLOCATE(psi(1:gs_st%nst,1:gs_st%d%dim,1:mesh%np))
+    SAFE_ALLOCATE(gs_psi(1:gs_st%nst,1:gs_st%d%dim,1:mesh%np))
+    SAFE_ALLOCATE(temp_state(1:mesh%np,1:gs_st%d%dim))
+    
+    ! Project only k-points that have a zero weight.
+    ! Why? It is unlikely that one is interested in the projections 
+    ! of the Monkhorst-Pack kpoints, but instead we assume that
+    ! the user has specified a k-path with zero weights
+    nk_proj = gr%sb%kpoints%nik_skip
+
+    do ik=gr%sb%kpoints%reduced%npoints-nk_proj,nk_proj
+      ! reset arrays
+      psi(1:gs_st%nst, 1:gs_st%d%dim, 1:mesh%np)= M_ZERO
+      gs_psi(1:gs_st%nst, 1:gs_st%d%dim, 1:mesh%np)= M_ZERO
+      ! open file for writing
+      if(mpi_world%rank==0) then
+        write(filename2,'(I10)') ik
+        filename2 = trim(adjustl(filename1))//'_ik_'//trim(adjustl(filename2))
+        open(unit=file,file=filename2)
+      end if
+      ! get all states at ik that are locally stored (ground state and td-states)
+      do ist=gs_st%st_start,gs_st%st_end
+        if(state_kpt_is_local(gs_st, ist, ik)) then
+          call states_get_state(st, mesh, ist, ik,temp_state )
+          do idim=1,gs_st%d%dim
+            psi(ist,idim,1:mesh%np) =  temp_state(1:mesh%np,idim)
+          end do
+          call states_get_state(gs_st, mesh, ist, ik,temp_state )
+          do idim=1,gs_st%d%dim
+            gs_psi(ist,idim,1:mesh%np) =  temp_state(1:mesh%np,idim)
+          end do
+        end if
+      end do
+      ! collect states at ik from all processes in one array
+      call comm_allreduce(mpi_world%comm, psi)
+      call comm_allreduce(mpi_world%comm, gs_psi)
+       
+      ! compute the overlaps as a matrix porduct
+      proj(1:gs_st%nst,1:gs_st%nst) = M_ZERO
+      call zgemm('n',                               &
+                 'c',                               &
+                 gs_st%nst,                         &
+                 gs_st%nst,                         &
+                 mesh%np_global*gs_st%d%dim,        &
+                 cmplx(mesh%volume_element,kind=8), &
+                 psi(1, 1, 1),                      &
+                 ubound(psi, dim = 1),              &
+                 gs_psi(1, 1, 1),                   &
+                 ubound(gs_psi, dim = 1),           &
+                 cmplx(0.,kind=8),                  &
+                 proj(1, 1),                        &
+                 ubound(proj, dim = 1))
+
+      ! write to file 
+      if(mpi_world%rank==0) then
+        do ist=1,gs_st%nst
+          do jst=1,gs_st%nst
+            write(file,'(I3,1x,I3,1x,e12.6,1x,e12.6,2x)') ist, jst, proj(ist,jst)
+          end do
+        end do
+        close(file)
+      end if
+
+  end do! ik            
+
+  SAFE_DEALLOCATE_A(proj)
+  SAFE_DEALLOCATE_A(psi)
+  SAFE_DEALLOCATE_A(gs_psi)
+  SAFE_DEALLOCATE_A(temp_state)
+     
+  POP_SUB(td_write_proj_kp)
+
+  end subroutine td_write_proj_kp
 
 
   ! ---------------------------------------------------------
