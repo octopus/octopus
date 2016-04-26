@@ -233,7 +233,7 @@ contains
       ! the occupations must be recalculated each time, though they do not affect the result of course.
       ! FIXME: This is wrong for metals where we must use the Fermi level from the original calculation!
       call states_fermi(sys%st, sys%gr%mesh)
-      call states_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb, eigens%diff, st_start = showstart)
+      call states_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb, eigens%diff, st_start = showstart, compact = .true.)
       call messages_print_stress(stdout)
 
       ! write output file
