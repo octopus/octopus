@@ -163,6 +163,7 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   CMPLX, allocatable :: rwork(:)
   CMPLX :: ftmp
 #endif
+  type(profile_t), save :: prof_diag, prof_gemm1, prof_gemm2
 
   PUSH_SUB(X(subspace_diag_scalapack))
 
@@ -217,6 +218,8 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
     hpsi(der%mesh%np + 1:der%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end) = M_ZERO
   end if
   
+  call profiling_in(prof_gemm1, "SCALAPACK_GEMM1")
+
   ! get the matrix <psi|H|psi> = <psi|hpsi>
   call pblas_gemm('c', 'n', st%nst, st%nst, total_np, &
     R_TOTYPE(der%mesh%vol_pp(1)), psi(1, 1, st%st_start), 1, 1, psi_desc(1), &
@@ -224,6 +227,9 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
     R_TOTYPE(M_ZERO), hs(1, 1), 1, 1, hs_desc(1))
 
   SAFE_ALLOCATE(evectors(1:nrow, 1:ncol))
+  call profiling_out(prof_gemm1)
+
+  call profiling_in(prof_diag, "SCALAPACK_DIAG")
 
   ! now diagonalize
 #ifdef R_TCOMPLEX
@@ -280,6 +286,8 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
 
 #endif
 
+  call profiling_out(prof_diag)
+
   SAFE_DEALLOCATE_A(hs)
 
   !$omp parallel private(ist, idim, ip)
@@ -294,10 +302,12 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   end do
   !$omp end parallel
 
+  call profiling_in(prof_gemm2, "SCALAPACK_GEMM2")
   call pblas_gemm('n', 'n', total_np, st%nst, st%nst, &
     R_TOTYPE(M_ONE), hpsi(1, 1, st%st_start), 1, 1, psi_desc(1), &
     evectors(1, 1), 1, 1, hs_desc(1), &
     R_TOTYPE(M_ZERO), psi(1, 1, st%st_start), 1, 1, psi_desc(1))
+  call profiling_out(prof_gemm2)
 
   ! Recalculate the residues if requested by the diff argument.
   if(present(diff)) then 

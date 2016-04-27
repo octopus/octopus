@@ -98,6 +98,7 @@ contains
 
     R_TYPE, allocatable :: psi(:, :, :)
     integer             :: psi_block(1:2), total_np
+    type(profile_t), save :: prof_cholesky, prof_trsm, prof_herk
 #ifdef HAVE_SCALAPACK
     integer             :: info, nbl, nrow, ncol
     integer             :: psi_desc(BLACS_DLEN), ss_desc(BLACS_DLEN)
@@ -160,12 +161,17 @@ contains
 
     ss = M_ZERO
 
+    call profiling_in(prof_herk, "SCALAPACK_HERK")
     call pblas_herk(uplo = 'U', trans = 'C', n = st%nst, k = total_np, &
       alpha = R_TOTYPE(mesh%vol_pp(1)), a = psi(1, 1, st%st_start), ia = 1, ja = 1, desca = psi_desc(1), &
       beta = R_TOTYPE(M_ZERO), c = ss(1, 1), ic = 1, jc = 1, descc = ss_desc(1))
+    call profiling_count_operations(dble(mesh%np)*dble(nst)**2*(R_ADD + R_MUL))
+    call profiling_out(prof_herk)
 
+    call profiling_in(prof_cholesky, "SCALAPACK_CHOLESKY")
     ! calculate the Cholesky decomposition
     call scalapack_potrf(uplo = 'U', n = st%nst, a = ss(1, 1), ia = 1, ja = 1, desca = ss_desc(1), info = info)
+    call profiling_out(prof_cholesky)
 
     if(info /= 0) then
       write(message(1),'(3a,i6)') "cholesky_parallel orthogonalization with ", TOSTRING(pX(potrf)), &
@@ -173,13 +179,12 @@ contains
       call messages_fatal(1)
     end if
 
+    call profiling_in(prof_trsm, "SCALAPACK_TRSM")
     call pblas_trsm(side = 'R', uplo = 'U', transa = 'N', diag = 'N', m = total_np, n = st%nst, &
       alpha = R_TOTYPE(M_ONE), a = ss(1, 1), ia = 1, ja = 1, desca = ss_desc(1), &
       b = psi(1, 1, st%st_start), ib = 1, jb = 1, descb = psi_desc(1))
-
+    call profiling_out(prof_trsm)
 #endif
-
-    call profiling_count_operations(dble(mesh%np)*dble(nst)**2*(R_ADD + R_MUL))
 
     SAFE_DEALLOCATE_A(ss)
 
