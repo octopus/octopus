@@ -156,7 +156,7 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   R_TYPE               :: rttmp
   integer              :: ist, lwork, size
   integer :: psi_block(1:2), total_np, psi_desc(BLACS_DLEN), hs_desc(BLACS_DLEN), info
-  integer :: nbl, nrow, ncol
+  integer :: nbl, nrow, ncol, ip, idim, ist
   type(batch_t) :: psib, hpsib
 #ifdef R_TCOMPLEX
   integer :: lrwork
@@ -282,7 +282,17 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
 
   SAFE_DEALLOCATE_A(hs)
 
-  hpsi(1:der%mesh%np, 1:st%d%dim,  st%st_start:st%st_end) = psi(1:der%mesh%np, 1:st%d%dim, st%st_start:st%st_end)
+  !$omp parallel private(ist, idim, ip)
+  do ist = st%st_start, st%st_end
+    do idim = 1, st%d%dim
+      !$omp do
+      do ip = 1, der%mesh%np
+        hpsi(ip, idim, ist) = psi(ip, idim, ist)
+      end do
+      !$omp end do nowait
+    end do
+  end do
+  !$omp end parallel
 
   call pblas_gemm('n', 'n', total_np, st%nst, st%nst, &
     R_TOTYPE(M_ONE), hpsi(1, 1, st%st_start), 1, 1, psi_desc(1), &
