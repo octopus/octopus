@@ -462,6 +462,8 @@ contains
         this%norbs = this%maxorbs
       end if
 
+      if(this%mode == OPTION__LCAOSTART__LCAO_SIMPLE) this%norbs = st%nst
+      
       ASSERT(this%norbs <= this%maxorbs)
 
       SAFE_ALLOCATE(this%cst(1:this%norbs, 1:st%d%spin_channels))
