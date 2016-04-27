@@ -2183,7 +2183,7 @@ contains
     ! the user has specified a k-path with zero weights
     nk_proj = gr%sb%kpoints%nik_skip
 
-    do ik=gr%sb%kpoints%reduced%npoints-nk_proj,nk_proj
+    do ik=gr%sb%kpoints%reduced%npoints-nk_proj+1,gr%sb%kpoints%reduced%npoints
       ! reset arrays
       psi(1:gs_st%nst, 1:gs_st%d%dim, 1:mesh%np)= M_ZERO
       gs_psi(1:gs_st%nst, 1:gs_st%d%dim, 1:mesh%np)= M_ZERO
@@ -2210,7 +2210,7 @@ contains
       call comm_allreduce(mpi_world%comm, psi)
       call comm_allreduce(mpi_world%comm, gs_psi)
        
-      ! compute the overlaps as a matrix porduct
+      ! compute the overlaps as a matrix product
       proj(1:gs_st%nst,1:gs_st%nst) = M_ZERO
       call zgemm('n',                               &
                  'c',                               &
