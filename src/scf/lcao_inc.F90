@@ -416,6 +416,8 @@ subroutine X(init_orbitals)(this, st, gr, geo, start)
 
   end if
 
+  this%initialized_orbitals = .true.
+  
   SAFE_DEALLOCATE_A(ao)
 
   POP_SUB(X(init_orbitals))
@@ -439,7 +441,7 @@ subroutine X(get_ao)(this, st, mesh, geo, iorb, ispin, ao, use_psi)
   if(this%ck(iorb, ispin) == 0) then
     ao(1:mesh%np, 1:st%d%dim) = this%X(buff)(1:mesh%np, 1:st%d%dim, iorb, ispin)
   else
-    if(use_psi) then
+    if(use_psi .and. this%initialized_orbitals) then
       call states_get_state(st, mesh, this%cst(iorb, ispin), this%ck(iorb, ispin), ao)
     else
       call X(lcao_atomic_orbital)(this, iorb, mesh, st, geo, ao, ispin)

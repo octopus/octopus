@@ -89,6 +89,7 @@ module lcao_oct_m
     integer, pointer  :: ck(:, :)
     real(4), pointer  :: dbuff(:, :, :, :) !< single-precision buffer
     complex(4), pointer :: zbuff(:, :, :, :) !< single-precision buffer
+    logical           :: initialized_orbitals
     FLOAT             :: orbital_scale_factor
 
     !> For the alternative LCAO
@@ -468,6 +469,7 @@ contains
 
       SAFE_ALLOCATE(this%cst(1:this%norbs, 1:st%d%spin_channels))
       SAFE_ALLOCATE(this%ck(1:this%norbs, 1:st%d%spin_channels))
+      this%initialized_orbitals = .false.
     else
       call lcao2_init()
     end if
@@ -718,7 +720,9 @@ contains
 
     call lcao_init(lcao, sys%gr, sys%geo, sys%st)
 
-    call lcao_init_orbitals(lcao, sys%st, sys%gr, sys%geo, start = st_start)
+    if(lcao%mode /= OPTION__LCAOSTART__LCAO_SIMPLE) then
+      call lcao_init_orbitals(lcao, sys%st, sys%gr, sys%geo, start = st_start)
+    end if
 
     if (.not. present(st_start)) then
       call lcao_guess_density(lcao, sys%st, sys%gr, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
