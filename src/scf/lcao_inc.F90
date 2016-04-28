@@ -435,10 +435,10 @@ subroutine X(get_ao)(this, st, mesh, geo, iorb, ispin, ao, use_psi)
   integer,             intent(in)    :: ispin
   R_TYPE,              intent(out)   :: ao(:, :)
   logical,             intent(in)    :: use_psi
-  
+
   PUSH_SUB(X(get_ao))
   
-  if(this%ck(iorb, ispin) == 0) then
+  if(this%ck(iorb, ispin) == 0 .and. this%initialized_orbitals) then
     ao(1:mesh%np, 1:st%d%dim) = this%X(buff)(1:mesh%np, 1:st%d%dim, iorb, ispin)
   else
     if(use_psi .and. this%initialized_orbitals) then
