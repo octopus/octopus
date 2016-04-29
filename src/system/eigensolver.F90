@@ -324,7 +324,7 @@ contains
 
     if(st%parallel_in_states .and. .not. eigensolver_parallel_in_states(eigens)) then
       message(1) = "The selected eigensolver is not parallel in states."
-      message(2) = "Please use the lobpcg or rmmdiis eigensolvers."
+      message(2) = "Please use the lobpcg, psd, or rmmdiis eigensolvers."
       call messages_fatal(2)
     end if
 
@@ -752,7 +752,7 @@ contains
     par_stat = .false.
 
     select case(this%es_type)
-    case(RS_RMMDIIS, RS_LOBPCG)
+    case(RS_RMMDIIS, RS_LOBPCG, RS_PSD)
       par_stat = .true.
     end select
 
