@@ -156,7 +156,7 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   R_TYPE               :: rttmp
   integer              :: ist, lwork, size
   integer :: psi_block(1:2), total_np, psi_desc(BLACS_DLEN), hs_desc(BLACS_DLEN), info
-  integer :: nbl, nrow, ncol, ip, idim, ist
+  integer :: nbl, nrow, ncol, ip, idim
   type(batch_t) :: psib, hpsib
 #ifdef R_TCOMPLEX
   integer :: lrwork
