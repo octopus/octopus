@@ -821,7 +821,7 @@ contains
     end do
     call spline_init(aux)
     call spline_fit(npoints, x, y2, aux)
-    yw(1) = oct_spline_eval_integ(aux%spl, x(1), x(npoints), aux%acc)
+    yw(1) = oct_spline_eval_integ_full(aux%spl, aux%acc)
     call spline_end(aux)
 
     do i = 2, np
@@ -830,7 +830,7 @@ contains
       end do
       call spline_init(aux)
       call spline_fit(npoints, x, y2, aux)
-      yw(i) = oct_spline_eval_integ(aux%spl, x(1), x(npoints), aux%acc)
+      yw(i) = oct_spline_eval_integ_full(aux%spl, aux%acc)
       call spline_end(aux)
     end do
 
@@ -891,6 +891,7 @@ contains
     end if
 
     do i = 1, np
+      !$omp parallel do
       do j = 1, npoints
         y2(j) = y(j) * x(j)**2 * loct_sph_bessel(l, x(j)*xw(i))
       end do
