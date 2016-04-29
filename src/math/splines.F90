@@ -201,6 +201,7 @@ module splines_oct_m
   use iso_c_binding
   use loct_math_oct_m
   use messages_oct_m
+  use parser_oct_m
   use profiling_oct_m
 
   implicit none
@@ -290,7 +291,7 @@ module splines_oct_m
       type(c_ptr), intent(inout) :: spl, acc
     end subroutine oct_spline_end
 
-    subroutine oct_spline_fit(nrc, x, y, spl, acc)
+    subroutine oct_spline_fit(nrc, x, y, spl, acc, lib)
       use iso_c_binding
       implicit none
       integer,     intent(in) :: nrc
@@ -298,6 +299,7 @@ module splines_oct_m
       real(8),     intent(in) :: y
       type(c_ptr), intent(inout) :: spl
       type(c_ptr), intent(inout) :: acc
+      integer,     intent(in)    :: lib
     end subroutine oct_spline_fit
 
     real(8) pure function oct_spline_eval(x, spl, acc)
@@ -360,23 +362,26 @@ module splines_oct_m
       type(c_ptr), intent(in) :: acc
     end function oct_spline_eval_der2
 
-    integer pure function oct_spline_npoints(spl)
+    integer pure function oct_spline_npoints(spl, acc)
       use iso_c_binding
 
       type(c_ptr), intent(in) :: spl
+      type(c_ptr), intent(in) :: acc
     end function oct_spline_npoints
 
-    pure subroutine oct_spline_x(spl, x)
+    pure subroutine oct_spline_x(spl, acc, x)
       use iso_c_binding
 
       type(c_ptr), intent(in)  :: spl
+      type(c_ptr), intent(in) :: acc
       real(8),     intent(out) :: x
     end subroutine oct_spline_x
 
-    subroutine oct_spline_y(spl, y)
+    subroutine oct_spline_y(spl, acc, y)
       use iso_c_binding
       implicit none
       type(c_ptr), intent(in) :: spl
+      type(c_ptr), intent(in) :: acc
       real(8),     intent(out) :: y
     end subroutine oct_spline_y
 
@@ -390,7 +395,29 @@ module splines_oct_m
     end function oct_spline_eval_integ
   end interface
 
+  integer, save :: library = 0
+
 contains
+
+  subroutine spline_init_global()
+    PUSH_SUB(spline_init_global)
+
+    !%Variable Splines
+    !%Type integer
+    !%Default gsl
+    !%Section Execution
+    !%Description
+    !% Selects the implementation of the spline interpolation.
+    !%Option gsl 1
+    !% The GNU standard library. 
+    !%Option native 2
+    !% (experimental) Octopus own implementation. New, untested, and
+    !% hopefully faster.
+    !%End
+    call parse_variable('Splines', OPTION__SPLINES__GSL, library)
+    
+    POP_SUB(spline_init_global)
+  end subroutine spline_init_global
 
   !------------------------------------------------------------
   subroutine spline_init_0(spl)
@@ -501,13 +528,13 @@ contains
 
     PUSH_SUB(spline_copy)
 
-    npoints = oct_spline_npoints(splin%spl)
+    npoints = oct_spline_npoints(splin%spl, splin%acc)
 
     SAFE_ALLOCATE( x(1:npoints))
     SAFE_ALLOCATE( y(1:npoints))
 
-    call oct_spline_x(splin%spl, x(1))
-    call oct_spline_y(splout%spl, y(1))
+    call oct_spline_x(splin%spl, splin%acc, x(1))
+    call oct_spline_y(splin%spl, splin%acc, y(1))
 
     call spline_fit(npoints, x, y, splout)
 
@@ -527,9 +554,11 @@ contains
 
     !No PUSH SUB, called too often
 
+    if(library == 0) call spline_init_global()
+    
     spl%x_limit(1) = rofi(1)
     spl%x_limit(2) = rofi(nrc)
-    call oct_spline_fit(nrc, rofi(1), ffit(1), spl%spl, spl%acc)
+    call oct_spline_fit(nrc, rofi(1), ffit(1), spl%spl, spl%acc, library)
 
   end subroutine spline_fit8
 
@@ -629,14 +658,14 @@ contains
 
     PUSH_SUB(spline_sum)
 
-    npoints = oct_spline_npoints(spl1%spl)
+    npoints = oct_spline_npoints(spl1%spl, spl1%acc)
 
     SAFE_ALLOCATE( x(1:npoints))
     SAFE_ALLOCATE( y(1:npoints))
     SAFE_ALLOCATE(y2(1:npoints))
 
-    call oct_spline_x(spl1%spl, x(1))
-    call oct_spline_y(spl1%spl, y(1))
+    call oct_spline_x(spl1%spl, spl1%acc, x(1))
+    call oct_spline_y(spl1%spl, spl1%acc, y(1))
 
     do i = 1, npoints
       y2(i) = spline_eval8(spl2, x(i))
@@ -663,12 +692,12 @@ contains
 
     PUSH_SUB(spline_times)
 
-    npoints = oct_spline_npoints(spl%spl)
+    npoints = oct_spline_npoints(spl%spl, spl%acc)
     SAFE_ALLOCATE(x(1:npoints))
     SAFE_ALLOCATE(y(1:npoints))
 
-    call oct_spline_x(spl%spl, x(1))
-    call oct_spline_y(spl%spl, y(1))
+    call oct_spline_x(spl%spl, spl%acc, x(1))
+    call oct_spline_y(spl%spl, spl%acc, y(1))
     call oct_spline_end(spl%spl, spl%acc)
     do i = 1, npoints
       y(i) = a*y(i)
@@ -691,9 +720,9 @@ contains
 
     PUSH_SUB(spline_integral_full)
 
-    npoints = oct_spline_npoints(spl%spl)
+    npoints = oct_spline_npoints(spl%spl, spl%acc)
     SAFE_ALLOCATE(x(1:npoints))
-    call oct_spline_x(spl%spl, x(1))
+    call oct_spline_x(spl%spl, spl%acc, x(1))
     res = oct_spline_eval_integ(spl%spl, x(1), x(npoints), spl%acc)
     SAFE_DEALLOCATE_A(x)
 
@@ -722,12 +751,12 @@ contains
 
     PUSH_SUB(spline_dotp)
 
-    npoints = oct_spline_npoints(spl1%spl)
+    npoints = oct_spline_npoints(spl1%spl, spl1%acc)
     SAFE_ALLOCATE(x(1:npoints))
     SAFE_ALLOCATE(y(1:npoints))
 
-    call oct_spline_x(spl1%spl, x(1))
-    call oct_spline_y(spl1%spl, y(1))
+    call oct_spline_x(spl1%spl, spl1%acc, x(1))
+    call oct_spline_y(spl1%spl, spl1%acc, y(1))
     do i = 1, npoints
       y(i) = y(i)*oct_spline_eval(x(i), spl2%spl, spl2%acc)
     end do
@@ -756,20 +785,20 @@ contains
 
     PUSH_SUB(spline_3dft)
 
-    npoints = oct_spline_npoints(spl%spl)
+    npoints = oct_spline_npoints(spl%spl, spl%acc)
     SAFE_ALLOCATE( x(1:npoints))
     SAFE_ALLOCATE( y(1:npoints))
     SAFE_ALLOCATE(y2(1:npoints))
 
-    call oct_spline_x(spl%spl, x(1))
-    call oct_spline_y(spl%spl, y(1))
+    call oct_spline_x(spl%spl, spl%acc, x(1))
+    call oct_spline_y(spl%spl, spl%acc, y(1))
 
     ! Check whether splw comes with a defined grid, or else build it.
     if(c_associated(splw%spl)) then
-      np = oct_spline_npoints(splw%spl)
+      np = oct_spline_npoints(splw%spl, splw%acc)
       SAFE_ALLOCATE(xw(1:np))
       SAFE_ALLOCATE(yw(1:np))
-      call oct_spline_x(splw%spl, xw(1))
+      call oct_spline_x(splw%spl, splw%acc, xw(1))
       ! But now we need to kill the input:
       call spline_end(splw)
     else
@@ -830,20 +859,20 @@ contains
 
     PUSH_SUB(spline_besselft)
 
-    npoints = oct_spline_npoints(spl%spl)
+    npoints = oct_spline_npoints(spl%spl, spl%acc)
     SAFE_ALLOCATE( x(1:npoints))
     SAFE_ALLOCATE( y(1:npoints))
     SAFE_ALLOCATE(y2(1:npoints))
 
-    call oct_spline_x(spl%spl, x(1))
-    call oct_spline_y(spl%spl, y(1))
+    call oct_spline_x(spl%spl, spl%acc, x(1))
+    call oct_spline_y(spl%spl, spl%acc, y(1))
 
     ! Check whether splw comes with a defined grid, or else build it.
     if(c_associated(splw%spl)) then
-      np = oct_spline_npoints(splw%spl)
+      np = oct_spline_npoints(splw%spl, splw%acc)
       SAFE_ALLOCATE(xw(1:np))
       SAFE_ALLOCATE(yw(1:np))
-      call oct_spline_x(splw%spl, xw(1))
+      call oct_spline_x(splw%spl, splw%acc, xw(1))
       ! But now we need to kill the input:
       call spline_end(splw)
     else
@@ -892,12 +921,12 @@ contains
 
     PUSH_SUB(spline_cut)
 
-    npoints = oct_spline_npoints(spl%spl)
+    npoints = oct_spline_npoints(spl%spl, spl%acc)
     SAFE_ALLOCATE(x(1:npoints))
     SAFE_ALLOCATE(y(1:npoints))
 
-    call oct_spline_x(spl%spl, x(1))
-    call oct_spline_y(spl%spl, y(1))
+    call oct_spline_x(spl%spl, spl%acc, x(1))
+    call oct_spline_y(spl%spl, spl%acc, y(1))
     call oct_spline_end(spl%spl, spl%acc)
     do i = npoints, 1, -1
       if(x(i)<cutoff) then
@@ -925,13 +954,13 @@ contains
 
     PUSH_SUB(spline_div)
 
-    npoints = oct_spline_npoints(spla%spl)
+    npoints = oct_spline_npoints(spla%spl, spla%acc)
 
     SAFE_ALLOCATE(x(1:npoints))
     SAFE_ALLOCATE(y(1:npoints))
 
-    call oct_spline_x(spla%spl, x(1))
-    call oct_spline_y(spla%spl, y(1))
+    call oct_spline_x(spla%spl, spla%acc, x(1))
+    call oct_spline_y(spla%spl, spla%acc, y(1))
     call oct_spline_end(spla%spl, spla%acc)
   
     ASSERT(splb%x_limit(2) >= splb%x_limit(1))
@@ -962,13 +991,13 @@ contains
 
     PUSH_SUB(spline_mult)
 
-    npoints = oct_spline_npoints(spla%spl)
+    npoints = oct_spline_npoints(spla%spl, spla%acc)
 
     SAFE_ALLOCATE(x(1:npoints))
     SAFE_ALLOCATE(y(1:npoints))
 
-    call oct_spline_x(spla%spl, x(1))
-    call oct_spline_y(spla%spl, y(1))
+    call oct_spline_x(spla%spl, spla%acc, x(1))
+    call oct_spline_y(spla%spl, spla%acc, y(1))
     call oct_spline_end(spla%spl, spla%acc)
   
     ASSERT(splb%x_limit(2) >= splb%x_limit(1))
@@ -1003,15 +1032,15 @@ contains
 
     ! Use the grid of dspl if it is present, otherwise use the same one of spl.
     if(.not. c_associated(dspl%spl)) then ! use the grid of spl
-      npoints = oct_spline_npoints(spl%spl)
+      npoints = oct_spline_npoints(spl%spl, spl%acc)
       SAFE_ALLOCATE(x(1:npoints))
       SAFE_ALLOCATE(y(1:npoints))
-      call oct_spline_x(spl%spl, x(1))
+      call oct_spline_x(spl%spl, spl%acc, x(1))
     else ! use the grid of dspl
-      npoints = oct_spline_npoints(dspl%spl)
+      npoints = oct_spline_npoints(dspl%spl, dspl%acc)
       SAFE_ALLOCATE(x(1:npoints))
       SAFE_ALLOCATE(y(1:npoints))
-      call oct_spline_x(dspl%spl, x(1))
+      call oct_spline_x(dspl%spl, dspl%acc, x(1))
     end if
     do i = 1, npoints
       y(i) = oct_spline_eval_der(x(i), spl%spl, spl%acc)
@@ -1037,15 +1066,15 @@ contains
 
     ! Use the grid of dspl if it is present, otherwise use the same one of spl.
     if(.not. c_associated(dspl%spl)) then ! use the grid of spl
-      npoints = oct_spline_npoints(spl%spl)
+      npoints = oct_spline_npoints(spl%spl, spl%acc)
       SAFE_ALLOCATE(x(1:npoints))
       SAFE_ALLOCATE(y(1:npoints))
-      call oct_spline_x(spl%spl, x(1))
+      call oct_spline_x(spl%spl, spl%acc, x(1))
     else ! use the grid of dspl
-      npoints = oct_spline_npoints(dspl%spl)
+      npoints = oct_spline_npoints(dspl%spl, dspl%acc)
       SAFE_ALLOCATE(x(1:npoints))
       SAFE_ALLOCATE(y(1:npoints))
-      call oct_spline_x(dspl%spl, x(1))
+      call oct_spline_x(dspl%spl, dspl%acc, x(1))
     end if
     do i = 1, npoints
       y(i) = oct_spline_eval_der2(x(i), spl%spl, spl%acc)
@@ -1069,12 +1098,12 @@ contains
 
     PUSH_SUB(spline_print_0)
 
-    np = oct_spline_npoints(spl%spl)
+    np = oct_spline_npoints(spl%spl, spl%acc)
     SAFE_ALLOCATE(x(1:np))
     SAFE_ALLOCATE(y(1:np))
 
-    call oct_spline_x(spl%spl, x(1))
-    call oct_spline_y(spl%spl, y(1))
+    call oct_spline_x(spl%spl, spl%acc, x(1))
+    call oct_spline_y(spl%spl, spl%acc, y(1))
     do i = 1, np
       write(iunit, '(2f16.8)') x(i), y(i)
     end do
@@ -1104,12 +1133,12 @@ contains
     end if
 
     write(fm,'(i4)') n + 1; fm = adjustl(fm)
-    np = oct_spline_npoints(spl(1)%spl)
+    np = oct_spline_npoints(spl(1)%spl, spl(1)%acc)
     SAFE_ALLOCATE(x(1:np))
     SAFE_ALLOCATE(y(1:np))
 
-    call oct_spline_x(spl(1)%spl, x(1))
-    call oct_spline_y(spl(1)%spl, y(1))
+    call oct_spline_x(spl(1)%spl, spl(1)%acc, x(1))
+    call oct_spline_y(spl(1)%spl, spl(1)%acc, y(1))
     do i = 1, np
       write(iunit, '('//trim(fm)//'f16.8)') x(i), (spline_eval(spl(j), x(i)), j = 1, size(spl))
     end do
@@ -1139,13 +1168,13 @@ contains
     end if
 
     write(fm,'(i4)') n1*n2 + 1; fm = adjustl(fm)
-    np = oct_spline_npoints(spl(1, 1)%spl)
+    np = oct_spline_npoints(spl(1, 1)%spl, spl(1, 1)%acc)
 
     SAFE_ALLOCATE(x(1:np))
     SAFE_ALLOCATE(y(1:np))
 
-    call oct_spline_x(spl(1, 1)%spl, x(1))
-    call oct_spline_y(spl(1, 1)%spl, y(1))
+    call oct_spline_x(spl(1, 1)%spl, spl(1, 1)%acc, x(1))
+    call oct_spline_y(spl(1, 1)%spl, spl(1, 1)%acc, y(1))
     do i = 1, np
       write(iunit, '('//trim(fm)//'f16.8)') x(i), &
         ((spline_eval(spl(j, k), x(i)), j = 1, n1), k = 1, n2)
