@@ -454,7 +454,7 @@ contains
     logical             :: family_is_mgga
 
     PUSH_SUB(xc_get_vxc.family_is_mgga)
-    family_is_mgga = iand(xcs%family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0
+    family_is_mgga = iand(family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0
     POP_SUB(xc_get_vxc.family_is_mgga)
   end function family_is_mgga
 
