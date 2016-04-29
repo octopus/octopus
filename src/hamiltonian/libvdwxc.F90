@@ -358,6 +358,7 @@ contains
 
 #ifdef HAVE_MPI
     call MPI_Allreduce(MPI_IN_PLACE, energy_and_integrals_buffer, 3, MPI_FLOAT, MPI_SUM, this%mesh%mpi_grp%comm, ierr)
+    this%energy = energy_and_integrals_buffer(1)
 #endif
     write(message(1), '(a,f15.12,a)') 'libvdwxc non-local correlation energy: ', energy_and_integrals_buffer(1), ' Ha'
     write(message(2), '(a,f15.12)')   '                      n-dedn integral: ', energy_and_integrals_buffer(2)
