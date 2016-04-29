@@ -214,6 +214,17 @@ class Spline {
   void derivative(const double & x, double & y, double & dy) const {
     splintd(&x_[0], &y_[0], &y2_[0], x_.size(), x, &y, &dy);
   }
+
+  double integral() const {
+    double sum = 0.5*(x_[1] - x_[0])*y_[0];
+    for(int ii = 1; ii < size() - 2; ii++){
+      double dx = 0.5*(x_[ii + 1] - x_[ii - 1]);
+      sum += dx*y_[ii];
+    }
+    sum += 0.5*(x_[size() - 1] - x_[size() - 2])*y_[size() - 1];    
+    return sum;
+  }
+  
  private :
 
   std::vector<double> x_;
@@ -240,7 +251,7 @@ extern "C" void FC_FUNC_(oct_spline_fit, OCT_SPLINE_FIT)
   library = *lib;
   if(*lib == NATIVE){
     Spline * spline = new Spline();
-    spline->fit(x, y, *nrc, SPLINE_NATURAL_BC, SPLINE_FLAT_BC);
+    spline->fit(x, y, *nrc, SPLINE_NATURAL_BC, SPLINE_FLAT_BC);    
     *spl = (void *) spline;
   } else {
     /* the GSL headers actually specify size_t instead of const int for nrc */
@@ -370,6 +381,21 @@ extern "C" double FC_FUNC_(oct_spline_eval_integ, OCT_SPLINE_EVAL_INTEG)
   } else {
     /* the GSL headers specify double a, double b */
     return gsl_spline_eval_integ((gsl_spline *)(*spl), *a, *b, (gsl_interp_accel *)(* acc));
+  }
+}
+
+extern "C" double FC_FUNC_(oct_spline_eval_integ_full, OCT_SPLINE_EVAL_INTEG_FULL)
+     (const void **spl, void **acc)
+{
+  if(library == NATIVE){
+    Spline * spline = (Spline *)*spl;
+    return spline->integral();
+  } else {
+    /* the GSL headers specify double a, double b */
+    const int size = (int)((gsl_spline *)(*spl))->size;
+    const double a = ((gsl_spline *)(*spl))->x[0];
+    const double b = ((gsl_spline *)(*spl))->x[size - 1];
+    return gsl_spline_eval_integ((gsl_spline *)(*spl), a, b, (gsl_interp_accel *)(* acc));
   }
 }
 

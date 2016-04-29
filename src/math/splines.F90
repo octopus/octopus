@@ -393,6 +393,13 @@ module splines_oct_m
       real(8),     intent(in) :: b
       type(c_ptr), intent(in) :: acc
     end function oct_spline_eval_integ
+
+    real(8) pure function oct_spline_eval_integ_full(spl, acc)
+      use iso_c_binding
+      implicit none
+      type(c_ptr), intent(in) :: spl
+      type(c_ptr), intent(in) :: acc
+    end function oct_spline_eval_integ_full
   end interface
 
   integer, save :: library = 0
@@ -720,11 +727,7 @@ contains
 
     PUSH_SUB(spline_integral_full)
 
-    npoints = oct_spline_npoints(spl%spl, spl%acc)
-    SAFE_ALLOCATE(x(1:npoints))
-    call oct_spline_x(spl%spl, spl%acc, x(1))
-    res = oct_spline_eval_integ(spl%spl, x(1), x(npoints), spl%acc)
-    SAFE_DEALLOCATE_A(x)
+    res = oct_spline_eval_integ_full(spl%spl, spl%acc)
 
     POP_SUB(spline_integral_full)
   end function spline_integral_full
@@ -893,7 +896,8 @@ contains
       end do
       call spline_init(aux)
       call spline_fit(npoints, x, y2, aux)
-      yw(i) = sqrt(CNST(2.0)/M_PI)*oct_spline_eval_integ(aux%spl, x(1), x(npoints), aux%acc)
+      yw(i) = sqrt(CNST(2.0)/M_PI)*oct_spline_eval_integ_full(aux%spl, aux%acc)
+      
       call spline_end(aux)
     end do
 
