@@ -72,7 +72,7 @@ module submesh_oct_m
   end type submesh_t
   
   interface submesh_add_to_mesh
-    module procedure ddsubmesh_add_to_mesh, zdsubmesh_add_to_mesh
+    module procedure ddsubmesh_add_to_mesh, zdsubmesh_add_to_mesh, zzsubmesh_add_to_mesh
   end interface submesh_add_to_mesh
 
   interface submesh_to_mesh_dotp
@@ -407,6 +407,26 @@ contains
 
   end function submesh_overlap
   
+  ! -----------------------------------------------------------
+  
+  subroutine zzsubmesh_add_to_mesh(this, sphi, phi, factor)
+    type(submesh_t),  intent(in)    :: this
+    CMPLX,            intent(in)    :: sphi(:)
+    CMPLX,            intent(inout) :: phi(:)
+    CMPLX,  optional, intent(in)    :: factor
+    
+    integer :: is
+    
+    PUSH_SUB(zzdsubmesh_add_to_mesh)
+    
+    if(present(factor)) then
+      forall(is = 1:this%np) phi(this%map(is)) = phi(this%map(is)) + factor*sphi(is)
+    else
+      forall(is = 1:this%np) phi(this%map(is)) = phi(this%map(is)) + sphi(is)
+    end if
+    
+    POP_SUB(zzdsubmesh_add_to_mesh)
+  end subroutine zzsubmesh_add_to_mesh
 
 
 #include "undef.F90"
