@@ -54,3 +54,5 @@ Smearing = 0.01
 
 FilterPotentials = filter_none
 
+Preconditioner = no
+

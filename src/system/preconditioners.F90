@@ -74,7 +74,7 @@ contains
     type(preconditioner_t), intent(out)    :: this 
     type(grid_t),           intent(in)     :: gr
 
-    FLOAT, parameter :: alpha = M_HALF
+    FLOAT :: alpha, default_alpha
     FLOAT :: vol
     integer :: default
     integer :: maxp, is, ns, ip, ip2
@@ -87,8 +87,8 @@ contains
     !%Description
     !% Which preconditioner to use in order to solve the Kohn-Sham
     !% equations or the linear-response equations. The default is
-    !% pre_filter, except for periodic systems or curvilinear
-    !% coordinates, where no preconditioner is applied by default.
+    !% pre_filter, except for curvilinear coordinates, where no
+    !% preconditioner is applied by default.
     !%Option no 0
     !% Do not apply preconditioner.
     !%Option pre_filter 1
@@ -103,7 +103,7 @@ contains
     !% Multigrid preconditioner.
     !%End
 
-    if(gr%mesh%use_curvilinear .or. simul_box_is_periodic(gr%sb)) then
+    if(gr%mesh%use_curvilinear) then
       default = PRE_NONE
     else
       default = PRE_FILTER
@@ -120,6 +120,28 @@ contains
       call nl_operator_init(this%op, "Preconditioner")
       call stencil_star_get_lapl(this%op%stencil, gr%mesh%sb%dim, 1)
       call nl_operator_build(gr%mesh, this%op, gr%mesh%np, const_w = .not. gr%mesh%use_curvilinear)
+
+      !%Variable PreconditionerFilterFactor
+      !%Type float
+      !%Section SCF::Eigensolver
+      !%Description
+      !% This variable controls how much filter preconditioner is
+      !% applied. A value of 1.0 means no preconditioning, 0.5 is the
+      !% standard.
+      !%
+      !% The default is 0.5, except for periodic systems where the
+      !% default is 0.6.
+      !%
+      !% If you observe that the first eigenvectors are not converging
+      !% properly, especially for periodic systems, you should
+      !% increment this value.
+      !%End
+      default_alpha = CNST(0.5)
+      if(simul_box_is_periodic(gr%sb)) default_alpha = CNST(0.6)
+      
+      call parse_variable('PreconditionerFilterFactor', default_alpha, alpha)
+
+      call messages_print_var_value(stdout, 'PreconditionerFilterFactor', alpha)
       
       ns = this%op%stencil%size
 
