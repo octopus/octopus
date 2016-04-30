@@ -57,7 +57,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel)
 
   call species_iwf_ilm(spec, jj, ispin, ii, ll, mm)
 
-  radius = CNST(1.2)*this%orbital_scale_factor*species_get_iwf_radius(geo%atom(iatom)%species, ii, ispin)
+  radius = this%orbital_scale_factor*species_get_iwf_radius(geo%atom(iatom)%species, ii, ispin)
   ! make sure that if the spacing is too large, the orbitals fit in a few points at least
   radius = max(radius, CNST(2.0)*maxval(mesh%spacing(1:mesh%sb%dim)))
   

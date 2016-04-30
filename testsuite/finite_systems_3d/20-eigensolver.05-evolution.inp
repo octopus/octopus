@@ -27,9 +27,7 @@ ConvRelDens = 0.08
 TDExponentialMethod = lanczos
 TDExpOrder = 100
 
-FilterPotentials = filter_none
-
 SCFCalculatePartialCharges = yes
 
 ExperimentalFeatures = yes
-MixField = density
+

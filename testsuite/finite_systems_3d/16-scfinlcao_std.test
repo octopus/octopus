@@ -8,54 +8,54 @@ Enabled    : Yes
 
 Input: 16-scfinlcao_std.01-gs.inp
 
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -1390.61069220
-match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; 1601.15113645
-match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -362.94143349
-match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; 2714.76323602
-match ; Int[n*v_xc]        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -374.56660196
-match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -262.87599497
-match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -25.74776614
-match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 556.98463430
-match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -5974.88599293
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;   -1388.70114650
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;    1601.15113645
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;    -362.52586430
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;    2713.24192188
+match ; Int[n*v_xc]        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -374.45189228
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ;    -262.79115376
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;     -25.74523530
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;     556.38249374
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;   -5970.94275738
 
-match ; Eigenvalue  1     ; GREPFIELD(static/info, ' 1   --', 3) ; -25.771797
-match ; Eigenvalue  2     ; GREPFIELD(static/info, ' 2   --', 3) ; -22.561462
-match ; Eigenvalue  3     ; GREPFIELD(static/info, ' 3   --', 3) ; -22.550680
-match ; Eigenvalue  4     ; GREPFIELD(static/info, ' 4   --', 3) ; -17.522628
-match ; Eigenvalue  5     ; GREPFIELD(static/info, ' 5   --', 3) ; -14.195334
-match ; Eigenvalue  6     ; GREPFIELD(static/info, ' 6   --', 3) ; -13.124492
-match ; Eigenvalue  7     ; GREPFIELD(static/info, ' 7   --', 3) ; -13.111105
-match ; Eigenvalue  8     ; GREPFIELD(static/info, ' 8   --', 3) ;  -9.343024
-match ; Eigenvalue  9     ; GREPFIELD(static/info, ' 9   --', 3) ;  -9.339323
-match ; Eigenvalue 10     ; GREPFIELD(static/info, '10   --', 3) ;  -8.688390
-match ; Eigenvalue 11     ; GREPFIELD(static/info, '11   --', 3) ;  -8.585302
-match ; Eigenvalue 12     ; GREPFIELD(static/info, '12   --', 3) ;  -8.575777
-match ; Eigenvalue 13     ; GREPFIELD(static/info, '13   --', 3) ;  -8.101402
+match ; Eigenvalue  1     ; GREPFIELD(static/info, ' 1   --', 3) ; -25.797072
+match ; Eigenvalue  2     ; GREPFIELD(static/info, ' 2   --', 3) ; -22.487182
+match ; Eigenvalue  3     ; GREPFIELD(static/info, ' 3   --', 3) ; -22.485740
+match ; Eigenvalue  4     ; GREPFIELD(static/info, ' 4   --', 3) ; -17.462598
+match ; Eigenvalue  5     ; GREPFIELD(static/info, ' 5   --', 3) ; -14.166622
+match ; Eigenvalue  6     ; GREPFIELD(static/info, ' 6   --', 3) ; -13.079226
+match ; Eigenvalue  7     ; GREPFIELD(static/info, ' 7   --', 3) ; -13.077821
+match ; Eigenvalue  8     ; GREPFIELD(static/info, ' 8   --', 3) ;  -9.354909
+match ; Eigenvalue  9     ; GREPFIELD(static/info, ' 9   --', 3) ;  -9.353202
+match ; Eigenvalue 10     ; GREPFIELD(static/info, '10   --', 3) ;  -8.700166
+match ; Eigenvalue 11     ; GREPFIELD(static/info, '11   --', 3) ;  -8.595169
+match ; Eigenvalue 12     ; GREPFIELD(static/info, '12   --', 3) ;  -8.593985
+match ; Eigenvalue 13     ; GREPFIELD(static/info, '13   --', 3) ;  -8.109240
 
-match ; Dipole Moment x   ; GREPFIELD(static/info, '<x>', 4) ;  -2.84626E-14
-match ; Dipole Moment y   ; GREPFIELD(static/info, '<y>', 4) ;   7.17733E-03
-match ; Dipole Moment z   ; GREPFIELD(static/info, '<z>', 4) ;   8.08835E-01
+match ; Dipole Moment x   ; GREPFIELD(static/info, '<x>', 4) ;   3.61170E-13
+match ; Dipole Moment y   ; GREPFIELD(static/info, '<y>', 4) ;   1.71005E-04
+match ; Dipole Moment z   ; GREPFIELD(static/info, '<z>', 4) ;   8.06628E-01
 
 match ; Force C  x        ; GREPFIELD(static/info, '1         C', 3) ;  -0.000000
-match ; Force C  z        ; GREPFIELD(static/info, '1         C', 5) ;  -3.892538
-match ; Force Cl y        ; GREPFIELD(static/info, '3        Cl', 4) ;  21.947112
+match ; Force C  z        ; GREPFIELD(static/info, '1         C', 5) ;  -3.717101
+match ; Force Cl y        ; GREPFIELD(static/info, '3        Cl', 4) ;  23.312070
 
 match ; Bond 1->5 trans x ; GREPFIELD(static/density.scad, '//  Bond 1 -> 5', 2, 1);   -1.367881
 match ; Bond 1->5 rot x   ; GREPFIELD(static/density.scad, '//  Bond 1 -> 5', 2, 2); -108.23
 match ; Bond 1->5 cyl h   ; GREPFIELD(static/density.scad, '//  Bond 1 -> 5', 2, 3);    3.325918
 match ; Number polyhedra  ; GREPFIELD(out, 'polyhedra', 2); 836
-match ; Minimum value     ; GREPFIELD(out, 'Minimum value =', 4); 2.9732944087543614E-010
-match ; Maximum value     ; GREPFIELD(out, 'Maximum value =', 8); 0.29093634145326080
-match ; Isovalue          ; GREPFIELD(out, 'isovalue', 5); 0.14546817087529512
-match ; Polyhedron point 1; LINEFIELD(static/density.scad, 314, 2); -4.187573
+match ; Minimum value     ; GREPFIELD(out, 'Minimum value =', 4); 0.0000000000000000
+match ; Maximum value     ; GREPFIELD(out, 'Maximum value =', 8); 0.29080463942600326
+match ; Isovalue          ; GREPFIELD(out, 'isovalue', 5); 0.14540231971300163
+match ; Polyhedron point 1; LINEFIELD(static/density.scad, 314, 2); -4.190540
 match ; Polyhedron point 2; LINEFIELD(static/density.scad, 315, 3); -2.362158
 match ; Polyhedron face   ; LINEFIELD(static/density.scad, 319, 2);  2
 
-match ; MATLAB point 1    ; LINEFIELD(static/density.z=0.matlab, 22, 28); 1.23240205761690
-match ; MATLAB point 2    ; LINEFIELD(static/density.z=0.matlab, 42, 30); 0.02500518562190
+match ; MATLAB point 1    ; LINEFIELD(static/density.z=0.matlab, 22, 28); 1.23255040284864
+match ; MATLAB point 2    ; LINEFIELD(static/density.z=0.matlab, 42, 30); 0.02499576752910
 
-match ; Partial charge  1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2)  ; 3.983
-match ; Partial charge  2 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3)  ; 0.946
-match ; Partial charge  3 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 4)  ; 7.023
-match ; Partial charge  4 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 5)  ; 7.024
-match ; Partial charge  5 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 6)  ; 7.024
+match ; Partial charge  1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2)  ; 3.957
+match ; Partial charge  2 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3)  ; 0.940
+match ; Partial charge  3 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 4)  ; 7.034
+match ; Partial charge  4 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 5)  ; 7.034
+match ; Partial charge  5 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 6)  ; 7.034

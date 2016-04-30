@@ -14,6 +14,3 @@ ExtraStates = 3
 Output = pol_density
 OutputFormat = xcrysden
 
-FilterPotentials = filter_none
-
-MixField = density

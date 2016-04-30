@@ -34,13 +34,9 @@ ExperimentalFeatures = yes
 Output = geometry + density
 OutputFormat = openscad + matlab + plane_z
 
-FilterPotentials = filter_none
-
 SCFCalculatePartialCharges = yes
 
 ExperimentalFeatures = yes
-MixField = density
 
 #We need to disable OpenCL as the OpenSCAD file changes considerably for small numerical differences
 DisableOpenCL = yes
-

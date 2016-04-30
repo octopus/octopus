@@ -11,6 +11,3 @@ ExtraStates = 3
   "Na" |  1.54 | 0 | 0
 %
 
-FilterPotentials = filter_none
-
-MixField = density
