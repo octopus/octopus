@@ -1552,7 +1552,12 @@ contains
     ! get the surface points
     this%nsrfcpnts = 0
     do ip_local = 1, mesh%np
-      ip_global = mesh%vp%local(mesh%vp%xlocal + ip_local - 1)
+      if(mesh%parallel_in_domains) then
+        ip_global = mesh%vp%local(mesh%vp%xlocal + ip_local - 1)
+      else
+        ip_global = ip_local
+      end if
+      
       nsurfaces = 0
 
       xx(1:MAX_DIM) = mesh%x(ip_local, 1:MAX_DIM) - offset(1:MAX_DIM)
