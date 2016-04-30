@@ -23,7 +23,7 @@ Enabled    : Yes
 # discrepancy...
 Input: 01-carbon_atom.01-psf_l0.inp
 Precision: 0.00011
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -146.74133256
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -146.74144572
 match ; Eigenvalue   [1up] ; GREPFIELD(static/info, '1   up', 3) ; -14.461702
 match ; Occupation   [1up] ; GREPFIELD(static/info, '1   up', 4) ; 1.000000
 match ; Eigenvalue [4down] ; GREPFIELD(static/info, '4   dn', 3) ; -3.682119

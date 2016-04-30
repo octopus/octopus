@@ -34,9 +34,12 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel)
 
   type(species_t), pointer :: spec
   integer :: idim, iatom, jj, ip, ispin, ii, ll, mm
-  FLOAT, allocatable :: ao(:)
+  FLOAT, allocatable :: ao(:), dorbital(:)
+  R_TYPE, allocatable :: orbital(:)
+  FLOAT :: radius
   type(profile_t), save :: prof
-
+  type(submesh_t) :: sphere
+  
   call profiling_in(prof, "ATOMIC_ORBITAL")
   PUSH_SUB(X(lcao_atomic_orbital))
 
@@ -54,26 +57,42 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel)
 
   call species_iwf_ilm(spec, jj, ispin, ii, ll, mm)
 
+  radius = CNST(1.2)*this%orbital_scale_factor*species_get_iwf_radius(geo%atom(iatom)%species, ii, ispin)
+  ! make sure that if the spacing is too large, the orbitals fit in a few points at least
+  radius = max(radius, CNST(2.0)*maxval(mesh%spacing(1:mesh%sb%dim)))
+  
+  call submesh_init(sphere, mesh%sb, mesh, geo%atom(iatom)%x, radius)
+
 #ifdef R_TCOMPLEX
   if(.not. this%complex_ylms) then
     SAFE_ALLOCATE(ao(1:mesh%np))
 
-    call dspecies_get_orbital(spec, mesh, ii, ll, mm, &
-      ispin, geo%atom(iatom)%x, ao, scale = this%orbital_scale_factor)
+    SAFE_ALLOCATE(dorbital(1:sphere%np))
+    call dspecies_get_orbital_submesh(geo%atom(iatom)%species, sphere, ii, ll, mm, ispin, geo%atom(iatom)%x, dorbital)
+    psi(1:mesh%np, idim) = CNST(0.0)
+    call submesh_add_to_mesh(sphere, dorbital, psi(:, idim))
 
-    do ip = 1, mesh%np
-      psi(ip, idim) = ao(ip)
-    end do
-
-    SAFE_DEALLOCATE_A(ao)
+    SAFE_DEALLOCATE_A(dorbital)
   else
 #endif
-    call X(species_get_orbital)(spec, mesh, ii, ll, mm, &
-      ispin, geo%atom(iatom)%x, psi(:, idim), scale = this%orbital_scale_factor)
+
+    SAFE_ALLOCATE(orbital(1:sphere%np))
+
+    call X(species_get_orbital_submesh)(geo%atom(iatom)%species, sphere, ii, ll, mm, ispin, geo%atom(iatom)%x, orbital)
+    
+    psi(1:mesh%np, idim) = CNST(0.0)
+    call submesh_add_to_mesh(sphere, orbital, psi(:, idim))
+    
+    SAFE_DEALLOCATE_A(orbital)
+
 #ifdef R_TCOMPLEX
   end if
 #endif
+  
+  call submesh_end(sphere)
 
+
+  
   POP_SUB(X(lcao_atomic_orbital))
   call profiling_out(prof)
 

@@ -166,7 +166,7 @@
 
     ASSERT(ubound(phi, dim = 1) >= submesh%np)
 
-    if(species_represents_real_atom(species)) then
+    if(species_represents_real_atom(species) .and. submesh%mesh%sb%dim == 3) then
       ps => species_ps(species)
       
       forall(ip = 1:submesh%np) phi(ip) = submesh%x(ip, 0)
