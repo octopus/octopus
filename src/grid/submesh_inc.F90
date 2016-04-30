@@ -49,14 +49,18 @@ subroutine X(dsubmesh_add_to_mesh)(this, sphi, phi, factor)
   R_TYPE,           intent(inout) :: phi(:)
   R_TYPE, optional, intent(in)    :: factor
 
-  integer :: is
+  integer :: ip
 
   PUSH_SUB(X(dsubmesh_add_to_mesh))
 
   if(present(factor)) then
-    forall(is = 1:this%np) phi(this%map(is)) = phi(this%map(is)) + factor*sphi(is)
+    do ip = 1, this%np
+      phi(this%map(ip)) = phi(this%map(ip)) + factor*sphi(ip)
+    end do
   else
-    forall(is = 1:this%np) phi(this%map(is)) = phi(this%map(is)) + sphi(is)
+    do ip = 1, this%np
+      phi(this%map(ip)) = phi(this%map(ip)) + sphi(ip)
+    end do
   end if
 
   POP_SUB(X(dsubmesh_add_to_mesh))
