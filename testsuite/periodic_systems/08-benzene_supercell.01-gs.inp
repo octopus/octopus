@@ -30,9 +30,3 @@ FromScratch = yes
 
 ProfilingMode = prof_memory
 SCFCalculateDipole = yes
-
-FilterPotentials = filter_none
-
-MixField = density
-
-Preconditioner = no
