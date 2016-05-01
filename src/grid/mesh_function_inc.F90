@@ -315,7 +315,7 @@ subroutine X(mf_random)(mesh, ff, seed)
   do ip = 1, mesh%np
     call quickrnd(iseed, rnd)
     call quickrnd(iseed, rndi)
-    ff(ip) = rnd + M_ZI*rnd2
+    ff(ip) = rnd + M_ZI*rndi
   end do
 #endif
   
