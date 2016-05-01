@@ -298,7 +298,7 @@ subroutine X(mf_random)(mesh, ff, seed)
 
   integer, save :: iseed = 123
   integer :: idim, ip
-  R_BASE  :: aa(MAX_DIM), rnd, rr
+  R_BASE  :: aa(MAX_DIM), rnd, rndi, rr
 
   PUSH_SUB(X(mf_random))
 
@@ -306,28 +306,23 @@ subroutine X(mf_random)(mesh, ff, seed)
     iseed = iseed + seed
   end if
 
-  aa = M_ZERO
-  do idim = 1, mesh%sb%dim
-    call quickrnd(iseed, rnd)
-    aa(idim) = M_TWO*(2*rnd - 1) * M_FOUR * mesh%spacing(idim)
-  end do
-
-  !$omp parallel do private(rr)
+#ifdef R_TREAL
   do ip = 1, mesh%np
-    rr = sum( ((mesh%x(ip, 1:mesh%sb%dim) - aa(1:mesh%sb%dim)) / (M_FOUR * mesh%spacing(1:mesh%sb%dim)) ) **2)
-    if ( rr < CNST(100.0) ) then 
-      ff(ip) = exp(-M_HALF*rr)
-    else
-      ff(ip) = M_ZERO
-    end if
+    call quickrnd(iseed, rnd)
+    ff(ip) = rnd
   end do
-  !$omp end parallel do
-
+#else
+  do ip = 1, mesh%np
+    call quickrnd(iseed, rnd)
+    call quickrnd(iseed, rndi)
+    ff(ip) = rnd + M_ZI*rnd2
+  end do
+#endif
+  
   rr = X(mf_nrm2)(mesh, ff)
   call lalg_scal(mesh%np, R_TOTYPE(1.0)/rr, ff)
 
   POP_SUB(X(mf_random))
-
 end subroutine X(mf_random)
 
 ! --------------------------------------------------------- 

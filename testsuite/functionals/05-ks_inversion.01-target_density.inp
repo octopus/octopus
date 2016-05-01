@@ -28,6 +28,4 @@ MixingScheme = linear
 Output = density
 OutputFormat = Axis_X
 
-FilterPotentials = filter_none
-
-MixField = density
+ConvRelDens = 1e-8

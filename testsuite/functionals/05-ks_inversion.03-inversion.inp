@@ -30,7 +30,7 @@ InvertKSmethod = iterative
 
 InvertKSTargetDensity = "static/density.y=0,z=0"
 
-InvertKSConvAbsDens = 1e-3
+InvertKSConvAbsDens = 1e-7
 InvertKSstabilizer = 1.0d-20
 InvertKSVerbosity = 1
 

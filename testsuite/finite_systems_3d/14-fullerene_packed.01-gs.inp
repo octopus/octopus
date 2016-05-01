@@ -82,7 +82,3 @@ StatesPack = yes
 'C'| -2.963792| -4.78832  | 3.625482
 'C'| -6.291688| -0.839777 | 2.141966
 %
-
-FilterPotentials = filter_none
-
-MixField = density

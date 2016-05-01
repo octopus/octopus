@@ -22,4 +22,4 @@ match ; 2nd state    ; GREPFIELD(static/eigenvalues, '2   --', 3) ; -0.525874
 
 # Then, run the optimization.
 Input: 02-sym_doublewell.03-oct.inp
-match ; J1 1st iteration  ; GREPFIELD(opt-control/convergence, ' 1  ', 3) ; 0.51522386
+match ; J1 1st iteration  ; GREPFIELD(opt-control/convergence, ' 1  ', 3) ; 0.80332180
