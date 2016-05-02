@@ -300,8 +300,11 @@ subroutine X(mf_random)(mesh, ff, seed, normalized)
   integer, save :: iseed = 123
   integer :: idim, ip
   R_BASE  :: aa(MAX_DIM), rnd, rndi, rr
+  type(profile_t), save :: prof
 
   PUSH_SUB(X(mf_random))
+
+  call profiling_in(prof, "RANDOMIZE")
 
   if(present(seed)) then
     iseed = iseed + seed
@@ -324,6 +327,8 @@ subroutine X(mf_random)(mesh, ff, seed, normalized)
     rr = X(mf_nrm2)(mesh, ff)
     call lalg_scal(mesh%np, R_TOTYPE(1.0)/rr, ff)
   end if
+
+  call profiling_out(prof)
   
   POP_SUB(X(mf_random))
 end subroutine X(mf_random)
