@@ -42,7 +42,6 @@ module math_oct_m
     zdot_product,               &
     is_integer_multiple,        &
     divides,                    &
-    quickrnd,                   &
     ylmr,                       &
     grylmr,                     &
     weights,                    &
@@ -189,24 +188,6 @@ contains
       fac = n*factorial(n-1)
     end if
   end function factorial
-
-
-  ! ---------------------------------------------------------
-  !> a simple congruent random number generator
-  subroutine quickrnd(iseed, rnd)
-    integer, intent(inout) :: iseed
-    FLOAT,   intent(inout) :: rnd
-
-    integer, parameter :: im=6075, ia=106, ic=1283
-
-    PUSH_SUB(quickrnd)
-
-    iseed = mod(iseed*ia + ic, im)
-    rnd = real(iseed, REAL_PRECISION)/real(im, REAL_PRECISION)
-
-    POP_SUB(quickrnd)
-  end subroutine quickrnd
-
 
   ! ---------------------------------------------------------
   !> Computes spherical harmonics ylm at position (x, y, z)

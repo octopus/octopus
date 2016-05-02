@@ -44,6 +44,7 @@ module lcao_oct_m
   use periodic_copy_oct_m
   use profiling_oct_m
   use ps_oct_m
+  use quickrnd_oct_m
   use simul_box_oct_m
   use scalapack_oct_m
   use species_oct_m
