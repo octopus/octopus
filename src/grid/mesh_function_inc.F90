@@ -291,11 +291,12 @@ end function X(mf_moment)
 ! ---------------------------------------------------------
 !> This subroutine generates a Gaussian wavefunction at a
 !! random position in space.
-subroutine X(mf_random)(mesh, ff, seed)
+subroutine X(mf_random)(mesh, ff, seed, normalized)
   type(mesh_t),      intent(in)  :: mesh
   R_TYPE,            intent(out) :: ff(:)
   integer, optional, intent(in)  :: seed
-
+  logical, optional, intent(in)  :: normalized !< whether generate states should have norm 1, true by default
+  
   integer, save :: iseed = 123
   integer :: idim, ip
   R_BASE  :: aa(MAX_DIM), rnd, rndi, rr
@@ -318,10 +319,12 @@ subroutine X(mf_random)(mesh, ff, seed)
     ff(ip) = rnd + M_ZI*rndi
   end do
 #endif
-  
-  rr = X(mf_nrm2)(mesh, ff)
-  call lalg_scal(mesh%np, R_TOTYPE(1.0)/rr, ff)
 
+  if(optional_default(normalized, .true.)) then
+    rr = X(mf_nrm2)(mesh, ff)
+    call lalg_scal(mesh%np, R_TOTYPE(1.0)/rr, ff)
+  end if
+  
   POP_SUB(X(mf_random))
 end subroutine X(mf_random)
 
