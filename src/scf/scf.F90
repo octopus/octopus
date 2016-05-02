@@ -98,6 +98,8 @@ module scf_oct_m
     ! several convergence criteria
     FLOAT :: conv_abs_dens, conv_rel_dens, conv_abs_ev, conv_rel_ev, conv_abs_force
     FLOAT :: abs_dens, rel_dens, abs_ev, rel_ev, abs_force
+    FLOAT :: conv_energy_diff
+    FLOAT :: energy_diff
     logical :: conv_eigen_error
 
     integer :: mix_field
@@ -153,7 +155,19 @@ contains
       call parse_variable('MaximumIterBerry', 10, scf%max_iter_berry)
       if(scf%max_iter_berry < 0) scf%max_iter_berry = huge(scf%max_iter_berry)
     end if
-
+    
+    !%Variable ConvEnergy
+    !%Type float
+    !%Default 0.0
+    !%Section SCF::Convergence
+    !%Description
+    !% Stop the SCF when the magnitude of change in energy during at
+    !% one SCF iteration is smaller than this value.
+    !%
+    !%A zero value (the default) means do not use this criterion.
+    !%End
+    call parse_variable('ConvEnergy', M_ZERO, scf%conv_energy_diff, unit = units_inp%energy)
+    
     !%Variable ConvAbsDens
     !%Type float
     !%Default 0.0
@@ -634,7 +648,7 @@ contains
       ! which would cause a failure of testsuite/linear_response/04-vib_modes.03-vib_modes_fd.inp
       scf%eigens%converged = 0
 
-      energy_diff = hm%energy%total
+      scf%energy_diff = hm%energy%total
       
       if(scf%lcao_restricted) then
         call lcao_init_orbitals(lcao, st, gr, geo)
@@ -707,9 +721,8 @@ contains
       ! recalculate total energy
       call energy_calc_total(hm, gr, st, iunit = 0)
 
-      energy_diff = hm%energy%total - energy_diff
-      
       ! compute convergence criteria
+      scf%energy_diff = hm%energy%total - scf%energy_diff
       scf%abs_dens = M_ZERO
       SAFE_ALLOCATE(tmp(1:gr%fine%mesh%np))
       do is = 1, nspin
@@ -758,6 +771,7 @@ contains
         (scf%conv_abs_force <= M_ZERO .or. scf%abs_force <= scf%conv_abs_force) .and. &
         (scf%conv_abs_ev    <= M_ZERO .or. scf%abs_ev    <= scf%conv_abs_ev)    .and. &
         (scf%conv_rel_ev    <= M_ZERO .or. scf%rel_ev    <= scf%conv_rel_ev)    .and. &
+        (scf%conv_energy_diff <= M_ZERO .or. abs(scf%energy_diff) <= scf%conv_energy_diff) .and. &
         (.not. scf%conv_eigen_error .or. all(scf%eigens%converged == st%nst))
 
       etime = loct_clock() - itime
@@ -1322,7 +1336,7 @@ contains
         call io_mkdir(dir)
         iunit = io_open(trim(dir) // "/" // trim(fname), action='write', position='append')
         write(iunit, '(i5,es18.8)', advance = 'no') iter, units_from_atomic(units_out%energy, hm%energy%total)
-        write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%energy, energy_diff)
+        write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%energy, scf%energy_diff)
         write(iunit, '(es13.5)', advance = 'no') scf%abs_dens
         write(iunit, '(es13.5)', advance = 'no') scf%rel_dens
         write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%energy, scf%abs_ev)
