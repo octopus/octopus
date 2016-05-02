@@ -241,15 +241,25 @@ contains
     call parse_variable('ConvForce', optional_default(conv_force, M_ZERO), scf%conv_abs_force, unit = units_inp%force)
 
     scf%check_conv = &
+      scf%conv_energy_diff > M_ZERO .or. &
       scf%conv_abs_dens > M_ZERO .or. scf%conv_rel_dens > M_ZERO .or. &
       scf%conv_abs_ev > M_ZERO .or. scf%conv_rel_ev > M_ZERO .or. &
       scf%conv_abs_force > M_ZERO
 
     if(.not. scf%check_conv .and. scf%max_iter < 0) then
-      message(1) = "Input: Not all convergence criteria can be <= 0"
-      message(2) = "Please set one of the following:"
-      message(3) = "MaximumIter | ConvAbsDens | ConvRelDens | ConvAbsEv | ConvRelEv | ConvForce"
-      call messages_fatal(3)
+      call messages_write("All convergence criteria are disabled. Octopus is cowardly refusing")
+      call messages_new_line()
+      call messages_write("to enter an infinite loop.")
+      call messages_new_line()
+      call messages_new_line()
+      call messages_write("Please set one of the following variables to a positive value:")
+      call messages_new_line()
+      call messages_new_line()
+      call messages_write(" | MaximumIter | ConvEnergy | ConvAbsDens | ConvRelDens |")
+      call messages_new_line()
+      call messages_write(" |  ConvAbsEv  | ConvRelEv  |  ConvForce  |")
+      call messages_new_line()
+      call messages_fatal()
     end if
 
     !%Variable ConvEigenError
