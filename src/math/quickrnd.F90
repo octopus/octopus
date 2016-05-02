@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2002-2016 M. Marques, A. Castro, A. Rubio, G. Bertsch, X. Andrade
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -19,8 +19,9 @@
 
 #include "global.h"
 
-!> This module is intended to contain "only mathematical" functions
-!! and procedures.
+! ---------------------------------------------------------
+!> a simple congruent random number generator
+
 module quickrnd_oct_m
   use global_oct_m
   use messages_oct_m
@@ -31,14 +32,16 @@ module quickrnd_oct_m
   private
   public ::                     &
     quickrnd
+
+  interface quickrnd
+    module procedure dquickrnd_single, dquickrnd_array, zquickrnd_array
+  end interface quickrnd
   
 contains
 
-  ! ---------------------------------------------------------
-  !> a simple congruent random number generator
-  subroutine quickrnd(iseed, rnd)
+  subroutine dquickrnd_single(iseed, rnd)
     integer, intent(inout) :: iseed
-    FLOAT,   intent(inout) :: rnd
+    FLOAT,   intent(out)   :: rnd
 
     integer, parameter :: im=6075, ia=106, ic=1283
 
@@ -47,7 +50,52 @@ contains
     iseed = mod(iseed*ia + ic, im)
     rnd = real(iseed, REAL_PRECISION)/real(im, REAL_PRECISION)
 
-  end subroutine quickrnd
+  end subroutine dquickrnd_single
+
+  ! ---------------------------------------------------------
+
+  subroutine dquickrnd_array(iseed, nn, rnd)
+    integer, intent(inout) :: iseed
+    integer, intent(in)    :: nn
+    FLOAT,   intent(inout) :: rnd(:)
+
+    integer, parameter :: im=6075, ia=106, ic=1283
+    integer :: ii
+    
+    PUSH_SUB(quickrnd_array)
+
+    do ii = 1, nn
+      iseed = mod(iseed*ia + ic, im)
+      rnd(ii) = real(iseed, REAL_PRECISION)/real(im, REAL_PRECISION)
+    end do
+    
+    POP_SUB(quickrnd_array)
+    
+  end subroutine dquickrnd_array
+
+  ! ---------------------------------------------------------
+
+  subroutine zquickrnd_array(iseed, nn, rnd)
+    integer, intent(inout) :: iseed
+    integer, intent(in)    :: nn
+    CMPLX,   intent(inout) :: rnd(:)
+
+    integer, parameter :: im=6075, ia=106, ic=1283
+    integer :: ii
+    
+    PUSH_SUB(quickrnd_array)
+
+    do ii = 1, nn
+      iseed = mod(iseed*ia + ic, im)
+      rnd(ii) = real(iseed, REAL_PRECISION)/real(im, REAL_PRECISION)
+      iseed = mod(iseed*ia + ic, im)
+      rnd(ii) = rnd(ii) + M_ZI*real(iseed, REAL_PRECISION)/real(im, REAL_PRECISION)
+      rnd(ii) = rnd(ii)/sqrt(CNST(2.0))
+    end do
+    
+    POP_SUB(quickrnd_array)
+    
+  end subroutine zquickrnd_array
   
 end module quickrnd_oct_m
 

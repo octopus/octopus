@@ -299,7 +299,7 @@ subroutine X(mf_random)(mesh, ff, seed, normalized)
   
   integer, save :: iseed = 123
   integer :: idim, ip
-  R_BASE  :: aa(MAX_DIM), rnd, rndi, rr
+  R_BASE  :: aa(MAX_DIM), rr
   type(profile_t), save :: prof
 
   PUSH_SUB(X(mf_random))
@@ -310,18 +310,7 @@ subroutine X(mf_random)(mesh, ff, seed, normalized)
     iseed = iseed + seed
   end if
 
-#ifdef R_TREAL
-  do ip = 1, mesh%np
-    call quickrnd(iseed, rnd)
-    ff(ip) = rnd
-  end do
-#else
-  do ip = 1, mesh%np
-    call quickrnd(iseed, rnd)
-    call quickrnd(iseed, rndi)
-    ff(ip) = rnd + M_ZI*rndi
-  end do
-#endif
+  call quickrnd(iseed, mesh%np, ff(1:mesh%np))
 
   if(optional_default(normalized, .true.)) then
     rr = X(mf_nrm2)(mesh, ff)
