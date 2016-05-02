@@ -101,6 +101,7 @@ module scf_oct_m
     FLOAT :: conv_energy_diff
     FLOAT :: energy_diff
     logical :: conv_eigen_error
+    logical :: check_conv
 
     integer :: mix_field
     logical :: lcao_restricted
@@ -239,10 +240,12 @@ contains
     !%End
     call parse_variable('ConvForce', optional_default(conv_force, M_ZERO), scf%conv_abs_force, unit = units_inp%force)
 
-    if(scf%max_iter < 0 .and. &
-      scf%conv_abs_dens <= M_ZERO .and. scf%conv_rel_dens <= M_ZERO .and. &
-      scf%conv_abs_ev <= M_ZERO .and. scf%conv_rel_ev <= M_ZERO .and. &
-      scf%conv_abs_force <= M_ZERO) then
+    scf%check_conv = &
+      scf%conv_abs_dens > M_ZERO .or. scf%conv_rel_dens > M_ZERO .or. &
+      scf%conv_abs_ev > M_ZERO .or. scf%conv_rel_ev > M_ZERO .or. &
+      scf%conv_abs_force > M_ZERO
+
+    if(.not. scf%check_conv .and. scf%max_iter < 0) then
       message(1) = "Input: Not all convergence criteria can be <= 0"
       message(2) = "Please set one of the following:"
       message(3) = "MaximumIter | ConvAbsDens | ConvRelDens | ConvAbsEv | ConvRelEv | ConvForce"
@@ -765,7 +768,7 @@ contains
       scf%eigens%current_rel_dens_error = scf%rel_dens
 
       ! are we finished?
-      finish = &
+      finish = scf%check_conv .and. &
         (scf%conv_abs_dens  <= M_ZERO .or. scf%abs_dens  <= scf%conv_abs_dens)  .and. &
         (scf%conv_rel_dens  <= M_ZERO .or. scf%rel_dens  <= scf%conv_rel_dens)  .and. &
         (scf%conv_abs_force <= M_ZERO .or. scf%abs_force <= scf%conv_abs_force) .and. &
