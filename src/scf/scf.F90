@@ -1293,6 +1293,18 @@ contains
         write(iunit, '(a)', advance = 'no') '#iter energy           '
         label = 'energy_diff'
         write(iunit, '(1x,a)', advance = 'no') label
+        label = 'abs_dens'
+        write(iunit, '(1x,a)', advance = 'no') label
+        label = 'rel_dens'
+        write(iunit, '(1x,a)', advance = 'no') label
+        label = 'abs_ev'
+        write(iunit, '(1x,a)', advance = 'no') label
+        label = 'rel_ev'
+        write(iunit, '(1x,a)', advance = 'no') label
+         if (scf%conv_abs_force > M_ZERO) then
+           label = 'force_diff'
+           write(iunit, '(1x,a)', advance = 'no') label
+         end if
         write(iunit,'(a)') ''
         call io_close(iunit)
       end if
@@ -1312,6 +1324,13 @@ contains
         iunit = io_open(trim(dir) // "/" // trim(fname), action='write', position='append')
         write(iunit, '(i5,es18.8)', advance = 'no') iter, units_from_atomic(units_out%energy, hm%energy%total)
         write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%energy, energy_diff)
+        write(iunit, '(es13.5)', advance = 'no') scf%abs_dens
+        write(iunit, '(es13.5)', advance = 'no') scf%rel_dens
+        write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%energy, scf%abs_ev)
+        write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%energy, scf%rel_ev)
+        if (scf%conv_abs_force > M_ZERO) then
+          write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%force, scf%abs_force)
+        end if
         write(iunit,'(a)') ''
         call io_close(iunit)
       end if
