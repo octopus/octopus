@@ -464,7 +464,7 @@ contains
         this%norbs = this%maxorbs
       end if
 
-      if(this%mode == OPTION__LCAOSTART__LCAO_SIMPLE) this%norbs = st%nst
+      if(this%mode == OPTION__LCAOSTART__LCAO_SIMPLE) this%norbs = this%maxorbs
       
       ASSERT(this%norbs <= this%maxorbs)
 

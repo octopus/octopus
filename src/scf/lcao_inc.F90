@@ -23,7 +23,7 @@
 !> This routine fills state psi with an atomic orbital -- provided
 !! by the pseudopotential structure in geo.
 ! ---------------------------------------------------------
-subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel)
+subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel, add)
   type(lcao_t),             intent(in)    :: this
   integer,                  intent(in)    :: iorb
   type(mesh_t),             intent(in)    :: mesh
@@ -31,6 +31,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel)
   type(geometry_t), target, intent(in)    :: geo
   R_TYPE,                   intent(inout) :: psi(:, :)
   integer,                  intent(in)    :: spin_channel
+  logical, optional,        intent(in)    :: add
 
   type(species_t), pointer :: spec
   integer :: idim, iatom, jj, ip, ispin, ii, ll, mm
@@ -69,7 +70,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel)
 
     SAFE_ALLOCATE(dorbital(1:sphere%np))
     call dspecies_get_orbital_submesh(geo%atom(iatom)%species, sphere, ii, ll, mm, ispin, geo%atom(iatom)%x, dorbital)
-    psi(1:mesh%np, idim) = CNST(0.0)
+    if(.not. optional_default(add, .false.)) psi(1:mesh%np, idim) = CNST(0.0)
     call submesh_add_to_mesh(sphere, dorbital, psi(:, idim))
 
     SAFE_DEALLOCATE_A(dorbital)
@@ -80,7 +81,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel)
 
     call X(species_get_orbital_submesh)(geo%atom(iatom)%species, sphere, ii, ll, mm, ispin, geo%atom(iatom)%x, orbital)
     
-    psi(1:mesh%np, idim) = CNST(0.0)
+    if(.not. optional_default(add, .false.)) psi(1:mesh%np, idim) = CNST(0.0)
     call submesh_add_to_mesh(sphere, orbital, psi(:, idim))
     
     SAFE_DEALLOCATE_A(orbital)
@@ -120,19 +121,24 @@ subroutine X(lcao_simple)(this, st, gr, geo, hm, start)
 
   SAFE_ALLOCATE(orbital(1:gr%mesh%np, 1:st%d%dim))
 
+  call states_set_zero(st)
+  
   do iqn = st%d%kpt%start, st%d%kpt%end
     ispin = states_dim_get_spin_index(st%d, iqn)
 
-    do ist = 1, st%nst
-      if(ist > this%norbs) exit
+    ist = 0
+    do iorb = 1, this%norbs
+      ist = ist + 1
+      if(ist > st%nst) ist = 1
 
       if(ist < st%st_start) cycle
       if(ist > st%st_end) cycle
       if(ist < lcao_start) cycle
 
-      call X(lcao_atomic_orbital)(this, ist, gr%mesh, st, geo, orbital, ispin)
+      call states_get_state(st, gr%mesh, ist, iqn, orbital)
+      call X(lcao_atomic_orbital)(this, iorb, gr%mesh, st, geo, orbital, ispin, add = .true.)
       call states_set_state(st, gr%mesh, ist, iqn, orbital)
-
+      
     end do
 
     ! if we don't have all states we can't orthogonalize right now
