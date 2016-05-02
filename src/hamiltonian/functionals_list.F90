@@ -78,8 +78,50 @@
 !% Vosko, Wilk, & Nussair (3)
 !%Option lda_c_vwn_4               31000
 !% Vosko, Wilk, & Nussair (4)
+!%Option gga_c_q2d               47000
+!% Chiodo et al
+!%Option gga_x_q2d               48
+!% Chiodo et al
+!%Option gga_x_pbe_mol               49
+!% Del Campo, Gazquez, Trickey and Vela (PBE-like)
+!%Option gga_x_ak13               56
+!% Armiento & Kuemmel 2013
+!%Option gga_x_lv_rpw86               58
+!% Berland and Hyldgaard
+!%Option gga_x_pbe_tca               59
+!% PBE revised by Tognetti et al
+!%Option gga_x_pbeint               60
+!% PBE for hybrid interfaces
+!%Option gga_c_zpbeint               61000
+!% spin-dependent gradient correction to PBEint
+!%Option gga_c_pbeint               62000
+!% PBE for hybrid interfaces
+!%Option gga_c_zpbesol               63000
+!% spin-dependent gradient correction to PBEsol
+!%Option gga_xc_opbe_d               65000
+!% oPBE_D functional of Goerigk and Grimme
+!%Option gga_xc_opwlyp_d               66000
+!% oPWLYP-D functional of Goerigk and Grimme
+!%Option gga_xc_oblyp_d               67000
+!% oBLYP-D functional of Goerigk and Grimme
+!%Option gga_x_vmt84_ge               68
+!% VMT{8,4} with constraint satisfaction with mu = mu_GE
+!%Option gga_x_vmt84_pbe               69
+!% VMT{8,4} with constraint satisfaction with mu = mu_PBE
+!%Option gga_x_vmt_ge               70
+!% Vela, Medel, and Trickey with mu = mu_GE
+!%Option gga_x_vmt_pbe               71
+!% Vela, Medel, and Trickey with mu = mu_PBE
+!%Option gga_c_n12_sx               79000
+!% N12-SX functional from Minnesota
+!%Option gga_c_n12               80000
+!% N12 functional from Minnesota
+!%Option gga_x_n12               82
+!% N12 functional from Minnesota
+!%Option gga_c_vpbe               83000
+!% variant PBE
 !%Option gga_c_op_xalpha               84000
-!% one-parameter progressive functional (G96 version)
+!% one-parameter progressive functional (XALPHA version)
 !%Option gga_c_op_g96               85000
 !% one-parameter progressive functional (G96 version)
 !%Option gga_c_op_pbe               86000
@@ -314,6 +356,10 @@
 !% HJS screened exchange B97x version
 !%Option gga_x_ityh               529
 !% short-range recipe for exchange GGA functionals
+!%Option gga_x_sfat               530
+!% short-range recipe for exchange GGA functionals
+!%Option hyb_gga_x_n12_sx               81
+!% N12-SX functional from Minnesota
 !%Option hyb_gga_xc_b3pw91               401000
 !% The original (ACM) hybrid of Becke
 !%Option hyb_gga_xc_b3lyp               402000
@@ -386,6 +432,30 @@
 !% Becke half-and-half with B88 exchange
 !%Option hyb_gga_xc_mb3lyp_rc04               437000
 !% B3LYP with RC04 LDA
+!%Option hyb_gga_xc_mpwlyp1m               453000
+!% MPW with 1 par. for metals/LYP
+!%Option hyb_gga_xc_revb3lyp               454000
+!% Revised B3LYP
+!%Option hyb_gga_xc_camy_blyp               455000
+!% BLYP with yukawa screening
+!%Option hyb_gga_xc_pbe0_13               456000
+!% PBE0-1/3
+!%Option mgga_xc_otpss_d               64000
+!% oTPSS_D functional of Goerigk and Grimme
+!%Option mgga_c_cs               72000
+!% Colle and Salvetti
+!%Option mgga_c_mn12_sx               73000
+!% MN12-SX functional of Minnesota
+!%Option mgga_c_mn12_l               74000
+!% MN12-L functional of Minnesota
+!%Option mgga_c_m11_l               75000
+!% M11-L functional of Minnesota
+!%Option mgga_c_m11               76000
+!% M11 functional of Minnesota
+!%Option mgga_c_m08_so               77000
+!% M08-SO functional of Minnesota
+!%Option mgga_c_m08_hx               78000
+!% M08-HX functional of Minnesota
 !%Option mgga_x_lta               201
 !% Local tau approximation of Ernzerhof & Scuseria
 !%Option mgga_x_tpss               202
@@ -426,6 +496,24 @@
 !% M08-HX functional of Minnesota
 !%Option mgga_x_m08_so               220
 !% M08-SO functional of Minnesota
+!%Option mgga_x_ms0               221
+!% MS exchange of Sun, Xiao, and Ruzsinszky
+!%Option mgga_x_ms1               222
+!% MS1 exchange of Sun, et al
+!%Option mgga_x_ms2               223
+!% MS2 exchange of Sun, et al
+!%Option mgga_x_ms2h               224
+!% MS2 hybrid exchange of Sun, et al
+!%Option mgga_x_m11_l               226
+!% M11-L functional of Minnesota
+!%Option mgga_x_mn12_l               227
+!% MN12-L functional from Minnesota
+!%Option mgga_x_mn12_sx               228
+!% MN12-SX functional from Minnesota
+!%Option mgga_c_cc06               229000
+!% Cancio and Chou 2006
+!%Option mgga_x_mk00               230
+!% Exchange for accurate virtual orbital energies
 !%Option mgga_c_tpss               231000
 !% Perdew, Tao, Staroverov & Scuseria correlation
 !%Option mgga_c_vsxc               232000
@@ -446,6 +534,18 @@
 !% Perdew, Kurth, Zupan, and Blaha
 !%Option mgga_c_bc95               240000
 !% Becke correlation 95
+!%Option mgga_c_revtpss               241000
+!% revised TPSS correlation
+!%Option mgga_xc_tpsslyp1w               242000
+!% Functionals fitted for water
+!%Option mgga_x_mk00b               243
+!% Exchange for accurate virtual orbital energies (v. B)
+!%Option mgga_x_bloc               244
+!% functional with balanced localization
+!%Option mgga_x_modtpss               245
+!% Modified Perdew, Tao, Staroverov & Scuseria exchange
+!%Option hyb_mgga_x_m11               225
+!% M11 functional of Minnesota
 !%Option hyb_mgga_xc_m05               438000
 !% M05 functional of Minnesota
 !%Option hyb_mgga_xc_m05_2x               439000
@@ -472,6 +572,14 @@
 !% M06 functional of Minnesota
 !%Option hyb_mgga_xc_m06_2x               450000
 !% M06-2X functional of Minnesota
+!%Option hyb_mgga_xc_pw6b95               451000
+!% Mixture of PW91 with BC95 from Zhao and Truhlar
+!%Option hyb_mgga_xc_pwb6k               452000
+!% Mixture of PW91 with BC95 from Zhao and Truhlar for kinetics
+!%Option hyb_mgga_xc_tpssh               457000
+!% TPSS hybrid
+!%Option hyb_mgga_xc_revtpssh               458000
+!% revTPSS hybrid
 !%Option oep_x                    901
 !% OEP: Exact exchange (not from libxc).
 !%Option ks_inversion             801
@@ -482,7 +590,7 @@
 !% Complex-scaled PBE exchange and correlation (not from libxc).
 !%Option lb94_xc_cmplx            703
 !% Complex-scaled LB94 exchange and correlation (not from libxc).
-!%Option rdmft_xc_oct_m               601
+!%Option rdmft_xc_m               601
 !% RDMFT Mueller functional (not from libxc).
 !%Option xc_half_hartree          917
 !% Half-Hartree exchange for two electrons (supports complex scaling) (not from libxc).
