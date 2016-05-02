@@ -459,7 +459,7 @@ contains
 
     logical :: finish, gs_run_, berry_conv, cmplxscl
     integer :: iter, is, iatom, nspin, ierr, iberry, idir, verbosity_, ib, iqn
-    FLOAT :: evsum_out, evsum_in, forcetmp, dipole(MAX_DIM), dipole_prev(MAX_DIM)
+    FLOAT :: evsum_out, evsum_in, forcetmp, dipole(MAX_DIM), dipole_prev(MAX_DIM), energy_diff
     real(8) :: etime, itime
     character(len=MAX_PATH_LEN) :: dirname
     type(lcao_t) :: lcao    !< Linear combination of atomic orbitals
@@ -610,6 +610,8 @@ contains
       end do
     end if
 
+    call create_convergence_file(STATIC_DIR, "convergence")
+    
     if ( verbosity_ /= VERB_NO ) then
       if(scf%max_iter > 0) then
         write(message(1),'(a)') 'Info: Starting SCF iteration.'
@@ -633,6 +635,8 @@ contains
       ! which would cause a failure of testsuite/linear_response/04-vib_modes.03-vib_modes_fd.inp
       scf%eigens%converged = 0
 
+      energy_diff = hm%energy%total
+      
       if(scf%lcao_restricted) then
         call lcao_init_orbitals(lcao, st, gr, geo)
         call lcao_wf(lcao, st, gr, geo, hm)
@@ -704,6 +708,8 @@ contains
       ! recalculate total energy
       call energy_calc_total(hm, gr, st, iunit = 0)
 
+      energy_diff = hm%energy%total - energy_diff
+      
       ! compute convergence criteria
       scf%abs_dens = M_ZERO
       SAFE_ALLOCATE(tmp(1:gr%fine%mesh%np))
@@ -855,6 +861,8 @@ contains
         end if
       end if
 
+      call write_convergence_file(STATIC_DIR, "convergence")
+      
       if(finish) then
         if(present(iters_done)) iters_done = iter
         if(verbosity_ >= VERB_COMPACT) then
@@ -1271,6 +1279,45 @@ contains
       POP_SUB(scf_run.write_dipole)
     end subroutine write_dipole
 
+    ! -----------------------------------------------------
+    
+    subroutine create_convergence_file(dir, fname)
+      character(len=*), intent(in) :: dir
+      character(len=*), intent(in) :: fname
+
+      integer :: iunit
+      character(len=12) :: label
+      if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
+        call io_mkdir(dir)
+        iunit = io_open(trim(dir) // "/" // trim(fname), action='write')
+        write(iunit, '(a)', advance = 'no') '#iter energy           '
+        label = 'energy_diff'
+        write(iunit, '(1x,a)', advance = 'no') label
+        write(iunit,'(a)') ''
+        call io_close(iunit)
+      end if
+      
+    end subroutine create_convergence_file
+
+    ! -----------------------------------------------------
+    
+    subroutine write_convergence_file(dir, fname)
+      character(len=*), intent(in) :: dir
+      character(len=*), intent(in) :: fname
+
+      integer :: iunit
+      
+      if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
+        call io_mkdir(dir)
+        iunit = io_open(trim(dir) // "/" // trim(fname), action='write', position='append')
+        write(iunit, '(i5,es18.8)', advance = 'no') iter, units_from_atomic(units_out%energy, hm%energy%total)
+        write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%energy, energy_diff)
+        write(iunit,'(a)') ''
+        call io_close(iunit)
+      end if
+      
+    end subroutine write_convergence_file
+    
   end subroutine scf_run
 
 end module scf_oct_m
