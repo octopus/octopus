@@ -232,7 +232,8 @@ subroutine X(mixing_diis)(this, vin, vout, vnew, iter, dotp)
 
   integer :: size, ii, jj, kk, ll
   FLOAT :: sumaa
-  FLOAT, allocatable :: aa(:, :), alpha(:)
+  R_TYPE, allocatable :: aa(:, :), alpha(:)
+  R_TYPE, allocatable :: ff(:), precff(:)
   
   PUSH_SUB(X(mixing_diis))
 
@@ -266,6 +267,12 @@ subroutine X(mixing_diis)(this, vin, vout, vnew, iter, dotp)
 
   SAFE_ALLOCATE(aa(1:size, 1:size))
   SAFE_ALLOCATE(alpha(1:size))
+
+  if(this%precondition) then
+    SAFE_ALLOCATE(ff(1:this%der%mesh%np_part))
+    SAFE_ALLOCATE(precff(1:this%der%mesh%np))
+    ASSERT(this%d1 == this%der%mesh%np)
+  end if
   
   do ii = 1, size
     do jj = 1, size
@@ -273,13 +280,24 @@ subroutine X(mixing_diis)(this, vin, vout, vnew, iter, dotp)
       aa(ii, jj) = CNST(0.0)
       do kk = 1, this%d2
         do ll = 1, this%d3
-          aa(ii, jj) = aa(ii, jj) + dotp(this%X(df)(:, kk, ll, jj), this%X(df)(:, kk, ll, ii))
+
+          if(this%precondition) then
+            ff(1:this%der%mesh%np) = this%X(df)(1:this%der%mesh%np, kk, ll, ii)
+            call X(derivatives_perform)(this%preconditioner, this%der, ff, precff)
+            aa(ii, jj) = aa(ii, jj) + dotp(this%X(df)(:, kk, ll, jj), precff)
+          else
+            aa(ii, jj) = aa(ii, jj) + dotp(this%X(df)(:, kk, ll, jj), this%X(df)(:, kk, ll, ii))
+          end if
+          
         end do
       end do
       
     end do
   end do
 
+  SAFE_DEALLOCATE_A(precff)
+  SAFE_DEALLOCATE_A(ff)
+  
   sumaa = lalg_inverter(size, aa)
 
   if(abs(sumaa) > CNST(1e-8)) then

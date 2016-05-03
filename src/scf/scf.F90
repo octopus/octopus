@@ -341,9 +341,9 @@ contains
 
     if(scf%mix_field /= OPTION__MIXFIELD__NONE) then
       if(.not. st%cmplxscl%space) then
-        call mix_init(scf%smix, scf%mixdim1, 1, st%d%nspin)
+        call mix_init(scf%smix, gr%der, scf%mixdim1, 1, st%d%nspin)
       else
-        call mix_init(scf%smix, scf%mixdim1, 1, st%d%nspin, func_type = TYPE_CMPLX)
+        call mix_init(scf%smix, gr%der, scf%mixdim1, 1, st%d%nspin, func_type = TYPE_CMPLX)
       end if
     end if
 

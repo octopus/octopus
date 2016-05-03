@@ -20,6 +20,7 @@
 #include "global.h"
 
 module mix_oct_m
+  use derivatives_oct_m
   use global_oct_m
   use io_oct_m
   use io_function_oct_m
@@ -28,9 +29,11 @@ module mix_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use nl_operator_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
+  use stencil_cube_oct_m
   use types_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
@@ -76,17 +79,22 @@ module mix_oct_m
     CMPLX, pointer :: zf_old(:, :, :)
     CMPLX, pointer :: zvin_old(:, :, :)
 
+    type(derivatives_t), pointer :: der
+    logical                      :: precondition
+    type(nl_operator_t)          :: preconditioner
+    
   end type mix_t
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine mix_init(smix, d1, d2, d3, def_, func_type, prefix_)
-    type(mix_t),                intent(out) :: smix
-    integer,                    intent(in)  :: d1, d2, d3
-    integer,          optional, intent(in)  :: def_
-    type(type_t),     optional, intent(in)  :: func_type
-    character(len=*), optional, intent(in)  :: prefix_
+  subroutine mix_init(smix, der, d1, d2, d3, def_, func_type, prefix_)
+    type(mix_t),                   intent(out) :: smix
+    type(derivatives_t), target,   intent(in)  :: der
+    integer,                       intent(in)  :: d1, d2, d3
+    integer,             optional, intent(in)  :: def_
+    type(type_t),        optional, intent(in)  :: func_type
+    character(len=*),    optional, intent(in)  :: prefix_
 
     integer :: def
     character(len=32) :: prefix
@@ -135,6 +143,17 @@ contains
     call messages_print_var_option(stdout, "MixingScheme", smix%scheme)
 
     if(smix%scheme == OPTION__MIXINGSCHEME__DIIS) call messages_experimental('MixingScheme = diis')
+
+    !%Variable MixingPreconditioner
+    !%Type logical
+    !%Default false
+    !%Section SCF::Mixing
+    !%Description
+    !% (Experimental) If set to yes, Octopus will use a preconditioner
+    !% for the mixing operator.
+    !%End
+    call parse_variable(trim(prefix)+'MixingPreconditioner', .false., smix%precondition)
+    if(smix%precondition) call messages_experimental('MixingPreconditioner')
     
     !%Variable Mixing
     !%Type float
@@ -201,7 +220,62 @@ contains
 
     call mix_clear(smix)
 
+    if(smix%precondition) call init_preconditioner()
+
     POP_SUB(mix_init)
+
+  contains
+
+    subroutine init_preconditioner()
+
+      integer :: ns, maxp, ip, is
+      FLOAT, parameter :: weight = 50.0
+      
+      ! This the mixing preconditioner from GPAW:
+      !
+      !   https://wiki.fysik.dtu.dk/gpaw/documentation/densitymix/densitymix.html
+      !
+
+      smix%der => der
+      
+      ASSERT(.not. der%mesh%use_curvilinear)
+      ASSERT(der%mesh%sb%dim == 3)
+      
+      call nl_operator_init(smix%preconditioner, "Mixing preconditioner")
+      call stencil_cube_get_lapl(smix%preconditioner%stencil, der%mesh%sb%dim, 1)
+      call nl_operator_build(der%mesh, smix%preconditioner, der%mesh%np, const_w = .not. der%mesh%use_curvilinear)
+      
+      ns = smix%preconditioner%stencil%size
+
+      if (smix%preconditioner%const_w) then
+        maxp = 1
+      else
+        maxp = der%mesh%np
+      end if
+
+      do ip = 1, maxp
+
+        do is = 1, ns
+          select case(sum(abs(smix%preconditioner%stencil%points(1:der%mesh%sb%dim, is))))
+          case(0)
+            smix%preconditioner%w_re(is, ip) = CNST(1.0) + weight/CNST(8.0)
+          case(1)
+            smix%preconditioner%w_re(is, ip) = weight/CNST(16.0)
+          case(2)
+            smix%preconditioner%w_re(is, ip) = weight/CNST(32.0)
+          case(3)
+            smix%preconditioner%w_re(is, ip) = weight/CNST(64.0)
+          case default
+            ASSERT(.false.)
+          end select
+
+        end do
+      end do
+      
+      call nl_operator_update_weights(smix%preconditioner)
+
+    end subroutine init_preconditioner
+
   end subroutine mix_init
 
 
@@ -237,6 +311,8 @@ contains
     type(mix_t), intent(inout) :: smix
 
     PUSH_SUB(mix_end)
+
+    if(smix%precondition) call nl_operator_end(smix%preconditioner)
 
     ! Arrays got allocated for all mixing schemes, except linear mixing
     if (smix%scheme /= OPTION__MIXINGSCHEME__LINEAR) then
