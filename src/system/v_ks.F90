@@ -723,7 +723,6 @@ contains
         do ispin = 1,st%d%nspin
           do ik = ispin, st%d%nik, st%d%nspin
            qsp(ispin) = qsp(ispin)+ st%occ(ist, ik) * st%d%kweights(ik) 
-      !     qsp(:) = qsp(:)+ st%occ(ist, :) * st%d%kweights(:)
           enddo
         enddo
       end do
