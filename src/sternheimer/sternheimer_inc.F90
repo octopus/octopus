@@ -62,8 +62,6 @@ subroutine X(sternheimer_solve)(                           &
 
   call mix_clear(this%mixer)
 
-  call mesh_init_mesh_aux(sys%gr%mesh)
-
   SAFE_ALLOCATE(dpsimod(1:nsigma, st%st_start:st%st_end))
   SAFE_ALLOCATE(residue(1:nsigma, st%st_start:st%st_end))
   SAFE_ALLOCATE(conv_iters(1:nsigma, st%st_start:st%st_end))
@@ -308,7 +306,7 @@ subroutine X(sternheimer_solve)(                           &
       call lalg_copy(mesh%np, lr(1)%X(dl_rho)(:, ispin), dl_rhotmp(:, ispin, 1))
     end do
 
-    call X(mixing)(this%mixer, dl_rhoin, dl_rhotmp, dl_rhonew, X(mf_dotp_aux))
+    call X(mixing)(this%mixer, dl_rhoin, dl_rhotmp, dl_rhonew)
 
     abs_dens = M_ZERO
 

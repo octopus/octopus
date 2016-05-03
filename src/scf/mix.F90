@@ -27,6 +27,7 @@ module mix_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
   use mesh_oct_m
+  use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
   use nl_operator_oct_m
@@ -100,6 +101,8 @@ contains
     character(len=32) :: prefix
 
     PUSH_SUB(mix_init)
+
+    smix%der => der
 
     def = OPTION__MIXINGSCHEME__BROYDEN
     if(present(def_)) def = def_
@@ -236,8 +239,6 @@ contains
       !   https://wiki.fysik.dtu.dk/gpaw/documentation/densitymix/densitymix.html
       !
 
-      smix%der => der
-      
       ASSERT(.not. der%mesh%use_curvilinear)
       ASSERT(der%mesh%sb%dim == 3)
       

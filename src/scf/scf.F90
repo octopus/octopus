@@ -127,7 +127,8 @@ contains
 
     FLOAT :: rmin
     integer :: mixdefault
-
+    type(type_t) :: mix_type
+    
     PUSH_SUB(scf_init)
 
     !%Variable MaximumIter
@@ -339,12 +340,14 @@ contains
       scf%mixdim1 = 1
     end select
 
-    if(scf%mix_field /= OPTION__MIXFIELD__NONE) then
-      if(.not. st%cmplxscl%space) then
-        call mix_init(scf%smix, gr%der, scf%mixdim1, 1, st%d%nspin)
-      else
-        call mix_init(scf%smix, gr%der, scf%mixdim1, 1, st%d%nspin, func_type = TYPE_CMPLX)
-      end if
+    mix_type = TYPE_FLOAT
+    if(st%cmplxscl%space) mix_type = TYPE_CMPLX
+    
+
+    if(scf%mix_field == OPTION__MIXFIELD__DENSITY) then
+      call mix_init(scf%smix, gr%fine%der, scf%mixdim1, 1, st%d%nspin, func_type = mix_type)
+    else if(scf%mix_field /= OPTION__MIXFIELD__NONE) then
+      call mix_init(scf%smix, gr%der, scf%mixdim1, 1, st%d%nspin, func_type = mix_type)
     end if
 
     ! now the eigensolver stuff
@@ -482,7 +485,7 @@ contains
 
     logical :: finish, gs_run_, berry_conv, cmplxscl
     integer :: iter, is, iatom, nspin, ierr, iberry, idir, verbosity_, ib, iqn
-    FLOAT :: evsum_out, evsum_in, forcetmp, dipole(MAX_DIM), dipole_prev(MAX_DIM), energy_diff
+    FLOAT :: evsum_out, evsum_in, forcetmp, dipole(MAX_DIM), dipole_prev(MAX_DIM)
     real(8) :: etime, itime
     character(len=MAX_PATH_LEN) :: dirname
     type(lcao_t) :: lcao    !< Linear combination of atomic orbitals
@@ -791,11 +794,9 @@ contains
       ! mixing
       select case (scf%mix_field)
       case (OPTION__MIXFIELD__DENSITY)
-        !set the pointer for dmf_dotp_aux
-        call mesh_init_mesh_aux(gr%fine%mesh)
         ! mix input and output densities and compute new potential
         if(.not. cmplxscl) then
-          call dmixing(scf%smix, rhoin, rhoout, rhonew, dmf_dotp_aux)
+          call dmixing(scf%smix, rhoin, rhoout, rhonew)
           ! for spinors, having components 3 or 4 be negative is not unphysical
           if(minval(rhonew(1:gr%fine%mesh%np, 1, 1:st%d%spin_channels)) < -CNST(1e-6)) then
             write(message(1),*) 'Negative density after mixing. Minimum value = ', &
@@ -804,19 +805,17 @@ contains
           end if
           st%rho(1:gr%fine%mesh%np, 1:nspin) = rhonew(1:gr%fine%mesh%np, 1, 1:nspin)
         else
-          call zmixing(scf%smix, zrhoin, zrhoout, zrhonew, zmf_dotp_aux)
+          call zmixing(scf%smix, zrhoin, zrhoout, zrhonew)
           st%zrho%Re(1:gr%fine%mesh%np, 1:nspin) =  real(zrhonew(1:gr%fine%mesh%np, 1, 1:nspin))                   
           st%zrho%Im(1:gr%fine%mesh%np, 1:nspin) = aimag(zrhonew(1:gr%fine%mesh%np, 1, 1:nspin))                    
         end if
         call v_ks_calc(ks, hm, st, geo)
       case (OPTION__MIXFIELD__POTENTIAL)
-        !set the pointer for dmf_dotp_aux
-        call mesh_init_mesh_aux(gr%mesh)
         ! mix input and output potentials
-        call dmixing(scf%smix, vin, vout, vnew, dmf_dotp_aux)
+        call dmixing(scf%smix, vin, vout, vnew)
         hm%vhxc(1:gr%mesh%np, 1:nspin) = vnew(1:gr%mesh%np, 1, 1:nspin)
         if(cmplxscl) then
-          call dmixing(scf%smix, Imvin, Imvout, Imvnew, dmf_dotp_aux)
+          call dmixing(scf%smix, Imvin, Imvout, Imvnew)
           hm%Imvhxc(1:gr%mesh%np, 1:nspin) = Imvnew(1:gr%mesh%np, 1, 1:nspin)
         end if
         call hamiltonian_update(hm, gr%mesh)
