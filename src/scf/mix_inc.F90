@@ -95,7 +95,7 @@ subroutine X(mixing_broyden)(smix, vin, vout, vnew, iter)
     gamma = M_ZERO
     do i = 1, d2
       do j = 1, d3
-        gamma = gamma + X(dotp)(smix, smix%X(df)(:, i, j, ipos), smix%X(df)(:, i, j, ipos))
+        gamma = gamma + X(mix_dotp)(smix, smix%X(df)(:, i, j, ipos), smix%X(df)(:, i, j, ipos))
       end do
     end do
     gamma = sqrt(gamma)
@@ -158,7 +158,7 @@ subroutine X(broyden_extrapolation)(this, alpha, d1, d2, d3, vin, vnew, iter_use
       beta(i, j) = M_ZERO
       do k = 1, d2
         do l = 1, d3
-          beta(i, j) = beta(i, j) + ww*ww*X(dotp)(this, df(:, k, l, j), df(:, k, l, i))
+          beta(i, j) = beta(i, j) + ww*ww*X(mix_dotp)(this, df(:, k, l, j), df(:, k, l, i))
         end do
       end do
       beta(j, i) = R_CONJ(beta(i, j))
@@ -173,7 +173,7 @@ subroutine X(broyden_extrapolation)(this, alpha, d1, d2, d3, vin, vnew, iter_use
     work(i) = M_ZERO
     do k = 1, d2
       do l = 1, d3
-        work(i) = work(i) + X(dotp)(this, df(:, k, l, i), f(:, k, l))
+        work(i) = work(i) + X(mix_dotp)(this, df(:, k, l, i), f(:, k, l))
       end do
     end do
   end do
@@ -205,8 +205,7 @@ subroutine X(mixing_diis)(this, vin, vout, vnew, iter)
   integer :: size, ii, jj, kk, ll
   FLOAT :: sumaa
   R_TYPE, allocatable :: aa(:, :), alpha(:)
-  R_TYPE, allocatable :: ff(:), precff(:)
-  
+
   PUSH_SUB(X(mixing_diis))
 
   if(iter <= this%d4) then
@@ -240,36 +239,19 @@ subroutine X(mixing_diis)(this, vin, vout, vnew, iter)
   SAFE_ALLOCATE(aa(1:size, 1:size))
   SAFE_ALLOCATE(alpha(1:size))
 
-  if(this%precondition) then
-    SAFE_ALLOCATE(ff(1:this%der%mesh%np_part))
-    SAFE_ALLOCATE(precff(1:this%der%mesh%np))
-    ASSERT(this%d1 == this%der%mesh%np)
-  end if
-  
   do ii = 1, size
     do jj = 1, size
 
       aa(ii, jj) = CNST(0.0)
       do kk = 1, this%d2
         do ll = 1, this%d3
-
-          if(this%precondition) then
-            ff(1:this%der%mesh%np) = this%X(df)(1:this%der%mesh%np, kk, ll, ii)
-            call X(derivatives_perform)(this%preconditioner, this%der, ff, precff)
-            aa(ii, jj) = aa(ii, jj) + X(dotp)(this, this%X(df)(:, kk, ll, jj), precff)
-          else
-            aa(ii, jj) = aa(ii, jj) + X(dotp)(this, this%X(df)(:, kk, ll, jj), this%X(df)(:, kk, ll, ii))
-          end if
-          
+          aa(ii, jj) = aa(ii, jj) + X(mix_dotp)(this, this%X(df)(:, kk, ll, jj), this%X(df)(:, kk, ll, ii))
         end do
       end do
       
     end do
   end do
 
-  SAFE_DEALLOCATE_A(precff)
-  SAFE_DEALLOCATE_A(ff)
-  
   sumaa = lalg_inverter(size, aa)
 
   if(abs(sumaa) > CNST(1e-8)) then
@@ -385,7 +367,7 @@ subroutine X(pulay_extrapolation)(this, d2, d3, vin, vout, vnew, iter_used, f, d
       a(i, j) = M_ZERO
       do k = 1, d2
         do l = 1, d3
-          a(i, j) = a(i, j) + X(dotp)(this, df(:, k, l, j), df(:, k, l, i))
+          a(i, j) = a(i, j) + X(mix_dotp)(this, df(:, k, l, j), df(:, k, l, i))
         end do
       end do
       if(j > i) a(j, i) = a(i, j)
@@ -407,7 +389,7 @@ subroutine X(pulay_extrapolation)(this, d2, d3, vin, vout, vnew, iter_used, f, d
     do j = 1, iter_used
       do k = 1, d2
         do l = 1, d3
-          alpha = alpha - a(i, j)*X(dotp)(this, df(:, k, l, j), f(:, k, l))
+          alpha = alpha - a(i, j)*X(mix_dotp)(this, df(:, k, l, j), f(:, k, l))
         end do
       end do
     end do
@@ -419,14 +401,38 @@ subroutine X(pulay_extrapolation)(this, d2, d3, vin, vout, vnew, iter_used, f, d
   POP_SUB(X(pulay_extrapolation))
 end subroutine X(pulay_extrapolation)
 
-R_TYPE function X(dotp)(this, xx, yy) result(dotp)
+! --------------------------------------------------------------
+
+R_TYPE function X(mix_dotp)(this, xx, yy) result(dotp)
   type(mix_t), intent(in) :: this
   R_TYPE,      intent(in) :: xx(:)
   R_TYPE,      intent(in) :: yy(:)
 
-  dotp = X(mf_dotp)(this%der%mesh, xx, yy)
+  R_TYPE, allocatable :: ff(:), precff(:)
+  
+  PUSH_SUB(X(mix_dotp))
 
-end function X(dotp)
+  ASSERT(this%d1 == this%der%mesh%np)
+  
+  if(this%precondition) then
+
+    SAFE_ALLOCATE(ff(1:this%der%mesh%np_part))
+    SAFE_ALLOCATE(precff(1:this%der%mesh%np))
+
+    ff(1:this%der%mesh%np) = yy(1:this%der%mesh%np)
+    call X(derivatives_perform)(this%preconditioner, this%der, ff, precff)
+    dotp = X(mf_dotp)(this%der%mesh, xx, precff)
+
+    SAFE_DEALLOCATE_A(precff)
+    SAFE_DEALLOCATE_A(ff)
+      
+  else
+    dotp = X(mf_dotp)(this%der%mesh, xx, yy)
+  end if
+
+  POP_SUB(X(mix_dotp))
+  
+end function X(mix_dotp)
 
 !! Local Variables:
 !! mode: f90
