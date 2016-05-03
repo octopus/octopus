@@ -236,8 +236,6 @@ subroutine X(mixing_diis)(this, vin, vout, vnew, iter, dotp)
   
   PUSH_SUB(X(mixing_diis))
 
-  print*, "ITER", iter
-  
   if(iter <= this%d4) then
 
     size = iter
@@ -261,15 +259,11 @@ subroutine X(mixing_diis)(this, vin, vout, vnew, iter, dotp)
     vnew(1:this%d1, 1:this%d2, 1:this%d3) = (CNST(1.0) - this%alpha)*vin(1:this%d1, 1:this%d2, 1:this%d3) &
       + this%alpha*vout(1:this%d1, 1:this%d2, 1:this%d3)
 
-!    vnew(1:this%d1, 1:this%d2, 1:this%d3) = vin(1:this%d1, 1:this%d2, 1:this%d3)
-    
     POP_SUB(X(mixing_diis))
     return
   end if
  
 
-  print*, "res ", dotp(this%X(df)(:, 1, 1, size), this%X(df)(:, 1, 1, size))
-  
   SAFE_ALLOCATE(aa(1:size, 1:size))
   SAFE_ALLOCATE(alpha(1:size))
   
@@ -286,21 +280,7 @@ subroutine X(mixing_diis)(this, vin, vout, vnew, iter, dotp)
     end do
   end do
 
-  print*, "============"
-
-  do ii = 1, size
-    print*, aa(ii, :)
-  end do
-  
   sumaa = lalg_inverter(size, aa)
-
-  print*, "============"
-  
-  do ii = 1, size
-    print*, aa(ii, :)
-  end do
-
-  print*, "SUM", sumaa
 
   if(abs(sumaa) > CNST(1e-8)) then
     
@@ -317,11 +297,9 @@ subroutine X(mixing_diis)(this, vin, vout, vnew, iter, dotp)
     
   end if
 
-  print*, "---------------"
-  print*, alpha, "sum = ", sum(alpha)
-  print*, "---------------"
 
   vnew(1:this%d1, 1:this%d2, 1:this%d3) = CNST(0.0)
+
   do ii = 1, size
     vnew(1:this%d1, 1:this%d2, 1:this%d3) = &
       vnew(1:this%d1, 1:this%d2, 1:this%d3) + alpha(ii)*this%X(dv)(1:this%d1, 1:this%d2, 1:this%d3, ii)
