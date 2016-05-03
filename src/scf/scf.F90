@@ -208,8 +208,7 @@ contains
     !%
     !% A zero value (the default) means do not use this criterion.
     !%End
-    call parse_variable('ConvAbsEv', M_ZERO, scf%conv_abs_ev)
-    scf%conv_abs_ev = units_to_atomic(units_inp%energy, scf%conv_abs_ev)
+    call parse_variable('ConvAbsEv', M_ZERO, scf%conv_abs_ev, unit = units_inp%energy)
 
     !%Variable ConvRelEv
     !%Type float
@@ -431,10 +430,8 @@ contains
     !% The default is half the minimum distance between two atoms
     !% in the input coordinates, or 100 a.u. if there is only one atom.
     !%End
-    call parse_variable('LocalMagneticMomentsSphereRadius', &
-      units_from_atomic(units_inp%length, rmin * M_HALF), scf%lmm_r)
+    call parse_variable('LocalMagneticMomentsSphereRadius', rmin*M_HALF, scf%lmm_r, unit = units_inp%length)
     ! this variable is also used in td/td_write.F90
-    scf%lmm_r = units_to_atomic(units_inp%length, scf%lmm_r)
 
     scf%forced_finish = .false.
 
@@ -1019,10 +1016,10 @@ contains
           write(message(2),'(a,es15.8,2(a,es9.2))') ' Im(etot) = ', units_from_atomic(units_out%energy, hm%energy%Imtotal), &
             ' abs_dens = ', scf%abs_dens, ' rel_dens = ', scf%rel_dens
         else
-          write(message(1),'(a,es15.8,2(a,es9.2))') ' etot = ', units_from_atomic(units_out%energy, hm%energy%total), &
+          write(message(1),'(a,es15.8,2(a,es9.2))') ' etot  = ', units_from_atomic(units_out%energy, hm%energy%total), &
             ' abs_ev   = ', units_from_atomic(units_out%energy, scf%abs_ev), ' rel_ev   = ', scf%rel_ev
-          write(message(2),'(23x,2(a,es9.2))') &
-            ' abs_dens = ', scf%abs_dens, ' rel_dens = ', scf%rel_dens
+          write(message(2),'(a,es15.2,2(a,es9.2))') &
+            ' ediff = ', scf%energy_diff, ' abs_dens = ', scf%abs_dens, ' rel_dens = ', scf%rel_dens
         end if
         ! write info about forces only if they are used as convergence criteria
         if (scf%conv_abs_force > M_ZERO) then
