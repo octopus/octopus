@@ -208,9 +208,6 @@ contains
     !%Option ELF_basins bit(7)
     !% Outputs basins of attraction of the ELF. The output file is called
     !% <tt>elf_rs_basins.info</tt>. Only in 2D and 3D.
-    !%Option ELF_FS bit(8)
-    !% Outputs electron localization function in Fourier space (experimental). The output file is called
-    !% <tt>elf_FS-</tt>. Only in 2D and 3D.
     !%Option Bader bit(9)
     !% Outputs Laplacian of the density which shows lone pairs, bonded charge concentrations
     !% and regions subject to electrophilic or nucleophilic attack.
@@ -287,19 +284,14 @@ contains
     !%End
     call parse_variable('Output', 0, outp%what)
 
-    if(iand(outp%what, OPTION__OUTPUT__ELF_FS) /= 0) then
-      call messages_experimental("ELF in Fourier space")
-    end if
-
     if(iand(outp%what, OPTION__OUTPUT__WFS_FOURIER) /= 0) then
       call messages_experimental("Wave-functions in Fourier space")
     end if
 
     ! cannot calculate the ELF in 1D
-    if(iand(outp%what, OPTION__OUTPUT__ELF) /= 0 .or. iand(outp%what, OPTION__OUTPUT__ELF_BASINS) /= 0 &
-       .or. iand(outp%what, OPTION__OUTPUT__ELF_FS) /= 0) then
+    if(iand(outp%what, OPTION__OUTPUT__ELF) /= 0 .or. iand(outp%what, OPTION__OUTPUT__ELF_BASINS) /= 0) then
        if(sb%dim /= 2 .and. sb%dim /= 3) then
-         outp%what = iand(outp%what, not(OPTION__OUTPUT__ELF + OPTION__OUTPUT__ELF_BASINS + OPTION__OUTPUT__ELF_FS))
+         outp%what = iand(outp%what, not(OPTION__OUTPUT__ELF + OPTION__OUTPUT__ELF_BASINS))
          write(message(1), '(a)') 'Cannot calculate ELF except in 2D and 3D.'
          call messages_warning(1)
        end if
@@ -698,17 +690,6 @@ contains
 
       if(iand(outp%what, OPTION__OUTPUT__ELF_BASINS) /= 0) &
         call out_basins(f_loc(:,1), "elf_rs_basins")
-    end if
-
-    ! Second, ELF in Fourier space.
-    if(iand(outp%what, OPTION__OUTPUT__ELF_FS) /= 0) then
-      call elf_calc_fs(st, gr, f_loc)
-      do is = 1, st%d%nspin
-        write(fname, '(a,i1)') 'elf_fs-sp', is
-        call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
-          f_loc(:,is), unit_one, ierr, geo = geo, grp = mpi_grp)
-        ! this quantity is dimensionless
-      end do
     end if
 
     ! Now Bader analysis
