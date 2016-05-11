@@ -86,7 +86,7 @@ contains
     PUSH_SUB(current_init)
 
     !%Variable CurrentDensity
-    !%Default hamiltonian
+    !%Default gradient_corrected
     !%Type integer
     !%Section Hamiltonian
     !%Description
@@ -98,16 +98,16 @@ contains
     !% The calculation of current is done using the gradient operator. (Experimental)
     !%Option gradient_corrected 2
     !% The calculation of current is done using the gradient operator
-    !% with additional corrections for the total current from non-local operators. (Experimental)
+    !% with additional corrections for the total current from non-local operators.
     !%Option hamiltonian 3
     !% The current density is obtained from the commutator of the
-    !% Hamiltonian with the position operator.
+    !% Hamiltonian with the position operator. (Experimental)
     !%End
 
-    call parse_variable('CurrentDensity', CURRENT_HAMILTONIAN, this%method)
+    call parse_variable('CurrentDensity', CURRENT_GRADIENT_CORR, this%method)
     if(.not.varinfo_valid_option('CurrentDensity', this%method)) call messages_input_error('CurrentDensity')
-    if(this%method /= CURRENT_HAMILTONIAN) then
-      call messages_experimental("CurrentDensity /= hamiltonian")
+    if(this%method /= CURRENT_GRADIENT_CORR) then
+      call messages_experimental("CurrentDensity /= gradient_corrected")
     end if
     
     POP_SUB(current_init)
