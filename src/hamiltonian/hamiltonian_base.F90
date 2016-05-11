@@ -117,6 +117,9 @@ module hamiltonian_base_oct_m
     type(opencl_mem_t)                    :: buff_pos
     type(opencl_mem_t)                    :: buff_invmap
     type(opencl_mem_t)                    :: buff_projector_phases
+
+    CMPLX, pointer     :: phase(:, :)
+    type(opencl_mem_t) :: buff_phase
   end type hamiltonian_base_t
 
   type projection_t

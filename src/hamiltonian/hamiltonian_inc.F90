@@ -61,7 +61,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
   ASSERT(psib%nst == hpsib%nst)
   ASSERT(ik >= hm%d%kpt%start .and. ik <= hm%d%kpt%end)
 
-  apply_phase = associated(hm%phase)
+  apply_phase = associated(hm%hm_base%phase)
 
   pack = hamiltonian_apply_packed(hm, der%mesh) &
     .and. (opencl_is_enabled() .or. psib%nst_linear > 1) &
@@ -929,7 +929,7 @@ subroutine X(hamiltonian_phase)(this, der, np, iqn, conjugate, psib, src)
 
       !$omp parallel do private(ip, ii, phase)
       do ip = 1, np
-        phase = conjg(this%phase(ip, iqn))
+        phase = conjg(this%hm_base%phase(ip, iqn))
         do ii = 1, psib%nst_linear
           psib%pack%X(psi)(ii, ip) = phase*src_%pack%X(psi)(ii, ip)
         end do
@@ -940,7 +940,7 @@ subroutine X(hamiltonian_phase)(this, der, np, iqn, conjugate, psib, src)
 
       !$omp parallel do private(ip, ii, phase)
       do ip = 1, np
-        phase = this%phase(ip, iqn)
+        phase = this%hm_base%phase(ip, iqn)
         do ii = 1, psib%nst_linear
           psib%pack%X(psi)(ii, ip) = phase*src_%pack%X(psi)(ii, ip)
         end do
@@ -957,7 +957,7 @@ subroutine X(hamiltonian_phase)(this, der, np, iqn, conjugate, psib, src)
       do ii = 1, psib%nst_linear
         !$omp do
         do ip = 1, np
-          psib%states_linear(ii)%X(psi)(ip) = conjg(this%phase(ip, iqn))*src_%states_linear(ii)%X(psi)(ip)
+          psib%states_linear(ii)%X(psi)(ip) = conjg(this%hm_base%phase(ip, iqn))*src_%states_linear(ii)%X(psi)(ip)
         end do
         !$omp end do nowait
       end do
@@ -968,7 +968,7 @@ subroutine X(hamiltonian_phase)(this, der, np, iqn, conjugate, psib, src)
       do ii = 1, psib%nst_linear
         !$omp do
         do ip = 1, np
-          psib%states_linear(ii)%X(psi)(ip) = this%phase(ip, iqn)*src_%states_linear(ii)%X(psi)(ip)
+          psib%states_linear(ii)%X(psi)(ip) = this%hm_base%phase(ip, iqn)*src_%states_linear(ii)%X(psi)(ip)
         end do
         !$omp end do nowait
       end do
@@ -989,7 +989,7 @@ subroutine X(hamiltonian_phase)(this, der, np, iqn, conjugate, psib, src)
 
     call opencl_set_kernel_arg(kernel, 1, (iqn - this%d%kpt%start)*der%mesh%np_part)
     call opencl_set_kernel_arg(kernel, 2, np)
-    call opencl_set_kernel_arg(kernel, 3, this%buff_phase)
+    call opencl_set_kernel_arg(kernel, 3, this%hm_base%buff_phase)
     call opencl_set_kernel_arg(kernel, 4, src_%pack%buffer)
     call opencl_set_kernel_arg(kernel, 5, log2(src_%pack%size(1)))
     call opencl_set_kernel_arg(kernel, 6, psib%pack%buffer)

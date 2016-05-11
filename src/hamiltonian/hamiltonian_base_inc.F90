@@ -219,6 +219,8 @@ end subroutine X(hamiltonian_base_local_sub)
 
 ! ---------------------------------------------------------------------------------------
 
+! ---------------------------------------------------------------------------------------
+
 subroutine X(hamiltonian_base_rashba)(this, der, std, psib, vpsib)
   type(hamiltonian_base_t),    intent(in)    :: this
   type(derivatives_t),         intent(in)    :: der

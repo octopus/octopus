@@ -125,14 +125,14 @@ subroutine X(pert_apply)(this, gr, geo, hm, ik, f_in, f_out, set_bc)
   end if
   ! no derivatives in electric, so ghost points not needed
 
-  apply_kpoint = associated(hm%phase) .and. this%pert_type /= PERTURBATION_ELECTRIC
+  apply_kpoint = associated(hm%hm_base%phase) .and. this%pert_type /= PERTURBATION_ELECTRIC
   ! electric does not need it since (e^-ikr)r(e^ikr) = r
   if(this%pert_type == PERTURBATION_KDOTP .and. this%vel_method == OPTION__KDOTPVELMETHOD__HCOM_VEL) &
     apply_kpoint = .false.
 
   if (apply_kpoint) then
     forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np_part)
-      f_in_copy(ip, idim) = hm%phase(ip, ik) * f_in_copy(ip, idim)
+      f_in_copy(ip, idim) = hm%hm_base%phase(ip, ik) * f_in_copy(ip, idim)
     end forall
   end if
 
@@ -156,7 +156,7 @@ subroutine X(pert_apply)(this, gr, geo, hm, ik, f_in, f_out, set_bc)
   
   if (apply_kpoint) then
     forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np)
-      f_out(ip, idim) = conjg(hm%phase(ip, ik)) * f_out(ip, idim)
+      f_out(ip, idim) = conjg(hm%hm_base%phase(ip, ik)) * f_out(ip, idim)
     end forall
   end if
 
@@ -415,14 +415,14 @@ subroutine X(pert_apply_order_2) (this, gr, geo, hm, ik, f_in, f_out)
   end if
   ! no derivatives in electric, so ghost points not needed
 
-  apply_kpoint = associated(hm%phase) .and. this%pert_type /= PERTURBATION_ELECTRIC &
+  apply_kpoint = associated(hm%hm_base%phase) .and. this%pert_type /= PERTURBATION_ELECTRIC &
     .and. this%pert_type /= PERTURBATION_KDOTP
   ! electric does not need it since (e^-ikr)r(e^ikr) = r
   ! kdotp has the perturbation written in terms of the periodic part with the phase
 
   if (apply_kpoint) then
     forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np_part)
-      f_in_copy(ip, idim) = hm%phase(ip, ik) * f_in_copy(ip, idim)
+      f_in_copy(ip, idim) = hm%hm_base%phase(ip, ik)*f_in_copy(ip, idim)
     end forall
   end if
 
@@ -442,7 +442,7 @@ subroutine X(pert_apply_order_2) (this, gr, geo, hm, ik, f_in, f_out)
 
   if (apply_kpoint) then
     forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np)
-      f_out(ip, idim) = conjg(hm%phase(ip, ik)) * f_out(ip, idim)
+      f_out(ip, idim) = conjg(hm%hm_base%phase(ip, ik))*f_out(ip, idim)
     end forall
   end if
 
