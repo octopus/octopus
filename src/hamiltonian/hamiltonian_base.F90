@@ -21,6 +21,7 @@
 
 module hamiltonian_base_oct_m
   use batch_oct_m
+  use batch_ops_oct_m
   use blas_oct_m
 #ifdef HAVE_OPENCL
   use cl
@@ -74,6 +75,8 @@ module hamiltonian_base_oct_m
     zhamiltonian_base_nlocal_start,            &
     dhamiltonian_base_nlocal_finish,           &
     zhamiltonian_base_nlocal_finish,           &
+    dhamiltonian_base_nlocal_position_commutator, &
+    zhamiltonian_base_nlocal_position_commutator, &
     hamiltonian_base_has_magnetic,             &
     hamiltonian_base_init,                     &
     hamiltonian_base_end,                      &
@@ -524,7 +527,10 @@ contains
           end do
         end do
 
-        forall(ip = 1:pmat%npoints) pmat%map(ip) = epot%proj(iatom)%sphere%map(ip)
+        forall(ip = 1:pmat%npoints)
+          pmat%map(ip) = epot%proj(iatom)%sphere%map(ip)
+          pmat%position(1:3, ip) = epot%proj(iatom)%sphere%x(ip, 1:3)
+        end forall
 
         INCR(this%full_projection_size, pmat%nprojs)
 
