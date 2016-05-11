@@ -702,9 +702,6 @@ contains
     call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_POTENTIAL, &
       complex_potential = this%cmplxscl%space .or. this%bc%abtype == IMAGINARY_ABSORBING)
 
-    if(this%d%nspin > 2 .and. this%bc%abtype == IMAGINARY_ABSORBING) then
-      call messages_not_implemented('AbsorbingBoundaries = cap for spinors')
-    end if
 
     do ispin = 1, this%d%nspin
       if(ispin <= 2) then
@@ -723,15 +720,21 @@ contains
               this%hm_base%Impotential(ip, ispin) + this%Imvhxc(ip, ispin) +  this%ep%Imvpsl(ip)
           end forall
         end if
-      else
+        
+        if(this%bc%abtype == IMAGINARY_ABSORBING) then
+          forall (ip = 1:mesh%np)
+            this%hm_base%Impotential(ip, ispin) = this%hm_base%Impotential(ip, ispin) + this%bc%mf(ip)
+          end forall
+        end if
+
+      else !Spinors 
         forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin)
+        if(this%cmplxscl%space) then
+          forall (ip = 1:mesh%np) this%hm_base%Impotential(ip, ispin) = this%Imvhxc(ip, ispin)
+        end if
+          
       end if
 
-      if(this%bc%abtype == IMAGINARY_ABSORBING) then
-        forall (ip = 1:mesh%np)
-          this%hm_base%Impotential(ip, ispin) = this%hm_base%Impotential(ip, ispin) + this%bc%mf(ip)
-        end forall
-      end if
 
     end do
 
