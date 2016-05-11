@@ -27,6 +27,7 @@ module states_group_oct_m
   use messages_oct_m
   use mpi_oct_m
   use profiling_oct_m
+  use states_dim_oct_m
 
   implicit none
 
@@ -72,7 +73,8 @@ contains
 
   !---------------------------------------------------------
 
-  subroutine states_group_copy(group_in, group_out)
+  subroutine states_group_copy(d,group_in, group_out)
+    type(states_dim_t) :: d
     type(states_group_t), intent(in)    :: group_in
     type(states_group_t), intent(out)   :: group_out
 
@@ -92,8 +94,8 @@ contains
 
       ASSERT(associated(group_in%psib))
 
-      qn_start = lbound(group_in%psib, dim = 2)
-      qn_end   = ubound(group_in%psib, dim = 2)
+      qn_start = d%kpt%start 
+      qn_end   = d%kpt%end 
 
       SAFE_ALLOCATE(group_out%psib(1:group_out%nblocks, qn_start:qn_end))
 

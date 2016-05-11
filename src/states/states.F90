@@ -1463,7 +1463,7 @@ contains
 
     stout%symmetrize_density = stin%symmetrize_density
 
-    if(.not. exclude_wfns_) call states_group_copy(stin%group, stout%group)
+    if(.not. exclude_wfns_) call states_group_copy(stin%d,stin%group, stout%group)
 
     stout%packed = stin%packed
 
