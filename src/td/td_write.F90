@@ -304,60 +304,72 @@ contains
     call parse_variable('LocalMagneticMomentsSphereRadius', rmin*M_HALF, writ%lmm_r, units_inp%length)
 
     if(writ%out(OUT_PROJ)%write .or. writ%out(OUT_POPULATIONS)%write.or.writ%out(OUT_KP_PROJ)%write) then
-      if (.not.writ%out(OUT_KP_PROJ)%write.and.st%parallel_in_states) then
+      if (.not.writ%out(OUT_KP_PROJ)%write.and.(st%parallel_in_states.or.st%d%kpt%parallel)) then
         message(1) = "Options TDOutput = td_occup and populations are not implemented for parallel in states."
         call messages_fatal(1)
       end if
-
-      call states_copy(writ%gs_st, st, exclude_wfns = .true., exclude_eigenval = .true.)
+      
+      if(.not.writ%out(OUT_KP_PROJ)%write) then
+         call states_copy(writ%gs_st, st, exclude_wfns = .true., exclude_eigenval = .true.)
+         ! clean up all the stuff we have to reallocate
+         SAFE_DEALLOCATE_P(writ%gs_st%node)
+      else
+         ! we want the same layout of gs_st as st
+         call states_copy(writ%gs_st, st)
+      end if
 
       ! clean up all the stuff we have to reallocate
       SAFE_DEALLOCATE_P(writ%gs_st%node)
 
-      call restart_init(restart_gs, RESTART_PROJ, RESTART_TYPE_LOAD, gr%mesh%mpi_grp, ierr, mesh=gr%mesh)
-      if(ierr == 0) &
-        call states_look(restart_gs, ii, jj, writ%gs_st%nst, ierr)
-      if(ierr /= 0) then
-        message(1) = "Unable to read states information."
-        call messages_fatal(1)
-      end if
+      call restart_init(restart_gs, RESTART_PROJ, RESTART_TYPE_LOAD,writ%gs_st%dom_st_kpt_mpi_grp, ierr, mesh=gr%mesh)
 
-      ! do this only when not calculating populations, since all states are needed then
-      if(.not. writ%out(OUT_POPULATIONS)%write) then
-        ! We will store the ground-state Kohn-Sham system for all processors.
-        !%Variable TDProjStateStart
-        !%Type integer
-        !%Default 1
-        !%Section Time-Dependent::TD Output
-        !%Description
-        !% To be used with <tt>TDOutput = td_occup</tt>. Not available if <tt>TDOutput = populations</tt>.
-        !% Only output projections to states above <tt>TDProjStateStart</tt>. Usually one is only interested
-        !% in particle-hole projections around the HOMO, so there is no need to calculate (and store)
-        !% the projections of all TD states onto all static states. This sets a lower limit. The upper limit
-        !% is set by the number of states in the propagation and the number of unoccupied states
-        !% available.
-        !%End
-        call parse_variable('TDProjStateStart', 1, writ%gs_st%st_start)
-      else
-        writ%gs_st%st_start = 1
-      end if
-
-      ! allocate memory
-      SAFE_ALLOCATE(writ%gs_st%occ(1:writ%gs_st%nst, 1:writ%gs_st%d%nik))
-      SAFE_ALLOCATE(writ%gs_st%zeigenval%Re(1:writ%gs_st%nst, 1:writ%gs_st%d%nik))
-      writ%gs_st%eigenval => writ%gs_st%zeigenval%Re
-
-      SAFE_ALLOCATE(writ%gs_st%node(1:writ%gs_st%nst))
-      writ%gs_st%node(:)  = 0
-
-      writ%gs_st%eigenval = huge(writ%gs_st%eigenval)
-      writ%gs_st%occ      = M_ZERO
-      if(writ%gs_st%d%ispin == SPINORS) then
-        SAFE_ALLOCATE(writ%gs_st%spin(1:3, 1:writ%gs_st%nst, 1:writ%gs_st%d%nik))
+      if(.not.writ%out(OUT_KP_PROJ)%write) then
+        if(ierr == 0) &
+          call states_look(restart_gs, ii, jj, writ%gs_st%nst, ierr)
+        if(ierr /= 0) then
+          message(1) = "Unable to read states information."
+          call messages_fatal(1)
+        end if
+        
+        ! do this only when not calculating populations, since all states are needed then
+        if(.not. writ%out(OUT_POPULATIONS)%write) then
+          ! We will store the ground-state Kohn-Sham system for all processors.
+          !%Variable TDProjStateStart
+          !%Type integer
+          !%Default 1
+          !%Section Time-Dependent::TD Output
+          !%Description
+          !% To be used with <tt>TDOutput = td_occup</tt>. Not available if <tt>TDOutput = populations</tt>.
+          !% Only output projections to states above <tt>TDProjStateStart</tt>. Usually one is only interested
+          !% in particle-hole projections around the HOMO, so there is no need to calculate (and store)
+          !% the projections of all TD states onto all static states. This sets a lower limit. The upper limit
+          !% is set by the number of states in the propagation and the number of unoccupied states
+          !% available.
+          !%End
+          call parse_variable('TDProjStateStart', 1, writ%gs_st%st_start)
+        else
+          writ%gs_st%st_start = 1
+        end if
+        
+        ! allocate memory
+        SAFE_ALLOCATE(writ%gs_st%occ(1:writ%gs_st%nst, 1:writ%gs_st%d%nik))
+        SAFE_ALLOCATE(writ%gs_st%zeigenval%Re(1:writ%gs_st%nst, 1:writ%gs_st%d%nik))
+        writ%gs_st%eigenval => writ%gs_st%zeigenval%Re
+        
+        SAFE_ALLOCATE(writ%gs_st%node(1:writ%gs_st%nst))
+        writ%gs_st%node(:)  = 0
+        
+        writ%gs_st%eigenval = huge(writ%gs_st%eigenval)
+        writ%gs_st%occ      = M_ZERO
+        if(writ%gs_st%d%ispin == SPINORS) then
+          SAFE_ALLOCATE(writ%gs_st%spin(1:3, 1:writ%gs_st%nst, 1:writ%gs_st%d%nik))
+        end if
+        
+        call states_allocate_wfns(writ%gs_st, gr%mesh, TYPE_CMPLX)
       end if
       
-      call states_allocate_wfns(writ%gs_st, gr%mesh, TYPE_CMPLX)
       call states_load(restart_gs, writ%gs_st, gr, ierr, label = ': gs for TDOutput')
+
       if(ierr /= 0 .and. ierr /= (writ%gs_st%st_end-writ%gs_st%st_start+1)*writ%gs_st%d%nik*writ%gs_st%d%dim) then
         message(1) = "Unable to read wavefunctions for TDOutput."
         call messages_fatal(1)
