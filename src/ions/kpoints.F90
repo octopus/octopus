@@ -52,7 +52,8 @@ module kpoints_oct_m
     kpoints_get_num_symmetry_ops, &
     kpoints_kweight_denominator,  &
     kpoints_grid_generate,        &
-    kpoints_have_zero_weight_path
+    kpoints_have_zero_weight_path,&
+    kpoints_to_absolute
 
   type kpoints_grid_t
     FLOAT, pointer :: point(:, :)
@@ -889,9 +890,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine kpoints_write_info(this, iunit)
+  subroutine kpoints_write_info(this, iunit, absolute_coordinates)
     type(kpoints_t),    intent(in) :: this
     integer,            intent(in) :: iunit
+    logical, optional,  intent(in) :: absolute_coordinates
     
     integer :: ik, idir
     character(len=100) :: str_tmp
@@ -945,7 +947,11 @@ contains
     do ik = 1, kpoints_number(this)
       write(message(1),'(i8,1x)') ik
       do idir = 1, this%full%dim
-        write(str_tmp,'(f12.4)') this%reduced%red_point(idir, ik)
+        if(optional_default(absolute_coordinates, .false.)) then
+          write(str_tmp,'(f12.4)') this%reduced%point(idir, ik)
+        else  
+          write(str_tmp,'(f12.4)') this%reduced%red_point(idir, ik)
+        end if
         message(1) = trim(message(1)) // trim(str_tmp)
       end do
       write(str_tmp,'(f12.4)') kpoints_get_weight(this, ik)
