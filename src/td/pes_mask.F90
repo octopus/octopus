@@ -541,7 +541,7 @@ contains
     
     
     ! generate the map between mesh and cube
-    call  pes_mask_generate_Lk(mask) ! generate the physical momentum vector
+    call  pes_mask_generate_Lk(mask, sb) ! generate the physical momentum vector
     
     
     
@@ -803,36 +803,20 @@ contains
   
 
   ! --------------------------------------------------------
-  subroutine pes_mask_generate_Lk(mask)
-    type(pes_mask_t), intent(inout) :: mask
+  subroutine pes_mask_generate_Lk(mask, sb)
+    type(pes_mask_t),  intent(inout) :: mask
+    type(simul_box_t),   intent(in)  :: sb
 
     integer :: ii,nn(3),dim
     FLOAT   :: temp
 
     PUSH_SUB(pes_mask_generate_Lk)
-    
-    mask%Lk(:,1:mask%mesh%sb%dim)= mask%cube%Lfs(:,1:mask%mesh%sb%dim)
 
-!     do ii=1, maxval(mask%ll(:))
-!        print *,ii, mask%Lk(ii,1), mask%Lk(ii,2)
-!     end do
+    dim = mask%mesh%sb%dim
     
-!     dim = mesh%sb%dim
-!     temp = M_TWO * M_PI / (mask%fs_n_global(1) * mask%spacing(1))
-!     nn(1:dim) = mask%fs_n_global(1:dim)
-!
-!     do ii = 1, mask%fs_n_global(1)
-!
-!       if (mask%pw_map_how  ==   PW_MAP_NFFT) then
-!         !The Fourier space is shrunk by the factor mask%enlarge_2p
-! !HH FIXME this factor is wrong for non-cubic enlargement
-!         mask%Lk(ii,1:mesh%sb%dim) = (ii - nn/2 - 1)* &
-!                                   temp/(mask%enlarge_2p(1:mesh%sb%dim))
-!       else
-!         mask%Lk(ii) = pad_feq(ii,nn, .true.) * temp
-!       end if
-!
-!     end do
+    do ii=1, maxval(mask%ll(:))    
+      mask%Lk(ii,1:dim)= matmul(sb%klattice_primitive(1:dim,1:dim), mask%cube%Lfs(ii,1:dim))
+    end do
 
     POP_SUB(pes_mask_generate_Lk)
   end subroutine pes_mask_generate_Lk
