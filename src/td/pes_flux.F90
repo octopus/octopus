@@ -1719,7 +1719,7 @@ contains
         if(mdim == 3) this%srfcnrml(3, isp) = cos(thetar)
         this%rcoords(1:mdim, isp) = this%radius * this%srfcnrml(1:mdim, isp)
         ! here we also include the surface elements
-        this%srfcnrml(1:mdim, isp) = weight * this%srfcnrml(1:mdim, isp)
+        this%srfcnrml(1:mdim, isp) = this%radius**M_TWO * weight * this%srfcnrml(1:mdim, isp)
         if(ith == 0 .or. ith == nstepsthetar) exit
       end do
     end do
