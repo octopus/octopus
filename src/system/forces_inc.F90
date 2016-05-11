@@ -183,7 +183,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
 
       ! set the phase for periodic systems
       if(simul_box_is_periodic(gr%sb) .and. .not. kpoints_point_is_gamma(gr%sb%kpoints, ikpoint)) then
-        call X(hamiltonian_phase)(hm, gr%der, gr%mesh%np_part, iq, .false., psib)
+        call X(hamiltonian_base_phase)(hm%hm_base, gr%der, gr%mesh%np_part, iq, .false., psib)
       end if
 
       ! calculate the gradient

@@ -219,6 +219,123 @@ end subroutine X(hamiltonian_base_local_sub)
 
 ! ---------------------------------------------------------------------------------------
 
+subroutine X(hamiltonian_base_phase)(this, der, np, iqn, conjugate, psib, src)
+  type(hamiltonian_base_t),              intent(in)    :: this
+  type(derivatives_t),                   intent(in)    :: der
+  integer,                               intent(in)    :: np
+  integer,                               intent(in)    :: iqn
+  logical,                               intent(in)    :: conjugate
+  type(batch_t),                 target, intent(inout) :: psib
+  type(batch_t),       optional, target, intent(in)    :: src
+
+  integer :: ip, ii
+  type(batch_t), pointer :: src_
+  type(profile_t), save :: phase_prof
+  CMPLX :: phase
+#ifdef HAVE_OPENCL
+  integer :: wgsize
+  type(octcl_kernel_t), save :: ker_phase
+  type(cl_kernel) :: kernel
+#endif
+
+  PUSH_SUB(X(hamiltonian_base_phase))
+  call profiling_in(phase_prof, "PBC_PHASE_APPLY")
+
+  call profiling_count_operations(R_MUL*dble(np)*psib%nst_linear)
+
+  ASSERT(np <= der%mesh%np_part)
+
+  src_ => psib
+  if(present(src)) src_ => src
+
+  select case(batch_status(psib))
+  case(BATCH_PACKED)
+
+    if(conjugate) then
+
+      !$omp parallel do private(ip, ii, phase)
+      do ip = 1, np
+        phase = conjg(this%phase(ip, iqn))
+        do ii = 1, psib%nst_linear
+          psib%pack%X(psi)(ii, ip) = phase*src_%pack%X(psi)(ii, ip)
+        end do
+      end do
+      !$omp end parallel do
+
+    else
+
+      !$omp parallel do private(ip, ii, phase)
+      do ip = 1, np
+        phase = this%phase(ip, iqn)
+        do ii = 1, psib%nst_linear
+          psib%pack%X(psi)(ii, ip) = phase*src_%pack%X(psi)(ii, ip)
+        end do
+      end do
+      !$omp end parallel do
+
+    end if
+
+  case(BATCH_NOT_PACKED)
+
+    if(conjugate) then
+
+      !$omp parallel private(ii, ip)
+      do ii = 1, psib%nst_linear
+        !$omp do
+        do ip = 1, np
+          psib%states_linear(ii)%X(psi)(ip) = conjg(this%phase(ip, iqn))*src_%states_linear(ii)%X(psi)(ip)
+        end do
+        !$omp end do nowait
+      end do
+      !$omp end parallel
+
+    else
+      !$omp parallel private(ii, ip)
+      do ii = 1, psib%nst_linear
+        !$omp do
+        do ip = 1, np
+          psib%states_linear(ii)%X(psi)(ip) = this%phase(ip, iqn)*src_%states_linear(ii)%X(psi)(ip)
+        end do
+        !$omp end do nowait
+      end do
+      !$omp end parallel
+
+    end if
+
+  case(BATCH_CL_PACKED)
+#ifdef HAVE_OPENCL
+    call octcl_kernel_start_call(ker_phase, 'phase.cl', 'phase_hamiltonian')
+    kernel = octcl_kernel_get_ref(ker_phase)
+
+    if(conjugate) then
+      call opencl_set_kernel_arg(kernel, 0, 1_4)
+    else
+      call opencl_set_kernel_arg(kernel, 0, 0_4)
+    end if
+
+    call opencl_set_kernel_arg(kernel, 1, (iqn - this%d%kpt%start)*der%mesh%np_part)
+    call opencl_set_kernel_arg(kernel, 2, np)
+    call opencl_set_kernel_arg(kernel, 3, this%buff_phase)
+    call opencl_set_kernel_arg(kernel, 4, src_%pack%buffer)
+    call opencl_set_kernel_arg(kernel, 5, log2(src_%pack%size(1)))
+    call opencl_set_kernel_arg(kernel, 6, psib%pack%buffer)
+    call opencl_set_kernel_arg(kernel, 7, log2(psib%pack%size(1)))
+
+    wgsize = opencl_kernel_workgroup_size(kernel)/psib%pack%size(1)
+
+    call opencl_kernel_run(kernel, (/psib%pack%size(1), pad(np, wgsize)/), (/psib%pack%size(1), wgsize/))
+
+    call opencl_finish()
+#endif
+  end select
+
+  call batch_pack_was_modified(psib)
+
+
+  call profiling_out(phase_prof)
+  POP_SUB(X(hamiltonian_base_phase))
+end subroutine X(hamiltonian_base_phase)
+
 ! ---------------------------------------------------------------------------------------
 
 subroutine X(hamiltonian_base_rashba)(this, der, std, psib, vpsib)

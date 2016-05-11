@@ -112,8 +112,6 @@ module hamiltonian_oct_m
     zexchange_operator_single,       &
     dscdm_exchange_operator,         &
     zscdm_exchange_operator,         &
-    dhamiltonian_phase,              &
-    zhamiltonian_phase,              &
     zhamiltonian_dervexternal,       &
     zhamiltonian_apply_atom,         &
     hamiltonian_dump_vhxc,           &
