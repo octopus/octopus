@@ -76,7 +76,8 @@ module current_oct_m
   integer, parameter, public ::           &
     CURRENT_GRADIENT           = 1,       &
     CURRENT_GRADIENT_CORR      = 2,       &
-    CURRENT_HAMILTONIAN        = 3
+    CURRENT_HAMILTONIAN        = 3,       &
+    CURRENT_FAST               = 4
 
 contains
 
@@ -102,6 +103,8 @@ contains
     !%Option hamiltonian 3
     !% The current density is obtained from the commutator of the
     !% Hamiltonian with the position operator. (Experimental)
+    !%Option gradient_corrected_fast 4
+    !% More efficient version of the gradient_corrected calculation of the current. (Experimental)
     !%End
 
     call parse_variable('CurrentDensity', CURRENT_GRADIENT_CORR, this%method)
@@ -138,7 +141,8 @@ contains
     FLOAT, allocatable :: symmcurrent(:, :)
     type(profile_t), save :: prof
     type(symmetrizer_t) :: symmetrizer
-    type(batch_t) :: hpsib, rhpsib, rpsib, hrpsib
+    type(batch_t) :: hpsib, rhpsib, rpsib, hrpsib, epsib
+    type(batch_t), allocatable :: commpsib(:)
     logical, parameter :: hamiltonian_current = .false.
 
     call profiling_in(prof, "CURRENT")
@@ -153,10 +157,69 @@ contains
     SAFE_ALLOCATE(rhpsi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(rpsi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(hrpsi(1:der%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(commpsib(1:der%mesh%sb%dim))
 
     current = M_ZERO
 
     select case(this%method)
+    case(CURRENT_FAST)
+
+      do ik = st%d%kpt%start, st%d%kpt%end
+        ispin = states_dim_get_spin_index(st%d, ik)
+        do ib = st%group%block_start, st%group%block_end
+
+          call batch_pack(st%group%psib(ib, ik), copy = .true.)
+          call batch_copy(st%group%psib(ib, ik), epsib)
+          call boundaries_set(der%boundaries, st%group%psib(ib, ik))
+          
+          if(associated(hm%hm_base%phase)) then
+            call zhamiltonian_base_phase(hm%hm_base, der, der%mesh%np_part, ik, &
+              conjugate = .false., psib = epsib, src = st%group%psib(ib, ik))
+          else
+            call batch_copy_data(der%mesh%np_part, st%group%psib(ib, ik), epsib)
+          end if
+
+          do idir = 1, der%mesh%sb%dim
+            call batch_copy(st%group%psib(ib, ik), commpsib(idir))
+            call zderivatives_batch_perform(der%grad(idir), der, epsib, commpsib(idir), set_bc = .false.)
+          end do
+          
+          call zhamiltonian_base_nlocal_position_commutator(hm%hm_base, der%mesh, st%d, ik, epsib, commpsib)
+
+          do idir = 1, der%mesh%sb%dim
+
+            if(associated(hm%hm_base%phase)) then
+              call zhamiltonian_base_phase(hm%hm_base, der, der%mesh%np_part, ik, conjugate = .true., psib = commpsib(idir))
+            end if
+            
+            do ist = states_block_min(st, ib), states_block_max(st, ib)
+
+              do idim = 1, st%d%dim
+                ii = batch_inv_index(st%group%psib(ib, ik), (/ist, idim/))
+                call batch_get_state(st%group%psib(ib, ik), ii, der%mesh%np, psi(:, idim))
+                call batch_get_state(commpsib(idir), ii, der%mesh%np, hrpsi(:, idim))
+              end do
+              
+              do idim = 1, st%d%dim
+                !$omp parallel do
+                do ip = 1, der%mesh%np
+                  current(ip, idir, ispin) = &
+                    current(ip, idir, ispin) + st%d%kweights(ik)*st%occ(ist, ik)*aimag(conjg(psi(ip, idim))*hrpsi(ip, idim))
+                end do
+                !$omp end parallel do
+              end do
+              
+            end do
+
+            call batch_end(commpsib(idir))
+
+          end do
+
+          call batch_unpack(st%group%psib(ib, ik), copy = .false.)
+
+        end do
+      end do
+    
     case(CURRENT_HAMILTONIAN)
 
       do ik = st%d%kpt%start, st%d%kpt%end
