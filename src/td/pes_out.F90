@@ -31,6 +31,9 @@ module pes_out_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
+#if defined(HAVE_NETCDF)
+  use netcdf
+#endif    
   use output_oct_m
   use parser_oct_m
   use profiling_oct_m
@@ -102,7 +105,7 @@ contains
       end do
     end if
   
-  #if defined(HAVE_NETCDF)  
+#if defined(HAVE_NETCDF)  
   
     if(iand(how, OPTION__OUTPUTFORMAT__NETCDF) /= 0) then
       filename = trim(file)//".ncdf"
@@ -114,7 +117,7 @@ contains
 
     end if
 
-  #endif
+#endif
   
     if(iand(how, OPTION__OUTPUTFORMAT__VTK) /= 0)  then
       filename = trim(file)//".vtk"
