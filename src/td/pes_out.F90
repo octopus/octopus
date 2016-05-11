@@ -26,6 +26,7 @@ module pes_out_oct_m
   use global_oct_m
   use grid_oct_m
   use io_oct_m
+  use io_function_oct_m
   use loct_oct_m
   use math_oct_m
   use mesh_oct_m
