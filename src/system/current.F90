@@ -215,6 +215,7 @@ contains
 
           end do
 
+          call batch_end(epsib)
           call batch_unpack(st%group%psib(ib, ik), copy = .false.)
 
         end do
