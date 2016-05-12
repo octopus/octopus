@@ -302,7 +302,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
     prog = prog + bsize
     if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
-      call loct_progress_bar(st%nst*(ik - 1) + prog, st%nst*st%d%nik)
+      call loct_progress_bar(st%lnst*(ik - 1) + prog, st%lnst*st%d%kpt%nlocal)
     end if
     
   end do ! ib
