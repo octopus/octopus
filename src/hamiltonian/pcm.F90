@@ -151,9 +151,9 @@ contains
     type(grid_t), intent(in)     :: grid
     type(pcm_t), intent(out)     :: pcm
 
-    integer :: ia, itess, jtess, cav_unit_test, subdivider, ii
-    integer :: pcm_vdw_type
-    integer :: pcmmat_unit, pcmmat_gamess_unit, iunit, ip
+    integer :: ia, ip, ii, itess, jtess, pcm_vdw_type, subdivider
+    integer :: cav_unit_test, iunit, pcmmat_unit
+    integer :: pcmmat_gamess_unit, cav_gamess_unit      
 
     integer, parameter :: mxts = 10000
 
@@ -163,7 +163,8 @@ contains
     type(pcm_tessera_t) :: dum2(1)
 
     logical :: band
-    logical :: add_spheres_h, changed_default_nn
+    logical :: add_spheres_h
+    logical :: changed_default_nn
 
     type(species_t), pointer :: spci 
     FLOAT :: z_ia
@@ -496,6 +497,39 @@ contains
 !     do ia = 1, pcm%n_tesserae
 !       call nearest_cube_vertices(pcm%tess(ia)%point, grid%mesh, pcm%ind_vh(ia,:), pcm%arg_li(ia,:))
 !     end do
+
+    !>printing out the cavity surface
+    if ( gamess_benchmark .and. mpi_grp_is_root(mpi_world)) then 
+      cav_gamess_unit = io_open(PCM_DIR//'geom_cavity_gamess.out', action='write')
+
+      write(cav_gamess_unit,*) pcm%n_tesserae
+
+      do ia=1, pcm%n_tesserae
+        write(cav_gamess_unit,*) pcm%tess(ia)%point(1)
+      end do
+
+      do ia=1, pcm%n_tesserae
+        write(cav_gamess_unit,*) pcm%tess(ia)%point(2)
+      end do
+
+      do ia=1, pcm%n_tesserae
+        write(cav_gamess_unit,*) pcm%tess(ia)%point(3)
+      end do
+
+      do ia=1, pcm%n_tesserae
+        write(cav_gamess_unit,*) pcm%tess(ia)%area
+      end do
+
+      do ia=1, pcm%n_tesserae
+        write(cav_gamess_unit,*) pcm%tess(ia)%r_sphere
+      end do
+
+      do ia=1, pcm%n_tesserae
+        write(cav_gamess_unit,*) pcm%tess(ia)%normal
+      end do
+
+      call io_close(cav_gamess_unit)
+    endif
 
     !>Generating the dynamical PCM matrix
     if ( gamess_benchmark ) then
