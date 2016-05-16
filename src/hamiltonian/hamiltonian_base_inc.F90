@@ -345,7 +345,7 @@ subroutine X(hamiltonian_base_phase)(this, der, np, iqn, conjugate, psib, src)
       call opencl_set_kernel_arg(kernel, 0, 0_4)
     end if
 
-    call opencl_set_kernel_arg(kernel, 1, (iqn - this%d%kpt%start)*der%mesh%np_part)
+    call opencl_set_kernel_arg(kernel, 1, (iqn - this%buff_phase_qn_start)*der%mesh%np_part)
     call opencl_set_kernel_arg(kernel, 2, np)
     call opencl_set_kernel_arg(kernel, 3, this%buff_phase)
     call opencl_set_kernel_arg(kernel, 4, src_%pack%buffer)

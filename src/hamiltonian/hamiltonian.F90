@@ -509,6 +509,7 @@ contains
       if(opencl_is_enabled()) then
         call opencl_create_buffer(hm%hm_base%buff_phase, CL_MEM_READ_ONLY, TYPE_CMPLX, gr%mesh%np_part*hm%d%kpt%nlocal)
         call opencl_write_buffer(hm%hm_base%buff_phase, gr%mesh%np_part*hm%d%kpt%nlocal, hm%hm_base%phase)
+        hm%hm_base%buff_phase_qn_start = hm%d%kpt%start
       end if
 #endif 
 
