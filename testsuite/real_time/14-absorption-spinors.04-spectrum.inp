@@ -34,5 +34,3 @@ PropagationSpectrumEnergyStep = 0.1
 
 SpinComponents = spinors
 
-FilterPotentials = filter_none
-

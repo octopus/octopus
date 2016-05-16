@@ -37,5 +37,3 @@ ExperimentalFeatures = yes
 
 SpinComponents = spinors
 
-FilterPotentials = filter_none
-

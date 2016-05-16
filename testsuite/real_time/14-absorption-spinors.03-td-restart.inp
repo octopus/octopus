@@ -29,5 +29,3 @@ TDPolarizationEquivAxes = 3
 
 SpinComponents = spinors
 
-FilterPotentials = filter_none
-

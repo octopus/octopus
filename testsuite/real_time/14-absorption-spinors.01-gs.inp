@@ -15,7 +15,3 @@ Spacing = 0.32
 Radius = 6.0
 
 SpinComponents = spinors
-
-FilterPotentials = filter_none
-
-MixField = density
