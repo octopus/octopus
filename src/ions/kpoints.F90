@@ -59,6 +59,8 @@ module kpoints_oct_m
     FLOAT, pointer :: point(:, :)
     FLOAT, pointer :: red_point(:, :)
     FLOAT, pointer :: weight(:)
+    integer          :: nshifts            !< number of shifts
+    FLOAT, pointer   :: shifts(:,:)
     integer        :: npoints
     integer        :: dim
   end type kpoints_grid_t
@@ -75,7 +77,6 @@ module kpoints_oct_m
 
     !> For the modified Monkhorst-Pack scheme
     integer        :: nik_axis(MAX_DIM)    !< number of MP divisions
-    FLOAT          :: shifts(MAX_DIM)      ! 
     integer, pointer :: symmetry_ops(:, :)  !< (reduced%npoints, nops)
     integer, pointer :: num_symmetry_ops(:) !< (reduced%npoints)
 
@@ -92,24 +93,28 @@ contains
   elemental subroutine  kpoints_grid_nullify(this)
     type(kpoints_grid_t), intent(out) :: this
 
-    nullify(this%point, this%red_point, this%weight)
+    nullify(this%point, this%red_point, this%weight, this%shifts)
     this%npoints = 0
     this%dim = 0
-
+    this%nshifts = 1
+  
   end subroutine kpoints_grid_nullify
 
-  subroutine kpoints_grid_init(dim, this, npoints)
+  subroutine kpoints_grid_init(dim, this, npoints, nshifts)
     integer,              intent(in)  :: dim
     type(kpoints_grid_t), intent(out) :: this
     integer,              intent(in)  :: npoints
+    integer,              intent(in)  :: nshifts
 
     PUSH_SUB(kpoints_grid_init)
 
     this%dim = dim
     this%npoints = npoints
+    this%nshifts = nshifts
     SAFE_ALLOCATE(this%red_point(1:dim, 1:npoints))
     SAFE_ALLOCATE(this%point(1:dim, 1:npoints))
     SAFE_ALLOCATE(this%weight(1:npoints))
+    SAFE_ALLOCATE(this%shifts(1:dim,1:nshifts)) 
 
     POP_SUB(kpoints_grid_init)
   end subroutine kpoints_grid_init
@@ -123,6 +128,7 @@ contains
     SAFE_DEALLOCATE_P(this%red_point)
     SAFE_DEALLOCATE_P(this%point)
     SAFE_DEALLOCATE_P(this%weight)
+    SAFE_DEALLOCATE_P(this%shifts)
 
     POP_SUB(kpoints_grid_end)
   end subroutine kpoints_grid_end
@@ -135,11 +141,12 @@ contains
 
     PUSH_SUB(kpoints_grid_copy)
     
-    call kpoints_grid_init(bb%dim, aa, bb%npoints)
+    call kpoints_grid_init(bb%dim, aa, bb%npoints, bb%nshifts)
     
     aa%weight = bb%weight
     aa%point  = bb%point
     aa%red_point = bb%red_point
+    aa%shifts = bb%shifts
 
     POP_SUB(kpoints_grid_copy)
   end subroutine kpoints_grid_copy
@@ -155,7 +162,6 @@ contains
     this%use_time_reversal = .false.
     this%nik_skip = 0
     this%nik_axis = 0
-    this%shifts = M_ZERO
     nullify(this%symmetry_ops, this%num_symmetry_ops)
     nullify(this%klattice)
 
@@ -169,7 +175,7 @@ contains
     FLOAT,              intent(in)  :: rlattice(:,:), klattice(:,:)
     logical,            intent(in)  :: only_gamma
 
-    integer :: ik, idir
+    integer :: ik, idir, is
     character(len=100) :: str_tmp
     FLOAT :: weight_sum
 
@@ -230,23 +236,26 @@ contains
         this%method = KPOINTS_USER
       else
         this%method = KPOINTS_MONKH_PACK
-
+ 
         write(message(1),'(a)') ' '
         write(message(2),'(1x,i3,a)') this%reduced%npoints, ' k-points generated from parameters :'
         write(message(3),'(1x,a)') '---------------------------------------------------'
-
-        write(message(4),'(4x,a)') 'n ='    
+        write(message(4),'(4x,a)') 'n ='
         do idir = 1, dim
           write(str_tmp,'(i5)') this%nik_axis(idir)
           message(4) = trim(message(4)) // trim(str_tmp)
         end do
-        write(str_tmp,'(6x,a)') 's ='
-        message(4) = trim(message(4)) // trim(str_tmp)
-        do idir = 1, dim
-          write(str_tmp,'(f6.2)') this%shifts(idir)
-          message(4) = trim(message(4)) // trim(str_tmp)
-        end do
         call messages_info(4)
+        
+        do is = 1, this%reduced%nshifts
+          write(message(1),'(a)') ' '
+          write(message(2),'(4x,a,i1,a)') 's', is, '  ='
+          do idir = 1, dim
+            write(str_tmp,'(f6.2)') this%reduced%shifts(idir,is)
+            message(2) = trim(message(2)) // trim(str_tmp)
+          end do
+          call messages_info(2)
+        enddo
 
       end if
 
@@ -284,9 +293,10 @@ contains
       logical, intent(in) :: gamma_only
 
       logical       :: gamma_only_
-      integer       :: ii, ncols
+      integer       :: ii, is, ncols, nshifts
       type(block_t) :: blk
       integer, allocatable :: symm_ops(:, :), num_symm_ops(:)
+      FLOAT, allocatable :: shifts(:,:)
       
 
       PUSH_SUB(kpoints_init.read_MP)
@@ -309,8 +319,8 @@ contains
       !% in reciprocal space. The numbers refer to the whole Brillouin
       !% zone, and the actual number of <i>k</i>-points is usually
       !% reduced exploiting the symmetries of the system.  By default
-      !% the grid will always include the <math>\Gamma</math>-point. An optional
-      !% second row can specify a shift in the <i>k</i>-points (between 0.0 and 1.0),
+      !% the grid will always include the <math>\Gamma</math>-point. Optional
+      !% rows can be added to specify multiple shifts in the <i>k</i>-points (between 0.0 and 1.0),
       !% in units of the Brillouin zone divided by the number in the first row.
       !% The number of columns should be equal to <tt>Dimensions</tt>,
       !% but the grid and shift numbers should be 1 and zero in finite directions.
@@ -329,7 +339,14 @@ contains
         gamma_only_ = (parse_block('KPointsGrid', blk) /= 0)
 
       this%nik_axis(1:MAX_DIM) = 1
-      this%shifts(1:MAX_DIM) = M_ZERO
+
+      if(.not. gamma_only_) then
+        nshifts = max(parse_block_n(blk)-1,1) 
+      else
+        nshifts = 1
+      end if
+      SAFE_ALLOCATE(shifts(1:MAX_DIM,1:nshifts))
+      shifts(1:MAX_DIM,1:nshifts) = M_ZERO
 
       if(.not. gamma_only_) then
         ncols = parse_block_cols(blk, 0)
@@ -346,23 +363,34 @@ contains
           call messages_fatal(1)
         end if
 
-        if(parse_block_n(blk) > 1) then ! we have a shift
+        if(parse_block_n(blk) > 1) then ! we have a shift, or even more
           ncols = parse_block_cols(blk, 1)
           if(ncols /= dim) then
             write(message(1),'(a,i3,a,i3)') 'KPointsGrid second row has ', ncols, ' columns but must have ', dim
             call messages_fatal(1)
           end if
-          do ii = 1, dim
-            call parse_block_float(blk, 1, ii - 1, this%shifts(ii))
+          do is = 1, nshifts
+            do ii = 1, dim
+              call parse_block_float(blk, is, ii - 1, shifts(ii,is))
+            end do
           end do
         end if
 
         call parse_block_end(blk)
       end if
 
-      call kpoints_grid_init(dim, this%full, product(this%nik_axis(1:dim)))
+      call kpoints_grid_init(dim, this%full, product(this%nik_axis(1:dim))*nshifts, nshifts)
 
-      call kpoints_grid_generate(dim, this%nik_axis(1:dim), this%shifts(1:dim), this%full%red_point)
+      !We move the k-points into this%shifts
+      do is = 1, nshifts
+        do ii = 1, dim
+          this%full%shifts(ii,is) = shifts(ii,is)
+        end do
+      end do
+      SAFE_DEALLOCATE_A(shifts)
+
+      call kpoints_grid_generate(dim, this%nik_axis(1:dim), this%full%nshifts, &
+               this%full%shifts(1:dim,1:this%full%nshifts), this%full%red_point)
 
       this%full%weight = M_ONE / this%full%npoints
 
@@ -483,11 +511,12 @@ contains
 
       this%use_symmetries = .false.
 
-      call kpoints_grid_init(dim, this%full, parse_block_n(blk))
+      call kpoints_grid_init(dim, this%full, parse_block_n(blk), 1)
 
       this%full%red_point = M_ZERO
       this%full%point = M_ZERO
       this%full%weight = M_ZERO
+      this%full%shifts = M_ZERO
 
       if(reduced) then
         do ik = 1, this%full%npoints
@@ -565,6 +594,7 @@ contains
     SAFE_DEALLOCATE_P(this%klattice)
     SAFE_DEALLOCATE_P(this%symmetry_ops)
     SAFE_DEALLOCATE_P(this%num_symmetry_ops)
+   
 
     POP_SUB(kpoints_end)
   end subroutine kpoints_end
@@ -627,7 +657,6 @@ contains
     kout%use_time_reversal = kin%use_time_reversal
 
     kout%nik_axis(1:kin%full%dim) = kin%nik_axis(1:kin%full%dim)
-    kout%shifts  (1:kin%full%dim) = kin%shifts  (1:kin%full%dim)
 
     SAFE_ALLOCATE(kout%klattice(1:kin%full%dim, kin%full%dim))
     kout%klattice(1:kin%full%dim, kin%full%dim) = kin%klattice(1:kin%full%dim, kin%full%dim)
@@ -678,16 +707,17 @@ contains
   !! used with a shift of (1/2, 1/2, 1/2).
   !! naxis(i) are the number of points in the three directions determined by the lattice vectors.
   !! shift(i) and sz shift the grid of integration points from the origin.
-  subroutine kpoints_grid_generate(dim, naxis, shift, kpoints, lk123)  
+  subroutine kpoints_grid_generate(dim, naxis, nshifts, shift, kpoints, lk123)  
     integer,           intent(in)  :: dim
     integer,           intent(in)  :: naxis(:)
-    FLOAT,             intent(in)  :: shift(:)
+    integer,           intent(in)  :: nshifts
+    FLOAT,             intent(in)  :: shift(:,:)
     FLOAT,             intent(out) :: kpoints(:, :)
     integer, optional, intent(out) :: lk123(:,:)      !< lk123(1:nkpt,1:3): maps ik to a triplet of indices on a cube
                                                       !< running from 0 to naxis(1:3).
   
     FLOAT :: dx(1:MAX_DIM), maxcoord
-    integer :: ii, jj, divisor, ik, idir, npoints
+    integer :: ii, jj, divisor, ik, idir, npoints, is
     integer, allocatable :: ix(:), lk123_(:,:),idx(:)
     FLOAT, allocatable :: nrm(:), shell(:), coords(:, :)
     logical, allocatable :: move_to_minus_half(:)
@@ -702,55 +732,55 @@ contains
     SAFE_ALLOCATE(ix(1:dim))
     
     if (present(lk123)) then
-      SAFE_ALLOCATE(lk123_(1:npoints,1:dim))
-      SAFE_ALLOCATE(idx(1:npoints))
+      SAFE_ALLOCATE(lk123_(1:npoints*nshifts,1:dim))
+      SAFE_ALLOCATE(idx(1:npoints*nshifts))
     end if
 
     move_to_minus_half(1:dim) = .true.
     
-    do ii = 0, npoints - 1
+    do is = 1, nshifts
+      do ii = 0, npoints - 1
+        ik = npoints*is - ii
+        jj = ii
+        divisor = npoints
 
-      ik = npoints - ii
-      jj = ii
-      divisor = npoints
+        do idir = 1, dim
+          divisor = divisor / naxis(idir)
+          ix(idir) = jj / divisor + 1
+          jj = mod(jj, divisor)
 
-      do idir = 1, dim
-        divisor = divisor / naxis(idir)
-        ix(idir) = jj / divisor + 1
-        jj = mod(jj, divisor)
+          kpoints(idir, ik) = (M_TWO*ix(idir) - M_ONE*naxis(idir) + M_TWO*shift(idir,is))*dx(idir)
 
-        kpoints(idir, ik) = (M_TWO*ix(idir) - M_ONE*naxis(idir) + M_TWO*shift(idir))*dx(idir)
-
-        if(mod(naxis(idir), 2) /= 0) then    
-          kpoints(idir, ik) = kpoints(idir, ik) - dx(idir)
-        end if
+          if(mod(naxis(idir), 2) /= 0) then    
+            kpoints(idir, ik) = kpoints(idir, ik) - dx(idir)
+          end if
   
-        !bring back point to first Brillouin zone, except for points at 1/2
-        if ( abs(kpoints(idir, ik) - CNST(0.5)) > CNST(1e-14) )  then
-          kpoints(idir, ik) = mod(kpoints(idir, ik) + M_HALF, M_ONE) - M_HALF
-        else
-          ! alternate the assignation of points at 1/2 and -1/2 such that the total sum of k-points is zero.
-          if(move_to_minus_half(idir)) kpoints(idir,ik) = -CNST(0.5)
-          move_to_minus_half(idir) = .not. move_to_minus_half(idir)
+          !bring back point to first Brillouin zone, except for points at 1/2
+          if ( abs(kpoints(idir, ik) - CNST(0.5)) > CNST(1e-14) )  then
+            kpoints(idir, ik) = mod(kpoints(idir, ik) + M_HALF, M_ONE) - M_HALF
+          else
+            ! alternate the assignation of points at 1/2 and -1/2 such that the total sum of k-points is zero.
+            if(move_to_minus_half(idir)) kpoints(idir,ik) = -CNST(0.5)
+            move_to_minus_half(idir) = .not. move_to_minus_half(idir)
+          end if
+
+        end do
+        if (present(lk123)) then
+          lk123_(ik, 1:dim) = ix(1:dim)
+          idx(ik) = ik
         end if
-
       end do
-      if (present(lk123)) then
-        lk123_(ik, 1:dim) = ix(1:dim)
-        idx(ik) = ik
-      end if
-
     end do
 
     SAFE_DEALLOCATE_A(ix)    
 
     ! sort the k-points
 
-    SAFE_ALLOCATE(nrm(1:npoints))
-    SAFE_ALLOCATE(shell(1:npoints))
-    SAFE_ALLOCATE(coords(1:dim, 1:npoints))
+    SAFE_ALLOCATE(nrm(1:npoints*nshifts))
+    SAFE_ALLOCATE(shell(1:npoints*nshifts))
+    SAFE_ALLOCATE(coords(1:dim, 1:npoints*nshifts))
     
-    do ik = 1, npoints
+    do ik = 1, npoints*nshifts
       shell(ik) = sum((kpoints(1:dim, ik)/dx(1:dim))**2)
       do idir = 1, dim
         coords(idir, ik) = kpoints(idir, ik)
@@ -759,23 +789,23 @@ contains
       end do
     end do
 
-    nrm(1:npoints) = M_ZERO
+    nrm(1:npoints*nshifts) = M_ZERO
 
     maxcoord = CNST(1.0)
     do idir = dim, 1, -1
-      do ik = 1, npoints
+      do ik = 1, npoints*nshifts
         nrm(ik) = nrm(ik) + coords(idir, ik)*maxcoord
       end do
-      maxcoord = maxcoord*max(CNST(1.0), maxval(coords(idir, 1:npoints)))
+      maxcoord = maxcoord*max(CNST(1.0), maxval(coords(idir, 1:npoints*nshifts)))
     end do
 
-    do ik = 1, npoints
+    do ik = 1, npoints*nshifts
       nrm(ik) = nrm(ik) + shell(ik)*maxcoord
     end do
 
     if (present(lk123)) then
       call sort(nrm, idx)      
-      do ik = 1, npoints
+      do ik = 1, npoints*nshifts
         lk123(ik,1:dim) = lk123_(idx(ik),1:dim)
       end do
       SAFE_DEALLOCATE_A(lk123_)
