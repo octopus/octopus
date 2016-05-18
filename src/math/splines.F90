@@ -416,7 +416,7 @@ contains
     !%Description
     !% Selects the implementation of the spline interpolation.
     !%Option gsl 1
-    !% The GNU standard library. 
+    !% The GNU scientific library. 
     !%Option native 2
     !% (experimental) Octopus own implementation. New, untested, and
     !% hopefully faster.
