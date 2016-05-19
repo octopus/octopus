@@ -351,10 +351,14 @@
     !and print the spectrum
     iunit = io_open('td.general/conductivity', action='write')
 
-!    write(unit = iunit, iostat = ierr, fmt = 800) 
-!    write(unit = iunit, iostat = ierr, fmt = '(8a)')  '# HEADER'
-!    write(unit = iunit, iostat = ierr, fmt = '(a17,6x,a15)') '#   Energy [1/cm]', 'Spectrum [a.u.]'
-!    write(unit = iunit, iostat = ierr, fmt = 800 ) 
+    
+    write(unit = iunit, iostat = ierr, fmt = '(a)') &
+      '###########################################################################################################################'
+    write(unit = iunit, iostat = ierr, fmt = '(8a)')  '# HEADER'
+    write(unit = iunit, iostat = ierr, fmt = '(a,a,a)') &
+      '#  Energy [', trim(units_abbrev(units_out%energy)), '] Conductivity [a.u.] ReX ImX ReY ImY ReZ ImZ'
+    write(unit = iunit, iostat = ierr, fmt = '(a)') &
+      '###########################################################################################################################'
 
     v0 = sqrt(sum(vel0(1:space%dim)**2))
     if(.not. from_forces .or. v0 < epsilon(v0)) v0 = CNST(1.0)
@@ -362,7 +366,7 @@
     do ifreq = 1, max_freq
       ww = spectrum%energy_step*(ifreq - 1)
       write(unit = iunit, iostat = ierr, fmt = '(7e20.10)') units_from_atomic(units_out%energy, ww), &
-        ftcurr(ifreq, 1:3, 1)/v0, ftcurr(ifreq, 1:3, 2)/v0
+        transpose(ftcurr(ifreq, 1:3, 1:2)/v0)
     end do
     
     call io_close(iunit)
