@@ -236,7 +236,7 @@ contains
 
       ! only write in final run
       if(write_iter_) then
-        call td_write_iter(write_handler, gr, psi, hm, sys%geo, hm%ep%kick, td%dt, istep)
+        call td_write_iter(write_handler, gr, psi, hm, sys%geo, hm%ep%kick, td%dt, sys%ks, istep)
         ii = ii + 1 
         if(ii == sys%outp%output_interval+1 .or. istep == td%max_iter) then ! output
           if(istep == td%max_iter) sys%outp%output_interval = ii - 1
