@@ -458,9 +458,7 @@ contains
           sb%lsize(1:sb%dim) = sb%lsize(1)
         else
           message(1) = "Lsize was not found in input file. Continuing anyway."
-          message(2) = " NOTE that non-orthogonal unit cells are not working yet."
-          message(3) = " You have been warned"
-          call messages_warning(3)
+          call messages_warning(1)
         end if
       else
         ! if not a compatible box-shape
@@ -670,7 +668,6 @@ contains
       !% <br>&nbsp;&nbsp;0.0 | 1.0 | 0.0
       !% <br>&nbsp;&nbsp;0.0 | 0.0 | 1.0
       !% <br>%<br></tt>
-      !% Note: This version of Octopus should support non-orthogonal cells.
       !%End
       sb%rlattice_primitive = M_ZERO
       sb%nonorthogonal = .false.
