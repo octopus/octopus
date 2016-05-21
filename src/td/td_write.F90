@@ -33,6 +33,7 @@ module td_write_oct_m
   use ion_dynamics_oct_m
   use kick_oct_m
   use lasers_oct_m
+  use lalg_adv_oct_m
   use loct_oct_m
   use loct_math_oct_m
   use magnetic_oct_m
@@ -96,8 +97,9 @@ module td_write_oct_m
     OUT_ION_CH      = 16, &
     OUT_TOTAL_CURRENT = 17, &
     OUT_PARTIAL_CHARGES = 18, &
-    OUT_KP_PROJ = 19, &
-    OUT_MAX         = 19
+    OUT_KP_PROJ     = 19, &
+    OUT_FLOQUET     = 20, &
+    OUT_MAX         = 20
   
   type td_write_t
     private
@@ -242,6 +244,11 @@ contains
     !% restart_proj (see %RestartOptions). This is an alternative to the option
     !% td_occup, with a formating more suitable for k-points and works only in 
     !% k- and/or state parallelization
+    !%Option td_floquet 524288
+    !% Compute non-interacting Floquet bandstructure according to further options: 
+    !% TDFloquetFrequency, TDFloquetSample, TDFloquetDimension.
+    !% This is done only once per td-run at t=0.
+    !% works only in k- and/or state parallelization 
     !%End
 
     default = 2**(OUT_MULTIPOLES - 1) +  2**(OUT_ENERGY - 1)
@@ -266,11 +273,12 @@ contains
     if(writ%out(OUT_TOTAL_CURRENT)%write) call messages_experimental('TDOutput = total_current')
     if(writ%out(OUT_PARTIAL_CHARGES)%write) call messages_experimental('TDOutput = partial_charges')
     if(writ%out(OUT_KP_PROJ)%write) call messages_experimental('TDOutput = td_kpoint_occup')
+    if(writ%out(OUT_FLOQUET)%write) call messages_experimental('TDOutput = td_floquet')
 
-    if(writ%out(OUT_KP_PROJ)%write) then
+    if(writ%out(OUT_KP_PROJ)%write.or.writ%out(OUT_FLOQUET)%write) then
       ! make sure this is not domain distributed
       if(gr%mesh%np /= gr%mesh%np_global) then
-        message(1) = "TDOutput option td_kpoint_occup does not work with domain parallelization"
+        message(1) = "TDOutput option td_kpoint_occup and td_floquet do not work with domain parallelization"
         call messages_fatal(1)
       end if
     end if
@@ -514,6 +522,10 @@ contains
         call write_iter_init(writ%out(OUT_KP_PROJ)%handle, first, &
           units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/projections")))
 
+      if(writ%out(OUT_FLOQUET)%write) &
+        call write_iter_init(writ%out(OUT_FLOQUET)%handle, first, &
+          units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/floquet_bands")))
+
       if(writ%out(OUT_GAUGE_FIELD)%write) &
         call write_iter_init(writ%out(OUT_GAUGE_FIELD)%handle, &
         first, units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/gauge_field")))
@@ -586,7 +598,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_iter(writ, gr, st, hm, geo, kick, dt, iter)
+  subroutine td_write_iter(writ, gr, st, hm, geo, kick, dt,ks, iter)
     type(td_write_t),    intent(inout) :: writ !< Write object
     type(grid_t),        intent(inout) :: gr   !< The grid
     type(states_t),      intent(inout) :: st   !< State object
@@ -594,8 +606,8 @@ contains
     type(geometry_t),    intent(inout) :: geo  !< Geometry object
     type(kick_t),        intent(in)    :: kick !< The kick
     FLOAT,               intent(in)    :: dt   !< Delta T, time interval
+    type(v_ks_t),        intent(in)    :: ks  
     integer,             intent(in)    :: iter !< Iteration number
-
     type(profile_t), save :: prof
 
     PUSH_SUB(td_write_iter)
@@ -618,6 +630,9 @@ contains
 
     if(writ%out(OUT_PROJ)%write) &
       call td_write_proj(writ%out(OUT_PROJ)%handle, gr, geo, st, writ%gs_st, kick, iter)
+
+    if(writ%out(OUT_FLOQUET)%write) &
+      call td_write_floquet(writ%out(OUT_FLOQUET)%handle,hm, gr, st, ks, iter)
 
     if(writ%out(OUT_KP_PROJ)%write) &
       call td_write_proj_kp(writ%out(OUT_KP_PROJ)%handle,hm, gr, st, writ%gs_st, iter)
@@ -2259,6 +2274,277 @@ contains
 
   end subroutine td_write_proj_kp
 
+  !---------------------------------------
+  subroutine td_write_floquet(out_floquet, hm, gr, st, ks, iter)
+    type(c_ptr),       intent(inout)   :: out_floquet
+    type(hamiltonian_t), intent(inout) :: hm
+    type(grid_t),      intent(inout)   :: gr
+    type(states_t),    intent(inout)   :: st !< at iter=0 this is the groundstate
+    type(v_ks_t),      intent(in)      :: ks
+    integer,           intent(in)      :: iter 
+
+    CMPLX, allocatable :: hmss(:,:), psi(:,:,:), hpsi(:,:,:), temp_state1(:,:), temp_state2(:,:)
+    CMPLX, allocatable :: HFloquet(:,:,:), HFloq_eff(:,:), temp(:,:)
+    FLOAT, allocatable :: eigenval(:), bands(:,:)
+    character(len=80) :: filename
+    integer :: it, nT, ik, ist, jst, in, im, inm, file, idim, nik, ik_count
+    integer :: Forder, Fdim, m0, n0, n1, nst, ii, jj, lim_nst
+    logical :: downfolding = .false.
+    type(mesh_t) :: mesh
+    type(states_t) :: hm_st
+
+    FLOAT :: dt, Tcycle, omega
+
+    PUSH_SUB(td_write_floquet)
+
+    ! this does not depend on propagation, so we do it only once 
+    if(.not. iter == 0) then
+       POP_SUB(td_write_floquet)
+       return
+    end if
+
+    mesh = gr%der%mesh
+    nst = st%nst
+
+    !for now no domain distributionallowed
+    ASSERT(mesh%np == mesh%np_global)
+
+   ! this is used to initialize the hpsi (more effiecient ways?)
+    call states_copy(hm_st, st)
+
+    !%Variable TDFloquetFrequency
+    !%Type float
+    !%Default 0
+    !%Section Time-Dependent::TD Output
+    !%Description Frequency for the Flquet analysis, this should be the carrier freqency or interger multiples of it.
+    !% Other options will work, but likely be nonsense.
+    !% 
+    !%End
+    call parse_variable('TDFloquetFrequency', M_ZERO, omega, units_inp%energy)
+    call messages_print_var_value(stdout,'Frequency used for Floquet analysis', omega)
+    if(omega==M_ZERO) then
+       message(1) = "Please give a non-zero value for TDFloquetFrequency"
+       call messages_fatal(1)
+    endif
+
+    ! get time of one cycle
+    Tcycle=M_TWO*M_PI/omega
+
+    !%Variable TDFloquetSample
+    !%Type integer
+    !%Default 20
+    !%Section Time-Dependent::TD Output
+    !%Description Number of points on which one Floquet cycle is sampled in the time-integral for the Floquet analysis.
+    !%
+    !%End 
+    call parse_variable('TDFloquetSample',20 ,nt)
+    call messages_print_var_value(stdout,'Number of Floquet time-sampling points', nT)
+    dt = Tcycle/real(nT)
+
+    !%Variable TDFloquetDimension
+    !%Type integer
+    !%Default -1
+    !%Section Time-Dependent::TD Output
+    !%Description
+    !% Order of Floquet Hamiltonain. If negative number is given, downfolding is performed.
+    !%End
+    call parse_variable('TDFloquetDimension',-1,Forder)
+    if(Forder.ge.0) then
+       call messages_print_var_value(stdout,'Order of multiphoton Floquet-Hamiltonian', Forder)
+       !Dimension of multiphoton Floquet-Hamiltonian
+       Fdim = 2*Forder+1
+    else
+       message(1) = 'Floquet-Hamiltonian is downfolded'
+       call messages_info(1)
+       downfolding = .true.
+       Forder = 1
+       Fdim = 3
+    endif
+
+    dt = Tcycle/real(nT)
+
+    ! we are only interested for k-point with zero weight
+    nik=gr%sb%kpoints%nik_skip
+
+    SAFE_ALLOCATE(hmss(1:nst,1:nst))
+    SAFE_ALLOCATE( psi(1:nst,1:st%d%dim,1:mesh%np))
+    SAFE_ALLOCATE(hpsi(1:nst,1:st%d%dim,1:mesh%np))
+    SAFE_ALLOCATE(temp_state1(1:mesh%np,1:st%d%dim))
+
+    ! multiphoton Floquet Hamiltonian, layout:
+    !     (H_{-n,-m} ...  H_{-n,0} ...  H_{-n,m}) 
+    !     (    .      .      .      .      .    )
+    ! H = (H_{0,-m}  ...  H_{0,0}  ...  H_{0,m} )
+    !     (    .      .      .      .      .    )
+    !     (H_{n,-m}  ...  H_{n,0}  ...  H_{n,m} )    
+    SAFE_ALLOCATE(HFloquet(1:nik,1:nst*Fdim, 1:nst*Fdim))
+    HFloquet(1:nik,1:nst*Fdim, 1:nst*Fdim) = M_ZERO
+
+    ! perform time-integral over one cycle
+    do it=1,nT
+      ! get non-interacting Hamiltonian at time (offset by one cycle to allow for ramp)
+      call hamiltonian_update(hm,gr%mesh,time=Tcycle+it*dt)
+      ! get hpsi
+      call zhamiltonian_apply_all(hm, ks%xc, gr%der, st, hm_st)
+
+      ! project Hamiltonian into grounstates for zero weight k-points
+      ik_count = 0
+
+      do ik=gr%sb%kpoints%reduced%npoints-nik+1,gr%sb%kpoints%reduced%npoints
+        ik_count = ik_count + 1
+
+        psi(1:nst, 1:st%d%dim, 1:mesh%np)= M_ZERO
+        hpsi(1:nst, 1:st%d%dim, 1:mesh%np)= M_ZERO
+
+        do ist=st%st_start,st%st_end
+          if(state_kpt_is_local(st, ist, ik)) then
+            call states_get_state(st, mesh, ist, ik,temp_state1 )
+            do idim=1,st%d%dim
+              psi(ist,idim,1:mesh%np) =  temp_state1(1:mesh%np,idim)
+            end do
+            call states_get_state(hm_st, mesh, ist, ik,temp_state1 )
+            do idim=1,st%d%dim
+              hpsi(ist,idim,1:mesh%np) =temp_state1(1:mesh%np,idim)
+            end do
+          end if
+        end do
+        call comm_allreduce(mpi_world%comm, psi)
+        call comm_allreduce(mpi_world%comm, hpsi)
+        hmss(1:nst,1:nst) = M_ZERO
+        call zgemm( 'n',                               &
+                    'c',                               &
+                    nst,                               &
+                    nst,                               &
+                    mesh%np_global*st%d%dim,           &
+                    cmplx(mesh%volume_element,kind=8), &
+                    hpsi(1, 1, 1),                     &
+                    ubound(hpsi, dim = 1),             &
+                    psi(1, 1, 1),                      &
+                    ubound(psi, dim = 1),              &
+                    cmplx(0.,kind=8),                  &
+                    hmss(1, 1),                        &
+                    ubound(hmss, dim = 1))
+
+        hmss(1:nst,1:nst) = CONJG(hmss(1:nst,1:nst))
+
+        ! accumulate the Floqeut integrals
+        do in=-Forder,Forder
+           do im=-Forder,Forder
+              ii=(in+Forder)*nst
+              jj=(im+Forder)*nst
+              HFloquet(ik_count,ii+1:ii+nst,jj+1:jj+nst) =  &
+                HFloquet(ik_count,ii+1:ii+nst,jj+1:jj+nst) + hmss(1:nst,1:nst)*exp(-(in-im)*M_zI*omega*it*dt)
+              ! diagonal term
+              if(in==im) then
+                 do ist=1,nst
+                    HFloquet(ik_count,ii+ist,ii+ist) = HFloquet(ik_count,ii+ist,ii+ist) + in*omega
+                 end do
+              end if
+           end do
+        end do
+      end do !ik
+
+    end do ! it
+
+    HFloquet(:,:,:) = M_ONE/nT*HFloquet(:,:,:)
+
+    ! diagonalize Floquet Hamiltonian
+    if(downfolding) then
+       ! here perform downfolding
+       SAFE_ALLOCATE(HFloq_eff(1:nst,1:nst))
+       SAFE_ALLOCATE(eigenval(1:nst))
+       SAFE_ALLOCATE(bands(1:nik,1:nst))
+
+       HFloq_eff(1:nst,1:nst) = M_ZERO
+       do ik=1,nik
+          ! the HFloquet blocks are copied directly out of the super matrix
+          m0 = nst ! the m=0 start position
+          n0 = nst ! the n=0 start postion
+          n1 = 2*nst ! the n=+1 start postion
+          HFloq_eff(1:nst,1:nst) = HFloquet(ik,n0+1:n0+nst,m0+1:m0+nst) + &
+               M_ONE/omega*(matmul(HFloquet(ik,1:nst,m0+1:m0+nst), HFloquet(ik,n1+1:n1+nst,m0+1:m0+nst))- &
+                            matmul(HFloquet(ik,n1+1:n1+nst,m0+1:m0+nst), HFloquet(ik,1:nst,m0+1:m0+nst)))
+
+          call lalg_eigensolve(nst, HFloq_eff, eigenval)
+          bands(ik,1:nst) = eigenval(1:nst)
+       end do
+       SAFE_DEALLOCATE_A(HFloq_eff)
+    else
+      ! the full Floquet 
+      SAFE_ALLOCATE(eigenval(1:nst*Fdim))
+      SAFE_ALLOCATE(bands(1:nik,1:nst*Fdim))
+      SAFE_ALLOCATE(temp(1:nst*Fdim, 1:nst*Fdim))
+
+      do ik=1,nik
+         temp(1:nst*Fdim,1:nst*Fdim) = HFloquet(ik,1:nst*Fdim,1:nst*Fdim)
+         call lalg_eigensolve(nst*Fdim, temp, eigenval)
+         bands(ik,1:nst*Fdim) = eigenval(1:nst*Fdim)
+      end do
+    end if
+
+    !write bandstructure to file
+    if(downfolding) then
+      lim_nst = nst
+      filename="downfolded_floquet_bands"
+    else
+       lim_nst = nst*Fdim
+       filename="floquet_bands"
+    end if
+    ! write bands (full or downfolded)
+    if(mpi_world%rank==0) then
+      file=987254
+      open(unit=file,file=filename)
+      do ik=1,nik
+        do ist=1,lim_nst
+          write(file,'(e12.6, 1x)',advance='no') bands(ik,ist)
+        end do
+        write(file,'(1x)')
+      end do
+      close(file)
+    endif
+    
+    if(.not.downfolding) then
+      ! for the full Floquet case compute also the trivially shifted
+      ! Floquet bands for reference (i.e. setting H_{nm}=0 for n!=m)
+      bands(1:nik,1:nst*Fdim) = M_ZERO
+      do ik=1,nik
+        temp(1:nst*Fdim,1:nst*Fdim) = M_ZERO
+        do jj=0,Fdim-1
+          ii=jj*nst
+          temp(ii+1:ii+nst,ii+1:ii+nst) = HFloquet(ik,ii+1:ii+nst,ii+1:ii+nst)
+        end do
+        call lalg_eigensolve(nst*Fdim, temp, eigenval)
+        bands(ik,1:nst*Fdim) = eigenval(1:nst*Fdim)
+      end do
+    
+      if(mpi_world%rank==0) then
+        filename='trivial_floquet_bands'
+        open(unit=file,file=filename)
+        do ik=1,nik
+          do ist=1,lim_nst
+            write(file,'(e12.6, 1x)',advance='no') bands(ik,ist)
+          end do
+          write(file,'(1x)')
+        end do
+        close(file)
+      endif
+     end if
+  
+    ! reset time in Hamiltonian
+    call hamiltonian_update(hm,gr%mesh,time=M_ZERO)
+
+    SAFE_DEALLOCATE_A(hmss)
+    SAFE_DEALLOCATE_A(psi)
+    SAFE_DEALLOCATE_A(hpsi)
+    SAFE_DEALLOCATE_A(temp_state1)
+    SAFE_DEALLOCATE_A(HFloquet)
+    SAFE_DEALLOCATE_A(eigenval)
+    SAFE_DEALLOCATE_A(bands)
+    SAFE_DEALLOCATE_A(temp)
+
+   POP_SUB(td_write_floquet)
+
+  end subroutine td_write_floquet
 
   ! ---------------------------------------------------------
   subroutine td_write_total_current(out_total_current, gr, st, iter)
