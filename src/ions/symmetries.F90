@@ -220,6 +220,9 @@ contains
         typs(iatom) = species_index(geo%atom(iatom)%species)
       end do
 
+      ! transpose the lattice vectors for use in spglib as row-major matrix
+      lattice(:,:) = transpose(lattice(:,:))
+
       this%space_group = spglib_get_international(symbol, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
 
       if(this%space_group == 0) then
@@ -307,6 +310,11 @@ contains
       end if
 
       SAFE_ALLOCATE(this%ops(1:fullnops))
+
+      ! NOTE: HH 21/05/2016
+      ! The below search for fractional translations doesnt seem to work for non-orthogonal cells,
+      ! but not critical as it just returns less useable symmetries...
+      ! FIXME
 
       ! check all operations and leave those that kept the symmetry-breaking
       ! direction invariant and (for the moment) that do not have a translation
