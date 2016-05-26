@@ -666,17 +666,9 @@ contains
     type(grid_t),         intent(in)    :: gr
     FLOAT,                intent(in)    :: lambda(:, :)
     
-    type(states_t)   :: psi2
-    FLOAT, allocatable :: occ(:,:), psii(:, :), psij(:, :)
-    integer :: ist, jst, iqn
+    integer :: iqn
 
     PUSH_SUB(assign_eigenfunctions)
-    
-    SAFE_ALLOCATE(occ(1:st%nst,1:st%d%nik))
-
-    occ = M_ZERO
-
-    call states_copy(psi2, st)
 
     do iqn = st%d%kpt%start, st%d%kpt%end
       if(states_are_real(st)) then
@@ -685,39 +677,6 @@ contains
         call states_rotate(gr%mesh, st, M_z1*lambda, iqn)
       end if
     end do
-    
-   ! reordering occupation numbers if needed
-    occ = st%occ
-
-    SAFE_ALLOCATE(psii(1:gr%mesh%np, 1:st%d%dim))
-    SAFE_ALLOCATE(psij(1:gr%mesh%np, 1:st%d%dim))
-    
-    do ist = 1, st%nst
-      call states_get_state(st, gr%mesh, ist, 1, psii)
-      call states_get_state(psi2, gr%mesh, ist, 1, psij)
-      
-      if (abs(dmf_dotp(gr%mesh, st%d%dim, psii, psij)) < M_HALF) then
-        
-        do jst = 1, st%nst
-          call states_get_state(psi2, gr%mesh, jst, 1, psij)
-          
-          if (abs(dmf_dotp(gr%mesh, st%d%dim, psii, psij)) >= M_HALF) then
-            occ(ist, 1) = st%occ(jst, 1)
-          end if 
-
-        end do
-        
-      end if
-
-    end do
-
-    SAFE_DEALLOCATE_A(psii)
-    SAFE_DEALLOCATE_A(psij)
-    
-  
-    call states_end(psi2) 
-
-    SAFE_DEALLOCATE_A(occ)
     
     POP_SUB(assign_eigenfunctions)
 
