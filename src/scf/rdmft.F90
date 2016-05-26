@@ -170,7 +170,7 @@ contains
         call scf_orb(rdm, gr, geo, st, ks, hm, energy)
         energy_dif = energy - energy_old
         energy_old = energy
-        if (abs(energy_dif).lt. rdm%conv_ener)  exit
+        if (abs(energy_dif).lt. rdm%conv_ener.and.rdm%maxFO < 1.d3*rdm%conv_ener)  exit
         if (energy_dif < M_ZERO) then
           xneg = xneg + 1
         else
