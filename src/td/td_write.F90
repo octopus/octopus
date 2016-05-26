@@ -2316,7 +2316,8 @@ contains
     !%Type float
     !%Default 0
     !%Section Time-Dependent::TD Output
-    !%Description Frequency for the Flquet analysis, this should be the carrier freqency or interger multiples of it.
+    !%Description 
+    !% Frequency for the Floquet analysis, this should be the carrier frequency or integer multiples of it.
     !% Other options will work, but likely be nonsense.
     !% 
     !%End
@@ -2334,7 +2335,8 @@ contains
     !%Type integer
     !%Default 20
     !%Section Time-Dependent::TD Output
-    !%Description Number of points on which one Floquet cycle is sampled in the time-integral for the Floquet analysis.
+    !%Description 
+    !% Number of points on which one Floquet cycle is sampled in the time-integral of the Floquet analysis.
     !%
     !%End 
     call parse_variable('TDFloquetSample',20 ,nt)
@@ -2346,7 +2348,7 @@ contains
     !%Default -1
     !%Section Time-Dependent::TD Output
     !%Description
-    !% Order of Floquet Hamiltonain. If negative number is given, downfolding is performed.
+    !% Order of Floquet Hamiltonian. If negative number is given, downfolding is performed.
     !%End
     call parse_variable('TDFloquetDimension',-1,Forder)
     if(Forder.ge.0) then
