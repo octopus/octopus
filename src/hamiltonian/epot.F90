@@ -580,9 +580,8 @@ contains
   end subroutine epot_init
 
   ! ---------------------------------------------------------
-  subroutine epot_end(ep, geo)
-    type(epot_t),      intent(inout) :: ep
-    type(geometry_t),  intent(inout) :: geo
+  subroutine epot_end(ep)
+    type(epot_t), intent(inout) :: ep
 
     integer :: iproj
 
@@ -627,8 +626,8 @@ contains
     SAFE_DEALLOCATE_P(ep%B_field)
     SAFE_DEALLOCATE_P(ep%A_static)
 
-    do iproj = 1, geo%natoms
-      if(.not. species_is_ps(geo%atom(iproj)%species)) cycle
+    do iproj = 1, ep%natoms
+      if (projector_is_null(ep%proj(iproj))) cycle
       call projector_end(ep%proj(iproj))
     end do
 

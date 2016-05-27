@@ -553,7 +553,7 @@ contains
       SAFE_DEALLOCATE_P(hm%vtau)
     end if
 
-    call epot_end(hm%ep, hm%geo)
+    call epot_end(hm%ep)
     nullify(hm%geo)
 
     call bc_end(hm%bc)
