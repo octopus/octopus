@@ -717,7 +717,7 @@ contains
     end if
 #endif
 
-    if (.not. present(lr)) call fill_random()
+    if (.not. present(lr)) call states_fill_random(st, gr%mesh, filled, normalized = .false.)
     ! it is better to initialize lr wfns to zero
 
     SAFE_DEALLOCATE_A(filled)
@@ -749,24 +749,6 @@ contains
     POP_SUB(states_load)
 
   contains
-
-    ! ---------------------------------------------------------
-    subroutine fill_random() !< Put random function in orbitals that could not be read.
-      PUSH_SUB(states_load.fill_random)
-
-      do ik = st%d%kpt%start, st%d%kpt%end
-
-        do ist = st%st_start, st%st_end
-          do idim = 1, st%d%dim
-            if(filled(idim, ist, ik)) cycle
-
-            call states_generate_random(st, gr%mesh, ist, ist)
-          end do
-        end do
-      end do
-
-      POP_SUB(states_load.fill_random)
-    end subroutine fill_random
 
     ! ---------------------------------------------------------
 

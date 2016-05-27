@@ -89,6 +89,7 @@ module states_oct_m
     states_end,                       &
     states_copy,                      &
     states_generate_random,           &
+    states_fill_random,               &
     states_fermi,                     &
     states_eigenvalues_sum,           &
     states_spin_channel,              &
@@ -1553,7 +1554,7 @@ contains
     integer, optional, intent(in)    :: ist_start_
     integer, optional, intent(in)    :: ist_end_
     logical, optional, intent(in)    :: normalized !< whether generate states should have norm 1, true by default
-    
+
     integer :: ist, ik, id, ist_start, ist_end, jst
     CMPLX   :: alpha, beta
     FLOAT, allocatable :: dpsi(:,  :)
@@ -1565,28 +1566,31 @@ contains
     ist_end   = optional_default(ist_end_,   st%nst)
 
     if (states_are_real(st)) then
-      SAFE_ALLOCATE(dpsi(1:mesh%np, 1:st%d%dim))
+      SAFE_ALLOCATE(dpsi(1:mesh%np_global, 1:st%d%dim))
     else
-      SAFE_ALLOCATE(zpsi(1:mesh%np, 1:st%d%dim))
+      SAFE_ALLOCATE(zpsi(1:mesh%np_global, 1:st%d%dim))
     end if
 
     select case(st%d%ispin)
     case(UNPOLARIZED, SPIN_POLARIZED)
 
       do ik = 1, st%d%nik
-        do ist = ist_start, ist_end
+        do ist = 1, st%nst
           if (states_are_real(st)) then
             call dmf_random(mesh, dpsi(:, 1), normalized = normalized)
-            if(.not. state_kpt_is_local(st, ist, ik)) cycle
-            call states_set_state(st, mesh, ist,  ik, dpsi)
+            if(ist < ist_start .or. ist > ist_end &
+             .or. .not. state_kpt_is_local(st, ist, ik)) cycle
+            call states_set_state(st, mesh, ist,  ik, dpsi(mesh%vp%xlocal:(mesh%vp%xlocal+mesh%vp%np_local-1),:))
           else
             call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
-            if(.not. state_kpt_is_local(st, ist, ik)) cycle
-            call states_set_state(st, mesh, ist,  ik, zpsi)
+            if(ist >= ist_start .and. ist <= ist_end &
+              .and. state_kpt_is_local(st, ist, ik))  &
+              call states_set_state(st, mesh, ist,  ik, zpsi(mesh%vp%xlocal:(mesh%vp%xlocal+mesh%vp%np_local-1),:))
             if(st%have_left_states) then
               call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
-              if(.not. state_kpt_is_local(st, ist, ik)) cycle
-              call states_set_state(st, mesh, ist,  ik, zpsi, left = .true.)
+              if(ist >= ist_start .and. ist <= ist_end &
+               .and. state_kpt_is_local(st, ist, ik))  &
+              call states_set_state(st, mesh, ist,  ik, zpsi(mesh%vp%xlocal:(mesh%vp%xlocal+mesh%vp%np_local-1),:), left = .true.)
             end if
           end if
         end do
@@ -1599,9 +1603,10 @@ contains
       if(st%fixed_spins) then
 
         do ik = 1, st%d%nik
-          do ist = ist_start, ist_end
+          do ist = 1, st%nst
             call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
-            if(.not. state_kpt_is_local(st, ist, ik)) cycle
+            if(ist < ist_start .or. ist > ist_end &
+             .or. .not. state_kpt_is_local(st, ist, ik)) cycle
             ! In this case, the spinors are made of a spatial part times a vector [alpha beta]^T in
             ! spin space (i.e., same spatial part for each spin component). So (alpha, beta)
             ! determines the spin values. The values of (alpha, beta) can be be obtained
@@ -1627,17 +1632,18 @@ contains
             end if
             zpsi(1:mesh%np, 1) = alpha*zpsi(1:mesh%np, 1)
             zpsi(1:mesh%np, 2) = beta*zpsi(1:mesh%np, 2)
-            call states_set_state(st, mesh, ist,  ik, zpsi)
+            call states_set_state(st, mesh, ist,  ik, zpsi(mesh%vp%xlocal:(mesh%vp%xlocal+mesh%vp%np_local-1),:))
           end do
         end do
       else
         do ik = 1, st%d%nik
-          do ist = ist_start, ist_end
+          do ist = 1, st%nst
             do id = 1, st%d%dim
               call zmf_random(mesh, zpsi(:, id), normalized = normalized)
             end do
-            if(.not. state_kpt_is_local(st, ist, ik)) cycle
-            call states_set_state(st, mesh, ist,  ik, zpsi)
+            if(ist < ist_start .or. ist > ist_end &
+             .or. .not. state_kpt_is_local(st, ist, ik)) cycle
+            call states_set_state(st, mesh, ist,  ik, zpsi(mesh%vp%xlocal:(mesh%vp%xlocal+mesh%vp%np_local-1),:))
           end do
         end do
       end if
@@ -1650,6 +1656,134 @@ contains
     POP_SUB(states_generate_random)
   end subroutine states_generate_random
 
+    ! ---------------------------------------------------------
+  subroutine states_fill_random(st, mesh, filled,  normalized)
+    type(states_t),    intent(inout) :: st
+    type(mesh_t),      intent(in)    :: mesh
+    logical, intent(in)              :: filled(1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end)
+    logical, optional, intent(in)    :: normalized !< whether generate states should have norm 1, true by default
+
+
+    integer :: ist, ik, id, ist_start, ist_end, jst, idim
+    CMPLX   :: alpha, beta
+    FLOAT, allocatable :: dpsi(:,  :)
+    CMPLX, allocatable :: zpsi(:,  :), zpsi2(:)
+
+    PUSH_SUB(states_fill_random)
+
+    ist_start = st%st_start
+    ist_end   = st%st_end
+
+    if (states_are_real(st)) then
+      SAFE_ALLOCATE(dpsi(1:mesh%np_global, 1:st%d%dim))
+    else
+      SAFE_ALLOCATE(zpsi(1:mesh%np_global, 1:st%d%dim))
+    end if
+
+    select case(st%d%ispin)
+    case(UNPOLARIZED, SPIN_POLARIZED)
+
+      do ik = 1, st%d%nik
+        do ist = 1, st%nst
+          if (states_are_real(st)) then
+            call dmf_random(mesh, dpsi(:, 1), normalized = normalized)
+            if(ist < ist_start .or. ist > ist_end &
+             .or. .not. state_kpt_is_local(st, ist, ik)) cycle
+            do idim = 1,st%d%dim
+              if(filled(idim, ist, ik)) cycle
+              call states_set_state(st, mesh, ist,  ik, dpsi(1:mesh%np,:))
+            enddo
+          else
+            call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
+            if(ist >= ist_start .and. ist <= ist_end &
+              .and. state_kpt_is_local(st, ist, ik))  then
+              do idim = 1,st%d%dim
+                if(filled(idim, ist, ik)) cycle
+                call states_set_state(st, mesh, ist,  ik, zpsi(1:mesh%np,:))
+              end do
+            end if
+            if(st%have_left_states) then
+              call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
+              if(ist >= ist_start .and. ist <= ist_end &
+               .and. state_kpt_is_local(st, ist, ik))  then
+                do idim = 1,st%d%dim
+                  if(filled(idim, ist, ik)) cycle
+                  call states_set_state(st, mesh, ist,  ik, zpsi(1:mesh%np,:), left = .true.)
+                end do
+              end if
+            end if
+          end if
+        end do
+      end do
+    
+     case(SPINORS)
+
+      ASSERT(states_are_complex(st))
+
+      if(st%fixed_spins) then
+
+        do ik = 1, st%d%nik
+          do ist = 1, st%nst
+            call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
+            if(ist < ist_start .or. ist > ist_end &
+             .or. .not. state_kpt_is_local(st, ist, ik)) cycle
+            do idim = 1,st%d%dim
+              if(filled(idim, ist, ik)) cycle
+              ! In this case, the spinors are made of a spatial part times a vector [alpha beta]^T in
+              ! spin space (i.e., same spatial part for each spin component). So (alpha, beta)
+              ! determines the spin values. The values of (alpha, beta) can be be obtained
+              ! with simple formulae from <Sx>, <Sy>, <Sz>.
+              !
+              ! Note that here we orthonormalize the orbital part. This ensures that the spinors
+              ! are untouched later in the general orthonormalization, and therefore the spin values
+              ! of each spinor remain the same.
+              SAFE_ALLOCATE(zpsi2(1:mesh%np))
+              do jst = ist_start, ist - 1
+                call states_get_state(st, mesh, 1, jst, ik, zpsi2)
+                zpsi(1:mesh%np, 1) = zpsi(1:mesh%np, 1) - zmf_dotp(mesh, zpsi(:, 1), zpsi2)*zpsi2(1:mesh%np)
+              end do
+              SAFE_DEALLOCATE_A(zpsi2)
+
+              zpsi(1:mesh%np, 1) = zpsi(1:mesh%np, 1)/zmf_nrm2(mesh, zpsi(:, 1))
+              zpsi(1:mesh%np, 2) = zpsi(1:mesh%np, 1)
+
+              alpha = TOCMPLX(sqrt(M_HALF + st%spin(3, ist, ik)), M_ZERO)
+              beta  = TOCMPLX(sqrt(M_ONE - abs(alpha)**2), M_ZERO)
+              if(abs(alpha) > M_ZERO) then
+                beta = TOCMPLX(st%spin(1, ist, ik) / abs(alpha), st%spin(2, ist, ik) / abs(alpha))
+              end if
+              zpsi(1:mesh%np, 1) = alpha*zpsi(1:mesh%np, 1)
+              zpsi(1:mesh%np, 2) = beta*zpsi(1:mesh%np, 2)
+              call states_set_state(st, mesh, ist,  ik, zpsi(1:mesh%np,:))
+            end do
+          end do
+        end do
+      else
+        do ik = 1, st%d%nik
+          do ist = 1, st%nst
+            do id = 1, st%d%dim
+              call zmf_random(mesh, zpsi(:, id), normalized = normalized)
+            end do
+            if(ist < ist_start .or. ist > ist_end &
+             .or. .not. state_kpt_is_local(st, ist, ik)) cycle
+            do idim = 1,st%d%dim
+              if(filled(idim, ist, ik)) cycle
+              call states_set_state(st, mesh, ist,  ik, zpsi(1:mesh%np,:))
+            end do
+          end do
+        end do
+      end if
+
+    end select
+
+    SAFE_DEALLOCATE_A(dpsi)
+    SAFE_DEALLOCATE_A(zpsi)
+
+    POP_SUB(states_fill_random)
+  end subroutine states_fill_random
+ 
+
+ 
   ! ---------------------------------------------------------
   subroutine substates_set_charge(this, st)
     type(base_states_t), intent(inout) :: this

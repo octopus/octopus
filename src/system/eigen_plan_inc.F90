@@ -49,6 +49,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
   R_TYPE, allocatable :: eigenvec(:,:,:) ! The eigenvectors
   FLOAT,  allocatable :: res(:)          ! The residuals
   R_TYPE, allocatable :: vv(:,:,:)       ! The Krylov subspace basis vectors
+  R_TYPE, allocatable :: vv_ran(:,:,:)   ! An array for the generation of random vectors
   R_TYPE, allocatable :: av(:,:,:)       ! Workspace: W = A V
   FLOAT,  allocatable :: tmp(:)          ! Workspace.
   R_TYPE, allocatable :: ham(:,:)        ! Projection of the Hamiltonian onto Krylov subspace.
@@ -77,6 +78,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
   SAFE_ALLOCATE(aux(1:gr%mesh%np_part, 1:dim))
   SAFE_ALLOCATE(tmp(1:krylov))
   SAFE_ALLOCATE(vv(1:gr%mesh%np, 1:dim, 1:krylov))
+  SAFE_ALLOCATE(vv_ran(1:gr%mesh%np_global, 1:dim, 1:krylov))
   SAFE_ALLOCATE(ham(1:krylov, 1:krylov))
   SAFE_ALLOCATE(eigenval(1:me))
   SAFE_ALLOCATE(av(1:gr%mesh%np, 1:dim, 1:krylov))
@@ -87,6 +89,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
   eigenvec = R_TOTYPE(M_ZERO)
   res      = M_ZERO
   vv       = R_TOTYPE(M_ZERO)
+  vv_ran   = R_TOTYPE(M_ZERO)
   av       = R_TOTYPE(M_ZERO)
   tmp      = M_ZERO
   ham      = R_TOTYPE(M_ZERO)
@@ -154,7 +157,8 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
         end do
         xx = X(mf_nrm2)(gr%mesh, dim, vv(:, :, ist))
         if(xx  <=  M_EPSILON) then
-          call X(mf_random)(gr%mesh, vv(:, 1, ist))
+          call X(mf_random)(gr%mesh, vv_ran(:, 1, ist))
+          vv(:, 1, ist) = vv_ran(gr%mesh%vp%xlocal:(gr%mesh%vp%xlocal+gr%mesh%vp%np_local-1), 1, ist)   
         else
           do idim = 1, dim
             call lalg_scal(gr%mesh%np, R_TOTYPE(M_ONE/xx), vv(:, idim, ist))
@@ -313,6 +317,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
   SAFE_DEALLOCATE_A(eigenvec)
   SAFE_DEALLOCATE_A(res)
   SAFE_DEALLOCATE_A(vv)
+  SAFE_DEALLOCATE_A(vv_ran)
   SAFE_DEALLOCATE_A(av)
   SAFE_DEALLOCATE_A(tmp)
   SAFE_DEALLOCATE_A(ham)
