@@ -1566,9 +1566,9 @@ contains
     ist_end   = optional_default(ist_end_,   st%nst)
 
     if (states_are_real(st)) then
-      SAFE_ALLOCATE(dpsi(1:mesh%np_global, 1:st%d%dim))
+      SAFE_ALLOCATE(dpsi(1:mesh%np, 1:st%d%dim))
     else
-      SAFE_ALLOCATE(zpsi(1:mesh%np_global, 1:st%d%dim))
+      SAFE_ALLOCATE(zpsi(1:mesh%np, 1:st%d%dim))
     end if
 
     select case(st%d%ispin)
@@ -1577,20 +1577,20 @@ contains
       do ik = 1, st%d%nik
         do ist = 1, st%nst
           if (states_are_real(st)) then
-            call dmf_random(mesh, dpsi(:, 1), normalized = normalized)
+            call dmf_random(mesh, dpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
             if(ist < ist_start .or. ist > ist_end &
              .or. .not. state_kpt_is_local(st, ist, ik)) cycle
-            call states_set_state(st, mesh, ist,  ik, dpsi(mesh%vp%xlocal:(mesh%vp%xlocal+mesh%vp%np_local-1),:))
+            call states_set_state(st, mesh, ist, ik, dpsi)
           else
-            call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
+            call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
             if(ist >= ist_start .and. ist <= ist_end &
               .and. state_kpt_is_local(st, ist, ik))  &
-              call states_set_state(st, mesh, ist,  ik, zpsi(mesh%vp%xlocal:(mesh%vp%xlocal+mesh%vp%np_local-1),:))
+              call states_set_state(st, mesh, ist, ik, zpsi)
             if(st%have_left_states) then
-              call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
+              call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
               if(ist >= ist_start .and. ist <= ist_end &
                .and. state_kpt_is_local(st, ist, ik))  &
-              call states_set_state(st, mesh, ist,  ik, zpsi(mesh%vp%xlocal:(mesh%vp%xlocal+mesh%vp%np_local-1),:), left = .true.)
+              call states_set_state(st, mesh, ist, ik, zpsi, left = .true.)
             end if
           end if
         end do
@@ -1604,7 +1604,7 @@ contains
 
         do ik = 1, st%d%nik
           do ist = 1, st%nst
-            call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
+            call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
             if(ist < ist_start .or. ist > ist_end &
              .or. .not. state_kpt_is_local(st, ist, ik)) cycle
             ! In this case, the spinors are made of a spatial part times a vector [alpha beta]^T in
@@ -1618,12 +1618,11 @@ contains
             SAFE_ALLOCATE(zpsi2(1:mesh%np))
             do jst = ist_start, ist - 1
               call states_get_state(st, mesh, 1, jst, ik, zpsi2)
-              zpsi(1:mesh%np, 1) = zpsi(mesh%vp%xlocal:(mesh%vp%xlocal+mesh%vp%np_local-1), 1) &
-                  - zmf_dotp(mesh, zpsi(mesh%vp%xlocal:(mesh%vp%xlocal+mesh%vp%np_local-1), 1), zpsi2)*zpsi2(1:mesh%np)
+              zpsi(1:mesh%np, 1) = zpsi(1:mesh%np, 1) - zmf_dotp(mesh, zpsi(1:mesh%np, 1), zpsi2)*zpsi2(1:mesh%np)
             end do
             SAFE_DEALLOCATE_A(zpsi2)
 
-            zpsi(1:mesh%np, 1) = zpsi(1:mesh%np, 1)/zmf_nrm2(mesh, zpsi(:, 1))
+            zpsi(1:mesh%np, 1) = zpsi(1:mesh%np, 1)/zmf_nrm2(mesh, zpsi(1:mesh%np, 1))
             zpsi(1:mesh%np, 2) = zpsi(1:mesh%np, 1)
 
             alpha = TOCMPLX(sqrt(M_HALF + st%spin(3, ist, ik)), M_ZERO)
@@ -1633,18 +1632,18 @@ contains
             end if
             zpsi(1:mesh%np, 1) = alpha*zpsi(1:mesh%np, 1)
             zpsi(1:mesh%np, 2) = beta*zpsi(1:mesh%np, 2)
-            call states_set_state(st, mesh, ist,  ik, zpsi(1:mesh%np,:))
+            call states_set_state(st, mesh, ist,  ik, zpsi)
           end do
         end do
       else
         do ik = 1, st%d%nik
           do ist = 1, st%nst
             do id = 1, st%d%dim
-              call zmf_random(mesh, zpsi(:, id), normalized = normalized)
-            end do
+              call zmf_random(mesh, zpsi(:, id), mesh%vp%xlocal-1, normalized = normalized)
+            end do 
             if(ist < ist_start .or. ist > ist_end &
-             .or. .not. state_kpt_is_local(st, ist, ik)) cycle
-            call states_set_state(st, mesh, ist,  ik, zpsi(mesh%vp%xlocal:(mesh%vp%xlocal+mesh%vp%np_local-1),:))
+               .or. .not. state_kpt_is_local(st, ist, ik)) cycle
+            call states_set_state(st, mesh, ist,  ik, zpsi)
           end do
         end do
       end if
@@ -1676,9 +1675,9 @@ contains
     ist_end   = st%st_end
 
     if (states_are_real(st)) then
-      SAFE_ALLOCATE(dpsi(1:mesh%np_global, 1:st%d%dim))
+      SAFE_ALLOCATE(dpsi(1:mesh%np, 1:st%d%dim))
     else
-      SAFE_ALLOCATE(zpsi(1:mesh%np_global, 1:st%d%dim))
+      SAFE_ALLOCATE(zpsi(1:mesh%np, 1:st%d%dim))
     end if
 
     select case(st%d%ispin)
@@ -1687,30 +1686,29 @@ contains
       do ik = 1, st%d%nik
         do ist = 1, st%nst
           if (states_are_real(st)) then
-            call dmf_random(mesh, dpsi(:, 1), normalized = normalized)
+            call dmf_random(mesh, dpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
             if(ist < ist_start .or. ist > ist_end &
              .or. .not. state_kpt_is_local(st, ist, ik)) cycle
             do idim = 1,st%d%dim
               if(filled(idim, ist, ik)) cycle
-              call states_set_state(st, mesh, ist,  ik, dpsi(mesh%vp%xlocal:(mesh%vp%xlocal+mesh%vp%np_local-1),:))
+              call states_set_state(st, mesh, ist, ik, dpsi)
             enddo
           else
-            call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
+            call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
             if(ist >= ist_start .and. ist <= ist_end &
               .and. state_kpt_is_local(st, ist, ik))  then
               do idim = 1,st%d%dim
                 if(filled(idim, ist, ik)) cycle
-                call states_set_state(st, mesh, ist,  ik, zpsi(mesh%vp%xlocal:(mesh%vp%xlocal+mesh%vp%np_local-1),:))
+                call states_set_state(st, mesh, ist, ik, zpsi)
               end do
             end if
             if(st%have_left_states) then
-              call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
+              call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
               if(ist >= ist_start .and. ist <= ist_end &
                .and. state_kpt_is_local(st, ist, ik))  then
                 do idim = 1,st%d%dim
                   if(filled(idim, ist, ik)) cycle
-                  call states_set_state(st, mesh, ist,  ik, &
-                        zpsi(mesh%vp%xlocal:(mesh%vp%xlocal+mesh%vp%np_local-1),:), left = .true.)
+                  call states_set_state(st, mesh, ist,  ik, zpsi, left = .true.)
                 end do
               end if
             end if
@@ -1726,7 +1724,7 @@ contains
 
         do ik = 1, st%d%nik
           do ist = 1, st%nst
-            call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
+            call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
             if(ist < ist_start .or. ist > ist_end &
              .or. .not. state_kpt_is_local(st, ist, ik)) cycle
             do idim = 1,st%d%dim
@@ -1742,8 +1740,7 @@ contains
               SAFE_ALLOCATE(zpsi2(1:mesh%np))
               do jst = ist_start, ist - 1
                 call states_get_state(st, mesh, 1, jst, ik, zpsi2)
-                zpsi(1:mesh%np, 1) = zpsi(mesh%vp%xlocal:(mesh%vp%xlocal+mesh%vp%np_local-1), 1) &
-                     - zmf_dotp(mesh, zpsi(mesh%vp%xlocal:(mesh%vp%xlocal+mesh%vp%np_local-1), 1), zpsi2)*zpsi2(1:mesh%np)
+                zpsi(1:mesh%np, 1) = zpsi(1:mesh%np, 1) - zmf_dotp(mesh, zpsi(1:mesh%np, 1), zpsi2)*zpsi2(1:mesh%np)
               end do
               SAFE_DEALLOCATE_A(zpsi2)
 
@@ -1757,7 +1754,7 @@ contains
               end if
               zpsi(1:mesh%np, 1) = alpha*zpsi(1:mesh%np, 1)
               zpsi(1:mesh%np, 2) = beta*zpsi(1:mesh%np, 2)
-              call states_set_state(st, mesh, ist,  ik, zpsi(1:mesh%np,:))
+              call states_set_state(st, mesh, ist,  ik, zpsi)
             end do
           end do
         end do
@@ -1765,13 +1762,13 @@ contains
         do ik = 1, st%d%nik
           do ist = 1, st%nst
             do id = 1, st%d%dim
-              call zmf_random(mesh, zpsi(:, id), normalized = normalized)
+              call zmf_random(mesh, zpsi(:, id), mesh%vp%xlocal-1, normalized = normalized)
             end do
             if(ist < ist_start .or. ist > ist_end &
              .or. .not. state_kpt_is_local(st, ist, ik)) cycle
             do idim = 1,st%d%dim
               if(filled(idim, ist, ik)) cycle
-              call states_set_state(st, mesh, ist,  ik, zpsi(mesh%vp%xlocal:(mesh%vp%xlocal+mesh%vp%np_local-1),:))
+              call states_set_state(st, mesh, ist,  ik, zpsi)
             end do
           end do
         end do

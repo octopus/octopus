@@ -264,32 +264,6 @@ FLOAT function X(mf_nrm2_2)(mesh, dim, ff, reduce) result(nrm2)
 end function X(mf_nrm2_2)
 
 ! ---------------------------------------------------------
-!> this function returns the the norm of a vector of length np_global
-FLOAT function X(mf_nrm2_global)(mesh, ff) result(nrm2)
-  type(mesh_t),      intent(in) :: mesh
-  R_TYPE,            intent(in) :: ff(:)
-
-  R_TYPE, allocatable :: ll(:)
-
-  PUSH_SUB(X(mf_nrm2_global))
-
-  if(mesh%use_curvilinear) then
-    SAFE_ALLOCATE(ll(1:mesh%np_global))
-    ll(1:mesh%np_global) = ff(1:mesh%np_global)*sqrt(mesh%vol_pp(1:mesh%np_global))
-    nrm2 = lalg_nrm2(mesh%np_global, ll)
-    SAFE_DEALLOCATE_A(ll)
-  else
-    nrm2 = lalg_nrm2(mesh%np_global, ff)
-  end if
-
-  nrm2 = nrm2*sqrt(mesh%volume_element)
-
-  POP_SUB(X(mf_nrm2_global))
-
-end function X(mf_nrm2_global)
-
-
-! ---------------------------------------------------------
 !> This function calculates the "order" moment of the function ff
 R_TYPE function X(mf_moment) (mesh, ff, idir, order) result(rr)
   type(mesh_t), intent(in) :: mesh
@@ -316,9 +290,10 @@ end function X(mf_moment)
 ! ---------------------------------------------------------
 !> This subroutine generates a Gaussian wavefunction at a
 !! random position in space.
-subroutine X(mf_random)(mesh, ff, seed, normalized)
+subroutine X(mf_random)(mesh, ff, shift, seed, normalized)
   type(mesh_t),      intent(in)  :: mesh
   R_TYPE,            intent(out) :: ff(:)
+  integer,           intent(in)  :: shift
   integer, optional, intent(in)  :: seed
   logical, optional, intent(in)  :: normalized !< whether generate states should have norm 1, true by default
   
@@ -335,11 +310,14 @@ subroutine X(mf_random)(mesh, ff, seed, normalized)
     iseed = iseed + seed
   end if
 
-  call quickrnd(iseed, mesh%np_global, ff(1:mesh%np_global))
-  
+  !We skip shift times the seed
+  call shiftseed(iseed, shift, ff(1)) 
+
+  call quickrnd(iseed, mesh%np, ff(1:mesh%np))
+ 
   if(optional_default(normalized, .true.)) then
-    rr = X(mf_nrm2_global)(mesh, ff)
-    call lalg_scal(mesh%np_global, R_TOTYPE(1.0)/rr, ff)
+    rr = X(mf_nrm2)(mesh, ff, reduce = .true.)
+    call lalg_scal(mesh%np, R_TOTYPE(1.0)/rr, ff)
   end if
 
   call profiling_out(prof)
