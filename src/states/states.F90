@@ -1548,14 +1548,13 @@ contains
 
   ! ---------------------------------------------------------
   !> generate a hydrogen s-wavefunction around a random point
-  subroutine states_generate_random(st, mesh, ist_start_, ist_end_, normalized)
+  subroutine states_generate_random(st, mesh, ist_start_, normalized)
     type(states_t),    intent(inout) :: st
     type(mesh_t),      intent(in)    :: mesh
     integer, optional, intent(in)    :: ist_start_
-    integer, optional, intent(in)    :: ist_end_
     logical, optional, intent(in)    :: normalized !< whether generate states should have norm 1, true by default
 
-    integer :: ist, ik, id, ist_start, ist_end, jst
+    integer :: ist, ik, id, ist_start, jst
     CMPLX   :: alpha, beta
     FLOAT, allocatable :: dpsi(:,  :)
     CMPLX, allocatable :: zpsi(:,  :), zpsi2(:)
@@ -1563,7 +1562,6 @@ contains
     PUSH_SUB(states_generate_random)
 
     ist_start = optional_default(ist_start_, 1)
-    ist_end   = optional_default(ist_end_,   st%nst)
 
     if (states_are_real(st)) then
       SAFE_ALLOCATE(dpsi(1:mesh%np, 1:st%d%dim))
@@ -1575,7 +1573,7 @@ contains
     case(UNPOLARIZED, SPIN_POLARIZED)
 
       do ik = 1, st%d%nik
-        do ist = 1, st%nst
+        do ist = ist_start, st%nst
           if (states_are_real(st)) then
             call dmf_random(mesh, dpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
             if(.not. state_kpt_is_local(st, ist, ik)) cycle
@@ -1600,7 +1598,7 @@ contains
       if(st%fixed_spins) then
 
         do ik = 1, st%d%nik
-          do ist = 1, st%nst
+          do ist = ist_start, st%nst
             call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
             if(.not. state_kpt_is_local(st, ist, ik)) cycle
             ! In this case, the spinors are made of a spatial part times a vector [alpha beta]^T in
@@ -1633,7 +1631,7 @@ contains
         end do
       else
         do ik = 1, st%d%nik
-          do ist = 1, st%nst
+          do ist = ist_start, st%nst
             do id = 1, st%d%dim
               call zmf_random(mesh, zpsi(:, id), mesh%vp%xlocal-1, normalized = normalized)
             end do 
@@ -1659,15 +1657,12 @@ contains
     logical, optional, intent(in)    :: normalized !< whether generate states should have norm 1, true by default
 
 
-    integer :: ist, ik, id, ist_start, ist_end, jst, idim
+    integer :: ist, ik, id, jst, idim
     CMPLX   :: alpha, beta
     FLOAT, allocatable :: dpsi(:,  :)
     CMPLX, allocatable :: zpsi(:,  :), zpsi2(:)
 
     PUSH_SUB(states_fill_random)
-
-    ist_start = st%st_start
-    ist_end   = st%st_end
 
     if (states_are_real(st)) then
       SAFE_ALLOCATE(dpsi(1:mesh%np, 1:st%d%dim))
@@ -1718,7 +1713,7 @@ contains
               ! are untouched later in the general orthonormalization, and therefore the spin values
               ! of each spinor remain the same.
               SAFE_ALLOCATE(zpsi2(1:mesh%np))
-              do jst = ist_start, ist - 1
+              do jst = st%st_start, ist - 1
                 call states_get_state(st, mesh, 1, jst, ik, zpsi2)
                 zpsi(1:mesh%np, 1) = zpsi(1:mesh%np, 1) - zmf_dotp(mesh, zpsi(1:mesh%np, 1), zpsi2)*zpsi2(1:mesh%np)
               end do
