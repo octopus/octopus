@@ -1677,8 +1677,8 @@ contains
         do ist = 1, st%nst
           if (states_are_real(st)) then
             call dmf_random(mesh, dpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
-            if(.not. state_kpt_is_local(st, ist, ik) .or. filled(1, ist, ik)) cycle
-            call states_set_state(st, mesh, ist, ik, dpsi)
+            if(state_kpt_is_local(st, ist, ik) .and..not. filled(1, ist, ik)) &
+              call states_set_state(st, mesh, ist, ik, dpsi)
           else
             call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
             if(state_kpt_is_local(st, ist, ik).and..not.filled(1, ist, ik)) &
