@@ -1677,21 +1677,27 @@ contains
         do ist = 1, st%nst
           if (states_are_real(st)) then
             call dmf_random(mesh, dpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
-            if(state_kpt_is_local(st, ist, ik) .and..not. filled(1, ist, ik)) &
+            if(.not. state_kpt_is_local(st, ist, ik)) cycle
+            if(.not. filled(1, ist, ik)) &
               call states_set_state(st, mesh, ist, ik, dpsi)
           else
             call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
-            if(state_kpt_is_local(st, ist, ik).and..not.filled(1, ist, ik)) &
-              call states_set_state(st, mesh, ist, ik, zpsi)
+            if(state_kpt_is_local(st, ist, ik)) then
+              if(.not.filled(1, ist, ik)) &
+                call states_set_state(st, mesh, ist, ik, zpsi)
+            endif
             if(st%have_left_states) then
               call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
-              if(state_kpt_is_local(st, ist, ik).and..not.filled(1, ist, ik)) &
+              if(state_kpt_is_local(st, ist, ik)) then
+                if(.not.filled(1, ist, ik)) &
                 call states_set_state(st, mesh, ist, ik, zpsi, left = .true.)
+              endif
             end if
           end if
         end do
       end do
     
+ 
      case(SPINORS)
 
       ASSERT(states_are_complex(st))
