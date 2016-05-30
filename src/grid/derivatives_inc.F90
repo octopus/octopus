@@ -194,7 +194,7 @@ subroutine X(derivatives_grad)(der, ff, op_ff, ghost_update, set_bc)
   logical, optional,   intent(in)    :: ghost_update
   logical, optional,   intent(in)    :: set_bc
 
-  integer :: idir
+  integer :: idir,ip
   logical :: set_bc_, ghost_update_
   
   PUSH_SUB(X(derivatives_grad))
@@ -211,6 +211,11 @@ subroutine X(derivatives_grad)(der, ff, op_ff, ghost_update, set_bc)
     set_bc_       = .false. ! there is no need to update again
     ghost_update_ = .false. ! the boundary or ghost points
   end do
+
+  if (simul_box_is_periodic(der%mesh%sb)) then
+    forall (ip = 1:der%mesh%np) & 
+      op_ff(ip, 1:der%dim) = matmul(der%mesh%sb%rlattice_primitive(1:der%dim, 1:der%dim), op_ff(ip, 1:der%dim))
+  end if
 
   call profiling_out(gradient_prof)
   POP_SUB(X(derivatives_grad))
