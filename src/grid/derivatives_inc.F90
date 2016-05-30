@@ -212,9 +212,10 @@ subroutine X(derivatives_grad)(der, ff, op_ff, ghost_update, set_bc)
     ghost_update_ = .false. ! the boundary or ghost points
   end do
 
-  if (simul_box_is_periodic(der%mesh%sb)) then
+  ! Grad_xyw = Bt Grad_uvw, see Chelikowsky after Eq. 10
+  if (simul_box_is_periodic(der%mesh%sb) .and. der%mesh%sb%nonorthogonal ) then
     forall (ip = 1:der%mesh%np) & 
-      op_ff(ip, 1:der%dim) = matmul(der%mesh%sb%rlattice_primitive(1:der%dim, 1:der%dim), op_ff(ip, 1:der%dim))
+      op_ff(ip, 1:der%dim) = matmul(op_ff(ip, 1:der%dim),der%mesh%sb%klattice_primitive(1:der%dim, 1:der%dim))
   end if
 
   call profiling_out(gradient_prof)
