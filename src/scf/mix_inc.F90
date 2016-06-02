@@ -226,7 +226,7 @@ subroutine X(mixing_diis)(this, vin, vout, vnew, iter)
   call lalg_copy(this%d1, this%d2, this%d3, vin, this%X(dv)(:, :, :, size))
   this%X(df)(1:this%d1, 1:this%d2, 1:this%d3, size) = vout(1:this%d1, 1:this%d2, 1:this%d3) - vin(1:this%d1, 1:this%d2, 1:this%d3)
 
-  if(iter == 1) then
+  if(iter == 1 .or. mod(iter, this%interval) /= 0) then
 
     vnew(1:this%d1, 1:this%d2, 1:this%d3) = (CNST(1.0) - this%alpha)*vin(1:this%d1, 1:this%d2, 1:this%d3) &
       + this%alpha*vout(1:this%d1, 1:this%d2, 1:this%d3)

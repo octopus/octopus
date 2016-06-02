@@ -70,6 +70,8 @@ module mix_oct_m
 
     integer :: last_ipos        !< where is the information about the last iteration stored in arrays df and dv
 
+    integer :: interval
+
     FLOAT, pointer :: ddf(:, :, :, :)
     FLOAT, pointer :: ddv(:, :, :, :)
     FLOAT, pointer :: df_old(:, :, :)
@@ -184,7 +186,20 @@ contains
     else
       smix%ns = 0
     end if
-
+    
+    !%Variable MixInterval
+    !%Type integer
+    !%Default 1
+    !%Section SCF::Mixing
+    !%Description
+    !% When this variable is set to a value different than 1 (the
+    !% defaul) a combined mixing scheme will be used, with MixInterval
+    !% - 1 steps of linear mixing followed by 1 step of the selected
+    !% mixing. For the moment this variable only works with DIIS mixing.
+    !%End
+    call parse_variable(trim(prefix)//'MixInterval', 1, smix%interval)
+    if(smix%interval < 1) call messages_input_error('MixInterval', 'MixInterval must be larger or equal than 1')
+    
     smix%iter = 0
 
     nullify(smix%ddf)
