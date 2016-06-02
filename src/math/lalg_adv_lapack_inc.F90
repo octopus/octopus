@@ -1138,6 +1138,56 @@ subroutine X(invert_upper_triangular)(n, a)
   POP_SUB(X(invert_upper_triangular))
 end subroutine X(invert_upper_triangular)
 
+
+
+
+subroutine X(lalg_least_squares_vec)(nn, aa, bb, xx)
+  integer, intent(in)    :: nn
+  R_TYPE,  intent(inout) :: aa(:, :)
+  R_TYPE,  intent(in)    :: bb(:)
+  R_TYPE,  intent(out)   :: xx(:)
+
+  R_TYPE :: dlwork
+  R_TYPE, allocatable :: ss(:), work(:)
+  integer :: rank, info
+  
+  interface
+    subroutine dgelss(m, n, nrhs, a, lda, b, ldb, s, rcond, rank, work, lwork, info)
+      integer, intent(in)    :: m
+      integer, intent(in)    :: n
+      integer, intent(in)    :: nrhs
+      FLOAT,   intent(inout) :: a
+      integer, intent(in)    :: lda
+      FLOAT,   intent(inout) :: b
+      integer, intent(in)    :: ldb
+      FLOAT,   intent(out)   :: s
+      FLOAT,   intent(in)    :: rcond
+      integer, intent(out)   :: rank 
+      FLOAT,   intent(out)   :: work
+      integer, intent(in)    :: lwork
+      integer, intent(out)   :: info 
+    end subroutine dgelss
+  end interface
+
+  xx(1:nn) = bb(1:nn)
+
+  SAFE_ALLOCATE(ss(1:nn))
+
+#ifdef R_TREAL
+  
+  call dgelss(m = nn, n = nn, nrhs = 1, a = aa(1, 1), lda = nn, b = xx(1), ldb = nn, &
+    s = ss(1), rcond = CNST(-1.0), rank = rank, work = dlwork, lwork = -1, info = info)
+
+  SAFE_ALLOCATE(work(1:int(dlwork)))
+
+  call dgelss(m = nn, n = nn, nrhs = 1, a = aa(1, 1), lda = nn, b = xx(1), ldb = nn, &
+    s = ss(1), rcond = CNST(-1.0), rank = rank, work = work(1), lwork = int(dlwork), info = info)
+#else
+
+#endif
+
+end subroutine X(lalg_least_squares_vec)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

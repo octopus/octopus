@@ -54,7 +54,8 @@ module lalg_adv_oct_m
     lalg_check_zeigenderivatives, &
     lalg_zdni,                    &
     lalg_zduialpha,               &
-    lalg_zd2ni
+    lalg_zd2ni,                   &
+    lalg_least_squares
 
   type(profile_t), save :: cholesky_prof, eigensolver_prof
 
@@ -115,6 +116,10 @@ module lalg_adv_oct_m
   interface lapack_geev
     module procedure lalg_dgeev, lalg_zgeev
   end interface lapack_geev
+
+  interface lalg_least_squares
+    module procedure dlalg_least_squares_vec, zlalg_least_squares_vec
+  end interface lalg_least_squares
 
 contains
 
