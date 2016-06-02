@@ -1547,7 +1547,7 @@ contains
   end subroutine states_end
 
   ! ---------------------------------------------------------
-  !> generate a hydrogen s-wavefunction around a random point
+  !> fill all the states with random functions
   subroutine states_generate_random(st, mesh, ist_start_, normalized)
     type(states_t),    intent(inout) :: st
     type(mesh_t),      intent(in)    :: mesh
@@ -1572,20 +1572,17 @@ contains
     select case(st%d%ispin)
     case(UNPOLARIZED, SPIN_POLARIZED)
 
-      do ik = 1, st%d%nik
-        do ist = ist_start, st%nst
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do ist = st%st_start, st%st_end
           if (states_are_real(st)) then
-            call dmf_random(mesh, dpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
-            if(.not. state_kpt_is_local(st, ist, ik)) cycle
+            call dmf_random(mesh, dpsi(:, 1), mesh%vp%xlocal - 1, normalized = normalized)
             call states_set_state(st, mesh, ist, ik, dpsi)
           else
             call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
-            if(state_kpt_is_local(st, ist, ik))  &
-              call states_set_state(st, mesh, ist, ik, zpsi)
+            call states_set_state(st, mesh, ist, ik, zpsi)
             if(st%have_left_states) then
               call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
-              if(state_kpt_is_local(st, ist, ik))  &
-                call states_set_state(st, mesh, ist, ik, zpsi, left = .true.)
+              call states_set_state(st, mesh, ist, ik, zpsi, left = .true.)
             end if
           end if
         end do
@@ -1597,10 +1594,9 @@ contains
 
       if(st%fixed_spins) then
 
-        do ik = 1, st%d%nik
-          do ist = ist_start, st%nst
+        do ik = st%d%kpt%start, st%d%kpt%end
+          do ist = st%st_start, st%st_end
             call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
-            if(.not. state_kpt_is_local(st, ist, ik)) cycle
             ! In this case, the spinors are made of a spatial part times a vector [alpha beta]^T in
             ! spin space (i.e., same spatial part for each spin component). So (alpha, beta)
             ! determines the spin values. The values of (alpha, beta) can be be obtained
@@ -1630,12 +1626,11 @@ contains
           end do
         end do
       else
-        do ik = 1, st%d%nik
-          do ist = ist_start, st%nst
+        do ik = st%d%kpt%start, st%d%kpt%end
+          do ist = st%st_start, st%st_end
             do id = 1, st%d%dim
               call zmf_random(mesh, zpsi(:, id), mesh%vp%xlocal-1, normalized = normalized)
             end do 
-            if(.not. state_kpt_is_local(st, ist, ik)) cycle
             call states_set_state(st, mesh, ist,  ik, zpsi)
           end do
         end do
