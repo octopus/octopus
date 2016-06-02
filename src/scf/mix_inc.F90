@@ -203,8 +203,8 @@ subroutine X(mixing_diis)(this, vin, vout, vnew, iter)
   integer,     intent(in)    :: iter
 
   integer :: size, ii, jj, kk, ll
-  FLOAT :: sumaa
-  R_TYPE, allocatable :: aa(:, :), alpha(:)
+  FLOAT :: sumalpha
+  R_TYPE, allocatable :: aa(:, :), alpha(:), rhs(:)
 
   PUSH_SUB(X(mixing_diis))
 
@@ -236,8 +236,9 @@ subroutine X(mixing_diis)(this, vin, vout, vnew, iter)
   end if
  
 
-  SAFE_ALLOCATE(aa(1:size, 1:size))
-  SAFE_ALLOCATE(alpha(1:size))
+  SAFE_ALLOCATE(aa(1:size + 1, 1:size + 1))
+  SAFE_ALLOCATE(alpha(1:size + 1))
+  SAFE_ALLOCATE(rhs(1:size + 1))
 
   do ii = 1, size
     do jj = 1, size
@@ -252,31 +253,25 @@ subroutine X(mixing_diis)(this, vin, vout, vnew, iter)
     end do
   end do
 
-  sumaa = lalg_inverter(size, aa)
-
-  if(abs(sumaa) > CNST(1e-8)) then
-    
-    sumaa = sum(aa(1:size, 1:size))
-    
-    do ii = 1, size
-      alpha(ii) = sum(aa(1:size, ii))/sumaa
-    end do
-
-  else
-
-    alpha(1:size - 1) = CNST(0.0)
-    alpha(size) = CNST(1.0)
-    
-  end if
-
-
-  vnew(1:this%d1, 1:this%d2, 1:this%d3) = CNST(0.0)
-
-  do ii = 1, size
-    vnew(1:this%d1, 1:this%d2, 1:this%d3) = &
-      vnew(1:this%d1, 1:this%d2, 1:this%d3) + alpha(ii)*this%X(dv)(1:this%d1, 1:this%d2, 1:this%d3, ii)
-  end do
+  aa(1:size, size + 1) = CNST(-1.0)
+  aa(size + 1, 1:size) = CNST(-1.0)
+  aa(size + 1, size + 1) = CNST(0.0)
   
+  rhs(1:size) = CNST(0.0)
+  rhs(size + 1) = CNST(-1.0)
+
+  call lalg_least_squares(size + 1, aa, rhs, alpha)
+
+  sumalpha = sum(alpha(1:size))
+  alpha = alpha/sumalpha
+  
+  vnew(1:this%d1, 1:this%d2, 1:this%d3) = CNST(0.0)
+  
+  do ii = 1, size
+    vnew(1:this%d1, 1:this%d2, 1:this%d3) = vnew(1:this%d1, 1:this%d2, 1:this%d3) &
+      + alpha(ii)*(this%X(dv)(1:this%d1, 1:this%d2, 1:this%d3, ii) + this%alpha*this%X(df)(1:this%d1, 1:this%d2, 1:this%d3, ii))
+  end do
+
   POP_SUB(X(mixing_diis))
 end subroutine X(mixing_diis)
 
