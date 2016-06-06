@@ -563,6 +563,9 @@ contains
     call parse_variable('SymmetrizeDensity', .false., st%symmetrize_density)
     call messages_print_var_value(stdout, 'SymmetrizeDensity', st%symmetrize_density)
 
+    if(gr%sb%kpoints%use_symmetries) &
+      st%symmetrize_density = .true.  
+
     ! Why? Resulting discrepancies can be suspiciously large even at SCF convergence;
     ! the case of partially periodic systems has not been fully considered.
     if(st%symmetrize_density) call messages_experimental('SymmetrizeDensity')
