@@ -34,8 +34,7 @@ module ps_oct_m
   use ps_qso_oct_m
   use ps_in_grid_oct_m
 #ifdef HAVE_PSPIO
-  use pspio_f90_lib_oct_m
-  use pspio_f90_types_oct_m
+  use fpspio_m
 #endif
   use ps_psf_oct_m
   use ps_upf_oct_m
@@ -119,7 +118,8 @@ module ps_oct_m
     type(spline_t) :: nlr         !< the charge density associated with the long-range part
 
     FLOAT :: sigma_erf            !< the a constant in erf(r/(sqrt(2)*sigma))/r
-    
+
+    logical :: has_density                     !< does the species have a density?
     type(spline_t), pointer :: density(:)      !< the atomic density for each spin
     type(spline_t), pointer :: density_der(:)  !< the radial derivative for the atomic density for each spin
     
@@ -181,7 +181,13 @@ contains
     ps%label   = label
     ps%ispin   = ispin
     ps%hamann  = .false.
-
+    select case(ps%flavour)
+    case(PS_TYPE_PSF, PS_TYPE_HGH, PS_TYPE_UPF)
+      ps%has_density = .true.
+    case default
+      ps%has_density = .false.
+    end select
+    
     if(.not. (ps%flavour >= PS_TYPE_PSF .and. ps%flavour <= PS_TYPE_QSO)) then
       call messages_write("Cannot determine the pseudopotential type for species '"//trim(label)//"' from", new_line = .true.)
       call messages_write("file '"//trim(filename)//"'.")
@@ -322,7 +328,7 @@ contains
     call messages_info(1)
 
     ps%local = ps%l_max == 0 .and. ps%l_loc == 0 
-
+    
     ! We allocate all the stuff
     SAFE_ALLOCATE(ps%kb   (0:ps%l_max, 1:ps%kbc))
     SAFE_ALLOCATE(ps%dkb  (0:ps%l_max, 1:ps%kbc))
@@ -630,6 +636,18 @@ contains
     call spline_print(ps%ur, iunit)
     call io_close(iunit)
 
+    ! Density
+    if (ps%has_density) then
+      iunit = io_open(trim(dir)//'/density', action='write')
+      call spline_print(ps%density, iunit)
+      call io_close(iunit)
+
+      iunit = io_open(trim(dir)//'/density_derivative', action='write')
+      call spline_print(ps%density_der, iunit)
+      call io_close(iunit)
+    end if
+
+    ! Non-linear core-corrections
     if(ps%nlcc) then
       iunit = io_open(trim(dir)//'/nlcc', action='write')
       call spline_print(ps%core, iunit)
@@ -1209,12 +1227,7 @@ contains
   pure logical function ps_has_density(ps) result(has_density)
     type(ps_t), intent(in) :: ps
 
-    select case(ps%flavour)
-    case(PS_TYPE_PSF, PS_TYPE_HGH, PS_TYPE_UPF)
-      has_density = .true.
-    case(PS_TYPE_CPI, PS_TYPE_FHI, PS_TYPE_QSO)
-      has_density = .false.
-    end select
+    has_density = ps%has_density
 
   end function ps_has_density
 

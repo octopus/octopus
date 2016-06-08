@@ -18,8 +18,9 @@
 !! $Id$
 
   ! ---------------------------------------------------------
-  subroutine ps_pspio_init(ps, z, lmax, lloc, ispin, filename)
+  subroutine ps_pspio_init(ps, label, z, lmax, lloc, ispin, filename)
     type(ps_t),        intent(out)   :: ps
+    character(len=10), intent(in)    :: label
     integer,           intent(inout) :: lmax
     integer,           intent(in)    :: lloc, ispin
     FLOAT,             intent(in)    :: z
@@ -31,7 +32,7 @@
     integer :: idir
     character(len=3) :: psp_dir(3) = (/"PSF", "FHI", "UPF"/)
     character(len=MAX_PATH_LEN) :: filename2
-    type(pspio_f90_pspdata_t)   :: pspdata
+    type(fpspio_pspdata_t)   :: pspdata
 
     PUSH_SUB(ps_pspio_init)
 
@@ -60,11 +61,14 @@
     call messages_info(2)
 
     ! Init pspio data structure and parse file
-    call check_error(pspio_f90_pspdata_init(pspdata))
-    call check_error(pspio_f90_pspdata_read(pspdata, PSPIO_UNKNOWN, filename2))
+    call check_error(fpspio_pspdata_alloc(pspdata))
+    call check_error(fpspio_pspdata_read(pspdata, PSPIO_FMT_UNKNOWN, filename2))
 
     ! General info
+    ps%flavour = ps_get_type(filename)
+    ps%label = label
     ps%ispin = ispin
+    ps%hamann = .false.
     ps%z = z
     ps%conf%z = nint(z)
     call ps_pspio_read_info(ps, pspdata)
@@ -84,6 +88,9 @@
     ! States
     call ps_pspio_read_states(ps, pspdata)
 
+    ! Density
+    call ps_pspio_read_density(ps, pspdata)
+
     ! If we do not have KB projectors, then we read the pseudopotentials
     if (.not. has_kb) then
       call ps_pspio_read_potentials(ps, pspdata)
@@ -95,8 +102,10 @@
     ps%has_long_range = .true.
     ps%is_separated = .false.
 
+    ps%local = ps%l_max == 0 .and. ps%l_loc == 0
+    
     !Free memory
-    call pspio_f90_pspdata_free(pspdata)
+    call fpspio_pspdata_free(pspdata)
 
 #else
     message(1) = 'PSPIO selected for pseudopotential parsing, but the code was compiled witout PSPIO support.'
@@ -111,34 +120,33 @@
 
   ! ---------------------------------------------------------
   subroutine ps_pspio_read_info(ps, pspdata)
-    type(ps_t),                intent(inout) :: ps
-    type(pspio_f90_pspdata_t), intent(in)    :: pspdata
+    type(ps_t),             intent(inout) :: ps
+    type(fpspio_pspdata_t), intent(in)    :: pspdata
 
     PUSH_SUB(ps_pspio_read_info)
 
-    call pspio_f90_pspdata_get_symbol(pspdata, ps%conf%symbol)
-    call pspio_f90_pspdata_get_l_max(pspdata, ps%l_max)
-    call pspio_f90_pspdata_get_zvalence(pspdata, ps%z_val)
+    ps%conf%symbol = fpspio_pspdata_get_symbol(pspdata)
+    ps%l_max = fpspio_pspdata_get_l_max(pspdata)
+    ps%z_val = fpspio_pspdata_get_zvalence(pspdata)
 
     POP_SUB(ps_pspio_read_info)
   end subroutine ps_pspio_read_info
 
   ! ---------------------------------------------------------
   subroutine ps_pspio_read_mesh(ps, pspdata)
-    type(ps_t),                intent(inout) :: ps
-    type(pspio_f90_pspdata_t), intent(in)    :: pspdata
+    type(ps_t),             intent(inout) :: ps
+    type(fpspio_pspdata_t), intent(in)    :: pspdata
 
     integer :: ip
-    type(pspio_f90_mesh_t) :: mesh
-    FLOAT, allocatable :: r_tmp(:)
+    type(fpspio_mesh_t) :: mesh
+    FLOAT, pointer :: r_tmp(:)
 
     PUSH_SUB(ps_pspio_read_mesh)
 
-    call pspio_f90_pspdata_get_mesh(pspdata, mesh)
-    call pspio_f90_mesh_get_np(mesh, ps%g%nrval)
+    mesh = fpspio_pspdata_get_mesh(pspdata)
+    ps%g%nrval = fpspio_mesh_get_np(mesh)
 
-    SAFE_ALLOCATE(r_tmp(1:ps%g%nrval))
-    call pspio_f90_mesh_get_r(mesh, r_tmp(1))
+    r_tmp => fpspio_mesh_get_r(mesh)
     if(any(abs(r_tmp(2:ps%g%nrval)) < M_EPSILON)) then
       ! only the first point is allowed to be zero
       message(1) = "Illegal zero values in PSPIO radial grid"
@@ -157,45 +165,47 @@
     ps%g%rofi(1) = M_ZERO
     ps%g%rofi(ip:ps%g%nrval) = r_tmp(1:ps%g%nrval-ip+1)
     ps%g%r2ofi = ps%g%rofi**2
-    SAFE_DEALLOCATE_A(r_tmp)
 
     POP_SUB(ps_pspio_read_mesh)
   end subroutine ps_pspio_read_mesh
 
   ! ---------------------------------------------------------
   subroutine ps_pspio_read_states(ps, pspdata)
-    type(ps_t),                intent(inout) :: ps
-    type(pspio_f90_pspdata_t), intent(in)    :: pspdata
+    type(ps_t),             intent(inout) :: ps
+    type(fpspio_pspdata_t), intent(in)    :: pspdata
 
-    integer :: is, ist, l
-    FLOAT :: x, j
-    type(pspio_f90_state_t) :: state
+    integer :: is, ist, ir
+    FLOAT :: x
+    type(fpspio_state_t) :: state
     FLOAT, allocatable :: wfs(:)
 
     PUSH_SUB(ps_pspio_read_states)
 
-    call pspio_f90_pspdata_get_n_states(pspdata, ps%conf%p)
+    ps%conf%p = fpspio_pspdata_get_n_states(pspdata)
     SAFE_ALLOCATE(ps%ur   (1:ps%conf%p, 1:ps%ispin))
     SAFE_ALLOCATE(ps%ur_sq(1:ps%conf%p, 1:ps%ispin))
     do ist = 1, ps%conf%p
-      call pspio_f90_pspdata_get_state(pspdata, ist, state)
+      state = fpspio_pspdata_get_state(pspdata, ist)
 
       !Quantum numbers
-      call pspio_f90_state_get_qn(state, ps%conf%n(ist), ps%conf%l(ist), j)
+      ps%conf%n(ist) = fpspio_qn_get_n(fpspio_state_get_qn(state))
+      ps%conf%l(ist) = fpspio_qn_get_l(fpspio_state_get_qn(state))
 
       !Occupations
-      call pspio_f90_state_get_occ(state, ps%conf%occ(ist, 1))
+      ps%conf%occ(ist, 1) = fpspio_state_get_occ(state)
       if(ps%ispin == 2) then
         ! Spin-dependent pseudopotentials are not supported, so we need to fix the occupations
         ! if we want to have a spin-dependent atomic density.      
-        x = ps%conf%occ(l, 1)
+        x = ps%conf%occ(ps%conf%l(ist), 1)
         ps%conf%occ(ist, 1) = min(x, real(2*ps%conf%l(ist)+1, REAL_PRECISION))
-        ps%conf%occ(ist, 2) = x - ps%conf%occ(l, 1)
+        ps%conf%occ(ist, 2) = x - ps%conf%occ(ps%conf%l(ist), 1)
       end if
 
       !Wavefunctions
       SAFE_ALLOCATE(wfs(1:ps%g%nrval))
-      call pspio_f90_state_wf_eval(state, ps%g%nrval, ps%g%rofi, wfs)
+      do ir = 1, ps%g%nrval
+        wfs(ir) = fpspio_state_wf_eval(state, ps%g%rofi(ir))
+      end do
       do is = 1, ps%ispin
         call spline_fit(ps%g%nrval, ps%g%rofi, wfs, ps%ur(ist, is))
       end do
@@ -209,22 +219,60 @@
   end subroutine ps_pspio_read_states
 
   ! ---------------------------------------------------------
+  subroutine ps_pspio_read_density(ps, pspdata)
+    type(ps_t),             intent(inout) :: ps
+    type(fpspio_pspdata_t), intent(in)    :: pspdata
+
+    integer :: ir, is
+    type(fpspio_meshfunc_t) :: density
+    FLOAT, allocatable :: dens(:)
+    
+    PUSH_SUB(ps_pspio_read_density)
+
+    density = fpspio_pspdata_get_rho_valence(pspdata)
+    ps%has_density = fpspio_associated(density)
+
+    SAFE_ALLOCATE(ps%density(1:ps%ispin))
+    SAFE_ALLOCATE(ps%density_der(1:ps%ispin))
+
+    call spline_init(ps%density)
+    call spline_init(ps%density_der)
+    
+    if (ps%has_density) then
+      SAFE_ALLOCATE(dens(1:ps%g%nrval))
+
+      do ir = 1, ps%g%nrval
+        dens(ir) = fpspio_meshfunc_eval(density, ps%g%rofi(ir))
+      end do
+      
+      do is = 1, ps%ispin
+        call spline_fit(ps%g%nrval, ps%g%rofi, dens, ps%density(is))
+        call spline_der(ps%density(is), ps%density_der(is))
+      end do
+
+      SAFE_DEALLOCATE_A(dens)
+    end if
+    
+    POP_SUB(ps_pspio_read_density)
+  end subroutine ps_pspio_read_density
+
+  ! ---------------------------------------------------------
   subroutine ps_pspio_read_kb_projectors(ps, pspdata, has_kb)
-    type(ps_t),                intent(inout) :: ps
-    type(pspio_f90_pspdata_t), intent(in)    :: pspdata
-    logical,                   intent(out)   :: has_kb
+    type(ps_t),             intent(inout) :: ps
+    type(fpspio_pspdata_t), intent(in)    :: pspdata
+    logical,                intent(out)   :: has_kb
 
     integer :: ir, n_kbproj, wave_eq, ikb, ikbc, l
     FLOAT :: j
     FLOAT, parameter :: threshold = CNST(0.5e-7)
-    type(pspio_f90_potential_t) :: vlocal
-    type(pspio_f90_projector_t) :: kb_projector
+    type(fpspio_potential_t) :: vlocal
+    type(fpspio_projector_t) :: kb_projector
     logical, allocatable :: was_init(:,:)
     FLOAT, allocatable :: v_local(:), proj(:)
 
     PUSH_SUB(ps_pspio_read_kb_projectors)
 
-    call pspio_f90_pspdata_get_n_kbproj(pspdata, n_kbproj)
+    n_kbproj = fpspio_pspdata_get_n_projectors(pspdata)
 
     has_kb = .true.
     if (n_kbproj == 0) then
@@ -234,10 +282,12 @@
     end if
 
     ! Local potential
-    call pspio_f90_pspdata_get_l_local(pspdata, ps%l_loc)
-    call pspio_f90_pspdata_get_vlocal(pspdata, vlocal)
+    ps%l_loc = fpspio_pspdata_get_l_local(pspdata)
+    vlocal = fpspio_pspdata_get_vlocal(pspdata)
     SAFE_ALLOCATE(v_local(1:ps%g%nrval))
-    call pspio_f90_potential_eval(vlocal, ps%g%nrval, ps%g%rofi, v_local)
+    do ir = 1, ps%g%nrval
+      v_local(ir) = fpspio_potential_eval(vlocal, ps%g%rofi(ir))
+    end do
     do ir = ps%g%nrval-1, 2, -1
       if(abs(v_local(ir)*ps%g%rofi(ir) + ps%z_val) > threshold) exit
     end do
@@ -247,8 +297,8 @@
     SAFE_DEALLOCATE_A(v_local)
 
     ! KB projectors 
-    call pspio_f90_pspdata_get_wave_eq(pspdata, wave_eq)
-    if (wave_eq == PSPIO_DIRAC) then
+    wave_eq = fpspio_pspdata_get_wave_eq(pspdata)
+    if (wave_eq == PSPIO_EQN_DIRAC) then
       ps%kbc = 2
     else
       ps%kbc = 1
@@ -257,26 +307,27 @@
     SAFE_ALLOCATE(ps%kb (0:ps%l_max, 1:ps%kbc))
     SAFE_ALLOCATE(ps%dkb(0:ps%l_max, 1:ps%kbc))
     SAFE_ALLOCATE(ps%h  (0:ps%l_max, 1:ps%kbc, 1:ps%kbc))
-    SAFE_ALLOCATE(ps%k  (0:ps%l_max, 1:ps%kbc, 1:ps%kbc))
     SAFE_ALLOCATE(was_init(0:ps%l_max, 1:ps%kbc))
     SAFE_ALLOCATE(proj(1:ps%g%nrval))
     call spline_init(ps%kb)
     call spline_init(ps%dkb)
+    nullify(ps%k)
 
     was_init = .false.
     ps%h = M_ZERO
-    ps%k = M_ZERO
     do ikb = 1, n_kbproj
-      call pspio_f90_pspdata_get_kb_projector(pspdata, ikb, kb_projector)
+      kb_projector = fpspio_pspdata_get_projector(pspdata, ikb)
 
-      call pspio_f90_projector_get_l(kb_projector, l)
-      call pspio_f90_projector_get_j(kb_projector, j)
+      l = fpspio_qn_get_l(fpspio_projector_get_qn(kb_projector))
+      j = fpspio_qn_get_j(fpspio_projector_get_qn(kb_projector))
       ikbc = 1
       if (j == real(l, REAL_PRECISION) - M_HALF) ikbc = 2
 
-      call pspio_f90_projector_get_energy(kb_projector, ps%h(l, ikbc, ikbc))
+      ps%h(l, ikbc, ikbc) = fpspio_projector_get_energy(kb_projector)
 
-      call pspio_f90_projector_eval(kb_projector, ps%g%nrval, ps%g%rofi, proj)
+      do ir = 1, ps%g%nrval
+        proj(ir) = fpspio_projector_eval(kb_projector, ps%g%rofi(ir))
+      end do
       do ir = ps%g%nrval-1, 2, -1
         if(abs(proj(ir)) > threshold) exit
       end do
@@ -307,8 +358,8 @@
 
   ! ---------------------------------------------------------
   subroutine ps_pspio_read_potentials(ps, pspdata)
-    type(ps_t),                intent(inout) :: ps
-    type(pspio_f90_pspdata_t), intent(in)    :: pspdata
+    type(ps_t),             intent(inout) :: ps
+    type(fpspio_pspdata_t), intent(in)    :: pspdata
 
     PUSH_SUB(ps_pspio_read_potentials)
 
@@ -320,30 +371,30 @@
 
   ! ---------------------------------------------------------
   subroutine ps_pspio_read_xc(ps, pspdata)
-    type(ps_t),                intent(inout) :: ps
-    type(pspio_f90_pspdata_t), intent(in)    :: pspdata
+    type(ps_t),             intent(inout) :: ps
+    type(fpspio_pspdata_t), intent(in)    :: pspdata
 
-    logical :: has_nlcc
     integer :: ir, nrc
     FLOAT, parameter :: threshold = CNST(0.5e-7)
-    type(pspio_f90_xc_t) :: xc
+    type(fpspio_xc_t) :: xc
     FLOAT, allocatable :: rho(:)
 
     PUSH_SUB(ps_pspio_read_xc)
 
     !Non-linear core-corrections
-    call pspio_f90_pspdata_get_xc(pspdata, xc)
+    xc = fpspio_pspdata_get_xc(pspdata)
 
     call spline_init(ps%core)
-    call pspio_f90_xc_has_nlcc(xc, has_nlcc)
-    if (has_nlcc) then
-      ps%icore=''
-
+    ps%nlcc = fpspio_xc_get_nlcc_scheme(xc) /= PSPIO_NLCC_NONE
+    if (ps%nlcc) then
       ! get core density
       SAFE_ALLOCATE(rho(1:ps%g%nrval))
-      call pspio_f90_xc_nlcc_eval(xc, ps%g%nrval, ps%g%rofi, rho)
-
+      do ir = 1, ps%g%nrval
+        rho(ir) = fpspio_xc_nlcc_density_eval(xc, ps%g%rofi(ir))
+      end do
+      
       ! find cutoff radius
+      nrc = ps%g%nrval
       do ir = ps%g%nrval-1, 1, -1
         if(rho(ir) > eps) then
           nrc = ir + 1
@@ -355,8 +406,6 @@
       call spline_fit(ps%g%nrval, ps%g%rofi, rho, ps%core)
 
       SAFE_DEALLOCATE_A(rho)
-    else
-      ps%icore = 'nc'
     end if
 
     POP_SUB(ps_pspio_read_xc)
@@ -366,10 +415,8 @@
   subroutine check_error(ierr)
     integer, intent(in) :: ierr
 
-    integer :: ierr2
-
     if (ierr /= PSPIO_SUCCESS) then
-      ierr2 = pspio_f90_error_flush()
+      call fpspio_error_flush()
       message(1) = "PSPIO error"
       call messages_fatal(1)
     end if
