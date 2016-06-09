@@ -55,13 +55,32 @@ OCTEps = 0.000001
 OCTMaxIter = 1
 
 OCTInitialState = oct_is_gstransformation
+OCTTargetOperator = oct_tg_gstransformation
+
+# The sign of the states is machine-dependent, and even dependent on the number of processors used.
+# Therefore, the linear combinations of states are also machine dependent. Due to this fact, we
+# cannot use linear combinations in the testsuite runs. In principle, the idea of this test is
+# to start from one state localized on one of the wells, and transfer it to the other one. For such
+# a task, one should use a combination such as:
+#
+#%OCTInitialTransformStates
+#1/sqrt(2) |  1/sqrt(2)
+#%
+# but it many happen that actually one needs a minus sign. The target operator would be:
+#
+#%OCTTargetTransformStates
+#1/sqrt(2) | -1/sqrt(2)
+#%
+#
+# with, in any case, the opposite sign. For the test, we will however use a transfer from the ground
+# state to the excited state:
+
 %OCTInitialTransformStates
-1/sqrt(2) |  1/sqrt(2)
+1.0 | 0.0
 %
 
-OCTTargetOperator = oct_tg_gstransformation
 %OCTTargetTransformStates
-1/sqrt(2) | -1/sqrt(2)
+0.0 | 1.0
 %
 
 OCTScheme  = oct_zbr98

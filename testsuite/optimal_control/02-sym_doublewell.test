@@ -9,7 +9,10 @@ Enabled    : Yes
 # The test ensures the optimal control algorithm ZBR98. 
 # It calculates the optimal laser field that transfers one particle
 # localized in one particle well to other.
-# 
+#
+# [In fact, this test has been modified to transfer the system from
+# the ground to the excited state, due to the reason explained in
+# file 02-sym_doublewell.03-oct.inp]
 
 
 # Ground state and unoccupied states
@@ -22,4 +25,4 @@ match ; 2nd state    ; GREPFIELD(static/eigenvalues, '2   --', 3) ; -0.525874
 
 # Then, run the optimization.
 Input: 02-sym_doublewell.03-oct.inp
-match ; J1 1st iteration  ; GREPFIELD(opt-control/convergence, ' 1  ', 3) ; 0.80332180
+match ; J1 1st iteration  ; GREPFIELD(opt-control/convergence, ' 1  ', 3) ; 0.92704415
