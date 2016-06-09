@@ -1009,14 +1009,11 @@ contains
 
     end do
 
-    SAFE_ALLOCATE(dens(1:ps%g%nrval))
-
     if(ps%conf%p > 0) then
       
       ! Define the table for the pseudo-wavefunction components (using splines)
       ! with a correct normalization function
       do is = 1, ps%ispin
-        dens = CNST(0.0)
         do l = 1, ps%conf%p
           ! do not divide by zero
           if(ps%g%rofi(1) > M_EPSILON) then
@@ -1026,28 +1023,27 @@ contains
           end if
           ! rofi /= 0 except rofi(1) possibly
           hato(2:ps%g%nrval) = ps_upf%wfs(2:ps%g%nrval, l)/ps%g%rofi(2:ps%g%nrval)
+          hato(1) = linear_extrapolate(ps%g%rofi(1), ps%g%rofi(2), ps%g%rofi(3), hato(2), hato(3)) !take care of the point at zero
           
-          forall(ip = 1:ps%g%nrval) dens(ip) = dens(ip) + ps%conf%occ(l, is)*hato(ip)**2/(M_FOUR*M_PI)
-        
           call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%ur(l, is))
           call spline_fit(ps%g%nrval, ps%g%r2ofi, hato, ps%ur_sq(l, is))
         end do
-        call spline_fit(ps%g%nrval, ps%g%rofi, dens, ps%density(is))
-      end do
-
-    else
-
-      ! no orbitals, but we should have the atomic density
-      dens(2:ps%g%nrval) = ps_upf%rho(2:ps%g%nrval)/ps%g%rofi(2:ps%g%nrval)/ps%ispin
-      dens(1) = linear_extrapolate(ps%g%rofi(1), ps%g%rofi(2), ps%g%rofi(3), dens(2), dens(3)) !take care of the point at zero
-      
-      do is = 1, ps%ispin
-        call spline_fit(ps%g%nrval, ps%g%rofi, dens, ps%density(is))
       end do
 
     end if
-    
+
     SAFE_DEALLOCATE_A(hato)
+
+    
+    SAFE_ALLOCATE(dens(1:ps%g%nrval))
+    
+    dens(2:ps%g%nrval) = ps_upf%rho(2:ps%g%nrval)/ps%g%r2ofi(2:ps%g%nrval)/ps%ispin/CNST(4.0)/M_PI
+    dens(1) = linear_extrapolate(ps%g%rofi(1), ps%g%rofi(2), ps%g%rofi(3), dens(2), dens(3)) !take care of the point at zero
+      
+    do is = 1, ps%ispin
+      call spline_fit(ps%g%nrval, ps%g%rofi, dens, ps%density(is))
+    end do
+
     SAFE_DEALLOCATE_A(dens)
 
     POP_SUB(ps_upf_load)
