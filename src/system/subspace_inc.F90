@@ -164,6 +164,10 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   CMPLX :: ftmp
 #endif
   type(profile_t), save :: prof_diag, prof_gemm1, prof_gemm2
+#ifdef HAVE_ELPA
+  integer :: rcomm, ccomm
+  logical :: elpa_success
+#endif
 
   PUSH_SUB(X(subspace_diag_scalapack))
 
@@ -263,6 +267,26 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
 
 #else
 
+#ifdef HAVE_ELPA
+  
+  mpi_err = get_elpa_communicators(st%dom_st_mpi_grp%comm, st%dom_st_proc_grid%myrow, st%dom_st_proc_grid%mycol, rcomm, ccomm)
+
+  if(.false.) then
+
+    elpa_success = solve_evp_real_1stage(na = st%nst, nev = st%nst, a = hs, &
+      lda = ubound(hs, dim = 1), ev = eigenval, q = evectors, ldq = ubound(evectors, dim = 1), &
+      nblk = nbl, matrixCols = ubound(hs, dim = 2), mpi_comm_rows = rcomm, mpi_comm_cols = ccomm)
+  else
+    
+    elpa_success = solve_evp_real_2stage(na = st%nst, nev = st%nst, a = hs, &
+      lda = ubound(hs, dim = 1), ev = eigenval, q = evectors, ldq = ubound(evectors, dim = 1), &
+      nblk = nbl, matrixCols = ubound(hs, dim = 2), &
+      mpi_comm_rows = rcomm, mpi_comm_cols = ccomm, mpi_comm_all = st%dom_st_mpi_grp%comm)
+
+  end if
+  
+#else
+
   call pdsyev(jobz = 'V', uplo = 'U', n = st%nst, a = hs(1, 1) , ia = 1, ja = 1, desca = hs_desc(1), &
     w = eigenval(1), z = evectors(1, 1), iz = 1, jz = 1, descz = hs_desc(1), work = rttmp, lwork = -1, info = info)
 
@@ -283,7 +307,8 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   end if
   
   SAFE_DEALLOCATE_A(work)
-
+#endif
+  
 #endif
 
   call profiling_out(prof_diag)

@@ -26,6 +26,7 @@ module eigensolver_oct_m
   use eigen_cg_oct_m
   use eigen_feast_oct_m
   use eigen_lobpcg_oct_m
+  use eigen_ppcg_oct_m
   use eigen_rmmdiis_oct_m
   use energy_calc_oct_m
   use exponential_oct_m
@@ -100,7 +101,8 @@ module eigensolver_oct_m
        RS_RMMDIIS = 10,         &
        RS_ARPACK  = 12,         &
        RS_FEAST   = 13,         &
-       RS_PSD      = 14
+       RS_PSD     = 14,         &
+       RS_PPCG    = 15
   
 contains
 
@@ -312,6 +314,10 @@ contains
     !% (Experimental) Non-Hermitian FEAST eigensolver. Requires the FEAST package.
     !%Option psd 14
     !% (Experimental) Precondtioned steepest descent optimization of the eigenvectors.
+    !%Option ppcg 15
+    !% (Experimental) The Projected precondtioned conjugate gradient
+    !% (PPCG) algorithm of Vecharynski, Yang, and Pask
+    !% [J. Comput. Phys 290 73-89 (2015)].
     !%End
 
     if(st%parallel_in_states) then
@@ -434,6 +440,9 @@ contains
     case(RS_PSD)
       default_iter = 18
       call messages_experimental("preconditioned steepest descent (PSD) eigensolver")
+
+    case(RS_PPCG)
+      call messages_experimental("projected preconditioned conjugate gradient (PPCG) eigensolver")
 
     case default
       call messages_input_error('Eigensolver')
@@ -624,6 +633,8 @@ contains
           call messages_not_implemented('FEAST solver for Hermitian problems')
         case(RS_PSD)
           call deigensolver_rmmdiis_min(gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
+        case(RS_PPCG)
+          call deigensolver_ppcg(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         end select
 
         ! FEAST: subspace diag or not?
@@ -666,6 +677,8 @@ contains
           call zeigensolver_feast(eigens%feast, gr, st, hm, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_PSD)
           call zeigensolver_rmmdiis_min(gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
+        case(RS_PPCG)
+          call zeigensolver_ppcg(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         end select
 
         if(st%calc_eigenval) then

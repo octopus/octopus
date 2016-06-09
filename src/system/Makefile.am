@@ -46,7 +46,8 @@ libsystem_a_SOURCES =         \
 	magnetic.F90          \
 	eigen_arpack.F90      \
 	current.F90           \
-	partial_charges.F90
+	partial_charges.F90   \
+	eigen_ppcg.F90
 
 noinst_HEADERS =                        \
 	energy_calc_inc.F90             \
@@ -72,7 +73,8 @@ noinst_HEADERS =                        \
 	output_berkeleygw_inc.F90       \
 	forces_inc.F90                  \
 	eigen_arpack_inc.F90            \
-	output_modelmb_inc.F90
+	output_modelmb_inc.F90          \
+	eigen_ppcg_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -84,7 +86,7 @@ subspace.o : preconditioners.o subspace_inc.F90
 linear_solver.o : linear_solver.F90 linear_solver_inc.F90 preconditioners.o 
 eigen_cg.o: eigen_cg.F90 eigen_cg_inc.F90 preconditioners.o
 eigen_lobpcg.o: eigen_cg.F90 eigen_lobpcg_inc.F90 preconditioners.o
-eigensolver.o: eigensolver.F90 eigen_evolution_inc.F90 eigen_plan_inc.F90 eigen_cg.o subspace.o eigen_lobpcg.o eigen_rmmdiis.o exponential.o eigen_arpack.o eigen_feast.o
+eigensolver.o: eigensolver.F90 eigen_evolution_inc.F90 eigen_plan_inc.F90 eigen_cg.o subspace.o eigen_lobpcg.o eigen_rmmdiis.o exponential.o eigen_arpack.o eigen_feast.o eigen_ppcg.o
 eigen_rmmdiis.o: eigen_rmmdiis.F90 eigen_rmmdiis_inc.F90 subspace.o
 eigen_arpack.o: eigen_arpack.F90 eigen_arpack_inc.F90
 eigen_feast.o: eigen_feast.F90 linear_solver.o
@@ -104,4 +106,4 @@ elf.o : elf.F90
 magnetic.o : magnetic.F90
 current.o : current.F90
 partial_charges.o : partial_charges.F90
-
+eigen_ppcg.o : eigen_ppcg_inc.F90 subspace.o

@@ -30,6 +30,10 @@ module subspace_oct_m
 #endif
   use comm_oct_m
   use derivatives_oct_m
+#ifdef HAVE_ELPA
+  use elpa1
+  use elpa2
+#endif
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
