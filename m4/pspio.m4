@@ -33,15 +33,14 @@ dnl Check if the library was given in the command line
 AC_ARG_WITH(pspio-prefix, [AS_HELP_STRING([--with-pspio-prefix=DIR], [Directory where pspio was installed.])],[],[with_pspio_prefix=$PSPIO_PREFIX])
 case $with_pspio_prefix in
   no ) acx_pspio_ok=disable ;;
-  *) LIBS_PSPIO="-L$with_pspio_prefix/lib -lpspio_fortran -lpspio"; FCFLAGS_PSPIO="$ax_cv_f90_modflag$with_pspio_prefix/include" ;;
+  *) LIBS_PSPIO="-L$with_pspio_prefix/lib -lfpspio -lpspio"; FCFLAGS_PSPIO="$ax_cv_f90_modflag$with_pspio_prefix/include" ;;
 esac
 
 testprog="AC_LANG_PROGRAM([],[
-    use pspio_f90_types_m
-    use pspio_f90_lib_m
+    use fpspio_m
 
-    type(pspio_f90_pspdata_t) :: pspdata
-    call pspio_f90_pspdata_free(pspdata)])"
+    type(fpspio_pspdata_t) :: pspdata
+    call fpspio_pspdata_free(pspdata)])"
 
 dnl The tests
 if test "$acx_pspio_ok" = no; then
