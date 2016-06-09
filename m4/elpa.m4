@@ -57,20 +57,24 @@ AC_DEFUN([ACX_ELPA],
     LIBS_ELPA="-lelpa"
   fi
 
-  LIBS="$LIBS_ELPA $acx_elpa_save_LIBS"
+  LIBS="$LIBS_ELPA $acx_elpa_save_LIBS $LIBS_LAPACK $LIBS_BLAS"
   AC_LINK_IFELSE($elpa_program, [acx_elpa_ok=yes], [acx_elpa_ok=no])
 
   AC_MSG_RESULT([$acx_elpa_ok ($FCFLAGS_ELPA $LIBS_ELPA)])
 
   if test x$acx_elpa_ok != xyes; then
+
     AC_MSG_WARN([Could not find the elpa library])
+
+    FCFLAGS_ELPA=""
+    LIBS_ELPA=""
+
+  else
+
+    AC_DEFINE(HAVE_ELPA, 1, [Define if ELPA is available])
+
   fi
 
-  AC_DEFINE(HAVE_ELPA, 1, [Define if ELPA is available])
-
-  LIBS_ELPA="$LIBS_ELPA -lelpa"
-
-  CFLAGS_ELPA="$FCFLAGS_ELPA"
   AC_SUBST(FCFLAGS_ELPA)
   AC_SUBST(LIBS_ELPA)
 
