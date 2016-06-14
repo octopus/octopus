@@ -223,8 +223,7 @@ contains
     !% zero, except for geometry optimization, which sets a default of
     !% 1e-8.
     !%End
-    call parse_variable('ConvForce', optional_default(conv_force, M_ZERO), scf%conv_abs_force)
-    scf%conv_abs_force = units_to_atomic(units_inp%force, scf%conv_abs_force)
+    call parse_variable('ConvForce', optional_default(conv_force, M_ZERO), scf%conv_abs_force, unit = units_inp%force)
 
     if(scf%max_iter < 0 .and. &
       scf%conv_abs_dens <= M_ZERO .and. scf%conv_rel_dens <= M_ZERO .and. &
