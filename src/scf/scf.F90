@@ -208,7 +208,7 @@ contains
     !%
     !%A zero value (the default) means do not use this criterion.
     !%End
-    call parse_variable('ConvRelEv', M_ZERO, scf%conv_rel_ev)
+    call parse_variable('ConvRelEv', M_ZERO, scf%conv_rel_ev, unit = units_inp%energy)
 
     call messages_obsolete_variable("ConvAbsForce", "ConvForce")
     call messages_obsolete_variable("ConvRelForce", "ConvForce")
