@@ -83,6 +83,8 @@ contains
 
     PUSH_SUB(bc_init)
 
+    this%ab_user_def = .false.
+    
     !%Variable AbsorbingBoundaries
     !%Type flag
     !%Default not_absorbing
