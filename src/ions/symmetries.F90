@@ -49,7 +49,7 @@ module symmetries_oct_m
     symmetries_identity_index
 
   type symmetries_t
-    type(symm_op_t), pointer :: ops(:)
+    type(symm_op_t), allocatable :: ops(:)
     integer                  :: nops
     FLOAT                    :: breakdir(1:3)
     integer                  :: space_group
@@ -86,7 +86,6 @@ contains
   elemental subroutine symmetries_nullify(this)
     type(symmetries_t), intent(out) :: this
 
-    nullify(this%ops)
     this%nops = 0
     this%breakdir = M_ZERO
     this%space_group = 0
@@ -399,11 +398,14 @@ contains
 
     PUSH_SUB(symmetries_end)
 
-    do iop = 1, this%nops
-      call symm_op_end(this%ops(iop))
-    end do
+    if(allocated(this%ops)) then
+      do iop = 1, this%nops
+        call symm_op_end(this%ops(iop))
+      end do
 
-    SAFE_DEALLOCATE_P(this%ops)
+      SAFE_DEALLOCATE_A(this%ops)
+    end if
+    
     POP_SUB(symmetries_end)
   end subroutine symmetries_end
 
