@@ -552,6 +552,13 @@ contains
     end if
 
     if(this%method == POISSON_POKE) then
+#ifndef HAVE_POKE
+      call messages_write('Octopus was compiled without Poke support, you cannot use', new_line = .true.)
+      call messages_write("  'PoissonSolver = poke'. ")
+      call messages_fatal()
+#endif
+
+      call messages_experimental('Poke library')
       ASSERT(der%mesh%sb%dim == 3)
       box(1:der%mesh%sb%dim) = der%mesh%idx%ll(1:der%mesh%sb%dim)
       need_cube = .true.
@@ -849,7 +856,9 @@ contains
       call dcube_function_alloc_RS(this%cube, crho)
       call dcube_function_alloc_RS(this%cube, cpot)
       call dmesh_to_cube(der%mesh, rho, this%cube, crho)
+#if HAVE_POKE
       call this%poke_solver%solve(crho%drs, cpot%drs)
+#endif
       call dcube_to_mesh(this%cube, cpot, der%mesh, pot)
       call dcube_function_free_RS(this%cube, crho)
       call dcube_function_free_RS(this%cube, cpot)
