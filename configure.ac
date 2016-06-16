@@ -325,6 +325,10 @@ AM_CONDITIONAL(COMPILE_ISF, test x${HAVE_COMP_ISF} = x1)
 dnl check for PSPIO
 ACX_PSPIO
 
+dnl check for the Poke library to solve the Poisson equation
+dnl http://www.e-cam2020.eu:10080/ESL/poke
+ACX_POKE
+
 dnl check for compiled METIS5 and ParMETIS (also checks METIS in the same path)
 AC_LANG_PUSH(C)
 ACX_PATH_METIS

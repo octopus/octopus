@@ -24,6 +24,7 @@ module poisson_oct_m
   use batch_oct_m
   use boundaries_oct_m
   use cube_oct_m
+  use cube_function_oct_m
   use derivatives_oct_m
   use fft_oct_m
   use global_oct_m
@@ -58,6 +59,10 @@ module poisson_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
 
+#ifdef HAVE_POKE
+  use poke
+#endif
+  
   implicit none
 
   private
@@ -94,6 +99,7 @@ module poisson_oct_m
     POISSON_MULTIGRID     =  7,         &
     POISSON_ISF           =  8,         &
     POISSON_LIBISF        = 10,         &
+    POISSON_POKE          = 11,         &
     POISSON_NO            = -99,        &
     POISSON_NULL          = -999
   
@@ -119,6 +125,10 @@ module poisson_oct_m
     integer         :: intercomm
     type(mpi_grp_t) :: local_grp
     logical         :: root
+#endif
+#ifdef HAVE_POKE
+    type(PokeGrid)   :: poke_grid
+    type(PokeSolver) :: poke_solver
 #endif
   end type poisson_t
 
@@ -218,6 +228,8 @@ contains
     !% found in <a href=http://www.tddft.org/programs/octopus/wiki/index.php/Manual:Specific_architectures>Octopus</a>
     !% and <a href=http://bigdft.org/Wiki/index.php?title=Installation#Building_the_Poisson_Solver_library_only>
     !% BigDFT</a> documentation. Tested with the version bigdft-1.7.6.
+    !%Option poke 11
+    !% (Experimental) Solver from the Poke library.
     !%End
 
     default_solver = POISSON_FFT
@@ -267,6 +279,8 @@ contains
       str = "interpolating scaling functions (from BigDFT)"
     case (POISSON_NO)
       str = "no Poisson solver - Hartree set to 0"
+    case (POISSON_POKE)
+      str = "Poke library"
     end select
     write(message(1),'(a,a,a)') "The chosen Poisson solver is '", trim(str), "'"
     call messages_info(1)
@@ -537,6 +551,12 @@ contains
 
     end if
 
+    if(this%method == POISSON_POKE) then
+      ASSERT(der%mesh%sb%dim == 3)
+      box(1:der%mesh%sb%dim) = der%mesh%idx%ll(1:der%mesh%sb%dim)
+      need_cube = .true.
+    end if
+
     ! Create the cube
     if (need_cube) then
       call cube_init(this%cube, box, der%mesh%sb, fft_type = fft_type, verbose = .true., &
@@ -546,6 +566,18 @@ contains
       end if
     end if
 
+    if(this%method == POISSON_POKE) then
+
+      ASSERT(all(der%mesh%spacing(2:der%mesh%sb%dim) == der%mesh%spacing(1)))
+      
+#ifdef HAVE_POKE      
+      this%poke_grid = PokeGrid(der%mesh%spacing(1), this%cube%rs_n)
+      if(der%mesh%sb%periodic_dim == 3) call this%poke_grid%set_boundaries(POKE_BOUNDARIES_PERIODIC)
+      this%poke_solver = PokeSolver(this%poke_grid)
+      call this%poke_solver%build()
+#endif
+    end if
+    
     call poisson_kernel_init(this, mc%master_comm)
 
     POP_SUB(poisson_init)
@@ -588,6 +620,12 @@ contains
     case(POISSON_NO)
       call poisson_no_end(this%no_solver)
 
+    case(POISSON_POKE)
+#ifdef HAVE_POKE
+      call this%poke_grid%end()
+      call this%poke_solver%end()
+#endif
+      
     end select
     this%method = POISSON_NULL
 
@@ -718,7 +756,7 @@ contains
     !! its calculations? (Defaults to .true.)
     logical, optional,    intent(in)    :: all_nodes 
     type(derivatives_t), pointer :: der
-
+    type(cube_function_t) :: crho, cpot
     FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
 
     logical               :: all_nodes_value
@@ -804,7 +842,18 @@ contains
       else ! "D" Distributed version
         call poisson_libisf_parallel_solve(this%libisf_solver, der%mesh, this%cube, pot, rho, this%mesh_cube_map)
       end if
-    
+
+    case(POISSON_POKE)
+      call cube_function_null(crho)
+      call cube_function_null(cpot)
+      call dcube_function_alloc_RS(this%cube, crho)
+      call dcube_function_alloc_RS(this%cube, cpot)
+      call dmesh_to_cube(der%mesh, rho, this%cube, crho)
+      call this%poke_solver%solve(crho%drs, cpot%drs)
+      call dcube_to_mesh(this%cube, cpot, der%mesh, pot)
+      call dcube_function_free_RS(this%cube, crho)
+      call dcube_function_free_RS(this%cube, cpot)
+      
     case(POISSON_NO)
       call poisson_no_solve(this%no_solver, der%mesh, this%cube, pot, rho)
     end select
