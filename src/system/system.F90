@@ -77,9 +77,16 @@ module system_oct_m
     type(v_ks_t)                 :: ks    !< the Kohn-Sham potentials
     type(output_t)               :: outp  !< the output
     type(multicomm_t)            :: mc    !< index and domain communicators
+  contains
+    final     :: destructor
   end type system_t
-
+  
 contains
+  
+  subroutine destructor(self)
+    type(system_t), intent(inout)   :: self
+    ! nothing here for the moment, since this object cannot be safely destroyed with system_end without being initialized before
+  end subroutine destructor
 
   !----------------------------------------------------------
   subroutine system_init(sys)
