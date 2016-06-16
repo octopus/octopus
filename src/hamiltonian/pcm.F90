@@ -97,6 +97,10 @@ module pcm_oct_m
     FLOAT, allocatable               :: rho_n(:)      !< polarization density due to the solute nuclei
     FLOAT                            :: qtot_e        !< total polarization charge due to electrons
     FLOAT                            :: qtot_n        !< total polarization charge due to nuclei
+    FLOAT                            :: q_e_nominal   !< total (nominal) electronic charge
+    FLOAT                            :: q_n_nominal   !< total (nominal) electronic charge
+    logical                          :: renorm_charges!< flag to renormalized polarization charges
+    FLOAT                            :: q_tot_tol     !< tolerance to trigger normalization of the polarization charges 
     FLOAT, allocatable               :: v_e(:)        !< Hartree potential at each tessera
     FLOAT, allocatable               :: v_n(:)        !< Nuclear potential at each tessera
     FLOAT, allocatable               :: v_e_rs(:)     !< PCM potential in real-space produced by q_e(:) 
@@ -138,18 +142,19 @@ module pcm_oct_m
 
   integer, parameter ::       &
     PCM_VDW_OPTIMIZED   = 1,   &
-    PCM_VDW_SPECIES     = 2 
-    
+    PCM_VDW_SPECIES     = 2
 
 contains
 
 
   !-------------------------------------------------------------------------------------------------------
   !> Initializes the PCM calculation: reads the VdW molecular cavity and generates the PCM response matrix.
-  subroutine pcm_init(pcm, geo, grid)
+  subroutine pcm_init(pcm, geo, grid, qtot, val_charge)
     type(geometry_t), intent(in) :: geo
     type(grid_t), intent(in)     :: grid
     type(pcm_t), intent(out)     :: pcm
+    FLOAT, intent(in)            :: qtot
+    FLOAT, intent(in)            :: val_charge
 
     integer :: ia, ip, ii, itess, jtess, pcm_vdw_type, subdivider
     integer :: cav_unit_test, iunit, pcmmat_unit
@@ -185,9 +190,9 @@ contains
     !%Description
     !% (Experimental) If true, the calculation is performed accounting for solvation effects
     !% by using the Integral Equation Formalism Polarizable Continuum Model IEF-PCM
-    !% formulated in real-space and real-time (arXiv:1507.05471, <i>Chem. Rev.</i> <b>105</b>, 2999 (2005),
-    !% <i>J. Chem. Phys.</i> <b>139</b>, 024105 (2013)). At the moment, this option is available 
-    !% only for <tt>TheoryLevel = DFT</tt>.
+    !% formulated in real-space and real-time (<i>J. Chem. Phys.<i> <b>143<b>, 144111 (2015),
+    !% <i>Chem. Rev.</i> <b>105</b>, 2999 (2005), <i>J. Chem. Phys.</i> <b>139</b>, 024105 (2013)).
+    !% At the moment, this option is available only for <tt>TheoryLevel = DFT</tt>.
     !%End
 
     call parse_variable('PCMCalculation', .false., pcm%run_pcm)
@@ -214,7 +219,7 @@ contains
     !% Use the van der Waals radius optimized by Stefan Grimme in J. Comput. Chem. 27: 1787-1799, 2006, 
     !% except for C, N and O, reported in J. Chem. Phys. 120, 3893 (2004).
     !%Option pcm_vdw_species  2
-    !% The vdW radii are set from the <tt>share/pseudopotentials/elements</tt> file. These values are obtained from 
+    !% The vdW radii are set from the <tt>share/pseudopotentials/elements</tt> file. These values are obtained from
     !% Alvarez S., Dalton Trans., 2013, 42, 8617-8636. Values can be changed in the <tt>Species</tt> block.
     !%End
     call parse_variable('PCMVdWRadii', PCM_VDW_OPTIMIZED, pcm_vdw_type)
@@ -279,6 +284,39 @@ contains
     !% for benchamarking purposes.
     !%End
     call parse_variable('PCMGamessBenchmark', .false., gamess_benchmark)
+
+    !%Variable PCMRenormCharges
+    !%Type logical
+    !%Default .false.
+    !%Section Hamiltonian::PCM
+    !%Description
+    !% If .true. renormalization of the polarization charges is performed to enforce fulfillment
+    !% of the Gauss law, <math>\sum_i q_i^{e/n} = -[(\epsilon-1)/\epsilon] Q_M^{e/n}</math> where 
+    !% <math>q_i^{e/n}</math> are the polarization charges induced by the electrons/nuclei of the molecule
+    !% and <math>Q_M^{e/n}</math> is the nominal electronic/nuclear charge of the system. This can be needed
+    !% to treat molecules in weakly polar solvents.
+    !%End
+    call parse_variable('PCMRenormCharges', .false., pcm%renorm_charges)
+
+    !%Variable PCMQtotTol
+    !%Type float
+    !%Default 0.5
+    !%Section Hamiltonian::PCM
+    !%Description
+    !% If <tt>PCMRenormCharges=.true.</tt> and  <math>\delta Q = |[\sum_i q_i| - ((\epsilon-1)/\epsilon)*|Q_M]|>PCMQtotTol</math>
+    !% the polarization charges will be normalized as 
+    !% <math>q_i^\prime=q_i + sign_function(e, n, \deltaQ) (q_i/q_{tot})*\delta Q</math>
+    !% with <math>q_{tot} = sum_i q_i</math>. For values of <math>\delta Q > 0.5</math>
+    !% (printed by the code in standard output) even, if polarization charges are renormalized, 
+    !% the calculated results might be inaccurate or erroneous.
+    !%End
+    call parse_variable('PCMQtotTol', CNST(0.5), pcm%q_tot_tol)
+
+    if (pcm%renorm_charges) then
+      message(1) = "Info: Polarization charges will be renormalized"
+      message(2) = "      if |Q_tot_PCM - Q_M| > PCMQtotTol"
+      call messages_info(2)
+    endif
 
     !%Variable PCMSmearingFactor
     !%Type float
@@ -651,8 +689,6 @@ contains
       
     end if
     
-    
-
     if (pcm%run_pcm)  call messages_print_stress(stdout)
 
     if (pcm%calc_method == PCM_CALC_POISSON) then
@@ -674,6 +710,9 @@ contains
     pcm%v_e    = M_ZERO
     pcm%q_e    = M_ZERO
     pcm%v_e_rs = M_ZERO
+   
+    pcm%q_e_nominal = qtot
+    pcm%q_n_nominal = val_charge
 
     POP_SUB(pcm_init)
   end subroutine pcm_init
@@ -697,14 +736,16 @@ contains
     
     if (calc == PCM_NUCLEI) then
       call pcm_v_nuclei_cav(pcm%v_n, geo, pcm%tess, pcm%n_tesserae)
-      call pcm_charges(pcm%q_n, pcm%qtot_n, pcm%v_n, pcm%matrix, pcm%n_tesserae)
+      call pcm_charges(pcm%q_n, pcm%qtot_n, pcm%v_n, pcm%matrix, pcm%n_tesserae, &
+                                pcm%q_n_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%q_tot_tol)
       if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_n, pcm%qtot_n, mesh, pcm%rho_n)
       call pcm_pot_rs(pcm, pcm%v_n_rs, pcm%q_n, pcm%rho_n, mesh)      
     end if
 
     if (calc == PCM_ELECTRONS) then
       call pcm_v_electrons_cav_li(pcm%v_e, v_h, pcm, mesh)
-      call pcm_charges(pcm%q_e, pcm%qtot_e, pcm%v_e, pcm%matrix, pcm%n_tesserae) 
+      call pcm_charges(pcm%q_e, pcm%qtot_e, pcm%v_e, pcm%matrix, pcm%n_tesserae, &
+                                pcm%q_e_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%q_tot_tol) 
       if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_e, pcm%qtot_e, mesh, pcm%rho_e)
       call pcm_pot_rs(pcm, pcm%v_e_rs, pcm%q_e, pcm%rho_e, mesh )
     end if
@@ -934,15 +975,23 @@ contains
   !> Calculates the polarization charges at each tessera by using the response matrix 'pcm_mat',
   !! provided the value of the molecular electrostatic potential at 
   !! the tesserae: q_pcm(ia) = \sum_{ib}^{n_tess} pcm_mat(ia,ib)*v_cav(ib).
-  subroutine pcm_charges(q_pcm, q_pcm_tot, v_cav, pcm_mat, n_tess)
+  subroutine pcm_charges(q_pcm, q_pcm_tot, v_cav, pcm_mat, n_tess, &
+                                qtot_nominal, epsilon, renorm_charges, q_tot_tol)
     FLOAT,   intent(out)   :: q_pcm(:)     !< (1:n_tess)
     FLOAT,   intent(out)   :: q_pcm_tot
     FLOAT,   intent(in)    :: v_cav(:)     !< (1:n_tess)
     FLOAT,   intent(in)    :: pcm_mat(:,:) !< (1:n_tess, 1:n_tess)
     integer, intent(in)    :: n_tess
+    FLOAT,   intent(in)    :: qtot_nominal
+    FLOAT,   intent(in)    :: epsilon
+    logical, intent(in)    :: renorm_charges
+    FLOAT,   intent(in)    :: q_tot_tol
 
     integer :: ia, ib
     type(profile_t), save :: prof_init
+    FLOAT :: deltaQ
+    FLOAT :: q_pcm_tot_norm
+    FLOAT :: coeff
 
     PUSH_SUB(pcm_charges)
     call profiling_in(prof_init, 'PCM_CHARGES') 
@@ -956,7 +1005,22 @@ contains
       end do
       q_pcm_tot = q_pcm_tot + q_pcm(ia)
     end do
-    
+
+    ! renormalization of the polarization charges to enforce fulfillment of the Gauss law.
+    deltaQ = ABS(q_pcm_tot) - ( (epsilon-CNST(1.0))/epsilon )*ABS(qtot_nominal)
+    if ( (renorm_charges).and.(ABS(deltaQ) > q_tot_tol) ) then
+        write(message(1),'(A35,F8.4)') "[Q_tot - (epsilon-1)/epsilon*Q_M]= ", deltaQ
+        call messages_warning(1)     
+
+        q_pcm_tot_norm = M_ZERO
+        coeff = sign(CNST(1.0), qtot_nominal)*sign(CNST(1.0), deltaQ)
+        do ia = 1, n_tess
+          q_pcm(ia) = q_pcm(ia) + coeff*q_pcm(ia)/q_pcm_tot*ABS(deltaQ)
+          q_pcm_tot_norm = q_pcm_tot_norm + q_pcm(ia)
+        end do
+        q_pcm_tot = q_pcm_tot_norm
+    endif
+
     call profiling_out(prof_init)
     
     POP_SUB(pcm_charges)

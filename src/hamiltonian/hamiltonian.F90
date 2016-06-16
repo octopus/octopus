@@ -439,7 +439,7 @@ contains
     !%End
     call parse_variable('StatesPack', .true., hm%apply_packed)
 
-    call pcm_init(hm%pcm, geo, gr)  !< initializes PCM 
+    call pcm_init(hm%pcm, geo, gr, st%qtot, st%val_charge)  !< initializes PCM  
     if(hm%pcm%run_pcm .and. hm%theory_level /= KOHN_SHAM_DFT) &
       call messages_not_implemented("PCM for TheoryLevel /= DFT")
     
