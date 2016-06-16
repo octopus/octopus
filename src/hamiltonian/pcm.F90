@@ -98,9 +98,11 @@ module pcm_oct_m
     FLOAT                            :: qtot_e        !< total polarization charge due to electrons
     FLOAT                            :: qtot_n        !< total polarization charge due to nuclei
     FLOAT                            :: q_e_nominal   !< total (nominal) electronic charge
-    FLOAT                            :: q_n_nominal   !< total (nominal) electronic charge
+    FLOAT                            :: q_n_nominal   !< total (nominal) nuclear charge
     logical                          :: renorm_charges!< flag to renormalized polarization charges
-    FLOAT                            :: q_tot_tol     !< tolerance to trigger normalization of the polarization charges 
+    FLOAT                            :: q_tot_tol     !< tolerance to trigger normalization of the polarization charges
+    FLOAT                            :: deltaQ_e      !< difference between the calculated and nominal electronic charge
+    FLOAT                            :: deltaQ_n      !< difference between the calculated and nominal nuclear charge
     FLOAT, allocatable               :: v_e(:)        !< Hartree potential at each tessera
     FLOAT, allocatable               :: v_n(:)        !< Nuclear potential at each tessera
     FLOAT, allocatable               :: v_e_rs(:)     !< PCM potential in real-space produced by q_e(:) 
@@ -518,8 +520,8 @@ contains
       call io_close(cav_unit_test)
      
       write(pcm%info_unit,'(A1)')'#'  
-      write(pcm%info_unit,'(A1,4X,A4,14X,A4,21X,A4,21X,A4,21X,A4,21X,A8,17X,A5,20X,A5)') &
-        '#','iter', 'E_ee', 'E_en', 'E_nn', 'E_ne', 'E_M-solv', 'Q_M^e','Q_M^n'
+      write(pcm%info_unit,'(A1,4X,A4,14X,A4,21X,A4,21X,A4,21X,A4,21X,A8,17X,A5,20X,A8,17X,A5,20X, A8)') &
+        '#','iter', 'E_ee', 'E_en', 'E_nn', 'E_ne', 'E_M-solv', 'Q_M^e', 'deltaQ^e', 'Q_M^n', 'deltaQ^n'
     end if
     pcm%counter = 0
 
@@ -713,6 +715,8 @@ contains
    
     pcm%q_e_nominal = qtot
     pcm%q_n_nominal = val_charge
+    pcm%deltaQ_e = M_ZERO
+    pcm%deltaQ_n = M_ZERO
 
     POP_SUB(pcm_init)
   end subroutine pcm_init
@@ -737,7 +741,7 @@ contains
     if (calc == PCM_NUCLEI) then
       call pcm_v_nuclei_cav(pcm%v_n, geo, pcm%tess, pcm%n_tesserae)
       call pcm_charges(pcm%q_n, pcm%qtot_n, pcm%v_n, pcm%matrix, pcm%n_tesserae, &
-                                pcm%q_n_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%q_tot_tol)
+                       pcm%q_n_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_n)
       if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_n, pcm%qtot_n, mesh, pcm%rho_n)
       call pcm_pot_rs(pcm, pcm%v_n_rs, pcm%q_n, pcm%rho_n, mesh)      
     end if
@@ -745,7 +749,7 @@ contains
     if (calc == PCM_ELECTRONS) then
       call pcm_v_electrons_cav_li(pcm%v_e, v_h, pcm, mesh)
       call pcm_charges(pcm%q_e, pcm%qtot_e, pcm%v_e, pcm%matrix, pcm%n_tesserae, &
-                                pcm%q_e_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%q_tot_tol) 
+                       pcm%q_e_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_e) 
       if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_e, pcm%qtot_e, mesh, pcm%rho_e)
       call pcm_pot_rs(pcm, pcm%v_e_rs, pcm%q_e, pcm%rho_e, mesh )
     end if
@@ -878,7 +882,7 @@ contains
 ! print results of the iteration in pcm_info file
 
     if ( mpi_grp_is_root(mpi_world) ) &
-      write(pcm%info_unit,'(3X,I5,5X,F20.8,5X,F20.8,5X,F20.8,5X,F20.8,5X,F20.8,5X,F20.8,5X,F20.8)') &
+      write(pcm%info_unit,'(3X,I5,5X,F20.8,5X,F20.8,5X,F20.8,5X,F20.8,5X,F20.8,5X,F20.8,5X,F20.8,5X,F20.8,5X,F20.8)') &
                               pcm%counter, &
                               units_from_atomic(units_out%energy, E_int_ee ), & 
                               units_from_atomic(units_out%energy, E_int_en ), &
@@ -889,7 +893,9 @@ contains
                                                                   E_int_nn +  &
                                                                   E_int_ne ), &
                                (pcm%epsilon_0/(pcm%epsilon_0-M_ONE))*pcm%qtot_e, &
-                               (pcm%epsilon_0/(pcm%epsilon_0-M_ONE))*pcm%qtot_n
+                                                                   pcm%deltaQ_e, &
+                               (pcm%epsilon_0/(pcm%epsilon_0-M_ONE))*pcm%qtot_n, &
+                                                                   pcm%deltaQ_n
 
 
     POP_SUB(pcm_elect_energy)
@@ -976,7 +982,7 @@ contains
   !! provided the value of the molecular electrostatic potential at 
   !! the tesserae: q_pcm(ia) = \sum_{ib}^{n_tess} pcm_mat(ia,ib)*v_cav(ib).
   subroutine pcm_charges(q_pcm, q_pcm_tot, v_cav, pcm_mat, n_tess, &
-                                qtot_nominal, epsilon, renorm_charges, q_tot_tol)
+                         qtot_nominal, epsilon, renorm_charges, q_tot_tol, deltaQ)
     FLOAT,   intent(out)   :: q_pcm(:)     !< (1:n_tess)
     FLOAT,   intent(out)   :: q_pcm_tot
     FLOAT,   intent(in)    :: v_cav(:)     !< (1:n_tess)
@@ -1009,9 +1015,6 @@ contains
     ! renormalization of the polarization charges to enforce fulfillment of the Gauss law.
     deltaQ = ABS(q_pcm_tot) - ( (epsilon-CNST(1.0))/epsilon )*ABS(qtot_nominal)
     if ( (renorm_charges).and.(ABS(deltaQ) > q_tot_tol) ) then
-        write(message(1),'(A35,F8.4)') "[Q_tot - (epsilon-1)/epsilon*Q_M]= ", deltaQ
-        call messages_warning(1)     
-
         q_pcm_tot_norm = M_ZERO
         coeff = sign(CNST(1.0), qtot_nominal)*sign(CNST(1.0), deltaQ)
         do ia = 1, n_tess
