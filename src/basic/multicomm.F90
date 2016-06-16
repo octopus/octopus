@@ -117,9 +117,9 @@ module multicomm_oct_m
 
     integer          :: par_strategy     !< What kind of parallelization strategy should we use?
 
-    integer, pointer :: group_sizes(:)   !< Number of processors in each group.
-    integer, pointer :: who_am_i(:)      !< Rank in the "line"-communicators.
-    integer, pointer :: group_comm(:)    !< "Line"-communicators I belong to.
+    integer, allocatable :: group_sizes(:)   !< Number of processors in each group.
+    integer, allocatable :: who_am_i(:)      !< Rank in the "line"-communicators.
+    integer, allocatable :: group_comm(:)    !< "Line"-communicators I belong to.
     integer          :: dom_st_comm      !< States-domain plane communicator.
     integer          :: st_kpt_comm      !< Kpoints-states plane communicator.
     integer          :: dom_st_kpt_comm  !< Kpoints-states-domain cube communicator.
@@ -289,7 +289,6 @@ contains
 
     call strategy()
 
-    nullify(mc%group_sizes)
     mc%have_slaves = .false.
 
     if(mc%par_strategy /= P_STRATEGY_SERIAL) then
@@ -750,14 +749,14 @@ contains
   
 
   ! ---------------------------------------------------------
-    subroutine multicomm_end(mc)
-      type(multicomm_t), intent(inout) :: mc
-
+  subroutine multicomm_end(mc)
+    type(multicomm_t), intent(inout) :: mc
+    
 #if defined(HAVE_MPI)
-      integer :: ii
+    integer :: ii
 #endif
-
-      PUSH_SUB(multicomm_end)
+    
+    PUSH_SUB(multicomm_end)
 
     if(mc%par_strategy /= P_STRATEGY_SERIAL) then
 #if defined(HAVE_MPI)
@@ -771,18 +770,17 @@ contains
       call MPI_Comm_free(mc%dom_st_kpt_comm, mpi_err)
       call MPI_Comm_free(mc%full_comm, mpi_err)
       call MPI_Comm_free(mc%master_comm, mpi_err)
-
+      
 #ifdef HAVE_MPI2
       if(multicomm_have_slaves(mc)) call MPI_Comm_free(mc%slave_intercomm, mpi_err)
 #endif
-
+      
 #endif
-      ! Deallocate the rest of the arrays.
-      SAFE_DEALLOCATE_P(mc%group_sizes)
     end if
 
-    SAFE_DEALLOCATE_P(mc%group_comm)
-    SAFE_DEALLOCATE_P(mc%who_am_i)
+    SAFE_DEALLOCATE_A(mc%group_sizes)
+    SAFE_DEALLOCATE_A(mc%group_comm)
+    SAFE_DEALLOCATE_A(mc%who_am_i)
     
     POP_SUB(multicomm_end)
   end subroutine multicomm_end
