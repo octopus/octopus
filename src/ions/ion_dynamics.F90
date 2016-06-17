@@ -72,6 +72,14 @@ module ion_dynamics_oct_m
     FLOAT :: vel
   end type nose_hoover_t
 
+  type ion_td_displacement_t
+    private
+    logical     :: move
+    type(tdf_t) :: fx 
+    type(tdf_t) :: fy 
+    type(tdf_t) :: fz       
+  end type ion_td_displacement_t
+
   type ion_dynamics_t
     private
     logical          :: move_ions
@@ -88,6 +96,9 @@ module ion_dynamics_oct_m
     !> variables for the Nose-Hoover thermostat
     type(nose_hoover_t) :: nh(1:2)
     type(tdf_t) :: temperature_function
+      
+    logical :: drive_ions  
+    type(ion_td_displacement_t), pointer ::  td_displacements(:) !> Time dependent displacements driving the ions
   end type ion_dynamics_t
 
   type ion_state_t
@@ -96,7 +107,7 @@ module ion_dynamics_oct_m
     FLOAT, pointer :: vel(:, :)
     FLOAT, pointer :: old_pos(:, :)
     type(nose_hoover_t) :: nh(1:2)
-  end type ion_state_t
+  end type ion_state_t  
 
 contains
 
@@ -112,11 +123,16 @@ contains
     character(len=100)  :: temp_function_name
     logical :: have_velocities
 
+    type(block_t)      :: blk
+    integer            :: ndisp
+    character(len=200) :: expression
+
     PUSH_SUB(ion_dynamics_init)
 
     nullify(this%oldforce)
 
     have_velocities = .false.
+    this%drive_ions = .false.
 
     !%Variable IonsConstantVelocity
     !%Type logical
@@ -133,7 +149,67 @@ contains
     if(this%constant_velocity) then
       call messages_experimental('IonsConstantVelocity')
       have_velocities = .true.
+      this%drive_ions = .true.
     end if
+    
+    !%Variable IonsTimeDependentDisplacements
+    !%Type block    
+    !%Section Time-Dependent::Propagation
+    !%Description
+    !% (Experimental) This variable allow to specify a time dependent
+    !% function describing the ions displacement form their equilibrium
+    !% position: r(t) = r0+ Dr(t). 
+    !% For each ion it must be specified the displacements dx(t) ,dy(t), dz(t)
+    !% as follows: 
+    !% 
+    !% <tt>%TDExternalFields
+    !% <br>&nbsp;&nbsp; atom_index [1:Natoms+1] | dx(t) | dy(t) | dz(t) 
+    !% <br>%</tt>
+    !%
+    !% The displacement functions is a time dependent function and should match one 
+    !% of the function names given in the first column of the <tt>TDFunctions</tt> block.
+    !% They will not be affected by any forces.
+    !%End
+
+    
+    ndisp = 0
+    if(parse_block('IonsTimeDependentDisplacements', blk) == 0) then
+      ndisp= parse_block_n(blk)
+      SAFE_ALLOCATE(this%td_displacements(1:geo%natoms))
+      this%td_displacements(1:geo%natoms)%move = .false.
+      if (ndisp > 0) this%drive_ions =.true.
+      
+      do i = 1, ndisp
+        call parse_block_integer(blk, i-1, 0, iatom)
+        this%td_displacements(iatom)%move = .true.
+        
+        call parse_block_string(blk, i-1, 1, expression)
+        call tdf_read(this%td_displacements(iatom)%fx, trim(expression), ierr)
+        if (ierr /= 0) then            
+          write(message(1),'(3A)') 'Could not find "', trim(expression), '" in the TDExternalFields block:'
+          call messages_warning(1)
+        end if
+        
+        
+        call parse_block_string(blk, i-1, 2, expression)
+        call tdf_read(this%td_displacements(iatom)%fy, trim(expression), ierr)
+        if (ierr /= 0) then            
+          write(message(1),'(3A)') 'Could not find "', trim(expression), '" in the TDExternalFields block:'
+          call messages_warning(1)
+        end if
+        
+        call parse_block_string(blk, i-1, 3, expression)
+        call tdf_read(this%td_displacements(iatom)%fz, trim(expression), ierr)
+        if (ierr /= 0) then            
+          write(message(1),'(3A)') 'Could not find "', trim(expression), '" in the TDExternalFields block:'
+          call messages_warning(1)
+        end if
+        
+      end do
+    end if
+    
+    
+
 
     !%Variable Thermostat
     !%Type integer
@@ -158,8 +234,9 @@ contains
       
       have_velocities = .true.
 
-      if(this%constant_velocity) then
-        call messages_write('You cannot use a Thermostat and IonsConstantVelocity at the same time.')
+      if(this%drive_ions) then
+        call messages_write('You cannot use a Thermostat and IonsConstantVelocity or IonsTimeDependentDisplacements')
+        call messages_write('at the same time.')
         call messages_fatal()
       end if
 
@@ -381,6 +458,10 @@ contains
       call tdf_end(this%temperature_function)
     end if
 
+    if (this%drive_ions) then
+      SAFE_DEALLOCATE_P(this%td_displacements)
+    end if
+
     POP_SUB(ion_dynamics_end)
   end subroutine ion_dynamics_end
 
@@ -394,12 +475,16 @@ contains
     FLOAT,                intent(in)    :: dt
 
     integer :: iatom
+    FLOAT   :: DR(1:3)
 
     if(.not. ion_dynamics_ions_move(this)) return
 
     PUSH_SUB(ion_dynamics_propagate)
+    
+    DR = M_ZERO
 
     this%dt = dt
+    
 
     ! get the temperature from the tdfunction for the current time
     if(this%thermostat /= THERMO_NONE) then
@@ -422,7 +507,7 @@ contains
       do iatom = 1, geo%natoms
         if(.not. geo%atom(iatom)%move) cycle
 
-        if(.not. this%constant_velocity) then
+        if(.not. this%drive_ions) then
 
           geo%atom(iatom)%x(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim) &
             + dt*geo%atom(iatom)%v(1:geo%space%dim) + &
@@ -431,9 +516,21 @@ contains
           this%oldforce(1:geo%space%dim, iatom) = geo%atom(iatom)%f(1:geo%space%dim)
           
         else
+          if(this%constant_velocity) then
+            geo%atom(iatom)%x(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim) &
+                                                + dt*geo%atom(iatom)%v(1:geo%space%dim)
+          end if
 
-          geo%atom(iatom)%x(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim) + dt*geo%atom(iatom)%v(1:geo%space%dim)
-          
+
+          if (this%td_displacements(iatom)%move) then
+            
+            DR(1:3)=(/real(tdf(this%td_displacements(iatom)%fx,time)), &
+                      real(tdf(this%td_displacements(iatom)%fy,time)), &
+                      real(tdf(this%td_displacements(iatom)%fz,time)) /)
+
+            geo%atom(iatom)%x(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim) + DR(1:geo%space%dim)
+          end if
+            
         end if
 
       end do
@@ -515,7 +612,7 @@ contains
     FLOAT   :: scal
 
     if(.not. ion_dynamics_ions_move(this)) return
-    if(this%constant_velocity) return
+    if(this%drive_ions) return
 
     PUSH_SUB(ion_dynamics_propagate_vel)
     
