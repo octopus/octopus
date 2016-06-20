@@ -263,6 +263,7 @@ FLOAT function X(mf_nrm2_2)(mesh, dim, ff, reduce) result(nrm2)
 
 end function X(mf_nrm2_2)
 
+
 ! ---------------------------------------------------------
 !> This function calculates the "order" moment of the function ff
 R_TYPE function X(mf_moment) (mesh, ff, idir, order) result(rr)
@@ -288,12 +289,10 @@ end function X(mf_moment)
 #ifndef SINGLE_PRECISION
 
 ! ---------------------------------------------------------
-!> This subroutine generates a Gaussian wavefunction at a
-!! random position in space.
-subroutine X(mf_random)(mesh, ff, shift, seed, normalized)
+!> This subroutine fills a function with randon values.
+subroutine X(mf_random)(mesh, ff, seed, normalized)
   type(mesh_t),      intent(in)  :: mesh
   R_TYPE,            intent(out) :: ff(:)
-  integer,           intent(in)  :: shift
   integer, optional, intent(in)  :: seed
   logical, optional, intent(in)  :: normalized !< whether generate states should have norm 1, true by default
   
@@ -310,13 +309,10 @@ subroutine X(mf_random)(mesh, ff, shift, seed, normalized)
     iseed = iseed + seed
   end if
 
-  !We skip shift times the seed
-  call shiftseed(iseed, shift, ff(1)) 
-
   call quickrnd(iseed, mesh%np, ff(1:mesh%np))
- 
+
   if(optional_default(normalized, .true.)) then
-    rr = X(mf_nrm2)(mesh, ff, reduce = .true.)
+    rr = X(mf_nrm2)(mesh, ff)
     call lalg_scal(mesh%np, R_TOTYPE(1.0)/rr, ff)
   end if
 
