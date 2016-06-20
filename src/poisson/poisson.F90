@@ -562,6 +562,7 @@ contains
       ASSERT(der%mesh%sb%dim == 3)
       box(1:der%mesh%sb%dim) = der%mesh%idx%ll(1:der%mesh%sb%dim)
       need_cube = .true.
+      fft_type = FFTLIB_NONE
     end if
 
     ! Create the cube
@@ -579,7 +580,11 @@ contains
       
 #ifdef HAVE_POKE      
       this%poke_grid = PokeGrid(der%mesh%spacing(1), this%cube%rs_n)
-      if(der%mesh%sb%periodic_dim == 3) call this%poke_grid%set_boundaries(POKE_BOUNDARIES_PERIODIC)
+      if(der%mesh%sb%periodic_dim > 0) then
+        call this%poke_grid%set_boundaries(POKE_BOUNDARIES_PERIODIC)
+      else
+        call this%poke_grid%set_boundaries(POKE_BOUNDARIES_FREE)
+      end if
       this%poke_solver = PokeSolver(this%poke_grid)
       call this%poke_solver%build()
 #endif
