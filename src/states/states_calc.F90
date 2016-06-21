@@ -313,8 +313,8 @@ contains
     !%Default 1e-5
     !%Section States
     !%Description
-    !% A state j with energy E_j will be considered degenerate with a state
-    !% with energy E_i, if  E_i - threshold < E_j < E_i + threshold.
+    !% States with energy <math>E_i</math> and <math>E_j</math> will be considered degenerate
+    !% if <math> \left| E_i - E_j \right| < </math><tt>DegeneracyThreshold</tt>.
     !%End
     call parse_variable('DegeneracyThreshold', units_from_atomic(units_inp%energy, CNST(1e-5)), degen_thres)
     degen_thres = units_to_atomic(units_inp%energy, degen_thres)
