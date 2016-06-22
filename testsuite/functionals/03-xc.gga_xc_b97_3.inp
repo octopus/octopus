@@ -18,7 +18,7 @@ Spacing = 0.5
 0.2
 %
 
-XCFunctional = gga_xc_b97_3
+XCFunctional = hyb_gga_xc_b97_3
 
 FilterPotentials = filter_none
 
