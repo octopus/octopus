@@ -15,7 +15,7 @@ Spacing = 0.5
 
 TheoryLevel = dft
 
-XCFunctional = hyb_mgga_xc_m05
+XCFunctional = MGGA_X_M05_2X
 
 %Occupations
 0.8
