@@ -413,9 +413,8 @@ contains
       
         pcm%n_spheres = 0
         do ia = 1, geo%natoms
-          if (geo%atom(ia)%label == 'H') cycle
+        if ( (.not.(add_spheres_h)).and.(geo%atom(ia)%label == 'H') ) cycle
           pcm%n_spheres = pcm%n_spheres + 1       
-      
           if ( mpi_grp_is_root(mpi_world) ) & 
             write(pcm%info_unit,'(A1,2X,I3,7X,A2,3X,F14.8,2X,F14.8,2X,F14.8,4X,F14.8)')'#', pcm%n_spheres, &
               geo%atom(ia)%label,          &
