@@ -1207,7 +1207,7 @@ contains
     write(iunit, '(a,i1,a)') 'BEGIN_BLOCK_DATAGRID_', mesh%sb%dim, 'D'
     write(iunit, '(4a)') 'units: coords = ', trim(units_abbrev(units_out%length)), &
                             ', function = ', trim(units_abbrev(unit))
-    write(iunit, '(a,i1,a)') 'DATAGRID_', mesh%sb%dim, 'D_function'
+    write(iunit, '(a,i1,a)') 'BEGIN_DATAGRID_', mesh%sb%dim, 'D_function'
     write(iunit, '(3i7)') my_n(1:mesh%sb%dim)
     write(iunit, '(a)') '0.0 0.0 0.0'
 
