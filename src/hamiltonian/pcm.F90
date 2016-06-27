@@ -307,9 +307,9 @@ contains
     !%Description
     !% If <tt>PCMRenormCharges=.true.</tt> and  <math>\delta Q = |[\sum_i q_i| - ((\epsilon-1)/\epsilon)*|Q_M]|>PCMQtotTol</math>
     !% the polarization charges will be normalized as 
-    !% <math>q_i^\prime=q_i + sign_function(e, n, \deltaQ) (q_i/q_{tot})*\delta Q</math>
-    !% with <math>q_{tot} = sum_i q_i</math>. For values of <math>\delta Q > 0.5</math>
-    !% (printed by the code in standard output) even, if polarization charges are renormalized, 
+    !% <math>q_i^\prime=q_i + signfunction(e, n, \delta Q) (q_i/q_{tot})*\delta Q</math>
+    !% with <math>q_{tot} = \sum_i q_i</math>. For values of <math>\delta Q > 0.5</math>
+    !% (printed by the code in the file pcm/pcm_info.out) even, if polarization charges are renormalized, 
     !% the calculated results might be inaccurate or erroneous.
     !%End
     call parse_variable('PCMQtotTol', CNST(0.5), pcm%q_tot_tol)
