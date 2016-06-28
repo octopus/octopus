@@ -1312,13 +1312,17 @@ contains
 #ifdef R_TREAL
     maxff = maxval(ff)
     minff = minval(ff)
-    write(message(1),*) 'Minimum value = ', minff, ' Maximum value = ', maxff
+    write(message(1),*) 'Minimum value = ', units_from_atomic(unit, minff), &
+      ' Maximum value = ', units_from_atomic(unit, maxff), " ", trim(units_abbrev(unit))
 #else
     maxff = maxval(abs(ff))
     minff = minval(abs(ff))
-    write(message(1),*) 'Minimum magnitude = ', minff, ' Maximum magnitude = ', maxff
+    write(message(1),*) 'Minimum magnitude = ', units_from_atomic(unit, minff), &
+      ' Maximum magnitude = ', units_from_atomic(unit, maxff), " ", trim(units_abbrev(unit))
 #endif
     call messages_info(1)
+
+    ! note: this default makes no sense for real wfs. the complex version is better.
 
     !%Variable OpenSCADIsovalue
     !%Type float
@@ -1330,7 +1334,7 @@ contains
     !% for the magnitude of the field.
     !%End
     call parse_variable('OpenSCADIsovalue', (maxff + minff) / M_TWO, isosurface_value, unit)
-    write(message(1),*) 'OpenSCAD output at isovalue ', isosurface_value, " ", trim(units_abbrev(unit))
+    write(message(1),*) 'OpenSCAD output at isovalue ', units_from_atomic(unit, isosurface_value), " ", trim(units_abbrev(unit))
     call messages_info(1)
     
     SAFE_ALLOCATE(edges(0:255))
