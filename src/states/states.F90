@@ -401,6 +401,12 @@ contains
 
     st%qtot = -(st%val_charge + excess_charge)
 
+    if(st%qtot < -M_EPSILON) then
+      write(message(1),'(a,f12.6,a)') 'Total charge = ', st%qtot, ' < 0'
+      message(2) = 'Check Species and ExcessCharge.'
+      call messages_fatal(2, only_root_writes = .true.)
+    endif
+
     select case(st%d%ispin)
     case(UNPOLARIZED)
       st%d%dim = 1
@@ -667,20 +673,38 @@ contains
     !% variable. For example:
     !%
     !% <tt>%Occupations
-    !% <br>&nbsp;&nbsp;2.0 | 2.0 | 2.0 | 2.0 | 2.0
+    !% <br>&nbsp;&nbsp;2 | 2 | 2 | 2 | 2
     !% <br>%</tt>
     !%
-    !% would fix the occupations of the five states to <i>2.0</i>. There can be
+    !% would fix the occupations of the five states to 2. There can be
     !% at most as many columns as states in the calculation. If there are fewer columns
     !% than states, then the code will assume that the user is indicating the occupations
-    !% of the uppermost states, assigning maximum occupation (i.e. 2 for spin-unpolarized
-    !% calculations, 1 otherwise) to the lower states. The number of rows should be equal
+    !% of the uppermost states where all lower states have full occupation (i.e. 2 for spin-unpolarized
+    !% calculations, 1 otherwise) and all higher states have zero occupation. The first column
+    !% will be taken to refer to the lowest state such that the occupations would be consistent
+    !% with the correct total charge. For example, if there are 8 electrons and 10 states (from
+    !% <tt>ExtraStates = 6</tt>), then an abbreviated specification
+    !%
+    !% <tt>%Occupations
+    !% <br>&nbsp;&nbsp;1 | 0 | 1
+    !% <br>%</tt>
+    !%
+    !% would be equivalent to a full specification
+    !%
+    !% <tt>%Occupations
+    !% <br>&nbsp;&nbsp;2 | 2 | 2 | 1 | 0 | 1 | 0 | 0 | 0 | 0
+    !% <br>%</tt>
+    !%
+    !% This is an example of use for constrained density-functional theory,
+    !% crudely emulating a HOMO->LUMO+1 optical excitation.
+    !% The number of rows should be equal
     !% to the number of k-points times the number of spins. For example, for a finite system
     !% with <tt>SpinComponents == spin_polarized</tt>,
     !% this block should contain two lines, one for each spin channel.
     !% All rows must have the same number of columns.
-    !% This variable is very useful when dealing with highly symmetric small systems
-    !% (like an open-shell atom), for it allows us to fix the occupation numbers
+    !%
+    !% The <tt>Occupations</tt> block is useful for the ground state of highly symmetric
+    !% small systems (like an open-shell atom), to fix the occupation numbers
     !% of degenerate states in order to help <tt>octopus</tt> to converge. This is to
     !% be used in conjuction with <tt>ExtraStates</tt>. For example, to calculate the
     !% carbon atom, one would do:
