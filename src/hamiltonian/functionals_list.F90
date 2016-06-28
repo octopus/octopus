@@ -9,7 +9,7 @@
 !% correlation functional, or a single exchange-correlation functional
 !% (<i>e.g.</i> <tt>hyb_gga_xc_pbeh</tt>). For more information on the functionals, see
 !% <a href=http://www.tddft.org/programs/octopus/wiki/index.php/Libxc:manual#Available_functionals>
-!% Libxc documentation</a>. The list provided here is from libxc 2.0; if you have
+!% Libxc documentation</a>. The list provided here is from libxc 2.2.3; if you have
 !% linked against a different libxc version, you may have a somewhat different set
 !% of available functionals. Note that kinetic-energy functionals are not supported.
 !% <br>Defaults:
@@ -459,7 +459,7 @@
 !%Option mgga_x_lta               201
 !% Local tau approximation of Ernzerhof & Scuseria
 !%Option mgga_x_tpss               202
-!% Perdew, Tao, Staroverov & Scuseria exchange
+!% Tao, Perdew, Staroverov & Scuseria exchange
 !%Option mgga_x_m06_l               203
 !% M06-Local functional of Minnesota
 !%Option mgga_x_gvt4               204
@@ -479,7 +479,7 @@
 !%Option mgga_x_2d_prhg07_prp10               211
 !% PRGH07 with PRP10 correction
 !%Option mgga_x_revtpss               212
-!% revised Perdew, Tao, Staroverov & Scuseria exchange
+!% revised Tao, Perdew, Staroverov & Scuseria exchange
 !%Option mgga_x_pkzb               213
 !% Perdew, Kurth, Zupan, and Blaha
 !%Option mgga_x_m05               214
@@ -515,7 +515,7 @@
 !%Option mgga_x_mk00               230
 !% Exchange for accurate virtual orbital energies
 !%Option mgga_c_tpss               231000
-!% Perdew, Tao, Staroverov & Scuseria correlation
+!% Tao, Perdew, Staroverov & Scuseria correlation
 !%Option mgga_c_vsxc               232000
 !% VSxc from Van Voorhis and Scuseria (correlation part)
 !%Option mgga_c_m06_l               233000
@@ -543,7 +543,7 @@
 !%Option mgga_x_bloc               244
 !% functional with balanced localization
 !%Option mgga_x_modtpss               245
-!% Modified Perdew, Tao, Staroverov & Scuseria exchange
+!% Modified Tao, Perdew, Staroverov & Scuseria exchange
 !%Option hyb_mgga_x_m11               225
 !% M11 functional of Minnesota
 !%Option hyb_mgga_xc_m05               438000
