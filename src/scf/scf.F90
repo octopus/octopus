@@ -236,7 +236,7 @@ contains
     !% component of the ionic forces in consecutive iterations.  A
     !% zero value means do not use this criterion. The default is
     !% zero, except for geometry optimization, which sets a default of
-    !% 1e-8.
+    !% 1e-8 H/b.
     !%End
     call parse_variable('ConvForce', optional_default(conv_force, M_ZERO), scf%conv_abs_force, unit = units_inp%force)
 
