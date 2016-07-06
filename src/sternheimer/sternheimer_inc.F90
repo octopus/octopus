@@ -266,7 +266,9 @@ subroutine X(sternheimer_solve)(                           &
       else
         sigma_alt = 2
       end if
-      call X(lr_dump_rho)(lr(sigma_alt), sys%gr%mesh, st%d%nspin, restart, rho_tag, ierr)
+      if(st%d%kpt%start == 1) then
+        call X(lr_dump_rho)(lr(sigma_alt), sys%gr%mesh, st%d%nspin, restart, rho_tag, ierr)
+      end if
       if (ierr /= 0) then
         message(1) = "Unable to write response density '"//trim(rho_tag)//"'."
         call messages_warning(1)
