@@ -132,11 +132,12 @@ subroutine X(sternheimer_solve)(                           &
 
     SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
 
+    states_conv = .true.
+
     do ik = st%d%kpt%start, st%d%kpt%end
       !now calculate response for each state
       ispin = states_dim_get_spin_index(sys%st%d, ik)
 
-      states_conv = .true.
       do ib = st%group%block_start, st%group%block_end
         
         sst = states_block_min(st, ib)
@@ -243,13 +244,13 @@ subroutine X(sternheimer_solve)(                           &
 
     SAFE_DEALLOCATE_A(psi)
 
+    total_iter_reduced = total_iter
 #ifdef HAVE_MPI
     if(st%d%kpt%parallel) then
       call MPI_Allreduce(states_conv, states_conv_reduced, 1, MPI_LOGICAL, MPI_LAND, st%d%kpt%mpi_grp%comm, mpi_err)
       states_conv = states_conv_reduced
 
       call MPI_Allreduce(total_iter, total_iter_reduced, 1, MPI_INTEGER, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
-      total_iter = total_iter_reduced
     end if
 #endif
 
@@ -299,7 +300,7 @@ subroutine X(sternheimer_solve)(                           &
 
       message(1)="--------------------------------------------"
       write(message(2), '(a, i8)') &
-        'Info: Total Hamiltonian applications:', total_iter * linear_solver_ops_per_iter(this%solver)
+        'Info: Total Hamiltonian applications:', total_iter_reduced * linear_solver_ops_per_iter(this%solver)
       call messages_info(2)
       exit
     end if
