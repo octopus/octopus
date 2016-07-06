@@ -37,6 +37,7 @@ module sternheimer_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mix_oct_m
+  use mpi_oct_m
   use multigrid_oct_m
   use pert_oct_m
   use poisson_oct_m

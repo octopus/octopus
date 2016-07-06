@@ -246,7 +246,7 @@ subroutine X(lr_orth_response)(mesh, st, lr, omega)
   integer :: ist, ik
   PUSH_SUB(X(lr_orth_response))
   
-  do ik = 1, st%d%nik
+  do ik = st%d%kpt%start, st%d%kpt%end
     do ist = 1, st%nst
       call X(lr_orth_vector) (mesh, st, lr%X(dl_psi)(:,:, ist, ik), ist, ik, omega)
     end do

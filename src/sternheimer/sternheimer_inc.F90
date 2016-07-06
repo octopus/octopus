@@ -47,10 +47,10 @@ subroutine X(sternheimer_solve)(                           &
   R_TYPE :: omega_sigma, proj
   logical, allocatable :: orth_mask(:)
   type(batch_t) :: rhsb, dlpsib, orhsb
-  logical :: conv_last, conv, states_conv, have_restart_rho_
+  logical :: conv_last, conv, states_conv, have_restart_rho_, states_conv_reduced
   type(mesh_t), pointer :: mesh
   type(states_t), pointer :: st
-  integer :: total_iter, idim, ip, ispin, ib
+  integer :: total_iter, idim, ip, ispin, ib, total_iter_reduced
 
   PUSH_SUB(X(sternheimer_solve))
   call profiling_in(prof, "STERNHEIMER")
@@ -242,6 +242,16 @@ subroutine X(sternheimer_solve)(                           &
     end do !ik
 
     SAFE_DEALLOCATE_A(psi)
+
+#ifdef HAVE_MPI
+    if(st%d%kpt%parallel) then
+      call MPI_Allreduce(states_conv, states_conv_reduced, 1, MPI_LOGICAL, MPI_LAND, st%d%kpt%mpi_grp%comm, mpi_err)
+      states_conv = states_conv_reduced
+
+      call MPI_Allreduce(total_iter, total_iter_reduced, 1, MPI_INTEGER, MPI_SUM, st%d%kpt%mpi_grp%comm, mpi_err)
+      total_iter = total_iter_reduced
+    end if
+#endif
 
     call X(lr_build_dl_rho)(mesh, st, lr, nsigma)
 

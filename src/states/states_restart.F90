@@ -299,10 +299,16 @@ contains
                 err = 0
               end if
             else
-              if (states_are_real(st)) then
-                call drestart_write_mesh_function(restart, filename, gr%mesh, lr%ddl_psi(:, idim, ist, ik), err)
+              if(st%d%kpt%start <= ik .and. ik <= st%d%kpt%end) then
+                if (states_are_real(st)) then
+                  call drestart_write_mesh_function(restart, filename, gr%mesh, &
+                    lr%ddl_psi(:, idim, ist, ik), err, root = root)
+                else
+                  call zrestart_write_mesh_function(restart, filename, gr%mesh, &
+                    lr%zdl_psi(:, idim, ist, ik), err, root = root)      
+                end if
               else
-                call zrestart_write_mesh_function(restart, filename, gr%mesh, lr%zdl_psi(:, idim, ist, ik), err)
+                err = 0
               end if
             end if
             if (err /= 0) err2(2) = err2(2) + 1
