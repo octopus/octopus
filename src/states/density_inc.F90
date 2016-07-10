@@ -93,9 +93,9 @@ subroutine X(density_accumulate_grad)(gr, st, iq, psib, grad_psib, grad_rho)
    
     SAFE_DEALLOCATE_A(weights)
     
-    call octcl_kernel_start_call(ker_calc_grad_dens, 'forces.cl', TOSTRING(X(density_gradient)), &
+    call accel_kernel_start_call(ker_calc_grad_dens, 'forces.cl', TOSTRING(X(density_gradient)), &
       flags = '-D' + R_TYPE_CL)
-    kernel = octcl_kernel_get_ref(ker_calc_grad_dens)
+    kernel = accel_kernel_get_ref(ker_calc_grad_dens)
 
     do idir = 1, gr%mesh%sb%dim
       call opencl_set_kernel_arg(kernel, 0, idir - 1)

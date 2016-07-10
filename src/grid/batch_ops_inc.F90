@@ -166,9 +166,9 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
   select case(batch_status(xx))
   case(BATCH_CL_PACKED)
 #ifdef HAVE_OPENCL
-    call octcl_kernel_start_call(kernel, 'axpy.cl', TOSTRING(X(axpy_vec)), &
+    call accel_kernel_start_call(kernel, 'axpy.cl', TOSTRING(X(axpy_vec)), &
       flags = '-D' + R_TYPE_CL)
-    kernel_ref = octcl_kernel_get_ref(kernel)
+    kernel_ref = accel_kernel_get_ref(kernel)
 
     if(batch_type(yy) == TYPE_CMPLX .and. R_TYPE_VAL == TYPE_FLOAT) then
       size_factor = 2
@@ -322,10 +322,10 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
       call opencl_write_buffer(aa_buffer, xx%pack%size(1), aa_linear)
     end if
 
-    call octcl_kernel_start_call(kernel, 'axpy.cl', TOSTRING(X(scal_vec)), &
+    call accel_kernel_start_call(kernel, 'axpy.cl', TOSTRING(X(scal_vec)), &
       flags = '-D' + R_TYPE_CL)
   
-    kernel_ref = octcl_kernel_get_ref(kernel)
+    kernel_ref = accel_kernel_get_ref(kernel)
 
     call opencl_set_kernel_arg(kernel_ref, 0, aa_buffer)
     call opencl_set_kernel_arg(kernel_ref, 1, xx%pack%buffer)
@@ -438,10 +438,10 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
       call opencl_write_buffer(aa_buffer, yy%pack%size(1), aa_linear)
     end if
 
-    call octcl_kernel_start_call(kernel, 'axpy.cl', TOSTRING(X(xpay_vec)), &
+    call accel_kernel_start_call(kernel, 'axpy.cl', TOSTRING(X(xpay_vec)), &
       flags = '-D' + R_TYPE_CL)
   
-    kernel_ref = octcl_kernel_get_ref(kernel)
+    kernel_ref = accel_kernel_get_ref(kernel)
 
     call opencl_set_kernel_arg(kernel_ref, 0, aa_buffer)
     call opencl_set_kernel_arg(kernel_ref, 1, xx%pack%buffer)

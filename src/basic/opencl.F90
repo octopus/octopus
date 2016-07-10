@@ -50,8 +50,8 @@ module opencl_oct_m
     opencl_end,                   &
     opencl_padded_size,           &
     opencl_mem_nullify,           &
-    octcl_kernel_start_call,      &
-    octcl_kernel_build
+    accel_kernel_start_call,      &
+    accel_kernel_build
 
 
 #ifdef HAVE_OPENCL
@@ -74,7 +74,7 @@ module opencl_oct_m
     clfft_print_error,            &
     opencl_set_buffer_to_zero,    &
     opencl_use_shared_mem,        &
-    octcl_kernel_get_ref
+    accel_kernel_get_ref
 #endif
 
 #ifdef HAVE_OPENCL
@@ -505,7 +505,7 @@ contains
 #endif
     end if
 
-    call octcl_kernel_global_init()
+    call accel_kernel_global_init()
     
     call messages_print_stress(stdout)
 
@@ -657,7 +657,7 @@ contains
 
     PUSH_SUB(opencl_end)
 
-    call octcl_kernel_global_end()
+    call accel_kernel_global_end()
 
 #ifdef HAVE_CLBLAS
     call clblasTearDown()
@@ -1385,35 +1385,35 @@ contains
   
   !------------------------------------------------------------
 
-  subroutine octcl_kernel_global_init()
+  subroutine accel_kernel_global_init()
     
-    PUSH_SUB(octcl_kernel_global_init)
+    PUSH_SUB(accel_kernel_global_init)
 
     nullify(head)
 
-    POP_SUB(octcl_kernel_global_init)
-  end subroutine octcl_kernel_global_init
+    POP_SUB(accel_kernel_global_init)
+  end subroutine accel_kernel_global_init
 
   !------------------------------------------------------------
   
-  subroutine octcl_kernel_global_end()
+  subroutine accel_kernel_global_end()
     type(accel_kernel_t), pointer :: next_head
 
-    PUSH_SUB(octcl_kernel_global_end)
+    PUSH_SUB(accel_kernel_global_end)
 
     do
       if(.not. associated(head)) exit
       next_head => head%next
-      call octcl_kernel_end(head)
+      call accel_kernel_end(head)
       head => next_head
     end do
 
-    POP_SUB(octcl_kernel_global_end)
-  end subroutine octcl_kernel_global_end
+    POP_SUB(accel_kernel_global_end)
+  end subroutine accel_kernel_global_end
 
   !------------------------------------------------------------
 
-  subroutine octcl_kernel_build(this, file_name, kernel_name, flags)
+  subroutine accel_kernel_build(this, file_name, kernel_name, flags)
     type(accel_kernel_t),        intent(inout) :: this
     character(len=*),            intent(in)    :: file_name
     character(len=*),            intent(in)    :: kernel_name
@@ -1422,26 +1422,26 @@ contains
 #ifdef HAVE_OPENCL
     type(cl_program) :: prog
 
-    PUSH_SUB(octcl_kernel_build)
+    PUSH_SUB(accel_kernel_build)
 
     call opencl_build_program(prog, trim(conf%share)//'/opencl/'//trim(file_name), flags = flags)
     call opencl_create_kernel(this%kernel, prog, trim(kernel_name))
     call opencl_release_program(prog)
     this%initialized = .true.
 
-    POP_SUB(octcl_kernel_build)
+    POP_SUB(accel_kernel_build)
 #endif
-  end subroutine octcl_kernel_build
+  end subroutine accel_kernel_build
 
   !------------------------------------------------------------
 
-  subroutine octcl_kernel_end(this)
+  subroutine accel_kernel_end(this)
     type(accel_kernel_t), intent(inout) :: this
 #ifdef HAVE_OPENCL
     integer :: ierr
 #endif
 
-      PUSH_SUB(octcl_kernel_end)
+      PUSH_SUB(accel_kernel_end)
 
 #ifdef HAVE_OPENCL
       call clReleaseKernel(this%kernel, ierr)
@@ -1449,35 +1449,35 @@ contains
 #endif
       this%initialized = .false.
 
-      POP_SUB(octcl_kernel_end)
-  end subroutine octcl_kernel_end
+      POP_SUB(accel_kernel_end)
+  end subroutine accel_kernel_end
 
   !------------------------------------------------------------
 
-  subroutine octcl_kernel_start_call(this, file_name, kernel_name, flags)
+  subroutine accel_kernel_start_call(this, file_name, kernel_name, flags)
     type(accel_kernel_t), target, intent(inout) :: this
     character(len=*),             intent(in)    :: file_name
     character(len=*),             intent(in)    :: kernel_name
     character(len=*), optional,   intent(in)    :: flags
 
-    PUSH_SUB(octcl_kernel_start_call)
+    PUSH_SUB(accel_kernel_start_call)
 
     if(.not. this%initialized) then
-      call octcl_kernel_build(this, file_name, kernel_name, flags)
+      call accel_kernel_build(this, file_name, kernel_name, flags)
       this%next => head
       head => this
     end if
 
-    POP_SUB(octcl_kernel_start_call)
-  end subroutine octcl_kernel_start_call
+    POP_SUB(accel_kernel_start_call)
+  end subroutine accel_kernel_start_call
 
   !--------------------------------------------------------------
 #ifdef HAVE_OPENCL
-  type(cl_kernel) function octcl_kernel_get_ref(this) result(ref)
+  type(cl_kernel) function accel_kernel_get_ref(this) result(ref)
     type(accel_kernel_t), intent(in) :: this
     
     ref = this%kernel
-  end function octcl_kernel_get_ref
+  end function accel_kernel_get_ref
 #endif
   !--------------------------------------------------------------
 

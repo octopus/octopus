@@ -401,8 +401,8 @@ contains
 #ifdef HAVE_OPENCL
         call opencl_create_buffer(buff_send, CL_MEM_WRITE_ONLY, R_TYPE_VAL, ffb%pack%size(1)*maxsend*npart)
 
-        call octcl_kernel_start_call(kernel_send, 'boundaries.cl', 'boundaries_periodic_send')
-        kernel_ref = octcl_kernel_get_ref(kernel_send)
+        call accel_kernel_start_call(kernel_send, 'boundaries.cl', 'boundaries_periodic_send')
+        kernel_ref = accel_kernel_get_ref(kernel_send)
 
         call opencl_set_kernel_arg(kernel_ref, 0, maxsend)
         call opencl_set_kernel_arg(kernel_ref, 1, boundaries%buff_nsend)
@@ -493,8 +493,8 @@ contains
         call opencl_create_buffer(buff_recv, CL_MEM_READ_ONLY, R_TYPE_VAL, ffb%pack%size(1)*maxrecv*npart)
         call opencl_write_buffer(buff_recv, ffb%pack%size(1)*maxrecv*npart, recvbuffer)
 
-        call octcl_kernel_start_call(kernel_recv, 'boundaries.cl', 'boundaries_periodic_recv')
-        kernel_ref = octcl_kernel_get_ref(kernel_recv)
+        call accel_kernel_start_call(kernel_recv, 'boundaries.cl', 'boundaries_periodic_recv')
+        kernel_ref = accel_kernel_get_ref(kernel_recv)
 
         call opencl_set_kernel_arg(kernel_ref, 0, maxrecv)
         call opencl_set_kernel_arg(kernel_ref, 1, boundaries%buff_nrecv)
@@ -545,8 +545,8 @@ contains
     case(BATCH_CL_PACKED)
 #ifdef HAVE_OPENCL
 
-      call octcl_kernel_start_call(kernel, 'boundaries.cl', 'boundaries_periodic')
-      kernel_ref = octcl_kernel_get_ref(kernel)
+      call accel_kernel_start_call(kernel, 'boundaries.cl', 'boundaries_periodic')
+      kernel_ref = accel_kernel_get_ref(kernel)
 
       call opencl_set_kernel_arg(kernel_ref, 0, boundaries%nper)
       call opencl_set_kernel_arg(kernel_ref, 1, boundaries%buff_per_points)

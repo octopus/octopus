@@ -300,7 +300,7 @@ contains
     PUSH_SUB(X(nl_operator_operate_batch).operate_opencl)
     call profiling_in(prof, "CL_NL_OPERATOR")
 
-    kernel_operate = octcl_kernel_get_ref(op%kernel)
+    kernel_operate = accel_kernel_get_ref(op%kernel)
 
     call opencl_create_buffer(buff_weights, CL_MEM_READ_ONLY, TYPE_FLOAT, op%stencil%size)
 

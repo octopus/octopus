@@ -611,11 +611,11 @@ contains
       
       select case(function_opencl)
       case(OP_INVMAP)
-        call octcl_kernel_build(op%kernel, 'operate.cl', 'operate', flags)
+        call accel_kernel_build(op%kernel, 'operate.cl', 'operate', flags)
       case(OP_MAP)
-        call octcl_kernel_build(op%kernel, 'operate.cl', 'operate_map', flags)
+        call accel_kernel_build(op%kernel, 'operate.cl', 'operate_map', flags)
       case(OP_NOMAP)
-        call octcl_kernel_build(op%kernel, 'operate.cl', 'operate_nomap', flags)
+        call accel_kernel_build(op%kernel, 'operate.cl', 'operate_nomap', flags)
       end select
 
       call opencl_create_buffer(op%buff_ri, CL_MEM_READ_ONLY, TYPE_INTEGER, op%nri*op%stencil%size)

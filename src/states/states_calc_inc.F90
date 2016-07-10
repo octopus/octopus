@@ -368,11 +368,11 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
 #else
 
       if(states_are_real(st)) then
-        call octcl_kernel_start_call(dkernel, 'trsm.cl', 'dtrsm')
-        kernel_ref = octcl_kernel_get_ref(dkernel)
+        call accel_kernel_start_call(dkernel, 'trsm.cl', 'dtrsm')
+        kernel_ref = accel_kernel_get_ref(dkernel)
       else
-        call octcl_kernel_start_call(zkernel, 'trsm.cl', 'ztrsm')
-        kernel_ref = octcl_kernel_get_ref(zkernel)
+        call accel_kernel_start_call(zkernel, 'trsm.cl', 'ztrsm')
+        kernel_ref = accel_kernel_get_ref(zkernel)
       end if
 
       call opencl_set_kernel_arg(kernel_ref, 0, st%nst)
@@ -1189,11 +1189,11 @@ subroutine X(states_rotate)(mesh, st, uu, ik)
 #else
 
       if(states_are_real(st)) then
-        call octcl_kernel_start_call(dkernel, 'rotate.cl', 'drotate_states')
-        kernel_ref = octcl_kernel_get_ref(dkernel)
+        call accel_kernel_start_call(dkernel, 'rotate.cl', 'drotate_states')
+        kernel_ref = accel_kernel_get_ref(dkernel)
       else
-        call octcl_kernel_start_call(zkernel, 'rotate.cl', 'zrotate_states')
-        kernel_ref = octcl_kernel_get_ref(zkernel)
+        call accel_kernel_start_call(zkernel, 'rotate.cl', 'zrotate_states')
+        kernel_ref = accel_kernel_get_ref(zkernel)
       end if
 
       call opencl_set_kernel_arg(kernel_ref, 0, st%nst)

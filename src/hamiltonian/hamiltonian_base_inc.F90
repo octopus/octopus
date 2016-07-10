@@ -336,8 +336,8 @@ subroutine X(hamiltonian_base_phase)(this, der, np, iqn, conjugate, psib, src)
 
   case(BATCH_CL_PACKED)
 #ifdef HAVE_OPENCL
-    call octcl_kernel_start_call(ker_phase, 'phase.cl', 'phase_hamiltonian')
-    kernel = octcl_kernel_get_ref(ker_phase)
+    call accel_kernel_start_call(ker_phase, 'phase.cl', 'phase_hamiltonian')
+    kernel = accel_kernel_get_ref(ker_phase)
 
     if(conjugate) then
       call opencl_set_kernel_arg(kernel, 0, 1_4)
@@ -535,13 +535,13 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
     call profiling_in(cl_prof, "CL_PROJ_BRA")
 
     if(allocated(this%projector_phases)) then
-      call octcl_kernel_start_call(ker_proj_bra_phase, 'projector.cl', 'projector_bra_phase')
-      kernel = octcl_kernel_get_ref(ker_proj_bra_phase)
+      call accel_kernel_start_call(ker_proj_bra_phase, 'projector.cl', 'projector_bra_phase')
+      kernel = accel_kernel_get_ref(ker_proj_bra_phase)
       size = psib%pack%size(1)
       ASSERT(R_TYPE_VAL == TYPE_CMPLX)
     else
-      call octcl_kernel_start_call(ker_proj_bra, 'projector.cl', 'projector_bra')
-      kernel = octcl_kernel_get_ref(ker_proj_bra)
+      call accel_kernel_start_call(ker_proj_bra, 'projector.cl', 'projector_bra')
+      kernel = accel_kernel_get_ref(ker_proj_bra)
       size = psib%pack%size_real(1)
     end if
 
@@ -875,13 +875,13 @@ contains
     call profiling_in(cl_prof, "CL_PROJ_KET")
 
     if(allocated(this%projector_phases)) then
-      call octcl_kernel_start_call(ker_proj_ket_phase, 'projector.cl', 'projector_ket_phase')
-      kernel = octcl_kernel_get_ref(ker_proj_ket_phase)
+      call accel_kernel_start_call(ker_proj_ket_phase, 'projector.cl', 'projector_ket_phase')
+      kernel = accel_kernel_get_ref(ker_proj_ket_phase)
       size = vpsib%pack%size(1)
       ASSERT(R_TYPE_VAL == TYPE_CMPLX)
     else
-      call octcl_kernel_start_call(ker_proj_ket, 'projector.cl', 'projector_ket')
-      kernel = octcl_kernel_get_ref(ker_proj_ket)
+      call accel_kernel_start_call(ker_proj_ket, 'projector.cl', 'projector_ket')
+      kernel = accel_kernel_get_ref(ker_proj_ket)
       size = vpsib%pack%size_real(1)
     end if
 

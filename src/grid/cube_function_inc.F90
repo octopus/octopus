@@ -258,8 +258,8 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
     call opencl_create_buffer(mf_buffer, CL_MEM_READ_ONLY, R_TYPE_VAL, mesh%np_global)
     call opencl_write_buffer(mf_buffer, mesh%np_global, gmf)
 
-    call octcl_kernel_start_call(kernel, 'mesh_to_cube.cl', TOSTRING(X(mesh_to_cube)))
-    kernel_ref = octcl_kernel_get_ref(kernel)
+    call accel_kernel_start_call(kernel, 'mesh_to_cube.cl', TOSTRING(X(mesh_to_cube)))
+    kernel_ref = accel_kernel_get_ref(kernel)
     
     call opencl_set_kernel_arg(kernel_ref, 0, mesh%cube_map%nmap)
     call opencl_set_kernel_arg(kernel_ref, 1, cube%fft%stride_rs(1))
@@ -351,8 +351,8 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
 #ifdef HAVE_OPENCL    
     call opencl_create_buffer(mf_buffer, CL_MEM_WRITE_ONLY, R_TYPE_VAL, mesh%np_global)
 
-    call octcl_kernel_start_call(kernel, 'mesh_to_cube.cl', TOSTRING(X(cube_to_mesh)))
-    kernel_ref = octcl_kernel_get_ref(kernel)
+    call accel_kernel_start_call(kernel, 'mesh_to_cube.cl', TOSTRING(X(cube_to_mesh)))
+    kernel_ref = accel_kernel_get_ref(kernel)
    
     call opencl_set_kernel_arg(kernel_ref, 0, mesh%cube_map%nmap)
     call opencl_set_kernel_arg(kernel_ref, 1, cube%fft%stride_rs(1))

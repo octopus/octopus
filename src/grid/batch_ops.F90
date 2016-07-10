@@ -182,9 +182,9 @@ subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
     offset = batch_linear_to_ist(this, 1) - 1
 
 #ifdef HAVE_OPENCL
-    call octcl_kernel_start_call(kernel, 'points.cl', 'get_points')
+    call accel_kernel_start_call(kernel, 'points.cl', 'get_points')
 
-    kernel_ref = octcl_kernel_get_ref(kernel)
+    kernel_ref = accel_kernel_get_ref(kernel)
 
     call opencl_set_kernel_arg(kernel_ref, 0, sp)
     call opencl_set_kernel_arg(kernel_ref, 1, ep)
@@ -235,9 +235,9 @@ subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
       /types_get_size(TYPE_FLOAT)
     offset = batch_linear_to_ist(this, 1) - 1
 #ifdef HAVE_OPENCL
-    call octcl_kernel_start_call(kernel, 'points.cl', 'set_points')
+    call accel_kernel_start_call(kernel, 'points.cl', 'set_points')
     
-    kernel_ref = octcl_kernel_get_ref(kernel)
+    kernel_ref = accel_kernel_get_ref(kernel)
 
     call opencl_set_kernel_arg(kernel_ref, 0, sp)
     call opencl_set_kernel_arg(kernel_ref, 1, ep)
