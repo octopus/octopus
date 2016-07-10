@@ -54,7 +54,6 @@ module hamiltonian_oct_m
   use mpi_oct_m
   use mpi_lib_oct_m
   use opencl_oct_m
-  use octcl_kernel_oct_m
   use oct_exchange_oct_m
   use opencl_oct_m
   use parser_oct_m

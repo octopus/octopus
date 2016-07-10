@@ -40,7 +40,6 @@ module system_oct_m
   use modelmb_particles_oct_m
   use mpi_oct_m
   use multicomm_oct_m
-  use octcl_kernel_oct_m
   use opencl_oct_m
   use output_oct_m
   use parser_oct_m

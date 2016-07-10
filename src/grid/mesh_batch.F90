@@ -30,7 +30,6 @@ module mesh_batch_oct_m
   use clblas
 #endif
 #endif
-  use octcl_kernel_oct_m
   use comm_oct_m
   use global_oct_m
   use hardware_oct_m

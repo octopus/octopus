@@ -26,7 +26,6 @@ module batch_oct_m
 #ifdef HAVE_OPENCL
   use cl
 #endif
-  use octcl_kernel_oct_m
   use global_oct_m
   use hardware_oct_m
   use lalg_adv_oct_m

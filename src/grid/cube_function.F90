@@ -35,7 +35,6 @@ module cube_function_oct_m
   use messages_oct_m
   use mpi_oct_m
   use mpi_debug_oct_m
-  use octcl_kernel_oct_m
   use opencl_oct_m
   use parser_oct_m
   use partition_transfer_oct_m

@@ -69,7 +69,6 @@ libbasic_a_SOURCES =     \
 	blacs.F90        \
 	blacs_proc_grid.F90  \
 	comm.F90             \
-	octcl_kernel.F90     \
 	openscad.F90         \
 	polyhedron.F90       \
 	xml.F90              \
@@ -135,7 +134,6 @@ json_parser.o : json_parser.F90 json.o kinds.o io.o messages.o profiling.o globa
 
 accel.o : accel.F90 types.o
 opencl.o : opencl.F90 opencl_inc.F90 global.o types.o profiling.o messages.o parser.o mpi.o io.o unit_system.o accel.o
-octcl_kernel.o : octcl_kernel.F90 opencl.o global.o
 mpi_debug.o : mpi_debug.F90 mpi_debug_inc.F90 mpi.o messages.o loct.o global.o 
 mpi_lib.o : mpi_lib.F90 mpi_lib_inc.F90 mpi_debug.o mpi.o messages.o global.o profiling.o
 topology.o : topology.F90 utils.o mpi.o messages.o parser.o io.o global.o  profiling.o

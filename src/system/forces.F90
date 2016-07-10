@@ -50,7 +50,6 @@ module forces_oct_m
   use mpi_oct_m
   use profiling_oct_m
   use projector_oct_m
-  use octcl_kernel_oct_m
   use opencl_oct_m
   use simul_box_oct_m
   use species_oct_m

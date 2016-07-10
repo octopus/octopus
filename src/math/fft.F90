@@ -44,7 +44,6 @@ module fft_oct_m
 #if defined(HAVE_OPENMP) && defined(HAVE_FFTW3_THREADS)
   use omp_lib
 #endif
-  use octcl_kernel_oct_m
   use opencl_oct_m
   use parser_oct_m
   use pfft_oct_m
