@@ -555,10 +555,12 @@ contains
 #ifdef HAVE_CLFFT
 
       ! create the plans
-      call clfftCreateDefaultPlan(fft_array(jj)%cl_plan_fw, opencl%context, fft_dim, int(fft_array(jj)%rs_n_global, 8), status)
+      call clfftCreateDefaultPlan(fft_array(jj)%cl_plan_fw, opencl%context%cl_context, &
+        fft_dim, int(fft_array(jj)%rs_n_global, 8), status)
       if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clfftCreateDefaultPlan')
 
-      call clfftCreateDefaultPlan(fft_array(jj)%cl_plan_bw, opencl%context, fft_dim, int(fft_array(jj)%rs_n_global, 8), status)
+      call clfftCreateDefaultPlan(fft_array(jj)%cl_plan_bw, opencl%context%cl_context, &
+        fft_dim, int(fft_array(jj)%rs_n_global, 8), status)
       if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clfftCreateDefaultPlan')
 
       ! set precision

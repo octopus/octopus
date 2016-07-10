@@ -2272,7 +2272,7 @@ contains
 
     if(opencl_is_enabled()) then
 #ifdef HAVE_OPENCL
-      call clGetDeviceInfo(opencl%device, CL_DEVICE_GLOBAL_MEM_SIZE, max_mem, cl_status)
+      call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_GLOBAL_MEM_SIZE, max_mem, cl_status)
 #endif
       if(st%d%cl_states_mem > CNST(1.0)) then
         max_mem = int(st%d%cl_states_mem, 8)*(1024_8)**2

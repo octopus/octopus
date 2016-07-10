@@ -20,6 +20,7 @@
 #include "global.h"
 
 module opencl_oct_m
+  use accel_oct_m
 #ifdef HAVE_OPENCL
   use cl
 #endif
@@ -77,9 +78,9 @@ module opencl_oct_m
   type opencl_t 
 #ifdef HAVE_OPENCL
     type(cl_platform_id)   :: platform_id
-    type(cl_context)       :: context
+    type(accel_context_t)  :: context
     type(cl_command_queue) :: command_queue
-    type(cl_device_id)     :: device
+    type(accel_device_t)   :: device
 #endif
     integer                :: max_workgroup_size
     integer                :: local_memory_size
@@ -411,23 +412,24 @@ contains
       call messages_fatal()
     end if
 
-    opencl%device = alldevices(idevice + 1)
+    opencl%device%cl_device = alldevices(idevice + 1)
 
     if(mpi_grp_is_root(base_grp)) call device_info()
 
     ! create the context
-    opencl%context = clCreateContext(opencl%platform_id, opencl%device, cl_status)
+    opencl%context%cl_context = clCreateContext(opencl%platform_id, opencl%device%cl_device, cl_status)
     if(cl_status /= CL_SUCCESS) call opencl_print_error(cl_status, "CreateContext")
 
     SAFE_DEALLOCATE_A(alldevices)
 
-    opencl%command_queue = clCreateCommandQueue(opencl%context, opencl%device, CL_QUEUE_PROFILING_ENABLE, cl_status)
+    opencl%command_queue = clCreateCommandQueue(opencl%context%cl_context, opencl%device%cl_device, &
+      CL_QUEUE_PROFILING_ENABLE, cl_status)
     if(cl_status /= CL_SUCCESS) call opencl_print_error(cl_status, "CreateCommandQueue")
 
-    call clGetDeviceInfo(opencl%device, CL_DEVICE_MAX_WORK_GROUP_SIZE, opencl%max_workgroup_size, cl_status)
-    call clGetDeviceInfo(opencl%device, CL_DEVICE_LOCAL_MEM_SIZE, opencl%local_memory_size, cl_status)
+    call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_MAX_WORK_GROUP_SIZE, opencl%max_workgroup_size, cl_status)
+    call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_LOCAL_MEM_SIZE, opencl%local_memory_size, cl_status)
 
-    call clGetDeviceInfo(opencl%device, CL_DEVICE_TYPE, device_type, cl_status)
+    call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_TYPE, device_type, cl_status)
 
     select case(device_type)
     case(CL_DEVICE_TYPE_GPU)
@@ -571,7 +573,7 @@ contains
       call messages_write('Selected CL device:')
       call messages_new_line()
 
-      call clGetDeviceInfo(opencl%device, CL_DEVICE_TYPE, val, cl_status)
+      call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_TYPE, val, cl_status)
       call messages_write('      Device type            :')
       select case(int(val, 4))
       case(CL_DEVICE_TYPE_GPU)
@@ -583,65 +585,65 @@ contains
       end select
       call messages_new_line()
 
-      call clGetDeviceInfo(opencl%device, CL_DEVICE_VENDOR, val_str, cl_status)
+      call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_VENDOR, val_str, cl_status)
       call messages_write('      Device vendor          : '//trim(val_str))
       call messages_new_line()
 
-      call clGetDeviceInfo(opencl%device, CL_DEVICE_NAME, val_str, cl_status)
+      call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_NAME, val_str, cl_status)
       call messages_write('      Device name            : '//trim(val_str))
       call messages_new_line()
 
-      call clGetDeviceInfo(opencl%device, CL_DRIVER_VERSION, val_str, cl_status)
+      call clGetDeviceInfo(opencl%device%cl_device, CL_DRIVER_VERSION, val_str, cl_status)
       call messages_write('      Driver version         : '//trim(val_str))
       call messages_new_line()
 
-      call clGetDeviceInfo(opencl%device, CL_DEVICE_MAX_COMPUTE_UNITS, val, cl_status)
+      call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_MAX_COMPUTE_UNITS, val, cl_status)
       call messages_write('      Compute units          :')
       call messages_write(val)
       call messages_new_line()
 
-      call clGetDeviceInfo(opencl%device, CL_DEVICE_MAX_CLOCK_FREQUENCY, val, cl_status)
+      call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_MAX_CLOCK_FREQUENCY, val, cl_status)
       call messages_write('      Clock frequency        :')
       call messages_write(val)
       call messages_write(' GHz')
       call messages_new_line()
 
-      call clGetDeviceInfo(opencl%device, CL_DEVICE_GLOBAL_MEM_SIZE, val, cl_status)
+      call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_GLOBAL_MEM_SIZE, val, cl_status)
       call messages_write('      Device memory          :')
       call messages_write(val, units = unit_megabytes)
       call messages_new_line()
 
-      call clGetDeviceInfo(opencl%device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, val, cl_status)
+      call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, val, cl_status)
       call messages_write('      Max alloc size         :')
       call messages_write(val, units = unit_megabytes)
       call messages_new_line()
 
-      call clGetDeviceInfo(opencl%device, CL_DEVICE_GLOBAL_MEM_CACHE_SIZE, val, cl_status)
+      call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_GLOBAL_MEM_CACHE_SIZE, val, cl_status)
       call messages_write('      Device cache           :')
       call messages_write(val, units = unit_kilobytes)
       call messages_new_line()
 
-      call clGetDeviceInfo(opencl%device, CL_DEVICE_LOCAL_MEM_SIZE, val, cl_status)
+      call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_LOCAL_MEM_SIZE, val, cl_status)
       call messages_write('      Local memory           :')
       call messages_write(val, units = unit_kilobytes)
       call messages_new_line()
 
-      call clGetDeviceInfo(opencl%device, CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE, val, cl_status)
+      call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE, val, cl_status)
       call messages_write('      Constant memory        :')
       call messages_write(val, units = unit_kilobytes)
       call messages_new_line()
 
-      call clGetDeviceInfo(opencl%device, CL_DEVICE_MAX_WORK_GROUP_SIZE, val, cl_status)
+      call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_MAX_WORK_GROUP_SIZE, val, cl_status)
       call messages_write('      Max. workgroup size    :')
       call messages_write(val)
       call messages_new_line()
 
       call messages_write('      Extension cl_khr_fp64  :')
-      call messages_write(f90_cl_device_has_extension(opencl%device, "cl_khr_fp64"))
+      call messages_write(f90_cl_device_has_extension(opencl%device%cl_device, "cl_khr_fp64"))
       call messages_new_line()
 
       call messages_write('      Extension cl_amd_fp64  :')
-      call messages_write(f90_cl_device_has_extension(opencl%device, "cl_amd_fp64"))
+      call messages_write(f90_cl_device_has_extension(opencl%device%cl_device, "cl_amd_fp64"))
       call messages_new_line()
 
       call messages_info()
@@ -705,7 +707,7 @@ contains
       call clReleaseCommandQueue(opencl%command_queue, ierr)
 
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "ReleaseCommandQueue")
-      call clReleaseContext(opencl%context, cl_status)
+      call clReleaseContext(opencl%context%cl_context, cl_status)
 
       if(buffer_alloc_count /= 0) then
         call messages_write('OpenCL:')
@@ -771,7 +773,7 @@ contains
 
     ASSERT(fsize >= 0)
 
-    this%mem = clCreateBuffer(opencl%context, flags, fsize, ierr)
+    this%mem = clCreateBuffer(opencl%context%cl_context, flags, fsize, ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateBuffer")
 
     INCR(buffer_alloc_count, 1)
@@ -918,7 +920,7 @@ contains
     integer(8) :: workgroup_size8
     integer    :: ierr
 
-    call clGetKernelWorkGroupInfo(kernel, opencl%device, CL_KERNEL_WORK_GROUP_SIZE, workgroup_size8, ierr)
+    call clGetKernelWorkGroupInfo(kernel, opencl%device%cl_device, CL_KERNEL_WORK_GROUP_SIZE, workgroup_size8, ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
     workgroup_size = workgroup_size8
 
@@ -962,7 +964,7 @@ contains
     call messages_write("Building CL program '"//trim(filename)//"'.")
     call messages_info()
 
-    prog = clCreateProgramWithSource(opencl%context, string, ierr)
+    prog = clCreateProgramWithSource(opencl%context%cl_context, string, ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateProgramWithSource")
 
     ! build the compilation flags
@@ -978,9 +980,9 @@ contains
 
     share_string='-I'//trim(conf%share)//'/opencl/'
 
-    if (f90_cl_device_has_extension(opencl%device, "cl_khr_fp64")) then
+    if (f90_cl_device_has_extension(opencl%device%cl_device, "cl_khr_fp64")) then
       string = trim(string)//' -DEXT_KHR_FP64'
-    else if(f90_cl_device_has_extension(opencl%device, "cl_amd_fp64")) then
+    else if(f90_cl_device_has_extension(opencl%device%cl_device, "cl_amd_fp64")) then
       string = trim(string)//' -DEXT_AMD_FP64'
     else
       call messages_write('Octopus requires an OpenCL device with double-precision support.')
@@ -1005,7 +1007,7 @@ contains
 
     call clBuildProgram(prog, trim(string), ierr)
 
-    call clGetProgramBuildInfo(prog, opencl%device, CL_PROGRAM_BUILD_LOG, string, ierrlog)
+    call clGetProgramBuildInfo(prog, opencl%device%cl_device, CL_PROGRAM_BUILD_LOG, string, ierrlog)
     if(ierrlog /= CL_SUCCESS) call opencl_print_error(ierrlog, "clGetProgramBuildInfo")
 
     ! CL_PROGRAM_BUILD_LOG seems to have a useless '\n' in it

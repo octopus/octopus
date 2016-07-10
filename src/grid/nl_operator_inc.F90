@@ -341,7 +341,7 @@ contains
       call opencl_set_kernel_arg(kernel_operate, 7, log2(eff_size))
       iarg = 7
       
-      call clGetDeviceInfo(opencl%device, CL_DEVICE_LOCAL_MEM_SIZE, local_mem_size, cl_status)
+      call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_LOCAL_MEM_SIZE, local_mem_size, cl_status)
       isize = int(dble(local_mem_size)/(op%stencil%size*types_get_size(TYPE_INTEGER)))
       isize = isize - mod(isize, eff_size)
       bsize = eff_size*isize
@@ -398,7 +398,7 @@ contains
       call opencl_set_kernel_arg(kernel_operate, 6, fo%pack%buffer)
       call opencl_set_kernel_arg(kernel_operate, 7, log2(eff_size))
 
-      call clGetDeviceInfo(opencl%device, CL_DEVICE_LOCAL_MEM_SIZE, local_mem_size, cl_status)
+      call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_LOCAL_MEM_SIZE, local_mem_size, cl_status)
       isize = int(dble(local_mem_size)/(op%stencil%size*types_get_size(TYPE_INTEGER)))
       isize = isize - mod(isize, eff_size)
       bsize = eff_size*isize

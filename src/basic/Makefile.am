@@ -77,7 +77,8 @@ libbasic_a_SOURCES =     \
 	test_parameters.F90  \
 	sort.F90             \
 	sort_low.cc          \
-	debug.F90
+	debug.F90            \
+	accel.F90
 
 noinst_HEADERS =               \
 	mpi_debug_inc.F90      \
@@ -132,7 +133,7 @@ path.o : path.F90 loct.o messages.o profiling.o global.o
 json.o : json.F90 kinds.o io.o messages.o profiling.o global.o
 json_parser.o : json_parser.F90 json.o kinds.o io.o messages.o profiling.o global.o
 
-opencl.o : opencl.F90 opencl_inc.F90 global.o types.o profiling.o messages.o parser.o mpi.o io.o unit_system.o
+opencl.o : opencl.F90 opencl_inc.F90 global.o types.o profiling.o messages.o parser.o mpi.o io.o unit_system.o accel.o
 octcl_kernel.o : octcl_kernel.F90 opencl.o global.o
 mpi_debug.o : mpi_debug.F90 mpi_debug_inc.F90 mpi.o messages.o loct.o global.o 
 mpi_lib.o : mpi_lib.F90 mpi_lib_inc.F90 mpi_debug.o mpi.o messages.o global.o profiling.o
