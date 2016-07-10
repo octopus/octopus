@@ -77,7 +77,6 @@ module opencl_oct_m
 
   type opencl_t 
 #ifdef HAVE_OPENCL
-    type(cl_platform_id)   :: platform_id
     type(accel_context_t)  :: context
     type(cl_command_queue) :: command_queue
     type(accel_device_t)   :: device
@@ -200,6 +199,7 @@ contains
     integer  :: idevice, iplatform, ndevices, idev, cl_status, ret_devices, nplatforms, iplat
     character(len=256) :: device_name
 #ifdef HAVE_OPENCL
+    type(cl_platform_id) :: platform_id
     type(cl_program) :: prog
     type(cl_platform_id), allocatable :: allplatforms(:)
     type(cl_device_id), allocatable :: alldevices(:)
@@ -335,11 +335,11 @@ contains
       call messages_fatal()
     end if
 
-    opencl%platform_id = allplatforms(iplatform + 1)
+    platform_id = allplatforms(iplatform + 1)
 
     SAFE_DEALLOCATE_A(allplatforms)
 
-    call clGetDeviceIDs(opencl%platform_id, CL_DEVICE_TYPE_ALL, ndevices, cl_status)
+    call clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_ALL, ndevices, cl_status)
 
     call messages_write('Info: Available CL devices: ')
     call messages_write(ndevices)
@@ -349,7 +349,7 @@ contains
 
     ! list all devices
 
-    call clGetDeviceIDs(opencl%platform_id, CL_DEVICE_TYPE_ALL, alldevices, ret_devices, cl_status)
+    call clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_ALL, alldevices, ret_devices, cl_status)
 
     do idev = 1, ndevices
       call messages_write('      Device ')
@@ -373,15 +373,15 @@ contains
     end select
 
     ! now get a list of the selected type
-    call clGetDeviceIDs(opencl%platform_id, device_type, alldevices, ret_devices, cl_status)
+    call clGetDeviceIDs(platform_id, device_type, alldevices, ret_devices, cl_status)
 
     if(ret_devices < 1) then
       ! we didnt find a device of the selected type, we ask for the default device
-      call clGetDeviceIDs(opencl%platform_id, CL_DEVICE_TYPE_DEFAULT, alldevices, ret_devices, cl_status)
+      call clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_DEFAULT, alldevices, ret_devices, cl_status)
 
       if(ret_devices < 1) then
         ! if this does not work, we ask for all devices
-        call clGetDeviceIDs(opencl%platform_id, CL_DEVICE_TYPE_ALL, alldevices, ret_devices, cl_status)
+        call clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_ALL, alldevices, ret_devices, cl_status)
       end if
 
       if(ret_devices < 1) then
@@ -417,7 +417,7 @@ contains
     if(mpi_grp_is_root(base_grp)) call device_info()
 
     ! create the context
-    opencl%context%cl_context = clCreateContext(opencl%platform_id, opencl%device%cl_device, cl_status)
+    opencl%context%cl_context = clCreateContext(platform_id, opencl%device%cl_device, cl_status)
     if(cl_status /= CL_SUCCESS) call opencl_print_error(cl_status, "CreateContext")
 
     SAFE_DEALLOCATE_A(alldevices)
