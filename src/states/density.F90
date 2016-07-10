@@ -20,6 +20,7 @@
 #include "global.h"
 
 module density_oct_m
+  use accel_oct_m
   use base_states_oct_m
   use blas_oct_m
   use batch_oct_m
@@ -77,7 +78,7 @@ module density_oct_m
     FLOAT,                pointer :: Imdensity(:, :)
     type(states_t),       pointer :: st
     type(grid_t),         pointer :: gr
-    type(opencl_mem_t)            :: buff_density
+    type(accel_mem_t)            :: buff_density
     integer                       :: pnp
     logical                       :: packed
   end type density_calc_t
@@ -146,7 +147,7 @@ contains
     logical :: correct_size, cmplxscl
 #ifdef HAVE_OPENCL
     integer            :: wgsize
-    type(opencl_mem_t) :: buff_weight
+    type(accel_mem_t) :: buff_weight
     type(cl_kernel)    :: kernel
 #endif
 

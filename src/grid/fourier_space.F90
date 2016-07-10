@@ -20,6 +20,7 @@
 #include "global.h"
 
 module fourier_space_oct_m
+  use accel_oct_m
 #ifdef HAVE_OPENCL
   use cl
 #endif
@@ -64,7 +65,7 @@ module fourier_space_oct_m
     FLOAT, pointer :: dop(:, :, :)
     CMPLX, pointer :: zop(:, :, :)
     logical :: in_device_memory
-    type(opencl_mem_t) :: op_buffer
+    type(accel_mem_t) :: op_buffer
   end type fourier_space_op_t
 
 contains

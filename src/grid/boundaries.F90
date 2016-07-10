@@ -20,6 +20,7 @@
 #include "global.h"
 
 module boundaries_oct_m
+  use accel_oct_m
   use batch_oct_m
 #ifdef HAVE_OPENCL
   use cl
@@ -50,11 +51,11 @@ module boundaries_oct_m
     integer, pointer :: per_recv(:, :)
     integer, pointer :: nsend(:)
     integer, pointer :: nrecv(:)
-    type(opencl_mem_t) :: buff_per_points
-    type(opencl_mem_t) :: buff_per_send
-    type(opencl_mem_t) :: buff_per_recv
-    type(opencl_mem_t) :: buff_nsend
-    type(opencl_mem_t) :: buff_nrecv
+    type(accel_mem_t) :: buff_per_points
+    type(accel_mem_t) :: buff_per_send
+    type(accel_mem_t) :: buff_per_recv
+    type(accel_mem_t) :: buff_nsend
+    type(accel_mem_t) :: buff_nrecv
   end type boundaries_t
 
   public ::                        &

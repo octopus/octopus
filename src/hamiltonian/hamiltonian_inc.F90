@@ -190,7 +190,7 @@ subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
   FLOAT, allocatable :: vpsl_spin(:,:), Imvpsl_spin(:,:)
 #ifdef HAVE_OPENCL
   integer :: pnp, offset, ispin
-  type(opencl_mem_t) :: vpsl_buff
+  type(accel_mem_t) :: vpsl_buff
 #endif
 
   PUSH_SUB(X(hamiltonian_external))

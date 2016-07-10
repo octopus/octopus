@@ -23,6 +23,7 @@ module accel_oct_m
 #ifdef HAVE_OPENCL
   use cl
 #endif
+  use types_oct_m
   
   implicit none 
 
@@ -30,7 +31,9 @@ module accel_oct_m
 
   public ::                 &
     accel_context_t,        &
-    accel_device_t
+    accel_device_t,         &
+    accel_mem_t,            &
+    accel_t
   
   type accel_context_t
 #ifdef HAVE_OPENCL
@@ -47,7 +50,29 @@ module accel_oct_m
     integer         :: dummy
 #endif
   end type accel_device_t
-  
+
+  type accel_t 
+#ifdef HAVE_OPENCL
+    type(accel_context_t)  :: context
+    type(cl_command_queue) :: command_queue
+    type(accel_device_t)   :: device
+#endif
+    integer                :: max_workgroup_size
+    integer                :: local_memory_size
+    logical                :: enabled
+  end type accel_t
+
+  type accel_mem_t
+#ifdef HAVE_OPENCL
+    type(cl_mem)           :: mem
+#endif
+    integer(SIZEOF_SIZE_T) :: size
+    type(type_t)           :: type
+    integer                :: flags
+  end type accel_mem_t
+
+  type(accel_t), public :: accel
+
 end module accel_oct_m
 
 !! Local Variables:

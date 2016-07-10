@@ -20,6 +20,7 @@
 #include "global.h"
 
 module cube_function_oct_m
+  use accel_oct_m
   use cube_oct_m
 #ifdef HAVE_OPENCL
   use cl
@@ -71,8 +72,8 @@ module cube_function_oct_m
     CMPLX, pointer :: FS(:, :, :)   !< Fourier-space grid
     logical            :: forced_alloc !< Forced to be allocated even when PFFT is associated with the cube
     logical            :: in_device_memory
-    type(opencl_mem_t) :: real_space_buffer
-    type(opencl_mem_t) :: fourier_space_buffer
+    type(accel_mem_t) :: real_space_buffer
+    type(accel_mem_t) :: fourier_space_buffer
   end type cube_function_t
 
   type(profile_t), save :: prof_m2c, prof_c2m

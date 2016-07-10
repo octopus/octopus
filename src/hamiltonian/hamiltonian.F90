@@ -20,6 +20,7 @@
 #include "global.h"
 
 module hamiltonian_oct_m
+  use accel_oct_m
   use base_hamiltonian_oct_m
   use base_potential_oct_m
   use batch_oct_m

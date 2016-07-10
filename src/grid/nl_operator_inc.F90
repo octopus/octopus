@@ -293,7 +293,7 @@ contains
   subroutine operate_opencl()
     integer    :: pnri, bsize, isize, ist, eff_size, iarg, npoints
     integer(8) :: local_mem_size
-    type(opencl_mem_t) :: buff_weights
+    type(accel_mem_t) :: buff_weights
     type(profile_t), save :: prof
     type(cl_kernel) :: kernel_operate
 
@@ -341,7 +341,7 @@ contains
       call opencl_set_kernel_arg(kernel_operate, 7, log2(eff_size))
       iarg = 7
       
-      call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_LOCAL_MEM_SIZE, local_mem_size, cl_status)
+      call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_LOCAL_MEM_SIZE, local_mem_size, cl_status)
       isize = int(dble(local_mem_size)/(op%stencil%size*types_get_size(TYPE_INTEGER)))
       isize = isize - mod(isize, eff_size)
       bsize = eff_size*isize
@@ -398,7 +398,7 @@ contains
       call opencl_set_kernel_arg(kernel_operate, 6, fo%pack%buffer)
       call opencl_set_kernel_arg(kernel_operate, 7, log2(eff_size))
 
-      call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_LOCAL_MEM_SIZE, local_mem_size, cl_status)
+      call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_LOCAL_MEM_SIZE, local_mem_size, cl_status)
       isize = int(dble(local_mem_size)/(op%stencil%size*types_get_size(TYPE_INTEGER)))
       isize = isize - mod(isize, eff_size)
       bsize = eff_size*isize

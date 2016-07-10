@@ -20,6 +20,7 @@
 #include "global.h"
 
 module mesh_batch_oct_m
+  use accel_oct_m
   use batch_oct_m
   use blas_oct_m
   use iso_c_binding

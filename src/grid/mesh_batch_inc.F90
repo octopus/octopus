@@ -31,7 +31,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   type(profile_t), save :: prof, profgemm, profcomm
   logical :: use_blas, reduce_, conj
 #ifdef HAVE_OPENCL
-  type(opencl_mem_t) :: dot_buffer
+  type(accel_mem_t) :: dot_buffer
   type(cl_kernel)    :: kernel
   integer            :: ierr
   type(profile_t), save :: prof_copy, prof_gemmcl
@@ -156,7 +156,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
       A = aa%pack%buffer%mem, offA = 0_8, lda = int(aa%pack%size(1), 8), &
       B = bb%pack%buffer%mem, offB = 0_8, ldb = int(bb%pack%size(1), 8), beta = R_TOTYPE(M_ZERO), &
       C = dot_buffer%mem, offC = 0_8, ldc = int(aa%nst, 8), &
-      CommandQueue = opencl%command_queue, status = ierr)
+      CommandQueue = accel%command_queue, status = ierr)
     if(ierr /= clblasSuccess) call clblas_print_error(ierr, 'clblasXgemmEx')
 
 #else
@@ -420,7 +420,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
   type(profile_t), save :: prof, profcomm
   R_TYPE, allocatable :: tmp(:), cltmp(:, :)
 #ifdef HAVE_OPENCL
-  type(opencl_mem_t)  :: dot_buffer, scratch_buffer
+  type(accel_mem_t)  :: dot_buffer, scratch_buffer
   type(profile_t), save :: prof_copy
 #endif
 
@@ -521,13 +521,13 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
       call clblasDdot(N = int(mesh%np, 8), dotProduct = dot_buffer%mem, offDP = int(ist - 1, 8), &
         X = aa%pack%buffer%mem, offx = int(ist - 1, 8), incx = aa%pack%size(1), &
         Y = bb%pack%buffer%mem, offy = int(ist - 1, 8), incy = bb%pack%size(1), &
-        scratchBuff = scratch_buffer%mem, CommandQueue = opencl%command_queue, status = status)
+        scratchBuff = scratch_buffer%mem, CommandQueue = accel%command_queue, status = status)
       if(status /= clblasSuccess) call clblas_print_error(status, 'clblasDdot')
 #else
       call clblasZdotc(N = int(mesh%np, 8), dotProduct = dot_buffer%mem, offDP = int(ist - 1, 8), &
         X = aa%pack%buffer%mem, offx = int(ist - 1, 8), incx = aa%pack%size(1), &
         Y = bb%pack%buffer%mem, offy = int(ist - 1, 8), incy = bb%pack%size(1), &
-        scratchBuff = scratch_buffer%mem, CommandQueue = opencl%command_queue, status = status)
+        scratchBuff = scratch_buffer%mem, CommandQueue = accel%command_queue, status = status)
       if(status /= clblasSuccess) call clblas_print_error(status, 'clblasDdot')
 #endif
 
@@ -788,7 +788,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
   R_TYPE :: a0
   FLOAT, allocatable :: scal(:), ssq(:)
 #ifdef HAVE_OPENCL
-  type(opencl_mem_t)  :: nrm2_buffer, scratch_buffer
+  type(accel_mem_t)  :: nrm2_buffer, scratch_buffer
 #endif
   type(profile_t), save :: prof
 
@@ -868,12 +868,12 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
 #ifdef R_TREAL
       call clblasDnrm2(N = int(mesh%np, 8), NRM2 = nrm2_buffer%mem, offNRM2 = int(ist - 1, 8), &
         X = aa%pack%buffer%mem, offx = int(ist - 1, 8), incx = aa%pack%size(1), &
-        scratchBuff = scratch_buffer%mem, CommandQueue = opencl%command_queue, status = status)
+        scratchBuff = scratch_buffer%mem, CommandQueue = accel%command_queue, status = status)
       if(status /= clblasSuccess) call clblas_print_error(status, 'clblasDdot')
 #else
       call clblasDznrm2(N = int(mesh%np, 8), NRM2 = nrm2_buffer%mem, offNRM2 = int(ist - 1, 8), &
         X = aa%pack%buffer%mem, offx = int(ist - 1, 8), incx = aa%pack%size(1), &
-        scratchBuff = scratch_buffer%mem, CommandQueue = opencl%command_queue, status = status)
+        scratchBuff = scratch_buffer%mem, CommandQueue = accel%command_queue, status = status)
       if(status /= clblasSuccess) call clblas_print_error(status, 'clblasDdot')
 #endif
       

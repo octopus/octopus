@@ -20,6 +20,7 @@
 #include "global.h"
 
 module states_calc_oct_m
+  use accel_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use blas_oct_m

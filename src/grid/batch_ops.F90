@@ -20,6 +20,7 @@
 #include "global.h"
 
 module batch_ops_oct_m
+  use accel_oct_m
   use batch_oct_m
   use blas_oct_m
   use iso_c_binding
@@ -160,7 +161,7 @@ subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
   type(batch_t),       intent(in)    :: this
   integer,             intent(in)    :: sp  
   integer,             intent(in)    :: ep
-  type(opencl_mem_t),  intent(inout) :: psi
+  type(accel_mem_t),  intent(inout) :: psi
   integer,             intent(in)    :: ldpsi
 
   integer :: tsize, offset
@@ -211,7 +212,7 @@ subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
   type(batch_t),       intent(inout) :: this
   integer,             intent(in)    :: sp  
   integer,             intent(in)    :: ep
-  type(opencl_mem_t),  intent(in)    :: psi
+  type(accel_mem_t),  intent(in)    :: psi
   integer,             intent(in)    :: ldpsi
 
   integer :: tsize, offset

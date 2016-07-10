@@ -135,7 +135,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
 #ifdef HAVE_OPENCL
   integer :: localsize
   integer :: size_factor
-  type(opencl_mem_t)      :: aa_buffer
+  type(accel_mem_t)      :: aa_buffer
   FLOAT,  allocatable     :: aa_linear_double(:)
   type(octcl_kernel_t), save :: kernel
   type(cl_kernel)         :: kernel_ref
@@ -278,7 +278,7 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
   integer :: localsize
   integer :: size_factor
   FLOAT,  allocatable     :: aa_linear_double(:)
-  type(opencl_mem_t)      :: aa_buffer
+  type(accel_mem_t)      :: aa_buffer
   type(octcl_kernel_t), save :: kernel
   type(cl_kernel)         :: kernel_ref
 #endif
@@ -391,7 +391,7 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
 #ifdef HAVE_OPENCL
   integer :: size_factor, localsize
   FLOAT,  allocatable     :: aa_linear_double(:)
-  type(opencl_mem_t)      :: aa_buffer
+  type(accel_mem_t)      :: aa_buffer
   type(octcl_kernel_t), save :: kernel
   type(cl_kernel)         :: kernel_ref
 #endif
@@ -543,7 +543,7 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
 
   integer :: ip
   type(profile_t), save :: prof
-  type(opencl_mem_t) :: tmp
+  type(accel_mem_t) :: tmp
 
   call profiling_in(prof, "BATCH_SET_STATE")
 
@@ -640,7 +640,7 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
 
   integer :: ip
   type(profile_t), save :: prof 
-  type(opencl_mem_t) :: tmp
+  type(accel_mem_t) :: tmp
 
   PUSH_SUB(X(batch_get_state1))
 
@@ -911,7 +911,7 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
   R_TYPE :: mul
 #ifdef HAVE_OPENCL
   integer :: iprange
-  type(opencl_mem_t)      :: ff_buffer
+  type(accel_mem_t)      :: ff_buffer
 #endif
   
   PUSH_SUB(X(batch_mul))

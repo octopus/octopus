@@ -20,6 +20,7 @@
 #include "global.h"
 
 module hamiltonian_base_oct_m
+  use accel_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use blas_oct_m
@@ -114,24 +115,24 @@ module hamiltonian_base_oct_m
     integer,                  allocatable :: projector_to_atom(:)
     integer                               :: nregions
     integer,                  allocatable :: regions(:)
-    type(opencl_mem_t)                    :: potential_opencl
-    type(opencl_mem_t)                    :: buff_offsets
-    type(opencl_mem_t)                    :: buff_matrices
-    type(opencl_mem_t)                    :: buff_maps
-    type(opencl_mem_t)                    :: buff_scals
-    type(opencl_mem_t)                    :: buff_pos
-    type(opencl_mem_t)                    :: buff_invmap
-    type(opencl_mem_t)                    :: buff_projector_phases
+    type(accel_mem_t)                    :: potential_opencl
+    type(accel_mem_t)                    :: buff_offsets
+    type(accel_mem_t)                    :: buff_matrices
+    type(accel_mem_t)                    :: buff_maps
+    type(accel_mem_t)                    :: buff_scals
+    type(accel_mem_t)                    :: buff_pos
+    type(accel_mem_t)                    :: buff_invmap
+    type(accel_mem_t)                    :: buff_projector_phases
 
     CMPLX, pointer     :: phase(:, :)
-    type(opencl_mem_t) :: buff_phase
+    type(accel_mem_t) :: buff_phase
     integer            :: buff_phase_qn_start
   end type hamiltonian_base_t
 
   type projection_t
     FLOAT, allocatable     :: dprojection(:, :)
     CMPLX, allocatable     :: zprojection(:, :)
-    type(opencl_mem_t)     :: buff_projection
+    type(accel_mem_t)     :: buff_projection
   end type projection_t
 
   integer, parameter, public ::          &

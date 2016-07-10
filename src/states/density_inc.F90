@@ -32,7 +32,7 @@ subroutine X(density_accumulate_grad)(gr, st, iq, psib, grad_psib, grad_rho)
 #ifdef HAVE_OPENCL
   integer :: wgsize
   FLOAT, allocatable :: grad_rho_tmp(:, :), weights(:)
-  type(opencl_mem_t) :: grad_rho_buff, weights_buff
+  type(accel_mem_t) :: grad_rho_buff, weights_buff
   type(octcl_kernel_t), save :: ker_calc_grad_dens
   type(cl_kernel) :: kernel
 #endif  

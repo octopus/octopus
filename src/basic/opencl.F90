@@ -46,11 +46,9 @@ module opencl_oct_m
 
   public ::                       &
     opencl_is_enabled,            &
-    opencl_t,                     &
     opencl_init,                  &
     opencl_end,                   &
     opencl_padded_size,           &
-    opencl_mem_t,                 &
     opencl_mem_nullify
 
 #ifdef HAVE_OPENCL
@@ -74,28 +72,6 @@ module opencl_oct_m
     opencl_set_buffer_to_zero,    &
     opencl_use_shared_mem
 #endif
-
-  type opencl_t 
-#ifdef HAVE_OPENCL
-    type(accel_context_t)  :: context
-    type(cl_command_queue) :: command_queue
-    type(accel_device_t)   :: device
-#endif
-    integer                :: max_workgroup_size
-    integer                :: local_memory_size
-    logical                :: enabled
-  end type opencl_t
-
-  type opencl_mem_t
-#ifdef HAVE_OPENCL
-    type(cl_mem)           :: mem
-#endif
-    integer(SIZEOF_SIZE_T) :: size
-    type(type_t)           :: type
-    integer                :: flags
-  end type opencl_mem_t
-
-  type(opencl_t), public :: opencl
 
 #ifdef HAVE_OPENCL
   ! the kernels
@@ -183,7 +159,7 @@ contains
 
   pure logical function opencl_is_enabled() result(enabled)
 #ifdef HAVE_OPENCL
-    enabled = opencl%enabled
+    enabled = accel%enabled
 #else
     enabled = .false.
 #endif
@@ -226,10 +202,10 @@ contains
     default = .false.
 #endif
     call parse_variable('DisableOpenCL', default, disable)
-    opencl%enabled = .not. disable
+    accel%enabled = .not. disable
 
 #ifndef HAVE_OPENCL
-    if(opencl%enabled) then
+    if(accel%enabled) then
       message(1) = 'Octopus was compiled without OpenCL support.'
       call messages_fatal(1)
     end if
@@ -412,24 +388,24 @@ contains
       call messages_fatal()
     end if
 
-    opencl%device%cl_device = alldevices(idevice + 1)
+    accel%device%cl_device = alldevices(idevice + 1)
 
     if(mpi_grp_is_root(base_grp)) call device_info()
 
     ! create the context
-    opencl%context%cl_context = clCreateContext(platform_id, opencl%device%cl_device, cl_status)
+    accel%context%cl_context = clCreateContext(platform_id, accel%device%cl_device, cl_status)
     if(cl_status /= CL_SUCCESS) call opencl_print_error(cl_status, "CreateContext")
 
     SAFE_DEALLOCATE_A(alldevices)
 
-    opencl%command_queue = clCreateCommandQueue(opencl%context%cl_context, opencl%device%cl_device, &
+    accel%command_queue = clCreateCommandQueue(accel%context%cl_context, accel%device%cl_device, &
       CL_QUEUE_PROFILING_ENABLE, cl_status)
     if(cl_status /= CL_SUCCESS) call opencl_print_error(cl_status, "CreateCommandQueue")
 
-    call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_MAX_WORK_GROUP_SIZE, opencl%max_workgroup_size, cl_status)
-    call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_LOCAL_MEM_SIZE, opencl%local_memory_size, cl_status)
+    call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_MAX_WORK_GROUP_SIZE, accel%max_workgroup_size, cl_status)
+    call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_LOCAL_MEM_SIZE, accel%local_memory_size, cl_status)
 
-    call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_TYPE, device_type, cl_status)
+    call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_TYPE, device_type, cl_status)
 
     select case(device_type)
     case(CL_DEVICE_TYPE_GPU)
@@ -573,7 +549,7 @@ contains
       call messages_write('Selected CL device:')
       call messages_new_line()
 
-      call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_TYPE, val, cl_status)
+      call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_TYPE, val, cl_status)
       call messages_write('      Device type            :')
       select case(int(val, 4))
       case(CL_DEVICE_TYPE_GPU)
@@ -585,65 +561,65 @@ contains
       end select
       call messages_new_line()
 
-      call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_VENDOR, val_str, cl_status)
+      call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_VENDOR, val_str, cl_status)
       call messages_write('      Device vendor          : '//trim(val_str))
       call messages_new_line()
 
-      call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_NAME, val_str, cl_status)
+      call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_NAME, val_str, cl_status)
       call messages_write('      Device name            : '//trim(val_str))
       call messages_new_line()
 
-      call clGetDeviceInfo(opencl%device%cl_device, CL_DRIVER_VERSION, val_str, cl_status)
+      call clGetDeviceInfo(accel%device%cl_device, CL_DRIVER_VERSION, val_str, cl_status)
       call messages_write('      Driver version         : '//trim(val_str))
       call messages_new_line()
 
-      call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_MAX_COMPUTE_UNITS, val, cl_status)
+      call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_MAX_COMPUTE_UNITS, val, cl_status)
       call messages_write('      Compute units          :')
       call messages_write(val)
       call messages_new_line()
 
-      call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_MAX_CLOCK_FREQUENCY, val, cl_status)
+      call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_MAX_CLOCK_FREQUENCY, val, cl_status)
       call messages_write('      Clock frequency        :')
       call messages_write(val)
       call messages_write(' GHz')
       call messages_new_line()
 
-      call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_GLOBAL_MEM_SIZE, val, cl_status)
+      call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_GLOBAL_MEM_SIZE, val, cl_status)
       call messages_write('      Device memory          :')
       call messages_write(val, units = unit_megabytes)
       call messages_new_line()
 
-      call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, val, cl_status)
+      call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, val, cl_status)
       call messages_write('      Max alloc size         :')
       call messages_write(val, units = unit_megabytes)
       call messages_new_line()
 
-      call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_GLOBAL_MEM_CACHE_SIZE, val, cl_status)
+      call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_GLOBAL_MEM_CACHE_SIZE, val, cl_status)
       call messages_write('      Device cache           :')
       call messages_write(val, units = unit_kilobytes)
       call messages_new_line()
 
-      call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_LOCAL_MEM_SIZE, val, cl_status)
+      call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_LOCAL_MEM_SIZE, val, cl_status)
       call messages_write('      Local memory           :')
       call messages_write(val, units = unit_kilobytes)
       call messages_new_line()
 
-      call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE, val, cl_status)
+      call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE, val, cl_status)
       call messages_write('      Constant memory        :')
       call messages_write(val, units = unit_kilobytes)
       call messages_new_line()
 
-      call clGetDeviceInfo(opencl%device%cl_device, CL_DEVICE_MAX_WORK_GROUP_SIZE, val, cl_status)
+      call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_MAX_WORK_GROUP_SIZE, val, cl_status)
       call messages_write('      Max. workgroup size    :')
       call messages_write(val)
       call messages_new_line()
 
       call messages_write('      Extension cl_khr_fp64  :')
-      call messages_write(f90_cl_device_has_extension(opencl%device%cl_device, "cl_khr_fp64"))
+      call messages_write(f90_cl_device_has_extension(accel%device%cl_device, "cl_khr_fp64"))
       call messages_new_line()
 
       call messages_write('      Extension cl_amd_fp64  :')
-      call messages_write(f90_cl_device_has_extension(opencl%device%cl_device, "cl_amd_fp64"))
+      call messages_write(f90_cl_device_has_extension(accel%device%cl_device, "cl_amd_fp64"))
       call messages_new_line()
 
       call messages_info()
@@ -704,10 +680,10 @@ contains
       call opencl_release_kernel(zkernel_dot_matrix_spinors)
 
 
-      call clReleaseCommandQueue(opencl%command_queue, ierr)
+      call clReleaseCommandQueue(accel%command_queue, ierr)
 
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "ReleaseCommandQueue")
-      call clReleaseContext(opencl%context%cl_context, cl_status)
+      call clReleaseContext(accel%context%cl_context, cl_status)
 
       if(buffer_alloc_count /= 0) then
         call messages_write('OpenCL:')
@@ -726,7 +702,7 @@ contains
   ! ------------------------------------------
 
   elemental subroutine opencl_mem_nullify(this)
-    type(opencl_mem_t), intent(out) :: this
+    type(accel_mem_t), intent(out) :: this
 
     !> To be implemented.
     This%size = 0
@@ -756,7 +732,7 @@ contains
   ! ------------------------------------------
 
   subroutine opencl_create_buffer_4(this, flags, type, size)
-    type(opencl_mem_t), intent(inout) :: this
+    type(accel_mem_t), intent(inout) :: this
     integer,            intent(in)    :: flags
     type(type_t),       intent(in)    :: type
     integer,            intent(in)    :: size
@@ -773,7 +749,7 @@ contains
 
     ASSERT(fsize >= 0)
 
-    this%mem = clCreateBuffer(opencl%context%cl_context, flags, fsize, ierr)
+    this%mem = clCreateBuffer(accel%context%cl_context, flags, fsize, ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateBuffer")
 
     INCR(buffer_alloc_count, 1)
@@ -785,7 +761,7 @@ contains
   ! ------------------------------------------
 
   subroutine opencl_release_buffer(this)
-    type(opencl_mem_t), intent(inout) :: this
+    type(accel_mem_t), intent(inout) :: this
 
     integer :: ierr
 
@@ -806,7 +782,7 @@ contains
   ! ------------------------------------------
 
   integer(SIZEOF_SIZE_T) pure function opencl_get_buffer_size(this) result(size)
-    type(opencl_mem_t), intent(in) :: this
+    type(accel_mem_t), intent(in) :: this
 
     size = this%size
   end function opencl_get_buffer_size
@@ -814,7 +790,7 @@ contains
   ! -----------------------------------------
 
   type(type_t) pure function opencl_get_buffer_type(this) result(type)
-    type(opencl_mem_t), intent(in) :: this
+    type(accel_mem_t), intent(in) :: this
 
     type = this%type
   end function opencl_get_buffer_type
@@ -826,7 +802,7 @@ contains
 
     ! no push_sub, called too frequently
 
-    call clFinish(opencl%command_queue, ierr)
+    call clFinish(accel%command_queue, ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, 'clFinish') 
 
   end subroutine opencl_finish
@@ -836,7 +812,7 @@ contains
   subroutine opencl_set_kernel_arg_buffer(kernel, narg, buffer)
     type(cl_kernel),    intent(inout) :: kernel
     integer,            intent(in)    :: narg
-    type(opencl_mem_t), intent(in)    :: buffer
+    type(accel_mem_t), intent(in)    :: buffer
 
     integer :: ierr
 
@@ -862,9 +838,9 @@ contains
 
     size_in_bytes = int(size, 8)*types_get_size(type)
 
-    if(size_in_bytes > opencl%local_memory_size) then
+    if(size_in_bytes > accel%local_memory_size) then
       write(message(1), '(a,f12.6,a)') "CL Error: requested local memory: ", dble(size_in_bytes)/1024.0, " Kb"
-      write(message(2), '(a,f12.6,a)') "          available local memory: ", dble(opencl%local_memory_size)/1024.0, " Kb"
+      write(message(2), '(a,f12.6,a)') "          available local memory: ", dble(accel%local_memory_size)/1024.0, " Kb"
       call messages_fatal(2)
     else if(size_in_bytes <= 0) then
       write(message(1), '(a,i10)') "CL Error: invalid local memory size: ", size_in_bytes
@@ -900,7 +876,7 @@ contains
     gsizes(1:dim) = int(globalsizes(1:dim), 8)
     lsizes(1:dim) = int(localsizes(1:dim), 8)
 
-    call clEnqueueNDRangeKernel(opencl%command_queue, kernel, gsizes(1:dim), lsizes(1:dim), ierr)
+    call clEnqueueNDRangeKernel(accel%command_queue, kernel, gsizes(1:dim), lsizes(1:dim), ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
 
   end subroutine opencl_kernel_run
@@ -909,7 +885,7 @@ contains
   ! -----------------------------------------------
 
   integer pure function opencl_max_workgroup_size() result(max_workgroup_size)
-    max_workgroup_size = opencl%max_workgroup_size
+    max_workgroup_size = accel%max_workgroup_size
   end function opencl_max_workgroup_size
 
   ! -----------------------------------------------
@@ -920,7 +896,7 @@ contains
     integer(8) :: workgroup_size8
     integer    :: ierr
 
-    call clGetKernelWorkGroupInfo(kernel, opencl%device%cl_device, CL_KERNEL_WORK_GROUP_SIZE, workgroup_size8, ierr)
+    call clGetKernelWorkGroupInfo(kernel, accel%device%cl_device, CL_KERNEL_WORK_GROUP_SIZE, workgroup_size8, ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
     workgroup_size = workgroup_size8
 
@@ -964,7 +940,7 @@ contains
     call messages_write("Building CL program '"//trim(filename)//"'.")
     call messages_info()
 
-    prog = clCreateProgramWithSource(opencl%context%cl_context, string, ierr)
+    prog = clCreateProgramWithSource(accel%context%cl_context, string, ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateProgramWithSource")
 
     ! build the compilation flags
@@ -980,9 +956,9 @@ contains
 
     share_string='-I'//trim(conf%share)//'/opencl/'
 
-    if (f90_cl_device_has_extension(opencl%device%cl_device, "cl_khr_fp64")) then
+    if (f90_cl_device_has_extension(accel%device%cl_device, "cl_khr_fp64")) then
       string = trim(string)//' -DEXT_KHR_FP64'
-    else if(f90_cl_device_has_extension(opencl%device%cl_device, "cl_amd_fp64")) then
+    else if(f90_cl_device_has_extension(accel%device%cl_device, "cl_amd_fp64")) then
       string = trim(string)//' -DEXT_AMD_FP64'
     else
       call messages_write('Octopus requires an OpenCL device with double-precision support.')
@@ -1007,7 +983,7 @@ contains
 
     call clBuildProgram(prog, trim(string), ierr)
 
-    call clGetProgramBuildInfo(prog, opencl%device%cl_device, CL_PROGRAM_BUILD_LOG, string, ierrlog)
+    call clGetProgramBuildInfo(prog, accel%device%cl_device, CL_PROGRAM_BUILD_LOG, string, ierrlog)
     if(ierrlog /= CL_SUCCESS) call opencl_print_error(ierrlog, "clGetProgramBuildInfo")
 
     ! CL_PROGRAM_BUILD_LOG seems to have a useless '\n' in it
@@ -1305,7 +1281,7 @@ contains
   ! ----------------------------------------------------
 
   subroutine opencl_set_buffer_to_zero(buffer, type, nval, offset)
-    type(opencl_mem_t), intent(inout) :: buffer
+    type(accel_mem_t), intent(inout) :: buffer
     type(type_t),       intent(in)    :: type
     integer,            intent(in)    :: nval
     integer, optional,  intent(in)    :: offset
@@ -1338,7 +1314,7 @@ contains
     integer :: size
     real(8) :: time, stime
     real(8) :: read_bw, write_bw
-    type(opencl_mem_t) :: buff
+    type(accel_mem_t) :: buff
     FLOAT, allocatable :: data(:)
 
     call messages_new_line()

@@ -20,6 +20,7 @@
 #include "global.h"
 
 module mesh_cube_map_oct_m
+  use accel_oct_m
 #ifdef HAVE_OPENCL
   use cl
 #endif
@@ -43,7 +44,7 @@ module mesh_cube_map_oct_m
   type mesh_cube_map_t
     integer            :: nmap      !< The number of maps
     integer, pointer   :: map(:, :)
-    type(opencl_mem_t) :: map_buffer
+    type(accel_mem_t) :: map_buffer
   end type mesh_cube_map_t
 
   integer, public, parameter :: MCM_POINT = 4, MCM_COUNT = 5

@@ -24,6 +24,7 @@
 !! This module provides a single interface that works with different
 !! FFT implementations.
 module fft_oct_m
+  use accel_oct_m
   use,intrinsic :: iso_c_binding
 #ifdef HAVE_OPENCL  
   use cl
@@ -555,11 +556,11 @@ contains
 #ifdef HAVE_CLFFT
 
       ! create the plans
-      call clfftCreateDefaultPlan(fft_array(jj)%cl_plan_fw, opencl%context%cl_context, &
+      call clfftCreateDefaultPlan(fft_array(jj)%cl_plan_fw, accel%context%cl_context, &
         fft_dim, int(fft_array(jj)%rs_n_global, 8), status)
       if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clfftCreateDefaultPlan')
 
-      call clfftCreateDefaultPlan(fft_array(jj)%cl_plan_bw, opencl%context%cl_context, &
+      call clfftCreateDefaultPlan(fft_array(jj)%cl_plan_bw, accel%context%cl_context, &
         fft_dim, int(fft_array(jj)%rs_n_global, 8), status)
       if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clfftCreateDefaultPlan')
 
@@ -682,10 +683,10 @@ contains
 
       ! now 'bake' the plans, this signals that the plans are ready to use
 
-      call clfftBakePlan(fft_array(jj)%cl_plan_fw, opencl%command_queue, status)
+      call clfftBakePlan(fft_array(jj)%cl_plan_fw, accel%command_queue, status)
       if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clfftBakePlan')
 
-      call clfftBakePlan(fft_array(jj)%cl_plan_bw, opencl%command_queue, status)
+      call clfftBakePlan(fft_array(jj)%cl_plan_bw, accel%command_queue, status)
       if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clfftBakePlan')
 
 #endif

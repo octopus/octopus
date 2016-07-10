@@ -50,9 +50,9 @@ subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
   integer :: iblock, ii, ist, bsize
   R_TYPE  :: aa
 #ifdef HAVE_OPENCL
-  type(opencl_mem_t) :: blength_buff
-  type(opencl_mem_t) :: offsets_buff
-  type(opencl_mem_t) :: dest_buff
+  type(accel_mem_t) :: blength_buff
+  type(accel_mem_t) :: offsets_buff
+  type(accel_mem_t) :: dest_buff
 #endif
 
   call profiling_in(prof, "SUBARRAY_GATHER_BATCH")

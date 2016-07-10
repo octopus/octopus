@@ -20,6 +20,7 @@
 #include "global.h"
 
 module batch_oct_m
+  use accel_oct_m
   use blas_oct_m
   use iso_c_binding
 #ifdef HAVE_OPENCL
@@ -97,7 +98,7 @@ module batch_oct_m
     CMPLX,      allocatable        :: zpsi(:, :)
     real(4),    allocatable        :: spsi(:, :)
     complex(4), allocatable        :: cpsi(:, :)
-    type(opencl_mem_t)             :: buffer
+    type(accel_mem_t)             :: buffer
   end type batch_pack_t
   
   type batch_t
@@ -727,7 +728,7 @@ contains
 
 #ifdef HAVE_OPENCL
     integer :: ist, ist2, unroll
-    type(opencl_mem_t) :: tmp
+    type(accel_mem_t) :: tmp
     type(profile_t), save :: prof_pack
     type(cl_kernel) :: kernel
 
@@ -807,7 +808,7 @@ contains
 
 #ifdef HAVE_OPENCL
     integer :: ist, ist2, unroll
-    type(opencl_mem_t) :: tmp
+    type(accel_mem_t) :: tmp
     type(cl_kernel) :: kernel
     type(profile_t), save :: prof_unpack
 

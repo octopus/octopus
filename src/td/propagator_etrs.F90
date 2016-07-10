@@ -20,6 +20,7 @@
 #include "global.h"
 
 module propagator_etrs_oct_m
+  use accel_oct_m
 #ifdef HAVE_OPENCL
   use cl
 #endif
@@ -344,7 +345,7 @@ contains
     type(profile_t), save :: phase_prof
     integer               :: pnp, iprange
     FLOAT, allocatable    :: vold(:, :), imvold(:, :)
-    type(opencl_mem_t)    :: phase_buff
+    type(accel_mem_t)    :: phase_buff
 
     PUSH_SUB(td_aetrs)
 

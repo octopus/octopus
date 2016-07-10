@@ -20,6 +20,7 @@
 #include "global.h"
 
 module subarray_oct_m
+  use accel_oct_m
   use batch_oct_m
 #ifdef HAVE_OPENCL
   use cl

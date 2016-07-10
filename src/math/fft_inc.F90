@@ -30,7 +30,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
     type(profile_t), save :: prof_fw
 #ifdef HAVE_CLFFT
     CMPLX, allocatable :: cin(:, :, :)
-    type(opencl_mem_t) :: rsbuffer, fsbuffer
+    type(accel_mem_t) :: rsbuffer, fsbuffer
 #endif
 
     PUSH_SUB(X(fft_forward))
@@ -96,7 +96,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
 
       call opencl_finish()
 
-      call clfftEnqueueTransform(fft_array(slot)%cl_plan_fw, CLFFT_FORWARD, opencl%command_queue, &
+      call clfftEnqueueTransform(fft_array(slot)%cl_plan_fw, CLFFT_FORWARD, accel%command_queue, &
         rsbuffer%mem, fsbuffer%mem, cl_status)
       if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clfftEnqueueTransform')
 
@@ -124,13 +124,13 @@ subroutine X(fft_forward)(fft, in, out, norm)
 ! ---------------------------------------------------------
   subroutine X(fft_forward_cl)(fft, in, out)
     type(fft_t),        intent(in)    :: fft
-    type(opencl_mem_t), intent(in)    :: in
-    type(opencl_mem_t), intent(inout) :: out
+    type(accel_mem_t), intent(in)    :: in
+    type(accel_mem_t), intent(inout) :: out
 
     integer :: slot
     type(profile_t), save :: prof_fw
 #ifdef HAVE_CLFFT
-    type(opencl_mem_t)         :: tmp_buf
+    type(accel_mem_t)         :: tmp_buf
     integer                    :: bsize
     integer(8)                 :: tmp_buf_size
 #endif
@@ -152,10 +152,10 @@ subroutine X(fft_forward)(fft, in, out, norm)
     end if
 
     if(tmp_buf_size > 0) then
-      call clfftEnqueueTransform(fft_array(slot)%cl_plan_fw, CLFFT_FORWARD, opencl%command_queue, &
+      call clfftEnqueueTransform(fft_array(slot)%cl_plan_fw, CLFFT_FORWARD, accel%command_queue, &
         in%mem, out%mem, tmp_buf%mem, cl_status)
     else
-      call clfftEnqueueTransform(fft_array(slot)%cl_plan_fw, CLFFT_FORWARD, opencl%command_queue, &
+      call clfftEnqueueTransform(fft_array(slot)%cl_plan_fw, CLFFT_FORWARD, accel%command_queue, &
         in%mem, out%mem, cl_status)
     end if
     
@@ -206,7 +206,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
     logical :: scale
 #ifdef HAVE_CLFFT
     CMPLX, allocatable :: cout(:, :, :)
-    type(opencl_mem_t) :: rsbuffer, fsbuffer
+    type(accel_mem_t) :: rsbuffer, fsbuffer
 #endif
 
     PUSH_SUB(X(fft_backward))
@@ -255,7 +255,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
 
       call opencl_finish()
 
-      call clfftEnqueueTransform(fft_array(slot)%cl_plan_bw, CLFFT_FORWARD, opencl%command_queue, &
+      call clfftEnqueueTransform(fft_array(slot)%cl_plan_bw, CLFFT_FORWARD, accel%command_queue, &
         fsbuffer%mem, rsbuffer%mem, cl_status)
       if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clfftEnqueueTransform')
 
@@ -305,15 +305,15 @@ subroutine X(fft_forward)(fft, in, out, norm)
 
   subroutine X(fft_backward_cl)(fft, in, out)
     type(fft_t),        intent(in)    :: fft
-    type(opencl_mem_t), intent(in)    :: in
-    type(opencl_mem_t), intent(inout) :: out
+    type(accel_mem_t), intent(in)    :: in
+    type(accel_mem_t), intent(inout) :: out
 
     integer :: slot
     type(profile_t), save :: prof_bw
 #ifdef HAVE_CLFFT
     integer                    :: bsize
     integer(8)                 :: tmp_buf_size
-    type(opencl_mem_t)         :: tmp_buf
+    type(accel_mem_t)         :: tmp_buf
 #endif
 
     PUSH_SUB(X(fft_backward_cl))
@@ -333,10 +333,10 @@ subroutine X(fft_forward)(fft, in, out, norm)
     end if
 
     if(tmp_buf_size > 0) then
-      call clfftEnqueueTransform(fft_array(slot)%cl_plan_bw, CLFFT_FORWARD, opencl%command_queue, &
+      call clfftEnqueueTransform(fft_array(slot)%cl_plan_bw, CLFFT_FORWARD, accel%command_queue, &
         in%mem, out%mem, tmp_buf%mem, cl_status)
     else
-      call clfftEnqueueTransform(fft_array(slot)%cl_plan_bw, CLFFT_FORWARD, opencl%command_queue, &
+      call clfftEnqueueTransform(fft_array(slot)%cl_plan_bw, CLFFT_FORWARD, accel%command_queue, &
         in%mem, out%mem, cl_status)
     end if
     

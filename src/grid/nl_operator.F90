@@ -20,6 +20,7 @@
 #include "global.h"
 
 module nl_operator_oct_m
+  use accel_oct_m
   use batch_oct_m
   use boundaries_oct_m
 #ifdef HAVE_OPENCL
@@ -115,16 +116,16 @@ module nl_operator_oct_m
     type(nl_operator_index_t) :: outer
 
     type(octcl_kernel_t) :: kernel
-    type(opencl_mem_t) :: buff_imin
-    type(opencl_mem_t) :: buff_imax
-    type(opencl_mem_t) :: buff_ri
-    type(opencl_mem_t) :: buff_map
-    type(opencl_mem_t) :: buff_all
-    type(opencl_mem_t) :: buff_inner
-    type(opencl_mem_t) :: buff_outer
-    type(opencl_mem_t) :: buff_stencil
-    type(opencl_mem_t) :: buff_ip_to_xyz
-    type(opencl_mem_t) :: buff_xyz_to_ip
+    type(accel_mem_t) :: buff_imin
+    type(accel_mem_t) :: buff_imax
+    type(accel_mem_t) :: buff_ri
+    type(accel_mem_t) :: buff_map
+    type(accel_mem_t) :: buff_all
+    type(accel_mem_t) :: buff_inner
+    type(accel_mem_t) :: buff_outer
+    type(accel_mem_t) :: buff_stencil
+    type(accel_mem_t) :: buff_ip_to_xyz
+    type(accel_mem_t) :: buff_xyz_to_ip
   end type nl_operator_t
 
   integer, parameter :: &

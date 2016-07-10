@@ -53,7 +53,7 @@ subroutine X(hamiltonian_base_local_sub)(potential, mesh, std, ispin, psib, vpsi
   type(batch_t), target,        intent(in)    :: psib
   type(batch_t), target,        intent(inout) :: vpsib
   FLOAT, optional,              intent(in)    :: Impotential(:,:)
-  type(opencl_mem_t), optional, intent(in)    :: potential_opencl
+  type(accel_mem_t), optional, intent(in)    :: potential_opencl
 
   integer :: ist, ip
   R_TYPE, pointer :: psi(:, :), vpsi(:, :)

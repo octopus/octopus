@@ -286,7 +286,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
   R_TYPE, allocatable :: psicopy(:, :, :)
 #ifdef HAVE_OPENCL
   integer :: ierr
-  type(opencl_mem_t) :: psicopy_buffer, ss_buffer
+  type(accel_mem_t) :: psicopy_buffer, ss_buffer
   type(octcl_kernel_t), save :: dkernel, zkernel
   type(cl_kernel) :: kernel_ref
   type(profile_t), save :: prof_copy
@@ -362,7 +362,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
         M = int(st%nst, 8), N = int(size, 8), alpha = R_TOTYPE(M_ONE), &
         A = ss_buffer%mem, offA = 0_8, lda = int(ubound(ss, dim = 1), 8), &
         B = psicopy_buffer%mem, offB = 0_8, ldb = int(st%nst, 8), &
-        CommandQueue = opencl%command_queue, status = ierr)
+        CommandQueue = accel%command_queue, status = ierr)
       if(ierr /= clblasSuccess) call clblas_print_error(ierr, 'clblasXtrsmEx')
 
 #else
@@ -1106,7 +1106,7 @@ subroutine X(states_rotate)(mesh, st, uu, ik)
 #ifdef HAVE_OPENCL
   type(octcl_kernel_t), save :: dkernel, zkernel
   type(cl_kernel) :: kernel_ref
-  type(opencl_mem_t) :: psinew_buffer, psicopy_buffer, uu_buffer
+  type(accel_mem_t) :: psinew_buffer, psicopy_buffer, uu_buffer
   integer :: ierr
 #endif
   type(profile_t), save :: prof
@@ -1183,7 +1183,7 @@ subroutine X(states_rotate)(mesh, st, uu, ik)
         A = uu_buffer%mem, offA = 0_8, lda = int(ubound(uu, dim = 1), 8), &
         B = psicopy_buffer%mem, offB = 0_8, ldb = int(st%nst, 8), beta = R_TOTYPE(M_ZERO), &
         C = psinew_buffer%mem, offC = 0_8, ldc = int(st%nst, 8), &
-        CommandQueue = opencl%command_queue, status = ierr)
+        CommandQueue = accel%command_queue, status = ierr)
       if(ierr /= clblasSuccess) call clblas_print_error(ierr, 'clblasXgemmEx')
       
 #else
@@ -1246,7 +1246,7 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
   R_TYPE, allocatable :: psi(:, :, :)
 #ifdef HAVE_CLBLAS
   integer :: ierr
-  type(opencl_mem_t) :: psi_buffer, overlap_buffer
+  type(accel_mem_t) :: psi_buffer, overlap_buffer
 #endif
 
   PUSH_SUB(X(states_calc_overlap))
@@ -1339,7 +1339,7 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
         A = psi_buffer%mem, offA = 0_8, lda = int(st%nst, 8), &
         beta = 1.0_8, &
         C = overlap_buffer%mem, offC = 0_8, ldc = int(st%nst, 8), &
-        CommandQueue = opencl%command_queue, status = ierr)
+        CommandQueue = accel%command_queue, status = ierr)
       if(ierr /= clblasSuccess) call clblas_print_error(ierr, 'clblasDsyrkEx/clblasZherkEx')
 
     end do

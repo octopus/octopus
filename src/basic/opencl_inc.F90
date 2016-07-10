@@ -19,7 +19,7 @@
 
 
 subroutine X(opencl_write_buffer_1)(this, size, data, offset)
-  type(opencl_mem_t),               intent(inout) :: this
+  type(accel_mem_t),               intent(inout) :: this
   integer,                          intent(in)    :: size
   R_TYPE,                           intent(in)    :: data(:)
   integer,                optional, intent(in)    :: offset
@@ -40,7 +40,7 @@ subroutine X(opencl_write_buffer_1)(this, size, data, offset)
   ASSERT(fsize >= 0)
 
 #ifdef HAVE_OPENCL
-  call clEnqueueWriteBuffer(opencl%command_queue, this%mem, cl_bool(.true.), offset_, fsize, data(1), ierr)
+  call clEnqueueWriteBuffer(accel%command_queue, this%mem, cl_bool(.true.), offset_, fsize, data(1), ierr)
 #endif
 
   if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueWriteBuffer")
@@ -55,7 +55,7 @@ end subroutine X(opencl_write_buffer_1)
 ! -----------------------------------------------------------------------------
 
 subroutine X(opencl_write_buffer_2)(this, size, data, offset)
-  type(opencl_mem_t),               intent(inout) :: this
+  type(accel_mem_t),               intent(inout) :: this
   integer,                          intent(in)    :: size
   R_TYPE,                           intent(in)    :: data(:, :)
   integer,                optional, intent(in)    :: offset
@@ -74,7 +74,7 @@ subroutine X(opencl_write_buffer_2)(this, size, data, offset)
   if(present(offset)) offset_ = int(offset, 8)*R_SIZEOF
 
 #ifdef HAVE_OPENCL
-  call clEnqueueWriteBuffer(opencl%command_queue, this%mem, cl_bool(.true.), offset_, fsize, data(1, 1), ierr)
+  call clEnqueueWriteBuffer(accel%command_queue, this%mem, cl_bool(.true.), offset_, fsize, data(1, 1), ierr)
 #endif
 
   if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueWriteBuffer")
@@ -89,7 +89,7 @@ end subroutine X(opencl_write_buffer_2)
 ! -----------------------------------------------------------------------------
 
 subroutine X(opencl_write_buffer_3)(this, size, data, offset)
-  type(opencl_mem_t),               intent(inout) :: this
+  type(accel_mem_t),               intent(inout) :: this
   integer,                          intent(in)    :: size
   R_TYPE,                           intent(in)    :: data(:, :, :)
   integer,                optional, intent(in)    :: offset
@@ -108,7 +108,7 @@ subroutine X(opencl_write_buffer_3)(this, size, data, offset)
   if(present(offset)) offset_ = int(offset, 8)*R_SIZEOF
 
 #ifdef HAVE_OPENCL
-  call clEnqueueWriteBuffer(opencl%command_queue, this%mem, cl_bool(.true.), offset_, fsize, data(1, 1, 1), ierr)
+  call clEnqueueWriteBuffer(accel%command_queue, this%mem, cl_bool(.true.), offset_, fsize, data(1, 1, 1), ierr)
 #endif
 
   if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueWriteBuffer")
@@ -123,7 +123,7 @@ end subroutine X(opencl_write_buffer_3)
 ! -----------------------------------------------------------------------------
 
 subroutine X(opencl_read_buffer_1)(this, size, data, offset)
-  type(opencl_mem_t),               intent(in)    :: this
+  type(accel_mem_t),               intent(in)    :: this
   integer,                          intent(in)    :: size
   R_TYPE,                           intent(out)   :: data(:)
   integer,                optional, intent(in)    :: offset
@@ -142,7 +142,7 @@ subroutine X(opencl_read_buffer_1)(this, size, data, offset)
   if(present(offset)) offset_ = offset*R_SIZEOF
 
 #ifdef HAVE_OPENCL
-  call clEnqueueReadBuffer(opencl%command_queue, this%mem, cl_bool(.true.), offset_, fsize, data(1), ierr)
+  call clEnqueueReadBuffer(accel%command_queue, this%mem, cl_bool(.true.), offset_, fsize, data(1), ierr)
 #endif
   if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueReadBuffer")
 
@@ -156,7 +156,7 @@ end subroutine X(opencl_read_buffer_1)
 ! ---------------------------------------------------------------------------
 
 subroutine X(opencl_read_buffer_2)(this, size, data, offset)
-  type(opencl_mem_t),               intent(in)    :: this
+  type(accel_mem_t),               intent(in)    :: this
   integer,                          intent(in)    :: size
   R_TYPE,                           intent(out)   :: data(:, :)
   integer,                optional, intent(in)    :: offset
@@ -175,7 +175,7 @@ subroutine X(opencl_read_buffer_2)(this, size, data, offset)
   if(present(offset)) offset_ = offset*R_SIZEOF
 
 #ifdef HAVE_OPENCL
-  call clEnqueueReadBuffer(opencl%command_queue, this%mem, cl_bool(.true.), offset_, fsize, data(1, 1), ierr)
+  call clEnqueueReadBuffer(accel%command_queue, this%mem, cl_bool(.true.), offset_, fsize, data(1, 1), ierr)
 #endif
   if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueReadBuffer")
 
@@ -190,7 +190,7 @@ end subroutine X(opencl_read_buffer_2)
 ! ---------------------------------------------------------------------------
 
 subroutine X(opencl_read_buffer_3)(this, size, data, offset)
-  type(opencl_mem_t),               intent(in)    :: this
+  type(accel_mem_t),               intent(in)    :: this
   integer,                          intent(in)    :: size
   R_TYPE,                           intent(out)   :: data(:, :, :)
   integer,                optional, intent(in)    :: offset
@@ -209,7 +209,7 @@ subroutine X(opencl_read_buffer_3)(this, size, data, offset)
   if(present(offset)) offset_ = offset*R_SIZEOF
 
 #ifdef HAVE_OPENCL
-  call clEnqueueReadBuffer(opencl%command_queue, this%mem, cl_bool(.true.), offset_, fsize, data(1, 1, 1), ierr)
+  call clEnqueueReadBuffer(accel%command_queue, this%mem, cl_bool(.true.), offset_, fsize, data(1, 1, 1), ierr)
 #endif
   if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueReadBuffer")
 

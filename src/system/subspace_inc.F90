@@ -365,7 +365,7 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
   type(batch_t), allocatable :: hpsib(:)
   integer :: sp, ep, size, block_size, ierr
 #ifdef HAVE_CLBLAS
-  type(opencl_mem_t) :: psi_buffer, hpsi_buffer, hmss_buffer
+  type(accel_mem_t) :: psi_buffer, hpsi_buffer, hmss_buffer
 #endif
 
   PUSH_SUB(X(subspace_diag_hamiltonian))
@@ -399,7 +399,7 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
         ldb = int(hpsib(st%group%block_start)%pack%size(1), 8), &
         beta = R_TOTYPE(CNST(0.0)), &
         C = hmss_buffer%mem, offC = 0_8, ldc = int(st%nst, 8), &
-        CommandQueue = opencl%command_queue, status = ierr)
+        CommandQueue = accel%command_queue, status = ierr)
       if(ierr /= clblasSuccess) call clblas_print_error(ierr, 'clblasXgemmEx')
 
     else
@@ -427,7 +427,7 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
           A = psi_buffer%mem, offA = 0_8, lda = int(st%nst, 8), &
           B = hpsi_buffer%mem, offB = 0_8, ldb = int(st%nst, 8), beta = R_TOTYPE(CNST(1.0)), & 
           C = hmss_buffer%mem, offC = 0_8, ldc = int(st%nst, 8), &
-          CommandQueue = opencl%command_queue, status = ierr)
+          CommandQueue = accel%command_queue, status = ierr)
         if(ierr /= clblasSuccess) call clblas_print_error(ierr, 'clblasXgemmEx')
 
         call opencl_finish()

@@ -353,8 +353,8 @@ contains
     type(octcl_kernel_t), save :: kernel_send, kernel_recv, kernel
     type(cl_kernel) :: kernel_ref
     integer :: wgsize
-    type(opencl_mem_t) :: buff_send
-    type(opencl_mem_t) :: buff_recv
+    type(accel_mem_t) :: buff_send
+    type(accel_mem_t) :: buff_recv
 #endif
 
     PUSH_SUB(X(boundaries_set_batch).periodic)
