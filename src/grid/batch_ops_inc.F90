@@ -137,7 +137,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
   integer :: size_factor
   type(accel_mem_t)      :: aa_buffer
   FLOAT,  allocatable     :: aa_linear_double(:)
-  type(octcl_kernel_t), save :: kernel
+  type(accel_kernel_t), save :: kernel
   type(cl_kernel)         :: kernel_ref
 #endif
   
@@ -279,7 +279,7 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
   integer :: size_factor
   FLOAT,  allocatable     :: aa_linear_double(:)
   type(accel_mem_t)      :: aa_buffer
-  type(octcl_kernel_t), save :: kernel
+  type(accel_kernel_t), save :: kernel
   type(cl_kernel)         :: kernel_ref
 #endif
   
@@ -392,7 +392,7 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
   integer :: size_factor, localsize
   FLOAT,  allocatable     :: aa_linear_double(:)
   type(accel_mem_t)      :: aa_buffer
-  type(octcl_kernel_t), save :: kernel
+  type(accel_kernel_t), save :: kernel
   type(cl_kernel)         :: kernel_ref
 #endif
   

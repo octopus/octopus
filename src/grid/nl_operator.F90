@@ -115,7 +115,7 @@ module nl_operator_oct_m
     type(nl_operator_index_t) :: inner
     type(nl_operator_index_t) :: outer
 
-    type(octcl_kernel_t) :: kernel
+    type(accel_kernel_t) :: kernel
     type(accel_mem_t) :: buff_imin
     type(accel_mem_t) :: buff_imax
     type(accel_mem_t) :: buff_ri

@@ -266,7 +266,7 @@ subroutine X(hamiltonian_base_phase)(this, der, np, iqn, conjugate, psib, src)
   CMPLX :: phase
 #ifdef HAVE_OPENCL
   integer :: wgsize
-  type(octcl_kernel_t), save :: ker_phase
+  type(accel_kernel_t), save :: ker_phase
   type(cl_kernel) :: kernel
 #endif
 
@@ -511,7 +511,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 #ifdef HAVE_OPENCL
   integer :: padnprojs, wgsize, lnprojs, size
   type(profile_t), save :: cl_prof
-  type(octcl_kernel_t), save :: ker_proj_bra, ker_proj_bra_phase
+  type(accel_kernel_t), save :: ker_proj_bra, ker_proj_bra_phase
   type(cl_kernel) :: kernel
 #endif
   if(.not. this%apply_projector_matrices) return
@@ -863,7 +863,7 @@ contains
 #ifdef HAVE_OPENCL
     integer :: wgsize, imat, iregion, size
     type(profile_t), save :: cl_prof
-    type(octcl_kernel_t), save :: ker_proj_ket, ker_proj_ket_phase
+    type(accel_kernel_t), save :: ker_proj_ket, ker_proj_ket_phase
     type(cl_kernel) :: kernel
 
     PUSH_SUB(X(hamiltonian_base_nlocal_finish).finish_opencl)
@@ -1096,7 +1096,7 @@ subroutine X(hamiltonian_base_nlocal_position_commutator)(this, mesh, std, ik, p
 #ifdef HAVE_OPENCL
   integer :: padnprojs, wgsize, lnprojs, size
   type(profile_t), save :: cl_prof
-  type(octcl_kernel_t), save :: ker_proj_bra, ker_proj_bra_phase
+  type(accel_kernel_t), save :: ker_proj_bra, ker_proj_bra_phase
   type(cl_kernel) :: kernel
 #endif
 

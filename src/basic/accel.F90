@@ -33,6 +33,7 @@ module accel_oct_m
     accel_context_t,        &
     accel_device_t,         &
     accel_mem_t,            &
+    accel_kernel_t,         &
     accel_t
   
   type accel_context_t
@@ -71,6 +72,15 @@ module accel_oct_m
     type(type_t)           :: type
     integer                :: flags
   end type accel_mem_t
+
+  type accel_kernel_t
+#ifdef HAVE_OPENCL
+    type(cl_kernel)               :: kernel
+#endif
+    logical                       :: initialized = .false.
+    type(accel_kernel_t), pointer :: next
+    integer                       :: arg_count
+  end type accel_kernel_t
 
   type(accel_t), public :: accel
 

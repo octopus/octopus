@@ -166,7 +166,7 @@ subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
 
   integer :: tsize, offset
 #ifdef HAVE_OPENCL
-  type(octcl_kernel_t), save :: kernel
+  type(accel_kernel_t), save :: kernel
   type(cl_kernel)         :: kernel_ref
 #endif
 
@@ -217,7 +217,7 @@ subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
 
   integer :: tsize, offset
 #ifdef HAVE_OPENCL
-  type(octcl_kernel_t), save :: kernel
+  type(accel_kernel_t), save :: kernel
   type(cl_kernel)         :: kernel_ref
 #endif
 

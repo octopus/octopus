@@ -207,7 +207,7 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
   R_TYPE, pointer :: gmf(:)
 #ifdef HAVE_OPENCL
   type(accel_mem_t)         :: mf_buffer
-  type(octcl_kernel_t), save :: kernel
+  type(accel_kernel_t), save :: kernel
   type(cl_kernel)            :: kernel_ref
 #endif
 
@@ -310,7 +310,7 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
 #ifdef HAVE_OPENCL
   integer                    :: bsize
   type(accel_mem_t)         :: mf_buffer
-  type(octcl_kernel_t), save :: kernel
+  type(accel_kernel_t), save :: kernel
   type(cl_kernel)            :: kernel_ref
 #endif
 

@@ -350,7 +350,7 @@ contains
     integer :: ipart, npart, maxsend, maxrecv, ldbuffer, ip2
 #endif
 #ifdef HAVE_OPENCL
-    type(octcl_kernel_t), save :: kernel_send, kernel_recv, kernel
+    type(accel_kernel_t), save :: kernel_send, kernel_recv, kernel
     type(cl_kernel) :: kernel_ref
     integer :: wgsize
     type(accel_mem_t) :: buff_send

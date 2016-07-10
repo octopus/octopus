@@ -287,7 +287,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
 #ifdef HAVE_OPENCL
   integer :: ierr
   type(accel_mem_t) :: psicopy_buffer, ss_buffer
-  type(octcl_kernel_t), save :: dkernel, zkernel
+  type(accel_kernel_t), save :: dkernel, zkernel
   type(cl_kernel) :: kernel_ref
   type(profile_t), save :: prof_copy
 #endif
@@ -1104,7 +1104,7 @@ subroutine X(states_rotate)(mesh, st, uu, ik)
   integer       :: block_size, sp, idim, size, ib
   R_TYPE, allocatable :: psinew(:, :, :), psicopy(:, :, :)
 #ifdef HAVE_OPENCL
-  type(octcl_kernel_t), save :: dkernel, zkernel
+  type(accel_kernel_t), save :: dkernel, zkernel
   type(cl_kernel) :: kernel_ref
   type(accel_mem_t) :: psinew_buffer, psicopy_buffer, uu_buffer
   integer :: ierr

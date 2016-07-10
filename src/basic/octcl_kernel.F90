@@ -20,6 +20,7 @@
 #include "global.h"
 
 module octcl_kernel_oct_m
+  use accel_oct_m
 #ifdef HAVE_OPENCL
   use cl
 #endif
@@ -34,7 +35,6 @@ module octcl_kernel_oct_m
   private
 
   public ::                             &
-    octcl_kernel_t,                     &
     octcl_kernel_global_init,           &
     octcl_kernel_global_end,            &
     octcl_kernel_start_call,            &
@@ -45,17 +45,7 @@ module octcl_kernel_oct_m
     octcl_kernel_get_ref
 #endif
 
-  type octcl_kernel_t
-    private
-#ifdef HAVE_OPENCL
-    type(cl_kernel)               :: kernel
-#endif
-    logical                       :: initialized = .false.
-    type(octcl_kernel_t), pointer :: next
-    integer                       :: arg_count
-  end type octcl_kernel_t
-
-  type(octcl_kernel_t), pointer :: head
+  type(accel_kernel_t), pointer :: head
 
 contains
 
@@ -73,7 +63,7 @@ contains
   !------------------------------------------------------------
   
   subroutine octcl_kernel_global_end()
-    type(octcl_kernel_t), pointer :: next_head
+    type(accel_kernel_t), pointer :: next_head
 
     PUSH_SUB(octcl_kernel_global_end)
 
@@ -90,7 +80,7 @@ contains
   !------------------------------------------------------------
 
   subroutine octcl_kernel_build(this, file_name, kernel_name, flags)
-    type(octcl_kernel_t),        intent(inout) :: this
+    type(accel_kernel_t),        intent(inout) :: this
     character(len=*),            intent(in)    :: file_name
     character(len=*),            intent(in)    :: kernel_name
     character(len=*), optional,  intent(in)    :: flags
@@ -112,7 +102,7 @@ contains
   !------------------------------------------------------------
 
   subroutine octcl_kernel_end(this)
-    type(octcl_kernel_t), intent(inout) :: this
+    type(accel_kernel_t), intent(inout) :: this
 #ifdef HAVE_OPENCL
     integer :: ierr
 #endif
@@ -131,7 +121,7 @@ contains
   !------------------------------------------------------------
 
   subroutine octcl_kernel_start_call(this, file_name, kernel_name, flags)
-    type(octcl_kernel_t), target, intent(inout) :: this
+    type(accel_kernel_t), target, intent(inout) :: this
     character(len=*),             intent(in)    :: file_name
     character(len=*),             intent(in)    :: kernel_name
     character(len=*), optional,   intent(in)    :: flags
@@ -150,7 +140,7 @@ contains
   !--------------------------------------------------------------
 #ifdef HAVE_OPENCL
   type(cl_kernel) function octcl_kernel_get_ref(this) result(ref)
-    type(octcl_kernel_t), intent(in) :: this
+    type(accel_kernel_t), intent(in) :: this
     
     ref = this%kernel
   end function octcl_kernel_get_ref
