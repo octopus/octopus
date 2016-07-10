@@ -50,8 +50,6 @@ module opencl_oct_m
     opencl_end,                   &
     opencl_padded_size,           &
     opencl_mem_nullify,           &
-    octcl_kernel_global_init,     &
-    octcl_kernel_global_end,      &
     octcl_kernel_start_call,      &
     octcl_kernel_build
 
@@ -507,6 +505,8 @@ contains
 #endif
     end if
 
+    call octcl_kernel_global_init()
+    
     call messages_print_stress(stdout)
 
     POP_SUB(opencl_init)
@@ -656,6 +656,8 @@ contains
 #endif
 
     PUSH_SUB(opencl_end)
+
+    call octcl_kernel_global_end()
 
 #ifdef HAVE_CLBLAS
     call clblasTearDown()

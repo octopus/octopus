@@ -94,7 +94,6 @@ contains
     SAFE_ALLOCATE(sys%st)
 
     call opencl_init(mpi_world)
-    call octcl_kernel_global_init()
 
     call messages_obsolete_variable('SystemName')
 
@@ -260,7 +259,6 @@ contains
 
     call space_end(sys%space)
 
-    call octcl_kernel_global_end()
     call opencl_end()
 
     SAFE_DEALLOCATE_P(sys%gr)
