@@ -60,6 +60,7 @@ module accel_oct_m
     integer                :: max_workgroup_size
     integer                :: local_memory_size
     logical                :: enabled
+    logical                :: shared_mem
   end type accel_t
 
   type accel_mem_t

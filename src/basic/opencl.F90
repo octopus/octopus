@@ -153,7 +153,6 @@ module opencl_oct_m
 
   integer :: buffer_alloc_count
   integer(8) :: allocated_mem
-  logical :: shared_mem
 
 contains
 
@@ -409,11 +408,11 @@ contains
 
     select case(device_type)
     case(CL_DEVICE_TYPE_GPU)
-      shared_mem = .true.
+      accel%shared_mem = .true.
     case(CL_DEVICE_TYPE_CPU, CL_DEVICE_TYPE_ACCELERATOR)
-      shared_mem = .false.
+      accel%shared_mem = .false.
     case default
-      shared_mem = .false.
+      accel%shared_mem = .false.
     end select
 
     ! now initialize the kernels
@@ -1369,7 +1368,7 @@ contains
 
   logical pure function opencl_use_shared_mem() result(use_shared_mem)
     
-    use_shared_mem = shared_mem
+    use_shared_mem = accel%shared_mem
 
   end function opencl_use_shared_mem
   
