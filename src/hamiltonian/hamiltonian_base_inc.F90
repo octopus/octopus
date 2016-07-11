@@ -337,25 +337,24 @@ subroutine X(hamiltonian_base_phase)(this, der, np, iqn, conjugate, psib, src)
   case(BATCH_CL_PACKED)
 #ifdef HAVE_OPENCL
     call accel_kernel_start_call(ker_phase, 'phase.cl', 'phase_hamiltonian')
-    kernel = accel_kernel_get_ref(ker_phase)
 
     if(conjugate) then
-      call opencl_set_kernel_arg(kernel, 0, 1_4)
+      call opencl_set_kernel_arg(ker_phase, 0, 1_4)
     else
-      call opencl_set_kernel_arg(kernel, 0, 0_4)
+      call opencl_set_kernel_arg(ker_phase, 0, 0_4)
     end if
 
-    call opencl_set_kernel_arg(kernel, 1, (iqn - this%buff_phase_qn_start)*der%mesh%np_part)
-    call opencl_set_kernel_arg(kernel, 2, np)
-    call opencl_set_kernel_arg(kernel, 3, this%buff_phase)
-    call opencl_set_kernel_arg(kernel, 4, src_%pack%buffer)
-    call opencl_set_kernel_arg(kernel, 5, log2(src_%pack%size(1)))
-    call opencl_set_kernel_arg(kernel, 6, psib%pack%buffer)
-    call opencl_set_kernel_arg(kernel, 7, log2(psib%pack%size(1)))
+    call opencl_set_kernel_arg(ker_phase, 1, (iqn - this%buff_phase_qn_start)*der%mesh%np_part)
+    call opencl_set_kernel_arg(ker_phase, 2, np)
+    call opencl_set_kernel_arg(ker_phase, 3, this%buff_phase)
+    call opencl_set_kernel_arg(ker_phase, 4, src_%pack%buffer)
+    call opencl_set_kernel_arg(ker_phase, 5, log2(src_%pack%size(1)))
+    call opencl_set_kernel_arg(ker_phase, 6, psib%pack%buffer)
+    call opencl_set_kernel_arg(ker_phase, 7, log2(psib%pack%size(1)))
 
-    wgsize = opencl_kernel_workgroup_size(kernel)/psib%pack%size(1)
+    wgsize = opencl_kernel_workgroup_size(ker_phase)/psib%pack%size(1)
 
-    call opencl_kernel_run(kernel, (/psib%pack%size(1), pad(np, wgsize)/), (/psib%pack%size(1), wgsize/))
+    call opencl_kernel_run(ker_phase, (/psib%pack%size(1), pad(np, wgsize)/), (/psib%pack%size(1), wgsize/))
 
     call opencl_finish()
 #endif
@@ -511,8 +510,8 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 #ifdef HAVE_OPENCL
   integer :: padnprojs, wgsize, lnprojs, size
   type(profile_t), save :: cl_prof
-  type(accel_kernel_t), save :: ker_proj_bra, ker_proj_bra_phase
-  type(cl_kernel) :: kernel
+  type(accel_kernel_t), save, target :: ker_proj_bra, ker_proj_bra_phase
+  type(accel_kernel_t), pointer :: kernel
 #endif
   if(.not. this%apply_projector_matrices) return
 
@@ -536,12 +535,12 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 
     if(allocated(this%projector_phases)) then
       call accel_kernel_start_call(ker_proj_bra_phase, 'projector.cl', 'projector_bra_phase')
-      kernel = accel_kernel_get_ref(ker_proj_bra_phase)
+      kernel => ker_proj_bra_phase
       size = psib%pack%size(1)
       ASSERT(R_TYPE_VAL == TYPE_CMPLX)
     else
       call accel_kernel_start_call(ker_proj_bra, 'projector.cl', 'projector_bra')
-      kernel = accel_kernel_get_ref(ker_proj_bra)
+      kernel => ker_proj_bra
       size = psib%pack%size_real(1)
     end if
 
@@ -863,8 +862,8 @@ contains
 #ifdef HAVE_OPENCL
     integer :: wgsize, imat, iregion, size
     type(profile_t), save :: cl_prof
-    type(accel_kernel_t), save :: ker_proj_ket, ker_proj_ket_phase
-    type(cl_kernel) :: kernel
+    type(accel_kernel_t), save, target :: ker_proj_ket, ker_proj_ket_phase
+    type(accel_kernel_t), pointer :: kernel
 
     PUSH_SUB(X(hamiltonian_base_nlocal_finish).finish_opencl)
 
@@ -876,12 +875,12 @@ contains
 
     if(allocated(this%projector_phases)) then
       call accel_kernel_start_call(ker_proj_ket_phase, 'projector.cl', 'projector_ket_phase')
-      kernel = accel_kernel_get_ref(ker_proj_ket_phase)
+      kernel => ker_proj_ket_phase
       size = vpsib%pack%size(1)
       ASSERT(R_TYPE_VAL == TYPE_CMPLX)
     else
       call accel_kernel_start_call(ker_proj_ket, 'projector.cl', 'projector_ket')
-      kernel = accel_kernel_get_ref(ker_proj_ket)
+      kernel => ker_proj_ket
       size = vpsib%pack%size_real(1)
     end if
 

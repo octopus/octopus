@@ -295,12 +295,12 @@ contains
     integer(8) :: local_mem_size
     type(accel_mem_t) :: buff_weights
     type(profile_t), save :: prof
-    type(cl_kernel) :: kernel_operate
+    type(accel_kernel_t) :: kernel_operate
 
     PUSH_SUB(X(nl_operator_operate_batch).operate_opencl)
     call profiling_in(prof, "CL_NL_OPERATOR")
 
-    kernel_operate = accel_kernel_get_ref(op%kernel)
+    kernel_operate = op%kernel
 
     call opencl_create_buffer(buff_weights, CL_MEM_READ_ONLY, TYPE_FLOAT, op%stencil%size)
 

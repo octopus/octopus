@@ -349,9 +349,8 @@ contains
     integer, allocatable :: recv_disp(:), recv_count(:)
     integer :: ipart, npart, maxsend, maxrecv, ldbuffer, ip2
 #endif
-#ifdef HAVE_OPENCL
     type(accel_kernel_t), save :: kernel_send, kernel_recv, kernel
-    type(cl_kernel) :: kernel_ref
+#ifdef HAVE_OPENCL
     integer :: wgsize
     type(accel_mem_t) :: buff_send
     type(accel_mem_t) :: buff_recv
@@ -402,18 +401,17 @@ contains
         call opencl_create_buffer(buff_send, CL_MEM_WRITE_ONLY, R_TYPE_VAL, ffb%pack%size(1)*maxsend*npart)
 
         call accel_kernel_start_call(kernel_send, 'boundaries.cl', 'boundaries_periodic_send')
-        kernel_ref = accel_kernel_get_ref(kernel_send)
 
-        call opencl_set_kernel_arg(kernel_ref, 0, maxsend)
-        call opencl_set_kernel_arg(kernel_ref, 1, boundaries%buff_nsend)
-        call opencl_set_kernel_arg(kernel_ref, 2, boundaries%buff_per_send)
-        call opencl_set_kernel_arg(kernel_ref, 3, ffb%pack%buffer)
-        call opencl_set_kernel_arg(kernel_ref, 4, log2(ffb%pack%size_real(1)))
-        call opencl_set_kernel_arg(kernel_ref, 5, buff_send)
+        call opencl_set_kernel_arg(kernel_send, 0, maxsend)
+        call opencl_set_kernel_arg(kernel_send, 1, boundaries%buff_nsend)
+        call opencl_set_kernel_arg(kernel_send, 2, boundaries%buff_per_send)
+        call opencl_set_kernel_arg(kernel_send, 3, ffb%pack%buffer)
+        call opencl_set_kernel_arg(kernel_send, 4, log2(ffb%pack%size_real(1)))
+        call opencl_set_kernel_arg(kernel_send, 5, buff_send)
 
-        wgsize = opencl_kernel_workgroup_size(kernel_ref)/ffb%pack%size_real(1)
+        wgsize = opencl_kernel_workgroup_size(kernel_send)/ffb%pack%size_real(1)
 
-        call opencl_kernel_run(kernel_ref, (/ffb%pack%size_real(1), pad(maxsend, wgsize), npart/), &
+        call opencl_kernel_run(kernel_send, (/ffb%pack%size_real(1), pad(maxsend, wgsize), npart/), &
           (/ffb%pack%size_real(1), wgsize, 1/))
 
         call opencl_finish()
@@ -494,19 +492,18 @@ contains
         call opencl_write_buffer(buff_recv, ffb%pack%size(1)*maxrecv*npart, recvbuffer)
 
         call accel_kernel_start_call(kernel_recv, 'boundaries.cl', 'boundaries_periodic_recv')
-        kernel_ref = accel_kernel_get_ref(kernel_recv)
 
-        call opencl_set_kernel_arg(kernel_ref, 0, maxrecv)
-        call opencl_set_kernel_arg(kernel_ref, 1, boundaries%buff_nrecv)
-        call opencl_set_kernel_arg(kernel_ref, 2, boundaries%buff_per_recv)
-        call opencl_set_kernel_arg(kernel_ref, 3, ubound(boundaries%per_recv, dim = 1))
-        call opencl_set_kernel_arg(kernel_ref, 4, buff_recv)
-        call opencl_set_kernel_arg(kernel_ref, 5, ffb%pack%buffer)
-        call opencl_set_kernel_arg(kernel_ref, 6, log2(ffb%pack%size_real(1)))
+        call opencl_set_kernel_arg(kernel_recv, 0, maxrecv)
+        call opencl_set_kernel_arg(kernel_recv, 1, boundaries%buff_nrecv)
+        call opencl_set_kernel_arg(kernel_recv, 2, boundaries%buff_per_recv)
+        call opencl_set_kernel_arg(kernel_recv, 3, ubound(boundaries%per_recv, dim = 1))
+        call opencl_set_kernel_arg(kernel_recv, 4, buff_recv)
+        call opencl_set_kernel_arg(kernel_recv, 5, ffb%pack%buffer)
+        call opencl_set_kernel_arg(kernel_recv, 6, log2(ffb%pack%size_real(1)))
 
-        wgsize = opencl_kernel_workgroup_size(kernel_ref)/ffb%pack%size_real(1)
+        wgsize = opencl_kernel_workgroup_size(kernel_recv)/ffb%pack%size_real(1)
 
-        call opencl_kernel_run(kernel_ref, (/ffb%pack%size_real(1), pad(maxrecv, wgsize), npart/), &
+        call opencl_kernel_run(kernel_recv, (/ffb%pack%size_real(1), pad(maxrecv, wgsize), npart/), &
           (/ffb%pack%size_real(1), wgsize, 1/))
 
         call opencl_finish()
@@ -546,20 +543,18 @@ contains
 #ifdef HAVE_OPENCL
 
       call accel_kernel_start_call(kernel, 'boundaries.cl', 'boundaries_periodic')
-      kernel_ref = accel_kernel_get_ref(kernel)
 
-      call opencl_set_kernel_arg(kernel_ref, 0, boundaries%nper)
-      call opencl_set_kernel_arg(kernel_ref, 1, boundaries%buff_per_points)
-      call opencl_set_kernel_arg(kernel_ref, 2, ffb%pack%buffer)
-      call opencl_set_kernel_arg(kernel_ref, 3, log2(ffb%pack%size_real(1)))
+      call opencl_set_kernel_arg(kernel, 0, boundaries%nper)
+      call opencl_set_kernel_arg(kernel, 1, boundaries%buff_per_points)
+      call opencl_set_kernel_arg(kernel, 2, ffb%pack%buffer)
+      call opencl_set_kernel_arg(kernel, 3, log2(ffb%pack%size_real(1)))
 
-      wgsize = opencl_kernel_workgroup_size(kernel_ref)/ffb%pack%size_real(1)
+      wgsize = opencl_kernel_workgroup_size(kernel)/ffb%pack%size_real(1)
 
-      call opencl_kernel_run(kernel_ref, (/ffb%pack%size_real(1), pad(boundaries%nper, wgsize)/), &
+      call opencl_kernel_run(kernel, (/ffb%pack%size_real(1), pad(boundaries%nper, wgsize)/), &
         (/ffb%pack%size_real(1), wgsize/))
 
       call opencl_finish()
-
 #endif
 
     end select

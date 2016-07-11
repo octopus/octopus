@@ -287,8 +287,8 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
 #ifdef HAVE_OPENCL
   integer :: ierr
   type(accel_mem_t) :: psicopy_buffer, ss_buffer
-  type(accel_kernel_t), save :: dkernel, zkernel
-  type(cl_kernel) :: kernel_ref
+  type(accel_kernel_t), save, target :: dkernel, zkernel
+  type(accel_kernel_t), pointer :: kernel
   type(profile_t), save :: prof_copy
 #endif
   type(profile_t), save :: prof
@@ -369,19 +369,19 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
 
       if(states_are_real(st)) then
         call accel_kernel_start_call(dkernel, 'trsm.cl', 'dtrsm')
-        kernel_ref = accel_kernel_get_ref(dkernel)
+        kernel => dkernel
       else
         call accel_kernel_start_call(zkernel, 'trsm.cl', 'ztrsm')
-        kernel_ref = accel_kernel_get_ref(zkernel)
+        kernel => zkernel
       end if
 
-      call opencl_set_kernel_arg(kernel_ref, 0, st%nst)
-      call opencl_set_kernel_arg(kernel_ref, 1, ss_buffer)
-      call opencl_set_kernel_arg(kernel_ref, 2, ubound(ss, dim = 1))
-      call opencl_set_kernel_arg(kernel_ref, 3, psicopy_buffer)
-      call opencl_set_kernel_arg(kernel_ref, 4, st%nst)
+      call opencl_set_kernel_arg(kernel, 0, st%nst)
+      call opencl_set_kernel_arg(kernel, 1, ss_buffer)
+      call opencl_set_kernel_arg(kernel, 2, ubound(ss, dim = 1))
+      call opencl_set_kernel_arg(kernel, 3, psicopy_buffer)
+      call opencl_set_kernel_arg(kernel, 4, st%nst)
       
-      call opencl_kernel_run(kernel_ref, (/size/), (/1/))
+      call opencl_kernel_run(kernel, (/size/), (/1/))
 
 #endif
       call opencl_finish()

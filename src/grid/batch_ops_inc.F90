@@ -138,7 +138,6 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
   type(accel_mem_t)      :: aa_buffer
   FLOAT,  allocatable     :: aa_linear_double(:)
   type(accel_kernel_t), save :: kernel
-  type(cl_kernel)         :: kernel_ref
 #endif
   
   PUSH_SUB(X(batch_axpy_vec))
@@ -168,7 +167,6 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
 #ifdef HAVE_OPENCL
     call accel_kernel_start_call(kernel, 'axpy.cl', TOSTRING(X(axpy_vec)), &
       flags = '-D' + R_TYPE_CL)
-    kernel_ref = accel_kernel_get_ref(kernel)
 
     if(batch_type(yy) == TYPE_CMPLX .and. R_TYPE_VAL == TYPE_FLOAT) then
       size_factor = 2
@@ -186,14 +184,14 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
       call opencl_write_buffer(aa_buffer, yy%pack%size(1), aa_linear)
     end if
 
-    call opencl_set_kernel_arg(kernel_ref, 0, aa_buffer)
-    call opencl_set_kernel_arg(kernel_ref, 1, xx%pack%buffer)
-    call opencl_set_kernel_arg(kernel_ref, 2, log2(xx%pack%size(1)*size_factor))
-    call opencl_set_kernel_arg(kernel_ref, 3, yy%pack%buffer)
-    call opencl_set_kernel_arg(kernel_ref, 4, log2(yy%pack%size(1)*size_factor))
+    call opencl_set_kernel_arg(kernel, 0, aa_buffer)
+    call opencl_set_kernel_arg(kernel, 1, xx%pack%buffer)
+    call opencl_set_kernel_arg(kernel, 2, log2(xx%pack%size(1)*size_factor))
+    call opencl_set_kernel_arg(kernel, 3, yy%pack%buffer)
+    call opencl_set_kernel_arg(kernel, 4, log2(yy%pack%size(1)*size_factor))
 
     localsize = opencl_max_workgroup_size()
-    call opencl_kernel_run(kernel_ref, (/yy%pack%size(1)*size_factor, pad(np, localsize)/), &
+    call opencl_kernel_run(kernel, (/yy%pack%size(1)*size_factor, pad(np, localsize)/), &
       (/yy%pack%size(1)*size_factor, localsize/(yy%pack%size(1)*size_factor)/))
 
     call opencl_finish()
@@ -280,7 +278,6 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
   FLOAT,  allocatable     :: aa_linear_double(:)
   type(accel_mem_t)      :: aa_buffer
   type(accel_kernel_t), save :: kernel
-  type(cl_kernel)         :: kernel_ref
 #endif
   
   PUSH_SUB(X(batch_scal_vec))
@@ -325,14 +322,12 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
     call accel_kernel_start_call(kernel, 'axpy.cl', TOSTRING(X(scal_vec)), &
       flags = '-D' + R_TYPE_CL)
   
-    kernel_ref = accel_kernel_get_ref(kernel)
-
-    call opencl_set_kernel_arg(kernel_ref, 0, aa_buffer)
-    call opencl_set_kernel_arg(kernel_ref, 1, xx%pack%buffer)
-    call opencl_set_kernel_arg(kernel_ref, 2, log2(xx%pack%size(1)*size_factor))
+    call opencl_set_kernel_arg(kernel, 0, aa_buffer)
+    call opencl_set_kernel_arg(kernel, 1, xx%pack%buffer)
+    call opencl_set_kernel_arg(kernel, 2, log2(xx%pack%size(1)*size_factor))
 
     localsize = opencl_max_workgroup_size()
-    call opencl_kernel_run(kernel_ref, (/xx%pack%size(1)*size_factor, pad(np, localsize)/), &
+    call opencl_kernel_run(kernel, (/xx%pack%size(1)*size_factor, pad(np, localsize)/), &
       (/xx%pack%size(1)*size_factor, localsize/(xx%pack%size(1)*size_factor)/))
 
     call opencl_finish()
@@ -393,7 +388,6 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
   FLOAT,  allocatable     :: aa_linear_double(:)
   type(accel_mem_t)      :: aa_buffer
   type(accel_kernel_t), save :: kernel
-  type(cl_kernel)         :: kernel_ref
 #endif
   
   PUSH_SUB(X(batch_xpay_vec))
@@ -440,17 +434,15 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
 
     call accel_kernel_start_call(kernel, 'axpy.cl', TOSTRING(X(xpay_vec)), &
       flags = '-D' + R_TYPE_CL)
-  
-    kernel_ref = accel_kernel_get_ref(kernel)
 
-    call opencl_set_kernel_arg(kernel_ref, 0, aa_buffer)
-    call opencl_set_kernel_arg(kernel_ref, 1, xx%pack%buffer)
-    call opencl_set_kernel_arg(kernel_ref, 2, log2(xx%pack%size(1)*size_factor))
-    call opencl_set_kernel_arg(kernel_ref, 3, yy%pack%buffer)
-    call opencl_set_kernel_arg(kernel_ref, 4, log2(yy%pack%size(1)*size_factor))
+    call opencl_set_kernel_arg(kernel, 0, aa_buffer)
+    call opencl_set_kernel_arg(kernel, 1, xx%pack%buffer)
+    call opencl_set_kernel_arg(kernel, 2, log2(xx%pack%size(1)*size_factor))
+    call opencl_set_kernel_arg(kernel, 3, yy%pack%buffer)
+    call opencl_set_kernel_arg(kernel, 4, log2(yy%pack%size(1)*size_factor))
 
     localsize = opencl_max_workgroup_size()
-    call opencl_kernel_run(kernel_ref, (/yy%pack%size(1)*size_factor, pad(np, localsize)/), &
+    call opencl_kernel_run(kernel, (/yy%pack%size(1)*size_factor, pad(np, localsize)/), &
       (/yy%pack%size(1)*size_factor, localsize/(yy%pack%size(1)*size_factor)/))
 
     call opencl_finish()

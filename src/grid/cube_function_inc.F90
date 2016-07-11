@@ -208,7 +208,6 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
 #ifdef HAVE_OPENCL
   type(accel_mem_t)         :: mf_buffer
   type(accel_kernel_t), save :: kernel
-  type(cl_kernel)            :: kernel_ref
 #endif
 
   PUSH_SUB(X(mesh_to_cube))
@@ -259,22 +258,21 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
     call opencl_write_buffer(mf_buffer, mesh%np_global, gmf)
 
     call accel_kernel_start_call(kernel, 'mesh_to_cube.cl', TOSTRING(X(mesh_to_cube)))
-    kernel_ref = accel_kernel_get_ref(kernel)
     
-    call opencl_set_kernel_arg(kernel_ref, 0, mesh%cube_map%nmap)
-    call opencl_set_kernel_arg(kernel_ref, 1, cube%fft%stride_rs(1))
-    call opencl_set_kernel_arg(kernel_ref, 2, cube%fft%stride_rs(2))
-    call opencl_set_kernel_arg(kernel_ref, 3, cube%fft%stride_rs(3))
-    call opencl_set_kernel_arg(kernel_ref, 4, cube%center(1))
-    call opencl_set_kernel_arg(kernel_ref, 5, cube%center(2))
-    call opencl_set_kernel_arg(kernel_ref, 6, cube%center(3))
-    call opencl_set_kernel_arg(kernel_ref, 7, mesh%cube_map%map_buffer)
-    call opencl_set_kernel_arg(kernel_ref, 8, mf_buffer)
-    call opencl_set_kernel_arg(kernel_ref, 9, cf%real_space_buffer)
+    call opencl_set_kernel_arg(kernel, 0, mesh%cube_map%nmap)
+    call opencl_set_kernel_arg(kernel, 1, cube%fft%stride_rs(1))
+    call opencl_set_kernel_arg(kernel, 2, cube%fft%stride_rs(2))
+    call opencl_set_kernel_arg(kernel, 3, cube%fft%stride_rs(3))
+    call opencl_set_kernel_arg(kernel, 4, cube%center(1))
+    call opencl_set_kernel_arg(kernel, 5, cube%center(2))
+    call opencl_set_kernel_arg(kernel, 6, cube%center(3))
+    call opencl_set_kernel_arg(kernel, 7, mesh%cube_map%map_buffer)
+    call opencl_set_kernel_arg(kernel, 8, mf_buffer)
+    call opencl_set_kernel_arg(kernel, 9, cf%real_space_buffer)
 
-    bsize = opencl_kernel_workgroup_size(kernel_ref)
+    bsize = opencl_kernel_workgroup_size(kernel)
 
-    call opencl_kernel_run(kernel_ref, (/pad(mesh%cube_map%nmap, bsize)/), (/bsize/))
+    call opencl_kernel_run(kernel, (/pad(mesh%cube_map%nmap, bsize)/), (/bsize/))
     call opencl_finish()
     call opencl_release_buffer(mf_buffer)
 
@@ -311,7 +309,6 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
   integer                    :: bsize
   type(accel_mem_t)         :: mf_buffer
   type(accel_kernel_t), save :: kernel
-  type(cl_kernel)            :: kernel_ref
 #endif
 
   PUSH_SUB(X(cube_to_mesh))
@@ -352,22 +349,21 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
     call opencl_create_buffer(mf_buffer, CL_MEM_WRITE_ONLY, R_TYPE_VAL, mesh%np_global)
 
     call accel_kernel_start_call(kernel, 'mesh_to_cube.cl', TOSTRING(X(cube_to_mesh)))
-    kernel_ref = accel_kernel_get_ref(kernel)
    
-    call opencl_set_kernel_arg(kernel_ref, 0, mesh%cube_map%nmap)
-    call opencl_set_kernel_arg(kernel_ref, 1, cube%fft%stride_rs(1))
-    call opencl_set_kernel_arg(kernel_ref, 2, cube%fft%stride_rs(2))
-    call opencl_set_kernel_arg(kernel_ref, 3, cube%fft%stride_rs(3))
-    call opencl_set_kernel_arg(kernel_ref, 4, cube%center(1))
-    call opencl_set_kernel_arg(kernel_ref, 5, cube%center(2))
-    call opencl_set_kernel_arg(kernel_ref, 6, cube%center(3))
-    call opencl_set_kernel_arg(kernel_ref, 7, mesh%cube_map%map_buffer)
-    call opencl_set_kernel_arg(kernel_ref, 8, cf%real_space_buffer)
-    call opencl_set_kernel_arg(kernel_ref, 9, mf_buffer)
+    call opencl_set_kernel_arg(kernel, 0, mesh%cube_map%nmap)
+    call opencl_set_kernel_arg(kernel, 1, cube%fft%stride_rs(1))
+    call opencl_set_kernel_arg(kernel, 2, cube%fft%stride_rs(2))
+    call opencl_set_kernel_arg(kernel, 3, cube%fft%stride_rs(3))
+    call opencl_set_kernel_arg(kernel, 4, cube%center(1))
+    call opencl_set_kernel_arg(kernel, 5, cube%center(2))
+    call opencl_set_kernel_arg(kernel, 6, cube%center(3))
+    call opencl_set_kernel_arg(kernel, 7, mesh%cube_map%map_buffer)
+    call opencl_set_kernel_arg(kernel, 8, cf%real_space_buffer)
+    call opencl_set_kernel_arg(kernel, 9, mf_buffer)
 
-    bsize = opencl_kernel_workgroup_size(kernel_ref)
+    bsize = opencl_kernel_workgroup_size(kernel)
 
-    call opencl_kernel_run(kernel_ref, (/pad(mesh%cube_map%nmap, bsize)/), (/bsize/))
+    call opencl_kernel_run(kernel, (/pad(mesh%cube_map%nmap, bsize)/), (/bsize/))
     call opencl_finish()
 
     call opencl_read_buffer(mf_buffer, mesh%np_global, gmf)

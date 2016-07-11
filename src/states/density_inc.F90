@@ -34,7 +34,6 @@ subroutine X(density_accumulate_grad)(gr, st, iq, psib, grad_psib, grad_rho)
   FLOAT, allocatable :: grad_rho_tmp(:, :), weights(:)
   type(accel_mem_t) :: grad_rho_buff, weights_buff
   type(accel_kernel_t), save :: ker_calc_grad_dens
-  type(cl_kernel) :: kernel
 #endif  
 
   PUSH_SUB(X(density_accumulate_grad))
@@ -95,20 +94,19 @@ subroutine X(density_accumulate_grad)(gr, st, iq, psib, grad_psib, grad_rho)
     
     call accel_kernel_start_call(ker_calc_grad_dens, 'forces.cl', TOSTRING(X(density_gradient)), &
       flags = '-D' + R_TYPE_CL)
-    kernel = accel_kernel_get_ref(ker_calc_grad_dens)
 
     do idir = 1, gr%mesh%sb%dim
-      call opencl_set_kernel_arg(kernel, 0, idir - 1)
-      call opencl_set_kernel_arg(kernel, 1, psib%pack%size(1))
-      call opencl_set_kernel_arg(kernel, 2, gr%mesh%np)
-      call opencl_set_kernel_arg(kernel, 3, weights_buff)
-      call opencl_set_kernel_arg(kernel, 4, grad_psib(idir)%pack%buffer)
-      call opencl_set_kernel_arg(kernel, 5, psib%pack%buffer)
-      call opencl_set_kernel_arg(kernel, 6, log2(psib%pack%size(1)))
-      call opencl_set_kernel_arg(kernel, 7, grad_rho_buff)
+      call opencl_set_kernel_arg(ker_calc_grad_dens, 0, idir - 1)
+      call opencl_set_kernel_arg(ker_calc_grad_dens, 1, psib%pack%size(1))
+      call opencl_set_kernel_arg(ker_calc_grad_dens, 2, gr%mesh%np)
+      call opencl_set_kernel_arg(ker_calc_grad_dens, 3, weights_buff)
+      call opencl_set_kernel_arg(ker_calc_grad_dens, 4, grad_psib(idir)%pack%buffer)
+      call opencl_set_kernel_arg(ker_calc_grad_dens, 5, psib%pack%buffer)
+      call opencl_set_kernel_arg(ker_calc_grad_dens, 6, log2(psib%pack%size(1)))
+      call opencl_set_kernel_arg(ker_calc_grad_dens, 7, grad_rho_buff)
 
-      wgsize = opencl_kernel_workgroup_size(kernel)
-      call opencl_kernel_run(kernel, (/pad(gr%mesh%np, wgsize)/), (/wgsize/))
+      wgsize = opencl_kernel_workgroup_size(ker_calc_grad_dens)
+      call opencl_kernel_run(ker_calc_grad_dens, (/pad(gr%mesh%np, wgsize)/), (/wgsize/))
 
     end do
 

@@ -164,10 +164,7 @@ subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
   integer,             intent(in)    :: ldpsi
 
   integer :: tsize, offset
-#ifdef HAVE_OPENCL
   type(accel_kernel_t), save :: kernel
-  type(cl_kernel)         :: kernel_ref
-#endif
 
   PUSH_SUB(batch_get_points_cl)
   call profiling_in(get_points_prof, "GET_POINTS")
@@ -184,18 +181,16 @@ subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
 #ifdef HAVE_OPENCL
     call accel_kernel_start_call(kernel, 'points.cl', 'get_points')
 
-    kernel_ref = accel_kernel_get_ref(kernel)
+    call opencl_set_kernel_arg(kernel, 0, sp)
+    call opencl_set_kernel_arg(kernel, 1, ep)
+    call opencl_set_kernel_arg(kernel, 2, offset*tsize)
+    call opencl_set_kernel_arg(kernel, 3, this%nst_linear*tsize)
+    call opencl_set_kernel_arg(kernel, 4, this%pack%buffer)
+    call opencl_set_kernel_arg(kernel, 5, this%pack%size_real(1))
+    call opencl_set_kernel_arg(kernel, 6, psi)
+    call opencl_set_kernel_arg(kernel, 7, ldpsi*tsize)
 
-    call opencl_set_kernel_arg(kernel_ref, 0, sp)
-    call opencl_set_kernel_arg(kernel_ref, 1, ep)
-    call opencl_set_kernel_arg(kernel_ref, 2, offset*tsize)
-    call opencl_set_kernel_arg(kernel_ref, 3, this%nst_linear*tsize)
-    call opencl_set_kernel_arg(kernel_ref, 4, this%pack%buffer)
-    call opencl_set_kernel_arg(kernel_ref, 5, this%pack%size_real(1))
-    call opencl_set_kernel_arg(kernel_ref, 6, psi)
-    call opencl_set_kernel_arg(kernel_ref, 7, ldpsi*tsize)
-
-    call opencl_kernel_run(kernel_ref, (/this%pack%size_real(1), ep -&
+    call opencl_kernel_run(kernel, (/this%pack%size_real(1), ep -&
       sp + 1/), (/this%pack%size_real(1), 1/))
 #endif
   end select
@@ -215,10 +210,7 @@ subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
   integer,             intent(in)    :: ldpsi
 
   integer :: tsize, offset
-#ifdef HAVE_OPENCL
   type(accel_kernel_t), save :: kernel
-  type(cl_kernel)         :: kernel_ref
-#endif
 
   PUSH_SUB(batch_set_points_cl)
   call profiling_in(set_points_prof, "SET_POINTS")
@@ -237,18 +229,16 @@ subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
 #ifdef HAVE_OPENCL
     call accel_kernel_start_call(kernel, 'points.cl', 'set_points')
     
-    kernel_ref = accel_kernel_get_ref(kernel)
+    call opencl_set_kernel_arg(kernel, 0, sp)
+    call opencl_set_kernel_arg(kernel, 1, ep)
+    call opencl_set_kernel_arg(kernel, 2, offset*tsize)
+    call opencl_set_kernel_arg(kernel, 3, this%nst_linear*tsize)
+    call opencl_set_kernel_arg(kernel, 4, psi)
+    call opencl_set_kernel_arg(kernel, 5, ldpsi*tsize)
+    call opencl_set_kernel_arg(kernel, 6, this%pack%buffer)
+    call opencl_set_kernel_arg(kernel, 7, this%pack%size_real(1))
 
-    call opencl_set_kernel_arg(kernel_ref, 0, sp)
-    call opencl_set_kernel_arg(kernel_ref, 1, ep)
-    call opencl_set_kernel_arg(kernel_ref, 2, offset*tsize)
-    call opencl_set_kernel_arg(kernel_ref, 3, this%nst_linear*tsize)
-    call opencl_set_kernel_arg(kernel_ref, 4, psi)
-    call opencl_set_kernel_arg(kernel_ref, 5, ldpsi*tsize)
-    call opencl_set_kernel_arg(kernel_ref, 6, this%pack%buffer)
-    call opencl_set_kernel_arg(kernel_ref, 7, this%pack%size_real(1))
-
-    call opencl_kernel_run(kernel_ref, (/this%pack%size_real(1), ep -&
+    call opencl_kernel_run(kernel, (/this%pack%size_real(1), ep -&
       sp + 1/), (/this%pack%size_real(1), 1/))
 #endif
   end select
