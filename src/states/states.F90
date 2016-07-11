@@ -25,9 +25,6 @@ module states_oct_m
   use base_states_oct_m
   use blacs_proc_grid_oct_m
   use calc_mode_par_oct_m
-#ifdef HAVE_OPENCL
-  use cl
-#endif
   use cmplxscl_oct_m
   use comm_oct_m
   use batch_oct_m
@@ -2261,9 +2258,7 @@ contains
 
     integer :: iqn, ib
     integer(8) :: max_mem, mem
-#ifdef HAVE_OPENCL
     FLOAT, parameter :: mem_frac = 0.75
-#endif
 
     PUSH_SUB(states_pack)
 
@@ -2272,9 +2267,8 @@ contains
     st%packed = .true.
 
     if(opencl_is_enabled()) then
-#ifdef HAVE_OPENCL
-      call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_GLOBAL_MEM_SIZE, max_mem, cl_status)
-#endif
+      max_mem = accel_global_memory_size()
+      
       if(st%d%cl_states_mem > CNST(1.0)) then
         max_mem = int(st%d%cl_states_mem, 8)*(1024_8)**2
       else if(st%d%cl_states_mem < CNST(0.0)) then

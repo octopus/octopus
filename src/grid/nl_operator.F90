@@ -23,9 +23,6 @@ module nl_operator_oct_m
   use accel_oct_m
   use batch_oct_m
   use boundaries_oct_m
-#ifdef HAVE_OPENCL
-  use cl
-#endif
   use iso_c_binding
   use global_oct_m
   use io_oct_m
@@ -377,9 +374,7 @@ contains
     integer :: ir, maxp, iinner, iouter
     logical :: change, force_change
     character(len=200) :: flags
-#ifdef HAVE_OPENCL
     integer, allocatable :: inner_points(:), outer_points(:), all_points(:)    
-#endif
     
     PUSH_SUB(nl_operator_build)
 
@@ -601,7 +596,6 @@ contains
       
     end if
 
-#ifdef HAVE_OPENCL
     if(opencl_is_enabled() .and. op%const_w) then
 
       write(flags, '(i5)') op%stencil%size
@@ -709,7 +703,6 @@ contains
 
       end select
     end if
-#endif
 
     POP_SUB(nl_operator_build)
 
@@ -1135,7 +1128,6 @@ contains
 
     PUSH_SUB(nl_operator_end)
 
-#ifdef HAVE_OPENCL
     if(opencl_is_enabled() .and. op%const_w) then
 
       call opencl_release_buffer(op%buff_ri)
@@ -1159,7 +1151,6 @@ contains
         call opencl_release_buffer(op%buff_ip_to_xyz)
       end select
     end if
-#endif
 
     if(op%mesh%parallel_in_domains) then
       SAFE_DEALLOCATE_P(op%inner%imin)

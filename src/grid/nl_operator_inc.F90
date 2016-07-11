@@ -109,11 +109,9 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
       call operate_non_const_weights()
     else if(op%cmplx_op .or. X(function_global) == OP_FORTRAN) then
       call operate_const_weights()
-#ifdef HAVE_OPENCL
     else if(opencl_is_enabled() .and. batch_is_packed(fi) .and. batch_is_packed(fo)) then
       use_opencl = .true.
       call operate_opencl()
-#endif
     else
       
 ! for the moment this is not implemented
@@ -287,8 +285,6 @@ contains
     POP_SUB(X(nl_operator_operate_batch).operate_non_const_weights)
   end subroutine operate_non_const_weights
 
-#ifdef HAVE_OPENCL
-
   ! ------------------------------------------
   subroutine operate_opencl()
     integer    :: pnri, bsize, isize, ist, eff_size, iarg, npoints
@@ -341,7 +337,7 @@ contains
       call opencl_set_kernel_arg(kernel_operate, 7, log2(eff_size))
       iarg = 7
       
-      call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_LOCAL_MEM_SIZE, local_mem_size, cl_status)
+      local_mem_size = accel_local_memory_size()
       isize = int(dble(local_mem_size)/(op%stencil%size*types_get_size(TYPE_INTEGER)))
       isize = isize - mod(isize, eff_size)
       bsize = eff_size*isize
@@ -398,7 +394,7 @@ contains
       call opencl_set_kernel_arg(kernel_operate, 6, fo%pack%buffer)
       call opencl_set_kernel_arg(kernel_operate, 7, log2(eff_size))
 
-      call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_LOCAL_MEM_SIZE, local_mem_size, cl_status)
+      local_mem_size = accel_local_memory_size()
       isize = int(dble(local_mem_size)/(op%stencil%size*types_get_size(TYPE_INTEGER)))
       isize = isize - mod(isize, eff_size)
       bsize = eff_size*isize
@@ -446,12 +442,10 @@ contains
     POP_SUB(X(nl_operator_operate_batch).operate_opencl)
   end subroutine operate_opencl
 
-#endif
-
 end subroutine X(nl_operator_operate_batch)
 
-
 ! ---------------------------------------------------------
+
 subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
   R_TYPE,              intent(inout) :: fi(:)  !< fi(op%np_part)
   type(nl_operator_t), intent(in)    :: op

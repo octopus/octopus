@@ -496,12 +496,11 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
   R_TYPE :: aa, bb, cc, dd
   CMPLX :: phase
   type(projector_matrix_t), pointer :: pmat
-#ifdef HAVE_OPENCL
   integer :: padnprojs, wgsize, lnprojs, size
   type(profile_t), save :: cl_prof
   type(accel_kernel_t), save, target :: ker_proj_bra, ker_proj_bra_phase
   type(accel_kernel_t), pointer :: kernel
-#endif
+  
   if(.not. this%apply_projector_matrices) return
 
   call profiling_in(prof_vnlpsi_start, "VNLPSI_MAT_BRA")
@@ -514,7 +513,6 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
   nreal = nst
 #endif
 
-#ifdef HAVE_OPENCL
   if(batch_is_packed(psib) .and. opencl_is_enabled()) then
 
     call opencl_create_buffer(projection%buff_projection, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, &
@@ -577,7 +575,6 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
     call profiling_out(prof_vnlpsi_start)
     return
   end if
-#endif
 
   SAFE_ALLOCATE(projection%X(projection)(1:nst, 1:this%full_projection_size))
   projection%X(projection) = M_ZERO
@@ -758,17 +755,13 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
   if(batch_is_packed(vpsib) .and. opencl_is_enabled()) then
 
     if(mesh%parallel_in_domains) then
-#ifdef HAVE_OPENCL
       call opencl_write_buffer(projection%buff_projection, &
         this%full_projection_size*vpsib%pack%size_real(1), projection%X(projection))
-#endif
       SAFE_DEALLOCATE_A(projection%X(projection))
     end if
 
-#ifdef HAVE_OPENCL
     call finish_opencl()
     call opencl_release_buffer(projection%buff_projection)
-#endif
     
     POP_SUB(X(hamiltonian_base_nlocal_finish))
     call profiling_out(prof_vnlpsi_finish)
@@ -848,7 +841,6 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
 contains
 
   subroutine finish_opencl()
-#ifdef HAVE_OPENCL
     integer :: wgsize, imat, iregion, size
     type(profile_t), save :: cl_prof
     type(accel_kernel_t), save, target :: ker_proj_ket, ker_proj_ket_phase
@@ -914,7 +906,6 @@ contains
     call profiling_out(cl_prof)
 
     POP_SUB(X(hamiltonian_base_nlocal_finish).finish_opencl)
-#endif
   end subroutine finish_opencl
 
 end subroutine X(hamiltonian_base_nlocal_finish)
@@ -1099,9 +1090,7 @@ subroutine X(hamiltonian_base_nlocal_position_commutator)(this, mesh, std, ik, p
   nreal = nst
 #endif
 
-#ifdef HAVE_OPENCL
   if(batch_is_packed(psib) .and. opencl_is_enabled()) call messages_not_implemented('OpenCL commutator')
-#endif
 
   SAFE_ALLOCATE(projections(1:nst, 1:this%full_projection_size, 0:3))
   projections = M_ZERO

@@ -59,7 +59,8 @@ module accel_oct_m
     type(accel_device_t)   :: device
 #endif
     integer                :: max_workgroup_size
-    integer                :: local_memory_size
+    integer(8)             :: local_memory_size
+    integer(8)             :: global_memory_size
     logical                :: enabled
     logical                :: shared_mem
   end type accel_t

@@ -229,11 +229,9 @@ contains
           SAFE_ALLOCATE(this%Impotential(1:mesh%np, 1:this%nspin))
           this%Impotential = M_ZERO
         end if
-#ifdef HAVE_OPENCL
         if(opencl_is_enabled()) then
           call opencl_create_buffer(this%potential_opencl, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, opencl_padded_size(mesh%np)*this%nspin)
         end if
-#endif
       end if
     end if
 
@@ -271,10 +269,8 @@ contains
     type(hamiltonian_base_t), intent(inout) :: this
     type(mesh_t),             intent(in)    :: mesh
 
-#ifdef HAVE_OPENCL
     integer :: ispin
     integer :: offset
-#endif
 
     PUSH_SUB(hamiltonian_base_update)
 
@@ -282,7 +278,6 @@ contains
       call unify_vector_potentials()
     end if
 
-#ifdef HAVE_OPENCL
     if(allocated(this%potential) .and. opencl_is_enabled()) then
 
       offset = 0
@@ -292,7 +287,6 @@ contains
       end do
 
     end if
-#endif
 
     POP_SUB(hamiltonian_base_update)
 
@@ -327,7 +321,6 @@ contains
 
     if(allocated(this%projector_matrices)) then
 
-#ifdef HAVE_OPENCL
       if(opencl_is_enabled()) then
         call opencl_release_buffer(this%buff_offsets)
         call opencl_release_buffer(this%buff_matrices)
@@ -337,7 +330,6 @@ contains
         call opencl_release_buffer(this%buff_invmap)
         if(allocated(this%projector_phases)) call opencl_release_buffer(this%buff_projector_phases)
       end if
-#endif
 
       do iproj = 1, this%nprojector_matrices
         call projector_matrix_deallocate(this%projector_matrices(iproj))
@@ -551,16 +543,13 @@ contains
       INCR(this%total_points, pmat%npoints)
     end do
 
-#ifdef HAVE_OPENCL
     if(opencl_is_enabled()) call build_opencl()
-#endif
 
     POP_SUB(hamiltonian_base_build_proj)
 
   contains
 
     subroutine build_opencl()
-#ifdef HAVE_OPENCL
       integer              :: matrix_size, scal_size
       integer, allocatable :: cnt(:), invmap(:, :), invmap2(:), pos(:)
       integer, allocatable :: offsets(:, :)
@@ -662,8 +651,6 @@ contains
       SAFE_DEALLOCATE_A(invmap)
       SAFE_DEALLOCATE_A(invmap2)
       SAFE_DEALLOCATE_A(pos)
-
-#endif  
 
       POP_SUB(hamiltonian_base_build_proj.build_opencl)
     end subroutine build_opencl

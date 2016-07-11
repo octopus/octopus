@@ -64,9 +64,10 @@ module opencl_oct_m
     opencl_set_buffer_to_zero,    &
     opencl_use_shared_mem,        &
     clblas_print_error,           &
-    clfft_print_error
+    clfft_print_error,            &
+    accel_local_memory_size,      &
+    accel_global_memory_size
   
-
 #ifdef HAVE_OPENCL
   integer, public, parameter ::                 &
     ACCEL_MEM_READ_ONLY  = CL_MEM_READ_ONLY,    &
@@ -415,6 +416,7 @@ contains
 
     call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_MAX_WORK_GROUP_SIZE, accel%max_workgroup_size, cl_status)
     call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_LOCAL_MEM_SIZE, accel%local_memory_size, cl_status)
+    call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_GLOBAL_MEM_SIZE, accel%global_memory_size, cl_status)
 
     call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_TYPE, device_type, cl_status)
 
@@ -1451,6 +1453,22 @@ contains
 
   !--------------------------------------------------------------
 
+  integer(8) pure function accel_global_memory_size() result(size)
+
+    size = accel%global_memory_size
+    
+  end function accel_global_memory_size
+
+  !--------------------------------------------------------------
+  
+  integer(8) pure function accel_local_memory_size() result(size)
+
+    size = accel%local_memory_size
+    
+  end function accel_local_memory_size
+
+  !--------------------------------------------------------------
+  
 #include "undef.F90"
 #include "real.F90"
 #include "opencl_inc.F90"
