@@ -51,11 +51,7 @@ module opencl_oct_m
     opencl_padded_size,           &
     opencl_mem_nullify,           &
     accel_kernel_start_call,      &
-    accel_kernel_build
-
-
-#ifdef HAVE_OPENCL
-  public ::                       &
+    accel_kernel_build,           &
     opencl_create_buffer,         &
     opencl_write_buffer,          &
     opencl_read_buffer,           &
@@ -65,33 +61,24 @@ module opencl_oct_m
     opencl_max_workgroup_size,    &
     opencl_kernel_workgroup_size, &
     opencl_kernel_run,            &
-    opencl_build_program,         &
-    opencl_release_program,       &
-    opencl_release_kernel,        &
-    opencl_create_kernel,         &
-    opencl_print_error,           &
-    clblas_print_error,           &
-    clfft_print_error,            &
     opencl_set_buffer_to_zero,    &
     opencl_use_shared_mem,        &
-    accel_kernel_get_ref
-#endif
-
+    clblas_print_error,           &
+    clfft_print_error
+  
 
 #ifdef HAVE_OPENCL
-  integer, public , parameter ::                &
+  integer, public, parameter ::                 &
     ACCEL_MEM_READ_ONLY  = CL_MEM_READ_ONLY,    &
     ACCEL_MEM_READ_WRITE = CL_MEM_READ_WRITE,   &
     ACCEL_MEM_WRITE_ONLY = CL_MEM_WRITE_ONLY
 #else
-  integer, public, parameter ::          &
-    ACCEL_MEM_READ_ONLY  = 0,            &
-    ACCEL_MEM_READ_WRITE = 1,            &
+  integer, public, parameter ::                 &
+    ACCEL_MEM_READ_ONLY  = 0,                   &
+    ACCEL_MEM_READ_WRITE = 1,                   &
     ACCEL_MEM_WRITE_ONLY = 2
 #endif
-  
-  
-#ifdef HAVE_OPENCL
+
   ! the kernels
   type(accel_kernel_t), public, target :: kernel_vpsi
   type(accel_kernel_t), public, target :: kernel_vpsi_spinors
@@ -154,8 +141,6 @@ module opencl_oct_m
     module procedure accel_kernel_workgroup_size
   end interface opencl_kernel_workgroup_size
   
-#endif
-
   type(profile_t), save :: prof_read, prof_write
 
   integer, parameter  ::      &
@@ -704,7 +689,6 @@ contains
 #endif
   end function opencl_padded_size
 
-#ifdef HAVE_OPENCL
   ! ------------------------------------------
 
   subroutine opencl_create_buffer_4(this, flags, type, size)
@@ -725,8 +709,10 @@ contains
 
     ASSERT(fsize >= 0)
 
+#ifdef HAVE_OPENCL
     this%mem = clCreateBuffer(accel%context%cl_context, flags, fsize, ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateBuffer")
+#endif
 
     INCR(buffer_alloc_count, 1)
     INCR(allocated_mem, fsize)
@@ -743,8 +729,10 @@ contains
 
     PUSH_SUB(opencl_release_buffer)
 
+#ifdef HAVE_OPENCL
     call clReleaseMemObject(this%mem, ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clReleaseMemObject")
+#endif
 
     INCR(buffer_alloc_count, -1)
     INCR(allocated_mem, -int(this%size, 8)*types_get_size(this%type))
@@ -777,9 +765,10 @@ contains
     integer :: ierr
 
     ! no push_sub, called too frequently
-
+#ifdef HAVE_OPENCL
     call clFinish(accel%command_queue, ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, 'clFinish') 
+#endif
 
   end subroutine opencl_finish
 
@@ -793,9 +782,10 @@ contains
     integer :: ierr
 
     ! no push_sub, called too frequently
-
+#ifdef HAVE_OPENCL
     call clSetKernelArg(kernel%kernel, narg, buffer%mem, ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clSetKernelArg_buf")
+#endif
 
   end subroutine opencl_set_accel_kernel_arg_buffer
   
@@ -822,9 +812,11 @@ contains
       write(message(1), '(a,i10)') "CL Error: invalid local memory size: ", size_in_bytes
       call messages_fatal(1)
     end if
-
+    
+#ifdef HAVE_OPENCL
     call clSetKernelArgLocal(kernel%kernel, narg, size_in_bytes, ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "set_kernel_arg_local")
+#endif
 
     POP_SUB(opencl_set_kernel_arg_local)
   end subroutine opencl_set_accel_kernel_arg_local
@@ -851,8 +843,10 @@ contains
     gsizes(1:dim) = int(globalsizes(1:dim), 8)
     lsizes(1:dim) = int(localsizes(1:dim), 8)
 
+#ifdef HAVE_OPENCL
     call clEnqueueNDRangeKernel(accel%command_queue, kernel%kernel, gsizes(1:dim), lsizes(1:dim), ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
+#endif
 
   end subroutine accel_kernel_run
 
@@ -864,34 +858,24 @@ contains
 
   ! -----------------------------------------------
 
-  integer function opencl_cl_kernel_workgroup_size(kernel) result(workgroup_size)
-    type(cl_kernel), intent(inout) :: kernel
-
-    integer(8) :: workgroup_size8
-    integer    :: ierr
-
-    call clGetKernelWorkGroupInfo(kernel, accel%device%cl_device, CL_KERNEL_WORK_GROUP_SIZE, workgroup_size8, ierr)
-    if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
-    workgroup_size = workgroup_size8
-
-  end function opencl_cl_kernel_workgroup_size
-
-  ! -----------------------------------------------
-
   integer function accel_kernel_workgroup_size(kernel) result(workgroup_size)
     type(accel_kernel_t), intent(inout) :: kernel
 
     integer(8) :: workgroup_size8
     integer    :: ierr
 
+#ifdef HAVE_OPENCL
     call clGetKernelWorkGroupInfo(kernel%kernel, accel%device%cl_device, CL_KERNEL_WORK_GROUP_SIZE, workgroup_size8, ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
+#endif
+
     workgroup_size = workgroup_size8
 
   end function accel_kernel_workgroup_size
 
   ! -----------------------------------------------
 
+#ifdef HAVE_OPENCL
   subroutine opencl_build_program(prog, filename, flags)
     type(cl_program),           intent(inout) :: prog
     character(len=*),           intent(in)    :: filename
@@ -981,13 +965,14 @@ contains
     if(len(trim(string)) > 0) write(stderr, '(a)') trim(string)
 
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clBuildProgram")
-
+    
     call profiling_out(prof)
     POP_SUB(opencl_build_program)
   end subroutine opencl_build_program
+#endif
 
   ! -----------------------------------------------
-
+#ifdef HAVE_OPENCL
   subroutine opencl_release_program(prog)
     type(cl_program),    intent(inout) :: prog
 
@@ -1000,9 +985,11 @@ contains
 
     POP_SUB(opencl_release_program)
   end subroutine opencl_release_program
+#endif
 
   ! -----------------------------------------------
 
+#ifdef HAVE_OPENCL
   subroutine opencl_release_kernel(prog)
     type(cl_kernel),      intent(inout) :: prog
 
@@ -1010,12 +997,16 @@ contains
 
     PUSH_SUB(opencl_release_kernel)
 
+#ifdef HAVE_OPENCL
     call clReleaseKernel(prog, ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clReleaseKernel")
+#endif
 
     POP_SUB(opencl_release_kernel)
   end subroutine opencl_release_kernel
+#endif
 
+#ifdef HAVE_OPENCL
   ! -----------------------------------------------
   subroutine opencl_create_kernel(kernel, prog, name)
     type(cl_kernel),  intent(inout) :: kernel
@@ -1027,14 +1018,17 @@ contains
 
     PUSH_SUB(opencl_create_kernel)
     call profiling_in(prof, "CL_BUILD_KERNEL", exclude = .true.)
-
+    
+#ifdef HAVE_OPENCL
     kernel = clCreateKernel(prog, name, ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateKernel")
+#endif
 
     call profiling_out(prof)
     POP_SUB(opencl_create_kernel)
   end subroutine opencl_create_kernel
-
+#endif
+  
   ! ------------------------------------------------
 
   subroutine opencl_print_error(ierr, name)
@@ -1045,6 +1039,7 @@ contains
 
     PUSH_SUB(opencl_print_error)
 
+#ifdef HAVE_OPENCL
     select case(ierr)
     case(CL_SUCCESS); errcode = 'CL_SUCCESS '
     case(CL_DEVICE_NOT_FOUND); errcode = 'CL_DEVICE_NOT_FOUND '
@@ -1098,7 +1093,8 @@ contains
       write(errcode, '(i10)') ierr
       errcode = 'UNKNOWN ERROR CODE ('//trim(adjustl(errcode))//')'
     end select
-
+#endif
+    
     message(1) = 'OpenCL '//trim(name)//' '//trim(errcode)
     call messages_fatal(1)
 
@@ -1237,6 +1233,7 @@ contains
 
   ! ----------------------------------------------------
 
+#ifdef HAVE_OPENCL
   logical function f90_cl_device_has_extension(device, extension) result(has)
     type(cl_device_id), intent(inout) :: device
     character(len=*),   intent(in)    :: extension
@@ -1244,12 +1241,15 @@ contains
     integer :: cl_status
     character(len=2048) :: all_extensions
 
+#ifdef HAVE_OPENCL
     call clGetDeviceInfo(device, CL_DEVICE_EXTENSIONS, all_extensions, cl_status)
-
+#endif
+    
     has = index(all_extensions, extension) /= 0
 
   end function f90_cl_device_has_extension
-
+#endif
+  
   ! ---------------------------------------------------------
 
   integer pure function opencl_pad(size, blk) result(pad)
@@ -1361,8 +1361,6 @@ contains
 
   end function opencl_use_shared_mem
 
-#endif
-  
   !------------------------------------------------------------
 
   subroutine accel_kernel_global_init()
@@ -1452,17 +1450,7 @@ contains
   end subroutine accel_kernel_start_call
 
   !--------------------------------------------------------------
-#ifdef HAVE_OPENCL
-  type(cl_kernel) function accel_kernel_get_ref(this) result(ref)
-    type(accel_kernel_t), intent(in) :: this
-    
-    ref = this%kernel
-  end function accel_kernel_get_ref
-#endif
-  !--------------------------------------------------------------
 
-#ifdef HAVE_OPENCL
-  
 #include "undef.F90"
 #include "real.F90"
 #include "opencl_inc.F90"
@@ -1482,8 +1470,6 @@ contains
 #include "undef.F90"
 #include "integer.F90"
 #include "opencl_inc.F90"
-  
-#endif
 
 end module opencl_oct_m
 
