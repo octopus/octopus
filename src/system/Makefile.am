@@ -46,7 +46,8 @@ libsystem_a_SOURCES =         \
 	magnetic.F90          \
 	eigen_arpack.F90      \
 	current.F90           \
-	partial_charges.F90
+	partial_charges.F90   \
+	stress.F90
 
 noinst_HEADERS =                        \
 	energy_calc_inc.F90             \
@@ -104,4 +105,4 @@ elf.o : elf.F90
 magnetic.o : magnetic.F90
 current.o : current.F90
 partial_charges.o : partial_charges.F90
-
+stress.o : stress.F90 v_ks.o

@@ -69,8 +69,10 @@ module projector_oct_m
     dprojector_matrix_element, &
     zprojector_matrix_element, &
     dprojector_commute_r,      &
-    zprojector_commute_r
-
+    zprojector_commute_r,      &
+    dr_project_psi,            &
+    zr_project_psi
+  
   integer, public, parameter ::  &
     M_NONE = 0,  &
     M_HGH  = 1,  &

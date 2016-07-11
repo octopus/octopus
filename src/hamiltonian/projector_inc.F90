@@ -404,6 +404,82 @@ subroutine X(projector_commute_r)(pj, mesh, dim, idir, ik, psi, cpsi)
 
 end subroutine X(projector_commute_r)
 
+!------------------------------------------------------------------------------
+!> This function calculates |cpsi> += r * V_nl  |psi>
+subroutine X(r_project_psi)(pj, mesh, dim, ik, psi, cpsi)
+  type(projector_t), target, intent(in)     :: pj
+  type(mesh_t),              intent(in)     :: mesh
+  integer,                   intent(in)     :: dim
+  integer,                   intent(in)     :: ik
+  R_TYPE,                    intent(in)     :: psi(:, :)
+  R_TYPE,                    intent(inout)  :: cpsi(:,:,:)
+
+  integer ::  ns, idim, ip, sb_dim, isb_dim
+  R_TYPE, allocatable :: lpsi(:, :), pxlpsi(:,:), xplpsi(:, :),xplpsi_t(:, :, :)
+  integer, pointer :: map(:)
+  FLOAT,   pointer :: smx(:, :)
+  type(profile_t), save :: prof
+
+  PUSH_SUB(X(r_project_psi))
+  call profiling_in(prof, "P_PROJECT_PSI")
+
+  sb_dim = mesh%sb%dim
+  
+  if(pj%type /= M_NONE) then
+
+    ns = pj%sphere%np
+    map => pj%sphere%map
+    smx => pj%sphere%x
+
+    SAFE_ALLOCATE(  lpsi(1:ns, 1:dim))
+    SAFE_ALLOCATE(xplpsi(1:ns, 1:dim))
+    SAFE_ALLOCATE(xplpsi_t(1:ns, 1:sb_dim+1, 1:dim))
+
+    if(associated(pj%phase)) then
+      do idim = 1, dim
+        lpsi(1:ns, idim) = psi(map(1:ns), idim)*pj%phase(1:ns, ik)
+      end do
+    else
+      do idim = 1, dim
+        lpsi(1:ns, idim) = psi(map(1:ns), idim)
+      end do
+    end if
+
+    ! x V_nl |psi>
+    call X(project_sphere)(mesh, pj, dim, lpsi, xplpsi)
+    do idim = 1, dim
+
+       do isb_dim = 1,sb_dim
+          xplpsi_t(1:ns, isb_dim, idim) = smx(1:ns, isb_dim) * xplpsi(1:ns, idim)
+       end do
+
+       xplpsi_t(1:ns, sb_dim+1, idim) = xplpsi(1:ns, idim)       
+    end do
+
+    ! |cpsi> += x V_nl |psi> 
+    if(associated(pj%phase)) then
+       do idim = 1, dim
+          do ip = 1, ns
+             cpsi(map(ip), 1:sb_dim+1, idim) = cpsi(map(ip), 1:sb_dim+1, idim) + &
+                  xplpsi_t(ip, 1:sb_dim+1, idim) * R_CONJ(pj%phase(ip, ik))
+          end do
+       end do
+   else
+      do idim = 1, dim
+         cpsi(map(1:ns), 1:sb_dim+1, idim) = cpsi(map(1:ns), 1:sb_dim+1, idim) &
+              + xplpsi_t(1:ns, 1:sb_dim+1, idim)
+      end do
+    end if
+
+    SAFE_DEALLOCATE_A(lpsi)
+    SAFE_DEALLOCATE_A(xplpsi)
+    SAFE_DEALLOCATE_A(xplpsi_t)
+  end if
+  call profiling_out(prof)
+  POP_SUB(X(r_project_psi))
+
+end subroutine X(r_project_psi)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8
