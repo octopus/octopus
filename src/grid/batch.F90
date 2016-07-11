@@ -729,7 +729,7 @@ contains
     integer :: ist, ist2, unroll
     type(accel_mem_t) :: tmp
     type(profile_t), save :: prof_pack
-    type(cl_kernel) :: kernel
+    type(accel_kernel_t), pointer :: kernel
 
     PUSH_SUB(batch_write_to_opencl_buffer)
 
@@ -749,9 +749,9 @@ contains
       ! we copy to a temporary array and then we re-arrange data
 
       if(batch_type(this) == TYPE_FLOAT) then
-        kernel = dpack
+        kernel => dpack
       else
-        kernel = zpack
+        kernel => zpack
       end if
       
       unroll = min(CL_PACK_MAX_BUFFER_SIZE, this%pack%size(1))
@@ -808,7 +808,7 @@ contains
 #ifdef HAVE_OPENCL
     integer :: ist, ist2, unroll
     type(accel_mem_t) :: tmp
-    type(cl_kernel) :: kernel
+    type(accel_kernel_t), pointer :: kernel
     type(profile_t), save :: prof_unpack
 
     PUSH_SUB(batch_read_from_opencl_buffer)
@@ -830,9 +830,9 @@ contains
       call opencl_create_buffer(tmp, CL_MEM_WRITE_ONLY, batch_type(this), unroll*this%pack%size(2))
 
       if(batch_type(this) == TYPE_FLOAT) then
-        kernel = dunpack
+        kernel => dunpack
       else
-        kernel = zunpack
+        kernel => zunpack
       end if
 
       do ist = 1, this%nst_linear, unroll

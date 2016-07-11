@@ -79,27 +79,27 @@ module opencl_oct_m
 
 #ifdef HAVE_OPENCL
   ! the kernels
-  type(cl_kernel), public :: kernel_vpsi
-  type(cl_kernel), public :: kernel_vpsi_spinors
-  type(cl_kernel), public :: kernel_daxpy
-  type(cl_kernel), public :: kernel_zaxpy
-  type(cl_kernel), public :: kernel_copy
-  type(cl_kernel), public :: dpack
-  type(cl_kernel), public :: zpack
-  type(cl_kernel), public :: dunpack
-  type(cl_kernel), public :: zunpack
-  type(cl_kernel), public :: kernel_subarray_gather
-  type(cl_kernel), public :: kernel_density_real
-  type(cl_kernel), public :: kernel_density_complex
-  type(cl_kernel), public :: kernel_phase
-  type(cl_kernel), public :: dkernel_dot_matrix
-  type(cl_kernel), public :: zkernel_dot_matrix
-  type(cl_kernel), public :: zkernel_dot_matrix_spinors
-  type(cl_kernel), public :: dzmul
-  type(cl_kernel), public :: zzmul
+  type(accel_kernel_t), public, target :: kernel_vpsi
+  type(accel_kernel_t), public, target :: kernel_vpsi_spinors
+  type(accel_kernel_t), public, target :: kernel_daxpy
+  type(accel_kernel_t), public, target :: kernel_zaxpy
+  type(accel_kernel_t), public, target :: kernel_copy
+  type(accel_kernel_t), public, target :: dpack
+  type(accel_kernel_t), public, target :: zpack
+  type(accel_kernel_t), public, target :: dunpack
+  type(accel_kernel_t), public, target :: zunpack
+  type(accel_kernel_t), public, target :: kernel_subarray_gather
+  type(accel_kernel_t), public, target :: kernel_density_real
+  type(accel_kernel_t), public, target :: kernel_density_complex
+  type(accel_kernel_t), public, target :: kernel_phase
+  type(accel_kernel_t), public, target :: dkernel_dot_matrix
+  type(accel_kernel_t), public, target :: zkernel_dot_matrix
+  type(accel_kernel_t), public, target :: zkernel_dot_matrix_spinors
+  type(accel_kernel_t), public, target :: dzmul
+  type(accel_kernel_t), public, target :: zzmul
 
   ! kernels used locally
-  type(cl_kernel)         :: set_zero
+  type(accel_kernel_t)         :: set_zero
 
   interface opencl_create_buffer
     module procedure opencl_create_buffer_4
@@ -130,8 +130,22 @@ module opencl_oct_m
       dopencl_set_kernel_arg_data,   &
       zopencl_set_kernel_arg_data,   &
       opencl_set_kernel_arg_local
+    module procedure                 &
+      opencl_set_accel_kernel_arg_buffer,  &
+      iopencl_set_accel_kernel_arg_data,   &
+      dopencl_set_accel_kernel_arg_data,   &
+      zopencl_set_accel_kernel_arg_data,   &
+      opencl_set_accel_kernel_arg_local
   end interface opencl_set_kernel_arg
 
+  interface opencl_kernel_run
+    module procedure opencl_cl_kernel_run, accel_kernel_run
+  end interface opencl_kernel_run
+  
+  interface opencl_kernel_workgroup_size
+    module procedure opencl_cl_kernel_workgroup_size, accel_kernel_workgroup_size
+  end interface opencl_kernel_workgroup_size
+  
 #endif
 
   type(profile_t), save :: prof_read, prof_write
@@ -421,60 +435,25 @@ contains
     end select
 
     ! now initialize the kernels
-    call opencl_build_program(prog, trim(conf%share)//'/opencl/set_zero.cl')
-    call opencl_create_kernel(set_zero, prog, "set_zero")
-    call opencl_release_program(prog)
-
-    call opencl_build_program(prog, trim(conf%share)//'/opencl/vpsi.cl')
-    call opencl_create_kernel(kernel_vpsi, prog, "vpsi")
-    call opencl_create_kernel(kernel_vpsi_spinors, prog, "vpsi_spinors")
-    call opencl_release_program(prog)
-
-    call opencl_build_program(prog, trim(conf%share)//'/opencl/axpy.cl', flags = '-DRTYPE_DOUBLE')
-    call opencl_create_kernel(kernel_daxpy, prog, "daxpy")
-    call opencl_release_program(prog)
-
-    call opencl_build_program(prog, trim(conf%share)//'/opencl/axpy.cl', flags = '-DRTYPE_COMPLEX')
-    call opencl_create_kernel(kernel_zaxpy, prog, "zaxpy")
-    call opencl_release_program(prog)
-
-    call opencl_build_program(prog, trim(conf%share)//'/opencl/pack.cl')
-    call opencl_create_kernel(dpack, prog, "dpack")
-    call opencl_create_kernel(zpack, prog, "zpack")
-    call opencl_create_kernel(dunpack, prog, "dunpack")
-    call opencl_create_kernel(zunpack, prog, "zunpack")
-    call opencl_release_program(prog)
-
-    call opencl_build_program(prog, trim(conf%share)//'/opencl/copy.cl')
-    call opencl_create_kernel(kernel_copy, prog, "copy")
-    call opencl_release_program(prog)
-
-    call opencl_build_program(prog, trim(conf%share)//'/opencl/subarray.cl')
-    call opencl_create_kernel(kernel_subarray_gather, prog, "subarray_gather")
-    call opencl_release_program(prog)
-
-    call opencl_build_program(prog, trim(conf%share)//'/opencl/density.cl')
-    call opencl_create_kernel(kernel_density_real, prog, "density_real")
-    call opencl_create_kernel(kernel_density_complex, prog, "density_complex")
-    call opencl_release_program(prog)
-
-    call opencl_build_program(prog, trim(conf%share)//'/opencl/phase.cl')
-    call opencl_create_kernel(kernel_phase, prog, "phase")
-    call opencl_release_program(prog)
-
-    call opencl_build_program(prog, trim(conf%share)//'/opencl/mesh_batch.cl')
-    call opencl_create_kernel(dkernel_dot_matrix, prog, "ddot_matrix")
-    call opencl_create_kernel(zkernel_dot_matrix, prog, "zdot_matrix")
-    call opencl_create_kernel(zkernel_dot_matrix_spinors, prog, "zdot_matrix_spinors")
-    call opencl_release_program(prog)
-
-    call opencl_build_program(prog, trim(conf%share)//'/opencl/mul.cl', flags = '-DRTYPE_DOUBLE')
-    call opencl_create_kernel(dzmul, prog, "dzmul")
-    call opencl_release_program(prog)
-
-    call opencl_build_program(prog, trim(conf%share)//'/opencl/mul.cl', flags = '-DRTYPE_COMPLEX')
-    call opencl_create_kernel(zzmul, prog, "zzmul")
-    call opencl_release_program(prog)
+    call accel_kernel_start_call(set_zero, 'set_zero.cl', "set_zero")
+    call accel_kernel_start_call(kernel_vpsi, 'vpsi.cl', "vpsi")
+    call accel_kernel_start_call(kernel_vpsi_spinors, 'vpsi.cl', "vpsi_spinors")
+    call accel_kernel_start_call(kernel_daxpy, 'axpy.cl', "daxpy", flags = '-DRTYPE_DOUBLE')
+    call accel_kernel_start_call(kernel_zaxpy, 'axpy.cl', "zaxpy", flags = '-DRTYPE_COMPLEX')
+    call accel_kernel_start_call(dpack, 'pack.cl', "dpack")
+    call accel_kernel_start_call(zpack, 'pack.cl', "zpack")
+    call accel_kernel_start_call(dunpack, 'pack.cl', "dunpack")
+    call accel_kernel_start_call(zunpack, 'pack.cl', "zunpack")
+    call accel_kernel_start_call(kernel_copy, 'copy.cl', "copy")
+    call accel_kernel_start_call(kernel_subarray_gather, 'subarray.cl', "subarray_gather")
+    call accel_kernel_start_call(kernel_density_real, 'density.cl', "density_real")
+    call accel_kernel_start_call(kernel_density_complex, 'density.cl', "density_complex")
+    call accel_kernel_start_call(kernel_phase, 'phase.cl', "phase")
+    call accel_kernel_start_call(dkernel_dot_matrix, 'mesh_batch.cl', "ddot_matrix")
+    call accel_kernel_start_call(zkernel_dot_matrix, 'mesh_batch.cl', "zdot_matrix")
+    call accel_kernel_start_call(zkernel_dot_matrix_spinors, 'mesh_batch.cl', "zdot_matrix_spinors")
+    call accel_kernel_start_call(dzmul, 'mul.cl', "dzmul", flags = '-DRTYPE_DOUBLE')
+    call accel_kernel_start_call(zzmul, 'mul.cl', "zzmul", flags = '-DRTYPE_COMPLEX')
 
 #ifdef HAVE_CLBLAS
     call clblasSetup(cl_status)
@@ -669,25 +648,6 @@ contains
 
     if(opencl_is_enabled()) then
 #ifdef HAVE_OPENCL
-      call opencl_release_kernel(kernel_vpsi)
-      call opencl_release_kernel(kernel_vpsi_spinors)
-      call opencl_release_kernel(set_zero)
-      call opencl_release_kernel(kernel_daxpy)
-      call opencl_release_kernel(kernel_zaxpy)
-      call opencl_release_kernel(kernel_copy)
-      call opencl_release_kernel(dpack)
-      call opencl_release_kernel(zpack)
-      call opencl_release_kernel(dunpack)
-      call opencl_release_kernel(zunpack)
-      call opencl_release_kernel(kernel_subarray_gather)
-      call opencl_release_kernel(kernel_density_real)
-      call opencl_release_kernel(kernel_density_complex)
-      call opencl_release_kernel(kernel_phase)
-      call opencl_release_kernel(dkernel_dot_matrix)
-      call opencl_release_kernel(zkernel_dot_matrix)
-      call opencl_release_kernel(zkernel_dot_matrix_spinors)
-
-
       call clReleaseCommandQueue(accel%command_queue, ierr)
 
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "ReleaseCommandQueue")
@@ -817,6 +777,22 @@ contains
 
   ! ------------------------------------------
 
+  subroutine opencl_set_accel_kernel_arg_buffer(kernel, narg, buffer)
+    type(accel_kernel_t), intent(inout) :: kernel
+    integer,              intent(in)    :: narg
+    type(accel_mem_t),    intent(in)    :: buffer
+
+    integer :: ierr
+
+    ! no push_sub, called too frequently
+
+    call clSetKernelArg(kernel%kernel, narg, buffer%mem, ierr)
+    if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clSetKernelArg_buf")
+
+  end subroutine opencl_set_accel_kernel_arg_buffer
+  
+  ! ------------------------------------------
+
   subroutine opencl_set_kernel_arg_buffer(kernel, narg, buffer)
     type(cl_kernel),    intent(inout) :: kernel
     integer,            intent(in)    :: narg
@@ -859,12 +835,41 @@ contains
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "set_kernel_arg_local")
 
     POP_SUB(opencl_set_kernel_arg_local)
-
   end subroutine opencl_set_kernel_arg_local
+
+    ! ------------------------------------------
+
+  subroutine opencl_set_accel_kernel_arg_local(kernel, narg, type, size)
+    type(accel_kernel_t), intent(inout) :: kernel
+    integer,              intent(in)    :: narg
+    type(type_t),         intent(in)    :: type
+    integer,              intent(in)    :: size
+
+    integer :: ierr
+    integer(8) :: size_in_bytes
+
+    PUSH_SUB(opencl_set_kernel_arg_local)
+
+    size_in_bytes = int(size, 8)*types_get_size(type)
+
+    if(size_in_bytes > accel%local_memory_size) then
+      write(message(1), '(a,f12.6,a)') "CL Error: requested local memory: ", dble(size_in_bytes)/1024.0, " Kb"
+      write(message(2), '(a,f12.6,a)') "          available local memory: ", dble(accel%local_memory_size)/1024.0, " Kb"
+      call messages_fatal(2)
+    else if(size_in_bytes <= 0) then
+      write(message(1), '(a,i10)') "CL Error: invalid local memory size: ", size_in_bytes
+      call messages_fatal(1)
+    end if
+
+    call clSetKernelArgLocal(kernel%kernel, narg, size_in_bytes, ierr)
+    if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "set_kernel_arg_local")
+
+    POP_SUB(opencl_set_kernel_arg_local)
+  end subroutine opencl_set_accel_kernel_arg_local
 
   ! ------------------------------------------
 
-  subroutine opencl_kernel_run(kernel, globalsizes, localsizes)
+  subroutine opencl_cl_kernel_run(kernel, globalsizes, localsizes)
     type(cl_kernel),    intent(inout) :: kernel
     integer,            intent(in)    :: globalsizes(:)
     integer,            intent(in)    :: localsizes(:)
@@ -887,8 +892,34 @@ contains
     call clEnqueueNDRangeKernel(accel%command_queue, kernel, gsizes(1:dim), lsizes(1:dim), ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
 
-  end subroutine opencl_kernel_run
+  end subroutine opencl_cl_kernel_run
 
+  ! ------------------------------------------
+
+  subroutine accel_kernel_run(kernel, globalsizes, localsizes)
+    type(accel_kernel_t), intent(inout) :: kernel
+    integer,              intent(in)    :: globalsizes(:)
+    integer,              intent(in)    :: localsizes(:)
+
+    integer :: dim, ierr
+    integer(8) :: gsizes(1:3)
+    integer(8) :: lsizes(1:3)
+
+    ! no push_sub, called too frequently
+
+    dim = ubound(globalsizes, dim = 1)
+
+    ASSERT(dim == ubound(localsizes, dim = 1))
+    ASSERT(all(localsizes <= opencl_max_workgroup_size()))
+    ASSERT(all(mod(globalsizes, localsizes) == 0))
+
+    gsizes(1:dim) = int(globalsizes(1:dim), 8)
+    lsizes(1:dim) = int(localsizes(1:dim), 8)
+
+    call clEnqueueNDRangeKernel(accel%command_queue, kernel%kernel, gsizes(1:dim), lsizes(1:dim), ierr)
+    if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
+
+  end subroutine accel_kernel_run
 
   ! -----------------------------------------------
 
@@ -898,7 +929,7 @@ contains
 
   ! -----------------------------------------------
 
-  integer function opencl_kernel_workgroup_size(kernel) result(workgroup_size)
+  integer function opencl_cl_kernel_workgroup_size(kernel) result(workgroup_size)
     type(cl_kernel), intent(inout) :: kernel
 
     integer(8) :: workgroup_size8
@@ -908,7 +939,21 @@ contains
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
     workgroup_size = workgroup_size8
 
-  end function opencl_kernel_workgroup_size
+  end function opencl_cl_kernel_workgroup_size
+
+  ! -----------------------------------------------
+
+  integer function accel_kernel_workgroup_size(kernel) result(workgroup_size)
+    type(accel_kernel_t), intent(inout) :: kernel
+
+    integer(8) :: workgroup_size8
+    integer    :: ierr
+
+    call clGetKernelWorkGroupInfo(kernel%kernel, accel%device%cl_device, CL_KERNEL_WORK_GROUP_SIZE, workgroup_size8, ierr)
+    if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
+    workgroup_size = workgroup_size8
+
+  end function accel_kernel_workgroup_size
 
   ! -----------------------------------------------
 
@@ -1289,7 +1334,7 @@ contains
   ! ----------------------------------------------------
 
   subroutine opencl_set_buffer_to_zero(buffer, type, nval, offset)
-    type(accel_mem_t), intent(inout) :: buffer
+    type(accel_mem_t),  intent(inout) :: buffer
     type(type_t),       intent(in)    :: type
     integer,            intent(in)    :: nval
     integer, optional,  intent(in)    :: offset
@@ -1306,7 +1351,7 @@ contains
     call opencl_set_kernel_arg(set_zero, 1, optional_default(offset, 0)*types_get_size(type)/8)
     call opencl_set_kernel_arg(set_zero, 2, buffer)
 
-    bsize = opencl_kernel_workgroup_size(set_zero)
+    bsize = opencl_kernel_workgroup_size(set_zero%kernel)
 
     call opencl_kernel_run(set_zero, (/ opencl_pad(nval_real, bsize) /), (/ bsize /))
     call opencl_finish()

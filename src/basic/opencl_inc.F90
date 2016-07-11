@@ -238,6 +238,24 @@ subroutine X(opencl_set_kernel_arg_data)(kernel, narg, data)
 
 end subroutine X(opencl_set_kernel_arg_data)
 
+! ---------------------------------------------------------------------------
+
+subroutine X(opencl_set_accel_kernel_arg_data)(kernel, narg, data)
+  type(accel_kernel_t), intent(inout) :: kernel
+  integer,              intent(in)    :: narg
+  R_TYPE,               intent(in)    :: data
+  
+  integer :: ierr
+
+  ! no push_sub, called too frequently
+
+#ifdef HAVE_OPENCL
+  call clSetKernelArg(kernel%kernel, narg, data, ierr)
+#endif
+  if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "set_kernel_arg_data")
+
+end subroutine X(opencl_set_accel_kernel_arg_data)
+
 
 !! Local Variables:
 !! mode: f90

@@ -147,7 +147,7 @@ contains
 #ifdef HAVE_OPENCL
     integer            :: wgsize
     type(accel_mem_t) :: buff_weight
-    type(cl_kernel)    :: kernel
+    type(accel_kernel_t), pointer :: kernel
 #endif
 
     PUSH_SUB(density_calc_accumulate)
@@ -224,9 +224,9 @@ contains
         if(.not. this%packed) call density_calc_pack(this)
 
         if(states_are_real(this%st)) then
-          kernel = kernel_density_real
+          kernel => kernel_density_real
         else
-          kernel = kernel_density_complex
+          kernel => kernel_density_complex
         end if
 
         call opencl_create_buffer(buff_weight, CL_MEM_READ_ONLY, TYPE_FLOAT, psib%nst)
