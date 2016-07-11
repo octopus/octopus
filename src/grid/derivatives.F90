@@ -22,9 +22,6 @@
 module derivatives_oct_m
   use batch_oct_m
   use boundaries_oct_m
-#ifdef HAVE_OPENCL
-  use cl
-#endif
   use global_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m

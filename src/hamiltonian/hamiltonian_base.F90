@@ -24,9 +24,6 @@ module hamiltonian_base_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use blas_oct_m
-#ifdef HAVE_OPENCL
-  use cl
-#endif
   use comm_oct_m
   use derivatives_oct_m
   use epot_oct_m
@@ -181,9 +178,7 @@ contains
     PUSH_SUB(hamiltonian_base_end)
 
     if(allocated(this%potential) .and. opencl_is_enabled()) then
-#ifdef HAVE_OPENCL
       call opencl_release_buffer(this%potential_opencl)
-#endif
     end if
     
     SAFE_DEALLOCATE_A(this%potential)

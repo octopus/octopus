@@ -22,9 +22,6 @@
 module subarray_oct_m
   use accel_oct_m
   use batch_oct_m
-#ifdef HAVE_OPENCL
-  use cl
-#endif
   use global_oct_m
   use math_oct_m
   use messages_oct_m

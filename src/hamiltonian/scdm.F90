@@ -24,9 +24,6 @@ module scdm_oct_m
   use batch_ops_oct_m
   use blacs_proc_grid_oct_m
   use blas_oct_m
-#ifdef HAVE_OPENCL
-  use cl
-#endif
   use cmplxscl_oct_m
   use comm_oct_m
   use cube_oct_m

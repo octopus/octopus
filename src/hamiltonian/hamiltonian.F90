@@ -28,9 +28,6 @@ module hamiltonian_oct_m
   use blas_oct_m
   use boundaries_oct_m
   use boundary_op_oct_m
-#ifdef HAVE_OPENCL
-  use cl
-#endif  
   use cmplxscl_oct_m
   use comm_oct_m
   use derivatives_oct_m
@@ -505,13 +502,11 @@ contains
         end forall
       end do
 
-#ifdef HAVE_OPENCL
       if(opencl_is_enabled()) then
         call opencl_create_buffer(hm%hm_base%buff_phase, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, gr%mesh%np_part*hm%d%kpt%nlocal)
         call opencl_write_buffer(hm%hm_base%buff_phase, gr%mesh%np_part*hm%d%kpt%nlocal, hm%hm_base%phase)
         hm%hm_base%buff_phase_qn_start = hm%d%kpt%start
       end if
-#endif 
 
       POP_SUB(hamiltonian_init.init_phase)
     end subroutine init_phase
@@ -529,11 +524,9 @@ contains
 
     nullify(hm%subsys_hm)
     
-#ifdef HAVE_OPENCL
     if(associated(hm%hm_base%phase) .and. opencl_is_enabled()) then
       call opencl_release_buffer(hm%hm_base%buff_phase)
     end if
-#endif
 
     SAFE_DEALLOCATE_P(hm%hm_base%phase)
     SAFE_DEALLOCATE_P(hm%vhartree)
@@ -833,9 +826,7 @@ contains
         if(.not. associated(this%hm_base%phase)) then
           SAFE_ALLOCATE(this%hm_base%phase(1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
           if(opencl_is_enabled()) then
-#ifdef HAVE_OPENCL
             call opencl_create_buffer(this%hm_base%buff_phase, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, mesh%np_part*this%d%kpt%nlocal)
-#endif
           end if
         end if
 
@@ -849,9 +840,7 @@ contains
           end forall
         end do
         if(opencl_is_enabled()) then
-#ifdef HAVE_OPENCL
           call opencl_write_buffer(this%hm_base%buff_phase, mesh%np_part*this%d%kpt%nlocal, this%hm_base%phase)
-#endif
         end if
       end if
 
@@ -864,10 +853,8 @@ contains
         if(.not. allocated(this%hm_base%projector_phases)) then
           SAFE_ALLOCATE(this%hm_base%projector_phases(1:max_npoints, nmat, this%d%kpt%start:this%d%kpt%end))
           if(opencl_is_enabled()) then
-#ifdef HAVE_OPENCL
             call opencl_create_buffer(this%hm_base%buff_projector_phases, ACCEL_MEM_READ_ONLY, &
               TYPE_CMPLX, this%hm_base%total_points*this%d%kpt%nlocal)
-#endif
           end if
         end if
 
@@ -880,10 +867,8 @@ contains
             end do
 
             if(opencl_is_enabled() .and. this%hm_base%projector_matrices(imat)%npoints > 0) then
-#ifdef HAVE_OPENCL
               call opencl_write_buffer(this%hm_base%buff_projector_phases, &
                 this%hm_base%projector_matrices(imat)%npoints, this%hm_base%projector_phases(1:, imat, ik), offset = offset)
-#endif
             end if
             offset = offset + this%hm_base%projector_matrices(imat)%npoints
           end do

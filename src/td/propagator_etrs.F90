@@ -21,9 +21,6 @@
 
 module propagator_etrs_oct_m
   use accel_oct_m
-#ifdef HAVE_OPENCL
-  use cl
-#endif
   use batch_oct_m
   use batch_ops_oct_m
   use density_oct_m
@@ -383,14 +380,12 @@ contains
 
       ! copy vold to a cl buffer
       if(opencl_is_enabled() .and. hamiltonian_apply_packed(hm, gr%mesh)) then
-#ifdef HAVE_OPENCL
         pnp = opencl_padded_size(gr%mesh%np)
         call opencl_create_buffer(phase_buff, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, pnp*st%d%nspin)
         ASSERT(ubound(vold, dim = 1) == gr%mesh%np)
         do ispin = 1, st%d%nspin
           call opencl_write_buffer(phase_buff, gr%mesh%np, vold(:, ispin), offset = (ispin - 1)*pnp)
         end do
-#endif
       end if
 
     end if
@@ -438,7 +433,6 @@ contains
               end forall
             end do
           case(BATCH_CL_PACKED)
-#ifdef HAVE_OPENCL
             call opencl_set_kernel_arg(kernel_phase, 0, pnp*(ispin - 1))
             call opencl_set_kernel_arg(kernel_phase, 1, phase_buff)
             call opencl_set_kernel_arg(kernel_phase, 2, st%group%psib(ib, ik)%pack%buffer)
@@ -448,7 +442,6 @@ contains
 
             call opencl_kernel_run(kernel_phase, (/st%group%psib(ib, ik)%pack%size(1), pnp/), &
               (/st%group%psib(ib, ik)%pack%size(1), iprange/))
-#endif
           end select
           call profiling_out(phase_prof)
         end if
@@ -460,11 +453,9 @@ contains
       end do
     end do
 
-#ifdef HAVE_OPENCL
     if(tr%method == PROP_CAETRS .and. opencl_is_enabled() .and. hamiltonian_apply_packed(hm, gr%mesh)) then
       call opencl_release_buffer(phase_buff)
     end if
-#endif
 
     call density_calc_end(dens_calc)
 

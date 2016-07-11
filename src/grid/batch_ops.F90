@@ -24,9 +24,6 @@ module batch_ops_oct_m
   use batch_oct_m
   use blas_oct_m
   use iso_c_binding
-#ifdef HAVE_OPENCL
-  use cl
-#endif
   use global_oct_m
   use hardware_oct_m
   use lalg_adv_oct_m
@@ -133,9 +130,7 @@ contains
     call batch_pack_was_modified(this)
 
     if(batch_is_packed(this) .and. opencl_is_enabled()) then
-#ifdef HAVE_OPENCL
       call opencl_set_buffer_to_zero(this%pack%buffer, batch_type(this), product(this%pack%size))
-#endif
     else if(batch_is_packed(this) .and. batch_type(this) == TYPE_FLOAT) then
       this%pack%dpsi = M_ZERO
     else if(batch_is_packed(this) .and. batch_type(this) == TYPE_CMPLX) then
@@ -178,7 +173,6 @@ subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
     tsize = types_get_size(batch_type(this))/types_get_size(TYPE_FLOAT)
     offset = batch_linear_to_ist(this, 1) - 1
 
-#ifdef HAVE_OPENCL
     call accel_kernel_start_call(kernel, 'points.cl', 'get_points')
 
     call opencl_set_kernel_arg(kernel, 0, sp)
@@ -192,7 +186,7 @@ subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
 
     call opencl_kernel_run(kernel, (/this%pack%size_real(1), ep -&
       sp + 1/), (/this%pack%size_real(1), 1/))
-#endif
+
   end select
 
   call profiling_out(get_points_prof)

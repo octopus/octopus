@@ -134,9 +134,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   if(batch_status(v_local) == BATCH_CL_PACKED) then
     nn = product(handle%ghost_send%pack%size(1:2))
     SAFE_ALLOCATE(handle%X(send_buffer)(1:nn))
-#ifdef HAVE_OPENCL
     call opencl_read_buffer(handle%ghost_send%pack%buffer, nn, handle%X(send_buffer))
-#endif
   end if
 
   select case(batch_status(v_local))
@@ -205,10 +203,8 @@ subroutine X(ghost_update_batch_finish)(handle)
   SAFE_DEALLOCATE_P(handle%requests)
 
   if(batch_status(handle%v_local) == BATCH_CL_PACKED) then
-#ifdef HAVE_OPENCL
     call opencl_write_buffer(handle%v_local%pack%buffer, handle%v_local%pack%size(1)*handle%vp%np_ghost, &
       handle%X(recv_buffer), offset = handle%v_local%pack%size(1)*handle%vp%np_local)
-#endif
     SAFE_DEALLOCATE_P(handle%X(send_buffer))
     SAFE_DEALLOCATE_P(handle%X(recv_buffer))
   end if
@@ -256,19 +252,15 @@ contains
   ! ---------------------------------------------------------
   subroutine zero_boundaries()
     integer :: ist, ip
-#ifdef HAVE_OPENCL
     integer :: np
-#endif
 
     PUSH_SUB(X(boundaries_set_batch).zero_boundaries)
 
     select case(batch_status(ffb))
     case(BATCH_CL_PACKED)
-#ifdef HAVE_OPENCL
       np = ffb%pack%size(1)*(bndry_end - bndry_start + 1)
       call opencl_set_buffer_to_zero(ffb%pack%buffer, batch_type(ffb), np, offset = ffb%pack%size(1)*(bndry_start - 1))
       call opencl_finish()
-#endif
     case(BATCH_PACKED)
       forall(ip = bndry_start:bndry_end) 
         forall(ist = 1:ffb%nst_linear)
@@ -342,23 +334,18 @@ contains
     integer :: ip, ist, ip_bnd, ip_inn
     R_TYPE, pointer :: ff(:)
 
-#ifdef HAVE_MPI
     R_TYPE, allocatable :: sendbuffer(:, :, :)
     R_TYPE, allocatable :: recvbuffer(:, :, :)
     integer, allocatable :: send_disp(:), send_count(:)
     integer, allocatable :: recv_disp(:), recv_count(:)
     integer :: ipart, npart, maxsend, maxrecv, ldbuffer, ip2
-#endif
     type(accel_kernel_t), save :: kernel_send, kernel_recv, kernel
-#ifdef HAVE_OPENCL
     integer :: wgsize
     type(accel_mem_t) :: buff_send
     type(accel_mem_t) :: buff_recv
-#endif
 
     PUSH_SUB(X(boundaries_set_batch).periodic)
 
-#ifdef HAVE_MPI
     if(boundaries%mesh%parallel_in_domains) then
 
       call profiling_in(set_bc_precomm_prof, 'SET_BC_PRECOMM')
@@ -397,7 +384,6 @@ contains
         end do
 
       case(BATCH_CL_PACKED)
-#ifdef HAVE_OPENCL
         call opencl_create_buffer(buff_send, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, ffb%pack%size(1)*maxsend*npart)
 
         call accel_kernel_start_call(kernel_send, 'boundaries.cl', 'boundaries_periodic_send')
@@ -418,7 +404,6 @@ contains
 
         call opencl_read_buffer(buff_send, ffb%pack%size(1)*maxsend*npart, sendbuffer)
         call opencl_release_buffer(buff_send)
-#endif
       end select
 
 
@@ -443,11 +428,13 @@ contains
 
       call profiling_in(set_bc_comm_prof, 'SET_BC_COMM')
 
+#ifdef HAVE_MPI
       call mpi_debug_in(boundaries%mesh%vp%comm, C_MPI_ALLTOALLV)
       call MPI_Alltoallv(sendbuffer, send_count, send_disp, R_MPITYPE, &
         recvbuffer, recv_count, recv_disp, R_MPITYPE, boundaries%mesh%vp%comm, mpi_err)
       call mpi_debug_out(boundaries%mesh%vp%comm, C_MPI_ALLTOALLV)
-
+#endif
+      
       call profiling_count_transfers(sum(boundaries%nsend(1:npart) + boundaries%nrecv(1:npart))*ffb%nst_linear, &
         R_TOTYPE(M_ONE))
 
@@ -487,7 +474,6 @@ contains
         end do
 
       case(BATCH_CL_PACKED)
-#ifdef HAVE_OPENCL
         call opencl_create_buffer(buff_recv, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, ffb%pack%size(1)*maxrecv*npart)
         call opencl_write_buffer(buff_recv, ffb%pack%size(1)*maxrecv*npart, recvbuffer)
 
@@ -509,7 +495,6 @@ contains
         call opencl_finish()
 
         call opencl_release_buffer(buff_recv)
-#endif
       end select
 
       SAFE_DEALLOCATE_A(recvbuffer)        
@@ -517,7 +502,6 @@ contains
       call profiling_out(set_bc_postcomm_prof)
 
     end if
-#endif
 
     select case(batch_status(ffb))
 
@@ -540,8 +524,6 @@ contains
       end do
 
     case(BATCH_CL_PACKED)
-#ifdef HAVE_OPENCL
-
       call accel_kernel_start_call(kernel, 'boundaries.cl', 'boundaries_periodic')
 
       call opencl_set_kernel_arg(kernel, 0, boundaries%nper)
@@ -555,7 +537,6 @@ contains
         (/ffb%pack%size_real(1), wgsize/))
 
       call opencl_finish()
-#endif
 
     end select
 

@@ -188,10 +188,8 @@ subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
 
   FLOAT, dimension(:), pointer :: vpsl
   FLOAT, allocatable :: vpsl_spin(:,:), Imvpsl_spin(:,:)
-#ifdef HAVE_OPENCL
   integer :: pnp, offset, ispin
   type(accel_mem_t) :: vpsl_buff
-#endif
 
   PUSH_SUB(X(hamiltonian_external))
 
@@ -227,7 +225,6 @@ subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
   end if
 
   if(batch_status(psib) == BATCH_CL_PACKED) then
-#ifdef HAVE_OPENCL
     pnp = opencl_padded_size(mesh%np)
     call opencl_create_buffer(vpsl_buff, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, pnp * this%d%nspin)
     call opencl_write_buffer(vpsl_buff, mesh%np, vpsl)
@@ -242,7 +239,6 @@ subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
       psib, vpsib, potential_opencl = vpsl_buff)
 
     call opencl_release_buffer(vpsl_buff)
-#endif
   else
     if(this%cmplxscl%space) then
       call X(hamiltonian_base_local_sub)(vpsl_spin, mesh, this%d, 1, &

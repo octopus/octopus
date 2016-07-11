@@ -46,9 +46,7 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
   type(batch_t),     intent(inout) :: yy
 
   integer :: ist
-#ifdef HAVE_OPENCL
   integer :: localsize
-#endif
   CMPLX :: zaa
 
   PUSH_SUB(X(batch_axpy_const))
@@ -64,7 +62,6 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
 
   select case(batch_status(xx))
   case(BATCH_CL_PACKED)
-#ifdef HAVE_OPENCL
     if(batch_type(yy) == TYPE_FLOAT) then
 
       call opencl_set_kernel_arg(kernel_daxpy, 0, aa)
@@ -90,7 +87,7 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
     end if
 
     call opencl_finish()
-#endif
+    
   case(BATCH_PACKED)
     if(batch_type(yy) == TYPE_CMPLX) then
       call lalg_axpy(xx%pack%size(1), np, aa, xx%pack%zpsi, yy%pack%zpsi)
@@ -132,13 +129,11 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
 
   integer :: ist, ip, effsize, iaa
   R_TYPE, allocatable     :: aa_linear(:)
-#ifdef HAVE_OPENCL
   integer :: localsize
   integer :: size_factor
   type(accel_mem_t)      :: aa_buffer
   FLOAT,  allocatable     :: aa_linear_double(:)
   type(accel_kernel_t), save :: kernel
-#endif
   
   PUSH_SUB(X(batch_axpy_vec))
   call profiling_in(axpy_vec_prof, "BATCH_AXPY_VEC")
@@ -164,7 +159,6 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
 
   select case(batch_status(xx))
   case(BATCH_CL_PACKED)
-#ifdef HAVE_OPENCL
     call accel_kernel_start_call(kernel, 'axpy.cl', TOSTRING(X(axpy_vec)), &
       flags = '-D' + R_TYPE_CL)
 
@@ -197,7 +191,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
     call opencl_finish()
 
     call opencl_release_buffer(aa_buffer)
-#endif
+
   case(BATCH_PACKED)
     if(batch_type(yy) == TYPE_CMPLX) then
       !$omp parallel do private(ip, ist)
@@ -272,13 +266,11 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
 
   integer :: ist, ip, effsize, iaa
   R_TYPE, allocatable     :: aa_linear(:)
-#ifdef HAVE_OPENCL
   integer :: localsize
   integer :: size_factor
   FLOAT,  allocatable     :: aa_linear_double(:)
   type(accel_mem_t)      :: aa_buffer
   type(accel_kernel_t), save :: kernel
-#endif
   
   PUSH_SUB(X(batch_scal_vec))
   call profiling_in(scal_prof, "BATCH_SCAL")
@@ -301,8 +293,6 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
   
   select case(batch_status(xx))
   case(BATCH_CL_PACKED)
-#ifdef HAVE_OPENCL
-
     if(batch_type(xx) == TYPE_CMPLX .and. R_TYPE_VAL == TYPE_FLOAT) then
       size_factor = 2
       SAFE_ALLOCATE(aa_linear_double(1:2*xx%pack%size(1)))
@@ -333,7 +323,7 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
     call opencl_finish()
 
     call opencl_release_buffer(aa_buffer)
-#endif
+    
   case(BATCH_PACKED)
     if(batch_type(xx) == TYPE_CMPLX) then
       do ist = 1, xx%pack%size(1)
@@ -383,12 +373,10 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
 
   integer :: ist, ip, effsize, iaa
   R_TYPE, allocatable     :: aa_linear(:)
-#ifdef HAVE_OPENCL
   integer :: size_factor, localsize
   FLOAT,  allocatable     :: aa_linear_double(:)
   type(accel_mem_t)      :: aa_buffer
   type(accel_kernel_t), save :: kernel
-#endif
   
   PUSH_SUB(X(batch_xpay_vec))
   call profiling_in(xpay_prof, "BATCH_XPAY")
@@ -414,8 +402,6 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
 
   select case(batch_status(xx))
   case(BATCH_CL_PACKED)
-#ifdef HAVE_OPENCL
-
     if(batch_type(yy) == TYPE_CMPLX .and. R_TYPE_VAL == TYPE_FLOAT) then
       size_factor = 2
       SAFE_ALLOCATE(aa_linear_double(1:2*yy%pack%size(1)))
@@ -448,7 +434,7 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
     call opencl_finish()
 
     call opencl_release_buffer(aa_buffer)
-#endif
+    
   case(BATCH_PACKED)
     if(batch_type(yy) == TYPE_CMPLX) then
       !$omp parallel do private(ip, ist)
@@ -563,7 +549,6 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
       forall(ip = 1:np) this%pack%zpsi(ist, ip) = psi(ip)
     end if
   case(BATCH_CL_PACKED)
-#ifdef HAVE_OPENCL
     call opencl_create_buffer(tmp, ACCEL_MEM_READ_ONLY, batch_type(this), this%pack%size(2))
 
     call opencl_write_buffer(tmp, np, psi)
@@ -579,7 +564,7 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
     call opencl_finish()
 
     call opencl_release_buffer(tmp)
-#endif
+    
   end select
 
   call profiling_out(prof)
@@ -677,7 +662,6 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
     end if
 
   case(BATCH_CL_PACKED)
-#ifdef HAVE_OPENCL
     call opencl_create_buffer(tmp, ACCEL_MEM_WRITE_ONLY, batch_type(this), this%pack%size(2))
 
     call opencl_set_kernel_arg(X(unpack), 0, this%pack%size(1))
@@ -692,7 +676,7 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
     call opencl_read_buffer(tmp, np, psi)
 
     call opencl_release_buffer(tmp)
-#endif
+    
   end select
 
   call profiling_out(prof)
@@ -901,10 +885,8 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
 
   integer :: ist, ip
   R_TYPE :: mul
-#ifdef HAVE_OPENCL
   integer :: iprange
   type(accel_mem_t)      :: ff_buffer
-#endif
   
   PUSH_SUB(X(batch_mul))
   call profiling_in(mul_prof, "BATCH_MUL")
@@ -920,7 +902,7 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
   select case(batch_status(yy))
   case(BATCH_CL_PACKED)
 
-#if defined(HAVE_OPENCL) && defined(R_TREAL)
+#if defined(R_TREAL)
 
     ! We reuse here the routine to apply the local potential
     call batch_set_zero(yy)

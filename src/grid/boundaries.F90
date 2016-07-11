@@ -22,9 +22,6 @@
 module boundaries_oct_m
   use accel_oct_m
   use batch_oct_m
-#ifdef HAVE_OPENCL
-  use cl
-#endif
   use global_oct_m
   use math_oct_m
   use messages_oct_m
@@ -313,12 +310,10 @@ contains
       end if
 #endif
 
-#ifdef HAVE_OPENCL
       if(opencl_is_enabled()) then
         call opencl_create_buffer(this%buff_per_points, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, 2*this%nper)
         call opencl_write_buffer(this%buff_per_points, 2*this%nper, this%per_points)
 
-#ifdef HAVE_MPI
         if(mesh%parallel_in_domains) then
           call opencl_create_buffer(this%buff_per_send, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, product(ubound(this%per_send)))
           call opencl_write_buffer(this%buff_per_send, product(ubound(this%per_send)), this%per_send)
@@ -332,9 +327,7 @@ contains
           call opencl_create_buffer(this%buff_nrecv, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, mesh%vp%npart)
           call opencl_write_buffer(this%buff_nrecv, mesh%vp%npart, this%nrecv)
         end if
-#endif
       end if
-#endif
 
     end if
 
@@ -349,7 +342,6 @@ contains
     PUSH_SUB(boundaries_end)
 
     if(simul_box_is_periodic(this%mesh%sb)) then
-#ifdef HAVE_MPI
       if(this%mesh%parallel_in_domains) then    
         
         ASSERT(associated(this%nsend))
@@ -360,20 +352,15 @@ contains
         SAFE_DEALLOCATE_P(this%nsend)
         SAFE_DEALLOCATE_P(this%nrecv)
 
-#ifdef HAVE_OPENCL
         if(opencl_is_enabled()) then
           call opencl_release_buffer(this%buff_per_send)
           call opencl_release_buffer(this%buff_per_recv)
           call opencl_release_buffer(this%buff_nsend)
           call opencl_release_buffer(this%buff_nrecv)
         end if
-#endif
       end if
-#endif
-      
-#ifdef HAVE_OPENCL
+
       if(opencl_is_enabled()) call opencl_release_buffer(this%buff_per_points)
-#endif
 
       SAFE_DEALLOCATE_P(this%per_points)
     end if

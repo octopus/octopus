@@ -49,11 +49,9 @@ subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
   type(profile_t), save :: prof
   integer :: iblock, ii, ist, bsize
   R_TYPE  :: aa
-#ifdef HAVE_OPENCL
   type(accel_mem_t) :: blength_buff
   type(accel_mem_t) :: offsets_buff
   type(accel_mem_t) :: dest_buff
-#endif
 
   call profiling_in(prof, "SUBARRAY_GATHER_BATCH")
 
@@ -61,7 +59,6 @@ subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
   ASSERT(batch_status(arrayb) == batch_status(subarrayb))
     
   select case(batch_status(arrayb))
-#ifdef HAVE_OPENCL
   case(BATCH_CL_PACKED)
 
     call opencl_create_buffer(blength_buff, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, this%nblocks)
@@ -88,7 +85,7 @@ subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
     call opencl_release_buffer(blength_buff)
     call opencl_release_buffer(offsets_buff)
     call opencl_release_buffer(dest_buff)
-#endif
+    
   case(BATCH_PACKED)
     do iblock = 1, this%nblocks
       forall(ii = 1:this%blength(iblock))

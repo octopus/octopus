@@ -24,9 +24,6 @@ module forces_oct_m
   use batch_ops_oct_m
   use born_charges_oct_m
   use boundaries_oct_m
-#ifdef HAVE_OPENCL
-  use cl
-#endif
   use comm_oct_m
   use density_oct_m
   use derivatives_oct_m

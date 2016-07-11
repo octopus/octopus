@@ -21,9 +21,6 @@
 
 module mesh_cube_map_oct_m
   use accel_oct_m
-#ifdef HAVE_OPENCL
-  use cl
-#endif
   use global_oct_m
   use index_oct_m
   use messages_oct_m
@@ -92,10 +89,8 @@ contains
       end do
 
       if(opencl_is_enabled()) then
-#ifdef HAVE_OPENCL
         call opencl_create_buffer(this%map_buffer, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, this%nmap*5)
         call opencl_write_buffer(this%map_buffer, this%nmap*5, this%map)
-#endif
       end if
 
     else
@@ -116,11 +111,7 @@ contains
 
       SAFE_DEALLOCATE_P(this%map)
       
-      if(opencl_is_enabled()) then
-#ifdef HAVE_OPENCL
-        call opencl_release_buffer(this%map_buffer)
-#endif
-      end if
+      if(opencl_is_enabled()) call opencl_release_buffer(this%map_buffer)
 
     end if
 

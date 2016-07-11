@@ -29,12 +29,10 @@ subroutine X(density_accumulate_grad)(gr, st, iq, psib, grad_psib, grad_rho)
   integer :: ii, ist, idir, ip
   FLOAT :: ff
   R_TYPE :: psi, gpsi
-#ifdef HAVE_OPENCL
   integer :: wgsize
   FLOAT, allocatable :: grad_rho_tmp(:, :), weights(:)
   type(accel_mem_t) :: grad_rho_buff, weights_buff
   type(accel_kernel_t), save :: ker_calc_grad_dens
-#endif  
 
   PUSH_SUB(X(density_accumulate_grad))
 
@@ -76,7 +74,6 @@ subroutine X(density_accumulate_grad)(gr, st, iq, psib, grad_psib, grad_rho)
     end do
       
   case(BATCH_CL_PACKED)
-#ifdef HAVE_OPENCL
     call opencl_create_buffer(grad_rho_buff, ACCEL_MEM_WRITE_ONLY, TYPE_FLOAT, gr%mesh%np*gr%sb%dim)
 
     SAFE_ALLOCATE(weights(1:psib%pack%size(1)))
@@ -125,7 +122,6 @@ subroutine X(density_accumulate_grad)(gr, st, iq, psib, grad_psib, grad_rho)
     end do
 
     SAFE_DEALLOCATE_A(grad_rho_tmp)
-#endif
   end select
 
   POP_SUB(X(density_accumulate_grad))

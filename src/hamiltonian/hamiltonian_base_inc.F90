@@ -28,11 +28,9 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
   PUSH_SUB(X(hamiltonian_base_local))
 
   if(batch_status(psib) == BATCH_CL_PACKED) then
-#ifdef HAVE_OPENCL
     ASSERT(.not. allocated(this%Impotential))
     call X(hamiltonian_base_local_sub)(this%potential, mesh, std, ispin, &
       psib, vpsib, potential_opencl = this%potential_opencl)
-#endif
   else
     if(allocated(this%Impotential)) then
       call X(hamiltonian_base_local_sub)(this%potential, mesh, std, ispin, &
@@ -61,9 +59,7 @@ subroutine X(hamiltonian_base_local_sub)(potential, mesh, std, ispin, psib, vpsi
   FLOAT   :: vv, Imvv
   R_TYPE  :: pot(1:4) 
   logical :: pot_is_cmplx
-#ifdef HAVE_OPENCL
   integer :: pnp, iprange
-#endif
 
   call profiling_in(prof_vlpsi, "VLPSI")
   PUSH_SUB(X(hamiltonian_base_local_sub))
@@ -79,7 +75,6 @@ subroutine X(hamiltonian_base_local_sub)(potential, mesh, std, ispin, psib, vpsi
 
   select case(batch_status(psib))
   case(BATCH_CL_PACKED)
-#ifdef HAVE_OPENCL
     ASSERT(.not. pot_is_cmplx) ! not implemented
 
     pnp = opencl_padded_size(mesh%np)
@@ -119,7 +114,6 @@ subroutine X(hamiltonian_base_local_sub)(potential, mesh, std, ispin, psib, vpsi
     call profiling_count_transfers(mesh%np, M_ONE)
     call profiling_count_transfers(mesh%np*psib%nst, R_TOTYPE(M_ONE))
 
-#endif
   case(BATCH_PACKED)
 
     select case(std%ispin)
@@ -264,11 +258,8 @@ subroutine X(hamiltonian_base_phase)(this, der, np, iqn, conjugate, psib, src)
   type(batch_t), pointer :: src_
   type(profile_t), save :: phase_prof
   CMPLX :: phase
-#ifdef HAVE_OPENCL
   integer :: wgsize
   type(accel_kernel_t), save :: ker_phase
-  type(cl_kernel) :: kernel
-#endif
 
   PUSH_SUB(X(hamiltonian_base_phase))
   call profiling_in(phase_prof, "PBC_PHASE_APPLY")
@@ -335,7 +326,6 @@ subroutine X(hamiltonian_base_phase)(this, der, np, iqn, conjugate, psib, src)
     end if
 
   case(BATCH_CL_PACKED)
-#ifdef HAVE_OPENCL
     call accel_kernel_start_call(ker_phase, 'phase.cl', 'phase_hamiltonian')
 
     if(conjugate) then
@@ -357,11 +347,9 @@ subroutine X(hamiltonian_base_phase)(this, der, np, iqn, conjugate, psib, src)
     call opencl_kernel_run(ker_phase, (/psib%pack%size(1), pad(np, wgsize)/), (/psib%pack%size(1), wgsize/))
 
     call opencl_finish()
-#endif
   end select
 
   call batch_pack_was_modified(psib)
-
 
   call profiling_out(phase_prof)
   POP_SUB(X(hamiltonian_base_phase))
@@ -421,6 +409,7 @@ subroutine X(hamiltonian_base_rashba)(this, der, std, psib, vpsib)
   POP_SUB(X(hamiltonian_base_rashba))
 end subroutine X(hamiltonian_base_rashba)
 
+! -----------------------------------------------------------------------------
 
 subroutine X(hamiltonian_base_magnetic)(this, der, std, ep, ispin, psib, vpsib)
   type(hamiltonian_base_t),    intent(in)    :: this
@@ -1092,12 +1081,9 @@ subroutine X(hamiltonian_base_nlocal_position_commutator)(this, mesh, std, ik, p
   CMPLX :: phase
   type(projector_matrix_t), pointer :: pmat
   type(profile_t), save :: prof, reduce_prof
-#ifdef HAVE_OPENCL
   integer :: padnprojs, wgsize, lnprojs, size
   type(profile_t), save :: cl_prof
   type(accel_kernel_t), save :: ker_proj_bra, ker_proj_bra_phase
-  type(cl_kernel) :: kernel
-#endif
 
   if(.not. this%apply_projector_matrices) return
 

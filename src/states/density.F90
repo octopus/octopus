@@ -26,9 +26,6 @@ module density_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use iso_c_binding
-#ifdef HAVE_OPENCL
-  use cl
-#endif
   use comm_oct_m
   use derivatives_oct_m
   use global_oct_m
@@ -117,15 +114,14 @@ contains
     type(density_calc_t),           intent(out)   :: this
 
     PUSH_SUB(density_calc_pack)
-
+    
     this%packed = .true.
-#ifdef HAVE_OPENCL    
     this%pnp = opencl_padded_size(this%gr%mesh%np)
     call opencl_create_buffer(this%buff_density, ACCEL_MEM_READ_WRITE, TYPE_FLOAT, this%pnp*this%st%d%nspin)
     
     ! set to zero
     call opencl_set_buffer_to_zero(this%buff_density, TYPE_FLOAT, this%pnp*this%st%d%nspin)
-#endif
+    
     POP_SUB(density_calc_pack)
   end subroutine density_calc_pack
 
@@ -144,11 +140,9 @@ contains
     FLOAT, allocatable :: weight(:), sqpsi(:)
     type(profile_t), save :: prof
     logical :: correct_size, cmplxscl
-#ifdef HAVE_OPENCL
     integer            :: wgsize
     type(accel_mem_t) :: buff_weight
     type(accel_kernel_t), pointer :: kernel
-#endif
 
     PUSH_SUB(density_calc_accumulate)
     call profiling_in(prof, "CALC_DENSITY")
@@ -220,7 +214,6 @@ contains
           end if
         end if
       case(BATCH_CL_PACKED)
-#ifdef HAVE_OPENCL
         if(.not. this%packed) call density_calc_pack(this)
 
         if(states_are_real(this%st)) then
@@ -247,7 +240,7 @@ contains
         call opencl_finish()
         
         call opencl_release_buffer(buff_weight)
-#endif
+        
       end select
 
     else if(this%gr%have_fine_mesh) then
@@ -326,14 +319,11 @@ contains
     FLOAT, allocatable :: tmpdensity(:)
     integer :: ispin, ip
     type(profile_t), save :: reduce_prof
-#ifdef HAVE_OPENCL
     FLOAT, allocatable :: fdensity(:)
-#endif
 
     PUSH_SUB(density_calc_end)
 
     if(this%packed) then
-#ifdef HAVE_OPENCL
       SAFE_ALLOCATE(tmpdensity(1:this%gr%mesh%np_part))
 
       ! the density is in device memory
@@ -354,7 +344,6 @@ contains
       this%packed = .false.
       call opencl_release_buffer(this%buff_density)
       SAFE_DEALLOCATE_A(tmpdensity)
-#endif
     end if
 
     ! reduce over states and k-points

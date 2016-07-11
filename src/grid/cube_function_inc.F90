@@ -52,9 +52,7 @@ subroutine X(cube_function_alloc_rs)(cube, cf, in_device, force_alloc)
       if(optional_default(in_device, .true.)) then
         allocated = .true.
         cf%in_device_memory = .true.
-#ifdef HAVE_OPENCL
         call opencl_create_buffer(cf%real_space_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, product(cube%rs_n(1:3)))
-#endif
       end if
     end select
   end if
@@ -87,14 +85,12 @@ subroutine X(cube_function_free_rs)(cube, cf)
            nullify(cf%X(rs))
         end if
      case(FFTLIB_OPENCL)
-#ifdef HAVE_OPENCL
         if(cf%in_device_memory) then
            deallocated = .true.
            ASSERT(cf%in_device_memory)
            call opencl_release_buffer(cf%real_space_buffer)
            cf%in_device_memory = .false.
         end if
-#endif
      end select
   end if
 
@@ -205,10 +201,8 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
   integer :: im, ii, nn, bsize
   logical :: local_
   R_TYPE, pointer :: gmf(:)
-#ifdef HAVE_OPENCL
   type(accel_mem_t)         :: mf_buffer
   type(accel_kernel_t), save :: kernel
-#endif
 
   PUSH_SUB(X(mesh_to_cube))
   call profiling_in(prof_m2c, "MESH_TO_CUBE")
@@ -250,7 +244,6 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
     !$omp end parallel do
 
   else
-#ifdef HAVE_OPENCL
 
     call opencl_set_buffer_to_zero(cf%real_space_buffer, R_TYPE_VAL, product(cube%rs_n(1:3)))
 
@@ -276,7 +269,6 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
     call opencl_finish()
     call opencl_release_buffer(mf_buffer)
 
-#endif
   end if
 
   if(local_) then
