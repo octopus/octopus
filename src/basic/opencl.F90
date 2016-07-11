@@ -56,11 +56,11 @@ module opencl_oct_m
     opencl_write_buffer,          &
     opencl_read_buffer,           &
     opencl_release_buffer,        &
-    opencl_finish,                &
-    opencl_set_kernel_arg,        &
+    accel_finish,                 &
+    accel_set_kernel_arg,         &
     opencl_max_workgroup_size,    &
-    opencl_kernel_workgroup_size, &
-    opencl_kernel_run,            &
+    accel_kernel_workgroup_size,  &
+    accel_kernel_run,             &
     opencl_set_buffer_to_zero,    &
     opencl_use_shared_mem,        &
     clblas_print_error,           &
@@ -125,23 +125,15 @@ module opencl_oct_m
     module procedure sopencl_read_buffer_3, copencl_read_buffer_3
   end interface opencl_read_buffer
 
-  interface opencl_set_kernel_arg
+  interface accel_set_kernel_arg
     module procedure                       &
-      opencl_set_accel_kernel_arg_buffer,  &
-      iopencl_set_accel_kernel_arg_data,   &
-      dopencl_set_accel_kernel_arg_data,   &
-      zopencl_set_accel_kernel_arg_data,   &
-      opencl_set_accel_kernel_arg_local
-  end interface opencl_set_kernel_arg
+      accel_set_kernel_arg_buffer,  &
+      iaccel_set_kernel_arg_data,   &
+      daccel_set_kernel_arg_data,   &
+      zaccel_set_kernel_arg_data,   &
+      accel_set_kernel_arg_local
+  end interface accel_set_kernel_arg
 
-  interface opencl_kernel_run
-    module procedure accel_kernel_run
-  end interface opencl_kernel_run
-  
-  interface opencl_kernel_workgroup_size
-    module procedure accel_kernel_workgroup_size
-  end interface opencl_kernel_workgroup_size
-  
   type(profile_t), save :: prof_read, prof_write
 
   integer, parameter  ::      &
@@ -763,7 +755,7 @@ contains
 
   ! -----------------------------------------
 
-  subroutine opencl_finish()
+  subroutine accel_finish()
     integer :: ierr
 
     ! no push_sub, called too frequently
@@ -772,11 +764,11 @@ contains
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, 'clFinish') 
 #endif
 
-  end subroutine opencl_finish
+  end subroutine accel_finish
 
   ! ------------------------------------------
 
-  subroutine opencl_set_accel_kernel_arg_buffer(kernel, narg, buffer)
+  subroutine accel_set_kernel_arg_buffer(kernel, narg, buffer)
     type(accel_kernel_t), intent(inout) :: kernel
     integer,              intent(in)    :: narg
     type(accel_mem_t),    intent(in)    :: buffer
@@ -789,11 +781,11 @@ contains
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clSetKernelArg_buf")
 #endif
 
-  end subroutine opencl_set_accel_kernel_arg_buffer
+  end subroutine accel_set_kernel_arg_buffer
   
   ! ------------------------------------------
 
-  subroutine opencl_set_accel_kernel_arg_local(kernel, narg, type, size)
+  subroutine accel_set_kernel_arg_local(kernel, narg, type, size)
     type(accel_kernel_t), intent(inout) :: kernel
     integer,              intent(in)    :: narg
     type(type_t),         intent(in)    :: type
@@ -802,7 +794,7 @@ contains
     integer :: ierr
     integer(8) :: size_in_bytes
 
-    PUSH_SUB(opencl_set_kernel_arg_local)
+    PUSH_SUB(accel_set_kernel_arg_local)
 
     size_in_bytes = int(size, 8)*types_get_size(type)
 
@@ -820,8 +812,8 @@ contains
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "set_kernel_arg_local")
 #endif
 
-    POP_SUB(opencl_set_kernel_arg_local)
-  end subroutine opencl_set_accel_kernel_arg_local
+    POP_SUB(accel_set_kernel_arg_local)
+  end subroutine accel_set_kernel_arg_local
 
   ! ------------------------------------------
 
@@ -1284,14 +1276,14 @@ contains
 
     nval_real = nval*types_get_size(type)/8
 
-    call opencl_set_kernel_arg(set_zero, 0, nval_real)
-    call opencl_set_kernel_arg(set_zero, 1, optional_default(offset, 0)*types_get_size(type)/8)
-    call opencl_set_kernel_arg(set_zero, 2, buffer)
+    call accel_set_kernel_arg(set_zero, 0, nval_real)
+    call accel_set_kernel_arg(set_zero, 1, optional_default(offset, 0)*types_get_size(type)/8)
+    call accel_set_kernel_arg(set_zero, 2, buffer)
 
-    bsize = opencl_kernel_workgroup_size(set_zero)
+    bsize = accel_kernel_workgroup_size(set_zero)
 
-    call opencl_kernel_run(set_zero, (/ opencl_pad(nval_real, bsize) /), (/ bsize /))
-    call opencl_finish()
+    call accel_kernel_run(set_zero, (/ opencl_pad(nval_real, bsize) /), (/ bsize /))
+    call accel_finish()
 
     POP_SUB(opencl_set_buffer_to_zero)
   end subroutine opencl_set_buffer_to_zero
@@ -1325,7 +1317,7 @@ contains
       stime = loct_clock()
       do itime = 1, times
         call opencl_write_buffer(buff, size, data)
-        call opencl_finish()
+        call accel_finish()
       end do
       time = (loct_clock() - stime)/dble(times)
 
@@ -1335,7 +1327,7 @@ contains
       do itime = 1, times
         call opencl_read_buffer(buff, size, data)
       end do
-      call opencl_finish()
+      call accel_finish()
 
       time = (loct_clock() - stime)/dble(times)
       read_bw = dble(size)*8.0_8/time

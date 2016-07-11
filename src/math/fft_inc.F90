@@ -94,17 +94,17 @@ subroutine X(fft_forward)(fft, in, out, norm)
 
       call opencl_write_buffer(rsbuffer, product(fft_array(slot)%rs_n(1:3)), cin)
 
-      call opencl_finish()
+      call accel_finish()
 
       call clfftEnqueueTransform(fft_array(slot)%cl_plan_fw, CLFFT_FORWARD, accel%command_queue, &
         rsbuffer%mem, fsbuffer%mem, cl_status)
       if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clfftEnqueueTransform')
 
-      call opencl_finish()
+      call accel_finish()
 
       call opencl_read_buffer(fsbuffer, product(fft_array(slot)%fs_n(1:3)), out)
 
-      call opencl_finish()
+      call accel_finish()
 
       call opencl_release_buffer(rsbuffer)
       call opencl_release_buffer(fsbuffer)
@@ -163,7 +163,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
     
     call fft_operation_count(fft)
 
-    call opencl_finish()
+    call accel_finish()
 
     if(tmp_buf_size > 0) call opencl_release_buffer(tmp_buf)
 
@@ -253,19 +253,19 @@ subroutine X(fft_forward)(fft, in, out, norm)
 
       call opencl_write_buffer(fsbuffer, product(fft_array(slot)%fs_n(1:3)), in)
 
-      call opencl_finish()
+      call accel_finish()
 
       call clfftEnqueueTransform(fft_array(slot)%cl_plan_bw, CLFFT_FORWARD, accel%command_queue, &
         fsbuffer%mem, rsbuffer%mem, cl_status)
       if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clfftEnqueueTransform')
 
-      call opencl_finish()
+      call accel_finish()
 
       SAFE_ALLOCATE(cout(1:fft_array(slot)%rs_n(1), 1:fft_array(slot)%rs_n(2), 1:fft_array(slot)%rs_n(3)))
 
       call opencl_read_buffer(rsbuffer, product(fft_array(slot)%rs_n(1:3)), cout)
 
-      call opencl_finish()
+      call accel_finish()
 
       out(1:fft_array(slot)%rs_n(1), 1:fft_array(slot)%rs_n(2), 1:fft_array(slot)%rs_n(3)) = &
         cout(1:fft_array(slot)%rs_n(1), 1:fft_array(slot)%rs_n(2), 1:fft_array(slot)%rs_n(3))
@@ -344,7 +344,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
     
     call fft_operation_count(fft)
 
-    call opencl_finish()
+    call accel_finish()
 
     if(tmp_buf_size > 0) call opencl_release_buffer(tmp_buf)
 

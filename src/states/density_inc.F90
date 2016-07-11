@@ -93,17 +93,17 @@ subroutine X(density_accumulate_grad)(gr, st, iq, psib, grad_psib, grad_rho)
       flags = '-D' + R_TYPE_CL)
 
     do idir = 1, gr%mesh%sb%dim
-      call opencl_set_kernel_arg(ker_calc_grad_dens, 0, idir - 1)
-      call opencl_set_kernel_arg(ker_calc_grad_dens, 1, psib%pack%size(1))
-      call opencl_set_kernel_arg(ker_calc_grad_dens, 2, gr%mesh%np)
-      call opencl_set_kernel_arg(ker_calc_grad_dens, 3, weights_buff)
-      call opencl_set_kernel_arg(ker_calc_grad_dens, 4, grad_psib(idir)%pack%buffer)
-      call opencl_set_kernel_arg(ker_calc_grad_dens, 5, psib%pack%buffer)
-      call opencl_set_kernel_arg(ker_calc_grad_dens, 6, log2(psib%pack%size(1)))
-      call opencl_set_kernel_arg(ker_calc_grad_dens, 7, grad_rho_buff)
+      call accel_set_kernel_arg(ker_calc_grad_dens, 0, idir - 1)
+      call accel_set_kernel_arg(ker_calc_grad_dens, 1, psib%pack%size(1))
+      call accel_set_kernel_arg(ker_calc_grad_dens, 2, gr%mesh%np)
+      call accel_set_kernel_arg(ker_calc_grad_dens, 3, weights_buff)
+      call accel_set_kernel_arg(ker_calc_grad_dens, 4, grad_psib(idir)%pack%buffer)
+      call accel_set_kernel_arg(ker_calc_grad_dens, 5, psib%pack%buffer)
+      call accel_set_kernel_arg(ker_calc_grad_dens, 6, log2(psib%pack%size(1)))
+      call accel_set_kernel_arg(ker_calc_grad_dens, 7, grad_rho_buff)
 
-      wgsize = opencl_kernel_workgroup_size(ker_calc_grad_dens)
-      call opencl_kernel_run(ker_calc_grad_dens, (/pad(gr%mesh%np, wgsize)/), (/wgsize/))
+      wgsize = accel_kernel_workgroup_size(ker_calc_grad_dens)
+      call accel_kernel_run(ker_calc_grad_dens, (/pad(gr%mesh%np, wgsize)/), (/wgsize/))
 
     end do
 

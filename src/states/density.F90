@@ -225,19 +225,19 @@ contains
         call opencl_create_buffer(buff_weight, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, psib%nst)
         call opencl_write_buffer(buff_weight, psib%nst, weight)
 
-        call opencl_set_kernel_arg(kernel, 0, psib%nst)
-        call opencl_set_kernel_arg(kernel, 1, this%gr%mesh%np)
-        call opencl_set_kernel_arg(kernel, 2, this%pnp*(ispin - 1))
-        call opencl_set_kernel_arg(kernel, 3, buff_weight)
-        call opencl_set_kernel_arg(kernel, 4, psib%pack%buffer)
-        call opencl_set_kernel_arg(kernel, 5, log2(psib%pack%size(1)))
-        call opencl_set_kernel_arg(kernel, 6, this%buff_density)
+        call accel_set_kernel_arg(kernel, 0, psib%nst)
+        call accel_set_kernel_arg(kernel, 1, this%gr%mesh%np)
+        call accel_set_kernel_arg(kernel, 2, this%pnp*(ispin - 1))
+        call accel_set_kernel_arg(kernel, 3, buff_weight)
+        call accel_set_kernel_arg(kernel, 4, psib%pack%buffer)
+        call accel_set_kernel_arg(kernel, 5, log2(psib%pack%size(1)))
+        call accel_set_kernel_arg(kernel, 6, this%buff_density)
 
-        wgsize = opencl_kernel_workgroup_size(kernel)
+        wgsize = accel_kernel_workgroup_size(kernel)
         
-        call opencl_kernel_run(kernel, (/pad(this%gr%mesh%np, wgsize)/), (/wgsize/))
+        call accel_kernel_run(kernel, (/pad(this%gr%mesh%np, wgsize)/), (/wgsize/))
 
-        call opencl_finish()
+        call accel_finish()
         
         call opencl_release_buffer(buff_weight)
         

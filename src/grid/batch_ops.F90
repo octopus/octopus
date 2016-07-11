@@ -175,16 +175,16 @@ subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
 
     call accel_kernel_start_call(kernel, 'points.cl', 'get_points')
 
-    call opencl_set_kernel_arg(kernel, 0, sp)
-    call opencl_set_kernel_arg(kernel, 1, ep)
-    call opencl_set_kernel_arg(kernel, 2, offset*tsize)
-    call opencl_set_kernel_arg(kernel, 3, this%nst_linear*tsize)
-    call opencl_set_kernel_arg(kernel, 4, this%pack%buffer)
-    call opencl_set_kernel_arg(kernel, 5, this%pack%size_real(1))
-    call opencl_set_kernel_arg(kernel, 6, psi)
-    call opencl_set_kernel_arg(kernel, 7, ldpsi*tsize)
+    call accel_set_kernel_arg(kernel, 0, sp)
+    call accel_set_kernel_arg(kernel, 1, ep)
+    call accel_set_kernel_arg(kernel, 2, offset*tsize)
+    call accel_set_kernel_arg(kernel, 3, this%nst_linear*tsize)
+    call accel_set_kernel_arg(kernel, 4, this%pack%buffer)
+    call accel_set_kernel_arg(kernel, 5, this%pack%size_real(1))
+    call accel_set_kernel_arg(kernel, 6, psi)
+    call accel_set_kernel_arg(kernel, 7, ldpsi*tsize)
 
-    call opencl_kernel_run(kernel, (/this%pack%size_real(1), ep -&
+    call accel_kernel_run(kernel, (/this%pack%size_real(1), ep -&
       sp + 1/), (/this%pack%size_real(1), 1/))
 
   end select
@@ -223,16 +223,16 @@ subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
 #ifdef HAVE_OPENCL
     call accel_kernel_start_call(kernel, 'points.cl', 'set_points')
     
-    call opencl_set_kernel_arg(kernel, 0, sp)
-    call opencl_set_kernel_arg(kernel, 1, ep)
-    call opencl_set_kernel_arg(kernel, 2, offset*tsize)
-    call opencl_set_kernel_arg(kernel, 3, this%nst_linear*tsize)
-    call opencl_set_kernel_arg(kernel, 4, psi)
-    call opencl_set_kernel_arg(kernel, 5, ldpsi*tsize)
-    call opencl_set_kernel_arg(kernel, 6, this%pack%buffer)
-    call opencl_set_kernel_arg(kernel, 7, this%pack%size_real(1))
+    call accel_set_kernel_arg(kernel, 0, sp)
+    call accel_set_kernel_arg(kernel, 1, ep)
+    call accel_set_kernel_arg(kernel, 2, offset*tsize)
+    call accel_set_kernel_arg(kernel, 3, this%nst_linear*tsize)
+    call accel_set_kernel_arg(kernel, 4, psi)
+    call accel_set_kernel_arg(kernel, 5, ldpsi*tsize)
+    call accel_set_kernel_arg(kernel, 6, this%pack%buffer)
+    call accel_set_kernel_arg(kernel, 7, this%pack%size_real(1))
 
-    call opencl_kernel_run(kernel, (/this%pack%size_real(1), ep -&
+    call accel_kernel_run(kernel, (/this%pack%size_real(1), ep -&
       sp + 1/), (/this%pack%size_real(1), 1/))
 #endif
   end select

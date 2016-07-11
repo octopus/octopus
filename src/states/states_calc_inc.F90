@@ -375,16 +375,16 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
         kernel => zkernel
       end if
 
-      call opencl_set_kernel_arg(kernel, 0, st%nst)
-      call opencl_set_kernel_arg(kernel, 1, ss_buffer)
-      call opencl_set_kernel_arg(kernel, 2, ubound(ss, dim = 1))
-      call opencl_set_kernel_arg(kernel, 3, psicopy_buffer)
-      call opencl_set_kernel_arg(kernel, 4, st%nst)
+      call accel_set_kernel_arg(kernel, 0, st%nst)
+      call accel_set_kernel_arg(kernel, 1, ss_buffer)
+      call accel_set_kernel_arg(kernel, 2, ubound(ss, dim = 1))
+      call accel_set_kernel_arg(kernel, 3, psicopy_buffer)
+      call accel_set_kernel_arg(kernel, 4, st%nst)
       
-      call opencl_kernel_run(kernel, (/size/), (/1/))
+      call accel_kernel_run(kernel, (/size/), (/1/))
 
 #endif
-      call opencl_finish()
+      call accel_finish()
 
       do ib = st%group%block_start, st%group%block_end
         call batch_set_points(st%group%psib(ib, ik), sp, sp + size - 1, psicopy_buffer, st%nst)
@@ -1196,20 +1196,20 @@ subroutine X(states_rotate)(mesh, st, uu, ik)
         kernel_ref = accel_kernel_get_ref(zkernel)
       end if
 
-      call opencl_set_kernel_arg(kernel_ref, 0, st%nst)
-      call opencl_set_kernel_arg(kernel_ref, 1, size)
-      call opencl_set_kernel_arg(kernel_ref, 2, uu_buffer)
-      call opencl_set_kernel_arg(kernel_ref, 3, ubound(uu, dim = 1))
-      call opencl_set_kernel_arg(kernel_ref, 4, psicopy_buffer)
-      call opencl_set_kernel_arg(kernel_ref, 5, st%nst)
-      call opencl_set_kernel_arg(kernel_ref, 6, psinew_buffer)
-      call opencl_set_kernel_arg(kernel_ref, 7, st%nst)
+      call accel_set_kernel_arg(kernel_ref, 0, st%nst)
+      call accel_set_kernel_arg(kernel_ref, 1, size)
+      call accel_set_kernel_arg(kernel_ref, 2, uu_buffer)
+      call accel_set_kernel_arg(kernel_ref, 3, ubound(uu, dim = 1))
+      call accel_set_kernel_arg(kernel_ref, 4, psicopy_buffer)
+      call accel_set_kernel_arg(kernel_ref, 5, st%nst)
+      call accel_set_kernel_arg(kernel_ref, 6, psinew_buffer)
+      call accel_set_kernel_arg(kernel_ref, 7, st%nst)
       
-      call opencl_kernel_run(kernel_ref, (/st%nst, size/), (/1, 1/))
+      call accel_kernel_run(kernel_ref, (/st%nst, size/), (/1, 1/))
 
 #endif
 
-      call opencl_finish()
+      call accel_finish()
 
       do ib = st%group%block_start, st%group%block_end
         call batch_set_points(st%group%psib(ib, ik), sp, sp + size - 1, psinew_buffer, st%nst)
@@ -1344,7 +1344,7 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
 
     end do
 
-    call opencl_finish()
+    call accel_finish()
 
     call opencl_release_buffer(psi_buffer)
 
@@ -1352,7 +1352,7 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
 
     call opencl_read_buffer(overlap_buffer, st%nst*st%nst, overlap)
 
-    call opencl_finish()
+    call accel_finish()
 
 #ifndef R_TREAL
     do jst = 1, st%nst

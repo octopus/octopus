@@ -69,17 +69,17 @@ subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
     call opencl_write_buffer(offsets_buff, this%nblocks, this%offsets)
     call opencl_write_buffer(dest_buff, this%nblocks, this%dest)
     
-    call opencl_set_kernel_arg(kernel_subarray_gather, 0, blength_buff)
-    call opencl_set_kernel_arg(kernel_subarray_gather, 1, offsets_buff)
-    call opencl_set_kernel_arg(kernel_subarray_gather, 2, dest_buff)
-    call opencl_set_kernel_arg(kernel_subarray_gather, 3, arrayb%pack%buffer)
-    call opencl_set_kernel_arg(kernel_subarray_gather, 4, log2(arrayb%pack%size_real(1)))
-    call opencl_set_kernel_arg(kernel_subarray_gather, 5, subarrayb%pack%buffer)
-    call opencl_set_kernel_arg(kernel_subarray_gather, 6, log2(subarrayb%pack%size_real(1)))
+    call accel_set_kernel_arg(kernel_subarray_gather, 0, blength_buff)
+    call accel_set_kernel_arg(kernel_subarray_gather, 1, offsets_buff)
+    call accel_set_kernel_arg(kernel_subarray_gather, 2, dest_buff)
+    call accel_set_kernel_arg(kernel_subarray_gather, 3, arrayb%pack%buffer)
+    call accel_set_kernel_arg(kernel_subarray_gather, 4, log2(arrayb%pack%size_real(1)))
+    call accel_set_kernel_arg(kernel_subarray_gather, 5, subarrayb%pack%buffer)
+    call accel_set_kernel_arg(kernel_subarray_gather, 6, log2(subarrayb%pack%size_real(1)))
 
-    bsize = opencl_kernel_workgroup_size(kernel_subarray_gather)/subarrayb%pack%size_real(1)
+    bsize = accel_kernel_workgroup_size(kernel_subarray_gather)/subarrayb%pack%size_real(1)
 
-    call opencl_kernel_run(kernel_subarray_gather, &
+    call accel_kernel_run(kernel_subarray_gather, &
       (/subarrayb%pack%size_real(1), bsize, this%nblocks/), (/subarrayb%pack%size_real(1), bsize, 1/))
     
     call opencl_release_buffer(blength_buff)

@@ -310,38 +310,38 @@ contains
     case(OP_INVMAP)
       ASSERT(points_ == OP_ALL)
      
-      call opencl_set_kernel_arg(kernel_operate, 0, op%stencil%size)
-      call opencl_set_kernel_arg(kernel_operate, 1, nri)
-      call opencl_set_kernel_arg(kernel_operate, 2, op%buff_ri)
-      call opencl_set_kernel_arg(kernel_operate, 3, op%buff_imin)
-      call opencl_set_kernel_arg(kernel_operate, 4, op%buff_imax)
-      call opencl_set_kernel_arg(kernel_operate, 5, buff_weights)
-      call opencl_set_kernel_arg(kernel_operate, 6, fi%pack%buffer)
-      call opencl_set_kernel_arg(kernel_operate, 7, log2(eff_size))
-      call opencl_set_kernel_arg(kernel_operate, 8, fo%pack%buffer)
-      call opencl_set_kernel_arg(kernel_operate, 9, log2(eff_size))
+      call accel_set_kernel_arg(kernel_operate, 0, op%stencil%size)
+      call accel_set_kernel_arg(kernel_operate, 1, nri)
+      call accel_set_kernel_arg(kernel_operate, 2, op%buff_ri)
+      call accel_set_kernel_arg(kernel_operate, 3, op%buff_imin)
+      call accel_set_kernel_arg(kernel_operate, 4, op%buff_imax)
+      call accel_set_kernel_arg(kernel_operate, 5, buff_weights)
+      call accel_set_kernel_arg(kernel_operate, 6, fi%pack%buffer)
+      call accel_set_kernel_arg(kernel_operate, 7, log2(eff_size))
+      call accel_set_kernel_arg(kernel_operate, 8, fo%pack%buffer)
+      call accel_set_kernel_arg(kernel_operate, 9, log2(eff_size))
 
-      bsize = opencl_kernel_workgroup_size(kernel_operate)
+      bsize = accel_kernel_workgroup_size(kernel_operate)
       pnri = pad(nri, bsize)
 
-      call opencl_kernel_run(kernel_operate, (/eff_size, pnri/), (/eff_size, bsize/eff_size/))
+      call accel_kernel_run(kernel_operate, (/eff_size, pnri/), (/eff_size, bsize/eff_size/))
 
     case(OP_MAP)
-      call opencl_set_kernel_arg(kernel_operate, 0, op%mesh%np)
-      call opencl_set_kernel_arg(kernel_operate, 1, op%buff_ri)
-      call opencl_set_kernel_arg(kernel_operate, 2, op%buff_map)
-      call opencl_set_kernel_arg(kernel_operate, 3, buff_weights)
-      call opencl_set_kernel_arg(kernel_operate, 4, fi%pack%buffer)
-      call opencl_set_kernel_arg(kernel_operate, 5, log2(eff_size))
-      call opencl_set_kernel_arg(kernel_operate, 6, fo%pack%buffer)
-      call opencl_set_kernel_arg(kernel_operate, 7, log2(eff_size))
+      call accel_set_kernel_arg(kernel_operate, 0, op%mesh%np)
+      call accel_set_kernel_arg(kernel_operate, 1, op%buff_ri)
+      call accel_set_kernel_arg(kernel_operate, 2, op%buff_map)
+      call accel_set_kernel_arg(kernel_operate, 3, buff_weights)
+      call accel_set_kernel_arg(kernel_operate, 4, fi%pack%buffer)
+      call accel_set_kernel_arg(kernel_operate, 5, log2(eff_size))
+      call accel_set_kernel_arg(kernel_operate, 6, fo%pack%buffer)
+      call accel_set_kernel_arg(kernel_operate, 7, log2(eff_size))
       iarg = 7
       
       local_mem_size = accel_local_memory_size()
       isize = int(dble(local_mem_size)/(op%stencil%size*types_get_size(TYPE_INTEGER)))
       isize = isize - mod(isize, eff_size)
       bsize = eff_size*isize
-      bsize = min(opencl_kernel_workgroup_size(kernel_operate), bsize)
+      bsize = min(accel_kernel_workgroup_size(kernel_operate), bsize)
 
       if(bsize < fi%pack%size_real(1)) then
         message(1) = "The value of StatesBlockSize is too large for this OpenCL implementation."
@@ -355,7 +355,7 @@ contains
 
       if(opencl_use_shared_mem()) then
         iarg = iarg + 1
-        call opencl_set_kernel_arg(kernel_operate, iarg, TYPE_INTEGER, isize*op%stencil%size)
+        call accel_set_kernel_arg(kernel_operate, iarg, TYPE_INTEGER, isize*op%stencil%size)
       end if
 
       npoints = op%mesh%np
@@ -364,20 +364,20 @@ contains
         select case(points_)
         case(OP_INNER)
           npoints = op%ninner
-          call opencl_set_kernel_arg(kernel_operate, 0, op%ninner)
-          call opencl_set_kernel_arg(kernel_operate, iarg, op%buff_inner)
+          call accel_set_kernel_arg(kernel_operate, 0, op%ninner)
+          call accel_set_kernel_arg(kernel_operate, iarg, op%buff_inner)
         case(OP_OUTER)
           npoints = op%nouter
-          call opencl_set_kernel_arg(kernel_operate, 0, op%nouter)
-          call opencl_set_kernel_arg(kernel_operate, iarg, op%buff_outer)
+          call accel_set_kernel_arg(kernel_operate, 0, op%nouter)
+          call accel_set_kernel_arg(kernel_operate, iarg, op%buff_outer)
         case(OP_ALL)
-          call opencl_set_kernel_arg(kernel_operate, iarg, op%buff_all)
+          call accel_set_kernel_arg(kernel_operate, iarg, op%buff_all)
         case default
           ASSERT(.false.)
         end select
       end if
       
-      call opencl_kernel_run(kernel_operate, (/eff_size, pad(op%mesh%np, bsize)/), (/eff_size, isize/))
+      call accel_kernel_run(kernel_operate, (/eff_size, pad(op%mesh%np, bsize)/), (/eff_size, isize/))
 
       call profiling_count_transfers(npoints*(op%stencil%size + 2), isize)
       call profiling_count_transfers(fi%nst_linear*npoints*(op%stencil%size + 1), R_TOTYPE(M_ONE))
@@ -385,20 +385,20 @@ contains
     case(OP_NOMAP)
       ASSERT(points_ == OP_ALL)
 
-      call opencl_set_kernel_arg(kernel_operate, 0, op%mesh%np)
-      call opencl_set_kernel_arg(kernel_operate, 1, op%buff_stencil)
-      call opencl_set_kernel_arg(kernel_operate, 2, op%buff_xyz_to_ip)
-      call opencl_set_kernel_arg(kernel_operate, 3, op%buff_ip_to_xyz)
-      call opencl_set_kernel_arg(kernel_operate, 4, buff_weights)
-      call opencl_set_kernel_arg(kernel_operate, 5, fi%pack%buffer)
-      call opencl_set_kernel_arg(kernel_operate, 6, fo%pack%buffer)
-      call opencl_set_kernel_arg(kernel_operate, 7, log2(eff_size))
+      call accel_set_kernel_arg(kernel_operate, 0, op%mesh%np)
+      call accel_set_kernel_arg(kernel_operate, 1, op%buff_stencil)
+      call accel_set_kernel_arg(kernel_operate, 2, op%buff_xyz_to_ip)
+      call accel_set_kernel_arg(kernel_operate, 3, op%buff_ip_to_xyz)
+      call accel_set_kernel_arg(kernel_operate, 4, buff_weights)
+      call accel_set_kernel_arg(kernel_operate, 5, fi%pack%buffer)
+      call accel_set_kernel_arg(kernel_operate, 6, fo%pack%buffer)
+      call accel_set_kernel_arg(kernel_operate, 7, log2(eff_size))
 
       local_mem_size = accel_local_memory_size()
       isize = int(dble(local_mem_size)/(op%stencil%size*types_get_size(TYPE_INTEGER)))
       isize = isize - mod(isize, eff_size)
       bsize = eff_size*isize
-      bsize = min(opencl_kernel_workgroup_size(kernel_operate), bsize)
+      bsize = min(accel_kernel_workgroup_size(kernel_operate), bsize)
 
       if(bsize < fi%pack%size_real(1)) then
         call messages_write('The value of StatesBlockSize is too large for this OpenCL implementation.')
@@ -410,9 +410,9 @@ contains
       ASSERT(isize > 0)
       ASSERT(isize*op%stencil%size*types_get_size(TYPE_INTEGER) <= local_mem_size)
 
-      call opencl_set_kernel_arg(kernel_operate, 8, TYPE_INTEGER, isize*op%stencil%size)
+      call accel_set_kernel_arg(kernel_operate, 8, TYPE_INTEGER, isize*op%stencil%size)
 
-      call opencl_kernel_run(kernel_operate, (/eff_size, pad(op%mesh%np, bsize)/), (/eff_size, isize/))
+      call accel_kernel_run(kernel_operate, (/eff_size, pad(op%mesh%np, bsize)/), (/eff_size, isize/))
 
       call profiling_count_transfers(op%stencil%size*op%mesh%np + op%mesh%np, isize)
 
@@ -434,7 +434,7 @@ contains
       end select
     end if
     
-    call opencl_finish()
+    call accel_finish()
 
     call opencl_release_buffer(buff_weights)
 

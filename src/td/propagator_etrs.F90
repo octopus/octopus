@@ -433,14 +433,14 @@ contains
               end forall
             end do
           case(BATCH_CL_PACKED)
-            call opencl_set_kernel_arg(kernel_phase, 0, pnp*(ispin - 1))
-            call opencl_set_kernel_arg(kernel_phase, 1, phase_buff)
-            call opencl_set_kernel_arg(kernel_phase, 2, st%group%psib(ib, ik)%pack%buffer)
-            call opencl_set_kernel_arg(kernel_phase, 3, log2(st%group%psib(ib, ik)%pack%size(1)))
+            call accel_set_kernel_arg(kernel_phase, 0, pnp*(ispin - 1))
+            call accel_set_kernel_arg(kernel_phase, 1, phase_buff)
+            call accel_set_kernel_arg(kernel_phase, 2, st%group%psib(ib, ik)%pack%buffer)
+            call accel_set_kernel_arg(kernel_phase, 3, log2(st%group%psib(ib, ik)%pack%size(1)))
 
             iprange = opencl_max_workgroup_size()/st%group%psib(ib, ik)%pack%size(1)
 
-            call opencl_kernel_run(kernel_phase, (/st%group%psib(ib, ik)%pack%size(1), pnp/), &
+            call accel_kernel_run(kernel_phase, (/st%group%psib(ib, ik)%pack%size(1), pnp/), &
               (/st%group%psib(ib, ik)%pack%size(1), iprange/))
           end select
           call profiling_out(phase_prof)

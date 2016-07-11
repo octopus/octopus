@@ -170,27 +170,27 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
     ASSERT(aa%dim == 1)
 #endif
 
-    call opencl_set_kernel_arg(kernel, 0, mesh%np)
-    call opencl_set_kernel_arg(kernel, 1, aa%pack%buffer)
-    call opencl_set_kernel_arg(kernel, 2, log2(aa%pack%size(1)/aa%dim))
-    call opencl_set_kernel_arg(kernel, 3, bb%pack%buffer)
-    call opencl_set_kernel_arg(kernel, 4, log2(bb%pack%size(1)/aa%dim))
-    call opencl_set_kernel_arg(kernel, 5, dot_buffer)
-    call opencl_set_kernel_arg(kernel, 6, aa%nst)
+    call accel_set_kernel_arg(kernel, 0, mesh%np)
+    call accel_set_kernel_arg(kernel, 1, aa%pack%buffer)
+    call accel_set_kernel_arg(kernel, 2, log2(aa%pack%size(1)/aa%dim))
+    call accel_set_kernel_arg(kernel, 3, bb%pack%buffer)
+    call accel_set_kernel_arg(kernel, 4, log2(bb%pack%size(1)/aa%dim))
+    call accel_set_kernel_arg(kernel, 5, dot_buffer)
+    call accel_set_kernel_arg(kernel, 6, aa%nst)
     
-    call opencl_kernel_run(kernel, (/aa%pack%size(1)/aa%dim, bb%nst/), &
+    call accel_kernel_run(kernel, (/aa%pack%size(1)/aa%dim, bb%nst/), &
       (/aa%pack%size(1)/aa%dim, 1/))
 #endif
 
     call profiling_count_operations(dble(mesh%np)*aa%nst*bb%nst*(R_ADD + 2*R_MUL))
 
-    call opencl_finish()
+    call accel_finish()
     call profiling_out(prof_gemmcl)
 
     call profiling_in(prof_copy, 'DOTP_BATCH_COPY')
     call opencl_read_buffer(dot_buffer, aa%nst*bb%nst, dd)
     call profiling_count_transfers(aa%nst*bb%nst, dd(1, 1))
-    call opencl_finish()
+    call accel_finish()
     call profiling_out(prof_copy)
 
     call opencl_release_buffer(dot_buffer)

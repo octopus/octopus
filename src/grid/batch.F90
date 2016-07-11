@@ -763,13 +763,13 @@ contains
         end do
 
         ! now call an opencl kernel to rearrange the data
-        call opencl_set_kernel_arg(kernel, 0, this%pack%size(1))
-        call opencl_set_kernel_arg(kernel, 1, ist - 1)
-        call opencl_set_kernel_arg(kernel, 2, tmp)
-        call opencl_set_kernel_arg(kernel, 3, this%pack%buffer)
+        call accel_set_kernel_arg(kernel, 0, this%pack%size(1))
+        call accel_set_kernel_arg(kernel, 1, ist - 1)
+        call accel_set_kernel_arg(kernel, 2, tmp)
+        call accel_set_kernel_arg(kernel, 3, this%pack%buffer)
 
         call profiling_in(prof_pack, "CL_PACK")
-        call opencl_kernel_run(kernel, (/this%pack%size(2), unroll/), (/opencl_max_workgroup_size()/unroll, unroll/))
+        call accel_kernel_run(kernel, (/this%pack%size(2), unroll/), (/opencl_max_workgroup_size()/unroll, unroll/))
 
         if(batch_type(this) == TYPE_FLOAT) then
           call profiling_count_transfers(unroll*this%pack%size(2), M_ONE)
@@ -777,7 +777,7 @@ contains
           call profiling_count_transfers(unroll*this%pack%size(2), M_ZI)
         end if
 
-        call opencl_finish()
+        call accel_finish()
         call profiling_out(prof_pack)
 
       end do
@@ -824,13 +824,13 @@ contains
       end if
 
       do ist = 1, this%nst_linear, unroll
-        call opencl_set_kernel_arg(kernel, 0, this%pack%size(1))
-        call opencl_set_kernel_arg(kernel, 1, ist - 1)
-        call opencl_set_kernel_arg(kernel, 2, this%pack%buffer)
-        call opencl_set_kernel_arg(kernel, 3, tmp)
+        call accel_set_kernel_arg(kernel, 0, this%pack%size(1))
+        call accel_set_kernel_arg(kernel, 1, ist - 1)
+        call accel_set_kernel_arg(kernel, 2, this%pack%buffer)
+        call accel_set_kernel_arg(kernel, 3, tmp)
 
         call profiling_in(prof_unpack, "CL_UNPACK")
-        call opencl_kernel_run(kernel, (/unroll, this%pack%size(2)/), (/unroll, opencl_max_workgroup_size()/unroll/))
+        call accel_kernel_run(kernel, (/unroll, this%pack%size(2)/), (/unroll, opencl_max_workgroup_size()/unroll/))
 
         if(batch_type(this) == TYPE_FLOAT) then
           call profiling_count_transfers(unroll*this%pack%size(2), M_ONE)
@@ -838,7 +838,7 @@ contains
           call profiling_count_transfers(unroll*this%pack%size(2), M_ZI)
         end if
 
-        call opencl_finish()
+        call accel_finish()
         call profiling_out(prof_unpack)
 
         ! copy a number 'unroll' of states from the buffer
@@ -1002,15 +1002,15 @@ subroutine batch_copy_data(np, xx, yy)
 
   select case(batch_status(xx))
   case(BATCH_CL_PACKED)
-    call opencl_set_kernel_arg(kernel_copy, 0, xx%pack%buffer)
-    call opencl_set_kernel_arg(kernel_copy, 1, log2(xx%pack%size_real(1)))
-    call opencl_set_kernel_arg(kernel_copy, 2, yy%pack%buffer)
-    call opencl_set_kernel_arg(kernel_copy, 3, log2(yy%pack%size_real(1)))
+    call accel_set_kernel_arg(kernel_copy, 0, xx%pack%buffer)
+    call accel_set_kernel_arg(kernel_copy, 1, log2(xx%pack%size_real(1)))
+    call accel_set_kernel_arg(kernel_copy, 2, yy%pack%buffer)
+    call accel_set_kernel_arg(kernel_copy, 3, log2(yy%pack%size_real(1)))
     
     localsize = opencl_max_workgroup_size()/yy%pack%size_real(1)
-    call opencl_kernel_run(kernel_copy, (/yy%pack%size_real(1), pad(np, localsize)/), (/yy%pack%size_real(1), localsize/))
+    call accel_kernel_run(kernel_copy, (/yy%pack%size_real(1), pad(np, localsize)/), (/yy%pack%size_real(1), localsize/))
     
-    call opencl_finish()
+    call accel_finish()
 
   case(BATCH_PACKED)
     if(batch_type(yy) == TYPE_FLOAT) then

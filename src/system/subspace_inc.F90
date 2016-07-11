@@ -430,7 +430,7 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
           CommandQueue = accel%command_queue, status = ierr)
         if(ierr /= clblasSuccess) call clblas_print_error(ierr, 'clblasXgemmEx')
 
-        call opencl_finish()
+        call accel_finish()
 
       end do
 

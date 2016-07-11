@@ -17,7 +17,6 @@
 !!
 !! $Id$
 
-
 subroutine X(opencl_write_buffer_1)(this, size, data, offset)
   type(accel_mem_t),               intent(inout) :: this
   integer,                          intent(in)    :: size
@@ -45,7 +44,7 @@ subroutine X(opencl_write_buffer_1)(this, size, data, offset)
 #endif
   
   call profiling_count_transfers(size, data(1))
-  call opencl_finish()
+  call accel_finish()
   call profiling_out(prof_write)
   POP_SUB(X(opencl_write_buffer_1))
 
@@ -78,7 +77,7 @@ subroutine X(opencl_write_buffer_2)(this, size, data, offset)
 #endif
 
   call profiling_count_transfers(size, data(1, 1))
-  call opencl_finish()
+  call accel_finish()
   call profiling_out(prof_write)
   POP_SUB(X(opencl_write_buffer_2))
 
@@ -111,7 +110,7 @@ subroutine X(opencl_write_buffer_3)(this, size, data, offset)
 #endif
 
   call profiling_count_transfers(size, data(1, 1, 1))
-  call opencl_finish()
+  call accel_finish()
   call profiling_out(prof_write)
   POP_SUB(X(opencl_write_buffer_3))
 
@@ -144,7 +143,7 @@ subroutine X(opencl_read_buffer_1)(this, size, data, offset)
 #endif
 
   call profiling_count_transfers(size, data(1))
-  call opencl_finish()
+  call accel_finish()
   call profiling_out(prof_read)
   POP_SUB(X(opencl_read_buffer_1))
 
@@ -177,7 +176,7 @@ subroutine X(opencl_read_buffer_2)(this, size, data, offset)
 #endif
 
   call profiling_count_transfers(size, data(1, 1))
-  call opencl_finish()
+  call accel_finish()
   
   call profiling_out(prof_read)
   POP_SUB(X(opencl_read_buffer_2))
@@ -211,7 +210,7 @@ subroutine X(opencl_read_buffer_3)(this, size, data, offset)
 #endif
 
   call profiling_count_transfers(size, data(1, 1, 1))
-  call opencl_finish()
+  call accel_finish()
   call profiling_out(prof_read)
   POP_SUB(X(opencl_read_buffer_3))
   
@@ -219,7 +218,7 @@ end subroutine X(opencl_read_buffer_3)
 
 ! ---------------------------------------------------------------------------
 
-subroutine X(opencl_set_accel_kernel_arg_data)(kernel, narg, data)
+subroutine X(accel_set_kernel_arg_data)(kernel, narg, data)
   type(accel_kernel_t), intent(inout) :: kernel
   integer,              intent(in)    :: narg
   R_TYPE,               intent(in)    :: data
@@ -233,7 +232,7 @@ subroutine X(opencl_set_accel_kernel_arg_data)(kernel, narg, data)
   if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "set_kernel_arg_data")
 #endif
   
-end subroutine X(opencl_set_accel_kernel_arg_data)
+end subroutine X(accel_set_kernel_arg_data)
 
 
 !! Local Variables:

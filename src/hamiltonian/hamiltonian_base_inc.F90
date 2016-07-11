@@ -82,33 +82,33 @@ subroutine X(hamiltonian_base_local_sub)(potential, mesh, std, ispin, psib, vpsi
     select case(std%ispin)
 
     case(UNPOLARIZED, SPIN_POLARIZED)
-      call opencl_set_kernel_arg(kernel_vpsi, 0, pnp*(ispin - 1))
-      call opencl_set_kernel_arg(kernel_vpsi, 1, mesh%np)
-      call opencl_set_kernel_arg(kernel_vpsi, 2, potential_opencl)
-      call opencl_set_kernel_arg(kernel_vpsi, 3, psib%pack%buffer)
-      call opencl_set_kernel_arg(kernel_vpsi, 4, log2(psib%pack%size_real(1)))
-      call opencl_set_kernel_arg(kernel_vpsi, 5, vpsib%pack%buffer)
-      call opencl_set_kernel_arg(kernel_vpsi, 6, log2(vpsib%pack%size_real(1)))
+      call accel_set_kernel_arg(kernel_vpsi, 0, pnp*(ispin - 1))
+      call accel_set_kernel_arg(kernel_vpsi, 1, mesh%np)
+      call accel_set_kernel_arg(kernel_vpsi, 2, potential_opencl)
+      call accel_set_kernel_arg(kernel_vpsi, 3, psib%pack%buffer)
+      call accel_set_kernel_arg(kernel_vpsi, 4, log2(psib%pack%size_real(1)))
+      call accel_set_kernel_arg(kernel_vpsi, 5, vpsib%pack%buffer)
+      call accel_set_kernel_arg(kernel_vpsi, 6, log2(vpsib%pack%size_real(1)))
 
       iprange = opencl_max_workgroup_size()/psib%pack%size_real(1)
 
-      call opencl_kernel_run(kernel_vpsi, (/psib%pack%size_real(1), pnp/), (/psib%pack%size_real(1), iprange/))
+      call accel_kernel_run(kernel_vpsi, (/psib%pack%size_real(1), pnp/), (/psib%pack%size_real(1), iprange/))
 
     case(SPINORS)
-      call opencl_set_kernel_arg(kernel_vpsi_spinors, 0, mesh%np)
-      call opencl_set_kernel_arg(kernel_vpsi_spinors, 1, potential_opencl)
-      call opencl_set_kernel_arg(kernel_vpsi_spinors, 2, pnp)
-      call opencl_set_kernel_arg(kernel_vpsi_spinors, 3, psib%pack%buffer)
-      call opencl_set_kernel_arg(kernel_vpsi_spinors, 4, psib%pack%size(1))
-      call opencl_set_kernel_arg(kernel_vpsi_spinors, 5, vpsib%pack%buffer)
-      call opencl_set_kernel_arg(kernel_vpsi_spinors, 6, vpsib%pack%size(1))
+      call accel_set_kernel_arg(kernel_vpsi_spinors, 0, mesh%np)
+      call accel_set_kernel_arg(kernel_vpsi_spinors, 1, potential_opencl)
+      call accel_set_kernel_arg(kernel_vpsi_spinors, 2, pnp)
+      call accel_set_kernel_arg(kernel_vpsi_spinors, 3, psib%pack%buffer)
+      call accel_set_kernel_arg(kernel_vpsi_spinors, 4, psib%pack%size(1))
+      call accel_set_kernel_arg(kernel_vpsi_spinors, 5, vpsib%pack%buffer)
+      call accel_set_kernel_arg(kernel_vpsi_spinors, 6, vpsib%pack%size(1))
 
-      call opencl_kernel_run(kernel_vpsi_spinors, (/psib%pack%size(1)/2, pnp/), &
+      call accel_kernel_run(kernel_vpsi_spinors, (/psib%pack%size(1)/2, pnp/), &
         (/psib%pack%size(1)/2, 2*opencl_max_workgroup_size()/psib%pack%size(1)/))
 
     end select
 
-    call opencl_finish()
+    call accel_finish()
 
     call profiling_count_operations((R_MUL*psib%nst)*mesh%np)
     call profiling_count_transfers(mesh%np, M_ONE)
@@ -329,24 +329,24 @@ subroutine X(hamiltonian_base_phase)(this, der, np, iqn, conjugate, psib, src)
     call accel_kernel_start_call(ker_phase, 'phase.cl', 'phase_hamiltonian')
 
     if(conjugate) then
-      call opencl_set_kernel_arg(ker_phase, 0, 1_4)
+      call accel_set_kernel_arg(ker_phase, 0, 1_4)
     else
-      call opencl_set_kernel_arg(ker_phase, 0, 0_4)
+      call accel_set_kernel_arg(ker_phase, 0, 0_4)
     end if
 
-    call opencl_set_kernel_arg(ker_phase, 1, (iqn - this%buff_phase_qn_start)*der%mesh%np_part)
-    call opencl_set_kernel_arg(ker_phase, 2, np)
-    call opencl_set_kernel_arg(ker_phase, 3, this%buff_phase)
-    call opencl_set_kernel_arg(ker_phase, 4, src_%pack%buffer)
-    call opencl_set_kernel_arg(ker_phase, 5, log2(src_%pack%size(1)))
-    call opencl_set_kernel_arg(ker_phase, 6, psib%pack%buffer)
-    call opencl_set_kernel_arg(ker_phase, 7, log2(psib%pack%size(1)))
+    call accel_set_kernel_arg(ker_phase, 1, (iqn - this%buff_phase_qn_start)*der%mesh%np_part)
+    call accel_set_kernel_arg(ker_phase, 2, np)
+    call accel_set_kernel_arg(ker_phase, 3, this%buff_phase)
+    call accel_set_kernel_arg(ker_phase, 4, src_%pack%buffer)
+    call accel_set_kernel_arg(ker_phase, 5, log2(src_%pack%size(1)))
+    call accel_set_kernel_arg(ker_phase, 6, psib%pack%buffer)
+    call accel_set_kernel_arg(ker_phase, 7, log2(psib%pack%size(1)))
 
-    wgsize = opencl_kernel_workgroup_size(ker_phase)/psib%pack%size(1)
+    wgsize = accel_kernel_workgroup_size(ker_phase)/psib%pack%size(1)
 
-    call opencl_kernel_run(ker_phase, (/psib%pack%size(1), pad(np, wgsize)/), (/psib%pack%size(1), wgsize/))
+    call accel_kernel_run(ker_phase, (/psib%pack%size(1), pad(np, wgsize)/), (/psib%pack%size(1), wgsize/))
 
-    call opencl_finish()
+    call accel_finish()
   end select
 
   call batch_pack_was_modified(psib)
@@ -531,25 +531,25 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
       size = psib%pack%size_real(1)
     end if
 
-    call opencl_set_kernel_arg(kernel, 0, this%nprojector_matrices)
-    call opencl_set_kernel_arg(kernel, 1, this%buff_offsets)
-    call opencl_set_kernel_arg(kernel, 2, this%buff_matrices)
-    call opencl_set_kernel_arg(kernel, 3, this%buff_maps)
-    call opencl_set_kernel_arg(kernel, 4, this%buff_scals)
-    call opencl_set_kernel_arg(kernel, 5, psib%pack%buffer)
-    call opencl_set_kernel_arg(kernel, 6, log2(size))
-    call opencl_set_kernel_arg(kernel, 7, projection%buff_projection)
-    call opencl_set_kernel_arg(kernel, 8, log2(size))
+    call accel_set_kernel_arg(kernel, 0, this%nprojector_matrices)
+    call accel_set_kernel_arg(kernel, 1, this%buff_offsets)
+    call accel_set_kernel_arg(kernel, 2, this%buff_matrices)
+    call accel_set_kernel_arg(kernel, 3, this%buff_maps)
+    call accel_set_kernel_arg(kernel, 4, this%buff_scals)
+    call accel_set_kernel_arg(kernel, 5, psib%pack%buffer)
+    call accel_set_kernel_arg(kernel, 6, log2(size))
+    call accel_set_kernel_arg(kernel, 7, projection%buff_projection)
+    call accel_set_kernel_arg(kernel, 8, log2(size))
 
     if(allocated(this%projector_phases)) then
-      call opencl_set_kernel_arg(kernel, 9, this%buff_projector_phases)
-      call opencl_set_kernel_arg(kernel, 10, (ik - std%kpt%start)*this%total_points)
+      call accel_set_kernel_arg(kernel, 9, this%buff_projector_phases)
+      call accel_set_kernel_arg(kernel, 10, (ik - std%kpt%start)*this%total_points)
     end if
 
     padnprojs = pad_pow2(this%max_nprojs)
-    lnprojs = min(opencl_kernel_workgroup_size(kernel)/size, padnprojs)
+    lnprojs = min(accel_kernel_workgroup_size(kernel)/size, padnprojs)
 
-    call opencl_kernel_run(kernel, &
+    call accel_kernel_run(kernel, &
       (/size, padnprojs, this%nprojector_matrices/), (/size, lnprojs, 1/))
 
     do imat = 1, this%nprojector_matrices
@@ -561,7 +561,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
       call profiling_count_operations(nreal*nprojs*M_TWO*npoints + nst*nprojs)
     end do
 
-    call opencl_finish()
+    call accel_finish()
 
     if(mesh%parallel_in_domains) then
       SAFE_ALLOCATE(projection%X(projection)(1:psib%pack%size_real(1), 1:this%full_projection_size))
@@ -867,28 +867,28 @@ contains
 
     do iregion = 1, this%nregions
       
-      call opencl_set_kernel_arg(kernel, 0, this%nprojector_matrices)
-      call opencl_set_kernel_arg(kernel, 1, this%regions(iregion) - 1)
-      call opencl_set_kernel_arg(kernel, 2, this%buff_offsets)
-      call opencl_set_kernel_arg(kernel, 3, this%buff_matrices)
-      call opencl_set_kernel_arg(kernel, 4, this%buff_maps)
-      call opencl_set_kernel_arg(kernel, 5, projection%buff_projection)
-      call opencl_set_kernel_arg(kernel, 6, log2(size))
-      call opencl_set_kernel_arg(kernel, 7, vpsib%pack%buffer)
-      call opencl_set_kernel_arg(kernel, 8, log2(size))
+      call accel_set_kernel_arg(kernel, 0, this%nprojector_matrices)
+      call accel_set_kernel_arg(kernel, 1, this%regions(iregion) - 1)
+      call accel_set_kernel_arg(kernel, 2, this%buff_offsets)
+      call accel_set_kernel_arg(kernel, 3, this%buff_matrices)
+      call accel_set_kernel_arg(kernel, 4, this%buff_maps)
+      call accel_set_kernel_arg(kernel, 5, projection%buff_projection)
+      call accel_set_kernel_arg(kernel, 6, log2(size))
+      call accel_set_kernel_arg(kernel, 7, vpsib%pack%buffer)
+      call accel_set_kernel_arg(kernel, 8, log2(size))
 
       if(allocated(this%projector_phases)) then
-        call opencl_set_kernel_arg(kernel, 9, this%buff_projector_phases)
-        call opencl_set_kernel_arg(kernel, 10, (ik - std%kpt%start)*this%total_points)
+        call accel_set_kernel_arg(kernel, 9, this%buff_projector_phases)
+        call accel_set_kernel_arg(kernel, 10, (ik - std%kpt%start)*this%total_points)
       end if
 
-      wgsize = opencl_kernel_workgroup_size(kernel)/size    
+      wgsize = accel_kernel_workgroup_size(kernel)/size    
 
-      call opencl_kernel_run(kernel, &
+      call accel_kernel_run(kernel, &
         (/size, pad(this%max_npoints, wgsize), this%regions(iregion + 1) - this%regions(iregion)/), &
         (/size, wgsize, 1/))
       
-      call opencl_finish()
+      call accel_finish()
       
     end do
     
@@ -901,7 +901,7 @@ contains
     end do
 
     call batch_pack_was_modified(vpsib)
-    call opencl_finish()
+    call accel_finish()
 
     call profiling_out(cl_prof)
 

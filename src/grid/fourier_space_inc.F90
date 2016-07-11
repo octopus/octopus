@@ -170,12 +170,12 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
     !$omp end parallel do
   else if(cube%fft%library == FFTLIB_OPENCL) then
 #ifdef HAVE_OPENCL
-    call opencl_set_kernel_arg(X(zmul), 0, product(cube%fs_n(1:3)))
-    call opencl_set_kernel_arg(X(zmul), 1, this%op_buffer)
-    call opencl_set_kernel_arg(X(zmul), 2, cf%fourier_space_buffer)
-    bsize = opencl_kernel_workgroup_size(X(zmul))
-    call opencl_kernel_run(X(zmul), (/pad(product(cube%fs_n(1:3)), bsize)/), (/bsize/))
-    call opencl_finish()
+    call accel_set_kernel_arg(X(zmul), 0, product(cube%fs_n(1:3)))
+    call accel_set_kernel_arg(X(zmul), 1, this%op_buffer)
+    call accel_set_kernel_arg(X(zmul), 2, cf%fourier_space_buffer)
+    bsize = accel_kernel_workgroup_size(X(zmul))
+    call accel_kernel_run(X(zmul), (/pad(product(cube%fs_n(1:3)), bsize)/), (/bsize/))
+    call accel_finish()
 #endif
   end if
 
