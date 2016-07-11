@@ -337,9 +337,9 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
 #ifdef HAVE_OPENCL
     block_size = batch_points_block_size(st%group%psib(st%group%block_start, ik))
 
-    call opencl_create_buffer(psicopy_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
+    call opencl_create_buffer(psicopy_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
 
-    call opencl_create_buffer(ss_buffer, CL_MEM_READ_ONLY, R_TYPE_VAL, product(ubound(ss)))
+    call opencl_create_buffer(ss_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, product(ubound(ss)))
 
     call profiling_in(prof_copy, 'STATES_TRSM_COPY')
     call opencl_write_buffer(ss_buffer, product(ubound(ss)), ss)
@@ -1163,11 +1163,11 @@ subroutine X(states_rotate)(mesh, st, uu, ik)
 #ifdef HAVE_OPENCL
     block_size = batch_points_block_size(st%group%psib(st%group%block_start, ik))
 
-    call opencl_create_buffer(uu_buffer, CL_MEM_READ_ONLY, R_TYPE_VAL, product(ubound(uu)))
+    call opencl_create_buffer(uu_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, product(ubound(uu)))
     call opencl_write_buffer(uu_buffer, product(ubound(uu)), uu)
 
-    call opencl_create_buffer(psicopy_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
-    call opencl_create_buffer(psinew_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
+    call opencl_create_buffer(psicopy_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
+    call opencl_create_buffer(psinew_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
 
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
@@ -1311,14 +1311,14 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
     ASSERT(ubound(overlap, dim = 1) == st%nst)
     ASSERT(.not. st%parallel_in_states)
     
-    call opencl_create_buffer(overlap_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%nst)
+    call opencl_create_buffer(overlap_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%nst)
     call opencl_set_buffer_to_zero(overlap_buffer, R_TYPE_VAL, st%nst*st%nst)
 
     ! we need to use a temporary array
 
     block_size = batch_points_block_size(st%group%psib(st%group%block_start, ik))
 
-    call opencl_create_buffer(psi_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
+    call opencl_create_buffer(psi_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
 
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)

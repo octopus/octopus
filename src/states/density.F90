@@ -121,7 +121,7 @@ contains
     this%packed = .true.
 #ifdef HAVE_OPENCL    
     this%pnp = opencl_padded_size(this%gr%mesh%np)
-    call opencl_create_buffer(this%buff_density, CL_MEM_READ_WRITE, TYPE_FLOAT, this%pnp*this%st%d%nspin)
+    call opencl_create_buffer(this%buff_density, ACCEL_MEM_READ_WRITE, TYPE_FLOAT, this%pnp*this%st%d%nspin)
     
     ! set to zero
     call opencl_set_buffer_to_zero(this%buff_density, TYPE_FLOAT, this%pnp*this%st%d%nspin)
@@ -229,7 +229,7 @@ contains
           kernel => kernel_density_complex
         end if
 
-        call opencl_create_buffer(buff_weight, CL_MEM_READ_ONLY, TYPE_FLOAT, psib%nst)
+        call opencl_create_buffer(buff_weight, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, psib%nst)
         call opencl_write_buffer(buff_weight, psib%nst, weight)
 
         call opencl_set_kernel_arg(kernel, 0, psib%nst)

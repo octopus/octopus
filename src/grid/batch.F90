@@ -493,7 +493,7 @@ contains
 #ifdef HAVE_OPENCL
         this%status = BATCH_CL_PACKED
 
-        call opencl_create_buffer(this%pack%buffer, CL_MEM_READ_WRITE, batch_type(this), product(this%pack%size))
+        call opencl_create_buffer(this%pack%buffer, ACCEL_MEM_READ_WRITE, batch_type(this), product(this%pack%size))
 #endif
       else
         this%status = BATCH_PACKED
@@ -756,7 +756,7 @@ contains
       
       unroll = min(CL_PACK_MAX_BUFFER_SIZE, this%pack%size(1))
 
-      call opencl_create_buffer(tmp, CL_MEM_READ_ONLY, batch_type(this), unroll*this%pack%size(2))
+      call opencl_create_buffer(tmp, ACCEL_MEM_READ_ONLY, batch_type(this), unroll*this%pack%size(2))
       
       do ist = 1, this%nst_linear, unroll
         
@@ -827,7 +827,7 @@ contains
       unroll = min(CL_PACK_MAX_BUFFER_SIZE, this%pack%size(1))
 
       ! we use a kernel to move to a temporary array and then we read
-      call opencl_create_buffer(tmp, CL_MEM_WRITE_ONLY, batch_type(this), unroll*this%pack%size(2))
+      call opencl_create_buffer(tmp, ACCEL_MEM_WRITE_ONLY, batch_type(this), unroll*this%pack%size(2))
 
       if(batch_type(this) == TYPE_FLOAT) then
         kernel => dunpack

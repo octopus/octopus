@@ -145,7 +145,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
     ASSERT(.not. mesh%use_curvilinear)
 #ifdef HAVE_OPENCL
 
-    call opencl_create_buffer(dot_buffer, CL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%nst*bb%nst)
+    call opencl_create_buffer(dot_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%nst*bb%nst)
 
     call profiling_in(prof_gemmcl, "DOTP_BATCH_CL_GEMM")
 
@@ -512,8 +512,8 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
 
 #ifdef HAVE_OPENCL
 
-    call opencl_create_buffer(dot_buffer, CL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%pack%size(1))
-    call opencl_create_buffer(scratch_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, mesh%np)
+    call opencl_create_buffer(dot_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%pack%size(1))
+    call opencl_create_buffer(scratch_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, mesh%np)
 
     do ist = 1, aa%nst_linear
 
@@ -860,8 +860,8 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
     SAFE_ALLOCATE(ssq(1:aa%pack%size(1)))
 
 #ifdef HAVE_OPENCL
-    call opencl_create_buffer(nrm2_buffer, CL_MEM_WRITE_ONLY, TYPE_FLOAT, aa%pack%size(1))
-    call opencl_create_buffer(scratch_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, 2*mesh%np)
+    call opencl_create_buffer(nrm2_buffer, ACCEL_MEM_WRITE_ONLY, TYPE_FLOAT, aa%pack%size(1))
+    call opencl_create_buffer(scratch_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, 2*mesh%np)
 
     do ist = 1, aa%nst_linear
 

@@ -528,7 +528,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 #ifdef HAVE_OPENCL
   if(batch_is_packed(psib) .and. opencl_is_enabled()) then
 
-    call opencl_create_buffer(projection%buff_projection, CL_MEM_READ_WRITE, R_TYPE_VAL, &
+    call opencl_create_buffer(projection%buff_projection, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, &
       this%full_projection_size*psib%pack%size_real(1))
 
     call profiling_in(cl_prof, "CL_PROJ_BRA")

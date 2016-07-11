@@ -64,9 +64,9 @@ subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
 #ifdef HAVE_OPENCL
   case(BATCH_CL_PACKED)
 
-    call opencl_create_buffer(blength_buff, CL_MEM_READ_ONLY, TYPE_INTEGER, this%nblocks)
-    call opencl_create_buffer(offsets_buff, CL_MEM_READ_ONLY, TYPE_INTEGER, this%nblocks)
-    call opencl_create_buffer(dest_buff, CL_MEM_READ_ONLY, TYPE_INTEGER, this%nblocks)
+    call opencl_create_buffer(blength_buff, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, this%nblocks)
+    call opencl_create_buffer(offsets_buff, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, this%nblocks)
+    call opencl_create_buffer(dest_buff, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, this%nblocks)
 
     call opencl_write_buffer(blength_buff, this%nblocks, this%blength)
     call opencl_write_buffer(offsets_buff, this%nblocks, this%offsets)

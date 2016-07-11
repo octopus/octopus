@@ -507,7 +507,7 @@ contains
 
 #ifdef HAVE_OPENCL
       if(opencl_is_enabled()) then
-        call opencl_create_buffer(hm%hm_base%buff_phase, CL_MEM_READ_ONLY, TYPE_CMPLX, gr%mesh%np_part*hm%d%kpt%nlocal)
+        call opencl_create_buffer(hm%hm_base%buff_phase, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, gr%mesh%np_part*hm%d%kpt%nlocal)
         call opencl_write_buffer(hm%hm_base%buff_phase, gr%mesh%np_part*hm%d%kpt%nlocal, hm%hm_base%phase)
         hm%hm_base%buff_phase_qn_start = hm%d%kpt%start
       end if
@@ -834,7 +834,7 @@ contains
           SAFE_ALLOCATE(this%hm_base%phase(1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
           if(opencl_is_enabled()) then
 #ifdef HAVE_OPENCL
-            call opencl_create_buffer(this%hm_base%buff_phase, CL_MEM_READ_ONLY, TYPE_CMPLX, mesh%np_part*this%d%kpt%nlocal)
+            call opencl_create_buffer(this%hm_base%buff_phase, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, mesh%np_part*this%d%kpt%nlocal)
 #endif
           end if
         end if
@@ -865,7 +865,7 @@ contains
           SAFE_ALLOCATE(this%hm_base%projector_phases(1:max_npoints, nmat, this%d%kpt%start:this%d%kpt%end))
           if(opencl_is_enabled()) then
 #ifdef HAVE_OPENCL
-            call opencl_create_buffer(this%hm_base%buff_projector_phases, CL_MEM_READ_ONLY, &
+            call opencl_create_buffer(this%hm_base%buff_projector_phases, ACCEL_MEM_READ_ONLY, &
               TYPE_CMPLX, this%hm_base%total_points*this%d%kpt%nlocal)
 #endif
           end if

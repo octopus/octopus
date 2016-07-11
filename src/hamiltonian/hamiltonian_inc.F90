@@ -229,7 +229,7 @@ subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
   if(batch_status(psib) == BATCH_CL_PACKED) then
 #ifdef HAVE_OPENCL
     pnp = opencl_padded_size(mesh%np)
-    call opencl_create_buffer(vpsl_buff, CL_MEM_READ_ONLY, TYPE_FLOAT, pnp * this%d%nspin)
+    call opencl_create_buffer(vpsl_buff, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, pnp * this%d%nspin)
     call opencl_write_buffer(vpsl_buff, mesh%np, vpsl)
 
     offset = 0

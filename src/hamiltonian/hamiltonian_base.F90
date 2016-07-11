@@ -236,7 +236,7 @@ contains
         end if
 #ifdef HAVE_OPENCL
         if(opencl_is_enabled()) then
-          call opencl_create_buffer(this%potential_opencl, CL_MEM_READ_ONLY, TYPE_FLOAT, opencl_padded_size(mesh%np)*this%nspin)
+          call opencl_create_buffer(this%potential_opencl, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, opencl_padded_size(mesh%np)*this%nspin)
         end if
 #endif
       end if
@@ -636,9 +636,9 @@ contains
       end do
 
       ! allocate
-      call opencl_create_buffer(this%buff_matrices, CL_MEM_READ_ONLY, TYPE_FLOAT, matrix_size)
-      call opencl_create_buffer(this%buff_maps, CL_MEM_READ_ONLY, TYPE_INTEGER, this%total_points)
-      call opencl_create_buffer(this%buff_scals, CL_MEM_READ_ONLY, TYPE_FLOAT, scal_size)
+      call opencl_create_buffer(this%buff_matrices, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, matrix_size)
+      call opencl_create_buffer(this%buff_maps, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, this%total_points)
+      call opencl_create_buffer(this%buff_scals, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, scal_size)
 
       ! now copy
       do imat = 1, this%nprojector_matrices
@@ -652,14 +652,14 @@ contains
       end do
 
       ! write the offsets
-      call opencl_create_buffer(this%buff_offsets, CL_MEM_READ_ONLY, TYPE_INTEGER, 5*this%nprojector_matrices)
+      call opencl_create_buffer(this%buff_offsets, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, 5*this%nprojector_matrices)
       call opencl_write_buffer(this%buff_offsets, 5*this%nprojector_matrices, offsets)
 
       ! the inverse map
-      call opencl_create_buffer(this%buff_pos, CL_MEM_READ_ONLY, TYPE_INTEGER, mesh%np + 1)
+      call opencl_create_buffer(this%buff_pos, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, mesh%np + 1)
       call opencl_write_buffer(this%buff_pos, mesh%np + 1, pos)
 
-      call opencl_create_buffer(this%buff_invmap, CL_MEM_READ_ONLY, TYPE_INTEGER, ipos)
+      call opencl_create_buffer(this%buff_invmap, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, ipos)
       call opencl_write_buffer(this%buff_invmap, ipos, invmap2)
 
       SAFE_DEALLOCATE_A(offsets)

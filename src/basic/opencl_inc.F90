@@ -31,7 +31,7 @@ subroutine X(opencl_write_buffer_1)(this, size, data, offset)
   call profiling_in(prof_write, "CL_WRITE_BUFFER")
 
   ! it does not make sense to write a buffer that the kernels cannot read
-  ASSERT(this%flags /= CL_MEM_WRITE_ONLY)
+  ASSERT(this%flags /= ACCEL_MEM_WRITE_ONLY)
 
   fsize = int(size,8)*R_SIZEOF
   offset_ = 0
@@ -67,7 +67,7 @@ subroutine X(opencl_write_buffer_2)(this, size, data, offset)
   call profiling_in(prof_write, "CL_WRITE_BUFFER")
 
   ! it does not make sense to write a buffer that the kernels cannot read
-  ASSERT(this%flags /= CL_MEM_WRITE_ONLY)
+  ASSERT(this%flags /= ACCEL_MEM_WRITE_ONLY)
 
   fsize = int(size, 8)*R_SIZEOF
   offset_ = 0
@@ -101,7 +101,7 @@ subroutine X(opencl_write_buffer_3)(this, size, data, offset)
   call profiling_in(prof_write, "CL_WRITE_BUFFER")
 
   ! it does not make sense to write a buffer that the kernels cannot read
-  ASSERT(this%flags /= CL_MEM_WRITE_ONLY)
+  ASSERT(this%flags /= ACCEL_MEM_WRITE_ONLY)
 
   fsize = int(size, 8)*R_SIZEOF
   offset_ = 0
@@ -135,7 +135,7 @@ subroutine X(opencl_read_buffer_1)(this, size, data, offset)
   call profiling_in(prof_read, "CL_READ_BUFFER")
 
   ! it does not make sense to read a buffer that the kernels cannot write
-  ASSERT(this%flags /= CL_MEM_READ_ONLY)
+  ASSERT(this%flags /= ACCEL_MEM_READ_ONLY)
 
   fsize = size*R_SIZEOF
   offset_ = 0
@@ -168,7 +168,7 @@ subroutine X(opencl_read_buffer_2)(this, size, data, offset)
   call profiling_in(prof_read, "CL_READ_BUFFER")
 
   ! it does not make sense to read a buffer that the kernels cannot write
-  ASSERT(this%flags /= CL_MEM_READ_ONLY)
+  ASSERT(this%flags /= ACCEL_MEM_READ_ONLY)
 
   fsize = size*R_SIZEOF
   offset_ = 0
@@ -202,7 +202,7 @@ subroutine X(opencl_read_buffer_3)(this, size, data, offset)
   call profiling_in(prof_read, "CL_READ_BUFFER")
 
   ! it does not make sense to read a buffer that the kernels cannot write
-  ASSERT(this%flags /= CL_MEM_READ_ONLY)
+  ASSERT(this%flags /= ACCEL_MEM_READ_ONLY)
 
   fsize = size*R_SIZEOF
   offset_ = 0

@@ -315,21 +315,21 @@ contains
 
 #ifdef HAVE_OPENCL
       if(opencl_is_enabled()) then
-        call opencl_create_buffer(this%buff_per_points, CL_MEM_READ_ONLY, TYPE_INTEGER, 2*this%nper)
+        call opencl_create_buffer(this%buff_per_points, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, 2*this%nper)
         call opencl_write_buffer(this%buff_per_points, 2*this%nper, this%per_points)
 
 #ifdef HAVE_MPI
         if(mesh%parallel_in_domains) then
-          call opencl_create_buffer(this%buff_per_send, CL_MEM_READ_ONLY, TYPE_INTEGER, product(ubound(this%per_send)))
+          call opencl_create_buffer(this%buff_per_send, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, product(ubound(this%per_send)))
           call opencl_write_buffer(this%buff_per_send, product(ubound(this%per_send)), this%per_send)
 
-          call opencl_create_buffer(this%buff_per_recv, CL_MEM_READ_ONLY, TYPE_INTEGER, product(ubound(this%per_recv)))
+          call opencl_create_buffer(this%buff_per_recv, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, product(ubound(this%per_recv)))
           call opencl_write_buffer(this%buff_per_recv, product(ubound(this%per_recv)), this%per_recv)
 
-          call opencl_create_buffer(this%buff_nsend, CL_MEM_READ_ONLY, TYPE_INTEGER, mesh%vp%npart)
+          call opencl_create_buffer(this%buff_nsend, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, mesh%vp%npart)
           call opencl_write_buffer(this%buff_nsend, mesh%vp%npart, this%nsend)
 
-          call opencl_create_buffer(this%buff_nrecv, CL_MEM_READ_ONLY, TYPE_INTEGER, mesh%vp%npart)
+          call opencl_create_buffer(this%buff_nrecv, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, mesh%vp%npart)
           call opencl_write_buffer(this%buff_nrecv, mesh%vp%npart, this%nrecv)
         end if
 #endif

@@ -383,7 +383,7 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
     ASSERT(ubound(hmss, dim = 1) == st%nst)
 
 #ifdef HAVE_CLBLAS
-    call opencl_create_buffer(hmss_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%nst)
+    call opencl_create_buffer(hmss_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%nst)
     call opencl_set_buffer_to_zero(hmss_buffer, R_TYPE_VAL, st%nst*st%nst)
 
     if(.not. st%parallel_in_states .and. st%group%block_start == st%group%block_end) then
@@ -409,8 +409,8 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
       ! we have to copy the blocks to a temporary array
       block_size = batch_points_block_size(st%group%psib(st%group%block_start, ik))
 
-      call opencl_create_buffer(psi_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
-      call opencl_create_buffer(hpsi_buffer, CL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
+      call opencl_create_buffer(psi_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
+      call opencl_create_buffer(hpsi_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
 
       do sp = 1, der%mesh%np, block_size
         size = min(block_size, der%mesh%np - sp + 1)

@@ -175,12 +175,12 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
         aa_linear_double(2*ist - 1) = aa_linear(ist)
         aa_linear_double(2*ist) = aa_linear(ist)
       end do
-      call opencl_create_buffer(aa_buffer, CL_MEM_READ_ONLY, TYPE_FLOAT, 2*yy%pack%size(1))
+      call opencl_create_buffer(aa_buffer, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, 2*yy%pack%size(1))
       call opencl_write_buffer(aa_buffer, 2*yy%pack%size(1), aa_linear_double)
       SAFE_DEALLOCATE_A(aa_linear_double)
     else
       size_factor = 1
-      call opencl_create_buffer(aa_buffer, CL_MEM_READ_ONLY, R_TYPE_VAL, yy%pack%size(1))
+      call opencl_create_buffer(aa_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, yy%pack%size(1))
       call opencl_write_buffer(aa_buffer, yy%pack%size(1), aa_linear)
     end if
 
@@ -310,12 +310,12 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
         aa_linear_double(2*ist - 1) = aa_linear(ist)
         aa_linear_double(2*ist) = aa_linear(ist)
       end do
-      call opencl_create_buffer(aa_buffer, CL_MEM_READ_ONLY, TYPE_FLOAT, 2*xx%pack%size(1))
+      call opencl_create_buffer(aa_buffer, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, 2*xx%pack%size(1))
       call opencl_write_buffer(aa_buffer, 2*xx%pack%size(1), aa_linear_double)
       SAFE_DEALLOCATE_A(aa_linear_double)
     else
       size_factor = 1
-      call opencl_create_buffer(aa_buffer, CL_MEM_READ_ONLY, R_TYPE_VAL, xx%pack%size(1))
+      call opencl_create_buffer(aa_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, xx%pack%size(1))
       call opencl_write_buffer(aa_buffer, xx%pack%size(1), aa_linear)
     end if
 
@@ -423,12 +423,12 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
         aa_linear_double(2*ist - 1) = aa_linear(ist)
         aa_linear_double(2*ist) = aa_linear(ist)
       end do
-      call opencl_create_buffer(aa_buffer, CL_MEM_READ_ONLY, TYPE_FLOAT, 2*yy%pack%size(1))
+      call opencl_create_buffer(aa_buffer, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, 2*yy%pack%size(1))
       call opencl_write_buffer(aa_buffer, 2*yy%pack%size(1), aa_linear_double)
       SAFE_DEALLOCATE_A(aa_linear_double)
     else
       size_factor = 1
-      call opencl_create_buffer(aa_buffer, CL_MEM_READ_ONLY, R_TYPE_VAL, yy%pack%size(1))
+      call opencl_create_buffer(aa_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, yy%pack%size(1))
       call opencl_write_buffer(aa_buffer, yy%pack%size(1), aa_linear)
     end if
 
@@ -564,7 +564,7 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
     end if
   case(BATCH_CL_PACKED)
 #ifdef HAVE_OPENCL
-    call opencl_create_buffer(tmp, CL_MEM_READ_ONLY, batch_type(this), this%pack%size(2))
+    call opencl_create_buffer(tmp, ACCEL_MEM_READ_ONLY, batch_type(this), this%pack%size(2))
 
     call opencl_write_buffer(tmp, np, psi)
 
@@ -678,7 +678,7 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
 
   case(BATCH_CL_PACKED)
 #ifdef HAVE_OPENCL
-    call opencl_create_buffer(tmp, CL_MEM_WRITE_ONLY, batch_type(this), this%pack%size(2))
+    call opencl_create_buffer(tmp, ACCEL_MEM_WRITE_ONLY, batch_type(this), this%pack%size(2))
 
     call opencl_set_kernel_arg(X(unpack), 0, this%pack%size(1))
     call opencl_set_kernel_arg(X(unpack), 1, ist - 1)
@@ -925,7 +925,7 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
     ! We reuse here the routine to apply the local potential
     call batch_set_zero(yy)
     
-    call opencl_create_buffer(ff_buffer, CL_MEM_READ_ONLY, R_TYPE_VAL, np)
+    call opencl_create_buffer(ff_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, np)
     call opencl_write_buffer(ff_buffer, np, ff)
 
     call opencl_set_kernel_arg(kernel_vpsi, 0, 0)

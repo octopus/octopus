@@ -77,6 +77,20 @@ module opencl_oct_m
     accel_kernel_get_ref
 #endif
 
+
+#ifdef HAVE_OPENCL
+  integer, public , parameter ::                &
+    ACCEL_MEM_READ_ONLY  = CL_MEM_READ_ONLY,    &
+    ACCEL_MEM_READ_WRITE = CL_MEM_READ_WRITE,   &
+    ACCEL_MEM_WRITE_ONLY = CL_MEM_WRITE_ONLY
+#else
+  integer, public, parameter ::          &
+    ACCEL_MEM_READ_ONLY  = 0,            &
+    ACCEL_MEM_READ_WRITE = 1,            &
+    ACCEL_MEM_WRITE_ONLY = 2
+#endif
+  
+  
 #ifdef HAVE_OPENCL
   ! the kernels
   type(accel_kernel_t), public, target :: kernel_vpsi
@@ -1304,7 +1318,7 @@ contains
     size = 15000
     do 
       SAFE_ALLOCATE(data(1:size))
-      call opencl_create_buffer(buff, CL_MEM_READ_WRITE, TYPE_FLOAT, size)
+      call opencl_create_buffer(buff, ACCEL_MEM_READ_WRITE, TYPE_FLOAT, size)
 
       stime = loct_clock()
       do itime = 1, times

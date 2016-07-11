@@ -302,7 +302,7 @@ contains
 
     kernel_operate = op%kernel
 
-    call opencl_create_buffer(buff_weights, CL_MEM_READ_ONLY, TYPE_FLOAT, op%stencil%size)
+    call opencl_create_buffer(buff_weights, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, op%stencil%size)
 
     call opencl_write_buffer(buff_weights, op%stencil%size, wre)
 

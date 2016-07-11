@@ -77,7 +77,7 @@ subroutine X(density_accumulate_grad)(gr, st, iq, psib, grad_psib, grad_rho)
       
   case(BATCH_CL_PACKED)
 #ifdef HAVE_OPENCL
-    call opencl_create_buffer(grad_rho_buff, CL_MEM_WRITE_ONLY, TYPE_FLOAT, gr%mesh%np*gr%sb%dim)
+    call opencl_create_buffer(grad_rho_buff, ACCEL_MEM_WRITE_ONLY, TYPE_FLOAT, gr%mesh%np*gr%sb%dim)
 
     SAFE_ALLOCATE(weights(1:psib%pack%size(1)))
 
@@ -87,7 +87,7 @@ subroutine X(density_accumulate_grad)(gr, st, iq, psib, grad_psib, grad_rho)
       weights(ii) = st%d%kweights(iq)*st%occ(ist, iq)*M_TWO
     end do
 
-    call opencl_create_buffer(weights_buff, CL_MEM_READ_ONLY, TYPE_FLOAT, psib%pack%size(1))
+    call opencl_create_buffer(weights_buff, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, psib%pack%size(1))
     call opencl_write_buffer(weights_buff, psib%pack%size(1), weights)
    
     SAFE_DEALLOCATE_A(weights)
