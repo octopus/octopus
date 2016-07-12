@@ -1,4 +1,4 @@
-!! Copyright (C) 2010 X. Andrade
+!! Copyright (C) 2010-2016 X. Andrade
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -19,8 +19,7 @@
 
 #include "global.h"
 
-module opencl_oct_m
-  use accel_oct_m
+module accel_oct_m
 #ifdef HAVE_OPENCL
   use cl
 #endif
@@ -45,6 +44,11 @@ module opencl_oct_m
   private
 
   public ::                       &
+    accel_context_t,              &
+    accel_device_t,               &
+    accel_mem_t,                  &
+    accel_kernel_t,               &
+    accel_t,                      &
     accel_is_enabled,             &
     accel_init,                   &
     accel_end,                    &
@@ -79,6 +83,55 @@ module opencl_oct_m
     ACCEL_MEM_READ_WRITE = 1,                   &
     ACCEL_MEM_WRITE_ONLY = 2
 #endif
+
+  type accel_context_t
+#ifdef HAVE_OPENCL
+    type(cl_context) :: cl_context
+#else
+    integer          :: dummy
+#endif
+  end type accel_context_t
+
+  type accel_device_t
+#ifdef HAVE_OPENCL
+    type(cl_device_id) :: cl_device
+#else
+    integer         :: dummy
+#endif
+  end type accel_device_t
+
+  type accel_t 
+#ifdef HAVE_OPENCL
+    type(accel_context_t)  :: context
+    type(cl_command_queue) :: command_queue
+    type(accel_device_t)   :: device
+#endif
+    integer                :: max_workgroup_size
+    integer(8)             :: local_memory_size
+    integer(8)             :: global_memory_size
+    logical                :: enabled
+    logical                :: shared_mem
+  end type accel_t
+
+  type accel_mem_t
+#ifdef HAVE_OPENCL
+    type(cl_mem)           :: mem
+#endif
+    integer(SIZEOF_SIZE_T) :: size
+    type(type_t)           :: type
+    integer                :: flags
+  end type accel_mem_t
+
+  type accel_kernel_t
+#ifdef HAVE_OPENCL
+    type(cl_kernel)               :: kernel
+#endif
+    logical                       :: initialized = .false.
+    type(accel_kernel_t), pointer :: next
+    integer                       :: arg_count
+  end type accel_kernel_t
+
+  type(accel_t), public :: accel
 
   ! the kernels
   type(accel_kernel_t), public, target :: kernel_vpsi
@@ -1481,7 +1534,7 @@ contains
 #include "integer.F90"
 #include "opencl_inc.F90"
 
-end module opencl_oct_m
+end module accel_oct_m
 
 !! Local Variables:
 !! mode: f90

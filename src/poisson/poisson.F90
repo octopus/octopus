@@ -39,7 +39,6 @@ module poisson_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
-  use opencl_oct_m
   use par_vec_oct_m
   use parser_oct_m
   use partition_oct_m

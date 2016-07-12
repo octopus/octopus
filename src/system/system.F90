@@ -20,6 +20,7 @@
 #include "global.h"
 
 module system_oct_m
+  use accel_oct_m
   use base_handle_oct_m
   use base_model_oct_m
   use base_states_oct_m
@@ -40,7 +41,6 @@ module system_oct_m
   use modelmb_particles_oct_m
   use mpi_oct_m
   use multicomm_oct_m
-  use opencl_oct_m
   use output_oct_m
   use parser_oct_m
   use pcm_oct_m

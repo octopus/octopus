@@ -53,7 +53,6 @@ module states_oct_m
 #ifdef HAVE_OPENMP
   use omp_lib
 #endif
-  use opencl_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m

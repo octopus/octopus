@@ -40,7 +40,6 @@ module hamiltonian_base_oct_m
   use messages_oct_m
   use mpi_oct_m
   use nl_operator_oct_m
-  use opencl_oct_m
   use parser_oct_m
   use profiling_oct_m
   use projector_oct_m

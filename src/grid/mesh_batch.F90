@@ -42,7 +42,6 @@ module mesh_batch_oct_m
   use messages_oct_m
   use mpi_oct_m
   use mpi_debug_oct_m
-  use opencl_oct_m
   use par_vec_oct_m
   use partition_oct_m
   use profiling_oct_m

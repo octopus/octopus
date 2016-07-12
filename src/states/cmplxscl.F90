@@ -20,8 +20,8 @@
 #include "global.h"
 
 module cmplxscl_oct_m
+  use accel_oct_m
   use global_oct_m
-  use opencl_oct_m
   use parser_oct_m
   use messages_oct_m
   use varinfo_oct_m

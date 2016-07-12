@@ -53,7 +53,6 @@ module states_calc_oct_m
   use mpi_oct_m
   use mpi_lib_oct_m
   use multicomm_oct_m
-  use opencl_oct_m
   use parser_oct_m
   use pblas_oct_m
   use physics_op_oct_m

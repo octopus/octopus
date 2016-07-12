@@ -34,7 +34,6 @@ module fourier_space_oct_m
 #ifdef HAVE_OPENMP
   use omp_lib
 #endif
-  use opencl_oct_m
 #ifdef HAVE_PFFT
   use pfft_oct_m
 #endif

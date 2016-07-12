@@ -28,7 +28,6 @@ module boundaries_oct_m
   use mesh_oct_m
   use mpi_oct_m
   use mpi_debug_oct_m
-  use opencl_oct_m
   use par_vec_oct_m
   use profiling_oct_m
   use simul_box_oct_m

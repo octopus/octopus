@@ -41,7 +41,6 @@ module density_oct_m
   use multicomm_oct_m
   use mpi_oct_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
   use mpi_lib_oct_m
-  use opencl_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use smear_oct_m

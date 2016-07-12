@@ -57,7 +57,6 @@ module subspace_oct_m
   use states_calc_oct_m
   use states_parallel_oct_m
   use types_oct_m
-  use opencl_oct_m
   use varinfo_oct_m
 
   implicit none

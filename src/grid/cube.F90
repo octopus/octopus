@@ -21,6 +21,7 @@
 #include "global.h"
 
 module cube_oct_m
+  use accel_oct_m
   use fft_oct_m
   use global_oct_m
   use index_oct_m
@@ -29,7 +30,6 @@ module cube_oct_m
   use mpi_oct_m
   use multicomm_oct_m
   use nfft_oct_m
-  use opencl_oct_m
   use parser_oct_m
   use pfft_oct_m
   use pnfft_oct_m
