@@ -129,8 +129,8 @@ contains
 
     call batch_pack_was_modified(this)
 
-    if(batch_is_packed(this) .and. opencl_is_enabled()) then
-      call opencl_set_buffer_to_zero(this%pack%buffer, batch_type(this), product(this%pack%size))
+    if(batch_is_packed(this) .and. accel_is_enabled()) then
+      call accel_set_buffer_to_zero(this%pack%buffer, batch_type(this), product(this%pack%size))
     else if(batch_is_packed(this) .and. batch_type(this) == TYPE_FLOAT) then
       this%pack%dpsi = M_ZERO
     else if(batch_is_packed(this) .and. batch_type(this) == TYPE_CMPLX) then

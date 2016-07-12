@@ -52,7 +52,7 @@ subroutine X(cube_function_alloc_rs)(cube, cf, in_device, force_alloc)
       if(optional_default(in_device, .true.)) then
         allocated = .true.
         cf%in_device_memory = .true.
-        call opencl_create_buffer(cf%real_space_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, product(cube%rs_n(1:3)))
+        call accel_create_buffer(cf%real_space_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, product(cube%rs_n(1:3)))
       end if
     end select
   end if
@@ -88,7 +88,7 @@ subroutine X(cube_function_free_rs)(cube, cf)
         if(cf%in_device_memory) then
            deallocated = .true.
            ASSERT(cf%in_device_memory)
-           call opencl_release_buffer(cf%real_space_buffer)
+           call accel_release_buffer(cf%real_space_buffer)
            cf%in_device_memory = .false.
         end if
      end select
@@ -245,10 +245,10 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
 
   else
 
-    call opencl_set_buffer_to_zero(cf%real_space_buffer, R_TYPE_VAL, product(cube%rs_n(1:3)))
+    call accel_set_buffer_to_zero(cf%real_space_buffer, R_TYPE_VAL, product(cube%rs_n(1:3)))
 
-    call opencl_create_buffer(mf_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, mesh%np_global)
-    call opencl_write_buffer(mf_buffer, mesh%np_global, gmf)
+    call accel_create_buffer(mf_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, mesh%np_global)
+    call accel_write_buffer(mf_buffer, mesh%np_global, gmf)
 
     call accel_kernel_start_call(kernel, 'mesh_to_cube.cl', TOSTRING(X(mesh_to_cube)))
     
@@ -267,7 +267,7 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
 
     call accel_kernel_run(kernel, (/pad(mesh%cube_map%nmap, bsize)/), (/bsize/))
     call accel_finish()
-    call opencl_release_buffer(mf_buffer)
+    call accel_release_buffer(mf_buffer)
 
   end if
 
@@ -338,7 +338,7 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
   else
 
 #ifdef HAVE_OPENCL    
-    call opencl_create_buffer(mf_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, mesh%np_global)
+    call accel_create_buffer(mf_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, mesh%np_global)
 
     call accel_kernel_start_call(kernel, 'mesh_to_cube.cl', TOSTRING(X(cube_to_mesh)))
    
@@ -358,8 +358,8 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
     call accel_kernel_run(kernel, (/pad(mesh%cube_map%nmap, bsize)/), (/bsize/))
     call accel_finish()
 
-    call opencl_read_buffer(mf_buffer, mesh%np_global, gmf)
-    call opencl_release_buffer(mf_buffer)
+    call accel_read_buffer(mf_buffer, mesh%np_global, gmf)
+    call accel_release_buffer(mf_buffer)
 #endif
 
   end if

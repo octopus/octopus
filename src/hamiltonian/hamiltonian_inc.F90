@@ -64,7 +64,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
   apply_phase = associated(hm%hm_base%phase)
 
   pack = hamiltonian_apply_packed(hm, der%mesh) &
-    .and. (opencl_is_enabled() .or. psib%nst_linear > 1) &
+    .and. (accel_is_enabled() .or. psib%nst_linear > 1) &
     .and. terms_ == TERM_ALL
 
   if(pack) then
@@ -225,20 +225,20 @@ subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
   end if
 
   if(batch_status(psib) == BATCH_CL_PACKED) then
-    pnp = opencl_padded_size(mesh%np)
-    call opencl_create_buffer(vpsl_buff, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, pnp * this%d%nspin)
-    call opencl_write_buffer(vpsl_buff, mesh%np, vpsl)
+    pnp = accel_padded_size(mesh%np)
+    call accel_create_buffer(vpsl_buff, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, pnp * this%d%nspin)
+    call accel_write_buffer(vpsl_buff, mesh%np, vpsl)
 
     offset = 0
     do ispin = 1, this%d%nspin
-       call opencl_write_buffer(vpsl_buff, mesh%np, vpsl_spin(:, ispin), offset = offset)
+       call accel_write_buffer(vpsl_buff, mesh%np, vpsl_spin(:, ispin), offset = offset)
        offset = offset + pnp
     end do
 
     call X(hamiltonian_base_local_sub)(vpsl_spin, mesh, this%d, 1, &
       psib, vpsib, potential_opencl = vpsl_buff)
 
-    call opencl_release_buffer(vpsl_buff)
+    call accel_release_buffer(vpsl_buff)
   else
     if(this%cmplxscl%space) then
       call X(hamiltonian_base_local_sub)(vpsl_spin, mesh, this%d, 1, &

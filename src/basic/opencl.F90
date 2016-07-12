@@ -45,24 +45,24 @@ module opencl_oct_m
   private
 
   public ::                       &
-    opencl_is_enabled,            &
-    opencl_init,                  &
-    opencl_end,                   &
-    opencl_padded_size,           &
-    opencl_mem_nullify,           &
+    accel_is_enabled,             &
+    accel_init,                   &
+    accel_end,                    &
+    accel_padded_size,            &
+    accel_mem_nullify,            &
     accel_kernel_start_call,      &
     accel_kernel_build,           &
-    opencl_create_buffer,         &
-    opencl_write_buffer,          &
-    opencl_read_buffer,           &
-    opencl_release_buffer,        &
+    accel_create_buffer,          &
+    accel_write_buffer,           &
+    accel_read_buffer,            &
+    accel_release_buffer,         &
     accel_finish,                 &
     accel_set_kernel_arg,         &
-    opencl_max_workgroup_size,    &
+    accel_max_workgroup_size,     &
     accel_kernel_workgroup_size,  &
     accel_kernel_run,             &
-    opencl_set_buffer_to_zero,    &
-    opencl_use_shared_mem,        &
+    accel_set_buffer_to_zero,     &
+    accel_use_shared_mem,         &
     clblas_print_error,           &
     clfft_print_error,            &
     accel_local_memory_size,      &
@@ -103,27 +103,27 @@ module opencl_oct_m
   ! kernels used locally
   type(accel_kernel_t)         :: set_zero
 
-  interface opencl_create_buffer
-    module procedure opencl_create_buffer_4
-  end interface opencl_create_buffer
+  interface accel_create_buffer
+    module procedure accel_create_buffer_4
+  end interface accel_create_buffer
 
-  interface opencl_write_buffer
-    module procedure iopencl_write_buffer_1, dopencl_write_buffer_1, zopencl_write_buffer_1
-    module procedure iopencl_write_buffer_2, dopencl_write_buffer_2, zopencl_write_buffer_2
-    module procedure iopencl_write_buffer_3, dopencl_write_buffer_3, zopencl_write_buffer_3
-    module procedure sopencl_write_buffer_1, copencl_write_buffer_1
-    module procedure sopencl_write_buffer_2, copencl_write_buffer_2
-    module procedure sopencl_write_buffer_3, copencl_write_buffer_3
-  end interface opencl_write_buffer
+  interface accel_write_buffer
+    module procedure iaccel_write_buffer_1, daccel_write_buffer_1, zaccel_write_buffer_1
+    module procedure iaccel_write_buffer_2, daccel_write_buffer_2, zaccel_write_buffer_2
+    module procedure iaccel_write_buffer_3, daccel_write_buffer_3, zaccel_write_buffer_3
+    module procedure saccel_write_buffer_1, caccel_write_buffer_1
+    module procedure saccel_write_buffer_2, caccel_write_buffer_2
+    module procedure saccel_write_buffer_3, caccel_write_buffer_3
+  end interface accel_write_buffer
 
-  interface opencl_read_buffer
-    module procedure iopencl_read_buffer_1, dopencl_read_buffer_1, zopencl_read_buffer_1
-    module procedure iopencl_read_buffer_2, dopencl_read_buffer_2, zopencl_read_buffer_2
-    module procedure iopencl_read_buffer_3, dopencl_read_buffer_3, zopencl_read_buffer_3
-    module procedure sopencl_read_buffer_1, copencl_read_buffer_1
-    module procedure sopencl_read_buffer_2, copencl_read_buffer_2
-    module procedure sopencl_read_buffer_3, copencl_read_buffer_3
-  end interface opencl_read_buffer
+  interface accel_read_buffer
+    module procedure iaccel_read_buffer_1, daccel_read_buffer_1, zaccel_read_buffer_1
+    module procedure iaccel_read_buffer_2, daccel_read_buffer_2, zaccel_read_buffer_2
+    module procedure iaccel_read_buffer_3, daccel_read_buffer_3, zaccel_read_buffer_3
+    module procedure saccel_read_buffer_1, caccel_read_buffer_1
+    module procedure saccel_read_buffer_2, caccel_read_buffer_2
+    module procedure saccel_read_buffer_3, caccel_read_buffer_3
+  end interface accel_read_buffer
 
   interface accel_set_kernel_arg
     module procedure                       &
@@ -161,17 +161,17 @@ module opencl_oct_m
   
 contains
 
-  pure logical function opencl_is_enabled() result(enabled)
+  pure logical function accel_is_enabled() result(enabled)
 #ifdef HAVE_OPENCL
     enabled = accel%enabled
 #else
     enabled = .false.
 #endif
-  end function opencl_is_enabled
+  end function accel_is_enabled
 
   ! ------------------------------------------
 
-  subroutine opencl_init(base_grp)
+  subroutine accel_init(base_grp)
     type(mpi_grp_t),  intent(inout) :: base_grp
 
     logical  :: disable, default, run_benchmark
@@ -186,7 +186,7 @@ contains
     type(profile_t), save :: prof_init
 #endif
 
-    PUSH_SUB(opencl_init)
+    PUSH_SUB(accel_init)
 
     buffer_alloc_count = 0
 
@@ -215,8 +215,8 @@ contains
     end if
 #endif
 
-    if(.not. opencl_is_enabled()) then
-      POP_SUB(opencl_init)
+    if(.not. accel_is_enabled()) then
+      POP_SUB(accel_init)
       return
     end if
 
@@ -475,7 +475,7 @@ contains
 
     call messages_print_stress(stdout)
 
-    POP_SUB(opencl_init)
+    POP_SUB(accel_init)
 
   contains
 
@@ -485,7 +485,7 @@ contains
       integer :: irank
       character(len=256) :: device_name
 
-      PUSH_SUB(opencl_init.select_device)
+      PUSH_SUB(accel_init.select_device)
 
       idevice = mod(base_grp%rank, ndevices)
 
@@ -506,7 +506,7 @@ contains
       end do
 #endif
 
-      POP_SUB(opencl_init.select_device)
+      POP_SUB(accel_init.select_device)
     end subroutine select_device
 
     subroutine device_info()
@@ -515,7 +515,7 @@ contains
       integer(8) :: val 
       character(len=256) :: val_str
 
-      PUSH_SUB(opencl_init.device_info)
+      PUSH_SUB(accel_init.device_info)
 
       call messages_new_line()
       call messages_write('Selected CL device:')
@@ -596,11 +596,11 @@ contains
 
       call messages_info()
 
-      POP_SUB(opencl_init.device_info)
+      POP_SUB(accel_init.device_info)
 #endif
     end subroutine device_info
 
-  end subroutine opencl_init
+  end subroutine accel_init
 
   ! ------------------------------------------
 
@@ -616,12 +616,12 @@ contains
 
   ! ------------------------------------------
 
-  subroutine opencl_end()
+  subroutine accel_end()
 #ifdef HAVE_OPENCL
     integer :: ierr
 #endif
 
-    PUSH_SUB(opencl_end)
+    PUSH_SUB(accel_end)
 
     call accel_kernel_global_end()
 
@@ -633,7 +633,7 @@ contains
     call clfftTearDown()
 #endif
 
-    if(opencl_is_enabled()) then
+    if(accel_is_enabled()) then
 #ifdef HAVE_OPENCL
       call clReleaseCommandQueue(accel%command_queue, ierr)
 
@@ -651,29 +651,29 @@ contains
 #endif
     end if
 
-    POP_SUB(opencl_end)
-  end subroutine opencl_end
+    POP_SUB(accel_end)
+  end subroutine accel_end
 
   ! ------------------------------------------
 
-  elemental subroutine opencl_mem_nullify(this)
+  elemental subroutine accel_mem_nullify(this)
     type(accel_mem_t), intent(out) :: this
 
     !> To be implemented.
     This%size = 0
     this%flags = 0
 
-  end subroutine opencl_mem_nullify
+  end subroutine accel_mem_nullify
 
   ! ------------------------------------------
 
-  integer function opencl_padded_size(nn) result(psize)
+  integer function accel_padded_size(nn) result(psize)
     integer,        intent(in) :: nn
 
 #ifdef HAVE_OPENCL
     integer :: modnn, bsize
 
-    bsize = opencl_max_workgroup_size()
+    bsize = accel_max_workgroup_size()
 
     psize = nn
     modnn = mod(nn, bsize)
@@ -681,12 +681,12 @@ contains
 #else
     psize = nn
 #endif
-  end function opencl_padded_size
+  end function accel_padded_size
 
   ! ------------------------------------------
 
-  subroutine opencl_create_buffer_4(this, flags, type, size)
-    type(accel_mem_t), intent(inout) :: this
+  subroutine accel_create_buffer_4(this, flags, type, size)
+    type(accel_mem_t),  intent(inout) :: this
     integer,            intent(in)    :: flags
     type(type_t),       intent(in)    :: type
     integer,            intent(in)    :: size
@@ -694,7 +694,7 @@ contains
     integer(8) :: fsize
     integer :: ierr
 
-    PUSH_SUB(opencl_create_buffer_4)
+    PUSH_SUB(accel_create_buffer_4)
 
     this%type = type
     this%size = size
@@ -711,17 +711,17 @@ contains
     INCR(buffer_alloc_count, 1)
     INCR(allocated_mem, fsize)
 
-    POP_SUB(opencl_create_buffer_4)
-  end subroutine opencl_create_buffer_4
+    POP_SUB(accel_create_buffer_4)
+  end subroutine accel_create_buffer_4
 
   ! ------------------------------------------
 
-  subroutine opencl_release_buffer(this)
+  subroutine accel_release_buffer(this)
     type(accel_mem_t), intent(inout) :: this
 
     integer :: ierr
 
-    PUSH_SUB(opencl_release_buffer)
+    PUSH_SUB(accel_release_buffer)
 
 #ifdef HAVE_OPENCL
     call clReleaseMemObject(this%mem, ierr)
@@ -734,8 +734,8 @@ contains
     this%size = 0
     this%flags = 0
 
-    POP_SUB(opencl_release_buffer)
-  end subroutine opencl_release_buffer
+    POP_SUB(accel_release_buffer)
+  end subroutine accel_release_buffer
 
   ! ------------------------------------------
 
@@ -831,7 +831,7 @@ contains
     dim = ubound(globalsizes, dim = 1)
 
     ASSERT(dim == ubound(localsizes, dim = 1))
-    ASSERT(all(localsizes <= opencl_max_workgroup_size()))
+    ASSERT(all(localsizes <= accel_max_workgroup_size()))
     ASSERT(all(mod(globalsizes, localsizes) == 0))
 
     gsizes(1:dim) = int(globalsizes(1:dim), 8)
@@ -846,9 +846,9 @@ contains
 
   ! -----------------------------------------------
 
-  integer pure function opencl_max_workgroup_size() result(max_workgroup_size)
+  integer pure function accel_max_workgroup_size() result(max_workgroup_size)
     max_workgroup_size = accel%max_workgroup_size
-  end function opencl_max_workgroup_size
+  end function accel_max_workgroup_size
 
   ! -----------------------------------------------
 
@@ -931,7 +931,7 @@ contains
       call messages_fatal()
     end if
 
-    if(opencl_use_shared_mem()) then
+    if(accel_use_shared_mem()) then
       string = trim(string)//' -DSHARED_MEM'
     end if
 
@@ -1262,7 +1262,7 @@ contains
 
   ! ----------------------------------------------------
 
-  subroutine opencl_set_buffer_to_zero(buffer, type, nval, offset)
+  subroutine accel_set_buffer_to_zero(buffer, type, nval, offset)
     type(accel_mem_t),  intent(inout) :: buffer
     type(type_t),       intent(in)    :: type
     integer,            intent(in)    :: nval
@@ -1270,7 +1270,7 @@ contains
 
     integer :: nval_real, bsize
 
-    PUSH_SUB(opencl_set_buffer_to_zero)
+    PUSH_SUB(accel_set_buffer_to_zero)
 
     ASSERT(type == TYPE_CMPLX .or. type == TYPE_FLOAT)
 
@@ -1285,8 +1285,8 @@ contains
     call accel_kernel_run(set_zero, (/ opencl_pad(nval_real, bsize) /), (/ bsize /))
     call accel_finish()
 
-    POP_SUB(opencl_set_buffer_to_zero)
-  end subroutine opencl_set_buffer_to_zero
+    POP_SUB(accel_set_buffer_to_zero)
+  end subroutine accel_set_buffer_to_zero
 
   ! ----------------------------------------------------
 
@@ -1312,11 +1312,11 @@ contains
     size = 15000
     do 
       SAFE_ALLOCATE(data(1:size))
-      call opencl_create_buffer(buff, ACCEL_MEM_READ_WRITE, TYPE_FLOAT, size)
+      call accel_create_buffer(buff, ACCEL_MEM_READ_WRITE, TYPE_FLOAT, size)
 
       stime = loct_clock()
       do itime = 1, times
-        call opencl_write_buffer(buff, size, data)
+        call accel_write_buffer(buff, size, data)
         call accel_finish()
       end do
       time = (loct_clock() - stime)/dble(times)
@@ -1325,7 +1325,7 @@ contains
 
       stime = loct_clock()
       do itime = 1, times
-        call opencl_read_buffer(buff, size, data)
+        call accel_read_buffer(buff, size, data)
       end do
       call accel_finish()
 
@@ -1337,7 +1337,7 @@ contains
       call messages_write(read_bw/1024.0**2, fmt = '(f10.1)')
       call messages_info()
 
-      call opencl_release_buffer(buff)
+      call accel_release_buffer(buff)
 
       SAFE_DEALLOCATE_A(data)
 
@@ -1349,11 +1349,11 @@ contains
 
   ! ----------------------------------------------------
 
-  logical pure function opencl_use_shared_mem() result(use_shared_mem)
+  logical pure function accel_use_shared_mem() result(use_shared_mem)
     
     use_shared_mem = accel%shared_mem
 
-  end function opencl_use_shared_mem
+  end function accel_use_shared_mem
 
   !------------------------------------------------------------
 

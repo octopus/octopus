@@ -109,7 +109,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
       call operate_non_const_weights()
     else if(op%cmplx_op .or. X(function_global) == OP_FORTRAN) then
       call operate_const_weights()
-    else if(opencl_is_enabled() .and. batch_is_packed(fi) .and. batch_is_packed(fo)) then
+    else if(accel_is_enabled() .and. batch_is_packed(fi) .and. batch_is_packed(fo)) then
       use_opencl = .true.
       call operate_opencl()
     else
@@ -298,9 +298,9 @@ contains
 
     kernel_operate = op%kernel
 
-    call opencl_create_buffer(buff_weights, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, op%stencil%size)
+    call accel_create_buffer(buff_weights, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, op%stencil%size)
 
-    call opencl_write_buffer(buff_weights, op%stencil%size, wre)
+    call accel_write_buffer(buff_weights, op%stencil%size, wre)
 
     ASSERT(fi%pack%size_real(1) == fo%pack%size_real(1))
 
@@ -353,7 +353,7 @@ contains
       ASSERT(isize > 0)
       ASSERT(isize*op%stencil%size*types_get_size(TYPE_INTEGER) <= local_mem_size)
 
-      if(opencl_use_shared_mem()) then
+      if(accel_use_shared_mem()) then
         iarg = iarg + 1
         call accel_set_kernel_arg(kernel_operate, iarg, TYPE_INTEGER, isize*op%stencil%size)
       end if
@@ -436,7 +436,7 @@ contains
     
     call accel_finish()
 
-    call opencl_release_buffer(buff_weights)
+    call accel_release_buffer(buff_weights)
 
     call profiling_out(prof)
     POP_SUB(X(nl_operator_operate_batch).operate_opencl)

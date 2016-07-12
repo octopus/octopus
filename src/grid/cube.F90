@@ -167,7 +167,7 @@ contains
         default_lib = FFTLIB_FFTW
 #ifdef HAVE_CLFFT
         ! disabled by default since there are some problems for dim != 3
-        ! if(opencl_is_enabled() .and. sb%dim == 3) default_lib = FFTLIB_OPENCL
+        ! if(accel_is_enabled() .and. sb%dim == 3) default_lib = FFTLIB_OPENCL
 #endif
         call parse_variable('FFTLibrary', default_lib, fft_library_)
         if(optional_default(verbose, .false.)) call messages_print_var_option(stdout, 'FFTLibrary', fft_library_)
@@ -185,7 +185,7 @@ contains
         call messages_write('without clfft (or OpenCL) support.')
         call messages_fatal()
 #endif
-        if(.not. opencl_is_enabled()) then
+        if(.not. accel_is_enabled()) then
           call messages_write('You have selected the OpenCL FFT, but OpenCL is disabled.')
           call messages_fatal()
         end if

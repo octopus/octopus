@@ -241,7 +241,7 @@ contains
 #ifdef HAVE_CLFFT
     ! this is disabled, since the difference between solvers are big
     ! enough to cause problems with the tests.
-    ! if(opencl_is_enabled()) default_solver = POISSON_FFT
+    ! if(accel_is_enabled()) default_solver = POISSON_FFT
 #endif
 
     if(der%mesh%use_curvilinear) then

@@ -196,7 +196,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
       call X(density_accumulate_grad)(gr, st, iq, psib, grad_psib, grad_rho)
 
       ! the non-local potential contribution
-      if(hm%hm_base%apply_projector_matrices .and. .not. opencl_is_enabled() .and. &
+      if(hm%hm_base%apply_projector_matrices .and. .not. accel_is_enabled() .and. &
         .not. (st%symmetrize_density .and. gr%sb%kpoints%use_symmetries)) then
 
         call X(hamiltonian_base_nlocal_force)(hm%hm_base, gr%mesh, st, geo, iq, gr%mesh%sb%dim, psib, grad_psib, force)

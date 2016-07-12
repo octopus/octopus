@@ -17,7 +17,7 @@
 !!
 !! $Id$
 
-subroutine X(opencl_write_buffer_1)(this, size, data, offset)
+subroutine X(accel_write_buffer_1)(this, size, data, offset)
   type(accel_mem_t),               intent(inout) :: this
   integer,                          intent(in)    :: size
   R_TYPE,                           intent(in)    :: data(:)
@@ -26,7 +26,7 @@ subroutine X(opencl_write_buffer_1)(this, size, data, offset)
   integer(8) :: fsize, offset_
   integer :: ierr
 
-  PUSH_SUB(X(opencl_write_buffer_1))
+  PUSH_SUB(X(accel_write_buffer_1))
   call profiling_in(prof_write, "CL_WRITE_BUFFER")
 
   ! it does not make sense to write a buffer that the kernels cannot read
@@ -46,13 +46,13 @@ subroutine X(opencl_write_buffer_1)(this, size, data, offset)
   call profiling_count_transfers(size, data(1))
   call accel_finish()
   call profiling_out(prof_write)
-  POP_SUB(X(opencl_write_buffer_1))
+  POP_SUB(X(accel_write_buffer_1))
 
-end subroutine X(opencl_write_buffer_1)
+end subroutine X(accel_write_buffer_1)
 
 ! -----------------------------------------------------------------------------
 
-subroutine X(opencl_write_buffer_2)(this, size, data, offset)
+subroutine X(accel_write_buffer_2)(this, size, data, offset)
   type(accel_mem_t),               intent(inout) :: this
   integer,                          intent(in)    :: size
   R_TYPE,                           intent(in)    :: data(:, :)
@@ -61,7 +61,7 @@ subroutine X(opencl_write_buffer_2)(this, size, data, offset)
   integer(8) :: fsize, offset_
   integer :: ierr
 
-  PUSH_SUB(X(opencl_write_buffer_2))
+  PUSH_SUB(X(accel_write_buffer_2))
   call profiling_in(prof_write, "CL_WRITE_BUFFER")
 
   ! it does not make sense to write a buffer that the kernels cannot read
@@ -79,13 +79,13 @@ subroutine X(opencl_write_buffer_2)(this, size, data, offset)
   call profiling_count_transfers(size, data(1, 1))
   call accel_finish()
   call profiling_out(prof_write)
-  POP_SUB(X(opencl_write_buffer_2))
+  POP_SUB(X(accel_write_buffer_2))
 
-end subroutine X(opencl_write_buffer_2)
+end subroutine X(accel_write_buffer_2)
 
 ! -----------------------------------------------------------------------------
 
-subroutine X(opencl_write_buffer_3)(this, size, data, offset)
+subroutine X(accel_write_buffer_3)(this, size, data, offset)
   type(accel_mem_t),               intent(inout) :: this
   integer,                          intent(in)    :: size
   R_TYPE,                           intent(in)    :: data(:, :, :)
@@ -94,7 +94,7 @@ subroutine X(opencl_write_buffer_3)(this, size, data, offset)
   integer(8) :: fsize, offset_
   integer :: ierr
 
-  PUSH_SUB(X(opencl_write_buffer_3))
+  PUSH_SUB(X(accel_write_buffer_3))
   call profiling_in(prof_write, "CL_WRITE_BUFFER")
 
   ! it does not make sense to write a buffer that the kernels cannot read
@@ -112,13 +112,13 @@ subroutine X(opencl_write_buffer_3)(this, size, data, offset)
   call profiling_count_transfers(size, data(1, 1, 1))
   call accel_finish()
   call profiling_out(prof_write)
-  POP_SUB(X(opencl_write_buffer_3))
+  POP_SUB(X(accel_write_buffer_3))
 
-end subroutine X(opencl_write_buffer_3)
+end subroutine X(accel_write_buffer_3)
 
 ! -----------------------------------------------------------------------------
 
-subroutine X(opencl_read_buffer_1)(this, size, data, offset)
+subroutine X(accel_read_buffer_1)(this, size, data, offset)
   type(accel_mem_t),               intent(in)    :: this
   integer,                          intent(in)    :: size
   R_TYPE,                           intent(out)   :: data(:)
@@ -127,7 +127,7 @@ subroutine X(opencl_read_buffer_1)(this, size, data, offset)
   integer(8) :: fsize, offset_
   integer :: ierr
 
-  PUSH_SUB(X(opencl_read_buffer_1))
+  PUSH_SUB(X(accel_read_buffer_1))
   call profiling_in(prof_read, "CL_READ_BUFFER")
 
   ! it does not make sense to read a buffer that the kernels cannot write
@@ -145,13 +145,13 @@ subroutine X(opencl_read_buffer_1)(this, size, data, offset)
   call profiling_count_transfers(size, data(1))
   call accel_finish()
   call profiling_out(prof_read)
-  POP_SUB(X(opencl_read_buffer_1))
+  POP_SUB(X(accel_read_buffer_1))
 
-end subroutine X(opencl_read_buffer_1)
+end subroutine X(accel_read_buffer_1)
 
 ! ---------------------------------------------------------------------------
 
-subroutine X(opencl_read_buffer_2)(this, size, data, offset)
+subroutine X(accel_read_buffer_2)(this, size, data, offset)
   type(accel_mem_t),               intent(in)    :: this
   integer,                          intent(in)    :: size
   R_TYPE,                           intent(out)   :: data(:, :)
@@ -160,7 +160,7 @@ subroutine X(opencl_read_buffer_2)(this, size, data, offset)
   integer(8) :: fsize, offset_
   integer :: ierr
   
-  PUSH_SUB(X(opencl_read_buffer_2))
+  PUSH_SUB(X(accel_read_buffer_2))
   call profiling_in(prof_read, "CL_READ_BUFFER")
 
   ! it does not make sense to read a buffer that the kernels cannot write
@@ -179,13 +179,13 @@ subroutine X(opencl_read_buffer_2)(this, size, data, offset)
   call accel_finish()
   
   call profiling_out(prof_read)
-  POP_SUB(X(opencl_read_buffer_2))
+  POP_SUB(X(accel_read_buffer_2))
   
-end subroutine X(opencl_read_buffer_2)
+end subroutine X(accel_read_buffer_2)
 
 ! ---------------------------------------------------------------------------
 
-subroutine X(opencl_read_buffer_3)(this, size, data, offset)
+subroutine X(accel_read_buffer_3)(this, size, data, offset)
   type(accel_mem_t),               intent(in)    :: this
   integer,                          intent(in)    :: size
   R_TYPE,                           intent(out)   :: data(:, :, :)
@@ -194,7 +194,7 @@ subroutine X(opencl_read_buffer_3)(this, size, data, offset)
   integer(8) :: fsize, offset_
   integer :: ierr
   
-  PUSH_SUB(X(opencl_read_buffer_3))
+  PUSH_SUB(X(accel_read_buffer_3))
   call profiling_in(prof_read, "CL_READ_BUFFER")
 
   ! it does not make sense to read a buffer that the kernels cannot write
@@ -212,9 +212,9 @@ subroutine X(opencl_read_buffer_3)(this, size, data, offset)
   call profiling_count_transfers(size, data(1, 1, 1))
   call accel_finish()
   call profiling_out(prof_read)
-  POP_SUB(X(opencl_read_buffer_3))
+  POP_SUB(X(accel_read_buffer_3))
   
-end subroutine X(opencl_read_buffer_3)
+end subroutine X(accel_read_buffer_3)
 
 ! ---------------------------------------------------------------------------
 

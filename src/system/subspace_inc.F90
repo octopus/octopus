@@ -378,13 +378,13 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
     call X(hamiltonian_apply_batch)(hm, der, st%group%psib(ib, ik), hpsib(ib), ik)
   end do
   
-  if(states_are_packed(st) .and. opencl_is_enabled()) then
+  if(states_are_packed(st) .and. accel_is_enabled()) then
 
     ASSERT(ubound(hmss, dim = 1) == st%nst)
 
 #ifdef HAVE_CLBLAS
-    call opencl_create_buffer(hmss_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%nst)
-    call opencl_set_buffer_to_zero(hmss_buffer, R_TYPE_VAL, st%nst*st%nst)
+    call accel_create_buffer(hmss_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%nst)
+    call accel_set_buffer_to_zero(hmss_buffer, R_TYPE_VAL, st%nst*st%nst)
 
     if(.not. st%parallel_in_states .and. st%group%block_start == st%group%block_end) then
       ! all the states are stored in one block
@@ -409,8 +409,8 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
       ! we have to copy the blocks to a temporary array
       block_size = batch_points_block_size(st%group%psib(st%group%block_start, ik))
 
-      call opencl_create_buffer(psi_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
-      call opencl_create_buffer(hpsi_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
+      call accel_create_buffer(psi_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
+      call accel_create_buffer(hpsi_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
 
       do sp = 1, der%mesh%np, block_size
         size = min(block_size, der%mesh%np - sp + 1)
@@ -435,13 +435,13 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
       end do
 
 
-      call opencl_release_buffer(psi_buffer)
-      call opencl_release_buffer(hpsi_buffer)
+      call accel_release_buffer(psi_buffer)
+      call accel_release_buffer(hpsi_buffer)
       
     end if
 
-    call opencl_read_buffer(hmss_buffer, st%nst*st%nst, hmss)
-    call opencl_release_buffer(hmss_buffer)
+    call accel_read_buffer(hmss_buffer, st%nst*st%nst, hmss)
+    call accel_release_buffer(hmss_buffer)
 #endif
 
   else

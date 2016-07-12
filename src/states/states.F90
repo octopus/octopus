@@ -461,7 +461,7 @@ contains
     !$omp end parallel
 #endif    
 
-    if(opencl_is_enabled()) then
+    if(accel_is_enabled()) then
       default = 32
     else
       default = max(4, 2*nthreads)
@@ -2266,7 +2266,7 @@ contains
 
     st%packed = .true.
 
-    if(opencl_is_enabled()) then
+    if(accel_is_enabled()) then
       max_mem = accel_global_memory_size()
       
       if(st%d%cl_states_mem > CNST(1.0)) then

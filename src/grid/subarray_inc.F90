@@ -61,13 +61,13 @@ subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
   select case(batch_status(arrayb))
   case(BATCH_CL_PACKED)
 
-    call opencl_create_buffer(blength_buff, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, this%nblocks)
-    call opencl_create_buffer(offsets_buff, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, this%nblocks)
-    call opencl_create_buffer(dest_buff, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, this%nblocks)
+    call accel_create_buffer(blength_buff, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, this%nblocks)
+    call accel_create_buffer(offsets_buff, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, this%nblocks)
+    call accel_create_buffer(dest_buff, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, this%nblocks)
 
-    call opencl_write_buffer(blength_buff, this%nblocks, this%blength)
-    call opencl_write_buffer(offsets_buff, this%nblocks, this%offsets)
-    call opencl_write_buffer(dest_buff, this%nblocks, this%dest)
+    call accel_write_buffer(blength_buff, this%nblocks, this%blength)
+    call accel_write_buffer(offsets_buff, this%nblocks, this%offsets)
+    call accel_write_buffer(dest_buff, this%nblocks, this%dest)
     
     call accel_set_kernel_arg(kernel_subarray_gather, 0, blength_buff)
     call accel_set_kernel_arg(kernel_subarray_gather, 1, offsets_buff)
@@ -82,9 +82,9 @@ subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
     call accel_kernel_run(kernel_subarray_gather, &
       (/subarrayb%pack%size_real(1), bsize, this%nblocks/), (/subarrayb%pack%size_real(1), bsize, 1/))
     
-    call opencl_release_buffer(blength_buff)
-    call opencl_release_buffer(offsets_buff)
-    call opencl_release_buffer(dest_buff)
+    call accel_release_buffer(blength_buff)
+    call accel_release_buffer(offsets_buff)
+    call accel_release_buffer(dest_buff)
     
   case(BATCH_PACKED)
     do iblock = 1, this%nblocks

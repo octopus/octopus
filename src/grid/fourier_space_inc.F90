@@ -107,8 +107,8 @@ subroutine X(fourier_space_op_init)(this, cube, op, in_device)
     end do
 
 #ifdef HAVE_OPENCL
-    call opencl_create_buffer(this%op_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, size)
-    call opencl_write_buffer(this%op_buffer, size, op_linear)
+    call accel_create_buffer(this%op_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, size)
+    call accel_write_buffer(this%op_buffer, size, op_linear)
 #endif
     
     SAFE_DEALLOCATE_A(op_linear)

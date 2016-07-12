@@ -379,12 +379,12 @@ contains
       end forall
 
       ! copy vold to a cl buffer
-      if(opencl_is_enabled() .and. hamiltonian_apply_packed(hm, gr%mesh)) then
-        pnp = opencl_padded_size(gr%mesh%np)
-        call opencl_create_buffer(phase_buff, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, pnp*st%d%nspin)
+      if(accel_is_enabled() .and. hamiltonian_apply_packed(hm, gr%mesh)) then
+        pnp = accel_padded_size(gr%mesh%np)
+        call accel_create_buffer(phase_buff, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, pnp*st%d%nspin)
         ASSERT(ubound(vold, dim = 1) == gr%mesh%np)
         do ispin = 1, st%d%nspin
-          call opencl_write_buffer(phase_buff, gr%mesh%np, vold(:, ispin), offset = (ispin - 1)*pnp)
+          call accel_write_buffer(phase_buff, gr%mesh%np, vold(:, ispin), offset = (ispin - 1)*pnp)
         end do
       end if
 
@@ -438,7 +438,7 @@ contains
             call accel_set_kernel_arg(kernel_phase, 2, st%group%psib(ib, ik)%pack%buffer)
             call accel_set_kernel_arg(kernel_phase, 3, log2(st%group%psib(ib, ik)%pack%size(1)))
 
-            iprange = opencl_max_workgroup_size()/st%group%psib(ib, ik)%pack%size(1)
+            iprange = accel_max_workgroup_size()/st%group%psib(ib, ik)%pack%size(1)
 
             call accel_kernel_run(kernel_phase, (/st%group%psib(ib, ik)%pack%size(1), pnp/), &
               (/st%group%psib(ib, ik)%pack%size(1), iprange/))
@@ -453,8 +453,8 @@ contains
       end do
     end do
 
-    if(tr%method == PROP_CAETRS .and. opencl_is_enabled() .and. hamiltonian_apply_packed(hm, gr%mesh)) then
-      call opencl_release_buffer(phase_buff)
+    if(tr%method == PROP_CAETRS .and. accel_is_enabled() .and. hamiltonian_apply_packed(hm, gr%mesh)) then
+      call accel_release_buffer(phase_buff)
     end if
 
     call density_calc_end(dens_calc)

@@ -77,7 +77,7 @@ subroutine X(hamiltonian_base_local_sub)(potential, mesh, std, ispin, psib, vpsi
   case(BATCH_CL_PACKED)
     ASSERT(.not. pot_is_cmplx) ! not implemented
 
-    pnp = opencl_padded_size(mesh%np)
+    pnp = accel_padded_size(mesh%np)
 
     select case(std%ispin)
 
@@ -90,7 +90,7 @@ subroutine X(hamiltonian_base_local_sub)(potential, mesh, std, ispin, psib, vpsi
       call accel_set_kernel_arg(kernel_vpsi, 5, vpsib%pack%buffer)
       call accel_set_kernel_arg(kernel_vpsi, 6, log2(vpsib%pack%size_real(1)))
 
-      iprange = opencl_max_workgroup_size()/psib%pack%size_real(1)
+      iprange = accel_max_workgroup_size()/psib%pack%size_real(1)
 
       call accel_kernel_run(kernel_vpsi, (/psib%pack%size_real(1), pnp/), (/psib%pack%size_real(1), iprange/))
 
@@ -104,7 +104,7 @@ subroutine X(hamiltonian_base_local_sub)(potential, mesh, std, ispin, psib, vpsi
       call accel_set_kernel_arg(kernel_vpsi_spinors, 6, vpsib%pack%size(1))
 
       call accel_kernel_run(kernel_vpsi_spinors, (/psib%pack%size(1)/2, pnp/), &
-        (/psib%pack%size(1)/2, 2*opencl_max_workgroup_size()/psib%pack%size(1)/))
+        (/psib%pack%size(1)/2, 2*accel_max_workgroup_size()/psib%pack%size(1)/))
 
     end select
 
@@ -513,9 +513,9 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
   nreal = nst
 #endif
 
-  if(batch_is_packed(psib) .and. opencl_is_enabled()) then
+  if(batch_is_packed(psib) .and. accel_is_enabled()) then
 
-    call opencl_create_buffer(projection%buff_projection, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, &
+    call accel_create_buffer(projection%buff_projection, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, &
       this%full_projection_size*psib%pack%size_real(1))
 
     call profiling_in(cl_prof, "CL_PROJ_BRA")
@@ -565,7 +565,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 
     if(mesh%parallel_in_domains) then
       SAFE_ALLOCATE(projection%X(projection)(1:psib%pack%size_real(1), 1:this%full_projection_size))
-      call opencl_read_buffer(projection%buff_projection, &
+      call accel_read_buffer(projection%buff_projection, &
         this%full_projection_size*psib%pack%size_real(1), projection%X(projection))
     end if
 
@@ -752,16 +752,16 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
   end if
 #endif
 
-  if(batch_is_packed(vpsib) .and. opencl_is_enabled()) then
+  if(batch_is_packed(vpsib) .and. accel_is_enabled()) then
 
     if(mesh%parallel_in_domains) then
-      call opencl_write_buffer(projection%buff_projection, &
+      call accel_write_buffer(projection%buff_projection, &
         this%full_projection_size*vpsib%pack%size_real(1), projection%X(projection))
       SAFE_DEALLOCATE_A(projection%X(projection))
     end if
 
     call finish_opencl()
-    call opencl_release_buffer(projection%buff_projection)
+    call accel_release_buffer(projection%buff_projection)
     
     POP_SUB(X(hamiltonian_base_nlocal_finish))
     call profiling_out(prof_vnlpsi_finish)
@@ -1090,7 +1090,7 @@ subroutine X(hamiltonian_base_nlocal_position_commutator)(this, mesh, std, ik, p
   nreal = nst
 #endif
 
-  if(batch_is_packed(psib) .and. opencl_is_enabled()) call messages_not_implemented('OpenCL commutator')
+  if(batch_is_packed(psib) .and. accel_is_enabled()) call messages_not_implemented('OpenCL commutator')
 
   SAFE_ALLOCATE(projections(1:nst, 1:this%full_projection_size, 0:3))
   projections = M_ZERO

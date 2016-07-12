@@ -177,8 +177,8 @@ contains
 
     PUSH_SUB(hamiltonian_base_end)
 
-    if(allocated(this%potential) .and. opencl_is_enabled()) then
-      call opencl_release_buffer(this%potential_opencl)
+    if(allocated(this%potential) .and. accel_is_enabled()) then
+      call accel_release_buffer(this%potential_opencl)
     end if
     
     SAFE_DEALLOCATE_A(this%potential)
@@ -229,8 +229,8 @@ contains
           SAFE_ALLOCATE(this%Impotential(1:mesh%np, 1:this%nspin))
           this%Impotential = M_ZERO
         end if
-        if(opencl_is_enabled()) then
-          call opencl_create_buffer(this%potential_opencl, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, opencl_padded_size(mesh%np)*this%nspin)
+        if(accel_is_enabled()) then
+          call accel_create_buffer(this%potential_opencl, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, accel_padded_size(mesh%np)*this%nspin)
         end if
       end if
     end if
@@ -278,12 +278,12 @@ contains
       call unify_vector_potentials()
     end if
 
-    if(allocated(this%potential) .and. opencl_is_enabled()) then
+    if(allocated(this%potential) .and. accel_is_enabled()) then
 
       offset = 0
       do ispin = 1, this%nspin
-        call opencl_write_buffer(this%potential_opencl, mesh%np, this%potential(:, ispin), offset = offset)
-        offset = offset + opencl_padded_size(mesh%np)
+        call accel_write_buffer(this%potential_opencl, mesh%np, this%potential(:, ispin), offset = offset)
+        offset = offset + accel_padded_size(mesh%np)
       end do
 
     end if
@@ -321,14 +321,14 @@ contains
 
     if(allocated(this%projector_matrices)) then
 
-      if(opencl_is_enabled()) then
-        call opencl_release_buffer(this%buff_offsets)
-        call opencl_release_buffer(this%buff_matrices)
-        call opencl_release_buffer(this%buff_maps)
-        call opencl_release_buffer(this%buff_scals)
-        call opencl_release_buffer(this%buff_pos)
-        call opencl_release_buffer(this%buff_invmap)
-        if(allocated(this%projector_phases)) call opencl_release_buffer(this%buff_projector_phases)
+      if(accel_is_enabled()) then
+        call accel_release_buffer(this%buff_offsets)
+        call accel_release_buffer(this%buff_matrices)
+        call accel_release_buffer(this%buff_maps)
+        call accel_release_buffer(this%buff_scals)
+        call accel_release_buffer(this%buff_pos)
+        call accel_release_buffer(this%buff_invmap)
+        if(allocated(this%projector_phases)) call accel_release_buffer(this%buff_projector_phases)
       end if
 
       do iproj = 1, this%nprojector_matrices
@@ -543,7 +543,7 @@ contains
       INCR(this%total_points, pmat%npoints)
     end do
 
-    if(opencl_is_enabled()) call build_opencl()
+    if(accel_is_enabled()) call build_opencl()
 
     POP_SUB(hamiltonian_base_build_proj)
 
@@ -620,31 +620,31 @@ contains
       end do
 
       ! allocate
-      call opencl_create_buffer(this%buff_matrices, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, matrix_size)
-      call opencl_create_buffer(this%buff_maps, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, this%total_points)
-      call opencl_create_buffer(this%buff_scals, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, scal_size)
+      call accel_create_buffer(this%buff_matrices, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, matrix_size)
+      call accel_create_buffer(this%buff_maps, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, this%total_points)
+      call accel_create_buffer(this%buff_scals, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, scal_size)
 
       ! now copy
       do imat = 1, this%nprojector_matrices
         pmat => this%projector_matrices(imat)
         ! in parallel some spheres might not have points
         if(pmat%npoints > 0) then
-          call opencl_write_buffer(this%buff_matrices, pmat%nprojs*pmat%npoints, pmat%projectors, offset = offsets(MATRIX, imat))
-          call opencl_write_buffer(this%buff_maps, pmat%npoints, pmat%map, offset = offsets(MAP, imat))
+          call accel_write_buffer(this%buff_matrices, pmat%nprojs*pmat%npoints, pmat%projectors, offset = offsets(MATRIX, imat))
+          call accel_write_buffer(this%buff_maps, pmat%npoints, pmat%map, offset = offsets(MAP, imat))
         end if
-        call opencl_write_buffer(this%buff_scals, pmat%nprojs, pmat%scal, offset = offsets(SCAL, imat))
+        call accel_write_buffer(this%buff_scals, pmat%nprojs, pmat%scal, offset = offsets(SCAL, imat))
       end do
 
       ! write the offsets
-      call opencl_create_buffer(this%buff_offsets, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, 5*this%nprojector_matrices)
-      call opencl_write_buffer(this%buff_offsets, 5*this%nprojector_matrices, offsets)
+      call accel_create_buffer(this%buff_offsets, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, 5*this%nprojector_matrices)
+      call accel_write_buffer(this%buff_offsets, 5*this%nprojector_matrices, offsets)
 
       ! the inverse map
-      call opencl_create_buffer(this%buff_pos, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, mesh%np + 1)
-      call opencl_write_buffer(this%buff_pos, mesh%np + 1, pos)
+      call accel_create_buffer(this%buff_pos, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, mesh%np + 1)
+      call accel_write_buffer(this%buff_pos, mesh%np + 1, pos)
 
-      call opencl_create_buffer(this%buff_invmap, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, ipos)
-      call opencl_write_buffer(this%buff_invmap, ipos, invmap2)
+      call accel_create_buffer(this%buff_invmap, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, ipos)
+      call accel_write_buffer(this%buff_invmap, ipos, invmap2)
 
       SAFE_DEALLOCATE_A(offsets)
       SAFE_DEALLOCATE_A(cnt)

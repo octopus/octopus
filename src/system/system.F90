@@ -93,7 +93,7 @@ contains
     SAFE_ALLOCATE(sys%gr)
     SAFE_ALLOCATE(sys%st)
 
-    call opencl_init(mpi_world)
+    call accel_init(mpi_world)
 
     call messages_obsolete_variable('SystemName')
 
@@ -259,7 +259,7 @@ contains
 
     call space_end(sys%space)
 
-    call opencl_end()
+    call accel_end()
 
     SAFE_DEALLOCATE_P(sys%gr)
 

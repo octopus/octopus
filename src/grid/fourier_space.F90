@@ -114,7 +114,7 @@ contains
 #ifdef HAVE_OPENCL
       if(cf%in_device_memory) then
         allocated = .true.
-        call opencl_create_buffer(cf%fourier_space_buffer, ACCEL_MEM_READ_WRITE, TYPE_CMPLX, product(cube%fs_n(1:3)))
+        call accel_create_buffer(cf%fourier_space_buffer, ACCEL_MEM_READ_WRITE, TYPE_CMPLX, product(cube%fs_n(1:3)))
       end if
 #endif
     end select
@@ -151,7 +151,7 @@ contains
 #ifdef HAVE_OPENCL
       if(cf%in_device_memory) then
         deallocated = .true.
-        call opencl_release_buffer(cf%fourier_space_buffer)
+        call accel_release_buffer(cf%fourier_space_buffer)
       end if
 #endif
     end select
@@ -173,7 +173,7 @@ contains
 
     if(this%in_device_memory) then
 #ifdef HAVE_OPENCL
-      call opencl_release_buffer(this%op_buffer)
+      call accel_release_buffer(this%op_buffer)
 #endif
       this%in_device_memory = .false.
     end if

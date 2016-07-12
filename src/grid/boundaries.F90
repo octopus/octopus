@@ -124,11 +124,11 @@ contains
     this%nper = 0
     nullify(this%per_points, this%per_send, this%per_recv)
     nullify(this%nsend, this%nrecv)
-    call opencl_mem_nullify(this%buff_per_points)
-    call opencl_mem_nullify(this%buff_per_send)
-    call opencl_mem_nullify(this%buff_per_recv)
-    call opencl_mem_nullify(this%buff_nsend)
-    call opencl_mem_nullify(this%buff_nrecv)
+    call accel_mem_nullify(this%buff_per_points)
+    call accel_mem_nullify(this%buff_per_send)
+    call accel_mem_nullify(this%buff_per_recv)
+    call accel_mem_nullify(this%buff_nsend)
+    call accel_mem_nullify(this%buff_nrecv)
 
   end subroutine boundaries_nullify
 
@@ -310,22 +310,22 @@ contains
       end if
 #endif
 
-      if(opencl_is_enabled()) then
-        call opencl_create_buffer(this%buff_per_points, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, 2*this%nper)
-        call opencl_write_buffer(this%buff_per_points, 2*this%nper, this%per_points)
+      if(accel_is_enabled()) then
+        call accel_create_buffer(this%buff_per_points, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, 2*this%nper)
+        call accel_write_buffer(this%buff_per_points, 2*this%nper, this%per_points)
 
         if(mesh%parallel_in_domains) then
-          call opencl_create_buffer(this%buff_per_send, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, product(ubound(this%per_send)))
-          call opencl_write_buffer(this%buff_per_send, product(ubound(this%per_send)), this%per_send)
+          call accel_create_buffer(this%buff_per_send, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, product(ubound(this%per_send)))
+          call accel_write_buffer(this%buff_per_send, product(ubound(this%per_send)), this%per_send)
 
-          call opencl_create_buffer(this%buff_per_recv, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, product(ubound(this%per_recv)))
-          call opencl_write_buffer(this%buff_per_recv, product(ubound(this%per_recv)), this%per_recv)
+          call accel_create_buffer(this%buff_per_recv, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, product(ubound(this%per_recv)))
+          call accel_write_buffer(this%buff_per_recv, product(ubound(this%per_recv)), this%per_recv)
 
-          call opencl_create_buffer(this%buff_nsend, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, mesh%vp%npart)
-          call opencl_write_buffer(this%buff_nsend, mesh%vp%npart, this%nsend)
+          call accel_create_buffer(this%buff_nsend, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, mesh%vp%npart)
+          call accel_write_buffer(this%buff_nsend, mesh%vp%npart, this%nsend)
 
-          call opencl_create_buffer(this%buff_nrecv, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, mesh%vp%npart)
-          call opencl_write_buffer(this%buff_nrecv, mesh%vp%npart, this%nrecv)
+          call accel_create_buffer(this%buff_nrecv, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, mesh%vp%npart)
+          call accel_write_buffer(this%buff_nrecv, mesh%vp%npart, this%nrecv)
         end if
       end if
 
@@ -352,15 +352,15 @@ contains
         SAFE_DEALLOCATE_P(this%nsend)
         SAFE_DEALLOCATE_P(this%nrecv)
 
-        if(opencl_is_enabled()) then
-          call opencl_release_buffer(this%buff_per_send)
-          call opencl_release_buffer(this%buff_per_recv)
-          call opencl_release_buffer(this%buff_nsend)
-          call opencl_release_buffer(this%buff_nrecv)
+        if(accel_is_enabled()) then
+          call accel_release_buffer(this%buff_per_send)
+          call accel_release_buffer(this%buff_per_recv)
+          call accel_release_buffer(this%buff_nsend)
+          call accel_release_buffer(this%buff_nrecv)
         end if
       end if
 
-      if(opencl_is_enabled()) call opencl_release_buffer(this%buff_per_points)
+      if(accel_is_enabled()) call accel_release_buffer(this%buff_per_points)
 
       SAFE_DEALLOCATE_P(this%per_points)
     end if

@@ -296,7 +296,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
   PUSH_SUB(X(states_trsm))
   call profiling_in(prof, "STATES_TRSM")
 
-  if(.not. (states_are_packed(st) .and. opencl_is_enabled())) then
+  if(.not. (states_are_packed(st) .and. accel_is_enabled())) then
 
 #ifdef R_TREAL  
     block_size = max(40, hardware%l2%size/(2*8*st%nst))
@@ -337,12 +337,12 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
 #ifdef HAVE_OPENCL
     block_size = batch_points_block_size(st%group%psib(st%group%block_start, ik))
 
-    call opencl_create_buffer(psicopy_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
+    call accel_create_buffer(psicopy_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
 
-    call opencl_create_buffer(ss_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, product(ubound(ss)))
+    call accel_create_buffer(ss_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, product(ubound(ss)))
 
     call profiling_in(prof_copy, 'STATES_TRSM_COPY')
-    call opencl_write_buffer(ss_buffer, product(ubound(ss)), ss)
+    call accel_write_buffer(ss_buffer, product(ubound(ss)), ss)
     call profiling_count_transfers(product(ubound(ss)), ss(1, 1))
 
     call profiling_out(prof_copy)
@@ -391,8 +391,8 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
       end do
     end do
     
-    call opencl_release_buffer(ss_buffer)
-    call opencl_release_buffer(psicopy_buffer)
+    call accel_release_buffer(ss_buffer)
+    call accel_release_buffer(psicopy_buffer)
 #endif
   end if
 
@@ -1117,7 +1117,7 @@ subroutine X(states_rotate)(mesh, st, uu, ik)
 
   ASSERT(R_TYPE_VAL == states_type(st))
   
-  if(.not. states_are_packed(st) .or. .not. opencl_is_enabled()) then
+  if(.not. states_are_packed(st) .or. .not. accel_is_enabled()) then
     
 #ifdef R_TREAL  
     block_size = max(40, hardware%l2%size/(2*8*st%nst))
@@ -1163,11 +1163,11 @@ subroutine X(states_rotate)(mesh, st, uu, ik)
 #ifdef HAVE_OPENCL
     block_size = batch_points_block_size(st%group%psib(st%group%block_start, ik))
 
-    call opencl_create_buffer(uu_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, product(ubound(uu)))
-    call opencl_write_buffer(uu_buffer, product(ubound(uu)), uu)
+    call accel_create_buffer(uu_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, product(ubound(uu)))
+    call accel_write_buffer(uu_buffer, product(ubound(uu)), uu)
 
-    call opencl_create_buffer(psicopy_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
-    call opencl_create_buffer(psinew_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
+    call accel_create_buffer(psicopy_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
+    call accel_create_buffer(psinew_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
 
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
@@ -1218,9 +1218,9 @@ subroutine X(states_rotate)(mesh, st, uu, ik)
 
     call profiling_count_operations((R_ADD + R_MUL)*st%nst*(st%nst - CNST(1.0))*mesh%np)
    
-    call opencl_release_buffer(uu_buffer)
-    call opencl_release_buffer(psicopy_buffer)
-    call opencl_release_buffer(psinew_buffer)
+    call accel_release_buffer(uu_buffer)
+    call accel_release_buffer(psicopy_buffer)
+    call accel_release_buffer(psinew_buffer)
 #endif
   end if
 
@@ -1253,7 +1253,7 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
 
   call profiling_in(prof, "STATES_OVERLAP")
 
-  if(.not. states_are_packed(st) .or. .not. opencl_is_enabled()) then
+  if(.not. states_are_packed(st) .or. .not. accel_is_enabled()) then
 
 #ifdef R_TREAL  
     block_size = max(80, hardware%l2%size/(8*st%nst))
@@ -1306,19 +1306,19 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
 
 #ifdef HAVE_CLBLAS
 
-  else if(opencl_is_enabled()) then
+  else if(accel_is_enabled()) then
 
     ASSERT(ubound(overlap, dim = 1) == st%nst)
     ASSERT(.not. st%parallel_in_states)
     
-    call opencl_create_buffer(overlap_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%nst)
-    call opencl_set_buffer_to_zero(overlap_buffer, R_TYPE_VAL, st%nst*st%nst)
+    call accel_create_buffer(overlap_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%nst)
+    call accel_set_buffer_to_zero(overlap_buffer, R_TYPE_VAL, st%nst*st%nst)
 
     ! we need to use a temporary array
 
     block_size = batch_points_block_size(st%group%psib(st%group%block_start, ik))
 
-    call opencl_create_buffer(psi_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
+    call accel_create_buffer(psi_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
 
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
@@ -1346,11 +1346,11 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
 
     call accel_finish()
 
-    call opencl_release_buffer(psi_buffer)
+    call accel_release_buffer(psi_buffer)
 
     call profiling_count_operations((R_ADD + R_MUL)*CNST(0.5)*st%nst*(st%nst - CNST(1.0))*mesh%np)
 
-    call opencl_read_buffer(overlap_buffer, st%nst*st%nst, overlap)
+    call accel_read_buffer(overlap_buffer, st%nst*st%nst, overlap)
 
     call accel_finish()
 
@@ -1364,7 +1364,7 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
 
     if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, overlap, dim = (/st%nst, st%nst/))
 
-    call opencl_release_buffer(overlap_buffer)
+    call accel_release_buffer(overlap_buffer)
 
 #endif
 

@@ -88,9 +88,9 @@ contains
         end do
       end do
 
-      if(opencl_is_enabled()) then
-        call opencl_create_buffer(this%map_buffer, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, this%nmap*5)
-        call opencl_write_buffer(this%map_buffer, this%nmap*5, this%map)
+      if(accel_is_enabled()) then
+        call accel_create_buffer(this%map_buffer, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, this%nmap*5)
+        call accel_write_buffer(this%map_buffer, this%nmap*5, this%map)
       end if
 
     else
@@ -111,7 +111,7 @@ contains
 
       SAFE_DEALLOCATE_P(this%map)
       
-      if(opencl_is_enabled()) call opencl_release_buffer(this%map_buffer)
+      if(accel_is_enabled()) call accel_release_buffer(this%map_buffer)
 
     end if
 

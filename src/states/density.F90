@@ -116,11 +116,11 @@ contains
     PUSH_SUB(density_calc_pack)
     
     this%packed = .true.
-    this%pnp = opencl_padded_size(this%gr%mesh%np)
-    call opencl_create_buffer(this%buff_density, ACCEL_MEM_READ_WRITE, TYPE_FLOAT, this%pnp*this%st%d%nspin)
+    this%pnp = accel_padded_size(this%gr%mesh%np)
+    call accel_create_buffer(this%buff_density, ACCEL_MEM_READ_WRITE, TYPE_FLOAT, this%pnp*this%st%d%nspin)
     
     ! set to zero
-    call opencl_set_buffer_to_zero(this%buff_density, TYPE_FLOAT, this%pnp*this%st%d%nspin)
+    call accel_set_buffer_to_zero(this%buff_density, TYPE_FLOAT, this%pnp*this%st%d%nspin)
     
     POP_SUB(density_calc_pack)
   end subroutine density_calc_pack
@@ -222,8 +222,8 @@ contains
           kernel => kernel_density_complex
         end if
 
-        call opencl_create_buffer(buff_weight, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, psib%nst)
-        call opencl_write_buffer(buff_weight, psib%nst, weight)
+        call accel_create_buffer(buff_weight, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, psib%nst)
+        call accel_write_buffer(buff_weight, psib%nst, weight)
 
         call accel_set_kernel_arg(kernel, 0, psib%nst)
         call accel_set_kernel_arg(kernel, 1, this%gr%mesh%np)
@@ -239,7 +239,7 @@ contains
 
         call accel_finish()
         
-        call opencl_release_buffer(buff_weight)
+        call accel_release_buffer(buff_weight)
         
       end select
 
@@ -328,7 +328,7 @@ contains
 
       ! the density is in device memory
       do ispin = 1, this%st%d%nspin
-        call opencl_read_buffer(this%buff_density, this%gr%mesh%np, tmpdensity, offset = (ispin - 1)*this%pnp)
+        call accel_read_buffer(this%buff_density, this%gr%mesh%np, tmpdensity, offset = (ispin - 1)*this%pnp)
 
         if(this%gr%have_fine_mesh) then
            SAFE_ALLOCATE(fdensity(1:this%gr%fine%mesh%np))
@@ -342,7 +342,7 @@ contains
       end do
 
       this%packed = .false.
-      call opencl_release_buffer(this%buff_density)
+      call accel_release_buffer(this%buff_density)
       SAFE_DEALLOCATE_A(tmpdensity)
     end if
 

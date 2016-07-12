@@ -502,9 +502,9 @@ contains
         end forall
       end do
 
-      if(opencl_is_enabled()) then
-        call opencl_create_buffer(hm%hm_base%buff_phase, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, gr%mesh%np_part*hm%d%kpt%nlocal)
-        call opencl_write_buffer(hm%hm_base%buff_phase, gr%mesh%np_part*hm%d%kpt%nlocal, hm%hm_base%phase)
+      if(accel_is_enabled()) then
+        call accel_create_buffer(hm%hm_base%buff_phase, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, gr%mesh%np_part*hm%d%kpt%nlocal)
+        call accel_write_buffer(hm%hm_base%buff_phase, gr%mesh%np_part*hm%d%kpt%nlocal, hm%hm_base%phase)
         hm%hm_base%buff_phase_qn_start = hm%d%kpt%start
       end if
 
@@ -524,8 +524,8 @@ contains
 
     nullify(hm%subsys_hm)
     
-    if(associated(hm%hm_base%phase) .and. opencl_is_enabled()) then
-      call opencl_release_buffer(hm%hm_base%buff_phase)
+    if(associated(hm%hm_base%phase) .and. accel_is_enabled()) then
+      call accel_release_buffer(hm%hm_base%buff_phase)
     end if
 
     SAFE_DEALLOCATE_P(hm%hm_base%phase)
@@ -825,8 +825,8 @@ contains
       if(allocated(this%hm_base%uniform_vector_potential)) then
         if(.not. associated(this%hm_base%phase)) then
           SAFE_ALLOCATE(this%hm_base%phase(1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
-          if(opencl_is_enabled()) then
-            call opencl_create_buffer(this%hm_base%buff_phase, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, mesh%np_part*this%d%kpt%nlocal)
+          if(accel_is_enabled()) then
+            call accel_create_buffer(this%hm_base%buff_phase, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, mesh%np_part*this%d%kpt%nlocal)
           end if
         end if
 
@@ -839,8 +839,8 @@ contains
               + this%hm_base%uniform_vector_potential(1:mesh%sb%dim))))
           end forall
         end do
-        if(opencl_is_enabled()) then
-          call opencl_write_buffer(this%hm_base%buff_phase, mesh%np_part*this%d%kpt%nlocal, this%hm_base%phase)
+        if(accel_is_enabled()) then
+          call accel_write_buffer(this%hm_base%buff_phase, mesh%np_part*this%d%kpt%nlocal, this%hm_base%phase)
         end if
       end if
 
@@ -852,8 +852,8 @@ contains
 
         if(.not. allocated(this%hm_base%projector_phases)) then
           SAFE_ALLOCATE(this%hm_base%projector_phases(1:max_npoints, nmat, this%d%kpt%start:this%d%kpt%end))
-          if(opencl_is_enabled()) then
-            call opencl_create_buffer(this%hm_base%buff_projector_phases, ACCEL_MEM_READ_ONLY, &
+          if(accel_is_enabled()) then
+            call accel_create_buffer(this%hm_base%buff_projector_phases, ACCEL_MEM_READ_ONLY, &
               TYPE_CMPLX, this%hm_base%total_points*this%d%kpt%nlocal)
           end if
         end if
@@ -866,8 +866,8 @@ contains
               this%hm_base%projector_phases(ip, imat, ik) = this%ep%proj(iatom)%phase(ip, ik)
             end do
 
-            if(opencl_is_enabled() .and. this%hm_base%projector_matrices(imat)%npoints > 0) then
-              call opencl_write_buffer(this%hm_base%buff_projector_phases, &
+            if(accel_is_enabled() .and. this%hm_base%projector_matrices(imat)%npoints > 0) then
+              call accel_write_buffer(this%hm_base%buff_projector_phases, &
                 this%hm_base%projector_matrices(imat)%npoints, this%hm_base%projector_phases(1:, imat, ik), offset = offset)
             end if
             offset = offset + this%hm_base%projector_matrices(imat)%npoints
@@ -926,7 +926,7 @@ contains
     if(this%rashba_coupling**2 > M_ZERO) apply = .false.
     if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) apply = .false.
     if(iand(this%xc_family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0)  apply = .false. 
-    if(this%bc%abtype == IMAGINARY_ABSORBING .and. opencl_is_enabled()) apply = .false.
+    if(this%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) apply = .false.
     
   end function hamiltonian_apply_packed
 

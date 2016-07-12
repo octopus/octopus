@@ -134,7 +134,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   if(batch_status(v_local) == BATCH_CL_PACKED) then
     nn = product(handle%ghost_send%pack%size(1:2))
     SAFE_ALLOCATE(handle%X(send_buffer)(1:nn))
-    call opencl_read_buffer(handle%ghost_send%pack%buffer, nn, handle%X(send_buffer))
+    call accel_read_buffer(handle%ghost_send%pack%buffer, nn, handle%X(send_buffer))
   end if
 
   select case(batch_status(v_local))
@@ -203,7 +203,7 @@ subroutine X(ghost_update_batch_finish)(handle)
   SAFE_DEALLOCATE_P(handle%requests)
 
   if(batch_status(handle%v_local) == BATCH_CL_PACKED) then
-    call opencl_write_buffer(handle%v_local%pack%buffer, handle%v_local%pack%size(1)*handle%vp%np_ghost, &
+    call accel_write_buffer(handle%v_local%pack%buffer, handle%v_local%pack%size(1)*handle%vp%np_ghost, &
       handle%X(recv_buffer), offset = handle%v_local%pack%size(1)*handle%vp%np_local)
     SAFE_DEALLOCATE_P(handle%X(send_buffer))
     SAFE_DEALLOCATE_P(handle%X(recv_buffer))
@@ -259,7 +259,7 @@ contains
     select case(batch_status(ffb))
     case(BATCH_CL_PACKED)
       np = ffb%pack%size(1)*(bndry_end - bndry_start + 1)
-      call opencl_set_buffer_to_zero(ffb%pack%buffer, batch_type(ffb), np, offset = ffb%pack%size(1)*(bndry_start - 1))
+      call accel_set_buffer_to_zero(ffb%pack%buffer, batch_type(ffb), np, offset = ffb%pack%size(1)*(bndry_start - 1))
       call accel_finish()
     case(BATCH_PACKED)
       forall(ip = bndry_start:bndry_end) 
@@ -384,7 +384,7 @@ contains
         end do
 
       case(BATCH_CL_PACKED)
-        call opencl_create_buffer(buff_send, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, ffb%pack%size(1)*maxsend*npart)
+        call accel_create_buffer(buff_send, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, ffb%pack%size(1)*maxsend*npart)
 
         call accel_kernel_start_call(kernel_send, 'boundaries.cl', 'boundaries_periodic_send')
 
@@ -402,8 +402,8 @@ contains
 
         call accel_finish()
 
-        call opencl_read_buffer(buff_send, ffb%pack%size(1)*maxsend*npart, sendbuffer)
-        call opencl_release_buffer(buff_send)
+        call accel_read_buffer(buff_send, ffb%pack%size(1)*maxsend*npart, sendbuffer)
+        call accel_release_buffer(buff_send)
       end select
 
 
@@ -474,8 +474,8 @@ contains
         end do
 
       case(BATCH_CL_PACKED)
-        call opencl_create_buffer(buff_recv, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, ffb%pack%size(1)*maxrecv*npart)
-        call opencl_write_buffer(buff_recv, ffb%pack%size(1)*maxrecv*npart, recvbuffer)
+        call accel_create_buffer(buff_recv, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, ffb%pack%size(1)*maxrecv*npart)
+        call accel_write_buffer(buff_recv, ffb%pack%size(1)*maxrecv*npart, recvbuffer)
 
         call accel_kernel_start_call(kernel_recv, 'boundaries.cl', 'boundaries_periodic_recv')
 
@@ -494,7 +494,7 @@ contains
 
         call accel_finish()
 
-        call opencl_release_buffer(buff_recv)
+        call accel_release_buffer(buff_recv)
       end select
 
       SAFE_DEALLOCATE_A(recvbuffer)        

@@ -234,7 +234,7 @@ contains
     call parse_variable('OperateComplexSingle', OP_FORTRAN, cfunction_global)
     if(.not.varinfo_valid_option('OperateComplexSingle', cfunction_global)) call messages_input_error('OperateComplexSingle')
 
-    if(opencl_is_enabled()) then
+    if(accel_is_enabled()) then
 
       !%Variable OperateOpenCL
       !%Type integer
@@ -596,7 +596,7 @@ contains
       
     end if
 
-    if(opencl_is_enabled() .and. op%const_w) then
+    if(accel_is_enabled() .and. op%const_w) then
 
       write(flags, '(i5)') op%stencil%size
       flags='-DNDIM=3 -DSTENCIL_SIZE='//trim(adjustl(flags))
@@ -612,20 +612,20 @@ contains
         call accel_kernel_build(op%kernel, 'operate.cl', 'operate_nomap', flags)
       end select
 
-      call opencl_create_buffer(op%buff_ri, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, op%nri*op%stencil%size)
-      call opencl_write_buffer(op%buff_ri, op%nri*op%stencil%size, op%ri)
+      call accel_create_buffer(op%buff_ri, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, op%nri*op%stencil%size)
+      call accel_write_buffer(op%buff_ri, op%nri*op%stencil%size, op%ri)
 
       select case(function_opencl)
       case(OP_INVMAP)
-        call opencl_create_buffer(op%buff_imin, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, op%nri)
-        call opencl_write_buffer(op%buff_imin, op%nri, op%rimap_inv(1:))
-        call opencl_create_buffer(op%buff_imax, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, op%nri)
-        call opencl_write_buffer(op%buff_imax, op%nri, op%rimap_inv(2:))
+        call accel_create_buffer(op%buff_imin, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, op%nri)
+        call accel_write_buffer(op%buff_imin, op%nri, op%rimap_inv(1:))
+        call accel_create_buffer(op%buff_imax, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, op%nri)
+        call accel_write_buffer(op%buff_imax, op%nri, op%rimap_inv(2:))
 
       case(OP_MAP)
 
-        call opencl_create_buffer(op%buff_map, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%mesh%np, opencl_max_workgroup_size()))
-        call opencl_write_buffer(op%buff_map, op%mesh%np, (op%rimap - 1)*op%stencil%size)
+        call accel_create_buffer(op%buff_map, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%mesh%np, accel_max_workgroup_size()))
+        call accel_write_buffer(op%buff_map, op%mesh%np, (op%rimap - 1)*op%stencil%size)
 
         if(op%mesh%parallel_in_domains) then
           
@@ -648,14 +648,14 @@ contains
             end if
           end do
           
-          call opencl_create_buffer(op%buff_all, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%mesh%np, opencl_max_workgroup_size()))
-          call opencl_write_buffer(op%buff_all, op%mesh%np, all_points)
+          call accel_create_buffer(op%buff_all, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%mesh%np, accel_max_workgroup_size()))
+          call accel_write_buffer(op%buff_all, op%mesh%np, all_points)
         
-          call opencl_create_buffer(op%buff_inner, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%ninner, opencl_max_workgroup_size()))
-          call opencl_write_buffer(op%buff_inner, op%ninner, inner_points)
+          call accel_create_buffer(op%buff_inner, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%ninner, accel_max_workgroup_size()))
+          call accel_write_buffer(op%buff_inner, op%ninner, inner_points)
           
-          call opencl_create_buffer(op%buff_outer, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%nouter, opencl_max_workgroup_size()))
-          call opencl_write_buffer(op%buff_outer, op%nouter, outer_points)
+          call accel_create_buffer(op%buff_outer, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%nouter, accel_max_workgroup_size()))
+          call accel_write_buffer(op%buff_outer, op%nouter, outer_points)
 
         end if
         
@@ -667,8 +667,8 @@ contains
         ASSERT(op%mesh%sb%dim == 3)
         ASSERT(.not. op%mesh%parallel_in_domains)
 
-        call opencl_create_buffer(op%buff_map, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%mesh%np, opencl_max_workgroup_size()))
-        call opencl_write_buffer(op%buff_map, op%mesh%np, (op%rimap - 1)*op%stencil%size)
+        call accel_create_buffer(op%buff_map, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%mesh%np, accel_max_workgroup_size()))
+        call accel_write_buffer(op%buff_map, op%mesh%np, (op%rimap - 1)*op%stencil%size)
         
         SAFE_ALLOCATE(stencil(1:op%mesh%sb%dim, 1:op%stencil%size + 1))
 
@@ -678,15 +678,15 @@ contains
         stencil(2, op%stencil%size + 1) = mesh%idx%nr(2, 1) - mesh%idx%nr(1, 1) + 1
         stencil(3, op%stencil%size + 1) = stencil(2, op%stencil%size + 1)*(mesh%idx%nr(2, 2) - mesh%idx%nr(1, 2) + 1)
 
-        call opencl_create_buffer(op%buff_stencil, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, op%mesh%sb%dim*(op%stencil%size + 1))
-        call opencl_write_buffer(op%buff_stencil, op%mesh%sb%dim*(op%stencil%size + 1), stencil)
+        call accel_create_buffer(op%buff_stencil, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, op%mesh%sb%dim*(op%stencil%size + 1))
+        call accel_write_buffer(op%buff_stencil, op%mesh%sb%dim*(op%stencil%size + 1), stencil)
         
         SAFE_DEALLOCATE_A(stencil)
 
         size = product(mesh%idx%nr(2, 1:op%mesh%sb%dim) - mesh%idx%nr(1, 1:op%mesh%sb%dim) + 1)
 
-        call opencl_create_buffer(op%buff_xyz_to_ip, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, size)
-        call opencl_write_buffer(op%buff_xyz_to_ip, size, op%mesh%idx%lxyz_inv - 1)
+        call accel_create_buffer(op%buff_xyz_to_ip, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, size)
+        call accel_write_buffer(op%buff_xyz_to_ip, size, op%mesh%idx%lxyz_inv - 1)
 
         SAFE_ALLOCATE(stencil(1:op%mesh%sb%dim, 1:mesh%np_part))
 
@@ -696,8 +696,8 @@ contains
 
         ASSERT(minval(stencil) == 0)
 
-        call opencl_create_buffer(op%buff_ip_to_xyz, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, op%mesh%np_part*op%mesh%sb%dim)
-        call opencl_write_buffer(op%buff_ip_to_xyz, op%mesh%np_part*op%mesh%sb%dim, stencil)
+        call accel_create_buffer(op%buff_ip_to_xyz, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, op%mesh%np_part*op%mesh%sb%dim)
+        call accel_write_buffer(op%buff_ip_to_xyz, op%mesh%np_part*op%mesh%sb%dim, stencil)
 
         SAFE_DEALLOCATE_A(stencil)
 
@@ -1128,27 +1128,27 @@ contains
 
     PUSH_SUB(nl_operator_end)
 
-    if(opencl_is_enabled() .and. op%const_w) then
+    if(accel_is_enabled() .and. op%const_w) then
 
-      call opencl_release_buffer(op%buff_ri)
+      call accel_release_buffer(op%buff_ri)
       select case(function_opencl)
       case(OP_INVMAP)
-        call opencl_release_buffer(op%buff_imin)
-        call opencl_release_buffer(op%buff_imax)
+        call accel_release_buffer(op%buff_imin)
+        call accel_release_buffer(op%buff_imax)
 
       case(OP_MAP)
-        call opencl_release_buffer(op%buff_map)
+        call accel_release_buffer(op%buff_map)
         if(op%mesh%parallel_in_domains) then
-          call opencl_release_buffer(op%buff_all)
-          call opencl_release_buffer(op%buff_inner)
-          call opencl_release_buffer(op%buff_outer)
+          call accel_release_buffer(op%buff_all)
+          call accel_release_buffer(op%buff_inner)
+          call accel_release_buffer(op%buff_outer)
         end if
 
       case(OP_NOMAP)
-        call opencl_release_buffer(op%buff_map)
-        call opencl_release_buffer(op%buff_stencil)
-        call opencl_release_buffer(op%buff_xyz_to_ip)
-        call opencl_release_buffer(op%buff_ip_to_xyz)
+        call accel_release_buffer(op%buff_map)
+        call accel_release_buffer(op%buff_stencil)
+        call accel_release_buffer(op%buff_xyz_to_ip)
+        call accel_release_buffer(op%buff_ip_to_xyz)
       end select
     end if
 

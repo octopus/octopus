@@ -89,10 +89,10 @@ subroutine X(fft_forward)(fft, in, out, norm)
       cin(1:fft_array(slot)%rs_n(1), 1:fft_array(slot)%rs_n(2), 1:fft_array(slot)%rs_n(3)) = &
         in(1:fft_array(slot)%rs_n(1), 1:fft_array(slot)%rs_n(2), 1:fft_array(slot)%rs_n(3))
 
-      call opencl_create_buffer(rsbuffer, ACCEL_MEM_READ_WRITE, TYPE_CMPLX, product(fft_array(slot)%rs_n(1:3)))
-      call opencl_create_buffer(fsbuffer, ACCEL_MEM_READ_WRITE, TYPE_CMPLX, product(fft_array(slot)%fs_n(1:3)))
+      call accel_create_buffer(rsbuffer, ACCEL_MEM_READ_WRITE, TYPE_CMPLX, product(fft_array(slot)%rs_n(1:3)))
+      call accel_create_buffer(fsbuffer, ACCEL_MEM_READ_WRITE, TYPE_CMPLX, product(fft_array(slot)%fs_n(1:3)))
 
-      call opencl_write_buffer(rsbuffer, product(fft_array(slot)%rs_n(1:3)), cin)
+      call accel_write_buffer(rsbuffer, product(fft_array(slot)%rs_n(1:3)), cin)
 
       call accel_finish()
 
@@ -102,12 +102,12 @@ subroutine X(fft_forward)(fft, in, out, norm)
 
       call accel_finish()
 
-      call opencl_read_buffer(fsbuffer, product(fft_array(slot)%fs_n(1:3)), out)
+      call accel_read_buffer(fsbuffer, product(fft_array(slot)%fs_n(1:3)), out)
 
       call accel_finish()
 
-      call opencl_release_buffer(rsbuffer)
-      call opencl_release_buffer(fsbuffer)
+      call accel_release_buffer(rsbuffer)
+      call accel_release_buffer(fsbuffer)
 #endif
     case default
       call messages_write('Invalid FFT library.')
@@ -148,7 +148,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
     if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clfftGetTmpBufSize')
 
     if(tmp_buf_size > 0) then
-      call opencl_create_buffer(tmp_buf, ACCEL_MEM_READ_WRITE, TYPE_BYTE, int(tmp_buf_size, 4))
+      call accel_create_buffer(tmp_buf, ACCEL_MEM_READ_WRITE, TYPE_BYTE, int(tmp_buf_size, 4))
     end if
 
     if(tmp_buf_size > 0) then
@@ -165,7 +165,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
 
     call accel_finish()
 
-    if(tmp_buf_size > 0) call opencl_release_buffer(tmp_buf)
+    if(tmp_buf_size > 0) call accel_release_buffer(tmp_buf)
 
 #endif
 
@@ -248,10 +248,10 @@ subroutine X(fft_forward)(fft, in, out, norm)
     case(FFTLIB_OPENCL)
 #ifdef HAVE_CLFFT
 
-      call opencl_create_buffer(rsbuffer, ACCEL_MEM_READ_WRITE, TYPE_CMPLX, product(fft_array(slot)%rs_n(1:3)))
-      call opencl_create_buffer(fsbuffer, ACCEL_MEM_READ_WRITE, TYPE_CMPLX, product(fft_array(slot)%fs_n(1:3)))
+      call accel_create_buffer(rsbuffer, ACCEL_MEM_READ_WRITE, TYPE_CMPLX, product(fft_array(slot)%rs_n(1:3)))
+      call accel_create_buffer(fsbuffer, ACCEL_MEM_READ_WRITE, TYPE_CMPLX, product(fft_array(slot)%fs_n(1:3)))
 
-      call opencl_write_buffer(fsbuffer, product(fft_array(slot)%fs_n(1:3)), in)
+      call accel_write_buffer(fsbuffer, product(fft_array(slot)%fs_n(1:3)), in)
 
       call accel_finish()
 
@@ -263,15 +263,15 @@ subroutine X(fft_forward)(fft, in, out, norm)
 
       SAFE_ALLOCATE(cout(1:fft_array(slot)%rs_n(1), 1:fft_array(slot)%rs_n(2), 1:fft_array(slot)%rs_n(3)))
 
-      call opencl_read_buffer(rsbuffer, product(fft_array(slot)%rs_n(1:3)), cout)
+      call accel_read_buffer(rsbuffer, product(fft_array(slot)%rs_n(1:3)), cout)
 
       call accel_finish()
 
       out(1:fft_array(slot)%rs_n(1), 1:fft_array(slot)%rs_n(2), 1:fft_array(slot)%rs_n(3)) = &
         cout(1:fft_array(slot)%rs_n(1), 1:fft_array(slot)%rs_n(2), 1:fft_array(slot)%rs_n(3))
 
-      call opencl_release_buffer(rsbuffer)
-      call opencl_release_buffer(fsbuffer)
+      call accel_release_buffer(rsbuffer)
+      call accel_release_buffer(fsbuffer)
       
       scale = .false. ! scaling is done by the library
 #endif
@@ -329,7 +329,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
     if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clfftGetTmpBufSize')
 
     if(tmp_buf_size > 0) then
-      call opencl_create_buffer(tmp_buf, ACCEL_MEM_READ_WRITE, TYPE_BYTE, int(tmp_buf_size, 4))
+      call accel_create_buffer(tmp_buf, ACCEL_MEM_READ_WRITE, TYPE_BYTE, int(tmp_buf_size, 4))
     end if
 
     if(tmp_buf_size > 0) then
@@ -346,7 +346,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
 
     call accel_finish()
 
-    if(tmp_buf_size > 0) call opencl_release_buffer(tmp_buf)
+    if(tmp_buf_size > 0) call accel_release_buffer(tmp_buf)
 
 #endif
 
