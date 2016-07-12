@@ -1516,23 +1516,23 @@ contains
   
 #include "undef.F90"
 #include "real.F90"
-#include "opencl_inc.F90"
+#include "accel_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
-#include "opencl_inc.F90"
+#include "accel_inc.F90"
 
 #include "undef.F90"
 #include "real_single.F90"
-#include "opencl_inc.F90"
+#include "accel_inc.F90"
 
 #include "undef.F90"
 #include "complex_single.F90"
-#include "opencl_inc.F90"
+#include "accel_inc.F90"
 
 #include "undef.F90"
 #include "integer.F90"
-#include "opencl_inc.F90"
+#include "accel_inc.F90"
 
 end module accel_oct_m
 
