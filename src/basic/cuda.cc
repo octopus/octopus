@@ -40,6 +40,10 @@ typedef int CUfunction;
 
 #include "string_f.h" /* fortran <-> c string compatibility issues */
 
+#include <vector>
+#include <sstream>
+#include <iterator>
+
 using namespace std;
 
 extern "C" void FC_FUNC_(cuda_init, CUDA_INIT)(CUcontext ** context, CUdevice ** device){
@@ -90,13 +94,15 @@ extern "C" void FC_FUNC_(cuda_end, CUDA_END)(CUcontext ** context, CUdevice ** d
 #endif
 }
 
-extern "C" void FC_FUNC_(cuda_build_program, CUDA_BUILD_PROGRAM)(CUmodule ** module, STR_F_TYPE include_path, STR_F_TYPE const fname STR_ARG2){
+extern "C" void FC_FUNC_(cuda_build_program, CUDA_BUILD_PROGRAM)(CUmodule ** module, STR_F_TYPE include_path, STR_F_TYPE const fname, STR_F_TYPE const flags STR_ARG3){
 #ifdef HAVE_CUDA
   char *include_path_c;
   char *fname_c;
+  char *flags_c;
 
   TO_C_STR1(include_path, include_path_c);
   TO_C_STR2(fname, fname_c);
+  TO_C_STR3(flags, flags_c);
   
   // read the source
 
@@ -117,18 +123,22 @@ extern "C" void FC_FUNC_(cuda_build_program, CUDA_BUILD_PROGRAM)(CUmodule ** mod
 
   delete [] source;
 
+  string all_flags = "-DCUDA -default-device " + string("-I") + include_path_c + string(" ") + string(flags_c);
 
-  const char * opts[3];
- 
-  string include = string("-I") + include_path_c;
-  opts[0] = include.c_str();
-  opts[1] = "-DCUDA";
-  opts[2] = "-default-device";
+  stringstream flags_stream(all_flags);
+  istream_iterator<string> iter(flags_stream);
+  istream_iterator<string> end;
+  vector<string> tokens(iter, end);
+  
+  const char ** opts = new const char*[tokens.size()];
+  for (unsigned ii = 0; ii < tokens.size(); ii++) opts[ii] = tokens[ii].c_str();
 
-  cout << "OPTS " << opts[0] << endl;
+  cout << "OPTS " << all_flags << endl;
 
-  nvrtcCompileProgram(prog, 3, opts);
+  nvrtcCompileProgram(prog, tokens.size(), opts);
 
+  free(flags_c);
+  
   size_t logSize;
   nvrtcGetProgramLogSize(prog, &logSize);
   char *log = new char[logSize];

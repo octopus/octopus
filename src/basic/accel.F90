@@ -139,6 +139,9 @@ module accel_oct_m
 #ifdef HAVE_OPENCL
     type(cl_kernel)               :: kernel
 #endif
+#ifdef HAVE_CUDA
+    type(c_ptr)                   :: cuda_kernel
+#endif
     logical                       :: initialized = .false.
     type(accel_kernel_t), pointer :: next
     integer                       :: arg_count
@@ -1472,6 +1475,14 @@ contains
     character(len=*),            intent(in)    :: kernel_name
     character(len=*), optional,  intent(in)    :: flags
 
+#ifdef HAVE_CUDA
+    if(present(flags)) then
+      call cuda_build_program(this%cuda_kernel, trim(conf%share)//'/opencl/', trim(conf%share)//'/opencl/'//trim(file_name), flags)
+    else
+      call cuda_build_program(this%cuda_kernel, trim(conf%share)//'/opencl/', trim(conf%share)//'/opencl/'//trim(file_name), ' ')
+    end if
+#endif
+    
 #ifdef HAVE_OPENCL
     type(cl_program) :: prog
 
