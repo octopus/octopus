@@ -17,7 +17,7 @@ match ; electrons-solvent int. energy ;  GREPFIELD(static/info, 'E_e-solvent =',
 match ; nuclei-solvent int. energy    ;  GREPFIELD(static/info, 'E_n-solvent =', 3)     ;  23.86066947
 match ; molecule-solvent int. energy  ;  GREPFIELD(static/info, 'E_M-solvent =', 3)     ;  -3.21579859
 match ; electronic pol. charge        ;  GREPFIELD(pcm/pcm_info.out, '       9   ', 7)  ;  -7.94244818
-match ; nuclear pol. charge           ;  GREPFIELD(pcm/pcm_info.out, '       9   ', 8)  ;   6.99925894
+match ; nuclear pol. charge           ;  GREPFIELD(pcm/pcm_info.out, '       9   ', 9)  ;   6.99925894
 
 
 Input      : 29-pcm_chlorine_anion.02-td_prop.inp
