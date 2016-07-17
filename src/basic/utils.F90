@@ -244,6 +244,9 @@ contains
 #ifdef HAVE_OPENCL
     get_config_opts = trim(get_config_opts)//' opencl'
 #endif
+#ifdef HAVE_CUDA
+    get_config_opts = trim(get_config_opts)//' cuda'
+#endif
 #ifdef HAVE_M128D
     get_config_opts = trim(get_config_opts)//' sse2'
 #endif

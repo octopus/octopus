@@ -19,6 +19,14 @@
 
 #include "global.h"
 
+#if defined(HAVE_OPENCL) && defined(HAVE_CUDA)
+#error "Cannot compile with OpenCL and Cuda support at the same time"
+#endif
+
+#if defined(HAVE_OPENCL) || defined(HAVE_CUDA)
+#define HAVE_ACCEL 1
+#endif
+
 module accel_oct_m
 #ifdef HAVE_OPENCL
   use cl
@@ -31,6 +39,7 @@ module accel_oct_m
 #endif
   use global_oct_m
   use io_oct_m
+  use iso_c_binding
   use loct_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -87,6 +96,8 @@ module accel_oct_m
   type accel_context_t
 #ifdef HAVE_OPENCL
     type(cl_context) :: cl_context
+#elif defined(HAVE_CUDA)
+    type(c_ptr)      :: cuda_context
 #else
     integer          :: dummy
 #endif
@@ -95,16 +106,18 @@ module accel_oct_m
   type accel_device_t
 #ifdef HAVE_OPENCL
     type(cl_device_id) :: cl_device
+#elif defined(HAVE_CUDA)
+    type(c_ptr)      :: cuda_device
 #else
     integer         :: dummy
 #endif
   end type accel_device_t
 
   type accel_t 
-#ifdef HAVE_OPENCL
     type(accel_context_t)  :: context
-    type(cl_command_queue) :: command_queue
     type(accel_device_t)   :: device
+#ifdef HAVE_OPENCL
+    type(cl_command_queue) :: command_queue
 #endif
     integer                :: max_workgroup_size
     integer(8)             :: local_memory_size
@@ -215,7 +228,7 @@ module accel_oct_m
 contains
 
   pure logical function accel_is_enabled() result(enabled)
-#ifdef HAVE_OPENCL
+#ifdef HAVE_ACCEL
     enabled = accel%enabled
 #else
     enabled = .false.
@@ -253,17 +266,17 @@ contains
     !% to <tt>yes</tt> you tell Octopus not to use OpenCL.
     !%End
 
-#ifndef HAVE_OPENCL
-    default = .true.
-#else
+#ifdef HAVE_ACCEL
     default = .false.
+#else
+    default = .true.
 #endif
     call parse_variable('DisableOpenCL', default, disable)
     accel%enabled = .not. disable
 
-#ifndef HAVE_OPENCL
+#ifndef HAVE_ACCEL
     if(accel%enabled) then
-      message(1) = 'Octopus was compiled without OpenCL support.'
+      message(1) = 'Octopus was compiled without OpenCL or Cuda support.'
       call messages_fatal(1)
     end if
 #endif
@@ -318,11 +331,21 @@ contains
       call messages_fatal(1)
     end if
 
-    call messages_print_stress(stdout, "OpenCL")
+    call messages_print_stress(stdout, "GPU acceleration")
 
+#ifdef HAVE_CUDA
+    call messages_write('Library: CUDA')
+    call messages_info()
+
+    call cuda_init(accel%context%cuda_context, accel%device%cuda_device)
+#endif
+    
 #ifdef HAVE_OPENCL
     call profiling_in(prof_init, 'CL_INIT')
 
+    call messages_write('Library: OpenCL')
+    call messages_info()
+    
     call clGetPlatformIDs(nplatforms, cl_status)
     if(cl_status /= CL_SUCCESS) call opencl_print_error(cl_status, "GetPlatformIDs")
 

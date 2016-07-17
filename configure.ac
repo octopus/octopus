@@ -115,6 +115,11 @@ if test -n "${enable_openmp}" -a x"${enable_openmp}" != x"no"; then
   HAVE_OPENMP=1
 fi
 
+AC_ARG_ENABLE(cuda, AS_HELP_STRING([--enable-cuda], [Cuda support (experimental)]))
+if test x"${enable_cuda}" == x"yes" ; then
+  AC_DEFINE(HAVE_CUDA, 1, [defined if cuda support is enabled])
+fi
+
 if test x"${enable_opencl}" == x"yes" ; then
   AC_MSG_WARN([
   
