@@ -147,27 +147,27 @@ module accel_oct_m
   type(accel_t), public :: accel
 
   ! the kernels
-  type(accel_kernel_t), public, target :: kernel_vpsi
-  type(accel_kernel_t), public, target :: kernel_vpsi_spinors
-  type(accel_kernel_t), public, target :: kernel_daxpy
-  type(accel_kernel_t), public, target :: kernel_zaxpy
-  type(accel_kernel_t), public, target :: kernel_copy
-  type(accel_kernel_t), public, target :: dpack
-  type(accel_kernel_t), public, target :: zpack
-  type(accel_kernel_t), public, target :: dunpack
-  type(accel_kernel_t), public, target :: zunpack
-  type(accel_kernel_t), public, target :: kernel_subarray_gather
-  type(accel_kernel_t), public, target :: kernel_density_real
-  type(accel_kernel_t), public, target :: kernel_density_complex
-  type(accel_kernel_t), public, target :: kernel_phase
-  type(accel_kernel_t), public, target :: dkernel_dot_matrix
-  type(accel_kernel_t), public, target :: zkernel_dot_matrix
-  type(accel_kernel_t), public, target :: zkernel_dot_matrix_spinors
-  type(accel_kernel_t), public, target :: dzmul
-  type(accel_kernel_t), public, target :: zzmul
+  type(accel_kernel_t), public, target, save :: kernel_vpsi
+  type(accel_kernel_t), public, target, save :: kernel_vpsi_spinors
+  type(accel_kernel_t), public, target, save :: kernel_daxpy
+  type(accel_kernel_t), public, target, save :: kernel_zaxpy
+  type(accel_kernel_t), public, target, save :: kernel_copy
+  type(accel_kernel_t), public, target, save :: dpack
+  type(accel_kernel_t), public, target, save :: zpack
+  type(accel_kernel_t), public, target, save :: dunpack
+  type(accel_kernel_t), public, target, save :: zunpack
+  type(accel_kernel_t), public, target, save :: kernel_subarray_gather
+  type(accel_kernel_t), public, target, save :: kernel_density_real
+  type(accel_kernel_t), public, target, save :: kernel_density_complex
+  type(accel_kernel_t), public, target, save :: kernel_phase
+  type(accel_kernel_t), public, target, save :: dkernel_dot_matrix
+  type(accel_kernel_t), public, target, save :: zkernel_dot_matrix
+  type(accel_kernel_t), public, target, save :: zkernel_dot_matrix_spinors
+  type(accel_kernel_t), public, target, save :: dzmul
+  type(accel_kernel_t), public, target, save :: zzmul
 
   ! kernels used locally
-  type(accel_kernel_t)         :: set_zero
+  type(accel_kernel_t), save :: set_zero
 
   interface accel_create_buffer
     module procedure accel_create_buffer_4
