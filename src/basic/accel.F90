@@ -497,9 +497,22 @@ contains
       accel%shared_mem = .false.
     end select
 
-    call accel_kernel_global_init()
-   
+#ifdef HAVE_CLBLAS
+    call clblasSetup(cl_status)
+    if(cl_status /= clblasSuccess) call clblas_print_error(cl_status, 'clblasSetup')
+#endif
+
+#ifdef HAVE_CLFFT
+    call clfftSetup(cl_status)
+    if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clfftSetup')
+#endif
+
+    call profiling_out(prof_init)
+#endif
+       
     ! now initialize the kernels
+    call accel_kernel_global_init()
+
     call accel_kernel_start_call(set_zero, 'set_zero.cl', "set_zero")
     call accel_kernel_start_call(kernel_vpsi, 'vpsi.cl', "vpsi")
     call accel_kernel_start_call(kernel_vpsi_spinors, 'vpsi.cl', "vpsi_spinors")
@@ -520,18 +533,6 @@ contains
     call accel_kernel_start_call(dzmul, 'mul.cl', "dzmul", flags = '-DRTYPE_DOUBLE')
     call accel_kernel_start_call(zzmul, 'mul.cl', "zzmul", flags = '-DRTYPE_COMPLEX')
 
-#ifdef HAVE_CLBLAS
-    call clblasSetup(cl_status)
-    if(cl_status /= clblasSuccess) call clblas_print_error(cl_status, 'clblasSetup')
-#endif
-
-#ifdef HAVE_CLFFT
-    call clfftSetup(cl_status)
-    if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clfftSetup')
-#endif
-
-    call profiling_out(prof_init)
-#endif
     !%Variable OpenCLBenchmark
     !%Type logical
     !%Default no
@@ -710,6 +711,10 @@ contains
 #endif
 
     if(accel_is_enabled()) then
+#ifdef HAVE_CUDA
+      call cuda_end()
+#endif
+
 #ifdef HAVE_OPENCL
       call clReleaseCommandQueue(accel%command_queue, ierr)
 

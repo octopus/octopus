@@ -79,6 +79,16 @@ extern "C" void FC_FUNC_(cuda_init, CUDA_INIT)(CUcontext ** context, CUdevice **
 #endif
 }
 
+extern "C" void FC_FUNC_(cuda_end, CUDA_END)(CUcontext ** context, CUdevice ** device){
+#ifdef HAVE_CUDA
+
+  cuCtxDestroy(**context);
+  
+  delete *context;
+  delete *device;
+#endif
+}
+
 extern "C" void FC_FUNC_(cuda_build_program, CUDA_BUILD_PROGRAM)(CUmodule ** module, STR_F_TYPE include_path, STR_F_TYPE const fname STR_ARG2){
 #ifdef HAVE_CUDA
   char *include_path_c;
