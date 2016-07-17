@@ -31,6 +31,7 @@ typedef int CUmodule;
 typedef int CUfunction;
 #endif
 
+#include <stdlib.h> //we have to include this before cmath to workaround a bug in the PGI "compiler".
 #include <cmath>
 
 #include <iostream>
