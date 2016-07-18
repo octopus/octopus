@@ -485,7 +485,6 @@ contains
       CL_QUEUE_PROFILING_ENABLE, cl_status)
     if(cl_status /= CL_SUCCESS) call opencl_print_error(cl_status, "CreateCommandQueue")
 
-    call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_MAX_WORK_GROUP_SIZE, accel%max_workgroup_size, cl_status)
     call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_LOCAL_MEM_SIZE, accel%local_memory_size, cl_status)
     call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_GLOBAL_MEM_SIZE, accel%global_memory_size, cl_status)
 
@@ -511,6 +510,13 @@ contains
 #endif
 
     call profiling_out(prof_init)
+#endif
+
+#ifdef HAVE_OPENCL
+    call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_MAX_WORK_GROUP_SIZE, accel%max_workgroup_size, cl_status)
+#endif
+#ifdef HAVE_CUDA
+    call cuda_device_max_threads_per_block(accel%device%cuda_device, accel%max_workgroup_size)
 #endif
        
     ! now initialize the kernels

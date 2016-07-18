@@ -44,6 +44,8 @@ typedef int CUfunction;
 #include <sstream>
 #include <iterator>
 
+#include <fortran_types.h>
+
 using namespace std;
 
 extern "C" void FC_FUNC_(cuda_init, CUDA_INIT)(CUcontext ** context, CUdevice ** device){
@@ -187,3 +189,8 @@ extern "C" void FC_FUNC_(cuda_release_program, CUDA_RELEASE_PROGRAM)(CUmodule **
 #endif
 }
 
+extern "C" void FC_FUNC_(cuda_device_max_threads_per_block, CUDA_DEVICE_MAX_THREADS_PER_BLOCK)(CUdevice ** device, fint * max_threads){
+  int value;
+  cuDeviceGetAttribute (&value, CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_BLOCK, **device);
+  *max_threads = value;
+}
