@@ -105,23 +105,16 @@ extern "C" void FC_FUNC_(cuda_build_program, CUDA_BUILD_PROGRAM)(CUmodule ** mod
   TO_C_STR3(flags, flags_c);
   
   // read the source
+  
+  string source;
 
-  std::ifstream source_file;
-  source_file.open(fname_c);
-  source_file.seekg(0, std::ios::end);
-  size_t length = source_file.tellg();
-  char * source =  new char[length];
-  source_file.seekg(0, std::ios::beg);
-  source_file.read(source, length);
-  source_file.close();        
+  source = "#include \"" + string(fname_c) + "\"\n";
 
-  //cout << source << endl;
+  // cout << source << "|" << endl;
 
   nvrtcProgram prog;
-  nvrtcCreateProgram(&prog, source, fname_c, 0, NULL,NULL);
+  nvrtcCreateProgram(&prog, source.c_str(), "kernel_include.c", 0, NULL,NULL);
   free(fname_c);
-
-  delete [] source;
 
   cout << fname << endl;
 
