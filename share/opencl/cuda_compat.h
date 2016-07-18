@@ -75,38 +75,53 @@ __device__ __forceinline__ static int get_local_size(const int ii){
   return 0;
 }
 
-__device__ __forceinline__ static double2 operator*(const double & a, const double2 & b){
-  double2 c;
+#define double2 Double2
+
+class double2{
+ public:
+  double x;
+  double y;
+  __forceinline__ double2(const double & a = 0, const double & b = 0):x(a), y(b){}
+};
+
+__forceinline__ static Double2 operator*(const double & a, const Double2 & b){
+  Double2 c;
   c.x = a*b.x;
   c.y = a*b.y;
   return c;
 }
 
-__device__ __forceinline__ static double2 operator*(const double2 & a, const double2 & b){
-  double2 c;
+__forceinline__ static Double2 operator*(const Double2 & a, const Double2 & b){
+  Double2 c;
   c.x = a.x*b.x;
   c.y = a.y*b.y;
   return c;
 }
 
-__device__ __forceinline__ static double2 operator+(const double2 & a, const double2 & b){
-  double2 c;
+__forceinline__ static Double2 operator+(const Double2 & a, const Double2 & b){
+  Double2 c;
   c.x = a.x + b.x;
   c.y = a.y + b.y;
   return c;
 }
 
-__device__ __forceinline__ static double2 operator+=(double2 & a, const double2 & b){
+__forceinline__ static Double2 operator+=(Double2 & a, const Double2 & b){
   a.x += b.x;
   a.y += b.y;
   return a;
 }
 
-__device__ __forceinline__ static double2 operator/(const double2 & a, const double & b){
-  double2 c;
+__forceinline__ static Double2 operator/(const Double2 & a, const double & b){
+  Double2 c;
   c.x = a.x/b;
   c.y = a.y/b;
   return c;
+}
+
+__forceinline__ static double sincos(const double & x, double * cosx){
+  double sinx;
+  sincos(x, &sinx, cosx);
+  return sinx;
 }
 
 #endif

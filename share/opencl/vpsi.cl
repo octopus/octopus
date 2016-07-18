@@ -54,8 +54,8 @@ __kernel void vpsi_spinors(const int np,
     const double2 psi2 = psi[ip*ldpsi + ist + 1];
 
 #ifdef CUDA
-    vpsi[ip*ldvpsi + ist] += vi1*psi1 + make_double2(vi3*psi2.x - vi4*psi2.y, vi3*psi2.y + vi4*psi2.x);
-    vpsi[ip*ldvpsi + ist + 1] += vi2*psi2 + make_double2(vi3*psi1.x + vi4*psi1.y, vi3*psi1.y - vi4*psi1.x);
+    vpsi[ip*ldvpsi + ist] += vi1*psi1 + double2(vi3*psi2.x - vi4*psi2.y, vi3*psi2.y + vi4*psi2.x);
+    vpsi[ip*ldvpsi + ist + 1] += vi2*psi2 + double2(vi3*psi1.x + vi4*psi1.y, vi3*psi1.y - vi4*psi1.x);
 #else
     vpsi[ip*ldvpsi + ist] += vi1*psi1 + (double2)(vi3*psi2.x - vi4*psi2.y, vi3*psi2.y + vi4*psi2.x);
     vpsi[ip*ldvpsi + ist + 1] += vi2*psi2 + (double2)(vi3*psi1.x + vi4*psi1.y, vi3*psi1.y - vi4*psi1.x);

@@ -26,7 +26,7 @@
 
 inline double2 complex_conj(const double2 a){
 #ifdef CUDA
-  return make_double2(a.x, -a.y);
+  return double2(a.x, -a.y);
 #else
     return (double2) (a.x, -a.y);
 #endif
@@ -34,7 +34,7 @@ inline double2 complex_conj(const double2 a){
 
 inline double2 complex_mul(const double2 a, const double2 b){
 #ifdef CUDA
-  return make_double2(a.x*b.x - a.y*b.y, a.y*b.x + a.x*b.y);
+  return double2(a.x*b.x - a.y*b.y, a.y*b.x + a.x*b.y);
 #else
   return (double2)(a.x*b.x - a.y*b.y, a.y*b.x + a.x*b.y);
 #endif

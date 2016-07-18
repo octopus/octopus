@@ -22,7 +22,7 @@
 #include <cl_global.h>
 #include <cl_complex.h>
 
-#ifdef EXT_KHR_FP64
+#if defined(EXT_KHR_FP64) || defined(CUDA)
 #define HAVE_SINCOS
 #endif
 
@@ -43,10 +43,14 @@ __kernel void phase(const int offset,
   double cc = (double) fcc;
 #endif
 
-  double2 ff = psi[(ip<<ldpsi) + ist];
+  const double2 ff = psi[(ip<<ldpsi) + ist];
 
+#ifdef CUDA
+  psi[(ip<<ldpsi) + ist] = double2(cc*ff.x + ss*ff.y, cc*ff.y - ss*ff.x);
+#else
   psi[(ip<<ldpsi) + ist] = (double2)(cc*ff.x + ss*ff.y, cc*ff.y - ss*ff.x);
-
+#endif
+  
 }
 
 __kernel void phase_hamiltonian(const int conjugate,
@@ -58,8 +62,6 @@ __kernel void phase_hamiltonian(const int conjugate,
   
   const int ist = get_global_id(0);
   const int ip  = get_global_id(1);
-
-  double2 ff = psi[(ip<<ldpsi) + ist];
 
   if(ip >= np) return;
 
