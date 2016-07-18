@@ -1568,22 +1568,27 @@ contains
 
   ! ---------------------------------------------------------
   !> generate a hydrogen s-wavefunction around a random point
-  subroutine states_generate_random(st, mesh, ist_start_, ist_end_, normalized)
+  subroutine states_generate_random(st, mesh, ist_start_, ist_end_, ikpt_start_, ikpt_end_, normalized)
     type(states_t),    intent(inout) :: st
     type(mesh_t),      intent(in)    :: mesh
     integer, optional, intent(in)    :: ist_start_
     integer, optional, intent(in)    :: ist_end_
+    integer, optional, intent(in)    :: ikpt_start_
+    integer, optional, intent(in)    :: ikpt_end_
     logical, optional, intent(in)    :: normalized !< whether generate states should have norm 1, true by default
     
-    integer :: ist, ik, id, ist_start, ist_end, jst
+    integer :: ist, ik, id, ist_start, ist_end, jst, ikpt_start, ikpt_end
     CMPLX   :: alpha, beta
     FLOAT, allocatable :: dpsi(:,  :)
     CMPLX, allocatable :: zpsi(:,  :), zpsi2(:)
 
     PUSH_SUB(states_generate_random)
-
+ 
     ist_start = optional_default(ist_start_, 1)
     ist_end   = optional_default(ist_end_,   st%nst)
+    ikpt_start = optional_default(ikpt_start_, 1)  
+    ikpt_end = optional_default(ikpt_end_, st%d%nik)
+    
 
     if (states_are_real(st)) then
       SAFE_ALLOCATE(dpsi(1:mesh%np, 1:st%d%dim))
@@ -1594,7 +1599,7 @@ contains
     select case(st%d%ispin)
     case(UNPOLARIZED, SPIN_POLARIZED)
 
-      do ik = 1, st%d%nik
+      do ik = ikpt_start, ikpt_end
         do ist = ist_start, ist_end
           if (states_are_real(st)) then
             call dmf_random(mesh, dpsi(:, 1), normalized = normalized)
@@ -1619,7 +1624,7 @@ contains
 
       if(st%fixed_spins) then
 
-        do ik = 1, st%d%nik
+        do ik = ikpt_start, ikpt_end
           do ist = ist_start, ist_end
             call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
             if(.not. state_kpt_is_local(st, ist, ik)) cycle
@@ -1652,7 +1657,7 @@ contains
           end do
         end do
       else
-        do ik = 1, st%d%nik
+        do ik = ikpt_start, ikpt_end
           do ist = ist_start, ist_end
             do id = 1, st%d%dim
               call zmf_random(mesh, zpsi(:, id), normalized = normalized)
