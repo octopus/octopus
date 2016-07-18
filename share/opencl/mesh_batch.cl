@@ -75,8 +75,13 @@ __kernel void zdot_matrix_spinors(const int np,
   for(int ip = 0; ip < np; ip++){
     double4 a1 = xx[(ip<<ldxx) + ist];
     double4 a2 = yy[(ip<<ldyy) + jst];
-    tmp1 += complex_mul(complex_conj((double2)(a1.s0, a1.s1)), (double2)(a2.s0, a2.s1));
-    tmp2 += complex_mul(complex_conj((double2)(a1.s2, a1.s3)), (double2)(a2.s2, a2.s3));
+#ifdef CUDA
+    tmp1 += complex_mul(complex_conj(double2(a1.x, a1.y)), double2(a2.x, a2.y));
+    tmp2 += complex_mul(complex_conj(double2(a1.z, a1.w)), double2(a2.z, a2.w));
+#else
+    tmp1 += complex_mul(complex_conj((double2)(a1.x, a1.y)), (double2)(a2.x, a2.y));
+    tmp2 += complex_mul(complex_conj((double2)(a1.z, a1.w)), (double2)(a2.z, a2.w));
+#endif
   }
   dot[ist + lddot*jst] = tmp1 + tmp2;
 }

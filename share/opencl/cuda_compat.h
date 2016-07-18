@@ -24,8 +24,10 @@
 
 #define __kernel extern "C" __global__
 #define __global
-#define __constant
+#define __constant       // perhaps there is a type of memory for this
+#define __local          // for the moment local memory is "emulated" with global memory
 #define restrict __restrict__
+#define barrier(x) __syncthreads()
 
 __device__ __forceinline__ static int get_global_id(const int ii){
   switch(ii){

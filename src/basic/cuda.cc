@@ -112,11 +112,11 @@ extern "C" void FC_FUNC_(cuda_build_program, CUDA_BUILD_PROGRAM)(CUmodule ** mod
 
   // cout << source << "|" << endl;
 
+  cout << fname_c << endl;
+
   nvrtcProgram prog;
   nvrtcCreateProgram(&prog, source.c_str(), "kernel_include.c", 0, NULL,NULL);
   free(fname_c);
-
-  cout << fname << endl;
 
   string all_flags = "-DCUDA -default-device " + string("-I") + include_path_c + string(" ") + string(flags_c);
 
