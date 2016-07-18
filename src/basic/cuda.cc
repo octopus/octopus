@@ -182,10 +182,16 @@ extern "C" void FC_FUNC_(cuda_create_kernel, CUDA_CREATE_KERNEL)(CUfunction ** k
 #endif
 }
 
-extern "C" void FC_FUNC_(cuda_release_program, CUDA_RELEASE_PROGRAM)(CUmodule ** module){
+extern "C" void FC_FUNC_(cuda_release_module, CUDA_RELEASE_MODULE)(CUmodule ** module){
 #ifdef HAVE_CUDA
   cuModuleUnload(**module); 
-  delete [] *module;
+  delete *module;
+#endif
+}
+
+extern "C" void FC_FUNC_(cuda_release_kernel, CUDA_RELEASE_KERNEL)(CUfunction ** kernel){
+#ifdef HAVE_CUDA
+  delete *kernel;
 #endif
 }
 

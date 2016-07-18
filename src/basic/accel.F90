@@ -141,6 +141,7 @@ module accel_oct_m
 #endif
 #ifdef HAVE_CUDA
     type(c_ptr)                   :: cuda_kernel
+    type(c_ptr)                   :: cuda_module
 #endif
     logical                       :: initialized = .false.
     type(accel_kernel_t), pointer :: next
@@ -1482,11 +1483,15 @@ contains
     character(len=*), optional,  intent(in)    :: flags
 
 #ifdef HAVE_CUDA
+    type(c_ptr) :: cuda_module
+    
     if(present(flags)) then
-      call cuda_build_program(this%cuda_kernel, trim(conf%share)//'/opencl/', trim(conf%share)//'/opencl/'//trim(file_name), flags)
+      call cuda_build_program(this%cuda_module, trim(conf%share)//'/opencl/', trim(conf%share)//'/opencl/'//trim(file_name), flags)
     else
-      call cuda_build_program(this%cuda_kernel, trim(conf%share)//'/opencl/', trim(conf%share)//'/opencl/'//trim(file_name), ' ')
+      call cuda_build_program(this%cuda_module, trim(conf%share)//'/opencl/', trim(conf%share)//'/opencl/'//trim(file_name), ' ')
     end if
+    
+    call cuda_create_kernel(this%cuda_kernel, this%cuda_module, trim(kernel_name))
 #endif
     
 #ifdef HAVE_OPENCL
@@ -1513,6 +1518,11 @@ contains
 
       PUSH_SUB(accel_kernel_end)
 
+#ifdef HAVE_CUDA
+      call cuda_release_module(this%cuda_module)
+      call cuda_release_kernel(this%cuda_kernel)
+#endif
+      
 #ifdef HAVE_OPENCL
       call clReleaseKernel(this%kernel, ierr)
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "release_kernel")
