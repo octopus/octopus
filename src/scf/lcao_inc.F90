@@ -325,10 +325,11 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
 #ifdef HAVE_MPI
   if(st%d%kpt%parallel) then
     ASSERT(.not. st%parallel_in_states)
-    SAFE_ALLOCATE(tmp(1:nst, kstart:kend))
+    SAFE_ALLOCATE(tmp(1:st%nst, kstart:kend))
     tmp(1:nst, kstart:kend) = st%eigenval(1:nst, kstart:kend)
-    call MPI_Allgatherv(tmp(:, kstart:), nst * (kend - kstart + 1), MPI_FLOAT, &
-         st%eigenval, st%d%kpt%num(:) * nst, (st%d%kpt%range(1, :) - 1) * nst, MPI_FLOAT, &
+    if(nst<st%nst) tmp(nst+1:st%nst, kstart:kend) = M_ZERO
+    call MPI_Allgatherv(tmp(:, kstart:), st%nst * (kend - kstart + 1), MPI_FLOAT, &
+         st%eigenval, st%d%kpt%num(:) * st%nst, (st%d%kpt%range(1, :)-1) * st%nst, MPI_FLOAT, &
          st%d%kpt%mpi_grp%comm, mpi_err)
     SAFE_DEALLOCATE_A(tmp)
   end if
