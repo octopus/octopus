@@ -190,7 +190,9 @@ extern "C" void FC_FUNC_(cuda_release_program, CUDA_RELEASE_PROGRAM)(CUmodule **
 }
 
 extern "C" void FC_FUNC_(cuda_device_max_threads_per_block, CUDA_DEVICE_MAX_THREADS_PER_BLOCK)(CUdevice ** device, fint * max_threads){
+#ifdef HAVE_CUDA
   int value;
   cuDeviceGetAttribute (&value, CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_BLOCK, **device);
   *max_threads = value;
+#endif
 }
