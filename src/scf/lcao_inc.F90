@@ -35,7 +35,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel,
 
   type(species_t), pointer :: spec
   integer :: idim, iatom, jj, ip, ispin, ii, ll, mm
-  FLOAT, allocatable :: ao(:), dorbital(:)
+  FLOAT, allocatable :: dorbital(:)
   R_TYPE, allocatable :: orbital(:)
   FLOAT :: radius
   type(profile_t), save :: prof
@@ -58,7 +58,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel,
 
   call species_iwf_ilm(spec, jj, ispin, ii, ll, mm)
 
-  radius = this%orbital_scale_factor*species_get_iwf_radius(geo%atom(iatom)%species, ii, ispin)
+  radius = this%orbital_scale_factor*species_get_iwf_radius(spec, ii, ispin)
   ! make sure that if the spacing is too large, the orbitals fit in a few points at least
   radius = max(radius, CNST(2.0)*maxval(mesh%spacing(1:mesh%sb%dim)))
   
@@ -66,10 +66,8 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel,
 
 #ifdef R_TCOMPLEX
   if(.not. this%complex_ylms) then
-    SAFE_ALLOCATE(ao(1:mesh%np))
-
     SAFE_ALLOCATE(dorbital(1:sphere%np))
-    call dspecies_get_orbital_submesh(geo%atom(iatom)%species, sphere, ii, ll, mm, ispin, geo%atom(iatom)%x, dorbital)
+    call dspecies_get_orbital_submesh(spec, sphere, ii, ll, mm, ispin, geo%atom(iatom)%x, dorbital)
     if(.not. optional_default(add, .false.)) psi(1:mesh%np, idim) = CNST(0.0)
     call submesh_add_to_mesh(sphere, dorbital, psi(:, idim))
 
@@ -79,7 +77,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel,
 
     SAFE_ALLOCATE(orbital(1:sphere%np))
 
-    call X(species_get_orbital_submesh)(geo%atom(iatom)%species, sphere, ii, ll, mm, ispin, geo%atom(iatom)%x, orbital)
+    call X(species_get_orbital_submesh)(spec, sphere, ii, ll, mm, ispin, geo%atom(iatom)%x, orbital)
     
     if(.not. optional_default(add, .false.)) psi(1:mesh%np, idim) = CNST(0.0)
     call submesh_add_to_mesh(sphere, orbital, psi(:, idim))
