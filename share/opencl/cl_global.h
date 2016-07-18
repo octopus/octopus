@@ -30,6 +30,10 @@
 //#pragma OPENCL EXTENSION cl_amd_printf:enable
 #endif
 
+#ifdef CUDA
+#include <cuda_compat.h>
+#endif
+
 #endif
 
 /*

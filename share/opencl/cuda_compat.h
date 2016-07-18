@@ -74,4 +74,24 @@ __device__ __forceinline__ static int get_local_size(const int ii){
   return 0;
 }
 
+__device__ __forceinline__ static double2 operator*(const double & a, const double2 & b){
+  double2 c;
+  c.x = a*b.x;
+  c.y = a*b.y;
+  return c;
+}
+
+__device__ __forceinline__ static double2 operator+(const double2 & a, const double2 & b){
+  double2 c;
+  c.x = a.x + b.x;
+  c.y = a.y + b.y;
+  return c;
+}
+
+__device__ __forceinline__ static double2 operator+=(double2 & a, const double2 & b){
+  a.x += b.x;
+  a.y += b.y;
+  return a;
+}
+
 #endif

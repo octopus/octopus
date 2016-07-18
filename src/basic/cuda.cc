@@ -115,13 +115,15 @@ extern "C" void FC_FUNC_(cuda_build_program, CUDA_BUILD_PROGRAM)(CUmodule ** mod
   source_file.read(source, length);
   source_file.close();        
 
-  cout << source << endl;
+  //cout << source << endl;
 
   nvrtcProgram prog;
   nvrtcCreateProgram(&prog, source, fname_c, 0, NULL,NULL);
   free(fname_c);
 
   delete [] source;
+
+  cout << fname << endl;
 
   string all_flags = "-DCUDA -default-device " + string("-I") + include_path_c + string(" ") + string(flags_c);
 
@@ -135,7 +137,7 @@ extern "C" void FC_FUNC_(cuda_build_program, CUDA_BUILD_PROGRAM)(CUmodule ** mod
 
   cout << "OPTS " << all_flags << endl;
 
-  nvrtcCompileProgram(prog, tokens.size(), opts);
+  nvrtcResult err = nvrtcCompileProgram(prog, tokens.size(), opts);
 
   free(flags_c);
   
@@ -148,6 +150,11 @@ extern "C" void FC_FUNC_(cuda_build_program, CUDA_BUILD_PROGRAM)(CUmodule ** mod
 
   cout << log << endl;
 
+  if(CUDA_SUCCESS != err){
+    cerr << "Error in compiling" << endl;
+    exit(1);
+  }
+  
   delete [] log;
 
   // Obtain PTX from the program.
