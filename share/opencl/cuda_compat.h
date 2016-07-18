@@ -23,7 +23,8 @@
 #define __CUDA_COMPAT_H__
 
 #define __kernel extern "C" __global__
-#define __global 
+#define __global
+#define __constant
 #define restrict __restrict__
 
 __device__ __forceinline__ static int get_global_id(const int ii){
@@ -81,6 +82,13 @@ __device__ __forceinline__ static double2 operator*(const double & a, const doub
   return c;
 }
 
+__device__ __forceinline__ static double2 operator*(const double2 & a, const double2 & b){
+  double2 c;
+  c.x = a.x*b.x;
+  c.y = a.y*b.y;
+  return c;
+}
+
 __device__ __forceinline__ static double2 operator+(const double2 & a, const double2 & b){
   double2 c;
   c.x = a.x + b.x;
@@ -92,6 +100,13 @@ __device__ __forceinline__ static double2 operator+=(double2 & a, const double2 
   a.x += b.x;
   a.y += b.y;
   return a;
+}
+
+__device__ __forceinline__ static double2 operator/(const double2 & a, const double & b){
+  double2 c;
+  c.x = a.x/b;
+  c.y = a.y/b;
+  return c;
 }
 
 #endif
