@@ -89,7 +89,7 @@ for ac_verb in -v -verbose --verbose -V -\#\#\#; do
   # look for -l* and *.a constructs in the output
   for ac_arg in $ac_cxx_v_output; do
      case $ac_arg in
-        [[\\/]]*.a | ?:[[\\/]]*.a | -[[lLRu]]*)
+        [[\\/]]*.a | ?:[[\\/]]*.a | -[[lLu]]*)
           ac_cv_prog_cxx_v=$ac_verb
           break 2 ;;
      esac
@@ -139,7 +139,7 @@ while test $[@%:@] != 1; do
         -lkernel32)
           test x"$CYGWIN" != xyes && ac_cv_cxxlibs="$ac_cv_cxxlibs $ac_arg"
           ;;
-        -[[LRuY]])      
+        -[[LuY]])      
           # These flags, when seen by themselves, take an argument.
           # We remove the space between option and argument and re-iterate
           # unless we find an empty arg or a new option (starting with -)
@@ -159,7 +159,7 @@ while test $[@%:@] != 1; do
                                ac_cv_cxxlibs="$ac_cv_cxxlibs $ac_j"]) 
           done
           ;;
-        -[[lLR]]*)
+        -[[lL]]*)
           _AC_LIST_MEMBER_IF($ac_arg, $ac_cv_cxxlibs, ,
                              ac_cv_cxxlibs="$ac_cv_cxxlibs $ac_arg")
           ;;
