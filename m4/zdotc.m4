@@ -41,6 +41,8 @@ open(1, file='conftest.out')
 if(abs(result1-result2) .lt. 1d-6) then
   write(1, '(a)') 'success'
 endif
+
+deallocate(f1,f2)
 ])], [  
   if test "x$acx_zdotc_ok" = "xyes"; then
     if test "x`cat conftest.out`" != "xsuccess"; then
