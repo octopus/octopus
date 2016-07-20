@@ -130,6 +130,9 @@ module accel_oct_m
 #ifdef HAVE_OPENCL
     type(cl_mem)           :: mem
 #endif
+#ifdef HAVE_CUDA
+    type(c_ptr)            :: cuda_ptr
+#endif
     integer(SIZEOF_SIZE_T) :: size
     type(type_t)           :: type
     integer                :: flags
@@ -798,7 +801,10 @@ contains
     this%mem = clCreateBuffer(accel%context%cl_context, flags, fsize, ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateBuffer")
 #endif
-
+#ifdef HAVE_CUDA
+    call cuda_mem_alloc(this%cuda_ptr, fsize)
+#endif
+    
     INCR(buffer_alloc_count, 1)
     INCR(allocated_mem, fsize)
 
@@ -818,7 +824,10 @@ contains
     call clReleaseMemObject(this%mem, ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clReleaseMemObject")
 #endif
-
+#ifdef HAVE_CUDA
+    call cuda_mem_free(this%cuda_ptr)
+#endif
+    
     INCR(buffer_alloc_count, -1)
     INCR(allocated_mem, -int(this%size, 8)*types_get_size(this%type))
 

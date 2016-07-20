@@ -202,3 +202,19 @@ extern "C" void FC_FUNC_(cuda_device_max_threads_per_block, CUDA_DEVICE_MAX_THRE
   *max_threads = value;
 #endif
 }
+
+extern "C" void FC_FUNC_(cuda_mem_alloc, CUDA_MEM_ALLOC)(CUdeviceptr ** cuda_ptr, const fint8 * size){
+#ifdef HAVE_CUDA
+  *cuda_ptr = new CUdeviceptr;
+  cuMemAlloc(*cuda_ptr, *size);
+#endif
+}
+
+extern "C" void FC_FUNC_(cuda_mem_free, CUDA_MEM_FREE)(CUdeviceptr ** cuda_ptr){
+#ifdef HAVE_CUDA
+  cuMemFree(**cuda_ptr);
+  delete *cuda_ptr;
+#endif
+}
+
+
