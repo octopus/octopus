@@ -46,19 +46,42 @@ typedef int CUfunction;
 
 #include <fortran_types.h>
 
+
+#define NVRTC_SAFE_CALL(x)                                        \
+  do {                                                            \
+    nvrtcResult result = x;                                       \
+    if (result != NVRTC_SUCCESS) {                                \
+      std::cerr << "\nerror: " #x " failed with error "           \
+                << nvrtcGetErrorString(result) << '\n';           \
+      exit(1);                                                    \
+    }                                                             \
+  } while(0)
+
+#define CUDA_SAFE_CALL(x)                                         \
+  do {                                                            \
+    CUresult result = x;                                          \
+    if (result != CUDA_SUCCESS) {                                 \
+      const char *msg;                                            \
+      cuGetErrorName(result, &msg);                               \
+      std::cerr << "\nerror: " #x " failed with error "           \
+                << msg << '\n';                                   \
+      exit(1);                                                    \
+    }                                                             \
+  } while(0)
+
 using namespace std;
 
 extern "C" void FC_FUNC_(cuda_init, CUDA_INIT)(CUcontext ** context, CUdevice ** device){
 
 #ifdef HAVE_CUDA
-  CUresult err = cuInit(0);
+  CUDA_SAFE_CALL(cuInit(0));
 
   *context = new CUcontext;
   *device = new CUdevice;
 
   int ndevices;
 
-  cuDeviceGetCount(&ndevices);
+  CUDA_SAFE_CALL(cuDeviceGetCount(&ndevices));
   
   cout << "Number of devices : " << ndevices << endl;
 
@@ -66,30 +89,31 @@ extern "C" void FC_FUNC_(cuda_init, CUDA_INIT)(CUcontext ** context, CUdevice **
     cerr << "Error: no CUDA devices" << std::endl;
     exit(1);
   }
-  cuDeviceGet(*device, 0);
+  
+  CUDA_SAFE_CALL(cuDeviceGet(*device, 0));
 
   char devicename[200];
 
-  cuDeviceGetName(devicename, sizeof(devicename), **device);
+  CUDA_SAFE_CALL(cuDeviceGetName(devicename, sizeof(devicename), **device));
 
   cout << "CUDA device name : " << devicename << endl;
 
   int major = 0, minor = 0;
-  cuDeviceComputeCapability(&major, &minor, **device);
+  CUDA_SAFE_CALL(cuDeviceComputeCapability(&major, &minor, **device));
   cout << "CUDA compute capability : " <<  major << '.' <<  minor << endl;
   
   size_t mem;
-  cuDeviceTotalMem(&mem, **device);
+  CUDA_SAFE_CALL(cuDeviceTotalMem(&mem, **device));
   cout << "CUDA device memory : " << mem/pow(1024.0, 3) << " GB" << endl;
 
-  cuCtxCreate(*context, 0, **device);
+  CUDA_SAFE_CALL(cuCtxCreate(*context, 0, **device));
 #endif
 }
 
 extern "C" void FC_FUNC_(cuda_end, CUDA_END)(CUcontext ** context, CUdevice ** device){
 #ifdef HAVE_CUDA
 
-  cuCtxDestroy(**context);
+  CUDA_SAFE_CALL(cuCtxDestroy(**context));
   
   delete *context;
   delete *device;
@@ -117,7 +141,7 @@ extern "C" void FC_FUNC_(cuda_build_program, CUDA_BUILD_PROGRAM)(CUmodule ** mod
   cout << fname_c << endl;
 
   nvrtcProgram prog;
-  nvrtcCreateProgram(&prog, source.c_str(), "kernel_include.c", 0, NULL,NULL);
+  NVRTC_SAFE_CALL(nvrtcCreateProgram(&prog, source.c_str(), "kernel_include.c", 0, NULL, NULL));
   free(fname_c);
 
   string all_flags = "-DCUDA -default-device " + string("-I") + include_path_c + string(" ") + string(flags_c);
@@ -137,9 +161,9 @@ extern "C" void FC_FUNC_(cuda_build_program, CUDA_BUILD_PROGRAM)(CUmodule ** mod
   free(flags_c);
   
   size_t logSize;
-  nvrtcGetProgramLogSize(prog, &logSize);
+  NVRTC_SAFE_CALL(nvrtcGetProgramLogSize(prog, &logSize));
   char *log = new char[logSize];
-  nvrtcGetProgramLog(prog, log);  
+  NVRTC_SAFE_CALL(nvrtcGetProgramLog(prog, log));
 
   cout << "=====================================" << endl;
 
@@ -154,15 +178,15 @@ extern "C" void FC_FUNC_(cuda_build_program, CUDA_BUILD_PROGRAM)(CUmodule ** mod
 
   // Obtain PTX from the program.
   size_t ptxSize;
-  nvrtcGetPTXSize(prog, &ptxSize);
+  NVRTC_SAFE_CALL(nvrtcGetPTXSize(prog, &ptxSize));
   char *ptx = new char[ptxSize];
-  nvrtcGetPTX(prog, ptx);
+  NVRTC_SAFE_CALL(nvrtcGetPTX(prog, ptx));
 
-  nvrtcDestroyProgram(&prog);
+  NVRTC_SAFE_CALL(nvrtcDestroyProgram(&prog));
 
   *module = new CUmodule;
 
-  cuModuleLoadDataEx(*module, ptx, 0, 0, 0);
+  CUDA_SAFE_CALL(cuModuleLoadDataEx(*module, ptx, 0, 0, 0));
 
   delete [] ptx;
 #endif
@@ -176,7 +200,7 @@ extern "C" void FC_FUNC_(cuda_create_kernel, CUDA_CREATE_KERNEL)(CUfunction ** k
   
   *kernel = new CUfunction;
 
-  cuModuleGetFunction(*kernel, **module, kernel_name_c);
+  CUDA_SAFE_CALL(cuModuleGetFunction(*kernel, **module, kernel_name_c));
 
   free(kernel_name_c);
 #endif
@@ -184,7 +208,7 @@ extern "C" void FC_FUNC_(cuda_create_kernel, CUDA_CREATE_KERNEL)(CUfunction ** k
 
 extern "C" void FC_FUNC_(cuda_release_module, CUDA_RELEASE_MODULE)(CUmodule ** module){
 #ifdef HAVE_CUDA
-  cuModuleUnload(**module); 
+  CUDA_SAFE_CALL(cuModuleUnload(**module));
   delete *module;
 #endif
 }
@@ -198,7 +222,7 @@ extern "C" void FC_FUNC_(cuda_release_kernel, CUDA_RELEASE_KERNEL)(CUfunction **
 extern "C" void FC_FUNC_(cuda_device_max_threads_per_block, CUDA_DEVICE_MAX_THREADS_PER_BLOCK)(CUdevice ** device, fint * max_threads){
 #ifdef HAVE_CUDA
   int value;
-  cuDeviceGetAttribute (&value, CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_BLOCK, **device);
+  CUDA_SAFE_CALL(cuDeviceGetAttribute (&value, CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_BLOCK, **device));
   *max_threads = value;
 #endif
 }
@@ -206,13 +230,13 @@ extern "C" void FC_FUNC_(cuda_device_max_threads_per_block, CUDA_DEVICE_MAX_THRE
 extern "C" void FC_FUNC_(cuda_mem_alloc, CUDA_MEM_ALLOC)(CUdeviceptr ** cuda_ptr, const fint8 * size){
 #ifdef HAVE_CUDA
   *cuda_ptr = new CUdeviceptr;
-  cuMemAlloc(*cuda_ptr, *size);
+  CUDA_SAFE_CALL(cuMemAlloc(*cuda_ptr, *size));
 #endif
 }
 
 extern "C" void FC_FUNC_(cuda_mem_free, CUDA_MEM_FREE)(CUdeviceptr ** cuda_ptr){
 #ifdef HAVE_CUDA
-  cuMemFree(**cuda_ptr);
+  CUDA_SAFE_CALL(cuMemFree(**cuda_ptr));
   delete *cuda_ptr;
 #endif
 }
