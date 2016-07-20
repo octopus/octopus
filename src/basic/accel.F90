@@ -345,6 +345,9 @@ contains
     call messages_info()
 
     call cuda_init(accel%context%cuda_context, accel%device%cuda_device)
+
+    ! no shared mem support in our cuda interface (for the moment)
+    accel%shared_mem = .false.
 #endif
     
 #ifdef HAVE_OPENCL
@@ -962,8 +965,11 @@ contains
     call clGetKernelWorkGroupInfo(kernel%kernel, accel%device%cl_device, CL_KERNEL_WORK_GROUP_SIZE, workgroup_size8, ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
 #endif
-
     workgroup_size = workgroup_size8
+
+#ifdef HAVE_CUDA
+    workgroup_size = accel%max_workgroup_size
+#endif
 
   end function accel_kernel_workgroup_size
 

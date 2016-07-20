@@ -336,13 +336,17 @@ contains
       call accel_set_kernel_arg(kernel_operate, 6, fo%pack%buffer)
       call accel_set_kernel_arg(kernel_operate, 7, log2(eff_size))
       iarg = 7
-      
-      local_mem_size = accel_local_memory_size()
-      isize = int(dble(local_mem_size)/(op%stencil%size*types_get_size(TYPE_INTEGER)))
-      isize = isize - mod(isize, eff_size)
-      bsize = eff_size*isize
-      bsize = min(accel_kernel_workgroup_size(kernel_operate), bsize)
 
+      if(accel_use_shared_mem()) then
+        local_mem_size = accel_local_memory_size()
+        isize = int(dble(local_mem_size)/(op%stencil%size*types_get_size(TYPE_INTEGER)))
+        isize = isize - mod(isize, eff_size)
+        bsize = eff_size*isize
+        bsize = min(accel_kernel_workgroup_size(kernel_operate), bsize)
+      else
+        bsize = accel_kernel_workgroup_size(kernel_operate)
+      end if
+      
       if(bsize < fi%pack%size_real(1)) then
         message(1) = "The value of StatesBlockSize is too large for this OpenCL implementation."
         call messages_fatal(1)
@@ -351,9 +355,10 @@ contains
       isize = bsize/eff_size
 
       ASSERT(isize > 0)
-      ASSERT(isize*op%stencil%size*types_get_size(TYPE_INTEGER) <= local_mem_size)
 
       if(accel_use_shared_mem()) then
+        ASSERT(isize*op%stencil%size*types_get_size(TYPE_INTEGER) <= local_mem_size)
+
         iarg = iarg + 1
         call accel_set_kernel_arg(kernel_operate, iarg, TYPE_INTEGER, isize*op%stencil%size)
       end if
@@ -394,11 +399,15 @@ contains
       call accel_set_kernel_arg(kernel_operate, 6, fo%pack%buffer)
       call accel_set_kernel_arg(kernel_operate, 7, log2(eff_size))
 
-      local_mem_size = accel_local_memory_size()
-      isize = int(dble(local_mem_size)/(op%stencil%size*types_get_size(TYPE_INTEGER)))
-      isize = isize - mod(isize, eff_size)
-      bsize = eff_size*isize
-      bsize = min(accel_kernel_workgroup_size(kernel_operate), bsize)
+      if(accel_use_shared_mem()) then
+        local_mem_size = accel_local_memory_size()
+        isize = int(dble(local_mem_size)/(op%stencil%size*types_get_size(TYPE_INTEGER)))
+        isize = isize - mod(isize, eff_size)
+        bsize = eff_size*isize
+        bsize = min(accel_kernel_workgroup_size(kernel_operate), bsize)
+      else
+        bsize = accel_kernel_workgroup_size(kernel_operate)
+      end if
 
       if(bsize < fi%pack%size_real(1)) then
         call messages_write('The value of StatesBlockSize is too large for this OpenCL implementation.')
@@ -408,10 +417,12 @@ contains
       isize = bsize/eff_size
 
       ASSERT(isize > 0)
-      ASSERT(isize*op%stencil%size*types_get_size(TYPE_INTEGER) <= local_mem_size)
 
-      call accel_set_kernel_arg(kernel_operate, 8, TYPE_INTEGER, isize*op%stencil%size)
-
+      if(accel_use_shared_mem()) then
+        ASSERT(isize*op%stencil%size*types_get_size(TYPE_INTEGER) <= local_mem_size)
+        call accel_set_kernel_arg(kernel_operate, 8, TYPE_INTEGER, isize*op%stencil%size)
+      end if
+      
       call accel_kernel_run(kernel_operate, (/eff_size, pad(op%mesh%np, bsize)/), (/eff_size, isize/))
 
       call profiling_count_transfers(op%stencil%size*op%mesh%np + op%mesh%np, isize)
