@@ -29,6 +29,7 @@ typedef int CUcontext;
 typedef int CUdevice;
 typedef int CUmodule;
 typedef int CUfunction;
+typedef int CUdeviceptr;
 #endif
 
 #include <stdlib.h> //we have to include this before cmath to workaround a bug in the PGI "compiler".
