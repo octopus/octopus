@@ -225,10 +225,7 @@ contains
 
     ! TODO implement.  Should dump quantities to files.
 
-    blocksize = mesh%idx%ll(1) / mesh%mpi_grp%size
-    if(mod(mesh%idx%ll(1), mesh%mpi_grp%size) /= 0) then
-      blocksize = blocksize + 1
-    end if
+    blocksize = (mesh%idx%ll(3) + mod(mesh%idx%ll(3), mesh%mpi_grp%size)) / mesh%mpi_grp%size
 
     if(libvdwxc_mode == LIBVDWXC_MODE_SERIAL) then
       call cube_init(this%cube, mesh%idx%ll, mesh%sb)
