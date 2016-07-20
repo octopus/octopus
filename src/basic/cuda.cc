@@ -169,7 +169,7 @@ extern "C" void FC_FUNC_(cuda_build_program, CUDA_BUILD_PROGRAM)(CUmodule ** mod
 
   cout << log << endl;
 
-  if(CUDA_SUCCESS != err){
+  if(NVRTC_SUCCESS != err){
     cerr << "Error in compiling" << endl;
     exit(1);
   }
@@ -241,4 +241,14 @@ extern "C" void FC_FUNC_(cuda_mem_free, CUDA_MEM_FREE)(CUdeviceptr ** cuda_ptr){
 #endif
 }
 
+extern "C" void FC_FUNC_(cuda_memcpy_htod, CUDA_MEMCPY_HTOD)(CUdeviceptr ** cuda_ptr, const void * data, fint8 * size){
+#ifdef HAVE_CUDA
+  CUDA_SAFE_CALL(cuMemcpyHtoD(**cuda_ptr, data, *size));
+#endif  
+}
 
+extern "C" void FC_FUNC_(cuda_memcpy_dtoh, CUDA_MEMCPY_DTOH)(CUdeviceptr ** cuda_ptr, void * data, fint8 * size){
+#ifdef HAVE_CUDA
+  CUDA_SAFE_CALL(cuMemcpyDtoH(data, **cuda_ptr, *size));
+#endif  
+}
