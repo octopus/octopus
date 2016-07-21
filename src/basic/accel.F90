@@ -767,17 +767,20 @@ contains
   integer function accel_padded_size(nn) result(psize)
     integer,        intent(in) :: nn
 
-#ifdef HAVE_OPENCL
     integer :: modnn, bsize
-
-    bsize = accel_max_workgroup_size()
-
+    
     psize = nn
-    modnn = mod(nn, bsize)
-    if(modnn /= 0) psize = psize + bsize - modnn
-#else
-    psize = nn
-#endif
+
+    if(accel_is_enabled()) then
+
+      bsize = accel_max_workgroup_size()
+      
+      psize = nn
+      modnn = mod(nn, bsize)
+      if(modnn /= 0) psize = psize + bsize - modnn
+
+    end if
+    
   end function accel_padded_size
 
   ! ------------------------------------------
