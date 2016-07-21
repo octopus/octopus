@@ -298,6 +298,8 @@ extern "C" void FC_FUNC_(cuda_launch_kernel, CUDA_LAUNCH_KERNEL)
   (CUfunction ** kernel, fint8 * griddim, fint8 * blockdim, vector<void *> ** arg_array){
 #ifdef HAVE_CUDA
   /*
+  cout << "Kernel call" << endl;
+
   int nn;
   CUDA_SAFE_CALL(cuFuncGetAttribute(&nn, CU_FUNC_ATTRIBUTE_MAX_THREADS_PER_BLOCK, **kernel));
   cout << "SIZE   " << nn << endl;
@@ -306,13 +308,23 @@ extern "C" void FC_FUNC_(cuda_launch_kernel, CUDA_LAUNCH_KERNEL)
   CUDA_SAFE_CALL(cuFuncGetAttribute(&nn, CU_FUNC_ATTRIBUTE_BINARY_VERSION, **kernel));
   cout << "BINARY " << nn << endl;
 
-  cout << arg_array[0][0][0] << " " << arg_array[0][0][1] << endl;
+  for(unsigned ii = 0; ii < (**arg_array).size(); ii++) cout << ii << " " << (**arg_array)[ii] << endl;
+
+  cout << "GRID  " << griddim[0] << " " << griddim[1] << " " <<  griddim[2] << endl;
+  cout << "BLOCK " << blockdim[0] << " " << blockdim[1] << " " <<  blockdim[2] << endl;
   */
+    
   assert((**arg_array).size() > 0);
-  //  cout << "GRID  " << griddim[0] << " " << griddim[1] << " " <<  griddim[2] << endl;
-  //  cout << "BLOCK " << blockdim[0] << " " << blockdim[1] << " " <<  blockdim[2] << endl;
+  for(unsigned ii = 0; ii < (**arg_array).size(); ii++) assert((**arg_array)[ii] != NULL);
+  
   CUDA_SAFE_CALL(cuLaunchKernel(**kernel, griddim[0], griddim[1], griddim[2],
   				blockdim[0], blockdim[1], blockdim[2], 0, NULL, &(**arg_array)[0], NULL));
+
+  // release the stored argument, this is not necessary in principle,
+  // but it should help us to detect missing arguments.
+  for(unsigned ii = 0; ii < (**arg_array).size(); ii++) free((**arg_array)[ii]);
+  (**arg_array).resize(0);
+ 
 #endif
 }
 
