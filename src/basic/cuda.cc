@@ -44,6 +44,7 @@ typedef int CUdeviceptr;
 #include <vector>
 #include <sstream>
 #include <iterator>
+#include <cassert>
 
 #include <fortran_types.h>
 
@@ -266,5 +267,20 @@ extern "C" void FC_FUNC_(cuda_free_arg_array, CUDA_FREE_ARG_ARRAY)(vector<void *
 extern "C" void FC_FUNC_(cuda_kernel_set_arg, CUDA_KERNEL_SET_ARG)(vector<void *> ** arg_array, void * arg, fint * arg_index){
   if(unsigned(*arg_index) >= (**arg_array).size()) (**arg_array).resize(*arg_index + 1);
   (**arg_array)[*arg_index] = arg;
+}
+
+extern "C" void FC_FUNC_(cuda_context_synchronize, CUDA_CONTEXT_SYNCHRONIZE)(){
+#ifdef HAVE_CUDA
+  CUDA_SAFE_CALL(cuCtxSynchronize());
+#endif
+}
+
+extern "C" void FC_FUNC_(cuda_launch_kernel, CUDA_LAUNCH_KERNEL)
+  (CUfunction ** kernel, fint8 * griddim, fint8 * blockdim, vector<void *> ** arg_array){
+#ifdef HAVE_CUDA
+  assert((**arg_array).size() > 0);
+  CUDA_SAFE_CALL(cuLaunchKernel(**kernel, griddim[0], griddim[1], griddim[2],
+				blockdim[0], blockdim[1], blockdim[2], 0, NULL, &(**arg_array)[0], NULL));
+#endif
 }
 

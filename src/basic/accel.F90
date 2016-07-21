@@ -870,7 +870,9 @@ contains
     call clFinish(accel%command_queue, ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, 'clFinish') 
 #endif
-
+#ifdef HAVE_CUDA
+    call cuda_context_synchronize()
+#endif
   end subroutine accel_finish
 
   ! ------------------------------------------
@@ -943,6 +945,10 @@ contains
 
     ! no push_sub, called too frequently
 
+    ! cuda needs all dimensions
+    gsizes = 1
+    lsizes = 1
+    
     dim = ubound(globalsizes, dim = 1)
 
     ASSERT(dim == ubound(localsizes, dim = 1))
@@ -957,6 +963,10 @@ contains
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
 #endif
 
+#ifdef HAVE_CUDA
+    call cuda_launch_kernel(kernel%cuda_kernel, gsizes(1), lsizes(1), kernel%arguments)
+#endif
+    
   end subroutine accel_kernel_run
 
   ! -----------------------------------------------
