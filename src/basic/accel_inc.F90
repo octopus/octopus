@@ -244,7 +244,10 @@ subroutine X(accel_set_kernel_arg_data)(kernel, narg, data)
   integer :: ierr
 
   ! no push_sub, called too frequently
-
+#ifdef HAVE_CUDA
+  call cuda_kernel_set_arg(kernel%arguments, narg, data)
+#endif
+  
 #ifdef HAVE_OPENCL
   call clSetKernelArg(kernel%kernel, narg, data, ierr)
   if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "set_kernel_arg_data")

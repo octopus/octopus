@@ -253,3 +253,18 @@ extern "C" void FC_FUNC_(cuda_memcpy_dtoh, CUDA_MEMCPY_DTOH)(CUdeviceptr ** cuda
   CUDA_SAFE_CALL(cuMemcpyDtoH(data, **cuda_ptr, *size));
 #endif  
 }
+
+
+extern "C" void FC_FUNC_(cuda_alloc_arg_array, CUDA_ALLOC_ARG_ARRAY)(vector<void *> ** arg_array){
+  *arg_array = new vector<void *>;  
+}
+
+extern "C" void FC_FUNC_(cuda_free_arg_array, CUDA_FREE_ARG_ARRAY)(vector<void *> ** arg_array){
+  delete *arg_array;  
+}
+
+extern "C" void FC_FUNC_(cuda_kernel_set_arg, CUDA_KERNEL_SET_ARG)(vector<void *> ** arg_array, void * arg, fint * arg_index){
+  if(unsigned(*arg_index) >= (**arg_array).size()) (**arg_array).resize(*arg_index + 1);
+  (**arg_array)[*arg_index] = arg;
+}
+

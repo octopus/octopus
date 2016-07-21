@@ -145,6 +145,7 @@ module accel_oct_m
 #ifdef HAVE_CUDA
     type(c_ptr)                   :: cuda_kernel
     type(c_ptr)                   :: cuda_module
+    type(c_ptr)                   :: arguments
 #endif
     logical                       :: initialized = .false.
     type(accel_kernel_t), pointer :: next
@@ -881,6 +882,10 @@ contains
 
     integer :: ierr
 
+#ifdef HAVE_CUDA
+    call cuda_kernel_set_arg(kernel%arguments, narg, buffer%cuda_ptr)
+#endif
+    
     ! no push_sub, called too frequently
 #ifdef HAVE_OPENCL
     call clSetKernelArg(kernel%kernel, narg, buffer%mem, ierr)
@@ -902,6 +907,10 @@ contains
 
     PUSH_SUB(accel_set_kernel_arg_local)
 
+#ifdef HAVE_CUDA
+    call messages_not_implemented('local memory for Cuda')
+#endif
+    
     size_in_bytes = int(size, 8)*types_get_size(type)
 
     if(size_in_bytes > accel%local_memory_size) then
@@ -1510,6 +1519,8 @@ contains
     end if
     
     call cuda_create_kernel(this%cuda_kernel, this%cuda_module, trim(kernel_name))
+
+    call cuda_alloc_arg_array(this%arguments)
 #endif
     
 #ifdef HAVE_OPENCL
@@ -1537,6 +1548,7 @@ contains
       PUSH_SUB(accel_kernel_end)
 
 #ifdef HAVE_CUDA
+      call cuda_free_arg_array(this%arguments)
       call cuda_release_module(this%cuda_module)
       call cuda_release_kernel(this%cuda_kernel)
 #endif
