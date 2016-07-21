@@ -727,7 +727,7 @@ contains
 
     if(accel_is_enabled()) then
 #ifdef HAVE_CUDA
-      call cuda_end()
+      call cuda_end(accel%context%cuda_context, accel%device%cuda_device)
 #endif
 
 #ifdef HAVE_OPENCL
