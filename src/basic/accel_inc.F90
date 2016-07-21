@@ -245,7 +245,7 @@ subroutine X(accel_set_kernel_arg_data)(kernel, narg, data)
 
   ! no push_sub, called too frequently
 #ifdef HAVE_CUDA
-  call cuda_kernel_set_arg_value(kernel%arguments, data, narg)
+  call cuda_kernel_set_arg_value(kernel%arguments, data, narg, types_get_size(R_TYPE_VAL))
 #endif
   
 #ifdef HAVE_OPENCL

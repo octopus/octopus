@@ -45,6 +45,7 @@ typedef int CUdeviceptr;
 #include <sstream>
 #include <iterator>
 #include <cassert>
+#include <cstring>
 
 #include <fortran_types.h>
 
@@ -255,24 +256,36 @@ extern "C" void FC_FUNC_(cuda_memcpy_dtoh, CUDA_MEMCPY_DTOH)(CUdeviceptr ** cuda
 #endif  
 }
 
-
 extern "C" void FC_FUNC_(cuda_alloc_arg_array, CUDA_ALLOC_ARG_ARRAY)(vector<void *> ** arg_array){
   *arg_array = new vector<void *>;  
 }
 
 extern "C" void FC_FUNC_(cuda_free_arg_array, CUDA_FREE_ARG_ARRAY)(vector<void *> ** arg_array){
-  delete *arg_array;  
+
+  for(unsigned ii = 0; ii < (**arg_array).size(); ii++) free((**arg_array)[ii]);
+  delete *arg_array;
+
 }
 
-extern "C" void FC_FUNC_(cuda_kernel_set_arg_buffer, CUDA_KERNEL_SET_ARG_BUFFER)(vector<void *> ** arg_array, CUdeviceptr ** cuda_ptr, fint * arg_index){
-  if(unsigned(*arg_index) >= (**arg_array).size()) (**arg_array).resize(*arg_index + 1);
-  (**arg_array)[*arg_index] = *cuda_ptr;
+extern "C" void FC_FUNC_(cuda_kernel_set_arg_buffer, CUDA_KERNEL_SET_ARG_BUFFER)
+  (vector<void *> ** arg_array, CUdeviceptr ** cuda_ptr, fint * arg_index){
+
+  if(unsigned(*arg_index) >= (**arg_array).size()) (**arg_array).resize(*arg_index + 1, NULL);
+  
+  if((**arg_array)[*arg_index] == NULL) (**arg_array)[*arg_index] = malloc(sizeof(CUdeviceptr));
+  
+  memcpy((**arg_array)[*arg_index], *cuda_ptr, sizeof(CUdeviceptr));
 }
 
-extern "C" void FC_FUNC_(cuda_kernel_set_arg_value, CUDA_KERNEL_SET_ARG_VALUE)(vector<void *> ** arg_array, void * arg, fint * arg_index){
-  if(unsigned(*arg_index) >= (**arg_array).size()) (**arg_array).resize(*arg_index + 1);
-  //  cout << "ARG " << *arg_index << " " << *(int *)arg << " " << endl;
-  (**arg_array)[*arg_index] = arg;
+extern "C" void FC_FUNC_(cuda_kernel_set_arg_value, CUDA_KERNEL_SET_ARG_VALUE)
+  (vector<void *> ** arg_array, void * arg, fint * arg_index, fint * size){
+  
+  if(unsigned(*arg_index) >= (**arg_array).size()) (**arg_array).resize(*arg_index + 1, NULL);
+  
+  if((**arg_array)[*arg_index] == NULL) (**arg_array)[*arg_index] = malloc(*size);
+
+  memcpy((**arg_array)[*arg_index], arg, *size);
+  
 }
 
 extern "C" void FC_FUNC_(cuda_context_synchronize, CUDA_CONTEXT_SYNCHRONIZE)(){
