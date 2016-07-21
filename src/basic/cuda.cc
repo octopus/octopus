@@ -146,7 +146,7 @@ extern "C" void FC_FUNC_(cuda_build_program, CUDA_BUILD_PROGRAM)(CUmodule ** mod
   NVRTC_SAFE_CALL(nvrtcCreateProgram(&prog, source.c_str(), "kernel_include.c", 0, NULL, NULL));
   free(fname_c);
 
-  string all_flags = "-DCUDA -default-device " + string("-I") + include_path_c + string(" ") + string(flags_c);
+  string all_flags = "--gpu-architecture=compute_52 -DCUDA -default-device " + string("-I") + include_path_c + string(" ") + string(flags_c);
 
   stringstream flags_stream(all_flags);
   istream_iterator<string> iter(flags_stream);
@@ -264,8 +264,14 @@ extern "C" void FC_FUNC_(cuda_free_arg_array, CUDA_FREE_ARG_ARRAY)(vector<void *
   delete *arg_array;  
 }
 
-extern "C" void FC_FUNC_(cuda_kernel_set_arg, CUDA_KERNEL_SET_ARG)(vector<void *> ** arg_array, void * arg, fint * arg_index){
+extern "C" void FC_FUNC_(cuda_kernel_set_arg_buffer, CUDA_KERNEL_SET_ARG_BUFFER)(vector<void *> ** arg_array, CUdeviceptr ** cuda_ptr, fint * arg_index){
   if(unsigned(*arg_index) >= (**arg_array).size()) (**arg_array).resize(*arg_index + 1);
+  (**arg_array)[*arg_index] = *cuda_ptr;
+}
+
+extern "C" void FC_FUNC_(cuda_kernel_set_arg_value, CUDA_KERNEL_SET_ARG_VALUE)(vector<void *> ** arg_array, void * arg, fint * arg_index){
+  if(unsigned(*arg_index) >= (**arg_array).size()) (**arg_array).resize(*arg_index + 1);
+  //  cout << "ARG " << *arg_index << " " << *(int *)arg << " " << endl;
   (**arg_array)[*arg_index] = arg;
 }
 
@@ -278,9 +284,22 @@ extern "C" void FC_FUNC_(cuda_context_synchronize, CUDA_CONTEXT_SYNCHRONIZE)(){
 extern "C" void FC_FUNC_(cuda_launch_kernel, CUDA_LAUNCH_KERNEL)
   (CUfunction ** kernel, fint8 * griddim, fint8 * blockdim, vector<void *> ** arg_array){
 #ifdef HAVE_CUDA
+  /*
+  int nn;
+  CUDA_SAFE_CALL(cuFuncGetAttribute(&nn, CU_FUNC_ATTRIBUTE_MAX_THREADS_PER_BLOCK, **kernel));
+  cout << "SIZE   " << nn << endl;
+  CUDA_SAFE_CALL(cuFuncGetAttribute(&nn, CU_FUNC_ATTRIBUTE_PTX_VERSION, **kernel));
+  cout << "PTX    " << nn << endl;
+  CUDA_SAFE_CALL(cuFuncGetAttribute(&nn, CU_FUNC_ATTRIBUTE_BINARY_VERSION, **kernel));
+  cout << "BINARY " << nn << endl;
+
+  cout << arg_array[0][0][0] << " " << arg_array[0][0][1] << endl;
+  */
   assert((**arg_array).size() > 0);
+  //  cout << "GRID  " << griddim[0] << " " << griddim[1] << " " <<  griddim[2] << endl;
+  //  cout << "BLOCK " << blockdim[0] << " " << blockdim[1] << " " <<  blockdim[2] << endl;
   CUDA_SAFE_CALL(cuLaunchKernel(**kernel, griddim[0], griddim[1], griddim[2],
-				blockdim[0], blockdim[1], blockdim[2], 0, NULL, &(**arg_array)[0], NULL));
+  				blockdim[0], blockdim[1], blockdim[2], 0, NULL, &(**arg_array)[0], NULL));
 #endif
 }
 

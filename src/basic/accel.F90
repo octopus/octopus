@@ -890,7 +890,7 @@ contains
 #endif
 
 #ifdef HAVE_CUDA
-    call cuda_kernel_set_arg(kernel%arguments, narg, buffer%cuda_ptr)
+    call cuda_kernel_set_arg_buffer(kernel%arguments, buffer%cuda_ptr, narg)
 #endif
    
   end subroutine accel_set_kernel_arg_buffer
@@ -963,6 +963,7 @@ contains
 #endif
 
 #ifdef HAVE_CUDA
+    gsizes = gsizes/lsizes
     call cuda_launch_kernel(kernel%cuda_kernel, gsizes(1), lsizes(1), kernel%arguments)
 #endif
     
@@ -1395,16 +1396,17 @@ contains
     integer,            intent(in)    :: nval
     integer, optional,  intent(in)    :: offset
 
-    integer :: nval_real, bsize
+    integer :: nval_real, bsize, offset_real
 
     PUSH_SUB(accel_set_buffer_to_zero)
 
     ASSERT(type == TYPE_CMPLX .or. type == TYPE_FLOAT)
 
     nval_real = nval*types_get_size(type)/8
-
+    offset_real = optional_default(offset, 0)*types_get_size(type)/8
+    
     call accel_set_kernel_arg(set_zero, 0, nval_real)
-    call accel_set_kernel_arg(set_zero, 1, optional_default(offset, 0)*types_get_size(type)/8)
+    call accel_set_kernel_arg(set_zero, 1, offset_real)
     call accel_set_kernel_arg(set_zero, 2, buffer)
 
     bsize = accel_kernel_workgroup_size(set_zero)
