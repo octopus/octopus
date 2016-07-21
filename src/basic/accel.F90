@@ -562,9 +562,7 @@ contains
     call parse_variable('OpenCLBenchmark', .false., run_benchmark)
 
     if(run_benchmark) then
-#ifdef HAVE_OPENCL
       call opencl_check_bandwidth()
-#endif
     end if
 
     call messages_print_stress(stdout)
@@ -758,7 +756,7 @@ contains
     type(accel_mem_t), intent(out) :: this
 
     !> To be implemented.
-    This%size = 0
+    this%size = 0
     this%flags = 0
 
   end subroutine accel_mem_nullify
@@ -866,6 +864,7 @@ contains
     integer :: ierr
 
     ! no push_sub, called too frequently
+    
 #ifdef HAVE_OPENCL
     call clFinish(accel%command_queue, ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, 'clFinish') 
@@ -884,16 +883,16 @@ contains
 
     integer :: ierr
 
-#ifdef HAVE_CUDA
-    call cuda_kernel_set_arg(kernel%arguments, narg, buffer%cuda_ptr)
-#endif
-    
     ! no push_sub, called too frequently
 #ifdef HAVE_OPENCL
     call clSetKernelArg(kernel%kernel, narg, buffer%mem, ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clSetKernelArg_buf")
 #endif
 
+#ifdef HAVE_CUDA
+    call cuda_kernel_set_arg(kernel%arguments, narg, buffer%cuda_ptr)
+#endif
+   
   end subroutine accel_set_kernel_arg_buffer
   
   ! ------------------------------------------
