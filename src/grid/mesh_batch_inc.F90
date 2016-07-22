@@ -419,10 +419,8 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
   logical :: reduce_, cproduct_
   type(profile_t), save :: prof, profcomm
   R_TYPE, allocatable :: tmp(:), cltmp(:, :)
-#ifdef HAVE_OPENCL
   type(accel_mem_t)  :: dot_buffer, scratch_buffer
   type(profile_t), save :: prof_copy
-#endif
 
   PUSH_SUB(X(mesh_batch_dotp_vector))
   call profiling_in(prof, "DOTPV_BATCH")
@@ -510,13 +508,11 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
 
   case(BATCH_CL_PACKED)
 
-#ifdef HAVE_OPENCL
-
     call accel_create_buffer(dot_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%pack%size(1))
     call accel_create_buffer(scratch_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, mesh%np)
 
     do ist = 1, aa%nst_linear
-
+#ifdef HAVE_OPENCL
 #ifdef R_TREAL
       call clblasDdot(N = int(mesh%np, 8), dotProduct = dot_buffer%mem, offDP = int(ist - 1, 8), &
         X = aa%pack%buffer%mem, offx = int(ist - 1, 8), incx = aa%pack%size(1), &
@@ -530,7 +526,16 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
         scratchBuff = scratch_buffer%mem, CommandQueue = accel%command_queue, status = status)
       if(status /= clblasSuccess) call clblas_print_error(status, 'clblasDdot')
 #endif
-
+#endif
+#ifdef HAVE_CUDA
+#ifdef R_TREAL
+      call cuda_blas_ddot(accel%cublas_handle, int(mesh%np, 8), &
+        aa%pack%buffer%cuda_ptr, int(ist - 1, 8), int(aa%pack%size(1), 8), &
+        bb%pack%buffer%cuda_ptr, int(ist - 1, 8), int(bb%pack%size(1), 8), &
+        dot_buffer%cuda_ptr, int(ist - 1, 8))
+#else
+#endif
+#endif
     end do
 
     call accel_release_buffer(scratch_buffer)
@@ -541,7 +546,6 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
 
     call accel_release_buffer(dot_buffer)
 
-#endif
 
     do ist = 1, aa%nst
       dot(ist) = M_ZERO

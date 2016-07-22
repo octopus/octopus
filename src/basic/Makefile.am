@@ -77,7 +77,8 @@ libbasic_a_SOURCES =     \
 	sort.F90             \
 	sort_low.cc          \
 	debug.F90            \
-	cuda.cc
+	cuda.cc              \
+	cublas.cc
 
 noinst_HEADERS =               \
 	mpi_debug_inc.F90      \

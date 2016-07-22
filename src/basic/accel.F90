@@ -119,6 +119,9 @@ module accel_oct_m
 #ifdef HAVE_OPENCL
     type(cl_command_queue) :: command_queue
 #endif
+#ifdef HAVE_CUDA
+    type(c_ptr)            :: cublas_handle
+#endif
     integer                :: max_workgroup_size
     integer(8)             :: local_memory_size
     integer(8)             :: global_memory_size
@@ -349,6 +352,8 @@ contains
 
     ! no shared mem support in our cuda interface (for the moment)
     accel%shared_mem = .false.
+
+    call cublas_init(accel%cublas_handle)
 #endif
     
 #ifdef HAVE_OPENCL
@@ -727,6 +732,7 @@ contains
 
     if(accel_is_enabled()) then
 #ifdef HAVE_CUDA
+      call cublas_end(accel%cublas_handle)
       call cuda_end(accel%context%cuda_context, accel%device%cuda_device)
 #endif
 
