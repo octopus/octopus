@@ -534,6 +534,10 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
         bb%pack%buffer%cuda_ptr, int(ist - 1, 8), int(bb%pack%size(1), 8), &
         dot_buffer%cuda_ptr, int(ist - 1, 8))
 #else
+      call cuda_blas_zdotc(accel%cublas_handle, int(mesh%np, 8), &
+        aa%pack%buffer%cuda_ptr, int(ist - 1, 8), int(aa%pack%size(1), 8), &
+        bb%pack%buffer%cuda_ptr, int(ist - 1, 8), int(bb%pack%size(1), 8), &
+        dot_buffer%cuda_ptr, int(ist - 1, 8))
 #endif
 #endif
     end do

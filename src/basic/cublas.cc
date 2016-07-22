@@ -66,3 +66,12 @@ extern "C" void FC_FUNC_(cuda_blas_ddot, CUDA_BLAS_DDOT)
 			      ((double *) **y) + *offy, *incy, ((double *)**result) + *off_result));
 #endif
 }
+
+extern "C" void FC_FUNC_(cuda_blas_zdotc, CUDA_BLAS_ZDOTC)
+  (cublasHandle_t ** handle, fint8 *n, CUdeviceptr ** x, fint8 * offx, fint8 * incx,
+   CUdeviceptr ** y, fint8 * offy, fint8 * incy, CUdeviceptr ** result, fint8 * off_result){
+#ifdef HAVE_CUDA
+  CUBLAS_SAFE_CALL(cublasZdotc(**handle, *n, ((cuDoubleComplex *) **x) + *offx, *incx,
+			      ((cuDoubleComplex *) **y) + *offy, *incy, ((cuDoubleComplex *)**result) + *off_result));
+#endif
+}
