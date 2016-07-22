@@ -113,7 +113,7 @@ module td_write_oct_m
     integer        :: n_excited_states  !< number of excited states onto which the projections are calculated.
     type(excited_states_t), pointer :: excited_st(:) !< The excited states.
     type(partial_charges_t) :: partial_charges
-    integer :: update_interval     !< output every iter
+    integer :: compute_interval     !< Compute every compute_interval
   end type td_write_t
 
 contains
@@ -439,19 +439,19 @@ contains
       end if
     end if
 
-    !%Variable TDUpdateInterval
+    !%Variable TDOutputComputeInterval
     !%Type integer
     !%Default 50
     !%Section Time-Dependent::TD Output
     !%Description
     !% The TD output requested are computed
-    !% when the iteration number is a multiple of the <tt>TDUpdateInterval</tt> variable.
+    !% when the iteration number is a multiple of the <tt>TDOutputComputeInterval</tt> variable.
     !% Must be >= 0. If it is 0, then no output is written. 
     !% Implemented only for projections for the moment.
     !%End
-    call parse_variable('TUpdateInterval', 50, writ%update_interval)
-    if(writ%update_interval < 0) then
-      message(1) = "TDUpdateInterval must be >= 0."
+    call parse_variable('TDOutputComputeInterval', 50, writ%compute_interval)
+    if(writ%compute_interval < 0) then
+      message(1) = "TDOutputComputeInterval must be >= 0."
       call messages_fatal(1)
     end if
 
@@ -646,7 +646,7 @@ contains
     if(writ%out(OUT_MAGNETS)%write) &
       call td_write_local_magnetic_moments(writ%out(OUT_MAGNETS)%handle, gr, st, geo, writ%lmm_r, iter)
 
-    if(writ%out(OUT_PROJ)%write .and. mod(iter, writ%update_interval) == 0) &
+    if(writ%out(OUT_PROJ)%write .and. mod(iter, writ%compute_interval) == 0) &
       call td_write_proj(writ%out(OUT_PROJ)%handle, gr, geo, st, writ%gs_st, kick, iter)
 
     if(writ%out(OUT_FLOQUET)%write) &
