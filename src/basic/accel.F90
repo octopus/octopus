@@ -975,7 +975,10 @@ contains
 #endif
 
 #ifdef HAVE_CUDA
-    gsizes = gsizes/lsizes
+    gsizes(1:3) = gsizes(1:3)/lsizes(1:3)
+    
+    ASSERT(all(gsizes <= 65535))
+    
     call cuda_launch_kernel(kernel%cuda_kernel, gsizes(1), lsizes(1), kernel%arguments)
 #endif
     

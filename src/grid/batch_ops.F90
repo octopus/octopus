@@ -246,7 +246,7 @@ end subroutine batch_set_points_cl
 integer pure function batch_points_block_size(this) result(block_size)
   type(batch_t),       intent(in)    :: this
   
-  block_size = 100000
+  block_size = 61440
 
 end function batch_points_block_size
 
