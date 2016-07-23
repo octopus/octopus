@@ -230,6 +230,15 @@ extern "C" void FC_FUNC_(cuda_device_max_threads_per_block, CUDA_DEVICE_MAX_THRE
 #endif
 }
 
+extern "C" void FC_FUNC_(cuda_device_total_memory, CUDA_DEVICE_TOTAL_MEMORY)(CUdevice ** device, fint8 * total_memory){
+#ifdef HAVE_CUDA
+  size_t mem;
+  CUDA_SAFE_CALL(cuDeviceTotalMem(&mem, **device));
+  *total_memory = mem;
+#endif
+}
+
+
 extern "C" void FC_FUNC_(cuda_mem_alloc, CUDA_MEM_ALLOC)(CUdeviceptr ** cuda_ptr, const fint8 * size){
 #ifdef HAVE_CUDA
   *cuda_ptr = new CUdeviceptr;
