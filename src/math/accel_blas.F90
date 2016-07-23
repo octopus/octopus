@@ -42,16 +42,16 @@ module accel_blas_oct_m
       
       implicit none
       
-      type(c_ptr),  intent(in) :: handle
-      integer(8),   intent(in) :: n
-      type(c_ptr),  intent(in) :: x
-      integer(8),   intent(in) :: offx
-      integer(8),   intent(in) :: incx
-      type(c_ptr),  intent(in) :: y
-      integer(8),   intent(in) :: offy
-      integer(8),   intent(in) :: incy
-      type(c_ptr),  intent(in) :: res
-      integer(8),   intent(in) :: offres
+      type(c_ptr),  intent(in)    :: handle
+      integer(8),   intent(in)    :: n
+      type(c_ptr),  intent(in)    :: x
+      integer(8),   intent(in)    :: offx
+      integer(8),   intent(in)    :: incx
+      type(c_ptr),  intent(in)    :: y
+      integer(8),   intent(in)    :: offy
+      integer(8),   intent(in)    :: incy
+      type(c_ptr),  intent(inout) :: res
+      integer(8),   intent(in)    :: offres
     end subroutine cuda_blas_ddot
 
     subroutine cuda_blas_zdotc(handle, n, x, offx, incx, y, offy, incy, res, offres)
@@ -59,16 +59,16 @@ module accel_blas_oct_m
             
       implicit none
       
-      type(c_ptr),  intent(in) :: handle
-      integer(8),   intent(in) :: n
-      type(c_ptr),  intent(in) :: x
-      integer(8),   intent(in) :: offx
-      integer(8),   intent(in) :: incx
-      type(c_ptr),  intent(in) :: y
-      integer(8),   intent(in) :: offy
-      integer(8),   intent(in) :: incy
-      type(c_ptr),  intent(in) :: res
-      integer(8),   intent(in) :: offres
+      type(c_ptr),  intent(in)    :: handle
+      integer(8),   intent(in)    :: n
+      type(c_ptr),  intent(in)    :: x
+      integer(8),   intent(in)    :: offx
+      integer(8),   intent(in)    :: incx
+      type(c_ptr),  intent(in)    :: y
+      integer(8),   intent(in)    :: offy
+      integer(8),   intent(in)    :: incy
+      type(c_ptr),  intent(inout) :: res
+      integer(8),   intent(in)    :: offres
     end subroutine cuda_blas_zdotc
   end interface
 
@@ -79,20 +79,20 @@ module accel_blas_oct_m
       
       implicit none
       
-      type(c_ptr),  intent(in) :: handle
-      integer,      intent(in) :: transa
-      integer,      intent(in) :: transb
-      integer,      intent(in) :: m
-      integer,      intent(in) :: n
-      integer,      intent(in) :: k
-      real(8),      intent(in) :: alpha
-      type(c_ptr),  intent(in) :: A
-      integer,      intent(in) :: lda
-      type(c_ptr),  intent(in) :: B
-      integer,      intent(in) :: ldb
-      real(8),      intent(in) :: beta
-      type(c_ptr),  intent(in) :: C
-      integer,      intent(in) :: ldc       
+      type(c_ptr),  intent(in)    :: handle
+      integer,      intent(in)    :: transa
+      integer,      intent(in)    :: transb
+      integer,      intent(in)    :: m
+      integer,      intent(in)    :: n
+      integer,      intent(in)    :: k
+      real(8),      intent(in)    :: alpha
+      type(c_ptr),  intent(in)    :: A
+      integer,      intent(in)    :: lda
+      type(c_ptr),  intent(in)    :: B
+      integer,      intent(in)    :: ldb
+      real(8),      intent(in)    :: beta
+      type(c_ptr),  intent(inout) :: C
+      integer,      intent(in)    :: ldc       
     end subroutine cuda_blas_dgemm
 
     subroutine cuda_blas_zgemm(handle, transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
@@ -100,20 +100,20 @@ module accel_blas_oct_m
       
       implicit none
 
-      type(c_ptr),  intent(in) :: handle
-      integer,      intent(in) :: transa
-      integer,      intent(in) :: transb
-      integer,      intent(in) :: m
-      integer,      intent(in) :: n
-      integer,      intent(in) :: k
-      complex(8),   intent(in) :: alpha
-      type(c_ptr),  intent(in) :: A
-      integer,      intent(in) :: lda
-      type(c_ptr),  intent(in) :: B
-      integer,      intent(in) :: ldb
-      complex(8),   intent(in) :: beta
-      type(c_ptr),  intent(in) :: C
-      integer,      intent(in) :: ldc       
+      type(c_ptr),  intent(in)    :: handle
+      integer,      intent(in)    :: transa
+      integer,      intent(in)    :: transb
+      integer,      intent(in)    :: m
+      integer,      intent(in)    :: n
+      integer,      intent(in)    :: k
+      complex(8),   intent(in)    :: alpha
+      type(c_ptr),  intent(in)    :: A
+      integer,      intent(in)    :: lda
+      type(c_ptr),  intent(in)    :: B
+      integer,      intent(in)    :: ldb
+      complex(8),   intent(in)    :: beta
+      type(c_ptr),  intent(inout) :: C
+      integer,      intent(in)    :: ldc       
     end subroutine cuda_blas_zgemm
   end interface
 
