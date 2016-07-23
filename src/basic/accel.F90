@@ -1535,32 +1535,34 @@ contains
     character(len=*),            intent(in)    :: kernel_name
     character(len=*), optional,  intent(in)    :: flags
 
+#ifdef HAVE_OPENCL
+    type(cl_program) :: prog
+#endif
 #ifdef HAVE_CUDA
     type(c_ptr) :: cuda_module
+#endif
+
+    PUSH_SUB(accel_kernel_build)
     
+#ifdef HAVE_CUDA
     if(present(flags)) then
       call cuda_build_program(this%cuda_module, trim(conf%share)//'/opencl/', trim(conf%share)//'/opencl/'//trim(file_name), flags)
     else
       call cuda_build_program(this%cuda_module, trim(conf%share)//'/opencl/', trim(conf%share)//'/opencl/'//trim(file_name), ' ')
     end if
-    
     call cuda_create_kernel(this%cuda_kernel, this%cuda_module, trim(kernel_name))
-
     call cuda_alloc_arg_array(this%arguments)
 #endif
-    
+
 #ifdef HAVE_OPENCL
-    type(cl_program) :: prog
-
-    PUSH_SUB(accel_kernel_build)
-
     call opencl_build_program(prog, trim(conf%share)//'/opencl/'//trim(file_name), flags = flags)
     call opencl_create_kernel(this%kernel, prog, trim(kernel_name))
     call opencl_release_program(prog)
+#endif
+
     this%initialized = .true.
 
     POP_SUB(accel_kernel_build)
-#endif
   end subroutine accel_kernel_build
 
   !------------------------------------------------------------
