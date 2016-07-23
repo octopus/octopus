@@ -63,7 +63,8 @@ libmath_a_SOURCES =                      \
         pnfft.F90                        \
 	qshep.F90                        \
 	spline_low.cc                    \
-	quickrnd.F90
+	quickrnd.F90                     \
+	accel_blas.F90
 
 noinst_HEADERS =                         \
 	fft_inc.F90                      \

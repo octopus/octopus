@@ -529,15 +529,15 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
 #endif
 #ifdef HAVE_CUDA
 #ifdef R_TREAL
-      call cuda_blas_ddot(accel%cublas_handle, int(mesh%np, 8), &
-        aa%pack%buffer%cuda_ptr, int(ist - 1, 8), int(aa%pack%size(1), 8), &
-        bb%pack%buffer%cuda_ptr, int(ist - 1, 8), int(bb%pack%size(1), 8), &
-        dot_buffer%cuda_ptr, int(ist - 1, 8))
+      call cuda_blas_ddot(handle = accel%cublas_handle, n = int(mesh%np, 8), &
+        x = aa%pack%buffer%cuda_ptr, offx = int(ist - 1, 8), incx = int(aa%pack%size(1), 8), &
+        y = bb%pack%buffer%cuda_ptr, offy = int(ist - 1, 8), incy = int(bb%pack%size(1), 8), &
+        res = dot_buffer%cuda_ptr, offres = int(ist - 1, 8))
 #else
-      call cuda_blas_zdotc(accel%cublas_handle, int(mesh%np, 8), &
-        aa%pack%buffer%cuda_ptr, int(ist - 1, 8), int(aa%pack%size(1), 8), &
-        bb%pack%buffer%cuda_ptr, int(ist - 1, 8), int(bb%pack%size(1), 8), &
-        dot_buffer%cuda_ptr, int(ist - 1, 8))
+      call cuda_blas_zdotc(handle = accel%cublas_handle, n = int(mesh%np, 8), &
+        x = aa%pack%buffer%cuda_ptr, offx = int(ist - 1, 8), incx = int(aa%pack%size(1), 8), &
+        y = bb%pack%buffer%cuda_ptr, offy = int(ist - 1, 8), incy = int(bb%pack%size(1), 8), &
+        res = dot_buffer%cuda_ptr, offres = int(ist - 1, 8))
 #endif
 #endif
     end do

@@ -30,8 +30,12 @@
 #include <cuda.h>
 #include <cublas_v2.h>
 #else
+
+#include <complex>
+
 typedef int cublasHandle_t;
 typedef int CUdeviceptr;
+typedef std::complex<double> cuDoubleComplex;
 #endif
 
 #define CUBLAS_SAFE_CALL(x)                                       \
@@ -73,5 +77,29 @@ extern "C" void FC_FUNC_(cuda_blas_zdotc, CUDA_BLAS_ZDOTC)
 #ifdef HAVE_CUDA
   CUBLAS_SAFE_CALL(cublasZdotc(**handle, *n, ((cuDoubleComplex *) **x) + *offx, *incx,
 			      ((cuDoubleComplex *) **y) + *offy, *incy, ((cuDoubleComplex *)**result) + *off_result));
+#endif
+}
+
+extern "C" void FC_FUNC_(cuda_blas_dgemm, CUDA_BLAS_DGEMM)
+  (cublasHandle_t ** handle, fint * transa, fint * transb, fint * m, fint * n, fint * k,
+   const double *alpha, CUdeviceptr ** A, fint * lda, CUdeviceptr ** B, fint * ldb, 
+   const double *beta, CUdeviceptr ** C, fint * ldc){
+  
+#ifdef HAVE_CUDA
+  CUBLAS_SAFE_CALL(cublasDgemm(**handle, (cublasOperation_t) *transa, (cublasOperation_t) *transb, *m, *n, *k,
+			       alpha, (double *) **A, *lda, (double *) **B, *ldb,
+			       beta, (double *) **C, *ldc));
+#endif
+}
+
+extern "C" void FC_FUNC_(cuda_blas_zgemm, CUDA_BLAS_ZGEMM)
+  (cublasHandle_t ** handle, fint * transa, fint * transb, fint * m, fint * n, fint * k,
+   const cuDoubleComplex * alpha, CUdeviceptr ** A, fint * lda, CUdeviceptr ** B, fint * ldb, 
+   const cuDoubleComplex * beta, CUdeviceptr ** C, fint * ldc){
+  
+#ifdef HAVE_CUDA
+  CUBLAS_SAFE_CALL(cublasZgemm(**handle, (cublasOperation_t) *transa, (cublasOperation_t) *transb, *m, *n, *k,
+			       alpha, (cuDoubleComplex *) **A, *lda, (cuDoubleComplex *) **B, *ldb,
+			       beta, (cuDoubleComplex *) **C, *ldc));
 #endif
 }
