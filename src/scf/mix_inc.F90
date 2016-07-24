@@ -31,7 +31,7 @@ subroutine X(mixing)(smix, vin, vout, vnew)
   
   select case (smix%scheme)
   case (OPTION__MIXINGSCHEME__LINEAR)
-    call X(mixing_linear)(smix%alpha, smix%d1, smix%d2, smix%d3, vin, vout, vnew)
+    call X(mixing_linear)(smix%coeff, smix%d1, smix%d2, smix%d3, vin, vout, vnew)
     
   case (OPTION__MIXINGSCHEME__BROYDEN)
     call X(mixing_broyden)(smix, vin, vout, vnew, smix%iter)
@@ -49,15 +49,15 @@ end subroutine X(mixing)
 
 
 ! ---------------------------------------------------------
-subroutine X(mixing_linear)(alpha, d1, d2, d3, vin, vout, vnew)
-  FLOAT,        intent(in) :: alpha
+subroutine X(mixing_linear)(coeff, d1, d2, d3, vin, vout, vnew)
+  FLOAT,        intent(in) :: coeff
   integer,      intent(in) :: d1, d2, d3
   R_TYPE,       intent(in) :: vin(:, :, :), vout(:, :, :)
   R_TYPE,       intent(out):: vnew(:, :, :)
 
   PUSH_SUB(X(mixing_linear))
   
-  vnew(1:d1, 1:d2, 1:d3) = vin(1:d1, 1:d2, 1:d3)*(M_ONE - alpha) + alpha*vout(1:d1, 1:d2, 1:d3)
+  vnew(1:d1, 1:d2, 1:d3) = vin(1:d1, 1:d2, 1:d3)*(M_ONE - coeff) + coeff*vout(1:d1, 1:d2, 1:d3)
   
   POP_SUB(X(mixing_linear))
 end subroutine X(mixing_linear)
@@ -117,7 +117,7 @@ subroutine X(mixing_broyden)(smix, vin, vout, vnew, iter)
   
   ! extrapolate new vector
   iter_used = min(iter -1, smix%ns)
-  call X(broyden_extrapolation)(smix, smix%alpha, d1, d2, d3, vin, vnew, iter_used, f, smix%X(df), smix%X(dv))
+  call X(broyden_extrapolation)(smix, smix%coeff, d1, d2, d3, vin, vnew, iter_used, f, smix%X(df), smix%X(dv))
 
   SAFE_DEALLOCATE_A(f)
 
@@ -126,9 +126,9 @@ end subroutine X(mixing_broyden)
 
 
 ! ---------------------------------------------------------
-subroutine X(broyden_extrapolation)(this, alpha, d1, d2, d3, vin, vnew, iter_used, f, df, dv)
+subroutine X(broyden_extrapolation)(this, coeff, d1, d2, d3, vin, vnew, iter_used, f, df, dv)
   type(mix_t), intent(inout) :: this
-  FLOAT,       intent(in)    :: alpha
+  FLOAT,       intent(in)    :: coeff
   integer,     intent(in)    :: d1, d2, d3, iter_used
   R_TYPE,      intent(in)    :: vin(:, :, :), f(:, :, :)
   R_TYPE,      intent(in)    :: df(:, :, :, :), dv(:, :, :, :)
@@ -143,7 +143,7 @@ subroutine X(broyden_extrapolation)(this, alpha, d1, d2, d3, vin, vnew, iter_use
   
   if (iter_used == 0) then
     ! linear mixing...
-    vnew(1:d1, 1:d2, 1:d3) = vin(1:d1, 1:d2, 1:d3) + alpha*f(1:d1, 1:d2, 1:d3)
+    vnew(1:d1, 1:d2, 1:d3) = vin(1:d1, 1:d2, 1:d3) + coeff*f(1:d1, 1:d2, 1:d3)
     POP_SUB(X(broyden_extrapolation))
     return
   end if
@@ -179,12 +179,12 @@ subroutine X(broyden_extrapolation)(this, alpha, d1, d2, d3, vin, vnew, iter_use
   end do
 
   ! linear mixing term
-  vnew(1:d1, 1:d2, 1:d3) = vin(1:d1, 1:d2, 1:d3) + alpha*f(1:d1, 1:d2, 1:d3)
+  vnew(1:d1, 1:d2, 1:d3) = vin(1:d1, 1:d2, 1:d3) + coeff*f(1:d1, 1:d2, 1:d3)
   
   ! other terms
   do i = 1, iter_used
     gamma = ww*sum(beta(:, i)*work(:))
-    vnew(1:d1, 1:d2, 1:d3) = vnew(1:d1, 1:d2, 1:d3) - ww*gamma*(alpha*df(1:d1, 1:d2, 1:d3, i) + dv(1:d1, 1:d2, 1:d3, i))
+    vnew(1:d1, 1:d2, 1:d3) = vnew(1:d1, 1:d2, 1:d3) - ww*gamma*(coeff*df(1:d1, 1:d2, 1:d3, i) + dv(1:d1, 1:d2, 1:d3, i))
   end do
   
   SAFE_DEALLOCATE_A(beta)
@@ -228,8 +228,8 @@ subroutine X(mixing_diis)(this, vin, vout, vnew, iter)
 
   if(iter == 1 .or. mod(iter, this%interval) /= 0) then
 
-    vnew(1:this%d1, 1:this%d2, 1:this%d3) = (CNST(1.0) - this%alpha)*vin(1:this%d1, 1:this%d2, 1:this%d3) &
-      + this%alpha*vout(1:this%d1, 1:this%d2, 1:this%d3)
+    vnew(1:this%d1, 1:this%d2, 1:this%d3) = (CNST(1.0) - this%coeff)*vin(1:this%d1, 1:this%d2, 1:this%d3) &
+      + this%coeff*vout(1:this%d1, 1:this%d2, 1:this%d3)
 
     POP_SUB(X(mixing_diis))
     return
@@ -269,7 +269,8 @@ subroutine X(mixing_diis)(this, vin, vout, vnew, iter)
   
   do ii = 1, size
     vnew(1:this%d1, 1:this%d2, 1:this%d3) = vnew(1:this%d1, 1:this%d2, 1:this%d3) &
-      + alpha(ii)*(this%X(dv)(1:this%d1, 1:this%d2, 1:this%d3, ii) + this%alpha*this%X(df)(1:this%d1, 1:this%d2, 1:this%d3, ii))
+      + alpha(ii)*(this%X(dv)(1:this%d1, 1:this%d2, 1:this%d3, ii) &
+      + this%residual_coeff*this%X(df)(1:this%d1, 1:this%d2, 1:this%d3, ii))
   end do
 
   POP_SUB(X(mixing_diis))

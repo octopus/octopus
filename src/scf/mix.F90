@@ -58,7 +58,7 @@ module mix_oct_m
     private
     integer :: scheme           !< the mixing scheme used (linear, broyden, etc)
 
-    FLOAT :: alpha              !< the mixing coefficient (in linear mixing: vnew = (1-alpha)*vin + alpha*vout)
+    FLOAT :: coeff              !< the mixing coefficient (in linear mixing: vnew = (1-coeff)*vin + coeff*vout)
 
     integer :: iter             !< number of SCF iterations already done. In case of restart, this number must
                                 !< include the iterations done in previous calculations.
@@ -85,6 +85,8 @@ module mix_oct_m
     type(derivatives_t), pointer :: der
     logical                      :: precondition
     type(nl_operator_t)          :: preconditioner
+
+    FLOAT :: residual_coeff
     
   end type mix_t
 
@@ -165,11 +167,26 @@ contains
     !%Default 0.3
     !%Section SCF::Mixing
     !%Description
-    !% Both the linear and the Broyden scheme depend on a "mixing parameter", set by this variable. 
+    !% The linear, Broyden and DIIS scheme depend on a "mixing parameter", set by this variable. 
     !% Must be 0 < <tt>Mixing</tt> <= 1.
     !%End
-    call parse_variable(trim(prefix)+'Mixing', CNST(0.3), smix%alpha)
-    if(smix%alpha <= M_ZERO .or. smix%alpha > M_ONE) call messages_input_error('Mixing')
+    call parse_variable(trim(prefix)+'Mixing', CNST(0.3), smix%coeff)
+    if(smix%coeff <= M_ZERO .or. smix%coeff > M_ONE) then
+      call messages_input_error('Mixing', 'Value should be positive and smaller than one.')
+    end if
+    
+    !%Variable MixingResidual
+    !%Type float
+    !%Default 0.05
+    !%Section SCF::Mixing
+    !%Description
+    !% In the DIIS mixing it is benefitial to include a bit of
+    !% residual into the mixing. This parameter controls this amount.
+    !%End
+    call parse_variable(trim(prefix)+'MixingResidual', CNST(0.05), smix%residual_coeff)
+    if(smix%residual_coeff <= M_ZERO .or. smix%residual_coeff > M_ONE) then
+      call messages_input_error('MixingResidual', 'Value should be positive and smaller than one.')
+    end if
     
     !%Variable MixNumberSteps
     !%Type integer
@@ -355,7 +372,7 @@ contains
     PUSH_SUB(mix_set_mixing)
     
     if(smix%scheme == OPTION__MIXINGSCHEME__LINEAR) then
-      smix%alpha = newmixing
+      smix%coeff = newmixing
     else
     !  message(1) = "Mixing can only be adjusted in linear mixing scheme."
     !  call messages_fatal(1)
@@ -602,7 +619,7 @@ contains
   FLOAT pure function mix_coefficient(this) result(coefficient)
     type(mix_t), intent(in) :: this
     
-    coefficient = this%alpha
+    coefficient = this%coeff
   end function mix_coefficient
   
   
