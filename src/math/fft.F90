@@ -445,6 +445,13 @@ contains
       call pfft_get_dims(fft_array(jj)%rs_n_global, mpi_comm, type == FFT_REAL, &
            alloc_size, fft_array(jj)%fs_n_global, fft_array(jj)%rs_n, &
            fft_array(jj)%fs_n, fft_array(jj)%rs_istart, fft_array(jj)%fs_istart)
+      !write(*,"(6(A,3I4,/),A,I10,/)") "PFFT: rs_n_global = ",fft_array(jj)%rs_n_global,&
+      !  & "fs_n_global = ",fft_array(jj)%fs_n_global,&
+      !  & "rs_n        = ",fft_array(jj)%rs_n,&
+      !  & "fs_n        = ",fft_array(jj)%fs_n,&
+      !  & "rs_istart   = ",fft_array(jj)%rs_istart,&
+      !  & "fs_istart   = ",fft_array(jj)%fs_istart,&
+      !  & "alloc_size  = ",alloc_size
 #endif
 
       ! Allocate memory. Note that PFFT may need extra memory space 
@@ -457,9 +464,10 @@ contains
         n3 = ceiling(real(2*alloc_size)/real(n_1*n_2))
         SAFE_ALLOCATE(fft_array(jj)%drs_data(1:n_1, 1:n_2, 1:n3))
 
+        ! The following comment is not any more valid as rs_n is not changed by pfft.
         ! For real functions, PFFT increases the size of rs_n(1) by 1, such that rs_n(1) = nn(1) + 1.
         ! The rest of the code does not need to know about this.
-        fft_array(jj)%rs_n(1) = fft_array(jj)%rs_n(1) - 1
+        !fft_array(jj)%rs_n(1) = fft_array(jj)%rs_n(1) - 1
       else
         n3 = ceiling(real(alloc_size)/real(fft_array(jj)%rs_n(1)*fft_array(jj)%rs_n(2)))
         SAFE_ALLOCATE(fft_array(jj)%zrs_data(1:fft_array(jj)%rs_n(1), 1:fft_array(jj)%rs_n(2), 1:n3))
