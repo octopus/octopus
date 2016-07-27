@@ -663,7 +663,7 @@ contains
       !%Section Mesh::Simulation Box
       !%Description
       !% (Experimental) Primitive lattice vectors. Vectors are stored in rows.
-      !% Note that these vectors will be normalized. Default:
+      !% Default:
       !% <br><br><tt>%LatticeVectors
       !% <br>&nbsp;&nbsp;1.0 | 0.0 | 0.0
       !% <br>&nbsp;&nbsp;0.0 | 1.0 | 0.0
