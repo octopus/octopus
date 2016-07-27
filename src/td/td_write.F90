@@ -154,7 +154,7 @@ contains
     FLOAT,                    intent(in)    :: dt
 
     FLOAT :: rmin
-    integer :: ierr, first, ii, ist, jj, flags, iout, default
+    integer :: ierr, first, ii, ist, jj, kk, flags, iout, default
     type(block_t) :: blk
     character(len=100) :: filename
     type(restart_t) :: restart_gs
@@ -340,7 +340,8 @@ contains
 
       if(.not.writ%out(OUT_KP_PROJ)%write) then
         if(ierr == 0) &
-          call states_look(restart_gs, ii, jj, writ%gs_st%nst, ierr)
+          call states_look(restart_gs, ii, jj, kk, ierr)
+          writ%gs_st%nst = min(writ%gs_st%nst, kk)
         if(ierr /= 0) then
           message(1) = "Unable to read states information."
           call messages_fatal(1)
