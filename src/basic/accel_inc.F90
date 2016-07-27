@@ -17,6 +17,27 @@
 !!
 !! $Id$
 
+subroutine X(accel_write_buffer_0)(this, data)
+  type(accel_mem_t),               intent(inout) :: this
+  R_TYPE,                          intent(in)    :: data
+
+  R_TYPE, allocatable :: data_vec(:)
+  
+  PUSH_SUB(X(accel_write_buffer_0))
+
+  SAFE_ALLOCATE(data_vec(1:1))
+
+  data_vec(1:1) = data
+
+  call X(accel_write_buffer_1)(this, 1, data_vec)
+  
+  SAFE_DEALLOCATE_A(data_vec)
+  
+  POP_SUB(X(accel_write_buffer_0))
+end subroutine X(accel_write_buffer_0)
+
+! -----------------------------------------------------------------------------
+
 subroutine X(accel_write_buffer_1)(this, size, data, offset)
   type(accel_mem_t),               intent(inout) :: this
   integer,                          intent(in)    :: size

@@ -185,6 +185,7 @@ module accel_oct_m
   end interface accel_create_buffer
 
   interface accel_write_buffer
+    module procedure iaccel_write_buffer_0, daccel_write_buffer_0, zaccel_write_buffer_0
     module procedure iaccel_write_buffer_1, daccel_write_buffer_1, zaccel_write_buffer_1
     module procedure iaccel_write_buffer_2, daccel_write_buffer_2, zaccel_write_buffer_2
     module procedure iaccel_write_buffer_3, daccel_write_buffer_3, zaccel_write_buffer_3
