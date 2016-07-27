@@ -251,7 +251,7 @@ contains
     !% TDFloquetFrequency, TDFloquetSample, TDFloquetDimension.
     !% This is done only once per td-run at t=0.
     !% works only in k- and/or state parallelization
-    !%Option n_ex 1048576
+    !%Option n_excited_el 1048576
     !% Output the number of excited electrons, based on the projections 
     !% of the time evolved wave-functions on the ground-state wave-functions. 
     !%End
@@ -279,7 +279,7 @@ contains
     if(writ%out(OUT_PARTIAL_CHARGES)%write) call messages_experimental('TDOutput = partial_charges')
     if(writ%out(OUT_KP_PROJ)%write) call messages_experimental('TDOutput = td_kpoint_occup')
     if(writ%out(OUT_FLOQUET)%write) call messages_experimental('TDOutput = td_floquet')
-    if(writ%out(OUT_N_EX)%write) call messages_experimental('TDOutput = n_ex')
+    if(writ%out(OUT_N_EX)%write) call messages_experimental('TDOutput = n_excited_el')
 
     if(writ%out(OUT_KP_PROJ)%write.or.writ%out(OUT_FLOQUET)%write) then
       ! make sure this is not domain distributed
