@@ -66,8 +66,8 @@ module accel_blas_oct_m
     ACCEL_BLAS_C = clblasConjTrans
   
   integer, parameter, public ::                      &
-    ACCEL_BLAS_DIAG_NON_UNIT = clblasUnit,           &
-    ACCEL_BLAS_DIAG_UNIT     = clblasNonUnit
+    ACCEL_BLAS_DIAG_NON_UNIT = clblasNonUnit,        &
+    ACCEL_BLAS_DIAG_UNIT     = clblasUnit
 #else 
   integer, parameter, public ::                      &
     ACCEL_BLAS_LEFT  = CUBLAS_SIDE_LEFT,             &
