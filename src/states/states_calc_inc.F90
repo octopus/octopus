@@ -1317,22 +1317,6 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
         call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psi_buffer, st%nst)
       end do
 
-#ifdef HAVE_CLBLAS
-#ifdef R_TREAL
-      call clblasDsyrkEx &
-#else
-      call clblasZherkEx &
-#endif
-      (order = clblasColumnMajor, uplo = clblasUpper, transA = clblasNoTrans, &
-        N = int(st%nst, 8), K = int(size, 8), &
-        alpha = real(mesh%volume_element, 8), &
-        A = psi_buffer%mem, offA = 0_8, lda = int(st%nst, 8), &
-        beta = 1.0_8, &
-        C = overlap_buffer%mem, offC = 0_8, ldc = int(st%nst, 8), &
-        CommandQueue = accel%command_queue, status = ierr)
-      if(ierr /= clblasSuccess) call clblas_print_error(ierr, 'clblasDsyrkEx/clblasZherkEx')
-#endif
-#ifdef HAVE_CUDA
 #ifdef R_TREAL
       call daccel_syrk &
 #else
@@ -1344,7 +1328,6 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
         A = psi_buffer, offa = 0_8, lda = int(st%nst, 8), &
         beta = 1.0_8, &
         C = overlap_buffer, offc = 0_8, ldc = int(st%nst, 8))
-#endif
     end do
 
     call accel_finish()

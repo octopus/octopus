@@ -256,6 +256,7 @@ contains
     integer(8),        intent(in)    :: offc
     integer(8),        intent(in)    :: ldc   
 
+    integer :: ierr
     type(accel_mem_t) :: alpha_buffer, beta_buffer
     
     PUSH_SUB(daccel_syrk)
@@ -263,23 +264,35 @@ contains
     ASSERT(offa == 0)
     ASSERT(offc == 0)
 
+#ifdef HAVE_OPENCL
+    call clblasDsyrkEx(order = clblasColumnMajor, uplo = uplo, transA = trans, N = n, K = k, &
+      alpha = alpha, A = a%mem, offA = offa, lda = lda, &
+      beta = beta, C = c%mem, offC = offc, ldc = ldc, &
+      CommandQueue = accel%command_queue, status = ierr)
+    if(ierr /= clblasSuccess) call clblas_print_error(ierr, 'clblasDsyrkEx')
+    call accel_finish()
+#endif
+
+#ifdef HAVE_CUDA    
     call accel_create_buffer(alpha_buffer, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, 1)
     call accel_create_buffer(beta_buffer, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, 1)
 
     call accel_write_buffer(alpha_buffer, alpha)
     call accel_write_buffer(beta_buffer, beta)
 
-#ifdef HAVE_CUDA    
     call cuda_blas_dsyrk(handle = accel%cublas_handle, uplo = uplo, trans = trans, &
       n = n, k = k, &
       alpha = alpha_buffer%cuda_ptr, &
       A = a%cuda_ptr, lda = lda, &
       beta = beta_buffer%cuda_ptr, &
       C = c%cuda_ptr, ldc = ldc)
-#endif
 
     call accel_finish()
-    
+
+    call accel_release_buffer(alpha_buffer)
+    call accel_release_buffer(beta_buffer)
+#endif
+
     POP_SUB(daccel_syrk)
   end subroutine daccel_syrk
 
@@ -299,29 +312,42 @@ contains
     integer(8),        intent(in)    :: offc
     integer(8),        intent(in)    :: ldc   
 
+    integer :: ierr
     type(accel_mem_t) :: alpha_buffer, beta_buffer
     
     PUSH_SUB(zaccel_herk)
 
     ASSERT(offa == 0)
     ASSERT(offc == 0)
+#ifdef HAVE_OPENCL
+    call clblasZherkEx(order = clblasColumnMajor, uplo = uplo, transA = trans, N = n, K = k, &
+      alpha = alpha, A = a%mem, offA = offa, lda = lda, &
+      beta = beta, C = c%mem, offC = offc, ldc = ldc, &
+      CommandQueue = accel%command_queue, status = ierr)
+    if(ierr /= clblasSuccess) call clblas_print_error(ierr, 'clblasZherkEx')
+    call accel_finish()
+#endif
 
+#ifdef HAVE_CUDA    
     call accel_create_buffer(alpha_buffer, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, 1)
     call accel_create_buffer(beta_buffer, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, 1)
 
     call accel_write_buffer(alpha_buffer, alpha)
     call accel_write_buffer(beta_buffer, beta)
 
-#ifdef HAVE_CUDA    
     call cuda_blas_zherk(handle = accel%cublas_handle, uplo = uplo, trans = trans, &
       n = n, k = k, &
       alpha = alpha_buffer%cuda_ptr, &
       A = a%cuda_ptr, lda = lda, &
       beta = beta_buffer%cuda_ptr, &
       C = c%cuda_ptr, ldc = ldc)
-#endif
 
     call accel_finish()
+    
+    call accel_release_buffer(alpha_buffer)
+    call accel_release_buffer(beta_buffer)
+#endif
+
     
     POP_SUB(zaccel_herk)
   end subroutine zaccel_herk
