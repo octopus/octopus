@@ -1244,10 +1244,8 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
   type(profile_t), save :: prof
   FLOAT :: vol
   R_TYPE, allocatable :: psi(:, :, :)
-#ifdef HAVE_CLBLAS
   integer :: ierr
   type(accel_mem_t) :: psi_buffer, overlap_buffer
-#endif
 
   PUSH_SUB(X(states_calc_overlap))
 
@@ -1304,7 +1302,6 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
 
     SAFE_DEALLOCATE_A(psi)
 
-#ifdef HAVE_CLBLAS
 
   else if(accel_is_enabled()) then
 
@@ -1328,6 +1325,7 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
         call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psi_buffer, st%nst)
       end do
 
+#ifdef HAVE_CLBLAS
 #ifdef R_TREAL
       call clblasDsyrkEx &
 #else
@@ -1341,7 +1339,15 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
         C = overlap_buffer%mem, offC = 0_8, ldc = int(st%nst, 8), &
         CommandQueue = accel%command_queue, status = ierr)
       if(ierr /= clblasSuccess) call clblas_print_error(ierr, 'clblasDsyrkEx/clblasZherkEx')
-
+#endif
+#ifdef HAVE_CUDA      
+      call daccel_syrk(uplo = ACCEL_BLAS_U, trans = ACCEL_BLAS_N, &
+        n = int(st%nst, 8), k = int(size, 8), &
+        alpha = mesh%volume_element, &
+        A = psi_buffer, offa = 0_8, lda = int(st%nst, 8), &
+        beta = 1.0_8, &
+        C = overlap_buffer, offc = 0_8, ldc = int(st%nst, 8))
+#endif
     end do
 
     call accel_finish()
@@ -1365,8 +1371,6 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
     if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, overlap, dim = (/st%nst, st%nst/))
 
     call accel_release_buffer(overlap_buffer)
-
-#endif
 
   else
 
