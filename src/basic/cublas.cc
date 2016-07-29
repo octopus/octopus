@@ -103,3 +103,15 @@ extern "C" void FC_FUNC_(cuda_blas_zgemm, CUDA_BLAS_ZGEMM)
 			       beta, (cuDoubleComplex *) **C, *ldc));
 #endif
 }
+
+extern "C" void FC_FUNC_(cuda_blas_dsyrk, CUDA_BLAS_DSYRK)
+  (cublasHandle_t ** handle, fint * uplo, fint * trans, fint8 * n, fint8 * k,
+   CUdeviceptr **alpha, CUdeviceptr ** A, fint8 * lda,
+   CUdeviceptr **beta, CUdeviceptr ** C, fint8 * ldc){
+  
+#ifdef HAVE_CUDA
+  CUBLAS_SAFE_CALL(cublasDsyrk(**handle, (cublasFillMode_t) *uplo, (cublasOperation_t) *trans, *n, *k,
+			       (double *) **alpha, (double *) **A, *lda,
+			       (double *) **beta, (double *) **C, *ldc));
+#endif
+}
