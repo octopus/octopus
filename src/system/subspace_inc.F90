@@ -386,7 +386,8 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
     if(.not. st%parallel_in_states .and. st%group%block_start == st%group%block_end) then
       ! all the states are stored in one block
       ! we can use blas directly
-
+      print*, "HEEEEEEEEREE1"
+      
 #ifdef HAVE_CLBLAS
       call aX(clblas,gemmEx)(order = clblasColumnMajor, transA = clblasNoTrans, transB = clblasConjTrans, &
         M = int(st%nst, 8), N = int(st%nst, 8), K = int(der%mesh%np, 8), &
@@ -411,6 +412,8 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
 #endif
     else
 
+      print*, "HEEEEEEEEREE3"
+    
       ASSERT(.not. st%parallel_in_states)
 
       ! we have to copy the blocks to a temporary array
@@ -448,12 +451,15 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
       call accel_release_buffer(hpsi_buffer)
       
     end if
-
+    print*, "HERE 8"
     call accel_read_buffer(hmss_buffer, st%nst*st%nst, hmss)
+    print*, "HERE 9"
     call accel_release_buffer(hmss_buffer)
 
   else
 
+    print*, "HERE4"
+    
 #ifdef R_TREAL  
     block_size = max(40, hardware%l2%size/(2*8*st%nst))
 #else
@@ -498,6 +504,17 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
 #endif
 
   end if
+
+  print*, "==================="
+  
+  do ib = 1, st%nst
+    print*, hmss(ib, :)
+  end do
+  
+  print*, "==================="
+  
+  stop
+   
 
   call profiling_count_operations((R_ADD + R_MUL)*st%nst*(st%nst - CNST(1.0))*der%mesh%np)
   

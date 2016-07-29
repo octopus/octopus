@@ -20,6 +20,9 @@
 #include <global.h>
 
 module accel_blas_oct_m
+#ifdef HAVE_OPENCL
+  use clblas
+#endif
   use accel_oct_m
   use global_oct_m
   use iso_c_binding
@@ -30,40 +33,61 @@ module accel_blas_oct_m
   implicit none
 
   private
-  
-  integer, parameter, public ::  &
-    ACCEL_BLAS_LEFT  = 0,        &
-    ACCEL_BLAS_RIGHT = 1
 
-  integer, parameter, public ::  &
-    ACCEL_BLAS_LOWER = 0,        &
-    ACCEL_BLAS_UPPER = 1
-  
-  integer, parameter, public ::  &
-    ACCEL_BLAS_N = 0,            &
-    ACCEL_BLAS_T = 1,            &
-    ACCEL_BLAS_C = 2
-
-  integer, parameter, public ::   &
-    ACCEL_BLAS_DIAG_NON_UNIT = 0, &
-    ACCEL_BLAS_DIAG_UNIT     = 1
-  
-  integer, parameter, public ::  &
-    CUBLAS_DIAG_NON_UNIT = 0,    &
+  integer, parameter, public ::                      &
+    CUBLAS_DIAG_NON_UNIT = 0,                        &
     CUBLAS_DIAG_UNIT     = 1
 
-  integer, parameter, public ::  &
-    CUBLAS_OP_N = 0,             &
-    CUBLAS_OP_T = 1,             &  
+  integer, parameter, public ::                      &
+    CUBLAS_OP_N = 0,                                 &
+    CUBLAS_OP_T = 1,                                 &  
     CUBLAS_OP_C = 2
 
-  integer, parameter, public ::  &
-    CUBLAS_FILL_MODE_LOWER = 0,  &
+  integer, parameter, public ::                      &
+    CUBLAS_FILL_MODE_LOWER = 0,                      &
     CUBLAS_FILL_MODE_UPPER = 1
 
-  integer, parameter, public ::  &
-    CUBLAS_SIDE_LEFT  = 0,       &
+  integer, parameter, public ::                      &
+    CUBLAS_SIDE_LEFT  = 0,                           &
     CUBLAS_SIDE_RIGHT = 1
+
+#ifdef HAVE_OPENCL
+  integer, parameter, public ::                      &
+    ACCEL_BLAS_LEFT  = clblasLeft,                   &
+    ACCEL_BLAS_RIGHT = clblasRight
+
+  integer, parameter, public ::                      &
+    ACCEL_BLAS_LOWER = clblasLower,                  &
+    ACCEL_BLAS_UPPER = clblasUpper
+  
+  integer, parameter, public ::                      &
+    ACCEL_BLAS_N = clblasNoTrans,                    &
+    ACCEL_BLAS_T = clblasTrans,                      &
+    ACCEL_BLAS_C = clblasConjTrans
+  
+  integer, parameter, public ::                      &
+    ACCEL_BLAS_DIAG_NON_UNIT = clblasUnit,           &
+    ACCEL_BLAS_DIAG_UNIT     = clblasNonUnit
+#endif
+  
+#ifdef HAVE_CUDA
+  integer, parameter, public ::                      &
+    ACCEL_BLAS_LEFT  = CUBLAS_SIDE_LEFT,             &
+    ACCEL_BLAS_RIGHT = CUBLAS_SIDE_RIGHT
+
+  integer, parameter, public ::                      &
+    ACCEL_BLAS_LOWER = CUBLAS_FILL_MODE_LOWER,       &
+    ACCEL_BLAS_UPPER = CUBLAS_FILL_MODE_UPPER
+  
+  integer, parameter, public ::                      &
+    ACCEL_BLAS_N = CUBLAS_OP_N,                      &
+    ACCEL_BLAS_T = CUBLAS_OP_T,                      &
+    ACCEL_BLAS_C = CUBLAS_OP_C
+
+  integer, parameter, public ::                      &
+    ACCEL_BLAS_DIAG_NON_UNIT = CUBLAS_DIAG_NON_UNIT, &
+    ACCEL_BLAS_DIAG_UNIT     = CUBLAS_DIAG_UNIT
+#endif
   
   public ::                        &
     cuda_blas_ddot,                &
@@ -176,6 +200,7 @@ module accel_blas_oct_m
     end subroutine cuda_blas_dsyrk
   end interface
 
+  ! TRSM
   interface
     subroutine cuda_blas_dtrsm(handle, side, uplo, trans, diag, m, n, alpha, A, lda, B, ldb)
       use iso_c_binding
@@ -251,7 +276,7 @@ contains
     integer(8),        intent(in)    :: m
     integer(8),        intent(in)    :: n
     real(8),           intent(in)    :: alpha
-    type(accel_mem_t), intent(in)    :: A
+    type(accel_mem_t), intent(inout) :: A
     integer(8),        intent(in)    :: offa
     integer(8),        intent(in)    :: lda
     type(accel_mem_t), intent(inout) :: B
@@ -259,21 +284,34 @@ contains
     integer(8),        intent(in)    :: ldb
     
     type(accel_mem_t) :: alpha_buffer
+    integer :: ierr
     
     PUSH_SUB(daccel_trsm)
 
     ASSERT(offa == 0)
     ASSERT(offb == 0)
 
+#ifdef HAVE_CUDA    
     call accel_create_buffer(alpha_buffer, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, 1)
     call accel_write_buffer(alpha_buffer, alpha)
 
-#ifdef HAVE_CUDA    
     call cuda_blas_dtrsm(handle = accel%cublas_handle, side = side, uplo = uplo, trans = trans, diag = diag, &
       m = m, n = n, alpha = alpha_buffer%cuda_ptr, A = a%cuda_ptr, lda = lda, B = b%cuda_ptr, ldb = ldb)
 #endif
 
+#ifdef HAVE_OPENCL
+    call clblasDtrsmEx(order = clblasColumnMajor, side = side, uplo = uplo, transA = trans, diag = diag, &
+      M = m, N = n, alpha = alpha, A = a%mem, offA = offa, lda = lda, &
+      B = b%mem, offB = offb, ldb = ldb, &
+      CommandQueue = accel%command_queue, status = ierr)
+    if(ierr /= clblasSuccess) call clblas_print_error(ierr, 'clblasDtrsmEx')
+#endif
+    
     call accel_finish()
+
+#ifdef HAVE_CUDA
+    call accel_release_buffer(alpha_buffer)
+#endif
     
     POP_SUB(daccel_trsm)
   end subroutine daccel_trsm
