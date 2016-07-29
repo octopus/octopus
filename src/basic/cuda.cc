@@ -253,15 +253,15 @@ extern "C" void FC_FUNC_(cuda_mem_free, CUDA_MEM_FREE)(CUdeviceptr ** cuda_ptr){
 #endif
 }
 
-extern "C" void FC_FUNC_(cuda_memcpy_htod, CUDA_MEMCPY_HTOD)(CUdeviceptr ** cuda_ptr, const void * data, fint8 * size){
+extern "C" void FC_FUNC_(cuda_memcpy_htod, CUDA_MEMCPY_HTOD)(CUdeviceptr ** cuda_ptr, const void * data, fint8 * size, fint8 * offset){
 #ifdef HAVE_CUDA
-  CUDA_SAFE_CALL(cuMemcpyHtoD(**cuda_ptr, data, *size));
+  CUDA_SAFE_CALL(cuMemcpyHtoD(**cuda_ptr + *offset, data, *size));
 #endif  
 }
 
-extern "C" void FC_FUNC_(cuda_memcpy_dtoh, CUDA_MEMCPY_DTOH)(CUdeviceptr ** cuda_ptr, void * data, fint8 * size){
+extern "C" void FC_FUNC_(cuda_memcpy_dtoh, CUDA_MEMCPY_DTOH)(CUdeviceptr ** cuda_ptr, void * data, fint8 * size, fint8 * offset){
 #ifdef HAVE_CUDA
-  CUDA_SAFE_CALL(cuMemcpyDtoH(data, **cuda_ptr, *size));
+  CUDA_SAFE_CALL(cuMemcpyDtoH(data, **cuda_ptr + *offset, *size));
 #endif  
 }
 
@@ -322,7 +322,7 @@ extern "C" void FC_FUNC_(cuda_launch_kernel, CUDA_LAUNCH_KERNEL)
   cout << "GRID  " << griddim[0] << " " << griddim[1] << " " <<  griddim[2] << endl;
   cout << "BLOCK " << blockdim[0] << " " << blockdim[1] << " " <<  blockdim[2] << endl;
   */
-    
+  
   assert((**arg_array).size() > 0);
   for(unsigned ii = 0; ii < (**arg_array).size(); ii++) assert((**arg_array)[ii] != NULL);
   
