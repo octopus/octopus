@@ -326,6 +326,15 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
     end do
   end do
 
+
+  ! Grad_xyw = Bt Grad_uvw, see Chelikowsky after Eq. 10
+  if (simul_box_is_periodic(gr%mesh%sb) .and. gr%mesh%sb%nonorthogonal ) then
+     forall (iatom = 1:geo%natoms)
+        force(1:gr%mesh%sb%dim,iatom) = &
+             matmul(force(1:gr%mesh%sb%dim,iatom),gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim))
+     end forall
+  end if
+
   SAFE_DEALLOCATE_A(force_tmp)
   SAFE_DEALLOCATE_A(force_psi)
   SAFE_DEALLOCATE_A(force_loc)
