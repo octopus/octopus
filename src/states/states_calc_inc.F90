@@ -284,13 +284,11 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
 
   integer :: idim, block_size, ib, size, sp
   R_TYPE, allocatable :: psicopy(:, :, :)
-#ifdef HAVE_OPENCL
   integer :: ierr
   type(accel_mem_t) :: psicopy_buffer, ss_buffer
   type(accel_kernel_t), save, target :: dkernel, zkernel
   type(accel_kernel_t), pointer :: kernel
   type(profile_t), save :: prof_copy
-#endif
   type(profile_t), save :: prof
 
   PUSH_SUB(X(states_trsm))
@@ -334,7 +332,6 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
 
     if(st%d%dim > 1) call messages_not_implemented('Opencl states_trsm for spinors')
 
-#ifdef HAVE_OPENCL
     block_size = batch_points_block_size(st%group%psib(st%group%block_start, ik))
 
     call accel_create_buffer(psicopy_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
@@ -355,8 +352,8 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
         call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psicopy_buffer, st%nst)
       end do
 
-#if defined(HAVE_CLBLAS) && defined(R_TREAL)
-
+#if defined(R_TREAL)
+#if defined(HAVE_CLBLAS)
       call aX(clblas,trsmEx)(order = clblasColumnMajor, side = clblasLeft, &
         uplo = clblasUpper, transA = clblasTrans, diag = clblasNonUnit, &
         M = int(st%nst, 8), N = int(size, 8), alpha = R_TOTYPE(M_ONE), &
@@ -364,9 +361,15 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
         B = psicopy_buffer%mem, offB = 0_8, ldb = int(st%nst, 8), &
         CommandQueue = accel%command_queue, status = ierr)
       if(ierr /= clblasSuccess) call clblas_print_error(ierr, 'clblasXtrsmEx')
-
+#endif
+#ifdef HAVE_CUDA
+      call daccel_trsm(side = ACCEL_BLAS_LEFT, uplo = ACCEL_BLAS_UPPER, &
+        trans = ACCEL_BLAS_T, diag = ACCEL_BLAS_DIAG_NON_UNIT, &
+        M = int(st%nst, 8), N = int(size, 8), alpha = R_TOTYPE(M_ONE), &
+        A = ss_buffer, offA = 0_8, lda = int(ubound(ss, dim = 1), 8), &
+        B = psicopy_buffer, offB = 0_8, ldb = int(st%nst, 8))
+#endif
 #else
-
       if(states_are_real(st)) then
         call accel_kernel_start_call(dkernel, 'trsm.cl', 'dtrsm')
         kernel => dkernel
@@ -393,7 +396,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
     
     call accel_release_buffer(ss_buffer)
     call accel_release_buffer(psicopy_buffer)
-#endif
+
   end if
 
   call profiling_count_operations(mesh%np*dble(st%nst)*(st%nst + 1)*CNST(0.5)*(R_ADD + R_MUL))
@@ -1341,7 +1344,7 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
       if(ierr /= clblasSuccess) call clblas_print_error(ierr, 'clblasDsyrkEx/clblasZherkEx')
 #endif
 #ifdef HAVE_CUDA      
-      call daccel_syrk(uplo = ACCEL_BLAS_U, trans = ACCEL_BLAS_N, &
+      call daccel_syrk(uplo = ACCEL_BLAS_UPPER, trans = ACCEL_BLAS_N, &
         n = int(st%nst, 8), k = int(size, 8), &
         alpha = mesh%volume_element, &
         A = psi_buffer, offa = 0_8, lda = int(st%nst, 8), &

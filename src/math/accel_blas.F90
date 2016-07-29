@@ -30,15 +30,27 @@ module accel_blas_oct_m
   implicit none
 
   private
+  
+  integer, parameter, public ::  &
+    ACCEL_BLAS_LEFT  = 0,        &
+    ACCEL_BLAS_RIGHT = 1
 
   integer, parameter, public ::  &
-    ACCEL_BLAS_L = 0,            &
-    ACCEL_BLAS_U = 1
+    ACCEL_BLAS_LOWER = 0,        &
+    ACCEL_BLAS_UPPER = 1
   
   integer, parameter, public ::  &
     ACCEL_BLAS_N = 0,            &
     ACCEL_BLAS_T = 1,            &
     ACCEL_BLAS_C = 2
+
+  integer, parameter, public ::   &
+    ACCEL_BLAS_DIAG_NON_UNIT = 0, &
+    ACCEL_BLAS_DIAG_UNIT     = 1
+  
+  integer, parameter, public ::  &
+    CUBLAS_DIAG_NON_UNIT = 0,    &
+    CUBLAS_DIAG_UNIT     = 1
 
   integer, parameter, public ::  &
     CUBLAS_OP_N = 0,             &
@@ -49,12 +61,17 @@ module accel_blas_oct_m
     CUBLAS_FILL_MODE_LOWER = 0,  &
     CUBLAS_FILL_MODE_UPPER = 1
 
+  integer, parameter, public ::  &
+    CUBLAS_SIDE_LEFT  = 0,       &
+    CUBLAS_SIDE_RIGHT = 1
+  
   public ::                        &
     cuda_blas_ddot,                &
     cuda_blas_zdotc,               &
     cuda_blas_dgemm,               &
     cuda_blas_zgemm,               &
-    daccel_syrk
+    daccel_syrk,                   &
+    daccel_trsm
   
   ! DOT
   interface
@@ -159,6 +176,28 @@ module accel_blas_oct_m
     end subroutine cuda_blas_dsyrk
   end interface
 
+  interface
+    subroutine cuda_blas_dtrsm(handle, side, uplo, trans, diag, m, n, alpha, A, lda, B, ldb)
+      use iso_c_binding
+      
+      implicit none
+      
+      type(c_ptr),  intent(in)    :: handle
+      integer,      intent(in)    :: side
+      integer,      intent(in)    :: uplo
+      integer,      intent(in)    :: trans
+      integer,      intent(in)    :: diag
+      integer(8),   intent(in)    :: m
+      integer(8),   intent(in)    :: n
+      type(c_ptr),  intent(in)    :: alpha
+      type(c_ptr),  intent(in)    :: A
+      integer(8),   intent(in)    :: lda
+      type(c_ptr),  intent(inout) :: B
+      integer(8),   intent(in)    :: ldb       
+    end subroutine cuda_blas_dtrsm
+
+  end interface
+  
 contains
 
   subroutine daccel_syrk(uplo, trans, n, k, alpha, a, offa, lda, beta, c, offc, ldc)
@@ -175,7 +214,6 @@ contains
     integer(8),        intent(in)    :: offc
     integer(8),        intent(in)    :: ldc   
 
-    FLOAT, allocatable :: aa(:, :), cc(:, :)
     type(accel_mem_t) :: alpha_buffer, beta_buffer
     
     PUSH_SUB(daccel_syrk)
@@ -202,5 +240,42 @@ contains
     
     POP_SUB(daccel_syrk)
   end subroutine daccel_syrk
+
+  ! -----------------------------------------------------------------------------------
+  
+  subroutine daccel_trsm(side, uplo, trans, diag, m, n, alpha, a, offa, lda, b, offb, ldb)
+    integer,           intent(in)    :: side
+    integer,           intent(in)    :: uplo
+    integer,           intent(in)    :: trans
+    integer,           intent(in)    :: diag
+    integer(8),        intent(in)    :: m
+    integer(8),        intent(in)    :: n
+    real(8),           intent(in)    :: alpha
+    type(accel_mem_t), intent(in)    :: A
+    integer(8),        intent(in)    :: offa
+    integer(8),        intent(in)    :: lda
+    type(accel_mem_t), intent(inout) :: B
+    integer(8),        intent(in)    :: offb
+    integer(8),        intent(in)    :: ldb
+    
+    type(accel_mem_t) :: alpha_buffer
+    
+    PUSH_SUB(daccel_trsm)
+
+    ASSERT(offa == 0)
+    ASSERT(offb == 0)
+
+    call accel_create_buffer(alpha_buffer, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, 1)
+    call accel_write_buffer(alpha_buffer, alpha)
+
+#ifdef HAVE_CUDA    
+    call cuda_blas_dtrsm(handle = accel%cublas_handle, side = side, uplo = uplo, trans = trans, diag = diag, &
+      m = m, n = n, alpha = alpha_buffer%cuda_ptr, A = a%cuda_ptr, lda = lda, B = b%cuda_ptr, ldb = ldb)
+#endif
+
+    call accel_finish()
+    
+    POP_SUB(daccel_trsm)
+  end subroutine daccel_trsm
   
 end module accel_blas_oct_m
