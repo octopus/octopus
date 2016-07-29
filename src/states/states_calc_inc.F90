@@ -353,22 +353,11 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
       end do
 
 #if defined(R_TREAL)
-#if defined(HAVE_CLBLAS)
-      call aX(clblas,trsmEx)(order = clblasColumnMajor, side = clblasLeft, &
-        uplo = clblasUpper, transA = clblasTrans, diag = clblasNonUnit, &
-        M = int(st%nst, 8), N = int(size, 8), alpha = R_TOTYPE(M_ONE), &
-        A = ss_buffer%mem, offA = 0_8, lda = int(ubound(ss, dim = 1), 8), &
-        B = psicopy_buffer%mem, offB = 0_8, ldb = int(st%nst, 8), &
-        CommandQueue = accel%command_queue, status = ierr)
-      if(ierr /= clblasSuccess) call clblas_print_error(ierr, 'clblasXtrsmEx')
-#endif
-#ifdef HAVE_CUDA
       call daccel_trsm(side = ACCEL_BLAS_LEFT, uplo = ACCEL_BLAS_UPPER, &
         trans = ACCEL_BLAS_T, diag = ACCEL_BLAS_DIAG_NON_UNIT, &
         M = int(st%nst, 8), N = int(size, 8), alpha = R_TOTYPE(M_ONE), &
         A = ss_buffer, offA = 0_8, lda = int(ubound(ss, dim = 1), 8), &
         B = psicopy_buffer, offB = 0_8, ldb = int(st%nst, 8))
-#endif
 #else
       if(states_are_real(st)) then
         call accel_kernel_start_call(dkernel, 'trsm.cl', 'dtrsm')
@@ -1343,8 +1332,13 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
         CommandQueue = accel%command_queue, status = ierr)
       if(ierr /= clblasSuccess) call clblas_print_error(ierr, 'clblasDsyrkEx/clblasZherkEx')
 #endif
-#ifdef HAVE_CUDA      
-      call daccel_syrk(uplo = ACCEL_BLAS_UPPER, trans = ACCEL_BLAS_N, &
+#ifdef HAVE_CUDA
+#ifdef R_TREAL
+      call daccel_syrk &
+#else
+      call zaccel_herk &
+#endif
+      (uplo = ACCEL_BLAS_UPPER, trans = ACCEL_BLAS_N, &
         n = int(st%nst, 8), k = int(size, 8), &
         alpha = mesh%volume_element, &
         A = psi_buffer, offa = 0_8, lda = int(st%nst, 8), &

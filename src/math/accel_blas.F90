@@ -68,9 +68,7 @@ module accel_blas_oct_m
   integer, parameter, public ::                      &
     ACCEL_BLAS_DIAG_NON_UNIT = clblasUnit,           &
     ACCEL_BLAS_DIAG_UNIT     = clblasNonUnit
-#endif
-  
-#ifdef HAVE_CUDA
+#else 
   integer, parameter, public ::                      &
     ACCEL_BLAS_LEFT  = CUBLAS_SIDE_LEFT,             &
     ACCEL_BLAS_RIGHT = CUBLAS_SIDE_RIGHT
@@ -95,6 +93,7 @@ module accel_blas_oct_m
     cuda_blas_dgemm,               &
     cuda_blas_zgemm,               &
     daccel_syrk,                   &
+    zaccel_herk,                   &
     daccel_trsm
   
   ! DOT
@@ -198,6 +197,24 @@ module accel_blas_oct_m
       type(c_ptr),  intent(inout) :: C
       integer(8),   intent(in)    :: ldc       
     end subroutine cuda_blas_dsyrk
+
+    subroutine cuda_blas_zherk(handle, uplo, trans, n, k, alpha, A, lda, beta, C, ldc)
+      use iso_c_binding
+      
+      implicit none
+      
+      type(c_ptr),  intent(in)    :: handle
+      integer,      intent(in)    :: uplo
+      integer,      intent(in)    :: trans
+      integer(8),   intent(in)    :: n
+      integer(8),   intent(in)    :: k
+      type(c_ptr),  intent(in)    :: alpha
+      type(c_ptr),  intent(in)    :: A
+      integer(8),   intent(in)    :: lda
+      type(c_ptr),  intent(in)    :: beta
+      type(c_ptr),  intent(inout) :: C
+      integer(8),   intent(in)    :: ldc       
+    end subroutine cuda_blas_zherk
   end interface
 
   ! TRSM
@@ -265,6 +282,49 @@ contains
     
     POP_SUB(daccel_syrk)
   end subroutine daccel_syrk
+
+  ! -----------------------------------------------------------------------------------
+
+  subroutine zaccel_herk(uplo, trans, n, k, alpha, a, offa, lda, beta, c, offc, ldc)
+    integer,           intent(in)    :: uplo
+    integer,           intent(in)    :: trans
+    integer(8),        intent(in)    :: n
+    integer(8),        intent(in)    :: k
+    real(8),           intent(in)    :: alpha
+    type(accel_mem_t), intent(in)    :: a
+    integer(8),        intent(in)    :: offa
+    integer(8),        intent(in)    :: lda
+    real(8),           intent(in)    :: beta
+    type(accel_mem_t), intent(inout) :: c
+    integer(8),        intent(in)    :: offc
+    integer(8),        intent(in)    :: ldc   
+
+    type(accel_mem_t) :: alpha_buffer, beta_buffer
+    
+    PUSH_SUB(zaccel_herk)
+
+    ASSERT(offa == 0)
+    ASSERT(offc == 0)
+
+    call accel_create_buffer(alpha_buffer, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, 1)
+    call accel_create_buffer(beta_buffer, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, 1)
+
+    call accel_write_buffer(alpha_buffer, alpha)
+    call accel_write_buffer(beta_buffer, beta)
+
+#ifdef HAVE_CUDA    
+    call cuda_blas_zherk(handle = accel%cublas_handle, uplo = uplo, trans = trans, &
+      n = n, k = k, &
+      alpha = alpha_buffer%cuda_ptr, &
+      A = a%cuda_ptr, lda = lda, &
+      beta = beta_buffer%cuda_ptr, &
+      C = c%cuda_ptr, ldc = ldc)
+#endif
+
+    call accel_finish()
+    
+    POP_SUB(zaccel_herk)
+  end subroutine zaccel_herk
 
   ! -----------------------------------------------------------------------------------
   
