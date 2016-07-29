@@ -183,8 +183,7 @@ subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
     call accel_set_kernel_arg(kernel, 6, psi)
     call accel_set_kernel_arg(kernel, 7, ldpsi*tsize)
 
-    call accel_kernel_run(kernel, (/this%pack%size_real(1), ep -&
-      sp + 1/), (/this%pack%size_real(1), 1/))
+    call accel_kernel_run(kernel, (/this%pack%size_real(1), ep - sp + 1/), (/this%pack%size_real(1), 1/))
 
   end select
 
@@ -219,7 +218,7 @@ subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
     tsize = types_get_size(batch_type(this))&
       /types_get_size(TYPE_FLOAT)
     offset = batch_linear_to_ist(this, 1) - 1
-#ifdef HAVE_OPENCL
+
     call accel_kernel_start_call(kernel, 'points.cl', 'set_points')
     
     call accel_set_kernel_arg(kernel, 0, sp)
@@ -231,9 +230,8 @@ subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
     call accel_set_kernel_arg(kernel, 6, this%pack%buffer)
     call accel_set_kernel_arg(kernel, 7, this%pack%size_real(1))
 
-    call accel_kernel_run(kernel, (/this%pack%size_real(1), ep -&
-      sp + 1/), (/this%pack%size_real(1), 1/))
-#endif
+    call accel_kernel_run(kernel, (/this%pack%size_real(1), ep - sp + 1/), (/this%pack%size_real(1), 1/))
+
   end select
 
   call profiling_out(set_points_prof)
