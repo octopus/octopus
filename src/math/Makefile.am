@@ -79,7 +79,8 @@ noinst_HEADERS =                         \
 	matrix_inc.F90                   \
 	matrix_ops_inc.F90               \
 	nfft_inc.F90                     \
-	pnfft_inc.F90
+	pnfft_inc.F90                    \
+	accel_blas_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -125,3 +126,4 @@ minimizer.o : minimizer.F90 lalg_basic.o
 qshep.o : qshep.F90
 spline_low.o : spline_low.cc
 quickrnd.o : quickrnd.F90 
+accel_blas.o : accel_blas.F90 accel_blas_inc.F90

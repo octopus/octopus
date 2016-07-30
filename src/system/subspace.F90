@@ -26,10 +26,6 @@ module subspace_oct_m
   use batch_ops_oct_m
   use blas_oct_m
   use blacs_proc_grid_oct_m
-#ifdef HAVE_CLBLAS
-  use cl
-  use clblas
-#endif
   use comm_oct_m
   use derivatives_oct_m
 #ifdef HAVE_ELPA

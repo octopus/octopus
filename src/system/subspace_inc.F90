@@ -387,32 +387,20 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
       ! all the states are stored in one block
       ! we can use blas directly
 
-#ifdef HAVE_CLBLAS
-      call aX(clblas,gemmEx)(order = clblasColumnMajor, transA = clblasNoTrans, transB = clblasConjTrans, &
+      call X(accel_gemm)(transA = ACCEL_BLAS_N, transB = ACCEL_BLAS_C, &
         M = int(st%nst, 8), N = int(st%nst, 8), K = int(der%mesh%np, 8), &
         alpha = R_TOTYPE(der%mesh%volume_element), &
-        A = st%group%psib(st%group%block_start, ik)%pack%buffer%mem, offA = 0_8, &
+        A = st%group%psib(st%group%block_start, ik)%pack%buffer, offA = 0_8, &
         lda = int(st%group%psib(st%group%block_start, ik)%pack%size(1), 8), &
-        B = hpsib(st%group%block_start)%pack%buffer%mem, offB = 0_8, &
+        B = hpsib(st%group%block_start)%pack%buffer, offB = 0_8, &
         ldb = int(hpsib(st%group%block_start)%pack%size(1), 8), &
         beta = R_TOTYPE(CNST(0.0)), &
-        C = hmss_buffer%mem, offC = 0_8, ldc = int(st%nst, 8), &
-        CommandQueue = accel%command_queue, status = ierr)
-      if(ierr /= clblasSuccess) call clblas_print_error(ierr, 'clblasXgemmEx')
-#endif
-#ifdef HAVE_CUDA
-      call aX(cuda_blas_,gemm)(handle = accel%cublas_handle, transa = CUBLAS_OP_N, transb = CUBLAS_OP_C, &
-        m = st%nst, n = st%nst, k = der%mesh%np, &
-        alpha = R_TOTYPE(der%mesh%volume_element), &
-        a = st%group%psib(st%group%block_start, ik)%pack%buffer%cuda_ptr, &
-        lda = st%group%psib(st%group%block_start, ik)%pack%size(1), &
-        b = hpsib(st%group%block_start)%pack%buffer%cuda_ptr, ldb = hpsib(st%group%block_start)%pack%size(1), &
-        beta = R_TOTYPE(CNST(0.0)), c = hmss_buffer%cuda_ptr, ldc = st%nst)
-#endif
+        C = hmss_buffer, offC = 0_8, ldc = int(st%nst, 8))
+
     else
 
       ASSERT(.not. st%parallel_in_states)
-
+      
       ! we have to copy the blocks to a temporary array
       block_size = batch_points_block_size(st%group%psib(st%group%block_start, ik))
 
@@ -428,16 +416,12 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
           call batch_get_points(hpsib(ib), sp, sp + size - 1, hpsi_buffer, st%nst)
         end do
 
-#ifdef HAVE_CLBLAS
-        call aX(clblas,gemmEx)(order = clblasColumnMajor, transA = clblasNoTrans, transB = clblasConjTrans, &
+        call X(accel_gemm)(transA = ACCEL_BLAS_N, transB = ACCEL_BLAS_C, &
           M = int(st%nst, 8), N = int(st%nst, 8), K = int(size, 8), &
           alpha = R_TOTYPE(der%mesh%volume_element), &
-          A = psi_buffer%mem, offA = 0_8, lda = int(st%nst, 8), &
-          B = hpsi_buffer%mem, offB = 0_8, ldb = int(st%nst, 8), beta = R_TOTYPE(CNST(1.0)), & 
-          C = hmss_buffer%mem, offC = 0_8, ldc = int(st%nst, 8), &
-          CommandQueue = accel%command_queue, status = ierr)
-        if(ierr /= clblasSuccess) call clblas_print_error(ierr, 'clblasXgemmEx')
-#endif
+          A = psi_buffer, offA = 0_8, lda = int(st%nst, 8), &
+          B = hpsi_buffer, offB = 0_8, ldb = int(st%nst, 8), beta = R_TOTYPE(CNST(1.0)), & 
+          C = hmss_buffer, offC = 0_8, ldc = int(st%nst, 8))
         
         call accel_finish()
 
@@ -498,7 +482,7 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
 #endif
 
   end if
-
+  
   call profiling_count_operations((R_ADD + R_MUL)*st%nst*(st%nst - CNST(1.0))*der%mesh%np)
   
   do ib = st%group%block_start, st%group%block_end

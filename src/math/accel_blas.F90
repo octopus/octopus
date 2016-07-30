@@ -90,12 +90,12 @@ module accel_blas_oct_m
   public ::                        &
     cuda_blas_ddot,                &
     cuda_blas_zdotc,               &
-    cuda_blas_dgemm,               &
-    cuda_blas_zgemm,               &
-    daccel_syrk,                   &
+    daccel_herk,                   &
     zaccel_herk,                   &
     daccel_trsm,                   &
-    zaccel_trsm
+    zaccel_trsm,                   &
+    daccel_gemm,                   &
+    zaccel_gemm
   
   ! DOT
   interface
@@ -144,17 +144,17 @@ module accel_blas_oct_m
       type(c_ptr),  intent(in)    :: handle
       integer,      intent(in)    :: transa
       integer,      intent(in)    :: transb
-      integer,      intent(in)    :: m
-      integer,      intent(in)    :: n
-      integer,      intent(in)    :: k
-      real(8),      intent(in)    :: alpha
+      integer(8),   intent(in)    :: m
+      integer(8),   intent(in)    :: n
+      integer(8),   intent(in)    :: k
+      type(c_ptr),  intent(in)    :: alpha
       type(c_ptr),  intent(in)    :: A
-      integer,      intent(in)    :: lda
+      integer(8),   intent(in)    :: lda
       type(c_ptr),  intent(in)    :: B
-      integer,      intent(in)    :: ldb
-      real(8),      intent(in)    :: beta
+      integer(8),   intent(in)    :: ldb
+      type(c_ptr),  intent(in)    :: beta
       type(c_ptr),  intent(inout) :: C
-      integer,      intent(in)    :: ldc       
+      integer(8),   intent(in)    :: ldc       
     end subroutine cuda_blas_dgemm
 
     subroutine cuda_blas_zgemm(handle, transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
@@ -165,17 +165,17 @@ module accel_blas_oct_m
       type(c_ptr),  intent(in)    :: handle
       integer,      intent(in)    :: transa
       integer,      intent(in)    :: transb
-      integer,      intent(in)    :: m
-      integer,      intent(in)    :: n
-      integer,      intent(in)    :: k
-      complex(8),   intent(in)    :: alpha
+      integer(8),   intent(in)    :: m
+      integer(8),   intent(in)    :: n
+      integer(8),   intent(in)    :: k
+      type(c_ptr),  intent(in)    :: alpha
       type(c_ptr),  intent(in)    :: A
-      integer,      intent(in)    :: lda
+      integer(8),   intent(in)    :: lda
       type(c_ptr),  intent(in)    :: B
-      integer,      intent(in)    :: ldb
-      complex(8),   intent(in)    :: beta
+      integer(8),   intent(in)    :: ldb
+      type(c_ptr),  intent(in)    :: beta
       type(c_ptr),  intent(inout) :: C
-      integer,      intent(in)    :: ldc       
+      integer(8),   intent(in)    :: ldc       
     end subroutine cuda_blas_zgemm
   end interface
 
@@ -260,215 +260,13 @@ module accel_blas_oct_m
   end interface
   
 contains
-
-  subroutine daccel_syrk(uplo, trans, n, k, alpha, a, offa, lda, beta, c, offc, ldc)
-    integer,           intent(in)    :: uplo
-    integer,           intent(in)    :: trans
-    integer(8),        intent(in)    :: n
-    integer(8),        intent(in)    :: k
-    real(8),           intent(in)    :: alpha
-    type(accel_mem_t), intent(in)    :: a
-    integer(8),        intent(in)    :: offa
-    integer(8),        intent(in)    :: lda
-    real(8),           intent(in)    :: beta
-    type(accel_mem_t), intent(inout) :: c
-    integer(8),        intent(in)    :: offc
-    integer(8),        intent(in)    :: ldc   
-
-    integer :: ierr
-    type(accel_mem_t) :: alpha_buffer, beta_buffer
-    
-    PUSH_SUB(daccel_syrk)
-
-    ASSERT(offa == 0)
-    ASSERT(offc == 0)
-
-#ifdef HAVE_OPENCL
-    call clblasDsyrkEx(order = clblasColumnMajor, uplo = uplo, transA = trans, N = n, K = k, &
-      alpha = alpha, A = a%mem, offA = offa, lda = lda, &
-      beta = beta, C = c%mem, offC = offc, ldc = ldc, &
-      CommandQueue = accel%command_queue, status = ierr)
-    if(ierr /= clblasSuccess) call clblas_print_error(ierr, 'clblasDsyrkEx')
-    call accel_finish()
-#endif
-
-#ifdef HAVE_CUDA    
-    call accel_create_buffer(alpha_buffer, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, 1)
-    call accel_create_buffer(beta_buffer, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, 1)
-
-    call accel_write_buffer(alpha_buffer, alpha)
-    call accel_write_buffer(beta_buffer, beta)
-
-    call cuda_blas_dsyrk(handle = accel%cublas_handle, uplo = uplo, trans = trans, &
-      n = n, k = k, &
-      alpha = alpha_buffer%cuda_ptr, &
-      A = a%cuda_ptr, lda = lda, &
-      beta = beta_buffer%cuda_ptr, &
-      C = c%cuda_ptr, ldc = ldc)
-
-    call accel_finish()
-
-    call accel_release_buffer(alpha_buffer)
-    call accel_release_buffer(beta_buffer)
-#endif
-
-    POP_SUB(daccel_syrk)
-  end subroutine daccel_syrk
-
-  ! -----------------------------------------------------------------------------------
-
-  subroutine zaccel_herk(uplo, trans, n, k, alpha, a, offa, lda, beta, c, offc, ldc)
-    integer,           intent(in)    :: uplo
-    integer,           intent(in)    :: trans
-    integer(8),        intent(in)    :: n
-    integer(8),        intent(in)    :: k
-    real(8),           intent(in)    :: alpha
-    type(accel_mem_t), intent(in)    :: a
-    integer(8),        intent(in)    :: offa
-    integer(8),        intent(in)    :: lda
-    real(8),           intent(in)    :: beta
-    type(accel_mem_t), intent(inout) :: c
-    integer(8),        intent(in)    :: offc
-    integer(8),        intent(in)    :: ldc   
-
-    integer :: ierr
-    type(accel_mem_t) :: alpha_buffer, beta_buffer
-    
-    PUSH_SUB(zaccel_herk)
-
-    ASSERT(offa == 0)
-    ASSERT(offc == 0)
-#ifdef HAVE_OPENCL
-    call clblasZherkEx(order = clblasColumnMajor, uplo = uplo, transA = trans, N = n, K = k, &
-      alpha = alpha, A = a%mem, offA = offa, lda = lda, &
-      beta = beta, C = c%mem, offC = offc, ldc = ldc, &
-      CommandQueue = accel%command_queue, status = ierr)
-    if(ierr /= clblasSuccess) call clblas_print_error(ierr, 'clblasZherkEx')
-    call accel_finish()
-#endif
-
-#ifdef HAVE_CUDA    
-    call accel_create_buffer(alpha_buffer, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, 1)
-    call accel_create_buffer(beta_buffer, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, 1)
-
-    call accel_write_buffer(alpha_buffer, alpha)
-    call accel_write_buffer(beta_buffer, beta)
-
-    call cuda_blas_zherk(handle = accel%cublas_handle, uplo = uplo, trans = trans, &
-      n = n, k = k, &
-      alpha = alpha_buffer%cuda_ptr, &
-      A = a%cuda_ptr, lda = lda, &
-      beta = beta_buffer%cuda_ptr, &
-      C = c%cuda_ptr, ldc = ldc)
-
-    call accel_finish()
-    
-    call accel_release_buffer(alpha_buffer)
-    call accel_release_buffer(beta_buffer)
-#endif
-
-    
-    POP_SUB(zaccel_herk)
-  end subroutine zaccel_herk
-
-  ! -----------------------------------------------------------------------------------
   
-  subroutine daccel_trsm(side, uplo, trans, diag, m, n, alpha, a, offa, lda, b, offb, ldb)
-    integer,           intent(in)    :: side
-    integer,           intent(in)    :: uplo
-    integer,           intent(in)    :: trans
-    integer,           intent(in)    :: diag
-    integer(8),        intent(in)    :: m
-    integer(8),        intent(in)    :: n
-    real(8),           intent(in)    :: alpha
-    type(accel_mem_t), intent(inout) :: A
-    integer(8),        intent(in)    :: offa
-    integer(8),        intent(in)    :: lda
-    type(accel_mem_t), intent(inout) :: B
-    integer(8),        intent(in)    :: offb
-    integer(8),        intent(in)    :: ldb
-    
-    type(accel_mem_t) :: alpha_buffer
-    integer :: ierr
-    
-    PUSH_SUB(daccel_trsm)
+#include "undef.F90"
+#include "complex.F90"
+#include "accel_blas_inc.F90"
 
-    ASSERT(offa == 0)
-    ASSERT(offb == 0)
+#include "undef.F90"
+#include "real.F90"
+#include "accel_blas_inc.F90"
 
-#ifdef HAVE_CUDA    
-    call accel_create_buffer(alpha_buffer, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, 1)
-    call accel_write_buffer(alpha_buffer, alpha)
-
-    call cuda_blas_dtrsm(handle = accel%cublas_handle, side = side, uplo = uplo, trans = trans, diag = diag, &
-      m = m, n = n, alpha = alpha_buffer%cuda_ptr, A = a%cuda_ptr, lda = lda, B = b%cuda_ptr, ldb = ldb)
-#endif
-
-#ifdef HAVE_OPENCL
-    call clblasDtrsmEx(order = clblasColumnMajor, side = side, uplo = uplo, transA = trans, diag = diag, &
-      M = m, N = n, alpha = alpha, A = a%mem, offA = offa, lda = lda, &
-      B = b%mem, offB = offb, ldb = ldb, &
-      CommandQueue = accel%command_queue, status = ierr)
-    if(ierr /= clblasSuccess) call clblas_print_error(ierr, 'clblasDtrsmEx')
-#endif
-    
-    call accel_finish()
-
-#ifdef HAVE_CUDA
-    call accel_release_buffer(alpha_buffer)
-#endif
-    
-    POP_SUB(daccel_trsm)
-  end subroutine daccel_trsm
-  
-  ! -----------------------------------------------------------------------------------
-  
-  subroutine zaccel_trsm(side, uplo, trans, diag, m, n, alpha, a, offa, lda, b, offb, ldb)
-    integer,           intent(in)    :: side
-    integer,           intent(in)    :: uplo
-    integer,           intent(in)    :: trans
-    integer,           intent(in)    :: diag
-    integer(8),        intent(in)    :: m
-    integer(8),        intent(in)    :: n
-    complex(8),        intent(in)    :: alpha
-    type(accel_mem_t), intent(inout) :: A
-    integer(8),        intent(in)    :: offa
-    integer(8),        intent(in)    :: lda
-    type(accel_mem_t), intent(inout) :: B
-    integer(8),        intent(in)    :: offb
-    integer(8),        intent(in)    :: ldb
-    
-    type(accel_mem_t) :: alpha_buffer
-    integer :: ierr
-    
-    PUSH_SUB(zaccel_trsm)
-
-    ASSERT(offa == 0)
-    ASSERT(offb == 0)
-
-#ifdef HAVE_CUDA    
-    call accel_create_buffer(alpha_buffer, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, 1)
-    call accel_write_buffer(alpha_buffer, alpha)
-
-    call cuda_blas_dtrsm(handle = accel%cublas_handle, side = side, uplo = uplo, trans = trans, diag = diag, &
-      m = m, n = n, alpha = alpha_buffer%cuda_ptr, A = a%cuda_ptr, lda = lda, B = b%cuda_ptr, ldb = ldb)
-#endif
-
-#ifdef HAVE_OPENCL
-    call clblasZtrsmEx(order = clblasColumnMajor, side = side, uplo = uplo, transA = trans, diag = diag, &
-      M = m, N = n, alpha = alpha, A = a%mem, offA = offa, lda = lda, &
-      B = b%mem, offB = offb, ldb = ldb, &
-      CommandQueue = accel%command_queue, status = ierr)
-    if(ierr /= clblasSuccess) call clblas_print_error(ierr, 'clblasZtrsmEx')
-#endif
-    
-    call accel_finish()
-
-#ifdef HAVE_CUDA
-    call accel_release_buffer(alpha_buffer)
-#endif
-    
-    POP_SUB(zaccel_trsm)
-  end subroutine zaccel_trsm
-  
 end module accel_blas_oct_m

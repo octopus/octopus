@@ -1298,12 +1298,7 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
         call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psi_buffer, st%nst)
       end do
 
-#ifdef R_TREAL
-      call daccel_syrk &
-#else
-      call zaccel_herk &
-#endif
-      (uplo = ACCEL_BLAS_UPPER, trans = ACCEL_BLAS_N, &
+      call X(accel_herk)(uplo = ACCEL_BLAS_UPPER, trans = ACCEL_BLAS_N, &
         n = int(st%nst, 8), k = int(size, 8), &
         alpha = mesh%volume_element, &
         A = psi_buffer, offa = 0_8, lda = int(st%nst, 8), &
