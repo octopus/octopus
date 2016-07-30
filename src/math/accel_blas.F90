@@ -94,7 +94,8 @@ module accel_blas_oct_m
     cuda_blas_zgemm,               &
     daccel_syrk,                   &
     zaccel_herk,                   &
-    daccel_trsm
+    daccel_trsm,                   &
+    zaccel_trsm
   
   ! DOT
   interface
@@ -237,7 +238,25 @@ module accel_blas_oct_m
       type(c_ptr),  intent(inout) :: B
       integer(8),   intent(in)    :: ldb       
     end subroutine cuda_blas_dtrsm
-
+    
+    subroutine cuda_blas_ztrsm(handle, side, uplo, trans, diag, m, n, alpha, A, lda, B, ldb)
+      use iso_c_binding
+      
+      implicit none
+      
+      type(c_ptr),  intent(in)    :: handle
+      integer,      intent(in)    :: side
+      integer,      intent(in)    :: uplo
+      integer,      intent(in)    :: trans
+      integer,      intent(in)    :: diag
+      integer(8),   intent(in)    :: m
+      integer(8),   intent(in)    :: n
+      type(c_ptr),  intent(in)    :: alpha
+      type(c_ptr),  intent(in)    :: A
+      integer(8),   intent(in)    :: lda
+      type(c_ptr),  intent(inout) :: B
+      integer(8),   intent(in)    :: ldb       
+    end subroutine cuda_blas_ztrsm
   end interface
   
 contains
@@ -401,5 +420,55 @@ contains
     
     POP_SUB(daccel_trsm)
   end subroutine daccel_trsm
+  
+  ! -----------------------------------------------------------------------------------
+  
+  subroutine zaccel_trsm(side, uplo, trans, diag, m, n, alpha, a, offa, lda, b, offb, ldb)
+    integer,           intent(in)    :: side
+    integer,           intent(in)    :: uplo
+    integer,           intent(in)    :: trans
+    integer,           intent(in)    :: diag
+    integer(8),        intent(in)    :: m
+    integer(8),        intent(in)    :: n
+    complex(8),        intent(in)    :: alpha
+    type(accel_mem_t), intent(inout) :: A
+    integer(8),        intent(in)    :: offa
+    integer(8),        intent(in)    :: lda
+    type(accel_mem_t), intent(inout) :: B
+    integer(8),        intent(in)    :: offb
+    integer(8),        intent(in)    :: ldb
+    
+    type(accel_mem_t) :: alpha_buffer
+    integer :: ierr
+    
+    PUSH_SUB(zaccel_trsm)
+
+    ASSERT(offa == 0)
+    ASSERT(offb == 0)
+
+#ifdef HAVE_CUDA    
+    call accel_create_buffer(alpha_buffer, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, 1)
+    call accel_write_buffer(alpha_buffer, alpha)
+
+    call cuda_blas_dtrsm(handle = accel%cublas_handle, side = side, uplo = uplo, trans = trans, diag = diag, &
+      m = m, n = n, alpha = alpha_buffer%cuda_ptr, A = a%cuda_ptr, lda = lda, B = b%cuda_ptr, ldb = ldb)
+#endif
+
+#ifdef HAVE_OPENCL
+    call clblasZtrsmEx(order = clblasColumnMajor, side = side, uplo = uplo, transA = trans, diag = diag, &
+      M = m, N = n, alpha = alpha, A = a%mem, offA = offa, lda = lda, &
+      B = b%mem, offB = offb, ldb = ldb, &
+      CommandQueue = accel%command_queue, status = ierr)
+    if(ierr /= clblasSuccess) call clblas_print_error(ierr, 'clblasZtrsmEx')
+#endif
+    
+    call accel_finish()
+
+#ifdef HAVE_CUDA
+    call accel_release_buffer(alpha_buffer)
+#endif
+    
+    POP_SUB(zaccel_trsm)
+  end subroutine zaccel_trsm
   
 end module accel_blas_oct_m

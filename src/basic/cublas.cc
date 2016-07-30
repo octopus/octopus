@@ -140,3 +140,16 @@ extern "C" void FC_FUNC_(cuda_blas_dtrsm, CUDA_BLAS_DTRSM)
 			       *m, *n, (double *) **alpha, (double *) **A, *lda, (double *) **B, *ldb));
 #endif
 }
+
+extern "C" void FC_FUNC_(cuda_blas_ztrsm, CUDA_BLAS_ZTRSM)
+  (cublasHandle_t ** handle, fint * side, fint * uplo, fint * trans, fint * diag,
+   fint8 * m, fint8 * n,
+   CUdeviceptr **alpha, CUdeviceptr ** A, fint8 * lda,
+   CUdeviceptr ** B, fint8 * ldb){
+  
+#ifdef HAVE_CUDA  
+  CUBLAS_SAFE_CALL(cublasZtrsm(**handle, (cublasSideMode_t) *side, (cublasFillMode_t) *uplo,
+			       (cublasOperation_t) *trans, (cublasDiagType_t) *diag,
+			       *m, *n, (cuDoubleComplex *) **alpha, (cuDoubleComplex *) **A, *lda, (cuDoubleComplex *) **B, *ldb));
+#endif
+}
