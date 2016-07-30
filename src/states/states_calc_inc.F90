@@ -352,36 +352,17 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
         call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psicopy_buffer, st%nst)
       end do
 
-#if defined(R_TREAL)
-      call daccel_trsm(side = ACCEL_BLAS_LEFT, uplo = ACCEL_BLAS_UPPER, &
+      call X(accel_trsm)(side = ACCEL_BLAS_LEFT, uplo = ACCEL_BLAS_UPPER, &
         trans = ACCEL_BLAS_T, diag = ACCEL_BLAS_DIAG_NON_UNIT, &
         M = int(st%nst, 8), N = int(size, 8), alpha = R_TOTYPE(M_ONE), &
         A = ss_buffer, offA = 0_8, lda = int(ubound(ss, dim = 1), 8), &
         B = psicopy_buffer, offB = 0_8, ldb = int(st%nst, 8))
-#else
-      if(states_are_real(st)) then
-        call accel_kernel_start_call(dkernel, 'trsm.cl', 'dtrsm')
-        kernel => dkernel
-      else
-        call accel_kernel_start_call(zkernel, 'trsm.cl', 'ztrsm')
-        kernel => zkernel
-      end if
-
-      call accel_set_kernel_arg(kernel, 0, st%nst)
-      call accel_set_kernel_arg(kernel, 1, ss_buffer)
-      call accel_set_kernel_arg(kernel, 2, ubound(ss, dim = 1))
-      call accel_set_kernel_arg(kernel, 3, psicopy_buffer)
-      call accel_set_kernel_arg(kernel, 4, st%nst)
       
-      call accel_kernel_run(kernel, (/size/), (/1/))
-
-#endif
-      call accel_finish()
-
       do ib = st%group%block_start, st%group%block_end
         call batch_set_points(st%group%psib(ib, ik), sp, sp + size - 1, psicopy_buffer, st%nst)
       end do
     end do
+
     
     call accel_release_buffer(ss_buffer)
     call accel_release_buffer(psicopy_buffer)
