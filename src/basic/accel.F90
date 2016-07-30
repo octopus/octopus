@@ -181,7 +181,7 @@ module accel_oct_m
   type(accel_kernel_t), save :: set_zero
 
   interface accel_create_buffer
-    module procedure accel_create_buffer_4
+    module procedure accel_create_buffer_4, accel_create_buffer_8
   end interface accel_create_buffer
 
   interface accel_write_buffer
@@ -829,6 +829,40 @@ contains
     POP_SUB(accel_create_buffer_4)
   end subroutine accel_create_buffer_4
 
+  ! ------------------------------------------
+
+  subroutine accel_create_buffer_8(this, flags, type, size)
+    type(accel_mem_t),  intent(inout) :: this
+    integer,            intent(in)    :: flags
+    type(type_t),       intent(in)    :: type
+    integer(8),            intent(in)    :: size
+
+    integer(8) :: fsize
+    integer :: ierr
+
+    PUSH_SUB(accel_create_buffer_8)
+
+    this%type = type
+    this%size = size
+    this%flags = flags
+    fsize = int(size, 8)*types_get_size(type)
+
+    ASSERT(fsize >= 0)
+
+#ifdef HAVE_OPENCL
+    this%mem = clCreateBuffer(accel%context%cl_context, flags, fsize, ierr)
+    if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateBuffer")
+#endif
+#ifdef HAVE_CUDA
+    call cuda_mem_alloc(this%cuda_ptr, fsize)
+#endif
+    
+    INCR(buffer_alloc_count, 1)
+    INCR(allocated_mem, fsize)
+
+    POP_SUB(accel_create_buffer_8)
+  end subroutine accel_create_buffer_8
+  
   ! ------------------------------------------
 
   subroutine accel_release_buffer(this)
