@@ -1076,12 +1076,8 @@ subroutine X(states_rotate)(mesh, st, uu, ik)
   type(batch_t) :: psib
   integer       :: block_size, sp, idim, size, ib
   R_TYPE, allocatable :: psinew(:, :, :), psicopy(:, :, :)
-#ifdef HAVE_OPENCL
   type(accel_kernel_t), save :: dkernel, zkernel
-  type(cl_kernel) :: kernel_ref
   type(accel_mem_t) :: psinew_buffer, psicopy_buffer, uu_buffer
-  integer :: ierr
-#endif
   type(profile_t), save :: prof
 
   PUSH_SUB(X(states_rotate))
@@ -1133,7 +1129,7 @@ subroutine X(states_rotate)(mesh, st, uu, ik)
   else
 
     if(st%d%dim > 1) call messages_not_implemented('Opencl states_rotate for spinors')
-#ifdef HAVE_OPENCL
+
     block_size = batch_points_block_size(st%group%psib(st%group%block_start, ik))
 
     call accel_create_buffer(uu_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, product(ubound(uu)))
@@ -1149,39 +1145,12 @@ subroutine X(states_rotate)(mesh, st, uu, ik)
         call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psicopy_buffer, st%nst)
       end do
 
-#ifdef HAVE_CLBLAS
-
-      call aX(clblas,gemmEx)(order = clblasColumnMajor, transA = clblasTrans, transB = clblasNoTrans, &
+      call X(accel_gemm)(transA = CUBLAS_OP_T, transB = CUBLAS_OP_N, &
         M = int(st%nst, 8), N = int(size, 8), K = int(st%nst, 8), alpha = R_TOTYPE(M_ONE), &
-        A = uu_buffer%mem, offA = 0_8, lda = int(ubound(uu, dim = 1), 8), &
-        B = psicopy_buffer%mem, offB = 0_8, ldb = int(st%nst, 8), beta = R_TOTYPE(M_ZERO), &
-        C = psinew_buffer%mem, offC = 0_8, ldc = int(st%nst, 8), &
-        CommandQueue = accel%command_queue, status = ierr)
-      if(ierr /= clblasSuccess) call clblas_print_error(ierr, 'clblasXgemmEx')
+        A = uu_buffer, offA = 0_8, lda = int(ubound(uu, dim = 1), 8), &
+        B = psicopy_buffer, offB = 0_8, ldb = int(st%nst, 8), beta = R_TOTYPE(M_ZERO), &
+        C = psinew_buffer, offC = 0_8, ldc = int(st%nst, 8))
       
-#else
-
-      if(states_are_real(st)) then
-        call accel_kernel_start_call(dkernel, 'rotate.cl', 'drotate_states')
-        kernel_ref = accel_kernel_get_ref(dkernel)
-      else
-        call accel_kernel_start_call(zkernel, 'rotate.cl', 'zrotate_states')
-        kernel_ref = accel_kernel_get_ref(zkernel)
-      end if
-
-      call accel_set_kernel_arg(kernel_ref, 0, st%nst)
-      call accel_set_kernel_arg(kernel_ref, 1, size)
-      call accel_set_kernel_arg(kernel_ref, 2, uu_buffer)
-      call accel_set_kernel_arg(kernel_ref, 3, ubound(uu, dim = 1))
-      call accel_set_kernel_arg(kernel_ref, 4, psicopy_buffer)
-      call accel_set_kernel_arg(kernel_ref, 5, st%nst)
-      call accel_set_kernel_arg(kernel_ref, 6, psinew_buffer)
-      call accel_set_kernel_arg(kernel_ref, 7, st%nst)
-      
-      call accel_kernel_run(kernel_ref, (/st%nst, size/), (/1, 1/))
-
-#endif
-
       call accel_finish()
 
       do ib = st%group%block_start, st%group%block_end
@@ -1194,7 +1163,7 @@ subroutine X(states_rotate)(mesh, st, uu, ik)
     call accel_release_buffer(uu_buffer)
     call accel_release_buffer(psicopy_buffer)
     call accel_release_buffer(psinew_buffer)
-#endif
+
   end if
 
   call profiling_out(prof)

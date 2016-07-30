@@ -28,12 +28,6 @@ module states_calc_oct_m
   use blacs_oct_m
   use blacs_proc_grid_oct_m
   use iso_c_binding
-#ifdef HAVE_OPENCL
-  use cl
-#ifdef HAVE_CLBLAS
-  use clblas
-#endif
-#endif
   use cmplxscl_oct_m
   use comm_oct_m
   use derivatives_oct_m
