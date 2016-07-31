@@ -45,7 +45,7 @@ AM_CPPFLAGS = \
         -I$(top_srcdir)/external_libs/spglib-1.5.2/src \
 	-I$(top_srcdir)/liboct_parser \
         $(GSL_CFLAGS) $(GD_CFLAGS) \
-	@METIS_CFLAGS@ @PARMETIS_CFLAGS@ @CFLAGS_NFFT@ @CFLAGS_FFTW@ \
+	@METIS_CFLAGS@ @PARMETIS_CFLAGS@ @CFLAGS_NFFT@ @CFLAGS_FFTW@ @CFLAGS_CUDA@ \
 	-DSHARE_OCTOPUS='"$(pkgdatadir)"'
 
 AM_CCASFLAGS = \
@@ -103,7 +103,7 @@ endif
 outside_LIBS = @LIBS_PSPIO@ @LIBS_POKE@ @LIBS_ISF@ @LIBS_NFFT@ @LIBS_PNFFT@ @LIBS_PFFT@ \
   @LIBS_SPARSKIT@ @LIBS_ETSF_IO@ @LIBS_NETCDF@ @LIBS_LIBFM@ \
   @LIBS_BERKELEYGW@ @LIBS_NLOPT@ @LIBS_PARPACK@ @LIBS_ARPACK@ @GD_LIBS@ \
-  @LIBS_PARMETIS@ @LIBS_METIS@ @LIBS_FEAST@ @LIBS_MPI@
+  @LIBS_PARMETIS@ @LIBS_METIS@ @LIBS_FEAST@ @LIBS_CUDA@ @LIBS_MPI@
 
 other_LIBS = $(external_LIBS) $(scalapack_LIBS) $(outside_LIBS) $(core_LIBS) @CXXLIBS@
 all_LIBS = $(octopus_LIBS) $(other_LIBS)
