@@ -34,12 +34,19 @@ __kernel void projector_bra(const int nmat,
   const int ist = get_global_id(0);
   const int ipj = get_global_id(1);
   const int imat = get_global_id(2);
+
+#ifdef SHARED_MEM
   __local int loff[5];
 
   for(int ii = get_local_id(0); ii < 5; ii += get_local_size(0)) loff[ii] = offsets[5*imat + ii];
 
   barrier(CLK_LOCAL_MEM_FENCE);
+#else
+  int loff[5];
 
+  for(int ii = 0; ii < 5; ii++) loff[ii] = offsets[5*imat + ii];
+#endif
+  
   const int npoints       = loff[0];
   const int nprojs        = loff[1];
   const int matrix_offset = loff[2];
@@ -101,12 +108,19 @@ __kernel void projector_bra_phase(const int nmat,
   const int ist = get_global_id(0);
   const int ipj = get_global_id(1);
   const int imat = get_global_id(2);
+
+#ifdef SHARED_MEM
   __local int loff[5];
 
   for(int ii = get_local_id(0); ii < 5; ii += get_local_size(0)) loff[ii] = offsets[5*imat + ii];
 
   barrier(CLK_LOCAL_MEM_FENCE);
+#else
+  int loff[5];
 
+  for(int ii = 0; ii < 5; ii++) loff[ii] = offsets[5*imat + ii];
+#endif
+  
   const int npoints       = loff[0];
   const int nprojs        = loff[1];
   const int matrix_offset = loff[2];
