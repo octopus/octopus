@@ -206,6 +206,7 @@ __kernel void operate_map(const int np,
 
 }
 
+#ifdef SHARED_MEM
 __kernel void operate_nomap(const int np,
 			    __constant int const * restrict stencil,
 			    __global int const * restrict xyz_to_ip,
@@ -213,14 +214,17 @@ __kernel void operate_nomap(const int np,
 			    __constant double * restrict weights,
 			    __global double const * restrict fi,
 			    __global double * restrict fo, const int ldf
+#ifdef SHARED_MEM
 			    , __local int * indexl
+#endif
 			    ){
 
   const int ist = get_global_id(0);
   const int nst = get_global_size(0);
   const int ip  = get_global_id(1);
+  
   __local int * index = indexl + STENCIL_SIZE*get_local_id(1);
-
+  
   if(ip < np){
 
     for(int j = ist; j < STENCIL_SIZE; j += nst){
@@ -344,6 +348,7 @@ __kernel void operate_nomap(const int np,
   }
 
 }
+#endif
 
 /*
  Local Variables:
