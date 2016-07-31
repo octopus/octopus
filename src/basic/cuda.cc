@@ -123,15 +123,14 @@ extern "C" void FC_FUNC_(cuda_end, CUDA_END)(CUcontext ** context, CUdevice ** d
 #endif
 }
 
-extern "C" void FC_FUNC_(cuda_build_program, CUDA_BUILD_PROGRAM)(CUmodule ** module, STR_F_TYPE include_path, STR_F_TYPE const fname, STR_F_TYPE const flags STR_ARG3){
+extern "C" void FC_FUNC_(cuda_build_program, CUDA_BUILD_PROGRAM)(CUmodule ** module, CUdevice ** device,
+								 STR_F_TYPE const fname, STR_F_TYPE const flags STR_ARG2){
 #ifdef HAVE_CUDA
-  char *include_path_c;
   char *fname_c;
   char *flags_c;
-
-  TO_C_STR1(include_path, include_path_c);
-  TO_C_STR2(fname, fname_c);
-  TO_C_STR3(flags, flags_c);
+    
+  TO_C_STR1(fname, fname_c);
+  TO_C_STR2(flags, flags_c);
   
   // read the source
   
@@ -147,7 +146,13 @@ extern "C" void FC_FUNC_(cuda_build_program, CUDA_BUILD_PROGRAM)(CUmodule ** mod
   NVRTC_SAFE_CALL(nvrtcCreateProgram(&prog, source.c_str(), "kernel_include.c", 0, NULL, NULL));
   free(fname_c);
 
-  string all_flags = "--gpu-architecture=compute_52 -DCUDA -default-device " + string("-I") + include_path_c + string(" ") + string(flags_c);
+  int major = 0, minor = 0;
+  CUDA_SAFE_CALL(cuDeviceComputeCapability(&major, &minor, **device));
+
+  char compute_version[2];
+  sprintf(compute_version, "%.1d%.1d", major, minor);
+
+  string all_flags = "--gpu-architecture=compute_" + string(compute_version) + " -DCUDA -default-device " + string(flags_c);
 
   stringstream flags_stream(all_flags);
   istream_iterator<string> iter(flags_stream);

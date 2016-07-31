@@ -1581,10 +1581,12 @@ contains
 
 #ifdef HAVE_CUDA
     if(present(flags)) then
-      call cuda_build_program(this%cuda_module, trim(conf%share)//'/opencl/', trim(conf%share)//'/opencl/'//trim(file_name), flags)
+      call cuda_build_program(this%cuda_module, accel%device%cuda_device, trim(file_name), &
+        '-I'//trim(conf%share)//'/opencl/'//' '//flags)
     else
-      call cuda_build_program(this%cuda_module, trim(conf%share)//'/opencl/', trim(conf%share)//'/opencl/'//trim(file_name), ' ')
+      call cuda_build_program(this%cuda_module, accel%device%cuda_device, trim(file_name), '-I'//trim(conf%share)//'/opencl/')
     end if
+    
     call cuda_create_kernel(this%cuda_kernel, this%cuda_module, trim(kernel_name))
     call cuda_alloc_arg_array(this%arguments)
 #endif
