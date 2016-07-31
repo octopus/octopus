@@ -51,7 +51,7 @@ module accel_oct_m
   implicit none 
 
   private
-
+  
   public ::                       &
     accel_context_t,              &
     accel_device_t,               &
@@ -119,9 +119,8 @@ module accel_oct_m
 #ifdef HAVE_OPENCL
     type(cl_command_queue) :: command_queue
 #endif
-#ifdef HAVE_CUDA
     type(c_ptr)            :: cublas_handle
-#endif
+    type(c_ptr)            :: module_map
     integer                :: max_workgroup_size
     integer(8)             :: local_memory_size
     integer(8)             :: global_memory_size
@@ -1539,6 +1538,8 @@ contains
 
     nullify(head)
 
+    call cuda_module_map_init(accel%module_map)
+    
     POP_SUB(accel_kernel_global_init)
   end subroutine accel_kernel_global_init
 
@@ -1556,6 +1557,8 @@ contains
       head => next_head
     end do
 
+    call cuda_module_map_end(accel%module_map)
+    
     POP_SUB(accel_kernel_global_end)
   end subroutine accel_kernel_global_end
 
@@ -1574,17 +1577,18 @@ contains
 #ifdef HAVE_CUDA
     type(c_ptr) :: cuda_module
 #endif
-
+    
     PUSH_SUB(accel_kernel_build)
 
     call profiling_in(prof, "ACCEL_COMPILE", exclude = .true.)
 
 #ifdef HAVE_CUDA
     if(present(flags)) then
-      call cuda_build_program(this%cuda_module, accel%device%cuda_device, trim(file_name), &
-        '-I'//trim(conf%share)//'/opencl/'//' '//flags)
+      call cuda_build_program(accel%module_map, this%cuda_module, accel%device%cuda_device, &
+        trim(file_name), '-I'//trim(conf%share)//'/opencl/'//' '//trim(flags))
     else
-      call cuda_build_program(this%cuda_module, accel%device%cuda_device, trim(file_name), '-I'//trim(conf%share)//'/opencl/')
+      call cuda_build_program(accel%module_map, this%cuda_module, accel%device%cuda_device, &
+        trim(file_name), '-I'//trim(conf%share)//'/opencl/')
     end if
     
     call cuda_create_kernel(this%cuda_kernel, this%cuda_module, trim(kernel_name))
@@ -1616,8 +1620,8 @@ contains
 
 #ifdef HAVE_CUDA
       call cuda_free_arg_array(this%arguments)
-      call cuda_release_module(this%cuda_module)
       call cuda_release_kernel(this%cuda_kernel)
+      ! modules are not released here, since they are not associated to a kernel
 #endif
       
 #ifdef HAVE_OPENCL

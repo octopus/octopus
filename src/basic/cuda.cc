@@ -46,6 +46,7 @@ typedef int CUdeviceptr;
 #include <iterator>
 #include <cassert>
 #include <cstring>
+#include <map>
 
 #include <fortran_types.h>
 
@@ -123,7 +124,24 @@ extern "C" void FC_FUNC_(cuda_end, CUDA_END)(CUcontext ** context, CUdevice ** d
 #endif
 }
 
-extern "C" void FC_FUNC_(cuda_build_program, CUDA_BUILD_PROGRAM)(CUmodule ** module, CUdevice ** device,
+extern "C" void FC_FUNC_(cuda_module_map_init, CUDA_MODULES_MAP_INIT)(map<string, CUmodule *> ** module_map){
+  *module_map = new map<string, CUmodule *>;
+}
+
+extern "C" void FC_FUNC_(cuda_module_map_end, CUDA_MODULES_MAP_END)(map<string, CUmodule *> ** module_map){
+
+  for(map<string, CUmodule *>::iterator map_it = (**module_map).begin(); map_it != (**module_map).end(); ++map_it){
+    CUmodule * module = map_it->second;
+#ifdef HAVE_CUDA
+    CUDA_SAFE_CALL(cuModuleUnload(*module));
+#endif
+    delete module;
+  }
+  
+  delete *module_map;
+}
+
+extern "C" void FC_FUNC_(cuda_build_program, CUDA_BUILD_PROGRAM)(map<string, CUmodule *> ** module_map, CUmodule ** module, CUdevice ** device,
 								 STR_F_TYPE const fname, STR_F_TYPE const flags STR_ARG2){
 #ifdef HAVE_CUDA
   char *fname_c;
@@ -131,20 +149,26 @@ extern "C" void FC_FUNC_(cuda_build_program, CUDA_BUILD_PROGRAM)(CUmodule ** mod
     
   TO_C_STR1(fname, fname_c);
   TO_C_STR2(flags, flags_c);
+
+  string map_descriptor = string(fname_c) + string(flags_c);
+
+  cout << fname_c << endl;
+  
+  map<string, CUmodule *>::iterator map_it = (**module_map).find(map_descriptor);
+  if(map_it != (**module_map).end()){
+    *module = map_it->second;
+    return;
+  }
   
   // read the source
-  
   string source;
 
   source = "#include \"" + string(fname_c) + "\"\n";
 
   // cout << source << "|" << endl;
 
-  cout << fname_c << endl;
-
   nvrtcProgram prog;
   NVRTC_SAFE_CALL(nvrtcCreateProgram(&prog, source.c_str(), "kernel_include.c", 0, NULL, NULL));
-  free(fname_c);
 
   int major = 0, minor = 0;
   CUDA_SAFE_CALL(cuDeviceComputeCapability(&major, &minor, **device));
@@ -197,6 +221,10 @@ extern "C" void FC_FUNC_(cuda_build_program, CUDA_BUILD_PROGRAM)(CUmodule ** mod
   CUDA_SAFE_CALL(cuModuleLoadDataEx(*module, ptx, 0, 0, 0));
 
   delete [] ptx;
+
+  (**module_map)[map_descriptor] = *module;
+
+  free(fname_c);
 #endif
 }
 
