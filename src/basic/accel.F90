@@ -1056,10 +1056,8 @@ contains
     character(len = OPENCL_MAX_FILE_LENGTH) :: string
     character(len = 256) :: share_string
     integer :: ierr, ierrlog, iunit, irec, newlen
-    type(profile_t), save :: prof
-
+    
     PUSH_SUB(opencl_build_program)
-    call profiling_in(prof, "CL_COMPILE", exclude = .true.)
 
     string = ''
 
@@ -1138,7 +1136,6 @@ contains
 
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clBuildProgram")
     
-    call profiling_out(prof)
     POP_SUB(opencl_build_program)
   end subroutine opencl_build_program
 #endif
@@ -1570,6 +1567,7 @@ contains
     character(len=*),            intent(in)    :: kernel_name
     character(len=*), optional,  intent(in)    :: flags
 
+    type(profile_t), save :: prof
 #ifdef HAVE_OPENCL
     type(cl_program) :: prog
 #endif
@@ -1578,7 +1576,9 @@ contains
 #endif
 
     PUSH_SUB(accel_kernel_build)
-    
+
+    call profiling_in(prof, "ACCEL_COMPILE", exclude = .true.)
+
 #ifdef HAVE_CUDA
     if(present(flags)) then
       call cuda_build_program(this%cuda_module, trim(conf%share)//'/opencl/', trim(conf%share)//'/opencl/'//trim(file_name), flags)
@@ -1597,6 +1597,8 @@ contains
 
     this%initialized = .true.
 
+    call profiling_out(prof)
+    
     POP_SUB(accel_kernel_build)
   end subroutine accel_kernel_build
 
