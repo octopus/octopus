@@ -25,12 +25,6 @@ module mesh_batch_oct_m
   use batch_oct_m
   use blas_oct_m
   use iso_c_binding
-#ifdef HAVE_OPENCL
-  use cl
-#ifdef HAVE_CLBLAS
-  use clblas
-#endif
-#endif
   use comm_oct_m
   use global_oct_m
   use hardware_oct_m

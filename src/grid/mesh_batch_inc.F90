@@ -386,7 +386,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
   logical :: reduce_, cproduct_
   type(profile_t), save :: prof, profcomm
   R_TYPE, allocatable :: tmp(:), cltmp(:, :)
-  type(accel_mem_t)  :: dot_buffer, scratch_buffer
+  type(accel_mem_t)  :: dot_buffer
   type(profile_t), save :: prof_copy
 
   PUSH_SUB(X(mesh_batch_dotp_vector))
@@ -476,40 +476,13 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
   case(BATCH_CL_PACKED)
 
     call accel_create_buffer(dot_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%pack%size(1))
-    call accel_create_buffer(scratch_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, mesh%np)
 
     do ist = 1, aa%nst_linear
-#ifdef HAVE_OPENCL
-#ifdef R_TREAL
-      call clblasDdot(N = int(mesh%np, 8), dotProduct = dot_buffer%mem, offDP = int(ist - 1, 8), &
-        X = aa%pack%buffer%mem, offx = int(ist - 1, 8), incx = aa%pack%size(1), &
-        Y = bb%pack%buffer%mem, offy = int(ist - 1, 8), incy = bb%pack%size(1), &
-        scratchBuff = scratch_buffer%mem, CommandQueue = accel%command_queue, status = status)
-      if(status /= clblasSuccess) call clblas_print_error(status, 'clblasDdot')
-#else
-      call clblasZdotc(N = int(mesh%np, 8), dotProduct = dot_buffer%mem, offDP = int(ist - 1, 8), &
-        X = aa%pack%buffer%mem, offx = int(ist - 1, 8), incx = aa%pack%size(1), &
-        Y = bb%pack%buffer%mem, offy = int(ist - 1, 8), incy = bb%pack%size(1), &
-        scratchBuff = scratch_buffer%mem, CommandQueue = accel%command_queue, status = status)
-      if(status /= clblasSuccess) call clblas_print_error(status, 'clblasDdot')
-#endif
-#endif
-#ifdef HAVE_CUDA
-#ifdef R_TREAL
-      call cuda_blas_ddot(handle = accel%cublas_handle, n = int(mesh%np, 8), &
-        x = aa%pack%buffer%cuda_ptr, offx = int(ist - 1, 8), incx = int(aa%pack%size(1), 8), &
-        y = bb%pack%buffer%cuda_ptr, offy = int(ist - 1, 8), incy = int(bb%pack%size(1), 8), &
-        res = dot_buffer%cuda_ptr, offres = int(ist - 1, 8))
-#else
-      call cuda_blas_zdotc(handle = accel%cublas_handle, n = int(mesh%np, 8), &
-        x = aa%pack%buffer%cuda_ptr, offx = int(ist - 1, 8), incx = int(aa%pack%size(1), 8), &
-        y = bb%pack%buffer%cuda_ptr, offy = int(ist - 1, 8), incy = int(bb%pack%size(1), 8), &
-        res = dot_buffer%cuda_ptr, offres = int(ist - 1, 8))
-#endif
-#endif
+      call X(accel_dot)(n = int(mesh%np, 8), &
+        x = aa%pack%buffer, offx = int(ist - 1, 8), incx = int(aa%pack%size(1), 8), &
+        y = bb%pack%buffer, offy = int(ist - 1, 8), incy = int(bb%pack%size(1), 8), &
+        res = dot_buffer, offres = int(ist - 1, 8))
     end do
-
-    call accel_release_buffer(scratch_buffer)
 
     SAFE_ALLOCATE(cltmp(1:aa%pack%size(1), 1))
 
@@ -762,9 +735,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
   integer :: ist, idim, indb, ip, status
   R_TYPE :: a0
   FLOAT, allocatable :: scal(:), ssq(:)
-#ifdef HAVE_OPENCL
-  type(accel_mem_t)  :: nrm2_buffer, scratch_buffer
-#endif
+  type(accel_mem_t)  :: nrm2_buffer
   type(profile_t), save :: prof
 
   PUSH_SUB(X(priv_mesh_batch_nrm2))
@@ -824,7 +795,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
       nrm2(ist) = M_ZERO
       do idim = 1, aa%dim
         indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
-        nrm2(ist) = hypot(nrm2(ist), scal(indb)*sqrt(mesh%volume_element*ssq(indb)))
+         nrm2(ist) = hypot(nrm2(ist), scal(indb)*sqrt(mesh%volume_element*ssq(indb)))
       end do
     end do
 
@@ -834,32 +805,18 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
 
     SAFE_ALLOCATE(ssq(1:aa%pack%size(1)))
 
-#ifdef HAVE_OPENCL
     call accel_create_buffer(nrm2_buffer, ACCEL_MEM_WRITE_ONLY, TYPE_FLOAT, aa%pack%size(1))
-    call accel_create_buffer(scratch_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, 2*mesh%np)
 
     do ist = 1, aa%nst_linear
 
-#ifdef R_TREAL
-      call clblasDnrm2(N = int(mesh%np, 8), NRM2 = nrm2_buffer%mem, offNRM2 = int(ist - 1, 8), &
-        X = aa%pack%buffer%mem, offx = int(ist - 1, 8), incx = aa%pack%size(1), &
-        scratchBuff = scratch_buffer%mem, CommandQueue = accel%command_queue, status = status)
-      if(status /= clblasSuccess) call clblas_print_error(status, 'clblasDdot')
-#else
-      call clblasDznrm2(N = int(mesh%np, 8), NRM2 = nrm2_buffer%mem, offNRM2 = int(ist - 1, 8), &
-        X = aa%pack%buffer%mem, offx = int(ist - 1, 8), incx = aa%pack%size(1), &
-        scratchBuff = scratch_buffer%mem, CommandQueue = accel%command_queue, status = status)
-      if(status /= clblasSuccess) call clblas_print_error(status, 'clblasDdot')
-#endif
+      call X(accel_nrm2)(N = int(mesh%np, 8), X = aa%pack%buffer, offx = int(ist - 1, 8), incx = int(aa%pack%size(1), 8), &
+        res = nrm2_buffer, offres = int(ist - 1, 8))
       
     end do
 
     call accel_read_buffer(nrm2_buffer, aa%pack%size(1), ssq)
 
     call accel_release_buffer(nrm2_buffer)
-    call accel_release_buffer(scratch_buffer)
-
-#endif
 
     do ist = 1, aa%nst
       nrm2(ist) = M_ZERO

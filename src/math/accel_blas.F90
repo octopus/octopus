@@ -34,6 +34,18 @@ module accel_blas_oct_m
 
   private
 
+  public ::                        &
+    daccel_dot,                    &
+    zaccel_dot,                    &
+    daccel_nrm2,                   &
+    zaccel_nrm2,                   &
+    daccel_herk,                   &
+    zaccel_herk,                   &
+    daccel_trsm,                   &
+    zaccel_trsm,                   &
+    daccel_gemm,                   &
+    zaccel_gemm
+
   integer, parameter, public ::                      &
     CUBLAS_DIAG_NON_UNIT = 0,                        &
     CUBLAS_DIAG_UNIT     = 1
@@ -87,16 +99,6 @@ module accel_blas_oct_m
     ACCEL_BLAS_DIAG_UNIT     = CUBLAS_DIAG_UNIT
 #endif
   
-  public ::                        &
-    cuda_blas_ddot,                &
-    cuda_blas_zdotc,               &
-    daccel_herk,                   &
-    zaccel_herk,                   &
-    daccel_trsm,                   &
-    zaccel_trsm,                   &
-    daccel_gemm,                   &
-    zaccel_gemm
-  
   ! DOT
   interface
     subroutine cuda_blas_ddot(handle, n, x, offx, incx, y, offy, incy, res, offres)
@@ -132,6 +134,37 @@ module accel_blas_oct_m
       type(c_ptr),  intent(inout) :: res
       integer(8),   intent(in)    :: offres
     end subroutine cuda_blas_zdotc
+  end interface
+
+  ! NRM2
+  interface
+    subroutine cuda_blas_dnrm2(handle, n, x, offx, incx, res, offres)
+      use iso_c_binding
+      
+      implicit none
+      
+      type(c_ptr),  intent(in)    :: handle
+      integer(8),   intent(in)    :: n
+      type(c_ptr),  intent(in)    :: x
+      integer(8),   intent(in)    :: offx
+      integer(8),   intent(in)    :: incx
+      type(c_ptr),  intent(inout) :: res
+      integer(8),   intent(in)    :: offres
+    end subroutine cuda_blas_dnrm2
+
+    subroutine cuda_blas_znrm2(handle, n, x, offx, incx, res, offres)
+      use iso_c_binding
+            
+      implicit none
+      
+      type(c_ptr),  intent(in)    :: handle
+      integer(8),   intent(in)    :: n
+      type(c_ptr),  intent(in)    :: x
+      integer(8),   intent(in)    :: offx
+      integer(8),   intent(in)    :: incx
+      type(c_ptr),  intent(inout) :: res
+      integer(8),   intent(in)    :: offres
+    end subroutine cuda_blas_znrm2
   end interface
 
   ! GEMM
