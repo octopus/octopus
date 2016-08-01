@@ -230,8 +230,6 @@ module accel_oct_m
   ! a "convenience" public variable
   integer, public :: cl_status
 
-  integer, parameter :: OPENCL_MAX_FILE_LENGTH = 10000
-
   integer :: buffer_alloc_count
   integer(8) :: allocated_mem
   type(accel_kernel_t), pointer :: head
@@ -1052,36 +1050,18 @@ contains
     character(len=*),           intent(in)    :: filename
     character(len=*), optional, intent(in)    :: flags
 
-    character(len = OPENCL_MAX_FILE_LENGTH) :: string
+    character(len = 1000) :: string
     character(len = 256) :: share_string
     integer :: ierr, ierrlog, iunit, irec, newlen
     
     PUSH_SUB(opencl_build_program)
 
-    string = ''
-
-    call io_assign(iunit)
-    open(unit = iunit, file = trim(filename), access='direct', status = 'old', action = 'read', iostat = ierr, recl = 1)
-    irec = 1
-    do
-      read(unit = iunit, rec = irec, iostat = ierr) string(irec:irec) 
-      if (ierr /= 0) exit
-      if(irec == OPENCL_MAX_FILE_LENGTH) then
-        call messages_write('CL source file is too big: '//trim(filename)//'.')
-        call messages_new_line()
-        call messages_write("       Increase 'OPENCL_MAX_FILE_LENGTH'.")
-        call messages_fatal()
-      end if
-      irec = irec + 1
-    end do
-
-    close(unit = iunit)
-    call io_free(iunit)
+    string = '#include "'//trim(filename)//'"'
 
     call messages_write("Building CL program '"//trim(filename)//"'.")
     call messages_info()
 
-    prog = clCreateProgramWithSource(accel%context%cl_context, string, ierr)
+    prog = clCreateProgramWithSource(accel%context%cl_context, trim(string), ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateProgramWithSource")
 
     ! build the compilation flags
