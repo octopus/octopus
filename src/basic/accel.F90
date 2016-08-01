@@ -1557,7 +1557,9 @@ contains
       head => next_head
     end do
 
-    call cuda_module_map_end(accel%module_map)
+    if(accel_is_enabled()) then
+      call cuda_module_map_end(accel%module_map)
+    end if
     
     POP_SUB(accel_kernel_global_end)
   end subroutine accel_kernel_global_end
