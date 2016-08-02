@@ -319,15 +319,20 @@ contains
 
     if(writ%out(OUT_PROJ)%write .or. writ%out(OUT_POPULATIONS)%write &
       .or.writ%out(OUT_KP_PROJ)%write .or. writ%out(OUT_N_EX)%write) then
-      if (.not.writ%out(OUT_KP_PROJ)%write.and.(st%parallel_in_states.or.st%d%kpt%parallel)) then
+      if (.not.writ%out(OUT_KP_PROJ)%write.and. &
+          .not.writ%out(OUT_N_EX)%write.and. &
+          (st%parallel_in_states.or.st%d%kpt%parallel)) then
         message(1) = "Options TDOutput = td_occup and populations are not implemented for parallel in states."
+        call messages_fatal(1)
+      end if
+
+      if (writ%out(OUT_N_EX)%write.and. st%d%kpt%parallel) then
+        message(1) = "Options TDOutput = n_excited_el is not implemented for parallel in states."
         call messages_fatal(1)
       end if
       
       if(.not.writ%out(OUT_KP_PROJ)%write) then
          call states_copy(writ%gs_st, st, exclude_wfns = .true., exclude_eigenval = .true.)
-         ! clean up all the stuff we have to reallocate
-         SAFE_DEALLOCATE_P(writ%gs_st%node)
       else
          ! we want the same layout of gs_st as st
          call states_copy(writ%gs_st, st)
@@ -336,7 +341,7 @@ contains
       ! clean up all the stuff we have to reallocate
       SAFE_DEALLOCATE_P(writ%gs_st%node)
 
-      call restart_init(restart_gs, RESTART_PROJ, RESTART_TYPE_LOAD,writ%gs_st%dom_st_kpt_mpi_grp, ierr, mesh=gr%mesh)
+      call restart_init(restart_gs, RESTART_PROJ, RESTART_TYPE_LOAD, writ%gs_st%dom_st_kpt_mpi_grp, ierr, mesh=gr%mesh)
 
       if(.not.writ%out(OUT_KP_PROJ)%write) then
         if(ierr == 0) &
@@ -346,7 +351,7 @@ contains
           message(1) = "Unable to read states information."
           call messages_fatal(1)
         end if
-        
+
         ! do this only when not calculating populations, since all states are needed then
         if(.not. writ%out(OUT_POPULATIONS)%write) then
           ! We will store the ground-state Kohn-Sham system for all processors.
@@ -364,7 +369,15 @@ contains
           !%End
           call parse_variable('TDProjStateStart', 1, writ%gs_st%st_start)
         else
-          writ%gs_st%st_start = 1
+           writ%gs_st%st_start = 1
+        end if
+
+        !In case of n_excited_el in state parallelisation, the parallelisation is done over the 
+        ! time-evolved states and each task must know all GS states to project on.
+        if(writ%out(OUT_N_EX)%write) then
+          writ%gs_st%st_end = writ%gs_st%nst
+          writ%gs_st%lnst =  writ%gs_st%nst
+          writ%gs_st%parallel_in_states = .false.
         end if
         
         ! allocate memory
@@ -383,14 +396,13 @@ contains
         
         call states_allocate_wfns(writ%gs_st, gr%mesh, TYPE_CMPLX)
       end if
-    
+
       call states_load(restart_gs, writ%gs_st, gr, ierr, label = ': gs for TDOutput')
 
       if(ierr /= 0 .and. ierr /= (writ%gs_st%st_end-writ%gs_st%st_start+1)*writ%gs_st%d%nik*writ%gs_st%d%dim) then
         message(1) = "Unable to read wavefunctions for TDOutput."
         call messages_fatal(1)
       end if
-
       call restart_end(restart_gs)
     end if
  
@@ -2053,7 +2065,7 @@ contains
 
       end if
 
-      SAFE_ALLOCATE(projections(gs_st%st_start:st%nst, gs_st%st_start:gs_st%st_end, 1:st%d%nik))
+      SAFE_ALLOCATE(projections(1:st%nst, gs_st%st_start:gs_st%st_end, 1:st%d%nik))
       do idir = 1, geo%space%dim
         projections = M_Z0
 
@@ -2064,7 +2076,7 @@ contains
           call write_iter_string(out_proj, "# ------")
           call write_iter_header(out_proj, aux)
           do ik = 1, st%d%nik
-            do ist = max(gs_st%st_start, st%st_start), st%nst
+            do ist = gs_st%st_start, st%st_end
               do uist = gs_st%st_start, gs_st%st_end
                 call write_iter_double(out_proj,  real(projections(ist, uist, ik)), 1)
                 call write_iter_double(out_proj, aimag(projections(ist, uist, ik)), 1)
@@ -2086,7 +2098,7 @@ contains
     ! this is required if st%X(psi) is used
     call states_sync(st)
 
-    SAFE_ALLOCATE(projections(gs_st%st_start:st%nst, gs_st%st_start:gs_st%st_end, 1:st%d%nik))
+    SAFE_ALLOCATE(projections(1:st%nst, gs_st%st_start:gs_st%st_end, 1:st%d%nik))
     projections(:,:,:) = M_Z0
     call calc_projections(gr, st, gs_st, projections)
 
@@ -2127,7 +2139,7 @@ contains
       SAFE_ALLOCATE(xpsi(1:gr%mesh%np, 1:st%d%dim))
       
       do ik = 1, st%d%nik
-        do ist = max(gs_st%st_start, st%st_start), st%st_end
+        do ist = gs_st%st_start, st%nst
           call states_get_state(st, gr%mesh, ist, ik, psi)
           do uist = gs_st%st_start, gs_st%st_end
             call states_get_state(gs_st, gr%mesh, ist, ik, gspsi)
@@ -2208,30 +2220,38 @@ contains
     end if
 
     ! this is required if st%X(psi) is used
-    call states_sync(st)
+     call states_sync(st)
 
-    SAFE_ALLOCATE(projections(gs_st%st_start:st%nst, gs_st%st_start:gs_st%st_end, 1:st%d%nik))
+    SAFE_ALLOCATE(projections(1:st%nst, gs_st%st_start:gs_st%nst, 1:st%d%nik))
     projections(:,:,:) = M_Z0
     call calc_projections(gr, st, gs_st, projections)
  
-    Nex = st%qtot
+    Nex = M_ZERO 
     do ik = 1, st%d%nik
-      do ist = gs_st%st_start, st%nst
-        do uist = gs_st%st_start, gs_st%st_end
+      do ist = st%st_start, st%st_end
+        do uist = gs_st%st_start, gs_st%nst
           Nex = Nex - st%d%kweights(ik) * st%occ(ist, ik) * gs_st%occ(uist, ik) &
                      * abs(projections(ist, uist, ik))**2 / st%smear%el_per_state
         end do
       end do
-    end do 
+    end do
 
-    if(mpi_grp_is_root(mpi_world)) then
-      call write_iter_start(out_nex)
-      call write_iter_double(out_nex, Nex, 1)
-      call write_iter_nl(out_nex)
-    end if
+#if defined(HAVE_MPI)        
+   if(st%parallel_in_states .or. st%d%kpt%parallel) then
+     call comm_allreduce(st%st_kpt_mpi_grp%comm, Nex)
+   end if
+#endif  
+
+  Nex = Nex + st%qtot 
+
+  if(mpi_grp_is_root(mpi_world)) then
+    call write_iter_start(out_nex)
+    call write_iter_double(out_nex, Nex, 1)
+    call write_iter_nl(out_nex)
+  end if
   
-    SAFE_DEALLOCATE_A(projections)
-    POP_SUB(td_write_nex)
+  SAFE_DEALLOCATE_A(projections)
+  POP_SUB(td_write_nex)
  end subroutine td_write_n_ex
 
    ! ---------------------------------------------------------
@@ -2246,8 +2266,8 @@ contains
      type(grid_t),      intent(in)    :: gr
      type(states_t),    intent(inout) :: st
      type(states_t),    intent(in)    :: gs_st
-     CMPLX, intent(inout) :: projections(gs_st%st_start:st%nst, &
-                               gs_st%st_start:gs_st%st_end, 1:st%d%nik)
+     CMPLX, intent(inout) :: projections(1:st%nst, &
+                                         gs_st%st_start:gs_st%nst, 1:st%d%nik)
  
      integer :: uist, ist, ik
      CMPLX, allocatable :: psi(:, :), gspsi(:, :)
@@ -2257,9 +2277,9 @@ contains
      SAFE_ALLOCATE(gspsi(1:gr%mesh%np, 1:st%d%dim))
      
      do ik = 1, st%d%nik
-       do ist = max(gs_st%st_start, st%st_start), st%st_end
+       do ist = st%st_start, st%st_end
          call states_get_state(st, gr%mesh, ist, ik, psi)
-         do uist = gs_st%st_start, gs_st%st_end
+         do uist = gs_st%st_start, gs_st%nst
            call states_get_state(gs_st, gr%mesh, uist, ik, gspsi)
            projections(ist, uist, ik) = zmf_dotp(gr%mesh, st%d%dim, psi, gspsi)
         end do
@@ -2277,8 +2297,8 @@ contains
       
       type(states_t),    intent(in) :: st
       type(states_t),    intent(in) :: gs_st
-      CMPLX, intent(inout) :: projections(gs_st%st_start:st%nst, &
-                                     gs_st%st_start:gs_st%st_end, 1:st%d%nik)
+      CMPLX, intent(inout) :: projections(1:st%nst, &
+                                          gs_st%st_start:gs_st%nst, 1:st%d%nik)
 
 #if defined(HAVE_MPI)
       integer :: k, ik, ist, uist
@@ -2286,11 +2306,11 @@ contains
       if(.not.st%parallel_in_states) return
 
       PUSH_SUB(distribute_projections)
-
+      
       do ik = 1, st%d%nik
-        do ist = gs_st%st_start, st%nst
+        do ist = st%st_start, st%st_end
           k = st%node(ist)
-          do uist = gs_st%st_start, gs_st%st_end
+          do uist = gs_st%st_start, gs_st%nst
             call MPI_Bcast(projections(ist, uist, ik), 1, MPI_CMPLX, k, st%mpi_grp%comm, mpi_err)
           end do
         end do
