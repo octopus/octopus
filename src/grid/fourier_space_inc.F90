@@ -97,6 +97,7 @@ subroutine X(fourier_space_op_init)(this, cube, op, in_device)
 
     SAFE_ALLOCATE(op_linear(1:size))
 
+#ifdef HAVE_OPENCL
     do kk = 1, cube%fs_n(3)
       do jj = 1, cube%fs_n(2)
         do ii = 1, cube%fs_n(1)
@@ -105,7 +106,20 @@ subroutine X(fourier_space_op_init)(this, cube, op, in_device)
         end do
       end do
     end do
+#endif
 
+#ifdef HAVE_CUDA
+    ii_linear = 1
+    do kk = 1, cube%fs_n(3)
+      do jj = 1, cube%fs_n(2)
+        do ii = 1, cube%fs_n(1)
+          op_linear(ii_linear) = op(ii, jj, kk)
+          ii_linear = ii_linear + 1
+        end do
+      end do
+    end do
+#endif
+    
     call accel_create_buffer(this%op_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, size)
     call accel_write_buffer(this%op_buffer, size, op_linear)
     

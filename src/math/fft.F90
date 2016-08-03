@@ -128,6 +128,8 @@ module fft_oct_m
     type(clfftPlanHandle) :: cl_plan_fw 
     type(clfftPlanHandle) :: cl_plan_bw !< for real transforms we need a different plan, so we always use 2
 #endif
+    type(c_ptr)           :: cuda_plan_fw
+    type(c_ptr)           :: cuda_plan_bw
 #ifdef HAVE_NFFT
     type(nfft_t) :: nfft 
 #endif
@@ -141,6 +143,14 @@ module fft_oct_m
   type(fft_t), save :: fft_array(FFT_MAX)
   logical           :: fft_optimize
   integer           :: fft_prepare_plan
+
+  integer, parameter ::  &
+    CUFFT_R2C = z'2a',   &
+    CUFFT_C2R = z'2c',   &
+    CUFFT_C2C = z'29',   &
+    CUFFT_D2Z = z'6a',   &
+    CUFFT_Z2D = z'6c',   &
+    CUFFT_Z2Z = z'69'
 
 contains
 
@@ -313,7 +323,11 @@ contains
         ! the AMD OpenCL FFT only supports sizes 2, 3 and 5, but size
         ! 5 gives an fpe error on the Radeon 7970 (APPML 1.8), so we
         ! only use factors 2 and 3
+#ifdef HAVE_CLFFT
         nn_temp(ii) = fft_size(nn(ii), (/2, 3/))
+#else
+        nn_temp(ii) = fft_size(nn(ii), (/2, 3, 5, 7/))
+#endif
         if(fft_optimize .and. optimize(ii)) nn(ii) = nn_temp(ii)
       end do 
       
@@ -558,6 +572,13 @@ contains
 #endif
 
     case(FFTLIB_OPENCL)
+#ifdef HAVE_CUDA
+      call cuda_fft_plan3d(fft_array(jj)%cuda_plan_fw, &
+        fft_array(jj)%rs_n_global(3), fft_array(jj)%rs_n_global(2), fft_array(jj)%rs_n_global(1), CUFFT_D2Z)
+      call cuda_fft_plan3d(fft_array(jj)%cuda_plan_bw, &
+        fft_array(jj)%rs_n_global(3), fft_array(jj)%rs_n_global(2), fft_array(jj)%rs_n_global(1), CUFFT_Z2D)
+#endif
+      
 #ifdef HAVE_CLFFT
 
       ! create the plans
@@ -828,8 +849,13 @@ contains
           SAFE_DEALLOCATE_P(fft_array(ii)%drs_data)
           SAFE_DEALLOCATE_P(fft_array(ii)%zrs_data)
           SAFE_DEALLOCATE_P(fft_array(ii)%fs_data)
-#ifdef HAVE_CLFFT
+
         case(FFTLIB_OPENCL)
+#ifdef HAVE_CUDA
+          call cuda_fft_destroy(fft_array(ii)%cuda_plan_fw)
+          call cuda_fft_destroy(fft_array(ii)%cuda_plan_bw)
+#endif
+#ifdef HAVE_CLFFT
           call clfftDestroyPlan(fft_array(ii)%cl_plan_fw, status)
           call clfftDestroyPlan(fft_array(ii)%cl_plan_bw, status)
 #endif

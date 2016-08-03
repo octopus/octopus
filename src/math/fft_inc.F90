@@ -123,7 +123,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
 
 ! ---------------------------------------------------------
   subroutine X(fft_forward_cl)(fft, in, out)
-    type(fft_t),        intent(in)    :: fft
+    type(fft_t),       intent(in)    :: fft
     type(accel_mem_t), intent(in)    :: in
     type(accel_mem_t), intent(inout) :: out
 
@@ -142,6 +142,11 @@ subroutine X(fft_forward)(fft, in, out, norm)
     slot = fft%slot
     ASSERT(fft_array(slot)%library == FFTLIB_OPENCL)
 
+#ifdef HAVE_CUDA
+    call cuda_fft_execute_d2z(fft_array(slot)%cuda_plan_fw, in%cuda_ptr, out%cuda_ptr)
+    call accel_finish()
+#endif
+    
 #ifdef HAVE_CLFFT
 
     call clfftGetTmpBufSize(fft_array(slot)%cl_plan_bw, tmp_buf_size, cl_status)
@@ -304,7 +309,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
   ! ---------------------------------------------------------
 
   subroutine X(fft_backward_cl)(fft, in, out)
-    type(fft_t),        intent(in)    :: fft
+    type(fft_t),       intent(in)    :: fft
     type(accel_mem_t), intent(in)    :: in
     type(accel_mem_t), intent(inout) :: out
 
@@ -323,8 +328,12 @@ subroutine X(fft_forward)(fft, in, out, norm)
     slot = fft%slot
     ASSERT(fft_array(slot)%library == FFTLIB_OPENCL)
 
-#ifdef HAVE_CLFFT
+#ifdef HAVE_CUDA
+    call cuda_fft_execute_z2d(fft_array(slot)%cuda_plan_bw, in%cuda_ptr, out%cuda_ptr)
+    call accel_finish()
+#endif
     
+#ifdef HAVE_CLFFT
     call clfftGetTmpBufSize(fft_array(slot)%cl_plan_bw, tmp_buf_size, cl_status)
     if(cl_status /= CLFFT_SUCCESS) call clfft_print_error(cl_status, 'clfftGetTmpBufSize')
 
