@@ -97,10 +97,6 @@ contains
     this%space = iand(cmplxscl_flags, CMPLXSCL_SPACE) /= 0
     this%time  = iand(cmplxscl_flags, CMPLXSCL_TIME)  /= 0
 
-    if((this%space .or. this%time) .and. accel_is_enabled()) &
-      call messages_not_implemented("ComplexScaling with OpenCL")
-    ! scaling of kinetic energy in src/hamiltonian/hamiltonian_inc.F90 seg-faults, for example
-    
     if(this%space) then
       !%Variable ComplexScalingTheta
       !%Type float 
