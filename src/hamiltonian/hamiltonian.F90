@@ -926,6 +926,7 @@ contains
     if(iand(this%xc_family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0)  apply = .false. 
     if(this%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) apply = .false.
     if(this%cmplxscl%space .and. accel_is_enabled()) apply = .false.
+    if(associated(this%hm_base%phase) .and. accel_is_enabled()) apply = .false.
     
   end function hamiltonian_apply_packed
 
