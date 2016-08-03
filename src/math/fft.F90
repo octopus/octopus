@@ -76,7 +76,8 @@ module fft_oct_m
     dfft_forward1,     &
     zfft_forward1,     &
     dfft_backward1,    &
-    zfft_backward1
+    zfft_backward1,    &
+    fft_scaling_factor
 
 
   !> global constants
@@ -572,6 +573,14 @@ contains
 #endif
 
     case(FFTLIB_OPENCL)
+
+      fft_array(jj)%stride_rs(1) = 1
+      fft_array(jj)%stride_fs(1) = 1
+      do ii = 2, fft_dim
+        fft_array(jj)%stride_rs(ii) = fft_array(jj)%stride_rs(ii - 1)*fft_array(jj)%rs_n(ii - 1)
+        fft_array(jj)%stride_fs(ii) = fft_array(jj)%stride_fs(ii - 1)*fft_array(jj)%fs_n(ii - 1)
+      end do
+
 #ifdef HAVE_CUDA
       call cuda_fft_plan3d(fft_array(jj)%cuda_plan_fw, &
         fft_array(jj)%rs_n_global(3), fft_array(jj)%rs_n_global(2), fft_array(jj)%rs_n_global(1), CUFFT_D2Z)
@@ -642,28 +651,6 @@ contains
 
       call clfftSetResultLocation(fft_array(jj)%cl_plan_bw, CLFFT_OUTOFPLACE, status)
       if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clfftSetResultLocation')
-
-      ! invert the stride for Fortran arrays
-
-!      call clfftGetPlanInStride(fft_array(jj)%cl_plan_bw, fft_dim, stride_rs, status)
-!      if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clfftGetPlanInStride')
-
-
-!      call clfftGetPlanInStride(fft_array(jj)%cl_plan_fw, fft_dim, stride_fs, status)
-!      if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clfftGetPlanInStride')
-
-!      print*, "STRIDE IN     ", stride_rs
-!      print*, "STRIDE OUT    ", stride_fs
-
-      fft_array(jj)%stride_rs(1) = 1
-      fft_array(jj)%stride_fs(1) = 1
-      do ii = 2, fft_dim
-        fft_array(jj)%stride_rs(ii) = fft_array(jj)%stride_rs(ii - 1)*fft_array(jj)%rs_n(ii - 1)
-        fft_array(jj)%stride_fs(ii) = fft_array(jj)%stride_fs(ii - 1)*fft_array(jj)%fs_n(ii - 1)
-      end do
-
-!      print*, "STRIDE NEW IN ", stride_rs
-!      print*, "STRIDE NEW OUT", stride_fs
 
       ! the strides
       
@@ -1014,6 +1001,26 @@ contains
     POP_SUB(fft_operation_count)
   end subroutine fft_operation_count
 
+
+  ! ----------------------------------------------------------
+  
+  !> This function returns the factor required to normalize a function
+  !> after a forward and backward transform.  
+  FLOAT pure function fft_scaling_factor(fft) result(scaling_factor)
+    type(fft_t), intent(in)  :: fft
+
+    ! for the moment this factor is handled by the backwards transform for most libraries
+    scaling_factor = M_ONE
+    
+    select case (fft_array(fft%slot)%library)
+    case(FFTLIB_OPENCL)
+#ifdef HAVE_CUDA
+      scaling_factor = &
+        M_ONE/(fft_array(fft%slot)%rs_n_global(1)*fft_array(fft%slot)%rs_n_global(2)*fft_array(fft%slot)%rs_n_global(3))
+#endif
+    end select
+  
+  end function fft_scaling_factor
 
 #include "undef.F90"
 #include "real.F90"
