@@ -297,11 +297,9 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
 #endif
   logical :: local_
   R_TYPE, pointer :: gmf(:)
-#ifdef HAVE_OPENCL
   integer                    :: bsize
   type(accel_mem_t)         :: mf_buffer
   type(accel_kernel_t), save :: kernel
-#endif
 
   PUSH_SUB(X(cube_to_mesh))
 
@@ -337,7 +335,6 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
 
   else
 
-#ifdef HAVE_OPENCL    
     call accel_create_buffer(mf_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, mesh%np_global)
 
     call accel_kernel_start_call(kernel, 'mesh_to_cube.cl', TOSTRING(X(cube_to_mesh)))
@@ -360,7 +357,6 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
 
     call accel_read_buffer(mf_buffer, mesh%np_global, gmf)
     call accel_release_buffer(mf_buffer)
-#endif
 
   end if
 

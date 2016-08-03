@@ -21,9 +21,6 @@
 
 module fourier_space_oct_m
   use accel_oct_m
-#ifdef HAVE_OPENCL
-  use cl
-#endif
   use cube_oct_m
   use cube_function_oct_m
   use global_oct_m
@@ -110,12 +107,11 @@ contains
         SAFE_ALLOCATE(cf%fs(1:n3, 1:n1, 1:n2))
       end if
     case(FFTLIB_OPENCL)
-#ifdef HAVE_OPENCL
       if(cf%in_device_memory) then
         allocated = .true.
         call accel_create_buffer(cf%fourier_space_buffer, ACCEL_MEM_READ_WRITE, TYPE_CMPLX, product(cube%fs_n(1:3)))
       end if
-#endif
+
     end select
 
     if(.not. allocated) then
@@ -147,12 +143,10 @@ contains
         nullify(cf%fs)
       end if
     case(FFTLIB_OPENCL)
-#ifdef HAVE_OPENCL
       if(cf%in_device_memory) then
         deallocated = .true.
         call accel_release_buffer(cf%fourier_space_buffer)
       end if
-#endif
     end select
 
     if(.not. deallocated) then
@@ -171,9 +165,7 @@ contains
     PUSH_SUB(fourier_space_op_end)
 
     if(this%in_device_memory) then
-#ifdef HAVE_OPENCL
       call accel_release_buffer(this%op_buffer)
-#endif
       this%in_device_memory = .false.
     end if
     SAFE_DEALLOCATE_P(this%dop)

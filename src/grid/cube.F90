@@ -180,9 +180,9 @@ contains
 #endif
 
       if (fft_library_ == FFTLIB_OPENCL) then
-#ifndef HAVE_CLFFT
-        call messages_write('You have selected the OpenCL FFT, but Octopus was compiled', new_line = .true.)
-        call messages_write('without clfft (or OpenCL) support.')
+#if ! (defined(HAVE_CLFFT) || defined(HAVE_CUDA))
+        call messages_write('You have selected the Accelerated FFT, but Octopus was compiled', new_line = .true.)
+        call messages_write('without clfft (OpenCL) or Cuda support.')
         call messages_fatal()
 #endif
         if(.not. accel_is_enabled()) then

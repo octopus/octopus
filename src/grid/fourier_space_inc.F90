@@ -106,10 +106,8 @@ subroutine X(fourier_space_op_init)(this, cube, op, in_device)
       end do
     end do
 
-#ifdef HAVE_OPENCL
     call accel_create_buffer(this%op_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, size)
     call accel_write_buffer(this%op_buffer, size, op_linear)
-#endif
     
     SAFE_DEALLOCATE_A(op_linear)
   end if
@@ -126,9 +124,7 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
   type(cube_function_t),    intent(inout)  :: cf
   
   integer :: ii, jj, kk
-#ifdef HAVE_OPENCL
   integer :: bsize
-#endif
 
   type(profile_t), save :: prof_g, prof
 
@@ -169,14 +165,12 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
     end do
     !$omp end parallel do
   else if(cube%fft%library == FFTLIB_OPENCL) then
-#ifdef HAVE_OPENCL
     call accel_set_kernel_arg(X(zmul), 0, product(cube%fs_n(1:3)))
     call accel_set_kernel_arg(X(zmul), 1, this%op_buffer)
     call accel_set_kernel_arg(X(zmul), 2, cf%fourier_space_buffer)
     bsize = accel_kernel_workgroup_size(X(zmul))
     call accel_kernel_run(X(zmul), (/pad(product(cube%fs_n(1:3)), bsize)/), (/bsize/))
     call accel_finish()
-#endif
   end if
 
 #ifdef R_TREAL
