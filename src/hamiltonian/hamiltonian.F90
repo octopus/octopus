@@ -925,7 +925,7 @@ contains
     if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) apply = .false.
     if(iand(this%xc_family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0)  apply = .false. 
     if(this%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) apply = .false.
-    if(this%cmplxscl%space) apply = .false.
+    if(this%cmplxscl%space .and. accel_is_enabled()) apply = .false.
     
   end function hamiltonian_apply_packed
 
