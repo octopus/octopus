@@ -176,7 +176,8 @@ extern "C" void FC_FUNC_(cuda_build_program, CUDA_BUILD_PROGRAM)(map<string, CUm
   char compute_version[2];
   sprintf(compute_version, "%.1d%.1d", major, minor);
 
-  string all_flags = "--gpu-architecture=compute_" + string(compute_version) + " -DCUDA -default-device " + string(flags_c);
+  string all_flags = "--gpu-architecture=compute_" + string(compute_version)
+    + " --ftz=true --fmad=true -DCUDA -default-device " + string(flags_c);
 
   stringstream flags_stream(all_flags);
   istream_iterator<string> iter(flags_stream);
