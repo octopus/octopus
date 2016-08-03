@@ -106,7 +106,7 @@ contains
         allocated = .true.
         SAFE_ALLOCATE(cf%fs(1:n3, 1:n1, 1:n2))
       end if
-    case(FFTLIB_OPENCL)
+    case(FFTLIB_ACCEL)
       if(cf%in_device_memory) then
         allocated = .true.
         call accel_create_buffer(cf%fourier_space_buffer, ACCEL_MEM_READ_WRITE, TYPE_CMPLX, product(cube%fs_n(1:3)))
@@ -142,7 +142,7 @@ contains
         deallocated = .true.
         nullify(cf%fs)
       end if
-    case(FFTLIB_OPENCL)
+    case(FFTLIB_ACCEL)
       if(cf%in_device_memory) then
         deallocated = .true.
         call accel_release_buffer(cf%fourier_space_buffer)

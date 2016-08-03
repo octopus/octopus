@@ -48,7 +48,7 @@ subroutine X(cube_function_alloc_rs)(cube, cf, in_device, force_alloc)
         allocated = .true.
         cf%X(rs) => cube%fft%X(rs_data)(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3))
       end if
-    case(FFTLIB_OPENCL)
+    case(FFTLIB_ACCEL)
       if(optional_default(in_device, .true.)) then
         allocated = .true.
         cf%in_device_memory = .true.
@@ -84,7 +84,7 @@ subroutine X(cube_function_free_rs)(cube, cf)
            deallocated = .true.
            nullify(cf%X(rs))
         end if
-     case(FFTLIB_OPENCL)
+     case(FFTLIB_ACCEL)
         if(cf%in_device_memory) then
            deallocated = .true.
            ASSERT(cf%in_device_memory)

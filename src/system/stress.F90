@@ -240,7 +240,7 @@ contains
             end do
          end do
          
-      else if(cube%fft%library == FFTLIB_OPENCL) then
+      else if(cube%fft%library == FFTLIB_ACCEL) then
 ! Not implemented yet
       end if
     
@@ -310,7 +310,7 @@ contains
             end do
          end do
 
-      else if(cube%fft%library == FFTLIB_OPENCL) then
+      else if(cube%fft%library == FFTLIB_ACCEL) then
 !Not implemented yet
       end if
       

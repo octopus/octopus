@@ -161,13 +161,15 @@ contains
         !% Uses FFTW3 library.
         !%Option pfft 2
         !% (experimental) Uses PFFT library, which has to be linked.
-        !%Option clfft 3
-        !% (experimental) Uses clfft (GPU) library, which has to be linked.
+        !%Option accel 3
+        !% (experimental) Uses a GPU accelerated library. This only
+        !% works if Octopus was compiled with Cuda or OpenCL support.
         !%End
         default_lib = FFTLIB_FFTW
+
 #ifdef HAVE_CLFFT
         ! disabled by default since there are some problems for dim != 3
-        ! if(accel_is_enabled() .and. sb%dim == 3) default_lib = FFTLIB_OPENCL
+        ! if(accel_is_enabled() .and. sb%dim == 3) default_lib = FFTLIB_ACCEL
 #endif
         call parse_variable('FFTLibrary', default_lib, fft_library_)
         if(optional_default(verbose, .false.)) call messages_print_var_option(stdout, 'FFTLibrary', fft_library_)
@@ -179,14 +181,14 @@ contains
       end if
 #endif
 
-      if (fft_library_ == FFTLIB_OPENCL) then
+      if (fft_library_ == FFTLIB_ACCEL) then
 #if ! (defined(HAVE_CLFFT) || defined(HAVE_CUDA))
         call messages_write('You have selected the Accelerated FFT, but Octopus was compiled', new_line = .true.)
         call messages_write('without clfft (OpenCL) or Cuda support.')
         call messages_fatal()
 #endif
         if(.not. accel_is_enabled()) then
-          call messages_write('You have selected the OpenCL FFT, but OpenCL is disabled.')
+          call messages_write('You have selected the accelerated FFT, but acceleration is disabled.')
           call messages_fatal()
         end if
       end if
@@ -426,7 +428,7 @@ contains
   ! ---------------------------------------------------------
   !> Returns the FFT library of the cube.
   !! Possible values are FFTLIB_NONE, FFTLIB_FFTW, FFTLIB_PFFT 
-  !! FFTLIB_OPENCL, FFTLIB_NFFT and FFTLIB_PNFFT 
+  !! FFTLIB_ACCEL, FFTLIB_NFFT and FFTLIB_PNFFT 
   !! (defined in fft.F90)
   integer function cube_getFFTLibrary(cube) result(fft_library)
     type(cube_t), intent(in)  :: cube

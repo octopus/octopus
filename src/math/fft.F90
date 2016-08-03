@@ -90,7 +90,7 @@ module fft_oct_m
        FFTLIB_NONE  = 0, &
        FFTLIB_FFTW  = 1, &
        FFTLIB_PFFT  = 2, &
-       FFTLIB_OPENCL = 3, &
+       FFTLIB_ACCEL = 3, &
        FFTLIB_NFFT  = 4, &
        FFTLIB_PNFFT = 5
        
@@ -318,7 +318,7 @@ contains
     nn_temp(1:fft_dim) = nn(1:fft_dim)
 
     select case (library_)
-    case (FFTLIB_OPENCL)
+    case (FFTLIB_ACCEL)
     
       do ii = 1, fft_dim
         ! the AMD OpenCL FFT only supports sizes 2, 3 and 5, but size
@@ -494,7 +494,7 @@ contains
       n3 = ceiling(real(alloc_size)/real(n_3*n_1))
       SAFE_ALLOCATE(fft_array(jj)%fs_data(1:n_3, 1:n_1, 1:n3))
 
-    case(FFTLIB_OPENCL)
+    case(FFTLIB_ACCEL)
       call fftw_get_dims(fft_array(jj)%rs_n_global, (type == FFT_REAL), fft_array(jj)%fs_n_global)
       fft_array(jj)%rs_n = fft_array(jj)%rs_n_global
       fft_array(jj)%fs_n = fft_array(jj)%fs_n_global
@@ -572,7 +572,7 @@ contains
       
 #endif
 
-    case(FFTLIB_OPENCL)
+    case(FFTLIB_ACCEL)
 
       fft_array(jj)%stride_rs(1) = 1
       fft_array(jj)%stride_fs(1) = 1
@@ -793,7 +793,7 @@ contains
 #endif
     case (FFTLIB_PFFT)
     !Do nothing 
-    case(FFTLIB_OPENCL)
+    case(FFTLIB_ACCEL)
     !Do nothing 
     case(FFTLIB_PNFFT)
 #ifdef HAVE_PNFFT
@@ -837,7 +837,7 @@ contains
           SAFE_DEALLOCATE_P(fft_array(ii)%zrs_data)
           SAFE_DEALLOCATE_P(fft_array(ii)%fs_data)
 
-        case(FFTLIB_OPENCL)
+        case(FFTLIB_ACCEL)
 #ifdef HAVE_CUDA
           call cuda_fft_destroy(fft_array(ii)%cuda_plan_fw)
           call cuda_fft_destroy(fft_array(ii)%cuda_plan_bw)
@@ -1013,7 +1013,7 @@ contains
     scaling_factor = M_ONE
     
     select case (fft_array(fft%slot)%library)
-    case(FFTLIB_OPENCL)
+    case(FFTLIB_ACCEL)
 #ifdef HAVE_CUDA
       scaling_factor = &
         M_ONE/(fft_array(fft%slot)%rs_n_global(1)*fft_array(fft%slot)%rs_n_global(2)*fft_array(fft%slot)%rs_n_global(3))

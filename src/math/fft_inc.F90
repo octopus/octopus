@@ -81,7 +81,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
 #ifdef HAVE_PFFT
       call pfft_execute(fft_array(slot)%planf)
 #endif
-    case(FFTLIB_OPENCL)
+    case(FFTLIB_ACCEL)
 #ifdef HAVE_CLFFT
 
       SAFE_ALLOCATE(cin(1:fft_array(slot)%rs_n(1), 1:fft_array(slot)%rs_n(2), 1:fft_array(slot)%rs_n(3)))
@@ -140,7 +140,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
     call profiling_in(prof_fw, "FFT_FORWARD_CL")
 
     slot = fft%slot
-    ASSERT(fft_array(slot)%library == FFTLIB_OPENCL)
+    ASSERT(fft_array(slot)%library == FFTLIB_ACCEL)
 
 #ifdef HAVE_CUDA
     call cuda_fft_execute_d2z(fft_array(slot)%cuda_plan_fw, in%cuda_ptr, out%cuda_ptr)
@@ -250,7 +250,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
 #ifdef HAVE_PFFT
       call pfft_execute(fft_array(slot)%planb)
 #endif
-    case(FFTLIB_OPENCL)
+    case(FFTLIB_ACCEL)
 #ifdef HAVE_CLFFT
 
       call accel_create_buffer(rsbuffer, ACCEL_MEM_READ_WRITE, TYPE_CMPLX, product(fft_array(slot)%rs_n(1:3)))
@@ -326,7 +326,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
     call profiling_in(prof_bw,"FFT_BACKWARD_CL")
 
     slot = fft%slot
-    ASSERT(fft_array(slot)%library == FFTLIB_OPENCL)
+    ASSERT(fft_array(slot)%library == FFTLIB_ACCEL)
 
 #ifdef HAVE_CUDA
     call cuda_fft_execute_z2d(fft_array(slot)%cuda_plan_bw, in%cuda_ptr, out%cuda_ptr)
