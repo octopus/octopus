@@ -1563,6 +1563,7 @@ contains
     character(len=*),            intent(in)    :: kernel_name
     character(len=*), optional,  intent(in)    :: flags
 
+    character(len=1000) :: all_flags
     type(profile_t), save :: prof
 #ifdef HAVE_OPENCL
     type(cl_program) :: prog
@@ -1576,13 +1577,17 @@ contains
     call profiling_in(prof, "ACCEL_COMPILE", exclude = .true.)
 
 #ifdef HAVE_CUDA
-    if(present(flags)) then
-      call cuda_build_program(accel%module_map, this%cuda_module, accel%device%cuda_device, &
-        trim(file_name), '-I'//trim(conf%share)//'/opencl/'//' '//trim(flags))
-    else
-      call cuda_build_program(accel%module_map, this%cuda_module, accel%device%cuda_device, &
-        trim(file_name), '-I'//trim(conf%share)//'/opencl/')
+    all_flags = '-I'//trim(conf%share)//'/opencl/'
+
+    if(accel_use_shared_mem()) then
+      all_flags = trim(all_flags)//' -DSHARED_MEM'
     end if
+    
+    if(present(flags)) then
+      all_flags = trim(all_flags)//' '//trim(flags)
+    end if
+    
+    call cuda_build_program(accel%module_map, this%cuda_module, accel%device%cuda_device, trim(file_name), trim(all_flags))
     
     call cuda_create_kernel(this%cuda_kernel, this%cuda_module, trim(kernel_name))
     call cuda_alloc_arg_array(this%arguments)

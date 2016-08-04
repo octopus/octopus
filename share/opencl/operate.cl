@@ -81,17 +81,16 @@ __kernel void operate_map(const int np,
 #endif
 
 #ifdef SHARED_MEM
-  __local int * index = indexl + STENCIL_SIZE*lip;
 
   if(ipd < np){
     for(int j = ist; j < STENCIL_SIZE; j += nst){
-      index[j] = ri[map[ip] + j];
+      indexl[STENCIL_SIZE*lip + j] = ri[map[ip] + j];
     }
   }
 
   barrier(CLK_LOCAL_MEM_FENCE);
 
-#define INDEX(j) index[(j)]
+#define INDEX(j) indexl[STENCIL_SIZE*lip + (j)]
 #endif
   
   if(ipd < np) {
@@ -210,7 +209,6 @@ __kernel void operate_map(const int np,
 
 }
 
-#ifdef SHARED_MEM
 __kernel void operate_nomap(const int np,
 			    __constant int const * restrict stencil,
 			    __global int const * restrict xyz_to_ip,
@@ -218,16 +216,19 @@ __kernel void operate_nomap(const int np,
 			    __constant double * restrict weights,
 			    __global double const * restrict fi,
 			    __global double * restrict fo, const int ldf
-#ifdef SHARED_MEM
+#if !defined(CUDA)
 			    , __local int * indexl
 #endif
 			    ){
 
+#if defined(CUDA)
+  extern __shared__ int indexl[];
+#endif
+
   const int ist = get_global_id(0);
   const int nst = get_global_size(0);
   const int ip  = get_global_id(1);
-  
-  __local int * index = indexl + STENCIL_SIZE*get_local_id(1);
+  const int lip = get_local_id(1);
   
   if(ip < np){
 
@@ -236,9 +237,11 @@ __kernel void operate_nomap(const int np,
       const int iy = ip_to_xyz[NDIM*ip + 1] + stencil[NDIM*j + 1];
       const int iz = ip_to_xyz[NDIM*ip + 2] + stencil[NDIM*j + 2];
       
-      index[j] = xyz_to_ip[stencil[NDIM*STENCIL_SIZE]*ix + stencil[NDIM*STENCIL_SIZE + 1]*iy +  stencil[NDIM*STENCIL_SIZE + 2]*iz]<<ldf;
+      indexl[STENCIL_SIZE*lip + j] = xyz_to_ip[stencil[NDIM*STENCIL_SIZE]*ix + stencil[NDIM*STENCIL_SIZE + 1]*iy +  stencil[NDIM*STENCIL_SIZE + 2]*iz]<<ldf;
     }
   }
+
+#define INDEX(j) indexl[STENCIL_SIZE*lip + (j)]
 
   barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -250,12 +253,12 @@ __kernel void operate_nomap(const int np,
     double a1 = (double) (0.0);
     
     for(int j = 0; j < STENCIL_SIZE - 2 + 1; j += 2){
-      a0 += weights[j    ]*fi[index[j    ] + ist];
-      a1 += weights[j + 1]*fi[index[j + 1] + ist];
+      a0 += weights[j    ]*fi[INDEX(j    ) + ist];
+      a1 += weights[j + 1]*fi[INDEX(j + 1) + ist];
     }
     
     // if STENCIL_SIZE is odd, we still have to do the last iteration
-    if(STENCIL_SIZE & 1) a0 += weights[STENCIL_SIZE - 1]*fi[index[STENCIL_SIZE - 1] + ist];
+    if(STENCIL_SIZE & 1) a0 += weights[STENCIL_SIZE - 1]*fi[INDEX(STENCIL_SIZE - 1) + ist];
     
     fo[(ip<<ldf) + ist] = a0 + a1;
     
@@ -263,84 +266,84 @@ __kernel void operate_nomap(const int np,
 
     double a0 = (double) (0.0);
 
-    a0 += weights[ 0]*fi[index[ 0] + ist];
+    a0 += weights[ 0]*fi[INDEX( 0) + ist];
 #if STENCIL_SIZE > 1
-    a0 += weights[ 1]*fi[index[ 1] + ist];
+    a0 += weights[ 1]*fi[INDEX( 1) + ist];
 #endif
 #if STENCIL_SIZE > 2
-    a0 += weights[ 2]*fi[index[ 2] + ist];
+    a0 += weights[ 2]*fi[INDEX( 2) + ist];
 #endif
 #if STENCIL_SIZE > 3
-    a0 += weights[ 3]*fi[index[ 3] + ist];
+    a0 += weights[ 3]*fi[INDEX( 3) + ist];
 #endif
 #if STENCIL_SIZE > 4
-    a0 += weights[ 4]*fi[index[ 4] + ist];
+    a0 += weights[ 4]*fi[INDEX( 4) + ist];
 #endif
 #if STENCIL_SIZE > 5
-    a0 += weights[ 5]*fi[index[ 5] + ist];
+    a0 += weights[ 5]*fi[INDEX( 5) + ist];
 #endif
 #if STENCIL_SIZE > 6
-    a0 += weights[ 6]*fi[index[ 6] + ist];
+    a0 += weights[ 6]*fi[INDEX( 6) + ist];
 #endif
 #if STENCIL_SIZE > 7
-    a0 += weights[ 7]*fi[index[ 7] + ist];
+    a0 += weights[ 7]*fi[INDEX( 7) + ist];
 #endif
 #if STENCIL_SIZE > 8
-    a0 += weights[ 8]*fi[index[ 8] + ist];
+    a0 += weights[ 8]*fi[INDEX( 8) + ist];
 #endif
 #if STENCIL_SIZE > 9
-    a0 += weights[ 9]*fi[index[ 9] + ist];
+    a0 += weights[ 9]*fi[INDEX( 9) + ist];
 #endif
 #if STENCIL_SIZE > 10
-    a0 += weights[10]*fi[index[10] + ist];
+    a0 += weights[10]*fi[INDEX(10) + ist];
 #endif
 #if STENCIL_SIZE > 11
-    a0 += weights[11]*fi[index[11] + ist];
+    a0 += weights[11]*fi[INDEX(11) + ist];
 #endif
 #if STENCIL_SIZE > 12
-    a0 += weights[12]*fi[index[12] + ist];
+    a0 += weights[12]*fi[INDEX(12) + ist];
 #endif
 #if STENCIL_SIZE > 13
-    a0 += weights[13]*fi[index[13] + ist];
+    a0 += weights[13]*fi[INDEX(13) + ist];
 #endif
 #if STENCIL_SIZE > 14
-    a0 += weights[14]*fi[index[14] + ist];
+    a0 += weights[14]*fi[INDEX(14) + ist];
 #endif
 #if STENCIL_SIZE > 15
-    a0 += weights[15]*fi[index[15] + ist];
+    a0 += weights[15]*fi[INDEX(15) + ist];
 #endif
 #if STENCIL_SIZE > 16
-    a0 += weights[16]*fi[index[16] + ist];
+    a0 += weights[16]*fi[INDEX(16) + ist];
 #endif
 #if STENCIL_SIZE > 17
-    a0 += weights[17]*fi[index[17] + ist];
+    a0 += weights[17]*fi[INDEX(17) + ist];
 #endif
 #if STENCIL_SIZE > 18
-    a0 += weights[18]*fi[index[18] + ist];
+    a0 += weights[18]*fi[INDEX(18) + ist];
 #endif
 #if STENCIL_SIZE > 19
-    a0 += weights[19]*fi[index[19] + ist];
+    a0 += weights[19]*fi[INDEX(19) + ist];
 #endif
 #if STENCIL_SIZE > 20
-    a0 += weights[20]*fi[index[20] + ist];
+    a0 += weights[20]*fi[INDEX(20) + ist];
 #endif
 #if STENCIL_SIZE > 21
-    a0 += weights[21]*fi[index[21] + ist];
+    a0 += weights[21]*fi[INDEX(21) + ist];
 #endif
 #if STENCIL_SIZE > 22
-    a0 += weights[22]*fi[index[22] + ist];
+    a0 += weights[22]*fi[INDEX(22) + ist];
 #endif
 #if STENCIL_SIZE > 23
-    a0 += weights[23]*fi[index[23] + ist];
+    a0 += weights[23]*fi[INDEX(23) + ist];
 #endif
 #if STENCIL_SIZE > 24
-    a0 += weights[24]*fi[index[24] + ist];
+    a0 += weights[24]*fi[INDEX(24) + ist];
 #endif
 #if STENCIL_SIZE > 25
-    a0 += weights[25]*fi[index[25] + ist];
+    a0 += weights[25]*fi[INDEX(25) + ist];
 #endif
 #if STENCIL_SIZE > 26
-    a0 += weights[26]*fi[index[26] + ist];
+    a0 += weights[26]*fi[INDEX(26) + ist];
 #endif
 
     fo[(ip<<ldf) + ist] = a0;
@@ -352,7 +355,6 @@ __kernel void operate_nomap(const int np,
   }
 
 }
-#endif
 
 /*
  Local Variables:
