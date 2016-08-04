@@ -638,12 +638,6 @@ contains
 #endif
       call messages_write('      Device name            : '//trim(val_str))
       call messages_new_line()
-
-#ifdef HAVE_OPENCL
-      call clGetDeviceInfo(accel%device%cl_device, CL_DRIVER_VERSION, val_str, cl_status)
-      call messages_write('      Driver version         : '//trim(val_str))
-      call messages_new_line()
-#endif
       
 #ifdef HAVE_CUDA
       call cuda_device_capability(accel%device%cuda_device, val, val2)
@@ -653,6 +647,19 @@ contains
       call messages_write('.')
       call messages_write(val2, fmt = '(i1)')
       call messages_new_line()
+
+      ! VERSION
+#ifdef HAVE_OPENCL
+      call clGetDeviceInfo(accel%device%cl_device, CL_DRIVER_VERSION, val_str, cl_status)
+      call messages_write('      Driver version         : '//trim(val_str))
+#endif
+#ifdef HAVE_CUDA
+      call cuda_driver_version(val)
+      call messages_write('      Driver version         : ')
+      call messages_write(val)
+#endif
+      call messages_new_line()
+
       
 #ifdef HAVE_OPENCL
       call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_MAX_COMPUTE_UNITS, val, cl_status)

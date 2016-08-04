@@ -382,3 +382,11 @@ extern "C" void FC_FUNC_(cuda_device_capability, CUDA_DEVICE_CAPABILITY)(CUdevic
   *minor = cminor;
 #endif
 }
+
+extern "C" void FC_FUNC_(cuda_driver_version, CUDA_DRIVER_VERSION)(fint * version){
+#ifdef HAVE_CUDA
+  int driverversion;
+  CUDA_SAFE_CALL(cuDriverGetVersion(&driverversion));
+  *version = driverversion;
+#endif
+}
