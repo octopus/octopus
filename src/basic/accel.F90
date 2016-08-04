@@ -344,9 +344,6 @@ contains
     call messages_print_stress(stdout, "GPU acceleration")
 
 #ifdef HAVE_CUDA
-    call messages_write('Library: CUDA')
-    call messages_info()
-
     call cuda_init(accel%context%cuda_context, accel%device%cuda_device)
 
     ! no shared mem support in our cuda interface (for the moment)
@@ -358,9 +355,6 @@ contains
 #ifdef HAVE_OPENCL
     call profiling_in(prof_init, 'CL_INIT')
 
-    call messages_write('Library: OpenCL')
-    call messages_info()
-    
     call clGetPlatformIDs(nplatforms, cl_status)
     if(cl_status /= CL_SUCCESS) call opencl_print_error(cl_status, "GetPlatformIDs")
 
@@ -485,8 +479,6 @@ contains
 
     accel%device%cl_device = alldevices(idevice + 1)
 
-    if(mpi_grp_is_root(base_grp)) call device_info()
-
     ! create the context
     accel%context%cl_context = clCreateContext(platform_id, accel%device%cl_device, cl_status)
     if(cl_status /= CL_SUCCESS) call opencl_print_error(cl_status, "CreateContext")
@@ -521,29 +513,8 @@ contains
     call profiling_out(prof_init)
 #endif
 
-#ifdef HAVE_OPENCL
-    call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_MAX_WORK_GROUP_SIZE, accel%max_workgroup_size, cl_status)
-#endif
-#ifdef HAVE_CUDA
-    call cuda_device_max_threads_per_block(accel%device%cuda_device, accel%max_workgroup_size)
-#endif
+    if(mpi_grp_is_root(base_grp)) call device_info()
 
-
-    ! SHARED/LOCAL MEMORY
-#ifdef HAVE_OPENCL
-    call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_LOCAL_MEM_SIZE, accel%local_memory_size, cl_status)
-#endif
-#ifdef HAVE_CUDA
-    call cuda_device_shared_memory(accel%device%cuda_device, accel%local_memory_size)
-#endif
-    
-#ifdef HAVE_OPENCL
-    call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_GLOBAL_MEM_SIZE, accel%global_memory_size, cl_status)
-#endif
-#ifdef HAVE_CUDA
-    call cuda_device_total_memory(accel%device%cuda_device, accel%global_memory_size)
-#endif
-    
     ! now initialize the kernels
     call accel_kernel_global_init()
 
@@ -619,17 +590,29 @@ contains
     end subroutine select_device
 
     subroutine device_info()
-
-#ifdef HAVE_OPENCL
-      integer(8) :: val 
+      integer(8) :: val, val2
       character(len=256) :: val_str
-
+      
       PUSH_SUB(accel_init.device_info)
 
       call messages_new_line()
-      call messages_write('Selected CL device:')
+      call messages_write('Selected device:')
       call messages_new_line()
 
+#ifdef HAVE_OPENCL
+      call messages_write('      Framework              : OpenCL')
+#endif
+#ifdef HAVE_CUDA
+      call messages_write('      Framework              : CUDA')
+#endif
+      call messages_info()
+
+#ifdef HAVE_CUDA
+      call messages_write('      Device type            : GPU', new_line = .true.)
+      call messages_write('      Device vendor          : NVIDIA Corporation', new_line = .true.)
+#endif
+
+#ifdef HAVE_OPENCL
       call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_TYPE, val, cl_status)
       call messages_write('      Device type            :')
       select case(int(val, 4))
@@ -645,15 +628,33 @@ contains
       call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_VENDOR, val_str, cl_status)
       call messages_write('      Device vendor          : '//trim(val_str))
       call messages_new_line()
-
+#endif
+      
+#ifdef HAVE_OPENCL
       call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_NAME, val_str, cl_status)
+#endif
+#ifdef HAVE_CUDA
+      call cuda_device_name(accel%device%cuda_device, val_str)
+#endif
       call messages_write('      Device name            : '//trim(val_str))
       call messages_new_line()
 
+#ifdef HAVE_OPENCL
       call clGetDeviceInfo(accel%device%cl_device, CL_DRIVER_VERSION, val_str, cl_status)
       call messages_write('      Driver version         : '//trim(val_str))
       call messages_new_line()
-
+#endif
+      
+#ifdef HAVE_CUDA
+      call cuda_device_capability(accel%device%cuda_device, val, val2)
+#endif
+      call messages_write('      Cuda capabilities      :')
+      call messages_write(val, fmt = '(i2)')
+      call messages_write('.')
+      call messages_write(val2, fmt = '(i1)')
+      call messages_new_line()
+      
+#ifdef HAVE_OPENCL
       call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_MAX_COMPUTE_UNITS, val, cl_status)
       call messages_write('      Compute units          :')
       call messages_write(val)
@@ -664,12 +665,33 @@ contains
       call messages_write(val)
       call messages_write(' GHz')
       call messages_new_line()
+#endif
 
-      call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_GLOBAL_MEM_SIZE, val, cl_status)
+      ! TOTAL MEMORY
+#ifdef HAVE_OPENCL
+      call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_GLOBAL_MEM_SIZE, accel%global_memory_size, cl_status)
+#endif
+#ifdef HAVE_CUDA
+      call cuda_device_total_memory(accel%device%cuda_device, accel%global_memory_size)
+#endif
       call messages_write('      Device memory          :')
-      call messages_write(val, units = unit_megabytes)
+      call messages_write(accel%global_memory_size, units = unit_megabytes)
       call messages_new_line()
 
+
+      ! SHARED/LOCAL MEMORY
+#ifdef HAVE_OPENCL
+      call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_LOCAL_MEM_SIZE, accel%local_memory_size, cl_status)
+#endif
+#ifdef HAVE_CUDA
+      call cuda_device_shared_memory(accel%device%cuda_device, accel%local_memory_size)
+#endif
+      call messages_write('      Local/shared memory    :')
+      call messages_write(accel%local_memory_size, units = unit_kilobytes)
+      call messages_new_line()
+      
+    
+#ifdef HAVE_OPENCL
       call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, val, cl_status)
       call messages_write('      Max alloc size         :')
       call messages_write(val, units = unit_megabytes)
@@ -680,21 +702,25 @@ contains
       call messages_write(val, units = unit_kilobytes)
       call messages_new_line()
 
-      call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_LOCAL_MEM_SIZE, val, cl_status)
-      call messages_write('      Local memory           :')
-      call messages_write(val, units = unit_kilobytes)
-      call messages_new_line()
-
       call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE, val, cl_status)
       call messages_write('      Constant memory        :')
       call messages_write(val, units = unit_kilobytes)
       call messages_new_line()
+#endif
 
-      call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_MAX_WORK_GROUP_SIZE, val, cl_status)
-      call messages_write('      Max. workgroup size    :')
-      call messages_write(val)
+      ! Workgroup/block size
+#ifdef HAVE_OPENCL
+      call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_MAX_WORK_GROUP_SIZE, accel%max_workgroup_size, cl_status)
+#endif
+#ifdef HAVE_CUDA
+      call cuda_device_max_threads_per_block(accel%device%cuda_device, accel%max_workgroup_size)
+#endif
+      call messages_write('      Max. group/block size  :')
+      call messages_write(accel%max_workgroup_size)
       call messages_new_line()
+      
 
+#ifdef HAVE_OPENCL
       call messages_write('      Extension cl_khr_fp64  :')
       call messages_write(f90_cl_device_has_extension(accel%device%cl_device, "cl_khr_fp64"))
       call messages_new_line()
@@ -702,11 +728,12 @@ contains
       call messages_write('      Extension cl_amd_fp64  :')
       call messages_write(f90_cl_device_has_extension(accel%device%cl_device, "cl_amd_fp64"))
       call messages_new_line()
-
+#endif
+      
       call messages_info()
 
+
       POP_SUB(accel_init.device_info)
-#endif
     end subroutine device_info
 
   end subroutine accel_init

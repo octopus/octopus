@@ -96,20 +96,6 @@ extern "C" void FC_FUNC_(cuda_init, CUDA_INIT)(CUcontext ** context, CUdevice **
   
   CUDA_SAFE_CALL(cuDeviceGet(*device, 0));
 
-  char devicename[200];
-
-  CUDA_SAFE_CALL(cuDeviceGetName(devicename, sizeof(devicename), **device));
-
-  cout << "CUDA device name : " << devicename << endl;
-
-  int major = 0, minor = 0;
-  CUDA_SAFE_CALL(cuDeviceComputeCapability(&major, &minor, **device));
-  cout << "CUDA compute capability : " <<  major << '.' <<  minor << endl;
-  
-  size_t mem;
-  CUDA_SAFE_CALL(cuDeviceTotalMem(&mem, **device));
-  cout << "CUDA device memory : " << mem/pow(1024.0, 3) << " GB" << endl;
-
   CUDA_SAFE_CALL(cuCtxCreate(*context, 0, **device));
 #endif
 }
@@ -378,3 +364,21 @@ extern "C" void FC_FUNC_(cuda_launch_kernel, CUDA_LAUNCH_KERNEL)
 #endif
 }
 
+extern "C" void FC_FUNC_(cuda_device_name, CUDA_DEVICE_NAME)(CUdevice ** device, STR_F_TYPE const name STR_ARG1){
+#ifdef HAVE_CUDA
+  char devicename[200];
+  CUDA_SAFE_CALL(cuDeviceGetName(devicename, sizeof(devicename), **device));
+  TO_F_STR1(devicename, name);
+  
+#endif
+  
+}
+
+extern "C" void FC_FUNC_(cuda_device_capability, CUDA_DEVICE_CAPABILITY)(CUdevice ** device, fint * major, fint * minor){
+#ifdef HAVE_CUDA
+  int cmajor = 0, cminor = 0;
+  CUDA_SAFE_CALL(cuDeviceComputeCapability(&cmajor, &cminor, **device));
+  *major = cmajor;
+  *minor = cminor;
+#endif
+}
