@@ -79,7 +79,7 @@ __device__ __forceinline__ static int get_local_size(const int ii){
 
 #define double2 Double2
 
-class double2{
+class __align__(16) double2{
  public:
   double x;
   double y;
