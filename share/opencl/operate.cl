@@ -57,7 +57,7 @@ __kernel void operate_map(const int np,
 			  __constant double * restrict weights,
 			  __global double const * restrict fi, const int ldfi,
 			  __global double * restrict fo, const int ldfo
-#ifdef SHARED_MEM
+#if defined(SHARED_MEM) && !defined(CUDA)
 			  , __local int * indexl
 #endif
 #ifdef INDIRECT
@@ -65,6 +65,10 @@ __kernel void operate_map(const int np,
 #endif			  
 			  ){
 
+#if defined(SHARED_MEM) && defined(CUDA)
+  extern __shared__ int indexl[];
+#endif
+  
   const int ist = get_global_id(0);
   const int nst = get_global_size(0);
   const int ipd = get_global_id(1);

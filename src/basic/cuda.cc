@@ -272,6 +272,13 @@ extern "C" void FC_FUNC_(cuda_device_total_memory, CUDA_DEVICE_TOTAL_MEMORY)(CUd
 #endif
 }
 
+extern "C" void FC_FUNC_(cuda_device_shared_memory, CUDA_DEVICE_SHARED_MEMORY)(CUdevice ** device, fint8 * shared_memory){
+#ifdef HAVE_CUDA
+  int mem;
+  CUDA_SAFE_CALL(cuDeviceGetAttribute(&mem, CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK, **device));
+  *shared_memory = mem;
+#endif
+}
 
 extern "C" void FC_FUNC_(cuda_mem_alloc, CUDA_MEM_ALLOC)(CUdeviceptr ** cuda_ptr, const fint8 * size){
 #ifdef HAVE_CUDA
@@ -338,7 +345,7 @@ extern "C" void FC_FUNC_(cuda_context_synchronize, CUDA_CONTEXT_SYNCHRONIZE)(){
 }
 
 extern "C" void FC_FUNC_(cuda_launch_kernel, CUDA_LAUNCH_KERNEL)
-  (CUfunction ** kernel, fint8 * griddim, fint8 * blockdim, vector<void *> ** arg_array){
+  (CUfunction ** kernel, fint8 * griddim, fint8 * blockdim, fint8 * shared_mem, vector<void *> ** arg_array){
 #ifdef HAVE_CUDA
   /*
   cout << "Kernel call" << endl;
@@ -361,7 +368,7 @@ extern "C" void FC_FUNC_(cuda_launch_kernel, CUDA_LAUNCH_KERNEL)
   for(unsigned ii = 0; ii < (**arg_array).size(); ii++) assert((**arg_array)[ii] != NULL);
   
   CUDA_SAFE_CALL(cuLaunchKernel(**kernel, griddim[0], griddim[1], griddim[2],
-  				blockdim[0], blockdim[1], blockdim[2], 0, NULL, &(**arg_array)[0], NULL));
+  				blockdim[0], blockdim[1], blockdim[2], *shared_mem, NULL, &(**arg_array)[0], NULL));
 
   // release the stored argument, this is not necessary in principle,
   // but it should help us to detect missing arguments.

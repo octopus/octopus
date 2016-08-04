@@ -149,6 +149,7 @@ module accel_oct_m
     type(c_ptr)                   :: cuda_module
     type(c_ptr)                   :: arguments
 #endif
+    integer(8)                    :: cuda_shared_mem
     logical                       :: initialized = .false.
     type(accel_kernel_t), pointer :: next
     integer                       :: arg_count
@@ -349,7 +350,7 @@ contains
     call cuda_init(accel%context%cuda_context, accel%device%cuda_device)
 
     ! no shared mem support in our cuda interface (for the moment)
-    accel%shared_mem = .false.
+    accel%shared_mem = .true.
 
     call cublas_init(accel%cublas_handle)
 #endif
@@ -496,8 +497,6 @@ contains
       CL_QUEUE_PROFILING_ENABLE, cl_status)
     if(cl_status /= CL_SUCCESS) call opencl_print_error(cl_status, "CreateCommandQueue")
 
-    call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_LOCAL_MEM_SIZE, accel%local_memory_size, cl_status)
-
     call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_TYPE, device_type, cl_status)
 
     select case(device_type)
@@ -529,6 +528,15 @@ contains
     call cuda_device_max_threads_per_block(accel%device%cuda_device, accel%max_workgroup_size)
 #endif
 
+
+    ! SHARED/LOCAL MEMORY
+#ifdef HAVE_OPENCL
+    call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_LOCAL_MEM_SIZE, accel%local_memory_size, cl_status)
+#endif
+#ifdef HAVE_CUDA
+    call cuda_device_shared_memory(accel%device%cuda_device, accel%local_memory_size)
+#endif
+    
 #ifdef HAVE_OPENCL
     call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_GLOBAL_MEM_SIZE, accel%global_memory_size, cl_status)
 #endif
@@ -952,9 +960,6 @@ contains
 
     PUSH_SUB(accel_set_kernel_arg_local)
 
-#ifdef HAVE_CUDA
-    call messages_not_implemented('local memory for Cuda')
-#endif
     
     size_in_bytes = int(size, 8)*types_get_size(type)
 
@@ -966,7 +971,11 @@ contains
       write(message(1), '(a,i10)') "CL Error: invalid local memory size: ", size_in_bytes
       call messages_fatal(1)
     end if
-    
+
+#ifdef HAVE_CUDA
+    kernel%cuda_shared_mem = size_in_bytes
+#endif
+
 #ifdef HAVE_OPENCL
     call clSetKernelArgLocal(kernel%kernel, narg, size_in_bytes, ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "set_kernel_arg_local")
@@ -1011,7 +1020,9 @@ contains
     
     ASSERT(all(gsizes <= 65535))
     
-    call cuda_launch_kernel(kernel%cuda_kernel, gsizes(1), lsizes(1), kernel%arguments)
+    call cuda_launch_kernel(kernel%cuda_kernel, gsizes(1), lsizes(1), kernel%cuda_shared_mem, kernel%arguments)
+
+    kernel%cuda_shared_mem = 0    
 #endif
     
   end subroutine accel_kernel_run
@@ -1172,6 +1183,8 @@ contains
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateKernel")
 #endif
 
+    kernel%cuda_shared_mem = 0
+    
     call profiling_out(prof)
     POP_SUB(opencl_create_kernel)
   end subroutine opencl_create_kernel

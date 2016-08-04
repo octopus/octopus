@@ -25,6 +25,7 @@
 #define __kernel extern "C" __global__
 #define __global
 #define __constant       // perhaps there is a type of memory for this
+#define __local __shared__
 #define restrict __restrict__
 #define barrier(x) __syncthreads()
 
