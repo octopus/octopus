@@ -1183,8 +1183,6 @@ contains
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateKernel")
 #endif
 
-    kernel%cuda_shared_mem = 0
-    
     call profiling_out(prof)
     POP_SUB(opencl_create_kernel)
   end subroutine opencl_create_kernel
@@ -1588,6 +1586,8 @@ contains
     
     call cuda_create_kernel(this%cuda_kernel, this%cuda_module, trim(kernel_name))
     call cuda_alloc_arg_array(this%arguments)
+
+    this%cuda_shared_mem = 0
 #endif
 
 #ifdef HAVE_OPENCL
