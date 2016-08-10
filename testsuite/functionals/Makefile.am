@@ -130,8 +130,9 @@ dist_share_DATA =                                  \
 	05-ks_inversion.01-target_density.inp      \
 	05-ks_inversion.02-two_particle.inp        \
         05-ks_inversion.03-inversion.inp           \
-        06-rdmft.01-oep.inp                        \
+        06-rdmft.01-lda.inp                        \
         06-rdmft.02-gs.inp                         \
+        06-rdmft.03-gs_grid.inp                    \
         06-rdmft.test                              \
 	07-sic.01-gs.inp                           \
 	07-sic.test                                \
