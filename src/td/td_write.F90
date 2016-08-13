@@ -52,6 +52,7 @@ module td_write_oct_m
   use states_calc_oct_m
   use states_dim_oct_m
   use states_restart_oct_m
+  use subspace_oct_m
   use td_calc_oct_m
   use types_oct_m
   use unit_oct_m
@@ -372,13 +373,13 @@ contains
            writ%gs_st%st_start = 1
         end if
 
-        !In case of n_excited_el in state parallelisation, the parallelisation is done over the 
-        ! time-evolved states and each task must know all GS states to project on.
-        if(writ%out(OUT_N_EX)%write) then
-          writ%gs_st%st_end = writ%gs_st%nst
-          writ%gs_st%lnst =  writ%gs_st%nst
-          writ%gs_st%parallel_in_states = .false.
-        end if
+      !  !In case of n_excited_el in state parallelisation, the parallelisation is done over the 
+      !  ! time-evolved states and each task must know all GS states to project on.
+      !  if(writ%out(OUT_N_EX)%write) then
+      !    writ%gs_st%st_end = writ%gs_st%nst
+      !    writ%gs_st%lnst =  writ%gs_st%nst
+      !    writ%gs_st%parallel_in_states = .false.
+      !  end if
         
         ! allocate memory
         SAFE_ALLOCATE(writ%gs_st%occ(1:writ%gs_st%nst, 1:writ%gs_st%d%nik))
@@ -2176,7 +2177,8 @@ contains
     type(states_t),    intent(in)    :: gs_st
     integer,           intent(in)    :: iter
 
-    CMPLX, allocatable :: projections(:,:,:)
+    CMPLX, allocatable :: projections(:,:)
+    FLOAT, allocatable :: occ(:,:)
     character(len=80) :: aux
     integer :: ik, ist, uist, idir
     FLOAT :: Nex
@@ -2220,24 +2222,31 @@ contains
     end if
 
     ! this is required if st%X(psi) is used
-     call states_sync(st)
+    call states_sync(st)
 
-    SAFE_ALLOCATE(projections(1:st%nst, gs_st%st_start:gs_st%nst, 1:st%d%nik))
-    projections(:,:,:) = M_Z0
-    call calc_projections(gr, st, gs_st, projections)
+    SAFE_ALLOCATE(projections(1:gs_st%nst, 1:st%nst))
+     
+    !We need to distribute the occupations
+    SAFE_ALLOCATE(occ(1:st%nst, 1:st%d%nik))
+    occ(1:st%nst, 1:st%d%nik) = CNST(0.0)
+    occ(st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end) = st%occ(st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end)
+    if(st%parallel_in_states .or. st%d%kpt%parallel) then
+     call comm_allreduce(st%st_kpt_mpi_grp%comm, occ, dim = (/st%nst, st%d%nik/))
+    end if 
  
     Nex = M_ZERO 
     do ik = 1, st%d%nik
-      do ist = st%st_start, st%st_end
-        do uist = gs_st%st_start, gs_st%nst
-          Nex = Nex - st%d%kweights(ik) * st%occ(ist, ik) * gs_st%occ(uist, ik) &
-                     * abs(projections(ist, uist, ik))**2 / st%smear%el_per_state
+      call zsubspace_projections(gr%mesh, st, gs_st, ik, projections)
+      do ist = 1, gs_st%st_end
+        do uist = 1, gs_st%nst
+          Nex = Nex - st%d%kweights(ik) * occ(ist, ik) * occ(uist, ik) / st%smear%el_per_state &
+                     * abs(projections(ist, uist))**2
         end do
       end do
     end do
 
 #if defined(HAVE_MPI)        
-   if(st%parallel_in_states .or. st%d%kpt%parallel) then
+   if(st%d%kpt%parallel) then
      call comm_allreduce(st%st_kpt_mpi_grp%comm, Nex)
    end if
 #endif  
@@ -2251,6 +2260,8 @@ contains
   end if
   
   SAFE_DEALLOCATE_A(projections)
+  SAFE_DEALLOCATE_A(occ)
+
   POP_SUB(td_write_nex)
  end subroutine td_write_n_ex
 

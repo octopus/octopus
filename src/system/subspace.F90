@@ -60,11 +60,13 @@ module subspace_oct_m
   
   private
 
-  public ::             &
-    subspace_t,         &
-    subspace_init,      &
-    dsubspace_diag,     &
-    zsubspace_diag
+  public ::               &
+    subspace_t,           &
+    subspace_init,        &
+    dsubspace_diag,       &
+    zsubspace_diag,       &
+    dsubspace_projections,&
+    zsubspace_projections  
 
   type subspace_t
     integer :: method
