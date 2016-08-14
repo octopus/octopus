@@ -463,7 +463,7 @@ contains
 
       !Photoelectron stuff 
       if(td%pesv%calc_spm .or. td%pesv%calc_mask .or. td%pesv%calc_flux) &
-        call pes_calc(td%pesv, gr%mesh, st, td%dt, iter, td%max_iter, gr, hm)
+        call pes_calc(td%pesv, gr%mesh, st, td%dt, iter, gr, hm)
 
       call td_write_iter(write_handler, gr, st, hm, geo, hm%ep%kick, td%dt, sys%ks, iter)
 

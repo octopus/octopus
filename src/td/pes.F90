@@ -201,19 +201,18 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_calc(pes, mesh, st, dt, iter, maxiter, gr, hm)
+  subroutine pes_calc(pes, mesh, st, dt, iter, gr, hm)
     type(pes_t),         intent(inout) :: pes
     type(mesh_t),        intent(in)    :: mesh
     type(states_t),      intent(inout) :: st
     type(grid_t),        intent(in)    :: gr
     FLOAT,               intent(in)    :: dt
     integer,             intent(in)    :: iter
-    integer,             intent(in)    :: maxiter
     type(hamiltonian_t), intent(in)    :: hm
 
     PUSH_SUB(pes_calc)
 
-    if(pes%calc_spm)   call pes_spm_calc  (pes%spm, st, mesh, dt, iter, hm)
+    if(pes%calc_spm)  call pes_spm_calc(pes%spm, st, mesh, dt, iter, hm)
     if(pes%calc_mask) call pes_mask_calc(pes%mask, mesh, st, dt, iter)
     if(pes%calc_flux) call pes_flux_calc(pes%flux, mesh, st, gr, hm, iter, dt)
 
@@ -234,9 +233,7 @@ contains
 
     PUSH_SUB(pes_output)
     
-    if(mpi_grp_is_root(mpi_world)) then
-      if(pes%calc_spm) call pes_spm_output(pes%spm, mesh, st, iter, dt)
-    end if
+    if(pes%calc_spm) call pes_spm_output(pes%spm, mesh, st, iter, dt)
 
     if(pes%calc_mask) call pes_mask_output (pes%mask, mesh, st,outp, "td.general/PESM", gr, geo,iter)
 
