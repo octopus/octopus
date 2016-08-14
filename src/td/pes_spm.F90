@@ -55,6 +55,7 @@ module pes_spm_oct_m
   type pes_spm_t
     integer                    :: nspoints                  !< how many points we store the wf
     FLOAT, pointer             :: rcoords(:,:)              !< coordinates of the sample points
+    FLOAT, pointer             :: rcoords_nrm(:,:)
     CMPLX, pointer             :: wf(:,:,:,:,:)   => NULL() !< wavefunctions at sample points
     FLOAT, pointer             :: dq(:,:)         => NULL() !< part 1 of Volkov phase (recipe phase) 
     FLOAT, pointer             :: domega(:)       => NULL() !< part 2 of Volkov phase (recipe phase)
@@ -258,6 +259,7 @@ contains
     call messages_print_var_value(stdout, "Number of sample points", this%nspoints)
 
     SAFE_ALLOCATE(this%rcoords(1:mdim, 1:this%nspoints))
+    SAFE_ALLOCATE(this%rcoords_nrm(1:mdim, 1:this%nspoints))
 
     if(.not. this%sphgrid) then
 
@@ -270,6 +272,8 @@ contains
           call parse_block_float(blk, isp - 1, imdim - 1, xx(imdim), units_inp%length)
         end do
         this%rcoords(1:mdim, isp) = xx(1:mdim)
+        this%rcoords_nrm(1:mdim, isp) = this%rcoords(1:mdim, isp) / &
+          sqrt(dot_product(this%rcoords(:, isp), this%rcoords(:, isp)))
       end do
       call parse_block_end(blk)
 
@@ -286,9 +290,10 @@ contains
         do iph = 0, this%nstepsphir - 1
           isp = isp + 1
           phir = iph * M_TWO * M_PI / this%nstepsphir
-                        this%rcoords(1, isp) = radius * cos(phir) * sin(thetar)
-          if(mdim >= 2) this%rcoords(2, isp) = radius * sin(phir) * sin(thetar)
-          if(mdim == 3) this%rcoords(3, isp) = radius * cos(thetar)
+                        this%rcoords_nrm(1, isp) = cos(phir) * sin(thetar)
+          if(mdim >= 2) this%rcoords_nrm(2, isp) = sin(phir) * sin(thetar)
+          if(mdim == 3) this%rcoords_nrm(3, isp) = cos(thetar)
+          this%rcoords(1:mdim, isp) = radius * this%rcoords_nrm(1:mdim, isp)
           if(mdim == 3 .and. (ith == 0 .or. ith == this%nstepsthetar)) exit
         end do
       end do
@@ -324,6 +329,7 @@ contains
 
     SAFE_DEALLOCATE_P(this%wf)
     SAFE_DEALLOCATE_P(this%rcoords)
+    SAFE_DEALLOCATE_P(this%rcoords_nrm)
 
     SAFE_DEALLOCATE_P(this%wfft)
 
@@ -345,7 +351,7 @@ contains
 
     integer            :: stst, stend, kptst, kptend, sdim, mdim
     integer            :: ist, ik, isdim
-    integer            :: ii
+    integer            :: itstep
 
     CMPLX, allocatable :: psistate(:), wfftact(:,:,:,:,:)
     CMPLX              :: rawfac
@@ -356,7 +362,7 @@ contains
 
     PUSH_SUB(pes_spm_calc)
 
-    ii = mod(iter-1, this%save_iter)
+    itstep = mod(iter-1, this%save_iter)
 
     stst   = st%st_start
     stend  = st%st_end
@@ -378,7 +384,7 @@ contains
     end if
 
     ! needed for allreduce, otherwise it will take values from previous cycle
-    this%wf(:,:,:,:,ii) = M_z0
+    this%wf(:,:,:,:,itstep) = M_z0
 
     do ik = kptst, kptend 
       do ist = stst, stend
@@ -386,40 +392,40 @@ contains
           call states_get_state(st, mesh, isdim, ist, ik, psistate(1:mesh%np_part))
           call mesh_interpolation_evaluate(this%interp, this%nspoints, psistate(1:mesh%np_part), &
             this%rcoords(1:mdim, 1:this%nspoints), interp_values(1:this%nspoints))
-          this%wf(ist, isdim, ik, :, ii) = interp_values(:)
+          this%wf(ist, isdim, ik, :, itstep) = st%occ(ist, ik) * interp_values(:)
         end do
       end do
     end do
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
 #if defined(HAVE_MPI)
       ! interpolated values have already been communicated over domains
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, this%wf(:,:,:,:,ii))
+      call comm_allreduce(st%st_kpt_mpi_grp%comm, this%wf(:,:,:,:,itstep))
 #endif
     end if
 
     if(this%recipe == M_PHASE) then
-      call pes_spm_calc_rcphase(this, mesh, iter, dt, hm, ii)
+      call pes_spm_calc_rcphase(this, mesh, iter, dt, hm, itstep)
     end if
 
     if(this%onfly) then
       do iom = 1, this%nomega
         omega = iom*this%delomega
-        rawfac = exp(M_zI * omega * iter * dt) * dt * sqrt(M_TWO * omega) / (M_TWO * M_PI)**(mdim/M_TWO)
+        rawfac = exp(M_zI * omega * iter * dt) * dt / (M_TWO * M_PI)**(mdim/M_TWO)
 
-        select case(this%recipe)
-        case(M_RAW)
-          wfftact(stst:stend, 1:sdim, kptst:kptend, :, iom) = this%wf(stst:stend, 1:sdim, kptst:kptend, :, ii) * rawfac
-        case(M_PHASE)
-          phasefac(:) = exp(M_zI * (this%domega(ii) - sqrt(M_TWO * omega) * this%dq(:, ii)))
+        if(this%recipe == M_RAW) then
+          wfftact(stst:stend, 1:sdim, kptst:kptend, :, iom) = &
+            rawfac * sqrt(M_TWO * omega) * this%wf(stst:stend, 1:sdim, kptst:kptend, :, itstep)
+        else
+          phasefac(:) = rawfac * exp(M_zI * (this%domega(itstep) - sqrt(M_TWO * omega) * this%dq(:, itstep)))
 
           do ik = kptst, kptend
             do ist = stst, stend
               do isdim = 1, sdim
-                wfftact(ist, isdim, ik, :, iom) = this%wf(ist, isdim, ik, :, ii) * phasefac(:) * rawfac
+                wfftact(ist, isdim, ik, :, iom) = phasefac(:) * this%wf(ist, isdim, ik, :, itstep) * sqrt(M_TWO * omega)
               end do
             end do
           end do
-        end select
+        end if
         if(st%parallel_in_states .or. st%d%kpt%parallel) then
 #if defined(HAVE_MPI)
           call comm_allreduce(st%st_kpt_mpi_grp%comm, wfftact(:,:,:,:,iom))
@@ -615,8 +621,8 @@ contains
 
             if(this%nstepsphir > 1 .or. ith == this%nstepsthetar) write(iunittwo, '(1x)', advance='yes')
           end do
-          write(iunitone, '(2(1x,e18.10E3))') omega, spctrsum * this%delomega
-        end do
+          write(iunitone, '(2(1x,e18.10E3))') omega, spctrsum * sqrt(M_TWO * omega)
+       end do
       end select
       call io_close(iunittwo)
       call io_close(iunitone)
@@ -785,7 +791,7 @@ contains
     integer :: isp
     integer :: il, iprev
     FLOAT   :: vp(1:MAX_DIM)
-    FLOAT   :: rr
+    FLOAT   :: rdota
 
     PUSH_SUB(pes_spm_calc_rcphase)
 
@@ -801,9 +807,8 @@ contains
     if(ii == 0) iprev = this%save_iter - 1
 
     do isp = 1, this%nspoints
-      rr = sqrt(dot_product(this%rcoords(1:mdim, isp), this%rcoords(1:mdim, isp)))
-      this%dq(isp, ii) = this%dq(isp, iprev) &
-        + dot_product(this%rcoords(1:mdim, isp), vp(1:mdim)) / (P_C * rr) * dt
+      rdota = dot_product(this%rcoords_nrm(1:mdim, isp), vp(1:mdim))
+      this%dq(isp, ii) = this%dq(isp, iprev) + rdota * dt / P_C
     end do
 
     this%domega(ii) = this%domega(iprev) &
