@@ -94,7 +94,9 @@ module states_calc_oct_m
     dstates_calc_overlap,           &
     zstates_calc_overlap,           &
     states_orthogonalize_cproduct,  &
-    states_sort_complex
+    states_sort_complex,            &
+    dstates_calc_projections,       &
+    zstates_calc_projections
 
   interface states_rotate
     module procedure dstates_rotate, zstates_rotate

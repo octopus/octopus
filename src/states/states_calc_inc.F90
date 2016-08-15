@@ -1326,6 +1326,79 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
   POP_SUB(X(states_calc_overlap))
 end subroutine X(states_calc_overlap)
 
+!> This routine computes the projection between two set of states
+subroutine X(states_calc_projections)(mesh, st, gs_st, ik, proj)
+  type(mesh_t),           intent(in)    :: mesh
+  type(states_t),         intent(in)    :: st
+  type(states_t),         intent(in)    :: gs_st
+  integer,                intent(in)    :: ik
+  R_TYPE,                 intent(out)   :: proj(:, :)
+
+  integer       :: ib, jb, ip
+  R_TYPE, allocatable :: psi(:, :, :), gspsi(:, :, :)
+  integer :: sp, ep, size, block_size, ierr
+  type(profile_t), save :: prof
+
+  PUSH_SUB(X(states_calc_projections))
+  call profiling_in(prof, "STATES_PROJECTIONS")
+
+  if(states_are_packed(st) .and. accel_is_enabled()) then
+   message(1) = "states_calc_projections is not implemented with packed states or accel."
+   call messages_fatal(1) 
+  else
+
+#ifdef R_TREAL  
+    block_size = max(40, hardware%l2%size/(2*8*st%nst))
+#else
+    block_size = max(20, hardware%l2%size/(2*16*st%nst))
+#endif
+
+    proj(1:gs_st%nst, 1:st%nst) = CNST(0.0)
+    
+    SAFE_ALLOCATE(psi(1:st%nst, 1:st%d%dim, 1:block_size))
+    SAFE_ALLOCATE(gspsi(1:st%nst, 1:st%d%dim, 1:block_size))
+
+    do sp = 1, mesh%np, block_size
+      size = min(block_size, mesh%np - sp + 1)
+      
+      do ib = st%group%block_start, st%group%block_end
+        call batch_get_points(st%group%psib(ib, ik),  sp, sp + size - 1, psi)
+        call batch_get_points(gs_st%group%psib(ib,ik), sp, sp + size - 1, gspsi)
+      end do
+
+      if(st%parallel_in_states) then
+        call states_parallel_gather(st, (/st%d%dim, size/), psi)
+        call states_parallel_gather(st, (/st%d%dim, size/), gspsi)
+      end if
+      
+      if(mesh%use_curvilinear) then
+        do ip = 1, size
+          psi(1:st%nst, 1:st%d%dim, ip) = psi(1:st%nst, 1:st%d%dim, ip)*mesh%vol_pp(sp + ip - 1)
+          gspsi(1:st%nst, 1:st%d%dim, ip) = gspsi(1:st%nst, 1:st%d%dim, ip)*mesh%vol_pp(sp + ip - 1)
+        end do
+      end if
+
+      call blas_gemm(transa = 'n', transb = 'c',        &
+        m = gs_st%nst, n = st%nst, k = size*st%d%dim,      &
+        alpha = R_TOTYPE(mesh%volume_element),      &
+        a = gspsi(1, 1, 1), lda = ubound(gspsi, dim = 1),   &
+        b = psi(1, 1, 1), ldb = ubound(psi, dim = 1), &
+        beta = R_TOTYPE(CNST(1.0)),                     & 
+        c = proj(1, 1), ldc = ubound(proj, dim = 1))
+    end do
+
+  end if
+  
+  call profiling_count_operations((R_ADD + R_MUL)*gs_st%nst*(st%nst - CNST(1.0))*mesh%np)
+  
+  if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, proj, dim = (/gs_st%nst, st%nst/))
+  
+  call profiling_out(prof)
+  POP_SUB(X(states_calc_projections))
+
+end subroutine X(states_calc_projections)
+
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

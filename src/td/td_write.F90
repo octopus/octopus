@@ -52,7 +52,6 @@ module td_write_oct_m
   use states_calc_oct_m
   use states_dim_oct_m
   use states_restart_oct_m
-  use subspace_oct_m
   use td_calc_oct_m
   use types_oct_m
   use unit_oct_m
@@ -373,14 +372,6 @@ contains
            writ%gs_st%st_start = 1
         end if
 
-      !  !In case of n_excited_el in state parallelisation, the parallelisation is done over the 
-      !  ! time-evolved states and each task must know all GS states to project on.
-      !  if(writ%out(OUT_N_EX)%write) then
-      !    writ%gs_st%st_end = writ%gs_st%nst
-      !    writ%gs_st%lnst =  writ%gs_st%nst
-      !    writ%gs_st%parallel_in_states = .false.
-      !  end if
-        
         ! allocate memory
         SAFE_ALLOCATE(writ%gs_st%occ(1:writ%gs_st%nst, 1:writ%gs_st%d%nik))
         SAFE_ALLOCATE(writ%gs_st%zeigenval%Re(1:writ%gs_st%nst, 1:writ%gs_st%d%nik))
@@ -2236,7 +2227,7 @@ contains
  
     Nex = M_ZERO 
     do ik = 1, st%d%nik
-      call zsubspace_projections(gr%mesh, st, gs_st, ik, projections)
+      call zstates_calc_projections(gr%mesh, st, gs_st, ik, projections)
       do ist = 1, gs_st%st_end
         do uist = 1, gs_st%nst
           Nex = Nex - st%d%kweights(ik) * occ(ist, ik) * occ(uist, ik) / st%smear%el_per_state &

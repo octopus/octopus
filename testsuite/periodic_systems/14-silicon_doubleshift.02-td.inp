@@ -1,0 +1,66 @@
+FromScratch=yes
+
+CalculationMode = td
+ExperimentalFeatures = yes
+
+PeriodicDimensions = 3
+
+a = 10.2
+
+BoxShape = parallelepiped
+Lsize = a/2
+Spacing = Lsize/7
+
+%ReducedCoordinates
+  "Si" |   0.0       | 0.0       | 0.0 
+  "Si" |   1/2       | 1/2       | 0.0
+  "Si" |   1/2       | 0.0       | 1/2
+  "Si" |   0.0       | 1/2       | 1/2 
+  "Si" |   1/4       | 1/4       | 1/4 
+  "Si" |   1/4 + 1/2 | 1/4 + 1/2 | 1/4
+  "Si" |   1/4 + 1/2 | 1/4       | 1/4 + 1/2
+  "Si" |   1/4       | 1/4 + 1/2 | 1/4 + 1/2 
+%
+
+%KPointsGrid
+ 2 | 2 | 2
+ 0.1 | 0.2 | 0.3
+-0.1 |-0.2 |-0.3
+%
+
+
+KPointsUseSymmetries = no
+SymmetrizeDensity = no
+
+ExtraStates = 0
+
+FilterPotentials = filter_none
+
+TDPropagator = aetrs
+TDExponentialMethod = lanczos
+TDExpOrder = 16
+TDTimeStep = 0.5
+TDMaxSteps = 100
+TDOutputComputeInterval = 50
+
+ParStates = no
+ParDomains = auto
+ParKPoints = no
+CurrentDensity = gradient_corrected
+
+Iau  = (sqrt(10^11)/sqrt(3.509470*10^16)) #Conservion in a.u.
+omega = 0.5
+c = 137.03604
+Tpulse = 210
+
+
+%TDExternalFields
+  vector_potential | 0.0 | 0.0 | 1.0 | omega | "envelope_sin2"
+%
+
+%TDFunctions
+  "envelope_sin2" | tdf_from_expr | "-Iau/omega*c*sin(pi*t/Tpulse)^2*(1-step(t-Tpulse))"
+%
+
+TDOutput = laser + total_current + n_excited_el
+

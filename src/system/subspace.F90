@@ -64,9 +64,7 @@ module subspace_oct_m
     subspace_t,           &
     subspace_init,        &
     dsubspace_diag,       &
-    zsubspace_diag,       &
-    dsubspace_projections,&
-    zsubspace_projections  
+    zsubspace_diag
 
   type subspace_t
     integer :: method
