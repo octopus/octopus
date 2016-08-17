@@ -2253,7 +2253,7 @@ contains
   SAFE_DEALLOCATE_A(projections)
   SAFE_DEALLOCATE_A(occ)
 
-  POP_SUB(td_write_nex)
+  POP_SUB(td_write_n_ex)
  end subroutine td_write_n_ex
 
    ! ---------------------------------------------------------
