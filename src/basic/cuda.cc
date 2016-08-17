@@ -97,6 +97,8 @@ extern "C" void FC_FUNC_(cuda_init, CUDA_INIT)(CUcontext ** context, CUdevice **
   CUDA_SAFE_CALL(cuDeviceGet(*device, 0));
 
   CUDA_SAFE_CALL(cuCtxCreate(*context, 0, **device));
+
+  CUDA_SAFE_CALL(cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_L1));
 #endif
 }
 
