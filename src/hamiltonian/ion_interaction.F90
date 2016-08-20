@@ -302,7 +302,6 @@ contains
     FLOAT   :: gg(1:MAX_DIM), gg2, gx
     FLOAT   :: factor, charge
     CMPLX   :: sumatoms, tmp(1:MAX_DIM), aa
-    CMPLX, allocatable :: phase(:)
     type(profile_t), save :: prof_short, prof_long
     type(ps_t) :: spec_ps
 
@@ -378,6 +377,78 @@ contains
       eself = eself - this%alpha/sqrt(M_PI)*zi**2
     end do
 
+! Long range part of Ewald sum
+    select case(sb%periodic_dim)
+    case(1)
+!Temporarily, the 3D Ewald sum is employed for the 1D mixed-periodic system.
+      call Ewald_long_3D(this, geo, sb, efourier, force, charge)
+!      call Ewald_long_1D
+    case(2)
+      call Ewald_long_2D(this, geo, sb, efourier, force, charge)
+!      call Ewald_long_2D
+    case(3)
+      call Ewald_long_3D(this, geo, sb, efourier, force, charge)
+    end select
+
+
+    if(present(energy_components)) then
+      energy_components(ION_COMPONENT_REAL) = ereal
+      energy_components(ION_COMPONENT_SELF) = eself
+      energy_components(ION_COMPONENT_FOURIER) = efourier      
+    end if
+
+    if(present(force_components)) then
+      force_components(1:sb%dim, 1:geo%natoms, ION_COMPONENT_FOURIER) = &
+        force(1:sb%dim, 1:geo%natoms) - force_components(1:sb%dim, 1:geo%natoms, ION_COMPONENT_REAL)
+    end if
+
+    energy = ereal + efourier + eself
+
+
+    epseudo = M_ZERO
+    if(sb%periodic_dim == 3)then
+       ! Previously unaccounted G = 0 term from pseudopotentials. 
+       ! See J. Ihm, A. Zunger, M.L. Cohen, J. Phys. C 12, 4409 (1979)
+
+       do iatom = 1, geo%natoms
+          if(species_is_ps(geo%atom(iatom)%species)) then
+             zi = species_zval(geo%atom(iatom)%species)
+             spec_ps = species_ps(geo%atom(iatom)%species)
+             epseudo = epseudo + M_PI*zi*&
+                  (spec_ps%sigma_erf*sqrt(M_TWO))**2/sb%rcell_volume*charge
+          end if
+       end do
+
+       energy = energy + epseudo
+    end if
+    
+    call profiling_out(prof_long)
+    
+    POP_SUB(ion_interaction_periodic)
+  end subroutine ion_interaction_periodic
+
+  ! ---------------------------------------------------------
+
+  subroutine Ewald_long_3D(this, geo, sb, efourier, force, charge)
+    type(ion_interaction_t),   intent(in)    :: this
+    type(geometry_t),          intent(in)    :: geo
+    type(simul_box_t),         intent(in)    :: sb
+    FLOAT,                     intent(inout)   :: efourier
+    FLOAT,                     intent(inout)   :: force(:, :) !< (sb%dim, geo%natoms)
+    FLOAT,                     intent(in)   :: charge
+
+    FLOAT :: rcut
+    integer :: iatom, jatom
+    integer :: ix, iy, iz, isph, ss, idim
+    FLOAT   :: gg(1:MAX_DIM), gg2, gx
+    FLOAT   :: factor
+    CMPLX   :: sumatoms, tmp(1:MAX_DIM), aa
+
+    CMPLX, allocatable :: phase(:)
+
+    PUSH_SUB(Ewald_long_3d)
+
+
     ! And the long-range part, using an Ewald sum
     SAFE_ALLOCATE(phase(1:geo%natoms))
 
@@ -439,39 +510,149 @@ contains
 
     SAFE_DEALLOCATE_A(phase)
 
-    if(present(energy_components)) then
-      energy_components(ION_COMPONENT_REAL) = ereal
-      energy_components(ION_COMPONENT_SELF) = eself
-      energy_components(ION_COMPONENT_FOURIER) = efourier      
-    end if
+    POP_SUB(ewald_long_3d)
 
-    if(present(force_components)) then
-      force_components(1:sb%dim, 1:geo%natoms, ION_COMPONENT_FOURIER) = &
-        force(1:sb%dim, 1:geo%natoms) - force_components(1:sb%dim, 1:geo%natoms, ION_COMPONENT_REAL)
-    end if
 
-    energy = ereal + efourier + eself
-	
-    ! Previously unaccounted G = 0 term from pseudopotentials. 
-    ! See J. Ihm, A. Zunger, M.L. Cohen, J. Phys. C 12, 4409 (1979)
-    epseudo = M_ZERO
+  end subroutine Ewald_long_3D
+
+  ! ---------------------------------------------------------
+  !> In-Chul Yeh and Max L. Berkowitz, J. Chem. Phys. 111, 3155 (1999).
+  subroutine Ewald_long_2D(this, geo, sb, efourier, force, charge)
+    type(ion_interaction_t),   intent(in)    :: this
+    type(geometry_t),          intent(in)    :: geo
+    type(simul_box_t),         intent(in)    :: sb
+    FLOAT,                     intent(inout)   :: efourier
+    FLOAT,                     intent(inout)   :: force(:, :) !< (sb%dim, geo%natoms)
+    FLOAT,                     intent(in)   :: charge
+
+    FLOAT :: rcut,rcut_min,rcut_max
+    integer :: iatom, jatom
+    integer :: ix, iy, iz, ix_max, iy_max, ss, idim
+    FLOAT   :: gg(1:MAX_DIM), gg2, gx, gg_abs
+    FLOAT   :: factor,factor1,factor2
+    FLOAT   :: dz_max, dz_ij, area_cell, erfc
+    CMPLX   :: sumatoms, tmp(1:MAX_DIM), aa
+
+    CMPLX, allocatable :: phase(:)
+
+    PUSH_SUB(Ewald_long_2d)
+
+
+    ! And the long-range part, using an Ewald sum
+
+
+    ! Searching maximum distance
+    dz_max = M_ZERO
     do iatom = 1, geo%natoms
-      if(species_is_ps(geo%atom(iatom)%species)) then
-        zi = species_zval(geo%atom(iatom)%species)
-        spec_ps = species_ps(geo%atom(iatom)%species)
-        epseudo = epseudo + M_PI*zi*&
-          (spec_ps%sigma_erf*sqrt(M_TWO))**2/sb%rcell_volume*charge
-      end if
+      do jatom = iatom + 1, geo%natoms
+        dz_max = max(dz_max, abs(geo%atom(iatom)%x(3) - geo%atom(iatom)%x(3)))
+      end do
     end do
 
-    energy = energy + epseudo
-    
-    call profiling_out(prof_long)
-    
-    POP_SUB(ion_interaction_periodic)
-  end subroutine ion_interaction_periodic
+    !get a converged value for the cutoff in g
+    rcut = M_TWO*this%alpha*CNST(4.6) + M_TWO*this%alpha**2*dz_max
+    do 
+      erfc = M_ONE - loct_erf(this%alpha*dz_max + M_HALF*rcut/this%alpha)
+      if(erfc*exp(rcut*dz_max) < CNST(1e-10))exit
+      rcut = rcut * CNST(1.414)
+    end do
 
-  ! --------------------------------------------------------------
+
+    ix_max = ceiling(rcut/sqrt(sum(sb%klattice(1:sb%dim, 1)**2)))
+    iy_max = ceiling(rcut/sqrt(sum(sb%klattice(1:sb%dim, 2)**2)))
+
+    area_cell = abs(sb%rlattice(1, 1)*sb%rlattice(2, 2) - sb%rlattice(1, 2)*sb%rlattice(2, 1))
+
+    ! First the G = 0 term (charge was calculated previously)
+    efourier = M_ZERO
+    factor = M_PI/(area_cell)
+    do iatom = 1, geo%natoms
+      do jatom = 1, geo%natoms
+! efourier
+        dz_ij = geo%atom(iatom)%x(3)-geo%atom(jatom)%x(3)
+
+        factor1 = dz_ij*loct_erf(this%alpha*dz_ij)
+        factor2 = exp(-(this%alpha*dz_ij)**2)/(this%alpha*sqrt(M_PI))
+
+        efourier = efourier - factor&
+          * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
+          * (factor1 + factor2)
+
+! force
+        if(iatom == jatom)cycle
+        force(3,iatom) = force(3,iatom) - (- M_TWO*factor) &
+          * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
+          * loct_erf(this%alpha*dz_ij)
+
+      end do
+    end do
+
+
+    do ix = -ix_max, ix_max
+      do iy = -iy_max, iy_max
+
+        ss = ix**2 + iy**2
+        if(ss == 0) cycle
+          
+        gg(1:sb%dim) = ix*sb%klattice(1:sb%dim, 1) + iy*sb%klattice(1:sb%dim, 2)
+        gg2 = sum(gg(1:sb%dim)**2)
+
+        ! g=0 must be removed from the sum
+        if(gg2 < M_EPSILON) cycle
+        gg_abs = sqrt(gg2)
+        factor = M_HALF*M_PI/(area_cell*gg_abs)
+          
+        do iatom = 1, geo%natoms
+          do jatom = 1, geo%natoms
+! efourier
+            gx = gg(1)*(geo%atom(iatom)%x(1)-geo%atom(jatom)%x(1)) &
+              + gg(2)*(geo%atom(iatom)%x(2)-geo%atom(jatom)%x(2))
+            dz_ij = geo%atom(iatom)%x(3)-geo%atom(jatom)%x(3)
+
+            erfc = M_ONE - loct_erf(this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)
+            factor1 = exp(gg_abs*dz_ij)*erfc
+            erfc = M_ONE - loct_erf(-this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)
+            factor2 = exp(-gg_abs*dz_ij)*erfc
+
+            efourier = efourier &
+              + factor &
+              * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
+              * cos(gx)* ( factor1 + factor2)
+              
+! force
+            if(iatom == jatom)cycle
+
+            force(1:2, iatom) = force(1:2, iatom) &
+              - (CNST(-1.0)* M_TWO*factor )* gg(1:2) &
+              * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
+              *sin(gx)*(factor1 + factor2)
+
+            erfc = M_ONE - loct_erf(this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)
+            factor1 = exp(gg_abs*dz_ij)*( gg_abs*erfc &
+              - M_TWO*this%alpha/sqrt(M_PI)*exp(-(this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)**2))
+            erfc = M_ONE - loct_erf(-this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)
+            factor2 = exp(-gg_abs*dz_ij)*( gg_abs*erfc &
+              - M_TWO*this%alpha/sqrt(M_PI)*exp(-(-this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)**2))
+
+            force(3, iatom) = force(3, iatom) &
+              - M_TWO*factor &
+              * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
+              * cos(gx)* ( factor1 - factor2)
+
+
+          end do
+        end do
+
+
+      end do
+    end do
+
+    POP_SUB(ewald_long_2d)
+
+
+  end subroutine Ewald_long_2D
+
+  ! ---------------------------------------------------------
   
   subroutine ion_interaction_test(geo, sb)
     type(geometry_t),         intent(in)    :: geo
