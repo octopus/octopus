@@ -2222,14 +2222,14 @@ contains
     occ(1:st%nst, 1:st%d%nik) = CNST(0.0)
     occ(st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end) = st%occ(st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end)
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
-     call comm_allreduce(st%st_kpt_mpi_grp%comm, occ, dim = (/st%nst, st%d%nik/))
+      call comm_allreduce(st%st_kpt_mpi_grp%comm, occ, dim = (/st%nst, st%d%nik/))
     end if 
  
     Nex = M_ZERO 
     do ik = 1, st%d%nik
       call zstates_calc_projections(gr%mesh, st, gs_st, ik, projections)
-      do ist = 1, gs_st%st_end
-        do uist = 1, gs_st%nst
+      do ist = 1, gs_st%nst
+        do uist = 1, st%nst
           Nex = Nex - st%d%kweights(ik) * occ(ist, ik) * occ(uist, ik) / st%smear%el_per_state &
                      * abs(projections(ist, uist))**2
         end do

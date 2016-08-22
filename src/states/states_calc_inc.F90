@@ -1356,7 +1356,7 @@ subroutine X(states_calc_projections)(mesh, st, gs_st, ik, proj)
     proj(1:gs_st%nst, 1:st%nst) = CNST(0.0)
     
     SAFE_ALLOCATE(psi(1:st%nst, 1:st%d%dim, 1:block_size))
-    SAFE_ALLOCATE(gspsi(1:st%nst, 1:st%d%dim, 1:block_size))
+    SAFE_ALLOCATE(gspsi(1:gs_st%nst, 1:gs_st%d%dim, 1:block_size))
 
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
@@ -1368,13 +1368,13 @@ subroutine X(states_calc_projections)(mesh, st, gs_st, ik, proj)
 
       if(st%parallel_in_states) then
         call states_parallel_gather(st, (/st%d%dim, size/), psi)
-        call states_parallel_gather(st, (/st%d%dim, size/), gspsi)
+        call states_parallel_gather(gs_st, (/st%d%dim, size/), gspsi)
       end if
       
       if(mesh%use_curvilinear) then
         do ip = 1, size
           psi(1:st%nst, 1:st%d%dim, ip) = psi(1:st%nst, 1:st%d%dim, ip)*mesh%vol_pp(sp + ip - 1)
-          gspsi(1:st%nst, 1:st%d%dim, ip) = gspsi(1:st%nst, 1:st%d%dim, ip)*mesh%vol_pp(sp + ip - 1)
+          gspsi(1:gs_st%nst, 1:st%d%dim, ip) = gspsi(1:gs_st%nst, 1:st%d%dim, ip)*mesh%vol_pp(sp + ip - 1)
         end do
       end if
 
