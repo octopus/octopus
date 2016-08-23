@@ -327,11 +327,11 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
   end do
 
 
-  ! Grad_xyw = Bt Grad_uvw, see Chelikowsky after Eq. 10
+  ! transformation from reduced coordinates to Cartesian coordinates
   if (simul_box_is_periodic(gr%mesh%sb) .and. gr%mesh%sb%nonorthogonal ) then
      forall (iatom = 1:geo%natoms)
         force(1:gr%mesh%sb%dim,iatom) = &
-             matmul(force(1:gr%mesh%sb%dim,iatom),gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim))
+          matmul(gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim),force(1:gr%mesh%sb%dim,iatom))
      end forall
   end if
 
