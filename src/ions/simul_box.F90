@@ -658,8 +658,8 @@ contains
         call parse_block_end(blk)
 
         if(sb%nonorthogonal) &
-          call messages_experimental('Non-orthogonal unit cells')
-        
+          call messages_not_implemented('Non-orthogonal cells support')
+
 ! check if Lsize is defined, if not, then set it to a/2, b/2, c/2
         if (.not. parse_is_defined('Lsize')) then  
           sb%lsize(:) = M_ZERO
