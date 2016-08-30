@@ -510,7 +510,7 @@ contains
 
     SAFE_DEALLOCATE_A(phase)
 
-    POP_SUB(ewald_long_3d)
+    POP_SUB(Ewald_long_3d)
 
 
   end subroutine Ewald_long_3D
