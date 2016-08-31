@@ -3,7 +3,7 @@
 
 Test       : Boron Nitride Sheet
 Program    : octopus
-TestGroups : long-run, periodic_systems
+TestGroups : short-run, periodic_systems
 Enabled    : Yes
 
 Processors : 4
@@ -15,9 +15,9 @@ match ; Reduced k-points   ; GREPFIELD(static/info, 'Number of symmetry-reduced 
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 187
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;   4
 
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  742.84601385
-match ; Free energy        ; GREPFIELD(static/info, 'Free        =', 3) ;  742.84601385
-match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;  355.73622641
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -699.52841943
+match ; Free energy        ; GREPFIELD(static/info, 'Free        =', 3) ; -699.52841943
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -1086.63818887
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -198.67050830
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; -524.27936356
 match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -174.81774097
