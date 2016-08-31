@@ -2172,8 +2172,8 @@ contains
     FLOAT, allocatable :: occ(:,:)
     character(len=80) :: aux
     integer :: ik, ist, uist, idir
-    FLOAT :: Nex
-
+    FLOAT :: Nex, weight
+    
 
     PUSH_SUB(td_write_n_ex)
 
@@ -2226,12 +2226,12 @@ contains
     end if 
  
     Nex = M_ZERO 
-    do ik = 1, st%d%nik
+    do ik = st%d%kpt%start, st%d%kpt%end
       call zstates_calc_projections(gr%mesh, st, gs_st, ik, projections)
       do ist = 1, gs_st%nst
+        weight = st%d%kweights(ik) * occ(ist, ik)/ st%smear%el_per_state 
         do uist = 1, st%nst
-          Nex = Nex - st%d%kweights(ik) * occ(ist, ik) * occ(uist, ik) / st%smear%el_per_state &
-                     * abs(projections(ist, uist))**2
+          Nex = Nex - weight * occ(uist, ik) * abs(projections(ist, uist))**2
         end do
       end do
     end do
