@@ -86,7 +86,7 @@ contains
     PUSH_SUB(current_init)
 
     !%Variable CurrentDensity
-    !%Default hamiltonian
+    !%Default gradient_corrected
     !%Type integer
     !%Section Hamiltonian
     !%Description
@@ -104,10 +104,10 @@ contains
     !% Hamiltonian with the position operator.
     !%End
 
-    call parse_variable('CurrentDensity', CURRENT_HAMILTONIAN, this%method)
+    call parse_variable('CurrentDensity', CURRENT_GRADIENT_CORR, this%method)
     if(.not.varinfo_valid_option('CurrentDensity', this%method)) call messages_input_error('CurrentDensity')
-    if(this%method /= CURRENT_HAMILTONIAN) then
-      call messages_experimental("CurrentDensity /= hamiltonian")
+    if(this%method /= CURRENT_GRADIENT_CORR) then
+      call messages_experimental("CurrentDensity /= gradient_corrected")
     end if
     
     POP_SUB(current_init)
