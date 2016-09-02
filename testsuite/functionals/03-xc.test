@@ -367,41 +367,11 @@ match ; gga_xc_xlyp Eigenvalue dn              ; GREPFIELD(static/info, '  1   d
 match ; gga_xc_xlyp Correlation                ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.33505116
 match ; gga_xc_xlyp Int[n*v_xc]                ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.42659195
 
-Input: 03-xc.gga_xc_b97.inp
-match ; gga_xc_b97 Eigenvalue up               ; GREPFIELD(static/info, '  1   up', 3)      ; -1.015224
-match ; gga_xc_b97 Eigenvalue dn               ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.838893
-match ; gga_xc_b97 Correlation                 ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.27231614
-match ; gga_xc_b97 Int[n*v_xc]                 ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.34773617
-
-Input: 03-xc.gga_xc_b97_1.inp
-match ; gga_xc_b97_1 Eigenvalue up             ; GREPFIELD(static/info, '  1   up', 3)      ; -1.016530
-match ; gga_xc_b97_1 Eigenvalue dn             ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.833353
-match ; gga_xc_b97_1 Correlation               ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.26492862
-match ; gga_xc_b97_1 Int[n*v_xc]               ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.33973285
-
-Input: 03-xc.gga_xc_b97_2.inp
-match ; gga_xc_b97_2 Eigenvalue up             ; GREPFIELD(static/info, '  1   up', 3)      ; -1.019162
-match ; gga_xc_b97_2 Eigenvalue dn             ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.838990
-match ; gga_xc_b97_2 Correlation               ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.26946618
-match ; gga_xc_b97_2 Int[n*v_xc]               ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.34296580
-
 Input: 03-xc.gga_xc_b97_d.inp
 match ; gga_xc_b97_d Eigenvalue up             ; GREPFIELD(static/info, '  1   up', 3)      ; -0.986964
 match ; gga_xc_b97_d Eigenvalue dn             ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.879540
 match ; gga_xc_b97_d Correlation               ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.34058884
 match ; gga_xc_b97_d Int[n*v_xc]               ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.43151898
-
-Input: 03-xc.gga_xc_b97_k.inp
-match ; gga_xc_b97_k Eigenvalue up             ; GREPFIELD(static/info, '  1   up', 3)      ; -1.042820
-match ; gga_xc_b97_k Eigenvalue dn             ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.800609
-match ; gga_xc_b97_k Correlation               ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.19356517
-match ; gga_xc_b97_k Int[n*v_xc]               ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.24801510
-
-Input: 03-xc.gga_xc_b97_3.inp
-match ; gga_xc_b97_3 Eigenvalue up             ; GREPFIELD(static/info, '  1   up', 3)      ; -1.028856
-match ; gga_xc_b97_3 Eigenvalue dn             ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.831110
-match ; gga_xc_b97_3 Correlation               ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.25035509
-match ; gga_xc_b97_3 Int[n*v_xc]               ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.31916227
 
 Input: 03-xc.gga_xc_pbe1w.inp
 match ; gga_xc_pbe1w Eigenvalue up             ; GREPFIELD(static/info, '  1   up', 3)      ; -0.989867
@@ -420,42 +390,6 @@ match ; gga_xc_pbelyp1w Eigenvalue up          ; GREPFIELD(static/info, '  1   u
 match ; gga_xc_pbelyp1w Eigenvalue dn          ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.863965
 match ; gga_xc_pbelyp1w Correlation            ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.33476946
 match ; gga_xc_pbelyp1w Int[n*v_xc]            ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.42800185
-
-Input: 03-xc.gga_xc_sb98_1a.inp
-match ; gga_xc_sb98_1a Eigenvalue up           ; GREPFIELD(static/info, '  1   up', 3)      ; -1.015283
-match ; gga_xc_sb98_1a Eigenvalue dn           ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.826158
-match ; gga_xc_sb98_1a Correlation             ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.25339616
-match ; gga_xc_sb98_1a Int[n*v_xc]             ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.32768011
-
-Input: 03-xc.gga_xc_sb98_1b.inp
-match ; gga_xc_sb98_1b Eigenvalue up           ; GREPFIELD(static/info, '  1   up', 3)      ; -1.013078
-match ; gga_xc_sb98_1b Eigenvalue dn           ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.842484
-match ; gga_xc_sb98_1b Correlation             ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.27188700
-match ; gga_xc_sb98_1b Int[n*v_xc]             ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.34418279
-
-Input: 03-xc.gga_xc_sb98_1c.inp
-match ; gga_xc_sb98_1c Eigenvalue up           ; GREPFIELD(static/info, '  1   up', 3)      ; -1.015395
-match ; gga_xc_sb98_1c Eigenvalue dn           ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.839804
-match ; gga_xc_sb98_1c Correlation             ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.27333098
-match ; gga_xc_sb98_1c Int[n*v_xc]             ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.34900792
-
-Input: 03-xc.gga_xc_sb98_2a.inp
-match ; gga_xc_sb98_2a Eigenvalue up           ; GREPFIELD(static/info, '  1   up', 3)      ; -1.044982
-match ; gga_xc_sb98_2a Eigenvalue dn           ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.854131
-match ; gga_xc_sb98_2a Correlation             ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.28194616
-match ; gga_xc_sb98_2a Int[n*v_xc]             ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.35549638
-
-Input: 03-xc.gga_xc_sb98_2b.inp
-match ; gga_xc_sb98_2b Eigenvalue up           ; GREPFIELD(static/info, '  1   up', 3)      ; -1.018808
-match ; gga_xc_sb98_2b Eigenvalue dn           ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.832837
-match ; gga_xc_sb98_2b Correlation             ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.25603741
-match ; gga_xc_sb98_2b Int[n*v_xc]             ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.32730296
-
-Input: 03-xc.gga_xc_sb98_2c.inp
-match ; gga_xc_sb98_2c Eigenvalue up           ; GREPFIELD(static/info, '  1   up', 3)      ; -1.018942
-match ; gga_xc_sb98_2c Eigenvalue dn           ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.835737
-match ; gga_xc_sb98_2c Correlation             ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.26344385
-match ; gga_xc_sb98_2c Int[n*v_xc]             ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.33715994
 
 Input: 03-xc.kli.inp
 match ; OEP KLI Eigenvalue up                  ; GREPFIELD(static/info, '  1   up', 3)      ; -1.128711
