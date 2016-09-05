@@ -34,7 +34,14 @@ EXTRA_DIST = \
 	ChangeLog.2005.gz   \
 	ChangeLog.2006.gz   \
 	ChangeLog.2007.gz   \
-	ChangeLog.2008.gz
+	ChangeLog.2008.gz   \
+	ChangeLog.2009.gz   \
+	ChangeLog.2010.gz   \
+	ChangeLog.2011.gz   \
+	ChangeLog.2012.gz   \
+	ChangeLog.2013.gz   \
+	ChangeLog.2014.gz   \
+	ChangeLog.2015.gz
 
 CLEANFILES = *~ *.bak variables.texi $(man_MANS)
 
