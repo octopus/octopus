@@ -1202,7 +1202,7 @@ contains
 
     if(species_is_ps(spec)) then
       ASSERT(ii <= spec%ps%conf%p)
-      radius = spline_cutoff_radius(spec%ps%ur(ii, is), threshold)
+      radius = spline_cutoff_radius(spec%ps%ur(ii, is), spec%ps%projectors_sphere_threshold)
     else if(species_represents_real_atom(spec)) then
       radius = -ii*log(threshold)/spec%Z_val
     else
