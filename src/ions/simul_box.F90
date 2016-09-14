@@ -726,10 +726,10 @@ contains
     call reciprocal_lattice(sb%rlattice_primitive, sb%klattice_primitive, sb%volume_element, sb%dim)
 
     sb%metric = M_ZERO
-    sb%metric = matmul(sb%klattice_primitive, transpose(sb%klattice_primitive))
+    sb%metric = matmul(transpose(sb%klattice_primitive), sb%klattice_primitive)
 
     ! rlattice_primitive is the A matrix from Chelikowski PRB 78 075109 (2008)
-    ! klattice_primitive is the B matrix, with no 2 pi factor included
+    ! klattice_primitive is the transpose (!) of the B matrix, with no 2 pi factor included
     ! klattice is the proper reciprocal lattice vectors, with 2 pi factor, and in units of 1/bohr
     ! metric is the F matrix of Chelikowski
 
