@@ -207,8 +207,8 @@ contains
         call messages_experimental('Support for mixed periodicity systems')
       end if
 
-      if(sb%periodic_dim == 1 .or. sb%periodic_dim == 2) then
-        call messages_write('For systems that  are periodic in 1D and  2D, interaction between', new_line = .true.)
+      if(sb%periodic_dim == 1) then
+        call messages_write('For systems that  are periodic in 1D, interaction between', new_line = .true.)
         call messages_write('ions is assumed to be periodic in 3D. This affects the calculation', new_line = .true.)
         call messages_write('of total energy and forces.')
         call messages_warning()
