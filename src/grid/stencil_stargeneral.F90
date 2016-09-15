@@ -248,7 +248,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine stencil_stargeneral_pol_lapl(this, dim, order, pol)
-    type(stencil_t), intent(out) :: this
+    type(stencil_t), intent(in) :: this
     integer, intent(in)          :: dim
     integer, intent(in)          :: order
     integer, intent(out)         :: pol(:,:) !< pol(dim, order)
