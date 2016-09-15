@@ -647,7 +647,7 @@ contains
       end do
     end do
 
-    POP_SUB(ewald_long_2d)
+    POP_SUB(Ewald_long_2d)
 
 
   end subroutine Ewald_long_2D
