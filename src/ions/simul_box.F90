@@ -705,22 +705,7 @@ contains
       end forall
     end do
     
-    select case(sb%dim)
-    case(3)
-      cross = dcross_product(sb%rlattice(:,2), sb%rlattice(:,3))
-      sb%rcell_volume = sum(sb%rlattice(1:3, 1)*cross(1:3))
-    case(2)
-      sb%rcell_volume = abs(sb%rlattice(1, 1)*sb%rlattice(2, 2) - sb%rlattice(1, 2)*sb%rlattice(2, 1))
-    case(1)
-      sb%rcell_volume = abs(sb%rlattice(2, 1) - sb%rlattice(1, 1))
-    case default
-      sb%rcell_volume = M_ONE
-      do idim = 1, sb%dim
-        sb%rcell_volume = sb%rcell_volume*abs(sb%rlattice(idim, idim))
-      end do
-    end select
-
-    call reciprocal_lattice(sb%rlattice, sb%klattice, sb%volume_element, sb%dim)
+    call reciprocal_lattice(sb%rlattice, sb%klattice, sb%rcell_volume, sb%dim)
     sb%klattice = sb%klattice * M_TWO*M_PI
 
     call reciprocal_lattice(sb%rlattice_primitive, sb%klattice_primitive, sb%volume_element, sb%dim)
