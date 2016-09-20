@@ -359,12 +359,12 @@ contains
     energy_and_integrals_buffer(3) = sum(gradrho(1:this%mesh%np,:,:) * dedgd(1:this%mesh%np,:,:)) * this%mesh%volume_element
 
 #ifdef HAVE_MPI
-    call MPI_Allreduce(MPI_IN_PLACE, energy_and_integrals_buffer, 3, MPI_FLOAT, MPI_SUM, this%mesh%mpi_grp%comm, ierr)
+    call MPI_Allreduce(MPI_IN_PLACE, energy_and_integrals_buffer, 3, MPI_DOUBLE, MPI_SUM, this%mesh%mpi_grp%comm, ierr)
     this%energy = energy_and_integrals_buffer(1)
 #endif
-    write(message(1), '(a,f15.12,a)') 'libvdwxc non-local correlation energy: ', energy_and_integrals_buffer(1), ' Ha'
-    write(message(2), '(a,f15.12)')   '                      n-dedn integral: ', energy_and_integrals_buffer(2)
-    write(message(3), '(a,f15.12)')   '              gradn-dedgradn integral: ', energy_and_integrals_buffer(3)
+    write(message(1), '(a,f18.10,a)') 'libvdwxc non-local correlation energy: ', energy_and_integrals_buffer(1), ' Ha'
+    write(message(2), '(a,f18.10)')   '                      n-dedn integral: ', energy_and_integrals_buffer(2)
+    write(message(3), '(a,f18.10)')   '              gradn-dedgradn integral: ', energy_and_integrals_buffer(3)
     call messages_info(3)
 
     SAFE_DEALLOCATE_A(workbuffer)
