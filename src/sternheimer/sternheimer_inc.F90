@@ -73,10 +73,10 @@ subroutine X(sternheimer_solve)(                           &
     SAFE_ALLOCATE(rhs_full(1:mesh%np, 1:st%d%dim, 1:st%d%block_size))
   end if
   if(calculate_rho) then
-  SAFE_ALLOCATE(hvar(1:mesh%np, 1:st%d%nspin, 1:nsigma))
-  SAFE_ALLOCATE(dl_rhoin(1:mesh%np, 1:st%d%nspin, 1:1))
-  SAFE_ALLOCATE(dl_rhonew(1:mesh%np, 1:st%d%nspin, 1:1))
-  SAFE_ALLOCATE(dl_rhotmp(1:mesh%np, 1:st%d%nspin, 1:1))
+    SAFE_ALLOCATE(hvar(1:mesh%np, 1:st%d%nspin, 1:nsigma))
+    SAFE_ALLOCATE(dl_rhoin(1:mesh%np, 1:st%d%nspin, 1:1))
+    SAFE_ALLOCATE(dl_rhonew(1:mesh%np, 1:st%d%nspin, 1:1))
+    SAFE_ALLOCATE(dl_rhotmp(1:mesh%np, 1:st%d%nspin, 1:1))
   end if
   SAFE_ALLOCATE(orth_mask(1:st%nst))
 
@@ -129,11 +129,11 @@ subroutine X(sternheimer_solve)(                           &
     call messages_info(2)
 
     if (calculate_rho) then
-    do ispin = 1, st%d%nspin
-      call lalg_copy(mesh%np, lr(1)%X(dl_rho)(:, ispin), dl_rhoin(:, ispin, 1))
-    end do
+      do ispin = 1, st%d%nspin
+        call lalg_copy(mesh%np, lr(1)%X(dl_rho)(:, ispin), dl_rhoin(:, ispin, 1))
+      end do
 
-    call X(sternheimer_calc_hvar)(this, sys, lr, nsigma, hvar)
+      call X(sternheimer_calc_hvar)(this, sys, lr, nsigma, hvar)
     end if
 
     SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
@@ -180,10 +180,10 @@ subroutine X(sternheimer_solve)(                           &
             end do
 
             if(calculate_rho) then
-            call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
-            do idim = 1, st%d%dim
-              rhs(1:mesh%np, idim, ii) = rhs(1:mesh%np, idim, ii) - hvar(1:mesh%np, ispin, sigma)*psi(1:mesh%np, idim)
-            end do
+              call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
+              do idim = 1, st%d%dim
+                rhs(1:mesh%np, idim, ii) = rhs(1:mesh%np, idim, ii) - hvar(1:mesh%np, ispin, sigma)*psi(1:mesh%np, idim)
+              end do
             end if
 
             if(sternheimer_have_inhomog(this)) then
@@ -266,9 +266,9 @@ subroutine X(sternheimer_solve)(                           &
 #endif
 
     if(calculate_rho) then
-    call X(lr_build_dl_rho)(mesh, st, lr, nsigma)
+      call X(lr_build_dl_rho)(mesh, st, lr, nsigma)
 
-    dl_rhonew(1:mesh%np, 1:st%d%nspin, 1) = M_ZERO
+      dl_rhonew(1:mesh%np, 1:st%d%nspin, 1) = M_ZERO
 
       !write restart info
       !save all frequencies as positive
@@ -398,10 +398,10 @@ subroutine X(sternheimer_solve)(                           &
     SAFE_DEALLOCATE_A(rhs_full)
   end if
   if(calculate_rho) then
-  SAFE_DEALLOCATE_A(hvar)
-  SAFE_DEALLOCATE_A(dl_rhoin)
-  SAFE_DEALLOCATE_A(dl_rhonew)
-  SAFE_DEALLOCATE_A(dl_rhotmp)
+    SAFE_DEALLOCATE_A(hvar)
+    SAFE_DEALLOCATE_A(dl_rhoin)
+    SAFE_DEALLOCATE_A(dl_rhonew)
+    SAFE_DEALLOCATE_A(dl_rhotmp)
   end if
   SAFE_DEALLOCATE_A(orth_mask)
 

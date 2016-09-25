@@ -189,13 +189,13 @@ contains
     PUSH_SUB(lr_copy)
 
     if(src%is_allocated_rho .and. dest%is_allocated_rho) then
-    do ik = 1, st%d%nspin
-      if(states_are_complex(st)) then
-        call lalg_copy(mesh%np, src%zdl_rho(:, ik), dest%zdl_rho(:, ik))
-      else
-        call lalg_copy(mesh%np, src%ddl_rho(:, ik), dest%ddl_rho(:, ik))
-      end if
-    end do
+      do ik = 1, st%d%nspin
+        if(states_are_complex(st)) then
+          call lalg_copy(mesh%np, src%zdl_rho(:, ik), dest%zdl_rho(:, ik))
+        else
+          call lalg_copy(mesh%np, src%ddl_rho(:, ik), dest%ddl_rho(:, ik))
+        end if
+      end do
     else
       if(dest%is_allocated_rho) then
         if(states_are_complex(st)) then

@@ -361,7 +361,7 @@ contains
         call sternheimer_build_kxc(sh_mo, sys%gr%mesh, sys%st, sys%ks)
       end if
       call messages_experimental("Magneto-optical response")
-            allocate_rho_mo = sternheimer_add_fxc(sh_mo) .or. sternheimer_add_hartree(sh_mo)
+      allocate_rho_mo = sternheimer_add_fxc(sh_mo) .or. sternheimer_add_hartree(sh_mo)
       SAFE_ALLOCATE(b_lr(1:gr%sb%dim, 1:1))
       SAFE_ALLOCATE(e_lr(1:gr%sb%dim, 1:em_vars%nsigma))
       do idir = 1, gr%sb%dim
