@@ -65,7 +65,7 @@ module linear_response_oct_m
 
 
   type lr_t
-    logical :: is_allocated
+    logical :: is_allocated, is_allocated_rho
      
     !> the real quantities
     FLOAT, pointer :: ddl_rho(:,:)     !< response of the density
@@ -104,19 +104,23 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine lr_allocate(lr, st, mesh)
+  subroutine lr_allocate(lr, st, mesh, allocate_rho)
     type(lr_t),     intent(inout) :: lr
     type(states_t), intent(in)    :: st
     type(mesh_t),   intent(in)    :: mesh
+    logical, optional, intent(in) :: allocate_rho
 
     PUSH_SUB(lr_allocate)
 
+    lr%is_allocated_rho = .true.
+    if(present(allocate_rho)) lr%is_allocated_rho = allocate_rho
+
     if (states_are_complex(st)) then
       SAFE_ALLOCATE(lr%zdl_psi(1:mesh%np_part, 1:st%d%dim, 1:st%nst, 1:st%d%nik))
-      SAFE_ALLOCATE(lr%zdl_rho(1:mesh%np, 1:st%d%nspin))
+      if(lr%is_allocated_rho) SAFE_ALLOCATE(lr%zdl_rho(1:mesh%np, 1:st%d%nspin))
     else
       SAFE_ALLOCATE(lr%ddl_psi(1:mesh%np_part, 1:st%d%dim, 1:st%nst, 1:st%d%nik))
-      SAFE_ALLOCATE(lr%ddl_rho(1:mesh%np, 1:st%d%nspin))
+      if(lr%is_allocated_rho) SAFE_ALLOCATE(lr%ddl_rho(1:mesh%np, 1:st%d%nspin))
     end if
 
     lr%is_allocated = .true.
@@ -139,10 +143,10 @@ contains
 
     if (states_are_complex(st)) then
       lr%zdl_psi = M_ZERO
-      lr%zdl_rho = M_ZERO
+      if(lr%is_allocated_rho) lr%zdl_rho = M_ZERO
     else
       lr%ddl_psi = M_ZERO
-      lr%ddl_rho = M_ZERO
+      if(lr%is_allocated_rho) lr%ddl_rho = M_ZERO
     end if
 
     POP_SUB(lr_zero)
@@ -184,6 +188,7 @@ contains
 
     PUSH_SUB(lr_copy)
 
+    if(src%is_allocated_rho .and. dest%is_allocated_rho) then
     do ik = 1, st%d%nspin
       if(states_are_complex(st)) then
         call lalg_copy(mesh%np, src%zdl_rho(:, ik), dest%zdl_rho(:, ik))
@@ -191,6 +196,15 @@ contains
         call lalg_copy(mesh%np, src%ddl_rho(:, ik), dest%ddl_rho(:, ik))
       end if
     end do
+    else
+      if(dest%is_allocated_rho) then
+        if(states_are_complex(st)) then
+          dest%zdl_rho(:, :) = M_ZERO
+        else
+          dest%ddl_rho(:, :) = M_ZERO
+        end if
+      end if
+    end if
 
     do ik = 1, st%d%nik
       do ist = 1, st%nst

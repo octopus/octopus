@@ -162,7 +162,7 @@ subroutine X(run_sternheimer)()
         end if
       end if
     
-      if((em_vars%nfactor > 1) .or. (iomega == 1)) then
+      if((em_vars%nfactor > 1 .or. iomega == 1) .and. allocate_rho_em) then
         !search for the density of the closest frequency, including negative
         closest_omega = em_vars%freq_factor(ifactor) * em_vars%omega(iomega)
         call loct_search_file_lr(closest_omega, idir, ierr_e(idir), trim(restart_dir(restart_load)))
@@ -298,7 +298,7 @@ subroutine X(run_sternheimer)()
   
       if(nsigma_eff == 1 .and. em_vars%nsigma == 2) then
         em_vars%lr(idir, 2, ifactor)%X(dl_psi) = em_vars%lr(idir, 1, ifactor)%X(dl_psi)
-        em_vars%lr(idir, 2, ifactor)%X(dl_rho) = R_CONJ(em_vars%lr(idir, 1, ifactor)%X(dl_rho))
+        if(allocate_rho_em) em_vars%lr(idir, 2, ifactor)%X(dl_rho) = R_CONJ(em_vars%lr(idir, 1, ifactor)%X(dl_rho))
       end if
   
       if(use_kdotp) then
@@ -362,7 +362,7 @@ subroutine X(run_sternheimer)()
           call lr_copy(sys%st, sys%gr%mesh, em_vars%lr(idir, sigma, ifactor), e_lr(idir, sigma))
           e_lr(idir, sigma)%X(dl_psi) = R_CONJ(em_vars%lr(idir, sigma, ifactor)%X(dl_psi))
         end if
-        if((ierr_e2(idir) /= 0) .or. (.not. complex_wfs)) &
+        if(((ierr_e2(idir) /= 0) .or. (.not. complex_wfs)) .and. allocate_rho_em) &
           e_lr(idir, sigma)%X(dl_rho) = R_CONJ(em_vars%lr(idir, sigma, ifactor)%X(dl_rho))
       end do
     end do
@@ -381,7 +381,7 @@ subroutine X(run_sternheimer)()
           em_wfs_tag(idir, ifactor, ipert = PE), .true., have_exact_freq = exact_freq1(idir))
         if(nsigma_eff == 1 .and. em_vars%nsigma == 2) then
           e_lr(idir, 2)%X(dl_psi) = e_lr(idir, 1)%X(dl_psi)
-          e_lr(idir, 2)%X(dl_rho) = R_CONJ(e_lr(idir, 1)%X(dl_rho))
+          if(allocate_rho_em) e_lr(idir, 2)%X(dl_rho) = R_CONJ(e_lr(idir, 1)%X(dl_rho))
         end if
         if(use_kdotp .and. idir <= gr%sb%periodic_dim) then
           call sternheimer_unset_rhs(sh)
@@ -398,7 +398,7 @@ subroutine X(run_sternheimer)()
           message(1) = "Info: Calculating response for B-perturbation"
           call messages_info(1)  
           call X(inhomog_B)(sh_mo, sys, hm, magn_dir(idir, 1), magn_dir(idir, 2),&
-            kdotp_lr(magn_dir(idir, 1), 1:1), kdotp_lr(magn_dir(idir, 2), 1:1), inhomog) 
+            kdotp_lr(magn_dir(idir, 1), 1:1), kdotp_lr(magn_dir(idir, 2), 1:1), inhomog)
           call X(sternheimer_set_inhomog)(sh_mo, inhomog)   
           call X(sternheimer_solve)(sh_mo, sys, hm, b_lr(idir, 1:1), 1, &
             R_TOPREC(frequency_zero), pert2_none, restart_dump, "null", &
@@ -456,7 +456,6 @@ subroutine X(run_sternheimer)()
                   em_wfs_tag(idir, ifactor, idir2, ipert), have_restart_rho = .false., have_exact_freq = .false.)
                 if(nsigma_eff == 1 .and. em_vars%nsigma == 2) then
                   ke_lr(idir, idir2, 2)%X(dl_psi) = ke_lr(idir, idir2, 1)%X(dl_psi)
-                  ke_lr(idir, idir2, 2)%X(dl_rho) = R_CONJ(ke_lr(idir, idir2, 1)%X(dl_rho))
                 end if
                 call sternheimer_unset_inhomog(sh_kmo)
                 em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh_kmo)

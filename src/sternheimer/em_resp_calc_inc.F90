@@ -1202,8 +1202,8 @@ subroutine X(lr_calc_magneto_optics_periodic)(sh, sh2, sys, hm, nsigma, &
   add_fxc2 = sternheimer_add_fxc(sh2)
   
   call lr_init(lr0(1))
-  call lr_allocate(lr0(1), sys%st, sys%gr%mesh)
   if(add_hartree2 .or. add_fxc2) then
+    call lr_allocate(lr0(1), sys%st, sys%gr%mesh, allocate_rho = .true.)
     if(add_fxc2) then
       SAFE_ALLOCATE(density(1:np))
     end if
@@ -1234,6 +1234,8 @@ subroutine X(lr_calc_magneto_optics_periodic)(sh, sh2, sys, hm, nsigma, &
     if(add_fxc2) then 
       SAFE_DEALLOCATE_A(density) 
     end if
+  else
+    call lr_allocate(lr0(1), sys%st, sys%gr%mesh, allocate_rho = .false.)
   end if
   
   if(add_hartree1 .or. add_fxc1) then
@@ -2117,7 +2119,7 @@ subroutine X(inhomog_B)(sh, sys, hm, idir1, idir2, &
  
   if(sternheimer_add_hartree(sh) .or. sternheimer_add_fxc(sh)) then
     call lr_init(lr0(1))
-    call lr_allocate(lr0(1), sys%st, sys%gr%mesh)
+    call lr_allocate(lr0(1), sys%st, sys%gr%mesh, allocate_rho = .true.)
     lr0(1)%X(dl_rho)(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = M_ZERO
     factor_sum = -M_ONE
     call X(calc_rho)(sys, hm, factor_rho, factor_sum, factor_k, factor_k,&
@@ -2561,7 +2563,7 @@ subroutine X(inhomog_KB_tot)(sh, sys, hm, idir, idir1, idir2, &
   
   if(add_hartree .or. add_fxc) then
     call lr_init(lr0(1))
-    call lr_allocate(lr0(1), sys%st, sys%gr%mesh)
+    call lr_allocate(lr0(1), sys%st, sys%gr%mesh, allocate_rho = .true.)
     lr0(1)%X(dl_rho) = lr_b(1)%X(dl_rho)
   
     call X(calc_rho)(sys, hm, factor_rho, factor_sum, factor1, &

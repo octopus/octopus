@@ -126,7 +126,7 @@ contains
     integer :: ierr_e(3), ierr_e1(3), ierr_e2(3) 
     character(len=100) :: dirname_output, str_tmp
     logical :: complex_response, have_to_calculate, use_kdotp, opp_freq, &
-      exact_freq(3), exact_freq1(3), complex_wfs
+      exact_freq(3), exact_freq1(3), complex_wfs, allocate_rho_em, allocate_rho_mo
 
     FLOAT :: closest_omega, last_omega, frequency
     FLOAT, allocatable :: dl_eig(:,:,:)
@@ -201,7 +201,7 @@ contains
       
       do idir = 1, gr%sb%periodic_dim
         call lr_init(kdotp_lr(idir, 1))
-        call lr_allocate(kdotp_lr(idir, 1), sys%st, sys%gr%mesh)
+        call lr_allocate(kdotp_lr(idir, 1), sys%st, sys%gr%mesh, allocate_rho = .false.)
 
         ! load wavefunctions
         str_tmp = kdotp_wfs_tag(idir)
@@ -243,7 +243,7 @@ contains
           do idir = 1, gr%sb%periodic_dim
             do idir2 = 1, gr%sb%dim
               call lr_init(kdotp_em_lr2(idir, idir2, sigma, ifactor))
-              call lr_allocate(kdotp_em_lr2(idir, idir2, sigma, ifactor), sys%st, sys%gr%mesh)
+              call lr_allocate(kdotp_em_lr2(idir, idir2, sigma, ifactor), sys%st, sys%gr%mesh, allocate_rho = .false.)
             end do
           end do
         end do
@@ -255,7 +255,7 @@ contains
       SAFE_ALLOCATE(dl_eig(1:sys%st%nst, 1:sys%st%d%nik, 1:sys%gr%sb%periodic_dim))
 
       call lr_init(kdotp_lr2)
-      call lr_allocate(kdotp_lr2, sys%st, sys%gr%mesh)
+      call lr_allocate(kdotp_lr2, sys%st, sys%gr%mesh, allocate_rho = .false.)
 
     end if
 
@@ -291,10 +291,10 @@ contains
         do idir = 1, gr%sb%dim
           do idir2 = 1, gr%sb%dim
             call lr_init(kb_lr(idir, idir2, 1))
-            call lr_allocate(kb_lr(idir, idir2, 1), sys%st, sys%gr%mesh)
+            call lr_allocate(kb_lr(idir, idir2, 1), sys%st, sys%gr%mesh, allocate_rho = .false.)
             if(idir2 <= idir) then
               call lr_init(k2_lr(idir, idir2, 1))
-              call lr_allocate(k2_lr(idir, idir2, 1), sys%st, sys%gr%mesh)
+              call lr_allocate(k2_lr(idir, idir2, 1), sys%st, sys%gr%mesh, allocate_rho = .false.)
             end if 
           end do
         end do
@@ -342,11 +342,13 @@ contains
       call io_mkdir(EM_RESP_DIR) ! output
     end if
 
+
+    allocate_rho_em = sternheimer_add_fxc(sh) .or. sternheimer_add_hartree(sh)
     do ifactor = 1, em_vars%nfactor
       do idir = 1, sys%gr%sb%dim
         do sigma = 1, em_vars%nsigma
           call lr_init(em_vars%lr(idir, sigma, ifactor))
-          call lr_allocate(em_vars%lr(idir, sigma, ifactor), sys%st, sys%gr%mesh)
+          call lr_allocate(em_vars%lr(idir, sigma, ifactor), sys%st, sys%gr%mesh, allocate_rho = allocate_rho_em)
         end do
       end do
     end do
@@ -359,14 +361,15 @@ contains
         call sternheimer_build_kxc(sh_mo, sys%gr%mesh, sys%st, sys%ks)
       end if
       call messages_experimental("Magneto-optical response")
+            allocate_rho_mo = sternheimer_add_fxc(sh_mo) .or. sternheimer_add_hartree(sh_mo)
       SAFE_ALLOCATE(b_lr(1:gr%sb%dim, 1:1))
       SAFE_ALLOCATE(e_lr(1:gr%sb%dim, 1:em_vars%nsigma))
       do idir = 1, gr%sb%dim
         call lr_init(b_lr(idir, 1))
-        call lr_allocate(b_lr(idir, 1), sys%st, sys%gr%mesh)
+        call lr_allocate(b_lr(idir, 1), sys%st, sys%gr%mesh, allocate_rho = allocate_rho_mo)
         do sigma = 1, em_vars%nsigma
           call lr_init(e_lr(idir, sigma))
-          call lr_allocate(e_lr(idir, sigma), sys%st, sys%gr%mesh)
+          call lr_allocate(e_lr(idir, sigma), sys%st, sys%gr%mesh, allocate_rho = allocate_rho_em)
         end do
       end do
       
@@ -376,7 +379,7 @@ contains
           do idir2 = 1, gr%sb%dim
             do sigma = 1, em_vars%nsigma
               call lr_init(ke_lr(idir, idir2, sigma))
-              call lr_allocate(ke_lr(idir, idir2, sigma), sys%st, sys%gr%mesh)
+              call lr_allocate(ke_lr(idir, idir2, sigma), sys%st, sys%gr%mesh, allocate_rho = .false.)
             end do
           end do
         end do
