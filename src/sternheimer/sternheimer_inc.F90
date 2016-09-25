@@ -422,30 +422,30 @@ subroutine X(sternheimer_add_occ)(sys, lr_psi, rhs, sst, est, ik, omega_sigma, d
 
   SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
 
-    ii = 0
-    ! iteration within states block
-    do ist = sst, est
-      ii = ii + 1
+  ii = 0
+  ! iteration within states block
+  do ist = sst, est
+    ii = ii + 1
 
-      do ist2 = 1, sys%st%nst
-        ! avoid dividing by zero below; these contributions are arbitrary anyway
-        if (abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres) cycle
+    do ist2 = 1, sys%st%nst
+      ! avoid dividing by zero below; these contributions are arbitrary anyway
+      if (abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres) cycle
 
-        ! the unoccupied subspace was handled by the Sternheimer equation
-        if(sys%st%occ(ist2, ik) < M_HALF) cycle
+      ! the unoccupied subspace was handled by the Sternheimer equation
+      if(sys%st%occ(ist2, ik) < M_HALF) cycle
 
-        call states_get_state(sys%st, sys%gr%mesh, ist2, ik, psi)
-        mtxel = X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, psi, rhs(:, :, ii))
+      call states_get_state(sys%st, sys%gr%mesh, ist2, ik, psi)
+      mtxel = X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, psi, rhs(:, :, ii))
 
-        lr_psi(1:sys%gr%mesh%np, 1:sys%st%d%dim, ist) = lr_psi(1:sys%gr%mesh%np, 1:sys%st%d%dim, ist) + &
-          psi(1:sys%gr%mesh%np, 1:sys%st%d%dim) * mtxel / (sys%st%eigenval(ist, ik) - sys%st%eigenval(ist2, ik) - omega_sigma)
+      lr_psi(1:sys%gr%mesh%np, 1:sys%st%d%dim, ist) = lr_psi(1:sys%gr%mesh%np, 1:sys%st%d%dim, ist) + &
+        psi(1:sys%gr%mesh%np, 1:sys%st%d%dim) * mtxel / (sys%st%eigenval(ist, ik) - sys%st%eigenval(ist2, ik) - omega_sigma)
 
-        ! need to get psi(ist) to do this. correct for a Hermitian operator, not for kdotp (which would need -mtxel)
-!        lr%X(dl_psi)(:, :, ist2, ik) = lr%X(dl_psi)(:, :, ist2, ik) + &
-!          sys%st%X(psi)(:, :, ist, ik) * R_CONJ(mtxel) / (sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik) - omega_sigma)
+     ! need to get psi(ist) to do this. correct for a Hermitian operator, not for kdotp (which would need -mtxel)
+!     lr%X(dl_psi)(:, :, ist2, ik) = lr%X(dl_psi)(:, :, ist2, ik) + &
+!       sys%st%X(psi)(:, :, ist, ik) * R_CONJ(mtxel) / (sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik) - omega_sigma)
 
-      end do
     end do
+  end do
 
   SAFE_DEALLOCATE_A(psi)
 
