@@ -223,7 +223,7 @@ subroutine X(sternheimer_solve)(                           &
           end do !ist
 
           if(conv_last .and. this%last_occ_response .and. .not. this%occ_response_by_sternheimer) then
-            call X(sternheimer_add_occ)(sys, lr(sigma), rhs_full, sst, est, omega_sigma, CNST(1e-5))
+            call X(sternheimer_add_occ)(sys, lr(sigma)%X(dl_psi)(:, :, :, ik), rhs_full, sst, est, ik, omega_sigma, CNST(1e-5))
           end if
 
         end do !sigma
@@ -400,16 +400,17 @@ end subroutine X(sternheimer_solve)
 
 ! ---------------------------------------------------------
 !> add projection onto occupied states, by sum over states
-subroutine X(sternheimer_add_occ)(sys, lr, rhs, sst, est, omega_sigma, degen_thres)
+subroutine X(sternheimer_add_occ)(sys, lr_psi, rhs, sst, est, ik, omega_sigma, degen_thres)
   type(system_t),      intent(in)    :: sys
-  type(lr_t),          intent(inout) :: lr
+  R_TYPE,              intent(inout) :: lr_psi(:,:,:)
   R_TYPE,              intent(in)    :: rhs(:,:,:) !< (np, ndim, nst)
   integer,             intent(in)    :: sst !< start state
   integer,             intent(in)    :: est !< start state
+  integer,             intent(in)    :: ik
   R_TYPE,              intent(in)    :: omega_sigma
   FLOAT,               intent(in)    :: degen_thres
 
-  integer :: ist, ist2, ik, ii
+  integer :: ist, ist2, ii
   R_TYPE :: mtxel
   R_TYPE, allocatable :: psi(:,:)
 
@@ -421,7 +422,6 @@ subroutine X(sternheimer_add_occ)(sys, lr, rhs, sst, est, omega_sigma, degen_thr
 
   SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
 
-  do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
     ii = 0
     ! iteration within states block
     do ist = sst, est
@@ -437,7 +437,7 @@ subroutine X(sternheimer_add_occ)(sys, lr, rhs, sst, est, omega_sigma, degen_thr
         call states_get_state(sys%st, sys%gr%mesh, ist2, ik, psi)
         mtxel = X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, psi, rhs(:, :, ii))
 
-        lr%X(dl_psi)(1:sys%gr%mesh%np, 1:sys%st%d%dim, ist, ik) = lr%X(dl_psi)(1:sys%gr%mesh%np, 1:sys%st%d%dim, ist, ik) + &
+        lr_psi(1:sys%gr%mesh%np, 1:sys%st%d%dim, ist) = lr_psi(1:sys%gr%mesh%np, 1:sys%st%d%dim, ist) + &
           psi(1:sys%gr%mesh%np, 1:sys%st%d%dim) * mtxel / (sys%st%eigenval(ist, ik) - sys%st%eigenval(ist2, ik) - omega_sigma)
 
         ! need to get psi(ist) to do this. correct for a Hermitian operator, not for kdotp (which would need -mtxel)
@@ -446,7 +446,6 @@ subroutine X(sternheimer_add_occ)(sys, lr, rhs, sst, est, omega_sigma, degen_thr
 
       end do
     end do
-  end do
 
   SAFE_DEALLOCATE_A(psi)
 
