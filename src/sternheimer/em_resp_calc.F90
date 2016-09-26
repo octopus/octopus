@@ -20,6 +20,7 @@
 #include "global.h"
 
 module em_resp_calc_oct_m
+  use comm_oct_m
   use density_oct_m
   use derivatives_oct_m
   use elf_oct_m
