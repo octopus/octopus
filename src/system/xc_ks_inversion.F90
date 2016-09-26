@@ -60,8 +60,10 @@ module xc_ks_inversion_oct_m
 
   !> KS inversion methods/algorithms
   integer, public, parameter ::      &
-    XC_INV_METHOD_VS_ITER      = 1,  &
-    XC_INV_METHOD_TWO_PARTICLE = 2
+    XC_INV_METHOD_TWO_PARTICLE = 1,  &
+    XC_INV_METHOD_VS_ITER      = 2,  &
+    XC_INV_METHOD_ITER_STELLA  = 3,  &
+    XC_INV_METHOD_ITER_GODBY   = 4
 
   !> the KS inversion levels
   integer, public, parameter ::      &
@@ -72,7 +74,7 @@ module xc_ks_inversion_oct_m
   !> asymptotic correction for v_xc
   integer, public, parameter ::      &
     XC_ASYMPTOTICS_NONE    = 1,      &
-    XC_ASYMPTOTICS_SC      = 2     
+    XC_ASYMPTOTICS_SC      = 2
 
   type xc_ks_inversion_t
      integer             :: method
@@ -109,15 +111,19 @@ contains
     !%Description
     !% Selects whether the exact two-particle method or the iterative scheme
     !% is used to invert the density to get the KS potential.
-    !%Option iterative 1
-    !% Iterative scheme for <math>v_s</math>.
-    !%Option two_particle 2
+    !%Option two_particle 1
     !% Exact two-particle scheme.
+    !%Option iterative 2
+    !% Iterative scheme for <math>v_s</math>.
+    !%Option iter_stella 3
+    !% Iterative scheme for <math>v_s</math> using Stella and Verstraete method.
+    !%Option iter_godby 4
+    !% Iterative scheme for <math>v_s</math> using power method from Rex Godby.
     !%End
     call parse_variable('InvertKSmethod', XC_INV_METHOD_VS_ITER, ks_inv%method)
 
-    if(ks_inv%method < XC_INV_METHOD_VS_ITER &
-      .or. ks_inv%method > XC_INV_METHOD_TWO_PARTICLE) then
+    if(ks_inv%method < XC_INV_METHOD_TWO_PARTICLE &
+      .or. ks_inv%method > XC_INV_METHOD_ITER_GODBY) then
       call messages_input_error('InvertKSmethod')
       call messages_fatal(1)
     end if
@@ -325,20 +331,23 @@ contains
   ! here states are used to iterate KS solution and update of the VHXC potential,
   ! then new calculation of rho.
   ! ---------------------------------------------------------
-  subroutine invertks_iter(target_rho, nspin, aux_hm, gr, st, eigensolver, asymptotics)
+  subroutine invertks_iter(target_rho, nspin, aux_hm, gr, st, eigensolver, asymptotics, method)
     type(grid_t),        intent(in)    :: gr
     type(states_t),      intent(inout) :: st
     type(hamiltonian_t), intent(inout) :: aux_hm
     type(eigensolver_t), intent(inout) :: eigensolver
     integer,             intent(in)    :: nspin
+    integer,             intent(in)    :: method
     FLOAT,               intent(in)    :: target_rho(1:gr%mesh%np, 1:nspin)
     integer,             intent(in)    :: asymptotics
         
     integer :: ii, jj, ierr, asym1, asym2
     integer :: iunit, verbosity, counter, np
     integer :: max_iter
+    integer :: imax
     FLOAT :: rr, shift
     FLOAT :: alpha, beta
+    FLOAT :: mu, npower ! these constants are from Rex Godbys scheme
     FLOAT :: convdensity, diffdensity
     FLOAT, allocatable :: vhxc(:,:)
 
@@ -357,6 +366,25 @@ contains
     !% inversion. Has to be larger than the convergence of the density in the SCF run.
     !%End    
     call parse_variable('InvertKSConvAbsDens', CNST(1e-5), convdensity)
+
+    !%Variable InvertKSGodbyMu
+    !%Type float
+    !%Default 1.0
+    !%Section Calculation Modes::Invert KS
+    !%Description
+    !% prefactor for iterative KS inversion convergence scheme from Godby based on van Leeuwen scheme
+    !%End    
+    call parse_variable('InvertKSGodbyMu', CNST(1.0), mu)
+
+    !%Variable InvertKSGodbyPower
+    !%Type float
+    !%Default 0.05
+    !%Section Calculation Modes::Invert KS
+    !%Description
+    !% power to which density is elevated for iterative KS inversion convergence 
+    !% scheme from Godby based on van Leeuwen scheme
+    !%End    
+    call parse_variable('InvertKSGodbyPower', CNST(0.05), npower)
 
     !%Variable InvertKSVerbosity
     !%Type integer
@@ -395,15 +423,15 @@ contains
     if(verbosity == 1 .or. verbosity == 2) then
       iunit = io_open('InvertKSconvergence', action = 'write')
     end if
-    
+
     diffdensity = M_ONE
     counter = 0
     alpha = CNST(0.05)
 
 
     do while(diffdensity > convdensity .and. counter < max_iter)
-      write(message(1),'(a,2E15.4,2I8)') ' KSinversion: diffdensity, convdensity, counter, max_iter ', &
-        diffdensity, convdensity, counter, max_iter
+      write(message(1),'(a,3E15.4,3I8)') ' KSinversion: diffdensity, convdensity, alpha, imax, counter, max_iter ', &
+        diffdensity, convdensity, alpha, imax, counter, max_iter
       call messages_info(1)
       
       counter = counter + 1 
@@ -411,7 +439,8 @@ contains
 
       ! proposition to increase convergence speed progressively
       alpha = max(CNST(0.05), CNST(0.5) - diffdensity*CNST(100.0)*CNST(0.45))
-  
+      !alpha = CNST(0.25)
+
       if(verbosity == 2) then
         write(fname,'(i6.6)') counter
         call dio_function_output(io_function_fill_how("AxisX"), &
@@ -425,22 +454,39 @@ contains
       call density_calc(st, gr, st%rho)      
 
       ! Inversion according to Stella/Verstraete
-      do ii = 1, nspin
-        do jj = 1, np
-          vhxc(jj, ii) = vhxc(jj, ii) &
-             + ((st%rho(jj, ii) - target_rho(jj, ii))/(target_rho(jj, ii) + beta))*alpha
+      if (method == XC_INV_METHOD_VS_ITER) then
+        do ii = 1, nspin
+          do jj = 1, np
+            vhxc(jj, ii) = vhxc(jj, ii) &
+               + ((st%rho(jj, ii) - target_rho(jj, ii))/(target_rho(jj, ii) + beta))*alpha
+          end do
         end do
-      end do
+      else if (method == XC_INV_METHOD_ITER_STELLA) then
+        do ii = 1, nspin
+          do jj = 1, np
+            vhxc(jj, ii) = vhxc(jj, ii) &
+               + ((st%rho(jj, ii) - target_rho(jj, ii))/(target_rho(jj, ii) + beta))*alpha
+          end do
+        end do
+      else if (method == XC_INV_METHOD_ITER_GODBY) then
+        do ii = 1, nspin
+          do jj = 1, np
+            vhxc(jj, ii) = vhxc(jj, ii) &
+               + (st%rho(jj, ii)**npower - target_rho(jj, ii)**npower)*mu
+          end do
+        end do
+      end if
 
       diffdensity = M_ZERO
-      diffdensity = maxval ( abs ( st%rho(1:np,1:nspin)-target_rho(1:np,1:nspin) ) )
-      !do jj = 1, nspin
-      !  do ii = 1, np
-      !    if (abs(st%rho(ii,jj)-target_rho(ii,jj)) > diffdensity) then
-      !      diffdensity = abs(st%rho(ii,jj)-target_rho(ii,jj))
-      !    end if
-      !  end do
-      !end do
+      !diffdensity = maxval ( abs ( st%rho(1:np,1:nspin)-target_rho(1:np,1:nspin) ) )
+      do jj = 1, nspin
+        do ii = 1, np
+          if (abs(st%rho(ii,jj)-target_rho(ii,jj)) > diffdensity) then
+            diffdensity = abs(st%rho(ii,jj)-target_rho(ii,jj))
+            imax = ii
+          end if
+        end do
+      end do
             
       if(verbosity == 1 .or. verbosity == 2) then
         write(iunit,'(i6.6)', ADVANCE = 'no') counter
@@ -455,7 +501,7 @@ contains
       do jj = 1, nspin
         aux_hm%vxc(:, jj) = vhxc(:, jj) - aux_hm%vhartree(1:np)
       end do
-    end do
+    end do ! end while statement on convergence
 
     !ensure correct asymptotic behavior, only for 1D potentials at the moment
     !need to find a way to find all points from where asymptotics should start in 2 and 3D
@@ -547,7 +593,6 @@ contains
     ks_inversion%aux_hm%vhartree = hm%vhartree
  
     if (present(time) .and. time > M_ZERO) then
-!      write(*,*) 'debug 1'
       do ii = 1, st%d%nspin
         ks_inversion%aux_hm%vhxc(:,ii) = ks_inversion%vhxc_previous_step(:,ii)
       end do
@@ -574,9 +619,10 @@ contains
     case(XC_INV_METHOD_TWO_PARTICLE)
       call invertks_2part(ks_inversion%aux_st%rho, st%d%nspin, ks_inversion%aux_hm, gr, &
                          ks_inversion%aux_st, ks_inversion%eigensolver, ks_inversion%asymp)
-    case(XC_INV_METHOD_VS_ITER)
+    case(XC_INV_METHOD_VS_ITER : XC_INV_METHOD_ITER_GODBY)
       call invertks_iter(st%rho, st%d%nspin, ks_inversion%aux_hm, gr, &
-                         ks_inversion%aux_st, ks_inversion%eigensolver, ks_inversion%asymp)
+                         ks_inversion%aux_st, ks_inversion%eigensolver, ks_inversion%asymp, &
+                         ks_inversion%method)
     end select
 
     ! subtract Hartree potential
@@ -590,9 +636,7 @@ contains
     
     ! save vhxc for next step if we are running td
     if (present(time)) then
-!      write(*,*) 'debug 2'
       ks_inversion%vhxc_previous_step = ks_inversion%aux_hm%vhxc
-!      write(*,*) 'debug 3'
     end if
 
     POP_SUB(X(xc_ks_inversion_calc))
