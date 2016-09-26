@@ -907,11 +907,11 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, lr_e, &
   SAFE_ALLOCATE(prod_ee1%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
   SAFE_ALLOCATE(prod_ee2%X(matrix)(1:sys%st%nst, 1:sys%st%nst))
   if(calc_var) then
-  SAFE_ALLOCATE(hvar_e1(1:sys%gr%sb%dim, 1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:nsigma))
-  SAFE_ALLOCATE(hvar_e2(1:sys%gr%sb%dim, 1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:nsigma))
+    SAFE_ALLOCATE(hvar_e1(1:sys%gr%sb%dim, 1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:nsigma))
+    SAFE_ALLOCATE(hvar_e2(1:sys%gr%sb%dim, 1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:nsigma))
   end if
   if(calc_var_mo) then
-  SAFE_ALLOCATE(hvar_b(1:sys%gr%sb%dim, 1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:1))
+    SAFE_ALLOCATE(hvar_b(1:sys%gr%sb%dim, 1:sys%gr%mesh%np, 1:sys%st%d%nspin, 1:1))
   end if
   SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
   SAFE_ALLOCATE(psi1(1:sys%gr%mesh%np, 1:sys%st%d%dim))
@@ -938,18 +938,18 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, lr_e, &
   psi1(:,:) = M_ZERO
   
   if(calc_var) then
-  hvar_e2(:,:,:,:) = M_ZERO
-  hvar_e1(:,:,:,:) = M_ZERO
-  do dir1 = 1, sys%gr%sb%dim
-    call X(sternheimer_calc_hvar)(sh, sys, lr_e(dir1, :), nsigma, hvar_e2(dir1, :, :, :))
-    call X(sternheimer_calc_hvar)(sh, sys, lr_e1(dir1, :), nsigma, hvar_e1(dir1, :, :, :))
-  end do
+    hvar_e2(:,:,:,:) = M_ZERO
+    hvar_e1(:,:,:,:) = M_ZERO
+    do dir1 = 1, sys%gr%sb%dim
+      call X(sternheimer_calc_hvar)(sh, sys, lr_e(dir1, :), nsigma, hvar_e2(dir1, :, :, :))
+      call X(sternheimer_calc_hvar)(sh, sys, lr_e1(dir1, :), nsigma, hvar_e1(dir1, :, :, :))
+    end do
   end if
   if(calc_var_mo) then
-  hvar_b(:,:,:,:) = M_ZERO
-  do dir1 = 1, sys%gr%sb%dim
-    call X(sternheimer_calc_hvar)(sh_mo, sys, lr_b(dir1, :), 1, hvar_b(dir1, :, :, :))
-  end do
+    hvar_b(:,:,:,:) = M_ZERO
+    do dir1 = 1, sys%gr%sb%dim
+      call X(sternheimer_calc_hvar)(sh_mo, sys, lr_b(dir1, :), 1, hvar_b(dir1, :, :, :))
+    end do
   end if
   
   do dir1 = 1, sys%gr%sb%dim
@@ -970,22 +970,22 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, lr_e, &
               call X(pert_apply)(pert_m, sys%gr, sys%geo, hm, ik, &
                 lr_e1(dir1, nsigma)%X(dl_psi)(:, :, ist, ik), pertpsi_b(:, :))
               if(calc_var) then
-              do idim = 1, hm%d%dim
-                do ip = 1, sys%gr%mesh%np
-                  pertpsi_e1(ip, idim) = pertpsi_e1(ip, idim) + hvar_e1(dir1, ip, ispin, 1) * &
-                    lr_e(dir2, 1)%X(dl_psi)(ip,idim,ist,ik)
-                  pertpsi_e2(ip, idim) = pertpsi_e2(ip, idim) + hvar_e2(dir2, ip, ispin, nsigma) * &
-                    lr_e1(dir1, nsigma)%X(dl_psi)(ip, idim, ist, ik)
+                do idim = 1, hm%d%dim
+                  do ip = 1, sys%gr%mesh%np
+                    pertpsi_e1(ip, idim) = pertpsi_e1(ip, idim) + hvar_e1(dir1, ip, ispin, 1) * &
+                      lr_e(dir2, 1)%X(dl_psi)(ip,idim,ist,ik)
+                    pertpsi_e2(ip, idim) = pertpsi_e2(ip, idim) + hvar_e2(dir2, ip, ispin, nsigma) * &
+                      lr_e1(dir1, nsigma)%X(dl_psi)(ip, idim, ist, ik)
+                  end do
                 end do
-              end do
               end if
               if(calc_var_mo) then
-              do idim = 1, hm%d%dim
-                do ip = 1, sys%gr%mesh%np
-                  pertpsi_b(ip, idim) = pertpsi_b(ip, idim) + hvar_b(dir3, ip, ispin, 1) * &
-                    lr_e1(dir1, nsigma)%X(dl_psi)(ip, idim, ist, ik)
+                do idim = 1, hm%d%dim
+                  do ip = 1, sys%gr%mesh%np
+                    pertpsi_b(ip, idim) = pertpsi_b(ip, idim) + hvar_b(dir3, ip, ispin, 1) * &
+                      lr_e1(dir1, nsigma)%X(dl_psi)(ip, idim, ist, ik)
+                  end do
                 end do
-              end do
               end if
               chi(dir1, dir2, dir3) = chi(dir1, dir2, dir3) + weight * ( &
                 factor1 * X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, lr_b(dir3, 1)%X(dl_psi)(:, :, ist, ik),&
@@ -1002,22 +1002,22 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, lr_e, &
               call X(pert_apply)(pert_m, sys%gr, sys%geo, hm, ik, lr_e(dir2, 1)%X(dl_psi)(:, :, ist, ik), &
                 pertpsi_b(:, :))
               if(calc_var) then
-              do idim = 1, hm%d%dim
-                do ip = 1, sys%gr%mesh%np
-                  pertpsi_e1(ip, idim) = pertpsi_e1(ip, idim) + hvar_e1(dir1, ip, ispin, 1) * &
-                    lr_b(dir3, 1)%X(dl_psi)(ip, idim, ist, ik)
-                  pertpsi_e2(ip, idim) = pertpsi_e2(ip, idim) + hvar_e2(dir2, ip, ispin, nsigma) * &
-                    lr_b(dir3, 1)%X(dl_psi)(ip, idim, ist, ik)
+                do idim = 1, hm%d%dim
+                  do ip = 1, sys%gr%mesh%np
+                    pertpsi_e1(ip, idim) = pertpsi_e1(ip, idim) + hvar_e1(dir1, ip, ispin, 1) * &
+                      lr_b(dir3, 1)%X(dl_psi)(ip, idim, ist, ik)
+                    pertpsi_e2(ip, idim) = pertpsi_e2(ip, idim) + hvar_e2(dir2, ip, ispin, nsigma) * &
+                      lr_b(dir3, 1)%X(dl_psi)(ip, idim, ist, ik)
+                  end do
                 end do
-              end do
               end if
               if(calc_var_mo) then
-              do idim = 1, hm%d%dim
-                do ip = 1, sys%gr%mesh%np
-                  pertpsi_b(ip, idim) = pertpsi_b(ip, idim) + hvar_b(dir3, ip, ispin, 1) * &
-                    lr_e(dir2, 1)%X(dl_psi)(ip, idim, ist, ik)
+                do idim = 1, hm%d%dim
+                  do ip = 1, sys%gr%mesh%np
+                    pertpsi_b(ip, idim) = pertpsi_b(ip, idim) + hvar_b(dir3, ip, ispin, 1) * &
+                      lr_e(dir2, 1)%X(dl_psi)(ip, idim, ist, ik)
+                  end do
                 end do
-              end do
               end if
               chi(dir1, dir2, dir3) = chi(dir1, dir2, dir3) + weight * ( &
                 X(mf_dotp)(sys%gr%mesh, sys%st%d%dim,&
@@ -1066,19 +1066,19 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, lr_e, &
               call X(pert_apply)(pert_e2, sys%gr, sys%geo, hm, ik, psi, pertpsi_e2(:, :))
               call X(pert_apply)(pert_m, sys%gr, sys%geo, hm, ik, psi, pertpsi_b(:, :))
               if(calc_var) then
-              do idim = 1, hm%d%dim
-                do ip = 1, sys%gr%mesh%np
-                  pertpsi_e1(ip, idim) = pertpsi_e1(ip, idim) + hvar_e1(dir1, ip, ispin, 1) * psi(ip, idim)
-                  pertpsi_e2(ip, idim) = pertpsi_e2(ip, idim) + hvar_e2(dir2, ip, ispin, nsigma) * psi(ip, idim)
+                do idim = 1, hm%d%dim
+                  do ip = 1, sys%gr%mesh%np
+                    pertpsi_e1(ip, idim) = pertpsi_e1(ip, idim) + hvar_e1(dir1, ip, ispin, 1) * psi(ip, idim)
+                    pertpsi_e2(ip, idim) = pertpsi_e2(ip, idim) + hvar_e2(dir2, ip, ispin, nsigma) * psi(ip, idim)
+                  end do
                 end do
-              end do
               end if
               if(calc_var_mo) then
-              do idim = 1, hm%d%dim
-                do ip = 1, sys%gr%mesh%np
-                  pertpsi_b(ip, idim) = pertpsi_b(ip, idim) + hvar_b(dir3, ip, ispin, 1) * psi(ip, idim)
+                do idim = 1, hm%d%dim
+                  do ip = 1, sys%gr%mesh%np
+                    pertpsi_b(ip, idim) = pertpsi_b(ip, idim) + hvar_b(dir3, ip, ispin, 1) * psi(ip, idim)
+                  end do
                 end do
-              end do
               end if
               do ist_occ = 1, sys%st%nst
                 if(abs(sys%st%occ(ist_occ, ik)) .gt. M_EPSILON) then
@@ -1114,11 +1114,11 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, lr_e, &
   SAFE_DEALLOCATE_A(pertpsi_e2)
   SAFE_DEALLOCATE_A(pertpsi_b)
   if(calc_var) then
-  SAFE_DEALLOCATE_A(hvar_e1)
-  SAFE_DEALLOCATE_A(hvar_e2)
+    SAFE_DEALLOCATE_A(hvar_e1)
+    SAFE_DEALLOCATE_A(hvar_e2)
   end if
   if(calc_var_mo) then
-  SAFE_DEALLOCATE_A(hvar_b)
+    SAFE_DEALLOCATE_A(hvar_b)
   end if
   
   if(sternheimer_add_fxc(sh)) then 
