@@ -170,7 +170,7 @@ contains
 
       call scf_occ(rdm, gr, hm, st, energy_occ)
       ! Diagonalization of the generalized Fock matrix 
-      do icount = 1, 100 ! still under investigation how many iterations we need
+      do icount = 1, 50 ! still under investigation how many iterations we need
         call scf_orb(rdm, gr, geo, st, ks, hm, energy)
         energy_dif = energy - energy_old
         energy_old = energy
@@ -241,17 +241,16 @@ contains
 
       !%Variable RDMTolerance
       !%Type float
-      !%Default 1e-1 Ha
+      !%Default 1e-7 Ha
       !%Section SCF::RDMFT
       !%Description
       !% Convergence criterion for stopping the occupation numbers minimization. Minimization is
       !% stopped when all derivatives of the energy wrt. each occupation number 
       !% are smaller than this criterion. The bisection for finding the correct mu that is needed
       !% for the occupation number minimization also stops according to this criterion.
-      !% This number gets stricter with more iterations.
       !%End
 
-      call parse_variable('RDMTolerance', CNST(1.0e-1), rdm%toler)
+      call parse_variable('RDMTolerance', CNST(1.0e-7), rdm%toler)
 
       !%Variable RDMConvEner
       !%Type float
@@ -265,7 +264,7 @@ contains
       !% orbitals is smaller than this criterion. It is also used to exit the orbital minimization.
       !%End
 
-      call parse_variable('RDMConvEner', CNST(1.0e-6), rdm%conv_ener)
+      call parse_variable('RDMConvEner', CNST(1.0e-7), rdm%conv_ener)
       
       !%Variable RDMBasis
       !%Type logical
@@ -369,10 +368,10 @@ contains
     type(states_t),       intent(inout) :: st
     FLOAT,                intent(out)   :: energy
 
-    integer :: ist, icycle, ierr
+    integer :: ist, icycle, ierr, ik
     FLOAT ::  sumgi1, sumgi2, sumgim, mu1, mu2, mum, dinterv
     FLOAT, allocatable ::  occin(:,:),dE_dn(:), occ(:)
-    FLOAT, parameter :: smallocc = CNST(0.01) 
+    FLOAT, parameter :: smallocc = CNST(0.00001) 
     REAL(8), allocatable ::   theta(:)
     REAL(8) :: objective
 
@@ -393,6 +392,23 @@ contains
     where(occin(:,:) < smallocc) occin(:,:) = smallocc 
     where(occin(:,:) > st%smear%el_per_state-smallocc) occin(:,:) = st%smear%el_per_state - smallocc
 
+    !Renormalize the occupation numbers 
+    rdm%occsum = M_ZERO
+
+    do ist = 1, st%nst
+      do ik = 1, st%d%nik
+        rdm%occsum = rdm%occsum + occin(ist,ik)
+      end do
+    end do
+
+    do ist = 1, st%nst
+      do ik = 1, st%d%nik
+        occin(ist, ik) = occin(ist,ik)*st%qtot/rdm%occsum
+      end do
+    end do 
+
+    rdm%occsum = st%qtot
+
     st%occ = occin
     
     if((rdm%iter == 1).and. (rdm%do_basis.eqv. .true.))  then 
@@ -410,13 +426,13 @@ contains
 
     !use n_j=sin^2(2pi*theta_j) to treat pinned states, minimize for both intial mu
     theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-    call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.5,8), real(0.1, 8), &
-        real(0.001, 8), real(0.001,8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
+    call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
+        real(CNST(1e-8), 8), real(CNST(1e-8),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
     sumgi1 = rdm%occsum - st%qtot
     rdm%mu = mu2
     theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-    call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.5,8), real(0.1, 8), &
-        real(0.001, 8), real(0.001,8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
+    call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
+        real(CNST(1e-8), 8), real(CNST(1e-8),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
     sumgi2 = rdm%occsum - st%qtot
 
     ! Adjust the interval between the initial mu to include the root of rdm%occsum-st%qtot=M_ZERO
@@ -427,8 +443,8 @@ contains
         mu1 = mu1 - dinterv
         rdm%mu = mu1
         theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-        call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.5,8), real(0.1, 8), &
-        real(0.001, 8), real(0.001,8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
+        call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
+            real(CNST(1e-8), 8), real(CNST(1e-8),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
         sumgi1 = rdm%occsum - st%qtot 
       else
         mu1 = mu2
@@ -436,8 +452,8 @@ contains
         mu2 = mu2 + dinterv
         rdm%mu = mu2
         theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-        call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.5,8), real(0.1, 8), &
-        real(0.001, 8), real(0.001,8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
+        call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
+            real(CNST(1e-8), 8), real(CNST(1e-8),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
       end if
     end do
 
@@ -445,8 +461,8 @@ contains
       mum = (mu1 + mu2)*M_HALF
       rdm%mu = mum
       theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-      call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.5,8), real(0.1, 8), &
-      real(0.001, 8), real(0.001,8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
+      call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
+          real(CNST(1e-8), 8), real(CNST(1e-8),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
       sumgim = rdm%occsum - st%qtot
       if (sumgi1*sumgim < M_ZERO) then
         mu2 = mum
