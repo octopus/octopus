@@ -162,7 +162,7 @@ subroutine X(sternheimer_solve)(                           &
           call batch_init(rhsb, st%d%dim, sst, est, rhs)
           
           if(sternheimer_have_rhs(this)) then
-            call batch_init(orhsb, st%d%dim, sst, est, this%X(rhs)(:, :, sst:, ik))
+            call batch_init(orhsb, st%d%dim, sst, est, this%X(rhs)(:, :, sst:, ik - st%d%kpt%start + 1))
             call batch_copy_data(mesh%np, orhsb, rhsb)
             call batch_end(orhsb)
           else
@@ -188,7 +188,7 @@ subroutine X(sternheimer_solve)(                           &
 
             if(sternheimer_have_inhomog(this)) then
               forall(idim = 1:st%d%dim, ip = 1:mesh%np)
-                rhs(ip, idim, ii) = rhs(ip, idim, ii) + this%X(inhomog)(ip, idim, ist, ik, sigma)
+                rhs(ip, idim, ii) = rhs(ip, idim, ii) + this%X(inhomog)(ip, idim, ist, ik - st%d%kpt%start + 1, sigma)
               end forall
             end if
 
@@ -647,7 +647,7 @@ subroutine X(sternheimer_solve_order2)( &
 
   ! FIXME: do not allocate ones we can point instead
 
-  SAFE_ALLOCATE(inhomog(1:mesh%np, 1:st%d%dim, 1:st%nst, 1:st%d%nik, 1:nsigma))
+  SAFE_ALLOCATE(inhomog(1:mesh%np, 1:st%d%dim, 1:st%nst, 1:sys%st%d%kpt%nlocal, 1:nsigma))
   SAFE_ALLOCATE(hvar1(1:mesh%np, 1:st%d%nspin, 1:nsigma))
   SAFE_ALLOCATE(hvar2(1:mesh%np, 1:st%d%nspin, 1:nsigma))
   SAFE_ALLOCATE(pert1psi2(1:mesh%np, 1:st%d%dim))
@@ -704,7 +704,7 @@ subroutine X(sternheimer_solve_order2)( &
         ! FIXME: sort out proper isigma`s when not just freq = 0 for second perturbation?
 
         do idim = 1, st%d%dim
-          inhomog(1:mesh%np, idim, ist, ik, isigma) = &
+          inhomog(1:mesh%np, idim, ist, ik - st%d%kpt%start + 1, isigma) = &
             - pert1psi2(1:mesh%np, idim) &
             - (hvar1(1:mesh%np, ispin, isigma) - dl_eig1) * lr2(1)%X(dl_psi)(1:mesh%np, idim, ist, ik) &
             - pert2psi1(1:mesh%np, idim) &
