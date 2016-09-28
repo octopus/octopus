@@ -20,6 +20,7 @@
 subroutine X(run_sternheimer)()
 
   R_TYPE, allocatable :: inhomog(:,:,:,:,:)
+  integer :: ik, ik0
 
   PUSH_SUB(em_resp_run.X(run_sternheimer))
 
@@ -228,12 +229,12 @@ subroutine X(run_sternheimer)()
   else
     nsigma_eff = em_vars%nsigma
   end if
+  SAFE_ALLOCATE(inhomog(1:gr%mesh%np,1:hm%d%dim,1:sys%st%nst,1:sys%st%d%kpt%nlocal,1:nsigma_eff))
 
   if((pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) .and. use_kdotp) then
-    SAFE_ALLOCATE(inhomog(1:gr%mesh%np,1:hm%d%dim,1:sys%st%nst,1:sys%st%d%nik,1:nsigma_eff))
     do idir = 1, sys%gr%sb%dim 
       message(1)="Info: Calculating response for B-perturbation"
-      call messages_info(1)	
+      call messages_info(1)
       call X(inhomog_B)(sh, sys, hm, magn_dir(idir,1), magn_dir(idir,2), &
         kdotp_lr(magn_dir(idir, 1), 1:1), kdotp_lr(magn_dir(idir, 2), 1:1),inhomog) 
       call X(sternheimer_set_inhomog)(sh, inhomog)   
@@ -242,7 +243,7 @@ subroutine X(run_sternheimer)()
         em_rho_tag(abs(em_vars%freq_factor(ifactor) * em_vars%omega(iomega)), idir), &
         em_wfs_tag(idir, ifactor), have_restart_rho = (ierr_e(idir) == 0), have_exact_freq = exact_freq(idir))
       call sternheimer_unset_inhomog(sh)
-      em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh)	
+      em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh)
     end do
 
     do idir = 1, sys%gr%sb%dim
@@ -277,13 +278,16 @@ subroutine X(run_sternheimer)()
         em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh_kmo)
       end do
     end do
-    SAFE_DEALLOCATE_A(inhomog) 
   else 
     do idir = 1, sys%gr%sb%dim
       call pert_setup_dir(em_vars%perturbation, idir)
   
       if(use_kdotp .and. idir <= gr%sb%periodic_dim) then
-        call X(sternheimer_set_rhs)(sh, kdotp_lr(idir, 1)%X(dl_psi))
+        do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
+          ik0 = ik - sys%st%d%kpt%start + 1 
+          inhomog(:, :, :, ik0, 1) = kdotp_lr(idir, 1)%X(dl_psi)(:,:,:,ik)
+        end do
+        call X(sternheimer_set_rhs)(sh, inhomog(:,:,:,:,1))
       end if
 
       str_tmp = freq2str(units_from_atomic(units_out%energy, frequency))
@@ -373,7 +377,11 @@ subroutine X(run_sternheimer)()
         call messages_info(1)
         call pert_setup_dir(em_vars%perturbation, idir)
         if(use_kdotp .and. idir <= gr%sb%periodic_dim) then
-          call X(sternheimer_set_rhs)(sh, kdotp_lr(idir, 1)%X(dl_psi))
+          do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
+            ik0 = ik - sys%st%d%kpt%start + 1 
+            inhomog(:, :, :, ik0, 1) = kdotp_lr(idir, 1)%X(dl_psi)(:,:,:,ik)
+          end do
+          call X(sternheimer_set_rhs)(sh, inhomog(:,:,:,:,1))
         end if       
         call X(sternheimer_solve)(sh, sys, hm, e_lr(idir, 1:nsigma_eff), nsigma_eff, &
           R_TOPREC(R_CONJ(frequency_eta)), em_vars%perturbation, restart_dump, &
@@ -391,8 +399,6 @@ subroutine X(run_sternheimer)()
     end if
 
     if(use_kdotp) then
-      SAFE_ALLOCATE(inhomog(1:gr%mesh%np, 1:hm%d%dim, 1:sys%st%nst, 1:sys%st%d%nik, 1:nsigma_eff))
- 
       if(iomega == 1) then
         do idir = 1, gr%sb%dim
           message(1) = "Info: Calculating response for B-perturbation"
@@ -463,7 +469,6 @@ subroutine X(run_sternheimer)()
           end do
         end do
       end do
-      SAFE_DEALLOCATE_A(inhomog)
     else
       if(iomega == 1) then
         do idir = 1, sys%gr%sb%dim
@@ -481,6 +486,7 @@ subroutine X(run_sternheimer)()
   end if
 
   call restart_end(restart_dump)
+  SAFE_DEALLOCATE_A(inhomog) 
 
   POP_SUB(em_resp_run.X(run_sternheimer))
 end subroutine X(run_sternheimer)
