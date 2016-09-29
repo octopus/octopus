@@ -2,10 +2,11 @@
 # $Id$
 
 ExperimentalFeatures = yes
-Units = eV_Angstrom
+UnitsOutput = eV_Angstrom
 
-Radius = 5.0
-Spacing = 0.5
+Radius = 5.0*angstrom
+Spacing = 0.5*angstrom
+
 %Coordinates
   "H" | 0 | 0 | 0
 %

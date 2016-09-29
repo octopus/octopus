@@ -1,20 +1,20 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 
-Units = ev_angstrom
+UnitsOutput = ev_angstrom
 
 CalculationMode = unocc
 
-Radius  = 5.0
-Spacing = 0.35
+Radius  = 5.0*angstrom
+Spacing = 0.35*angstrom
 
 %Species
  "Xe" | species_pseudo | db_file | "extra/Xe.UPF"
 %
 
 %Coordinates
-  "Xe" | -1.5 | 0 | 0 
-  "Xe" |  1.5 | 0 | 0 
+  "Xe" | -1.5*angstrom | 0 | 0 
+  "Xe" |  1.5*angstrom | 0 | 0 
 %
 ExcessCharge = 1
 

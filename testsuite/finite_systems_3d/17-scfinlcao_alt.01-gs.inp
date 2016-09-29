@@ -3,11 +3,11 @@
 #
 CalculationMode = gs
 FromScratch = yes
-Units = ev_angstrom
+UnitsOutput = ev_angstrom
 
 # Colmont et al
-rCCl  = 1.760
-rCH   = 1.080
+rCCl  = 1.760*angstrom
+rCH   = 1.080*angstrom
 theta = 108.23 * pi / 180
 
 %Coordinates
@@ -24,8 +24,8 @@ theta = 108.23 * pi / 180
  'Cl' | species_pseudo | db_file | "extra/Cl.psf" | lmax | 3 | lloc | 0
 %
 
-Spacing = 0.25
-Radius = 6.0
+Spacing = 0.25*angstrom
+Radius = 6.0*angstrom
 
 XCFunctional = gga_x_pbe + gga_c_pbe
 

@@ -1,22 +1,22 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 
-Units = ev_angstrom
+UnitsOutput = ev_angstrom
 
 CalculationMode = gs
 fromScratch = yes
 
 BoxShape = minimum
-Radius  = 5.0
-Spacing = 0.35
+Radius  = 5.0*angstrom
+Spacing = 0.35*angstrom
 
 %Species
  "Xe" | species_pseudo | file | "07-spin_orbit_coupling.02-xe-pseudo.upf"
 %
 
 %Coordinates
-  "Xe" | -1.5 | 0 | 0 
-  "Xe" |  1.5 | 0 | 0 
+  "Xe" | -1.5*angstrom | 0 | 0 
+  "Xe" |  1.5*angstrom | 0 | 0 
 %
 ExcessCharge = 1
 

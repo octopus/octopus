@@ -2,10 +2,11 @@
 # $Id: 05-output.02-convert.inp 14678 2015-10-19 06:40:46Z xavier $
 
 ExperimentalFeatures = yes
-Units = eV_Angstrom
+UnitsOutput = eV_Angstrom
 
-Radius = 5.0
-Spacing = 0.5
+Radius = 5.0*angstrom
+Spacing = 0.5*angstrom
+
 %Coordinates
   "H" | 0 | 0 | 0
 %
