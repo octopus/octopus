@@ -1,24 +1,24 @@
 CalculationMode = td
 
-Units = ev_angstrom
+UnitsOutput = ev_angstrom
 
 %Coordinates
-'Na'  | -1.4646408 | 0 | 0 | yes
-'Na'  |  1.4646408 | 0 | 0 | yes
+'Na'  | -1.4646408*angstrom | 0 | 0 | yes
+'Na'  |  1.4646408*angstrom | 0 | 0 | yes
 %
 
 ExcessCharge = 1
 
 FromScratch = yes
 
-Spacing = 0.32
-Radius = 6.0
+Spacing = 0.32*angstrom
+Radius = 6.0*angstrom
 
 TDMaxSteps = 500
 
 TDPropagator = aetrs
 
-TDDeltaStrength = 0.01
+TDDeltaStrength = 0.01/angstrom
 
 %TDPolarization
  1/sqrt(2) | -1/sqrt(2) | 0
@@ -29,8 +29,8 @@ TDDeltaStrength = 0.01
 TDPolarizationDirection = 1
 TDPolarizationEquivAxes = 3
 
-PropagationSpectrumMaxEnergy = 10.0
-PropagationSpectrumEnergyStep = 0.1
+PropagationSpectrumMaxEnergy = 10.0*eV
+PropagationSpectrumEnergyStep = 0.1*eV
 
 SpinComponents = spin_polarized
 
