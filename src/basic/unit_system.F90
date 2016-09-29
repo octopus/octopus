@@ -131,6 +131,9 @@ contains
     !%Option ev_angstrom   1
     !% Electronvolts for energy, Angstroms for length, the rest of the
     !% units are derived from these and <math>\hbar=1</math>.
+    !%Option angstrom        1.8897261328856432
+    !%Option ev              0.03674932539796232
+    !%Option electronvolt    0.03674932539796232
     !%End
 
     !%Variable UnitsInput
