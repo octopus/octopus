@@ -131,9 +131,6 @@ contains
     !%Option ev_angstrom   1
     !% Electronvolts for energy, Angstroms for length, the rest of the
     !% units are derived from these and <math>\hbar=1</math>.
-    !%Option femtoseconds  2
-    !% (Experimental) If you add this value to the other options,
-    !% Octopus will treat time in femtoseconds units.
     !%End
 
     !%Variable UnitsInput
@@ -217,16 +214,8 @@ contains
     unit_gigabytes%abbrev = 'GiB'
     unit_gigabytes%name   = 'gibibytes'
 
-    call unit_system_get(units_inp, mod(cinp, 2))
-    call unit_system_get(units_out, mod(cout, 2))
-
-    if(cinp/2 == 1 .or. cout/2 == 1) then
-      call messages_experimental('Femtosecond units')
-    end if
-
-    if(cinp/2 == 1) units_inp%time = unit_femtosecond
-    if(cout/2 == 1) units_out%time = unit_femtosecond
-
+    call unit_system_get(units_inp, cinp)
+    call unit_system_get(units_out, cout)
 
     !%Variable UnitsXYZFiles
     !%Type integer
@@ -239,7 +228,7 @@ contains
     !% The XYZ will be assumed to be in the same units that Octopus is
     !% using for the input file based on the Units, UnitsInput, and
     !% UnitsOutput variables.
-    !%Option angstrom   1
+    !%Option angstrom_units   1
     !% XYZ files will be assumed to be always in Angstrom,
     !% independently of the units used by Octopus. This ensures
     !% compatibility with most programs, that assume XYZ files have
@@ -256,8 +245,8 @@ contains
       units_inp%length_xyz_file = units_inp%length
       units_out%length_xyz_file = units_out%length
 
-    case(OPTION__UNITSXYZFILES__ANGSTROM)
-      call messages_experimental('UnitsXYZFiles = angstrom')
+    case(OPTION__UNITSXYZFILES__ANGSTROM_UNITS)
+      call messages_experimental('UnitsXYZFiles = angstrom_units')
       units_inp%length_xyz_file = unit_angstrom
       units_out%length_xyz_file = unit_angstrom
 
