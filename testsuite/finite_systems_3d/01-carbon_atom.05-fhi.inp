@@ -8,7 +8,7 @@
 
 CalculationMode = gs
 fromScratch = yes
-units = ev_angstrom
+UnitsOutput = ev_angstrom
 
 %Coordinates
 "C" | 0 | 0 | 0
@@ -18,8 +18,8 @@ units = ev_angstrom
 "C" | species_pseudo | db_file | "extra/C.fhi" | lmax | 1 | lloc | 1
 %
 
-spacing = 0.19
-radius = 5.0
+spacing = 0.19*angstrom
+radius = 5.0*angstrom
 
 SpinComponents = polarized
 

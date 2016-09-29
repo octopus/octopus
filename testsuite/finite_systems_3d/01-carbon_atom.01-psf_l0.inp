@@ -19,14 +19,14 @@
 
 CalculationMode = gs
 fromScratch = yes
-units = ev_angstrom
+UnitsOutput = ev_angstrom
 
 %Coordinates
 "C" | 0 | 0 | 0
 %
 
-spacing = 0.19
-radius = 5.0
+spacing = 0.19*angstrom
+radius = 5.0*angstrom
 
 ForceComplex = yes
 LCAOComplexYlms = yes

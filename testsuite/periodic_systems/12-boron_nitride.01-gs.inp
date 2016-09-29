@@ -3,7 +3,7 @@ FromScratch = yes
 PeriodicDimensions = 2
 ExperimentalFeatures = yes
 
-Units = ev_angstrom
+UnitsOutput = ev_angstrom
 
 MixField = potential
 ExtraStates = 2
@@ -13,10 +13,10 @@ ConvEigenError = yes
 XCfunctional = lda_x + lda_c_pw
 
 BoxShape = parallelepiped
-a = 1.45
+a = 1.45*angstrom
 lx = 3*a
 ly = sqrt(3)*a
-lz = 4.0
+lz = 4.0*angstrom
 
 %Lsize
   lx/2 | ly/2 | lz
@@ -50,7 +50,7 @@ ParKPoints = auto
 
 # LCAO is actually metallic
 SmearingFunction = fermi_dirac
-Smearing = 0.01
+Smearing = 0.01*eV
 
 FilterPotentials = filter_none
 

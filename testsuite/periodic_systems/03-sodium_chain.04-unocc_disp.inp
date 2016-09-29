@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 # $Id$
 
-Units = ev_angstrom
+UnitsOutput = ev_angstrom
 
 Dimensions = 3
 PeriodicDimensions = 1
@@ -15,26 +15,26 @@ FromScratch = yes
 %
 
 %Coordinates
-  "Na" |  -1.99932905 | 0.0 | 0.0 
+  "Na" |  -1.99932905*angstrom | 0.0 | 0.0 
 %
 
 BoxShape = parallelepiped
 
 %Lsize
- 1.99932905 | 5.29 | 5.29
+ 1.99932905*angstrom | 5.29*angstrom | 5.29*angstrom
 %
 
 %Spacing
-  1.99932905/6 | 0.3 | 0.3
+  1.99932905/6*angstrom | 0.3*angstrom | 0.3*angstrom
 %
 
 %KPoints
-0.1 | 0.000000 | 0.000000| 0.000000
-0.2 | 0.157132 | 0.000000| 0.000000
-0.2 | 0.314265 | 0.000000| 0.000000
-0.2 | 0.471397 | 0.000000| 0.000000
-0.2 | 0.628529 | 0.000000| 0.000000
-0.1 | 0.785662 | 0.000000| 0.000000
+0.1 | 0.000000/angstrom | 0.000000| 0.000000
+0.2 | 0.157132/angstrom | 0.000000| 0.000000
+0.2 | 0.314265/angstrom | 0.000000| 0.000000
+0.2 | 0.471397/angstrom | 0.000000| 0.000000
+0.2 | 0.628529/angstrom | 0.000000| 0.000000
+0.1 | 0.785662/angstrom | 0.000000| 0.000000
 %
 
 LCAOStart = lcao_none
