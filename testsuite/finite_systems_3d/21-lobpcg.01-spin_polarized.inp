@@ -8,14 +8,14 @@ ParStates = 2
 
 CalculationMode = gs
 fromScratch = yes
-units = ev_angstrom
+UnitsOutput = ev_angstrom
 
 %Coordinates
 "C" | 0 | 0 | 0
 %
 
-Spacing = 0.19
-Radius = 5.0
+Spacing = 0.19*angstrom
+Radius = 5.0*angstrom
 
 SpinComponents = polarized
 

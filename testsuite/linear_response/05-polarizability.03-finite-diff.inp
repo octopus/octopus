@@ -1,22 +1,21 @@
 CalculationMode = em_resp
-Units = eV_Angstrom
+UnitsOutput = eV_Angstrom
 FromScratch = yes
 
 ResponseMethod = finite_differences
-EMStaticElectricField = 0.01
+EMStaticElectricField = 0.01*eV/angstrom
 
 ExperimentalFeatures = yes
 EMCalcBornCharges = yes
 BornChargeSumRuleCorrection = no
 
 SmearingFunction = methfessel_paxton
-Smearing = 0.5
+Smearing = 0.5*eV
 ExtraStates = 3
 
 %Coordinates
-  "Na" | -1.54 | 0 | 0
-  "Na" |  1.54 | 0 | 0
+  "Na" | -1.54*angstrom | 0 | 0
+  "Na" |  1.54*angstrom | 0 | 0
 %
 
 ConvRelDens=1e-8
-

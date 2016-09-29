@@ -1,13 +1,13 @@
 CalculationMode = gs
-Units = eV_Angstrom
+UnitsOutput = eV_Angstrom
 fromScratch = yes
 
 SmearingFunction = methfessel_paxton
-Smearing = 0.5
+Smearing = 0.5*eV
 ExtraStates = 3
 
 %Coordinates
-  "Na" | -1.54 | 0 | 0
-  "Na" |  1.54 | 0 | 0
+  "Na" | -1.54*angstrom | 0 | 0
+  "Na" |  1.54*angstrom | 0 | 0
 %
 

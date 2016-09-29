@@ -38,4 +38,4 @@ match ; Born charge diff; GREPFIELD(em_resp_fd/Born_charges, "Discrepancy", 3,  
 Precision : 0.6
 match ; beta xxx ; GREPFIELD(em_resp_fd/beta, "beta xxx", 3); -0.43240390E+00
 Precision : 0.3
-match ; beta zxy ; GREPFIELD(em_resp_fd/beta, "beta zxy", 3);  -0.50429704E-01
+match ; beta zxy ; GREPFIELD(em_resp_fd/beta, "beta zxy", 3);  -0.35729543E+00

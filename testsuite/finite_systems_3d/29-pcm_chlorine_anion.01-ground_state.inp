@@ -10,7 +10,7 @@ ExperimentalFeatures = yes
 "Cl" | 0.0 | 0.0 | 0.0
 %
 
-units = ev_angstrom
+UnitsOutput = ev_angstrom
 ExcessCharge = -1
 
 %Species
@@ -18,8 +18,8 @@ ExcessCharge = -1
 %
 
 BoxShape = minimum
-radius = 5.0
-spacing = 0.19
+radius = 5.0*angstrom
+spacing = 0.19*angstrom
 
 ConvRelDens = 1e-5
 XCFunctional = gga_x_pbe + gga_c_pbe
