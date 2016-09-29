@@ -87,10 +87,8 @@ extern "C" void FC_FUNC_(cuda_init, CUDA_INIT)(CUcontext ** context, CUdevice **
 
   CUDA_SAFE_CALL(cuDeviceGetCount(&ndevices));
   
-  cout << "Number of devices : " << ndevices << endl;
-
   if (ndevices == 0) {
-    cerr << "Error: no CUDA devices" << std::endl;
+    cerr << "Error: no CUDA devices available." << std::endl;
     exit(1);
   }
   
