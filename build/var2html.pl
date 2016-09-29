@@ -105,7 +105,7 @@ sub read_varinfo(){
     }elsif($key eq "type"){
       $vars{$thisvar}{"type"} = $arg;
       if($arg ne "float" && $arg ne "integer" && $arg ne "flag" &&
-	 $arg ne "string" && $arg ne "logical" && $arg ne "block") {
+	 $arg ne "string" && $arg ne "logical" && $arg ne "block" && $arg ne "virtual") {
 	  print STDERR "ERROR: Variable '$thisvar' has unknown type '$arg'.\n";
 	  exit(1);
       }

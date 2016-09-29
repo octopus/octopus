@@ -88,34 +88,32 @@ contains
     PUSH_SUB(unit_system_init)
 
     !%Variable Units
+    !%Type virtual
+    !%Default atomic
+    !%Section Execution::Units
+    !%Description
+    !% (Virtual) These are the values of units that can be used in the input file.
+    !%Option angstrom        1.8897261328856432
+    !%Option ev              0.03674932539796232
+    !%Option electronvolt    0.03674932539796232
+    !%End
+
+    !%Variable UnitsOutput
     !%Type integer
     !%Default atomic
     !%Section Execution::Units
     !%Description
-    !% This variable selects the units that Octopus use for
-    !% input and output.
+    !% This variable selects the units that Octopus use for output.
     !%
     !% Atomic units seem to be the preferred system in the atomic and
     !% molecular physics community. Internally, the code works in
-    !% atomic units. However, for input or output, some people like
+    !% atomic units. However, for output, some people like
     !% to use a system based on electron-Volts (eV) for energies
     !% and Angstroms (&Aring;) for length.
     !%
     !% Normally time units are derived from energy and length units,
     !% so it is measured in <math>\hbar</math>/Hartree or
-    !% <math>\hbar</math>/eV. Alternatively you can tell
-    !% Octopus to use femtoseconds as the time unit by adding the
-    !% value <tt>femtoseconds</tt> (Note that no other unit will be 
-    !% based on femtoseconds). So for example you can use:
-    !%
-    !% <tt>Units = femtoseconds</tt>
-    !%
-    !% or
-    !%
-    !% <tt>Units = ev_angstrom + femtoseconds</tt>
-    !%
-    !% You can use different unit systems for input and output by
-    !% setting the <tt>UnitsInput</tt> and <tt>UnitsOutput</tt>.
+    !% <math>\hbar</math>/eV.
     !%
     !% Warning 1: All files read on input will also be treated using
     !% these units, including XYZ geometry files.
@@ -131,41 +129,23 @@ contains
     !%Option ev_angstrom   1
     !% Electronvolts for energy, Angstroms for length, the rest of the
     !% units are derived from these and <math>\hbar=1</math>.
-    !%Option angstrom        1.8897261328856432
-    !%Option ev              0.03674932539796232
-    !%Option electronvolt    0.03674932539796232
     !%End
 
-    !%Variable UnitsInput
-    !%Type integer
-    !%Default atomic
-    !%Section Execution::Units
-    !%Description
-    !% Same as <tt>Units</tt>, but only refers to input values.
-    !%End
-
-    !%Variable UnitsOutput
-    !%Type integer
-    !%Default atomic
-    !%Section Execution::Units
-    !%Description
-    !% Same as <tt>Units</tt>, but only refers to output values.
-    !%End
-
-    if(parse_is_defined('Units')) then
-      call parse_variable('Units', UNITS_ATOMIC, cc)
-      if(.not.varinfo_valid_option('Units', cc, is_flag = .true.)) call messages_input_error('Units')
-      cinp = cc
-      cout = cc
-    else
-      ! note that we check the value is valid for the 'Units' variable
-      call parse_variable('UnitsInput', UNITS_ATOMIC, cc)
-      if(.not.varinfo_valid_option('Units', cc, is_flag = .true.)) call messages_input_error('UnitsInput')
-      cinp = cc
-      call parse_variable('UnitsOutput', UNITS_ATOMIC, cc)
-      if(.not.varinfo_valid_option('Units', cc, is_flag = .true.)) call messages_input_error('UnitsOutput')
-      cout = cc
+    if(parse_is_defined('Units') .or. parse_is_defined('Units')) then
+      call messages_write("The 'Units' variable is obsolete. Now Octopus always works in atomic", new_line = .true.)
+      call messages_write("units. For different units you can use values like 'angstrom', 'eV' ", new_line = .true.)
+      call messages_write("and others in the input file.")
+      call messages_fatal()
     end if
+
+    call messages_obsolete_variable('Units')
+    call messages_obsolete_variable('UnitsInput')
+
+    cinp = UNITS_ATOMIC
+    
+    call parse_variable('UnitsOutput', UNITS_ATOMIC, cc)
+    if(.not.varinfo_valid_option('Units', cc, is_flag = .true.)) call messages_input_error('UnitsOutput')
+    cout = cc
 
     unit_one%factor = M_ONE
     unit_one%abbrev = '1'
