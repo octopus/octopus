@@ -51,16 +51,16 @@ subroutine X(run_sternheimer)()
               sigma_alt = swap_sigma(sigma)
           
             if((.not. em_vars%calc_magnetooptics) .or. complex_wfs .or. ifactor == 1) then
-            str_tmp = em_wfs_tag(idir, ifactor)
-            call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, sigma), ierr)
-            if (ierr == 0) call states_load(restart_load, sys%st, sys%gr, ierr, lr=em_vars%lr(idir, sigma_alt, ifactor))
-            call restart_close_dir(restart_load)
+              str_tmp = em_wfs_tag(idir, ifactor)
+              call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, sigma), ierr)
+              if (ierr == 0) call states_load(restart_load, sys%st, sys%gr, ierr, lr=em_vars%lr(idir, sigma_alt, ifactor))
+              call restart_close_dir(restart_load)
 
-            if(ierr /= 0) then
-              message(1) = "Unable to read response wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, sigma))//&
-                 "': Initializing to zero."
-              call messages_warning(1)
-            end if
+              if(ierr /= 0) then
+                message(1) = "Unable to read response wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, sigma))//&
+                   "': Initializing to zero."
+                call messages_warning(1)
+              end if
             end if
           
             if(em_vars%calc_hyperpol .and. use_kdotp) then
@@ -281,43 +281,43 @@ subroutine X(run_sternheimer)()
   else 
     do idir = 1, sys%gr%sb%dim
       if((.not. em_vars%calc_magnetooptics) .or. ifactor == 1 .or. complex_wfs) then
-      call pert_setup_dir(em_vars%perturbation, idir)
+        call pert_setup_dir(em_vars%perturbation, idir)
   
-      if(use_kdotp .and. idir <= gr%sb%periodic_dim) then
-        do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
-          ik0 = ik - sys%st%d%kpt%start + 1 
-          inhomog(:, :, :, ik0, 1) = kdotp_lr(idir, 1)%X(dl_psi)(:,:,:,ik)
-        end do
-        call X(sternheimer_set_rhs)(sh, inhomog(:,:,:,:,1))
-      end if
+        if(use_kdotp .and. idir <= gr%sb%periodic_dim) then
+          do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
+            ik0 = ik - sys%st%d%kpt%start + 1 
+            inhomog(:, :, :, ik0, 1) = kdotp_lr(idir, 1)%X(dl_psi)(:,:,:,ik)
+          end do
+          call X(sternheimer_set_rhs)(sh, inhomog(:,:,:,:,1))
+        end if
 
-      str_tmp = freq2str(units_from_atomic(units_out%energy, frequency))
-      write(message(1), '(5a)') 'Info: Calculating response for the ', index2axis(idir), &
-        '-direction and frequency ', trim(str_tmp), '.'
-      call messages_info(1)
+        str_tmp = freq2str(units_from_atomic(units_out%energy, frequency))
+        write(message(1), '(5a)') 'Info: Calculating response for the ', index2axis(idir), &
+          '-direction and frequency ', trim(str_tmp), '.'
+        call messages_info(1)
   
-      if((.not. em_vars%calc_magnetooptics) .or. ifactor==1) then
-      call X(sternheimer_solve)(sh, sys, hm, em_vars%lr(idir, 1:nsigma_eff, ifactor), nsigma_eff, &
-        R_TOPREC(frequency_eta), em_vars%perturbation, restart_dump, &
-        em_rho_tag(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)), idir), &
-        em_wfs_tag(idir, ifactor), have_restart_rho=(ierr_e(idir)==0), have_exact_freq = exact_freq(idir))
-      else
-      call X(sternheimer_solve)(sh, sys, hm, em_vars%lr(idir, 1:nsigma_eff, ifactor), nsigma_eff, &
-        R_TOPREC(frequency_eta), em_vars%perturbation, restart_dump, &
-        em_rho_tag(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)), idir, ipert = PE), &
-        em_wfs_tag(idir, ifactor), have_restart_rho=.true., have_exact_freq = exact_freq(idir))
-      end if
+        if((.not. em_vars%calc_magnetooptics) .or. ifactor==1) then
+          call X(sternheimer_solve)(sh, sys, hm, em_vars%lr(idir, 1:nsigma_eff, ifactor), nsigma_eff, &
+            R_TOPREC(frequency_eta), em_vars%perturbation, restart_dump, &
+            em_rho_tag(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)), idir), &
+            em_wfs_tag(idir, ifactor), have_restart_rho=(ierr_e(idir)==0), have_exact_freq = exact_freq(idir))
+        else
+          call X(sternheimer_solve)(sh, sys, hm, em_vars%lr(idir, 1:nsigma_eff, ifactor), nsigma_eff, &
+            R_TOPREC(frequency_eta), em_vars%perturbation, restart_dump, &
+            em_rho_tag(abs(em_vars%freq_factor(ifactor)*em_vars%omega(iomega)), idir, ipert = PE), &
+            em_wfs_tag(idir, ifactor), have_restart_rho=.true., have_exact_freq = exact_freq(idir))
+        end if
   
-      if(nsigma_eff == 1 .and. em_vars%nsigma == 2) then
-        em_vars%lr(idir, 2, ifactor)%X(dl_psi) = em_vars%lr(idir, 1, ifactor)%X(dl_psi)
-        if(allocate_rho_em) em_vars%lr(idir, 2, ifactor)%X(dl_rho) = R_CONJ(em_vars%lr(idir, 1, ifactor)%X(dl_rho))
-      end if
+        if(nsigma_eff == 1 .and. em_vars%nsigma == 2) then
+          em_vars%lr(idir, 2, ifactor)%X(dl_psi) = em_vars%lr(idir, 1, ifactor)%X(dl_psi)
+          if(allocate_rho_em) em_vars%lr(idir, 2, ifactor)%X(dl_rho) = R_CONJ(em_vars%lr(idir, 1, ifactor)%X(dl_rho))
+        end if
   
-      if(use_kdotp) then
-        call sternheimer_unset_rhs(sh)
-      end if
+        if(use_kdotp) then
+          call sternheimer_unset_rhs(sh)
+        end if
   
-      em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh)
+        em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh)
       end if
   
       if(em_vars%calc_hyperpol .and. use_kdotp) then
@@ -424,19 +424,19 @@ subroutine X(run_sternheimer)()
                   
               case(PKE)
                 if(ifactor == 1) then
-                message(1) = "Info: Calculating response for KE-perturbation"
-                call messages_info(1) 
-                call X(inhomog_kE_tot)(sh, sys, hm, idir, nsigma_eff, kdotp_lr(idir, 1:1), &
-                  em_vars%lr(idir2, :, ifactor),k2_lr(max(idir2, idir), min(idir2,idir), 1:1), inhomog)
-                call X(sternheimer_set_inhomog)(sh_kmo, inhomog)   
-                call X(sternheimer_solve)(sh_kmo, sys, hm, ke_lr(idir, idir2, 1:nsigma_eff), nsigma_eff, &
-                  R_TOPREC(frequency_eta), pert2_none, restart_dump, "null", &
-                  em_wfs_tag(idir, ifactor, idir2, ipert), have_restart_rho = .false., have_exact_freq = .false.)
-                if(nsigma_eff == 1 .and. em_vars%nsigma == 2) then
-                  ke_lr(idir, idir2, 2)%X(dl_psi) = ke_lr(idir, idir2, 1)%X(dl_psi)
-                end if
-                call sternheimer_unset_inhomog(sh_kmo)
-                em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh_kmo)
+                  message(1) = "Info: Calculating response for KE-perturbation"
+                  call messages_info(1) 
+                  call X(inhomog_kE_tot)(sh, sys, hm, idir, nsigma_eff, kdotp_lr(idir, 1:1), &
+                    em_vars%lr(idir2, :, ifactor),k2_lr(max(idir2, idir), min(idir2,idir), 1:1), inhomog)
+                  call X(sternheimer_set_inhomog)(sh_kmo, inhomog)   
+                  call X(sternheimer_solve)(sh_kmo, sys, hm, ke_lr(idir, idir2, 1:nsigma_eff), nsigma_eff, &
+                    R_TOPREC(frequency_eta), pert2_none, restart_dump, "null", &
+                    em_wfs_tag(idir, ifactor, idir2, ipert), have_restart_rho = .false., have_exact_freq = .false.)
+                  if(nsigma_eff == 1 .and. em_vars%nsigma == 2) then
+                    ke_lr(idir, idir2, 2)%X(dl_psi) = ke_lr(idir, idir2, 1)%X(dl_psi)
+                  end if
+                  call sternheimer_unset_inhomog(sh_kmo)
+                  em_vars%ok(ifactor) = em_vars%ok(ifactor) .and. sternheimer_has_converged(sh_kmo)
                 end if
               end select
           end do
@@ -470,72 +470,72 @@ subroutine X(calc_properties_linear)()
   PUSH_SUB(em_resp_run.X(calc_properties_linear))
   
   if((.not. em_vars%calc_magnetooptics) .or. ifactor == 2) then
-  if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
+    if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
     
-    ! calculate polarizability
-    message(1) = "Info: Calculating polarizabilities."
-    call messages_info(1)
-    
-    if(use_kdotp) then
-      call X(calc_polarizability_periodic)(sys, em_vars%lr(:, :, ifactor), kdotp_lr(:, 1), &
-        em_vars%nsigma, em_vars%alpha(:, :, ifactor))
-    end if
-
-    call X(calc_polarizability_finite)(sys, hm, em_vars%lr(:, :, ifactor), em_vars%nsigma, &
-      em_vars%perturbation, em_vars%alpha(:, :, ifactor), doalldirs = .not. use_kdotp)
-    
-    if(em_vars%calc_Born) then
-      ! calculate Born effective charges
-      message(1) = "Info: Calculating (frequency-dependent) Born effective charges."
+      ! calculate polarizability
+      message(1) = "Info: Calculating polarizabilities."
       call messages_info(1)
-      
-      call X(forces_born_charges)(sys%gr, sys%geo, hm%ep, sys%st, &
-        lr = em_vars%lr(:, 1, ifactor), lr2 = em_vars%lr(:, em_vars%nsigma, ifactor), &
-        Born_charges = em_vars%Born_charges(ifactor))
-    end if
-
-    if(em_vars%calc_magnetooptics) then
-    
-      write(message(1), '(a)') 'Info: Calculating magneto-optical response.'
-      call messages_info(1)
-      em_vars%alpha_be(:, :, :) = M_ZERO
-      em_vars%chi_para(:, :) = M_ZERO
-      em_vars%chi_dia(:, :) = M_ZERO
     
       if(use_kdotp) then
-        if(abs(frequency) > M_EPSILON) then
-          call X(lr_calc_magneto_optics_periodic)(sh, sh_mo, sys, hm, em_vars%nsigma, em_vars%lr(:, :, 1), &
-            em_vars%lr(:, :, 2), b_lr(:, :), kdotp_lr(:, :), k2_lr(:, :, :), ke_lr(:, :, :), kb_lr(:, :, :), -frequency_eta, &
-            em_vars%alpha_be(:, :, :))  
-        end if
-        call X(lr_calc_susceptibility_periodic)(sys, hm, em_vars%nsigma, kdotp_lr(:, 1), b_lr(:, 1),&
-          k2_lr(:, :, 1), kb_lr(:, :, 1), em_vars%chi_dia(:, :))
-        em_vars%chi_para(:, :) = M_ZERO  
-        call X(lr_calc_magnetization_periodic)(sys, hm, kdotp_lr(:, 1), em_vars%magn(:))  
-      else
-        call X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, em_vars%nsigma, &
-          em_vars%lr(:, :, 1), em_vars%lr(:, :, 2), b_lr(:, :), em_vars%alpha_be(:, :, :))
-        call X(lr_calc_susceptibility)(sys, hm, b_lr(:, :), 1, pert_b, &
-          em_vars%chi_para(: ,:), em_vars%chi_dia(:, :))
+        call X(calc_polarizability_periodic)(sys, em_vars%lr(:, :, ifactor), kdotp_lr(:, 1), &
+          em_vars%nsigma, em_vars%alpha(:, :, ifactor))
       end if
-    end if
+
+      call X(calc_polarizability_finite)(sys, hm, em_vars%lr(:, :, ifactor), em_vars%nsigma, &
+        em_vars%perturbation, em_vars%alpha(:, :, ifactor), doalldirs = .not. use_kdotp)
     
-  else if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
-    message(1) = "Info: Calculating magnetic susceptibilities."
-    call messages_info(1)
+      if(em_vars%calc_Born) then
+        ! calculate Born effective charges
+        message(1) = "Info: Calculating (frequency-dependent) Born effective charges."
+        call messages_info(1)
+      
+        call X(forces_born_charges)(sys%gr, sys%geo, hm%ep, sys%st, &
+          lr = em_vars%lr(:, 1, ifactor), lr2 = em_vars%lr(:, em_vars%nsigma, ifactor), &
+          Born_charges = em_vars%Born_charges(ifactor))
+      end if
+
+      if(em_vars%calc_magnetooptics) then
     
-    if(use_kdotp) then
-      call X(lr_calc_susceptibility_periodic)(sys, hm, em_vars%nsigma, kdotp_lr(:, 1), em_vars%lr(:, 1, ifactor),&
-        k2_lr(:, :, 1), kb_lr(:, :, 1), em_vars%chi_dia(:, :))
+        write(message(1), '(a)') 'Info: Calculating magneto-optical response.'
+        call messages_info(1)
+        em_vars%alpha_be(:, :, :) = M_ZERO
         em_vars%chi_para(:, :) = M_ZERO
-      call X(lr_calc_magnetization_periodic)(sys, hm, kdotp_lr(:, 1), em_vars%magn(:))
-    else
-      call X(lr_calc_susceptibility)(sys, hm, em_vars%lr(:, :, ifactor), em_vars%nsigma, em_vars%perturbation, &
-        em_vars%chi_para(:, :), em_vars%chi_dia(:, :))
-    end if
-  end if
+        em_vars%chi_dia(:, :) = M_ZERO
+    
+        if(use_kdotp) then
+          if(abs(frequency) > M_EPSILON) then
+            call X(lr_calc_magneto_optics_periodic)(sh, sh_mo, sys, hm, em_vars%nsigma, em_vars%lr(:, :, 1), &
+              em_vars%lr(:, :, 2), b_lr(:, :), kdotp_lr(:, :), k2_lr(:, :, :), ke_lr(:, :, :), kb_lr(:, :, :), -frequency_eta, &
+              em_vars%alpha_be(:, :, :))  
+          end if
+          call X(lr_calc_susceptibility_periodic)(sys, hm, em_vars%nsigma, kdotp_lr(:, 1), b_lr(:, 1),&
+            k2_lr(:, :, 1), kb_lr(:, :, 1), em_vars%chi_dia(:, :))
+          em_vars%chi_para(:, :) = M_ZERO  
+          call X(lr_calc_magnetization_periodic)(sys, hm, kdotp_lr(:, 1), em_vars%magn(:))  
+       else
+          call X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, em_vars%nsigma, &
+            em_vars%lr(:, :, 1), em_vars%lr(:, :, 2), b_lr(:, :), em_vars%alpha_be(:, :, :))
+          call X(lr_calc_susceptibility)(sys, hm, b_lr(:, :), 1, pert_b, &
+            em_vars%chi_para(: ,:), em_vars%chi_dia(:, :))
+        end if
+      end if
+    
+    else if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
+      message(1) = "Info: Calculating magnetic susceptibilities."
+      call messages_info(1)
+    
+      if(use_kdotp) then
+        call X(lr_calc_susceptibility_periodic)(sys, hm, em_vars%nsigma, kdotp_lr(:, 1), em_vars%lr(:, 1, ifactor),&
+          k2_lr(:, :, 1), kb_lr(:, :, 1), em_vars%chi_dia(:, :))
+          em_vars%chi_para(:, :) = M_ZERO
+        call X(lr_calc_magnetization_periodic)(sys, hm, kdotp_lr(:, 1), em_vars%magn(:))
+      else
+        call X(lr_calc_susceptibility)(sys, hm, em_vars%lr(:, :, ifactor), em_vars%nsigma, em_vars%perturbation, &
+          em_vars%chi_para(:, :), em_vars%chi_dia(:, :))
+      end if
+   end if
   
-  call em_resp_output(sys%st, sys%gr, hm, sys%geo, sys%outp, em_vars, iomega, ifactor)
+    call em_resp_output(sys%st, sys%gr, hm, sys%geo, sys%outp, em_vars, iomega, ifactor)
   end if
   
   POP_SUB(em_resp_run.X(calc_properties_linear))
