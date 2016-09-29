@@ -1,9 +1,9 @@
 CalculationMode = gs
-Units = eV_Angstrom
+UnitsOutput = eV_Angstrom
 ExperimentalFeatures = yes
 FromScratch = yes
-radius = 6.0
-spacing = 0.2
+Radius = angstrom*6.0
+Spacing = angstrom*0.2
 SpinComponents = spin_polarized
 PseudopotentialSet = standard
 %Species

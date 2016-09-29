@@ -3,9 +3,9 @@ ExperimentalFeatures = yes
 FromScratch = yes
 ConvEigenError = yes
 ConvAbsDens = 1.0e-6
-Units = eV_Angstrom
-radius = 6.0
-spacing = 0.2
+UnitsOutput = eV_Angstrom
+Radius = angstrom*6.0
+Spacing = angstrom*0.2
 SpinComponents = spin_polarized
 PseudopotentialSet = standard
 %Species
