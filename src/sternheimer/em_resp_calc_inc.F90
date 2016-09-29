@@ -963,19 +963,19 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, lr_e, &
           weight = sys%st%d%kweights(ik) * sys%st%smear%el_per_state
           do ist = 1, sys%st%nst
             if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
-              call X(pert_apply)(pert_e1, sys%gr, sys%geo, hm, ik,&
+              call X(pert_apply)(pert_e1, sys%gr, sys%geo, hm, ik, &
                 lr_e(dir2, 1)%X(dl_psi)(:, :, ist, ik), pertpsi_e1(:, :))
               call X(pert_apply)(pert_e2, sys%gr, sys%geo, hm, ik,&
-                lr_e1(dir1, nsigma)%X(dl_psi)(:, :, ist, ik), pertpsi_e2(:, :))
+                lr_e1(dir1, 1)%X(dl_psi)(:, :, ist, ik), pertpsi_e2(:, :))
               call X(pert_apply)(pert_m, sys%gr, sys%geo, hm, ik, &
-                lr_e1(dir1, nsigma)%X(dl_psi)(:, :, ist, ik), pertpsi_b(:, :))
+                lr_e1(dir1, 1)%X(dl_psi)(:, :, ist, ik), pertpsi_b(:, :))
               if(calc_var) then
                 do idim = 1, hm%d%dim
                   do ip = 1, sys%gr%mesh%np
                     pertpsi_e1(ip, idim) = pertpsi_e1(ip, idim) + hvar_e1(dir1, ip, ispin, 1) * &
                       lr_e(dir2, 1)%X(dl_psi)(ip,idim,ist,ik)
-                    pertpsi_e2(ip, idim) = pertpsi_e2(ip, idim) + hvar_e2(dir2, ip, ispin, nsigma) * &
-                      lr_e1(dir1, nsigma)%X(dl_psi)(ip, idim, ist, ik)
+                    pertpsi_e2(ip, idim) = pertpsi_e2(ip, idim) + hvar_e2(dir2, ip, ispin, 1) * &
+                      lr_e1(dir1, 1)%X(dl_psi)(ip, idim, ist, ik)
                   end do
                 end do
               end if
@@ -983,7 +983,7 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, lr_e, &
                 do idim = 1, hm%d%dim
                   do ip = 1, sys%gr%mesh%np
                     pertpsi_b(ip, idim) = pertpsi_b(ip, idim) + hvar_b(dir3, ip, ispin, 1) * &
-                      lr_e1(dir1, nsigma)%X(dl_psi)(ip, idim, ist, ik)
+                      lr_e1(dir1, 1)%X(dl_psi)(ip, idim, ist, ik)
                   end do
                 end do
               end if
@@ -1006,7 +1006,7 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, lr_e, &
                   do ip = 1, sys%gr%mesh%np
                     pertpsi_e1(ip, idim) = pertpsi_e1(ip, idim) + hvar_e1(dir1, ip, ispin, 1) * &
                       lr_b(dir3, 1)%X(dl_psi)(ip, idim, ist, ik)
-                    pertpsi_e2(ip, idim) = pertpsi_e2(ip, idim) + hvar_e2(dir2, ip, ispin, nsigma) * &
+                    pertpsi_e2(ip, idim) = pertpsi_e2(ip, idim) + hvar_e2(dir2, ip, ispin, 1) * &
                       lr_b(dir3, 1)%X(dl_psi)(ip, idim, ist, ik)
                   end do
                 end do
@@ -1023,20 +1023,20 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, lr_e, &
                 X(mf_dotp)(sys%gr%mesh, sys%st%d%dim,&
                   lr_e(dir2, nsigma)%X(dl_psi)(:, :, ist, ik), pertpsi_e1(:, :)) &
                 + X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, &
-                  lr_e1(dir1, 1)%X(dl_psi)(:, :, ist, ik), pertpsi_e2(:, :)) &
+                  lr_e1(dir1, nsigma)%X(dl_psi)(:, :, ist, ik), pertpsi_e2(:, :)) &
                 + X(mf_dotp)(sys%gr%mesh, sys%st%d%dim,&
-                  lr_e1(dir1, 1)%X(dl_psi)(:, :, ist, ik), pertpsi_b(:, :)))
+                  lr_e1(dir1, nsigma)%X(dl_psi)(:, :, ist, ik), pertpsi_b(:, :)))
             end if
           end do
         end do
         if(sternheimer_add_fxc(sh_mo) .and. sternheimer_add_fxc(sh)) then 
           hpol_density(:) = M_ZERO
-          call X(calc_kvar_energy)(sh_mo, sys, lr_e1(dir1, nsigma), lr_e(dir2, 1), lr_b(dir3, 1), hpol_density)
-          call X(calc_kvar_energy)(sh_mo, sys, lr_e1(dir1, nsigma), lr_b(dir3, 1), lr_e(dir2, 1), hpol_density)
-          call X(calc_kvar_energy)(sh_mo, sys, lr_e(dir2, 1), lr_e1(dir1, nsigma), lr_b(dir3, 1), hpol_density)
-          call X(calc_kvar_energy)(sh_mo, sys, lr_e(dir2, 1), lr_b(dir3, 1), lr_e1(dir1, nsigma), hpol_density)
-          call X(calc_kvar_energy)(sh_mo, sys, lr_b(dir3, 1), lr_e1(dir1, nsigma), lr_e(dir2, 1), hpol_density)
-          call X(calc_kvar_energy)(sh_mo, sys, lr_b(dir3, 1), lr_e(dir2, 1), lr_e1(dir1, nsigma), hpol_density)
+          call X(calc_kvar_energy)(sh_mo, sys, lr_e1(dir1, 1), lr_e(dir2, 1), lr_b(dir3, 1), hpol_density)
+          call X(calc_kvar_energy)(sh_mo, sys, lr_e1(dir1, 1), lr_b(dir3, 1), lr_e(dir2, 1), hpol_density)
+          call X(calc_kvar_energy)(sh_mo, sys, lr_e(dir2, 1), lr_e1(dir1, 1), lr_b(dir3, 1), hpol_density)
+          call X(calc_kvar_energy)(sh_mo, sys, lr_e(dir2, 1), lr_b(dir3, 1), lr_e1(dir1, 1), hpol_density)
+          call X(calc_kvar_energy)(sh_mo, sys, lr_b(dir3, 1), lr_e1(dir1, 1), lr_e(dir2, 1), hpol_density)
+          call X(calc_kvar_energy)(sh_mo, sys, lr_b(dir3, 1), lr_e(dir2, 1), lr_e1(dir1, 1), hpol_density)
           chi(dir1, dir2, dir3) = chi(dir1, dir2, dir3) + &
             M_ONE/CNST(6.0) * X(mf_integrate)(sys%gr%mesh, hpol_density) ! the coefficient should be checked
         end if
@@ -1050,14 +1050,14 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, lr_e, &
             factor1 * lr_b(dir3, 1)%X(dl_psi)(:, :, :, ik), lr_e(dir2, 1)%X(dl_psi)(:, :, :, ik), prod_be2%X(matrix))
 
           call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
-            lr_e1(dir1, 1)%X(dl_psi)(:, :, :, ik), lr_b(dir3, 1)%X(dl_psi)(:, :, :, ik), prod_eb1%X(matrix))
+            lr_e1(dir1, nsigma)%X(dl_psi)(:, :, :, ik), lr_b(dir3, 1)%X(dl_psi)(:, :, :, ik), prod_eb1%X(matrix))
           call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
-            factor1 * lr_b(dir3, 1)%X(dl_psi)(:, :, :, ik), lr_e1(dir1, nsigma)%X(dl_psi)(:, :, :, ik), prod_be1%X(matrix))
+            factor1 * lr_b(dir3, 1)%X(dl_psi)(:, :, :, ik), lr_e1(dir1, 1)%X(dl_psi)(:, :, :, ik), prod_be1%X(matrix))
 
           call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
-            lr_e1(dir1, 1)%X(dl_psi)(:, :, :, ik), lr_e(dir2, 1)%X(dl_psi)(:, :, :, ik), prod_ee1%X(matrix))
+            lr_e1(dir1, nsigma)%X(dl_psi)(:, :, :, ik), lr_e(dir2, 1)%X(dl_psi)(:, :, :, ik), prod_ee1%X(matrix))
           call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
-            lr_e(dir2, nsigma)%X(dl_psi)(:, :, :, ik), lr_e1(dir1, nsigma)%X(dl_psi)(:, :, :, ik), prod_ee2%X(matrix))
+            lr_e(dir2, nsigma)%X(dl_psi)(:, :, :, ik), lr_e1(dir1, 1)%X(dl_psi)(:, :, :, ik), prod_ee2%X(matrix))
          
           do ist = 1, sys%st%nst
             if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
@@ -1069,7 +1069,7 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, lr_e, &
                 do idim = 1, hm%d%dim
                   do ip = 1, sys%gr%mesh%np
                     pertpsi_e1(ip, idim) = pertpsi_e1(ip, idim) + hvar_e1(dir1, ip, ispin, 1) * psi(ip, idim)
-                    pertpsi_e2(ip, idim) = pertpsi_e2(ip, idim) + hvar_e2(dir2, ip, ispin, nsigma) * psi(ip, idim)
+                    pertpsi_e2(ip, idim) = pertpsi_e2(ip, idim) + hvar_e2(dir2, ip, ispin, 1) * psi(ip, idim)
                   end do
                 end do
               end if
@@ -1269,12 +1269,12 @@ subroutine X(lr_calc_magneto_optics_periodic)(sh, sh2, sys, hm, nsigma, &
         do idir2 = 1, ndir
           do idir3 = 1, ndir    
             density(:) = M_ZERO
-            call X(calc_kvar_energy)(sh2, sys, lr_e1(idir3, nsigma), lr_e(idir2, 1), lr0(1), density)
-            call X(calc_kvar_energy)(sh2, sys, lr_e1(idir3, nsigma), lr0(1), lr_e(idir2, 1), density)
-            call X(calc_kvar_energy)(sh2, sys, lr_e(idir2, 1), lr_e1(idir3, nsigma), lr0(1), density)
-            call X(calc_kvar_energy)(sh2, sys, lr_e(idir2, 1), lr0(1), lr_e1(idir3, nsigma), density)
-            call X(calc_kvar_energy)(sh2, sys, lr0(1), lr_e1(idir3, nsigma), lr_e(idir2, 1), density)
-            call X(calc_kvar_energy)(sh2, sys, lr0(1), lr_e(idir2, 1), lr_e1(idir3, nsigma), density)
+            call X(calc_kvar_energy)(sh2, sys, lr_e1(idir3, 1), lr_e(idir2, 1), lr0(1), density)
+            call X(calc_kvar_energy)(sh2, sys, lr_e1(idir3, 1), lr0(1), lr_e(idir2, 1), density)
+            call X(calc_kvar_energy)(sh2, sys, lr_e(idir2, 1), lr_e1(idir3, 1), lr0(1), density)
+            call X(calc_kvar_energy)(sh2, sys, lr_e(idir2, 1), lr0(1), lr_e1(idir3, 1), density)
+            call X(calc_kvar_energy)(sh2, sys, lr0(1), lr_e1(idir3, 1), lr_e(idir2, 1), density)
+            call X(calc_kvar_energy)(sh2, sys, lr0(1), lr_e(idir2, 1), lr_e1(idir3, 1), density)
             zpol(idir3, idir2, idir1) = zpol(idir3, idir2, idir1) - &
               frequency/P_C * factor0/CNST(6.0) * X(mf_integrate)(sys%gr%mesh, density)   
            ! the coefficient should be checked
@@ -1325,8 +1325,8 @@ subroutine X(lr_calc_magneto_optics_periodic)(sh, sh2, sys, hm, nsigma, &
               do idim = 1, ndim    
                 zpol(idir3, idir2, idir1) = zpol(idir3, idir2, idir1) - weight * frequency / P_C * factor_e * &
                   (X(mf_dotp)(sys%gr%mesh, psi_be(:, idim, ist, nsigma), &
-                  factor0 * lr_e1(idir3, nsigma)%X(dl_psi)(:, idim, ist, ik))&
-                  - X(mf_dotp)(sys%gr%mesh, factor0 * lr_e1(idir3, 1)%X(dl_psi)(:, idim, ist, ik), &
+                  factor0 * lr_e1(idir3, 1)%X(dl_psi)(:, idim, ist, ik))&
+                  - X(mf_dotp)(sys%gr%mesh, factor0 * lr_e1(idir3, nsigma)%X(dl_psi)(:, idim, ist, ik), &
                    psi_be(:, idim, ist, 1)))
 
                 zpol(idir3, idir2, idir1) = zpol(idir3, idir2, idir1) - weight / P_C *&
@@ -1511,14 +1511,14 @@ contains
       do idim = 1, hm%d%dim
         do ip = 1, sys%gr%mesh%np
           psi_out(ip, idim, 1) = psi_out(ip, idim, 1) + frequency * &
-            factor_e * hvar_in(ip, nsigma_h) * lr_in(1)%X(dl_psi)(ip, idim, ist0, ik0)
+            factor_e * hvar_in(ip, 1) * lr_in(1)%X(dl_psi)(ip, idim, ist0, ik0)
         end do
       end do
       if(nsigma_h == 2) then 
         do idim = 1, hm%d%dim
           do ip = 1, sys%gr%mesh%np
             psi_out(ip, idim, nsigma_h) = psi_out(ip, idim, nsigma_h) - R_CONJ(frequency) * &
-              factor_e * hvar_in(ip, 1) * lr_in(nsigma_in)%X(dl_psi)(ip, idim, ist0, ik0)
+              factor_e * hvar_in(ip, nsigma_h) * lr_in(nsigma_in)%X(dl_psi)(ip, idim, ist0, ik0)
           end do
         end do
       end if

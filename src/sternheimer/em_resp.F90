@@ -82,11 +82,11 @@ module em_resp_oct_m
 
     logical :: calc_hyperpol
     CMPLX   :: alpha(MAX_DIM, MAX_DIM, 3)        !< the linear polarizability
-    CMPLX   :: alpha_be(MAX_DIM, MAX_DIM, MAX_DIM, 3) !< the magneto-optical response
+    CMPLX   :: alpha_be(MAX_DIM, MAX_DIM, MAX_DIM) !< the magneto-optical response
     CMPLX   :: beta (MAX_DIM, MAX_DIM, MAX_DIM)  !< first hyperpolarizability
 
-    CMPLX   :: chi_para(MAX_DIM, MAX_DIM, 3)     !< The paramagnetic part of the susceptibility
-    CMPLX   :: chi_dia (MAX_DIM, MAX_DIM, 3)     !< The diamagnetic  part of the susceptibility
+    CMPLX   :: chi_para(MAX_DIM, MAX_DIM)     !< The paramagnetic part of the susceptibility
+    CMPLX   :: chi_dia (MAX_DIM, MAX_DIM)     !< The diamagnetic  part of the susceptibility
     CMPLX   :: magn(MAX_DIM)                     !< The orbital magnetization
 
     logical :: ok(1:3)                           !< whether calculation is converged
@@ -117,16 +117,16 @@ contains
     type(lr_t)              :: kdotp_lr(MAX_DIM, 1)
     type(lr_t)              :: kdotp_lr2
     type(lr_t), allocatable :: kdotp_em_lr2(:, :, :, :)
-    type(lr_t), allocatable :: b_lr(:, :), e_lr(:, :)
+    type(lr_t), allocatable :: b_lr(:, :)
     type(lr_t), allocatable :: kb_lr(:, :, :), k2_lr(:, :, :)
     type(lr_t), allocatable :: ke_lr(:, :, :)
     type(pert_t)            :: pert_kdotp, pert2_none, pert_b
 
     integer :: sigma, sigma_alt, ndim, idir, idir2, ierr, iomega, ifactor, nsigma_eff, ipert
-    integer :: ierr_e(3), ierr_e1(3), ierr_e2(3) 
+    integer :: ierr_e(3), ierr_e2(3) 
     character(len=100) :: dirname_output, str_tmp
     logical :: complex_response, have_to_calculate, use_kdotp, opp_freq, &
-      exact_freq(3), exact_freq1(3), complex_wfs, allocate_rho_em, allocate_rho_mo
+      exact_freq(3), complex_wfs, allocate_rho_em, allocate_rho_mo
 
     FLOAT :: closest_omega, last_omega, frequency
     FLOAT, allocatable :: dl_eig(:,:,:)
@@ -267,6 +267,10 @@ contains
         message(2) = "Only calculation of hyperpolarizability will be performed."
         call messages_warning(2)
         em_vars%calc_magnetooptics = .false.
+      else
+        em_vars%nfactor = 2    
+        em_vars%freq_factor(1) = M_ONE
+        em_vars%freq_factor(2) = -M_ONE
       end if
     end if
 
@@ -281,8 +285,6 @@ contains
       em_vars%occ_response = .false.
    
       if(use_kdotp) then
-        em_vars%nfactor = 1
-
         call pert_init(pert2_none, PERTURBATION_NONE,  sys%gr, sys%geo)
         call pert_setup_dir(pert2_none, 1) 
 
@@ -363,14 +365,9 @@ contains
       call messages_experimental("Magneto-optical response")
       allocate_rho_mo = sternheimer_add_fxc(sh_mo) .or. sternheimer_add_hartree(sh_mo)
       SAFE_ALLOCATE(b_lr(1:gr%sb%dim, 1:1))
-      SAFE_ALLOCATE(e_lr(1:gr%sb%dim, 1:em_vars%nsigma))
       do idir = 1, gr%sb%dim
         call lr_init(b_lr(idir, 1))
         call lr_allocate(b_lr(idir, 1), sys%st, sys%gr%mesh, allocate_rho = allocate_rho_mo)
-        do sigma = 1, em_vars%nsigma
-          call lr_init(e_lr(idir, sigma))
-          call lr_allocate(e_lr(idir, sigma), sys%st, sys%gr%mesh, allocate_rho = allocate_rho_em)
-        end do
       end do
       
       if(use_kdotp) then
@@ -397,6 +394,7 @@ contains
       do ifactor = 1, em_vars%nfactor
         frequency = em_vars%freq_factor(ifactor)*em_vars%omega(iomega)
         frequency_eta = frequency + M_zI * em_vars%eta
+        if(em_vars%calc_magnetooptics .and. ifactor == 2) frequency_eta = frequency - M_zI * em_vars%eta
 
         if(abs(frequency) < M_EPSILON .and. em_vars%calc_magnetooptics .and. use_kdotp) then
           message(1) = "Magnetooptical response with kdotp requires non-zero frequency."
@@ -405,7 +403,6 @@ contains
 
         ierr = 0
         ierr_e(:) = 0
-        ierr_e1(:) = 0
         ierr_e2(:) = 0
 
         have_to_calculate = .true.
@@ -415,7 +412,7 @@ contains
         ! iteration we do not have to do anything
         if(iomega > 1 .and. em_vars%freq_factor(ifactor) == M_ZERO) have_to_calculate = .false. 
 
-        if(ifactor > 1) then 
+        if(ifactor > 1 .and. (.not. em_vars%calc_magnetooptics)) then 
 
           ! if this frequency is the same as the previous one, just copy it
           if( have_to_calculate .and. abs(em_vars%freq_factor(ifactor - 1) * em_vars%omega(iomega) &
@@ -463,7 +460,7 @@ contains
 
         end if
 
-        if(iomega > 1 .and. ifactor == 1) then 
+        if(iomega > 1 .and. ifactor == 1 .and. (.not. em_vars%calc_magnetooptics)) then 
 
           ! if this frequency is the same as the previous one, just copy it
           if( have_to_calculate .and. abs(frequency - last_omega) < M_EPSILON ) then
@@ -512,7 +509,6 @@ contains
         if(have_to_calculate) then 
 
           exact_freq(:) = .false.
-          exact_freq1(:) = .false.
 
           if(states_are_real(sys%st)) then
             call drun_sternheimer()
@@ -599,12 +595,8 @@ contains
       call sternheimer_end(sh_mo)
       do idir = 1, gr%sb%dim
         call lr_dealloc(b_lr(idir, 1))
-        do sigma = 1, em_vars%nsigma
-          call lr_dealloc(e_lr(idir, sigma))
-        end do
       end do
       SAFE_DEALLOCATE_A(b_lr)
-      SAFE_DEALLOCATE_A(e_lr)
       
       if(use_kdotp) then
         do idir = 1, gr%sb%dim 
@@ -954,6 +946,7 @@ contains
     use_kdotp = simul_box_is_periodic(gr%sb) .and. .not. em_vars%force_no_kdotp
 
     str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%freq_factor(ifactor)*em_vars%omega(iomega)))
+    if(em_vars%calc_magnetooptics) str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%omega(iomega)))
     write(dirname, '(a, a)') EM_RESP_DIR//'freq_', trim(str_tmp)
     call io_mkdir(trim(dirname))
 
@@ -1150,16 +1143,16 @@ contains
       ! for periodic systems 
       if(.not. use_kdotp) then
         write(iunit, '(2a)') '# Paramagnetic contribution to the susceptibility tensor [ppm a.u.]'
-        call output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor)), gr%sb%dim, unit_ppm)
+        call output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :)), gr%sb%dim, unit_ppm)
         write(iunit, '(1x)')
 
         write(iunit, '(2a)') '# Diamagnetic contribution to the susceptibility tensor [ppm a.u.]'
-        call output_tensor(iunit, TOFLOAT(em_vars%chi_dia(:, :, ifactor)), gr%sb%dim, unit_ppm)
+        call output_tensor(iunit, TOFLOAT(em_vars%chi_dia(:, :)), gr%sb%dim, unit_ppm)
         write(iunit, '(1x)')
       end if
 
       write(iunit, '(2a)') '# Total susceptibility tensor [ppm a.u.]'
-      call output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor) + em_vars%chi_dia(:,:, ifactor)), &
+      call output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :) + em_vars%chi_dia(:,:)), &
         gr%sb%dim, unit_ppm)
       write(iunit, '(1x)')
 
@@ -1167,16 +1160,16 @@ contains
 
       if(.not. use_kdotp) then
         write(iunit, '(2a)') '# Paramagnetic contribution to the susceptibility tensor [ppm cgs / mol]'
-        call output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor)), gr%sb%dim, unit_susc_ppm_cgs)
+        call output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :)), gr%sb%dim, unit_susc_ppm_cgs)
         write(iunit, '(1x)')
 
         write(iunit, '(2a)') '# Diamagnetic contribution to the susceptibility tensor [ppm cgs / mol]'
-        call output_tensor(iunit, TOFLOAT(em_vars%chi_dia(:, :, ifactor)), gr%sb%dim, unit_susc_ppm_cgs)
+        call output_tensor(iunit, TOFLOAT(em_vars%chi_dia(:, :)), gr%sb%dim, unit_susc_ppm_cgs)
         write(iunit, '(1x)')
       end if
 
       write(iunit, '(2a)') '# Total susceptibility tensor [ppm cgs / mol]'
-      call output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :, ifactor) + em_vars%chi_dia(:,:, ifactor)), &
+      call output_tensor(iunit, TOFLOAT(em_vars%chi_para(:, :) + em_vars%chi_dia(:,:)), &
            gr%sb%dim, unit_susc_ppm_cgs)
       write(iunit, '(1x)')
 
@@ -1371,15 +1364,15 @@ contains
       
       mcd(:) = M_ZERO
       do idir = 1, gr%sb%dim 
-        diff(idir) = M_HALF * (em_vars%alpha_be(magn_dir(idir, 1), magn_dir(idir, 2), idir, ifactor) - &
-          em_vars%alpha_be(magn_dir(idir, 2), magn_dir(idir, 1), idir, ifactor))
+        diff(idir) = M_HALF * (em_vars%alpha_be(magn_dir(idir, 1), magn_dir(idir, 2), idir) - &
+          em_vars%alpha_be(magn_dir(idir, 2), magn_dir(idir, 1), idir))
 
         eps1 = epsilon(magn_dir(idir, 1), magn_dir(idir, 1))
         eps2 = epsilon(magn_dir(idir, 2), magn_dir(idir, 2))
-        if(use_kdotp) mcd(idir) = M_TWO * M_PI * em_vars%freq_factor(ifactor) * &
+        if(use_kdotp) mcd(idir) = M_TWO * M_PI * &
           em_vars%omega(iomega)/(gr%sb%rcell_volume * P_C) * diff(idir)/(M_HALF * (sqrt(eps1) + sqrt(eps2)))
       end do
-      mcd(4) = M_TWO * M_PI * em_vars%freq_factor(ifactor) * & 
+      mcd(4) = M_TWO * M_PI * & 
         em_vars%omega(iomega)/P_C * (diff(1) + diff(2) + diff(3)) / M_THREE
   
       iunit = io_open(trim(dirname)//'/alpha_be', action='write')
@@ -1389,7 +1382,7 @@ contains
       write(iunit, '(1a)') '# Real part of magneto-optical response [a.u.]'
       
       do idir = 1, gr%sb%dim 
-        call output_tensor(iunit, real(em_vars%alpha_be(:,:,idir,ifactor)), &
+        call output_tensor(iunit, real(em_vars%alpha_be(:,:,idir)), &
           gr%sb%dim, unit_one)
         write(iunit, '(3a,f25.15)') 'Re_', index2axis(idir), ' ', real(diff(idir))
       end do
@@ -1397,7 +1390,7 @@ contains
       write(iunit, '(1a)') '# Imaginary part of magneto-optical response [a.u.]'
       
       do idir = 1, gr%sb%dim 
-        call output_tensor(iunit, aimag(em_vars%alpha_be(:,:,idir,ifactor)), &
+        call output_tensor(iunit, aimag(em_vars%alpha_be(:,:,idir)), &
           gr%sb%dim, unit_one)
         write(iunit, '(3a,f25.15)') 'Im_', index2axis(idir), ' ', aimag(diff(idir))
       end do
