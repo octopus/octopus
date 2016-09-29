@@ -1,23 +1,23 @@
 CalculationMode = td
 FromScratch = yes
 
-Units = ev_angstrom
+UnitsOutput = ev_angstrom
 
 %Coordinates
-'Na'  | -1.4646408 | 0 | 0 | yes
-'Na'  |  1.4646408 | 0 | 0 | yes
+'Na'  | -1.4646408*angstrom | 0 | 0 | yes
+'Na'  |  1.4646408*angstrom | 0 | 0 | yes
 %
 
 FromScratch = yes
 
-Spacing = 0.32
-Radius = 6.0
+Spacing = 0.32*angstrom
+Radius = 6.0*angstrom
 
 TDMaxSteps = 100
 
 TDPropagator = aetrs
 
-TDDeltaStrength = 0.01
+TDDeltaStrength = 0.01/angstrom
 
 %TDPolarization
  1/sqrt(2) | -1/sqrt(2) | 0
