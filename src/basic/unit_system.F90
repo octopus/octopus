@@ -92,12 +92,30 @@ contains
     !%Default atomic
     !%Section Execution::Units
     !%Description
-    !% (Virtual) These are the values of units that can be used in the input file.
+    !% (Virtual) These are the units that can be used in the input file.
+    !%
     !%Option angstrom        1.8897261328856432
+    !%Option pm              0.018897261328856432
+    !%Option picometer       0.018897261328856432
+    !%Option nm              18.897261328856432
+    !%Option nanometer       18.897261328856432
+    !%Option ry              0.5
+    !%Option rydberg         0.5
     !%Option ev              0.03674932539796232
     !%Option electronvolt    0.03674932539796232
+    !%Option invcm           4.5563353e-06
+    !%Option kelvin          3.1668105e-06
+    !%Option kjoule_mol      0.00038087988
+    !%Option kcal_mol        0.0015936014
+    !%Option as              0.0413413737896
+    !%Option attosecond      0.0413413737896
+    !%Option fs              41.3413737896
+    !%Option femtosecond     41.3413737896
+    !%Option ps              41341.3737896
+    !%Option picosecond      41341.3737896
+    !%Option c               137.035999139
     !%End
-
+    
     !%Variable UnitsOutput
     !%Type integer
     !%Default atomic
