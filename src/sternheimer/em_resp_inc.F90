@@ -514,7 +514,7 @@ subroutine X(calc_properties_linear)()
           call X(lr_calc_magnetization_periodic)(sys, hm, kdotp_lr(:, 1), em_vars%magn(:))  
        else
           call X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, em_vars%nsigma, &
-            em_vars%lr(:, :, 1), em_vars%lr(:, :, 2), b_lr(:, :), em_vars%alpha_be(:, :, :))
+            em_vars%nfactor, em_vars%lr(:, :, :), b_lr(:, :), em_vars%alpha_be(:, :, :))
           call X(lr_calc_susceptibility)(sys, hm, b_lr(:, :), 1, pert_b, &
             em_vars%chi_para(: ,:), em_vars%chi_dia(:, :))
         end if
