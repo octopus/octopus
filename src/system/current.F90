@@ -355,6 +355,12 @@ contains
     end if
 
     SAFE_DEALLOCATE_A(gpsi)
+    SAFE_DEALLOCATE_A(psi)
+    SAFE_DEALLOCATE_A(hpsi)
+    SAFE_DEALLOCATE_A(rhpsi)
+    SAFE_DEALLOCATE_A(rpsi)
+    SAFE_DEALLOCATE_A(hrpsi)
+    SAFE_DEALLOCATE_A(commpsib)
 
     call profiling_out(prof)
     POP_SUB(current_calculate)
