@@ -33,7 +33,8 @@ pure function X(symm_op_apply_inv)(this, aa) result(bb)
   R_TYPE,           intent(in)  :: aa(:) !< (3)
   R_TYPE                        :: bb(1:3)
   
-  bb(1:3) = matmul(dble(this%rotation(1:3, 1:3)), aa(1:3))
+  bb(1:3) = aa(1:3) - this%translation(1:3)
+  bb(1:3) = matmul(dble(this%rotation(1:3, 1:3)), bb(1:3))
   
 end function X(symm_op_apply_inv)
 
