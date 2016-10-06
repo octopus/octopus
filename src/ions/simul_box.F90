@@ -812,11 +812,8 @@ contains
       ASSERT(all(xx(1:pd) >= M_ZERO))
       ASSERT(all(xx(1:pd) < CNST(1.0)))
 
-      xx(1:pd) = (xx(1:pd) - M_HALF)*M_TWO*sb%lsize(1:pd)
-!TODO: change next line to rlattice (not prim) and remove previous line
-! (for some reason doing this breaks many tests UDG) 
-      ratom(1:pd) = matmul(sb%rlattice_primitive(1:pd, 1:pd), xx(1:pd))
-
+      xx(1:pd) = (xx(1:pd) - M_HALF)
+      ratom(1:pd) = matmul(sb%rlattice(1:pd, 1:pd), xx(1:pd))
 
     end if
     
