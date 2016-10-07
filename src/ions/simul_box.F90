@@ -790,11 +790,7 @@ contains
     if (simul_box_is_periodic(sb)) then
       if(.not. geo%reduced_coordinates) then
         !convert the position to reduced coordinates
-!         xx(1:pd) = matmul(ratom(1:pd), sb%klattice(1:pd, 1:pd))
-         xx(1:pd) = matmul(ratom(1:pd), sb%klattice_primitive(1:pd, 1:pd))
-!TODO: change previous line to klattice (not prim) and remove next line
-! (for some reason doing this breaks many tests UDG) 
-         xx(1:pd) = xx(1:pd)/(M_TWO*sb%lsize(1:pd))
+         xx(1:pd) = matmul(ratom(1:pd), sb%klattice(1:pd, 1:pd))/(M_TWO*M_PI)
       else
         ! in this case coordinates are already in reduced space
         xx(1:pd) = ratom(1:pd)
