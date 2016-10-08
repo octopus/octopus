@@ -220,7 +220,7 @@ contains
 
     !%Variable UnitsXYZFiles
     !%Type integer
-    !%Default octopus_units
+    !%Default angstrom_units
     !%Section Execution::Units
     !%Description
     !% This variable selects in which units I/O of XYZ files should be
@@ -236,7 +236,7 @@ contains
     !% coordinates in Angstrom.
     !%End
 
-    call parse_variable('UnitsXYZFiles', OPTION__UNITSXYZFILES__OCTOPUS_UNITS, xyz_units)
+    call parse_variable('UnitsXYZFiles', OPTION__UNITSXYZFILES__ANGSTROM_UNITS, xyz_units)
 
     if(.not.varinfo_valid_option('UnitsXYZFiles', xyz_units)) call messages_input_error('UnitsXYZFiles', 'Invalid option')
 
@@ -247,7 +247,6 @@ contains
       units_out%length_xyz_file = units_out%length
 
     case(OPTION__UNITSXYZFILES__ANGSTROM_UNITS)
-      call messages_experimental('UnitsXYZFiles = angstrom_units')
       units_inp%length_xyz_file = unit_angstrom
       units_out%length_xyz_file = unit_angstrom
 
