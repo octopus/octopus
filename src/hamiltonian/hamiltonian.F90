@@ -765,8 +765,9 @@ contains
       ! the gauge field
       if(gauge_field_is_applied(this%ep%gfield)) then
         call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL, this%cmplxscl%space)
-        call gauge_field_get_vec_pot(this%ep%gfield, this%hm_base%uniform_vector_potential)
-        this%hm_base%uniform_vector_potential(1:mesh%sb%dim) = this%hm_base%uniform_vector_potential(1:mesh%sb%dim)/P_c
+        call gauge_field_get_vec_pot(this%ep%gfield, aa)
+        this%hm_base%uniform_vector_potential(1:mesh%sb%dim) = this%hm_base%uniform_vector_potential(1:mesh%sb%dim)  &
+          + aa(1:mesh%sb%dim)/P_c
       end if
 
       ! the electric field for a periodic system through the gauge field

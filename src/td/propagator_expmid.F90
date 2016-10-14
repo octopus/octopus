@@ -65,6 +65,9 @@ contains
 
     PUSH_SUB(propagator_dt.exponential_midpoint)
 
+    ! the half step of this propagator screws with the gauge field kick
+    ASSERT(hm%ep%gfield%with_gauge_field == .false.)
+
     vecpot(:)     = M_ZERO
     vecpot_vel(:) = M_ZERO
     
@@ -94,7 +97,7 @@ contains
       if(gauge_field_is_applied(hm%ep%gfield)) then
         call gauge_field_get_vec_pot(hm%ep%gfield, vecpot)
         call gauge_field_get_vec_pot_vel(hm%ep%gfield, vecpot_vel)
-        call gauge_field_propagate(hm%ep%gfield, gauge_force, M_HALF*dt)
+        call gauge_field_propagate(hm%ep%gfield, gauge_force, M_HALF*dt,time)
       end if
 
       call hamiltonian_update(hm, gr%mesh, time = real(zt - zdt/M_z2, REAL_PRECISION), Imtime = aimag(zt - zdt/M_z2  ))
@@ -129,7 +132,7 @@ contains
       if(gauge_field_is_applied(hm%ep%gfield)) then
         call gauge_field_get_vec_pot(hm%ep%gfield, vecpot)
         call gauge_field_get_vec_pot_vel(hm%ep%gfield, vecpot_vel)
-        call gauge_field_propagate(hm%ep%gfield, gauge_force, M_HALF*dt)
+        call gauge_field_propagate(hm%ep%gfield, gauge_force, M_HALF*dt, time)
       end if
       call hamiltonian_update(hm, gr%mesh, time = time - M_HALF*dt)
       do ik = st%d%kpt%start, st%d%kpt%end

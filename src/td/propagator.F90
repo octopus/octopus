@@ -558,7 +558,7 @@ contains
     end if
 
     if(gauge_field_is_applied(hm%ep%gfield) .and. .not. propagator_ions_are_propagated(tr)) then
-      call gauge_field_propagate(hm%ep%gfield, gauge_force, dt)
+      call gauge_field_propagate(hm%ep%gfield, gauge_force, dt, time)
     end if
 
     if(generate .or. geometry_species_time_dependent(geo)) then
@@ -640,7 +640,7 @@ contains
       gs_run = .false., verbosity = VERB_COMPACT, iters_done = scsteps)
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
-      call gauge_field_propagate(hm%ep%gfield, gauge_force, dt)
+      call gauge_field_propagate(hm%ep%gfield, gauge_force, dt, iter*dt)
     end if
 
     call hamiltonian_epot_generate(hm, gr, geo, st, time = iter*dt)
