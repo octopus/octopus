@@ -39,7 +39,7 @@ match ; Forces [step 4] ; LINEFIELD(td.general/coordinates, -1, 15) ; -2.5704330
 
 Util       : oct-xyz-anim
 Input      : 10-bomd.04-xyz-anim.inp
-match ; Coordinates  2 2 1 ; LINEFIELD(td.general/movie.xyz, 8, 2) ; 1.181302
+match ; Coordinates  2 2 1 ; LINEFIELD(td.general/movie.xyz, 8, 2) ; 0.625118
 match ; Coordinates  2 2 2 ; LINEFIELD(td.general/movie.xyz, 8, 3) ; 0.0
-match ; Coordinates  8 1 1 ; LINEFIELD(td.general/movie.xyz, 23, 2) ; -1.146508
+match ; Coordinates  8 1 1 ; LINEFIELD(td.general/movie.xyz, 23, 2) ; -0.606707
 match ; Coordinates  8 1 3 ; LINEFIELD(td.general/movie.xyz, 23, 4) ; 0.0

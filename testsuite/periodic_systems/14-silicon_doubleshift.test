@@ -56,11 +56,11 @@ match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   4', 3, 17) ; 0.196336
 
 match ; geometry size  ; LINEFIELD(static/geometry.xyz,  1, 1) ;  8
 match ; geometry  4 1  ; LINEFIELD(static/geometry.xyz,  6, 2) ;  0.0
-match ; geometry  4 3  ; LINEFIELD(static/geometry.xyz,  6, 3) ; -5.1
-match ; geometry  4 4  ; LINEFIELD(static/geometry.xyz,  6, 4) ; -5.1
-match ; geometry  8 1  ; LINEFIELD(static/geometry.xyz, 10, 2) ;  2.55
-match ; geometry  8 2  ; LINEFIELD(static/geometry.xyz, 10, 3) ; -2.55
-match ; geometry  8 3  ; LINEFIELD(static/geometry.xyz, 10, 4) ; -2.55
+match ; geometry  4 3  ; LINEFIELD(static/geometry.xyz,  6, 3) ; -2.698804
+match ; geometry  4 4  ; LINEFIELD(static/geometry.xyz,  6, 4) ; -2.698804
+match ; geometry  8 1  ; LINEFIELD(static/geometry.xyz, 10, 2) ;  1.349402
+match ; geometry  8 2  ; LINEFIELD(static/geometry.xyz, 10, 3) ; -1.349402
+match ; geometry  8 3  ; LINEFIELD(static/geometry.xyz, 10, 4) ; -1.349402
 
 match ; crystal  size  ; LINEFIELD(static/crystal.xyz,  1, 1) ;  95
 match ; crystal  14 1  ; LINEFIELD(static/crystal.xyz, 16, 2) ;  0.0
