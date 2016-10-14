@@ -298,7 +298,7 @@ contains
     this%vecpot_acc(1:this%ndim) = force%vecpot(1:this%ndim)
 
     ! apply kick (kick is zero unless given by GaugeVectorField)
-    if (this%kicktime >= time .and. this%kicktime <= time+dt) then
+    if(time-dt <= this%kicktime .and. time >= this%kicktime )  then
        this%vecpot(1:this%ndim) = this%vecpot(1:this%ndim) +  this%vecpot_kick(1:this%ndim)
        if(this%kicktime > M_ZERO) then
           call messages_write('     ----------------  Applying gauge kick  ----------------')
