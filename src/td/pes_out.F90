@@ -126,10 +126,10 @@ contains
       call messages_info(1)
     
       if (present(pmesh)) then          
-        call dvtk_out_cf_structured(filename, ierr, cf, cube,& 
+        call dvtk_out_cf_structured(filename, 'PES_vel_map', ierr, cf, cube,& 
           sqrt(units_out%energy)**sb%dim, pmesh, ascii = .false.)
       else 
-        call dvtk_out_cf(filename, ierr, cf, cube, dk(:),& 
+        call dvtk_out_cf(filename, 'PES_vel_map', ierr, cf, cube, dk(:),& 
           sqrt(units_out%energy)**sb%dim)
       end if        
     end if

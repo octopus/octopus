@@ -22,8 +22,9 @@
 !>  Writes a cube_function in VTK legacy format
 !!  see http://www.vtk.org/VTK/img/file-formats.pdf
 ! ---------------------------------------------------------
-subroutine X(vtk_out_cf)(filename, ierr, cf_in, cube, spacing, unit)
+subroutine X(vtk_out_cf)(filename, fieldname, ierr, cf_in, cube, spacing, unit)
   character(len=*),      intent(in) :: filename        !< the file name
+  character(len=*),      intent(in) :: fieldname       !< the name of the field
   integer,               intent(out):: ierr            !< error message   
   type(cube_function_t), intent(in) :: cf_in           !< the cube_function to be written 
   type(cube_t),          intent(in) :: cube            !< the underlying cube mesh
@@ -52,7 +53,11 @@ subroutine X(vtk_out_cf)(filename, ierr, cf_in, cube, spacing, unit)
     - int(cube%rs_n_global(3)/2)* spacing(3)
   write(iunit, '(1a,3f12.6)') 'SPACING ', spacing(1), spacing(2), spacing(3)
   write(iunit, '(1a,1i9)') 'POINT_DATA ', np
-  write(iunit, '(1a)') 'SCALARS Re double 1'
+#ifdef R_TCOMPLEX  
+  write(iunit, '(3a)') 'SCALARS Re_'//trim(fieldname), ' double 1'
+#else
+  write(iunit, '(3a)') 'SCALARS ', trim(fieldname), ' double 1'
+#endif
   write(iunit, '(1a)') 'LOOKUP_TABLE default'
   call io_close(iunit)
 
@@ -73,7 +78,7 @@ subroutine X(vtk_out_cf)(filename, ierr, cf_in, cube, spacing, unit)
   iunit = io_open(trim(filename), action='write', position = 'append')
 
   write(iunit, '(1a)') ' '
-  write(iunit, '(1a)') 'SCALARS Im double 1'
+  write(iunit, '(3a)') 'SCALARS Im_'//trim(fieldname), ' double 1'
   write(iunit, '(1a)') 'LOOKUP_TABLE default'
 
   call io_close(iunit)
@@ -129,7 +134,7 @@ subroutine X(vtk_out_cf_vector)(filename, fieldname, ierr, cf_in, vector_dim, cu
   write(iunit, '(1a,1i9)') 'POINT_DATA ', np
 
 #ifdef R_TCOMPLEX  
-  write(iunit, '(3a,i1)') 'SCALARS Re', trim(fieldname), ' double ', vector_dim
+  write(iunit, '(3a,i1)') 'SCALARS Re_'//trim(fieldname), ' double ', vector_dim
 #else
   write(iunit, '(3a,i1)') 'SCALARS ', trim(fieldname), ' double ', vector_dim
 #endif
@@ -152,7 +157,7 @@ subroutine X(vtk_out_cf_vector)(filename, fieldname, ierr, cf_in, vector_dim, cu
   iunit = io_open(trim(filename), action='write', position = 'append')
 
   write(iunit, '(1a)') ' '
-  write(iunit, '(3a,i1)') 'SCALARS Im', trim(fieldname), ' double ', vector_dim
+  write(iunit, '(3a,i1)') 'SCALARS Im_'//trim(fieldname), ' double ', vector_dim
   write(iunit, '(1a)') 'LOOKUP_TABLE default'
 
   call io_close(iunit)
@@ -180,8 +185,9 @@ end subroutine X(vtk_out_cf_vector)
 !!  coordinate is free in space. 
 !!    
 ! ---------------------------------------------------------
-subroutine X(vtk_out_cf_structured)(filename, ierr, cf_in, cube, unit, points, ascii)
+subroutine X(vtk_out_cf_structured)(filename, fieldname, ierr, cf_in, cube, unit, points, ascii)
   character(len=*),      intent(in) :: filename        !< the file name
+  character(len=*),      intent(in) :: fieldname       !< the name of the field
   integer,               intent(out):: ierr            !< error message   
   type(cube_function_t), intent(in) :: cf_in           !< the cube_function to be written 
   type(cube_t),          intent(in) :: cube            !< the underlying cube mesh
@@ -222,7 +228,11 @@ subroutine X(vtk_out_cf_structured)(filename, ierr, cf_in, cube, unit, points, a
 
     write(iunit, '(1a)') ' '
     write(iunit, '(1a,1i9)') 'POINT_DATA ', np
-    write(iunit, '(1a)') 'SCALARS Re double 1'
+#ifdef R_TCOMPLEX
+    write(iunit, '(3a)') 'SCALARS Re_'//trim(fieldname), 'double 1'
+#else
+    write(iunit, '(3a)') 'SCALARS', trim(fieldname), 'double 1'
+#endif
     write(iunit, '(1a)') 'LOOKUP_TABLE default'
 
     call cube_function_null(cf_out)
@@ -276,7 +286,11 @@ subroutine X(vtk_out_cf_structured)(filename, ierr, cf_in, cube, unit, points, a
     iunit = io_open(trim(filename), action='write', position = 'append')
     write(iunit, '(1a)') ' '
     write(iunit, '(1a,1i9)') 'POINT_DATA ', np
-    write(iunit, '(1a)') 'SCALARS Re double 1'
+#ifdef R_TCOMPLEX
+    write(iunit, '(3a)') 'SCALARS Re_'//trim(fieldname), 'double 1'
+#else
+    write(iunit, '(3a)') 'SCALARS', trim(fieldname), 'double 1'
+#endif
     write(iunit, '(1a)') 'LOOKUP_TABLE default'
     call io_close(iunit)
 
@@ -296,7 +310,7 @@ subroutine X(vtk_out_cf_structured)(filename, ierr, cf_in, cube, unit, points, a
 
     iunit = io_open(trim(filename), action='write', position = 'append')
     write(iunit, '(1a)') ' '
-    write(iunit, '(1a)') 'SCALARS Im double 1'
+    write(iunit, '(3a)') 'SCALARS Im_'//trim(fieldname), 'double 1'
     write(iunit, '(1a)') 'LOOKUP_TABLE default'
     call io_close(iunit)
 
