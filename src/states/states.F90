@@ -588,7 +588,11 @@ contains
     !% When enabled the density is symmetrized. Currently, this can
     !% only be done for periodic systems. (Experimental.)
     !%End
-    call parse_variable('SymmetrizeDensity', .false., st%symmetrize_density)
+    if(gr%sb%kpoints%use_symmetries) then
+      call parse_variable('SymmetrizeDensity', .true., st%symmetrize_density)
+    else
+      call parse_variable('SymmetrizeDensity', .false., st%symmetrize_density)
+    end if
     call messages_print_var_value(stdout, 'SymmetrizeDensity', st%symmetrize_density)
 
     ! Why? Resulting discrepancies can be suspiciously large even at SCF convergence;
