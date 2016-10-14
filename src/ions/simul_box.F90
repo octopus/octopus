@@ -799,11 +799,9 @@ contains
 
       xx(1:pd) = xx(1:pd) + M_HALF
       do idir = 1, pd
-        if(xx(idir) >= M_ZERO) then
-          xx(idir) = xx(idir) - aint(xx(idir))
-        else
-          xx(idir) = xx(idir) - aint(xx(idir)) + M_ONE
-        end if
+        xx(idir) = xx(idir) - anint(xx(idir))
+        if(xx(idir) < -CNST(1.0e-6)) &
+          xx(idir) = xx(idir) + M_ONE
       end do
       ASSERT(all(xx(1:pd) >= M_ZERO))
       ASSERT(all(xx(1:pd) < CNST(1.0)))
