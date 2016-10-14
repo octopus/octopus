@@ -66,7 +66,7 @@ contains
     PUSH_SUB(propagator_dt.exponential_midpoint)
 
     ! the half step of this propagator screws with the gauge field kick
-    ASSERT(hm%ep%gfield%with_gauge_field == .false.)
+    ASSERT(hm%ep%gfield%with_gauge_field .eqv. .false.)
 
     vecpot(:)     = M_ZERO
     vecpot_vel(:) = M_ZERO
