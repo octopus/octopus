@@ -290,9 +290,10 @@ end function X(mf_moment)
 
 ! ---------------------------------------------------------
 !> This subroutine fills a function with randon values.
-subroutine X(mf_random)(mesh, ff, seed, normalized)
+subroutine X(mf_random)(mesh, ff, shift, seed, normalized)
   type(mesh_t),      intent(in)  :: mesh
   R_TYPE,            intent(out) :: ff(:)
+  integer, optional, intent(in)  :: shift
   integer, optional, intent(in)  :: seed
   logical, optional, intent(in)  :: normalized !< whether generate states should have norm 1, true by default
   
@@ -309,10 +310,15 @@ subroutine X(mf_random)(mesh, ff, seed, normalized)
     iseed = iseed + seed
   end if
 
+  if(present(shift)) then
+    !We skip shift times the seed 
+    call shiftseed(iseed, shift, ff(1))
+  end if
+
   call quickrnd(iseed, mesh%np, ff(1:mesh%np))
 
   if(optional_default(normalized, .true.)) then
-    rr = X(mf_nrm2)(mesh, ff)
+    rr = X(mf_nrm2)(mesh, ff, reduce = present(shift))
     call lalg_scal(mesh%np, R_TOTYPE(1.0)/rr, ff)
   end if
 
