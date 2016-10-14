@@ -142,12 +142,14 @@ program dielectric_function
     call batch_add_state(ftimagb, ftimag(0:,  ii))
   end do
 
-  call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, istart, iend, M_ZERO, dt, vecpotb)
+  call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, istart, iend, spectrum%start_time, dt, vecpotb)
 
   call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
-    istart, iend, M_ZERO, dt, vecpotb, 1, energy_steps + 1, spectrum%energy_step, ftrealb)
+    istart, iend, spectrum%start_time, dt, vecpotb, 1, energy_steps + 1, spectrum%energy_step, ftrealb)
+
   call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
-    istart, iend, M_ZERO, dt, vecpotb, 1, energy_steps + 1, spectrum%energy_step, ftimagb)
+    istart, iend, spectrum%start_time, dt, vecpotb, 1, energy_steps + 1, spectrum%energy_step, ftimagb)
+
 
   call batch_end(vecpotb)
   call batch_end(ftrealb)
