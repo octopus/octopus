@@ -446,19 +446,26 @@ contains
     type(states_t),       intent(in)    :: st
     type(gauge_force_t),  intent(out)   :: force
 
-    integer :: idir
+    integer :: idir,ispin,istot
 
     PUSH_SUB(gauge_field_get_force)
 
-    ASSERT(st%d%nspin == 1)
+
+    force%vecpot(1:gr%sb%dim) = M_ZERO 
 
     select case(this%dynamics)
     case(OPTION__GAUGEFIELDDYNAMICS__NONE)
-      force%vecpot(1:gr%sb%dim) = CNST(0.0)
+      force%vecpot(1:gr%sb%dim) = M_ZERO 
 
     case(OPTION__GAUGEFIELDDYNAMICS__POLARIZATION)
-      do idir = 1, gr%sb%dim
-        force%vecpot(idir) = CNST(4.0)*M_PI*P_c/gr%sb%rcell_volume*dmf_integrate(gr%mesh, st%current(:, idir, 1))
+      istot = 1
+      if (st%d%nspin > 1) istot = 2
+      do idir = 1, gr%sb%periodic_dim
+        do ispin = 1, istot
+          force%vecpot(idir) = M_ZERO            
+          force%vecpot(idir) = force%vecpot(idir) + &
+                               CNST(4.0)*M_PI*P_c/gr%sb%rcell_volume*dmf_integrate(gr%mesh, st%current(:, idir, ispin))
+        end do
       end do
 
     case default
