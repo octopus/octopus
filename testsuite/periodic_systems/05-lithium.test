@@ -98,7 +98,7 @@ match ; XSF value    ; GREPFIELD(static/density.xsf, 'DATAGRID_3D_function', 1, 
 
 Input      : 05-lithium.02-td.inp
 
-#match ; Energy           [step  1] ; LINEFIELD(td.general/energy, -21, 3) ; -5.155523867410e-01
+match ; Energy           [step  1] ; LINEFIELD(td.general/energy, -21, 3) ; -5.155523867410e-01
 match ; Energy           [step  5] ; LINEFIELD(td.general/energy, -16, 3) ; -5.155539482896e-01
 match ; Energy           [step 10] ; LINEFIELD(td.general/energy, -11, 3) ; -5.155556651853e-01
 match ; Energy           [step 15] ; LINEFIELD(td.general/energy, -6, 3) ;  -5.155573465006e-01

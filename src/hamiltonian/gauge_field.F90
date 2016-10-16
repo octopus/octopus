@@ -202,6 +202,10 @@ contains
 
     call parse_variable('GaugeFieldDelay', M_ZERO, this%kicktime)
 
+    if(this%kicktime == M_ZERO) then
+       this%vecpot(1:this%ndim) = this%vecpot_kick(1:this%ndim)
+    endif
+
     POP_SUB(gauge_field_init)
   end subroutine gauge_field_init
 
@@ -297,14 +301,12 @@ contains
 
     this%vecpot_acc(1:this%ndim) = force%vecpot(1:this%ndim)
 
-    ! apply kick (kick is zero unless given by GaugeVectorField)
-    if(time-dt <= this%kicktime .and. time >= this%kicktime )  then
-       this%vecpot(1:this%ndim) = this%vecpot(1:this%ndim) +  this%vecpot_kick(1:this%ndim)
-       if(this%kicktime > M_ZERO) then
-          call messages_write('     ----------------  Applying gauge kick  ----------------')
-          call messages_info()
-       endif
-    end if
+    ! apply kick, in case kicktime=0 the kick has already been applied
+    if(this%kicktime > M_ZERO .and. time-dt <= this%kicktime .and. time >= this%kicktime )  then
+      this%vecpot(1:this%ndim) = this%vecpot(1:this%ndim) +  this%vecpot_kick(1:this%ndim)
+      call messages_write('     ----------------  Applying gauge kick  ----------------')
+      call messages_info()
+    endif
 
     this%vecpot(1:this%ndim) = this%vecpot(1:this%ndim) + dt * this%vecpot_vel(1:this%ndim) + &
       M_HALF * dt**2 * force%vecpot(1:this%ndim)
