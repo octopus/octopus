@@ -16,3 +16,5 @@ TestType = real
 
 ParDomains = auto
 ParStates = 2
+
+StatesRandomization = par_dependent

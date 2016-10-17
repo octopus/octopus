@@ -17,4 +17,4 @@ TestType = complex
 ParDomains = auto
 ParStates = 2
 
-
+StatesRandomization = par_dependent
