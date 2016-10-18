@@ -382,10 +382,8 @@ contains
     case(1)
 !Temporarily, the 3D Ewald sum is employed for the 1D mixed-periodic system.
       call Ewald_long_3D(this, geo, sb, efourier, force, charge)
-!      call Ewald_long_1D
     case(2)
       call Ewald_long_2D(this, geo, sb, efourier, force, charge)
-!      call Ewald_long_2D
     case(3)
       call Ewald_long_3D(this, geo, sb, efourier, force, charge)
     end select
@@ -406,7 +404,8 @@ contains
 
 
     epseudo = M_ZERO
-    if(sb%periodic_dim == 3)then
+    !Temporary adding the pseudo contribution for 1D systems, as Ewald_long_1D is not yet implemented
+    if(sb%periodic_dim == 3 .or. sb%periodic_dim == 1)then
        ! Previously unaccounted G = 0 term from pseudopotentials. 
        ! See J. Ihm, A. Zunger, M.L. Cohen, J. Phys. C 12, 4409 (1979)
 
