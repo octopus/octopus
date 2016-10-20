@@ -570,7 +570,10 @@ sub run_match_new {
     print "   Calculated value : ".$value."\n";
     print "   Reference value  : ".$ref_value."\n";
     print "   Difference       : ".abs($ref_value - $value)."\n";
-    print "   Tolerance        : ".$precnum."\n\n";
+    print "   Deviation [%]    : ".(abs($ref_value - $value)/abs($ref_value)*100.0)."\n";
+    print "   Tolerance        : ".$precnum."\n";
+    print "   Tolerance [%]    : ".($precnum/abs($ref_value)*100.0)."\n\n";
+    
   }
 
   return $success;
