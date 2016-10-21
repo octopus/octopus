@@ -18,6 +18,6 @@ Precision : 6E-03
 Input: 05-ks_inversion.02-two_particle.inp
 match ; XC potential                             ; LINEFIELD(static/vxc.y=0\,z=0, 302, 2);  -0.476678740987975
 
-Precision : 4.5E-03
+Precision : 5.0E-03
 Input: 05-ks_inversion.03-inversion.inp
-match ; KS inversion                             ; LINEFIELD(InvertKSconvergence,  19, 2) ; 0.00680966256065
+match ; KS inversion                             ; LINEFIELD(InvertKSconvergence,  19, 2) ; 0.00779439660595
