@@ -45,8 +45,8 @@ match ; Bond 1->5 rot x   ; GREPFIELD(static/density.scad, '//  Bond 1 -> 5', 2,
 match ; Bond 1->5 cyl h   ; GREPFIELD(static/density.scad, '//  Bond 1 -> 5', 2, 3);    3.325918
 match ; Number polyhedra  ; GREPFIELD(out, 'polyhedra', 2); 836
 match ; Minimum value     ; GREPFIELD(out, 'Minimum value =', 4); 0.0000000000000000
-match ; Maximum value     ; GREPFIELD(out, 'Maximum value =', 8); 0.29080463942600326
-match ; Isovalue          ; GREPFIELD(out, 'isovalue', 5); 0.14540231971300163
+match ; Maximum value     ; GREPFIELD(out, 'Maximum value =', 8); 1.9624470051615213
+match ; Isovalue          ; GREPFIELD(out, 'isovalue', 5); 0.9812235025807595
 match ; Polyhedron point 1; LINEFIELD(static/density.scad, 314, 2); -4.190540
 match ; Polyhedron point 2; LINEFIELD(static/density.scad, 315, 3); -2.362158
 match ; Polyhedron face   ; LINEFIELD(static/density.scad, 319, 2);  2
