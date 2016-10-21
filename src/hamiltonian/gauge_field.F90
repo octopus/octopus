@@ -463,8 +463,8 @@ contains
       istot = 1
       if (st%d%nspin > 1) istot = 2
       do idir = 1, gr%sb%periodic_dim
-        do ispin = 1, istot
-          force%vecpot(idir) = M_ZERO            
+        force%vecpot(idir) = M_ZERO
+        do ispin = 1, istot                      
           force%vecpot(idir) = force%vecpot(idir) + &
                                CNST(4.0)*M_PI*P_c/gr%sb%rcell_volume*dmf_integrate(gr%mesh, st%current(:, idir, ispin))
         end do
