@@ -3,7 +3,7 @@
 
 Test       : Silicon crystal with two k-point shifts
 Program    : octopus
-TestGroups : short-run, periodic_systems
+TestGroups : long-run, periodic_systems
 Enabled    : Yes
 
 Input      : 14-silicon_doubleshift.01-gs.inp
