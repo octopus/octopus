@@ -7,7 +7,7 @@ Radius  = 8.0*angstrom
 Spacing = 0.3*angstrom
 
 PoissonSolver = fft
-FFTLibrary = clfft
+FFTLibrary = accel
 
 TestRepetitions = 2
 
