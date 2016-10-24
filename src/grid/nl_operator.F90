@@ -949,14 +949,6 @@ contains
     ! op%w_im.
     call nl_operator_common_copy(op, opg)
 
-    ! Gather op%index and -- if necessary -- op%w_re and op%w_im.
-    ! Collect for every point in the stencil in a single step.
-    ! This permits to use ivec_gather.
-    do ip = 1, op%stencil%size
-      call vec_allgather(op%mesh%vp, opg%index(ip, :), op%index(ip, :))
-    end do
-    call nl_operator_translate_indices(opg)
-
     ! Weights have to be collected only if they are not constant.
     if(.not.op%const_w) then
       do ip = 1, op%stencil%size
@@ -990,7 +982,6 @@ contains
 
     call stencil_copy(op%stencil, opg%stencil)
 
-    SAFE_ALLOCATE(opg%index(1:op%stencil%size, 1:op%mesh%np_global))
     if(op%const_w) then
       SAFE_ALLOCATE(opg%w_re(1:op%stencil%size, 1:1))
       if(op%cmplx_op) then
@@ -1018,75 +1009,6 @@ contains
 
   end subroutine nl_operator_common_copy
 
-
-  ! ---------------------------------------------------------
-  !> Translates indices in i from local point numbers to
-  !! global point numbers after gathering them.
-  subroutine nl_operator_translate_indices(opg)
-    type(nl_operator_t), intent(inout) :: opg
-
-    integer              :: ip, jp, il, ig, np_enl
-    integer, allocatable :: np_ghost_tmp(:), xbndry_tmp(:), xghost_tmp(:), part_vec(:), ip_v(:)
-    
-    PUSH_SUB(nl_operator_translate_indices)
-
-    ASSERT(associated(opg%index))
-
-    SAFE_ALLOCATE(np_ghost_tmp(1:opg%mesh%vp%npart))
-    call MPI_Allgather(opg%mesh%vp%np_ghost, 1, MPI_INTEGER, &
-         np_ghost_tmp(1), 1, MPI_INTEGER, &
-         opg%mesh%vp%comm, mpi_err)
-
-    SAFE_ALLOCATE(xbndry_tmp(1:opg%mesh%vp%npart))
-    call MPI_Allgather(opg%mesh%vp%xbndry, 1, MPI_INTEGER, &
-         xbndry_tmp(1), 1, MPI_INTEGER, &
-         opg%mesh%vp%comm, mpi_err)
-
-    SAFE_ALLOCATE(xghost_tmp(1:opg%mesh%vp%npart))
-    call MPI_Allgather(opg%mesh%vp%xghost, 1, MPI_INTEGER, &
-         xghost_tmp(1), 1, MPI_INTEGER, &
-         opg%mesh%vp%comm, mpi_err)
-    SAFE_ALLOCATE(part_vec(1:opg%mesh%np_part_global))
-    SAFE_ALLOCATE(ip_v(1:opg%mesh%np_part_global))
-    do ip = 1, opg%mesh%np_part_global 
-      ip_v(ip) = ip 
-    end do
-    np_enl = opg%mesh%np_part_global - opg%mesh%np_global
-    call partition_get_partition_number(opg%mesh%inner_partition, opg%mesh%np_global, ip_v, part_vec) 
-    call partition_get_partition_number(opg%mesh%bndry_partition, np_enl , &
-         ip_v(opg%mesh%np_global+1:np_enl), part_vec(opg%mesh%np_global+1:np_enl)) 
-        
-    do ip = 1, opg%stencil%size
-      do jp = 1, opg%mesh%np_global
-        il = opg%mesh%vp%np_local_vec(part_vec(jp))
-        ig = il + np_ghost_tmp(part_vec(jp))
-        ! opg%index(ip, jp) is a local point number, i.e. it can be
-        ! a real local point (i.e. the local point number
-        ! is less or equal than the number of local points of
-        ! the node which owns the point with global number jp):
-        if(opg%index(ip, jp) <= il) then
-          ! Write the global point number from the lookup
-          ! table in op_(ip, jp).
-          opg%index(ip, jp) = opg%mesh%vp%local(opg%mesh%vp%xlocal_vec(part_vec(jp)) &
-            + opg%index(ip, jp)-1)
-          ! Or a ghost point:
-        else if(opg%index(ip, jp) > il .and. opg%index(ip, jp) <= ig) then
-          opg%index(ip, jp) = opg%mesh%vp%ghost(xghost_tmp(part_vec(jp)) &
-            + opg%index(ip, jp)-1-il)
-          ! Or a boundary point:
-        else if(opg%index(ip, jp) > ig) then
-          opg%index(ip, jp) = opg%mesh%vp%bndry(xbndry_tmp(part_vec(jp)) &
-            + opg%index(ip, jp)-1-ig)
-        end if
-      end do
-    end do
-    SAFE_DEALLOCATE_A(np_ghost_tmp)
-    SAFE_DEALLOCATE_A(xbndry_tmp)
-    SAFE_DEALLOCATE_A(xghost_tmp)
-
-    POP_SUB(nl_operator_translate_indices)
-
-  end subroutine nl_operator_translate_indices
 
   ! ---------------------------------------------------------
   ! End of private routines.
