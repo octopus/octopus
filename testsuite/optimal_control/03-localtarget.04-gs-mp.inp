@@ -33,5 +33,4 @@ ExtraStates = 1
 
 ConvRelDens = 1.0e-8
 
-
-
+ProfilingMode = prof_time

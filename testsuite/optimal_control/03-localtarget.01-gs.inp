@@ -32,5 +32,4 @@ TheoryLevel = independent_particles
 
 #EigenSolverMaxIter = 1000
 
-
-
+ProfilingMode = prof_time
