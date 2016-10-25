@@ -11,6 +11,7 @@ Spacing = 0.6
 EigenSolver = rmmdiis
 
 LCAOAlternative = yes
+LCAOExtraOrbitals = yes
 
 ConvRelDens = 2e-6
 
