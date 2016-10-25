@@ -153,10 +153,27 @@ contains
 
   end function symm_op_is_identity
 
+  ! -------------------------------------------------------------------------------
+  
+  pure function isymm_op_apply(this, aa) result(bb)
+    type(symm_op_t),  intent(in)  :: this
+    integer,          intent(in)  :: aa(:) !< (3)
+    integer                       :: bb(1:3)
 
-#include "undef.F90"
-#include "integer.F90"
-#include "symm_op_inc.F90"
+    bb(1:3) = nint(dsymm_op_apply(this, real(aa, REAL_PRECISION)))
+    
+  end function isymm_op_apply
+  
+  ! -------------------------------------------------------------------------------
+
+  function isymm_op_apply_inv(this, aa) result(bb)
+    type(symm_op_t),  intent(in)  :: this
+    integer,          intent(in)  :: aa(:) !< (3)
+    integer                       :: bb(1:3)
+
+    bb(1:3) = nint(dsymm_op_apply_inv(this, real(aa, REAL_PRECISION)))
+    
+  end function isymm_op_apply_inv
 
 #include "undef.F90"
 #include "real.F90"
