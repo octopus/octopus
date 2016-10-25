@@ -20,7 +20,7 @@
 subroutine X(run_sternheimer)()
 
   R_TYPE, allocatable :: inhomog(:,:,:,:,:)
-  integer :: ik, ik0
+  integer :: ik, ik0, ist
 
   PUSH_SUB(em_resp_run.X(run_sternheimer))
 
@@ -285,8 +285,11 @@ subroutine X(run_sternheimer)()
   
         if(use_kdotp .and. idir <= gr%sb%periodic_dim) then
           do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
-            ik0 = ik - sys%st%d%kpt%start + 1 
-            inhomog(:, :, :, ik0, 1) = kdotp_lr(idir, 1)%X(dl_psi)(:,:,:,ik)
+            ik0 = ik - sys%st%d%kpt%start + 1
+            do ist = sys%st%st_start, sys%st%st_end
+              inhomog(1:sys%gr%mesh%np, 1:sys%st%d%dim, ist, ik0, 1) = &
+                kdotp_lr(idir, 1)%X(dl_psi)(1:sys%gr%mesh%np, 1:sys%st%d%dim, ist, ik)
+            end do
           end do
           call X(sternheimer_set_rhs)(sh, inhomog(:,:,:,:,1))
         end if
