@@ -9,6 +9,15 @@ Processors : 4
 
 Input      : 13-primitive.01-diamond.inp
 
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -11.47123094
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -10.73490075
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.82674166
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  0.99993012
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -3.10096198
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.44501224
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  8.61918229
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -6.80953754
+
 match ; k-point 50 (x) ; GREPFIELD(static/info, '#k =  50', 7) ;   0.000000
 match ; k-point 50 (y) ; GREPFIELD(static/info, '#k =  50', 8) ;   0.000000
 match ; k-point 50 (z) ; GREPFIELD(static/info, '#k =  50', 9) ;   0.000000
@@ -26,6 +35,15 @@ match ; Eigenvalue  3 ; GREPFIELD(static/info,  '#k =  75', 3, 3) ;  0.210654
 match ; Eigenvalue  4 ; GREPFIELD(static/info,  '#k =  75', 3, 4) ;  0.210656
 
 Input      : 13-primitive.02-graphene.inp
+
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -11.45357653
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -19.80012852
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -4.00466269
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; -11.28270313
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -3.03638186
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.43849641
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  8.31417529
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;  14.78994566
 
 match ; k-point 26 (x) ; GREPFIELD(static/info, '#k =  26', 7) ;   0.000000
 match ; k-point 26 (y) ; GREPFIELD(static/info, '#k =  26', 8) ;   0.000000
