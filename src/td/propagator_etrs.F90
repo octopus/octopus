@@ -57,7 +57,7 @@ contains
 
   ! ---------------------------------------------------------
   !> Propagator with enforced time-reversal symmetry
-  subroutine td_etrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions, gauge_force)
+  subroutine td_etrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
     type(v_ks_t), target,            intent(inout) :: ks
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(grid_t),        target,     intent(inout) :: gr
@@ -69,7 +69,6 @@ contains
     type(ion_dynamics_t),            intent(inout) :: ions
     type(geometry_t),                intent(inout) :: geo
     logical,                         intent(in)    :: move_ions
-    type(gauge_force_t),  optional,  intent(inout) :: gauge_force
 
     FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
     integer :: ik, ib
@@ -132,7 +131,7 @@ contains
     end if
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
-      call gauge_field_propagate(hm%ep%gfield, gauge_force, dt, time)
+      call gauge_field_propagate(hm%ep%gfield, dt, time)
     end if
 
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
@@ -162,7 +161,7 @@ contains
 
   ! ---------------------------------------------------------
   !> Propagator with enforced time-reversal symmetry and self-consistency
-  subroutine td_etrs_sc(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions, sctol, gauge_force, scsteps)
+  subroutine td_etrs_sc(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions, sctol, scsteps)
     type(v_ks_t), target,            intent(inout) :: ks
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(grid_t),        target,     intent(inout) :: gr
@@ -175,7 +174,6 @@ contains
     type(geometry_t),                intent(inout) :: geo
     logical,                         intent(in)    :: move_ions
     FLOAT,                           intent(in)    :: sctol
-    type(gauge_force_t),  optional,  intent(inout) :: gauge_force
     integer,              optional,  intent(out)   :: scsteps
 
     FLOAT :: diff
@@ -236,7 +234,7 @@ contains
     end if
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
-      call gauge_field_propagate(hm%ep%gfield, gauge_force, dt, time)
+      call gauge_field_propagate(hm%ep%gfield, dt, time)
     end if
 
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
@@ -320,7 +318,7 @@ contains
 
   ! ---------------------------------------------------------
   !> Propagator with approximate enforced time-reversal symmetry
-  subroutine td_aetrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions, gauge_force)
+  subroutine td_aetrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
     type(v_ks_t), target,            intent(inout) :: ks
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(grid_t),        target,     intent(inout) :: gr
@@ -332,7 +330,6 @@ contains
     type(ion_dynamics_t),            intent(inout) :: ions
     type(geometry_t),                intent(inout) :: geo
     logical,                         intent(in)    :: move_ions
-    type(gauge_force_t),  optional,  intent(inout) :: gauge_force
 
     integer :: ik, ispin, ip, ist, ib
     FLOAT :: vv
@@ -398,7 +395,7 @@ contains
     end if
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
-      call gauge_field_propagate(hm%ep%gfield, gauge_force, dt, time)
+      call gauge_field_propagate(hm%ep%gfield, dt, time)
     end if
 
     call hamiltonian_update(hm, gr%mesh, time = time)

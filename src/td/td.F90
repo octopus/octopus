@@ -86,7 +86,6 @@ module td_oct_m
     logical              :: recalculate_gs !< Recalculate ground-state along the evolution.
 
     type(pes_t)          :: pesv
-    type(gauge_force_t)  :: gauge_force
 
     FLOAT                :: mu
     integer              :: dynamics
@@ -404,7 +403,7 @@ contains
 
     if(td%iter == 0) call td_run_zero_iter()
 
-    if (gauge_field_is_applied(hm%ep%gfield)) call gauge_field_get_force(hm%ep%gfield, gr, st, td%gauge_force)
+    if (gauge_field_is_applied(hm%ep%gfield)) call gauge_field_get_force(hm%ep%gfield, gr, st)
 
     !call td_check_trotter(td, sys, h)
     td%iter = td%iter + 1
@@ -452,10 +451,10 @@ contains
       select case(td%dynamics)
       case(EHRENFEST)
         call propagator_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt, td%energy_update_iter*td%mu, iter, td%ions, geo, &
-          gauge_force = td%gauge_force, scsteps = scsteps, &
+          scsteps = scsteps, &
           update_energy = (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter) )
       case(BO)
-        call propagator_dt_bo(td%scf, gr, sys%ks, st, hm, td%gauge_force, geo, sys%mc, sys%outp, iter, td%dt, td%ions, scsteps)
+        call propagator_dt_bo(td%scf, gr, sys%ks, st, hm, geo, sys%mc, sys%outp, iter, td%dt, td%ions, scsteps)
       end select
 
       !Apply mask absorbing boundaries

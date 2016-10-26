@@ -45,7 +45,7 @@ contains
   
   ! ---------------------------------------------------------
   !> Exponential midpoint
-  subroutine exponential_midpoint(hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions, gauge_force)
+  subroutine exponential_midpoint(hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(grid_t),        target,     intent(inout) :: gr
     type(states_t),      target,     intent(inout) :: st
@@ -56,7 +56,6 @@ contains
     type(ion_dynamics_t),            intent(inout) :: ions
     type(geometry_t),                intent(inout) :: geo
     logical,                         intent(in)    :: move_ions
-    type(gauge_force_t),  optional,  intent(inout) :: gauge_force
 
     integer :: ib, ik
     type(ion_state_t) :: ions_state
@@ -97,7 +96,7 @@ contains
       if(gauge_field_is_applied(hm%ep%gfield)) then
         call gauge_field_get_vec_pot(hm%ep%gfield, vecpot)
         call gauge_field_get_vec_pot_vel(hm%ep%gfield, vecpot_vel)
-        call gauge_field_propagate(hm%ep%gfield, gauge_force, M_HALF*dt,time)
+        call gauge_field_propagate(hm%ep%gfield, M_HALF*dt,time)
       end if
 
       call hamiltonian_update(hm, gr%mesh, time = real(zt - zdt/M_z2, REAL_PRECISION), Imtime = aimag(zt - zdt/M_z2  ))
@@ -132,7 +131,7 @@ contains
       if(gauge_field_is_applied(hm%ep%gfield)) then
         call gauge_field_get_vec_pot(hm%ep%gfield, vecpot)
         call gauge_field_get_vec_pot_vel(hm%ep%gfield, vecpot_vel)
-        call gauge_field_propagate(hm%ep%gfield, gauge_force, M_HALF*dt, time)
+        call gauge_field_propagate(hm%ep%gfield, M_HALF*dt, time)
       end if
       call hamiltonian_update(hm, gr%mesh, time = time - M_HALF*dt)
       do ik = st%d%kpt%start, st%d%kpt%end

@@ -474,7 +474,7 @@ contains
   !! If dt<0, it propagates *backwards* from t+|dt| to t
   ! ---------------------------------------------------------
   subroutine propagator_dt(ks, hm, gr, st, tr, time, dt, ionic_scale, nt, ions, geo, &
-    gauge_force, scsteps, update_energy, qcchi)
+    scsteps, update_energy, qcchi)
     type(v_ks_t), target,            intent(inout) :: ks
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(grid_t),        target,     intent(inout) :: gr
@@ -486,7 +486,6 @@ contains
     integer,                         intent(in)    :: nt
     type(ion_dynamics_t),            intent(inout) :: ions
     type(geometry_t),                intent(inout) :: geo
-    type(gauge_force_t),  optional,  intent(inout) :: gauge_force
     integer,              optional,  intent(out)   :: scsteps
     logical,              optional,  intent(in)    :: update_energy
     type(opt_control_state_t), optional, target, intent(inout) :: qcchi
@@ -500,10 +499,6 @@ contains
     update_energy_ = optional_default(update_energy, .true.)
 
     cmplxscl = hm%cmplxscl%space
-
-    if(gauge_field_is_applied(hm%ep%gfield)) then
-      ASSERT(present(gauge_force))
-    end if
 
     if(cmplxscl) then
       call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, hm%vhxc, hm%imvhxc)
@@ -521,14 +516,14 @@ contains
     case(PROP_ETRS)
       if(self_consistent_step()) then
         call td_etrs_sc(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_, tr%scf_threshold, &
-          gauge_force, scsteps)
+           scsteps)
       else
-        call td_etrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_, gauge_force)
+        call td_etrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
       end if
     case(PROP_AETRS, PROP_CAETRS)
-      call td_aetrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_, gauge_force)
+      call td_aetrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
     case(PROP_EXPONENTIAL_MIDPOINT)
-      call exponential_midpoint(hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_, gauge_force)
+      call exponential_midpoint(hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
     case(PROP_CRANK_NICOLSON)
       call td_crank_nicolson(hm, gr, st, tr, time, dt, ions, geo, .false.)
     case(PROP_RUNGE_KUTTA4)
@@ -558,7 +553,7 @@ contains
     end if
 
     if(gauge_field_is_applied(hm%ep%gfield) .and. .not. propagator_ions_are_propagated(tr)) then
-      call gauge_field_propagate(hm%ep%gfield, gauge_force, dt, time)
+      call gauge_field_propagate(hm%ep%gfield, dt, time)
     end if
 
     if(generate .or. geometry_species_time_dependent(geo)) then
@@ -577,8 +572,8 @@ contains
     end if
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
-      call gauge_field_get_force(hm%ep%gfield, gr, st, gauge_force)
-      call gauge_field_propagate_vel(hm%ep%gfield, gauge_force, dt)
+      call gauge_field_get_force(hm%ep%gfield, gr, st)
+      call gauge_field_propagate_vel(hm%ep%gfield, dt)
     end if
 
     POP_SUB(propagator_dt)
@@ -615,13 +610,12 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine propagator_dt_bo(scf, gr, ks, st, hm, gauge_force, geo, mc, outp, iter, dt, ions, scsteps)
+  subroutine propagator_dt_bo(scf, gr, ks, st, hm, geo, mc, outp, iter, dt, ions, scsteps)
     type(scf_t), intent(inout)         :: scf
     type(grid_t), intent(inout)        :: gr
     type(v_ks_t), intent(inout)        :: ks
     type(states_t), intent(inout)      :: st
     type(hamiltonian_t), intent(inout) :: hm
-    type(gauge_force_t), intent(inout) :: gauge_force
     type(geometry_t), intent(inout)    :: geo
     type(multicomm_t), intent(inout)   :: mc    !< index and domain communicators
     type(output_t), intent(inout)      :: outp
@@ -640,7 +634,7 @@ contains
       gs_run = .false., verbosity = VERB_COMPACT, iters_done = scsteps)
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
-      call gauge_field_propagate(hm%ep%gfield, gauge_force, dt, iter*dt)
+      call gauge_field_propagate(hm%ep%gfield, dt, iter*dt)
     end if
 
     call hamiltonian_epot_generate(hm, gr, geo, st, time = iter*dt)
@@ -656,7 +650,7 @@ contains
      geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
-      call gauge_field_propagate_vel(hm%ep%gfield, gauge_force, dt)
+      call gauge_field_propagate_vel(hm%ep%gfield, dt)
     end if
 
     POP_SUB(propagator_dt_bo)
