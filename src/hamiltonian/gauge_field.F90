@@ -453,8 +453,6 @@ contains
     PUSH_SUB(gauge_field_get_force)
 
 
-    force%vecpot(1:gr%sb%dim) = M_ZERO 
-
     select case(this%dynamics)
     case(OPTION__GAUGEFIELDDYNAMICS__NONE)
       force%vecpot(1:gr%sb%dim) = M_ZERO 
