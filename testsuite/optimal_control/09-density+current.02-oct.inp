@@ -95,5 +95,6 @@ Output=  wfs + density
 OutputFormat= axis_x
 TDOutput = laser + td_occup
 
+DisableOpenCL = yes
 
 
