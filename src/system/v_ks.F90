@@ -75,7 +75,7 @@ module v_ks_oct_m
     v_ks_calc_start,    &
     v_ks_calc_finish,   &
     v_ks_freeze_hxc,    &
-    v_ks_calculate_current
+    v_ks_calculate_current 
 
   integer, parameter, public :: &
     SIC_NONE   = 1,     &  !< no self-interaction correction
@@ -488,7 +488,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine v_ks_calc(ks, hm, st, geo, calc_eigenval, time, calc_berry, calc_energy)
+  subroutine v_ks_calc(ks, hm, st, geo, calc_eigenval, time, calc_berry, calc_energy, calc_current)
     type(v_ks_t),               intent(inout) :: ks
     type(hamiltonian_t),        intent(inout) :: hm
     type(states_t),             intent(inout) :: st
@@ -497,10 +497,15 @@ contains
     FLOAT,            optional, intent(in)    :: time
     logical,          optional, intent(in)    :: calc_berry !< use this before wfns initialized
     logical,          optional, intent(in)    :: calc_energy
+    logical,          optional, intent(in)    :: calc_current
+
+    logical :: calc_current_
 
     PUSH_SUB(v_ks_calc)
 
-    call v_ks_calc_start(ks, hm, st, geo, time, calc_berry, calc_energy)
+    calc_current_ = optional_default(calc_current, .true.)
+
+    call v_ks_calc_start(ks, hm, st, geo, time, calc_berry, calc_energy, calc_current_)
     call v_ks_calc_finish(ks, hm)
 
     if(optional_default(calc_eigenval, .false.)) then
@@ -516,7 +521,7 @@ contains
   !! potential. The routine v_ks_calc_finish must be called to finish
   !! the calculation. The argument hm is not modified. The argument st
   !! can be modified after the function have been used.
-  subroutine v_ks_calc_start(ks, hm, st, geo, time, calc_berry, calc_energy) 
+  subroutine v_ks_calc_start(ks, hm, st, geo, time, calc_berry, calc_energy, calc_current) 
     type(v_ks_t),            target,   intent(inout) :: ks 
     type(hamiltonian_t),     target,   intent(in)    :: hm !< This MUST be intent(in), changes to hm are done in v_ks_calc_finish.
     type(states_t),                    intent(inout) :: st
@@ -524,11 +529,16 @@ contains
     FLOAT,                   optional, intent(in)    :: time 
     logical,                 optional, intent(in)    :: calc_berry !< Use this before wfns initialized.
     logical,                 optional, intent(in)    :: calc_energy
+    logical,                 optional, intent(in)    :: calc_current
 
     type(profile_t), save :: prof
     logical :: cmplxscl
+    logical :: calc_current_
 
     PUSH_SUB(v_ks_calc_start)
+
+    calc_current_ = optional_default(calc_current, .true.)
+
     call profiling_in(prof, "KOHN_SHAM_CALC")
     cmplxscl = hm%cmplxscl%space
 
@@ -566,7 +576,7 @@ contains
 
     ! If the Hxc term is frozen, there is nothing more to do (WARNING: MISSING ks%calc%energy%intnvxc)
     if(ks%frozen_hxc) then      
-      if(ks%calculate_current) then
+      if(ks%calculate_current .and. calc_current_ ) then
         call states_allocate_current(st, ks%gr)
         call current_calculate(ks%current_calculator, ks%gr%der, hm, geo, st, st%current)
       end if      
@@ -610,7 +620,7 @@ contains
       ks%calc%total_density_alloc = .false.
     end if
 
-    if(ks%calculate_current) then
+    if(ks%calculate_current .and. calc_current_ ) then
       call states_allocate_current(st, ks%gr)
       call current_calculate(ks%current_calculator, ks%gr%der, hm, geo, st, st%current)
     end if
@@ -1287,7 +1297,7 @@ contains
 
     POP_SUB(v_ks_calculate_current)
   end subroutine v_ks_calculate_current
-  
+ 
 end module v_ks_oct_m
 
 !! Local Variables:

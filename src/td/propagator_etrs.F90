@@ -105,7 +105,7 @@ contains
 
       call density_calc_end(dens_calc)
 
-      call v_ks_calc(ks, hm, st, geo)
+      call v_ks_calc(ks, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield))
 
       call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
       call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
@@ -219,7 +219,7 @@ contains
 
     call density_calc_end(dens_calc)
 
-    call v_ks_calc(ks, hm, st, geo)
+    call v_ks_calc(ks, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield))
 
     call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
     call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
@@ -270,7 +270,7 @@ contains
         call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
       end if
 
-      call v_ks_calc(ks, hm, st, geo, time = time)
+      call v_ks_calc(ks, hm, st, geo, time = time, calc_current = gauge_field_is_applied(hm%ep%gfield))
 
       ! now check how much the potential changed
       do ip = 1, gr%mesh%np
@@ -353,7 +353,8 @@ contains
       call lalg_copy(gr%mesh%np, st%d%nspin, vold, hm%vhxc)
       if(hm%cmplxscl%space) call lalg_copy(gr%mesh%np, st%d%nspin, Imvold, hm%Imvhxc)
       call hamiltonian_update(hm, gr%mesh, time = time - dt)
-      call v_ks_calc_start(ks, hm, st, geo, time = time - dt, calc_energy = .false.)
+      call v_ks_calc_start(ks, hm, st, geo, time = time - dt, calc_energy = .false., &
+             calc_current = gauge_field_is_applied(hm%ep%gfield))
     end if
 
     ! propagate half of the time step with H(time - dt)
