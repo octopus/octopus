@@ -454,6 +454,7 @@ contains
         theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
         call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
             real(CNST(1e-8), 8), real(CNST(1e-8),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
+        sumgi2 = rdm%occsum - st%qtot 
       end if
     end do
 
@@ -1000,7 +1001,7 @@ contains
     type(states_t),       intent(in)    :: st 
     type(grid_t),         intent(inout) :: gr
     
-    FLOAT, allocatable :: hpsi(:,:), rho(:), rho1(:), rho2(:), rho3(:), rho4(:)
+    FLOAT, allocatable :: hpsi(:,:), rho(:), rho1(:), rho2(:), rho3(:)
     FLOAT, allocatable :: dpsi(:,:), dpsi2(:,:)
     FLOAT, allocatable :: v_ij(:,:,:)
     FLOAT, allocatable :: lxc(:, :, :) !required input variable for doep_x, not used otherwise, might get used
@@ -1015,7 +1016,6 @@ contains
     SAFE_ALLOCATE(rho1(1:gr%mesh%np))
     SAFE_ALLOCATE(rho2(1:gr%mesh%np))
     SAFE_ALLOCATE(rho3(1:gr%mesh%np))
-    SAFE_ALLOCATE(rho4(1:gr%mesh%np))
     SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(dpsi2(1:gr%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(v_ij(1:gr%der%mesh%np, 1:st%nst, 1:st%nst))
@@ -1138,8 +1138,8 @@ contains
              rdm%k_index(icount)=jst
              rdm%l_index(icount)=lst
              icount = icount + 1
-             rho4(1:gr%mesh%np) = dpsi2(1:gr%mesh%np, 1)*dpsi(1:gr%mesh%np, 1)
-             rdm%twoint(icount) = dmf_dotp(gr%mesh, rho4, v_ij(:,jst, kst))  !<il|jk>
+             rho3(1:gr%mesh%np) = dpsi2(1:gr%mesh%np, 1)*dpsi(1:gr%mesh%np, 1)
+             rdm%twoint(icount) = dmf_dotp(gr%mesh, rho3, v_ij(:,jst, kst))  !<il|jk>
              rdm%i_index(icount)=ist
              rdm%j_index(icount)=lst
              rdm%k_index(icount)=jst
@@ -1154,7 +1154,6 @@ contains
     SAFE_DEALLOCATE_A(rho1)
     SAFE_DEALLOCATE_A(rho2)
     SAFE_DEALLOCATE_A(rho3)
-    SAFE_DEALLOCATE_A(rho4)
     SAFE_DEALLOCATE_A(dpsi)
     SAFE_DEALLOCATE_A(dpsi2)
     SAFE_DEALLOCATE_A(lxc)
