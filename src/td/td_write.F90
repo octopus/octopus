@@ -2237,7 +2237,7 @@ contains
     end do
 
 #if defined(HAVE_MPI)        
-   if(st%d%kpt%parallel) then
+   if(st%parallel_in_states .or. st%d%kpt%parallel) then
      call comm_allreduce(st%st_kpt_mpi_grp%comm, Nex)
    end if
 #endif  
