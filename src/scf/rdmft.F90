@@ -491,10 +491,9 @@ contains
     call messages_info(3)   
 
     do ist = 1, st%nst
-      write(message(ist),'(i4,3x,f11.4)') ist, st%occ(ist, 1)
+      write(message(1),'(i4,3x,f11.4)') ist, st%occ(ist, 1)
+      call messages_info(1)
     end do
-
-    call messages_info(st%nst)
 
 
     SAFE_DEALLOCATE_A(occin)
