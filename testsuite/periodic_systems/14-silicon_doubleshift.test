@@ -82,6 +82,6 @@ Input      : 14-silicon_doubleshift.02-td.inp
 
 Precision : 6e-5
 match ; Total current [step  100] ; LINEFIELD(td.general/total_current, -1, 5) ; -0.04530770208443
-Precision : 1e-6
-match ; Number of excited electrons [step  100] ; LINEFIELD(td.general/n_ex, -1, 3) ; 1.027640665754e-04
+Precision : 2e-6
+match ; Number of excited electrons [step  100] ; LINEFIELD(td.general/n_ex, -1, 3) ; 1.0130718794523e-04
 
