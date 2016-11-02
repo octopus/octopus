@@ -25,7 +25,6 @@ module current_oct_m
   use boundaries_oct_m
   use comm_oct_m
   use derivatives_oct_m
-  use gauge_field_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
