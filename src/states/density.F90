@@ -318,29 +318,26 @@ contains
 
     type(symmetrizer_t) :: symmetrizer
     FLOAT, allocatable :: tmpdensity(:)
-    integer :: ispin, ip, np
+    integer :: ispin, ip
     type(profile_t), save :: reduce_prof
     FLOAT, allocatable :: fdensity(:)
 
     PUSH_SUB(density_calc_end)
 
-    !The assert in density_calc_init ensures a valid size
-    np = ubound(this%density, dim = 1)
-
     if(this%packed) then
-      SAFE_ALLOCATE(tmpdensity(1:np))
+      SAFE_ALLOCATE(tmpdensity(1:this%gr%mesh%np_part))
 
       ! the density is in device memory
       do ispin = 1, this%st%d%nspin
-        call accel_read_buffer(this%buff_density, np, tmpdensity, offset = (ispin - 1)*this%pnp)
+        call accel_read_buffer(this%buff_density, this%gr%mesh%np, tmpdensity, offset = (ispin - 1)*this%pnp)
 
         if(this%gr%have_fine_mesh) then
            SAFE_ALLOCATE(fdensity(1:this%gr%fine%mesh%np))
            call dmultigrid_coarse2fine(this%gr%fine%tt, this%gr%der, this%gr%fine%mesh, tmpdensity, fdensity, order = 2)
-           forall(ip = 1:np) this%density(ip, ispin) = this%density(ip, ispin) + fdensity(ip)
+           forall(ip = 1:this%gr%fine%mesh%np) this%density(ip, ispin) = this%density(ip, ispin) + fdensity(ip)
            SAFE_DEALLOCATE_A(fdensity)
         else
-           forall(ip = 1:np) this%density(ip, ispin) = this%density(ip, ispin) + tmpdensity(ip)
+           forall(ip = 1:this%gr%mesh%np) this%density(ip, ispin) = this%density(ip, ispin) + tmpdensity(ip)
         end if
 
       end do
@@ -353,17 +350,17 @@ contains
     ! reduce over states and k-points
     if(this%st%parallel_in_states .or. this%st%d%kpt%parallel) then
       call profiling_in(reduce_prof, "DENSITY_REDUCE")
-      call comm_allreduce(this%st%st_kpt_mpi_grp%comm, this%density, dim = (/np, this%st%d%nspin/))
+      call comm_allreduce(this%st%st_kpt_mpi_grp%comm, this%density, dim = (/this%gr%fine%mesh%np, this%st%d%nspin/))
       call profiling_out(reduce_prof)
     end if
 
     if(this%st%symmetrize_density) then
-      SAFE_ALLOCATE(tmpdensity(1:np))
+      SAFE_ALLOCATE(tmpdensity(1:this%gr%fine%mesh%np))
       call symmetrizer_init(symmetrizer, this%gr%fine%mesh)
 
       do ispin = 1, this%st%d%nspin
         call dsymmetrizer_apply(symmetrizer, field = this%density(:, ispin), symmfield = tmpdensity)
-        this%density(1:np, ispin) = tmpdensity(1:np)
+        this%density(1:this%gr%fine%mesh%np, ispin) = tmpdensity(1:this%gr%fine%mesh%np)
       end do
 
       call symmetrizer_end(symmetrizer)
