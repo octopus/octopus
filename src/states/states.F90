@@ -2140,17 +2140,6 @@ contains
                  - ww*M_TWO*aimag(conjg(wf_psi(1:der%mesh%np, 1))*kpoint(i_dim)*gwf_psi(1:der%mesh%np, i_dim, 1) )
           end if
 
-          if(present(gi_kinetic_energy_density)) then
-            ASSERT(associated(tau))
-            if(states_are_complex(st)) then
-              ASSERT(associated(jp))
-              gi_kinetic_energy_density(1:der%mesh%np, is) = tau(1:der%mesh%np, is) - &
-                   jp(1:der%mesh%np, i_dim, 1)**2/st%rho(1:der%mesh%np, 1)
-            else
-              gi_kinetic_energy_density(1:der%mesh%np, is) = tau(1:der%mesh%np, is)
-            end if
-          end if
-
           if(st%d%ispin == SPINORS) then
             if(present(density_gradient)) then
               density_gradient(1:der%mesh%np, i_dim, 2) = density_gradient(1:der%mesh%np, i_dim, 2) + &
@@ -2205,6 +2194,22 @@ contains
 
       end do
     end do
+
+    !We compute the gauge-invariant kinetic energy density
+    if(present(gi_kinetic_energy_density) .and. st%d%ispin /= SPINORS) then
+      do is = 1, st%d%nspin
+        ASSERT(associated(tau))
+        gi_kinetic_energy_density(1:der%mesh%np, is) = tau(1:der%mesh%np, is)
+        if(states_are_complex(st)) then
+          ASSERT(associated(jp))
+          do i_dim = 1, der%mesh%sb%dim
+            gi_kinetic_energy_density(1:der%mesh%np, is) = &
+                gi_kinetic_energy_density(1:der%mesh%np, is) - &
+                jp(1:der%mesh%np, i_dim, 1)**2/st%rho(1:der%mesh%np, 1)
+          end do
+        end if
+      end do
+    end if
 
     SAFE_DEALLOCATE_A(wf_psi)
     SAFE_DEALLOCATE_A(gwf_psi)

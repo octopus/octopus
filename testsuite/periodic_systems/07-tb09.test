@@ -84,10 +84,10 @@ match ; Eigenvalue [  k=20,n=17  ] ; GREPFIELD(static/info, '#k =  20', 3, 18) ;
 Input      : 07-tb09.03-td.inp
 
 match ; Energy           [step  1] ; LINEFIELD(td.general/energy, -21, 3) ; -3.361334134902e+01
-match ; Energy           [step  5] ; LINEFIELD(td.general/energy, -16, 3) ; -3.361380842417e+01
-match ; Energy           [step 10] ; LINEFIELD(td.general/energy, -11, 3) ; -3.361376135437e+01
-match ; Energy           [step 15] ; LINEFIELD(td.general/energy, -6, 3) ;  -3.361328277519e+01
-match ; Energy           [step 20] ; LINEFIELD(td.general/energy, -1, 3) ;  -3.361287560642e+01
+match ; Energy           [step  5] ; LINEFIELD(td.general/energy, -16, 3) ; -3.361381877052e+01
+match ; Energy           [step 10] ; LINEFIELD(td.general/energy, -11, 3) ; -3.361380005105e+01
+match ; Energy           [step 15] ; LINEFIELD(td.general/energy, -6, 3) ;  -3.361336147719e+01
+match ; Energy           [step 20] ; LINEFIELD(td.general/energy, -1, 3) ;  -3.361298971043e+01
 
 match ; Vector potential [step  1] ; LINEFIELD(td.general/gauge_field, -21, 3) ; 1.000000000000e+01
 match ; Vector potential [step  5] ; LINEFIELD(td.general/gauge_field, -16, 3) ; 9.929939668754e+00
