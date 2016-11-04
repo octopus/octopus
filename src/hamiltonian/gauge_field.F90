@@ -71,8 +71,7 @@ module gauge_field_oct_m
     gauge_field_dump,                     &
     gauge_field_load,                     &
     gauge_field_end,                      &
-    gauge_field_get_force,                &
-    gauge_field_add_vec_pot_kick       
+    gauge_field_get_force
 
   type gauge_field_t
     FLOAT   :: vecpot(1:MAX_DIM)   
@@ -200,6 +199,10 @@ contains
 
     call parse_variable('GaugeFieldDelay', M_ZERO, this%kicktime)
 
+    if(this%kicktime == M_ZERO) then
+       this%vecpot(1:this%ndim) = this%vecpot_kick(1:this%ndim)
+    endif
+
     POP_SUB(gauge_field_init)
   end subroutine gauge_field_init
 
@@ -283,17 +286,6 @@ contains
     POP_SUB(gauge_field_get_vec_pot_acc)
   end subroutine gauge_field_get_vec_pot_acc
 
-  ! ---------------------------------------------------------
-  subroutine gauge_field_add_vec_pot_kick(this, aa, time)
-    type(gauge_field_t),  intent(in)    :: this
-    FLOAT,                intent(inout) :: aa(:) !< (this%ndim)
-    FLOAT,                intent(in)    :: time
- 
-    if(time < this%kicktime ) return
-
-    aa(1:this%ndim) = aa(1:this%ndim) + this%vecpot_kick(1:this%ndim) 
-
-  end subroutine gauge_field_add_vec_pot_kick
 
   ! ---------------------------------------------------------
   subroutine gauge_field_propagate(this, dt, time)
@@ -304,6 +296,13 @@ contains
     PUSH_SUB(gauge_field_propagate)
 
     this%vecpot_acc(1:this%ndim) = this%force(1:this%ndim)
+
+    ! apply kick, in case kicktime=0 the kick has already been applied
+    if(this%kicktime > M_ZERO .and. time-dt <= this%kicktime .and. time >= this%kicktime )  then
+      this%vecpot(1:this%ndim) = this%vecpot(1:this%ndim) +  this%vecpot_kick(1:this%ndim)
+      call messages_write('     ----------------  Applying gauge kick  ----------------')
+      call messages_info()
+    endif
 
     this%vecpot(1:this%ndim) = this%vecpot(1:this%ndim) + dt * this%vecpot_vel(1:this%ndim) + &
       M_HALF * dt**2 * this%force(1:this%ndim)
@@ -444,7 +443,6 @@ contains
     type(states_t),       intent(in)    :: st
 
     integer :: idir,ispin,istot
-    FLOAT   :: vecpot(1:this%ndim)
 
     PUSH_SUB(gauge_field_get_force)
 
@@ -454,16 +452,13 @@ contains
       this%force(1:gr%sb%dim) = M_ZERO 
 
     case(OPTION__GAUGEFIELDDYNAMICS__POLARIZATION)
-
       istot = 1
       if (st%d%nspin > 1) istot = 2
       do idir = 1, gr%sb%periodic_dim
         this%force(idir) = M_ZERO
         do ispin = 1, istot                      
-          this%force(idir) = this%force(idir) - CNST(4.0)*M_PI*P_c/gr%sb%rcell_volume &
-            *( dmf_integrate(gr%mesh, st%current(:, idir, ispin))                     &
-              +dmf_integrate(gr%mesh, st%rho(:,ispin))/gr%sb%rcell_volume*            &
-               (this%vecpot(idir)+this%vecpot_kick(idir))/P_c )
+          this%force(idir) = this%force(idir) + &
+                               CNST(4.0)*M_PI*P_c/gr%sb%rcell_volume*dmf_integrate(gr%mesh, st%current(:, idir, ispin))
         end do
       end do
 
