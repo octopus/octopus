@@ -696,7 +696,7 @@ contains
       call td_write_energy(writ%out(OUT_ENERGY)%handle, hm, iter, geo%kinetic_energy)
 
     if(writ%out(OUT_GAUGE_FIELD)%write) &
-      call td_write_gauge_field(writ%out(OUT_GAUGE_FIELD)%handle, hm, gr, dt, iter)
+      call td_write_gauge_field(writ%out(OUT_GAUGE_FIELD)%handle, hm, gr, iter)
 
     if(writ%out(OUT_EIGS)%write) &
       call td_write_eigs(writ%out(OUT_EIGS)%handle, st, iter)
@@ -1922,11 +1922,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_gauge_field(out_gauge, hm, gr, dt, iter)
+  subroutine td_write_gauge_field(out_gauge, hm, gr, iter)
     type(c_ptr),         intent(inout) :: out_gauge
     type(hamiltonian_t), intent(in) :: hm
     type(grid_t),        intent(in) :: gr
-    FLOAT,               intent(in) :: dt
     integer,             intent(in) :: iter
     
     integer :: idir
@@ -1973,9 +1972,6 @@ contains
 
     ! this complicated stuff here is a workaround for a PGI compiler bug in versions before 9.0-3
     call gauge_field_get_vec_pot(hm%ep%gfield, temp)
-    ! In case of gauge field, we want gauge field to be the total field
-    ! we thus add it here to the induced field (gauge field)
-    call gauge_field_add_vec_pot_kick(hm%ep%gfield, temp, iter*dt)
     forall(idir = 1:gr%mesh%sb%dim)
       temp(idir) = units_from_atomic(units_out%energy, temp(idir))
     end forall
