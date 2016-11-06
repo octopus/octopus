@@ -575,10 +575,8 @@ contains
 
     if(this%method == POISSON_POKE) then
 
-      ASSERT(all(der%mesh%spacing(2:der%mesh%sb%dim) == der%mesh%spacing(1)))
-      
 #ifdef HAVE_POKE      
-      this%poke_grid = PokeGrid(der%mesh%spacing(1), this%cube%rs_n)
+      this%poke_grid = PokeGrid(der%mesh%spacing, this%cube%rs_n)
       if(der%mesh%sb%periodic_dim > 0) then
         call this%poke_grid%set_boundaries(POKE_BOUNDARIES_PERIODIC)
       else
