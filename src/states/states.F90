@@ -2205,7 +2205,7 @@ contains
           do i_dim = 1, der%mesh%sb%dim
             gi_kinetic_energy_density(1:der%mesh%np, is) = &
                 gi_kinetic_energy_density(1:der%mesh%np, is) - &
-                jp(1:der%mesh%np, i_dim, 1)**2/st%rho(1:der%mesh%np, 1)
+                jp(1:der%mesh%np, i_dim, is)**2/st%rho(1:der%mesh%np, is)
           end do
         end if
       end do
