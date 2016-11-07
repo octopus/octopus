@@ -409,7 +409,6 @@ contains
         end if
 
         call parse_variable('Xlength', default, sb%xsize, units_inp%length)
-        sb%lsize(1) = sb%xsize
         if(def_rsize > M_ZERO .and. sb%periodic_dim == 0) &
           call messages_check_def(sb%xsize, .false., def_rsize, 'xlength', units_out%length)
       end if
