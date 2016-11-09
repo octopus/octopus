@@ -675,7 +675,7 @@ contains
       if(iand(outp%what, OPTION__OUTPUT__ELF) /= 0) then
         write(fname, '(a)') 'elf_rs'
         call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
-          f_loc(:,imax), unit_one, ierr, geo = geo)
+          f_loc(:,imax), unit_one, ierr, geo = geo, grp = mpi_grp)
         ! this quantity is dimensionless
 
         if(st%d%ispin /= UNPOLARIZED) then
@@ -734,7 +734,7 @@ contains
       call basins_analyze(basins, gr%mesh, ff(:), st%rho, CNST(0.01))
 
       call dio_function_output(outp%how, dir, trim(filename), gr%mesh, &
-        real(basins%map, REAL_PRECISION), unit_one, ierr, geo = geo)
+        real(basins%map, REAL_PRECISION), unit_one, ierr, geo = geo, grp = mpi_grp)
       ! this quantity is dimensionless
 
       write(fname,'(4a)') trim(dir), '/', trim(filename), '.info'
