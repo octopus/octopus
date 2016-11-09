@@ -2195,6 +2195,21 @@ contains
       end do
     end do
 
+    SAFE_DEALLOCATE_A(wf_psi)
+    SAFE_DEALLOCATE_A(gwf_psi)
+    SAFE_DEALLOCATE_A(lwf_psi)
+
+    if(.not. present(gi_kinetic_energy_density)) then
+      if(.not. present(paramagnetic_current)) then
+        SAFE_DEALLOCATE_P(jp)
+      end if
+      if(.not. present(kinetic_energy_density)) then
+        SAFE_DEALLOCATE_P(tau)
+      end if
+    end if
+
+    if(st%parallel_in_states .or. st%d%kpt%parallel) call reduce_all(st%st_kpt_mpi_grp)
+
     !We compute the gauge-invariant kinetic energy density
     if(present(gi_kinetic_energy_density) .and. st%d%ispin /= SPINORS) then
       do is = 1, st%d%nspin
@@ -2211,19 +2226,13 @@ contains
       end do
     end if
 
-    SAFE_DEALLOCATE_A(wf_psi)
-    SAFE_DEALLOCATE_A(gwf_psi)
-    SAFE_DEALLOCATE_A(lwf_psi)
-
+    if(.not. present(kinetic_energy_density)) then
+      SAFE_DEALLOCATE_P(tau)
+    end if
     if(.not. present(paramagnetic_current)) then
       SAFE_DEALLOCATE_P(jp)
     end if
 
-    if(.not. present(kinetic_energy_density)) then
-      SAFE_DEALLOCATE_P(tau)
-    end if
-
-    if(st%parallel_in_states .or. st%d%kpt%parallel) call reduce_all(st%st_kpt_mpi_grp)
 
     POP_SUB(states_calc_quantities)
 
@@ -2235,9 +2244,6 @@ contains
       PUSH_SUB(states_calc_quantities.reduce_all)
 
       if(associated(tau)) call comm_allreduce(grp%comm, tau, dim = (/der%mesh%np, st%d%nspin/))
-
-      if(present(gi_kinetic_energy_density)) &
-        call comm_allreduce(grp%comm, gi_kinetic_energy_density, dim = (/der%mesh%np, st%d%nspin/))
 
       if (present(density_laplacian)) call comm_allreduce(grp%comm, density_laplacian, dim = (/der%mesh%np, st%d%nspin/))
 
