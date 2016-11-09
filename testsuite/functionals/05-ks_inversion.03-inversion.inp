@@ -26,7 +26,7 @@ a=1.0
 XCFunctional = ks_inversion
 KSInversionLevel = ks_inversion_adiabatic
 KSInversionAsymptotics = xc_asymptotics_none
-InvertKSmethod = iterative
+InvertKSmethod = iter_stella # this is the default value and previously the only iterative algorithm
 
 InvertKSTargetDensity = "static/density.y=0,z=0"
 

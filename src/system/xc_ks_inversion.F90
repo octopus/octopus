@@ -99,8 +99,8 @@ contains
 
     PUSH_SUB(xc_ks_inversion_init)
 
-    if(mc%n_node > 1) &
-      call messages_not_implemented("Kohn-Sham inversion in parallel")
+!    if(mc%n_node > 1) &
+!      call messages_not_implemented("Kohn-Sham inversion in parallel")
 
     call messages_experimental("Kohn-Sham inversion")
     
@@ -120,7 +120,7 @@ contains
     !%Option iter_godby 4
     !% Iterative scheme for <math>v_s</math> using power method from Rex Godby.
     !%End
-    call parse_variable('InvertKSmethod', XC_INV_METHOD_VS_ITER, ks_inv%method)
+    call parse_variable('InvertKSmethod', XC_INV_METHOD_ITER_STELLA, ks_inv%method)
 
     if(ks_inv%method < XC_INV_METHOD_TWO_PARTICLE &
       .or. ks_inv%method > XC_INV_METHOD_ITER_GODBY) then
@@ -347,7 +347,7 @@ contains
     integer :: imax
     FLOAT :: rr, shift
     FLOAT :: alpha, beta
-    FLOAT :: mu, npower ! these constants are from Rex Godbys scheme
+    FLOAT :: mu, npower, npower_in ! these constants are from Rex Godbys scheme
     FLOAT :: convdensity, diffdensity
     FLOAT, allocatable :: vhxc(:,:)
 
@@ -367,6 +367,24 @@ contains
     !%End    
     call parse_variable('InvertKSConvAbsDens', CNST(1e-5), convdensity)
 
+    !%Variable InvertKSStellaBeta
+    !%Type float
+    !%Default 1.0
+    !%Section Calculation Modes::Invert KS
+    !%Description
+    !% residual term in Stella iterative scheme to avoid 0 denominators
+    !%End    
+    call parse_variable('InvertKSStellaBeta', CNST(.000001), beta)
+
+    !%Variable InvertKSStellaAlpha
+    !%Type float
+    !%Default 0.05
+    !%Section Calculation Modes::Invert KS
+    !%Description
+    !% prefactor term in iterative scheme from L Stella
+    !%End    
+    call parse_variable('InvertKSStellaAlpha', CNST(0.25), alpha)
+
     !%Variable InvertKSGodbyMu
     !%Type float
     !%Default 1.0
@@ -384,7 +402,8 @@ contains
     !% power to which density is elevated for iterative KS inversion convergence 
     !% scheme from Godby based on van Leeuwen scheme
     !%End    
-    call parse_variable('InvertKSGodbyPower', CNST(0.05), npower)
+    call parse_variable('InvertKSGodbyPower', CNST(0.05), npower_in)
+    npower = npower_in
 
     !%Variable InvertKSVerbosity
     !%Type integer
@@ -426,20 +445,11 @@ contains
 
     diffdensity = M_ONE
     counter = 0
-    alpha = CNST(0.05)
 
 
     do while(diffdensity > convdensity .and. counter < max_iter)
-      write(message(1),'(a,3E15.4,3I8)') ' KSinversion: diffdensity, convdensity, alpha, imax, counter, max_iter ', &
-        diffdensity, convdensity, alpha, imax, counter, max_iter
-      call messages_info(1)
       
       counter = counter + 1 
-      beta = diffdensity*CNST(0.001) !parameter to avoid numerical problems due to small denominator
-
-      ! proposition to increase convergence speed progressively
-      alpha = max(CNST(0.05), CNST(0.5) - diffdensity*CNST(100.0)*CNST(0.45))
-      !alpha = CNST(0.25)
 
       if(verbosity == 2) then
         write(fname,'(i6.6)') counter
@@ -453,23 +463,46 @@ contains
       call eigensolver_run(eigensolver, gr, st, aux_hm, 1)
       call density_calc(st, gr, st%rho)      
 
-      ! Inversion according to Stella/Verstraete
+      ! Iterative inversion with fixed parameters in Stella Verstraete method
       if (method == XC_INV_METHOD_VS_ITER) then
         do ii = 1, nspin
+!TODO: parallelize these loops over np
           do jj = 1, np
             vhxc(jj, ii) = vhxc(jj, ii) &
                + ((st%rho(jj, ii) - target_rho(jj, ii))/(target_rho(jj, ii) + beta))*alpha
           end do
         end do
+
+      ! adaptative iterative method, with update of alpha and beta coefficients
+      ! based on residual in density
       else if (method == XC_INV_METHOD_ITER_STELLA) then
+        beta = diffdensity*CNST(0.001) !parameter to avoid numerical problems due to small denominator
+  
+        ! proposition to increase convergence speed progressively
+        alpha = max(CNST(0.05), CNST(0.5) - diffdensity*CNST(100.0)*CNST(0.45))
+        write(message(1),'(a,2E15.4,3I8, 2E15.4)') &
+          ' KSinversion: diffdensity, convdensity, imax, counter, max_iter, alpha, beta ', &
+          diffdensity, convdensity, imax, counter, max_iter, alpha, beta
+        call messages_info(1)
         do ii = 1, nspin
+!TODO: parallelize these loops over np
           do jj = 1, np
             vhxc(jj, ii) = vhxc(jj, ii) &
                + ((st%rho(jj, ii) - target_rho(jj, ii))/(target_rho(jj, ii) + beta))*alpha
           end do
         end do
+
       else if (method == XC_INV_METHOD_ITER_GODBY) then
+!        ! below 1.e-3 start reducing power down to 0.01
+!        if (diffdensity < CNST(0.001)) then
+!          npower = min(npower_in, diffdensity*CNST(50.0))
+!        end if
+        write(message(1),'(a,2E15.4,3I8, 2E15.4)') &
+          ' KSinversion: diffdensity, convdensity, imax, counter, max_iter, power, mu ', &
+          diffdensity, convdensity, imax, counter, max_iter, npower, mu
+        call messages_info(1)
         do ii = 1, nspin
+!TODO: parallelize these loops over np
           do jj = 1, np
             vhxc(jj, ii) = vhxc(jj, ii) &
                + (st%rho(jj, ii)**npower - target_rho(jj, ii)**npower)*mu
@@ -480,6 +513,7 @@ contains
       diffdensity = M_ZERO
       !diffdensity = maxval ( abs ( st%rho(1:np,1:nspin)-target_rho(1:np,1:nspin) ) )
       do jj = 1, nspin
+!TODO: parallelize these loops over np
         do ii = 1, np
           if (abs(st%rho(ii,jj)-target_rho(ii,jj)) > diffdensity) then
             diffdensity = abs(st%rho(ii,jj)-target_rho(ii,jj))
@@ -507,6 +541,7 @@ contains
     !need to find a way to find all points from where asymptotics should start in 2 and 3D
     if(asymptotics == XC_ASYMPTOTICS_SC) then
       do ii = 1, nspin
+!TODO: parallelize these loops over np
         do jj = 1, int(np/2)
           if(target_rho(jj,ii) < convdensity*CNST(10.0)) then
             call mesh_r(gr%mesh, jj, rr)
@@ -521,12 +556,14 @@ contains
         ! calculate constant shift for correct asymptotics and shift accordingly
         call mesh_r(gr%mesh, asym1+1, rr)
         shift  = vhxc(asym1+1, ii) - (st%qtot-1.0)/sqrt(rr**2 + 1.0)
+!TODO: parallelize these loops over np
         do jj = asym1+1, asym2-1
           vhxc(jj,ii) = vhxc(jj, ii) - shift
         end do
   
         call mesh_r(gr%mesh, asym2-1, rr)
         shift  = vhxc(asym2-1, ii) - (st%qtot-1.0)/sqrt(rr**2 + 1.0)
+!TODO: parallelize these loops over np
         do jj = 1, asym2-1
           vhxc(jj,ii) = vhxc(jj, ii) - shift
         end do
@@ -537,11 +574,15 @@ contains
       end do
     end if
 
+!TODO: parallelize these loops over np
     aux_hm%vhxc(1:np,1:nspin) = vhxc(1:np, 1:nspin)
       
     do jj = 1, nspin
       aux_hm%vxc(:,jj) = vhxc(:,jj) - aux_hm%vhartree(1:np)
     end do
+
+!TODO: check that all arrays needed by hamiltonian update are sync'd in MPI
+!      fashion
 
     !calculate final density
 
