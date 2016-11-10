@@ -1,5 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 04-box.test 13244 2015-02-28 23:19:28Z dstrubbe $
+# $Id$
 
 Test       : 1D Box (NLOPT)
 Options    : nlopt
@@ -7,7 +7,7 @@ Program    : octopus
 TestGroups : long-run, optimal_control
 Enabled    : Yes
 
-# The test checks several optimal-control algorithm, all of them based on the NLOPT library.
+# The test checks several optimal-control algorithms, all of them based on the NLOPT library.
 # It calculates the optimal laser field that transfers the ground state to the first excited state. 
 # 
 # We do the following intermediate steps:
@@ -20,5 +20,5 @@ Input: 04-box.02-unocc.inp
 
 # run the optimization with the NLOPT BOBYQA algorithm
 Options : nlopt
-Input: 13-box.03-bobyqa.inp
+Input: 13-box-nlopt.03-bobyqa.inp
 match ; J1 1st iteration  ; LINEFIELD(opt-control/convergence, -2, 2) ; 0.62909889
