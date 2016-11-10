@@ -35,6 +35,8 @@
 %type  <val>  exp
 %type  <str>  string
 
+%left ','
+%left ')'
 %right '='
 %left '<' '>' LE GE EQUAL
 %left '-' '+'
@@ -59,6 +61,7 @@ line:
 ;
      
 exp: NUM                   { $$ = $1;                           }
+| exp ',' exp              { fprintf(stderr, "Parser error: comma is not valid operator\n"); exit(0); }
 | VAR                      { if(!$1->def) sym_notdef($1); $$ = $1->value.c; }
 | VAR '=' exp              { $$ = $3; $1->value.c = $3; $1->def = 1; $1->type = S_CMPLX;}
 | FNCT                     { sym_wrong_arg($1); }
