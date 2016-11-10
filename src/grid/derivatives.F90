@@ -491,7 +491,7 @@ contains
 
     case(DER_STAR) ! Laplacian and gradient have different stencils
       do i = 1, der%dim + 1
-        SAFE_ALLOCATE(polynomials(1:der%dim, 1:der%op(i)%stencil%size))
+        SAFE_ALLOCATE(polynomials(1:der%dim, 1:der%op(i)%stencil%npoly))
         SAFE_ALLOCATE(rhs(1:der%op(i)%stencil%size, 1:1))
 
         if(i <= der%dim) then  ! gradient
@@ -511,7 +511,7 @@ contains
 
     case(DER_CUBE) ! Laplacian and gradient have similar stencils
 
-      SAFE_ALLOCATE(polynomials(1:der%dim, 1:der%op(1)%stencil%size))
+      SAFE_ALLOCATE(polynomials(1:der%dim, 1:der%op(1)%stencil%npoly))
       SAFE_ALLOCATE(rhs(1:der%op(1)%stencil%size, 1:der%dim + 1))
       call stencil_cube_polynomials_lapl(der%dim, der%order, polynomials)
 
@@ -528,7 +528,7 @@ contains
 
     case(DER_STARPLUS)
       do i = 1, der%dim
-        SAFE_ALLOCATE(polynomials(1:der%dim, 1:der%op(i)%stencil%size))
+        SAFE_ALLOCATE(polynomials(1:der%dim, 1:der%op(i)%stencil%npoly))
         SAFE_ALLOCATE(rhs(1:der%op(i)%stencil%size, 1:1))
         call stencil_starplus_pol_grad(der%dim, i, der%order, polynomials)
         call get_rhs_grad(i, rhs(:, 1))
@@ -537,7 +537,7 @@ contains
         SAFE_DEALLOCATE_A(polynomials)
         SAFE_DEALLOCATE_A(rhs)
       end do
-      SAFE_ALLOCATE(polynomials(1:der%dim, 1:der%op(der%dim+1)%stencil%size))
+      SAFE_ALLOCATE(polynomials(1:der%dim, 1:der%op(der%dim+1)%stencil%npoly))
       SAFE_ALLOCATE(rhs(1:der%op(i)%stencil%size, 1:1))
       call stencil_starplus_pol_lapl(der%dim, der%order, polynomials)
       call get_rhs_lapl(rhs(:, 1))
@@ -549,7 +549,9 @@ contains
     case(DER_STARGENERAL)    
     
       do i = 1, der%dim        
-        SAFE_ALLOCATE(polynomials(1:der%dim, 1:der%op(i)%stencil%size))
+        der%op(i)%stencil%npoly = der%op(i)%stencil%size ! for gradients we are fine
+
+        SAFE_ALLOCATE(polynomials(1:der%dim, 1:der%op(i)%stencil%npoly))
         SAFE_ALLOCATE(rhs(1:der%op(i)%stencil%size, 1:1))
         ! use simple star stencil polynomials
         call stencil_star_polynomials_grad(i, der%order, polynomials)
@@ -564,7 +566,10 @@ contains
         SAFE_DEALLOCATE_A(rhs)
       end do
 
-      SAFE_ALLOCATE(polynomials(1:der%dim, 1:der%op(der%dim+1)%stencil%size))
+      der%op(der%dim+1)%stencil%npoly = der%op(der%dim+1)%stencil%size &
+           + 2*der%order*(2*der%order-2)*der%op(der%dim+1)%stencil%stargeneral%narms
+
+      SAFE_ALLOCATE(polynomials(1:der%dim, 1:der%op(der%dim+1)%stencil%npoly))
       SAFE_ALLOCATE(rhs(1:der%op(der%dim+1)%stencil%size, 1:1))
       call stencil_stargeneral_pol_lapl(der%op(der%dim+1)%stencil, der%dim, der%order, polynomials)
       call get_rhs_lapl(rhs(:, 1))
@@ -624,7 +629,7 @@ contains
       ! find right-hand side for operator
       rhs(:) = M_ZERO
       do i = 1, der%dim
-        do j = 1, der%lapl%stencil%size
+        do j = 1, der%lapl%stencil%npoly
           this_one = .true.
           do k = 1, der%dim
             if(k == i .and. polynomials(k, j) /= 2) this_one = .false.
@@ -650,7 +655,7 @@ contains
 
       ! find right-hand side for operator
       rhs(:) = M_ZERO
-      do j = 1, der%grad(dir)%stencil%size
+      do j = 1, der%grad(dir)%stencil%npoly
         this_one = .true.
         do k = 1, der%dim
           if(k == dir .and. polynomials(k, j) /= 1) this_one = .false.
@@ -666,12 +671,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine derivatives_make_discretization(dim, mesh, masses, pol, rhs, n, op, name, force_orthogonal)
+  subroutine derivatives_make_discretization(dim, mesh, masses, pol, rhs, nderiv, op, name, force_orthogonal)
     integer,                intent(in)    :: dim
     type(mesh_t),           intent(in)    :: mesh
     FLOAT,                  intent(in)    :: masses(:)
     integer,                intent(in)    :: pol(:,:)
-    integer,                intent(in)    :: n
+    integer,                intent(in)    :: nderiv
     FLOAT,                  intent(inout) :: rhs(:,:)
     type(nl_operator_t),    intent(inout) :: op(:)
     character(len=32),      intent(in)    :: name
@@ -683,8 +688,8 @@ contains
 
     PUSH_SUB(derivatives_make_discretization)
 
-    SAFE_ALLOCATE(mat(1:op(1)%stencil%size, 1:op(1)%stencil%size))
-    SAFE_ALLOCATE(sol(1:op(1)%stencil%size, 1:n))
+    SAFE_ALLOCATE(mat(1:op(1)%stencil%npoly, 1:op(1)%stencil%size))
+    SAFE_ALLOCATE(sol(1:op(1)%stencil%size, 1:nderiv))
 
     message(1) = 'Info: Generating weights for finite-difference discretization of ' // trim(name)
     call messages_info(1)
@@ -699,7 +704,9 @@ contains
     if(op(1)%const_w) p_max = 1
 
     do p = 1, p_max
+      ! first polynomial is just a constant
       mat(1,:) = M_ONE
+      ! i indexes the point in the stencil
       do i = 1, op(1)%stencil%size
         if(mesh%use_curvilinear) then
           forall(j = 1:dim) x(j) = mesh%x(p + op(1)%ri(i, op(1)%rimap(p)), j) - mesh%x(p, j)
@@ -722,24 +729,38 @@ contains
         end do
 
         ! generate the matrix
-        do j = 2, op(1)%stencil%size
+        ! j indexes the polynomial being used
+        do j = 2, op(1)%stencil%npoly
           mat(j, i) = powers(1, pol(1, j))
           do k = 2, dim
             mat(j, i) = mat(j, i)*powers(k, pol(k, j))
           end do
         end do
-      end do
+      end do ! loop over i = point in stencil
 
-      call lalg_linsyssolve(op(1)%stencil%size, n, mat, rhs, sol)
-      do i = 1, n
-        op(i)%w_re(:, p) = sol(:, n)
+      ! linear problem to solve for derivative weights:
+      !   mat * sol = rhs
+
+      if (op(1)%stencil%npoly==op(1)%stencil%size) then
+        call lalg_linsyssolve(op(1)%stencil%size, nderiv, mat, rhs, sol)
+      else
+        call lalg_svd_inverse(op(1)%stencil%npoly, op(1)%stencil%size, mat, CNST(1.e-10))
+        sol = matmul(transpose(mat(1:op(1)%stencil%size, 1:op(1)%stencil%size)), rhs)
+      end if
+
+      do i = 1, nderiv
+!MJV 10 nov 2016: changed n to i below in sol(:,n): was only erroneous in cube case when several
+!derivatives are calculated in 1 batch by this subroutine. All weights contained
+!the last derivative's weights (gradient z)
+!op(1) is used systematically above to get dimensions, but here we have to save
+!all operator stencil weights
+! once we are happy and convinced, remove this comment
+        op(i)%w_re(:, p) = sol(:, i)
       end do
               
+    end do ! loop over points p
 
-
-      
-    end do
-    do i = 1, n
+    do i = 1, nderiv
       call nl_operator_update_weights(op(i))
     end do
 

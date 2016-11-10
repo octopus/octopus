@@ -45,6 +45,7 @@ module stencil_oct_m
   type stencil_t
     integer          :: center
     integer          :: size
+    integer          :: npoly
     integer, pointer :: points(:, :) 
     
     ! The stargeneral arms
@@ -59,6 +60,7 @@ contains
 
     this%center = -1
     this%size = 0
+    this%npoly = 0
     nullify(this%points)
 
   end subroutine stencil_nullify
@@ -71,6 +73,7 @@ contains
     PUSH_SUB(stencil_allocate)
 
     this%size = size
+    this%npoly = size
 
     SAFE_ALLOCATE(this%points(1:MAX_DIM, 1:size))
 
@@ -89,6 +92,7 @@ contains
     call stencil_allocate(output, input%size)
     output%points(1:MAX_DIM, 1:output%size) = input%points(1:MAX_DIM, 1:output%size)
     output%center = input%center
+    output%npoly = input%npoly
 
     POP_SUB(stencil_copy)
   end subroutine stencil_copy
@@ -147,6 +151,10 @@ contains
     stu%points(dim + 1:MAX_DIM, 1:nstu) = 0
 
     stu%size = nstu
+
+    ! this is not defined for a union, which could be any combination. The
+    ! weights should already be known here
+    stu%npoly = -1
 
     call stencil_init_center(stu)
 

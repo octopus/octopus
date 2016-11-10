@@ -94,11 +94,11 @@ module lalg_adv_oct_m
   end interface lalg_linsyssolve
 
   interface lalg_singular_value_decomp
-    module procedure zsingular_value_decomp
+    module procedure dsingular_value_decomp, zsingular_value_decomp
   end interface lalg_singular_value_decomp
 
   interface lalg_svd_inverse
-    module procedure zsvd_inverse
+    module procedure dsvd_inverse, zsvd_inverse
   end interface lalg_svd_inverse
 
   interface lalg_invert_upper_triangular
@@ -413,7 +413,7 @@ contains
     SAFE_ALLOCATE(sg_values(1:n))
 
     imat = mat
-    call  lalg_singular_value_decomp(n, imat, u, vt, sg_values)
+    call  lalg_singular_value_decomp(n, n, imat, u, vt, sg_values)
 
     sigma = M_z0
     do i = 1, n

@@ -822,6 +822,8 @@ subroutine X(sym_inverter)(uplo, n, a)
   POP_SUB(X(sym_inverter))
 end subroutine X(sym_inverter)
 
+! MJV 9 nov 2016: why is this stuff explicitly set in cpp instead of using the
+! macros X()??? For the moment I have replicated this strategy in svd below.
 #ifdef R_TREAL
 ! ---------------------------------------------------------
 !> compute the solution to a real system of linear equations A*X = B,
@@ -894,7 +896,7 @@ subroutine dlinsyssolve(n, nrhs, a, b, x)
 
 end subroutine dlinsyssolve
 
-#else
+#elif R_TCOMPLEX
 
 ! ---------------------------------------------------------
 !> compute the solution to a complex system of linear equations A*X = B,
@@ -972,13 +974,128 @@ subroutine zlinsyssolve(n, nrhs, a, b, x)
 end subroutine zlinsyssolve
 #endif
 
-#ifdef R_TCOMPLEX
+#ifdef R_TREAL
 ! ---------------------------------------------------------
-!> computes the singular value decomposition of a complex NxN matrix a(:,:)
-subroutine zsingular_value_decomp(n, a, u, vt, sg_values)
-  integer, intent(in)    :: n
-  CMPLX,   intent(inout) :: a(:,:)          !< (n,n)
-  CMPLX,   intent(out)   :: u(:,:), vt(:,:) !< (n,n)  
+!> computes the singular value decomposition of a real NxN matrix a(:,:)
+subroutine dsingular_value_decomp(m, n, a, u, vt, sg_values)
+  integer, intent(in)    :: m, n
+  FLOAT,   intent(inout) :: a(:,:)          !< (m,n)
+  FLOAT,   intent(out)   :: u(:,:), vt(:,:) !< (m,m) (n,n)  
+  FLOAT,   intent(out)   :: sg_values(:)    !< (min(m,n))
+
+  interface
+    subroutine X(gesvd) ( jobu, jobvt, m, n, a, lda, s, u, ldu, &
+      vt, ldvt, work, lwork, info )
+      implicit none
+      character(1), intent(in)    :: jobu, jobvt
+      integer,      intent(in)    :: m, n
+      FLOAT,        intent(inout) :: a, u, vt ! a(lda,n), u(ldu,m), vt(ldvt,n)
+      FLOAT,        intent(out)   :: work     ! work(lwork)
+      integer,      intent(in)    :: lda, ldu, ldvt, lwork
+      integer,      intent(out)   :: info
+      FLOAT,        intent(out)   :: s        ! s(min(m,n))
+    end subroutine X(gesvd)
+  end interface
+
+  integer :: info, lwork
+  FLOAT, allocatable :: work(:)
+
+  PUSH_SUB(dsingular_value_decomp)
+
+  ASSERT(n > 0)
+  ASSERT(m > 0)
+
+
+  ! double minimum lwork size to increase performance (see manpage)
+  lwork = 2*( 2*min(m, n) + max(m, n) )
+
+  SAFE_ALLOCATE(work(1:lwork)) ! query?
+
+  call X(gesvd)( &
+    'A', 'A', m, n, a(1, 1), m, sg_values(1), u(1, 1), m, vt(1, 1), n, work(1), lwork, info )
+
+  if(info /= 0) then
+    write(message(1), '(3a, i7)') 'In dsingular_value_decomp, LAPACK ', TOSTRING(X(gesvd)), ' returned info = ', info
+!    http://www.netlib.org/lapack/explore-3.1.1-html/dgesvd.f.html
+!*  INFO    (output) INTEGER
+!*          = 0:  successful exit.
+!*          < 0:  if INFO = -i, the i-th argument had an illegal value.
+!*          > 0:  if ZBDSQR did not converge, INFO specifies how many
+!*                superdiagonals of an intermediate bidiagonal form B
+!*                did not converge to zero. See the description of WORK
+!*                above for details.
+    if(info < 0) then
+      write(message(2), '(a,i5,a)') 'Argument number ', -info, ' had an illegal value.'
+    else
+      write(message(2), '(i5,a)') info, ' superdiagonal elements of an intermediate bidiagonal did not converge to zero.'
+    end if
+    call messages_fatal(2)
+  end if
+
+  SAFE_DEALLOCATE_A(work)
+  POP_SUB(dsingular_value_decomp)
+end subroutine dsingular_value_decomp
+
+
+! ---------------------------------------------------------
+!> computes inverse of a real NxN matrix a(:,:) using the SVD decomposition 
+subroutine dsvd_inverse(m, n, a, threshold)
+  integer, intent(in)           :: m, n
+  FLOAT,   intent(inout)        :: a(:,:)    !< (m,n); a will be replaced by its inverse
+  FLOAT,   intent(in), optional :: threshold
+
+  FLOAT, allocatable :: u(:,:), vt(:,:)
+  FLOAT, allocatable :: sg_values(:)
+  FLOAT   :: tmp
+  FLOAT   :: sg_inverse, threshold_
+  integer :: j, k, l, minmn
+
+  ASSERT(n > 0)
+  ASSERT(m > 0)
+  minmn = min(m,n)
+
+  SAFE_ALLOCATE( u(1:m, 1:m))
+  SAFE_ALLOCATE(vt(1:n, 1:n))
+  SAFE_ALLOCATE(sg_values(1:minmn))
+
+  PUSH_SUB(dsvd_inverse)
+
+  call dsingular_value_decomp(m, n, a, u, vt, sg_values)
+
+  threshold_ = CNST(1e-10)
+  if(present(threshold)) threshold_ = threshold
+
+  ! build inverse
+  do j = 1, m
+    do k = 1, n
+      tmp = M_ZERO
+      do l = 1, minmn
+        if (sg_values(l) < threshold_) then
+          !write(message(1), '(a)') 'In dsvd_inverse: singular value below threshold.'
+          !call messages_warning(1)
+          sg_inverse = M_ZERO
+        else
+          sg_inverse = M_ONE/sg_values(l)
+        end if
+        tmp = tmp + vt(l, k)*sg_inverse*u(j, l)
+      end do
+      a(j, k) = tmp
+    end do
+  end do
+
+  SAFE_DEALLOCATE_A(sg_values)
+  SAFE_DEALLOCATE_A(vt)
+  SAFE_DEALLOCATE_A(u)
+  POP_SUB(dsvd_inverse)
+end subroutine dsvd_inverse
+
+#elif R_TCOMPLEX
+! ---------------------------------------------------------
+!> computes the singular value decomposition of a complex MxN matrix a(:,:)
+subroutine zsingular_value_decomp(m, n, a, u, vt, sg_values)
+  integer, intent(in)    :: m, n
+  CMPLX,   intent(inout) :: a(:,:)          !< (m,n)
+  CMPLX,   intent(out)   :: u(:,:), vt(:,:) !< (n,n) and (m,m)  
   FLOAT,   intent(out)   :: sg_values(:)    !< (n)
 
   interface
@@ -987,7 +1104,7 @@ subroutine zsingular_value_decomp(n, a, u, vt, sg_values)
       implicit none
       character(1), intent(in)    :: jobu, jobvt
       integer,      intent(in)    :: m, n
-      CMPLX,        intent(inout) :: a, u, vt ! a(lda,n), b(ldu,n), b(ldvt,n)
+      CMPLX,        intent(inout) :: a, u, vt ! a(lda,n), u(ldu,m), vt(ldvt,n)
       CMPLX,        intent(out)   :: work     ! work(lwork)
       integer,      intent(in)    :: lda, ldu, ldvt, lwork
       integer,      intent(out)   :: info
@@ -996,16 +1113,14 @@ subroutine zsingular_value_decomp(n, a, u, vt, sg_values)
     end subroutine X(gesvd)
   end interface
 
-  integer :: m, info, lwork
+  integer :: info, lwork
   CMPLX, allocatable :: work(:)
   FLOAT, allocatable :: rwork(:)
 
   PUSH_SUB(zsingular_value_decomp)
 
   ASSERT(n > 0)
-
-  ! for now we treat only square matrices
-  m = n 
+  ASSERT(m > 0)
 
   ! double minimum lwork size to increase performance (see manpage)
   lwork = 2*( 2*min(m, n) + max(m, n) )
@@ -1041,36 +1156,38 @@ end subroutine zsingular_value_decomp
 
 
 ! ---------------------------------------------------------
-!> computes inverse of a complex NxN matrix a(:,:) using the SVD decomposition 
-subroutine zsvd_inverse(n, a, threshold)
-  integer, intent(in)           :: n
-  CMPLX,   intent(inout)        :: a(:,:)    !< (n,n); a will be replaced by its inverse
+!> computes inverse of a complex MxN matrix a(:,:) using the SVD decomposition 
+subroutine zsvd_inverse(m, n, a, threshold)
+  integer, intent(in)           :: m, n
+  CMPLX,   intent(inout)        :: a(:,:)    !< (m,n); a will be replaced by its inverse transposed
   FLOAT,   intent(in), optional :: threshold
 
   CMPLX, allocatable :: u(:,:), vt(:,:)
   FLOAT, allocatable :: sg_values(:)
   CMPLX   :: tmp
   FLOAT   :: sg_inverse, threshold_
-  integer :: j, k, l
+  integer :: j, k, l, minmn
 
   ASSERT(n > 0)
+  ASSERT(m > 0)
+  minmn = min(m,n)
 
-  SAFE_ALLOCATE( u(1:n, 1:n))
+  SAFE_ALLOCATE( u(1:m, 1:m))
   SAFE_ALLOCATE(vt(1:n, 1:n))
-  SAFE_ALLOCATE(sg_values(1:n))
+  SAFE_ALLOCATE(sg_values(1:minmn))
 
   PUSH_SUB(zsvd_inverse)
 
-  call zsingular_value_decomp(n, a, u, vt, sg_values)
+  call zsingular_value_decomp(m, n, a, u, vt, sg_values)
 
   threshold_ = CNST(1e-10)
   if(present(threshold)) threshold_ = threshold
 
   ! build inverse
-  do j = 1, n
+  do j = 1, m
     do k = 1, n
       tmp = M_ZERO
-      do l = 1, n
+      do l = 1, minmn
         if (sg_values(l) < threshold_) then
           write(message(1), '(a)') 'In zsvd_inverse: singular value below threshold.'
           call messages_warning(1)
@@ -1173,6 +1290,7 @@ subroutine X(lalg_least_squares_vec)(nn, aa, bb, xx)
 
   SAFE_ALLOCATE(ss(1:nn))
 
+! MJV 2016 11 09 : TODO: this is callable with complex, but does nothing!!!
 #ifdef R_TREAL
   
   call dgelss(m = nn, n = nn, nrhs = 1, a = aa(1, 1), lda = nn, b = xx(1), ldb = nn, &
