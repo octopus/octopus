@@ -112,7 +112,15 @@ int parse_input(const char *file_in)
   do{
     c = parse_get_line(f, &s, &length);
     if(*s){
-      if(*s == '%'){ /* we have a block */
+      if(*s == '&'){ /* include another file */
+	*s = ' ';
+	str_trim(s);
+	c = parse_input(s);
+	if(c != 0) {
+	  fprintf(stderr, "Parser error: cannot open included file '%s'.\n", s);
+	  exit(1);
+	}
+      } else if(*s == '%'){ /* we have a block */
 	*s = ' ';
 	str_trim(s);
 	if(getsym(s) != NULL){ /* error */
