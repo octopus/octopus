@@ -107,14 +107,17 @@ int parse_input(const char *file_in)
     return -1; /* error opening file */
   
   /* we now read in the file and parse */
+  /* note: 40 is just a starter length, it is not a maximum */
   length = 40;
   s = (char *)malloc(length + 1);
   do{
     c = parse_get_line(f, &s, &length);
     if(*s){
-      if(*s == '&'){ /* include another file */
-	*s = ' ';
+      if(strncmp("include ", s, 8) == 0 ){ /* include another file */
+	/* wipe out leading 'include' with blanks */
+	strncpy(s, "       ", 7);
 	str_trim(s);
+	fprintf(fout, "# including file '%s'\n", s);
 	c = parse_input(s);
 	if(c != 0) {
 	  fprintf(stderr, "Parser error: cannot open included file '%s'.\n", s);
