@@ -174,12 +174,22 @@ int parse_input(const char *file_in)
   free(s);
   if(f != stdin)
     fclose(f);
+
+  return 0;
+}
+
+/* If *_PARSE_ENV is set, then environment variables beginning with prefix are read and set,
+overriding input file if defined there too. */
+void parse_environment(const char* prefix)
+{
+  char* flag;
+
+  flag = (char *)malloc(strlen(prefix) + 11);
+  strcpy(flag, prefix);
+  strcat(flag, "PARSE_ENV");
   
-#define OCT_ENV_HEADER "OCT_"
-
-  /*now read options from environment variables (by X) */
-
-  if( getenv("OCT_PARSE_ENV")!=NULL ) {
+  if( getenv(flag)!=NULL ) {
+    fprintf(fout, "# %s is set, parsing environment variables\n", flag);
     
     /* environ is an array of C strings with all the environment
        variables, the format of the string is NAME=VALUE, which
@@ -187,19 +197,18 @@ int parse_input(const char *file_in)
     
     char **env = environ;    
     while(*env) {
-      /* Only consider variables that begin with OCT_ */
-      if( strncmp(OCT_ENV_HEADER, *env, strlen(OCT_ENV_HEADER)) == 0 ){	
+      /* Only consider variables that begin with the prefix, except the PARSE_ENV flag */
+      if( strncmp(flag, *env, strlen(flag)) != 0 && strncmp(prefix, *env, strlen(prefix)) == 0 ){	
+	fprintf(fout, "# parsed from environment: %s\n", (*env) + strlen(prefix));
 	parse_result pc;
-	parse_exp( (*env) + strlen(OCT_ENV_HEADER), &pc);
+	parse_exp( (*env) + strlen(prefix), &pc);
       }
       
       env++;
     }
   }
-  
-  sym_clear_reserved();
 
-  return 0;
+  free(flag);
 }
 
 void parse_end()

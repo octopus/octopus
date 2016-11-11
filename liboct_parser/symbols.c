@@ -216,14 +216,6 @@ void sym_init_table ()  /* puts arithmetic functions in table. */
   }
 }
 
-void sym_clear_reserved()
-{
-  int i;
-  for (i = 0; reserved_symbols[i] != 0; i++){
-    rmsym(reserved_symbols[i]);
-  }
-}
-
 void sym_end_table()
 {
   symrec *ptr, *ptr2;

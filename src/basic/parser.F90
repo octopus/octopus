@@ -43,7 +43,6 @@ module parser_oct_m
   
   implicit none
 
-  ! Define which routines can be seen from the outside.
   private
   public ::              &
     block_t,             &   ! This is defined in block_t_oct_m above
@@ -94,6 +93,13 @@ module parser_oct_m
       character(len=*), intent(in)  :: file_in
     end function oct_parse_input
   end interface parse_input_file
+
+  interface parse_environment
+    subroutine oct_parse_environment(prefix)
+      implicit none
+      character(len=*), intent(in)  :: prefix
+    end subroutine oct_parse_environment
+  end interface parse_environment
 
   interface parse_end
     subroutine oct_parse_end()
@@ -313,7 +319,9 @@ contains
       call parse_fatal()
     end if
 
-
+    ! parse OCT_ prefixed variables from environment
+    call parse_environment("OCT_")
+    
   end subroutine parser_init
 
 

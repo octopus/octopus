@@ -110,6 +110,18 @@ int FC_FUNC_(oct_parse_input, OCT_PARSE_INPUT)
 
 
 /* --------------------------------------------------------- */
+void FC_FUNC_(oct_parse_environment, OCT_PARSE_ENVIRONMENT)
+	(STR_F_TYPE s STR_ARG1)
+{
+  char *s_c;
+  
+  TO_C_STR1(s, s_c);
+  parse_environment(s_c); 
+  free(s_c);
+}
+
+
+/* --------------------------------------------------------- */
 void FC_FUNC_(oct_parse_end, OCT_PARSE_END)
 	()
 {
