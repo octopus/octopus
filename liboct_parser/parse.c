@@ -97,7 +97,8 @@ int parse_input(const char *file_in)
   FILE *f;
   char *s;
   int c, length = 0;
-  
+  parse_result pc;
+
   if(strcmp(file_in, "-") == 0)
     f = stdin;
   else
@@ -165,7 +166,6 @@ int parse_input(const char *file_in)
 	  }while(c != EOF && *s != '%');
 	}
       }else{ /* we can parse it np */
-	parse_result pc;
 	parse_exp(s, &pc);
       }
     }
@@ -183,6 +183,7 @@ overriding input file if defined there too. */
 void parse_environment(const char* prefix)
 {
   char* flag;
+  parse_result pc;
 
   flag = (char *)malloc(strlen(prefix) + 11);
   strcpy(flag, prefix);
@@ -200,7 +201,6 @@ void parse_environment(const char* prefix)
       /* Only consider variables that begin with the prefix, except the PARSE_ENV flag */
       if( strncmp(flag, *env, strlen(flag)) != 0 && strncmp(prefix, *env, strlen(prefix)) == 0 ){	
 	fprintf(fout, "# parsed from environment: %s\n", (*env) + strlen(prefix));
-	parse_result pc;
 	parse_exp( (*env) + strlen(prefix), &pc);
       }
       
