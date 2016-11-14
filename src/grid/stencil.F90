@@ -39,6 +39,7 @@ module stencil_oct_m
   type stargeneral_arms_t
     integer          :: arms(1:3,1:3)
     integer          :: narms  
+    integer          :: dir_min
   end type stargeneral_arms_t
 
 
