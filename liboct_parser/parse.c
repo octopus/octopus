@@ -92,7 +92,7 @@ int parse_init(const char *file_out, const int *mpiv_node)
   return 0;
 }
 
-int parse_input(const char *file_in)
+int parse_input(const char *file_in, int set_used)
 {
   FILE *f;
   char *s;
@@ -118,8 +118,9 @@ int parse_input(const char *file_in)
 	/* wipe out leading 'include' with blanks */
 	strncpy(s, "       ", 7);
 	str_trim(s);
-	fprintf(fout, "# including file '%s'\n", s);
-	c = parse_input(s);
+	if(!disable_write)
+	  fprintf(fout, "# including file '%s'\n", s);
+	c = parse_input(s, 0);
 	if(c != 0) {
 	  fprintf(stderr, "Parser error: cannot open included file '%s'.\n", s);
 	  exit(1);
@@ -175,6 +176,9 @@ int parse_input(const char *file_in)
   if(f != stdin)
     fclose(f);
 
+  if(set_used == 1)
+    sym_mark_table_used();
+
   return 0;
 }
 
@@ -190,7 +194,8 @@ void parse_environment(const char* prefix)
   strcat(flag, "PARSE_ENV");
   
   if( getenv(flag)!=NULL ) {
-    fprintf(fout, "# %s is set, parsing environment variables\n", flag);
+    if(!disable_write)
+      fprintf(fout, "# %s is set, parsing environment variables\n", flag);
     
     /* environ is an array of C strings with all the environment
        variables, the format of the string is NAME=VALUE, which
@@ -200,7 +205,8 @@ void parse_environment(const char* prefix)
     while(*env) {
       /* Only consider variables that begin with the prefix, except the PARSE_ENV flag */
       if( strncmp(flag, *env, strlen(flag)) != 0 && strncmp(prefix, *env, strlen(prefix)) == 0 ){	
-	fprintf(fout, "# parsed from environment: %s\n", (*env) + strlen(prefix));
+	if(!disable_write)
+	  fprintf(fout, "# parsed from environment: %s\n", (*env) + strlen(prefix));
 	parse_exp( (*env) + strlen(prefix), &pc);
       }
       

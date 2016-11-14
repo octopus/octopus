@@ -61,7 +61,8 @@ void sym_wrong_arg(symrec *sym);
 void sym_init_table(void);
 void sym_clear_reserved(void);
 void sym_end_table(void);
-void sym_output_table(int only_unused);
+void sym_output_table(int only_unused, int mpiv_node);
 void str_tolower(char *in);
+void sym_mark_table_used();
 
 #endif

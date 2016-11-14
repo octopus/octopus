@@ -41,7 +41,18 @@ void str_tolower(char *in)
     *in = (char)tolower(*in);
 }
 
-symrec *putsym (const char *sym_name, symrec_type sym_type)
+void sym_mark_table_used ()
+{
+  symrec *ptr;
+
+  for (ptr = sym_table; ptr != (symrec *) 0;
+       ptr = (symrec *)ptr->next)
+  {
+    ptr->used = 1;
+  }
+}
+
+symrec *putsym (const char *sym_name, symrec_type sym_type)  
 {
   symrec *ptr;
   ptr = (symrec *)malloc(sizeof(symrec));
@@ -252,24 +263,42 @@ void sym_end_table()
   sym_table = NULL;
 }
 
-void sym_output_table(int only_unused)
+void sym_output_table(int only_unused, int mpiv_node)
 {
+  FILE *f;
   symrec *ptr;
+  int any_unused = 0;
+
+  if(mpiv_node != 0) {
+    return;
+  }
+  
+  if(only_unused) {
+    f = stderr;
+  } else {
+    f = stdout;
+  }
+  
   for(ptr = sym_table; ptr != NULL; ptr = ptr->next){
     if(only_unused && ptr->used == 1) continue;
-    printf("%s", ptr->name);
+    if(any_unused == 0) {
+      fprintf(f, "\nParser warning: possible mistakes in input file.\n");
+      fprintf(f, "List of variable assignments not used by parser:\n");
+      any_unused = 1;
+    }
+    fprintf(f, "%s", ptr->name);
     switch(ptr->type){
     case S_CMPLX:
-      printf(" = (%f,%f)\n", GSL_REAL(ptr->value.c), GSL_IMAG(ptr->value.c));
+      fprintf(f, " = (%f,%f)\n", GSL_REAL(ptr->value.c), GSL_IMAG(ptr->value.c));
       break;
     case S_STR:
-      printf(" = \"%s\"\n", ptr->value.str);
+      fprintf(f, " = \"%s\"\n", ptr->value.str);
       break;
     case S_BLOCK:
-      printf("%s\n", " <= BLOCK");
+      fprintf(f, "%s\n", " <= BLOCK");
       break;
     case S_FNCT:
-      printf("%s\n", " <= FUNCTION");
+      fprintf(f, "%s\n", " <= FUNCTION");
       break;
     }
   }

@@ -88,9 +88,10 @@ module parser_oct_m
   end interface parse_putsym
 
   interface parse_input_file
-    integer function oct_parse_input(file_in)
+    integer function oct_parse_input(file_in, set_used)
       implicit none
       character(len=*), intent(in)  :: file_in
+      integer,          intent(in)  :: set_used
     end function oct_parse_input
   end interface parse_input_file
 
@@ -106,6 +107,14 @@ module parser_oct_m
       implicit none
     end subroutine oct_parse_end
   end interface parse_end
+
+  interface sym_output_table
+    subroutine oct_sym_output_table(only_unused, mpiv_node)
+      implicit none
+      integer, intent(in) :: only_unused
+      integer, intent(in) :: mpiv_node
+    end subroutine oct_sym_output_table
+  end interface sym_output_table
 
   interface parse_isdef
     integer function oct_parse_isdef(name)
@@ -301,7 +310,7 @@ contains
     end if
 
     ! read in option definitions
-    ierr = parse_input_file(trim(conf%share)//'/variables')
+    ierr = parse_input_file(trim(conf%share)//'/variables', set_used = 1)
     if(ierr /= 0) then
       write(stderr,'(a)') '*** Fatal Error (description follows)'
       write(stderr,'(a)') 'Error initializing parser'
@@ -310,7 +319,7 @@ contains
     end if
 
     ! setup standard input
-    ierr = parse_input_file('inp')
+    ierr = parse_input_file('inp', set_used = 0)
     if(ierr /= 0) then 
       write(stderr,'(a)') '*** Fatal Error (description follows)' 
       write(stderr,'(a)') 'Error initializing parser'
@@ -328,6 +337,7 @@ contains
   ! ---------------------------------------------------------
   subroutine parser_end
 
+    call sym_output_table(only_unused = 1, mpiv_node = mpi_world%rank)
     call parse_end()
 
   end subroutine parser_end
