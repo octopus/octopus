@@ -61,7 +61,12 @@ static int parse_get_line(FILE *f, char **s, int *length)
 	*length *= 2;
 	*s = (char *)realloc(*s, *length + 1);
       }
-      (*s)[i++] = (char)c;
+      /* check for continuation lines */
+      if(i > 0 && c == '\n' && (*s)[i-1] == '\\'){
+        c = 'd'; /* dummy */
+        i--;
+      }else
+        (*s)[i++] = (char)c;
     }
   }while(c != EOF && c != '\n');
   (*s)[i] = '\0';
