@@ -221,7 +221,7 @@ contains
       if(cube%fft%library == FFTLIB_PFFT) then
 ! Not implemented yet
       else if(cube%fft%library == FFTLIB_FFTW) then
-         xx(1:3) = minval(this%der%mesh%x(1:this%der%mesh%np,1:3))
+         xx(1:3) = this%der%mesh%x(1,1:3)
          do kk = 1, cube%fs_n(3)
             kkt = - pad_feq(kk, cube%rs_n_global(3), .true.)
             kkt = mod(kkt+cube%rs_n_global(3),cube%rs_n_global(3)) +1
