@@ -283,6 +283,8 @@ subroutine X(one_body) (dir, gr, geo, st, hm)
   np = gr%mesh%np
 
   ASSERT(.not. st%parallel_in_states)
+  if(gr%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("OutputMatrixElements=two_body with k-points")
+
   ! how to do this properly? states_matrix
   iunit = io_open(trim(dir)//'/output_me_one_body', action='write')
 
@@ -339,7 +341,8 @@ subroutine X(one_body) (dir, gr, geo, st, hm)
        
      end do
    end do
-   
+
+  SAFE_DEALLOCATE_A(cpsi)   
   SAFE_DEALLOCATE_A(gpsi)
   SAFE_DEALLOCATE_A(psii)
   SAFE_DEALLOCATE_A(psij)
@@ -362,6 +365,7 @@ subroutine X(two_body) (dir, gr, st)
   PUSH_SUB(X(two_body))
 
   ASSERT(.not. st%parallel_in_states)
+  if(gr%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("OutputMatrixElements=two_body with k-points")
   ! how to do this properly? states_matrix
   iunit = io_open(trim(dir)//'/output_me_two_body', action='write')
 
@@ -407,7 +411,9 @@ subroutine X(two_body) (dir, gr, st)
       end do
     end do
   end do
-
+ 
+  SAFE_DEALLOCATE_A(nn)
+  SAFE_DEALLOCATE_A(vv)
   SAFE_DEALLOCATE_A(psii)
   SAFE_DEALLOCATE_A(psij)
   SAFE_DEALLOCATE_A(psik)
