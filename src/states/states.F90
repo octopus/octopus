@@ -2126,8 +2126,8 @@ contains
           if(associated(jp)) then
             if (.not.(states_are_real(st))) then
               jp(1:der%mesh%np, i_dim, is) = jp(1:der%mesh%np, i_dim, is) + &
-                   ww*aimag(conjg(wf_psi(1:der%mesh%np, 1))*gwf_psi(1:der%mesh%np, i_dim, 1) - &
-                   M_zI*(wf_psi(1:der%mesh%np, 1))**2*kpoint(i_dim ) )
+                   ww*aimag(conjg(wf_psi(1:der%mesh%np, 1))*(gwf_psi(1:der%mesh%np, i_dim, 1) - &
+                   M_zI*wf_psi(1:der%mesh%np, 1)*kpoint(i_dim ) ) )
             else
               jp(1:der%mesh%np, i_dim, is) = M_ZERO
             end if
