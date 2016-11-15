@@ -802,7 +802,7 @@ contains
         if(xx(idir) < -CNST(1.0e-6)) &
           xx(idir) = xx(idir) + M_ONE
       end do
-      ASSERT(all(xx(1:pd) >= M_ZERO))
+      ASSERT(all(xx(1:pd) >= -CNST(1.0e-6)))
       ASSERT(all(xx(1:pd) < CNST(1.0)))
 
       xx(1:pd) = (xx(1:pd) - M_HALF)
