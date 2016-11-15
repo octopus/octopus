@@ -143,6 +143,7 @@ contains
     type(batch_t) :: hpsib, rhpsib, rpsib, hrpsib, epsib
     type(batch_t), allocatable :: commpsib(:)
     logical, parameter :: hamiltonian_current = .false.
+    FLOAT :: ww
 
     call profiling_in(prof, "CURRENT")
     PUSH_SUB(current_calculate)
@@ -199,11 +200,12 @@ contains
                 call batch_get_state(commpsib(idir), ii, der%mesh%np, hrpsi(:, idim))
               end do
               
+              ww = st%d%kweights(ik)*st%occ(ist, ik) 
               do idim = 1, st%d%dim
                 !$omp parallel do
                 do ip = 1, der%mesh%np
                   current(ip, idir, ispin) = &
-                    current(ip, idir, ispin) + st%d%kweights(ik)*st%occ(ist, ik)*aimag(conjg(psi(ip, idim))*hrpsi(ip, idim))
+                    current(ip, idir, ispin) + ww*aimag(conjg(psi(ip, idim))*hrpsi(ip, idim))
                 end do
                 !$omp end parallel do
               end do
@@ -251,13 +253,14 @@ contains
                 call batch_get_state(hrpsib, ii, der%mesh%np, hrpsi(:, idim))
                 call batch_get_state(rhpsib, ii, der%mesh%np, rhpsi(:, idim))
               end do
-              
+
+              ww = st%d%kweights(ik)*st%occ(ist, ik)              
+
               do idim = 1, st%d%dim
                 !$omp parallel do
                 do ip = 1, der%mesh%np
                   current(ip, idir, ispin) = current(ip, idir, ispin) &
-                    - st%d%kweights(ik)*st%occ(ist, ik)&
-                    *aimag(conjg(psi(ip, idim))*hrpsi(ip, idim) - conjg(psi(ip, idim))*rhpsi(ip, idim))
+                    - ww*aimag(conjg(psi(ip, idim))*hrpsi(ip, idim) - conjg(psi(ip, idim))*rhpsi(ip, idim))
                 end do
                 !$omp end parallel do
               end do
@@ -304,16 +307,10 @@ contains
           end do
           
           if(this%method == CURRENT_GRADIENT_CORR) then
-
-            do idir = 1, der%mesh%sb%dim
-              do iatom = 1, geo%natoms
-                if(species_is_ps(geo%atom(iatom)%species)) then
-                  call zprojector_commute_r(hm%ep%proj(iatom), der%mesh, st%d%dim, idir, ik, psi, gpsi(:, idir, :))
-                end if
-              end do
-            end do
-          
+           call zprojector_commute_r_allatoms_alldir(hm%ep%proj, geo, der%mesh, st%d%dim, ik, psi, gpsi)                 
           end if
+
+          ww = st%d%kweights(ik)*st%occ(ist, ik)
 
           do idir = 1, der%mesh%sb%dim
             
@@ -321,7 +318,7 @@ contains
               !$omp parallel do
               do ip = 1, der%mesh%np
                 current(ip, idir, ispin) = current(ip, idir, ispin) + &
-                  st%d%kweights(ik)*st%occ(ist, ik)*aimag(conjg(psi(ip, idim))*gpsi(ip, idir, idim))
+                  ww*aimag(conjg(psi(ip, idim))*gpsi(ip, idir, idim))
               end do
               !$omp end parallel do
             end do

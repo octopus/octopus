@@ -70,6 +70,8 @@ module projector_oct_m
     zprojector_matrix_element, &
     dprojector_commute_r,      &
     zprojector_commute_r,      &
+    dprojector_commute_r_allatoms_alldir, &
+    zprojector_commute_r_allatoms_alldir, &
     dr_project_psi,            &
     zr_project_psi
   

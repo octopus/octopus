@@ -405,6 +405,92 @@ subroutine X(projector_commute_r)(pj, mesh, dim, idir, ik, psi, cpsi)
 end subroutine X(projector_commute_r)
 
 !------------------------------------------------------------------------------
+!> This function calculates |cpsi> += [x, V_nl] |psi>
+subroutine X(projector_commute_r_allatoms_alldir)(pj, geo, mesh, dim, ik, psi, cpsi)
+  type(projector_t), target, intent(in)     :: pj(:)
+  type(geometry_t),          intent(in)     :: geo
+  type(mesh_t),              intent(in)     :: mesh
+  integer,                   intent(in)     :: dim
+  integer,                   intent(in)     :: ik
+  R_TYPE,                    intent(in)     :: psi(:, :)
+  R_TYPE,                    intent(inout)  :: cpsi(:,:,:)
+
+  integer ::  ns, idim, idir, iatom
+  R_TYPE, allocatable :: lpsi(:, :), plpsi(:,:), xlpsi(:,:), pxlpsi(:,:), xplpsi(:,:)
+  integer, pointer :: map(:)
+  FLOAT,   pointer :: smx(:, :)
+  logical  :: phase
+  type(profile_t), save :: prof
+
+  PUSH_SUB(X(projector_commute_r_all_atoms_alldir))
+  call profiling_in(prof, "PROJ_COMMUTE_ALL")
+
+  do iatom = 1, geo%natoms
+    if(species_is_ps(geo%atom(iatom)%species) .and. pj(iatom)%type /= M_NONE) then
+
+      ns = pj(iatom)%sphere%np
+      map => pj(iatom)%sphere%map
+      smx => pj(iatom)%sphere%x
+
+      SAFE_ALLOCATE(  lpsi(1:ns, 1:dim))
+      SAFE_ALLOCATE( plpsi(1:ns, 1:dim))
+      SAFE_ALLOCATE( xlpsi(1:ns, 1:dim))
+      SAFE_ALLOCATE(xplpsi(1:ns, 1:dim))
+      SAFE_ALLOCATE(pxlpsi(1:ns, 1:dim))
+
+      phase = associated(pj(iatom)%phase)
+
+      if(phase) then
+        do idim = 1, dim 
+          lpsi(1:ns, idim) = psi(map(1:ns), idim)*pj(iatom)%phase(1:ns, ik) 
+        end do
+      else
+        do idim = 1, dim 
+          lpsi(1:ns, idim) = psi(map(1:ns), idim)
+        end do
+      end if
+
+      !V_nl |psi>
+      call X(project_sphere)(mesh, pj(iatom), dim, lpsi, plpsi)
+
+      do idir = 1, mesh%sb%dim 
+        ! x V_nl |psi>
+        do idim = 1, dim
+          ! x V_nl |psi>
+          xplpsi(1:ns, idim) = smx(1:ns, idir) * plpsi(1:ns, idim)
+          ! x |psi>
+          xlpsi(1:ns, idim) = smx(1:ns, idir) * lpsi(1:ns, idim)
+        end do
+        ! V_nl x |psi>
+        call X(project_sphere)(mesh, pj(iatom), dim, xlpsi, pxlpsi)
+     
+        ! |cpsi> += x V_nl |psi> - V_nl x |psi> 
+        if(phase) then
+          do idim = 1, dim
+           cpsi(map(1:ns), idir, idim) = cpsi(map(1:ns), idir, idim) + &
+             (xplpsi(1:ns, idim) - pxlpsi(1:ns, idim)) * R_CONJ(pj(iatom)%phase(1:ns, ik))
+          end do
+        else
+          do idim = 1, dim
+           cpsi(map(1:ns), idir, idim) = cpsi(map(1:ns), idir, idim) + xplpsi(1:ns, idim) - pxlpsi(1:ns, idim)
+          end do
+        end if
+
+      end do !idir
+
+      SAFE_DEALLOCATE_A(lpsi)
+      SAFE_DEALLOCATE_A(plpsi)
+      SAFE_DEALLOCATE_A(xlpsi)
+      SAFE_DEALLOCATE_A(xplpsi)
+      SAFE_DEALLOCATE_A(pxlpsi)
+    end if
+  end do
+  call profiling_out(prof)
+  POP_SUB(X(projector_commute_r_allatoms_alldir))
+
+end subroutine X(projector_commute_r_allatoms_alldir)
+
+!------------------------------------------------------------------------------
 !> This function calculates |cpsi> += r * V_nl  |psi>
 subroutine X(r_project_psi)(pj, mesh, dim, ik, psi, cpsi)
   type(projector_t), target, intent(in)     :: pj
