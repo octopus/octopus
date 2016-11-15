@@ -422,7 +422,7 @@ subroutine X(projector_commute_r_allatoms_alldir)(pj, geo, mesh, dim, ik, psi, c
   logical  :: phase
   type(profile_t), save :: prof
 
-  PUSH_SUB(X(projector_commute_r_all_atoms_alldir))
+  PUSH_SUB(X(projector_commute_r_allatoms_alldir))
   call profiling_in(prof, "PROJ_COMMUTE_ALL")
 
   do iatom = 1, geo%natoms
