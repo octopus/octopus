@@ -6,7 +6,6 @@ Program    : oct-test
 TestGroups : short-run, components
 Enabled    : Yes
 
-Precision : 0.005
 
 Input: 04-hartree_3d_cg.01-cg_corrected.inp
-match ; CG Corrected  ; GREPFIELD(hartree_results, 'Hartree test (abs.) =', 5) ; 0.00349973
+match ; CG Corrected  ; GREPFIELD(hartree_results, 'Hartree test (abs.) =', 5) ; 0.00349973; 0.005

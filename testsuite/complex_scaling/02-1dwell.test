@@ -14,7 +14,7 @@ Processors: 1
 # Minus twice the imaginary part of the total energy is the lifetime
 # (The Kohn-Sham energies do not have any real physical meaning)
 Input: 02-1dwell.01-lda.inp
-match ; Total energy Re ; GREPFIELD(static/info, 'Total       =', 3) ;  -4.10655088E+01
-match ; Total energy Im ; GREPFIELD(static/info, 'Total       =', 4) ;  -4.16712239E-03
-match ; 3rd state Re    ; GREPFIELD(static/info, '  3   -- ',     3) ;  1.971904
-match ; 3rd state Im    ; GREPFIELD(static/info, '  3   -- ',     4) ;  -0.003929
+match ; Total energy Re ; GREPFIELD(static/info, 'Total       =', 3) ;  -4.10655088E+01; 0.0001
+match ; Total energy Im ; GREPFIELD(static/info, 'Total       =', 4) ;  -4.16712239E-03; 0.0001
+match ; 3rd state Re    ; GREPFIELD(static/info, '  3   -- ',     3) ;  1.971904; 0.0001
+match ; 3rd state Im    ; GREPFIELD(static/info, '  3   -- ',     4) ;  -0.003929; 0.0001

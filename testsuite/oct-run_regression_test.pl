@@ -405,16 +405,10 @@ while ($_ = <TESTSUITE>) {
 	  }
 	}
       }
-
-      elsif ( $_ =~ /^Precision\s*:\s*(.*)\s*$/) {
-	set_precision($1);
-      }
-
       elsif ( $_ =~ /^ExtraFile\s*:\s*(.*)\s*$/) {
         $file_cp = dirname($opt_f)."/".$1;
         $cp_return = system("cp $file_cp $workdir/");
       } 
-
       elsif ( $_ =~ /^match/ ) {
 	  # FIXME: should we do matches even when execution failed?
 	  if (!$opt_n && $return_value == 0) {
@@ -450,13 +444,18 @@ sub run_match_new {
   die255("Have to run before matching.") if !$test{"run"} && !opt_m;
 
   # parse match line
-  my ($line, $match, $match_command, $shell_command, $ref_value, $off);
+  my ($line, $match, $match_command, $shell_command, $ref_value, $precision, $off);
   $line = $_[0];
   $line =~ s/\\;/_COLUMN_/g;
-  ($match, $name, $match_command, $ref_value) = split(/;/, $line);
+  ($match, $name, $match_command, $ref_value, $precision) = split(/;/, $line);
   $match_command =~ s/_COLUMN_/;/g;
   $ref_value =~ s/^\s*//;
   $ref_value =~ s/\s*$//;
+
+  $precision =~ s/^\s*//;
+  $precision =~ s/\s*$//;
+  set_precision($precision);
+  
 
   # parse command
   $match_command =~ /\s*(\w+)\s*\((.*)\)/;

@@ -7,27 +7,27 @@ TestGroups : short-run, finite_systems_3d
 Enabled    : Yes
 
 Input      : 24-o2-spin.01-gs.inp
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -31.40980858
-match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -7.26069056
-match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; 41.94836385
-match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -5.90391663
-match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.70038784
-match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 20.26785247
-match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -102.76584579
-match ; Eigenvalue 1 up    ; GREPFIELD(static/info, ' 1   up', 3) ; -1.240901
-match ; Eigenvalue 1 dn    ; GREPFIELD(static/info, ' 1   dn', 3) ; -1.194074
-match ; Eigenvalue 2 up    ; GREPFIELD(static/info, ' 2   up', 3) ; -0.790372
-match ; Eigenvalue 2 dn    ; GREPFIELD(static/info, ' 2   dn', 3) ; -0.727767
-match ; Eigenvalue 3 up    ; GREPFIELD(static/info, ' 3   up', 3) ; -0.520789
-match ; Eigenvalue 3 dn    ; GREPFIELD(static/info, ' 3   dn', 3) ; -0.486577
-match ; Eigenvalue 4 up    ; GREPFIELD(static/info, ' 4   up', 3) ; -0.491824
-match ; Eigenvalue 4 dn    ; GREPFIELD(static/info, ' 4   dn', 3) ; -0.426660
-match ; Eigenvalue 5 up    ; GREPFIELD(static/info, ' 5   up', 3) ; -0.491824
-match ; Eigenvalue 5 dn    ; GREPFIELD(static/info, ' 5   dn', 3) ; -0.426660
-match ; Eigenvalue 6 up    ; GREPFIELD(static/info, ' 6   up', 3) ; -0.231622
-match ; Eigenvalue 6 dn    ; GREPFIELD(static/info, ' 6   dn', 3) ; -0.152778
-match ; Eigenvalue 7 up    ; GREPFIELD(static/info, ' 7   up', 3) ; -0.231622
-match ; Eigenvalue 7 dn    ; GREPFIELD(static/info, ' 7   dn', 3) ; -0.152778
-match ; Force              ; GREPFIELD(static/info, 'Forces on the ions', 3, 2) ; 0.094124
-match ; Partial charge 1   ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2) ; 6.000
-match ; Partial charge 2   ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3) ; 6.000
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -31.40980858; 0.0001
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -7.26069056; 0.0001
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; 41.94836385; 0.0001
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -5.90391663; 0.0001
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.70038784; 0.0001
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 20.26785247; 0.0001
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -102.76584579; 0.0001
+match ; Eigenvalue 1 up    ; GREPFIELD(static/info, ' 1   up', 3) ; -1.240901; 0.0001
+match ; Eigenvalue 1 dn    ; GREPFIELD(static/info, ' 1   dn', 3) ; -1.194074; 0.0001
+match ; Eigenvalue 2 up    ; GREPFIELD(static/info, ' 2   up', 3) ; -0.790372; 0.0001
+match ; Eigenvalue 2 dn    ; GREPFIELD(static/info, ' 2   dn', 3) ; -0.727767; 0.0001
+match ; Eigenvalue 3 up    ; GREPFIELD(static/info, ' 3   up', 3) ; -0.520789; 0.0001
+match ; Eigenvalue 3 dn    ; GREPFIELD(static/info, ' 3   dn', 3) ; -0.486577; 0.0001
+match ; Eigenvalue 4 up    ; GREPFIELD(static/info, ' 4   up', 3) ; -0.491824; 0.0001
+match ; Eigenvalue 4 dn    ; GREPFIELD(static/info, ' 4   dn', 3) ; -0.426660; 0.0001
+match ; Eigenvalue 5 up    ; GREPFIELD(static/info, ' 5   up', 3) ; -0.491824; 0.0001
+match ; Eigenvalue 5 dn    ; GREPFIELD(static/info, ' 5   dn', 3) ; -0.426660; 0.0001
+match ; Eigenvalue 6 up    ; GREPFIELD(static/info, ' 6   up', 3) ; -0.231622; 0.0001
+match ; Eigenvalue 6 dn    ; GREPFIELD(static/info, ' 6   dn', 3) ; -0.152778; 0.0001
+match ; Eigenvalue 7 up    ; GREPFIELD(static/info, ' 7   up', 3) ; -0.231622; 0.0001
+match ; Eigenvalue 7 dn    ; GREPFIELD(static/info, ' 7   dn', 3) ; -0.152778; 0.0001
+match ; Force              ; GREPFIELD(static/info, 'Forces on the ions', 3, 2) ; 0.094124; 0.0001
+match ; Partial charge 1   ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2) ; 6.000; 0.0001
+match ; Partial charge 2   ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3) ; 6.000; 0.0001

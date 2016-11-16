@@ -7,38 +7,36 @@ TestGroups  : short-run, finite_systems_3d
 Enabled  : Yes
 
 Input: 09-spinors.01-ground_state.inp
-match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.17669593
-match ; External energy ; GREPFIELD(static/info, 'External    =', 3) ; -0.29125118
-match ; Eigenvalue   ; GREPFIELD(static/info, '1   --', 3) ; -0.085321
-match ; <Sx>         ; GREPFIELD(static/info, '1   --', 5) ; 0.1927
-match ; <Sy>         ; GREPFIELD(static/info, '1   --', 6) ; 0.1927
-match ; <Sz>         ; GREPFIELD(static/info, '1   --', 7) ; 0.4192
-match ; mx           ; GREPFIELD(static/info, 'Local Magnetic Moments', 3, 2) ; 0.385414
-match ; my           ; GREPFIELD(static/info, 'Local Magnetic Moments', 4, 2) ; 0.385414
-match ; mz           ; GREPFIELD(static/info, 'Local Magnetic Moments', 5, 2) ; 0.838398
+match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.17669593; 0.0001
+match ; External energy ; GREPFIELD(static/info, 'External    =', 3) ; -0.29125118; 0.0001
+match ; Eigenvalue   ; GREPFIELD(static/info, '1   --', 3) ; -0.085321; 0.0001
+match ; <Sx>         ; GREPFIELD(static/info, '1   --', 5) ; 0.1927; 0.0001
+match ; <Sy>         ; GREPFIELD(static/info, '1   --', 6) ; 0.1927; 0.0001
+match ; <Sz>         ; GREPFIELD(static/info, '1   --', 7) ; 0.4192; 0.0001
+match ; mx           ; GREPFIELD(static/info, 'Local Magnetic Moments', 3, 2) ; 0.385414; 0.0001
+match ; my           ; GREPFIELD(static/info, 'Local Magnetic Moments', 4, 2) ; 0.385414; 0.0001
+match ; mz           ; GREPFIELD(static/info, 'Local Magnetic Moments', 5, 2) ; 0.838398; 0.0001
 
 Input: 09-spinors.02-rmmdiis.inp
-match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.17669575
-match ; External energy ; GREPFIELD(static/info, 'External    =', 3) ; -0.29125111
-match ; Eigenvalue   ; GREPFIELD(static/info, '1   --', 3) ; -0.085321
-match ; <Sx>         ; GREPFIELD(static/info, '1   --', 5) ; 0.1975
-match ; <Sy>         ; GREPFIELD(static/info, '1   --', 6) ; 0.1975
-match ; <Sz>         ; GREPFIELD(static/info, '1   --', 7) ; 0.4147
-Precision : 0.00021
-match ; mx           ; GREPFIELD(static/info, 'Local Magnetic Moments', 3, 2) ; 0.394958
-match ; my           ; GREPFIELD(static/info, 'Local Magnetic Moments', 4, 2) ; 0.394958
-match ; mz           ; GREPFIELD(static/info, 'Local Magnetic Moments', 5, 2) ; 0.829468
+match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.17669575; 0.0001
+match ; External energy ; GREPFIELD(static/info, 'External    =', 3) ; -0.29125111; 0.0001
+match ; Eigenvalue   ; GREPFIELD(static/info, '1   --', 3) ; -0.085321; 0.0001
+match ; <Sx>         ; GREPFIELD(static/info, '1   --', 5) ; 0.1975; 0.0001
+match ; <Sy>         ; GREPFIELD(static/info, '1   --', 6) ; 0.1975; 0.0001
+match ; <Sz>         ; GREPFIELD(static/info, '1   --', 7) ; 0.4147; 0.0001
+match ; mx           ; GREPFIELD(static/info, 'Local Magnetic Moments', 3, 2) ; 0.394958; 0.00021
+match ; my           ; GREPFIELD(static/info, 'Local Magnetic Moments', 4, 2) ; 0.394958; 0.00021
+match ; mz           ; GREPFIELD(static/info, 'Local Magnetic Moments', 5, 2) ; 0.829468; 0.00021
 # This differs significantly from the initial magnetization.
 # It is due to the small radius and large spacing.
 
 Input: 09-spinors.03-rmmdiis_extra_states.inp
-match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.17669585
-match ; External energy ; GREPFIELD(static/info, 'External    =', 3) ; -0.29125110
-match ; Eigenvalue   ; GREPFIELD(static/info, '1   --', 3) ; -0.085321
-match ; <Sx>         ; GREPFIELD(static/info, '1   --', 5) ; 0.0736
-match ; <Sy>         ; GREPFIELD(static/info, '1   --', 6) ; 0.0736
-match ; <Sz>         ; GREPFIELD(static/info, '1   --', 7) ; 0.4890
-Precision : 0.00021
-match ; mx           ; GREPFIELD(static/info, 'Local Magnetic Moments', 3, 2) ; 0.147186
-match ; my           ; GREPFIELD(static/info, 'Local Magnetic Moments', 4, 2) ; 0.147186
-match ; mz           ; GREPFIELD(static/info, 'Local Magnetic Moments', 5, 2) ; 0.978097
+match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.17669585; 0.00021
+match ; External energy ; GREPFIELD(static/info, 'External    =', 3) ; -0.29125110; 0.00021
+match ; Eigenvalue   ; GREPFIELD(static/info, '1   --', 3) ; -0.085321; 0.00021
+match ; <Sx>         ; GREPFIELD(static/info, '1   --', 5) ; 0.0736; 0.00021
+match ; <Sy>         ; GREPFIELD(static/info, '1   --', 6) ; 0.0736; 0.00021
+match ; <Sz>         ; GREPFIELD(static/info, '1   --', 7) ; 0.4890; 0.00021
+match ; mx           ; GREPFIELD(static/info, 'Local Magnetic Moments', 3, 2) ; 0.147186; 0.00021
+match ; my           ; GREPFIELD(static/info, 'Local Magnetic Moments', 4, 2) ; 0.147186; 0.00021
+match ; mz           ; GREPFIELD(static/info, 'Local Magnetic Moments', 5, 2) ; 0.978097; 0.00021

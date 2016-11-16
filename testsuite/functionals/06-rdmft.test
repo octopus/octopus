@@ -9,15 +9,13 @@ Enabled    : Yes
 Processors: 4
 
 Input: 06-rdmft.01-lda.inp
-match ; LDA energy                    ; GREPFIELD(static/info, 'Total       =', 3) ; -1.30637651
-match ; LDA eigenvalue                ; GREPFIELD(static/info, '  1   --', 3) ; -0.441873
+match ; LDA energy                    ; GREPFIELD(static/info, 'Total       =', 3) ; -1.30637651; 0.0001
+match ; LDA eigenvalue                ; GREPFIELD(static/info, '  1   --', 3) ; -0.441873; 0.0001
 
 Input: 06-rdmft.02-gs.inp
-Precision : 1e-5
-match ; RDMFT energy after occupation numbers minimization            ; GREPFIELD(out, 'occ minim = ', 7) ; -1.15642
-match ; RDMFT converged energy                                        ; GREPFIELD(out, 'total energy is ', 5) ;  -1.15642
+match ; RDMFT energy after occupation numbers minimization            ; GREPFIELD(out, 'occ minim = ', 7) ; -1.15642; 1e-05
+match ; RDMFT converged energy                                        ; GREPFIELD(out, 'total energy is ', 5) ;  -1.15642; 1e-05
 
 Input: 06-rdmft.03-gs_grid.inp
-Precision : 1e-5
-match ; RDMFT energy after occupation numbers minimization            ; GREPFIELD(out, 'occ minim = ', 7) ; -1.15642
-match ; RDMFT converged energy                                        ; GREPFIELD(out, 'total energy is ', 5) ;  -1.15642
+match ; RDMFT energy after occupation numbers minimization            ; GREPFIELD(out, 'occ minim = ', 7) ; -1.15642; 1e-05
+match ; RDMFT converged energy                                        ; GREPFIELD(out, 'total energy is ', 5) ;  -1.15642; 1e-05

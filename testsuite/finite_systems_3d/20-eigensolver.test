@@ -9,66 +9,65 @@ Enabled    : Yes
 # This test checks the eigensolvers lobpcg, cg, cg_new, plan, evolution and rmmdiis with CH4.
 
 Input: 20-eigensolver.01-lobpcg.inp
-match ; Eigenvalue  1 ; GREPFIELD(static/info, ' 1   --', 3) ; -14.539741
-match ; Eigenvalue  2 ; GREPFIELD(static/info, ' 2   --', 3) ; -8.142330
-match ; Eigenvalue  3 ; GREPFIELD(static/info, ' 3   --', 3) ; -8.142330
-match ; Eigenvalue  4 ; GREPFIELD(static/info, ' 4   --', 3) ; -8.107420
-match ; Partial charge 1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2) ; 4.157
-match ; Partial charge 2 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3) ; 0.961
-match ; Partial charge 3 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 4) ; 0.961
-match ; Partial charge 4 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 5) ; 0.961
+match ; Eigenvalue  1 ; GREPFIELD(static/info, ' 1   --', 3) ; -14.539741; 0.0001
+match ; Eigenvalue  2 ; GREPFIELD(static/info, ' 2   --', 3) ; -8.142330; 0.0001
+match ; Eigenvalue  3 ; GREPFIELD(static/info, ' 3   --', 3) ; -8.142330; 0.0001
+match ; Eigenvalue  4 ; GREPFIELD(static/info, ' 4   --', 3) ; -8.107420; 0.0001
+match ; Partial charge 1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2) ; 4.157; 0.0001
+match ; Partial charge 2 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3) ; 0.961; 0.0001
+match ; Partial charge 3 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 4) ; 0.961; 0.0001
+match ; Partial charge 4 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 5) ; 0.961; 0.0001
 
 Input: 20-eigensolver.02-cg.inp
-match ; Eigenvalue  1 ; GREPFIELD(static/info, ' 1   --', 3) ; -14.539741
-match ; Eigenvalue  2 ; GREPFIELD(static/info, ' 2   --', 3) ; -8.142336
-match ; Eigenvalue  3 ; GREPFIELD(static/info, ' 3   --', 3) ; -8.142336
-match ; Eigenvalue  4 ; GREPFIELD(static/info, ' 4   --', 3) ; -8.107426
-match ; Partial charge 1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2) ; 4.157
-match ; Partial charge 2 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3) ; 0.961
-match ; Partial charge 3 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 4) ; 0.961
-match ; Partial charge 4 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 5) ; 0.961
+match ; Eigenvalue  1 ; GREPFIELD(static/info, ' 1   --', 3) ; -14.539741; 0.0001
+match ; Eigenvalue  2 ; GREPFIELD(static/info, ' 2   --', 3) ; -8.142336; 0.0001
+match ; Eigenvalue  3 ; GREPFIELD(static/info, ' 3   --', 3) ; -8.142336; 0.0001
+match ; Eigenvalue  4 ; GREPFIELD(static/info, ' 4   --', 3) ; -8.107426; 0.0001
+match ; Partial charge 1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2) ; 4.157; 0.0001
+match ; Partial charge 2 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3) ; 0.961; 0.0001
+match ; Partial charge 3 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 4) ; 0.961; 0.0001
+match ; Partial charge 4 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 5) ; 0.961; 0.0001
 
 Input: 20-eigensolver.03-cg_new.inp
-match ; Eigenvalue  1 ; GREPFIELD(static/info, ' 1   --', 3) ; -14.539625
-match ; Eigenvalue  2 ; GREPFIELD(static/info, ' 2   --', 3) ; -8.142251
-match ; Eigenvalue  3 ; GREPFIELD(static/info, ' 3   --', 3) ; -8.142251
-match ; Eigenvalue  4 ; GREPFIELD(static/info, ' 4   --', 3) ; -8.107344
-match ; Partial charge 1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2) ; 4.157
-match ; Partial charge 2 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3) ; 0.961
-match ; Partial charge 3 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 4) ; 0.961
-match ; Partial charge 4 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 5) ; 0.961
+match ; Eigenvalue  1 ; GREPFIELD(static/info, ' 1   --', 3) ; -14.539625; 0.0001
+match ; Eigenvalue  2 ; GREPFIELD(static/info, ' 2   --', 3) ; -8.142251; 0.0001
+match ; Eigenvalue  3 ; GREPFIELD(static/info, ' 3   --', 3) ; -8.142251; 0.0001
+match ; Eigenvalue  4 ; GREPFIELD(static/info, ' 4   --', 3) ; -8.107344; 0.0001
+match ; Partial charge 1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2) ; 4.157; 0.0001
+match ; Partial charge 2 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3) ; 0.961; 0.0001
+match ; Partial charge 3 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 4) ; 0.961; 0.0001
+match ; Partial charge 4 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 5) ; 0.961; 0.0001
 
 Input: 20-eigensolver.04-plan.inp
-match ; Eigenvalue  1 ; GREPFIELD(static/info, ' 1   --', 3) ; -14.539705
-match ; Eigenvalue  2 ; GREPFIELD(static/info, ' 2   --', 3) ; -8.142294
-match ; Eigenvalue  3 ; GREPFIELD(static/info, ' 3   --', 3) ; -8.142282
-match ; Eigenvalue  4 ; GREPFIELD(static/info, ' 4   --', 3) ; -8.107378
-match ; Partial charge 1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2) ; 4.157
-match ; Partial charge 2 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3) ; 0.961
-match ; Partial charge 3 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 4) ; 0.961
-match ; Partial charge 4 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 5) ; 0.961
+match ; Eigenvalue  1 ; GREPFIELD(static/info, ' 1   --', 3) ; -14.539705; 0.0001
+match ; Eigenvalue  2 ; GREPFIELD(static/info, ' 2   --', 3) ; -8.142294; 0.0001
+match ; Eigenvalue  3 ; GREPFIELD(static/info, ' 3   --', 3) ; -8.142282; 0.0001
+match ; Eigenvalue  4 ; GREPFIELD(static/info, ' 4   --', 3) ; -8.107378; 0.0001
+match ; Partial charge 1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2) ; 4.157; 0.0001
+match ; Partial charge 2 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3) ; 0.961; 0.0001
+match ; Partial charge 3 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 4) ; 0.961; 0.0001
+match ; Partial charge 4 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 5) ; 0.961; 0.0001
 
 # In this case, the numbers are slightly different because the input
 # file sets a high convergence criterion. If allowed to proceed further,
 # the algorithm does converge to the correct numbers.
 Input: 20-eigensolver.05-evolution.inp
-match ; Eigenvalue  1 ; GREPFIELD(static/info, ' 1   --', 3) ; -15.248394
-match ; Eigenvalue  2 ; GREPFIELD(static/info, ' 2   --', 3) ;  -8.782688
-match ; Eigenvalue  3 ; GREPFIELD(static/info, ' 3   --', 3) ;  -8.782688
-match ; Eigenvalue  4 ; GREPFIELD(static/info, ' 4   --', 3) ;  -8.754083
-match ; Partial charge 1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2) ; 4.175
-match ; Partial charge 2 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3) ; 0.956
-match ; Partial charge 3 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 4) ; 0.956
-match ; Partial charge 4 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 5) ; 0.956
+match ; Eigenvalue  1 ; GREPFIELD(static/info, ' 1   --', 3) ; -15.248394; 0.0001
+match ; Eigenvalue  2 ; GREPFIELD(static/info, ' 2   --', 3) ;  -8.782688; 0.0001
+match ; Eigenvalue  3 ; GREPFIELD(static/info, ' 3   --', 3) ;  -8.782688; 0.0001
+match ; Eigenvalue  4 ; GREPFIELD(static/info, ' 4   --', 3) ;  -8.754083; 0.0001
+match ; Partial charge 1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2) ; 4.175; 0.0001
+match ; Partial charge 2 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3) ; 0.956; 0.0001
+match ; Partial charge 3 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 4) ; 0.956; 0.0001
+match ; Partial charge 4 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 5) ; 0.956; 0.0001
 
 Processors : 3
 Input: 20-eigensolver.06-rmmdiis.inp
-Precision : 0.00015
-match ; Eigenvalue  1 ; GREPFIELD(static/info, ' 1   --', 3) ; -14.539769
-match ; Eigenvalue  2 ; GREPFIELD(static/info, ' 2   --', 3) ; -8.142283
-match ; Eigenvalue  3 ; GREPFIELD(static/info, ' 3   --', 3) ; -8.142283
-match ; Eigenvalue  4 ; GREPFIELD(static/info, ' 4   --', 3) ; -8.107373
-match ; Partial charge 1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2) ; 4.157
-match ; Partial charge 2 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3) ; 0.961
-match ; Partial charge 3 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 4) ; 0.961
-match ; Partial charge 4 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 5) ; 0.961
+match ; Eigenvalue  1 ; GREPFIELD(static/info, ' 1   --', 3) ; -14.539769; 0.00015
+match ; Eigenvalue  2 ; GREPFIELD(static/info, ' 2   --', 3) ; -8.142283; 0.00015
+match ; Eigenvalue  3 ; GREPFIELD(static/info, ' 3   --', 3) ; -8.142283; 0.00015
+match ; Eigenvalue  4 ; GREPFIELD(static/info, ' 4   --', 3) ; -8.107373; 0.00015
+match ; Partial charge 1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2) ; 4.157; 0.00015
+match ; Partial charge 2 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3) ; 0.961; 0.00015
+match ; Partial charge 3 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 4) ; 0.961; 0.00015
+match ; Partial charge 4 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 5) ; 0.961; 0.00015
