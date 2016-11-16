@@ -20,6 +20,7 @@
 */
 
 /* This is essentially the example from bison */
+/* https://www.gnu.org/software/bison/manual/html_node/Infix-Calc.html */
 %{
 %}
 
