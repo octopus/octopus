@@ -264,8 +264,6 @@ end subroutine X(output_me_ks_multipoles1d)
 
 ! ---------------------------------------------------------
 subroutine X(one_body) (dir, gr, geo, st, hm)
-  use XC_F90(lib_m)
-
   character(len=*),    intent(in)    :: dir
   type(grid_t),        intent(inout) :: gr
   type(geometry_t),    intent(in)    :: geo
@@ -285,9 +283,7 @@ subroutine X(one_body) (dir, gr, geo, st, hm)
   np = gr%mesh%np
 
   ASSERT(.not. st%parallel_in_states)
-  if(gr%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("OutputMatrixElements=one_body with k-points")
-  if(iand(hm%xc_family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) &
-    call messages_not_implemented("OutputMatrixElements=one_body with MGGA")
+  if(gr%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("OutputMatrixElements=two_body with k-points")
 
   ! how to do this properly? states_matrix
   iunit = io_open(trim(dir)//'/output_me_one_body', action='write')
@@ -303,8 +299,7 @@ subroutine X(one_body) (dir, gr, geo, st, hm)
 
       psij(1:np, 1) = R_CONJ(psii(1:np, 1))*hm%Vhxc(1:np, 1)*psij(1:np, 1)
 
-      me = - X(mf_integrate)(gr%mesh, psij(:, 1))
-      if(ist == jst ) me = me + st%eigenval(ist,1)       
+      me = st%eigenval(ist,1) - X(mf_integrate)(gr%mesh, psij(:, 1))
 
       write(iunit, *) ist, jst, me
     end do
