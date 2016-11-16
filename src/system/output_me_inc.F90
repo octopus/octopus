@@ -283,7 +283,7 @@ subroutine X(one_body) (dir, gr, geo, st, hm)
   np = gr%mesh%np
 
   ASSERT(.not. st%parallel_in_states)
-  if(gr%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("OutputMatrixElements=two_body with k-points")
+  if(gr%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("OutputMatrixElements=one_body with k-points")
 
   ! how to do this properly? states_matrix
   iunit = io_open(trim(dir)//'/output_me_one_body', action='write')
