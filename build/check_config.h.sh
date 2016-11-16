@@ -25,10 +25,11 @@
 BUILDER="$1"
 BRANCH="$2"
 
-if [ "x$BRANCH" == "x" ]; then
+# All branches should use the config files from develop, except master.
+if [ "x$BRANCH" != "xmaster" ]; then
     BRANCH=develop
 fi
-    
+
 echo ""
 echo "Checking config.h against reference:"
 
@@ -36,8 +37,11 @@ echo "Checking config.h against reference:"
 set -x
 
 # download ref_file with git
-git archive -o $BUILDER.tar --remote git@gitlab.com:octopus-code/buildbot.git master:config.h/$BRANCH $BUILDER
-tar xf $BUILDER.tar
+git clone git@gitlab.com:octopus-code/buildbot.git buildbot
+cp buildbot/config.h/$BRANCH/$BUILDER .
 
 # these two fields will generally be different, and that is fine
 diff -I '^#define BUILD_TIME' -I '^#define LATEST_SVN' config.h $BUILDER
+
+# cleanup
+rm -rf buildbot
