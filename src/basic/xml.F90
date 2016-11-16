@@ -15,15 +15,15 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id:$
+!! $Id$
 
 #include "global.h"
 
 module xml_oct_m
 
-  ! This module implements a very limited and non-general interface to
-  ! read xml files. Its main purpose it is to read pseudo-potentials
-  ! in xml format.
+  !< This module implements a very limited and non-general interface to
+  !! read xml files. Its main purpose it is to read pseudo-potentials
+  !! in xml format.
 
   implicit none 
 
