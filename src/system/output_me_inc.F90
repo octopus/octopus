@@ -299,7 +299,8 @@ subroutine X(one_body) (dir, gr, geo, st, hm)
 
       psij(1:np, 1) = R_CONJ(psii(1:np, 1))*hm%Vhxc(1:np, 1)*psij(1:np, 1)
 
-      me = st%eigenval(ist,1) - X(mf_integrate)(gr%mesh, psij(:, 1))
+      me = - X(mf_integrate)(gr%mesh, psij(:, 1))
+      if(ist == jst ) me = me + st%eigenval(ist,1)       
 
       write(iunit, *) ist, jst, me
     end do
