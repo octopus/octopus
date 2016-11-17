@@ -33,6 +33,7 @@ module hamiltonian_base_oct_m
   use hardware_oct_m
   use io_oct_m
   use kb_projector_oct_m
+  use hgh_projector_oct_m
   use lalg_basic_oct_m
   use math_oct_m
   use mesh_oct_m
@@ -349,7 +350,7 @@ contains
     type(mesh_t),                     intent(in)    :: mesh
     type(epot_t),             target, intent(in)    :: epot
 
-    integer :: iatom, iproj, ll, lmax, lloc, mm, ic
+    integer :: iatom, iproj, ll, lmax, lloc, mm, ic, jc
     integer :: nmat, imat, ip, iorder
     integer :: nregion, jatom, katom, iregion
     integer, allocatable :: order(:), head(:), region_count(:)
@@ -357,6 +358,7 @@ contains
     logical :: overlap
     type(projector_matrix_t), pointer :: pmat
     type(kb_projector_t),     pointer :: kb_p
+    type(hgh_projector_t),    pointer :: hgh_p
     type(profile_t), save :: color_prof
 
     PUSH_SUB(hamiltonian_base_build_proj)
@@ -443,17 +445,17 @@ contains
     do iorder = 1, epot%natoms
       iatom = order(iorder)
 
-      if(projector_is(epot%proj(iatom), M_KB)) then
+      if(projector_is(epot%proj(iatom), M_KB) .or. projector_is(epot%proj(iatom), M_HGH)) then
         INCR(this%nprojector_matrices, 1)
         this%apply_projector_matrices = .true.
       else if(.not. projector_is_null(epot%proj(iatom))) then
-        ! for the moment only KB projectors are supported
         this%apply_projector_matrices = .false.
         exit
       end if
     end do
 
-    if(mesh%use_curvilinear) this%apply_projector_matrices = .false.
+    if(epot%reltype /= NOREL) this%apply_projector_matrices = .false.
+    if(mesh%use_curvilinear)  this%apply_projector_matrices = .false.
 
     if(.not. this%apply_projector_matrices) then
       SAFE_DEALLOCATE_A(order)
@@ -462,6 +464,7 @@ contains
       POP_SUB(hamiltonian_base_build_proj)
       return
     end if
+
 
     SAFE_ALLOCATE(this%projector_matrices(1:this%nprojector_matrices))
     SAFE_ALLOCATE(this%regions(1:this%nprojector_matrices + 1))
@@ -477,42 +480,89 @@ contains
 
         iatom = order(iorder)
 
-        if(.not. projector_is(epot%proj(iatom), M_KB)) cycle
+        if(projector_is(epot%proj(iatom), M_NONE)) cycle
+          
         INCR(iproj, 1)
+
+        pmat => this%projector_matrices(iproj)
 
         this%projector_to_atom(iproj) = iatom
 
         lmax = epot%proj(iatom)%lmax
         lloc = epot%proj(iatom)%lloc
 
-        ! count the number of projectors for this matrix
-        nmat = 0
-        do ll = 0, lmax
-          if (ll == lloc) cycle
-          do mm = -ll, ll
-            INCR(nmat, epot%proj(iatom)%kb_p(ll, mm)%n_c)
-          end do
-        end do
-
-        pmat => this%projector_matrices(iproj)
-
-        call projector_matrix_allocate(pmat, epot%proj(iatom)%sphere%np, nmat)
-
-        ! generate the matrix
-        pmat%projectors = M_ZERO
-
-        imat = 1
-        do ll = 0, lmax
-          if (ll == lloc) cycle
-          do mm = -ll, ll
-            kb_p =>  epot%proj(iatom)%kb_p(ll, mm)
-            do ic = 1, kb_p%n_c
-              forall(ip = 1:pmat%npoints) pmat%projectors(ip, imat) = kb_p%p(ip, ic)
-              pmat%scal(imat) = kb_p%e(ic)*mesh%vol_pp(1)
-              INCR(imat, 1)
+        if(projector_is(epot%proj(iatom), M_KB)) then
+          
+          ! count the number of projectors for this matrix
+          nmat = 0
+          do ll = 0, lmax
+            if (ll == lloc) cycle
+            do mm = -ll, ll
+              INCR(nmat, epot%proj(iatom)%kb_p(ll, mm)%n_c)
             end do
           end do
-        end do
+          
+          call projector_matrix_allocate(pmat, epot%proj(iatom)%sphere%np, nmat, has_mix_matrix = .false.)
+          
+          ! generate the matrix
+          pmat%projectors = M_ZERO
+          
+          imat = 1
+          do ll = 0, lmax
+            if (ll == lloc) cycle
+            do mm = -ll, ll
+              kb_p =>  epot%proj(iatom)%kb_p(ll, mm)
+              do ic = 1, kb_p%n_c
+                forall(ip = 1:pmat%npoints) pmat%projectors(ip, imat) = kb_p%p(ip, ic)
+                pmat%scal(imat) = kb_p%e(ic)*mesh%vol_pp(1)
+                INCR(imat, 1)
+              end do
+            end do
+          end do
+
+        else if(projector_is(epot%proj(iatom), M_HGH)) then
+
+          ! count the number of projectors for this matrix
+          nmat = 0
+          do ll = 0, lmax
+            if (ll == lloc) cycle
+            do mm = -ll, ll
+              nmat = nmat + 3
+            end do
+          end do
+          
+          call projector_matrix_allocate(pmat, epot%proj(iatom)%sphere%np, nmat, has_mix_matrix = .true.)
+
+          ! generate the matrix
+          pmat%projectors = M_ZERO
+          pmat%mix = M_ZERO
+          
+          imat = 1
+          do ll = 0, lmax
+            if (ll == lloc) cycle
+            do mm = -ll, ll
+              hgh_p =>  epot%proj(iatom)%hgh_p(ll, mm)
+
+              ! HGH pseudos mix different components, so we need to
+              ! generate a matrix that mixes the projections
+              do ic = 1, 3
+                do jc = 1, 3
+                  pmat%mix(imat - 1 + ic, imat - 1 + jc) = hgh_p%h(ic, jc)
+                end do
+              end do
+              
+              do ic = 1, 3
+                forall(ip = 1:pmat%npoints) pmat%projectors(ip, imat) = hgh_p%p(ip, ic)
+                pmat%scal(imat) = mesh%volume_element
+                INCR(imat, 1)
+              end do
+              
+            end do
+          end do
+          
+        else
+          cycle          
+        end if
 
         forall(ip = 1:pmat%npoints)
           pmat%map(ip) = epot%proj(iatom)%sphere%map(ip)

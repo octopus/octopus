@@ -42,6 +42,7 @@ module projector_matrix_oct_m
     FLOAT,   allocatable :: position(:, :)
     integer          :: npoints
     integer          :: nprojs
+    FLOAT,   allocatable :: mix(:, :)
   end type projector_matrix_t
 
 contains
@@ -57,10 +58,11 @@ contains
   
   ! -------------------------------------------------
 
-  subroutine projector_matrix_allocate(this, npoints, nprojs)
+  subroutine projector_matrix_allocate(this, npoints, nprojs, has_mix_matrix)
     type(projector_matrix_t), intent(out) :: this
     integer,                  intent(in)  :: npoints
     integer,                  intent(in)  :: nprojs
+    logical,                  intent(in)  :: has_mix_matrix
 
     PUSH_SUB(projector_matrix_allocate)
 
@@ -71,6 +73,10 @@ contains
     SAFE_ALLOCATE(this%projectors(1:npoints, 1:nprojs))
     SAFE_ALLOCATE(this%scal(1:nprojs))
     SAFE_ALLOCATE(this%position(1:3, 1:npoints))
+
+    if(has_mix_matrix) then
+      SAFE_ALLOCATE(this%mix(1:nprojs, 1:nprojs))
+    end if
 
     POP_SUB(projector_matrix_allocate)
   end subroutine projector_matrix_allocate
@@ -86,6 +92,7 @@ contains
     SAFE_DEALLOCATE_P(this%projectors)
     SAFE_DEALLOCATE_P(this%scal)
     SAFE_DEALLOCATE_A(this%position)
+    SAFE_DEALLOCATE_A(this%mix)
 
     POP_SUB(projector_matrix_deallocate)
   end subroutine projector_matrix_deallocate

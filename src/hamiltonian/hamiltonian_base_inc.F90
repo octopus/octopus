@@ -768,6 +768,13 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
     npoints = pmat%npoints
     nprojs = pmat%nprojs
 
+    if(allocated(pmat%mix)) then
+      do ist = 1, nst
+        projection%X(projection)(ist, iprojection + 1:iprojection + nprojs) = &
+          matmul(pmat%mix(1:nprojs, 1:nprojs), projection%X(projection)(ist, iprojection + 1:iprojection + nprojs))
+      end do
+    end if
+    
     if(npoints /=  0) then
 
       SAFE_ALLOCATE(psi(1:nst, 1:npoints))
