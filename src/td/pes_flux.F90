@@ -473,7 +473,7 @@ contains
 
       if(this%usememory) then
         SAFE_ALLOCATE(k_dot_aux(1:this%nkpnts))
-        SAFE_ALLOCATE(this%conjgplanewf_cub(1:this%nkpnts, this%nsrfcpnts_start:this%nsrfcpnts_end, kptst:kptend))
+        SAFE_ALLOCATE(this%conjgplanewf_cub(1:this%nkpnts, this%nsrfcpnts_start:this%nsrfcpnts_end,kptst:kptend))
         this%conjgplanewf_cub = M_z0
 
         do ik = kptst, kptend
