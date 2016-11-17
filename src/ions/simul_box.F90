@@ -114,6 +114,8 @@ module simul_box_oct_m
     FLOAT :: rcell_volume                        !< the volume of the cell in real space
     FLOAT :: metric            (MAX_DIM,MAX_DIM) !< metric tensor F matrix following Chelikowski paper PRB 78 075109 (2008)
     FLOAT :: stress_tensor(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
+    FLOAT :: spacing_ini(MAX_DIM)   !< Initial spacing before adjustment
+    FLOAT :: spacing_new(MAX_DIM)   !< Adjusted Sspacing
     logical :: nonorthogonal
     
     type(kpoints_t) :: kpoints                   !< the k-points

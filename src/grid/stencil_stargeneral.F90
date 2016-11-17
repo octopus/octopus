@@ -41,18 +41,24 @@ module stencil_stargeneral_oct_m
 contains
   
   ! ---------------------------------------------------------
-  subroutine stencil_stargeneral_get_arms(this, sb, spacing)
+  subroutine stencil_stargeneral_get_arms(this, sb)
     type(stencil_t),     intent(inout) :: this 
     type(simul_box_t),      intent(in) :: sb
-    FLOAT, intent(in)   :: spacing(sb%dim)
     integer :: idim, dim
-    FLOAT   :: vec1(1:3), vec2(1:3), theta, arm(1:3), ratio
+    FLOAT   :: vec1(1:3), vec2(1:3), theta, arm(1:3)
+    FLOAT   :: ratio, hx(1:MAX_DIM)
     integer :: n1, n2, n3
     
     PUSH_SUB(stencil_stargeneral_get_arms)  
 
     dim = sb%dim    
        
+    if(sb%spacing_new(1) < M_ZERO)then
+       hx(1:dim) = sb%spacing_ini(1:dim)
+    else
+       hx(1:dim) = sb%spacing_new(1:dim)
+    end if
+
     vec1(:) = M_ZERO
     vec2(:) = M_ZERO
     
@@ -70,7 +76,7 @@ contains
     theta = acos(dot_product(vec1(1:dim),vec2(1:dim)))
 
 ! find a reasonable direction for arm 1
-    ratio = (M_TWO*sb%lsize(1)/spacing(1)) / (M_TWO*sb%lsize(2)/spacing(2))
+    ratio = (M_TWO*sb%lsize(1)/hx(1)) / (M_TWO*sb%lsize(2)/hx(2))
     if(ratio > M_ONE)then
       ratio = ratio + M_HALF
       n1 = aint(ratio); n2 = 1
@@ -105,7 +111,7 @@ contains
     theta = acos(dot_product(vec1(1:dim),vec2(1:dim)))
 
 ! find a reasonable direction for arm 2
-    ratio = (M_TWO*sb%lsize(2)/spacing(2)) / (M_TWO*sb%lsize(3)/spacing(3))
+    ratio = (M_TWO*sb%lsize(2)/hx(2)) / (M_TWO*sb%lsize(3)/hx(3))
     if(ratio > M_ONE)then
       ratio = ratio + M_HALF
       n2 = aint(ratio); n3 = 1
@@ -129,7 +135,7 @@ contains
     theta = acos(dot_product(vec1(1:dim),vec2(1:dim)))
 
 ! find a reasonable direction for arm 3
-    ratio = (M_TWO*sb%lsize(3)/spacing(3)) / (M_TWO*sb%lsize(1)/spacing(1))
+    ratio = (M_TWO*sb%lsize(3)/hx(3)) / (M_TWO*sb%lsize(1)/hx(1))
     if(ratio > M_ONE)then
       ratio = ratio + M_HALF
       n3 = aint(ratio); n1 = 1

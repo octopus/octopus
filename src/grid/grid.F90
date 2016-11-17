@@ -196,6 +196,9 @@ contains
     ! initialize curvilinear coordinates
     call curvilinear_init(gr%cv, gr%sb, geo, grid_spacing)
 
+    ! initial spacing may be used in "derivatives_init".
+    gr%sb%spacing_ini(1:MAX_DIM) = grid_spacing(1:MAX_DIM)
+    gr%sb%spacing_new(1:MAX_DIM) = -M_ONE
     ! initialize derivatives
     call derivatives_init(gr%der, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
 

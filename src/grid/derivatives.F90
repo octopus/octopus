@@ -370,7 +370,7 @@ contains
     case(DER_STARPLUS)
       call stencil_starplus_get_lapl(der%lapl%stencil, der%dim, der%order)
     case(DER_STARGENERAL)
-      call stencil_stargeneral_get_arms(der%lapl%stencil, sb, der%mesh%spacing)
+      call stencil_stargeneral_get_arms(der%lapl%stencil, sb)
       call stencil_stargeneral_get_lapl(der%lapl%stencil, der%dim, der%order)
     end select
 
