@@ -41,12 +41,13 @@ module stencil_stargeneral_oct_m
 contains
   
   ! ---------------------------------------------------------
-  subroutine stencil_stargeneral_get_arms(this, sb)
+  subroutine stencil_stargeneral_get_arms(this, sb, spacing)
     type(stencil_t),     intent(inout) :: this 
     type(simul_box_t),      intent(in) :: sb
-    
+    FLOAT, intent(in)   :: spacing(sb%dim)
     integer :: idim, dim
-    FLOAT   :: vec1(1:3), vec2(1:3), theta, arm(1:3)
+    FLOAT   :: vec1(1:3), vec2(1:3), theta, arm(1:3), ratio
+    integer :: n1, n2, n3
     
     PUSH_SUB(stencil_stargeneral_get_arms)  
 
@@ -67,15 +68,24 @@ contains
     vec2(1:dim)=sb%rlattice_primitive(1:dim, 2)
     !get the angle between the primitive vectors
     theta = acos(dot_product(vec1(1:dim),vec2(1:dim)))
-    
+
+! find a reasonable direction for arm 1
+    ratio = (M_TWO*sb%lsize(1)/spacing(1)) / (M_TWO*sb%lsize(2)/spacing(2))
+    if(ratio > M_ONE)then
+      ratio = ratio + M_HALF
+      n1 = aint(ratio); n2 = 1
+    else
+      ratio = M_ONE/ratio + M_HALF
+      n1 = 1; n2 = aint(ratio)
+    end if
 
     if (theta < M_PI*M_HALF) then
       this%stargeneral%narms = this%stargeneral%narms + 1
-      arm(1:3) = (/1,-1,0/)
+      arm(1:3) = (/n1,-n2,0/)
       this%stargeneral%arms(this%stargeneral%narms, 1:dim) = arm(1:dim)
     else if(theta > M_PI*M_HALF) then
       this%stargeneral%narms = this%stargeneral%narms + 1
-      arm(1:3) = (/1,+1,0/)
+      arm(1:3) = (/n1,+n2,0/)
       this%stargeneral%arms(this%stargeneral%narms, 1:dim) = arm(1:dim)
     end if
     !if theta == pi/2 we do not need additional arms
@@ -94,12 +104,22 @@ contains
     !get the angle between the primitive vectors
     theta = acos(dot_product(vec1(1:dim),vec2(1:dim)))
 
+! find a reasonable direction for arm 2
+    ratio = (M_TWO*sb%lsize(2)/spacing(2)) / (M_TWO*sb%lsize(3)/spacing(3))
+    if(ratio > M_ONE)then
+      ratio = ratio + M_HALF
+      n2 = aint(ratio); n3 = 1
+    else
+      ratio = M_ONE/ratio + M_HALF
+      n2 = 1; n3 = aint(ratio)
+    end if
+
     if (theta < M_PI*M_HALF) then
       this%stargeneral%narms = this%stargeneral%narms + 1
-      this%stargeneral%arms(this%stargeneral%narms, 1:dim) = (/0,1,-1/)
+      this%stargeneral%arms(this%stargeneral%narms, 1:dim) = (/0,n2,-n3/)
     else if(theta > M_PI*M_HALF) then
       this%stargeneral%narms = this%stargeneral%narms + 1
-      this%stargeneral%arms(this%stargeneral%narms, 1:dim) = (/0,1,+1/)
+      this%stargeneral%arms(this%stargeneral%narms, 1:dim) = (/0,n2,+n3/)
     end if
     !if theta == pi/2 we do not need additional arms
       
@@ -108,12 +128,22 @@ contains
     !get the angle between the primitive vectors
     theta = acos(dot_product(vec1(1:dim),vec2(1:dim)))
 
+! find a reasonable direction for arm 2
+    ratio = (M_TWO*sb%lsize(3)/spacing(3)) / (M_TWO*sb%lsize(1)/spacing(1))
+    if(ratio > M_ONE)then
+      ratio = ratio + M_HALF
+      n3 = aint(ratio); n1 = 1
+    else
+      ratio = M_ONE/ratio + M_HALF
+      n3 = 1; n1 = aint(ratio)
+    end if
+
     if (theta < M_PI*M_HALF) then
       this%stargeneral%narms = this%stargeneral%narms + 1
-      this%stargeneral%arms(this%stargeneral%narms, 1:dim) = (/-1,0,1/)
+      this%stargeneral%arms(this%stargeneral%narms, 1:dim) = (/-n1,0,n3/)
     else if(theta > M_PI*M_HALF) then
       this%stargeneral%narms = this%stargeneral%narms + 1
-      this%stargeneral%arms(this%stargeneral%narms, 1:dim) = (/+1,0,1/)
+      this%stargeneral%arms(this%stargeneral%narms, 1:dim) = (/+n1,0,n3/)
     end if
     !if theta == pi/2 we do not need additional arms
 
