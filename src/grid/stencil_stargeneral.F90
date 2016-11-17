@@ -26,6 +26,8 @@ module stencil_stargeneral_oct_m
   use simul_box_oct_m
   use stencil_oct_m
 
+  implicit none
+
   private
   public ::                     &
     stencil_stargeneral_size_lapl, &
@@ -254,7 +256,7 @@ contains
     integer, intent(in)          :: order
     integer, intent(out)         :: pol(:,:) !< pol(dim, order)
 
-    integer :: i, j, n
+    integer :: i, j, n, j1, j2
 
     PUSH_SUB(stencil_stargeneral_pol_lapl)
 
