@@ -128,7 +128,7 @@ contains
     !get the angle between the primitive vectors
     theta = acos(dot_product(vec1(1:dim),vec2(1:dim)))
 
-! find a reasonable direction for arm 2
+! find a reasonable direction for arm 3
     ratio = (M_TWO*sb%lsize(3)/spacing(3)) / (M_TWO*sb%lsize(1)/spacing(1))
     if(ratio > M_ONE)then
       ratio = ratio + M_HALF
