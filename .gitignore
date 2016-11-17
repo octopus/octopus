@@ -21,7 +21,7 @@
 /man
 /include
 /.tm_properties
-/compile 
+/compile
 
 # /build/
 /build/*.log
