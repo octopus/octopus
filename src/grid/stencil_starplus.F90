@@ -25,6 +25,8 @@ module stencil_starplus_oct_m
   use profiling_oct_m
   use stencil_oct_m
 
+  implicit none
+
   private
   public ::                     &
     stencil_starplus_size_lapl, &
