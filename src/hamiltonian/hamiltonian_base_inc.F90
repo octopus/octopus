@@ -1186,6 +1186,15 @@ subroutine X(hamiltonian_base_nlocal_position_commutator)(this, mesh, std, ik, p
     npoints = pmat%npoints
     nprojs = pmat%nprojs
 
+    if(allocated(pmat%mix)) then
+      do idir = 0, 3
+        do ist = 1, nst
+          projections(ist, iprojection + 1:iprojection + nprojs, idir) = &
+            matmul(pmat%mix(1:nprojs, 1:nprojs), projections(ist, iprojection + 1:iprojection + nprojs, idir))
+        end do
+      end do
+    end if
+    
     if(npoints /=  0) then
 
       SAFE_ALLOCATE(psi(1:nst, 1:npoints, 0:3))
