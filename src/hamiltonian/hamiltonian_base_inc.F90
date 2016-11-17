@@ -1020,6 +1020,15 @@ subroutine X(hamiltonian_base_nlocal_force)(this, mesh, st, geo, iqn, ndim, psi1
     nprojs = pmat%nprojs
           
     iatom = this%projector_to_atom(imat)
+
+    if(allocated(pmat%mix)) then
+      do idir = 1, ndim
+        do ist = 1, nst
+          projs(idir, ist, iprojection + 1:iprojection + nprojs) = &
+            matmul(pmat%mix(1:nprojs, 1:nprojs), projs(idir, ist, iprojection + 1:iprojection + nprojs))
+        end do
+      end do
+    end if
     
     SAFE_ALLOCATE(ff(1:ndim))
     
@@ -1239,7 +1248,6 @@ subroutine X(hamiltonian_base_nlocal_position_commutator)(this, mesh, std, ik, p
   call profiling_out(prof)
   POP_SUB(X(hamiltonian_base_nlocal_position_commutator))
 end subroutine X(hamiltonian_base_nlocal_position_commutator)
-
 
 !! Local Variables:
 !! mode: f90
