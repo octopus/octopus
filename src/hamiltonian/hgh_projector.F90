@@ -50,7 +50,6 @@ module hgh_projector_oct_m
   
 
   type hgh_projector_t
-    private
     integer        :: n_s         !< number of points inside the sphere
     FLOAT, pointer :: p(:, :)     !< projectors
     FLOAT, pointer :: lp(:, :, :) !< angular momentum times projectors
