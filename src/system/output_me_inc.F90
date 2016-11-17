@@ -264,6 +264,9 @@ end subroutine X(output_me_ks_multipoles1d)
 
 ! ---------------------------------------------------------
 subroutine X(one_body) (dir, gr, geo, st, hm)
+  use XC_F90(lib_m)
+  use xc_functl_oct_m
+
   character(len=*),    intent(in)    :: dir
   type(grid_t),        intent(inout) :: gr
   type(geometry_t),    intent(in)    :: geo
