@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright (C) 2016 D. Strubbe
+# Copyright (C) 2016 D. Strubbe, M. Oliveira
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,18 +25,23 @@
 BUILDER="$1"
 BRANCH="$2"
 
-if [ "x$BRANCH" == "x" ]; then
-    BRANCH=trunk
+# All branches should use the config files from develop, except master.
+if [ "x$BRANCH" != "xmaster" ]; then
+    BRANCH=develop
 fi
-    
+
 echo ""
 echo "Checking config.h against reference:"
 
 # show commands in terminal output
 set -x
 
-# download ref_file with svn
-svn export --force http://www.tddft.org/svn/octopus/buildbot/config.h/$BRANCH/$BUILDER
+# download ref_file with git
+git clone git@gitlab.com:octopus-code/buildbot.git buildbot
+cp buildbot/config.h/$BRANCH/$BUILDER .
 
 # these two fields will generally be different, and that is fine
 diff -I '^#define BUILD_TIME' -I '^#define LATEST_SVN' config.h $BUILDER
+
+# cleanup
+rm -rf buildbot
