@@ -722,11 +722,7 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
   CMPLX  :: phase
   R_TYPE, allocatable :: psi(:, :)
   type(projector_matrix_t), pointer :: pmat
-#ifdef HAVE_MPI
-  integer :: d1
-  R_TYPE, allocatable :: projection_red(:, :)
   type(profile_t), save :: reduce_prof
-#endif
 
   if(.not. this%apply_projector_matrices) return
 
@@ -741,18 +737,11 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
 #endif
 
   ! reduce the projections
-#ifdef HAVE_MPI
   if(mesh%parallel_in_domains) then
     call profiling_in(reduce_prof, "VNLPSI_MAT_REDUCE")
-    d1 = ubound(projection%X(projection), dim = 1)
-    SAFE_ALLOCATE(projection_red(1:d1, 1:this%full_projection_size))
-    projection_red = projection%X(projection)
-    call MPI_Allreduce(projection_red(1, 1), projection%X(projection)(1, 1), d1*this%full_projection_size, &
-      R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
-    SAFE_DEALLOCATE_A(projection_red)
+    call comm_allreduce(mesh%vp%comm, projection%X(projection))
     call profiling_out(reduce_prof)
   end if
-#endif
 
   if(batch_is_packed(vpsib) .and. accel_is_enabled()) then
 
