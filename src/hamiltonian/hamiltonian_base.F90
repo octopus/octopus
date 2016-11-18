@@ -107,6 +107,7 @@ module hamiltonian_base_oct_m
     integer                               :: max_npoints
     integer                               :: total_points
     integer                               :: max_nprojs
+    logical                               :: projector_mix
     CMPLX,                    allocatable :: projector_phases(:, :, :)
     integer,                  allocatable :: projector_to_atom(:)
     integer                               :: nregions
@@ -328,6 +329,7 @@ contains
         call accel_release_buffer(this%buff_scals)
         call accel_release_buffer(this%buff_pos)
         call accel_release_buffer(this%buff_invmap)
+        if(this%projector_mix) call accel_release_buffer(this%buff_mix)
         if(allocated(this%projector_phases)) call accel_release_buffer(this%buff_projector_phases)
       end if
 
@@ -473,6 +475,8 @@ contains
     this%full_projection_size = 0
     this%regions(this%nregions + 1) = this%nprojector_matrices + 1
 
+    this%projector_mix = .false.
+    
     iproj = 0
     do iregion = 1, this%nregions
       this%regions(iregion) = iproj + 1
@@ -522,6 +526,8 @@ contains
 
         else if(projector_is(epot%proj(iatom), M_HGH)) then
 
+          this%projector_mix = .true.
+          
           ! count the number of projectors for this matrix
           nmat = 0
           do ll = 0, lmax
