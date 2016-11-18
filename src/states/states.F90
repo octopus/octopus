@@ -2217,10 +2217,10 @@ contains
         gi_kinetic_energy_density(1:der%mesh%np, is) = tau(1:der%mesh%np, is)
         if(states_are_complex(st)) then
           ASSERT(associated(jp))
-          do i_dim = 1, der%mesh%sb%dim
-            gi_kinetic_energy_density(1:der%mesh%np, is) = &
-                gi_kinetic_energy_density(1:der%mesh%np, is) - &
-                jp(1:der%mesh%np, i_dim, is)**2/st%rho(1:der%mesh%np, is)
+          do ii = 1, der%mesh%np
+            if(st%rho(ii, is) < CNST(1.0e-7)) cycle
+            gi_kinetic_energy_density(ii, is) = &
+              gi_kinetic_energy_density(ii, is) - sum(jp(ii,1:der%mesh%sb%dim, is)**2)/st%rho(ii, is)
           end do
         end if
       end do
