@@ -717,6 +717,8 @@ contains
     !% default is no.
     !%End
     call parse_variable('ConvLattice', .false. , sb%conv_lattice)
+    if(sb%conv_lattice) call internal_lattice_conversion(sb%rlattice, &
+      sb%rlattice_primitive, sb%rlattice_org, sb%lsize, sb%dim)
 
     
     call reciprocal_lattice(sb%rlattice, sb%klattice, sb%rcell_volume, sb%dim)
@@ -1457,6 +1459,80 @@ contains
 
     POP_SUB(simul_box_check_atoms_are_too_close)
   end subroutine simul_box_check_atoms_are_too_close
+
+  ! ---------------------------------------------------------
+  subroutine internal_lattice_conversion(rlattice,rlattice_primitive &
+    ,rlattice_org,lsize,dim)
+    FLOAT :: rlattice_primitive(MAX_DIM,MAX_DIM)   !< lattice primitive vectors
+    FLOAT :: rlattice          (MAX_DIM,MAX_DIM)   !< lattice vectors
+    FLOAT :: rlattice_org          (MAX_DIM,MAX_DIM)   !< lattice vectors (original)
+    FLOAT :: lsize(MAX_DIM) !< half of the length of the parallelepiped in each direction.
+    integer :: dim
+
+    FLOAT :: d,d0
+    FLOAT :: a0(dim,dim), a(dim,dim)
+    integer :: l, m, n, i, j, k 
+
+    if(dim /= 3)then
+      message(1) = "Internal lattice conversion is only available for 3D lattice"
+      call messages_fatal(1)
+      return
+    end if
+
+!Look for the conventional lattice vectors
+    a = rlattice
+    a0 = a
+    d0 = calc_diff(a)
+    l = 0
+    do
+      n = 0
+      do i = 1,dim
+        do j = 1,dim-1
+          k = mod(i+j-1,dim)+1
+          do m = -1,1,2
+
+            a(:,i) = a(:,i) + m*a(:,j)
+            d = calc_diff(a)
+            if(d < d0)then
+              d0 = d
+              a0 = a
+              n = n +1
+            else
+              a = a0
+            end if
+          end do
+        end do
+      end do
+      if(n == 0)exit
+      l = l + 1
+    end do
+
+    if(l /= 0)then
+      write(message(1), '(a)') "Lattice vectors are internally converted."
+      call messages_warning(1)
+    else
+      return
+    end if
+! update lattice vectors
+    rlattice_org = rlattice
+    rlattice = a
+    
+! update lattice parameters
+    do i = 1,dim
+      lsize(i) = M_HALF*sqrt(sum(rlattice(:,i)**2))
+      rlattice_primitive(:,i) = rlattice(:,i)/(M_TWO*lsize(i))
+    end do
+
+
+    contains 
+      FLOAT function calc_diff(b) result(diff)
+        FLOAT :: b(dim,dim)
+        diff = sum( (b(:,1) - b(:,2))**2 &
+          +(b(:,2) - b(:,3))**2 &
+          +(b(:,3) - b(:,1))**2 )
+      end function calc_diff
+
+    end subroutine internal_lattice_conversion
 
   ! ---------------------------------------------------------
   FLOAT function simul_box_min_distance(geo, sb, real_atoms_only) result(rmin)
