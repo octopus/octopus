@@ -119,7 +119,6 @@ module hamiltonian_base_oct_m
     type(accel_mem_t)                    :: buff_pos
     type(accel_mem_t)                    :: buff_invmap
     type(accel_mem_t)                    :: buff_projector_phases
-
     CMPLX, pointer     :: phase(:, :)
     type(accel_mem_t) :: buff_phase
     integer            :: buff_phase_qn_start
@@ -602,12 +601,12 @@ contains
       integer              :: matrix_size, scal_size
       integer, allocatable :: cnt(:), invmap(:, :), invmap2(:), pos(:)
       integer, allocatable :: offsets(:, :)
-      integer, parameter   :: POINTS = 1, PROJS = 2, MATRIX = 3, MAP = 4, SCAL = 5
+      integer, parameter   :: POINTS = 1, PROJS = 2, MATRIX = 3, MAP = 4, SCAL = 5, MIX = 6, OFFSET_SIZE = 6
       integer              :: ip, is, ii, ipos
 
       PUSH_SUB(hamiltonian_base_build_proj.build_opencl)
 
-      SAFE_ALLOCATE(offsets(1:5, 1:this%nprojector_matrices))
+      SAFE_ALLOCATE(offsets(1:OFFSET_SIZE, 1:this%nprojector_matrices))
       SAFE_ALLOCATE(cnt(1:mesh%np))
 
       cnt = 0
@@ -685,8 +684,8 @@ contains
       end do
 
       ! write the offsets
-      call accel_create_buffer(this%buff_offsets, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, 5*this%nprojector_matrices)
-      call accel_write_buffer(this%buff_offsets, 5*this%nprojector_matrices, offsets)
+      call accel_create_buffer(this%buff_offsets, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, OFFSET_SIZE*this%nprojector_matrices)
+      call accel_write_buffer(this%buff_offsets, OFFSET_SIZE*this%nprojector_matrices, offsets)
 
       ! the inverse map
       call accel_create_buffer(this%buff_pos, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, mesh%np + 1)

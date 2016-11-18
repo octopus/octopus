@@ -22,6 +22,8 @@
 #include <cl_global.h>
 #include <cl_complex.h>
 
+#define OFFSET_SIZE 6
+
 __kernel void projector_bra(const int nmat,
 			    __global int const * restrict offsets,
 			    __global double const * restrict matrix,
@@ -36,15 +38,15 @@ __kernel void projector_bra(const int nmat,
   const int imat = get_global_id(2);
 
 #ifdef SHARED_MEM
-  __local int loff[5];
+  __local int loff[OFFSET_SIZE];
 
-  for(int ii = get_local_id(0); ii < 5; ii += get_local_size(0)) loff[ii] = offsets[5*imat + ii];
+  for(int ii = get_local_id(0); ii < OFFSET_SIZE; ii += get_local_size(0)) loff[ii] = offsets[OFFSET_SIZE*imat + ii];
 
   barrier(CLK_LOCAL_MEM_FENCE);
 #else
-  int loff[5];
+  int loff[OFFSET_SIZE];
 
-  for(int ii = 0; ii < 5; ii++) loff[ii] = offsets[5*imat + ii];
+  for(int ii = 0; ii < OFFSET_SIZE; ii++) loff[ii] = offsets[OFFSET_SIZE*imat + ii];
 #endif
   
   const int npoints       = loff[0];
@@ -78,11 +80,11 @@ __kernel void projector_ket(const int nmat,
   const int ip = get_global_id(1);
   const int imat = get_global_id(2) + imat_offset;
 
-  const int npoints       = offsets[5*imat + 0];
-  const int nprojs        = offsets[5*imat + 1];
-  const int matrix_offset = offsets[5*imat + 2];
-  const int map_offset    = offsets[5*imat + 3];
-  const int scal_offset   = offsets[5*imat + 4];
+  const int npoints       = offsets[OFFSET_SIZE*imat + 0];
+  const int nprojs        = offsets[OFFSET_SIZE*imat + 1];
+  const int matrix_offset = offsets[OFFSET_SIZE*imat + 2];
+  const int map_offset    = offsets[OFFSET_SIZE*imat + 3];
+  const int scal_offset   = offsets[OFFSET_SIZE*imat + 4];
 
   if(ip >= npoints) return;
 
@@ -110,15 +112,15 @@ __kernel void projector_bra_phase(const int nmat,
   const int imat = get_global_id(2);
 
 #ifdef SHARED_MEM
-  __local int loff[5];
+  __local int loff[OFFSET_SIZE];
 
-  for(int ii = get_local_id(0); ii < 5; ii += get_local_size(0)) loff[ii] = offsets[5*imat + ii];
+  for(int ii = get_local_id(0); ii < OFFSET_SIZE; ii += get_local_size(0)) loff[ii] = offsets[OFFSET_SIZE*imat + ii];
 
   barrier(CLK_LOCAL_MEM_FENCE);
 #else
-  int loff[5];
+  int loff[OFFSET_SIZE];
 
-  for(int ii = 0; ii < 5; ii++) loff[ii] = offsets[5*imat + ii];
+  for(int ii = 0; ii < OFFSET_SIZE; ii++) loff[ii] = offsets[OFFSET_SIZE*imat + ii];
 #endif
   
   const int npoints       = loff[0];
@@ -154,11 +156,11 @@ __kernel void projector_ket_phase(const int nmat,
   const int ip = get_global_id(1);
   const int imat = get_global_id(2) + imat_offset;
 
-  const int npoints       = offsets[5*imat + 0];
-  const int nprojs        = offsets[5*imat + 1];
-  const int matrix_offset = offsets[5*imat + 2];
-  const int map_offset    = offsets[5*imat + 3];
-  const int scal_offset   = offsets[5*imat + 4];
+  const int npoints       = offsets[OFFSET_SIZE*imat + 0];
+  const int nprojs        = offsets[OFFSET_SIZE*imat + 1];
+  const int matrix_offset = offsets[OFFSET_SIZE*imat + 2];
+  const int map_offset    = offsets[OFFSET_SIZE*imat + 3];
+  const int scal_offset   = offsets[OFFSET_SIZE*imat + 4];
 
   if(ip >= npoints) return;
 
