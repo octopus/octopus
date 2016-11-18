@@ -65,8 +65,7 @@ libmath_a_SOURCES =                      \
 	spline_low.cc                    \
 	quickrnd.F90                     \
 	accel_blas.F90                   \
-	cufft.cc                         \
-	volume.F90
+	cufft.cc 
 
 noinst_HEADERS =                         \
 	fft_inc.F90                      \
