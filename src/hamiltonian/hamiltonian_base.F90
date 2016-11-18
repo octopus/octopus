@@ -119,6 +119,7 @@ module hamiltonian_base_oct_m
     type(accel_mem_t)                    :: buff_pos
     type(accel_mem_t)                    :: buff_invmap
     type(accel_mem_t)                    :: buff_projector_phases
+    type(accel_mem_t)                    :: buff_mix
     CMPLX, pointer     :: phase(:, :)
     type(accel_mem_t) :: buff_phase
     integer            :: buff_phase_qn_start
@@ -603,7 +604,7 @@ contains
       integer, allocatable :: offsets(:, :)
       integer, parameter   :: OFFSET_SIZE = 6 ! also defined in share/opencl/projectors.cl
       integer, parameter   :: POINTS = 1, PROJS = 2, MATRIX = 3, MAP = 4, SCAL = 5, MIX = 6 ! update OFFSET_SIZE
-      integer              :: ip, is, ii, ipos
+      integer              :: ip, is, ii, ipos, mix_offset
 
       PUSH_SUB(hamiltonian_base_build_proj.build_opencl)
 
@@ -618,6 +619,7 @@ contains
       scal_size = 0
       this%max_npoints = 0
       this%max_nprojs = 0
+      mix_offset = 0
       do imat = 1, this%nprojector_matrices
         pmat => this%projector_matrices(imat)
 
@@ -636,6 +638,13 @@ contains
         offsets(SCAL, imat) = scal_size
         INCR(scal_size, pmat%nprojs)
 
+        if(allocated(pmat%mix)) then
+          offsets(MIX, imat) = mix_offset
+          INCR(mix_offset, pmat%nprojs**2)
+        else
+          offsets(MIX, imat) = -1
+        end if
+        
         do is = 1, pmat%npoints
           ip = pmat%map(is)
           INCR(cnt(ip), 1)
@@ -672,7 +681,8 @@ contains
       call accel_create_buffer(this%buff_matrices, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, matrix_size)
       call accel_create_buffer(this%buff_maps, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, this%total_points)
       call accel_create_buffer(this%buff_scals, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, scal_size)
-
+      if(mix_offset > 0) call accel_create_buffer(this%buff_mix, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, mix_offset)
+      
       ! now copy
       do imat = 1, this%nprojector_matrices
         pmat => this%projector_matrices(imat)
@@ -682,6 +692,7 @@ contains
           call accel_write_buffer(this%buff_maps, pmat%npoints, pmat%map, offset = offsets(MAP, imat))
         end if
         call accel_write_buffer(this%buff_scals, pmat%nprojs, pmat%scal, offset = offsets(SCAL, imat))
+        if(offsets(MIX, imat) /= -1) call accel_write_buffer(this%buff_mix, pmat%nprojs**2, pmat%mix, offset = offsets(MIX, imat))
       end do
 
       ! write the offsets
