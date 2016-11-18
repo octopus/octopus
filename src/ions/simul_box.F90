@@ -120,6 +120,10 @@ module simul_box_oct_m
     integer :: dim
     integer :: periodic_dim
 
+! Conversion of lattice vectors
+    FLOAT :: rlattice_org          (MAX_DIM,MAX_DIM)   !< lattice vectors (original)
+    logical :: conv_lattice                 !< control the conversion of lattice
+
     !> for the box defined through an image
     integer             :: image_size(1:2)
     type(c_ptr)         :: image
@@ -702,6 +706,18 @@ contains
         sb%rlattice(jdim, idim) = sb%rlattice_primitive(jdim, idim) * M_TWO*sb%lsize(idim)
       end forall
     end do
+
+
+    !%Variable ConvLattice
+    !%Type logical
+    !%Section Mesh::Simulation Box
+    !%Description
+    !% This variable controls whether the lattice is internally converted
+    !% to be suitable for the grid representation.
+    !% default is no.
+    !%End
+    call parse_variable('ConvLattice', .false. , sb%conv_lattice)
+
     
     call reciprocal_lattice(sb%rlattice, sb%klattice, sb%rcell_volume, sb%dim)
     sb%klattice = sb%klattice * M_TWO*M_PI
