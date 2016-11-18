@@ -601,7 +601,8 @@ contains
       integer              :: matrix_size, scal_size
       integer, allocatable :: cnt(:), invmap(:, :), invmap2(:), pos(:)
       integer, allocatable :: offsets(:, :)
-      integer, parameter   :: POINTS = 1, PROJS = 2, MATRIX = 3, MAP = 4, SCAL = 5, MIX = 6, OFFSET_SIZE = 6
+      integer, parameter   :: OFFSET_SIZE = 6 ! also defined in share/opencl/projectors.cl
+      integer, parameter   :: POINTS = 1, PROJS = 2, MATRIX = 3, MAP = 4, SCAL = 5, MIX = 6 ! update OFFSET_SIZE
       integer              :: ip, is, ii, ipos
 
       PUSH_SUB(hamiltonian_base_build_proj.build_opencl)

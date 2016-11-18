@@ -22,7 +22,7 @@
 #include <cl_global.h>
 #include <cl_complex.h>
 
-#define OFFSET_SIZE 6
+#define OFFSET_SIZE 6 /* defined in src/hamiltonian/hamiltonian_base.F90 */
 
 __kernel void projector_bra(const int nmat,
 			    __global int const * restrict offsets,
