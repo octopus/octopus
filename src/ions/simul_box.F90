@@ -153,7 +153,7 @@ contains
     call read_misc()                       ! Miscellaneous stuff.
     call read_box()                        ! Parameters defining the simulation box.
     call simul_box_lookup_init(sb, geo)
-    call simul_box_build_lattice(sb)       ! Build lattice vectors.
+    call simul_box_build_lattice(sb, geo=geo)       ! Build lattice vectors.
     call simul_box_atoms_in_box(sb, geo, .true.)   ! Put all the atoms inside the box.
 
     call simul_box_check_atoms_are_too_close(geo, sb)
@@ -618,8 +618,9 @@ contains
   end subroutine simul_box_interp_init
 
   !--------------------------------------------------------------
-  subroutine simul_box_build_lattice(sb, rlattice_primitive)
+  subroutine simul_box_build_lattice(sb, geo, rlattice_primitive)
     type(simul_box_t), intent(inout) :: sb
+    type(geometry_t),  optional, intent(inout)    :: geo
     FLOAT,   optional, intent(in)    :: rlattice_primitive(:,:)
 
     type(block_t) :: blk
@@ -717,8 +718,8 @@ contains
     !% default is no.
     !%End
     call parse_variable('ConvLattice', .false. , sb%conv_lattice)
-    if(sb%conv_lattice) call internal_lattice_conversion(sb%rlattice, &
-      sb%rlattice_primitive, sb%rlattice_org, sb%lsize, sb%dim)
+    if(sb%conv_lattice .and. present(geo)) call internal_lattice_conversion(sb%rlattice, &
+      sb%rlattice_primitive, sb%rlattice_org, sb%lsize, sb%dim, geo)
 
     
     call reciprocal_lattice(sb%rlattice, sb%klattice, sb%rcell_volume, sb%dim)
@@ -1377,7 +1378,7 @@ contains
     end if
 
     if (ierr == 0) then
-      call simul_box_build_lattice(sb, rlattice_primitive)
+      call simul_box_build_lattice(sb, rlattice_primitive=rlattice_primitive)
     end if
 
     POP_SUB(simul_box_load)
@@ -1462,15 +1463,16 @@ contains
 
   ! ---------------------------------------------------------
   subroutine internal_lattice_conversion(rlattice,rlattice_primitive &
-    ,rlattice_org,lsize,dim)
+    ,rlattice_org,lsize,dim,geo)
     FLOAT :: rlattice_primitive(MAX_DIM,MAX_DIM)   !< lattice primitive vectors
     FLOAT :: rlattice          (MAX_DIM,MAX_DIM)   !< lattice vectors
     FLOAT :: rlattice_org          (MAX_DIM,MAX_DIM)   !< lattice vectors (original)
     FLOAT :: lsize(MAX_DIM) !< half of the length of the parallelepiped in each direction.
     integer :: dim
+    type(geometry_t),  intent(inout)    :: geo
 
     FLOAT :: d,d0
-    FLOAT :: a0(dim,dim), a(dim,dim)
+    FLOAT :: a0(dim,dim), a(dim,dim), b(dim,dim), xyz(dim,geo%natoms)
     integer :: l, m, n, i, j, k 
 
     if(dim /= 3)then
@@ -1523,6 +1525,17 @@ contains
       rlattice_primitive(:,i) = rlattice(:,i)/(M_TWO*lsize(i))
     end do
 
+! upate atom coordinates if they are reduced-coordinates
+    if(geo%reduced_coordinates) then
+      call inv_matrix3x3(rlattice(1:3,1:3),b)
+      do i = 1, geo%natoms
+! First convert to Cartesian coordinate.
+        xyz(1:dim,i) = matmul(rlattice_org(1:dim,1:dim),geo%atom(i)%x(1:dim))
+! Then, back to updated reduced coordinate.
+        geo%atom(i)%x(1:dim) = matmul(b(1:dim,1:dim),xyz(1:dim,i))
+      end do
+    end if
+
 
     contains 
       FLOAT function calc_diff(b) result(diff)
@@ -1531,6 +1544,27 @@ contains
           +(b(:,2) - b(:,3))**2 &
           +(b(:,3) - b(:,1))**2 )
       end function calc_diff
+      subroutine inv_matrix3x3(am,bm)
+        FLOAT :: am(3,3),bm(3,3),det_a
+
+        det_a=am(1,1)*am(2,2)*am(3,3)+am(2,1)*am(3,2)*am(1,3)+am(3,1)*am(1,2)*am(2,3) &
+          -am(1,3)*am(2,2)*am(3,1)-am(2,3)*am(3,2)*am(1,1)-am(3,3)*am(1,2)*am(2,1)
+
+        bm(1,1)=am(2,2)*am(3,3)-am(2,3)*am(3,2)
+        bm(2,1)=am(2,3)*am(3,1)-am(2,1)*am(3,3)
+        bm(3,1)=am(2,1)*am(3,2)-am(2,2)*am(3,1)
+
+        bm(1,2)=am(1,3)*am(3,2)-am(1,2)*am(3,3)
+        bm(2,2)=am(1,1)*am(3,3)-am(1,3)*am(3,1)
+        bm(3,2)=am(1,2)*am(3,1)-am(1,1)*am(3,2)
+
+        bm(1,3)=am(1,2)*am(2,3)-am(1,3)*am(2,2)
+        bm(2,3)=am(1,3)*am(2,1)-am(1,1)*am(2,3)
+        bm(3,3)=am(1,1)*am(2,2)-am(1,2)*am(2,1)
+
+        bm=bm/det_a
+
+      end subroutine inv_matrix3x3
 
     end subroutine internal_lattice_conversion
 
