@@ -209,30 +209,30 @@ contains
         write(message(1), '(20x,a,a)') '       Real       ','    Imaginary     '
         call messages_info(1, iunit)
       end if
-      write(message(1), '(6x,a, f18.8)')'Total       = ', units_from_atomic(units_out%energy, hm%energy%total)
+      write(message(1), '(6x,a, es20.8)')'Total       = ', units_from_atomic(units_out%energy, hm%energy%total)
       if(cmplxscl) write(message(1), '(a, es18.6)') trim(message(1)), units_from_atomic(units_out%energy, hm%energy%Imtotal)
-      write(message(2), '(6x,a, f18.8)')'Free        = ', units_from_atomic(units_out%energy, hm%energy%total - hm%energy%TS)
+      write(message(2), '(6x,a, es20.8)')'Free        = ', units_from_atomic(units_out%energy, hm%energy%total - hm%energy%TS)
       if(cmplxscl) write(message(2), '(a, es18.6)') trim(message(2)), units_from_atomic(units_out%energy,&
          hm%energy%Imtotal - hm%energy%Imts)
       write(message(3), '(6x,a)') '-----------'
       call messages_info(3, iunit)
 
-      write(message(1), '(6x,a, f18.8)')'Ion-ion     = ', units_from_atomic(units_out%energy, hm%ep%eii)
-      write(message(2), '(6x,a, f18.8)')'Eigenvalues = ', units_from_atomic(units_out%energy, hm%energy%eigenvalues)
+      write(message(1), '(6x,a, es20.8)')'Ion-ion     = ', units_from_atomic(units_out%energy, hm%ep%eii)
+      write(message(2), '(6x,a, es20.8)')'Eigenvalues = ', units_from_atomic(units_out%energy, hm%energy%eigenvalues)
       if(cmplxscl) write(message(2), '(a, es18.6)') trim(message(2)), units_from_atomic(units_out%energy, hm%energy%Imeigenvalues)
-      write(message(3), '(6x,a, f18.8)')'Hartree     = ', units_from_atomic(units_out%energy, hm%energy%hartree)
+      write(message(3), '(6x,a, es20.8)')'Hartree     = ', units_from_atomic(units_out%energy, hm%energy%hartree)
       if(cmplxscl) write(message(3), '(a, es18.6)') trim(message(3)), units_from_atomic(units_out%energy, hm%energy%Imhartree)
-      write(message(4), '(6x,a, f18.8)')'Int[n*v_xc] = ', units_from_atomic(units_out%energy, hm%energy%intnvxc + evxctau)
+      write(message(4), '(6x,a, es20.8)')'Int[n*v_xc] = ', units_from_atomic(units_out%energy, hm%energy%intnvxc + evxctau)
       if(cmplxscl) write(message(4), '(a, es18.6)') trim(message(4)),&
                      units_from_atomic(units_out%energy, hm%energy%Imintnvxc + Imevxctau)
-      write(message(5), '(6x,a, f18.8)')'Exchange    = ', units_from_atomic(units_out%energy, hm%energy%exchange)
+      write(message(5), '(6x,a, es20.8)')'Exchange    = ', units_from_atomic(units_out%energy, hm%energy%exchange)
       if(cmplxscl) write(message(5), '(a, es18.6)') trim(message(5)), units_from_atomic(units_out%energy, hm%energy%Imexchange)
-      write(message(6), '(6x,a, f18.8)')'Correlation = ', units_from_atomic(units_out%energy, hm%energy%correlation)
+      write(message(6), '(6x,a, es20.8)')'Correlation = ', units_from_atomic(units_out%energy, hm%energy%correlation)
       if(cmplxscl) write(message(6), '(a, es18.6)') trim(message(6)), units_from_atomic(units_out%energy, hm%energy%Imcorrelation)
-      write(message(7), '(6x,a, f18.8)')'vanderWaals = ', units_from_atomic(units_out%energy, hm%energy%vdw)
-      write(message(8), '(6x,a, f18.8)')'Delta XC    = ', units_from_atomic(units_out%energy, hm%energy%delta_xc)
-      write(message(9), '(6x,a, f18.8)')'Entropy     = ', hm%energy%entropy ! the dimensionless sigma of Kittel&Kroemer
-      write(message(10), '(6x,a, f18.8)')'-TS         = ', -units_from_atomic(units_out%energy, hm%energy%TS)
+      write(message(7), '(6x,a, es20.8)')'vanderWaals = ', units_from_atomic(units_out%energy, hm%energy%vdw)
+      write(message(8), '(6x,a, es20.8)')'Delta XC    = ', units_from_atomic(units_out%energy, hm%energy%delta_xc)
+      write(message(9), '(6x,a, es20.8)')'Entropy     = ', hm%energy%entropy ! the dimensionless sigma of Kittel&Kroemer
+      write(message(10), '(6x,a, es20.8)')'-TS         = ', -units_from_atomic(units_out%energy, hm%energy%TS)
       call messages_info(10, iunit)
       
       if (hm%pcm%run_pcm) then
