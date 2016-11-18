@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
+!! $Id: parser.F90 15737 2016-11-14 04:36:01Z dstrubbe $
 
 #include "global.h"
 
@@ -408,11 +408,17 @@ contains
 
   ! ---------------------------------------------------------
   
-  integer function parse_block(name, blk)
-    character(len=*), intent(in)    :: name
-    type(block_t),    intent(out)   :: blk
+  integer function parse_block(name, blk, check_varinfo_)
+    character(len=*),  intent(in)    :: name
+    type(block_t),     intent(out)   :: blk
+    logical, optional, intent(in)    :: check_varinfo_
 
-    call parse_check_varinfo(name)
+    logical check_varinfo
+
+    check_varinfo = .true.
+    if(present(check_varinfo_)) check_varinfo = check_varinfo_
+
+    if(check_varinfo) call parse_check_varinfo(name)
     parse_block = oct_parse_block(name, blk)
 
   end function parse_block
