@@ -1472,7 +1472,7 @@ contains
     type(geometry_t),  intent(inout)    :: geo
 
     FLOAT :: d,d0
-    FLOAT :: a0(dim,dim), a(dim,dim), b(dim,dim), xyz(dim,geo%natoms)
+    FLOAT :: a0(dim,dim), a(dim,dim), b(dim,dim), xyz(dim,geo%natoms), xx(dim)
     integer :: l, m, n, i, j, k 
 
     if(dim /= 3)then
@@ -1482,7 +1482,7 @@ contains
     end if
 
 !Look for the conventional lattice vectors
-    a = rlattice
+    a(1:dim,1:dim) = rlattice(1:dim,1:dim)
     a0 = a
     d0 = calc_diff(a)
     l = 0
@@ -1493,7 +1493,7 @@ contains
           k = mod(i+j-1,dim)+1
           do m = -1,1,2
 
-            a(:,i) = a(:,i) + m*a(:,j)
+            a(:,i) = a(:,i) + m*a(:,k)
             d = calc_diff(a)
             if(d < d0)then
               d0 = d
@@ -1515,9 +1515,16 @@ contains
     else
       return
     end if
+
+! check whether left or right handed
+    xx(1) = a(2,1)*a(3,2)-a(3,1)*a(2,2)
+    xx(2) = a(3,1)*a(1,2)-a(1,1)*a(3,2)
+    xx(3) = a(1,1)*a(2,2)-a(2,1)*a(1,2)
+    if(sum(a(:,3)*xx(:)) < M_ZERO)a(:,3) = - a(:,3)
+
 ! update lattice vectors
     rlattice_org = rlattice
-    rlattice = a
+    rlattice(1:dim,1:dim) = a(1:dim,1:dim)
     
 ! update lattice parameters
     do i = 1,dim
