@@ -65,7 +65,6 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   FLOAT, allocatable :: dedgd(:,:,:)   ! Derivative of the exchange or correlation energy wrt the gradient of the density
   FLOAT, allocatable :: dedldens(:,:)  ! Derivative of the exchange or correlation energy wrt the laplacian of the density
 
-  FLOAT, allocatable :: symmtmp(:, :)  ! Temporary vector for the symmetrizer
   FLOAT, allocatable :: vx(:)
   FLOAT, allocatable :: unp_dens(:), unp_dedd(:)
 
@@ -75,7 +74,6 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   type(profile_t), save :: prof, prof_libxc
   logical :: calc_energy
   type(xc_functl_t), pointer :: functl(:)
-  type(symmetrizer_t) :: symmetrizer
   type(distributed_t) :: distribution
   type(profile_t), save :: prof_gather
   
@@ -154,24 +152,6 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
       call states_calc_quantities(der, st, gi_kinetic_energy_density = tau, density_gradient = gdens, density_laplacian = ldens)
     else
       call states_calc_quantities(der, st, kinetic_energy_density = tau, density_gradient = gdens, density_laplacian = ldens)
-    end if
-
-    ! We have to symmetrize everything as they are calculated from the
-    ! wavefunctions.
-    if(st%symmetrize_density) then
-      SAFE_ALLOCATE(symmtmp(1:der%mesh%np, 1:der%mesh%sb%dim))
-      call symmetrizer_init(symmetrizer, der%mesh)
-      do isp = 1, spin_channels
-        call dsymmetrizer_apply(symmetrizer, field = tau(:, isp), symmfield = symmtmp(:, 1))
-        tau(1:der%mesh%np, isp) = symmtmp(1:der%mesh%np, 1)
-        call dsymmetrizer_apply(symmetrizer, field = ldens(:, isp), symmfield = symmtmp(:, 1))
-        ldens(1:der%mesh%np, isp) = symmtmp(1:der%mesh%np, 1)
-        call dsymmetrizer_apply(symmetrizer, field_vector = gdens(:, :, isp), symmfield_vector = symmtmp)
-        gdens(1:der%mesh%np, 1:der%mesh%sb%dim, isp) = symmtmp(1:der%mesh%np, 1:der%mesh%sb%dim)
-      end do
-
-      call symmetrizer_end(symmetrizer)
-      SAFE_DEALLOCATE_A(symmtmp)
     end if
 
     if(functl(FUNC_X)%id == XC_MGGA_X_TB09 .and. der%mesh%sb%periodic_dim == 3) then

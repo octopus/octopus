@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
+!! $Id: states.F90 15746 2016-11-15 12:35:27Z nicolastd $
 
 #include "global.h"
 
@@ -2040,6 +2040,8 @@ contains
     integer :: is, ik, ist, i_dim, st_dim, ii
     FLOAT   :: ww, kpoint(1:MAX_DIM)
     logical :: something_to_do
+    FLOAT, allocatable :: symm(:, :)
+    type(symmetrizer_t) :: symmetrizer
 
     PUSH_SUB(states_calc_quantities)
 
@@ -2209,6 +2211,41 @@ contains
     end if
 
     if(st%parallel_in_states .or. st%d%kpt%parallel) call reduce_all(st%st_kpt_mpi_grp)
+
+    ! We have to symmetrize everything as they are calculated from the
+    ! wavefunctions.
+    ! This must be done before compute the gauge-invariant kinetic energy density 
+    if(der%mesh%sb%kpoints%use_symmetries.or.st%symmetrize_density) then
+      SAFE_ALLOCATE(symm(1:der%mesh%np, 1:der%mesh%sb%dim))
+      call symmetrizer_init(symmetrizer, der%mesh)
+      do is = 1, st%d%nspin
+        if(associated(tau)) then
+          call dsymmetrizer_apply(symmetrizer, field = tau(:, is), symmfield = symm(:,1), &
+            suppress_warning = .true.)
+          tau(1:der%mesh%np, is) = symm(1:der%mesh%np,1)
+        end if
+
+        if(present(density_laplacian)) then
+          call dsymmetrizer_apply(symmetrizer, field = density_laplacian(:, is), symmfield = symm(:,1), &
+            suppress_warning = .true.)
+          density_laplacian(1:der%mesh%np, is) = symm(1:der%mesh%np,1)
+        end if
+
+        if(associated(jp)) then 
+          call dsymmetrizer_apply(symmetrizer, field_vector = jp(:, :, is), symmfield_vector = symm, &
+            suppress_warning = .true.)
+          jp(1:der%mesh%np, 1:der%mesh%sb%dim, is) = symm(1:der%mesh%np, 1:der%mesh%sb%dim)
+        end if
+ 
+        if(present(density_gradient)) then
+          call dsymmetrizer_apply(symmetrizer, field_vector = density_gradient(:, :, is), &
+            symmfield_vector = symm, suppress_warning = .true.)
+          density_gradient(1:der%mesh%np, 1:der%mesh%sb%dim, is) = symm(1:der%mesh%np, 1:der%mesh%sb%dim)
+        end if   
+      end do
+      call symmetrizer_end(symmetrizer)
+      SAFE_DEALLOCATE_A(symm) 
+    end if
 
     !We compute the gauge-invariant kinetic energy density
     if(present(gi_kinetic_energy_density) .and. st%d%ispin /= SPINORS) then
