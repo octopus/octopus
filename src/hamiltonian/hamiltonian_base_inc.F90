@@ -961,13 +961,15 @@ subroutine X(hamiltonian_base_nlocal_force)(this, mesh, st, geo, iqn, ndim, psi1
   type(projector_matrix_t), pointer :: pmat
 
   if(.not. this%apply_projector_matrices) return
-
+    
   call profiling_in(prof_matelement, "VNLPSI_MAT_ELEM")
   PUSH_SUB(X(hamiltonian_base_nlocal_force))
 
   ASSERT(psi1b%nst_linear == psi2b(1)%nst_linear)
   ASSERT(batch_status(psi1b) == batch_status(psi2b(1)))
-
+  
+  if(batch_is_packed(psi1b) .and. accel_is_enabled()) call messages_not_implemented('Accel non-local force')
+  
   nst = psi1b%nst_linear
 #ifdef R_TCOMPLEX
   nreal = 2*nst
