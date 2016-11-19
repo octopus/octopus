@@ -294,6 +294,7 @@
 /liboct_parser/build-aux
 /liboct_parser/*.a
 /liboct_parser/lib64
+/liboct_parser/*.o
 
 # /m4/
 /m4/*.log
