@@ -1134,7 +1134,7 @@ subroutine X(hamiltonian_base_nlocal_position_commutator)(this, mesh, std, ik, p
   if(batch_is_packed(psib) .and. accel_is_enabled()) then
     call X(commutator_opencl)()
     call profiling_out(prof)
-    PUSH_SUB(X(hamiltonian_base_nlocal_position_commutator))
+    POP_SUB(X(hamiltonian_base_nlocal_position_commutator))
     return
   end if
 
