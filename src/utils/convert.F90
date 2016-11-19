@@ -48,7 +48,6 @@ program oct_convert
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
-  use multicomm_oct_m
 
   implicit none
 

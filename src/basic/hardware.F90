@@ -19,10 +19,9 @@
 
 #include "global.h"
 module hardware_oct_m
-
-  implicit none
   
   private
+  
   public ::             &
     hardware,           &
     cache_t,            &

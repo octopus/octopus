@@ -21,7 +21,6 @@
 #include "global.h"
 
 module casida_oct_m
-  use global_oct_m
   use batch_oct_m
   use calc_mode_par_oct_m
   use comm_oct_m
@@ -57,9 +56,7 @@ module casida_oct_m
   use v_ks_oct_m
   use phonons_lr_oct_m
   use xc_oct_m
-  use messages_oct_m  
-  use multicomm_oct_m
-
+  
   implicit none
 
   private
