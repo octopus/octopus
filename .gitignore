@@ -165,6 +165,7 @@
 /external_libs/bpdn/Makefile
 /external_libs/bpdn/*.mod
 /external_libs/bpdn/*.a
+/external_libs/bpdn/*.o
 
 # /external_libs/fortrancl/
 /external_libs/fortrancl/*.mod
@@ -244,6 +245,7 @@
 /external_libs/qshep/*.a
 /external_libs/qshep/*.mod
 /external_libs/qshep/*__genmod.*
+/external_libs/qshep/*.o
 
 # /external_libs/spglib-1.5.2/
 /external_libs/spglib-1.5.2/Makefile
@@ -255,6 +257,7 @@
 /external_libs/spglib-1.5.2/src/*.mod
 /external_libs/spglib-1.5.2/src/.deps
 /external_libs/spglib-1.5.2/src/*.a
+/external_libs/spglib-1.5.2/src/*.o
 
 # /external_libs/yaml-0.1.4/
 /external_libs/yaml-0.1.4/Makefile
