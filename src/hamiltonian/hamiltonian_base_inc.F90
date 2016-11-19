@@ -1119,8 +1119,8 @@ subroutine X(hamiltonian_base_nlocal_position_commutator)(this, mesh, std, ik, p
 
   if(.not. this%apply_projector_matrices) return
 
-  call profiling_in(prof, "COMMUTATOR")
   PUSH_SUB(X(hamiltonian_base_nlocal_position_commutator))
+  call profiling_in(prof, "COMMUTATOR")
 
   ASSERT(batch_is_packed(psib))
 
@@ -1131,7 +1131,12 @@ subroutine X(hamiltonian_base_nlocal_position_commutator)(this, mesh, std, ik, p
   nreal = nst
 #endif
 
-  if(batch_is_packed(psib) .and. accel_is_enabled()) call messages_not_implemented('OpenCL commutator')
+  if(batch_is_packed(psib) .and. accel_is_enabled()) then
+    call X(commutator_opencl)()
+    call profiling_out(prof)
+    PUSH_SUB(X(hamiltonian_base_nlocal_position_commutator))
+    return
+  end if
 
   SAFE_ALLOCATE(projections(1:nst, 1:this%full_projection_size, 0:3))
   projections = M_ZERO
@@ -1290,6 +1295,113 @@ subroutine X(hamiltonian_base_nlocal_position_commutator)(this, mesh, std, ik, p
 
   call profiling_out(prof)
   POP_SUB(X(hamiltonian_base_nlocal_position_commutator))
+
+contains
+
+  subroutine X(commutator_opencl)()
+    type(accel_kernel_t), target, save :: ker_commutator_bra, ker_mix, ker_commutator_ket
+    type(accel_kernel_t), pointer :: kernel
+    type(accel_mem_t), target :: buff_proj
+    type(accel_mem_t), pointer :: buff_proj_copy
+    integer :: padnprojs, lnprojs, iregion
+
+    padnprojs = pad_pow2(this%max_nprojs)
+    
+    call accel_create_buffer(buff_proj, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, 4*this%full_projection_size*psib%pack%size_real(1))
+
+    call accel_kernel_start_call(ker_commutator_bra, 'projector.cl', 'projector_commutator_bra')
+    size = psib%pack%size_real(1)
+    kernel => ker_commutator_bra
+    
+    call accel_set_kernel_arg(kernel,  0, this%nprojector_matrices)
+    call accel_set_kernel_arg(kernel,  1, this%buff_offsets)
+    call accel_set_kernel_arg(kernel,  2, this%buff_matrices)
+    call accel_set_kernel_arg(kernel,  3, this%buff_maps)
+    call accel_set_kernel_arg(kernel,  4, this%buff_scals)
+    call accel_set_kernel_arg(kernel,  5, this%buff_position)
+    call accel_set_kernel_arg(kernel,  6, psib%pack%buffer)
+    call accel_set_kernel_arg(kernel,  7, log2(size))
+    call accel_set_kernel_arg(kernel,  8, buff_proj)
+    call accel_set_kernel_arg(kernel,  9, log2(size))
+
+    lnprojs = min(accel_kernel_workgroup_size(kernel)/size, padnprojs)
+
+    call accel_kernel_run(kernel, (/size, padnprojs, this%nprojector_matrices/), (/size, lnprojs, 1/))
+
+    call accel_finish()
+
+    ! missing reduction
+    ASSERT(.not. mesh%parallel_in_domains)
+    
+    if(this%projector_mix) then
+
+      SAFE_ALLOCATE(buff_proj_copy)
+      
+      call accel_create_buffer(buff_proj_copy, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, &
+        4*this%full_projection_size*psib%pack%size_real(1))
+
+      size = 4*psib%pack%size_real(1)
+      
+      call accel_kernel_start_call(ker_mix, 'projector.cl', 'projector_mix')
+      
+      call accel_set_kernel_arg(ker_mix, 0, this%nprojector_matrices)
+      call accel_set_kernel_arg(ker_mix, 1, this%buff_offsets)
+      call accel_set_kernel_arg(ker_mix, 2, this%buff_mix)
+      call accel_set_kernel_arg(ker_mix, 3, buff_proj)
+      call accel_set_kernel_arg(ker_mix, 4, log2(size))
+      call accel_set_kernel_arg(ker_mix, 5, buff_proj_copy)
+      
+      padnprojs = pad_pow2(this%max_nprojs)
+      lnprojs = min(accel_kernel_workgroup_size(ker_mix)/size, padnprojs)
+      
+      call accel_kernel_run(ker_mix, (/size, padnprojs, this%nprojector_matrices/), (/size, lnprojs, 1/))
+      
+      call accel_finish()
+
+    else
+
+      buff_proj_copy => buff_proj
+      
+    end if
+    
+    call accel_kernel_start_call(ker_commutator_ket, 'projector.cl', 'projector_commutator_ket')
+    kernel => ker_commutator_ket
+    size = psib%pack%size_real(1)
+
+    do iregion = 1, this%nregions
+      
+      call accel_set_kernel_arg(kernel,  0, this%nprojector_matrices)
+      call accel_set_kernel_arg(kernel,  1, this%regions(iregion) - 1)
+      call accel_set_kernel_arg(kernel,  2, this%buff_offsets)
+      call accel_set_kernel_arg(kernel,  3, this%buff_matrices)
+      call accel_set_kernel_arg(kernel,  4, this%buff_maps)
+      call accel_set_kernel_arg(kernel,  5, this%buff_position)
+      call accel_set_kernel_arg(kernel,  6, buff_proj_copy)
+      call accel_set_kernel_arg(kernel,  7, log2(size))
+      call accel_set_kernel_arg(kernel,  8, commpsib(1)%pack%buffer)
+      call accel_set_kernel_arg(kernel,  9, commpsib(2)%pack%buffer)
+      call accel_set_kernel_arg(kernel, 10, commpsib(3)%pack%buffer)
+      call accel_set_kernel_arg(kernel, 11, log2(size))
+
+      wgsize = accel_kernel_workgroup_size(kernel)/size    
+
+      call accel_kernel_run(kernel, &
+        (/size, pad(this%max_npoints, wgsize), this%regions(iregion + 1) - this%regions(iregion)/), &
+        (/size, wgsize, 1/))
+      
+      call accel_finish()
+      
+    end do
+    
+    if(this%projector_mix) then
+      call accel_release_buffer(buff_proj_copy)
+      SAFE_ALLOCATE(buff_proj_copy)
+    end if
+
+    call accel_release_buffer(buff_proj)
+    
+  end subroutine X(commutator_opencl)
+  
 end subroutine X(hamiltonian_base_nlocal_position_commutator)
 
 !! Local Variables:
