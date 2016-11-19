@@ -19,9 +19,10 @@
 
 #include "global.h"
 module test_parameters_oct_m
+
+  implicit none
   
   private
-  
   public ::             &
     test_parameters_t
 

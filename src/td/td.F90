@@ -20,6 +20,7 @@
 #include "global.h"
 
 module td_oct_m
+  use global_oct_m
   use boundary_op_oct_m
   use calc_mode_par_oct_m
   use density_oct_m
@@ -59,6 +60,8 @@ module td_oct_m
   use unit_system_oct_m
   use v_ks_oct_m
   use varinfo_oct_m
+  use messages_oct_m
+  use multicomm_oct_m
 
   implicit none
 
