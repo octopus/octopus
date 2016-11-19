@@ -1,0 +1,19 @@
+CalculationMode =  gs
+
+PseudopotentialSet = hgh_lda
+
+dist = 4.0
+
+%Coordinates
+ 'Cu_sc' | 0.0 | 0.0 | -dist/2
+ 'Cu_sc' | 0.0 | 0.0 |  dist/2
+%
+
+Spacing = 0.4
+Radius = 6.0
+
+ExtraStates = 2
+
+Smearing = 0.1 * eV
+SmearingFunction = fermi_dirac
+
