@@ -135,9 +135,9 @@ contains
     !%Default none
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
-    !%This variable controls the method used for the calculation of
-    !%the photoelectron spectrum. You can specify more than one value
-    !%by giving them as a sum, for example:
+    !% This variable controls the method used for the calculation of
+    !% the photoelectron spectrum. You can specify more than one value
+    !% by giving them as a sum, for example:
     !% <tt>PhotoElectronSpectrum = pes_spm + pes_mask</tt>
     !%Option none 0
     !% The photoelectron spectrum is not calculated. This is the default.

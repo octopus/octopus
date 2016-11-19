@@ -153,9 +153,9 @@ contains
     !%Default 0.0
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
-    !% If PES_spm_OmegaMax > 0, the photoelectron spectrum is directly calculated during 
-    !% time-propagation, evaluated by the PES_spm method. PES_spm_OmegaMax is then the maximum frequency 
-    !% (approximate kinetic energy) and PES_spm_DeltaOmega the spacing in frequency domain of the spectrum.
+    !% If <tt>PES_spm_OmegaMax > 0</tt>, the photoelectron spectrum is directly calculated during
+    !% time-propagation, evaluated by the PES_spm method. <tt>PES_spm_OmegaMax</tt> is then the maximum frequency
+    !% (approximate kinetic energy) and <tt>PES_spm_DeltaOmega</tt> the spacing in frequency domain of the spectrum.
     !%End
     call parse_variable('PES_spm_OmegaMax', units_to_atomic(units_inp%energy, M_ZERO), this%omegamax)
     this%onfly = .false.
@@ -170,8 +170,8 @@ contains
     !%Type float
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
-    !% The spacing in frequency domain for the photoelectron spectrum (if PES_spm_OmegaMax > 0).
-    !% By default is set to PES_spm_OmegaMax/500. 
+    !% The spacing in frequency domain for the photoelectron spectrum (if <tt>PES_spm_OmegaMax > 0</tt>).
+    !% The default is <tt>PES_spm_OmegaMax/500</tt>.
     !%End
     call parse_variable('PES_spm_DeltaOmega', units_to_atomic(units_inp%energy, this%omegamax/CNST(500)), this%delomega)
     if(this%onfly) then
@@ -184,8 +184,8 @@ contains
     !%Default 45
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
-    !% Number of steps in theta (0 <= theta <= pi) for the spherical grid (if no 
-    !% PES_spm_points are given).
+    !% Number of steps in <math>\theta</math> (<math>0 \le \theta \le \pi</math>) for the spherical grid (if no
+    !% <tt>PES_spm_points</tt> are given).
     !%End
     call parse_variable('PES_spm_StepsThetaR', 45, this%nstepsthetar)
     if(this%sphgrid .and. this%nstepsthetar < 0) call messages_input_error('PES_spm_StepsThetaR')
@@ -195,8 +195,8 @@ contains
     !%Default 90
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
-    !% Number of steps in phi (0 <= phi <= 2 pi) for the spherical grid (if no
-    !% PES_spm_points are given).
+    !% Number of steps in <math>\phi</math> (<math>0 \le \phi \le 2 \pi</math>) for the spherical grid (if no
+    !% <tt>PES_spm_points</tt> are given).
     !%End
     call parse_variable('PES_spm_StepsPhiR', 90, this%nstepsphir)
     if(this%sphgrid) then
@@ -208,7 +208,7 @@ contains
     !%Type float
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
-    !% The radius of the sphere for the spherical grid (if no PES_spm_points
+    !% The radius of the sphere for the spherical grid (if no <tt>PES_spm_points</tt>
     !% are given).
     !%End
     if(this%sphgrid) then

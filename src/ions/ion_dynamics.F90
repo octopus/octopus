@@ -98,7 +98,7 @@ module ion_dynamics_oct_m
     type(tdf_t) :: temperature_function
       
     logical :: drive_ions  
-    type(ion_td_displacement_t), pointer ::  td_displacements(:) !> Time dependent displacements driving the ions
+    type(ion_td_displacement_t), pointer ::  td_displacements(:) !> Time-dependent displacements driving the ions
   end type ion_dynamics_t
 
   type ion_state_t
@@ -153,27 +153,28 @@ contains
     end if
     
     !%Variable IonsTimeDependentDisplacements
-    !%Type block    
+    !%Type block
     !%Section Time-Dependent::Propagation
     !%Description
-    !% (Experimental) This variable allow to specify a time dependent
-    !% function describing the ions displacement form their equilibrium
-    !% position: r(t) = r0+ Dr(t). 
-    !% For each ion it must be specified the displacements dx(t) ,dy(t), dz(t)
-    !% as follows: 
+    !% (Experimental) This variable allows you to specify a time-dependent
+    !% function describing the ions' displacement from their equilibrium
+    !% position: <math>r(t) = r_0 + \Delta r(t)</math>.
+    !% Specify the displacements dx(t), dy(t), dz(t)
+    !% as follows, for some or all of the atoms:
     !% 
-    !% <tt>%TDExternalFields
-    !% <br>&nbsp;&nbsp; atom_index [1:Natoms+1] | dx(t) | dy(t) | dz(t) 
+    !% <tt>%IonsTimeDependentDisplacements
+    !% <br>&nbsp;&nbsp; atom_index | dx(t) | dy(t) | dz(t)
     !% <br>%</tt>
     !%
-    !% The displacement functions is a time dependent function and should match one 
+    !% The displacement functions are time-dependent functions and should match one
     !% of the function names given in the first column of the <tt>TDFunctions</tt> block.
-    !% They will not be affected by any forces.
+    !% If this block is set, the ions will not be affected by any forces.
     !%End
 
     
     ndisp = 0
     if(parse_block('IonsTimeDependentDisplacements', blk) == 0) then
+      call messages_experimental("IonsTimeDependentDisplacements")
       ndisp= parse_block_n(blk)
       SAFE_ALLOCATE(this%td_displacements(1:geo%natoms))
       this%td_displacements(1:geo%natoms)%move = .false.
@@ -524,9 +525,9 @@ contains
 
           if (this%td_displacements(iatom)%move) then
             
-            DR(1:3)=(/real(tdf(this%td_displacements(iatom)%fx,time)), &
-                      real(tdf(this%td_displacements(iatom)%fy,time)), &
-                      real(tdf(this%td_displacements(iatom)%fz,time)) /)
+            DR(1:3)=(/TOFLOAT(tdf(this%td_displacements(iatom)%fx,time)), &
+                      TOFLOAT(tdf(this%td_displacements(iatom)%fy,time)), &
+                      TOFLOAT(tdf(this%td_displacements(iatom)%fz,time)) /)
 
             geo%atom(iatom)%x(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim) + DR(1:geo%space%dim)
           end if
