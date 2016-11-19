@@ -323,7 +323,6 @@ gsl_complex parse_complex(const char *name, gsl_complex def)
   return ret;
 }
 
-/* FIXME: this function should use strcpy rather than assigning char* */
 char *parse_string(const char *name, char *def)
 {
   symrec *ptr;
@@ -335,12 +334,14 @@ char *parse_string(const char *name, char *def)
       fprintf(stderr, "Parser error: expecting a string for variable '%s'.\n", name);
       exit(1);
     }
-    ret = ptr->value.str; /* this should use strcpy instead */
+    ret = (char *)malloc(strlen(ptr->value.str) + 1);
+    strcpy(ret, ptr->value.str);
     if(!disable_write) {
       fprintf(fout, "%s = \"%s\"\n", name, ret);
     }
   }else{
-    ret = def;
+    ret = (char *)malloc(strlen(def) + 1);
+    strcpy(ret, def);
     if(!disable_write) {
       fprintf(fout, "%s = \"%s\"\t\t# default\n", name, ret);
     }

@@ -200,6 +200,7 @@ void FC_FUNC_(oct_parse_string, OCT_PARSE_STRING)
   c = parse_string(name_c, def_c); 
   TO_F_STR3(c, res);             /* convert string to Fortran */
   free(name_c); free(def_c);     /* this has to be *after* the to_f_str or we will have memory problems */
+  free(c);
 }
 
 
