@@ -75,12 +75,17 @@ void FC_FUNC_(trap_segfault, TRAP_SEGFAULT)(){
   act.sa_sigaction = segv_handler;
   act.sa_flags = SA_SIGINFO;
 
+  sigaction(SIGTERM, &act, 0);
+  sigaction(SIGKILL, &act, 0);
   sigaction(SIGSEGV, &act, 0);
   sigaction(SIGABRT, &act, 0);
   sigaction(SIGINT,  &act, 0);
+  sigaction(SIGBUS,  &act, 0);
+  sigaction(SIGILL,  &act, 0);
   sigaction(SIGTSTP, &act, 0);
   sigaction(SIGQUIT, &act, 0);
   sigaction(SIGFPE,  &act, 0);
+  sigaction(SIGHUP,  &act, 0);
   
 #endif
 }
