@@ -30,6 +30,9 @@ module calc_mode_par_oct_m
   use messages_oct_m
   use multicomm_oct_m
 
+  implicit none
+
+  private
   public ::                             &
        calc_mode_par_t,                     &
        calc_mode_par_init,                  &
