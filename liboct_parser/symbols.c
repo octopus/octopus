@@ -113,9 +113,19 @@ void sym_notdef (symrec *sym)
   exit(1);
 }
 
+void sym_redef (symrec *sym)
+{
+  fprintf(stderr, "Parser error: attempt to redefine value of symbol '%s'.\n", sym->name);
+  exit(1);
+}
+
 void sym_wrong_arg (symrec *sym)
 {
-  fprintf(stderr, "Parser error: function '%s' requires %d argument(s).\n", sym->name, sym->nargs);
+  if(sym->type == S_BLOCK) {
+    fprintf(stderr, "Parser error: block name '%s' used in variable context.\n", sym->name);
+  } else {
+    fprintf(stderr, "Parser error: function '%s' requires %d argument(s).\n", sym->name, sym->nargs);
+  }
   exit(1);
 }
 

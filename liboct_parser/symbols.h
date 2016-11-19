@@ -57,6 +57,7 @@ symrec *getsym (const char *sym_name);
 int      rmsym (const char *sym_name);
 
 void sym_notdef(symrec *sym);
+void sym_redef(symrec *sym);
 void sym_wrong_arg(symrec *sym);
 void sym_init_table(void);
 void sym_end_table(void);
