@@ -36,6 +36,7 @@ module calc_mode_par_oct_m
   public ::                             &
        calc_mode_par_t,                     &
        calc_mode_par_init,                  &
+       calc_mode_par_end,                   &
        calc_mode_par_set_parallelization,   &
        calc_mode_par_unset_parallelization, &
        calc_mode_par_parallel_mask,         &
