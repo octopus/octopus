@@ -174,6 +174,32 @@ __kernel void projector_ket_phase(const int nmat,
 }
 
 
+__kernel void projector_mix(const int nmat,
+			    __global int const * restrict offsets,
+			    __global double const * restrict mix,
+			    __global double * const restrict projection, const int ldprojection,
+			    __global double * restrict mixprojection
+			    ){
+  
+  const int ist = get_global_id(0);
+  const int ipj = get_global_id(1);
+  const int imat = get_global_id(2);
+
+  const int nprojs        = offsets[OFFSET_SIZE*imat + 1];
+  const int scal_offset   = offsets[OFFSET_SIZE*imat + 4];
+  const int mix_offset    = offsets[OFFSET_SIZE*imat + 5];
+
+  if(mix_offset == -1 || ipj >= nprojs) return;
+  
+  double aa = 0.0;
+  for(int jpj = 0; jpj < nprojs; jpj++){
+    aa += mix[mix_offset + nprojs*ipj + jpj]*projection[ist + ((scal_offset + jpj)<<ldprojection)];
+  }
+
+  mixprojection[ist + ((scal_offset + ipj)<<ldprojection)] = aa;
+
+}
+
 /*
  Local Variables:
  mode: c
