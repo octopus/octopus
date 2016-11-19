@@ -117,6 +117,7 @@ module hamiltonian_base_oct_m
     type(accel_mem_t)                    :: buff_matrices
     type(accel_mem_t)                    :: buff_maps
     type(accel_mem_t)                    :: buff_scals
+    type(accel_mem_t)                    :: buff_position
     type(accel_mem_t)                    :: buff_pos
     type(accel_mem_t)                    :: buff_invmap
     type(accel_mem_t)                    :: buff_projector_phases
@@ -327,6 +328,7 @@ contains
         call accel_release_buffer(this%buff_matrices)
         call accel_release_buffer(this%buff_maps)
         call accel_release_buffer(this%buff_scals)
+        call accel_release_buffer(this%buff_position)
         call accel_release_buffer(this%buff_pos)
         call accel_release_buffer(this%buff_invmap)
         if(this%projector_mix) call accel_release_buffer(this%buff_mix)
@@ -686,6 +688,7 @@ contains
       ! allocate
       call accel_create_buffer(this%buff_matrices, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, matrix_size)
       call accel_create_buffer(this%buff_maps, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, this%total_points)
+      call accel_create_buffer(this%buff_position, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, 3*this%total_points)
       call accel_create_buffer(this%buff_scals, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, scal_size)
       if(mix_offset > 0) call accel_create_buffer(this%buff_mix, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, mix_offset)
       
@@ -696,6 +699,7 @@ contains
         if(pmat%npoints > 0) then
           call accel_write_buffer(this%buff_matrices, pmat%nprojs*pmat%npoints, pmat%projectors, offset = offsets(MATRIX, imat))
           call accel_write_buffer(this%buff_maps, pmat%npoints, pmat%map, offset = offsets(MAP, imat))
+          call accel_write_buffer(this%buff_position, 3*pmat%npoints, pmat%position, offset = 3*offsets(MAP, imat))
         end if
         call accel_write_buffer(this%buff_scals, pmat%nprojs, pmat%scal, offset = offsets(SCAL, imat))
         if(offsets(MIX, imat) /= -1) call accel_write_buffer(this%buff_mix, pmat%nprojs**2, pmat%mix, offset = offsets(MIX, imat))
