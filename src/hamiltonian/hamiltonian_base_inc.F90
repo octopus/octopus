@@ -1304,6 +1304,7 @@ contains
     type(accel_mem_t), target :: buff_proj
     type(accel_mem_t), pointer :: buff_proj_copy
     integer :: padnprojs, lnprojs, iregion
+    FLOAT, allocatable :: proj(:)
 
     padnprojs = pad_pow2(this%max_nprojs)
     
@@ -1330,9 +1331,13 @@ contains
 
     call accel_finish()
 
-    ! missing reduction
-    ASSERT(.not. mesh%parallel_in_domains)
-    
+    if(mesh%parallel_in_domains) then
+      SAFE_ALLOCATE(proj(1:4*this%full_projection_size*psib%pack%size_real(1)))
+      call accel_read_buffer(buff_proj, 4*this%full_projection_size*psib%pack%size_real(1), proj)
+      call comm_allreduce(mesh%vp%comm, proj)
+      call accel_write_buffer(buff_proj, 4*this%full_projection_size*psib%pack%size_real(1), proj)
+    end if
+
     if(this%projector_mix) then
 
       SAFE_ALLOCATE(buff_proj_copy)
