@@ -25,6 +25,7 @@
 #endif
 #include <stdlib.h>
 #include <unistd.h>
+#include <fortran_types.h>
 
 void FC_FUNC_(block_signals, BLOCK_SIGNALS)(){
 #if defined(HAVE_SIGACTION) && defined(HAVE_SIGNAL_H)
@@ -53,12 +54,13 @@ void FC_FUNC_(unblock_signals, UNBLOCK_SIGNALS)(){
 #endif
 }
 
-void FC_FUNC_(dump_call_stack, DUMP_CALL_STACK)(void);
+void FC_FUNC_(dump_call_stack, DUMP_CALL_STACK)(fint *);
 
 #if defined(HAVE_SIGACTION) && defined(HAVE_SIGNAL_H)
 					       
 void segv_handler(int signum, siginfo_t * si, void * vd){
-  FC_FUNC_(dump_call_stack, DUMP_CALL_STACK)();
+  fint isignal = signum;
+  FC_FUNC_(dump_call_stack, DUMP_CALL_STACK)(&isignal);
   signal(signum, SIG_DFL);
   kill(getpid(), signum);
 }
