@@ -43,18 +43,23 @@ __kernel void projector_bra(const int nmat,
   for(int ii = get_local_id(0); ii < OFFSET_SIZE; ii += get_local_size(0)) loff[ii] = offsets[OFFSET_SIZE*imat + ii];
 
   barrier(CLK_LOCAL_MEM_FENCE);
-#else
-  int loff[OFFSET_SIZE];
 
-  for(int ii = 0; ii < OFFSET_SIZE; ii++) loff[ii] = offsets[OFFSET_SIZE*imat + ii];
-#endif
-  
   const int npoints       = loff[0];
   const int nprojs        = loff[1];
   const int matrix_offset = loff[2];
   const int map_offset    = loff[3];
   const int scal_offset   = loff[4];
 
+#else
+
+  const int npoints       = offsets[OFFSET_SIZE*imat + 0];
+  const int nprojs        = offsets[OFFSET_SIZE*imat + 1];
+  const int matrix_offset = offsets[OFFSET_SIZE*imat + 2];
+  const int map_offset    = offsets[OFFSET_SIZE*imat + 3];
+  const int scal_offset   = offsets[OFFSET_SIZE*imat + 4];
+
+#endif
+  
   if(ipj >= nprojs) return;
 
   const int nppj = npoints*ipj;
@@ -117,17 +122,23 @@ __kernel void projector_bra_phase(const int nmat,
   for(int ii = get_local_id(0); ii < OFFSET_SIZE; ii += get_local_size(0)) loff[ii] = offsets[OFFSET_SIZE*imat + ii];
 
   barrier(CLK_LOCAL_MEM_FENCE);
-#else
-  int loff[OFFSET_SIZE];
 
-  for(int ii = 0; ii < OFFSET_SIZE; ii++) loff[ii] = offsets[OFFSET_SIZE*imat + ii];
-#endif
-  
   const int npoints       = loff[0];
   const int nprojs        = loff[1];
   const int matrix_offset = loff[2];
   const int map_offset    = loff[3];
   const int scal_offset   = loff[4];
+  
+#else
+
+  const int npoints       = offsets[OFFSET_SIZE*imat + 0];
+  const int nprojs        = offsets[OFFSET_SIZE*imat + 1];
+  const int matrix_offset = offsets[OFFSET_SIZE*imat + 2];
+  const int map_offset    = offsets[OFFSET_SIZE*imat + 3];
+  const int scal_offset   = offsets[OFFSET_SIZE*imat + 4];
+  
+#endif
+
 
   if(ipj >= nprojs) return;
 
