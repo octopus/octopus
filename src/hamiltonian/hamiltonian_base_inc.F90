@@ -714,7 +714,7 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
   type(mesh_t),                     intent(in)    :: mesh
   type(states_dim_t),               intent(in)    :: std
   integer,                          intent(in)    :: ik
-  type(projection_t),               intent(inout) :: projection
+  type(projection_t),       target, intent(inout) :: projection
   type(batch_t),                    intent(inout) :: vpsib
 
   integer :: ist, ip, imat, nreal, iprojection
@@ -839,11 +839,12 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
 contains
 
   subroutine finish_opencl()
-    integer :: wgsize, imat, iregion, size
+    integer :: wgsize, imat, iregion, size, padnprojs, lnprojs
     type(profile_t), save :: cl_prof
-    type(accel_kernel_t), save, target :: ker_proj_ket, ker_proj_ket_phase
+    type(accel_kernel_t), save, target :: ker_proj_ket, ker_proj_ket_phase, ker_mix
     type(accel_kernel_t), pointer :: kernel
-
+    type(accel_mem_t), pointer :: buff_proj
+    
     PUSH_SUB(X(hamiltonian_base_nlocal_finish).finish_opencl)
 
     ! In this case we run one kernel per projector, since all write to
@@ -852,6 +853,34 @@ contains
 
     call profiling_in(cl_prof, "CL_PROJ_KET")
 
+    if(this%projector_mix) then
+
+      SAFE_ALLOCATE(buff_proj)
+      call accel_create_buffer(buff_proj, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, this%full_projection_size*vpsib%pack%size_real(1))
+
+      call accel_kernel_start_call(ker_mix, 'projector.cl', 'projector_mix')
+      
+      call accel_set_kernel_arg(ker_mix, 0, this%nprojector_matrices)
+      call accel_set_kernel_arg(ker_mix, 1, this%buff_offsets)
+      call accel_set_kernel_arg(ker_mix, 2, this%buff_mix)
+      call accel_set_kernel_arg(ker_mix, 3, projection%buff_projection)
+      call accel_set_kernel_arg(ker_mix, 4, log2(vpsib%pack%size_real(1)))
+      call accel_set_kernel_arg(ker_mix, 5, buff_proj)
+      
+      padnprojs = pad_pow2(this%max_nprojs)
+      lnprojs = min(accel_kernel_workgroup_size(ker_mix)/vpsib%pack%size_real(1), padnprojs)
+      
+      call accel_kernel_run(ker_mix, &
+        (/vpsib%pack%size_real(1), padnprojs, this%nprojector_matrices/), (/vpsib%pack%size_real(1), lnprojs, 1/))
+      
+      call accel_finish()
+
+    else
+
+      buff_proj => projection%buff_projection
+      
+    end if
+    
     if(allocated(this%projector_phases)) then
       call accel_kernel_start_call(ker_proj_ket_phase, 'projector.cl', 'projector_ket_phase')
       kernel => ker_proj_ket_phase
@@ -870,7 +899,7 @@ contains
       call accel_set_kernel_arg(kernel, 2, this%buff_offsets)
       call accel_set_kernel_arg(kernel, 3, this%buff_matrices)
       call accel_set_kernel_arg(kernel, 4, this%buff_maps)
-      call accel_set_kernel_arg(kernel, 5, projection%buff_projection)
+      call accel_set_kernel_arg(kernel, 5, buff_proj)
       call accel_set_kernel_arg(kernel, 6, log2(size))
       call accel_set_kernel_arg(kernel, 7, vpsib%pack%buffer)
       call accel_set_kernel_arg(kernel, 8, log2(size))
@@ -901,6 +930,11 @@ contains
     call batch_pack_was_modified(vpsib)
     call accel_finish()
 
+    if(this%projector_mix) then
+      call accel_release_buffer(buff_proj)
+      SAFE_DEALLOCATE_P(buff_proj)
+    end if
+    
     call profiling_out(cl_prof)
 
     POP_SUB(X(hamiltonian_base_nlocal_finish).finish_opencl)
