@@ -72,36 +72,6 @@ __kernel void projector_bra(const int nmat,
 
 }
 
-__kernel void projector_ket(const int nmat,
-			    const int imat_offset,
-			    __global int const * restrict offsets,
-			    __global double const * restrict matrix,
-			    __global int const * restrict map,
-			    __global double const * restrict projection, const int ldprojection,
-			    __global double * restrict psi, const int ldpsi
-			    ){
-  
-  const int ist = get_global_id(0);
-  const int ip = get_global_id(1);
-  const int imat = get_global_id(2) + imat_offset;
-
-  const int npoints       = offsets[OFFSET_SIZE*imat + 0];
-  const int nprojs        = offsets[OFFSET_SIZE*imat + 1];
-  const int matrix_offset = offsets[OFFSET_SIZE*imat + 2];
-  const int map_offset    = offsets[OFFSET_SIZE*imat + 3];
-  const int scal_offset   = offsets[OFFSET_SIZE*imat + 4];
-
-  if(ip >= npoints) return;
-
-  double aa = 0.0;
-  for(int ipj = 0; ipj < nprojs; ipj++){
-    aa += matrix[matrix_offset + ip + npoints*ipj]*projection[ist + ((scal_offset + ipj)<<ldprojection)];
-  }
-
-  psi[((map[map_offset + ip] - 1)<<ldpsi) + ist] += aa;
-
-}
-
 __kernel void projector_bra_phase(const int nmat,
 				  __global int const * restrict offsets,
 				  __global double const * restrict matrix,
@@ -150,6 +120,36 @@ __kernel void projector_bra_phase(const int nmat,
     aa += matrix[matrix_offset + ip + nppj]*phasepsi;
   }
   projection[ist + ((scal_offset + ipj)<<ldprojection)] = scal[scal_offset + ipj]*aa;
+
+}
+
+__kernel void projector_ket(const int nmat,
+			    const int imat_offset,
+			    __global int const * restrict offsets,
+			    __global double const * restrict matrix,
+			    __global int const * restrict map,
+			    __global double const * restrict projection, const int ldprojection,
+			    __global double * restrict psi, const int ldpsi
+			    ){
+  
+  const int ist = get_global_id(0);
+  const int ip = get_global_id(1);
+  const int imat = get_global_id(2) + imat_offset;
+
+  const int npoints       = offsets[OFFSET_SIZE*imat + 0];
+  const int nprojs        = offsets[OFFSET_SIZE*imat + 1];
+  const int matrix_offset = offsets[OFFSET_SIZE*imat + 2];
+  const int map_offset    = offsets[OFFSET_SIZE*imat + 3];
+  const int scal_offset   = offsets[OFFSET_SIZE*imat + 4];
+
+  if(ip >= npoints) return;
+
+  double aa = 0.0;
+  for(int ipj = 0; ipj < nprojs; ipj++){
+    aa += matrix[matrix_offset + ip + npoints*ipj]*projection[ist + ((scal_offset + ipj)<<ldprojection)];
+  }
+
+  psi[((map[map_offset + ip] - 1)<<ldpsi) + ist] += aa;
 
 }
 
