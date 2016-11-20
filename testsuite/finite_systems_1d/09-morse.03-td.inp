@@ -65,14 +65,12 @@ TheoryLevel = independent_particles
 
 TDOutput = energy + laser + multipoles + td_occup + populations
 
-picosecond = 41341.373
-
 # The whole run should go up to 1 picosecond, but in order to have a short
 # test we only do a small fraction of that.
-T = picosecond/100
-#T = picosecond
+TotalTime = picosecond/100
+#TotalTime = picosecond
 dt = 0.25
-TDPropagationTime = T
+TDPropagationTime = TotalTime
 TDPropagator = aetrs
 TDExponentialMethod = lanczos
 TDExpOrder = 20
