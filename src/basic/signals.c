@@ -93,7 +93,7 @@ void FC_FUNC_(trap_segfault, TRAP_SEGFAULT)(){
 }
 
 void FC_FUNC_(get_signal_description, GET_SIGNAL_DESCRIPTION)(fint * signum, STR_F_TYPE const signame STR_ARG1){
-#if defined(aHAVE_STRSIGNAL) && defined(HAVE_STRING_H)
+#if defined(HAVE_STRSIGNAL) && defined(HAVE_STRING_H)
   TO_F_STR1(strsignal(*signum), signame);
 #else
   TO_F_STR1("(description not available)", signame);
