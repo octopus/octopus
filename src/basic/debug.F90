@@ -22,9 +22,10 @@
 module debug_oct_m
   use global_oct_m
   use parser_oct_m
+
+  implicit none
   
   private
-  
   public ::             &
     debug_t,            &
     debug_init,         &

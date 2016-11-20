@@ -50,6 +50,7 @@ program oct_local_multipoles
   use unit_system_oct_m
   use utils_oct_m
   use varinfo_oct_m
+  use multicomm_oct_m
 
   implicit none
   
