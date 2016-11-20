@@ -158,11 +158,11 @@ static int oct_parser_lex (){
       /* Get another character.                    */
       c = par_string[par_pos++];
     }while (c != '\0' && 
-	    ((startc && c!=startc) || (!startc && (isalnum(c) || c == '_' ))));
+	    ((startc && c!=startc) || (!startc && (isalnum(c) || c == '_' || c == '[' || c == ']'))));
     
     if(!startc) par_pos--;
     symbuf[i] = '\0';
-    
+
     if(!startc){
       s = getsym (symbuf);
       if (s == 0){
