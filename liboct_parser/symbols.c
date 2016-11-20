@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
+ Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch, D. Strubbe
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -116,6 +116,8 @@ void sym_notdef (symrec *sym)
 void sym_redef (symrec *sym)
 {
   fprintf(stderr, "Parser error: attempt to redefine value of symbol '%s'.\n", sym->name);
+  fprintf(stderr, "Previous value: ");
+  sym_print(stderr, sym);
   exit(1);
 }
 
@@ -123,6 +125,8 @@ void sym_wrong_arg (symrec *sym)
 {
   if(sym->type == S_BLOCK) {
     fprintf(stderr, "Parser error: block name '%s' used in variable context.\n", sym->name);
+  } else if(sym->type == S_STR) {
+    fprintf(stderr, "Parser error: string variable '%s' used in expression context.\n", sym->name);
   } else {
     fprintf(stderr, "Parser error: function '%s' requires %d argument(s).\n", sym->name, sym->nargs);
   }
@@ -296,20 +300,26 @@ void sym_output_table(int only_unused, int mpiv_node)
       fprintf(f, "List of variable assignments not used by parser:\n");
       any_unused = 1;
     }
-    fprintf(f, "%s", ptr->name);
-    switch(ptr->type){
-    case S_CMPLX:
-      fprintf(f, " = (%f,%f)\n", GSL_REAL(ptr->value.c), GSL_IMAG(ptr->value.c));
-      break;
-    case S_STR:
-      fprintf(f, " = \"%s\"\n", ptr->value.str);
-      break;
-    case S_BLOCK:
-      fprintf(f, "%s\n", " <= BLOCK");
-      break;
-    case S_FNCT:
-      fprintf(f, "%s\n", " <= FUNCTION");
-      break;
-    }
+
+    sym_print(f, ptr);
+  }
+}
+
+void sym_print(FILE *f, const symrec *ptr)
+{
+  fprintf(f, "%s", ptr->name);
+  switch(ptr->type){
+  case S_CMPLX:
+    fprintf(f, " = (%f,%f)\n", GSL_REAL(ptr->value.c), GSL_IMAG(ptr->value.c));
+    break;
+  case S_STR:
+    fprintf(f, " = \"%s\"\n", ptr->value.str);
+    break;
+  case S_BLOCK:
+    fprintf(f, "%s\n", " <= BLOCK");
+    break;
+  case S_FNCT:
+    fprintf(f, "%s\n", " <= FUNCTION");
+    break;
   }
 }

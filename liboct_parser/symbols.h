@@ -64,5 +64,6 @@ void sym_end_table(void);
 void sym_output_table(int only_unused, int mpiv_node);
 void str_tolower(char *in);
 void sym_mark_table_used();
+void sym_print(FILE *f, const symrec *ptr);
 
 #endif
