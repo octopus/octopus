@@ -97,7 +97,7 @@ AC_FUNC_STAT
 AC_CHECK_FUNCS([gettimeofday nanosleep sysconf getpid \
 strndup tcgetpgrp scandir alphasort \
 sigaction readdir closedir strchr strtod \
-perror strcasestr sbrk getopt_long uname ioctl])
+perror strcasestr sbrk getopt_long uname ioctl strsignal])
 
 ACX_ARCH
 

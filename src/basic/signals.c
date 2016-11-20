@@ -26,6 +26,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <fortran_types.h>
+#include "string_f.h" /* fortran <-> c string compatibility issues */
+#include <string.h>
 
 void FC_FUNC_(block_signals, BLOCK_SIGNALS)(){
 #if defined(HAVE_SIGACTION) && defined(HAVE_SIGNAL_H)
@@ -87,5 +89,13 @@ void FC_FUNC_(trap_segfault, TRAP_SEGFAULT)(){
   sigaction(SIGFPE,  &act, 0);
   sigaction(SIGHUP,  &act, 0);
   
+#endif
+}
+
+void FC_FUNC_(get_signal_description, GET_SIGNAL_DESCRIPTION)(fint * signum, STR_F_TYPE const signame STR_ARG1){
+#if defined(aHAVE_STRSIGNAL) && defined(HAVE_STRING_H)
+  TO_F_STR1(strsignal(*signum), signame);
+#else
+  TO_F_STR1("(description not available)", signame);
 #endif
 }
