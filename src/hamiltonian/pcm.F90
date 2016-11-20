@@ -192,7 +192,7 @@ contains
     !%Description
     !% (Experimental) If true, the calculation is performed accounting for solvation effects
     !% by using the Integral Equation Formalism Polarizable Continuum Model IEF-PCM
-    !% formulated in real-space and real-time (<i>J. Chem. Phys.<i> <b>143</b>, 144111 (2015),
+    !% formulated in real-space and real-time (<i>J. Chem. Phys.</i> <b>143</b>, 144111 (2015),
     !% <i>Chem. Rev.</i> <b>105</b>, 2999 (2005), <i>J. Chem. Phys.</i> <b>139</b>, 024105 (2013)).
     !% At the moment, this option is available only for <tt>TheoryLevel = DFT</tt>.
     !%End
