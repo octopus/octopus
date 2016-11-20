@@ -1315,9 +1315,28 @@ contains
     clean_path = filename(start:)
   end function messages_clean_path
 
-  subroutine messages_dump_stack()
+  ! -----------------------------------------------------------
+
+  subroutine messages_dump_stack(isignal)
+    integer, intent(in) :: isignal
 
     integer :: ii
+    character(len=300) :: description
+
+    call get_signal_description(isignal, description)
+
+    write(msg, '(a,i2)') ''
+    call flush_msg(stderr, msg)
+    write(msg, '(a,i2)') '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
+    call flush_msg(stderr, msg)
+    write(msg, '(a,i2)') ''
+    call flush_msg(stderr, msg)
+    write(msg, '(a,i2,2a)') '  Octopus was killed by signal ', isignal, ': ', trim(description)
+    call flush_msg(stderr, msg)
+    write(msg, '(a,i2)') ''
+    call flush_msg(stderr, msg)
+    write(msg, '(a,i2)') '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
+    call flush_msg(stderr, msg)
     
     if(debug%trace) then
       call flush_msg(stderr, shyphens)
@@ -1369,10 +1388,14 @@ end subroutine assert_die
 
 !-------------------------------------------------------
 
-subroutine dump_call_stack()
+subroutine dump_call_stack(isignal)
   use messages_oct_m
 
-  call messages_dump_stack()
+  implicit none
+  
+  integer, intent(in) :: isignal
+  
+  call messages_dump_stack(isignal)
   
 end subroutine dump_call_stack
 
