@@ -19,5 +19,3 @@ Spacing = 0.65
 %
 
 FilterPotentials = filter_none
-
-MixField = density

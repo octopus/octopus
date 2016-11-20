@@ -1,6 +1,4 @@
 CalculationMode = gs
-#CalculationMode = td
-#CalculationMode = opt_control
 
 ExperimentalFeatures = yes
 
@@ -30,20 +28,7 @@ ConvRelDens = 1.0e-12
 EigenSolverTolerance = 1.0e-12
 SCFCalculateForces = yes
 
-Mixing = 1.0
-MixingScheme = linear
-
-MoveIons = yes
-
 stime  = 1.0
-dt = stime/100
-
-TDPropagator = exp_mid
-TDExponentialMethod = lanczos
-TDExponentialOrder = 30
-TDLanczosTol = 1.0e-4
-TDPropagationTime = stime
-TDTimeStep = dt
 
 ampl = 0.1
 freq = (2*pi/stime)
@@ -57,42 +42,3 @@ electric_field | 1.0/sqrt(2.0) | 1.0/sqrt(2.0) | 0.0 | freq | "envelope_function
 %TDFunctions
 "envelope_function" | tdf_cw | ampl
 %
-
-# --------------
-# OCT parameters
-# --------------
-
-OCTPenalty = 0.0
-OCTEps   = 1.0e-4
-OCTMaxIter = 2
-
-OCTInitialState = oct_is_groundstate
-
-OCTTargetOperator = oct_tg_classical
-%OCTClassicalTarget
-"q[2,2]+q[2,1]*p[1,1]*p[3,2]"
-%
-%OCTPositionDerivatives
-"0.0" | "0.0"
-"p[1,1]*p[3,2]" | "1.0"
-"0.0" | "0.0"
-%
-%OCTMomentumDerivatives
-"q[2,1]*p[3,2]" | "0.0"
-"0.0" | "0.0"
-"0.0" | "q[2,1]*p[1,1]"
-%
-
-#OCTCheckGradient = 0.001
-OCTDirectStep = 0.1
-OCTScheme = oct_bfgs
-OCTControlFunctionRepresentation = control_fourier_series_h
-OCTControlFunctionOmegaMax = 10.0
-
-OCTFixFluenceTo = -1
-
-OCTDoubleCheck = no
-
-
-
-

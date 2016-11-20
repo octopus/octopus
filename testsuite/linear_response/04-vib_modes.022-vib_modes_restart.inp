@@ -13,5 +13,4 @@ Radius = 6
   "Li" | 0 | 0 | 3.058523
 %
 
-LRMaxIter = 1
-
+LinearSolverMaxIter = 1

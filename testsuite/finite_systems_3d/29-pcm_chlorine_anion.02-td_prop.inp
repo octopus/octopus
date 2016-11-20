@@ -24,13 +24,11 @@ BoxShape = minimum
 radius = 5.0*angstrom
 spacing = 0.19*angstrom
 
-ConvRelDens = 1e-5
 XCFunctional = gga_x_pbe + gga_c_pbe
 
 PCMCalculation = true
 PCMStaticEpsilon = 78.39
 
 TDDeltaStrength = 0.0
-TDPolarizationDirection = 1
 TDTimeStep = 0.0015/eV
 TDMaxSteps = 5
