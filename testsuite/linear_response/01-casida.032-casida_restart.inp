@@ -4,7 +4,6 @@
 CalculationMode = casida
 ExperimentalFeatures = yes
 
-Debug = info + trace
 FromScratch = no
 
 bond_length = 2.0744
