@@ -1491,10 +1491,11 @@ contains
       do i = 1,dim
         do j = 1,dim-1
           k = mod(i+j-1,dim)+1
+          d0 = abs(sum(a(:,i)*a(:,k)))
           do m = -1,1,2
 
             a(:,i) = a(:,i) + m*a(:,k)
-            d = calc_diff(a)
+            d = abs(sum(a(:,i)*a(:,k)))
             if(d < d0)then
               d0 = d
               a0 = a
