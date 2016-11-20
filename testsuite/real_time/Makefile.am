@@ -103,6 +103,7 @@ dist_share_DATA =                      \
         17-absorption-spin_symmetry.test \
         18-hhg.test \
         18-hhg.01-gs.inp \
-        18-hhg.02-td.inp
+        18-hhg.02-td.inp \
+        18-hhg.03-hs.inp
 
 CLEANFILES = *~ *.bak

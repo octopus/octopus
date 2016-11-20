@@ -25,7 +25,6 @@ EigenSolverTolerance = 1e-5
 
 # Frequency corresponding to 800nm.
 omega = 0.05655
-period = 2*pi/omega
 
 %TDExternalFields
 electric_field   | 1 | 0 | 0 | omega | "envelope_function"

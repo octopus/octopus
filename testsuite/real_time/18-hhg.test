@@ -31,5 +31,5 @@ match ; Dipole acceleration [step   2000] ; LINEFIELD(td.general/acceleration, -
 # Calculation of the emission spectrum
 Precision : 1e-4
 Util       : oct-harmonic-spectrum
-Input      : 18-hhg.02-td.inp
+Input      : 18-hhg.03-hs.inp
 match ; Emission spectrum (at resonance frequency) ; LINEFIELD(hs-mult.x, 14, 2) ; 0.544695E-01
