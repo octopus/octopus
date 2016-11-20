@@ -115,10 +115,9 @@ void sym_notdef (symrec *sym)
 
 void sym_redef (symrec *sym)
 {
-  fprintf(stderr, "Parser error: attempt to redefine value of symbol '%s'.\n", sym->name);
-  fprintf(stderr, "Previous value: ");
+  fprintf(stderr, "Parser warning: redefining symbol, previous value ");
   sym_print(stderr, sym);
-  exit(1);
+  fprintf(stderr, "\n");
 }
 
 void sym_wrong_arg (symrec *sym)
@@ -208,10 +207,8 @@ static struct init_cnst arith_cnts[] = {
 	{"e",      M_E, 0},
 	{"i",        0, 1},
 	{"true",     1, 0}, 
-	{"t",        1, 0}, 
 	{"yes",      1, 0},
 	{"false",    0, 0}, 
-	{"f",        0, 0}, 
 	{"no",       0, 0},
 	{0,          0, 0}
 };
@@ -302,6 +299,9 @@ void sym_output_table(int only_unused, int mpiv_node)
     }
 
     sym_print(f, ptr);
+  }
+  if(any_unused == 1) {
+    fprintf(f, "\n");
   }
 }
 

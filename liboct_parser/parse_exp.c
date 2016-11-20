@@ -168,7 +168,7 @@ static int oct_parser_lex (){
       if (s == 0){
 	int jj;
 	for (jj = 0; reserved_symbols[jj] != 0; jj++){
-	  if(strcmp(symbuf, reserved_symbols[jj]) == 0){
+	  if(strcasecmp(symbuf, reserved_symbols[jj]) == 0){
 	    fprintf(stderr, "Parser error: trying to redefine reserved symbol '%s'.\n", symbuf);
 	    exit(1);
 	  }
