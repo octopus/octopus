@@ -1491,11 +1491,10 @@ contains
       do i = 1,dim
         do j = 1,dim-1
           k = mod(i+j-1,dim)+1
-          d0 = abs(sum(a(:,i)*a(:,k)))
           do m = -1,1,2
 
             a(:,i) = a(:,i) + m*a(:,k)
-            d = abs(sum(a(:,i)*a(:,k)))
+            d = calc_diff(a)
             if(d < d0)then
               d0 = d
               a0 = a
@@ -1548,9 +1547,10 @@ contains
     contains 
       FLOAT function calc_diff(b) result(diff)
         FLOAT :: b(dim,dim)
-        diff = sum( (b(:,1) - b(:,2))**2 &
-          +(b(:,2) - b(:,3))**2 &
-          +(b(:,3) - b(:,1))**2 )
+        diff = abs(sum(b(1:dim,1)*b(1:dim,2))) &
+              +abs(sum(b(1:dim,2)*b(1:dim,3))) &
+              +abs(sum(b(1:dim,3)*b(1:dim,1))) 
+
       end function calc_diff
       subroutine inv_matrix3x3(am,bm)
         FLOAT :: am(3,3),bm(3,3),det_a
