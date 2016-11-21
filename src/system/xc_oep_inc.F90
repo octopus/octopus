@@ -16,6 +16,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
+!! $Id$
 
 ! ---------------------------------------------------------
 !> This file handles the evaluation of the OEP potential, in the KLI or full OEP
@@ -117,16 +118,16 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
       if(present(vxc)) then
         ! solve the KLI equation
         if(oep%level /= XC_OEP_FULL .or. first) then
-          first = .false.
           oep%vxc = M_ZERO
           call X(xc_KLI_solve) (gr%mesh, st, is, oep)
         end if
 
         ! if asked, solve the full OEP equation
-        if(oep%level == XC_OEP_FULL) then
+        if(oep%level == XC_OEP_FULL .and. (.not. first)) then
           call X(xc_oep_solve)(gr, hm, st, is, vxc(:,is), oep)
         end if
 
+        first = .false.
         vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) + oep%vxc(1:gr%mesh%np,1)
       end if
     end do spin2
