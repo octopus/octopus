@@ -17,7 +17,6 @@
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 ## 02110-1301, USA.
 ##
-## $Id: Makefile.am 3932 2008-03-23 20:10:10Z xavier $
 
 sharedir = $(pkgdatadir)/testsuite/real_time
 

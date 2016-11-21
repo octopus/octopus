@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 !---------------------------------------------------------------------------
 subroutine X(density_accumulate_grad)(gr, st, iq, psib, grad_psib, grad_rho)

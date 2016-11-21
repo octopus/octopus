@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # 
-# $Id$
 
 cd `dirname "$0"`/..
 if [ -x "$(which svn)" ] && svn info > /dev/null 2>&1 ; then

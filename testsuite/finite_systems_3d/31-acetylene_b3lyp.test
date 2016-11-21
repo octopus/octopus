@@ -1,5 +1,4 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 10-fullerene.test 14159 2015-05-30 17:07:56Z xavier $
 
 Test       : Acetylene - B3LYP
 Program    : octopus

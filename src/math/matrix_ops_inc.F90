@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: matrix_inc.F90 14808 2015-11-21 05:43:46Z xavier $
 
 
 subroutine X(to_submatrix)(this, bsize, proc, nproc, submatrix)

@@ -1,5 +1,4 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id$
 #
 # The two lowest eigenstates of the asymmetric double well,
 # V(x) = -5*step(x+5)*step(5-x)

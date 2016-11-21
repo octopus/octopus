@@ -17,6 +17,5 @@
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 ## 02110-1301, USA.
 ##
-## $Id: Makefile.am 13390 2015-03-18 15:21:52Z xavier $
 
 SUBDIRS = lda pbe

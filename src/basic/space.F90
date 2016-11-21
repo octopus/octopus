@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: space.F90 6963 2010-08-25 09:10:42Z xavier $
 
 #include "global.h"
 

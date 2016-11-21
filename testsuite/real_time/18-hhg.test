@@ -1,5 +1,4 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 18-hhg.test $
 #
 # This tests the oct-harmonic-spectrum utility. It computes the high harmonic generation
 # of a 1D model of Hydrogen, when irradiated with a 800 nm, 10^14 W/cm^2, 8 periods laser

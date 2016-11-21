@@ -15,7 +15,6 @@
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 ## 02110-1301, USA.
 ##
-## $Id: pspio.m4 754 2012-08-31 17:05:18Z micael $
 
 AC_DEFUN([ACX_PSPIO], [
 acx_pspio_ok=no

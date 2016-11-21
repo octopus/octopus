@@ -15,7 +15,6 @@
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 ## 02110-1301, USA.
 ##
-## $Id$
 
 AC_PREREQ(2.59)
 # Note: the version string is written into ETSF_IO files, so when you update
