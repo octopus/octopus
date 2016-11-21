@@ -1108,8 +1108,10 @@ contains
 
     string = '#include "'//trim(filename)//'"'
 
-    call messages_write("Building CL program '"//trim(filename)//"'.")
-    call messages_info()
+    if(debug%info) then
+      call messages_write("Building CL program '"//trim(filename)//"'.")
+      call messages_info()
+    end if
 
     prog = clCreateProgramWithSource(accel%context%cl_context, trim(string), ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateProgramWithSource")
