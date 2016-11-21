@@ -327,7 +327,7 @@ contains
     write(message(1), '(a,i2,a)') "Info: l = ", ps%l_max, " is maximum angular momentum considered."
     call messages_info(1)
 
-    ps%local = ps%l_max == 0 .and. ps%l_loc == 0 
+    ps%local = (ps%l_max == 0 .and. ps%l_loc == 0 ) .or. (ps%l_max == -1 .and. ps%l_loc == -1)
     
     ! We allocate all the stuff
     SAFE_ALLOCATE(ps%kb   (0:ps%l_max, 1:ps%kbc))
