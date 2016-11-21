@@ -21,6 +21,7 @@
 
 module kb_projector_oct_m
   use atom_oct_m
+  use comm_oct_m
   use double_grid_oct_m
   use geometry_oct_m
   use global_oct_m

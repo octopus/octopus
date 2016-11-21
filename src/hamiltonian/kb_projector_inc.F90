@@ -35,23 +35,13 @@ subroutine X(kb_project)(mesh, sm, kb_p, dim, psi, ppsi)
   R_TYPE,               intent(inout) :: ppsi(:, :) !< (kb%n_s, dim)
 
   R_TYPE, allocatable :: uvpsi(:,:)
-#if defined(HAVE_MPI)
-  R_TYPE, allocatable :: uvpsi_tmp(:,:)
-#endif
 
   PUSH_SUB(X(kb_project))
 
   SAFE_ALLOCATE(uvpsi(1:dim, 1:kb_p%n_c))
   call X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi)
 
-#if defined(HAVE_MPI)
-  if(mesh%parallel_in_domains) then
-    SAFE_ALLOCATE(uvpsi_tmp(1:kb_p%n_c, 1:dim))
-    call MPI_Allreduce(uvpsi, uvpsi_tmp, size(uvpsi), R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
-    uvpsi = uvpsi_tmp
-    SAFE_DEALLOCATE_A(uvpsi_tmp)
-  end if
-#endif
+  if(mesh%parallel_in_domains) call comm_allreduce(mesh%vp%comm, uvpsi)
 
   call X(kb_project_ket)(kb_p, dim, uvpsi, ppsi)
   SAFE_DEALLOCATE_A(uvpsi)
