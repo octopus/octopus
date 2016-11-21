@@ -37,7 +37,6 @@ char       *parse_string (const char *name, char *def);
 /* Now comes stuff for the blocks */
 typedef struct sym_block_line{
   int n;
-  char **fields;
 } sym_block_line;
 
 typedef struct sym_block{

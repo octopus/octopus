@@ -250,13 +250,6 @@ void sym_end_table()
       break;
     case S_BLOCK:
       if(ptr->value.block->n > 0){
-	for(l = 0; l < ptr->value.block->n; l++){
-	  if(ptr->value.block->lines[l].n > 0){
-	    for(col = 0; col < ptr->value.block->lines[l].n; col++)
-	      free(ptr->value.block->lines[l].fields[col]);
-	    free(ptr->value.block->lines[l].fields);
-	  }
-	}
 	free(ptr->value.block->lines);
       }
       free(ptr->value.block);

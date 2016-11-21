@@ -99,7 +99,7 @@ int parse_init(const char *file_out, const int *mpiv_node)
 int parse_input(const char *file_in, int set_used)
 {
   FILE *f;
-  char *s;
+  char *s, *mtxel;
   int c, length = 0;
   parse_result pc;
 
@@ -115,6 +115,7 @@ int parse_input(const char *file_in, int set_used)
   /* note: 40 is just a starter length, it is not a maximum */
   length = 40;
   s = (char *)malloc(length + 1);
+
   do{
     c = parse_get_line(f, &s, &length);
     if(*s){
@@ -154,7 +155,6 @@ int parse_input(const char *file_in, int set_used)
 	      rec->value.block->lines = (sym_block_line *)
 		realloc((void *)rec->value.block->lines, sizeof(sym_block_line)*(l+1));
 	      rec->value.block->lines[l].n = 0;
-	      rec->value.block->lines[l].fields = NULL;
 	      
 	      /* parse columns */
 	      for(s1 = s; (tok = strtok(s1, "|\t")) != NULL; s1 = NULL){
@@ -162,10 +162,12 @@ int parse_input(const char *file_in, int set_used)
 		str_trim(tok2);
 		
 		col = rec->value.block->lines[l].n;
+		mtxel = (char *)malloc(strlen(tok2) + strlen(rec->name) + 20);
+		sprintf(mtxel, "%s[%i][%i] = %s", rec->name, l, col, tok2);
+		parse_exp(mtxel, &pc);
+		free(mtxel);
+
 		rec->value.block->lines[l].n++;
-		rec->value.block->lines[l].fields = (char **)
-		  realloc((void *)rec->value.block->lines[l].fields, sizeof(char *)*(col+1));
-		rec->value.block->lines[l].fields[col] = tok2;
 	      }
 	    }
 	  }while(c != EOF && *s != '%');
@@ -219,6 +221,13 @@ void parse_environment(const char* prefix)
   }
 
   free(flag);
+}
+
+char* get_mtxel_name(const char* block, int l, int col)
+{
+  char *mtxel = (char *)malloc(strlen(block) + 20);
+  sprintf(mtxel, "%s[%i][%i]", block, l, col);
+  return mtxel;
 }
 
 void parse_end()
@@ -395,118 +404,39 @@ int parse_block_cols(const sym_block *blk, int l)
   return blk->lines[l].n;
 }
 
-static int parse_block_work(const sym_block *blk, int l, int col, parse_result *r)
-{
-  assert(blk!=NULL);
-  assert(l>=0 && l<blk->n);
-
-  if(col < 0 || col >= blk->lines[l].n){
-    fprintf(stderr, "Parser error: column %i out of range [0,%i] when parsing block '%s'.\n", col, blk->lines[l].n-1, blk->name);
-    exit(1);
-  }
-  
-  return parse_exp(blk->lines[l].fields[col], r);
-}
-
-
 int parse_block_int(const sym_block *blk, int l, int col, int *r)
 {
-  int o;
-  parse_result pr;
-
-  o = parse_block_work(blk, l, col, &pr);
-
-  if(o == 0) {
-    if(pr.type == PR_CMPLX){
-      *r = ROUND(GSL_REAL(pr.value.c));
-      if(!disable_write) {
-	fprintf(fout, "  %s (%d, %d) = %d\n", blk->name, l, col, *r);
-      }
-      if(fabs(GSL_IMAG(pr.value.c)) > 1e-10) {
-        fprintf(stderr, "Parser error: complex value passed for integer field in block '%s'.\n", blk->name);
-	exit(1);
-      }
-      if(fabs(*r - GSL_REAL(pr.value.c)) > 1e-10) {
-	fprintf(stderr, "Parser error: non-integer value passed for integer field in block '%s'.\n", blk->name);
-        exit(1);
-      }
-    } else {
-      o = -1;
-    }
-  }
-
-  parse_result_free(&pr);
-  return o;
+  char *mtxel_name = get_mtxel_name(blk->name, l, col);
+  *r = parse_int(mtxel_name, 0);
+  free(mtxel_name);
+  return 0;
 }
 
 int parse_block_double(const sym_block *blk, int l, int col, double *r)
 {
-  int o;
-  parse_result pr;
-  
-  o = parse_block_work(blk, l, col, &pr);
-  
-  if(o == 0) {
-    if(pr.type == PR_CMPLX){
-      *r = GSL_REAL(pr.value.c);
-      if(!disable_write) {
-        fprintf(fout, "  %s (%d, %d) = %g\n", blk->name, l, col, *r);
-      }
-      if(fabs(GSL_IMAG(pr.value.c)) > 1e-10) {
-        fprintf(stderr, "Parser error: complex value passed for real field in block '%s'.\n", blk->name);
-	exit(1);
-      }
-    } else {
-      o = -1;
-    }
-  }
-  
-  parse_result_free(&pr);
-  return o;
+  char *mtxel_name = get_mtxel_name(blk->name, l, col);
+  *r = parse_double(mtxel_name, 0.0);
+  free(mtxel_name);
+  return 0;
 }
 
 int parse_block_complex(const sym_block *blk, int l, int col, gsl_complex *r)
 {
-  int o;
-  parse_result pr;
-
-  o = parse_block_work(blk, l, col, &pr);
-
-  if(o == 0) {
-    if(pr.type == PR_CMPLX){
-      *r = pr.value.c;
-      if(!disable_write) {
-        fprintf(fout, "  %s (%d, %d) = (%g,%g)\n", blk->name, l, col, GSL_REAL(*r), GSL_IMAG(*r));
-      }
-    } else {
-      o = -1;
-    }
-  }
-
-  parse_result_free(&pr);
-  return o;
+  char *mtxel_name = get_mtxel_name(blk->name, l, col);
+  gsl_complex zero;
+  GSL_SET_COMPLEX(&zero, 0.0, 0.0);
+  *r = parse_complex(mtxel_name, zero);
+  free(mtxel_name);
+  return 0;
 }
+
 
 int parse_block_string(const sym_block *blk, int l, int col, char **r)
 {
-  int o;
-  parse_result pr;
-
-  o = parse_block_work(blk, l, col, &pr);
-
-  if(o == 0) {
-    if(pr.type == PR_STR){
-      *r = strdup(pr.value.s);
-      if(!disable_write) {
-        fprintf(fout, "  %s (%d, %d) = \"%s\"\n", blk->name, l, col, *r);
-      }
-    } else {
-      o = -1;
-    }
-  }
-
-  parse_result_free(&pr);
-  return o;
+  char *mtxel_name = get_mtxel_name(blk->name, l, col);
+  *r = parse_string(mtxel_name, "");
+  free(mtxel_name);
+  return 0;
 }
 
 
