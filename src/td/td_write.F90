@@ -100,7 +100,10 @@ module td_write_oct_m
     OUT_KP_PROJ     = 19, &
     OUT_FLOQUET     = 20, &
     OUT_N_EX        = 21, &
-    OUT_MAX         = 21
+    OUT_SEPARATE_COORDS  = 22, &
+    OUT_SEPARATE_VELOCITY= 23, &
+    OUT_SEPARATE_FORCES  = 24, &
+    OUT_MAX         = 24
   
   type td_write_t
     private
@@ -254,6 +257,8 @@ contains
     !%Option n_excited_el 1048576
     !% Output the number of excited electrons, based on the projections 
     !% of the time evolved wave-functions on the ground-state wave-functions. 
+    !%Option geometry_separated 14680064
+    !% Writes geometry, velocities and forces in separate files.
     !%End
 
     default = 2**(OUT_MULTIPOLES - 1) +  2**(OUT_ENERGY - 1)
@@ -511,6 +516,18 @@ contains
         call write_iter_init(writ%out(OUT_COORDS)%handle, first, &
           units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/coordinates")))
 
+      if(writ%out(OUT_SEPARATE_COORDS)%write) &
+        call write_iter_init(writ%out(OUT_SEPARATE_COORDS)%handle, first, &
+          units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/onlyCoordinates")))
+
+      if(writ%out(OUT_SEPARATE_VELOCITY)%write) &
+        call write_iter_init(writ%out(OUT_SEPARATE_VELOCITY)%handle, first, &
+          units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/onlyVelocities")))
+
+      if(writ%out(OUT_SEPARATE_FORCES)%write) &
+        call write_iter_init(writ%out(OUT_SEPARATE_FORCES)%handle, first, &
+          units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/onlyForces")))
+
       if(writ%out(OUT_TEMPERATURE)%write) &
         call write_iter_init(writ%out(OUT_TEMPERATURE)%handle, first, &
           units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/temperature")))
@@ -675,6 +692,15 @@ contains
 
     if(writ%out(OUT_COORDS)%write) &
       call td_write_coordinates(writ%out(OUT_COORDS)%handle, gr, geo, iter)
+
+    if(writ%out(OUT_SEPARATE_COORDS)%write) &
+      call td_write_sep_coordinates(writ%out(OUT_SEPARATE_COORDS)%handle, gr, geo, iter,1)
+
+    if(writ%out(OUT_SEPARATE_VELOCITY)%write) &
+      call td_write_sep_coordinates(writ%out(OUT_SEPARATE_VELOCITY)%handle, gr, geo, iter,2)
+
+    if(writ%out(OUT_SEPARATE_FORCES)%write) &
+      call td_write_sep_coordinates(writ%out(OUT_SEPARATE_FORCES)%handle, gr, geo, iter,3)
 
     if(writ%out(OUT_TEMPERATURE)%write) &
       call td_write_temperature(writ%out(OUT_TEMPERATURE)%handle, geo, iter)
@@ -1303,6 +1329,84 @@ contains
 
     POP_SUB(td_write_coordinates)
   end subroutine td_write_coordinates
+
+  ! ---------------------------------------------------------
+  subroutine td_write_sep_coordinates(out_coords, gr, geo, iter,which)
+    type(c_ptr),       intent(inout) :: out_coords
+    type(grid_t),      intent(in) :: gr
+    type(geometry_t),  intent(in) :: geo
+    integer,           intent(in) :: iter
+    integer,           intent(in) :: which !1=xyz, 2=velocity, 3=force
+
+    integer :: iatom, idir
+    character(len=50) :: aux
+    FLOAT :: tmp(1:MAX_DIM)
+
+    if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
+
+    PUSH_SUB(td_write_sep_coordinates)
+
+    if(iter == 0) then
+      call td_write_print_header_init(out_coords)
+
+      ! first line: column names
+      call write_iter_header_start(out_coords)
+
+      do iatom = 1, geo%natoms
+        do idir = 1, gr%mesh%sb%dim
+          if (which==1) then 
+            write(aux, '(a2,i3,a1,i3,a1)') 'x(', iatom, ',', idir, ')'
+          else if (which==2) then 
+            write(aux, '(a2,i3,a1,i3,a1)') 'v(', iatom, ',', idir,')'
+          else
+            write(aux, '(a2,i3,a1,i3,a1)') 'f(', iatom, ',', idir,')'
+          end if
+            call write_iter_header(out_coords, aux)
+        end do
+      end do
+      call write_iter_nl(out_coords)
+
+      ! second line: units
+      call write_iter_string(out_coords, '#[Iter n.]')
+      call write_iter_header(out_coords, '[' // trim(units_abbrev(units_out%time)) // ']')
+      if (which==1) then 
+        call write_iter_string(out_coords, &
+          'Positions in '   // trim(units_abbrev(units_out%length))) 
+      else if (which==2) then 
+        call write_iter_string(out_coords, &
+          'Velocities in '  // trim(units_abbrev(units_out%velocity)))
+      else
+        call write_iter_string(out_coords, &
+          'Forces in '    // trim(units_abbrev(units_out%force)))
+      end if
+      call write_iter_nl(out_coords)
+
+      call td_write_print_header_end(out_coords)
+    end if
+
+    call write_iter_start(out_coords)
+
+    if (which==1) then 
+      do iatom = 1, geo%natoms
+         tmp(1:gr%mesh%sb%dim) = units_from_atomic(units_out%length, geo%atom(iatom)%x(1:gr%mesh%sb%dim))
+         call write_iter_double(out_coords, tmp, gr%mesh%sb%dim)
+      end do
+    else if (which==2) then
+      do iatom = 1, geo%natoms
+         tmp(1:gr%mesh%sb%dim) = units_from_atomic(units_out%velocity, geo%atom(iatom)%v(1:gr%mesh%sb%dim))
+         call write_iter_double(out_coords, tmp, gr%mesh%sb%dim)
+      end do
+    else
+      do iatom = 1, geo%natoms
+         tmp(1:gr%mesh%sb%dim) = units_from_atomic(units_out%force, geo%atom(iatom)%f(1:gr%mesh%sb%dim))
+         call write_iter_double(out_coords, tmp, gr%mesh%sb%dim)
+      end do
+    end if
+       
+    call write_iter_nl(out_coords)
+
+    POP_SUB(td_write_sep_coordinates)
+  end subroutine td_write_sep_coordinates
 
 
   ! ---------------------------------------------------------
