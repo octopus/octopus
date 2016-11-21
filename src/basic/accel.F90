@@ -1030,8 +1030,11 @@ contains
     dim = ubound(globalsizes, dim = 1)
 
     ASSERT(dim == ubound(localsizes, dim = 1))
+    ASSERT(all(localsizes > 0))
+    ASSERT(all(globalsizes > 0))
     ASSERT(all(localsizes <= accel_max_workgroup_size()))
     ASSERT(all(mod(globalsizes, localsizes) == 0))
+
 
     gsizes(1:dim) = int(globalsizes(1:dim), 8)
     lsizes(1:dim) = int(localsizes(1:dim), 8)
@@ -1465,18 +1468,22 @@ contains
 
     ASSERT(type == TYPE_CMPLX .or. type == TYPE_FLOAT)
 
-    nval_real = nval*types_get_size(type)/8
-    offset_real = optional_default(offset, 0)*types_get_size(type)/8
-    
-    call accel_set_kernel_arg(set_zero, 0, nval_real)
-    call accel_set_kernel_arg(set_zero, 1, offset_real)
-    call accel_set_kernel_arg(set_zero, 2, buffer)
+    if(nval > 0) then
+      
+      nval_real = nval*types_get_size(type)/8
+      offset_real = optional_default(offset, 0)*types_get_size(type)/8
+      
+      call accel_set_kernel_arg(set_zero, 0, nval_real)
+      call accel_set_kernel_arg(set_zero, 1, offset_real)
+      call accel_set_kernel_arg(set_zero, 2, buffer)
+      
+      bsize = accel_kernel_workgroup_size(set_zero)
+      
+      call accel_kernel_run(set_zero, (/ opencl_pad(nval_real, bsize) /), (/ bsize /))
+      call accel_finish()
 
-    bsize = accel_kernel_workgroup_size(set_zero)
-
-    call accel_kernel_run(set_zero, (/ opencl_pad(nval_real, bsize) /), (/ bsize /))
-    call accel_finish()
-
+    end if
+      
     POP_SUB(accel_set_buffer_to_zero)
   end subroutine accel_set_buffer_to_zero
 
