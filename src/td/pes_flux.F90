@@ -117,6 +117,10 @@ module pes_flux_oct_m
     logical          :: parallel_in_momentum           !< whether we are parallelizing over the k-mesh  
     logical          :: arpes_grid
 
+    integer          :: dim                            !< dimensions
+    integer          :: pdim                           !< periodi dimensions
+
+
   end type pes_flux_t
 
   integer, parameter ::   &
@@ -473,7 +477,7 @@ contains
 
       if(this%usememory) then
         SAFE_ALLOCATE(k_dot_aux(1:this%nkpnts))
-        SAFE_ALLOCATE(this%conjgplanewf_cub(1:this%nkpnts, this%nsrfcpnts_start:this%nsrfcpnts_end,kptst:kptend))
+        SAFE_ALLOCATE(this%conjgplanewf_cub(1:this%nkpnts, this%nsrfcpnts_start:this%nsrfcpnts_end, kptst:kptend))
         this%conjgplanewf_cub = M_z0
 
         do ik = kptst, kptend
@@ -569,6 +573,9 @@ contains
     kptend = st%d%kpt%end
     mdim   = sb%dim
     pdim   = sb%periodic_dim
+
+    this%dim  = mdim
+    this%pdim = pdim
 
     
     if (this%shape == M_SPHERICAL .or. this%shape == M_CUBIC) then
@@ -1037,33 +1044,33 @@ contains
     end subroutine fill_non_periodic_dimension
          
           
-    subroutine get_kpath_perp_direction(kpoints, kpth_dir)
-      type(kpoints_t),   intent(in)  :: kpoints 
-      integer,           intent(out) :: kpth_dir
-
-      FLOAT                :: kpt(3)
-      integer              :: ikzero_start
-         
-      ikzero_start = kpoints_number(sb%kpoints) - sb%kpoints%nik_skip  + 1   
-      
-      kpth_dir = -1
-         
-      kpt = M_ZERO
-      kpt(1:mdim) = kpoints_get_point(kpoints, ikzero_start+1)-kpoints_get_point(kpoints, ikzero_start)
-      kpt(1:mdim) = kpt(1:mdim)/sqrt(sum(kpt(1:mdim)**2))  
-           
-      
-      if (sum((kpt(:) - (/1,0,0/))**2) < M_EPSILON) then
-        kpth_dir = 2
-      end if        
-              
-      if (sum((kpt(:) - (/0,1,0/))**2) < M_EPSILON) then 
-        kpth_dir = 1
-      end if
-      
-      
-      
-    end subroutine get_kpath_perp_direction
+!     subroutine get_kpath_perp_direction(kpoints, kpth_dir)
+!       type(kpoints_t),   intent(in)  :: kpoints
+!       integer,           intent(out) :: kpth_dir
+!
+!       FLOAT                :: kpt(3)
+!       integer              :: ikzero_start
+!
+!       ikzero_start = kpoints_number(sb%kpoints) - sb%kpoints%nik_skip  + 1
+!
+!       kpth_dir = -1
+!
+!       kpt = M_ZERO
+!       kpt(1:mdim) = kpoints_get_point(kpoints, ikzero_start+1)-kpoints_get_point(kpoints, ikzero_start)
+!       kpt(1:mdim) = kpt(1:mdim)/sqrt(sum(kpt(1:mdim)**2))
+!
+!
+!       if (sum((kpt(:) - (/1,0,0/))**2) < M_EPSILON) then
+!         kpth_dir = 2
+!       end if
+!
+!       if (sum((kpt(:) - (/0,1,0/))**2) < M_EPSILON) then
+!         kpth_dir = 1
+!       end if
+!
+!
+!
+!     end subroutine get_kpath_perp_direction
           
           
     

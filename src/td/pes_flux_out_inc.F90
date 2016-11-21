@@ -90,9 +90,10 @@ end subroutine pes_flux_map_from_states
 ! still preserve an array ordering on the kpoint mesh 
 ! such that the lowest index touple is associated with the smaller 
 ! (negative) kpoint value.
-subroutine flip_sign_Lkpt_idx( dim, nk, idx)
+subroutine flip_sign_Lkpt_idx( dim, nk, idx, do_nothing)
    integer, intent(out) :: idx(:,:)
    integer, intent(in)  :: dim, nk(:)
+   logical, intent(in)  :: do_nothing
 
    integer :: idx_tmp(1:maxval(nk(1:3)), 1:3)
    integer :: idir, ii
@@ -106,9 +107,13 @@ subroutine flip_sign_Lkpt_idx( dim, nk, idx)
        idx_tmp(ii,idir) = ii
      end do
      
-     do ii = 1, nk(idir)
-       idx(ii,idir) = nk(idir) - idx_tmp(ii,idir) + 1 
-     end do
+     if (do_nothing) then
+       idx(1:nk(idir),idir)  = idx_tmp(1:nk(idir),idir)
+     else 
+       do ii = 1, nk(idir)
+         idx(ii,idir) = nk(idir) - idx_tmp(ii,idir) + 1 
+       end do
+     end if
      
    end do
    
@@ -124,11 +129,112 @@ integer pure function flatten_indices(i1,i2,i3,igpt, ll, ngpt) result(ii)
   integer, intent(in) :: ll(:)
   integer, intent(in) :: ngpt
   
-  ii = (i3-1)*ll(1)*ll(2)*ngpt + (igpt-1)*ll(1)*ll(2) + (i2-1)*ll(1) + i1
+!   ii = (i3-1)*ll(1)*ll(2)*ngpt + (igpt-1)*ll(1)*ll(2) + (i2-1)*ll(1) + i1
+!   ii = (i3-1)*ll(1)*ll(2)*ngpt + (i1-1)*ll(2)*ngpt + (i2-1)*ngpt + igpt
+  ii = (i3-1)*ll(1)*ll(2)*ngpt + (i2-1)*ll(1)*ngpt + (i1-1)*ngpt + igpt 
 !   ii = (i3-1)*ll(1)*ll(2) + (i2-1)*ll(1) + i1
   
 end function flatten_indices
 
+
+subroutine reorder_kpoints(this, kpoints, krng, Lkpt, idx)
+  type(pes_flux_t),     intent(in)  :: this
+  type(kpoints_t),      intent(in)  :: kpoints
+  integer,              intent(in)  :: krng(:)
+  integer,              intent(in)  :: Lkpt(:,:)
+  integer,              intent(out) :: idx(:,:)
+  
+  integer :: dim, pdim, idim, ik,  nk(1:3), ix, iy
+  FLOAT :: kpt(1:3)
+  FLOAT,   allocatable :: KK(:,:,:), KK_tmp(:)
+  integer, allocatable :: Lkpt_inv(:,:), idx_tmp(:)
+  
+  PUSH_SUB(reorder_kpoints)
+  
+  dim  = this%dim
+  pdim = this%pdim
+  
+  nk(:) = 1  
+  nk(1:dim) = kpoints%nik_axis(1:dim)
+
+  SAFE_ALLOCATE(KK(nk(1), nk(2),1:3))
+  SAFE_ALLOCATE(Lkpt_inv(nk(1), nk(2)) )
+  SAFE_ALLOCATE(idx_tmp(maxval(nk(1:2))) )
+  SAFE_ALLOCATE(KK_tmp(maxval(nk(1:2))) )
+
+  KK = M_ZERO
+  kpt = M_ZERO
+  idx(:,:) = 1
+  
+  do ik = krng(1),krng(2)
+    kpt(1:dim) = kpoints_get_point(kpoints, ik) 
+    KK(Lkpt(ik, 1),Lkpt(ik, 2),1:dim) = kpt(1:dim)
+    Lkpt_inv(Lkpt(ik, 1),Lkpt(ik, 2)) = ik
+    print *, Lkpt(ik, 1), Lkpt(ik, 2),   ik,  kpt(1:dim)
+  end do 
+
+  
+
+  do ix = 1, nk(1)
+    idx(ix, 1) = ix
+  end do
+  do iy = 1, nk(2)
+    idx(iy, 2) = iy
+  end do
+
+  do ix = 1, nk(1)
+    do iy = 1, nk(2)
+      print *, ix, iy, KK(ix,iy,1:dim), idx(ix,1), idx(iy,2)
+    end do
+  end do
+
+
+  do iy = 1, nk(2)
+    do ix = 1, nk(1)
+      idx_tmp(ix)=ix
+    end do
+    KK_tmp(1:nk(1)) = KK(iy,1:nk(1),2)
+  print *, iy, "--", KK(iy,1:nk(1),2)
+    call sort(KK_tmp, idx_tmp(1:nk(1)))
+    KK(iy,1:nk(1),2)= KK_tmp(1:nk(1)) 
+!     call sort(KK(iy,1:nk(1),2), idx_tmp(1:nk(1)))
+print *, iy, "--",  idx_tmp(1:nk(1))
+    
+print *, iy, "--",  KK(iy,1:nk(1),2)
+print *, iy, "--", idx(Lkpt(Lkpt_inv(1:nk(1),iy), 1), 1)
+    do ix = 1, nk(1)
+!       idx(Lkpt(Lkpt_inv(ix,iy), 1), 1) = idx_tmp(Lkpt(Lkpt_inv(ix,iy), 1))
+!       idx(Lkpt(Lkpt_inv(ix,iy), 1), 1) = idx_tmp(ix)
+      idx(Lkpt(Lkpt_inv(ix,iy), 1), 1) = idx(idx_tmp(ix), 1)
+    end do
+print *, iy, "--", idx(Lkpt(Lkpt_inv(1:nk(1),iy), 1), 1)
+    
+  end do
+
+
+!   do ix = 1, nk(1)
+!     do iy = 1, nk(2)
+!       idx_tmp(iy)=iy
+!     end do
+!     KK_tmp(1:nk(2)) = KK(ix,1:nk(2),1)
+!     call sort(KK_tmp, idx_tmp(1:nk(2)))
+!     do iy = 1, nk(2)
+! !       idx(Lkpt(Lkpt_inv(ix,iy), 2), 2) = idx_tmp(Lkpt(ik, 2))
+! !       idx(Lkpt(Lkpt_inv(ix,iy), 2), 2) = idx_tmp(iy)
+!       idx(idx_tmp(Lkpt(Lkpt_inv(ix,iy), 2)), 2) = iy
+!     end do
+!   end do
+
+
+
+  
+  SAFE_DEALLOCATE_A(KK)
+  SAFE_DEALLOCATE_A(KK_tmp)
+  SAFE_DEALLOCATE_A(Lkpt_inv)
+  SAFE_DEALLOCATE_A(idx_tmp)
+
+  POP_SUB(reorder_kpoints)  
+end subroutine reorder_kpoints
 
 !< Generate the momentum-space mesh (p) and the arrays mapping the 
 !< the mask and the kpoint meshes in p.
@@ -209,8 +315,10 @@ subroutine pes_flux_pmesh_pln(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, 
   end if
   
   SAFE_ALLOCATE(ikidx(maxval(nk(1:3)),1:3))
-  call flip_sign_Lkpt_idx(dim, nk(:), ikidx(:,:))
-
+!   call flip_sign_Lkpt_idx(dim, nk(:), ikidx(:,:), kpoints_have_zero_weight_path(kpoints))
+  call flip_sign_Lkpt_idx(dim, nk(:), ikidx(:,:), do_nothing = .true.)
+  
+!   call reorder_kpoints(this, kpoints, krng, Lkpt, ikidx)
   
   if (debug%info) then
     print *,"reordered"
@@ -226,6 +334,7 @@ subroutine pes_flux_pmesh_pln(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, 
     print *,"----"
   end if
   
+!   stop
 
 
   pmesh(:, :, :, :) = M_HUGE      
@@ -244,7 +353,7 @@ subroutine pes_flux_pmesh_pln(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, 
   !
   !       (G = x and Kpt = o)
   ! 
-  ! The grid represents the final momentum p = G + Kpt. 
+  ! The grid represents the final momentum p =  Kpt -G. 
   ! The lower left corner correspond to the minimum value of p and the lowest 
   ! index-touple value (ip1,ip2,ip3) = (1,1,1). 
   do ik = krng(1),krng(2)
@@ -268,16 +377,12 @@ subroutine pes_flux_pmesh_pln(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, 
   !           Lp(idx_inv(j1,1),idx_inv(j2,2),idx_inv(j3,3),ik,1:3) =  (/ip1,ip2,ip3/)
             Lp(j1,j2,j3,ik,1:3) =  (/ip1,ip2,ip3/)
           
-            ! The final momentum corresponds to p = G - K. 
-            ! This is due to the convention for the sign of the Bloch phase associated to 
-            ! each kpoint subspace in hamilonian_update wich is exp(-i K*r) instead of the 
-            ! most commonly used (in textbooks) exp(i K*r). 
-            ! Thus in order to solve the propagation equations only for the periodic part 
-            ! of each KS orbital u_K(r) I nees to project on plane waves with <p|=<G-K|. 
-            ! Note: in order to preserve the correct ordering of the final mesh in p 
-            ! we remap each kpoint grid-index with ikidx(:,1:3).
-            pmesh(ip1, ip2, ip3, 1:dim) = GG(1:dim) - kpt(1:dim)
-            pmesh(ip1, ip2, ip3, dim+1) = pmesh(ip1, ip2, ip3, dim+1) + 1 
+            ! The final momentum corresponds to p = K-G. 
+            ! I have to subtract G only along the periodic dimensions
+!             pmesh(ip1, ip2, ip3, 1:dim) = GG(1:dim) - kpt(1:dim)
+            pmesh(ip1, ip2, ip3, 1:this%pdim) = kpt(1:this%pdim) - GG(1:this%pdim)
+            pmesh(ip1, ip2, ip3, dim)         = GG(dim)
+            pmesh(ip1, ip2, ip3, dim+1)       = pmesh(ip1, ip2, ip3, dim+1) + 1 
           
           
             if (present(Ekin)) Ekin(ip1, ip2, ip3) = sign(M_ONE,pmesh(ip1,ip2,ip3,dim)) &
@@ -299,6 +404,7 @@ subroutine pes_flux_pmesh_pln(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, 
             end if
           
             if (pmesh(ip1, ip2, ip3, dim+1) > 1 ) then
+stop
               err = -2 
             end if
       
@@ -480,7 +586,7 @@ subroutine pes_flux_map_from_states_pln(this, restart, st, ll, pesP, krng, Lp, i
                   pesP(ip(1),ip(2),ip(3), 3) = pesP(ip(1),ip(2),ip(3), 3) &
                                                  + real(psiG1(ig)*conjg(psiG2(ig)), REAL_PRECISION) * weight
                                                
-                  pesP(ip(1),ip(2),ip(3), 3) = pesP(ip(1),ip(2),ip(3), 3) &
+                  pesP(ip(1),ip(2),ip(3), 4) = pesP(ip(1),ip(2),ip(3), 4) &
                                                  + aimag(psiG1(ig)*conjg(psiG2(ig))) * weight
               end do
             end do
@@ -1207,11 +1313,21 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
     if(this%shape == M_PLANES) then
       write(filename,'(i5.5)') ik
       write(filename,'(a)') trim(restart_dir(restart))//"/pesflux4-kpt"//trim(filename)//".obf"
-      
+ 
+
+if(mpi_grp_is_root(st%mpi_grp)) then      
       SAFE_ALLOCATE(psi1(this%nkpnts))
       psi1(:)=this%conjgphase_prev_cub(:,ik)
       call io_binary_write(filename, this%nkpnts, psi1(:), err)
       SAFE_DEALLOCATE_P(psi1)
+end if
+
+#if defined(HAVE_MPI)
+  if(st%mpi_grp%size > 1) then
+    call MPI_Bcast(err, 1, MPI_INTEGER, 0, st%mpi_grp%comm, mpi_err)
+    call MPI_Barrier(st%mpi_grp%comm, mpi_err)
+  end if
+#endif
 
       if (err /= 0) then
         message(1) = "Unable to write restart information to '"//trim(filename)//"'."

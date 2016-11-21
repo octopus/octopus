@@ -382,7 +382,7 @@ subroutine pes_mask_map_from_states(restart, st, ll, pesK, krng, Lp, istin)
                 pesK(ip(1),ip(2),ip(3), 3) = pesK(ip(1),ip(2),ip(3), 3) &
                                                + real(psiG1(i1,i2,i3)*conjg(psiG2(i1,i2,i3)), REAL_PRECISION) * weight
                                                
-                pesK(ip(1),ip(2),ip(3), 3) = pesK(ip(1),ip(2),ip(3), 3) &
+                pesK(ip(1),ip(2),ip(3), 4) = pesK(ip(1),ip(2),ip(3), 4) &
                                                + aimag(psiG1(i1,i2,i3)*conjg(psiG2(i1,i2,i3))) * weight
             end do
           end do
