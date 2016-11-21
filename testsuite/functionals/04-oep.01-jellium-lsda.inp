@@ -34,8 +34,8 @@ jradius = r_s * (N_electrons)^(1.0/3.0)
 %
 
 BoxShape = sphere
-Radius  = 13.0
-Spacing = 0.35
+Radius  = 20.0
+Spacing = 0.75
 
 XCFunctional = lda_x + lda_c_pw
 
