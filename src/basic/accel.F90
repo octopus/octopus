@@ -1038,11 +1038,13 @@ contains
     dim = ubound(globalsizes, dim = 1)
 
     ASSERT(dim == ubound(localsizes, dim = 1))
+
+    ! if one size is zero, there is nothing to do
+    if(any(globalsizes == 0)) return
+
     ASSERT(all(localsizes > 0))
-    ASSERT(all(globalsizes > 0))
     ASSERT(all(localsizes <= accel_max_workgroup_size()))
     ASSERT(all(mod(globalsizes, localsizes) == 0))
-
 
     gsizes(1:dim) = int(globalsizes(1:dim), 8)
     lsizes(1:dim) = int(localsizes(1:dim), 8)
