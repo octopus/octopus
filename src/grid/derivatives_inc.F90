@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 !> This module calculates the derivatives (gradients, Laplacians, etc.) 
 !! of a function. Note that the function whose derivative is to be calculated

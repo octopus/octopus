@@ -1,5 +1,4 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id$
 Test       : Cu2 HGH 
 Program    : octopus
 TestGroups : short-run, pseudopotentials

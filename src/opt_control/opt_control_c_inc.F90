@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
   subroutine opt_control_nlopt_func(val, n, x, grad, need_gradient, f_data)
     integer :: n, need_gradient

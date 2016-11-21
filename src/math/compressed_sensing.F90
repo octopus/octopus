@@ -13,7 +13,6 @@
 !! You should have received a copy of the GNU General Public License
 !! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 !!
-!! $Id: compressed_sensing.F90 7842 2011-05-05 16:20:39Z joseba $
   
 #include <global.h>
 

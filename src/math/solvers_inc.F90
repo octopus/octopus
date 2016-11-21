@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 
 !> The two following subroutines, sym_conjugate_gradients, and bi_conjugate_gradients,
