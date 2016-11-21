@@ -844,19 +844,21 @@ contains
     this%flags = flags
     fsize = int(size, 8)*types_get_size(type)
 
-    ASSERT(fsize >= 0)
+    if(this%size > 0) then
 
 #ifdef HAVE_OPENCL
-    this%mem = clCreateBuffer(accel%context%cl_context, flags, fsize, ierr)
-    if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateBuffer")
+      this%mem = clCreateBuffer(accel%context%cl_context, flags, fsize, ierr)
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateBuffer")
 #endif
 #ifdef HAVE_CUDA
-    call cuda_mem_alloc(this%cuda_ptr, fsize)
+      call cuda_mem_alloc(this%cuda_ptr, fsize)
 #endif
     
-    INCR(buffer_alloc_count, 1)
-    INCR(allocated_mem, fsize)
-
+      INCR(buffer_alloc_count, 1)
+      INCR(allocated_mem, fsize)
+      
+    end if
+    
     POP_SUB(accel_create_buffer_4)
   end subroutine accel_create_buffer_4
 
@@ -878,19 +880,21 @@ contains
     this%flags = flags
     fsize = int(size, 8)*types_get_size(type)
 
-    ASSERT(fsize >= 0)
-
+    if(fsize > 0) then
+      
 #ifdef HAVE_OPENCL
-    this%mem = clCreateBuffer(accel%context%cl_context, flags, fsize, ierr)
-    if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateBuffer")
+      this%mem = clCreateBuffer(accel%context%cl_context, flags, fsize, ierr)
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateBuffer")
 #endif
 #ifdef HAVE_CUDA
-    call cuda_mem_alloc(this%cuda_ptr, fsize)
+      call cuda_mem_alloc(this%cuda_ptr, fsize)
 #endif
-    
-    INCR(buffer_alloc_count, 1)
-    INCR(allocated_mem, fsize)
+      
+      INCR(buffer_alloc_count, 1)
+      INCR(allocated_mem, fsize)
 
+    end if
+      
     POP_SUB(accel_create_buffer_8)
   end subroutine accel_create_buffer_8
   
@@ -903,17 +907,21 @@ contains
 
     PUSH_SUB(accel_release_buffer)
 
+    if(this%size > 0) then
+
 #ifdef HAVE_OPENCL
-    call clReleaseMemObject(this%mem, ierr)
-    if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clReleaseMemObject")
+      call clReleaseMemObject(this%mem, ierr)
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clReleaseMemObject")
 #endif
 #ifdef HAVE_CUDA
-    call cuda_mem_free(this%cuda_ptr)
+      call cuda_mem_free(this%cuda_ptr)
 #endif
-    
-    INCR(buffer_alloc_count, -1)
-    INCR(allocated_mem, -int(this%size, 8)*types_get_size(this%type))
+      
+      INCR(buffer_alloc_count, -1)
+      INCR(allocated_mem, -int(this%size, 8)*types_get_size(this%type))
 
+    end if
+    
     this%size = 0
     this%flags = 0
 
