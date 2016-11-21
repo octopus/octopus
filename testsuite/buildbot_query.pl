@@ -17,7 +17,6 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 # 02110-1301, USA.
 #
-# $Id$
 
 # Query a buildbot using the Octopus/APE/BerkeleyGW testsuite infrastructure for
 # values obtained by each buildslave for a particular test and match.

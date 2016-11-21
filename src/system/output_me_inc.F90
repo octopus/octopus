@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 ! Now we have three "ks_multipoles" routines, for the 1, 2, and 3D
 ! cases. Eventually they can probably be merged back into one, once

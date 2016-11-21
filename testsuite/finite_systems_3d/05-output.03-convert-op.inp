@@ -1,5 +1,4 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 05-output.02-convert.inp 14678 2015-10-19 06:40:46Z xavier $
 
 ExperimentalFeatures = yes
 UnitsOutput = eV_Angstrom

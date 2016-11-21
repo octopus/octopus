@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
   type(double_grid_t),     intent(in)    :: this

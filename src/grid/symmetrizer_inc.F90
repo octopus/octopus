@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 !> supply field and symmfield, and/or field_vector and symmfield_vector
 subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_vector, suppress_warning)

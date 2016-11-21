@@ -17,7 +17,6 @@
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 ## 02110-1301, USA.
 ##
-## $Id: Makefile.am 2789 2007-03-24 12:47:37Z lorenzen $
 
 extradir = $(pkgdatadir)/pseudopotentials/extra
 

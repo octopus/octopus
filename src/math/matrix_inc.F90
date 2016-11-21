@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
   ! ---------------------------------------------------------
   subroutine X(matrix_init_data)(this, dim1, dim2, data, mpi_grp)

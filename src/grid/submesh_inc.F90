@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 R_TYPE function X(sm_integrate)(mesh, sm, ff) result(res)
   type(mesh_t),      intent(in) :: mesh
