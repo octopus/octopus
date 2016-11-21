@@ -46,6 +46,7 @@ module species_pot_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
+  use volume_oct_m
 
   implicit none
 
@@ -83,6 +84,7 @@ contains
     FLOAT :: xx(MAX_DIM), yy(MAX_DIM), rerho, imrho
     type(species_t), pointer :: species
     type(ps_t), pointer :: ps
+    type(volume_t) :: volume
 
 #if defined(HAVE_MPI)
     integer :: in_points_red
@@ -105,9 +107,15 @@ contains
         rho(1:mesh%np, isp) = x * rho(1:mesh%np, isp)
       end do
 
-    case (SPECIES_CHARGE_DENSITY)
+    case (SPECIES_CHARGE_DENSITY, SPECIES_JELLIUM_CHARGE_DENSITY)
       ! We put, for the electron density, the same as the positive density that 
       ! creates the external potential.
+      ! This code is repeated in get_density, and should therefore be cleaned!!!!!
+
+       if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
+          call volume_init(volume)
+          call volume_read_from_block(volume, trim(species_rho_string(species)))
+       end if
 
       call periodic_copy_init(pp, sb, spread(M_ZERO, dim=1, ncopies = sb%dim), &
         range = M_TWO * maxval(sb%lsize(1:sb%dim)))
@@ -119,15 +127,27 @@ contains
           call mesh_r(mesh, ip, rr, origin = atom%x, coords = xx)
           xx(1:sb%dim) = xx(1:sb%dim) + yy(1:sb%dim)
           rr = sqrt(dot_product(xx(1:sb%dim), xx(1:sb%dim)))
-          call parse_expression(rerho, imrho, sb%dim, xx, rr, M_ZERO, trim(species_rho_string(species)))
+          
+          rerho = M_ZERO
+          if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
+             if(volume_in_volume(sb, volume, xx, rr)) rerho = M_ONE
+          else
+             call parse_expression(rerho, imrho, sb%dim, xx, rr, M_ZERO, trim(species_rho_string(species)))
+          end if
           rho(ip, 1) = rho(ip, 1) + rerho
-        end do
+       end do
       end do
+
+      if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
+         call volume_end(volume)
+      end if
       call periodic_copy_end(pp)
+
       if(spin_channels > 1) then
         rho(:, 1) = M_HALF*rho(:, 1)
         rho(:, 2) = rho(:, 1)
       end if
+
       ! rescale to match the valence charge
       do isp = 1, spin_channels
         x = species_zval(species) / dmf_integrate(mesh, rho(:, isp))
@@ -371,6 +391,7 @@ contains
     integer :: icell, ipos, ip
     type(periodic_copy_t) :: pp
     type(ps_t), pointer :: ps
+    type(volume_t) :: volume
     logical :: have_point
 #ifdef HAVE_MPI
     real(8) :: local_min(2), global_min(2)
@@ -515,8 +536,13 @@ contains
       SAFE_DEALLOCATE_A(rho_p)
 
 
-    case(SPECIES_CHARGE_DENSITY)
+    case(SPECIES_CHARGE_DENSITY, SPECIES_JELLIUM_CHARGE_DENSITY)
 
+      if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
+        call volume_init(volume)
+        call volume_read_from_block(volume, trim(species_rho_string(species)))
+      end if
+       
       call periodic_copy_init(pp, mesh%sb, spread(M_ZERO, dim=1, ncopies = mesh%sb%dim), &
         range = M_TWO * maxval(mesh%sb%lsize(1:mesh%sb%dim)))
 
@@ -528,11 +554,23 @@ contains
           call mesh_r(mesh, ip, rr, origin = pos, coords = xx)
           xx(1:mesh%sb%dim) = xx(1:mesh%sb%dim) + yy(1:mesh%sb%dim)
           rr = sqrt(dot_product(xx(1:mesh%sb%dim), xx(1:mesh%sb%dim)))
-          call parse_expression(rerho, imrho1, mesh%sb%dim, xx, rr, M_ZERO, trim(species_rho_string(species)))
+
+          rerho = M_ZERO
+          if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
+            if(volume_in_volume(mesh%sb, volume, xx, rr)) rerho = M_ONE
+          else
+            call parse_expression(rerho, imrho1, mesh%sb%dim, xx, rr, M_ZERO, trim(species_rho_string(species)))
+          end if
           rho(ip) = rho(ip) - rerho
           if (cmplxscl) Imrho(ip) = Imrho(ip) - imrho1
         end do
       end do
+
+      if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
+         call volume_end(volume)
+      end if
+      call periodic_copy_end(pp)
+
       if (cmplxscl) then 
         rr = M_ONE ! XXXXX normalization
         rho(1:mesh%np) = rr * rho(1:mesh%np)
@@ -541,8 +579,6 @@ contains
         rr = species_zval(species) / abs(dmf_integrate(mesh, rho(:)))
         rho(1:mesh%np) = rr * rho(1:mesh%np)
       end if
-
-      call periodic_copy_end(pp)
 
     end select
 
@@ -772,7 +808,7 @@ contains
 
         nullify(ps)
         
-      case(SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN, SPECIES_CHARGE_DENSITY)
+      case(SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN, SPECIES_CHARGE_DENSITY, SPECIES_JELLIUM_CHARGE_DENSITY)
         vl(1:mesh%np) = M_ZERO
         
       end select
