@@ -156,7 +156,6 @@ int parse_input(const char *file_in, int set_used)
 	      rec->value.block->lines = (sym_block_line *)
 		realloc((void *)rec->value.block->lines, sizeof(sym_block_line)*(l+1));
 	      rec->value.block->lines[l].n = 0;
-	      rec->value.block->lines[l].fields = NULL;
 	      
 	      /* parse columns */
 	      for(s1 = s; (tok = strtok(s1, "|\t")) != NULL; s1 = NULL){
@@ -170,9 +169,6 @@ int parse_input(const char *file_in, int set_used)
 		free(mtxel);
 
 		rec->value.block->lines[l].n++;
-		rec->value.block->lines[l].fields = (char **)
-		  realloc((void *)rec->value.block->lines[l].fields, sizeof(char *)*(col+1));
-		rec->value.block->lines[l].fields[col] = tok2;
 	      }
 	    }
 	  }while(c != EOF && *s != '%');
@@ -408,20 +404,6 @@ int parse_block_cols(const sym_block *blk, int l)
   
   return blk->lines[l].n;
 }
-
-static int parse_block_work(const sym_block *blk, int l, int col, parse_result *r)
-{
-  assert(blk!=NULL);
-  assert(l>=0 && l<blk->n);
-
-  if(col < 0 || col >= blk->lines[l].n){
-    fprintf(stderr, "Parser error: column %i out of range [0,%i] when parsing block '%s'.\n", col, blk->lines[l].n-1, blk->name);
-    exit(1);
-  }
-  
-  return parse_exp(blk->lines[l].fields[col], r);
-}
-
 
 int parse_block_int(const sym_block *blk, int l, int col, int *r)
 {
