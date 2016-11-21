@@ -147,7 +147,7 @@ contains
     type(ps_cpi_t) :: ps_cpi !< Fritz-Haber pseudopotential
     type(ps_fhi_t) :: ps_fhi !< Fritz-Haber pseudopotential (from abinit)
     type(ps_upf_t) :: ps_upf !< In case UPF format is used
-    type(hgh_t)    :: psp    !< In case Hartwigsen-Goedecker-Hutter ps are used.
+    type(hgh_t)    :: ps_hgh !< In case Hartwigsen-Goedecker-Hutter ps are used.
     type(ps_qso_t) :: ps_qso !< quantum-simulation.org xml format (from qbox)
 
     PUSH_SUB(ps_init)
@@ -255,16 +255,16 @@ contains
       end if
 
     case(PS_TYPE_HGH)
-      call hgh_init(psp, trim(filename))
-      call valconf_copy(ps%conf, psp%conf)
+      call hgh_init(ps_hgh, trim(filename))
+      call valconf_copy(ps%conf, ps_hgh%conf)
 
       ps%z        = z
       ps%kbc      = 3
       ps%l_loc    = -1
-      ps%l_max    = psp%l_max
+      ps%l_max    = ps_hgh%l_max
 
-      call hgh_process(psp)
-      call logrid_copy(psp%g, ps%g)
+      call hgh_process(ps_hgh)
+      call logrid_copy(ps_hgh%g, ps%g)
 
     case(PS_TYPE_UPF)
       call ps_upf_init(ps_upf, trim(filename))
@@ -360,8 +360,8 @@ contains
       call ps_fhi_end(ps_fhi)
     case(PS_TYPE_HGH)
       SAFE_ALLOCATE(ps%k    (0:ps%l_max, 1:ps%kbc, 1:ps%kbc))
-      call hgh_load(ps, psp)
-      call hgh_end(psp)
+      call hgh_load(ps, ps_hgh)
+      call hgh_end(ps_hgh)
     case(PS_TYPE_UPF)
       call ps_upf_load(ps, ps_upf)
       call ps_upf_end(ps_upf)
@@ -699,9 +699,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine hgh_load(ps, psp)
+  subroutine hgh_load(ps, ps_hgh)
     type(ps_t),  intent(inout) :: ps
-    type(hgh_t), intent(inout) :: psp
+    type(hgh_t), intent(inout) :: ps_hgh
 
     integer :: l, ll
     FLOAT :: x
@@ -709,15 +709,15 @@ contains
     PUSH_SUB(hgh_load)
 
     ! Fixes some components of ps
-    ps%z_val = psp%z_val
+    ps%z_val = ps_hgh%z_val
     ps%nlcc = .false.
     if(ps%l_max>=0) then
-      ps%rc_max = CNST(1.1) * maxval(psp%kbr(0:ps%l_max)) ! Increase a little.
+      ps%rc_max = CNST(1.1) * maxval(ps_hgh%kbr(0:ps%l_max)) ! Increase a little.
     else
       ps%rc_max = M_ZERO
     end if
-    ps%h(0:ps%l_max, 1:ps%kbc, 1:ps%kbc) = psp%h(0:ps%l_max, 1:ps%kbc, 1:ps%kbc)
-    ps%k(0:ps%l_max, 1:ps%kbc, 1:ps%kbc) = psp%k(0:ps%l_max, 1:ps%kbc, 1:ps%kbc)
+    ps%h(0:ps%l_max, 1:ps%kbc, 1:ps%kbc) = ps_hgh%h(0:ps%l_max, 1:ps%kbc, 1:ps%kbc)
+    ps%k(0:ps%l_max, 1:ps%kbc, 1:ps%kbc) = ps_hgh%k(0:ps%l_max, 1:ps%kbc, 1:ps%kbc)
 
     ! Fixes the occupations
     if(ps%ispin == 2) then
@@ -743,37 +743,37 @@ contains
 
       PUSH_SUB(hgh_load.get_splines)
 
-      SAFE_ALLOCATE(hato(1:psp%g%nrval))
-      SAFE_ALLOCATE(dens(1:psp%g%nrval))
+      SAFE_ALLOCATE(hato(1:ps_hgh%g%nrval))
+      SAFE_ALLOCATE(dens(1:ps_hgh%g%nrval))
 
       ! Interpolate the KB-projection functions
-      do l = 0, psp%l_max
+      do l = 0, ps_hgh%l_max
         do j = 1, 3
           hato = M_ZERO
-          nrc = nint(log(psp%kbr(l)/psp%g%b + M_ONE)/psp%g%a) + 1
-          hato(1:nrc) = psp%kb(1:nrc, l, j)
-          call spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%kb(l, j))
+          nrc = nint(log(ps_hgh%kbr(l)/ps_hgh%g%b + M_ONE)/ps_hgh%g%a) + 1
+          hato(1:nrc) = ps_hgh%kb(1:nrc, l, j)
+          call spline_fit(ps_hgh%g%nrval, ps_hgh%g%rofi, hato, ps%kb(l, j))
         end do
       end do
 
       ! Now the part corresponding to the local pseudopotential
       ! where the asymptotic part is subtracted
-      call spline_fit(psp%g%nrval, psp%g%rofi, psp%vlocal, ps%vl)
+      call spline_fit(ps_hgh%g%nrval, ps_hgh%g%rofi, ps_hgh%vlocal, ps%vl)
 
       ! Define the table for the pseudo-wavefunction components (using splines)
       ! with a correct normalization function
       do is = 1, ps%ispin
         dens = CNST(0.0)
         do l = 1, ps%conf%p
-          hato(2:psp%g%nrval) = psp%rphi(2:psp%g%nrval, l)/psp%g%rofi(2:psp%g%nrval)
+          hato(2:ps_hgh%g%nrval) = ps_hgh%rphi(2:ps_hgh%g%nrval, l)/ps_hgh%g%rofi(2:ps_hgh%g%nrval)
           hato(1) = hato(2)
 
-          forall(ip = 1:psp%g%nrval) dens(ip) = dens(ip) + ps%conf%occ(l, is)*hato(ip)**2/(M_FOUR*M_PI)
+          forall(ip = 1:ps_hgh%g%nrval) dens(ip) = dens(ip) + ps%conf%occ(l, is)*hato(ip)**2/(M_FOUR*M_PI)
           
-          call spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%ur(l, is))
-          call spline_fit(psp%g%nrval, psp%g%r2ofi, hato, ps%ur_sq(l, is))
+          call spline_fit(ps_hgh%g%nrval, ps_hgh%g%rofi, hato, ps%ur(l, is))
+          call spline_fit(ps_hgh%g%nrval, ps_hgh%g%r2ofi, hato, ps%ur_sq(l, is))
         end do
-        call spline_fit(psp%g%nrval, psp%g%rofi, dens, ps%density(is))
+        call spline_fit(ps_hgh%g%nrval, ps_hgh%g%rofi, dens, ps%density(is))
       end do
 
       SAFE_DEALLOCATE_A(hato)
