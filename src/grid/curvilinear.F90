@@ -22,7 +22,6 @@
 module curvilinear_oct_m
   use curv_briggs_oct_m
   use curv_gygi_oct_m
-  use curv_irecs_oct_m
   use curv_modine_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -53,16 +52,13 @@ module curvilinear_oct_m
     CURV_METHOD_UNIFORM = 1,    &
     CURV_METHOD_GYGI    = 2,    &
     CURV_METHOD_BRIGGS  = 3,    &
-    CURV_METHOD_MODINE  = 4,    &
-    CURV_METHOD_IRECS   = 5
-    
+    CURV_METHOD_MODINE  = 4
 
   type curvilinear_t
     integer :: method
     type(curv_gygi_t)   :: gygi
     type(curv_briggs_t) :: briggs
     type(curv_modine_t) :: modine
-    type(curv_irecs_t)  :: irecs
   end type curvilinear_t
 
   character(len=23), parameter :: dump_tag = '*** curvilinear_dump **'
@@ -102,9 +98,6 @@ contains
     !% The deformation of the grid is done according to the scheme described by
     !% Modine [N.A. Modine, G. Zumbach and E. Kaxiras, <i>Phys. Rev. B</i> <b>55</b>, 10289 (1997)]
     !% (NOT WORKING).
-    !%Option curv_irecs 5
-    !% Implements infinite range exterior complex scaling with exponential grid
-    !% Scrinzi [M. Weinmuller, M. Weinmuller, J. Rohland, and A. Scrinzi, arXiv:1509.04947 (2015)]
     !%End
     call parse_variable('CurvMethod', CURV_METHOD_UNIFORM, cv%method)
     if(.not.varinfo_valid_option('CurvMethod', cv%method)) call messages_input_error('CurvMethod')
@@ -120,8 +113,6 @@ contains
       call curv_briggs_init(cv%briggs, sb)
     case(CURV_METHOD_MODINE)
       call curv_modine_init(cv%modine, sb, geo, spacing)
-    case(CURV_METHOD_IRECS)
-      call curv_irecs_init(cv%irecs, sb)
     end select
 
     POP_SUB(curvilinear_init)
@@ -141,8 +132,6 @@ contains
       call curv_briggs_copy(this_out%briggs, this_in%briggs)
     case(CURV_METHOD_MODINE)
       call curv_modine_copy(this_out%modine, this_in%modine)
-    case(CURV_METHOD_IRECS)
-      call curv_irecs_copy(this_out%irecs, this_in%irecs)
     end select
     POP_SUB(curvilinear_copy)
     return
@@ -161,8 +150,6 @@ contains
       !
     case(CURV_METHOD_MODINE)
       call curv_modine_end(cv%modine)
-    case(CURV_METHOD_IRECS)
-      call curv_irecs_end(cv%irecs)
     end select
 
     POP_SUB(curvilinear_end)
@@ -170,12 +157,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine curvilinear_chi2x(sb, cv, chi, x, phx)
+  subroutine curvilinear_chi2x(sb, cv, chi, x)
     type(simul_box_t),   intent(in)  :: sb
     type(curvilinear_t), intent(in)  :: cv
     FLOAT,               intent(in)  :: chi(MAX_DIM)  !< chi(conf%dim)
     FLOAT,               intent(out) :: x(MAX_DIM)    !< x(conf%dim)
-    CMPLX, optional,     intent(out) :: phx(MAX_DIM)  !< x(conf%dim)
 
     ! no push_sub because called too frequently
     x = M_ZERO
@@ -189,8 +175,6 @@ contains
       call curv_briggs_chi2x(sb, cv%briggs, chi, x)
     case(CURV_METHOD_MODINE)
       call curv_modine_chi2x(sb, cv%modine, chi, x)
-    case(CURV_METHOD_IRECS)
-      call curv_irecs_chi2x(sb, cv%irecs, chi, x , phx)
     end select
 
   end subroutine curvilinear_chi2x
@@ -215,8 +199,6 @@ contains
     case(CURV_METHOD_BRIGGS, CURV_METHOD_MODINE)
       message(1) = "Internal error in curvilinear_x2chi"
       call messages_fatal(1)
-    case(CURV_METHOD_IRECS)
-      call curv_irecs_x2chi(sb, cv%irecs, x, chi)
     end select
 
     POP_SUB(curvilinear_x2chi)
@@ -254,12 +236,6 @@ contains
     case(CURV_METHOD_MODINE)
       call curv_modine_jacobian_inv(sb, cv%modine, chi, dummy, Jac)
       jdet = M_ONE*lalg_determinant(sb%dim, Jac, invert = .false.)
-    case(CURV_METHOD_IRECS)
-      call curv_irecs_jacobian(sb, cv%irecs, chi, dummy, Jac)
-      jdet = M_ONE
-      do i = 1, sb%dim
-        jdet = jdet * Jac(i,i) ! Jacobian is diagonal in this method
-      end do
     end select
 
     SAFE_DEALLOCATE_A(Jac)
@@ -293,11 +269,6 @@ contains
     case(CURV_METHOD_MODINE)
       write(message(1), '(a)') ' Curvilinear  Method = modine'
       call messages_info(1, unit)
-
-    case(CURV_METHOD_IRECS)
-      write(message(1), '(a)') ' Curvilinear  Method = irecs'
-      call messages_info(1, unit)
-
 
     end select
 

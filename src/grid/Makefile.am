@@ -69,9 +69,7 @@ libgrid_a_SOURCES =       \
 	hilbert.c               \
 	mesh_interpolation.F90  \
 	vtk.F90                 \
-	sphericalmesh.F90       \
-  curv_irecs.F90
-
+	sphericalmesh.F90
 
 noinst_HEADERS =                   \
 	batch_inc.F90              \
@@ -93,7 +91,7 @@ noinst_HEADERS =                   \
 	symmetrizer_inc.F90        \
 	batch_ops_inc.F90          \
 	mesh_interpolation_inc.F90 \
-	vtk_inc.F90                
+	vtk_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -108,9 +106,8 @@ cube_function.o : cube_function.F90 cube_function_inc.F90 mesh_cube_parallel_map
 cube.o : cube.F90 index.o par_vec.o
 curv_briggs.o : curv_briggs.F90  
 curv_gygi.o : curv_gygi.F90  
-curvilinear.o : curvilinear.F90  curv_modine.o curv_gygi.o curv_briggs.o curv_irecs.o
-curv_modine.o : curv_modine.F90 
-curv_irecs.o : curv_irecs.F90  
+curvilinear.o : curvilinear.F90  curv_modine.o curv_gygi.o curv_briggs.o 
+curv_modine.o : curv_modine.F90  
 derivatives.o : derivatives.F90 derivatives_inc.F90 stencil_variational.o stencil_starplus.o stencil_stargeneral.o stencil_star.o stencil_cube.o  nl_operator.o mesh.o batch.o transfer_table.o mesh_function.o boundaries.o
 double_grid.o : double_grid.F90 double_grid_apply_inc.F90 submesh.o mesh_function.o mesh.o curvilinear.o 
 fourier_shell.o : fourier_shell.F90 cube_function.o mesh.o

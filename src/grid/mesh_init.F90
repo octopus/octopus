@@ -445,7 +445,7 @@ subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
   type(mpi_grp_t),           intent(in)    :: mpi_grp
   type(mesh_t),    optional, intent(in)    :: parent
 
-  integer :: ip, iunit, ii
+  integer :: ip
 
   PUSH_SUB(mesh_init_stage_3)
   call profiling_in(mesh_init_prof, "MESH_INIT")
@@ -488,14 +488,6 @@ subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
   call mesh_cube_map_init(mesh%cube_map, mesh%idx, mesh%np_global)
 
   call mesh_get_vol_pp(mesh%sb)
-
-  if(debug%info) then
-    iunit = io_open('debug/mesh', action='write')
-    do ii = 1, mesh%np
-      write(iunit, '(i8,99f18.8)') ii, mesh_x_global(mesh, ii)
-    end do
-    call io_close(iunit)
-  end if
 
   call profiling_out(mesh_init_prof)
   POP_SUB(mesh_init_stage_3)
