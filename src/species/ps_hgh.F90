@@ -35,7 +35,7 @@ module ps_hgh_oct_m
 
   private
   public  ::      &
-    hgh_t,        &
+    ps_hgh_t,     &
     hgh_init,     &
     hgh_process,  &
     hgh_debug,    &
@@ -44,7 +44,7 @@ module ps_hgh_oct_m
   !> The following data type contains:
   !!   (a) the pseudopotential parameters, as read from a *.hgh file,
   !!   (b) auxiliary intermediate functions, to store stuff before passing it to the "ps" variable.
-  type hgh_t
+  type ps_hgh_t
     !< HGH parameters.
     character(len=5) :: atom_name
     integer          :: z_val
@@ -64,7 +64,7 @@ module ps_hgh_oct_m
 
     !> Logarithmic grid parameters
     type(logrid_t) :: g
-  end type hgh_t
+  end type ps_hgh_t
 
   FLOAT, parameter :: eps = CNST(1.0e-8)
 
@@ -80,8 +80,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine hgh_init(psp, filename)
-    type(hgh_t),    intent(inout) :: psp
-    character(len=*), intent(in)  :: filename
+    type(ps_hgh_t),   intent(inout) :: psp
+    character(len=*), intent(in)    :: filename
 
     integer :: iunit, i
 
@@ -130,7 +130,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine hgh_end(psp)
-    type(hgh_t), intent(inout) :: psp
+    type(ps_hgh_t), intent(inout) :: psp
 
     PUSH_SUB(hgh_end)
 
@@ -149,7 +149,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine hgh_process(psp)
-    type(hgh_t), intent(inout) :: psp
+    type(ps_hgh_t), intent(inout) :: psp
 
     integer :: l, i, ierr
     FLOAT, pointer :: ptr(:)
@@ -191,9 +191,9 @@ contains
 
   ! ---------------------------------------------------------
   function load_params(unit, params)
-    integer,     intent(in)  :: unit        ! where to read from
-    type(hgh_t), intent(out) :: params      ! obvious
-    integer                  :: load_params ! 0 if success,
+    integer,        intent(in)  :: unit        ! where to read from
+    type(ps_hgh_t), intent(out) :: params      ! obvious
+    integer                     :: load_params ! 0 if success,
     ! 1 otherwise.
 
     integer :: i, iostat, j, k
@@ -304,7 +304,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine get_cutoff_radii(psp)
-    type(hgh_t), intent(inout)     :: psp
+    type(ps_hgh_t), intent(inout)     :: psp
 
     integer  :: ir, l, i
     FLOAT :: dincv, tmp
@@ -331,9 +331,9 @@ contains
   ! ---------------------------------------------------------
   ! Local pseudopotential, both in real and reciprocal space.
   function vlocalr_scalar(r, p)
-    type(hgh_t), intent(in)     :: p
-    FLOAT, intent(in)           :: r
-    FLOAT                       :: vlocalr_scalar
+    type(ps_hgh_t), intent(in)    :: p
+    FLOAT,          intent(in)    :: r
+    FLOAT                         :: vlocalr_scalar
 
     FLOAT :: r1, r2, r4, r6
 
@@ -360,9 +360,9 @@ contains
 
   ! ---------------------------------------------------------
   function vlocalr_vector(r, p)
-    type(hgh_t), intent(in)      :: p
-    FLOAT, intent(in)            :: r(:)
-    FLOAT, pointer               :: vlocalr_vector(:)
+    type(ps_hgh_t), intent(in)    :: p
+    FLOAT, intent(in)             :: r(:)
+    FLOAT, pointer                :: vlocalr_vector(:)
 
     integer :: i
 
@@ -379,9 +379,9 @@ contains
 
   ! ---------------------------------------------------------
   function vlocalg(g, p)
-    type(hgh_t), intent(in)     :: p
-    FLOAT, intent(in)           :: g
-    FLOAT                       :: vlocalg
+    type(ps_hgh_t), intent(in)    :: p
+    FLOAT, intent(in)             :: g
+    FLOAT                         :: vlocalg
 
     FLOAT :: g1, g2, g4, g6
 
@@ -403,9 +403,11 @@ contains
 
   ! ---------------------------------------------------------
   function projectorr_scalar(r, p, i, l)
-    type(hgh_t), intent(in)     :: p
-    FLOAT, intent(in)           :: r
-    integer, intent(in)         :: i, l
+    type(ps_hgh_t), intent(in)    :: p
+    FLOAT,          intent(in)    :: r
+    integer,        intent(in)    :: i
+    integer,        intent(in)    :: l
+    
     FLOAT                       :: projectorr_scalar
 
     FLOAT :: x, y, rr
@@ -430,10 +432,11 @@ contains
 
   ! ---------------------------------------------------------
   function projectorr_vector(r, p, i, l)
-    type(hgh_t), intent(in)     :: p
-    FLOAT, intent(in)           :: r(:)
-    integer, intent(in)         :: i, l
-    FLOAT, pointer              :: projectorr_vector(:)
+    type(ps_hgh_t), intent(in)    :: p
+    FLOAT,          intent(in)    :: r(:)
+    integer,        intent(in)    :: i
+    integer,        intent(in)    :: l
+    FLOAT,          pointer       :: projectorr_vector(:)
 
     integer :: j
 
@@ -450,10 +453,11 @@ contains
 
   ! ---------------------------------------------------------
   function projectorg(g, p, i, l)
-    type(hgh_t), intent(in)     :: p
-    FLOAT, intent(in)           :: g
-    integer, intent(in)         :: i, l
-    FLOAT                       :: projectorg
+    type(ps_hgh_t), intent(in)    :: p
+    FLOAT,          intent(in)    :: g
+    integer,        intent(in)    :: i
+    integer,        intent(in)    :: l
+    FLOAT                         :: projectorg
 
     FLOAT :: pif, ex
 
@@ -512,8 +516,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine solve_schroedinger(psp, ierr)
-    type(hgh_t), intent(inout) :: psp
-    integer,     intent(out)   :: ierr
+    type(ps_hgh_t), intent(inout) :: psp
+    integer,        intent(out)   :: ierr
 
     integer :: iter, ir, l, nnode, nprin, i, j, irr, n, k
     FLOAT :: vtot, a2b4, diff, nonl
@@ -641,7 +645,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine hgh_debug(psp, dir)
-    type(hgh_t), intent(in) :: psp
+    type(ps_hgh_t),   intent(in) :: psp
     character(len=*), intent(in) :: dir
 
     integer :: hgh_unit, loc_unit, dat_unit, kbp_unit, wav_unit, i, l, k

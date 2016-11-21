@@ -147,7 +147,7 @@ contains
     type(ps_cpi_t) :: ps_cpi !< Fritz-Haber pseudopotential
     type(ps_fhi_t) :: ps_fhi !< Fritz-Haber pseudopotential (from abinit)
     type(ps_upf_t) :: ps_upf !< In case UPF format is used
-    type(hgh_t)    :: ps_hgh !< In case Hartwigsen-Goedecker-Hutter ps are used.
+    type(ps_hgh_t) :: ps_hgh !< In case Hartwigsen-Goedecker-Hutter ps are used.
     type(ps_qso_t) :: ps_qso !< quantum-simulation.org xml format (from qbox)
 
     PUSH_SUB(ps_init)
@@ -700,8 +700,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine hgh_load(ps, ps_hgh)
-    type(ps_t),  intent(inout) :: ps
-    type(hgh_t), intent(inout) :: ps_hgh
+    type(ps_t),     intent(inout) :: ps
+    type(ps_hgh_t), intent(inout) :: ps_hgh
 
     integer :: l, ll
     FLOAT :: x
