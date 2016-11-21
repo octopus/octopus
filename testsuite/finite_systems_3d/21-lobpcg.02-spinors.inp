@@ -1,5 +1,4 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id$
 #
 # This input file is the same as 01-carbon_atom.01-ground_state.inp
 # except for the usage of spinors and the parallel LOBPCG.

@@ -158,18 +158,18 @@ RashbaSpinOrbitCoupling = lambda
 # explained above:
 GyroMagneticRatio=gfactor * meff 
 
-#B=77.623978916051/sqrt(epsilon)
+#mag=77.623978916051/sqrt(epsilon)
 # This i the magnetic field, in teslas:
-B = 1
+mag_tesla = 1
 # Now we convert to atomic units:
-B = B * (1.0/1715.25539471980586102447) 
+mag_au = mag_tesla * (1.0/1715.25539471980586102447) 
 # Now we convert to effective atomic units:
-B = B * sqrt(epsilon^5) / (meff^2) 
+mag_effau = mag_au * sqrt(epsilon^5) / (meff^2) 
 # And now we divide by sqrt(epsilon), as described above:
-B = B/ sqrt(epsilon)
+mag = mag_effau/ sqrt(epsilon)
 
-%StaticMagneticField
-0 | 0 | B
+%StaticmagneticField
+0 | 0 | mag
 %
 
 

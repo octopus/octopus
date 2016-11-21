@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -263,33 +262,28 @@ contains
     !%Section Time-Dependent
     !%Description
     !% The block <tt>TDExternalFields</tt> describes the type and shape of time-dependent 
-    !% external perturbations that are applied to the system.
+    !% external perturbations that are applied to the system, in the form
+    !% <math>f(x,y,z) \cos(\omega t + \phi (t)) g(t)</math>, where <math>f(x,y,z)</math> is defined by
+    !% by a field type and polarization or a scalar potential, as below; <math>\omega</math>
+    !% is defined by <tt>omega</tt>; <math>g(t)</math> is defined by
+    !% <tt>envelope_function_name</tt>; and <math>\phi(t)</math> is the (time-dependent) phase from <tt>phase</tt>.
     !%
-    !% Note: This perturbations are only applied for time-dependent runs. If
+    !% These perturbations are only applied for time-dependent runs. If
     !% you want the value of the perturbation at time zero to be
     !% applied for time-independent runs, use <tt>TimeZero = yes</tt>.
     !%
     !% Each line of the block describes an external field; this way you can actually have more
     !% than one laser (<i>e.g.</i> a "pump" and a "probe").
     !%
-    !% The syntax of each line is:
-    !%
-    !% <tt>%TDExternalField
-    !% <br>&nbsp;&nbsp; type | ...other descriptors...
-    !% <br>%</tt>
-    !%
-    !% The first element of each line describes which kind of external field is described
-    !% by the line: (i) an electric field (<tt>electric_field</tt>); (ii) a magnetic field 
-    !% (<tt>magnetic_field</tt>); (iii) a vector potential (<tt>vector_potential</tt>) -- this option, 
-    !% in the current version, is a field constant in space, which permits us to describe 
-    !% an electric perturbation in the velocity gauge; (iv) an arbitrary scalar potential
-    !% (<tt>scalar_potential</tt>). 
-    !% The last element is optional and indicates the carrier phase function <math>\phi(t)</math>. 
-    !% It is a time dependent function and as such it should match one of the function names given in 
-    !% the first column of the <tt>TDFunctions</tt> block.
-    !%
-    !% The "other descriptors" depend on which kind of external field has been indicated in 
-    !% the first column.
+    !% There are two ways to specify <math>f(x,y,z)</math> but both use the same <tt>omega | envelope_function_name [| phase]</tt>
+    !% for the time-dependence.
+    !% The float <tt>omega</tt> will be the carrier frequency of the
+    !% pulse (in energy units). The envelope of the field is a time-dependent function whose definition
+    !% must be given in a <tt>TDFunctions</tt> block. <tt>envelope_function_name</tt> is a string (and therefore
+    !% it must be surrounded by quotation marks) that must match one of the function names
+    !% given in the first column of the <tt>TDFunctions</tt> block.
+    !% <tt>phase</tt> is optional and is taken to be zero if not provided, and is also a string specifying
+    !% a time-dependent function.
     !%
     !% (A) type = <tt>electric field, magnetic field, vector_potential</tt>
     !%
@@ -299,22 +293,19 @@ contains
     !% <br>&nbsp;&nbsp; type | nx | ny | nz | omega | envelope_function_name | phase
     !% <br>%</tt>
     !%
-    !% The three (possibly complex) numbers (<i>nx</i>, <i>ny</i>, <i>nz</i>) mark the polarization 
-    !% direction of the field. The float <tt>omega</tt> will be the carrier frequency of the
-    !% pulse (in energy units). The envelope of the field is a time-dependent function whose definition
-    !% must be given in a <tt>TDFunctions</tt> block. <tt>envelope_function_name</tt> is a string (and therefore
-    !% it must be surrounded by quotation marks) that must match one of the function names
-    !% given in the first column of the <tt>TDFunctions</tt> block. 
+    !% The <tt>vector_potential</tt> option (constant in space) permits us to describe
+    !% an electric perturbation in the velocity gauge.
+    !% The three (possibly complex) numbers (<tt>nx</tt>, <tt>ny</tt>, <tt>nz</tt>) mark the polarization
+    !% direction of the field.
     !%
     !% (B) type = <tt>scalar_potential</tt>
     !%
     !% <tt>%TDExternalFields
-    !% <br>&nbsp;&nbsp; scalar_potential | "scalar_expression" | freq | envelope_function_name | phase
+    !% <br>&nbsp;&nbsp; scalar_potential | "spatial_expression" | omega | envelope_function_name | phase
     !% <br>%</tt>
     !%
-    !% The scalar potential is not just a dipole, but any expression given by the string
-    !% "scalar_expression". The temporal shape is determined by the envelope function
-    !% defined by <tt>envelope_function_name</tt>.
+    !% The scalar potential is any expression of the spatial coordinates given by the string
+    !% "spatial_expression", allowing a field beyond the dipole approximation.
     !%
     !% A NOTE ON UNITS:
     !%

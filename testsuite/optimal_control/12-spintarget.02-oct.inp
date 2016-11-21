@@ -67,7 +67,6 @@ gfactor = -0.44
 # MISSING: References with typical values for confining
 # potentials.
 #*********************************************************
-omega_meV = 0.001
 omega_Ha = 0.001 * ( 1e3 / 27211.384)
 omega = omega_Ha * (epsilon^2/meff)
 
@@ -104,16 +103,16 @@ Spacing = 1.0
 GyroMagneticRatio = gfactor * meff 
 
 # This i the magnetic field, in teslas:
-B = 1.0
+mag_tesla = 1.0
 # Now we convert to atomic units:
-B = B * (1.0/1715.25539471980586102447) 
+mag_au = mag_tesla * (1.0/1715.25539471980586102447) 
 # Now we convert to effective atomic units:
-B = B * sqrt(epsilon^5) / (meff^2) 
+mag_effau = mag_au * sqrt(epsilon^5) / (meff^2) 
 # And now we divide by sqrt(epsilon):
-B = B / sqrt(epsilon)
+mag = mag_effau / sqrt(epsilon)
 
 %StaticMagneticField
-0 | 0 | B
+0 | 0 | mag
 %
 
 
@@ -125,21 +124,12 @@ B = B / sqrt(epsilon)
 #*********************************************************
 
 # First, we express lambda in meV*nm
-lambda = 0.05 * ( 1.0e2 )
+lambda_mevnm = 0.05 * ( 1.0e2 )
 # Then, we transform it into Ha * a0
-lambda = lambda * 0.00069446161
+lambda_haa0 = lambda_mevnm * 0.00069446161
 # And then, to (Ha*) * (a0*)
-lambda = lambda * (epsilon^2/meff) * (meff/epsilon)
+lambda = lambda_haa0 * (epsilon^2/meff) * (meff/epsilon)
 RashbaSpinOrbitCoupling = lambda
-
-
-#*********************************************************
-#Eigensolver parameters
-#*********************************************************
-EigenSolver = cg
-#EigenSolverTolerance = 1.0e-6
-Mixing = 1.0
-MixingScheme = linear
 
 
 #*********************************************************

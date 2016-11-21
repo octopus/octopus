@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -513,6 +512,20 @@ contains
     call profiling_out(prof_init)
 #endif
 
+    ! Get some device information that we will need later
+    
+    ! total memory
+#ifdef HAVE_OPENCL
+    call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_GLOBAL_MEM_SIZE, accel%global_memory_size, cl_status)
+    call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_LOCAL_MEM_SIZE, accel%local_memory_size, cl_status)
+    call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_MAX_WORK_GROUP_SIZE, accel%max_workgroup_size, cl_status)
+#endif
+#ifdef HAVE_CUDA
+    call cuda_device_total_memory(accel%device%cuda_device, accel%global_memory_size)
+    call cuda_device_shared_memory(accel%device%cuda_device, accel%local_memory_size)
+    call cuda_device_max_threads_per_block(accel%device%cuda_device, accel%max_workgroup_size)
+#endif
+      
     if(mpi_grp_is_root(base_grp)) call device_info()
 
     ! now initialize the kernels
@@ -674,25 +687,10 @@ contains
       call messages_new_line()
 #endif
 
-      ! TOTAL MEMORY
-#ifdef HAVE_OPENCL
-      call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_GLOBAL_MEM_SIZE, accel%global_memory_size, cl_status)
-#endif
-#ifdef HAVE_CUDA
-      call cuda_device_total_memory(accel%device%cuda_device, accel%global_memory_size)
-#endif
       call messages_write('      Device memory          :')
       call messages_write(accel%global_memory_size, units = unit_megabytes)
       call messages_new_line()
 
-
-      ! SHARED/LOCAL MEMORY
-#ifdef HAVE_OPENCL
-      call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_LOCAL_MEM_SIZE, accel%local_memory_size, cl_status)
-#endif
-#ifdef HAVE_CUDA
-      call cuda_device_shared_memory(accel%device%cuda_device, accel%local_memory_size)
-#endif
       call messages_write('      Local/shared memory    :')
       call messages_write(accel%local_memory_size, units = unit_kilobytes)
       call messages_new_line()
@@ -715,13 +713,6 @@ contains
       call messages_new_line()
 #endif
 
-      ! Workgroup/block size
-#ifdef HAVE_OPENCL
-      call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_MAX_WORK_GROUP_SIZE, accel%max_workgroup_size, cl_status)
-#endif
-#ifdef HAVE_CUDA
-      call cuda_device_max_threads_per_block(accel%device%cuda_device, accel%max_workgroup_size)
-#endif
       call messages_write('      Max. group/block size  :')
       call messages_write(accel%max_workgroup_size)
       call messages_new_line()

@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: floquet.F90 15203 2016-03-19 13:15:05Z xavier $
 
 #include "global.h"
 
@@ -63,6 +62,7 @@ program oct_floquet
   use utils_oct_m
   use varinfo_oct_m
   use v_ks_oct_m
+  use multicomm_oct_m
 
   implicit none
 

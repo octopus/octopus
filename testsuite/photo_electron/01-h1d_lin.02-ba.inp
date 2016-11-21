@@ -35,14 +35,8 @@ TheoryLevel = independent_particles
 # TD
 #############################
 
-
-dt = 0.008
-T = 60
-
-TDTimeStep = dt
-TDPropagationTime = T
-
-
+TDTimeStep = 0.008
+TDPropagationTime = 60
 
 #############################
 # PES

@@ -40,9 +40,8 @@ Bz = 5.0
 P_c = 137.036
 
 
-T = (1/4) * (2*pi*P_c)/Bz
+TDPropagationTime = (1/4) * (2*pi*P_c)/Bz
 dt = 0.50
-TDPropagationTime = T
 TDPropagator = aetrs
 TDExponentialMethod = lanczos
 TDExpOrder = 16

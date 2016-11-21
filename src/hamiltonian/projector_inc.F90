@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 !------------------------------------------------------------------------------
 !> X(project_psi) calculates the action of a projector on the psi wavefunction.

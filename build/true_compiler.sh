@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # 
-# $Id$
 
 # If the argument is mpicc or mpif90, prints the true compiler that is
 # being called. For the moment it only works if the -show argument is

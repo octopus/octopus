@@ -1,5 +1,4 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 09-vdw_ts_sc.test 14491 2015-08-01 06:07:14Z xavier $
 
 Test       : Tkatchenko-Scheffler van der Waals correction (self-consistent)
 Program    : octopus

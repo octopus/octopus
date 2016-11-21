@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
+ Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch, D. Strubbe
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -16,7 +16,6 @@
  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  02110-1301, USA.
 
- $Id$
 */
 
 #include <stdio.h>
@@ -323,7 +322,6 @@ gsl_complex parse_complex(const char *name, gsl_complex def)
   return ret;
 }
 
-/* FIXME: this function should use strcpy rather than assigning char* */
 char *parse_string(const char *name, char *def)
 {
   symrec *ptr;
@@ -335,12 +333,14 @@ char *parse_string(const char *name, char *def)
       fprintf(stderr, "Parser error: expecting a string for variable '%s'.\n", name);
       exit(1);
     }
-    ret = ptr->value.str; /* this should use strcpy instead */
+    ret = (char *)malloc(strlen(ptr->value.str) + 1);
+    strcpy(ret, ptr->value.str);
     if(!disable_write) {
       fprintf(fout, "%s = \"%s\"\n", name, ret);
     }
   }else{
-    ret = def;
+    ret = (char *)malloc(strlen(def) + 1);
+    strcpy(ret, def);
     if(!disable_write) {
       fprintf(fout, "%s = \"%s\"\t\t# default\n", name, ret);
     }

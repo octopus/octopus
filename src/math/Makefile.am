@@ -17,7 +17,6 @@
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 ## 02110-1301, USA.
 ##
-## $Id: Makefile.am 15563 2016-08-03 08:07:02Z xavier $
 
 noinst_LIBRARIES = libmath.a
 

@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 !> this performs the SCDM localization, transforming the original set of states KS (Kohn-Sham)
 !! into the set SCDM, by first performing RRQR and then Cholesky for orthogonalization

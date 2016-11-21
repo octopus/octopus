@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: conductivity.F90 14000 2015-05-15 21:17:19Z dstrubbe $
 
 #include "global.h"
 

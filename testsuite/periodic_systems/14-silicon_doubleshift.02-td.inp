@@ -50,9 +50,7 @@ CurrentDensity = gradient_corrected
 
 Iau  = (sqrt(10^11)/sqrt(3.509470*10^16)) #Conservion in a.u.
 omega = 0.5
-c = 137.03604
 Tpulse = 210
-
 
 %TDExternalFields
   vector_potential | 0.0 | 0.0 | 1.0 | omega | "envelope_sin2"

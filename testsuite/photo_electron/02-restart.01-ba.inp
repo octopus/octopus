@@ -35,14 +35,8 @@ TheoryLevel = independent_particles
 # TD
 #############################
 
-
-dt = 0.008
-T = 60
-
-TDTimeStep = dt
+TDTimeStep = 0.008
 TDMaxSteps = 800
-
-
 
 #############################
 # PES

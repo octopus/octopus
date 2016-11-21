@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: species.F90 15609 2016-09-14 15:24:25Z nicolastd $
 #include "global.h"
 
 module species_oct_m

@@ -57,14 +57,12 @@ Spacing = 0.04
 
 TheoryLevel = independent_particles
 
-T = 30000
-dt = 1.0
-TDPropagationTime = T
+TDPropagationTime = 30000
 TDPropagator = exp_mid
 TDExponentialMethod = lanczos
 TDExpOrder = 20
 TDLanczosTol = 1.0e-5
-TDTimeStep = dt
+TDTimeStep = 1.0
 
 AbsorbingBoundaries = no
 

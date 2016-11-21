@@ -1,6 +1,5 @@
 ## Copyright (C) YAML developers
 ##
-## $Id$	
 ##
 
 AC_DEFUN([ACX_YAML], [

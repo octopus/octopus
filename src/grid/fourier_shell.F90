@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: fourier_shell.F90 6722 2010-06-13 12:44:43Z acastro $
 
 #include "global.h"
 

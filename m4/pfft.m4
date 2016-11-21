@@ -15,7 +15,6 @@
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 ## 02110-1301, USA.
 ##
-## $Id: pfft.m4 6722 2010-06-13 12:44:43Z joseba $
 ##
 
 AC_DEFUN([ACX_PFFT], [

@@ -3,7 +3,6 @@
 # script to generate the atomic occupations block for
 # octopus input files.
 #
-# $Id$
 
 use Getopt::Std;
 use POSIX qw(ceil);
