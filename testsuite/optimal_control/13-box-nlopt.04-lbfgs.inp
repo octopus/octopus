@@ -23,7 +23,7 @@ TDTimeStep = dt
 
 OCTPenalty = 1.0
 OCTEps = 0.001
-OCTMaxIter = 20
+OCTMaxIter = 4
 
 OCTInitialState = oct_is_groundstate
 OCTTargetOperator = oct_tg_gstransformation
@@ -32,7 +32,7 @@ OCTTargetOperator = oct_tg_gstransformation
 %
 
 OCTDirectStep = 0.25*pi
-OCTScheme = oct_nlopt_bobyqa
+OCTScheme = oct_nlopt_lbfgs
 OCTControlFunctionRepresentation = control_fourier_series
 OCTControlFunctionOmegaMax = 0.10
 #OCTFixFluenceTo = -1
