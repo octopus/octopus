@@ -17,7 +17,6 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
   02110-1301, USA.
 
-  $Id$
 
 Note: This comment header is excluded by the preprocessor since this
 file is included in both C and Fortran source files, and thus neither

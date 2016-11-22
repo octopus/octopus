@@ -1,5 +1,4 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id$
 #
 # This test calculates the ground-state of a Na8 cluster, described by
 # the spherical-jellium model. The calculation reproduces one of the 

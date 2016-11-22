@@ -26,7 +26,6 @@
  * Revision 1.12  1996/05/23  16:10:47  ps
  * First reasonably stable version.
  *
- * $Id$
  */
 
 #include <config.h>

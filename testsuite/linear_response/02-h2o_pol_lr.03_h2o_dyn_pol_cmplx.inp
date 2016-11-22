@@ -1,5 +1,4 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id$
 
 CalculationMode = em_resp
 ExperimentalFeatures = yes
@@ -24,5 +23,3 @@ Spacing = 0.65
 EMEta = 0.01
 
 FilterPotentials = filter_none
-
-MixField = density

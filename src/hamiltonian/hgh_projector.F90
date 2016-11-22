@@ -15,12 +15,12 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
 module hgh_projector_oct_m
   use atom_oct_m
+  use comm_oct_m
   use global_oct_m
   use lalg_basic_oct_m
   use mesh_oct_m
@@ -50,7 +50,6 @@ module hgh_projector_oct_m
   
 
   type hgh_projector_t
-    private
     integer        :: n_s         !< number of points inside the sphere
     FLOAT, pointer :: p(:, :)     !< projectors
     FLOAT, pointer :: lp(:, :, :) !< angular momentum times projectors

@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 #include "global.h"
 
 module species_oct_m
@@ -91,6 +90,7 @@ module species_oct_m
   integer, public, parameter ::  &
     SPECIES_JELLIUM        = 3,             & !< jellium sphere.
     SPECIES_JELLIUM_SLAB   = 4,             & !< jellium slab.
+    SPECIES_JELLIUM_CHARGE_DENSITY = 129,   & !< jellium volume read from file
     SPECIES_FROZEN         = 5,             & !< frozen species.
     SPECIES_PSEUDO         = 7,             & !< pseudopotential
     SPECIES_PSPIO          = 110,           & !< pseudopotential parsed by pspio library
@@ -410,6 +410,8 @@ contains
     !%
     !% The value of <i>a</i> should be given by the mandatory <tt>softening</tt> parameter.
     !% The charge associated with this species must be given by the <tt>valence</tt> parameter.
+    !%Option species_jellium_charge_density -129
+    !% The parameter is the name of a volume block specifying the shape of the jellium.
     !%Option min_radius -10001
     !% The minimum radius of the box that will be used for this species.
     !%Option max_spacing -10002
@@ -450,6 +452,8 @@ contains
     !% The thickness of the slab for species_jellium_slab. Must be positive.
     !%Option vdw_radius -10015
     !% The van der Waals radius that will be used for this species.
+    !%Option volume -10016
+    !% Name of a volume block
     !%End
 
     call messages_obsolete_variable('SpecieAllElectronSigma', 'Species')
@@ -648,13 +652,17 @@ contains
       spec%niwfs = species_closed_shell_size(2*nint(spec%z_val+M_HALF))
       spec%omega = spec%z_val
 
-    case(SPECIES_CHARGE_DENSITY)
+    case(SPECIES_CHARGE_DENSITY, SPECIES_JELLIUM_CHARGE_DENSITY)
       spec%niwfs = int(max(2*spec%z_val, CNST(1.0)))
       spec%omega = spec%z_val
       spec%has_density = .true.
       if(print_info_) then
-        write(message(1),'(a,a,a)')    'Species "',trim(spec%label),'" is a distribution of charge:'
-        write(message(2),'(a,a)')      '   rho = ', trim(spec%density_formula)
+        write(message(1),'(a,a,a)')    'Species "', trim(spec%label), '" is a distribution of charge:'
+        if(spec%type == SPECIES_CHARGE_DENSITY) then
+           write(message(2),'(a,a)')   '   rho = ', trim(spec%density_formula)
+        else
+           write(message(2),'(a,a,a)') '   rho is enclosed in volume defined by the "', trim(spec%density_formula), '" block'
+        end if
         write(message(3),'(a,f11.6)')  '   Z = ', spec%z_val
         call messages_info(3)
       end if
@@ -1110,8 +1118,13 @@ contains
     ! NO PUSH_SUB, called too often
     
     type = species_type(spec)
-    species_represents_real_atom = (type /= SPECIES_USDEF .and. type /= SPECIES_CHARGE_DENSITY &
-      .and. type /= SPECIES_FROM_FILE .and. type /= SPECIES_JELLIUM_SLAB)
+    species_represents_real_atom =                    &
+         type /= SPECIES_USDEF                        &
+         .and. type /= SPECIES_CHARGE_DENSITY         &
+         .and. type /= SPECIES_FROM_FILE              &
+         .and. type /= SPECIES_JELLIUM_CHARGE_DENSITY &
+         .and. type /= SPECIES_JELLIUM                &
+         .and. type /= SPECIES_JELLIUM_SLAB
     
   end function species_represents_real_atom
 
@@ -1464,7 +1477,7 @@ contains
     case(SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN)
       spec%sigma = CNST(0.25)
 
-    case(SPECIES_CHARGE_DENSITY)
+    case(SPECIES_CHARGE_DENSITY, SPECIES_JELLIUM_CHARGE_DENSITY)
 
     case(SPECIES_PSEUDO)
 
@@ -1576,6 +1589,15 @@ contains
           call messages_input_error('Species', 'potential_formula can only be used with species_user_defined')
         end if
 
+      case(OPTION__SPECIES__VOLUME)
+        call check_duplication(OPTION__SPECIES__VOLUME)
+        call parse_block_string(blk, row, icol + 1, spec%density_formula)
+        call conv_to_C_string(spec%density_formula)
+
+        if(spec%type /= SPECIES_JELLIUM_CHARGE_DENSITY) then
+          call messages_input_error('Species', 'volume can only be used with species_jellium_charge_density')
+        end if
+
       case(OPTION__SPECIES__DENSITY_FORMULA)
         call check_duplication(OPTION__SPECIES__DENSITY_FORMULA)
         call parse_block_string(blk, row, icol + 1, spec%density_formula)
@@ -1609,7 +1631,6 @@ contains
 
       icol = icol + 2        
     end do
-
     ! CHECK THAT WHAT WE PARSED MAKES SENSE
     
     if(spec%type == SPECIES_SOFT_COULOMB .and. .not. parameter_defined(OPTION__SPECIES__SOFTENING)) then
@@ -1636,6 +1657,11 @@ contains
     if(spec%type == SPECIES_JELLIUM_SLAB .and. .not. parameter_defined(OPTION__SPECIES__THICKNESS)) then
       call messages_input_error('Species', &
         "The 'thickness' parameter is missing for species '"//trim(spec%label)//"'")
+    end if
+
+    if(spec%type == SPECIES_JELLIUM_CHARGE_DENSITY .and. .not. parameter_defined(OPTION__SPECIES__VOLUME)) then
+      call messages_input_error('Species', &
+        "The 'volume' parameter is missing for species '"//trim(spec%label)//"'")
     end if
 
     if(parameter_defined(OPTION__SPECIES__LMAX) .and. parameter_defined(OPTION__SPECIES__LLOC)) then

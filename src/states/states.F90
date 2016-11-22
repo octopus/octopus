@@ -15,8 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: states.F90 15746 2016-11-15 12:35:27Z nicolastd $
-
 #include "global.h"
 
 module states_oct_m

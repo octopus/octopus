@@ -25,14 +25,6 @@ TheoryLevel = independent_particles
 %
 ExcessCharge = 3
 
-EigenSolver = plan
-ConvRelDens = 1.0e-12
-EigenSolverTolerance = 1.0e-12
-SCFCalculateForces = yes
-
-Mixing = 1.0
-MixingScheme = linear
-
 MoveIons = yes
 
 stime  = 1.0
@@ -40,11 +32,9 @@ dt = stime/100
 
 AbsorbingBoundaries = cap
 AbWidth = 2.0
-AbHeight = -3.0
 
 TDPropagator = exp_mid
 TDExponentialMethod = lanczos
-TDExponentialOrder = 30
 TDLanczosTol = 1.0e-4
 TDPropagationTime = stime
 TDTimeStep = dt

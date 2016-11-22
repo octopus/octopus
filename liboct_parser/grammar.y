@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
+ Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch, D. Strubbe
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -16,7 +16,6 @@
  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  02110-1301, USA.
 
- $Id$
 */
 
 /* This is essentially the example from bison */
@@ -62,9 +61,10 @@ line:
 ;
      
 exp: NUM                   { $$ = $1;                           }
-| exp ',' exp              { fprintf(stderr, "Parser error: comma is not valid operator\n"); exit(0); }
+| exp ',' exp              { fprintf(stderr, "Parser error: comma is not valid operator\n"); exit(1); }
 | VAR                      { if(!$1->def) sym_notdef($1); $$ = $1->value.c; }
-| VAR '=' exp              { $$ = $3; $1->value.c = $3; $1->def = 1; $1->type = S_CMPLX;}
+| VAR '=' exp              { if($1->def && (gsl_complex_abs(gsl_complex_sub($1->value.c, $3)) > 1e-9)) sym_redef($1);
+                             $$ = $3; $1->value.c = $3; $1->def = 1; $1->type = S_CMPLX;}
 | FNCT                     { sym_wrong_arg($1); }
 | FNCT '(' exp ')'         { if($1->nargs != 1) sym_wrong_arg($1); $$ = (*($1->value.fnctptr))($3);   }
 | FNCT '(' exp ',' exp ')' { if($1->nargs != 2) sym_wrong_arg($1); $$ = (*($1->value.fnctptr))($3, $5); }
@@ -86,6 +86,6 @@ exp: NUM                   { $$ = $1;                           }
 | '(' exp ')'              { $$ = $2;                           }
 
 string: STR                { $$ = $1; }
-| VAR '=' STR              { $$ = $3; $1->value.str = $3; $1->def = 1; $1->type = S_STR; }
+| VAR '=' STR              { if($1->def) sym_redef($1); $$ = $3; $1->value.str = $3; $1->def = 1; $1->type = S_STR; }
 ;
 %%

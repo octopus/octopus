@@ -1,5 +1,4 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id$
 #
 # The following tests do not describe the calculation of a two-dimensional
 # model, but of a one-dimensional model of a system of two electrons. It is

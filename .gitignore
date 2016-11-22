@@ -165,6 +165,7 @@
 /external_libs/bpdn/Makefile
 /external_libs/bpdn/*.mod
 /external_libs/bpdn/*.a
+/external_libs/bpdn/*.o
 
 # /external_libs/fortrancl/
 /external_libs/fortrancl/*.mod
@@ -212,6 +213,7 @@
 /external_libs/metis-5.1/GKlib/Makefile
 /external_libs/metis-5.1/GKlib/Makefile.in
 /external_libs/metis-5.1/GKlib/*.a
+/external_libs/metis-5.1/GKlib/*.o
 
 # /external_libs/metis-5.1/include/
 /external_libs/metis-5.1/include/.deps
@@ -223,6 +225,7 @@
 /external_libs/metis-5.1/libmetis/Makefile
 /external_libs/metis-5.1/libmetis/Makefile.in
 /external_libs/metis-5.1/libmetis/*.a
+/external_libs/metis-5.1/libmetis/*.o
 
 # /external_libs/qshep/
 /external_libs/qshep/*.log
@@ -244,6 +247,7 @@
 /external_libs/qshep/*.a
 /external_libs/qshep/*.mod
 /external_libs/qshep/*__genmod.*
+/external_libs/qshep/*.o
 
 # /external_libs/spglib-1.5.2/
 /external_libs/spglib-1.5.2/Makefile
@@ -255,6 +259,7 @@
 /external_libs/spglib-1.5.2/src/*.mod
 /external_libs/spglib-1.5.2/src/.deps
 /external_libs/spglib-1.5.2/src/*.a
+/external_libs/spglib-1.5.2/src/*.o
 
 # /external_libs/yaml-0.1.4/
 /external_libs/yaml-0.1.4/Makefile
@@ -291,6 +296,7 @@
 /liboct_parser/build-aux
 /liboct_parser/*.a
 /liboct_parser/lib64
+/liboct_parser/*.o
 
 # /m4/
 /m4/*.log
@@ -621,6 +627,7 @@
 /src/basic/Makefile
 /src/basic/Makefile.in
 /src/basic/.deps
+/src/basic/*_oct.f90
 
 # /src/frozen/
 /src/frozen/*.o
@@ -630,6 +637,7 @@
 /src/frozen/Makefile.in
 /src/frozen/Makefile
 /src/frozen/.deps
+/src/frozen/*_oct.f90
 
 # /src/grid/
 /src/grid/*.o
@@ -639,6 +647,7 @@
 /src/grid/Makefile.in
 /src/grid/.deps
 /src/grid/Makefile
+/src/grid/*_oct.f90
 
 # /src/hamiltonian/
 /src/hamiltonian/*.o
@@ -648,6 +657,7 @@
 /src/hamiltonian/Makefile
 /src/hamiltonian/Makefile.in
 /src/hamiltonian/.deps
+/src/hamiltonian/*_oct.f90
 
 # /src/include/
 /src/include/*.o
@@ -668,6 +678,7 @@
 /src/ions/Makefile.in
 /src/ions/Makefile
 /src/ions/.deps
+/src/ions/*_oct.f90
 
 # /src/main/
 /src/main/*.o
@@ -681,6 +692,7 @@
 /src/main/oct-test
 /src/main/octopus_mpi
 /src/main/*.dSYM
+/src/main/*_oct.f90
 
 # /src/math/
 /src/math/*.o
@@ -690,6 +702,7 @@
 /src/math/.deps
 /src/math/Makefile.in
 /src/math/Makefile
+/src/math/*_oct.f90
 
 # /src/opt_control/
 /src/opt_control/*.o
@@ -698,6 +711,7 @@
 /src/opt_control/*~
 /src/opt_control/Makefile.in
 /src/opt_control/Makefile
+/src/opt_control/*_oct.f90
 
 # /src/poisson/
 /src/poisson/*.o
@@ -707,6 +721,7 @@
 /src/poisson/Makefile
 /src/poisson/*~
 /src/poisson/.deps
+/src/poisson/*_oct.f90
 
 # /src/scf/
 /src/scf/*.o
@@ -715,6 +730,7 @@
 /src/scf/*~
 /src/scf/Makefile.in
 /src/scf/Makefile
+/src/scf/*_oct.f90
 
 # /src/species/
 /src/species/Makefile.in
@@ -724,6 +740,7 @@
 /src/species/*.mod
 /src/species/*~
 /src/species/.deps
+/src/species/*_oct.f90
 
 # /src/states/
 /src/states/*.o
@@ -733,6 +750,7 @@
 /src/states/Makefile
 /src/states/*~
 /src/states/.deps
+/src/states/*_oct.f90
 
 # /src/sternheimer/
 /src/sternheimer/*.o
@@ -742,6 +760,7 @@
 /src/sternheimer/Makefile
 /src/sternheimer/Makefile.in
 /src/sternheimer/.deps
+/src/sternheimer/*_oct.f90
 
 # /src/system/
 /src/system/*.o
@@ -750,6 +769,7 @@
 /src/system/*~
 /src/system/Makefile
 /src/system/Makefile.in
+/src/system/*_oct.f90
 
 # /src/td/
 /src/td/Makefile.in
@@ -758,6 +778,7 @@
 /src/td/*.a
 /src/td/*.mod
 /src/td/*~
+/src/td/*_oct.f90
 
 # /src/utils/
 /src/utils/*.o
@@ -783,6 +804,7 @@
 /src/utils/oct-xyz-anim
 /src/utils/oct-floquet
 /src/utils/*.dSYM
+/src/utils/*_oct.f90
 
 # /testsuite/
 /testsuite/*.log

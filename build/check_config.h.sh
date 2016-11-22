@@ -17,7 +17,6 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 # 02110-1301, USA.
 #
-# $Id$
 
 # Used by buildbot to determine if result of configure, encoded in config.h,
 # has changed from the reference result.

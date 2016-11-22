@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 subroutine X(partition_transfer)(this, f_in, f_out)
   type(partition_transfer_t), intent(in)  :: this

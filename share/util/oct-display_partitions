@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 #
-# $Id$
 #
 # Script to use gnuplot to plot the partitioning of the mesh.
 # The files mesh_partition.XXXXXX as produced in debug/mesh_partition by

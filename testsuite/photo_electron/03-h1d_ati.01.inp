@@ -55,11 +55,9 @@ nr=2
 #############################
 # TD
 #############################
-dt = 0.008
-T = (Ntot+1)*tc
 
-TDTimeStep = dt
-TDPropagationTime = T
+TDTimeStep = 0.008
+TDPropagationTime = (Ntot+1)*tc
 
 #############################
 # PHOTOELECTRON
