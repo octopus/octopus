@@ -34,6 +34,9 @@
 /* The symbol table: a chain of `struct symrec'.  */
 symrec *sym_table = (symrec *)0;
 
+/* set to 0 for file, 1 for environment */
+int allow_redefinition = 0;
+
 void str_tolower(char *in)
 {
   for(; *in; in++)
@@ -114,9 +117,16 @@ void sym_notdef (symrec *sym)
 
 void sym_redef (symrec *sym)
 {
-  fprintf(stderr, "Parser warning: redefining symbol, previous value ");
+  if(allow_redefinition == 1) {
+    fprintf(stderr, "Parser warning: redefining symbol from environment, previous value ");
+  } else {
+    fprintf(stderr, "Parser error: redefining symbol; previous value ");
+  }
   sym_print(stderr, sym);
   fprintf(stderr, "\n");
+  if(!allow_redefinition) {
+    exit(1);
+  }
 }
 
 void sym_wrong_arg (symrec *sym)
@@ -235,6 +245,8 @@ void sym_init_table ()  /* puts arithmetic functions in table. */
     ptr->used = 1;
     GSL_SET_COMPLEX(&ptr->value.c, arith_cnts[i].re, arith_cnts[i].im);
   }
+
+  allow_redefinition = 0;
 }
 
 void sym_end_table()

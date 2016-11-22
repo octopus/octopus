@@ -32,7 +32,7 @@ extern char ** environ;
 #include "symbols.h"
 
 static FILE *fout;
-static int  disable_write;
+static int  disable_write; /* set to 1 except for MPI node 0 */
 
 #define ROUND(x) ((x)<0 ? (int)(x-0.5) : (int)(x+0.5)) 
 
@@ -198,6 +198,8 @@ void parse_environment(const char* prefix)
   flag = (char *)malloc(strlen(prefix) + 11);
   strcpy(flag, prefix);
   strcat(flag, "PARSE_ENV");
+
+  allow_redefinition = 1;
   
   if( getenv(flag)!=NULL ) {
     if(!disable_write)
@@ -209,8 +211,11 @@ void parse_environment(const char* prefix)
     
     char **env = environ;    
     while(*env) {
-      /* Only consider variables that begin with the prefix, except the PARSE_ENV flag */
-      if( strncmp(flag, *env, strlen(flag)) != 0 && strncmp(prefix, *env, strlen(prefix)) == 0 ){	
+      /* Only consider variables that begin with the prefix, except:
+         the PARSE_ENV flag, or TEST_NJOBS or TEST_MPI_NPROCS which are for testsuite */
+      if( strncmp(flag, *env, strlen(flag)) != 0 && strncmp(prefix, *env, strlen(prefix)) == 0 &&
+	  strncmp("TEST_NJOBS", *env + strlen(prefix), strlen("TEST_NJOBS")) != 0 &&
+	  strncmp("TEST_MPI_NPROCS", *env + strlen(prefix), strlen("TEST_MPI_NPROCS")) != 0 ){
 	if(!disable_write)
 	  fprintf(fout, "# parsed from environment: %s\n", (*env) + strlen(prefix));
 	parse_exp( (*env) + strlen(prefix), &pc);
@@ -221,6 +226,7 @@ void parse_environment(const char* prefix)
   }
 
   free(flag);
+  allow_redefinition = 0;
 }
 
 char* get_mtxel_name(const char* block, int l, int col)
