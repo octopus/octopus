@@ -16,8 +16,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
-
+!!
 ! ---------------------------------------------------------
 !> This file handles the evaluation of the OEP potential, in the KLI or full OEP
 !! as described in S. Kuemmel and J. Perdew, PRL 90, 043004 (2003)
