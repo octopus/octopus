@@ -161,11 +161,17 @@ contains
    call states_end(this%gs_st)
  end subroutine scissor_end
 
-	#include "undef.F90"
-	#include "real.F90"
-	#include "scissor_inc.F90"
+#include "undef.F90"
+#include "real.F90"
+#include "scissor_inc.F90"
 
-	#include "undef.F90"
-	#include "complex.F90"
-	#include "scissor_inc.F90"
+#include "undef.F90"
+#include "complex.F90"
+#include "scissor_inc.F90"
 end module scissor_oct_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:
+
