@@ -105,6 +105,13 @@ contains
     call profiling_in(stress_prof, "STRESS")
     PUSH_SUB(total_stress_calculate)
 
+
+    if(gr%der%mesh%sb%kpoints%use_symmetries) then
+      write(message(1), '(a)') "Symmetry operation is not &
+           implemented in stress calculation."
+      write(message(2), '(a)') "Stress might not be correct."
+      call messages_warning(2)
+    end if
   
     stress(:,:) = M_ZERO
 
@@ -391,9 +398,6 @@ contains
     stress_KE = stress_l
     stress = stress + stress_l
     
-    if(der%mesh%sb%kpoints%use_symmetries) then
-       ASSERT(.false.)
-    end if
 
     SAFE_DEALLOCATE_A(psi)    
     SAFE_DEALLOCATE_A(gpsi)
