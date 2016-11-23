@@ -24,13 +24,13 @@ subroutine X(scissor_apply)(this, mesh, ik, psib, hpsib)
   type(batch_t),   intent(in)    :: psib
   type(batch_t),   intent(inout) :: hpsib
 
-  integer :: ibatch, ist, idim!, ik2 !, ii, ib! ip, np, idim, ist, ip, np
-  R_TYPE  :: dot
+  integer             :: ibatch, ist, idim
+  R_TYPE              :: dot
   R_TYPE, allocatable :: psi(:,:)
   R_TYPE, allocatable :: hpsi(:,:)
   R_TYPE, allocatable :: gspsi(:,:)
 
-!  PUSH_SUB(scissor_apply)
+  PUSH_SUB(scissor_apply)
 
   !Ading first gap*psi to hpsi
   call batch_axpy(mesh%np, this%gap, psib, hpsib)
@@ -60,21 +60,21 @@ subroutine X(scissor_apply)(this, mesh, ik, psib, hpsib)
   SAFE_DEALLOCATE_A(hpsi)
   SAFE_DEALLOCATE_A(gspsi)
 
-!  POP_SUB(scissor_apply) 
+  POP_SUB(scissor_apply) 
 end subroutine X(scissor_apply)
 
 subroutine X(scissor_commute_r)(this, mesh, ik, psi, gpsi)
    type(scissor_t), intent(in)    :: this
    type(mesh_t),    intent(in)    :: mesh 
-   R_TYPE,    intent(in)    :: psi(:,:)
-   integer,   intent(in)    :: ik
-   R_TYPE,    intent(inout) :: gpsi(:, :, :)
+   R_TYPE,          intent(in)    :: psi(:,:)
+   integer,         intent(in)    :: ik
+   R_TYPE,          intent(inout) :: gpsi(:, :, :)
 
    integer :: ist, idim, idir
    R_TYPE  :: dot
    R_TYPE, allocatable :: gspsi(:,:), tmpstate(:,:), psi_r(:)
 
-!   PUSH_SUB(scissor_commute_r)
+   PUSH_SUB(scissor_commute_r)
 
    SAFE_ALLOCATE(gspsi(1:mesh%np, 1:this%gs_st%d%dim))
    SAFE_ALLOCATE(psi_r(1:mesh%np))
@@ -121,5 +121,5 @@ subroutine X(scissor_commute_r)(this, mesh, ik, psi, gpsi)
    SAFE_DEALLOCATE_A(psi_r)
    SAFE_DEALLOCATE_A(tmpstate) 
 
-!   POP_SUB(scissor_commute_r)
+   POP_SUB(scissor_commute_r)
 end subroutine X(scissor_commute_r)

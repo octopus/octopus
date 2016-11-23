@@ -51,7 +51,7 @@ module scissor_oct_m
        scissor_init,         &
        dscissor_apply,       &
        zscissor_apply,       &
-       scissor_commute_r,   &
+       scissor_commute_r,    &
        scissor_end
 
   type scissor_t
@@ -87,8 +87,10 @@ contains
 
   call messages_print_stress(stdout, "TDScissor")
 
-  if(this%gs_st%parallel_in_states) call messages_not_implemented("scissor operator parallel in states")
-  if(gr%mesh%parallel_in_domains) call messages_not_implemented("scissor operator parallel in domains")
+  if(this%gs_st%parallel_in_states) &
+    call messages_not_implemented("scissor operator parallel in states")
+  if(gr%mesh%parallel_in_domains) &
+    call messages_not_implemented("scissor operator parallel in domains")
 
   this%apply = .true.
   this%gap = real(gap)
