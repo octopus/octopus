@@ -18,8 +18,6 @@
 !! $Id$
 
 subroutine X(scissor_apply)(this, mesh, ik, psib, hpsib)
-  implicit none 
-
   type(scissor_t), intent(in)    :: this
   type(mesh_t),    intent(in)    :: mesh
   integer,         intent(in)    :: ik
@@ -66,8 +64,6 @@ subroutine X(scissor_apply)(this, mesh, ik, psib, hpsib)
 end subroutine X(scissor_apply)
 
 subroutine X(scissor_commute_r)(this, mesh, ik, psi, gpsi)
-   implicit none
-
    type(scissor_t), intent(in)    :: this
    type(mesh_t),    intent(in)    :: mesh 
    R_TYPE,    intent(in)    :: psi(:,:)

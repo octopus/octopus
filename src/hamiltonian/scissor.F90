@@ -67,8 +67,6 @@ module scissor_oct_m
 contains
 
  subroutine scissor_init(this, st, gr, d, gap)
-  implicit none
-
   type(scissor_t),           intent(inout) :: this
   type(states_t),            intent(in)    :: st
   type(grid_t),              intent(in)    :: gr
@@ -151,14 +149,12 @@ contains
 
 
  subroutine scissor_nullify(this)
-   implicit none
    type(scissor_t), intent(out) :: this
    
    this%apply = .false.
  end subroutine scissor_nullify
 
  subroutine scissor_end(this)
-   implicit none
    type(scissor_t), intent(inout) :: this
   
    this%apply = .false.
