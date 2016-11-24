@@ -1221,6 +1221,36 @@ contains
            write(iunit,'(a9,2x,3es18.6)')"x", gr%sb%stress_tensor(1,1:3)
            write(iunit,'(a9,2x,3es18.6)')"y", gr%sb%stress_tensor(2,1:3)
            write(iunit,'(a9,2x,3es18.6)')"z", gr%sb%stress_tensor(3,1:3)
+
+           write(iunit,'(a)') "Stress Kinetic energy [H/b^3]"
+           write(iunit,'(a9,2x,3a18)')"T_{kl}","x","y","z"
+           write(iunit,'(a9,2x,3es18.6)')"x", gr%sb%stress_KE(1,1:3)
+           write(iunit,'(a9,2x,3es18.6)')"y", gr%sb%stress_KE(2,1:3)
+           write(iunit,'(a9,2x,3es18.6)')"z", gr%sb%stress_KE(3,1:3)
+
+           write(iunit,'(a)') "Stress Hartree [H/b^3]"
+           write(iunit,'(a9,2x,3a18)')"T_{kl}","x","y","z"
+           write(iunit,'(a9,2x,3es18.6)')"x", gr%sb%stress_Hartree(1,1:3)
+           write(iunit,'(a9,2x,3es18.6)')"y", gr%sb%stress_Hartree(2,1:3)
+           write(iunit,'(a9,2x,3es18.6)')"z", gr%sb%stress_Hartree(3,1:3)
+
+           write(iunit,'(a)') "Stress xc [H/b^3]"
+           write(iunit,'(a9,2x,3a18)')"T_{kl}","x","y","z"
+           write(iunit,'(a9,2x,3es18.6)')"x", gr%sb%stress_xc(1,1:3)
+           write(iunit,'(a9,2x,3es18.6)')"y", gr%sb%stress_xc(2,1:3)
+           write(iunit,'(a9,2x,3es18.6)')"z", gr%sb%stress_xc(3,1:3)
+
+           write(iunit,'(a)') "Stress ps [H/b^3]"
+           write(iunit,'(a9,2x,3a18)')"T_{kl}","x","y","z"
+           write(iunit,'(a9,2x,3es18.6)')"x", gr%sb%stress_ps(1,1:3)
+           write(iunit,'(a9,2x,3es18.6)')"y", gr%sb%stress_ps(2,1:3)
+           write(iunit,'(a9,2x,3es18.6)')"z", gr%sb%stress_ps(3,1:3)
+
+           write(iunit,'(a)') "Stress Ewald [H/b^3]"
+           write(iunit,'(a9,2x,3a18)')"T_{kl}","x","y","z"
+           write(iunit,'(a9,2x,3es18.6)')"x", gr%sb%stress_Ewald(1,1:3)
+           write(iunit,'(a9,2x,3es18.6)')"y", gr%sb%stress_Ewald(2,1:3)
+           write(iunit,'(a9,2x,3es18.6)')"z", gr%sb%stress_Ewald(3,1:3)
         end if
         
       end if

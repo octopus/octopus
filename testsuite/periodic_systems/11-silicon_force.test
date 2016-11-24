@@ -126,3 +126,10 @@ match ; Stress (yz)   ; GREPFIELD(static/info, 'T_{ij}', 4, 2) ;  -2.698186E-03
 match ; Stress (zy)   ; GREPFIELD(static/info, 'T_{ij}', 3, 3) ;  -2.698266E-03
 match ; Stress (zx)   ; GREPFIELD(static/info, 'T_{ij}', 2, 3) ;   3.007702E-04
 match ; Stress (xz)   ; GREPFIELD(static/info, 'T_{ij}', 4, 1) ;   3.007715E-04
+
+
+match ; Stress_KE (xx) ; GREPFIELD(static/info, 'Stress Kinetic', 2, 2) ;  7.765635E-03
+match ; Stress_Ha (xx) ; GREPFIELD(static/info, 'Stress Hartree', 2, 2) ;  5.882263E-04
+match ; Stress_xc (xx) ; GREPFIELD(static/info, 'Stress xc', 2, 2) ;  -2.773839E-03
+match ; Stress_ps (xx) ; GREPFIELD(static/info, 'Stress ps', 2, 2) ;  7.350177E-03
+match ; Stress_Ew (xx) ; GREPFIELD(static/info, 'Stress Ewald', 2, 2) ;  -8.926281E-03

@@ -107,8 +107,7 @@ contains
 
 
     if(gr%der%mesh%sb%kpoints%use_symmetries) then
-      write(message(1), '(a)') "Symmetry operation is not &
-           implemented in stress calculation."
+      write(message(1), '(a)') "Symmetry operation is not implemented in stress calculation."
       write(message(2), '(a)') "Stress might not be correct."
       call messages_warning(2)
     end if
@@ -121,18 +120,23 @@ contains
     
     ! Stress from kinetic energy of electrons    
     call stress_from_kinetic_energy_electron(gr%der, hm, st, stress, stress_KE)
+    gr%sb%stress_KE(1:3,1:3) = stress_KE(1:3,1:3)
 
     ! Stress from Hartree energy
     call stress_from_Hartree(st, hm, ks, stress, stress_Hartree)
+    gr%sb%stress_Hartree(1:3,1:3) = stress_Hartree(1:3,1:3)
 
     ! Stress from exchange-correlation energy
     call stress_from_xc(gr%der, hm, stress, stress_xc)
+    gr%sb%stress_xc(1:3,1:3) = stress_xc(1:3,1:3)
 
     ! Stress from pseudopotentials
     call stress_from_pseudo(gr, hm, st, geo, ks, stress, stress_ps)
+    gr%sb%stress_ps(1:3,1:3) = stress_ps(1:3,1:3)
     
 ! Stress from Ewald summation
     call stress_from_Ewald_sum(gr, geo, hm, stress, stress_Ewald)
+    gr%sb%stress_Ewald(1:3,1:3) = stress_Ewald(1:3,1:3)
     
 
     ! Stress from kinetic energy of ion
@@ -226,8 +230,7 @@ contains
       
       if(cube%fft%library == FFTLIB_PFFT) then
 ! Not implemented yet
-         write(message(1), '(a)') "PFFT FFT library is not applicable &
-         to stress calculation at the moment."
+         write(message(1), '(a)') "PFFT FFT library is not applicable to stress calculation at the moment."
          call messages_warning(1)
       else if(cube%fft%library == FFTLIB_FFTW) then
          xx(1:3) = this%der%mesh%x(1,1:3)
@@ -251,8 +254,7 @@ contains
          
       else if(cube%fft%library == FFTLIB_ACCEL) then
 ! Not implemented yet
-         write(message(1), '(a)') "ACCEL FFT library is not applicable &
-         to stress calculation at the moment."
+         write(message(1), '(a)') "ACCEL FFT library is not applicable to stress calculation at the moment."
          call messages_warning(1)
       else
          write(message(1), '(a)') "FFT library is not well specified in stress calculation."
