@@ -60,7 +60,9 @@ module xc_oct_m
     xc_get_vxc_cmplx,   &
     xc_get_fxc,         &
     xc_get_kxc,         &
-    xc_is_orbital_dependent
+    xc_is_orbital_dependent, &
+    family_is_gga,      &
+    family_is_mgga         
 
 
   type xc_t

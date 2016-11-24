@@ -418,25 +418,6 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
 
 contains
 
-  function family_is_gga(family)
-    integer, intent(in) :: family
-    logical             :: family_is_gga
-
-    PUSH_SUB(xc_get_vxc.family_is_gga)
-    family_is_gga = iand(family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + &
-      XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA + XC_FAMILY_LIBVDWXC) /= 0
-    POP_SUB(xc_get_vxc.family_is_gga)
-  end function  family_is_gga
-
-  function family_is_mgga(family)
-    integer, intent(in) :: family
-    logical             :: family_is_mgga
-
-    PUSH_SUB(xc_get_vxc.family_is_mgga)
-    family_is_mgga = iand(family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0
-    POP_SUB(xc_get_vxc.family_is_mgga)
-  end function family_is_mgga
-
   ! ---------------------------------------------------------
   !> make a local copy with the correct memory order for libxc
   subroutine copy_global_to_local(global, local, n_block, spin_channels, ip)
@@ -813,6 +794,26 @@ contains
   end subroutine mgga_process
 
 end subroutine xc_get_vxc
+
+  function family_is_gga(family)
+    integer, intent(in) :: family
+    logical             :: family_is_gga
+
+    PUSH_SUB(family_is_gga)
+    family_is_gga = iand(family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + &
+      XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA + XC_FAMILY_LIBVDWXC) /= 0
+    POP_SUB(family_is_gga)
+  end function  family_is_gga
+
+  function family_is_mgga(family)
+    integer, intent(in) :: family
+    logical             :: family_is_mgga
+
+    PUSH_SUB(family_is_mgga)
+    family_is_mgga = iand(family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0
+    POP_SUB(family_is_mgga)
+  end function family_is_mgga
+
 
 ! -----------------------------------------------------
 
