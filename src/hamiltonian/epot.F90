@@ -65,6 +65,7 @@ module epot_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
+  use xc_oct_m
 
   implicit none
 
