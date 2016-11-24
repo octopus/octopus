@@ -254,6 +254,9 @@ contains
          write(message(1), '(a)') "ACCEL FFT library is not applicable &
          to stress calculation at the moment."
          call messages_warning(1)
+      else
+         write(message(1), '(a)') "FFT library is not well specified in stress calculation."
+         call messages_warning(1)
       end if
     
     end subroutine density_rs2fs
