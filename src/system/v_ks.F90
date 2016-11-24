@@ -269,7 +269,7 @@ contains
       default = KOHN_SHAM_DFT
 
       ! the functional is a hybrid, use Hartree-Fock as theory level by default
-      if( iand(ks%xc_family, XC_FAMILY_HYB_GGA + XC_FAMILY_HYB_MGGA) /= 0 ) then
+      if(family_is_mgga(ks%xc_family)) then
         default = HARTREE_FOCK
       end if
 
@@ -713,7 +713,7 @@ contains
       
       PUSH_SUB(add_adsic)
       
-      if(iand(hm%xc_family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) then
+      if(family_is_mgga(hm%xc_family)) then
         call messages_not_implemented('ADSIC with MGGAs')
       end if
       if (st%d%ispin == SPINORS) then
@@ -845,7 +845,7 @@ contains
       end if
 
       nullify(ks%calc%vtau)
-      if(iand(hm%xc_family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) then
+      if(family_is_mgga(hm%xc_family)) then
         SAFE_ALLOCATE(ks%calc%vtau(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
         ks%calc%vtau = M_ZERO
         if(cmplxscl) then
@@ -856,7 +856,7 @@ contains
 
       ! Get the *local* XC term
       if(ks%calc%calc_energy) then
-        if(iand(hm%xc_family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) then
+        if(family_is_mgga(hm%xc_family)) then
           if (cmplxscl) call messages_not_implemented('Complex Scaling with (hybrid) meta-GGAs')
           call xc_get_vxc(ks%gr%fine%der, ks%xc, st, &
             ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, &
@@ -873,7 +873,7 @@ contains
           end if
         end if
       else
-        if(iand(hm%xc_family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) then
+        if(family_is_mgga(hm%xc_family)) then
           if (cmplxscl) call messages_not_implemented('Complex Scaling with (hybrid) meta-GGAs')
           call xc_get_vxc(ks%gr%fine%der, ks%xc, &
             st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
@@ -1062,7 +1062,7 @@ contains
           end if
         end if
 
-        if(iand(hm%xc_family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) then
+        if(family_is_mgga(hm%xc_family)) then
           do ispin = 1, hm%d%nspin
             call lalg_copy(ks%gr%fine%mesh%np, ks%calc%vtau(:, ispin), hm%vtau(:, ispin))
             if(hm%cmplxscl%space) call lalg_copy(ks%gr%fine%mesh%np, ks%calc%Imvtau(:, ispin), hm%Imvtau(:, ispin))
