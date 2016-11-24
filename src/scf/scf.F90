@@ -1246,6 +1246,24 @@ contains
            write(iunit,'(a9,2x,3es18.6)')"y", gr%sb%stress_ps(2,1:3)
            write(iunit,'(a9,2x,3es18.6)')"z", gr%sb%stress_ps(3,1:3)
 
+           write(iunit,'(a)') "Stress ps-SR [H/b^3]"
+           write(iunit,'(a9,2x,3a18)')"T_{kl}","x","y","z"
+           write(iunit,'(a9,2x,3es18.6)')"x", gr%sb%stress_ps_SR(1,1:3)
+           write(iunit,'(a9,2x,3es18.6)')"y", gr%sb%stress_ps_SR(2,1:3)
+           write(iunit,'(a9,2x,3es18.6)')"z", gr%sb%stress_ps_SR(3,1:3)
+
+           write(iunit,'(a)') "Stress ps-LR [H/b^3]"
+           write(iunit,'(a9,2x,3a18)')"T_{kl}","x","y","z"
+           write(iunit,'(a9,2x,3es18.6)')"x", gr%sb%stress_ps_LR(1,1:3)
+           write(iunit,'(a9,2x,3es18.6)')"y", gr%sb%stress_ps_LR(2,1:3)
+           write(iunit,'(a9,2x,3es18.6)')"z", gr%sb%stress_ps_LR(3,1:3)
+
+           write(iunit,'(a)') "Stress ps-NL [H/b^3]"
+           write(iunit,'(a9,2x,3a18)')"T_{kl}","x","y","z"
+           write(iunit,'(a9,2x,3es18.6)')"x", gr%sb%stress_ps_NL(1,1:3)
+           write(iunit,'(a9,2x,3es18.6)')"y", gr%sb%stress_ps_NL(2,1:3)
+           write(iunit,'(a9,2x,3es18.6)')"z", gr%sb%stress_ps_NL(3,1:3)
+
            write(iunit,'(a)') "Stress Ewald [H/b^3]"
            write(iunit,'(a9,2x,3a18)')"T_{kl}","x","y","z"
            write(iunit,'(a9,2x,3es18.6)')"x", gr%sb%stress_Ewald(1,1:3)

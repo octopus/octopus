@@ -117,6 +117,9 @@ module simul_box_oct_m
     FLOAT :: stress_Hartree(MAX_DIM,MAX_DIM) 
     FLOAT :: stress_xc(MAX_DIM,MAX_DIM) 
     FLOAT :: stress_ps(MAX_DIM,MAX_DIM) 
+    FLOAT :: stress_ps_SR(MAX_DIM,MAX_DIM) 
+    FLOAT :: stress_ps_LR(MAX_DIM,MAX_DIM) 
+    FLOAT :: stress_ps_NL(MAX_DIM,MAX_DIM) 
     FLOAT :: stress_Ewald(MAX_DIM,MAX_DIM) 
     logical :: nonorthogonal
     

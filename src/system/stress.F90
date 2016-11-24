@@ -510,7 +510,7 @@ contains
   end subroutine stress_from_xc
   ! -------------------------------------------------------
   subroutine stress_from_pseudo(gr, hm, st, geo, ks, stress, stress_ps)
-    type(grid_t),      target,        intent(in) :: gr !< grid
+    type(grid_t),      target,        intent(inout) :: gr !< grid
     type(hamiltonian_t),  intent(inout)    :: hm
     type(states_t),       intent(inout) :: st
     type(geometry_t),          intent(in) :: geo !< geometry
@@ -692,6 +692,9 @@ contains
 
     
     stress_ps = stress_t_SR + stress_t_LR + stress_t_NL
+    gr%sb%stress_ps_SR(1:3,1:3) = stress_t_SR(1:3,1:3)    
+    gr%sb%stress_ps_LR(1:3,1:3) = stress_t_LR(1:3,1:3)
+    gr%sb%stress_ps_NL(1:3,1:3) = stress_t_NL(1:3,1:3)
 
 !!! NOTE!! This part is moved to Ewald contoributoin
 !! Contribition from G=0 component of the long-range part        

@@ -132,4 +132,7 @@ match ; Stress_KE (xx) ; GREPFIELD(static/info, 'Stress Kinetic', 2, 2) ;  7.765
 match ; Stress_Ha (xx) ; GREPFIELD(static/info, 'Stress Hartree', 2, 2) ;  5.882263E-04
 match ; Stress_xc (xx) ; GREPFIELD(static/info, 'Stress xc', 2, 2) ;  -2.773839E-03
 match ; Stress_ps (xx) ; GREPFIELD(static/info, 'Stress ps', 2, 2) ;  7.350177E-03
+match ; Stress_sr (xx) ; GREPFIELD(static/info, 'Stress ps-SR', 2, 2) ;  6.493925E-03
+match ; Stress_lr (xx) ; GREPFIELD(static/info, 'Stress ps-LR', 2, 2) ;  2.197040E-03
+match ; Stress_nl (xx) ; GREPFIELD(static/info, 'Stress ps-NL', 2, 2) ;  -1.340788E-03
 match ; Stress_Ew (xx) ; GREPFIELD(static/info, 'Stress Ewald', 2, 2) ;  -8.926281E-03
