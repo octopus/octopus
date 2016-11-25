@@ -269,7 +269,7 @@ contains
       default = KOHN_SHAM_DFT
 
       ! the functional is a hybrid, use Hartree-Fock as theory level by default
-      if(iand(ks%xc_family, XC_FAMILY_HYB_GGA + XC_FAMILY_HYB_MGGA)) then
+      if(iand(ks%xc_family, XC_FAMILY_HYB_GGA + XC_FAMILY_HYB_MGGA) /= 0) then
         default = HARTREE_FOCK
       end if
 
