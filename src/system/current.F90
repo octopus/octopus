@@ -43,6 +43,7 @@ module current_oct_m
   use projector_oct_m
   use ps_oct_m
   use restart_oct_m
+  use scissor_oct_m
   use simul_box_oct_m
   use species_oct_m
   use splines_oct_m
@@ -308,6 +309,11 @@ contains
           if(this%method == CURRENT_GRADIENT_CORR) then
            call zprojector_commute_r_allatoms_alldir(hm%ep%proj, geo, der%mesh, st%d%dim, ik, psi, gpsi)                 
           end if
+
+          !A nonlocal contribution from the scissor must be included
+          if(hm%scissor%apply) then
+            call scissor_commute_r(hm%scissor, der%mesh, ik, psi, gpsi)
+          endif
 
           ww = st%d%kweights(ik)*st%occ(ist, ik)
 

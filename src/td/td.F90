@@ -46,6 +46,7 @@ module td_oct_m
   use restart_oct_m
   use scdm_oct_m
   use scf_oct_m
+  use scissor_oct_m
   use simul_box_oct_m
   use states_oct_m
   use states_calc_oct_m
@@ -92,6 +93,7 @@ module td_oct_m
     FLOAT                :: mu
     integer              :: dynamics
     integer              :: energy_update_iter
+    FLOAT                :: scissor
   end type td_t
 
 
@@ -276,7 +278,18 @@ contains
     !%End
     call parse_variable('RecalculateGSDuringEvolution', .false., td%recalculate_gs)
 
-    call messages_obsolete_variable('TDScissor')
+    !%Variable TDScissor 
+    !%Type float 
+    !%Default 0.0 
+    !%Section Time-Dependent 
+    !%Description 
+    !% (experimental) If set, a scissor operator will be applied in the 
+    !% Hamiltonian, shifting the excitation energies by the amount 
+    !% specified. By default, it is not applied. 
+    !%End 
+    call parse_variable('TDScissor', CNST(0.0), td%scissor) 
+    td%scissor = units_to_atomic(units_inp%energy, td%scissor) 
+    call messages_print_var_value(stdout, 'TDScissor', td%scissor)
 
     call propagator_init(sys%gr, sys%st, td%tr, &
       ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(hm%ep%gfield))
@@ -355,6 +368,10 @@ contains
     if(simul_box_is_periodic(gr%mesh%sb)) call messages_experimental('Time propagation for periodic systems')
 
     call td_init(td, sys, hm)
+
+    if(td%scissor > M_EPSILON) then
+      call scissor_init(hm%scissor, st, gr, hm%d, td%scissor)
+    end if
 
     ! Allocate wavefunctions during time-propagation
     if(td%dynamics == EHRENFEST) then

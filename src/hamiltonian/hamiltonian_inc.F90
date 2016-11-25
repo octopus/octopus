@@ -161,6 +161,10 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
     call X(h_mgga_terms)(hm, der, ik, epsib, hpsib)
   end if
 
+  if(iand(TERM_OTHERS, terms_) /= 0 .and. hm%scissor%apply) then
+    call X(scissor_apply)(hm%scissor, der%mesh, ik, epsib, hpsib)
+  end if
+
   if(apply_phase) then
     call X(hamiltonian_base_phase)(hm%hm_base, der, der%mesh%np, ik, .true., hpsib)
     call batch_end(epsib)
