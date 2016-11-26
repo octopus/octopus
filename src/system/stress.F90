@@ -226,7 +226,8 @@ contains
       select case(cube%fft%library)
       case(FFTLIB_PFFT)
 ! Not implemented yet
-         ASSERT(.false.)
+         write(message(1),'(a)') 'Internal error: PFFT library is not applicable for stress calculation.'
+         call messages_fatal(1)
       case(FFTLIB_FFTW)
          if(associated(cube%Lrs))then
             xx(1:3) = cube%Lrs(1,1:3)
@@ -253,8 +254,9 @@ contains
             end do
          end do
       case(FFTLIB_ACCEL)
-         ASSERT(.false.)
 ! Not implemented yet
+         write(message(1),'(a)') 'Internal error: ACCEL library is not applicable for stress calculation.'
+         call messages_fatal(1)
       case default
          ASSERT(.false.)
       end select
