@@ -103,7 +103,7 @@ contains
 
 
     call profiling_in(stress_prof, "STRESS")
-    PUSH_SUB(total_stress_calculate)
+    PUSH_SUB(stress_calculate)
 
 
     if(gr%der%mesh%sb%kpoints%use_symmetries) then
