@@ -222,12 +222,12 @@ contains
       
       call dcube_function_rs2fs(cube, cf)
       cf%fs = cf%fs/dble(cube%rs_n(1)*cube%rs_n(2)*cube%rs_n(3)) !Normalize
-      
-      if(cube%fft%library == FFTLIB_PFFT) then
+
+      select case(cube%fft%library)
+      case(FFTLIB_PFFT)
 ! Not implemented yet
-         write(message(1), '(a)') "PFFT FFT library is not applicable to stress calculation at the moment."
-         call messages_warning(1)
-      else if(cube%fft%library == FFTLIB_FFTW) then
+         ASSERT(.false.)
+      case(FFTLIB_FFTW)
          if(associated(cube%Lrs))then
             xx(1:3) = cube%Lrs(1,1:3)
             xx(1:3) = matmul(gr%sb%rlattice(1:3,1:3),xx)
@@ -244,7 +244,7 @@ contains
                do ii = 1, cube%fs_n(1)
                   iit = - pad_feq(ii , cube%rs_n_global(1), .true.)
                   iit = mod(iit+cube%rs_n_global(1),cube%rs_n_global(1)) + 1
-
+                  
                   gx =  sum(xx(1:3)*Gvec(ii, jj, kk, 1:3) )
                   zphase = TOCMPLX(cos(gx), sin(gx)) 
                   rho_total_fs(ii,jj,kk) = conjg(cf%fs(ii, jj, kk))*zphase
@@ -252,15 +252,12 @@ contains
                end do
             end do
          end do
-         
-      else if(cube%fft%library == FFTLIB_ACCEL) then
+      case(FFTLIB_ACCEL)
+         ASSERT(.false.)
 ! Not implemented yet
-         write(message(1), '(a)') "ACCEL FFT library is not applicable to stress calculation at the moment."
-         call messages_warning(1)
-      else
-         write(message(1), '(a)') "FFT library is not well specified in stress calculation."
-         call messages_warning(1)
-      end if
+      case default
+         ASSERT(.false.)
+      end select
     
     end subroutine density_rs2fs
 
