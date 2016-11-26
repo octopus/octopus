@@ -107,8 +107,7 @@ contains
 
 
     if(gr%der%mesh%sb%kpoints%use_symmetries) then
-      write(message(1), '(a)') "Symmetry operation is not &
-           implemented in stress calculation."
+      write(message(1), '(a)') "Symmetry operation is not implemented in stress calculation."
       write(message(2), '(a)') "Stress might not be correct."
       call messages_warning(2)
     end if
@@ -226,8 +225,7 @@ contains
       
       if(cube%fft%library == FFTLIB_PFFT) then
 ! Not implemented yet
-         write(message(1), '(a)') "PFFT FFT library is not applicable &
-         to stress calculation at the moment."
+         write(message(1), '(a)') "PFFT FFT library is not applicable to stress calculation at the moment."
          call messages_warning(1)
       else if(cube%fft%library == FFTLIB_FFTW) then
          if(associated(cube%Lrs))then
@@ -257,8 +255,7 @@ contains
          
       else if(cube%fft%library == FFTLIB_ACCEL) then
 ! Not implemented yet
-         write(message(1), '(a)') "ACCEL FFT library is not applicable &
-         to stress calculation at the moment."
+         write(message(1), '(a)') "ACCEL FFT library is not applicable to stress calculation at the moment."
          call messages_warning(1)
       else
          write(message(1), '(a)') "FFT library is not well specified in stress calculation."
