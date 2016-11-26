@@ -230,7 +230,13 @@ contains
          to stress calculation at the moment."
          call messages_warning(1)
       else if(cube%fft%library == FFTLIB_FFTW) then
-         xx(1:3) = this%der%mesh%x(1,1:3)
+         if(associated(cube%Lrs))then
+            xx(1:3) = cube%Lrs(1,1:3)
+            xx(1:3) = matmul(gr%sb%rlattice(1:3,1:3),xx)
+         else
+            xx(1:3) = -dble(cube%rs_n_global(1:3)/2 )/dble(cube%rs_n_global(1:3))
+            xx(1:3) = matmul(gr%sb%rlattice(1:3,1:3),xx)
+         end if
          do kk = 1, cube%fs_n(3)
             kkt = - pad_feq(kk, cube%rs_n_global(3), .true.)
             kkt = mod(kkt+cube%rs_n_global(3),cube%rs_n_global(3)) +1
