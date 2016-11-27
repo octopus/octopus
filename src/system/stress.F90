@@ -103,8 +103,14 @@ contains
 
 
     call profiling_in(stress_prof, "STRESS")
-    PUSH_SUB(total_stress_calculate)
+    PUSH_SUB(stress_calculate)
 
+
+    if(gr%der%mesh%sb%kpoints%use_symmetries) then
+      write(message(1), '(a)') "Symmetry operation is not implemented in stress calculation."
+      write(message(2), '(a)') "Stress might not be correct."
+      call messages_warning(2)
+    end if
   
     stress(:,:) = M_ZERO
 
@@ -216,11 +222,20 @@ contains
       
       call dcube_function_rs2fs(cube, cf)
       cf%fs = cf%fs/dble(cube%rs_n(1)*cube%rs_n(2)*cube%rs_n(3)) !Normalize
-      
-      if(cube%fft%library == FFTLIB_PFFT) then
+
+      select case(cube%fft%library)
+      case(FFTLIB_PFFT)
 ! Not implemented yet
-      else if(cube%fft%library == FFTLIB_FFTW) then
-         xx(1:3) = this%der%mesh%x(1,1:3)
+         write(message(1),'(a)') 'Internal error: PFFT library is not applicable for stress calculation.'
+         call messages_fatal(1)
+      case(FFTLIB_FFTW)
+         if(associated(cube%Lrs))then
+            xx(1:3) = cube%Lrs(1,1:3)
+            xx(1:3) = matmul(gr%sb%rlattice(1:3,1:3),xx)
+         else
+            xx(1:3) = -dble(cube%rs_n_global(1:3)/2 )/dble(cube%rs_n_global(1:3))
+            xx(1:3) = matmul(gr%sb%rlattice(1:3,1:3),xx)
+         end if
          do kk = 1, cube%fs_n(3)
             kkt = - pad_feq(kk, cube%rs_n_global(3), .true.)
             kkt = mod(kkt+cube%rs_n_global(3),cube%rs_n_global(3)) +1
@@ -230,7 +245,7 @@ contains
                do ii = 1, cube%fs_n(1)
                   iit = - pad_feq(ii , cube%rs_n_global(1), .true.)
                   iit = mod(iit+cube%rs_n_global(1),cube%rs_n_global(1)) + 1
-
+                  
                   gx =  sum(xx(1:3)*Gvec(ii, jj, kk, 1:3) )
                   zphase = TOCMPLX(cos(gx), sin(gx)) 
                   rho_total_fs(ii,jj,kk) = conjg(cf%fs(ii, jj, kk))*zphase
@@ -238,10 +253,13 @@ contains
                end do
             end do
          end do
-         
-      else if(cube%fft%library == FFTLIB_ACCEL) then
+      case(FFTLIB_ACCEL)
 ! Not implemented yet
-      end if
+         write(message(1),'(a)') 'Internal error: ACCEL library is not applicable for stress calculation.'
+         call messages_fatal(1)
+      case default
+         ASSERT(.false.)
+      end select
     
     end subroutine density_rs2fs
 
@@ -391,9 +409,6 @@ contains
     stress_KE = stress_l
     stress = stress + stress_l
     
-    if(der%mesh%sb%kpoints%use_symmetries) then
-       ASSERT(.false.)
-    end if
 
     SAFE_DEALLOCATE_A(psi)    
     SAFE_DEALLOCATE_A(gpsi)
