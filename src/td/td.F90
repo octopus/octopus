@@ -61,6 +61,7 @@ module td_oct_m
   use varinfo_oct_m
   use messages_oct_m
   use multicomm_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -279,7 +280,8 @@ contains
     call messages_obsolete_variable('TDScissor')
 
     call propagator_init(sys%gr, sys%st, td%tr, &
-      ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(hm%ep%gfield))
+      ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(hm%ep%gfield), &
+          family_is_mgga(hm%xc_family))
     if(hm%ep%no_lasers>0.and.mpi_grp_is_root(mpi_world)) then
       call messages_print_stress(stdout, "Time-dependent external fields")
       call laser_write_info(hm%ep%lasers, stdout, td%dt, td%max_iter)

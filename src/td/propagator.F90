@@ -51,6 +51,7 @@ module propagator_oct_m
   use states_oct_m
   use v_ks_oct_m
   use varinfo_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -133,7 +134,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine propagator_init(gr, st, tr, have_fields)
+  subroutine propagator_init(gr, st, tr, have_fields, family_is_mgga)
     type(grid_t),        intent(in)    :: gr
     type(states_t),      intent(in)    :: st
     type(propagator_t),  intent(inout) :: tr
@@ -141,13 +142,14 @@ contains
     !! that must be propagated (currently ions
     !! or a gauge field).
     logical,             intent(in)    :: have_fields 
+    logical,             intent(in)    :: family_is_mgga
 
     logical :: cmplxscl
     
     PUSH_SUB(propagator_init)
     
     cmplxscl = st%cmplxscl%space
-    
+
     call propagator_nullify(tr)
 
     !%Variable TDPropagator
@@ -335,7 +337,7 @@ contains
       end if
     end if
 
-    call potential_interpolation_init(tr%vksold, cmplxscl, gr%mesh%np, st%d%nspin)
+    call potential_interpolation_init(tr%vksold, cmplxscl, gr%mesh%np, st%d%nspin, family_is_mgga)
 
     call exponential_init(tr%te) ! initialize propagator
 
@@ -458,10 +460,22 @@ contains
 
     PUSH_SUB(propagator_run_zero_iter)
 
-    if(hm%cmplxscl%space) then
-      call potential_interpolation_run_zero_iter(tr%vksold, gr%mesh%np, hm%d%nspin, hm%vhxc, hm%imvhxc)   
+    if(family_is_mgga(hm%xc_family)) then
+      if(hm%cmplxscl%space) then
+        call potential_interpolation_run_zero_iter(tr%vksold, gr%mesh%np, hm%d%nspin, &
+                hm%vhxc, hm%imvhxc, hm%vtau, hm%imvtau)   
+      else
+        call potential_interpolation_run_zero_iter(tr%vksold, gr%mesh%np, hm%d%nspin, &
+                hm%vhxc, vtau = hm%vtau)   
+      end if
     else
-      call potential_interpolation_run_zero_iter(tr%vksold, gr%mesh%np, hm%d%nspin, hm%vhxc)   
+      if(hm%cmplxscl%space) then
+        call potential_interpolation_run_zero_iter(tr%vksold, gr%mesh%np, hm%d%nspin, &
+                hm%vhxc, hm%imvhxc)   
+      else
+        call potential_interpolation_run_zero_iter(tr%vksold, gr%mesh%np, hm%d%nspin, &
+                hm%vhxc)
+      end if
     end if
 
     POP_SUB(propagator_run_zero_iter)
@@ -499,10 +513,22 @@ contains
 
     cmplxscl = hm%cmplxscl%space
 
-    if(cmplxscl) then
-      call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, hm%vhxc, hm%imvhxc)
+    if(family_is_mgga(hm%xc_family)) then
+      if(cmplxscl) then
+        call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, &
+                hm%vhxc, hm%imvhxc, hm%vtau, hm%imvtau)
+      else
+        call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, &
+                hm%vhxc, vtau = hm%vtau)
+      end if
     else
-      call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, hm%vhxc)
+      if(cmplxscl) then
+        call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, &
+                hm%vhxc, hm%imvhxc)
+      else
+        call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, &
+                hm%vhxc)
+      end if
     end if
 
     ! to work on SCDM states we rotate the states in st to the localized SCDM,
