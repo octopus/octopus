@@ -32,6 +32,7 @@ module propagator_expmid_oct_m
   use potential_interpolation_oct_m
   use propagator_base_oct_m
   use states_oct_m
+  use xc_oct_m
 
   implicit none
 
