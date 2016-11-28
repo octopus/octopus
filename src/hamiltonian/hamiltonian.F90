@@ -58,6 +58,7 @@ module hamiltonian_oct_m
   use pcm_oct_m
   use restart_oct_m
   use scdm_oct_m
+  use scissor_oct_m
   use simul_box_oct_m
   use smear_oct_m
   use species_oct_m
@@ -171,6 +172,8 @@ module hamiltonian_oct_m
     !> There may also be a exchange-like term, similar to the one necessary for time-dependent
     !! Hartree Fock, also useful only for the OCT equations
     type(oct_exchange_t) :: oct_exchange
+
+    type(scissor_t) :: scissor
 
     FLOAT :: current_time
     FLOAT :: Imcurrent_time  !< needed when cmplxscl%time = .true.
@@ -480,6 +483,8 @@ contains
     call parse_variable('TimeZero', .false., hm%time_zero)
     if(hm%time_zero) call messages_experimental('TimeZero')
 
+    call scissor_nullify(hm%scissor)
+
     call profiling_out(prof)
     POP_SUB(hamiltonian_init)
 
@@ -552,6 +557,8 @@ contains
     call bc_end(hm%bc)
 
     call states_dim_end(hm%d) 
+
+    if(hm%scissor%apply) call scissor_end(hm%scissor)
 
     ! this is a bit ugly, hf_st is initialized in v_ks_calc but deallocated here.
     if(associated(hm%hf_st))  then
@@ -927,6 +934,7 @@ contains
     if(this%rashba_coupling**2 > M_ZERO) apply = .false.
     if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) apply = .false.
     if(family_is_mgga_with_exc(this%xc_family, this%xc_flags))  apply = .false. 
+    if(this%scissor%apply) apply = .false.
     if(this%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) apply = .false.
     if(this%cmplxscl%space .and. accel_is_enabled()) apply = .false.
     if(associated(this%hm_base%phase) .and. accel_is_enabled()) apply = .false.

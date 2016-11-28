@@ -5,10 +5,6 @@
 # All numbers from Table I may be obtained by properly choosing
 # r_s and N_electrons.
 #
-# However, they are not reproduced exactly, probably due to differences
-# in the numerical representation. This is a bit of a problem, since the
-# differences between KLI and full EXX are smaller than this (hopefully
-# only) numerical error.
 #
 # Figure 4 can also be obtained, although for some reason only if 
 # the density is divided by 2. I think that in the paper they slipped
@@ -34,25 +30,30 @@ jradius = r_s * (N_electrons)^(1.0/3.0)
 %
 
 BoxShape = sphere
-Radius  = 13.0
-Spacing = 0.35
+Radius  = 20.0
+Spacing = 0.75
 
 XCFunctional = oep_x
 OEPLevel = oep_full
+OEPMixing = 30
 
+LRTolFinalTol = 1e-6
+LRConvAbsDens = 1e-6
 
 ConvRelDens = 8e-10
 
-LCAOStart = lcao_none
-
-EigenSolverTolerance = 1e-5
+EigenSolverTolerance = 1e-6
 
 Preconditioner = no
 
 LinearSolver = cg
-MaximumIter = 4
+MaximumIter = 20
 
 ExperimentalFeatures = yes
 
 FilterPotentials = filter_none
 
+%RestartOptions
+  restart_gs | "restart" | restart_states+restart_rho+restart_vhxc
+%
+MixingScheme = linear
