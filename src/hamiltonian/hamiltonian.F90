@@ -295,7 +295,7 @@ contains
       SAFE_ALLOCATE(hm%vxc(1:gr%mesh%np, 1:hm%d%nspin))
       hm%vxc=M_ZERO
 
-      if(family_is_mgga(hm%xc_family)) then
+      if(family_is_mgga_with_exc(hm%xc_family, hm%xc_flags)) then
         SAFE_ALLOCATE(hm%vtau(1:gr%mesh%np, 1:hm%d%nspin))
         hm%vtau=M_ZERO
       end if
@@ -317,7 +317,7 @@ contains
         SAFE_ALLOCATE(hm%Imvxc(1:gr%mesh%np, 1:hm%d%nspin))
         hm%Imvxc=M_ZERO
 
-        if(family_is_mgga(hm%xc_family)) then
+        if(family_is_mgga_with_exc(hm%xc_family, hm%xc_flags)) then
           SAFE_ALLOCATE(hm%Imvtau(1:gr%mesh%np, 1:hm%d%nspin))
           hm%Imvtau=M_ZERO
         end if
@@ -542,7 +542,7 @@ contains
     SAFE_DEALLOCATE_P(hm%Imvxc)
     SAFE_DEALLOCATE_P(hm%Imvtau)
     
-    if(family_is_mgga(hm%xc_family)) then
+    if(family_is_mgga_with_exc(hm%xc_family, hm%xc_flags)) then
       SAFE_DEALLOCATE_P(hm%vtau)
     end if
 
@@ -926,7 +926,7 @@ contains
     if(hamiltonian_base_has_magnetic(this%hm_base)) apply = .false.
     if(this%rashba_coupling**2 > M_ZERO) apply = .false.
     if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) apply = .false.
-    if(family_is_mgga(this%xc_family))  apply = .false. 
+    if(family_is_mgga_with_exc(this%xc_family, this%xc_flags))  apply = .false. 
     if(this%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) apply = .false.
     if(this%cmplxscl%space .and. accel_is_enabled()) apply = .false.
     if(associated(this%hm_base%phase) .and. accel_is_enabled()) apply = .false.
@@ -1087,7 +1087,7 @@ contains
     if (err /= 0) ierr = ierr + 4
 
     ! MGGAs and hybrid MGGAs have an extra term that also needs to be dumped
-    if (family_is_mgga(hm%xc_family)) then
+    if (family_is_mgga_with_exc(hm%xc_family, hm%xc_flags)) then
       lines(1) = '#     #spin    #nspin    filename'
       lines(2) = '%vtau'
       call restart_write(restart, iunit, lines, 2, err)
@@ -1183,7 +1183,7 @@ contains
 
     ! MGGAs and hybrid MGGAs have an extra term that also needs to be read
     err2 = 0
-    if (family_is_mgga(hm%xc_family)) then
+    if (family_is_mgga_with_exc(hm%xc_family, hm%xc_flags)) then
       do isp = 1, hm%d%nspin
         if (hm%d%nspin == 1) then
           write(filename, fmt='(a)') 'vtau'

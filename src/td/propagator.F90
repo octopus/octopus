@@ -460,7 +460,7 @@ contains
 
     PUSH_SUB(propagator_run_zero_iter)
 
-    if(family_is_mgga(hm%xc_family)) then
+    if(family_is_mgga_with_exc(hm%xc_family, hm%xc_flags)) then
       if(hm%cmplxscl%space) then
         call potential_interpolation_run_zero_iter(tr%vksold, gr%mesh%np, hm%d%nspin, &
                 hm%vhxc, hm%imvhxc, hm%vtau, hm%imvtau)   
@@ -513,7 +513,7 @@ contains
 
     cmplxscl = hm%cmplxscl%space
 
-    if(family_is_mgga(hm%xc_family)) then
+    if(family_is_mgga_with_exc(hm%xc_family, hm%xc_flags)) then
       if(cmplxscl) then
         call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, &
                 hm%vhxc, hm%imvhxc, hm%vtau, hm%imvtau)

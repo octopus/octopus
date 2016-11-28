@@ -285,7 +285,7 @@ subroutine X(one_body) (dir, gr, geo, st, hm)
 
   ASSERT(.not. st%parallel_in_states)
   if(gr%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("OutputMatrixElements=two_body with k-points")
-  if(family_is_mgga(hm%xc_family)) &
+  if(family_is_mgga_with_exc(hm%xc_family, hm%xc_flags)) &
     call messages_not_implemented("OutputMatrixElements=one_body with MGGA") 
   ! how to do this properly? states_matrix
   iunit = io_open(trim(dir)//'/output_me_one_body', action='write')
