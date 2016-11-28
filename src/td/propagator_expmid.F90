@@ -70,6 +70,9 @@ contains
     vecpot_vel(:) = M_ZERO
     
     if(hm%cmplxscl%time) then
+      if(family_is_mgga_with_exc(hm%xc_family,hm%xc_flags)) &
+        call messages_not_implemented('Expmid propagator and MGGA with energy functionals')
+
       zt =  TOCMPLX(time, M_ZERO) *exp(M_zI * TOCMPLX(hm%cmplxscl%alphaR, M_ZERO))
       zdt = TOCMPLX(dt,   M_ZERO) *exp(M_zI * TOCMPLX(hm%cmplxscl%alphaR, M_ZERO))
 
