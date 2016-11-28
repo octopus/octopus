@@ -75,6 +75,9 @@ module xc_ks_inversion_oct_m
     XC_ASYMPTOTICS_NONE    = 1,      &
     XC_ASYMPTOTICS_SC      = 2
 
+  integer, parameter ::              &
+    XC_FLAGS_NONE = 0
+
   type xc_ks_inversion_t
      integer             :: method
      integer             :: level
@@ -164,7 +167,8 @@ contains
 
       ! initialize densities, hamiltonian and eigensolver
       call states_densities_init(ks_inv%aux_st, gr, geo)
-      call hamiltonian_init(ks_inv%aux_hm, gr, geo, ks_inv%aux_st, INDEPENDENT_PARTICLES, XC_FAMILY_NONE)
+      call hamiltonian_init(ks_inv%aux_hm, gr, geo, ks_inv%aux_st, INDEPENDENT_PARTICLES, &
+                            XC_FAMILY_NONE, XC_FLAGS_NONE)
       call eigensolver_init(ks_inv%eigensolver, gr, ks_inv%aux_st)
     end if
 

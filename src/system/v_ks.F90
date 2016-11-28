@@ -118,6 +118,7 @@ module v_ks_oct_m
     logical :: frozen_hxc !< For RPA and SAE calculations.
 
     integer                  :: xc_family  !< the XC stuff
+    integer                  :: xc_flags   !< the XC flags
     integer                  :: sic_type   !< what kind of self-interaction correction to apply
     type(xc_t)               :: xc
     type(xc_OEP_t)           :: oep
@@ -264,6 +265,7 @@ contains
     end if
 
     ks%xc_family = ks%xc%family
+    ks%xc_flags  = ks%xc%flags 
 
     if(.not. parsed_theory_level) then
       default = KOHN_SHAM_DFT

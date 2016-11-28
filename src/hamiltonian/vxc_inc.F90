@@ -795,21 +795,27 @@ contains
 
 end subroutine xc_get_vxc
 
-  pure function family_is_gga(family)
+  pure logical function family_is_gga(family)
     integer, intent(in) :: family
-    logical             :: family_is_gga
 
     family_is_gga = iand(family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + &
       XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA + XC_FAMILY_LIBVDWXC) /= 0
   end function  family_is_gga
 
-  pure function family_is_mgga(family)
+  pure logical function family_is_mgga(family)
     integer, intent(in) :: family
-    logical             :: family_is_mgga
 
     family_is_mgga = iand(family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0
   end function family_is_mgga
 
+  pure logical function family_is_mgga_with_exc(family, flags)
+    integer, intent(in) :: family
+    integer, intent(in) :: flags
+   
+    family_is_mgga_with_exc = (iand(family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0 ) &
+                        .and. (iand(flags, XC_FLAGS_HAVE_EXC) /= 0 )
+
+  end function family_is_mgga_with_exc
 
 ! -----------------------------------------------------
 

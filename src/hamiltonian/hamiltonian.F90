@@ -142,6 +142,7 @@ module hamiltonian_oct_m
 
     integer :: theory_level    !< copied from sys%ks
     integer :: xc_family       !< copied from sys%ks
+    integer :: xc_flags        !< copied from sys%ks
 
     type(epot_t) :: ep         !< handles the external potential
     type(pcm_t)  :: pcm        !< handles pcm variables
@@ -204,13 +205,14 @@ module hamiltonian_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_init(hm, gr, geo, st, theory_level, xc_family, subsys_hm)
+  subroutine hamiltonian_init(hm, gr, geo, st, theory_level, xc_family, xc_flags, subsys_hm)
     type(hamiltonian_t),                        intent(out)   :: hm
     type(grid_t),                       target, intent(inout) :: gr
     type(geometry_t),                   target, intent(inout) :: geo
     type(states_t),                     target, intent(inout) :: st
     integer,                                    intent(in)    :: theory_level
     integer,                                    intent(in)    :: xc_family
+    integer,                                    intent(in)    :: xc_flags
     type(base_hamiltonian_t), optional, target, intent(in)    :: subsys_hm
 
     integer :: iline, icol
@@ -224,6 +226,7 @@ contains
     ! make a couple of local copies
     hm%theory_level = theory_level
     hm%xc_family    = xc_family
+    hm%xc_flags     = xc_flags
     call states_dim_copy(hm%d, st%d)
 
     !%Variable ParticleMass
