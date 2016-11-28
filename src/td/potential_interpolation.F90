@@ -52,6 +52,7 @@ module potential_interpolation_oct_m
     FLOAT, pointer      :: Imv_old(:, :, :) => null()
     FLOAT, pointer      :: vtau_old(:, :, :) => null()
     FLOAT, pointer      :: Imvtau_old(:, :, :) => null()
+    logical             :: mgga_with_exc
   end type potential_interpolation_t
 
 contains
@@ -88,11 +89,11 @@ contains
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  subroutine potential_interpolation_init(potential_interpolation, cmplxscl, np, nspin, mgga)
+  subroutine potential_interpolation_init(potential_interpolation, cmplxscl, np, nspin, mgga_with_exc)
     type(potential_interpolation_t), intent(inout) :: potential_interpolation
     logical, intent(in) :: cmplxscl
     integer, intent(in) :: np, nspin
-    logical, intent(in) :: mgga
+    logical, intent(in) :: mgga_with_exc
     
     PUSH_SUB(potential_interpolation_init)
 
@@ -104,14 +105,18 @@ contains
       potential_interpolation%Imv_old(:, :, :) = M_ZERO
     end if
 
-    SAFE_ALLOCATE(potential_interpolation%vtau_old(1:np, 1:nspin, 0:3))
-    potential_interpolation%vtau_old(:, :, :) = M_ZERO
+    potential_interpolation%mgga_with_exc = mgga_with_exc
 
-     if(cmplxscl) then
-      SAFE_ALLOCATE(potential_interpolation%Imvtau_old(1:np, 1:nspin, 0:3))
-      potential_interpolation%Imvtau_old(:, :, :) = M_ZERO
-    end if
+    if(potential_interpolation%mgga_with_exc) then
 
+      SAFE_ALLOCATE(potential_interpolation%vtau_old(1:np, 1:nspin, 0:3))
+      potential_interpolation%vtau_old(:, :, :) = M_ZERO
+
+       if(cmplxscl) then
+        SAFE_ALLOCATE(potential_interpolation%Imvtau_old(1:np, 1:nspin, 0:3))
+        potential_interpolation%Imvtau_old(:, :, :) = M_ZERO
+      end if
+   end if
 
     POP_SUB(potential_interpolation_init)
   end subroutine potential_interpolation_init
@@ -396,24 +401,26 @@ contains
       end do
     end do
 
-    err2 = 0
-    do ii = 1, 2
-      do is = 1, nspin
-        write(filename,'(a6,i2.2,i3.3)') 'vtauprev_', ii, is
-        if (cmplxscl) then
-          zv_old = potential_interpolation%vtau_old(1:gr%mesh%np, is, ii) &
-            + M_zI*potential_interpolation%Imvtau_old(1:gr%mesh%np, is, ii)
-          call zrestart_write_mesh_function(restart, filename, gr%mesh, zv_old, err, use_mpi_grp = .true.)
-        else
-          call drestart_write_mesh_function(restart, filename, gr%mesh, &
-            potential_interpolation%vtau_old(1:gr%mesh%np, is, ii), err, use_mpi_grp = .true.)
-        end if
-        ! the unit is energy actually, but this only for restart, and can be kept in atomic units
-        ! for simplicity
-        if (err /= 0) err2 = err2 + 1
-      end do
-    end do
 
+    if(potential_interpolation%mgga_with_exc) then
+      err2 = 0
+      do ii = 1, 2
+        do is = 1, nspin
+          write(filename,'(a6,i2.2,i3.3)') 'vtauprev_', ii, is
+          if (cmplxscl) then
+            zv_old = potential_interpolation%vtau_old(1:gr%mesh%np, is, ii) &
+              + M_zI*potential_interpolation%Imvtau_old(1:gr%mesh%np, is, ii)
+            call zrestart_write_mesh_function(restart, filename, gr%mesh, zv_old, err, use_mpi_grp = .true.)
+          else
+            call drestart_write_mesh_function(restart, filename, gr%mesh, &
+              potential_interpolation%vtau_old(1:gr%mesh%np, is, ii), err, use_mpi_grp = .true.)
+          end if
+          ! the unit is energy actually, but this only for restart, and can be kept in atomic units
+          ! for simplicity
+          if (err /= 0) err2 = err2 + 1
+        end do
+      end do
+    end if
 
     if (cmplxscl) then
       SAFE_DEALLOCATE_A(zv_old)
@@ -460,25 +467,27 @@ contains
       end do
     end do
 
-    err2 = 0
-    do ii = 1, 2
-      do is = 1, nspin
-        write(filename,'(a,i2.2,i3.3)') 'vtauprev_', ii, is
-        if(cmplxscl) then
-          call zrestart_read_mesh_function(restart, trim(filename), gr%mesh, zv_old(1:gr%mesh%np), err)
-          potential_interpolation%vtau_old(1:gr%mesh%np, is, ii)   =  real(zv_old(1:gr%mesh%np))
-          potential_interpolation%imvtau_old(1:gr%mesh%np, is, ii) = aimag(zv_old(1:gr%mesh%np))
-        else
-          call drestart_read_mesh_function(restart, trim(filename), gr%mesh, &
-            potential_interpolation%vtau_old(1:gr%mesh%np, is, ii), err)
-        end if
-        if (err /= 0) then
-          err2 = err2 + 1
-          message(1) = "Unable to read VKS restart file '" // trim(filename) // "'"
-          call messages_warning(1)
-        end if
+    if(potential_interpolation%mgga_with_exc) then
+      err2 = 0
+      do ii = 1, 2
+        do is = 1, nspin
+          write(filename,'(a,i2.2,i3.3)') 'vtauprev_', ii, is
+          if(cmplxscl) then
+            call zrestart_read_mesh_function(restart, trim(filename), gr%mesh, zv_old(1:gr%mesh%np), err)
+            potential_interpolation%vtau_old(1:gr%mesh%np, is, ii)   =  real(zv_old(1:gr%mesh%np))
+            potential_interpolation%imvtau_old(1:gr%mesh%np, is, ii) = aimag(zv_old(1:gr%mesh%np))
+          else
+            call drestart_read_mesh_function(restart, trim(filename), gr%mesh, &
+              potential_interpolation%vtau_old(1:gr%mesh%np, is, ii), err)
+          end if
+          if (err /= 0) then
+            err2 = err2 + 1
+            message(1) = "Unable to read VKS restart file '" // trim(filename) // "'"
+            call messages_warning(1)
+          end if
+        end do
       end do
-    end do
+    end if
 
     if (cmplxscl) then
       SAFE_DEALLOCATE_A(zv_old)
