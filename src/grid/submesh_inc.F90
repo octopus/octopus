@@ -15,7 +15,9 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
+!! $Id: submesh_inc.F90 15314 2016-04-30 08:40:18Z xavier $
 
+!Here ff is a function in the submesh 
 R_TYPE function X(sm_integrate)(mesh, sm, ff) result(res)
   type(mesh_t),      intent(in) :: mesh
   type(submesh_t),   intent(in) :: sm
@@ -39,6 +41,32 @@ R_TYPE function X(sm_integrate)(mesh, sm, ff) result(res)
 
   POP_SUB(X(sm_integrate))
 end function X(sm_integrate)
+
+!Here ff is a function expressed in mesh
+R_TYPE function X(sm_integrate_frommesh)(mesh, sm, ff) result(res)
+  type(mesh_t),      intent(in) :: mesh
+  type(submesh_t),   intent(in) :: sm
+  R_TYPE, optional,  intent(in) :: ff(:)
+
+  PUSH_SUB(X(sm_integrate_frommesh))
+
+  ASSERT(present(ff) .or. sm%np  ==  0)
+
+  if(sm%np > 0) then
+    if (mesh%use_curvilinear) then
+      res = sum(ff(sm%map(1:sm%np))*mesh%vol_pp(sm%map(1:sm%np)) )
+    else
+      res = sum(ff(sm%map(1:sm%np)))*mesh%volume_element
+    end if
+  else
+    res = M_ZERO
+  end if
+
+  if(mesh%parallel_in_domains) call comm_allreduce(mesh%vp%comm, res)
+
+  POP_SUB(X(sm_integrate_frommesh))
+end function X(sm_integrate_frommesh)
+
 
 !------------------------------------------------------------
 
