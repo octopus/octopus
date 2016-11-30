@@ -292,6 +292,8 @@ contains
     FLOAT,                intent(in)    :: dt
     FLOAT,                intent(in)    :: time
 
+    integer :: idim
+
     PUSH_SUB(gauge_field_propagate)
 
     this%vecpot_acc(1:this%ndim) = this%force(1:this%ndim)
@@ -306,6 +308,15 @@ contains
     this%vecpot(1:this%ndim) = this%vecpot(1:this%ndim) + dt * this%vecpot_vel(1:this%ndim) + &
       M_HALF * dt**2 * this%force(1:this%ndim)
 
+    !In the case of a kick, the induced field could not be higher than the initial kick
+    do idim = 1, this%ndim
+      if(this%vecpot_kick(idim) /= M_ZERO .and.  &
+         abs(this%vecpot(idim))> abs(this%vecpot_kick(idim))*1.01 ) then
+        write(message(1),'(a)') 'It seems that the gauge-field is diverging.'
+        write(message(2),'(a)') 'You should probably check the propagation parameters.'
+        call messages_fatal(2)
+      end if
+    end do
     POP_SUB(gauge_field_propagate)
   end subroutine gauge_field_propagate
 

@@ -60,11 +60,15 @@ module xc_oct_m
     xc_get_vxc_cmplx,   &
     xc_get_fxc,         &
     xc_get_kxc,         &
-    xc_is_orbital_dependent
+    xc_is_orbital_dependent, &
+    family_is_gga,      &
+    family_is_mgga,     &
+    family_is_mgga_with_exc   
 
 
   type xc_t
     integer :: family                   !< the families present
+    integer :: flags                    !<flags of the xc functional
     integer :: kernel_family
     type(xc_functl_t) :: functional(2,2)    !< (FUNC_X,:) => exchange,    (FUNC_C,:) => correlation
                                         !< (:,1) => unpolarized, (:,2) => polarized
@@ -139,6 +143,7 @@ contains
     PUSH_SUB(xc_init)
 
     xcs%family = 0
+    xcs%flags  = 0
     xcs%kernel_family = 0
 
     call parse()
@@ -157,6 +162,9 @@ contains
 
     xcs%family = ior(xcs%family, xcs%functional(FUNC_X,1)%family)
     xcs%family = ior(xcs%family, xcs%functional(FUNC_C,1)%family)
+
+    xcs%flags = ior(xcs%flags, xcs%functional(FUNC_X,1)%flags)
+    xcs%flags = ior(xcs%flags, xcs%functional(FUNC_C,1)%flags)
 
     xcs%kernel_family = ior(xcs%kernel_family, xcs%kernel(FUNC_X,1)%family)
     xcs%kernel_family = ior(xcs%kernel_family, xcs%kernel(FUNC_C,1)%family)
@@ -198,7 +206,7 @@ contains
     call messages_obsolete_variable('MGGAimplementation')
     call messages_obsolete_variable('CurrentInTau', 'XCUseGaugeIndependentKED')
 
-    if(iand(xcs%family, XC_FAMILY_MGGA) /= 0 .or. iand(xcs%family, XC_FAMILY_HYB_MGGA) /= 0) then
+    if(family_is_mgga(xcs%family)) then
       !%Variable XCUseGaugeIndependentKED
       !%Type logical
       !%Default yes
@@ -334,6 +342,7 @@ contains
       call xc_functl_end(xcs%kernel(FUNC_C, isp))
     end do
     xcs%family = 0
+    xcs%flags  = 0
 
     POP_SUB(xc_end)
   end subroutine xc_end

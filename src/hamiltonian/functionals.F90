@@ -88,6 +88,7 @@ contains
     functl%family = 0
     functl%type   = 0
     functl%id     = 0
+    functl%flags  = 0
     functl%spin_channels = spin_channels
 
     POP_SUB(xc_functl_init)

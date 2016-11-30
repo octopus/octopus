@@ -65,6 +65,7 @@ module epot_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -148,7 +149,7 @@ module epot_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine epot_init( ep, gr, geo, ispin, nik, cmplxscl, subsys_hm)
+  subroutine epot_init( ep, gr, geo, ispin, nik, cmplxscl, subsys_hm, xc_family)
     type(epot_t),                       intent(out)   :: ep
     type(grid_t),                       intent(in)    :: gr
     type(geometry_t),                   intent(inout) :: geo
@@ -156,6 +157,7 @@ contains
     integer,                            intent(in)    :: nik
     logical,                            intent(in)    :: cmplxscl
     type(base_hamiltonian_t), optional, intent(in)    :: subsys_hm
+    integer,                            intent(in)    :: xc_family
 
 
     type(base_term_t), pointer :: subsys_ionic
@@ -187,6 +189,9 @@ contains
     call parse_variable('FilterPotentials', PS_FILTER_TS, filter)
     if(.not.varinfo_valid_option('FilterPotentials', filter)) call messages_input_error('FilterPotentials')
     call messages_print_var_option(stdout, "FilterPotentials", filter)
+
+    if(family_is_mgga(xc_family) .and. filter /= PS_FILTER_NONE) &
+      call messages_not_implemented("FilterPotentials different from filter_none with MGGA")
 
     if(filter == PS_FILTER_TS) call spline_filter_mask_init()
     do ispec = 1, geo%nspecies
