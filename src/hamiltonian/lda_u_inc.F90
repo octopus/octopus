@@ -394,6 +394,7 @@ subroutine X(get_atomic_orbital) (geo, mesh, iatom, iorb, ispin, orb)
   type(species_t), pointer :: spec
   integer :: ii, ll, mm, ispin_
   FLOAT :: radius
+  logical :: complex_ylms
 
   PUSH_SUB(X(get_atomic_orbital))
 
@@ -408,15 +409,34 @@ subroutine X(get_atomic_orbital) (geo, mesh, iatom, iorb, ispin, orb)
   !radius = max(radius, CNST(2.0)*maxval(mesh%sb%lsize)+ maxval(mesh%spacing(1:mesh%sb%dim)))
   ! make sure that if the spacing is too large, the orbitals fit in a few points at least
   radius = max(radius, CNST(2.0)*maxval(mesh%spacing(1:mesh%sb%dim)))
-  
+ 
+  !We initialise the submesh corresponding to the orbital 
   call submesh_init(orb%sphere, mesh%sb, mesh, geo%atom(iatom)%x, radius)
 
+  !We allocate both the orbital on the submesh and on the complete mesh
   SAFE_ALLOCATE(orb%X(orbital)(1:orb%sphere%np))
-  call X(species_get_orbital_submesh)(spec, orb%sphere, ii, ll, mm, ispin_, geo%atom(iatom)%x, orb%X(orbital))
   SAFE_ALLOCATE(orb%X(orbital_mesh)(1:mesh%np))
+  orb%X(orbital) = M_ZERO
   orb%X(orbital_mesh) = M_ZERO
-  call submesh_add_to_mesh(orb%sphere, orb%X(orbital), orb%X(orbital_mesh))
-  
+
+  !This is a bit dirty. This is the default behavior, see LCAO.
+  complex_ylms = .false.
+
+  !We get the orbital from the pseudopotential
+  #ifdef R_TCOMPLEX
+  if(.not. complex_ylms) then
+    !In this case we want to get a real orbital and to store it in complex array
+    SAFE_ALLOCATE(orb%dorbital(1:orb%sphere%np))
+    call dspecies_get_orbital_submesh(spec, orb%sphere, ii, ll, mm, ispin_, geo%atom(iatom)%x, orb%dorbital)
+    call submesh_add_to_mesh(orb%sphere, orb%dorbital, orb%X(orbital_mesh))
+    SAFE_DEALLOCATE_P(orb%dorbital)
+  else
+  #endif
+    call X(species_get_orbital_submesh)(spec, orb%sphere, ii, ll, mm, ispin_, geo%atom(iatom)%x, orb%X(orbital))
+    call submesh_add_to_mesh(orb%sphere, orb%X(orbital), orb%X(orbital_mesh))
+  #ifdef R_TCOMPLEX
+  end if
+  #endif
 
   POP_SUB(X(get_atomic_orbital))
 

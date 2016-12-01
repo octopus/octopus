@@ -167,6 +167,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
 
   if(iand(TERM_OTHERS, terms_) /= 0 .and. hm%lda_u%apply) then
     call X(hubbard_apply)(hm%lda_u, der%mesh, hm%d, ik, epsib, hpsib)
+  end if  
 
   if(apply_phase) then
     call X(hamiltonian_base_phase)(hm%hm_base, der, der%mesh%np, ik, .true., hpsib)
