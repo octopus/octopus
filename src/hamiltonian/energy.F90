@@ -16,6 +16,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
+!! $Id: energy.F90 15203 2016-03-19 13:15:05Z xavier $
 
 #include "global.h"
 
@@ -73,6 +74,9 @@ module energy_oct_m
     FLOAT :: Imentropy
     FLOAT :: Imts
     FLOAT :: Imberry
+
+    !LDA+U
+    FLOAT :: hubbard_dc
   end type energy_t
 
 contains
@@ -118,6 +122,8 @@ contains
     this%Imentropy     = M_ZERO
     this%Imts          = M_ZERO
     this%Imberry       = M_ZERO
+
+    this%hubbard_dc    = M_ZERO
 
     POP_SUB(energy_nullify)
   end subroutine energy_nullify
@@ -165,6 +171,7 @@ contains
     eout%Imts = ein%Imts
     eout%Imberry = ein%Imberry
 
+    eout%hubbard_dc = ein%hubbard_dc
     
     POP_SUB(energy_copy)
   end subroutine energy_copy
