@@ -15,6 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
+!! $Id: energy_calc.F90 15203 2016-03-19 13:15:05Z xavier $
 
 #include "global.h"
 
@@ -34,6 +35,7 @@ module energy_calc_oct_m
   use hamiltonian_base_oct_m
   use io_oct_m
   use lalg_basic_oct_m
+  use lda_u_oct_m
   use mesh_oct_m
   use mesh_batch_oct_m
   use mesh_function_oct_m
@@ -168,7 +170,8 @@ contains
       hm%energy%total = hm%ep%eii + hm%energy%eigenvalues &
         - hm%energy%hartree + hm%energy%exchange + hm%energy%correlation + hm%energy%vdw - hm%energy%intnvxc - evxctau &
         - hm%energy%pcm_corr + hm%energy%int_ee_pcm + hm%energy%int_en_pcm &
-                             + hm%energy%int_nn_pcm + hm%energy%int_ne_pcm
+                             + hm%energy%int_nn_pcm + hm%energy%int_ne_pcm &
+        + hm%energy%hubbard_dc
 
       if (cmplxscl) then
         hm%energy%Imtotal = hm%energy%Imeigenvalues - hm%energy%Imhartree + hm%energy%Imexchange + hm%energy%Imcorrelation &
