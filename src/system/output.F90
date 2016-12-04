@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -199,7 +198,7 @@ contains
     !% in the file <tt>geometry_classical.xyz</tt>.
     !% If <tt>OutputFormat = xcrysden</tt>, a file called <tt>geometry.xsf</tt> is written.
     !%Option current bit(5)
-    !% Outputs paramagnetic current density. The output file is called <tt>current-</tt>.
+    !% Outputs the total current density. The output file is called <tt>current-</tt>.
     !% For linear response, the filename is <tt>lr_current-</tt>.
     !%Option ELF bit(6)
     !% Outputs electron localization function (ELF). The output file is called <tt>elf-</tt>,

@@ -15,11 +15,11 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
 program octopus
+  use global_oct_m
   use calc_mode_par_oct_m
   use command_line_oct_m
   use io_oct_m
@@ -31,6 +31,7 @@ program octopus
   use string_oct_m
   use utils_oct_m
   use varinfo_oct_m
+  use messages_oct_m
 
   implicit none
 

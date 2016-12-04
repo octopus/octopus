@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
   
 !> Implementation of the locally optimal block preconditioned conjugate-
 !! gradients algorithm.

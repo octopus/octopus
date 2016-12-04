@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 subroutine X(states_get_state2)(st, mesh, ist, iqn, psi, left)
   type(states_t),    intent(in)    :: st

@@ -1,5 +1,4 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id$
 Test       : Forces
 Program    : octopus
 TestGroups : short-run, finite_systems_3d

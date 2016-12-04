@@ -1,5 +1,4 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id$
 
 CalculationMode = em_resp
 fromScratch = yes
@@ -19,5 +18,3 @@ Spacing = 0.65
 %
 
 FilterPotentials = filter_none
-
-MixField = density

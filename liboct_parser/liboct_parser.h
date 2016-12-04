@@ -16,7 +16,6 @@
  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  02110-1301, USA.
 
- $Id$
 */
 
 #ifndef _LIB_OCT_H
@@ -38,7 +37,6 @@ char       *parse_string (const char *name, char *def);
 /* Now comes stuff for the blocks */
 typedef struct sym_block_line{
   int n;
-  char **fields;
 } sym_block_line;
 
 typedef struct sym_block{

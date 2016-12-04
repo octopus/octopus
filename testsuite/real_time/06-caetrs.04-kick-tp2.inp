@@ -1,5 +1,4 @@
 CalculationMode = td
-Debug = info + trace
 
 bond_length = 2.8
 

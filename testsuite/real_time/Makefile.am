@@ -17,7 +17,6 @@
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 ## 02110-1301, USA.
 ##
-## $Id: Makefile.am 3932 2008-03-23 20:10:10Z xavier $
 
 sharedir = $(pkgdatadir)/testsuite/real_time
 
@@ -103,6 +102,7 @@ dist_share_DATA =                      \
         17-absorption-spin_symmetry.test \
         18-hhg.test \
         18-hhg.01-gs.inp \
-        18-hhg.02-td.inp
+        18-hhg.02-td.inp \
+        18-hhg.03-hs.inp
 
 CLEANFILES = *~ *.bak

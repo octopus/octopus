@@ -15,16 +15,16 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: hardware.F90 11591 2013-12-17 09:10:32Z joseba $
 
 #include "global.h"
 
 module debug_oct_m
   use global_oct_m
   use parser_oct_m
+
+  implicit none
   
   private
-  
   public ::             &
     debug_t,            &
     debug_init,         &

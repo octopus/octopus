@@ -17,7 +17,6 @@
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 ## 02110-1301, USA.
 ##
-## $Id: Makefile.am 2440 2006-09-29 13:44:03Z marques $
 
 docdir = $(pkgdatadir)/doc/vars
 

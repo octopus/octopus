@@ -1,5 +1,4 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id$
 
 ExperimentalFeatures = yes
 UnitsOutput = eV_Angstrom
@@ -19,7 +18,3 @@ ConvertIterateFolder = no
 
 ConvertStart = 1
 ConvertEnd   = 1
-
-FilterPotentials = filter_none
-
-MixField = density

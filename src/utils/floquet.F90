@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: floquet.F90 15203 2016-03-19 13:15:05Z xavier $
 
 #include "global.h"
 
@@ -63,6 +62,7 @@ program oct_floquet
   use utils_oct_m
   use varinfo_oct_m
   use v_ks_oct_m
+  use multicomm_oct_m
 
   implicit none
 
@@ -114,7 +114,7 @@ program oct_floquet
   gr = sys%gr
 
   ! generate the full hamiltonian following the sequence in td_init
-  call hamiltonian_init(hm, gr, sys%geo, st, sys%ks%theory_level, sys%ks%xc_family)
+  call hamiltonian_init(hm, gr, sys%geo, st, sys%ks%theory_level, sys%ks%xc_family, sys%ks%xc_flags)
   call hamiltonian_epot_generate(hm, gr, sys%geo, st, time=M_ZERO)
   call hamiltonian_update(hm, gr%mesh, time = M_ZERO)
 

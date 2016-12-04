@@ -17,7 +17,6 @@
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 ## 02110-1301, USA.
 ##
-## $Id$
 
 noinst_LIBRARIES = libmath.a
 
@@ -65,7 +64,7 @@ libmath_a_SOURCES =                      \
 	spline_low.cc                    \
 	quickrnd.F90                     \
 	accel_blas.F90                   \
-	cufft.cc
+	cufft.cc 
 
 noinst_HEADERS =                         \
 	fft_inc.F90                      \

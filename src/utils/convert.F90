@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 !> This utility runs in parallel and can be used for post-processing of the results of Output.
 
@@ -48,6 +47,7 @@ program oct_convert
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
+  use multicomm_oct_m
 
   implicit none
 

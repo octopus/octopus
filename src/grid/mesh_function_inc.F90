@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 
 ! ---------------------------------------------------------
@@ -138,12 +137,12 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu) result(dotp)
     if (.not. dotu_) then
 #endif
       do ip = 1, mesh%np
-        dotp = dotp + mesh%vol_pp(ip)*R_CONJ(f1(ip))*f2(ip)
+        dotp = dotp + mesh%vol_pp(ip)*f1(ip)*f2(ip)
       end do
 #ifdef R_TCOMPLEX
     else
       do ip = 1, mesh%np
-        dotp = dotp + mesh%vol_pp(ip)*f1(ip)*f2(ip)
+        dotp = dotp + mesh%vol_pp(ip)*R_CONJ(f1(ip))*f2(ip)
       end do
     end if
 #endif

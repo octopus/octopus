@@ -18,7 +18,6 @@
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 ## 02110-1301, USA.
 ##
-## $Id$
 
 noinst_LIBRARIES = libgrid.a
 
@@ -69,7 +68,8 @@ libgrid_a_SOURCES =       \
 	hilbert.c               \
 	mesh_interpolation.F90  \
 	vtk.F90                 \
-	sphericalmesh.F90
+	sphericalmesh.F90       \
+        volume.F90
 
 noinst_HEADERS =                   \
 	batch_inc.F90              \

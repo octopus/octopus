@@ -16,7 +16,6 @@
  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  02110-1301, USA.
 
- $Id$
 */
 
 #ifndef _SYMBOLS_H
@@ -57,11 +56,13 @@ symrec *getsym (const char *sym_name);
 int      rmsym (const char *sym_name);
 
 void sym_notdef(symrec *sym);
+void sym_redef(symrec *sym);
 void sym_wrong_arg(symrec *sym);
 void sym_init_table(void);
 void sym_end_table(void);
 void sym_output_table(int only_unused, int mpiv_node);
 void str_tolower(char *in);
 void sym_mark_table_used();
+void sym_print(FILE *f, const symrec *ptr);
 
 #endif

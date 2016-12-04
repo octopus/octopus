@@ -17,7 +17,6 @@
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 ## 02110-1301, USA.
 ##
-## $Id: Makefile.am 13126 2015-02-20 03:12:26Z xavier $
 
 ldadir = $(pkgdatadir)/pseudopotentials/hscv/lda
 

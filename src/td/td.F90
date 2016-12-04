@@ -15,11 +15,11 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
 module td_oct_m
+  use global_oct_m
   use boundary_op_oct_m
   use calc_mode_par_oct_m
   use density_oct_m
@@ -46,6 +46,7 @@ module td_oct_m
   use restart_oct_m
   use scdm_oct_m
   use scf_oct_m
+  use scissor_oct_m
   use simul_box_oct_m
   use states_oct_m
   use states_calc_oct_m
@@ -59,6 +60,9 @@ module td_oct_m
   use unit_system_oct_m
   use v_ks_oct_m
   use varinfo_oct_m
+  use messages_oct_m
+  use multicomm_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -90,6 +94,7 @@ module td_oct_m
     FLOAT                :: mu
     integer              :: dynamics
     integer              :: energy_update_iter
+    FLOAT                :: scissor
   end type td_t
 
 
@@ -274,10 +279,22 @@ contains
     !%End
     call parse_variable('RecalculateGSDuringEvolution', .false., td%recalculate_gs)
 
-    call messages_obsolete_variable('TDScissor')
+    !%Variable TDScissor 
+    !%Type float 
+    !%Default 0.0 
+    !%Section Time-Dependent 
+    !%Description 
+    !% (experimental) If set, a scissor operator will be applied in the 
+    !% Hamiltonian, shifting the excitation energies by the amount 
+    !% specified. By default, it is not applied. 
+    !%End 
+    call parse_variable('TDScissor', CNST(0.0), td%scissor) 
+    td%scissor = units_to_atomic(units_inp%energy, td%scissor) 
+    call messages_print_var_value(stdout, 'TDScissor', td%scissor)
 
     call propagator_init(sys%gr, sys%st, td%tr, &
-      ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(hm%ep%gfield))
+      ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(hm%ep%gfield), &
+          family_is_mgga_with_exc(hm%xc_family, hm%xc_flags))
     if(hm%ep%no_lasers>0.and.mpi_grp_is_root(mpi_world)) then
       call messages_print_stress(stdout, "Time-dependent external fields")
       call laser_write_info(hm%ep%lasers, stdout, td%dt, td%max_iter)
@@ -353,6 +370,10 @@ contains
     if(simul_box_is_periodic(gr%mesh%sb)) call messages_experimental('Time propagation for periodic systems')
 
     call td_init(td, sys, hm)
+
+    if(td%scissor > M_EPSILON) then
+      call scissor_init(hm%scissor, st, gr, hm%d, td%scissor)
+    end if
 
     ! Allocate wavefunctions during time-propagation
     if(td%dynamics == EHRENFEST) then

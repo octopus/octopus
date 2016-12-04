@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 ! ---------------------------------------------------------
 subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, terms, set_bc)
@@ -158,8 +157,12 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
     
   end if
 
-  if (iand(TERM_MGGA, terms_) /= 0 .and. (iand(hm%xc_family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0)) then
+  if (iand(TERM_MGGA, terms_) /= 0 .and. family_is_mgga_with_exc(hm%xc_family, hm%xc_flags)) then
     call X(h_mgga_terms)(hm, der, ik, epsib, hpsib)
+  end if
+
+  if(iand(TERM_OTHERS, terms_) /= 0 .and. hm%scissor%apply) then
+    call X(scissor_apply)(hm%scissor, der%mesh, ik, epsib, hpsib)
   end if
 
   if(apply_phase) then

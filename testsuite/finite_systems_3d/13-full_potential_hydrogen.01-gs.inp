@@ -1,5 +1,4 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id$
 
 %Coordinates
  'H_f' | 0 | 0 | 0
@@ -11,7 +10,6 @@
 Radius = 8.0
 Spacing = 0.4
 fromScratch = yes
-Debug = info + trace
 
 TheoryLevel = independent_particles
 

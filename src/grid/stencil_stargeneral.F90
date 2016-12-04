@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: stencil_stargeneral.F90 10978 2013-07-11 15:28:46Z micael $
 
 #include "global.h"
 

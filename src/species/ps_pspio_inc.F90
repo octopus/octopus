@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
   ! ---------------------------------------------------------
   subroutine ps_pspio_init(ps, label, z, lmax, lloc, ispin, filename)

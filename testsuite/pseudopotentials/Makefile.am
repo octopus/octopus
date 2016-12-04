@@ -17,12 +17,15 @@
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 ## 02110-1301, USA.
 ##
-## $Id: Makefile.am 6425 2010-04-01 16:08:02Z xavier $
 
 sharedir = $(pkgdatadir)/testsuite/pseudopotentials
 
 dist_share_DATA =                                  \
 	01-sg15-h.01-gs.inp                        \
-	01-sg15-h.test
+	01-sg15-h.test                             \
+	02-cu2_hgh.test                            \
+	02-cu2_hgh.01_gs.inp                       \
+	02-cu2_hgh.02_gs_current.inp               \
+	02-cu2_hgh.03_gs_current_fast.inp
 
 CLEANFILES = *~ *.bak

@@ -1,6 +1,5 @@
 #!/usr/bin/env perl
 #
-# $Id$
 #
 # This script can be used to generate some simple diagrams from
 # profiling data. The plots in the octopus wiki are produced

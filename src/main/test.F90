@@ -15,11 +15,11 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
 program oct_test
+  use global_oct_m
   use calc_mode_par_oct_m
   use command_line_oct_m
   use derivatives_oct_m
@@ -35,6 +35,8 @@ program oct_test
   use test_parameters_oct_m
   use unit_system_oct_m
   use utils_oct_m
+  use messages_oct_m
+  use multicomm_oct_m
 
   implicit none
 

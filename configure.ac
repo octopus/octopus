@@ -15,7 +15,6 @@
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 ## 02110-1301, USA.
 ##
-## $Id$
 
 AC_PREREQ(2.59)
 # Note: the version string is written into ETSF_IO files, so when you update
@@ -97,7 +96,7 @@ AC_FUNC_STAT
 AC_CHECK_FUNCS([gettimeofday nanosleep sysconf getpid \
 strndup tcgetpgrp scandir alphasort \
 sigaction readdir closedir strchr strtod \
-perror strcasestr sbrk getopt_long uname ioctl])
+perror strcasestr sbrk getopt_long uname ioctl strsignal])
 
 ACX_ARCH
 

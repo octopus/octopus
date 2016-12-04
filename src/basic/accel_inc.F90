@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 subroutine X(accel_write_buffer_0)(this, data)
   type(accel_mem_t),               intent(inout) :: this

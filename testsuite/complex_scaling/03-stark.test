@@ -1,5 +1,4 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id$
 
 Test       : Complex-scaling - PBE / Stark effect
 Options    : arpack

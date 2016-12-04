@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
   type(output_bgw_t),     intent(in)    :: bgw
