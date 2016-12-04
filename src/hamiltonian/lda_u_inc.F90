@@ -54,7 +54,7 @@ subroutine X(hubbard_apply)(this, mesh, d, ik, psib, hpsib)
         !
         do im = 1, this%norbs(ia)
           dot(im) = X(mf_dotp)(mesh, this%orbitals(im,ispin,ia)%X(orbital_mesh),& 
-                                  psi(1:mesh%np,idim),dotu =.true.)
+                                  psi(1:mesh%np,idim))
         end do
         !
         do im = 1, this%norbs(ia)
@@ -131,7 +131,7 @@ subroutine X(update_occ_matrices)(this, geo, mesh, st, hubbard_dc)
         do im = 1, norbs
         !  dot(im) =  submesh_to_mesh_dotp(this%orbitals(im,ispin,ia)%sphere, st%d%dim, &
         !                        this%orbitals(im,ispin,ia)%X(orbital), psi)
-          dot(im) = X(mf_dotp)(mesh, psi(1:mesh%np,1), this%orbitals(im,ispin,ia)%X(orbital_mesh),dotu=.true.)
+          dot(im) = X(mf_dotp)(mesh, psi(1:mesh%np,1), this%orbitals(im,ispin,ia)%X(orbital_mesh))
         end do
         do im = 1, norbs
           this%X(n)(1:norbs,im,ispin,ia) = this%X(n)(1:norbs,im,ispin,ia) &
