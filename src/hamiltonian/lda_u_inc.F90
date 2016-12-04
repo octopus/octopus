@@ -414,9 +414,9 @@ subroutine X(get_atomic_orbital) (geo, mesh, iatom, iorb, ispin, orb)
   call submesh_init(orb%sphere, mesh%sb, mesh, geo%atom(iatom)%x, radius)
 
   !We allocate both the orbital on the submesh and on the complete mesh
-  SAFE_ALLOCATE(orb%X(orbital)(1:orb%sphere%np))
+  SAFE_ALLOCATE(orb%X(orbital_sphere)(1:orb%sphere%np))
   SAFE_ALLOCATE(orb%X(orbital_mesh)(1:mesh%np))
-  orb%X(orbital) = M_ZERO
+  orb%X(orbital_sphere) = M_ZERO
   orb%X(orbital_mesh) = M_ZERO
 
   !This is a bit dirty. This is the default behavior, see LCAO.
@@ -426,14 +426,15 @@ subroutine X(get_atomic_orbital) (geo, mesh, iatom, iorb, ispin, orb)
   #ifdef R_TCOMPLEX
   if(.not. complex_ylms) then
     !In this case we want to get a real orbital and to store it in complex array
-    SAFE_ALLOCATE(orb%dorbital(1:orb%sphere%np))
-    call dspecies_get_orbital_submesh(spec, orb%sphere, ii, ll, mm, ispin_, geo%atom(iatom)%x, orb%dorbital)
-    call submesh_add_to_mesh(orb%sphere, orb%dorbital, orb%X(orbital_mesh))
-    SAFE_DEALLOCATE_P(orb%dorbital)
+    SAFE_ALLOCATE(orb%dorbital_sphere(1:orb%sphere%np))
+    call dspecies_get_orbital_submesh(spec, orb%sphere, ii, ll, mm, ispin_, geo%atom(iatom)%x, orb%dorbital_sphere)
+    call submesh_add_to_mesh(orb%sphere, orb%dorbital_sphere, orb%X(orbital_mesh))
+    orb%X(orbital_sphere)(1:orb%sphere%np) = orb%dorbital_sphere(1:orb%sphere%np)
+    SAFE_DEALLOCATE_P(orb%dorbital_sphere)
   else
   #endif
-    call X(species_get_orbital_submesh)(spec, orb%sphere, ii, ll, mm, ispin_, geo%atom(iatom)%x, orb%X(orbital))
-    call submesh_add_to_mesh(orb%sphere, orb%X(orbital), orb%X(orbital_mesh))
+    call X(species_get_orbital_submesh)(spec, orb%sphere, ii, ll, mm, ispin_, geo%atom(iatom)%x, orb%X(orbital_sphere))
+    call submesh_add_to_mesh(orb%sphere, orb%X(orbital_sphere), orb%X(orbital_mesh))
   #ifdef R_TCOMPLEX
   end if
   #endif

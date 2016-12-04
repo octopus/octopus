@@ -31,6 +31,7 @@ module lda_u_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use parser_oct_m
   use periodic_copy_oct_m
   use profiling_oct_m
   use species_oct_m
@@ -57,8 +58,8 @@ module lda_u_oct_m
 
   type orbital_t
     type(submesh_t)     :: sphere      !The submesh of the orbital
-    FLOAT, pointer      :: dorbital(:) !The orbital, if real
-    CMPLX, pointer      :: zorbital(:) !The orbital, if complex
+    FLOAT, pointer      :: dorbital_sphere(:) !The orbital, if real, on the submesh
+    CMPLX, pointer      :: zorbital_sphere(:) !The orbital, if complex, on the submesh
     FLOAT, pointer      :: dorbital_mesh(:) !The orbital, if real, on the full mesh
     CMPLX, pointer      :: zorbital_mesh(:) !The orbital, if complex, on the full mesh
   end type orbital_t
@@ -73,7 +74,9 @@ module lda_u_oct_m
     integer             :: natoms        !> Number of atoms (copied from geometry_t)
     integer             :: nspins
     integer, pointer    :: norbs(:)      !> Number of orbitals
-    integer             :: maxnorbs      !> Maximal number of orbitals for all the atoms 
+    integer             :: maxnorbs      !> Maximal number of orbitals for all the atoms
+    integer             :: projection    !> The method used to perform the projection
+    logical             :: truncate
   end type lda_u_t
 
 contains
@@ -99,6 +102,33 @@ contains
   if(st%d%ispin == SPINORS) call messages_not_implemented("lda+u with spinors") 
 
   this%apply = .true.
+
+  !%Variable OrbitalsTruncateTONLRadius
+  !%Type logical
+  !%Default no
+  !%Section Hamiltonian::LDA+U
+  !%Description
+  !% If set to yes, Octopus will truncate the orbitals 
+  !% to the radius of the nonlocal part of the pseudopotential.
+  !% This makes the orbitals basis to b non-overlapping between different atoms
+  !%End
+  call parse_variable('OrbitalsTruncateTONLRadius', .false., this%truncate)
+
+  !%Variable OrbitalsProjectionMethod
+  !%Type integer
+  !%Default projection_fullmesh
+  !%Section Hamiltonian::LDA+U
+  !%Description
+  !% This variable controls how the projection on the orbitals is done.
+  !%Option fullmesh 0
+  !% The projection is done on the full mesh. This is the default  value.
+  !%Option sphere 1
+  !% The projection is done using the submesh
+  !%End
+  call parse_variable('OrbitalsProjectionMethod', OPTION__ORBITALSPROJECTIONMETHOD__FULLMESH, this%projection)
+  if(this%projection==OPTION__ORBITALSPROJECTIONMETHOD__SPHERE) &
+    call messages_not_implemented("OrbitalProjectionMethod=sphere") 
+
 
   nullify(this%dn)
   nullify(this%zn)
@@ -148,8 +178,8 @@ contains
    do iat = 1, this%natoms
      do ispin = 1, this%nspins 
        do iorb = 1, this%norbs(iat)
-         SAFE_DEALLOCATE_P(this%orbitals(iorb,ispin,iat)%dorbital)
-         SAFE_DEALLOCATE_P(this%orbitals(iorb,ispin,iat)%zorbital)
+         SAFE_DEALLOCATE_P(this%orbitals(iorb,ispin,iat)%dorbital_sphere)
+         SAFE_DEALLOCATE_P(this%orbitals(iorb,ispin,iat)%zorbital_sphere)
          SAFE_DEALLOCATE_P(this%orbitals(iorb,ispin,iat)%dorbital_mesh)
          SAFE_DEALLOCATE_P(this%orbitals(iorb,ispin,iat)%zorbital_mesh)
          call submesh_end(this%orbitals(iorb,ispin,iat)%sphere)
