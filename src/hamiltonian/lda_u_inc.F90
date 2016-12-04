@@ -358,11 +358,13 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
         if(ll .eq. hubbardl ) then 
           norb = norb + 1
           !We obtain the orbital
-          call X(get_atomic_orbital)(geo, mesh, ia, iorb, ispin, this%orbitals(norb,ispin,ia)) 
+          call X(get_atomic_orbital)(geo, mesh, ia, iorb, ispin, this%orbitals(norb,ispin,ia),&
+                                     this%truncate) 
           ! We have to normalize the orbitals, 
           ! in case the orbitals that comes out of the pseudo are not properly normalised
           norm = X(mf_nrm2)(mesh, this%orbitals(norb,ispin,ia)%X(orbital_mesh)(1:mesh%np))
-          this%orbitals(norb,ispin,ia)%X(orbital_mesh)(1:mesh%np) =  this%orbitals(norb,ispin,ia)%X(orbital_mesh)(1:mesh%np) /sqrt(norm)
+          this%orbitals(norb,ispin,ia)%X(orbital_mesh)(1:mesh%np) =  &
+                  this%orbitals(norb,ispin,ia)%X(orbital_mesh)(1:mesh%np) /sqrt(norm)
          !   norm_proj = norm_proj + norm
         endif
       end do
@@ -383,13 +385,14 @@ end subroutine X(construct_orbital_basis)
 !> This routine returns the atomic orbital basis -- provided
 !! by the pseudopotential structure in geo.
 ! ---------------------------------------------------------
-subroutine X(get_atomic_orbital) (geo, mesh, iatom, iorb, ispin, orb)
+subroutine X(get_atomic_orbital) (geo, mesh, iatom, iorb, ispin, orb, truncate)
   type(mesh_t),             intent(in)    :: mesh
   type(geometry_t), target, intent(in)    :: geo
   integer,                  intent(in)    :: iatom
   integer,                  intent(in)    :: iorb
   integer,                  intent(in)    :: ispin
   type(orbital_t),          intent(inout) :: orb
+  logical,                  intent(in)    :: truncate
 
   type(species_t), pointer :: spec
   integer :: ii, ll, mm, ispin_
@@ -405,10 +408,17 @@ subroutine X(get_atomic_orbital) (geo, mesh, iatom, iorb, ispin, orb)
 
   call species_iwf_ilm(spec, iorb, ispin_, ii, ll, mm)
 
-  radius = species_get_iwf_radius(spec, ii, ispin_) ! + maxval(mesh%spacing(1:mesh%sb%dim))
-  !radius = max(radius, CNST(2.0)*maxval(mesh%sb%lsize)+ maxval(mesh%spacing(1:mesh%sb%dim)))
+  radius = species_get_iwf_radius(spec, ii, ispin_) 
+
+  !If asked, we truncate the orbital to the radius on the projector spheres 
+  !of the NL part of the pseudopotential.
+  !This is a way to garanty no overlap between orbitals of different atoms.
+  if(truncate .and. species_is_ps(spec)) &
+    radius = min(radius,species_get_ps_radius(spec))
+
   ! make sure that if the spacing is too large, the orbitals fit in a few points at least
   radius = max(radius, CNST(2.0)*maxval(mesh%spacing(1:mesh%sb%dim)))
+
  
   !We initialise the submesh corresponding to the orbital 
   call submesh_init(orb%sphere, mesh%sb, mesh, geo%atom(iatom)%x, radius)

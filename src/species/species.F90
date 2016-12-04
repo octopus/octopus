@@ -84,6 +84,7 @@ module species_oct_m
     species_real_nl_projector,     &
     species_nl_projector,          &
     species_get_iwf_radius,        &
+    species_get_ps_radius,         &
     species_copy,                  &
     species_end
 
@@ -1254,6 +1255,23 @@ contains
 
     POP_SUB(species_get_iwf_radius)
   end function species_get_iwf_radius
+  ! ---------------------------------------------------------
+
+  ! ---------------------------------------------------------
+  !> Return radius of the pseudopotential if this is a pseudo, zero otherwise
+  FLOAT function species_get_ps_radius(spec) result(radius)
+    type(species_t),   intent(in) :: spec
+
+    PUSH_SUB(species_get_ps_radius)
+
+    if(species_is_ps(spec)) then
+      radius = spec%ps%rc_max
+    else
+      radius = M_ZERO
+    end if
+
+    POP_SUB(species_get_ps_radius)
+  end function species_get_ps_radius
   ! ---------------------------------------------------------
 
 

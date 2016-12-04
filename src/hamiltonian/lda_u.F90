@@ -103,7 +103,7 @@ contains
 
   this%apply = .true.
 
-  !%Variable OrbitalsTruncateTONLRadius
+  !%Variable OrbitalsTruncateToNLRadius
   !%Type logical
   !%Default no
   !%Section Hamiltonian::LDA+U
@@ -112,7 +112,7 @@ contains
   !% to the radius of the nonlocal part of the pseudopotential.
   !% This makes the orbitals basis to b non-overlapping between different atoms
   !%End
-  call parse_variable('OrbitalsTruncateTONLRadius', .false., this%truncate)
+  call parse_variable('OrbitalsTruncateToNLRadius', .false., this%truncate)
 
   !%Variable OrbitalsProjectionMethod
   !%Type integer
