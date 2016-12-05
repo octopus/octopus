@@ -206,7 +206,7 @@ contains
  
    PUSH_SUB(lda_u_write_occupation_matrices)
 
-   if(.not. mpi_grp_is_root(mpi_world)) return ! this the absolute master writes
+   if(.not. mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
   
    call io_mkdir(dir)
    iunit = io_open(trim(dir) // "/occ_matrices", action='write')
@@ -236,6 +236,8 @@ contains
      end do !ispin
    end do !iatom
    call io_close(iunit)
+
+   end if
 
    POP_SUB(lda_u_write_occupation_matrices)
  end subroutine lda_u_write_occupation_matrices
