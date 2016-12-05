@@ -34,6 +34,7 @@ module td_oct_m
   use ion_dynamics_oct_m
   use kick_oct_m
   use lasers_oct_m
+  use lda_u_oct_m
   use loct_oct_m
   use loct_math_oct_m
   use modelmb_exchange_syms_oct_m
@@ -405,6 +406,20 @@ contains
       call end_()
       POP_SUB(td_run)
       return
+    end if
+
+    !Initialise the occupation matrices for LDA+U
+    if(hm%lda_u%apply) then
+      if (states_are_real(st)) then
+        call dupdate_occ_matrices(hm%lda_u, geo, gr%mesh, st, hm%energy%hubbard_dc)
+      else
+        if(associated(hm%hm_base%phase)) then
+          call zupdate_occ_matrices(hm%lda_u, geo, gr%mesh, st, hm%energy%hubbard_dc,&
+                              hm%hm_base%phase)
+        else
+          call zupdate_occ_matrices(hm%lda_u, geo, gr%mesh, st, hm%energy%hubbard_dc)
+        end if
+      end if
     end if
 
     ! Calculate initial forces and kinetic energy
