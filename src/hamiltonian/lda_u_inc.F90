@@ -165,6 +165,8 @@ subroutine X(update_occ_matrices)(this, geo, mesh, st, hubbard_dc, phase)
   call X(correct_energy_dc)(this, geo, st, hubbard_dc)
   call X(update_potential_lda_u)(this, geo, st)
 
+
+
   POP_SUB(update_occ_matrices)
 end subroutine X(update_occ_matrices)
 
