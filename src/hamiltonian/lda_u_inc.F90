@@ -102,12 +102,12 @@ end subroutine X(hubbard_apply)
 subroutine X(update_occ_matrices)(this, geo, mesh, st, hubbard_dc, phase)
   implicit none
  
-  type(lda_u_t), intent(inout)    :: this
-  type(geometry_t), intent(in)    :: geo
-  type(mesh_t),     intent(in)    :: mesh
-  type(states_t),  intent(inout)  :: st
-  FLOAT, intent(inout)            :: hubbard_dc
-  CMPLX, optional, intent(in)     :: phase(:,:) 
+  type(lda_u_t), intent(inout)         :: this
+  type(geometry_t), intent(in)         :: geo
+  type(mesh_t),     intent(in)         :: mesh
+  type(states_t),  intent(inout)       :: st
+  FLOAT, intent(inout)                 :: hubbard_dc
+  CMPLX, pointer, optional             :: phase(:,:) 
 
   integer :: ia, im, ik, ist, ispin, norbs, ip, idim
   R_TYPE, allocatable :: psi(:,:)
