@@ -134,18 +134,6 @@ contains
   nullify(this%zn)
   nullify(this%dV)
   nullify(this%zV)
-  do iat = 1, this%natoms
-    do ispin = 1, this%nspins
-      do iorb = 1, this%norbs(iat)
-        nullify(this%orbitals(iorb,ispin,iat)%dorbital_sphere)
-        nullify(this%orbitals(iorb,ispin,iat)%zorbital_sphere)
-        nullify(this%orbitals(iorb,ispin,iat)%dorbital_mesh)
-        nullify(this%orbitals(iorb,ispin,iat)%zorbital_mesh)
-      end do
-    end do
-  end do
-
-
 
   this%natoms = geo%natoms
   this%nspins = st%d%nspin
