@@ -99,11 +99,10 @@ end subroutine X(hubbard_apply)
 ! ---------------------------------------------------------
 !> This routine compute the values of the occupation matrices
 ! ---------------------------------------------------------
-subroutine X(update_occ_matrices)(this, geo, mesh, st, hubbard_dc, phase)
+subroutine X(update_occ_matrices)(this, mesh, st, hubbard_dc, phase)
   implicit none
  
   type(lda_u_t), intent(inout)         :: this
-  type(geometry_t), intent(in)         :: geo
   type(mesh_t),     intent(in)         :: mesh
   type(states_t),  intent(inout)       :: st
   FLOAT, intent(inout)                 :: hubbard_dc
@@ -116,7 +115,7 @@ subroutine X(update_occ_matrices)(this, geo, mesh, st, hubbard_dc, phase)
 
   PUSH_SUB(update_occ_matrices)
 
-  this%X(n)(1:this%maxnorbs,1:this%maxnorbs,1:st%d%nspin,1:geo%natoms) = R_TOTYPE(M_ZERO)
+  this%X(n)(1:this%maxnorbs,1:this%maxnorbs,1:st%d%nspin,1:this%natoms) = R_TOTYPE(M_ZERO)
   SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(dot(1:this%maxnorbs))
 
@@ -136,7 +135,7 @@ subroutine X(update_occ_matrices)(this, geo, mesh, st, hubbard_dc, phase)
         end do
       end if
       
-      do ia = 1, geo%natoms
+      do ia = 1, this%natoms
         norbs = this%norbs(ia)
         do im = 1, norbs
         !  dot(im) =  submesh_to_mesh_dotp(this%orbitals(im,ispin,ia)%sphere, st%d%dim, &
@@ -162,10 +161,8 @@ subroutine X(update_occ_matrices)(this, geo, mesh, st, hubbard_dc, phase)
   end if
 #endif      
 
-  call X(correct_energy_dc)(this, geo, st, hubbard_dc)
-  call X(update_potential_lda_u)(this, geo, st)
-
-
+  call X(correct_energy_dc)(this, st, hubbard_dc)
+  call X(update_potential_lda_u)(this,  st)
 
   POP_SUB(update_occ_matrices)
 end subroutine X(update_occ_matrices)
@@ -173,30 +170,27 @@ end subroutine X(update_occ_matrices)
 ! ---------------------------------------------------------
 !> This routine compute the value of the double counting term in the LDA+U energy
 ! ---------------------------------------------------------
-subroutine X(correct_energy_dc)(this, geo, st, hubbard_dc)
+subroutine X(correct_energy_dc)(this, st, hubbard_dc)
   implicit none
 
   type(lda_u_t), intent(inout)    :: this
-  type(geometry_t), intent(in)    :: geo
   type(states_t),  intent(in)     :: st
   FLOAT, intent(inout)         :: hubbard_dc
 
   integer :: ia, imp, im, ispin
-  FLOAT :: U_I
 
   PUSH_SUB(correct_energy_dc)
 
   hubbard_dc = M_ZERO
 
-  do ia = 1, geo%natoms
-    U_I = species_hubbard_u(geo%atom(ia)%species)
+  do ia = 1, this%natoms
     do ispin = 1, st%d%nspin
       !TODO: These are matrix operations, that could be optimized
       do im = 1, this%norbs(ia)
         do imp = 1, this%norbs(ia)
-          hubbard_dc = hubbard_dc - CNST(0.5)*U_I*abs(this%X(n)(im,imp,ispin,ia))**2
+          hubbard_dc = hubbard_dc - CNST(0.5)*this%Ueff(ia)*abs(this%X(n)(im,imp,ispin,ia))**2
         end do
-        hubbard_dc = hubbard_dc + CNST(0.5)*U_I*this%X(n)(im,im,ispin,ia)
+        hubbard_dc = hubbard_dc + CNST(0.5)*this%Ueff(ia)*this%X(n)(im,im,ispin,ia)
       end do
     end do
   end do
@@ -210,11 +204,10 @@ end subroutine X(correct_energy_dc)
 !> by the projector Pmm' and summed over m and m' for all the atoms
 !> gives the full Hubbard potential
 ! ---------------------------------------------------------
-subroutine X(update_potential_lda_u)(this, geo, st)
+subroutine X(update_potential_lda_u)(this, st)
   implicit none
 
   type(lda_u_t), intent(inout)    :: this
-  type(geometry_t), intent(in)    :: geo
   type(states_t),  intent(in)     :: st
 
   integer :: ia, im, ispin, norbs
@@ -222,13 +215,12 @@ subroutine X(update_potential_lda_u)(this, geo, st)
 
   PUSH_SUB(update_potential_lda_u)
 
-  do ia = 1, geo%natoms
-    U_I = species_hubbard_u(geo%atom(ia)%species)
+  do ia = 1, this%natoms
     norbs = this%norbs(ia)
     do ispin = 1, st%d%nspin
       do im = 1, norbs
-        this%X(V)(1:norbs,im,ispin,ia) = - U_I*this%X(n)(1:norbs,im,ispin,ia)
-        this%X(V)(im,im,ispin,ia) = this%X(V)(im,im,ispin,ia) + CNST(0.5)*U_I
+        this%X(V)(1:norbs,im,ispin,ia) = - this%Ueff(ia)*this%X(n)(1:norbs,im,ispin,ia)
+        this%X(V)(im,im,ispin,ia) = this%X(V)(im,im,ispin,ia) + CNST(0.5)*this%Ueff(ia)
       end do
     end do
   end do
