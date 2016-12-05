@@ -70,13 +70,17 @@ module lda_u_oct_m
     FLOAT, pointer           :: dn(:,:,:,:), dV(:,:,:,:)
     CMPLX, pointer           :: zn(:,:,:,:), zV(:,:,:,:)
     type(orbital_t), pointer :: orbitals(:,:,:)    
+    FLOAT, pointer           :: Ueff(:) !> The effective U of the simplified rotational invariant form
 
-    integer             :: natoms        !> Number of atoms (copied from geometry_t)
+    integer             :: natoms          !> Number of atoms (copied from geometry_t)
     integer             :: nspins
-    integer, pointer    :: norbs(:)      !> Number of orbitals
-    integer             :: maxnorbs      !> Maximal number of orbitals for all the atoms
-    integer             :: projection    !> The method used to perform the projection
-    logical             :: truncate
+    integer, pointer    :: norbs(:)        !> Number of orbitals
+    integer             :: maxnorbs        !> Maximal number of orbitals for all the atoms
+    integer             :: projection      !> The method used to perform the projection
+  
+    logical             :: truncate        !> Do we truncate the orbitals to the radius 
+                                           !> of the NL part of the pseudo
+    logical             :: selfconsistentU !> Do we compute U self-consistenly
   end type lda_u_t
 
 contains
@@ -129,11 +133,21 @@ contains
   if(this%projection==OPTION__ORBITALSPROJECTIONMETHOD__SPHERE) &
     call messages_not_implemented("OrbitalProjectionMethod=sphere") 
 
+  !%Variable UseACBNOFunctional
+  !%Type logical
+  !%Default no
+  !%Section Hamiltonian::LDA+U
+  !%Description
+  !% If set to yes, Octopus will determine the effective U term using the 
+  !% ACBN0 functional as defined in PRX 5, 011006 (2015) 
+  !%End
+  call parse_variable('UseACBNOFunctional', .false., this%selfconsistentU)
 
   nullify(this%dn)
   nullify(this%zn)
   nullify(this%dV)
   nullify(this%zV)
+  nullify(this%Ueff)
 
   this%natoms = geo%natoms
   this%nspins = st%d%nspin
@@ -174,6 +188,7 @@ contains
    SAFE_DEALLOCATE_P(this%zn)
    SAFE_DEALLOCATE_P(this%dV)
    SAFE_DEALLOCATE_P(this%zV) 
+   SAFE_DEALLOCATE_P(this%Ueff)
  
    do iat = 1, this%natoms
      do ispin = 1, this%nspins 

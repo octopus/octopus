@@ -222,8 +222,6 @@ subroutine X(update_potential_lda_u)(this, geo, st)
 
   PUSH_SUB(update_potential_lda_u)
 
-  !this%X(V)(1:this%maxnorbs,1:this%maxnorbs,1:st%d%nspin,1:geo%natoms) = R_TOTYPE(M_ZERO)
-
   do ia = 1, geo%natoms
     U_I = species_hubbard_u(geo%atom(ia)%species)
     norbs = this%norbs(ia)
@@ -323,7 +321,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
 
   integer :: ia, iorb, norb, ispin
   integer ::  hubbardl, ii, ll, mm
-  FLOAT   :: norm !, norm_proj
+  FLOAT   :: norm
 
 
   PUSH_SUB(X(construct_orbital_basis))
@@ -357,14 +355,15 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
   end do
  
   SAFE_ALLOCATE(this%orbitals(1:this%maxnorbs, 1:st%d%nspin, 1:geo%natoms))
+  SAFE_ALLOCATE(this%Ueff(1:geo%natoms))
 
   do ia = 1, geo%natoms
     hubbardl = species_hubbard_l(geo%atom(ia)%species)
+    this%Ueff(ia) = species_hubbard_u(geo%atom(ia)%species)
     if( hubbardl .eq. M_ZERO ) cycle
  
     do ispin = 1,st%d%nspin
       norb = 0
-!      norm_proj = CNST(0.0)
       do iorb = 1, species_niwfs(geo%atom(ia)%species)
         call species_iwf_ilm(geo%atom(ia)%species, iorb, ispin, ii, ll, mm)
         if(ll .eq. hubbardl ) then 
@@ -377,14 +376,9 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
           norm = X(mf_nrm2)(mesh, this%orbitals(norb,ispin,ia)%X(orbital_mesh)(1:mesh%np))
           this%orbitals(norb,ispin,ia)%X(orbital_mesh)(1:mesh%np) =  &
                   this%orbitals(norb,ispin,ia)%X(orbital_mesh)(1:mesh%np) /sqrt(norm)
-         !   norm_proj = norm_proj + norm
         endif
       end do
       
-!      !Normalizing the projector
-!      do iorb = 1, norb
-!        this%X(basis)(1:mesh%np, ispin, iorb, ia) = this%X(basis)(1:mesh%np, ispin, iorb, ia) / sqrt(norm_proj)
-!      end do
     end do
   end do
 
@@ -454,13 +448,15 @@ subroutine X(get_atomic_orbital) (geo, mesh, iatom, iorb, ispin, orb, truncate)
   if(.not. complex_ylms) then
     !In this case we want to get a real orbital and to store it in complex array
     SAFE_ALLOCATE(orb%dorbital_sphere(1:orb%sphere%np))
-    call dspecies_get_orbital_submesh(spec, orb%sphere, ii, ll, mm, ispin_, geo%atom(iatom)%x, orb%dorbital_sphere)
+    call dspecies_get_orbital_submesh(spec, orb%sphere, ii, ll, mm, ispin_, geo%atom(iatom)%x, &
+                                            orb%dorbital_sphere)
     call submesh_add_to_mesh(orb%sphere, orb%dorbital_sphere, orb%X(orbital_mesh))
     orb%X(orbital_sphere)(1:orb%sphere%np) = orb%dorbital_sphere(1:orb%sphere%np)
     SAFE_DEALLOCATE_P(orb%dorbital_sphere)
   else
   #endif
-    call X(species_get_orbital_submesh)(spec, orb%sphere, ii, ll, mm, ispin_, geo%atom(iatom)%x, orb%X(orbital_sphere))
+    call X(species_get_orbital_submesh)(spec, orb%sphere, ii, ll, mm, ispin_, geo%atom(iatom)%x,&
+                                         orb%X(orbital_sphere))
     call submesh_add_to_mesh(orb%sphere, orb%X(orbital_sphere), orb%X(orbital_mesh))
   #ifdef R_TCOMPLEX
   end if
