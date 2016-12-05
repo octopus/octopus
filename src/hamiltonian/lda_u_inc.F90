@@ -99,7 +99,7 @@ end subroutine X(hubbard_apply)
 ! ---------------------------------------------------------
 !> This routine compute the values of the occupation matrices
 ! ---------------------------------------------------------
-subroutine X(update_occ_matrices)(this, geo, mesh, st, hubbard_dc)
+subroutine X(update_occ_matrices)(this, geo, mesh, st, hubbard_dc, phase)
   implicit none
  
   type(lda_u_t), intent(inout)    :: this
@@ -107,8 +107,9 @@ subroutine X(update_occ_matrices)(this, geo, mesh, st, hubbard_dc)
   type(mesh_t),     intent(in)    :: mesh
   type(states_t),  intent(inout)  :: st
   FLOAT, intent(inout)            :: hubbard_dc
+  CMPLX, optional, intent(in)     :: phase(:,:) 
 
-  integer :: ia, im, ik, ist, ispin, norbs
+  integer :: ia, im, ik, ist, ispin, norbs, ip, idim
   R_TYPE, allocatable :: psi(:,:)
   R_TYPE, allocatable :: dot(:)
   FLOAT   :: weight
@@ -125,7 +126,16 @@ subroutine X(update_occ_matrices)(this, geo, mesh, st, hubbard_dc)
     do ist = st%st_start, st%st_end
       weight = st%d%kweights(ik) * st%occ(ist, ik)
 
-      call states_get_state(st, mesh, ist, ik, psi )   
+      call states_get_state(st, mesh, ist, ik, psi )  
+      if(present(phase)) then 
+        ! Apply the phase that contains both the k-point and vector-potential terms.
+        do idim = 1, st%d%dim
+          do ip = 1, mesh%np
+            psi(ip, idim) = phase(ip, ik)*psi(ip, idim)
+          end do
+        end do
+      end if
+      
       do ia = 1, geo%natoms
         norbs = this%norbs(ia)
         do im = 1, norbs

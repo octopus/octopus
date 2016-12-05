@@ -717,7 +717,12 @@ contains
         if (states_are_real(st)) then
           call dupdate_occ_matrices(hm%lda_u, geo, gr%mesh, st, hm%energy%hubbard_dc)
         else
-          call zupdate_occ_matrices(hm%lda_u, geo, gr%mesh, st, hm%energy%hubbard_dc)
+          if(associated(hm%hm_base%phase)) then
+            call zupdate_occ_matrices(hm%lda_u, geo, gr%mesh, st, hm%energy%hubbard_dc,&
+                                hm%hm_base%phase)
+          else
+            call zupdate_occ_matrices(hm%lda_u, geo, gr%mesh, st, hm%energy%hubbard_dc)
+          end if
         end if
       end if
 
