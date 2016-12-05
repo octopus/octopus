@@ -441,6 +441,7 @@ subroutine X(get_atomic_orbital) (geo, mesh, iatom, iorb, ispin, orb, truncate)
     call submesh_add_to_mesh(orb%sphere, orb%dorbital_sphere, orb%X(orbital_mesh))
     orb%X(orbital_sphere)(1:orb%sphere%np) = orb%dorbital_sphere(1:orb%sphere%np)
     SAFE_DEALLOCATE_P(orb%dorbital_sphere)
+    nullify(orb%dorbital_sphere)
   else
   #endif
     call X(species_get_orbital_submesh)(spec, orb%sphere, ii, ll, mm, ispin_, geo%atom(iatom)%x, orb%X(orbital_sphere))

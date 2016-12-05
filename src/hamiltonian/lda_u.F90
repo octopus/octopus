@@ -26,6 +26,7 @@ module lda_u_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
+  use io_oct_m
   use lalg_basic_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
@@ -50,11 +51,10 @@ module lda_u_oct_m
        lda_u_init,           &
        dhubbard_apply,       &
        zhubbard_apply,       &
-       dcorrect_energy_dc,   &
-       zcorrect_energy_dc,   &
        dupdate_occ_matrices, &
        zupdate_occ_matrices, &
-       lda_u_end
+       lda_u_end,            &
+       lda_u_write_occupation_matrices
 
   type orbital_t
     type(submesh_t)     :: sphere      !The submesh of the orbital
@@ -89,7 +89,7 @@ contains
   type(geometry_t), target,  intent(in)    :: geo
   type(states_t),            intent(in)    :: st
 
-  integer :: maxorbs
+  integer :: maxorbs, iat, ispin, iorb
 
   PUSH_SUB(lda_u_init)
 
@@ -134,6 +134,18 @@ contains
   nullify(this%zn)
   nullify(this%dV)
   nullify(this%zV)
+  do iat = 1, this%natoms
+    do ispin = 1, this%nspins
+      do iorb = 1, this%norbs(iat)
+        nullify(this%orbitals(iorb,ispin,iat)%dorbital_sphere)
+        nullify(this%orbitals(iorb,ispin,iat)%zorbital_sphere)
+        nullify(this%orbitals(iorb,ispin,iat)%dorbital_mesh)
+        nullify(this%orbitals(iorb,ispin,iat)%zorbital_mesh)
+      end do
+    end do
+  end do
+
+
 
   this%natoms = geo%natoms
   this%nspins = st%d%nspin
@@ -192,6 +204,53 @@ contains
 
    POP_SUB(lda_u_end)
  end subroutine lda_u_end
+
+ !> Prints the occupation matrices at the end of the scf calculation.
+ subroutine lda_u_write_occupation_matrices(dir, this, geo, st)
+   implicit none
+   type(lda_u_t),     intent(inout) :: this
+   character(len=*),  intent(in)    :: dir
+   type(geometry_t),  intent(in)    :: geo
+   type(states_t),    intent(in)    :: st
+
+   integer :: iunit, ia, ispin, im, imp
+   FLOAT :: hubbardl
+ 
+   PUSH_SUB(lda_u_write_occupation_matrices)
+
+   if(.not. mpi_grp_is_root(mpi_world)) return ! this the absolute master writes
+  
+   call io_mkdir(dir)
+   iunit = io_open(trim(dir) // "/occ_matrices", action='write')
+   write(iunit,'(a)') ' Occupation matrices '
+
+   do ia = 1, this%natoms
+     hubbardl = species_hubbard_l(geo%atom(ia)%species)
+     if( hubbardl .eq. M_ZERO ) cycle
+
+     do ispin = 1,st%d%nspin 
+        write(iunit,'(a, i4, a, i4)') ' Ion ', ia, ' spin ', ispin
+        do im = 1, this%norbs(ia)
+          write(iunit,'(1x)',advance='no') 
+
+          if (states_are_real(st)) then
+            do imp = 1, this%norbs(ia)-1
+              write(iunit,'(f14.8)',advance='no') this%dn(im,imp,ispin,ia)  
+            end do
+            write(iunit,'(f14.8)') this%dn(im,this%norbs(ia),ispin,ia)
+          else
+            do imp = 1, this%norbs(ia)-1
+              write(iunit,'(f14.8,f14.8)',advance='no') this%zn(im,imp,ispin,ia)
+            end do
+            write(iunit,'(f14.8,f14.8)') this%zn(im,this%norbs(ia),ispin,ia) 
+          end if
+        end do
+     end do !ispin
+   end do !iatom
+   call io_close(iunit)
+
+   POP_SUB(lda_u_write_occupation_matrices)
+ end subroutine lda_u_write_occupation_matrices
 
 #include "undef.F90"
 #include "real.F90"

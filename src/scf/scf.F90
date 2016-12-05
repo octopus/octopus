@@ -1016,6 +1016,9 @@ contains
     if(simul_box_is_periodic(gr%sb) .and. st%d%nik > st%d%nspin) &
       call states_write_bands(STATIC_DIR, st%nst, st, gr%sb)
 
+    if(hm%lda_u%apply) &
+      call lda_u_write_occupation_matrices(STATIC_DIR, hm%lda_u, geo, st) 
+
     POP_SUB(scf_run)
 
   contains
