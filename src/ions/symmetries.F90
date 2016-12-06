@@ -210,7 +210,8 @@ contains
 
       do iatom = 1, geo%natoms
         position(1:3, iatom) = M_ZERO
-        position(1:dim4syms, iatom) = matmul (geo%atom(iatom)%x(1:dim4syms),klattice)/(M_TWO*M_PI) 
+        ! Transform atomic positions to reduced coordinates
+        position(1:dim4syms, iatom) = matmul (geo%atom(iatom)%x(1:dim4syms),klattice(1:dim4syms,1:dim4syms))/(M_TWO*M_PI) 
         typs(iatom) = species_index(geo%atom(iatom)%species)
       end do
 
