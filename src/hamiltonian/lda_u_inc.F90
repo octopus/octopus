@@ -18,25 +18,27 @@
 !! $Id$
 
 
-subroutine X(hubbard_apply)(this, mesh, d, ik, psib, hpsib)
+subroutine X(hubbard_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
   implicit none 
 
-  type(lda_u_t), intent(in)      :: this
-  type(mesh_t),    intent(in)    :: mesh
-  integer,         intent(in)    :: ik
-  type(batch_t),   intent(in)    :: psib
+  type(lda_u_t),      intent(in) :: this
+  type(mesh_t),       intent(in) :: mesh
+  integer,            intent(in) :: ik
+  type(batch_t),      intent(in) :: psib
   type(batch_t),   intent(inout) :: hpsib
   type(states_dim_t), intent(in) :: d
+  logical,            intent(in) :: has_phase !True if the wavefunction has an associated phase
 
   integer :: ibatch, idim, ia, imp, im, ispin
   integer :: bind, is
   R_TYPE  :: weight, reduced
   R_TYPE, allocatable :: psi(:,:), hpsi(:,:)
-  R_TYPE, allocatable :: dot(:)
+  R_TYPE, allocatable :: dot(:), epsi(:)
 
-  ! no push_sub because it is called too frequently
+  PUSH_SUB(hubbard_apply)
 
   SAFE_ALLOCATE(psi(1:mesh%np, 1:d%dim))
+  SAFE_ALLOCATE(epsi(1:mesh%np))
   SAFE_ALLOCATE(hpsi(1:mesh%np, 1:d%dim))
   SAFE_ALLOCATE(dot(1:this%maxnorbs))
 
@@ -53,8 +55,21 @@ subroutine X(hubbard_apply)(this, mesh, d, ik, psib, hpsib)
         ! We first compute <phi m | psi> for all orbitals of the atom
         !
         do im = 1, this%norbs(ia)
-          dot(im) = X(mf_dotp)(mesh, this%orbitals(im,ispin,ia)%X(orbital_mesh),& 
+          !If we need to add the phase, we explicitly do the operation using the sphere
+          !This does not change anything if the sphere occupies the full mesh or not
+          if(has_phase) then
+            do is = 1, this%orbitals(im,ispin,ia)%sphere%np
+              epsi(is) = psi(this%orbitals(im,ispin,ia)%sphere%map(is), idim)*&
+                           this%orbitals(im,ispin,ia)%phase(is, ik) 
+            end do
+            dot(im) = X(mf_dotp)(this%orbitals(im,ispin,ia)%sphere%mesh, &
+                                 this%orbitals(im,ispin,ia)%X(orbital_sphere),&
+                                 epsi(1:this%orbitals(im,ispin,ia)%sphere%np),&
+                                 np = this%orbitals(im,ispin,ia)%sphere%np)
+          else
+            dot(im) = X(mf_dotp)(mesh, this%orbitals(im,ispin,ia)%X(orbital_mesh),& 
                                   psi(1:mesh%np,idim))
+          end if
         end do
         !
         do im = 1, this%norbs(ia)
@@ -67,23 +82,24 @@ subroutine X(hubbard_apply)(this, mesh, d, ik, psib, hpsib)
         !  call submesh_add_to_mesh(this%orbitals(im,ispin,ia)%sphere, &
           !                           this%orbitals(im,ispin,ia)%X(orbital), &
           !                           hpsi(:, idim), this%X(V)(im,imp,ispin,ia)*dot) 
-  !        bind = batch_ist_idim_to_linear(psib, (/ibatch, idim/))
-          !forall (is = 1:this%orbitals(im,ispin,ia)%sphere%np)
-          !  hpsib%states_linear(bind)%X(psi)(this%orbitals(im,ispin,ia)%sphere%map(is)) = &
-          !    hpsib%states_linear(bind)%X(psi)(this%orbitals(im,ispin,ia)%sphere%map(is)) &
-          !         + this%orbitals(im,ispin,ia)%X(orbital)(is)*reduced
-          !end forall
 
-  !        forall (is = 1:mesh%np)
-  !          hpsib%states_linear(bind)%X(psi)(is) = &
-  !            hpsib%states_linear(bind)%X(psi)(is) &
-  !                 + this%orbitals(im,ispin,ia)%X(orbital_mesh)(is)*reduced
-  !        end forall
         !call submesh_add_to_mesh(this%orbitals(im,ispin,ia)%sphere, &
         !                         this%orbitals(im,ispin,ia)%X(orbital), &
         !                         hpsi(:, idim), reduced)
-         call lalg_axpy(mesh%np, reduced, &
+
+         !In case of phase, we have to apply the conjugate of the phase here
+         if(has_phase) then
+           do is = 1, this%orbitals(im,ispin,ia)%sphere%np
+             epsi(is) = this%orbitals(im,ispin,ia)%X(orbital_sphere)(is) & 
+                            *conjg(this%orbitals(im,ispin,ia)%phase(is, ik))
+           end do
+           !Here it is simpler to use the sphere 
+           call submesh_add_to_mesh(this%orbitals(im,ispin,ia)%sphere, &
+                                    epsi, hpsi(:, idim), reduced)
+         else
+           call lalg_axpy(mesh%np, reduced, &
                this%orbitals(im,ispin,ia)%X(orbital_mesh), hpsi(1:mesh%np, idim))
+         end if
        end do !im
      end do !idim
    end do !ia
@@ -91,8 +107,11 @@ subroutine X(hubbard_apply)(this, mesh, d, ik, psib, hpsib)
   end do !ibatch
 
   SAFE_DEALLOCATE_A(psi)
+  SAFE_DEALLOCATE_A(epsi)
   SAFE_DEALLOCATE_A(hpsi)
   SAFE_DEALLOCATE_A(dot)
+
+  POP_SUB(hubbard_apply)
 
 end subroutine X(hubbard_apply)
 
@@ -108,8 +127,8 @@ subroutine X(update_occ_matrices)(this, mesh, st, hubbard_dc, phase)
   FLOAT, intent(inout)                 :: hubbard_dc
   CMPLX, pointer, optional             :: phase(:,:) 
 
-  integer :: ia, im, ik, ist, ispin, norbs, ip, idim
-  R_TYPE, allocatable :: psi(:,:)
+  integer :: ia, im, ik, ist, ispin, norbs, ip, idim, is
+  R_TYPE, allocatable :: psi(:,:), epsi(:)
   R_TYPE, allocatable :: dot(:)
   FLOAT   :: weight
 
@@ -117,6 +136,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, hubbard_dc, phase)
 
   this%X(n)(1:this%maxnorbs,1:this%maxnorbs,1:st%d%nspin,1:this%natoms) = R_TOTYPE(M_ZERO)
   SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(epsi(1:mesh%np))
   SAFE_ALLOCATE(dot(1:this%maxnorbs))
 
   !TODO: use symmetries of the occupation matrices
@@ -138,9 +158,19 @@ subroutine X(update_occ_matrices)(this, mesh, st, hubbard_dc, phase)
       do ia = 1, this%natoms
         norbs = this%norbs(ia)
         do im = 1, norbs
-        !  dot(im) =  submesh_to_mesh_dotp(this%orbitals(im,ispin,ia)%sphere, st%d%dim, &
-        !                        this%orbitals(im,ispin,ia)%X(orbital), psi)
-          dot(im) = X(mf_dotp)(mesh, psi(1:mesh%np,1), this%orbitals(im,ispin,ia)%X(orbital_mesh))
+          if(present(phase)) then
+            do is = 1, this%orbitals(im,ispin,ia)%sphere%np
+              epsi(is) = psi(this%orbitals(im,ispin,ia)%sphere%map(is), 1)*this%orbitals(im,ispin,ia)%phase(is, ik)
+            end do
+            dot(im) = X(mf_dotp)(this%orbitals(im,ispin,ia)%sphere%mesh, &
+                                 epsi(1:this%orbitals(im,ispin,ia)%sphere%np),& 
+                                 this%orbitals(im,ispin,ia)%X(orbital_sphere),&
+                                 np = this%orbitals(im,ispin,ia)%sphere%np )
+          else
+         !  dot(im) =  submesh_to_mesh_dotp(this%orbitals(im,ispin,ia)%sphere, st%d%dim, &
+         !                        this%orbitals(im,ispin,ia)%X(orbital), psi)
+            dot(im) = X(mf_dotp)(mesh, psi(1:mesh%np,1), this%orbitals(im,ispin,ia)%X(orbital_mesh))
+          end if
         end do
         do im = 1, norbs
           this%X(n)(1:norbs,im,ispin,ia) = this%X(n)(1:norbs,im,ispin,ia) &
@@ -153,6 +183,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, hubbard_dc, phase)
 
   
   SAFE_DEALLOCATE_A(dot)
+  SAFE_DEALLOCATE_A(epsi)
   SAFE_DEALLOCATE_A(psi)
 
 #if defined(HAVE_MPI)        
@@ -160,6 +191,8 @@ subroutine X(update_occ_matrices)(this, mesh, st, hubbard_dc, phase)
     call comm_allreduce(st%st_kpt_mpi_grp%comm, this%X(n))
   end if
 #endif      
+
+  !TODO : Add symmetrization in case of k-point symmetry
 
   call X(correct_energy_dc)(this, st, hubbard_dc)
   call X(update_potential_lda_u)(this,  st)
@@ -368,6 +401,12 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
           norm = X(mf_nrm2)(mesh, this%orbitals(norb,ispin,ia)%X(orbital_mesh)(1:mesh%np))
           this%orbitals(norb,ispin,ia)%X(orbital_mesh)(1:mesh%np) =  &
                   this%orbitals(norb,ispin,ia)%X(orbital_mesh)(1:mesh%np) /sqrt(norm)
+
+          !In case of complex wavefunction, we allocate the array for the phase correction
+  #ifdef R_TCOMPLEX
+          SAFE_ALLOCATE(this%orbitals(norb,ispin,ia)%phase(1:this%orbitals(norb,ispin,ia)%sphere%np, st%d%kpt%start:st%d%kpt%end))
+          this%orbitals(norb,ispin,ia)%phase(:,:) = M_ZERO
+  #endif
         endif
       end do
       
@@ -408,19 +447,23 @@ subroutine X(get_atomic_orbital) (geo, mesh, iatom, iorb, ispin, orb, truncate)
   nullify(orb%zorbital_sphere)
   nullify(orb%dorbital_mesh)
   nullify(orb%zorbital_mesh)
+  nullify(orb%phase)
 
   call species_iwf_ilm(spec, iorb, ispin_, ii, ll, mm)
 
   radius = species_get_iwf_radius(spec, ii, ispin_) 
+  ! make sure that if the spacing is too large, the orbitals fit in a few points at least
+  radius = max(radius, CNST(2.0)*maxval(mesh%spacing(1:mesh%sb%dim)))
+  ! if the orbital is larger than the size of the box, we restrict it to this size, 
+  ! otherwise the orbital will overlap more than one time with the simulation box.
+  ! This would induces phase problem if the complete mesh is used instead of the sphere
+  radius = min(radius, minval(mesh%sb%lsize(1:mesh%sb%dim)-mesh%spacing(1:mesh%sb%dim)))
 
   !If asked, we truncate the orbital to the radius on the projector spheres 
   !of the NL part of the pseudopotential.
   !This is a way to garanty no overlap between orbitals of different atoms.
   if(truncate .and. species_is_ps(spec)) &
     radius = min(radius,species_get_ps_radius(spec))
-
-  ! make sure that if the spacing is too large, the orbitals fit in a few points at least
-  radius = max(radius, CNST(2.0)*maxval(mesh%spacing(1:mesh%sb%dim)))
 
  
   !We initialise the submesh corresponding to the orbital 

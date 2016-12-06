@@ -27,6 +27,7 @@ module lda_u_oct_m
   use global_oct_m
   use grid_oct_m
   use io_oct_m
+  use kpoints_oct_m
   use lalg_basic_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
@@ -35,6 +36,7 @@ module lda_u_oct_m
   use parser_oct_m
   use periodic_copy_oct_m
   use profiling_oct_m
+  use simul_box_oct_m
   use species_oct_m
   use species_pot_oct_m
   use states_oct_m
@@ -54,14 +56,16 @@ module lda_u_oct_m
        dupdate_occ_matrices, &
        zupdate_occ_matrices, &
        lda_u_end,            &
+       lda_u_build_phase_correction,   &
        lda_u_write_occupation_matrices
 
   type orbital_t
-    type(submesh_t)     :: sphere      !The submesh of the orbital
+    type(submesh_t)     :: sphere             !The submesh of the orbital
     FLOAT, pointer      :: dorbital_sphere(:) !The orbital, if real, on the submesh
     CMPLX, pointer      :: zorbital_sphere(:) !The orbital, if complex, on the submesh
-    FLOAT, pointer      :: dorbital_mesh(:) !The orbital, if real, on the full mesh
-    CMPLX, pointer      :: zorbital_mesh(:) !The orbital, if complex, on the full mesh
+    FLOAT, pointer      :: dorbital_mesh(:)   !The orbital, if real, on the full mesh
+    CMPLX, pointer      :: zorbital_mesh(:)   !The orbital, if complex, on the full mesh
+    CMPLX, pointer      :: phase(:,:)         !Correction to the global phase if the sphere cross the border of the box
   end type orbital_t
 
 
@@ -197,6 +201,7 @@ contains
          SAFE_DEALLOCATE_P(this%orbitals(iorb,ispin,iat)%zorbital_sphere)
          SAFE_DEALLOCATE_P(this%orbitals(iorb,ispin,iat)%dorbital_mesh)
          SAFE_DEALLOCATE_P(this%orbitals(iorb,ispin,iat)%zorbital_mesh)
+         SAFE_DEALLOCATE_P(this%orbitals(iorb,ispin,iat)%phase)
          call submesh_end(this%orbitals(iorb,ispin,iat)%sphere)
        end do
      end do
@@ -207,6 +212,82 @@ contains
 
    POP_SUB(lda_u_end)
  end subroutine lda_u_end
+
+ !> Build the phase correction to the global phase for all orbitals
+ subroutine lda_u_build_phase_correction(this, sb, std, vec_pot, vec_pot_var)
+   type(lda_u_t),                 intent(inout) :: this
+   type(simul_box_t),             intent(in)    :: sb 
+   type(states_dim_t),            intent(in)    :: std
+   FLOAT, optional,  allocatable, intent(in)    :: vec_pot(:) !< (sb%dim)
+   FLOAT, optional,  allocatable, intent(in)    :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)
+
+   integer :: iat, ispin, iorb
+ 
+   PUSH_SUB(lda_u_build_phase_correction)
+
+   do iat = 1, this%natoms
+     do ispin = 1, this%nspins
+       do iorb = 1, this%norbs(iat)
+         call  orbital_update_phase_correction(this%orbitals(iorb,ispin,iat), sb, std, vec_pot, vec_pot_var)
+       end do
+     end do
+   end do
+  
+
+   POP_SUB(lda_u_build_phase_correction)
+
+ end subroutine lda_u_build_phase_correction
+
+  !TODO: merge with the routine of projector.F90
+  !> Build the phase correction to the global phase in case the orbital crosses the border of the simulaton box
+  subroutine orbital_update_phase_correction(this, sb, std, vec_pot, vec_pot_var)
+    type(orbital_t),               intent(inout) :: this
+    type(simul_box_t),             intent(in)    :: sb
+    type(states_dim_t),            intent(in)    :: std
+    FLOAT, optional,  allocatable, intent(in)    :: vec_pot(:) !< (sb%dim)
+    FLOAT, optional,  allocatable, intent(in)    :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)
+
+    integer :: ns, iq, is, ikpoint
+    FLOAT   :: kr, kpoint(1:MAX_DIM)
+    integer :: ndim
+
+    PUSH_SUB(orbital_update_phase_correction)
+
+    ns = this%sphere%np
+    ndim = sb%dim
+
+    do iq = std%kpt%start, std%kpt%end
+      ikpoint = states_dim_get_kpoint_index(std, iq)
+
+      ! if this fails, it probably means that sb is not compatible with std
+      ASSERT(ikpoint <= kpoints_number(sb%kpoints))
+
+      kpoint = M_ZERO
+      kpoint(1:ndim) = kpoints_get_point(sb%kpoints, ikpoint)
+
+      do is = 1, ns
+        ! this is only the correction to the global phase, that can
+        ! appear if the sphere crossed the boundary of the cell.
+
+        kr = sum(kpoint(1:ndim)*(this%sphere%x(is, 1:ndim) - this%sphere%mesh%x(this%sphere%map(is), 1:ndim)))
+
+        if(present(vec_pot)) then
+          if(allocated(vec_pot)) kr = kr + &
+            sum(vec_pot(1:ndim)*(this%sphere%x(is, 1:ndim)- this%sphere%mesh%x(this%sphere%map(is), 1:ndim)))
+        end if
+
+        if(present(vec_pot_var)) then
+          if(allocated(vec_pot_var)) kr = kr + sum(vec_pot_var(1:ndim, this%sphere%map(is))*this%sphere%x(is, 1:ndim))
+        end if
+
+        this%phase(is, iq) = exp(-M_zI*kr)
+      end do
+
+    end do
+
+    POP_SUB(orbital_update_phase_correction)
+
+  end subroutine orbital_update_phase_correction
 
  !> Prints the occupation matrices at the end of the scf calculation.
  subroutine lda_u_write_occupation_matrices(dir, this, geo, st)
