@@ -187,6 +187,9 @@ contains
     nullify(this%num_symmetry_ops)
     nullify(this%klattice)
 
+    SAFE_ALLOCATE(this%klattice(1:dim, 1:dim))
+    this%klattice(1:dim, 1:dim) = klattice(1:dim, 1:dim)
+
     !%Variable KPointsUseSymmetries
     !%Type logical
     !%Default no
@@ -225,64 +228,90 @@ contains
     !%End
     call parse_variable('KPointsUseTimeReversal', .not. symmetries_have_break_dir(symm), this%use_time_reversal)
 
+    !We determine the method used to define k-point
+    this%method = -1
+
     if(only_gamma) then
       this%method = KPOINTS_GAMMA
       call read_MP(gamma_only = .true.)
-    else 
-      ! do this always to allow setting KPointsGrid for BerkeleyGW output even if KPoints(Reduced) is also set
-      call read_MP(gamma_only = .false.)
-
-      if(read_user_kpoints()) then
-        this%method = KPOINTS_USER
-      else
-        this%method = KPOINTS_MONKH_PACK
- 
-        write(message(1),'(a)') ' '
-        write(message(2),'(1x,i3,a)') this%reduced%npoints, ' k-points generated from parameters :'
-        write(message(3),'(1x,a)') '---------------------------------------------------'
-        write(message(4),'(4x,a)') 'n ='
-        do idir = 1, dim
-          write(str_tmp,'(i5)') this%nik_axis(idir)
-          message(4) = trim(message(4)) // trim(str_tmp)
-        end do
-        call messages_info(4)
-        
-        do is = 1, this%reduced%nshifts
-          write(message(1),'(a)') ' '
-          write(message(2),'(4x,a,i1,a)') 's', is, '  ='
-          do idir = 1, dim
-            write(str_tmp,'(f6.2)') this%reduced%shifts(idir,is)
-            message(2) = trim(message(2)) // trim(str_tmp)
-          end do
-          call messages_info(2)
-        enddo
-
-      end if
-
-      write(message(1),'(a)') ' '
-      write(message(2),'(a)') ' index |    weight    |             coordinates              |'
-      call messages_info(2)
-
-      do ik = 1, this%reduced%npoints
-        write(str_tmp,'(i6,a,f12.6,a)') ik, " | ", this%reduced%weight(ik), " |"
-        message(1) =  str_tmp
-        do idir = 1, dim
-          write(str_tmp,'(f12.6)') this%reduced%red_point(idir, ik)
-          message(1) = trim(message(1)) // trim(str_tmp)
-        end do
-        write(str_tmp,'(a)') "  |"
-        message(1) = trim(message(1)) // trim(str_tmp)
-        call messages_info(1)
-      end do
-
-      write(message(1),'(a)') ' '
-      call messages_info(1)
-
+      POP_SUB(kpoints_init)
+      return
     end if
 
-    SAFE_ALLOCATE(this%klattice(1:dim, 1:dim))
+    ! do this always to allow setting KPointsGrid for BerkeleyGW output even if KPoints(Reduced) is also set
+    call read_MP(gamma_only = .false.)
 
-    this%klattice(1:dim, 1:dim) = klattice(1:dim, 1:dim)
+    if(parse_is_defined('KPointsGrid')) then
+      this%method = KPOINTS_MONKH_PACK
+
+      !Sanity check
+      if(parse_is_defined('KPointsReduced').or. parse_is_defined('KPoints')) then
+        write(message(1), '(a)') "More than one k-points method in the input file."
+        call messages_fatal(1) 
+      end if
+    end if
+
+    if(parse_is_defined('KPointsReduced').or. parse_is_defined('KPoints')) then
+      this%method = KPOINTS_USER
+
+      !Sanity check
+      if(parse_is_defined('KPointsGrid')) then
+        write(message(1), '(a)') "More than one k-points method in the input file."
+        call messages_fatal(1)
+      end if
+
+      call read_user_kpoints()
+    end if
+
+    if(this%method == -1) then
+      write(message(1), '(a)') "Unable to determine the method for defining k-points."
+      write(message(2), '(a)') "Octopus will assume a Monkhorst Pack grid."
+      call messages_warning(2)
+      this%method = KPOINTS_MONKH_PACK
+    end if
+
+    !Printing the k-point list
+    if( this%method == KPOINTS_MONKH_PACK ) then
+
+      write(message(1),'(a)') ' '
+      write(message(2),'(1x,i3,a)') this%reduced%npoints, ' k-points generated from parameters :'
+      write(message(3),'(1x,a)') '---------------------------------------------------'
+      write(message(4),'(4x,a)') 'n ='
+      do idir = 1, dim
+        write(str_tmp,'(i5)') this%nik_axis(idir)
+        message(4) = trim(message(4)) // trim(str_tmp)
+      end do
+      call messages_info(4)
+        
+      do is = 1, this%reduced%nshifts
+        write(message(1),'(a)') ' '
+        write(message(2),'(4x,a,i1,a)') 's', is, '  ='
+        do idir = 1, dim
+          write(str_tmp,'(f6.2)') this%reduced%shifts(idir,is)
+          message(2) = trim(message(2)) // trim(str_tmp)
+        end do
+        call messages_info(2)
+      enddo
+    end if
+
+    write(message(1),'(a)') ' '
+    write(message(2),'(a)') ' index |    weight    |             coordinates              |'
+    call messages_info(2)
+
+    do ik = 1, this%reduced%npoints
+      write(str_tmp,'(i6,a,f12.6,a)') ik, " | ", this%reduced%weight(ik), " |"
+      message(1) =  str_tmp
+      do idir = 1, dim
+        write(str_tmp,'(f12.6)') this%reduced%red_point(idir, ik)
+        message(1) = trim(message(1)) // trim(str_tmp)
+      end do
+      write(str_tmp,'(a)') "  |"
+      message(1) = trim(message(1)) // trim(str_tmp)
+      call messages_info(1)
+    end do
+
+    write(message(1),'(a)') ' '
+    call messages_info(1)
 
     POP_SUB(kpoints_init)
 
@@ -455,7 +484,7 @@ contains
 
 
     ! ---------------------------------------------------------
-    logical function read_user_kpoints()
+    subroutine read_user_kpoints()
       type(block_t) :: blk
       logical :: reduced
       integer :: ik, idir
@@ -495,16 +524,14 @@ contains
       !%End
 
       reduced = .false.
-      if(parse_block('KPoints', blk) /= 0) then
+      if(parse_block('KPoints', blk) /= 0 ) then
         if(parse_block('KPointsReduced', blk) == 0) then
           reduced = .true.
         else
-          read_user_kpoints = .false.
-          POP_SUB(kpoints_init.read_user_kpoints)
-          return
+          write(message(1),'(a)') 'Internal error loading user-defined k-point list.'
+          call messages_fatal(1)
         end if
       end if
-      read_user_kpoints = .true.
 
       ! end the one initialized by KPointsGrid already
       call kpoints_end(this)
@@ -578,7 +605,7 @@ contains
       call messages_info(1)
 
       POP_SUB(kpoints_init.read_user_kpoints)
-    end function read_user_kpoints
+    end subroutine read_user_kpoints
 
   end subroutine kpoints_init
 
