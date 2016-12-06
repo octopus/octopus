@@ -102,7 +102,8 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
 
     ! iterate over all points that go to this point by a symmetry operation
     do iop = 1, nops
-      srcpoint = symm_op_apply_inv(this%mesh%sb%symm%ops(iop), destpoint)
+!      srcpoint = symm_op_apply_inv(this%mesh%sb%symm%ops(iop), destpoint)
+srcpoint = symm_op_apply(this%mesh%sb%symm%ops(iop), destpoint) 
 
       ! move back to reference to origin at corner of cell
       srcpoint = srcpoint + lsize / 2
