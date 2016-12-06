@@ -55,37 +55,38 @@ module kpoints_oct_m
     kpoints_to_absolute
 
   type kpoints_grid_t
-    FLOAT, pointer :: point(:, :)
-    FLOAT, pointer :: red_point(:, :)
-    FLOAT, pointer :: weight(:)
+    FLOAT, pointer   :: point(:, :)
+    FLOAT, pointer   :: red_point(:, :)
+    FLOAT, pointer   :: weight(:)
     integer          :: nshifts            !< number of shifts
     FLOAT, pointer   :: shifts(:,:)
-    integer        :: npoints
-    integer        :: dim
+    integer          :: npoints
+    integer          :: dim
   end type kpoints_grid_t
 
   type kpoints_t
     type(kpoints_grid_t) :: full
     type(kpoints_grid_t) :: reduced
 
-    integer        :: method
+    integer              :: method
 
-    logical        :: use_symmetries
-    logical        :: use_time_reversal
-    integer        :: nik_skip=0 !< number of user defined points with zero weight
+    logical              :: use_symmetries
+    logical              :: use_time_reversal
+    integer              :: nik_skip=0 !< number of user defined points with zero weight
 
     !> For the modified Monkhorst-Pack scheme
-    integer        :: nik_axis(MAX_DIM)    !< number of MP divisions
-    integer, pointer :: symmetry_ops(:, :)  !< (reduced%npoints, nops)
-    integer, pointer :: num_symmetry_ops(:) !< (reduced%npoints)
+    integer              :: nik_axis(MAX_DIM)    !< number of MP divisions
+    integer, pointer     :: symmetry_ops(:, :)  !< (reduced%npoints, nops)
+    integer, pointer     :: num_symmetry_ops(:) !< (reduced%npoints)
 
-    FLOAT, pointer :: klattice(:, :)
+    FLOAT, pointer       :: klattice(:, :)
   end type kpoints_t
 
   integer, parameter ::                &
     KPOINTS_GAMMA       =  1,          &
     KPOINTS_MONKH_PACK  =  2,          &
-    KPOINTS_USER        =  3
+    KPOINTS_USER        =  3,          &
+    KPOINTS_PATHS       =  4
 
 contains
 
