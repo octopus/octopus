@@ -182,6 +182,7 @@ contains
     integer :: ik, idir, is
     character(len=100) :: str_tmp
     FLOAT :: weight_sum
+    logical :: default_timereversal
 
     PUSH_SUB(kpoints_init)
 
@@ -230,7 +231,8 @@ contains
     !% time-reversal symmetry should not be used.
     !%
     !%End
-    call parse_variable('KPointsUseTimeReversal', .not. symmetries_have_break_dir(symm), this%use_time_reversal)
+    default_timereversal = this%use_symmetries .and. .not. symmetries_have_break_dir(symm)
+    call parse_variable('KPointsUseTimeReversal', default_timereversal, this%use_time_reversal)
 
     !We determine the method used to define k-point
     this%method = -1
@@ -289,6 +291,10 @@ contains
       end if
       if(this%use_symmetries) then
         write(message(1), '(a)') "KPointsUseSymmetries is not compatible with user-defined k-points."
+        call messages_fatal(1)
+      end if
+      if(this%use_time_reversal) then
+        write(message(1), '(a)') "KPointsUseTimeReversal is not compatible with user-defined k-points."
         call messages_fatal(1)
       end if
       
@@ -554,7 +560,7 @@ contains
       !%
       !%End
 
-      if(parse_block('KPointsPath', blk) == 0) then
+      if(parse_block('KPointsPath', blk) /= 0) then
         write(message(1),'(a)') 'Internal error while reading KPointsPath.'
         call messages_fatal(1)
       end if
