@@ -31,6 +31,7 @@ module lcao_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
   use lapack_oct_m
+  use lda_u_oct_m
   use loct_oct_m
   use magnetic_oct_m
   use math_oct_m
@@ -770,14 +771,14 @@ contains
         call states_fermi(sys%st, sys%gr%mesh)
 
         if(hm%lda_u%apply) then
-          if (states_are_real(st)) then
-            call dupdate_occ_matrices(hm%lda_u, gr%mesh, st, hm%energy%hubbard_dc)
+          if (states_are_real(sys%st)) then
+            call dupdate_occ_matrices(hm%lda_u, sys%gr%mesh, sys%st, hm%energy%hubbard_dc)
           else
             if(associated(hm%hm_base%phase)) then
-              call zupdate_occ_matrices(hm%lda_u, gr%mesh, st, hm%energy%hubbard_dc,&
+              call zupdate_occ_matrices(hm%lda_u, sys%gr%mesh, sys%st, hm%energy%hubbard_dc,&
                                 hm%hm_base%phase)
             else
-              call zupdate_occ_matrices(hm%lda_u, gr%mesh, st, hm%energy%hubbard_dc)
+              call zupdate_occ_matrices(hm%lda_u, sys%gr%mesh, sys%st, hm%energy%hubbard_dc)
             end if
           end if
         end if
@@ -786,7 +787,7 @@ contains
 
         ! Update the density and the Hamiltonian
         if (lcao%mode == OPTION__LCAOSTART__LCAO_FULL) then
-          call: system_h_setup(sys, hm, calc_eigenval = .false.)
+          call system_h_setup(sys, hm, calc_eigenval = .false.)
           if(sys%st%d%ispin > UNPOLARIZED) then
             ASSERT(present(lmm_r))
             call write_magnetic_moments(stdout, sys%gr%fine%mesh, sys%st, sys%geo, lmm_r)
@@ -824,14 +825,14 @@ contains
           call states_fermi(sys%st, sys%gr%mesh) ! occupations
          
           if(hm%lda_u%apply) then
-            if (states_are_real(st)) then
-              call dupdate_occ_matrices(hm%lda_u, gr%mesh, st, hm%energy%hubbard_dc)
+            if (states_are_real(sys%st)) then
+              call dupdate_occ_matrices(hm%lda_u, sys%gr%mesh, sys%st, hm%energy%hubbard_dc)
             else
               if(associated(hm%hm_base%phase)) then
-                call zupdate_occ_matrices(hm%lda_u, gr%mesh, st, hm%energy%hubbard_dc,&
+                call zupdate_occ_matrices(hm%lda_u, sys%gr%mesh, sys%st, hm%energy%hubbard_dc,&
                                 hm%hm_base%phase)
               else
-                call zupdate_occ_matrices(hm%lda_u, gr%mesh, st, hm%energy%hubbard_dc)
+                call zupdate_occ_matrices(hm%lda_u, sys%gr%mesh, sys%st, hm%energy%hubbard_dc)
               end if
             end if
           end if 

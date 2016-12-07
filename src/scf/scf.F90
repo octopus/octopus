@@ -726,6 +726,8 @@ contains
         end if
       end if
 
+      !!NTD!!
+      !Move this block after the different mixing below      
 
       ! compute output density, potential (if needed) and eigenvalues sum
       if(cmplxscl) then
@@ -864,6 +866,10 @@ contains
         call v_ks_calc(ks, hm, st, geo)
       end select
 
+      !!NTD!!
+      !Here we mix the occupation matrices
+      !using mix_coefficient(scf%smix)
+
       ! Are we asked to stop? (Whenever Fortran is ready for signals, this should go away)
       scf%forced_finish = clean_stop(mc%master_comm)
 
@@ -945,6 +951,9 @@ contains
       if (scf%conv_abs_force > M_ZERO) then
         forcein(1:geo%natoms, 1:gr%sb%dim) = forceout(1:geo%natoms, 1:gr%sb%dim)
       end if
+
+      !!NTD!! 
+      !Here we copy the old occupation matrix
 
       if(scf%forced_finish) then
         call profiling_out(prof)
