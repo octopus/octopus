@@ -1044,8 +1044,8 @@ contains
 
       do ik = 1, resolution(is)
         kpt_ind = kpt_ind +1
-        coord(kpt_ind) = accumulated_length + (is-1)*length/resolution(is) 
-        kpoints(1:dim, kpt_ind) = kpt1(1:dim) + (is-1)*length/resolution(is)*vec(1:dim)
+        coord(kpt_ind) = accumulated_length + (ik-1)*length/resolution(is) 
+        kpoints(1:dim, kpt_ind) = kpt1(1:dim) + (ik-1)*length/resolution(is)*vec(1:dim)
       end do
       accumulated_length = accumulated_length + length
     end do
