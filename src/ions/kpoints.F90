@@ -86,7 +86,7 @@ module kpoints_oct_m
     KPOINTS_GAMMA       =  1,          &
     KPOINTS_MONKH_PACK  =  2,          &
     KPOINTS_USER        =  3,          &
-    KPOINTS_PATHS       =  4
+    KPOINTS_PATH        =  4
 
 contains
 
@@ -241,21 +241,38 @@ contains
     ! do this always to allow setting KPointsGrid for BerkeleyGW output even if KPoints(Reduced) is also set
     call read_MP(gamma_only = .false.)
 
+    !Monkhorst Pack grid
     if(parse_is_defined('KPointsGrid')) then
       this%method = KPOINTS_MONKH_PACK
 
       !Sanity check
-      if(parse_is_defined('KPointsReduced').or. parse_is_defined('KPoints')) then
+      if(parse_is_defined('KPointsReduced').or. parse_is_defined('KPoints') &
+         .or.parse_is_defined('KPointsPath')) then
         write(message(1), '(a)') "More than one k-points method in the input file."
         call messages_fatal(1) 
       end if
     end if
 
+    !Monkhorst Pack grid
+    if(parse_is_defined('KPointsPath')) then
+      this%method = KPOINTS_MONKH_PACK
+ 
+      !Sanity check
+      if(parse_is_defined('KPointsReduced').or. parse_is_defined('KPoints') &
+         .or.parse_is_defined('KPointsGrid')) then
+        write(message(1), '(a)') "More than one k-points method in the input file."
+        call messages_fatal(1)
+      end if     
+ 
+      !call read_path() 
+    end if
+
+    !User-defined kpoints
     if(parse_is_defined('KPointsReduced').or. parse_is_defined('KPoints')) then
       this%method = KPOINTS_USER
 
       !Sanity check
-      if(parse_is_defined('KPointsGrid')) then
+      if(parse_is_defined('KPointsGrid').or.parse_is_defined('KPointsPath')) then
         write(message(1), '(a)') "More than one k-points method in the input file."
         call messages_fatal(1)
       end if
