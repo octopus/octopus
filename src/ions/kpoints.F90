@@ -264,16 +264,24 @@ contains
         call messages_fatal(1)
       end if     
  
-      !call read_path() 
+      call read_path() 
     end if
 
     !User-defined kpoints
     if(parse_is_defined('KPointsReduced').or. parse_is_defined('KPoints')) then
       this%method = KPOINTS_USER
 
-      !Sanity check
+      !Sanity checks
       if(parse_is_defined('KPointsGrid').or.parse_is_defined('KPointsPath')) then
         write(message(1), '(a)') "More than one k-points method in the input file."
+        call messages_fatal(1)
+      end if
+      if(this%use_symmetries) then
+        write(message(1), '(a)') "KPointsUseSymmetries is not compatible with user-defined k-points."
+        call messages_fatal(1)
+      end if
+      if(this%use_time_reversal) then
+        write(message(1), '(a)') "KPointsUseTimeReversal is not compatible with user-defined k-points."
         call messages_fatal(1)
       end if
 
@@ -499,6 +507,17 @@ contains
       POP_SUB(kpoints_init.read_MP)
     end subroutine read_MP
 
+    ! ---------------------------------------------------------
+    !> Read the k-points path information and generate the k-points list
+    subroutine read_path()
+      type(block_t) :: blk    
+
+      PUSH_SUB(kpoints_init.read_path)
+
+      POP_SUB(kpoints_init.read_path) 
+    end subroutine read_path
+
+
 
     ! ---------------------------------------------------------
     subroutine read_user_kpoints()
@@ -552,8 +571,6 @@ contains
 
       ! end the one initialized by KPointsGrid already
       call kpoints_end(this)
-
-      this%use_symmetries = .false.
 
       call kpoints_grid_init(dim, this%full, parse_block_n(blk), 1)
 
@@ -642,7 +659,6 @@ contains
 
     POP_SUB(kpoints_end)
   end subroutine kpoints_end
-
 
   ! ---------------------------------------------------------
   subroutine kpoints_to_absolute(klattice, kin, kout, dim)
