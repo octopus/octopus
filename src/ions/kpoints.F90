@@ -193,6 +193,7 @@ contains
     nullify(this%symmetry_ops)
     nullify(this%num_symmetry_ops)
     nullify(this%klattice)
+    nullify(this%coord_along_path)
 
     SAFE_ALLOCATE(this%klattice(1:dim, 1:dim))
     this%klattice(1:dim, 1:dim) = klattice(1:dim, 1:dim)
