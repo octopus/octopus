@@ -307,9 +307,10 @@ contains
 
     if(this%method == -1) then
       write(message(1), '(a)') "Unable to determine the method for defining k-points."
-      write(message(2), '(a)') "Octopus will assume a Monkhorst Pack grid."
+      write(message(2), '(a)') "Octopus will continue assuming a Monkhorst Pack grid."
       call messages_warning(2)
       this%method = KPOINTS_MONKH_PACK
+      call read_MP(gamma_only = .false.)
     end if
 
     !Printing the k-point list
