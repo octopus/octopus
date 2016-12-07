@@ -26,6 +26,7 @@ module unocc_oct_m
   use hamiltonian_oct_m
   use io_oct_m
   use lcao_oct_m
+  use lda_u_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -236,14 +237,14 @@ contains
       call states_fermi(sys%st, sys%gr%mesh)
 
       if(hm%lda_u%apply) then
-        if (states_are_real(st)) then
-          call dupdate_occ_matrices(hm%lda_u, gr%mesh, st, hm%energy%hubbard_dc)
+        if (states_are_real(sys%st)) then
+          call dupdate_occ_matrices(hm%lda_u, sys%gr%mesh, sys%st, hm%energy%hubbard_dc)
         else
           if(associated(hm%hm_base%phase)) then
-            call zupdate_occ_matrices(hm%lda_u, gr%mesh, st, hm%energy%hubbard_dc,&
+            call zupdate_occ_matrices(hm%lda_u, sys%gr%mesh, sys%st, hm%energy%hubbard_dc,&
                                 hm%hm_base%phase)
           else
-            call zupdate_occ_matrices(hm%lda_u, gr%mesh, st, hm%energy%hubbard_dc)
+            call zupdate_occ_matrices(hm%lda_u, sys%gr%mesh, sys%st, hm%energy%hubbard_dc)
           end if
         end if
       end if
