@@ -291,10 +291,6 @@ contains
         write(message(1), '(a)') "KPointsUseSymmetries is not compatible with user-defined k-points."
         call messages_fatal(1)
       end if
-      if(this%use_time_reversal) then
-        write(message(1), '(a)') "KPointsUseTimeReversal is not compatible with user-defined k-points."
-        call messages_fatal(1)
-      end if
       
       !TODO: This is dirty
       ! do this always to allow setting KPointsGrid for BerkeleyGW output even if KPoints(Reduced) is also set
