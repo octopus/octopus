@@ -622,11 +622,11 @@ contains
 
       !The points have been generated in absolute coordinates
       do ik = 1, this%full%npoints
-        call kpoints_to_reduced(klattice, this%full%point(:, ik), this%full%red_point(:, ik), dim)
+        call kpoints_to_reduced(rlattice, this%full%point(:, ik), this%full%red_point(:, ik), dim)
       end do
 
       do ik = 1, this%reduced%npoints
-        call kpoints_to_reduced(klattice, this%reduced%point(:, ik), this%reduced%red_point(:, ik), dim)
+        call kpoints_to_reduced(rlattice, this%reduced%point(:, ik), this%reduced%red_point(:, ik), dim)
       end do
 
       POP_SUB(kpoints_init.read_path) 
