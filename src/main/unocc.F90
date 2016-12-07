@@ -25,6 +25,7 @@ module unocc_oct_m
   use output_oct_m
   use hamiltonian_oct_m
   use io_oct_m
+  use kpoints_oct_m
   use lcao_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -284,8 +285,12 @@ contains
       call messages_warning(1)
     end if
 
-    if(simul_box_is_periodic(sys%gr%sb).and. sys%st%d%nik > sys%st%d%nspin) &
+    if(simul_box_is_periodic(sys%gr%sb).and. sys%st%d%nik > sys%st%d%nspin) then
       call states_write_bands(STATIC_DIR, sys%st%nst, sys%st, sys%gr%sb)
+      if(kpoints_get_kpoint_method(sys%gr%sb%kpoints) == KPOINTS_PATH) &
+        call states_write_bandstructure(STATIC_DIR, sys%st%nst, sys%st, sys%gr%sb)
+   end if
+ 
 
     call output_all(sys%outp, sys%gr, sys%geo, sys%st, hm, sys%ks, STATIC_DIR)
 

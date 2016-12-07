@@ -53,7 +53,8 @@ module kpoints_oct_m
     kpoints_grid_generate,        &
     kpoints_have_zero_weight_path,&
     kpoints_to_absolute,          &
-    kpoints_get_kpoint_method
+    kpoints_get_kpoint_method,    &
+    kpoints_get_path_coord
 
   type kpoints_grid_t
     FLOAT, pointer   :: point(:, :)
@@ -261,7 +262,7 @@ contains
 
     !User-defined k-points path
     if(parse_is_defined('KPointsPath')) then
-      this%method = KPOINTS_MONKH_PACK
+      this%method = KPOINTS_PATH
  
       !Sanity checks
       if(parse_is_defined('KPointsReduced').or. parse_is_defined('KPoints') &
@@ -1320,6 +1321,12 @@ contains
     kpoints_get_kpoint_method = this%method
   end function kpoints_get_kpoint_method
 
+  FLOAT pure function kpoints_get_path_coord(this, ind) result(coord)
+    type(kpoints_t),    intent(in) :: this
+    integer,            intent(in) :: ind
+
+    coord = this%coord_along_path(ind)
+  end function 
 
 end module kpoints_oct_m
 
