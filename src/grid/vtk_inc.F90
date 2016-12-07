@@ -228,9 +228,9 @@ subroutine X(vtk_out_cf_structured)(filename, fieldname, ierr, cf_in, cube, unit
     write(iunit, '(1a)') ' '
     write(iunit, '(1a,1i9)') 'POINT_DATA ', np
 #ifdef R_TCOMPLEX
-    write(iunit, '(3a)') 'SCALARS Re_'//trim(fieldname), 'double 1'
+    write(iunit, '(3a)') 'SCALARS Re_'//trim(fieldname), ' double 1'
 #else
-    write(iunit, '(3a)') 'SCALARS', trim(fieldname), 'double 1'
+    write(iunit, '(3a)') 'SCALARS ', trim(fieldname), ' double 1'
 #endif
     write(iunit, '(1a)') 'LOOKUP_TABLE default'
 
@@ -286,9 +286,9 @@ subroutine X(vtk_out_cf_structured)(filename, fieldname, ierr, cf_in, cube, unit
     write(iunit, '(1a)') ' '
     write(iunit, '(1a,1i9)') 'POINT_DATA ', np
 #ifdef R_TCOMPLEX
-    write(iunit, '(3a)') 'SCALARS Re_'//trim(fieldname), 'double 1'
+    write(iunit, '(3a)') 'SCALARS Re_'//trim(fieldname), ' double 1'
 #else
-    write(iunit, '(3a)') 'SCALARS', trim(fieldname), 'double 1'
+    write(iunit, '(3a)') 'SCALARS ', trim(fieldname), ' double 1'
 #endif
     write(iunit, '(1a)') 'LOOKUP_TABLE default'
     call io_close(iunit)
@@ -309,7 +309,7 @@ subroutine X(vtk_out_cf_structured)(filename, fieldname, ierr, cf_in, cube, unit
 
     iunit = io_open(trim(filename), action='write', position = 'append')
     write(iunit, '(1a)') ' '
-    write(iunit, '(3a)') 'SCALARS Im_'//trim(fieldname), 'double 1'
+    write(iunit, '(3a)') 'SCALARS Im_'//trim(fieldname), ' double 1'
     write(iunit, '(1a)') 'LOOKUP_TABLE default'
     call io_close(iunit)
 
