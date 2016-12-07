@@ -52,7 +52,8 @@ module kpoints_oct_m
     kpoints_kweight_denominator,  &
     kpoints_grid_generate,        &
     kpoints_have_zero_weight_path,&
-    kpoints_to_absolute
+    kpoints_to_absolute,          &
+    kpoints_get_kpoint_method
 
   type kpoints_grid_t
     FLOAT, pointer   :: point(:, :)
@@ -85,7 +86,7 @@ module kpoints_oct_m
     FLOAT, pointer       :: coord_along_path(:)
   end type kpoints_t
 
-  integer, parameter ::                &
+  integer, public, parameter ::        &
     KPOINTS_GAMMA       =  1,          &
     KPOINTS_MONKH_PACK  =  2,          &
     KPOINTS_USER        =  3,          &
@@ -1311,6 +1312,13 @@ contains
     end if
 
   end function kpoints_have_zero_weight_path
+ 
+  integer pure function kpoints_get_kpoint_method(this) 
+    type(kpoints_t),    intent(in) :: this
+
+    kpoints_get_kpoint_method = this%method
+  end function kpoints_get_kpoint_method
+
 
 end module kpoints_oct_m
 
