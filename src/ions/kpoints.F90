@@ -80,6 +80,9 @@ module kpoints_oct_m
     integer, pointer     :: num_symmetry_ops(:) !< (reduced%npoints)
 
     FLOAT, pointer       :: klattice(:, :)
+ 
+    !> For the output of a band-structure
+    FLOAT, pointer       :: coord_along_path(:)
   end type kpoints_t
 
   integer, parameter ::                &
@@ -164,6 +167,7 @@ contains
     this%nik_axis = 0
     nullify(this%symmetry_ops, this%num_symmetry_ops)
     nullify(this%klattice)
+    nullify(this%coord_along_path)
 
   end subroutine kpoints_nullify
 
@@ -238,9 +242,6 @@ contains
       return
     end if
 
-    ! do this always to allow setting KPointsGrid for BerkeleyGW output even if KPoints(Reduced) is also set
-    call read_MP(gamma_only = .false.)
-
     !Monkhorst Pack grid
     if(parse_is_defined('KPointsGrid')) then
       this%method = KPOINTS_MONKH_PACK
@@ -251,18 +252,28 @@ contains
         write(message(1), '(a)') "More than one k-points method in the input file."
         call messages_fatal(1) 
       end if
+
+      call read_MP(gamma_only = .false.)
     end if
 
-    !Monkhorst Pack grid
+    !User-defined k-points path
     if(parse_is_defined('KPointsPath')) then
       this%method = KPOINTS_MONKH_PACK
  
-      !Sanity check
+      !Sanity checks
       if(parse_is_defined('KPointsReduced').or. parse_is_defined('KPoints') &
          .or.parse_is_defined('KPointsGrid')) then
         write(message(1), '(a)') "More than one k-points method in the input file."
         call messages_fatal(1)
       end if     
+      if(this%use_symmetries) then
+        write(message(1), '(a)') "KPointsUseSymmetries is not compatible with KPointsPath."
+        call messages_fatal(1)
+      end if
+      if(this%use_time_reversal) then
+        write(message(1), '(a)') "KPointsUseTimeReversal is not compatible with KPointsPath."
+        call messages_fatal(1)
+      end if
  
       call read_path() 
     end if
@@ -284,7 +295,10 @@ contains
         write(message(1), '(a)') "KPointsUseTimeReversal is not compatible with user-defined k-points."
         call messages_fatal(1)
       end if
-
+      
+      !TODO: This is dirty
+      ! do this always to allow setting KPointsGrid for BerkeleyGW output even if KPoints(Reduced) is also set
+      call read_MP(gamma_only = .false.)
       call read_user_kpoints()
     end if
 
@@ -420,7 +434,7 @@ contains
         if(parse_block_n(blk) > 1) then ! we have a shift, or even more
           ncols = parse_block_cols(blk, 1)
           if(ncols /= dim) then
-            write(message(1),'(a,i3,a,i3)') 'KPointsGrid second row has ', ncols, ' columns but must have ', dim
+            write(message(1),'(a,i3,a,i3)') 'KPointsGrid shift has ', ncols, ' columns but must have ', dim
             call messages_fatal(1)
           end if
           do is = 1, nshifts
@@ -511,8 +525,107 @@ contains
     !> Read the k-points path information and generate the k-points list
     subroutine read_path()
       type(block_t) :: blk    
+      integer :: nshifts, nkpoints, nhighsympoints, nsegments
+      integer :: icol, ik, idir, ncols
+      integer, allocatable :: resolution(:)
+      FLOAT, allocatable   :: highsympoints(:,:)
+
 
       PUSH_SUB(kpoints_init.read_path)
+
+
+      !%Variable KPointsPath
+      !%Type block
+      !%Section Mesh::KPoints
+      !%Description
+      !% When this block is given, <i>k</i>-points are generated along a path 
+      !% defined by the points of the list. 
+      !% The points must be given in reduced coordinates.
+      !%
+      !% The first row of the block is a set of integers defining
+      !% the number of <i>k</i>-points for each segments of the path.
+      !% The number of columns should be equal to <tt>Dimensions</tt>,
+      !% and the k-points coordinate should be zero in finite directions.
+      !%
+      !% For example, the following input samples the BZ with 15 points:
+      !%
+      !% <tt>%KPointsPath
+      !% <br>&nbsp;&nbsp;10 | 5
+      !% <br>&nbsp;&nbsp; 0 | 0 | 0 
+      !% <br>&nbsp;&nbsp; 0.5 | 0 | 0
+      !% <br>&nbsp;&nbsp; 0.5 | 0.5 | 0.5
+      !% <br>%</tt>
+      !%
+      !%End
+
+      if(parse_block('KPointsPath', blk) == 0) then
+        write(message(1),'(a)') 'Internal error while reading KPointsPath.'
+        call messages_fatal(1)
+      end if
+
+      ! There is one high symmetry k-point per line
+      nsegments = parse_block_cols(blk, 0)
+      nhighsympoints = parse_block_n(blk)-1
+      if( nhighsympoints /= nsegments +1) then
+        write(message(1),'(a,i3,a,i3)') 'The first row of KPointsPath is not compatible with the number of specified k-points.'
+        call messages_fatal(1)
+      end if
+
+      SAFE_ALLOCATE(resolution(1:nsegments))
+      do icol = 1, nsegments
+        call parse_block_integer(blk, 0, icol-1, resolution(icol))
+      end do 
+      !Total number of points in the segment
+      nkpoints = sum(resolution)+1
+
+      SAFE_ALLOCATE(highsympoints(1:dim, 1:nhighsympoints))
+      do ik = 1, nhighsympoints
+        !Sanity check
+        ncols = parse_block_cols(blk, ik)
+        if(ncols /= dim) then
+          write(message(1),'(a,i3,a,i3)') 'KPointsPath row ', ik, ' has ', ncols, ' columns but must have ', dim
+          call messages_fatal(1)
+        end if
+
+        do idir = 1, dim
+            call parse_block_float(blk, ik, idir-1, highsympoints(idir, ik))
+        end do
+      end do
+
+      !We do not use axis
+      this%nik_axis(1:MAX_DIM) = 1
+
+      !We do not have shifts
+      nshifts = 1
+      call kpoints_grid_init(dim, this%full, nkpoints, nshifts)
+
+      ! For the output of band-structures
+      SAFE_ALLOCATE(this%coord_along_path(1:nkpoints))
+
+      call kpoints_path_generate(dim, klattice, nkpoints, nsegments, resolution, &
+               nhighsympoints, highsympoints, this%full%point, this%coord_along_path)
+
+      SAFE_DEALLOCATE_A(resolution)
+      SAFE_DEALLOCATE_A(highsympoints)
+
+      this%full%weight = M_ONE / this%full%npoints
+
+      call kpoints_grid_copy(this%full, this%reduced)
+
+      !We have no symmetry
+      SAFE_ALLOCATE(this%num_symmetry_ops(1:this%reduced%npoints))
+      SAFE_ALLOCATE(this%symmetry_ops(1:this%reduced%npoints, 1:1))
+      this%num_symmetry_ops(1:this%reduced%npoints) = 1
+      this%symmetry_ops(1:this%reduced%npoints, 1) = 1
+
+      !The points have been generated in absolute coordinates
+      do ik = 1, this%full%npoints
+        call kpoints_to_reduced(klattice, this%full%point(:, ik), this%full%red_point(:, ik), dim)
+      end do
+
+      do ik = 1, this%reduced%npoints
+        call kpoints_to_reduced(klattice, this%reduced%point(:, ik), this%reduced%red_point(:, ik), dim)
+      end do
 
       POP_SUB(kpoints_init.read_path) 
     end subroutine read_path
@@ -655,7 +768,7 @@ contains
     SAFE_DEALLOCATE_P(this%klattice)
     SAFE_DEALLOCATE_P(this%symmetry_ops)
     SAFE_DEALLOCATE_P(this%num_symmetry_ops)
-   
+    SAFE_DEALLOCATE_P(this%coord_along_path) 
 
     POP_SUB(kpoints_end)
   end subroutine kpoints_end
@@ -883,7 +996,70 @@ contains
     POP_SUB(kpoints_grid_generate)
   end subroutine kpoints_grid_generate
 
-  
+  ! --------------------------------------------------------------------------------------------  
+  !> Generate the k-point along a path
+  subroutine kpoints_path_generate(dim, klattice, nkpoints, nsegments, resolution, &
+               nhighsympoints, highsympoints, kpoints, coord)
+    integer,           intent(in)  :: dim
+    FLOAT,             intent(in)  :: klattice(:,:)
+    integer,           intent(in)  :: nkpoints
+    integer,           intent(in)  :: nsegments
+    integer,           intent(in)  :: resolution(:)
+    integer,           intent(in)  :: nhighsympoints
+    FLOAT,             intent(in)  :: highsympoints(:,:)
+    FLOAT,             intent(out) :: kpoints(:, :) 
+    FLOAT,             intent(out) :: coord(:)
+
+    integer :: is, ik, kpt_ind
+    FLOAT   :: length, total_length, accumulated_length
+    FLOAT   :: kpt1(1:MAX_DIM), kpt2(1:MAX_DIM), vec(1:MAX_DIM)
+
+    PUSH_SUB(kpoints_grid_generate)
+
+    total_length = M_ZERO
+    !We first compute the total length of the k-point path
+    do is=1, nsegments
+      ! We need to work in abolute coordinates to get the correct path length
+      call kpoints_to_absolute(klattice, highsympoints(1:dim,is), kpt1(:), dim)
+      call kpoints_to_absolute(klattice, highsympoints(1:dim,is+1), kpt2(:), dim)
+     
+      vec(1:dim) = kpt2(1:dim)-kpt1(1:dim) 
+      length = sqrt(sum(vec(1:dim)**2)) 
+      total_length = total_length + length
+    end do 
+
+    accumulated_length = M_ZERO
+    kpt_ind = 0
+    !Now we generate the points
+    do is=1, nsegments
+      ! We need to work in abolute coordinates to get the correct path length
+      call kpoints_to_absolute(klattice, highsympoints(1:dim,is), kpt1(:), dim)
+      call kpoints_to_absolute(klattice, highsympoints(1:dim,is+1), kpt2(:), dim)
+
+      vec(1:dim) = kpt2(1:dim)-kpt1(1:dim) 
+      length = sqrt(sum(vec(1:dim)**2))
+      vec(1:dim) = vec(1:dim)/length
+
+      do ik = 1, resolution(is)
+        kpt_ind = kpt_ind +1
+        coord(kpt_ind) = accumulated_length + (is-1)*length/resolution(is) 
+        kpoints(1:dim, kpt_ind) = kpt1(1:dim) + (is-1)*length/resolution(is)*vec(1:dim)
+      end do
+      accumulated_length = accumulated_length + length
+    end do
+    !We add the last point
+    kpt_ind = kpt_ind +1
+    call kpoints_to_absolute(klattice, highsympoints(1:dim,nsegments+1), kpt1(:), dim)
+    coord(kpt_ind) = accumulated_length
+    kpoints(1:dim, kpt_ind) =  kpt1(1:dim)
+
+    !The length of the total path is arbitrarily put to 1
+    coord(1:nkpoints) = coord(1:nkpoints)/total_length
+
+    POP_SUB(kpoints_grid_generate)
+  end subroutine kpoints_path_generate
+ 
+ 
   ! --------------------------------------------------------------------------------------------
   subroutine kpoints_grid_reduce(symm, time_reversal, nkpoints, dim, kpoints, weights, symm_ops, num_symm_ops)
     type(symmetries_t), intent(in)    :: symm
