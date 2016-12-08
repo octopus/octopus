@@ -603,18 +603,7 @@ contains
     end if
 
     !We update the occupation matrices
-    if(hm%lda_u%apply) then
-      if (states_are_real(st)) then
-        call dupdate_occ_matrices(hm%lda_u, gr%mesh, st, hm%energy%hubbard_dc)
-      else
-        if(associated(hm%hm_base%phase)) then
-          call zupdate_occ_matrices(hm%lda_u, gr%mesh, st, hm%energy%hubbard_dc,&
-                              hm%hm_base%phase)
-        else
-          call zupdate_occ_matrices(hm%lda_u, gr%mesh, st, hm%energy%hubbard_dc)
-        end if
-      end if
-    end if
+    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
     POP_SUB(propagator_dt)
     call profiling_out(prof)

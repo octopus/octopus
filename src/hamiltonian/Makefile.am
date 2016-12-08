@@ -100,4 +100,4 @@ vdw_ts.o : vdw_ts.F90 hirshfeld.o
 boundary_op.o : boundary_op.F90
 oct_exchange.o : oct_exchange_inc.F90 xc.o
 scissor.o : scissor.F90 scissor_inc.F90
-lda_u.o : lda_u.F90 lda_u_inc.F90 species_pot.o
+lda_u.o : lda_u.F90 lda_u_inc.F90 species_pot.o energy.o hamiltonian_base.o

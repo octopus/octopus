@@ -23,9 +23,11 @@ module lda_u_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use comm_oct_m
+  use energy_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
+  use hamiltonian_base_oct_m 
   use io_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
@@ -48,14 +50,13 @@ module lda_u_oct_m
 
   private
 
-  public ::                  &
-       lda_u_t,              &
-       lda_u_init,           &
-       dhubbard_apply,       &
-       zhubbard_apply,       &
-       dupdate_occ_matrices, &
-       zupdate_occ_matrices, &
-       lda_u_end,            &
+  public ::                            &
+       lda_u_t,                        &
+       lda_u_init,                     &
+       dhubbard_apply,                 &
+       zhubbard_apply,                 &
+       lda_u_update_occ_matrices,      &
+       lda_u_end,                      &
        lda_u_build_phase_correction,   &
        lda_u_write_occupation_matrices
 
@@ -90,8 +91,6 @@ module lda_u_oct_m
 contains
 
  subroutine lda_u_init(this, gr, geo, st)
-  implicit none
-
   type(lda_u_t),             intent(inout) :: this
   type(grid_t),              intent(in)    :: gr
   type(geometry_t), target,  intent(in)    :: geo
@@ -212,6 +211,31 @@ contains
 
    POP_SUB(lda_u_end)
  end subroutine lda_u_end
+
+ ! Interface for the X(update_occ_matrices) routines
+ subroutine lda_u_update_occ_matrices(this, mesh, st, hm_base, energy )
+   type(lda_u_t),             intent(inout) :: this
+   type(mesh_t),              intent(in)    :: mesh 
+   type(states_t),            intent(in)    :: st
+   type(hamiltonian_base_t),  intent(in)    :: hm_base 
+   type(energy_t),            intent(inout) :: energy
+
+   if(.not. this%apply) return
+   PUSH_SUB(lda_u_update_occ_matrices)
+
+   if (states_are_real(st)) then
+     call dupdate_occ_matrices(this, mesh, st, energy%hubbard_dc)
+   else
+     if(associated(hm_base%phase)) then
+       call zupdate_occ_matrices(this, mesh, st, energy%hubbard_dc,&
+                                hm_base%phase)
+     else
+       call zupdate_occ_matrices(this, mesh, st, energy%hubbard_dc)
+     end if
+   end if
+
+   POP_SUB(lda_u_update_occ_matrices)
+ end subroutine lda_u_update_occ_matrices
 
  !> Build the phase correction to the global phase for all orbitals
  subroutine lda_u_build_phase_correction(this, sb, std, vec_pot, vec_pot_var)

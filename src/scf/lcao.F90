@@ -769,20 +769,7 @@ contains
 
       if (lcao%mode /= OPTION__LCAOSTART__LCAO_SIMPLE .and. .not. present(st_start)) then
         call states_fermi(sys%st, sys%gr%mesh)
-
-        if(hm%lda_u%apply) then
-          if (states_are_real(sys%st)) then
-            call dupdate_occ_matrices(hm%lda_u, sys%gr%mesh, sys%st, hm%energy%hubbard_dc)
-          else
-            if(associated(hm%hm_base%phase)) then
-              call zupdate_occ_matrices(hm%lda_u, sys%gr%mesh, sys%st, hm%energy%hubbard_dc,&
-                                hm%hm_base%phase)
-            else
-              call zupdate_occ_matrices(hm%lda_u, sys%gr%mesh, sys%st, hm%energy%hubbard_dc)
-            end if
-          end if
-        end if
-
+        call lda_u_update_occ_matrices(hm%lda_u, sys%gr%mesh, sys%st, hm%hm_base, hm%energy )
         call states_write_eigenvalues(stdout, min(sys%st%nst, lcao%norbs), sys%st, sys%gr%sb)
 
         ! Update the density and the Hamiltonian
@@ -823,19 +810,7 @@ contains
         call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start)) ! get potentials
         if(.not. present(st_start)) then
           call states_fermi(sys%st, sys%gr%mesh) ! occupations
-         
-          if(hm%lda_u%apply) then
-            if (states_are_real(sys%st)) then
-              call dupdate_occ_matrices(hm%lda_u, sys%gr%mesh, sys%st, hm%energy%hubbard_dc)
-            else
-              if(associated(hm%hm_base%phase)) then
-                call zupdate_occ_matrices(hm%lda_u, sys%gr%mesh, sys%st, hm%energy%hubbard_dc,&
-                                hm%hm_base%phase)
-              else
-                call zupdate_occ_matrices(hm%lda_u, sys%gr%mesh, sys%st, hm%energy%hubbard_dc)
-              end if
-            end if
-          end if 
+          call lda_u_update_occ_matrices(hm%lda_u, sys%gr%mesh, sys%st, hm%hm_base, hm%energy ) 
         end if
       end if
 

@@ -235,19 +235,7 @@ contains
       ! the occupations must be recalculated each time, though they do not affect the result of course.
       ! FIXME: This is wrong for metals where we must use the Fermi level from the original calculation!
       call states_fermi(sys%st, sys%gr%mesh)
-
-      if(hm%lda_u%apply) then
-        if (states_are_real(sys%st)) then
-          call dupdate_occ_matrices(hm%lda_u, sys%gr%mesh, sys%st, hm%energy%hubbard_dc)
-        else
-          if(associated(hm%hm_base%phase)) then
-            call zupdate_occ_matrices(hm%lda_u, sys%gr%mesh, sys%st, hm%energy%hubbard_dc,&
-                                hm%hm_base%phase)
-          else
-            call zupdate_occ_matrices(hm%lda_u, sys%gr%mesh, sys%st, hm%energy%hubbard_dc)
-          end if
-        end if
-      end if
+      call lda_u_update_occ_matrices(hm%lda_u, sys%gr%mesh, sys%st, hm%hm_base, hm%energy )
 
       call states_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb, eigens%diff, st_start = showstart, compact = .true.)
       call messages_print_stress(stdout)

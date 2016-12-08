@@ -409,18 +409,7 @@ contains
     end if
 
     !Initialise the occupation matrices for LDA+U
-    if(hm%lda_u%apply) then
-      if (states_are_real(st)) then
-        call dupdate_occ_matrices(hm%lda_u, gr%mesh, st, hm%energy%hubbard_dc)
-      else
-        if(associated(hm%hm_base%phase)) then
-          call zupdate_occ_matrices(hm%lda_u, gr%mesh, st, hm%energy%hubbard_dc,&
-                              hm%hm_base%phase)
-        else
-          call zupdate_occ_matrices(hm%lda_u, gr%mesh, st, hm%energy%hubbard_dc)
-        end if
-      end if
-    end if
+    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
     ! Calculate initial forces and kinetic energy
     if(ion_dynamics_ions_move(td%ions)) then

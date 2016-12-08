@@ -123,7 +123,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, hubbard_dc, phase)
  
   type(lda_u_t), intent(inout)         :: this
   type(mesh_t),     intent(in)         :: mesh
-  type(states_t),  intent(inout)       :: st
+  type(states_t),  intent(in)          :: st
   FLOAT, intent(inout)                 :: hubbard_dc
   CMPLX, pointer, optional             :: phase(:,:) 
 

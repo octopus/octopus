@@ -712,22 +712,7 @@ contains
 
       ! occupations
       call states_fermi(st, gr%mesh)
-
-      if(hm%lda_u%apply) then
-        if (states_are_real(st)) then
-          call dupdate_occ_matrices(hm%lda_u, gr%mesh, st, hm%energy%hubbard_dc)
-        else
-          if(associated(hm%hm_base%phase)) then
-            call zupdate_occ_matrices(hm%lda_u, gr%mesh, st, hm%energy%hubbard_dc,&
-                                hm%hm_base%phase)
-          else
-            call zupdate_occ_matrices(hm%lda_u, gr%mesh, st, hm%energy%hubbard_dc)
-          end if
-        end if
-      end if
-
-      !!NTD!!
-      !Move this block after the different mixing below      
+      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
       ! compute output density, potential (if needed) and eigenvalues sum
       if(cmplxscl) then
