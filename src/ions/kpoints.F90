@@ -827,6 +827,8 @@ contains
 
     PUSH_SUB(kpoints_copy)
 
+    call kpoints_nullify(kout)
+
     kout%method = kin%method
 
     call kpoints_grid_copy(kin%full, kout%full)
@@ -839,6 +841,11 @@ contains
 
     SAFE_ALLOCATE(kout%klattice(1:kin%full%dim, kin%full%dim))
     kout%klattice(1:kin%full%dim, kin%full%dim) = kin%klattice(1:kin%full%dim, kin%full%dim)
+
+    if(associated(kin%coord_along_path)) then
+      SAFE_ALLOCATE(kout%coord_along_path(1:kin%full%npoints))
+      kout%coord_along_path(1:kin%full%npoints) = kin%coord_along_path(1:kin%full%npoints)
+    end if
 
     POP_SUB(kpoints_copy)
   end subroutine kpoints_copy
