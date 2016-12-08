@@ -192,8 +192,6 @@ subroutine X(update_occ_matrices)(this, mesh, st, hubbard_dc, phase)
   end if
 #endif      
 
-  !TODO : Add symmetrization in case of k-point symmetry
-
   call X(correct_energy_dc)(this, st, hubbard_dc)
   call X(update_potential_lda_u)(this,  st)
 
