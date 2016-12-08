@@ -61,21 +61,31 @@ module lda_u_oct_m
        lda_u_write_occupation_matrices
 
   type orbital_t
-    type(submesh_t)     :: sphere             !The submesh of the orbital
-    FLOAT, pointer      :: dorbital_sphere(:) !The orbital, if real, on the submesh
-    CMPLX, pointer      :: zorbital_sphere(:) !The orbital, if complex, on the submesh
-    FLOAT, pointer      :: dorbital_mesh(:)   !The orbital, if real, on the full mesh
-    CMPLX, pointer      :: zorbital_mesh(:)   !The orbital, if complex, on the full mesh
-    CMPLX, pointer      :: phase(:,:)         !Correction to the global phase if the sphere cross the border of the box
+    type(submesh_t)     :: sphere             !> The submesh of the orbital
+    FLOAT, pointer      :: dorbital_sphere(:) !> The orbital, if real, on the submesh
+    CMPLX, pointer      :: zorbital_sphere(:) !> The orbital, if complex, on the submesh
+    FLOAT, pointer      :: dorbital_mesh(:)   !> The orbital, if real, on the full mesh
+    CMPLX, pointer      :: zorbital_mesh(:)   !> The orbital, if complex, on the full mesh
+    CMPLX, pointer      :: phase(:,:)         !> Correction to the global phase if the sphere cross the border of the box
   end type orbital_t
 
 
   type lda_u_t
     logical                  :: apply
-    FLOAT, pointer           :: dn(:,:,:,:), dV(:,:,:,:)
+    FLOAT, pointer           :: dn(:,:,:,:), dV(:,:,:,:) !> Occupation matrices and potentials 
+                                                         !> for the standard scheme
     CMPLX, pointer           :: zn(:,:,:,:), zV(:,:,:,:)
-    type(orbital_t), pointer :: orbitals(:,:,:)    
-    FLOAT, pointer           :: Ueff(:) !> The effective U of the simplified rotational invariant form
+    FLOAT, pointer           :: drenorm_occ(:,:,:,:) !> Renorm. occ. numbers for the ACBN0 functional
+    CMPLX, pointer           :: zrenorm_occ(:,:,:,:)
+ 
+    FLOAT, pointer           :: drenorm_n(:,:,:,:) !> Renorm. occ. matrices for the ACBN0 functional
+    CMPLX, pointer           :: zrenorm_n(:,:,:,:)
+   
+    FLOAT, pointer           :: dcoulomb(:,:,:,:,:,:) !>Coulomb integrals for all the system
+    CMPLX, pointer           :: zcoulomb(:,:,:,:,:,:) 
+ 
+    type(orbital_t), pointer :: orbitals(:,:,:) !>An array containing all the orbitals of the system
+    FLOAT, pointer           :: Ueff(:)    !> The effective U of the simplified rotational invariant form
 
     integer             :: natoms          !> Number of atoms (copied from geometry_t)
     integer             :: nspins
@@ -85,7 +95,7 @@ module lda_u_oct_m
   
     logical             :: truncate        !> Do we truncate the orbitals to the radius 
                                            !> of the NL part of the pseudo
-    logical             :: selfconsistentU !> Do we compute U self-consistenly
+    logical             :: useACBN0        !> Do we use the ACBN0 functional
   end type lda_u_t
 
 contains
@@ -144,7 +154,7 @@ contains
   !% If set to yes, Octopus will determine the effective U term using the 
   !% ACBN0 functional as defined in PRX 5, 011006 (2015) 
   !%End
-  call parse_variable('UseACBNOFunctional', .false., this%selfconsistentU)
+  call parse_variable('UseACBNOFunctional', .false., this%useACBN0)
 
   nullify(this%dn)
   nullify(this%zn)
