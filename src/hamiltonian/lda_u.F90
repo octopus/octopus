@@ -45,6 +45,7 @@ module lda_u_oct_m
   use states_dim_oct_m
   use submesh_oct_m
   use types_oct_m  
+  use unit_system_oct_m
  
   implicit none
 
@@ -75,14 +76,11 @@ module lda_u_oct_m
     FLOAT, pointer           :: dn(:,:,:,:), dV(:,:,:,:) !> Occupation matrices and potentials 
                                                          !> for the standard scheme
     CMPLX, pointer           :: zn(:,:,:,:), zV(:,:,:,:)
-    FLOAT, pointer           :: drenorm_occ(:,:,:,:) !> Renorm. occ. numbers for the ACBN0 functional
-    CMPLX, pointer           :: zrenorm_occ(:,:,:,:)
- 
-    FLOAT, pointer           :: drenorm_n(:,:,:,:) !> Renorm. occ. matrices for the ACBN0 functional
-    CMPLX, pointer           :: zrenorm_n(:,:,:,:)
+    
+    FLOAT, pointer           :: orb_occ(:,:,:) !> Orbital occupations (for the ACBN0 functional)
    
     FLOAT, pointer           :: dcoulomb(:,:,:,:,:,:) !>Coulomb integrals for all the system
-    CMPLX, pointer           :: zcoulomb(:,:,:,:,:,:) 
+    CMPLX, pointer           :: zcoulomb(:,:,:,:,:,:) !> (for the ACBN0 functional) 
  
     type(orbital_t), pointer :: orbitals(:,:,:) !>An array containing all the orbitals of the system
     FLOAT, pointer           :: Ueff(:)    !> The effective U of the simplified rotational invariant form
@@ -107,6 +105,7 @@ contains
   type(states_t),            intent(in)    :: st
 
   integer :: maxorbs, iat, ispin, iorb
+  real(8) :: mem
 
   PUSH_SUB(lda_u_init)
 
@@ -161,25 +160,66 @@ contains
   nullify(this%dV)
   nullify(this%zV)
   nullify(this%Ueff)
+  nullify(this%orb_occ)
+  nullify(this%dcoulomb) 
+  nullify(this%zcoulomb)
 
   this%natoms = geo%natoms
   this%nspins = st%d%nspin
-
+ 
+  !We first need to load the basis
   if (states_are_real(st)) then
     call dconstruct_orbital_basis(this, geo, gr%mesh, st)
-    maxorbs = maxval(this%norbs)
+  else
+    call zconstruct_orbital_basis(this, geo, gr%mesh, st)  
+  end if
+  maxorbs = maxval(this%norbs)
+
+  !We analyse the memeory and we print the requiered memory
+  !Thus, if there is not enough memory, the user knows with the code crashes
+  mem = 0.0_8
+  mem = mem + REAL_PRECISION*dble(maxorbs**2*st%d%nspin*geo%natoms*2) !Occupation matrices and potentials
+  mem = mem + REAL_PRECISION*dble(maxorbs*st%d%nspin*geo%natoms)    !Orbital occupations
+  if(this%useACBN0) then
+    mem = mem + REAL_PRECISION*dble(maxorbs**4*st%d%nspin*geo%natoms) !Coulomb intergrals
+  end if
+  call messages_new_line()
+  call messages_write('    Approximate memory requirement for LDA+U (for each task)   :')
+  if (states_are_real(st)) then
+    call messages_write(mem, units = unit_megabytes)
+  else
+    call messages_write(mem*2.0_8, units = unit_kilobytes, fmt = '(f10.1)')
+  end if
+  call messages_new_line()
+  call messages_info()
+
+  !We allocate the necessary ressources
+  if (states_are_real(st)) then
     SAFE_ALLOCATE(this%dn(1:maxorbs,1:maxorbs,1:st%d%nspin,1:geo%natoms))
     this%dn(1:maxorbs,1:maxorbs,1:st%d%nspin,1:geo%natoms) = M_ZERO
     SAFE_ALLOCATE(this%dV(1:maxorbs,1:maxorbs,1:st%d%nspin,1:geo%natoms))
     this%dV(1:maxorbs,1:maxorbs,1:st%d%nspin,1:geo%natoms) = M_ZERO
+
+    !In case we use the ab-initio scheme, we need to allocate extra resources
+    if(this%useACBN0) then
+      SAFE_ALLOCATE(this%dcoulomb(1:maxorbs,1:maxorbs,1:maxorbs,1:maxorbs,1:st%d%nspin,1:geo%natoms))
+      this%dcoulomb(1:maxorbs,1:maxorbs,1:maxorbs,1:maxorbs,1:st%d%nspin,1:geo%natoms) = M_ZERO
+    end if 
   else
-    call zconstruct_orbital_basis(this, geo, gr%mesh, st)
-    maxorbs = maxval(this%norbs)
     SAFE_ALLOCATE(this%zn(1:maxorbs,1:maxorbs,1:st%d%nspin,1:geo%natoms))
     this%zn(1:maxorbs,1:maxorbs,1:st%d%nspin,1:geo%natoms) = cmplx(M_ZERO,M_ZERO)
     SAFE_ALLOCATE(this%zV(1:maxorbs,1:maxorbs,1:st%d%nspin,1:geo%natoms))
     this%zV(1:maxorbs,1:maxorbs,1:st%d%nspin,1:geo%natoms) = cmplx(M_ZERO,M_ZERO)
+
+    !In case we use the ab-initio scheme, we need to allocate extra resources
+    if(this%useACBN0) then
+      SAFE_ALLOCATE(this%zcoulomb(1:maxorbs,1:maxorbs,1:maxorbs,1:maxorbs,1:st%d%nspin,1:geo%natoms))
+      this%zcoulomb(1:maxorbs,1:maxorbs,1:maxorbs,1:maxorbs,1:st%d%nspin,1:geo%natoms) = M_ZERO
+    end if
   end if
+  SAFE_ALLOCATE(this%orb_occ(1:maxorbs,1:st%d%nspin,1:geo%natoms))
+  this%orb_occ(1:maxorbs,1:st%d%nspin,1:geo%natoms) = M_ZERO
+
 
   call messages_print_stress(stdout)
 
@@ -202,7 +242,10 @@ contains
    SAFE_DEALLOCATE_P(this%dV)
    SAFE_DEALLOCATE_P(this%zV) 
    SAFE_DEALLOCATE_P(this%Ueff)
- 
+   SAFE_DEALLOCATE_P(this%orb_occ)
+   SAFE_DEALLOCATE_P(this%dcoulomb)
+   SAFE_DEALLOCATE_P(this%zcoulomb) 
+
    do iat = 1, this%natoms
      do ispin = 1, this%nspins 
        do iorb = 1, this%norbs(iat)
@@ -214,8 +257,8 @@ contains
          call submesh_end(this%orbitals(iorb,ispin,iat)%sphere)
        end do
      end do
-   end do
-  
+   end do 
+ 
    SAFE_DEALLOCATE_P(this%norbs)
    SAFE_DEALLOCATE_P(this%orbitals)
 
