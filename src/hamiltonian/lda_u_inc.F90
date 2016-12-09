@@ -129,21 +129,27 @@ subroutine X(update_occ_matrices)(this, mesh, st, hubbard_dc, phase)
 
   integer :: ia, im, ik, ist, ispin, norbs, ip, idim, is
   R_TYPE, allocatable :: psi(:,:), epsi(:)
-  R_TYPE, allocatable :: dot(:)
-  FLOAT   :: weight
+  R_TYPE, allocatable :: dot(:,:)
+  FLOAT   :: weight, renorm_weight, renorm_occ
 
   PUSH_SUB(update_occ_matrices)
 
   this%X(n)(1:this%maxnorbs,1:this%maxnorbs,1:st%d%nspin,1:this%natoms) = R_TOTYPE(M_ZERO)
   SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(epsi(1:mesh%np))
-  SAFE_ALLOCATE(dot(1:this%maxnorbs))
+  SAFE_ALLOCATE(dot(1:this%maxnorbs,1:this%natoms))
+
+  if(this%useACBN0) then
+    this%orb_occ(1:this%maxnorbs,1:st%d%nspin,1:this%natoms) = R_TOTYPE(M_ZERO)
+  end if
 
   !TODO: use symmetries of the occupation matrices
   do ik = st%d%kpt%start, st%d%kpt%end
     ispin =  states_dim_get_spin_index(st%d,ik)
     do ist = st%st_start, st%st_end
       weight = st%d%kweights(ik) * st%occ(ist, ik)
+      renorm_occ = M_ONE
+      if(this%useACBN0) renorm_occ = M_ZERO
 
       call states_get_state(st, mesh, ist, ik, psi )  
       if(present(phase)) then 
@@ -157,24 +163,40 @@ subroutine X(update_occ_matrices)(this, mesh, st, hubbard_dc, phase)
       
       do ia = 1, this%natoms
         norbs = this%norbs(ia)
+ 
+        !We first compute the matrix elemets <\psi | orb_m>
+        !taking into account phase correction if needed 
         do im = 1, norbs
           if(present(phase)) then
             do is = 1, this%orbitals(im,ispin,ia)%sphere%np
               epsi(is) = psi(this%orbitals(im,ispin,ia)%sphere%map(is), 1)*this%orbitals(im,ispin,ia)%phase(is, ik)
             end do
-            dot(im) = X(mf_dotp)(this%orbitals(im,ispin,ia)%sphere%mesh, &
+            dot(im,ia) = X(mf_dotp)(this%orbitals(im,ispin,ia)%sphere%mesh, &
                                  epsi(1:this%orbitals(im,ispin,ia)%sphere%np),& 
                                  this%orbitals(im,ispin,ia)%X(orbital_sphere),&
                                  np = this%orbitals(im,ispin,ia)%sphere%np )
           else
          !  dot(im) =  submesh_to_mesh_dotp(this%orbitals(im,ispin,ia)%sphere, st%d%dim, &
          !                        this%orbitals(im,ispin,ia)%X(orbital), psi)
-            dot(im) = X(mf_dotp)(mesh, psi(1:mesh%np,1), this%orbitals(im,ispin,ia)%X(orbital_mesh))
+            dot(im,ia) = X(mf_dotp)(mesh, psi(1:mesh%np,1), this%orbitals(im,ispin,ia)%X(orbital_mesh))
+          end if
+         
+          !We compute the on-site occupation of the site, if needed
+          if(this%useACBN0) then
+            renorm_occ = renorm_occ + abs(dot(im,ia))**2
           end if
         end do
+      end do 
+     
+      !We can compute the (renormalized) occupation matrices
+      do ia = 1, this%natoms
+        norbs = this%norbs(ia) 
         do im = 1, norbs
-          this%X(n)(1:norbs,im,ispin,ia) = this%X(n)(1:norbs,im,ispin,ia) &
-                                           + weight*dot(1:norbs)*R_CONJ(dot(im))
+            renorm_weight = renorm_occ*weight
+            this%X(n)(1:norbs,im,ispin,ia) = this%X(n)(1:norbs,im,ispin,ia) &
+                                         + renorm_weight*dot(1:norbs,ia)*R_CONJ(dot(im,ia))
+            this%orb_occ(im, ispin,ia) = this%orb_occ(im, ispin,ia) &
+                                        + weight*abs(dot(im,ia))**2
         end do
        !  call lalg_her( norbs, weight, this%X(n)(1:norbs,1:norbs,ispin,ia), dot)
       end do
@@ -189,6 +211,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, hubbard_dc, phase)
 #if defined(HAVE_MPI)        
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
     call comm_allreduce(st%st_kpt_mpi_grp%comm, this%X(n))
+    call comm_allreduce(st%st_kpt_mpi_grp%comm, this%orb_occ)
   end if
 #endif      
 
