@@ -288,6 +288,7 @@ subroutine X(compute_ACBNO_U)(this, st)
   PUSH_SUB(compute_ACBNO_U)
 
   do ia = 1, this%natoms
+    if( species_hubbard_l(geo%atom(ia)%species) .eq. M_ZERO ) cycle
     norbs = this%norbs(ia)
     numU = M_ZERO
     numJ = M_ZERO
@@ -369,6 +370,7 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
   SAFE_ALLOCATE(tmp(1:mesh%np))
 
   do ia = 1, this%natoms
+   if( species_hubbard_l(geo%atom(ia)%species) .eq. M_ZERO ) cycle
    ! ijst=0
     norbs = this%norbs(ia)
     do ist = 1, norbs
