@@ -19,8 +19,6 @@
 
 
 subroutine X(hubbard_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
-  implicit none 
-
   type(lda_u_t),      intent(in) :: this
   type(mesh_t),       intent(in) :: mesh
   integer,            intent(in) :: ik
@@ -119,8 +117,6 @@ end subroutine X(hubbard_apply)
 !> This routine compute the values of the occupation matrices
 ! ---------------------------------------------------------
 subroutine X(update_occ_matrices)(this, mesh, st, hubbard_dc, phase)
-  implicit none
- 
   type(lda_u_t), intent(inout)         :: this
   type(mesh_t),     intent(in)         :: mesh
   type(states_t),  intent(in)          :: st
@@ -225,8 +221,6 @@ end subroutine X(update_occ_matrices)
 !> This routine compute the value of the double counting term in the LDA+U energy
 ! ---------------------------------------------------------
 subroutine X(correct_energy_dc)(this, st, hubbard_dc)
-  implicit none
-
   type(lda_u_t), intent(inout)    :: this
   type(states_t),  intent(in)     :: st
   FLOAT, intent(inout)         :: hubbard_dc
@@ -259,13 +253,10 @@ end subroutine X(correct_energy_dc)
 !> gives the full Hubbard potential
 ! ---------------------------------------------------------
 subroutine X(update_potential_lda_u)(this, st)
-  implicit none
-
   type(lda_u_t), intent(inout)    :: this
   type(states_t),  intent(in)     :: st
 
   integer :: ia, im, ispin, norbs
-  FLOAT :: U_I
 
   PUSH_SUB(update_potential_lda_u)
 
@@ -281,6 +272,25 @@ subroutine X(update_potential_lda_u)(this, st)
 
   POP_SUB(update_potential_lda_u)
 end subroutine X(update_potential_lda_u)
+
+
+! ---------------------------------------------------------
+!> This routine compute the effective U following the expression 
+!> given in Agapito et al., Phys. Rev. X 5, 011006 (2015)
+! ---------------------------------------------------------
+subroutine X(compute_ACBNO_U)(this, st)
+  type(lda_u_t), intent(inout)    :: this
+  type(states_t),  intent(in)     :: st
+  
+  integer :: ia, im, ispin, norbs
+  FLOAT   :: U, J
+
+  PUSH_SUB(compute_ACBNO_U)
+
+
+
+  POP_SUB(compute_ACBNO_U)  
+end subroutine X(compute_ACBNO_U)
 
 ! ---------------------------------------------------------
 !> This routine computes [r,V_lda+u].
@@ -357,9 +367,6 @@ end subroutine X(update_potential_lda_u)
 !> This routine is an interface for constructing the orbital basis.
 ! ---------------------------------------------------------
 subroutine X(construct_orbital_basis)(this, geo, mesh, st)
-
-  implicit none
-
   type(lda_u_t),             intent(inout)    :: this
   type(geometry_t), target,  intent(in)       :: geo
   type(mesh_t),              intent(in)       :: mesh
