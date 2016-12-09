@@ -1612,15 +1612,14 @@ contains
 
     PUSH_SUB(states_generate_random)
  
-    ist_start = optional_default(ist_start_, 1)
     if(st%randomization == PAR_INDEPENDENT) then
       ist_start = optional_default(ist_start_, st%st_start)
-      ist_end = st%st_end 
+      ist_end = optional_default(ist_end_, st%st_end)
       ikpt_start = optional_default(ikpt_start_, st%d%kpt%start)
       ikpt_end = optional_default(ikpt_end_, st%d%kpt%end)
     else 
       ist_start = optional_default(ist_start_, 1)
-      ist_end = optional_default(ist_end_,   st%nst)
+      ist_end = optional_default(ist_end_, st%nst)
       ikpt_start = optional_default(ikpt_start_, 1)
       ikpt_end = optional_default(ikpt_end_, st%d%nik)
     end if

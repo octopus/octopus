@@ -372,10 +372,6 @@ contains
 
     call td_init(td, sys, hm)
 
-    if(td%scissor > M_EPSILON) then
-      call scissor_init(hm%scissor, st, gr, hm%d, td%scissor)
-    end if
-
     ! Allocate wavefunctions during time-propagation
     if(td%dynamics == EHRENFEST) then
       !complex wfs are required for Ehrenfest
@@ -426,6 +422,10 @@ contains
 
     call td_write_init(write_handler, gr, st, hm, geo, sys%ks, &
       ion_dynamics_ions_move(td%ions), gauge_field_is_applied(hm%ep%gfield), hm%ep%kick, td%iter, td%max_iter, td%dt)
+
+    if(td%scissor > M_EPSILON) then
+      call scissor_init(hm%scissor, st, gr, hm%d, td%scissor)
+    end if
 
     if(td%iter == 0) call td_run_zero_iter()
 

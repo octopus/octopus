@@ -521,7 +521,7 @@ contains
     FLOAT,                         intent(out) :: stress_ps(3, 3) ! temporal
     FLOAT :: stress_l(3, 3)
     FLOAT :: stress_t_SR(3, 3), stress_t_LR(3, 3), stress_t_NL(3, 3)
-    CMPLX, allocatable :: gpsi(:, :, :), psi(:, :), ppsi(:, :), rppsi(:, :, :)
+    CMPLX, allocatable :: gpsi(:, :, :), psi(:, :), rppsi(:, :, :)
     FLOAT,  allocatable :: grad_rho(:, :)
     FLOAT :: energy_ps_SR,energy_ps_LR,energy_ps_NL, energy_ps
     FLOAT,  allocatable :: vloc(:),rvloc(:,:)
@@ -544,7 +544,6 @@ contains
 
     SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(gpsi(1:der%mesh%np, 1:der%mesh%sb%dim, 1:st%d%dim))
-    SAFE_ALLOCATE(ppsi(1:der%mesh%np, 1:st%d%dim))
     SAFE_ALLOCATE(rppsi(1:der%mesh%np, 1:der%mesh%sb%dim+1, 1:st%d%dim))
     SAFE_ALLOCATE(vloc(1:gr%mesh%np))
     SAFE_ALLOCATE(rvloc(1:gr%mesh%np, 1:der%mesh%sb%dim))
@@ -579,8 +578,6 @@ contains
              call zderivatives_grad(der, psi(:, idim), gpsi(:, :, idim), set_bc = .false.)
           end do
 
-          ppsi = M_ZERO
-          call zproject_psi(der%mesh, hm%ep%proj, hm%ep%natoms, st%d%dim, psi(1:der%mesh%np,:), ppsi, ik)
 
 
           rppsi = M_ZERO

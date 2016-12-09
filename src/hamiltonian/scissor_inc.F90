@@ -72,19 +72,19 @@ subroutine X(scissor_commute_r)(this, mesh, ik, psi, gpsi)
 
    integer :: ist, idim, idir
    R_TYPE  :: dot
-   R_TYPE, allocatable :: gspsi(:,:), tmpstate(:,:), psi_r(:)
+   R_TYPE, allocatable :: gspsi(:,:), tmpstate(:,:), psi_r(:,:)
 
    PUSH_SUB(scissor_commute_r)
 
    SAFE_ALLOCATE(gspsi(1:mesh%np, 1:this%gs_st%d%dim))
-   SAFE_ALLOCATE(psi_r(1:mesh%np))
+   SAFE_ALLOCATE(psi_r(1:mesh%np, 1:this%gs_st%d%dim))
    SAFE_ALLOCATE(tmpstate(1:mesh%np, 1:this%gs_st%d%dim))
    
    tmpstate(1:mesh%np, 1:this%gs_st%d%dim) = R_TOTYPE(M_ZERO)
    do ist = 1, this%gs_st%nst
      call states_get_state(this%gs_st, mesh, ist, ik, gspsi )
      !<gpsi|psi>
-     dot = X(mf_dotp)(mesh, this%gs_st%d%dim, gspsi(1:mesh%np,1:this%gs_st%d%dim), psi) &
+     dot = X(mf_dotp)(mesh, this%gs_st%d%dim, gspsi, psi) &
            * this%gs_st%occ(ist, ik)/ this%gs_st%smear%el_per_state
      do idim = 1, this%gs_st%d%dim
       call lalg_axpy(mesh%np, dot,  gspsi(1:mesh%np, idim), tmpstate(1:mesh%np, idim)) 
@@ -98,19 +98,21 @@ subroutine X(scissor_commute_r)(this, mesh, ik, psi, gpsi)
      enddo
    enddo
 
-   do idim = 1, this%gs_st%d%dim
-     do idir = 1, mesh%sb%dim
-  
-       psi_r(1:mesh%np) = mesh%x(1:mesh%np,idir) * psi(1:mesh%np, idim)
-
-       tmpstate(1:mesh%np,idim) = R_TOTYPE(M_ZERO)
-       do ist = 1, this%gs_st%nst
-         call states_get_state(this%gs_st, mesh, ist, ik, gspsi )
-         ! <gspsi|r|psi>
-         dot = X(mf_dotp)(mesh, gspsi(1:mesh%np,idim), psi_r(1:mesh%np)) &
-           * this%gs_st%occ(ist, ik) / this%gs_st%smear%el_per_state
+   do idir = 1, mesh%sb%dim
+     do idim = 1, this%gs_st%d%dim
+       psi_r(1:mesh%np, idim) = mesh%x(1:mesh%np,idir) * psi(1:mesh%np, idim)
+     end do
+     tmpstate(1:mesh%np,:) = R_TOTYPE(M_ZERO)
+     do ist = 1, this%gs_st%nst
+       call states_get_state(this%gs_st, mesh, ist, ik, gspsi )
+       ! <gspsi|r|psi>
+       dot = X(mf_dotp)(mesh, this%gs_st%d%dim, gspsi, psi_r) &
+         * this%gs_st%occ(ist, ik) / this%gs_st%smear%el_per_state
+       do idim = 1, this%gs_st%d%dim
          call lalg_axpy(mesh%np, dot,  gspsi(1:mesh%np, idim), tmpstate(1:mesh%np, idim))
-       enddo
+       end do
+     enddo
+     do idim = 1, this%gs_st%d%dim
        ! |gpsi> += S |gspsi><gspsi|x|psi>
        gpsi(1:mesh%np, idir, idim) = gpsi(1:mesh%np, idir, idim) &
              + this%gap * tmpstate(1:mesh%np, idim)

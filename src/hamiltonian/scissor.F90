@@ -120,20 +120,20 @@ contains
     write(message(1),'(a)')    'Adding the phase for GS states.'
     call messages_info(1)
   
-    SAFE_ALLOCATE(temp_state(1:gr%mesh%np_part,1:this%gs_st%d%dim))
-    SAFE_ALLOCATE(phase(1:gr%mesh%np_part))
+    SAFE_ALLOCATE(temp_state(1:gr%mesh%np,1:this%gs_st%d%dim))
+    SAFE_ALLOCATE(phase(1:gr%mesh%np))
     ! We apply the phase to these states, as we need it for the projectors later
     do ik=this%gs_st%d%kpt%start, this%gs_st%d%kpt%end
       
       kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(d, ik))
-      forall (ip = 1:gr%mesh%np_part)
+      forall (ip = 1:gr%mesh%np)
         phase(ip) = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%sb%dim) * kpoint(1:gr%sb%dim)))
       end forall
 
       do ist=this%gs_st%st_start, this%gs_st%st_end
         call states_get_state(this%gs_st, gr%mesh, ist, ik, temp_state )
         do idim=1,this%gs_st%d%dim
-          temp_state(1:gr%mesh%np_part,idim) = temp_state(1:gr%mesh%np_part,idim) * phase(1:gr%mesh%np_part)
+          temp_state(1:gr%mesh%np,idim) = temp_state(1:gr%mesh%np,idim) * phase(1:gr%mesh%np)
         end do
         call states_set_state(this%gs_st, gr%mesh, ist, ik,temp_state )
       end do
