@@ -312,7 +312,7 @@ subroutine X(compute_ACBNO_U)(this, st)
         end do
         ! These are the numerator of the ACBN0 U and J
         numU = numU + tmpU*this%X(coulomb)(im,imp,impp,imppp,ia)
-        numJ = numJ + tmpJ*this%X(coulomb)(im,imp,impp,imppp,ia) 
+        numJ = numJ + tmpJ*this%X(coulomb)(im,imppp,impp,imp,ia) 
       end do
       end do
 
