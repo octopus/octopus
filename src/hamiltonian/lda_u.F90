@@ -37,6 +37,7 @@ module lda_u_oct_m
   use mpi_oct_m
   use parser_oct_m
   use periodic_copy_oct_m
+  use poisson_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use species_oct_m

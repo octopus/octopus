@@ -347,6 +347,74 @@ subroutine X(compute_ACBNO_U)(this, st)
 end subroutine X(compute_ACBNO_U)
 
 ! ---------------------------------------------------------
+! TODO: Merge this with the two_body routine in system/output_me_inc.F90
+subroutine X(load_coulomb_integrals) (this, mesh, st)
+  type(lda_u_t), intent(inout)    :: this
+  type(mesh_t),     intent(inout) :: mesh
+  type(states_t),   intent(in)    :: st
+
+  integer :: ist, jst, kst, lst !, ijst, klst
+  integer :: norbs, np_sphere, ia
+  R_TYPE, allocatable :: tmp(:)
+  R_TYPE, allocatable :: nn(:), nn_sphere(:), vv(:)
+  type(orbital_t), pointer :: orbi, orbj, orbk, orbl
+
+  PUSH_SUB(X(load_coulomb_integrals))
+
+  ASSERT(.not. st%parallel_in_states)
+  
+  SAFE_ALLOCATE(nn(1:mesh%np))
+  SAFE_ALLOCATE(nn_sphere(1:mesh%np))
+  SAFE_ALLOCATE(vv(1:mesh%np))
+  SAFE_ALLOCATE(tmp(1:mesh%np))
+
+  do ia = 1, this%natoms
+   ! ijst=0
+    norbs = this%norbs(ia)
+    do ist = 1, norbs
+      orbi => this%orbitals(ist,ia) 
+      do jst = 1, norbs
+   !     if(jst > ist) cycle
+   !     ijst=ijst+1
+        orbj => this%orbitals(jst,ia)
+
+        np_sphere = orbi%sphere%np
+        nn_sphere(1:np_sphere)  = R_CONJ(orbi%X(orbital_sphere)(1:np_sphere)) &
+                                        *orbj%X(orbital_sphere)(1:np_sphere)
+        call submesh_add_to_mesh(orbi%sphere, nn_sphere, nn) 
+
+        call X(poisson_solve)(psolver, vv, nn, all_nodes=.false.)
+
+   !     klst=0
+        do kst = 1, norbs
+          orbk = this%orbitals(kst,ia)
+
+          do lst = 1, norbs
+   !         if(lst > kst) cycle
+   !         klst=klst+1
+   !        if(klst > ijst) cycle
+
+            orbl = this%orbitals(lst,ia)
+
+            tmp(1:mesh%np) = vv(1:mesh%np)*orbk%X(orbital_mesh)(1:mesh%np) &
+                                          *R_CONJ(orbl%X(orbital_mesh)(1:mesh%np))
+
+            this%X(coulomb)(ist,jst,kst,lst,ia) = X(mf_integrate)(mesh, tmp(:))
+          end do !lst
+        end do !kst
+      end do !jst
+    end do !ist 
+  end do !ia
+ 
+  SAFE_DEALLOCATE_A(nn)
+  SAFE_DEALLOCATE_A(nn_sphere)
+  SAFE_DEALLOCATE_A(vv)
+  SAFE_DEALLOCATE_A(tmp)
+
+  POP_SUB(X(load_coulomb_integrals))
+end subroutine X(load_coulomb_integrals)
+
+! ---------------------------------------------------------
 !> This routine computes [r,V_lda+u].
 ! ---------------------------------------------------------
 !subroutine X(lda_u_commute_r)(this, mesh, ik, psi, gpsi)
