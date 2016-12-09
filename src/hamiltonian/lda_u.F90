@@ -51,15 +51,16 @@ module lda_u_oct_m
 
   private
 
-  public ::                            &
-       lda_u_t,                        &
-       lda_u_init,                     &
-       dhubbard_apply,                 &
-       zhubbard_apply,                 &
-       lda_u_update_occ_matrices,      &
-       lda_u_end,                      &
-       lda_u_build_phase_correction,   &
-       lda_u_write_occupation_matrices
+  public ::                             &
+       lda_u_t,                         &
+       lda_u_init,                      &
+       dhubbard_apply,                  &
+       zhubbard_apply,                  &
+       lda_u_update_occ_matrices,       &
+       lda_u_end,                       &
+       lda_u_build_phase_correction,    &
+       lda_u_write_occupation_matrices, &
+       lda_u_update_U
 
   type orbital_t
     type(submesh_t)     :: sphere             !> The submesh of the orbital

@@ -282,12 +282,66 @@ subroutine X(compute_ACBNO_U)(this, st)
   type(lda_u_t), intent(inout)    :: this
   type(states_t),  intent(in)     :: st
   
-  integer :: ia, im, ispin, norbs
-  FLOAT   :: U, J
+  integer :: ia, im, imp, impp, imppp, ispin1, ispin2, norbs
+  FLOAT   :: numU, numJ, denomU, denomJ, tmpU, tmpJ
 
   PUSH_SUB(compute_ACBNO_U)
 
+  do ia = 1, this%natoms
+    norbs = this%norbs(ia)
+    numU = M_ZERO
+    numJ = M_ZERO
+    denomU = M_ZERO
+    denomJ = M_ZERO
 
+    do im = 1, norbs
+    do imp = 1,norbs
+      do impp = 1, norbs
+      do imppp = 1, norbs
+        ! We first compute the terms
+        ! sum_{alpha,beta} P^alpha_{mmp}P^beta_{mpp,mppp}  
+        ! sum_{alpha} P^alpha_{mmp}P^alpha_{mpp,mppp}
+        tmpU = M_ZERO
+        tmpJ = M_ZERO
+        do ispin1 = 1, st%d%nspin
+          do ispin2 = 1, st%d%nspin
+            tmpU = tmpU + this%X(n)(im,imp,ispin1,ia)*this%X(n)(impp,imppp,ispin2,ia)
+          end do
+          tmpJ = tmpJ + this%X(n)(im,imp,ispin1,ia)*this%X(n)(impp,imppp,ispin1,ia)
+        end do
+        ! These are the numerator of the ACBN0 U and J
+        numU = numU + tmpU*this%X(coulomb)(im,imp,impp,imppp)
+        numJ = numJ + tmpJ*this%X(coulomb)(im,imp,impp,imppp) 
+      end do
+      end do
+
+      ! We compute the term
+      ! sum_{alpha} sum_{m,mp/=m} N^alpha_{m}N^alpha_{mp}
+      tmpJ = M_ZERO
+      if(imp/=im) then
+        do ispin1 = 1, st%d%nspin
+          tmpJ = tmpJ + this%orb_occ(im,ispin1,ia)*this%orb_occ(imp,ispin1,ia)
+        end do
+      end if
+      denomJ = denomJ + tmpJ
+      denomU = denomU + tmpJ
+
+      ! We compute the term
+      ! sum_{alpha,beta} sum_{m,mp} N^alpha_{m}N^beta_{mp}
+      tmpU = M_ZERO
+      do ispin1 = 1, st%d%nspin
+        do ispin2 = 1, st%d%nspin
+          tmpU = tmpU + this%orb_occ(im,ispin1,ia)*this%orb_occ(imp,ispin2,ia)
+        end do
+      end do
+      denomU = denomU + tmpU
+
+    end do
+    end do
+
+    this%Ueff(ia) = numU/denomU - numJ/denomJ
+
+  end do
 
   POP_SUB(compute_ACBNO_U)  
 end subroutine X(compute_ACBNO_U)
