@@ -230,6 +230,7 @@ contains
     ! FIXME: This is wrong for metals where we must use the Fermi level from the original calculation!
     call states_fermi(sys%st, sys%gr%mesh)
     call lda_u_update_occ_matrices(hm%lda_u, sys%gr%mesh, sys%st, hm%hm_base, hm%energy )
+    call lda_u_update_U(hm%lda_u, sys%st)
 
     do iter = 1, max_iter
       call eigensolver_run(eigens, sys%gr, sys%st, hm, 1, converged)

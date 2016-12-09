@@ -348,10 +348,10 @@ end subroutine X(compute_ACBNO_U)
 
 ! ---------------------------------------------------------
 ! TODO: Merge this with the two_body routine in system/output_me_inc.F90
-subroutine X(load_coulomb_integrals) (this, mesh, st)
-  type(lda_u_t), intent(inout)    :: this
-  type(mesh_t),     intent(inout) :: mesh
-  type(states_t),   intent(in)    :: st
+subroutine X(compute_coulomb_integrals) (this, mesh, st)
+  type(lda_u_t), intent(inout)  :: this
+  type(mesh_t),     intent(in)  :: mesh
+  type(states_t),   intent(in)  :: st
 
   integer :: ist, jst, kst, lst !, ijst, klst
   integer :: norbs, np_sphere, ia
@@ -359,7 +359,7 @@ subroutine X(load_coulomb_integrals) (this, mesh, st)
   R_TYPE, allocatable :: nn(:), nn_sphere(:), vv(:)
   type(orbital_t), pointer :: orbi, orbj, orbk, orbl
 
-  PUSH_SUB(X(load_coulomb_integrals))
+  PUSH_SUB(X(compute_coulomb_integrals))
 
   ASSERT(.not. st%parallel_in_states)
   
@@ -411,8 +411,8 @@ subroutine X(load_coulomb_integrals) (this, mesh, st)
   SAFE_DEALLOCATE_A(vv)
   SAFE_DEALLOCATE_A(tmp)
 
-  POP_SUB(X(load_coulomb_integrals))
-end subroutine X(load_coulomb_integrals)
+  POP_SUB(X(compute_coulomb_integrals))
+end subroutine X(compute_coulomb_integrals)
 
 ! ---------------------------------------------------------
 !> This routine computes [r,V_lda+u].

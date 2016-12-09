@@ -410,6 +410,7 @@ contains
 
     !Initialise the occupation matrices for LDA+U
     call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
+    call lda_u_update_U(hm%lda_u, st) 
 
     ! Calculate initial forces and kinetic energy
     if(ion_dynamics_ions_move(td%ions)) then
