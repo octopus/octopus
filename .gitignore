@@ -20,8 +20,6 @@
 /lib
 /man
 /include
-/.tm_properties
-/compile
 
 # /build/
 /build/*.log
