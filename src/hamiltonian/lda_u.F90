@@ -225,7 +225,7 @@ contains
   this%orb_occ(1:maxorbs,1:st%d%nspin,1:geo%natoms) = M_ZERO
 
   if(this%useACBN0) then
-    write(message(1),'(a)')    'Computing the Coulomb integrals localized orbital basisi.'
+    write(message(1),'(a)')    'Computing the Coulomb integrals localized orbital basis.'
     call messages_info(1) 
     if (states_are_real(st)) then
       call dcompute_coulomb_integrals(this, gr%mesh, st)

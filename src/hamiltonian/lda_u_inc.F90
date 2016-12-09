@@ -381,25 +381,25 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
         np_sphere = orbi%sphere%np
         nn_sphere(1:np_sphere)  = R_CONJ(orbi%X(orbital_sphere)(1:np_sphere)) &
                                         *orbj%X(orbital_sphere)(1:np_sphere)
+        nn(1:mesh%np) = M_ZERO
         call submesh_add_to_mesh(orbi%sphere, nn_sphere, nn) 
 
         call X(poisson_solve)(psolver, vv, nn, all_nodes=.false.)
 
    !     klst=0
         do kst = 1, norbs
-          orbk = this%orbitals(kst,ia)
-
+          orbk => this%orbitals(kst,ia)
           do lst = 1, norbs
    !         if(lst > kst) cycle
    !         klst=klst+1
    !        if(klst > ijst) cycle
 
-            orbl = this%orbitals(lst,ia)
+            orbl => this%orbitals(lst,ia)
 
             tmp(1:mesh%np) = vv(1:mesh%np)*orbk%X(orbital_mesh)(1:mesh%np) &
-                                          *R_CONJ(orbl%X(orbital_mesh)(1:mesh%np))
+                                   *R_CONJ(orbl%X(orbital_mesh)(1:mesh%np))
 
-            this%X(coulomb)(ist,jst,kst,lst,ia) = X(mf_integrate)(mesh, tmp(:))
+            this%X(coulomb)(ist,jst,kst,lst,ia) = X(mf_integrate)(mesh, tmp(1:mesh%np))
           end do !lst
         end do !kst
       end do !jst
@@ -529,6 +529,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
  
   SAFE_ALLOCATE(this%orbitals(1:this%maxnorbs, 1:geo%natoms))
   SAFE_ALLOCATE(this%Ueff(1:geo%natoms))
+  this%Ueff(1:geo%natoms) = M_ZERO
 
   do ia = 1, geo%natoms
     hubbardl = species_hubbard_l(geo%atom(ia)%species)
