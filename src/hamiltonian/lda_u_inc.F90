@@ -18,7 +18,7 @@
 !! $Id$
 
 
-subroutine X(hubbard_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
+subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
   type(lda_u_t),      intent(in) :: this
   type(mesh_t),       intent(in) :: mesh
   integer,            intent(in) :: ik
@@ -33,7 +33,7 @@ subroutine X(hubbard_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
   R_TYPE, allocatable :: psi(:,:), hpsi(:,:)
   R_TYPE, allocatable :: dot(:), epsi(:)
 
-  PUSH_SUB(hubbard_apply)
+  PUSH_SUB(lda_u_apply)
 
   SAFE_ALLOCATE(psi(1:mesh%np, 1:d%dim))
   SAFE_ALLOCATE(epsi(1:mesh%np))
@@ -109,18 +109,18 @@ subroutine X(hubbard_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
   SAFE_DEALLOCATE_A(hpsi)
   SAFE_DEALLOCATE_A(dot)
 
-  POP_SUB(hubbard_apply)
+  POP_SUB(lda_u_apply)
 
-end subroutine X(hubbard_apply)
+end subroutine X(lda_u_apply)
 
 ! ---------------------------------------------------------
 !> This routine compute the values of the occupation matrices
 ! ---------------------------------------------------------
-subroutine X(update_occ_matrices)(this, mesh, st, hubbard_dc, phase)
+subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
   type(lda_u_t), intent(inout)         :: this
   type(mesh_t),     intent(in)         :: mesh
   type(states_t),  intent(in)          :: st
-  FLOAT, intent(inout)                 :: hubbard_dc
+  FLOAT, intent(inout)                 :: lda_u_energy
   CMPLX, pointer, optional             :: phase(:,:) 
 
   integer :: ia, im, ik, ist, ispin, norbs, ip, idim, is
@@ -211,7 +211,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, hubbard_dc, phase)
   end if
 #endif      
 
-  call X(correct_energy_dc)(this, st, hubbard_dc)
+  call X(compute_dudarev_energy)(this, st, lda_u_energy)
   call X(update_potential_lda_u)(this,  st)
 
   POP_SUB(update_occ_matrices)
@@ -220,31 +220,31 @@ end subroutine X(update_occ_matrices)
 ! ---------------------------------------------------------
 !> This routine compute the value of the double counting term in the LDA+U energy
 ! ---------------------------------------------------------
-subroutine X(correct_energy_dc)(this, st, hubbard_dc)
+subroutine X(compute_dudarev_energy)(this, st, lda_u_energy)
   type(lda_u_t), intent(inout)    :: this
   type(states_t),  intent(in)     :: st
-  FLOAT, intent(inout)         :: hubbard_dc
-
+  FLOAT, intent(inout)            :: lda_u_energy
+ 
   integer :: ia, imp, im, ispin
 
-  PUSH_SUB(correct_energy_dc)
+  PUSH_SUB(compute_dudarev_energy)
 
-  hubbard_dc = M_ZERO
+  lda_u_energy = M_ZERO
 
   do ia = 1, this%natoms
     do ispin = 1, st%d%nspin
       !TODO: These are matrix operations, that could be optimized
       do im = 1, this%norbs(ia)
         do imp = 1, this%norbs(ia)
-          hubbard_dc = hubbard_dc - CNST(0.5)*this%Ueff(ia)*abs(this%X(n)(im,imp,ispin,ia))**2
+          lda_u_energy = lda_u_energy - CNST(0.5)*this%Ueff(ia)*abs(this%X(n)(im,imp,ispin,ia))**2
         end do
-        hubbard_dc = hubbard_dc + CNST(0.5)*this%Ueff(ia)*this%X(n)(im,im,ispin,ia)
+        lda_u_energy = lda_u_energy + CNST(0.5)*this%Ueff(ia)*this%X(n)(im,im,ispin,ia)
       end do
     end do
   end do
 
-  POP_SUB(correct_energy_dc)
-end subroutine X(correct_energy_dc)
+  POP_SUB(compute_dudarev_energy)
+end subroutine X(compute_dudarev_energy)
 
 
 ! ---------------------------------------------------------
@@ -310,8 +310,8 @@ subroutine X(compute_ACBNO_U)(this, st)
           tmpJ = tmpJ + this%X(n)(im,imp,ispin1,ia)*this%X(n)(impp,imppp,ispin1,ia)
         end do
         ! These are the numerator of the ACBN0 U and J
-        numU = numU + tmpU*this%X(coulomb)(im,imp,impp,imppp)
-        numJ = numJ + tmpJ*this%X(coulomb)(im,imp,impp,imppp) 
+        numU = numU + tmpU*this%X(coulomb)(im,imp,impp,imppp,1,ia)
+        numJ = numJ + tmpJ*this%X(coulomb)(im,imp,impp,imppp,1,ia) 
       end do
       end do
 

@@ -76,7 +76,7 @@ module energy_oct_m
     FLOAT :: Imberry
 
     !LDA+U
-    FLOAT :: hubbard_dc
+    FLOAT :: lda_u_energy
   end type energy_t
 
 contains
@@ -123,7 +123,7 @@ contains
     this%Imts          = M_ZERO
     this%Imberry       = M_ZERO
 
-    this%hubbard_dc    = M_ZERO
+    this%lda_u_energy  = M_ZERO
 
     POP_SUB(energy_nullify)
   end subroutine energy_nullify
@@ -171,7 +171,7 @@ contains
     eout%Imts = ein%Imts
     eout%Imberry = ein%Imberry
 
-    eout%hubbard_dc = ein%hubbard_dc
+    eout%lda_u_energy = ein%lda_u_energy
     
     POP_SUB(energy_copy)
   end subroutine energy_copy

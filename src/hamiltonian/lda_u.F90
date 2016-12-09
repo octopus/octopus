@@ -54,8 +54,8 @@ module lda_u_oct_m
   public ::                             &
        lda_u_t,                         &
        lda_u_init,                      &
-       dhubbard_apply,                  &
-       zhubbard_apply,                  &
+       dlda_u_apply,                  &
+       zlda_u_apply,                  &
        lda_u_update_occ_matrices,       &
        lda_u_end,                       &
        lda_u_build_phase_correction,    &
@@ -278,13 +278,13 @@ contains
    PUSH_SUB(lda_u_update_occ_matrices)
 
    if (states_are_real(st)) then
-     call dupdate_occ_matrices(this, mesh, st, energy%hubbard_dc)
+     call dupdate_occ_matrices(this, mesh, st, energy%lda_u_energy)
    else
      if(associated(hm_base%phase)) then
-       call zupdate_occ_matrices(this, mesh, st, energy%hubbard_dc,&
+       call zupdate_occ_matrices(this, mesh, st, energy%lda_u_energy,&
                                 hm_base%phase)
      else
-       call zupdate_occ_matrices(this, mesh, st, energy%hubbard_dc)
+       call zupdate_occ_matrices(this, mesh, st, energy%lda_u_energy)
      end if
    end if
 
@@ -294,6 +294,7 @@ contains
  ! Interface for the X(compute_ACBNO_U) routines
  subroutine lda_u_update_U(this, st)
    type(lda_u_t),             intent(inout) :: this
+   type(states_t),            intent(in)    :: st
 
    if(.not. this%apply.or..not. this%useACBN0) return
    PUSH_SUB(lda_u_update_U)
@@ -328,7 +329,6 @@ contains
      end do
    end do
   
-
    POP_SUB(lda_u_build_phase_correction)
 
  end subroutine lda_u_build_phase_correction
