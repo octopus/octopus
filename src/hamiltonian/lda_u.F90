@@ -148,7 +148,7 @@ contains
   if(this%projection==OPTION__ORBITALSPROJECTIONMETHOD__SPHERE) &
     call messages_not_implemented("OrbitalProjectionMethod=sphere") 
 
-  !%Variable UseACBNOFunctional
+  !%Variable UseACBN0Functional
   !%Type logical
   !%Default no
   !%Section Hamiltonian::LDA+U
