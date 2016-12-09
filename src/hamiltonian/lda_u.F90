@@ -118,7 +118,6 @@ contains
   call messages_print_stress(stdout, "LDA+U")
  
   if(st%parallel_in_states) call messages_not_implemented("lda+u parallel in states")
-  if(gr%mesh%parallel_in_domains) call messages_not_implemented("lda+u parallel in domains")
   if(st%d%ispin == SPINORS) call messages_not_implemented("lda+u with spinors") 
 
   this%apply = .true.
