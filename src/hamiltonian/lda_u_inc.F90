@@ -56,16 +56,16 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
           !If we need to add the phase, we explicitly do the operation using the sphere
           !This does not change anything if the sphere occupies the full mesh or not
           if(has_phase) then
-            do is = 1, this%orbitals(im,ispin,ia)%sphere%np
-              epsi(is) = psi(this%orbitals(im,ispin,ia)%sphere%map(is), idim)*&
-                           this%orbitals(im,ispin,ia)%phase(is, ik) 
+            do is = 1, this%orbitals(im,ia)%sphere%np
+              epsi(is) = psi(this%orbitals(im,ia)%sphere%map(is), idim)*&
+                           this%orbitals(im,ia)%phase(is, ik) 
             end do
-            dot(im) = X(mf_dotp)(this%orbitals(im,ispin,ia)%sphere%mesh, &
-                                 this%orbitals(im,ispin,ia)%X(orbital_sphere),&
-                                 epsi(1:this%orbitals(im,ispin,ia)%sphere%np),&
-                                 np = this%orbitals(im,ispin,ia)%sphere%np)
+            dot(im) = X(mf_dotp)(this%orbitals(im,ia)%sphere%mesh, &
+                                 this%orbitals(im,ia)%X(orbital_sphere),&
+                                 epsi(1:this%orbitals(im,ia)%sphere%np),&
+                                 np = this%orbitals(im,ia)%sphere%np)
           else
-            dot(im) = X(mf_dotp)(mesh, this%orbitals(im,ispin,ia)%X(orbital_mesh),& 
+            dot(im) = X(mf_dotp)(mesh, this%orbitals(im,ia)%X(orbital_mesh),& 
                                   psi(1:mesh%np,idim))
           end if
         end do
@@ -87,16 +87,16 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
 
          !In case of phase, we have to apply the conjugate of the phase here
          if(has_phase) then
-           do is = 1, this%orbitals(im,ispin,ia)%sphere%np
-             epsi(is) = this%orbitals(im,ispin,ia)%X(orbital_sphere)(is) & 
-                            *conjg(this%orbitals(im,ispin,ia)%phase(is, ik))
+           do is = 1, this%orbitals(im,ia)%sphere%np
+             epsi(is) = this%orbitals(im,ia)%X(orbital_sphere)(is) & 
+                            *conjg(this%orbitals(im,ia)%phase(is, ik))
            end do
            !Here it is simpler to use the sphere 
-           call submesh_add_to_mesh(this%orbitals(im,ispin,ia)%sphere, &
+           call submesh_add_to_mesh(this%orbitals(im,ia)%sphere, &
                                     epsi, hpsi(:, idim), reduced)
          else
            call lalg_axpy(mesh%np, reduced, &
-               this%orbitals(im,ispin,ia)%X(orbital_mesh), hpsi(1:mesh%np, idim))
+               this%orbitals(im,ia)%X(orbital_mesh), hpsi(1:mesh%np, idim))
          end if
        end do !im
      end do !idim
@@ -164,17 +164,17 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
         !taking into account phase correction if needed 
         do im = 1, norbs
           if(present(phase)) then
-            do is = 1, this%orbitals(im,ispin,ia)%sphere%np
-              epsi(is) = psi(this%orbitals(im,ispin,ia)%sphere%map(is), 1)*this%orbitals(im,ispin,ia)%phase(is, ik)
+            do is = 1, this%orbitals(im,ia)%sphere%np
+              epsi(is) = psi(this%orbitals(im,ia)%sphere%map(is), 1)*this%orbitals(im,ia)%phase(is, ik)
             end do
-            dot(im,ia) = X(mf_dotp)(this%orbitals(im,ispin,ia)%sphere%mesh, &
-                                 epsi(1:this%orbitals(im,ispin,ia)%sphere%np),& 
-                                 this%orbitals(im,ispin,ia)%X(orbital_sphere),&
-                                 np = this%orbitals(im,ispin,ia)%sphere%np )
+            dot(im,ia) = X(mf_dotp)(this%orbitals(im,ia)%sphere%mesh, &
+                                 epsi(1:this%orbitals(im,ia)%sphere%np),& 
+                                 this%orbitals(im,ia)%X(orbital_sphere),&
+                                 np = this%orbitals(im,ia)%sphere%np )
           else
          !  dot(im) =  submesh_to_mesh_dotp(this%orbitals(im,ispin,ia)%sphere, st%d%dim, &
          !                        this%orbitals(im,ispin,ia)%X(orbital), psi)
-            dot(im,ia) = X(mf_dotp)(mesh, psi(1:mesh%np,1), this%orbitals(im,ispin,ia)%X(orbital_mesh))
+            dot(im,ia) = X(mf_dotp)(mesh, psi(1:mesh%np,1), this%orbitals(im,ia)%X(orbital_mesh))
           end if
          
           !We compute the on-site occupation of the site, if needed
@@ -310,8 +310,8 @@ subroutine X(compute_ACBNO_U)(this, st)
           tmpJ = tmpJ + this%X(n)(im,imp,ispin1,ia)*this%X(n)(impp,imppp,ispin1,ia)
         end do
         ! These are the numerator of the ACBN0 U and J
-        numU = numU + tmpU*this%X(coulomb)(im,imp,impp,imppp,1,ia)
-        numJ = numJ + tmpJ*this%X(coulomb)(im,imp,impp,imppp,1,ia) 
+        numU = numU + tmpU*this%X(coulomb)(im,imp,impp,imppp,ia)
+        numJ = numJ + tmpJ*this%X(coulomb)(im,imp,impp,imppp,ia) 
       end do
       end do
 
@@ -442,13 +442,11 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
   do ia = 1, geo%natoms
     hubbardl = species_hubbard_l(geo%atom(ia)%species)
     if( hubbardl .eq. 0 ) cycle
-    do ispin = 1,st%d%nspin
-      this%norbs(ia) = 0
-      do iorb = 1, species_niwfs(geo%atom(ia)%species)
-        call species_iwf_ilm(geo%atom(ia)%species, iorb, ispin, ii, ll, mm)
-        if(ll .eq. hubbardl ) this%norbs(ia) = this%norbs(ia) + 1
-      end do !iorb
-    end do !ispin
+    this%norbs(ia) = 0
+    do iorb = 1, species_niwfs(geo%atom(ia)%species)
+      call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
+      if(ll .eq. hubbardl ) this%norbs(ia) = this%norbs(ia) + 1
+    end do !iorb
   end do  !ia
   this%maxnorbs = maxval(this%norbs) 
   
@@ -461,7 +459,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
      call messages_info(1)
   end do
  
-  SAFE_ALLOCATE(this%orbitals(1:this%maxnorbs, 1:st%d%nspin, 1:geo%natoms))
+  SAFE_ALLOCATE(this%orbitals(1:this%maxnorbs, 1:geo%natoms))
   SAFE_ALLOCATE(this%Ueff(1:geo%natoms))
 
   do ia = 1, geo%natoms
@@ -469,29 +467,25 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
     this%Ueff(ia) = species_hubbard_u(geo%atom(ia)%species)
     if( hubbardl .eq. M_ZERO ) cycle
  
-    do ispin = 1,st%d%nspin
-      norb = 0
-      do iorb = 1, species_niwfs(geo%atom(ia)%species)
-        call species_iwf_ilm(geo%atom(ia)%species, iorb, ispin, ii, ll, mm)
-        if(ll .eq. hubbardl ) then 
-          norb = norb + 1
-          !We obtain the orbital
-          call X(get_atomic_orbital)(geo, mesh, ia, iorb, ispin, this%orbitals(norb,ispin,ia),&
-                                     this%truncate) 
-          ! We have to normalize the orbitals, 
-          ! in case the orbitals that comes out of the pseudo are not properly normalised
-          norm = X(mf_nrm2)(mesh, this%orbitals(norb,ispin,ia)%X(orbital_mesh)(1:mesh%np))
-          this%orbitals(norb,ispin,ia)%X(orbital_mesh)(1:mesh%np) =  &
-                  this%orbitals(norb,ispin,ia)%X(orbital_mesh)(1:mesh%np) /sqrt(norm)
+    norb = 0
+    do iorb = 1, species_niwfs(geo%atom(ia)%species)
+      call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
+      if(ll .eq. hubbardl ) then 
+        norb = norb + 1
+        !We obtain the orbital
+        call X(get_atomic_orbital)(geo, mesh, ia, iorb, 1, this%orbitals(norb,ia), this%truncate) 
+        ! We have to normalize the orbitals, 
+        ! in case the orbitals that comes out of the pseudo are not properly normalised
+        norm = X(mf_nrm2)(mesh, this%orbitals(norb,ia)%X(orbital_mesh)(1:mesh%np))
+        this%orbitals(norb,ia)%X(orbital_mesh)(1:mesh%np) =  &
+                this%orbitals(norb,ia)%X(orbital_mesh)(1:mesh%np) /sqrt(norm)
 
-          !In case of complex wavefunction, we allocate the array for the phase correction
+        !In case of complex wavefunction, we allocate the array for the phase correction
   #ifdef R_TCOMPLEX
-          SAFE_ALLOCATE(this%orbitals(norb,ispin,ia)%phase(1:this%orbitals(norb,ispin,ia)%sphere%np, st%d%kpt%start:st%d%kpt%end))
-          this%orbitals(norb,ispin,ia)%phase(:,:) = M_ZERO
+        SAFE_ALLOCATE(this%orbitals(norb,ia)%phase(1:this%orbitals(norb,ia)%sphere%np, st%d%kpt%start:st%d%kpt%end))
+        this%orbitals(norb,ia)%phase(:,:) = M_ZERO
   #endif
-        endif
-      end do
-      
+      endif
     end do
   end do
 

@@ -80,10 +80,10 @@ module lda_u_oct_m
     
     FLOAT, pointer           :: orb_occ(:,:,:) !> Orbital occupations (for the ACBN0 functional)
    
-    FLOAT, pointer           :: dcoulomb(:,:,:,:,:,:) !>Coulomb integrals for all the system
-    CMPLX, pointer           :: zcoulomb(:,:,:,:,:,:) !> (for the ACBN0 functional) 
+    FLOAT, pointer           :: dcoulomb(:,:,:,:,:) !>Coulomb integrals for all the system
+    CMPLX, pointer           :: zcoulomb(:,:,:,:,:) !> (for the ACBN0 functional) 
  
-    type(orbital_t), pointer :: orbitals(:,:,:) !>An array containing all the orbitals of the system
+    type(orbital_t), pointer :: orbitals(:,:) !>An array containing all the orbitals of the system
     FLOAT, pointer           :: Ueff(:)    !> The effective U of the simplified rotational invariant form
 
     integer             :: natoms          !> Number of atoms (copied from geometry_t)
@@ -203,8 +203,8 @@ contains
 
     !In case we use the ab-initio scheme, we need to allocate extra resources
     if(this%useACBN0) then
-      SAFE_ALLOCATE(this%dcoulomb(1:maxorbs,1:maxorbs,1:maxorbs,1:maxorbs,1:st%d%nspin,1:geo%natoms))
-      this%dcoulomb(1:maxorbs,1:maxorbs,1:maxorbs,1:maxorbs,1:st%d%nspin,1:geo%natoms) = M_ZERO
+      SAFE_ALLOCATE(this%dcoulomb(1:maxorbs,1:maxorbs,1:maxorbs,1:maxorbs,1:geo%natoms))
+      this%dcoulomb(1:maxorbs,1:maxorbs,1:maxorbs,1:maxorbs,1:geo%natoms) = M_ZERO
     end if 
   else
     SAFE_ALLOCATE(this%zn(1:maxorbs,1:maxorbs,1:st%d%nspin,1:geo%natoms))
@@ -214,8 +214,8 @@ contains
 
     !In case we use the ab-initio scheme, we need to allocate extra resources
     if(this%useACBN0) then
-      SAFE_ALLOCATE(this%zcoulomb(1:maxorbs,1:maxorbs,1:maxorbs,1:maxorbs,1:st%d%nspin,1:geo%natoms))
-      this%zcoulomb(1:maxorbs,1:maxorbs,1:maxorbs,1:maxorbs,1:st%d%nspin,1:geo%natoms) = M_ZERO
+      SAFE_ALLOCATE(this%zcoulomb(1:maxorbs,1:maxorbs,1:maxorbs,1:maxorbs,1:geo%natoms))
+      this%zcoulomb(1:maxorbs,1:maxorbs,1:maxorbs,1:maxorbs,1:geo%natoms) = M_ZERO
     end if
   end if
   SAFE_ALLOCATE(this%orb_occ(1:maxorbs,1:st%d%nspin,1:geo%natoms))
@@ -248,15 +248,13 @@ contains
    SAFE_DEALLOCATE_P(this%zcoulomb) 
 
    do iat = 1, this%natoms
-     do ispin = 1, this%nspins 
-       do iorb = 1, this%norbs(iat)
-         SAFE_DEALLOCATE_P(this%orbitals(iorb,ispin,iat)%dorbital_sphere)
-         SAFE_DEALLOCATE_P(this%orbitals(iorb,ispin,iat)%zorbital_sphere)
-         SAFE_DEALLOCATE_P(this%orbitals(iorb,ispin,iat)%dorbital_mesh)
-         SAFE_DEALLOCATE_P(this%orbitals(iorb,ispin,iat)%zorbital_mesh)
-         SAFE_DEALLOCATE_P(this%orbitals(iorb,ispin,iat)%phase)
-         call submesh_end(this%orbitals(iorb,ispin,iat)%sphere)
-       end do
+     do iorb = 1, this%norbs(iat)
+         SAFE_DEALLOCATE_P(this%orbitals(iorb,iat)%dorbital_sphere)
+         SAFE_DEALLOCATE_P(this%orbitals(iorb,iat)%zorbital_sphere)
+         SAFE_DEALLOCATE_P(this%orbitals(iorb,iat)%dorbital_mesh)
+         SAFE_DEALLOCATE_P(this%orbitals(iorb,iat)%zorbital_mesh)
+         SAFE_DEALLOCATE_P(this%orbitals(iorb,iat)%phase)
+         call submesh_end(this%orbitals(iorb,iat)%sphere)
      end do
    end do 
  
@@ -322,10 +320,8 @@ contains
    PUSH_SUB(lda_u_build_phase_correction)
 
    do iat = 1, this%natoms
-     do ispin = 1, this%nspins
-       do iorb = 1, this%norbs(iat)
-         call  orbital_update_phase_correction(this%orbitals(iorb,ispin,iat), sb, std, vec_pot, vec_pot_var)
-       end do
+     do iorb = 1, this%norbs(iat)
+       call  orbital_update_phase_correction(this%orbitals(iorb,iat), sb, std, vec_pot, vec_pot_var)
      end do
    end do
   
