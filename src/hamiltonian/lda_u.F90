@@ -156,7 +156,7 @@ contains
   !% If set to yes, Octopus will determine the effective U term using the 
   !% ACBN0 functional as defined in PRX 5, 011006 (2015) 
   !%End
-  call parse_variable('UseACBNOFunctional', .false., this%useACBN0)
+  call parse_variable('UseACBN0Functional', .false., this%useACBN0)
 
   nullify(this%dn)
   nullify(this%zn)
