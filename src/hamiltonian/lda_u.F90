@@ -71,7 +71,9 @@ module lda_u_oct_m
     CMPLX, pointer      :: zorbital_sphere(:) !> The orbital, if complex, on the submesh
     FLOAT, pointer      :: dorbital_mesh(:)   !> The orbital, if real, on the full mesh
     CMPLX, pointer      :: zorbital_mesh(:)   !> The orbital, if complex, on the full mesh
-    CMPLX, pointer      :: phase(:,:)         !> Correction to the global phase if the sphere cross the border of the box
+    CMPLX, pointer      :: phase(:,:)         !> Correction to the global phase 
+                                              !> if the sphere cross the border of the box
+   integer              :: ll                 !> Angular momentum of the orbital
   end type orbital_t
 
 
@@ -82,7 +84,8 @@ module lda_u_oct_m
     CMPLX, pointer           :: zn(:,:,:,:), zV(:,:,:,:)
     
     FLOAT, pointer           :: orb_occ(:,:,:) !> Orbital occupations (for the ACBN0 functional)
-   
+    FLOAT, pointer           :: renorm_occ(:,:,:) !> On-site occupations (for the ACBN0 functional)  
+ 
     FLOAT, pointer           :: dcoulomb(:,:,:,:,:) !>Coulomb integrals for all the system
     CMPLX, pointer           :: zcoulomb(:,:,:,:,:) !> (for the ACBN0 functional) 
  
@@ -109,7 +112,7 @@ contains
   type(states_t),            intent(in)    :: st
 
   integer :: maxorbs, iat, ispin, iorb
-  real(8) :: mem
+  real(8) :: mem, coef
 
   PUSH_SUB(lda_u_init)
 
@@ -166,6 +169,7 @@ contains
   nullify(this%orb_occ)
   nullify(this%dcoulomb) 
   nullify(this%zcoulomb)
+  nullify(this%renorm_occ)
 
   this%natoms = geo%natoms
   this%nspins = st%d%nspin
@@ -181,18 +185,17 @@ contains
   !We analyse the memeory and we print the requiered memory
   !Thus, if there is not enough memory, the user knows with the code crashes
   mem = 0.0_8
-  mem = mem + REAL_PRECISION*dble(maxorbs**2*st%d%nspin*geo%natoms*2) !Occupation matrices and potentials
-  mem = mem + REAL_PRECISION*dble(maxorbs*st%d%nspin*geo%natoms)    !Orbital occupations
+  coef = 2.0_8
+  if (states_are_real(st)) coef = 1.0_8
+  mem = mem + coef*REAL_PRECISION*dble(maxorbs**2*st%d%nspin*geo%natoms*2) !Occupation matrices and potentials
+  mem = mem + coef*REAL_PRECISION*dble(maxorbs*st%d%nspin*geo%natoms)    !Orbital occupations
   if(this%useACBN0) then
-    mem = mem + REAL_PRECISION*dble(maxorbs**4*st%d%nspin*geo%natoms) !Coulomb intergrals
+    mem = mem + coef*REAL_PRECISION*dble(maxorbs**4*st%d%nspin*geo%natoms) !Coulomb intergrals
+    mem = mem + REAL_PRECISION*dble(10*(st%d%kpt%end-st%d%kpt%start+1)*(st%st_end-st%st_start+1)) !On-site occupations
   end if
   call messages_new_line()
   call messages_write('    Approximate memory requirement for LDA+U (for each task)   :')
-  if (states_are_real(st)) then
-    call messages_write(mem, units = unit_megabytes)
-  else
-    call messages_write(mem*2.0_8, units = unit_kilobytes, fmt = '(f10.1)')
-  end if
+  call messages_write(mem, units = unit_megabytes)
   call messages_new_line()
   call messages_info()
 
@@ -222,7 +225,9 @@ contains
   end if
   SAFE_ALLOCATE(this%orb_occ(1:maxorbs,1:st%d%nspin,1:geo%natoms))
   this%orb_occ(1:maxorbs,1:st%d%nspin,1:geo%natoms) = M_ZERO
-
+  SAFE_ALLOCATE(this%renorm_occ(10,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end))
+  this%renorm_occ(10,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end) = M_ZERO 
+ 
   if(this%useACBN0) then
     write(message(1),'(a)')    'Computing the Coulomb integrals localized orbital basis.'
     call messages_info(1) 
@@ -258,6 +263,7 @@ contains
    SAFE_DEALLOCATE_P(this%orb_occ)
    SAFE_DEALLOCATE_P(this%dcoulomb)
    SAFE_DEALLOCATE_P(this%zcoulomb) 
+   SAFE_DEALLOCATE_P(this%renorm_occ)
 
    do iat = 1, this%natoms
      do iorb = 1, this%norbs(iat)

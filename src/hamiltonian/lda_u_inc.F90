@@ -45,6 +45,7 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
   do ibatch = 1, psib%nst
     call batch_get_state(psib, ibatch, mesh%np, psi)
     call batch_get_state(hpsib,ibatch, mesh%np, hpsi)
+
     do ia = 1, this%natoms
       do idim = 1, d%dim
         ! We have to compute 
@@ -76,6 +77,8 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
           do imp = 1, this%norbs(ia)
             reduced = reduced + this%X(V)(im,imp,ispin,ia)*dot(imp)
           end do
+
+  !        reduced = reduced * this%renorm_occ(this%orbitals(im,ia)%ll,psib%states(ibatch)%ist,ik)
         !
         !  call submesh_add_to_mesh(this%orbitals(im,ispin,ia)%sphere, &
           !                           this%orbitals(im,ispin,ia)%X(orbital), &
@@ -126,8 +129,8 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
   integer :: ia, im, ik, ist, ispin, norbs, ip, idim, is
   R_TYPE, allocatable :: psi(:,:), epsi(:)
   R_TYPE, allocatable :: dot(:,:)
-  FLOAT   :: weight, renorm_weight, renorm_occ
-
+  FLOAT   :: weight, renorm_weight
+  
   PUSH_SUB(update_occ_matrices)
 
   this%X(n)(1:this%maxnorbs,1:this%maxnorbs,1:st%d%nspin,1:this%natoms) = R_TOTYPE(M_ZERO)
@@ -143,9 +146,13 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
   do ik = st%d%kpt%start, st%d%kpt%end
     ispin =  states_dim_get_spin_index(st%d,ik)
     do ist = st%st_start, st%st_end
-      weight = st%d%kweights(ik) * st%occ(ist, ik)
-      renorm_occ = M_ONE
-      if(this%useACBN0) renorm_occ = M_ZERO
+      
+      if(this%useACBN0) then
+        this%renorm_occ(:,ist,ik) = M_ZERO
+      else
+        this%renorm_occ(:,ist,ik) = st%occ(ist, ik)
+      end if
+      weight = st%d%kweights(ik) 
 
       call states_get_state(st, mesh, ist, ik, psi )  
       if(present(phase)) then 
@@ -159,7 +166,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
       
       do ia = 1, this%natoms
         norbs = this%norbs(ia)
- 
+        if(norbs.eq. M_ZERO ) cycle
         !We first compute the matrix elemets <\psi | orb_m>
         !taking into account phase correction if needed 
         do im = 1, norbs
@@ -179,16 +186,18 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
          
           !We compute the on-site occupation of the site, if needed
           if(this%useACBN0) then
-            renorm_occ = renorm_occ + abs(dot(im,ia))**2
+            this%renorm_occ(this%orbitals(im,ia)%ll,ist,ik) = &
+                this%renorm_occ(this%orbitals(im,ia)%ll,ist,ik) + abs(dot(im,ia))**2
           end if
         end do
       end do 
      
       !We can compute the (renormalized) occupation matrices
       do ia = 1, this%natoms
-        norbs = this%norbs(ia) 
+        norbs = this%norbs(ia)
+        if(norbs.eq. M_ZERO ) cycle 
         do im = 1, norbs
-            renorm_weight = renorm_occ*weight
+            renorm_weight = this%renorm_occ(this%orbitals(im,ia)%ll,ist,ik)*weight
             this%X(n)(1:norbs,im,ispin,ia) = this%X(n)(1:norbs,im,ispin,ia) &
                                          + renorm_weight*dot(1:norbs,ia)*R_CONJ(dot(im,ia))
             this%orb_occ(im, ispin,ia) = this%orb_occ(im, ispin,ia) &
@@ -382,11 +391,16 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
    !     ijst=ijst+1
         orbj => this%orbitals(jst,ia)
 
-        np_sphere = orbi%sphere%np
-        nn_sphere(1:np_sphere)  = R_CONJ(orbi%X(orbital_sphere)(1:np_sphere)) &
+        if(this%projection==OPTION__ORBITALSPROJECTIONMETHOD__SPHERE) then
+          np_sphere = orbi%sphere%np
+          nn_sphere(1:np_sphere)  = R_CONJ(orbi%X(orbital_sphere)(1:np_sphere)) &
                                         *orbj%X(orbital_sphere)(1:np_sphere)
-        nn(1:mesh%np) = M_ZERO
-        call submesh_add_to_mesh(orbi%sphere, nn_sphere, nn) 
+          nn(1:mesh%np) = M_ZERO
+          call submesh_add_to_mesh(orbi%sphere, nn_sphere, nn) 
+        else
+          nn(1:mesh%np) = R_CONJ(orbi%X(orbital_mesh)(1:mesh%np)) &
+                              *orbj%X(orbital_mesh)(1:mesh%np)
+        end if
 
         call X(poisson_solve)(psolver, vv, nn, all_nodes=.false.)
 
@@ -558,6 +572,8 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
         SAFE_ALLOCATE(this%orbitals(norb,ia)%phase(1:this%orbitals(norb,ia)%sphere%np, st%d%kpt%start:st%d%kpt%end))
         this%orbitals(norb,ia)%phase(:,:) = M_ZERO
   #endif
+        !We store the angular momentum of the orbital
+        this%orbitals(norb,ia)%ll = ll
       endif
     end do
   end do
