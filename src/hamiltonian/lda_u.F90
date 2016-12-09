@@ -46,6 +46,7 @@ module lda_u_oct_m
   use states_dim_oct_m
   use submesh_oct_m
   use types_oct_m  
+  use unit_oct_m
   use unit_system_oct_m
  
   implicit none
@@ -55,13 +56,14 @@ module lda_u_oct_m
   public ::                             &
        lda_u_t,                         &
        lda_u_init,                      &
-       dlda_u_apply,                  &
-       zlda_u_apply,                  &
+       dlda_u_apply,                    &
+       zlda_u_apply,                    &
        lda_u_update_occ_matrices,       &
        lda_u_end,                       &
        lda_u_build_phase_correction,    &
        lda_u_write_occupation_matrices, &
-       lda_u_update_U
+       lda_u_update_U,                  &
+       lda_u_write_U
 
   type orbital_t
     type(submesh_t)     :: sphere             !> The submesh of the orbital
@@ -393,7 +395,6 @@ contains
 
  !> Prints the occupation matrices at the end of the scf calculation.
  subroutine lda_u_write_occupation_matrices(dir, this, geo, st)
-   implicit none
    type(lda_u_t),     intent(inout) :: this
    character(len=*),  intent(in)    :: dir
    type(geometry_t),  intent(in)    :: geo
@@ -439,6 +440,30 @@ contains
 
    POP_SUB(lda_u_write_occupation_matrices)
  end subroutine lda_u_write_occupation_matrices
+
+ !--------------------------------------------------------- 
+ subroutine lda_u_write_U(this, iunit, geo)
+   type(lda_u_t),     intent(in) :: this
+   integer,           intent(in) :: iunit
+   type(geometry_t),  intent(in) :: geo
+
+   integer :: ia
+
+   PUSH_SUB(lda_u_write_U)
+  
+   if(mpi_grp_is_root(mpi_world)) then
+
+     write(iunit, '(a,a,a,f7.3,a)') 'Effective Hubbard U [', &
+       trim(units_abbrev(units_out%energy)),']:'
+     write(iunit,'(a,6x,14x,a)') ' Ion','U'
+     do ia = 1, this%natoms
+        write(iunit,'(i4,a10,f15.6)') ia, trim(species_label(geo%atom(ia)%species)), this%Ueff(ia)  
+     end do
+   end if
+ 
+   POP_SUB(lda_u_write_U)
+ end subroutine lda_u_write_U
+
 
 #include "undef.F90"
 #include "real.F90"

@@ -1073,6 +1073,10 @@ contains
           call write_magnetic_moments(stdout, gr%mesh, st, geo, scf%lmm_r)
         end if
 
+        if(hm%lda_u%apply .and. hm%lda_u%useACBN0) then
+          call lda_u_write_U(hm%lda_u, stdout, geo)
+        end if
+
         write(message(1),'(a)') ''
         write(message(2),'(a,i5,a,f14.2)') 'Elapsed time for SCF step ', iter,':', etime
         call messages_info(2)
@@ -1171,6 +1175,11 @@ contains
         call write_magnetic_moments(iunit, gr%mesh, st, geo, scf%lmm_r)
         if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       end if
+
+      if(hm%lda_u%apply .and. hm%lda_u%useACBN0) then
+          call lda_u_write_U(hm%lda_u, iunit, geo)
+          if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
+        end if 
 
       if(scf%calc_dipole) then
         call calc_dipole(dipole)
