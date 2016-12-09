@@ -332,7 +332,9 @@ subroutine X(compute_ACBNO_U)(this, st)
       tmpU = M_ZERO
       do ispin1 = 1, st%d%nspin
         do ispin2 = 1, st%d%nspin
-          tmpU = tmpU + this%orb_occ(im,ispin1,ia)*this%orb_occ(imp,ispin2,ia)
+          if(ispin1 /= ispin2) then
+            tmpU = tmpU + this%orb_occ(im,ispin1,ia)*this%orb_occ(imp,ispin2,ia)
+          end if
         end do
       end do
       denomU = denomU + tmpU
