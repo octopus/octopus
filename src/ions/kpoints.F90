@@ -541,13 +541,32 @@ contains
     subroutine read_path()
       type(block_t) :: blk    
       integer :: nshifts, nkpoints, nhighsympoints, nsegments
-      integer :: icol, ik, idir, ncols
+      integer :: icol, ik, idir, ncols, path_type
       integer, allocatable :: resolution(:)
       FLOAT, allocatable   :: highsympoints(:,:)
+      character(len=1), allocatable   :: highsympoints_strings(:)
       type(kpoints_grid_t) :: path_kpoints_grid
+      logical :: path_is_string
 
       PUSH_SUB(kpoints_init.read_path)
 
+      !%Variable KPointsPathType
+      !%Type flag
+      !%Default numerical
+      !%Section Mesh::KPoints
+      !%Description
+      !% Defines in which format the high-symmetry <i>k</i>-points path is given
+      !%Option numerical 1
+      !% High symmetry points are numerical values
+      !%Option string 2
+      !% High symmetry points are given by their conventional alphabetical label.
+      !% Possible values depend on the symmetry of the system, but no other characters than: A,G,H,K,L,M,P,R,U,W,X,Z
+      !% are accepted (Note: Gamma=G).
+      !% This is only implemented for cubic, hexagonal, tetragonal and orthorombic symmetries.
+      !%End
+
+      call parse_variable('KPointsPathType', 1, path_type)
+      path_is_string = (path_type == 2)
 
       !%Variable KPointsPath
       !%Type block
@@ -567,9 +586,17 @@ contains
       !% <tt>%KPointsPath
       !% <br>&nbsp;&nbsp;10 | 5
       !% <br>&nbsp;&nbsp; 0 | 0 | 0 
-      !% <br>&nbsp;&nbsp; 0.5 | 0 | 0
-      !% <br>&nbsp;&nbsp; 0.5 | 0.5 | 0.5
+      !% <br>&nbsp;&nbsp; 0. | 0.5 | 0
+      !% <br>&nbsp;&nbsp; 1/3 | 1/3 | 0.5
       !% <br>%</tt>
+      !%
+      !% If KpointsPathType = string has been specified this corresponds to:
+      !%
+      !% <tt>%KPointsPath
+      !% <br>&nbsp;&nbsp;10 | 5
+      !% <br>&nbsp;&nbsp; "G" | "M" | "H"
+      !% <br>%</tt>
+      !% for a lattice with hexagonal symmetry.
       !%
       !%End
 
@@ -581,9 +608,17 @@ contains
       ! There is one high symmetry k-point per line
       nsegments = parse_block_cols(blk, 0)
       nhighsympoints = parse_block_n(blk)-1
-      if( nhighsympoints /= nsegments +1) then
+
+      ! in case the path is given by strings, there are only two rows
+      ! and the number of points given is inferred from the number of segments specified
+      if(path_is_string) then
+        nhighsympoints = nsegments+1
+      end if
+
+      if(nhighsympoints /= nsegments +1) then
         write(message(1),'(a,i3,a,i3)') 'The first row of KPointsPath is not compatible with the number of specified k-points.'
-        call messages_fatal(1)
+        write(message(2),'(a)') 'In case you are giving the path by alphabetical labels, please set KPointsPathType = string'
+        call messages_fatal(2)
       end if
 
       SAFE_ALLOCATE(resolution(1:nsegments))
@@ -594,18 +629,26 @@ contains
       nkpoints = sum(resolution)+1
 
       SAFE_ALLOCATE(highsympoints(1:dim, 1:nhighsympoints))
-      do ik = 1, nhighsympoints
-        !Sanity check
-        ncols = parse_block_cols(blk, ik)
-        if(ncols /= dim) then
-          write(message(1),'(a,i3,a,i3)') 'KPointsPath row ', ik, ' has ', ncols, ' columns but must have ', dim
-          call messages_fatal(1)
-        end if
-
-        do idir = 1, dim
+      if(.not.path_is_string) then
+        do ik = 1, nhighsympoints
+          !Sanity check
+          ncols = parse_block_cols(blk, ik)
+          if(ncols /= dim) then
+            write(message(1),'(a,i3,a,i3)') 'KPointsPath row ', ik, ' has ', ncols, ' columns but must have ', dim
+            call messages_fatal(1)
+          end if
+          do idir=1,dim
             call parse_block_float(blk, ik, idir-1, highsympoints(idir, ik))
+          end do
         end do
-      end do
+      else
+        SAFE_ALLOCATE(highsympoints_strings(1:nhighsympoints))
+        do ik = 1, nhighsympoints
+          call parse_block_string(blk, 1, ik-1, highsympoints_strings(ik))
+        end do
+        call convert_string_to_coordinate(nhighsympoints,highsympoints_strings,highsympoints)
+        SAFE_DEALLOCATE_A(highsympoints_strings)
+      end if
 
       !We do not use axis
       this%nik_axis(1:MAX_DIM) = 1
@@ -646,6 +689,178 @@ contains
       POP_SUB(kpoints_init.read_path) 
     end subroutine read_path
 
+    ! ---------------------------------------------------------
+    subroutine convert_string_to_coordinate(nk,string,coord)
+      integer :: nk
+      character(len=1) :: string(nk)
+      FLOAT :: coord(dim,nk)
+      character(len=1), allocatable :: special_points_labels(:)
+      FLOAT, allocatable :: special_points(:,:)
+      integer :: nspecial, space_group, symm_class, ik, is
+      integer, parameter  :: &
+           CUBIC       =  1, &
+           FCC         =  2, &
+           BCC         =  3, &
+           TETRAGONAL  =  4, &
+           ORTHOROMBIC =  5, &
+           HEXAGONAL   =  6
+
+
+      PUSH_SUB(kpoints_init.convert_string_to_coordinate)
+
+      space_group = symm%space_group
+
+      ! find the relevant symmetry class for the given spacegroup
+      symm_class = -1
+      if(space_group >= 16  .and. space_group <= 74)  symm_class = ORTHOROMBIC
+      if(space_group >= 75  .and. space_group <= 142) symm_class = TETRAGONAL
+      if(space_group >= 168 .and. space_group <= 194) symm_class = HEXAGONAL
+      if(space_group ==  195 )  symm_class = CUBIC
+      if(space_group ==  196 )  symm_class = FCC
+      if(space_group ==  197 )  symm_class = BCC
+      if(space_group ==  198 )  symm_class = CUBIC
+      if(space_group ==  199 )  symm_class = BCC
+      if(space_group ==  200 )  symm_class = CUBIC
+      if(space_group ==  201 )  symm_class = CUBIC
+      if(space_group ==  202 )  symm_class = FCC
+      if(space_group ==  203 )  symm_class = FCC
+      if(space_group ==  204 )  symm_class = BCC
+      if(space_group ==  205 )  symm_class = CUBIC
+      if(space_group ==  206 )  symm_class = BCC
+      if(space_group ==  207 )  symm_class = CUBIC
+      if(space_group ==  208 )  symm_class = CUBIC
+      if(space_group ==  209 )  symm_class = FCC
+      if(space_group ==  210 )  symm_class = FCC
+      if(space_group ==  211 )  symm_class = BCC
+      if(space_group ==  212 )  symm_class = CUBIC
+      if(space_group ==  213 )  symm_class = CUBIC
+      if(space_group ==  214 )  symm_class = BCC
+      if(space_group ==  215 )  symm_class = CUBIC
+      if(space_group ==  216 )  symm_class = FCC
+      if(space_group ==  217 )  symm_class = BCC
+      if(space_group ==  218 )  symm_class = CUBIC
+      if(space_group ==  219 )  symm_class = FCC
+      if(space_group ==  220 )  symm_class = BCC
+      if(space_group ==  221 )  symm_class = CUBIC
+      if(space_group ==  222 )  symm_class = CUBIC
+      if(space_group ==  223 )  symm_class = CUBIC
+      if(space_group ==  224 )  symm_class = CUBIC
+      if(space_group ==  225 )  symm_class = FCC
+      if(space_group ==  226 )  symm_class = FCC
+      if(space_group ==  227 )  symm_class = FCC
+      if(space_group ==  228 )  symm_class = FCC
+      if(space_group ==  229 )  symm_class = BCC
+      if(space_group ==  230 )  symm_class = BCC
+
+      ! define the special points for the symmetry class
+      select case (symm_class)
+
+      ! simple cubic
+      case(CUBIC)
+        nspecial = 4
+        SAFE_ALLOCATE(special_points_labels(1:nspecial))
+        SAFE_ALLOCATE(special_points(1:nspecial,1:3))
+
+        special_points_labels(1:nspecial) = (/"G","M","R","X"/)
+        special_points(1,1:3) = (/   0.,   0.,   0./)
+        special_points(2,1:3) = (/ 1/2., 1/2.,   0./)
+        special_points(3,1:3) = (/ 1/2., 1/2., 1/2./)
+        special_points(4,1:3) = (/   0., 1/2.,   0./)
+
+      case(FCC)
+         nspecial = 6
+         SAFE_ALLOCATE(special_points_labels(1:nspecial))
+         SAFE_ALLOCATE(special_points(1:nspecial,1:3))
+
+         special_points_labels(1:nspecial) = (/"G","K","L","U","W","X"/)
+         special_points(1,1:3) = (/   0.,   0.,   0./)
+         special_points(2,1:3) = (/ 3/8., 3/8., 3/4./)
+         special_points(3,1:3) = (/ 1/2., 1/2., 1/2./)
+         special_points(4,1:3) = (/ 5/8., 1/4., 5/8./)
+         special_points(5,1:3) = (/ 1/2., 1/4., 3/4./)
+         special_points(4,1:3) = (/ 1/2.,   0., 1/2./)
+
+      case(BCC)
+         nspecial = 4
+         SAFE_ALLOCATE(special_points_labels(1:nspecial))
+         SAFE_ALLOCATE(special_points(1:nspecial,1:3))
+
+         special_points_labels(1:nspecial) = (/"G","H","P","N"/)
+         special_points(1,1:3) = (/  0.,    0.,   0./)
+         special_points(2,1:3) = (/1/2., -1/2., 1/2./)
+         special_points(3,1:3) = (/1/4.,  1/4., 1/4./)
+         special_points(4,1:3) = (/  0.,    0., 1/2./)
+                                      
+      case(TETRAGONAL)                
+         nspecial = 6
+         SAFE_ALLOCATE(special_points_labels(1:nspecial))
+         SAFE_ALLOCATE(special_points(1:nspecial,1:3))
+
+         special_points_labels(1:nspecial) = (/"G","A","M","R","X","Z"/)
+         special_points(1,1:3) = (/  0.,   0.,   0./)
+         special_points(2,1:3) = (/1/2., 1/2., 1/2./)
+         special_points(3,1:3) = (/1/2., 1/2.,   0./)
+         special_points(4,1:3) = (/  0., 1/2., 1/2./)
+         special_points(5,1:3) = (/  0., 1/2.,   0./)
+         special_points(6,1:3) = (/  0.,   0., 1/2./)
+
+    case(ORTHOROMBIC)
+         nspecial = 8
+         SAFE_ALLOCATE(special_points_labels(1:nspecial))
+         SAFE_ALLOCATE(special_points(1:nspecial,1:3))
+
+         special_points_labels(1:nspecial) = (/"G","R","S","T","U","X","Y","Z"/)
+         special_points(1,1:3) = (/  0.,   0.,   0./)
+         special_points(2,1:3) = (/1/2., 1/2., 1/2./)
+         special_points(3,1:3) = (/1/2., 1/2.,   0./)
+         special_points(4,1:3) = (/  0., 1/2., 1/2./)
+         special_points(5,1:3) = (/1/2.,   0., 1/2./)
+         special_points(6,1:3) = (/1/2.,   0.,   0./)
+         special_points(7,1:3) = (/  0., 1/2.,   0./)
+         special_points(8,1:3) = (/  0.,   0., 1/2./)
+
+     case(HEXAGONAL)
+         nspecial = 6
+         SAFE_ALLOCATE(special_points_labels(1:nspecial))
+         SAFE_ALLOCATE(special_points(1:nspecial,1:3))
+
+         special_points_labels(1:nspecial) = (/"G","A","H","K","L","M"/)
+         special_points(1,1:3) = (/  0.,   0.,   0./)
+         special_points(2,1:3) = (/  0.,   0., 1/2./)
+         special_points(3,1:3) = (/1/3., 1/3., 1/2./)
+         special_points(4,1:3) = (/1/3., 1/3.,   0./)
+         special_points(5,1:3) = (/1/2.,   0., 1/2./)
+         special_points(6,1:3) = (/1/2.,   0.,   0./)
+
+      case(-1)
+         write(message(1),'(a,i3,a)') 'For space group ', space_group , ' no special k-points have been implemented.'
+         write(message(2),'(a)') 'Please give numerical values withthe default KPointsPathType'
+         call messages_fatal(2)
+
+      end select
+
+      ! fill the coordinates array
+      coord(1:3,1:nk) = -9999
+      do ik=1,nk
+         do is=1,nspecial
+            if(string(ik) == special_points_labels(is)) then
+               coord(1:3,ik) = special_points(is,1:3)
+               exit
+            end if
+         end do
+         ! check the label has been found
+         if(coord(1,ik) < -100.) then
+            write(message(1),'(a,a,a,i3)') 'The label ', string(ik) , ' is not known for spacegroup ', space_group
+            write(message(2),'(a)') 'Please give numerical values withthe default KPointsPathType'
+            call messages_fatal(2)
+         end if
+      end do
+
+      SAFE_DEALLOCATE_A(special_points_labels)
+      SAFE_DEALLOCATE_A(special_points)
+
+      POP_SUB(kpoints_init.convert_string_to_coordinate)
+    end subroutine convert_string_to_coordinate
 
 
     ! ---------------------------------------------------------
