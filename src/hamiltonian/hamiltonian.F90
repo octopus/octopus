@@ -43,6 +43,7 @@ module hamiltonian_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
   use lasers_oct_m
+  use lda_u_oct_m
   use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
@@ -186,6 +187,11 @@ module hamiltonian_oct_m
     !> For the Rashba spin-orbit coupling
     FLOAT :: rashba_coupling
     type(scdm_t)  :: scdm
+
+    !> For the LDA+U 
+    logical :: use_lda_u
+    type(lda_u_t) :: lda_u
+
 
     logical :: time_zero
   end type hamiltonian_t
@@ -483,6 +489,19 @@ contains
     call parse_variable('TimeZero', .false., hm%time_zero)
     if(hm%time_zero) call messages_experimental('TimeZero')
 
+    !%Variable LDA_U
+    !%Type logical
+    !%Default no
+    !%Section Hamiltonian
+    !%Description
+    !% (Experimental) If set to yes, the LDA+U calculation is performed.
+    !%End
+    call parse_variable('LDA_U', .false., hm%use_lda_u)
+    if(hm%use_lda_u) then
+      call messages_experimental('LDA+U')
+      call lda_u_init(hm%lda_u, gr, geo, st)
+    end if
+
     call scissor_nullify(hm%scissor)
 
     call profiling_out(prof)
@@ -570,6 +589,8 @@ contains
     SAFE_DEALLOCATE_P(hm%energy)
      
     if (hm%pcm%run_pcm) call pcm_end(hm%pcm)
+
+    if (hm%use_lda_u) call lda_u_end(hm%lda_u)
 
     POP_SUB(hamiltonian_end)
   end subroutine hamiltonian_end
