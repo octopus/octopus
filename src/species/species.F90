@@ -66,6 +66,8 @@ module species_oct_m
     species_def_h,                 &
     species_jradius,               &
     species_jthick,                &
+    species_hubbard_l,             &
+    species_hubbard_u,             &
     species_sigma,                 &
     species_omega,                 &
     species_mass,                  &
@@ -146,6 +148,9 @@ module species_oct_m
     integer, pointer :: iwf_l(:, :), iwf_m(:, :), iwf_i(:, :) !< i, l, m as a function of iorb and ispin
 
     integer :: lmax, lloc         !< For the TM pseudos, the lmax and lloc.
+ 
+    integer :: hubbard_l          !< For the LDA+U, the angular momentum for the applied U
+    FLOAT   :: hubbard_U          !< For the LDA+U, the effective U
   end type species_t
 
   interface species_end
@@ -190,6 +195,8 @@ contains
     nullify(this%iwf_i)
     this%lmax=0
     this%lloc=0
+    this%hubbard_l=0
+    this%hubbard_U=M_ZERO
 
     POP_SUB(species_nullify)
   end subroutine species_nullify
@@ -455,6 +462,10 @@ contains
     !% The van der Waals radius that will be used for this species.
     !%Option volume -10016
     !% Name of a volume block
+    !%Option hubbard_l -10017
+    !% The angular-momentum for which the effective U will be applied.
+    !%Option hubbard_u -10018
+    !% The effective U that will be used for the LDA+U calculations.
     !%End
 
     call messages_obsolete_variable('SpecieAllElectronSigma', 'Species')
@@ -1042,6 +1053,20 @@ contains
   end function species_niwfs
   ! ---------------------------------------------------------
 
+  ! ---------------------------------------------------------
+  integer pure function species_hubbard_l(spec)
+    type(species_t), intent(in) :: spec
+    species_hubbard_l = spec%hubbard_l
+  end function species_hubbard_l
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  FLOAT pure function species_hubbard_u(spec)
+    type(species_t), intent(in) :: spec
+    species_hubbard_u = spec%hubbard_u
+  end function species_hubbard_u
+  ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
   pure subroutine species_iwf_ilm(spec, j, is, i, l, m)
@@ -1295,6 +1320,8 @@ contains
     call loct_pointer_copy(this%iwf_i, that%iwf_i)
     this%lmax=that%lmax
     this%lloc=that%lloc
+    this%hubbard_l=that%hubbard_l
+    this%hubbard_U=that%hubbard_U
 
     POP_SUB(species_copy)
   end subroutine species_copy
@@ -1390,6 +1417,8 @@ contains
     write(iunit, '(a,f15.2)') 'def_h = ', spec%def_h
     if (spec%type /= SPECIES_USDEF ) write(iunit, '(a,i3)')    'lmax  = ', spec%lmax
     if (spec%type /= SPECIES_USDEF ) write(iunit, '(a,i3)')    'lloc  = ', spec%lloc
+    write(iunit, '(a,i3)')    'hubbard_l  = ', spec%hubbard_l
+    write(iunit, '(a,f15.2)') 'hubbard_U = ', spec%hubbard_U
 
     if(species_is_ps(spec)) then
        if(debug%info) call ps_debug(spec%ps, trim(dirname))
@@ -1554,6 +1583,23 @@ contains
         if(spec%lloc < 0) then
           call messages_input_error('Species', "The 'lloc' parameter in species "//trim(spec%label)//" cannot be negative")
         end if
+
+       case(OPTION__SPECIES__HUBBARD_L)
+        call check_duplication(OPTION__SPECIES__HUBBARD_L)
+        call parse_block_integer(blk, row, icol + 1, spec%hubbard_l)
+
+        if(spec%type /= SPECIES_PSEUDO .and. spec%type /= SPECIES_PSPIO) then
+          call messages_input_error('Species', &
+            "The 'hubbard_l' parameter in species "//trim(spec%label)//" can only be used with pseudopotential species")
+        end if
+
+        if(spec%hubbard_l < 0) then
+          call messages_input_error('Species', "The 'hubbard_l' parameter in species "//trim(spec%label)//" cannot be negative")
+        end if
+
+     case(OPTION__SPECIES__HUBBARD_U)
+        call check_duplication(OPTION__SPECIES__HUBBARD_U)
+        call parse_block_float(blk, row, icol + 1, spec%hubbard_u, unit = units_inp%energy)
 
       case(OPTION__SPECIES__MASS)
         call check_duplication(OPTION__SPECIES__MASS)
