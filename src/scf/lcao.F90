@@ -31,7 +31,6 @@ module lcao_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
   use lapack_oct_m
-  use lda_u_oct_m
   use loct_oct_m
   use magnetic_oct_m
   use math_oct_m

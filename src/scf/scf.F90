@@ -710,8 +710,6 @@ contains
 
       ! occupations
       call states_fermi(st, gr%mesh)
-      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
-      call lda_u_update_U(hm%lda_u, st)
 
       ! compute output density, potential (if needed) and eigenvalues sum
       if(cmplxscl) then
@@ -914,7 +912,7 @@ contains
         exit
       end if
 
-      if((outp%what+outp%what_lda_u /=0) .and. outp%duringscf .and. outp%output_interval /= 0 &
+      if(outp%what/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
         .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
         write(dirname,'(a,a,i4.4)') trim(outp%iter_dir),"scf.",iter
         call output_all(outp, gr, geo, st, hm, ks, dirname)
@@ -1071,10 +1069,6 @@ contains
           call write_magnetic_moments(stdout, gr%mesh, st, geo, scf%lmm_r)
         end if
 
-        if(hm%lda_u%apply .and. hm%lda_u%useACBN0) then
-          call lda_u_write_U(hm%lda_u, stdout, geo)
-        end if
-
         write(message(1),'(a)') ''
         write(message(2),'(a,i5,a,f14.2)') 'Elapsed time for SCF step ', iter,':', etime
         call messages_info(2)
@@ -1173,11 +1167,6 @@ contains
         call write_magnetic_moments(iunit, gr%mesh, st, geo, scf%lmm_r)
         if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       end if
-
-      if(hm%lda_u%apply .and. hm%lda_u%useACBN0) then
-          call lda_u_write_U(hm%lda_u, iunit, geo)
-          if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
-        end if 
 
       if(scf%calc_dipole) then
         call calc_dipole(dipole)

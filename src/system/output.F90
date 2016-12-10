@@ -47,7 +47,6 @@ module output_oct_m
   use kick_oct_m
   use kpoints_oct_m
   use lasers_oct_m
-  use lda_u_oct_m
   use linear_response_oct_m
   use loct_oct_m
   use loct_math_oct_m
@@ -124,7 +123,6 @@ module output_oct_m
   type output_t
     !> General output variables:
     integer :: what                !< what to output
-    integer :: what_lda_u          !< what to output for the LDA+U part
     integer :: how                 !< how to output
 
     type(output_me_t) :: me        !< this handles the output of matrix elements
@@ -544,28 +542,6 @@ contains
       call current_init(outp%current_calculator)
     end if
 
-    !%Variable OutputLDA_U
-    !%Type flag
-    !%Default none
-    !%Section Output
-    !%Description
-    !% Specifies what to print. The output files are written at the end of the run into the output directory for the
-    !% relevant kind of run (<i>e.g.</i> <tt>static</tt> for <tt>CalculationMode = gs</tt>).
-    !% Time-dependent simulations print only per iteration, including always the last. The frequency of output per iteration
-    !% (available for <tt>CalculationMode</tt> = <tt>gs</tt>, <tt>unocc</tt>,  <tt>td</tt>, and <tt>opt_control</tt>)
-    !% is set by <tt>OutputInterval</tt> and the directory is set by <tt>OutputIterDir</tt>.
-    !% For linear-response run modes, the derivatives of many quantities can be printed, as listed in
-    !% the options below. Indices in the filename are labelled as follows:
-    !% <tt>sp</tt> = spin (or spinor component), <tt>k</tt> = <i>k</i>-point, <tt>st</tt> = state/band.
-    !% There is no tag for directions, given as a letter. The perturbation direction is always
-    !% the last direction for linear-response quantities, and a following +/- indicates the sign of the frequency.
-    !% Example: <tt>density + potential</tt>
-    !%Option occupation_matrices  bit(0)
-    !% Outputs the occupation matrices of LDA+U 
-    !%End
-    call parse_variable('OutputLDA_U', 0, outp%what_lda_u)
-    
-    
 
     POP_SUB(output_init)
   end subroutine output_init
@@ -602,7 +578,7 @@ contains
     PUSH_SUB(output_all)
     call profiling_in(prof, "OUTPUT_ALL")
 
-    if(outp%what /= 0 .or. outp%what_lda_u /= 0) then
+    if(outp%what /= 0) then
       message(1) = "Info: Writing output to " // trim(dir)
       call messages_info(1)
       call io_mkdir(dir)
@@ -659,11 +635,6 @@ contains
     
     if(iand(outp%what, OPTION__OUTPUT__FROZEN_SYSTEM) /= 0) then
       call output_fio(gr, geo, st, hm, trim(adjustl(dir)), mpi_world)
-    end if
-
-    if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__OCCUPATION_MATRICES) /= 0&
-       .and. hm%lda_u%apply) then
-      call lda_u_write_occupation_matrices(dir, hm%lda_u, geo, st)
     end if
 
     call profiling_out(prof)

@@ -28,7 +28,6 @@ module propagator_oct_m
   use global_oct_m
   use hamiltonian_oct_m
   use ion_dynamics_oct_m
-  use lda_u_oct_m
   use loct_pointer_oct_m
   use parser_oct_m
   use mesh_function_oct_m
@@ -602,10 +601,6 @@ contains
       call gauge_field_propagate_vel(hm%ep%gfield, dt)
     end if
 
-    !We update the occupation matrices
-    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
-    call lda_u_update_U(hm%lda_u, st)
-
     POP_SUB(propagator_dt)
     call profiling_out(prof)
 
@@ -665,12 +660,6 @@ contains
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
       call gauge_field_propagate(hm%ep%gfield, dt, iter*dt)
-    end if
-
-    !TODO: we should update the occupation matrices here 
-    ! Who calls fermi ? 
-    if(hm%lda_u%apply) then
-      call messages_not_implemented("lda+u with propagator_dt_bo")  
     end if
 
     call hamiltonian_epot_generate(hm, gr, geo, st, time = iter*dt)
