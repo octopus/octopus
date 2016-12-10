@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: scf.F90 15471 2016-07-11 15:38:35Z ssato $
 
 #include "global.h"
 
@@ -36,7 +35,6 @@ module scf_oct_m
   use io_function_oct_m
   use kpoints_oct_m
   use lcao_oct_m
-  use lda_u_oct_m
   use loct_oct_m
   use magnetic_oct_m
   use math_oct_m
@@ -676,7 +674,7 @@ contains
       scf%eigens%converged = 0
 
       scf%energy_diff = hm%energy%total
-
+      
       if(scf%lcao_restricted) then
         call lcao_init_orbitals(lcao, st, gr, geo)
         call lcao_wf(lcao, st, gr, geo, hm)
