@@ -150,9 +150,9 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
       if(this%useACBN0) then
         this%renorm_occ(:,ist,ik) = M_ZERO
       else
-        this%renorm_occ(:,ist,ik) = st%occ(ist, ik)
+        this%renorm_occ(:,ist,ik) = M_ONE !st%occ(ist, ik)
       end if
-      weight = st%d%kweights(ik) 
+      weight = st%d%kweights(ik)*st%occ(ist, ik) 
 
       call states_get_state(st, mesh, ist, ik, psi )  
       if(present(phase)) then 
