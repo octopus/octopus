@@ -139,11 +139,6 @@ contains
     end if
     call hamiltonian_update(hm, gr%mesh, time = time)
 
-    !We have to propagate backward, this was only needed for hamiltonian_update
-    if(gauge_field_is_applied(hm%ep%gfield)) then
-      call gauge_field_propagate_backward(hm%ep%gfield, dt)
-    end if
-
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
         call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt, time)
@@ -247,11 +242,6 @@ contains
     end if
 
     call hamiltonian_update(hm, gr%mesh, time = time)
-
-    !We have to propagate backward, this was only needed for hamiltonian_update
-    if(gauge_field_is_applied(hm%ep%gfield)) then
-      call gauge_field_propagate_backward(hm%ep%gfield, dt)
-    end if
 
     SAFE_ALLOCATE(psi2(st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
 
@@ -447,11 +437,6 @@ contains
     end if
 
     call hamiltonian_update(hm, gr%mesh, time = time)
-
-    !We have to propagate backward, this was only needed for hamiltonian_update
-    if(gauge_field_is_applied(hm%ep%gfield)) then
-      call gauge_field_propagate_backward(hm%ep%gfield, dt)
-    end if 
 
     call density_calc_init(dens_calc, st, gr, st%rho)
 

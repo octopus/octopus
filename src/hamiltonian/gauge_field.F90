@@ -65,7 +65,6 @@ module gauge_field_oct_m
     gauge_field_get_vec_pot_vel,          &
     gauge_field_get_vec_pot_acc,          &
     gauge_field_propagate,                &
-    gauge_field_propagate_backward,       &
     gauge_field_propagate_vel,            &
     gauge_field_get_energy,               &
     gauge_field_dump,                     &
@@ -320,21 +319,6 @@ contains
     end do
     POP_SUB(gauge_field_propagate)
   end subroutine gauge_field_propagate
-
-    ! ---------------------------------------------------------
-  subroutine gauge_field_propagate_backward(this, dt)
-    type(gauge_field_t),  intent(inout) :: this
-    FLOAT,                intent(in)    :: dt
-
-    integer :: idim
-
-    PUSH_SUB(gauge_field_propagate_backward)
-
-    this%vecpot(1:this%ndim) = this%vecpot(1:this%ndim) - dt * this%vecpot_vel(1:this%ndim) - &
-      M_HALF * dt**2 * this%force(1:this%ndim)
-
-    POP_SUB(gauge_field_propagate_backward)
-  end subroutine gauge_field_propagate_backward
 
 
   ! ---------------------------------------------------------

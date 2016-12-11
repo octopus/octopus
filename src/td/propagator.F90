@@ -578,7 +578,6 @@ contains
       end if
     end if
 
-    !This is the real propagation by dt
     if(gauge_field_is_applied(hm%ep%gfield) .and. .not. propagator_ions_are_propagated(tr)) then
       call gauge_field_propagate(hm%ep%gfield, dt, time)
     end if

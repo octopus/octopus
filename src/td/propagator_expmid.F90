@@ -137,7 +137,6 @@ contains
         call gauge_field_propagate(hm%ep%gfield, M_HALF*dt, time)
       end if
       call hamiltonian_update(hm, gr%mesh, time = time - M_HALF*dt)
-
       do ik = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
 
