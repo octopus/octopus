@@ -96,6 +96,9 @@ module td_oct_m
     integer              :: dynamics
     integer              :: energy_update_iter
     FLOAT                :: scissor
+
+    logical              :: freeze_occ
+    logical              :: freeze_u
   end type td_t
 
 
@@ -404,10 +407,6 @@ contains
       return
     end if
 
-    !Initialise the occupation matrices for LDA+U
-    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
-    call lda_u_update_U(hm%lda_u, st) 
-
     ! Calculate initial forces and kinetic energy
     if(ion_dynamics_ions_move(td%ions)) then
       if(td%iter > 0) then
@@ -610,7 +609,7 @@ contains
 
       integer :: ierr, freeze_orbitals
       FLOAT :: x
-      logical :: freeze_hxc
+      logical :: freeze_hxc, freeze_occ, freeze_u
       type(restart_t) :: restart
 
       PUSH_SUB(td_run.init_wfs)
@@ -734,6 +733,51 @@ contains
       ! initialize Fermi energy
       call states_fermi(st, gr%mesh)
       call energy_calc_total(hm, gr, st)
+
+      ! Initialize the occupation matrices and U for LDA+U
+      ! This must be called before parsing TDFreezeOccupations and TDFreezeU
+      ! in order that the code does properly the initialization.
+      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
+      call lda_u_update_U(hm%lda_u, st)
+
+      !%Variable TDFreezeOccupations
+      !%Type logical
+      !%Default no
+      !%Section Time-Dependent
+      !%Description
+      !% The occupation matrices than enters in the LDA+U potential
+      !% are not evolved during the time evolution.
+      !%End
+      call parse_variable('TDFreezeOccupations', .false., freeze_occ)
+      if(freeze_occ) then
+        write(message(1),'(a)') 'Info: Freezing occupation matrices that enters in the LDA+U potential.'
+        call messages_info(1)
+        call lda_u_freeze_occ(hm%lda_u)
+
+        !In this case we should reload GS wavefunctions 
+        if(.not.fromScratch) then 
+          call messages_not_implemented("TDFreezeOccupations with FromScratch=no") 
+        end if
+      end if
+
+      !%Variable TDFreezeU
+      !%Type logical
+      !%Default no
+      !%Section Time-Dependent
+      !%Description
+      !% The effective U of LDA+U is not evolved during the time evolution.
+      !%End
+      call parse_variable('TDFreezeU', .false., freeze_u)
+      if(freeze_u) then
+        write(message(1),'(a)') 'Info: Freezing the effective U of LDA+U.'
+        call messages_info(1)
+        call lda_u_freeze_u(hm%lda_u)
+
+        !In this case we should reload GS wavefunctions
+        if(.not.fromScratch) then
+          call messages_not_implemented("TDFreezeU with FromScratch=no")
+        end if
+      end if
 
       POP_SUB(td_run.init_wfs)
     end subroutine init_wfs

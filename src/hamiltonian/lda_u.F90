@@ -63,7 +63,9 @@ module lda_u_oct_m
        lda_u_build_phase_correction,    &
        lda_u_write_occupation_matrices, &
        lda_u_update_U,                  &
-       lda_u_write_U
+       lda_u_write_U,                   &
+       lda_u_freeze_occ,                &
+       lda_u_freeze_u
 
   type orbital_t
     type(submesh_t)     :: sphere             !> The submesh of the orbital
@@ -101,6 +103,8 @@ module lda_u_oct_m
     logical             :: truncate        !> Do we truncate the orbitals to the radius 
                                            !> of the NL part of the pseudo
     logical             :: useACBN0        !> Do we use the ACBN0 functional
+    logical             :: freeze_occ      !> Occupation matrices are not recomputed during TD evolution
+    logical             :: freeze_u        !> U is not recomputed during TD evolution
   end type lda_u_t
 
 contains
@@ -276,7 +280,7 @@ contains
    type(hamiltonian_base_t),  intent(in)    :: hm_base 
    type(energy_t),            intent(inout) :: energy
 
-   if(.not. this%apply) return
+   if(.not. this%apply .or. this%freeze_occ) return
    PUSH_SUB(lda_u_update_occ_matrices)
 
    if (states_are_real(st)) then
@@ -298,7 +302,7 @@ contains
    type(lda_u_t),             intent(inout) :: this
    type(states_t),            intent(in)    :: st
 
-   if(.not. this%apply.or..not. this%useACBN0) return
+   if(.not. this%apply.or..not. this%useACBN0 .or.this%freeze_u) return
    PUSH_SUB(lda_u_update_U)
 
    if (states_are_real(st)) then
@@ -383,6 +387,18 @@ contains
     POP_SUB(orbital_update_phase_correction)
 
   end subroutine orbital_update_phase_correction
+
+ subroutine lda_u_freeze_occ(this) 
+   type(lda_u_t),     intent(inout) :: this
+
+   this%freeze_occ = .true.
+ end subroutine lda_u_freeze_occ
+
+ subroutine lda_u_freeze_u(this)            
+   type(lda_u_t),     intent(inout) :: this
+
+   this%freeze_u = .true.
+ end subroutine lda_u_freeze_u
 
  !> Prints the occupation matrices at the end of the scf calculation.
  subroutine lda_u_write_occupation_matrices(dir, this, geo, st)
