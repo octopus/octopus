@@ -48,6 +48,8 @@ module submesh_oct_m
     dsm_integrate,               &
     zsm_integrate,               &
     submesh_add_to_mesh,         &
+    dsubmesh_add_product_to_mesh,&
+    zsubmesh_add_product_to_mesh,&
     dsubmesh_batch_add,          &
     zsubmesh_batch_add,          &
     submesh_to_mesh_dotp,        &

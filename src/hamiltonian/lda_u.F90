@@ -96,8 +96,8 @@ module lda_u_oct_m
     integer             :: nspins
     integer, pointer    :: norbs(:)        !> Number of orbitals
     integer             :: maxnorbs        !> Maximal number of orbitals for all the atoms
-    integer             :: projection      !> The method used to perform the projection
-  
+    integer             :: max_np          !> Maximum number of points in all orbitals submesh's spheres 
+ 
     logical             :: truncate        !> Do we truncate the orbitals to the radius 
                                            !> of the NL part of the pseudo
     logical             :: useACBN0        !> Do we use the ACBN0 functional
@@ -136,21 +136,6 @@ contains
   !%End
   call parse_variable('OrbitalsTruncateToNLRadius', .false., this%truncate)
 
-  !%Variable OrbitalsProjectionMethod
-  !%Type integer
-  !%Default projection_fullmesh
-  !%Section Hamiltonian::LDA+U
-  !%Description
-  !% This variable controls how the projection on the orbitals is done.
-  !%Option fullmesh 0
-  !% The projection is done on the full mesh. This is the default  value.
-  !%Option sphere 1
-  !% The projection is done using the submesh
-  !%End
-  call parse_variable('OrbitalsProjectionMethod', OPTION__ORBITALSPROJECTIONMETHOD__FULLMESH, this%projection)
-  if(this%projection==OPTION__ORBITALSPROJECTIONMETHOD__SPHERE) &
-    call messages_not_implemented("OrbitalProjectionMethod=sphere") 
-
   !%Variable UseACBN0Functional
   !%Type logical
   !%Default no
@@ -173,6 +158,7 @@ contains
 
   this%natoms = geo%natoms
   this%nspins = st%d%nspin
+  this%max_np = 0
  
   !We first need to load the basis
   if (states_are_real(st)) then

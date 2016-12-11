@@ -36,7 +36,7 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
   PUSH_SUB(lda_u_apply)
 
   SAFE_ALLOCATE(psi(1:mesh%np, 1:d%dim))
-  SAFE_ALLOCATE(epsi(1:mesh%np))
+  SAFE_ALLOCATE(epsi(1:this%max_np))
   SAFE_ALLOCATE(hpsi(1:mesh%np, 1:d%dim))
   SAFE_ALLOCATE(dot(1:this%maxnorbs))
 
@@ -78,8 +78,6 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
             reduced = reduced + this%X(V)(im,imp,ispin,ia)*dot(imp)
           end do
 
-  !        reduced = reduced * this%renorm_occ(this%orbitals(im,ia)%ll,psib%states(ibatch)%ist,ik)
-        !
         !  call submesh_add_to_mesh(this%orbitals(im,ispin,ia)%sphere, &
           !                           this%orbitals(im,ispin,ia)%X(orbital), &
           !                           hpsi(:, idim), this%X(V)(im,imp,ispin,ia)*dot) 
@@ -94,9 +92,14 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
              epsi(is) = this%orbitals(im,ia)%X(orbital_sphere)(is) & 
                             *conjg(this%orbitals(im,ia)%phase(is, ik))
            end do
-           !Here it is simpler to use the sphere 
            call submesh_add_to_mesh(this%orbitals(im,ia)%sphere, &
                                     epsi, hpsi(:, idim), reduced)
+ !   #ifdef R_TCOMPLEX
+ !          call X(submesh_add_product_to_mesh)(this%orbitals(im,ia)%sphere, &
+ !                                   this%orbitals(im,ia)%X(orbital_sphere), &
+ !                                   this%orbitals(im,ia)%phase(:,ik), hpsi(:, idim), &
+ !                                   reduced, conjugate=.true.)
+ !   #endif
          else
            call lalg_axpy(mesh%np, reduced, &
                this%orbitals(im,ia)%X(orbital_mesh), hpsi(1:mesh%np, idim))
@@ -135,7 +138,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
 
   this%X(n)(1:this%maxnorbs,1:this%maxnorbs,1:st%d%nspin,1:this%natoms) = R_TOTYPE(M_ZERO)
   SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(epsi(1:mesh%np))
+  SAFE_ALLOCATE(epsi(1:this%max_np))
   SAFE_ALLOCATE(dot(1:this%maxnorbs,1:this%natoms))
 
   if(this%useACBN0) then
@@ -391,18 +394,15 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
    !     ijst=ijst+1
         orbj => this%orbitals(jst,ia)
 
-        if(this%projection==OPTION__ORBITALSPROJECTIONMETHOD__SPHERE) then
-          np_sphere = orbi%sphere%np
-          nn_sphere(1:np_sphere)  = R_CONJ(orbi%X(orbital_sphere)(1:np_sphere)) &
+        np_sphere = orbi%sphere%np
+        nn_sphere(1:np_sphere)  = R_CONJ(orbi%X(orbital_sphere)(1:np_sphere)) &
                                         *orbj%X(orbital_sphere)(1:np_sphere)
-          nn(1:mesh%np) = M_ZERO
-          call submesh_add_to_mesh(orbi%sphere, nn_sphere, nn) 
-        else
-          nn(1:mesh%np) = R_CONJ(orbi%X(orbital_mesh)(1:mesh%np)) &
-                              *orbj%X(orbital_mesh)(1:mesh%np)
-        end if
+        nn(1:mesh%np) = M_ZERO
+        call submesh_add_to_mesh(orbi%sphere, nn_sphere, nn) 
+      !  call X(submesh_add_product_to_mesh)(orbi%sphere, orbj%X(orbital_sphere),orbi%X(orbital_sphere),&
+      !                                      nn, conjugate=.true.)
 
-        call X(poisson_solve)(psolver, vv, nn, all_nodes=.false.)
+        call X(poisson_solve)(psolver, vv, nn, all_nodes=.true.)
 
    !     klst=0
         do kst = 1, norbs
@@ -411,6 +411,8 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
    !         if(lst > kst) cycle
    !         klst=klst+1
    !        if(klst > ijst) cycle
+
+     !       print *, ist,jst,kst,lst,ia
 
             orbl => this%orbitals(lst,ia)
 
@@ -559,7 +561,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
       call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
       if(ll .eq. hubbardl ) then 
         norb = norb + 1
-        !We obtain the orbital
+        ! We obtain the orbital
         call X(get_atomic_orbital)(geo, mesh, ia, iorb, 1, this%orbitals(norb,ia), this%truncate) 
         ! We have to normalize the orbitals, 
         ! in case the orbitals that comes out of the pseudo are not properly normalised
@@ -567,13 +569,18 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
         this%orbitals(norb,ia)%X(orbital_mesh)(1:mesh%np) =  &
                 this%orbitals(norb,ia)%X(orbital_mesh)(1:mesh%np) /sqrt(norm)
 
-        !In case of complex wavefunction, we allocate the array for the phase correction
+        ! In case of complex wavefunction, we allocate the array for the phase correction
   #ifdef R_TCOMPLEX
         SAFE_ALLOCATE(this%orbitals(norb,ia)%phase(1:this%orbitals(norb,ia)%sphere%np, st%d%kpt%start:st%d%kpt%end))
         this%orbitals(norb,ia)%phase(:,:) = M_ZERO
   #endif
-        !We store the angular momentum of the orbital
+        ! We store the angular momentum of the orbital
         this%orbitals(norb,ia)%ll = ll
+
+        ! We need to know the maximum number of points in order to allocate a temporary array
+        ! to apply the phase in lda_u_apply
+        if(this%orbitals(norb,ia)%sphere%np > this%max_np) &
+          this%max_np = this%orbitals(norb,ia)%sphere%np
       endif
     end do
   end do
@@ -619,9 +626,9 @@ subroutine X(get_atomic_orbital) (geo, mesh, iatom, iorb, ispin, orb, truncate)
   radius = species_get_iwf_radius(spec, ii, ispin_) 
   ! make sure that if the spacing is too large, the orbitals fit in a few points at least
   radius = max(radius, CNST(2.0)*maxval(mesh%spacing(1:mesh%sb%dim)))
-  ! if the orbital is larger than the size of the box, we restrict it to this size, 
-  ! otherwise the orbital will overlap more than one time with the simulation box.
-  ! This would induces phase problem if the complete mesh is used instead of the sphere
+  !! if the orbital is larger than the size of the box, we restrict it to this size, 
+  !! otherwise the orbital will overlap more than one time with the simulation box.
+  !! This would induces phase problem if the complete mesh is used instead of the sphere
   radius = min(radius, minval(mesh%sb%lsize(1:mesh%sb%dim)-mesh%spacing(1:mesh%sb%dim)))
 
   !If asked, we truncate the orbital to the radius on the projector spheres 
