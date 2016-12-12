@@ -416,8 +416,8 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
 
             orbl => this%orbitals(lst,ia)
 
-            tmp(1:mesh%np) = vv(1:mesh%np)*orbk%X(orbital_mesh)(1:mesh%np) &
-                                   *R_CONJ(orbl%X(orbital_mesh)(1:mesh%np))
+            tmp(1:mesh%np) = vv(1:mesh%np)*orbl%X(orbital_mesh)(1:mesh%np) &
+                                   *R_CONJ(orbk%X(orbital_mesh)(1:mesh%np))
 
             this%X(coulomb)(ist,jst,kst,lst,ia) = X(mf_integrate)(mesh, tmp(1:mesh%np))
           end do !lst
