@@ -561,7 +561,9 @@ contains
     !% the last direction for linear-response quantities, and a following +/- indicates the sign of the frequency.
     !% Example: <tt>density + potential</tt>
     !%Option occupation_matrices  bit(0)
-    !% Outputs the occupation matrices of LDA+U 
+    !% Outputs the occupation matrices of LDA+U
+    !%Option effectiveU bit(1)
+    !% Outputs the value of the effectiveU for each atoms 
     !%End
     call parse_variable('OutputLDA_U', 0, outp%what_lda_u)
     
@@ -664,6 +666,11 @@ contains
     if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__OCCUPATION_MATRICES) /= 0&
        .and. hm%lda_u%apply) then
       call lda_u_write_occupation_matrices(dir, hm%lda_u, geo, st)
+    end if
+
+    if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__EFFECTIVEU) /= 0&
+       .and. hm%lda_u%apply) then
+      call lda_u_write_effectiveU(dir, hm%lda_u, geo, st)
     end if
 
     call profiling_out(prof)

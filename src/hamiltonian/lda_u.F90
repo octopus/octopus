@@ -65,7 +65,8 @@ module lda_u_oct_m
        lda_u_update_U,                  &
        lda_u_write_U,                   &
        lda_u_freeze_occ,                &
-       lda_u_freeze_u
+       lda_u_freeze_u,                  &
+       lda_u_write_effectiveU
 
   type orbital_t
     type(submesh_t)     :: sphere             !> The submesh of the orbital
@@ -447,6 +448,33 @@ contains
 
    POP_SUB(lda_u_write_occupation_matrices)
  end subroutine lda_u_write_occupation_matrices
+
+ !--------------------------------------------------------- 
+ subroutine lda_u_write_effectiveU(dir, this, geo, st)
+   type(lda_u_t),     intent(inout) :: this
+   character(len=*),  intent(in)    :: dir
+   type(geometry_t),  intent(in)    :: geo
+   type(states_t),    intent(in)    :: st
+
+   integer :: iunit, ia, ispin, im, imp
+   FLOAT :: hubbardl
+
+   PUSH_SUB(lda_u_write_effectiveU)
+
+   if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
+
+   call io_mkdir(dir)
+   iunit = io_open(trim(dir) // "/effectiveU", action='write')
+
+   call lda_u_write_U(this, iunit, geo)
+
+   call io_close(iunit)
+
+   end if
+
+   POP_SUB(lda_u_write_effectiveU)
+ end subroutine lda_u_write_effectiveU
+
 
  !--------------------------------------------------------- 
  subroutine lda_u_write_U(this, iunit, geo)
