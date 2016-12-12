@@ -22,6 +22,7 @@ module td_write_oct_m
   use iso_c_binding
   use comm_oct_m
   use excited_states_oct_m
+  use floquet_oct_m
   use gauge_field_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -2651,6 +2652,26 @@ contains
 
     POP_SUB(td_write_partial_charges)
   end subroutine td_write_partial_charges
+
+
+  subroutine td_write_floquet(out_floquet, hm, gr, st, ks, iter)
+    type(c_ptr),       intent(inout)   :: out_floquet
+    type(hamiltonian_t), intent(inout) :: hm
+    type(grid_t),      intent(inout)   :: gr
+    type(states_t),    intent(inout)   :: st !< at iter=0 this is the ggroundstate
+    type(v_ks_t),      intent(in)      :: ks
+    integer,           intent(in)      :: iter
+
+    PUSH_SUB(td_write_floquet)
+
+    if(iter==0) then
+      call floquet_init(hm%F,st%d%dim)
+      call floquet_hamiltonians_init(hm ,gr, st, ks, iter)
+    end if
+
+    POP_SUB(td_write_floquet)
+
+  end subroutine td_write_floquet
 
 
   ! ---------------------------------------------------------

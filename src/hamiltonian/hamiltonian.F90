@@ -78,6 +78,7 @@ module hamiltonian_oct_m
   private
   public ::                          &
     hamiltonian_t,                   &
+    floquet_t, &
     hamiltonian_init,                &
     hamiltonian_end,                 &
     hamiltonian_span,                &
@@ -112,6 +113,14 @@ module hamiltonian_oct_m
     hamiltonian_dump_vhxc,           &
     hamiltonian_load_vhxc,           &
     zoct_exchange_operator
+
+  type floquet_t ! this should live in the floquet module
+    logical :: floquet_apply !< use action of the Floquet Hamiltonian
+    integer :: nT, ncycle, interval, count, floquet_dim, spindim, order
+    logical ::  downfolding
+    FLOAT :: omega, Tcycle, dt
+  end type floquet_t
+
 
   type hamiltonian_t
     !> The Hamiltonian must know what are the "dimensions" of the spaces,
@@ -188,6 +197,11 @@ module hamiltonian_oct_m
     type(scdm_t)  :: scdm
 
     logical :: time_zero
+
+    !> the Floquet-Hamiltonains (this should be all in one type, but not possible because circular dependence) 
+    type(floquet_t) :: F 
+    type(hamiltonian_t), pointer :: td_hm(:) ! this shold be part of the floquet type
+
   end type hamiltonian_t
 
   integer, public, parameter :: &
