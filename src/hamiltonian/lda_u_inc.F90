@@ -639,7 +639,13 @@ subroutine X(get_atomic_orbital) (geo, mesh, iatom, iorb, ispin, orb, truncate)
 
  
   !We initialise the submesh corresponding to the orbital 
-  call submesh_init(orb%sphere, mesh%sb, mesh, geo%atom(iatom)%x, radius)
+  if(radius <= minval(mesh%sb%lsize(1:mesh%sb%dim)-mesh%spacing(1:mesh%sb%dim))) then
+    call submesh_init(orb%sphere, mesh%sb, mesh, geo%atom(iatom)%x, radius)
+  else
+    call submesh_init_extendedorbital(orb%sphere, mesh%sb, mesh, geo%atom(iatom)%x, radius) 
+    write(message(1),'(a,i2,a)')  'This is an extended orbital, with ', orb%sphere%np, ' grid points.'
+    call messages_info(1)
+  end if
 
   !We allocate both the orbital on the submesh and on the complete mesh
   SAFE_ALLOCATE(orb%X(orbital_sphere)(1:orb%sphere%np))

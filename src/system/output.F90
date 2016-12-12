@@ -460,6 +460,30 @@ contains
       call output_berkeleygw_init(nst, outp%bgw, sb%periodic_dim)
     end if
 
+    !%Variable OutputLDA_U
+    !%Type flag
+    !%Default none
+    !%Section Output
+    !%Description
+    !% Specifies what to print, related to LDA+U. 
+    !% The output files are written at the end of the run into the output directory for the
+    !% relevant kind of run (<i>e.g.</i> <tt>static</tt> for <tt>CalculationMode = gs</tt>).
+    !% Time-dependent simulations print only per iteration, including always the last. The frequency of output per iteration
+    !% (available for <tt>CalculationMode</tt> = <tt>gs</tt>, <tt>unocc</tt>,  <tt>td</tt>, and <tt>opt_control</tt>)
+    !% is set by <tt>OutputInterval</tt> and the directory is set by <tt>OutputIterDir</tt>.
+    !% For linear-response run modes, the derivatives of many quantities can be printed, as listed in
+    !% the options below. Indices in the filename are labelled as follows:
+    !% <tt>sp</tt> = spin (or spinor component), <tt>k</tt> = <i>k</i>-point, <tt>st</tt> = state/band.
+    !% There is no tag for directions, given as a letter. The perturbation direction is always
+    !% the last direction for linear-response quantities, and a following +/- indicates the sign of the frequency.
+    !% Example: <tt>density + potential</tt>
+    !%Option occupation_matrices  bit(0)
+    !% Outputs the occupation matrices of LDA+U
+    !%Option effectiveU bit(1)
+    !% Outputs the value of the effectiveU for each atoms 
+    !%End
+    call parse_variable('OutputLDA_U', 0, outp%what_lda_u)
+
     !%Variable OutputInterval
     !%Type integer
     !%Default 50
@@ -503,7 +527,7 @@ contains
     !% according to <tt>OutputInterval</tt>, and has nothing to do with the restart information.
     !%End
     call parse_variable('OutputIterDir', "output_iter", outp%iter_dir)
-    if(outp%what /= 0 .and. outp%output_interval > 0) then
+    if((outp%what+outp%what_lda_u) /= 0 .and. outp%output_interval > 0) then
       call io_mkdir(outp%iter_dir)
     end if
     call add_last_slash(outp%iter_dir)
@@ -543,31 +567,6 @@ contains
     if(iand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
       call current_init(outp%current_calculator)
     end if
-
-    !%Variable OutputLDA_U
-    !%Type flag
-    !%Default none
-    !%Section Output
-    !%Description
-    !% Specifies what to print. The output files are written at the end of the run into the output directory for the
-    !% relevant kind of run (<i>e.g.</i> <tt>static</tt> for <tt>CalculationMode = gs</tt>).
-    !% Time-dependent simulations print only per iteration, including always the last. The frequency of output per iteration
-    !% (available for <tt>CalculationMode</tt> = <tt>gs</tt>, <tt>unocc</tt>,  <tt>td</tt>, and <tt>opt_control</tt>)
-    !% is set by <tt>OutputInterval</tt> and the directory is set by <tt>OutputIterDir</tt>.
-    !% For linear-response run modes, the derivatives of many quantities can be printed, as listed in
-    !% the options below. Indices in the filename are labelled as follows:
-    !% <tt>sp</tt> = spin (or spinor component), <tt>k</tt> = <i>k</i>-point, <tt>st</tt> = state/band.
-    !% There is no tag for directions, given as a letter. The perturbation direction is always
-    !% the last direction for linear-response quantities, and a following +/- indicates the sign of the frequency.
-    !% Example: <tt>density + potential</tt>
-    !%Option occupation_matrices  bit(0)
-    !% Outputs the occupation matrices of LDA+U
-    !%Option effectiveU bit(1)
-    !% Outputs the value of the effectiveU for each atoms 
-    !%End
-    call parse_variable('OutputLDA_U', 0, outp%what_lda_u)
-    
-    
 
     POP_SUB(output_init)
   end subroutine output_init

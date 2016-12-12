@@ -634,7 +634,8 @@ contains
     !if(hm%lda_u%useACBN0) default = default + 2**(OUT_LDAU_EFFECTIVEU - 1)
     call parse_variable('TDOutputLDA_U', default, flags)
 
-    if(.not.varinfo_valid_option('TDOutputLDA_U', flags, is_flag = .true.)) call messages_input_error('TDOutputLDA_U')
+    if(.not.varinfo_valid_option('TDOutputLDA_U', flags, is_flag = .true.)) &
+      call messages_input_error('TDOutputLDA_U')
 
     do iout = 1, OUT_LDAU_MAX
       writ%out_ldau(iout)%write = (iand(flags, 2**(iout - 1)) /= 0)

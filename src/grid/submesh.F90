@@ -42,6 +42,7 @@ module submesh_oct_m
     submesh_t,                   &
     submesh_null,                &
     submesh_init,                &
+    submesh_init_extendedorbital,&
     submesh_broadcast,           &    
     submesh_copy,                &
     submesh_get_inv,             &
@@ -279,6 +280,123 @@ contains
     call profiling_out(submesh_init_prof)
     POP_SUB(submesh_init)
   end subroutine submesh_init
+
+    ! -------------------------------------------------------------
+
+  subroutine submesh_init_extendedorbital(this, sb, mesh, center, rc)
+    type(submesh_t),      intent(inout)  :: this !< valgrind objects to intent(out) due to the initializations above
+    type(simul_box_t),    intent(in)     :: sb
+    type(mesh_t), target, intent(in)     :: mesh
+    FLOAT,                intent(in)     :: center(:)
+    FLOAT,                intent(in)     :: rc
+    
+    FLOAT :: r2, xx(1:MAX_DIM)
+    FLOAT, allocatable :: center_copies(:, :), xtmp(:, :)
+    integer :: icell, is, isb, ip, ix, iy, iz
+    type(profile_t), save :: submesh_init_prof
+    type(periodic_copy_t) :: pp
+    integer, allocatable :: map_inv(:)
+    integer :: nmax(1:MAX_DIM), nmin(1:MAX_DIM), trans(1:MAX_DIM)
+    integer, allocatable :: order(:)
+    FLOAT :: rc_extended
+
+    
+    PUSH_SUB(submesh_init_extendedorbital)
+    call profiling_in(submesh_init_prof, "SUBMESH_INIT_EXTENDEDORBITAL")
+
+    this%mesh => mesh
+
+    this%center(1:sb%dim) = center(1:sb%dim)
+
+    this%radius = rc
+
+    !This routine is only made of periodic systems
+    ASSERT(simul_box_is_periodic(sb))
+
+    ! Get the total number of points inside a sphere
+    ! which is bigger than the simulation box
+
+    ! this requires some optimization
+
+    ! We use the periodic copies to know how many cells are covered by the sphere
+    ! We add here the size of the box to be sure to catch all the boxes properly
+    ! This is not a problem as the if test latter takes care about selecting only 
+    ! valid points
+    rc_extended = rc + M_TWO*maxval(sb%lsize(1:sb%dim))
+    call periodic_copy_init(pp, sb, center(1:sb%dim), rc_extended)
+     
+    SAFE_ALLOCATE(center_copies(1:sb%dim, 1:periodic_copy_num(pp)))
+ 
+    do icell = 1, periodic_copy_num(pp)
+      center_copies(1:sb%dim, icell) = periodic_copy_position(pp, sb, icell)
+    end do
+
+    is = 0
+    do ip = 1, mesh%np_part
+      do icell = 1, periodic_copy_num(pp)
+        ! We find the translation vector from the initial cell to the next one
+        trans(1:sb%dim)= center_copies(1:sb%dim, icell)-center(1:sb%dim)
+        r2 = sum((mesh%x(ip, 1:sb%dim) + trans(1:sb%dim) - center(1:sb%dim))**2)
+        if(r2 > rc**2 ) cycle
+        is = is + 1
+      end do
+      if (ip == mesh%np) this%np = is
+    end do
+      
+    this%np_part = is
+
+    SAFE_ALLOCATE(this%map(1:this%np_part))
+    SAFE_ALLOCATE(xtmp(1:this%np_part, 0:sb%dim))
+            
+    !iterate again to fill the tables
+    is = 0
+    do ip = 1, mesh%np_part
+      do icell = 1, periodic_copy_num(pp)
+        ! We find the translation vector from the initial cell to the next one
+        trans(1:sb%dim)= center_copies(1:sb%dim, icell)-center(1:sb%dim)
+        xx(1:sb%dim) = mesh%x(ip, 1:sb%dim) + trans(1:sb%dim) - center(1:sb%dim)
+        r2 = sum(xx(1:sb%dim)**2)
+        if(r2 > rc**2 ) cycle
+        is = is + 1
+        this%map(is) = ip
+        xtmp(is, 0) = sqrt(r2)
+        xtmp(is, 1:sb%dim) = xx(1:sb%dim)
+       end do
+    end do
+
+    SAFE_DEALLOCATE_A(center_copies)
+      
+    call periodic_copy_end(pp)
+
+    this%has_points = (this%np > 0)
+    
+    ! now order points for better locality
+    
+    SAFE_ALLOCATE(order(1:this%np_part))
+    SAFE_ALLOCATE(this%x(1:this%np_part, 0:sb%dim))
+
+    forall(ip = 1:this%np_part) order(ip) = ip
+
+    call sort(this%map, order)
+
+    forall(ip = 1:this%np_part) this%x(ip, 0:sb%dim) = xtmp(order(ip), 0:sb%dim)
+
+    !check whether points overlap
+    
+    this%overlap = .false.
+    do ip = 1, this%np_part - 1
+      if(this%map(ip) == this%map(ip + 1)) then
+        this%overlap = .true.
+        exit
+      end if
+    end do
+    
+    SAFE_DEALLOCATE_A(order)
+    SAFE_DEALLOCATE_A(xtmp)
+
+    call profiling_out(submesh_init_prof)
+    POP_SUB(submesh_init_extendedorbital)
+  end subroutine submesh_init_extendedorbital
 
   ! --------------------------------------------------------------
 

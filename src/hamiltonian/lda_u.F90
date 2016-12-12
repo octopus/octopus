@@ -403,7 +403,7 @@ contains
 
  !> Prints the occupation matrices at the end of the scf calculation.
  subroutine lda_u_write_occupation_matrices(dir, this, geo, st)
-   type(lda_u_t),     intent(inout) :: this
+   type(lda_u_t),     intent(in)    :: this
    character(len=*),  intent(in)    :: dir
    type(geometry_t),  intent(in)    :: geo
    type(states_t),    intent(in)    :: st
@@ -414,8 +414,6 @@ contains
    PUSH_SUB(lda_u_write_occupation_matrices)
 
    if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
-  
-   call io_mkdir(dir)
    iunit = io_open(trim(dir) // "/occ_matrices", action='write')
    write(iunit,'(a)') ' Occupation matrices '
 
@@ -451,25 +449,19 @@ contains
 
  !--------------------------------------------------------- 
  subroutine lda_u_write_effectiveU(dir, this, geo, st)
-   type(lda_u_t),     intent(inout) :: this
+   type(lda_u_t),     intent(in)    :: this
    character(len=*),  intent(in)    :: dir
    type(geometry_t),  intent(in)    :: geo
    type(states_t),    intent(in)    :: st
 
-   integer :: iunit, ia, ispin, im, imp
-   FLOAT :: hubbardl
+   integer :: iunit
 
    PUSH_SUB(lda_u_write_effectiveU)
 
    if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
-
-   call io_mkdir(dir)
-   iunit = io_open(trim(dir) // "/effectiveU", action='write')
-
-   call lda_u_write_U(this, iunit, geo)
-
-   call io_close(iunit)
-
+     iunit = io_open(trim(dir) // "/effectiveU", action='write')
+     call lda_u_write_U(this, iunit, geo)
+     call io_close(iunit)
    end if
 
    POP_SUB(lda_u_write_effectiveU)
