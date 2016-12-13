@@ -2668,6 +2668,8 @@ contains
     if(iter==0) then
       call floquet_init(hm%F,hm%geo,st%d%dim)
       call floquet_hamiltonians_init(hm ,gr, st, sys)
+      if(hm%F%mode == FLOQUET_NON_INTERACTING .or. hm%F%mode == FLOQUET_FROZEN_PHONON) &
+           call floquet_hamiltonian_solve(out_floquet,hm,gr,sys,st)
     else
       ! check if we are at a Floquet sampling step                                                
       if(mod(iter,hm%F%interval)==0) then

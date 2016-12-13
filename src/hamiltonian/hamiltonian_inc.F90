@@ -17,7 +17,29 @@
 !!
 
 ! ---------------------------------------------------------
+! This is a wrapper that switches the hamiltonian action form the normal one the the Floquet
 subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, terms, set_bc)
+  type(hamiltonian_t),   intent(in)    :: hm
+  type(derivatives_t),   intent(in)    :: der
+  type(batch_t), target, intent(inout) :: psib
+  type(batch_t), target, intent(inout) :: hpsib
+  integer,               intent(in)    :: ik
+  FLOAT, optional,       intent(in)    :: time
+  FLOAT, optional,       intent(in)    :: Imtime
+  integer, optional,     intent(in)    :: terms
+  logical, optional,     intent(in)    :: set_bc
+
+ if(hm%F%floquet_apply) then
+     call X(apply_floquet_hamiltonian)(hm, der, psib, hpsib, ik, time, Imtime, terms, set_bc)
+  else
+     call X(hamiltonian_apply_batch2)(hm, der, psib, hpsib, ik, time, Imtime, terms, set_bc)
+  end if
+
+end subroutine X(hamiltonian_apply_batch)
+
+
+! ---------------------------------------------------------
+subroutine X(hamiltonian_apply_batch2) (hm, der, psib, hpsib, ik, time, Imtime, terms, set_bc)
   type(hamiltonian_t),   intent(in)    :: hm
   type(derivatives_t),   intent(in)    :: der
   type(batch_t), target, intent(inout) :: psib
@@ -36,7 +58,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
   type(projection_t) :: projection
   
   call profiling_in(prof_hamiltonian, "HAMILTONIAN")
-  PUSH_SUB(X(hamiltonian_apply_batch))
+  PUSH_SUB(X(hamiltonian_apply_batch2))
 
   ASSERT(batch_status(psib) == batch_status(hpsib))
 
@@ -176,10 +198,10 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
     call batch_unpack(hpsib)
   end if
 
-  POP_SUB(X(hamiltonian_apply_batch))
+  POP_SUB(X(hamiltonian_apply_batch2))
   call profiling_out(prof_hamiltonian)
 
-end subroutine X(hamiltonian_apply_batch)
+end subroutine X(hamiltonian_apply_batch2)
 
 ! ---------------------------------------------------------
 
@@ -953,6 +975,165 @@ subroutine X(rdmft_exchange_operator) (hm, der, ik, psib, hpsib)
 
   POP_SUB(X(rdmft_exchange_operator))
 end subroutine X(rdmft_exchange_operator)
+
+subroutine  X(apply_floquet_hamiltonian)(hm, der, psib, hpsib, ik, time, Imtime,terms, set_bc)
+  type(hamiltonian_t),   intent(in)    :: hm
+  type(derivatives_t),   intent(in)    :: der
+  type(batch_t), target, intent(inout) :: psib
+  type(batch_t), target, intent(inout) :: hpsib
+  integer,               intent(in)    :: ik
+  FLOAT, optional,       intent(in)    :: time
+  FLOAT, optional,       intent(in)    :: Imtime
+  integer, optional,     intent(in)    :: terms
+  logical, optional,     intent(in)    :: set_bc
+
+  type(batch_t) :: small_psib, small_hpsib
+  integer :: in, im, spindim, Fdim, idim, ist
+  integer :: it,  nT
+  FLOAT :: omega, Tcycle, dt
+  CMPLX, allocatable :: vec(:)
+
+  R_TYPE, allocatable :: small_temp(:,:)
+
+  PUSH_SUB(X(apply_floquet_hamiltonian))
+
+  dt=hm%F%dt
+  nT=hm%F%nT
+  omega=hm%F%omega
+  Fdim=hm%F%order
+  spindim = hm%F%spindim
+
+  ! zero hpsi
+  do ist=1,hpsib%nst
+    hpsib%states(ist)%X(psi)(:,:) = M_ZERO
+  end do
+
+  call batch_init(small_hpsib,spindim,hpsib%nst)
+  call X(batch_allocate)(small_hpsib,1,hpsib%nst,der%mesh%np_part)
+  call get_small_batch(hpsib,-Fdim,small_hpsib)
+  
+  call batch_init(small_psib,spindim,psib%nst)
+  call X(batch_allocate)(small_psib,1,psib%nst,der%mesh%np_part)
+
+  do it=1,nT
+    do im=-Fdim,Fdim
+      call get_small_batch(psib,im,small_psib)
+      call X(hamiltonian_apply_batch2)(hm%td_hm(it), der, small_psib , small_hpsib, ik, &
+              time = time, terms = terms, Imtime = Imtime, set_bc = set_bc)
+
+      ! sum the contributions of im to the in components of the matrix product
+      do in=-Fdim,Fdim
+        call set_big_batch_axpy(small_hpsib,in, exp(M_zI*(im-in)*omega*it*dt)/nT, hpsib)
+      end do
+    end do
+  end do
+
+  ! add diagonal term
+  do in=-Fdim,Fdim
+    call get_small_batch(psib,in,small_psib)
+    call get_small_batch(hpsib,in,small_hpsib)
+    call batch_axpy(der%mesh%np, in*omega, small_psib , small_hpsib )
+    call set_big_batch(small_hpsib,in,hpsib)
+  end do
+
+  call batch_end(small_psib)
+  call batch_end(small_hpsib)
+
+  POP_SUB(X(apply_floquet_hamiltonian))
+
+contains
+
+  ! ----------------------------------------------------------
+  ! get a batch of normal size (small) from the big Floquet batch
+  subroutine get_small_batch(big,nn,small)
+    type(batch_t) :: big, small
+    integer :: ii, nn, inn, ist, jj, np
+    R_TYPE, allocatable :: big_temp(:,:), small_temp(:,:)
+
+    PUSH_SUB(X(apply_floquet_hamiltonian).get_small_batch)
+
+    np = size(big%states(1)%X(psi)(:,1))!der%mesh%np
+    
+    SAFE_ALLOCATE(big_temp(1:np,big%dim))
+    SAFE_ALLOCATE(small_temp(1:np,small%dim))
+    
+    inn=Fdim+nn+1
+    ii = (inn-1)*spindim+1
+    do ist=1,big%nst
+      call batch_get_state(big,ist,np,big_temp)
+      small_temp(:,1:spindim) =  big_temp(:,ii:ii+(spindim-1))
+      call batch_set_state(small,ist,np,small_temp)
+    end do
+
+    SAFE_DEALLOCATE_A(big_temp)
+    SAFE_DEALLOCATE_A(small_temp)
+
+    POP_SUB(X(apply_floquet_hamiltonian).get_small_batch)
+
+  end subroutine get_small_batch
+
+  !-----------------------------------------------
+  ! (over)write a batch of normal size (small) into the big Floquet batch
+  subroutine set_big_batch(small,nn,big)
+    type(batch_t) :: big, small
+    integer :: ii, nn, inn, ist, jj, np
+    R_TYPE, allocatable :: big_temp(:,:), small_temp(:,:)
+    
+    PUSH_SUB(X(apply_floquet_hamiltonian).set_big_batch)
+
+    np = size(big%states(1)%X(psi)(:,1)) !der%mesh%np
+
+    SAFE_ALLOCATE(big_temp(1:np,big%dim))
+    SAFE_ALLOCATE(small_temp(1:np,small%dim))
+    
+    inn=Fdim+nn+1
+    ii = (inn-1)*spindim+1
+    do ist=1,small%nst
+      call batch_get_state(small,ist,np,small_temp)
+      call batch_get_state(big,ist,np,big_temp)
+      big_temp(:,ii:ii+(spindim-1)) = small_temp(:,1:spindim)
+      call batch_set_state(big,ist,np,big_temp)
+    end do
+
+    SAFE_DEALLOCATE_A(big_temp)
+    SAFE_DEALLOCATE_A(small_temp)
+
+    POP_SUB(X(apply_floquet_hamiltonian).set_big_batch)
+
+  end subroutine set_big_batch
+
+  ! --------------------------------------------------
+  ! as above but with axpy action
+  subroutine set_big_batch_axpy(small,nn,aa,big)
+    type(batch_t) :: big, small
+    integer :: ii, nn, inn, ist, jj, np
+    CMPLX :: aa
+    R_TYPE, allocatable :: big_temp(:,:), small_temp(:,:)
+    
+    PUSH_SUB(X(apply_floquet_hamiltonian).set_big_batch_axpy)
+    
+    np = size(big%states(1)%X(psi)(:,1)) !der%mesh%np
+    
+    SAFE_ALLOCATE(big_temp(1:np,big%dim))
+    SAFE_ALLOCATE(small_temp(1:np,small%dim))
+    
+    inn=Fdim+nn+1
+    ii = (inn-1)*spindim+1
+    do ist=1,small%nst
+      call batch_get_state(small,ist,np,small_temp)
+      call batch_get_state(big,ist,np,big_temp)
+      big_temp(:,ii:ii+(spindim-1)) = big_temp(:,ii:ii+(spindim-1)) + aa*small_temp(:,1:spindim)
+      call batch_set_state(big,ist,np,big_temp)
+    end do
+    
+    SAFE_DEALLOCATE_A(big_temp)
+    SAFE_DEALLOCATE_A(small_temp)
+    
+    POP_SUB(X(apply_floquet_hamiltonian).set_big_batch_axpy)
+    
+  end subroutine set_big_batch_axpy
+
+end subroutine X(apply_floquet_hamiltonian)
 
 !! Local Variables:
 !! mode: f90

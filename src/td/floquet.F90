@@ -69,7 +69,7 @@ module floquet_oct_m
        floquet_hamiltonian_update,&
        floquet_hamiltonian_solve  
 
-  integer, private, parameter ::    &
+  integer, public, parameter ::    &
        FLOQUET_NON_INTERACTING = 1, &
        FLOQUET_FROZEN_PHONON   = 2, &
        FLOQUET_INTERACTING     = 3
@@ -259,7 +259,7 @@ contains
          call hamiltonian_epot_generate(this%td_hm(it), gr, this%td_hm(it)%geo, st, time=M_ZERO)
 
          call scf_init(scf,gr,this%td_hm(it)%geo,st,this%td_hm(it))
-         call scf_run(scf,sys%mc,gr,this%td_hm(it)%geo,st,sys%ks,this%td_hm(it),sys%outp)
+         call scf_run(scf,sys%mc,gr,this%td_hm(it)%geo,st,sys%ks,this%td_hm(it),sys%outp, gs_run=.false.)
          call scf_end(scf)
 
        case(FLOQUET_NON_INTERACTING)
@@ -335,6 +335,10 @@ contains
       type(eigensolver_t) :: eigens
       type(states_t) :: dressed_st
 
+! temporary variables for outputting 
+character(len=80) :: filename
+integer :: nik, file
+
       ! initialize a state object with the Floquet dimension
       call states_init(dressed_st, gr, hm%geo,floquet_dim=hm%F%floquet_dim)
       call kpoints_distribute(dressed_st%d,sys%mc)
@@ -362,7 +366,7 @@ contains
             
       hm%F%floquet_apply = .true.
       ! set dimension of Floquet Hamiltonian                                                    
-      hm%d%dim = hm%F%floquet_dim*2+1
+      hm%d%dim = hm%F%floquet_dim
       
       call eigensolver_init(eigens, gr, dressed_st)
       ! no subspace diag implemented yet
@@ -374,6 +378,24 @@ contains
       maxiter = 15
       do while(.not.converged.and.iter <= maxiter)
          call eigensolver_run(eigens, gr, dressed_st, hm, 1,converged)
+
+! this will be replaced with a a call to plot_bandstructure
+if(mpi_world%rank==0) then
+   file = 987654
+   write(filename,'(I5)') iter !hm%F_count
+   filename = 'floquet_multibands_'//trim(adjustl(filename))
+   open(unit=file,file=filename)
+   ! we are only interested in k-points with zero weight
+   nik=gr%sb%kpoints%nik_skip
+   do ik=gr%sb%kpoints%reduced%npoints-nik+1,gr%sb%kpoints%reduced%npoints
+      do ist=1,dressed_st%nst
+         write(file,'(e12.6, 1x)',advance='no') dressed_st%eigenval(ist, ik)
+      end do
+      write(file,'(1x)')
+   end do
+   close(file)
+endif
+
          iter = iter +1
       end do
 
@@ -384,7 +406,7 @@ contains
       hm%d%dim = hm%F%spindim
       
       hm%F%count=hm%F%count + 1
-
+      
       ! here we might want to do other things with the states...
 
       call states_end(dressed_st)
