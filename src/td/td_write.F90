@@ -52,6 +52,7 @@ module td_write_oct_m
   use states_calc_oct_m
   use states_dim_oct_m
   use states_restart_oct_m
+  use system_oct_m
   use td_calc_oct_m
   use types_oct_m
   use unit_oct_m
@@ -653,7 +654,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_iter(writ, gr, st, hm, geo, kick, dt,ks, iter)
+  subroutine td_write_iter(writ, gr, st, hm, geo, kick, dt, sys, iter)
     type(td_write_t),    intent(inout) :: writ !< Write object
     type(grid_t),        intent(inout) :: gr   !< The grid
     type(states_t),      intent(inout) :: st   !< State object
@@ -661,7 +662,7 @@ contains
     type(geometry_t),    intent(inout) :: geo  !< Geometry object
     type(kick_t),        intent(in)    :: kick !< The kick
     FLOAT,               intent(in)    :: dt   !< Delta T, time interval
-    type(v_ks_t),        intent(in)    :: ks  
+    type(system_t),      intent(inout)  :: sys
     integer,             intent(in)    :: iter !< Iteration number
     type(profile_t), save :: prof
 
@@ -689,7 +690,7 @@ contains
     end if
 
     if(writ%out(OUT_FLOQUET)%write) &
-      call td_write_floquet(writ%out(OUT_FLOQUET)%handle,hm, gr, st, ks, iter)
+      call td_write_floquet(writ%out(OUT_FLOQUET)%handle,hm, gr, st, sys, iter)
 
     if(writ%out(OUT_KP_PROJ)%write) &
       call td_write_proj_kp(writ%out(OUT_KP_PROJ)%handle,hm, gr, st, writ%gs_st, iter)
@@ -2654,19 +2655,31 @@ contains
   end subroutine td_write_partial_charges
 
 
-  subroutine td_write_floquet(out_floquet, hm, gr, st, ks, iter)
+  subroutine td_write_floquet(out_floquet, hm, gr, st, sys, iter)
     type(c_ptr),       intent(inout)   :: out_floquet
     type(hamiltonian_t), intent(inout) :: hm
     type(grid_t),      intent(inout)   :: gr
     type(states_t),    intent(inout)   :: st !< at iter=0 this is the ggroundstate
-    type(v_ks_t),      intent(in)      :: ks
+    type(system_t),    intent(inout)  :: sys
     integer,           intent(in)      :: iter
 
     PUSH_SUB(td_write_floquet)
 
     if(iter==0) then
-      call floquet_init(hm%F,st%d%dim)
-      call floquet_hamiltonians_init(hm ,gr, st, ks, iter)
+      call floquet_init(hm%F,hm%geo,st%d%dim)
+      call floquet_hamiltonians_init(hm ,gr, st, sys)
+    else
+      ! check if we are at a Floquet sampling step                                                
+      if(mod(iter,hm%F%interval)==0) then
+        message(1) = 'Floquet-Hamiltonian update'
+        call messages_info(1)
+        call floquet_hamiltonian_update(hm,st,gr,iter)
+        
+        ! in case a cycle is complete: solve and write bandstructure
+        if(mod(iter,hm%F%ncycle)==0) then
+          call floquet_hamiltonian_solve(out_floquet,hm,gr,sys,st)
+        end if
+      end if
     end if
 
     POP_SUB(td_write_floquet)

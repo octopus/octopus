@@ -107,6 +107,9 @@ module geometry_oct_m
     !> variables for passing info from XSF input to simul_box_init
     integer :: periodic_dim
     FLOAT :: lsize(MAX_DIM)
+
+    !> flag to prevent double initialization of species
+    logical :: skip_species_pot_init=.false.
     
   end type geometry_t
 

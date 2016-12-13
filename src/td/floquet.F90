@@ -20,6 +20,7 @@
 module floquet_oct_m
   use iso_c_binding
   use comm_oct_m
+  use eigensolver_oct_m
   use excited_states_oct_m
   use gauge_field_oct_m
   use geometry_oct_m
@@ -46,11 +47,12 @@ module floquet_oct_m
   use pert_oct_m
   use profiling_oct_m
   use restart_oct_m
+  use scf_oct_m
   use states_oct_m
   use states_calc_oct_m
   use states_dim_oct_m
   use states_restart_oct_m
-  use td_calc_oct_m
+  use system_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -61,19 +63,75 @@ module floquet_oct_m
   implicit none
 
   private
-  public ::                      &
-       floquet_init,             &
-       floquet_hamiltonians_init
+  public ::                       &
+       floquet_init,              &
+       floquet_hamiltonians_init, &
+       floquet_hamiltonian_update,&
+       floquet_hamiltonian_solve  
+
+  integer, private, parameter ::    &
+       FLOQUET_NON_INTERACTING = 1, &
+       FLOQUET_FROZEN_PHONON   = 2, &
+       FLOQUET_INTERACTING     = 3
 
 contains
 
-  subroutine floquet_init(this,dim)
-    type(floquet_t),    intent(out)    :: this
+  subroutine floquet_init(this,geo,dim)
+    type(floquet_t),    intent(out)  :: this
+    type(geometry_t), intent(in)     :: geo
     integer :: dim ! the standard dimension of the groundstate
+    type(block_t)     :: blk
+    integer :: ia, idir
 
     FLOAT :: time_step
 
     PUSH_SUB(floquet_init)
+
+    !%Variable TDFloquetMode
+    !%Type flag
+    !%Default non_interacting
+    !%Section Time-Dependent::TD Output
+    !%Description
+    !% Types of Floquet analysis performed when TDOutput=td_floquet
+    !%Option non_interacting 1
+    !% 
+    !%Option frozen_phonon 2
+    !% 
+    !%Option interacting 3
+    !%
+    !%End
+
+    call parse_variable('TDFloquetMode', 1,this%mode)
+
+    if(this%mode==FLOQUET_FROZEN_PHONON) then
+      
+      !%Variable TDFloquetFrozenDistortion
+      !%Type block
+      !%Section Time-Dependent::TD Output
+      !%Description
+      !%
+      !%End
+      if(.not.parse_block('TDFloquetFrozenDistortion', blk) == 0) then
+        write(message(1),'(a)') 'Internal error while reading TDFloquetFrozenDistortion.'
+        call messages_fatal(1)
+      end if
+      if(parse_block_n(blk) /= geo%natoms) then
+         write(message(1),'(a)') 'Please provide in then TDFloquetFrozenDistortion block an'
+         write(message(2),'(a,i3,a)') 'initial distortion for all ',geo%natoms, ' atoms.'
+         call messages_fatal(2)
+      end if
+
+      SAFE_ALLOCATE(this%frozen_distortion(1:geo%natoms,1:geo%space%dim))
+      do ia=1,geo%natoms
+        do idir = 1, geo%space%dim
+          call parse_block_float(blk, ia-1, idir-1,this%frozen_distortion(ia,idir))
+        end do
+      end do
+
+      write(message(1),'(a)') 'Initial distortions given in input file:'
+      call messages_info(1)
+      ! TODO: print here the values also
+    end if
 
     !%Variable TDFloquetFrequency
     !%Type float
@@ -144,22 +202,21 @@ contains
 
   end subroutine floquet_init
 
-  subroutine floquet_hamiltonians_init(this,gr, st, ks, iter)
+  subroutine floquet_hamiltonians_init(this, gr, st, sys)
     type(hamiltonian_t), intent(inout) :: this ! this is not great, as everyhting should be within the floquet_t
     type(grid_t),      intent(inout)   :: gr
     type(states_t),    intent(inout)   :: st !< at iter=0 this is the ggroundstate
-    type(v_ks_t),      intent(in)      :: ks
-    integer,           intent(in)      :: iter
+    type(system_t),    intent(inout)   :: sys
 
-    CMPLX, allocatable :: hmss(:,:), psi(:,:,:), hpsi(:,:,:), temp_state1(:,:), temp_state2(:,:)
-    CMPLX, allocatable :: HFloquet(:,:,:), HFloq_eff(:,:), temp(:,:)
+    CMPLX, allocatable ::  temp_state1(:,:), temp_state2(:,:)
     FLOAT, allocatable :: eigenval(:), bands(:,:)
     character(len=80) :: filename
-    integer :: it, nT, ik, ist, jst, in, im, inm, file, idim, nik, ik_count
-    integer ::  m0, n0, n1, nst, ii, jj, lim_nst
+    integer :: it, ik, nst,ip, idim, ispin
     type(mesh_t) :: mesh
     type(states_t) :: hm_st
-    FLOAT :: time_step
+    FLOAT :: time_step, time
+    type(scf_t) :: scf ! used for frozen_phonon
+    integer :: ia, space_dim
 
     PUSH_SUB(floquet_hamiltonian_init)
 
@@ -169,16 +226,172 @@ contains
     !for now no domain distributionallowed
     ASSERT(mesh%np == mesh%np_global)
 
-   ! this is used to initialize the hpsi (more effiecient ways?)
-    call states_copy(hm_st, st)
-
     ! the Hamiltonain gets assigned an array of td-Hamiltonians
     ! this is a bit recursive, so maybe there should be a Flqoeut moduel or something
     nullify(this%td_hm)
     SAFE_ALLOCATE(this%td_hm(1:this%F%nT))
-    
-    POP_SUB(floquet_hamiltonian_init)
-    
-  end subroutine floquet_hamiltonians_init
+
+    ! initialize the instances of the Hamiltonians
+    do it=1,this%F%nT
+       this%td_hm(it)%F%Tcycle = this%F%Tcycle
+       this%td_hm(it)%F%omega = this%F%omega
+       this%td_hm(it)%F%dt = this%F%dt
+
+       SAFE_ALLOCATE(this%td_hm(it)%geo)
+       call geometry_copy(this%td_hm(it)%geo, this%geo)
+
+       ! set flag to prevent species types to be touched, because
+       ! hm%geo is only a pointer to the global geo instance
+       this%td_hm(it)%geo%skip_species_pot_init = .true.
+
+       select case(this%F%mode)
+
+       case(FLOQUET_FROZEN_PHONON) 
+         time = it*this%F%dt
+         space_dim = this%geo%space%dim
+         do ia=1,this%geo%natoms
+           this%td_hm(it)%geo%atom(ia)%x(1:space_dim) = this%td_hm(it)%geo%atom(ia)%x(1:space_dim) + &
+                                                this%F%frozen_distortion(ia,1:space_dim)*cos(time*this%F%omega)
+         end do
+
+         call hamiltonian_init(this%td_hm(it), gr, this%td_hm(it)%geo, st, &
+                                     sys%ks%theory_level, sys%ks%xc_family,sys%ks%xc_flags)
+         call hamiltonian_epot_generate(this%td_hm(it), gr, this%td_hm(it)%geo, st, time=M_ZERO)
+
+         call scf_init(scf,gr,this%td_hm(it)%geo,st,this%td_hm(it))
+         call scf_run(scf,sys%mc,gr,this%td_hm(it)%geo,st,sys%ks,this%td_hm(it),sys%outp)
+         call scf_end(scf)
+
+       case(FLOQUET_NON_INTERACTING)
+         call hamiltonian_init(this%td_hm(it), gr, this%td_hm(it)%geo, st, &
+                                    sys%ks%theory_level, sys%ks%xc_family,sys%ks%xc_flags)
+         time =this%F%Tcycle+ it*this%F%dt ! offset in time to catch switch on cycle
+         do ispin=1,this%d%nspin
+            forall (ip = 1:gr%mesh%np) this%td_hm(it)%vhxc(ip,ispin) = this%vhxc(ip, ispin)
+         end do
+         forall (ip = 1:gr%mesh%np) this%td_hm(it)%ep%vpsl(ip)= this%ep%vpsl(ip)
+         call hamiltonian_epot_generate(this%td_hm(it), gr, this%td_hm(it)%geo, st, time=time)
+         call hamiltonian_update(this%td_hm(it), gr%der%mesh,time=time)
+
+        case(FLOQUET_INTERACTING)
+          call hamiltonian_init(this%td_hm(it), gr, this%td_hm(it)%geo, st, &
+                                        sys%ks%theory_level, sys%ks%xc_family,sys%ks%xc_flags)
+          call hamiltonian_epot_generate(this%td_hm(it), gr, this%td_hm(it)%geo, st, time=time)
+          call hamiltonian_update(this%td_hm(it), gr%der%mesh,time=time)
+
+        end select
+
+     enddo
+
+     POP_SUB(floquet_hamiltonian_init)
+        
+   end subroutine floquet_hamiltonians_init
+
+   !--------------------------------------------
+   subroutine floquet_hamiltonian_update(hm,st,gr,iter)
+     type(hamiltonian_t), intent(inout) :: hm
+     type(states_t)      , intent(inout) :: st
+     type(grid_t),      intent(inout)   :: gr
+     integer :: iter
+     integer :: it
+
+     integer :: ip, ispin
+     FLOAT :: time
+
+     PUSH_SUB(floquet_hamiltonian_update)
+
+     it = mod(iter/hm%F%interval,hm%F%nT)
+
+     ! we do not save the zeroth step in the Floquet sample
+     if(it==0) return
+     ! fill time-dependent hamiltonian structure with scf-fields at this time
+     do ispin=1,hm%d%nspin
+       forall (ip = 1:gr%mesh%np) hm%td_hm(it)%vhxc(ip,ispin) = hm%vhxc(ip, ispin)
+     end do
+     forall (ip = 1:gr%mesh%np) hm%td_hm(it)%ep%vpsl(ip) = hm%ep%vpsl(ip)
+     ! set the geometry of the td-hamiltonian
+     call geometry_copy(hm%td_hm(it)%geo, hm%geo)
+
+     ! set time in td-hamiltonian (i.e. set the laser)
+     time = iter/hm%F%interval*hm%F%dt
+     call hamiltonian_epot_generate(hm%td_hm(it), gr, hm%td_hm(it)%geo, st, time=time)
+     forall (ip = 1:gr%mesh%np) hm%td_hm(it)%ep%vpsl(ip)= hm%ep%vpsl(ip)
+
+     PUSH_SUB(floquet_hamiltonian_update)
+
+    end subroutine floquet_hamiltonian_update
+
+    !--------------------------------------------
+    subroutine floquet_hamiltonian_solve(out_floquet,hm,gr,sys,st)
+      type(c_ptr),       intent(inout)   :: out_floquet
+      type(hamiltonian_t), intent(inout) :: hm
+      type(grid_t),      intent(inout)   :: gr
+      type(system_t), intent(inout)      :: sys
+      type(states_t), intent(in)         :: st
+
+      logical :: converged
+      integer :: iter , maxiter, ik, in, im, ist, idim
+      CMPLX, allocatable :: temp_state1(:,:), temp_state2(:,:)
+      type(eigensolver_t) :: eigens
+      type(states_t) :: dressed_st
+
+      ! initialize a state object with the Floquet dimension
+      call states_init(dressed_st, gr, hm%geo,floquet_dim=hm%F%floquet_dim)
+      call kpoints_distribute(dressed_st%d,sys%mc)
+      call states_distribute_nodes(dressed_st,sys%mc)
+      
+      call states_allocate_wfns(dressed_st,gr%der%mesh)
+      SAFE_ALLOCATE(temp_state1(1:gr%der%mesh%np,st%d%dim))
+      SAFE_ALLOCATE(temp_state2(1:gr%der%mesh%np,hm%F%floquet_dim))
+      
+      do ik=st%d%kpt%start,st%d%kpt%end
+        do in=1,hm%F%floquet_dim
+          do ist=st%st_start,st%st_end
+            call states_get_state(st,gr%der%mesh,ist,ik,temp_state1)
+            temp_state2(:,:) = M_ZERO
+            do idim=1,st%d%dim
+              temp_state2(1:gr%der%mesh%np,(in-1)*st%d%dim+idim) = temp_state1(1:gr%der%mesh%np,idim)
+            end do
+            call states_set_state(dressed_st,gr%der%mesh, (in-1)*st%nst+ist, ik,temp_state2)
+          enddo
+        enddo
+      enddo
+      
+      SAFE_DEALLOCATE_A(temp_state1)
+      SAFE_DEALLOCATE_A(temp_state2)
+            
+      hm%F%floquet_apply = .true.
+      ! set dimension of Floquet Hamiltonian                                                    
+      hm%d%dim = hm%F%floquet_dim*2+1
+      
+      call eigensolver_init(eigens, gr, dressed_st)
+      ! no subspace diag implemented yet
+      eigens%sdiag%method = OPTION__SUBSPACEDIAGONALIZATION__NONE
+
+      ! here we need a more sophisticated control of the solver loop
+      converged=.false.
+      iter =0
+      maxiter = 15
+      do while(.not.converged.and.iter <= maxiter)
+         call eigensolver_run(eigens, gr, dressed_st, hm, 1,converged)
+         iter = iter +1
+      end do
+
+      call eigensolver_end(eigens)                                                             
+      !switch off floquet hamiltonian                                                           
+      hm%F%floquet_apply = .false.                                                               
+      ! reset dimension
+      hm%d%dim = hm%F%spindim
+      
+      hm%F%count=hm%F%count + 1
+
+      ! here we might want to do other things with the states...
+
+      call states_end(dressed_st)
+         
+    end subroutine floquet_hamiltonian_solve
+
+    !---------------------------------------
+    !subroutine floquet_end()
 
 end module floquet_oct_m

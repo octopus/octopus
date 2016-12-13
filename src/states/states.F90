@@ -280,10 +280,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_init(st, gr, geo)
+  subroutine states_init(st, gr, geo, floquet_dim)
     type(states_t), target, intent(inout) :: st
     type(grid_t),           intent(in)    :: gr
     type(geometry_t),       intent(in)    :: geo
+    integer, optional, intent(in)         :: floquet_dim
 
     FLOAT :: excess_charge
     integer :: nempty, ntot, default, nthreads
@@ -444,6 +445,11 @@ contains
     if(st%nst == 0) then
       message(1) = "Cannot run with number of states = zero."
       call messages_fatal(1)
+    end if
+
+    if(optional_default(floquet_dim,1) > 1) then
+      st%d%dim = st%d%dim*floquet_dim
+      st%nst = st%nst*floquet_dim
     end if
 
     !%Variable StatesBlockSize
