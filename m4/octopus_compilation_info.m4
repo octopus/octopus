@@ -19,7 +19,7 @@
 
 ################################################
 # Generates macro definitions for:
-#  LATEST_SVN : the svn revision number.
+#  GIT_COMMIT : git commit hash.
 #  BUILD_TIME : when the configure script is launched.
 #  FC : The "true" Fortran compiler (figuring out which compiler hides under the mpif90 disguise).
 #  CC : The "true" C compiler (figuring out which compiler hides under the mpicc disguise).
@@ -31,12 +31,12 @@ AC_DEFUN([ACX_OCTOPUS_COMPILATION_INFO],
 AC_MSG_NOTICE([collecting compilation info...])
 
 [folder=$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )]
-rev=$($folder/build/svn_release_number.sh 2> /dev/null)
+hash=$($folder/build/git_commit_hash.sh 2> /dev/null)
 date=`date`
 truecc=$($folder/build/true_compiler.sh $CC 2> /dev/null)
 truefc=$($folder/build/true_compiler.sh $FC 2> /dev/null)
 
-AC_DEFINE_UNQUOTED([LATEST_SVN], ["$rev"], [subversion revision number])
+AC_DEFINE_UNQUOTED([GIT_COMMIT], ["$hash"], [git commit hash])
 AC_DEFINE_UNQUOTED([BUILD_TIME], ["$date"], [date when configure was launched])
 AC_DEFINE_UNQUOTED([CC], ["$CC $truecc"], [C compiler])
 AC_DEFINE_UNQUOTED([FC], ["$FC $truefc"], [Fortran compiler])
@@ -44,7 +44,7 @@ AC_DEFINE_UNQUOTED([FC], ["$FC $truefc"], [Fortran compiler])
 AC_DEFINE_UNQUOTED([CFLAGS], ["${CFLAGS:0:130}"], [C compiler])
 AC_DEFINE_UNQUOTED([FCFLAGS], ["${FCFLAGS:0:130}"], [Fortran compiler])
 
-LATEST_SVN=$rev
-AC_SUBST([LATEST_SVN])
+GIT_COMMIT=$hash
+AC_SUBST([GIT_COMMIT])
 ]
 )

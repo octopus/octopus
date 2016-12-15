@@ -78,12 +78,3 @@ deb: dist
 	rm -rf $(DEB_DIR)/$(PACKAGE)-$(VERSION)
 	scp $(DEB_DIR)/octopus*.deb \
 		marques@nautilus.fis.uc.pt:/server/www/tddft.org/programs/octopus/download/
-
-.PHONY: ChangeLog
-
-ChangeLog:
-	(svn2cl -i -r {20160101}:BASE -o .changelog.tmp \$(top_srcdir) && \
-	mv .changelog.tmp ChangeLog) || (rm -f .changelog.tmp; touch ChangeLog; \
-	echo 'svn2cl command not found: installing possibly empty changelog.' >&2)
-
-dist-hook: ChangeLog

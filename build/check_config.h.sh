@@ -40,7 +40,7 @@ git clone git@gitlab.com:octopus-code/buildbot.git buildbot
 cp buildbot/config.h/$BRANCH/$BUILDER .
 
 # these two fields will generally be different, and that is fine
-diff -I '^#define BUILD_TIME' -I '^#define LATEST_SVN' config.h $BUILDER
+diff -I '^#define BUILD_TIME' -I '^#define GIT_COMMIT' config.h $BUILDER
 
 # cleanup
 rm -rf buildbot
