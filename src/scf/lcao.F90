@@ -769,6 +769,7 @@ contains
       if (lcao%mode /= OPTION__LCAOSTART__LCAO_SIMPLE .and. .not. present(st_start)) then
         call states_fermi(sys%st, sys%gr%mesh)
         call states_write_eigenvalues(stdout, min(sys%st%nst, lcao%norbs), sys%st, sys%gr%sb)
+        write(*,*) "eigenval = ", sys%st%eigenval
 
         ! Update the density and the Hamiltonian
         if (lcao%mode == OPTION__LCAOSTART__LCAO_FULL) then

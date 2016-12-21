@@ -593,7 +593,7 @@ contains
     end if
     
     call output_states(st, gr, geo, dir, outp)
-    call output_hamiltonian(hm, st, gr%der, dir, outp, geo, st%st_kpt_mpi_grp)
+    call output_hamiltonian(hm, st, gr%der, dir, outp, geo, st%st_kpt_mpi_grp, ks)
     call output_localization_funct(st, hm, gr, dir, outp, geo)
     call output_current_flow(gr, st, dir, outp)
 

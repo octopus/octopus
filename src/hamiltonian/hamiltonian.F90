@@ -187,6 +187,10 @@ module hamiltonian_oct_m
     FLOAT :: rashba_coupling
     type(scdm_t)  :: scdm
 
+    !> For GLLB response potential
+    logical :: GLLBResp
+    FLOAT, pointer :: delta_xc_r(:)
+
     logical :: time_zero
   end type hamiltonian_t
 

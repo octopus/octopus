@@ -16,7 +16,7 @@
 !! 02110-1301, USA.
 !!
 
-subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, deltaxc, vtau)
+subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, deltaxc, vslater, vtau, GLLB)
   type(derivatives_t),  intent(in)    :: der             !< Discretization and the derivative operators and details
   type(xc_t), target,   intent(in)    :: xcs             !< Details about the xc functional used
   type(states_t),       intent(in)    :: st              !< State of the system (wavefunction,eigenvalues...)
@@ -29,6 +29,8 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   FLOAT, optional,      intent(inout) :: ec              !< Correlation energy.
   FLOAT, optional,      intent(inout) :: deltaxc         !< The XC derivative discontinuity
   FLOAT, optional,      intent(inout) :: vtau(:,:)       !< Derivative wrt (two times kinetic energy density)
+  FLOAT, optional,      intent(inout) :: vslater(:,:)    !Slater part of the potential
+  logical, optional,    intent(in)    :: GLLB            !GLLB is included?
 
   ! Formerly vxc was optional, but I removed this since we always pass vxc, and this simplifies the routine
   ! and avoids some optimization problems. --DAS
@@ -75,12 +77,24 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   type(xc_functl_t), pointer :: functl(:)
   type(distributed_t) :: distribution
   type(profile_t), save :: prof_gather
+
+  logical           :: GLLBResp
   
   PUSH_SUB(xc_get_vxc)
   call profiling_in(prof, "XC_LOCAL")
 
   ASSERT(present(ex) .eqv. present(ec))
   calc_energy = present(ex)
+
+  !;) Get vslater equal to zero if it is present
+  if(present(GLLB)) then
+    GLLBResp = GLLB
+  else
+    GLLBResp = .false.
+  end if
+  if(present(vslater)) then
+    vslater = M_ZERO
+  end if
 
   !Pointer-shortcut for xcs%functional
   !It helps to remember that for xcs%functional(:,:)
@@ -245,6 +259,20 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
       end if
 
       call copy_local_to_global(l_dedd, dedd, n_block, spin_channels, ip)
+
+      !;) This part calculate the slater part of the potential,
+      ! Defined vslater = 2 * energy per unit particle
+      if(present(vslater) .and. ixc == FUNC_X) then
+        !write(*,*) "vslater update", ip
+        do ib = 1, n_block
+          vslater(ib+ip-1,1) = vslater(ib+ip-1,1) + 2*l_zk(ib)
+        end do
+      end if
+      If(GLLBResp .and. ixc == FUNC_X) then !RespCorrection is only for exchange
+        do ib = 1, n_block
+          vxc(ib+ip-1,1) = vxc(ib+ip-1,1)+2*l_zk(ib)
+        end do
+      end if
       
       ! calculate the spin unpolarized exchange potential for the long range correction
       if(xcs%xc_density_correction == LR_X .and. &
@@ -404,9 +432,12 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   end if
 
   ! this has to be done in inverse order
-  if(mgga) call mgga_process()
-  if( gga) call  gga_process()
-  call lda_process()
+  !If GLLBResp want to be included, "normal" contributions can't be
+  if(.not. GLLBResp .and. .not. ixc == FUNC_X) then
+    if(mgga) call mgga_process()
+    if( gga) call  gga_process()
+    call lda_process()
+  end if
 
   ! clean up allocated memory
   call lda_end()

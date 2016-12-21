@@ -123,7 +123,7 @@ contains
     type(grid_t),        intent(inout) :: gr
     type(geometry_t),    intent(in)    :: geo
     type(states_t),      intent(in)    :: st
-    type(hamiltonian_t), intent(in)    :: hm
+    type(hamiltonian_t), intent(inout) :: hm !This variable will return intent(in)
     FLOAT,   optional,   intent(in)    :: conv_force
 
     FLOAT :: rmin
@@ -448,6 +448,22 @@ contains
     call parse_variable('LocalMagneticMomentsSphereRadius', rmin*M_HALF, scf%lmm_r, unit = units_inp%length)
     ! this variable is also used in td/td_write.F90
 
+    !%Variable RespCorrection
+    !%Type logical
+    !%Default no
+    !%Section Hamiltonian::XC
+    !%Description
+    !%If set to yes, the response part of the exchange potential
+    !%is approximated with the GLLB approximation. The screening part
+    !%is approximated with the parsed XCFunctional.
+    !%End
+
+    call parse_variable('RespCorrection', .false., hm%GLLBResp)
+    call messages_print_stress(stdout, "RespCorrection")
+    call messages_print_var_value(stdout, "RespCorrection", hm%GLLBResp)
+    call messages_print_stress(stdout)
+    
+
     scf%forced_finish = .false.
 
     POP_SUB(scf_init)
@@ -660,6 +676,7 @@ contains
       end if
       call messages_info(1)
     end if
+
 
     ! SCF cycle
     itime = loct_clock()
