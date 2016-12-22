@@ -632,7 +632,7 @@ subroutine X(get_atomic_orbital) (geo, mesh, iatom, iorb, ispin, orb, truncate)
   !! if the orbital is larger than the size of the box, we restrict it to this size, 
   !! otherwise the orbital will overlap more than one time with the simulation box.
   !! This would induces phase problem if the complete mesh is used instead of the sphere
-  radius = min(radius, minval(mesh%sb%lsize(1:mesh%sb%dim)-mesh%spacing(1:mesh%sb%dim)))
+  radius = min(radius, minval(mesh%sb%lsize(1:mesh%sb%dim)-mesh%spacing(1:mesh%sb%dim)*CNST(1.01)))
 
   !If asked, we truncate the orbital to the radius on the projector spheres 
   !of the NL part of the pseudopotential.
@@ -644,6 +644,10 @@ subroutine X(get_atomic_orbital) (geo, mesh, iatom, iorb, ispin, orb, truncate)
   !We initialise the submesh corresponding to the orbital 
   if(radius <= minval(mesh%sb%lsize(1:mesh%sb%dim)-mesh%spacing(1:mesh%sb%dim))) then
     call submesh_init(orb%sphere, mesh%sb, mesh, geo%atom(iatom)%x, radius)
+    if(orb%sphere%overlap) then
+      write(message(1),'(a)')  'This orbital has overlapping points.'
+      call messages_warning(1)
+    end if
   else
     call submesh_init_extendedorbital(orb%sphere, mesh%sb, mesh, geo%atom(iatom)%x, radius) 
     write(message(1),'(a,i2,a)')  'This is an extended orbital, with ', orb%sphere%np, ' grid points.'
