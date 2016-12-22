@@ -1,0 +1,40 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : ACBN0 functional for (AF) bulk NiO crystal
+Program    : octopus
+TestGroups : short-run, periodic_systems, lda_u
+Enabled    : Yes
+
+Input      : 02-ACBN0.01-nio.inp
+
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 8
+
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -275.53621201 
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -177.00987193 
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -30.58707979 
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  76.74466085 
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -31.90865864 
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;  -1.99574821 
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 173.46968727 
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -313.78411877
+match ; Total Magnetic Moment ; GREPFIELD(static/info, 'mz = ', 3);  0.000000    
+match ; Local Magnetic Moment (Ni1) ; GREPFIELD(static/info, '1        Ni', 3);  1.634793
+match ; Local Magnetic Moment (Ni2) ; GREPFIELD(static/info, '2        Ni', 3); -0.912854 
+match ; Local Magnetic Moment (O1) ;  GREPFIELD(static/info, '3         O', 3);  0.005588 
+match ; Local Magnetic Moment (O2) ;  GREPFIELD(static/info, '4         O', 3); -0.005619 
+
+match ; k-point 1 (x) ; GREPFIELD(static/info, '#k =   1', 7) ; 0.000000 
+match ; k-point 1 (y) ; GREPFIELD(static/info, '#k =   1', 8) ; 0.000000
+match ; k-point 1 (z) ; GREPFIELD(static/info, '#k =   1', 9) ; 0.000000
+match ; Eigenvalue  1 ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -2.319747 
+match ; Eigenvalue  8 ; GREPFIELD(static/info, '#k =   1', 3, 8) ; -2.215352 
+match ; Eigenvalue 16 ; GREPFIELD(static/info, '#k =   1', 3, 16) ; -0.531332
+match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   1', 3, 17) ; -0.216552
+
+match ; Occupation O2 down 2p2 ; LINEFIELD(static/occ_matrices, -2, 3) ; 0.76793174 
+match ; Occupation O2 down 2p3 ; LINEFIELD(static/occ_matrices, -1, 5) ; 0.76794954 
+
+match ; U3d Ni1 ; LINEFIELD(static/effectiveU, -4, 3) ; 0.181251 
+match ; U3d Ni2 ; LINEFIELD(static/effectiveU, -3, 3) ; 0.181190 
+match ; U2p O1  ; LINEFIELD(static/effectiveU, -2, 3) ; 0.056700         
+match ; U2p O2  ; LINEFIELD(static/effectiveU, -1, 3) ; 0.056961
