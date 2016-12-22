@@ -85,8 +85,9 @@ module lda_u_oct_m
     FLOAT, pointer           :: dn(:,:,:,:), dV(:,:,:,:) !> Occupation matrices and potentials 
                                                          !> for the standard scheme
     CMPLX, pointer           :: zn(:,:,:,:), zV(:,:,:,:)
-    
-    FLOAT, pointer           :: orb_occ(:,:,:) !> Orbital occupations (for the ACBN0 functional)
+    FLOAT, pointer           :: dn_alt(:,:,:,:) !> Stores the renomalized occ. matrices
+    CMPLX, pointer           :: zn_alt(:,:,:,:) !> if the ACBN0 functional is used  
+  
     FLOAT, pointer           :: renorm_occ(:,:,:) !> On-site occupations (for the ACBN0 functional)  
  
     FLOAT, pointer           :: dcoulomb(:,:,:,:,:) !>Coulomb integrals for all the system
@@ -153,10 +154,11 @@ contains
 
   nullify(this%dn)
   nullify(this%zn)
+  nullify(this%dn_alt)
+  nullify(this%zn_alt)
   nullify(this%dV)
   nullify(this%zV)
   nullify(this%Ueff)
-  nullify(this%orb_occ)
   nullify(this%dcoulomb) 
   nullify(this%zcoulomb)
   nullify(this%renorm_occ)
@@ -202,6 +204,11 @@ contains
       SAFE_ALLOCATE(this%dcoulomb(1:maxorbs,1:maxorbs,1:maxorbs,1:maxorbs,1:geo%natoms))
       this%dcoulomb(1:maxorbs,1:maxorbs,1:maxorbs,1:maxorbs,1:geo%natoms) = M_ZERO
     end if 
+    !In case we use the ab-initio scheme, we need to allocate extra resources
+    if(this%useACBN0) then
+      SAFE_ALLOCATE(this%dn_alt(1:maxorbs,1:maxorbs,1:st%d%nspin,1:geo%natoms))
+      this%dn_alt(1:maxorbs,1:maxorbs,1:st%d%nspin,1:geo%natoms) = M_ZERO
+    end if
   else
     SAFE_ALLOCATE(this%zn(1:maxorbs,1:maxorbs,1:st%d%nspin,1:geo%natoms))
     this%zn(1:maxorbs,1:maxorbs,1:st%d%nspin,1:geo%natoms) = cmplx(M_ZERO,M_ZERO)
@@ -213,9 +220,12 @@ contains
       SAFE_ALLOCATE(this%zcoulomb(1:maxorbs,1:maxorbs,1:maxorbs,1:maxorbs,1:geo%natoms))
       this%zcoulomb(1:maxorbs,1:maxorbs,1:maxorbs,1:maxorbs,1:geo%natoms) = M_ZERO
     end if
+    !In case we use the ab-initio scheme, we need to allocate extra resources
+    if(this%useACBN0) then
+      SAFE_ALLOCATE(this%zn_alt(1:maxorbs,1:maxorbs,1:st%d%nspin,1:geo%natoms))
+      this%zn_alt(1:maxorbs,1:maxorbs,1:st%d%nspin,1:geo%natoms) = cmplx(M_ZERO,M_ZERO)
+    end if
   end if
-  SAFE_ALLOCATE(this%orb_occ(1:maxorbs,1:st%d%nspin,1:geo%natoms))
-  this%orb_occ(1:maxorbs,1:st%d%nspin,1:geo%natoms) = M_ZERO
   SAFE_ALLOCATE(this%renorm_occ(10,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end))
   this%renorm_occ(10,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end) = M_ZERO 
  
@@ -248,10 +258,11 @@ contains
 
    SAFE_DEALLOCATE_P(this%dn)
    SAFE_DEALLOCATE_P(this%zn)
+   SAFE_DEALLOCATE_P(this%dn_alt)
+   SAFE_DEALLOCATE_P(this%zn_alt)
    SAFE_DEALLOCATE_P(this%dV)
    SAFE_DEALLOCATE_P(this%zV) 
    SAFE_DEALLOCATE_P(this%Ueff)
-   SAFE_DEALLOCATE_P(this%orb_occ)
    SAFE_DEALLOCATE_P(this%dcoulomb)
    SAFE_DEALLOCATE_P(this%zcoulomb) 
    SAFE_DEALLOCATE_P(this%renorm_occ)

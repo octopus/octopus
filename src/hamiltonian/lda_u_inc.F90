@@ -141,9 +141,8 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
   SAFE_ALLOCATE(epsi(1:this%max_np))
   SAFE_ALLOCATE(dot(1:this%maxnorbs,1:this%natoms))
 
-  if(this%useACBN0) then
-    this%orb_occ(1:this%maxnorbs,1:st%d%nspin,1:this%natoms) = R_TOTYPE(M_ZERO)
-  end if
+  if(this%useACBN0) &
+    this%X(n_alt)(1:this%maxnorbs,1:this%maxnorbs,1:st%d%nspin,1:this%natoms) = R_TOTYPE(M_ZERO)
 
   !TODO: use symmetries of the occupation matrices
   do ik = st%d%kpt%start, st%d%kpt%end
@@ -200,11 +199,14 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
         norbs = this%norbs(ia)
         if(norbs.eq. M_ZERO ) cycle 
         do im = 1, norbs
-            renorm_weight = this%renorm_occ(this%orbitals(im,ia)%ll,ist,ik)*weight
             this%X(n)(1:norbs,im,ispin,ia) = this%X(n)(1:norbs,im,ispin,ia) &
+                                         + weight*dot(1:norbs,ia)*R_CONJ(dot(im,ia))
+            !We compute the renomalized occupation matrices
+            if(this%useACBN0) then
+              renorm_weight = this%renorm_occ(this%orbitals(im,ia)%ll,ist,ik)*weight
+              this%X(n_alt)(1:norbs,im,ispin,ia) = this%X(n_alt)(1:norbs,im,ispin,ia) &
                                          + renorm_weight*dot(1:norbs,ia)*R_CONJ(dot(im,ia))
-            this%orb_occ(im, ispin,ia) = this%orb_occ(im, ispin,ia) &
-                                        + weight*abs(dot(im,ia))**2
+            end if 
         end do
        !  call lalg_her( norbs, weight, this%X(n)(1:norbs,1:norbs,ispin,ia), dot)
       end do
@@ -219,7 +221,8 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
 #if defined(HAVE_MPI)        
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
     call comm_allreduce(st%st_kpt_mpi_grp%comm, this%X(n))
-    call comm_allreduce(st%st_kpt_mpi_grp%comm, this%orb_occ)
+    if(this%useACBN0) &
+      call comm_allreduce(st%st_kpt_mpi_grp%comm, this%X(n_alt))
   end if
 #endif      
 
@@ -318,9 +321,9 @@ subroutine X(compute_ACBNO_U)(this, st)
         tmpJ = M_ZERO
         do ispin1 = 1, st%d%nspin
           do ispin2 = 1, st%d%nspin
-            tmpU = tmpU + this%X(n)(im,imp,ispin1,ia)*this%X(n)(impp,imppp,ispin2,ia)
+            tmpU = tmpU + this%X(n_alt)(im,imp,ispin1,ia)*this%X(n_alt)(impp,imppp,ispin2,ia)
           end do
-          tmpJ = tmpJ + this%X(n)(im,imp,ispin1,ia)*this%X(n)(impp,imppp,ispin1,ia)
+          tmpJ = tmpJ + this%X(n_alt)(im,imp,ispin1,ia)*this%X(n_alt)(impp,imppp,ispin1,ia)
         end do
         ! These are the numerator of the ACBN0 U and J
         numU = numU + tmpU*this%X(coulomb)(im,imp,impp,imppp,ia)
@@ -333,7 +336,7 @@ subroutine X(compute_ACBNO_U)(this, st)
       tmpJ = M_ZERO
       if(imp/=im) then
         do ispin1 = 1, st%d%nspin
-          tmpJ = tmpJ + this%orb_occ(im,ispin1,ia)*this%orb_occ(imp,ispin1,ia)
+          tmpJ = tmpJ + this%X(n)(im,im,ispin1,ia)*this%X(n)(imp,imp,ispin1,ia)
         end do
       end if
       denomJ = denomJ + tmpJ
@@ -345,7 +348,7 @@ subroutine X(compute_ACBNO_U)(this, st)
       do ispin1 = 1, st%d%nspin
         do ispin2 = 1, st%d%nspin
           if(ispin1 /= ispin2) then
-            tmpU = tmpU + this%orb_occ(im,ispin1,ia)*this%orb_occ(imp,ispin2,ia)
+            tmpU = tmpU + this%X(n)(im,im,ispin1,ia)*this%X(n)(imp,imp,ispin2,ia)
           end if
         end do
       end do
