@@ -49,6 +49,7 @@ libhamiltonian_a_SOURCES =         \
 	boundary_op.F90            \
 	oct_exchange.F90           \
         lda_u.F90                  \
+        lda_u_io.F90               \
         scissor.F90
 
 noinst_HEADERS =                      \
@@ -101,3 +102,4 @@ boundary_op.o : boundary_op.F90
 oct_exchange.o : oct_exchange_inc.F90 xc.o
 scissor.o : scissor.F90 scissor_inc.F90
 lda_u.o : lda_u.F90 lda_u_inc.F90 species_pot.o energy.o hamiltonian_base.o
+lda_u_io.o : lda_u_io.F90 lda_u.o

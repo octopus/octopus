@@ -61,12 +61,9 @@ module lda_u_oct_m
        lda_u_update_occ_matrices,       &
        lda_u_end,                       &
        lda_u_build_phase_correction,    &
-       lda_u_write_occupation_matrices, &
        lda_u_update_U,                  &
-       lda_u_write_U,                   &
        lda_u_freeze_occ,                &
-       lda_u_freeze_u,                  &
-       lda_u_write_effectiveU
+       lda_u_freeze_u
 
   type orbital_t
     type(submesh_t)     :: sphere             !> The submesh of the orbital
@@ -411,97 +408,6 @@ contains
 
    this%freeze_u = .true.
  end subroutine lda_u_freeze_u
-
- !> Prints the occupation matrices at the end of the scf calculation.
- subroutine lda_u_write_occupation_matrices(dir, this, geo, st)
-   type(lda_u_t),     intent(in)    :: this
-   character(len=*),  intent(in)    :: dir
-   type(geometry_t),  intent(in)    :: geo
-   type(states_t),    intent(in)    :: st
-
-   integer :: iunit, ia, ispin, im, imp
-   FLOAT :: hubbardl
- 
-   PUSH_SUB(lda_u_write_occupation_matrices)
-
-   if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
-   iunit = io_open(trim(dir) // "/occ_matrices", action='write')
-   write(iunit,'(a)') ' Occupation matrices '
-
-   do ia = 1, this%natoms
-     hubbardl = species_hubbard_l(geo%atom(ia)%species)
-     if( hubbardl .eq. M_ZERO ) cycle
-
-     do ispin = 1,st%d%nspin 
-        write(iunit,'(a, i4, a, i4)') ' Ion ', ia, ' spin ', ispin
-        do im = 1, this%norbs(ia)
-          write(iunit,'(1x)',advance='no') 
-
-          if (states_are_real(st)) then
-            do imp = 1, this%norbs(ia)-1
-              write(iunit,'(f14.8)',advance='no') this%dn(im,imp,ispin,ia)  
-            end do
-            write(iunit,'(f14.8)') this%dn(im,this%norbs(ia),ispin,ia)
-          else
-            do imp = 1, this%norbs(ia)-1
-              write(iunit,'(f14.8,f14.8)',advance='no') this%zn(im,imp,ispin,ia)
-            end do
-            write(iunit,'(f14.8,f14.8)') this%zn(im,this%norbs(ia),ispin,ia) 
-          end if
-        end do
-     end do !ispin
-   end do !iatom
-   call io_close(iunit)
-
-   end if
-
-   POP_SUB(lda_u_write_occupation_matrices)
- end subroutine lda_u_write_occupation_matrices
-
- !--------------------------------------------------------- 
- subroutine lda_u_write_effectiveU(dir, this, geo, st)
-   type(lda_u_t),     intent(in)    :: this
-   character(len=*),  intent(in)    :: dir
-   type(geometry_t),  intent(in)    :: geo
-   type(states_t),    intent(in)    :: st
-
-   integer :: iunit
-
-   PUSH_SUB(lda_u_write_effectiveU)
-
-   if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
-     iunit = io_open(trim(dir) // "/effectiveU", action='write')
-     call lda_u_write_U(this, iunit, geo)
-     call io_close(iunit)
-   end if
-
-   POP_SUB(lda_u_write_effectiveU)
- end subroutine lda_u_write_effectiveU
-
-
- !--------------------------------------------------------- 
- subroutine lda_u_write_U(this, iunit, geo)
-   type(lda_u_t),     intent(in) :: this
-   integer,           intent(in) :: iunit
-   type(geometry_t),  intent(in) :: geo
-
-   integer :: ia
-
-   PUSH_SUB(lda_u_write_U)
-  
-   if(mpi_grp_is_root(mpi_world)) then
-
-     write(iunit, '(a,a,a,f7.3,a)') 'Effective Hubbard U [', &
-       trim(units_abbrev(units_out%energy)),']:'
-     write(iunit,'(a,6x,14x,a)') ' Ion','U'
-     do ia = 1, this%natoms
-        write(iunit,'(i4,a10,f15.6)') ia, trim(species_label(geo%atom(ia)%species)), this%Ueff(ia)  
-     end do
-   end if
- 
-   POP_SUB(lda_u_write_U)
- end subroutine lda_u_write_U
-
 
 #include "undef.F90"
 #include "real.F90"

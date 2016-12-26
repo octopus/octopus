@@ -48,6 +48,7 @@ module output_oct_m
   use kpoints_oct_m
   use lasers_oct_m
   use lda_u_oct_m
+  use lda_u_io_oct_m
   use linear_response_oct_m
   use loct_oct_m
   use loct_math_oct_m

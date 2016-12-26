@@ -37,6 +37,7 @@ module scf_oct_m
   use kpoints_oct_m
   use lcao_oct_m
   use lda_u_oct_m
+  use lda_u_io_oct_m
   use loct_oct_m
   use magnetic_oct_m
   use math_oct_m
