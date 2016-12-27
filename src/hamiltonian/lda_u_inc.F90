@@ -191,7 +191,6 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
             dot(im,ia) =  submesh_to_mesh_dotp(this%orbitals(im,ia)%sphere, 1,&
                                                this%orbitals(im,ia)%X(orbital_sphere), &
                                                psi(1:mesh%np,1:st%d%dim))
-           ! dot(im,ia) = X(mf_dotp)(mesh, psi(1:mesh%np,1), this%orbitals(im,ia)%X(orbital_mesh))
           end if
          
           !We compute the on-site occupation of the site, if needed
@@ -334,8 +333,8 @@ subroutine X(compute_ACBNO_U)(this, st)
           tmpJ = tmpJ + this%X(n_alt)(im,imp,ispin1,ia)*this%X(n_alt)(impp,imppp,ispin1,ia)
         end do
         ! These are the numerator of the ACBN0 U and J
-        numU = numU + tmpU*this%X(coulomb)(im,imp,impp,imppp,ia)
-        numJ = numJ + tmpJ*this%X(coulomb)(im,imppp,impp,imp,ia) 
+        numU = numU + tmpU*this%coulomb(im,imp,impp,imppp,ia)
+        numJ = numJ + tmpJ*this%coulomb(im,imppp,impp,imp,ia) 
       end do
       end do
 
@@ -381,8 +380,8 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
 
   integer :: ist, jst, kst, lst !, ijst, klst
   integer :: norbs, np_sphere, ia, ip
-  R_TYPE, allocatable :: tmp(:)
-  R_TYPE, allocatable :: nn(:), nn_sphere(:), vv(:)
+  FLOAT, allocatable :: tmp(:)
+  FLOAT,  allocatable :: nn(:), nn_sphere(:), vv(:)
   type(orbital_t), pointer :: orbi, orbj, orbk, orbl
 
   PUSH_SUB(X(compute_coulomb_integrals))
@@ -407,14 +406,14 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
    !     ijst=ijst+1
         orbj => this%orbitals(jst,ia)
 
-        nn_sphere(1:np_sphere)  = R_CONJ(orbi%X(orbital_sphere)(1:np_sphere)) &
-                                        *orbj%X(orbital_sphere)(1:np_sphere)
+        nn_sphere(1:np_sphere)  = real(orbi%X(orbital_sphere)(1:np_sphere)) &
+                                 *real(orbj%X(orbital_sphere)(1:np_sphere))
         nn(1:mesh%np) = M_ZERO
         call submesh_add_to_mesh(orbi%sphere, nn_sphere, nn) 
       !  call X(submesh_add_product_to_mesh)(orbi%sphere, orbj%X(orbital_sphere),orbi%X(orbital_sphere),&
       !                                      nn, conjugate=.true.)
 
-        call X(poisson_solve)(psolver, vv, nn, all_nodes=.true.)
+        call dpoisson_solve(psolver, vv, nn, all_nodes=.true.)
 
    !     klst=0
         do kst = 1, norbs
@@ -433,7 +432,7 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
                                    *R_CONJ(orbk%X(orbital_sphere)(ip))
             end do
             
-            this%X(coulomb)(ist,jst,kst,lst,ia) = X(sm_integrate)(mesh, orbl%sphere, tmp(1:np_sphere))
+            this%coulomb(ist,jst,kst,lst,ia) = dsm_integrate(mesh, orbl%sphere, tmp(1:np_sphere))
           end do !lst
         end do !kst
       end do !jst

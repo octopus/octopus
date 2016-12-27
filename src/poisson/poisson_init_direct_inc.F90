@@ -369,6 +369,118 @@ subroutine poisson_solve_direct(this, pot, rho)
   POP_SUB(poisson_solve_direct) 
 end subroutine poisson_solve_direct
 
+!-----------------------------------------------------------------
+subroutine poisson_solve_direct_sm(this, sm, pot, rho)
+  type(poisson_t), intent(in)  :: this
+  type(submesh_t), intent(in)  :: sm 
+  FLOAT,           intent(out) :: pot(:)
+  FLOAT,           intent(in)  :: rho(:)
+
+  FLOAT                :: prefactor, aa1, aa2, aa3, aa4
+  integer              :: ip, jp, dim
+  integer, allocatable :: ip_v(:), part_v(:)
+  FLOAT                :: xx1(1:MAX_DIM), xx2(1:MAX_DIM), xx3(1:MAX_DIM), xx4(1:MAX_DIM)
+#ifdef HAVE_MPI
+  FLOAT                :: xx(1:this%der%mesh%sb%dim), yy(1:this%der%mesh%sb%dim) 
+  FLOAT                :: tmp, xg(MAX_DIM)
+  FLOAT, allocatable   :: pvec(:) 
+#endif
+
+  PUSH_SUB(poisson_solve_direct_sm)
+
+  dim = this%der%mesh%sb%dim
+
+  select case(dim)
+  case(3)
+    prefactor = M_TWO*M_PI*(M_THREE/(M_PI*M_FOUR))**(M_TWOTHIRD)
+  case(2)
+    prefactor = M_TWO*sqrt(M_PI)
+  case default
+    message(1) = "Internal error: poisson_solve_direct can only be called for 2D or 3D."
+    ! why not? all that is needed is the appropriate prefactors to be defined above, actually. then 1D, 4D etc. can be done
+    call messages_fatal(1)
+  end select
+
+  if(.not. this%der%mesh%use_curvilinear) then
+    prefactor = prefactor / (this%der%mesh%volume_element**(M_ONE/this%der%mesh%sb%dim))
+  end if
+
+  do ip = 1, sm%np - 4 + 1, 4
+
+    xx1(1:dim) = sm%x(ip    , 1:dim)
+    xx2(1:dim) = sm%x(ip + 1, 1:dim)
+    xx3(1:dim) = sm%x(ip + 2, 1:dim)
+    xx4(1:dim) = sm%x(ip + 3, 1:dim)
+      
+    if(this%der%mesh%use_curvilinear) then
+
+      aa1 = prefactor*rho(ip    )*this%der%mesh%vol_pp(ip    )**(M_ONE - M_ONE/this%der%mesh%sb%dim)
+      aa2 = prefactor*rho(ip + 1)*this%der%mesh%vol_pp(ip + 1)**(M_ONE - M_ONE/this%der%mesh%sb%dim)
+      aa3 = prefactor*rho(ip + 2)*this%der%mesh%vol_pp(ip + 2)**(M_ONE - M_ONE/this%der%mesh%sb%dim)
+      aa4 = prefactor*rho(ip + 3)*this%der%mesh%vol_pp(ip + 3)**(M_ONE - M_ONE/this%der%mesh%sb%dim)
+
+      !$omp parallel do reduction(+:aa1,aa2,aa3,aa4)
+      do jp = 1, sm%np
+        if(ip     /= jp) aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - sm%x(jp, 1:dim))**2))*this%der%mesh%vol_pp(jp)
+        if(ip + 1 /= jp) aa2 = aa2 + rho(jp)/sqrt(sum((xx2(1:dim) - sm%x(jp, 1:dim))**2))*this%der%mesh%vol_pp(jp)
+        if(ip + 2 /= jp) aa3 = aa3 + rho(jp)/sqrt(sum((xx3(1:dim) - sm%x(jp, 1:dim))**2))*this%der%mesh%vol_pp(jp)
+        if(ip + 3 /= jp) aa4 = aa4 + rho(jp)/sqrt(sum((xx4(1:dim) - sm%x(jp, 1:dim))**2))*this%der%mesh%vol_pp(jp)
+      end do
+
+    else
+
+      aa1 = prefactor*rho(ip    )
+      aa2 = prefactor*rho(ip + 1)
+      aa3 = prefactor*rho(ip + 2)
+      aa4 = prefactor*rho(ip + 3)
+
+      !$omp parallel do reduction(+:aa1,aa2,aa3,aa4)
+      do jp = 1, sm%np
+        if(ip     /= jp) aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - sm%x(jp, 1:dim))**2))
+        if(ip + 1 /= jp) aa2 = aa2 + rho(jp)/sqrt(sum((xx2(1:dim) - sm%x(jp, 1:dim))**2))
+        if(ip + 2 /= jp) aa3 = aa3 + rho(jp)/sqrt(sum((xx3(1:dim) - sm%x(jp, 1:dim))**2))
+        if(ip + 3 /= jp) aa4 = aa4 + rho(jp)/sqrt(sum((xx4(1:dim) - sm%x(jp, 1:dim))**2))
+      end do
+      
+    end if
+
+    pot(ip    ) = this%der%mesh%volume_element*aa1
+    pot(ip + 1) = this%der%mesh%volume_element*aa2
+    pot(ip + 2) = this%der%mesh%volume_element*aa3
+    pot(ip + 3) = this%der%mesh%volume_element*aa4
+    
+  end do
+  
+  do ip = ip, sm%np
+
+    aa1 = CNST(0.0)
+
+    xx1(1:dim) = sm%x(ip,1:dim)
+    if(this%der%mesh%use_curvilinear) then
+      do jp = 1, sm%np
+        if(ip == jp) then
+          aa1 = aa1 + prefactor*rho(ip)*this%der%mesh%vol_pp(sm%map(jp))**(M_ONE - M_ONE/this%der%mesh%sb%dim)
+        else
+          aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - sm%x(jp, 1:dim))**2))*this%der%mesh%vol_pp(sm%map(jp))
+        end if
+      end do
+    else
+      do jp = 1, sm%np
+        if(ip == jp) then
+          aa1 = aa1 + prefactor*rho(ip)
+        else
+          aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - sm%x(jp, 1:dim))**2))
+        end if
+      end do
+    end if
+
+    pot(ip) = this%der%mesh%volume_element*aa1
+    
+  end do
+  
+  POP_SUB(poisson_solve_direct_sm) 
+end subroutine poisson_solve_direct_sm
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

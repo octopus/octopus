@@ -85,8 +85,8 @@ module lda_u_oct_m
   
     FLOAT, pointer           :: renorm_occ(:,:,:) !> On-site occupations (for the ACBN0 functional)  
  
-    FLOAT, pointer           :: dcoulomb(:,:,:,:,:) !>Coulomb integrals for all the system
-    CMPLX, pointer           :: zcoulomb(:,:,:,:,:) !> (for the ACBN0 functional) 
+    FLOAT, pointer           :: coulomb(:,:,:,:,:) !>Coulomb integrals for all the system
+                                                   !> (for the ACBN0 functional) 
  
     type(orbital_t), pointer :: orbitals(:,:) !>An array containing all the orbitals of the system
     FLOAT, pointer           :: Ueff(:)    !> The effective U of the simplified rotational invariant form
@@ -154,8 +154,7 @@ contains
   nullify(this%dV)
   nullify(this%zV)
   nullify(this%Ueff)
-  nullify(this%dcoulomb) 
-  nullify(this%zcoulomb)
+  nullify(this%coulomb) 
   nullify(this%renorm_occ)
 
   this%natoms = geo%natoms
@@ -178,7 +177,7 @@ contains
   mem = mem + coef*REAL_PRECISION*dble(maxorbs**2*st%d%nspin*geo%natoms*2) !Occupation matrices and potentials
   mem = mem + coef*REAL_PRECISION*dble(maxorbs*st%d%nspin*geo%natoms)    !Orbital occupations
   if(this%useACBN0) then
-    mem = mem + coef*REAL_PRECISION*dble(maxorbs**4*st%d%nspin*geo%natoms) !Coulomb intergrals
+    mem = mem + REAL_PRECISION*dble(maxorbs**4*st%d%nspin*geo%natoms) !Coulomb intergrals
     mem = mem + REAL_PRECISION*dble(10*(st%d%kpt%end-st%d%kpt%start+1)*(st%st_end-st%st_start+1)) !On-site occupations
   end if
   call messages_new_line()
@@ -196,11 +195,6 @@ contains
 
     !In case we use the ab-initio scheme, we need to allocate extra resources
     if(this%useACBN0) then
-      SAFE_ALLOCATE(this%dcoulomb(1:maxorbs,1:maxorbs,1:maxorbs,1:maxorbs,1:geo%natoms))
-      this%dcoulomb(1:maxorbs,1:maxorbs,1:maxorbs,1:maxorbs,1:geo%natoms) = M_ZERO
-    end if 
-    !In case we use the ab-initio scheme, we need to allocate extra resources
-    if(this%useACBN0) then
       SAFE_ALLOCATE(this%dn_alt(1:maxorbs,1:maxorbs,1:st%d%nspin,1:geo%natoms))
       this%dn_alt(1:maxorbs,1:maxorbs,1:st%d%nspin,1:geo%natoms) = M_ZERO
     end if
@@ -212,17 +206,18 @@ contains
 
     !In case we use the ab-initio scheme, we need to allocate extra resources
     if(this%useACBN0) then
-      SAFE_ALLOCATE(this%zcoulomb(1:maxorbs,1:maxorbs,1:maxorbs,1:maxorbs,1:geo%natoms))
-      this%zcoulomb(1:maxorbs,1:maxorbs,1:maxorbs,1:maxorbs,1:geo%natoms) = M_ZERO
-    end if
-    !In case we use the ab-initio scheme, we need to allocate extra resources
-    if(this%useACBN0) then
       SAFE_ALLOCATE(this%zn_alt(1:maxorbs,1:maxorbs,1:st%d%nspin,1:geo%natoms))
       this%zn_alt(1:maxorbs,1:maxorbs,1:st%d%nspin,1:geo%natoms) = cmplx(M_ZERO,M_ZERO)
     end if
   end if
   SAFE_ALLOCATE(this%renorm_occ(10,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end))
   this%renorm_occ(10,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end) = M_ZERO 
+  !In case we use the ab-initio scheme, we need to allocate extra resources
+  if(this%useACBN0) then
+    SAFE_ALLOCATE(this%coulomb(1:maxorbs,1:maxorbs,1:maxorbs,1:maxorbs,1:geo%natoms))
+    this%coulomb(1:maxorbs,1:maxorbs,1:maxorbs,1:maxorbs,1:geo%natoms) = M_ZERO
+  end if
+
  
   if(this%useACBN0) then
     write(message(1),'(a)')    'Computing the Coulomb integrals localized orbital basis.'
@@ -258,8 +253,7 @@ contains
    SAFE_DEALLOCATE_P(this%dV)
    SAFE_DEALLOCATE_P(this%zV) 
    SAFE_DEALLOCATE_P(this%Ueff)
-   SAFE_DEALLOCATE_P(this%dcoulomb)
-   SAFE_DEALLOCATE_P(this%zcoulomb) 
+   SAFE_DEALLOCATE_P(this%coulomb)
    SAFE_DEALLOCATE_P(this%renorm_occ)
 
    do iat = 1, this%natoms
