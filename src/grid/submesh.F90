@@ -48,6 +48,8 @@ module submesh_oct_m
     submesh_get_inv,             &
     dsm_integrate,               &
     zsm_integrate,               &
+    dsm_nrm2,                    &
+    zsm_nrm2,                    &
     submesh_add_to_mesh,         &
     dsubmesh_add_product_to_mesh,&
     zsubmesh_add_product_to_mesh,&
@@ -78,8 +80,12 @@ module submesh_oct_m
   end interface submesh_add_to_mesh
 
   interface submesh_to_mesh_dotp
-    module procedure ddsubmesh_to_mesh_dotp, zdsubmesh_to_mesh_dotp
+    module procedure ddsubmesh_to_mesh_dotp, zdsubmesh_to_mesh_dotp, zzsubmesh_to_mesh_dotp
   end interface submesh_to_mesh_dotp
+
+   type(profile_t), save ::           &
+       C_PROFILING_SM_REDUCE,         &
+       C_PROFILING_SM_NRM2
 
 contains
   
@@ -550,6 +556,46 @@ contains
     
     POP_SUB(zzdsubmesh_add_to_mesh)
   end subroutine zzsubmesh_add_to_mesh
+
+
+  !------------------------------------------------------------
+
+  CMPLX function zzsubmesh_to_mesh_dotp(this, dim, sphi, phi, reduce) result(dotp)
+    type(submesh_t),   intent(in) :: this
+    integer,           intent(in) :: dim
+    CMPLX,             intent(in) :: sphi(:)
+    CMPLX,             intent(in) :: phi(:, :)
+    logical, optional, intent(in) :: reduce
+  
+    integer :: is, idim
+  
+    PUSH_SUB(zzsubmesh_to_mesh_dotp)
+  
+    dotp = cmplx(M_ZERO)
+  
+    if(this%mesh%use_curvilinear) then
+      do idim = 1, dim
+        do is = 1, this%np
+          dotp = dotp + this%mesh%vol_pp(this%map(is))*phi(this%map(is), idim)*conjg(sphi(is))
+        end do
+      end do
+    else
+      do idim = 1, dim
+        do is = 1, this%np
+          dotp = dotp + phi(this%map(is), idim)*conjg(sphi(is))
+        end do
+      end do
+      dotp = dotp*this%mesh%vol_pp(1)
+    end if
+  
+    if(optional_default(reduce, .true.) .and. this%mesh%parallel_in_domains) then
+      call profiling_in(C_PROFILING_SM_REDUCE, "SM_REDUCE")
+      call comm_allreduce(this%mesh%vp%comm, dotp)
+      call profiling_out(C_PROFILING_SM_REDUCE)
+    end if 
+ 
+    POP_SUB(zzsubmesh_to_mesh_dotp)
+  end function zzsubmesh_to_mesh_dotp
 
 
 #include "undef.F90"

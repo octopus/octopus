@@ -35,8 +35,12 @@ R_TYPE function X(sm_integrate)(mesh, sm, ff) result(res)
     res = M_ZERO
   end if
 
-  if(mesh%parallel_in_domains) call comm_allreduce(mesh%vp%comm, res)
-
+  if(mesh%parallel_in_domains) then
+    call profiling_in(C_PROFILING_SM_REDUCE, "SM_REDUCE")
+    call comm_allreduce(mesh%vp%comm, res)
+    call profiling_out(C_PROFILING_SM_REDUCE)
+  end if 
+ 
   POP_SUB(X(sm_integrate))
 end function X(sm_integrate)
 
@@ -105,6 +109,42 @@ subroutine X(submesh_add_product_to_mesh)(this, sphi, phase, phi, factor, conjug
  
   POP_SUB(X(submesh_add_product_to_mesh))
 end subroutine X(submesh_add_product_to_mesh)
+
+! ---------------------------------------------------------
+!> this function returns the the norm of a vector
+FLOAT function X(sm_nrm2)(sm, ff, reduce) result(nrm2)
+  type(submesh_t),   intent(in) :: sm
+  R_TYPE,            intent(in) :: ff(:)
+  logical, optional, intent(in) :: reduce
+
+  R_TYPE, allocatable :: ll(:)
+
+  call profiling_in(C_PROFILING_SM_NRM2, "SM_NRM2")
+  PUSH_SUB(X(sm_nrm2))
+
+  if(sm%mesh%use_curvilinear) then
+    SAFE_ALLOCATE(ll(1:sm%np))
+    ll(1:sm%np) = ff(1:sm%np)*sqrt(sm%mesh%vol_pp(sm%map(1:sm%np)))
+    nrm2 = lalg_nrm2(sm%np, ll)
+    SAFE_DEALLOCATE_A(ll)
+  else
+    nrm2 = lalg_nrm2(sm%np, ff)
+  end if
+
+  nrm2 = nrm2*sqrt(sm%mesh%volume_element)
+
+  if(sm%mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
+    call profiling_in(C_PROFILING_SM_REDUCE, "SM_REDUCE")
+    nrm2 = nrm2**2
+    call comm_allreduce(sm%mesh%vp%comm, nrm2)
+    nrm2 = sqrt(nrm2)
+    call profiling_out(C_PROFILING_SM_REDUCE)
+  end if
+
+  POP_SUB(X(sm_nrm2))
+  call profiling_out(C_PROFILING_SM_NRM2)
+
+end function X(sm_nrm2)
 
 
 !------------------------------------------------------------

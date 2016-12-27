@@ -69,8 +69,6 @@ module lda_u_oct_m
     type(submesh_t)     :: sphere             !> The submesh of the orbital
     FLOAT, pointer      :: dorbital_sphere(:) !> The orbital, if real, on the submesh
     CMPLX, pointer      :: zorbital_sphere(:) !> The orbital, if complex, on the submesh
-    FLOAT, pointer      :: dorbital_mesh(:)   !> The orbital, if real, on the full mesh
-    CMPLX, pointer      :: zorbital_mesh(:)   !> The orbital, if complex, on the full mesh
     CMPLX, pointer      :: phase(:,:)         !> Correction to the global phase 
                                               !> if the sphere cross the border of the box
    integer              :: ll                 !> Angular momentum of the orbital
@@ -268,8 +266,6 @@ contains
      do iorb = 1, this%norbs(iat)
          SAFE_DEALLOCATE_P(this%orbitals(iorb,iat)%dorbital_sphere)
          SAFE_DEALLOCATE_P(this%orbitals(iorb,iat)%zorbital_sphere)
-         SAFE_DEALLOCATE_P(this%orbitals(iorb,iat)%dorbital_mesh)
-         SAFE_DEALLOCATE_P(this%orbitals(iorb,iat)%zorbital_mesh)
          SAFE_DEALLOCATE_P(this%orbitals(iorb,iat)%phase)
          call submesh_end(this%orbitals(iorb,iat)%sphere)
      end do
