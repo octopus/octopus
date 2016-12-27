@@ -580,8 +580,8 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
         ! We have to normalize the orbitals, 
         ! in case the orbitals that comes out of the pseudo are not properly normalised
         norm = X(sm_nrm2)(this%orbitals(norb,ia)%sphere, this%orbitals(norb,ia)%X(orbital_sphere)(1:mesh%np))
-      !  this%orbitals(norb,ia)%X(orbital_sphere)(1:this%orbitals(norb,ia)%sphere%np) =  &
-      !          this%orbitals(norb,ia)%X(orbital_sphere)(1:this%orbitals(norb,ia)%sphere%np) /sqrt(norm)
+        this%orbitals(norb,ia)%X(orbital_sphere)(1:this%orbitals(norb,ia)%sphere%np) =  &
+                this%orbitals(norb,ia)%X(orbital_sphere)(1:this%orbitals(norb,ia)%sphere%np) /sqrt(norm)
 
         ! In case of complex wavefunction, we allocate the array for the phase correction
   #ifdef R_TCOMPLEX
