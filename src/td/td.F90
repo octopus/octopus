@@ -654,7 +654,11 @@ contains
         call restart_end(restart)
       end if
 
-
+      ! Initialize the occupation matrices and U for LDA+U
+      ! This must be called before parsing TDFreezeOccupations and TDFreezeU
+      ! in order that the code does properly the initialization.
+      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
+      call lda_u_update_U(hm%lda_u, st)
 
       !%Variable TDFreezeOrbitals
       !%Type integer
@@ -733,12 +737,6 @@ contains
       ! initialize Fermi energy
       call states_fermi(st, gr%mesh)
       call energy_calc_total(hm, gr, st)
-
-      ! Initialize the occupation matrices and U for LDA+U
-      ! This must be called before parsing TDFreezeOccupations and TDFreezeU
-      ! in order that the code does properly the initialization.
-      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
-      call lda_u_update_U(hm%lda_u, st)
 
       !%Variable TDFreezeOccupations
       !%Type logical
