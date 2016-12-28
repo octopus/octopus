@@ -74,6 +74,7 @@ module poisson_oct_m
     poisson_kernel_reinit,       &
     dpoisson_solve,              &
     zpoisson_solve,              &
+    dpoisson_solve_sm,           &
     poisson_solve_batch,         &
     poisson_solver_is_iterative, &
     poisson_solver_has_free_bc,  &
@@ -897,7 +898,7 @@ contains
     type(profile_t), save :: prof
 
     call profiling_in(prof, 'POISSON_SOLVE_SM')
-    PUSH_SUB(dpoisson_solvei_sm)
+    PUSH_SUB(dpoisson_solve_sm)
 
     der => this%der
 

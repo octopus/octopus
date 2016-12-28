@@ -380,17 +380,17 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
 
   integer :: ist, jst, kst, lst !, ijst, klst
   integer :: norbs, np_sphere, ia, ip
-  FLOAT, allocatable :: tmp(:)
-  FLOAT,  allocatable :: nn(:), nn_sphere(:), vv(:)
+  FLOAT, allocatable :: tmp(:), nn(:), vv(:), nn_sphere(:)
   type(orbital_t), pointer :: orbi, orbj, orbk, orbl
 
   PUSH_SUB(X(compute_coulomb_integrals))
 
   ASSERT(.not. st%parallel_in_states)
   
-  SAFE_ALLOCATE(nn(1:mesh%np))
-  SAFE_ALLOCATE(nn_sphere(1:mesh%np))
-  SAFE_ALLOCATE(vv(1:mesh%np))
+  SAFE_ALLOCATE(nn(1:this%max_np))   !1:mesh%np))
+  SAFE_ALLOCATE(nn_sphere(1:this%max_np))
+  SAFE_ALLOCATE(vv(1:this%max_np)) !1:mesh%np))
+  SAFE_ALLOCATE(tmp(1:this%max_np))
 
   do ia = 1, this%natoms
     norbs = this%norbs(ia)
@@ -399,21 +399,19 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
     do ist = 1, norbs
       orbi => this%orbitals(ist,ia) 
       np_sphere = orbi%sphere%np
- 
-      SAFE_ALLOCATE(tmp(1:np_sphere)) 
+      
       do jst = 1, norbs
    !     if(jst > ist) cycle
    !     ijst=ijst+1
         orbj => this%orbitals(jst,ia)
 
         nn_sphere(1:np_sphere)  = real(orbi%X(orbital_sphere)(1:np_sphere)) &
-                                 *real(orbj%X(orbital_sphere)(1:np_sphere))
-        nn(1:mesh%np) = M_ZERO
-        call submesh_add_to_mesh(orbi%sphere, nn_sphere, nn) 
-      !  call X(submesh_add_product_to_mesh)(orbi%sphere, orbj%X(orbital_sphere),orbi%X(orbital_sphere),&
-      !                                      nn, conjugate=.true.)
+                          *real(orbj%X(orbital_sphere)(1:np_sphere))
+!        nn(1:mesh%np) = M_ZERO
+!        call submesh_add_to_mesh(orbi%sphere, nn_sphere, nn) 
 
-        call dpoisson_solve(psolver, vv, nn, all_nodes=.true.)
+!        call dpoisson_solve(psolver, vv, nn, all_nodes=.true.)
+        call dpoisson_solve_sm(psolver, orbi%sphere, vv(1:np_sphere), nn_sphere(1:np_sphere), all_nodes=.true.)
 
    !     klst=0
         do kst = 1, norbs
@@ -427,22 +425,24 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
 
             orbl => this%orbitals(lst,ia)
 
-            do ip=1, np_sphere
-              tmp(ip) = vv(orbl%sphere%map(ip))*orbl%X(orbital_sphere)(ip) &
-                                   *R_CONJ(orbk%X(orbital_sphere)(ip))
+            do ip=1,np_sphere
+             tmp(ip) = vv(ip)*real(orbl%X(orbital_sphere)(ip)) &
+                             *real(orbk%X(orbital_sphere)(ip))
             end do
+         !   tmp(1:np_sphere) = vv(1:np_sphere)*real(orbl%X(orbital_sphere)(1:np_sphere)) &
+         !                                     *real(orbk%X(orbital_sphere)(1:np_sphere))
             
             this%coulomb(ist,jst,kst,lst,ia) = dsm_integrate(mesh, orbl%sphere, tmp(1:np_sphere))
           end do !lst
         end do !kst
       end do !jst
-      SAFE_DEALLOCATE_A(tmp)
     end do !ist
   end do !ia
  
   SAFE_DEALLOCATE_A(nn)
   SAFE_DEALLOCATE_A(nn_sphere)
   SAFE_DEALLOCATE_A(vv)
+  SAFE_DEALLOCATE_A(tmp)
 
   POP_SUB(X(compute_coulomb_integrals))
 end subroutine X(compute_coulomb_integrals)

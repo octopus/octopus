@@ -39,7 +39,7 @@ XCFunctional=gga_x_pbe + gga_c_pbe
  "O"  | 0.5 | 0.5 | 0.75
 %
 
-Spacing = 0.35
+Spacing = 0.5
 
 FromScratch = yes
 ParStates = no
