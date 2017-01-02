@@ -554,7 +554,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
         call X(get_atomic_orbital)(geo, mesh, ia, iorb, 1, this%orbitals(norb,ia), this%truncation, this%orbitals_threshold) 
         ! We have to normalize the orbitals, 
         ! in case the orbitals that comes out of the pseudo are not properly normalised
-        norm = X(sm_nrm2)(this%orbitals(norb,ia)%sphere, this%orbitals(norb,ia)%X(orbital_sphere)(1:mesh%np))
+        norm = X(sm_nrm2)(this%orbitals(norb,ia)%sphere, this%orbitals(norb,ia)%X(orbital_sphere)(1:this%orbitals(norb,ia)%sphere%np))
         this%orbitals(norb,ia)%X(orbital_sphere)(1:this%orbitals(norb,ia)%sphere%np) =  &
                 this%orbitals(norb,ia)%X(orbital_sphere)(1:this%orbitals(norb,ia)%sphere%np) /sqrt(norm)
 
