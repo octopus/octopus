@@ -89,19 +89,19 @@ module lda_u_oct_m
                                                    !> (for the ACBN0 functional) 
  
     type(orbital_t), pointer :: orbitals(:,:) !>An array containing all the orbitals of the system
-    FLOAT, pointer           :: Ueff(:)    !> The effective U of the simplified rotational invariant form
+    FLOAT, pointer           :: Ueff(:)       !> The effective U of the simplified rotational invariant form
 
-    integer             :: natoms          !> Number of atoms (copied from geometry_t)
+    integer             :: natoms             !> Number of atoms (copied from geometry_t)
     integer             :: nspins
-    integer, pointer    :: norbs(:)        !> Number of orbitals
-    integer             :: maxnorbs        !> Maximal number of orbitals for all the atoms
-    integer             :: max_np          !> Maximum number of points in all orbitals submesh's spheres 
+    integer, pointer    :: norbs(:)           !> Number of orbitals
+    integer             :: maxnorbs           !> Maximal number of orbitals for all the atoms
+    integer             :: max_np             !> Maximum number of points in all orbitals submesh spheres 
  
-    logical             :: truncate        !> Do we truncate the orbitals to the radius 
-                                           !> of the NL part of the pseudo
-    logical             :: useACBN0        !> Do we use the ACBN0 functional
-    logical             :: freeze_occ      !> Occupation matrices are not recomputed during TD evolution
-    logical             :: freeze_u        !> U is not recomputed during TD evolution
+    integer             :: truncation         !> Truncation method for the orbitals
+    FLOAT               :: orbitals_threshold !> Threshold for orbital truncation
+    logical             :: useACBN0           !> Do we use the ACBN0 functional
+    logical             :: freeze_occ         !> Occupation matrices are not recomputed during TD evolution
+    logical             :: freeze_u           !> U is not recomputed during TD evolution
   end type lda_u_t
 
 contains
@@ -126,16 +126,37 @@ contains
 
   this%apply = .true.
 
-  !%Variable OrbitalsTruncateToNLRadius
-  !%Type logical
-  !%Default no
+  !%Variable OrbitalsTruncationMethod
+  !%Type flag
+  !%Default full
   !%Section Hamiltonian::LDA+U
   !%Description
-  !% If set to yes, Octopus will truncate the orbitals 
-  !% to the radius of the nonlocal part of the pseudopotential.
-  !% This makes the orbitals basis to b non-overlapping between different atoms
+  !% This option determine how Octopus will truncate the orbitals used for LDA+U.
+  !% Except for the full method, the other options are only there to get a quick idea.
+  !%Option full bit(0)
+  !% The full size of the orbitals used. The radius is controled by variable OrbitalThreshold_LDAU
+  !%Option box bit(1)
+  !% The radius of the orbitals are restricted to the size of the simulation box. 
+  !% This reduces the number of points used to discretize the orbitals.
+  !%Option NLradius bit(2)
+  !% The radius of the orbitals are restricted to the radius of the non-local part of the pseudopotential 
+  !% of the corresponding atom.
   !%End
-  call parse_variable('OrbitalsTruncateToNLRadius', .false., this%truncate)
+  call parse_variable('OrbitalsTruncationMethod', OPTION__ORBITALSTRUNCATIONMETHOD__FULL, this%truncation)
+
+  !%Variable OrbitalsThreshold_LDAU
+  !%Type float
+  !%Default 0.01
+  !%Section Hamiltonian::LDA+U
+  !%Description
+  !% Determine the threshold used to compute the radius of the atomic orbitals for LDA+U.
+  !% This radius is computed by making sure that the 
+  !% absolute value of the radial part of the atomic orbital is below the specified threshold.
+  !% This value should be converged to be sure that results do not depend on this value. 
+  !% However increasing this value increases the number of grid points covered by the orbitals and directly affect performances.
+  !%End
+  call parse_variable('OrbitalsThreshold_LDAU', CNST(0.01), this%orbitals_threshold)
+  if(this%orbitals_threshold <= M_ZERO) call messages_input_error('OrbitalsThreshold_LDAU')
 
   !%Variable UseACBN0Functional
   !%Type logical

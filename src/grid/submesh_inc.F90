@@ -69,47 +69,6 @@ subroutine X(dsubmesh_add_to_mesh)(this, sphi, phi, factor)
   POP_SUB(X(dsubmesh_add_to_mesh))
 end subroutine X(dsubmesh_add_to_mesh)
 
-!------------------------------------------------------------
-subroutine X(submesh_add_product_to_mesh)(this, sphi, phase, phi, factor, conjugate)
-  type(submesh_t),  intent(in)    :: this
-  R_TYPE,           intent(in)    :: sphi(:)
-  R_TYPE,           intent(in)    :: phase(:)
-  R_TYPE,           intent(inout) :: phi(:)
-  R_TYPE, optional, intent(in)    :: factor
-  logical,optional, intent(in)    :: conjugate
-
-  integer :: ip
-  logical :: conj_
-
-  PUSH_SUB(X(submesh_add_product_to_mesh))
-
-  conj_ = optional_default(conjugate, .false.)
-
-  if(present(factor)) then
-    if(.not.conj_) then
-      do ip = 1, this%np
-        phi(this%map(ip)) = phi(this%map(ip)) + factor*sphi(ip)*phase(ip)
-      end do
-    else
-      do ip = 1, this%np
-        phi(this%map(ip)) = phi(this%map(ip)) + factor*sphi(ip)*R_CONJ(phase(ip))
-      end do
-    end if
-  else
-    if(.not.conj_) then
-      do ip = 1, this%np
-        phi(this%map(ip)) = phi(this%map(ip)) + sphi(ip)*phase(ip)
-      end do
-    else
-      do ip = 1, this%np
-        phi(this%map(ip)) = phi(this%map(ip)) + sphi(ip)*R_CONJ(phase(ip))
-      end do
-    end if
-  end if
- 
-  POP_SUB(X(submesh_add_product_to_mesh))
-end subroutine X(submesh_add_product_to_mesh)
-
 ! ---------------------------------------------------------
 !> this function returns the the norm of a vector
 FLOAT function X(sm_nrm2)(sm, ff, reduce) result(nrm2)

@@ -1230,22 +1230,29 @@ contains
 
   ! ---------------------------------------------------------
   !> Return radius outside which orbital is less than threshold value 0.001
-  FLOAT function species_get_iwf_radius(spec, ii, is) result(radius)
+  FLOAT function species_get_iwf_radius(spec, ii, is, threshold) result(radius)
     type(species_t),   intent(in) :: spec
     integer,           intent(in) :: ii !< principal quantum number
     integer,           intent(in) :: is !< spin component
+    FLOAT, optional,   intent(in) :: threshold
 
-    FLOAT, parameter :: threshold = CNST(0.001)
+    FLOAT threshold_
 
     PUSH_SUB(species_get_iwf_radius)
 
     if(species_is_ps(spec)) then
-      ASSERT(ii <= spec%ps%conf%p)
-      radius = spline_cutoff_radius(spec%ps%ur(ii, is), spec%ps%projectors_sphere_threshold)
-    else if(species_represents_real_atom(spec)) then
-      radius = -ii*log(threshold)/spec%Z_val
+      threshold_ = optional_default(threshold, spec%ps%projectors_sphere_threshold)
     else
-      radius = sqrt(-M_TWO*log(threshold)/spec%omega)
+      threshold_ = optional_default(threshold, CNST(0.001))
+    end if
+
+    if(species_is_ps(spec)) then
+      ASSERT(ii <= spec%ps%conf%p)
+      radius = spline_cutoff_radius(spec%ps%ur(ii, is), threshold_)
+    else if(species_represents_real_atom(spec)) then
+      radius = -ii*log(threshold_)/spec%Z_val
+    else
+      radius = sqrt(-M_TWO*log(threshold_)/spec%omega)
     end if
 
     ! The values for hydrogenic and harmonic-oscillator wavefunctions

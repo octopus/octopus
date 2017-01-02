@@ -65,6 +65,7 @@ KPointsUseSymmetries = no
 
 ExtraStates = 7
 
+OrbitalsTruncationMethod = box
 OutputLDA_U = occupation_matrices + effectiveU
 UseACBN0Functional = yes
 

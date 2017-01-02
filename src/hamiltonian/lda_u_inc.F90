@@ -80,14 +80,6 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
           reduced = reduced + this%X(V)(im,imp,ispin,ia)*dot(imp)
         end do
 
-      !  call submesh_add_to_mesh(this%orbitals(im,ispin,ia)%sphere, &
-        !                           this%orbitals(im,ispin,ia)%X(orbital), &
-        !                           hpsi(:, idim), this%X(V)(im,imp,ispin,ia)*dot) 
-
-      !call submesh_add_to_mesh(this%orbitals(im,ispin,ia)%sphere, &
-      !                         this%orbitals(im,ispin,ia)%X(orbital), &
-      !                         hpsi(:, idim), reduced)
-
        !In case of phase, we have to apply the conjugate of the phase here
        if(has_phase) then
          do is = 1, this%orbitals(im,ia)%sphere%np
@@ -99,12 +91,6 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
                                    epsi(1:this%orbitals(im,ia)%sphere%np,1),&
                                    hpsi(:, idim), reduced)
          end do
- !   #ifdef R_TCOMPLEX
- !          call X(submesh_add_product_to_mesh)(this%orbitals(im,ia)%sphere, &
- !                                   this%orbitals(im,ia)%X(orbital_sphere), &
- !                                   this%orbitals(im,ia)%phase(:,ik), hpsi(:, idim), &
- !                                   reduced, conjugate=.true.)
- !   #endif
        else
          do idim = 1, d%dim
            call submesh_add_to_mesh(this%orbitals(im,ia)%sphere,&
@@ -380,16 +366,15 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
 
   integer :: ist, jst, kst, lst !, ijst, klst
   integer :: norbs, np_sphere, ia, ip
-  FLOAT, allocatable :: tmp(:), nn(:), vv(:), nn_sphere(:)
+  FLOAT, allocatable :: tmp(:), vv(:), nn_sphere(:)
   type(orbital_t), pointer :: orbi, orbj, orbk, orbl
 
   PUSH_SUB(X(compute_coulomb_integrals))
 
   ASSERT(.not. st%parallel_in_states)
   
-  SAFE_ALLOCATE(nn(1:this%max_np))   !1:mesh%np))
   SAFE_ALLOCATE(nn_sphere(1:this%max_np))
-  SAFE_ALLOCATE(vv(1:this%max_np)) !1:mesh%np))
+  SAFE_ALLOCATE(vv(1:this%max_np))
   SAFE_ALLOCATE(tmp(1:this%max_np))
 
   do ia = 1, this%natoms
@@ -407,10 +392,7 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
 
         nn_sphere(1:np_sphere)  = real(orbi%X(orbital_sphere)(1:np_sphere)) &
                           *real(orbj%X(orbital_sphere)(1:np_sphere))
-!        nn(1:mesh%np) = M_ZERO
-!        call submesh_add_to_mesh(orbi%sphere, nn_sphere, nn) 
-
-!        call dpoisson_solve(psolver, vv, nn, all_nodes=.true.)
+        !Here it is important to use a non-periodic poisson solver, e.g. the direct solver
         call dpoisson_solve_sm(psolver, orbi%sphere, vv(1:np_sphere), nn_sphere(1:np_sphere), all_nodes=.true.)
 
    !     klst=0
@@ -421,17 +403,12 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
    !         klst=klst+1
    !        if(klst > ijst) cycle
 
-     !       print *, ist,jst,kst,lst,ia
-
             orbl => this%orbitals(lst,ia)
 
             do ip=1,np_sphere
              tmp(ip) = vv(ip)*real(orbl%X(orbital_sphere)(ip)) &
                              *real(orbk%X(orbital_sphere)(ip))
             end do
-         !   tmp(1:np_sphere) = vv(1:np_sphere)*real(orbl%X(orbital_sphere)(1:np_sphere)) &
-         !                                     *real(orbk%X(orbital_sphere)(1:np_sphere))
-            
             this%coulomb(ist,jst,kst,lst,ia) = dsm_integrate(mesh, orbl%sphere, tmp(1:np_sphere))
           end do !lst
         end do !kst
@@ -439,7 +416,6 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
     end do !ist
   end do !ia
  
-  SAFE_DEALLOCATE_A(nn)
   SAFE_DEALLOCATE_A(nn_sphere)
   SAFE_DEALLOCATE_A(vv)
   SAFE_DEALLOCATE_A(tmp)
@@ -575,7 +551,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
       if(ll .eq. hubbardl ) then 
         norb = norb + 1
         ! We obtain the orbital
-        call X(get_atomic_orbital)(geo, mesh, ia, iorb, 1, this%orbitals(norb,ia), this%truncate) 
+        call X(get_atomic_orbital)(geo, mesh, ia, iorb, 1, this%orbitals(norb,ia), this%truncation, this%orbitals_threshold) 
         ! We have to normalize the orbitals, 
         ! in case the orbitals that comes out of the pseudo are not properly normalised
         norm = X(sm_nrm2)(this%orbitals(norb,ia)%sphere, this%orbitals(norb,ia)%X(orbital_sphere)(1:mesh%np))
@@ -607,14 +583,15 @@ end subroutine X(construct_orbital_basis)
 !> This routine returns the atomic orbital basis -- provided
 !! by the pseudopotential structure in geo.
 ! ---------------------------------------------------------
-subroutine X(get_atomic_orbital) (geo, mesh, iatom, iorb, ispin, orb, truncate)
+subroutine X(get_atomic_orbital) (geo, mesh, iatom, iorb, ispin, orb, truncation, threshold)
   type(mesh_t),             intent(in)    :: mesh
   type(geometry_t), target, intent(in)    :: geo
   integer,                  intent(in)    :: iatom
   integer,                  intent(in)    :: iorb
   integer,                  intent(in)    :: ispin
   type(orbital_t),          intent(inout) :: orb
-  logical,                  intent(in)    :: truncate
+  integer,                  intent(in)    :: truncation
+  FLOAT,                    intent(in)    :: threshold
 
   type(species_t), pointer :: spec
   integer :: ii, ll, mm, ispin_
@@ -634,39 +611,40 @@ subroutine X(get_atomic_orbital) (geo, mesh, iatom, iorb, ispin, orb, truncate)
 
   call species_iwf_ilm(spec, iorb, ispin_, ii, ll, mm)
 
-  radius = species_get_iwf_radius(spec, ii, ispin_) 
+  if(truncation == OPTION__ORBITALSTRUNCATIONMETHOD__FULL) then
+    radius = species_get_iwf_radius(spec, ii, ispin_, threshold) 
+  else
+    radius = species_get_iwf_radius(spec, ii, ispin_)
+   
+    if(truncation == OPTION__ORBITALSTRUNCATIONMETHOD__BOX) then
+      ! if the orbital is larger than the size of the box, we restrict it to this size, 
+      ! otherwise the orbital will overlap more than one time with the simulation box.
+      ! This would induces phase problem if the complete mesh is used instead of the sphere
+      radius = min(radius, minval(mesh%sb%lsize(1:mesh%sb%dim)-mesh%spacing(1:mesh%sb%dim)*CNST(1.01)))
+    else
+      !If asked, we truncate the orbital to the radius on the projector spheres 
+      !of the NL part of the pseudopotential.
+      !This is a way to garanty no overlap between orbitals of different atoms.
+      if(species_is_ps(spec)) &
+        radius = min(radius,species_get_ps_radius(spec))
+    end if
+  end if
   ! make sure that if the spacing is too large, the orbitals fit in a few points at least
   radius = max(radius, CNST(2.0)*maxval(mesh%spacing(1:mesh%sb%dim)))
-  !! if the orbital is larger than the size of the box, we restrict it to this size, 
-  !! otherwise the orbital will overlap more than one time with the simulation box.
-  !! This would induces phase problem if the complete mesh is used instead of the sphere
-  radius = min(radius, minval(mesh%sb%lsize(1:mesh%sb%dim)-mesh%spacing(1:mesh%sb%dim)*CNST(1.01)))
-
-  !If asked, we truncate the orbital to the radius on the projector spheres 
-  !of the NL part of the pseudopotential.
-  !This is a way to garanty no overlap between orbitals of different atoms.
-  if(truncate .and. species_is_ps(spec)) &
-    radius = min(radius,species_get_ps_radius(spec))
-
  
   !We initialise the submesh corresponding to the orbital 
-  if(radius <= minval(mesh%sb%lsize(1:mesh%sb%dim)-mesh%spacing(1:mesh%sb%dim))) then
-    call submesh_init(orb%sphere, mesh%sb, mesh, geo%atom(iatom)%x, radius)
-    if(orb%sphere%overlap) then
-      write(message(1),'(a)')  'This orbital has overlapping points.'
-      call messages_warning(1)
-    end if
-  else
-    call submesh_init_extendedorbital(orb%sphere, mesh%sb, mesh, geo%atom(iatom)%x, radius) 
-    write(message(1),'(a,i2,a)')  'This is an extended orbital, with ', orb%sphere%np, ' grid points.'
-    call messages_info(1)
+  call submesh_init(orb%sphere, mesh%sb, mesh, geo%atom(iatom)%x, radius)
+  if(radius >= minval(mesh%sb%lsize(1:mesh%sb%dim)-mesh%spacing(1:mesh%sb%dim))) then
+    write(message(1),'(a,i5,a)')  'This is an extended orbital, with ', orb%sphere%np, ' grid points.'
+    write(message(2),'(a,f8.5,a)') 'The radius is ', radius, ' Bohr.'
+    call messages_info(2)
   end if
 
   !We allocate both the orbital on the submesh and on the complete mesh
   SAFE_ALLOCATE(orb%X(orbital_sphere)(1:orb%sphere%np))
   orb%X(orbital_sphere) = M_ZERO
 
-  !This is a bit dirty. This is the default behavior, see LCAO.
+  !This is a bit dirty.
   complex_ylms = .false.
 
   !We get the orbital from the pseudopotential
