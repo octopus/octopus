@@ -364,7 +364,7 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
   type(mesh_t),     intent(in)  :: mesh
   type(states_t),   intent(in)  :: st
 
-  integer :: ist, jst, kst, lst !, ijst, klst
+  integer :: ist, jst, kst, lst, ijst, klst
   integer :: norbs, np_sphere, ia, ip
   FLOAT, allocatable :: tmp(:), vv(:), nn_sphere(:)
   type(orbital_t), pointer :: orbi, orbj, orbk, orbl
@@ -380,14 +380,15 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
   do ia = 1, this%natoms
     norbs = this%norbs(ia)
     if(norbs.eq. M_ZERO ) cycle
-   ! ijst=0
+   
+    ijst=0
     do ist = 1, norbs
       orbi => this%orbitals(ist,ia) 
       np_sphere = orbi%sphere%np
       
       do jst = 1, norbs
-   !     if(jst > ist) cycle
-   !     ijst=ijst+1
+        if(jst > ist) cycle
+        ijst=ijst+1
         orbj => this%orbitals(jst,ia)
 
         nn_sphere(1:np_sphere)  = real(orbi%X(orbital_sphere)(1:np_sphere)) &
@@ -395,13 +396,13 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
         !Here it is important to use a non-periodic poisson solver, e.g. the direct solver
         call dpoisson_solve_sm(psolver, orbi%sphere, vv(1:np_sphere), nn_sphere(1:np_sphere), all_nodes=.true.)
 
-   !     klst=0
+        klst=0
         do kst = 1, norbs
           orbk => this%orbitals(kst,ia)
           do lst = 1, norbs
-   !         if(lst > kst) cycle
-   !         klst=klst+1
-   !        if(klst > ijst) cycle
+            if(lst > kst) cycle
+            klst=klst+1
+           if(klst > ijst) cycle
 
             orbl => this%orbitals(lst,ia)
 
@@ -410,6 +411,18 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
                              *real(orbk%X(orbital_sphere)(ip))
             end do
             this%coulomb(ist,jst,kst,lst,ia) = dsm_integrate(mesh, orbl%sphere, tmp(1:np_sphere))
+
+            if(abs(this%coulomb(ist,jst,kst,lst,ia))<CNST(1.0e-12)) &
+              this%coulomb(ist,jst,kst,lst,ia) = M_ZERO
+
+            this%coulomb(kst,lst,ist,jst,ia) = this%coulomb(ist,jst,kst,lst,ia)              
+            this%coulomb(jst,ist,lst,kst,ia) = this%coulomb(ist,jst,kst,lst,ia)
+            this%coulomb(lst,kst,jst,ist,ia) = this%coulomb(ist,jst,kst,lst,ia)
+            this%coulomb(jst,ist,kst,lst,ia) = this%coulomb(ist,jst,kst,lst,ia)
+            this%coulomb(lst,kst,ist,jst,ia) = this%coulomb(ist,jst,kst,lst,ia)              
+            this%coulomb(ist,jst,lst,kst,ia) = this%coulomb(ist,jst,kst,lst,ia)
+            this%coulomb(kst,lst,jst,ist,ia) = this%coulomb(ist,jst,kst,lst,ia)              
+
           end do !lst
         end do !kst
       end do !jst
