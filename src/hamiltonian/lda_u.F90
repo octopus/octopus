@@ -74,6 +74,14 @@ module lda_u_oct_m
    integer              :: ll                 !> Angular momentum of the orbital
   end type orbital_t
 
+  type orbital_set_t
+    integer             :: nn, ll
+    type(submesh_t)     :: sphere             !> The submesh of the orbital
+    CMPLX, pointer      :: phase(:,:)         !> Correction to the global phase 
+                                              !> if the sphere cross the border of the box
+    type(orbital_t), pointer :: orbitals(:,:) !> An array containing all the orbitals of the system
+    FLOAT               :: Ueff               !> The effective U of the simplified rotational invariant form
+  end type orbital_set_t
 
   type lda_u_t
     logical                  :: apply
@@ -88,7 +96,8 @@ module lda_u_oct_m
     FLOAT, pointer           :: coulomb(:,:,:,:,:) !>Coulomb integrals for all the system
                                                    !> (for the ACBN0 functional) 
  
-    type(orbital_t), pointer :: orbitals(:,:) !>An array containing all the orbitals of the system
+    type(orbital_t), pointer :: orbitals(:,:)    !> All the orbitals of the system
+    type(orbital_set_t), pointer :: orbsets(:,:) !> All the orbital setss of the system
     FLOAT, pointer           :: Ueff(:)       !> The effective U of the simplified rotational invariant form
 
     integer             :: natoms             !> Number of atoms (copied from geometry_t)
