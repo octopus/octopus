@@ -76,6 +76,7 @@ module species_oct_m
     species_filename,              &
     species_niwfs,                 &
     species_iwf_ilm,               &
+    species_iwf_n,                 &
     species_userdef_pot,           &
     species_is_ps,                 &
     species_is_full,               &
@@ -145,7 +146,7 @@ module species_oct_m
 
 
     integer :: niwfs              !< The number of initial wavefunctions
-    integer, pointer :: iwf_l(:, :), iwf_m(:, :), iwf_i(:, :) !< i, l, m as a function of iorb and ispin
+    integer, pointer :: iwf_l(:, :), iwf_m(:, :), iwf_i(:, :), iwf_n(:, :) !< i, n, l, m as a function of iorb and ispin
 
     integer :: lmax, lloc         !< For the TM pseudos, the lmax and lloc.
  
@@ -193,6 +194,7 @@ contains
     nullify(this%iwf_l)
     nullify(this%iwf_m)
     nullify(this%iwf_i)
+    nullify(this%iwf_n)
     this%lmax=0
     this%lloc=0
     this%hubbard_l=0
@@ -687,6 +689,7 @@ contains
       spec%niwfs = max(5, spec%niwfs)
     end if
 
+    SAFE_ALLOCATE(spec%iwf_n(1:spec%niwfs, 1:ispin))
     SAFE_ALLOCATE(spec%iwf_l(1:spec%niwfs, 1:ispin))
     SAFE_ALLOCATE(spec%iwf_m(1:spec%niwfs, 1:ispin))
     SAFE_ALLOCATE(spec%iwf_i(1:spec%niwfs, 1:ispin))
@@ -866,6 +869,7 @@ contains
     end if
     this%def_h=-M_ONE
     this%niwfs=-1
+    nullify(this%iwf_n)
     nullify(this%iwf_l)
     nullify(this%iwf_m)
     nullify(this%iwf_i)
@@ -1080,6 +1084,15 @@ contains
   end subroutine species_iwf_ilm
   ! ---------------------------------------------------------
 
+   ! ---------------------------------------------------------
+  pure subroutine species_iwf_n(spec, j, is, n)
+    type(species_t), intent(in) :: spec
+    integer, intent(in)         :: j, is
+    integer, intent(out)        :: n
+
+    n = spec%iwf_n(j, is)
+  end subroutine species_iwf_n
+  ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
   CMPLX function species_userdef_pot(spec, dim, xx, r)
@@ -1321,7 +1334,8 @@ contains
     this%def_rsize=that%def_rsize
     this%def_h=that%def_h
     this%niwfs=that%niwfs
-    nullify(this%iwf_l, this%iwf_m, this%iwf_i)
+    nullify(this%iwf_n, this%iwf_l, this%iwf_m, this%iwf_i)
+    call loct_pointer_copy(this%iwf_n, that%iwf_n)
     call loct_pointer_copy(this%iwf_l, that%iwf_l)
     call loct_pointer_copy(this%iwf_m, that%iwf_m)
     call loct_pointer_copy(this%iwf_i, that%iwf_i)
@@ -1346,6 +1360,7 @@ contains
         SAFE_DEALLOCATE_P(spec%ps)
       end if
     end if
+    SAFE_DEALLOCATE_P(spec%iwf_n)
     SAFE_DEALLOCATE_P(spec%iwf_l)
     SAFE_DEALLOCATE_P(spec%iwf_m)
     SAFE_DEALLOCATE_P(spec%iwf_i)
@@ -1885,6 +1900,7 @@ contains
           
           do m = -l, l
             spec%iwf_i(n, is) = i
+            spec%iwf_n(n, is) = spec%ps%conf%n(i)
             spec%iwf_l(n, is) = l
             spec%iwf_m(n, is) = m
             n = n + 1
@@ -1907,6 +1923,7 @@ contains
           do l = 0, i-1
             do m = -l, l
               spec%iwf_i(n, is) = i
+              spec%iwf_n(n, is) = i
               spec%iwf_l(n, is) = l
               spec%iwf_m(n, is) = m
               n = n + 1
@@ -1922,6 +1939,7 @@ contains
         do is = 1, ispin
           do i = 1, spec%niwfs
             spec%iwf_i(i, is) = i
+            spec%iwf_n(n, is) = 0
             spec%iwf_l(i, is) = 0
             spec%iwf_m(i, is) = 0
           end do
@@ -1932,16 +1950,19 @@ contains
           i = 1; n1 = 1; n2 = 1
           do
             spec%iwf_i(i, is) = n1
+            spec%iwf_n(i, is) = 1 
             spec%iwf_l(i, is) = n2
             spec%iwf_m(i, is) = 0
             i = i + 1; if(i>spec%niwfs) exit
 
             spec%iwf_i(i, is) = n1+1
+            spec%iwf_n(i, is) = 1
             spec%iwf_l(i, is) = n2
             spec%iwf_m(i, is) = 0
             i = i + 1; if(i>spec%niwfs) exit
 
             spec%iwf_i(i, is) = n1
+            spec%iwf_n(i, is) = 1
             spec%iwf_l(i, is) = n2+1
             spec%iwf_m(i, is) = 0
             i = i + 1; if(i>spec%niwfs) exit
@@ -1955,36 +1976,43 @@ contains
           i = 1; n1 = 1; n2 = 1; n3 = 1
           do
             spec%iwf_i(i, is) = n1
+            spec%iwf_n(i, is) = 1
             spec%iwf_l(i, is) = n2
             spec%iwf_m(i, is) = n3
             i = i + 1; if(i>spec%niwfs) exit
 
             spec%iwf_i(i, is) = n1+1
+            spec%iwf_n(i, is) = 1
             spec%iwf_l(i, is) = n2
             spec%iwf_m(i, is) = n3
             i = i + 1; if(i>spec%niwfs) exit
 
             spec%iwf_i(i, is) = n1
+            spec%iwf_n(i, is) = 1
             spec%iwf_l(i, is) = n2+1
             spec%iwf_m(i, is) = 0
             i = i + 1; if(i>spec%niwfs) exit
 
             spec%iwf_i(i, is) = n1
+            spec%iwf_n(i, is) = 1
             spec%iwf_l(i, is) = n2
             spec%iwf_m(i, is) = n3+1
             i = i + 1; if(i>spec%niwfs) exit
 
             spec%iwf_i(i, is) = n1+1
+            spec%iwf_n(i, is) = 1
             spec%iwf_l(i, is) = n2+1
             spec%iwf_m(i, is) = n3
             i = i + 1; if(i>spec%niwfs) exit
 
             spec%iwf_i(i, is) = n1+1
+            spec%iwf_n(i, is) = 1
             spec%iwf_l(i, is) = n2
             spec%iwf_m(i, is) = n3+1
             i = i + 1; if(i>spec%niwfs) exit
 
             spec%iwf_i(i, is) = n1
+            spec%iwf_n(i, is) = 1
             spec%iwf_l(i, is) = n2+1
             spec%iwf_m(i, is) = n3+1
             i = i + 1; if(i>spec%niwfs) exit

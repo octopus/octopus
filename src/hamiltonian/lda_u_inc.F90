@@ -517,7 +517,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
   type(states_t),            intent(in)       :: st 
 
   integer :: ia, iorb, norb, ispin
-  integer ::  hubbardl, ii, ll, mm
+  integer ::  hubbardl, ii, nn, ll, mm
   FLOAT   :: norm
 
 
@@ -535,6 +535,8 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
     this%norbs(ia) = 0
     do iorb = 1, species_niwfs(geo%atom(ia)%species)
       call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
+      call species_iwf_n(geo%atom(ia)%species, iorb, 1, nn )
+      print *, ia, ii, nn, ll, mm
       if(ll .eq. hubbardl ) this%norbs(ia) = this%norbs(ia) + 1
     end do !iorb
   end do  !ia
