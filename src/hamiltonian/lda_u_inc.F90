@@ -412,17 +412,17 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
             end do
             this%coulomb(ist,jst,kst,lst,ia) = dsm_integrate(mesh, orbl%sphere, tmp(1:np_sphere))
 
-            if(abs(this%coulomb(ist,jst,kst,lst,ia))<CNST(1.0e-12)) &
+            if(abs(this%coulomb(ist,jst,kst,lst,ia))<CNST(1.0e-12)) then
               this%coulomb(ist,jst,kst,lst,ia) = M_ZERO
-
-            this%coulomb(kst,lst,ist,jst,ia) = this%coulomb(ist,jst,kst,lst,ia)              
-            this%coulomb(jst,ist,lst,kst,ia) = this%coulomb(ist,jst,kst,lst,ia)
-            this%coulomb(lst,kst,jst,ist,ia) = this%coulomb(ist,jst,kst,lst,ia)
-            this%coulomb(jst,ist,kst,lst,ia) = this%coulomb(ist,jst,kst,lst,ia)
-            this%coulomb(lst,kst,ist,jst,ia) = this%coulomb(ist,jst,kst,lst,ia)              
-            this%coulomb(ist,jst,lst,kst,ia) = this%coulomb(ist,jst,kst,lst,ia)
-            this%coulomb(kst,lst,jst,ist,ia) = this%coulomb(ist,jst,kst,lst,ia)              
-
+            else
+              this%coulomb(kst,lst,ist,jst,ia) = this%coulomb(ist,jst,kst,lst,ia)              
+              this%coulomb(jst,ist,lst,kst,ia) = this%coulomb(ist,jst,kst,lst,ia)
+              this%coulomb(lst,kst,jst,ist,ia) = this%coulomb(ist,jst,kst,lst,ia)
+              this%coulomb(jst,ist,kst,lst,ia) = this%coulomb(ist,jst,kst,lst,ia)
+              this%coulomb(lst,kst,ist,jst,ia) = this%coulomb(ist,jst,kst,lst,ia)              
+              this%coulomb(ist,jst,lst,kst,ia) = this%coulomb(ist,jst,kst,lst,ia)
+              this%coulomb(kst,lst,jst,ist,ia) = this%coulomb(ist,jst,kst,lst,ia)              
+            end if
           end do !lst
         end do !kst
       end do !jst
