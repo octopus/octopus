@@ -100,6 +100,7 @@ module lda_u_oct_m
     integer             :: truncation         !> Truncation method for the orbitals
     FLOAT               :: orbitals_threshold !> Threshold for orbital truncation
     logical             :: useACBN0           !> Do we use the ACBN0 functional
+    logical             :: useAllOrbitals     !> Do we use all atomic orbitals possible
     logical             :: freeze_occ         !> Occupation matrices are not recomputed during TD evolution
     logical             :: freeze_u           !> U is not recomputed during TD evolution
   end type lda_u_t
@@ -167,6 +168,20 @@ contains
   !% ACBN0 functional as defined in PRX 5, 011006 (2015) 
   !%End
   call parse_variable('UseACBN0Functional', .false., this%useACBN0)
+
+  if( this%useACBN0) then
+    !%Variable UseAllAtomicOrbitals
+    !%Type logical
+    !%Default no
+    !%Section Hamiltonian::LDA+U
+    !%Description
+    !% If set to yes, Octopus will determine the effective U for all atomic orbitals
+    !% from the peusopotential. Only available with ACBN0 functional.
+    !%End
+    call parse_variable('UseAllAtomicOrbitals', .false., this%useAllOrbitals)
+    
+    if(this%useAllOrbitals) call messages_not_implemented("UseAllAtomicOrbitals")
+  end if
 
   nullify(this%dn)
   nullify(this%zn)
