@@ -27,7 +27,7 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
   type(states_dim_t), intent(in) :: d
   logical,            intent(in) :: has_phase !True if the wavefunction has an associated phase
 
-  integer :: ibatch, idim, ia, imp, im, ispin
+  integer :: ibatch, idim, ios, imp, im, ispin
   integer :: bind, is
   R_TYPE  :: weight, reduced
   R_TYPE, allocatable :: psi(:,:), hpsi(:,:)
@@ -47,13 +47,13 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
     call batch_get_state(psib, ibatch, mesh%np, psi)
     call batch_get_state(hpsib,ibatch, mesh%np, hpsi)
 
-    do ia = 1, this%norbsets 
+    do ios = 1, this%norbsets 
       ! We have to compute 
       ! hpsi> += sum_m |phi m> sum_m' Vmm' <phi m' | psi >
       !
       ! We first compute <phi m | psi> for all orbitals of the atom
       !
-      os => this%orbsets(ia)
+      os => this%orbsets(ios)
       do im = 1, os%norbs
         !If we need to add the phase, we explicitly do the operation using the sphere
         !This does not change anything if the sphere occupies the full mesh or not
@@ -79,7 +79,7 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
         ! sum_m' Vmm' <phi m' | psi >
         reduced = M_ZERO
         do imp = 1, os%norbs
-          reduced = reduced + this%X(V)(im,imp,ispin,ia)*dot(imp)
+          reduced = reduced + this%X(V)(im,imp,ispin,ios)*dot(imp)
         end do
 
        !In case of phase, we have to apply the conjugate of the phase here
@@ -101,7 +101,7 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
          end do !idim
        end if
      end do !im
-   end do !ia
+   end do !ios
    call batch_set_state(hpsib, ibatch, mesh%np, hpsi)
   end do !ibatch
 
@@ -124,7 +124,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
   FLOAT, intent(inout)                 :: lda_u_energy
   CMPLX, pointer, optional             :: phase(:,:) 
 
-  integer :: ia, im, ik, ist, ispin, norbs, ip, idim, is
+  integer :: ios, im, ik, ist, ispin, norbs, ip, idim, is
   R_TYPE, allocatable :: psi(:,:), epsi(:)
   R_TYPE, allocatable :: dot(:,:)
   FLOAT   :: weight, renorm_weight
@@ -162,8 +162,8 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
         end do
       end if
       
-      do ia = 1, this%norbsets
-        os => this%orbsets(ia)
+      do ios = 1, this%norbsets
+        os => this%orbsets(ios)
         norbs = os%norbs
         !We first compute the matrix elemets <\psi | orb_m>
         !taking into account phase correction if needed 
@@ -172,12 +172,12 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
             do is = 1, os%orbitals(im)%sphere%np
               epsi(is) = psi(os%orbitals(im)%sphere%map(is),1)*os%orbitals(im)%phase(is, ik)
             end do
-            dot(im,ia) = X(mf_dotp)(os%orbitals(im)%sphere%mesh, &
+            dot(im,ios) = X(mf_dotp)(os%orbitals(im)%sphere%mesh, &
                                  epsi(1:os%orbitals(im)%sphere%np),& 
                                  os%orbitals(im)%X(orbital_sphere),&
                                  np = os%orbitals(im)%sphere%np )
           else
-            dot(im,ia) =  submesh_to_mesh_dotp(os%orbitals(im)%sphere, 1,&
+            dot(im,ios) =  submesh_to_mesh_dotp(os%orbitals(im)%sphere, 1,&
                                                os%orbitals(im)%X(orbital_sphere), &
                                                psi(1:mesh%np,1:st%d%dim))
           end if
@@ -185,26 +185,26 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
           !We compute the on-site occupation of the site, if needed
           if(this%useACBN0) then
             this%renorm_occ(os%orbitals(im)%ll,ist,ik) = &
-                this%renorm_occ(os%orbitals(im)%ll,ist,ik) + abs(dot(im,ia))**2
+                this%renorm_occ(os%orbitals(im)%ll,ist,ik) + abs(dot(im,ios))**2
           end if
         end do
       end do 
      
       !We can compute the (renormalized) occupation matrices
-      do ia = 1, this%norbsets
-        os => this%orbsets(ia)
-        norbs = this%orbsets(ia)%norbs
+      do ios = 1, this%norbsets
+        os => this%orbsets(ios)
+        norbs = this%orbsets(ios)%norbs
         do im = 1, norbs
-            this%X(n)(1:norbs,im,ispin,ia) = this%X(n)(1:norbs,im,ispin,ia) &
-                                         + weight*dot(1:norbs,ia)*R_CONJ(dot(im,ia))
+            this%X(n)(1:norbs,im,ispin,ios) = this%X(n)(1:norbs,im,ispin,ios) &
+                                         + weight*dot(1:norbs,ios)*R_CONJ(dot(im,ios))
             !We compute the renomalized occupation matrices
             if(this%useACBN0) then
               renorm_weight = this%renorm_occ(os%orbitals(im)%ll,ist,ik)*weight
-              this%X(n_alt)(1:norbs,im,ispin,ia) = this%X(n_alt)(1:norbs,im,ispin,ia) &
-                                         + renorm_weight*dot(1:norbs,ia)*R_CONJ(dot(im,ia))
+              this%X(n_alt)(1:norbs,im,ispin,ios) = this%X(n_alt)(1:norbs,im,ispin,ios) &
+                                         + renorm_weight*dot(1:norbs,ios)*R_CONJ(dot(im,ios))
             end if 
         end do
-       !  call lalg_her( norbs, weight, this%X(n)(1:norbs,1:norbs,ispin,ia), dot)
+       !  call lalg_her( norbs, weight, this%X(n)(1:norbs,1:norbs,ispin,ios), dot)
       end do
     end do
   end do
@@ -236,20 +236,20 @@ subroutine X(compute_dudarev_energy)(this, st, lda_u_energy)
   type(states_t),  intent(in)     :: st
   FLOAT, intent(inout)            :: lda_u_energy
  
-  integer :: ia, imp, im, ispin
+  integer :: ios, imp, im, ispin
 
   PUSH_SUB(compute_dudarev_energy)
 
   lda_u_energy = M_ZERO
 
-  do ia = 1, this%norbsets
+  do ios = 1, this%norbsets
     do ispin = 1, st%d%nspin
       !TODO: These are matrix operations, that could be optimized
-      do im = 1, this%orbsets(ia)%norbs
-        do imp = 1, this%orbsets(ia)%norbs
-          lda_u_energy = lda_u_energy - CNST(0.5)*this%orbsets(ia)%Ueff*abs(this%X(n)(im,imp,ispin,ia))**2
+      do im = 1, this%orbsets(ios)%norbs
+        do imp = 1, this%orbsets(ios)%norbs
+          lda_u_energy = lda_u_energy - CNST(0.5)*this%orbsets(ios)%Ueff*abs(this%X(n)(im,imp,ispin,ios))**2
         end do
-        lda_u_energy = lda_u_energy + CNST(0.5)*this%orbsets(ia)%Ueff*this%X(n)(im,im,ispin,ia)
+        lda_u_energy = lda_u_energy + CNST(0.5)*this%orbsets(ios)%Ueff*this%X(n)(im,im,ispin,ios)
       end do
     end do
   end do
@@ -267,16 +267,16 @@ subroutine X(update_potential_lda_u)(this, st)
   type(lda_u_t), intent(inout)    :: this
   type(states_t),  intent(in)     :: st
 
-  integer :: ia, im, ispin, norbs
+  integer :: ios, im, ispin, norbs
 
   PUSH_SUB(update_potential_lda_u)
 
-  do ia = 1, this%norbsets
-    norbs = this%orbsets(ia)%norbs
+  do ios = 1, this%norbsets
+    norbs = this%orbsets(ios)%norbs
     do ispin = 1, st%d%nspin
       do im = 1, norbs
-        this%X(V)(1:norbs,im,ispin,ia) = - this%orbsets(ia)%Ueff*this%X(n)(1:norbs,im,ispin,ia)
-        this%X(V)(im,im,ispin,ia) = this%X(V)(im,im,ispin,ia) + CNST(0.5)*this%orbsets(ia)%Ueff
+        this%X(V)(1:norbs,im,ispin,ios) = - this%orbsets(ios)%Ueff*this%X(n)(1:norbs,im,ispin,ios)
+        this%X(V)(im,im,ispin,ios) = this%X(V)(im,im,ispin,ios) + CNST(0.5)*this%orbsets(ios)%Ueff
       end do
     end do
   end do
@@ -293,13 +293,13 @@ subroutine X(compute_ACBNO_U)(this, st)
   type(lda_u_t), intent(inout)    :: this
   type(states_t),  intent(in)     :: st
   
-  integer :: ia, im, imp, impp, imppp, ispin1, ispin2, norbs
+  integer :: ios, im, imp, impp, imppp, ispin1, ispin2, norbs
   FLOAT   :: numU, numJ, denomU, denomJ, tmpU, tmpJ
 
   PUSH_SUB(compute_ACBNO_U)
 
-  do ia = 1, this%norbsets
-    norbs = this%orbsets(ia)%norbs
+  do ios = 1, this%norbsets
+    norbs = this%orbsets(ios)%norbs
     numU = M_ZERO
     numJ = M_ZERO
     denomU = M_ZERO
@@ -316,13 +316,13 @@ subroutine X(compute_ACBNO_U)(this, st)
         tmpJ = M_ZERO
         do ispin1 = 1, st%d%nspin
           do ispin2 = 1, st%d%nspin
-            tmpU = tmpU + this%X(n_alt)(im,imp,ispin1,ia)*this%X(n_alt)(impp,imppp,ispin2,ia)
+            tmpU = tmpU + this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin2,ios)
           end do
-          tmpJ = tmpJ + this%X(n_alt)(im,imp,ispin1,ia)*this%X(n_alt)(impp,imppp,ispin1,ia)
+          tmpJ = tmpJ + this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin1,ios)
         end do
         ! These are the numerator of the ACBN0 U and J
-        numU = numU + tmpU*this%coulomb(im,imp,impp,imppp,ia)
-        numJ = numJ + tmpJ*this%coulomb(im,imppp,impp,imp,ia) 
+        numU = numU + tmpU*this%coulomb(im,imp,impp,imppp,ios)
+        numJ = numJ + tmpJ*this%coulomb(im,imppp,impp,imp,ios) 
       end do
       end do
 
@@ -331,7 +331,7 @@ subroutine X(compute_ACBNO_U)(this, st)
       tmpJ = M_ZERO
       if(imp/=im) then
         do ispin1 = 1, st%d%nspin
-          tmpJ = tmpJ + this%X(n)(im,im,ispin1,ia)*this%X(n)(imp,imp,ispin1,ia)
+          tmpJ = tmpJ + this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin1,ios)
         end do
       end if
       denomJ = denomJ + tmpJ
@@ -343,7 +343,7 @@ subroutine X(compute_ACBNO_U)(this, st)
       do ispin1 = 1, st%d%nspin
         do ispin2 = 1, st%d%nspin
           if(ispin1 /= ispin2) then
-            tmpU = tmpU + this%X(n)(im,im,ispin1,ia)*this%X(n)(imp,imp,ispin2,ia)
+            tmpU = tmpU + this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin2,ios)
           end if
         end do
       end do
@@ -352,7 +352,7 @@ subroutine X(compute_ACBNO_U)(this, st)
     end do
     end do
 
-    this%orbsets(ia)%Ueff = numU/denomU - numJ/denomJ
+    this%orbsets(ios)%Ueff = numU/denomU - numJ/denomJ
 
   end do
 
@@ -367,7 +367,7 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
   type(states_t),   intent(in)  :: st
 
   integer :: ist, jst, kst, lst, ijst, klst
-  integer :: norbs, np_sphere, ia, ip
+  integer :: norbs, np_sphere, ios, ip
   FLOAT, allocatable :: tmp(:), vv(:), nn_sphere(:)
   type(orbital_t), pointer :: orbi, orbj, orbk, orbl
 
@@ -379,18 +379,18 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
   SAFE_ALLOCATE(vv(1:this%max_np))
   SAFE_ALLOCATE(tmp(1:this%max_np))
 
-  do ia = 1, this%norbsets
-    norbs = this%orbsets(ia)%norbs
+  do ios = 1, this%norbsets
+    norbs = this%orbsets(ios)%norbs
    
     ijst=0
     do ist = 1, norbs
-      orbi => this%orbsets(ia)%orbitals(ist) 
+      orbi => this%orbsets(ios)%orbitals(ist) 
       np_sphere = orbi%sphere%np
       
       do jst = 1, norbs
         if(jst > ist) cycle
         ijst=ijst+1
-        orbj => this%orbsets(ia)%orbitals(jst)
+        orbj => this%orbsets(ios)%orbitals(jst)
 
         nn_sphere(1:np_sphere)  = real(orbi%X(orbital_sphere)(1:np_sphere)) &
                           *real(orbj%X(orbital_sphere)(1:np_sphere))
@@ -399,30 +399,30 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
 
         klst=0
         do kst = 1, norbs
-          orbk => this%orbsets(ia)%orbitals(kst)
+          orbk => this%orbsets(ios)%orbitals(kst)
           do lst = 1, norbs
             if(lst > kst) cycle
             klst=klst+1
            if(klst > ijst) cycle
 
-            orbl => this%orbsets(ia)%orbitals(lst)
+            orbl => this%orbsets(ios)%orbitals(lst)
 
             do ip=1,np_sphere
              tmp(ip) = vv(ip)*real(orbl%X(orbital_sphere)(ip)) &
                              *real(orbk%X(orbital_sphere)(ip))
             end do
-            this%coulomb(ist,jst,kst,lst,ia) = dsm_integrate(mesh, orbl%sphere, tmp(1:np_sphere))
+            this%coulomb(ist,jst,kst,lst,ios) = dsm_integrate(mesh, orbl%sphere, tmp(1:np_sphere))
 
-            if(abs(this%coulomb(ist,jst,kst,lst,ia))<CNST(1.0e-12)) then
-              this%coulomb(ist,jst,kst,lst,ia) = M_ZERO
+            if(abs(this%coulomb(ist,jst,kst,lst,ios))<CNST(1.0e-12)) then
+              this%coulomb(ist,jst,kst,lst,ios) = M_ZERO
             else
-              this%coulomb(kst,lst,ist,jst,ia) = this%coulomb(ist,jst,kst,lst,ia)              
-              this%coulomb(jst,ist,lst,kst,ia) = this%coulomb(ist,jst,kst,lst,ia)
-              this%coulomb(lst,kst,jst,ist,ia) = this%coulomb(ist,jst,kst,lst,ia)
-              this%coulomb(jst,ist,kst,lst,ia) = this%coulomb(ist,jst,kst,lst,ia)
-              this%coulomb(lst,kst,ist,jst,ia) = this%coulomb(ist,jst,kst,lst,ia)              
-              this%coulomb(ist,jst,lst,kst,ia) = this%coulomb(ist,jst,kst,lst,ia)
-              this%coulomb(kst,lst,jst,ist,ia) = this%coulomb(ist,jst,kst,lst,ia)              
+              this%coulomb(kst,lst,ist,jst,ios) = this%coulomb(ist,jst,kst,lst,ios)              
+              this%coulomb(jst,ist,lst,kst,ios) = this%coulomb(ist,jst,kst,lst,ios)
+              this%coulomb(lst,kst,jst,ist,ios) = this%coulomb(ist,jst,kst,lst,ios)
+              this%coulomb(jst,ist,kst,lst,ios) = this%coulomb(ist,jst,kst,lst,ios)
+              this%coulomb(lst,kst,ist,jst,ios) = this%coulomb(ist,jst,kst,lst,ios)              
+              this%coulomb(ist,jst,lst,kst,ios) = this%coulomb(ist,jst,kst,lst,ios)
+              this%coulomb(kst,lst,jst,ist,ios) = this%coulomb(ist,jst,kst,lst,ios)              
             end if
           end do !lst
         end do !kst
@@ -459,11 +459,11 @@ end subroutine X(compute_coulomb_integrals)
 !   
 !   tmpstate(1:mesh%np, 1:this%gs_st%d%dim) = R_TOTYPE(M_ZERO)
 !   do ia = 1, geo%natoms
-!     do imp = 1, this%maxorb(ia)
-!       dot = X(mf_dotp)(mesh, this%X(basis)(1:mesh%np,imp,ispin,ia),psi(1:mesh%np,idim))
-!       do im = 1, this%maxorb(ia)
-!          call lalg_axpy(mesh%np, -this%X(V)(im,imp,ispin,ia)*dot, &
-!                 this%X(basis)(1:mesh%np,im,ispin,ia), hpsi(1:mesh%np, idim))
+!     do imp = 1, this%maxorb(ios)
+!       dot = X(mf_dotp)(mesh, this%X(basis)(1:mesh%np,imp,ispin,ios),psi(1:mesh%np,idim))
+!       do im = 1, this%maxorb(ios)
+!          call lalg_axpy(mesh%np, -this%X(V)(im,imp,ispin,ios)*dot, &
+!                 this%X(basis)(1:mesh%np,im,ispin,ios), hpsi(1:mesh%np, idim))
 !         
 !   do ist = 1, this%gs_st%nsti
 !     call states_get_state(this%gs_st, mesh, ist, ik, gspsi )
@@ -617,31 +617,31 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
 !  SAFE_ALLOCATE(this%norbs(1:geo%natoms))
 !  this%norbs = 0
 !  do ia = 1, geo%natoms
-!    hubbardl = species_hubbard_l(geo%atom(ia)%species)
+!    hubbardl = species_hubbard_l(geo%atom(ios)%species)
 !    if( hubbardl .eq. 0 ) cycle
-!    this%norbs(ia) = 0
-!    do iorb = 1, species_niwfs(geo%atom(ia)%species)
-!      call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
-!      call species_iwf_n(geo%atom(ia)%species, iorb, 1, nn )
+!    this%norbs(ios) = 0
+!    do iorb = 1, species_niwfs(geo%atom(ios)%species)
+!      call species_iwf_ilm(geo%atom(ios)%species, iorb, 1, ii, ll, mm)
+!      call species_iwf_n(geo%atom(ios)%species, iorb, 1, nn )
 !      print *, ia, ii, nn, ll, mm
-!      if(ll .eq. hubbardl ) this%norbs(ia) = this%norbs(ia) + 1
+!      if(ll .eq. hubbardl ) this%norbs(ios) = this%norbs(ios) + 1
 !    end do !iorb
 !  end do  !ia
 !  this%maxnorbs = maxval(this%norbs) 
   
 !  do ia = 1, geo%natoms
 !    write(message(1),'(a,i2,a,f8.5,a)')    'Atom ', ia, ' has a value of U of ',&
-!                            species_hubbard_u(geo%atom(ia)%species), ' Ha.'
+!                            species_hubbard_u(geo%atom(ios)%species), ' Ha.'
 !    call messages_info(1)
 !
-!    write(message(1),'(a,i2,a, i3)')    'Found ', this%norbs(ia), ' orbitals for atom ', ia
+!    write(message(1),'(a,i2,a, i3)')    'Found ', this%norbs(ios), ' orbitals for atom ', ia
 !     call messages_info(1)
 !  end do
 
   do iorbset = 1, this%norbsets
     write(message(1),'(a,i2,a,f8.5,a)')    'Orbital set ', iorbset, ' has a value of U of ',&
                          this%orbsets(iorbset)%Ueff   , ' Ha'
-    write(message(1),'(a,i2,a)')    ' and', this%orbsets(iorbset)%norbs, ' orbitals.'
+    write(message(2),'(a,i2,a)')    ' and', this%orbsets(iorbset)%norbs, ' orbitals.'
      call messages_info(2)
   end do 
  
@@ -650,35 +650,35 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
   !this%Ueff(1:geo%natoms) = M_ZERO
 
 !  do ia = 1, geo%natoms
-!    hubbardl = species_hubbard_l(geo%atom(ia)%species)
-!    this%Ueff(ia) = species_hubbard_u(geo%atom(ia)%species)
+!    hubbardl = species_hubbard_l(geo%atom(ios)%species)
+!    this%Ueff(ios) = species_hubbard_u(geo%atom(ios)%species)
 !    if( hubbardl .eq. M_ZERO ) cycle
 ! 
 !    norb = 0
-!    do iorb = 1, species_niwfs(geo%atom(ia)%species)
-!      call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
+!    do iorb = 1, species_niwfs(geo%atom(ios)%species)
+!      call species_iwf_ilm(geo%atom(ios)%species, iorb, 1, ii, ll, mm)
 !      if(ll .eq. hubbardl ) then 
 !        norb = norb + 1
 !        ! We obtain the orbital
-!        call X(get_atomic_orbital)(geo, mesh, ia, iorb, 1, this%orbitals(norb,ia), this%truncation, this%orbitals_threshold) 
+!        call X(get_atomic_orbital)(geo, mesh, ia, iorb, 1, this%orbitals(norb,ios), this%truncation, this%orbitals_threshold) 
 !        ! We have to normalize the orbitals, 
 !        ! in case the orbitals that comes out of the pseudo are not properly normalised
-!        norm = X(sm_nrm2)(this%orbitals(norb,ia)%sphere, this%orbitals(norb,ia)%X(orbital_sphere)(1:this%orbitals(norb,ia)%sphere%np))
-!        this%orbitals(norb,ia)%X(orbital_sphere)(1:this%orbitals(norb,ia)%sphere%np) =  &
-!                this%orbitals(norb,ia)%X(orbital_sphere)(1:this%orbitals(norb,ia)%sphere%np) /sqrt(norm)
+!        norm = X(sm_nrm2)(this%orbitals(norb,ios)%sphere, this%orbitals(norb,ios)%X(orbital_sphere)(1:this%orbitals(norb,ios)%sphere%np))
+!        this%orbitals(norb,ios)%X(orbital_sphere)(1:this%orbitals(norb,ios)%sphere%np) =  &
+!                this%orbitals(norb,ios)%X(orbital_sphere)(1:this%orbitals(norb,ios)%sphere%np) /sqrt(norm)
 
 !        ! In case of complex wavefunction, we allocate the array for the phase correction
 !  #ifdef R_TCOMPLEX
-!        SAFE_ALLOCATE(this%orbitals(norb,ia)%phase(1:this%orbitals(norb,ia)%sphere%np, st%d%kpt%start:st%d%kpt%end))
-!        this%orbitals(norb,ia)%phase(:,:) = M_ZERO
+!        SAFE_ALLOCATE(this%orbitals(norb,ios)%phase(1:this%orbitals(norb,ios)%sphere%np, st%d%kpt%start:st%d%kpt%end))
+!        this%orbitals(norb,ios)%phase(:,:) = M_ZERO
 !  #endif
 !        ! We store the angular momentum of the orbital
-!        this%orbitals(norb,ia)%ll = ll
+!        this%orbitals(norb,ios)%ll = ll
 !
 !        ! We need to know the maximum number of points in order to allocate a temporary array
 !        ! to apply the phase in lda_u_apply
-!        if(this%orbitals(norb,ia)%sphere%np > this%max_np) &
-!          this%max_np = this%orbitals(norb,ia)%sphere%np
+!        if(this%orbitals(norb,ios)%sphere%np > this%max_np) &
+!          this%max_np = this%orbitals(norb,ios)%sphere%np
 !      endif
 !    end do
 !  end do

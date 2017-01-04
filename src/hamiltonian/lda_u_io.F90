@@ -43,16 +43,18 @@ module lda_u_io_oct_m
        lda_u_write_effectiveU,          &
        lda_u_write_U
 
+  character(len=1), parameter :: &
+    l_notation(0:3) = (/ 's', 'p', 'd', 'f' /)
+
 contains
 
  !> Prints the occupation matrices at the end of the scf calculation.
- subroutine lda_u_write_occupation_matrices(dir, this, geo, st)
+ subroutine lda_u_write_occupation_matrices(dir, this, st)
    type(lda_u_t),     intent(in)    :: this
    character(len=*),  intent(in)    :: dir
-   type(geometry_t),  intent(in)    :: geo
    type(states_t),    intent(in)    :: st
 
-   integer :: iunit, ia, ispin, im, imp
+   integer :: iunit, ios, ispin, im, imp
    FLOAT :: hubbardl
  
    PUSH_SUB(lda_u_write_occupation_matrices)
@@ -61,22 +63,22 @@ contains
    iunit = io_open(trim(dir) // "/occ_matrices", action='write')
    write(iunit,'(a)') ' Occupation matrices '
 
-   do ia = 1, this%norbsets
+   do ios = 1, this%norbsets
      do ispin = 1,st%d%nspin 
-        write(iunit,'(a, i4, a, i4)') ' Orbital set ', ia, ' spin ', ispin
-        do im = 1, this%orbsets(ia)%norbs
+        write(iunit,'(a, i4, a, i4)') ' Orbital set ', ios, ' spin ', ispin
+        do im = 1, this%orbsets(ios)%norbs
           write(iunit,'(1x)',advance='no') 
 
           if (states_are_real(st)) then
-            do imp = 1, this%orbsets(ia)%norbs-1
-              write(iunit,'(f14.8)',advance='no') this%dn(im,imp,ispin,ia)  
+            do imp = 1, this%orbsets(ios)%norbs-1
+              write(iunit,'(f14.8)',advance='no') this%dn(im,imp,ispin,ios)  
             end do
-            write(iunit,'(f14.8)') this%dn(im,this%orbsets(ia)%norbs,ispin,ia)
+            write(iunit,'(f14.8)') this%dn(im,this%orbsets(ios)%norbs,ispin,ios)
           else
-            do imp = 1, this%orbsets(ia)%norbs-1
-              write(iunit,'(f14.8,f14.8)',advance='no') this%zn(im,imp,ispin,ia)
+            do imp = 1, this%orbsets(ios)%norbs-1
+              write(iunit,'(f14.8,f14.8)',advance='no') this%zn(im,imp,ispin,ios)
             end do
-            write(iunit,'(f14.8,f14.8)') this%zn(im,this%orbsets(ia)%norbs,ispin,ia) 
+            write(iunit,'(f14.8,f14.8)') this%zn(im,this%orbsets(ios)%norbs,ispin,ios) 
           end if
         end do
      end do !ispin
@@ -89,10 +91,9 @@ contains
  end subroutine lda_u_write_occupation_matrices
 
  !--------------------------------------------------------- 
- subroutine lda_u_write_effectiveU(dir, this, geo, st)
+ subroutine lda_u_write_effectiveU(dir, this, st)
    type(lda_u_t),     intent(in)    :: this
    character(len=*),  intent(in)    :: dir
-   type(geometry_t),  intent(in)    :: geo
    type(states_t),    intent(in)    :: st
 
    integer :: iunit
@@ -101,7 +102,7 @@ contains
 
    if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
      iunit = io_open(trim(dir) // "/effectiveU", action='write')
-     call lda_u_write_U(this, iunit, geo)
+     call lda_u_write_U(this, iunit)
      call io_close(iunit)
    end if
 
@@ -110,12 +111,11 @@ contains
 
 
  !--------------------------------------------------------- 
- subroutine lda_u_write_U(this, iunit, geo)
+ subroutine lda_u_write_U(this, iunit)
    type(lda_u_t),     intent(in) :: this
    integer,           intent(in) :: iunit
-   type(geometry_t),  intent(in) :: geo
 
-   integer :: ia
+   integer :: ios
 
    PUSH_SUB(lda_u_write_U)
   
@@ -123,10 +123,15 @@ contains
 
      write(iunit, '(a,a,a,f7.3,a)') 'Effective Hubbard U [', &
        trim(units_abbrev(units_out%energy)),']:'
-     write(iunit,'(a,6x,14x,a)') ' Ion','U'
-     do ia = 1, this%norbsets
-        write(iunit,'(i4,a10,f15.6)') ia, trim(species_label(this%orbsets(ia)%spec)), &
-                                            this%orbsets(ia)%Ueff  
+     write(iunit,'(a,6x,14x,a)') ' Orbital',  'U'
+     do ios = 1, this%norbsets
+      if(this%orbsets(ios)%nn /= 0 ) then
+        write(iunit,'(i4,a10, 2x, i1, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                      this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), this%orbsets(ios)%Ueff  
+      else
+        write(iunit,'(i4,a10, 3x, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                              l_notation(this%orbsets(ios)%ll), this%orbsets(ios)%Ueff
+      end if
      end do
    end if
  

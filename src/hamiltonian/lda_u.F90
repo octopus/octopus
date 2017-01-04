@@ -98,14 +98,10 @@ module lda_u_oct_m
     FLOAT, pointer           :: coulomb(:,:,:,:,:) !>Coulomb integrals for all the system
                                                    !> (for the ACBN0 functional) 
  
-!    type(orbital_t), pointer :: orbitals(:,:)    !> All the orbitals of the system
     type(orbital_set_t), pointer :: orbsets(:)   !> All the orbital setss of the system
-!    FLOAT, pointer           :: Ueff(:)       !> The effective U of the simplified rotational invariant form
 
-!    integer             :: natoms             !> Number of atoms (copied from geometry_t)
     integer             :: norbsets           !> Number of orbital sets 
     integer             :: nspins
-!    integer, pointer    :: norbs(:)           !> Number of orbitals
     integer             :: maxnorbs           !> Maximal number of orbitals for all the atoms
     integer             :: max_np             !> Maximum number of points in all orbitals submesh spheres 
  
@@ -201,7 +197,6 @@ contains
   nullify(this%zn_alt)
   nullify(this%dV)
   nullify(this%zV)
- ! nullify(this%Ueff)
   nullify(this%coulomb) 
   nullify(this%renorm_occ)
 
@@ -288,7 +283,7 @@ contains
    implicit none
    type(lda_u_t), intent(inout) :: this
 
-   integer :: iat, ispin, iorb
+   integer :: ios, ispin, iorb
   
    PUSH_SUB(lda_u_end)  
 
@@ -300,25 +295,22 @@ contains
    SAFE_DEALLOCATE_P(this%zn_alt)
    SAFE_DEALLOCATE_P(this%dV)
    SAFE_DEALLOCATE_P(this%zV) 
-  ! SAFE_DEALLOCATE_P(this%Ueff)
    SAFE_DEALLOCATE_P(this%coulomb)
    SAFE_DEALLOCATE_P(this%renorm_occ)
 
-   do iat = 1, this%norbsets
-      do iorb = 1, this%orbsets(iat)%norbs
-         SAFE_DEALLOCATE_P(this%orbsets(iat)%orbitals(iorb)%dorbital_sphere)
-         SAFE_DEALLOCATE_P(this%orbsets(iat)%orbitals(iorb)%zorbital_sphere)
-         SAFE_DEALLOCATE_P(this%orbsets(iat)%orbitals(iorb)%phase)
-         call submesh_end(this%orbsets(iat)%orbitals(iorb)%sphere)
+   do ios = 1, this%norbsets
+      do iorb = 1, this%orbsets(ios)%norbs
+         SAFE_DEALLOCATE_P(this%orbsets(ios)%orbitals(iorb)%dorbital_sphere)
+         SAFE_DEALLOCATE_P(this%orbsets(ios)%orbitals(iorb)%zorbital_sphere)
+         SAFE_DEALLOCATE_P(this%orbsets(ios)%orbitals(iorb)%phase)
+         call submesh_end(this%orbsets(ios)%orbitals(iorb)%sphere)
      end do 
-     SAFE_DEALLOCATE_P(this%orbsets(iat)%orbitals)
+     SAFE_DEALLOCATE_P(this%orbsets(ios)%orbitals)
     ! SAFE_DEALLOCATE_P(this%orbsets(iat)%phase)
     ! call submesh_end(this%orbsets(iat)%sphere)
-     nullify(this%orbsets(iat)%spec)
+     nullify(this%orbsets(ios)%spec)
    end do
 
-  ! SAFE_DEALLOCATE_P(this%norbs)
-  ! SAFE_DEALLOCATE_P(this%orbitals)
    SAFE_DEALLOCATE_P(this%orbsets)
 
    POP_SUB(lda_u_end)
@@ -375,14 +367,14 @@ contains
    FLOAT, optional,  allocatable, intent(in)    :: vec_pot(:) !< (sb%dim)
    FLOAT, optional,  allocatable, intent(in)    :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)
 
-   integer :: iat, ispin, iorb
+   integer :: ios, ispin, iorb
  
    PUSH_SUB(lda_u_build_phase_correction)
 
  !  do iat = 1, this%natoms
-   do iat = 1, this%norbsets
-     do iorb = 1, this%orbsets(iat)%norbs
-       call  orbital_update_phase_correction(this%orbsets(iat)%orbitals(iorb), sb, std, vec_pot, vec_pot_var)
+   do ios = 1, this%norbsets
+     do iorb = 1, this%orbsets(ios)%norbs
+       call  orbital_update_phase_correction(this%orbsets(ios)%orbitals(iorb), sb, std, vec_pot, vec_pot_var)
      end do
    end do
   

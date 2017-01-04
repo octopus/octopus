@@ -1075,7 +1075,7 @@ contains
         end if
 
         if(hm%lda_u%apply .and. hm%lda_u%useACBN0) then
-          call lda_u_write_U(hm%lda_u, stdout, geo)
+          call lda_u_write_U(hm%lda_u, stdout)
         end if
 
         write(message(1),'(a)') ''
@@ -1178,7 +1178,7 @@ contains
       end if
 
       if(hm%lda_u%apply .and. hm%lda_u%useACBN0) then
-          call lda_u_write_U(hm%lda_u, iunit, geo)
+          call lda_u_write_U(hm%lda_u, iunit)
           if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
         end if 
 
