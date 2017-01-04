@@ -61,25 +61,22 @@ contains
    iunit = io_open(trim(dir) // "/occ_matrices", action='write')
    write(iunit,'(a)') ' Occupation matrices '
 
-   do ia = 1, this%natoms
-     hubbardl = species_hubbard_l(geo%atom(ia)%species)
-     if( hubbardl .eq. M_ZERO ) cycle
-
+   do ia = 1, this%norbsets
      do ispin = 1,st%d%nspin 
-        write(iunit,'(a, i4, a, i4)') ' Ion ', ia, ' spin ', ispin
-        do im = 1, this%norbs(ia)
+        write(iunit,'(a, i4, a, i4)') ' Orbital set ', ia, ' spin ', ispin
+        do im = 1, this%orbsets(ia)%norbs
           write(iunit,'(1x)',advance='no') 
 
           if (states_are_real(st)) then
-            do imp = 1, this%norbs(ia)-1
+            do imp = 1, this%orbsets(ia)%norbs-1
               write(iunit,'(f14.8)',advance='no') this%dn(im,imp,ispin,ia)  
             end do
-            write(iunit,'(f14.8)') this%dn(im,this%norbs(ia),ispin,ia)
+            write(iunit,'(f14.8)') this%dn(im,this%orbsets(ia)%norbs,ispin,ia)
           else
-            do imp = 1, this%norbs(ia)-1
+            do imp = 1, this%orbsets(ia)%norbs-1
               write(iunit,'(f14.8,f14.8)',advance='no') this%zn(im,imp,ispin,ia)
             end do
-            write(iunit,'(f14.8,f14.8)') this%zn(im,this%norbs(ia),ispin,ia) 
+            write(iunit,'(f14.8,f14.8)') this%zn(im,this%orbsets(ia)%norbs,ispin,ia) 
           end if
         end do
      end do !ispin
@@ -127,8 +124,9 @@ contains
      write(iunit, '(a,a,a,f7.3,a)') 'Effective Hubbard U [', &
        trim(units_abbrev(units_out%energy)),']:'
      write(iunit,'(a,6x,14x,a)') ' Ion','U'
-     do ia = 1, this%natoms
-        write(iunit,'(i4,a10,f15.6)') ia, trim(species_label(geo%atom(ia)%species)), this%Ueff(ia)  
+     do ia = 1, this%norbsets
+        write(iunit,'(i4,a10,f15.6)') ia, trim(species_label(this%orbsets(ia)%spec)), &
+                                            this%orbsets(ia)%Ueff  
      end do
    end if
  
