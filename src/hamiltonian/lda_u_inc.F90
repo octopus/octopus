@@ -305,60 +305,83 @@ subroutine X(compute_ACBNO_U)(this, st)
     denomU = M_ZERO
     denomJ = M_ZERO
 
-    do im = 1, norbs
-    do imp = 1,norbs
-      do impp = 1, norbs
-      do imppp = 1, norbs
-        ! We first compute the terms
-        ! sum_{alpha,beta} P^alpha_{mmp}P^beta_{mpp,mppp}  
-        ! sum_{alpha} P^alpha_{mmp}P^alpha_{mpp,mppp}
-        tmpU = M_ZERO
+    if(norbs > 1) then
+
+      do im = 1, norbs
+      do imp = 1,norbs
+        do impp = 1, norbs
+        do imppp = 1, norbs
+          ! We first compute the terms
+          ! sum_{alpha,beta} P^alpha_{mmp}P^beta_{mpp,mppp}  
+          ! sum_{alpha} P^alpha_{mmp}P^alpha_{mpp,mppp}
+          tmpU = M_ZERO
+          tmpJ = M_ZERO
+          do ispin1 = 1, st%d%nspin
+            do ispin2 = 1, st%d%nspin
+              tmpU = tmpU + this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin2,ios)
+            end do
+            tmpJ = tmpJ + this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin1,ios)
+          end do
+          ! These are the numerator of the ACBN0 U and J
+          numU = numU + tmpU*this%coulomb(im,imp,impp,imppp,ios)
+          numJ = numJ + tmpJ*this%coulomb(im,imppp,impp,imp,ios) 
+        end do
+        end do
+
+        ! We compute the term
+        ! sum_{alpha} sum_{m,mp/=m} N^alpha_{m}N^alpha_{mp}
         tmpJ = M_ZERO
+        if(imp/=im) then
+          do ispin1 = 1, st%d%nspin
+            tmpJ = tmpJ + this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin1,ios)
+          end do
+        end if
+        denomJ = denomJ + tmpJ
+        denomU = denomU + tmpJ
+
+        ! We compute the term
+        ! sum_{alpha,beta} sum_{m,mp} N^alpha_{m}N^beta_{mp}
+        tmpU = M_ZERO
         do ispin1 = 1, st%d%nspin
           do ispin2 = 1, st%d%nspin
-            tmpU = tmpU + this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin2,ios)
+            if(ispin1 /= ispin2) then
+              tmpU = tmpU + this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin2,ios)
+            end if
           end do
-          tmpJ = tmpJ + this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin1,ios)
         end do
-        ! These are the numerator of the ACBN0 U and J
-        numU = numU + tmpU*this%coulomb(im,imp,impp,imppp,ios)
-        numJ = numJ + tmpJ*this%coulomb(im,imppp,impp,imp,ios) 
+        denomU = denomU + tmpU
+ 
       end do
       end do
 
-      ! We compute the term
-      ! sum_{alpha} sum_{m,mp/=m} N^alpha_{m}N^alpha_{mp}
-      tmpJ = M_ZERO
-      if(imp/=im) then
-        do ispin1 = 1, st%d%nspin
-          tmpJ = tmpJ + this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin1,ios)
-        end do
-      end if
-      denomJ = denomJ + tmpJ
-      denomU = denomU + tmpJ
-
-      ! We compute the term
-      ! sum_{alpha,beta} sum_{m,mp} N^alpha_{m}N^beta_{mp}
-      tmpU = M_ZERO
-      do ispin1 = 1, st%d%nspin
-        do ispin2 = 1, st%d%nspin
-          if(ispin1 /= ispin2) then
-            tmpU = tmpU + this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin2,ios)
-          end if
-        end do
-      end do
-      denomU = denomU + tmpU
-
-    end do
-    end do
-
-    !This is the case for s orbitals
-    if(denomJ /= 0) then
       this%orbsets(ios)%Ueff = numU/denomU - numJ/denomJ
-    else
-      this%orbsets(ios)%Ueff = numU/denomU
-    end if
-   
+ 
+  else !In the case of s orbitals, the expression is different
+    ! sum_{alpha/=beta} P^alpha_{mmp}P^beta_{mpp,mppp}  
+    tmpU = M_ZERO
+    do ispin1 = 1, st%d%nspin
+      do ispin2 = 1, st%d%nspin
+        if(ispin1 /= ispin2) then
+          tmpU = tmpU + this%X(n_alt)(1,1,ispin1,ios)*this%X(n_alt)(1,1,ispin2,ios)
+        end if
+      end do
+    end do
+    ! These are the numerator of the ACBN0 U
+    numU = tmpU*this%coulomb(1,1,1,1,ios)
+
+    ! We compute the term
+    ! sum_{alpha,beta} sum_{m,mp} N^alpha_{m}N^beta_{mp}
+    denomU = M_ZERO
+    do ispin1 = 1, st%d%nspin
+      do ispin2 = 1, st%d%nspin
+        if(ispin1 /= ispin2) then
+          denomU = denomU + this%X(n)(1,1,ispin1,ios)*this%X(n)(1,1,ispin2,ios)
+        end if
+      end do
+    end do
+
+   this%orbsets(ios)%Ueff = numU/denomU
+  end if
   end do
 
   POP_SUB(compute_ACBNO_U)  
