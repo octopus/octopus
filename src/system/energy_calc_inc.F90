@@ -182,8 +182,6 @@ subroutine X(v_resp_calc)(st, gr, mu, d, vresp)
       do ist = 1, st%group%psib(ib, iq)%nst           !Sum over the states of the block
         if(st%eigenval(st%group%psib(ib,iq)%states(ist)%ist,1)<mu) then !We do not calculate weight if mu < epsilon(ist,1)
           psi => st%group%psib(ib, iq)%states(ist)%X(psi)         !Point to the ist state of the ib block
-          !write(*,*) "mu =", mu
-          !write(*,*) "eigenval =", st%eigenval
           weight = Kx*st%d%kweights(iq)*occ(st%group%psib(ib,iq)%states(ist)%ist, 1)&
                         *sqrt(mu-st%eigenval(st%group%psib(ib,iq)%states(ist)%ist,1))
           write(*,*) weight
@@ -196,7 +194,6 @@ subroutine X(v_resp_calc)(st, gr, mu, d, vresp)
     end do
   end do
 
-  !write(*,*) "vresp(100) =", vresp(100,1)
 end subroutine X(v_resp_calc)
 
 
