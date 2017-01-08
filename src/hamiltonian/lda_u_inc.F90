@@ -54,6 +54,8 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
       ! We first compute <phi m | psi> for all orbitals of the atom
       !
       os => this%orbsets(ios)
+      if(os%Ueff == M_ZERO ) cycle
+
       do im = 1, os%norbs
         !If we need to add the phase, we explicitly do the operation using the sphere
         !This does not change anything if the sphere occupies the full mesh or not
@@ -357,30 +359,34 @@ subroutine X(compute_ACBNO_U)(this, st)
       this%orbsets(ios)%Ueff = numU/denomU - numJ/denomJ
  
   else !In the case of s orbitals, the expression is different
-    ! sum_{alpha/=beta} P^alpha_{mmp}P^beta_{mpp,mppp}  
-    tmpU = M_ZERO
-    do ispin1 = 1, st%d%nspin
-      do ispin2 = 1, st%d%nspin
-        if(ispin1 /= ispin2) then
-          tmpU = tmpU + this%X(n_alt)(1,1,ispin1,ios)*this%X(n_alt)(1,1,ispin2,ios)
-        end if
+    if(st%d%nspin > 1) then
+      ! sum_{alpha/=beta} P^alpha_{mmp}P^beta_{mpp,mppp}  
+      tmpU = M_ZERO
+      do ispin1 = 1, st%d%nspin
+        do ispin2 = 1, st%d%nspin
+          if(ispin1 /= ispin2) then
+            tmpU = tmpU + this%X(n_alt)(1,1,ispin1,ios)*this%X(n_alt)(1,1,ispin2,ios)
+          end if
+        end do
       end do
-    end do
-    ! These are the numerator of the ACBN0 U
-    numU = tmpU*this%coulomb(1,1,1,1,ios)
+      ! These are the numerator of the ACBN0 U
+      numU = tmpU*this%coulomb(1,1,1,1,ios)
 
-    ! We compute the term
-    ! sum_{alpha,beta} sum_{m,mp} N^alpha_{m}N^beta_{mp}
-    denomU = M_ZERO
-    do ispin1 = 1, st%d%nspin
-      do ispin2 = 1, st%d%nspin
-        if(ispin1 /= ispin2) then
-          denomU = denomU + this%X(n)(1,1,ispin1,ios)*this%X(n)(1,1,ispin2,ios)
-        end if
+      ! We compute the term
+      ! sum_{alpha,beta} sum_{m,mp} N^alpha_{m}N^beta_{mp}
+      denomU = M_ZERO
+      do ispin1 = 1, st%d%nspin
+        do ispin2 = 1, st%d%nspin
+          if(ispin1 /= ispin2) then
+            denomU = denomU + this%X(n)(1,1,ispin1,ios)*this%X(n)(1,1,ispin2,ios)
+          end if
+        end do
       end do
-    end do
 
-   this%orbsets(ios)%Ueff = numU/denomU
+     this%orbsets(ios)%Ueff = numU/denomU
+   else
+     this%orbsets(ios)%Ueff = M_ZERO
+   end if
   end if
   end do
 
@@ -414,6 +420,8 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
     do ist = 1, norbs
       orbi => this%orbsets(ios)%orbitals(ist) 
       np_sphere = orbi%sphere%np
+
+      if( st%d%nspin == 1 .and. np_sphere == 1 ) cycle
       
       do jst = 1, norbs
         if(jst > ist) cycle
