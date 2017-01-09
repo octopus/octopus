@@ -47,6 +47,8 @@ module submesh_oct_m
     submesh_get_inv,             &
     dsm_integrate,               &
     zsm_integrate,               &
+    dsm_integrate_frommesh,      &
+    zsm_integrate_frommesh,      & 
     dsm_nrm2,                    &
     zsm_nrm2,                    &
     submesh_add_to_mesh,         &

@@ -6,9 +6,6 @@ BoxShape = parallelepiped
 
 ExperimentalFeatures = yes
 
-#Smearing = 0.01
-#SmearingFunction = fermi_dirac
-
 EigenSolver = rmmdiis
 
 a = 7.8809
@@ -68,9 +65,3 @@ ExtraStates = 7
 OrbitalsTruncationMethod = box
 OutputLDA_U = occupation_matrices + effectiveU
 UseACBN0Functional = yes
-
-Debug = trace
-
-%GaugeVectorField
-  10 | 0 | 0
-%

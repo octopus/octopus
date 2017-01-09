@@ -20,9 +20,9 @@ match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -208.2
 match ; Fermi energy       ; GREPFIELD(static/info, 'Fermi energy =', 4); 0.415060 
 match ; Total Magnetic Moment ; GREPFIELD(static/info, 'mz = ', 3);      -0.000273 
 match ; Local Magnetic Moment (Ni1) ; GREPFIELD(static/info, '1        Ni', 3);  3.278586 
-match ; Local Magnetic Moment (Ni2) ; GREPFIELD(static/info, '2        Ni', 3); -1.971463 
-match ; Local Magnetic Moment (O1) ;  GREPFIELD(static/info, '3         O', 3);  0.004550 
-match ; Local Magnetic Moment (O2) ;  GREPFIELD(static/info, '4         O', 3); -0.004488 
+match ; Local Magnetic Moment (Ni2) ; GREPFIELD(static/info, '2        Ni', 3); -3.278837
+match ; Local Magnetic Moment (O1) ;  GREPFIELD(static/info, '3         O', 3);  0.0000 
+match ; Local Magnetic Moment (O2) ;  GREPFIELD(static/info, '4         O', 3);  0.0000 
 
 match ; k-point 1 (x) ; GREPFIELD(static/info, '#k =   1', 7) ; 0.000000 
 match ; k-point 1 (y) ; GREPFIELD(static/info, '#k =   1', 8) ; 0.000000
