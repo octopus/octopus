@@ -25,6 +25,7 @@ module unocc_oct_m
   use output_oct_m
   use hamiltonian_oct_m
   use io_oct_m
+  use kpoints_oct_m
   use lcao_oct_m
   use lda_u_oct_m
   use mesh_oct_m
@@ -65,7 +66,7 @@ contains
     character(len=50) :: str
     character(len=10) :: dirname
     type(restart_t) :: restart_load_unocc, restart_load_gs, restart_dump
-    logical :: write_density
+    logical :: write_density, bandstructure_mode
 
     PUSH_SUB(unocc_run)
 
@@ -92,6 +93,13 @@ contains
     !% It will be enabled automatically if only occupied states are being calculated.
     !%End
     call parse_variable('UnoccShowOccStates', .false., showoccstates)
+
+    bandstructure_mode = .false.
+    if(simul_box_is_periodic(sys%gr%sb).and. &
+          kpoints_get_kpoint_method(sys%gr%sb%kpoints) == KPOINTS_PATH) then
+      bandstructure_mode = .true.
+      
+    end if
 
     SAFE_ALLOCATE(occ_states(1:sys%st%d%nik))
     do ik = 1, sys%st%d%nik
@@ -214,13 +222,23 @@ contains
 
     if(showoccstates) showstart = 1
 
-    ! Restart dump should be initialized after restart_load, as the mesh might have changed
-    call restart_init(restart_dump, RESTART_UNOCC, RESTART_TYPE_DUMP, sys%st%dom_st_kpt_mpi_grp, &
+    ! In the case of someone using KPointsPath, the code assume that this is only for plotting a 
+    ! bandstructure. This mode ensure that no restart information will be written for the new grid
+    if(bandstructure_mode) then
+      message(1) = "Info: The code will run in band structure mode."
+      message(2) = "      No restart information will be printed."
+      call messages_info(2)
+    end if
+
+    if(.not. bandstructure_mode) then
+      ! Restart dump should be initialized after restart_load, as the mesh might have changed
+      call restart_init(restart_dump, RESTART_UNOCC, RESTART_TYPE_DUMP, sys%st%dom_st_kpt_mpi_grp, &
                       ierr, mesh=sys%gr%mesh)
 
-    ! make sure the density is defined on the same mesh as the wavefunctions that will be written
-    if(write_density) &
-      call states_dump_rho(restart_dump, sys%st, sys%gr, ierr_rho)
+      ! make sure the density is defined on the same mesh as the wavefunctions that will be written
+      if(write_density) &
+        call states_dump_rho(restart_dump, sys%st, sys%gr, ierr_rho)
+   end if
 
     message(1) = "Info: Starting calculation of unoccupied states."
     call messages_info(1)
@@ -264,13 +282,15 @@ contains
       end if
 
       forced_finish = clean_stop(sys%mc%master_comm)
-      
-      ! write restart information.
-      if(converged .or. (modulo(iter, sys%outp%restart_write_interval) == 0) .or. iter == max_iter .or. forced_finish) then
-        call states_dump(restart_dump, sys%st, sys%gr, ierr, iter=iter)
-        if(ierr /= 0) then
-          message(1) = "Unable to write states wavefunctions."
-          call messages_warning(1)
+     
+      if(.not. bandstructure_mode) then
+        ! write restart information.
+        if(converged .or. (modulo(iter, sys%outp%restart_write_interval) == 0) .or. iter == max_iter .or. forced_finish) then
+          call states_dump(restart_dump, sys%st, sys%gr, ierr, iter=iter)
+          if(ierr /= 0) then
+            message(1) = "Unable to write states wavefunctions."
+            call messages_warning(1)
+          end if 
         end if
       end if
 
@@ -282,7 +302,8 @@ contains
       if(converged .or. forced_finish) exit
     end do
 
-    call restart_end(restart_dump)
+    if(.not. bandstructure_mode) &
+      call restart_end(restart_dump)
 
     if(any(eigens%converged(:) < occ_states(:))) then
       write(message(1),'(a)') 'Some of the occupied states are not fully converged!'
@@ -296,8 +317,11 @@ contains
       call messages_warning(1)
     end if
 
-    if(simul_box_is_periodic(sys%gr%sb).and. sys%st%d%nik > sys%st%d%nspin) &
+    if(simul_box_is_periodic(sys%gr%sb).and. sys%st%d%nik > sys%st%d%nspin) then
       call states_write_bands(STATIC_DIR, sys%st%nst, sys%st, sys%gr%sb)
+      if(kpoints_get_kpoint_method(sys%gr%sb%kpoints) == KPOINTS_PATH) &
+        call states_write_bandstructure(STATIC_DIR, sys%st%nst, sys%st, sys%gr%sb)
+    end if
 
     call output_all(sys%outp, sys%gr, sys%geo, sys%st, hm, sys%ks, STATIC_DIR)
 
