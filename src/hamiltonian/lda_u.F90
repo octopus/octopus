@@ -23,6 +23,7 @@ module lda_u_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use comm_oct_m
+  use distributed_oct_m
   use energy_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -34,6 +35,7 @@ module lda_u_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use multicomm_oct_m
   use mpi_oct_m
   use parser_oct_m
   use periodic_copy_oct_m
@@ -55,6 +57,7 @@ module lda_u_oct_m
 
   public ::                             &
        lda_u_t,                         &
+       lda_u_nullify,                   &
        lda_u_init,                      &
        dlda_u_apply,                    &
        zlda_u_apply,                    &
@@ -111,15 +114,43 @@ module lda_u_oct_m
     logical             :: useAllOrbitals     !> Do we use all atomic orbitals possible
     logical             :: freeze_occ         !> Occupation matrices are not recomputed during TD evolution
     logical             :: freeze_u           !> U is not recomputed during TD evolution
+
+    type(distributed_t) :: orbs_dist
   end type lda_u_t
 
 contains
 
- subroutine lda_u_init(this, gr, geo, st)
+ subroutine lda_u_nullify(this)
+  type(lda_u_t),             intent(inout) :: this
+
+  PUSH_SUB(lda_u_nullify)
+
+  this%apply = .false.
+  this%norbsets = 0
+  this%max_np = 0
+  this%maxnorbs = 0
+
+  nullify(this%dn)
+  nullify(this%zn)
+  nullify(this%dn_alt)
+  nullify(this%zn_alt)
+  nullify(this%dV)
+  nullify(this%zV)
+  nullify(this%coulomb)
+  nullify(this%renorm_occ)
+
+  call distributed_nullify(this%orbs_dist, 0)
+
+  POP_SUB(lda_u_nullify)
+
+ end subroutine lda_u_nullify
+
+ subroutine lda_u_init(this, gr, geo, st, mc)
   type(lda_u_t),             intent(inout) :: this
   type(grid_t),              intent(in)    :: gr
   type(geometry_t), target,  intent(in)    :: geo
   type(states_t),            intent(in)    :: st
+  type(multicomm_t),         intent(in)    :: mc
 
   integer :: maxorbs, iat, ispin, iorb
   real(8) :: mem, coef
@@ -193,15 +224,6 @@ contains
     if(this%useAllOrbitals) call messages_experimental("UseAllAtomicOrbitals")
   end if
 
-  nullify(this%dn)
-  nullify(this%zn)
-  nullify(this%dn_alt)
-  nullify(this%zn_alt)
-  nullify(this%dV)
-  nullify(this%zV)
-  nullify(this%coulomb) 
-  nullify(this%renorm_occ)
-
   this%nspins = st%d%nspin
   this%max_np = 0
  
@@ -256,12 +278,9 @@ contains
   end if
   SAFE_ALLOCATE(this%renorm_occ(0:5,0:3,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end))
   this%renorm_occ(0:5,0:3,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end) = M_ZERO 
-  !In case we use the ab-initio scheme, we need to allocate extra resources
-  if(this%useACBN0) then
-    SAFE_ALLOCATE(this%coulomb(1:maxorbs,1:maxorbs,1:maxorbs,1:maxorbs,1:this%norbsets))
-    this%coulomb(1:maxorbs,1:maxorbs,1:maxorbs,1:maxorbs,1:this%norbsets) = M_ZERO
-  end if
 
+  call distributed_nullify(this%orbs_dist, this%norbsets)
+  call distributed_init(this%orbs_dist, this%norbsets, MPI_COMM_WORLD, "orbsets")
  
   if(this%useACBN0) then
     write(message(1),'(a)')    'Computing the Coulomb integrals localized orbital basis.'
@@ -311,6 +330,11 @@ contains
    end do
 
    SAFE_DEALLOCATE_P(this%orbsets)
+
+   this%max_np = 0
+   this%norbsets = 0
+
+   call distributed_end(this%orbs_dist)  
 
    POP_SUB(lda_u_end)
  end subroutine lda_u_end

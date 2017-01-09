@@ -273,7 +273,9 @@ subroutine X(update_potential_lda_u)(this, st)
 
   PUSH_SUB(update_potential_lda_u)
 
-  do ios = 1, this%norbsets
+  this%X(V) = M_ZERO
+
+  do ios = this%orbs_dist%start, this%orbs_dist%end
     norbs = this%orbsets(ios)%norbs
     do ispin = 1, st%d%nspin
       do im = 1, norbs
@@ -282,6 +284,10 @@ subroutine X(update_potential_lda_u)(this, st)
       end do
     end do
   end do
+
+  if(this%orbs_dist%parallel) then
+    call comm_allreduce(this%orbs_dist%mpi_grp%comm, this%X(V))
+  end if
 
   POP_SUB(update_potential_lda_u)
 end subroutine X(update_potential_lda_u)
@@ -413,7 +419,10 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
   SAFE_ALLOCATE(vv(1:this%max_np))
   SAFE_ALLOCATE(tmp(1:this%max_np))
 
-  do ios = 1, this%norbsets
+  SAFE_ALLOCATE(this%coulomb(1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%norbsets))
+  this%coulomb(1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%norbsets) = M_ZERO
+
+  do ios = this%orbs_dist%start, this%orbs_dist%end
     norbs = this%orbsets(ios)%norbs
    
     ijst=0
@@ -465,6 +474,10 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
       end do !jst
     end do !ist
   end do !ia
+
+  if(this%orbs_dist%parallel) then
+    call comm_allreduce(this%orbs_dist%mpi_grp%comm, this%coulomb)
+  end if
  
   SAFE_DEALLOCATE_A(nn_sphere)
   SAFE_DEALLOCATE_A(vv)

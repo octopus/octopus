@@ -50,6 +50,7 @@ module hamiltonian_oct_m
   use messages_oct_m
   use mpi_oct_m
   use mpi_lib_oct_m
+  use multicomm_oct_m
   use oct_exchange_oct_m
   use parser_oct_m
   use par_vec_oct_m
@@ -214,7 +215,7 @@ module hamiltonian_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_init(hm, gr, geo, st, theory_level, xc_family, xc_flags, subsys_hm)
+  subroutine hamiltonian_init(hm, gr, geo, st, theory_level, xc_family, xc_flags, mc, subsys_hm)
     type(hamiltonian_t),                        intent(out)   :: hm
     type(grid_t),                       target, intent(inout) :: gr
     type(geometry_t),                   target, intent(inout) :: geo
@@ -222,6 +223,7 @@ contains
     integer,                                    intent(in)    :: theory_level
     integer,                                    intent(in)    :: xc_family
     integer,                                    intent(in)    :: xc_flags
+    type(multicomm_t),                          intent(in)    :: mc
     type(base_hamiltonian_t), optional, target, intent(in)    :: subsys_hm
 
     integer :: iline, icol
@@ -499,7 +501,8 @@ contains
     call parse_variable('LDA_U', .false., hm%use_lda_u)
     if(hm%use_lda_u) then
       call messages_experimental('LDA+U')
-      call lda_u_init(hm%lda_u, gr, geo, st)
+      call lda_u_nullify(hm%lda_u) 
+      call lda_u_init(hm%lda_u, gr, geo, st, mc)
     end if
 
     call scissor_nullify(hm%scissor)
