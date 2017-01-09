@@ -178,6 +178,8 @@ contains
   call parse_variable('UseACBN0Functional', .false., this%useACBN0)
 
   if( this%useACBN0) then
+    if(st%d%nspin == 1) call messages_input_error('UseACBN0Functional without spin')
+
     !%Variable UseAllAtomicOrbitals
     !%Type logical
     !%Default no
