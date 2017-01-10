@@ -148,9 +148,9 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
     do ist = st%st_start, st%st_end
       
       if(this%useACBN0) then
-        this%renorm_occ(:,:,ist,ik) = M_ZERO
+        this%renorm_occ(:,:,:,ist,ik) = M_ZERO
       else
-        this%renorm_occ(:,:,ist,ik) = M_ONE !st%occ(ist, ik)
+        this%renorm_occ(:,:,:,ist,ik) = M_ONE !st%occ(ist, ik)
       end if
       weight = st%d%kweights(ik)*st%occ(ist, ik) 
 
@@ -186,8 +186,8 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
          
           !We compute the on-site occupation of the site, if needed
           if(this%useACBN0) then
-            this%renorm_occ(os%nn,os%ll,ist,ik) = &
-                this%renorm_occ(os%nn, os%ll,ist,ik) + abs(dot(im,ios))**2
+            this%renorm_occ(species_index(os%spec),os%nn,os%ll,ist,ik) = &
+                this%renorm_occ(species_index(os%spec),os%nn, os%ll,ist,ik) + abs(dot(im,ios))**2
           end if
         end do
       end do 
@@ -201,7 +201,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
                                          + weight*dot(1:norbs,ios)*R_CONJ(dot(im,ios))
             !We compute the renomalized occupation matrices
             if(this%useACBN0) then
-              renorm_weight = this%renorm_occ(os%nn,os%ll,ist,ik)*weight
+              renorm_weight = this%renorm_occ(species_index(os%spec),os%nn,os%ll,ist,ik)*weight
               this%X(n_alt)(1:norbs,im,ispin,ios) = this%X(n_alt)(1:norbs,im,ispin,ios) &
                                          + renorm_weight*dot(1:norbs,ios)*R_CONJ(dot(im,ios))
             end if 

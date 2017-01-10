@@ -96,7 +96,7 @@ module lda_u_oct_m
     FLOAT, pointer           :: dn_alt(:,:,:,:) !> Stores the renomalized occ. matrices
     CMPLX, pointer           :: zn_alt(:,:,:,:) !> if the ACBN0 functional is used  
   
-    FLOAT, pointer           :: renorm_occ(:,:,:,:) !> On-site occupations (for the ACBN0 functional)  
+    FLOAT, pointer           :: renorm_occ(:,:,:,:,:) !> On-site occupations (for the ACBN0 functional)  
  
     FLOAT, pointer           :: coulomb(:,:,:,:,:) !>Coulomb integrals for all the system
                                                    !> (for the ACBN0 functional) 
@@ -276,8 +276,8 @@ contains
       this%zn_alt(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets) = cmplx(M_ZERO,M_ZERO)
     end if
   end if
-  SAFE_ALLOCATE(this%renorm_occ(0:5,0:3,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end))
-  this%renorm_occ(0:5,0:3,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end) = M_ZERO 
+  SAFE_ALLOCATE(this%renorm_occ(geo%nspecies,0:5,0:3,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end))
+  this%renorm_occ(geo%nspecies,0:5,0:3,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end) = M_ZERO 
 
   call distributed_nullify(this%orbs_dist, this%norbsets)
   call distributed_init(this%orbs_dist, this%norbsets, MPI_COMM_WORLD, "orbsets")
