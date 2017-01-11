@@ -28,6 +28,7 @@ module unocc_oct_m
   use kpoints_oct_m
   use lcao_oct_m
   use lda_u_oct_m
+  use lda_u_io_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -122,6 +123,8 @@ contains
 
       if(ierr == 0) then
         call states_load(restart_load_unocc, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
+        if(hm%lda_u%apply) &
+          call lda_u_load(restart_load_unocc, hm%lda_u, sys%st, ierr)
         call restart_end(restart_load_unocc)
       end if
       
@@ -138,6 +141,8 @@ contains
     if(ierr_rho == 0) then
       if (read_gs) then
         call states_load(restart_load_gs, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
+        if(hm%lda_u%apply) &
+          call lda_u_load(restart_load_gs, hm%lda_u, sys%st, ierr)
       end if
       call states_load_rho(restart_load_gs, sys%st, sys%gr, ierr_rho)
       write_density = restart_has_map(restart_load_gs)
@@ -155,9 +160,6 @@ contains
       message(3) = "unoccupied states will not be consistent with the gs run."
       call messages_warning(3)
     end if
-
-    call lda_u_update_occ_matrices(hm%lda_u, sys%gr%mesh, sys%st, hm%hm_base, hm%energy )
-    call lda_u_update_U(hm%lda_u, sys%st)
 
     if(ierr_rho /= 0 .or. is_orbital_dependent) then
       occ_missing = .false.

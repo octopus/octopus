@@ -94,6 +94,7 @@ contains
     PUSH_SUB(submesh_null)
 
     sm%np = -1
+    sm%radius = M_ZERO
     nullify(sm%map)
     nullify(sm%x)
     nullify(sm%mesh)

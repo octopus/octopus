@@ -66,15 +66,17 @@ module lda_u_oct_m
        lda_u_build_phase_correction,    &
        lda_u_update_U,                  &
        lda_u_freeze_occ,                &
-       lda_u_freeze_u
+       lda_u_freeze_u,                  &
+       dlda_u_set_occupations,          &
+       zlda_u_set_occupations,          &
+       dlda_u_get_occupations,          &
+       zlda_u_get_occupations,          &
+       dlda_u_update_potential,         &
+       zlda_u_update_potential
 
   type orbital_t
-    type(submesh_t)     :: sphere             !> The submesh of the orbital
-    FLOAT, pointer      :: dorbital_sphere(:) !> The orbital, if real, on the submesh
-    CMPLX, pointer      :: zorbital_sphere(:) !> The orbital, if complex, on the submesh
-    CMPLX, pointer      :: phase(:,:)         !> Correction to the global phase 
-                                              !> if the sphere cross the border of the box
-   integer              :: ll                 !> Angular momentum of the orbital
+    FLOAT, pointer      :: dorb(:) !> The orbital, if real, on the submesh
+    CMPLX, pointer      :: zorb(:) !> The orbital, if complex, on the submesh
   end type orbital_t
 
   type orbital_set_t
@@ -112,6 +114,7 @@ module lda_u_oct_m
     FLOAT               :: orbitals_threshold !> Threshold for orbital truncation
     logical             :: useACBN0           !> Do we use the ACBN0 functional
     logical             :: useAllOrbitals     !> Do we use all atomic orbitals possible
+    logical             :: skipSOrbitals      !> Not using s orbitals
     logical             :: freeze_occ         !> Occupation matrices are not recomputed during TD evolution
     logical             :: freeze_u           !> U is not recomputed during TD evolution
 
@@ -220,13 +223,20 @@ contains
     !% from the peusopotential. Only available with ACBN0 functional.
     !%End
     call parse_variable('UseAllAtomicOrbitals', .false., this%useAllOrbitals)
-    
+
+    !%Variable SkipSOrbitals
+    !%Type logical
+    !%Default no
+    !%Section Hamiltonian::LDA+U
+    !%Description
+    !% If set to yes, Octopus will determine the effective U for all atomic orbitals
+    !% from the peusopotential but s orbitals. Only available with ACBN0 functional.
+    !%End
+    call parse_variable('SkipSOrbitals', .true., this%skipSOrbitals)   
+ 
     if(this%useAllOrbitals) call messages_experimental("UseAllAtomicOrbitals")
   end if
 
-  this%nspins = st%d%nspin
-  this%max_np = 0
- 
   !We first need to load the basis
   if (states_are_real(st)) then
     call dconstruct_orbital_basis(this, geo, gr%mesh, st)
@@ -319,14 +329,14 @@ contains
    SAFE_DEALLOCATE_P(this%renorm_occ)
 
    do ios = 1, this%norbsets
-      do iorb = 1, this%orbsets(ios)%norbs
-         SAFE_DEALLOCATE_P(this%orbsets(ios)%orbitals(iorb)%dorbital_sphere)
-         SAFE_DEALLOCATE_P(this%orbsets(ios)%orbitals(iorb)%zorbital_sphere)
-         SAFE_DEALLOCATE_P(this%orbsets(ios)%orbitals(iorb)%phase)
-         call submesh_end(this%orbsets(ios)%orbitals(iorb)%sphere)
+     do iorb = 1, this%orbsets(ios)%norbs
+       SAFE_DEALLOCATE_P(this%orbsets(ios)%orbitals(iorb)%dorb)
+       SAFE_DEALLOCATE_P(this%orbsets(ios)%orbitals(iorb)%zorb)
      end do 
      SAFE_DEALLOCATE_P(this%orbsets(ios)%orbitals)
+     SAFE_DEALLOCATE_P(this%orbsets(ios)%phase)
      nullify(this%orbsets(ios)%spec)
+     call submesh_end(this%orbsets(ios)%sphere)
    end do
 
    SAFE_DEALLOCATE_P(this%orbsets)
@@ -390,24 +400,21 @@ contains
    FLOAT, optional,  allocatable, intent(in)    :: vec_pot(:) !< (sb%dim)
    FLOAT, optional,  allocatable, intent(in)    :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)
 
-   integer :: ios, ispin, iorb
+   integer :: ios
  
    PUSH_SUB(lda_u_build_phase_correction)
 
    do ios = 1, this%norbsets
-     do iorb = 1, this%orbsets(ios)%norbs
-       call  orbital_update_phase_correction(this%orbsets(ios)%orbitals(iorb), sb, std, vec_pot, vec_pot_var)
-     end do
+     call  orbital_update_phase_correction(this%orbsets(ios), sb, std, vec_pot, vec_pot_var)
    end do
   
    POP_SUB(lda_u_build_phase_correction)
 
  end subroutine lda_u_build_phase_correction
 
-  !TODO: merge with the routine of projector.F90
   !> Build the phase correction to the global phase in case the orbital crosses the border of the simulaton box
-  subroutine orbital_update_phase_correction(this, sb, std, vec_pot, vec_pot_var)
-    type(orbital_t),               intent(inout) :: this
+  subroutine orbital_update_phase_correction(os, sb, std, vec_pot, vec_pot_var)
+    type(orbital_set_t),           intent(inout) :: os
     type(simul_box_t),             intent(in)    :: sb
     type(states_dim_t),            intent(in)    :: std
     FLOAT, optional,  allocatable, intent(in)    :: vec_pot(:) !< (sb%dim)
@@ -419,7 +426,7 @@ contains
 
     PUSH_SUB(orbital_update_phase_correction)
 
-    ns = this%sphere%np
+    ns = os%sphere%np
     ndim = sb%dim
 
     do iq = std%kpt%start, std%kpt%end
@@ -434,38 +441,36 @@ contains
       do is = 1, ns
         ! this is only the correction to the global phase, that can
         ! appear if the sphere crossed the boundary of the cell.
-
-        kr = sum(kpoint(1:ndim)*(this%sphere%x(is, 1:ndim) - this%sphere%mesh%x(this%sphere%map(is), 1:ndim)))
+        kr = sum(kpoint(1:ndim)*(os%sphere%x(is, 1:ndim) - os%sphere%mesh%x(os%sphere%map(is), 1:ndim)))
 
         if(present(vec_pot)) then
           if(allocated(vec_pot)) kr = kr + &
-            sum(vec_pot(1:ndim)*(this%sphere%x(is, 1:ndim)- this%sphere%mesh%x(this%sphere%map(is), 1:ndim)))
+            sum(vec_pot(1:ndim)*(os%sphere%x(is, 1:ndim)- os%sphere%mesh%x(os%sphere%map(is), 1:ndim)))
         end if
 
         if(present(vec_pot_var)) then
-          if(allocated(vec_pot_var)) kr = kr + sum(vec_pot_var(1:ndim, this%sphere%map(is))*this%sphere%x(is, 1:ndim))
+          if(allocated(vec_pot_var)) kr = kr + sum(vec_pot_var(1:ndim, os%sphere%map(is))*os%sphere%x(is, 1:ndim))
         end if
 
-        this%phase(is, iq) = exp(-M_zI*kr)
+        os%phase(is, iq) = exp(-M_zI*kr)
       end do
 
     end do
 
     POP_SUB(orbital_update_phase_correction)
-
   end subroutine orbital_update_phase_correction
 
- subroutine lda_u_freeze_occ(this) 
-   type(lda_u_t),     intent(inout) :: this
+  subroutine lda_u_freeze_occ(this) 
+    type(lda_u_t),     intent(inout) :: this
 
-   this%freeze_occ = .true.
- end subroutine lda_u_freeze_occ
+    this%freeze_occ = .true.
+  end subroutine lda_u_freeze_occ
 
- subroutine lda_u_freeze_u(this)            
-   type(lda_u_t),     intent(inout) :: this
+  subroutine lda_u_freeze_u(this)            
+    type(lda_u_t),     intent(inout) :: this
 
-   this%freeze_u = .true.
- end subroutine lda_u_freeze_u
+    this%freeze_u = .true.
+  end subroutine lda_u_freeze_u
 
 #include "undef.F90"
 #include "real.F90"

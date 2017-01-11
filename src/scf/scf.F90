@@ -585,6 +585,14 @@ contains
           call messages_warning(1)
         end if
       end if
+
+      if(hm%lda_u%apply) then
+        call lda_u_load(restart_load, hm%lda_u, st, ierr) 
+        if (ierr /= 0) then
+          message(1) = "Unable to read LDA+U information. LDA+U data will be calculated from states."
+          call messages_warning(1)
+        end if
+      end if 
     end if
 
     if(.not. cmplxscl) then      
@@ -879,6 +887,14 @@ contains
           if (ierr /= 0) then
             message(1) = 'Unable to write density.'
             call messages_warning(1)
+          end if
+
+          if(hm%lda_u%apply) then
+            call lda_u_dump(restart_dump, hm%lda_u, st, ierr, iter=iter)
+            if (ierr /= 0) then
+              message(1) = 'Unable to write LDA+U information.'
+              call messages_warning(1)
+            end if
           end if
 
           select case (scf%mix_field)
