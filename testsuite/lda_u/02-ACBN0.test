@@ -1,6 +1,6 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
-Test       : ACBN0 functional for (AF) bulk NiO crystal
+Test       : ACBN0 functional for (AF) NiO and LiF bulk crystals
 Program    : octopus
 TestGroups : short-run, periodic_systems, lda_u
 Enabled    : Yes
@@ -37,4 +37,33 @@ match ; Occupation O2 down 2p3 ; LINEFIELD(static/occ_matrices, -1, 5) ; 0.72593
 match ; U3d Ni1 ; LINEFIELD(static/effectiveU, -4, 4) ; 0.266892
 match ; U3d Ni2 ; LINEFIELD(static/effectiveU, -3, 4) ; 0.266896 
 match ; U2p O1  ; LINEFIELD(static/effectiveU, -2, 4) ; 0.132244 
-match ; U2p O2  ; LINEFIELD(static/effectiveU, -1, 4) ; 0.132268 
+match ; U2p O2  ; LINEFIELD(static/effectiveU, -1, 4) ; 0.132268
+
+Input      : 02-ACBN0.02-lif.inp
+
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  -25.39718138
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;  -12.59982536
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;  -4.86768342
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;   9.67483390
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ;  -4.66384714
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;  -0.50517002
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;   19.41074009
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;  -35.57782914
+match ; Total Magnetic Moment ; GREPFIELD(static/info, 'mz = ', 3);  0.000000
+match ; Local Magnetic Moment (Li) ; GREPFIELD(static/info, '1        Li', 3);  0.000000
+match ; Local Magnetic Moment (F)  ; GREPFIELD(static/info, '2         F', 3);  0.000000
+
+match ; k-point 2 (x) ; GREPFIELD(static/info, '#k =   2', 7) ;  0.000000
+match ; k-point 2 (y) ; GREPFIELD(static/info, '#k =   2', 8) ; -0.500000
+match ; k-point 2 (z) ; GREPFIELD(static/info, '#k =   2', 9) ;  0.000000
+match ; Eigenvalue  1 up ; GREPFIELD(static/info, '#k =   2', 3, 1) ;  -0.905819
+match ; Eigenvalue  1 dn ; GREPFIELD(static/info, '#k =   2', 3, 2) ;  -0.905819
+match ; Eigenvalue  3 up ; GREPFIELD(static/info, '#k =   2', 3, 5) ;  -0.511556
+match ; Eigenvalue  4 up ; GREPFIELD(static/info, '#k =   2', 3, 7) ;  -0.442404
+match ; Eigenvalue  5 up ; GREPFIELD(static/info, '#k =   2', 3, 9) ;   0.014736
+
+match ; Occupation F down 2p2 ; LINEFIELD(static/occ_matrices, -2, 3) ; 0.96590447
+match ; Occupation F down 2p3 ; LINEFIELD(static/occ_matrices, -1, 5) ; 0.96590447
+
+match ; U2p O1  ; LINEFIELD(static/effectiveU, -2, 4) ; 0.113481
+match ; U2p O2  ; LINEFIELD(static/effectiveU, -1, 4) ; 0.478331

@@ -505,12 +505,16 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
   type(mesh_t),              intent(in)       :: mesh
   type(states_t),            intent(in)       :: st 
 
-  integer :: ia, iorb, norb, ispin
+  integer :: ia, iorb, norb, ispin, offset
   integer ::  hubbardl, ii, nn, ll, mm, work, work2, iorbset
   FLOAT   :: norm
+  logical :: hasSorbitals
   type(orbital_set_t), pointer :: os
 
   PUSH_SUB(X(construct_orbital_basis))
+
+  offset = 0
+  if(this%skipSOrbitals) offset = 1
 
   write(message(1),'(a)')    'Building the LDA+U localized orbital basis.'
   call messages_info(1)
@@ -526,11 +530,13 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
   else
     do ia = 1, geo%natoms
       work = 0
+      hasSorbitals = .false.
       do iorb = 1, species_niwfs(geo%atom(ia)%species)
         call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm) 
-        if(this%skipSOrbitals .and. ll == 0) cycle
+        if(ll == 0) hasSorbitals = .true.
         work = max(work, ii)
       end do
+      if(this%skipSOrbitals .and. hasSorbitals ) work = work-1
       norb = norb + work
     end do
   end if
@@ -580,11 +586,14 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
       end do
     else !useAllOrbitals
       work = 0
+      hasSorbitals = .false.
       do iorb = 1, species_niwfs(geo%atom(ia)%species)
         call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
-        if(this%skipSOrbitals .and. ll == 0) cycle
+        if(ll == 0) hasSorbitals = .true.
         work = max(work, ii)          
       end do
+      if(this%skipSOrbitals .and. hasSorbitals ) work = work-1
+
       !We loop over the orbital sets of the atom ia
       do norb = 1, work
         os => this%orbsets(iorbset+norb)
@@ -593,7 +602,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
         do iorb = 1, species_niwfs(geo%atom(ia)%species)
           call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
           call species_iwf_n(geo%atom(ia)%species, iorb, 1, nn )
-          if(ii == norb) then
+          if(ii == norb+offset) then
             work2 = work2 + 1
             os%ll = ll
             os%nn = nn
@@ -608,8 +617,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
         work2 = 0
         do iorb = 1, species_niwfs(geo%atom(ia)%species)
           call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
-          if(this%skipSOrbitals .and. ll == 0) cycle
-          if(ii == norb) then
+          if(ii == norb+offset) then
             work2  = work2 + 1
             ! We obtain the orbital
             call X(get_atomic_orbital)(geo, mesh, os%sphere, ia, iorb, 1, os%orbitals(work2),&
