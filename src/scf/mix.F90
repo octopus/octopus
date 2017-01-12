@@ -51,7 +51,11 @@ module mix_oct_m
     mix_load,                   &
     dmixing,                    &
     zmixing,                    &
-    mix_coefficient
+    mix_coefficient,            &
+    mixfield_t,                 &
+    mixfield_init,              &
+    mixfield_clear,             &
+    mixfield_end
 
   type mixfield_t
     FLOAT, pointer :: ddf(:, :, :, :)
@@ -67,6 +71,12 @@ module mix_oct_m
     type(type_t) :: func_type   !< type of the functions to be mixed
     integer :: d1, d2, d3, d4   !< the dimensions of the arrays that store the information from the previous iterations
   end type mixfield_t
+
+  type mixfield_ptr_t
+    type(mixfield_t), pointer :: p
+  end type mixfield_ptr_t
+
+  integer, parameter :: MAX_AUXMIXFIELD = 5
 
   type mix_t
     private
@@ -84,6 +94,9 @@ module mix_oct_m
     integer :: interval
 
     type(mixfield_t) :: mixfield    !< The field to be mixed
+    
+    integer :: nauxmixfield            !< Number of auxiliary mixing fields
+    type(mixfield_ptr_t) :: auxmixfield(MAX_AUXMIXFIELD) !< Auxiliary mixing fields
 
     type(derivatives_t), pointer :: der
     logical                      :: precondition
@@ -104,7 +117,7 @@ contains
     type(type_t),        optional, intent(in)  :: func_type_
     character(len=*),    optional, intent(in)  :: prefix_
 
-    integer :: def
+    integer :: def, ii
     character(len=32) :: prefix
     type(type_t) :: func_type
 
@@ -222,7 +235,13 @@ contains
     if(smix%interval < 1) call messages_input_error('MixInterval', 'MixInterval must be larger or equal than 1')
     
     smix%iter = 0
-    
+
+    smix%nauxmixfield = 0
+    do ii=1,MAX_AUXMIXFIELD
+      nullify(smix%auxmixfield(ii)%p)   
+    end do
+
+
     select case (smix%scheme)
     case (OPTION__MIXINGSCHEME__LINEAR, OPTION__MIXINGSCHEME__BROYDEN, OPTION__MIXINGSCHEME__DIIS)
       call mixfield_init(smix, smix%mixfield, d1, d2, d3, smix%ns, func_type)
@@ -308,11 +327,18 @@ contains
   subroutine mix_end(smix)
     type(mix_t), intent(inout) :: smix
 
+    integer :: ii 
+
     PUSH_SUB(mix_end)
 
     if(smix%precondition) call nl_operator_end(smix%preconditioner)
    
     call mixfield_end(smix, smix%mixfield)
+
+    smix%nauxmixfield = 0
+    do ii=1,MAX_AUXMIXFIELD
+      nullify(smix%auxmixfield(ii)%p)
+    end do
 
     POP_SUB(mix_end)
   end subroutine mix_end
@@ -576,6 +602,17 @@ contains
     coefficient = this%coeff
   end function mix_coefficient
 
+  subroutine mix_add_auxmixfield( smix, mixfield )
+    type(mix_t),      intent(inout)      :: smix
+    type(mixfield_t), target, intent(in) :: mixfield
+
+    PUSH_SUB(mix_add_auxmixfield)
+
+    smix%nauxmixfield = smix%nauxmixfield + 1
+    smix%auxmixfield(smix%nauxmixfield)%p => mixfield 
+
+    POP_SUB(mix_add_auxmixfield)
+  end subroutine mix_add_auxmixfield
 
   subroutine mixfield_init( smix, mixfield, d1, d2, d3, d4, func_type ) 
     type(mix_t),      intent(in)    :: smix
