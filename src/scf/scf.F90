@@ -114,6 +114,7 @@ module scf_oct_m
     logical :: calc_dipole
     logical :: calc_partial_charges
     type(mix_t) :: smix
+    type(mixfield_t), pointer :: mixfield
     type(eigensolver_t) :: eigens
     integer :: mixdim1
     logical :: forced_finish !< remember if 'touch stop' was triggered earlier.
@@ -355,6 +356,7 @@ contains
     else if(scf%mix_field /= OPTION__MIXFIELD__NONE) then
       call mix_init(scf%smix, gr%der, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
     end if
+    call mix_get_field(scf%smix, scf%mixfield)
 
   !  !If we use LDA+U, we also have do mix it
   !  if(scf%mix_field /= OPTION__MIXFIELD__STATES) then
@@ -512,11 +514,9 @@ contains
     character(len=MAX_PATH_LEN) :: dirname
     type(lcao_t) :: lcao    !< Linear combination of atomic orbitals
     type(profile_t), save :: prof
-    FLOAT, allocatable :: rhoout(:,:,:), rhoin(:,:,:), rhonew(:,:,:)
-    FLOAT, allocatable :: vout(:,:,:), vin(:,:,:), vnew(:,:,:)
+    FLOAT, allocatable :: rhoout(:,:,:), rhoin(:,:,:)
     FLOAT, allocatable :: forceout(:,:), forcein(:,:), forcediff(:), tmp(:)
-    CMPLX, allocatable :: zrhoout(:,:,:), zrhoin(:,:,:), zrhonew(:,:,:)
-    FLOAT, allocatable :: Imvout(:,:,:), Imvin(:,:,:), Imvnew(:,:,:)
+    CMPLX, allocatable :: zrhoout(:,:,:), zrhoin(:,:,:)
     type(batch_t), allocatable :: psioutb(:, :)
     
     PUSH_SUB(scf_run)
@@ -620,27 +620,17 @@ contains
 
     select case(scf%mix_field)
     case(OPTION__MIXFIELD__POTENTIAL)
-      SAFE_ALLOCATE(vout(1:gr%mesh%np, 1:1, 1:nspin))
-      SAFE_ALLOCATE( vin(1:gr%mesh%np, 1:1, 1:nspin))
-      SAFE_ALLOCATE(vnew(1:gr%mesh%np, 1:1, 1:nspin))
-
-      vin(1:gr%mesh%np, 1, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
-      vout = M_ZERO
-      if(cmplxscl) then
-        SAFE_ALLOCATE(Imvout(1:gr%mesh%np, 1:1, 1:nspin))
-        SAFE_ALLOCATE( Imvin(1:gr%mesh%np, 1:1, 1:nspin))
-        SAFE_ALLOCATE(Imvnew(1:gr%mesh%np, 1:1, 1:nspin))
-
-        Imvin(1:gr%mesh%np, 1, 1:nspin) = hm%Imvhxc(1:gr%mesh%np, 1:nspin)
-        Imvout = M_ZERO
-      end if
-    case(OPTION__MIXFIELD__DENSITY)
       if(.not. cmplxscl) then
-        SAFE_ALLOCATE(rhonew(1:gr%fine%mesh%np, 1:1, 1:nspin))
+        call mixfield_set_vin(scf%mixfield, hm%vhxc)
       else
-        SAFE_ALLOCATE(zrhonew(1:gr%fine%mesh%np, 1:1, 1:nspin))
+        call mixfield_set_vin(scf%mixfield, hm%vhxc, hm%Imvhxc)
       end if
-
+    case (OPTION__MIXFIELD__DENSITY)
+      if(.not. cmplxscl) then
+        call mixfield_set_vin(scf%mixfield, rhoin)
+      else
+        call mixfield_set_vin(scf%mixfield, zrhoin)
+      end if
     case(OPTION__MIXFIELD__STATES)
 
       SAFE_ALLOCATE(psioutb(st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
@@ -755,9 +745,17 @@ contains
       select case(scf%mix_field)
       case(OPTION__MIXFIELD__POTENTIAL)
         call v_ks_calc(ks, hm, st, geo)
-        vout(1:gr%mesh%np, 1, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
-        if(cmplxscl) Imvout(1:gr%mesh%np, 1, 1:nspin) = hm%Imvhxc(1:gr%mesh%np, 1:nspin)
-
+        if(.not. cmplxscl) then
+          call mixfield_set_vout(scf%mixfield, hm%vhxc)
+        else
+          call mixfield_set_vout(scf%mixfield, hm%vhxc, hm%Imvhxc)
+        end if
+      case (OPTION__MIXFIELD__DENSITY)
+        if(.not. cmplxscl) then
+          call mixfield_set_vout(scf%mixfield, rhoout)
+        else
+          call mixfield_set_vout(scf%mixfield, zrhoout)
+        end if
       case(OPTION__MIXFIELD__STATES)
 
         do iqn = st%d%kpt%start, st%d%kpt%end
@@ -834,29 +832,27 @@ contains
       select case (scf%mix_field)
       case (OPTION__MIXFIELD__DENSITY)
         ! mix input and output densities and compute new potential
+        call mixing(scf%smix)
         if(.not. cmplxscl) then
-          call dmixing(scf%smix, rhoin, rhoout, rhonew)
+          call mixfield_get_dvnew(scf%mixfield, st%rho)
           ! for spinors, having components 3 or 4 be negative is not unphysical
-          if(minval(rhonew(1:gr%fine%mesh%np, 1, 1:st%d%spin_channels)) < -CNST(1e-6)) then
+          if(minval(st%rho(1:gr%fine%mesh%np, 1:st%d%spin_channels)) < -CNST(1e-6)) then
             write(message(1),*) 'Negative density after mixing. Minimum value = ', &
-              minval(rhonew(1:gr%fine%mesh%np, 1, 1:st%d%spin_channels))
+              minval(st%rho(1:gr%fine%mesh%np, 1:st%d%spin_channels))
             call messages_warning(1)
           end if
-          st%rho(1:gr%fine%mesh%np, 1:nspin) = rhonew(1:gr%fine%mesh%np, 1, 1:nspin)
         else
-          call zmixing(scf%smix, zrhoin, zrhoout, zrhonew)
-          st%zrho%Re(1:gr%fine%mesh%np, 1:nspin) =  real(zrhonew(1:gr%fine%mesh%np, 1, 1:nspin))                   
-          st%zrho%Im(1:gr%fine%mesh%np, 1:nspin) = aimag(zrhonew(1:gr%fine%mesh%np, 1, 1:nspin))                    
+          call mixfield_get_zvnew(scf%mixfield, st%zrho%Re, st%zrho%Im)
         end if
       !  call lda_u_mixer_mix(hm%lda_u, scf%lda_u_mix, scf%smix)
         call v_ks_calc(ks, hm, st, geo)
       case (OPTION__MIXFIELD__POTENTIAL)
         ! mix input and output potentials
-        call dmixing(scf%smix, vin, vout, vnew)
-        hm%vhxc(1:gr%mesh%np, 1:nspin) = vnew(1:gr%mesh%np, 1, 1:nspin)
-        if(cmplxscl) then
-          call dmixing(scf%smix, Imvin, Imvout, Imvnew)
-          hm%Imvhxc(1:gr%mesh%np, 1:nspin) = Imvnew(1:gr%mesh%np, 1, 1:nspin)
+        call mixing(scf%smix)
+        if(.not. cmplxscl) then
+          call mixfield_get_dvnew(scf%mixfield, hm%vhxc)
+        else
+          call mixfield_get_zvnew(scf%mixfield, hm%vhxc, hm%Imvhxc)
         end if
        ! call lda_u_mixer_mix(hm%lda_u, scf%lda_u_mix, scf%smix)
         call hamiltonian_update(hm, gr%mesh)
@@ -958,10 +954,22 @@ contains
         zrhoin(1:gr%fine%mesh%np, 1, 1:nspin) = st%zrho%Re(1:gr%fine%mesh%np, 1:nspin) +&
           M_zI * st%zrho%Im(1:gr%fine%mesh%np, 1:nspin)  
       end if
-      if (scf%mix_field == OPTION__MIXFIELD__POTENTIAL) then
-        vin(1:gr%mesh%np, 1, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
-        if (cmplxscl) Imvin(1:gr%mesh%np, 1, 1:nspin) = hm%Imvhxc(1:gr%mesh%np, 1:nspin)
-      end if
+
+      select case(scf%mix_field)
+        case(OPTION__MIXFIELD__POTENTIAL)
+          if(.not. cmplxscl) then
+            call mixfield_set_vin(scf%mixfield, hm%vhxc(1:gr%mesh%np, 1:nspin))
+          else
+            call mixfield_set_vin(scf%mixfield, hm%vhxc(1:gr%mesh%np, 1:nspin), hm%Imvhxc(1:gr%mesh%np, 1:nspin))
+          end if
+        case (OPTION__MIXFIELD__DENSITY)
+          if(.not. cmplxscl) then
+            call mixfield_set_vin(scf%mixfield, rhoin)
+          else
+            call mixfield_set_vin(scf%mixfield, zrhoin)
+        end if
+      end select
+
       evsum_in = evsum_out
       if (scf%conv_abs_force > M_ZERO) then
         forcein(1:geo%natoms, 1:gr%sb%dim) = forceout(1:geo%natoms, 1:gr%sb%dim)
@@ -988,16 +996,6 @@ contains
     end if
 
     select case(scf%mix_field)
-    case(OPTION__MIXFIELD__POTENTIAL)
-      SAFE_DEALLOCATE_A(vout)
-      SAFE_DEALLOCATE_A(vin)
-      SAFE_DEALLOCATE_A(vnew)
-      SAFE_DEALLOCATE_A(Imvout)
-      SAFE_DEALLOCATE_A(Imvin)
-      SAFE_DEALLOCATE_A(Imvnew)
-    case(OPTION__MIXFIELD__DENSITY)
-      SAFE_DEALLOCATE_A(rhonew)
-      SAFE_DEALLOCATE_A(zrhonew)
     case(OPTION__MIXFIELD__STATES)
 
       do iqn = st%d%kpt%start, st%d%kpt%end

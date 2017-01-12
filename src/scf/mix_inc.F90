@@ -434,6 +434,55 @@ R_TYPE function X(mix_dotp)(this, xx, yy) result(dotp)
   
 end function X(mix_dotp)
 
+  ! --------------------------------------------------------------
+  subroutine X(mixfield_set_vin2)(mixfield, vin)
+    type(mixfield_t),         intent(in) :: mixfield
+    R_TYPE,  intent(in)  :: vin(:, :)
+
+    PUSH_SUB(X(mixfield_set_vin2))
+
+    mixfield%X(vin)(1:mixfield%d1, 1, 1:mixfield%d3) = vin(1:mixfield%d1, 1:mixfield%d3)
+
+    POP_SUB(X(mixfield_set_vin2))
+  end subroutine X(mixfield_set_vin2)
+
+  ! --------------------------------------------------------------
+  subroutine X(mixfield_set_vin3)(mixfield, vin)
+    type(mixfield_t),         intent(in) :: mixfield
+    R_TYPE,  intent(in)  :: vin(:, :, :)
+
+    PUSH_SUB(X(mixfield_set_vin3))
+
+    call lalg_copy(mixfield%d1, mixfield%d2, mixfield%d3, vin(:, :, :), mixfield%X(vin)(:, :, :))
+
+    POP_SUB(X(mixfield_set_vin3))
+  end subroutine X(mixfield_set_vin3)
+
+  ! --------------------------------------------------------------
+  subroutine X(mixfield_set_vout2)(mixfield, vout)
+    type(mixfield_t),         intent(in) :: mixfield
+    R_TYPE,  intent(in)  :: vout(:, :)
+
+    PUSH_SUB(X(mixfield_set_vout2))
+
+    mixfield%X(vout)(1:mixfield%d1, 1, 1:mixfield%d3) = vout(1:mixfield%d1, 1:mixfield%d3)
+
+    POP_SUB(X(mixfield_set_vout2))
+  end subroutine X(mixfield_set_vout2)
+
+  ! --------------------------------------------------------------
+  subroutine X(mixfield_set_vout3)(mixfield, vout)
+    type(mixfield_t),         intent(in) :: mixfield
+    R_TYPE,  intent(in)  :: vout(:, :, :)
+
+    PUSH_SUB(X(mixfield_set_vout3))
+
+    call lalg_copy(mixfield%d1, mixfield%d2, mixfield%d3, vout(:, :, :), mixfield%X(vout)(:, :, :))
+
+    POP_SUB(X(mixfield_set_vout3))
+  end subroutine X(mixfield_set_vout3)
+
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

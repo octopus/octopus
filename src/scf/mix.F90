@@ -49,24 +49,34 @@ module mix_oct_m
     mix_end,                    &
     mix_dump,                   &
     mix_load,                   &
-    dmixing,                    &
-    zmixing,                    &
+    mixing,                     &
     mix_coefficient,            &
+    mix_get_field,              &
     mixfield_t,                 &
     mixfield_init,              &
     mixfield_clear,             &
-    mixfield_end
+    mixfield_end,               &
+    mixfield_set_vin,           &
+    mixfield_set_vout,          &
+    mixfield_get_dvnew,         &
+    mixfield_get_zvnew
 
   type mixfield_t
     FLOAT, pointer :: ddf(:, :, :, :)
     FLOAT, pointer :: ddv(:, :, :, :)
     FLOAT, pointer :: df_old(:, :, :)
     FLOAT, pointer :: dvin_old(:, :, :)
+    FLOAT, pointer :: dvin(:, :, :)
+    FLOAT, pointer :: dvout(:, :, :)
+    FLOAT, pointer :: dvnew(:, :, :)
 
     CMPLX, pointer :: zdf(:, :, :, :)
     CMPLX, pointer :: zdv(:, :, :, :)
     CMPLX, pointer :: zf_old(:, :, :)
     CMPLX, pointer :: zvin_old(:, :, :)
+    CMPLX, pointer :: zvin(:, :, :)
+    CMPLX, pointer :: zvout(:, :, :)
+    CMPLX, pointer :: zvnew(:, :, :)
 
     type(type_t) :: func_type   !< type of the functions to be mixed
     integer :: d1, d2, d3, d4   !< the dimensions of the arrays that store the information from the previous iterations
@@ -94,7 +104,7 @@ module mix_oct_m
     integer :: interval
 
     type(mixfield_t) :: mixfield    !< The field to be mixed
-    
+
     integer :: nauxmixfield            !< Number of auxiliary mixing fields
     type(mixfield_ptr_t) :: auxmixfield(MAX_AUXMIXFIELD) !< Auxiliary mixing fields
 
@@ -105,6 +115,18 @@ module mix_oct_m
     FLOAT :: residual_coeff
     
   end type mix_t
+
+  interface mixfield_set_vin
+    module procedure dmixfield_set_vin2, dmixfield_set_vin3, &
+                     zmixfield_set_vin2, zmixfield_set_vin3, &
+                     ddmixfield_set_vin2
+  end interface mixfield_set_vin
+ 
+  interface mixfield_set_vout
+    module procedure dmixfield_set_vout2, dmixfield_set_vout3, &
+                     zmixfield_set_vout2, zmixfield_set_vout3, &
+                     ddmixfield_set_vout2
+  end interface mixfield_set_vout
 
 contains
 
@@ -602,6 +624,28 @@ contains
     coefficient = this%coeff
   end function mix_coefficient
 
+  subroutine mix_get_field(this, mixfield)
+    type(mix_t), target,  intent(in) :: this
+    type(mixfield_t), pointer, intent(out) :: mixfield
+
+    mixfield => this%mixfield
+  end subroutine mix_get_field
+
+  ! ---------------------------------------------------------
+  subroutine mixing(smix)
+    type(mix_t),  intent(inout) :: smix
+  
+     PUSH_SUB(mixing)
+
+    if(smix%mixfield%func_type == TYPE_FLOAT) then
+      call dmixing(smix, smix%mixfield%dvin, smix%mixfield%dvout, smix%mixfield%dvnew)
+    else
+      call zmixing(smix, smix%mixfield%zvin, smix%mixfield%zvout, smix%mixfield%zvnew)
+    end if
+  
+    POP_SUB(mixing)
+  end subroutine mixing
+
   subroutine mix_add_auxmixfield( smix, mixfield )
     type(mix_t),      intent(inout)      :: smix
     type(mixfield_t), target, intent(in) :: mixfield
@@ -626,11 +670,17 @@ contains
     nullify(mixfield%ddv)
     nullify(mixfield%df_old)
     nullify(mixfield%dvin_old)
+    nullify(mixfield%dvin)
+    nullify(mixfield%dvout)
+    nullify(mixfield%dvnew)
 
     nullify(mixfield%zdf)
     nullify(mixfield%zdv)
     nullify(mixfield%zf_old)
     nullify(mixfield%zvin_old)
+    nullify(mixfield%zvin)
+    nullify(mixfield%zvout)
+    nullify(mixfield%zvnew)
 
     mixfield%d1 = d1
     mixfield%d2 = d2
@@ -652,7 +702,16 @@ contains
         SAFE_ALLOCATE(  mixfield%zf_old(1:d1, 1:d2, 1:d3))
       end if
     end if
-    
+  
+    if(mixfield%func_type == TYPE_FLOAT) then
+      SAFE_ALLOCATE(mixfield%dvin(1:d1, 1:d2, 1:d3))
+      SAFE_ALLOCATE(mixfield%dvout(1:d1, 1:d2, 1:d3))
+      SAFE_ALLOCATE(mixfield%dvnew(1:d1, 1:d2, 1:d3))
+    else
+      SAFE_ALLOCATE(mixfield%zvin(1:d1, 1:d2, 1:d3))
+      SAFE_ALLOCATE(mixfield%zvout(1:d1, 1:d2, 1:d3))
+      SAFE_ALLOCATE(mixfield%zvnew(1:d1, 1:d2, 1:d3))
+    end if 
 
     POP_SUB(mixfield_init)
   end subroutine mixfield_init 
@@ -676,6 +735,13 @@ contains
       SAFE_DEALLOCATE_P(mixfield%zvin_old)
       SAFE_DEALLOCATE_P(mixfield%zf_old)
     end if
+
+    SAFE_DEALLOCATE_P(mixfield%dvin)
+    SAFE_DEALLOCATE_P(mixfield%dvout)
+    SAFE_DEALLOCATE_P(mixfield%dvnew)
+    SAFE_DEALLOCATE_P(mixfield%zvin)
+    SAFE_DEALLOCATE_P(mixfield%zvout)
+    SAFE_DEALLOCATE_P(mixfield%zvnew)
 
     POP_SUB(mixfield_end)
   end subroutine mixfield_end
@@ -701,10 +767,71 @@ contains
       end if
     end if
 
+    if(mixfield%func_type == TYPE_FLOAT) then
+      mixfield%dvin  = M_ZERO
+      mixfield%dvout = M_ZERO
+      mixfield%dvnew = M_ZERO
+    else
+      mixfield%zvin  = M_z0
+      mixfield%zvout = M_z0
+      mixfield%zvnew = M_z0
+    end if
+
     POP_SUB(mixfield_clear)
   end subroutine mixfield_clear
 
-  
+  ! --------------------------------------------------------------
+  subroutine ddmixfield_set_vin2(mixfield, vin_re, vin_im)
+    type(mixfield_t), intent(inout) :: mixfield
+    FLOAT,              intent(in)  :: vin_re(:,:), vin_im(:,:)
+
+    PUSH_SUB(ddmixfield_set_vin2)
+
+    mixfield%zvin(1:mixfield%d1, 1, 1:mixfield%d3) = vin_re(1:mixfield%d1, 1:mixfield%d3) &
+                                            + M_zI * vin_im(1:mixfield%d1, 1:mixfield%d3)
+
+    POP_SUB(ddmixfield_set_vin2)
+  end subroutine ddmixfield_set_vin2
+
+  ! --------------------------------------------------------------
+  subroutine ddmixfield_set_vout2(mixfield, vout_re, vout_im)
+    type(mixfield_t),  intent(inout) :: mixfield
+    FLOAT,               intent(in)  :: vout_re(:,:), vout_im(:,:)
+
+    PUSH_SUB(ddmixfield_set_vout2)
+
+    mixfield%zvout(1:mixfield%d1, 1, 1:mixfield%d3) = vout_re(1:mixfield%d1, 1:mixfield%d3) &
+                                            + M_zI * vout_im(1:mixfield%d1, 1:mixfield%d3)
+
+    POP_SUB(ddmixfield_set_vout2)
+  end subroutine ddmixfield_set_vout2
+
+  ! --------------------------------------------------------------
+  subroutine mixfield_get_dvnew(mixfield, vnew)
+    type(mixfield_t),   intent(in) :: mixfield
+    FLOAT,          intent(inout)  :: vnew(:,:)
+
+    PUSH_SUB(mixfield_get_dvnew)
+
+    vnew(1:mixfield%d1, 1:mixfield%d3) = mixfield%dvnew(1:mixfield%d1, 1, 1:mixfield%d3)
+
+    POP_SUB(mixfield_get_dvnew)
+  end subroutine mixfield_get_dvnew
+
+  ! --------------------------------------------------------------
+  subroutine mixfield_get_zvnew(mixfield, re, im)
+    type(mixfield_t),   intent(in) :: mixfield
+    FLOAT,          intent(inout)  :: re(:,:), im(:,:)
+
+    PUSH_SUB(mixfield_get_zvnew)
+
+    re(1:mixfield%d1, 1:mixfield%d3) =  real(mixfield%zvnew(1:mixfield%d1, 1, 1:mixfield%d3))
+    im(1:mixfield%d1, 1:mixfield%d3) = aimag(mixfield%zvnew(1:mixfield%d1, 1, 1:mixfield%d3))
+
+    POP_SUB(mixfield_get_zvnew)
+  end subroutine mixfield_get_zvnew
+
+
 #include "undef.F90"
 #include "real.F90"
 
