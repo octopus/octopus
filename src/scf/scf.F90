@@ -38,6 +38,7 @@ module scf_oct_m
   use lcao_oct_m
   use lda_u_oct_m
   use lda_u_io_oct_m
+  use lda_u_mixer_oct_m
   use loct_oct_m
   use magnetic_oct_m
   use math_oct_m
@@ -116,6 +117,7 @@ module scf_oct_m
     type(eigensolver_t) :: eigens
     integer :: mixdim1
     logical :: forced_finish !< remember if 'touch stop' was triggered earlier.
+    type(lda_u_mixer_t) :: lda_u_mix
   end type scf_t
 
 contains
@@ -349,10 +351,15 @@ contains
     
 
     if(scf%mix_field == OPTION__MIXFIELD__DENSITY) then
-      call mix_init(scf%smix, gr%fine%der, scf%mixdim1, 1, st%d%nspin, func_type = mix_type)
+      call mix_init(scf%smix, gr%fine%der, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
     else if(scf%mix_field /= OPTION__MIXFIELD__NONE) then
-      call mix_init(scf%smix, gr%der, scf%mixdim1, 1, st%d%nspin, func_type = mix_type)
+      call mix_init(scf%smix, gr%der, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
     end if
+
+  !  !If we use LDA+U, we also have do mix it
+  !  if(scf%mix_field /= OPTION__MIXFIELD__STATES) then
+  !    call lda_u_mixer_init_auxmixer(hm%lda_u, scf%lda_u_mix, scf%smix, gr%der, st)
+  !  end if
 
     ! now the eigensolver stuff
     call eigensolver_init(scf%eigens, gr, st)
@@ -646,6 +653,11 @@ contains
       
     end select
 
+    !If we use LDA+U, we also have do mix it
+    if(scf%mix_field /= OPTION__MIXFIELD__STATES) then
+      call lda_u_mixer_init(hm%lda_u, scf%lda_u_mix, st)
+    end if
+
     evsum_in = states_eigenvalues_sum(st)
 
     ! allocate and compute forces only if they are used as convergence criteria
@@ -723,6 +735,8 @@ contains
       call states_fermi(st, gr%mesh)
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
       call lda_u_update_U(hm%lda_u, st)
+      if(scf%mix_field /= OPTION__MIXFIELD__STATES) &
+        call lda_u_mixer_copy_out(hm%lda_u, scf%lda_u_mix)
 
       ! compute output density, potential (if needed) and eigenvalues sum
       if(cmplxscl) then
@@ -834,6 +848,7 @@ contains
           st%zrho%Re(1:gr%fine%mesh%np, 1:nspin) =  real(zrhonew(1:gr%fine%mesh%np, 1, 1:nspin))                   
           st%zrho%Im(1:gr%fine%mesh%np, 1:nspin) = aimag(zrhonew(1:gr%fine%mesh%np, 1, 1:nspin))                    
         end if
+      !  call lda_u_mixer_mix(hm%lda_u, scf%lda_u_mix, scf%smix)
         call v_ks_calc(ks, hm, st, geo)
       case (OPTION__MIXFIELD__POTENTIAL)
         ! mix input and output potentials
@@ -843,6 +858,7 @@ contains
           call dmixing(scf%smix, Imvin, Imvout, Imvnew)
           hm%Imvhxc(1:gr%mesh%np, 1:nspin) = Imvnew(1:gr%mesh%np, 1, 1:nspin)
         end if
+       ! call lda_u_mixer_mix(hm%lda_u, scf%lda_u_mix, scf%smix)
         call hamiltonian_update(hm, gr%mesh)
         
       case(OPTION__MIXFIELD__STATES)
@@ -860,10 +876,6 @@ contains
       case(OPTION__MIXFIELD__NONE)
         call v_ks_calc(ks, hm, st, geo)
       end select
-
-      !!NTD!!
-      !Here we mix the occupation matrices
-      !using mix_coefficient(scf%smix)
 
       ! Are we asked to stop? (Whenever Fortran is ready for signals, this should go away)
       scf%forced_finish = clean_stop(mc%master_comm)
@@ -955,8 +967,8 @@ contains
         forcein(1:geo%natoms, 1:gr%sb%dim) = forceout(1:geo%natoms, 1:gr%sb%dim)
       end if
 
-      !!NTD!! 
-      !Here we copy the old occupation matrix
+      if(scf%mix_field /= OPTION__MIXFIELD__STATES) &
+        call lda_u_mixer_outin(hm%lda_u, scf%lda_u_mix)
 
       if(scf%forced_finish) then
         call profiling_out(prof)
@@ -996,6 +1008,9 @@ contains
       
       SAFE_DEALLOCATE_A(psioutb)
     end select
+
+    if(scf%mix_field /= OPTION__MIXFIELD__STATES) &
+      call lda_u_mixer_end(hm%lda_u,scf%lda_u_mix)
 
     SAFE_DEALLOCATE_A(rhoout)
     SAFE_DEALLOCATE_A(rhoin)

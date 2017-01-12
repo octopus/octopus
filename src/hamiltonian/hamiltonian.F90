@@ -499,9 +499,9 @@ contains
     !% (Experimental) If set to yes, the LDA+U calculation is performed.
     !%End
     call parse_variable('LDA_U', .false., hm%use_lda_u)
+    call lda_u_nullify(hm%lda_u)
     if(hm%use_lda_u) then
       call messages_experimental('LDA+U')
-      call lda_u_nullify(hm%lda_u) 
       call lda_u_init(hm%lda_u, gr, geo, st, mc)
     end if
 

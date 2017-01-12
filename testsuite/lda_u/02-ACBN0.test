@@ -56,11 +56,11 @@ match ; Local Magnetic Moment (F)  ; GREPFIELD(static/info, '2         F', 3);  
 match ; k-point 2 (x) ; GREPFIELD(static/info, '#k =   2', 7) ;  0.000000
 match ; k-point 2 (y) ; GREPFIELD(static/info, '#k =   2', 8) ; -0.500000
 match ; k-point 2 (z) ; GREPFIELD(static/info, '#k =   2', 9) ;  0.000000
-match ; Eigenvalue  1 up ; GREPFIELD(static/info, '#k =   2', 3, 1) ;  -0.905819
-match ; Eigenvalue  1 dn ; GREPFIELD(static/info, '#k =   2', 3, 2) ;  -0.905819
-match ; Eigenvalue  3 up ; GREPFIELD(static/info, '#k =   2', 3, 5) ;  -0.511556
-match ; Eigenvalue  4 up ; GREPFIELD(static/info, '#k =   2', 3, 7) ;  -0.442404
-match ; Eigenvalue  5 up ; GREPFIELD(static/info, '#k =   2', 3, 9) ;   0.014736
+match ; Eigenvalue  1 up ; GREPFIELD(static/info, '#k =   2', 3, 1) ;  -0.890462
+match ; Eigenvalue  1 dn ; GREPFIELD(static/info, '#k =   2', 3, 2) ;  -0.890462
+match ; Eigenvalue  3 up ; GREPFIELD(static/info, '#k =   2', 3, 5) ;  -0.520335
+match ; Eigenvalue  4 up ; GREPFIELD(static/info, '#k =   2', 3, 7) ;  -0.440374
+match ; Eigenvalue  5 up ; GREPFIELD(static/info, '#k =   2', 3, 9) ;   0.243290
 
 match ; Occupation F down 2p2 ; LINEFIELD(static/occ_matrices, -2, 3) ; 0.96590447
 match ; Occupation F down 2p3 ; LINEFIELD(static/occ_matrices, -1, 5) ; 0.96590447

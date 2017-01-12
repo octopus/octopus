@@ -72,7 +72,9 @@ module lda_u_oct_m
        dlda_u_get_occupations,          &
        zlda_u_get_occupations,          &
        dlda_u_update_potential,         &
-       zlda_u_update_potential
+       zlda_u_update_potential,         &
+       lda_u_get_effectiveU,            &
+       lda_u_set_effectiveU
 
   type orbital_t
     FLOAT, pointer      :: dorb(:) !> The orbital, if real, on the submesh
@@ -471,6 +473,37 @@ contains
 
     this%freeze_u = .true.
   end subroutine lda_u_freeze_u
+
+    ! ---------------------------------------------------------
+  subroutine lda_u_set_effectiveU(this, Ueff)
+    type(lda_u_t),  intent(inout) :: this
+    FLOAT,          intent(in)    :: Ueff(:) !< (this%norbsets)
+
+    integer :: ios
+
+    PUSH_SUB(lda_u_set_effectiveU)
+
+    do ios = 1,this%norbsets
+      this%orbsets(ios)%Ueff = Ueff(ios)
+    end do
+    POP_SUB(lda_u_set_effectiveU)
+  end subroutine lda_u_set_effectiveU
+
+  ! ---------------------------------------------------------
+  subroutine lda_u_get_effectiveU(this, Ueff)
+    type(lda_u_t),  intent(in)    :: this
+    FLOAT,          intent(inout) :: Ueff(:) !< (this%norbsets)
+
+    integer :: ios
+
+    PUSH_SUB(lda_u_get_effectiveU)
+
+    do ios = 1,this%norbsets
+      Ueff(ios) = this%orbsets(ios)%Ueff
+    end do
+    POP_SUB(lda_u_get_effectiveU)
+  end subroutine lda_u_get_effectiveU
+
 
 #include "undef.F90"
 #include "real.F90"

@@ -53,24 +53,7 @@ module mix_oct_m
     zmixing,                    &
     mix_coefficient
 
-  type mix_t
-    private
-    integer :: scheme           !< the mixing scheme used (linear, broyden, etc)
-
-    FLOAT :: coeff              !< the mixing coefficient (in linear mixing: vnew = (1-coeff)*vin + coeff*vout)
-
-    integer :: iter             !< number of SCF iterations already done. In case of restart, this number must
-                                !< include the iterations done in previous calculations.
-
-    type(type_t) :: func_type   !< type of the functions to be mixed
-    integer :: ns               !< number of steps used to extrapolate the new vector
-
-    integer :: d1, d2, d3, d4   !< the dimensions of the arrays that store the information from the previous iterations
-
-    integer :: last_ipos        !< where is the information about the last iteration stored in arrays df and dv
-
-    integer :: interval
-
+  type mixfield_t
     FLOAT, pointer :: ddf(:, :, :, :)
     FLOAT, pointer :: ddv(:, :, :, :)
     FLOAT, pointer :: df_old(:, :, :)
@@ -80,6 +63,27 @@ module mix_oct_m
     CMPLX, pointer :: zdv(:, :, :, :)
     CMPLX, pointer :: zf_old(:, :, :)
     CMPLX, pointer :: zvin_old(:, :, :)
+
+    type(type_t) :: func_type   !< type of the functions to be mixed
+    integer :: d1, d2, d3, d4   !< the dimensions of the arrays that store the information from the previous iterations
+  end type mixfield_t
+
+  type mix_t
+    private
+    integer :: scheme           !< the mixing scheme used (linear, broyden, etc)
+
+    FLOAT :: coeff              !< the mixing coefficient (in linear mixing: vnew = (1-coeff)*vin + coeff*vout)
+
+    integer :: iter             !< number of SCF iterations already done. In case of restart, this number must
+                                !< include the iterations done in previous calculations.
+
+    integer :: ns               !< number of steps used to extrapolate the new vector
+
+    integer :: last_ipos        !< where is the information about the last iteration stored in arrays df and dv
+
+    integer :: interval
+
+    type(mixfield_t) :: mixfield    !< The field to be mixed
 
     type(derivatives_t), pointer :: der
     logical                      :: precondition
@@ -92,16 +96,17 @@ module mix_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine mix_init(smix, der, d1, d2, d3, def_, func_type, prefix_)
+  subroutine mix_init(smix, der, d1, d2, d3, def_, func_type_, prefix_)
     type(mix_t),                   intent(out) :: smix
     type(derivatives_t), target,   intent(in)  :: der
     integer,                       intent(in)  :: d1, d2, d3
     integer,             optional, intent(in)  :: def_
-    type(type_t),        optional, intent(in)  :: func_type
+    type(type_t),        optional, intent(in)  :: func_type_
     character(len=*),    optional, intent(in)  :: prefix_
 
     integer :: def
     character(len=32) :: prefix
+    type(type_t) :: func_type
 
     PUSH_SUB(mix_init)
 
@@ -109,10 +114,10 @@ contains
 
     def = OPTION__MIXINGSCHEME__BROYDEN
     if(present(def_)) def = def_
-    if(present(func_type)) then 
-      smix%func_type = func_type
+    if(present(func_type_)) then 
+      func_type = func_type_
     else 
-      smix%func_type = TYPE_FLOAT
+      func_type = TYPE_FLOAT
     end if
     prefix = ""
     if(present(prefix_)) prefix = prefix_
@@ -217,40 +222,13 @@ contains
     if(smix%interval < 1) call messages_input_error('MixInterval', 'MixInterval must be larger or equal than 1')
     
     smix%iter = 0
-
-    nullify(smix%ddf)
-    nullify(smix%ddv)
-    nullify(smix%df_old)
-    nullify(smix%dvin_old)
-
-    nullify(smix%zdf)
-    nullify(smix%zdv)
-    nullify(smix%zf_old)
-    nullify(smix%zvin_old)
-
-    smix%d1 = d1
-    smix%d2 = d2
-    smix%d3 = d3
+    
     select case (smix%scheme)
     case (OPTION__MIXINGSCHEME__LINEAR, OPTION__MIXINGSCHEME__BROYDEN, OPTION__MIXINGSCHEME__DIIS)
-      smix%d4 = smix%ns
+      call mixfield_init(smix, smix%mixfield, d1, d2, d3, smix%ns, func_type)
     case (OPTION__MIXINGSCHEME__BOWLER_GILLAN)
-      smix%d4 = smix%ns + 1
+      call mixfield_init(smix, smix%mixfield, d1, d2, d3, smix%ns+1, func_type)
     end select
-
-    if (smix%scheme /= OPTION__MIXINGSCHEME__LINEAR) then
-      if(smix%func_type == TYPE_FLOAT) then 
-        SAFE_ALLOCATE(     smix%ddf(1:d1, 1:d2, 1:d3, 1:smix%d4))
-        SAFE_ALLOCATE(smix%dvin_old(1:d1, 1:d2, 1:d3))
-        SAFE_ALLOCATE(     smix%ddv(1:d1, 1:d2, 1:d3, 1:smix%d4))
-        SAFE_ALLOCATE(  smix%df_old(1:d1, 1:d2, 1:d3))
-      else
-        SAFE_ALLOCATE(     smix%zdf(1:d1, 1:d2, 1:d3, 1:smix%d4))
-        SAFE_ALLOCATE(smix%zvin_old(1:d1, 1:d2, 1:d3))
-        SAFE_ALLOCATE(     smix%zdv(1:d1, 1:d2, 1:d3, 1:smix%d4))
-        SAFE_ALLOCATE(  smix%zf_old(1:d1, 1:d2, 1:d3))
-      end if
-    end if
 
     call mix_clear(smix)
 
@@ -317,19 +295,7 @@ contains
     
     PUSH_SUB(mix_clear)
 
-    if (smix%scheme /= OPTION__MIXINGSCHEME__LINEAR) then
-      if(smix%func_type == TYPE_FLOAT) then 
-        smix%ddf = M_ZERO
-        smix%ddv = M_ZERO
-        smix%dvin_old = M_ZERO
-        smix%df_old = M_ZERO
-      else
-        smix%zdf = M_z0
-        smix%zdv = M_z0
-        smix%zvin_old = M_z0
-        smix%zf_old = M_z0
-      end if
-    end if
+    call mixfield_clear(smix, smix%mixfield)
 
     smix%iter = 0
     smix%last_ipos = 0
@@ -345,19 +311,8 @@ contains
     PUSH_SUB(mix_end)
 
     if(smix%precondition) call nl_operator_end(smix%preconditioner)
-
-    ! Arrays got allocated for all mixing schemes, except linear mixing
-    if (smix%scheme /= OPTION__MIXINGSCHEME__LINEAR) then
-      SAFE_DEALLOCATE_P(smix%ddf)
-      SAFE_DEALLOCATE_P(smix%ddv)
-      SAFE_DEALLOCATE_P(smix%dvin_old)
-      SAFE_DEALLOCATE_P(smix%df_old)
-
-      SAFE_DEALLOCATE_P(smix%zdf)
-      SAFE_DEALLOCATE_P(smix%zdv)
-      SAFE_DEALLOCATE_P(smix%zvin_old)
-      SAFE_DEALLOCATE_P(smix%zf_old)
-    end if
+   
+    call mixfield_end(smix, smix%mixfield)
 
     POP_SUB(mix_end)
   end subroutine mix_end
@@ -407,16 +362,16 @@ contains
     end if
 
     ! functions to be written need to be compatible with the mesh
-    ASSERT(mesh%np == smix%d1)
+    ASSERT(mesh%np == smix%mixfield%d1)
 
     ! First we write some information about the mixing
     iunit = restart_open(restart, 'mixing')
     write(lines(1), '(a11,i1)')  'scheme=    ', smix%scheme
     ! Number of global mesh points have to be written, not only smix%d1
     write(lines(2), '(a11,i10)') 'd1=        ', mesh%np_global
-    write(lines(3), '(a11,i10)') 'd2=        ', smix%d2
-    write(lines(4), '(a11,i10)') 'd3=        ', smix%d3
-    write(lines(5), '(a11,i10)') 'd4=        ', smix%d4
+    write(lines(3), '(a11,i10)') 'd2=        ', smix%mixfield%d2
+    write(lines(4), '(a11,i10)') 'd3=        ', smix%mixfield%d3
+    write(lines(5), '(a11,i10)') 'd4=        ', smix%mixfield%d4
     write(lines(6), '(a11,i10)') 'iter=      ', smix%iter
     write(lines(7), '(a11,i10)') 'ns=        ', smix%ns
     write(lines(8), '(a11,i10)') 'last_ipos= ', smix%last_ipos
@@ -428,41 +383,41 @@ contains
     ! These are not needed when using linear mixing, so we will make sure we skip this step in that case.
     err2 = 0
     if (smix%scheme /= OPTION__MIXINGSCHEME__LINEAR) then
-      do id2 = 1, smix%d2
-        do id3 = 1, smix%d3
-          do id4 = 1, smix%d4
+      do id2 = 1, smix%mixfield%d2
+        do id3 = 1, smix%mixfield%d3
+          do id4 = 1, smix%mixfield%d4
 
             write(filename,'(a3,i2.2,i2.2,i2.2)') 'df_', id2, id3, id4
-            if (smix%func_type == TYPE_FLOAT) then
-              call drestart_write_mesh_function(restart, filename, mesh, smix%ddf(1:mesh%np, id2, id3, id4), err)
+            if (smix%mixfield%func_type == TYPE_FLOAT) then
+              call drestart_write_mesh_function(restart, filename, mesh, smix%mixfield%ddf(1:mesh%np, id2, id3, id4), err)
             else
-              call zrestart_write_mesh_function(restart, filename, mesh, smix%zdf(1:mesh%np, id2, id3, id4), err)
+              call zrestart_write_mesh_function(restart, filename, mesh, smix%mixfield%zdf(1:mesh%np, id2, id3, id4), err)
             end if
             if (err /= 0) err2(1) = err2(1) + 1
 
             write(filename,'(a3,i2.2,i2.2,i2.2)') 'dv_', id2, id3, id4
-            if (smix%func_type == TYPE_FLOAT) then
-              call drestart_write_mesh_function(restart, filename, mesh, smix%ddv(1:mesh%np, id2, id3, id4), err)
+            if (smix%mixfield%func_type == TYPE_FLOAT) then
+              call drestart_write_mesh_function(restart, filename, mesh, smix%mixfield%ddv(1:mesh%np, id2, id3, id4), err)
             else
-              call zrestart_write_mesh_function(restart, filename, mesh, smix%zdv(1:mesh%np, id2, id3, id4), err)
+              call zrestart_write_mesh_function(restart, filename, mesh, smix%mixfield%zdv(1:mesh%np, id2, id3, id4), err)
             end if
             if (err /= 0) err2(2) = err2(2) + 1
               
           end do
 
           write(filename,'(a6,i2.2,i2.2)') 'f_old_', id2, id3
-          if (smix%func_type == TYPE_FLOAT) then
-            call drestart_write_mesh_function(restart, filename, mesh, smix%df_old(1:mesh%np, id2, id3), err)
+          if (smix%mixfield%func_type == TYPE_FLOAT) then
+            call drestart_write_mesh_function(restart, filename, mesh, smix%mixfield%df_old(1:mesh%np, id2, id3), err)
           else
-            call zrestart_write_mesh_function(restart, filename, mesh, smix%zf_old(1:mesh%np, id2, id3), err)
+            call zrestart_write_mesh_function(restart, filename, mesh, smix%mixfield%zf_old(1:mesh%np, id2, id3), err)
           end if
           if (err /= 0) err2(3) = err2(3) + 1
 
           write(filename,'(a8,i2.2,i2.2)') 'vin_old_', id2, id3
-          if (smix%func_type == TYPE_FLOAT) then
-            call drestart_write_mesh_function(restart, filename, mesh, smix%dvin_old(1:mesh%np, id2, id3), err)
+          if (smix%mixfield%func_type == TYPE_FLOAT) then
+            call drestart_write_mesh_function(restart, filename, mesh, smix%mixfield%dvin_old(1:mesh%np, id2, id3), err)
           else
-            call zrestart_write_mesh_function(restart, filename, mesh, smix%zvin_old(1:mesh%np, id2, id3), err)
+            call zrestart_write_mesh_function(restart, filename, mesh, smix%mixfield%zvin_old(1:mesh%np, id2, id3), err)
           end if
           if (err /= 0) err2(4) = err2(4) + 1
           
@@ -540,7 +495,7 @@ contains
       end if
 
       ! Check the dimensions of the arrays to be read
-      if (mesh%np_global /= d1 .or. mesh%np /= smix%d1 .or. d2 /= smix%d2 .or. d3 /= smix%d3 ) then
+      if (mesh%np_global /= d1 .or. mesh%np /= smix%mixfield%d1 .or. d2 /= smix%mixfield%d2 .or. d3 /= smix%mixfield%d3 ) then
         message(1) = "The dimensions of the arrays from the mixing restart data"
         message(2) = "are not the same as the ones used in this calculation."
         call messages_warning(2)
@@ -554,41 +509,41 @@ contains
     if (ierr == 0) then
       if (smix%scheme /= OPTION__MIXINGSCHEME__LINEAR) then
         err2 = 0
-        do id2 = 1, smix%d2
-          do id3 = 1, smix%d3
-            do id4 = 1, smix%d4
+        do id2 = 1, smix%mixfield%d2
+          do id3 = 1, smix%mixfield%d3
+            do id4 = 1, smix%mixfield%d4
 
               write(filename,'(a3,i2.2,i2.2,i2.2)') 'df_', id2, id3, id4
-              if (smix%func_type == TYPE_FLOAT) then
-                call drestart_read_mesh_function(restart, trim(filename), mesh, smix%ddf(1:mesh%np, id2, id3, id4), err)
+              if (smix%mixfield%func_type == TYPE_FLOAT) then
+                call drestart_read_mesh_function(restart, trim(filename), mesh, smix%mixfield%ddf(1:mesh%np, id2, id3, id4), err)
               else
-                call zrestart_read_mesh_function(restart, trim(filename), mesh, smix%zdf(1:mesh%np, id2, id3, id4), err)
+                call zrestart_read_mesh_function(restart, trim(filename), mesh, smix%mixfield%zdf(1:mesh%np, id2, id3, id4), err)
               end if
               if (err /= 0) err2(1) = err2(1) + 1
           
               write(filename,'(a3,i2.2,i2.2,i2.2)') 'dv_', id2, id3, id4
-              if (smix%func_type == TYPE_FLOAT) then
-                call drestart_read_mesh_function(restart, trim(filename), mesh, smix%ddv(1:mesh%np, id2, id3, id4), err)
+              if (smix%mixfield%func_type == TYPE_FLOAT) then
+                call drestart_read_mesh_function(restart, trim(filename), mesh, smix%mixfield%ddv(1:mesh%np, id2, id3, id4), err)
               else
-                call zrestart_read_mesh_function(restart, trim(filename), mesh, smix%zdv(1:mesh%np, id2, id3, id4), err)
+                call zrestart_read_mesh_function(restart, trim(filename), mesh, smix%mixfield%zdv(1:mesh%np, id2, id3, id4), err)
               end if
               if (err /= 0) err2(2) = err2(2) + 1
 
             end do
 
             write(filename,'(a6,i2.2,i2.2)') 'f_old_', id2, id3
-            if (smix%func_type == TYPE_FLOAT) then
-              call drestart_read_mesh_function(restart, trim(filename), mesh, smix%df_old(1:mesh%np, id2, id3), err)
+            if (smix%mixfield%func_type == TYPE_FLOAT) then
+              call drestart_read_mesh_function(restart, trim(filename), mesh, smix%mixfield%df_old(1:mesh%np, id2, id3), err)
             else
-              call zrestart_read_mesh_function(restart, trim(filename), mesh, smix%zf_old(1:mesh%np, id2, id3), err)
+              call zrestart_read_mesh_function(restart, trim(filename), mesh, smix%mixfield%zf_old(1:mesh%np, id2, id3), err)
             end if
             if (err /= 0) err2(3) = err2(3) + 1
 
             write(filename,'(a8,i2.2,i2.2)') 'vin_old_', id2, id3
-            if (smix%func_type == TYPE_FLOAT) then
-              call drestart_read_mesh_function(restart, trim(filename), mesh, smix%dvin_old(1:mesh%np, id2, id3), err)
+            if (smix%mixfield%func_type == TYPE_FLOAT) then
+              call drestart_read_mesh_function(restart, trim(filename), mesh, smix%mixfield%dvin_old(1:mesh%np, id2, id3), err)
             else
-              call zrestart_read_mesh_function(restart, trim(filename), mesh, smix%zvin_old(1:mesh%np, id2, id3), err)
+              call zrestart_read_mesh_function(restart, trim(filename), mesh, smix%mixfield%zvin_old(1:mesh%np, id2, id3), err)
             end if
             if (err /= 0) err2(4) = err2(4) + 1
 
@@ -620,7 +575,98 @@ contains
     
     coefficient = this%coeff
   end function mix_coefficient
-  
+
+
+  subroutine mixfield_init( smix, mixfield, d1, d2, d3, d4, func_type ) 
+    type(mix_t),      intent(in)    :: smix
+    type(mixfield_t), intent(inout) :: mixfield
+    integer,          intent(in)    :: d1, d2, d3, d4
+    type(type_t),     intent(in)    :: func_type
+
+    PUSH_SUB(mixfield_init)
+
+    nullify(mixfield%ddf)
+    nullify(mixfield%ddv)
+    nullify(mixfield%df_old)
+    nullify(mixfield%dvin_old)
+
+    nullify(mixfield%zdf)
+    nullify(mixfield%zdv)
+    nullify(mixfield%zf_old)
+    nullify(mixfield%zvin_old)
+
+    mixfield%d1 = d1
+    mixfield%d2 = d2
+    mixfield%d3 = d3
+    mixfield%d4 = d4
+
+    mixfield%func_type = func_type 
+
+    if (smix%scheme /= OPTION__MIXINGSCHEME__LINEAR) then
+      if(mixfield%func_type == TYPE_FLOAT) then
+        SAFE_ALLOCATE(     mixfield%ddf(1:d1, 1:d2, 1:d3, 1:d4))
+        SAFE_ALLOCATE(mixfield%dvin_old(1:d1, 1:d2, 1:d3))
+        SAFE_ALLOCATE(     mixfield%ddv(1:d1, 1:d2, 1:d3, 1:d4))
+        SAFE_ALLOCATE(  mixfield%df_old(1:d1, 1:d2, 1:d3))
+      else
+        SAFE_ALLOCATE(     mixfield%zdf(1:d1, 1:d2, 1:d3, 1:d4))
+        SAFE_ALLOCATE(mixfield%zvin_old(1:d1, 1:d2, 1:d3))
+        SAFE_ALLOCATE(     mixfield%zdv(1:d1, 1:d2, 1:d3, 1:d4))
+        SAFE_ALLOCATE(  mixfield%zf_old(1:d1, 1:d2, 1:d3))
+      end if
+    end if
+    
+
+    POP_SUB(mixfield_init)
+  end subroutine mixfield_init 
+
+    ! ---------------------------------------------------------
+  subroutine mixfield_end(smix, mixfield)
+    type(mix_t),         intent(in) :: smix
+    type(mixfield_t), intent(inout) :: mixfield
+
+    PUSH_SUB(mixfield_end)
+
+    ! Arrays got allocated for all mixing schemes, except linear mixing
+    if (smix%scheme /= OPTION__MIXINGSCHEME__LINEAR) then
+      SAFE_DEALLOCATE_P(mixfield%ddf)
+      SAFE_DEALLOCATE_P(mixfield%ddv)
+      SAFE_DEALLOCATE_P(mixfield%dvin_old)
+      SAFE_DEALLOCATE_P(mixfield%df_old)
+
+      SAFE_DEALLOCATE_P(mixfield%zdf)
+      SAFE_DEALLOCATE_P(mixfield%zdv)
+      SAFE_DEALLOCATE_P(mixfield%zvin_old)
+      SAFE_DEALLOCATE_P(mixfield%zf_old)
+    end if
+
+    POP_SUB(mixfield_end)
+  end subroutine mixfield_end
+
+  ! ---------------------------------------------------------
+  subroutine mixfield_clear(smix, mixfield)
+    type(mix_t),         intent(in) :: smix
+    type(mixfield_t), intent(inout) :: mixfield
+
+    PUSH_SUB(mixfield_clear)
+
+    if (smix%scheme /= OPTION__MIXINGSCHEME__LINEAR) then
+      if(mixfield%func_type == TYPE_FLOAT) then
+        mixfield%ddf = M_ZERO
+        mixfield%ddv = M_ZERO
+        mixfield%dvin_old = M_ZERO
+        mixfield%df_old = M_ZERO
+      else
+        mixfield%zdf = M_z0
+        mixfield%zdv = M_z0
+        mixfield%zvin_old = M_z0
+        mixfield%zf_old = M_z0
+      end if
+    end if
+
+    POP_SUB(mixfield_clear)
+  end subroutine mixfield_clear
+
   
 #include "undef.F90"
 #include "real.F90"

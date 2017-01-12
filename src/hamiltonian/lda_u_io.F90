@@ -292,34 +292,4 @@ contains
     POP_SUB(lda_u_load)
   end subroutine lda_u_load
 
-  ! ---------------------------------------------------------
-  subroutine lda_u_set_effectiveU(this, Ueff)
-    type(lda_u_t),  intent(inout) :: this
-    FLOAT,          intent(in)    :: Ueff(:) !< (this%norbsets)
-
-    integer :: ios
-
-    PUSH_SUB(lda_u_set_effectiveU)
- 
-    do ios = 1,this%norbsets
-      this%orbsets(ios)%Ueff = Ueff(ios)
-    end do
-    POP_SUB(lda_u_set_effectiveU)
-  end subroutine lda_u_set_effectiveU
-
-  ! ---------------------------------------------------------
-  subroutine lda_u_get_effectiveU(this, Ueff)
-    type(lda_u_t),  intent(in)    :: this
-    FLOAT,          intent(inout) :: Ueff(:) !< (this%norbsets)
-
-    integer :: ios
-
-    PUSH_SUB(lda_u_get_effectiveU)
-
-    do ios = 1,this%norbsets
-      Ueff(ios) = this%orbsets(ios)%Ueff
-    end do
-    POP_SUB(lda_u_get_effectiveU)
-  end subroutine lda_u_get_effectiveU
-
 end module lda_u_io_oct_m

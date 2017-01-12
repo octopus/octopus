@@ -69,7 +69,7 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
         !This does not change anything if the sphere occupies the full mesh or not
         if(has_phase) then
           dot(im) = X(mf_dotp)(os%sphere%mesh, os%orbitals(im)%X(orb),&
-                               epsi(1:os%sphere%np,1), np = os%sphere%np)
+                               epsi(1:os%sphere%np,1), reduce = .false., np = os%sphere%np)
         else
           dot(im) = submesh_to_mesh_dotp(os%sphere, 1, os%orbitals(im)%X(orb),&
                                psi(1:mesh%np,1:d%dim))
@@ -173,7 +173,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
         do im = 1, norbs
           if(present(phase)) then
             dot(im,ios) = X(mf_dotp)(os%sphere%mesh, epsi(1:os%sphere%np),&
-                                 os%orbitals(im)%X(orb), np = os%sphere%np)
+                                 os%orbitals(im)%X(orb), reduce = .false., np = os%sphere%np)
           else
             dot(im,ios) = submesh_to_mesh_dotp(os%sphere, 1, os%orbitals(im)%X(orb), &
                                                psi(1:mesh%np,1:st%d%dim))
