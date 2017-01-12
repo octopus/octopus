@@ -358,10 +358,10 @@ contains
     end if
     call mix_get_field(scf%smix, scf%mixfield)
 
-  !  !If we use LDA+U, we also have do mix it
-  !  if(scf%mix_field /= OPTION__MIXFIELD__STATES) then
-  !    call lda_u_mixer_init_auxmixer(hm%lda_u, scf%lda_u_mix, scf%smix, gr%der, st)
-  !  end if
+    !If we use LDA+U, we also have do mix it
+    if(scf%mix_field /= OPTION__MIXFIELD__STATES) then
+      call lda_u_mixer_init_auxmixer(hm%lda_u, scf%lda_u_mix, scf%smix, st)
+    end if
 
     ! now the eigensolver stuff
     call eigensolver_init(scf%eigens, gr, st)
@@ -725,8 +725,6 @@ contains
       call states_fermi(st, gr%mesh)
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
       call lda_u_update_U(hm%lda_u, st)
-      if(scf%mix_field /= OPTION__MIXFIELD__STATES) &
-        call lda_u_mixer_copy_out(hm%lda_u, scf%lda_u_mix)
 
       ! compute output density, potential (if needed) and eigenvalues sum
       if(cmplxscl) then
@@ -763,9 +761,11 @@ contains
             call batch_copy_data(gr%mesh%np, st%group%psib(ib, iqn), psioutb(ib, iqn))
           end do
         end do
-        
       end select
-      
+     
+      if(scf%mix_field /= OPTION__MIXFIELD__STATES) &
+        call lda_u_mixer_set_vout(hm%lda_u, scf%lda_u_mix)
+ 
       evsum_out = states_eigenvalues_sum(st)
 
       ! recalculate total energy
@@ -834,7 +834,7 @@ contains
         ! mix input and output densities and compute new potential
         call mixing(scf%smix)
         if(.not. cmplxscl) then
-          call mixfield_get_dvnew(scf%mixfield, st%rho)
+          call mixfield_get_vnew(scf%mixfield, st%rho)
           ! for spinors, having components 3 or 4 be negative is not unphysical
           if(minval(st%rho(1:gr%fine%mesh%np, 1:st%d%spin_channels)) < -CNST(1e-6)) then
             write(message(1),*) 'Negative density after mixing. Minimum value = ', &
@@ -842,19 +842,19 @@ contains
             call messages_warning(1)
           end if
         else
-          call mixfield_get_zvnew(scf%mixfield, st%zrho%Re, st%zrho%Im)
+          call mixfield_get_vnew(scf%mixfield, st%zrho%Re, st%zrho%Im)
         end if
-      !  call lda_u_mixer_mix(hm%lda_u, scf%lda_u_mix, scf%smix)
+        call lda_u_mixer_get_vnew(hm%lda_u, scf%lda_u_mix)
         call v_ks_calc(ks, hm, st, geo)
       case (OPTION__MIXFIELD__POTENTIAL)
         ! mix input and output potentials
         call mixing(scf%smix)
         if(.not. cmplxscl) then
-          call mixfield_get_dvnew(scf%mixfield, hm%vhxc)
+          call mixfield_get_vnew(scf%mixfield, hm%vhxc)
         else
-          call mixfield_get_zvnew(scf%mixfield, hm%vhxc, hm%Imvhxc)
+          call mixfield_get_vnew(scf%mixfield, hm%vhxc, hm%Imvhxc)
         end if
-       ! call lda_u_mixer_mix(hm%lda_u, scf%lda_u_mix, scf%smix)
+        call lda_u_mixer_get_vnew(hm%lda_u, scf%lda_u_mix)
         call hamiltonian_update(hm, gr%mesh)
         
       case(OPTION__MIXFIELD__STATES)
@@ -969,14 +969,13 @@ contains
             call mixfield_set_vin(scf%mixfield, zrhoin)
         end if
       end select
+      if(scf%mix_field /= OPTION__MIXFIELD__STATES) &
+        call lda_u_mixer_set_vin(hm%lda_u, scf%lda_u_mix)
 
       evsum_in = evsum_out
       if (scf%conv_abs_force > M_ZERO) then
         forcein(1:geo%natoms, 1:gr%sb%dim) = forceout(1:geo%natoms, 1:gr%sb%dim)
       end if
-
-      if(scf%mix_field /= OPTION__MIXFIELD__STATES) &
-        call lda_u_mixer_outin(hm%lda_u, scf%lda_u_mix)
 
       if(scf%forced_finish) then
         call profiling_out(prof)
@@ -1008,7 +1007,7 @@ contains
     end select
 
     if(scf%mix_field /= OPTION__MIXFIELD__STATES) &
-      call lda_u_mixer_end(hm%lda_u,scf%lda_u_mix)
+      call lda_u_mixer_end(hm%lda_u,scf%lda_u_mix, scf%smix)
 
     SAFE_DEALLOCATE_A(rhoout)
     SAFE_DEALLOCATE_A(rhoin)

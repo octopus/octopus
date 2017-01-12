@@ -51,6 +51,7 @@ module mix_oct_m
     mix_load,                   &
     mixing,                     &
     mix_coefficient,            &
+    mix_d4,                     &
     mix_get_field,              &
     mixfield_t,                 &
     mixfield_init,              &
@@ -58,8 +59,7 @@ module mix_oct_m
     mixfield_end,               &
     mixfield_set_vin,           &
     mixfield_set_vout,          &
-    mixfield_get_dvnew,         &
-    mixfield_get_zvnew
+    mixfield_get_vnew
 
   type mixfield_t
     FLOAT, pointer :: ddf(:, :, :, :)
@@ -127,6 +127,12 @@ module mix_oct_m
                      zmixfield_set_vout2, zmixfield_set_vout3, &
                      ddmixfield_set_vout2
   end interface mixfield_set_vout
+
+  interface mixfield_get_vnew
+    module procedure dmixfield_get_vnew, ddmixfield_get_vnew, &
+                     zmixfield_get_vnew
+  end interface mixfield_get_vnew
+
 
 contains
 
@@ -624,6 +630,12 @@ contains
     coefficient = this%coeff
   end function mix_coefficient
 
+  integer pure function mix_d4(this) 
+    type(mix_t), intent(in) :: this
+
+    mix_d4 = this%mixfield%d4
+  end function mix_d4
+
   subroutine mix_get_field(this, mixfield)
     type(mix_t), target,  intent(in) :: this
     type(mixfield_t), pointer, intent(out) :: mixfield
@@ -819,17 +831,17 @@ contains
   end subroutine mixfield_get_dvnew
 
   ! --------------------------------------------------------------
-  subroutine mixfield_get_zvnew(mixfield, re, im)
+  subroutine ddmixfield_get_vnew(mixfield, re, im)
     type(mixfield_t),   intent(in) :: mixfield
     FLOAT,          intent(inout)  :: re(:,:), im(:,:)
 
-    PUSH_SUB(mixfield_get_zvnew)
+    PUSH_SUB(mixfield_get_ddvnew)
 
     re(1:mixfield%d1, 1:mixfield%d3) =  real(mixfield%zvnew(1:mixfield%d1, 1, 1:mixfield%d3))
     im(1:mixfield%d1, 1:mixfield%d3) = aimag(mixfield%zvnew(1:mixfield%d1, 1, 1:mixfield%d3))
 
-    POP_SUB(mixfield_get_zvnew)
-  end subroutine mixfield_get_zvnew
+    POP_SUB(mixfield_get_ddvnew)
+  end subroutine ddmixfield_get_vnew
 
 
 #include "undef.F90"

@@ -482,6 +482,18 @@ end function X(mix_dotp)
     POP_SUB(X(mixfield_set_vout3))
   end subroutine X(mixfield_set_vout3)
 
+  ! --------------------------------------------------------------
+  subroutine X(mixfield_get_vnew)(mixfield, vnew)
+    type(mixfield_t),   intent(in) :: mixfield
+    R_TYPE,          intent(inout)  :: vnew(:,:)
+
+    PUSH_SUB(X(mixfield_get_dvnew))
+
+    vnew(1:mixfield%d1, 1:mixfield%d3) = mixfield%X(vnew)(1:mixfield%d1, 1, 1:mixfield%d3)
+
+    POP_SUB(X(mixfield_get_vnew))
+  end subroutine X(mixfield_get_vnew)
+
 
 !! Local Variables:
 !! mode: f90
