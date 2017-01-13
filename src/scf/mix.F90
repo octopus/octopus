@@ -59,7 +59,8 @@ module mix_oct_m
     mixfield_end,               &
     mixfield_set_vin,           &
     mixfield_set_vout,          &
-    mixfield_get_vnew
+    mixfield_get_vnew,          &
+    mix_add_auxmixfield
 
   type mixfield_t
     FLOAT, pointer :: ddf(:, :, :, :)
@@ -94,11 +95,15 @@ module mix_oct_m
 
     FLOAT :: coeff              !< the mixing coefficient (in linear mixing: vnew = (1-coeff)*vin + coeff*vout)
 
+    FLOAT :: dgamma             !< The gamma coefficient of the Broyden mixing scheme
+    CMPLX :: zgamma             !< which is stored here for possible auxiliarry mixfields
+
     integer :: iter             !< number of SCF iterations already done. In case of restart, this number must
                                 !< include the iterations done in previous calculations.
 
     integer :: ns               !< number of steps used to extrapolate the new vector
 
+    integer :: ipos             !< For auxiliary mixing fields
     integer :: last_ipos        !< where is the information about the last iteration stored in arrays df and dv
 
     integer :: interval
@@ -666,6 +671,12 @@ contains
 
     smix%nauxmixfield = smix%nauxmixfield + 1
     smix%auxmixfield(smix%nauxmixfield)%p => mixfield 
+
+    if( smix%scheme == OPTION__MIXINGSCHEME__DIIS) &
+      call messages_input_error('Mixing scheme  DIIS is not implemented for auxiliary mixing fields')
+
+    if( smix%scheme == OPTION__MIXINGSCHEME__BOWLER_GILLAN) &
+      call messages_input_error('Mixing scheme  Bowler Gillan is not implemented for auxiliary mixing fields')
 
     POP_SUB(mix_add_auxmixfield)
   end subroutine mix_add_auxmixfield

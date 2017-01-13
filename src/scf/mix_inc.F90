@@ -21,7 +21,9 @@ subroutine X(mixing)(smix, vin, vout, vnew)
   type(mix_t),  intent(inout) :: smix
   R_TYPE,       intent(in)    :: vin(:, :, :), vout(:, :, :)
   R_TYPE,       intent(out)   :: vnew(:, :, :)
-  
+ 
+  integer :: ii
+ 
   PUSH_SUB(X(mixing))
 
   ASSERT(associated(smix%der))
@@ -31,7 +33,11 @@ subroutine X(mixing)(smix, vin, vout, vnew)
   select case (smix%scheme)
   case (OPTION__MIXINGSCHEME__LINEAR)
     call X(mixing_linear)(smix%coeff, smix%mixfield%d1, smix%mixfield%d2, smix%mixfield%d3, vin, vout, vnew)
-    
+    do ii = 1, smix%nauxmixfield
+      call X(mixing_linear)(smix%coeff, smix%auxmixfield(ii)%p%d1, smix%auxmixfield(ii)%p%d2, smix%auxmixfield(ii)%p%d3, &
+                                  smix%auxmixfield(ii)%p%X(vin), smix%auxmixfield(ii)%p%X(vout), smix%auxmixfield(ii)%p%X(vnew))
+    end do
+ 
   case (OPTION__MIXINGSCHEME__BROYDEN)
     call X(mixing_broyden)(smix, vin, vout, vnew, smix%iter)
     
@@ -70,7 +76,6 @@ subroutine X(mixing_broyden)(smix, vin, vout, vnew, iter)
   integer,        intent(in)    :: iter
 
   integer :: ipos, iter_used, i, j, d1, d2, d3
-  R_TYPE :: gamma
   R_TYPE, allocatable :: f(:, :, :)
 
   PUSH_SUB(X(mixing_broyden))
@@ -80,32 +85,34 @@ subroutine X(mixing_broyden)(smix, vin, vout, vnew, iter)
   d3 = smix%mixfield%d3
 
   SAFE_ALLOCATE(f(1:d1, 1:d2, 1:d3))
-  
+
+  smix%X(gamma) = M_ZERO 
+ 
   f(1:d1, 1:d2, 1:d3) = vout(1:d1, 1:d2, 1:d3) - vin(1:d1, 1:d2, 1:d3)
   if(iter > 1) then
     ! Store df and dv from current iteration
     ipos = mod(smix%last_ipos, smix%ns) + 1
-    
+    smix%ipos = ipos   
+ 
     call lalg_copy(d1, d2, d3, f(:, :, :), smix%mixfield%X(df)(:, :, :, ipos))
     call lalg_copy(d1, d2, d3, vin(:, :, :), smix%mixfield%X(dv)(:, :, :, ipos))
     call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), smix%mixfield%X(f_old)(:, :, :),   smix%mixfield%X(df)(:, :, :, ipos))
     call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), smix%mixfield%X(vin_old)(:, :, :), smix%mixfield%X(dv)(:, :, :, ipos))
     
-    gamma = M_ZERO
     do i = 1, d2
       do j = 1, d3
-        gamma = gamma + X(mix_dotp)(smix, smix%mixfield%X(df)(:, i, j, ipos), smix%mixfield%X(df)(:, i, j, ipos))
+        smix%X(gamma) = smix%X(gamma) + X(mix_dotp)(smix, smix%mixfield%X(df)(:, i, j, ipos), smix%mixfield%X(df)(:, i, j, ipos))
       end do
     end do
-    gamma = sqrt(gamma)
+    smix%X(gamma) = sqrt(smix%X(gamma))
     
-    if(abs(gamma) > CNST(1e-8)) then
-      gamma = M_ONE/gamma
+    if(abs(smix%X(gamma)) > CNST(1e-8)) then
+      smix%X(gamma) = M_ONE/smix%X(gamma)
     else
-      gamma = M_ONE
+      smix%X(gamma) = M_ONE
     end if
-    call lalg_scal(d1, d2, d3, gamma, smix%mixfield%X(df)(:, :, :, ipos))
-    call lalg_scal(d1, d2, d3, gamma, smix%mixfield%X(dv)(:, :, :, ipos))
+    call lalg_scal(d1, d2, d3, smix%X(gamma), smix%mixfield%X(df)(:, :, :, ipos))
+    call lalg_scal(d1, d2, d3, smix%X(gamma), smix%mixfield%X(dv)(:, :, :, ipos))
     
     smix%last_ipos = ipos
   end if
@@ -136,7 +143,7 @@ subroutine X(broyden_extrapolation)(this, coeff, d1, d2, d3, vin, vnew, iter_use
   FLOAT, parameter :: w0 = CNST(0.01), ww = M_FIVE
   integer  :: i, j, k, l
   R_TYPE    :: gamma, determinant
-  R_TYPE, allocatable :: beta(:, :), work(:)
+  R_TYPE, allocatable :: beta(:, :), work(:) 
 
   PUSH_SUB(X(broyden_extrapolation))
   
@@ -185,12 +192,93 @@ subroutine X(broyden_extrapolation)(this, coeff, d1, d2, d3, vin, vnew, iter_use
     gamma = ww*sum(beta(:, i)*work(:))
     vnew(1:d1, 1:d2, 1:d3) = vnew(1:d1, 1:d2, 1:d3) - ww*gamma*(coeff*df(1:d1, 1:d2, 1:d3, i) + dv(1:d1, 1:d2, 1:d3, i))
   end do
-  
+
+  do i = 1, this%nauxmixfield
+   if(this%auxmixfield(i)%p%func_type == TYPE_FLOAT) then
+     call dbroyden_extrapolation_aux(this, i, coeff, iter_used, X(beta)=beta, X(work)=work, X(gamma)=this%X(gamma))
+   else
+     call zbroyden_extrapolation_aux(this, i, coeff, iter_used, X(beta)=beta, X(work)=work, X(gamma)=this%X(gamma))
+   end if
+  end do 
+
   SAFE_DEALLOCATE_A(beta)
   SAFE_DEALLOCATE_A(work)
   
   POP_SUB(X(broyden_extrapolation))
 end subroutine X(broyden_extrapolation)
+
+!--------------------------------------------------------------------
+
+subroutine X(broyden_extrapolation_aux)(this, ii, coeff, iter_used, dbeta, dwork, zbeta, zwork, dgamma, zgamma)
+  type(mix_t),  intent(inout)    :: this
+  integer,            intent(in) :: ii
+  FLOAT,              intent(in) :: coeff
+  integer,            intent(in) :: iter_used
+  FLOAT, optional,    intent(in) :: dbeta(:, :), dwork(:), dgamma
+  CMPLX, optional,    intent(in) :: zbeta(:, :), zwork(:), zgamma
+
+  FLOAT, parameter :: w0 = CNST(0.01), ww = M_FIVE
+  integer :: d1,d2,d3, ipos, i
+  R_TYPE  :: gamma
+  R_TYPE, allocatable :: f(:, :, :)
+
+  PUSH_SUB(X(broyden_extrapolation_aux))
+
+  d1 = this%auxmixfield(ii)%p%d1 
+  d2 = this%auxmixfield(ii)%p%d2
+  d3 = this%auxmixfield(ii)%p%d3
+
+  SAFE_ALLOCATE(f(1:d1, 1:d2, 1:d3))
+
+  f(1:d1, 1:d2, 1:d3) = this%auxmixfield(ii)%p%X(vout)(1:d1, 1:d2, 1:d3) - this%auxmixfield(ii)%p%X(vin)(1:d1, 1:d2, 1:d3)
+  ! linear mixing term
+  this%auxmixfield(ii)%p%X(vnew)(1:d1, 1:d2, 1:d3) = this%auxmixfield(ii)%p%X(vin)(1:d1, 1:d2, 1:d3) + coeff*f(1:d1, 1:d2, 1:d3)
+
+  if(this%iter > 1) then
+   ! Store df and dv from current iteration
+   ipos = this%ipos
+
+   call lalg_copy(d1, d2, d3, f(:, :, :), this%auxmixfield(ii)%p%X(df)(:, :, :, ipos))
+   call lalg_copy(d1, d2, d3, this%auxmixfield(ii)%p%X(vin)(:, :, :), this%auxmixfield(ii)%p%X(dv)(:, :, :, ipos))
+   call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), this%auxmixfield(ii)%p%X(f_old)(:, :, :),   this%auxmixfield(ii)%p%X(df)(:, :, :, ipos))
+   call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), this%auxmixfield(ii)%p%X(vin_old)(:, :, :), this%auxmixfield(ii)%p%X(dv)(:, :, :, ipos))
+
+   if(present(dgamma)) then
+     gamma = dgamma
+   else
+     gamma = zgamma
+   end if
+
+   call lalg_scal(d1, d2, d3, gamma, this%auxmixfield(ii)%p%X(df)(:, :, :, ipos))
+   call lalg_scal(d1, d2, d3, gamma, this%auxmixfield(ii)%p%X(dv)(:, :, :, ipos))
+
+  end if
+
+  ! Store residual and vin for next iteration
+  this%auxmixfield(ii)%p%X(vin_old)(1:d1, 1:d2, 1:d3) = this%auxmixfield(ii)%p%X(vin)(1:d1, 1:d2, 1:d3)
+  this%auxmixfield(ii)%p%X(f_old)  (1:d1, 1:d2, 1:d3) = f  (1:d1, 1:d2, 1:d3)
+
+  ! other terms
+  do i = 1, iter_used
+    !Here gamma might be of a different type than the main mixfield type, so we convert it to the proper type
+    if(present(dbeta).and.present(dwork)) then
+      gamma = ww*sum(dbeta(:, i)*dwork(:))
+    else 
+      if(present(zbeta).and.present(zwork)) then
+        gamma = ww*sum(zbeta(:, i)*zwork(:))
+      else
+        write(message(1), '(a)') 'Internal error in broyden_extrapolation_aux'
+        call messages_fatal(1)
+      end if
+    end if
+    this%auxmixfield(ii)%p%X(vnew)(1:d1, 1:d2, 1:d3) = this%auxmixfield(ii)%p%X(vnew)(1:d1, 1:d2, 1:d3) &
+            - ww*gamma*(coeff*this%auxmixfield(ii)%p%X(df)(1:d1, 1:d2, 1:d3, i) + this%auxmixfield(ii)%p%X(dv)(1:d1, 1:d2, 1:d3, i))
+  end do
+
+  SAFE_DEALLOCATE_A(f)
+
+  POP_SUB(X(broyden_extrapolation_aux))
+endsubroutine X(broyden_extrapolation_aux)
 
 !--------------------------------------------------------------------
 
