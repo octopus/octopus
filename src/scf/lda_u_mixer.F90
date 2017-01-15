@@ -197,9 +197,11 @@ contains
    if(mixer%realstates) then
      call mixfield_get_vnew(mixer%mixfield_occ, mixer%dtmp_occ)
      call dlda_u_set_occupations(this, mixer%dtmp_occ(1:mixer%occsize,1))
+     call dlda_u_update_potential(this)
    else
      call mixfield_get_vnew(mixer%mixfield_occ, mixer%ztmp_occ)
      call zlda_u_set_occupations(this, mixer%ztmp_occ(1:mixer%occsize,1))
+     call zlda_u_update_potential(this)
    end if
 
    if(this%useACBN0) then

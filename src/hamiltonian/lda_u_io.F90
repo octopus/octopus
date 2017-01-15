@@ -263,7 +263,7 @@ contains
       if (err /= 0) ierr = ierr + 1
 
       call dlda_u_set_occupations(this, docc)
-      call dlda_u_update_potential(this, st)
+      call dlda_u_update_potential(this)
       SAFE_DEALLOCATE_A(docc)
     else
       SAFE_ALLOCATE(zocc(1:occsize))
@@ -271,7 +271,7 @@ contains
       if (err /= 0) ierr = ierr + 1
 
       call zlda_u_set_occupations(this, zocc)
-      call zlda_u_update_potential(this, st)
+      call zlda_u_update_potential(this)
       SAFE_DEALLOCATE_A(zocc)
     end if
 

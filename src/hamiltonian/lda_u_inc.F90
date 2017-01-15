@@ -218,8 +218,8 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
   end if
 #endif      
 
-  call X(compute_dudarev_energy)(this, st, lda_u_energy)
-  call X(lda_u_update_potential)(this, st)
+  call X(compute_dudarev_energy)(this, lda_u_energy)
+  call X(lda_u_update_potential)(this)
 
   POP_SUB(update_occ_matrices)
 end subroutine X(update_occ_matrices)
@@ -227,9 +227,8 @@ end subroutine X(update_occ_matrices)
 ! ---------------------------------------------------------
 !> This routine compute the value of the double counting term in the LDA+U energy
 ! ---------------------------------------------------------
-subroutine X(compute_dudarev_energy)(this, st, lda_u_energy)
+subroutine X(compute_dudarev_energy)(this, lda_u_energy)
   type(lda_u_t), intent(inout)    :: this
-  type(states_t),  intent(in)     :: st
   FLOAT, intent(inout)            :: lda_u_energy
  
   integer :: ios, imp, im, ispin
@@ -239,7 +238,7 @@ subroutine X(compute_dudarev_energy)(this, st, lda_u_energy)
   lda_u_energy = M_ZERO
 
   do ios = 1, this%norbsets
-    do ispin = 1, st%d%nspin
+    do ispin = 1, this%nspins
       !TODO: These are matrix operations, that could be optimized
       do im = 1, this%orbsets(ios)%norbs
         do imp = 1, this%orbsets(ios)%norbs
@@ -259,9 +258,8 @@ end subroutine X(compute_dudarev_energy)
 !> by the projector Pmm' and summed over m and m' for all the atoms
 !> gives the full Hubbard potential
 ! ---------------------------------------------------------
-subroutine X(lda_u_update_potential)(this, st)
+subroutine X(lda_u_update_potential)(this)
   type(lda_u_t), intent(inout)    :: this
-  type(states_t),  intent(in)     :: st
 
   integer :: ios, im, ispin, norbs
 
@@ -271,7 +269,7 @@ subroutine X(lda_u_update_potential)(this, st)
 
   do ios = this%orbs_dist%start, this%orbs_dist%end
     norbs = this%orbsets(ios)%norbs
-    do ispin = 1, st%d%nspin
+    do ispin = 1, this%nspins
       do im = 1, norbs
         this%X(V)(1:norbs,im,ispin,ios) = - this%orbsets(ios)%Ueff*this%X(n)(1:norbs,im,ispin,ios)
         this%X(V)(im,im,ispin,ios) = this%X(V)(im,im,ispin,ios) + CNST(0.5)*this%orbsets(ios)%Ueff
