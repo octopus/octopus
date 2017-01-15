@@ -575,7 +575,7 @@ end function X(mix_dotp)
     type(mixfield_t),   intent(in) :: mixfield
     R_TYPE,          intent(inout)  :: vnew(:,:)
 
-    PUSH_SUB(X(mixfield_get_dvnew))
+    PUSH_SUB(X(mixfield_get_vnew))
 
     vnew(1:mixfield%d1, 1:mixfield%d3) = mixfield%X(vnew)(1:mixfield%d1, 1, 1:mixfield%d3)
 

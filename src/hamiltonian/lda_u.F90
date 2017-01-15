@@ -134,6 +134,7 @@ contains
   this%norbsets = 0
   this%max_np = 0
   this%maxnorbs = 0
+  this%nspins = 0
 
   nullify(this%dn)
   nullify(this%zn)
@@ -246,6 +247,7 @@ contains
     call zconstruct_orbital_basis(this, geo, gr%mesh, st)  
   end if
   maxorbs = this%maxnorbs
+  this%nspins = st%d%nspin
 
   !We analyse the memeory and we print the requiered memory
   !Thus, if there is not enough memory, the user knows with the code crashes

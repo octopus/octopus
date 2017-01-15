@@ -50,6 +50,8 @@ module mix_oct_m
     mix_dump,                   &
     mix_load,                   &
     mixing,                     &
+    dmixing,                    &
+    zmixing,                    &
     mix_coefficient,            &
     mix_d4,                     &
     mix_get_field,              &

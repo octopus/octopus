@@ -761,6 +761,7 @@ end subroutine X(get_atomic_orbital)
 
     PUSH_SUB(X(lda_u_set_occupations))
 
+    ind = 0
     do ios = 1, this%norbsets
       norbs = this%orbsets(ios)%norbs
       do ispin = 1, this%nspins
@@ -785,6 +786,7 @@ end subroutine X(get_atomic_orbital)
 
     PUSH_SUB(X(lda_u_get_occupations))
 
+    ind = 0
     do ios = 1, this%norbsets
       norbs = this%orbsets(ios)%norbs
       do ispin = 1, this%nspins
