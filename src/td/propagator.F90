@@ -604,7 +604,6 @@ contains
 
     !We update the occupation matrices
     call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
-    call lda_u_update_U(hm%lda_u, st)
 
     POP_SUB(propagator_dt)
     call profiling_out(prof)

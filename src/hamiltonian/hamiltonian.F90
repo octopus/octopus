@@ -430,6 +430,21 @@ contains
 
     hm%adjoint = .false.
 
+    !%Variable LDA_U
+    !%Type logical
+    !%Default no
+    !%Section Hamiltonian
+    !%Description
+    !% (Experimental) If set to yes, the LDA+U calculation is performed.
+    !%End
+    call parse_variable('LDA_U', .false., hm%use_lda_u)
+    call lda_u_nullify(hm%lda_u)
+    if(hm%use_lda_u) then
+      call messages_experimental('LDA+U')
+      call lda_u_init(hm%lda_u, gr, geo, st, mc)
+    end if
+ 
+
     nullify(hm%hm_base%phase)
     if (simul_box_is_periodic(gr%sb) .and. &
         .not. (kpoints_number(gr%sb%kpoints) == 1 .and. kpoints_point_is_gamma(gr%sb%kpoints, 1))) &
@@ -491,20 +506,6 @@ contains
     call parse_variable('TimeZero', .false., hm%time_zero)
     if(hm%time_zero) call messages_experimental('TimeZero')
 
-    !%Variable LDA_U
-    !%Type logical
-    !%Default no
-    !%Section Hamiltonian
-    !%Description
-    !% (Experimental) If set to yes, the LDA+U calculation is performed.
-    !%End
-    call parse_variable('LDA_U', .false., hm%use_lda_u)
-    call lda_u_nullify(hm%lda_u)
-    if(hm%use_lda_u) then
-      call messages_experimental('LDA+U')
-      call lda_u_init(hm%lda_u, gr, geo, st, mc)
-    end if
-
     call scissor_nullify(hm%scissor)
 
     call profiling_out(prof)
@@ -533,6 +534,11 @@ contains
         call accel_create_buffer(hm%hm_base%buff_phase, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, gr%mesh%np_part*hm%d%kpt%nlocal)
         call accel_write_buffer(hm%hm_base%buff_phase, gr%mesh%np_part*hm%d%kpt%nlocal, hm%hm_base%phase)
         hm%hm_base%buff_phase_qn_start = hm%d%kpt%start
+      end if
+
+      ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
+      if(hm%lda_u%apply) then
+        call lda_u_build_phase_correction(hm%lda_u, gr%mesh%sb, hm%d )
       end if
 
       POP_SUB(hamiltonian_init.init_phase)

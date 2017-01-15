@@ -64,7 +64,6 @@ module lda_u_oct_m
        lda_u_update_occ_matrices,       &
        lda_u_end,                       &
        lda_u_build_phase_correction,    &
-       lda_u_update_U,                  &
        lda_u_freeze_occ,                &
        lda_u_freeze_u,                  &
        dlda_u_set_occupations,          &
@@ -378,23 +377,6 @@ contains
    POP_SUB(lda_u_update_occ_matrices)
  end subroutine lda_u_update_occ_matrices
 
- ! Interface for the X(compute_ACBNO_U) routines
- subroutine lda_u_update_U(this, st)
-   type(lda_u_t),             intent(inout) :: this
-   type(states_t),            intent(in)    :: st
-
-   if(.not. this%apply.or..not. this%useACBN0 .or.this%freeze_u) return
-   PUSH_SUB(lda_u_update_U)
-
-   if (states_are_real(st)) then
-     call dcompute_ACBNO_U(this, st) 
-   else
-     call zcompute_ACBNO_U(this, st)
-   end if
-
-   POP_SUB(lda_u_update_U)
- end subroutine lda_u_update_U
-  
 
  !> Build the phase correction to the global phase for all orbitals
  subroutine lda_u_build_phase_correction(this, sb, std, vec_pot, vec_pot_var)

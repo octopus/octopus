@@ -194,6 +194,12 @@ contains
    if(.not.this%apply) return
    PUSH_SUB(lda_u_mixer_get_vnew)
 
+   if(this%useACBN0) then
+     call mixfield_get_vnew(mixer%mixfield_U, mixer%tmpU)
+     call lda_u_set_effectiveU(this, mixer%tmpU(1:this%norbsets,1))
+   end if
+
+
    if(mixer%realstates) then
      call mixfield_get_vnew(mixer%mixfield_occ, mixer%dtmp_occ)
      call dlda_u_set_occupations(this, mixer%dtmp_occ(1:mixer%occsize,1))
@@ -202,11 +208,6 @@ contains
      call mixfield_get_vnew(mixer%mixfield_occ, mixer%ztmp_occ)
      call zlda_u_set_occupations(this, mixer%ztmp_occ(1:mixer%occsize,1))
      call zlda_u_update_potential(this)
-   end if
-
-   if(this%useACBN0) then
-     call mixfield_get_vnew(mixer%mixfield_U, mixer%tmpU)
-     call lda_u_set_effectiveU(this, mixer%tmpU(1:this%norbsets,1))
    end if
 
    POP_SUB(lda_u_mixer_get_vnew)

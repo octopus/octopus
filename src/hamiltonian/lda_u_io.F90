@@ -198,12 +198,14 @@ contains
     occsize = this%maxnorbs*this%maxnorbs*this%nspins*this%norbsets
     if (states_are_real(st)) then
       SAFE_ALLOCATE(docc(1:occsize))
+      docc = M_ZERO
       call dlda_u_get_occupations(this, docc)
       call drestart_write_binary(restart, "lda_u_occ", occsize, docc, err)      
       if (err /= 0) ierr = ierr + 1
       SAFE_DEALLOCATE_A(docc)
     else
       SAFE_ALLOCATE(zocc(1:occsize))
+      zocc = M_ZERO
       call zlda_u_get_occupations(this, zocc)
       call zrestart_write_binary(restart, "lda_u_occ", occsize, zocc, err)
       if (err /= 0) ierr = ierr + 1
@@ -215,7 +217,6 @@ contains
       SAFE_ALLOCATE(Ueff(1:this%norbsets))
       Ueff = M_ZERO
       call lda_u_get_effectiveU(this, Ueff(:))
-
       call drestart_write_binary(restart, "lda_u_Ueff", this%norbsets, Ueff, err)
       SAFE_DEALLOCATE_A(Ueff)
       if (err /= 0) ierr = ierr + 1
@@ -256,12 +257,21 @@ contains
       call messages_info(1)
     end if
 
+    !We have to read the effective U first, as we call lda_u_uptade_potential latter
+    if(this%useACBN0) then
+      SAFE_ALLOCATE(Ueff(1:this%norbsets))
+      call drestart_read_binary(restart, "lda_u_Ueff", this%norbsets, Ueff, err)
+      if (err /= 0) ierr = ierr + 1
+      call lda_u_set_effectiveU(this, Ueff)
+      SAFE_DEALLOCATE_A(Ueff)
+    end if
+
+
     occsize = this%maxnorbs*this%maxnorbs*this%nspins*this%norbsets
     if (states_are_real(st)) then
       SAFE_ALLOCATE(docc(1:occsize))
       call drestart_read_binary(restart, "lda_u_occ", occsize, docc, err) 
       if (err /= 0) ierr = ierr + 1
-
       call dlda_u_set_occupations(this, docc)
       call dlda_u_update_potential(this)
       SAFE_DEALLOCATE_A(docc)
@@ -269,19 +279,9 @@ contains
       SAFE_ALLOCATE(zocc(1:occsize))
       call zrestart_read_binary(restart, "lda_u_occ", occsize, zocc, err)
       if (err /= 0) ierr = ierr + 1
-
       call zlda_u_set_occupations(this, zocc)
       call zlda_u_update_potential(this)
       SAFE_DEALLOCATE_A(zocc)
-    end if
-
-    if(this%useACBN0) then
-      SAFE_ALLOCATE(Ueff(1:this%norbsets))
-      call drestart_read_binary(restart, "lda_u_Ueff", this%norbsets, Ueff, err)
-      if (err /= 0) ierr = ierr + 1
-
-      call lda_u_set_effectiveU(this, Ueff)
-      SAFE_DEALLOCATE_A(Ueff)
     end if
 
     if (debug%info) then

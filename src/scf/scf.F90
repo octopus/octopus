@@ -724,7 +724,6 @@ contains
       ! occupations
       call states_fermi(st, gr%mesh)
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
-      call lda_u_update_U(hm%lda_u, st)
 
       ! compute output density, potential (if needed) and eigenvalues sum
       if(cmplxscl) then

@@ -218,6 +218,9 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
   end if
 #endif      
 
+  if(this%useACBN0 .and. .not.this%freeze_u) & 
+    call X(compute_ACBNO_U)(this, st)
+
   call X(compute_dudarev_energy)(this, lda_u_energy)
   call X(lda_u_update_potential)(this)
 
