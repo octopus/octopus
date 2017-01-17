@@ -145,8 +145,6 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
       
       if(this%useACBN0) then
         this%renorm_occ(:,:,:,ist,ik) = M_ZERO
-      else
-        this%renorm_occ(:,:,:,ist,ik) = M_ONE 
       end if
       weight = st%d%kweights(ik)*st%occ(ist, ik) 
 
@@ -649,6 +647,12 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
     ! We need to know the maximum number of points in order to allocate a temporary array
     ! to apply the phase in lda_u_apply
     if(os%sphere%np > this%max_np) this%max_np = os%sphere%np
+
+   ! do work = 1, os%norbs
+   !   do work2 = 1, os%norbs
+   !    print *, work, work2, X(mf_dotp)(os%sphere%mesh, os%orbitals(work)%X(orb)(1:os%sphere%np), os%orbitals(work2)%X(orb)(1:os%sphere%np), np = os%sphere%np)
+   !   end do
+   ! end do
   end do  
 
   do iorbset = 1, this%norbsets
@@ -777,6 +781,20 @@ end subroutine X(get_atomic_orbital)
       end do
     end do 
 
+    if(this%useACBN0) then
+      do ios = 1, this%norbsets
+        norbs = this%orbsets(ios)%norbs
+        do ispin = 1, this%nspins
+          do im = 1, norbs
+            do imp = 1,norbs
+              ind = ind + 1
+              this%X(n_alt)(im,imp,ispin,ios) = occ(ind)
+            end do
+          end do
+        end do
+      end do
+    end if
+
     POP_SUB(X(lda_u_set_occupations))
   end subroutine X(lda_u_set_occupations)
 
@@ -801,6 +819,20 @@ end subroutine X(get_atomic_orbital)
         end do
       end do
     end do
+
+    if(this%useACBN0) then
+      do ios = 1, this%norbsets
+        norbs = this%orbsets(ios)%norbs
+        do ispin = 1, this%nspins
+          do im = 1, norbs
+            do imp = 1,norbs
+              ind = ind + 1
+              occ(ind) = this%X(n_alt)(im,imp,ispin,ios)
+            end do
+          end do
+        end do
+      end do
+    end if
 
     POP_SUB(X(lda_u_get_occupations))
   end subroutine X(lda_u_get_occupations)

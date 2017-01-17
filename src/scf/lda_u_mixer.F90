@@ -66,6 +66,7 @@ contains
    PUSH_SUB(lda_u_mixer_init_auxmixer)
 
    dim1 = this%maxnorbs*this%maxnorbs*this%nspins*this%norbsets
+   if(this%useACBN0) dim1 = dim1*2
 
    if(states_are_real(st)) then
      call mixfield_init( smix, mixer%mixfield_occ, dim1, 1, 1, mix_d4(smix), TYPE_FLOAT )
@@ -97,6 +98,7 @@ contains
    PUSH_SUB(lda_u_mixer_init)
 
    mixer%occsize = this%maxnorbs*this%maxnorbs*this%nspins*this%norbsets
+   if(this%useACBN0) mixer%occsize = mixer%occsize*2
 
    nullify(mixer%dtmp_occ, mixer%ztmp_occ, mixer%tmpU)
 

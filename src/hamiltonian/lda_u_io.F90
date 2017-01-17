@@ -196,6 +196,8 @@ contains
     end if
 
     occsize = this%maxnorbs*this%maxnorbs*this%nspins*this%norbsets
+    if(this%useACBN0) occsize = occsize*2
+ 
     if (states_are_real(st)) then
       SAFE_ALLOCATE(docc(1:occsize))
       docc = M_ZERO
@@ -268,6 +270,8 @@ contains
 
 
     occsize = this%maxnorbs*this%maxnorbs*this%nspins*this%norbsets
+    if(this%useACBN0) occsize = occsize*2
+
     if (states_are_real(st)) then
       SAFE_ALLOCATE(docc(1:occsize))
       call drestart_read_binary(restart, "lda_u_occ", occsize, docc, err) 

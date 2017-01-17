@@ -169,7 +169,7 @@ contains
     lmm = M_ZERO
     do ia = 1, geo%natoms
       call submesh_init(sphere, mesh%sb, mesh, geo%atom(ia)%x, rr)
-      
+
       do idir = 1, max(mesh%sb%dim, 3)
         lmm(idir, ia) = dsm_integrate_frommesh(mesh, sphere, md(1:mesh%np,idir))
       end do

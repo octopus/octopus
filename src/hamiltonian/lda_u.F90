@@ -134,6 +134,8 @@ contains
   this%max_np = 0
   this%maxnorbs = 0
   this%nspins = 0
+  this%freeze_occ = .false.
+  this%freeze_u = .false.
 
   nullify(this%dn)
   nullify(this%zn)
@@ -257,7 +259,7 @@ contains
   mem = mem + coef*REAL_PRECISION*dble(maxorbs*st%d%nspin*this%norbsets)    !Orbital occupations
   if(this%useACBN0) then
     mem = mem + REAL_PRECISION*dble(maxorbs**4*st%d%nspin*this%norbsets) !Coulomb intergrals
-    mem = mem + REAL_PRECISION*dble(10*(st%d%kpt%end-st%d%kpt%start+1)*(st%st_end-st%st_start+1)) !On-site occupations
+    mem = mem + REAL_PRECISION*dble(18*(st%d%kpt%end-st%d%kpt%start+1)*(st%st_end-st%st_start+1)) !On-site occupations
   end if
   call messages_new_line()
   call messages_write('    Approximate memory requirement for LDA+U (for each task)   :')
