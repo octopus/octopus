@@ -856,12 +856,6 @@ contains
           call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d, &
             vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
         end do
-
-        ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
-        if(this%lda_u%apply) then
-          call lda_u_build_phase_correction(this%lda_u, mesh%sb, this%d, &
-               vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
-        end if
         call profiling_out(prof_phases)
       end if
 
@@ -885,6 +879,14 @@ contains
         if(accel_is_enabled()) then
           call accel_write_buffer(this%hm_base%buff_phase, mesh%np_part*this%d%kpt%nlocal, this%hm_base%phase)
         end if
+
+        ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
+        if(this%lda_u%apply) then
+          call lda_u_build_phase_correction(this%lda_u, mesh%sb, this%d, &
+               vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
+        end if
+
+
       end if
 
       max_npoints = this%hm_base%max_npoints
