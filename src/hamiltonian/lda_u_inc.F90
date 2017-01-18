@@ -657,9 +657,11 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
 
   do iorbset = 1, this%norbsets
     write(message(1),'(a,i2,a,f8.5,a)')    'Orbital set ', iorbset, ' has a value of U of ',&
-                         this%orbsets(iorbset)%Ueff   , ' Ha'
-    write(message(2),'(a,i2,a)')    ' and', this%orbsets(iorbset)%norbs, ' orbitals.'
-     call messages_info(2)
+                         this%orbsets(iorbset)%Ueff   , ' Ha.'
+    write(message(2),'(a,i2,a)')    'It cotains ', this%orbsets(iorbset)%norbs, ' orbitals.'
+    write(message(3),'(a,f8.5,a,i5,a)') 'The radius is ', this%orbsets(iorbset)%sphere%radius, &
+                        ' Bohr,  with ', this%orbsets(iorbset)%sphere%np, ' grid points.'
+     call messages_info(3)
   end do 
  
   POP_SUB(X(construct_orbital_basis))
@@ -720,15 +722,50 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, iorb, ispin, orb, trunca
     end if
     ! make sure that if the spacing is too large, the orbitals fit in a few points at least
     radius = max(radius, CNST(2.0)*maxval(mesh%spacing(1:mesh%sb%dim)))
+
+    if(mesh%sb%box_shape == SPHERE .or. mesh%sb%box_shape == CYLINDER) then
+      if(radius > mesh%sb%rsize) then
+       message(1) = "The radius of an orbital set is bigger than the radius of the simulatio box."
+       message(2) = "Increase the value of Radius or decrease the value of OrbitalsThreshold_LDAU."
+       write(message(3),'(a,f8.5,a,i5,a)') 'The value of the radius is ', radius, ' Bohr.'
+       call messages_fatal(3) 
+      end if
+      if(mesh%sb%box_shape == CYLINDER .and. radius > mesh%sb%xsize) then
+       message(1) = "The radius of an orbital set is bigger than the length of the cylinder box."
+       message(2) = "Increase the value of XLength or decrease the value of OrbitalsThreshold_LDAU."
+       write(message(3),'(a,f8.5,a,i5,a)') 'The value of the radius is ', radius, ' Bohr.'
+       call messages_fatal(3) 
+      end if
+    end if 
+
+    if(mesh%sb%box_shape == SPHERE ) then
+      if(sqrt(sum(geo%atom(iatom)%x(1:mesh%sb%dim)**2)) + radius > mesh%sb%rsize) then
+       message(1) = "An orbital set has points outside of the simulatio box."
+       message(2) = "Increase the value of Radius or decrease the value of OrbitalsThreshold_LDAU."
+       write(message(3),'(a,f8.5,a,i5,a)') 'The value of the radius is ', radius, ' Bohr.'
+       call messages_fatal(3)
+      end if
+    end if
+
+    if(mesh%sb%box_shape == CYLINDER ) then
+      if(sqrt(sum(geo%atom(iatom)%x(2:mesh%sb%dim)**2)) + radius > mesh%sb%rsize) then
+       message(1) = "An orbital set has points outside of the simulatio box."
+       message(2) = "Increase the value of Radius or decrease the value of OrbitalsThreshold_LDAU."
+       write(message(3),'(a,f8.5,a,i5,a)') 'The value of the radius is ', radius, ' Bohr.'
+       call messages_fatal(3)
+      end if
+      if(abs(geo%atom(iatom)%x(1)) + radius > mesh%sb%xsize) then
+       message(1) = "An orbital set has points outside of the simulatio box."
+       message(2) = "Increase the value of Xlength or decrease the value of OrbitalsThreshold_LDAU."
+       write(message(3),'(a,f8.5,a,i5,a)') 'The value of the radius is ', radius, ' Bohr.'
+       call messages_fatal(3)
+      end if
+    end if
+
  
     !We initialise the submesh corresponding to the orbital 
     call submesh_init(sm, mesh%sb, mesh, geo%atom(iatom)%x, radius)
 
-    if(radius >= minval(mesh%sb%lsize(1:mesh%sb%dim)-mesh%spacing(1:mesh%sb%dim))) then
-      write(message(1),'(a,i5,a)')  'This is an extended orbital, with ', sm%np, ' grid points.'
-      write(message(2),'(a,f8.5,a)') 'The radius is ', radius, ' Bohr.'
-      call messages_info(2)
-    end if
   end if
 
   !We allocate both the orbital on the submesh and on the complete mesh
