@@ -417,12 +417,14 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
   this%coulomb(1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%norbsets) = M_ZERO
 
   !Lets counts the number of orbital to treat, to display a progress bar
+  ntodo = 0
   do ios = this%orbs_dist%start, this%orbs_dist%end
     norbs = this%orbsets(ios)%norbs
-    ntodo= ntodo + norbs**4
+    !This is not the correct value
+    ntodo= ntodo + ((norbs-1)*norbs/2)**2
   end do 
   idone = 0
-  call loct_progress_bar(-1, ntodo)
+  if(mpi_world%rank == 0) call loct_progress_bar(-1, ntodo)
 
   do ios = this%orbs_dist%start, this%orbs_dist%end
     norbs = this%orbsets(ios)%norbs
@@ -448,7 +450,7 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
           do lst = 1, norbs
             if(lst > kst) cycle
             klst=klst+1
-           if(klst > ijst) cycle
+            if(klst > ijst) cycle
 
             orbl => this%orbsets(ios)%orbitals(lst)
 
@@ -471,7 +473,7 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
          
             !Update the progress bar
             idone = idone + 1
-            call loct_progress_bar(idone, ntodo)
+            if(mpi_world%rank == 0) call loct_progress_bar(idone, ntodo)
           end do !lst
         end do !kst
       end do !jst
