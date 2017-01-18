@@ -401,6 +401,7 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
 
   integer :: ist, jst, kst, lst, ijst, klst
   integer :: norbs, np_sphere, ios, ip
+  integer :: idone, ntodo
   FLOAT, allocatable :: tmp(:), vv(:), nn(:)
   type(orbital_t), pointer :: orbi, orbj, orbk, orbl
 
@@ -414,6 +415,14 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
 
   SAFE_ALLOCATE(this%coulomb(1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%norbsets))
   this%coulomb(1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%norbsets) = M_ZERO
+
+  !Lets counts the number of orbital to treat, to display a progress bar
+  do ios = this%orbs_dist%start, this%orbs_dist%end
+    norbs = this%orbsets(ios)%norbs
+    ntodo= ntodo + norbs**4
+  end do 
+  idone = 0
+  call loct_progress_bar(-1, ntodo)
 
   do ios = this%orbs_dist%start, this%orbs_dist%end
     norbs = this%orbsets(ios)%norbs
@@ -459,11 +468,15 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
               this%coulomb(ist,jst,lst,kst,ios) = this%coulomb(ist,jst,kst,lst,ios)
               this%coulomb(kst,lst,jst,ist,ios) = this%coulomb(ist,jst,kst,lst,ios)              
             end if
+         
+            !Update the progress bar
+            idone = idone + 1
+            call loct_progress_bar(idone, ntodo)
           end do !lst
         end do !kst
       end do !jst
     end do !ist
-  end do !ia
+  end do !iorb
 
   if(this%orbs_dist%parallel) then
     call comm_allreduce(this%orbs_dist%mpi_grp%comm, this%coulomb)
@@ -723,6 +736,13 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, iorb, ispin, orb, trunca
     ! make sure that if the spacing is too large, the orbitals fit in a few points at least
     radius = max(radius, CNST(2.0)*maxval(mesh%spacing(1:mesh%sb%dim)))
 
+    if(mesh%sb%box_shape == MINIMUM .and. radius > mesh%sb%rsize) then
+      message(1) = "The radius of an orbital set is bigger than the radius of the simulatio box."
+      message(2) = "Increase the value of Radius or decrease the value of OrbitalsThreshold_LDAU."
+      write(message(3),'(a,f8.5,a,i5,a)') 'The value of the radius is ', radius, ' Bohr.'
+      call messages_fatal(3)
+    end if
+ 
     if(mesh%sb%box_shape == SPHERE .or. mesh%sb%box_shape == CYLINDER) then
       if(radius > mesh%sb%rsize) then
        message(1) = "The radius of an orbital set is bigger than the radius of the simulatio box."

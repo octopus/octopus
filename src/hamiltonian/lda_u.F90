@@ -32,6 +32,7 @@ module lda_u_oct_m
   use io_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
+  use loct_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
@@ -168,7 +169,8 @@ contains
 
   call messages_print_stress(stdout, "LDA+U")
  
-  if(st%parallel_in_states) call messages_not_implemented("lda+u parallel in states")
+!  if(st%parallel_in_states) call messages_not_implemented("lda+u parallel in states")
+  if(gr%mesh%parallel_in_domains) call messages_not_implemented("lda+u parallel in domains")
   if(st%d%ispin == SPINORS) call messages_not_implemented("lda+u with spinors") 
 
   this%apply = .true.
