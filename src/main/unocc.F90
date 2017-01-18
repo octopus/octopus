@@ -343,6 +343,13 @@ contains
 
       call states_allocate_wfns(st, mesh)
 
+#ifdef HAVE_MPI
+    ! here we want to avoid possible problems (if some nodes can allocate and other cannot)
+    ! this is just a copy of what is done for the GS calculation
+    if(sys%st%dom_st_kpt_mpi_grp%comm > 0) call MPI_Barrier(sys%st%dom_st_kpt_mpi_grp%comm, mpi_err)
+#endif
+
+
       ! now the eigensolver stuff
       call eigensolver_init(eigens, sys%gr, st)
 
