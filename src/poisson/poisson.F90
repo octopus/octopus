@@ -71,6 +71,7 @@ module poisson_oct_m
     poisson_get_solver,          &
     poisson_get_qpoint,          &
     poisson_init,                &
+    poisson_init_sm,             &
     poisson_kernel_reinit,       &
     dpoisson_solve,              &
     zpoisson_solve,              &
@@ -876,6 +877,58 @@ contains
 
     !-----------------------------------------------------------------
 
+    !-----------------------------------------------------------------
+  subroutine poisson_init_sm(this, main, der, sm)
+    type(poisson_t),             intent(out) :: this
+    type(poisson_t),             intent(in)  :: main
+    type(derivatives_t), target, intent(in)  :: der
+    type(submesh_t),           intent(in)    :: sm
+
+    logical :: need_cube
+    integer :: default_solver, box(MAX_DIM)
+
+    if(this%method /= POISSON_NULL) return ! already initialized
+
+    PUSH_SUB(poisson_init_sm)
+
+    this%theta = M_ZERO
+
+    this%nslaves = 0
+    this%der => der
+
+    this%qq = M_ZERO
+
+#ifdef HAVE_MPI
+    this%all_nodes_default = main%all_nodes_default
+#endif
+
+    default_solver = POISSON_DIRECT_SUM !POISSON_ISF
+    this%method = default_solver
+
+    if(der%mesh%use_curvilinear) then
+      call messages_not_implemented("lda+u with curvilinear mesh")    
+    end if
+
+    this%kernel = POISSON_FFT_KERNEL_NONE
+
+    ! Now that we know the method, we check if we need a cube and its dimentions
+    need_cube = .false.
+
+    if (this%method == POISSON_ISF) then
+      box(:) = 2*ceiling(sm%radius/der%mesh%spacing(:)) + 1
+      need_cube = .true.
+    end if
+
+    select case(this%method)
+    case(POISSON_ISF)
+        !Here we don't want parallelizaion, as Coulomb orbitals are already parallelized.
+        call poisson_isf_init(this%isf_solver, this%der%mesh, this%cube, MPI_COMM_NULL, init_world = .false.)
+    end select
+
+
+    POP_SUB(poisson_init_sm)
+  end subroutine poisson_init_sm
+
   !> Calculates the Poisson equation.
   !! Given the density returns the corresponding potential.
   !!
@@ -892,7 +945,6 @@ contains
     logical, optional,    intent(in)    :: all_nodes 
     type(derivatives_t), pointer :: der
     type(cube_function_t) :: crho, cpot
-    FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
 
     logical               :: all_nodes_value
     type(profile_t), save :: prof

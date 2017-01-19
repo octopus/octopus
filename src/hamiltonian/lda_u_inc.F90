@@ -394,10 +394,11 @@ end subroutine X(compute_ACBNO_U)
 
 ! ---------------------------------------------------------
 ! TODO: Merge this with the two_body routine in system/output_me_inc.F90
-subroutine X(compute_coulomb_integrals) (this, mesh, st)
-  type(lda_u_t), intent(inout)  :: this
-  type(mesh_t),     intent(in)  :: mesh
-  type(states_t),   intent(in)  :: st
+subroutine X(compute_coulomb_integrals) (this, mesh, der, st)
+  type(lda_u_t),   intent(inout)  :: this
+  type(mesh_t),       intent(in)  :: mesh
+  type(derivatives_t), intent(in) :: der
+  type(states_t),     intent(in)  :: st
 
   integer :: ist, jst, kst, lst, ijst, klst
   integer :: norbs, np_sphere, ios, ip
@@ -429,6 +430,8 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
   do ios = this%orbs_dist%start, this%orbs_dist%end
     norbs = this%orbsets(ios)%norbs
     np_sphere = this%orbsets(ios)%sphere%np  
+
+    call poisson_init_sm(this%orbsets(ios)%poisson, psolver, der, this%orbsets(ios)%sphere) 
  
     ijst=0
     do ist = 1, norbs
@@ -442,7 +445,7 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
 
         nn(1:np_sphere)  = real(orbi%X(orb)(1:np_sphere))*real(orbj%X(orb)(1:np_sphere))
         !Here it is important to use a non-periodic poisson solver, e.g. the direct solver
-        call dpoisson_solve_sm(psolver, this%orbsets(ios)%sphere, vv(1:np_sphere), nn(1:np_sphere))
+        call dpoisson_solve_sm(this%orbsets(ios)%poisson, this%orbsets(ios)%sphere, vv(1:np_sphere), nn(1:np_sphere))
 
         klst=0
         do kst = 1, norbs
@@ -478,6 +481,7 @@ subroutine X(compute_coulomb_integrals) (this, mesh, st)
         end do !kst
       end do !jst
     end do !ist
+    call poisson_end(this%orbsets(ios)%poisson)
   end do !iorb
 
   if(this%orbs_dist%parallel) then

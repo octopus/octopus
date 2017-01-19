@@ -23,6 +23,7 @@ module lda_u_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use comm_oct_m
+  use derivatives_oct_m
   use distributed_oct_m
   use energy_oct_m
   use geometry_oct_m
@@ -90,6 +91,8 @@ module lda_u_oct_m
     type(orbital_t), pointer :: orbitals(:)   !> Orbitals of this set of orbitals
     FLOAT               :: Ueff               !> The effective U of the simplified rotational invariant form
     type(species_t), pointer :: spec          
+
+    type(poisson_t)  :: poisson               !> For computing the Coulomb integrals
   end type orbital_set_t
 
   type lda_u_t
@@ -303,9 +306,9 @@ contains
     write(message(1),'(a)')    'Computing the Coulomb integrals localized orbital basis.'
     call messages_info(1) 
     if (states_are_real(st)) then
-      call dcompute_coulomb_integrals(this, gr%mesh, st)
+      call dcompute_coulomb_integrals(this, gr%mesh, gr%der, st)
     else
-      call zcompute_coulomb_integrals(this, gr%mesh, st)
+      call zcompute_coulomb_integrals(this, gr%mesh, gr%der, st)
     end if
   end if
 
