@@ -421,8 +421,7 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der, st)
   ntodo = 0
   do ios = this%orbs_dist%start, this%orbs_dist%end
     norbs = this%orbsets(ios)%norbs
-    !This is not the correct value
-    ntodo= ntodo + ((norbs-1)*norbs/2)**2
+    ntodo= ntodo + ((norbs+1)*norbs/2)*((norbs+1)*norbs/2+1)/2
   end do 
   idone = 0
   if(mpi_world%rank == 0) call loct_progress_bar(-1, ntodo)
