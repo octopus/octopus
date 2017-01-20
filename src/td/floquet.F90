@@ -27,6 +27,7 @@ module floquet_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
+  use hamiltonian_base_oct_m
   use output_oct_m
   use io_oct_m
   use ion_dynamics_oct_m
@@ -191,7 +192,11 @@ contains
     this%spindim = dim
 
     ! re-read time stepfrom input
-    call parse_variable('TDTimeStep', M_ONE, time_step, unit = units_inp%time)
+    call parse_variable('TDTimeStep', M_ZERO, time_step, unit = units_inp%time)
+    if(time_step == M_ZERO) then
+       message(1) = 'Did not find time-step in Floquet init, plase give a value for TDTimeStep'
+      call messages_fatal(1)
+    end if
     this%interval = int(this%dt/time_step)
     this%ncycle = this%interval*this%nT
 
@@ -238,11 +243,13 @@ contains
        this%td_hm(it)%F%dt = this%F%dt
 
        SAFE_ALLOCATE(this%td_hm(it)%geo)
-       call geometry_copy(this%td_hm(it)%geo, this%geo)
+       if(.not.this%F%mode==FLOQUET_INTERACTING) then
+          call geometry_copy(this%td_hm(it)%geo, this%geo)
 
-       ! set flag to prevent species types to be touched, because
-       ! hm%geo is only a pointer to the global geo instance
-       this%td_hm(it)%geo%skip_species_pot_init = .true.
+          ! set flag to prevent species types to be touched, because
+          ! hm%geo is only a pointer to the global geo instance
+          this%td_hm(it)%geo%skip_species_pot_init = .true.
+       end if
 
        select case(this%F%mode)
 
@@ -265,7 +272,7 @@ contains
        case(FLOQUET_NON_INTERACTING)
          call hamiltonian_init(this%td_hm(it), gr, this%td_hm(it)%geo, st, &
                                     sys%ks%theory_level, sys%ks%xc_family,sys%ks%xc_flags)
-         time =this%F%Tcycle+ it*this%F%dt ! offset in time to catch switch on cycle
+         time =this%F%Tcycle+ it*this%F%dt ! offset in time to catch switchon cycle
          do ispin=1,this%d%nspin
             forall (ip = 1:gr%mesh%np) this%td_hm(it)%vhxc(ip,ispin) = this%vhxc(ip, ispin)
          end do
@@ -274,10 +281,7 @@ contains
          call hamiltonian_update(this%td_hm(it), gr%der%mesh,time=time)
 
         case(FLOQUET_INTERACTING)
-          call hamiltonian_init(this%td_hm(it), gr, this%td_hm(it)%geo, st, &
-                                        sys%ks%theory_level, sys%ks%xc_family,sys%ks%xc_flags)
-          call hamiltonian_epot_generate(this%td_hm(it), gr, this%td_hm(it)%geo, st, time=time)
-          call hamiltonian_update(this%td_hm(it), gr%der%mesh,time=time)
+           ! init is on the fly
 
         end select
 
@@ -288,10 +292,12 @@ contains
    end subroutine floquet_hamiltonians_init
 
    !--------------------------------------------
-   subroutine floquet_hamiltonian_update(hm,st,gr,iter)
+   ! this is only called if F%mode=interacting
+   subroutine floquet_hamiltonian_update(hm,st,gr,sys,iter)
      type(hamiltonian_t), intent(inout) :: hm
-     type(states_t)      , intent(inout) :: st
+     type(states_t)      , intent(inout):: st
      type(grid_t),      intent(inout)   :: gr
+     type(system_t),      intent(in)    :: sys
      integer :: iter
      integer :: it
 
@@ -301,21 +307,29 @@ contains
      PUSH_SUB(floquet_hamiltonian_update)
 
      it = mod(iter/hm%F%interval,hm%F%nT)
+     if(it==0) it=hm%F%nT
+     
+     time = iter/hm%F%interval*hm%F%dt
 
-     ! we do not save the zeroth step in the Floquet sample
-     if(it==0) return
+     ! set the geometry of the td-hamiltonian
+     call geometry_copy(hm%td_hm(it)%geo, hm%geo)
+
+     ! set flag to prevent species types to be touched, because                                                   
+     ! hm%geo is only a pointer to the global geo instance                                                        
+     hm%td_hm(it)%geo%skip_species_pot_init = .true.
+
+     call hamiltonian_init(hm%td_hm(it), gr, hm%td_hm(it)%geo, st, &
+           sys%ks%theory_level, sys%ks%xc_family,sys%ks%xc_flags)
+     
+     call hamiltonian_update(hm%td_hm(it), gr%der%mesh,time=time)
+
      ! fill time-dependent hamiltonian structure with scf-fields at this time
      do ispin=1,hm%d%nspin
        forall (ip = 1:gr%mesh%np) hm%td_hm(it)%vhxc(ip,ispin) = hm%vhxc(ip, ispin)
      end do
      forall (ip = 1:gr%mesh%np) hm%td_hm(it)%ep%vpsl(ip) = hm%ep%vpsl(ip)
-     ! set the geometry of the td-hamiltonian
-     call geometry_copy(hm%td_hm(it)%geo, hm%geo)
 
-     ! set time in td-hamiltonian (i.e. set the laser)
-     time = iter/hm%F%interval*hm%F%dt
      call hamiltonian_epot_generate(hm%td_hm(it), gr, hm%td_hm(it)%geo, st, time=time)
-     forall (ip = 1:gr%mesh%np) hm%td_hm(it)%ep%vpsl(ip)= hm%ep%vpsl(ip)
 
      PUSH_SUB(floquet_hamiltonian_update)
 

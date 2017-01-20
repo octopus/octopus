@@ -2675,7 +2675,7 @@ contains
       if(mod(iter,hm%F%interval)==0) then
         message(1) = 'Floquet-Hamiltonian update'
         call messages_info(1)
-        call floquet_hamiltonian_update(hm,st,gr,iter)
+        call floquet_hamiltonian_update(hm,st,gr,sys,iter)
         
         ! in case a cycle is complete: solve and write bandstructure
         if(mod(iter,hm%F%ncycle)==0) then
