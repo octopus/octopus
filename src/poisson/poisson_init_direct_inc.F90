@@ -457,6 +457,7 @@ subroutine poisson_solve_direct_sm(this, sm, pot, rho)
 
     xx1(1:dim) = sm%x(ip,1:dim)
     if(sm%mesh%use_curvilinear) then
+      !$omp parallel do reduction(+:aa1)
       do jp = 1, sm%np
         if(ip == jp) then
           aa1 = aa1 + prefactor*rho(ip)*sm%mesh%vol_pp(sm%map(jp))**(M_ONE - M_ONE/sm%mesh%sb%dim)
@@ -465,6 +466,7 @@ subroutine poisson_solve_direct_sm(this, sm, pot, rho)
         end if
       end do
     else
+      !$omp parallel do reduction(+:aa1)
       do jp = 1, sm%np
         if(ip == jp) then
           aa1 = aa1 + prefactor*rho(ip)
