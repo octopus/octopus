@@ -58,9 +58,11 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
       !This does not change anything if the sphere occupies the full mesh or not
       if(has_phase) then
         do idim = 1, d%dim
+          !$omp parallel do 
           do is = 1, os%sphere%np
             epsi(is,idim) = psi(os%sphere%map(is), idim)*os%phase(is, ik)
           end do
+          !$omp end parallel do
         end do
       end if
 
@@ -85,9 +87,11 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
       
         !In case of phase, we have to apply the conjugate of the phase here
         if(has_phase) then
+          !$omp parallel do
           do is = 1, os%sphere%np
             epsi(is,1) = os%orbitals(im)%X(orb)(is)*conjg(os%phase(is, ik))
           end do
+          !$omp end parallel do
           do idim = 1, d%dim
            call submesh_add_to_mesh(os%sphere, epsi(1:os%sphere%np,1),&
                                     hpsi(:, idim), reduced)
@@ -152,9 +156,11 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
       if(present(phase)) then 
         ! Apply the phase that contains both the k-point and vector-potential terms.
         do idim = 1, st%d%dim
+          !$omp parallel do
           do ip = 1, mesh%np
             psi(ip, idim) = phase(ip, ik)*psi(ip, idim)
           end do
+          !$omp end parallel do
         end do
       end if
       
@@ -162,9 +168,11 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
         os => this%orbsets(ios)
         norbs = os%norbs
         if(present(phase)) then
+          !$omp parallel do
           do is = 1, os%sphere%np
             epsi(is) = psi(os%sphere%map(is),1)*os%phase(is, ik)
           end do
+          !$omp end parallel do
         end if
         !We first compute the matrix elemets <\psi | orb_m>
         !taking into account phase correction if needed 
@@ -442,7 +450,12 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der, st)
         ijst=ijst+1
         orbj => this%orbsets(ios)%orbitals(jst)
 
-        nn(1:np_sphere)  = real(orbi%X(orb)(1:np_sphere))*real(orbj%X(orb)(1:np_sphere))
+        !$omp parallel do
+        do ip=1,np_sphere
+          nn(ip)  = real(orbi%X(orb)(ip))*real(orbj%X(orb)(ip))
+        end do
+        !$omp end parallel do    
+
         !Here it is important to use a non-periodic poisson solver, e.g. the direct solver
         call dpoisson_solve_sm(this%orbsets(ios)%poisson, this%orbsets(ios)%sphere, vv(1:np_sphere), nn(1:np_sphere))
 
@@ -456,9 +469,12 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der, st)
 
             orbl => this%orbsets(ios)%orbitals(lst)
 
+            !$omp parallel do
             do ip=1,np_sphere
              tmp(ip) = vv(ip)*real(orbl%X(orb)(ip))*real(orbk%X(orb)(ip))
             end do
+            !$omp end parallel do
+
             this%coulomb(ist,jst,kst,lst,ios) = dsm_integrate(mesh, this%orbsets(ios)%sphere, tmp(1:np_sphere))
 
             if(abs(this%coulomb(ist,jst,kst,lst,ios))<CNST(1.0e-12)) then
