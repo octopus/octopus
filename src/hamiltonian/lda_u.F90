@@ -92,6 +92,7 @@ module lda_u_oct_m
                                               !> if the sphere cross the border of the box
     type(orbital_t), pointer :: orbitals(:)   !> Orbitals of this set of orbitals
     FLOAT               :: Ueff               !> The effective U of the simplified rotational invariant form
+    FLOAT               :: Ubar, Jbar
     type(species_t), pointer :: spec          
 
     type(poisson_t)  :: poisson               !> For computing the Coulomb integrals
@@ -102,6 +103,8 @@ module lda_u_oct_m
     FLOAT, pointer           :: dn(:,:,:,:), dV(:,:,:,:) !> Occupation matrices and potentials 
                                                          !> for the standard scheme
     CMPLX, pointer           :: zn(:,:,:,:), zV(:,:,:,:)
+    FLOAT, pointer           :: dVloc1(:,:,:), dVloc2(:,:,:,:) !> For the corrected ACBN0 functional
+    CMPLX, pointer           :: zVloc1(:,:,:), zVloc2(:,:,:,:)
     FLOAT, pointer           :: dn_alt(:,:,:,:) !> Stores the renomalized occ. matrices
     CMPLX, pointer           :: zn_alt(:,:,:,:) !> if the ACBN0 functional is used  
   
@@ -152,6 +155,10 @@ contains
   nullify(this%zV)
   nullify(this%coulomb)
   nullify(this%renorm_occ)
+  nullify(this%dVloc1)
+  nullify(this%dVloc2)
+  nullify(this%zVloc1)
+  nullify(this%zVloc2)
 
   call distributed_nullify(this%orbs_dist, 0)
 
@@ -297,6 +304,12 @@ contains
     if(this%useACBN0) then
       SAFE_ALLOCATE(this%dn_alt(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets))
       this%dn_alt(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets) = M_ZERO
+      if(this%ACBN0_corrected) then
+        SAFE_ALLOCATE(this%dVloc1(1:maxorbs,1:st%d%nspin,1:this%norbsets))
+        this%dVloc1(1:maxorbs,1:st%d%nspin,1:this%norbsets) = M_ZERO
+        SAFE_ALLOCATE(this%dVloc2(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets))
+        this%dVloc2(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets) = M_ZERO
+      end if
     end if
   else
     SAFE_ALLOCATE(this%zn(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets))
@@ -308,6 +321,12 @@ contains
     if(this%useACBN0) then
       SAFE_ALLOCATE(this%zn_alt(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets))
       this%zn_alt(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets) = cmplx(M_ZERO,M_ZERO)
+      if(this%ACBN0_corrected) then
+        SAFE_ALLOCATE(this%dVloc1(1:maxorbs,1:st%d%nspin,1:this%norbsets))
+        this%dVloc1(1:maxorbs,1:st%d%nspin,1:this%norbsets) = cmplx(M_ZERO,M_ZERO)
+        SAFE_ALLOCATE(this%dVloc2(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets))
+        this%dVloc2(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets) = cmplx(M_ZERO,M_ZERO)
+      end if
     end if
   end if
   SAFE_ALLOCATE(this%renorm_occ(geo%nspecies,0:5,0:3,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end))
@@ -351,6 +370,10 @@ contains
    SAFE_DEALLOCATE_P(this%zV) 
    SAFE_DEALLOCATE_P(this%coulomb)
    SAFE_DEALLOCATE_P(this%renorm_occ)
+   SAFE_DEALLOCATE_P(this%dVloc1)
+   SAFE_DEALLOCATE_P(this%zVloc1)
+   SAFE_DEALLOCATE_P(this%dVloc2)
+   SAFE_DEALLOCATE_P(this%zVloc2)
 
    do ios = 1, this%norbsets
      do iorb = 1, this%orbsets(ios)%norbs

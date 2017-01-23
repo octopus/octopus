@@ -84,7 +84,11 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
         do imp = 1, os%norbs
           reduced = reduced + this%X(V)(im,imp,ispin,ios)*dot(imp)
         end do
-      
+        
+        if(this%ACBN0_corrected) then
+          reduced = reduced + this%X(Vloc1)(im,ispin,ios)*dot(im)
+        end if     
+ 
         !In case of phase, we have to apply the conjugate of the phase here
         if(has_phase) then
           !$omp parallel do
@@ -117,7 +121,7 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
 end subroutine X(lda_u_apply)
 
 ! ---------------------------------------------------------
-!> This routine compute the values of the occupation matrices
+!> This routine computes the values of the occupation matrices
 ! ---------------------------------------------------------
 subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
   type(lda_u_t), intent(inout)         :: this
@@ -234,7 +238,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
 end subroutine X(update_occ_matrices)
 
 ! ---------------------------------------------------------
-!> This routine compute the value of the double counting term in the LDA+U energy
+!> This routine computes the value of the double counting term in the LDA+U energy
 ! ---------------------------------------------------------
 subroutine X(compute_dudarev_energy)(this, lda_u_energy)
   type(lda_u_t), intent(inout)    :: this
@@ -263,7 +267,7 @@ end subroutine X(compute_dudarev_energy)
 
 
 ! ---------------------------------------------------------
-!> This routine compute the potential that, once multiplied
+!> This routine computes the potential that, once multiplied
 !> by the projector Pmm' and summed over m and m' for all the atoms
 !> gives the full Hubbard potential
 ! ---------------------------------------------------------
@@ -290,12 +294,116 @@ subroutine X(lda_u_update_potential)(this)
     call comm_allreduce(this%orbs_dist%mpi_grp%comm, this%X(V))
   end if
 
+  if(this%ACBN0_corrected) then
+    call X(lda_u_ACBN0_correction)(this)
+  end if
+
   POP_SUB(lda_u_update_potential)
 end subroutine X(lda_u_update_potential)
 
+! ---------------------------------------------------------
+!> This routine adds the local contribution from the derivative
+!>  of the effective U to the LDA+U potential
+! ---------------------------------------------------------
+subroutine X(lda_u_ACBN0_correction)(this)
+  type(lda_u_t), intent(inout)    :: this
+
+  integer :: ios, im, imp, ispin1, ispin2, norbs
+  R_TYPE :: B, C, D, weight
+
+  PUSH_SUB(lda_u_ACBN0_correction)
+
+  this%X(Vloc1)(1:this%maxnorbs,1:this%nspins,1:this%norbsets) = R_TOTYPE(M_ZERO)
+  this%X(Vloc2)(1:this%maxnorbs,1:this%maxnorbs,1:this%nspins,1:this%norbsets) = R_TOTYPE(M_ZERO)
+  !this%X(Vnl)(1:this%maxnorbs,1:this%maxnorbs,1:this%nspins,1:this%norbsets) = R_TOTYPE(M_ZERO)
+
+  do ios = this%orbs_dist%start, this%orbs_dist%end
+    norbs = this%orbsets(ios)%norbs
+ 
+    !TODO: These quantites are already computed, we should not recompute them 
+    !We compute B, C, and D
+    B = R_TOTYPE(M_ZERO)
+    C = R_TOTYPE(M_ZERO)
+    do im = 1, norbs
+    do imp = 1,norbs
+      ! We compute the term
+      ! sum_{alpha} sum_{m,mp/=m} N^alpha_{m}N^alpha_{mp}
+      if(imp/=im) then
+        do ispin1 = 1, this%nspins
+          C = C + this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin1,ios)
+        end do
+      end if
+      ! We compute the term
+      ! sum_{alpha,beta} sum_{m,mp} N^alpha_{m}N^beta_{mp}
+      do ispin1 = 1, this%nspins
+        do ispin2 = 1, this%nspins
+          if(ispin1 /= ispin2) then
+            B = B + this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin2,ios)
+          end if
+        end do
+      end do
+    end do !imp
+    end do !im
+    D = R_TOTYPE(M_ZERO)
+    do ispin1 = 1, this%nspins
+      do im = 1, norbs
+        do imp = 1,norbs
+          D = D - abs(this%X(n)(im,imp,ispin1,ios))**2
+        end do
+        D = D + this%X(n)(im,im,ispin1,ios)
+      end do
+    end do
+    !This could append at first iteration, or for fully occupied orbital
+    if(abs(D) < CNST(1.0e-10)) cycle
+  
+    !We now computes the diagonal part of the local potential
+    weight = -D*this%orbsets(ios)%Ubar/(M_TWO*(B+C))
+    do ispin1 = 1, this%nspins
+      do im = 1, norbs
+        do imp = 1, norbs
+          if(imp /= im) then
+            !We add -D*U/(2*(B+C))\sum_{mp/=m} 2N_mp^{\sigma}
+            this%X(Vloc1)(im,ispin1,ios) = this%X(Vloc1)(im,ispin1,ios) &
+                  + M_TWO*weight*this%X(n)(imp,imp,ispin1,ios)
+          end if
+          !We add +D*U/(2*(B+C))\sum_{mp} N_mp^{\sigma}
+          this%X(Vloc1)(im,ispin1,ios) = this%X(Vloc1)(im,ispin1,ios) &
+                  - weight*this%X(n)(imp,imp,ispin1,ios)
+          do ispin2 = 1, this%nspins
+            if(ispin1 /= ispin2) then
+              !We add +D*U/(2*(B+C))\sum_{mp} N_mp^{-\sigma}
+              this%X(Vloc1)(im,ispin1,ios) = this%X(Vloc1)(im,ispin1,ios) &
+                     - weight*this%X(n)(imp,imp,ispin2,ios)
+            end if
+          end do !ispin2
+        end do !imp
+      end do !im
+    end do !ispin1
+
+    weight = D*this%orbsets(ios)%Jbar/C
+    do ispin1 = 1, this%nspins
+      do im = 1, norbs
+        do imp = 1, norbs
+          if(imp /= im) then
+            !We add -D*U/(2*(B+C))\sum_{mp/=m} N_mp^{\sigma}
+            this%X(Vloc1)(im,ispin1,ios) = this%X(Vloc1)(im,ispin1,ios) &
+                  + weight*this%X(n)(imp,imp,ispin1,ios)
+          end if
+        end do !imp
+      end do !im
+    end do !ispin1
+  end do !ios
+
+  if(this%orbs_dist%parallel) then
+    call comm_allreduce(this%orbs_dist%mpi_grp%comm, this%X(Vloc1))
+  end if
+
+  POP_SUB(lda_u_ACBN0_correction)
+end subroutine X(lda_u_ACBN0_correction)
+
 
 ! ---------------------------------------------------------
-!> This routine compute the effective U following the expression 
+!> This routine computes the effective U following the expression 
 !> given in Agapito et al., Phys. Rev. X 5, 011006 (2015)
 ! ---------------------------------------------------------
 subroutine X(compute_ACBNO_U)(this, st)
@@ -362,8 +470,9 @@ subroutine X(compute_ACBNO_U)(this, st)
  
       end do
       end do
-
       this%orbsets(ios)%Ueff = numU/denomU - numJ/denomJ
+      this%orbsets(ios)%Ubar = numU/denomU
+      this%orbsets(ios)%Jbar = numJ/denomJ
  
   else !In the case of s orbitals, the expression is different
     if(st%d%nspin > 1) then
@@ -391,6 +500,8 @@ subroutine X(compute_ACBNO_U)(this, st)
       end do
 
      this%orbsets(ios)%Ueff = numU/denomU
+     this%orbsets(ios)%Ubar = numU/denomU
+     this%orbsets(ios)%Jbar = 0
    else
      this%orbsets(ios)%Ueff = M_ZERO
    end if
@@ -572,6 +683,11 @@ end subroutine X(compute_coulomb_integrals)
         do imp = 1, os%norbs
           reduced = reduced + this%X(V)(im,imp,ispin,ios)*dot(imp)
         end do
+
+        if(this%ACBN0_corrected) then
+          reduced = reduced + this%X(Vloc1)(im,ispin,ios)*dot(im)
+        end if
+
         do idir = 1, mesh%sb%dim
           !In case of phase, we have to apply the conjugate of the phase here
           if(has_phase) then
