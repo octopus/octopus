@@ -147,61 +147,6 @@ R_TYPE function X(energy_calc_electronic)(hm, der, st, terms) result(energy)
   POP_SUB(X(energy_calc_electronic))
 end function X(energy_calc_electronic)
 
-!-----------------------------------------------
-
-subroutine X(v_resp_calc)(st, gr, mu, d, vresp)
-  integer, intent(in)            :: d					
-  type(states_t), intent(in)     :: st                                                           
-  FLOAT, intent(in)              :: mu	
-  type(grid_t), intent(in)       :: gr
-  FLOAT, pointer                 :: vresp(:,:)						
-  FLOAT, pointer                 :: density(:,:), occ(:,:)          
-  R_TYPE, pointer                :: psi(:,:)                        
-  integer                        :: ip, ist, iq, ib                     
-  FLOAT                          :: Kx         
-  FLOAT                          :: weight
-
-  !The Kx constant depends on dimentionality
-  !write(*,*) "Dimentionality: ", d
-  select case(d) 
-    case(3); Kx = CNST(0.382106112)
-    case(2); Kx = CNST(0.450158158)                    
-    case(1); call messages_not_implemented('GLLB in 1D')
-  end select                                                                
-  
-  !Pointing some useful quantities                                  
-  ! in order to simplify the notation                               
-  occ => st%occ
-  density => st%rho
-
-  SAFE_ALLOCATE(vresp(gr%mesh%np, 1))
-  SAFE_ALLOCATE(psi(gr%mesh%np, 1))
-  vresp = M_ZERO
-  do iq = st%d%kpt%start, st%d%kpt%end                !Sum over k-points
-    do ib = st%group%block_start, st%group%block_end  !Sum over block states
-      do ist = 1, st%group%psib(ib, iq)%nst           !Sum over the states of the block
-        if(st%eigenval(st%group%psib(ib,iq)%states(ist)%ist,1)<mu) then !We do not calculate weight if mu < epsilon(ist,1)
-          psi => st%group%psib(ib, iq)%states(ist)%X(psi)         !Point to the ist state of the ib block
-          !write(*,*) "mu =", mu
-          !write(*,*) "eigenval =", st%eigenval
-          weight = Kx*st%d%kweights(iq)*occ(st%group%psib(ib,iq)%states(ist)%ist, 1)&
-                        *sqrt(mu-st%eigenval(st%group%psib(ib,iq)%states(ist)%ist,1))
-          write(*,*) weight
-          forall(ip = 1:gr%mesh%np)  
-            vresp(ip,1) = vresp(ip,1) + weight*(R_REAL(psi(ip, 1))**2+& 
-                          R_AIMAG(psi(ip, 1))**2)/(density(ip,1) + 1E-10)
-          end forall
-        end if
-      end do
-    end do
-  end do
-
-  !write(*,*) "vresp(100) =", vresp(100,1)
-end subroutine X(v_resp_calc)
-
-
-
-
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

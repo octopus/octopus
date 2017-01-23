@@ -83,7 +83,7 @@ module v_ks_oct_m
     SIC_ADSIC  = 4         !< Averaged density SIC
 
   type v_ks_calc_t
-    !private
+    private
     logical                       :: calculating
     logical                       :: time_present
     FLOAT                         :: time
@@ -94,8 +94,6 @@ module v_ks_oct_m
     type(energy_t),       pointer :: energy
     type(states_t),       pointer :: hf_st
     FLOAT,                pointer :: vxc(:, :)
-    FLOAT,                pointer :: vslater(:,:)
-    FLOAT,                pointer :: vresp(:,:)
     FLOAT,                pointer :: vtau(:, :)
     FLOAT,                pointer :: axc(:, :, :)
     FLOAT,                pointer :: vberry(:, :)
@@ -135,7 +133,6 @@ module v_ks_oct_m
     logical                  :: vdw_self_consistent
     type(vdw_ts_t)           :: vdw_ts
     logical                  :: include_td_field
-    logical                  :: GLLBResp
   end type v_ks_t
 
 contains
@@ -538,14 +535,8 @@ contains
     type(profile_t), save :: prof
     logical :: cmplxscl
     logical :: calc_current_
-    integer :: ip
-    FLOAT :: mu
-
 
     PUSH_SUB(v_ks_calc_start)
-
-    !Copy the GLLB parsed variable in the ks_t structure
-    ks%GLLBResp = hm%GLLBResp
 
     calc_current_ = optional_default(calc_current, .true.)
 
@@ -572,9 +563,6 @@ contains
 
     nullify(ks%calc%vberry)
     nullify(ks%calc%Imvberry) !cmplxscl
-    !Allocation of the slater potential
-    nullify(ks%calc%vslater)
-    SAFE_ALLOCATE(ks%calc%vslater(ks%gr%mesh%np, 1))
     if(associated(hm%vberry)) then
       SAFE_ALLOCATE(ks%calc%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin))
       SAFE_ALLOCATE(ks%calc%Imvberry(1:ks%gr%mesh%np, 1:hm%d%nspin)) !cmplxscl
@@ -873,14 +861,13 @@ contains
         if(family_is_mgga_with_exc(hm%xc_family, hm%xc_flags)) then
           if (cmplxscl) call messages_not_implemented('Complex Scaling with (hybrid) meta-GGAs')
           call xc_get_vxc(ks%gr%fine%der, ks%xc, st, &
-            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, ex = ks%calc%energy%exchange&
-            , ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc, vtau = ks%calc%vtau)
+            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, &
+            ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc, vtau = ks%calc%vtau)
         else
           if(.not. cmplxscl) then
             call xc_get_vxc(ks%gr%fine%der, ks%xc, &
               st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, &
-              ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, vslater = ks%calc%vslater, deltaxc = &
-              ks%calc%energy%delta_xc, GLLB = hm%GLLBResp)
+              ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc)
           else
             call xc_get_vxc_cmplx(ks%gr%fine%der, ks%xc, st%d%ispin, ks%calc%density, ks%calc%Imdensity, &
               ks%calc%vxc, ks%calc%Imvxc, hm%cmplxscl%theta, ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, &
@@ -892,33 +879,17 @@ contains
           if (cmplxscl) call messages_not_implemented('Complex Scaling with (hybrid) meta-GGAs')
           call xc_get_vxc(ks%gr%fine%der, ks%xc, &
             st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
-            ks%calc%vxc, vtau = ks%calc%vtau, GLLB = ks%GLLBResp)
+            ks%calc%vxc, vtau = ks%calc%vtau)
         else
           if(.not. cmplxscl) then
             call xc_get_vxc(ks%gr%fine%der, ks%xc, &
               st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
-              ks%calc%vxc,  vslater = ks%calc%vslater, GLLB = ks%GLLBResp)
+              ks%calc%vxc)
           else
             call xc_get_vxc_cmplx(ks%gr%fine%der, ks%xc, st%d%ispin, ks%calc%density, ks%calc%Imdensity, &
               ks%calc%vxc, ks%calc%Imvxc, hm%cmplxscl%theta)
           end if
         end if
-      end if
-
-      !This part called the function that calculates the GLLB response potential
-      !and add the potential to the total one
-      write(*,*) "Variable correctly parsed? ", ks%GLLBResp
-      if(ks%GLLBResp) then
-        !SAFE_ALLOCATE(ks%calc%vresp(ks%gr%mesh%np,1))
-        mu = maxval(st%eigenval(:,:), st%occ(:,:) /= 0) !Con lo smearing non funziona
-        call obtain_vresp(st, ks%gr, mu,ks%gr%mesh%idx%dim, ks%calc%vresp) 
-        forall (ip = 1:ks%gr%mesh%np)
-          ks%calc%vxc(ip, 1) = ks%calc%vxc(ip,1) + ks%calc%vresp(ip,1)
-        end forall
-      else
-        !In the final code this piece will be canceled
-        mu = maxval(st%eigenval(:,:), st%occ(:,:) /= 0)
-        call obtain_vresp(st, ks%gr, mu,ks%gr%mesh%idx%dim, ks%calc%vresp) 
       end if
 
       if (ks%sic_type == SIC_ADSIC) then

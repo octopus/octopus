@@ -17,7 +17,7 @@
 !!
 
   ! ---------------------------------------------------------
-  subroutine output_hamiltonian(hm, st, der, dir, outp, geo, grp, ks)
+  subroutine output_hamiltonian(hm, st, der, dir, outp, geo, grp)
     type(hamiltonian_t),       intent(in)    :: hm
     type(states_t),            intent(inout) :: st
     type(derivatives_t),       intent(inout) :: der
@@ -25,7 +25,6 @@
     type(output_t),            intent(in)    :: outp
     type(geometry_t),          intent(in)    :: geo
     type(mpi_grp_t), optional, intent(in)    :: grp !< the group that shares the same data, must contain the domains group
-    type(v_ks_t),              intent(in)    :: ks  !<Necessary only to print vresp
 
     integer :: is, err, idir, ispin
     character(len=MAX_PATH_LEN) :: fname
@@ -76,20 +75,6 @@
       if(hm%theory_level /= INDEPENDENT_PARTICLES) then
         if (.not. hm%cmplxscl%space) then 
           call dio_function_output(outp%how, dir, 'vh', der%mesh, hm%vhartree, units_out%energy, err, geo = geo, grp = grp)
-     
-          !Print the GLLB relevant funtions
-          if(hm%GLLBResp) then
-            write(*,*) ubound(hm%delta_xc_r, dim = 1) 
-            call dio_function_output(outp%how, dir, 'delta_xc_r', der%mesh&
-                 , hm%delta_xc_r, units_out%energy, err, geo = geo, grp = grp)
-            call dio_function_output(outp%how, dir, 'vresp', der%mesh, ks%calc%vresp(:,1), &
-                 units_out%energy, err, geo = geo, grp = grp) 
-            call dio_function_output(outp%how, dir, 'vslater', der%mesh, ks%calc%vslater(:,1), &
-                 units_out%energy, err, geo = geo, grp = grp)  
-            call dio_function_output(outp%how, dir, 'vxc-vslater', der%mesh, &
-                 (hm%vxc(:,1)-ks%calc%vslater(:,1)), units_out%energy, err, geo = geo, grp = grp)  
-          end if
-
         else
           call zio_function_output(outp%how, dir, 'vh', der%mesh, &
             hm%vhartree(1:der%mesh%np) + M_zI*hm%Imvhartree(1:der%mesh%np), units_out%energy, err, geo = geo, grp = grp)

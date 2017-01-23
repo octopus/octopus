@@ -56,11 +56,7 @@ module energy_calc_oct_m
     denergy_calc_electronic,      &
     zenergy_calc_electronic,      &
     energy_calc_eigenvalues,      &
-    cmplxscl_get_kinetic_elements,&
-    get_GLLB_delta_xc,            &
-    obtain_vresp,                 &
-    dv_resp_calc,                 &
-    zv_resp_calc
+    cmplxscl_get_kinetic_elements
 
 contains
 
@@ -206,10 +202,6 @@ contains
     else
       hm%energy%berry = M_ZERO
     end if
-    
-    if(hm%GLLBResp) then
-      call get_GLLB_delta_xc(st, gr, hm%energy%delta_xc, hm%delta_xc_r)
-    end if
 
     if (optional_default(iunit, -1) > 0) then
       if(cmplxscl) then 
@@ -321,71 +313,6 @@ contains
     SAFE_DEALLOCATE_A(hpsi)
     POP_SUB(cmplxscl_get_kinetic_elements)
   end subroutine cmplxscl_get_kinetic_elements
-
-  !-----------------------------------------------------------------
-
-  subroutine get_GLLB_delta_xc(st, gr, delta_xc, delta_xc_r)
-  type(states_t), intent(in)    :: st
-  type(grid_t),   intent(in)    :: gr
-  FLOAT, intent(inout)          :: delta_XC
-  FLOAT, pointer, intent(inout) :: delta_xc_r(:) !delta_xc(r)
-  FLOAT, pointer                :: vresp(:,:)
-  FLOAT, dimension(2)           :: mu            !mu(1) = e_LOMO, mu(2) = e_HOMO
-  integer                       :: i, ip, j
-  integer, dimension(2)         :: indxLUMO
-  FLOAT, allocatable           :: psiLUMO(:,:)
-
-  SAFE_ALLOCATE(delta_xc_r(1:gr%mesh%np))
-  SAFE_ALLOCATE(psiLUMO(1:gr%mesh%np,1))
-  delta_xc_r = M_ZERO
-  
-  !Calculating e_HOMO and e_LUMO
-  mu(1) = minval(st%eigenval(:,:), st%occ(:,:) == 0) !Con lo smearing non funziona
-  mu(2) = maxval(st%eigenval(:,:), st%occ(:,:) /= 0) !Con lo smearing non funziona
-  indxLUMO = minloc(st%eigenval(:,:), st%occ(:,:) == 0)
-  do i = 1, 2
-    call obtain_vresp(st, gr, mu(i), gr%mesh%idx%dim, vresp)
-    forall(ip = 1:gr%mesh%np)
-      delta_xc_r(ip) =  delta_xc_r(ip) + (-1)**(1+i)*vresp(ip,1)
-    end forall
-  end do
-
-  !Getting the LUMO
-  !do i = 1,2
-    call states_get_state(st, gr%mesh, indxLUMO(1), 1, psiLUMO(:,:))
-    !write(*,*) psi(:,1,i)
-  !end do
-
-  delta_xc = dmf_dotp(gr%mesh, psiLUMO(:,1)**2, delta_xc_r(:))
-  !Calculation of the matrix elements
-  !do i = 1, 2
-    !do j = 1, 2
-      !do ip = 1, gr%mesh%np
-        !matrix(i,j) = matrix(i,j) + dmf_dotp(gr%mesh, psi(:,1,i)*psi(:,1,j), delta_xc_r(:))
-      !end do
-    !end do    
-  !end do
-  !write (*,*) matrix(1,:)
-  !write (*,*) matrix(2,:)
-
-  !delta_xc = matrix(1,1)
-  
-  end subroutine get_gllb_delta_xc
-
-
-  subroutine obtain_vresp(st, gr, mu, d, vresp)
-    type(states_t), intent(in)     :: st
-    integer, intent(in)            :: d					
-    type(grid_t), intent(in)       :: gr                                                          
-    FLOAT, intent(in)              :: mu
-    FLOAT, pointer, intent(inout)  :: vresp(:,:)							
-
-    if(states_are_real(st)) then
-      call dv_resp_calc(st, gr, mu, d, vresp)
-    else
-      call zv_resp_calc(st, gr, mu, d, vresp)
-    end if
-  end subroutine obtain_vresp
 
 
 #include "undef.F90"
