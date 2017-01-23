@@ -167,6 +167,18 @@ contains
     call messages_print_var_value(stdout,'Number of Floquet time-sampling points', this%nT)
     this%dt = this%Tcycle/real(this%nT)
 
+    !%Variable TDFloquetMaximumSolverIterations
+    !%Type integer
+    !%Default 35
+    !%Section Time-Dependent::TD Output
+    !%Description
+    !% Maximumn Number of calls to eigensolver for solving the Flqoeut Hamiltonian
+    !%
+    !%End
+    call parse_variable('TDFloquetMaximumSolverIterations ', 35 ,this%max_solve_iter)
+    call messages_print_var_value(stdout,'Maximum eigensolver iterations', this%max_solve_iter)
+
+
     !%Variable TDFloquetDimension
     !%Type integer
     !%Default -1
@@ -222,6 +234,9 @@ contains
     FLOAT :: time_step, time
     type(scf_t) :: scf ! used for frozen_phonon
     integer :: ia, space_dim
+integer :: nik, ist
+FLOAT, allocatable :: frozen_bands(:,:)
+
 
     PUSH_SUB(floquet_hamiltonian_init)
 
@@ -235,6 +250,10 @@ contains
     ! this is a bit recursive, so maybe there should be a Flqoeut moduel or something
     nullify(this%td_hm)
     SAFE_ALLOCATE(this%td_hm(1:this%F%nT))
+
+    if(this%F%mode == FLOQUET_FROZEN_PHONON) then
+       SAFE_ALLOCATE(frozen_bands(st%nst,gr%sb%kpoints%reduced%npoints))
+    end if
 
     ! initialize the instances of the Hamiltonians
     do it=1,this%F%nT
@@ -269,6 +288,22 @@ contains
          call scf_run(scf,sys%mc,gr,this%td_hm(it)%geo,st,sys%ks,this%td_hm(it),sys%outp, gs_run=.false.)
          call scf_end(scf)
 
+         frozen_bands(st%nst,gr%sb%kpoints%reduced%npoints) = &
+              frozen_bands(st%nst,gr%sb%kpoints%reduced%npoints) + M_ONE/this%F%nT*st%eigenval(st%nst,gr%sb%kpoints%reduced%npoints)
+
+         write(filename,'(I5)') it
+         filename = 'BO_bands_'//trim(adjustl(filename))
+         open(unit=98765,file=filename)
+         nik=gr%sb%kpoints%nik_skip
+         do ik=gr%sb%kpoints%reduced%npoints-nik+1,gr%sb%kpoints%reduced%npoints
+            do ist=1,st%nst
+               write(98765,'(e12.6, 1x)',advance='no') st%eigenval(ist, ik)
+            end do
+            write(98765,'(1x)')
+         end do
+         close(98765)
+
+
        case(FLOQUET_NON_INTERACTING)
          call hamiltonian_init(this%td_hm(it), gr, this%td_hm(it)%geo, st, &
                                     sys%ks%theory_level, sys%ks%xc_family,sys%ks%xc_flags)
@@ -286,6 +321,21 @@ contains
         end select
 
      enddo
+
+
+     if(this%F%mode == FLOQUET_FROZEN_PHONON) then
+        open(unit=98765,file='frozen_bands')
+        nik=gr%sb%kpoints%nik_skip
+        do ik=gr%sb%kpoints%reduced%npoints-nik+1,gr%sb%kpoints%reduced%npoints
+           do ist=1,st%nst
+              write(98765,'(e12.6, 1x)',advance='no') frozen_bands(ist, ik)
+           end do
+           write(98765,'(1x)')
+        end do
+        close(98765)
+        
+     end if
+
 
      POP_SUB(floquet_hamiltonian_init)
         
@@ -389,7 +439,7 @@ integer :: nik, file
       ! here we need a more sophisticated control of the solver loop
       converged=.false.
       iter =0
-      maxiter = 15
+      maxiter = hm%F%max_solve_iter
       do while(.not.converged.and.iter <= maxiter)
          call eigensolver_run(eigens, gr, dressed_st, hm, 1,converged)
 
@@ -413,7 +463,9 @@ endif
          iter = iter +1
       end do
 
-      call eigensolver_end(eigens)                                                             
+      call eigensolver_end(eigens)
+      !
+      
       !switch off floquet hamiltonian                                                           
       hm%F%floquet_apply = .false.                                                               
       ! reset dimension
