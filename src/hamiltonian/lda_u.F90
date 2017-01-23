@@ -120,6 +120,7 @@ module lda_u_oct_m
     integer             :: truncation         !> Truncation method for the orbitals
     FLOAT               :: orbitals_threshold !> Threshold for orbital truncation
     logical             :: useACBN0           !> Do we use the ACBN0 functional
+    logical             :: ACBN0_corrected    !> Do we take into account missing terms from the ACBN0 original paper
     logical             :: useAllOrbitals     !> Do we use all atomic orbitals possible
     logical             :: skipSOrbitals      !> Not using s orbitals
     logical             :: freeze_occ         !> Occupation matrices are not recomputed during TD evolution
@@ -234,6 +235,7 @@ contains
     !% from the peusopotential. Only available with ACBN0 functional.
     !%End
     call parse_variable('UseAllAtomicOrbitals', .false., this%useAllOrbitals)
+    if(this%useAllOrbitals) call messages_experimental("UseAllAtomicOrbitals")
 
     !%Variable SkipSOrbitals
     !%Type logical
@@ -244,8 +246,18 @@ contains
     !% from the peusopotential but s orbitals. Only available with ACBN0 functional.
     !%End
     call parse_variable('SkipSOrbitals', .true., this%skipSOrbitals)   
- 
-    if(this%useAllOrbitals) call messages_experimental("UseAllAtomicOrbitals")
+    if(this%SkipSOrbitals) call messages_experimental("SkipSOrbitals")
+
+    !%Variable ACBN0_corrected
+    !%Type logical
+    !%Default no
+    !%Section Hamiltonian::LDA+U
+    !%Description
+    !% If set to yes, Octopus will determine the effective U term using the 
+    !% ACBN0 functional, including the missing term from the derivative of the effective U.
+    !%End
+    call parse_variable('ACBN0_corrected', .false., this%ACBN0_corrected)
+    if(this%ACBN0_corrected) call messages_experimental("ACBN0_corrected")
   end if
 
   !We first need to load the basis
