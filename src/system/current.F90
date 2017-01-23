@@ -32,6 +32,7 @@ module current_oct_m
   use io_oct_m
   use io_function_oct_m
   use lalg_basic_oct_m
+  use lda_u_oct_m
   use logrid_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
@@ -327,6 +328,11 @@ contains
             !A nonlocal contribution from the scissor must be included
             if(hm%scissor%apply) then
               call scissor_commute_r(hm%scissor, der%mesh, ik, psi, gpsi)
+            end if
+            
+            if(hm%lda_u%apply) then
+              call zlda_u_commute_r(hm%lda_u, der%mesh, st%d, ik, psi, gpsi, &
+                              associated(hm%hm_base%phase))
             end if
 
           end if

@@ -29,7 +29,7 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
 
   integer :: ibatch, idim, ios, imp, im, ispin
   integer :: bind, is
-  R_TYPE  :: weight, reduced
+  R_TYPE  :: reduced
   R_TYPE, allocatable :: psi(:,:), hpsi(:,:)
   R_TYPE, allocatable :: dot(:), epsi(:,:)
   type(orbital_set_t), pointer  :: os
@@ -513,18 +513,147 @@ end subroutine X(compute_coulomb_integrals)
  ! ---------------------------------------------------------
  !> This routine computes [r,V_lda+u].
  ! ---------------------------------------------------------
- subroutine X(lda_u_commute_r)( ) !this, mesh, ik, psi, gpsi)
- !   type(scissor_t), intent(in)    :: this
- !   type(mesh_t),    intent(in)    :: mesh 
- !   R_TYPE,          intent(in)    :: psi(:,:)
- !   integer,         intent(in)    :: ik
- !   R_TYPE,          intent(inout) :: gpsi(:, :, :)
- !
- !   integer :: ist, idim, idir
- !   R_TYPE  :: dot
- !   R_TYPE, allocatable :: gspsi(:,:), tmpstate(:,:), psi_r(:)
- !
-    PUSH_SUB(lda_u_commute_r)
+ subroutine X(lda_u_commute_r)(this, mesh, d, ik, psi, gpsi, has_phase)
+   type(lda_u_t),      intent(in) :: this
+   type(mesh_t),    intent(in)    :: mesh
+   type(states_dim_t), intent(in) :: d
+   R_TYPE,          intent(in)    :: psi(:,:)
+   integer,         intent(in)    :: ik
+   R_TYPE,          intent(inout) :: gpsi(:, :, :)
+   logical,            intent(in) :: has_phase !True if the wavefunction has an associated phase 
+
+   integer :: ios, idim, idir, im, imp, is, ispin
+   R_TYPE, allocatable :: dot(:)
+   R_TYPE, allocatable :: epsi(:,:)
+   type(orbital_set_t), pointer  :: os 
+   R_TYPE  :: reduced
+
+   PUSH_SUB(lda_u_commute_r)
+
+   SAFE_ALLOCATE(epsi(1:this%max_np, d%dim))
+   SAFE_ALLOCATE(dot(1:this%maxnorbs))
+
+   ispin = states_dim_get_spin_index(d, ik)
+
+   do ios = 1, this%norbsets
+      ! We have to compute 
+      ! hpsi> += r sum_m |phi m> sum_m' Vmm' <phi m' | psi >
+      !
+      ! We first compute <phi m | psi> for all orbitals of the atom
+      !
+      os => this%orbsets(ios)
+      !If we need to add the phase, we explicitly do the operation using the sphere
+      !This does not change anything if the sphere occupies the full mesh or not
+      if(has_phase) then
+        do idim = 1, d%dim
+          !$omp parallel do 
+          do is = 1, os%sphere%np
+            epsi(is,idim) = psi(os%sphere%map(is), idim)*os%phase(is, ik)
+          end do
+          !$omp end parallel do
+        end do
+      end if
+
+      do im = 1, os%norbs
+        !If we need to add the phase, we explicitly do the operation using the sphere
+        !This does not change anything if the sphere occupies the full mesh or not
+        if(has_phase) then
+          dot(im) = X(mf_dotp)(os%sphere%mesh, os%orbitals(im)%X(orb),&
+                               epsi(1:os%sphere%np,1), reduce = .false., np = os%sphere%np)
+        else
+          dot(im) = submesh_to_mesh_dotp(os%sphere, 1, os%orbitals(im)%X(orb),&
+                               psi(1:mesh%np,1:d%dim))
+        end if
+      end do
+   
+      do im = 1, os%norbs
+        ! sum_m' Vmm' <phi m' | psi >
+        reduced = M_ZERO
+        do imp = 1, os%norbs
+          reduced = reduced + this%X(V)(im,imp,ispin,ios)*dot(imp)
+        end do
+        do idir = 1, mesh%sb%dim
+          !In case of phase, we have to apply the conjugate of the phase here
+          if(has_phase) then
+            !$omp parallel do
+            do is = 1, os%sphere%np
+              epsi(is,1) = os%sphere%x(is,idir)*os%orbitals(im)%X(orb)(is)&
+                               *conjg(os%phase(is, ik))
+            end do
+            !$omp end parallel do
+          else
+            !$omp parallel do
+            do is = 1, os%sphere%np
+              epsi(is,1) = os%sphere%x(is,idir)*os%orbitals(im)%X(orb)(is)
+            end do
+            !$omp end parallel do
+          end if
+          do idim = 1, d%dim
+            call submesh_add_to_mesh(os%sphere, epsi(1:os%sphere%np,1), &
+                                  gpsi(:, idir,idim), reduced)
+          end do !idim
+        end do !idir
+      end do !im
+
+     do idir = 1, mesh%sb%dim
+       ! We have to compute 
+       ! hpsi> -= sum_m |phi m> sum_m' Vmm' <phi m'| r | psi >
+       !
+       ! We first compute <phi m| r | psi> for all orbitals of the atom
+       !
+       !
+       if(has_phase) then
+         do idim = 1, d%dim
+           !$omp parallel do 
+           do is = 1, os%sphere%np
+             epsi(is,idim) = os%sphere%x(is,idir)*psi(os%sphere%map(is), idim)*os%phase(is, ik)
+           end do
+           !$omp end parallel do
+         end do
+       else
+         do idim = 1, d%dim
+           !$omp parallel do 
+           do is = 1, os%sphere%np
+             epsi(is,idim) = os%sphere%x(is,idir)*psi(os%sphere%map(is), idim)
+           end do
+           !$omp end parallel do
+         end do
+       end if
+       do im = 1, os%norbs
+         dot(im) = X(mf_dotp)(os%sphere%mesh, os%orbitals(im)%X(orb),&
+                               epsi(1:os%sphere%np,1), reduce = .false., np = os%sphere%np)
+       end do
+
+       do im = 1, os%norbs
+         ! sum_m' Vmm' <phi m'|r| psi >
+         reduced = M_ZERO
+         do imp = 1, os%norbs
+           reduced = reduced - this%X(V)(im,imp,ispin,ios)*dot(imp)
+         end do
+         !In case of phase, we have to apply the conjugate of the phase here
+         if(has_phase) then
+           !$omp parallel do
+           do is = 1, os%sphere%np
+             epsi(is,1) = os%orbitals(im)%X(orb)(is)*conjg(os%phase(is, ik))
+           end do
+           !$omp end parallel do
+           do idim = 1, d%dim
+             call submesh_add_to_mesh(os%sphere, epsi(1:os%sphere%np,1), &
+                                 gpsi(:, idir,idim), reduced)
+           end do !idim
+         else
+           do idim = 1, d%dim
+             call submesh_add_to_mesh(os%sphere, os%orbitals(im)%X(orb)(1:os%sphere%np), &
+                                gpsi(:, idir,idim), reduced)
+           end do !idim
+         end if
+       end do !im
+     end do
+
+   end do !ios
+
+   SAFE_DEALLOCATE_A(epsi)
+   SAFE_DEALLOCATE_A(dot)
 
     POP_SUB(lda_u_commute_r)
  end subroutine X(lda_u_commute_r)

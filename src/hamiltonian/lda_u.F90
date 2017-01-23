@@ -75,7 +75,9 @@ module lda_u_oct_m
        dlda_u_update_potential,         &
        zlda_u_update_potential,         &
        lda_u_get_effectiveU,            &
-       lda_u_set_effectiveU
+       lda_u_set_effectiveU,            &
+       dlda_u_commute_r,                &
+       zlda_u_commute_r
 
   type orbital_t
     FLOAT, pointer      :: dorb(:) !> The orbital, if real, on the submesh
