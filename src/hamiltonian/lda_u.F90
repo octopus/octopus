@@ -117,6 +117,7 @@ module lda_u_oct_m
 
     integer             :: norbsets           !> Number of orbital sets 
     integer             :: nspins
+    integer             :: nspecies        
     integer             :: maxnorbs           !> Maximal number of orbitals for all the atoms
     integer             :: max_np             !> Maximum number of points in all orbitals submesh spheres 
  
@@ -144,6 +145,7 @@ contains
   this%max_np = 0
   this%maxnorbs = 0
   this%nspins = 0
+  this%nspecies = 0
   this%freeze_occ = .false.
   this%freeze_u = .false.
 
@@ -275,6 +277,7 @@ contains
   end if
   maxorbs = this%maxnorbs
   this%nspins = st%d%nspin
+  this%nspecies = geo%nspecies
 
   !We analyse the memeory and we print the requiered memory
   !Thus, if there is not enough memory, the user knows with the code crashes
@@ -531,6 +534,43 @@ contains
     end do
     POP_SUB(lda_u_get_effectiveU)
   end subroutine lda_u_get_effectiveU
+
+!    ! ---------------------------------------------------------
+!  subroutine lda_u_set_renorm_occ(this, renorm_occ)
+!    type(lda_u_t),  intent(inout) :: this
+!    FLOAT,          intent(in)    :: renorm_occ(:) 
+!
+!    integer :: isp, inn, ill, ist, ik
+!
+!    PUSH_SUB(lda_u_set_renorm_occ)
+!     
+!    geo%nspecies,0:5,0:3,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end
+!    ind = 0
+!    do isp = 1,this%nspecies
+!     do inn = 0,5
+!      do ill = 0,3
+!       do ist = st%st_startst%st_end
+!        do ik = 
+!      ind = ind + 1
+!      this%renorm_occ(isp,inn,ill,ist, ik) = renorm_occ(ind)
+!    end do
+!    POP_SUB(lda_u_set_renorm_occ)
+!  end subroutine lda_u_set_renorm_occ
+
+!  ! ---------------------------------------------------------
+!  subroutine lda_u_get_renorm_occ(this, renorm_occ)
+!    type(lda_u_t),  intent(in)    :: this
+!    FLOAT,          intent(inout) :: renorm_occ(:)
+!
+!    integer :: ios
+!
+!    PUSH_SUB(lda_u_get_renorm_occ)
+!
+!    do ios = 1,this%norbsets
+!      Ueff(ios) = this%orbsets(ios)%Ueff
+!    end do
+!    POP_SUB(lda_u_get_renorm_occ)
+!  end subroutine lda_u_get_renorm_occ
 
 
 #include "undef.F90"

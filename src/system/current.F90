@@ -331,7 +331,7 @@ contains
             end if
             
             if(hm%lda_u%apply) then
-              call zlda_u_commute_r(hm%lda_u, der%mesh, st%d, ik, psi, gpsi, &
+              call zlda_u_commute_r(hm%lda_u, der%mesh, st%d, ik, ist, psi, gpsi, &
                               associated(hm%hm_base%phase))
             end if
 

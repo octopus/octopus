@@ -87,6 +87,10 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
         
         if(this%ACBN0_corrected) then
           reduced = reduced + this%X(Vloc1)(im,ispin,ios)*dot(im)
+          do imp = 1, os%norbs
+            reduced = reduced + this%X(Vloc2)(im,imp,ispin,ios)*dot(imp) &
+               *this%renorm_occ(species_index(os%spec),os%nn,os%ll,psib%states(ibatch)%ist,ik)
+          end do
         end if     
  
         !In case of phase, we have to apply the conjugate of the phase here
@@ -308,14 +312,13 @@ end subroutine X(lda_u_update_potential)
 subroutine X(lda_u_ACBN0_correction)(this)
   type(lda_u_t), intent(inout)    :: this
 
-  integer :: ios, im, imp, ispin1, ispin2, norbs
+  integer :: ios, im, imp, impp,imppp,ispin1, ispin2, norbs
   R_TYPE :: B, C, D, weight
 
   PUSH_SUB(lda_u_ACBN0_correction)
 
   this%X(Vloc1)(1:this%maxnorbs,1:this%nspins,1:this%norbsets) = R_TOTYPE(M_ZERO)
   this%X(Vloc2)(1:this%maxnorbs,1:this%maxnorbs,1:this%nspins,1:this%norbsets) = R_TOTYPE(M_ZERO)
-  !this%X(Vnl)(1:this%maxnorbs,1:this%maxnorbs,1:this%nspins,1:this%norbsets) = R_TOTYPE(M_ZERO)
 
   do ios = this%orbs_dist%start, this%orbs_dist%end
     norbs = this%orbsets(ios)%norbs
@@ -356,7 +359,7 @@ subroutine X(lda_u_ACBN0_correction)(this)
     !This could append at first iteration, or for fully occupied orbital
     if(abs(D) < CNST(1.0e-10)) cycle
   
-    !We now computes the diagonal part of the local potential
+    !We now compute the diagonal part of the local potential
     weight = -D*this%orbsets(ios)%Ubar/(M_TWO*(B+C))
     do ispin1 = 1, this%nspins
       do im = 1, norbs
@@ -392,10 +395,45 @@ subroutine X(lda_u_ACBN0_correction)(this)
         end do !imp
       end do !im
     end do !ispin1
+
+    !We now compute the non-diagonal part of the local potential
+    weight = D/(M_TWO*(B+C))
+    do ispin1 = 1, this%nspins
+      do im = 1, norbs
+      do imp = 1, norbs
+        do impp = 1, norbs
+        do imppp = 1, norbs
+          do ispin2 = 1, this%nspins
+            this%X(Vloc2)(im,imp,ispin1,ios) = this%X(Vloc2)(im,imp,ispin1,ios) &
+               + weight*this%X(n_alt)(impp,imppp,ispin2,ios) &
+                 * (this%coulomb(im,imp,impp,imppp,ios) + this%coulomb(impp,imppp,im,imp,ios))
+          end do 
+        end do !imppp
+        end do !impp
+      end do !imp
+      end do !im
+   end do !ispin1
+
+   weight = -D/(M_TWO*C)
+   do ispin1 = 1, this%nspins
+     do im = 1, norbs
+     do imp = 1, norbs
+       do impp = 1, norbs
+       do imppp = 1, norbs
+         this%X(Vloc2)(im,imp,ispin1,ios) = this%X(Vloc2)(im,imp,ispin1,ios) &
+             + weight*this%X(n_alt)(impp,imppp,ispin1,ios) &
+               * (this%coulomb(im,imppp,impp,imp,ios) + this%coulomb(impp,imp,im,imppp,ios))
+       end do !imppp
+       end do !impp
+     end do !imp
+     end do !im
+   end do !ispin1
+
   end do !ios
 
   if(this%orbs_dist%parallel) then
     call comm_allreduce(this%orbs_dist%mpi_grp%comm, this%X(Vloc1))
+    call comm_allreduce(this%orbs_dist%mpi_grp%comm, this%X(Vloc2))
   end if
 
   POP_SUB(lda_u_ACBN0_correction)
@@ -624,12 +662,12 @@ end subroutine X(compute_coulomb_integrals)
  ! ---------------------------------------------------------
  !> This routine computes [r,V_lda+u].
  ! ---------------------------------------------------------
- subroutine X(lda_u_commute_r)(this, mesh, d, ik, psi, gpsi, has_phase)
+ subroutine X(lda_u_commute_r)(this, mesh, d, ik, ist, psi, gpsi, has_phase)
    type(lda_u_t),      intent(in) :: this
    type(mesh_t),    intent(in)    :: mesh
    type(states_dim_t), intent(in) :: d
    R_TYPE,          intent(in)    :: psi(:,:)
-   integer,         intent(in)    :: ik
+   integer,         intent(in)    :: ik, ist
    R_TYPE,          intent(inout) :: gpsi(:, :, :)
    logical,            intent(in) :: has_phase !True if the wavefunction has an associated phase 
 
@@ -686,6 +724,10 @@ end subroutine X(compute_coulomb_integrals)
 
         if(this%ACBN0_corrected) then
           reduced = reduced + this%X(Vloc1)(im,ispin,ios)*dot(im)
+          do imp = 1, os%norbs
+            reduced = reduced + this%X(Vloc2)(im,imp,ispin,ios)*dot(imp) &
+               *this%renorm_occ(species_index(os%spec),os%nn,os%ll,ist,ik)
+          end do
         end if
 
         do idir = 1, mesh%sb%dim
@@ -746,6 +788,15 @@ end subroutine X(compute_coulomb_integrals)
          do imp = 1, os%norbs
            reduced = reduced - this%X(V)(im,imp,ispin,ios)*dot(imp)
          end do
+
+         if(this%ACBN0_corrected) then
+           reduced = reduced + this%X(Vloc1)(im,ispin,ios)*dot(im)
+           do imp = 1, os%norbs
+             reduced = reduced + this%X(Vloc2)(im,imp,ispin,ios)*dot(imp) &
+                *this%renorm_occ(species_index(os%spec),os%nn,os%ll,ist,ik)
+           end do
+         end if
+
          !In case of phase, we have to apply the conjugate of the phase here
          if(has_phase) then
            !$omp parallel do
