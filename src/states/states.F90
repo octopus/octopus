@@ -862,8 +862,8 @@ contains
 
       do ik = 1, st%d%nik, nspin
         charge = M_ZERO
-        do ispin = ik, ik + nspin - 1
-          do ist = 1, st%nst
+        do ist = 1, st%nst
+          do ispin = ik, ik + nspin - 1
             st%occ(ist, ispin) = min(rr, -(st%val_charge + excess_charge) - charge)
             charge = charge + st%occ(ist, ispin)
           end do
