@@ -460,15 +460,19 @@ contains
   
     if(this%mesh%use_curvilinear) then
       do idim = 1, dim
+        !$omp parallel do reduction(+:dotp)
         do is = 1, this%np
           dotp = dotp + this%mesh%vol_pp(this%map(is))*phi(this%map(is), idim)*conjg(sphi(is))
         end do
+        !$omp end parallel do
       end do
     else
       do idim = 1, dim
+        !$omp parallel do reduction(+:dotp)
         do is = 1, this%np
           dotp = dotp + phi(this%map(is), idim)*conjg(sphi(is))
         end do
+        !$omp end parallel do
       end do
       dotp = dotp*this%mesh%vol_pp(1)
     end if

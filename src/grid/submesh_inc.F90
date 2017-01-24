@@ -84,13 +84,17 @@ subroutine X(dsubmesh_add_to_mesh)(this, sphi, phi, factor)
   PUSH_SUB(X(dsubmesh_add_to_mesh))
 
   if(present(factor)) then
+    !$omp parallel do
     do ip = 1, this%np
       phi(this%map(ip)) = phi(this%map(ip)) + factor*sphi(ip)
     end do
+    !$omp end parallel do
   else
+    !$omp parallel do
     do ip = 1, this%np
       phi(this%map(ip)) = phi(this%map(ip)) + sphi(ip)
-    end do
+    end do 
+    !$omp end parallel do
   end if
 
   POP_SUB(X(dsubmesh_add_to_mesh))
@@ -150,15 +154,19 @@ R_TYPE function X(dsubmesh_to_mesh_dotp)(this, dim, sphi, phi, reduce) result(do
 
   if(this%mesh%use_curvilinear) then
     do idim = 1, dim
+      !$omp parallel do reduction(+:dotp)
       do is = 1, this%np
         dotp = dotp + this%mesh%vol_pp(this%map(is))*phi(this%map(is), idim)*sphi(is)
       end do
+      !$omp end parallel do
     end do
   else
     do idim = 1, dim
+      !$omp parallel do reduction(+:dotp)
       do is = 1, this%np
         dotp = dotp + phi(this%map(is), idim)*sphi(is)
       end do
+      !$omp end parallel do
     end do
     dotp = dotp*this%mesh%vol_pp(1)
   end if
