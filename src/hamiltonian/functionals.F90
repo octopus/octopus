@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -89,6 +88,7 @@ contains
     functl%family = 0
     functl%type   = 0
     functl%id     = 0
+    functl%flags  = 0
     functl%spin_channels = spin_channels
 
     POP_SUB(xc_functl_init)

@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 ! Now we have three "ks_multipoles" routines, for the 1, 2, and 3D
 ! cases. Eventually they can probably be merged back into one, once
@@ -264,8 +263,7 @@ end subroutine X(output_me_ks_multipoles1d)
 
 ! ---------------------------------------------------------
 subroutine X(one_body) (dir, gr, geo, st, hm)
-  use XC_F90(lib_m)
-  use xc_functl_oct_m
+  use xc_oct_m
 
   character(len=*),    intent(in)    :: dir
   type(grid_t),        intent(inout) :: gr
@@ -287,7 +285,8 @@ subroutine X(one_body) (dir, gr, geo, st, hm)
 
   ASSERT(.not. st%parallel_in_states)
   if(gr%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("OutputMatrixElements=two_body with k-points")
-
+  if(family_is_mgga_with_exc(hm%xc_family, hm%xc_flags)) &
+    call messages_not_implemented("OutputMatrixElements=one_body with MGGA") 
   ! how to do this properly? states_matrix
   iunit = io_open(trim(dir)//'/output_me_one_body', action='write')
 

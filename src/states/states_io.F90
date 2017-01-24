@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -53,7 +52,8 @@ module states_io_oct_m
     states_write_eigenvalues,         &
     states_write_dos,                 &
     states_write_tpa,                 &
-    states_write_bands
+    states_write_bands,               &
+    states_write_bandstructure
 
 contains
 
@@ -953,6 +953,78 @@ contains
 
     POP_SUB(states_write_fermi_for_bands)
   end subroutine states_write_fermi_for_bands
+
+
+    ! ---------------------------------------------------------
+
+  subroutine states_write_bandstructure(dir, nst, st, sb)
+    character(len=*),  intent(in) :: dir
+    integer,           intent(in) :: nst
+    type(states_t),    intent(in) :: st
+    type(simul_box_t), intent(in) :: sb
+
+    integer :: idir, ist, ik, ns, is,npath
+    integer, allocatable :: iunit(:)
+    FLOAT   :: red_kpoint(1:MAX_DIM)
+    character(len=80) :: filename
+
+    if(.not. mpi_grp_is_root(mpi_world)) return
+
+    PUSH_SUB(states_write_bandstructure)   
+
+    ! shortcuts
+    ns = 1
+    if(st%d%nspin == 2) ns = 2
+
+    SAFE_ALLOCATE(iunit(0:ns-1))
+
+    do is = 0, ns-1
+      if (ns > 1) then
+        write(filename, '(a,i1.1,a)') 'bandstructure-sp', is+1
+      else
+        write(filename, '(a)') 'bandstructure'
+      end if
+      iunit(is) = io_open(trim(dir)//'/'//trim(filename), action='write')    
+
+      ! write header
+      write(iunit(is),'(a)',advance='no') '# coord. '
+      do idir = 1, sb%dim
+        write(iunit(is),'(3a)',advance='no') 'k', index2axis(idir), ' '
+      end do
+      write(iunit(is),'(a,i6,3a)') '(red. coord.), bands:', nst, ' [', trim(units_abbrev(units_out%energy)), ']'
+    end do
+
+    npath = SIZE(sb%kpoints%coord_along_path)
+
+    ! output bands
+    do ik = st%d%nik-npath+1, st%d%nik, ns
+      do is = 0, ns - 1
+        red_kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, ik + is), &
+                                                   absolute_coordinates=.false.)
+        write(iunit(is),'(1x)',advance='no')
+        write(iunit(is),'(f14.8)',advance='no') kpoints_get_path_coord(sb%kpoints, & 
+                                                    states_dim_get_kpoint_index(st%d, ik + is)-(st%d%nik -npath)) 
+        do idir = 1, sb%dim
+          write(iunit(is),'(f14.8)',advance='no') red_kpoint(idir)
+        end do
+        do ist = 1, nst
+          write(iunit(is),'(1x,f14.8)',advance='no') units_from_atomic(units_out%energy, st%eigenval(ist, ik + is))
+        end do
+      end do
+      do is = 0, ns-1
+        write(iunit(is), '(a)')
+      end do
+    end do
+    do is = 0, ns-1
+      call io_close(iunit(is))
+    end do
+
+    SAFE_DEALLOCATE_A(iunit)
+
+
+  POP_SUB(states_write_bandstructure)
+    
+  end subroutine states_write_bandstructure
 
 end module states_io_oct_m
 

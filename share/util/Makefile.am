@@ -17,7 +17,6 @@
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 ## 02110-1301, USA.
 ##
-## $Id$
 
 utildir = $(pkgdatadir)/util
 dist_util_DATA = mf.cfg mf.net display_mesh_index.gp README

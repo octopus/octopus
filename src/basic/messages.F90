@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -132,7 +131,7 @@ contains
     !% still under development and are not suitable for production
     !% runs. This should not be used unless you know what you are doing.
     !% See details on
-    !% <a href=http://www.tddft.org/programs/octopus/experimental_features>wiki page</a>.
+    !% <a href=http://octopus-code.org/experimental_features>wiki page</a>.
     !%End
     call parse_variable('ExperimentalFeatures', .false., conf%devel_version)
     
@@ -188,7 +187,7 @@ contains
         call messages_write('  wrong and should not  be considered as valid scientific data.  Check')
         call messages_new_line()
         call messages_new_line()
-        call messages_write('  http://www.tddft.org/programs/octopus/experimental_features')
+        call messages_write('  http://octopus-code.org/experimental_features')
         call messages_new_line()
         call messages_new_line()
         call messages_write('  or contact the octopus developers for details.')
@@ -1083,7 +1082,7 @@ contains
       call messages_write('If you still want to use this feature (at your own risk), check:')
       call messages_new_line()
       call messages_new_line()
-      call messages_write('http://www.tddft.org/programs/octopus/experimental_features')
+      call messages_write('http://octopus-code.org/experimental_features')
       call messages_new_line()
       call messages_fatal(only_root_writes = .true.)
     else
@@ -1315,9 +1314,28 @@ contains
     clean_path = filename(start:)
   end function messages_clean_path
 
-  subroutine messages_dump_stack()
+  ! -----------------------------------------------------------
+
+  subroutine messages_dump_stack(isignal)
+    integer, intent(in) :: isignal
 
     integer :: ii
+    character(len=300) :: description
+
+    call get_signal_description(isignal, description)
+
+    write(msg, '(a,i2)') ''
+    call flush_msg(stderr, msg)
+    write(msg, '(a,i2)') '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
+    call flush_msg(stderr, msg)
+    write(msg, '(a,i2)') ''
+    call flush_msg(stderr, msg)
+    write(msg, '(a,i2,2a)') '  Octopus was killed by signal ', isignal, ': ', trim(description)
+    call flush_msg(stderr, msg)
+    write(msg, '(a,i2)') ''
+    call flush_msg(stderr, msg)
+    write(msg, '(a,i2)') '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
+    call flush_msg(stderr, msg)
     
     if(debug%trace) then
       call flush_msg(stderr, shyphens)
@@ -1369,10 +1387,14 @@ end subroutine assert_die
 
 !-------------------------------------------------------
 
-subroutine dump_call_stack()
+subroutine dump_call_stack(isignal)
   use messages_oct_m
 
-  call messages_dump_stack()
+  implicit none
+  
+  integer, intent(in) :: isignal
+  
+  call messages_dump_stack(isignal)
   
 end subroutine dump_call_stack
 

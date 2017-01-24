@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 ! ---------------------------------------------------------
 subroutine X(output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_unit)

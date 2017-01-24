@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -849,6 +848,10 @@ contains
         call v_ks_calc(ks, hm, st, geo)
       end select
 
+      !!NTD!!
+      !Here we mix the occupation matrices
+      !using mix_coefficient(scf%smix)
+
       ! Are we asked to stop? (Whenever Fortran is ready for signals, this should go away)
       scf%forced_finish = clean_stop(mc%master_comm)
 
@@ -909,7 +912,7 @@ contains
         exit
       end if
 
-      if(outp%what /= 0 .and. outp%duringscf .and. outp%output_interval /= 0 &
+      if(outp%what/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
         .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
         write(dirname,'(a,a,i4.4)') trim(outp%iter_dir),"scf.",iter
         call output_all(outp, gr, geo, st, hm, ks, dirname)
@@ -930,6 +933,9 @@ contains
       if (scf%conv_abs_force > M_ZERO) then
         forcein(1:geo%natoms, 1:gr%sb%dim) = forceout(1:geo%natoms, 1:gr%sb%dim)
       end if
+
+      !!NTD!! 
+      !Here we copy the old occupation matrix
 
       if(scf%forced_finish) then
         call profiling_out(prof)
@@ -1005,6 +1011,9 @@ contains
 
     if(simul_box_is_periodic(gr%sb) .and. st%d%nik > st%d%nspin) &
       call states_write_bands(STATIC_DIR, st%nst, st, gr%sb)
+      if(iand(gr%sb%kpoints%method, KPOINTS_PATH) /= 0) &
+        call states_write_bandstructure(STATIC_DIR, st%nst, st, gr%sb)
+      
 
     POP_SUB(scf_run)
 

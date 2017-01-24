@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
  
 #include "global.h"
   
@@ -48,6 +47,8 @@ module submesh_oct_m
     submesh_get_inv,             &
     dsm_integrate,               &
     zsm_integrate,               &
+    dsm_integrate_frommesh,      &
+    zsm_integrate_frommesh,      &         
     submesh_add_to_mesh,         &
     dsubmesh_batch_add,          &
     zsubmesh_batch_add,          &

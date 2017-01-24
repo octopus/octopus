@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -36,6 +35,7 @@ module propagator_cn_oct_m
   use solvers_oct_m
   use sparskit_oct_m
   use states_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -108,12 +108,22 @@ contains
       call hamiltonian_epot_generate(hm, gr, geo, st, time = time - dt/M_TWO)
     end if
 
-    if(hm%cmplxscl%space) then
-      call potential_interpolation_interpolate(tr%vksold, 3, &
-        time, dt, time -dt/M_TWO, hm%vhxc, hm%imvhxc)
-    else
-      call potential_interpolation_interpolate(tr%vksold, 3, &
-        time, dt, time -dt/M_TWO, hm%vhxc)
+    if(family_is_mgga_with_exc(hm%xc_family, hm%xc_flags)) then
+      if(hm%cmplxscl%space) then
+        call potential_interpolation_interpolate(tr%vksold, 3, &
+          time, dt, time -dt/M_TWO, hm%vhxc, hm%imvhxc, hm%vtau, hm%imvtau)
+      else
+        call potential_interpolation_interpolate(tr%vksold, 3, &
+          time, dt, time -dt/M_TWO, hm%vhxc, vtau = hm%vtau)
+      end if
+    else 
+      if(hm%cmplxscl%space) then
+        call potential_interpolation_interpolate(tr%vksold, 3, &
+           time, dt, time -dt/M_TWO, hm%vhxc, hm%imvhxc)
+      else
+        call potential_interpolation_interpolate(tr%vksold, 3, &
+          time, dt, time -dt/M_TWO, hm%vhxc)
+      end if
     end if
 
     call hamiltonian_update(hm, gr%mesh, time = time - dt/M_TWO)
@@ -172,8 +182,13 @@ contains
       dt_op = - dt !propagate backwards
       t_op  = time + dt/M_TWO
 
-      call potential_interpolation_interpolate(tr%vksold, 3,  &
-        time, dt, time + dt/M_TWO, hm%vhxc, hm%imvhxc)
+      if(family_is_mgga_with_exc(hm%xc_family,hm%xc_flags)) then
+        call potential_interpolation_interpolate(tr%vksold, 3,  &
+          time, dt, time + dt/M_TWO, hm%vhxc, hm%imvhxc, hm%vtau, hm%imvtau)
+      else
+        call potential_interpolation_interpolate(tr%vksold, 3,  &
+          time, dt, time + dt/M_TWO, hm%vhxc, hm%imvhxc)
+      end if
 
       call hamiltonian_update(hm, gr%mesh, time = time + dt/M_TWO)
 

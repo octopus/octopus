@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -92,18 +91,18 @@ contains
 
   end subroutine symmetries_nullify
 
-  subroutine symmetries_init(this, geo, dim, periodic_dim, rlattice)
+  subroutine symmetries_init(this, geo, dim, periodic_dim, rlattice, klattice)
     type(symmetries_t),  intent(out) :: this
     type(geometry_t),    intent(in)  :: geo
     integer,             intent(in)  :: dim
     integer,             intent(in)  :: periodic_dim
     FLOAT,               intent(in)  :: rlattice(:, :)
+    FLOAT,               intent(in)  :: klattice(:, :)
 
     integer :: max_size, fullnops, dim4syms
     integer :: idir, iatom, iop, verbosity, point_group
     real(8) :: determinant
     real(8) :: lattice(1:3, 1:3)
-    real(8) :: klattice(1:3, 1:3)
     real(8), allocatable :: position(:, :)
     integer, allocatable :: typs(:)
     type(block_t) :: blk
@@ -200,8 +199,6 @@ contains
 
       ! get inverse matrix to extract reduced coordinates for spglib
       lattice(1:3, 1:3) = rlattice(1:3, 1:3)
-      klattice = lattice
-      determinant = lalg_determinant(3, klattice, invert=.true.)
       
       SAFE_ALLOCATE(position(1:3, 1:geo%natoms))  ! transpose!!
       SAFE_ALLOCATE(typs(1:geo%natoms))
@@ -212,12 +209,9 @@ contains
       end do
 
       do iatom = 1, geo%natoms
-        position(1:3, iatom) = M_HALF
-        ! position here contains reduced coordinates
-        ! We thus convert geo%atom(iatom)%x to reduced coordinates.
-        ! Note that there M_TWO*M_PI here as this is not given by lalg_determinant. 
-        ! M_HALF is added to have reduced coordinates between 0 and 1, as used by spglib
-        position(1:dim4syms, iatom) = matmul (geo%atom(iatom)%x(1:dim4syms),klattice) + M_HALF
+        position(1:3, iatom) = M_ZERO
+        ! Transform atomic positions to reduced coordinates
+        position(1:dim4syms, iatom) = matmul (geo%atom(iatom)%x(1:dim4syms),klattice(1:dim4syms,1:dim4syms))/(M_TWO*M_PI) 
         typs(iatom) = species_index(geo%atom(iatom)%species)
       end do
 
@@ -312,10 +306,6 @@ contains
 
       SAFE_ALLOCATE(this%ops(1:fullnops))
 
-      ! NOTE: HH 21/05/2016
-      ! The below search for fractional translations doesnt seem to work for non-orthogonal cells,
-      ! but not critical as it just returns less useable symmetries...
-      ! FIXME
 
       ! check all operations and leave those that kept the symmetry-breaking
       ! direction invariant and (for the moment) that do not have a translation
@@ -323,12 +313,12 @@ contains
       write(message(1),'(a7,a31,12x,a33)') 'Index', 'Rotation matrix', 'Fractional translations'
       call messages_info(1)
       do iop = 1, fullnops
-        ! sometimes spglib may return lattice vectors as 'fractional' translations
+        ! sometimes spglib may return lattice vectors as 'fractional' translations        
         translation(:, iop) = translation(:, iop) - int(translation(:, iop) + CNST(0.5)*symprec)
         call symm_op_init(tmpop, rotation(:, :, iop), real(translation(:, iop), REAL_PRECISION))
 
         if(symm_op_invariant(tmpop, this%breakdir, real(symprec, REAL_PRECISION)) &
-          .and. .not. symm_op_has_translation(tmpop, real(symprec, REAL_PRECISION))) then
+         .and. .not. symm_op_has_translation(tmpop, real(symprec, REAL_PRECISION))) then
           this%nops = this%nops + 1
           call symm_op_copy(tmpop, this%ops(this%nops))
 

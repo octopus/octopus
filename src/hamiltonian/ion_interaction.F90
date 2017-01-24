@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -112,7 +111,7 @@ contains
   
   ! ---------------------------------------------------------
   !> For details about this routine, see
-  !! http://www.tddft.org/programs/octopus/wiki/index.php/Developers:Ion-Ion_interaction
+  !! http://octopus-code.org/wiki/Developers:Ion-Ion_interaction
   subroutine ion_interaction_calculate(this, geo, sb, ignore_external_ions, energy, force, energy_components, force_components)
     type(ion_interaction_t),  intent(inout) :: this
     type(geometry_t), target, intent(in)    :: geo

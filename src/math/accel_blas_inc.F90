@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 subroutine X(accel_herk)(uplo, trans, n, k, alpha, a, offa, lda, beta, c, offc, ldc)
   integer,           intent(in)    :: uplo

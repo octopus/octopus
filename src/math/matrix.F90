@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: matrix.F90 7610 2011-03-25 03:41:01Z xavier $
 
 #include "global.h"
 

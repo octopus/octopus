@@ -1,5 +1,4 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id: 04-box.06-oct_long.inp 15216 2016-03-21 15:48:22Z acastro $
 
 CalculationMode = opt_control
 ExperimentalFeatures = yes
@@ -12,7 +11,7 @@ stime  = 100.0
 dt = 0.02
 TDPropagator = exp_mid
 TDExponentialMethod = lanczos
-TDExponentialOrder = 30
+TDExpOrder = 30
 TDLanczosTol = 1.0e-4
 TDPropagationTime = stime
 TDTimeStep = dt
@@ -24,7 +23,7 @@ TDTimeStep = dt
 
 OCTPenalty = 1.0
 OCTEps = 0.001
-OCTMaxIter = 50
+OCTMaxIter = 20
 
 OCTInitialState = oct_is_groundstate
 OCTTargetOperator = oct_tg_gstransformation

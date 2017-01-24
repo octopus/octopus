@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -60,7 +59,12 @@ contains
 
     if( (hm%theory_level /= INDEPENDENT_PARTICLES) .and. &
       (.not. oct_exchange_enabled(hm%oct_exchange)) ) then
-      call potential_interpolation_interpolate(tr%vksold, 2, t, dt, t-dt/M_TWO, hm%vhxc)
+      !TODO: This does not support complex scaling
+      if(family_is_mgga_with_exc(hm%xc_family,hm%xc_flags)) then
+        call potential_interpolation_interpolate(tr%vksold, 2, t, dt, t-dt/M_TWO, hm%vhxc, vtau = hm%vtau)
+      else
+        call potential_interpolation_interpolate(tr%vksold, 2, t, dt, t-dt/M_TWO, hm%vhxc)
+      end if
     end if
 
     !move the ions to time 'time - dt/2'

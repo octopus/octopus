@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 
 !------------------------------------------------------------------------------
@@ -41,18 +40,10 @@ subroutine X(hgh_project)(mesh, sm, hgh_p, dim, psi, ppsi, reltype)
   integer,               intent(in)    :: reltype
 
   R_TYPE :: uvpsi(1:2, 1:12)
-#ifdef HAVE_MPI
-  R_TYPE :: uvpsi_tmp(1:2, 1:12)
-#endif
 
   call X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
 
-#if defined(HAVE_MPI)
-  if(mesh%parallel_in_domains) then
-    call MPI_Allreduce(uvpsi, uvpsi_tmp, 24, R_MPITYPE, MPI_SUM, mesh%vp%comm, mpi_err)
-    uvpsi = uvpsi_tmp
-  end if
-#endif
+  if(mesh%parallel_in_domains) call comm_allreduce(mesh%vp%comm, uvpsi)
 
   call X(hgh_project_ket)(hgh_p, dim, reltype, uvpsi, ppsi)
   

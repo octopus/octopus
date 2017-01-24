@@ -17,7 +17,6 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 # 02110-1301, USA.
 #
-# $Id$
 
 # Used by buildbot to determine if result of configure, encoded in config.h,
 # has changed from the reference result.
@@ -41,7 +40,7 @@ git clone git@gitlab.com:octopus-code/buildbot.git buildbot
 cp buildbot/config.h/$BRANCH/$BUILDER .
 
 # these two fields will generally be different, and that is fine
-diff -I '^#define BUILD_TIME' -I '^#define LATEST_SVN' config.h $BUILDER
+diff -I '^#define BUILD_TIME' -I '^#define GIT_COMMIT' config.h $BUILDER
 
 # cleanup
 rm -rf buildbot

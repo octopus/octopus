@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
+!! $Id: magnetic.F90 15203 2016-03-19 13:15:05Z xavier $
 
 #include "global.h"
 
@@ -32,6 +32,7 @@ module magnetic_oct_m
   use species_oct_m
   use states_oct_m
   use states_dim_oct_m
+  use submesh_oct_m
   use unit_oct_m
   use unit_system_oct_m
 
@@ -156,33 +157,27 @@ contains
     FLOAT,            intent(in)  :: rr
     FLOAT,            intent(out) :: lmm(max(mesh%sb%dim, 3), geo%natoms)
 
-    integer :: ia, ip, idir
-    FLOAT :: ri
-    FLOAT, allocatable :: md(:, :), aux(:, :)
+    integer :: ia, idir
+    FLOAT, allocatable :: md(:, :)
+    type(submesh_t) :: sphere
 
     PUSH_SUB(magnetic_local_moments)
 
     SAFE_ALLOCATE(md (1:mesh%np, 1:max(mesh%sb%dim, 3)))
-    SAFE_ALLOCATE(aux(1:mesh%np, 1:max(mesh%sb%dim, 3)))
-
+    
     call magnetic_density(mesh, st, rho, md)
     lmm = M_ZERO
     do ia = 1, geo%natoms
-      aux = M_ZERO
-      do ip = 1, mesh%np
-        call mesh_r(mesh, ip, ri, origin = geo%atom(ia)%x)
-        if (ri > rr) cycle
-        aux(ip, 1:max(mesh%sb%dim, 3)) = md(ip, 1:max(mesh%sb%dim, 3))
-      end do
-
+      call submesh_init(sphere, mesh%sb, mesh, geo%atom(ia)%x, rr)
+      
       do idir = 1, max(mesh%sb%dim, 3)
-        lmm(idir, ia) = dmf_integrate(mesh, aux(1:mesh%np, idir))
+        lmm(idir, ia) = dsm_integrate_frommesh(mesh, sphere, md(1:mesh%np,idir))
       end do
-
+      
+      call submesh_end(sphere) 
     end do
-
+    
     SAFE_DEALLOCATE_A(md)
-    SAFE_DEALLOCATE_A(aux)
 
     POP_SUB(magnetic_local_moments)
   end subroutine magnetic_local_moments

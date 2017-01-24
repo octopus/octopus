@@ -1,10 +1,7 @@
-CalculationMode = td
-
 PeriodicDimensions = 3
 
 a = 6.6329387
 Lsize = a/2
-Spacing = a/10
 
 %Coordinates
   "Li" |  0.0 | 0.0 | 0.0 
@@ -28,13 +25,4 @@ KPointsUseSymmetries = no
 10.0 | 0.0 | 0.0
 %
 
-TDPropagator = aetrs
-TDTimeStep = 0.02
-TDMaxSteps = 30
-
 ExperimentalFeatures = yes
-
-TDEnergyUpdateIter = 5
-
-FilterPotentials = filter_none
-

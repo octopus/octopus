@@ -18,10 +18,6 @@ ExperimentalFeatures = YES
 'H1D' | species_user_defined | potential_formula | '-1.0/(abs(x)+0.002)' | valence | 1
 %
 
-%UserDefinedStates
-  1 | 1 | 1 | formula | "sqrt(2)*x*exp(-abs(x))" | normalize_no
-%
-
 OnlyUserDefinedInitialStates = YES
 
 BoxShape = sphere
@@ -35,14 +31,8 @@ TheoryLevel = independent_particles
 # TD
 #############################
 
-
-dt = 0.008
-T = 60
-
-TDTimeStep = dt
-TDPropagationTime = T
-
-
+TDTimeStep = 0.008
+TDPropagationTime = 60
 
 #############################
 # PES

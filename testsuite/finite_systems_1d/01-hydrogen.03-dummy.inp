@@ -1,5 +1,4 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id$
 
 CalculationMode = dummy
 
@@ -21,7 +20,6 @@ TheoryLevel = independent_particles
 %
 
 ExtraStates = 9
-EigenSolverTolerance = 1e-5
 
 
 

@@ -17,7 +17,6 @@
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 ## 02110-1301, USA.
 ##
-## $Id: Makefile.am 6217 2009-12-12 08:28:11Z xavier $
 
 sharedir = $(pkgdatadir)/testsuite/functionals
 

@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
   
 !> Implementation of the locally optimal block preconditioned conjugate-
 !! gradients algorithm.
@@ -137,7 +136,7 @@ end subroutine X(eigensolver_lobpcg)
 !! 25 (5): 517–541, doi:10.1137/060661624 (2007)
 !!
 !! There is also a wiki page at
-!! http://www.tddft.org/programs/octopus/wiki/index.php/Developers:LOBPCG
+!! http://octopus-code.org/wiki/Developers:LOBPCG
 subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end,  &
   ik, pre, tol, niter, converged, diff, constr)
   type(grid_t),           intent(in)    :: gr

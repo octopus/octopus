@@ -1,5 +1,4 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id$
 
 CalculationMode = td
 
@@ -19,13 +18,11 @@ Spacing = 0.3/0.529177
 ExcessCharge = 1
 TheoryLevel = independent_particles
 
-T = 0.20
-dt = 0.01
-TDPropagationTime = T
+TDPropagationTime = 0.20
+TDTimeStep = 0.01
 TDPropagator = exp_mid
 TDExponentialMethod = lanczos
 TDExpOrder = 20
-TDTimeStep = dt
 
 omega = 0.1
 electric_amplitude = 1.0
