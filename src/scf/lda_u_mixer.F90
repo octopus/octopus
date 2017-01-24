@@ -194,6 +194,8 @@ contains
    type(lda_u_mixer_t), intent(in)    :: mixer
 
    if(.not.this%apply) return
+   !TODO: For the moment, the mixing is not supported with the ACBN0_corr functional
+   if(this%ACBN0_corrected) return
    PUSH_SUB(lda_u_mixer_get_vnew)
 
    if(this%useACBN0) then

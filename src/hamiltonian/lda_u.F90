@@ -255,7 +255,7 @@ contains
     !% from the peusopotential but s orbitals. Only available with ACBN0 functional.
     !%End
     call parse_variable('SkipSOrbitals', .true., this%skipSOrbitals)   
-    if(this%SkipSOrbitals) call messages_experimental("SkipSOrbitals")
+    if(.not.this%SkipSOrbitals) call messages_experimental("SkipSOrbitals")
 
     !%Variable ACBN0_corrected
     !%Type logical
@@ -325,10 +325,10 @@ contains
       SAFE_ALLOCATE(this%zn_alt(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets))
       this%zn_alt(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets) = cmplx(M_ZERO,M_ZERO)
       if(this%ACBN0_corrected) then
-        SAFE_ALLOCATE(this%dVloc1(1:maxorbs,1:st%d%nspin,1:this%norbsets))
-        this%dVloc1(1:maxorbs,1:st%d%nspin,1:this%norbsets) = cmplx(M_ZERO,M_ZERO)
-        SAFE_ALLOCATE(this%dVloc2(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets))
-        this%dVloc2(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets) = cmplx(M_ZERO,M_ZERO)
+        SAFE_ALLOCATE(this%zVloc1(1:maxorbs,1:st%d%nspin,1:this%norbsets))
+        this%zVloc1(1:maxorbs,1:st%d%nspin,1:this%norbsets) = cmplx(M_ZERO,M_ZERO)
+        SAFE_ALLOCATE(this%zVloc2(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets))
+        this%zVloc2(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets) = cmplx(M_ZERO,M_ZERO)
       end if
     end if
   end if
