@@ -56,7 +56,6 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
       !
       os => this%orbsets(ios)
       !If we need to add the phase, we explicitly do the operation using the sphere
-      !This does not change anything if the sphere occupies the full mesh or not
       if(has_phase) then
         do idim = 1, d%dim
           !$omp parallel do 
@@ -69,7 +68,6 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
 
       do im = 1, os%norbs
         !If we need to add the phase, we explicitly do the operation using the sphere
-        !This does not change anything if the sphere occupies the full mesh or not
         if(has_phase) then
           dot(im) = X(mf_dotp)(os%sphere%mesh, os%orbitals(im)%X(orb),&
                                epsi(1:os%sphere%np,1), reduce = .false., np = os%sphere%np)
@@ -86,13 +84,14 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
         do imp = 1, os%norbs
           reduced = reduced + this%X(V)(im,imp,ispin,ios)*dot(imp)
         end do
-        
-        if(this%ACBN0_corrected) then
-          reduced = reduced + this%X(Vloc1)(im,ispin,ios)*dot(im)
-          do imp = 1, os%norbs
-            reduced = reduced + this%X(Vloc2)(im,imp,ispin,ios)*dot(imp) &
-               *this%renorm_occ(species_index(os%spec),os%nn,os%ll,psib%states(ibatch)%ist,ik)
-          end do
+       
+        !We add a test to avoid out-of-bound problem for the LCAO 
+        if(this%ACBN0_corrected .and. psib%states(ibatch)%ist <= this%st_end) then
+          reduced = reduced + this%Vloc1(im,ispin,ios)*dot(im)
+         ! do imp = 1, os%norbs
+         !   reduced = reduced + this%X(Vloc2)(im,imp,ispin,ios)*dot(imp)! &
+         !      *this%renorm_occ(species_index(os%spec),os%nn,os%ll,psib%states(ibatch)%ist,ik)
+         ! end do
 
           do imp = 1, os%norbs
             reduced2 = reduced2 + this%X(Vloc2)(im,imp,ispin,ios)*R_CONJ(dot(im))*dot(imp)
@@ -118,40 +117,45 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
         end if
       end do !im
 
-      if(this%ACBN0_corrected) then
-        !We need to loop over the orbitals sharing the same quantum numbers
-        do ios2 = 1, this%norbsets
-          os2 => this%orbsets(ios2)
-          if(species_index(os%spec)/=species_index(os2%spec) &
-              .or.os%nn /= os2%nn .or. os%ll /= os2%ll ) cycle
-          do im = 1, os2%norbs
-            !If we need to add the phase, we explicitly do the operation using the sphere
-            !This does not change anything if the sphere occupies the full mesh or not
-            if(has_phase) then
-              dot(im) = X(mf_dotp)(os2%sphere%mesh, os2%orbitals(im)%X(orb),&
-                               epsi(1:os2%sphere%np,1), reduce = .false., np = os2%sphere%np)
-              dot(im) = dot(im)*reduced2
-              !$omp parallel do
-              do is = 1, os2%sphere%np
-                eorb(is) =dot(im)*os2%orbitals(im)%X(orb)(is)*conjg(os2%phase(is, ik))
-              end do
-              !$omp end parallel do
-              do idim = 1, d%dim
-                call submesh_add_to_mesh(os2%sphere, eorb(1:os2%sphere%np),&
-                                    hpsi(:, idim), dot(im))
-              end do  
-            else
-              dot(im) = submesh_to_mesh_dotp(os2%sphere, d%dim, os2%orbitals(im)%X(orb),&
-                               psi(1:mesh%np,1:d%dim))
-              dot(im) = dot(im)*reduced2
-              do idim = 1, d%dim
-                call submesh_add_to_mesh(os2%sphere, os2%orbitals(im)%X(orb), &
-                                    hpsi(:, idim), dot(im))
-               end do !idim
-            end if 
-          end do 
-        end do 
-      end if
+  !    if(this%ACBN0_corrected .and. psib%states(ibatch)%ist <= this%st_end) then
+  !      !We need to loop over the orbitals sharing the same quantum numbers
+  !      do ios2 = 1, this%norbsets
+  !        os2 => this%orbsets(ios2)
+  !        if(species_index(os%spec)/=species_index(os2%spec) &
+  !            .or.os%nn /= os2%nn .or. os%ll /= os2%ll ) cycle
+  !        do im = 1, os2%norbs
+  !          !If we need to add the phase, we explicitly do the operation using the sphere
+  !          !This does not change anything if the sphere occupies the full mesh or not
+  !          if(has_phase) then
+  !            !$omp parallel do 
+  !            do is = 1, os2%sphere%np
+  !              epsi(is,1) = psi(os2%sphere%map(is), 1)*os2%phase(is, ik)
+  !            end do
+  !            !$omp end parallel do
+  !            dot(im) = X(mf_dotp)(os2%sphere%mesh, os2%orbitals(im)%X(orb),&
+  !                             epsi(1:os2%sphere%np,1), reduce = .false., np = os2%sphere%np)
+  !            dot(im) = dot(im)*reduced2
+  !            !$omp parallel do
+  !            do is = 1, os2%sphere%np
+  !              eorb(is) = os2%orbitals(im)%X(orb)(is)*conjg(os2%phase(is, ik))
+  !            end do
+  !            !$omp end parallel do
+  !            do idim = 1, d%dim
+  !              call submesh_add_to_mesh(os2%sphere, eorb(1:os2%sphere%np),&
+  !                                 hpsi(:, idim), dot(im))
+  !            end do  
+  !          else
+  !            dot(im) = submesh_to_mesh_dotp(os2%sphere, d%dim, os2%orbitals(im)%X(orb),&
+  !                             psi(1:mesh%np,1:d%dim))
+  !            dot(im) = dot(im)*reduced2
+  !            do idim = 1, d%dim
+  !              call submesh_add_to_mesh(os2%sphere, os2%orbitals(im)%X(orb), &
+  !                                  hpsi(:, idim), dot(im))
+  !             end do !idim
+  !          end if 
+  !        end do 
+  !      end do 
+  !    end if
 
     end do !ios
     call batch_set_state(hpsib, ibatch, mesh%np, hpsi)
@@ -232,14 +236,14 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
             dot(im,ios) = X(mf_dotp)(os%sphere%mesh, epsi(1:os%sphere%np),&
                                  os%orbitals(im)%X(orb), reduce = .false., np = os%sphere%np)
           else
-            dot(im,ios) = submesh_to_mesh_dotp(os%sphere, 1, os%orbitals(im)%X(orb), &
+            dot(im,ios) = submesh_to_mesh_dotp(os%sphere, st%d%dim, os%orbitals(im)%X(orb), &
                                                psi(1:mesh%np,1:st%d%dim))
           end if 
           !We compute the on-site occupation of the site, if needed
           if(this%useACBN0) then
             this%renorm_occ(species_index(os%spec),os%nn,os%ll,ist,ik) = &
                 this%renorm_occ(species_index(os%spec),os%nn, os%ll,ist,ik) &
-                  + dot(im,ios)*R_CONJ(dot(im,ios))
+                  + abs(dot(im,ios))**2
           end if
         end do
       end do 
@@ -357,11 +361,11 @@ subroutine X(lda_u_ACBN0_correction)(this)
   type(lda_u_t), intent(inout)    :: this
 
   integer :: ios, im, imp, impp,imppp,ispin1, ispin2, norbs
-  R_TYPE :: B, C, D, weight
+  FLOAT :: B, C, D, weight
 
   PUSH_SUB(lda_u_ACBN0_correction)
 
-  this%X(Vloc1)(1:this%maxnorbs,1:this%nspins,1:this%norbsets) = R_TOTYPE(M_ZERO)
+  this%Vloc1(1:this%maxnorbs,1:this%nspins,1:this%norbsets) = M_ZERO
   this%X(Vloc2)(1:this%maxnorbs,1:this%maxnorbs,1:this%nspins,1:this%norbsets) = R_TOTYPE(M_ZERO)
 
   do ios = this%orbs_dist%start, this%orbs_dist%end
@@ -369,8 +373,8 @@ subroutine X(lda_u_ACBN0_correction)(this)
  
     !TODO: These quantites are already computed, we should not recompute them 
     !We compute B, C, and D
-    B = R_TOTYPE(M_ZERO)
-    C = R_TOTYPE(M_ZERO)
+    B = M_ZERO
+    C = M_ZERO
     do im = 1, norbs
     do imp = 1,norbs
       ! We compute the term
@@ -391,7 +395,7 @@ subroutine X(lda_u_ACBN0_correction)(this)
       end do
     end do !imp
     end do !im
-    D = R_TOTYPE(M_ZERO)
+    D = M_ZERO
     do ispin1 = 1, this%nspins
       do im = 1, norbs
         do imp = 1,norbs
@@ -404,23 +408,20 @@ subroutine X(lda_u_ACBN0_correction)(this)
     if(abs(D) < CNST(1.0e-10)) cycle
   
     !We now compute the diagonal part of the local potential
-    weight = -D*this%orbsets(ios)%Ubar/(M_TWO*(B+C))
+    weight = -D*this%orbsets(ios)%Ubar/((B+C))
     do ispin1 = 1, this%nspins
       do im = 1, norbs
         do imp = 1, norbs
           if(imp /= im) then
-            !We add -D*U/(2*(B+C))\sum_{mp/=m} 2N_mp^{\sigma}
-            this%X(Vloc1)(im,ispin1,ios) = this%X(Vloc1)(im,ispin1,ios) &
-                  + M_TWO*weight*this%X(n)(imp,imp,ispin1,ios)
+            !We add -D*U/((B+C))\sum_{mp/=m} N_mp^{\sigma}
+            this%Vloc1(im,ispin1,ios) = this%Vloc1(im,ispin1,ios) &
+                  + weight*this%X(n)(imp,imp,ispin1,ios)
           end if
-          !We add +D*U/(2*(B+C))\sum_{mp} N_mp^{\sigma}
-          this%X(Vloc1)(im,ispin1,ios) = this%X(Vloc1)(im,ispin1,ios) &
-                  - weight*this%X(n)(imp,imp,ispin1,ios)
           do ispin2 = 1, this%nspins
             if(ispin1 /= ispin2) then
-              !We add +D*U/(2*(B+C))\sum_{mp} N_mp^{-\sigma}
-              this%X(Vloc1)(im,ispin1,ios) = this%X(Vloc1)(im,ispin1,ios) &
-                     - weight*this%X(n)(imp,imp,ispin2,ios)
+              !We add +D*U/((B+C))\sum_{mp} N_mp^{-\sigma}
+              this%Vloc1(im,ispin1,ios) = this%Vloc1(im,ispin1,ios) &
+                     + weight*this%X(n)(imp,imp,ispin2,ios)
             end if
           end do !ispin2
         end do !imp
@@ -433,7 +434,7 @@ subroutine X(lda_u_ACBN0_correction)(this)
         do imp = 1, norbs
           if(imp /= im) then
             !We add -D*U/(2*(B+C))\sum_{mp/=m} N_mp^{\sigma}
-            this%X(Vloc1)(im,ispin1,ios) = this%X(Vloc1)(im,ispin1,ios) &
+            this%Vloc1(im,ispin1,ios) = this%Vloc1(im,ispin1,ios) &
                   + weight*this%X(n)(imp,imp,ispin1,ios)
           end if
         end do !imp
@@ -476,7 +477,7 @@ subroutine X(lda_u_ACBN0_correction)(this)
   end do !ios
 
   if(this%orbs_dist%parallel) then
-    call comm_allreduce(this%orbs_dist%mpi_grp%comm, this%X(Vloc1))
+    call comm_allreduce(this%orbs_dist%mpi_grp%comm, this%Vloc1)
     call comm_allreduce(this%orbs_dist%mpi_grp%comm, this%X(Vloc2))
   end if
 
@@ -766,13 +767,13 @@ end subroutine X(compute_coulomb_integrals)
           reduced = reduced + this%X(V)(im,imp,ispin,ios)*dot(imp)
         end do
 
-        if(this%ACBN0_corrected) then
-          reduced = reduced + this%X(Vloc1)(im,ispin,ios)*dot(im)
-          do imp = 1, os%norbs
-            reduced = reduced + this%X(Vloc2)(im,imp,ispin,ios)*dot(imp) &
-               *this%renorm_occ(species_index(os%spec),os%nn,os%ll,ist,ik)
-          end do
-        end if
+      !  if(this%ACBN0_corrected) then
+      !    reduced = reduced + this%Vloc1(im,ispin,ios)*dot(im)
+      !    do imp = 1, os%norbs
+      !      reduced = reduced + this%X(Vloc2)(im,imp,ispin,ios)*dot(imp) &
+      !         *this%renorm_occ(species_index(os%spec),os%nn,os%ll,ist,ik)
+      !    end do
+      !  end if
 
         do idir = 1, mesh%sb%dim
           !In case of phase, we have to apply the conjugate of the phase here
@@ -833,13 +834,13 @@ end subroutine X(compute_coulomb_integrals)
            reduced = reduced - this%X(V)(im,imp,ispin,ios)*dot(imp)
          end do
 
-         if(this%ACBN0_corrected) then
-           reduced = reduced + this%X(Vloc1)(im,ispin,ios)*dot(im)
-           do imp = 1, os%norbs
-             reduced = reduced + this%X(Vloc2)(im,imp,ispin,ios)*dot(imp) &
-                *this%renorm_occ(species_index(os%spec),os%nn,os%ll,ist,ik)
-           end do
-         end if
+       !  if(this%ACBN0_corrected) then
+       !    reduced = reduced + this%Vloc1(im,ispin,ios)*dot(im)
+       !    do imp = 1, os%norbs
+       !      reduced = reduced + this%X(Vloc2)(im,imp,ispin,ios)*dot(imp) &
+       !         *this%renorm_occ(species_index(os%spec),os%nn,os%ll,ist,ik)
+       !    end do
+       !  end if
 
          !In case of phase, we have to apply the conjugate of the phase here
          if(has_phase) then

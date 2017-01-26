@@ -22,6 +22,8 @@ R_TYPE function X(sm_integrate)(mesh, sm, ff) result(res)
   type(submesh_t),   intent(in) :: sm
   R_TYPE, optional,  intent(in) :: ff(:)
 
+  integer :: is
+
   PUSH_SUB(X(sm_integrate))
 
   ASSERT(present(ff) .or. sm%np  ==  0)
@@ -30,7 +32,13 @@ R_TYPE function X(sm_integrate)(mesh, sm, ff) result(res)
     if (mesh%use_curvilinear) then
       res = sum(ff(1:sm%np)*mesh%vol_pp(sm%map(1:sm%np)) )
     else
-      res = sum(ff(1:sm%np))*mesh%volume_element
+      res = R_TOTYPE(M_ZERO)
+      !$omp parallel do reduction(+:res)
+      do is = 1, sm%np
+      res = res+ff(is)
+      end do
+      !$omp end parallel do
+      res=res*mesh%volume_element
     end if
   else
     res = M_ZERO

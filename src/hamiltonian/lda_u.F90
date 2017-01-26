@@ -103,8 +103,8 @@ module lda_u_oct_m
     FLOAT, pointer           :: dn(:,:,:,:), dV(:,:,:,:) !> Occupation matrices and potentials 
                                                          !> for the standard scheme
     CMPLX, pointer           :: zn(:,:,:,:), zV(:,:,:,:)
-    FLOAT, pointer           :: dVloc1(:,:,:), dVloc2(:,:,:,:) !> For the corrected ACBN0 functional
-    CMPLX, pointer           :: zVloc1(:,:,:), zVloc2(:,:,:,:)
+    FLOAT, pointer           :: Vloc1(:,:,:), dVloc2(:,:,:,:) !> For the corrected ACBN0 functional
+    CMPLX, pointer           :: zVloc2(:,:,:,:)
     FLOAT, pointer           :: dn_alt(:,:,:,:) !> Stores the renomalized occ. matrices
     CMPLX, pointer           :: zn_alt(:,:,:,:) !> if the ACBN0 functional is used  
   
@@ -118,6 +118,7 @@ module lda_u_oct_m
     integer             :: norbsets           !> Number of orbital sets 
     integer             :: nspins
     integer             :: nspecies        
+    integer             :: st_end
     integer             :: maxnorbs           !> Maximal number of orbitals for all the atoms
     integer             :: max_np             !> Maximum number of points in all orbitals submesh spheres 
  
@@ -157,9 +158,8 @@ contains
   nullify(this%zV)
   nullify(this%coulomb)
   nullify(this%renorm_occ)
-  nullify(this%dVloc1)
+  nullify(this%Vloc1)
   nullify(this%dVloc2)
-  nullify(this%zVloc1)
   nullify(this%zVloc2)
 
   call distributed_nullify(this%orbs_dist, 0)
@@ -278,6 +278,7 @@ contains
   maxorbs = this%maxnorbs
   this%nspins = st%d%nspin
   this%nspecies = geo%nspecies
+  this%st_end = st%st_end
 
   !We analyse the memeory and we print the requiered memory
   !Thus, if there is not enough memory, the user knows with the code crashes
@@ -308,8 +309,8 @@ contains
       SAFE_ALLOCATE(this%dn_alt(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets))
       this%dn_alt(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets) = M_ZERO
       if(this%ACBN0_corrected) then
-        SAFE_ALLOCATE(this%dVloc1(1:maxorbs,1:st%d%nspin,1:this%norbsets))
-        this%dVloc1(1:maxorbs,1:st%d%nspin,1:this%norbsets) = M_ZERO
+        SAFE_ALLOCATE(this%Vloc1(1:maxorbs,1:st%d%nspin,1:this%norbsets))
+        this%Vloc1(1:maxorbs,1:st%d%nspin,1:this%norbsets) = M_ZERO
         SAFE_ALLOCATE(this%dVloc2(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets))
         this%dVloc2(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets) = M_ZERO
       end if
@@ -325,8 +326,8 @@ contains
       SAFE_ALLOCATE(this%zn_alt(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets))
       this%zn_alt(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets) = cmplx(M_ZERO,M_ZERO)
       if(this%ACBN0_corrected) then
-        SAFE_ALLOCATE(this%zVloc1(1:maxorbs,1:st%d%nspin,1:this%norbsets))
-        this%zVloc1(1:maxorbs,1:st%d%nspin,1:this%norbsets) = cmplx(M_ZERO,M_ZERO)
+        SAFE_ALLOCATE(this%Vloc1(1:maxorbs,1:st%d%nspin,1:this%norbsets))
+        this%Vloc1(1:maxorbs,1:st%d%nspin,1:this%norbsets) = M_ZERO
         SAFE_ALLOCATE(this%zVloc2(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets))
         this%zVloc2(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets) = cmplx(M_ZERO,M_ZERO)
       end if
@@ -373,8 +374,7 @@ contains
    SAFE_DEALLOCATE_P(this%zV) 
    SAFE_DEALLOCATE_P(this%coulomb)
    SAFE_DEALLOCATE_P(this%renorm_occ)
-   SAFE_DEALLOCATE_P(this%dVloc1)
-   SAFE_DEALLOCATE_P(this%zVloc1)
+   SAFE_DEALLOCATE_P(this%Vloc1)
    SAFE_DEALLOCATE_P(this%dVloc2)
    SAFE_DEALLOCATE_P(this%zVloc2)
 
