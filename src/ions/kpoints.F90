@@ -1086,7 +1086,7 @@ contains
     kpoints(1:dim, kpt_ind) =  kpt1(1:dim)
 
     !The length of the total path is arbitrarily put to 1
-!     coord(1:nkpoints) = coord(1:nkpoints)/total_length
+     coord(1:nkpoints) = coord(1:nkpoints)/total_length
 
     POP_SUB(kpoints_grid_generate)
   end subroutine kpoints_path_generate
