@@ -100,12 +100,6 @@ contains
       
     end if
 
-    SAFE_ALLOCATE(occ_states(1:sys%st%d%nik))
-    do ik = 1, sys%st%d%nik
-      call occupied_states(sys%st, ik, n_filled, n_partially_filled, n_half_filled)
-      occ_states(ik) = n_filled + n_partially_filled + n_half_filled
-    end do
-
     call init_(sys%gr%mesh, sys%st)
     converged = .false.
 
@@ -144,6 +138,12 @@ contains
     else
       write_density = .true.
     end if
+
+    SAFE_ALLOCATE(occ_states(1:sys%st%d%nik))
+    do ik = 1, sys%st%d%nik
+      call occupied_states(sys%st, ik, n_filled, n_partially_filled, n_half_filled)
+      occ_states(ik) = n_filled + n_partially_filled + n_half_filled
+    end do
 
     is_orbital_dependent = (sys%ks%theory_level == HARTREE .or. sys%ks%theory_level == HARTREE_FOCK .or. &
       (sys%ks%theory_level == KOHN_SHAM_DFT .and. xc_is_orbital_dependent(sys%ks%xc)))
