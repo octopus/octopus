@@ -172,7 +172,7 @@ contains
     !%Default 35
     !%Section Time-Dependent::TD Output
     !%Description
-    !% Maximumn Number of calls to eigensolver for solving the Flqoeut Hamiltonian
+    !% Maximumn Number of calls to eigensolver for solving the Floquet Hamiltonian
     !%
     !%End
     call parse_variable('TDFloquetMaximumSolverIterations ', 35 ,this%max_solve_iter)
@@ -203,7 +203,7 @@ contains
     this%count = 1
     this%spindim = dim
 
-    ! re-read time stepfrom input
+    ! re-read time step from input
     call parse_variable('TDTimeStep', M_ZERO, time_step, unit = units_inp%time)
     if(time_step == M_ZERO) then
        message(1) = 'Did not find time-step in Floquet init, plase give a value for TDTimeStep'
@@ -394,10 +394,11 @@ FLOAT, allocatable :: frozen_bands(:,:)
       type(states_t), intent(in)         :: st
 
       logical :: converged
-      integer :: iter , maxiter, ik, in, im, ist, idim
+      integer :: iter , maxiter, ik, in, im, ist, idim, ierr
       CMPLX, allocatable :: temp_state1(:,:), temp_state2(:,:)
       type(eigensolver_t) :: eigens
       type(states_t) :: dressed_st
+      type(restart_t) :: restart
 
 ! temporary variables for outputting 
 character(len=80) :: filename
@@ -430,13 +431,12 @@ integer :: nik, file
             
       hm%F%floquet_apply = .true.
       ! set dimension of Floquet Hamiltonian                                                    
-      hm%d%dim = hm%F%floquet_dim
+      hm%d%dim = dressed_st%d%dim
       
       call eigensolver_init(eigens, gr, dressed_st)
       ! no subspace diag implemented yet
       eigens%sdiag%method = OPTION__SUBSPACEDIAGONALIZATION__NONE
 
-      ! here we need a more sophisticated control of the solver loop
       converged=.false.
       iter =0
       maxiter = hm%F%max_solve_iter
@@ -474,6 +474,11 @@ endif
       hm%F%count=hm%F%count + 1
       
       ! here we might want to do other things with the states...
+
+      ! write states
+      call restart_init(restart, RESTART_FLOQUET, RESTART_TYPE_DUMP, &
+                        dressed_st%dom_st_kpt_mpi_grp, ierr)
+
 
       call states_end(dressed_st)
          

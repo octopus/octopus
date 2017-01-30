@@ -126,9 +126,10 @@ module restart_oct_m
                                 RESTART_VDW        =  8,  &
                                 RESTART_CASIDA     =  9,  &
                                 RESTART_OCT        =  10, &
-                                RESTART_PROJ       =  12
+                                RESTART_PROJ       =  12, &
+                                RESTART_FLOQUET    =  13
 
-  integer, parameter :: RESTART_N_DATA_TYPES = 12
+  integer, parameter :: RESTART_N_DATA_TYPES = 13
 
   integer, parameter, public :: RESTART_STATES = 1, &
                                 RESTART_RHO    = 2, &
@@ -207,6 +208,7 @@ contains
     info(RESTART_CASIDA)%tag = "Casida"
     info(RESTART_OCT)%tag = "Optimal Control"
     info(RESTART_PROJ)%tag = "GS for TDOutput"
+    info(RESTART_FLOQUET)%tag = "Floquet"
 
     ! Default flags and directories (flags not yet used)
     info(:)%basedir = 'restart'
@@ -223,6 +225,7 @@ contains
     info(RESTART_CASIDA)%dir = CASIDA_DIR
     info(RESTART_OCT)%dir = OCT_DIR
     info(RESTART_PROJ)%dir = GS_DIR
+    info(RESTART_FLOQUET)%dir = FLOQUET_DIR
 
     ! Read input
     call messages_obsolete_variable('RestartFileFormat', 'RestartOptions')
@@ -332,6 +335,10 @@ contains
     !% (data type)
     !% The ground-state to be used with the td_occup and populations options of <tt>TDOutput</tt>.
     !% This information should be a ground state, so the "gs" subdirectory is used.
+    !%Option restart_floquet 13
+    !% (data type)
+    !% 
+    !% 
     !%Option restart_states 1
     !% (flag)
     !% Read the electronic states. (not yet implemented)
