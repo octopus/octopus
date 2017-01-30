@@ -394,7 +394,7 @@ FLOAT, allocatable :: frozen_bands(:,:)
       type(states_t), intent(in)         :: st
 
       logical :: converged
-      integer :: iter , maxiter, ik, in, im, ist, idim, ierr
+      integer :: iter , maxiter, ik, in, im, ist, idim, ierr, nik, dim, nst
       CMPLX, allocatable :: temp_state1(:,:), temp_state2(:,:)
       type(eigensolver_t) :: eigens
       type(states_t) :: dressed_st
@@ -402,33 +402,53 @@ FLOAT, allocatable :: frozen_bands(:,:)
 
 ! temporary variables for outputting 
 character(len=80) :: filename
-integer :: nik, file
+integer :: file
 
       ! initialize a state object with the Floquet dimension
       call states_init(dressed_st, gr, hm%geo,floquet_dim=hm%F%floquet_dim)
       call kpoints_distribute(dressed_st%d,sys%mc)
       call states_distribute_nodes(dressed_st,sys%mc)
-      
       call states_allocate_wfns(dressed_st,gr%der%mesh)
-      SAFE_ALLOCATE(temp_state1(1:gr%der%mesh%np,st%d%dim))
-      SAFE_ALLOCATE(temp_state2(1:gr%der%mesh%np,hm%F%floquet_dim))
-      
-      do ik=st%d%kpt%start,st%d%kpt%end
-        do in=1,hm%F%floquet_dim
-          do ist=st%st_start,st%st_end
-            call states_get_state(st,gr%der%mesh,ist,ik,temp_state1)
-            temp_state2(:,:) = M_ZERO
-            do idim=1,st%d%dim
-              temp_state2(1:gr%der%mesh%np,(in-1)*st%d%dim+idim) = temp_state1(1:gr%der%mesh%np,idim)
-            end do
-            call states_set_state(dressed_st,gr%der%mesh, (in-1)*st%nst+ist, ik,temp_state2)
-          enddo
-        enddo
-      enddo
-      
-      SAFE_DEALLOCATE_A(temp_state1)
-      SAFE_DEALLOCATE_A(temp_state2)
-            
+
+      ! solver iteration
+      iter = 0
+
+      call restart_init(restart, RESTART_FLOQUET, RESTART_TYPE_LOAD, &
+                        dressed_st%dom_st_kpt_mpi_grp, ierr, gr%der%mesh)
+      if(ierr == 0) then
+         call states_look(restart, nik, dim, nst, ierr)
+         if(dim==dressed_st%d%dim .and. nik==gr%sb%kpoints%reduced%npoints &
+              .and. nst==dressed_st%nst) then
+            call states_load(restart, dressed_st, gr, ierr, iter)
+         else
+            ! this doesnt need to be fatal
+            write(message(1),'(a)') 'Floquet restart structure not commensurate.'
+            call messages_fatal(1)
+         end if
+      else
+         ! initialize floquet states from scratch
+         SAFE_ALLOCATE(temp_state1(1:gr%der%mesh%np,st%d%dim))
+         SAFE_ALLOCATE(temp_state2(1:gr%der%mesh%np,hm%F%floquet_dim))
+         
+         do ik=st%d%kpt%start,st%d%kpt%end
+            do in=1,hm%F%floquet_dim
+               do ist=st%st_start,st%st_end
+                  call states_get_state(st,gr%der%mesh,ist,ik,temp_state1)
+                  temp_state2(:,:) = M_ZERO
+                  do idim=1,st%d%dim
+                     temp_state2(1:gr%der%mesh%np,(in-1)*st%d%dim+idim) = temp_state1(1:gr%der%mesh%np,idim)
+                  end do
+                  call states_set_state(dressed_st,gr%der%mesh, (in-1)*st%nst+ist, ik,temp_state2)
+               enddo
+            enddo
+         enddo
+         
+         SAFE_DEALLOCATE_A(temp_state1)
+         SAFE_DEALLOCATE_A(temp_state2)
+      end if
+
+      call restart_end(restart)
+
       hm%F%floquet_apply = .true.
       ! set dimension of Floquet Hamiltonian                                                    
       hm%d%dim = dressed_st%d%dim
@@ -438,7 +458,6 @@ integer :: nik, file
       eigens%sdiag%method = OPTION__SUBSPACEDIAGONALIZATION__NONE
 
       converged=.false.
-      iter =0
       maxiter = hm%F%max_solve_iter
       do while(.not.converged.and.iter <= maxiter)
          call eigensolver_run(eigens, gr, dressed_st, hm, 1,converged)
@@ -477,11 +496,14 @@ endif
 
       ! write states
       call restart_init(restart, RESTART_FLOQUET, RESTART_TYPE_DUMP, &
-                        dressed_st%dom_st_kpt_mpi_grp, ierr)
-
+                        dressed_st%dom_st_kpt_mpi_grp, ierr, gr%der%mesh)
+      iter = iter -1
+      call states_dump(restart, dressed_st, gr, ierr, iter)
 
       call states_end(dressed_st)
-         
+
+
+
     end subroutine floquet_hamiltonian_solve
 
     !---------------------------------------
