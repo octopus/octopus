@@ -52,6 +52,7 @@ module floquet_oct_m
   use states_oct_m
   use states_calc_oct_m
   use states_dim_oct_m
+  use states_io_oct_m
   use states_restart_oct_m
   use system_oct_m
   use types_oct_m
@@ -293,15 +294,16 @@ FLOAT, allocatable :: frozen_bands(:,:)
 
          write(filename,'(I5)') it
          filename = 'BO_bands_'//trim(adjustl(filename))
-         open(unit=98765,file=filename)
-         nik=gr%sb%kpoints%nik_skip
-         do ik=gr%sb%kpoints%reduced%npoints-nik+1,gr%sb%kpoints%reduced%npoints
-            do ist=1,st%nst
-               write(98765,'(e12.6, 1x)',advance='no') st%eigenval(ist, ik)
-            end do
-            write(98765,'(1x)')
-         end do
-         close(98765)
+         call states_write_bandstructure('td.general', st%nst, st, gr%sb, filename)
+!         open(unit=98765,file=filename)
+!         nik=gr%sb%kpoints%nik_skip
+!         do ik=gr%sb%kpoints%reduced%npoints-nik+1,gr%sb%kpoints%reduced%npoints
+!            do ist=1,st%nst
+!               write(98765,'(e12.6, 1x)',advance='no') st%eigenval(ist, ik)
+!            end do
+!            write(98765,'(1x)')
+!         end do
+!         close(98765)
 
 
        case(FLOQUET_NON_INTERACTING)
@@ -399,10 +401,8 @@ FLOAT, allocatable :: frozen_bands(:,:)
       type(eigensolver_t) :: eigens
       type(states_t) :: dressed_st
       type(restart_t) :: restart
-
-! temporary variables for outputting 
-character(len=80) :: filename
-integer :: file
+      character(len=80) :: filename
+      integer :: file
 
       ! initialize a state object with the Floquet dimension
       call states_init(dressed_st, gr, hm%geo,floquet_dim=hm%F%floquet_dim)
@@ -461,23 +461,27 @@ integer :: file
       maxiter = hm%F%max_solve_iter
       do while(.not.converged.and.iter <= maxiter)
          call eigensolver_run(eigens, gr, dressed_st, hm, 1,converged)
+         
+         write(filename,'(I5)') iter !hm%F_count
+         filename = 'floquet_multibands_'//trim(adjustl(filename))
+         call states_write_bandstructure('td.general', dressed_st%nst, dressed_st, gr%sb, filename)
 
 ! this will be replaced with a a call to plot_bandstructure
-if(mpi_world%rank==0) then
-   file = 987654
-   write(filename,'(I5)') iter !hm%F_count
-   filename = 'floquet_multibands_'//trim(adjustl(filename))
-   open(unit=file,file=filename)
-   ! we are only interested in k-points with zero weight
-   nik=gr%sb%kpoints%nik_skip
-   do ik=gr%sb%kpoints%reduced%npoints-nik+1,gr%sb%kpoints%reduced%npoints
-      do ist=1,dressed_st%nst
-         write(file,'(e12.6, 1x)',advance='no') dressed_st%eigenval(ist, ik)
-      end do
-      write(file,'(1x)')
-   end do
-   close(file)
-endif
+!if(mpi_world%rank==0) then
+!   file = 987654
+!   write(filename,'(I5)') iter !hm%F_count
+!   filename = 'floquet_multibands_'//trim(adjustl(filename))
+!   open(unit=file,file=filename)
+!   ! we are only interested in k-points with zero weight
+!   nik=gr%sb%kpoints%nik_skip
+!   do ik=gr%sb%kpoints%reduced%npoints-nik+1,gr%sb%kpoints%reduced%npoints
+!      do ist=1,dressed_st%nst
+!         write(file,'(e12.6, 1x)',advance='no') dressed_st%eigenval(ist, ik)
+!      end do
+!      write(file,'(1x)')
+!   end do
+!   close(file)
+!endif
 
          iter = iter +1
       end do
