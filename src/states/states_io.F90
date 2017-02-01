@@ -962,22 +962,15 @@ contains
     integer,           intent(in) :: nst
     type(states_t),    intent(in) :: st
     type(simul_box_t), intent(in) :: sb
-    character(len=*), optional :: filename
+    character(len=*) :: filename
 
     integer :: idir, ist, ik, ns, is,npath
     integer, allocatable :: iunit(:)
     FLOAT   :: red_kpoint(1:MAX_DIM)
-    character(len=80) :: filename_
 
     if(.not. mpi_grp_is_root(mpi_world)) return
 
     PUSH_SUB(states_write_bandstructure)   
-
-    if(present(filename)) then
-       filename_ = filename
-    else
-       filename_ = 'bandstructure'
-    end if
 
     ! shortcuts
     ns = 1
@@ -987,9 +980,9 @@ contains
 
     do is = 0, ns-1
       if (ns > 1) then
-        write(filename_, '(a,i1.1,a)') trim(adjustl(filename_))//'-sp', is+1
+        write(filename, '(a,i1.1,a)') trim(adjustl(filename))//'-sp', is+1
       end if
-      iunit(is) = io_open(trim(dir)//'/'//trim(filename_), action='write')    
+      iunit(is) = io_open(trim(dir)//'/'//trim(filename), action='write')    
 
       ! write header
       write(iunit(is),'(a)',advance='no') '# coord. '
