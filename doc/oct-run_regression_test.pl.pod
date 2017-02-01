@@ -109,4 +109,4 @@ PARTICULAR PURPOSE.
 =head1 SEE ALSO
 
 The largest source of documentation is the Octopus
-wiki: S<http://www.tddft.org/programs/octopus/wiki/>.
+wiki: S<http://octopus-code.org>.

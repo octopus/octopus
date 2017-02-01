@@ -22,8 +22,8 @@ License: GPL 2.0
 Group: Applications/Scientific
 Prefix: /usr
 BuildRoot: %{_tmppath}/%{name}-%{version}-buildroot
-Source: http://www.tddft.org/programs/octopus/download/%{name}-%{version}.tar.gz
-URL: http://www.tddft.org/programs/octopus
+Source: http://www.tddft.org/programs/octopus/down.php?file=%{version}/%{name}-%{version}.tar.gz
+URL: http://octopus-code.org
 
 %description
 octopus is a computer package aimed at the simulation of the electron-ion 

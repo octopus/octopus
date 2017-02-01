@@ -6,7 +6,7 @@
 !%Description
 !% Defines the Kinetic Functional to be used in a Subsystem calculation,
 !% For more information on the functionals, see
-!% <a href=http://www.tddft.org/programs/octopus/wiki/index.php/Libxc:manual#Available_functionals>
+!% <a href=http://octopus-code.org/wiki/Libxc:manual#Available_functionals>
 !% Libxc documentation</a>. The list provided here is from libxc 2.0.3; if you have
 !% linked against a different libxc version, you may have a somewhat different set
 !% of available functionals.

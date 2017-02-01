@@ -189,7 +189,7 @@ contains
     message(1) = &
          "Version                : " // trim(conf%version)
     message(2) = &
-         "Revision               : "// trim(conf%latest_svn)
+         "Commit                 : "// trim(conf%git_commit)
     message(3) = &
          "Build time             : "// trim(conf%build_time)
     call messages_info(3)
