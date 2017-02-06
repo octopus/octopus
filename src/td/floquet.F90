@@ -235,8 +235,8 @@ contains
     FLOAT :: time_step, time
     type(scf_t) :: scf ! used for frozen_phonon
     integer :: ia, space_dim
-integer :: nik, ist
-FLOAT, allocatable :: frozen_bands(:,:)
+!integer :: nik, ist
+    FLOAT, allocatable :: frozen_bands(:,:)
 
 
     PUSH_SUB(floquet_hamiltonian_init)
@@ -253,7 +253,8 @@ FLOAT, allocatable :: frozen_bands(:,:)
     SAFE_ALLOCATE(this%td_hm(1:this%F%nT))
 
     if(this%F%mode == FLOQUET_FROZEN_PHONON) then
-       SAFE_ALLOCATE(frozen_bands(st%nst,gr%sb%kpoints%reduced%npoints))
+       SAFE_ALLOCATE(frozen_bands(1:st%nst,1:gr%sb%kpoints%reduced%npoints))
+       frozen_bands(1:st%nst,1:gr%sb%kpoints%reduced%npoints) = M_ZERO
     end if
 
     ! initialize the instances of the Hamiltonians
@@ -288,9 +289,10 @@ FLOAT, allocatable :: frozen_bands(:,:)
          call scf_init(scf,gr,this%td_hm(it)%geo,st,this%td_hm(it))
          call scf_run(scf,sys%mc,gr,this%td_hm(it)%geo,st,sys%ks,this%td_hm(it),sys%outp, gs_run=.false.)
          call scf_end(scf)
+         
 
-         frozen_bands(st%nst,gr%sb%kpoints%reduced%npoints) = &
-              frozen_bands(st%nst,gr%sb%kpoints%reduced%npoints) + M_ONE/this%F%nT*st%eigenval(st%nst,gr%sb%kpoints%reduced%npoints)
+         frozen_bands(1:st%nst,1:gr%sb%kpoints%reduced%npoints) = &
+              frozen_bands(1:st%nst,1:gr%sb%kpoints%reduced%npoints) + M_ONE/this%F%nT*st%eigenval(1:st%nst,1:gr%sb%kpoints%reduced%npoints)
 
          write(filename,'(I5)') it
          filename = 'BO_bands_'//trim(adjustl(filename))
@@ -326,15 +328,18 @@ FLOAT, allocatable :: frozen_bands(:,:)
 
 
      if(this%F%mode == FLOQUET_FROZEN_PHONON) then
-        open(unit=98765,file='frozen_bands')
-        nik=gr%sb%kpoints%nik_skip
-        do ik=gr%sb%kpoints%reduced%npoints-nik+1,gr%sb%kpoints%reduced%npoints
-           do ist=1,st%nst
-              write(98765,'(e12.6, 1x)',advance='no') frozen_bands(ist, ik)
-           end do
-           write(98765,'(1x)')
-        end do
-        close(98765)
+        st%eigenval(1:st%nst,1:gr%sb%kpoints%reduced%npoints) = frozen_bands(1:st%nst,1:gr%sb%kpoints%reduced%npoints)
+        filename = 'frozen_bands'
+        call states_write_bandstructure('td.general', st%nst, st, gr%sb, filename)
+!        open(unit=98765,file='frozen_bands')
+!        nik=gr%sb%kpoints%nik_skip
+!        do ik=gr%sb%kpoints%reduced%npoints-nik+1,gr%sb%kpoints%reduced%npoints
+!           do ist=1,st%nst
+!              write(98765,'(e12.6, 1x)',advance='no') frozen_bands(ist, ik)
+!           end do
+!           write(98765,'(1x)')
+!        end do
+!        close(98765)
         
      end if
 
