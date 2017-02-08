@@ -82,6 +82,7 @@ module lda_u_oct_m
   type orbital_t
     FLOAT, pointer      :: dorb(:) !> The orbital, if real, on the submesh
     CMPLX, pointer      :: zorb(:) !> The orbital, if complex, on the submesh
+    CMPLX, pointer      :: eorb(:,:) !> Orbitals with its phase factor
   end type orbital_t
 
   type orbital_set_t
@@ -451,7 +452,7 @@ contains
     FLOAT, optional,  allocatable, intent(in)    :: vec_pot(:) !< (sb%dim)
     FLOAT, optional,  allocatable, intent(in)    :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)
 
-    integer :: ns, iq, is, ikpoint
+    integer :: ns, iq, is, ikpoint, im
     FLOAT   :: kr, kpoint(1:MAX_DIM)
     integer :: ndim
 
@@ -483,9 +484,17 @@ contains
           if(allocated(vec_pot_var)) kr = kr + sum(vec_pot_var(1:ndim, os%sphere%map(is))*os%sphere%x(is, 1:ndim))
         end if
 
-        os%phase(is, iq) = exp(-M_zI*kr)
+        os%phase(is, iq) = exp(M_zI*kr)
       end do
 
+      !We now compute the so called-Bloch sum of the localized orbitals
+      do im = 1, os%norbs
+        !$omp parallel do
+        do is = 1, ns
+          os%orbitals(im)%eorb(is,iq) = os%orbitals(im)%zorb(is)*os%phase(is, iq)
+        end do
+        !$omp end parallel do
+      end do
     end do
 
     POP_SUB(orbital_update_phase_correction)

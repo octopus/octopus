@@ -31,14 +31,12 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
   integer :: is, ios2
   R_TYPE  :: reduced, reduced2
   R_TYPE, allocatable :: psi(:,:), hpsi(:,:)
-  R_TYPE, allocatable :: dot(:), epsi(:,:), eorb(:)
+  R_TYPE, allocatable :: dot(:)
   type(orbital_set_t), pointer  :: os, os2
 
   PUSH_SUB(lda_u_apply)
 
   SAFE_ALLOCATE(psi(1:mesh%np, 1:d%dim))
-  SAFE_ALLOCATE(epsi(1:this%max_np, 1:d%dim))
-  SAFE_ALLOCATE(eorb(1:this%max_np))
   SAFE_ALLOCATE(hpsi(1:mesh%np, 1:d%dim))
   SAFE_ALLOCATE(dot(1:this%maxnorbs))
 
@@ -55,22 +53,13 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
       ! We first compute <phi m | psi> for all orbitals of the atom
       !
       os => this%orbsets(ios)
-      !If we need to add the phase, we explicitly do the operation using the sphere
-      if(has_phase) then
-        do idim = 1, d%dim
-          !$omp parallel do 
-          do is = 1, os%sphere%np
-            epsi(is,idim) = psi(os%sphere%map(is), idim)*os%phase(is, ik)
-          end do
-          !$omp end parallel do
-        end do
-      end if
-
       do im = 1, os%norbs
         !If we need to add the phase, we explicitly do the operation using the sphere
         if(has_phase) then
-          dot(im) = X(mf_dotp)(os%sphere%mesh, os%orbitals(im)%X(orb),&
-                               epsi(1:os%sphere%np,1), reduce = .false., np = os%sphere%np)
+#ifdef R_TCOMPLEX
+          dot(im) = submesh_to_mesh_dotp(os%sphere, d%dim, os%orbitals(im)%eorb(1:os%sphere%np,ik),&
+                              psi(1:mesh%np,1:d%dim))
+#endif
         else
           dot(im) = submesh_to_mesh_dotp(os%sphere, d%dim, os%orbitals(im)%X(orb),&
                                psi(1:mesh%np,1:d%dim))
@@ -85,34 +74,31 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
           reduced = reduced + this%X(V)(im,imp,ispin,ios)*dot(imp)
         end do
        
-        !We add a test to avoid out-of-bound problem for the LCAO 
-        if(this%ACBN0_corrected .and. psib%states(ibatch)%ist <= this%st_end) then
-          reduced = reduced + this%Vloc1(im,ispin,ios)*dot(im)
-         ! do imp = 1, os%norbs
-         !   reduced = reduced + this%X(Vloc2)(im,imp,ispin,ios)*dot(imp)! &
-         !      *this%renorm_occ(species_index(os%spec),os%nn,os%ll,psib%states(ibatch)%ist,ik)
-         ! end do
-
-          do imp = 1, os%norbs
-            reduced2 = reduced2 + this%X(Vloc2)(im,imp,ispin,ios)*R_CONJ(dot(im))*dot(imp)
-          end do
-        end if     
+ !       !We add a test to avoid out-of-bound problem for the LCAO 
+ !       if(this%ACBN0_corrected .and. psib%states(ibatch)%ist <= this%st_end) then
+ !         reduced = reduced + this%Vloc1(im,ispin,ios)*dot(im)
+ !        ! do imp = 1, os%norbs
+ !        !   reduced = reduced + this%X(Vloc2)(im,imp,ispin,ios)*dot(imp)! &
+ !        !      *this%renorm_occ(species_index(os%spec),os%nn,os%ll,psib%states(ibatch)%ist,ik)
+ !        ! end do
+ !
+ !         do imp = 1, os%norbs
+ !           reduced2 = reduced2 + this%X(Vloc2)(im,imp,ispin,ios)*R_CONJ(dot(im))*dot(imp)
+ !         end do
+ !       end if     
  
         !In case of phase, we have to apply the conjugate of the phase here
         if(has_phase) then
-          !$omp parallel do
-          do is = 1, os%sphere%np
-            eorb(is) = os%orbitals(im)%X(orb)(is)*conjg(os%phase(is, ik))
-          end do
-          !$omp end parallel do
+#ifdef R_TCOMPLEX
           do idim = 1, d%dim
-           call submesh_add_to_mesh(os%sphere, eorb(1:os%sphere%np),&
-                                    hpsi(:, idim), reduced)
+           call submesh_add_to_mesh(os%sphere, os%orbitals(im)%eorb(1:os%sphere%np,ik), & 
+                                    hpsi(1:mesh%np, idim), reduced)
           end do
+#endif
         else
           do idim = 1, d%dim
             call submesh_add_to_mesh(os%sphere, os%orbitals(im)%X(orb), &
-                                    hpsi(:, idim), reduced)
+                                    hpsi(1:mesh%np, idim), reduced)
           end do !idim
         end if
       end do !im
@@ -162,8 +148,6 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
   end do !ibatch
 
   SAFE_DEALLOCATE_A(psi)
-  SAFE_DEALLOCATE_A(epsi)
-  SAFE_DEALLOCATE_A(eorb)
   SAFE_DEALLOCATE_A(hpsi)
   SAFE_DEALLOCATE_A(dot)
 
@@ -182,7 +166,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
   CMPLX, pointer, optional             :: phase(:,:) 
 
   integer :: ios, im, ik, ist, ispin, norbs, ip, idim, is
-  R_TYPE, allocatable :: psi(:,:), epsi(:)
+  R_TYPE, allocatable :: psi(:,:) 
   R_TYPE, allocatable :: dot(:,:)
   FLOAT   :: weight, renorm_weight
   type(orbital_set_t), pointer :: os
@@ -191,7 +175,6 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
 
   this%X(n)(1:this%maxnorbs,1:this%maxnorbs,1:st%d%nspin,1:this%norbsets) = R_TOTYPE(M_ZERO)
   SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(epsi(1:this%max_np))
   SAFE_ALLOCATE(dot(1:this%maxnorbs,1:this%norbsets))
 
   if(this%useACBN0) &
@@ -222,19 +205,14 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
       do ios = 1, this%norbsets
         os => this%orbsets(ios)
         norbs = os%norbs
-        if(present(phase)) then
-          !$omp parallel do
-          do is = 1, os%sphere%np
-            epsi(is) = psi(os%sphere%map(is),1)*os%phase(is, ik)
-          end do
-          !$omp end parallel do
-        end if
         !We first compute the matrix elemets <\psi | orb_m>
         !taking into account phase correction if needed 
         do im = 1, norbs
           if(present(phase)) then
-            dot(im,ios) = X(mf_dotp)(os%sphere%mesh, epsi(1:os%sphere%np),&
-                                 os%orbitals(im)%X(orb), reduce = .false., np = os%sphere%np)
+#ifdef R_TCOMPLEX
+            dot(im,ios) = submesh_to_mesh_dotp(os%sphere, st%d%dim, os%orbitals(im)%eorb(1:os%sphere%np,ik), &
+                                               psi(1:mesh%np,1:st%d%dim))
+#endif
           else
             dot(im,ios) = submesh_to_mesh_dotp(os%sphere, st%d%dim, os%orbitals(im)%X(orb), &
                                                psi(1:mesh%np,1:st%d%dim))
@@ -269,7 +247,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
 
   
   SAFE_DEALLOCATE_A(dot)
-  SAFE_DEALLOCATE_A(epsi)
+ ! SAFE_DEALLOCATE_A(epsi)
   SAFE_DEALLOCATE_A(psi)
 
 #if defined(HAVE_MPI)        
@@ -803,24 +781,14 @@ end subroutine X(compute_coulomb_integrals)
       ! We first compute <phi m | psi> for all orbitals of the atom
       !
       os => this%orbsets(ios)
-      !If we need to add the phase, we explicitly do the operation using the sphere
-      !This does not change anything if the sphere occupies the full mesh or not
-      if(has_phase) then
-        do idim = 1, d%dim
-          !$omp parallel do 
-          do is = 1, os%sphere%np
-            epsi(is,idim) = psi(os%sphere%map(is), idim)*os%phase(is, ik)
-          end do
-          !$omp end parallel do
-        end do
-      end if
-
       do im = 1, os%norbs
         !If we need to add the phase, we explicitly do the operation using the sphere
         !This does not change anything if the sphere occupies the full mesh or not
         if(has_phase) then
-          dot(im) = X(mf_dotp)(os%sphere%mesh, os%orbitals(im)%X(orb),&
-                               epsi(1:os%sphere%np,1), reduce = .false., np = os%sphere%np)
+#ifdef R_TCOMPLEX
+          dot(im) = submesh_to_mesh_dotp(os%sphere, 1, os%orbitals(im)%eorb(1:os%sphere%np,ik),&
+                               psi(1:mesh%np,1:d%dim))
+#endif
         else
           dot(im) = submesh_to_mesh_dotp(os%sphere, 1, os%orbitals(im)%X(orb),&
                                psi(1:mesh%np,1:d%dim))
@@ -847,8 +815,7 @@ end subroutine X(compute_coulomb_integrals)
           if(has_phase) then
             !$omp parallel do
             do is = 1, os%sphere%np
-              epsi(is,1) = os%sphere%x(is,idir)*os%orbitals(im)%X(orb)(is)&
-                               *conjg(os%phase(is, ik))
+              epsi(is,1) = os%sphere%x(is,idir)*os%orbitals(im)%eorb(is,ik)
             end do
             !$omp end parallel do
           else
@@ -872,28 +839,28 @@ end subroutine X(compute_coulomb_integrals)
        ! We first compute <phi m| r | psi> for all orbitals of the atom
        !
        !
-       if(has_phase) then
-         do idim = 1, d%dim
-           !$omp parallel do 
-           do is = 1, os%sphere%np
-             epsi(is,idim) = os%sphere%x(is,idir)*psi(os%sphere%map(is), idim)*os%phase(is, ik)
-           end do
-           !$omp end parallel do
+       do idim = 1, d%dim
+         !$omp parallel do 
+         do is = 1, os%sphere%np
+           epsi(is,idim) = os%sphere%x(is,idir)*psi(os%sphere%map(is), idim)
          end do
+         !$omp end parallel do
+       end do
+     
+       if(has_phase) then
+#ifdef R_TCOMPLEX
+         do im = 1, os%norbs
+           dot(im) = X(mf_dotp)(os%sphere%mesh, os%orbitals(im)%eorb(1:os%sphere%np,ik),&
+                               epsi(1:os%sphere%np,1), reduce = .false., np = os%sphere%np)
+         end do
+#endif
        else
-         do idim = 1, d%dim
-           !$omp parallel do 
-           do is = 1, os%sphere%np
-             epsi(is,idim) = os%sphere%x(is,idir)*psi(os%sphere%map(is), idim)
-           end do
-           !$omp end parallel do
+         do im = 1, os%norbs
+           dot(im) = X(mf_dotp)(os%sphere%mesh, os%orbitals(im)%X(orb),&
+                               epsi(1:os%sphere%np,1), reduce = .false., np = os%sphere%np)
          end do
        end if
-       do im = 1, os%norbs
-         dot(im) = X(mf_dotp)(os%sphere%mesh, os%orbitals(im)%X(orb),&
-                               epsi(1:os%sphere%np,1), reduce = .false., np = os%sphere%np)
-       end do
-
+ 
        do im = 1, os%norbs
          ! sum_m' Vmm' <phi m'|r| psi >
          reduced = M_ZERO
@@ -911,15 +878,12 @@ end subroutine X(compute_coulomb_integrals)
 
          !In case of phase, we have to apply the conjugate of the phase here
          if(has_phase) then
-           !$omp parallel do
-           do is = 1, os%sphere%np
-             epsi(is,1) = os%orbitals(im)%X(orb)(is)*conjg(os%phase(is, ik))
-           end do
-           !$omp end parallel do
+#ifdef R_TCOMPLEX
            do idim = 1, d%dim
-             call submesh_add_to_mesh(os%sphere, epsi(1:os%sphere%np,1), &
+             call submesh_add_to_mesh(os%sphere, os%orbitals(im)%eorb(1:os%sphere%np,ik), &
                                  gpsi(1:mesh%np,idir,idim), reduced)
            end do !idim
+#endif
          else
            do idim = 1, d%dim
              call submesh_add_to_mesh(os%sphere, os%orbitals(im)%X(orb)(1:os%sphere%np), &
@@ -1085,6 +1049,10 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
   #ifdef R_TCOMPLEX
     SAFE_ALLOCATE(os%phase(1:os%sphere%np, st%d%kpt%start:st%d%kpt%end))
     os%phase(:,:) = M_ZERO
+    do iorb = 1, os%norbs
+      SAFE_ALLOCATE(os%orbitals(iorb)%eorb(1:os%sphere%np, st%d%kpt%start:st%d%kpt%end))
+      os%orbitals(iorb)%eorb(:,:) = M_ZERO
+    end do
   #endif
     ! We need to know the maximum number of points in order to allocate a temporary array
     ! to apply the phase in lda_u_apply
