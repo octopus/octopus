@@ -233,8 +233,6 @@ contains
   call parse_variable('UseACBN0Functional', .false., this%useACBN0)
 
   if( this%useACBN0) then
-    if(st%d%nspin == 1) call messages_input_error('UseACBN0Functional without spin')
-
     !%Variable UseAllAtomicOrbitals
     !%Type logical
     !%Default no
@@ -534,43 +532,6 @@ contains
     end do
     POP_SUB(lda_u_get_effectiveU)
   end subroutine lda_u_get_effectiveU
-
-!    ! ---------------------------------------------------------
-!  subroutine lda_u_set_renorm_occ(this, renorm_occ)
-!    type(lda_u_t),  intent(inout) :: this
-!    FLOAT,          intent(in)    :: renorm_occ(:) 
-!
-!    integer :: isp, inn, ill, ist, ik
-!
-!    PUSH_SUB(lda_u_set_renorm_occ)
-!     
-!    geo%nspecies,0:5,0:3,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end
-!    ind = 0
-!    do isp = 1,this%nspecies
-!     do inn = 0,5
-!      do ill = 0,3
-!       do ist = st%st_startst%st_end
-!        do ik = 
-!      ind = ind + 1
-!      this%renorm_occ(isp,inn,ill,ist, ik) = renorm_occ(ind)
-!    end do
-!    POP_SUB(lda_u_set_renorm_occ)
-!  end subroutine lda_u_set_renorm_occ
-
-!  ! ---------------------------------------------------------
-!  subroutine lda_u_get_renorm_occ(this, renorm_occ)
-!    type(lda_u_t),  intent(in)    :: this
-!    FLOAT,          intent(inout) :: renorm_occ(:)
-!
-!    integer :: ios
-!
-!    PUSH_SUB(lda_u_get_renorm_occ)
-!
-!    do ios = 1,this%norbsets
-!      Ueff(ios) = this%orbsets(ios)%Ueff
-!    end do
-!    POP_SUB(lda_u_get_renorm_occ)
-!  end subroutine lda_u_get_renorm_occ
 
 
 #include "undef.F90"

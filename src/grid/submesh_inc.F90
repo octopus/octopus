@@ -92,17 +92,13 @@ subroutine X(dsubmesh_add_to_mesh)(this, sphi, phi, factor)
   PUSH_SUB(X(dsubmesh_add_to_mesh))
 
   if(present(factor)) then
-    !$omp parallel do
     do ip = 1, this%np
       phi(this%map(ip)) = phi(this%map(ip)) + factor*sphi(ip)
     end do
-    !$omp end parallel do
   else
-    !$omp parallel do
     do ip = 1, this%np
       phi(this%map(ip)) = phi(this%map(ip)) + sphi(ip)
     end do 
-    !$omp end parallel do
   end if
 
   POP_SUB(X(dsubmesh_add_to_mesh))

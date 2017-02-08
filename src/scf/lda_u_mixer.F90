@@ -189,9 +189,10 @@ contains
  end subroutine lda_u_mixer_set_vin
 
  ! ---------------------------------------------------------
- subroutine lda_u_mixer_get_vnew(this, mixer)
+ subroutine lda_u_mixer_get_vnew(this, mixer, st)
    type(lda_u_t),       intent(inout) :: this
    type(lda_u_mixer_t), intent(in)    :: mixer
+   type(states_t),      intent(in)    :: st
 
    if(.not.this%apply) return
    !TODO: For the moment, the mixing is not supported with the ACBN0_corr functional
@@ -207,11 +208,11 @@ contains
    if(mixer%realstates) then
      call mixfield_get_vnew(mixer%mixfield_occ, mixer%dtmp_occ)
      call dlda_u_set_occupations(this, mixer%dtmp_occ(1:mixer%occsize,1))
-     call dlda_u_update_potential(this)
+     call dlda_u_update_potential(this, st)
    else
      call mixfield_get_vnew(mixer%mixfield_occ, mixer%ztmp_occ)
      call zlda_u_set_occupations(this, mixer%ztmp_occ(1:mixer%occsize,1))
-     call zlda_u_update_potential(this)
+     call zlda_u_update_potential(this, st)
    end if
 
    POP_SUB(lda_u_mixer_get_vnew)

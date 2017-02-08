@@ -843,7 +843,7 @@ contains
         else
           call mixfield_get_vnew(scf%mixfield, st%zrho%Re, st%zrho%Im)
         end if
-        call lda_u_mixer_get_vnew(hm%lda_u, scf%lda_u_mix)
+        call lda_u_mixer_get_vnew(hm%lda_u, scf%lda_u_mix, st)
         call v_ks_calc(ks, hm, st, geo)
       case (OPTION__MIXFIELD__POTENTIAL)
         ! mix input and output potentials
@@ -853,7 +853,7 @@ contains
         else
           call mixfield_get_vnew(scf%mixfield, hm%vhxc, hm%Imvhxc)
         end if
-        call lda_u_mixer_get_vnew(hm%lda_u, scf%lda_u_mix)
+        call lda_u_mixer_get_vnew(hm%lda_u, scf%lda_u_mix, st)
         call hamiltonian_update(hm, gr%mesh)
         
       case(OPTION__MIXFIELD__STATES)
