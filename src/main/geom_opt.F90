@@ -466,6 +466,8 @@ contains
 
     call geometry_write_xyz(g_opt%geo, './work-geom', append = .true.)
 
+    call scf_mix_clear(g_opt%scfv)
+
     call hamiltonian_epot_generate(g_opt%hm, g_opt%syst%gr, g_opt%geo, g_opt%st)
     call density_calc(g_opt%st, g_opt%syst%gr, g_opt%st%rho)
     call v_ks_calc(g_opt%syst%ks, g_opt%hm, g_opt%st, g_opt%geo, calc_eigenval = .true.)
