@@ -291,10 +291,10 @@ contains
     if(writ%out(OUT_FLOQUET)%write) call messages_experimental('TDOutput = td_floquet')
     if(writ%out(OUT_N_EX)%write) call messages_experimental('TDOutput = n_excited_el')
 
-    if(writ%out(OUT_KP_PROJ)%write.or.writ%out(OUT_FLOQUET)%write) then
+    if(writ%out(OUT_KP_PROJ)%write) then  
       ! make sure this is not domain distributed
       if(gr%mesh%np /= gr%mesh%np_global) then
-        message(1) = "TDOutput option td_kpoint_occup and td_floquet do not work with domain parallelization"
+        message(1) = "TDOutput option td_kpoint_occup does not work with domain parallelization"
         call messages_fatal(1)
       end if
     end if

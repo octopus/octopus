@@ -245,7 +245,7 @@ contains
     nst = st%nst
 
     !for now no domain distributionallowed
-    ASSERT(mesh%np == mesh%np_global)
+!    ASSERT(mesh%np == mesh%np_global)
 
     ! the Hamiltonain gets assigned an array of td-Hamiltonians
     ! this is a bit recursive, so maybe there should be a Flqoeut moduel or something
@@ -413,7 +413,9 @@ contains
       call states_init(dressed_st, gr, hm%geo,floquet_dim=hm%F%floquet_dim)
       call kpoints_distribute(dressed_st%d,sys%mc)
       call states_distribute_nodes(dressed_st,sys%mc)
+      call states_exec_init(dressed_st, sys%mc)
       call states_allocate_wfns(dressed_st,gr%der%mesh)
+
 
       ! solver iteration
       iter = 0
@@ -431,7 +433,7 @@ contains
             call messages_fatal(1)
          end if
       else
-         ! initialize floquet states from scratch
+        ! initialize floquet states from scratch
          SAFE_ALLOCATE(temp_state1(1:gr%der%mesh%np,st%d%dim))
          SAFE_ALLOCATE(temp_state2(1:gr%der%mesh%np,hm%F%floquet_dim))
          
@@ -447,6 +449,28 @@ contains
                enddo
             enddo
          enddo
+
+! this is for random init, needed for state parallel
+!         do ik=st%d%kpt%start,st%d%kpt%end
+!            do ist=dressed_st%st_start,dressed_st%st_end
+!               if(dressed_st%randomization == PAR_INDEPENDENT) then
+!                  call zmf_random(gr%der%mesh, temp_state1(:, 1), gr%der%mesh%vp%xlocal-1, normalized = .true.)
+!               else
+!                  call zmf_random(gr%der%mesh, temp_state1(:, 1), normalized = .true.)
+!               end if
+!               temp_state2(:,:) = M_ZERO
+!               ! which floquet-block does ist belong to?
+!               if(mod(ist,st%nst) == 0) then
+!                  in = ist/st%nst 
+!               else ! this is rounded down
+!                  in = ist/st%nst + 1
+!               endif
+!               do idim=1,st%d%dim
+!                  temp_state2(1:gr%der%mesh%np,(in-1)*st%d%dim+idim) = temp_state1(1:gr%der%mesh%np,idim)
+!               end do
+!               call states_set_state(dressed_st,gr%der%mesh, ist, ik,temp_state2)
+!            enddo
+!         enddo
          
          SAFE_DEALLOCATE_A(temp_state1)
          SAFE_DEALLOCATE_A(temp_state2)
