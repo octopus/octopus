@@ -96,6 +96,9 @@ module lda_u_oct_m
     FLOAT               :: Ubar, Jbar
     type(species_t), pointer :: spec          
 
+    FLOAT, pointer      :: dS(:,:,:)             !> Overlap matrix for each orbital with similar orbital on other atomic sites    
+    CMPLX, pointer      :: zS(:,:,:)
+
     type(poisson_t)  :: poisson               !> For computing the Coulomb integrals
   end type orbital_set_t
 
@@ -109,7 +112,8 @@ module lda_u_oct_m
     FLOAT, pointer           :: dn_alt(:,:,:,:) !> Stores the renomalized occ. matrices
     CMPLX, pointer           :: zn_alt(:,:,:,:) !> if the ACBN0 functional is used  
   
-    FLOAT, pointer           :: renorm_occ(:,:,:,:,:) !> On-site occupations (for the ACBN0 functional)  
+    FLOAT, pointer           :: drenorm_occ(:,:,:,:,:) !> On-site occupations (for the ACBN0 functional)  
+    CMPLX, pointer           :: zrenorm_occ(:,:,:,:,:)
  
     FLOAT, pointer           :: coulomb(:,:,:,:,:) !>Coulomb integrals for all the system
                                                    !> (for the ACBN0 functional) 
@@ -158,7 +162,8 @@ contains
   nullify(this%dV)
   nullify(this%zV)
   nullify(this%coulomb)
-  nullify(this%renorm_occ)
+  nullify(this%drenorm_occ)
+  nullify(this%zrenorm_occ)
   nullify(this%Vloc1)
   nullify(this%dVloc2)
   nullify(this%zVloc2)
@@ -307,6 +312,8 @@ contains
     if(this%useACBN0) then
       SAFE_ALLOCATE(this%dn_alt(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets))
       this%dn_alt(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets) = M_ZERO
+      SAFE_ALLOCATE(this%drenorm_occ(geo%nspecies,0:5,0:3,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end))
+      this%drenorm_occ(geo%nspecies,0:5,0:3,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end) = M_ZERO
       if(this%ACBN0_corrected) then
         SAFE_ALLOCATE(this%Vloc1(1:maxorbs,1:st%d%nspin,1:this%norbsets))
         this%Vloc1(1:maxorbs,1:st%d%nspin,1:this%norbsets) = M_ZERO
@@ -324,6 +331,8 @@ contains
     if(this%useACBN0) then
       SAFE_ALLOCATE(this%zn_alt(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets))
       this%zn_alt(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets) = cmplx(M_ZERO,M_ZERO)
+      SAFE_ALLOCATE(this%zrenorm_occ(geo%nspecies,0:5,0:3,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end))
+      this%zrenorm_occ(geo%nspecies,0:5,0:3,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end) = M_ZERO
       if(this%ACBN0_corrected) then
         SAFE_ALLOCATE(this%Vloc1(1:maxorbs,1:st%d%nspin,1:this%norbsets))
         this%Vloc1(1:maxorbs,1:st%d%nspin,1:this%norbsets) = M_ZERO
@@ -332,8 +341,6 @@ contains
       end if
     end if
   end if
-  SAFE_ALLOCATE(this%renorm_occ(geo%nspecies,0:5,0:3,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end))
-  this%renorm_occ(geo%nspecies,0:5,0:3,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end) = M_ZERO 
 
   call distributed_nullify(this%orbs_dist, this%norbsets)
   call distributed_init(this%orbs_dist, this%norbsets, MPI_COMM_WORLD, "orbsets")
@@ -372,7 +379,8 @@ contains
    SAFE_DEALLOCATE_P(this%dV)
    SAFE_DEALLOCATE_P(this%zV) 
    SAFE_DEALLOCATE_P(this%coulomb)
-   SAFE_DEALLOCATE_P(this%renorm_occ)
+   SAFE_DEALLOCATE_P(this%drenorm_occ)
+   SAFE_DEALLOCATE_P(this%zrenorm_occ)
    SAFE_DEALLOCATE_P(this%Vloc1)
    SAFE_DEALLOCATE_P(this%dVloc2)
    SAFE_DEALLOCATE_P(this%zVloc2)
@@ -381,9 +389,12 @@ contains
      do iorb = 1, this%orbsets(ios)%norbs
        SAFE_DEALLOCATE_P(this%orbsets(ios)%orbitals(iorb)%dorb)
        SAFE_DEALLOCATE_P(this%orbsets(ios)%orbitals(iorb)%zorb)
+       SAFE_DEALLOCATE_P(this%orbsets(ios)%orbitals(iorb)%eorb)
      end do 
      SAFE_DEALLOCATE_P(this%orbsets(ios)%orbitals)
      SAFE_DEALLOCATE_P(this%orbsets(ios)%phase)
+     SAFE_DEALLOCATE_P(this%orbsets(ios)%dS)
+     SAFE_DEALLOCATE_P(this%orbsets(ios)%zS)
      nullify(this%orbsets(ios)%spec)
      call submesh_end(this%orbsets(ios)%sphere)
    end do

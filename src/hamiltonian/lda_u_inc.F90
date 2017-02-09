@@ -166,9 +166,11 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
   CMPLX, pointer, optional             :: phase(:,:) 
 
   integer :: ios, im, ik, ist, ispin, norbs, ip, idim, is
+  integer :: ios2, im2
   R_TYPE, allocatable :: psi(:,:) 
   R_TYPE, allocatable :: dot(:,:)
-  FLOAT   :: weight, renorm_weight
+  FLOAT   :: weight
+  R_TYPE  :: renorm_weight
   type(orbital_set_t), pointer :: os
   
   PUSH_SUB(update_occ_matrices)
@@ -177,21 +179,25 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
   SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(dot(1:this%maxnorbs,1:this%norbsets))
 
-  if(this%useACBN0) &
+  if(this%useACBN0) then
     this%X(n_alt)(1:this%maxnorbs,1:this%maxnorbs,1:st%d%nspin,1:this%norbsets) = R_TOTYPE(M_ZERO)
+  end if
 
   !TODO: use symmetries of the occupation matrices
   do ik = st%d%kpt%start, st%d%kpt%end
     ispin =  states_dim_get_spin_index(st%d,ik)
-    do ist = st%st_start, st%st_end
-      
-      if(this%useACBN0) then
-        this%renorm_occ(:,:,:,ist,ik) = M_ZERO
-      end if
-      weight = st%d%kweights(ik)*st%occ(ist, ik) 
 
-      call states_get_state(st, mesh, ist, ik, psi )  
-      if(present(phase)) then 
+    !We recompute the overlap patrices here
+    if(this%useACBN0) then
+        call X(build_overlap_matrices)(this, ik, present(phase))
+    end if
+
+    do ist = st%st_start, st%st_end
+
+      weight = st%d%kweights(ik)*st%occ(ist, ik)     
+      call states_get_state(st, mesh, ist, ik, psi )
+
+      if(present(phase)) then
         ! Apply the phase that contains both the k-point and vector-potential terms.
         do idim = 1, st%d%dim
           !$omp parallel do
@@ -201,7 +207,10 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
           !$omp end parallel do
         end do
       end if
-      
+ 
+      if(this%useACBN0) &
+        this%X(renorm_occ)(:,:,:,ist,ik) = M_ZERO
+
       do ios = 1, this%norbsets
         os => this%orbsets(ios)
         norbs = os%norbs
@@ -217,14 +226,34 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
             dot(im,ios) = submesh_to_mesh_dotp(os%sphere, st%d%dim, os%orbitals(im)%X(orb), &
                                                psi(1:mesh%np,1:st%d%dim))
           end if 
-          !We compute the on-site occupation of the site, if needed
-          if(this%useACBN0) then
-            this%renorm_occ(species_index(os%spec),os%nn,os%ll,ist,ik) = &
-                this%renorm_occ(species_index(os%spec),os%nn, os%ll,ist,ik) &
-                  + abs(dot(im,ios))**2
-          end if
+!          !We compute the on-site occupation of the site, if needed
+!          if(this%useACBN0) then
+!            this%renorm_occ(species_index(os%spec),os%nn,os%ll,ist,ik) = &
+!                this%renorm_occ(species_index(os%spec),os%nn, os%ll,ist,ik) &
+!                  + abs(dot(im,ios))**2
+!          end if
+        end do !im
+      end do !ios
+
+      !We compute the on-site occupation of the site, if needed 
+      if(this%useACBN0) then
+        do ios = 1, this%norbsets
+          os => this%orbsets(ios)
+          norbs = this%orbsets(ios)%norbs
+          do im = 1, norbs
+            !The second sum runs over all the orbitals
+            ios2 = ios
+          !  do ios2 = 1, this%norbsets
+              do im2 = 1, this%orbsets(ios2)%norbs
+                this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,ist,ik) = &
+                   this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,ist,ik) &
+                     + R_CONJ(dot(im,ios))*dot(im2,ios2)*os%X(S)(im,im2,ios2)
+
+              end do
+           ! end do
+          end do
         end do
-      end do 
+      end if
      
       !We can compute the (renormalized) occupation matrices
       do ios = 1, this%norbsets
@@ -235,7 +264,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
                                          + weight*dot(1:norbs,ios)*R_CONJ(dot(im,ios))
             !We compute the renomalized occupation matrices
             if(this%useACBN0) then
-              renorm_weight = this%renorm_occ(species_index(os%spec),os%nn,os%ll,ist,ik)*weight
+              renorm_weight = this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,ist,ik)*weight
               this%X(n_alt)(1:norbs,im,ispin,ios) = this%X(n_alt)(1:norbs,im,ispin,ios) &
                                          + renorm_weight*dot(1:norbs,ios)*R_CONJ(dot(im,ios))
             end if 
@@ -257,6 +286,15 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
       call comm_allreduce(st%st_kpt_mpi_grp%comm, this%X(n_alt))
   end if
 #endif      
+
+  do ios = 1, this%norbsets
+    os => this%orbsets(ios)
+    norbs = this%orbsets(ios)%norbs
+    do im = 1, norbs
+  !     print *, ios, im, real(this%X(orb_occ)(im,1,ios))
+      print *, ios, im, real(this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end))
+    end do
+ end do
 
   if(this%useACBN0 .and. .not.this%freeze_u) then
     if(this%nspins > 1 ) then
@@ -1073,10 +1111,92 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
                         ' Bohr,  with ', this%orbsets(iorbset)%sphere%np, ' grid points.'
      call messages_info(3)
   end do 
+
+  if(this%UseACBN0) then
+    do iorbset = 1, this%norbsets
+      os => this%orbsets(iorbset)
+      nullify(os%dS)
+      nullify(os%zS)
+      if(states_are_real(st)) then
+        SAFE_ALLOCATE(os%dS(os%norbs,this%maxnorbs,this%norbsets))
+      else
+        SAFE_ALLOCATE(os%zS(os%norbs,this%maxnorbs,this%norbsets))
+      end if
+    end do
+  end if
+
  
   POP_SUB(X(construct_orbital_basis))
 
 end subroutine X(construct_orbital_basis)
+
+subroutine X(build_overlap_matrices)(this, ik, has_phase)
+  type(lda_u_t),    intent(inout)    :: this
+  integer,          intent(in)       :: ik
+  logical,          intent(in)       :: has_phase
+
+  integer :: ios, ios2, im, im2, norbs, np
+  type(orbital_set_t), pointer :: os, os2
+  R_TYPE, allocatable :: orb1(:), orb2(:)
+
+  PUSH_SUB(X(build_overlap_matrices))
+
+  np = this%orbsets(1)%sphere%mesh%np
+  SAFE_ALLOCATE(orb1(1:np))
+  SAFE_ALLOCATE(orb2(1:np))
+
+  do ios = 1, this%norbsets
+    os => this%orbsets(ios)
+    norbs = this%orbsets(ios)%norbs
+    os%X(S)(:,:,:) = R_TOTYPE(M_ZERO)
+
+    !TODO: Use symmetry of the overlap matrices
+    norbs = this%orbsets(ios)%norbs
+
+    do im = 1, norbs
+      orb1(:) = R_TOTYPE(M_ZERO)
+
+      if(has_phase) then
+  #ifdef R_TCOMPLEX
+        call submesh_add_to_mesh(os%sphere, os%orbitals(im)%eorb(1:os%sphere%np,ik), &
+                                 orb1(1:np))
+  #endif
+      else
+        call submesh_add_to_mesh(os%sphere, os%orbitals(im)%X(orb), orb1(1:np))
+      end if
+
+      do ios2 = 1, this%norbsets
+        os2 => this%orbsets(ios2)
+
+        if(ios2 == ios) then
+          os%X(S)(im,im,ios2) = M_ONE
+        else
+          do im2 = 1, os2%norbs
+            orb2(:) = R_TOTYPE(M_ZERO)
+            if(has_phase) then
+    #ifdef R_TCOMPLEX
+              call submesh_add_to_mesh(os2%sphere, os2%orbitals(im2)%eorb(1:os2%sphere%np,ik), &
+                                 orb2(1:np))
+    #endif
+            else
+              call submesh_add_to_mesh(os2%sphere, os2%orbitals(im2)%X(orb), orb2(1:np))
+            end if
+            os%X(S)(im,im2,ios2) = X(mf_dotp)(os%sphere%mesh, orb1, orb2) 
+            !Orbitals are real, so we keep only the real part of the dotp product 
+!            os%S(im,im2,ios2) = real(X(submesh_to_submesh_dotp)(sbdim, os%sphere, os%orbitals(im)%X(orb), &
+!                                     os2%sphere, os2%orbitals(im2)%X(orb)))
+!            print *, ios, ios2, im, im2, os%X(S)(im,im2,ios2)
+          end do ! im2
+        end if
+      end do !im
+    end do !ios2
+  end do !ios 
+
+  SAFE_DEALLOCATE_A(orb1)
+  SAFE_DEALLOCATE_A(orb2)
+
+  POP_SUB(X(build_overlap_matrices))
+end subroutine X(build_overlap_matrices)
 
 
 ! ---------------------------------------------------------
