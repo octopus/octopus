@@ -58,6 +58,7 @@ module geom_opt_oct_m
     FLOAT    :: step
     FLOAT    :: line_tol
     FLOAT    :: fire_mass
+    logical  :: fire_verlet
     FLOAT    :: tolgrad
     FLOAT    :: toldr
     integer  :: max_iter
@@ -156,7 +157,7 @@ contains
 
       !TODO: add variable to use Euler integrator
       call minimize_fire(g_opt%size, coords, real(g_opt%step, 8), real(g_opt%tolgrad, 8), &
-        g_opt%max_iter, calc_point, write_iter_info, energy, ierr, mass, verlet=.true.)
+        g_opt%max_iter, calc_point, write_iter_info, energy, ierr, mass, verlet=g_opt%fire_verlet)
       SAFE_DEALLOCATE_A(mass)
 
     case default
@@ -374,6 +375,21 @@ contains
       !% species will be used.
       !%End
       call parse_variable('GOFireMass', M_ZERO, g_opt%fire_mass, unit_amu)
+
+      !%Variable GOFireIntegrator
+      !%Type logical
+      !%Default verlet
+      !%Section Calculation Modes::Geometry Optimization
+      !%Description
+      !% The Fire algorithm (<tt>GOMethod = fire</tt>) uses a molecular dynamics
+      !% integrator to compute new geometries and velocities.
+      !% Currently, two integrator schemes can be selected 
+      !%Option verlet 1
+      !% Velocity Verlet algorithm
+      !%Option euler 0
+      !% Euler method
+      !%End
+      call parse_variable('GOFireIntegrator', .true., g_opt%fire_verlet)
 
       call messages_obsolete_variable('GOWhat2Minimize', 'GOObjective')
 
