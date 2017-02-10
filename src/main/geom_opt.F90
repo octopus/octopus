@@ -325,14 +325,14 @@ contains
       !%Description
       !% Initial step for the geometry optimizer. The default is 0.5.
       !% WARNING: in some weird units.
-      !% For the FIRE minimizer, default value is 50.0 in a.u. of time,
+      !% For the FIRE minimizer, default value is 0.1 fs,
       !% and corresponds to the initial time-step for the MD.
       !%End
       if(g_opt%method /= MINMETHOD_FIRE ) then
         default_step = M_HALF
         call parse_variable('GOStep', default_step, g_opt%step)
       else
-        default_step = CNST(50.0)
+        default_step = CNST(0.1)*unit_femtosecond%factor
         call parse_variable('GOStep', default_step, g_opt%step, unit = units_inp%time)
       end if
 
@@ -363,7 +363,7 @@ contains
 
       !%Variable GOFireMass
       !%Type float
-      !%Default 0.0 amu
+      !%Default 1.0 amu
       !%Section Calculation Modes::Geometry Optimization
       !%Description
       !% The Fire algorithm (<tt>GOMethod = fire</tt>) assumes that all degrees of freedom
@@ -371,10 +371,13 @@ contains
       !% scale,  which  for  heteronuclear  systems  can  be  roughly
       !% achieved by setting all the atom masses equal, to the value
       !% specified by this variable.
+      !% By default the mass of a proton is selected (1 amu).
+      !% However, a selection of <tt>GOFireMass = 0.01</tt> can, in manys systems, 
+      !% speed up the geometry optimization procedure.
       !% If <tt>GOFireMass</tt> <= 0, the masses of each 
       !% species will be used.
       !%End
-      call parse_variable('GOFireMass', M_ZERO, g_opt%fire_mass, unit_amu)
+      call parse_variable('GOFireMass', M_ONE*unit_amu%factor, g_opt%fire_mass, unit = unit_amu)
 
       !%Variable GOFireIntegrator
       !%Type logical
