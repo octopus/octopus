@@ -60,7 +60,10 @@ module submesh_oct_m
     dsubmesh_batch_dotp_matrix,  &
     zsubmesh_batch_dotp_matrix,  &
     submesh_overlap,             &
+    dsubmesh_to_submesh_dotp,    &
+    zsubmesh_to_submesh_dotp,    &
     submesh_end
+
 
   type submesh_t
     FLOAT                 :: center(1:MAX_DIM)

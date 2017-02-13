@@ -133,6 +133,7 @@ module lda_u_oct_m
     logical             :: ACBN0_corrected    !> Do we take into account missing terms from the ACBN0 original paper
     logical             :: useAllOrbitals     !> Do we use all atomic orbitals possible
     logical             :: skipSOrbitals      !> Not using s orbitals
+    logical             :: IncludeOverlap     !> Do we compute and use overlap or not
     logical             :: freeze_occ         !> Occupation matrices are not recomputed during TD evolution
     logical             :: freeze_u           !> U is not recomputed during TD evolution
 
@@ -154,6 +155,7 @@ contains
   this%nspecies = 0
   this%freeze_occ = .false.
   this%freeze_u = .false.
+  this%IncludeOverlap = .false.
 
   nullify(this%dn)
   nullify(this%zn)
@@ -271,6 +273,17 @@ contains
     !%End
     call parse_variable('ACBN0_corrected', .false., this%ACBN0_corrected)
     if(this%ACBN0_corrected) call messages_experimental("ACBN0_corrected")
+
+    !%Variable IncludeOverlap
+    !%Type logical
+    !%Default no
+    !%Section Hamiltonian::LDA+U
+    !%Description
+    !% If set to yes, Octopus will determine the overlap between orbitals on different atomic sites
+    !% and use it for the ACBN0 functional
+    !%End
+    call parse_variable('IncludeOverlap', .false., this%IncludeOverlap)
+    if(this%IncludeOverlap) call messages_experimental("IncludeOverlap")
   end if
 
   !We first need to load the basis
