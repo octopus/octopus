@@ -154,7 +154,7 @@ contains
 
     call simul_box_check_atoms_are_too_close(geo, sb)
 
-    call symmetries_init(sb%symm, geo, sb%dim, sb%periodic_dim, sb%rlattice)
+    call symmetries_init(sb%symm, geo, sb%dim, sb%periodic_dim, sb%rlattice, sb%klattice)
 
     ! we need k-points for periodic systems
     only_gamma_kpoint = (sb%periodic_dim == 0)

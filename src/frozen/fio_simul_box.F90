@@ -48,7 +48,7 @@ contains
       ASSERT(.not.this%mr_flag)
       nullify(this%hr_area%radius, this%hr_area%interp%posi, this%hr_area%interp%ww)
       ASSERT(this%periodic_dim==0)
-      call symmetries_init(this%symm, geo, this%dim, this%periodic_dim, this%rlattice)
+      call symmetries_init(this%symm, geo, this%dim, this%periodic_dim, this%rlattice, this%klattice)
       call kpoints_init(this%kpoints, this%symm, this%dim, this%rlattice, this%klattice, .true.)
     else
       message(1) = "Could not read from the input file."

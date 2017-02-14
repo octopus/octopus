@@ -37,7 +37,7 @@ Dependencies:
   Sparskit (optional)
   
 Website:
-  http://www.tddft.org/programs/octopus/
+  http://octopus-code.org/
 
 New releases:
   2016/09/05 Version 6.0
@@ -53,7 +53,7 @@ New releases:
   2009/04/16 Version 3.1
 
 Bugs & Patches:
-  http://www.tddft.org/trac/octopus/report
+  https://gitlab.com/octopus-code/octopus
 
-SVN server:
-  svn co http://www.tddft.org/svn/octopus/trunk
+Git server:
+  git clone git@gitlab.com:octopus-code/octopus.git

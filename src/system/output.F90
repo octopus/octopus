@@ -139,6 +139,8 @@ module output_oct_m
     type(mesh_line_t)  :: line     !< or through a line (in 2D)
 
     type(output_bgw_t) :: bgw      !< parameters for BerkeleyGW output
+    type(current_t)    :: current_calculator
+
   end type output_t
 
   integer, parameter, public ::              &
@@ -198,7 +200,7 @@ contains
     !% in the file <tt>geometry_classical.xyz</tt>.
     !% If <tt>OutputFormat = xcrysden</tt>, a file called <tt>geometry.xsf</tt> is written.
     !%Option current bit(5)
-    !% Outputs paramagnetic current density. The output file is called <tt>current-</tt>.
+    !% Outputs the total current density. The output file is called <tt>current-</tt>.
     !% For linear response, the filename is <tt>lr_current-</tt>.
     !%Option ELF bit(6)
     !% Outputs electron localization function (ELF). The output file is called <tt>elf-</tt>,
@@ -540,6 +542,7 @@ contains
     if(iand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
       call v_ks_calculate_current(ks, .true.)
     end if
+
 
     POP_SUB(output_init)
   end subroutine output_init

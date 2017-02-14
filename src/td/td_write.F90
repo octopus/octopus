@@ -256,8 +256,12 @@ contains
     !%Option n_excited_el 1048576
     !% Output the number of excited electrons, based on the projections 
     !% of the time evolved wave-functions on the ground-state wave-functions. 
-    !%Option geometry_separated 14680064
-    !% Writes geometry, velocities and forces in separate files.
+    !%Option coordinates_sep 2097152
+    !% Writes geometries in a separate file.
+    !%Option velocities_sep 4194304
+    !% Writes velocities in a separate file.
+    !%Option forces_sep 8388608
+    !% Writes forces in a separate file.
     !%End
 
     default = 2**(OUT_MULTIPOLES - 1) +  2**(OUT_ENERGY - 1)
@@ -1337,6 +1341,9 @@ contains
     integer,           intent(in) :: iter
     integer,           intent(in) :: which !1=xyz, 2=velocity, 3=force
 
+    integer, parameter :: COORDINATES=1
+    integer, parameter :: VELOCITIES=2
+    integer, parameter :: FORCES=3
     integer :: iatom, idir
     character(len=50) :: aux
     FLOAT :: tmp(1:MAX_DIM)
@@ -1353,14 +1360,15 @@ contains
 
       do iatom = 1, geo%natoms
         do idir = 1, gr%mesh%sb%dim
-          if (which==1) then 
-            write(aux, '(a2,i3,a1,i3,a1)') 'x(', iatom, ',', idir, ')'
-          else if (which==2) then 
-            write(aux, '(a2,i3,a1,i3,a1)') 'v(', iatom, ',', idir,')'
-          else
-            write(aux, '(a2,i3,a1,i3,a1)') 'f(', iatom, ',', idir,')'
-          end if
-            call write_iter_header(out_coords, aux)
+          select case (which)
+            case (COORDINATES)
+              write(aux, '(a2,i3,a1,i3,a1)') 'x(', iatom, ',', idir, ')'
+            case (VELOCITIES)
+              write(aux, '(a2,i3,a1,i3,a1)') 'v(', iatom, ',', idir,')'
+            case (FORCES)
+              write(aux, '(a2,i3,a1,i3,a1)') 'f(', iatom, ',', idir,')'
+          end select
+          call write_iter_header(out_coords, aux)
         end do
       end do
       call write_iter_nl(out_coords)
@@ -1368,16 +1376,17 @@ contains
       ! second line: units
       call write_iter_string(out_coords, '#[Iter n.]')
       call write_iter_header(out_coords, '[' // trim(units_abbrev(units_out%time)) // ']')
-      if (which==1) then 
-        call write_iter_string(out_coords, &
-          'Positions in '   // trim(units_abbrev(units_out%length))) 
-      else if (which==2) then 
-        call write_iter_string(out_coords, &
-          'Velocities in '  // trim(units_abbrev(units_out%velocity)))
-      else
-        call write_iter_string(out_coords, &
-          'Forces in '    // trim(units_abbrev(units_out%force)))
-      end if
+      select case (which)
+        case (COORDINATES)
+          call write_iter_string(out_coords, &
+            'Positions in '   // trim(units_abbrev(units_out%length))) 
+        case (VELOCITIES)
+          call write_iter_string(out_coords, &
+            'Velocities in '  // trim(units_abbrev(units_out%velocity)))
+        case (FORCES)
+          call write_iter_string(out_coords, &
+            'Forces in '    // trim(units_abbrev(units_out%force)))
+      end select
       call write_iter_nl(out_coords)
 
       call td_write_print_header_end(out_coords)
@@ -1385,22 +1394,23 @@ contains
 
     call write_iter_start(out_coords)
 
-    if (which==1) then 
-      do iatom = 1, geo%natoms
-         tmp(1:gr%mesh%sb%dim) = units_from_atomic(units_out%length, geo%atom(iatom)%x(1:gr%mesh%sb%dim))
-         call write_iter_double(out_coords, tmp, gr%mesh%sb%dim)
-      end do
-    else if (which==2) then
-      do iatom = 1, geo%natoms
-         tmp(1:gr%mesh%sb%dim) = units_from_atomic(units_out%velocity, geo%atom(iatom)%v(1:gr%mesh%sb%dim))
-         call write_iter_double(out_coords, tmp, gr%mesh%sb%dim)
-      end do
-    else
-      do iatom = 1, geo%natoms
-         tmp(1:gr%mesh%sb%dim) = units_from_atomic(units_out%force, geo%atom(iatom)%f(1:gr%mesh%sb%dim))
-         call write_iter_double(out_coords, tmp, gr%mesh%sb%dim)
-      end do
-    end if
+    select case (which)
+      case (COORDINATES)
+        do iatom = 1, geo%natoms
+          tmp(1:gr%mesh%sb%dim) = units_from_atomic(units_out%length, geo%atom(iatom)%x(1:gr%mesh%sb%dim))
+          call write_iter_double(out_coords, tmp, gr%mesh%sb%dim)
+        end do
+      case (VELOCITIES)
+        do iatom = 1, geo%natoms
+           tmp(1:gr%mesh%sb%dim) = units_from_atomic(units_out%velocity, geo%atom(iatom)%v(1:gr%mesh%sb%dim))
+           call write_iter_double(out_coords, tmp, gr%mesh%sb%dim)
+        end do
+      case (FORCES)
+        do iatom = 1, geo%natoms
+           tmp(1:gr%mesh%sb%dim) = units_from_atomic(units_out%force, geo%atom(iatom)%f(1:gr%mesh%sb%dim))
+           call write_iter_double(out_coords, tmp, gr%mesh%sb%dim)
+        end do
+    end select
        
     call write_iter_nl(out_coords)
 

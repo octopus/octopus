@@ -24,7 +24,7 @@ EXTRA_DIST =                   \
 	mk_kfunctionals_list.pl \
 	preprocess.pl          \
 	var2html.pl            \
-	svn_release_number.sh  \
+	git_commit_hash.sh     \
 	true_compiler.sh       \
 	octopus.spec.in
 

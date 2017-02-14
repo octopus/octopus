@@ -82,6 +82,7 @@ module species_oct_m
     species_real_nl_projector,     &
     species_nl_projector,          &
     species_get_iwf_radius,        &
+    species_get_ps_radius,         &
     species_copy,                  &
     species_end
 
@@ -305,7 +306,7 @@ contains
     !% <tt>PseudopotentialSet</tt> variable.
     !%
     !% Additional pseudopotentials can be downloaded from the <a
-    !% href='http://www.tddft.org/programs/octopus/wiki/index.php/Pseudopotentials'>
+    !% href='http://octopus-code.org/wiki/Pseudopotentials'>
     !% octopus homepage</a> or from other sources. Supported norm-conserving pseudopotential formats are
     !% detected by the file extension: UPF (<tt>.upf</tt>), PSF (SIESTA, <tt>.psf</tt>), FHI (ABINIT 6, <tt>.fhi</tt>),
     !% CPI (Fritz-Haber, <tt>.cpi</tt>), QSO (quantum-simulation.org, for Qbox, <tt>.xml</tt>),
@@ -1231,6 +1232,23 @@ contains
   end function species_get_iwf_radius
   ! ---------------------------------------------------------
 
+  ! ---------------------------------------------------------
+  !> Return radius of the pseudopotential if this is a pseudo, zero otherwise
+  FLOAT function species_get_ps_radius(spec) result(radius)
+    type(species_t),   intent(in) :: spec
+
+    PUSH_SUB(species_get_ps_radius)
+
+    if(species_is_ps(spec)) then
+      radius = spec%ps%rc_max
+    else
+      radius = M_ZERO
+    end if
+
+    POP_SUB(species_get_ps_radius)
+  end function species_get_ps_radius
+  ! ---------------------------------------------------------
+
 
   ! ---------------------------------------------------------
   subroutine species_copy(this, that, index)
@@ -1798,7 +1816,7 @@ contains
       do i = 1, spec%ps%conf%p
         radius = M_ZERO
         do is = 1, ispin
-          radius = max(radius, spline_cutoff_radius(spec%ps%ur(i, is), threshold = CNST(0.001)))
+          radius = max(radius, spline_cutoff_radius(spec%ps%ur(i, is), spec%ps%projectors_sphere_threshold))
         end do
         ! we consider as bound a state that is localized to less than half the radius of the radial grid
         bound(i) = radius < CNST(0.5)*logrid_radius(spec%ps%g)

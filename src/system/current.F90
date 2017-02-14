@@ -43,6 +43,7 @@ module current_oct_m
   use projector_oct_m
   use ps_oct_m
   use restart_oct_m
+  use scissor_oct_m
   use simul_box_oct_m
   use species_oct_m
   use splines_oct_m
@@ -55,6 +56,7 @@ module current_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
+  use xc_oct_m  
 
   implicit none
 
@@ -306,7 +308,27 @@ contains
           end do
           
           if(this%method == CURRENT_GRADIENT_CORR) then
-           call zprojector_commute_r_allatoms_alldir(hm%ep%proj, geo, der%mesh, st%d%dim, ik, psi, gpsi)                 
+            !A nonlocal contribution from the MGGA potential must be included
+            !This must be done first, as this is like a position-dependent mass 
+            if(family_is_mgga_with_exc(hm%xc_family, hm%xc_flags)) then
+              do idim = 1, st%d%dim
+                do idir = 1, der%mesh%sb%dim
+                  !$omp parallel do
+                  do ip = 1, der%mesh%np
+                    gpsi(ip, idir, idim) = (M_ONE+CNST(2.0)*hm%vtau(ip,ispin))*gpsi(ip, idir, idim)
+                  end do
+                  !$omp end parallel do
+                end do
+              end do 
+            end if
+           
+            !A nonlocal contribution from the pseudopotential must be included
+            call zprojector_commute_r_allatoms_alldir(hm%ep%proj, geo, der%mesh, st%d%dim, ik, psi, gpsi)                 
+            !A nonlocal contribution from the scissor must be included
+            if(hm%scissor%apply) then
+              call scissor_commute_r(hm%scissor, der%mesh, ik, psi, gpsi)
+            end if
+
           end if
 
           ww = st%d%kweights(ik)*st%occ(ist, ik)

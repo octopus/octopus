@@ -806,7 +806,9 @@ contains
         ! If we are doing unocc calculation, do not mess with the correct eigenvalues and occupations
         ! of the occupied states.
         call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start)) ! get potentials
-        if(.not. present(st_start)) call states_fermi(sys%st, sys%gr%mesh) ! occupations
+        if(.not. present(st_start)) then
+          call states_fermi(sys%st, sys%gr%mesh) ! occupations
+        end if
       end if
 
     else if (present(st_start)) then
