@@ -158,6 +158,9 @@ module states_oct_m
     FLOAT, pointer :: rho(:,:)         !< rho(gr%mesh%np_part, st%d%nspin)
     FLOAT, pointer :: current(:, :, :) !<   current(gr%mesh%np_part, gr%sb%dim, st%d%nspin)
 
+    !> k-point resolved current
+    FLOAT, pointer :: current_kpt(:,:,:) !< current(gr%mesh%np_part, gr%sb%dim, kpt_start:kpt_end)
+
 
     FLOAT, pointer :: rho_core(:)      !< core charge for nl core corrections
 
@@ -262,6 +265,7 @@ contains
 
     nullify(st%user_def_states)
     nullify(st%rho, st%current)
+    nullify(st%current_kpt)
     nullify(st%rho_core, st%frozen_rho)
     nullify(st%subsys_st)
     nullify(st%eigenval, st%occ, st%spin)
@@ -1305,6 +1309,11 @@ contains
       st%current = M_ZERO
     end if
 
+    if(.not. associated(st%current_kpt)) then
+        SAFE_ALLOCATE(st%current_kpt(1:gr%mesh%np_part,1:gr%mesh%sb%dim,st%d%kpt%start:st%d%kpt%end))
+        st%current_kpt = M_ZERO
+    end if
+
     POP_SUB(states_allocate_current)
   end subroutine states_allocate_current
 
@@ -1473,6 +1482,8 @@ contains
     call loct_pointer_copy(stout%user_def_states, stin%user_def_states)
 
     call loct_pointer_copy(stout%current, stin%current)
+     
+    call loct_pointer_copy(stout%current_kpt, stin%current_kpt)
  
     call loct_pointer_copy(stout%rho_core, stin%rho_core)
     call loct_pointer_copy(stout%frozen_rho, stin%frozen_rho)
@@ -1570,6 +1581,7 @@ contains
     
 
     SAFE_DEALLOCATE_P(st%current)
+    SAFE_DEALLOCATE_P(st%current_kpt)
     SAFE_DEALLOCATE_P(st%rho_core)
     SAFE_DEALLOCATE_P(st%frozen_rho)
     

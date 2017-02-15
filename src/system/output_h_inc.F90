@@ -183,7 +183,7 @@
       if(states_are_complex(st)) then
         ! calculate current first
         SAFE_ALLOCATE(current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:hm%d%nspin))
-        call current_calculate(outp%current_calculator, der, hm, geo, st, current)
+        call current_calculate(outp%current_calculator, der, hm, geo, st, current,st%current_kpt)
         do is = 1, hm%d%nspin
 
           if(st%d%nspin == 1) then
