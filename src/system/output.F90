@@ -123,6 +123,7 @@ module output_oct_m
   type output_t
     !> General output variables:
     integer :: what                !< what to output
+    integer :: whatBZ              !< what to output - for k-point resolved output
     integer :: how                 !< how to output
 
     type(output_me_t) :: me        !< this handles the output of matrix elements
@@ -542,6 +543,35 @@ contains
       call current_init(outp%current_calculator)
     end if
 
+   
+    !%Variable Output_KPT
+    !%Type flag
+    !%Default none
+    !%Section Output
+    !%Description
+    !% Specifies what to print. The output files are written at the end of the run into the output directory for the
+    !% relevant kind of run (<i>e.g.</i> <tt>static</tt> for <tt>CalculationMode = gs</tt>).
+    !% Time-dependent simulations print only per iteration, including always the last. The frequency of output per iteration
+    !% (available for <tt>CalculationMode</tt> = <tt>gs</tt>, <tt>unocc</tt>,  <tt>td</tt>, and <tt>opt_control</tt>)
+    !% is set by <tt>OutputInterval</tt> and the directory is set by <tt>OutputIterDir</tt>.
+    !% For linear-response run modes, the derivatives of many quantities can be printed, as listed in
+    !% the options below. Indices in the filename are labelled as follows:
+    !% <tt>sp</tt> = spin (or spinor component), <tt>k</tt> = <i>k</i>-point, <tt>st</tt> = state/band.
+    !% There is no tag for directions, given as a letter. The perturbation direction is always
+    !% the last direction for linear-response quantities, and a following +/- indicates the sign of the frequency.
+    !% Example: <tt>current</tt>
+    !%Option current_kpt  bit(0)
+    !% Outputs the current density resolved in k-points. The output file is called <tt>current_kpt-</tt>.
+    !%End
+    call parse_variable('Output_KPT', 0, outp%whatBZ)
+
+    if(.not.varinfo_valid_option('OutputKPT', outp%whatBZ, is_flag=.true.)) then
+      call messages_input_error('OutputKPT')
+    end if
+
+    !if(iand(outp%whatBZ, OPTION__OUTPUTBZ__CURRENT) /= 0) then
+    ! call v_ks_calculate_current(ks, .true.) 
+    !end if
 
     POP_SUB(output_init)
   end subroutine output_init
