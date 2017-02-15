@@ -61,6 +61,8 @@ module smear_oct_m
     integer :: fermi_count  !< The number of occupied states at the fermi level
     integer :: nik_factor   !< denominator, for treating k-weights as integers
     integer :: nspins       !< = 2 if spin_polarized, else 1.
+    
+    FLOAT   :: fix_efermi   !< the fermi energy is fixed from input
   end type smear_t
 
   integer, parameter, public ::       &
@@ -162,6 +164,17 @@ contains
       !%End
       call parse_variable('SmearingMPOrder', 1, this%MP_n)
     end if
+
+
+    !%Variable SmearingEFermi
+    !%Type float
+    !%Default None
+    !%Section States
+    !%Description
+    !% Fix the Fermi energy to a given value. 
+    !%End
+    call parse_variable('SmearingEFermi', M_HUGE, this%fix_efermi, units_inp%energy)
+
 
     POP_SUB(smear_init)
   end subroutine smear_init
@@ -360,12 +373,14 @@ contains
         this%ef_occ = smear_step_function(this, M_ZERO)
       end do
 
-      if(.not.conv) then
+      if(.not.conv .and. this%fix_efermi == M_HUGE) then
         message(1) = 'Fermi: did not converge.'
         call messages_fatal(1)
       end if
 
     end if
+    
+    if (this%fix_efermi /= M_HUGE) this%e_fermi = this%fix_efermi
 
     POP_SUB(smear_find_fermi_energy)
   end subroutine smear_find_fermi_energy
