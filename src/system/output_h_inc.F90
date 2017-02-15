@@ -190,7 +190,7 @@
           end if
           
           call io_function_output_vector(outp%how, dir, fname, der%mesh, &
-            st%current(:, :, ispin), der%mesh%sb%dim, (unit_one/units_out%time)*units_out%length**(1 - der%mesh%sb%dim), err, &
+            st%current(:, :, is), der%mesh%sb%dim, (unit_one/units_out%time)*units_out%length**(1 - der%mesh%sb%dim), err, &
             geo = geo, grp = st%dom_st_kpt_mpi_grp, vector_dim_labels = (/'x', 'y', 'z'/))
 
         end do
