@@ -541,6 +541,8 @@ contains
 
     if(iand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
       call v_ks_calculate_current(ks, .true.)
+    else
+      call v_ks_calculate_current(ks, .false.)
     end if
 
 
