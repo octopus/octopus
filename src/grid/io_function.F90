@@ -19,8 +19,10 @@
 #include "global.h"
 
 module io_function_oct_m
+  use comm_oct_m
   use cube_function_oct_m
   use cube_oct_m
+  use distributed_oct_m
   use geometry_oct_m
   use global_oct_m
   use index_oct_m
@@ -61,7 +63,8 @@ module io_function_oct_m
     zio_function_input,           &
     dio_function_output,          &
     zio_function_output,          &
-    io_function_output_vector
+    io_function_output_vector,    &
+    io_function_output_vector_BZ
     
 
 #if defined(HAVE_NETCDF)
@@ -84,6 +87,10 @@ module io_function_oct_m
   interface io_function_output_vector
     module procedure dio_function_output_vector, zio_function_output_vector
   end interface io_function_output_vector
+
+  interface io_function_output_vector_BZ
+    module procedure dio_function_output_vector_BZ, zio_function_output_vector_BZ
+  end interface io_function_output_vector_BZ
 
 contains
 

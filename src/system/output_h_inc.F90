@@ -26,7 +26,7 @@
     type(geometry_t),          intent(in)    :: geo
     type(mpi_grp_t), optional, intent(in)    :: grp !< the group that shares the same data, must contain the domains group
 
-    integer :: is, err, idir, ispin
+    integer :: is, err, idir, ispin, ik
     character(len=MAX_PATH_LEN) :: fname
     type(base_potential_iterator_t)        :: iter
     type(base_potential_t),        pointer :: subsys_external
@@ -35,7 +35,7 @@
     FLOAT,         dimension(:),   pointer :: xpot
     FLOAT,         dimension(:,:), pointer :: tnadd_potential
     FLOAT, allocatable :: v0(:,:), nxc(:), potential(:)
-    FLOAT, allocatable :: current(:, :, :)
+    FLOAT, allocatable :: current_kpt(:, :)
 
     PUSH_SUB(output_hamiltonian)
 
@@ -181,9 +181,6 @@
 
     if(iand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
       if(states_are_complex(st)) then
-        ! calculate current first
-        SAFE_ALLOCATE(current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:hm%d%nspin))
-        call current_calculate(outp%current_calculator, der, hm, geo, st, current,st%current_kpt)
         do is = 1, hm%d%nspin
 
           if(st%d%nspin == 1) then
@@ -193,17 +190,36 @@
           end if
           
           call io_function_output_vector(outp%how, dir, fname, der%mesh, &
-            current(:, :, is), der%mesh%sb%dim, (unit_one/units_out%time)*units_out%length**(1 - der%mesh%sb%dim), err, &
+            st%current(:, :, is), der%mesh%sb%dim, (unit_one/units_out%time)*units_out%length**(1 - der%mesh%sb%dim), err, &
             geo = geo, grp = st%dom_st_kpt_mpi_grp, vector_dim_labels = (/'x', 'y', 'z'/))
 
         end do
-        SAFE_DEALLOCATE_A(current)
       else
         message(1) = 'No current density output for real states since it is identically zero.'
         call messages_warning(1)
       end if
     end if
-    
+   
+    if(iand(outp%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then
+      if(states_are_complex(st)) then
+      
+        SAFE_ALLOCATE(current_kpt(st%d%kpt%start:st%d%kpt%end, der%mesh%sb%dim)) 
+        do ik = st%d%kpt%start,st%d%kpt%end
+          do idir = 1,der%mesh%sb%dim
+            current_kpt(is,idir) = dmf_integrate(der%mesh, st%current_kpt(:, idir, ik))
+          end do
+        end do
+        write(fname, '(2a)') 'current_kpt'
+        call io_function_output_vector_BZ(outp%how, dir, fname, der%mesh, st%d%kpt, &
+            current_kpt(:, :), der%mesh%sb%dim, (unit_one/units_out%time)*units_out%length**(1 - der%mesh%sb%dim), err, &
+            grp = st%st_kpt_mpi_grp, vector_dim_labels = (/'kx', 'ky', 'kz'/))
+        SAFE_DEALLOCATE_A(current_kpt)
+      else
+        message(1) = 'No current density output for real states since it is identically zero.'
+        call messages_warning(1)
+      end if
+    end if
+ 
     POP_SUB(output_hamiltonian)
   end subroutine output_hamiltonian
 

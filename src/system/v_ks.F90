@@ -139,7 +139,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine v_ks_init(ks, gr, st, geo, mc)
-    type(v_ks_t),         intent(out)   :: ks
+    type(v_ks_t),         intent(inout)   :: ks
     type(grid_t), target, intent(inout) :: gr
     type(states_t),       intent(in)    :: st
     type(geometry_t),     intent(inout) :: geo
@@ -363,7 +363,7 @@ contains
     ks%gr => gr
     ks%calc%calculating = .false.
 
-    ks%calculate_current = .false.
+    !The value of ks%calculate_current is set to false or true by Output    
     call current_init(ks%current_calculator)
     
     !%Variable VDWCorrection

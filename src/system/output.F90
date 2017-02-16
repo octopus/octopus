@@ -140,8 +140,6 @@ module output_oct_m
     type(mesh_line_t)  :: line     !< or through a line (in 2D)
 
     type(output_bgw_t) :: bgw      !< parameters for BerkeleyGW output
-    type(current_t)    :: current_calculator
-
   end type output_t
 
   integer, parameter, public ::              &
@@ -149,10 +147,11 @@ module output_oct_m
   
 contains
 
-  subroutine output_init(outp, sb, nst)
-    type(output_t),       intent(out) :: outp
-    type(simul_box_t),    intent(in)  :: sb
-    integer,              intent(in)  :: nst
+  subroutine output_init(outp, sb, nst, ks)
+    type(output_t),       intent(out)   :: outp
+    type(simul_box_t),    intent(in)    :: sb
+    integer,              intent(in)    :: nst
+    type(v_ks_t),         intent(inout) :: ks
 
     type(block_t) :: blk
     FLOAT :: norm
@@ -540,7 +539,9 @@ contains
     end if
 
     if(iand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
-      call current_init(outp%current_calculator)
+      call v_ks_calculate_current(ks, .true.)
+    else
+      call v_ks_calculate_current(ks, .false.)
     end if
 
    
@@ -569,9 +570,9 @@ contains
       call messages_input_error('OutputKPT')
     end if
 
-    !if(iand(outp%whatBZ, OPTION__OUTPUTBZ__CURRENT) /= 0) then
-    ! call v_ks_calculate_current(ks, .true.) 
-    !end if
+    if(iand(outp%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then
+     call v_ks_calculate_current(ks, .true.) 
+    end if
 
     POP_SUB(output_init)
   end subroutine output_init
@@ -583,10 +584,6 @@ contains
 
     PUSH_SUB(output_end)
     
-    if(iand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
-      call current_end(outp%current_calculator)
-    end if
-
     POP_SUB(output_end)
 
   end subroutine output_end
@@ -608,7 +605,7 @@ contains
     PUSH_SUB(output_all)
     call profiling_in(prof, "OUTPUT_ALL")
 
-    if(outp%what /= 0) then
+    if(outp%what+outp%whatBZ /= 0) then
       message(1) = "Info: Writing output to " // trim(dir)
       call messages_info(1)
       call io_mkdir(dir)

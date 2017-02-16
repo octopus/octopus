@@ -685,7 +685,7 @@ contains
             scf%eigens%converged = 0
             call eigensolver_run(scf%eigens, gr, st, hm, iter)
 
-            call v_ks_calc(ks, hm, st, geo)
+            call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
             call hamiltonian_update(hm, gr%mesh)
 
             dipole_prev = dipole
@@ -727,7 +727,7 @@ contains
 
       select case(scf%mix_field)
       case(OPTION__MIXFIELD__POTENTIAL)
-        call v_ks_calc(ks, hm, st, geo)
+        call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
         vout(1:gr%mesh%np, 1, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
         if(cmplxscl) Imvout(1:gr%mesh%np, 1, 1:nspin) = hm%Imvhxc(1:gr%mesh%np, 1:nspin)
 
@@ -821,7 +821,7 @@ contains
           st%zrho%Re(1:gr%fine%mesh%np, 1:nspin) =  real(zrhonew(1:gr%fine%mesh%np, 1, 1:nspin))                   
           st%zrho%Im(1:gr%fine%mesh%np, 1:nspin) = aimag(zrhonew(1:gr%fine%mesh%np, 1, 1:nspin))                    
         end if
-        call v_ks_calc(ks, hm, st, geo)
+        call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
       case (OPTION__MIXFIELD__POTENTIAL)
         ! mix input and output potentials
         call dmixing(scf%smix, vin, vout, vnew)
@@ -842,10 +842,10 @@ contains
         end do
 
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(ks, hm, st, geo)
+        call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
         
       case(OPTION__MIXFIELD__NONE)
-        call v_ks_calc(ks, hm, st, geo)
+        call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
       end select
 
       !!NTD!!
@@ -912,7 +912,7 @@ contains
         exit
       end if
 
-      if(outp%what/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
+      if((outp%what+outp%whatBZ)/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
         .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
         write(dirname,'(a,a,i4.4)') trim(outp%iter_dir),"scf.",iter
         call output_all(outp, gr, geo, st, hm, ks, dirname)
@@ -950,7 +950,8 @@ contains
 
     if(scf%lcao_restricted) call lcao_end(lcao)
 
-    if(scf%max_iter > 0 .and. scf%mix_field == OPTION__MIXFIELD__POTENTIAL) then
+    if((scf%max_iter > 0 .and. scf%mix_field == OPTION__MIXFIELD__POTENTIAL) &
+        .or. iand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
       call v_ks_calc(ks, hm, st, geo)
     end if
 
