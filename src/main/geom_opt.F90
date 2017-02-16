@@ -277,7 +277,7 @@ contains
       !% forces) which makes it less efficient than other schemes. It is included here
       !% for completeness, since it is free.
       !%Option fire 8
-      !% (Experimental) The FIRE algorithm. See also <tt>GOFireMass</tt>.
+      !% (Experimental) The FIRE algorithm. See also <tt>GOFireMass</tt> and <tt>GOFireIntegrator</tt>.
       !% Ref: E. Bitzek, P. Koskinen, F. Gahler, M. Moseler, and P. Gumbsch, <i>Phys. Rev. Lett.</i> <b>97</b>, 170201 (2006).
       !%End
       call parse_variable('GOMethod', MINMETHOD_STEEPEST_DESCENT, g_opt%method)
@@ -388,9 +388,9 @@ contains
       !% integrator to compute new geometries and velocities.
       !% Currently, two integrator schemes can be selected 
       !%Option verlet 1
-      !% Velocity Verlet algorithm
+      !% The Velocity Verlet algorithm.
       !%Option euler 0
-      !% Euler method
+      !% The Euler method.
       !%End
       call parse_variable('GOFireIntegrator', .true., g_opt%fire_verlet)
 
