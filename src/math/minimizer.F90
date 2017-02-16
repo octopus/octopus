@@ -390,11 +390,8 @@ contains
     real (8), allocatable :: x_new(:)
     real (8), allocatable :: dr_atoms(:)
 
-    integer :: dr_atom_iter
     integer :: i_tmp
 
-    real (8) :: mod_vel
-    real (8) :: mod_force
     real (8) :: mod_dr
     real (8) :: maxmove
 
