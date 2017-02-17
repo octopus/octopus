@@ -1686,14 +1686,14 @@ subroutine X(io_function_output_global_BZ) (how, dir, fname, mesh, kpt, ff, unit
 
     PUSH_SUB(X(io_function_output_global_BZ).out_plane)
 
-    filename = trim(dir)//'/'//trim(fname)//"."//index2axis(d1)//"=0"
+    filename = trim(dir)//'/'//trim(fname)//"."//index2axisBZ(d1)//"=0"
     iunit = io_open(filename, action='write')
 
-    write(iunit, mfmtheader, iostat=ierr) '#', index2axis(d2), index2axis(d3), 'Re', 'Im'
+    write(iunit, mfmtheader, iostat=ierr) '#', index2axisBZ(d2), index2axisBZ(d3), 'Re', 'Im'
 
     do ik = 1, mesh%sb%kpoints%reduced%npoints
-      kk = units_from_atomic(units_out%length, mesh%sb%kpoints%reduced%point(:,ik))
-      if(kk(d1) == M_ZERO) then
+      kk = units_from_atomic(units_out%length**(-1), mesh%sb%kpoints%reduced%point(:,ik))
+      if(abs(kk(d1)) < CNST(1.0e-6)) then
         fu = units_from_atomic(unit, ff(ik))
         write(iunit, mformat, iostat=ierr)  &
           kk(d2), kk(d3), fu

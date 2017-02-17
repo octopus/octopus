@@ -212,7 +212,7 @@
         write(fname, '(2a)') 'current_kpt'
         call io_function_output_vector_BZ(outp%how, dir, fname, der%mesh, st%d%kpt, &
             current_kpt(:, :), der%mesh%sb%dim, (unit_one/units_out%time)*units_out%length**(1 - der%mesh%sb%dim), err, &
-            grp = st%st_kpt_mpi_grp, vector_dim_labels = (/'kx', 'ky', 'kz'/))
+            grp = st%st_kpt_mpi_grp, vector_dim_labels = (/'x', 'y', 'z'/))
         SAFE_DEALLOCATE_A(current_kpt)
       else
         message(1) = 'No current density output for real states since it is identically zero.'
