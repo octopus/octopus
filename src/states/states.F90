@@ -1310,8 +1310,8 @@ contains
     end if
 
     if(.not. associated(st%current_kpt)) then
-        SAFE_ALLOCATE(st%current_kpt(1:gr%mesh%np_part,1:gr%mesh%sb%dim,st%d%kpt%start:st%d%kpt%end))
-        st%current_kpt = M_ZERO
+      SAFE_ALLOCATE(st%current_kpt(1:gr%mesh%np_part,1:gr%mesh%sb%dim,st%d%kpt%start:st%d%kpt%end))
+      st%current_kpt = M_ZERO
     end if
 
     POP_SUB(states_allocate_current)
@@ -1482,7 +1482,6 @@ contains
     call loct_pointer_copy(stout%user_def_states, stin%user_def_states)
 
     call loct_pointer_copy(stout%current, stin%current)
-     
     call loct_pointer_copy(stout%current_kpt, stin%current_kpt)
  
     call loct_pointer_copy(stout%rho_core, stin%rho_core)

@@ -489,23 +489,6 @@ contains
     !%End
     call parse_variable('OutputDuringSCF', .false., outp%duringscf) 
 
-    !%Variable OutputIterDir
-    !%Default "output_iter"
-    !%Type string
-    !%Section Output
-    !%Description
-    !% The name of the directory where <tt>Octopus</tt> stores information
-    !% such as the density, forces, etc. requested by variable <tt>Output</tt>
-    !% in the format specified by <tt>OutputFormat</tt>.
-    !% This information is written while iterating <tt>CalculationMode = gs</tt>, <tt>unocc</tt>, or <tt>td</tt>,
-    !% according to <tt>OutputInterval</tt>, and has nothing to do with the restart information.
-    !%End
-    call parse_variable('OutputIterDir', "output_iter", outp%iter_dir)
-    if(outp%what /= 0 .and. outp%output_interval > 0) then
-      call io_mkdir(outp%iter_dir)
-    end if
-    call add_last_slash(outp%iter_dir)
-
     !%Variable RestartWriteInterval
     !%Type integer
     !%Default 50
@@ -526,13 +509,6 @@ contains
     ! these kinds of Output do not have a how
     what_no_how = OPTION__OUTPUT__MATRIX_ELEMENTS + OPTION__OUTPUT__BERKELEYGW + OPTION__OUTPUT__DOS + &
       OPTION__OUTPUT__TPA + OPTION__OUTPUT__MMB_DEN + OPTION__OUTPUT__J_FLOW + OPTION__OUTPUT__FROZEN_SYSTEM
-
-    ! we are using a what that has a how.
-    if(iand(outp%what, not(what_no_how)) /= 0) then
-      call io_function_read_how(sb, outp%how)
-    else
-      outp%how = 0
-    end if
 
     if(iand(outp%what, OPTION__OUTPUT__FROZEN_SYSTEM) /= 0) then
       call messages_experimental("Frozen output")
@@ -560,19 +536,44 @@ contains
     !% <tt>sp</tt> = spin (or spinor component), <tt>k</tt> = <i>k</i>-point, <tt>st</tt> = state/band.
     !% There is no tag for directions, given as a letter. The perturbation direction is always
     !% the last direction for linear-response quantities, and a following +/- indicates the sign of the frequency.
-    !% Example: <tt>current</tt>
+    !% Example: <tt>current_kpt</tt>
     !%Option current_kpt  bit(0)
     !% Outputs the current density resolved in k-points. The output file is called <tt>current_kpt-</tt>.
     !%End
     call parse_variable('Output_KPT', 0, outp%whatBZ)
 
-    if(.not.varinfo_valid_option('OutputKPT', outp%whatBZ, is_flag=.true.)) then
-      call messages_input_error('OutputKPT')
+    if(.not.varinfo_valid_option('Output_KPT', outp%whatBZ, is_flag=.true.)) then
+      call messages_input_error('Output_KPT')
     end if
 
     if(iand(outp%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then
      call v_ks_calculate_current(ks, .true.) 
     end if
+
+    !%Variable OutputIterDir
+    !%Default "output_iter"
+    !%Type string
+    !%Section Output
+    !%Description
+    !% The name of the directory where <tt>Octopus</tt> stores information
+    !% such as the density, forces, etc. requested by variable <tt>Output</tt>
+    !% in the format specified by <tt>OutputFormat</tt>.
+    !% This information is written while iterating <tt>CalculationMode = gs</tt>, <tt>unocc</tt>, or <tt>td</tt>,
+    !% according to <tt>OutputInterval</tt>, and has nothing to do with the restart information.
+    !%End
+    call parse_variable('OutputIterDir', "output_iter", outp%iter_dir)
+    if(outp%what + outp%whatBZ /= 0 .and. outp%output_interval > 0) then
+      call io_mkdir(outp%iter_dir)
+    end if
+    call add_last_slash(outp%iter_dir)
+
+    ! we are using a what that has a how.
+    if(iand(outp%what, not(what_no_how)) /= 0 .or. outp%whatBZ /= 0) then
+      call io_function_read_how(sb, outp%how)
+    else
+      outp%how = 0
+    end if
+
 
     POP_SUB(output_init)
   end subroutine output_init

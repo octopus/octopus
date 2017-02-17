@@ -628,8 +628,7 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, mesh, kpt, ff, vecto
   ASSERT(vector_dim < 10)
 
   ierr = 0
-
-  ASSERT(lbound(ff, dim = 1 ) == kpt%start .and. ubound(ff, dim = 1) ==  kpt%end)
+  ASSERT( ubound(ff, 1) - lbound(ff, dim = 1 ) + 1 == kpt%end - kpt%start +1 )
 
   i_am_root = .true.
 #ifdef HAVE_MPI
@@ -647,7 +646,7 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, mesh, kpt, ff, vecto
  
     do ivd = 1, vector_dim
 #ifdef HAVE_MPI       
-      ff_global(kpt%start:kpt%end, ivd) = ff(kpt%start:kpt%end, ivd) 
+      ff_global(kpt%start:kpt%end, ivd) = ff(lbound(ff, 1):ubound(ff, 1), ivd) 
       call comm_allreduce(comm, ff_global)
 #endif
     end do
@@ -663,7 +662,7 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, mesh, kpt, ff, vecto
   if(i_am_root) then
 
     how_seq = how
-    
+
     if(how_seq /= 0) then !perhaps there is nothing left to do
       do ivd = 1, vector_dim
         if(present(vector_dim_labels)) then

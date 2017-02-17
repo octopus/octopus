@@ -206,7 +206,7 @@
         SAFE_ALLOCATE(current_kpt(st%d%kpt%start:st%d%kpt%end, der%mesh%sb%dim)) 
         do ik = st%d%kpt%start,st%d%kpt%end
           do idir = 1,der%mesh%sb%dim
-            current_kpt(is,idir) = dmf_integrate(der%mesh, st%current_kpt(:, idir, ik))
+            current_kpt(ik,idir) = dmf_integrate(der%mesh, st%current_kpt(:, idir, ik))
           end do
         end do
         write(fname, '(2a)') 'current_kpt'
