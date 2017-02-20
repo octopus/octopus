@@ -58,7 +58,7 @@ module geom_opt_oct_m
     FLOAT    :: step
     FLOAT    :: line_tol
     FLOAT    :: fire_mass
-    logical  :: fire_verlet
+    integer  :: fire_integrator
     FLOAT    :: tolgrad
     FLOAT    :: toldr
     integer  :: max_iter
@@ -157,7 +157,7 @@ contains
 
       !TODO: add variable to use Euler integrator
       call minimize_fire(g_opt%size, coords, real(g_opt%step, 8), real(g_opt%tolgrad, 8), &
-        g_opt%max_iter, calc_point, write_iter_info, energy, ierr, mass, verlet=g_opt%fire_verlet)
+        g_opt%max_iter, calc_point, write_iter_info, energy, ierr, mass, integrator=g_opt%fire_integrator)
       SAFE_DEALLOCATE_A(mass)
 
     case default
@@ -380,7 +380,7 @@ contains
       call parse_variable('GOFireMass', M_ONE*unit_amu%factor, g_opt%fire_mass, unit = unit_amu)
 
       !%Variable GOFireIntegrator
-      !%Type logical
+      !%Type integer
       !%Default verlet
       !%Section Calculation Modes::Geometry Optimization
       !%Description
@@ -392,7 +392,7 @@ contains
       !%Option euler 0
       !% The Euler method.
       !%End
-      call parse_variable('GOFireIntegrator', .true., g_opt%fire_verlet)
+      call parse_variable('GOFireIntegrator', OPTION__GOFIREINTEGRATOR__VERLET, g_opt%fire_integrator)
 
       call messages_obsolete_variable('GOWhat2Minimize', 'GOObjective')
 

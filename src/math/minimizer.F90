@@ -340,7 +340,7 @@ contains
 
   !----------------------------------------------
 
-  subroutine minimize_fire(dim, x, step, tolgrad, maxiter, f, write_iter_info, en, ierr, mass, verlet)
+  subroutine minimize_fire(dim, x, step, tolgrad, maxiter, f, write_iter_info, en, ierr, mass, integrator)
     integer, intent(in)    :: dim
     real(8), intent(inout) :: x(:)
     real(8), intent(in)    :: step
@@ -366,7 +366,7 @@ contains
     real(8), intent(out)   :: en
     integer, intent(out)   :: ierr
     real(8), intent(in)    :: mass(:)
-    logical, intent(in)    :: verlet
+    integer, intent(in)    :: integrator
 
     integer :: n_iter
     real(8), allocatable :: grad(:)
@@ -418,19 +418,19 @@ contains
     dt_max = 10.0 * dt
     f_dec = CNST(0.5)
 
-    maxmove = 0.2 * 1.8897261328856432 ! 0.2 Angstroms
+    maxmove = 0.2 * P_Ang 
     
-    grad = 0.0
+    grad = M_ZERO
 
     SAFE_ALLOCATE(vel(1:dim))
-    vel = 0.0
+    vel = M_ZERO
 
     SAFE_ALLOCATE(dr_atoms(1:dim/3))
     SAFE_ALLOCATE(x_new(1:dim))
     SAFE_ALLOCATE(dr_i(1:dim))
 
     x_new = x
-    dr_i = 0.0
+    dr_i = M_ZERO
 
     n_iter = 1
 
@@ -438,8 +438,11 @@ contains
       
       call f(dim, x_new, en, 1, grad)
       
+      select case (integrator)
       ! Velocity verlet
-      if (verlet) vel(1:dim) = vel(1:dim) - 0.5*grad(1:dim)*dt/mass(1:dim)
+      case (OPTION__GOFIREINTEGRATOR__VERLET)
+        vel(1:dim) = vel(1:dim) - M_HALF*grad(1:dim)*dt/mass(1:dim)
+      end select
 
       if (n_iter /= 1) then 
         p_value = 0.0
@@ -458,22 +461,23 @@ contains
           p_times = 0
           dt = dt * f_dec
           alpha = alpha_start
-          vel = 0.0
+          vel = M_ZERO
         end if
       end if
 
       x(1:dim)=x_new(1:dim)
 
       
-      if (verlet) then
+      select case (integrator)
+      case (OPTION__GOFIREINTEGRATOR__VERLET)
       ! Velocity Verlet 
-        dr_i = vel(1:dim)*dt - 0.5*grad(1:dim)*dt**2/mass(1:dim)
-        vel(1:dim) = vel(1:dim) - 0.5*grad(1:dim)*dt/mass(1:dim)
-      else
+        dr_i = vel(1:dim)*dt - M_HALF*grad(1:dim)*dt**2/mass(1:dim)
+        vel(1:dim) = vel(1:dim) - M_HALF*grad(1:dim)*dt/mass(1:dim)
+      case (OPTION__GOFIREINTEGRATOR__EULER)
       ! Euler method
         vel(1:dim) = vel(1:dim) - grad(1:dim)*dt/mass(1:dim)
         dr_i(1:dim) = vel(1:dim)*dt
-      end if
+      end select
       
       mod_dr = lalg_nrm2(dim, dr_i)
       if (mod_dr > maxmove) then
