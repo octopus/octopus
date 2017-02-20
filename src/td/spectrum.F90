@@ -485,23 +485,32 @@ contains
 
     integer :: is, idir, jdir, ie, ii
     FLOAT :: average, anisotropy
-    FLOAT, allocatable :: pp(:,:), ip(:,:)
-    logical :: spins_subtract
+    FLOAT, allocatable :: pp(:,:), pp2(:,:), ip(:,:)
+    logical :: spins_singlet, spins_triplet
     character(len=20) :: header_string
 
     PUSH_SUB(spectrum_cross_section_tensor_write)
 
+    spins_singlet = .true.
+    spins_triplet = .false.
     if(present(kick)) then
       write(out_file, '(a15,i2)')      '# nspin        ', nspin
       call kick_write(kick, out_file)
-      spins_subtract = (kick%delta_strength_mode == KICK_SPIN_MODE)
-    else
-      spins_subtract = .false.
+      select case(kick%delta_strength_mode)
+      case (KICK_SPIN_MODE)
+        spins_triplet = .true.
+        spins_singlet = .false.
+      case (KICK_SPIN_DENSITY_MODE)
+        spins_triplet = .true.
+      end select
     end if
 
     write(out_file, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)
     write(out_file, '(a20)', advance = 'no') str_center("(1/3)*Tr[sigma]", 20)
     write(out_file, '(a20)', advance = 'no') str_center("Anisotropy[sigma]", 20)
+    if (spins_triplet .and. spins_singlet) then
+      write(out_file, '(a20)', advance = 'no') str_center("(1/3)*Tr[sigma-]", 20)
+    end if
     do is = 1, nspin
       do idir = 1, 3
         do jdir = 1, 3
@@ -512,6 +521,9 @@ contains
     end do
     write(out_file, '(1x)')
     write(out_file, '(a1,a20)', advance = 'no') '#', str_center('[' // trim(units_abbrev(units_out%energy)) // ']', 20)
+    if (spins_triplet .and. spins_singlet) then
+      write(out_file, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
+    end if
     do ii = 1, 2 + nspin * 9
       write(out_file, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
     end do
@@ -531,6 +543,7 @@ contains
     ! more different that the eigenvalues are, the larger the anisotropy is.
 
     SAFE_ALLOCATE(pp(1:3, 1:3))
+    if (spins_triplet .and. spins_singlet) SAFE_ALLOCATE(pp2(1:3, 1:3))
     SAFE_ALLOCATE(ip(1:3, 1:3))
 
     do ie = 0, energy_steps
@@ -538,15 +551,15 @@ contains
       pp = M_ZERO
       pp(:, :) = pp(:, :) + sigma(:, :, ie, 1)
       if (nspin >= 2) then
-        if (spins_subtract) then
+        if (spins_singlet .and. spins_triplet) then
+          pp2(:, :) = pp(:, :) - sigma(:, :, ie, 2)
+          pp(:, :) = pp(:, :) + sigma(:, :, ie, 2)
+        elseif (spins_triplet .and. .not.spins_singlet) then
           pp(:, :) = pp(:, :) - sigma(:, :, ie, 2)
-        else
+        elseif (spins_singlet .and. .not.spins_triplet) then
           pp(:, :) = pp(:, :) + sigma(:, :, ie, 2)
         end if
       end if
-      average = M_THIRD * ( pp(1, 1) + pp(2, 2) + pp(3, 3) )
-      ip = matmul(pp, pp)
-
       average = M_THIRD * ( pp(1, 1) + pp(2, 2) + pp(3, 3) )
       ip = matmul(pp, pp)
       anisotropy = M_THIRD * ( M_THREE * ( ip(1, 1) + ip(2, 2) + ip(3, 3) ) - (M_THREE * average)**2 )
@@ -555,6 +568,12 @@ contains
       ! they have been read from the "cross_section_vector.x", where they are already in the proper units.
       write(out_file,'(3e20.8)', advance = 'no') units_from_atomic(units_out%energy, (ie * energy_step)), &
         average, sqrt(max(anisotropy, M_ZERO))
+
+      if (spins_singlet .and. spins_triplet) then
+        average = M_THIRD * ( pp2(1, 1) + pp2(2, 2) + pp2(3, 3) )
+        write(out_file,'(1e20.8)', advance = 'no') average
+      end if
+
       do is = 1, nspin
         write(out_file,'(9e20.8)', advance = 'no') sigma(1:3, 1:3, ie, is)
       end do
@@ -562,6 +581,9 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(pp)
+    if (spins_triplet .and. spins_singlet) then 
+      SAFE_DEALLOCATE_A(pp2)
+    end if
     SAFE_DEALLOCATE_A(ip)
     POP_SUB(spectrum_cross_section_tensor_write)
   end subroutine spectrum_cross_section_tensor_write
