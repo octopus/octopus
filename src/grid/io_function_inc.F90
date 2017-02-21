@@ -645,11 +645,11 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, mesh, kpt, ff, vecto
     ff_global(1:mesh%sb%kpoints%reduced%npoints, 1:vector_dim) = R_TOTYPE(M_ZERO)   
  
     do ivd = 1, vector_dim
-#ifdef HAVE_MPI       
       ff_global(kpt%start:kpt%end, ivd) = ff(lbound(ff, 1):ubound(ff, 1), ivd) 
-      call comm_allreduce(comm, ff_global)
-#endif
     end do
+#ifdef HAVE_MPI
+    call comm_allreduce(comm, ff_global)
+#endif
   else
     ff_global => ff
   end if
@@ -1693,6 +1693,7 @@ subroutine X(io_function_output_global_BZ) (how, dir, fname, mesh, kpt, ff, unit
 
     do ik = 1, mesh%sb%kpoints%reduced%npoints
       kk = units_from_atomic(units_out%length**(-1), mesh%sb%kpoints%reduced%point(:,ik))
+      print *, kk
       if(abs(kk(d1)) < CNST(1.0e-6)) then
         fu = units_from_atomic(unit, ff(ik))
         write(iunit, mformat, iostat=ierr)  &
