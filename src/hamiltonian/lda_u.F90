@@ -136,7 +136,8 @@ module lda_u_oct_m
     logical             :: IncludeOverlap     !> Do we compute and use overlap or not
     logical             :: freeze_occ         !> Occupation matrices are not recomputed during TD evolution
     logical             :: freeze_u           !> U is not recomputed during TD evolution
-
+    logical             :: normalizeOrbitals  !> Do we normalize the orbitals 
+ 
     type(distributed_t) :: orbs_dist
   end type lda_u_t
 
@@ -239,6 +240,15 @@ contains
   !% ACBN0 functional as defined in PRX 5, 011006 (2015) 
   !%End
   call parse_variable('UseACBN0Functional', .false., this%useACBN0)
+
+  !%Variable DFTUNormalizeOrbitals
+  !%Type logical
+  !%Default no
+  !%Section Hamiltonian::LDA+U
+  !%Description
+  !% If set to yes, Octopus will normalize the atomic orbitals
+  !%End
+  call parse_variable('DFTUNormalizeOrbitals', .false., this%normalizeOrbitals)
 
   if( this%useACBN0) then
     !%Variable UseAllAtomicOrbitals

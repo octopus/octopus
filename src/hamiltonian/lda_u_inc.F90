@@ -1052,9 +1052,11 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
                          this%truncation, this%orbitals_threshold)
             ! We have to normalize the orbitals, 
             ! in case the orbitals that comes out of the pseudo are not properly normalised
-            norm = X(sm_nrm2)(os%sphere, os%orbitals(work2)%X(orb)(1:os%sphere%np))
-            os%orbitals(work2)%X(orb)(1:os%sphere%np) =  &
+            if(this%normalizeOrbitals) then
+              norm = X(sm_nrm2)(os%sphere, os%orbitals(work2)%X(orb)(1:os%sphere%np))
+              os%orbitals(work2)%X(orb)(1:os%sphere%np) =  &
                  os%orbitals(work2)%X(orb)(1:os%sphere%np) /norm
+            end if
           endif
         end do !iorb
       end do !norb
