@@ -202,7 +202,7 @@ contains
   !%Variable OrbitalsTruncationMethod
   !%Type flag
   !%Default full
-  !%Section Hamiltonian::LDA+U
+  !%Section Hamiltonian::DFT+U
   !%Description
   !% This option determine how Octopus will truncate the orbitals used for LDA+U.
   !% Except for the full method, the other options are only there to get a quick idea.
@@ -220,7 +220,7 @@ contains
   !%Variable OrbitalsThreshold_LDAU
   !%Type float
   !%Default 0.01
-  !%Section Hamiltonian::LDA+U
+  !%Section Hamiltonian::DFT+U
   !%Description
   !% Determine the threshold used to compute the radius of the atomic orbitals for LDA+U.
   !% This radius is computed by making sure that the 
@@ -234,7 +234,7 @@ contains
   !%Variable UseACBN0Functional
   !%Type logical
   !%Default no
-  !%Section Hamiltonian::LDA+U
+  !%Section Hamiltonian::DFT+U
   !%Description
   !% If set to yes, Octopus will determine the effective U term using the 
   !% ACBN0 functional as defined in PRX 5, 011006 (2015) 
@@ -244,7 +244,7 @@ contains
   !%Variable DFTUNormalizeOrbitals
   !%Type logical
   !%Default no
-  !%Section Hamiltonian::LDA+U
+  !%Section Hamiltonian::DFT+U
   !%Description
   !% If set to yes, Octopus will normalize the atomic orbitals
   !%End
@@ -254,7 +254,7 @@ contains
     !%Variable UseAllAtomicOrbitals
     !%Type logical
     !%Default no
-    !%Section Hamiltonian::LDA+U
+    !%Section Hamiltonian::DFT+U
     !%Description
     !% If set to yes, Octopus will determine the effective U for all atomic orbitals
     !% from the peusopotential. Only available with ACBN0 functional.
@@ -265,7 +265,7 @@ contains
     !%Variable SkipSOrbitals
     !%Type logical
     !%Default no
-    !%Section Hamiltonian::LDA+U
+    !%Section Hamiltonian::DFT+U
     !%Description
     !% If set to yes, Octopus will determine the effective U for all atomic orbitals
     !% from the peusopotential but s orbitals. Only available with ACBN0 functional.
@@ -276,7 +276,7 @@ contains
     !%Variable ACBN0_corrected
     !%Type logical
     !%Default no
-    !%Section Hamiltonian::LDA+U
+    !%Section Hamiltonian::DFT+U
     !%Description
     !% If set to yes, Octopus will determine the effective U term using the 
     !% ACBN0 functional, including the missing term from the derivative of the effective U.
@@ -287,7 +287,7 @@ contains
     !%Variable IncludeOverlap
     !%Type logical
     !%Default no
-    !%Section Hamiltonian::LDA+U
+    !%Section Hamiltonian::DFT+U
     !%Description
     !% If set to yes, Octopus will determine the overlap between orbitals on different atomic sites
     !% and use it for the ACBN0 functional
