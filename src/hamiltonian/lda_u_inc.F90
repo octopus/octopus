@@ -1054,7 +1054,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
             ! in case the orbitals that comes out of the pseudo are not properly normalised
             norm = X(sm_nrm2)(os%sphere, os%orbitals(work2)%X(orb)(1:os%sphere%np))
             os%orbitals(work2)%X(orb)(1:os%sphere%np) =  &
-                 os%orbitals(work2)%X(orb)(1:os%sphere%np) /sqrt(norm)
+                 os%orbitals(work2)%X(orb)(1:os%sphere%np) /norm
           endif
         end do !iorb
       end do !norb
