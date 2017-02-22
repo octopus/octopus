@@ -457,6 +457,13 @@ contains
               call parse_block_float(blk, is, ii - 1, shifts(ii,is))
             end do
           end do
+        else
+          !We include a default -0.5 shift for even number of k-points
+          do ii = 1, dim
+            if(mod(this%nik_axis(ii), 2) /= 0 ) then
+              shifts(ii,1) = M_HALF
+            end if
+          end do
         end if
 
         call parse_block_end(blk)
@@ -954,11 +961,8 @@ contains
           ix(idir) = jj / divisor + 1
           jj = mod(jj, divisor)
 
-          kpoints(idir, ik) = (M_TWO*ix(idir) - M_ONE*naxis(idir) + M_TWO*shift(idir,is))*dx(idir)
-
-          if(mod(naxis(idir), 2) /= 0) then    
-            kpoints(idir, ik) = kpoints(idir, ik) - dx(idir)
-          end if
+          kpoints(idir, ik) = (M_TWO*ix(idir) - M_ONE*naxis(idir) -M_TWO + M_TWO*shift(idir,is))*dx(idir)
+          !A default shift of +0.5 is including in case if(mod(naxis(idir), 2) /= 0 )
   
           !bring back point to first Brillouin zone, except for points at 1/2
           if ( abs(kpoints(idir, ik) - CNST(0.5)) > CNST(1e-14) )  then

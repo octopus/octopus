@@ -1693,7 +1693,6 @@ subroutine X(io_function_output_global_BZ) (how, dir, fname, mesh, kpt, ff, unit
 
     do ik = 1, mesh%sb%kpoints%reduced%npoints
       kk = units_from_atomic(units_out%length**(-1), mesh%sb%kpoints%reduced%point(:,ik))
-      print *, kk
       if(abs(kk(d1)) < CNST(1.0e-6)) then
         fu = units_from_atomic(unit, ff(ik))
         write(iunit, mformat, iostat=ierr)  &
