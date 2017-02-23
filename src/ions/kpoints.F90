@@ -1046,7 +1046,7 @@ contains
     FLOAT   :: length, total_length, accumulated_length
     FLOAT   :: kpt1(1:MAX_DIM), kpt2(1:MAX_DIM), vec(1:MAX_DIM)
 
-    PUSH_SUB(kpoints_grid_generate)
+    PUSH_SUB(kpoints_path_generate)
 
     total_length = M_ZERO
     !We first compute the total length of the k-point path
@@ -1088,7 +1088,7 @@ contains
     !The length of the total path is arbitrarily put to 1
      coord(1:nkpoints) = coord(1:nkpoints)/total_length
 
-    POP_SUB(kpoints_grid_generate)
+    POP_SUB(kpoints_path_generate)
   end subroutine kpoints_path_generate
  
  
