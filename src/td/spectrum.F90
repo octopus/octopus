@@ -452,12 +452,13 @@ contains
         sigma(:, :, ie, is) = matmul( transpose(ip), matmul(sigmap(:, :, ie, is), ip) )
       end do
     end do
-    ! Diagonalize sigma tensor
-    if (spectrum%sigma_diag) &
-    call spectrum_sigma_diagonalize(sigma, nspin, spectrum%energy_step, energy_steps, kick)
 
     ! Finally, write down the result
     call spectrum_cross_section_tensor_write(out_file, sigma, nspin, spectrum%energy_step, energy_steps, kick)
+
+    ! Diagonalize sigma tensor
+    if (spectrum%sigma_diag) &
+    call spectrum_sigma_diagonalize(sigma, nspin, spectrum%energy_step, energy_steps, kick)
 
     SAFE_DEALLOCATE_A(sigma)
     SAFE_DEALLOCATE_A(sigmap)
