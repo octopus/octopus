@@ -64,7 +64,8 @@ module io_function_oct_m
     dio_function_output,          &
     zio_function_output,          &
     io_function_output_vector,    &
-    io_function_output_vector_BZ
+    io_function_output_vector_BZ, &
+    io_function_output_global_BZ
     
 
 #if defined(HAVE_NETCDF)
@@ -91,6 +92,11 @@ module io_function_oct_m
   interface io_function_output_vector_BZ
     module procedure dio_function_output_vector_BZ, zio_function_output_vector_BZ
   end interface io_function_output_vector_BZ
+
+  interface io_function_output_global_BZ
+    module procedure dio_function_output_global_BZ, zio_function_output_global_BZ
+  end interface io_function_output_global_BZ
+
 
 contains
 
