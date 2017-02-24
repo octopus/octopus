@@ -819,6 +819,8 @@ contains
       call messages_info(1)
     end if
 
+    call restart_block_signals()
+
     !write the densities
     iunit = restart_open(restart, 'density')
     lines(1) = '#     #spin    #nspin    filename'
@@ -885,6 +887,8 @@ contains
       if (err /= 0) ierr = ierr + 16
     end if
     call restart_close(restart, iunit)
+
+    call restart_unblock_signals()
 
     if (debug%info) then
       message(1) = "Debug: Writing density restart done."
