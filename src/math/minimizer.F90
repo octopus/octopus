@@ -340,7 +340,7 @@ contains
 
   !----------------------------------------------
 
-  subroutine minimize_fire(dim, x, step, tolgrad, maxiter, f, write_iter_info, en, ierr, mass)
+  subroutine minimize_fire(dim, x, step, tolgrad, maxiter, f, write_iter_info, en, ierr, mass, integrator)
     integer, intent(in)    :: dim
     real(8), intent(inout) :: x(:)
     real(8), intent(in)    :: step
@@ -366,6 +366,7 @@ contains
     real(8), intent(out)   :: en
     integer, intent(out)   :: ierr
     real(8), intent(in)    :: mass(:)
+    integer, intent(in)    :: integrator
 
     integer :: n_iter
     real(8), allocatable :: grad(:)
@@ -385,16 +386,14 @@ contains
 
     real (8), allocatable :: grad_atoms(:)
     real (8), allocatable :: vel(:)
-    real (8), allocatable :: vec_delta_pos(:)
     real (8), allocatable :: dr_i(:)
     real (8), allocatable :: x_new(:)
     real (8), allocatable :: dr_atoms(:)
 
-    integer :: dr_atom_iter
     integer :: i_tmp
 
-    real (8) :: mod_vel
-    real (8) :: mod_force
+    real (8) :: mod_dr
+    real (8) :: maxmove
 
     PUSH_SUB(minimize_fire)
 
@@ -419,76 +418,81 @@ contains
     dt_max = 10.0 * dt
     f_dec = CNST(0.5)
 
-    SAFE_ALLOCATE(vec_delta_pos(1:dim))
-
-    grad = 0.0
+    maxmove = 0.2 * P_Ang 
+    
+    grad = M_ZERO
 
     SAFE_ALLOCATE(vel(1:dim))
-    vel = 0.0
+    vel = M_ZERO
 
     SAFE_ALLOCATE(dr_atoms(1:dim/3))
     SAFE_ALLOCATE(x_new(1:dim))
     SAFE_ALLOCATE(dr_i(1:dim))
 
     x_new = x
-    dr_i = 0.0
+    dr_i = M_ZERO
 
     n_iter = 1
+
     do while (n_iter <= maxiter)
       
-      vel(1:dim) = vel(1:dim) - grad(1:dim)*dt/mass(1:dim)
-
       call f(dim, x_new, en, 1, grad)
       
-      vel(1:dim) = vel(1:dim) - grad(1:dim)*dt/mass(1:dim)
-      
-      grad_atoms = 0.0
+      select case (integrator)
+      ! Velocity verlet
+      case (OPTION__GOFIREINTEGRATOR__VERLET)
+        vel(1:dim) = vel(1:dim) - M_HALF*grad(1:dim)*dt/mass(1:dim)
+      end select
 
-      do i_tmp = 0, dim/3 - 1
-        grad_atoms(i_tmp+1) = sqrt(grad(3*i_tmp+1)**2 + grad(3*i_tmp+2)**2 + grad(3*i_tmp+3)**2)
-      end do
+      if (n_iter /= 1) then 
+        p_value = 0.0
+        do i_tmp = 0, dim/3 - 1
+          p_value = p_value - grad(3*i_tmp+1)*vel(3*i_tmp+1) - grad(3*i_tmp+2)*vel(3*i_tmp+2) - grad(3*i_tmp+3)*vel(3*i_tmp+3)
+        end do
 
-      max_grad_atoms = maxval(abs(grad_atoms(1:)))
+        if(p_value > 0.0) then
+          vel(1:dim) = (1.0 - alpha) * vel(1:dim) - alpha * grad(1:dim) * lalg_nrm2(dim,vel) / lalg_nrm2(dim,grad)
+          if(p_times > n_min) then
+            dt = min(dt * f_inc , dt_max)
+            alpha = alpha * f_alpha
+          end if
 
-      p_value = 0.0
-      do i_tmp = 0, dim/3 - 1
-        p_value = p_value - grad(3*i_tmp+1)*vel(3*i_tmp+1) - grad(3*i_tmp+2)*vel(3*i_tmp+2) - grad(3*i_tmp+3)*vel(3*i_tmp+3)
-      end do
-
-      if(p_value > 0.0) then
-        p_times = p_times + 1
-        if(p_times > n_min) then
-          dt = min(dt * f_inc , dt_max)
-          alpha = alpha * f_alpha
+        else
+          p_times = 0
+          dt = dt * f_dec
+          alpha = alpha_start
+          vel = M_ZERO
         end if
-
-      else
-        p_times = 0
-        dt = dt * f_dec
-        alpha = alpha_start
-        vel = 0.0
       end if
 
       x(1:dim)=x_new(1:dim)
 
-      mod_force = lalg_nrm2(dim,grad)
-      mod_vel = lalg_nrm2(dim,vel)
       
-      vel(1:dim) = (1.0 - alpha) * vel(1:dim) - alpha * grad(1:dim) * mod_vel / mod_force
+      select case (integrator)
+      case (OPTION__GOFIREINTEGRATOR__VERLET)
+      ! Velocity Verlet 
+        dr_i = vel(1:dim)*dt - M_HALF*grad(1:dim)*dt**2/mass(1:dim)
+        vel(1:dim) = vel(1:dim) - M_HALF*grad(1:dim)*dt/mass(1:dim)
+      case (OPTION__GOFIREINTEGRATOR__EULER)
+      ! Euler method
+        vel(1:dim) = vel(1:dim) - grad(1:dim)*dt/mass(1:dim)
+        dr_i(1:dim) = vel(1:dim)*dt
+      end select
       
-      ! Velocity Verlet displacement : vel*dt - 1/2 * grad * dt**2
-      vec_delta_pos(1:dim) = vel(1:dim)*dt - grad(1:dim)*dt**2 / mass(1:dim)
-      
-      x_new(1:dim) = x(1:dim) + vec_delta_pos(1:dim)
-      dr_i(1:dim) = sqrt((x_new(1:dim)-x(1:dim))**2)
+      mod_dr = lalg_nrm2(dim, dr_i)
+      if (mod_dr > maxmove) then
+        dr_i = maxmove * dr_i / mod_dr
+      end if
 
-      do dr_atom_iter = 0, dim/3 - 1
-        dr_atoms(dr_atom_iter+1) = sqrt(dr_i(3*dr_atom_iter+1)**2+dr_i(3*dr_atom_iter+2)**2+dr_i(3*dr_atom_iter+3)**2)
+      x_new(1:dim) = x(1:dim) + dr_i(1:dim)
+
+      do i_tmp = 0, dim/3 - 1
+        grad_atoms(i_tmp+1) = sqrt(grad(3*i_tmp+1)**2 + grad(3*i_tmp+2)**2 + grad(3*i_tmp+3)**2)
+        dr_atoms(i_tmp+1) =   sqrt(dr_i(3*i_tmp+1)**2+dr_i(3*i_tmp+2)**2+dr_i(3*i_tmp+3)**2)
       end do
+      call write_iter_info(n_iter, dim, en, maxval(dr_atoms(1:)), maxval(abs(grad_atoms(1:))), x)
 
-      call write_iter_info(n_iter, dim, en, maxval(dr_atoms(1:)), max_grad_atoms, x)
-
-      if(max_grad_atoms < tolgrad) then
+      if(maxval(abs(grad_atoms(1:))) < tolgrad) then
         ierr = 0
         n_iter = maxiter + 1
       else
@@ -500,7 +504,6 @@ contains
     SAFE_DEALLOCATE_A(dr_atoms)
     SAFE_DEALLOCATE_A(x_new)
     SAFE_DEALLOCATE_A(dr_i)
-    SAFE_DEALLOCATE_A(vec_delta_pos)
     SAFE_DEALLOCATE_A(vel)
     SAFE_DEALLOCATE_A(grad)
     SAFE_DEALLOCATE_A(grad_atoms)

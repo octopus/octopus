@@ -140,6 +140,7 @@ module output_oct_m
     type(mesh_line_t)  :: line     !< or through a line (in 2D)
 
     type(output_bgw_t) :: bgw      !< parameters for BerkeleyGW output
+  
   end type output_t
 
   integer, parameter, public ::              &

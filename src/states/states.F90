@@ -1105,13 +1105,13 @@ contains
       end if
     end do
 
-    SAFE_ALLOCATE(st%group%psib(1:st%group%nblocks, 1:st%d%nik))
+    SAFE_ALLOCATE(st%group%psib(1:st%group%nblocks, st%d%kpt%start:st%d%kpt%end))
     if(st%have_left_states) then
-      SAFE_ALLOCATE(st%psibL(1:st%group%nblocks, 1:st%d%nik))
+      SAFE_ALLOCATE(st%psibL(1:st%group%nblocks, st%d%kpt%start:st%d%kpt%end))
     end if
 
 
-    SAFE_ALLOCATE(st%group%block_is_local(1:st%group%nblocks, 1:st%d%nik))
+    SAFE_ALLOCATE(st%group%block_is_local(1:st%group%nblocks, st%d%kpt%start:st%d%kpt%end))
     st%group%block_is_local = .false.
     st%group%block_start  = -1
     st%group%block_end    = -2  ! this will make that loops block_start:block_end do not run if not initialized

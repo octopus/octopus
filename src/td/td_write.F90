@@ -618,7 +618,8 @@ contains
     if(writ%out(OUT_N_EX)%write .and. writ%compute_interval > 0) then
       call io_mkdir(outp%iter_dir)
     end if
-    if(outp%how == 0) then
+
+    if(outp%how == 0 .and. writ%out(OUT_N_EX)%write) then
       call io_function_read_how(gr%sb, outp%how)
     end if
 
