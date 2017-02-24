@@ -2383,7 +2383,7 @@ contains
  
   ! now write down the k-resolved part
   write(dir, '(a,a,i7.7)') trim(outp%iter_dir),"td.", iter  ! name of directory
-  call io_function_output_global_BZ(outp%how, dir, "n_excited_el_kpt", gr%mesh, st%d%kpt, Nex_kpt, unit_one, err) 
+  call io_function_output_global_BZ(outp%how, dir, "n_excited_el_kpt", gr%mesh, Nex_kpt, unit_one, err) 
  
   SAFE_DEALLOCATE_A(projections)
   SAFE_DEALLOCATE_A(occ)
