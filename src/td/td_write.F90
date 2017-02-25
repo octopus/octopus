@@ -336,7 +336,7 @@ contains
         call messages_fatal(1)
       end if
 
-      if (writ%out(OUT_N_EX)%write.and. st%d%kpt%parallel) then
+      if (writ%out(OUT_N_EX)%write .and. st%parallel_in_states ) then
         message(1) = "Options TDOutput = n_excited_el is not implemented for parallel in states."
         call messages_fatal(1)
       end if
