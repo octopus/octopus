@@ -162,9 +162,6 @@ contains
     real(8), intent(out)   :: minimum
     integer, intent(out)   :: ierr
     
-    integer :: npt, iprint, sizeofw
-    REAL_DOUBLE, allocatable :: w(:)
-    
     PUSH_SUB(minimize_multidim_nograd)
 
     ASSERT(ubound(x, dim = 1) >= dim)
