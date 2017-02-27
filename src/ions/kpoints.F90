@@ -1211,7 +1211,7 @@ contains
 
     integer :: ig1, ig2, ig3, ik, ii    
     FLOAT :: Gvec(MAX_DIM,27), Gvec_cart(MAX_DIM,27)
-    FLOAT :: vec(1:MAX_DIM)
+    FLOAT :: vec(1:MAX_DIM), kpt(1:MAX_DIM)
     FLOAT :: d, dmin
 
     PUSH_SUB(kpoints_fold_to_1BZ)
@@ -1246,8 +1246,9 @@ contains
         end if
       end do
       do ii=1, grid%dim
-        grid%point1BZ(ii,ik) =  grid%point(ii,ik) - Gvec_cart(ii,ig2)
+        kpt(ii) = grid%red_point(ii,ik) - Gvec(ii,ig2)
       end do
+      call kpoints_to_absolute(klattice,kpt(1:grid%dim),grid%point1BZ(1:grid%dim,ik),grid%dim) 
     end do
 
     POP_SUB(kpoints_fold_to_1BZ)
