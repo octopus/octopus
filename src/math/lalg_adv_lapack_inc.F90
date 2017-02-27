@@ -80,7 +80,9 @@ subroutine X(geneigensolve)(n, a, b, e, bof, err_code)
   integer, optional, intent(out)   :: err_code
 
   integer :: info, lwork, ii, jj
+#ifdef R_TCOMPLEX
   FLOAT, allocatable :: rwork(:)
+#endif
   R_TYPE, allocatable :: work(:), diag(:)
 
   call profiling_in(eigensolver_prof, "DENSE_EIGENSOLVER")
