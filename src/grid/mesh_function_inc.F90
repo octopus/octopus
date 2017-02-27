@@ -314,7 +314,7 @@ subroutine X(mf_random)(mesh, ff, shift, seed, normalized)
 
   if(present(shift)) then
     !We skip shift times the seed 
-    call shiftseed(iseed, shift, ff(1))
+    call shiftseed(iseed, shift)
   end if
 
   call quickrnd(iseed, mesh%np, ff(1:mesh%np))
