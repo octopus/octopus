@@ -859,7 +859,8 @@ contains
         end if
       else
         if(st%cmplxscl%space) then
-          call zrestart_write_mesh_function(restart, filename, gr%mesh, st%zrho%Re(:,isp)+M_zI*st%zrho%Im(:,isp), err, use_mpi_grp = .true.)
+          call zrestart_write_mesh_function(restart, filename, gr%mesh, st%zrho%Re(:,isp)+M_zI*st%zrho%Im(:,isp), &
+                                                                                       err, use_mpi_grp = .true.)
         else
           call drestart_write_mesh_function(restart, filename, gr%mesh, st%rho(:,isp), err, use_mpi_grp = .true.)
         end if
