@@ -371,7 +371,6 @@ contains
     integer :: n_iter
     real(8), allocatable :: grad(:)
     real(8) :: dt
-    real(8) :: max_grad_atoms
 
     integer :: n_min
     real (8) :: alpha
