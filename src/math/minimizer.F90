@@ -230,7 +230,8 @@ contains
     call nlo_optimize(ires, opt, x, minimum)
     ierr = ires
     call nlo_destroy(opt)
-
+#else
+    ierr = 0
 #endif
   end subroutine minimize_multidim_nlopt
 
