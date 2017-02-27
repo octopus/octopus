@@ -162,11 +162,13 @@ contains
     integer, allocatable :: div(:)
     type(blacs_proc_grid_t) :: proc_grid
     integer :: desc(BLACS_DLEN)
+#ifdef HAVE_SCALAPACK
     FLOAT, allocatable :: da(:, :), devec(:, :), dwork(:)
     CMPLX, allocatable :: za(:, :), zevec(:, :), zwork(:), rwork(:)
     FLOAT :: dworksize
     CMPLX :: zworksize, lrwork
-    
+#endif   
+ 
     PUSH_SUB(matrix_diagonalize_hermitian_scalapack)
 
     ASSERT(.not. present(metric))
