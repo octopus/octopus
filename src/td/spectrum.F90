@@ -545,18 +545,18 @@ contains
 
     do ie = 0, energy_steps
 
-      pp = M_ZERO
-      pp(:, :) = pp(:, :) + sigma(:, :, ie, 1)
+      pp(:, :) = sigma(:, :, ie, 1)
       if (nspin >= 2) then
         if (spins_singlet .and. spins_triplet) then
           pp2(:, :) = pp(:, :) - sigma(:, :, ie, 2)
-          pp(:, :) = pp(:, :) + sigma(:, :, ie, 2)
+          pp(:, :)  = pp(:, :) + sigma(:, :, ie, 2)
         elseif (spins_triplet .and. .not.spins_singlet) then
           pp(:, :) = pp(:, :) - sigma(:, :, ie, 2)
         elseif (spins_singlet .and. .not.spins_triplet) then
           pp(:, :) = pp(:, :) + sigma(:, :, ie, 2)
         end if
       end if
+
       average = M_THIRD * ( pp(1, 1) + pp(2, 2) + pp(3, 3) )
       ip = matmul(pp, pp)
       anisotropy = M_THIRD * ( M_THREE * ( ip(1, 1) + ip(2, 2) + ip(3, 3) ) - (M_THREE * average)**2 )
@@ -567,7 +567,7 @@ contains
         average, sqrt(max(anisotropy, M_ZERO))
 
       if (spins_singlet .and. spins_triplet) then
-        average = M_THIRD * ( pp2(1, 1) + pp2(2, 2) + pp2(3, 3) )
+        average = - M_THIRD * ( pp2(1, 1) + pp2(2, 2) + pp2(3, 3) )
         write(out_file,'(1e20.8)', advance = 'no') average
       end if
 
