@@ -1265,9 +1265,12 @@ subroutine X(lalg_least_squares_vec)(nn, aa, bb, xx)
   R_TYPE,  intent(in)    :: bb(:)
   R_TYPE,  intent(out)   :: xx(:)
 
+#ifdef R_TREAL
   R_TYPE :: dlwork
-  R_TYPE, allocatable :: ss(:), work(:)
+  R_TYPE, allocatable :: work(:)
   integer :: rank, info
+#endif
+  R_TYPE, allocatable :: ss(:)
   
   interface
     subroutine dgelss(m, n, nrhs, a, lda, b, ldb, s, rcond, rank, work, lwork, info)
