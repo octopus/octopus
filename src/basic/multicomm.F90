@@ -172,7 +172,6 @@ contains
     integer,           intent(in)    :: min_range(:)
 
     integer :: ii, num_slaves, slave_level, ipar
-    type(block_t) :: blk
     integer :: parse(1:P_STRATEGY_MAX), default(1:P_STRATEGY_MAX)
 
     PUSH_SUB(multicomm_init)
