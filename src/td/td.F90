@@ -717,6 +717,11 @@ contains
         write(message(1),'(a)') 'Info: Freezing Hartree and exchange-correlation potentials.'
         call messages_info(1)
         call v_ks_freeze_hxc(sys%ks)
+
+        !In this case we should reload GS wavefunctions 
+        if(.not.fromScratch) then
+          call messages_not_implemented("TDFreezeOccupations with FromScratch=no")
+        end if
       end if
 
       x = minval(st%eigenval(st%st_start, :))
