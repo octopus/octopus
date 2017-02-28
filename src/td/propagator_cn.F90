@@ -108,7 +108,7 @@ contains
       call hamiltonian_epot_generate(hm, gr, geo, st, time = time - dt/M_TWO)
     end if
 
-    if(family_is_mgga_with_exc(hm%xc_family, hm%xc_flags)) then
+    if(hm%family_is_mgga_with_exc) then
       if(hm%cmplxscl%space) then
         call potential_interpolation_interpolate(tr%vksold, 3, &
           time, dt, time -dt/M_TWO, hm%vhxc, hm%imvhxc, hm%vtau, hm%imvtau)
@@ -182,7 +182,7 @@ contains
       dt_op = - dt !propagate backwards
       t_op  = time + dt/M_TWO
 
-      if(family_is_mgga_with_exc(hm%xc_family,hm%xc_flags)) then
+      if(hm%family_is_mgga_with_exc) then
         call potential_interpolation_interpolate(tr%vksold, 3,  &
           time, dt, time + dt/M_TWO, hm%vhxc, hm%imvhxc, hm%vtau, hm%imvtau)
       else

@@ -847,7 +847,7 @@ contains
       end if
 
       nullify(ks%calc%vtau)
-      if(family_is_mgga_with_exc(hm%xc_family, hm%xc_flags)) then
+      if(hm%family_is_mgga_with_exc) then
         SAFE_ALLOCATE(ks%calc%vtau(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
         ks%calc%vtau = M_ZERO
         if(cmplxscl) then
@@ -858,7 +858,7 @@ contains
 
       ! Get the *local* XC term
       if(ks%calc%calc_energy) then
-        if(family_is_mgga_with_exc(hm%xc_family, hm%xc_flags)) then
+        if(hm%family_is_mgga_with_exc) then
           if (cmplxscl) call messages_not_implemented('Complex Scaling with (hybrid) meta-GGAs')
           call xc_get_vxc(ks%gr%fine%der, ks%xc, st, &
             ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, &
@@ -875,7 +875,7 @@ contains
           end if
         end if
       else
-        if(family_is_mgga_with_exc(hm%xc_family, hm%xc_flags)) then
+        if(hm%family_is_mgga_with_exc) then
           if (cmplxscl) call messages_not_implemented('Complex Scaling with (hybrid) meta-GGAs')
           call xc_get_vxc(ks%gr%fine%der, ks%xc, &
             st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
@@ -1064,7 +1064,7 @@ contains
           end if
         end if
 
-        if(family_is_mgga_with_exc(hm%xc_family, hm%xc_flags)) then
+        if(hm%family_is_mgga_with_exc) then
           do ispin = 1, hm%d%nspin
             call lalg_copy(ks%gr%fine%mesh%np, ks%calc%vtau(:, ispin), hm%vtau(:, ispin))
             if(hm%cmplxscl%space) call lalg_copy(ks%gr%fine%mesh%np, ks%calc%Imvtau(:, ispin), hm%Imvtau(:, ispin))

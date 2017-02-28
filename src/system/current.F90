@@ -310,7 +310,7 @@ contains
           if(this%method == CURRENT_GRADIENT_CORR) then
             !A nonlocal contribution from the MGGA potential must be included
             !This must be done first, as this is like a position-dependent mass 
-            if(family_is_mgga_with_exc(hm%xc_family, hm%xc_flags)) then
+            if(hm%family_is_mgga_with_exc) then
               do idim = 1, st%d%dim
                 do idir = 1, der%mesh%sb%dim
                   !$omp parallel do
