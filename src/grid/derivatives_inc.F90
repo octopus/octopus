@@ -239,6 +239,8 @@ subroutine X(derivatives_div)(der, ff, op_ff, ghost_update, set_bc)
 
   ASSERT(ubound(ff, DIM=2) >= der%dim)
 
+  ASSERT(.not.mesh%sb%nonorthogonal)
+
   call X(derivatives_perform) (der%grad(1), der, ff(:, 1), op_ff, ghost_update, set_bc)
 
   SAFE_ALLOCATE(tmp(1:der%mesh%np))
@@ -276,6 +278,8 @@ subroutine X(derivatives_curl)(der, ff, op_ff, ghost_update, set_bc)
   ASSERT(der%dim==2 .or. der%dim==3)
   ASSERT(ubound(ff,    DIM=2) >= der%dim)
   ASSERT(ubound(op_ff, DIM=2) >= curl_dim(der%dim))
+
+  ASSERT(.not.mesh%sb%nonorthogonal)
 
   SAFE_ALLOCATE(tmp(1:der%mesh%np_part))
 
