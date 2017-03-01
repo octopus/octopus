@@ -811,7 +811,10 @@ contains
   subroutine fft_end(this)
     type(fft_t), intent(inout) :: this
 
-    integer :: ii, status
+    integer :: ii
+#ifdef HAVE_CLFFT
+    integer :: status
+#endif
 
     PUSH_SUB(fft_end)
 
