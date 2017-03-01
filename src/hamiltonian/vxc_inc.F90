@@ -427,13 +427,15 @@ contains
     integer, intent(in)  :: spin_channels
     integer, intent(in)  :: ip
 
-    integer :: ib
+    integer :: ib, is
 
     PUSH_SUB(xc_get_vxc.copy_global_to_local)
 
-    !$omp parallel do
-    do ib = 1, n_block
-      local(1:spin_channels, ib) = global(ib + ip - 1, 1:spin_channels)
+    do is = 1, spin_channels
+      !$omp parallel do
+      do ib = 1, n_block
+        local(is, ib) = global(ib + ip - 1, is)
+      end do
     end do
 
     POP_SUB(xc_get_vxc.copy_global_to_local)
@@ -447,13 +449,15 @@ contains
     integer, intent(in)    :: spin_channels
     integer, intent(in)    :: ip
 
-    integer :: ib
+    integer :: ib, is
 
     PUSH_SUB(xc_get_vxc.copy_local_to_global)
 
-    !$omp parallel do
-    do ib = 1, n_block
-      global(ib + ip - 1, 1:spin_channels) = global(ib + ip - 1, 1:spin_channels) + local(1:spin_channels, ib)
+    do is = 1, spin_channels
+      !$omp parallel do
+      do ib = 1, n_block
+        global(ib + ip - 1, is) = global(ib + ip - 1, is) + local(is, ib)
+      end do
     end do
 
     POP_SUB(xc_get_vxc.copy_local_to_global)
