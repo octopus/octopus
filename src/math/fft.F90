@@ -158,7 +158,6 @@ contains
   !> initialize the table
   subroutine fft_all_init()
     integer :: ii
-    FLOAT   :: time_limit
 
 #if defined(HAVE_OPENMP) && defined(HAVE_FFTW3_THREADS)
     integer :: iret
