@@ -2039,6 +2039,9 @@ contains
     logical :: something_to_do
     FLOAT, allocatable :: symm(:, :)
     type(symmetrizer_t) :: symmetrizer
+    type(profile_t), save :: prof
+
+    call profiling_in(prof, "STATES_CALC_QUANTITIES")
 
     PUSH_SUB(states_calc_quantities)
 
@@ -2269,6 +2272,8 @@ contains
 
 
     POP_SUB(states_calc_quantities)
+
+    call profiling_out(prof)
 
   contains
 
