@@ -284,12 +284,13 @@ contains
     type(mpi_grp_t), optional, intent(in) :: mpi_grp !< the mpi_group we want to use for the parallelization
 
     integer :: ii, jj, fft_dim, idir, column_size, row_size, alloc_size, n3
-    integer :: n_1, n_2, n_3, nn_temp(3), status
+    integer :: n_1, n_2, n_3, nn_temp(3)
     integer :: library_
     type(mpi_grp_t) :: mpi_grp_
 
 #ifdef HAVE_CLFFT
     real(8) :: scale
+    integer :: status
 #endif
 #ifdef HAVE_PFFT
     integer :: ierror
