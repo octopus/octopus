@@ -22,6 +22,7 @@ module states_oct_m
   use base_density_oct_m
   use base_states_oct_m
   use blacs_proc_grid_oct_m
+  use boundaries_oct_m
   use calc_mode_par_oct_m
   use cmplxscl_oct_m
   use comm_oct_m
@@ -2088,15 +2089,19 @@ contains
         ! all calculations will be done with complex wavefunctions
         call states_get_state(st, der%mesh, ist, ik, wf_psi)
 
+        do st_dim = 1, st%d%dim
+          call boundaries_set(der%boundaries, wf_psi(:, st_dim))
+        end do
+
         ! calculate gradient of the wavefunction
         do st_dim = 1, st%d%dim
-          call zderivatives_grad(der, wf_psi(:,st_dim), gwf_psi(:,:,st_dim))
+          call zderivatives_grad(der, wf_psi(:,st_dim), gwf_psi(:,:,st_dim), set_bc = .false.)
         end do
 
         ! calculate the Laplacian of the wavefunction
         if (present(density_laplacian)) then
           do st_dim = 1, st%d%dim
-            call zderivatives_lapl(der, wf_psi(:,st_dim), lwf_psi(:,st_dim))
+            call zderivatives_lapl(der, wf_psi(:,st_dim), lwf_psi(:,st_dim), set_bc = .false.)
           end do
         end if
 
