@@ -57,6 +57,8 @@ subroutine X(fft_forward)(fft, in, out, norm)
 #ifdef HAVE_PNFFT
       call X(pnfft_forward)(fft_array(slot)%pnfft, in(:,:,:), out(:,:,:))
       if(present(norm)) norm = fft_array(slot)%pnfft%norm
+#else
+      if(present(norm)) norm = M_ZERO
 #endif
     case (FFTLIB_PFFT)
       if (all(fft_array(slot)%rs_n /= 0)) then
@@ -232,6 +234,8 @@ subroutine X(fft_forward)(fft, in, out, norm)
 #ifdef HAVE_NFFT    
       call X(nfft_backward)(fft_array(slot)%nfft, in(:,:,:), out(:,:,:))
       if(present(norm)) norm = fft_array(slot)%nfft%norm
+#else
+      if(present(norm)) norm = M_ZERO
 #endif
     case (FFTLIB_PNFFT)
       scale = .false. ! the result is already scaled
