@@ -584,8 +584,7 @@ contains
       aux_hm%vxc(:,jj) = vhxc(:,jj) - aux_hm%vhartree(1:np)
     end do
 
-!TODO: check that all arrays needed by hamiltonian update are sync'd in MPI
-!      fashion
+    !TODO: check that all arrays needed by hamiltonian update are sync`d in MPI fashion
 
     !calculate final density
 
