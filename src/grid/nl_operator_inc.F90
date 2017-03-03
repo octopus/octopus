@@ -106,11 +106,13 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   if(nri > 0) then
     if(.not.op%const_w) then
       call operate_non_const_weights()
-    else if(op%cmplx_op .or. X(function_global) == OP_FORTRAN) then
+    else if(op%cmplx_op) then
       call operate_const_weights()
     else if(accel_is_enabled() .and. batch_is_packed(fi) .and. batch_is_packed(fo)) then
       use_opencl = .true.
       call operate_opencl()
+    else if(X(function_global) == OP_FORTRAN) then
+      call operate_const_weights()
     else
       
 ! for the moment this is not implemented
