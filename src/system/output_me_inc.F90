@@ -448,7 +448,7 @@ subroutine X(output_me_transition_dipole) (dir, gr, st, list_ij)
 
   SAFE_ALLOCATE(psii(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(psij(1:gr%mesh%np_part, 1:st%d%dim))
-  SAFE_ALLOCATE(grad_psi(1:gr%mesh%np_part, 1:st%d%dim, 1:gr%mesh%sb%dim))
+  SAFE_ALLOCATE(grad_psi(1:gr%mesh%np_part, 1:st%d%dim, 1:gr%sb%dim))
   SAFE_ALLOCATE(idj(1:gr%mesh%np_part))
   
 
@@ -482,37 +482,40 @@ subroutine X(output_me_transition_dipole) (dir, gr, st, list_ij)
 
   npath = SIZE(gr%sb%kpoints%coord_along_path)
   
-  do idim = 1, gr%mesh%sb%dim
-    write(filename, '(a,i1.1)') 'transition_dipole-', idim
-    iunit = io_open(trim(dir)//trim(filename), action='write')    
+  if(mpi_grp_is_root(mpi_world)) then
+  
+    do idim = 1, gr%mesh%sb%dim
+      write(filename, '(a,i1.1)') 'transition_dipole-', idim
+      iunit = io_open(trim(dir)//trim(filename), action='write')    
 
-    ! output bands
-    do ik = st%d%nik-npath+1, st%d%nik
-        red_kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik), &
-                                                   absolute_coordinates=.false.)
-        write(iunit,'(1x)',advance='no')
-        write(iunit,'(f14.8)',advance='no') kpoints_get_path_coord(gr%sb%kpoints, & 
-                                                    states_dim_get_kpoint_index(st%d, ik)-(st%d%nik -npath)) 
-        do idir = 1, gr%sb%dim
-          write(iunit,'(f14.8)',advance='no') red_kpoint(idir)
-        end do
-        do ipair = 1, npairs
+      ! output bands
+      do ik = st%d%nik-npath+1, st%d%nik
+          red_kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik), &
+                                                     absolute_coordinates=.false.)
+          write(iunit,'(1x)',advance='no')
+          write(iunit,'(f14.8)',advance='no') kpoints_get_path_coord(gr%sb%kpoints, & 
+                                                      states_dim_get_kpoint_index(st%d, ik)-(st%d%nik -npath)) 
+          do idir = 1, gr%sb%dim
+            write(iunit,'(f14.8)',advance='no') red_kpoint(idir)
+          end do
+          do ipair = 1, npairs
 #ifdef R_TCOMPLEX          
-          write(iunit,'(1x,f14.8,f14.8)',advance='no') real(me(ipair,ik,idim)), aimag(me(ipair,ik,idim))
+            write(iunit,'(1x,f14.8,f14.8)',advance='no') real(me(ipair,ik,idim)), aimag(me(ipair,ik,idim))
 #else
-          write(iunit,'(1x,f14.8)',advance='no') me(ipair,ik,idim)
+            write(iunit,'(1x,f14.8)',advance='no') me(ipair,ik,idim)
 
 #endif          
           
-        end do
+          end do
 
-      write(iunit, '(a)')
+        write(iunit, '(a)')
+    
+      end do
+  
+      call io_close(iunit)
     
     end do
-  
-    call io_close(iunit)
-    
-  end do
+  end if
  
   SAFE_DEALLOCATE_A(psii)
   SAFE_DEALLOCATE_A(psij)
