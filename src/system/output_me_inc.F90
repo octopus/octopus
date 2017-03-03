@@ -456,7 +456,7 @@ subroutine X(output_me_transition_dipole) (dir, gr, st, list_ij)
   me(:,:,:) = M_ZERO
 
   
-  do ik=1, st%d%nik
+  do ik=st%d%kpt%start, st%d%kpt%end
     do ipair = 1, npairs
 
       ist = list_ij(ipair,1)
@@ -474,6 +474,10 @@ subroutine X(output_me_transition_dipole) (dir, gr, st, list_ij)
 
     end do
   end do
+  
+  call comm_allreduce(st%st_kpt_mpi_grp%comm, me)
+
+  
 
 
   npath = SIZE(gr%sb%kpoints%coord_along_path)
