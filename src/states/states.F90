@@ -2034,7 +2034,8 @@ contains
     FLOAT, pointer :: jp(:, :, :)
     FLOAT, pointer :: tau(:, :)
     CMPLX, allocatable :: wf_psi(:,:), gwf_psi(:,:,:), wf_psi_conj(:,:), lwf_psi(:,:)
-    CMPLX, allocatable :: abs_wf_psi(:), abs_gwf_psi(:), psi_gpsi(:)
+    FLOAT, allocatable :: abs_wf_psi(:), abs_gwf_psi(:)
+    CMPLX, allocatable :: psi_gpsi(:)
     CMPLX   :: c_tmp
     integer :: is, ik, ist, i_dim, st_dim, ii
     FLOAT   :: ww, kpoint(1:MAX_DIM)
