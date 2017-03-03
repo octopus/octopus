@@ -473,6 +473,8 @@ contains
         end if
 
         call parse_block_end(blk)
+      else
+        shifts(1:dim, 1) = -M_HALF                                                                                                                       
       end if
 
       call kpoints_grid_init(dim, this%full, product(this%nik_axis(1:dim))*nshifts, nshifts)
@@ -974,7 +976,7 @@ contains
           ix(idir) = jj / divisor + 1
           jj = mod(jj, divisor)
 
-          kpoints(idir, ik) = (M_TWO*ix(idir) - M_ONE*naxis(idir) -M_TWO + M_TWO*shift(idir,is))*dx(idir)
+          kpoints(idir, ik) = (M_TWO*ix(idir) - M_ONE*naxis(idir) + M_TWO*shift(idir,is))*dx(idir)
           !A default shift of +0.5 is including in case if(mod(naxis(idir), 2) /= 0 )
   
           !bring back point to first Brillouin zone, except for points at 1/2
