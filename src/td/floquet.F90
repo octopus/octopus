@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+    !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -106,32 +106,37 @@ contains
     call parse_variable('TDFloquetMode', 1,this%mode)
 
     if(this%mode==FLOQUET_FROZEN_PHONON) then
-      
-      !%Variable TDFloquetFrozenDistortion
-      !%Type block
-      !%Section Time-Dependent::TD Output
-      !%Description
-      !%
-      !%End
-      if(.not.parse_block('TDFloquetFrozenDistortion', blk) == 0) then
-        write(message(1),'(a)') 'Internal error while reading TDFloquetFrozenDistortion.'
-        call messages_fatal(1)
-      end if
-      if(parse_block_n(blk) /= geo%natoms) then
-         write(message(1),'(a)') 'Please provide in then TDFloquetFrozenDistortion block an'
-         write(message(2),'(a,i3,a)') 'initial distortion for all ',geo%natoms, ' atoms.'
-         call messages_fatal(2)
-      end if
-
-      SAFE_ALLOCATE(this%frozen_distortion(1:geo%natoms,1:geo%space%dim))
-      do ia=1,geo%natoms
-        do idir = 1, geo%space%dim
-          call parse_block_float(blk, ia-1, idir-1,this%frozen_distortion(ia,idir))
-        end do
-      end do
-
-      write(message(1),'(a)') 'Initial distortions given in input file:'
-      call messages_info(1)
+       
+       if(.not.parse_is_defined('IonsTimeDependentDisplacements')) then
+          write(message(1),'(a)') 'Please specify IonsTimeDependentDisplacements in order'
+          write(message(2),'(a)') 'to use TDFloquetMode=frozen_phonon'
+          call messages_fatal(2) 
+       end if
+!      !%Variable TDFloquetFrozenDistortion
+!      !%Type block
+!      !%Section Time-Dependent::TD Output
+!      !%Description
+!      !%
+!      !%End
+!      if(.not.parse_block('TDFloquetFrozenDistortion', blk) == 0) then
+!        write(message(1),'(a)') 'Internal error while reading TDFloquetFrozenDistortion.'
+!        call messages_fatal(1)
+!      end if
+!      if(parse_block_n(blk) /= geo%natoms) then
+!         write(message(1),'(a)') 'Please provide in then TDFloquetFrozenDistortion block an'
+!         write(message(2),'(a,i3,a)') 'initial distortion for all ',geo%natoms, ' atoms.'
+!         call messages_fatal(2)
+!      end if
+!
+!      SAFE_ALLOCATE(this%frozen_distortion(1:geo%natoms,1:geo%space%dim))
+!      do ia=1,geo%natoms
+!        do idir = 1, geo%space%dim
+!          call parse_block_float(blk, ia-1, idir-1,this%frozen_distortion(ia,idir))
+!        end do
+!      end do
+!
+!      write(message(1),'(a)') 'Initial distortions given in input file:'
+!      call messages_info(1)
       ! TODO: print here the values also
     end if
 
@@ -235,6 +240,7 @@ contains
     FLOAT :: time_step, time
     type(scf_t) :: scf ! used for frozen_phonon
     integer :: ia, space_dim
+    type(ion_dynamics_t) :: ions
 !integer :: nik, ist
     FLOAT, allocatable :: frozen_bands(:,:)
 
@@ -255,6 +261,7 @@ contains
     if(this%F%mode == FLOQUET_FROZEN_PHONON) then
        SAFE_ALLOCATE(frozen_bands(1:st%nst,1:gr%sb%kpoints%reduced%npoints))
        frozen_bands(1:st%nst,1:gr%sb%kpoints%reduced%npoints) = M_ZERO
+       call ion_dynamics_init(ions,this%geo)
     end if
 
     ! initialize the instances of the Hamiltonians
@@ -264,23 +271,20 @@ contains
        this%td_hm(it)%F%dt = this%F%dt
 
        SAFE_ALLOCATE(this%td_hm(it)%geo)
-       if(.not.this%F%mode==FLOQUET_INTERACTING) then
-          call geometry_copy(this%td_hm(it)%geo, this%geo)
-
-          ! set flag to prevent species types to be touched, because
-          ! hm%geo is only a pointer to the global geo instance
-          this%td_hm(it)%geo%skip_species_pot_init = .true.
-       end if
 
        select case(this%F%mode)
 
        case(FLOQUET_FROZEN_PHONON) 
          time = it*this%F%dt
          space_dim = this%geo%space%dim
-         do ia=1,this%geo%natoms
-           this%td_hm(it)%geo%atom(ia)%x(1:space_dim) = this%td_hm(it)%geo%atom(ia)%x(1:space_dim) + &
-                                                this%F%frozen_distortion(ia,1:space_dim)*cos(time*this%F%omega)
-         end do
+!         do ia=1,this%geo%natoms
+!           this%td_hm(it)%geo%atom(ia)%x(1:space_dim) = this%td_hm(it)%geo%atom(ia)%x(1:space_dim) + &
+!                                                this%F%frozen_distortion(ia,1:space_dim)*cos(time*this%F%omega)
+!         end do
+         
+         call ion_dynamics_propagate(ions, gr%sb, this%geo, time, M_ZERO)
+         call geometry_copy(this%td_hm(it)%geo, this%geo)
+         this%td_hm(it)%geo%skip_species_pot_init = .true.
 
          call hamiltonian_init(this%td_hm(it), gr, this%td_hm(it)%geo, st, &
                                      sys%ks%theory_level, sys%ks%xc_family,sys%ks%xc_flags)
@@ -309,6 +313,12 @@ contains
 
 
        case(FLOQUET_NON_INTERACTING)
+         call geometry_copy(this%td_hm(it)%geo, this%geo)
+          
+         ! set flag to prevent species types to be touched, because
+         ! hm%geo is only a pointer to the global geo instance
+         this%td_hm(it)%geo%skip_species_pot_init = .true.
+
          call hamiltonian_init(this%td_hm(it), gr, this%td_hm(it)%geo, st, &
                                     sys%ks%theory_level, sys%ks%xc_family,sys%ks%xc_flags)
          time =this%F%Tcycle+ it*this%F%dt ! offset in time to catch switchon cycle
@@ -432,6 +442,7 @@ contains
             write(message(1),'(a)') 'Floquet restart structure not commensurate.'
             call messages_fatal(1)
          end if
+         call states_berry_connection('td.general','floquet_berry_connection',dressed_st, gr,gr%sb)
       else
         ! initialize floquet states from scratch
          SAFE_ALLOCATE(temp_state1(1:gr%der%mesh%np,st%d%dim))
@@ -495,7 +506,7 @@ contains
          filename = 'floquet_multibands_'//trim(adjustl(filename))
          call states_write_bandstructure('td.general', dressed_st%nst, dressed_st, gr%sb, filename)
 
-! this will be replaced with a a call to plot_bandstructure
+!! this will be replaced with a a call to plot_bandstructure
 !if(mpi_world%rank==0) then
 !   file = 987654
 !   write(filename,'(I5)') iter !hm%F_count
@@ -511,6 +522,10 @@ contains
 !   end do
 !   close(file)
 !endif
+      call restart_init(restart, RESTART_FLOQUET, RESTART_TYPE_DUMP, &
+                        dressed_st%dom_st_kpt_mpi_grp, ierr, gr%der%mesh)
+      call states_dump(restart, dressed_st, gr, ierr, iter)
+      call restart_end(restart)
 
          iter = iter +1
       end do
@@ -527,15 +542,9 @@ contains
       
       ! here we might want to do other things with the states...
 
-      ! write states
-      call restart_init(restart, RESTART_FLOQUET, RESTART_TYPE_DUMP, &
-                        dressed_st%dom_st_kpt_mpi_grp, ierr, gr%der%mesh)
-      iter = iter -1
-      call states_dump(restart, dressed_st, gr, ierr, iter)
-
       call states_end(dressed_st)
 
-
+stop 'Regular end of Floquet solver'
 
     end subroutine floquet_hamiltonian_solve
 

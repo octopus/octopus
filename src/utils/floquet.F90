@@ -38,6 +38,7 @@ program oct_floquet
   use io_binary_oct_m
   use io_function_oct_m
   use kick_oct_m
+  use kpoints_oct_m
   use lalg_adv_oct_m
   use loct_oct_m
 !  use local_write_oct_m
@@ -55,6 +56,8 @@ program oct_floquet
   use species_pot_oct_m
   use simul_box_oct_m
   use states_oct_m
+  use states_dim_oct_m
+  use states_io_oct_m
   use states_restart_oct_m
   use system_oct_m
   use unit_oct_m
@@ -87,6 +90,12 @@ program oct_floquet
   logical :: downfolding = .false.
   type(mesh_t) :: mesh
   type(restart_t) :: restart
+  logical :: compute_berry = .false.
+  CMPLX, allocatable :: evec(:,:,:)
+  FLOAT, allocatable :: berry(:,:)
+  FLOAT   :: kpoint1(1:3), kpoint2(1:3), dk1,dk2
+  integer :: npath, nsegment, loop(5), iloop
+  CMPLX :: product
 
   ! the usual initializations
   call global_init(is_serial = .false.)
@@ -213,6 +222,8 @@ contains
 
     mesh = gr%der%mesh
     nst = st%nst
+
+    call parse_variable('ComputeBerryConnectionAlongPath', .false.,compute_berry)
     
     SAFE_ALLOCATE(hmss(1:nst,1:nst))
     SAFE_ALLOCATE( psi(1:nst,1:st%d%dim,1:mesh%np))
@@ -329,13 +340,19 @@ contains
       SAFE_ALLOCATE(eigenval(1:nst*Fdim))
       SAFE_ALLOCATE(bands(1:nik,1:nst*Fdim))
       SAFE_ALLOCATE(temp(1:nst*Fdim, 1:nst*Fdim))
+      if(compute_berry) then
+         SAFE_ALLOCATE(berry(1:nst*Fdim,1:st%d%nik))
+         berry = M_ZERO
+         SAFE_ALLOCATE(evec(1:st%d%nik,1:nst*Fdim, 1:nst*Fdim))
+         evec = M_ZERO
+      end if
 
       do ik=1,nik
          temp(1:nst*Fdim,1:nst*Fdim) = HFloquet(ik,1:nst*Fdim,1:nst*Fdim)
          call lalg_eigensolve(nst*Fdim, temp, eigenval)
          bands(ik,1:nst*Fdim) = eigenval(1:nst*Fdim)
+         if(compute_berry) evec(ik,1:nst*Fdim,1:nst*Fdim) = temp(1:nst*Fdim,1:nst*Fdim) 
       end do
-    end if
 
     !write bandstructure to file
     if(downfolding) then
@@ -384,6 +401,50 @@ contains
         close(file)
       endif
      end if
+
+     if(compute_berry) then
+        npath = SIZE(gr%sb%kpoints%coord_along_path)
+        if(mod(npath-1,2) /= 0) then
+           print *, 'npath', npath-1
+           message(1) = 'Found odd number of k-point in path. For Berry calculation need a double path'
+           call messages_fatal(1)
+        else
+           nsegment = (npath)/2
+        end if
+
+        ! get k-spacing along the path
+        kpoint1(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, st%d%nik-npath+1 ), &
+          absolute_coordinates=.false.)
+        kpoint2(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, st%d%nik-npath+2), &
+          absolute_coordinates=.false.)
+        dk1 = sqrt(dot_product(kpoint1-kpoint2,kpoint1-kpoint2))
+
+        kpoint1(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, st%d%nik-npath+1 ), &
+             absolute_coordinates=.false.)
+        kpoint2(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, st%d%nik-npath+1+nsegment), &
+             absolute_coordinates=.false.)
+        dk2 = sqrt(dot_product(kpoint1-kpoint2,kpoint1-kpoint2))
+        write(message(1),'(a,e12.6,a,e12.6)')  'Berry: Found k-path spacings ', dk1,' ',dk2
+        call messages_info(1)
+print *, npath, nsegment, st%d%nik
+        ! for each band go through path and compute the loop product of states
+        loop = (/0,1,nsegment,nsegment-1,0/)
+        do ist=st%st_start,st%st_end
+           do ik = st%d%nik-npath+1, st%d%nik-nsegment
+              product = M_ONE
+              do iloop=1,4
+                 product = product*dot_product(evec(ik+loop(iloop),ist,:),evec(ik+loop(iloop+1),ist,:))
+              end do
+              berry(ist,ik) = -aimag(log(product))/(dk1*dk2)
+           end do
+        end do
+        
+        ! overwrite eigenvalue array of state object for easy output
+        st%eigenval(1:st%nst,1:gr%sb%kpoints%reduced%npoints) = berry(1:st%nst,1:gr%sb%kpoints%reduced%npoints)
+        call states_write_bandstructure('.', st%nst, st, gr%sb, 'floquet_util_berry_connection')
+     end if
+    
+  end if
   
     ! reset time in Hamiltonian
     call hamiltonian_update(hm,gr%mesh,time=M_ZERO)
@@ -396,7 +457,10 @@ contains
     SAFE_DEALLOCATE_A(eigenval)
     SAFE_DEALLOCATE_A(bands)
     SAFE_DEALLOCATE_A(temp)
-
+    if(compute_berry) then
+       SAFE_DEALLOCATE_A(evec)
+       SAFE_DEALLOCATE_A(berry)
+    endif
     POP_SUB(solve_non_interacting)
 
   end subroutine floquet_solve_non_interacting
