@@ -436,6 +436,7 @@ subroutine X(output_me_transition_dipole) (dir, gr, st, list_ij)
   integer ist, jst, ik, nst, npath, iunit, idim, idir, npairs, ipair
   R_TYPE, allocatable :: me(:,:,:)
   R_TYPE, allocatable :: psii(:, :), psij(:, :), grad_psi(:,:,:)
+  CMPLX, allocatable :: idj(:)
   FLOAT   :: red_kpoint(1:MAX_DIM)
   character (len=1024) :: filename
   
@@ -448,6 +449,8 @@ subroutine X(output_me_transition_dipole) (dir, gr, st, list_ij)
   SAFE_ALLOCATE(psii(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(psij(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(grad_psi(1:gr%mesh%np_part, 1:st%d%dim, 1:gr%mesh%sb%dim))
+  SAFE_ALLOCATE(idj(1:gr%mesh%np_part))
+  
 
   SAFE_ALLOCATE(me(1:npairs, 1:st%d%nik, 1:gr%mesh%sb%dim))
   me(:,:,:) = M_ZERO
@@ -465,8 +468,8 @@ subroutine X(output_me_transition_dipole) (dir, gr, st, list_ij)
       call X(derivatives_grad)(gr%der, psii(:,1), grad_psi(:,1,:))
     
       do idim = 1, gr%sb%dim
-        psii(:,1) = - M_zI * R_CONJ(psij(:,1)) * grad_psi(:,1,idim)
-        me(ipair,ik,idim) = X(mf_integrate)(gr%mesh, psii(:, 1))
+        idj(:) = - M_zI * R_CONJ(psij(:,1)) * grad_psi(:,1,idim)
+        me(ipair,ik,idim) = zmf_integrate(gr%mesh, idj(:))
       end do
 
     end do

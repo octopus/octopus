@@ -160,7 +160,11 @@ contains
           call parse_block_integer(blk, i-1, 1, this%list_ij(i,2))
         end do
       else 
-        !bullshit
+        SAFE_ALLOCATE(this%list_ij(1:1,1:2))
+        this%list_ij(1,:)=(/1,1/)
+        message(1) = "No OutputMEDipoleIndices specified."
+        message(2) = "OutputMatrixElements = ks_transition_dipole will produce garbage."
+        call messages_warning(2)
 
       end if
       
