@@ -557,6 +557,11 @@ contains
       call current_end(outp%current_calculator)
     end if
 
+    if(iand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
+      call output_me_end(outp%me)
+    end if
+
+
     POP_SUB(output_end)
 
   end subroutine output_end
