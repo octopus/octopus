@@ -25,6 +25,7 @@ module output_oct_m
   use base_states_oct_m
   use basins_oct_m
   use batch_oct_m
+  use comm_oct_m 
   use cube_function_oct_m
   use cube_oct_m
   use current_oct_m
@@ -539,7 +540,9 @@ contains
     !% the last direction for linear-response quantities, and a following +/- indicates the sign of the frequency.
     !% Example: <tt>current_kpt</tt>
     !%Option current_kpt  bit(0)
-    !% Outputs the current density resolved in k-points. The output file is called <tt>current_kpt-</tt>.
+    !% Outputs the current density resolved in momentum space. The output file is called <tt>current_kpt-</tt>.
+    !%Option density_kpt bit(1)
+    !% Outputs the electronic density resolved in momentum space. 
     !%End
     call parse_variable('Output_KPT', 0, outp%whatBZ)
 
@@ -622,7 +625,7 @@ contains
     end if
     
     call output_states(st, gr, geo, dir, outp)
-    call output_hamiltonian(hm, st, gr%der, dir, outp, geo, st%st_kpt_mpi_grp)
+    call output_hamiltonian(hm, st, gr%der, dir, outp, geo, gr, st%st_kpt_mpi_grp)
     call output_localization_funct(st, hm, gr, dir, outp, geo)
     call output_current_flow(gr, st, dir, outp)
 

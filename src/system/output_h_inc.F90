@@ -17,16 +17,17 @@
 !!
 
   ! ---------------------------------------------------------
-  subroutine output_hamiltonian(hm, st, der, dir, outp, geo, grp)
+  subroutine output_hamiltonian(hm, st, der, dir, outp, geo, gr, grp)
     type(hamiltonian_t),       intent(in)    :: hm
     type(states_t),            intent(inout) :: st
     type(derivatives_t),       intent(inout) :: der
     character(len=*),          intent(in)    :: dir
     type(output_t),            intent(in)    :: outp
     type(geometry_t),          intent(in)    :: geo
+    type(grid_t),              intent(in)    :: gr
     type(mpi_grp_t), optional, intent(in)    :: grp !< the group that shares the same data, must contain the domains group
 
-    integer :: is, err, idir, ispin, ik
+    integer :: is, err, idir, ispin, ik, ib
     character(len=MAX_PATH_LEN) :: fname
     type(base_potential_iterator_t)        :: iter
     type(base_potential_t),        pointer :: subsys_external
@@ -36,6 +37,8 @@
     FLOAT,         dimension(:,:), pointer :: tnadd_potential
     FLOAT, allocatable :: v0(:,:), nxc(:), potential(:)
     FLOAT, allocatable :: current_kpt(:, :)
+    FLOAT, allocatable :: density_kpt(:), density_tmp(:,:)
+    type(density_calc_t) :: dens_calc
 
     PUSH_SUB(output_hamiltonian)
 
@@ -218,6 +221,35 @@
         message(1) = 'No current density output for real states since it is identically zero.'
         call messages_warning(1)
       end if
+    end if
+
+    if(iand(outp%whatBZ, OPTION__OUTPUT_KPT__DENSITY_KPT) /= 0) then
+      SAFE_ALLOCATE(density_kpt(1:st%d%nik))
+      density_kpt(1:st%d%nik) = M_ZERO
+
+      SAFE_ALLOCATE(density_tmp(1:gr%fine%mesh%np, st%d%nspin))
+
+      do ik = st%d%kpt%start,st%d%kpt%end
+        call density_calc_init(dens_calc, st, gr, density_tmp)
+        do ib = st%group%block_start, st%group%block_end
+          call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
+        end do
+ 
+        density_kpt(ik) = M_ZERO
+        do is = 1, st%d%nspin
+          density_kpt(ik) = density_kpt(ik) + dmf_integrate(der%mesh, density_tmp(:,is))
+        end do
+      end do
+
+   #if defined(HAVE_MPI)        
+      if(st%parallel_in_states .or. st%d%kpt%parallel) then
+        call comm_allreduce(st%st_kpt_mpi_grp%comm, density_kpt)
+      end if
+   #endif  
+
+      call io_function_output_global_BZ(outp%how, dir, "density_kpt", gr%mesh, density_kpt, unit_one, err)
+      SAFE_DEALLOCATE_A(density_tmp)
+      SAFE_DEALLOCATE_A(density_kpt)
     end if
  
     POP_SUB(output_hamiltonian)
