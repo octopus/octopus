@@ -106,38 +106,11 @@ contains
     call parse_variable('TDFloquetMode', 1,this%mode)
 
     if(this%mode==FLOQUET_FROZEN_PHONON) then
-       
        if(.not.parse_is_defined('IonsTimeDependentDisplacements')) then
           write(message(1),'(a)') 'Please specify IonsTimeDependentDisplacements in order'
           write(message(2),'(a)') 'to use TDFloquetMode=frozen_phonon'
           call messages_fatal(2) 
        end if
-!      !%Variable TDFloquetFrozenDistortion
-!      !%Type block
-!      !%Section Time-Dependent::TD Output
-!      !%Description
-!      !%
-!      !%End
-!      if(.not.parse_block('TDFloquetFrozenDistortion', blk) == 0) then
-!        write(message(1),'(a)') 'Internal error while reading TDFloquetFrozenDistortion.'
-!        call messages_fatal(1)
-!      end if
-!      if(parse_block_n(blk) /= geo%natoms) then
-!         write(message(1),'(a)') 'Please provide in then TDFloquetFrozenDistortion block an'
-!         write(message(2),'(a,i3,a)') 'initial distortion for all ',geo%natoms, ' atoms.'
-!         call messages_fatal(2)
-!      end if
-!
-!      SAFE_ALLOCATE(this%frozen_distortion(1:geo%natoms,1:geo%space%dim))
-!      do ia=1,geo%natoms
-!        do idir = 1, geo%space%dim
-!          call parse_block_float(blk, ia-1, idir-1,this%frozen_distortion(ia,idir))
-!        end do
-!      end do
-!
-!      write(message(1),'(a)') 'Initial distortions given in input file:'
-!      call messages_info(1)
-      ! TODO: print here the values also
     end if
 
     !%Variable TDFloquetFrequency
@@ -241,7 +214,6 @@ contains
     type(scf_t) :: scf ! used for frozen_phonon
     integer :: ia, space_dim
     type(ion_dynamics_t) :: ions
-!integer :: nik, ist
     FLOAT, allocatable :: frozen_bands(:,:)
 
 
@@ -249,9 +221,6 @@ contains
 
     mesh = gr%der%mesh
     nst = st%nst
-
-    !for now no domain distributionallowed
-!    ASSERT(mesh%np == mesh%np_global)
 
     ! the Hamiltonain gets assigned an array of td-Hamiltonians
     ! this is a bit recursive, so maybe there should be a Flqoeut moduel or something
@@ -277,10 +246,6 @@ contains
        case(FLOQUET_FROZEN_PHONON) 
          time = it*this%F%dt
          space_dim = this%geo%space%dim
-!         do ia=1,this%geo%natoms
-!           this%td_hm(it)%geo%atom(ia)%x(1:space_dim) = this%td_hm(it)%geo%atom(ia)%x(1:space_dim) + &
-!                                                this%F%frozen_distortion(ia,1:space_dim)*cos(time*this%F%omega)
-!         end do
          
          call ion_dynamics_propagate(ions, gr%sb, this%geo, time, M_ZERO)
          call geometry_copy(this%td_hm(it)%geo, this%geo)
@@ -293,24 +258,14 @@ contains
          call scf_init(scf,gr,this%td_hm(it)%geo,st,this%td_hm(it))
          call scf_run(scf,sys%mc,gr,this%td_hm(it)%geo,st,sys%ks,this%td_hm(it),sys%outp, gs_run=.false.)
          call scf_end(scf)
-         
 
          frozen_bands(1:st%nst,1:gr%sb%kpoints%reduced%npoints) = &
-              frozen_bands(1:st%nst,1:gr%sb%kpoints%reduced%npoints) + M_ONE/this%F%nT*st%eigenval(1:st%nst,1:gr%sb%kpoints%reduced%npoints)
+              frozen_bands(1:st%nst,1:gr%sb%kpoints%reduced%npoints) + &
+                     M_ONE/this%F%nT*st%eigenval(1:st%nst,1:gr%sb%kpoints%reduced%npoints)
 
          write(filename,'(I5)') it
          filename = 'BO_bands_'//trim(adjustl(filename))
          call states_write_bandstructure('td.general', st%nst, st, gr%sb, filename)
-!         open(unit=98765,file=filename)
-!         nik=gr%sb%kpoints%nik_skip
-!         do ik=gr%sb%kpoints%reduced%npoints-nik+1,gr%sb%kpoints%reduced%npoints
-!            do ist=1,st%nst
-!               write(98765,'(e12.6, 1x)',advance='no') st%eigenval(ist, ik)
-!            end do
-!            write(98765,'(1x)')
-!         end do
-!         close(98765)
-
 
        case(FLOQUET_NON_INTERACTING)
          call geometry_copy(this%td_hm(it)%geo, this%geo)
@@ -341,16 +296,6 @@ contains
         st%eigenval(1:st%nst,1:gr%sb%kpoints%reduced%npoints) = frozen_bands(1:st%nst,1:gr%sb%kpoints%reduced%npoints)
         filename = 'frozen_bands'
         call states_write_bandstructure('td.general', st%nst, st, gr%sb, filename)
-!        open(unit=98765,file='frozen_bands')
-!        nik=gr%sb%kpoints%nik_skip
-!        do ik=gr%sb%kpoints%reduced%npoints-nik+1,gr%sb%kpoints%reduced%npoints
-!           do ist=1,st%nst
-!              write(98765,'(e12.6, 1x)',advance='no') frozen_bands(ist, ik)
-!           end do
-!           write(98765,'(1x)')
-!        end do
-!        close(98765)
-        
      end if
 
 
@@ -444,47 +389,49 @@ contains
          end if
          call states_berry_connection('td.general','floquet_berry_connection',dressed_st, gr,gr%sb)
       else
-        ! initialize floquet states from scratch
-         SAFE_ALLOCATE(temp_state1(1:gr%der%mesh%np,st%d%dim))
-         SAFE_ALLOCATE(temp_state2(1:gr%der%mesh%np,hm%F%floquet_dim))
+         ! only use gs states for init, if they are not distributed
+         if(st%st_end-st%st_start+1==st%nst) then
+            ! initialize floquet states from scratch
+            SAFE_ALLOCATE(temp_state1(1:gr%der%mesh%np,st%d%dim))
+            SAFE_ALLOCATE(temp_state2(1:gr%der%mesh%np,hm%F%floquet_dim))
          
-         do ik=st%d%kpt%start,st%d%kpt%end
-            do in=1,hm%F%floquet_dim
-               do ist=st%st_start,st%st_end
-                  call states_get_state(st,gr%der%mesh,ist,ik,temp_state1)
-                  temp_state2(:,:) = M_ZERO
-                  do idim=1,st%d%dim
-                     temp_state2(1:gr%der%mesh%np,(in-1)*st%d%dim+idim) = temp_state1(1:gr%der%mesh%np,idim)
-                  end do
-                  call states_set_state(dressed_st,gr%der%mesh, (in-1)*st%nst+ist, ik,temp_state2)
+            do ik=st%d%kpt%start,st%d%kpt%end
+               do in=1,hm%F%floquet_dim
+                  do ist=st%st_start,st%st_end
+                     call states_get_state(st,gr%der%mesh,ist,ik,temp_state1)
+                     temp_state2(:,:) = M_ZERO
+                     do idim=1,st%d%dim
+                        temp_state2(1:gr%der%mesh%np,(in-1)*st%d%dim+idim) = temp_state1(1:gr%der%mesh%np,idim)
+                     end do
+                     call states_set_state(dressed_st,gr%der%mesh, (in-1)*st%nst+ist, ik,temp_state2)
+                  enddo
                enddo
             enddo
-         enddo
+            SAFE_DEALLOCATE_A(temp_state1)
+            SAFE_DEALLOCATE_A(temp_state2)
+         else
+            ! randomize
+            SAFE_ALLOCATE(temp_state1(1:gr%der%mesh%np,st%d%dim))
+            SAFE_ALLOCATE(temp_state2(1:gr%der%mesh%np,hm%F%floquet_dim))
+            do ik=st%d%kpt%start,st%d%kpt%end
+               do ist=dressed_st%st_start,dressed_st%st_end
 
-! this is for random init, needed for state parallel
-!         do ik=st%d%kpt%start,st%d%kpt%end
-!            do ist=dressed_st%st_start,dressed_st%st_end
-!               if(dressed_st%randomization == PAR_INDEPENDENT) then
-!                  call zmf_random(gr%der%mesh, temp_state1(:, 1), gr%der%mesh%vp%xlocal-1, normalized = .true.)
-!               else
-!                  call zmf_random(gr%der%mesh, temp_state1(:, 1), normalized = .true.)
-!               end if
-!               temp_state2(:,:) = M_ZERO
-!               ! which floquet-block does ist belong to?
-!               if(mod(ist,st%nst) == 0) then
-!                  in = ist/st%nst 
-!               else ! this is rounded down
-!                  in = ist/st%nst + 1
-!               endif
-!               do idim=1,st%d%dim
-!                  temp_state2(1:gr%der%mesh%np,(in-1)*st%d%dim+idim) = temp_state1(1:gr%der%mesh%np,idim)
-!               end do
-!               call states_set_state(dressed_st,gr%der%mesh, ist, ik,temp_state2)
-!            enddo
-!         enddo
-         
-         SAFE_DEALLOCATE_A(temp_state1)
-         SAFE_DEALLOCATE_A(temp_state2)
+                  do in=1,hm%F%floquet_dim  
+                     if(dressed_st%randomization == PAR_INDEPENDENT) then
+                        call zmf_random(gr%der%mesh, temp_state2(:,in), gr%der%mesh%vp%xlocal-1, &
+                             seed=mpi_world%rank, normalized= .true.)
+                     else
+                        call zmf_random(gr%der%mesh, temp_state2(:, in),seed=mpi_world%rank,normalized = .true.)
+                     end if
+                  enddo
+
+                  call states_set_state(dressed_st,gr%der%mesh, ist, ik,temp_state2)
+               end do
+            enddo
+            SAFE_DEALLOCATE_A(temp_state1)
+            SAFE_DEALLOCATE_A(temp_state2)
+         end if
+
       end if
 
       call restart_end(restart)
@@ -505,27 +452,10 @@ contains
          write(filename,'(I5)') iter !hm%F_count
          filename = 'floquet_multibands_'//trim(adjustl(filename))
          call states_write_bandstructure('td.general', dressed_st%nst, dressed_st, gr%sb, filename)
-
-!! this will be replaced with a a call to plot_bandstructure
-!if(mpi_world%rank==0) then
-!   file = 987654
-!   write(filename,'(I5)') iter !hm%F_count
-!   filename = 'floquet_multibands_'//trim(adjustl(filename))
-!   open(unit=file,file=filename)
-!   ! we are only interested in k-points with zero weight
-!   nik=gr%sb%kpoints%nik_skip
-!   do ik=gr%sb%kpoints%reduced%npoints-nik+1,gr%sb%kpoints%reduced%npoints
-!      do ist=1,dressed_st%nst
-!         write(file,'(e12.6, 1x)',advance='no') dressed_st%eigenval(ist, ik)
-!      end do
-!      write(file,'(1x)')
-!   end do
-!   close(file)
-!endif
-      call restart_init(restart, RESTART_FLOQUET, RESTART_TYPE_DUMP, &
-                        dressed_st%dom_st_kpt_mpi_grp, ierr, gr%der%mesh)
-      call states_dump(restart, dressed_st, gr, ierr, iter)
-      call restart_end(restart)
+         call restart_init(restart, RESTART_FLOQUET, RESTART_TYPE_DUMP, &
+              dressed_st%dom_st_kpt_mpi_grp, ierr, gr%der%mesh)
+         call states_dump(restart, dressed_st, gr, ierr, iter)
+         call restart_end(restart)
 
          iter = iter +1
       end do
