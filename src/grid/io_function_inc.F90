@@ -1679,7 +1679,7 @@ subroutine X(io_function_output_global_BZ) (how, dir, fname, mesh, ff, unit, ier
   subroutine out_plane(d1, d2, d3)
     integer, intent(in) :: d1, d2, d3
 
-    integer :: ik
+    integer :: ik, dim
     FLOAT   :: kk(1:MAX_DIM)
     R_TYPE  :: fu
 
@@ -1690,8 +1690,12 @@ subroutine X(io_function_output_global_BZ) (how, dir, fname, mesh, ff, unit, ier
 
     write(iunit, mfmtheader, iostat=ierr) '#', index2axisBZ(d2), index2axisBZ(d3), 'Re', 'Im'
 
+    kk(1:MAX_DIM) = M_ZERO
+    dim = mesh%sb%kpoints%reduced%dim
+
     do ik = 1, mesh%sb%kpoints%reduced%npoints
-      kk = units_from_atomic(units_out%length**(-1), mesh%sb%kpoints%reduced%point1BZ(:,ik))
+      kk(1:dim) = units_from_atomic(units_out%length**(-1), &
+                         mesh%sb%kpoints%reduced%point1BZ(1:dim,ik))
       if(abs(kk(d1)) < CNST(1.0e-6)) then
         fu = units_from_atomic(unit, ff(ik))
         write(iunit, mformat, iostat=ierr)  &
