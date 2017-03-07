@@ -1086,15 +1086,20 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
     os => this%orbsets(iorbset)
     if( os%norbs > this%maxnorbs ) this%maxnorbs = os%norbs
 
+    nullify(os%phase)
     ! In case of complex wavefunction, we allocate the array for the phase correction
   #ifdef R_TCOMPLEX
     SAFE_ALLOCATE(os%phase(1:os%sphere%np, st%d%kpt%start:st%d%kpt%end))
     os%phase(:,:) = M_ZERO
+  #endif
+
     do iorb = 1, os%norbs
+      nullify(os%orbitals(iorb)%eorb)
+  #ifdef R_TCOMPLEX
       SAFE_ALLOCATE(os%orbitals(iorb)%eorb(1:os%sphere%np, st%d%kpt%start:st%d%kpt%end))
       os%orbitals(iorb)%eorb(:,:) = M_ZERO
-    end do
   #endif
+    end do
     ! We need to know the maximum number of points in order to allocate a temporary array
     ! to apply the phase in lda_u_apply
     if(os%sphere%np > this%max_np) this%max_np = os%sphere%np
