@@ -33,6 +33,9 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
   R_TYPE, allocatable :: psi(:,:), hpsi(:,:)
   R_TYPE, allocatable :: dot(:)
   type(orbital_set_t), pointer  :: os, os2
+  type(profile_t), save :: prof
+
+  call profiling_in(prof, "DFTU_APPLY")
 
   PUSH_SUB(lda_u_apply)
 
@@ -152,6 +155,7 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
   SAFE_DEALLOCATE_A(dot)
 
   POP_SUB(lda_u_apply)
+  call profiling_out(prof)
 
 end subroutine X(lda_u_apply)
 
@@ -172,6 +176,9 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
   FLOAT   :: weight
   R_TYPE  :: renorm_weight
   type(orbital_set_t), pointer :: os
+  type(profile_t), save :: prof
+
+  call profiling_in(prof, "DFTU_OCC_MATRICES")
   
   PUSH_SUB(update_occ_matrices)
 
@@ -294,6 +301,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
   call X(lda_u_update_potential)(this,st)
 
   POP_SUB(update_occ_matrices)
+  call profiling_out(prof)
 end subroutine X(update_occ_matrices)
 
 ! ---------------------------------------------------------
@@ -336,6 +344,9 @@ subroutine X(lda_u_update_potential)(this, st)
   type(states_t), intent(in)      :: st
 
   integer :: ios, im, ispin, norbs
+  type(profile_t), save :: prof
+
+  call profiling_in(prof, "DFTU_POTENTIAL")
 
   PUSH_SUB(lda_u_update_potential)
 
@@ -360,6 +371,7 @@ subroutine X(lda_u_update_potential)(this, st)
   end if
 
   POP_SUB(lda_u_update_potential)
+  call profiling_out(prof)
 end subroutine X(lda_u_update_potential)
 
 ! ---------------------------------------------------------
@@ -789,6 +801,9 @@ end subroutine X(compute_coulomb_integrals)
    R_TYPE, allocatable :: epsi(:,:)
    type(orbital_set_t), pointer  :: os 
    R_TYPE  :: reduced
+   type(profile_t), save :: prof
+
+   call profiling_in(prof, "DFTU_COMMUTE_R")
 
    PUSH_SUB(lda_u_commute_r)
 
@@ -921,7 +936,8 @@ end subroutine X(compute_coulomb_integrals)
    SAFE_DEALLOCATE_A(epsi)
    SAFE_DEALLOCATE_A(dot)
 
-    POP_SUB(lda_u_commute_r)
+   POP_SUB(lda_u_commute_r)
+   call profiling_out(prof)
  end subroutine X(lda_u_commute_r)
 
 ! ---------------------------------------------------------
