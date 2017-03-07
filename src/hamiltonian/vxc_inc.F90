@@ -69,7 +69,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
 
   integer :: ib, ip, isp, families, ixc, spin_channels, is, idir, ipstart, ipend
   FLOAT   :: rr, energy(1:2)
-  logical :: gga, mgga, libvdwxc
+  logical :: gga, mgga, mgga_withexc, libvdwxc
   type(profile_t), save :: prof, prof_libxc
   logical :: calc_energy
   type(xc_functl_t), pointer :: functl(:)
@@ -109,6 +109,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   ! initialize a couple of handy variables
   gga  = family_is_gga(xcs%family)
   mgga = family_is_mgga(xcs%family)
+  mgga_withexc = family_is_mgga_with_exc(xcs, ispin)
   if(mgga) then
     ASSERT(gga)
   end if
@@ -302,7 +303,8 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
         ! XXXXX does this work correctly when functionals belong to
         ! different families and only one is mgga?
         call copy_local_to_global(l_dedldens, dedldens, n_block, spin_channels, ip)
-        call copy_local_to_global(l_dedtau, vtau, n_block, spin_channels, ip)
+        if(iand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC) /= 0 ) &
+          call copy_local_to_global(l_dedtau, vtau, n_block, spin_channels, ip)
       end if
 
     end do functl_loop
@@ -364,6 +366,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
       if(mgga) then
         do isp = 1, spin_channels
           call distributed_allgather(distribution, dedldens(:, isp))
+          if(mgga_withexc) &
           call distributed_allgather(distribution, vtau(:, isp))
         end do
       end if
@@ -383,7 +386,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   end if
 
   ! Definition of tau in libxc is different, so we need to divide vtau by a factor of two
-  if (present(vtau)) vtau = vtau / M_TWO
+  if (present(vtau) .and. mgga_withexc) vtau = vtau / M_TWO
 
   if(present(deltaxc)) deltaxc = M_ZERO
 
@@ -808,13 +811,32 @@ end subroutine xc_get_vxc
     family_is_mgga = iand(family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0
   end function family_is_mgga
 
-  pure logical function family_is_mgga_with_exc(family, flags)
-    integer, intent(in) :: family
-    integer, intent(in) :: flags
-   
-    family_is_mgga_with_exc = (iand(family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0 ) &
-                        .and. (iand(flags, XC_FLAGS_HAVE_EXC) /= 0 )
+  logical function family_is_mgga_with_exc(xcs, ispin)
+    type(xc_t),    target,  intent(in)    :: xcs
+    integer,                intent(in)    :: ispin
 
+    type(xc_functl_t), pointer :: functl(:)
+    integer :: ixc  
+
+    PUSH_SUB(family_is_mgga_with_exc)
+
+    !Pointer-shortcut for xcs%functional
+    !It helps to remember that for xcs%functional(:,:)
+    ! (1,:) => exchange,    (2,:) => correlation
+    ! (:,1) => unpolarized, (:,2) => polarized
+    if(ispin == UNPOLARIZED) then
+      functl => xcs%functional(:, 1)
+    else
+      functl => xcs%functional(:, 2)
+    end if
+
+    family_is_mgga_with_exc = .false.
+    do ixc = 1, 2
+        if((iand(functl(ixc)%family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) &
+           .and. (iand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC) /= 0 )) family_is_mgga_with_exc = .true.
+    end do
+
+    POP_SUB(family_is_mgga_with_exc)
   end function family_is_mgga_with_exc
 
 ! -----------------------------------------------------

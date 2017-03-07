@@ -50,6 +50,7 @@ module run_oct_m
   use unocc_oct_m
   use varinfo_oct_m
   use vdw_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -157,7 +158,7 @@ contains
       call subsystems_get(sys%subsys_handle, subsys_hm)
       ASSERT(associated(subsys_hm))
       call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, &
-                              sys%ks%xc_flags, subsys_hm)
+                       sys%ks%xc_flags, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin), subsys_hm)
       nullify(subsys_hm)
 
       ! At present, PCM calculations in parallel must have ParallelizationStrategy = par_states
@@ -168,7 +169,7 @@ contains
       end if
     else
       call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, &
-                               sys%ks%xc_family, sys%ks%xc_flags)
+            sys%ks%xc_family, sys%ks%xc_flags, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
 
       if (hm%pcm%run_pcm) then 
         if ( (sys%mc%par_strategy /= P_STRATEGY_SERIAL).and.(sys%mc%par_strategy /= P_STRATEGY_STATES) ) then
