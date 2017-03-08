@@ -337,8 +337,28 @@ contains
       call accel_set_kernel_arg(kernel_operate, 5, log2(eff_size))
       call accel_set_kernel_arg(kernel_operate, 6, fo%pack%buffer)
       call accel_set_kernel_arg(kernel_operate, 7, log2(eff_size))
+
       iarg = 7
 
+      npoints = op%mesh%np
+      if(op%mesh%parallel_in_domains) then
+        iarg = iarg + 1
+        select case(points_)
+        case(OP_INNER)
+          npoints = op%ninner
+          call accel_set_kernel_arg(kernel_operate, 0, op%ninner)
+          call accel_set_kernel_arg(kernel_operate, iarg, op%buff_inner)
+        case(OP_OUTER)
+          npoints = op%nouter
+          call accel_set_kernel_arg(kernel_operate, 0, op%nouter)
+          call accel_set_kernel_arg(kernel_operate, iarg, op%buff_outer)
+        case(OP_ALL)
+          call accel_set_kernel_arg(kernel_operate, iarg, op%buff_all)
+        case default
+          ASSERT(.false.)
+        end select
+      end if
+      
       if(accel_use_shared_mem()) then
         local_mem_size = accel_local_memory_size()
         isize = int(dble(local_mem_size)/(op%stencil%size*types_get_size(TYPE_INTEGER)))
@@ -365,25 +385,6 @@ contains
         call accel_set_kernel_arg(kernel_operate, iarg, TYPE_INTEGER, isize*op%stencil%size)
       end if
 
-      npoints = op%mesh%np
-      if(op%mesh%parallel_in_domains) then
-        iarg = iarg + 1
-        select case(points_)
-        case(OP_INNER)
-          npoints = op%ninner
-          call accel_set_kernel_arg(kernel_operate, 0, op%ninner)
-          call accel_set_kernel_arg(kernel_operate, iarg, op%buff_inner)
-        case(OP_OUTER)
-          npoints = op%nouter
-          call accel_set_kernel_arg(kernel_operate, 0, op%nouter)
-          call accel_set_kernel_arg(kernel_operate, iarg, op%buff_outer)
-        case(OP_ALL)
-          call accel_set_kernel_arg(kernel_operate, iarg, op%buff_all)
-        case default
-          ASSERT(.false.)
-        end select
-      end if
-      
       call accel_kernel_run(kernel_operate, (/eff_size, pad(op%mesh%np, bsize)/), (/eff_size, isize/))
 
       call profiling_count_transfers(npoints*(op%stencil%size + 2), isize)
