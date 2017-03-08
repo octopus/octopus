@@ -294,7 +294,7 @@ contains
 
     call propagator_init(sys%gr, sys%st, td%tr, &
       ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(hm%ep%gfield), &
-          family_is_mgga_with_exc(hm%xc_family, hm%xc_flags))
+          hm%family_is_mgga_with_exc)
     if(hm%ep%no_lasers>0.and.mpi_grp_is_root(mpi_world)) then
       call messages_print_stress(stdout, "Time-dependent external fields")
       call laser_write_info(hm%ep%lasers, stdout, td%dt, td%max_iter)
@@ -717,6 +717,11 @@ contains
         write(message(1),'(a)') 'Info: Freezing Hartree and exchange-correlation potentials.'
         call messages_info(1)
         call v_ks_freeze_hxc(sys%ks)
+
+        !In this case we should reload GS wavefunctions 
+        if(.not.fromScratch) then
+          call messages_not_implemented("TDFreezeOccupations with FromScratch=no")
+        end if
       end if
 
       x = minval(st%eigenval(st%st_start, :))

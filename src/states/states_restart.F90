@@ -819,6 +819,8 @@ contains
       call messages_info(1)
     end if
 
+    call restart_block_signals()
+
     !write the densities
     iunit = restart_open(restart, 'density')
     lines(1) = '#     #spin    #nspin    filename'
@@ -850,16 +852,17 @@ contains
         if(st%cmplxscl%space) then
           zrho_fine(:) = st%zrho%Re(:,isp) + M_zI*st%zrho%Im(:,isp)
           call zmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, zrho_fine, zrho, INJECTION)
-          call zrestart_write_mesh_function(restart, filename, gr%mesh, zrho, err)
+          call zrestart_write_mesh_function(restart, filename, gr%mesh, zrho, err, use_mpi_grp = .true.)
         else
           call dmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, st%rho(:,isp), rho, INJECTION)
-          call drestart_write_mesh_function(restart, filename, gr%mesh, rho, err)
+          call drestart_write_mesh_function(restart, filename, gr%mesh, rho, err, use_mpi_grp = .true.)
         end if
       else
         if(st%cmplxscl%space) then
-          call zrestart_write_mesh_function(restart, filename, gr%mesh, st%zrho%Re(:,isp)+M_zI*st%zrho%Im(:,isp), err)
+          call zrestart_write_mesh_function(restart, filename, gr%mesh, st%zrho%Re(:,isp)+M_zI*st%zrho%Im(:,isp), &
+                                                                                       err, use_mpi_grp = .true.)
         else
-          call drestart_write_mesh_function(restart, filename, gr%mesh, st%rho(:,isp), err)
+          call drestart_write_mesh_function(restart, filename, gr%mesh, st%rho(:,isp), err, use_mpi_grp = .true.)
         end if
       end if
       if (err /= 0) err2(2) = err2(2) + 1
@@ -885,6 +888,8 @@ contains
       if (err /= 0) ierr = ierr + 16
     end if
     call restart_close(restart, iunit)
+
+    call restart_unblock_signals()
 
     if (debug%info) then
       message(1) = "Debug: Writing density restart done."
