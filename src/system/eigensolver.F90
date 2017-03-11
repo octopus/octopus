@@ -87,6 +87,7 @@ module eigensolver_oct_m
     integer :: rmmdiis_minimization_iter
 
     logical :: save_mem
+    logical :: skip_finite_weight_kpoints
   end type eigensolver_t
 
 
@@ -520,6 +521,15 @@ contains
 
     call messages_print_stress(stdout)
 
+    !%Variable EigensolverSkipKpoints
+    !%Type logical
+    !%Section SCF::Eigensolver
+    !%Description
+    !% Only solve Hamiltonian for k-points with zero weight
+    !%End
+    call parse_variable('EigensolverSkipKpoints', .false., eigens%skip_finite_weight_kpoints)
+    call messages_print_var_value(stdout,'EigensolverSkipKpoints',  eigens%skip_finite_weight_kpoints)
+
     POP_SUB(eigensolver_init)
   end subroutine eigensolver_init
 
@@ -576,6 +586,7 @@ contains
     end if
 
     ik_loop: do ik = st%d%kpt%start, st%d%kpt%end
+     if(eigens%skip_finite_weight_kpoints.and.gr%sb%kpoints%reduced%weight(ik) > M_ZERO) cycle
       maxiter = eigens%es_maxiter
 
       if(st%calc_eigenval) then

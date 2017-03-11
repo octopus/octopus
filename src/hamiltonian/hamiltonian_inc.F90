@@ -989,7 +989,7 @@ subroutine  X(apply_floquet_hamiltonian)(hm, der, psib, hpsib, ik, time, Imtime,
 
   type(batch_t) :: small_psib, small_hpsib
   integer :: in, im, spindim, Fdim, idim, ist
-  integer :: it,  nT
+  integer :: it,  nT, idx
   FLOAT :: omega, Tcycle, dt
   CMPLX, allocatable :: vec(:)
 
@@ -1015,8 +1015,9 @@ subroutine  X(apply_floquet_hamiltonian)(hm, der, psib, hpsib, ik, time, Imtime,
   call batch_init(small_psib,spindim,psib%nst)
   call X(batch_allocate)(small_psib,1,psib%nst,der%mesh%np_part)
 
-  do it=1,nT
-    do im=-Fdim,Fdim
+  do idx=hm%F%flat_idx%start, hm%F%flat_idx%end
+     it = hm%F%idx_map(idx,1)
+     im = hm%F%idx_map(idx,2)
       call get_small_batch(psib,im,small_psib)
       call X(hamiltonian_apply_batch2)(hm%td_hm(it), der, small_psib , small_hpsib, ik, &
               time = time, terms = terms, Imtime = Imtime, set_bc = set_bc)
@@ -1025,8 +1026,9 @@ subroutine  X(apply_floquet_hamiltonian)(hm, der, psib, hpsib, ik, time, Imtime,
       do in=-Fdim,Fdim
         call set_big_batch_axpy(small_hpsib,in, exp(M_zI*(im-in)*omega*it*dt)/nT, hpsib)
       end do
-    end do
   end do
+  
+  if(hm%F%is_parallel) call allreduce_batch(hm%F%mpi_grp%comm, hpsib)
 
   ! add diagonal term
   do in=-Fdim,Fdim
@@ -1132,6 +1134,34 @@ contains
     POP_SUB(X(apply_floquet_hamiltonian).set_big_batch_axpy)
     
   end subroutine set_big_batch_axpy
+
+  ! ----------------------------------------------------------
+  ! perform allreduce action on bathc
+  subroutine allreduce_batch(comm,batch)
+    type(batch_t) :: batch
+    integer :: comm
+    integer :: np, ist
+    R_TYPE, allocatable :: temp(:,:)
+
+    PUSH_SUB(X(apply_floquet_hamiltonian).allreduce_batch)
+
+    np = size(batch%states(1)%X(psi)(:,1))
+
+    SAFE_ALLOCATE(temp(1:np,batch%dim))
+
+    do ist=1,batch%nst
+      temp = M_ZERO
+      call batch_get_state(batch,ist,np,temp)
+      call comm_allreduce(comm, temp)
+      call batch_set_state(batch,ist,np,temp)
+    end do
+
+    SAFE_DEALLOCATE_A(temp)
+
+    POP_SUB(X(apply_floquet_hamiltonian).allreduce_batch)
+
+  end subroutine allreduce_batch
+
 
 end subroutine X(apply_floquet_hamiltonian)
 

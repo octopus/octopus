@@ -1,4 +1,4 @@
-    !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
 module floquet_oct_m
   use iso_c_binding
   use comm_oct_m
+  use distributed_oct_m
   use eigensolver_oct_m
   use excited_states_oct_m
   use gauge_field_oct_m
@@ -32,6 +33,7 @@ module floquet_oct_m
   use io_oct_m
   use ion_dynamics_oct_m
   use kick_oct_m
+  use kpoints_oct_m
   use lasers_oct_m
   use lalg_adv_oct_m
   use loct_oct_m
@@ -43,6 +45,7 @@ module floquet_oct_m
   use messages_oct_m
   use mpi_oct_m
   use mpi_lib_oct_m
+  use multicomm_oct_m
   use parser_oct_m
   use partial_charges_oct_m
   use pert_oct_m
@@ -78,16 +81,25 @@ module floquet_oct_m
 
 contains
 
-  subroutine floquet_init(this,geo,dim)
+  subroutine floquet_init(sys,this,geo,dim)
+    type(system_t), intent(in)       :: sys
     type(floquet_t),    intent(out)  :: this
     type(geometry_t), intent(in)     :: geo
     integer :: dim ! the standard dimension of the groundstate
     type(block_t)     :: blk
-    integer :: ia, idir
+    integer :: ia, idir, idim, it, count
 
     FLOAT :: time_step
 
     PUSH_SUB(floquet_init)
+
+
+    this%is_parallel = multicomm_strategy_is_parallel(sys%mc, P_STRATEGY_OTHER)
+    if(this%is_parallel) then
+      call mpi_grp_init(this%mpi_grp, sys%mc%group_comm(P_STRATEGY_OTHER))
+    else
+      call mpi_grp_init(this%mpi_grp, -1)
+    end if
 
     !%Variable TDFloquetMode
     !%Type flag
@@ -193,6 +205,19 @@ contains
 
     call messages_print_var_value(stdout,'Steps in Floquet time-sampling interval',  this%interval)
     call messages_print_var_value(stdout,'Steps in Floquet time-sampling cycle',  this%ncycle)
+
+    !call distributed_init(this%time,this%nT,sys%mc%group_comm(P_STRATEGY_OTHER),"Floquet-Sampling")
+    ! distribute the stacked loop of the Floquet-Hamiltonian
+    call distributed_init(this%flat_idx,this%nT*this%floquet_dim,sys%mc%group_comm(P_STRATEGY_OTHER),"Floquet-flat-index")
+    SAFE_ALLOCATE(this%idx_map(this%nT*this%floquet_dim,2))
+    count = 0
+    do it=1,this%nT
+       do idim=-this%order,this%order
+          count = count + 1
+          this%idx_map(count,1)=it
+          this%idx_map(count,2)=idim
+       end do
+    end do
 
    POP_SUB(floquet_init)
 
@@ -365,6 +390,7 @@ contains
       integer :: file
 
       ! initialize a state object with the Floquet dimension
+
       call states_init(dressed_st, gr, hm%geo,floquet_dim=hm%F%floquet_dim)
       call kpoints_distribute(dressed_st%d,sys%mc)
       call states_distribute_nodes(dressed_st,sys%mc)
@@ -387,10 +413,11 @@ contains
             write(message(1),'(a)') 'Floquet restart structure not commensurate.'
             call messages_fatal(1)
          end if
+         call calc_floquet_norms(gr%der%mesh,gr%sb%kpoints,st,dressed_st,iter,hm%F%floquet_dim)
          call states_berry_connection('td.general','floquet_berry_connection',dressed_st, gr,gr%sb)
       else
          ! only use gs states for init, if they are not distributed
-         if(st%st_end-st%st_start+1==st%nst) then
+         if(.not.st%parallel_in_states) then
             ! initialize floquet states from scratch
             SAFE_ALLOCATE(temp_state1(1:gr%der%mesh%np,st%d%dim))
             SAFE_ALLOCATE(temp_state2(1:gr%der%mesh%np,hm%F%floquet_dim))
@@ -449,6 +476,8 @@ contains
       do while(.not.converged.and.iter <= maxiter)
          call eigensolver_run(eigens, gr, dressed_st, hm, 1,converged)
          
+         call calc_floquet_norms(gr%der%mesh,gr%sb%kpoints,st,dressed_st,iter,hm%F%floquet_dim)
+         
          write(filename,'(I5)') iter !hm%F_count
          filename = 'floquet_multibands_'//trim(adjustl(filename))
          call states_write_bandstructure('td.general', dressed_st%nst, dressed_st, gr%sb, filename)
@@ -471,6 +500,7 @@ contains
       hm%F%count=hm%F%count + 1
       
       ! here we might want to do other things with the states...
+      
 
       call states_end(dressed_st)
 
@@ -478,6 +508,72 @@ stop 'Regular end of Floquet solver'
 
     end subroutine floquet_hamiltonian_solve
 
+
+    subroutine calc_floquet_norms(mesh,kpoints,st,dressed_st,iter,floquet_dim)
+      type(mesh_t), intent(in) :: mesh
+      type(kpoints_t), intent(in) :: kpoints
+      type(states_t), intent(in) :: st,dressed_st
+      integer :: iter , floquet_dim
+
+      integer :: maxiter, ik, in, im, ist, idim, ierr, nik, dim, nst, iunit
+      CMPLX, allocatable :: temp_state1(:,:), temp_state2(:,:)
+      FLOAT, allocatable :: norms(:,:,:)
+      character(len=1024):: ik_name,iter_name, filename
+
+      SAFE_ALLOCATE(temp_state1(1:mesh%np,st%d%dim))
+      SAFE_ALLOCATE(temp_state2(1:mesh%np,floquet_dim))
+      SAFE_ALLOCATE(norms(1:kpoints%reduced%npoints,1:dressed_st%nst,floquet_dim))
+
+      norms = M_ZERO
+
+      do ik=st%d%kpt%start,st%d%kpt%end
+        do in=1,floquet_dim
+          do ist=st%st_start,st%st_end
+            call states_get_state(dressed_st, mesh, (in-1)*st%nst+ist, ik,temp_state2)
+
+            do im=1,floquet_dim
+              do idim=1,st%d%dim
+                temp_state1(1:mesh%np,idim) = temp_state2(1:mesh%np,(im-1)*st%d%dim+idim)
+              end do
+              norms(ik,(in-1)*st%nst+ist,im) = zmf_nrm2(mesh,st%d%dim,temp_state1)
+            end do
+          enddo
+        enddo
+      enddo
+      
+      call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm, norms)
+
+      if(mpi_world%rank==0) then
+         write(iter_name,'(i4)') iter 
+         do ik=kpoints%reduced%npoints-kpoints%nik_skip+1, kpoints%reduced%npoints
+            write(ik_name,'(i4)') ik
+            filename = 'td.general/floquet_norms_ik_'//trim(adjustl(ik_name))//'_iter_'//trim(adjustl(iter_name))
+            iunit = io_open(filename, action='write')
+            
+!            do ist=1,dressed_st%nst
+!               write(iunit,'(e12.6,a1)',advance='no') dressed_st%eigenval(ist,ik), ' '
+!               do in=1,floquet_dim
+!                  write(iunit,'(e12.6,a1)',advance='no') norms(ik,ist,in), ' '
+!               end do
+!                write(iunit,'(a1)') ' '
+!            end do
+
+             do ist=1,dressed_st%nst
+                do in=1,floquet_dim
+                   write(iunit,'(i4,a1,e12.6,a1,i4,a1,e12.6)') ist, '', dressed_st%eigenval(ist,ik), ' ',in, ' ', norms(ik,ist,in)
+               end do
+               write(iunit,'(a1)') ' '
+            end do
+
+            call io_close(iunit)
+         end do
+      end if
+
+      SAFE_DEALLOCATE_A(temp_state1)
+      SAFE_DEALLOCATE_A(temp_state2)
+      SAFE_DEALLOCATE_A(norms)
+      
+    end subroutine calc_floquet_norms
     !---------------------------------------
     !subroutine floquet_end()
 

@@ -105,6 +105,7 @@ contains
     PUSH_SUB(td_run_init)
 
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .true.)
+    call calc_mode_par_set_parallelization(P_STRATEGY_OTHER, default = .true.)
 
     POP_SUB(td_run_init)
   end subroutine td_run_init

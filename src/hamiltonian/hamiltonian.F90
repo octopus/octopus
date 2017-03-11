@@ -30,6 +30,7 @@ module hamiltonian_oct_m
   use cmplxscl_oct_m
   use comm_oct_m
   use derivatives_oct_m
+  use distributed_oct_m
   use energy_oct_m
   use hamiltonian_base_oct_m
   use epot_oct_m
@@ -121,6 +122,10 @@ module hamiltonian_oct_m
     logical ::  downfolding
     FLOAT :: omega, Tcycle, dt
     FLOAT, pointer :: frozen_distortion(:,:)
+    logical :: is_parallel
+    type(mpi_grp_t) :: mpi_grp
+    type(distributed_t) :: flat_idx
+    integer, pointer :: idx_map(:,:)
   end type floquet_t
 
 
