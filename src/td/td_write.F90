@@ -117,6 +117,7 @@ module td_write_oct_m
     type(excited_states_t), pointer :: excited_st(:) !< The excited states.
     type(partial_charges_t) :: partial_charges
     integer :: compute_interval     !< Compute every compute_interval
+    integer       :: n_ion_ch !< number of ionization channels to calculate
   end type td_write_t
 
 contains
@@ -156,7 +157,7 @@ contains
     FLOAT,                    intent(in)    :: dt
 
     FLOAT :: rmin
-    integer :: ierr, first, ii, ist, jj, kk, flags, iout, default
+    integer :: ierr, first, ii, ist, jj, kk, flags, iout, default, Nch
     type(block_t) :: blk
     character(len=100) :: filename
     type(restart_t) :: restart_gs
@@ -312,6 +313,25 @@ contains
       call messages_fatal(2)
     end if
     call messages_obsolete_variable('TDDipoleLmax', 'TDMultipoleLmax')
+
+
+    if(writ%out(OUT_ION_CH)%write) then
+      !%Variable TDIonChNmax
+      !%Type integer
+      !%Default ncharge
+      !%Section Time-Dependent::TD Output
+      !%Description
+      !% Maximum number of ionization channels to be calculated. 
+      !% For N electrons a ionization channel Nc involves a loop over all the possible combinations 
+      !% which scales like the binomial coefficient of Nc over N. Since this number can be big and one 
+      !% is usually interested in small ionization probabilities this option helps to maintain the 
+      !% calculation of this observable to a reasonable computational cost.
+      !%End
+      Nch = st%nst * st%d%kpt%nglobal * st%d%dim 
+      call parse_variable('TDIonChNmax', Nch, writ%n_ion_ch)
+      
+    end if
+
 
     ! Compatibility test
     if( (writ%out(OUT_ACC)%write) .and. ions_move ) then
@@ -731,7 +751,7 @@ contains
       call td_write_eigs(writ%out(OUT_EIGS)%handle, st, iter)
 
     if(writ%out(OUT_ION_CH)%write) &
-      call td_write_ionch(writ%out(OUT_ION_CH)%handle, gr, st, iter)
+      call td_write_ionch(writ%out(OUT_ION_CH)%handle, gr, st, iter, writ%n_ion_ch)
 
     if(writ%out(OUT_TOTAL_CURRENT)%write) &
       call td_write_total_current(writ%out(OUT_TOTAL_CURRENT)%handle, gr, st, iter)
@@ -1936,13 +1956,14 @@ contains
   end subroutine td_write_eigs
 
   ! ---------------------------------------------------------
-  subroutine td_write_ionch(out_ionch, gr, st, iter)
+  subroutine td_write_ionch(out_ionch, gr, st, iter, Nch)
     type(c_ptr),         intent(inout) :: out_ionch
     type(grid_t),        intent(in) :: gr
     type(states_t),      intent(in) :: st
     integer,             intent(in) :: iter
+    integer,             intent(in) :: Nch
 
-    integer             :: ii, ist, Nch, ik, idim
+    integer             :: ii, ist, Ntotch, ik, idim
     character(len=68)   :: buf
     FLOAT, allocatable  :: ch(:), occ(:)
 
@@ -1953,9 +1974,9 @@ contains
     PUSH_SUB(td_write_ionch)
     
 
-    Nch =  st%nst * st%d%kpt%nglobal * st%d%dim 
+    Ntotch =  st%nst * st%d%kpt%nglobal * st%d%dim 
     SAFE_ALLOCATE(ch(0: Nch)) 
-    SAFE_ALLOCATE(occ(0: Nch))
+    SAFE_ALLOCATE(occ(0: Ntotch))
 
     occ(:) = M_ZERO
     ii = 1
@@ -1976,18 +1997,9 @@ contains
       call comm_allreduce(st%st_kpt_mpi_grp%comm, occ)
     end if   
       
-! #cif defined(HAVE_MPI)
-!     if(st%parallel_in_states) then
-!       cSAFE_ALLOCATE(occbuf(0: Nch))
-!       occbuf(:) = M_ZERO
-!       call MPI_Allreduce(occ(0), occbuf(0), Nch+1, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-!       occ(:) = occbuf(:)
-!       cSAFE_DEALLOCATE_A(occbuf)
-!     end if
-! #cendif
     
     !Calculate the channels
-    call td_calc_ionch(gr, st, ch, Nch)
+    call td_calc_ionch(gr, st, ch, Nch, Ntotch)
   
   
     if(.not.mpi_grp_is_root(mpi_world)) then 

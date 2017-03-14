@@ -190,11 +190,12 @@ end subroutine td_calc_tvel
 !> Multiple ionization probabilities calculated form the KS orbital densities 
 !! C. Ullrich, Journal of Molecular Structure: THEOCHEM 501, 315 (2000).
 ! ---------------------------------------------------------
-subroutine td_calc_ionch(gr, st, ch, Nch)
+subroutine td_calc_ionch(gr, st, ch, Nch, Ntotch)
   type(grid_t),        intent(in)    :: gr
   type(states_t),      intent(in)    :: st
-  integer,             intent(in)    :: Nch
   FLOAT,               intent(out)   :: ch(0:Nch)
+  integer,             intent(in)    :: Nch
+  integer,             intent(in)    :: Ntotch
 
   integer :: ik, ist, ii, jj, idim, Nid
   FLOAT   :: prod, prod0
@@ -212,8 +213,8 @@ subroutine td_calc_ionch(gr, st, ch, Nch)
   
   PUSH_SUB(td_calc_ionch)
   
-  SAFE_ALLOCATE(   N(1: Nch)) 
-  SAFE_ALLOCATE(Nnot(1: Nch)) 
+  SAFE_ALLOCATE(   N(1: Ntotch)) 
+  SAFE_ALLOCATE(Nnot(1: Ntotch)) 
   SAFE_ALLOCATE(zpsi(1:gr%mesh%np))
   
   N(:)   = M_ZERO
@@ -228,7 +229,7 @@ subroutine td_calc_ionch(gr, st, ch, Nch)
         if (st%st_start <= ist .and. ist <= st%st_end .and. &
               st%d%kpt%start <= ik .and. ik <= st%d%kpt%end) then
           call states_get_state(st, gr%mesh, idim, ist, ik, zpsi)
-          N(ii) = zmf_integrate(gr%mesh, zpsi(:) * conjg(zpsi(:)) ) 
+          N(ii) = zmf_nrm2(gr%mesh, zpsi(:)) 
           Nnot(ii) = M_ONE - N(ii)
         end if
 
@@ -245,35 +246,15 @@ subroutine td_calc_ionch(gr, st, ch, Nch)
   end if   
   
   
-! #cif defined(HAVE_MPI)
-!
-!
-!   if(st%parallel_in_states) then
-!     cSAFE_ALLOCATE(Nbuf(1: Nch))
-!     Nbuf(:) = M_ZERO
-!     call MPI_Allreduce(N(1), Nbuf(1), Nch, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-!     N(:) = Nbuf(:)
-!
-!     Nbuf(:) = M_ZERO
-!     call MPI_Allreduce(Nnot(1), Nbuf(1), Nch, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-!     Nnot(:) = Nbuf(:)
-!
-!     cSAFE_DEALLOCATE_A(Nbuf)
-!   end if
-! #cendif
-
-! print * ,mpi_world%rank, "N    =", N(:)
-! print * ,mpi_world%rank, "Nnot =", Nnot(:)
-
   ch(:) = M_ZERO
 
-  Nid = Nch - 1 
+  Nid = Ntotch - 1 
   SAFE_ALLOCATE(idx(0:Nid))
   SAFE_ALLOCATE(idxref(0:Nid))
   idxref = (/ (ii, ii = 0, Nid) /)
   do ii = 0, Nch  
 !     print *, "Nch= ", Nch, "ii", ii
-    call loct_combination_init(c, Nch, ii)
+    call loct_combination_init(c, Ntotch, ii)
     if (ii == 0 ) then
       SAFE_ALLOCATE(idx0(0:0))
     else 
@@ -285,6 +266,7 @@ subroutine td_calc_ionch(gr, st, ch, Nch)
       call messages_write(ii)
       call messages_write(") = 0")
       call messages_new_line()
+      call messages_info()
     end if
     ! Loop over combinations   
     do
@@ -294,6 +276,7 @@ subroutine td_calc_ionch(gr, st, ch, Nch)
         call messages_write("P(")
         call messages_write(ii)
         call messages_write(") += ")
+        call messages_info()
       end if               
       call loct_get_combination(c, idx0)
       idx(:) = idxref(:)
@@ -303,6 +286,7 @@ subroutine td_calc_ionch(gr, st, ch, Nch)
           call messages_write(" No(")
           call messages_write(idx0(jj)+1)
           call messages_write(") ")
+          call messages_info()
         end if
         prod0 = prod0 * Nnot(idx0(jj)+1)
       end do
@@ -313,6 +297,7 @@ subroutine td_calc_ionch(gr, st, ch, Nch)
             call messages_write(" N(")
             call messages_write(idx(jj)+1)
             call messages_write(") ")
+            call messages_info()
           end if
           prod = prod * N(idx(jj)+1)
         end if
