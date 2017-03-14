@@ -19,6 +19,7 @@
 #include "global.h"
 
 module td_calc_oct_m
+  use comm_oct_m
   use iso_c_binding 
   use forces_oct_m
   use geometry_oct_m
@@ -237,22 +238,29 @@ subroutine td_calc_ionch(gr, st, ch, Nch)
     end do
   end do
   
-#if defined(HAVE_MPI) 
-
-
+  
   if(st%parallel_in_states) then
-    SAFE_ALLOCATE(Nbuf(1: Nch)) 
-    Nbuf(:) = M_ZERO
-    call MPI_Allreduce(N(1), Nbuf(1), Nch, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-    N(:) = Nbuf(:)
-
-    Nbuf(:) = M_ZERO
-    call MPI_Allreduce(Nnot(1), Nbuf(1), Nch, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-    Nnot(:) = Nbuf(:)
-
-    SAFE_DEALLOCATE_A(Nbuf) 
-  end if
-#endif
+    call comm_allreduce(st%st_kpt_mpi_grp%comm, N)
+    call comm_allreduce(st%st_kpt_mpi_grp%comm, Nnot)
+  end if   
+  
+  
+! #cif defined(HAVE_MPI)
+!
+!
+!   if(st%parallel_in_states) then
+!     cSAFE_ALLOCATE(Nbuf(1: Nch))
+!     Nbuf(:) = M_ZERO
+!     call MPI_Allreduce(N(1), Nbuf(1), Nch, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+!     N(:) = Nbuf(:)
+!
+!     Nbuf(:) = M_ZERO
+!     call MPI_Allreduce(Nnot(1), Nbuf(1), Nch, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+!     Nnot(:) = Nbuf(:)
+!
+!     cSAFE_DEALLOCATE_A(Nbuf)
+!   end if
+! #cendif
 
 ! print * ,mpi_world%rank, "N    =", N(:)
 ! print * ,mpi_world%rank, "Nnot =", Nnot(:)

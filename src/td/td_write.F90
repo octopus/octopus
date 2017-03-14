@@ -1972,15 +1972,19 @@ contains
     end do
       
       
-#if defined(HAVE_MPI) 
-    if(st%parallel_in_states) then
-      SAFE_ALLOCATE(occbuf(0: Nch)) 
-      occbuf(:) = M_ZERO
-      call MPI_Allreduce(occ(0), occbuf(0), Nch+1, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
-      occ(:) = occbuf(:)
-      SAFE_DEALLOCATE_A(occbuf) 
-    end if
-#endif      
+    if(st%parallel_in_states .or. st%d%kpt%parallel) then
+      call comm_allreduce(st%st_kpt_mpi_grp%comm, occ)
+    end if   
+      
+! #cif defined(HAVE_MPI)
+!     if(st%parallel_in_states) then
+!       cSAFE_ALLOCATE(occbuf(0: Nch))
+!       occbuf(:) = M_ZERO
+!       call MPI_Allreduce(occ(0), occbuf(0), Nch+1, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+!       occ(:) = occbuf(:)
+!       cSAFE_DEALLOCATE_A(occbuf)
+!     end if
+! #cendif
     
     !Calculate the channels
     call td_calc_ionch(gr, st, ch, Nch)
