@@ -629,6 +629,16 @@
 /src/basic/.deps
 /src/basic/*_oct.f90
 
+# /src/basis_set/
+/src/basis_set/*.mod
+/src/basis_set/*.o
+/src/basis_set/*.a
+/src/basis_set/*~
+/src/basis_set/Makefile
+/src/basis_set/Makefile.in
+/src/basis_set/.deps
+/src/basis_set/*_oct.f90
+
 # /src/frozen/
 /src/frozen/*.o
 /src/frozen/*.a

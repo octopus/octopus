@@ -18,23 +18,16 @@
 ## 02110-1301, USA.
 ##
 
-SUBDIRS =                \
-	include          \
-	basic            \
-	math             \
-	species          \
-	ions             \
-	grid             \
-	poisson          \
-	frozen           \
-	states           \
-        basis_set        \
-	hamiltonian      \
-	system           \
-	scf              \
-	td               \
-	opt_control      \
-	sternheimer      \
-	main             \
-	utils
+noinst_LIBRARIES = libbasis_set.a
 
+libbasis_set_a_SOURCES =      \
+                    orbital.F90 
+
+noinst_HEADERS =        
+
+include $(srcdir)/../common-rules.make
+
+depend:
+	@makedepf90 $(libbasis_set_a_SOURCES)
+
+orbital.o : orbital.F90

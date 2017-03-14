@@ -378,6 +378,7 @@ AC_CONFIG_FILES([Makefile
   src/frozen/Makefile
   src/states/Makefile
   src/hamiltonian/Makefile
+  src/basis_set/Makefile
   src/system/Makefile
   src/scf/Makefile
   src/td/Makefile
