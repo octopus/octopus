@@ -200,7 +200,6 @@ subroutine td_calc_ionch(gr, st, ch, N, Nch, Ntotch)
 
   integer :: ik, ist, ii, jj, idim, Nid
   FLOAT   :: prod, prod0
-!   FLOAT, allocatable :: N(:), Nnot(:)
   FLOAT, allocatable :: Nnot(:)
   CMPLX,  allocatable :: zpsi(:)
   !combinations   
@@ -215,7 +214,6 @@ subroutine td_calc_ionch(gr, st, ch, N, Nch, Ntotch)
   
   PUSH_SUB(td_calc_ionch)
   
-!   SAFE_ALLOCATE(   N(1: Ntotch))
   SAFE_ALLOCATE(Nnot(1: Ntotch)) 
   SAFE_ALLOCATE(zpsi(1:gr%mesh%np))
   
@@ -322,7 +320,6 @@ subroutine td_calc_ionch(gr, st, ch, N, Nch, Ntotch)
   SAFE_DEALLOCATE_A(idxref)
 
   
-!   SAFE_DEALLOCATE_A(N)
   SAFE_DEALLOCATE_A(Nnot)
   SAFE_DEALLOCATE_A(zpsi)
 

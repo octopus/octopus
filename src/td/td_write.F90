@@ -2028,7 +2028,7 @@ contains
       
       !KS states norm 
       do ii = 1, Ntotch
-        write(buf, '(a,i4.1,a)') '|Psi(',ii,'+, t)|^2'
+        write(buf, '(a,i4.1,a)') '|Psi(',ii,', t)|^2'
         call write_iter_header(out_ionch, buf)
       end do
       
