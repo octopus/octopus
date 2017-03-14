@@ -1965,7 +1965,7 @@ contains
 
     integer             :: ii, ist, Ntotch, ik, idim
     character(len=68)   :: buf
-    FLOAT, allocatable  :: ch(:), occ(:)
+    FLOAT, allocatable  :: ch(:), occ(:), stnorm(:)
 
 #if defined(HAVE_MPI) 
     FLOAT, allocatable :: occbuf(:)
@@ -1998,12 +1998,15 @@ contains
     end if   
       
     
-    !Calculate the channels
-    call td_calc_ionch(gr, st, ch, Nch, Ntotch)
+    !Calculate the channels and the states norm
+    SAFE_ALLOCATE(stnorm(1: Ntotch))
+    call td_calc_ionch(gr, st, ch, stnorm, Nch, Ntotch)
   
   
     if(.not.mpi_grp_is_root(mpi_world)) then 
       SAFE_DEALLOCATE_A(ch)
+      SAFE_DEALLOCATE_A(occ)
+      SAFE_DEALLOCATE_A(stnorm)      
       POP_SUB(td_write_ionch)
       return ! only first node outputs        
     end if
@@ -2015,36 +2018,57 @@ contains
       ! first line -> column names
       call write_iter_header_start(out_ionch)
       
+      !Ion probability
       do ii = 0, Nch
         if(occ(ii)>M_ZERO .or. ii == 0) then
           write(buf, '(a,f4.1,a)') 'Pion(',occ(ii)*ii,'+, t)'
           call write_iter_header(out_ionch, buf)
         end if
       end do
+      
+      !KS states norm 
+      do ii = 1, Ntotch
+        write(buf, '(a,i4.1,a)') '|Psi(',ii,'+, t)|^2'
+        call write_iter_header(out_ionch, buf)
+      end do
+      
       call write_iter_nl(out_ionch)
 
       ! second line: units
       call write_iter_string(out_ionch, '#[Iter n.]')
       call write_iter_header(out_ionch, '[' // trim(units_abbrev(units_out%time)) // ']')
+      !ion_ch
       do ii = 0, Nch
         if(occ(ii)>M_ZERO .or. ii == 0) then
           call write_iter_header(out_ionch, '[' // trim(units_abbrev(unit_one)) // ']')
         end if
       end do
+      !norms
+      do ii = 1, Ntotch
+        call write_iter_header(out_ionch, '[' // trim(units_abbrev(unit_one)) // ']')
+      end do
+
       call write_iter_nl(out_ionch)
       call td_write_print_header_end(out_ionch)
     end if
 
     call write_iter_start(out_ionch)
+    !ion_ch 
     do ii =0 , Nch
       if(occ(ii)>M_ZERO .or. ii == 0) then
         call write_iter_double(out_ionch, units_from_atomic(unit_one, ch(ii)), 1)
       end if
     end do
+    
+    !norms
+    do ii =1 , Ntotch
+      call write_iter_double(out_ionch, units_from_atomic(unit_one, stnorm(ii)), 1)
+    end do
     call write_iter_nl(out_ionch)
 
     SAFE_DEALLOCATE_A(ch)
     SAFE_DEALLOCATE_A(occ)
+    SAFE_DEALLOCATE_A(stnorm)
 
     POP_SUB(td_write_ionch)
   end subroutine td_write_ionch

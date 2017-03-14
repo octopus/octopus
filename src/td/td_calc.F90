@@ -190,16 +190,18 @@ end subroutine td_calc_tvel
 !> Multiple ionization probabilities calculated form the KS orbital densities 
 !! C. Ullrich, Journal of Molecular Structure: THEOCHEM 501, 315 (2000).
 ! ---------------------------------------------------------
-subroutine td_calc_ionch(gr, st, ch, Nch, Ntotch)
+subroutine td_calc_ionch(gr, st, ch, N, Nch, Ntotch)
   type(grid_t),        intent(in)    :: gr
   type(states_t),      intent(in)    :: st
   FLOAT,               intent(out)   :: ch(0:Nch)
+  FLOAT,               intent(inout) :: N(:)  
   integer,             intent(in)    :: Nch
   integer,             intent(in)    :: Ntotch
 
   integer :: ik, ist, ii, jj, idim, Nid
   FLOAT   :: prod, prod0
-  FLOAT, allocatable :: N(:), Nnot(:)
+!   FLOAT, allocatable :: N(:), Nnot(:)
+  FLOAT, allocatable :: Nnot(:)
   CMPLX,  allocatable :: zpsi(:)
   !combinations   
   integer :: next
@@ -213,7 +215,7 @@ subroutine td_calc_ionch(gr, st, ch, Nch, Ntotch)
   
   PUSH_SUB(td_calc_ionch)
   
-  SAFE_ALLOCATE(   N(1: Ntotch)) 
+!   SAFE_ALLOCATE(   N(1: Ntotch))
   SAFE_ALLOCATE(Nnot(1: Ntotch)) 
   SAFE_ALLOCATE(zpsi(1:gr%mesh%np))
   
@@ -320,7 +322,7 @@ subroutine td_calc_ionch(gr, st, ch, Nch, Ntotch)
   SAFE_DEALLOCATE_A(idxref)
 
   
-  SAFE_DEALLOCATE_A(N)
+!   SAFE_DEALLOCATE_A(N)
   SAFE_DEALLOCATE_A(Nnot)
   SAFE_DEALLOCATE_A(zpsi)
 
