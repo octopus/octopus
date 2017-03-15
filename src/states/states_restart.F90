@@ -819,6 +819,8 @@ contains
       call messages_info(1)
     end if
 
+    call restart_block_signals()
+
     !write the densities
     iunit = restart_open(restart, 'density')
     lines(1) = '#     #spin    #nspin    filename'
@@ -857,7 +859,8 @@ contains
         end if
       else
         if(st%cmplxscl%space) then
-          call zrestart_write_mesh_function(restart, filename, gr%mesh, st%zrho%Re(:,isp)+M_zI*st%zrho%Im(:,isp), err)
+          call zrestart_write_mesh_function(restart, filename, gr%mesh, st%zrho%Re(:,isp)+M_zI*st%zrho%Im(:,isp), &
+                                                                                       err)
         else
           call drestart_write_mesh_function(restart, filename, gr%mesh, st%rho(:,isp), err)
         end if
@@ -885,6 +888,8 @@ contains
       if (err /= 0) ierr = ierr + 16
     end if
     call restart_close(restart, iunit)
+
+    call restart_unblock_signals()
 
     if (debug%info) then
       message(1) = "Debug: Writing density restart done."

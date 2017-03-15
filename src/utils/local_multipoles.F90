@@ -50,6 +50,7 @@ program oct_local_multipoles
   use utils_oct_m
   use varinfo_oct_m
   use multicomm_oct_m
+  use xc_oct_m
 
   implicit none
   
@@ -92,7 +93,8 @@ program oct_local_multipoles
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
   call system_init(sys)
   call simul_box_init(sb, sys%geo, sys%space)
-  call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, sys%ks%xc_flags)
+  call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, &
+             sys%ks%xc_flags, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
 
   call local_domains()
 
