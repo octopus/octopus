@@ -89,6 +89,7 @@ subroutine X(restart_write_mesh_function)(restart, filename, mesh, ff, ierr, roo
     ! Add a barrier to ensure that the process are synchronized
     call MPI_Barrier(mesh%vp%comm, mpi_err)
 #endif
+  end if
     
   POP_SUB(X(restart_write_mesh_function))
 end subroutine X(restart_write_mesh_function)
