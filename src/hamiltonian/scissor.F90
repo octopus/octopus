@@ -102,8 +102,7 @@ contains
   !We need to load GS states and to store them in this%gs_st
   call states_copy(this%gs_st, st)
   
-  call restart_init(restart_gs, RESTART_PROJ, RESTART_TYPE_LOAD, this%gs_st%dom_st_kpt_mpi_grp, mc, &
-                       ierr, mesh=gr%mesh)
+  call restart_init(restart_gs, RESTART_PROJ, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
   if(ierr /= 0) then
      message(1) = "Unable to read states information."
      call messages_fatal(1)

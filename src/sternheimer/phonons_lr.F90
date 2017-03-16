@@ -147,7 +147,7 @@ contains
     natoms = geo%natoms
     ndim = gr%mesh%sb%dim
 
-    call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, st%dom_st_kpt_mpi_grp, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
+    call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
     if(ierr == 0) then
       call states_look_and_load(gs_restart, st, gr)
       call restart_end(gs_restart)
@@ -161,7 +161,7 @@ contains
       message(1) = "Reading kdotp wavefunctions for periodic directions."
       call messages_info(1)
 
-      call restart_init(kdotp_restart, RESTART_KDOTP, RESTART_TYPE_LOAD, st%dom_st_kpt_mpi_grp, sys%mc, ierr, mesh=gr%mesh)
+      call restart_init(kdotp_restart, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
       if(ierr /= 0) then
         message(1) = "Unable to read kdotp wavefunctions."
         message(2) = "Previous kdotp calculation required."
@@ -218,8 +218,8 @@ contains
     call lr_init(lr(1))
     call lr_allocate(lr(1), st, gr%mesh)
 
-    call restart_init(restart_dump, RESTART_VIB_MODES, RESTART_TYPE_DUMP, st%dom_st_kpt_mpi_grp, sys%mc, ierr, mesh=gr%mesh)
-    call restart_init(restart_load, RESTART_VIB_MODES, RESTART_TYPE_LOAD, st%dom_st_kpt_mpi_grp, sys%mc, ierr, mesh=gr%mesh)
+    call restart_init(restart_dump, RESTART_VIB_MODES, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=gr%mesh)
+    call restart_init(restart_load, RESTART_VIB_MODES, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
 
     if (fromScratch) then
       start_mode = 1
