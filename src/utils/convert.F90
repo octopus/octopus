@@ -298,8 +298,8 @@ contains
  
     if (subtract_file) then
       write(message(1),'(a,a,a,a)') "Reading ref-file from ", trim(ref_folder), trim(ref_name),".obf"
-      call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mesh%mpi_grp, &
-                        mc, ierr, dir=trim(ref_folder), mesh = mesh)
+      call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mc, ierr, &
+                        dir=trim(ref_folder), mesh = mesh)
       ! FIXME: why only real functions? Please generalize.
       if(ierr == 0) then
         call drestart_read_mesh_function(restart, trim(ref_name), mesh, read_rff, ierr)
@@ -322,8 +322,8 @@ contains
     else 
       restart_folder = in_folder
     end if
-    call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mesh%mpi_grp, &
-                      mc, ierr, dir=trim(restart_folder), mesh = mesh)
+    call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mc, ierr, &
+                      dir=trim(restart_folder), mesh = mesh)
     call loct_progress_bar(-1, c_end-c_start)
     do ii = c_start, c_end, c_step
       if (iterate_folder) then
@@ -573,8 +573,8 @@ contains
     if (subtract_file) then
       write(message(1),'(a,a,a,a)') "Reading ref-file from ", trim(ref_folder), trim(ref_name),".obf"
       call messages_info(1)
-      call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mesh%mpi_grp, &
-                        mc, ierr, dir=trim(ref_folder), mesh = mesh)
+      call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mc, ierr, &
+                        dir=trim(ref_folder), mesh = mesh)
       ! FIXME: why only real functions? Please generalize.
       if(ierr == 0) then
         call drestart_read_mesh_function(restart, trim(ref_name), mesh, read_rff, ierr)
@@ -603,8 +603,8 @@ contains
       folder = in_folder(1:len_trim(in_folder)-1)
       folder_index = index(folder, '/', .true.)
       restart_folder = folder(1:folder_index)
-      call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mesh%mpi_grp, &
-                        mc, ierr, dir=trim(restart_folder), mesh = mesh)
+      call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mc, ierr, &
+                        dir=trim(restart_folder), mesh = mesh)
     end if
    
     !For each mesh point, open density file and read corresponding point.  
@@ -826,8 +826,8 @@ contains
       end if
       ! FIXME: why only real functions? Please generalize.
       ! TODO: check if mesh function are real or complex.
-      call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mesh%mpi_grp, &
-                        mc, ierr, dir=trim(folder), mesh = mesh, exact=.true.)
+      call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mc, ierr, &
+                        dir=trim(folder), mesh = mesh, exact=.true.)
       if(ierr == 0) then
         call drestart_read_mesh_function(restart, trim(filename), mesh, tmp_ff, ierr)
       else

@@ -110,8 +110,7 @@ contains
     
     read_gs = .true.
     if (.not. fromScratch) then
-      call restart_init(restart_load_unocc, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                        sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+      call restart_init(restart_load_unocc, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
 
       if(ierr == 0) then
         call states_load(restart_load_unocc, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
@@ -125,8 +124,7 @@ contains
         read_gs = .false.
     end if
 
-    call restart_init(restart_load_gs, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                      sys%mc, ierr_rho, mesh=sys%gr%mesh, exact=.true.)
+    call restart_init(restart_load_gs, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr_rho, mesh=sys%gr%mesh, exact=.true.)
 
     if(ierr_rho == 0) then
       if (read_gs) then
@@ -228,8 +226,7 @@ contains
 
     if(.not. bandstructure_mode) then
       ! Restart dump should be initialized after restart_load, as the mesh might have changed
-      call restart_init(restart_dump, RESTART_UNOCC, RESTART_TYPE_DUMP, sys%st%dom_st_kpt_mpi_grp, &
-                        sys%mc, ierr, mesh=sys%gr%mesh)
+      call restart_init(restart_dump, RESTART_UNOCC, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
 
       ! make sure the density is defined on the same mesh as the wavefunctions that will be written
       if(write_density) &

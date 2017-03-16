@@ -23,13 +23,11 @@ subroutine X(run_sternheimer)()
 
   PUSH_SUB(em_resp_run.X(run_sternheimer))
 
-  call restart_init(restart_dump, RESTART_EM_RESP, RESTART_TYPE_DUMP, sys%st%dom_st_kpt_mpi_grp, &
-                    sys%mc, ierr, mesh=sys%gr%mesh)
+  call restart_init(restart_dump, RESTART_EM_RESP, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
 
   if(.not. fromscratch) then
 
-    call restart_init(restart_load, RESTART_EM_RESP, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                      sys%mc, ierr, mesh=sys%gr%mesh)
+    call restart_init(restart_load, RESTART_EM_RESP, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
 
     do idir = 1, sys%gr%sb%dim
 
@@ -325,8 +323,7 @@ subroutine X(run_sternheimer)()
       if(em_vars%calc_hyperpol .and. use_kdotp) then
         call X(em_resp_calc_eigenvalues)(sys, dl_eig)
 
-        call restart_init(kdotp_restart, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                          sys%mc, ierr, mesh=sys%gr%mesh)
+        call restart_init(kdotp_restart, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
 
         do idir2 = 1, gr%sb%periodic_dim
           write(message(1), '(a,a,a)') 'Info: Calculating kdotp response in ', index2axis(idir2), '-direction.'
