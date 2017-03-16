@@ -194,7 +194,7 @@ contains
     call messages_info(1)
 
     call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                      ierr, mesh=sys%gr%mesh, exact=.true.)
+                      sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
     if(ierr == 0) then
       call states_look_and_load(gs_restart, sys%st, sys%gr)
       call restart_end(gs_restart)
@@ -554,8 +554,8 @@ contains
       call mpi_grp_init(cas%mpi_grp, -1)
     end if
 
-    call restart_init(cas%restart_dump, RESTART_CASIDA, RESTART_TYPE_DUMP, mpi_world, ierr)
-    call restart_init(cas%restart_load, RESTART_CASIDA, RESTART_TYPE_LOAD, mpi_world, ierr)
+    call restart_init(cas%restart_dump, RESTART_CASIDA, RESTART_TYPE_DUMP, mpi_world, sys%mc, ierr)
+    call restart_init(cas%restart_load, RESTART_CASIDA, RESTART_TYPE_LOAD, mpi_world, sys%mc, ierr)
 
     POP_SUB(casida_type_init)
   end subroutine casida_type_init

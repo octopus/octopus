@@ -35,6 +35,7 @@ module scissor_oct_m
   use batch_ops_oct_m
   use profiling_oct_m
   use messages_oct_m
+  use multicomm_oct_m
   use restart_oct_m
   use types_oct_m
   use mpi_oct_m
@@ -66,12 +67,13 @@ module scissor_oct_m
 
 contains
 
- subroutine scissor_init(this, st, gr, d, gap)
+ subroutine scissor_init(this, st, gr, d, gap, mc)
   type(scissor_t),           intent(inout) :: this
   type(states_t),            intent(in)    :: st
   type(grid_t),              intent(in)    :: gr
   type(states_dim_t),        intent(in)    :: d
   FLOAT,                     intent(in)    :: gap
+  type(multicomm_t),         intent(in)    :: mc
 
   CMPLX, allocatable   :: phase(:)
   type(restart_t) :: restart_gs
@@ -100,7 +102,7 @@ contains
   !We need to load GS states and to store them in this%gs_st
   call states_copy(this%gs_st, st)
   
-  call restart_init(restart_gs, RESTART_PROJ, RESTART_TYPE_LOAD, this%gs_st%dom_st_kpt_mpi_grp, &
+  call restart_init(restart_gs, RESTART_PROJ, RESTART_TYPE_LOAD, this%gs_st%dom_st_kpt_mpi_grp, mc, &
                        ierr, mesh=gr%mesh)
   if(ierr /= 0) then
      message(1) = "Unable to read states information."
