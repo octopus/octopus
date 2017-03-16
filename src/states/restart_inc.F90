@@ -83,11 +83,12 @@ subroutine X(restart_write_mesh_function)(restart, filename, mesh, ff, ierr, roo
   end if
   
   if (mesh%parallel_in_domains .and. in_line) then
-    ! I have to broadcast the error code
+#ifdef HAVE_MPI
+    ! I have to broadcast the error code  end if
     call MPI_Bcast(ierr, 1, MPI_INTEGER, root_(P_STRATEGY_DOMAINS), mesh%vp%comm, mpi_err)
     ! Add a barrier to ensure that the process are synchronized
     call MPI_Barrier(mesh%vp%comm, mpi_err)
-  end if
+#endif
     
   POP_SUB(X(restart_write_mesh_function))
 end subroutine X(restart_write_mesh_function)
