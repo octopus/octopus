@@ -107,7 +107,7 @@ contains
     ! load wavefunctions
     if(.not. fromscratch) then
       call restart_init(restart_load, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                        ierr, mesh=sys%gr%mesh)
+                        sys%mc, ierr, mesh=sys%gr%mesh)
       if(ierr == 0) call states_load(restart_load, sys%st, sys%gr, ierr)
       call restart_end(restart_load)
       if(ierr /= 0) then
@@ -436,7 +436,7 @@ contains
       end do
 
       call restart_init(g_opt%restart_dump, RESTART_GS, RESTART_TYPE_DUMP, sys%st%dom_st_kpt_mpi_grp, &
-                        ierr, mesh=sys%gr%mesh)
+                        sys%mc, ierr, mesh=sys%gr%mesh)
 
       POP_SUB(geom_opt_run.init_)
     end subroutine init_

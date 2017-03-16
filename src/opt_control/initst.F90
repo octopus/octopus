@@ -101,7 +101,7 @@ contains
       message(1) =  'Info: Using ground state for initial state.'
       call messages_info(1)
       call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, psi%dom_st_kpt_mpi_grp, &
-                         ierr, mesh=sys%gr%mesh, exact=.true.)
+                        sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
       if(ierr == 0) call states_load(restart, psi, sys%gr, ierr)
       if (ierr /= 0) then
         message(1) = "Unable to read wavefunctions."
@@ -139,7 +139,7 @@ contains
       end if
 
       call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, psi%dom_st_kpt_mpi_grp, &
-        ierr, mesh=sys%gr%mesh, exact=.true.)
+                        sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
       if(ierr /= 0) then
         message(1) = "Could not read states for OCTInitialTransformStates."
         call messages_fatal(1)

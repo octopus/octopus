@@ -41,6 +41,7 @@ module propagation_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use multicomm_oct_m
   use oct_exchange_oct_m
   use opt_control_state_oct_m
   use propagator_oct_m
@@ -166,7 +167,7 @@ contains
 
     if(write_iter_) then
       call td_write_init(write_handler, gr, sys%st, hm, sys%geo, sys%ks, ion_dynamics_ions_move(td%ions), &
-           gauge_field_is_applied(hm%ep%gfield), hm%ep%kick, td%iter, td%max_iter, td%dt)
+           gauge_field_is_applied(hm%ep%gfield), hm%ep%kick, td%iter, td%max_iter, td%dt, sys%mc)
       call td_write_data(write_handler, gr, psi, hm, sys%ks, sys%outp, sys%geo, 0)
     end if
 
@@ -1045,11 +1046,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine oct_prop_init(prop, dirname, gr)
+  subroutine oct_prop_init(prop, dirname, gr, mc)
     type(oct_prop_t), intent(inout) :: prop
     character(len=*), intent(in)    :: dirname
     type(grid_t),     intent(in)    :: gr
-
+    type(multicomm_t), intent(in)   :: mc
+    
     integer :: j, ierr
 
     PUSH_SUB(oct_prop_init)
@@ -1060,8 +1062,8 @@ contains
 
     ! The OCT_DIR//trim(dirname) will be used to write and read information during the calculation,
     ! so they need to use the same path.
-    call restart_init(prop%restart_dump, RESTART_OCT, RESTART_TYPE_DUMP, gr%mesh%mpi_grp, ierr, mesh=gr%mesh)
-    call restart_init(prop%restart_load, RESTART_OCT, RESTART_TYPE_LOAD, gr%mesh%mpi_grp, ierr, mesh=gr%mesh)
+    call restart_init(prop%restart_dump, RESTART_OCT, RESTART_TYPE_DUMP, gr%mesh%mpi_grp, mc, ierr, mesh=gr%mesh)
+    call restart_init(prop%restart_load, RESTART_OCT, RESTART_TYPE_LOAD, gr%mesh%mpi_grp, mc, ierr, mesh=gr%mesh)
 
     SAFE_ALLOCATE(prop%iter(1:prop%number_checkpoints+2))
     prop%iter(1) = 0
