@@ -1094,7 +1094,6 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
   #endif
 
     do iorb = 1, os%norbs
-      nullify(os%orbitals(iorb)%eorb)
   #ifdef R_TCOMPLEX
       SAFE_ALLOCATE(os%orbitals(iorb)%eorb(1:os%sphere%np, st%d%kpt%start:st%d%kpt%end))
       os%orbitals(iorb)%eorb(:,:) = M_ZERO
@@ -1218,9 +1217,9 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, iorb, ispin, orb, trunca
 
   spec => geo%atom(iatom)%species
   ASSERT(iorb <= species_niwfs(spec))
+ 
 
-  nullify(orb%dorb)
-  nullify(orb%zorb)
+  call orbital_nullify(orb)
 
   call species_iwf_ilm(spec, iorb, ispin_, ii, ll, mm)
 

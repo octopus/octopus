@@ -39,6 +39,7 @@ module lda_u_oct_m
   use messages_oct_m
   use multicomm_oct_m
   use mpi_oct_m
+  use orbital_oct_m
   use parser_oct_m
   use periodic_copy_oct_m
   use poisson_oct_m
@@ -78,12 +79,6 @@ module lda_u_oct_m
        lda_u_set_effectiveU,            &
        dlda_u_commute_r,                &
        zlda_u_commute_r
-
-  type orbital_t
-    FLOAT, pointer      :: dorb(:) !> The orbital, if real, on the submesh
-    CMPLX, pointer      :: zorb(:) !> The orbital, if complex, on the submesh
-    CMPLX, pointer      :: eorb(:,:) !> Orbitals with its phase factor
-  end type orbital_t
 
   type orbital_set_t
     integer             :: nn, ll
@@ -410,9 +405,7 @@ contains
 
    do ios = 1, this%norbsets
      do iorb = 1, this%orbsets(ios)%norbs
-       SAFE_DEALLOCATE_P(this%orbsets(ios)%orbitals(iorb)%dorb)
-       SAFE_DEALLOCATE_P(this%orbsets(ios)%orbitals(iorb)%zorb)
-       SAFE_DEALLOCATE_P(this%orbsets(ios)%orbitals(iorb)%eorb)
+       call orbital_end(this%orbsets(ios)%orbitals(iorb))
      end do 
      SAFE_DEALLOCATE_P(this%orbsets(ios)%orbitals)
      SAFE_DEALLOCATE_P(this%orbsets(ios)%phase)
