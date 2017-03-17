@@ -42,6 +42,7 @@ module td_write_oct_m
   use messages_oct_m
   use mpi_oct_m
   use mpi_lib_oct_m
+  use multicomm_oct_m
   use parser_oct_m
   use partial_charges_oct_m
   use pert_oct_m
@@ -141,7 +142,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_init(writ, gr, st, hm, geo, ks, ions_move, with_gauge_field, kick, iter, max_iter, dt)
+  subroutine td_write_init(writ, gr, st, hm, geo, ks, ions_move, with_gauge_field, kick, iter, max_iter, dt, mc)
     type(td_write_t), target, intent(out)   :: writ
     type(grid_t),             intent(in)    :: gr
     type(states_t),           intent(inout) :: st
@@ -154,6 +155,7 @@ contains
     integer,                  intent(in)    :: iter
     integer,                  intent(in)    :: max_iter
     FLOAT,                    intent(in)    :: dt
+    type(multicomm_t),        intent(in)    :: mc
 
     FLOAT :: rmin
     integer :: ierr, first, ii, ist, jj, kk, flags, iout, default
@@ -349,7 +351,7 @@ contains
       ! clean up all the stuff we have to reallocate
       SAFE_DEALLOCATE_P(writ%gs_st%node)
 
-      call restart_init(restart_gs, RESTART_PROJ, RESTART_TYPE_LOAD, writ%gs_st%dom_st_kpt_mpi_grp, ierr, mesh=gr%mesh)
+      call restart_init(restart_gs, RESTART_PROJ, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
 
       if(.not.writ%out(OUT_KP_PROJ)%write.and..not.writ%out(OUT_N_EX)%write) then
         if(ierr == 0) &
