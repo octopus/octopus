@@ -40,6 +40,7 @@ module lda_u_oct_m
   use multicomm_oct_m
   use mpi_oct_m
   use orbital_oct_m
+  use orbital_set_oct_m
   use parser_oct_m
   use periodic_copy_oct_m
   use poisson_oct_m
@@ -80,22 +81,6 @@ module lda_u_oct_m
        dlda_u_commute_r,                &
        zlda_u_commute_r
 
-  type orbital_set_t
-    integer             :: nn, ll
-    integer             :: norbs
-    type(submesh_t)     :: sphere             !> The submesh of the orbital
-    CMPLX, pointer      :: phase(:,:)         !> Correction to the global phase 
-                                              !> if the sphere cross the border of the box
-    type(orbital_t), pointer :: orbitals(:)   !> Orbitals of this set of orbitals
-    FLOAT               :: Ueff               !> The effective U of the simplified rotational invariant form
-    FLOAT               :: Ubar, Jbar
-    type(species_t), pointer :: spec          
-
-    FLOAT, pointer      :: dS(:,:,:)             !> Overlap matrix for each orbital with similar orbital on other atomic sites    
-    CMPLX, pointer      :: zS(:,:,:)
-
-    type(poisson_t)  :: poisson               !> For computing the Coulomb integrals
-  end type orbital_set_t
 
   type lda_u_t
     logical                  :: apply
@@ -404,15 +389,7 @@ contains
    SAFE_DEALLOCATE_P(this%zVloc2)
 
    do ios = 1, this%norbsets
-     do iorb = 1, this%orbsets(ios)%norbs
-       call orbital_end(this%orbsets(ios)%orbitals(iorb))
-     end do 
-     SAFE_DEALLOCATE_P(this%orbsets(ios)%orbitals)
-     SAFE_DEALLOCATE_P(this%orbsets(ios)%phase)
-     SAFE_DEALLOCATE_P(this%orbsets(ios)%dS)
-     SAFE_DEALLOCATE_P(this%orbsets(ios)%zS)
-     nullify(this%orbsets(ios)%spec)
-     call submesh_end(this%orbsets(ios)%sphere)
+     call orbital_set_end(this%orbsets(ios))
    end do
 
    SAFE_DEALLOCATE_P(this%orbsets)
@@ -464,68 +441,12 @@ contains
    PUSH_SUB(lda_u_build_phase_correction)
 
    do ios = 1, this%norbsets
-     call  orbital_update_phase_correction(this%orbsets(ios), sb, std, vec_pot, vec_pot_var)
+     call  orbital_set_update_phase(this%orbsets(ios), sb, std, vec_pot, vec_pot_var)
    end do
   
    POP_SUB(lda_u_build_phase_correction)
 
  end subroutine lda_u_build_phase_correction
-
-  !> Build the phase correction to the global phase in case the orbital crosses the border of the simulaton box
-  subroutine orbital_update_phase_correction(os, sb, std, vec_pot, vec_pot_var)
-    type(orbital_set_t),           intent(inout) :: os
-    type(simul_box_t),             intent(in)    :: sb
-    type(states_dim_t),            intent(in)    :: std
-    FLOAT, optional,  allocatable, intent(in)    :: vec_pot(:) !< (sb%dim)
-    FLOAT, optional,  allocatable, intent(in)    :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)
-
-    integer :: ns, iq, is, ikpoint, im
-    FLOAT   :: kr, kpoint(1:MAX_DIM)
-    integer :: ndim
-
-    PUSH_SUB(orbital_update_phase_correction)
-
-    ns = os%sphere%np
-    ndim = sb%dim
-
-    do iq = std%kpt%start, std%kpt%end
-      ikpoint = states_dim_get_kpoint_index(std, iq)
-
-      ! if this fails, it probably means that sb is not compatible with std
-      ASSERT(ikpoint <= kpoints_number(sb%kpoints))
-
-      kpoint = M_ZERO
-      kpoint(1:ndim) = kpoints_get_point(sb%kpoints, ikpoint)
-
-      do is = 1, ns
-        ! this is only the correction to the global phase, that can
-        ! appear if the sphere crossed the boundary of the cell.
-        kr = sum(kpoint(1:ndim)*(os%sphere%x(is, 1:ndim) - os%sphere%mesh%x(os%sphere%map(is), 1:ndim)))
-
-        if(present(vec_pot)) then
-          if(allocated(vec_pot)) kr = kr + &
-            sum(vec_pot(1:ndim)*(os%sphere%x(is, 1:ndim)- os%sphere%mesh%x(os%sphere%map(is), 1:ndim)))
-        end if
-
-        if(present(vec_pot_var)) then
-          if(allocated(vec_pot_var)) kr = kr + sum(vec_pot_var(1:ndim, os%sphere%map(is))*os%sphere%x(is, 1:ndim))
-        end if
-
-        os%phase(is, iq) = exp(M_zI*kr)
-      end do
-
-      !We now compute the so called-Bloch sum of the localized orbitals
-      do im = 1, os%norbs
-        !$omp parallel do
-        do is = 1, ns
-          os%orbitals(im)%eorb(is,iq) = os%orbitals(im)%zorb(is)*os%phase(is, iq)
-        end do
-        !$omp end parallel do
-      end do
-    end do
-
-    POP_SUB(orbital_update_phase_correction)
-  end subroutine orbital_update_phase_correction
 
   subroutine lda_u_freeze_occ(this) 
     type(lda_u_t),     intent(inout) :: this

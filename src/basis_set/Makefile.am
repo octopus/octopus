@@ -20,10 +20,11 @@
 
 noinst_LIBRARIES = libbasis_set.a
 
-libbasis_set_a_SOURCES =      \
-                    orbital.F90 
+libbasis_set_a_SOURCES =                 \
+                    orbital.F90          \
+                    orbital_set.F90
 
-noinst_HEADERS =        
+noinst_HEADERS =                         
 
 include $(srcdir)/../common-rules.make
 
@@ -31,3 +32,4 @@ depend:
 	@makedepf90 $(libbasis_set_a_SOURCES)
 
 orbital.o : orbital.F90
+orbital_set.o : orbital_set.F90 orbital.o

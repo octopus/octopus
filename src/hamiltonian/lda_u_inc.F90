@@ -990,6 +990,9 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
 
   this%norbsets = norb
   SAFE_ALLOCATE(this%orbsets(1:norb))
+  do iorbset = 1, this%norbsets
+    call orbital_set_nullify(this%orbsets(iorbset))
+  end do
 
   iorbset = 0
   do ia = 1, geo%natoms
@@ -1073,6 +1076,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
               os%orbitals(work2)%X(orb)(1:os%sphere%np) =  &
                  os%orbitals(work2)%X(orb)(1:os%sphere%np) /norm
             end if
+            print *, 'Norm of the orbital ', X(sm_nrm2)(os%sphere, os%orbitals(work2)%X(orb)(1:os%sphere%np))
           endif
         end do !iorb
       end do !norb
@@ -1242,6 +1246,7 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, iorb, ispin, orb, trunca
           radius = min(radius,species_get_ps_radius(spec))
       end if
     end if
+    print *, radius, species_get_iwf_radius(spec, ii, ispin_), species_get_ps_radius(spec)
     ! make sure that if the spacing is too large, the orbitals fit in a few points at least
     radius = max(radius, CNST(2.0)*maxval(mesh%spacing(1:mesh%sb%dim)))
 
