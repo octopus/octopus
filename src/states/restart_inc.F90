@@ -17,39 +17,82 @@
 !! 02110-1301, USA.
 !!
 
-
 ! ---------------------------------------------------------
-subroutine X(restart_write_mesh_function)(restart, filename, mesh, ff, ierr, root, is_global)
-  type(restart_t),  intent(in)  :: restart
-  character(len=*), intent(in)  :: filename
-  type(mesh_t),     intent(in)  :: mesh
-  R_TYPE,           intent(in)  :: ff(:)
-  integer,          intent(out) :: ierr
-  integer, optional, intent(in) :: root !< which process is going to write the data
-  logical, optional, intent(in) :: is_global
+subroutine X(restart_write_mesh_function)(restart, filename, mesh, ff, ierr, root)
+  type(restart_t),   intent(in)  :: restart
+  character(len=*),  intent(in)  :: filename
+  type(mesh_t),      intent(in)  :: mesh
+  R_TYPE,  target,   intent(in)  :: ff(:)
+  integer,           intent(out) :: ierr
+  integer, optional, intent(in)  :: root(:) !< which process is going to write the data
 
-  integer :: root_
-  logical :: is_global_
-
+  logical :: i_am_root, in_line
+  integer :: root_(1:P_STRATEGY_MAX)
+  R_TYPE, pointer :: ff_global(:)
+  
   PUSH_SUB(X(restart_write_mesh_function))
 
-  root_ = optional_default(root, 0)
-  is_global_ = optional_default(is_global, .false.)
   ASSERT(.not. restart%skip)
   ASSERT(restart%type == RESTART_TYPE_DUMP)
-  ASSERT(restart%has_mesh)
-  call X(io_function_output)(restart%format, trim(restart%pwd), trim(filename), mesh, ff(:), unit_one, ierr, &
-         grp=restart%mpi_grp, root = root_, is_global = is_global_)
-  ! all restart files are in atomic units
+  ASSERT(restart%has_mesh)  
 
-  if (ierr /= 0) then
-    message(1) = "Unable to write restart function to '"//trim(restart%pwd)//"/"//trim(filename)//"'."
-    call messages_warning(1)
+  root_(1:P_STRATEGY_MAX) = 0
+  if (present(root)) then
+    ASSERT(root(P_STRATEGY_DOMAINS) >= 0)
+    where(root >= 0)
+      root_ = root
+    elsewhere
+      root_ = restart%mc%who_am_i
+    end where
+  end if
+    
+  ierr = 0
+  i_am_root = all(root_ == restart%mc%who_am_i)
+  in_line = (root_(P_STRATEGY_STATES)  == restart%mc%who_am_i(P_STRATEGY_STATES)  .and. &
+             root_(P_STRATEGY_KPOINTS) == restart%mc%who_am_i(P_STRATEGY_KPOINTS) .and. &
+             root_(P_STRATEGY_OTHER)   == restart%mc%who_am_i(P_STRATEGY_OTHER)  )
+
+  if (i_am_root) then
+    if (mesh%parallel_in_domains) then
+      SAFE_ALLOCATE(ff_global(1:mesh%np_global))
+    else
+      ff_global => ff
+    end if
   end if
 
+  if (in_line .and. mesh%parallel_in_domains) then
+#ifdef HAVE_MPI
+    call vec_gather(mesh%vp, root_(P_STRATEGY_DOMAINS), ff_global, ff)
+#endif
+  end if
+  
+  if (i_am_root) then
+    call X(io_function_output_global)(restart%format, trim(restart%pwd), trim(filename), mesh, ff_global, unit_one, ierr)
+    ! all restart files are in atomic units
+
+    if (mesh%parallel_in_domains) then
+      SAFE_DEALLOCATE_P(ff_global)
+    else
+      nullify(ff_global)
+    end if
+
+    if (ierr /= 0) then
+      message(1) = "Unable to write restart function to '"//trim(restart%pwd)//"/"//trim(filename)//"'."
+      call messages_warning(1)
+    end if
+  end if
+  
+  if (mesh%parallel_in_domains .and. in_line) then
+#ifdef HAVE_MPI
+    ! I have to broadcast the error code  end if
+    call MPI_Bcast(ierr, 1, MPI_INTEGER, root_(P_STRATEGY_DOMAINS), mesh%vp%comm, mpi_err)
+    ! Add a barrier to ensure that the process are synchronized
+    call MPI_Barrier(mesh%vp%comm, mpi_err)
+#endif
+  end if
+    
   POP_SUB(X(restart_write_mesh_function))
 end subroutine X(restart_write_mesh_function)
-
 
 ! ---------------------------------------------------------
 !> In domain parallel case each process reads a part of the file.
