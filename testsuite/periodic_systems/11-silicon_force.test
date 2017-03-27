@@ -12,118 +12,118 @@ match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 1
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  1
 
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -32.06075739
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -32.05917205
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -31.21044509
-match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;  -1.33416280
-match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;   2.45976963
-match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ;  -8.17944799
-match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;  -1.50279946
-match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  12.42262925
-match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;  -5.59284870
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;  -1.33404207
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;   2.45823214
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ;  -8.17923144
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;  -1.50278323
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  12.42152972
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;  -5.58978692
 
 match ; k-point 1 (x) ; GREPFIELD(static/info, '#k =   1', 7) ; 0.25
 match ; k-point 1 (y) ; GREPFIELD(static/info, '#k =   1', 8) ; 0.25
 match ; k-point 1 (z) ; GREPFIELD(static/info, '#k =   1', 9) ; 0.25
-match ; Eigenvalue  1 ; GREPFIELD(static/info, '#k =   1', 3, 1) ;  -0.277126
-match ; Eigenvalue  8 ; GREPFIELD(static/info, '#k =   1', 3, 8) ;  -0.015110
-match ; Eigenvalue 16 ; GREPFIELD(static/info, '#k =   1', 3, 16) ;  0.148705
-match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   1', 3, 17) ;  0.197604
+match ; Eigenvalue  1 ; GREPFIELD(static/info, '#k =   1', 3, 1) ;  -0.276579
+match ; Eigenvalue  8 ; GREPFIELD(static/info, '#k =   1', 3, 8) ;  -0.014253
+match ; Eigenvalue 16 ; GREPFIELD(static/info, '#k =   1', 3, 16) ;  0.149457
+match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   1', 3, 17) ;  0.197945
 
 match ; k-point 2 (x) ; GREPFIELD(static/info, '#k =   2', 7) ; 0.25
 match ; k-point 2 (y) ; GREPFIELD(static/info, '#k =   2', 8) ; 0.25
 match ; k-point 2 (z) ; GREPFIELD(static/info, '#k =   2', 9) ; -0.25
-match ; Eigenvalue  1 ; GREPFIELD(static/info, '#k =   2', 3, 1) ;  -0.278533
-match ; Eigenvalue  8 ; GREPFIELD(static/info, '#k =   2', 3, 8) ;  -0.003596
-match ; Eigenvalue 16 ; GREPFIELD(static/info, '#k =   2', 3, 16) ;  0.145983
-match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   2', 3, 17) ;  0.181832
+match ; Eigenvalue  1 ; GREPFIELD(static/info, '#k =   2', 3, 1) ;  -0.277963
+match ; Eigenvalue  8 ; GREPFIELD(static/info, '#k =   2', 3, 8) ;  -0.003654
+match ; Eigenvalue 16 ; GREPFIELD(static/info, '#k =   2', 3, 16) ;  0.146648
+match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   2', 3, 17) ;  0.182404
 
 match ; k-point 3 (x) ; GREPFIELD(static/info, '#k =   3', 7) ; 0.25
 match ; k-point 3 (y) ; GREPFIELD(static/info, '#k =   3', 8) ; -0.25
 match ; k-point 3 (z) ; GREPFIELD(static/info, '#k =   3', 9) ; 0.25
-match ; Eigenvalue  1 ; GREPFIELD(static/info, '#k =   3', 3, 1) ;  -0.278827
-match ; Eigenvalue  8 ; GREPFIELD(static/info, '#k =   3', 3, 8) ;   0.000462
-match ; Eigenvalue 16 ; GREPFIELD(static/info, '#k =   3', 3, 16) ;  0.128354
-match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   3', 3, 17) ;  0.188937
+match ; Eigenvalue  1 ; GREPFIELD(static/info, '#k =   3', 3, 1) ;  -0.278222
+match ; Eigenvalue  8 ; GREPFIELD(static/info, '#k =   3', 3, 8) ;   0.000320
+match ; Eigenvalue 16 ; GREPFIELD(static/info, '#k =   3', 3, 16) ;  0.128581
+match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   3', 3, 17) ;  0.189586
 
 match ; k-point 4 (x) ; GREPFIELD(static/info, '#k =   4', 7) ; -0.25
 match ; k-point 4 (y) ; GREPFIELD(static/info, '#k =   4', 8) ; 0.25
 match ; k-point 4 (z) ; GREPFIELD(static/info, '#k =   4', 9) ; 0.25
-match ; Eigenvalue  1 ; GREPFIELD(static/info, '#k =   4', 3, 1) ;  -0.277152
-match ; Eigenvalue  8 ; GREPFIELD(static/info, '#k =   4', 3, 8) ;  -0.013068
-match ; Eigenvalue 16 ; GREPFIELD(static/info, '#k =   4', 3, 16) ;  0.149441
-match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   4', 3, 17) ;  0.195268
+match ; Eigenvalue  1 ; GREPFIELD(static/info, '#k =   4', 3, 1) ;  -0.276587
+match ; Eigenvalue  8 ; GREPFIELD(static/info, '#k =   4', 3, 8) ;  -0.012479
+match ; Eigenvalue 16 ; GREPFIELD(static/info, '#k =   4', 3, 16) ;  0.150171
+match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   4', 3, 17) ;  0.195613
 
 match ; k-point 5 (x) ; GREPFIELD(static/info, '#k =   5', 7) ; 0.25
 match ; k-point 5 (y) ; GREPFIELD(static/info, '#k =   5', 8) ; -0.25
 match ; k-point 5 (z) ; GREPFIELD(static/info, '#k =   5', 9) ; -0.25
-match ; Eigenvalue  1 ; GREPFIELD(static/info, '#k =   5', 3, 1) ;  -0.277152
-match ; Eigenvalue  8 ; GREPFIELD(static/info, '#k =   5', 3, 8) ;  -0.013068
-match ; Eigenvalue 16 ; GREPFIELD(static/info, '#k =   5', 3, 16) ;  0.149441
-match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   5', 3, 17) ;  0.195268
+match ; Eigenvalue  1 ; GREPFIELD(static/info, '#k =   5', 3, 1) ;  -0.276587
+match ; Eigenvalue  8 ; GREPFIELD(static/info, '#k =   5', 3, 8) ;  -0.012479
+match ; Eigenvalue 16 ; GREPFIELD(static/info, '#k =   5', 3, 16) ;  0.150171
+match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   5', 3, 17) ;  0.195613
 
 match ; k-point 6 (x) ; GREPFIELD(static/info, '#k =   6', 7) ; -0.25
 match ; k-point 6 (y) ; GREPFIELD(static/info, '#k =   6', 8) ; 0.25
 match ; k-point 6 (z) ; GREPFIELD(static/info, '#k =   6', 9) ; -0.25
-match ; Eigenvalue  1 ; GREPFIELD(static/info, '#k =   6', 3, 1) ;  -0.278827
-match ; Eigenvalue  8 ; GREPFIELD(static/info, '#k =   6', 3, 8) ;   0.000462
-match ; Eigenvalue 16 ; GREPFIELD(static/info, '#k =   6', 3, 16) ;  0.128354
-match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   6', 3, 17) ;  0.188937
+match ; Eigenvalue  1 ; GREPFIELD(static/info, '#k =   6', 3, 1) ;  -0.278222
+match ; Eigenvalue  8 ; GREPFIELD(static/info, '#k =   6', 3, 8) ;   0.000320
+match ; Eigenvalue 16 ; GREPFIELD(static/info, '#k =   6', 3, 16) ;  0.128581
+match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   6', 3, 17) ;  0.189586
 
 match ; k-point 7 (x) ; GREPFIELD(static/info, '#k =   7', 7) ; -0.25
 match ; k-point 7 (y) ; GREPFIELD(static/info, '#k =   7', 8) ; -0.25
 match ; k-point 7 (z) ; GREPFIELD(static/info, '#k =   7', 9) ; 0.25
-match ; Eigenvalue  1 ; GREPFIELD(static/info, '#k =   7', 3, 1) ;  -0.278533
-match ; Eigenvalue  8 ; GREPFIELD(static/info, '#k =   7', 3, 8) ;  -0.003596
-match ; Eigenvalue 16 ; GREPFIELD(static/info, '#k =   7', 3, 16) ;  0.145983
-match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   7', 3, 17) ;  0.181832
+match ; Eigenvalue  1 ; GREPFIELD(static/info, '#k =   7', 3, 1) ;  -0.277963
+match ; Eigenvalue  8 ; GREPFIELD(static/info, '#k =   7', 3, 8) ;  -0.003654
+match ; Eigenvalue 16 ; GREPFIELD(static/info, '#k =   7', 3, 16) ;  0.146648
+match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   7', 3, 17) ;  0.182404
 
 match ; k-point 8 (x) ; GREPFIELD(static/info, '#k =   8', 7) ; -0.25
 match ; k-point 8 (y) ; GREPFIELD(static/info, '#k =   8', 8) ; -0.25
 match ; k-point 8 (z) ; GREPFIELD(static/info, '#k =   8', 9) ; -0.25
-match ; Eigenvalue  1 ; GREPFIELD(static/info, '#k =   8', 3, 1) ;  -0.277126
-match ; Eigenvalue  8 ; GREPFIELD(static/info, '#k =   8', 3, 8) ;  -0.015110
-match ; Eigenvalue 16 ; GREPFIELD(static/info, '#k =   8', 3, 16) ;  0.148705
-match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   8', 3, 17) ;  0.197604
+match ; Eigenvalue  1 ; GREPFIELD(static/info, '#k =   8', 3, 1) ;  -0.276579
+match ; Eigenvalue  8 ; GREPFIELD(static/info, '#k =   8', 3, 8) ;  -0.014253
+match ; Eigenvalue 16 ; GREPFIELD(static/info, '#k =   8', 3, 16) ;  0.149457
+match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   8', 3, 17) ;  0.197945
 
-match ; Force 1 (x)   ; GREPFIELD(static/info, '1        Si', 3) ; -0.040722
-match ; Force 1 (y)   ; GREPFIELD(static/info, '1        Si', 4) ; -0.021067
-match ; Force 1 (z)   ; GREPFIELD(static/info, '1        Si', 5) ; -0.005386
+match ; Force 1 (x)   ; GREPFIELD(static/info, '1        Si', 3) ; -0.039914
+match ; Force 1 (y)   ; GREPFIELD(static/info, '1        Si', 4) ; -0.022004
+match ; Force 1 (z)   ; GREPFIELD(static/info, '1        Si', 5) ; -0.004411
 
-match ; Force 2 (x)   ; GREPFIELD(static/info, '2        Si', 3) ; -0.024885
-match ; Force 2 (y)   ; GREPFIELD(static/info, '2        Si', 4) ;  0.012115
-match ; Force 2 (z)   ; GREPFIELD(static/info, '2        Si', 5) ;  0.004616
+match ; Force 2 (x)   ; GREPFIELD(static/info, '2        Si', 3) ; -0.023435
+match ; Force 2 (y)   ; GREPFIELD(static/info, '2        Si', 4) ;  0.011419
+match ; Force 2 (z)   ; GREPFIELD(static/info, '2        Si', 5) ;  0.003449
 
-match ; Force 3 (x)   ; GREPFIELD(static/info, '3        Si', 3) ; -0.024827
-match ; Force 3 (y)   ; GREPFIELD(static/info, '3        Si', 4) ; -0.008522
-match ; Force 3 (z)   ; GREPFIELD(static/info, '3        Si', 5) ; -0.012880
+match ; Force 3 (x)   ; GREPFIELD(static/info, '3        Si', 3) ; -0.024106
+match ; Force 3 (y)   ; GREPFIELD(static/info, '3        Si', 4) ; -0.008194
+match ; Force 3 (z)   ; GREPFIELD(static/info, '3        Si', 5) ; -0.011171
 
-match ; Force 4 (x)   ; GREPFIELD(static/info, '4        Si', 3) ; -0.001233
-match ; Force 4 (y)   ; GREPFIELD(static/info, '4        Si', 4) ;  0.012239
-match ; Force 4 (z)   ; GREPFIELD(static/info, '4        Si', 5) ; -0.011281
+match ; Force 4 (x)   ; GREPFIELD(static/info, '4        Si', 3) ; -0.001346
+match ; Force 4 (y)   ; GREPFIELD(static/info, '4        Si', 4) ;  0.011232
+match ; Force 4 (z)   ; GREPFIELD(static/info, '4        Si', 5) ; -0.009520
 
-match ; Force 5 (x)   ; GREPFIELD(static/info, '5        Si', 3) ;  0.035017
-match ; Force 5 (y)   ; GREPFIELD(static/info, '5        Si', 4) ;  0.033235
-match ; Force 5 (z)   ; GREPFIELD(static/info, '5        Si', 5) ;  0.029931
+match ; Force 5 (x)   ; GREPFIELD(static/info, '5        Si', 3) ;  0.040110
+match ; Force 5 (y)   ; GREPFIELD(static/info, '5        Si', 4) ;  0.044247
+match ; Force 5 (z)   ; GREPFIELD(static/info, '5        Si', 5) ;  0.044829
 
-match ; Force 6 (x)   ; GREPFIELD(static/info, '6        Si', 3) ;  0.013106
-match ; Force 6 (y)   ; GREPFIELD(static/info, '6        Si', 4) ; -0.015603
-match ; Force 6 (z)   ; GREPFIELD(static/info, '6        Si', 5) ;  0.013548
+match ; Force 6 (x)   ; GREPFIELD(static/info, '6        Si', 3) ;  0.008073
+match ; Force 6 (y)   ; GREPFIELD(static/info, '6        Si', 4) ; -0.023402
+match ; Force 6 (z)   ; GREPFIELD(static/info, '6        Si', 5) ;  0.025221
 
-match ; Force 7 (x)   ; GREPFIELD(static/info, '7        Si', 3) ;  0.005833
-match ; Force 7 (y)   ; GREPFIELD(static/info, '7        Si', 4) ;  0.016194
-match ; Force 7 (z)   ; GREPFIELD(static/info, '7        Si', 5) ; -0.009466
+match ; Force 7 (x)   ; GREPFIELD(static/info, '7        Si', 3) ;  0.001733
+match ; Force 7 (y)   ; GREPFIELD(static/info, '7        Si', 4) ;  0.023542
+match ; Force 7 (z)   ; GREPFIELD(static/info, '7        Si', 5) ; -0.020679
 
-match ; Force 8 (x)   ; GREPFIELD(static/info, '8        Si', 3) ;  0.029173
-match ; Force 8 (y)   ; GREPFIELD(static/info, '8        Si', 4) ; -0.024361
-match ; Force 8 (z)   ; GREPFIELD(static/info, '8        Si', 5) ; -0.015709
+match ; Force 8 (x)   ; GREPFIELD(static/info, '8        Si', 3) ;  0.033868
+match ; Force 8 (y)   ; GREPFIELD(static/info, '8        Si', 4) ; -0.034303
+match ; Force 8 (z)   ; GREPFIELD(static/info, '8        Si', 5) ; -0.030839
 
 Precision : 1.0e-06
-match ; Stress (xx)   ; GREPFIELD(static/info, 'T_{ij}', 2, 1) ;  -8.094732E-05
-match ; Stress (yy)   ; GREPFIELD(static/info, 'T_{ij}', 3, 2) ;  -1.933343E-04
-match ; Stress (zz)   ; GREPFIELD(static/info, 'T_{ij}', 4, 3) ;  -1.862420E-04
-match ; Stress (xy)   ; GREPFIELD(static/info, 'T_{ij}', 3, 1) ;  -3.161466E-05
-match ; Stress (yx)   ; GREPFIELD(static/info, 'T_{ij}', 2, 2) ;  -3.196420E-05
-match ; Stress (yz)   ; GREPFIELD(static/info, 'T_{ij}', 4, 2) ;  -1.057419E-04
-match ; Stress (zy)   ; GREPFIELD(static/info, 'T_{ij}', 3, 3) ;  -1.058217E-04
-match ; Stress (zx)   ; GREPFIELD(static/info, 'T_{ij}', 2, 3) ;   4.403458E-06
-match ; Stress (xz)   ; GREPFIELD(static/info, 'T_{ij}', 4, 1) ;   4.404692E-06
+match ; Stress (xx)   ; GREPFIELD(static/info, 'T_{ij}', 2, 1) ;  -7.818318E-05
+match ; Stress (yy)   ; GREPFIELD(static/info, 'T_{ij}', 3, 2) ;  -1.936740E-04
+match ; Stress (zz)   ; GREPFIELD(static/info, 'T_{ij}', 4, 3) ;  -1.863484E-04
+match ; Stress (xy)   ; GREPFIELD(static/info, 'T_{ij}', 3, 1) ;  -3.212585E-05
+match ; Stress (yx)   ; GREPFIELD(static/info, 'T_{ij}', 2, 2) ;  -3.250140E-05
+match ; Stress (yz)   ; GREPFIELD(static/info, 'T_{ij}', 4, 2) ;  -1.103488E-04
+match ; Stress (zy)   ; GREPFIELD(static/info, 'T_{ij}', 3, 3) ;  -1.104294E-04
+match ; Stress (zx)   ; GREPFIELD(static/info, 'T_{ij}', 2, 3) ;   4.529804E-06
+match ; Stress (xz)   ; GREPFIELD(static/info, 'T_{ij}', 4, 1) ;   4.517699E-06

@@ -64,6 +64,7 @@ module floquet_oct_m
   use varinfo_oct_m
   use v_ks_oct_m
   use write_iter_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -276,8 +277,8 @@ contains
          call geometry_copy(this%td_hm(it)%geo, this%geo)
          this%td_hm(it)%geo%skip_species_pot_init = .true.
 
-         call hamiltonian_init(this%td_hm(it), gr, this%td_hm(it)%geo, st, &
-                                     sys%ks%theory_level, sys%ks%xc_family,sys%ks%xc_flags)
+         call hamiltonian_init(this%td_hm(it), gr, this%td_hm(it)%geo, st, sys%ks%theory_level, &
+                               sys%ks%xc_family,sys%ks%xc_flags,  family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
          call hamiltonian_epot_generate(this%td_hm(it), gr, this%td_hm(it)%geo, st, time=M_ZERO)
 
          call scf_init(scf,gr,this%td_hm(it)%geo,st,this%td_hm(it))
@@ -299,8 +300,8 @@ contains
          ! hm%geo is only a pointer to the global geo instance
          this%td_hm(it)%geo%skip_species_pot_init = .true.
 
-         call hamiltonian_init(this%td_hm(it), gr, this%td_hm(it)%geo, st, &
-                                    sys%ks%theory_level, sys%ks%xc_family,sys%ks%xc_flags)
+         call hamiltonian_init(this%td_hm(it), gr, this%td_hm(it)%geo, st, sys%ks%theory_level, &
+                               sys%ks%xc_family,sys%ks%xc_flags,  family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
          time =this%F%Tcycle+ it*this%F%dt ! offset in time to catch switchon cycle
          do ispin=1,this%d%nspin
             forall (ip = 1:gr%mesh%np) this%td_hm(it)%vhxc(ip,ispin) = this%vhxc(ip, ispin)
@@ -355,8 +356,8 @@ contains
      ! hm%geo is only a pointer to the global geo instance                                                        
      hm%td_hm(it)%geo%skip_species_pot_init = .true.
 
-     call hamiltonian_init(hm%td_hm(it), gr, hm%td_hm(it)%geo, st, &
-           sys%ks%theory_level, sys%ks%xc_family,sys%ks%xc_flags)
+     call hamiltonian_init(hm%td_hm(it), gr, hm%td_hm(it)%geo, st, sys%ks%theory_level, &
+                           sys%ks%xc_family,sys%ks%xc_flags, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
      
      call hamiltonian_update(hm%td_hm(it), gr%der%mesh,time=time)
 
@@ -402,7 +403,7 @@ contains
       iter = 0
 
       call restart_init(restart, RESTART_FLOQUET, RESTART_TYPE_LOAD, &
-                        dressed_st%dom_st_kpt_mpi_grp, ierr, gr%der%mesh)
+                       sys%mc, ierr, gr%der%mesh)
       if(ierr == 0) then
          call states_look(restart, nik, dim, nst, ierr)
          if(dim==dressed_st%d%dim .and. nik==gr%sb%kpoints%reduced%npoints &
@@ -482,7 +483,7 @@ contains
          filename = 'floquet_multibands_'//trim(adjustl(filename))
          call states_write_bandstructure('td.general', dressed_st%nst, dressed_st, gr%sb, filename)
          call restart_init(restart, RESTART_FLOQUET, RESTART_TYPE_DUMP, &
-              dressed_st%dom_st_kpt_mpi_grp, ierr, gr%der%mesh)
+                           sys%mc, ierr, gr%der%mesh)
          call states_dump(restart, dressed_st, gr, ierr, iter)
          call restart_end(restart)
 

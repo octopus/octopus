@@ -992,7 +992,7 @@ contains
       write(iunit(is),'(a,i6,3a)') '(red. coord.), bands:', nst, ' [', trim(units_abbrev(units_out%energy)), ']'
     end do
 
-    npath = SIZE(sb%kpoints%coord_along_path)
+    npath = SIZE(sb%kpoints%coord_along_path)*ns
 
     ! output bands
     do ik = st%d%nik-npath+1, st%d%nik, ns

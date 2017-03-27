@@ -31,6 +31,7 @@ module restart_oct_m
   use mesh_batch_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use multicomm_oct_m
   use parser_oct_m
   use par_vec_oct_m
   use profiling_oct_m
@@ -97,6 +98,7 @@ module restart_oct_m
     character(len=MAX_PATH_LEN) :: pwd !< The current directory where the restart information is being loaded from or dumped to.
                                        !! It can be either dir or a subdirectory of dir.
     type(mpi_grp_t)   :: mpi_grp   !< Some operations require an mpi group to be used.
+    type(multicomm_t), pointer :: mc
     logical           :: has_mesh  !< If no, mesh info is not written or read, and mesh functions cannot be written or read.
     integer, pointer  :: map(:)    !< Map between the points of the stored mesh and the mesh used in the current calculations.
   end type restart_t
@@ -385,12 +387,12 @@ contains
 
   ! ---------------------------------------------------------
   !> Initializes a restart object.
-  subroutine restart_init(restart, data_type, type, mpi_grp, ierr, mesh, dir, exact)
+  subroutine restart_init(restart, data_type, type, mc, ierr, mesh, dir, exact)
     type(restart_t),             intent(out) :: restart   !< Restart information.
     integer,                     intent(in)  :: data_type !< Restart data type (RESTART_GS, RESTART_TD, etc)
     integer,                     intent(in)  :: type      !< Is this restart used for dumping (type = RESTART_TYPE_DUMP)
                                                           !! or for loading (type = RESTART_TYPE_LOAD)?
-    type(mpi_grp_t),             intent(in)  :: mpi_grp   !< The mpi group in charge of handling this restart.
+    type(multicomm_t), target,   intent(in)  :: mc        !< The multicommunicator in charge of handling this restart.
     integer,                     intent(out) :: ierr      !< Error code, if any. Required for LOAD, should not be present for DUMP.
     type(mesh_t),      optional, intent(in)  :: mesh      !< If present, depending on the type of restart, the mesh 
                                                           !! information is either dumped or the mesh compatibility is checked.
@@ -419,7 +421,8 @@ contains
     ! Some initializations
     restart%type = type
     nullify(restart%map)
-    restart%mpi_grp = mpi_grp
+    restart%mc => mc
+    call mpi_grp_init(restart%mpi_grp, mc%master_comm)
     restart%format = io_function_fill_how("Binary")
     if (data_type < RESTART_UNDEFINED .and. data_type > RESTART_N_DATA_TYPES) then
       message(1) = "Illegal data_type in restart_init"
@@ -502,13 +505,13 @@ contains
         ! Dump the grid information. The main parameters of the grid should not change
         ! during the calculation, so we should only need to dump it once.
         if (present(mesh)) then
-          iunit = io_open(trim(restart%pwd)//'/mesh', action='write', die=.true., grp=mpi_grp)
+          iunit = io_open(trim(restart%pwd)//'/mesh', action='write', die=.true., grp=restart%mpi_grp)
           if (mpi_grp_is_root(restart%mpi_grp)) then
             write(iunit,'(a)') '# This file contains the necessary information to generate the'
             write(iunit,'(a)') '# grid with which the functions in this directory were calculated,'
             write(iunit,'(a)') '# except for the geometry of the system.'
           end if
-          call io_close(iunit, grp=mpi_grp)
+          call io_close(iunit, grp=restart%mpi_grp)
           
           call mesh_dump(mesh, restart%pwd, "mesh", restart%mpi_grp, ierr)
           if (ierr /= 0) then
@@ -630,7 +633,8 @@ contains
     restart%skip = .true.
     SAFE_DEALLOCATE_P(restart%map)
     restart%has_mesh = .false.
-
+    nullify(restart%mc)
+    
     POP_SUB(restart_end)
   end subroutine restart_end
 
