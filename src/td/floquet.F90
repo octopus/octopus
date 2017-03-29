@@ -192,7 +192,7 @@ contains
     !%time-integral of the Floquet analysis.
     !%
     !%End
-    call parse_variable('TDFloquetSample',this%floquet_dim*3 ,this%nt)
+    call parse_variable('TDFloquetSample',this%order*3 ,this%nt)
     call messages_print_var_value(stdout,'Number of Floquet time-sampling points', this%nT)
     this%dt = this%Tcycle/real(this%nT)
 
@@ -203,7 +203,7 @@ contains
     ! re-read time step from input
     call parse_variable('TDTimeStep', M_ZERO, time_step, unit = units_inp%time)
     if(time_step == M_ZERO) then
-       message(1) = 'Did not find time-step in Floquet init, plase give a value for TDTimeStep'
+       message(1) = 'Did not find time-step in Floquet init, please give a value for TDTimeStep'
       call messages_fatal(1)
     end if
     this%interval = int(this%dt/time_step)
