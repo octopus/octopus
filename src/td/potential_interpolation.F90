@@ -390,10 +390,10 @@ contains
         if (cmplxscl) then
           zv_old = potential_interpolation%v_old(1:gr%mesh%np, is, ii) &
             + M_zI*potential_interpolation%Imv_old(1:gr%mesh%np, is, ii)
-          call zrestart_write_mesh_function(restart, filename, gr%mesh, zv_old, err, use_mpi_grp = .true.)
+          call zrestart_write_mesh_function(restart, filename, gr%mesh, zv_old, err)
         else
           call drestart_write_mesh_function(restart, filename, gr%mesh, &
-            potential_interpolation%v_old(1:gr%mesh%np, is, ii), err, use_mpi_grp = .true.)
+            potential_interpolation%v_old(1:gr%mesh%np, is, ii), err)
         end if
         ! the unit is energy actually, but this only for restart, and can be kept in atomic units
         ! for simplicity
@@ -410,10 +410,10 @@ contains
           if (cmplxscl) then
             zv_old = potential_interpolation%vtau_old(1:gr%mesh%np, is, ii) &
               + M_zI*potential_interpolation%Imvtau_old(1:gr%mesh%np, is, ii)
-            call zrestart_write_mesh_function(restart, filename, gr%mesh, zv_old, err, use_mpi_grp = .true.)
+            call zrestart_write_mesh_function(restart, filename, gr%mesh, zv_old, err)
           else
             call drestart_write_mesh_function(restart, filename, gr%mesh, &
-              potential_interpolation%vtau_old(1:gr%mesh%np, is, ii), err, use_mpi_grp = .true.)
+              potential_interpolation%vtau_old(1:gr%mesh%np, is, ii), err)
           end if
           ! the unit is energy actually, but this only for restart, and can be kept in atomic units
           ! for simplicity
