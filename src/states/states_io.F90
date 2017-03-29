@@ -55,11 +55,37 @@ module states_io_oct_m
     states_write_bands,               &
     states_write_bandstructure
 
+  interface states_write_eigenvalues
+    module procedure states_write_eigenvalues_u, states_write_eigenvalues_f
+  end interface states_write_eigenvalues
+
 contains
+
+  subroutine states_write_eigenvalues_f(filename, nst,st, sb, error, st_start, compact)
+    character(len=*),  intent(in) :: filename
+    integer,           intent(in) :: nst
+    type(states_t),    intent(in) :: st
+    type(simul_box_t), intent(in) :: sb
+    FLOAT, optional,   intent(in) :: error(:,:) !< (nst, st%d%nik)
+    integer, optional, intent(in) :: st_start
+    logical, optional, intent(in) :: compact
+    
+    integer :: iunit
+    
+    PUSH_SUB(states_write_eigenvalues_f)
+    
+    iunit = io_open(filename, action='write')
+
+    call states_write_eigenvalues_u(iunit, nst, st, sb, error, st_start, compact)
+    call io_close(iunit)
+    
+    POP_SUB(states_write_eigenvalues_f)
+    
+  end subroutine states_write_eigenvalues_f
 
   ! ---------------------------------------------------------
 
-  subroutine states_write_eigenvalues(iunit, nst, st, sb, error, st_start, compact)
+  subroutine states_write_eigenvalues_u(iunit, nst, st, sb, error, st_start, compact)
     integer,           intent(in) :: iunit, nst
     type(states_t),    intent(in) :: st
     type(simul_box_t), intent(in) :: sb
@@ -76,10 +102,10 @@ contains
     integer, allocatable :: flat_indices(:, :)
     integer, parameter :: print_range = 8
 
-    PUSH_SUB(states_write_eigenvalues)
+    PUSH_SUB(states_write_eigenvalues_u)
 
     if(.not. st%calc_eigenval) then
-      POP_SUB(states_write_eigenvalues)
+      POP_SUB(states_write_eigenvalues_u)
       return
     end if
     
@@ -89,7 +115,7 @@ contains
 
 
     if(.not. mpi_grp_is_root(mpi_world)) then
-      POP_SUB(states_write_eigenvalues)
+      POP_SUB(states_write_eigenvalues_u)
       return
     end if
 
@@ -322,7 +348,7 @@ contains
       call messages_info(1, iunit)
     end if
 
-    POP_SUB(states_write_eigenvalues)
+    POP_SUB(states_write_eigenvalues_u)
     
   contains
 
@@ -333,14 +359,14 @@ contains
       character(len=ndiv) :: line
       FLOAT :: emin, emax, de
       
-      PUSH_SUB(states_write_eigenvalues.print_dos)
+      PUSH_SUB(states_write_eigenvalues_u.print_dos)
 
       emin = flat_eigenval(1)
       emax = flat_eigenval(st%d%nik*nst)
       de = (emax - emin)/(ndiv - 1.0)
 
       if(de < M_EPSILON) then
-        POP_SUB(states_write_eigenvalues.print_dos)
+        POP_SUB(states_write_eigenvalues_u.print_dos)
         return
       end if
       
@@ -385,10 +411,10 @@ contains
       call messages_new_line()
       call messages_info()
 
-      POP_SUB(states_write_eigenvalues.print_dos)
+      POP_SUB(states_write_eigenvalues_u.print_dos)
     end subroutine print_dos
     
-  end subroutine states_write_eigenvalues
+  end subroutine states_write_eigenvalues_u
 
 
   ! ---------------------------------------------------------
