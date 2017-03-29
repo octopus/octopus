@@ -87,7 +87,8 @@ contains
     type(system_t), intent(in)       :: sys
     type(floquet_t),    intent(out)  :: this
     type(geometry_t), intent(in)     :: geo
-    integer :: dim ! the standard dimension of the groundstate
+    integer,              intent(in) :: dim ! the standard dimension of the groundstate
+
     type(block_t)     :: blk
     integer :: ia, idir, idim, it, count
 
@@ -169,12 +170,32 @@ contains
     !%Description
     !% Order of Floquet Hamiltonian. If negative number is given, downfolding
     !%is performed.
+    !% If entered as a block allows to specify asymmetric dimensions 
+    !%
+    !% <tt>%TDFloquetDimension
+    !% <br>&nbsp;&nbsp; mindim| maxdim 
+    !% <br>%</tt>
+    !%
     !%End
-    call parse_variable('TDFloquetDimension',-1,this%order)
-    if(this%order.ge.0) then
-      call messages_print_var_value(stdout,'Order of multiphoton Floquet-Hamiltonian', this%order)
+    this%order(:)=-1
+    
+    if(parse_block('TDFloquetDimension', blk) == 0) then
+      if(parse_block_cols(blk,0) < 2) call messages_input_error('TDFloquetDimension')
+      do idim = 1, 2
+        call parse_block_integer(blk, 0, idim - 1, this%order(idim))
+      end do
+    else
+      call parse_variable('TDFloquetDimension',-1,this%order(2))
+      this%order(1)= -this%order(2)
+    end if
+    
+    if(this%order(2) >= 0) then
+      write(message(1),'(a,i5,a,i5,a)') 'Info: Floque-Hamiltonian tensor dimension [min,max]: [',&
+                                         this%order(1),',', this%order(2),']'
+      call messages_info(1)
       !Dimension of multiphoton Floquet-Hamiltonian
-      this%floquet_dim = 2*this%order+1
+      this%floquet_dim = this%order(2)-this%order(1)+1
+
     else
       message(1) = 'Floquet-Hamiltonian downfolding not implemented for interacting propagation.'
       call messages_fatal(1)
@@ -192,7 +213,7 @@ contains
     !%time-integral of the Floquet analysis.
     !%
     !%End
-    call parse_variable('TDFloquetSample',this%order*3 ,this%nt)
+    call parse_variable('TDFloquetSample',maxval(abs(this%order(:)))*3 ,this%nt)
     call messages_print_var_value(stdout,'Number of Floquet time-sampling points', this%nT)
     this%dt = this%Tcycle/real(this%nT)
 
@@ -209,6 +230,7 @@ contains
     this%interval = int(this%dt/time_step)
     this%ncycle = this%interval*this%nT
 
+
     call messages_print_var_value(stdout,'Steps in Floquet time-sampling interval',  this%interval)
     call messages_print_var_value(stdout,'Steps in Floquet time-sampling cycle',  this%ncycle)
 
@@ -218,7 +240,7 @@ contains
     SAFE_ALLOCATE(this%idx_map(this%nT*this%floquet_dim,2))
     count = 0
     do it=1,this%nT
-       do idim=-this%order,this%order
+       do idim=this%order(1),this%order(2)
           count = count + 1
           this%idx_map(count,1)=it
           this%idx_map(count,2)=idim
@@ -395,7 +417,12 @@ contains
       type(states_t) :: dressed_st
       type(restart_t) :: restart
       character(len=80) :: filename
+      character(len=40) :: msg
       integer :: file
+      real(8) :: itime, etime
+ 
+
+      call messages_print_stress(stdout, 'Floquet diagonalization')
 
       ! initialize a state object with the Floquet dimension
 
@@ -478,13 +505,20 @@ contains
       call eigensolver_init(eigens, gr, dressed_st)
       ! no subspace diag implemented yet
       eigens%sdiag%method = OPTION__SUBSPACEDIAGONALIZATION__NONE
+      eigens%converged(:) = 0
 
       converged=.false.
       maxiter = hm%F%max_solve_iter
+      itime = loct_clock()
       do while(.not.converged.and.iter <= maxiter)
+         write(msg,'(a,i5)') 'Iter #', iter         
+         call messages_print_stress(stdout, trim(msg))
+        
          call eigensolver_run(eigens, gr, dressed_st, hm, 1,converged)
          
          call calc_floquet_norms(gr%der%mesh,gr%sb%kpoints,st,dressed_st,iter,hm%F%floquet_dim)
+         
+
          
          write(filename,'(I5)') iter !hm%F_count
          if (simul_box_is_periodic(gr%sb)) then
@@ -492,12 +526,17 @@ contains
            call states_write_bandstructure('td.general', dressed_st%nst, dressed_st, gr%sb, filename)
          else
            filename = 'td.general/floquet_eigenvalues_'//trim(adjustl(filename))
-           call states_write_eigenvalues(filename, dressed_st%nst, dressed_st, gr%sb)
+           call states_write_eigenvalues(filename, dressed_st%nst, dressed_st, gr%sb, eigens%diff)
          end if
          call restart_init(restart, RESTART_FLOQUET, RESTART_TYPE_DUMP, &
                            sys%mc, ierr, gr%der%mesh)
          call states_dump(restart, dressed_st, gr, ierr, iter)
          call restart_end(restart)
+
+         etime = loct_clock() - itime
+         itime = etime + itime
+         write(message(1),'(a,i5,a,f14.2)') 'Elapsed time for iter # ', iter,':', etime
+         call messages_info(1)
 
          iter = iter +1
       end do
@@ -538,6 +577,7 @@ stop 'Regular end of Floquet solver'
       SAFE_ALLOCATE(norms(1:kpoints%reduced%npoints,1:dressed_st%nst,floquet_dim))
 
       norms = M_ZERO
+     
 
       do ik=st%d%kpt%start,st%d%kpt%end
         do in=1,floquet_dim

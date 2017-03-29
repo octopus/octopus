@@ -988,7 +988,7 @@ subroutine  X(apply_floquet_hamiltonian)(hm, der, psib, hpsib, ik, time, Imtime,
   logical, optional,     intent(in)    :: set_bc
 
   type(batch_t) :: small_psib, small_hpsib
-  integer :: in, im, spindim, Fdim, idim, ist
+  integer :: in, im, spindim, Fdim(2), idim, ist
   integer :: it,  nT, idx
   FLOAT :: omega, Tcycle, dt
   CMPLX, allocatable :: vec(:)
@@ -1000,7 +1000,7 @@ subroutine  X(apply_floquet_hamiltonian)(hm, der, psib, hpsib, ik, time, Imtime,
   dt=hm%F%dt
   nT=hm%F%nT
   omega=hm%F%omega
-  Fdim=hm%F%order
+  Fdim(:)=hm%F%order(:)
   spindim = hm%F%spindim
 
   ! zero hpsi
@@ -1010,7 +1010,7 @@ subroutine  X(apply_floquet_hamiltonian)(hm, der, psib, hpsib, ik, time, Imtime,
 
   call batch_init(small_hpsib,spindim,hpsib%nst)
   call X(batch_allocate)(small_hpsib,1,hpsib%nst,der%mesh%np_part)
-  call get_small_batch(hpsib,-Fdim,small_hpsib)
+  call get_small_batch(hpsib,Fdim(1),small_hpsib)
   
   call batch_init(small_psib,spindim,psib%nst)
   call X(batch_allocate)(small_psib,1,psib%nst,der%mesh%np_part)
@@ -1023,7 +1023,7 @@ subroutine  X(apply_floquet_hamiltonian)(hm, der, psib, hpsib, ik, time, Imtime,
               time = time, terms = terms, Imtime = Imtime, set_bc = set_bc)
 
       ! sum the contributions of im to the in components of the matrix product
-      do in=-Fdim,Fdim
+      do in=Fdim(1),Fdim(2)
         call set_big_batch_axpy(small_hpsib,in, exp(M_zI*(im-in)*omega*it*dt)/nT, hpsib)
       end do
   end do
@@ -1031,7 +1031,7 @@ subroutine  X(apply_floquet_hamiltonian)(hm, der, psib, hpsib, ik, time, Imtime,
   if(hm%F%is_parallel) call allreduce_batch(hm%F%mpi_grp%comm, hpsib)
 
   ! add diagonal term
-  do in=-Fdim,Fdim
+  do in=Fdim(1),Fdim(2)
     call get_small_batch(psib,in,small_psib)
     call get_small_batch(hpsib,in,small_hpsib)
     call batch_axpy(der%mesh%np, in*omega, small_psib , small_hpsib )
@@ -1059,7 +1059,7 @@ contains
     SAFE_ALLOCATE(big_temp(1:np,big%dim))
     SAFE_ALLOCATE(small_temp(1:np,small%dim))
     
-    inn=Fdim+nn+1
+    inn=nn-Fdim(1)+1
     ii = (inn-1)*spindim+1
     do ist=1,big%nst
       call batch_get_state(big,ist,np,big_temp)
@@ -1088,7 +1088,7 @@ contains
     SAFE_ALLOCATE(big_temp(1:np,big%dim))
     SAFE_ALLOCATE(small_temp(1:np,small%dim))
     
-    inn=Fdim+nn+1
+    inn=nn-Fdim(1)+1
     ii = (inn-1)*spindim+1
     do ist=1,small%nst
       call batch_get_state(small,ist,np,small_temp)
@@ -1119,7 +1119,7 @@ contains
     SAFE_ALLOCATE(big_temp(1:np,big%dim))
     SAFE_ALLOCATE(small_temp(1:np,small%dim))
     
-    inn=Fdim+nn+1
+    inn=nn-Fdim(1)+1
     ii = (inn-1)*spindim+1
     do ist=1,small%nst
       call batch_get_state(small,ist,np,small_temp)
