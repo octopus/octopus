@@ -29,6 +29,7 @@ program photoelectron_spectrum
   use io_oct_m
   use loct_oct_m
   use messages_oct_m
+  use multicomm_oct_m
   use parser_oct_m
   use pes_oct_m  
   use pes_mask_oct_m  
@@ -90,6 +91,7 @@ program photoelectron_spectrum
   type(pes_flux_t)     :: pflux
   integer              :: pes_method, option 
 
+  type(multicomm_t)    :: mc
 
   call getopt_init(ierr)
   if(ierr /= 0) then
@@ -232,7 +234,7 @@ program photoelectron_spectrum
   
   
   call restart_module_init()
-  call restart_init(restart, RESTART_TD, RESTART_TYPE_LOAD, st%dom_st_kpt_mpi_grp, ierr)
+  call restart_init(restart, RESTART_TD, RESTART_TYPE_LOAD, mc, ierr)
   if(ierr /= 0) then
     message(1) = "Unable to read time-dependent restart information."
     call messages_fatal(1)
