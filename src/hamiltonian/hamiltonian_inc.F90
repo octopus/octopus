@@ -1136,7 +1136,7 @@ contains
   end subroutine set_big_batch_axpy
 
   ! ----------------------------------------------------------
-  ! perform allreduce action on bathc
+  ! perform allreduce action on batch
   subroutine allreduce_batch(comm,batch)
     type(batch_t) :: batch
     integer :: comm
