@@ -149,18 +149,6 @@ contains
     ! get time of one cycle
     this%Tcycle=M_TWO*M_PI/this%omega
 
-    !%Variable TDFloquetSample
-    !%Type integer
-    !%Default 20
-    !%Section Time-Dependent::TD Output
-    !%Description
-    !% Number of points on which one Floquet cycle is sampled in the
-    !%time-integral of the Floquet analysis.
-    !%
-    !%End
-    call parse_variable('TDFloquetSample',20 ,this%nt)
-    call messages_print_var_value(stdout,'Number of Floquet time-sampling points', this%nT)
-    this%dt = this%Tcycle/real(this%nT)
 
     !%Variable TDFloquetMaximumSolverIterations
     !%Type integer
@@ -194,6 +182,20 @@ contains
       !this%Forder = 1
       !this%Fdim = 3
     endif
+
+    !%Variable TDFloquetSample
+    !%Type integer
+    !%Default TDFloquetDimension*3
+    !%Section Time-Dependent::TD Output
+    !%Description
+    !% Number of points on which one Floquet cycle is sampled in the
+    !%time-integral of the Floquet analysis.
+    !%
+    !%End
+    call parse_variable('TDFloquetSample',this%floquet_dim*3 ,this%nt)
+    call messages_print_var_value(stdout,'Number of Floquet time-sampling points', this%nT)
+    this%dt = this%Tcycle/real(this%nT)
+
 
     this%count = 1
     this%spindim = dim
