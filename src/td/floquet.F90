@@ -52,6 +52,7 @@ module floquet_oct_m
   use profiling_oct_m
   use restart_oct_m
   use scf_oct_m
+  use simul_box_oct_m
   use states_oct_m
   use states_calc_oct_m
   use states_dim_oct_m
@@ -93,6 +94,8 @@ contains
     FLOAT :: time_step
 
     PUSH_SUB(floquet_init)
+
+    call messages_print_stress(stdout, 'Floquet')
 
 
     this%is_parallel = multicomm_strategy_is_parallel(sys%mc, P_STRATEGY_OTHER)
@@ -219,6 +222,8 @@ contains
           this%idx_map(count,2)=idim
        end do
     end do
+    
+    call messages_print_stress(stdout)
 
    POP_SUB(floquet_init)
 
@@ -480,8 +485,13 @@ contains
          call calc_floquet_norms(gr%der%mesh,gr%sb%kpoints,st,dressed_st,iter,hm%F%floquet_dim)
          
          write(filename,'(I5)') iter !hm%F_count
-         filename = 'floquet_multibands_'//trim(adjustl(filename))
-         call states_write_bandstructure('td.general', dressed_st%nst, dressed_st, gr%sb, filename)
+         if (simul_box_is_periodic(gr%sb)) then
+           filename = 'floquet_multibands_'//trim(adjustl(filename))
+           call states_write_bandstructure('td.general', dressed_st%nst, dressed_st, gr%sb, filename)
+         else
+           filename = 'td.general/floquet_eigenvalues_'//trim(adjustl(filename))
+           call states_write_eigenvalues(filename, dressed_st%nst, dressed_st, gr%sb)
+         end if
          call restart_init(restart, RESTART_FLOQUET, RESTART_TYPE_DUMP, &
                            sys%mc, ierr, gr%der%mesh)
          call states_dump(restart, dressed_st, gr, ierr, iter)
