@@ -38,7 +38,7 @@ match ; Eigenvalue  ; GREPFIELD(static/info, '1   up',            3) ;  -3.30668
 match ; Charge      ; GREPFIELD(static/info, '1   up',            4) ;  1.000000
 match ; Eigenvalue  ; GREPFIELD(static/info, '1   dn',            3) ;  -2.335158
 match ; Charge      ; GREPFIELD(static/info, '1   dn',            4) ;  0.000000
-match ; Total       ; GREPFIELD(static/info, 'Total       =',     3) ;  -6.60394194
+match ; Total       ; GREPFIELD(static/info, 'Total       =',     3) ;  -10.50057618
 match ; Ion-ion     ; GREPFIELD(static/info, 'Ion-ion     =',     3) ;  5.75985766
 match ; Eigenvalues ; GREPFIELD(static/info, 'Eigenvalues =',     3) ;  -3.30668549
 match ; Hartree     ; GREPFIELD(static/info, 'Hartree     =',     3) ;  11.26278306
@@ -46,7 +46,10 @@ match ; Int[n*v_xc] ; GREPFIELD(static/info, 'Int\[n\*v\_xc\] =', 3) ;  -9.20935
 match ; Exchange    ; GREPFIELD(static/info, 'Exchange    =',     3) ;  -6.18352219
 match ; Correlation ; GREPFIELD(static/info, 'Correlation =',     3) ;  -0.82016080
 match ; Kinetic     ; GREPFIELD(static/info, 'Kinetic     =',     3) ;  4.66026308
-match ; External    ; GREPFIELD(static/info, 'External    =',     3) ;  -32.44532750
+match ; External    ; GREPFIELD(static/info, 'External    =',     3) ;  -25.17980555
+match ; T_nadd      ; GREPFIELD(static/info, 'T_nadd       =',    3) ;  2.62875138
+match ; int[n*v_nad]; GREPFIELD(static/info, 'int\[n\*v\_nad\] =',3) ;  0.74645597
+match ; E_f         ; GREPFIELD(static/info, 'E_f          =',    3) ;  -5.77893000
 
 Input: 07-kf-spin.gga_k_revapbeint.inp
 
@@ -55,7 +58,7 @@ match ; Eigenvalue  ; GREPFIELD(static/info, '1   up',            3) ;  -3.30922
 match ; Charge      ; GREPFIELD(static/info, '1   up',            4) ;  1.000000
 match ; Eigenvalue  ; GREPFIELD(static/info, '1   dn',            3) ;  -2.333053
 match ; Charge      ; GREPFIELD(static/info, '1   dn',            4) ;  0.000000
-match ; Total       ; GREPFIELD(static/info, 'Total       =',     3) ;  -6.60949851
+match ; Total       ; GREPFIELD(static/info, 'Total       =',     3) ;  -10.49041983
 match ; Ion-ion     ; GREPFIELD(static/info, 'Ion-ion     =',     3) ;  5.75985766
 match ; Eigenvalues ; GREPFIELD(static/info, 'Eigenvalues =',     3) ;  -3.30922741
 match ; Hartree     ; GREPFIELD(static/info, 'Hartree     =',     3) ;  11.26641843
@@ -63,7 +66,10 @@ match ; Int[n*v_xc] ; GREPFIELD(static/info, 'Int\[n\*v\_xc\] =', 3) ;  -9.21191
 match ; Exchange    ; GREPFIELD(static/info, 'Exchange    =',     3) ;  -6.18535454
 match ; Correlation ; GREPFIELD(static/info, 'Correlation =',     3) ;  -0.82026598
 match ; Kinetic     ; GREPFIELD(static/info, 'Kinetic     =',     3) ;  4.67635616
-match ; External    ; GREPFIELD(static/info, 'External    =',     3) ;  -32.45883355
+match ; External    ; GREPFIELD(static/info, 'External    =',     3) ;  -25.18744450
+match ; T_nadd      ; GREPFIELD(static/info, 'T_nadd       =',    3) ;  2.63830183
+match ; int[n*v_nad]; GREPFIELD(static/info, 'int\[n\*v\_nad\] =',3) ;  0.74132870
+match ; E_f         ; GREPFIELD(static/info, 'E_f          =',    3) ;  -5.77789342
 
 Input: 07-kf-spin.gga_k_revapbe.inp
 
@@ -72,7 +78,7 @@ match ; Eigenvalue  ; GREPFIELD(static/info, '1   up',            3) ;  -3.30785
 match ; Charge      ; GREPFIELD(static/info, '1   up',            4) ;  1.000000
 match ; Eigenvalue  ; GREPFIELD(static/info, '1   dn',            3) ;  -2.335690
 match ; Charge      ; GREPFIELD(static/info, '1   dn',            4) ;  0.000000
-match ; Total       ; GREPFIELD(static/info, 'Total       =',     3) ;  -6.60334712
+match ; Total       ; GREPFIELD(static/info, 'Total       =',     3) ;  -10.47274894
 match ; Ion-ion     ; GREPFIELD(static/info, 'Ion-ion     =',     3) ;  5.75985766
 match ; Eigenvalues ; GREPFIELD(static/info, 'Eigenvalues =',     3) ;  -3.30785764
 match ; Hartree     ; GREPFIELD(static/info, 'Hartree     =',     3) ;  11.26069884
@@ -80,7 +86,10 @@ match ; Int[n*v_xc] ; GREPFIELD(static/info, 'Int\[n\*v\_xc\] =', 3) ;  -9.20804
 match ; Exchange    ; GREPFIELD(static/info, 'Exchange    =',     3) ;  -6.18258861
 match ; Correlation ; GREPFIELD(static/info, 'Correlation =',     3) ;  -0.82010187
 match ; Kinetic     ; GREPFIELD(static/info, 'Kinetic     =',     3) ;  4.68768999
-match ; External    ; GREPFIELD(static/info, 'External    =',     3) ;  -32.44886695
+match ; External    ; GREPFIELD(static/info, 'External    =',     3) ;  -25.17831829
+match ; T_nadd      ; GREPFIELD(static/info, 'T_nadd       =',    3) ;  2.65237318
+match ; int[n*v_nad]; GREPFIELD(static/info, 'int\[n\*v\_nad\] =',3) ;  0.74033399
+match ; E_f         ; GREPFIELD(static/info, 'E_f          =',    3) ;  -5.78143910
 
 # Input: 07-kf-spin.gga_k_meyer.inp
 

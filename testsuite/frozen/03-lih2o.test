@@ -34,7 +34,7 @@ match ; Grid (lsize) ; GREPFIELD(static/fh2o/grid, 'lsize\=', 4) ; 5.66917839865
 Input: 03-lih2o.01.inp
 
 # Frozen calc.
-match ; Total       ; GREPFIELD(static/info, 'Total       =',     3) ;  -255.52588041
+match ; Total       ; GREPFIELD(static/info, 'Total       =',     3) ;  -416.19934008
 match ; Ion-ion     ; GREPFIELD(static/info, 'Ion-ion     =',     3) ;   226.57807735
 match ; Eigenvalues ; GREPFIELD(static/info, 'Eigenvalues =',     3) ;   -21.77414763
 match ; Hartree     ; GREPFIELD(static/info, 'Hartree     =',     3) ;   490.10212076
@@ -43,11 +43,14 @@ match ; Exchange    ; GREPFIELD(static/info, 'Exchange    =',     3) ;   -84.716
 match ; Correlation ; GREPFIELD(static/info, 'Correlation =',     3) ;   -11.77879839
 match ; Kinetic     ; GREPFIELD(static/info, 'Kinetic     =',     3) ;   202.74760071
 match ; External    ; GREPFIELD(static/info, 'External    =',     3) ; -1239.13166147
+match ; T_nadd      ; GREPFIELD(static/info, 'T_nadd       =',    3) ;   187.42329309
+match ; int[n*v_nad]; GREPFIELD(static/info, 'int\[n\*v\_nad\] =',3) ;    37.62474788
+match ; E_f         ; GREPFIELD(static/info, 'E_f          =',    3) ;  -310.47199266
  
 Input: 03-lih2o.02.inp
 
 # Frozen calc.
-match ; Total       ; GREPFIELD(static/info, 'Total       =',     3) ;  -255.52588041
+match ; Total       ; GREPFIELD(static/info, 'Total       =',     3) ;  -416.19934008
 match ; Ion-ion     ; GREPFIELD(static/info, 'Ion-ion     =',     3) ;   226.57807735
 match ; Eigenvalues ; GREPFIELD(static/info, 'Eigenvalues =',     3) ;   -21.77414763
 match ; Hartree     ; GREPFIELD(static/info, 'Hartree     =',     3) ;   490.10212076
@@ -56,11 +59,14 @@ match ; Exchange    ; GREPFIELD(static/info, 'Exchange    =',     3) ;   -84.716
 match ; Correlation ; GREPFIELD(static/info, 'Correlation =',     3) ;   -11.77879839
 match ; Kinetic     ; GREPFIELD(static/info, 'Kinetic     =',     3) ;   202.74760071
 match ; External    ; GREPFIELD(static/info, 'External    =',     3) ; -1239.13166147
- 
+match ; T_nadd      ; GREPFIELD(static/info, 'T_nadd       =',    3) ;   187.42329309
+match ; int[n*v_nad]; GREPFIELD(static/info, 'int\[n\*v\_nad\] =',3) ;    37.62474788
+match ; E_f         ; GREPFIELD(static/info, 'E_f          =',    3) ;  -310.47199266
+
 Input: 03-lih2o.03.inp
 
 # Frozen calc.
-match ; Total       ; GREPFIELD(static/info, 'Total       =',     3) ;  -255.52588041
+match ; Total       ; GREPFIELD(static/info, 'Total       =',     3) ;  -416.19934008
 match ; Ion-ion     ; GREPFIELD(static/info, 'Ion-ion     =',     3) ;   226.57807735
 match ; Eigenvalues ; GREPFIELD(static/info, 'Eigenvalues =',     3) ;   -21.77414763
 match ; Hartree     ; GREPFIELD(static/info, 'Hartree     =',     3) ;   490.10212076
@@ -69,4 +75,7 @@ match ; Exchange    ; GREPFIELD(static/info, 'Exchange    =',     3) ;   -84.716
 match ; Correlation ; GREPFIELD(static/info, 'Correlation =',     3) ;   -11.77879839
 match ; Kinetic     ; GREPFIELD(static/info, 'Kinetic     =',     3) ;   202.74760071
 match ; External    ; GREPFIELD(static/info, 'External    =',     3) ; -1239.13166147
+match ; T_nadd      ; GREPFIELD(static/info, 'T_nadd       =',    3) ;   187.42329309
+match ; int[n*v_nad]; GREPFIELD(static/info, 'int\[n\*v\_nad\] =',3) ;    37.62474788
+match ; E_f         ; GREPFIELD(static/info, 'E_f          =',    3) ;  -310.47199266
  
