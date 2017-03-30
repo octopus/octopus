@@ -200,8 +200,8 @@ subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
 
   nullify(vpsl)
   if(associated(this%ep%subsys_external))then
-    ! Sets the vpsl pointer to the "live" part of the subsystem potential.
-    call base_potential_gets(this%ep%subsys_external, "live", vpsl)
+    ! Sets the vpsl pointer to the total subsystem potential.
+    call base_potential_get(this%ep%subsys_external, vpsl)
     ASSERT(associated(vpsl))
   else
     ! Sets the vpsl pointer to the total potential.

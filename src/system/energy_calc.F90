@@ -21,6 +21,7 @@
 module energy_calc_oct_m
   use base_hamiltonian_oct_m
   use base_potential_oct_m
+  use base_states_oct_m
   use batch_oct_m
   use berry_oct_m
   use comm_oct_m
@@ -44,6 +45,7 @@ module energy_calc_oct_m
   use smear_oct_m
   use ssys_external_oct_m
   use states_oct_m
+  use states_dim_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
@@ -71,9 +73,7 @@ contains
     integer, optional,   intent(in)    :: iunit
     logical, optional,   intent(in)    :: full
 
-    type(base_hamiltonian_t), pointer :: subsys_tnadd
-    type(base_potential_t),   pointer :: subsys_external
-    FLOAT                             :: tnadd_energy, external_energy
+    FLOAT :: ssys_tnadd, ssys_externl, ssys_intnvhxc, ssys_intnvnad
     logical :: full_, cmplxscl
     FLOAT :: evxctau, Imevxctau
     CMPLX :: etmp
@@ -91,27 +91,19 @@ contains
     etmp = M_z0
     evxctau = M_ZERO
     Imevxctau = M_ZERO
+    ssys_tnadd = M_ZERO
+    ssys_externl = M_ZERO
+    ssys_intnvhxc = M_ZERO
+    ssys_intnvnad = M_ZERO
     if((full_.or.hm%theory_level==HARTREE.or.hm%theory_level==HARTREE_FOCK) & 
       .and.(hm%theory_level /= CLASSICAL)) then
       if(states_are_real(st)) then
 
-        tnadd_energy = M_ZERO
-        external_energy = M_ZERO
-        nullify(subsys_tnadd, subsys_external)
-        if(associated(hm%subsys_hm))then
-          call base_hamiltonian_get(hm%subsys_hm, "tnadd", subsys_tnadd)
-          ASSERT(associated(subsys_tnadd))
-          call base_hamiltonian_get(subsys_tnadd, energy=tnadd_energy)
-          nullify(subsys_tnadd)
-          call base_hamiltonian_get(hm%subsys_hm, "external", subsys_external)
-          ASSERT(associated(subsys_external))
-          call ssys_external_calc(subsys_external)
-          call ssys_external_get(subsys_external, energy=external_energy, except=(/"live"/))
-          nullify(subsys_external)
-        end if
+        if(associated(hm%subsys_hm))&
+          call energy_calc_ssys_corrections(hm, gr, st, ssys_tnadd, ssys_intnvnad, ssys_intnvhxc, ssys_externl)
         
-        hm%energy%kinetic  = tnadd_energy + denergy_calc_electronic(hm, gr%der, st, terms = TERM_KINETIC)
-        hm%energy%extern_local = external_energy + denergy_calc_electronic(hm, gr%der, st, terms = TERM_LOCAL_EXTERNAL)
+        hm%energy%kinetic  = ssys_tnadd + denergy_calc_electronic(hm, gr%der, st, terms = TERM_KINETIC)
+        hm%energy%extern_local = ssys_externl + denergy_calc_electronic(hm, gr%der, st, terms = TERM_LOCAL_EXTERNAL)
         hm%energy%extern_non_local   = denergy_calc_electronic(hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL)
         hm%energy%extern = hm%energy%extern_local + hm%energy%extern_non_local
         evxctau = denergy_calc_electronic(hm, gr%der, st, terms = TERM_MGGA)
@@ -167,6 +159,7 @@ contains
     case(KOHN_SHAM_DFT)
       hm%energy%total = hm%ep%eii + hm%energy%eigenvalues &
         - hm%energy%hartree + hm%energy%exchange + hm%energy%correlation + hm%energy%vdw - hm%energy%intnvxc - evxctau &
+        + ssys_tnadd - ssys_intnvnad + ssys_intnvhxc + ssys_externl                                                    &
         - hm%energy%pcm_corr + hm%energy%int_ee_pcm + hm%energy%int_en_pcm &
                              + hm%energy%int_nn_pcm + hm%energy%int_ne_pcm
 
@@ -259,6 +252,14 @@ contains
         write(message(1), '(6x,a, f18.8)')'Berry       = ', units_from_atomic(units_out%energy, hm%energy%berry)
         call messages_info(1, iunit)
       end if  
+
+      if(associated(hm%subsys_hm))then
+        write(message(1), '(6x,a)') '-----------'
+        write(message(2), '(6x,a, f18.8)')'T_nadd       = ', units_from_atomic(units_out%energy, ssys_tnadd)
+        write(message(3), '(6x,a, f18.8)')'int[n*v_nad] = ', units_from_atomic(units_out%energy, ssys_intnvnad)
+        write(message(4), '(6x,a, f18.8)')'E_f          = ', units_from_atomic(units_out%energy, ssys_intnvhxc + ssys_externl)
+        call messages_info(4, iunit)
+      end if
     end if
 
     POP_SUB(energy_calc_total)
@@ -314,6 +315,69 @@ contains
     POP_SUB(cmplxscl_get_kinetic_elements)
   end subroutine cmplxscl_get_kinetic_elements
 
+
+  ! ---------------------------------------------------------
+  subroutine energy_calc_ssys_corrections(hm, gr, st, tnadd, intnvnad, intnvhxc, externl)
+    type(hamiltonian_t), intent(in)  :: hm
+    type(grid_t),        intent(in)  :: gr
+    type(states_t),      intent(in)  :: st
+    FLOAT,               intent(out) :: tnadd
+    FLOAT,               intent(out) :: intnvnad
+    FLOAT,               intent(out) :: intnvhxc
+    FLOAT,               intent(out) :: externl
+
+    type(base_hamiltonian_t), pointer :: knadd
+    type(base_potential_t),   pointer :: extrnl
+    FLOAT, dimension(:,:),    pointer :: potential, density
+    integer                           :: ispin
+
+    PUSH_SUB(energy_calc_ssys_corrections)
+
+    tnadd = M_ZERO
+    intnvnad = M_ZERO
+    intnvhxc = M_ZERO
+    externl = M_ZERO
+    ASSERT(hm%d%ispin>0)
+    ASSERT(hm%d%ispin<3)
+    ASSERT(.not.gr%have_fine_mesh)
+    nullify(knadd, extrnl, potential, density)
+    ASSERT(associated(hm%subsys_hm))
+    call base_hamiltonian_get(hm%subsys_hm, "tnadd", knadd)
+    ASSERT(associated(knadd))
+    call base_hamiltonian_get(knadd, energy=tnadd)
+    call base_hamiltonian_get(knadd, nspin=ispin)
+    ASSERT(ispin<=hm%d%ispin)
+    call base_hamiltonian_get(knadd, potential)
+    ASSERT(associated(potential))
+    nullify(knadd)
+    ASSERT(associated(st%subsys_st))
+    call base_states_gets(st%subsys_st, "live", density)
+    ASSERT(associated(density))
+    intnvnad = dmf_dotp(gr%mesh, density(:,1), potential(:,1))
+    if(hm%d%ispin>UNPOLARIZED)then
+      intnvnad = intnvnad + dmf_dotp(gr%mesh, density(:,2), potential(:,ispin))
+    end if
+    nullify(potential, density)
+    call base_states_gets(st%subsys_st, "frozen", density)
+    ASSERT(associated(density))
+    intnvhxc = dmf_dotp(gr%mesh, density(:,1), hm%vxc(:,1))
+    if(hm%d%ispin>UNPOLARIZED)then
+      intnvhxc = intnvhxc + dmf_dotp(gr%mesh, density(:,2), hm%vxc(:,2))
+    end if
+    nullify(density)
+    call base_states_gets(st%subsys_st, "frozen", density, total=.true.)
+    ASSERT(associated(density))
+    intnvhxc = intnvhxc + dmf_dotp(gr%mesh, density(:,1), hm%vhartree)
+    call base_hamiltonian_get(hm%subsys_hm, "external", extrnl)
+    ASSERT(associated(extrnl))
+    call base_potential_get(extrnl, potential)
+    ASSERT(associated(potential))
+    nullify(extrnl)
+    externl = dmf_dotp(gr%mesh, density(:,1), potential(:,1))
+    nullify(potential, density)
+
+    POP_SUB(energy_calc_ssys_corrections)
+  end subroutine energy_calc_ssys_corrections
 
 #include "undef.F90"
 #include "real.F90"
