@@ -18,7 +18,7 @@ PseudopotentialSet = standard
 %
 TnaddFunctional = lda_k_tf
 %SubSystems
-    'H2O' | frozen | 'static/fh2o' | qshep
+    'H2O' | frozen | './static/fh2o' | qshep
 %
 %SubSystemCoordinates
     'H2O' | 0.0 | 0.0 | 1.0000*angstrom  | 0.0 | -pi/2.0 
