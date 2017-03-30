@@ -118,7 +118,7 @@ module hamiltonian_oct_m
   type floquet_t ! this should live in the floquet module
     logical :: floquet_apply !< use action of the Floquet Hamiltonian
     integer :: nT, ncycle, interval, count, floquet_dim, spindim, order(2), mode
-    integer :: max_solve_iter
+    integer :: max_solve_iter, iter
     logical ::  downfolding
     FLOAT :: omega, Tcycle, dt
     FLOAT, pointer :: frozen_distortion(:,:)
@@ -256,6 +256,8 @@ contains
     hm%xc_flags     = xc_flags
     hm%family_is_mgga_with_exc = family_is_mgga_with_exc
     call states_dim_copy(hm%d, st%d)
+
+    hm%F%floquet_apply = .false.
 
     !%Variable ParticleMass
     !%Type float

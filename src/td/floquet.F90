@@ -73,11 +73,12 @@ module floquet_oct_m
   private
   public ::                       &
        floquet_init,              &
-!        floquet_run_init,          &
-!        floquet_run,               &
        floquet_hamiltonians_init, &
        floquet_hamiltonian_update,&
-       floquet_hamiltonian_solve  
+       floquet_hamiltonian_solve, &
+       floquet_init_dressed_wfs,  &
+       floquet_hamiltonian_run_solver, &
+       floquet_restart_dressed_st
 
   integer, public, parameter ::    &
        FLOQUET_NON_INTERACTING = 1, &
@@ -88,28 +89,6 @@ contains
   
   
   
-!   subroutine floquet_run_init()
-!     PUSH_SUB(floquet_run_init)
-!
-!     call calc_mode_par_set_parallelization(P_STRATEGY_OTHER, default = .true.)
-!
-!     POP_SUB(floquet_run_init)
-!   end subroutine floquet_run_init
-!   !------------------------------------------------------------------------
-!
-!   subroutine floquet_run(sys, hm, fromScratch)
-!     type(system_t), target, intent(inout) :: sys
-!     type(hamiltonian_t),    intent(inout) :: hm
-!     logical,                intent(inout) :: fromScratch
-!
-!     PUSH_SUB(floquet_run)
-!
-!     call td_run(sys, hm, fromScratch)
-!
-!
-!     POP_SUB(floquet_run)
-!   end subroutine floquet_run
-
   
   !------------------------------------------------------------------------
 
@@ -433,60 +412,123 @@ contains
 
     end subroutine floquet_hamiltonian_update
 
+
     !--------------------------------------------
-    subroutine floquet_hamiltonian_solve(hm,gr,sys,st)
+    subroutine floquet_hamiltonian_solve(hm,gr,sys,st, fromScratch)
       type(hamiltonian_t), intent(inout) :: hm
-      type(grid_t),      intent(inout)   :: gr
-      type(system_t), intent(inout)      :: sys
-      type(states_t), intent(in)         :: st
+      type(grid_t),        intent(inout) :: gr
+      type(system_t),      intent(inout) :: sys
+      type(states_t),         intent(in) :: st
+      logical, optional,      intent(in) :: fromScratch  
 
-      logical :: converged
-      integer :: iter , maxiter, ik, in, im, ist, idim, ierr, nik, dim, nst
-      CMPLX, allocatable :: temp_state1(:,:), temp_state2(:,:)
-      type(eigensolver_t) :: eigens
       type(states_t) :: dressed_st
+      PUSH_SUB(floquet_hamiltonian_solve)
+      
+      call floquet_init_dressed_wfs(hm, sys, dressed_st, optional_default(fromScratch, .false.))  
+
+      call floquet_hamiltonian_run_solver(hm, sys, dressed_st)
+      
+      call states_end(dressed_st)
+      
+      
+      POP_SUB(floquet_hamiltonian_solve)
+    end subroutine floquet_hamiltonian_solve
+
+    !--------------------------------------------
+    subroutine floquet_restart_dressed_st(hm, sys, dressed_st, ierr, fromScratch)
+      type(hamiltonian_t), intent(inout) :: hm
+      type(system_t),         intent(in) :: sys
+      type(states_t),      intent(inout) :: dressed_st
+      integer,               intent(out) :: ierr
+      logical, optional,      intent(in) :: fromScratch  
+      
+      integer :: nik, dim, nst, iter
+      type(grid_t),   pointer :: gr
+      type(restart_t) :: restart        
+      
+      
+      PUSH_SUB(floquet_restart_dressed_st)
+      
+      gr => sys%gr
+      
+      ! solver iteration
+      iter = 0
+      
+      call restart_init(restart, RESTART_FLOQUET, RESTART_TYPE_LOAD, &
+                       sys%mc, ierr, gr%der%mesh)
+
+      if(ierr == 0 .and. .not. optional_default(fromScratch, .false.)) then 
+        call states_look(restart, nik, dim, nst, ierr)
+        if(dim==dressed_st%d%dim .and. nik==gr%sb%kpoints%reduced%npoints &
+            .and. nst==dressed_st%nst) then
+
+          call states_load(restart, dressed_st, gr, ierr, iter)
+        else
+          ! this doesn't need to be fatal
+          write(message(1),'(a)') 'Floquet restart structure not commensurate.'
+          call messages_fatal(1)
+        end if
+      end if
+      
+      call restart_end(restart)
+      
+      hm%F%iter = iter
+      
+      
+      POP_SUB(floquet_restart_dressed_st)
+    end subroutine floquet_restart_dressed_st
+
+
+    !--------------------------------------------
+    subroutine floquet_init_dressed_wfs(hm, sys, dressed_st, fromScratch)
+      type(hamiltonian_t), intent(inout) :: hm
+      type(system_t),      intent(inout) :: sys
+      type(states_t),        intent(out) :: dressed_st
+      logical,                intent(in) :: fromScratch
+      
       type(restart_t) :: restart
-      character(len=80) :: filename
-      character(len=40) :: msg
-      integer :: file
-      real(8) :: itime, etime
- 
-
-      call messages_print_stress(stdout, 'Floquet diagonalization')
-
+      type(grid_t),   pointer :: gr
+      type(states_t), pointer :: st
+      CMPLX, allocatable :: temp_state1(:,:), temp_state2(:,:)
+      integer            :: iter , ik, in, im, ist, idim, ierr, nik, dim, nst
+      
+      
+      PUSH_SUB(floquet_init_dressed_wfs)
+      
+      gr => sys%gr
+      st => sys%st
+      
       ! initialize a state object with the Floquet dimension
-
       call states_init(dressed_st, gr, hm%geo,floquet_dim=hm%F%floquet_dim)
       call kpoints_distribute(dressed_st%d,sys%mc)
       call states_distribute_nodes(dressed_st,sys%mc)
       call states_exec_init(dressed_st, sys%mc)
       call states_allocate_wfns(dressed_st,gr%der%mesh)
 
-
-      ! solver iteration
-      iter = 0
-
-      call restart_init(restart, RESTART_FLOQUET, RESTART_TYPE_LOAD, &
-                       sys%mc, ierr, gr%der%mesh)
-      if(ierr == 0) then
-         call states_look(restart, nik, dim, nst, ierr)
-         if(dim==dressed_st%d%dim .and. nik==gr%sb%kpoints%reduced%npoints &
-              .and. nst==dressed_st%nst) then
-            call states_load(restart, dressed_st, gr, ierr, iter)
-         else
-            ! this doesnt need to be fatal
-            write(message(1),'(a)') 'Floquet restart structure not commensurate.'
-            call messages_fatal(1)
-         end if
+  
+      call floquet_restart_dressed_st(hm, sys, dressed_st, ierr, fromScratch)
+      
+      if(ierr == 0 .and. .not. fromScratch) then
          call calc_floquet_norms(gr%der%mesh,gr%sb%kpoints,st,dressed_st,iter,hm%F%floquet_dim)
          call states_berry_connection(FLOQUET_DIR,'floquet_berry_connection',dressed_st, gr,gr%sb)
       else
-         ! only use gs states for init, if they are not distributed
-         if(.not.st%parallel_in_states) then
+
+        call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+
+        if(ierr == 0) call states_load(restart, sys%st, sys%gr, ierr, label = ": gs")
+        if (ierr /= 0) then
+          message(1) = 'Unable to read ground-state wavefunctions.'
+          message(2) = 'Floquet states will be randomly initialized.'
+          call messages_warning(2)
+        end if
+        call restart_end(restart)
+
+        ! only use gs states for init, if they are not distributed
+        if(.not. st%parallel_in_states .and. ierr == 0 ) then
             ! initialize floquet states from scratch
             SAFE_ALLOCATE(temp_state1(1:gr%der%mesh%np,st%d%dim))
             SAFE_ALLOCATE(temp_state2(1:gr%der%mesh%np,hm%F%floquet_dim))
-         
+       
             do ik=st%d%kpt%start,st%d%kpt%end
                do in=1,hm%F%floquet_dim
                   do ist=st%st_start,st%st_end
@@ -526,7 +568,40 @@ contains
 
       end if
 
-      call restart_end(restart)
+      
+      POP_SUB(floquet_init_dressed_wfs)
+      
+    end subroutine floquet_init_dressed_wfs
+
+
+    !--------------------------------------------
+    subroutine floquet_hamiltonian_run_solver(hm, sys, dressed_st)
+      type(hamiltonian_t), intent(inout) :: hm
+      type(system_t), intent(inout)      :: sys
+      type(states_t), intent(inout)      :: dressed_st
+        
+
+      logical :: converged
+      integer :: iter , maxiter, ik, in, im, ist, idim, ierr, nik, dim, nst
+      type(eigensolver_t) :: eigens
+      type(restart_t) :: restart
+      character(len=80) :: filename
+      character(len=40) :: msg
+      integer :: file
+      real(8) :: itime, etime
+
+      type(grid_t),   pointer :: gr
+      type(states_t), pointer :: st
+ 
+      PUSH_SUB(floquet_hamiltonian_run_solver)
+ 
+      gr => sys%gr
+      st => sys%st
+
+
+      call messages_print_stress(stdout, 'Floquet diagonalization')
+
+      iter = hm%F%iter
 
       hm%F%floquet_apply = .true.
       ! set dimension of Floquet Hamiltonian                                                    
@@ -583,12 +658,14 @@ contains
       
       ! here we might want to do other things with the states...
       
+      
 
-      call states_end(dressed_st)
+      
 
-stop 'Regular end of Floquet solver'
+      POP_SUB(floquet_hamiltonian_run_solver)
+! stop 'Regular end of Floquet solver'
 
-    end subroutine floquet_hamiltonian_solve
+    end subroutine floquet_hamiltonian_run_solver
 
 
     subroutine calc_floquet_norms(mesh,kpoints,st,dressed_st,iter,floquet_dim)

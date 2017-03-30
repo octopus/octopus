@@ -25,6 +25,7 @@ module td_oct_m
   use density_oct_m
   use energy_calc_oct_m
   use forces_oct_m
+  use floquet_oct_m
   use gauge_field_oct_m
   use geometry_oct_m
   use grid_oct_m
@@ -346,6 +347,7 @@ contains
     type(system_t), target, intent(inout) :: sys
     type(hamiltonian_t),    intent(inout) :: hm
     logical,                intent(inout) :: fromScratch
+    
 
     type(td_t)                :: td
     type(td_write_t)          :: write_handler
@@ -483,6 +485,20 @@ contains
       !Photoelectron stuff 
       if(td%pesv%calc_spm .or. td%pesv%calc_mask .or. td%pesv%calc_flux) &
         call pes_calc(td%pesv, gr%mesh, st, td%dt, iter, gr, hm)
+
+      ! Floquet
+      if (hm%F%floquet_apply) then
+        if(mod(iter,hm%F%interval) == 0) then
+          message(1) = 'Floquet-Hamiltonian update'
+          call messages_info(1)
+          call floquet_hamiltonian_update(hm,st,gr,sys,iter)
+      
+          ! In case a cycle is complete exit
+          if(mod(iter,hm%F%ncycle)==0) then
+            stopping = .true.
+          end if
+        end if
+      end if      
 
       call td_write_iter(write_handler, gr, st, hm, geo, hm%ep%kick, td%dt, sys, iter)
 

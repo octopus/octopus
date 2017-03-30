@@ -83,6 +83,7 @@ contains
 
     FLOAT :: x
     type(restart_t) :: restart
+    type(states_t)  :: dressed_st
       
     PUSH_SUB(floquet_run)
 
@@ -94,45 +95,36 @@ contains
       call td_init(td, sys, hm)
       
       call states_allocate_wfns(sys%st, sys%gr%mesh, alloc_Left = hm%cmplxscl%space)
-!       call scf_init(td%scf, sys%gr, sys%geo, sys%st, hm)
-
-      call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
-
-      if(ierr == 0) call states_load(restart, sys%st, sys%gr, ierr, label = ": gs")
-      if (ierr /= 0) then
-        message(1) = 'Unable to read ground-state wavefunctions.'
-        call messages_fatal(1)
-      end if
-      call restart_end(restart)
-      
-      
-!       call density_calc(sys%st, sys%gr, sys%st%rho)
-!       call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
-!       x = minval(sys%st%eigenval(sys%st%st_start, :))
-! #ifdef HAVE_MPI
-!       if(sys%st%parallel_in_states) then
-!         call MPI_Bcast(x, 1, MPI_FLOAT, 0, sys%st%mpi_grp%comm, mpi_err)
-!       end if
-! #endif
-!       call hamiltonian_span(hm, minval(sys%gr%mesh%spacing(1:sys%gr%mesh%sb%dim)), x)
-!       ! initialize Fermi energy
-!       call states_fermi(sys%st, sys%gr%mesh)
-!       call energy_calc_total(hm, sys%gr, sys%st)
-      
-      
+            
       
       call floquet_init(sys,hm%F,hm%geo,sys%st%d%dim)
       call floquet_hamiltonians_init(hm ,sys%gr, sys%st, sys)
-      call floquet_hamiltonian_solve(hm,sys%gr,sys,sys%st)
+      call floquet_hamiltonian_solve(hm,sys%gr,sys,sys%st, fromScratch)
       
       call states_deallocate_wfns(sys%st)
       
       
     else
+
+      call states_allocate_wfns(sys%st, sys%gr%mesh, alloc_Left = hm%cmplxscl%space)
+      call floquet_init(sys,hm%F,hm%geo,sys%st%d%dim)
+      
+      ! Check if we already have the restart
+      call floquet_restart_dressed_st(hm, sys, dressed_st, ierr, fromScratch)
+      
+      if(ierr /= 0 .or. fromScratch) then
+        call states_deallocate_wfns(sys%st)
+        
+        ! Run the time propagation to sample the Hamiltonians 
+        call td_run(sys, hm, fromScratch)
+      end if 
+      
+      call floquet_hamiltonian_run_solver(hm, sys, dressed_st)
+
+      call states_deallocate_wfns(sys%st)        
+      call states_end(dressed_st)      
       
       
-      
-      call td_run(sys, hm, fromScratch)
     end if
 
     POP_SUB(floquet_run)
