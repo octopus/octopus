@@ -38,8 +38,9 @@ libtd_a_SOURCES =                   \
 	propagator_qoct.F90               \
 	propagator_rk.F90                 \
 	propagator.F90                    \
-        pes_out.F90                       \
-	floquet.F90
+  pes_out.F90                       \
+	floquet.F90                       \
+  floquet_run.F90
 
 
 noinst_HEADERS =                    \
@@ -68,3 +69,4 @@ td_write.o: td_write.F90 spectrum.o td_calc.o floquet.o
 td.o: td.F90 spectrum.o pes.o td_write.o propagator.o potential_interpolation.o
 pes_out.o: pes_out.F90
 floquet.o : floquet.F90
+floquet_run.o : floquet_run.F90 floquet.o td.o

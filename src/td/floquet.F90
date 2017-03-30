@@ -19,6 +19,7 @@
 
 module floquet_oct_m
   use iso_c_binding
+  use calc_mode_par_oct_m
   use comm_oct_m
   use distributed_oct_m
   use eigensolver_oct_m
@@ -72,6 +73,8 @@ module floquet_oct_m
   private
   public ::                       &
        floquet_init,              &
+!        floquet_run_init,          &
+!        floquet_run,               &
        floquet_hamiltonians_init, &
        floquet_hamiltonian_update,&
        floquet_hamiltonian_solve  
@@ -82,6 +85,33 @@ module floquet_oct_m
        FLOQUET_INTERACTING     = 3
 
 contains
+  
+  
+  
+!   subroutine floquet_run_init()
+!     PUSH_SUB(floquet_run_init)
+!
+!     call calc_mode_par_set_parallelization(P_STRATEGY_OTHER, default = .true.)
+!
+!     POP_SUB(floquet_run_init)
+!   end subroutine floquet_run_init
+!   !------------------------------------------------------------------------
+!
+!   subroutine floquet_run(sys, hm, fromScratch)
+!     type(system_t), target, intent(inout) :: sys
+!     type(hamiltonian_t),    intent(inout) :: hm
+!     logical,                intent(inout) :: fromScratch
+!
+!     PUSH_SUB(floquet_run)
+!
+!     call td_run(sys, hm, fromScratch)
+!
+!
+!     POP_SUB(floquet_run)
+!   end subroutine floquet_run
+
+  
+  !------------------------------------------------------------------------
 
   subroutine floquet_init(sys,this,geo,dim)
     type(system_t), intent(in)       :: sys
@@ -120,7 +150,8 @@ contains
     !%
     !%End
 
-    call parse_variable('TDFloquetMode', 1,this%mode)
+    call parse_variable('TDFloquetMode', FLOQUET_NON_INTERACTING, this%mode)
+    call messages_print_var_option(stdout, 'TDFloquetMode',  this%mode)
 
     if(this%mode==FLOQUET_FROZEN_PHONON) then
        if(.not.parse_is_defined('IonsTimeDependentDisplacements')) then
@@ -403,8 +434,7 @@ contains
     end subroutine floquet_hamiltonian_update
 
     !--------------------------------------------
-    subroutine floquet_hamiltonian_solve(out_floquet,hm,gr,sys,st)
-      type(c_ptr),       intent(inout)   :: out_floquet
+    subroutine floquet_hamiltonian_solve(hm,gr,sys,st)
       type(hamiltonian_t), intent(inout) :: hm
       type(grid_t),      intent(inout)   :: gr
       type(system_t), intent(inout)      :: sys
@@ -449,7 +479,7 @@ contains
             call messages_fatal(1)
          end if
          call calc_floquet_norms(gr%der%mesh,gr%sb%kpoints,st,dressed_st,iter,hm%F%floquet_dim)
-         call states_berry_connection('td.general','floquet_berry_connection',dressed_st, gr,gr%sb)
+         call states_berry_connection(FLOQUET_DIR,'floquet_berry_connection',dressed_st, gr,gr%sb)
       else
          ! only use gs states for init, if they are not distributed
          if(.not.st%parallel_in_states) then
@@ -523,9 +553,9 @@ contains
          write(filename,'(I5)') iter !hm%F_count
          if (simul_box_is_periodic(gr%sb)) then
            filename = 'floquet_multibands_'//trim(adjustl(filename))
-           call states_write_bandstructure('td.general', dressed_st%nst, dressed_st, gr%sb, filename)
+           call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, gr%sb, filename)
          else
-           filename = 'td.general/floquet_eigenvalues_'//trim(adjustl(filename))
+           filename = FLOQUET_DIR//'/floquet_eigenvalues_'//trim(adjustl(filename))
            call states_write_eigenvalues(filename, dressed_st%nst, dressed_st, gr%sb, eigens%diff)
          end if
          call restart_init(restart, RESTART_FLOQUET, RESTART_TYPE_DUMP, &
@@ -600,17 +630,9 @@ stop 'Regular end of Floquet solver'
          write(iter_name,'(i4)') iter 
          do ik=kpoints%reduced%npoints-kpoints%nik_skip+1, kpoints%reduced%npoints
             write(ik_name,'(i4)') ik
-            filename = 'td.general/floquet_norms_ik_'//trim(adjustl(ik_name))//'_iter_'//trim(adjustl(iter_name))
+            filename = FLOQUET_DIR//'/floquet_norms_ik_'//trim(adjustl(ik_name))//'_iter_'//trim(adjustl(iter_name))
             iunit = io_open(filename, action='write')
             
-!            do ist=1,dressed_st%nst
-!               write(iunit,'(e12.6,a1)',advance='no') dressed_st%eigenval(ist,ik), ' '
-!               do in=1,floquet_dim
-!                  write(iunit,'(e12.6,a1)',advance='no') norms(ik,ist,in), ' '
-!               end do
-!                write(iunit,'(a1)') ' '
-!            end do
-
              do ist=1,dressed_st%nst
                 do in=1,floquet_dim
                    write(iunit,'(i4,a1,e12.6,a1,i4,a1,e12.6)') ist, '', dressed_st%eigenval(ist,ik), ' ',in, ' ', norms(ik,ist,in)

@@ -2671,7 +2671,7 @@ contains
       call floquet_init(sys,hm%F,hm%geo,st%d%dim)
       call floquet_hamiltonians_init(hm ,gr, st, sys)
       if(hm%F%mode == FLOQUET_NON_INTERACTING .or. hm%F%mode == FLOQUET_FROZEN_PHONON) &
-           call floquet_hamiltonian_solve(out_floquet,hm,gr,sys,st)
+           call floquet_hamiltonian_solve(hm,gr,sys,st)
     else
       ! check if we are at a Floquet sampling step                                                
       if(mod(iter,hm%F%interval)==0) then
@@ -2681,7 +2681,7 @@ contains
         
         ! in case a cycle is complete: solve and write bandstructure
         if(mod(iter,hm%F%ncycle)==0) then
-          call floquet_hamiltonian_solve(out_floquet,hm,gr,sys,st)
+          call floquet_hamiltonian_solve(hm,gr,sys,st)
         end if
       end if
     end if

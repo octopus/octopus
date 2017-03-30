@@ -25,6 +25,7 @@ module run_oct_m
   use casida_oct_m
   use em_resp_oct_m
   use fft_oct_m
+  use floquet_run_oct_m
   use geom_opt_oct_m
   use global_oct_m
   use ground_state_oct_m
@@ -77,6 +78,7 @@ module run_oct_m
     CM_KDOTP              =  15,  &
     CM_DUMMY              =  17,  &
     CM_INVERTKDS          =  18,  &
+    CM_FLOQUET            =  19,  &
     CM_PULPO_A_FEIRA      =  99
 
 contains
@@ -255,6 +257,8 @@ contains
       case(CM_DUMMY)
       case(CM_INVERTKDS)
         call invert_ks_run(sys, hm)
+      case(CM_FLOQUET)
+        call floquet_run(sys, hm, fromScratch)
       case(CM_PULPO_A_FEIRA)
         ASSERT(.false.) !this is handled before, if we get here, it is an error
       end select
@@ -287,6 +291,9 @@ contains
         call td_run_init()
       case(CM_CASIDA)
         call casida_run_init()
+      case(CM_FLOQUET)
+        call td_run_init()
+        call floquet_run_init()
       end select
 
       POP_SUB(calc_mode_init)

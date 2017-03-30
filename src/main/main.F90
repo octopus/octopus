@@ -99,6 +99,8 @@ program octopus
   !% This calculation mode does nothing. Useful for debugging, testing and benchmarking.  
   !%Option invert_ks 18
   !% Invert the Kohn-Sham equations (experimental).
+  !%Option floquet 19
+  !% Calculate time-periodic quantities using Floquet theory.
   !%Option recipe 99
   !% Prints out a tasty recipe.
   !%End
