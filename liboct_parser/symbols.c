@@ -289,6 +289,7 @@ void sym_output_table(int only_unused, int mpiv_node)
       fprintf(f, "List of variable assignments not used by parser:\n");
       any_unused = 1;
     }
+<<<<<<< HEAD
 
     sym_print(f, ptr);
   }
@@ -302,7 +303,11 @@ void sym_print(FILE *f, const symrec *ptr)
   fprintf(f, "%s", ptr->name);
   switch(ptr->type){
   case S_CMPLX:
-    fprintf(f, " = (%f,%f)\n", GSL_REAL(ptr->value.c), GSL_IMAG(ptr->value.c));
+    if(fabs(GSL_IMAG(ptr->value.c)) < 1.0e-14){
+      fprintf(f, " = %f\n", GSL_REAL(ptr->value.c));
+    } else {
+      fprintf(f, " = (%f,%f)\n", GSL_REAL(ptr->value.c), GSL_IMAG(ptr->value.c));
+    }
     break;
   case S_STR:
     fprintf(f, " = \"%s\"\n", ptr->value.str);
