@@ -287,7 +287,7 @@ void sym_output_table(int only_unused, int mpiv_node)
   
   for(ptr = sym_table; ptr != NULL; ptr = ptr->next){
     if(only_unused && ptr->used == 1) continue;
-    if(varinfo_variable_exists(ptr->name)) continue;
+    if(only_unused && varinfo_variable_exists(ptr->name)) continue;
     if(any_unused == 0) {
       fprintf(f, "\nParser warning: possible mistakes in input file.\n");
       fprintf(f, "List of variable assignments not used by parser:\n");
