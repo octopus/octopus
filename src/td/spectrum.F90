@@ -2391,10 +2391,25 @@ contains
     FLOAT, allocatable :: work(:,:) 
     CMPLX, allocatable :: w(:)
     character(len=20) :: header_string
-    logical :: spins_singlet, spins_triplet
+    logical :: spins_singlet, spins_triplet, symmetrize
     FLOAT, allocatable :: pp(:,:), pp2(:,:)
 
     PUSH_SUB(spectrum_sigma_diagonalize)
+
+    
+    !%Variable PropagationSpectrumSymmetrizeSigma
+    !%Type logical
+    !%Default .false.
+    !%Section Utilities::oct-propagation_spectrum
+    !%Description
+    !% The polarizablity tensor has to be real and symmetric. Due to numerical accuracy, 
+    !% that is not extricly conserved when computing it from different time-propations.
+    !% If <tt>PropagationSpectrumSymmetrizeSigma = yes</tt>, the polarizability tensor is
+    !% symmetrized before its diagonalizied.
+    !% This variable is only used if the cross_section_tensor is computed. 
+    !%End
+    call parse_variable('PropagationSpectrumSymmetrizeSigma', .false., symmetrize)
+    call messages_print_var_value(stdout, 'PropagationSpectrumSymmetrizeSigma', symmetrize)
 
     spins_singlet = .true.
     spins_triplet = .false.
@@ -2475,6 +2490,15 @@ contains
         elseif (spins_singlet .and. .not.spins_triplet) then
           pp(:, :) = pp(:, :) + sigma(:, :, ie, 2)
         end if
+      end if
+
+      if (symmetrize) then
+        do idir = 1, 3
+          do jdir = idir + 1, 3
+            pp(idir, jdir) = (pp(idir, jdir) + pp(jdir, idir) )/2.
+            pp(jdir, idir) = pp(idir, jdir)
+          end do 
+        end do
       end if
 
       work(1:3, 1:3) = pp(1:3, 1:3)
