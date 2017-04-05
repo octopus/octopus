@@ -48,12 +48,19 @@ program oct_convert
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
+  use varinfo_oct_m
   use multicomm_oct_m
 
   implicit none
 
-  character(len=256) :: config_str
-  integer :: ierr
+  type convert_out_t
+    integer                  :: what
+    integer                  :: how              !< format of the output
+  end type convert_out_t
+
+  type(convert_out_t)   :: outp
+  character(len=256)  :: config_str
+  integer             :: ierr
   
   call getopt_init(ierr)
   config_str = trim(get_config_opts()) // trim(get_optional_libraries())
@@ -72,6 +79,44 @@ program oct_convert
 
   call messages_print_stress(stdout, "Convert mode")
   call messages_print_stress(stdout)
+  
+  !%Variable ConvertOutput
+  !%Type flag
+  !%Default none
+  !%Section Utilities::oct-convert
+  !%Description
+  !% Defines what should be the mesh dependent property to be converted
+  !% See <tt>Output</tt> variable for the accepted options.
+  !%End
+
+  call parse_variable('ConvertOutput', 0, outp%what)
+  if(.not.varinfo_valid_option('Output', outp%what, is_flag=.true.)) then
+    call messages_input_error('ConvertOutput')
+  end if
+  if (outp%what == 0) then
+    message(1) = 'Variable ConvertOutput have to be set.'
+    call messages_warning(1)
+    call messages_input_error('ConvertOutput')
+  end if
+
+  !%Variable ConvertOutputFormat
+  !%Type flag
+  !%Default none
+  !%Section Utilities::oct-convert
+  !%Description
+  !% Describes the format of the output files (see <tt>ConvertOutput</tt>).
+  !% It can take the same values as <tt>OutputFormat</tt> flag.
+  !%End
+  call parse_variable('ConvertOutputFormat', 0, outp%how)
+  if(.not.varinfo_valid_option('OutputFormat', outp%how, is_flag=.true.)) then
+    call messages_input_error('ConvertOutputFormat')
+  end if
+  if (outp%how == 0) then
+    message(1) = 'Variable ConvertOutputFormat have to be set.'
+    call messages_warning(1)
+    call messages_input_error('ConvertOutputFormat')
+  end if
+
 
   call restart_module_init()
   call fft_all_init()
@@ -242,17 +287,17 @@ contains
     
     select case (c_how)
     CASE(OPERATION)
-      call convert_operate(sys%gr%mesh, sys%geo, sys%mc, sys%outp)
+      call convert_operate(sys%gr%mesh, sys%geo, sys%mc)
 
     CASE(FOURIER_TRANSFORM)
       ! Compute Fourier transform 
       call convert_transform(sys%gr%mesh, sys%geo, sys%mc, basename, folder, &
-         c_start, c_end, c_step, sys%outp, subtract_file, &
+         c_start, c_end, c_step, subtract_file, &
          ref_name, ref_folder)
 
     CASE(CONVERT_FORMAT)
       call convert_low(sys%gr%mesh, sys%geo, sys%mc, basename, folder, &
-         c_start, c_end, c_step, sys%outp, iterate_folder, &
+         c_start, c_end, c_step, iterate_folder, &
          subtract_file, ref_name, ref_folder)
     end select
 
@@ -264,7 +309,7 @@ contains
   ! ---------------------------------------------------------
   !> Giving a range of input files, it writes the corresponding 
   !! output files
-  subroutine convert_low(mesh, geo, mc, basename, in_folder, c_start, c_end, c_step, outp, iterate_folder, & 
+  subroutine convert_low(mesh, geo, mc, basename, in_folder, c_start, c_end, c_step, iterate_folder, & 
                                  subtract_file, ref_name, ref_folder)
     type(mesh_t)    , intent(in)    :: mesh
     type(geometry_t), intent(in)    :: geo
@@ -274,7 +319,6 @@ contains
     integer,          intent(in)    :: c_start        !< The first file number
     integer,          intent(in)    :: c_end          !< The last file number
     integer,          intent(in)    :: c_step         !< The step between files
-    type(output_t),   intent(in)    :: outp           !< Output object; Decides the kind, what and where to output
     logical,          intent(in)    :: iterate_folder !< If true, it iterates over the folders, keeping the filename fixed.
                                                       !! If false, it iterates over the filenames
     logical,          intent(in)    :: subtract_file  !< If true, it subtracts the density from the reference 
@@ -390,7 +434,7 @@ contains
   ! ---------------------------------------------------------
   !> Giving a range of input files, it computes the Fourier transform
   !! of the file.
-  subroutine convert_transform(mesh, geo, mc, basename, in_folder, c_start, c_end, c_step, outp, & 
+  subroutine convert_transform(mesh, geo, mc, basename, in_folder, c_start, c_end, c_step, & 
        subtract_file, ref_name, ref_folder)
     type(mesh_t)    , intent(in)    :: mesh
     type(geometry_t), intent(in)    :: geo
@@ -400,7 +444,6 @@ contains
     integer,          intent(in)    :: c_start        !< The first file number
     integer,          intent(in)    :: c_end          !< The last file number
     integer,          intent(in)    :: c_step         !< The step between files
-    type(output_t),   intent(in)    :: outp           !< Output object; Decides the kind, what and where to output
     logical,          intent(in)    :: subtract_file  !< If true, it subtracts the density from the reference 
     character(len=*), intent(inout) :: ref_name       !< Reference file name 
     character(len=*), intent(inout) :: ref_folder     !< Reference folder name
@@ -745,12 +788,11 @@ contains
   ! ---------------------------------------------------------
   !> Given a set of mesh function operations it computes a  
   !! a resulting mesh function from linear combination of them.
-  subroutine convert_operate(mesh, geo, mc, outp)
+  subroutine convert_operate(mesh, geo, mc)
 
     type(mesh_t)    , intent(in)    :: mesh
     type(geometry_t), intent(in)    :: geo
     type(multicomm_t), intent(in)   :: mc
-    type(output_t)  , intent(in)    :: outp           !< Output object; Decides the kind, what and where to output
 
     integer             :: ierr, ip, i_op, length, n_operations
     type(block_t)       :: blk
