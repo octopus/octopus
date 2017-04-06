@@ -23,12 +23,14 @@ module atom_oct_m
     atom_same_species,                    &
     atom_distance,                        &
     atom_write_xyz,                       &
+    atom_read_xyz,                        &
     atom_classical_init,                  &
     atom_classical_init_from_data_object, &
     atom_classical_end,                   &
     atom_classical_create_data_object,    &
     atom_classical_get_label,             &
-    atom_classical_write_xyz
+    atom_classical_write_xyz,             &
+    atom_classical_read_xyz
 
   type, public :: atom_t
     !private
@@ -234,6 +236,33 @@ contains
 
   end subroutine atom_write_xyz
 
+    ! ---------------------------------------------------------
+  subroutine atom_read_xyz(this, dim, unit)
+    type(atom_t),      intent(inout) :: this
+    integer, optional, intent(in) :: dim
+    integer,           intent(in) :: unit
+
+    character(len=19)          :: frmt, dum
+    integer                    :: i, dim_
+    FLOAT, dimension(MAX_DIM)  :: tmp
+ 
+
+    PUSH_SUB(atom_read_xyz)
+
+    dim_=MAX_DIM
+    if(present(dim))dim_=dim
+    write(unit=frmt, fmt="(a5,i2.2,a4,i2.2,a6)") "(6x,a", LABEL_LEN, ",2x,", dim_,"f12.6)"
+    read(unit=unit, fmt=frmt) dum, (tmp(i), i=1, dim_)
+
+    do i=1, dim_
+      this%x(i) = units_from_atomic(units_out%length_xyz_file, tmp(i))
+    end do
+ 
+    POP_SUB(atom_read_xyz)
+
+  end subroutine atom_read_xyz
+
+
   ! ---------------------------------------------------------
   pure subroutine atom_classical_init(this, label, x, charge)
     type(atom_classical_t), intent(out) :: this
@@ -334,6 +363,31 @@ contains
 
     POP_SUB(atom_classical_write_xyz)
   end subroutine atom_classical_write_xyz
+
+  ! ---------------------------------------------------------
+  subroutine atom_classical_read_xyz(this, dim, unit)
+    type(atom_classical_t), intent(inout) :: this
+    integer,      optional, intent(in) :: dim
+    integer,                intent(in) :: unit
+
+    character(len=27) :: frmt, dum
+    integer           :: i, dim_
+    FLOAT, dimension(MAX_DIM) :: tmp
+
+    PUSH_SUB(atom_classical_read_xyz)
+    dim_=MAX_DIM
+    if(present(dim))dim_=dim
+    write(unit=frmt, fmt="(a10,i2.2,a15)") "(6x,a1,2x,", dim_, "f12.6,a3,f12.6)"
+    read(unit=unit, fmt=frmt) dum, (tmp, i=1, dim_)
+
+    do i=1, dim_
+      this%x(i) = units_from_atomic(units_out%length_xyz_file, tmp(i))
+    end do
+
+
+    POP_SUB(atom_classical_read_xyz)
+  end subroutine atom_classical_read_xyz
+
 
 end module atom_oct_m
 

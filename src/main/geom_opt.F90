@@ -101,7 +101,7 @@ contains
 
     PUSH_SUB(geom_opt_run)
 
-    call init_()
+    call init_(fromscratch)
     
 
     ! load wavefunctions
@@ -191,7 +191,8 @@ contains
   contains
 
     ! ---------------------------------------------------------
-    subroutine init_()
+    subroutine init_(fromscratch)
+      logical,  intent(in) :: fromscratch
 
       logical :: center, does_exist
       integer :: iter, iatom
@@ -419,6 +420,10 @@ contains
       call loct_rm("geom/optimization.log")
 
       call loct_rm("./work-geom.xyz")
+
+      if(.not. fromScratch) then
+        call geometry_read_xyz(g_opt%geo, './last')
+      end if
 
       ! clean out old geom/go.XXXX.xyz files. must be consistent with write_iter_info
       iter = 1
