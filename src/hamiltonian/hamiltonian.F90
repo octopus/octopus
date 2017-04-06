@@ -119,7 +119,7 @@ module hamiltonian_oct_m
     logical :: floquet_apply !< use action of the Floquet Hamiltonian
     integer :: nT, ncycle, interval, count, floquet_dim, spindim, order(2), mode
     integer :: max_solve_iter, iter
-    logical ::  downfolding
+    logical ::  downfolding, sample
     FLOAT :: omega, Tcycle, dt
     FLOAT, pointer :: frozen_distortion(:,:)
     logical :: is_parallel
@@ -257,6 +257,7 @@ contains
     hm%family_is_mgga_with_exc = family_is_mgga_with_exc
     call states_dim_copy(hm%d, st%d)
 
+    hm%F%sample = .false.
     hm%F%floquet_apply = .false.
 
     !%Variable ParticleMass
@@ -1064,11 +1065,12 @@ contains
 
 
   ! -----------------------------------------------------------------
-  subroutine hamiltonian_dump_vhxc(restart, hm, mesh, ierr)
+  subroutine hamiltonian_dump_vhxc(restart, hm, mesh, ierr, idx)
     type(restart_t),     intent(in)  :: restart
     type(hamiltonian_t), intent(in)  :: hm
     type(mesh_t),        intent(in)  :: mesh
     integer,             intent(out) :: ierr
+    integer, optional,   intent(in)  :: idx
 
     integer :: iunit, err, err2(2), isp
     character(len=12) :: filename
@@ -1102,6 +1104,8 @@ contains
       else
         write(filename, fmt='(a,i1)') 'vhxc-sp', isp
       end if
+      if (present(idx)) write(filename, fmt='(a,i6.6)') trim(filename), idx
+      
       write(lines(1), '(i8,a,i8,a)') isp, ' | ', hm%d%nspin, ' | "'//trim(adjustl(filename))//'"'
       call restart_write(restart, iunit, lines, 1, err)
       if (err /= 0) err2(1) = err2(1) + 1
@@ -1135,6 +1139,8 @@ contains
         else
           write(filename, fmt='(a,i1)') 'vtau-sp', isp
         end if
+        if (present(idx)) write(filename, fmt='(a,i6.6)') trim(filename), idx
+        
         write(lines(1), '(i8,a,i8,a)') isp, ' | ', hm%d%nspin, ' | "'//trim(adjustl(filename))//'"'
         call restart_write(restart, iunit, lines, 1, err)
         if (err /= 0) err2(1) = err2(1) + 16
@@ -1167,11 +1173,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_load_vhxc(restart, hm, mesh, ierr)
+  subroutine hamiltonian_load_vhxc(restart, hm, mesh, ierr, idx)
     type(restart_t),     intent(in)    :: restart
     type(hamiltonian_t), intent(inout) :: hm
     type(mesh_t),        intent(in)    :: mesh
     integer,             intent(out)   :: ierr
+    integer, optional,   intent(in)    :: idx
+    
 
     integer :: err, err2, isp
     character(len=12) :: filename
@@ -1203,7 +1211,8 @@ contains
       else
         write(filename, fmt='(a,i1)') 'vhxc-sp', isp
       end if
-
+      if (present(idx)) write(filename, fmt='(a,i6.6)') trim(filename), idx
+      
       if (hm%cmplxscl%space) then
         call zrestart_read_mesh_function(restart, filename, mesh, zv, err)
         hm%vhxc(:,isp) =  real(zv, REAL_PRECISION)
@@ -1225,6 +1234,7 @@ contains
         else
           write(filename, fmt='(a,i1)') 'vtau-sp', isp
         end if
+        if (present(idx)) write(filename, fmt='(a,i6.6)') trim(filename), idx
 
         if (hm%cmplxscl%space) then
           call zrestart_read_mesh_function(restart, filename, mesh, zv, err)

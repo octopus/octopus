@@ -140,17 +140,22 @@ contains
   end subroutine geometry_nullify
 
   ! ---------------------------------------------------------
-  subroutine geometry_init(geo, space, print_info)
+  subroutine geometry_init(geo, space, print_info, xyzfname)
     type(geometry_t),           intent(inout) :: geo
     type(space_t),    target,   intent(in)    :: space
     logical,          optional, intent(in)    :: print_info
+    character(len=*), optional, intent(in)    :: xyzfname
 
     PUSH_SUB(geometry_init)
 
     geo%space => space
 
     ! initialize geometry
-    call geometry_init_xyz(geo)
+    if (present(xyzfname)) then
+      call geometry_init_xyz(geo, xyzfname)
+    else
+      call geometry_init_xyz(geo)
+    end if
     call geometry_init_species(geo, print_info=print_info)
     call distributed_nullify(geo%atoms_dist, geo%natoms)
 
@@ -160,8 +165,9 @@ contains
 
   ! ---------------------------------------------------------------
   !> initializes the xyz positions of the atoms in the structure geo
-  subroutine geometry_init_xyz(geo)
+  subroutine geometry_init_xyz(geo, xyzfname)
     type(geometry_t), intent(inout) :: geo
+    character(len=*), optional, intent(in)  :: xyzfname
 
     type(read_coords_info) :: xyz
     integer             :: ia
@@ -172,7 +178,11 @@ contains
     call read_coords_init(xyz)
 
     ! load positions of the atoms
-    call read_coords_read('Coordinates', xyz, geo%space)
+    if (present(xyzfname)) then
+      call read_coords_read('Coordinates', xyz, geo%space, xyzfname)
+    else 
+      call read_coords_read('Coordinates', xyz, geo%space)
+    end if
 
     if(xyz%n < 1) then
       message(1) = "Coordinates have not been defined."
@@ -908,6 +918,10 @@ contains
     call loct_pointer_copy(geo_out%ionic_interaction_parameter, geo_in%ionic_interaction_parameter)
 
     call distributed_copy(geo_in%atoms_dist, geo_out%atoms_dist)
+    
+    if (associated(geo_in%space)) then
+       geo_out%space => geo_in%space
+     end if
 
     POP_SUB(geometry_copy)
   end subroutine geometry_copy

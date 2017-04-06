@@ -444,6 +444,9 @@ contains
       call pes_init_write(td%pesv,gr%mesh,st)
     end if
 
+    call floquet_init(sys,hm%F,hm%geo,sys%st%d%dim)
+    if (hm%F%sample) call floquet_hamiltonians_init(hm ,sys%gr, sys%st, sys)
+
     if(st%d%pack_states .and. hamiltonian_apply_packed(hm, gr%mesh)) call states_pack(st)
 
     etime = loct_clock()
@@ -487,14 +490,18 @@ contains
         call pes_calc(td%pesv, gr%mesh, st, td%dt, iter, gr, hm)
 
       ! Floquet
-      if (hm%F%floquet_apply) then
+      if (hm%F%sample) then
         if(mod(iter,hm%F%interval) == 0) then
-          message(1) = 'Floquet-Hamiltonian update'
+          message(1) = 'Info: Recording td-Hamiltonian sample for Floquet analysis'
           call messages_info(1)
-          call floquet_hamiltonian_update(hm,st,gr,sys,iter)
+!           call floquet_hamiltonian_update(hm,st,gr,sys,iter)
+          call floquet_td_hamiltonians_sample(hm,sys,iter)
       
           ! In case a cycle is complete exit
           if(mod(iter,hm%F%ncycle)==0) then
+            message(1) = 'Info: Done sampling Hamiltoninans for Floquet analysis'
+            message(2) = '      Time propagation will finish'
+            call messages_info(2)
             stopping = .true.
           end if
         end if

@@ -80,6 +80,7 @@ contains
     
     integer :: mode, ierr
     type(td_t)  :: td
+    logical :: td_fromScratch
 
     FLOAT :: x
     type(restart_t) :: restart
@@ -90,42 +91,39 @@ contains
     call io_mkdir(FLOQUET_DIR)
 
     call parse_variable('TDFloquetMode', FLOQUET_NON_INTERACTING, mode) 
+
+    ! Needed to read info about laser, timestep, etc. 
+    call td_init(td, sys, hm)
     
     if(mode == FLOQUET_NON_INTERACTING .or. mode == FLOQUET_FROZEN_PHONON) then
-      call td_init(td, sys, hm)
       
       call states_allocate_wfns(sys%st, sys%gr%mesh, alloc_Left = hm%cmplxscl%space)
-            
-      
+                  
       call floquet_init(sys,hm%F,hm%geo,sys%st%d%dim)
       call floquet_hamiltonians_init(hm ,sys%gr, sys%st, sys)
       call floquet_hamiltonian_solve(hm,sys%gr,sys,sys%st, fromScratch)
       
-      call states_deallocate_wfns(sys%st)
-      
-      
     else
+      
+      call floquet_init(sys,hm%F,hm%geo,sys%st%d%dim)
+      call floquet_hamiltonians_init(hm ,sys%gr, sys%st, sys)
+      call floquet_load_td_hamiltonians(hm, sys, ierr)
+
+      if(ierr /= 0) then
+        write(message(1),'(a)') 'Failed to load td-Hamiltonians.'
+        write(message(2),'(a)') 'Begin time propagation to sample them.'
+        call messages_warning(2)        
+    
+        td_fromScratch = .true.
+        call td_run(sys, hm, td_fromScratch)    
+      end if
 
       call states_allocate_wfns(sys%st, sys%gr%mesh, alloc_Left = hm%cmplxscl%space)
-      call floquet_init(sys,hm%F,hm%geo,sys%st%d%dim)
+      call floquet_hamiltonian_solve(hm,sys%gr,sys,sys%st, fromScratch)      
       
-      ! Check if we already have the restart
-      call floquet_restart_dressed_st(hm, sys, dressed_st, ierr, fromScratch)
-      
-      if(ierr /= 0 .or. fromScratch) then
-        call states_deallocate_wfns(sys%st)
-        
-        ! Run the time propagation to sample the Hamiltonians 
-        call td_run(sys, hm, fromScratch)
-      end if 
-      
-      call floquet_hamiltonian_run_solver(hm, sys, dressed_st)
+    end if   
 
-      call states_deallocate_wfns(sys%st)        
-      call states_end(dressed_st)      
-      
-      
-    end if
+    call states_deallocate_wfns(sys%st)
 
     POP_SUB(floquet_run)
   end subroutine floquet_run

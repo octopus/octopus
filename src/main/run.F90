@@ -292,7 +292,6 @@ contains
       case(CM_CASIDA)
         call casida_run_init()
       case(CM_FLOQUET)
-        call td_run_init()
         call floquet_run_init()
       end select
 

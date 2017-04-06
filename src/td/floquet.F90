@@ -54,6 +54,7 @@ module floquet_oct_m
   use restart_oct_m
   use scf_oct_m
   use simul_box_oct_m
+  use smear_oct_m
   use states_oct_m
   use states_calc_oct_m
   use states_dim_oct_m
@@ -78,9 +79,12 @@ module floquet_oct_m
        floquet_hamiltonian_solve, &
        floquet_init_dressed_wfs,  &
        floquet_hamiltonian_run_solver, &
-       floquet_restart_dressed_st
+       floquet_restart_dressed_st, &
+       floquet_load_td_hamiltonians, &
+       floquet_td_hamiltonians_sample
 
   integer, public, parameter ::    &
+       FLOQUET_NONE            = 0, &      
        FLOQUET_NON_INTERACTING = 1, &
        FLOQUET_FROZEN_PHONON   = 2, &
        FLOQUET_INTERACTING     = 3
@@ -105,8 +109,14 @@ contains
 
     PUSH_SUB(floquet_init)
 
-    call messages_print_stress(stdout, 'Floquet')
+    ! Default values
+    this%floquet_apply = .false.
+    this%sample = .false.
+    
 
+
+    
+    
 
     this%is_parallel = multicomm_strategy_is_parallel(sys%mc, P_STRATEGY_OTHER)
     if(this%is_parallel) then
@@ -121,6 +131,8 @@ contains
     !%Section Time-Dependent::TD Output
     !%Description
     !% Types of Floquet analysis performed when TDOutput=td_floquet
+    !%Option none 0
+    !%
     !%Option non_interacting 1
     !% 
     !%Option frozen_phonon 2
@@ -129,7 +141,15 @@ contains
     !%
     !%End
 
-    call parse_variable('TDFloquetMode', FLOQUET_NON_INTERACTING, this%mode)
+    call parse_variable('TDFloquetMode', FLOQUET_NONE, this%mode)
+
+
+    if (this%mode == FLOQUET_NONE) then
+      POP_SUB(floquet_init)
+      return
+    end if 
+
+    call messages_print_stress(stdout, 'Floquet')
     call messages_print_var_option(stdout, 'TDFloquetMode',  this%mode)
 
     if(this%mode==FLOQUET_FROZEN_PHONON) then
@@ -139,6 +159,9 @@ contains
           call messages_fatal(2) 
        end if
     end if
+    
+    if (this%mode == FLOQUET_INTERACTING)  this%sample = .true.
+
 
     !%Variable TDFloquetFrequency
     !%Type float
@@ -350,8 +373,7 @@ contains
          call hamiltonian_update(this%td_hm(it), gr%der%mesh,time=time)
 
         case(FLOQUET_INTERACTING)
-           ! init is on the fly
-
+           ! init is on the fly           
         end select
 
      enddo
@@ -369,19 +391,41 @@ contains
    end subroutine floquet_hamiltonians_init
 
    !--------------------------------------------
+   subroutine floquet_td_hamiltonians_sample(hm,sys,iter)
+     type(hamiltonian_t), intent(inout) :: hm
+     type(system_t),      intent(in)    :: sys
+     integer,               intent (in) :: iter
+     
+     integer :: it
+     
+     
+     PUSH_SUB(floquet_td_hamiltonians_sample)   
+     
+     it = mod(iter/hm%F%interval,hm%F%nT)
+     if(it==0) it=hm%F%nT
+     
+     call floquet_save_td_hamiltonian(hm, sys, it)
+       
+     POP_SUB(floquet_td_hamiltonians_sample)   
+     
+   end subroutine floquet_td_hamiltonians_sample
+
+   !--------------------------------------------
    ! this is only called if F%mode=interacting
    subroutine floquet_hamiltonian_update(hm,st,gr,sys,iter)
      type(hamiltonian_t), intent(inout) :: hm
      type(states_t)      , intent(inout):: st
      type(grid_t),      intent(inout)   :: gr
      type(system_t),      intent(in)    :: sys
-     integer :: iter
+     integer,               intent (in) :: iter
+
      integer :: it
 
      integer :: ip, ispin
      FLOAT :: time
 
      PUSH_SUB(floquet_hamiltonian_update)
+
 
      it = mod(iter/hm%F%interval,hm%F%nT)
      if(it==0) it=hm%F%nT
@@ -406,12 +450,114 @@ contains
      end do
      forall (ip = 1:gr%mesh%np) hm%td_hm(it)%ep%vpsl(ip) = hm%ep%vpsl(ip)
 
+     call floquet_save_td_hamiltonian(hm%td_hm(it), sys, it)
+
+
      call hamiltonian_epot_generate(hm%td_hm(it), gr, hm%td_hm(it)%geo, st, time=time)
 
-     PUSH_SUB(floquet_hamiltonian_update)
+     POP_SUB(floquet_hamiltonian_update)
 
     end subroutine floquet_hamiltonian_update
 
+    !--------------------------------------------
+    subroutine floquet_save_td_hamiltonian(hm, sys, it)
+      type(hamiltonian_t), intent(inout) :: hm
+      type(system_t),      intent(in)    :: sys
+      integer,             intent(in)    :: it
+
+      type(restart_t) :: restart   
+      type(grid_t),   pointer :: gr
+      integer :: ierr
+      character(len=128) :: filename
+
+      PUSH_SUB(floquet_save_td_hamiltonian)
+
+      gr => sys%gr      
+      
+      call restart_init(restart, RESTART_FLOQUET, RESTART_TYPE_DUMP, sys%mc, ierr, gr%der%mesh)
+
+      if (hm%theory_level /= INDEPENDENT_PARTICLES) then
+        call hamiltonian_dump_vhxc(restart, hm, gr%mesh, ierr, idx = it)
+      end if
+        
+      
+      write(filename, fmt='(a,a,i6.6)') trim(restart_dir(restart)),'/geometry', it
+      call geometry_write_xyz(hm%geo,trim(filename))
+
+
+      call restart_end(restart)
+      
+      POP_SUB(floquet_save_td_hamiltonian)
+    end subroutine floquet_save_td_hamiltonian
+
+    !--------------------------------------------
+    subroutine floquet_load_td_hamiltonians(hm, sys, ierr)
+      type(hamiltonian_t), intent(inout) :: hm
+      type(system_t),      intent(in)    :: sys
+      integer,             intent(out)   :: ierr
+
+      type(restart_t) :: restart   
+      type(grid_t),   pointer :: gr
+      type(states_t), pointer :: st        
+      integer :: it
+      character(len=128) :: filename
+      FLOAT :: time
+
+      PUSH_SUB(floquet_load_td_hamiltonians)
+
+      gr => sys%gr      
+      st => sys%st      
+      
+      call messages_print_stress(stdout, 'Load Floquet Hamitonians')
+      call messages_print_stress(stdout)
+      
+      
+      call restart_init(restart, RESTART_FLOQUET, RESTART_TYPE_LOAD, sys%mc, ierr, gr%der%mesh)
+      
+      if (ierr /=0 ) then
+        return
+        POP_SUB(floquet_load_td_hamiltonians)
+      end if
+
+      do it=1, hm%F%nT
+        time = it * hm%F%dt
+
+        write(message(1),'(a)') ' '
+        write(message(2),'(a,i6,a,f9.3,a)') 'Info: Floquet td-hamiltonian: ', it,' (time =',time,')'
+        write(message(3),'(a)') ' '
+        call messages_info(3)        
+        
+
+        ! Read the geometry
+        write(filename, fmt='(a,a,i6.6, a)') trim(restart_dir(restart)),'/geometry', it,'.xyz'
+        call geometry_init(hm%td_hm(it)%geo, sys%space,  xyzfname = filename)
+        
+        
+        
+        call hamiltonian_init(hm%td_hm(it), gr, hm%td_hm(it)%geo, st, sys%ks%theory_level, &
+                              sys%ks%xc_family,sys%ks%xc_flags, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
+ 
+
+        if (hm%theory_level /= INDEPENDENT_PARTICLES) then
+          call hamiltonian_load_vhxc(restart, hm%td_hm(it), gr%mesh, ierr, idx = it)  
+        end if
+
+        if (ierr /=0 ) then
+          return
+          POP_SUB(floquet_load_td_hamiltonians)
+        end if
+        
+        call hamiltonian_epot_generate(hm%td_hm(it), gr, hm%td_hm(it)%geo, st, time=time)
+        
+      end do
+
+      call restart_end(restart)
+
+      call messages_print_stress(stdout, 'Done')
+      call messages_print_stress(stdout)
+      
+      POP_SUB(floquet_load_td_hamiltonians)
+    end subroutine floquet_load_td_hamiltonians
 
     !--------------------------------------------
     subroutine floquet_hamiltonian_solve(hm,gr,sys,st, fromScratch)
@@ -609,7 +755,7 @@ contains
       
       call eigensolver_init(eigens, gr, dressed_st)
       ! no subspace diag implemented yet
-      eigens%sdiag%method = OPTION__SUBSPACEDIAGONALIZATION__NONE
+!       eigens%sdiag%method = OPTION__SUBSPACEDIAGONALIZATION__NONE
       eigens%converged(:) = 0
 
       converged=.false.
@@ -620,9 +766,22 @@ contains
          call messages_print_stress(stdout, trim(msg))
         
          call eigensolver_run(eigens, gr, dressed_st, hm, 1,converged)
+         call smear_find_fermi_energy(dressed_st%smear, dressed_st%eigenval, dressed_st%occ, dressed_st%qtot, &
+           dressed_st%d%nik, dressed_st%nst, dressed_st%d%kweights)
+         
          
          call calc_floquet_norms(gr%der%mesh,gr%sb%kpoints,st,dressed_st,iter,hm%F%floquet_dim)
          
+
+         write(message(1),'(a,i6)') 'Converged eigenvectors: ', sum(eigens%converged(1:st%d%nik))
+         call messages_info(1)
+         call states_write_eigenvalues(stdout, dressed_st%nst, dressed_st, gr%sb, eigens%diff, &
+                                       compact = .true.)         
+         
+         etime = loct_clock() - itime
+         itime = etime + itime
+         write(message(1),'(a,i5,a,f14.2)') 'Elapsed time for iter # ', iter,':', etime
+         call messages_info(1)
 
          
          write(filename,'(I5)') iter !hm%F_count
@@ -638,10 +797,6 @@ contains
          call states_dump(restart, dressed_st, gr, ierr, iter)
          call restart_end(restart)
 
-         etime = loct_clock() - itime
-         itime = etime + itime
-         write(message(1),'(a,i5,a,f14.2)') 'Elapsed time for iter # ', iter,':', etime
-         call messages_info(1)
 
          iter = iter +1
       end do
