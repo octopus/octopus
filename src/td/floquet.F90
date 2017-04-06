@@ -481,8 +481,10 @@ contains
       end if
         
       
-      write(filename, fmt='(a,a,i6.6)') trim(restart_dir(restart)),'/geometry', it
-      call geometry_write_xyz(hm%geo,trim(filename))
+      if (mpi_grp_is_root(mpi_world)) then      
+        write(filename, fmt='(a,a,i6.6)') trim(restart_dir(restart)),'/geometry', it
+        call geometry_write_xyz(hm%geo,trim(filename))
+      end if
 
 
       call restart_end(restart)
@@ -649,7 +651,7 @@ contains
       call kpoints_distribute(dressed_st%d,sys%mc)
       call states_distribute_nodes(dressed_st,sys%mc)
       call states_exec_init(dressed_st, sys%mc)
-      call states_allocate_wfns(dressed_st,gr%der%mesh)
+      call states_allocate_wfns(dressed_st,gr%der%mesh, wfs_type = TYPE_CMPLX)
 
   
       call floquet_restart_dressed_st(hm, sys, dressed_st, ierr, fromScratch)
@@ -754,8 +756,6 @@ contains
       hm%d%dim = dressed_st%d%dim
       
       call eigensolver_init(eigens, gr, dressed_st)
-      ! no subspace diag implemented yet
-!       eigens%sdiag%method = OPTION__SUBSPACEDIAGONALIZATION__NONE
       eigens%converged(:) = 0
 
       converged=.false.
@@ -812,13 +812,8 @@ contains
       hm%F%count=hm%F%count + 1
       
       ! here we might want to do other things with the states...
-      
-      
-
-      
 
       POP_SUB(floquet_hamiltonian_run_solver)
-! stop 'Regular end of Floquet solver'
 
     end subroutine floquet_hamiltonian_run_solver
 

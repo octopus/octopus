@@ -93,11 +93,11 @@ contains
     call parse_variable('TDFloquetMode', FLOQUET_NON_INTERACTING, mode) 
 
     ! Needed to read info about laser, timestep, etc. 
-    call td_init(td, sys, hm)
+    call td_init(td, sys, hm)    
     
     if(mode == FLOQUET_NON_INTERACTING .or. mode == FLOQUET_FROZEN_PHONON) then
       
-      call states_allocate_wfns(sys%st, sys%gr%mesh, alloc_Left = hm%cmplxscl%space)
+      call states_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX, alloc_Left = hm%cmplxscl%space)
                   
       call floquet_init(sys,hm%F,hm%geo,sys%st%d%dim)
       call floquet_hamiltonians_init(hm ,sys%gr, sys%st, sys)
@@ -118,7 +118,7 @@ contains
         call td_run(sys, hm, td_fromScratch)    
       end if
 
-      call states_allocate_wfns(sys%st, sys%gr%mesh, alloc_Left = hm%cmplxscl%space)
+      call states_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX, alloc_Left = hm%cmplxscl%space)
       call floquet_hamiltonian_solve(hm,sys%gr,sys,sys%st, fromScratch)      
       
     end if   
