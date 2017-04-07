@@ -137,11 +137,10 @@ extern "C" void FC_FUNC_(cuda_build_program, CUDA_BUILD_PROGRAM)(map<string, CUm
 
   string map_descriptor = string(fname_c) + string(flags_c);
 
-  cout << fname_c << endl;
-  
   map<string, CUmodule *>::iterator map_it = (**module_map).find(map_descriptor);
   if(map_it != (**module_map).end()){
     *module = map_it->second;
+    free(fname_c);
     return;
   }
   
@@ -172,7 +171,7 @@ extern "C" void FC_FUNC_(cuda_build_program, CUDA_BUILD_PROGRAM)(map<string, CUm
   const char ** opts = new const char*[tokens.size()];
   for (unsigned ii = 0; ii < tokens.size(); ii++) opts[ii] = tokens[ii].c_str();
 
-  cout << "OPTS " << all_flags << endl;
+
 
   nvrtcResult err = nvrtcCompileProgram(prog, tokens.size(), opts);
 
@@ -183,9 +182,17 @@ extern "C" void FC_FUNC_(cuda_build_program, CUDA_BUILD_PROGRAM)(map<string, CUm
   char *log = new char[logSize];
   NVRTC_SAFE_CALL(nvrtcGetProgramLog(prog, log));
 
-  cout << "=====================================" << endl;
+  if(logSize > 1){
+    
+    cout << "Cuda compilation messages" << endl;
+    
+    cout << "File    : " << fname_c << endl;
+    
+    cout << "Options : " << all_flags << endl;
+    
+    cout << log << endl;
 
-  cout << log << endl;
+  }
 
   if(NVRTC_SUCCESS != err){
     cerr << "Error in compiling" << endl;

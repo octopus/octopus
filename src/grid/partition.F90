@@ -317,7 +317,7 @@ contains
     end if
 
     SAFE_DEALLOCATE_A(part_global)
-#endif ! HAVE_MPI2
+#endif /* HAVE_MPI2 */
 
     if(any(partition%part(:) <= 0)) then
       write(message(1),'(a)') 'Internal error: some elements of partition are <= 0.'

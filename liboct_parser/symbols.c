@@ -266,6 +266,9 @@ void sym_end_table()
   sym_table = NULL;
 }
 
+/* this function is defined in src/basic/varinfo_low.c */
+int varinfo_variable_exists(const char * var_name);
+
 void sym_output_table(int only_unused, int mpiv_node)
 {
   FILE *f;
@@ -284,6 +287,7 @@ void sym_output_table(int only_unused, int mpiv_node)
   
   for(ptr = sym_table; ptr != NULL; ptr = ptr->next){
     if(only_unused && ptr->used == 1) continue;
+    if(only_unused && varinfo_variable_exists(ptr->name)) continue;
     if(any_unused == 0) {
       fprintf(f, "\nParser warning: possible mistakes in input file.\n");
       fprintf(f, "List of variable assignments not used by parser:\n");
@@ -302,7 +306,11 @@ void sym_print(FILE *f, const symrec *ptr)
   fprintf(f, "%s", ptr->name);
   switch(ptr->type){
   case S_CMPLX:
-    fprintf(f, " = (%f,%f)\n", GSL_REAL(ptr->value.c), GSL_IMAG(ptr->value.c));
+    if(fabs(GSL_IMAG(ptr->value.c)) < 1.0e-14){
+      fprintf(f, " = %f\n", GSL_REAL(ptr->value.c));
+    } else {
+      fprintf(f, " = (%f,%f)\n", GSL_REAL(ptr->value.c), GSL_IMAG(ptr->value.c));
+    }
     break;
   case S_STR:
     fprintf(f, " = \"%s\"\n", ptr->value.str);

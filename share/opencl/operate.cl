@@ -56,12 +56,12 @@ __kernel void operate_map(const int np,
 			  __constant double * restrict weights,
 			  __global double const * restrict fi, const int ldfi,
 			  __global double * restrict fo, const int ldfo
-#if defined(SHARED_MEM) && !defined(CUDA)
-			  , __local int * indexl
-#endif
 #ifdef INDIRECT
 			  , __global int * restrict indirect
 #endif			  
+#if defined(SHARED_MEM) && !defined(CUDA)
+			  , __local int * indexl
+#endif
 			  ){
 
 #if defined(SHARED_MEM) && defined(CUDA)
