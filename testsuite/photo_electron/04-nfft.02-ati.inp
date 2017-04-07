@@ -56,10 +56,10 @@ nr=2
 # TD
 #############################
 dt = 0.008
-Tsimul = (Ntot+1)*tc
+Tf = (Ntot+1)*tc
 
 TDTimeStep = dt
-TDPropagationTime = Tsimul
+TDPropagationTime = Tf
 
 #############################
 # PHOTOELECTRON

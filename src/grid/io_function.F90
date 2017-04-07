@@ -64,6 +64,8 @@ module io_function_oct_m
     dio_function_output,          &
     zio_function_output,          &
     io_function_output_vector,    &
+    dio_function_output_global,   &
+    zio_function_output_global,   &
     io_function_output_vector_BZ, &
     io_function_output_global_BZ
     

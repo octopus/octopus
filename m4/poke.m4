@@ -45,7 +45,7 @@ AC_DEFUN([ACX_POKE],
 
     type(PokeGrid) :: grid
 
-    grid = PokeGrid(1.0_8, (/10, 10, 10/))
+    grid = PokeGrid((/1.0_8, 1.0_8, 1.0_8/), (/10, 10, 10/))
 
   ])"
 

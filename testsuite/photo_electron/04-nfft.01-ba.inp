@@ -37,10 +37,10 @@ TheoryLevel = independent_particles
 
 
 dt = 0.008
-Tsimul = 60
+Tf = 60
 
 TDTimeStep = dt
-TDPropagationTime = Tsimul
+TDPropagationTime = Tf
 
 
 

@@ -66,7 +66,7 @@ contains
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
       do j = 1, 2
         !TODO: There is no complex scaling here
-        if(family_is_mgga_with_exc(hm%xc_family,hm%xc_flags)) then
+        if(hm%family_is_mgga_with_exc) then
           call potential_interpolation_interpolate(tr%vksold, 3, time, dt, atime(j)-dt, &
                hm%vhxc, vtau = hm%vtau)
         else
