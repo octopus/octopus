@@ -98,6 +98,16 @@ contains
     if(mode == FLOQUET_NON_INTERACTING .or. mode == FLOQUET_FROZEN_PHONON) then
       
       call states_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX, alloc_Left = hm%cmplxscl%space)
+      
+      call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+
+      if(ierr == 0) call states_load(restart, sys%st, sys%gr, ierr, label = ": gs")
+      if (ierr /= 0) then
+        message(1) = 'Unable to read ground-state wavefunctions.'
+        call messages_fatal(1)
+      end if
+      call restart_end(restart)
+      
                   
       call floquet_init(sys,hm%F,hm%geo,sys%st%d%dim)
       call floquet_hamiltonians_init(hm ,sys%gr, sys%st, sys)
