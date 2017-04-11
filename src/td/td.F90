@@ -445,7 +445,6 @@ contains
     end if
 
     call floquet_init(sys,hm%F,hm%geo,sys%st%d%dim)
-    if (hm%F%sample) call floquet_hamiltonians_init(hm ,sys%gr, sys%st, sys)
 
     if(st%d%pack_states .and. hamiltonian_apply_packed(hm, gr%mesh)) call states_pack(st)
 
