@@ -161,9 +161,8 @@ contains
     integer :: ndiv, np1, np2, nb1, nb2, nr1, nr2
     integer, allocatable :: div(:)
     type(blacs_proc_grid_t) :: proc_grid
-    integer :: desc(BLACS_DLEN)
 #ifdef HAVE_SCALAPACK
-    integer :: info
+    integer :: info, desc(BLACS_DLEN)
     FLOAT, allocatable :: da(:, :), devec(:, :), dwork(:)
     CMPLX, allocatable :: za(:, :), zevec(:, :), zwork(:), rwork(:)
     FLOAT :: dworksize

@@ -35,7 +35,6 @@
     FLOAT,         dimension(:),   pointer :: xpot
     FLOAT,         dimension(:,:), pointer :: tnadd_potential
     FLOAT, allocatable :: v0(:,:), nxc(:), potential(:)
-    FLOAT, allocatable :: current(:, :, :)
 
     PUSH_SUB(output_hamiltonian)
 

@@ -905,10 +905,10 @@ contains
     integer, optional, intent(out) :: lsize(:) !< Number of objects in each partition
     logical, optional, intent(in)    :: scalapack_compat
 
-    integer :: ii, jj, rank, size
+    integer :: ii, jj, rank
     logical :: scalapack_compat_
 #ifdef HAVE_SCALAPACK
-    integer :: nbl
+    integer :: nbl, size
 #endif
     
     scalapack_compat_ = .false.
@@ -979,9 +979,12 @@ contains
     integer, intent(in)    :: nobjs       !< Number of points to divide
     integer, intent(out)   :: ini         !< Start point of the partition
     integer, intent(out)   :: nobjs_loc   !< Number of objects in each partition
-    
-    integer :: rank, nthreads
+
+    integer :: rank
     integer, allocatable :: istart(:), ifinal(:), lsize(:)
+#ifdef HAVE_OPENMP
+    integer :: nthreads
+#endif
 
     ! no push_sub, threadsafe
     rank = 1

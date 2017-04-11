@@ -97,10 +97,10 @@ contains
 
     R_TYPE, allocatable :: psi(:, :, :)
     integer             :: psi_block(1:2), total_np
-    type(profile_t), save :: prof_cholesky, prof_trsm, prof_herk
 #ifdef HAVE_SCALAPACK
     integer             :: info, nbl, nrow, ncol
     integer             :: psi_desc(BLACS_DLEN), ss_desc(BLACS_DLEN)
+    type(profile_t), save :: prof_cholesky, prof_trsm, prof_herk
 #endif
 
     PUSH_SUB(X(states_orthogonalization_full).cholesky_parallel)
@@ -283,7 +283,6 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
 
   integer :: idim, block_size, ib, size, sp
   R_TYPE, allocatable :: psicopy(:, :, :)
-  integer :: ierr
   type(accel_mem_t) :: psicopy_buffer, ss_buffer
   type(accel_kernel_t), save, target :: dkernel, zkernel
   type(accel_kernel_t), pointer :: kernel
@@ -1072,7 +1071,6 @@ subroutine X(states_rotate)(mesh, st, uu, ik)
   R_TYPE,            intent(in)    :: uu(:, :)
   integer,           intent(in)    :: ik
   
-  type(batch_t) :: psib
   integer       :: block_size, sp, idim, size, ib
   R_TYPE, allocatable :: psinew(:, :, :), psicopy(:, :, :)
   type(accel_kernel_t), save :: dkernel, zkernel
@@ -1181,11 +1179,9 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
 #ifndef R_TREAL
   integer :: ist, jst
 #endif
-  type(batch_t) :: psib, psi2b
   type(profile_t), save :: prof
   FLOAT :: vol
   R_TYPE, allocatable :: psi(:, :, :)
-  integer :: ierr
   type(accel_mem_t) :: psi_buffer, overlap_buffer
 
   PUSH_SUB(X(states_calc_overlap))
@@ -1333,9 +1329,9 @@ subroutine X(states_calc_projections)(mesh, st, gs_st, ik, proj)
   integer,                intent(in)    :: ik
   R_TYPE,                 intent(out)   :: proj(:, :)
 
-  integer       :: ib, jb, ip
+  integer       :: ib, ip
   R_TYPE, allocatable :: psi(:, :, :), gspsi(:, :, :)
-  integer :: sp, ep, size, block_size, ierr
+  integer :: sp, size, block_size
   type(profile_t), save :: prof
 
   PUSH_SUB(X(states_calc_projections))

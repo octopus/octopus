@@ -30,15 +30,18 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   integer :: ist, points_
   real(8) :: cop
   logical :: ghost_update_, profile_, use_opencl
-  integer :: nri, nri_loc, ini
+  integer :: nri
   integer, pointer :: imin(:), imax(:), ri(:, :)
-  R_TYPE,  pointer :: pfi(:), pfo(:)
 !  FLOAT, allocatable :: wre(:), wim(:)
   R_BASE, allocatable :: wre(:), wim(:)  
 #ifdef R_TREAL
   integer, parameter :: logldf = 0
 #else
   integer, parameter :: logldf = 1
+#endif
+#ifndef SINGLE_PRECISION
+  integer :: nri_loc, ini
+  R_TYPE,  pointer :: pfi(:), pfo(:)
 #endif
   
   PUSH_SUB(X(nl_operator_operate_batch))

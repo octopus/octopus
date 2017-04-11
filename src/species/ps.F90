@@ -888,7 +888,7 @@ contains
     type(ps_t),     intent(inout) :: ps
     type(ps_upf_t), intent(in)    :: ps_upf
 
-    integer :: i, l, ll, is, nrc, ir, j, ij, ispin, ip
+    integer :: i, l, ll, is, nrc, ir, j, ij
     FLOAT :: x
     FLOAT, allocatable :: hato(:), dens(:)
 

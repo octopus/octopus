@@ -136,7 +136,7 @@ contains
     type(states_t),       intent(inout) :: st
     FLOAT,                intent(out)    :: current(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin)
 
-    integer :: ik, ist, idir, idim, iatom, ip, ib, ii, ierr, ispin
+    integer :: ik, ist, idir, idim, ip, ib, ii, ispin
     CMPLX, allocatable :: gpsi(:, :, :), psi(:, :), hpsi(:, :), rhpsi(:, :), rpsi(:, :), hrpsi(:, :)
     FLOAT, allocatable :: symmcurrent(:, :)
     type(profile_t), save :: prof

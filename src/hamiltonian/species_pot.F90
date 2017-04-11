@@ -79,7 +79,7 @@ contains
     integer,              intent(in)    :: spin_channels
     FLOAT,                intent(inout) :: rho(:, :) !< (mesh%np, spin_channels)
 
-    integer :: isp, ip, in_points, nn, icell
+    integer :: isp, ip, in_points, icell
     FLOAT :: rr, x, pos(1:MAX_DIM), nrm, rmax
     FLOAT :: xx(MAX_DIM), yy(MAX_DIM), rerho, imrho
     type(species_t), pointer :: species
@@ -310,15 +310,10 @@ contains
     integer,              intent(in)    :: spin_channels
     FLOAT,                intent(inout) :: drho(:, :) !< (mesh%np, spin_channels)
 
-    integer :: isp, ip, in_points, nn, icell
-    FLOAT :: rr, x, pos(1:MAX_DIM), nrm
-    FLOAT :: xx(MAX_DIM), yy(MAX_DIM), rerho, imrho
+    integer :: isp, ip, icell
+    FLOAT :: rr, pos(1:MAX_DIM)
     type(species_t), pointer :: species
     type(ps_t), pointer :: ps
-
-#if defined(HAVE_MPI)
-    integer :: in_points_red
-#endif
     type(periodic_copy_t) :: pp
 
     PUSH_SUB(species_atom_density_derivative)

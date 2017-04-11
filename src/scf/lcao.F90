@@ -693,7 +693,7 @@ contains
     FLOAT,   optional,   intent(in)    :: lmm_r !< used only if not present(st_start)
 
     type(lcao_t) :: lcao
-    integer :: s1, s2, k1, k2, is, ik, st_start_random
+    integer :: st_start_random
     logical :: lcao_done
     type(profile_t), save :: prof
 
@@ -1069,7 +1069,7 @@ contains
     integer,           intent(in)    :: nspin, spin_channels
     FLOAT,             intent(out)   :: rho(:, :)
 
-    integer :: ia, is, ip, idir, gmd_opt
+    integer :: ia, is, idir, gmd_opt
     integer, save :: iseed = 321
     type(block_t) :: blk
     FLOAT :: rr, rnd, phi, theta, mag(1:3), lmag, n1, n2

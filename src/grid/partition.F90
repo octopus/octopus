@@ -150,10 +150,14 @@ contains
     character(len=*),  intent(in)  :: filename
     integer,           intent(out) :: ierr
 
-    integer :: ipart, err
-    integer, allocatable :: part_global(:)
+    integer :: err
+#ifdef HAVE_MPI2
+    integer :: ipart
     integer, allocatable :: scounts(:), sdispls(:)
-
+#else
+    integer, allocatable :: part_global(:)    
+#endif
+    
     PUSH_SUB(partition_dump)
 
     ierr = 0
@@ -230,9 +234,11 @@ contains
     integer,           intent(out)   :: ierr
 
     integer :: ipart, err, np, file_size
-    integer, allocatable :: part_global(:)
     integer, allocatable :: scounts(:), sdispls(:)
-
+#ifndef HAVE_MPI2
+    integer, allocatable :: part_global(:)
+#endif
+    
     PUSH_SUB(partition_load)
     
     ierr = 0

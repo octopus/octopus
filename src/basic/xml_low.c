@@ -501,10 +501,9 @@ fint FC_FUNC_(xml_tag_get_tag_value_array_low, XML_TAG_GET_TAG_VALUE_ARRAY_LOW)
 fint FC_FUNC_(xml_tag_get_value_array_low, XML_TAG_GET_VALUE_ARRAY_LOW)
      (tag_t ** tag, const fint * size, double * val){
 
-  fint ii, ierr;
+  fint ii;
   char buffer[1000];
   char * res;
-  double v;
   
   fsetpos((*tag)->xml_file, &(*tag)->pos);
   fgets(buffer, sizeof(buffer), (*tag)->xml_file);

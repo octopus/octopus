@@ -151,23 +151,28 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   FLOAT, optional,     intent(out)   :: diff(:)
  
 #ifdef HAVE_SCALAPACK
-  R_TYPE, allocatable  :: hs(:, :), hpsi(:, :, :), evectors(:, :), work(:)
-  R_TYPE               :: rttmp
-  integer              :: ist, lwork, size
+  R_TYPE, allocatable :: hs(:, :), hpsi(:, :, :), evectors(:, :)
+  integer             :: ist, size
   integer :: psi_block(1:2), total_np, psi_desc(BLACS_DLEN), hs_desc(BLACS_DLEN), info
   integer :: nbl, nrow, ncol, ip, idim
   type(batch_t) :: psib, hpsib
+  type(profile_t), save :: prof_diag, prof_gemm1, prof_gemm2
+
 #ifdef R_TCOMPLEX
   integer :: lrwork
   CMPLX, allocatable :: rwork(:)
   CMPLX :: ftmp
 #endif
-  type(profile_t), save :: prof_diag, prof_gemm1, prof_gemm2
-#ifdef HAVE_ELPA
+  
+#if defined(R_TCOMPLEX) || !defined(HAVE_ELPA)
+  integer :: lwork
+  R_TYPE :: rttmp
+  R_TYPE, allocatable :: work(:)
+#else
   integer :: rcomm, ccomm
   logical :: elpa_success
 #endif
-
+  
   PUSH_SUB(X(subspace_diag_scalapack))
 
   SAFE_ALLOCATE(hpsi(1:der%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end))
@@ -359,10 +364,10 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
   integer,                intent(in)    :: ik
   R_TYPE,                 intent(out)   :: hmss(:, :)
 
-  integer       :: ib, jb, ip
+  integer       :: ib, ip
   R_TYPE, allocatable :: psi(:, :, :), hpsi(:, :, :)
   type(batch_t), allocatable :: hpsib(:)
-  integer :: sp, ep, size, block_size, ierr
+  integer :: sp, size, block_size
   type(accel_mem_t) :: psi_buffer, hpsi_buffer, hmss_buffer
 
   PUSH_SUB(X(subspace_diag_hamiltonian))

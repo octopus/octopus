@@ -358,7 +358,7 @@ contains
     logical,          optional, intent(in)    :: verbose
 
     integer              :: states_file, wfns_file, occ_file, err, ik, ist, idir, idim
-    integer              :: idone, iread, ntodo, iread_tmp
+    integer              :: idone, iread, ntodo
     character(len=12)    :: filename
     character(len=1)     :: char
     logical, allocatable :: filled(:, :, :)
@@ -373,8 +373,12 @@ contains
     character(len=256), allocatable :: restart_file(:, :, :)
     logical,            allocatable :: restart_file_present(:, :, :)
     FLOAT                :: kpoint(MAX_DIM), read_kpoint(MAX_DIM)
-    integer, allocatable :: lowest_missing_tmp(:, :)
 
+#if defined(HAVE_MPI)
+    integer              :: iread_tmp
+    integer, allocatable :: lowest_missing_tmp(:, :)
+#endif
+    
     PUSH_SUB(states_load)
 
     ierr = 0

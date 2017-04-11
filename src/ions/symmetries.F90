@@ -101,7 +101,6 @@ contains
 
     integer :: max_size, fullnops, dim4syms
     integer :: idir, iatom, iop, verbosity, point_group
-    real(8) :: determinant
     real(8) :: lattice(1:3, 1:3)
     real(8), allocatable :: position(:, :)
     integer, allocatable :: typs(:)

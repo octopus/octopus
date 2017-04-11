@@ -198,7 +198,6 @@ contains
 #if defined(HAVE_NLOPT)
 
     integer(8) :: opt
-    real(8) :: minf
     integer :: ires
     include 'nlopt.f'
 

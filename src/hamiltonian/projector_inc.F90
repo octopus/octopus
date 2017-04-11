@@ -500,7 +500,7 @@ subroutine X(r_project_psi)(pj, mesh, dim, ik, psi, cpsi)
   R_TYPE,                    intent(inout)  :: cpsi(:,:,:)
 
   integer ::  ns, idim, ip, sb_dim, isb_dim
-  R_TYPE, allocatable :: lpsi(:, :), pxlpsi(:,:), xplpsi(:, :),xplpsi_t(:, :, :)
+  R_TYPE, allocatable :: lpsi(:, :), xplpsi(:, :), xplpsi_t(:, :, :)
   integer, pointer :: map(:)
   FLOAT,   pointer :: smx(:, :)
   type(profile_t), save :: prof

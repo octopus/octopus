@@ -1005,7 +1005,6 @@ contains
     type(type_t), optional, intent(in)      :: wfs_type
     logical,      optional, intent(in)      :: alloc_Left !< allocate an additional set of wfs to store left eigenstates
 
-    integer :: st1, st2, k1, k2, np_part
     logical :: force
 
     PUSH_SUB(states_allocate_wfns)
@@ -1738,7 +1737,7 @@ contains
 
     type(base_density_t), pointer :: dnst
     FLOAT                         :: chrg, qtot
-    integer                       :: ispn, ik, ierr
+    integer                       :: ispn, ik
 
     PUSH_SUB(substates_set_charge)
 
@@ -1769,10 +1768,6 @@ contains
     integer            :: ist, ik
     FLOAT              :: charge
     CMPLX, allocatable :: zpsi(:, :)
-#if defined(HAVE_MPI)
-    integer            :: idir, tmp
-    FLOAT, allocatable :: lspin(:), lspin2(:) !< To exchange spin.
-#endif
 
     PUSH_SUB(states_fermi)
 
@@ -1905,10 +1900,6 @@ contains
   subroutine states_distribute_nodes(st, mc)
     type(states_t),    intent(inout) :: st
     type(multicomm_t), intent(in)    :: mc
-
-#ifdef HAVE_MPI
-    integer :: inode, ist
-#endif
 
     PUSH_SUB(states_distribute_nodes)
 

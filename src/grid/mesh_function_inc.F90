@@ -188,7 +188,7 @@ R_TYPE function X(mf_dotp_2)(mesh, dim, f1, f2, reduce, dotu, np) result(dotp)
      !! no complex conjugation.  Default is false.
   integer, optional, intent(in) :: np
 
-  integer :: idim, np_
+  integer :: idim
 
   PUSH_SUB(X(mf_dotp_2))
 
@@ -300,8 +300,7 @@ subroutine X(mf_random)(mesh, ff, shift, seed, normalized)
   logical, optional, intent(in)  :: normalized !< whether generate states should have norm 1, true by default
   
   integer, save :: iseed = 123
-  integer :: idim, ip
-  R_BASE  :: aa(MAX_DIM), rr
+  R_BASE  :: rr
   type(profile_t), save :: prof
 
   PUSH_SUB(X(mf_random))

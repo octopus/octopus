@@ -139,7 +139,6 @@ contains
 
     ! some local stuff
     FLOAT :: def_h, def_rsize
-    integer :: idir
     logical :: only_gamma_kpoint
 
     PUSH_SUB(simul_box_init)
@@ -284,7 +283,7 @@ contains
       type(block_t) :: blk
 
       FLOAT :: default
-      integer :: default_boxshape
+      integer :: default_boxshape, idir
 #if defined(HAVE_GDLIB)
       logical :: found
       integer :: box_npts
@@ -619,7 +618,7 @@ contains
     FLOAT,   optional, intent(in)    :: rlattice_primitive(:,:)
 
     type(block_t) :: blk
-    FLOAT :: norm, cross(1:3), lparams(3)
+    FLOAT :: norm, lparams(3)
     integer :: idim, jdim
 
     PUSH_SUB(simul_box_build_lattice)
@@ -737,8 +736,7 @@ contains
     logical,           intent(in)    :: warn_if_not
     logical, optional, intent(in)    :: die_if_not
 
-    integer :: iatom, pd, idir
-    FLOAT :: xx(1:MAX_DIM)
+    integer :: iatom, pd
     logical :: die_if_not_
 
     PUSH_SUB(simul_box_atoms_in_box)

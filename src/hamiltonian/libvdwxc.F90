@@ -275,8 +275,11 @@ contains
     real(8), allocatable :: workbuffer(:)
     real(8), allocatable :: cube_rho(:,:,:), cube_sigma(:,:,:), cube_dedrho(:,:,:), cube_dedsigma(:,:,:)
     real(8), dimension(3) :: energy_and_integrals_buffer
-    integer :: ii, ierr
-
+    integer :: ii
+#ifdef HAVE_MPI
+    integer :: ierr
+#endif
+    
     PUSH_SUB(libvdwxc_calculate)
 
     ASSERT(size(rho, 2) == 1)
