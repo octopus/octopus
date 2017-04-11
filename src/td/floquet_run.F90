@@ -21,6 +21,7 @@ module floquet_run_oct_m
   use iso_c_binding
   use calc_mode_par_oct_m
   use comm_oct_m
+  use density_oct_m
   use distributed_oct_m
   use floquet_oct_m
   use global_oct_m
@@ -52,6 +53,7 @@ module floquet_run_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
+  use v_ks_oct_m
 
   implicit none
 
@@ -108,6 +110,8 @@ contains
       end if
       call restart_end(restart)
       
+      call density_calc(sys%st, sys%gr, sys%st%rho)
+      call v_ks_calc(sys%ks, hm, sys%st, sys%geo)
                   
       call floquet_init(sys,hm%F,hm%geo,sys%st%d%dim)
       call floquet_hamiltonians_init(hm ,sys%gr, sys%st, sys)
