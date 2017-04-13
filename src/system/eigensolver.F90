@@ -586,7 +586,7 @@ contains
     end if
 
     ik_loop: do ik = st%d%kpt%start, st%d%kpt%end
-     if(eigens%skip_finite_weight_kpoints.and.gr%sb%kpoints%reduced%weight(ik) > M_ZERO) cycle
+     if(eigens%skip_finite_weight_kpoints.and. st%d%kweights(ik) > M_ZERO) cycle
       maxiter = eigens%es_maxiter
 
       if(st%calc_eigenval) then
