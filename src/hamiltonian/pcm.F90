@@ -51,10 +51,6 @@ module pcm_oct_m
   use io_function_oct_m
   use mesh_function_oct_m
 
-  !GGIL: 10/04/2017
-  !use run_oct_m
-  
-
   implicit none
 
   private
@@ -163,8 +159,8 @@ module pcm_oct_m
     PCM_VDW_OPTIMIZED   = 1,   &
     PCM_VDW_SPECIES     = 2
 
-  !GGIL: 12/04/2017 - added flag td mode
-  !logical :: td_calc_mode = .false.
+  !GGIL: 13/04/2017 - added flag td mode
+  logical :: td_calc_mode = .false.
 
 contains
 
@@ -204,7 +200,7 @@ contains
     pcm%iter = 0
     pcm%update_iter = 1
 
-    !GGIL: 12/04/2017 - removed: experimental
+    !GGIL: 13/04/2017 - removed: experimental
     !%Variable PCMCalculation
     !%Type logical
     !%Default no
@@ -265,7 +261,6 @@ contains
     call parse_variable('PCMRadiusScaling', default_value, pcm%scale_r)
     call messages_print_var_value(stdout, "PCMRadiusScaling", pcm%scale_r)
 
-    !GGIL: - added: default comment. 
     !%Variable PCMStaticEpsilon
     !%Type float
     !%Default 1.0
@@ -608,7 +603,7 @@ contains
       call messages_write('Other choices of CalculationMode are not tested and might produce to unexpected results.')        
       call messages_new_line()        
       call messages_warning()
-     !else if( calc_mode_id == CM_GS ) then
+     !else if( calc_mode_id == CM_GS ) then 
      else
       call messages_write('You set up epsilon_infty /= epsilon_0 in a non-time-dependent run (e.g., CalculationMode=gs).')
       call messages_new_line()
@@ -791,7 +786,11 @@ contains
     
     if (present(v_h)) calc = PCM_ELECTRONS
     if (present(geo)) calc = PCM_NUCLEI
-    
+
+    if (present(time_present)) then
+     if (time_present) td_calc_mode = .true.
+    end if
+     
     if (calc == PCM_NUCLEI) then
       call pcm_v_nuclei_cav(pcm%v_n, geo, pcm%tess, pcm%n_tesserae)
       call pcm_charges(pcm%q_n, pcm%qtot_n, pcm%v_n, pcm%matrix, pcm%n_tesserae, &
@@ -805,7 +804,7 @@ contains
      !write(*,*) 'PCM response potential for electrons is called ok...', pcm%iter
       !GGIL LOG: inertial/dynamical partition.
       !if( calc_mode_id == CM_TD .and. pcm%epsilon_infty /= pcm%epsilon_0 ) then
-      if( time_present .and. pcm%epsilon_infty /= pcm%epsilon_0 ) then  
+      if( td_calc_mode .and. pcm%epsilon_infty /= pcm%epsilon_0 ) then  
        select case (pcm%iter)
        case(0)
         call pcm_v_electrons_cav_li(pcm%v_e, v_h, pcm, mesh)
@@ -2554,8 +2553,8 @@ contains
     SAFE_DEALLOCATE_A(pcm%matrix)
 ! BEGIN - GGIL: 07/04/2017 - matrix_d
     if ( pcm%epsilon_infty .ne. pcm%epsilon_0 ) then 
-    SAFE_DEALLOCATE_A(pcm%matrix_d)
-    SAFE_DEALLOCATE_A(pcm%q_e_in)
+     SAFE_DEALLOCATE_A(pcm%matrix_d)
+     SAFE_DEALLOCATE_A(pcm%q_e_in)
     end if
 ! BEGIN - GGIL: 07/04/2017 - matrix_d
     SAFE_DEALLOCATE_A(pcm%q_e)
