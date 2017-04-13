@@ -52,7 +52,7 @@ module pcm_oct_m
   use mesh_function_oct_m
 
   !GGIL: 10/04/2017
-  use run_oct_m
+  !use run_oct_m
   
 
   implicit none
@@ -163,17 +163,20 @@ module pcm_oct_m
     PCM_VDW_OPTIMIZED   = 1,   &
     PCM_VDW_SPECIES     = 2
 
+  !GGIL: 12/04/2017 - added flag td mode
+  !logical :: td_calc_mode = .false.
+
 contains
 
 
   !-------------------------------------------------------------------------------------------------------
   !> Initializes the PCM calculation: reads the VdW molecular cavity and generates the PCM response matrix.
   subroutine pcm_init(pcm, geo, grid, qtot, val_charge)
-    type(geometry_t), intent(in) :: geo
-    type(grid_t), intent(in)     :: grid
-    type(pcm_t), intent(out)     :: pcm
-    FLOAT, intent(in)            :: qtot
-    FLOAT, intent(in)            :: val_charge
+    type(geometry_t), intent(in)  :: geo
+    type(grid_t)    , intent(in)  :: grid
+    type(pcm_t)     , intent(out) :: pcm
+    FLOAT           , intent(in)  :: qtot
+    FLOAT           , intent(in)  :: val_charge
 
     integer :: ia, ip, ii, itess, jtess, pcm_vdw_type, subdivider
     integer :: cav_unit_test, iunit, pcmmat_unit
@@ -201,12 +204,13 @@ contains
     pcm%iter = 0
     pcm%update_iter = 1
 
+    !GGIL: 12/04/2017 - removed: experimental
     !%Variable PCMCalculation
     !%Type logical
     !%Default no
     !%Section Hamiltonian::PCM
     !%Description
-    !% (Experimental) If true, the calculation is performed accounting for solvation effects
+    !% If true, the calculation is performed accounting for solvation effects
     !% by using the Integral Equation Formalism Polarizable Continuum Model IEF-PCM
     !% formulated in real-space and real-time (<i>J. Chem. Phys.</i> <b>143</b>, 144111 (2015),
     !% <i>Chem. Rev.</i> <b>105</b>, 2999 (2005), <i>J. Chem. Phys.</i> <b>139</b>, 024105 (2013)).
@@ -597,6 +601,7 @@ contains
     !BEGIN - GGIL: 07/04/2017 - including matrix_d
     if ( pcm%epsilon_infty /= pcm%epsilon_0 ) then 
 
+     if( td_calc_mode ) then
      !if( calc_mode_id /= CM_TD .and. calc_mode_id /= CM_GS ) then
       call messages_write('Non-equilibrium PCM version have been created time propagation run (CalculationMode=td).')
       call messages_new_line()
@@ -604,7 +609,8 @@ contains
       call messages_new_line()        
       call messages_warning()
      !else if( calc_mode_id == CM_GS ) then
-      call messages_write('You set up epsilon_infty /= epsilon_0 in a CalculationMode=gs run.')
+     else
+      call messages_write('You set up epsilon_infty /= epsilon_0 in a non-time-dependent run (e.g., CalculationMode=gs).')
       call messages_new_line()
       call messages_write('PCM is active but it will produce the same result for any value of epsilon_infty.')        
       call messages_new_line()
@@ -612,10 +618,10 @@ contains
       call messages_new_line()
       call messages_write('Therefore, the only relevant dielectric constant is the static one.')        
       call messages_new_line()
-      call messages_write('Nevertheless, the dynamical PCM response matrix is evaluated.')        
+      call messages_write('Nevertheless, the dynamical PCM response matrix is evaluated for benchamarking purposes.')        
       call messages_new_line()                
       call messages_warning()
-     !end if 
+     end if 
        
     SAFE_ALLOCATE( pcm%matrix_d(1:pcm%n_tesserae, 1:pcm%n_tesserae) )
     pcm%matrix_d = M_ZERO
@@ -765,18 +771,17 @@ contains
     pcm%deltaQ_e = M_ZERO
     pcm%deltaQ_n = M_ZERO
 
-    !write(*,*) 'OCTOPUS INITIALIZES PCM...'
-
     POP_SUB(pcm_init)
   end subroutine pcm_init
 
   ! -----------------------------------------------------------------------------
   !BEGIN - GGIL: 07/04/2017 - including different iteration cases
-  subroutine pcm_calc_pot_rs(pcm, mesh, geo, v_h)
+  subroutine pcm_calc_pot_rs(pcm, mesh, geo, v_h, time_present)
     type(pcm_t),             intent(inout) :: pcm
     type(mesh_t),               intent(in) :: mesh  
     type(geometry_t), optional, intent(in) :: geo
     FLOAT,            optional, intent(in) :: v_h(:)
+    logical,          optional, intent(in) :: time_present
     
     integer :: calc
 
@@ -799,15 +804,17 @@ contains
      
      !write(*,*) 'PCM response potential for electrons is called ok...', pcm%iter
       !GGIL LOG: inertial/dynamical partition.
-      if( calc_mode_id == CM_TD .and. pcm%epsilon_infty /= pcm%epsilon_0 ) then 
+      !if( calc_mode_id == CM_TD .and. pcm%epsilon_infty /= pcm%epsilon_0 ) then
+      if( time_present .and. pcm%epsilon_infty /= pcm%epsilon_0 ) then  
        select case (pcm%iter)
        case(0)
         call pcm_v_electrons_cav_li(pcm%v_e, v_h, pcm, mesh)
-        !< calculating polarization charges equilibrated with the initial potential (just once)
+        !< calculating polarization charges equilibrated with the initial Hartree potential (just once)
         call pcm_charges(pcm%q_e, pcm%qtot_e, pcm%v_e, pcm%matrix, pcm%n_tesserae, &
                          pcm%q_e_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_e)
        case(1)
-        ! doubt down - pcm%qtot_e, pcm%q_e_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%deltaQ_e
+        ! doubt on renormalization of charges for inertial and dynamical charges separation!
+        ! doubt - pcm%qtot_e, pcm%q_e_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%deltaQ_e - see up
         !< calculating inertial polarization charges (once and for all)
         call pcm_charges(pcm%q_e_in, pcm%qtot_e, pcm%v_e, pcm%matrix-pcm%matrix_d, pcm%n_tesserae)
  
@@ -820,11 +827,11 @@ contains
         call pcm_v_electrons_cav_li(pcm%v_e, v_h, pcm, mesh)
         !< calculating dynamical polarization charges (each time)
         call pcm_charges(pcm%q_e, pcm%qtot_e, pcm%v_e, pcm%matrix_d, pcm%n_tesserae)
-        ! doubt up - pcm%qtot_e, pcm%q_e_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%deltaQ_e
 
         pcm%q_e = pcm%q_e + pcm%q_e_in
        end select
       else !GGIL LOG: hereafter Alain code.
+       !< calculating polarization charges to be equilibrated (upon self-consitency) with the ground state Hartree potential (always).
        call pcm_v_electrons_cav_li(pcm%v_e, v_h, pcm, mesh)
        call pcm_charges(pcm%q_e, pcm%qtot_e, pcm%v_e, pcm%matrix, pcm%n_tesserae, &
                         pcm%q_e_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_e)
