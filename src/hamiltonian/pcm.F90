@@ -16,6 +16,15 @@
 !! 02110-1301, USA.
 !!
 
+!GGIL LOG: 10/04/2017
+! 0) include use statement run_oct_m.
+! 1) inclusion of matrix_d(:,:), q_e_in(:) in derived pcm_t.
+! 2) saving pcm%matrix_d in pcm_init.
+! 3) inertial/dynamical charge calculation in pcm_calc_pot_rs.
+! 4) deallocating matrix_d(:,:), q_e_in(:) in pcm_end.
+!Subroutines pcm_init and pcm_calc_pot_rs need to be cleaned up:
+! Debug-purpose printing were used extensively.
+
 #include "global.h"
 
 module pcm_oct_m
@@ -41,6 +50,9 @@ module pcm_oct_m
   use unit_system_oct_m
   use io_function_oct_m
   use mesh_function_oct_m
+
+  !GGIL: 10/04/2017
+  use run_oct_m
   
 
   implicit none
@@ -90,8 +102,14 @@ module pcm_oct_m
     type(pcm_tessera_t), allocatable :: tess(:)       !< See type pcm_tessera_t
     FLOAT                            :: scale_r       !< scaling factor for the radii of the spheres used in PCM
     FLOAT, allocatable               :: matrix(:,:)   !< PCM response matrix
+    !BEGIN - GGIL: 07/04/2017 - matrix_d
+    FLOAT, allocatable               :: matrix_d(:,:) !< dynamical PCM response matrix (for epsilon_infty)
+    !END - GGIL: 07/04/2017 - matrix_d
     FLOAT, allocatable               :: q_e(:)        !< polarization charges due to the solute electrons        
     FLOAT, allocatable               :: q_n(:)        !< polarization charges due to the solute nuclei
+    !BEGIN - GGIL: 07/04/2017 - q_e_in
+    FLOAT, allocatable               :: q_e_in(:)     !< inertial polarization charges due to the solute electrons
+    !END - GGIL: 07/04/2017 - q_e_in
     FLOAT, allocatable               :: rho_e(:)      !< polarization density due to the solute electrons        
     FLOAT, allocatable               :: rho_n(:)      !< polarization density due to the solute nuclei
     FLOAT                            :: qtot_e        !< total polarization charge due to electrons
@@ -178,7 +196,6 @@ contains
     integer :: default_nn
     FLOAT   :: max_area
     
-
     PUSH_SUB(pcm_init)
     
     pcm%iter = 0
@@ -244,6 +261,7 @@ contains
     call parse_variable('PCMRadiusScaling', default_value, pcm%scale_r)
     call messages_print_var_value(stdout, "PCMRadiusScaling", pcm%scale_r)
 
+    !GGIL: - added: default comment. 
     !%Variable PCMStaticEpsilon
     !%Type float
     !%Default 1.0
@@ -254,14 +272,15 @@ contains
     call parse_variable('PCMStaticEpsilon', M_ONE, pcm%epsilon_0)
     call messages_print_var_value(stdout, "PCMStaticEpsilon", pcm%epsilon_0)
 
+    !GGIL: - removed: At present, non-equilibrium effects within PCM calculations are not implemented. For td calculations
+    !GGIL: - removed: take <tt>PCMDynamicEpsilon = PCMStaticEpsilon</tt> (default). 
     !%Variable PCMDynamicEpsilon
     !%Type float
     !%Default PCMStaticEpsilon
     !%Section Hamiltonian::PCM
     !%Description
-    !% High-frequency dielectric constant of the solvent (<math>\varepsilon_d</math>). 1.0 indicates gas phase.
-    !% At present, non-equilibrium effects within PCM calculations are not implemented. For td calculations
-    !% take <tt>PCMDynamicEpsilon = PCMStaticEpsilon</tt> (default). 
+    !% High-frequency dielectric constant of the solvent (<math>\varepsilon_d</math>). 
+    !% <math>\varepsilon_d=\varepsilon_0</math> indicate equilibrium with solvent. 
     !%End
     call parse_variable('PCMDynamicEpsilon', pcm%epsilon_0, pcm%epsilon_infty)
     call messages_print_var_value(stdout, "PCMDynamicEpsilon", pcm%epsilon_infty)
@@ -575,10 +594,33 @@ contains
       mat_gamess = M_ZERO
     end if
 
-    SAFE_ALLOCATE( pcm%matrix(1:pcm%n_tesserae, 1:pcm%n_tesserae) )
-    pcm%matrix = M_ZERO
+    !BEGIN - GGIL: 07/04/2017 - including matrix_d
+    if ( pcm%epsilon_infty /= pcm%epsilon_0 ) then 
 
-    call pcm_matrix(pcm%epsilon_infty, pcm%tess, pcm%n_tesserae, pcm%matrix) 
+     !if( calc_mode_id /= CM_TD .and. calc_mode_id /= CM_GS ) then
+      call messages_write('Non-equilibrium PCM version have been created time propagation run (CalculationMode=td).')
+      call messages_new_line()
+      call messages_write('Other choices of CalculationMode are not tested and might produce to unexpected results.')        
+      call messages_new_line()        
+      call messages_warning()
+     !else if( calc_mode_id == CM_GS ) then
+      call messages_write('You set up epsilon_infty /= epsilon_0 in a CalculationMode=gs run.')
+      call messages_new_line()
+      call messages_write('PCM is active but it will produce the same result for any value of epsilon_infty.')        
+      call messages_new_line()
+      call messages_write('By definition, the ground state is in equilibrium with the solvent.')        
+      call messages_new_line()
+      call messages_write('Therefore, the only relevant dielectric constant is the static one.')        
+      call messages_new_line()
+      call messages_write('Nevertheless, the dynamical PCM response matrix is evaluated.')        
+      call messages_new_line()                
+      call messages_warning()
+     !end if 
+       
+    SAFE_ALLOCATE( pcm%matrix_d(1:pcm%n_tesserae, 1:pcm%n_tesserae) )
+    pcm%matrix_d = M_ZERO
+
+    call pcm_matrix(pcm%epsilon_infty, pcm%tess, pcm%n_tesserae, pcm%matrix_d)
 
     if ( gamess_benchmark .and. mpi_grp_is_root(mpi_world)) then 
       pcmmat_gamess_unit = io_open(PCM_DIR//'pcm_matrix_gamess_dyn.out', action='write')
@@ -593,6 +635,10 @@ contains
       mat_gamess = M_ZERO
     end if
 
+    end if
+    !END - GGIL: 07/04/2017 - including matrix_d 
+
+    SAFE_ALLOCATE( pcm%matrix(1:pcm%n_tesserae, 1:pcm%n_tesserae) )
     pcm%matrix = M_ZERO
 
     call pcm_matrix(pcm%epsilon_0, pcm%tess, pcm%n_tesserae, pcm%matrix) 
@@ -710,17 +756,22 @@ contains
     pcm%v_e    = M_ZERO
     pcm%q_e    = M_ZERO
     pcm%v_e_rs = M_ZERO
+
+    !if ( calc_mode_id == CM_GS .and. pcm%epsilon_infty /= pcm%epsilon_0 ) &
+    SAFE_ALLOCATE( pcm%q_e_in(1:pcm%n_tesserae) )
    
     pcm%q_e_nominal = qtot
     pcm%q_n_nominal = val_charge
     pcm%deltaQ_e = M_ZERO
     pcm%deltaQ_n = M_ZERO
 
+    !write(*,*) 'OCTOPUS INITIALIZES PCM...'
+
     POP_SUB(pcm_init)
   end subroutine pcm_init
 
   ! -----------------------------------------------------------------------------
-
+  !BEGIN - GGIL: 07/04/2017 - including different iteration cases
   subroutine pcm_calc_pot_rs(pcm, mesh, geo, v_h)
     type(pcm_t),             intent(inout) :: pcm
     type(mesh_t),               intent(in) :: mesh  
@@ -745,17 +796,49 @@ contains
     end if
 
     if (calc == PCM_ELECTRONS) then
-      call pcm_v_electrons_cav_li(pcm%v_e, v_h, pcm, mesh)
-      call pcm_charges(pcm%q_e, pcm%qtot_e, pcm%v_e, pcm%matrix, pcm%n_tesserae, &
-                       pcm%q_e_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_e) 
+     
+     !write(*,*) 'PCM response potential for electrons is called ok...', pcm%iter
+      !GGIL LOG: inertial/dynamical partition.
+      if( calc_mode_id == CM_TD .and. pcm%epsilon_infty /= pcm%epsilon_0 ) then 
+       select case (pcm%iter)
+       case(0)
+        call pcm_v_electrons_cav_li(pcm%v_e, v_h, pcm, mesh)
+        !< calculating polarization charges equilibrated with the initial potential (just once)
+        call pcm_charges(pcm%q_e, pcm%qtot_e, pcm%v_e, pcm%matrix, pcm%n_tesserae, &
+                         pcm%q_e_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_e)
+       case(1)
+        ! doubt down - pcm%qtot_e, pcm%q_e_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%deltaQ_e
+        !< calculating inertial polarization charges (once and for all)
+        call pcm_charges(pcm%q_e_in, pcm%qtot_e, pcm%v_e, pcm%matrix-pcm%matrix_d, pcm%n_tesserae)
+ 
+        call pcm_v_electrons_cav_li(pcm%v_e, v_h, pcm, mesh)
+        !< calculating dynamical polarization charges (each time)
+        call pcm_charges(pcm%q_e, pcm%qtot_e, pcm%v_e, pcm%matrix_d, pcm%n_tesserae)
+
+        pcm%q_e = pcm%q_e + pcm%q_e_in
+       case default
+        call pcm_v_electrons_cav_li(pcm%v_e, v_h, pcm, mesh)
+        !< calculating dynamical polarization charges (each time)
+        call pcm_charges(pcm%q_e, pcm%qtot_e, pcm%v_e, pcm%matrix_d, pcm%n_tesserae)
+        ! doubt up - pcm%qtot_e, pcm%q_e_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%deltaQ_e
+
+        pcm%q_e = pcm%q_e + pcm%q_e_in
+       end select
+      else !GGIL LOG: hereafter Alain code.
+       call pcm_v_electrons_cav_li(pcm%v_e, v_h, pcm, mesh)
+       call pcm_charges(pcm%q_e, pcm%qtot_e, pcm%v_e, pcm%matrix, pcm%n_tesserae, &
+                        pcm%q_e_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_e)
+      end if
       if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_e, pcm%qtot_e, mesh, pcm%rho_e)
       call pcm_pot_rs(pcm, pcm%v_e_rs, pcm%q_e, pcm%rho_e, mesh )
+
+     !write(*,*) 'PCM response potential for electrons is calculated ok...'
+
     end if
-    
     
     POP_SUB(pcm_calc_pot_rs)  
   end subroutine pcm_calc_pot_rs
-
+  !END - GGIL: 07/04/2017 - including different iteration cases
 
   ! -----------------------------------------------------------------------------
 
@@ -986,14 +1069,16 @@ contains
     FLOAT,   intent(in)    :: v_cav(:)     !< (1:n_tess)
     FLOAT,   intent(in)    :: pcm_mat(:,:) !< (1:n_tess, 1:n_tess)
     integer, intent(in)    :: n_tess
-    FLOAT,   intent(in)    :: qtot_nominal
-    FLOAT,   intent(in)    :: epsilon
-    logical, intent(in)    :: renorm_charges
-    FLOAT,   intent(in)    :: q_tot_tol
+    !BEGIN - GGIL: 11/04/2017 - optional included
+    FLOAT,   optional, intent(in)    :: qtot_nominal
+    FLOAT,   optional, intent(in)    :: epsilon
+    logical, optional, intent(in)    :: renorm_charges
+    FLOAT,   optional, intent(in)    :: q_tot_tol
+    FLOAT,   optional, intent(out)    :: deltaQ
+    !END - GGIL: 11/04/2017 - optional included
 
     integer :: ia, ib
     type(profile_t), save :: prof_init
-    FLOAT :: deltaQ
     FLOAT :: q_pcm_tot_norm
     FLOAT :: coeff
 
@@ -1010,6 +1095,9 @@ contains
       q_pcm_tot = q_pcm_tot + q_pcm(ia)
     end do
 
+    !BEGIN - GGIL: 11/04/2017 - if optional present included
+    if ( present(qtot_nominal)   .and. present(epsilon) .and.  &
+       & present(renorm_charges) .and. present(q_tot_tol) .and. present(deltaQ) ) then
     ! renormalization of the polarization charges to enforce fulfillment of the Gauss law.
     deltaQ = ABS(q_pcm_tot) - ( (epsilon-CNST(1.0))/epsilon )*ABS(qtot_nominal)
     if ( (renorm_charges).and.(ABS(deltaQ) > q_tot_tol) ) then
@@ -1021,6 +1109,8 @@ contains
         end do
         q_pcm_tot = q_pcm_tot_norm
     endif
+    endif
+    !END - GGIL: 11/04/2017 - if optional present included
 
     call profiling_out(prof_init)
     
@@ -2455,6 +2545,12 @@ contains
     SAFE_DEALLOCATE_A(pcm%spheres)
     SAFE_DEALLOCATE_A(pcm%tess)
     SAFE_DEALLOCATE_A(pcm%matrix)
+! BEGIN - GGIL: 07/04/2017 - matrix_d
+    if ( pcm%epsilon_infty .ne. pcm%epsilon_0 ) then 
+    SAFE_DEALLOCATE_A(pcm%matrix_d)
+    SAFE_DEALLOCATE_A(pcm%q_e_in)
+    end if
+! BEGIN - GGIL: 07/04/2017 - matrix_d
     SAFE_DEALLOCATE_A(pcm%q_e)
     SAFE_DEALLOCATE_A(pcm%q_n) 
     SAFE_DEALLOCATE_A(pcm%v_e)

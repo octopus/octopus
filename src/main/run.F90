@@ -56,8 +56,10 @@ module run_oct_m
   private
   public ::                      &
     run
-
-  integer :: calc_mode_id
+  
+  !BEGIN - GGIL: 12/04/2017 - including public
+  integer, public :: calc_mode_id
+  !END - GGIL: 12/04/2017 - including public
 
   integer, parameter :: LR = 1, FD = 2
 
