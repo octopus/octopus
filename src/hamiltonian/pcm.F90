@@ -162,6 +162,10 @@ module pcm_oct_m
   !GGIL: 13/04/2017 - added flag td mode
   logical :: td_calc_mode = .false.
 
+  integer :: CM
+
+  integer, parameter :: CM_GS = 1
+
 contains
 
 
@@ -211,16 +215,18 @@ contains
     !% formulated in real-space and real-time (<i>J. Chem. Phys.</i> <b>143</b>, 144111 (2015),
     !% <i>Chem. Rev.</i> <b>105</b>, 2999 (2005), <i>J. Chem. Phys.</i> <b>139</b>, 024105 (2013)).
     !% At the moment, this option is available only for <tt>TheoryLevel = DFT</tt>.
+    !% PCM is tested for CalculationMode = gs, while still experimental for other values (in particular, CalculationMode = td).
     !%End
-
     call parse_variable('PCMCalculation', .false., pcm%run_pcm)
     if (pcm%run_pcm) then
       call messages_print_stress(stdout, trim('PCM'))
       if ( (grid%sb%box_shape /= MINIMUM).OR.(grid%sb%dim /= pcm_dim_space) ) then
         message(1) = "PCM is only available for BoxShape = minimum and 3d calculations"
         call messages_fatal(1)
-      else 
-        call messages_experimental("Polarizable Continuum Model")
+      else
+        !GGIL: 14/04/2017 - parse variable CalculationMode again inside pcm_oct_m
+        call parse_variable('CalculationMode', 1, CM)
+        if ( CM /= CM_GS) call messages_experimental("Polarizable Continuum Model")
       end if
     else
       POP_SUB(pcm_init)
