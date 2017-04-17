@@ -17,13 +17,10 @@
 !!
 
 !GGIL LOG: 10/04/2017
-! 0) include use statement run_oct_m.
 ! 1) inclusion of matrix_d(:,:), q_e_in(:) in derived pcm_t.
 ! 2) saving pcm%matrix_d in pcm_init.
 ! 3) inertial/dynamical charge calculation in pcm_calc_pot_rs.
 ! 4) deallocating matrix_d(:,:), q_e_in(:) in pcm_end.
-!Subroutines pcm_init and pcm_calc_pot_rs need to be cleaned up:
-! Debug-purpose printing were used extensively.
 
 #include "global.h"
 
@@ -112,6 +109,9 @@ module pcm_oct_m
     FLOAT                            :: qtot_n        !< total polarization charge due to nuclei
     FLOAT                            :: q_e_nominal   !< total (nominal) electronic charge
     FLOAT                            :: q_n_nominal   !< total (nominal) nuclear charge
+    !BEGIN - GGIL: 17/04/2017 - noneq
+    logical                          :: noneq         !< flag to use non-equilibrium PCM
+    !END - GGIL: 17/04/2017 - noneq
     logical                          :: renorm_charges!< flag to renormalized polarization charges
     FLOAT                            :: q_tot_tol     !< tolerance to trigger normalization of the polarization charges
     FLOAT                            :: deltaQ_e      !< difference between the calculated and nominal electronic charge
@@ -133,6 +133,9 @@ module pcm_oct_m
     character(len=80)                :: input_cavity  !< file name containing the geometry of the VdW cavity
     
     integer                          :: update_iter   !< how often the pcm potential is updated
+    !GGIL: 17/04/2017
+    integer                          :: update_iter_in!< how often the pcm inertial polarization is updated
+    !GGIL: 17/04/2017
     integer                          :: iter          !< update iteration counter
     
     integer                          :: calc_method   !< which method should be used to obtain the pcm potential 
@@ -203,8 +206,9 @@ contains
     
     pcm%iter = 0
     pcm%update_iter = 1
+    pcm%update_iter_in = 1000
 
-    !GGIL: 13/04/2017 - removed: experimental
+    !GGIL: 13/04/2017 - experimental only for CalculationMode /= gs.
     !%Variable PCMCalculation
     !%Type logical
     !%Default no
@@ -226,7 +230,7 @@ contains
       else
         !GGIL: 14/04/2017 - parse variable CalculationMode again inside pcm_oct_m
         call parse_variable('CalculationMode', 1, CM)
-        if ( CM /= CM_GS) call messages_experimental("Polarizable Continuum Model")
+        if ( CM /= CM_GS ) call messages_experimental("Polarizable Continuum Model")
       end if
     else
       POP_SUB(pcm_init)
@@ -289,6 +293,20 @@ contains
     !%End
     call parse_variable('PCMDynamicEpsilon', pcm%epsilon_0, pcm%epsilon_infty)
     call messages_print_var_value(stdout, "PCMDynamicEpsilon", pcm%epsilon_infty)
+
+    !GGIL: - added
+    !%Variable PCMNonequilibrium
+    !%Type logical
+    !%Default .true.
+    !%Section Hamiltonian::PCM
+    !%Description
+    !% If .false. the solvent polarization follows instantaneously the changes in solute density.  
+    !% If .true. the solvent polarization is splitted in two terms: 
+    !% one that follows instantaneously the changes in solute density (dynamical polarization charges),  
+    !% and another that lag behind in the evolution of the solute density (inertial polarization charges).    
+    !%End
+    call parse_variable('PCMNonequilibrium', .true., pcm%noneq)
+    call messages_print_var_value(stdout, "PCMNonequilibrium", pcm%noneq)
     
     !%Variable PCMUpdateIter
     !%Type integer
@@ -299,6 +317,17 @@ contains
     !%End
     call parse_variable('PCMUpdateIter', 1, pcm%update_iter)
     call messages_print_var_value(stdout, "PCMUpdateIter", pcm%update_iter)
+
+    !GGIL: 17/04/2017 - added
+    !%Variable PCMUpdateIterInertial
+    !%Type integer
+    !%Default 1000*PCMUpdateIter
+    !%Section Hamiltonian::PCM
+    !%Description
+    !% Defines how often the PCM inertial polarization potential is updated during time propagation.
+    !%End
+    call parse_variable('PCMUpdateIterInertial', 1000*pcm%update_iter, pcm%update_iter_in)
+    call messages_print_var_value(stdout, "PCMUpdateIterInertial", pcm%update_iter_in)
 
     !%Variable PCMGamessBenchmark
     !%Type logical
@@ -602,18 +631,17 @@ contains
     !BEGIN - GGIL: 07/04/2017 - including matrix_d
     if ( pcm%epsilon_infty /= pcm%epsilon_0 ) then 
 
-     if( td_calc_mode ) then
+     if( pcm%noneq .and. CM /= CM_GS ) then
      !if( calc_mode_id /= CM_TD .and. calc_mode_id /= CM_GS ) then
-      call messages_write('Non-equilibrium PCM version have been created time propagation run (CalculationMode=td).')
+      call messages_write('Non-equilibrium PCM version was created for a time propagation run (CalculationMode = td).')
       call messages_new_line()
-      call messages_write('Other choices of CalculationMode are not tested and might produce to unexpected results.')        
+      call messages_write('Other choices of CalculationMode are not tested and might produce unexpected results.')        
       call messages_new_line()        
       call messages_warning()
-     !else if( calc_mode_id == CM_GS ) then 
-     else
-      call messages_write('You set up epsilon_infty /= epsilon_0 in a non-time-dependent run (e.g., CalculationMode=gs).')
+     else if ( pcm%noneq .and. CM == CM_GS ) then 
+      call messages_write('Non-equilbrium PCM is not active in a non-time-dependent run (CalculationMode = gs).')        
       call messages_new_line()
-      call messages_write('PCM is active but it will produce the same result for any value of epsilon_infty.')        
+      call messages_write('epsilon_infty /= epsilon_0, epsilon_infty is not relevant for CalculationMode = gs.')
       call messages_new_line()
       call messages_write('By definition, the ground state is in equilibrium with the solvent.')        
       call messages_new_line()
@@ -807,31 +835,30 @@ contains
 
     if (calc == PCM_ELECTRONS) then
      
-     !write(*,*) 'PCM response potential for electrons is called ok...', pcm%iter
       !GGIL LOG: inertial/dynamical partition.
       !if( calc_mode_id == CM_TD .and. pcm%epsilon_infty /= pcm%epsilon_0 ) then
-      if( td_calc_mode .and. pcm%epsilon_infty /= pcm%epsilon_0 ) then  
+      if( td_calc_mode .and. pcm%epsilon_infty /= pcm%epsilon_0 .and. pcm%noneq ) then  
        select case (pcm%iter)
        case(0)
         call pcm_v_electrons_cav_li(pcm%v_e, v_h, pcm, mesh)
         !< calculating polarization charges equilibrated with the initial Hartree potential (just once)
         call pcm_charges(pcm%q_e, pcm%qtot_e, pcm%v_e, pcm%matrix, pcm%n_tesserae, &
                          pcm%q_e_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_e)
-       case(1)
-        ! doubt on renormalization of charges for inertial and dynamical charges separation!
-        ! doubt - pcm%qtot_e, pcm%q_e_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%deltaQ_e - see up
-        !< calculating inertial polarization charges (once and for all)
-        call pcm_charges(pcm%q_e_in, pcm%qtot_e, pcm%v_e, pcm%matrix-pcm%matrix_d, pcm%n_tesserae)
- 
-        call pcm_v_electrons_cav_li(pcm%v_e, v_h, pcm, mesh)
-        !< calculating dynamical polarization charges (each time)
-        call pcm_charges(pcm%q_e, pcm%qtot_e, pcm%v_e, pcm%matrix_d, pcm%n_tesserae)
-
-        pcm%q_e = pcm%q_e + pcm%q_e_in
        case default
+        !< calculating inertial polarization charges (once and for all)
+        if ( mod(pcm%iter, pcm%update_iter) == 0 ) then
+         !< calculated in two steps to guarantee correct renormalization: Gauss law is recovered at each step.
+         call pcm_charges(pcm%q_e_in, pcm%qtot_e, pcm%v_e, pcm%matrix, pcm%n_tesserae, &
+                          pcm%q_e_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_e)
+         call pcm_charges(pcm%q_e, pcm%qtot_e, pcm%v_e, pcm%matrix_d, pcm%n_tesserae, &
+                          pcm%q_e_nominal, pcm%epsilon_infty, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_e)
+         pcm%q_e_in = pcm%q_e_in - pcm%q_e
+        end if
+
         call pcm_v_electrons_cav_li(pcm%v_e, v_h, pcm, mesh)
         !< calculating dynamical polarization charges (each time)
-        call pcm_charges(pcm%q_e, pcm%qtot_e, pcm%v_e, pcm%matrix_d, pcm%n_tesserae)
+        call pcm_charges(pcm%q_e, pcm%qtot_e, pcm%v_e, pcm%matrix_d, pcm%n_tesserae, &
+                         pcm%q_e_nominal, pcm%epsilon_infty, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_e)
 
         pcm%q_e = pcm%q_e + pcm%q_e_in
        end select
@@ -843,8 +870,6 @@ contains
       end if
       if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_e, pcm%qtot_e, mesh, pcm%rho_e)
       call pcm_pot_rs(pcm, pcm%v_e_rs, pcm%q_e, pcm%rho_e, mesh )
-
-     !write(*,*) 'PCM response potential for electrons is calculated ok...'
 
     end if
     
