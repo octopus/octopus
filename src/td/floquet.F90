@@ -267,7 +267,6 @@ contains
     call messages_print_var_value(stdout,'Steps in Floquet time-sampling interval',  this%interval)
     call messages_print_var_value(stdout,'Steps in Floquet time-sampling cycle',  this%ncycle)
 
-    !call distributed_init(this%time,this%nT,sys%mc%group_comm(P_STRATEGY_OTHER),"Floquet-Sampling")
     ! distribute the stacked loop of the Floquet-Hamiltonian
     call distributed_init(this%flat_idx,this%nT*this%floquet_dim,sys%mc%group_comm(P_STRATEGY_OTHER),"Floquet-flat-index")
     SAFE_ALLOCATE(this%idx_map(this%nT*this%floquet_dim,2))
@@ -353,7 +352,7 @@ contains
 
          write(filename,'(I5)') it
          filename = 'BO_bands_'//trim(adjustl(filename))
-         call states_write_bandstructure('td.general', st%nst, st, gr%sb, filename)
+         call states_write_bandstructure(FLOQUET_DIR, st%nst, st, gr%sb, filename)
 
        case(FLOQUET_NON_INTERACTING)
          call geometry_copy(this%td_hm(it)%geo, this%geo)
@@ -382,7 +381,7 @@ contains
      if(this%F%mode == FLOQUET_FROZEN_PHONON) then
         st%eigenval(1:st%nst,1:gr%sb%kpoints%reduced%npoints) = frozen_bands(1:st%nst,1:gr%sb%kpoints%reduced%npoints)
         filename = 'frozen_bands'
-        call states_write_bandstructure('td.general', st%nst, st, gr%sb, filename)
+        call states_write_bandstructure(FLOQUET_DIR, st%nst, st, gr%sb, filename)
      end if
 
 
