@@ -101,7 +101,7 @@ contains
 
     PUSH_SUB(geom_opt_run)
 
-    call init_()
+    call init_(fromscratch)
     
 
     ! load wavefunctions
@@ -191,7 +191,8 @@ contains
   contains
 
     ! ---------------------------------------------------------
-    subroutine init_()
+    subroutine init_(fromscratch)
+      logical,  intent(in) :: fromscratch
 
       logical :: center, does_exist
       integer :: iter, iatom
@@ -419,6 +420,16 @@ contains
       call loct_rm("geom/optimization.log")
 
       call loct_rm("./work-geom.xyz")
+
+      if(.not. fromScratch) then
+        inquire(file = './last.xyz', exist = does_exist)
+        if(.not. does_exist) then
+          write(message(1), '(a)') "The file last.xyz does not exist. Octopus cannot restart the GO calculation."
+          write(message(2), '(a)') "Please use FromScratch=yes to start the calculation from scratch."
+          call messages_fatal(2)          
+        end if
+        call geometry_read_xyz(g_opt%geo, './last')
+      end if
 
       ! clean out old geom/go.XXXX.xyz files. must be consistent with write_iter_info
       iter = 1
