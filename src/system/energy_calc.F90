@@ -261,6 +261,10 @@ contains
         write(message(1), '(6x,a, f18.8)')'Berry       = ', units_from_atomic(units_out%energy, hm%energy%berry)
         call messages_info(1, iunit)
       end if  
+      if(hm%lda_u%apply) then
+        write(message(1), '(6x,a, f18.8)')'Hubbard     = ', units_from_atomic(units_out%energy, hm%energy%lda_u_energy)
+        call messages_info(1, iunit)
+      end if
     end if
 
     POP_SUB(energy_calc_total)
