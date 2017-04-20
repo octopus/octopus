@@ -2433,7 +2433,7 @@ contains
     write(out_file, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)
     do idir = 1, 3
       write(out_file, '(a20)', advance = 'no') str_center("Real part", 20)
-      write(out_file, '(a20)', advance = 'no') str_center("Imaginary part", 20)
+      if (.not.symmetrize) write(out_file, '(a20)', advance = 'no') str_center("Imaginary part", 20)
       do jdir = 1, 3
         write(header_string,'(a7,i1,a1,i1,a1,i1,a1)') 'vector(', idir, ',', jdir, ',', is, ')'
         write(out_file, '(a20)', advance = 'no') str_center(trim(header_string), 20)
@@ -2444,7 +2444,7 @@ contains
 
     do idir = 1, 3
       write(out_file, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
-      write(out_file, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
+      if (.not.symmetrize) write(out_file, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
       do jdir = 1, 3
         write(out_file, '(a20)', advance = 'no')  str_center('[ - ]', 20)
       end do
@@ -2455,7 +2455,7 @@ contains
       write(out_file_t, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)
       do idir = 1, 3
         write(out_file_t, '(a20)', advance = 'no') str_center("Real part", 20)
-        write(out_file_t, '(a20)', advance = 'no') str_center("Imaginary part", 20)
+        if (.not.symmetrize) write(out_file_t, '(a20)', advance = 'no') str_center("Imaginary part", 20)
         do jdir = 1, 3
           write(header_string,'(a7,i1,a1,i1,a1,i1,a1)') 'vector(', idir, ',', jdir, ',', is, ')'
           write(out_file_t, '(a20)', advance = 'no') str_center(trim(header_string), 20)
@@ -2466,7 +2466,7 @@ contains
      
       do idir = 1, 3
         write(out_file_t, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
-        write(out_file_t, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
+        if(.not.symmetrize) write(out_file_t, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
         do jdir = 1, 3
           write(out_file_t, '(a20)', advance = 'no')  str_center('[ - ]', 20)
         end do
@@ -2508,7 +2508,11 @@ contains
 
       write(out_file,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, (ie * energy_step))
       do idir = 3, 1, -1
-        write(out_file,'(2e20.8)', advance = 'no') w(idir)
+        if (symmetrize) then
+          write(out_file,'(2e20.8)', advance = 'no') real(w(idir))
+        else
+          write(out_file,'(2e20.8)', advance = 'no') w(idir)
+        end if
       
         do jdir = 1, 3
           write(out_file,'(e20.8)', advance = 'no') work(jdir, idir)
@@ -2523,7 +2527,11 @@ contains
       
         write(out_file_t,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, (ie * energy_step))
         do idir = 3, 1, -1
-          write(out_file_t,'(2e20.8)', advance = 'no') w(idir)
+          if (symmetrize) then
+            write(out_file,'(2e20.8)', advance = 'no') real(w(idir))
+          else
+            write(out_file,'(2e20.8)', advance = 'no') w(idir)
+          end if
         
           do jdir = 1, 3
             write(out_file_t,'(e20.8)', advance = 'no') work(jdir, idir)
