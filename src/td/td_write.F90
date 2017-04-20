@@ -1818,6 +1818,11 @@ contains
           n_columns = n_columns + 1    
       end if   
 
+      if (hm%lda_u%apply) then
+          call write_iter_header(out_energy, 'Hubbard')
+          n_columns = n_columns + 1
+      end if
+
       call write_iter_nl(out_energy)
 
       if(cmplxscl) then
@@ -1884,6 +1889,9 @@ contains
     if (hm%pcm%run_pcm) call write_iter_double(out_energy, &
                              units_from_atomic(units_out%energy, hm%energy%int_ee_pcm + hm%energy%int_en_pcm + &
                                                                  hm%energy%int_nn_pcm + hm%energy%int_ne_pcm), 1)
+
+    if(hm%lda_u%apply) call write_iter_double(out_energy, &
+                             units_from_atomic(units_out%energy, hm%energy%lda_u_energy), 1)
 
     call write_iter_nl(out_energy)
 
