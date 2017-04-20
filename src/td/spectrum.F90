@@ -2519,7 +2519,16 @@ contains
         end do
       end do 
       write(out_file, '(1x)')
+
       if (spins_singlet .and. spins_triplet) then
+        if (symmetrize) then
+          do idir = 1, 3
+            do jdir = idir + 1, 3
+              pp2(idir, jdir) = (pp2(idir, jdir) + pp2(jdir, idir) )/2.
+              pp2(jdir, idir) = pp2(idir, jdir)
+            end do 
+          end do
+        end if
         work(1:3, 1:3) = -pp2(1:3, 1:3)
         call lalg_eigensolve_nonh(3, work, w, err_code = info, sort_eigenvectors = .true.)
         ! Note that the cross-section elements do not have to be transformed to the proper units, since
@@ -2528,9 +2537,9 @@ contains
         write(out_file_t,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, (ie * energy_step))
         do idir = 3, 1, -1
           if (symmetrize) then
-            write(out_file,'(2e20.8)', advance = 'no') real(w(idir))
+            write(out_file_t,'(2e20.8)', advance = 'no') real(w(idir))
           else
-            write(out_file,'(2e20.8)', advance = 'no') w(idir)
+            write(out_file_t,'(2e20.8)', advance = 'no') w(idir)
           end if
         
           do jdir = 1, 3
@@ -2546,6 +2555,7 @@ contains
     SAFE_DEALLOCATE_A(pp)
     if (spins_triplet .and. spins_singlet) then 
       SAFE_DEALLOCATE_A(pp2)
+      call io_close(out_file_t)
     end if
     SAFE_DEALLOCATE_A(w)
     SAFE_DEALLOCATE_A(work)
