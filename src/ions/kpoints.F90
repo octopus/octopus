@@ -88,10 +88,10 @@ module kpoints_oct_m
   end type kpoints_t
 
   integer, public, parameter ::        &
-    KPOINTS_GAMMA       =  1,          &
-    KPOINTS_MONKH_PACK  =  2,          &
-    KPOINTS_USER        =  3,          &
-    KPOINTS_PATH        =  4
+    KPOINTS_GAMMA       =  2,          &
+    KPOINTS_MONKH_PACK  =  4,          &
+    KPOINTS_USER        =  8,          &
+    KPOINTS_PATH        =  16
 
 contains
 
@@ -124,6 +124,8 @@ contains
     POP_SUB(kpoints_grid_init)
   end subroutine kpoints_grid_init
 
+
+
   ! ---------------------------------------------------------
   subroutine kpoints_grid_end(this)
     type(kpoints_grid_t), intent(inout) :: this
@@ -147,7 +149,6 @@ contains
     PUSH_SUB(kpoints_grid_copy)
     
     call kpoints_grid_init(bb%dim, aa, bb%npoints, bb%nshifts)
-    
     aa%weight = bb%weight
     aa%point  = bb%point
     aa%red_point = bb%red_point
@@ -156,7 +157,56 @@ contains
     POP_SUB(kpoints_grid_copy)
   end subroutine kpoints_grid_copy
 
+  ! ---------------------------------------------------------
+  subroutine kpoints_grid_addto(this, that)
+    type(kpoints_grid_t), intent(inout) :: this
+    type(kpoints_grid_t), intent(in)    :: that
 
+    type(kpoints_grid_t) :: old_grid
+      
+    PUSH_SUB(kpoints_grid_addto)
+
+    if (.not. associated(that%point)) then
+      POP_SUB(kpoints_grid_addto)
+      return
+    end if   
+
+    if (.not. associated(this%point)) then
+      call kpoints_grid_copy(that, this)       
+      POP_SUB(kpoints_grid_addto)
+      return
+    end if   
+
+    call kpoints_grid_copy(this, old_grid)
+
+    call kpoints_grid_end(this)
+    call kpoints_grid_init(old_grid%dim, this, that%npoints + old_grid%npoints, old_grid%nshifts)
+
+    this%red_point = M_ZERO
+    this%point = M_ZERO
+    this%weight = M_ZERO
+    this%shifts = M_ZERO
+
+    ! Fill the the result with values form this 
+    this%red_point(1:old_grid%dim, 1:old_grid%npoints)= old_grid%red_point(1:old_grid%dim, 1:old_grid%npoints)
+    this%point(1:old_grid%dim, 1:old_grid%npoints)    = old_grid%point(1:old_grid%dim, 1:old_grid%npoints)
+    this%weight(1:old_grid%npoints)                   = old_grid%weight(1:old_grid%npoints)
+    this%shifts(1:old_grid%dim, 1:old_grid%nshifts)   = old_grid%shifts(1:old_grid%dim, 1:old_grid%nshifts)
+
+    ! Fill the result with that
+    this%red_point(1:old_grid%dim, old_grid%npoints+1:this%npoints)= that%red_point(1:that%dim, 1:that%npoints)
+    this%point(1:old_grid%dim, old_grid%npoints+1:this%npoints)    = that%point(1:that%dim, 1:that%npoints)
+    this%weight(old_grid%npoints+1:this%npoints)                   = that%weight(1:that%npoints)
+
+
+    call kpoints_grid_end(old_grid)
+
+
+    POP_SUB(kpoints_grid_addto)
+  end subroutine kpoints_grid_addto
+
+
+  ! ---------------------------------------------------------
   elemental subroutine kpoints_nullify(this)
     type(kpoints_t), intent(out) :: this
 
@@ -190,10 +240,7 @@ contains
 
     ASSERT(dim <= MAX_DIM)
 
-    nullify(this%symmetry_ops)
-    nullify(this%num_symmetry_ops)
-    nullify(this%klattice)
-    nullify(this%coord_along_path)
+    call kpoints_nullify(this)
 
     SAFE_ALLOCATE(this%klattice(1:dim, 1:dim))
     this%klattice(1:dim, 1:dim) = klattice(1:dim, 1:dim)
@@ -238,7 +285,7 @@ contains
     call parse_variable('KPointsUseTimeReversal', default_timereversal, this%use_time_reversal)
 
     !We determine the method used to define k-point
-    this%method = -1
+    this%method = 0
 
     if(only_gamma) then
       this%method = KPOINTS_GAMMA
@@ -249,65 +296,27 @@ contains
 
     !Monkhorst Pack grid
     if(parse_is_defined('KPointsGrid')) then
-      this%method = KPOINTS_MONKH_PACK
-
-      !Sanity check
-      if(parse_is_defined('KPointsReduced').or. parse_is_defined('KPoints') &
-         .or.parse_is_defined('KPointsPath')) then
-        write(message(1), '(a)') "More than one k-points method in the input file."
-        call messages_fatal(1) 
-      end if
-
+      this%method = this%method + KPOINTS_MONKH_PACK
+      
       call read_MP(gamma_only = .false.)
-    end if
-
-    !User-defined k-points path
-    if(parse_is_defined('KPointsPath')) then
-      this%method = KPOINTS_PATH
- 
-      !Sanity checks
-      if(parse_is_defined('KPointsReduced').or. parse_is_defined('KPoints') &
-         .or.parse_is_defined('KPointsGrid')) then
-        write(message(1), '(a)') "More than one k-points method in the input file."
-        call messages_fatal(1)
-      end if     
-      if(this%use_symmetries) then
-        write(message(1), '(a)') "KPointsUseSymmetries is not compatible with KPointsPath."
-        call messages_fatal(1)
-      end if
-      if(this%use_time_reversal) then
-        write(message(1), '(a)') "KPointsUseTimeReversal is not compatible with KPointsPath."
-        call messages_fatal(1)
-      end if
- 
-      call read_path() 
     end if
 
     !User-defined kpoints
     if(parse_is_defined('KPointsReduced').or. parse_is_defined('KPoints')) then
-      this%method = KPOINTS_USER
+      this%method = this%method + KPOINTS_USER
 
-      !Sanity checks
-      if(parse_is_defined('KPointsGrid').or.parse_is_defined('KPointsPath')) then
-        write(message(1), '(a)') "More than one k-points method in the input file."
-        call messages_fatal(1)
-      end if
-      if(this%use_symmetries) then
-        write(message(1), '(a)') "KPointsUseSymmetries is not compatible with user-defined k-points."
-        call messages_fatal(1)
-      end if
-      if(this%use_time_reversal) then
-        write(message(1), '(a)') "KPointsUseTimeReversal is not compatible with user-defined k-points."
-        call messages_fatal(1)
-      end if
-      
-      !TODO: This is dirty
-      ! do this always to allow setting KPointsGrid for BerkeleyGW output even if KPoints(Reduced) is also set
-      call read_MP(gamma_only = .false.)
       call read_user_kpoints()
     end if
 
-    if(this%method == -1) then
+    !User-defined k-points path
+    if(parse_is_defined('KPointsPath')) then
+      this%method = this%method + KPOINTS_PATH
+       
+      call read_path() 
+    end if
+
+
+    if(this%method == 0) then
       write(message(1), '(a)') "Unable to determine the method for defining k-points."
       write(message(2), '(a)') "Octopus will continue assuming a Monkhorst Pack grid."
       call messages_warning(2)
@@ -316,7 +325,7 @@ contains
     end if
 
     !Printing the k-point list
-    if( this%method == KPOINTS_MONKH_PACK ) then
+    if( iand(this%method, KPOINTS_MONKH_PACK) /= 0  ) then
 
       write(message(1),'(a)') ' '
       write(message(2),'(1x,i3,a)') this%reduced%npoints, ' k-points generated from parameters :'
@@ -535,7 +544,7 @@ contains
       integer :: icol, ik, idir, ncols
       integer, allocatable :: resolution(:)
       FLOAT, allocatable   :: highsympoints(:,:)
-
+      type(kpoints_grid_t) :: path_kpoints_grid
 
       PUSH_SUB(kpoints_init.read_path)
 
@@ -603,36 +612,37 @@ contains
 
       !We do not have shifts
       nshifts = 1
-      call kpoints_grid_init(dim, this%full, nkpoints, nshifts)
+      call kpoints_grid_init(dim, path_kpoints_grid, nkpoints, nshifts)
 
       ! For the output of band-structures
       SAFE_ALLOCATE(this%coord_along_path(1:nkpoints))
 
       call kpoints_path_generate(dim, klattice, nkpoints, nsegments, resolution, &
-               nhighsympoints, highsympoints, this%full%point, this%coord_along_path)
+               nhighsympoints, highsympoints, path_kpoints_grid%point, this%coord_along_path)
 
       SAFE_DEALLOCATE_A(resolution)
       SAFE_DEALLOCATE_A(highsympoints)
 
-      this%full%weight = M_ONE / this%full%npoints
-
-      call kpoints_grid_copy(this%full, this%reduced)
-
-      !We have no symmetry
-      SAFE_ALLOCATE(this%num_symmetry_ops(1:this%reduced%npoints))
-      SAFE_ALLOCATE(this%symmetry_ops(1:this%reduced%npoints, 1:1))
-      this%num_symmetry_ops(1:this%reduced%npoints) = 1
-      this%symmetry_ops(1:this%reduced%npoints, 1) = 1
+      !Use zero weight for the path so that it can be used with any kind of calculation mode
+      !without interfering with the physical BZ integral.
+      if (this%method==KPOINTS_PATH) then
+        path_kpoints_grid%weight = M_ONE/path_kpoints_grid%npoints
+      else
+        path_kpoints_grid%weight = M_ZERO
+        this%nik_skip = this%nik_skip + path_kpoints_grid%npoints
+      end if
+        
 
       !The points have been generated in absolute coordinates
-      do ik = 1, this%full%npoints
-        call kpoints_to_reduced(rlattice, this%full%point(:, ik), this%full%red_point(:, ik), dim)
+      do ik = 1, path_kpoints_grid%npoints
+        call kpoints_to_reduced(rlattice, path_kpoints_grid%point(:, ik), path_kpoints_grid%red_point(:, ik), dim)
       end do
 
-      do ik = 1, this%reduced%npoints
-        call kpoints_to_reduced(rlattice, this%reduced%point(:, ik), this%reduced%red_point(:, ik), dim)
-      end do
+      call kpoints_grid_addto(this%full   , path_kpoints_grid)
+      call kpoints_grid_addto(this%reduced, path_kpoints_grid)
 
+      call kpoints_grid_end(path_kpoints_grid)
+      
       POP_SUB(kpoints_init.read_path) 
     end subroutine read_path
 
@@ -643,6 +653,7 @@ contains
       type(block_t) :: blk
       logical :: reduced
       integer :: ik, idir
+      type(kpoints_grid_t) :: user_kpoints_grid
 
       PUSH_SUB(kpoints_init.read_user_kpoints)
 
@@ -683,44 +694,46 @@ contains
         if(parse_block('KPointsReduced', blk) == 0) then
           reduced = .true.
         else
+          ! This case should really never happen. But why not dying otherwise?!
           write(message(1),'(a)') 'Internal error loading user-defined k-point list.'
           call messages_fatal(1)
         end if
       end if
 
-      ! end the one initialized by KPointsGrid already
-      call kpoints_end(this)
+!       ! end the one initialized by KPointsGrid already
+!       call kpoints_end(this)
+!
+      call kpoints_grid_init(dim, user_kpoints_grid, parse_block_n(blk), 1)
 
-      call kpoints_grid_init(dim, this%full, parse_block_n(blk), 1)
+      user_kpoints_grid%red_point = M_ZERO
+      user_kpoints_grid%point = M_ZERO
+      user_kpoints_grid%weight = M_ZERO
+      user_kpoints_grid%shifts = M_ZERO
 
-      this%full%red_point = M_ZERO
-      this%full%point = M_ZERO
-      this%full%weight = M_ZERO
-      this%full%shifts = M_ZERO
 
       if(reduced) then
-        do ik = 1, this%full%npoints
-          call parse_block_float(blk, ik - 1, 0, this%full%weight(ik))
+        do ik = 1, user_kpoints_grid%npoints
+          call parse_block_float(blk, ik - 1, 0, user_kpoints_grid%weight(ik))
           do idir = 1, dim
-            call parse_block_float(blk, ik - 1, idir, this%full%red_point(idir, ik))
+            call parse_block_float(blk, ik - 1, idir, user_kpoints_grid%red_point(idir, ik))
           end do
           ! generate also the absolute coordinates
-          call kpoints_to_absolute(klattice, this%full%red_point(:, ik), this%full%point(:, ik), dim)
+          call kpoints_to_absolute(klattice, user_kpoints_grid%red_point(:, ik), user_kpoints_grid%point(:, ik), dim)
         end do
       else
-        do ik = 1, this%full%npoints
-          call parse_block_float(blk, ik - 1, 0, this%full%weight(ik))
+        do ik = 1, user_kpoints_grid%npoints
+          call parse_block_float(blk, ik - 1, 0, user_kpoints_grid%weight(ik))
           do idir = 1, dim
-            call parse_block_float(blk, ik - 1, idir, this%full%point(idir, ik), unit_one/units_inp%length)
+            call parse_block_float(blk, ik - 1, idir, user_kpoints_grid%point(idir, ik), unit_one/units_inp%length)
           end do
           ! generate also the reduced coordinates
-          call kpoints_to_reduced(rlattice, this%full%point(:, ik), this%full%red_point(:, ik), dim)
+          call kpoints_to_reduced(rlattice, user_kpoints_grid%point(:, ik), user_kpoints_grid%red_point(:, ik), dim)
         end do
       end if
       call parse_block_end(blk)
 
       this%nik_skip = 0
-      if(any(this%full%weight(:) < M_EPSILON)) then
+      if(any(user_kpoints_grid%weight(:) < M_EPSILON)) then
         call messages_experimental('K-points with zero weight')
         message(1) = "Found k-points with zero weight. They are excluded from density calculation"
         call messages_warning(1)
@@ -728,35 +741,41 @@ contains
         ! a block after all regular k-points. This is for convenience, so they can be skipped
         ! easily and not a big restraint for the user who has to provide the k-points
         ! explicitly anyway.
-        do ik=1,this%full%npoints
-          if(this%full%weight(ik) < M_EPSILON) then
+        do ik=1,user_kpoints_grid%npoints
+          if(user_kpoints_grid%weight(ik) < M_EPSILON) then
             ! check there are no points with positive weight following a zero weighted one
-            if(ik < this%full%npoints) then
-              if(this%full%weight(ik+1) > M_EPSILON) then
+            if(ik < user_kpoints_grid%npoints) then
+              if(user_kpoints_grid%weight(ik+1) > M_EPSILON) then
                 message(1) = "K-points with zero weight must follow all regular k-points in a block"
                 call messages_fatal(1)
               endif
             end if
             this%nik_skip = this%nik_skip + 1
             ! set to machine zero
-            this%full%weight(ik) = M_ZERO
+            user_kpoints_grid%weight(ik) = M_ZERO
           end if
         end do
       end if
       ! renormalize weights
-      weight_sum = sum(this%full%weight(1:this%full%npoints))
+      weight_sum = sum(user_kpoints_grid%weight(1:user_kpoints_grid%npoints))
       if(weight_sum < M_EPSILON) then
         message(1) = "k-point weights must sum to a positive number."
         call messages_fatal(1)
       end if
-      this%full%weight = this%full%weight / weight_sum
+      user_kpoints_grid%weight = user_kpoints_grid%weight / weight_sum
 
       ! for the moment we do not apply symmetries to user kpoints
-      call kpoints_grid_copy(this%full, this%reduced)
+!       call kpoints_grid_copy(this%full, this%reduced)
 
-      write(message(1), '(a,i4,a)') 'Input: ', this%full%npoints, ' k-points were read from the input file'
+      call kpoints_grid_addto(this%full   ,  user_kpoints_grid)
+      call kpoints_grid_addto(this%reduced,  user_kpoints_grid)
+
+
+      write(message(1), '(a,i4,a)') 'Input: ', user_kpoints_grid%npoints, ' k-points were read from the input file'
       call messages_info(1)
 
+      call kpoints_grid_end(user_kpoints_grid)
+      
       POP_SUB(kpoints_init.read_user_kpoints)
     end subroutine read_user_kpoints
 
@@ -1027,7 +1046,7 @@ contains
     FLOAT   :: length, total_length, accumulated_length
     FLOAT   :: kpt1(1:MAX_DIM), kpt2(1:MAX_DIM), vec(1:MAX_DIM)
 
-    PUSH_SUB(kpoints_grid_generate)
+    PUSH_SUB(kpoints_path_generate)
 
     total_length = M_ZERO
     !We first compute the total length of the k-point path
@@ -1067,9 +1086,9 @@ contains
     kpoints(1:dim, kpt_ind) =  kpt1(1:dim)
 
     !The length of the total path is arbitrarily put to 1
-    coord(1:nkpoints) = coord(1:nkpoints)/total_length
+     coord(1:nkpoints) = coord(1:nkpoints)/total_length
 
-    POP_SUB(kpoints_grid_generate)
+    POP_SUB(kpoints_path_generate)
   end subroutine kpoints_path_generate
  
  

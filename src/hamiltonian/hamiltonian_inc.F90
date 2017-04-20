@@ -157,7 +157,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
     
   end if
 
-  if (iand(TERM_MGGA, terms_) /= 0 .and. family_is_mgga_with_exc(hm%xc_family, hm%xc_flags)) then
+  if (iand(TERM_MGGA, terms_) /= 0 .and. hm%family_is_mgga_with_exc) then
     call X(h_mgga_terms)(hm, der, ik, epsib, hpsib)
   end if
 

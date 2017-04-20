@@ -15,6 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
+!! $Id: submesh_inc.F90 15314 2016-04-30 08:40:18Z xavier $
 
 !Here ff is a function in the submesh 
 R_TYPE function X(sm_integrate)(mesh, sm, ff) result(res)
@@ -35,7 +36,7 @@ R_TYPE function X(sm_integrate)(mesh, sm, ff) result(res)
       res = R_TOTYPE(M_ZERO)
       !$omp parallel do reduction(+:res)
       do is = 1, sm%np
-      res = res+ff(is)
+        res = res+ff(is)
       end do
       !$omp end parallel do
       res=res*mesh%volume_element
@@ -98,7 +99,7 @@ subroutine X(dsubmesh_add_to_mesh)(this, sphi, phi, factor)
   else
     do ip = 1, this%np
       phi(this%map(ip)) = phi(this%map(ip)) + sphi(ip)
-    end do 
+    end do
   end if
 
   POP_SUB(X(dsubmesh_add_to_mesh))
@@ -158,19 +159,15 @@ R_TYPE function X(dsubmesh_to_mesh_dotp)(this, dim, sphi, phi, reduce) result(do
 
   if(this%mesh%use_curvilinear) then
     do idim = 1, dim
-      !$omp parallel do reduction(+:dotp)
       do is = 1, this%np
         dotp = dotp + this%mesh%vol_pp(this%map(is))*phi(this%map(is), idim)*sphi(is)
       end do
-      !$omp end parallel do
     end do
   else
     do idim = 1, dim
-      !$omp parallel do reduction(+:dotp)
       do is = 1, this%np
         dotp = dotp + phi(this%map(is), idim)*sphi(is)
       end do
-      !$omp end parallel do
     end do
     dotp = dotp*this%mesh%vol_pp(1)
   end if

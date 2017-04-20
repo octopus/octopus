@@ -50,6 +50,7 @@ program oct_local_multipoles
   use utils_oct_m
   use varinfo_oct_m
   use multicomm_oct_m
+  use xc_oct_m
 
   implicit none
   
@@ -92,7 +93,8 @@ program oct_local_multipoles
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
   call system_init(sys)
   call simul_box_init(sb, sys%geo, sys%space)
-  call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, sys%ks%xc_flags, sys%mc)
+  call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, &
+             sys%ks%xc_flags, sys%mc, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
 
   call local_domains()
 
@@ -321,8 +323,8 @@ contains
 
     if (ldrestart) then
       !TODO: check for domains & mesh compatibility 
-      call restart_init(restart_ld, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%gr%mesh%mpi_grp, &
-         err, dir=trim(ldrestart_folder), mesh = sys%gr%mesh)
+      call restart_init(restart_ld, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%mc, err, &
+                        dir=trim(ldrestart_folder), mesh = sys%gr%mesh)
       call local_restart(local, restart_ld)
       call restart_end(restart_ld)
     end if
@@ -338,8 +340,8 @@ contains
     else 
       restart_folder = folder
     end if
-    call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%gr%mesh%mpi_grp, & 
-         err, dir=trim(restart_folder), mesh = sys%gr%mesh)
+    call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%mc, err, &
+                      dir=trim(restart_folder), mesh = sys%gr%mesh)
 
 !!$    call loct_progress_bar(-1, l_end-l_start)
     do iter = l_start, l_end, l_step
@@ -756,8 +758,8 @@ contains
     filename = "ldomains"
     write(message(1),'(a,a)')'Info: Writing restart info to ', trim(filename)
     call messages_info(1)
-    call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_DUMP, sys%gr%mesh%mpi_grp, & 
-                  ierr, mesh=sys%gr%mesh, dir=trim(base_folder)//trim(folder)) 
+    call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_DUMP, sys%mc, ierr, &
+                      mesh=sys%gr%mesh, dir=trim(base_folder)//trim(folder)) 
     ff2 = M_ZERO
     SAFE_ALLOCATE(lines(1:lcl%nd+2))
     write(lines(1),'(a,1x,i5)')'Number of local domains =', lcl%nd

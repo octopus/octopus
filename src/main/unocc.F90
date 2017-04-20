@@ -102,12 +102,6 @@ contains
       
     end if
 
-    SAFE_ALLOCATE(occ_states(1:sys%st%d%nik))
-    do ik = 1, sys%st%d%nik
-      call occupied_states(sys%st, ik, n_filled, n_partially_filled, n_half_filled)
-      occ_states(ik) = n_filled + n_partially_filled + n_half_filled
-    end do
-
     call init_(sys%gr%mesh, sys%st)
     converged = .false.
 
@@ -118,8 +112,7 @@ contains
     
     read_gs = .true.
     if (.not. fromScratch) then
-      call restart_init(restart_load_unocc, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                        ierr, mesh=sys%gr%mesh, exact=.true.)
+      call restart_init(restart_load_unocc, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
 
       if(ierr == 0) then
         call states_load(restart_load_unocc, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
@@ -135,8 +128,7 @@ contains
         read_gs = .false.
     end if
 
-    call restart_init(restart_load_gs, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                      ierr_rho, mesh=sys%gr%mesh, exact=.true.)
+    call restart_init(restart_load_gs, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr_rho, mesh=sys%gr%mesh, exact=.true.)
 
     if(ierr_rho == 0) then
       if (read_gs) then
@@ -150,6 +142,12 @@ contains
     else
       write_density = .true.
     end if
+
+    SAFE_ALLOCATE(occ_states(1:sys%st%d%nik))
+    do ik = 1, sys%st%d%nik
+      call occupied_states(sys%st, ik, n_filled, n_partially_filled, n_half_filled)
+      occ_states(ik) = n_filled + n_partially_filled + n_half_filled
+    end do
 
     is_orbital_dependent = (sys%ks%theory_level == HARTREE .or. sys%ks%theory_level == HARTREE_FOCK .or. &
       (sys%ks%theory_level == KOHN_SHAM_DFT .and. xc_is_orbital_dependent(sys%ks%xc)))
@@ -234,13 +232,12 @@ contains
 
     if(.not. bandstructure_mode) then
       ! Restart dump should be initialized after restart_load, as the mesh might have changed
-      call restart_init(restart_dump, RESTART_UNOCC, RESTART_TYPE_DUMP, sys%st%dom_st_kpt_mpi_grp, &
-                      ierr, mesh=sys%gr%mesh)
+      call restart_init(restart_dump, RESTART_UNOCC, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
 
       ! make sure the density is defined on the same mesh as the wavefunctions that will be written
       if(write_density) &
         call states_dump_rho(restart_dump, sys%st, sys%gr, ierr_rho)
-   end if
+    end if
 
     message(1) = "Info: Starting calculation of unoccupied states."
     call messages_info(1)
@@ -292,15 +289,14 @@ contains
           if(ierr /= 0) then
             message(1) = "Unable to write states wavefunctions."
             call messages_warning(1)
-          end if 
+          end if
         end if
-      end if
-
+      end if 
       if(sys%outp%output_interval /= 0 .and. mod(iter, sys%outp%output_interval) == 0) then
         write(dirname,'(a,i4.4)') "unocc.",iter
         call output_all(sys%outp, sys%gr, sys%geo, sys%st, hm, sys%ks, dirname)
       end if
-
+     
       if(converged .or. forced_finish) exit
     end do
 
@@ -321,9 +317,10 @@ contains
 
     if(simul_box_is_periodic(sys%gr%sb).and. sys%st%d%nik > sys%st%d%nspin) then
       call states_write_bands(STATIC_DIR, sys%st%nst, sys%st, sys%gr%sb)
-      if(kpoints_get_kpoint_method(sys%gr%sb%kpoints) == KPOINTS_PATH) &
+      if(iand(sys%gr%sb%kpoints%method, KPOINTS_PATH) /= 0) &
         call states_write_bandstructure(STATIC_DIR, sys%st%nst, sys%st, sys%gr%sb)
     end if
+ 
 
     call output_all(sys%outp, sys%gr, sys%geo, sys%st, hm, sys%ks, STATIC_DIR)
 
@@ -342,13 +339,6 @@ contains
       call messages_obsolete_variable("NumberUnoccStates", "ExtraStates")
 
       call states_allocate_wfns(st, mesh)
-
-#ifdef HAVE_MPI
-    ! here we want to avoid possible problems (if some nodes can allocate and other cannot)
-    ! this is just a copy of what is done for the GS calculation
-    if(sys%st%dom_st_kpt_mpi_grp%comm > 0) call MPI_Barrier(sys%st%dom_st_kpt_mpi_grp%comm, mpi_err)
-#endif
-
 
       ! now the eigensolver stuff
       call eigensolver_init(eigens, sys%gr, st)

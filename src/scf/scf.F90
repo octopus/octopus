@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: scf.F90 15471 2016-07-11 15:38:35Z ssato $
 
 #include "global.h"
 
@@ -475,6 +474,12 @@ contains
     call eigensolver_end(scf%eigens)
     if(scf%mix_field /= OPTION__MIXFIELD__NONE) call mix_end(scf%smix)
 
+    nullify(scf%mixfield)
+
+    if(scf%mix_field /= OPTION__MIXFIELD__STATES) &
+      call lda_u_mixer_end(scf%lda_u_mix, scf%smix)
+
+
     POP_SUB(scf_end)
   end subroutine scf_end
 
@@ -486,6 +491,9 @@ contains
     PUSH_SUB(scf_mix_clear)
 
     call mix_clear(scf%smix)
+
+    if(scf%mix_field /= OPTION__MIXFIELD__STATES) &
+      call lda_u_mixer_clear(scf%lda_u_mix, scf%smix)
 
     POP_SUB(scf_mix_clear)
   end subroutine scf_mix_clear
@@ -625,12 +633,13 @@ contains
       else
         call mixfield_set_vin(scf%mixfield, hm%vhxc, hm%Imvhxc)
       end if
-    case (OPTION__MIXFIELD__DENSITY)
+    case(OPTION__MIXFIELD__DENSITY)
       if(.not. cmplxscl) then
         call mixfield_set_vin(scf%mixfield, rhoin)
       else
         call mixfield_set_vin(scf%mixfield, zrhoin)
       end if
+
     case(OPTION__MIXFIELD__STATES)
 
       SAFE_ALLOCATE(psioutb(st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
@@ -687,7 +696,7 @@ contains
       scf%eigens%converged = 0
 
       scf%energy_diff = hm%energy%total
-
+      
       if(scf%lcao_restricted) then
         call lcao_init_orbitals(lcao, st, gr, geo)
         call lcao_wf(lcao, st, gr, geo, hm)
@@ -698,7 +707,7 @@ contains
             scf%eigens%converged = 0
             call eigensolver_run(scf%eigens, gr, st, hm, iter)
 
-            call v_ks_calc(ks, hm, st, geo)
+            call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
             call hamiltonian_update(hm, gr%mesh)
 
             dipole_prev = dipole
@@ -741,7 +750,7 @@ contains
 
       select case(scf%mix_field)
       case(OPTION__MIXFIELD__POTENTIAL)
-        call v_ks_calc(ks, hm, st, geo)
+        call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
         if(.not. cmplxscl) then
           call mixfield_set_vout(scf%mixfield, hm%vhxc)
         else
@@ -760,8 +769,9 @@ contains
             call batch_copy_data(gr%mesh%np, st%group%psib(ib, iqn), psioutb(ib, iqn))
           end do
         end do
+        
       end select
-     
+      
       if(scf%mix_field /= OPTION__MIXFIELD__STATES) &
         call lda_u_mixer_set_vout(hm%lda_u, scf%lda_u_mix)
  
@@ -844,7 +854,7 @@ contains
           call mixfield_get_vnew(scf%mixfield, st%zrho%Re, st%zrho%Im)
         end if
         call lda_u_mixer_get_vnew(hm%lda_u, scf%lda_u_mix, st)
-        call v_ks_calc(ks, hm, st, geo)
+        call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
       case (OPTION__MIXFIELD__POTENTIAL)
         ! mix input and output potentials
         call mixing(scf%smix)
@@ -866,11 +876,12 @@ contains
         end do
 
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(ks, hm, st, geo)
+        call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
         
       case(OPTION__MIXFIELD__NONE)
-        call v_ks_calc(ks, hm, st, geo)
+        call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
       end select
+
 
       ! Are we asked to stop? (Whenever Fortran is ready for signals, this should go away)
       scf%forced_finish = clean_stop(mc%master_comm)
@@ -976,6 +987,7 @@ contains
         forcein(1:geo%natoms, 1:gr%sb%dim) = forceout(1:geo%natoms, 1:gr%sb%dim)
       end if
 
+
       if(scf%forced_finish) then
         call profiling_out(prof)
         exit
@@ -989,7 +1001,8 @@ contains
 
     if(scf%lcao_restricted) call lcao_end(lcao)
 
-    if(scf%max_iter > 0 .and. scf%mix_field == OPTION__MIXFIELD__POTENTIAL) then
+    if((scf%max_iter > 0 .and. scf%mix_field == OPTION__MIXFIELD__POTENTIAL) &
+        .or. iand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
       call v_ks_calc(ks, hm, st, geo)
     end if
 
@@ -1004,9 +1017,6 @@ contains
       
       SAFE_DEALLOCATE_A(psioutb)
     end select
-
-    if(scf%mix_field /= OPTION__MIXFIELD__STATES) &
-      call lda_u_mixer_end(hm%lda_u,scf%lda_u_mix, scf%smix)
 
     SAFE_DEALLOCATE_A(rhoout)
     SAFE_DEALLOCATE_A(rhoin)
@@ -1043,6 +1053,9 @@ contains
 
     if(simul_box_is_periodic(gr%sb) .and. st%d%nik > st%d%nspin) &
       call states_write_bands(STATIC_DIR, st%nst, st, gr%sb)
+      if(iand(gr%sb%kpoints%method, KPOINTS_PATH) /= 0) &
+        call states_write_bandstructure(STATIC_DIR, st%nst, st, gr%sb)
+      
 
     POP_SUB(scf_run)
 

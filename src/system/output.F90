@@ -151,10 +151,11 @@ module output_oct_m
   
 contains
 
-  subroutine output_init(outp, sb, nst)
-    type(output_t),       intent(out) :: outp
-    type(simul_box_t),    intent(in)  :: sb
-    integer,              intent(in)  :: nst
+  subroutine output_init(outp, sb, nst, ks)
+    type(output_t),       intent(out)   :: outp
+    type(simul_box_t),    intent(in)    :: sb
+    integer,              intent(in)    :: nst
+    type(v_ks_t),         intent(inout) :: ks
 
     type(block_t) :: blk
     FLOAT :: norm
@@ -566,8 +567,11 @@ contains
     end if
 
     if(iand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
-      call current_init(outp%current_calculator)
+      call v_ks_calculate_current(ks, .true.)
+    else
+      call v_ks_calculate_current(ks, .false.)
     end if
+
 
     POP_SUB(output_init)
   end subroutine output_init
@@ -579,10 +583,6 @@ contains
 
     PUSH_SUB(output_end)
     
-    if(iand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
-      call current_end(outp%current_calculator)
-    end if
-
     POP_SUB(output_end)
 
   end subroutine output_end

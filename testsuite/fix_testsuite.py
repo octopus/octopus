@@ -217,7 +217,7 @@ for tfile in test_files:
                 print('')
 
 print('If you are happy with the diff, would you like me to update the files now?')
-if not get_answer('I\'ll not commit anything, so you can still "svn diff" to see the changes. (Y/n) ', True):
+if not get_answer('I\'ll not commit anything, so you can still "git diff" to see the changes. (Y/n) ', True):
 	sys.exit()
 
 for tfile in test_files:

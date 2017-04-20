@@ -94,7 +94,6 @@ contains
     this%nglobal = total
 
     call mpi_grp_init(this%mpi_grp, comm)
-
     if(this%mpi_grp%size == 1 .or. this%nglobal == 1) then
       
       SAFE_ALLOCATE(this%node(1:total))

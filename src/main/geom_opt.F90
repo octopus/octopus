@@ -58,6 +58,7 @@ module geom_opt_oct_m
     FLOAT    :: step
     FLOAT    :: line_tol
     FLOAT    :: fire_mass
+    integer  :: fire_integrator
     FLOAT    :: tolgrad
     FLOAT    :: toldr
     integer  :: max_iter
@@ -105,8 +106,7 @@ contains
 
     ! load wavefunctions
     if(.not. fromscratch) then
-      call restart_init(restart_load, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                        ierr, mesh=sys%gr%mesh)
+      call restart_init(restart_load, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
       if(ierr == 0) call states_load(restart_load, sys%st, sys%gr, ierr)
       call restart_end(restart_load)
       if(ierr /= 0) then
@@ -154,8 +154,9 @@ contains
         imass = imass + 3
       end do
 
+      !TODO: add variable to use Euler integrator
       call minimize_fire(g_opt%size, coords, real(g_opt%step, 8), real(g_opt%tolgrad, 8), &
-        g_opt%max_iter, calc_point, write_iter_info, energy, ierr, mass)
+        g_opt%max_iter, calc_point, write_iter_info, energy, ierr, mass, integrator=g_opt%fire_integrator)
       SAFE_DEALLOCATE_A(mass)
 
     case default
@@ -275,7 +276,7 @@ contains
       !% forces) which makes it less efficient than other schemes. It is included here
       !% for completeness, since it is free.
       !%Option fire 8
-      !% (Experimental) The FIRE algorithm. See also <tt>GOFireMass</tt>.
+      !% (Experimental) The FIRE algorithm. See also <tt>GOFireMass</tt> and <tt>GOFireIntegrator</tt>.
       !% Ref: E. Bitzek, P. Koskinen, F. Gahler, M. Moseler, and P. Gumbsch, <i>Phys. Rev. Lett.</i> <b>97</b>, 170201 (2006).
       !%End
       call parse_variable('GOMethod', MINMETHOD_STEEPEST_DESCENT, g_opt%method)
@@ -323,14 +324,14 @@ contains
       !%Description
       !% Initial step for the geometry optimizer. The default is 0.5.
       !% WARNING: in some weird units.
-      !% For the FIRE minimizer, default value is 50.0 in a.u. of time,
+      !% For the FIRE minimizer, default value is 0.1 fs,
       !% and corresponds to the initial time-step for the MD.
       !%End
       if(g_opt%method /= MINMETHOD_FIRE ) then
         default_step = M_HALF
         call parse_variable('GOStep', default_step, g_opt%step)
       else
-        default_step = CNST(50.0)
+        default_step = CNST(0.1)*unit_femtosecond%factor
         call parse_variable('GOStep', default_step, g_opt%step, unit = units_inp%time)
       end if
 
@@ -361,7 +362,7 @@ contains
 
       !%Variable GOFireMass
       !%Type float
-      !%Default 0.0 amu
+      !%Default 1.0 amu
       !%Section Calculation Modes::Geometry Optimization
       !%Description
       !% The Fire algorithm (<tt>GOMethod = fire</tt>) assumes that all degrees of freedom
@@ -369,10 +370,28 @@ contains
       !% scale,  which  for  heteronuclear  systems  can  be  roughly
       !% achieved by setting all the atom masses equal, to the value
       !% specified by this variable.
+      !% By default the mass of a proton is selected (1 amu).
+      !% However, a selection of <tt>GOFireMass = 0.01</tt> can, in manys systems, 
+      !% speed up the geometry optimization procedure.
       !% If <tt>GOFireMass</tt> <= 0, the masses of each 
       !% species will be used.
       !%End
-      call parse_variable('GOFireMass', M_ZERO, g_opt%fire_mass, unit_amu)
+      call parse_variable('GOFireMass', M_ONE*unit_amu%factor, g_opt%fire_mass, unit = unit_amu)
+
+      !%Variable GOFireIntegrator
+      !%Type integer
+      !%Default verlet
+      !%Section Calculation Modes::Geometry Optimization
+      !%Description
+      !% The Fire algorithm (<tt>GOMethod = fire</tt>) uses a molecular dynamics
+      !% integrator to compute new geometries and velocities.
+      !% Currently, two integrator schemes can be selected 
+      !%Option verlet 1
+      !% The Velocity Verlet algorithm.
+      !%Option euler 0
+      !% The Euler method.
+      !%End
+      call parse_variable('GOFireIntegrator', OPTION__GOFIREINTEGRATOR__VERLET, g_opt%fire_integrator)
 
       call messages_obsolete_variable('GOWhat2Minimize', 'GOObjective')
 
@@ -415,8 +434,7 @@ contains
       ! TODO: clean forces directory
       end do
 
-      call restart_init(g_opt%restart_dump, RESTART_GS, RESTART_TYPE_DUMP, sys%st%dom_st_kpt_mpi_grp, &
-                        ierr, mesh=sys%gr%mesh)
+      call restart_init(g_opt%restart_dump, RESTART_GS, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
 
       POP_SUB(geom_opt_run.init_)
     end subroutine init_
@@ -465,6 +483,8 @@ contains
     call simul_box_atoms_in_box(g_opt%syst%gr%sb, g_opt%geo, warn_if_not = .false., die_if_not = .true.)
 
     call geometry_write_xyz(g_opt%geo, './work-geom', append = .true.)
+
+    call scf_mix_clear(g_opt%scfv)
 
     call hamiltonian_epot_generate(g_opt%hm, g_opt%syst%gr, g_opt%geo, g_opt%st)
     call density_calc(g_opt%st, g_opt%syst%gr, g_opt%st%rho)

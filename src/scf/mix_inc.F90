@@ -21,7 +21,7 @@ subroutine X(mixing)(smix, vin, vout, vnew)
   type(mix_t),  intent(inout) :: smix
   R_TYPE,       intent(in)    :: vin(:, :, :), vout(:, :, :)
   R_TYPE,       intent(out)   :: vnew(:, :, :)
- 
+  
   integer :: ii
  
   PUSH_SUB(X(mixing))
@@ -85,9 +85,7 @@ subroutine X(mixing_broyden)(smix, vin, vout, vnew, iter)
   d3 = smix%mixfield%d3
 
   SAFE_ALLOCATE(f(1:d1, 1:d2, 1:d3))
-
-  smix%X(gamma) = M_ZERO 
- 
+  
   f(1:d1, 1:d2, 1:d3) = vout(1:d1, 1:d2, 1:d3) - vin(1:d1, 1:d2, 1:d3)
   if(iter > 1) then
     ! Store df and dv from current iteration
@@ -99,6 +97,7 @@ subroutine X(mixing_broyden)(smix, vin, vout, vnew, iter)
     call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), smix%mixfield%X(f_old)(:, :, :),   smix%mixfield%X(df)(:, :, :, ipos))
     call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), smix%mixfield%X(vin_old)(:, :, :), smix%mixfield%X(dv)(:, :, :, ipos))
     
+    smix%X(gamma) = M_ZERO
     do i = 1, d2
       do j = 1, d3
         smix%X(gamma) = smix%X(gamma) + X(mix_dotp)(smix, smix%mixfield%X(df)(:, i, j, ipos), smix%mixfield%X(df)(:, i, j, ipos))
@@ -143,7 +142,7 @@ subroutine X(broyden_extrapolation)(this, coeff, d1, d2, d3, vin, vnew, iter_use
   FLOAT, parameter :: w0 = CNST(0.01), ww = M_FIVE
   integer  :: i, j, k, l
   R_TYPE    :: gamma, determinant
-  R_TYPE, allocatable :: beta(:, :), work(:) 
+  R_TYPE, allocatable :: beta(:, :), work(:)
 
   PUSH_SUB(X(broyden_extrapolation))
   
@@ -192,7 +191,7 @@ subroutine X(broyden_extrapolation)(this, coeff, d1, d2, d3, vin, vnew, iter_use
     gamma = ww*sum(beta(:, i)*work(:))
     vnew(1:d1, 1:d2, 1:d3) = vnew(1:d1, 1:d2, 1:d3) - ww*gamma*(coeff*df(1:d1, 1:d2, 1:d3, i) + dv(1:d1, 1:d2, 1:d3, i))
   end do
-
+  
   do i = 1, this%nauxmixfield
    if(this%auxmixfield(i)%p%func_type == TYPE_FLOAT) then
      call dbroyden_extrapolation_aux(this, i, coeff, iter_used, X(beta)=beta, X(work)=work, X(gamma)=this%X(gamma))
@@ -548,7 +547,7 @@ end function X(mix_dotp)
 
   ! --------------------------------------------------------------
   subroutine X(mixfield_set_vout2)(mixfield, vout)
-    type(mixfield_t),         intent(in) :: mixfield
+    type(mixfield_t),         intent(inout) :: mixfield
     R_TYPE,  intent(in)  :: vout(:, :)
 
     PUSH_SUB(X(mixfield_set_vout2))
@@ -560,7 +559,7 @@ end function X(mix_dotp)
 
   ! --------------------------------------------------------------
   subroutine X(mixfield_set_vout3)(mixfield, vout)
-    type(mixfield_t),         intent(in) :: mixfield
+    type(mixfield_t),         intent(inout) :: mixfield
     R_TYPE,  intent(in)  :: vout(:, :, :)
 
     PUSH_SUB(X(mixfield_set_vout3))

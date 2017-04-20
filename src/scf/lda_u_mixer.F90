@@ -36,6 +36,7 @@ module lda_u_mixer_oct_m
        lda_u_mixer_t,              &
        lda_u_mixer_init,           &
        lda_u_mixer_init_auxmixer,  &
+       lda_u_mixer_clear,          &
        lda_u_mixer_end,            &
        lda_u_mixer_set_vout,       &
        lda_u_mixer_set_vin,        &
@@ -44,6 +45,7 @@ module lda_u_mixer_oct_m
   type lda_u_mixer_t
     integer :: occsize
     logical :: realstates
+    logical :: apply = .false.
 
     FLOAT, pointer :: dtmp_occ(:,:), tmpU(:,:)
     CMPLX, pointer :: ztmp_occ(:,:)
@@ -75,12 +77,12 @@ contains
      call mixfield_init( smix, mixer%mixfield_occ, dim1, 1, 1, mix_d4(smix), TYPE_CMPLX )
      mixer%realstates = .false.
    end if
-   call mixfield_clear(smix, mixer%mixfield_occ)
+   call mixfield_clear(mix_scheme(smix), mixer%mixfield_occ)
    call mix_add_auxmixfield(smix, mixer%mixfield_occ)
  
    if(this%useACBN0) then
      call mixfield_init( smix, mixer%mixfield_U, this%norbsets, 1, 1,  mix_d4(smix), TYPE_FLOAT )
-     call mixfield_clear(smix, mixer%mixfield_U)
+     call mixfield_clear(mix_scheme(smix), mixer%mixfield_U)
      call mix_add_auxmixfield(smix, mixer%mixfield_U)
    end if
 
@@ -96,6 +98,8 @@ contains
 
    if(.not.this%apply) return
    PUSH_SUB(lda_u_mixer_init)
+
+   mixer%apply = .true.
 
    mixer%occsize = this%maxnorbs*this%maxnorbs*this%nspins*this%norbsets
    if(this%useACBN0) mixer%occsize = mixer%occsize*2
@@ -122,20 +126,33 @@ contains
  end subroutine lda_u_mixer_init
 
  ! ---------------------------------------------------------
- subroutine lda_u_mixer_end(this, mixer, smix)
-   type(lda_u_t),       intent(in)    :: this
+ subroutine lda_u_mixer_clear(mixer, smix)
    type(lda_u_mixer_t), intent(inout) :: mixer
-   type(mix_t),         intent(out)   :: smix
+   type(mix_t),         intent(inout)   :: smix
 
-   if(.not.this%apply) return
+   if(.not.mixer%apply) return
+   PUSH_SUB(lda_u_mixer_clear)
+  
+   call mixfield_clear(mix_scheme(smix), mixer%mixfield_occ)
+   call mixfield_clear(mix_scheme(smix), mixer%mixfield_U)
+
+   POP_SUB(lda_u_mixer_clear)
+ end subroutine lda_u_mixer_clear
+
+ ! ---------------------------------------------------------
+ subroutine lda_u_mixer_end(mixer, smix)
+   type(lda_u_mixer_t), intent(inout) :: mixer
+   type(mix_t),         intent(inout) :: smix
+
+   if(.not.mixer%apply) return
    PUSH_SUB(lda_u_mixer_end)
   
    SAFE_DEALLOCATE_P(mixer%dtmp_occ)
    SAFE_DEALLOCATE_P(mixer%ztmp_occ)
    SAFE_DEALLOCATE_P(mixer%tmpU)
 
-   call mixfield_clear(smix,mixer%mixfield_occ)
-   if(this%useACBN0) call mixfield_clear(smix, mixer%mixfield_U)
+   call mixfield_end(smix,mixer%mixfield_occ)
+   call mixfield_end(smix, mixer%mixfield_U)
 
    POP_SUB(lda_u_mixer_end)
  end subroutine lda_u_mixer_end

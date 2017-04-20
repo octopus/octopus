@@ -64,7 +64,6 @@ module submesh_oct_m
     zsubmesh_to_submesh_dotp,    &
     submesh_end
 
-
   type submesh_t
     FLOAT                 :: center(1:MAX_DIM)
     FLOAT                 :: radius
@@ -289,8 +288,6 @@ contains
     call profiling_out(submesh_init_prof)
     POP_SUB(submesh_init)
   end subroutine submesh_init
-
-    ! -------------------------------------------------------------
 
   ! --------------------------------------------------------------
 

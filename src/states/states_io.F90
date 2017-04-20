@@ -963,7 +963,7 @@ contains
     type(states_t),    intent(in) :: st
     type(simul_box_t), intent(in) :: sb
 
-    integer :: idir, ist, ik, ns, is
+    integer :: idir, ist, ik, ns, is,npath
     integer, allocatable :: iunit(:)
     FLOAT   :: red_kpoint(1:MAX_DIM)
     character(len=80) :: filename
@@ -994,13 +994,16 @@ contains
       write(iunit(is),'(a,i6,3a)') '(red. coord.), bands:', nst, ' [', trim(units_abbrev(units_out%energy)), ']'
     end do
 
+    npath = SIZE(sb%kpoints%coord_along_path)*ns
+
     ! output bands
-    do ik = 1, st%d%nik, ns
+    do ik = st%d%nik-npath+1, st%d%nik, ns
       do is = 0, ns - 1
         red_kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, ik + is), &
                                                    absolute_coordinates=.false.)
         write(iunit(is),'(1x)',advance='no')
-        write(iunit(is),'(f14.8)',advance='no') kpoints_get_path_coord(sb%kpoints, states_dim_get_kpoint_index(st%d, ik + is)) 
+        write(iunit(is),'(f14.8)',advance='no') kpoints_get_path_coord(sb%kpoints, & 
+                                                    states_dim_get_kpoint_index(st%d, ik + is)-(st%d%nik -npath)) 
         do idir = 1, sb%dim
           write(iunit(is),'(f14.8)',advance='no') red_kpoint(idir)
         end do

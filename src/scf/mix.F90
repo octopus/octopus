@@ -53,6 +53,7 @@ module mix_oct_m
     dmixing,                    &
     zmixing,                    &
     mix_coefficient,            &
+    mix_scheme,                 &
     mix_d4,                     &
     mix_get_field,              &
     mixfield_t,                 &
@@ -349,7 +350,7 @@ contains
     
     PUSH_SUB(mix_clear)
 
-    call mixfield_clear(smix, smix%mixfield)
+    call mixfield_clear(smix%scheme, smix%mixfield)
 
     smix%iter = 0
     smix%last_ipos = 0
@@ -637,6 +638,12 @@ contains
     coefficient = this%coeff
   end function mix_coefficient
 
+  integer pure function mix_scheme(this) result(scheme)
+    type(mix_t), intent(in) :: this
+
+    scheme = this%scheme
+  end function mix_scheme
+
   integer pure function mix_d4(this) 
     type(mix_t), intent(in) :: this
 
@@ -654,7 +661,7 @@ contains
   subroutine mixing(smix)
     type(mix_t),  intent(inout) :: smix
   
-     PUSH_SUB(mixing)
+    PUSH_SUB(mixing)
 
     if(smix%mixfield%func_type == TYPE_FLOAT) then
       call dmixing(smix, smix%mixfield%dvin, smix%mixfield%dvout, smix%mixfield%dvnew)
@@ -684,7 +691,7 @@ contains
   end subroutine mix_add_auxmixfield
 
   subroutine mixfield_init( smix, mixfield, d1, d2, d3, d4, func_type ) 
-    type(mix_t),      intent(in)    :: smix
+    type(mix_t),      intent(inout) :: smix
     type(mixfield_t), intent(inout) :: mixfield
     integer,          intent(in)    :: d1, d2, d3, d4
     type(type_t),     intent(in)    :: func_type
@@ -743,7 +750,7 @@ contains
 
     ! ---------------------------------------------------------
   subroutine mixfield_end(smix, mixfield)
-    type(mix_t),         intent(in) :: smix
+    type(mix_t),      intent(inout) :: smix
     type(mixfield_t), intent(inout) :: mixfield
 
     PUSH_SUB(mixfield_end)
@@ -772,13 +779,13 @@ contains
   end subroutine mixfield_end
 
   ! ---------------------------------------------------------
-  subroutine mixfield_clear(smix, mixfield)
-    type(mix_t),         intent(in) :: smix
+  subroutine mixfield_clear(scheme, mixfield)
+    integer,             intent(in) :: scheme
     type(mixfield_t), intent(inout) :: mixfield
 
     PUSH_SUB(mixfield_clear)
 
-    if (smix%scheme /= OPTION__MIXINGSCHEME__LINEAR) then
+    if (scheme /= OPTION__MIXINGSCHEME__LINEAR) then
       if(mixfield%func_type == TYPE_FLOAT) then
         mixfield%ddf = M_ZERO
         mixfield%ddv = M_ZERO
