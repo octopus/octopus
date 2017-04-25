@@ -431,15 +431,15 @@ contains
     call zconstruct_orbital_basis(this, geo, gr%mesh, st)
   end if 
 
-  if(this%useACBN0) then
-    write(message(1),'(a)')    'Computing the Coulomb integrals localized orbital basis.'
-    call messages_info(1)
-    if (states_are_real(st)) then
-      call dcompute_coulomb_integrals(this, gr%mesh, gr%der, st)
-    else
-      call zcompute_coulomb_integrals(this, gr%mesh, gr%der, st)
-    end if
-  end if
+  !if(this%useACBN0) then
+  !  write(message(1),'(a)')    'Computing the Coulomb integrals localized orbital basis.'
+  !  call messages_info(1)
+  !  if (states_are_real(st)) then
+  !    call dcompute_coulomb_integrals(this, gr%mesh, gr%der, st)
+  !  else
+  !    call zcompute_coulomb_integrals(this, gr%mesh, gr%der, st)
+  !  end if
+  !end if
 
 
   call messages_print_stress(stdout)
