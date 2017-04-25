@@ -65,6 +65,7 @@ module lda_u_oct_m
        lda_u_init,                      &
        dlda_u_apply,                    &
        zlda_u_apply,                    &
+       lda_u_update_basis,              &
        lda_u_update_occ_matrices,       &
        lda_u_end,                       &
        lda_u_build_phase_correction,    &
@@ -171,11 +172,11 @@ contains
 
   ASSERT(.not. this%apply)
 
-  call messages_print_stress(stdout, "LDA+U")
+  call messages_print_stress(stdout, "DFT+U")
  
 !  if(st%parallel_in_states) call messages_not_implemented("lda+u parallel in states")
-  if(gr%mesh%parallel_in_domains) call messages_not_implemented("lda+u parallel in domains")
-  if(st%d%ispin == SPINORS) call messages_not_implemented("lda+u with spinors") 
+  if(gr%mesh%parallel_in_domains) call messages_not_implemented("dft+u parallel in domains")
+  if(st%d%ispin == SPINORS) call messages_not_implemented("dft+u with spinors") 
 
   this%apply = .true.
 
@@ -401,6 +402,51 @@ contains
 
    POP_SUB(lda_u_end)
  end subroutine lda_u_end
+
+ ! When moving the ions, the basis must be reconstructed
+ subroutine lda_u_update_basis(this, gr, geo, st)
+  type(lda_u_t),             intent(inout) :: this
+  type(grid_t),              intent(in)    :: gr
+  type(geometry_t), target,  intent(in)    :: geo
+  type(states_t),            intent(in)    :: st
+
+  integer :: iorbset
+
+  if(.not. this%apply) return
+
+  PUSH_SUB(lda_u_update_basis)
+
+  call messages_print_stress(stdout, "Updating DFT+U basis")
+
+  !We clean the orbital basis, to be able to reconstruct it
+  do iorbset = 1, this%norbsets
+    call orbital_set_end(this%orbsets(iorbset))
+  end do
+  SAFE_DEALLOCATE_P(this%orbsets)
+
+  !We now reconstruct the basis
+  if (states_are_real(st)) then
+    call dconstruct_orbital_basis(this, geo, gr%mesh, st)
+  else
+    call zconstruct_orbital_basis(this, geo, gr%mesh, st)
+  end if 
+
+  if(this%useACBN0) then
+    write(message(1),'(a)')    'Computing the Coulomb integrals localized orbital basis.'
+    call messages_info(1)
+    if (states_are_real(st)) then
+      call dcompute_coulomb_integrals(this, gr%mesh, gr%der, st)
+    else
+      call zcompute_coulomb_integrals(this, gr%mesh, gr%der, st)
+    end if
+  end if
+
+
+  call messages_print_stress(stdout)
+
+  POP_SUB(lda_u_update_basis)
+
+ end subroutine lda_u_update_basis
 
  ! Interface for the X(update_occ_matrices) routines
  subroutine lda_u_update_occ_matrices(this, mesh, st, hm_base, energy )

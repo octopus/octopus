@@ -27,6 +27,7 @@ module geom_opt_oct_m
   use io_oct_m
   use io_function_oct_m
   use lcao_oct_m
+  use lda_u_oct_m
   use loct_oct_m
   use parser_oct_m
   use mesh_oct_m
@@ -483,6 +484,8 @@ contains
     call simul_box_atoms_in_box(g_opt%syst%gr%sb, g_opt%geo, warn_if_not = .false., die_if_not = .true.)
 
     call geometry_write_xyz(g_opt%geo, './work-geom', append = .true.)
+
+    call lda_u_update_basis(g_opt%hm%lda_u, g_opt%syst%gr, g_opt%geo, g_opt%st)
 
     call scf_mix_clear(g_opt%scfv)
 
