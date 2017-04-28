@@ -80,7 +80,9 @@ module lda_u_oct_m
        lda_u_get_effectiveU,            &
        lda_u_set_effectiveU,            &
        dlda_u_commute_r,                &
-       zlda_u_commute_r
+       zlda_u_commute_r,                &
+       dlda_u_force,                    &
+       zlda_u_force
 
 
   type lda_u_t

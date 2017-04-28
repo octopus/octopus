@@ -46,6 +46,7 @@ module orbital_set_oct_m
   type orbital_set_t
     integer             :: nn, ll
     integer             :: norbs
+    integer             :: iatom 
     type(submesh_t)     :: sphere             !> The submesh of the orbital
     CMPLX, pointer      :: phase(:,:)         !> Correction to the global phase 
                                               !> if the sphere cross the border of the box

@@ -51,7 +51,7 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
 
     do ios = 1, this%norbsets 
       ! We have to compute 
-      ! hpsi> += sum_m |phi m> sum_m' Vmm' <phi m' | psi >
+      ! hpsi> += sum_m |phi m> sum_mp Vmmp <phi mp | psi >
       !
       ! We first compute <phi m | psi> for all orbitals of the atom
       !
@@ -71,7 +71,7 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
       !
       reduced2 = R_TOTYPE(M_ZERO)
       do im = 1, os%norbs
-        ! sum_m' Vmm' <phi m' | psi >
+        ! sum_mp Vmmp <phi mp | psi >
         reduced = R_TOTYPE(M_ZERO)
         do imp = 1, os%norbs
           reduced = reduced + this%X(V)(im,imp,ispin,ios)*dot(imp)
@@ -323,9 +323,9 @@ subroutine X(compute_dudarev_energy)(this, lda_u_energy, st)
       !TODO: These are matrix operations, that could be optimized
       do im = 1, this%orbsets(ios)%norbs
         do imp = 1, this%orbsets(ios)%norbs
-          lda_u_energy = lda_u_energy - CNST(0.5)*this%orbsets(ios)%Ueff*abs(this%X(n)(im,imp,ispin,ios))**2/st%smear%el_per_state
+          lda_u_energy = lda_u_energy + CNST(0.5)*this%orbsets(ios)%Ueff*abs(this%X(n)(im,imp,ispin,ios))**2/st%smear%el_per_state
         end do
-        lda_u_energy = lda_u_energy + CNST(0.5)*this%orbsets(ios)%Ueff*this%X(n)(im,im,ispin,ios)
+        lda_u_energy = lda_u_energy - CNST(0.5)*this%orbsets(ios)%Ueff*this%X(n)(im,im,ispin,ios)
       end do
     end do
   end do
@@ -814,7 +814,7 @@ end subroutine X(compute_coulomb_integrals)
 
    do ios = 1, this%norbsets
       ! We have to compute 
-      ! hpsi> += r sum_m |phi m> sum_m' Vmm' <phi m' | psi >
+      ! hpsi> += r sum_m |phi m> sum_mp Vmmp <phi mp | psi >
       !
       ! We first compute <phi m | psi> for all orbitals of the atom
       !
@@ -834,7 +834,7 @@ end subroutine X(compute_coulomb_integrals)
       end do
    
       do im = 1, os%norbs
-        ! sum_m' Vmm' <phi m' | psi >
+        ! sum_mp Vmmp <phi mp | psi >
         reduced = M_ZERO
         do imp = 1, os%norbs
           reduced = reduced + this%X(V)(im,imp,ispin,ios)*dot(imp)
@@ -940,6 +940,108 @@ end subroutine X(compute_coulomb_integrals)
    call profiling_out(prof)
  end subroutine X(lda_u_commute_r)
 
+ subroutine X(lda_u_force)(this, mesh, st, geo, iq, ndim, psib, grad_psib, force, phase)
+   type(lda_u_t),             intent(in)    :: this
+   type(mesh_t),              intent(in)    :: mesh 
+   type(states_t),            intent(in)    :: st
+   type(geometry_t),          intent(in)    :: geo
+   integer,                   intent(in)    :: iq, ndim
+   type(batch_t),             intent(in)    :: psib
+   type(batch_t),             intent(in)    :: grad_psib(:)
+   FLOAT,                     intent(inout) :: force(:, :)
+   logical,                   intent(in)    :: phase
+
+   integer :: ios, iatom, ibatch, ist, im, imp, ispin, idir
+   type(orbital_set_t), pointer  :: os
+   R_TYPE :: ff(1:ndim)
+   R_TYPE, allocatable :: psi(:,:), gpsi(:,:)
+   R_TYPE, allocatable :: dot(:), gdot(:,:), gradn(:,:,:,:)
+   FLOAT :: weight
+
+   if(.not. this%apply) return
+
+   PUSH_SUB(X(lda_u_force))
+
+   SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
+   SAFE_ALLOCATE(gpsi(1:mesh%np, 1:st%d%dim))
+   SAFE_ALLOCATE(dot(1:this%maxnorbs))
+   SAFE_ALLOCATE(gdot(1:this%maxnorbs,1:ndim))
+
+   ispin = states_dim_get_spin_index(st%d, iq)
+
+   do ios = 1, this%norbsets 
+     os => this%orbsets(ios)
+     iatom = os%iatom
+     ff(1:ndim) = M_ZERO
+
+     SAFE_ALLOCATE(gradn(1:os%norbs,1:os%norbs,1:this%nspins,1:ndim))
+     gradn(1:os%norbs,1:os%norbs,1:this%nspins,1:ndim) = M_ZERO
+
+     do ibatch = 1, psib%nst_linear
+       ist = batch_linear_to_ist(psib, ibatch) 
+       weight = st%d%kweights(iq)*st%occ(ist, iq)
+
+       call batch_get_state(psib, ibatch, mesh%np, psi)
+
+       !We first compute the matrix elemets <\psi | orb_m>
+       !taking into account phase correction if needed 
+       do im = 1, os%norbs
+         if(phase) then
+#ifdef R_TCOMPLEX
+           dot(im) = submesh_to_mesh_dotp(os%sphere, st%d%dim, os%orbitals(im)%eorb(1:os%sphere%np,iq), &
+                                               psi(1:mesh%np,1:st%d%dim))
+#endif
+         else
+           dot(im) = submesh_to_mesh_dotp(os%sphere, st%d%dim, os%orbitals(im)%X(orb), &
+                                               psi(1:mesh%np,1:st%d%dim))
+         end if
+       end do !im
+
+       do idir = 1, ndim
+         call batch_get_state(grad_psib(idir), ibatch, mesh%np, gpsi)     
+         !We first compute the matrix elemets <\psi | orb_m>
+         !taking into account phase correction if needed 
+         do im = 1, os%norbs
+           if(phase) then
+#ifdef R_TCOMPLEX
+             gdot(im,idir) = submesh_to_mesh_dotp(os%sphere, st%d%dim, os%orbitals(im)%eorb(1:os%sphere%np,iq), &
+                                               gpsi(1:mesh%np,1:st%d%dim))
+#endif
+           else
+             gdot(im,idir) = submesh_to_mesh_dotp(os%sphere, st%d%dim, os%orbitals(im)%X(orb), &
+                                               gpsi(1:mesh%np,1:st%d%dim))
+           end if
+         end do !im   
+       
+       do im = 1, os%norbs
+         gradn(1:os%norbs,im,ispin,idir) = gradn(1:os%norbs,im,ispin,idir) &
+                                        + weight*(R_CONJ(gdot(1:os%norbs,idir))*dot(im) &
+                                                 +gdot(im,idir)*R_CONJ(dot(1:os%norbs)))
+       end do 
+       end do !idir
+       
+     end do !ibatch
+
+     do ispin = 1, this%nspins
+       do im = 1, os%norbs
+         do imp = 1, os%norbs
+          ff(1:ndim) = ff(1:ndim) - this%X(n)(im,imp,ispin,ios)/st%smear%el_per_state*gradn(im,imp,ispin,1:ndim)
+         end do !imp
+        ff(1:ndim) = ff(1:ndim) + gradn(im, im, ispin,1:ndim)
+       end do !im
+     end do !ispin
+
+     SAFE_DEALLOCATE_A(gradn)
+   
+     force(1:ndim, iatom) = force(1:ndim, iatom) - CNST(0.5)*os%Ueff*ff(1:ndim)
+   end do
+
+   SAFE_DEALLOCATE_A(psi)
+   SAFE_DEALLOCATE_A(gpsi)
+
+   POP_SUB(X(lda_u_force))
+ end subroutine X(lda_u_force)
+
 ! ---------------------------------------------------------
 !> This routine is an interface for constructing the orbital basis.
 ! ---------------------------------------------------------
@@ -1015,6 +1117,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
       SAFE_ALLOCATE(os%orbitals(1:norb))
       os%Ueff = species_hubbard_u(geo%atom(ia)%species)
       os%spec => geo%atom(ia)%species
+      os%iatom = ia
       call submesh_null(os%sphere)
       norb = 0
       do iorb = 1, species_niwfs(geo%atom(ia)%species)
