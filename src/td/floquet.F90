@@ -128,7 +128,7 @@ contains
     !%Variable TDFloquetMode
     !%Type flag
     !%Default non_interacting
-    !%Section Time-Dependent::TD Output
+    !%Section Floquet
     !%Description
     !% Types of Floquet analysis performed when TDOutput=td_floquet
     !%Option none 0
@@ -161,12 +161,22 @@ contains
     end if
     
     if (this%mode == FLOQUET_INTERACTING)  this%sample = .true.
+    
+    !%Variable TDFloquetModeSampleOneCycle
+    !%Type logical
+    !%Default yes
+    !%Section Floquet
+    !%Description
+    !% Stop sampling Floquet Hamiltoninans after the first cycle.
+    !%End
+    call parse_variable('TDFloquetModeSampleOneCycle', .true., this%sample_one_only)
+    
 
 
     !%Variable TDFloquetFrequency
     !%Type float
     !%Default 0
-    !%Section Time-Dependent::TD Output
+    !%Section Floquet
     !%Description
     !% Frequency for the Floquet analysis, this should be the carrier
     !%frequency or integer multiples of it.
@@ -187,7 +197,7 @@ contains
     !%Variable TDFloquetMaximumSolverIterations
     !%Type integer
     !%Default 35
-    !%Section Time-Dependent::TD Output
+    !%Section Floquet
     !%Description
     !% Maximumn Number of calls to eigensolver for solving the Floquet Hamiltonian
     !%
@@ -199,7 +209,7 @@ contains
     !%Variable TDFloquetDimension
     !%Type integer
     !%Default -1
-    !%Section Time-Dependent::TD Output
+    !%Section Floquet
     !%Description
     !% Order of Floquet Hamiltonian. If negative number is given, downfolding
     !%is performed.
@@ -240,7 +250,7 @@ contains
     !%Variable TDFloquetSample
     !%Type integer
     !%Default TDFloquetDimension*3
-    !%Section Time-Dependent::TD Output
+    !%Section Floquet
     !%Description
     !% Number of points on which one Floquet cycle is sampled in the
     !%time-integral of the Floquet analysis.

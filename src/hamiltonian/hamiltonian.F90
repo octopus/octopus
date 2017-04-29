@@ -119,7 +119,7 @@ module hamiltonian_oct_m
     logical :: floquet_apply !< use action of the Floquet Hamiltonian
     integer :: nT, ncycle, interval, count, floquet_dim, spindim, order(2), mode
     integer :: max_solve_iter, iter
-    logical ::  downfolding, sample
+    logical ::  downfolding, sample, sample_one_only
     FLOAT :: omega, Tcycle, dt
     FLOAT, pointer :: frozen_distortion(:,:)
     logical :: is_parallel
