@@ -56,6 +56,7 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
       ! We first compute <phi m | psi> for all orbitals of the atom
       !
       os => this%orbsets(ios)
+ 
       do im = 1, os%norbs
         !If we need to add the phase, we explicitly do the operation using the sphere
         if(has_phase) then
@@ -973,13 +974,11 @@ end subroutine X(compute_coulomb_integrals)
    do ios = 1, this%norbsets 
      os => this%orbsets(ios)
      iatom = os%iatom
-     ff(1:ndim) = M_ZERO
 
      gradn(1:os%norbs,1:os%norbs,1:this%nspins,1:ndim) = M_ZERO
 
      do ibatch = 1, psib%nst_linear
        ist = batch_linear_to_ist(psib, ibatch) 
-       ispin = states_dim_get_spin_index(st%d, iq)
        weight = st%d%kweights(iq)*st%occ(ist, iq)
 
        call batch_get_state(psib, ibatch, mesh%np, psi)
@@ -1012,26 +1011,27 @@ end subroutine X(compute_coulomb_integrals)
              gdot(im,idir) = submesh_to_mesh_dotp(os%sphere, st%d%dim, os%orbitals(im)%X(orb), &
                                                gpsi(1:mesh%np,1:st%d%dim))
            end if
-       
+         end do !im 
+
+         do im = 1, os%norbs
            gradn(1:os%norbs,im,ispin,idir) = gradn(1:os%norbs,im,ispin,idir) &
                                         + weight*(R_CONJ(gdot(1:os%norbs,idir))*dot(im) &
                                                  +gdot(im,idir)*R_CONJ(dot(1:os%norbs)))
-         end do !im 
+         end do
        end do !idir
        
      end do !ibatch
 
-     do ispin = 1, this%nspins
-       do im = 1, os%norbs
-         do imp = 1, os%norbs
-          ff(1:ndim) = ff(1:ndim) - this%X(n)(im,imp,ispin,ios)/st%smear%el_per_state*gradn(im,imp,ispin,1:ndim)
-         end do !imp
-        ff(1:ndim) = ff(1:ndim) + gradn(im, im, ispin,1:ndim)
-       end do !im
-     end do !ispin
+     ff(1:ndim) = M_ZERO
+     do im = 1, os%norbs
+       do imp = 1, os%norbs
+        ff(1:ndim) = ff(1:ndim) - this%X(n)(im,imp,ispin,ios)/st%smear%el_per_state*gradn(im,imp,ispin,1:ndim)
+       end do !imp
+     ff(1:ndim) = ff(1:ndim) + gradn(im, im, ispin,1:ndim)
+     end do !im
 
      force(1:ndim, iatom) = force(1:ndim, iatom) - CNST(0.5)*os%Ueff*ff(1:ndim)
-   end do
+   end do !ios
 
    SAFE_DEALLOCATE_A(psi)
    SAFE_DEALLOCATE_A(gpsi)
@@ -1162,6 +1162,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
         SAFE_ALLOCATE(os%orbitals(1:os%norbs))
         os%Ueff = species_hubbard_u(geo%atom(ia)%species)
         os%spec => geo%atom(ia)%species
+        os%iatom = ia
         call submesh_null(os%sphere)        
  
         work2 = 0
