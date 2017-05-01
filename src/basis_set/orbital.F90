@@ -38,10 +38,6 @@ module orbital_oct_m
   type orbital_t
     FLOAT, pointer      :: dorb(:) !> The orbital, if real, on the submesh
     CMPLX, pointer      :: zorb(:) !> The orbital, if complex, on the submesh
-
-    FLOAT, pointer      :: dgradorb(:,:) !> Gradient of the orbital, on the full mesh
-    CMPLX, pointer      :: zgradorb(:,:) !> Gradient of the orbital, on the full mesh
-
     CMPLX, pointer      :: eorb(:,:) !> Orbitals with its phase factor
   end type orbital_t
 
@@ -55,8 +51,6 @@ contains
   nullify(this%dorb)
   nullify(this%zorb)
   nullify(this%eorb)
-  nullify(this%dgradorb)
-  nullify(this%zgradorb)
 
   POP_SUB(orbital_nullify)
 
@@ -80,8 +74,6 @@ contains
    SAFE_DEALLOCATE_P(this%dorb)
    SAFE_DEALLOCATE_P(this%zorb)
    SAFE_DEALLOCATE_P(this%eorb)
-   SAFE_DEALLOCATE_P(this%dgradorb)
-   SAFE_DEALLOCATE_P(this%zgradorb)
 
    POP_SUB(orbital_end)
  end subroutine orbital_end

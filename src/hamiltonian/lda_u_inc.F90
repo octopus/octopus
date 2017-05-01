@@ -966,6 +966,7 @@ end subroutine X(compute_coulomb_integrals)
    SAFE_ALLOCATE(gpsi(1:mesh%np, 1:st%d%dim))
    SAFE_ALLOCATE(dot(1:this%maxnorbs))
    SAFE_ALLOCATE(gdot(1:this%maxnorbs,1:ndim))
+   SAFE_ALLOCATE(gradn(1:this%maxnorbs,1:this%maxnorbs,1:this%nspins,1:ndim))
 
    ispin = states_dim_get_spin_index(st%d, iq)
 
@@ -974,11 +975,11 @@ end subroutine X(compute_coulomb_integrals)
      iatom = os%iatom
      ff(1:ndim) = M_ZERO
 
-     SAFE_ALLOCATE(gradn(1:os%norbs,1:os%norbs,1:this%nspins,1:ndim))
      gradn(1:os%norbs,1:os%norbs,1:this%nspins,1:ndim) = M_ZERO
 
      do ibatch = 1, psib%nst_linear
        ist = batch_linear_to_ist(psib, ibatch) 
+       ispin = states_dim_get_spin_index(st%d, iq)
        weight = st%d%kweights(iq)*st%occ(ist, iq)
 
        call batch_get_state(psib, ibatch, mesh%np, psi)
@@ -1011,13 +1012,11 @@ end subroutine X(compute_coulomb_integrals)
              gdot(im,idir) = submesh_to_mesh_dotp(os%sphere, st%d%dim, os%orbitals(im)%X(orb), &
                                                gpsi(1:mesh%np,1:st%d%dim))
            end if
-         end do !im   
        
-       do im = 1, os%norbs
-         gradn(1:os%norbs,im,ispin,idir) = gradn(1:os%norbs,im,ispin,idir) &
+           gradn(1:os%norbs,im,ispin,idir) = gradn(1:os%norbs,im,ispin,idir) &
                                         + weight*(R_CONJ(gdot(1:os%norbs,idir))*dot(im) &
                                                  +gdot(im,idir)*R_CONJ(dot(1:os%norbs)))
-       end do 
+         end do !im 
        end do !idir
        
      end do !ibatch
@@ -1031,13 +1030,14 @@ end subroutine X(compute_coulomb_integrals)
        end do !im
      end do !ispin
 
-     SAFE_DEALLOCATE_A(gradn)
-   
      force(1:ndim, iatom) = force(1:ndim, iatom) - CNST(0.5)*os%Ueff*ff(1:ndim)
    end do
 
    SAFE_DEALLOCATE_A(psi)
    SAFE_DEALLOCATE_A(gpsi)
+   SAFE_DEALLOCATE_A(dot)
+   SAFE_DEALLOCATE_A(gdot)
+   SAFE_DEALLOCATE_A(gradn)
 
    POP_SUB(X(lda_u_force))
  end subroutine X(lda_u_force)
