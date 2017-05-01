@@ -88,17 +88,34 @@ subroutine X(dsubmesh_add_to_mesh)(this, sphi, phi, factor)
   R_TYPE,           intent(inout) :: phi(:)
   R_TYPE, optional, intent(in)    :: factor
 
-  integer :: ip
+  integer :: ip, m
 
   PUSH_SUB(X(dsubmesh_add_to_mesh))
 
   if(present(factor)) then
-    do ip = 1, this%np
+    !Loop unrolling inspired from BLAS axpy routine
+    m = mod(this%np,4)
+    do ip = 1, m
       phi(this%map(ip)) = phi(this%map(ip)) + factor*sphi(ip)
     end do
+    if( this%np.lt.4) return
+    do ip = m+1, this%np, 4
+      phi(this%map(ip)) = phi(this%map(ip)) + factor*sphi(ip)
+      phi(this%map(ip+1)) = phi(this%map(ip+1)) + factor*sphi(ip+1)
+      phi(this%map(ip+2)) = phi(this%map(ip+2)) + factor*sphi(ip+2)
+      phi(this%map(ip+3)) = phi(this%map(ip+3)) + factor*sphi(ip+3)
+    end do
   else
-    do ip = 1, this%np
+    m = mod(this%np,4)
+    do ip = 1, m
       phi(this%map(ip)) = phi(this%map(ip)) + sphi(ip)
+    end do
+    if( this%np.lt.4) return
+    do ip = m+1, this%np, 4
+      phi(this%map(ip)) = phi(this%map(ip)) + sphi(ip)
+      phi(this%map(ip+1)) = phi(this%map(ip+1)) + sphi(ip+1)
+      phi(this%map(ip+2)) = phi(this%map(ip+2)) + sphi(ip+2)
+      phi(this%map(ip+3)) = phi(this%map(ip+3)) + sphi(ip+3)
     end do
   end if
 
