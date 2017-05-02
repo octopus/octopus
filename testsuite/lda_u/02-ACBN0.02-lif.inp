@@ -21,7 +21,7 @@ PseudopotentialSet = hscv_lda
 
 %ReducedCoordinates
  "Li" | 0.0 | 0.0 | 0.0
- "F"  | a/4 | a/4 | a/4
+ "F"  | 1/4 | 1/4 | 1/4
 %
 
 Spacing = 0.4
