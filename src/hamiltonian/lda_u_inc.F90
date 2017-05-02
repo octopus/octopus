@@ -324,9 +324,9 @@ subroutine X(compute_dudarev_energy)(this, lda_u_energy, st)
       !TODO: These are matrix operations, that could be optimized
       do im = 1, this%orbsets(ios)%norbs
         do imp = 1, this%orbsets(ios)%norbs
-          lda_u_energy = lda_u_energy + CNST(0.5)*this%orbsets(ios)%Ueff*abs(this%X(n)(im,imp,ispin,ios))**2/st%smear%el_per_state
+          lda_u_energy = lda_u_energy - CNST(0.5)*this%orbsets(ios)%Ueff*abs(this%X(n)(im,imp,ispin,ios))**2/st%smear%el_per_state
         end do
-        lda_u_energy = lda_u_energy - CNST(0.5)*this%orbsets(ios)%Ueff*this%X(n)(im,im,ispin,ios)
+        lda_u_energy = lda_u_energy + CNST(0.5)*this%orbsets(ios)%Ueff*this%X(n)(im,im,ispin,ios)
       end do
     end do
   end do
