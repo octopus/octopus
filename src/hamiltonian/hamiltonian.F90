@@ -122,7 +122,8 @@ module hamiltonian_oct_m
     logical ::  downfolding, sample, sample_one_only
     FLOAT :: omega, Tcycle, dt
     FLOAT, pointer :: frozen_distortion(:,:)
-    logical :: is_parallel
+    logical :: is_parallel 
+    logical :: calc_occupations
     type(mpi_grp_t) :: mpi_grp
     type(distributed_t) :: flat_idx
     integer, pointer :: idx_map(:,:)
