@@ -1074,7 +1074,7 @@ contains
     integer, optional,   intent(in)  :: idx
 
     integer :: iunit, err, err2(2), isp
-    character(len=12) :: filename
+    character(len=120) :: filename
     character(len=100) :: lines(2)
 
     PUSH_SUB(hamiltonian_dump_vhxc)
@@ -1183,7 +1183,7 @@ contains
     
 
     integer :: err, err2, isp
-    character(len=12) :: filename
+    character(len=120) :: filename
     CMPLX, allocatable :: zv(:)
 
     PUSH_SUB(hamiltonian_load_vhxc)
