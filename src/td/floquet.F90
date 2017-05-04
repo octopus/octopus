@@ -831,7 +831,8 @@ contains
          write(filename,'(I5)') iter !hm%F_count
          if (simul_box_is_periodic(gr%sb)) then
            filename = 'floquet_multibands_'//trim(adjustl(filename))
-           call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, gr%sb, filename)
+           call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, gr%sb, filename, &
+                                           write_occ = hm%F%calc_occupations .and. have_gs)
          else
            filename = FLOQUET_DIR//'/floquet_eigenvalues_'//trim(adjustl(filename))
            call states_write_eigenvalues(filename, dressed_st%nst, dressed_st, gr%sb, eigens%diff)
@@ -896,7 +897,7 @@ contains
 
         do ia=dressed_st%st_start,dressed_st%st_end
           call states_get_state(dressed_st, mesh, ia, ik, u_ma)
-          dressed_st%occ(ia,:) = M_ZERO 
+          dressed_st%occ(ia,ik) = M_ZERO 
           
           do ist=gs_st%st_start,gs_st%st_end
             call states_get_state(gs_st, mesh, ist, ik, psi)
@@ -914,7 +915,7 @@ contains
             end do 
             if(hm%F%is_parallel) call comm_allreduce(hm%F%mpi_grp%comm, tmp(:))   
             
-            dressed_st%occ(ia,:) = dressed_st%occ(ia,:) + abs(tmp(:))**2 * gs_st%occ(ist,:)
+            dressed_st%occ(ia,ik) = dressed_st%occ(ia,ik) + abs(sum(tmp(:)))**2 * gs_st%occ(ist,ik)
 !             print *, ist, "gs_st%occ(ist,:) =", gs_st%occ(ist,:)
 !             print *, tmp(:)
             
