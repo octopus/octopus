@@ -115,20 +115,10 @@ contains
     
 
 
-    
-    
-
-    this%is_parallel = multicomm_strategy_is_parallel(sys%mc, P_STRATEGY_OTHER)
-    if(this%is_parallel) then
-      call mpi_grp_init(this%mpi_grp, sys%mc%group_comm(P_STRATEGY_OTHER))
-    else
-      call mpi_grp_init(this%mpi_grp, -1)
-    end if
-
     !%Variable TDFloquetMode
     !%Type flag
     !%Default non_interacting
-    !%Section Time-Dependent::TD Output
+    !%Section Floquet
     !%Description
     !% Types of Floquet analysis performed when TDOutput=td_floquet
     !%Option none 0
@@ -148,6 +138,16 @@ contains
       POP_SUB(floquet_init)
       return
     end if 
+    
+    ! Init mpi communicators
+    this%is_parallel = multicomm_strategy_is_parallel(sys%mc, P_STRATEGY_OTHER)
+    if(this%is_parallel) then
+      call mpi_grp_init(this%mpi_grp, sys%mc%group_comm(P_STRATEGY_OTHER))
+    else
+      call mpi_grp_init(this%mpi_grp, -1)
+    end if
+    
+    
 
     call messages_print_stress(stdout, 'Floquet')
     call messages_print_var_option(stdout, 'TDFloquetMode',  this%mode)
@@ -161,12 +161,33 @@ contains
     end if
     
     if (this%mode == FLOQUET_INTERACTING)  this%sample = .true.
+    
+    !%Variable TDFloquetModeSampleOneCycle
+    !%Type logical
+    !%Default yes
+    !%Section Floquet
+    !%Description
+    !% Stop sampling Floquet Hamiltoninans after the first cycle.
+    !%End
+    call parse_variable('TDFloquetModeSampleOneCycle', .true., this%sample_one_only)
+    call messages_print_var_value(stdout,'TDFloquetModeSampleOneCycle',  this%sample_one_only)
+
+
+    !%Variable TDFloquetModeCalcOccupations
+    !%Type logical
+    !%Default No
+    !%Section Floquet
+    !%Description
+    !% Calculate occupations of Floquet states.
+    !%End
+    call parse_variable('TDFloquetModeCalcOccupations', .false., this%calc_occupations)
+    call messages_print_var_value(stdout,'Calculate occupations',  this%calc_occupations)
 
 
     !%Variable TDFloquetFrequency
     !%Type float
     !%Default 0
-    !%Section Time-Dependent::TD Output
+    !%Section Floquet
     !%Description
     !% Frequency for the Floquet analysis, this should be the carrier
     !%frequency or integer multiples of it.
@@ -187,7 +208,7 @@ contains
     !%Variable TDFloquetMaximumSolverIterations
     !%Type integer
     !%Default 35
-    !%Section Time-Dependent::TD Output
+    !%Section Floquet
     !%Description
     !% Maximumn Number of calls to eigensolver for solving the Floquet Hamiltonian
     !%
@@ -199,7 +220,7 @@ contains
     !%Variable TDFloquetDimension
     !%Type integer
     !%Default -1
-    !%Section Time-Dependent::TD Output
+    !%Section Floquet
     !%Description
     !% Order of Floquet Hamiltonian. If negative number is given, downfolding
     !%is performed.
@@ -240,7 +261,7 @@ contains
     !%Variable TDFloquetSample
     !%Type integer
     !%Default TDFloquetDimension*3
-    !%Section Time-Dependent::TD Output
+    !%Section Floquet
     !%Description
     !% Number of points on which one Floquet cycle is sampled in the
     !%time-integral of the Floquet analysis.
@@ -267,7 +288,6 @@ contains
     call messages_print_var_value(stdout,'Steps in Floquet time-sampling interval',  this%interval)
     call messages_print_var_value(stdout,'Steps in Floquet time-sampling cycle',  this%ncycle)
 
-    !call distributed_init(this%time,this%nT,sys%mc%group_comm(P_STRATEGY_OTHER),"Floquet-Sampling")
     ! distribute the stacked loop of the Floquet-Hamiltonian
     call distributed_init(this%flat_idx,this%nT*this%floquet_dim,sys%mc%group_comm(P_STRATEGY_OTHER),"Floquet-flat-index")
     SAFE_ALLOCATE(this%idx_map(this%nT*this%floquet_dim,2))
@@ -353,7 +373,7 @@ contains
 
          write(filename,'(I5)') it
          filename = 'BO_bands_'//trim(adjustl(filename))
-         call states_write_bandstructure('td.general', st%nst, st, gr%sb, filename)
+         call states_write_bandstructure(FLOQUET_DIR, st%nst, st, gr%sb, filename)
 
          call floquet_save_td_hamiltonian(this%td_hm(it), sys, it)
 
@@ -384,7 +404,7 @@ contains
      if(this%F%mode == FLOQUET_FROZEN_PHONON) then
         st%eigenval(1:st%nst,1:gr%sb%kpoints%reduced%npoints) = frozen_bands(1:st%nst,1:gr%sb%kpoints%reduced%npoints)
         filename = 'frozen_bands'
-        call states_write_bandstructure('td.general', st%nst, st, gr%sb, filename)
+        call states_write_bandstructure(FLOQUET_DIR, st%nst, st, gr%sb, filename)
      end if
 
 
@@ -659,7 +679,7 @@ contains
       call floquet_restart_dressed_st(hm, sys, dressed_st, ierr, fromScratch)
       
       if(ierr == 0 .and. .not. fromScratch) then
-         call calc_floquet_norms(gr%der%mesh,gr%sb%kpoints,st,dressed_st,iter,hm%F%floquet_dim)
+         call floquet_calc_norms(gr%der%mesh,gr%sb%kpoints,st,dressed_st,iter,hm%F%floquet_dim)
          call states_berry_connection(FLOQUET_DIR,'floquet_berry_connection',dressed_st, gr,gr%sb)
       else
 
@@ -731,7 +751,7 @@ contains
       type(states_t), intent(inout)      :: dressed_st
         
 
-      logical :: converged
+      logical :: converged, have_gs
       integer :: iter , maxiter, ik, in, im, ist, idim, ierr, nik, dim, nst
       type(eigensolver_t) :: eigens
       type(restart_t) :: restart
@@ -760,6 +780,25 @@ contains
       call eigensolver_init(eigens, gr, dressed_st)
       eigens%converged(:) = 0
 
+      have_gs= .false.
+      if (hm%F%calc_occupations) then
+        message(1) = 'Info: Read ground-state wavefunctions to calculate occupations.'
+         call messages_info(1)
+        
+        call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+
+        if(ierr == 0) call states_load(restart, sys%st, sys%gr, ierr, label = ": gs")
+        if (ierr /= 0) then
+          message(1) = 'Unable to read ground-state wavefunctions.'
+          message(2) = 'Occupations will not be calculated.'
+          call messages_warning(2)
+        else  
+          have_gs = .true.
+        end if
+        call restart_end(restart)
+      end if
+
+
       converged=.false.
       maxiter = hm%F%max_solve_iter
       itime = loct_clock()
@@ -768,11 +807,16 @@ contains
          call messages_print_stress(stdout, trim(msg))
         
          call eigensolver_run(eigens, gr, dressed_st, hm, 1,converged)
+         
+         if (hm%F%calc_occupations .and. have_gs) then
+           call floquet_calc_occupations(hm, sys, dressed_st)
+         end if 
+         
          call smear_find_fermi_energy(dressed_st%smear, dressed_st%eigenval, dressed_st%occ, dressed_st%qtot, &
            dressed_st%d%nik, dressed_st%nst, dressed_st%d%kweights)
          
          
-         call calc_floquet_norms(gr%der%mesh,gr%sb%kpoints,st,dressed_st,iter,hm%F%floquet_dim)
+         call floquet_calc_norms(gr%der%mesh,gr%sb%kpoints,st,dressed_st,iter,hm%F%floquet_dim)
          
 
          write(message(1),'(a,i6)') 'Converged eigenvectors: ', sum(eigens%converged(1:st%d%nik))
@@ -789,7 +833,8 @@ contains
          write(filename,'(I5)') iter !hm%F_count
          if (simul_box_is_periodic(gr%sb)) then
            filename = 'floquet_multibands_'//trim(adjustl(filename))
-           call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, gr%sb, filename)
+           call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, gr%sb, filename, &
+                                           write_occ = hm%F%calc_occupations .and. have_gs)
          else
            filename = FLOQUET_DIR//'/floquet_eigenvalues_'//trim(adjustl(filename))
            call states_write_eigenvalues(filename, dressed_st%nst, dressed_st, gr%sb, eigens%diff)
@@ -820,7 +865,85 @@ contains
     end subroutine floquet_hamiltonian_run_solver
 
 
-    subroutine calc_floquet_norms(mesh,kpoints,st,dressed_st,iter,floquet_dim)
+    !--------------------------------------------
+    subroutine floquet_calc_occupations(hm, sys, dressed_st)
+      type(hamiltonian_t), intent(inout) :: hm
+      type(system_t), intent(inout)      :: sys
+      type(states_t), intent(inout)      :: dressed_st
+
+      CMPLX, allocatable :: u_ma(:,:),  psi(:,:), tmp(:)
+      FLOAT :: omega, dt 
+      integer :: idx, im, it, ist, idim, nT, ik, ia, Fdim(2), imm
+      
+      type(states_t), pointer :: gs_st
+      type(mesh_t),   pointer :: mesh
+
+
+      PUSH_SUB(floquet_calc_occupations)
+
+      mesh  => sys%gr%der%mesh
+      gs_st => sys%st
+      
+      dt=hm%F%dt
+      nT=hm%F%nT
+      omega=hm%F%omega
+      Fdim(:)=hm%F%order(:)
+
+
+      SAFE_ALLOCATE(psi(1:mesh%np,gs_st%d%dim))
+      SAFE_ALLOCATE(u_ma(1:mesh%np,hm%F%floquet_dim))
+      SAFE_ALLOCATE(tmp(gs_st%d%dim))
+
+
+      do ik=dressed_st%d%kpt%start,dressed_st%d%kpt%end
+
+        do ia=dressed_st%st_start,dressed_st%st_end
+          call states_get_state(dressed_st, mesh, ia, ik, u_ma)
+          dressed_st%occ(ia,ik) = M_ZERO 
+          
+          do ist=gs_st%st_start,gs_st%st_end
+            call states_get_state(gs_st, mesh, ist, ik, psi)
+            
+            tmp(:) = M_ZERO
+            do idx=hm%F%flat_idx%start, hm%F%flat_idx%end
+               it = hm%F%idx_map(idx,1)
+               im = hm%F%idx_map(idx,2)
+               imm = im - Fdim(1) + 1
+               do idim=1,gs_st%d%dim
+                 tmp(idim)  =  tmp(idim) + exp(-M_zI*im*omega*it*dt)/nT * zmf_dotp(mesh, psi(1:mesh%np,idim), &
+                                                                          u_ma(1:mesh%np,(imm-1)*gs_st%d%dim+idim))
+               end do
+               
+            end do 
+            if(hm%F%is_parallel) call comm_allreduce(hm%F%mpi_grp%comm, tmp(:))   
+            
+            dressed_st%occ(ia,ik) = dressed_st%occ(ia,ik) + abs(sum(tmp(:)))**2 * gs_st%occ(ist,ik)
+!             print *, ist, "gs_st%occ(ist,:) =", gs_st%occ(ist,:)
+!             print *, tmp(:)
+            
+          enddo
+        enddo
+      enddo
+      
+      print *, "occsum = ", sum(dressed_st%occ(:,1))
+      print *, "gs_occsum = ", sum(gs_st%occ(:,1))
+
+
+      
+
+      
+      SAFE_DEALLOCATE_A(tmp)
+      SAFE_DEALLOCATE_A(psi)
+      SAFE_DEALLOCATE_A(u_ma)
+    
+      POP_SUB(floquet_calc_occupations)
+    
+    end subroutine floquet_calc_occupations
+    
+
+
+    !--------------------------------------------
+    subroutine floquet_calc_norms(mesh,kpoints,st,dressed_st,iter,floquet_dim)
       type(mesh_t), intent(in) :: mesh
       type(kpoints_t), intent(in) :: kpoints
       type(states_t), intent(in) :: st,dressed_st
@@ -877,7 +1000,7 @@ contains
       SAFE_DEALLOCATE_A(temp_state2)
       SAFE_DEALLOCATE_A(norms)
       
-    end subroutine calc_floquet_norms
+    end subroutine floquet_calc_norms
     !---------------------------------------
     !subroutine floquet_end()
 

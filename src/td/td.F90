@@ -498,10 +498,13 @@ contains
       
           ! In case a cycle is complete exit
           if(mod(iter,hm%F%ncycle)==0) then
-            message(1) = 'Info: Done sampling Hamiltoninans for Floquet analysis'
-            message(2) = '      Time propagation will finish'
-            call messages_info(2)
-            stopping = .true.
+            message(1) = 'Info: Done sampling a Floquet cycle'
+            call messages_info(1)
+            if(hm%F%sample_one_only) then
+              message(1) = '      Time propagation will finish'
+              call messages_info(1)
+              stopping = .true.
+            end if
           end if
         end if
       end if      
