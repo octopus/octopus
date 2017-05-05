@@ -355,6 +355,8 @@ contains
          filename = 'BO_bands_'//trim(adjustl(filename))
          call states_write_bandstructure('td.general', st%nst, st, gr%sb, filename)
 
+         call floquet_save_td_hamiltonian(this%td_hm(it), sys, it)
+
        case(FLOQUET_NON_INTERACTING)
          call geometry_copy(this%td_hm(it)%geo, this%geo)
           
