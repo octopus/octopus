@@ -989,8 +989,8 @@ contains
     type(states_t),    intent(in) :: st
     type(simul_box_t), intent(in) :: sb
     character(len=*) :: filename
-    logical, optional :: vec(:,:)           ! optional observable to be printed together  with the bandstrucure
-                                            ! it must have the same structure as st%eigenval(:,:)
+    FLOAT, optional :: vec(:,:)           ! optional observable to be printed together  with the bandstrucure
+                                          ! it must have the same structure as st%eigenval(:,:)
 
     integer :: idir, ist, ik, ns, is,npath
     integer, allocatable :: iunit(:)
