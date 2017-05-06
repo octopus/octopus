@@ -175,12 +175,12 @@ contains
 
     !%Variable TDFloquetModeCalcOccupations
     !%Type logical
-    !%Default No
+    !%Default yes
     !%Section Floquet
     !%Description
     !% Calculate occupations of Floquet states.
     !%End
-    call parse_variable('TDFloquetModeCalcOccupations', .false., this%calc_occupations)
+    call parse_variable('TDFloquetModeCalcOccupations', .true., this%calc_occupations)
     call messages_print_var_value(stdout,'Calculate occupations',  this%calc_occupations)
 
 
