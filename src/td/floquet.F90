@@ -846,7 +846,7 @@ contains
          if (hm%F%calc_pes) then
            SAFE_ALLOCATE(spect(dressed_st%nst,dressed_st%d%nik))
            SAFE_ALLOCATE(me(dressed_st%nst,dressed_st%d%nik))
-           call floquet_photoelectron_spectrum(hm, sys, st, hm%F%pes_omega, hm%F%pol, spect, me)
+           call floquet_photoelectron_spectrum(hm, sys, dressed_st, hm%F%pes_omega, hm%F%pol, spect, me)
          end if
          
          call floquet_calc_norms(gr%der%mesh,gr%sb%kpoints,st,dressed_st,iter,hm%F%floquet_dim)
@@ -1024,7 +1024,7 @@ contains
         kpt(1:dim) = kpoints_get_point(mesh%sb%kpoints, ik) 
 
         do ia=st%st_start, st%st_end
-          qq(dim)    = pomega - st%eigenval(ia,ik) - sum(kpt(1:dim)**2)*M_HALF
+          qq(dim)    = pomega - st%eigenval(ia,ik) - sum(kpt(1:pdim)**2)*M_HALF
           qq(1:pdim) = kpt(1:pdim)  
           
           do ip=1, mesh%np
