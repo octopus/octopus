@@ -1024,7 +1024,7 @@ contains
         kpt(1:dim) = kpoints_get_point(mesh%sb%kpoints, ik) 
 
         do ia=st%st_start, st%st_end
-          qq(dim)    = pomega - st%eigenval(ia,ik) - sum(kpt(1:dim)**2)
+          qq(dim)    = pomega - st%eigenval(ia,ik) - sum(kpt(1:dim)**2)*M_HALF
           qq(1:pdim) = kpt(1:pdim)  
           
           do ip=1, mesh%np
@@ -1033,7 +1033,6 @@ contains
           end do
           
           call states_get_state(st, mesh, ia, ik, u_ma)
-          me(ia,ik) = M_ZERO 
           
           tmp(:) = M_ZERO
           do idx=hm%F%flat_idx%start, hm%F%flat_idx%end
@@ -1048,9 +1047,9 @@ contains
           end do 
           if(hm%F%is_parallel) call comm_allreduce(hm%F%mpi_grp%comm, tmp(:))   
           
-          me(ia,ik) = sum(abs(tmp(1:2))**2) * abs(sum((hm%F%pol(1:dim)*qq(dim))**2) )**2
+          me(ia,ik) = sum(abs(tmp(:))**2) * sum((hm%F%pol(1:dim)*qq(dim)))**2
           
-          spect(ia,ik) =  spect(ia,ik)*st%occ(ia,ik)
+          spect(ia,ik) =  spect(ia,ik) * st%occ(ia,ik)
             
         end do
       end do
