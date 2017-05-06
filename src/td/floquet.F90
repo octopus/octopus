@@ -833,7 +833,7 @@ contains
            filename = 'floquet_multibands_'//trim(adjustl(filename))
            
            if (hm%F%calc_occupations .and. have_gs) then                                 
-             call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, gr%sb, filename, vec = states%occ)
+             call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, gr%sb, filename, vec = dressed_st%occ)
            else 
              call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, gr%sb, filename)
            end if
