@@ -120,10 +120,11 @@ module hamiltonian_oct_m
     integer :: nT, ncycle, interval, count, floquet_dim, spindim, order(2), mode
     integer :: max_solve_iter, iter
     logical ::  downfolding, sample, sample_one_only
-    FLOAT :: omega, Tcycle, dt
+    FLOAT :: omega, Tcycle, dt, pes_omega, pol(1:MAX_DIM)
     FLOAT, pointer :: frozen_distortion(:,:)
     logical :: is_parallel 
     logical :: calc_occupations
+    logical :: calc_pes    
     type(mpi_grp_t) :: mpi_grp
     type(distributed_t) :: flat_idx
     integer, pointer :: idx_map(:,:)
