@@ -1049,7 +1049,7 @@ contains
           
           me(ia,ik) = sum(abs(tmp(:))**2) * sum((hm%F%pol(1:dim)*qq(dim)))**2
           
-          spect(ia,ik) =  spect(ia,ik) * st%occ(ia,ik)
+          spect(ia,ik) =  me(ia,ik) * st%occ(ia,ik)
             
         end do
       end do
