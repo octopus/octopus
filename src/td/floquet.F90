@@ -999,7 +999,7 @@ contains
 
       CMPLX, allocatable :: u_ma(:,:),  phase(:), tmp(:)
       FLOAT :: omega, dt , qq(1:3), kpt(1:3), xx(1:MAX_DIM)
-      integer :: idx, im, it, ist, idim, nT, ik, ia, Fdim(2), imm, dim, pdim, ip
+      integer :: idx, im, it, ist, idim, nT, ik, ia, Fdim(2), imm, dim, pdim, ip, spindim
 
       type(mesh_t),   pointer :: mesh
 
@@ -1011,6 +1011,7 @@ contains
       nT=hm%F%nT
       omega=hm%F%omega
       Fdim(:)=hm%F%order(:)
+      spindim = hm%F%spindim 
       
       dim = mesh%sb%dim
       pdim = mesh%sb%periodic_dim
@@ -1040,9 +1041,9 @@ contains
             it = hm%F%idx_map(idx,1)
             im = hm%F%idx_map(idx,2)
             imm = im - Fdim(1) + 1
-            do idim=1,st%d%dim
+            do idim=1,spindim
               tmp(idim)  =  tmp(idim) + exp(-M_zI*im*omega*it*dt)/nT * &
-                            zmf_integrate(mesh, phase(1:mesh%np)*u_ma(1:mesh%np,(imm-1)*st%d%dim+idim))
+                            zmf_integrate(mesh, phase(1:mesh%np)*u_ma(1:mesh%np,(imm-1)*spindim+idim))
             end do
              
           end do 
