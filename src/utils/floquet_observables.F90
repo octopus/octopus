@@ -91,12 +91,13 @@ program floquet_observables
   call messages_init()  
   call io_init()
   call calc_mode_par_init()
+  call calc_mode_par_set_parallelization(P_STRATEGY_OTHER, default = .true.)
 
   call fft_all_init()
   call unit_system_init()
   
   call system_init(sys)
-  
+
 
   call floquet_init(sys,hm%F,sys%st%d%dim)
   gs_st => sys%st
