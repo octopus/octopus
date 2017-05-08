@@ -112,7 +112,8 @@ module states_oct_m
     cmplx_array2_t,                   &
     states_count_pairs,               &
     occupied_states,                  &
-    states_type
+    states_type,                      &
+    state_spin
 
   !>cmplxscl: complex 2D matrices 
   type cmplx_array2_t    

@@ -403,6 +403,8 @@ contains
          filename = 'BO_bands_'//trim(adjustl(filename))
          call states_write_bandstructure(FLOQUET_DIR, st%nst, st, gr%sb, filename)
 
+         call floquet_save_td_hamiltonian(this%td_hm(it), sys, it)
+
        case(FLOQUET_NON_INTERACTING)
          call geometry_copy(this%td_hm(it)%geo, this%geo)
           
@@ -718,12 +720,11 @@ contains
           call messages_warning(2)
         end if
         call restart_end(restart)
-
         ! only use gs states for init, if they are not distributed
         if(.not. st%parallel_in_states .and. ierr == 0 ) then
             ! initialize floquet states from scratch
             SAFE_ALLOCATE(temp_state1(1:gr%der%mesh%np,st%d%dim))
-            SAFE_ALLOCATE(temp_state2(1:gr%der%mesh%np,hm%F%floquet_dim))
+            SAFE_ALLOCATE(temp_state2(1:gr%der%mesh%np,hm%F%floquet_dim*st%d%dim))
        
             do ik=st%d%kpt%start,st%d%kpt%end
                do in=1,hm%F%floquet_dim
@@ -742,11 +743,11 @@ contains
          else
             ! randomize
             SAFE_ALLOCATE(temp_state1(1:gr%der%mesh%np,st%d%dim))
-            SAFE_ALLOCATE(temp_state2(1:gr%der%mesh%np,hm%F%floquet_dim))
+            SAFE_ALLOCATE(temp_state2(1:gr%der%mesh%np,hm%F%floquet_dim*st%d%dim))
             do ik=st%d%kpt%start,st%d%kpt%end
                do ist=dressed_st%st_start,dressed_st%st_end
 
-                  do in=1,hm%F%floquet_dim  
+                  do in=1,hm%F%floquet_dim*st%d%dim  
                      if(dressed_st%randomization == PAR_INDEPENDENT) then
                         call zmf_random(gr%der%mesh, temp_state2(:,in), gr%der%mesh%vp%xlocal-1, &
                              seed=mpi_world%rank, normalized= .true.)
@@ -939,7 +940,7 @@ contains
 
 
       SAFE_ALLOCATE(psi(1:mesh%np,gs_st%d%dim))
-      SAFE_ALLOCATE(u_ma(1:mesh%np,hm%F%floquet_dim))
+      SAFE_ALLOCATE(u_ma(1:mesh%np,hm%F%floquet_dim*hm%F%spindim))
       SAFE_ALLOCATE(tmp(gs_st%d%dim))
 
 
@@ -1018,7 +1019,7 @@ contains
       
       SAFE_ALLOCATE(phase(1:mesh%np))
       SAFE_ALLOCATE(u_ma(1:mesh%np,hm%F%floquet_dim))
-      SAFE_ALLOCATE(tmp(st%d%dim))
+      SAFE_ALLOCATE(tmp(spindim))
   
       kpt(:) = M_ZERO
       qq(:)  = M_ZERO
@@ -1049,12 +1050,16 @@ contains
           end do 
           if(hm%F%is_parallel) call comm_allreduce(hm%F%mpi_grp%comm, tmp(:))   
           
-          me(ia,ik) = sum(abs(tmp(:))**2) * sum((hm%F%pol(1:dim)*qq(dim)))**2
+          me(ia,ik) = sum(abs(tmp(:))**2) * sum((pol(1:dim)*qq(dim)))**2
           
           spect(ia,ik) =  me(ia,ik) * st%occ(ia,ik)
             
         end do
       end do
+      
+      call comm_allreduce(st%st_kpt_mpi_grp%comm, me)
+      call comm_allreduce(st%st_kpt_mpi_grp%comm, spect)
+      
       
       SAFE_DEALLOCATE_A(tmp)
       SAFE_DEALLOCATE_A(phase)
@@ -1080,7 +1085,7 @@ contains
       character(len=1024):: ik_name,iter_name, filename
 
       SAFE_ALLOCATE(temp_state1(1:mesh%np,st%d%dim))
-      SAFE_ALLOCATE(temp_state2(1:mesh%np,floquet_dim))
+      SAFE_ALLOCATE(temp_state2(1:mesh%np,floquet_dim*st%d%dim))
       SAFE_ALLOCATE(norms(1:kpoints%reduced%npoints,1:dressed_st%nst,floquet_dim))
 
       norms = M_ZERO
