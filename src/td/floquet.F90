@@ -844,13 +844,13 @@ contains
          call smear_find_fermi_energy(dressed_st%smear, dressed_st%eigenval, dressed_st%occ, dressed_st%qtot, &
            dressed_st%d%nik, dressed_st%nst, dressed_st%d%kweights)
         
-         if (hm%F%calc_pes) then
-           SAFE_ALLOCATE(spect(dressed_st%nst,dressed_st%d%nik))
-           SAFE_ALLOCATE(me(dressed_st%nst,dressed_st%d%nik))
-           call floquet_photoelectron_spectrum(hm, sys, dressed_st, hm%F%pes_omega, hm%F%pol, spect, me)
-         end if
-         
-         call floquet_calc_norms(gr%der%mesh,gr%sb%kpoints,st,dressed_st,iter,hm%F%floquet_dim)
+!          if (hm%F%calc_pes) then
+!            SAFE_ALLOCATE(spect(dressed_st%nst,dressed_st%d%nik))
+!            SAFE_ALLOCATE(me(dressed_st%nst,dressed_st%d%nik))
+!            call floquet_photoelectron_spectrum(hm, sys, dressed_st, hm%F%pes_omega, hm%F%pol, spect, me)
+!          end if
+!
+!          call floquet_calc_norms(gr%der%mesh,gr%sb%kpoints,st,dressed_st,iter,hm%F%floquet_dim)
          
 
          write(message(1),'(a,i6)') 'Converged eigenvectors: ', sum(eigens%converged(1:st%d%nik))
@@ -874,18 +874,18 @@ contains
              call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, gr%sb, filename)
            end if
                      
-           if (hm%F%calc_pes) then
-              filename = 'floquet_arpes_me_'//trim(adjustl(iterstr))
-              call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, gr%sb, filename, vec = me)
-
-              filename = 'floquet_arpes_'//trim(adjustl(iterstr))
-              call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, gr%sb, filename, vec = spect)
-           end if
-                                           
-         else
-           filename = FLOQUET_DIR//'/floquet_eigenvalues_'//trim(adjustl(iterstr))
-           call states_write_eigenvalues(filename, dressed_st%nst, dressed_st, gr%sb, eigens%diff)
+!            if (hm%F%calc_pes) then
+!               filename = 'floquet_arpes_me_'//trim(adjustl(iterstr))
+!               call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, gr%sb, filename, vec = me)
+!
+!               filename = 'floquet_arpes_'//trim(adjustl(iterstr))
+!               call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, gr%sb, filename, vec = spect)
+!            end if
          end if
+         
+         filename = FLOQUET_DIR//'/floquet_eigenvalues_'//trim(adjustl(iterstr))
+         call states_write_eigenvalues(filename, dressed_st%nst, dressed_st, gr%sb, eigens%diff)
+         
          call restart_init(restart, RESTART_FLOQUET, RESTART_TYPE_DUMP, &
                            sys%mc, ierr, gr%der%mesh)
          call states_dump(restart, dressed_st, gr, ierr, iter)
