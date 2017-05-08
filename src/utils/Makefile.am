@@ -207,6 +207,7 @@ oct_floquet_LDADD = $(top_builddir)/src/td/libtd.a \
 
 oct_floquet_observables_SOURCES = floquet_observables.F90 
 oct_floquet_observables_LDADD = $(top_builddir)/src/td/libtd.a \
+                                   $(top_builddir)/src/scf/libscf.a \
                                    $(top_builddir)/src/system/libsystem.a \
                                    $(top_builddir)/src/hamiltonian/libhamiltonian.a \
                                    $(top_builddir)/src/states/libstates.a \
@@ -217,7 +218,6 @@ oct_floquet_observables_LDADD = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/species/libspecies.a \
                                    $(top_builddir)/src/math/libmath.a \
                                    $(top_builddir)/src/basic/libbasic.a \
-                                   $(top_builddir)/src/scf/libscf.a \
                                    $(other_LIBS)
 
 
