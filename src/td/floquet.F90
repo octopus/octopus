@@ -1057,6 +1057,10 @@ contains
         end do
       end do
       
+      call comm_allreduce(st%st_kpt_mpi_grp%comm, me)
+      call comm_allreduce(st%st_kpt_mpi_grp%comm, spect)
+      
+      
       SAFE_DEALLOCATE_A(tmp)
       SAFE_DEALLOCATE_A(phase)
       SAFE_DEALLOCATE_A(u_ma)
