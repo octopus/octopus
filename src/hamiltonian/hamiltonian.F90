@@ -1106,9 +1106,10 @@ contains
       else
         write(filename, fmt='(a,i1)') 'vhxc-sp', isp
       end if
-      if (present(idx)) write(filename, fmt='(a,i6.6)') trim(filename), idx
-      
-      write(lines(1), '(i8,a,i8,a)') isp, ' | ', hm%d%nspin, ' | "'//trim(adjustl(filename))//'"'
+
+      if (present(idx)) write(filename, '(a,i6.6)') trim(adjustl(filename)), idx
+
+      write(lines(1), '(i8,a,i8,a)') isp, ' | ', hm%d%nspin, ' | '//trim(adjustl(filename))
       call restart_write(restart, iunit, lines, 1, err)
       if (err /= 0) err2(1) = err2(1) + 1
 
