@@ -444,7 +444,7 @@ contains
       call pes_init_write(td%pesv,gr%mesh,st)
     end if
 
-    call floquet_init(sys,hm%F,hm%geo,sys%st%d%dim)
+    call floquet_init(sys,hm%F,sys%st%d%dim)
 
     if(st%d%pack_states .and. hamiltonian_apply_packed(hm, gr%mesh)) call states_pack(st)
 

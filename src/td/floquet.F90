@@ -81,7 +81,9 @@ module floquet_oct_m
        floquet_hamiltonian_run_solver, &
        floquet_restart_dressed_st, &
        floquet_load_td_hamiltonians, &
-       floquet_td_hamiltonians_sample
+       floquet_td_hamiltonians_sample, &
+       floquet_photoelectron_spectrum, &
+       floquet_calc_norms   
 
   integer, public, parameter ::    &
        FLOQUET_NONE            = 0, &      
@@ -96,10 +98,9 @@ contains
   
   !------------------------------------------------------------------------
   
-  subroutine floquet_init(sys,this,geo,dim)
+  subroutine floquet_init(sys,this,dim)
     type(system_t), intent(in)       :: sys
     type(floquet_t),    intent(out)  :: this
-    type(geometry_t), intent(in)     :: geo
     integer,              intent(in) :: dim ! the standard dimension of the groundstate
 
     type(block_t)     :: blk
@@ -990,8 +991,8 @@ contains
       type(hamiltonian_t), intent(in) :: hm
       type(system_t), intent(in)      :: sys
       type(states_t), intent(in)      :: st
-      FLOAT,          intent(in)      :: pomega  
-      FLOAT,          intent(in)      :: pol(:)
+      FLOAT,          intent(in)      :: pomega     ! Probe field energy 
+      FLOAT,          intent(in)      :: pol(:)     ! Probe field polarization vector
       FLOAT,          intent(out)     :: spect(:,:) ! the photoelectron spectrum
       FLOAT,          intent(out)     :: me(:,:)    ! the photoeletron matrix elements
 
