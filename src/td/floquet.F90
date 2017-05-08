@@ -1018,7 +1018,7 @@ contains
       
       SAFE_ALLOCATE(phase(1:mesh%np))
       SAFE_ALLOCATE(u_ma(1:mesh%np,hm%F%floquet_dim))
-      SAFE_ALLOCATE(tmp(st%d%dim))
+      SAFE_ALLOCATE(tmp(spindim))
   
       kpt(:) = M_ZERO
       qq(:)  = M_ZERO
@@ -1049,7 +1049,7 @@ contains
           end do 
           if(hm%F%is_parallel) call comm_allreduce(hm%F%mpi_grp%comm, tmp(:))   
           
-          me(ia,ik) = sum(abs(tmp(:))**2) * sum((hm%F%pol(1:dim)*qq(dim)))**2
+          me(ia,ik) = sum(abs(tmp(:))**2) * sum((pol(1:dim)*qq(dim)))**2
           
           spect(ia,ik) =  me(ia,ik) * st%occ(ia,ik)
             
