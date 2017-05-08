@@ -983,13 +983,14 @@ contains
 
     ! ---------------------------------------------------------
 
-  subroutine states_write_bandstructure(dir, nst, st, sb, filename, write_occ)
+  subroutine states_write_bandstructure(dir, nst, st, sb, filename, vec)
     character(len=*),  intent(in) :: dir
     integer,           intent(in) :: nst
     type(states_t),    intent(in) :: st
     type(simul_box_t), intent(in) :: sb
     character(len=*) :: filename
-    logical, optional :: write_occ
+    FLOAT, optional :: vec(:,:)           ! optional observable to be printed together  with the bandstrucure
+                                          ! it must have the same structure as st%eigenval(:,:)
 
     integer :: idir, ist, ik, ns, is,npath
     integer, allocatable :: iunit(:)
@@ -1034,8 +1035,8 @@ contains
         end do
         do ist = 1, nst
           write(iunit(is),'(1x,f14.8)',advance='no') units_from_atomic(units_out%energy, st%eigenval(ist, ik + is))
-          if (optional_default(write_occ, .false.)) then
-            write(iunit(is),'(1x,f14.8)',advance='no') units_from_atomic(unit_one, st%occ(ist, ik + is))
+          if (present(vec)) then
+            write(iunit(is),'(1x,f14.8)',advance='no') units_from_atomic(unit_one, vec(ist, ik + is))
           end if
           
         end do

@@ -2668,7 +2668,7 @@ contains
     PUSH_SUB(td_write_floquet)
 
     if(iter==0) then
-      call floquet_init(sys,hm%F,hm%geo,st%d%dim)
+      call floquet_init(sys,hm%F,st%d%dim)
       call floquet_hamiltonians_init(hm ,gr, st, sys)
       if(hm%F%mode == FLOQUET_NON_INTERACTING .or. hm%F%mode == FLOQUET_FROZEN_PHONON) &
            call floquet_hamiltonian_solve(hm,gr,sys,st)

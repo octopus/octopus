@@ -81,7 +81,9 @@ module floquet_oct_m
        floquet_hamiltonian_run_solver, &
        floquet_restart_dressed_st, &
        floquet_load_td_hamiltonians, &
-       floquet_td_hamiltonians_sample
+       floquet_td_hamiltonians_sample, &
+       floquet_photoelectron_spectrum, &
+       floquet_calc_norms   
 
   integer, public, parameter ::    &
        FLOQUET_NONE            = 0, &      
@@ -95,11 +97,10 @@ contains
   
   
   !------------------------------------------------------------------------
-
-  subroutine floquet_init(sys,this,geo,dim)
+  
+  subroutine floquet_init(sys,this,dim)
     type(system_t), intent(in)       :: sys
     type(floquet_t),    intent(out)  :: this
-    type(geometry_t), intent(in)     :: geo
     integer,              intent(in) :: dim ! the standard dimension of the groundstate
 
     type(block_t)     :: blk
@@ -175,13 +176,40 @@ contains
 
     !%Variable TDFloquetModeCalcOccupations
     !%Type logical
-    !%Default No
+    !%Default yes
     !%Section Floquet
     !%Description
     !% Calculate occupations of Floquet states.
     !%End
-    call parse_variable('TDFloquetModeCalcOccupations', .false., this%calc_occupations)
+    call parse_variable('TDFloquetModeCalcOccupations', .true., this%calc_occupations)
     call messages_print_var_value(stdout,'Calculate occupations',  this%calc_occupations)
+
+    !%Variable TDFloquetModeCalcPESMatrixElements
+    !%Type logical
+    !%Default no
+    !%Section Floquet
+    !%Description
+    !% Calculate electron photemission matrix elements.
+    !%End
+    call parse_variable('TDFloquetModeCalcPESMatrixElements', .false., this%calc_pes)
+    call messages_print_var_value(stdout,'Calculate photoemission elements',  this%calc_pes)
+
+
+    if (this%calc_pes) then
+      !%Variable TDFloquetCalcPesOmega
+      !%Type float
+      !%Default 50 eV
+      !%Section Floquet
+      !%Description
+      !% The probe energy needed to calculate  photoemission matrix elements.
+      !%End
+      call parse_variable('TDFloquetCalcPesOmega', CNST(1.83749219065), this%pes_omega, units_inp%energy)
+      call messages_print_var_value(stdout,'Frequency of PES probe field', this%pes_omega)
+      
+      this%pol(:)=M_ZERO
+      this%pol(1)=M_ONE
+      
+    end if
 
 
     !%Variable TDFloquetFrequency
@@ -410,27 +438,27 @@ contains
 
      POP_SUB(floquet_hamiltonian_init)
         
-   end subroutine floquet_hamiltonians_init
+  end subroutine floquet_hamiltonians_init
 
    !--------------------------------------------
-   subroutine floquet_td_hamiltonians_sample(hm,sys,iter)
-     type(hamiltonian_t), intent(inout) :: hm
-     type(system_t),      intent(in)    :: sys
-     integer,               intent (in) :: iter
-     
-     integer :: it
-     
-     
-     PUSH_SUB(floquet_td_hamiltonians_sample)   
-     
-     it = mod(iter/hm%F%interval,hm%F%nT)
-     if(it==0) it=hm%F%nT
-     
-     call floquet_save_td_hamiltonian(hm, sys, it)
-       
-     POP_SUB(floquet_td_hamiltonians_sample)   
-     
-   end subroutine floquet_td_hamiltonians_sample
+  subroutine floquet_td_hamiltonians_sample(hm,sys,iter)
+  type(hamiltonian_t), intent(inout) :: hm
+  type(system_t),      intent(in)    :: sys
+  integer,               intent (in) :: iter
+
+  integer :: it
+
+
+  PUSH_SUB(floquet_td_hamiltonians_sample)   
+
+  it = mod(iter/hm%F%interval,hm%F%nT)
+  if(it==0) it=hm%F%nT
+
+  call floquet_save_td_hamiltonian(hm, sys, it)
+
+  POP_SUB(floquet_td_hamiltonians_sample)   
+ 
+  end subroutine floquet_td_hamiltonians_sample
 
    !--------------------------------------------
    ! this is only called if F%mode=interacting
@@ -755,12 +783,15 @@ contains
       type(eigensolver_t) :: eigens
       type(restart_t) :: restart
       character(len=80) :: filename
+      character(len=80) :: iterstr
       character(len=40) :: msg
       integer :: file
       real(8) :: itime, etime
 
       type(grid_t),   pointer :: gr
       type(states_t), pointer :: st
+        
+      FLOAT, allocatable :: spect(:,:), me(:,:)  
  
       PUSH_SUB(floquet_hamiltonian_run_solver)
  
@@ -813,9 +844,14 @@ contains
          
          call smear_find_fermi_energy(dressed_st%smear, dressed_st%eigenval, dressed_st%occ, dressed_st%qtot, &
            dressed_st%d%nik, dressed_st%nst, dressed_st%d%kweights)
-         
-         
-         call floquet_calc_norms(gr%der%mesh,gr%sb%kpoints,st,dressed_st,iter,hm%F%floquet_dim)
+        
+!          if (hm%F%calc_pes) then
+!            SAFE_ALLOCATE(spect(dressed_st%nst,dressed_st%d%nik))
+!            SAFE_ALLOCATE(me(dressed_st%nst,dressed_st%d%nik))
+!            call floquet_photoelectron_spectrum(hm, sys, dressed_st, hm%F%pes_omega, hm%F%pol, spect, me)
+!          end if
+!
+!          call floquet_calc_norms(gr%der%mesh,gr%sb%kpoints,st,dressed_st,iter,hm%F%floquet_dim)
          
 
          write(message(1),'(a,i6)') 'Converged eigenvectors: ', sum(eigens%converged(1:st%d%nik))
@@ -829,15 +865,28 @@ contains
          call messages_info(1)
 
          
-         write(filename,'(I5)') iter !hm%F_count
+         write(iterstr,'(I5)') iter !hm%F_count
          if (simul_box_is_periodic(gr%sb)) then
-           filename = 'floquet_multibands_'//trim(adjustl(filename))
-           call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, gr%sb, filename, &
-                                           write_occ = hm%F%calc_occupations .and. have_gs)
-         else
-           filename = FLOQUET_DIR//'/floquet_eigenvalues_'//trim(adjustl(filename))
-           call states_write_eigenvalues(filename, dressed_st%nst, dressed_st, gr%sb, eigens%diff)
+           filename = 'floquet_multibands_'//trim(adjustl(iterstr))
+           
+           if (hm%F%calc_occupations .and. have_gs) then                                 
+             call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, gr%sb, filename, vec = dressed_st%occ)
+           else 
+             call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, gr%sb, filename)
+           end if
+                     
+!            if (hm%F%calc_pes) then
+!               filename = 'floquet_arpes_me_'//trim(adjustl(iterstr))
+!               call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, gr%sb, filename, vec = me)
+!
+!               filename = 'floquet_arpes_'//trim(adjustl(iterstr))
+!               call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, gr%sb, filename, vec = spect)
+!            end if
          end if
+         
+         filename = FLOQUET_DIR//'/floquet_eigenvalues_'//trim(adjustl(iterstr))
+         call states_write_eigenvalues(filename, dressed_st%nst, dressed_st, gr%sb, eigens%diff)
+         
          call restart_init(restart, RESTART_FLOQUET, RESTART_TYPE_DUMP, &
                            sys%mc, ierr, gr%der%mesh)
          call states_dump(restart, dressed_st, gr, ierr, iter)
@@ -857,8 +906,9 @@ contains
       
       hm%F%count=hm%F%count + 1
       
-      ! here we might want to do other things with the states...
-
+      SAFE_DEALLOCATE_A(spect)
+      SAFE_DEALLOCATE_A(me)
+      
       POP_SUB(floquet_hamiltonian_run_solver)
 
     end subroutine floquet_hamiltonian_run_solver
@@ -929,8 +979,6 @@ contains
 
 
       
-
-      
       SAFE_DEALLOCATE_A(tmp)
       SAFE_DEALLOCATE_A(psi)
       SAFE_DEALLOCATE_A(u_ma)
@@ -939,6 +987,84 @@ contains
     
     end subroutine floquet_calc_occupations
     
+    !---------------------------------------
+    subroutine floquet_photoelectron_spectrum(hm, sys, st, pomega, pol, spect, me)
+      type(hamiltonian_t), intent(in) :: hm
+      type(system_t), intent(in)      :: sys
+      type(states_t), intent(in)      :: st
+      FLOAT,          intent(in)      :: pomega     ! Probe field energy 
+      FLOAT,          intent(in)      :: pol(:)     ! Probe field polarization vector
+      FLOAT,          intent(out)     :: spect(:,:) ! the photoelectron spectrum
+      FLOAT,          intent(out)     :: me(:,:)    ! the photoeletron matrix elements
+
+
+      CMPLX, allocatable :: u_ma(:,:),  phase(:), tmp(:)
+      FLOAT :: omega, dt , qq(1:3), kpt(1:3), xx(1:MAX_DIM)
+      integer :: idx, im, it, ist, idim, nT, ik, ia, Fdim(2), imm, dim, pdim, ip
+
+      type(mesh_t),   pointer :: mesh
+
+      PUSH_SUB(floquet_photoelectron_spectrum)
+  
+      mesh  => sys%gr%der%mesh
+      
+      dt=hm%F%dt
+      nT=hm%F%nT
+      omega=hm%F%omega
+      Fdim(:)=hm%F%order(:)
+      
+      dim = mesh%sb%dim
+      pdim = mesh%sb%periodic_dim
+      
+      SAFE_ALLOCATE(phase(1:mesh%np))
+      SAFE_ALLOCATE(u_ma(1:mesh%np,hm%F%floquet_dim))
+      SAFE_ALLOCATE(tmp(st%d%dim))
+  
+      kpt(:) = M_ZERO
+      qq(:)  = M_ZERO
+      do ik=st%d%kpt%start, st%d%kpt%end
+        kpt(1:dim) = kpoints_get_point(mesh%sb%kpoints, ik) 
+
+        do ia=st%st_start, st%st_end
+          qq(dim)    = pomega - st%eigenval(ia,ik) - sum(kpt(1:pdim)**2)*M_HALF
+          qq(1:pdim) = kpt(1:pdim)  
+          
+          do ip=1, mesh%np
+            xx=mesh_x_global(mesh, ip) 
+            phase(ip) = exp(-M_ZI*qq(dim)*xx(dim))
+          end do
+          
+          call states_get_state(st, mesh, ia, ik, u_ma)
+          
+          tmp(:) = M_ZERO
+          do idx=hm%F%flat_idx%start, hm%F%flat_idx%end
+            it = hm%F%idx_map(idx,1)
+            im = hm%F%idx_map(idx,2)
+            imm = im - Fdim(1) + 1
+            do idim=1,st%d%dim
+              tmp(idim)  =  tmp(idim) + exp(-M_zI*im*omega*it*dt)/nT * &
+                            zmf_integrate(mesh, phase(1:mesh%np)*u_ma(1:mesh%np,(imm-1)*st%d%dim+idim))
+            end do
+             
+          end do 
+          if(hm%F%is_parallel) call comm_allreduce(hm%F%mpi_grp%comm, tmp(:))   
+          
+          me(ia,ik) = sum(abs(tmp(:))**2) * sum((hm%F%pol(1:dim)*qq(dim)))**2
+          
+          spect(ia,ik) =  me(ia,ik) * st%occ(ia,ik)
+            
+        end do
+      end do
+      
+      SAFE_DEALLOCATE_A(tmp)
+      SAFE_DEALLOCATE_A(phase)
+      SAFE_DEALLOCATE_A(u_ma)
+  
+  
+  
+      POP_SUB(floquet_photoelectron_spectrum)
+      
+    end subroutine floquet_photoelectron_spectrum    
 
 
     !--------------------------------------------
@@ -1000,7 +1126,8 @@ contains
       SAFE_DEALLOCATE_A(norms)
       
     end subroutine floquet_calc_norms
-    !---------------------------------------
-    !subroutine floquet_end()
+    
+    
+    
 
 end module floquet_oct_m

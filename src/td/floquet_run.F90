@@ -113,13 +113,13 @@ contains
       call density_calc(sys%st, sys%gr, sys%st%rho)
       call v_ks_calc(sys%ks, hm, sys%st, sys%geo)
                   
-      call floquet_init(sys,hm%F,hm%geo,sys%st%d%dim)
+      call floquet_init(sys,hm%F,sys%st%d%dim)
       call floquet_hamiltonians_init(hm ,sys%gr, sys%st, sys)
       call floquet_hamiltonian_solve(hm,sys%gr,sys,sys%st, fromScratch)
       
     else
       
-      call floquet_init(sys,hm%F,hm%geo,sys%st%d%dim)
+      call floquet_init(sys,hm%F,sys%st%d%dim)
       call floquet_hamiltonians_init(hm ,sys%gr, sys%st, sys)
       call floquet_load_td_hamiltonians(hm, sys, ierr)
 

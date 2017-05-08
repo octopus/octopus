@@ -36,7 +36,8 @@ EXTRA_PROGRAMS = oct-propagation_spectrum \
                  oct-convert \
                  oct-local_multipoles \
                  oct-conductivity \
-                 oct-floquet
+                 oct-floquet \
+                 oct-floquet_observables
 
 bin_PROGRAMS = @UTILITY_PROGRAMS@
 
@@ -204,13 +205,28 @@ oct_floquet_LDADD = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/basic/libbasic.a \
                                    $(other_LIBS)
 
+oct_floquet_observables_SOURCES = floquet_observables.F90 
+oct_floquet_observables_LDADD = $(top_builddir)/src/td/libtd.a \
+                                   $(top_builddir)/src/system/libsystem.a \
+                                   $(top_builddir)/src/hamiltonian/libhamiltonian.a \
+                                   $(top_builddir)/src/states/libstates.a \
+                                   $(top_builddir)/src/frozen/libfrozen.a \
+                                   $(top_builddir)/src/poisson/libpoisson.a \
+                                   $(top_builddir)/src/grid/libgrid.a \
+                                   $(top_builddir)/src/ions/libions.a \
+                                   $(top_builddir)/src/species/libspecies.a \
+                                   $(top_builddir)/src/math/libmath.a \
+                                   $(top_builddir)/src/basic/libbasic.a \
+                                   $(top_builddir)/src/scf/libscf.a \
+                                   $(other_LIBS)
+
 
 # debug files from MacOS gcc with -g
 clean-local :
 	rm -rf *.dSYM
 
 depend:
-	@makedepf90 $(core_SRCS) $(oct_dielectric_function_SOURCES) $(oct_propagation_spectrum_SOURCES) $(oct_harmonic_spectrum_SOURCES) $(oct_xyz_anim_SOURCES) $(oct_casida_spectrum_SOURCES) $(oct_vibrational_spectrum_SOURCES) $(oct_infrared_spectrum_SOURCES) $(oct_center_geom_SOURCES) $(oct_help_SOURCES) $(oct_photoelectron_spectrum_SOURCES) $(oct_convert_SOURCES) $(oct_local_multipoles_SOURCES) $(oct_floquet_SOURCES)
+	@makedepf90 $(core_SRCS) $(oct_dielectric_function_SOURCES) $(oct_propagation_spectrum_SOURCES) $(oct_harmonic_spectrum_SOURCES) $(oct_xyz_anim_SOURCES) $(oct_casida_spectrum_SOURCES) $(oct_vibrational_spectrum_SOURCES) $(oct_infrared_spectrum_SOURCES) $(oct_center_geom_SOURCES) $(oct_help_SOURCES) $(oct_photoelectron_spectrum_SOURCES) $(oct_convert_SOURCES) $(oct_local_multipoles_SOURCES) $(oct_floquet_SOURCES) $(oct_floquet_observables_SOURCES)
 
 propagation_spectrum.o : propagation_spectrum.F90 
 harmonic_spectrum.o : harmonic_spectrum.F90 
@@ -225,3 +241,4 @@ convert.o : convert.F90
 local_write.o : local_write.F90
 local_multipoles.o : local_multipoles.F90 local_write.o
 floquet.o : floquet.F90
+floquet_observables.o: floquet_observables.F90
