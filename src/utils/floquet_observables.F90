@@ -20,6 +20,7 @@
 
 program floquet_observables
   use calc_mode_par_oct_m
+  use comm_oct_m
   use command_line_oct_m
   use geometry_oct_m
   use fft_oct_m
@@ -32,6 +33,7 @@ program floquet_observables
   use io_function_oct_m
   use io_oct_m
   use loct_oct_m
+  use mesh_oct_m
   use messages_oct_m
   use multicomm_oct_m
   use parser_oct_m
@@ -63,18 +65,10 @@ program floquet_observables
 !   type(simul_box_t)    :: sb
 !   type(grid_t)         :: gr
   type(restart_t)      :: restart
-  
   type(system_t)      :: sys
-    
   type(hamiltonian_t) :: hm
-  
-  character(len=512)   :: filename, str
-
-    
+  character(len=512)   :: filename, str, str2
   integer              :: ist, ispin  
-
-    
-  
   type(states_t)          :: dressed_st 
   type(states_t), pointer ::    gs_st
 
@@ -106,9 +100,6 @@ program floquet_observables
   call states_distribute_nodes(dressed_st,sys%mc)
   call states_exec_init(dressed_st, sys%mc)
   call states_allocate_wfns(dressed_st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX)
-
-
-  
   
   call restart_module_init()
   
@@ -131,6 +122,9 @@ program floquet_observables
   !% Calculate ARPES matrix elements for Floquet states.
   !%Option f_spin bit(3)
   !% Calculate the spin polarization of each state. 
+  !%Option f_td_spin bit(4)
+  !% Calculate the time-dependent spin projections of the Floquet eigenstates
+  !% given by FloquetObservableTDspinKpoints and FloquetObservableTDspinState
   !%End
   call parse_variable('FloquetObservableCalc', out_what, out_what)
   
@@ -154,6 +148,17 @@ program floquet_observables
     call calc_floquet_arpes()
   end if
 
+  if(iand(out_what, OPTION__FLOQUETOBSERVABLECALC__F_TD_SPIN) /= 0) then
+    call messages_write('Calculate td-spin of Floquet eigenstates.')
+    call messages_info()
+
+    if(gs_st%d%dim /=2 ) then
+      call messages_write('Need spin resolved calculation')
+      call messages_fatal()
+    end if
+
+    call calc_floquet_td_spin()
+  end if
 
   call system_end(sys)
   call fft_all_end()
@@ -205,8 +210,6 @@ contains
   
   write(message(1),'(a,f4.2,a,f4.2,a,f4.2,a)') 'Info: ARPES probe polarization: (', pol(1),',', pol(2),',', pol(3),')'
   call messages_info(1)
-  
-  
     
     
   SAFE_ALLOCATE(spect(dressed_st%nst,dressed_st%d%nik))
@@ -226,10 +229,118 @@ contains
   SAFE_DEALLOCATE_A(me)
     
   end subroutine calc_floquet_arpes  
+
+  !-------------------------------------------------
+  subroutine calc_floquet_td_spin()
+
+  FLOAT :: spin(1:3)
+  type(block_t)        :: blk
+  integer :: nk_input, ik,iik, ist,iist, nst_input, it, iunit
+  integer, allocatable :: kpoints_input(:), states_input(:)
+  CMPLX, allocatable   :: psi_t(:,:)
+  FLOAT :: time
+
+  !%Variable FloquetObservableTDspinKpoints
+  !%Type block
+  !%Default none
+  !%Section Utilities::oct-floquet_observables
+  !%Description
+  !% Indices of k-points for td-spin calculation  
+  !%End
+
+  if(parse_block('FloquetObservableTDspinKpoints', blk) == 0) then
+    nk_input = parse_block_cols(blk, 0)
+    if(nk_input < 1 ) call messages_input_error('FloquetObservableTDspinKpoints')
+    SAFE_ALLOCATE(kpoints_input(nk_input))
+    do ik = 1, nk_input
+      call parse_block_integer(blk, 0, ik-1, kpoints_input(ik))
+    end do
+    call parse_block_end(blk)
+  end if
+  write(message(1),'(a,i3,a)') 'Info: Read ', nk_input ,' kpoints for td-spin calculation'
+  call messages_info(1)
   
+  !%Variable FloquetObservableTDspinStates
+  !%Type block
+  !%Default none
+  !%Section Utilities::oct-floquet_observables
+  !%Description
+  !% Indices of Floquet eigenstates for td-spin calculation
+  !%End
 
+  if(parse_block('FloquetObservableTDspinStates', blk) == 0) then
+    nst_input = parse_block_cols(blk, 0)
+    if(nst_input < 1 ) call messages_input_error('FloquetObservableTDspinStates')
+    SAFE_ALLOCATE(states_input(nst_input))
+    do ist = 1, nst_input
+      call parse_block_integer(blk, 0, ist-1, states_input(ist))
+    end do
+    call parse_block_end(blk)
+  end if
+  write(message(1),'(a,i3,a)') 'Info: Read ', nst_input ,' states for td-spin calculation'
+  call messages_info(1)
 
-end program floquet_observables
+  SAFE_ALLOCATE(psi_t(1:sys%gr%der%mesh%np,sys%st%d%dim))
+
+  do ik=1,nk_input
+    iik=kpoints_input(ik)
+    write(str,'(I5)') iik
+    
+    do ist=1,nst_input
+      iist=states_input(ist)
+      write(str2,'(I5)') iist
+
+      filename = 'floquet_td_spin_ik_'//trim(adjustl(str))//'_ist_'//trim(adjustl(str2))
+      iunit = io_open(FLOQUET_DIR//filename, action='write')
+      write(iunit,'(a)') '# time Sx Sy Sz'
+
+      do it=1,hm%F%nT
+        time = hm%F%Tcycle/hm%F%nT*it
+        call floquet_td_eigenstate(hm%F,sys%gr%mesh, dressed_st,iik,iist,time,psi_t)
+        spin(1:3) = state_spin(sys%gr%mesh, psi_t) 
+        write(iunit,'(e12.6,2x,e12.6,2x,e12.6,2x,e12.6)') time, spin(1:3)
+      end do
+
+      close(iunit)
+    end do
+  end do
+
+  SAFE_DEALLOCATE_A(psi_t)
+  SAFE_DEALLOCATE_A(kpoints_input)
+  SAFE_DEALLOCATE_A(states_input)
+  end subroutine calc_floquet_td_spin
+
+  !--------------------------------
+  subroutine floquet_td_eigenstate(F,mesh,dressed_st,ik,ist,time,psi_t)
+  
+  type(floquet_t) :: F
+  type(mesh_t)    :: mesh
+  type(states_t)  :: dressed_st
+  integer :: ik, ist
+  FLOAT   :: time
+  CMPLX   :: psi_t(:,:)
+  
+  integer :: idim, im, imm
+  CMPLX, allocatable  :: u_ma(:,:)
+  
+  SAFE_ALLOCATE(u_ma(1:mesh%np,F%floquet_dim*F%spindim))
+  u_ma = M_ZERO
+
+  if(state_kpt_is_local(dressed_st, ist, ik))  call states_get_state(dressed_st, mesh, ist, ik, u_ma)
+  psi_t = M_ZERO
+  do im= F%order(1),F%order(2)
+    imm = im - F%order(1) + 1
+    do idim=1,F%spindim
+      psi_t(1:mesh%np,idim)  =  psi_t(1:mesh%np,idim) + exp(-M_zI*im*F%omega*time)*u_ma(1:mesh%np,(imm-1)*F%spindim+idim)
+    end do
+  end do
+
+  call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm, psi_t)
+
+  SAFE_DEALLOCATE_A(u_ma) 
+  end subroutine floquet_td_eigenstate
+
+  end program floquet_observables
 
 !! Local Variables:
 !! mode: f90

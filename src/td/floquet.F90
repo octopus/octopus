@@ -940,7 +940,7 @@ contains
 
 
       SAFE_ALLOCATE(psi(1:mesh%np,gs_st%d%dim))
-      SAFE_ALLOCATE(u_ma(1:mesh%np,hm%F%floquet_dim))
+      SAFE_ALLOCATE(u_ma(1:mesh%np,hm%F%floquet_dim*hm%F%spindim))
       SAFE_ALLOCATE(tmp(gs_st%d%dim))
 
 
