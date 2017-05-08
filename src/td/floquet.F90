@@ -692,12 +692,11 @@ contains
           call messages_warning(2)
         end if
         call restart_end(restart)
-
         ! only use gs states for init, if they are not distributed
         if(.not. st%parallel_in_states .and. ierr == 0 ) then
             ! initialize floquet states from scratch
             SAFE_ALLOCATE(temp_state1(1:gr%der%mesh%np,st%d%dim))
-            SAFE_ALLOCATE(temp_state2(1:gr%der%mesh%np,hm%F%floquet_dim))
+            SAFE_ALLOCATE(temp_state2(1:gr%der%mesh%np,hm%F%floquet_dim*st%d%dim))
        
             do ik=st%d%kpt%start,st%d%kpt%end
                do in=1,hm%F%floquet_dim
@@ -716,11 +715,11 @@ contains
          else
             ! randomize
             SAFE_ALLOCATE(temp_state1(1:gr%der%mesh%np,st%d%dim))
-            SAFE_ALLOCATE(temp_state2(1:gr%der%mesh%np,hm%F%floquet_dim))
+            SAFE_ALLOCATE(temp_state2(1:gr%der%mesh%np,hm%F%floquet_dim*st%d%dim))
             do ik=st%d%kpt%start,st%d%kpt%end
                do ist=dressed_st%st_start,dressed_st%st_end
 
-                  do in=1,hm%F%floquet_dim  
+                  do in=1,hm%F%floquet_dim*st%d%dim  
                      if(dressed_st%randomization == PAR_INDEPENDENT) then
                         call zmf_random(gr%der%mesh, temp_state2(:,in), gr%der%mesh%vp%xlocal-1, &
                              seed=mpi_world%rank, normalized= .true.)
@@ -955,7 +954,7 @@ contains
       character(len=1024):: ik_name,iter_name, filename
 
       SAFE_ALLOCATE(temp_state1(1:mesh%np,st%d%dim))
-      SAFE_ALLOCATE(temp_state2(1:mesh%np,floquet_dim))
+      SAFE_ALLOCATE(temp_state2(1:mesh%np,floquet_dim*st%d%dim))
       SAFE_ALLOCATE(norms(1:kpoints%reduced%npoints,1:dressed_st%nst,floquet_dim))
 
       norms = M_ZERO
