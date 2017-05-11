@@ -33,6 +33,7 @@ module io_oct_m
     io_workpath,         &
     io_open,             &
     io_mkdir,            &
+    io_rm,               &
     io_init,             &
     io_end,              &
     io_status,           &
@@ -312,6 +313,19 @@ contains
   end subroutine io_mkdir
 
 
+  ! ---------------------------------------------------------
+  subroutine io_rm(fname)
+    character(len=*),  intent(in) :: fname
+
+    integer :: last_slash, pos, length
+
+    PUSH_SUB(io_rm)
+
+    call loct_rm(trim(io_workpath(fname)))
+
+    POP_SUB(io_rm)
+  end subroutine io_rm
+  
   ! ---------------------------------------------------------
   integer function io_open(file, action, status, form, position, die, recl, grp) result(iunit)
     character(len=*), intent(in) :: file, action
