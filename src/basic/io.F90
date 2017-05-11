@@ -41,7 +41,6 @@ module io_oct_m
     io_close,            &
     io_assign,           &
     io_get_extension,    &
-    io_switch_status,    &
     io_debug_on_the_fly, &
     iopar_read,          &
     iopar_backspace,     &
@@ -520,31 +519,6 @@ contains
     POP_SUB(io_get_extension)
 
   end function io_get_extension
-
-
-  ! ---------------------------------------------------------
-  !> create status file for asynchronous communication with GUI
-  subroutine io_switch_status(status)
-    character(len=*), intent(in) :: status
-    
-    integer :: iunit
-
-    PUSH_SUB(io_switch_status)
-
-    ! only root node is taking care of file I/O
-    if(mpi_grp_is_root(mpi_world)) then 
-      ! remove possible leftovers first before we switch to new status
-      call loct_rm_status_files()
-
-      ! create empty status file 
-      iunit = io_open('exec/oct-status-'//trim(status), &
-        action='write', status='new')
-      call io_close(iunit)
-    end if
-
-    POP_SUB(io_switch_status)
-
-  end subroutine io_switch_status
 
 
   ! ---------------------------------------------------------
