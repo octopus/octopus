@@ -326,7 +326,6 @@ contains
 
     POP_SUB(io_rm)
   end subroutine io_rm
-
   
   ! ---------------------------------------------------------
   integer function io_open(file, action, status, form, position, die, recl, grp) result(iunit)
