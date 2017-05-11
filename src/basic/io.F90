@@ -47,7 +47,8 @@ module io_oct_m
     iopar_backspace,     &
     iopar_find_line,     &
     io_skip_header,      &
-    io_file_exists
+    io_file_exists,      &
+    io_dir_exists
 
   integer, parameter :: min_lun=10, max_lun=99
   logical            :: lun_is_free(min_lun:max_lun)
@@ -325,6 +326,7 @@ contains
 
     POP_SUB(io_rm)
   end subroutine io_rm
+
   
   ! ---------------------------------------------------------
   integer function io_open(file, action, status, form, position, die, recl, grp) result(iunit)
@@ -598,6 +600,17 @@ contains
     POP_SUB(io_file_exists)
   end function io_file_exists
 
+  !> Returns true if a dir with name 'dir' exists
+  ! ---------------------------------------------------------
+  logical function io_dir_exists(dir)
+    character(len=*), intent(in)  :: dir
+
+    PUSH_SUB(io_dir_exists)
+
+    io_dir_exists = loct_dir_exists(trim(io_workpath(dir)))
+
+    POP_SUB(io_dir_exists)
+  end function io_dir_exists
 
   ! ---------------------------------------------------------
   subroutine iopar_read(grp, iunit, lines, n_lines, ierr)
@@ -701,6 +714,8 @@ contains
 
   end subroutine io_skip_header
 
+  
+  
 end module io_oct_m
 
 !! Local Variables:
