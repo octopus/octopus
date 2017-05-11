@@ -584,10 +584,10 @@ contains
     call mesh_write_fingerprint(mesh, dir, 'grid_'//trim(numstring), mesh%mpi_grp, err)
     if (err /= 0) ierr = ierr + 1
 
-    call partition_dump(mesh%inner_partition, trim(dir)//'/inner_partition_'//trim(numstring)//'.obf', err)
+    call partition_dump(mesh%inner_partition, dir, 'inner_partition_'//trim(numstring)//'.obf', err)
     if (err /= 0) ierr = ierr + 2
 
-    call partition_dump(mesh%bndry_partition, trim(dir)//'/bndry_partition_'//trim(numstring)//'.obf', err)
+    call partition_dump(mesh%bndry_partition, dir, 'bndry_partition_'//trim(numstring)//'.obf', err)
     if (err /= 0) ierr = ierr + 4
 
     call profiling_out(prof)
@@ -624,13 +624,13 @@ contains
     ! If fingerprint is OK then we try to read the partitions
     if (ierr == 0) then
       !Read inner partition
-      call partition_load(mesh%inner_partition, trim(dir)//'/inner_partition_'//trim(numstring)//'.obf', err)
+      call partition_load(mesh%inner_partition, dir, 'inner_partition_'//trim(numstring)//'.obf', err)
       if (err /= 0) ierr = ierr + 8
     end if
 
     if (ierr == 0) then
       !Read boundary partition
-      call partition_load(mesh%bndry_partition, trim(dir)//'/bndry_partition_'//trim(numstring)//'.obf', err)
+      call partition_load(mesh%bndry_partition, dir, 'bndry_partition_'//trim(numstring)//'.obf', err)
       if (err /= 0) ierr = ierr + 16
     end if
 
