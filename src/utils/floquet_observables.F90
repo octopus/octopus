@@ -99,15 +99,7 @@ program floquet_observables
   call kpoints_distribute(dressed_st%d,sys%mc)
   call states_distribute_nodes(dressed_st,sys%mc)
   call states_exec_init(dressed_st, sys%mc)
-  call states_allocate_wfns(dressed_st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX)
-  
   call restart_module_init()
-  
-  call floquet_restart_dressed_st(hm, sys, dressed_st, ierr)
-  
-  
-  call messages_write('Read Floquet restart files.')
-  call messages_info()
 
   !%Variable FloquetObservableCalc
   !%Type flag
@@ -135,9 +127,19 @@ program floquet_observables
 !   call getopt_end()
                                        
 
+  ! load floquet states only for certain tasks
+  if(iand(out_what, OPTION__FLOQUETOBSERVABLECALC__F_NORMS) /= 0 .or. &
+     iand(out_what, OPTION__FLOQUETOBSERVABLECALC__F_NORMS) /= 0 ) then
+       call states_allocate_wfns(dressed_st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX)
+       call floquet_restart_dressed_st(hm, sys, dressed_st, ierr)
+       call messages_write('Read Floquet restart files.')
+       call messages_info()
+  end if
+
   if(iand(out_what, OPTION__FLOQUETOBSERVABLECALC__F_NORMS) /= 0) then
     call messages_write('Calculate norms of Floquet subspaces.')
     call messages_info()
+
     call floquet_calc_norms(sys%gr%der%mesh,sys%gr%sb%kpoints,gs_st,dressed_st, hm%F%iter,hm%F%floquet_dim)
   end if
 
@@ -236,8 +238,9 @@ contains
   FLOAT :: spin(1:3)
   type(block_t)        :: blk
   integer :: nk_input, ik,iik, ist,iist, nst_input, it, iunit
+  integer :: nik, dim, nst, itot
   integer, allocatable :: kpoints_input(:), states_input(:)
-  CMPLX, allocatable   :: psi_t(:,:)
+  CMPLX, allocatable   :: psi_t(:,:), zpsi(:), F_psi(:,:)
   FLOAT :: time
 
   !%Variable FloquetObservableTDspinKpoints
@@ -280,7 +283,18 @@ contains
   write(message(1),'(a,i3,a)') 'Info: Read ', nst_input ,' states for td-spin calculation'
   call messages_info(1)
 
+  ! prepare restart structure
+  call restart_init(restart, RESTART_FLOQUET, RESTART_TYPE_LOAD, &
+                       sys%mc, ierr,sys%gr%der%mesh)
+  call states_look(restart, nik, dim, nst, ierr)
+  if(dim/=dressed_st%d%dim .or. nik/=sys%gr%sb%kpoints%reduced%npoints.or.nst/=dressed_st%nst) then
+     write(message(1),'(a)') 'Did not find commensurate Floquet restart structure'
+     call messages_fatal(1)
+  end if
+
   SAFE_ALLOCATE(psi_t(1:sys%gr%der%mesh%np,sys%st%d%dim))
+  SAFE_ALLOCATE(zpsi(1:sys%gr%mesh%np))
+  SAFE_ALLOCATE(F_psi(1:sys%gr%mesh%np,dressed_st%d%dim))
 
   do ik=1,nk_input
     iik=kpoints_input(ik)
@@ -290,13 +304,21 @@ contains
       iist=states_input(ist)
       write(str2,'(I5)') iist
 
+      ! read the floquet wavefunction for states iik,iist
+      do idim = 1, dressed_st%d%dim
+         itot = idim + (iist-1)*dressed_st%d%dim +  (iik-1)*dressed_st%nst*dressed_st%d%dim 
+         write(filename,'(i10.10)') itot
+         call zrestart_read_mesh_function(restart, trim(adjustl(filename)), sys%gr%mesh, zpsi, ierr)
+         print *, ierr, trim(adjustl(filename)), iik, iist
+         F_psi(1:sys%gr%mesh%np,idim) = zpsi(1:sys%gr%mesh%np)
+      end do
       filename = 'floquet_td_spin_ik_'//trim(adjustl(str))//'_ist_'//trim(adjustl(str2))
       iunit = io_open(FLOQUET_DIR//filename, action='write')
       write(iunit,'(a)') '# time Sx Sy Sz'
 
       do it=1,hm%F%nT
         time = hm%F%Tcycle/hm%F%nT*it
-        call floquet_td_eigenstate(hm%F,sys%gr%mesh, dressed_st,iik,iist,time,psi_t)
+        call floquet_td_state(hm%F,sys%gr%mesh,F_psi,time,psi_t)
         spin(1:3) = state_spin(sys%gr%mesh, psi_t) 
         write(iunit,'(e12.6,2x,e12.6,2x,e12.6,2x,e12.6)') time, spin(1:3)
       end do
@@ -305,40 +327,39 @@ contains
     end do
   end do
 
+  call restart_end(restart)
+
   SAFE_DEALLOCATE_A(psi_t)
+  SAFE_DEALLOCATE_A(zpsi)
+  SAFE_DEALLOCATE_A(F_psi)
   SAFE_DEALLOCATE_A(kpoints_input)
   SAFE_DEALLOCATE_A(states_input)
   end subroutine calc_floquet_td_spin
 
   !--------------------------------
-  subroutine floquet_td_eigenstate(F,mesh,dressed_st,ik,ist,time,psi_t)
+  subroutine floquet_td_state(F,mesh,F_psi,time,psi_t)
   
   type(floquet_t) :: F
   type(mesh_t)    :: mesh
-  type(states_t)  :: dressed_st
+  CMPLX   :: F_psi(:,:)
   integer :: ik, ist
   FLOAT   :: time
   CMPLX   :: psi_t(:,:)
   
   integer :: idim, im, imm
-  CMPLX, allocatable  :: u_ma(:,:)
   
-  SAFE_ALLOCATE(u_ma(1:mesh%np,F%floquet_dim*F%spindim))
-  u_ma = M_ZERO
-
-  if(state_kpt_is_local(dressed_st, ist, ik))  call states_get_state(dressed_st, mesh, ist, ik, u_ma)
   psi_t = M_ZERO
   do im= F%order(1),F%order(2)
     imm = im - F%order(1) + 1
     do idim=1,F%spindim
-      psi_t(1:mesh%np,idim)  =  psi_t(1:mesh%np,idim) + exp(-M_zI*im*F%omega*time)*u_ma(1:mesh%np,(imm-1)*F%spindim+idim)
+      psi_t(1:mesh%np,idim)  =  psi_t(1:mesh%np,idim) + exp(-M_zI*im*F%omega*time)*F_psi(1:mesh%np,(imm-1)*F%spindim+idim)
     end do
   end do
 
-  call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm, psi_t)
+  ! normalize td-state
+  psi_t(1:mesh%np,1:F%spindim)  = M_ONE/(-F%order(1)+F%order(2))*psi_t(1:mesh%np,1:F%spindim) 
 
-  SAFE_DEALLOCATE_A(u_ma) 
-  end subroutine floquet_td_eigenstate
+  end subroutine floquet_td_state
 
   end program floquet_observables
 
