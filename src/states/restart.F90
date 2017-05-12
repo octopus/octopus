@@ -641,11 +641,11 @@ contains
   !! someone fixes them.
   function restart_dir(restart)
     type(restart_t), intent(in) :: restart
-    character(len=80) :: restart_dir
+    character(len=MAX_PATH_LEN) :: restart_dir
 
     PUSH_SUB(restart_dir)
 
-    restart_dir = restart%pwd
+    restart_dir = io_workpath(restart%pwd)
 
     POP_SUB(restart_dir)
   end function restart_dir
