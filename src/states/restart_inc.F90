@@ -198,24 +198,36 @@ end subroutine X(restart_read_mesh_function)
 
 
 ! ---------------------------------------------------------
-subroutine X(restart_write_binary1)(restart, filename, np, ff, ierr)
-  type(restart_t),  intent(in)  :: restart
-  character(len=*), intent(in)  :: filename
-  integer,          intent(in)  :: np
-  R_TYPE,           intent(in)  :: ff(:)
-  integer,          intent(out) :: ierr
+subroutine X(restart_write_binary1)(restart, filename, np, ff, ierr, root)
+  type(restart_t),   intent(in)  :: restart
+  character(len=*),  intent(in)  :: filename
+  integer,           intent(in)  :: np
+  R_TYPE,            intent(in)  :: ff(:)
+  integer,           intent(out) :: ierr
+  integer, optional, intent(in)  :: root(:) !< which process is going to write the data
 
   character(len=MAX_PATH_LEN) :: full_filename
-  
+  integer :: root_(1:P_STRATEGY_MAX)
+    
   PUSH_SUB(X(restart_write_binary1))
 
   ASSERT(.not. restart%skip)
   ASSERT(restart%type == RESTART_TYPE_DUMP)
 
   full_filename = trim(io_workpath(restart%pwd))//"/"//trim(filename)//".obf"
+
+  root_(1:P_STRATEGY_MAX) = 0
+  if (present(root)) then
+    ASSERT(root(P_STRATEGY_DOMAINS) >= 0)
+    where(root >= 0)
+      root_ = root
+    elsewhere
+      root_ = restart%mc%who_am_i
+    end where
+  end if
   
   !Only the root node writes
-  if (mpi_grp_is_root(restart%mpi_grp)) then
+  if (all(root_ == restart%mc%who_am_i)) then
     call io_binary_write(full_filename, np, ff, ierr)
   end if
 
@@ -235,14 +247,16 @@ subroutine X(restart_write_binary1)(restart, filename, np, ff, ierr)
 end subroutine X(restart_write_binary1)
 
 ! ---------------------------------------------------------
-subroutine X(restart_write_binary2)(restart, filename, np, ff, ierr)
-  type(restart_t),  intent(in)  :: restart
-  character(len=*), intent(in)  :: filename
-  integer,          intent(in)  :: np
-  R_TYPE,           intent(in)  :: ff(:,:)
-  integer,          intent(out) :: ierr
+subroutine X(restart_write_binary2)(restart, filename, np, ff, ierr, root)
+  type(restart_t),   intent(in)  :: restart
+  character(len=*),  intent(in)  :: filename
+  integer,           intent(in)  :: np
+  R_TYPE,            intent(in)  :: ff(:,:)
+  integer,           intent(out) :: ierr
+  integer, optional, intent(in)  :: root(:) !< which process is going to write the data
 
   character(len=MAX_PATH_LEN) :: full_filename
+  integer :: root_(1:P_STRATEGY_MAX)
 
   PUSH_SUB(X(restart_write_binary2))
 
@@ -250,9 +264,19 @@ subroutine X(restart_write_binary2)(restart, filename, np, ff, ierr)
   ASSERT(restart%type == RESTART_TYPE_DUMP)
 
   full_filename = trim(io_workpath(restart%pwd))//"/"//trim(filename)//".obf"
+
+  root_(1:P_STRATEGY_MAX) = 0
+  if (present(root)) then
+    ASSERT(root(P_STRATEGY_DOMAINS) >= 0)
+    where(root >= 0)
+      root_ = root
+    elsewhere
+      root_ = restart%mc%who_am_i
+    end where
+  end if
   
   !Only the root node writes
-  if (mpi_grp_is_root(restart%mpi_grp)) then
+  if (all(root_ == restart%mc%who_am_i)) then
     call io_binary_write(full_filename, np, ff, ierr)
   end if
 
@@ -272,14 +296,16 @@ subroutine X(restart_write_binary2)(restart, filename, np, ff, ierr)
 end subroutine X(restart_write_binary2)
 
 ! ---------------------------------------------------------
-subroutine X(restart_write_binary3)(restart, filename, np, ff, ierr)
-  type(restart_t),  intent(in)  :: restart
-  character(len=*), intent(in)  :: filename
-  integer,          intent(in)  :: np
-  R_TYPE,           intent(in)  :: ff(:,:,:)
-  integer,          intent(out) :: ierr
-
+subroutine X(restart_write_binary3)(restart, filename, np, ff, ierr, root)
+  type(restart_t),   intent(in)  :: restart
+  character(len=*),  intent(in)  :: filename
+  integer,           intent(in)  :: np
+  R_TYPE,            intent(in)  :: ff(:,:,:)
+  integer,           intent(out) :: ierr
+  integer, optional, intent(in)  :: root(:) !< which process is going to write the data
+  
   character(len=MAX_PATH_LEN) :: full_filename
+  integer :: root_(1:P_STRATEGY_MAX)
 
   PUSH_SUB(X(restart_write_binary3))
 
@@ -288,8 +314,18 @@ subroutine X(restart_write_binary3)(restart, filename, np, ff, ierr)
 
   full_filename = trim(io_workpath(restart%pwd))//"/"//trim(filename)//".obf"
 
+  root_(1:P_STRATEGY_MAX) = 0
+  if (present(root)) then
+    ASSERT(root(P_STRATEGY_DOMAINS) >= 0)
+    where(root >= 0)
+      root_ = root
+    elsewhere
+      root_ = restart%mc%who_am_i
+    end where
+  end if
+  
   !Only the root node writes
-  if (mpi_grp_is_root(restart%mpi_grp)) then
+  if (all(root_ == restart%mc%who_am_i)) then
     call io_binary_write(full_filename, np, ff, ierr)
   end if
 
@@ -309,14 +345,16 @@ subroutine X(restart_write_binary3)(restart, filename, np, ff, ierr)
 end subroutine X(restart_write_binary3)
 
 ! ---------------------------------------------------------
-subroutine X(restart_write_binary5)(restart, filename, np, ff, ierr)
-  type(restart_t),  intent(in)  :: restart
-  character(len=*), intent(in)  :: filename
-  integer,          intent(in)  :: np
-  R_TYPE,           intent(in)  :: ff(:,:,:,:,:)
-  integer,          intent(out) :: ierr
+subroutine X(restart_write_binary5)(restart, filename, np, ff, ierr, root)
+  type(restart_t),   intent(in)  :: restart
+  character(len=*),  intent(in)  :: filename
+  integer,           intent(in)  :: np
+  R_TYPE,            intent(in)  :: ff(:,:,:,:,:)
+  integer,           intent(out) :: ierr
+  integer, optional, intent(in)  :: root(:) !< which process is going to write the data
 
   character(len=MAX_PATH_LEN) :: full_filename
+  integer :: root_(1:P_STRATEGY_MAX)
 
   PUSH_SUB(X(restart_write_binary5))
 
@@ -325,8 +363,18 @@ subroutine X(restart_write_binary5)(restart, filename, np, ff, ierr)
 
   full_filename = trim(io_workpath(restart%pwd))//"/"//trim(filename)//".obf"
 
+  root_(1:P_STRATEGY_MAX) = 0
+  if (present(root)) then
+    ASSERT(root(P_STRATEGY_DOMAINS) >= 0)
+    where(root >= 0)
+      root_ = root
+    elsewhere
+      root_ = restart%mc%who_am_i
+    end where
+  end if
+  
   !Only the root node writes
-  if (mpi_grp_is_root(restart%mpi_grp)) then
+  if (all(root_ == restart%mc%who_am_i)) then
     call io_binary_write(full_filename, np, ff, ierr)
   end if
 
