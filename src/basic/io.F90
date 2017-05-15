@@ -124,8 +124,25 @@ contains
     !%Description
     !% By default, all files are written and read from the working directory,
     !% <i>i.e.</i> the directory from which the executable was launched. This behavior can
-    !% be changed by setting this variable: if you give it a name (other than ".")
-    !% the files are written and read in that directory.
+    !% be changed by setting this variable. If you set <tt>WorkDir</tt> to a name other than ".",
+    !% the following directories are written and read in that directory:
+    !%<ul>
+    !% <li>"casida/"</li>
+    !% <li>"em_resp_fd/"</li>
+    !% <li>"em_resp/"</li>
+    !% <li>"geom/"</li>
+    !% <li>"kdotp/"</li>
+    !% <li>"local.general"</li>
+    !% <li>"pcm/"</li>
+    !% <li>"profiling/"</li>
+    !% <li>"restart/"</li>
+    !% <li>"static/"</li>
+    !% <li>"td.general/"</li>
+    !% <li>"vdw/"</li>
+    !% <li>"vib_modes/"</li>
+    !%</ul>
+    !% Furthermore, some of the debug information (see <tt>Debug</tt>) is also written to <tt>WorkDir</tt> and
+    !% the non-absolute paths defined in <tt>OutputIterDir</tt> are relative to <tt>WorkDir</tt>.
     !%End
     call parse_variable('WorkDir', '.', work_dir)
     ! ... and if necessary create workdir (will not harm if work_dir is already there)
