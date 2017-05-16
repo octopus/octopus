@@ -873,7 +873,7 @@ end subroutine X(compute_coulomb_integrals)
 
      do idir = 1, mesh%sb%dim
        ! We have to compute 
-       ! hpsi> -= sum_m |phi m> sum_m' Vmm' <phi m'| r | psi >
+       ! hpsi> -= sum_m |phi m> sum_mp Vmmp <phi mp| r | psi >
        !
        ! We first compute <phi m| r | psi> for all orbitals of the atom
        !
@@ -901,7 +901,7 @@ end subroutine X(compute_coulomb_integrals)
        end if
  
        do im = 1, os%norbs
-         ! sum_m' Vmm' <phi m'|r| psi >
+         ! sum_mp Vmmp <phi mp|r| psi >
          reduced = M_ZERO
          do imp = 1, os%norbs
            reduced = reduced - this%X(V)(im,imp,ispin,ios)*dot(imp)
