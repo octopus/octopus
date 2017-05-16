@@ -55,6 +55,7 @@ libgrid_a_SOURCES =       \
 	partition.F90           \
 	partition_transfer.F90  \
 	par_vec.F90             \
+	restart.F90             \
 	stencil_cube.F90        \
 	stencil.F90             \
 	stencil_star.F90        \
@@ -86,6 +87,7 @@ noinst_HEADERS =                   \
 	operate_inc.c              \
 	partition_transfer_inc.F90 \
 	par_vec_inc.F90            \
+	restart_inc.F90            \
 	subarray_inc.F90           \
 	submesh_inc.F90            \
 	symmetrizer_inc.F90        \
@@ -120,9 +122,9 @@ mesh_batch.o : mesh_batch.F90 mesh_batch_inc.F90 mesh.o mesh_function.o
 mesh_cube_map.o : mesh_cube_map.F90 index.o partition_transfer.o cube.o
 mesh_cube_parallel_map.o : mesh_cube_parallel_map.F90 partition_transfer.o mesh.o cube.o
 mesh_function.o : mesh_function.F90 mesh_function_inc.F90 par_vec.o mesh.o cube_function.o modelmb_1part.o
-mesh_init.o : mesh_init.F90 mesh.o par_vec.o stencil.o partition.o mesh_partition.o mesh_cube_map.o
+mesh_init.o : mesh_init.F90 mesh.o par_vec.o stencil.o partition.o mesh_partition.o mesh_cube_map.o restart.o
 mesh.o : mesh.F90 par_vec.o index.o curvilinear.o mesh_cube_map.o partition.o
-mesh_partition.o : mesh_partition.F90 mesh.o stencil_star.o stencil.o partition.o
+mesh_partition.o : mesh_partition.F90 mesh.o stencil_star.o stencil.o partition.o restart.o
 modelmb_1part.o : modelmb_1part.F90 mesh.o hypercube.o
 multigrid.o : multigrid.F90 multigrid_inc.F90 mesh.o curvilinear.o derivatives.o mesh_init.o transfer_table.o boundaries.o
 nl_operator.o : nl_operator.F90 nl_operator_inc.F90 par_vec.o mesh.o index.o batch.o stencil.o boundaries.o operate_f.o
@@ -130,6 +132,7 @@ operate.o : operate.c operate_inc.c
 partition.o : partition.F90
 partition_transfer.o : partition_transfer.F90 partition_transfer_inc.F90 par_vec.o
 par_vec.o : par_vec.F90 par_vec_inc.F90 index.o stencil.o subarray.o partition.o
+restart.o : restart.F90 restart_inc.F90 io_function.o mesh.o
 stencil_cube.o : stencil_cube.F90 stencil.o
 stencil.o : stencil.F90
 stencil_star.o : stencil_star.F90 nl_operator.o stencil.o
