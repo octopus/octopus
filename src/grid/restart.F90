@@ -128,6 +128,7 @@ module restart_oct_m
                                 RESTART_VDW        =  8,  &
                                 RESTART_CASIDA     =  9,  &
                                 RESTART_OCT        =  10, &
+                                RESTART_PARTITION  =  11, &
                                 RESTART_PROJ       =  12
 
   integer, parameter :: RESTART_N_DATA_TYPES = 12
@@ -209,6 +210,7 @@ contains
     info(RESTART_CASIDA)%tag = "Casida"
     info(RESTART_OCT)%tag = "Optimal Control"
     info(RESTART_PROJ)%tag = "GS for TDOutput"
+    info(RESTART_PARTITION)%tag = "Mesh Partition"
 
     ! Default flags and directories (flags not yet used)
     info(:)%basedir = 'restart'
@@ -225,6 +227,7 @@ contains
     info(RESTART_CASIDA)%dir = CASIDA_DIR
     info(RESTART_OCT)%dir = OCT_DIR
     info(RESTART_PROJ)%dir = GS_DIR
+    info(RESTART_PARTITION)%dir = PARTITION_DIR
 
     ! Read input
     call messages_obsolete_variable('RestartFileFormat', 'RestartOptions')
@@ -330,6 +333,10 @@ contains
     !% (data type) 
     !% The data for optimal control calculations.
     !% This information is stored under the "opt-control" subdirectory.
+    !%Option restart_partition 11
+    !% (data type) 
+    !% The data for the mesh partitioning.
+    !% This information is stored under the "partition" subdirectory.
     !%Option restart_proj 12
     !% (data type)
     !% The ground-state to be used with the td_occup and populations options of <tt>TDOutput</tt>.
