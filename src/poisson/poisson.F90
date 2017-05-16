@@ -902,7 +902,7 @@ contains
     this%all_nodes_default = main%all_nodes_default
 #endif
 
-    default_solver = POISSON_DIRECT_SUM !POISSON_ISF
+    default_solver = POISSON_DIRECT_SUM 
     this%method = default_solver
 
     if(der%mesh%use_curvilinear) then
@@ -913,18 +913,6 @@ contains
 
     ! Now that we know the method, we check if we need a cube and its dimentions
     need_cube = .false.
-
-    if (this%method == POISSON_ISF) then
-      box(:) = 2*ceiling(sm%radius/der%mesh%spacing(:)) + 1
-      need_cube = .true.
-    end if
-
-    select case(this%method)
-    case(POISSON_ISF)
-        !Here we don't want parallelizaion, as Coulomb orbitals are already parallelized.
-        call poisson_isf_init(this%isf_solver, this%der%mesh, this%cube, MPI_COMM_NULL, init_world = .false.)
-    end select
-
 
     POP_SUB(poisson_init_sm)
   end subroutine poisson_init_sm
