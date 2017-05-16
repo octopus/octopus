@@ -349,8 +349,10 @@ contains
   end if
 
   call distributed_nullify(this%orbs_dist, this%norbsets)
+ #ifdef HAVE_MPI
   call distributed_init(this%orbs_dist, this%norbsets, MPI_COMM_WORLD, "orbsets")
- 
+ #endif 
+
   if(this%useACBN0) then
     write(message(1),'(a)')    'Computing the Coulomb integrals localized orbital basis.'
     call messages_info(1) 
@@ -400,7 +402,9 @@ contains
    this%max_np = 0
    this%norbsets = 0
 
+ #ifdef HAVE_MPI
    call distributed_end(this%orbs_dist)  
+ #endif
 
    POP_SUB(lda_u_end)
  end subroutine lda_u_end
