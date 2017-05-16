@@ -1939,7 +1939,7 @@ contains
         do is = 1, ispin
           do i = 1, spec%niwfs
             spec%iwf_i(i, is) = i
-            spec%iwf_n(n, is) = 0
+            spec%iwf_n(i, is) = 0
             spec%iwf_l(i, is) = 0
             spec%iwf_m(i, is) = 0
           end do
