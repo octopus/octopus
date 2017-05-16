@@ -227,12 +227,7 @@ contains
     type(multicomm_t),    intent(in)    :: mc
     type(geometry_t),     intent(in)    :: geo
 
-    type(mpi_grp_t) :: grp
-
-    PUSH_SUB(grid_init_stage_2)
-
-    call mpi_grp_init(grp, mc%group_comm(P_STRATEGY_DOMAINS))
-    call mesh_init_stage_3(gr%mesh, gr%stencil, grp)
+    call mesh_init_stage_3(gr%mesh, gr%stencil, mc)
 
     call nl_operator_global_init()
     if(gr%have_fine_mesh) then
@@ -258,7 +253,7 @@ contains
       
       call derivatives_init(gr%fine%der, gr%mesh%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
       
-      call mesh_init_stage_3(gr%fine%mesh, gr%stencil, gr%mesh%mpi_grp)
+      call mesh_init_stage_3(gr%fine%mesh, gr%stencil, mc)
       
       call multigrid_get_transfer_tables(gr%fine%tt, gr%fine%mesh, gr%mesh)
       
@@ -363,24 +358,26 @@ contains
 
 
   !-------------------------------------------------------------------
-  subroutine grid_create_multigrid(gr, geo)
-    type(grid_t), intent(inout) :: gr
-    type(geometry_t), intent(in) :: geo
+  subroutine grid_create_multigrid(gr, geo, mc)
+    type(grid_t),      intent(inout) :: gr
+    type(geometry_t),  intent(in)    :: geo
+    type(multicomm_t), intent(in)    :: mc
 
     PUSH_SUB(grid_create_multigrid)
 
     SAFE_ALLOCATE(gr%mgrid)
-    call multigrid_init(gr%mgrid, geo, gr%cv, gr%mesh, gr%der, gr%stencil)
+    call multigrid_init(gr%mgrid, geo, gr%cv, gr%mesh, gr%der, gr%stencil, mc)
 
     POP_SUB(grid_create_multigrid)
   end subroutine grid_create_multigrid
 
 
   !-------------------------------------------------------------------
-  subroutine grid_create_largergrid(grin, geo, grout)
-    type(grid_t), intent(in)     :: grin
-    type(geometry_t), intent(in) :: geo
-    type(grid_t), intent(out)    :: grout
+  subroutine grid_create_largergrid(grin, geo, mc, grout)
+    type(grid_t),      intent(in)  :: grin
+    type(geometry_t),  intent(in)  :: geo
+    type(multicomm_t), intent(in)  :: mc
+    type(grid_t),      intent(out) :: grout
 
     FLOAT :: avg
 
@@ -415,7 +412,7 @@ contains
 
     call grid_init_stage_1(grout, geo)
 
-    call mesh_init_stage_3(grout%mesh, grout%stencil, grin%mesh%mpi_grp)
+    call mesh_init_stage_3(grout%mesh, grout%stencil, mc)
 
     call derivatives_build(grout%der, grout%mesh)
 

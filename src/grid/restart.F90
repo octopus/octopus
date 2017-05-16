@@ -233,6 +233,9 @@ contains
     call messages_obsolete_variable('RestartFileFormat', 'RestartOptions')
     call messages_obsolete_variable('TmpDir', 'RestartOptions')
     call messages_obsolete_variable('RestartDir', 'RestartOptions')
+    call messages_obsolete_variable('MeshPartitionRead', 'RestartOptions')
+    call messages_obsolete_variable('MeshPartitionWrite', 'RestartOptions')
+    call messages_obsolete_variable('MeshPartitionDir', 'RestartOptions')
 
     !%Variable RestartOptions
     !%Type block
