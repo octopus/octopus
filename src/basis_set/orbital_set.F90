@@ -72,7 +72,7 @@ contains
   nullify(this%orbitals)
   nullify(this%dS)
   nullify(this%zS)
-  nullify(spec)
+  nullify(this%spec)
 
   POP_SUB(orbital_set_nullify)
 
