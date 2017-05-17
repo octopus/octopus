@@ -575,11 +575,18 @@ contains
           call states_deallocate_wfns(sys%st)
           call ground_state_run(sys, hm, fromScratch)
           call states_allocate_wfns(sys%st, gr%mesh)
-          call states_load(restart_load, st, gr, ierr, iter=iter)
+          call td_load(restart_load, gr, st, hm, td, ierr)
           if (ierr /= 0) then
             message(1) = "Unable to load TD states."
             call messages_fatal(1)
           end if
+          if(.not. cmplxscl) then
+            call density_calc(st, gr, st%rho)
+          else
+            call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
+          end if
+          call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval=.true., time = iter*td%dt, calc_energy=.true.)
+          call forces_calculate(gr, geo, hm, st, iter*td%dt, td%dt)
           call messages_print_stress(stdout, "Time-dependent simulation proceeds")
           call print_header()
         end if
