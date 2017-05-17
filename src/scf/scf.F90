@@ -550,7 +550,7 @@ contains
     nspin = st%d%nspin
 
     if (present(restart_load)) then
-      if (restart_has_flag(restart_load, RESTART_RHO)) then
+      if (restart_has_flag(restart_load, RESTART_FLAG_RHO)) then
         ! Load density and used it to recalculated the KS potential.
         call states_load_rho(restart_load, st, gr, ierr)
         if (ierr /= 0) then
@@ -561,7 +561,7 @@ contains
         end if
       end if
 
-      if (restart_has_flag(restart_load, RESTART_VHXC)) then
+      if (restart_has_flag(restart_load, RESTART_FLAG_VHXC)) then
         call hamiltonian_load_vhxc(restart_load, hm, gr%mesh, ierr)
         if (ierr /= 0) then
           message(1) = 'Unable to read Vhxc. Vhxc will be calculated from states.'
@@ -571,7 +571,7 @@ contains
         end if
       end if
 
-      if (restart_has_flag(restart_load, RESTART_MIX)) then
+      if (restart_has_flag(restart_load, RESTART_FLAG_MIX)) then
         select case (scf%mix_field)
         case (OPTION__MIXFIELD__DENSITY)
           call mix_load(restart_load, scf%smix, gr%fine%mesh, ierr)
