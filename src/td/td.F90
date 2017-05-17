@@ -572,7 +572,9 @@ contains
         if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) then
           call messages_print_stress(stdout, 'Recalculating the ground state.')
           fromScratch = .false.
+          call states_deallocate_wfns(sys%st)
           call ground_state_run(sys, hm, fromScratch)
+          call states_allocate_wfns(sys%st, gr%mesh)
           call states_load(restart_load, st, gr, ierr, iter=iter)
           if (ierr /= 0) then
             message(1) = "Unable to load TD states."
