@@ -72,6 +72,7 @@ contains
   nullify(this%orbitals)
   nullify(this%dS)
   nullify(this%zS)
+  nullify(spec)
 
   POP_SUB(orbital_set_nullify)
 
@@ -94,15 +95,15 @@ contains
   
    PUSH_SUB(orbital_set_end)  
 
-     do iorb = 1, this%norbs
-       call orbital_end(this%orbitals(iorb))
-     end do 
-     SAFE_DEALLOCATE_P(this%orbitals)
-     SAFE_DEALLOCATE_P(this%phase)
-     SAFE_DEALLOCATE_P(this%dS)
-     SAFE_DEALLOCATE_P(this%zS)
-     nullify(this%spec)
-     call submesh_end(this%sphere)
+   do iorb = 1, this%norbs
+     call orbital_end(this%orbitals(iorb))
+   end do 
+   SAFE_DEALLOCATE_P(this%orbitals)
+   SAFE_DEALLOCATE_P(this%phase)
+   SAFE_DEALLOCATE_P(this%dS)
+   SAFE_DEALLOCATE_P(this%zS)
+   nullify(this%spec)
+   call submesh_end(this%sphere)
    
    POP_SUB(orbital_set_end)
  end subroutine orbital_set_end
@@ -150,7 +151,7 @@ contains
         os%phase(is, iq) = exp(M_zI*kr)
       end do
 
-      !We now compute the so called-Bloch sum of the localized orbitals
+      !We now compute the so-called Bloch sum of the localized orbitals
       do im = 1, os%norbs
         !$omp parallel do
         do is = 1, ns

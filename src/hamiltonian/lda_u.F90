@@ -153,6 +153,7 @@ contains
   nullify(this%Vloc1)
   nullify(this%dVloc2)
   nullify(this%zVloc2)
+  nullify(this%orbsets)
 
   call distributed_nullify(this%orbs_dist, 0)
 
