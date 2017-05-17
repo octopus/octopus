@@ -789,15 +789,15 @@ contains
 
       do iatom = 1, geo%natoms
         read(iunit, '(3es20.12)', advance='no') geo%atom(iatom)%x(1:gr%mesh%sb%dim)
-        geo%atom(iatom)%x(:) = units_to_atomic(units_inp%length, geo%atom(iatom)%x(:))
+        geo%atom(iatom)%x(:) = units_to_atomic(units_out%length, geo%atom(iatom)%x(:))
       end do
       do iatom = 1, geo%natoms
         read(iunit, '(3es20.12)', advance='no') geo%atom(iatom)%v(1:gr%mesh%sb%dim)
-        geo%atom(iatom)%v(:) = units_to_atomic(units_inp%velocity, geo%atom(iatom)%v(:))
+        geo%atom(iatom)%v(:) = units_to_atomic(units_out%velocity, geo%atom(iatom)%v(:))
       end do
       do iatom = 1, geo%natoms
         read(iunit, '(3es20.12)', advance='no') geo%atom(iatom)%f(1:gr%mesh%sb%dim)
-        geo%atom(iatom)%f(:) = units_to_atomic(units_inp%force, geo%atom(iatom)%f(:))
+        geo%atom(iatom)%f(:) = units_to_atomic(units_out%force, geo%atom(iatom)%f(:))
       end do
 
       call io_close(iunit)
