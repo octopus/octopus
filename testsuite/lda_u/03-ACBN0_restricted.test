@@ -7,7 +7,7 @@ Enabled    : Yes
 
 Input      : 03-ACBN0_restricted.01-lif.inp
 
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  -25.48718794
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  -24.24557753
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;  -14.42250723
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;  -4.40333196
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;   8.28619903
