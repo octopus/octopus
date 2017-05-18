@@ -1054,6 +1054,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
   integer :: ia, iorb, norb, ispin, offset
   integer ::  hubbardl, ii, nn, ll, mm, work, work2, iorbset
   FLOAT   :: norm
+  FLOAT, allocatable :: minradii(:)
   logical :: hasSorbitals
   type(orbital_set_t), pointer :: os
 
@@ -1095,6 +1096,11 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
   do iorbset = 1, this%norbsets
     call orbital_set_nullify(this%orbsets(iorbset))
   end do
+
+  if( this%useAllOrbitals .and. this%minimalAtomicSphere ) then
+   SAFE_ALLOCATE(minradii(1:geo%natoms))
+   call find_minimal_atomic_spheres(geo, mesh, minradii, this%truncation, this%orbitals_threshold)
+  end if
 
   iorbset = 0
   do ia = 1, geo%natoms
@@ -1171,8 +1177,13 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
           if(ii == norb+offset) then
             work2  = work2 + 1
             ! We obtain the orbital
-            call X(get_atomic_orbital)(geo, mesh, os%sphere, ia, iorb, 1, os%orbitals(work2),&
+            if(this%minimalAtomicSphere) then
+              call X(get_atomic_orbital)(geo, mesh, os%sphere, ia, iorb, 1, os%orbitals(work2),&
+                         this%truncation, this%orbitals_threshold, minradii(ia))
+            else
+              call X(get_atomic_orbital)(geo, mesh, os%sphere, ia, iorb, 1, os%orbitals(work2),&
                          this%truncation, this%orbitals_threshold)
+            end if
             ! We have to normalize the orbitals, 
             ! in case the orbitals that comes out of the pseudo are not properly normalised
             if(this%normalizeOrbitals) then
@@ -1240,6 +1251,10 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
     end do
   end if
 
+  if( this%useAllOrbitals .and. this%minimalAtomicSphere ) then
+   SAFE_DEALLOCATE_A(minradii)
+  end if
+
  
   POP_SUB(X(construct_orbital_basis))
 
@@ -1298,12 +1313,11 @@ subroutine X(build_overlap_matrices)(this, ik, has_phase)
   POP_SUB(X(build_overlap_matrices))
 end subroutine X(build_overlap_matrices)
 
-
 ! ---------------------------------------------------------
 !> This routine returns the atomic orbital basis -- provided
 !! by the pseudopotential structure in geo.
 ! ---------------------------------------------------------
-subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, iorb, ispin, orb, truncation, threshold)
+subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, iorb, ispin, orb, truncation, threshold, minradius)
   type(mesh_t),             intent(in)    :: mesh
   type(geometry_t), target, intent(in)    :: geo
   type(submesh_t),          intent(inout) :: sm
@@ -1313,6 +1327,7 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, iorb, ispin, orb, trunca
   type(orbital_t),          intent(inout) :: orb
   integer,                  intent(in)    :: truncation
   FLOAT,                    intent(in)    :: threshold
+  FLOAT, optional,          intent(in)    :: minradius
 
   type(species_t), pointer :: spec
   integer :: ii, ll, mm, ispin_
@@ -1332,27 +1347,13 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, iorb, ispin, orb, trunca
   call species_iwf_ilm(spec, iorb, ispin_, ii, ll, mm)
 
   if(sm%np == -1) then
-    if(truncation == OPTION__ORBITALSTRUNCATIONMETHOD__FULL) then
-      radius = species_get_iwf_radius(spec, ii, ispin_, threshold) 
+ 
+    
+    if(.not.present(minradius)) then
+      radius = get_orbial_radius(geo, mesh, iatom, iorb, ispin, truncation, threshold)
     else
-      radius = species_get_iwf_radius(spec, ii, ispin_)
-   
-      if(truncation == OPTION__ORBITALSTRUNCATIONMETHOD__BOX) then
-        ! if the orbital is larger than the size of the box, we restrict it to this size, 
-        ! otherwise the orbital will overlap more than one time with the simulation box.
-        ! This would induces phase problem if the complete mesh is used instead of the sphere
-        radius = min(radius, minval(mesh%sb%lsize(1:mesh%sb%dim)-mesh%spacing(1:mesh%sb%dim)*CNST(1.01)))
-      else
-        !If asked, we truncate the orbital to the radius on the projector spheres 
-        !of the NL part of the pseudopotential.
-        !This is a way to garanty no overlap between orbitals of different atoms.
-        if(species_is_ps(spec)) &
-          radius = min(radius,species_get_ps_radius(spec))
-      end if
+      radius = minradius
     end if
-    print *, radius, species_get_iwf_radius(spec, ii, ispin_), species_get_ps_radius(spec)
-    ! make sure that if the spacing is too large, the orbitals fit in a few points at least
-    radius = max(radius, CNST(2.0)*maxval(mesh%spacing(1:mesh%sb%dim)))
 
     if(mesh%sb%box_shape == MINIMUM .and. radius > mesh%sb%rsize) then
       message(1) = "The radius of an orbital set is bigger than the radius of the simulatio box."
