@@ -165,7 +165,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
     call X(scissor_apply)(hm%scissor, der%mesh, ik, epsib, hpsib)
   end if
 
-  if(iand(TERM_OTHERS, terms_) /= 0 .and. hm%lda_u%apply) then
+  if(iand(TERM_DFT_U, terms_) /= 0 .and. hm%lda_u%apply) then
     call X(lda_u_apply)(hm%lda_u, der%mesh, hm%d, ik, epsib, hpsib, apply_phase)
   end if  
 

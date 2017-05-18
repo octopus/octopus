@@ -139,7 +139,8 @@ module hamiltonian_base_oct_m
     TERM_NON_LOCAL_POTENTIAL =   4,      &
     TERM_OTHERS              =   8,      &
     TERM_LOCAL_EXTERNAL      =  16,      &
-    TERM_MGGA                =  32
+    TERM_MGGA                =  32,      &
+    TERM_DFT_U               =  64 
 
   integer, parameter, public ::            &
     FIELD_POTENTIAL                = 1,    &

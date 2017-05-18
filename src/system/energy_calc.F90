@@ -114,6 +114,7 @@ contains
         hm%energy%kinetic  = tnadd_energy + denergy_calc_electronic(hm, gr%der, st, terms = TERM_KINETIC)
         hm%energy%extern_local = external_energy + denergy_calc_electronic(hm, gr%der, st, terms = TERM_LOCAL_EXTERNAL)
         hm%energy%extern_non_local   = denergy_calc_electronic(hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL)
+        hm%energy%int_dft_u = denergy_calc_electronic(hm, gr%der, st, terms = TERM_DFT_U)
         hm%energy%extern = hm%energy%extern_local + hm%energy%extern_non_local
         evxctau = denergy_calc_electronic(hm, gr%der, st, terms = TERM_MGGA)
       else
@@ -129,7 +130,11 @@ contains
         hm%energy%extern_non_local   = real(etmp)
         hm%energy%Imextern_non_local = aimag(etmp)
 
-        hm%energy%extern   = hm%energy%extern_local   + hm%energy%extern_non_local
+        etmp = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_DFT_U)
+        hm%energy%int_dft_u   = real(etmp)
+        hm%energy%Imint_dft_u = aimag(etmp)
+
+        hm%energy%extern   = hm%energy%extern_local   + hm%energy%extern_non_local 
         hm%energy%Imextern = hm%energy%Imextern_local + hm%energy%Imextern_non_local
         
         etmp = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_MGGA)
@@ -170,11 +175,11 @@ contains
         - hm%energy%hartree + hm%energy%exchange + hm%energy%correlation + hm%energy%vdw - hm%energy%intnvxc - evxctau &
         - hm%energy%pcm_corr + hm%energy%int_ee_pcm + hm%energy%int_en_pcm &
                              + hm%energy%int_nn_pcm + hm%energy%int_ne_pcm &
-        + hm%energy%lda_u_energy
+        + hm%energy%dft_u -  hm%energy%int_dft_u
 
       if (cmplxscl) then
         hm%energy%Imtotal = hm%energy%Imeigenvalues - hm%energy%Imhartree + hm%energy%Imexchange + hm%energy%Imcorrelation &
-          - hm%energy%Imintnvxc - Imevxctau
+          - hm%energy%Imintnvxc - Imevxctau - hm%energy%Imint_dft_u
       end if
 
     case(CLASSICAL)
@@ -262,8 +267,11 @@ contains
         call messages_info(1, iunit)
       end if  
       if(hm%lda_u%apply) then
-        write(message(1), '(6x,a, f18.8)')'Hubbard     = ', units_from_atomic(units_out%energy, hm%energy%lda_u_energy)
+        write(message(1), '(6x,a, f18.8)')'Hubbard     = ', units_from_atomic(units_out%energy, hm%energy%dft_u)
         call messages_info(1, iunit)
+        write(message(4), '(6x,a, f18.8)')'Int[n*v_U] = ', units_from_atomic(units_out%energy, hm%energy%int_dft_u)
+        if(cmplxscl) write(message(4), '(a, es18.6)') trim(message(4)),&
+                     units_from_atomic(units_out%energy, hm%energy%Imint_dft_u)
       end if
     end if
 

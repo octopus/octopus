@@ -9,14 +9,14 @@ Input      : 01-nio.01-U5-gs.inp
 
 match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 8
 
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -247.24658044 
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -246.83042074
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -177.00987193 
-match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -32.64083651 
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -32.64068066
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  45.62686369 
 match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -27.52019342 
 match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -2.04213031
 match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  122.05338009 
-match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -208.20767255 
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -208.20777899 
 match ; Fermi energy       ; GREPFIELD(static/info, 'Fermi energy =', 4);  0.415068
 match ; Total Magnetic Moment ; GREPFIELD(static/info, 'mz = ', 3);      0.0000 
 match ; Local Magnetic Moment (Ni1) ; GREPFIELD(static/info, '1        Ni', 3);  3.278704 

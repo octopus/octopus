@@ -1891,7 +1891,7 @@ contains
                                                                  hm%energy%int_nn_pcm + hm%energy%int_ne_pcm), 1)
 
     if(hm%lda_u%apply) call write_iter_double(out_energy, &
-                             units_from_atomic(units_out%energy, hm%energy%lda_u_energy), 1)
+                             units_from_atomic(units_out%energy, hm%energy%dft_u), 1)
 
     call write_iter_nl(out_energy)
 

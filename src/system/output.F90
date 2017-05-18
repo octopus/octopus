@@ -670,7 +670,7 @@ contains
 
     if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__EFFECTIVEU) /= 0&
        .and. hm%lda_u%apply) then
-      call lda_u_write_effectiveU(dir, hm%lda_u, st)
+      call lda_u_write_effectiveU(dir, hm%lda_u)
     end if
 
     call profiling_out(prof)

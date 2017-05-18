@@ -59,7 +59,6 @@ contains
    type(states_t),    intent(in)    :: st
 
    integer :: iunit, ios, ispin, im, imp
-   FLOAT :: hubbardl
  
    PUSH_SUB(lda_u_write_occupation_matrices)
 
@@ -122,10 +121,9 @@ contains
  end subroutine lda_u_write_occupation_matrices
 
  !--------------------------------------------------------- 
- subroutine lda_u_write_effectiveU(dir, this, st)
+ subroutine lda_u_write_effectiveU(dir, this)
    type(lda_u_t),     intent(in)    :: this
    character(len=*),  intent(in)    :: dir
-   type(states_t),    intent(in)    :: st
 
    integer :: iunit
 

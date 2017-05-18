@@ -467,13 +467,13 @@ contains
    PUSH_SUB(lda_u_update_occ_matrices)
 
    if (states_are_real(st)) then
-     call dupdate_occ_matrices(this, mesh, st, energy%lda_u_energy)
+     call dupdate_occ_matrices(this, mesh, st, energy%dft_u)
    else
      if(associated(hm_base%phase)) then
-       call zupdate_occ_matrices(this, mesh, st, energy%lda_u_energy,&
+       call zupdate_occ_matrices(this, mesh, st, energy%dft_u,&
                                 hm_base%phase)
      else
-       call zupdate_occ_matrices(this, mesh, st, energy%lda_u_energy)
+       call zupdate_occ_matrices(this, mesh, st, energy%dft_u)
      end if
    end if
 
