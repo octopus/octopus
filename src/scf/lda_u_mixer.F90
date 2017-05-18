@@ -84,6 +84,8 @@ contains
      call mixfield_init( smix, mixer%mixfield_U, this%norbsets, 1, 1,  mix_d4(smix), TYPE_FLOAT )
      call mixfield_clear(mix_scheme(smix), mixer%mixfield_U)
      call mix_add_auxmixfield(smix, mixer%mixfield_U)
+   else
+     call mixfield_nullify(mixer%mixfield_U)
    end if
 
    POP_SUB(lda_u_mixer_init_auxmixer)
