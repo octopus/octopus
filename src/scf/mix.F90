@@ -57,6 +57,7 @@ module mix_oct_m
     mix_d4,                     &
     mix_get_field,              &
     mixfield_t,                 &
+    mixfield_nullify,           &
     mixfield_init,              &
     mixfield_clear,             &
     mixfield_end,               &
@@ -690,13 +691,10 @@ contains
     POP_SUB(mix_add_auxmixfield)
   end subroutine mix_add_auxmixfield
 
-  subroutine mixfield_init( smix, mixfield, d1, d2, d3, d4, func_type ) 
-    type(mix_t),      intent(inout) :: smix
+  subroutine mixfield_nullify( mixfield )
     type(mixfield_t), intent(inout) :: mixfield
-    integer,          intent(in)    :: d1, d2, d3, d4
-    type(type_t),     intent(in)    :: func_type
 
-    PUSH_SUB(mixfield_init)
+    PUSH_SUB(mixfield_nullify)
 
     nullify(mixfield%ddf)
     nullify(mixfield%ddv)
@@ -713,6 +711,19 @@ contains
     nullify(mixfield%zvin)
     nullify(mixfield%zvout)
     nullify(mixfield%zvnew)
+
+    POP_SUB(mixfield_nullify)
+  end subroutine mixfield_nullify
+
+  subroutine mixfield_init( smix, mixfield, d1, d2, d3, d4, func_type ) 
+    type(mix_t),      intent(inout) :: smix
+    type(mixfield_t), intent(inout) :: mixfield
+    integer,          intent(in)    :: d1, d2, d3, d4
+    type(type_t),     intent(in)    :: func_type
+
+    PUSH_SUB(mixfield_init)
+
+    call mixfield_nullify( mixfield )
 
     mixfield%d1 = d1
     mixfield%d2 = d2
