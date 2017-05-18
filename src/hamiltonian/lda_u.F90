@@ -120,6 +120,7 @@ module lda_u_oct_m
     logical             :: freeze_occ         !> Occupation matrices are not recomputed during TD evolution
     logical             :: freeze_u           !> U is not recomputed during TD evolution
     logical             :: normalizeOrbitals  !> Do we normalize the orbitals 
+    logical             :: MinimalAtomicSphere!> Use the smallest atomic orbital radius for all of them
  
     type(distributed_t) :: orbs_dist
   end type lda_u_t
@@ -227,12 +228,12 @@ contains
 
   !%Variable DFTUNormalizeOrbitals
   !%Type logical
-  !%Default no
+  !%Default yes
   !%Section Hamiltonian::DFT+U
   !%Description
   !% If set to yes, Octopus will normalize the atomic orbitals
   !%End
-  call parse_variable('DFTUNormalizeOrbitals', .false., this%normalizeOrbitals)
+  call parse_variable('DFTUNormalizeOrbitals', .true., this%normalizeOrbitals)
 
   if( this%useACBN0) then
     !%Variable UseAllAtomicOrbitals
@@ -268,7 +269,7 @@ contains
     call parse_variable('ACBN0_corrected', .false., this%ACBN0_corrected)
     if(this%ACBN0_corrected) call messages_experimental("ACBN0_corrected")
 
-    !%Variable IncludeOverlap
+    !%Variable DFTUIncludeOverlap
     !%Type logical
     !%Default no
     !%Section Hamiltonian::DFT+U
@@ -276,8 +277,21 @@ contains
     !% If set to yes, Octopus will determine the overlap between orbitals on different atomic sites
     !% and use it for the ACBN0 functional
     !%End
-    call parse_variable('IncludeOverlap', .false., this%IncludeOverlap)
-    if(this%IncludeOverlap) call messages_experimental("IncludeOverlap")
+    call parse_variable('DFTUIncludeOverlap', .false., this%IncludeOverlap)
+    if(this%IncludeOverlap) call messages_experimental("DFTUIncludeOverlap")
+
+
+    !%Variable DFTUMinimalAtomicSphere
+    !%Type logical
+    !%Default yes
+    !%Section Hamiltonian::DFT+U
+    !%Description
+    !% If set to yes, Octupus will set the radius of the orbitals to the smallest orbital
+    !% present in the pseudopotential file. Only with the ACBN0 functional and the UseAllAtomicOrbitals 
+    !% options activated.
+    !%End
+    call parse_variable('DFTUMinimalAtomicSphere', .true., this%MinimalAtomicSphere)
+    if(this%MinimalAtomicSphere) call messages_experimental("DFTUMinimalAtomicSphere")
   end if
 
   !We first need to load the basis
