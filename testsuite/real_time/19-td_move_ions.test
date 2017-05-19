@@ -1,0 +1,37 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Time propagation with moving ions
+Program    : octopus
+TestGroups : long-run, real_time
+Enabled    : Yes
+
+# This test checks the time-propagation.
+
+# ground state
+Processors : 4
+Input      : 19-td_move_ions.01-gs.inp
+match ; Initial energy ; GREPFIELD(static/info, 'Total       =', 3) ; -29.63862020
+
+# time-propagation with moving ions
+Processors : 4
+Input      : 19-td_move_ions.02-td.inp
+match ; Energy [step 10] ; LINEFIELD(td.general/energy, -11, 3) ; -2.963867400889e+01
+match ; Energy [step 20] ; LINEFIELD(td.general/energy,  -1, 3) ; -2.963879583805e+01
+match ; X Coordinate Atom 1 [step 10] ; LINEFIELD(td.general/coordinates, -11, 3) ; -2.646331977145e-01
+match ; X Coordinate Atom 1 [step 20] ; LINEFIELD(td.general/coordinates,  -1, 3) ; -2.647668863614e-01
+match ; X Velocity Atom 1 [step 10] ; LINEFIELD(td.general/coordinates, -11, 9) ; -2.426443393702e-03
+match ; X Velocity Atom 1 [step 20] ; LINEFIELD(td.general/coordinates,  -1, 9) ; -4.848105661132e-03
+match ; X Force Atom 1 [step 10] ; LINEFIELD(td.general/coordinates, -11, 15) ; -1.590796202386e+01
+match ; X Force Atom 1 [step 20] ; LINEFIELD(td.general/coordinates,  -1, 15) ; -1.586331204762e+01
+
+# restart of time-propagation with moving ions
+Processors : 4
+Input      : 19-td_move_ions.03-td_restart.inp
+match ; Energy [step 15] ; LINEFIELD(td.general/energy, -11, 3) ; -2.963899920927e+01
+match ; Energy [step 20] ; LINEFIELD(td.general/energy,  -1, 3) ; -2.963928460291e+01
+match ; X Coordinate Atom 1 [step 30] ; LINEFIELD(td.general/coordinates, -11, 3) ; -2.649894205553e-01
+match ; X Coordinate Atom 1 [step 40] ; LINEFIELD(td.general/coordinates,  -1, 3) ; -2.653004059797e-01
+match ; X Velocity Atom 1 [step 30] ; LINEFIELD(td.general/coordinates, -11, 9) ; -7.260996672129e-03
+match ; X Velocity Atom 1 [step 40] ; LINEFIELD(td.general/coordinates,  -1, 9) ; -9.661202841311e-03
+match ; X Force Atom 1 [step 30] ; LINEFIELD(td.general/coordinates, -11, 15) ; -1.579290575660e+01
+match ; X Force Atom 1 [step 40] ; LINEFIELD(td.general/coordinates,  -1, 15) ; -1.569688807388e+01

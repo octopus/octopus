@@ -39,6 +39,7 @@ module mesh_init_oct_m
   use parser_oct_m
   use partition_oct_m
   use profiling_oct_m
+  use restart_oct_m
   use simul_box_oct_m
   use stencil_oct_m
   use subarray_oct_m
@@ -438,17 +439,20 @@ end subroutine mesh_init_stage_2
 !! mpi_grp is the communicator group that will be used for
 !! this mesh.
 ! ---------------------------------------------------------
-subroutine mesh_init_stage_3(mesh, stencil, mpi_grp, parent)
+subroutine mesh_init_stage_3(mesh, stencil, mc, parent)
   type(mesh_t),              intent(inout) :: mesh
   type(stencil_t),           intent(in)    :: stencil
-  type(mpi_grp_t),           intent(in)    :: mpi_grp
+  type(multicomm_t),         intent(in)    :: mc
   type(mesh_t),    optional, intent(in)    :: parent
 
   integer :: ip
+  type(mpi_grp_t) :: mpi_grp
 
   PUSH_SUB(mesh_init_stage_3)
   call profiling_in(mesh_init_prof, "MESH_INIT")
 
+  call mpi_grp_init(mpi_grp, mc%group_comm(P_STRATEGY_DOMAINS))
+  
   ! check if we are running in parallel in domains
   mesh%parallel_in_domains = (mpi_grp%size > 1)
 
@@ -792,51 +796,14 @@ contains
 
     logical :: read_partition, write_partition, has_virtual_partition = .false.
     integer :: vsize !< 'virtual' partition size
-    character(len=80) :: partition_dir
-
+    type(restart_t) :: restart_load, restart_dump
+    
     PUSH_SUB(mesh_init_stage_3.do_partition)
 
-    !%Variable MeshPartitionDir
-    !%Type string
-    !%Default "restart/partition"
-    !%Section Execution::Parallelization
-    !%Description
-    !% Directory where <tt>Octopus</tt> can read or write the mesh partition.
-    !%End
-    call parse_variable('MeshPartitionDir', "restart/partition", partition_dir)
-
-    call messages_obsolete_variable('MeshPartitionFromScratch', 'MeshPartitionRead')
-
-    !%Variable MeshPartitionRead
-    !%Type logical
-    !%Default true
-    !%Section Execution::Parallelization
-    !%Description
-    !% If set to yes (the default), <tt>Octopus</tt> will try to use the mesh
-    !% partition from a previous run, if available, in directory <tt>MeshPartitionDir</tt>.
-    !%End
-    call parse_variable('MeshPartitionRead', .true., read_partition)
-
-    ierr = -1
-    if (read_partition) then
-      call mesh_partition_load(partition_dir, mesh, ierr)
-      
-      ! Tell the user if we found a compatible mesh partition
-      if (ierr == 0) then
-        message(1) = "Info: Found a compatible mesh partition in '"//trim(partition_dir)//"'."
-        call messages_info(1)
-      else
-        message(1) = "Info: Could not find a compatible mesh partition in '"//trim(partition_dir)//"'."
-        message(2) = "Reason: "
-        if (IAND(ierr,1)  /= 0) message(2) = trim(message(2))//" fingerprint does not exist"
-        if (IAND(ierr,2)  /= 0) message(2) = trim(message(2))//" fingerprint read error"
-        if (IAND(ierr,4)  /= 0) message(2) = trim(message(2))//" fingerprint differs"
-        if (IAND(ierr,8)  /= 0) message(2) = trim(message(2))//" inner partition read failed"
-        if (IAND(ierr,16) /= 0) message(2) = trim(message(2))//" boundary partition read failed"
-        call messages_info(2)
-      end if
-    end if
-
+    !Try to load the partition from the restart files
+    call restart_init(restart_load, RESTART_PARTITION, RESTART_TYPE_LOAD, mc, ierr, mesh=mesh, exact=.true.)
+    if (ierr == 0) call mesh_partition_load(restart_load, mesh, ierr)
+    call restart_end(restart_load)
 
     if(ierr /= 0) then
 
@@ -870,31 +837,9 @@ contains
       call mesh_partition_boundaries(mesh, stencil, vsize)
 
       !Now that we have the partitions, we save them
-
-      !%Variable MeshPartitionWrite
-      !%Type logical
-      !%Default false
-      !%Section Execution::Parallelization
-      !%Description
-      !% If set to yes (the default), <tt>Octopus</tt> will write the mesh
-      !% partition of the current run to directory <tt>MeshPartitionDir</tt>.
-      !%End
-      call parse_variable('MeshPartitionWrite', .false., write_partition)
-
-      if (mpi_grp_is_root(mesh%mpi_grp)) then
-        call io_mkdir(trim(partition_dir), parents=.true.)
-      end if
-      if (write_partition) then
-        call mesh_partition_dump(partition_dir, mesh, vsize, ierr)
-        if (ierr /= 0) then
-          message(1) = "Unable to write partition to '"//trim(partition_dir)//"'."
-          message(2) = "Files: "          
-          if (IAND(ierr,1) /= 0) message(2) = trim(message(2))//" fingerprint"
-          if (IAND(ierr,2) /= 0) message(2) = trim(message(2))//" inner partition"
-          if (IAND(ierr,4) /= 0) message(2) = trim(message(2))//" boundary partition"
-          call messages_warning(2)
-        end if
-      end if
+      call restart_init(restart_dump, RESTART_PARTITION, RESTART_TYPE_DUMP, mc, ierr, mesh=mesh)
+      call mesh_partition_dump(restart_dump, mesh, vsize, ierr)
+      call restart_end(restart_dump)
     end if
 
     !At the moment we still need the global partition. This will be removed in near future.
@@ -902,7 +847,7 @@ contains
     call partition_get_global(mesh%inner_partition, mesh%vp%part_vec(1:mesh%np_global))
     call partition_get_global(mesh%bndry_partition, mesh%vp%part_vec(mesh%np_global+1:mesh%np_part_global))      
 
-    if (has_virtual_partition) then  
+    if (has_virtual_partition) then
       call profiling_end()
       call print_date("Calculation ended on ")
       write(message(1),'(a)') "Execution has ended."

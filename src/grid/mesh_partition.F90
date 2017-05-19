@@ -34,6 +34,7 @@ module mesh_partition_oct_m
   use parser_oct_m
   use partition_oct_m
   use profiling_oct_m
+  use restart_oct_m
   use simul_box_oct_m
   use stencil_oct_m
   use stencil_star_oct_m
@@ -564,11 +565,11 @@ contains
   end subroutine mesh_partition_from_parent
 
   ! ----------------------------------------------------
-  subroutine mesh_partition_dump(dir, mesh, vsize, ierr)
-    character(len=*), intent(in)  :: dir
-    type(mesh_t),     intent(in)  :: mesh
-    integer,          intent(in)  :: vsize
-    integer,          intent(out) :: ierr
+  subroutine mesh_partition_dump(restart, mesh, vsize, ierr)
+    type(restart_t), intent(in)  :: restart
+    type(mesh_t),    intent(in)  :: mesh
+    integer,         intent(in)  :: vsize
+    integer,         intent(out) :: ierr
 
     integer :: err
     character(len=6) :: numstring
@@ -580,64 +581,111 @@ contains
 
     ierr = 0
 
+    if (restart_skip(restart)) then
+      POP_SUB(mesh_partition_dump)
+      return
+    end if
+    
+    if (debug%info) then
+      message(1) = "Debug: Writing mesh partition restart."
+      call messages_info(1)
+    end if
+    
     write(numstring, '(i6.6)') vsize
-    call mesh_write_fingerprint(mesh, dir, 'grid_'//trim(numstring), mesh%mpi_grp, err)
-    if (err /= 0) ierr = ierr + 1
 
-    call partition_dump(mesh%inner_partition, trim(dir)//'/inner_partition_'//trim(numstring)//'.obf', err)
-    if (err /= 0) ierr = ierr + 2
+    call partition_dump(mesh%inner_partition, trim(restart_dir(restart))//'/inner_partition_'//trim(numstring)//'.obf', err)
+    if (err /= 0) then
+      message(1) = "Unable to write inner mesh partition to 'inner_partition_"//trim(numstring)//".obf'"
+      call messages_warning(1)
+      ierr = ierr + 1
+    end if
 
-    call partition_dump(mesh%bndry_partition, trim(dir)//'/bndry_partition_'//trim(numstring)//'.obf', err)
-    if (err /= 0) ierr = ierr + 4
+    call partition_dump(mesh%bndry_partition, trim(restart_dir(restart))//'/bndry_partition_'//trim(numstring)//'.obf', err)
+    if (err /= 0) then
+      message(1) = "Unable to write boundary mesh partition to 'bndry_partition_"//trim(numstring)//".obf'"
+      call messages_warning(1)
+      ierr = ierr + 2
+    end if
 
+    if (debug%info) then
+      message(1) = "Debug: Writing mesh partition restart done."
+      call messages_info(1)
+    end if
+    
     call profiling_out(prof)
 
     POP_SUB(mesh_partition_dump)
   end subroutine mesh_partition_dump
 
   ! ----------------------------------------------------
-  subroutine mesh_partition_load(dir, mesh, ierr)
-    character(len=*), intent(in)    :: dir
-    type(mesh_t),     intent(inout) :: mesh
-    integer,          intent(out)   :: ierr
+  subroutine mesh_partition_load(restart, mesh, ierr)
+    type(restart_t), intent(in)    :: restart
+    type(mesh_t),    intent(inout) :: mesh
+    integer,         intent(out)   :: ierr
 
-    integer :: read_np_part, read_np, err
+    integer :: err
     character(len=6) :: numstring
-
+    character(len=MAX_PATH_LEN) :: filename
+    
     PUSH_SUB(mesh_partition_load)
 
     ierr = 0
 
+    if (restart_skip(restart)) then
+      ierr = -1
+      POP_SUB(mesh_partition_load)
+      return
+    end if
+
+    if (debug%info) then
+      message(1) = "Debug: Reading mesh partition restart."
+      call messages_info(1)
+    end if
+
     call partition_init(mesh%inner_partition, mesh%np_global, mesh%mpi_grp)
     call partition_init(mesh%bndry_partition, mesh%np_part_global-mesh%np_global, mesh%mpi_grp)
 
-    ! Try to read mesh fingerprint and check if the meshes are identical
     write(numstring, '(i6.6)') mesh%mpi_grp%size
-    if (.not. io_file_exists(trim(dir)//"/"//'grid_'//trim(numstring))) then
+
+    !Read inner partition
+    filename = trim(restart_dir(restart))//'/inner_partition_'//numstring//'.obf'
+    if (.not. io_file_exists(filename)) then
+      message(1) = "Unable to read inner mesh partition, file '"//trim(filename)//"' does not exist."
+      call messages_warning(1)
       ierr = ierr + 1
     else
-      call mesh_read_fingerprint(mesh, dir, 'grid_'//trim(numstring), mesh%mpi_grp, read_np_part, read_np, err)
-      if (err /= 0) ierr = ierr + 2
-      if (read_np_part /= 0 .or. read_np /= 0) ierr = ierr + 4
+      call partition_load(mesh%inner_partition, filename, err)
+      if (err /= 0) then
+        message(1) = "Unable to read inner mesh partition from '"//trim(filename)//"'."
+        call messages_warning(1)
+        ierr = ierr + 2
+      end if
     end if
-
-    ! If fingerprint is OK then we try to read the partitions
-    if (ierr == 0) then
-      !Read inner partition
-      call partition_load(mesh%inner_partition, trim(dir)//'/inner_partition_'//trim(numstring)//'.obf', err)
-      if (err /= 0) ierr = ierr + 8
+    
+    !Read boundary partition
+    filename = trim(restart_dir(restart))//'/bndry_partition_'//numstring//'.obf'
+    if (.not. io_file_exists(filename)) then
+      message(1) = "Unable to read boundary mesh partition, file '"//trim(filename)//"' does not exist."
+      call messages_warning(1)
+      ierr = ierr + 4
+    else
+      call partition_load(mesh%bndry_partition, filename, err)
+      if (err /= 0) then
+        message(1) = "Unable to read boundary mesh partition from '"//trim(filename)//"'."
+        call messages_warning(1)
+        ierr = ierr + 8
+      end if
     end if
-
-    if (ierr == 0) then
-      !Read boundary partition
-      call partition_load(mesh%bndry_partition, trim(dir)//'/bndry_partition_'//trim(numstring)//'.obf', err)
-      if (err /= 0) ierr = ierr + 16
-    end if
-
+      
     ! Free the memory in case we were unable to read the partitions
     if (ierr /= 0) then
       call partition_end(mesh%inner_partition)
       call partition_end(mesh%bndry_partition)
+    end if
+
+    if (debug%info) then
+      message(1) = "Debug: Reading mesh partition restart done."
+      call messages_info(1)
     end if
 
     POP_SUB(mesh_partition_load)

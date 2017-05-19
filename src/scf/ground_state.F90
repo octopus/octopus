@@ -109,7 +109,7 @@ contains
       end if
     end if
 
-    call scf_init(scfv, sys%gr, sys%geo, sys%st, hm)
+    call scf_init(scfv, sys%gr, sys%geo, sys%st, sys%mc, hm)
 
     if(fromScratch) then
       if(sys%ks%theory_level == RDMFT) then

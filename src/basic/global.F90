@@ -123,6 +123,7 @@ module global_oct_m
   character(len=*), public, parameter :: CASIDA_DIR = "casida/"
   character(len=*), public, parameter :: OCT_DIR = "opt-control/"
   character(len=*), public, parameter :: PCM_DIR = "pcm/"
+  character(len=*), public, parameter :: PARTITION_DIR = "partition/"
 
   ! End of declaration of public objects.
   ! ---------------------------------------------------------

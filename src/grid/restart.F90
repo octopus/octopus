@@ -128,14 +128,16 @@ module restart_oct_m
                                 RESTART_VDW        =  8,  &
                                 RESTART_CASIDA     =  9,  &
                                 RESTART_OCT        =  10, &
+                                RESTART_PARTITION  =  11, &
                                 RESTART_PROJ       =  12
 
   integer, parameter :: RESTART_N_DATA_TYPES = 12
 
-  integer, parameter, public :: RESTART_STATES = 1, &
-                                RESTART_RHO    = 2, &
-                                RESTART_VHXC   = 4, &
-                                RESTART_MIX    = 8
+  integer, parameter, public :: RESTART_FLAG_STATES = 1,  &
+                                RESTART_FLAG_RHO    = 2,  &
+                                RESTART_FLAG_VHXC   = 4,  &
+                                RESTART_FLAG_MIX    = 8,  &
+                                RESTART_FLAG_SKIP   = 16
 
   type(restart_data_t) :: info(RESTART_N_DATA_TYPES)
 
@@ -209,11 +211,13 @@ contains
     info(RESTART_CASIDA)%tag = "Casida"
     info(RESTART_OCT)%tag = "Optimal Control"
     info(RESTART_PROJ)%tag = "GS for TDOutput"
+    info(RESTART_PARTITION)%tag = "Mesh Partition"
 
     ! Default flags and directories (flags not yet used)
     info(:)%basedir = 'restart'
     info(:)%flags = 0
-
+    info(RESTART_PARTITION)%flags = RESTART_FLAG_SKIP
+    
     info(RESTART_GS)%dir = GS_DIR
     info(RESTART_UNOCC)%dir = GS_DIR
     info(RESTART_TD)%dir = TD_DIR
@@ -225,11 +229,15 @@ contains
     info(RESTART_CASIDA)%dir = CASIDA_DIR
     info(RESTART_OCT)%dir = OCT_DIR
     info(RESTART_PROJ)%dir = GS_DIR
+    info(RESTART_PARTITION)%dir = PARTITION_DIR
 
     ! Read input
     call messages_obsolete_variable('RestartFileFormat', 'RestartOptions')
     call messages_obsolete_variable('TmpDir', 'RestartOptions')
     call messages_obsolete_variable('RestartDir', 'RestartOptions')
+    call messages_obsolete_variable('MeshPartitionRead', 'RestartOptions')
+    call messages_obsolete_variable('MeshPartitionWrite', 'RestartOptions')
+    call messages_obsolete_variable('MeshPartitionDir', 'RestartOptions')
 
     !%Variable RestartOptions
     !%Type block
@@ -281,7 +289,7 @@ contains
     !% are not available for that particular calculation, or might assume some of them always present, which will happen
     !% in case they are mandatory.
     !% 
-    !% Finally, note that the all the restart information of a given data type is always stored in a subdirectory of the
+    !% Finally, note that all the restart information of a given data type is always stored in a subdirectory of the
     !% specified path. The name of this subdirectory is fixed and cannot be changed. For example, ground-state information 
     !% will always be stored in a subdirectory named "gs". This makes it safe in most situations to use the same path for
     !% all the data types. The name of these subdirectories is indicated in the description of the data types below.
@@ -330,6 +338,10 @@ contains
     !% (data type) 
     !% The data for optimal control calculations.
     !% This information is stored under the "opt-control" subdirectory.
+    !%Option restart_partition 11
+    !% (data type) 
+    !% The data for the mesh partitioning.
+    !% This information is stored under the "partition" subdirectory.
     !%Option restart_proj 12
     !% (data type)
     !% The ground-state to be used with the td_occup and populations options of <tt>TDOutput</tt>.
@@ -345,7 +357,10 @@ contains
     !% Read the Hartree and XC potentials.
     !%Option restart_mix 8
     !% (flag)
-    !% Read the SCF mixing information.
+    !% Read the SCF mixing information.   
+    !%Option restart_skip 16
+    !% (flag)
+    !% This flag allows to selectively skip the reading and writting of specific restart information.
     !%End
     set = .false.
     if(parse_block('RestartOptions', blk) == 0) then
@@ -853,7 +868,7 @@ contains
   logical pure function restart_skip(restart)
     type(restart_t), intent(in) :: restart
 
-    restart_skip = restart%skip
+    restart_skip = restart%skip .or. restart_has_flag(restart, RESTART_FLAG_SKIP)
 
   end function restart_skip
 
