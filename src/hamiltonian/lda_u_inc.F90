@@ -1190,9 +1190,10 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
               norm = X(sm_nrm2)(os%sphere, os%orbitals(work2)%X(orb)(1:os%sphere%np))
               os%orbitals(work2)%X(orb)(1:os%sphere%np) =  &
                  os%orbitals(work2)%X(orb)(1:os%sphere%np) /norm
+            else
+              print *, 'Norm of the orbital ', X(sm_nrm2)(os%sphere, os%orbitals(work2)%X(orb)(1:os%sphere%np))
             end if
-            print *, 'Norm of the orbital ', X(sm_nrm2)(os%sphere, os%orbitals(work2)%X(orb)(1:os%sphere%np))
-          endif
+          end if
         end do !iorb
       end do !norb
       iorbset = iorbset + work
@@ -1222,11 +1223,6 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
     ! to apply the phase in lda_u_apply
     if(os%sphere%np > this%max_np) this%max_np = os%sphere%np
 
-   ! do work = 1, os%norbs
-   !   do work2 = 1, os%norbs
-   !    print *, work, work2, X(mf_dotp)(os%sphere%mesh, os%orbitals(work)%X(orb)(1:os%sphere%np), os%orbitals(work2)%X(orb)(1:os%sphere%np), np = os%sphere%np)
-   !   end do
-   ! end do
   end do  
 
   do iorbset = 1, this%norbsets
