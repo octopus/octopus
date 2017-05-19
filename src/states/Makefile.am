@@ -29,7 +29,6 @@ libstates_a_SOURCES =                \
 	states_dim.F90               \
 	states_calc.F90              \
 	excited_states.F90           \
-	restart.F90                  \
 	linear_response.F90          \
 	states_restart.F90           \
 	modelmb_density_matrix.F90   \
@@ -48,7 +47,6 @@ noinst_HEADERS =                       \
 	modelmb_density_matrix_inc.F90 \
 	states_block_inc.F90           \
 	linear_response_inc.F90        \
-	restart_inc.F90                \
 	states_inc.F90                 \
 	modelmb_exchange_syms_inc.F90  \
 	density_inc.F90                \
@@ -65,15 +63,14 @@ modelmb_exchange_syms.o : modelmb_exchange_syms.F90 modelmb_exchange_syms_inc.F9
 modelmb_particles.o : modelmb_particles.F90
 physics_op.o : physics_op.F90 physics_op_inc.F90
 states_parallel.o : states_parallel.F90 states_parallel_inc.F90 states.o
-states.o : states.F90 states_group.o states_inc.F90 states_dim.o restart.o modelmb_particles.o smear.o cmplxscl.o
+states.o : states.F90 states_group.o states_inc.F90 states_dim.o modelmb_particles.o smear.o cmplxscl.o
 states_dim.o : states_dim.F90
 states_group.o : states_group.F90 states_dim.o
 states_calc.o : states_calc.F90 states_calc_inc.F90 states.o states_block.o smear.o cmplxscl.o physics_op.o states_dim.o states_parallel.o
 states_block.o : states_block.F90 states_block_inc.F90 states.o
-states_restart.o : states_restart.F90 linear_response.o restart.o smear.o states.o states_calc.o states_dim.o states_io.o
+states_restart.o : states_restart.F90 linear_response.o smear.o states.o states_calc.o states_dim.o states_io.o
 excited_states.o : excited_states.F90 excited_states_inc.F90 states.o states_calc.o states_dim.o
-linear_response.o : linear_response.F90 linear_response_inc.F90 states.o states_calc.o states_dim.o smear.o restart.o
-restart.o : restart.F90 restart_inc.F90
+linear_response.o : linear_response.F90 linear_response_inc.F90 states.o states_calc.o states_dim.o smear.o
 density.o : density.F90 density_inc.F90 states.o smear.o states_dim.o
 states_io.o : states_io.F90 states.o smear.o states_dim.o
 cmplxscl.o : cmplxscl.F90

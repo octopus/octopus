@@ -130,7 +130,7 @@ contains
     call elf_init()
 
     call poisson_init(psolver, sys%gr%der, sys%mc, theta = sys%st%cmplxscl%theta)
-    if(poisson_is_multigrid(psolver)) call grid_create_multigrid(sys%gr, sys%geo)
+    if(poisson_is_multigrid(psolver)) call grid_create_multigrid(sys%gr, sys%geo, sys%mc)
 
     call v_ks_init(sys%ks, sys%gr, sys%st, sys%geo, sys%mc)
 

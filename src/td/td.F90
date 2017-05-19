@@ -377,7 +377,7 @@ contains
       call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX, alloc_Left = cmplxscl)
     else
       call states_allocate_wfns(st, gr%mesh, alloc_Left = cmplxscl)
-      call scf_init(td%scf, sys%gr, sys%geo, sys%st, hm)
+      call scf_init(td%scf, sys%gr, sys%geo, sys%st, sys%mc, hm)
     end if
 
     if(hm%scdm_EXX) then
