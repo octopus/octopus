@@ -432,7 +432,7 @@ contains
     call restart_init(restart_dump, RESTART_TD, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=gr%mesh)
     if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) then
       ! We will also use the TD restart directory as temporary storage during the time propagation
-      call restart_init(restart_load, RESTART_TD, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=gr%mesh)
+      call restart_init(restart_load, RESTART_TD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
     end if
 
     call messages_print_stress(stdout, "Time-Dependent Simulation")
@@ -572,12 +572,21 @@ contains
         if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) then
           call messages_print_stress(stdout, 'Recalculating the ground state.')
           fromScratch = .false.
+          call states_deallocate_wfns(sys%st)
           call ground_state_run(sys, hm, fromScratch)
-          call states_load(restart_load, st, gr, ierr, iter=iter)
+          call states_allocate_wfns(sys%st, gr%mesh)
+          call td_load(restart_load, gr, st, hm, td, ierr)
           if (ierr /= 0) then
             message(1) = "Unable to load TD states."
             call messages_fatal(1)
           end if
+          if(.not. cmplxscl) then
+            call density_calc(st, gr, st%rho)
+          else
+            call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
+          end if
+          call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval=.true., time = iter*td%dt, calc_energy=.true.)
+          call forces_calculate(gr, geo, hm, st, iter*td%dt, td%dt)
           call messages_print_stress(stdout, "Time-dependent simulation proceeds")
           call print_header()
         end if
