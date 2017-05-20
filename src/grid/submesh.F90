@@ -469,7 +469,7 @@ contains
     CMPLX,             intent(in) :: phi(:, :)
     logical, optional, intent(in) :: reduce
   
-    integer :: is, idim
+    integer :: is, idim, m, ip
   
     PUSH_SUB(zzsubmesh_to_mesh_dotp)
   
@@ -477,19 +477,23 @@ contains
   
     if(this%mesh%use_curvilinear) then
       do idim = 1, dim
-        !$omp parallel do reduction(+:dotp)
         do is = 1, this%np
           dotp = dotp + this%mesh%vol_pp(this%map(is))*phi(this%map(is), idim)*conjg(sphi(is))
         end do
-        !$omp end parallel do
       end do
     else
       do idim = 1, dim
-        !$omp parallel do reduction(+:dotp)
-        do is = 1, this%np
-          dotp = dotp + phi(this%map(is), idim)*conjg(sphi(is))
+        m = mod(this%np,4)
+        do ip = 1, m
+          dotp = dotp + phi(this%map(ip),idim)*conjg(sphi(ip))
         end do
-        !$omp end parallel do
+        if( this%np.lt.4) return
+        do ip = m+1, this%np, 4
+          dotp = dotp + phi(this%map(ip),idim)*conjg(sphi(ip))
+          dotp = dotp + phi(this%map(ip+1),idim)*conjg(sphi(ip+1))
+          dotp = dotp + phi(this%map(ip+2),idim)*conjg(sphi(ip+2))
+          dotp = dotp + phi(this%map(ip+3),idim)*conjg(sphi(ip+3))
+        end do
       end do
       dotp = dotp*this%mesh%vol_pp(1)
     end if

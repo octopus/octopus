@@ -281,17 +281,19 @@ contains
     if(this%IncludeOverlap) call messages_experimental("DFTUIncludeOverlap")
 
 
-    !%Variable DFTUMinimalAtomicSphere
-    !%Type logical
-    !%Default yes
-    !%Section Hamiltonian::DFT+U
-    !%Description
-    !% If set to yes, Octupus will set the radius of the orbitals to the smallest orbital
-    !% present in the pseudopotential file. Only with the ACBN0 functional and the UseAllAtomicOrbitals 
-    !% options activated.
-    !%End
-    call parse_variable('DFTUMinimalAtomicSphere', .true., this%minimalAtomicSphere)
-    if(this%minimalAtomicSphere) call messages_experimental("DFTUMinimalAtomicSphere")
+    if(this%useAllOrbitals) then
+      !%Variable DFTUMinimalAtomicSphere
+      !%Type logical
+      !%Default yes
+      !%Section Hamiltonian::DFT+U
+      !%Description
+      !% If set to yes, Octupus will set the radius of the orbitals to the smallest orbital
+      !% present in the pseudopotential file. Only with the ACBN0 functional and the UseAllAtomicOrbitals 
+      !% options activated.
+      !%End
+      call parse_variable('DFTUMinimalAtomicSphere', .true., this%minimalAtomicSphere)
+      if(this%minimalAtomicSphere) call messages_experimental("DFTUMinimalAtomicSphere")
+    end if
   end if
 
   !We first need to load the basis

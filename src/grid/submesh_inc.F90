@@ -168,7 +168,7 @@ R_TYPE function X(dsubmesh_to_mesh_dotp)(this, dim, sphi, phi, reduce) result(do
   R_TYPE,            intent(in) :: phi(:, :)
   logical, optional, intent(in) :: reduce
 
-  integer :: is, idim
+  integer :: is, idim, m, ip
 
   PUSH_SUB(X(dsubmesh_to_mesh_dotp))
 
@@ -182,8 +182,16 @@ R_TYPE function X(dsubmesh_to_mesh_dotp)(this, dim, sphi, phi, reduce) result(do
     end do
   else
     do idim = 1, dim
-      do is = 1, this%np
-        dotp = dotp + phi(this%map(is), idim)*sphi(is)
+      m = mod(this%np,4)
+      do ip = 1, m
+        dotp = dotp + phi(this%map(ip),idim)*sphi(ip)
+      end do
+      if( this%np.lt.4) return
+      do ip = m+1, this%np, 4
+        dotp = dotp + phi(this%map(ip),idim)*sphi(ip)
+        dotp = dotp + phi(this%map(ip+1),idim)*sphi(ip+1)
+        dotp = dotp + phi(this%map(ip+2),idim)*sphi(ip+2)
+        dotp = dotp + phi(this%map(ip+3),idim)*sphi(ip+3)
       end do
     end do
     dotp = dotp*this%mesh%vol_pp(1)

@@ -44,6 +44,7 @@ ExtraStates = 1
 LDA_U = yes
 UseACBN0Functional = yes
 UseAllAtomicOrbitals = yes
+DFTUMinimalAtomicSphere = no
 OrbitalsTruncationMethod = full
 OrbitalsThreshold_LDAU = 0.05
 OutputLDA_U = occupation_matrices + effectiveU
