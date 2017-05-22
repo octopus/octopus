@@ -666,7 +666,8 @@ contains
     type(restart_t),      intent(in)    :: restart
 
     integer                     :: id, ip, iunit, ierr
-    character(len=MAX_PATH_LEN) :: filename, folder, tmp
+    character(len=MAX_PATH_LEN) :: filename, tmp
+    character(len=31) :: line(1)
     FLOAT, allocatable          :: inside(:)
 
     PUSH_SUB(local_restart)
@@ -675,23 +676,23 @@ contains
     call messages_info(1)
     SAFE_ALLOCATE(inside(1:sys%gr%mesh%np))
     !Read local domain information from ldomains.info 
-     folder = restart_dir(restart)
-     filename = "ldomains.info"
-     iunit = io_open(trim(folder)//'/'//trim(filename), action='read',status='old')
-     !read(iunit,'(a25,1x,i5)')tmp ,lcl%nd 
-     read(iunit,'(a25,1x,i5)')tmp ,ierr
+    filename = "ldomains.info"    
+    iunit = restart_open(restart, filename, status='old')
+    call restart_read(restart, iunit, line, 1, ierr)    
+    read(line(1),'(a25,1x,i5)') tmp, ierr
+    call restart_close(restart, iunit)
+    
+    filename = "ldomains"
+    call drestart_read_mesh_function(restart, trim(filename), sys%gr%mesh, inside, ierr) 
 
-     filename = "ldomains"
-     call drestart_read_mesh_function(restart, trim(filename), sys%gr%mesh, inside, ierr) 
-
-     do ip = 1 , sys%gr%mesh%np
-       do id = 1, lcl%nd
+    do ip = 1 , sys%gr%mesh%np
+      do id = 1, lcl%nd
         if (iand(int(inside(ip)), 2**id) /= 0) lcl%inside(ip,id) = .true.
-       end do
-     end do
-
-     call io_close(iunit)
+      end do
+    end do
+    
     SAFE_DEALLOCATE_A(inside)
+
     POP_SUB(local_restart)
   end subroutine local_restart
   ! ---------------------------------------------------------

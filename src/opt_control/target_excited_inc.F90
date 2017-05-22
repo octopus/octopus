@@ -88,7 +88,7 @@
 
     PUSH_SUB(target_output_excited)
     
-    call loct_mkdir(trim(dir))
+    call io_mkdir(trim(dir))
     call output_states(tg%est%st, gr, geo, trim(dir)//'/st', outp)
     call excited_states_output(tg%est, trim(dir))
 

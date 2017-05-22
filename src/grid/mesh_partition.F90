@@ -593,14 +593,14 @@ contains
     
     write(numstring, '(i6.6)') vsize
 
-    call partition_dump(mesh%inner_partition, trim(restart_dir(restart))//'/inner_partition_'//trim(numstring)//'.obf', err)
+    call partition_dump(mesh%inner_partition, restart_dir(restart), 'inner_partition_'//trim(numstring)//'.obf', err)
     if (err /= 0) then
       message(1) = "Unable to write inner mesh partition to 'inner_partition_"//trim(numstring)//".obf'"
       call messages_warning(1)
       ierr = ierr + 1
     end if
 
-    call partition_dump(mesh%bndry_partition, trim(restart_dir(restart))//'/bndry_partition_'//trim(numstring)//'.obf', err)
+    call partition_dump(mesh%bndry_partition, restart_dir(restart), 'bndry_partition_'//trim(numstring)//'.obf', err)
     if (err /= 0) then
       message(1) = "Unable to write boundary mesh partition to 'bndry_partition_"//trim(numstring)//".obf'"
       call messages_warning(1)
@@ -625,7 +625,7 @@ contains
 
     integer :: err
     character(len=6) :: numstring
-    character(len=MAX_PATH_LEN) :: filename
+    character(len=MAX_PATH_LEN) :: filename, dir
     
     PUSH_SUB(mesh_partition_load)
 
@@ -646,15 +646,16 @@ contains
     call partition_init(mesh%bndry_partition, mesh%np_part_global-mesh%np_global, mesh%mpi_grp)
 
     write(numstring, '(i6.6)') mesh%mpi_grp%size
-
+    dir = restart_dir(restart)
+    
     !Read inner partition
-    filename = trim(restart_dir(restart))//'/inner_partition_'//numstring//'.obf'
-    if (.not. io_file_exists(filename)) then
+    filename = 'inner_partition_'//numstring//'.obf'
+    if (.not. io_file_exists(trim(dir)//"/"//filename)) then
       message(1) = "Unable to read inner mesh partition, file '"//trim(filename)//"' does not exist."
       call messages_warning(1)
       ierr = ierr + 1
     else
-      call partition_load(mesh%inner_partition, filename, err)
+      call partition_load(mesh%inner_partition, restart_dir(restart), filename, err)
       if (err /= 0) then
         message(1) = "Unable to read inner mesh partition from '"//trim(filename)//"'."
         call messages_warning(1)
@@ -663,13 +664,13 @@ contains
     end if
     
     !Read boundary partition
-    filename = trim(restart_dir(restart))//'/bndry_partition_'//numstring//'.obf'
-    if (.not. io_file_exists(filename)) then
+    filename = 'bndry_partition_'//numstring//'.obf'
+    if (.not. io_file_exists(trim(dir)//"/"//filename)) then
       message(1) = "Unable to read boundary mesh partition, file '"//trim(filename)//"' does not exist."
       call messages_warning(1)
       ierr = ierr + 4
     else
-      call partition_load(mesh%bndry_partition, filename, err)
+      call partition_load(mesh%bndry_partition, restart_dir(restart), filename, err)
       if (err /= 0) then
         message(1) = "Unable to read boundary mesh partition from '"//trim(filename)//"'."
         call messages_warning(1)

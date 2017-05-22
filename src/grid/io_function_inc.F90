@@ -161,12 +161,12 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, map)
 
     if(present(map)) then
 
-      call io_binary_get_info(filename, np, file_size, ierr)
+      call io_binary_get_info(io_workpath(filename), np, file_size, ierr)
 
       if (ierr == 0) then
         SAFE_ALLOCATE(read_ff(1:np))
 
-        call io_binary_read(filename, np, read_ff, ierr)
+        call io_binary_read(io_workpath(filename), np, read_ff, ierr)
         call profiling_count_transfers(np, read_ff(1))
         
         if (ierr == 0) then
@@ -180,7 +180,7 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, map)
       end if
 
     else
-      call io_binary_read(filename, mesh%np_global, ff, ierr)
+      call io_binary_read(io_workpath(filename), mesh%np_global, ff, ierr)
       call profiling_count_transfers(mesh%np_global, ff(1))
     end if
 

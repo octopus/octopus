@@ -652,7 +652,7 @@ contains
           if(ii < 1 .or. aa < 1 .or. ik < 1) then
             message(1) = "Illegal indices in '" // trim(restart_file) // "': working from scratch."
             call messages_warning(1)
-            call loct_rm(trim(restart_file))
+            call restart_rm(cas%restart_load, trim(restart_file))
             ! if file is corrupt, do not trust anything that was read
             is_saved = .false.
             exit
@@ -882,7 +882,7 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
         if(ii < 1 .or. aa < 1 .or. ik < 1) then
           message(1) = "Illegal indices in '" // trim(restart_filename) // "': working from scratch."
           call messages_warning(1)
-          call loct_rm(trim(restart_filename))
+          call restart_rm(cas%restart_load, trim(restart_filename))
           ! if file is corrupt, do not trust anything that was read
           is_saved = .false.
           exit

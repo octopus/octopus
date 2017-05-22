@@ -417,9 +417,9 @@ contains
       if(.not.varinfo_valid_option('GOObjective', g_opt%what2minimize)) call messages_input_error('GOObjective')
       call messages_print_var_option(stdout, "GOObjective", g_opt%what2minimize)
 
-      call loct_rm("geom/optimization.log")
+      call io_rm("geom/optimization.log")
 
-      call loct_rm("./work-geom.xyz")
+      call io_rm("work-geom.xyz")
 
       if(.not. fromScratch) then
         inquire(file = './last.xyz', exist = does_exist)
@@ -437,7 +437,7 @@ contains
         write(filename, '(a,i4.4,a)') "geom/go.", iter, ".xyz"
         inquire(file = trim(filename), exist = does_exist)
         if(does_exist) then
-          call loct_rm(trim(filename))
+          call io_rm(trim(filename))
           iter = iter + 1
         else
           exit
