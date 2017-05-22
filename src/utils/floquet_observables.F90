@@ -118,7 +118,7 @@ program floquet_observables
   !% Specifies what observables to calculate form the Floquet solution.
   !% Example: <tt>f_norms + f_spin</tt>
   !%Option f_norms bit(1)
-  !% The norms of the Floquet states with each tensorial subspace.
+  !% The norms of the Floquet states in each tensorial subspace.
   !%Option f_arpes bit(2)
   !% Calculate ARPES matrix elements for Floquet states.
   !%Option f_spin bit(3)
