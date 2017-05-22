@@ -267,7 +267,7 @@ contains
     filename = 'w90_kpoints'
     oct_kpts = io_open(trim(filename), action='write')
     write(oct_kpts,'(a)') '%KpointsReduced'
-    write(oct_kpts,'(i)') axis(1)*axis(2)*axis(3)
+    write(oct_kpts,'(i6)') axis(1)*axis(2)*axis(3)
 
     write(w90_win,'(a)')  'begin kpoints '
 
