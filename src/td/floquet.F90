@@ -907,7 +907,7 @@ contains
       type(states_t), intent(inout)      :: dressed_st
 
       CMPLX, allocatable :: u_ma(:,:),  psi(:,:), tmp(:)
-      FLOAT :: omega, dt 
+      FLOAT :: omega, dt, sum_dr, sum_gs   
       integer :: idx, im, it, ist, idim, nT, ik, ia, Fdim(2), imm
       
       type(states_t), pointer :: gs_st
@@ -958,10 +958,23 @@ contains
             
           enddo
         enddo
+        
+        ! occupations checksum 
+        sum_dr = sum(dressed_st%occ(:,ik))
+        sum_gs = sum(gs_st%occ(:,ik))
+        if( abs(sum_dr -sum_gs) > 1E-6) then
+          call messages_write('Occupations checksum failed for kpoint:')
+          call messages_write(ik, fmt = '(i6)')
+          call messages_write('gs_occ = ')
+          call messages_write(sum_gs, fmt ='(e8.2)')
+          call messages_write('floquet_occ = ')
+          call messages_write(sum_dr, fmt ='(e8.2)')
+          call messages_warning()
+        end if
       enddo
       
-      print *, "occsum = ", sum(dressed_st%occ(:,1))
-      print *, "gs_occsum = ", sum(gs_st%occ(:,1))
+!       print *, "occsum = ", sum(dressed_st%occ(:,1))
+!       print *, "gs_occsum = ", sum(gs_st%occ(:,1))
 
 
       
