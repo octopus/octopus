@@ -71,6 +71,7 @@ program wannier90_interface
   character(len=512)   :: filename, str, str2
   integer              :: ist, ispin
   type(states_t)       :: st
+  logical              :: w90_setup, w90_output, w90_floquet
   integer :: w90_nntot, w90_num_bands, w90_num_kpts    ! w90 input parameters
   integer, allocatable ::  w90_nnk_list(:,:)           !
   character(len=80) :: w90_prefix                      ! w90 input file prefix
@@ -136,29 +137,30 @@ program wannier90_interface
   !%End
   call parse_variable('W90_interface_mode', w90_what, w90_what)
 
+  w90_setup = iand(w90_what, OPTION__W90_INTERFACE_MODE__W90_SETUP) /= 0
+  w90_output = iand(w90_what, OPTION__W90_INTERFACE_MODE__W90_OUTPUT) /= 0
+  w90_floquet = iand(w90_what, OPTION__W90_INTERFACE_MODE__W90_FLOQUET) /= 0
+
   ! sanity checks
-  if(iand(w90_what, OPTION__W90_INTERFACE_MODE__W90_OUTPUT) /= 0 .and. &
-    iand(w90_what, OPTION__W90_INTERFACE_MODE__W90_SETUP) /= 0 ) then
+  if(w90_setup .and. w90_output) then
       message(1) = 'W90: w90_setup and w90_output are mutually exclusive'
       call messages_fatal(1)
   end if
 
-  if(iand(w90_what, OPTION__W90_INTERFACE_MODE__W90_FLOQUET) /= 0 .and. &
-     iand(w90_what, OPTION__W90_INTERFACE_MODE__W90_OUTPUT) == 0 .and.  &
-     iand(w90_what, OPTION__W90_INTERFACE_MODE__W90_SETUP) == 0 ) then
+  if(w90_floquet .and. .not. w90_setup .and. .not. w90_output) then
       message(1) = 'W90: w90_floquet has to be combined with either w90_setup or w90_output.'
       call messages_fatal(1)
   end if
 
   ! create setup files
-  if(iand(w90_what, OPTION__W90_INTERFACE_MODE__W90_SETUP) /= 0) then
+  if(w90_setup) then
      call wannier90_setup()
 
   ! load states and calculate interface files
-  elseif(iand(w90_what, OPTION__W90_INTERFACE_MODE__W90_OUTPUT) /= 0) then
+  elseif(w90_output) then
 
     ! normal interface run
-    if(iand(w90_what, OPTION__W90_INTERFACE_MODE__W90_FLOQUET) == 0 ) then
+    if(.not.w90_floquet ) then
       call states_init(st, sys%gr, sys%geo)
       call kpoints_distribute(st%d,sys%mc)
       call states_distribute_nodes(st,sys%mc)
@@ -179,7 +181,7 @@ program wannier90_interface
       call restart_end(restart)
 
     ! floquet interface run
-    elseif(iand(w90_what, OPTION__W90_INTERFACE_MODE__W90_FLOQUET) /= 0 ) then
+    elseif(w90_floquet) then
       call floquet_init(sys,hm%F,sys%st%d%dim)
 
       call states_init(st, sys%gr, sys%geo,floquet_dim=hm%F%floquet_dim)
@@ -212,7 +214,7 @@ contains
     character(len=80) :: filename
     integer :: w90_win, oct_kpts, ia, axis(3), jj, kk
 
-    if(iand(w90_what, OPTION__W90_INTERFACE_MODE__W90_FLOQUET) == 0 ) then
+    if(.not. w90_floquet ) then
       call states_init(st, sys%gr, sys%geo)
     else
       call floquet_init(sys,hm%F,sys%st%d%dim)
@@ -267,8 +269,6 @@ contains
     filename = 'w90_kpoints'
     oct_kpts = io_open(trim(filename), action='write')
     write(oct_kpts,'(a)') '%KpointsReduced'
-    write(oct_kpts,'(i)') axis(1)*axis(2)*axis(3)
-
     write(w90_win,'(a)')  'begin kpoints '
 
     do ii=0,axis(1)-1
@@ -356,7 +356,7 @@ contains
   end subroutine read_wannier90_files
 
   subroutine create_wannier90_mmn()
-    integer ::  ist, jst, ik, w90_mmn, w90_eig, w90_amn,  iknn, G(3), ii, jj, idim
+    integer ::  ist, jst, ik, w90_mmn, w90_eig, w90_amn,  iknn, G(3), ii, jj, idim, idim2
     FLOAT   ::  Gr(3), t1, t2
     character(len=80) :: filename
     CMPLX   :: overlap
@@ -364,7 +364,7 @@ contains
 
     ASSERT(st%d%kpt%start==1 .and. st%d%kpt%end==sys%gr%sb%kpoints%full%npoints)
 
-    filename = './'// trim(adjustl(w90_prefix))//'.mnn'
+    filename = './'// trim(adjustl(w90_prefix))//'.mmn'
     w90_mmn = io_open(trim(filename), action='write')
 
     ! write header
@@ -396,10 +396,12 @@ contains
 
          do ist=1,w90_num_bands
            call states_get_state(st, sys%gr%der%mesh, ist, ik, state1)
+
            overlap = M_ZERO
            do idim=1,st%d%dim
-             overlap =overlap +  zmf_dotp(sys%gr%der%mesh, state1(:,idim), state2(:,idim))
+              overlap =overlap +  zmf_dotp(sys%gr%der%mesh, state1(:,idim), state2(:,idim))
            end do
+
            ! write to W90 file
            if(mpi_grp_is_root(mpi_world)) write(w90_mmn,'(e12.6,2x,e12.6)') overlap
          end do
