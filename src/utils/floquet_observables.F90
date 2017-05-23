@@ -34,6 +34,7 @@ program floquet_observables
   use io_oct_m
   use loct_oct_m
   use mesh_oct_m
+  use mesh_function_oct_m
   use messages_oct_m
   use multicomm_oct_m
   use parser_oct_m
@@ -357,7 +358,7 @@ contains
   end do
 
   ! normalize td-state
-  psi_t(1:mesh%np,1:F%spindim)  = M_ONE/(-F%order(1)+F%order(2))*psi_t(1:mesh%np,1:F%spindim) 
+  psi_t(1:mesh%np,1:F%spindim)  = M_ONE/zmf_nrm2(mesh,F%spindim,psi_t)*psi_t(1:mesh%np,1:F%spindim) 
 
   end subroutine floquet_td_state
 
