@@ -1036,7 +1036,7 @@ contains
         do ist = 1, nst
           write(iunit(is),'(1x,f14.8)',advance='no') units_from_atomic(units_out%energy, st%eigenval(ist, ik + is))
           if (present(vec)) then
-            write(iunit(is),'(1x,f14.8)',advance='no') units_from_atomic(unit_one, vec(ist, ik + is))
+            write(iunit(is),'(1x,e14.8E3)',advance='no') units_from_atomic(unit_one, vec(ist, ik + is))
           end if
           
         end do
