@@ -1022,6 +1022,8 @@ contains
   
       kpt(:) = M_ZERO
       qq(:)  = M_ZERO
+      me(:,:) = M_ZERO
+      spect(:,:) = M_ZERO
       do ik=st%d%kpt%start, st%d%kpt%end
         kpt(1:dim) = kpoints_get_point(mesh%sb%kpoints, ik) 
 
