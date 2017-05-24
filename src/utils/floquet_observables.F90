@@ -129,8 +129,7 @@ program floquet_observables
                                        
 
   ! load floquet states only for certain tasks
-  if(iand(out_what, OPTION__FLOQUETOBSERVABLECALC__F_NORMS) /= 0 .or. &
-     iand(out_what, OPTION__FLOQUETOBSERVABLECALC__F_NORMS) /= 0 ) then
+  if(.not. (iand(out_what, OPTION__FLOQUETOBSERVABLECALC__F_TD_SPIN) /= 0) ) then
        call states_allocate_wfns(dressed_st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX)
        call floquet_restart_dressed_st(hm, sys, dressed_st, ierr)
        call messages_write('Read Floquet restart files.')
