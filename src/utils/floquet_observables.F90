@@ -34,6 +34,7 @@ program floquet_observables
   use io_oct_m
   use loct_oct_m
   use mesh_oct_m
+  use mesh_function_oct_m
   use messages_oct_m
   use multicomm_oct_m
   use parser_oct_m
@@ -336,7 +337,8 @@ contains
     end do
   end do
 
-  call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm, psi_t)
+  ! normalize td-state
+  psi_t(1:mesh%np,1:F%spindim)  = M_ONE/zmf_nrm2(mesh,F%spindim,psi_t)*psi_t(1:mesh%np,1:F%spindim) 
 
   SAFE_DEALLOCATE_A(u_ma) 
   end subroutine floquet_td_eigenstate
