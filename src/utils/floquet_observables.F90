@@ -141,7 +141,7 @@ program floquet_observables
     call messages_write('Calculate norms of Floquet subspaces.')
     call messages_info()
 
-    call floquet_calc_norms(sys%gr%der%mesh,sys%gr%sb%kpoints,gs_st,dressed_st, hm%F%iter,hm%F%floquet_dim)
+    call calc_floquet_norms(sys%gr%der%mesh,sys%gr%sb%kpoints,gs_st,dressed_st, hm%F%iter,hm%F%floquet_dim)
   end if
 
   if(iand(out_what, OPTION__FLOQUETOBSERVABLECALC__F_ARPES) /= 0) then
@@ -162,6 +162,8 @@ program floquet_observables
 
     call calc_floquet_td_spin()
   end if
+  
+  
 
   call system_end(sys)
   call fft_all_end()
@@ -451,7 +453,7 @@ contains
   
   
   !--------------------------------------------
-  subroutine floquet_calc_norms(mesh,kpoints,st,dressed_st,iter,floquet_dim)
+  subroutine calc_floquet_norms(mesh,kpoints,st,dressed_st,iter,floquet_dim)
     type(mesh_t), intent(in) :: mesh
     type(kpoints_t), intent(in) :: kpoints
     type(states_t), intent(in) :: st,dressed_st
@@ -508,7 +510,7 @@ contains
     SAFE_DEALLOCATE_A(temp_state2)
     SAFE_DEALLOCATE_A(norms)
     
-  end subroutine floquet_calc_norms
+  end subroutine calc_floquet_norms
   
 
   end program floquet_observables
