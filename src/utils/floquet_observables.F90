@@ -360,7 +360,7 @@ contains
   ! normalize td-state
   psi_t(1:mesh%np,1:F%spindim)  = M_ONE/zmf_nrm2(mesh,F%spindim,psi_t)*psi_t(1:mesh%np,1:F%spindim) 
 
-  end subroutine floquet_td_eigenstate
+  end subroutine floquet_td_state
 
   end program floquet_observables
 
