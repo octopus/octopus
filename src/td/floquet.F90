@@ -81,9 +81,7 @@ module floquet_oct_m
        floquet_hamiltonian_run_solver, &
        floquet_restart_dressed_st, &
        floquet_load_td_hamiltonians, &
-       floquet_td_hamiltonians_sample, &
-       floquet_photoelectron_spectrum, &
-       floquet_calc_norms   
+       floquet_td_hamiltonians_sample
 
   integer, public, parameter ::    &
        FLOQUET_NONE            = 0, &      
@@ -707,7 +705,6 @@ contains
       call floquet_restart_dressed_st(hm, sys, dressed_st, ierr, fromScratch)
       
       if(ierr == 0 .and. .not. fromScratch) then
-         call floquet_calc_norms(gr%der%mesh,gr%sb%kpoints,st,dressed_st,iter,hm%F%floquet_dim)
          call states_berry_connection(FLOQUET_DIR,'floquet_berry_connection',dressed_st, gr,gr%sb)
       else
 
@@ -986,152 +983,8 @@ contains
     
     end subroutine floquet_calc_occupations
     
-    !---------------------------------------
-    subroutine floquet_photoelectron_spectrum(hm, sys, st, pomega, pol, spect, me)
-      type(hamiltonian_t), intent(in) :: hm
-      type(system_t), intent(in)      :: sys
-      type(states_t), intent(in)      :: st
-      FLOAT,          intent(in)      :: pomega     ! Probe field energy 
-      FLOAT,          intent(in)      :: pol(:)     ! Probe field polarization vector
-      FLOAT,          intent(out)     :: spect(:,:) ! the photoelectron spectrum
-      FLOAT,          intent(out)     :: me(:,:)    ! the photoeletron matrix elements
 
 
-      CMPLX, allocatable :: u_ma(:,:),  phase(:), tmp(:)
-      FLOAT :: omega, dt , qq(1:3), kpt(1:3), xx(1:MAX_DIM)
-      integer :: idx, im, it, ist, idim, nT, ik, ia, Fdim(2), imm, dim, pdim, ip, spindim
-
-      type(mesh_t),   pointer :: mesh
-
-      PUSH_SUB(floquet_photoelectron_spectrum)
-  
-      mesh  => sys%gr%der%mesh
-      
-      dt=hm%F%dt
-      nT=hm%F%nT
-      omega=hm%F%omega
-      Fdim(:)=hm%F%order(:)
-      spindim = hm%F%spindim 
-      
-      dim = mesh%sb%dim
-      pdim = mesh%sb%periodic_dim
-      
-      SAFE_ALLOCATE(phase(1:mesh%np))
-      SAFE_ALLOCATE(u_ma(1:mesh%np,hm%F%floquet_dim))
-      SAFE_ALLOCATE(tmp(spindim))
-  
-      kpt(:) = M_ZERO
-      qq(:)  = M_ZERO
-      me(:,:) = M_ZERO
-      spect(:,:) = M_ZERO
-      do ik=st%d%kpt%start, st%d%kpt%end
-        kpt(1:dim) = kpoints_get_point(mesh%sb%kpoints, ik) 
-
-        do ia=st%st_start, st%st_end
-          qq(dim)    = pomega - st%eigenval(ia,ik) - sum(kpt(1:pdim)**2)*M_HALF
-          qq(1:pdim) = kpt(1:pdim)  
-          
-          do ip=1, mesh%np
-            xx=mesh_x_global(mesh, ip) 
-            phase(ip) = exp(-M_ZI*qq(dim)*xx(dim))
-          end do
-          
-          call states_get_state(st, mesh, ia, ik, u_ma)
-          
-          tmp(:) = M_ZERO
-          do idx=hm%F%flat_idx%start, hm%F%flat_idx%end
-            it = hm%F%idx_map(idx,1)
-            im = hm%F%idx_map(idx,2)
-            imm = im - Fdim(1) + 1
-            do idim=1,spindim
-              tmp(idim)  =  tmp(idim) + exp(-M_zI*im*omega*it*dt)/nT * &
-                            zmf_integrate(mesh, phase(1:mesh%np)*u_ma(1:mesh%np,(imm-1)*spindim+idim))
-            end do
-             
-          end do 
-          if(hm%F%is_parallel) call comm_allreduce(hm%F%mpi_grp%comm, tmp(:))   
-          
-          me(ia,ik) = sum(abs(tmp(:))**2) * sum((pol(1:dim)*qq(dim)))**2
-          
-          spect(ia,ik) =  me(ia,ik) * st%occ(ia,ik)
-            
-        end do
-      end do
-      
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, me)
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, spect)
-      
-      
-      SAFE_DEALLOCATE_A(tmp)
-      SAFE_DEALLOCATE_A(phase)
-      SAFE_DEALLOCATE_A(u_ma)
-  
-  
-  
-      POP_SUB(floquet_photoelectron_spectrum)
-      
-    end subroutine floquet_photoelectron_spectrum    
-
-
-    !--------------------------------------------
-    subroutine floquet_calc_norms(mesh,kpoints,st,dressed_st,iter,floquet_dim)
-      type(mesh_t), intent(in) :: mesh
-      type(kpoints_t), intent(in) :: kpoints
-      type(states_t), intent(in) :: st,dressed_st
-      integer :: iter , floquet_dim
-
-      integer :: maxiter, ik, in, im, ist, idim, ierr, nik, dim, nst, iunit
-      CMPLX, allocatable :: temp_state1(:,:), temp_state2(:,:)
-      FLOAT, allocatable :: norms(:,:,:)
-      character(len=1024):: ik_name,iter_name, filename
-
-      SAFE_ALLOCATE(temp_state1(1:mesh%np,st%d%dim))
-      SAFE_ALLOCATE(temp_state2(1:mesh%np,floquet_dim*st%d%dim))
-      SAFE_ALLOCATE(norms(1:kpoints%reduced%npoints,1:dressed_st%nst,floquet_dim))
-
-      norms = M_ZERO
-     
-
-      do ik=st%d%kpt%start,st%d%kpt%end
-        do in=1,floquet_dim
-          do ist=st%st_start,st%st_end
-            call states_get_state(dressed_st, mesh, (in-1)*st%nst+ist, ik,temp_state2)
-
-            do im=1,floquet_dim
-              do idim=1,st%d%dim
-                temp_state1(1:mesh%np,idim) = temp_state2(1:mesh%np,(im-1)*st%d%dim+idim)
-              end do
-              norms(ik,(in-1)*st%nst+ist,im) = zmf_nrm2(mesh,st%d%dim,temp_state1)
-            end do
-          enddo
-        enddo
-      enddo
-      
-      call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm, norms)
-
-      if(mpi_world%rank==0) then
-         write(iter_name,'(i4)') iter 
-         do ik=kpoints%reduced%npoints-kpoints%nik_skip+1, kpoints%reduced%npoints
-            write(ik_name,'(i4)') ik
-            filename = FLOQUET_DIR//'/floquet_norms_ik_'//trim(adjustl(ik_name))//'_iter_'//trim(adjustl(iter_name))
-            iunit = io_open(filename, action='write')
-            
-             do ist=1,dressed_st%nst
-                do in=1,floquet_dim
-                   write(iunit,'(i4,a1,e12.6,a1,i4,a1,e12.6)') ist, '', dressed_st%eigenval(ist,ik), ' ',in, ' ', norms(ik,ist,in)
-               end do
-               write(iunit,'(a1)') ' '
-            end do
-
-            call io_close(iunit)
-         end do
-      end if
-
-      SAFE_DEALLOCATE_A(temp_state1)
-      SAFE_DEALLOCATE_A(temp_state2)
-      SAFE_DEALLOCATE_A(norms)
-      
-    end subroutine floquet_calc_norms
     
     
     
