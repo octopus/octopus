@@ -794,6 +794,7 @@ contains
 
     !if ( calc_mode_id == CM_GS .and. pcm%epsilon_infty /= pcm%epsilon_0 ) &
     SAFE_ALLOCATE( pcm%q_e_in(1:pcm%n_tesserae) )
+    pcm%q_e_in = M_ZERO
    
     pcm%q_e_nominal = qtot
     pcm%q_n_nominal = val_charge
@@ -837,25 +838,22 @@ contains
      
       !GGIL LOG: inertial/dynamical partition.
       !if( calc_mode_id == CM_TD .and. pcm%epsilon_infty /= pcm%epsilon_0 ) then
+      call pcm_v_electrons_cav_li(pcm%v_e, v_h, pcm, mesh)
       if( td_calc_mode .and. pcm%epsilon_infty /= pcm%epsilon_0 .and. pcm%noneq ) then  
        select case (pcm%iter)
        case(0)
-        call pcm_v_electrons_cav_li(pcm%v_e, v_h, pcm, mesh)
         !< calculating polarization charges equilibrated with the initial Hartree potential (just once)
         call pcm_charges(pcm%q_e, pcm%qtot_e, pcm%v_e, pcm%matrix, pcm%n_tesserae, &
                          pcm%q_e_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_e)
-       case default
-        !< calculating inertial polarization charges (once and for all)
-        if ( mod(pcm%iter, pcm%update_iter) == 0 ) then
-         !< calculated in two steps to guarantee correct renormalization: Gauss law is recovered at each step.
-         call pcm_charges(pcm%q_e_in, pcm%qtot_e, pcm%v_e, pcm%matrix, pcm%n_tesserae, &
-                          pcm%q_e_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_e)
-         call pcm_charges(pcm%q_e, pcm%qtot_e, pcm%v_e, pcm%matrix_d, pcm%n_tesserae, &
-                          pcm%q_e_nominal, pcm%epsilon_infty, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_e)
-         pcm%q_e_in = pcm%q_e_in - pcm%q_e
-        end if
 
-        call pcm_v_electrons_cav_li(pcm%v_e, v_h, pcm, mesh)
+        !< calculating inertial polarization charges (once and for all)
+        !< calculated in two steps to guarantee correct renormalization: Gauss law is recovered at each step.
+        call pcm_charges(pcm%q_e_in, pcm%qtot_e, pcm%v_e, pcm%matrix, pcm%n_tesserae, &
+                         pcm%q_e_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_e)
+        call pcm_charges(pcm%q_e, pcm%qtot_e, pcm%v_e, pcm%matrix_d, pcm%n_tesserae, &
+                         pcm%q_e_nominal, pcm%epsilon_infty, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_e)
+        pcm%q_e_in = pcm%q_e_in - pcm%q_e
+       case default
         !< calculating dynamical polarization charges (each time)
         call pcm_charges(pcm%q_e, pcm%qtot_e, pcm%v_e, pcm%matrix_d, pcm%n_tesserae, &
                          pcm%q_e_nominal, pcm%epsilon_infty, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_e)
@@ -864,7 +862,6 @@ contains
        end select
       else !GGIL LOG: hereafter Alain code.
        !< calculating polarization charges to be equilibrated (upon self-consitency) with the ground state Hartree potential (always).
-       call pcm_v_electrons_cav_li(pcm%v_e, v_h, pcm, mesh)
        call pcm_charges(pcm%q_e, pcm%qtot_e, pcm%v_e, pcm%matrix, pcm%n_tesserae, &
                         pcm%q_e_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_e)
       end if
