@@ -470,7 +470,7 @@ contains
              do ist=1,w90_num_bands
                 call states_get_state(st, sys%gr%der%mesh, ist, ik, state1)
                 ! reorder state
-                ip1=0
+                ip=0
                 do iz=nr(1,3),nr(2,3)
                    do iy=nr(1,2),nr(2,2)
                       do ix=nr(1,1),nr(2,1)
