@@ -871,10 +871,10 @@ contains
   subroutine out_floquet_wfs()
     
 
-    integer :: ik, ist, fdim 
+    integer :: ik, ist, fdim, spindim , im, imm
     integer :: nik, dim, nst, itot
     CMPLX, allocatable  ::  zpsi(:)
-    character(len=512)  ::  str3
+    character(len=512)  ::  str3, str4
     type(unit_t) :: fn_unit
     
     integer :: how
@@ -885,6 +885,7 @@ contains
 
     fn_unit = units_out%length**(-sys%gr%mesh%sb%dim)
 
+    spindim = hm%F%spindim 
 
 
     ! prepare restart structure
@@ -905,17 +906,33 @@ contains
         write(str2,'(I5)') ist
 
         ! read the floquet wavefunction for states ik,ist
-        do fdim = 1, dressed_st%d%dim
-           itot = fdim + (ist-1)*dressed_st%d%dim +  (ik-1)*dressed_st%nst*dressed_st%d%dim 
-           write(filename,'(i10.10)') itot
-           call zrestart_read_mesh_function(restart, trim(adjustl(filename)), sys%gr%mesh, zpsi, ierr)
+        do im=hm%F%order(1),hm%F%order(2)
+           imm = im - hm%F%order(1) + 1
+           do idim=1,spindim
+!         do fdim = 1, dressed_st%d%dim
+             fdim = (imm-1)*spindim+idim 
+             itot = fdim + (ist-1)*dressed_st%d%dim +  (ik-1)*dressed_st%nst*dressed_st%d%dim
+             write(filename,'(i10.10)') itot
+             ierr = 0
+             call zrestart_read_mesh_function(restart, trim(adjustl(filename)), sys%gr%mesh, zpsi, ierr)
 
-           print *, ierr, trim(adjustl(filename)), ik, ist, fdim
+             if (ierr > 0) then
+               write(message(1),'(2a)') "Failed to read from restart file ", trim(filename)
+               call messages_warning(2)
+               cycle
+             end if
+!              print *, ierr, trim(adjustl(filename)), ik, ist, fdim
 
-           write(str3,'(I5)') fdim - hm%F%order(1) - 1
-           filename = 'wfn_ik_'//trim(adjustl(str))//'_ist_'//trim(adjustl(str2))//'_m_'//trim(adjustl(str3))
-           call zio_function_output(how, FLOQUET_DIR, filename, sys%gr%mesh, zpsi, fn_unit, ierr)
-           
+             write(str3,'(I5)') im
+             if(spindim>1) then
+               filename = 'wfn_is_'//trim(adjustl(str4))//'_ik_'//trim(adjustl(str))//'_ist_'&
+                                   //trim(adjustl(str2))//'_m_'//trim(adjustl(str3))
+             else
+               filename = 'wfn_ik_'//trim(adjustl(str))//'_ist_'//trim(adjustl(str2))//'_m_'//trim(adjustl(str3))
+             end if
+             
+             call zio_function_output(how, FLOQUET_DIR, filename, sys%gr%mesh, zpsi, fn_unit, ierr)
+           end do
         end do
 
 
