@@ -71,7 +71,7 @@ program wannier90_interface
   character(len=512)   :: filename, str, str2
   integer              :: ist, ispin
   type(states_t)       :: st
-  logical              :: w90_setup, w90_output, w90_floquet
+  logical              :: w90_setup, w90_output, w90_floquet, w90_unk
   integer :: w90_nntot, w90_num_bands, w90_num_kpts    ! w90 input parameters
   integer, allocatable ::  w90_nnk_list(:,:)           !
   character(len=80) :: w90_prefix                      ! w90 input file prefix
@@ -134,12 +134,17 @@ program wannier90_interface
   !%Option w90_floquet bit(3)
   !% Make interface for a Floquet structure. Takes care of different dimensionalities etc. 
   !%
+  !%Option w90_unk bit(4)
+  !% write unk files for plotting routines of wannier90 
+  !%
   !%End
   call parse_variable('W90_interface_mode', w90_what, w90_what)
 
   w90_setup = iand(w90_what, OPTION__W90_INTERFACE_MODE__W90_SETUP) /= 0
   w90_output = iand(w90_what, OPTION__W90_INTERFACE_MODE__W90_OUTPUT) /= 0
   w90_floquet = iand(w90_what, OPTION__W90_INTERFACE_MODE__W90_FLOQUET) /= 0
+  w90_unk = iand(w90_what, OPTION__W90_INTERFACE_MODE__W90_UNK) /= 0
+
 
   ! sanity checks
   if(w90_setup .and. w90_output) then
@@ -149,6 +154,11 @@ program wannier90_interface
 
   if(w90_floquet .and. .not. w90_setup .and. .not. w90_output) then
       message(1) = 'W90: w90_floquet has to be combined with either w90_setup or w90_output.'
+      call messages_fatal(1)
+  end if
+
+  if(w90_unk .and. .not. w90_output) then
+      message(1) = 'W90: w90_unk has to be combined with w90_output.'
       call messages_fatal(1)
   end if
 
@@ -199,6 +209,7 @@ program wannier90_interface
     ! ---- actual interface work ----------
     call read_wannier90_files()
     call create_wannier90_mmn()
+    if(w90_unk) call write_unk()
 
    end if
 
@@ -428,6 +439,55 @@ contains
     SAFE_DEALLOCATE_A(state2)
 
   end subroutine create_wannier90_mmn
+
+  subroutine write_unk()
+    integer ::  ist, jst, ik, unk_file,  iknn, G(3), ii, jj, idim, idim2,  ispin
+    integer :: nr(2,3), ix, iy, iz, ip
+    FLOAT   ::  Gr(3), t1, t2
+    character(len=80) :: filename
+    CMPLX   :: overlap
+    CMPLX, allocatable :: state1(:,:), state2(:)
+
+    ASSERT(st%d%kpt%start==1 .and. st%d%kpt%end==sys%gr%sb%kpoints%full%npoints)
+    ASSERT(sys%gr%mesh%np==sys%gr%mesh%np_global)
+
+    SAFE_ALLOCATE(state1(1:sys%gr%der%mesh%np, 1:st%d%dim))
+    SAFE_ALLOCATE(state2(1:sys%gr%der%mesh%np))
+
+    ! set boundaries of inner box
+    nr(1,:) = sys%gr%mesh%idx%nr(1,:) + sys%gr%mesh%idx%enlarge(:)
+    nr(2,:) = sys%gr%mesh%idx%nr(2,:) - sys%gr%mesh%idx%enlarge(:)
+
+    do ik=1,w90_num_kpts
+       do ispin=1,st%d%dim
+
+          if(mpi_grp_is_root(mpi_world)) then
+             write(filename,'(a,i5.5,a1,i1)') './UNK', ik,'.', ispin
+             unk_file = io_open(trim(filename), action='write',form='unformatted')
+             ! write header
+             write(unk_file) sys%gr%mesh%idx%ll(1:sys%gr%mesh%idx%dim), ik,  w90_num_bands
+             ! states 
+             do ist=1,w90_num_bands
+                call states_get_state(st, sys%gr%der%mesh, ist, ik, state1)
+                ! reorder state
+                ip=0
+                do iz=nr(1,3),nr(2,3)
+                   do iy=nr(1,2),nr(2,2)
+                      do ix=nr(1,1),nr(2,1)
+                         ip = sys%gr%mesh%idx%lxyz_inv(ix, iy, iz)
+                         ip=ip+1
+                         state2(ip) =  state1(sys%gr%mesh%idx%lxyz_inv(ix, iy, iz),ispin)
+                      end do
+                   end do
+                end do
+                write(unk_file) state2(:)
+             end do
+             close(unk_file)
+          end if
+       end do
+    end do
+
+  end subroutine write_unk
 
 end program wannier90_interface
 

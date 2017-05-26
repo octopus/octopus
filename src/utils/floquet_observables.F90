@@ -732,7 +732,7 @@ contains
       
       
       do ii = 1, itot
-        if (weight(idx(ii)) > CNST(1E-14) .and.  ediff(ii) > M_ZERO) then
+        if (weight(idx(ii)) > CNST(1E-15) .and.  ediff(ii) > M_ZERO) then
           write(iunit, '(1x,2es15.6)', advance='no') units_from_atomic(units_out%energy, ediff(ii)) , weight(idx(ii))  
           write(iunit, '(4i15)', advance='no') alpha(idx(ii)) , beta(idx(ii)), mm(idx(ii)), nn(idx(ii))
           write(iunit, '(4es15.6)') abs(mel(idx(ii),1)),abs(mel(idx(ii),2)),abs(mel(idx(ii),3)), fab(idx(ii))
@@ -763,7 +763,7 @@ contains
     CMPLX, allocatable   :: u_ma(:,:), u_nb(:,:)
     FLOAT, allocatable   :: spect(:,:)
     
-    integer :: idim, im, in, ista, istb, ik, itot, ii, i, imm, inn, spindim, ie
+    integer :: idim, im, in, ista, istb, ik, itot, ii, i, imm, inn, spindim, ie, dim
     FLOAT   :: omega, DE, ediff, EE
     CMPLX   :: tmp(4), ampl(1:3), mel(1:3)
     integer :: iunit
@@ -772,6 +772,7 @@ contains
     PUSH_SUB(calc_floquet_hhg)
     
     spindim = hm%F%spindim 
+    dim = sys%gr%sb%dim
     
     itot = dressed_st%d%kpt%nglobal * dressed_st%nst**2 * hm%F%floquet_dim**2
     
@@ -781,6 +782,8 @@ contains
     SAFE_ALLOCATE(u_nb(1:sys%gr%mesh%np, hm%F%floquet_dim))
 
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, obs%ne)
+    
+    spect(:,:) = M_ZERO
 
     do ie = 1, obs%ne
       EE= ie * obs%de
@@ -793,8 +796,9 @@ contains
             call states_get_state(dressed_st, sys%gr%mesh, ista, ik, u_ma)
           
             do istb=dressed_st%st_start, dressed_st%st_end
-
-!               if (dressed_st%occ(istb,ik) * dressed_st%occ(ista,ik) < 1E-18) cycle
+              
+              !Cut out all the component suppressed by small occupations 
+              if (dressed_st%occ(istb,ik) * dressed_st%occ(ista,ik) < 1E-14) cycle
 
               call states_get_state(dressed_st, sys%gr%mesh, istb, ik, u_nb)
             
@@ -808,15 +812,17 @@ contains
                   imm = im - hm%F%order(1) + 1
 
                   ediff = DE + (in-im)*hm%F%omega
-                
+                  
                   ! get the dipole matrix elements 
+                  mel(:) = M_z0
                   do idim=1,spindim
                     call zmf_multipoles(sys%gr%mesh, conjg(u_ma(:,(imm-1)*spindim+idim)) &
                                                          * u_nb(:,(inn-1)*spindim+idim) , 1, tmp(:))
                   
-                    mel(1:3) = mel(1:3) + tmp(2:4)/(hm%F%order(2)-hm%F%order(1))
+                    mel(1:dim) = mel(1:dim) + tmp(2:2+dim-1)/(hm%F%order(2)-hm%F%order(1))
                   end do
-                  ampl(1:3) = ampl(1:3)+ mel(1:3) * dressed_st%occ(istb,ik) * dressed_st%occ(ista,ik) &
+                  
+                  ampl(1:dim) = ampl(1:dim)+ mel(1:dim) * dressed_st%occ(istb,ik) * dressed_st%occ(ista,ik) &
                                          * aimag(1/(EE - ediff  + M_zi*obs%gamma))
 !                   print *, ampl(1:3), ediff
                 
@@ -828,7 +834,7 @@ contains
 
       end do
       
-      spect(ie,1:3) = abs(ampl(1:3))**2 *EE**4 
+      spect(ie,1:dim) = abs(ampl(1:dim))**2 *EE**4 
       
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ie, obs%ne)
       
@@ -871,10 +877,10 @@ contains
   subroutine out_floquet_wfs()
     
 
-    integer :: ik, ist, fdim 
+    integer :: ik, ist, fdim, spindim , im, imm
     integer :: nik, dim, nst, itot
     CMPLX, allocatable  ::  zpsi(:)
-    character(len=512)  ::  str3
+    character(len=512)  ::  str3, str4
     type(unit_t) :: fn_unit
     
     integer :: how
@@ -885,6 +891,7 @@ contains
 
     fn_unit = units_out%length**(-sys%gr%mesh%sb%dim)
 
+    spindim = hm%F%spindim 
 
 
     ! prepare restart structure
@@ -905,17 +912,33 @@ contains
         write(str2,'(I5)') ist
 
         ! read the floquet wavefunction for states ik,ist
-        do fdim = 1, dressed_st%d%dim
-           itot = fdim + (ist-1)*dressed_st%d%dim +  (ik-1)*dressed_st%nst*dressed_st%d%dim 
-           write(filename,'(i10.10)') itot
-           call zrestart_read_mesh_function(restart, trim(adjustl(filename)), sys%gr%mesh, zpsi, ierr)
+        do im=hm%F%order(1),hm%F%order(2)
+           imm = im - hm%F%order(1) + 1
+           do idim=1,spindim
+!         do fdim = 1, dressed_st%d%dim
+             fdim = (imm-1)*spindim+idim 
+             itot = fdim + (ist-1)*dressed_st%d%dim +  (ik-1)*dressed_st%nst*dressed_st%d%dim
+             write(filename,'(i10.10)') itot
+             ierr = 0
+             call zrestart_read_mesh_function(restart, trim(adjustl(filename)), sys%gr%mesh, zpsi, ierr)
 
-           print *, ierr, trim(adjustl(filename)), ik, ist, fdim
+             if (ierr > 0) then
+               write(message(1),'(2a)') "Failed to read from restart file ", trim(filename)
+               call messages_warning(2)
+               cycle
+             end if
+!              print *, ierr, trim(adjustl(filename)), ik, ist, fdim
 
-           write(str3,'(I5)') fdim - hm%F%order(1) - 1
-           filename = 'wfn_ik_'//trim(adjustl(str))//'_ist_'//trim(adjustl(str2))//'_m_'//trim(adjustl(str3))
-           call zio_function_output(how, FLOQUET_DIR, filename, sys%gr%mesh, zpsi, fn_unit, ierr)
-           
+             write(str3,'(I5)') im
+             if(spindim>1) then
+               filename = 'wfn_is_'//trim(adjustl(str4))//'_ik_'//trim(adjustl(str))//'_ist_'&
+                                   //trim(adjustl(str2))//'_m_'//trim(adjustl(str3))
+             else
+               filename = 'wfn_ik_'//trim(adjustl(str))//'_ist_'//trim(adjustl(str2))//'_m_'//trim(adjustl(str3))
+             end if
+             
+             call zio_function_output(how, FLOQUET_DIR, filename, sys%gr%mesh, zpsi, fn_unit, ierr)
+           end do
         end do
 
 

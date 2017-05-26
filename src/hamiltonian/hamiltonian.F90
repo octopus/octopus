@@ -118,7 +118,7 @@ module hamiltonian_oct_m
   type floquet_t ! this should live in the floquet module
     logical :: floquet_apply !< use action of the Floquet Hamiltonian
     integer :: nT, ncycle, interval, count, floquet_dim, spindim, order(2), mode
-    integer :: max_solve_iter, iter
+    integer :: max_solve_iter, iter, init
     logical ::  downfolding, sample, sample_one_only
     FLOAT :: omega, Tcycle, dt, pes_omega, pol(1:MAX_DIM)
     FLOAT, pointer :: frozen_distortion(:,:)
