@@ -24,7 +24,6 @@
 !! FFT implementations.
 module fft_oct_m
   use accel_oct_m
-  use,intrinsic :: iso_c_binding
 #ifdef HAVE_OPENCL
   use cl
 #ifdef HAVE_CLFFT
@@ -32,7 +31,9 @@ module fft_oct_m
 #endif
 #endif
   use fftw_oct_m
+  use fftw_params_oct_m
   use global_oct_m
+  use,intrinsic :: iso_c_binding
   use lalg_basic_oct_m
   use loct_math_oct_m
   use messages_oct_m
@@ -43,6 +44,7 @@ module fft_oct_m
 #endif
   use parser_oct_m
   use pfft_oct_m
+  use pfft_params_oct_m
   use pnfft_oct_m
   use profiling_oct_m
   use types_oct_m
