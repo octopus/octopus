@@ -54,25 +54,35 @@ noinst_HEADERS =                       \
 
 include $(srcdir)/../common-rules.make
 
+
+# This is to generate the dependencies. It makes use of the makedepf90
+# program of Erik Edelmann
+# (http://www.helsinki.fi/~eedelman/makedepf90.html). It should be run
+# from time to time (just typing make depend within the src
+# directory), substituting the dependencies below by the resulting new
+# dependencies. (For normal compilation of octopus, there is
+# absolutely no need of installing makedepf90).
 depend:
 	@makedepf90 $(libstates_a_SOURCES)
 
-ksinversion.o : ksinversion.F90 modelmb_particles.o states.o
-modelmb_density_matrix.o : modelmb_density_matrix.F90 modelmb_density_matrix_inc.F90 modelmb_particles.o states.o
-modelmb_exchange_syms.o : modelmb_exchange_syms.F90 modelmb_exchange_syms_inc.F90 modelmb_density_matrix.o modelmb_particles.o states.o
-modelmb_particles.o : modelmb_particles.F90
-physics_op.o : physics_op.F90 physics_op_inc.F90
+
+# DO NOT EDIT DIRECTLY --- use make depend to generate the dependencies and copy-paste the result here
+
+physics_op.o : physics_op.F90 physics_op_inc.F90 
+smear.o : smear.F90 cmplxscl.o 
+states_group.o : states_group.F90 states_dim.o 
+states.o : states.F90 states_inc.F90 states_dim.o states_group.o smear.o modelmb_particles.o cmplxscl.o 
+states_block.o : states_block.F90 states_block_inc.F90 states.o 
+states_dim.o : states_dim.F90 
+states_calc.o : states_calc.F90 states_calc_inc.F90 states_parallel.o states_dim.o states.o smear.o physics_op.o cmplxscl.o 
+excited_states.o : excited_states.F90 excited_states_inc.F90 states_dim.o states_calc.o states.o 
+linear_response.o : linear_response.F90 linear_response_inc.F90 states_dim.o states_calc.o states.o smear.o 
+states_restart.o : states_restart.F90 states_io.o states_dim.o states_calc.o states.o smear.o linear_response.o 
+modelmb_density_matrix.o : modelmb_density_matrix.F90 modelmb_density_matrix_inc.F90 states.o modelmb_particles.o 
+modelmb_particles.o : modelmb_particles.F90 
+modelmb_exchange_syms.o : modelmb_exchange_syms.F90 modelmb_exchange_syms_inc.F90 states.o modelmb_density_matrix.o modelmb_particles.o 
+density.o : density.F90 density_inc.F90 states_dim.o states.o smear.o 
+states_io.o : states_io.F90 states_dim.o states.o smear.o 
+cmplxscl.o : cmplxscl.F90 
+opt_control_state.o : opt_control_state.F90 states.o 
 states_parallel.o : states_parallel.F90 states_parallel_inc.F90 states.o
-states.o : states.F90 states_group.o states_inc.F90 states_dim.o modelmb_particles.o smear.o cmplxscl.o
-states_dim.o : states_dim.F90
-states_group.o : states_group.F90 states_dim.o
-states_calc.o : states_calc.F90 states_calc_inc.F90 states.o states_block.o smear.o cmplxscl.o physics_op.o states_dim.o states_parallel.o
-states_block.o : states_block.F90 states_block_inc.F90 states.o
-states_restart.o : states_restart.F90 linear_response.o smear.o states.o states_calc.o states_dim.o states_io.o
-excited_states.o : excited_states.F90 excited_states_inc.F90 states.o states_calc.o states_dim.o
-linear_response.o : linear_response.F90 linear_response_inc.F90 states.o states_calc.o states_dim.o smear.o
-density.o : density.F90 density_inc.F90 states.o smear.o states_dim.o
-states_io.o : states_io.F90 states.o smear.o states_dim.o
-cmplxscl.o : cmplxscl.F90
-smear.o : smear.F90 cmplxscl.o
-opt_control_state.o : opt_control_state.F90 states.o

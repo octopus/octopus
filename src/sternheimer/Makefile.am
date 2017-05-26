@@ -38,13 +38,24 @@ noinst_HEADERS =                 \
 
 include $(srcdir)/../common-rules.make
 
+
+# This is to generate the dependencies. It makes use of the makedepf90
+# program of Erik Edelmann
+# (http://www.helsinki.fi/~eedelman/makedepf90.html). It should be run
+# from time to time (just typing make depend within the src
+# directory), substituting the dependencies below by the resulting new
+# dependencies. (For normal compilation of octopus, there is
+# absolutely no need of installing makedepf90).
 depend:
 	@makedepf90 $(libsternheimer_a_SOURCES)
 
-sternheimer.o : sternheimer.F90 sternheimer_inc.F90
-em_resp_calc.o : em_resp_calc.F90 em_resp_calc_inc.F90 sternheimer.o
-em_resp.o : em_resp.F90 em_resp_inc.F90 sternheimer.o em_resp_calc.o kdotp.o kdotp_calc.o
-kdotp_calc.o : kdotp_calc.F90 kdotp_calc_inc.F90 sternheimer.o
-kdotp.o : kdotp.F90 kdotp_calc.o sternheimer.o
-vdw.o : vdw.F90 em_resp.o sternheimer.o em_resp_calc.o
-phonons_lr.o : phonons_lr.F90 phonons_lr_inc.F90 sternheimer.o kdotp.o kdotp_calc.o
+
+# DO NOT EDIT DIRECTLY --- use make depend to generate the dependencies and copy-paste the result here
+
+sternheimer.o : sternheimer.F90 sternheimer_inc.F90 
+em_resp_calc.o : em_resp_calc.F90 em_resp_calc_inc.F90 sternheimer.o 
+em_resp.o : em_resp.F90 em_resp_inc.F90 sternheimer.o kdotp_calc.o kdotp.o em_resp_calc.o 
+vdw.o : vdw.F90 sternheimer.o em_resp_calc.o em_resp.o 
+phonons_lr.o : phonons_lr.F90 phonons_lr_inc.F90 sternheimer.o kdotp_calc.o kdotp.o 
+kdotp_calc.o : kdotp_calc.F90 kdotp_calc_inc.F90 sternheimer.o 
+kdotp.o : kdotp.F90 sternheimer.o kdotp_calc.o

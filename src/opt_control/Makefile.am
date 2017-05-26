@@ -33,20 +33,25 @@ noinst_HEADERS = \
 
 include $(srcdir)/../common-rules.make
 
+
+# This is to generate the dependencies. It makes use of the makedepf90
+# program of Erik Edelmann
+# (http://www.helsinki.fi/~eedelman/makedepf90.html). It should be run
+# from time to time (just typing make depend within the src
+# directory), substituting the dependencies below by the resulting new
+# dependencies. (For normal compilation of octopus, there is
+# absolutely no need of installing makedepf90).
 depend:
 	@makedepf90 $(libopt_control_a_SOURCES)
 
 
-opt_control_global.o : opt_control_global.F90 
-filter.o : filter.F90 
-controlfunction.o : controlfunction.F90 controlfunction_trans_inc.F90 filter.o 
-opt_control_iter.o : opt_control_iter.F90 controlfunction.o opt_control_global.o 
-target.o : target.F90 target_density_inc.F90 target_velocity_inc.F90 target_hhg_inc.F90 \
-  target_groundstate_inc.F90 target_excited_inc.F90 target_gstransformation_inc.F90 \
-  target_exclude_inc.F90 target_userdefined_inc.F90 target_local_inc.F90 \
-  target_tdlocal_inc.F90 target_classical_inc.F90 opt_control_global.o \
-  target_spin_inc.F90
+# DO NOT EDIT DIRECTLY --- use make depend to generate the dependencies and copy-paste the result here
+
+opt_control_global.o : opt_control_global.F90
+filter.o : filter.F90
+controlfunction.o : controlfunction.F90 controlfunction_trans_inc.F90 filter.o
+opt_control_iter.o : opt_control_iter.F90 controlfunction.o 
+target.o : target.F90 target_spin_inc.F90 target_classical_inc.F90 target_tdlocal_inc.F90 target_local_inc.F90 target_userdefined_inc.F90 target_exclude_inc.F90 target_gstransformation_inc.F90 target_excited_inc.F90 target_groundstate_inc.F90 target_hhg_inc.F90 target_velocity_inc.F90 target_density_inc.F90 opt_control_global.o 
+propagation.o : propagation.F90 target.o controlfunction.o 
 initst.o : initst.F90 
-propagation.o : propagation.F90 controlfunction.o target.o opt_control_global.o 
-opt_control.o : opt_control.F90 finalcheck_inc.F90 opt_control_c_inc.F90 initst.o check_input_inc.F90 target.o \
-  opt_control_iter.o controlfunction.o propagation.o opt_control_global.o filter.o
+opt_control.o : opt_control.F90 finalcheck_inc.F90 check_input_inc.F90 opt_control_c_inc.F90 target.o propagation.o opt_control_iter.o opt_control_global.o initst.o filter.o controlfunction.o

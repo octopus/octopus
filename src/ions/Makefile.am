@@ -40,20 +40,31 @@ noinst_HEADERS =
 
 include $(srcdir)/../common-rules.make
 
+
+# This is to generate the dependencies. It makes use of the makedepf90
+# program of Erik Edelmann
+# (http://www.helsinki.fi/~eedelman/makedepf90.html). It should be run
+# from time to time (just typing make depend within the src
+# directory), substituting the dependencies below by the resulting new
+# dependencies. (For normal compilation of octopus, there is
+# absolutely no need of installing makedepf90).
 depend:
 	@makedepf90 $(libions_a_SOURCES)
 
+
+# DO NOT EDIT DIRECTLY --- use make depend to generate the dependencies and copy-paste the result here
+
 read_coords.o : read_coords.F90 
-atom.o : atom.F90
-geometry.o : geometry.F90 atom.o read_coords.o
+atom.o : atom.F90 
+geometry.o : geometry.F90 read_coords.o atom.o 
 xyz_adjust.o : xyz_adjust.F90 geometry.o 
-kpoints.o : geometry.o symmetries.o
-box.o : box.F90
-box_union.o : box_union.F90 box.o
-simul_box.o : simul_box.F90 geometry.o kpoints.o symmetries.o atom.o
-periodic_copy.o: periodic_copy.F90 simul_box.o
-vibrations.o : vibrations.F90 simul_box.o geometry.o
-ion_dynamics.o : ion_dynamics.F90 simul_box.o geometry.o read_coords.o
-symmetries.o : symmetries.F90 geometry.o
-symmetries_finite.o : symmetries_finite.c
+kpoints.o : kpoints.F90 symmetries.o geometry.o 
+box.o : box.F90 
+box_union.o : box_union.F90 box.o 
+simul_box.o : simul_box.F90 symmetries.o kpoints.o geometry.o atom.o 
+periodic_copy.o : periodic_copy.F90 simul_box.o geometry.o 
+vibrations.o : vibrations.F90 simul_box.o geometry.o 
+ion_dynamics.o : ion_dynamics.F90 simul_box.o read_coords.o geometry.o 
+symmetries.o : symmetries.F90 geometry.o 
+symmetries_finite.o : symmetries_finite.c 
 spglib_f.o : spglib_f.c

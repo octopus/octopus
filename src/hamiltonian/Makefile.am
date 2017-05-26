@@ -68,34 +68,45 @@ noinst_HEADERS =                      \
 
 include $(srcdir)/../common-rules.make
 
+
+# This is to generate the dependencies. It makes use of the makedepf90
+# program of Erik Edelmann
+# (http://www.helsinki.fi/~eedelman/makedepf90.html). It should be run
+# from time to time (just typing make depend within the src
+# directory), substituting the dependencies below by the resulting new
+# dependencies. (For normal compilation of octopus, there is
+# absolutely no need of installing makedepf90).
 depend:
 	@makedepf90 $(libhamiltonian_a_SOURCES)
 
-gauge_field.o : gauge_field.F90 projector.o
-lasers.o : lasers.F90 lasers_inc.F90
-species_pot.o : species_pot.F90 species_pot_inc.F90
-rkb_projector.o : rkb_projector.F90 species_pot.o 
-kb_projector.o : kb_projector.F90 kb_projector_inc.F90 species_pot.o 
-hgh_projector.o : hgh_projector.F90 hgh_projector_inc.F90 species_pot.o 
-projector.o : projector.F90 projector_inc.F90 rkb_projector.o kb_projector.o hgh_projector.o species_pot.o
-epot.o : epot.F90 projector.o lasers.o species_pot.o gauge_field.o kick.o ion_interaction.o xc.o
-hamiltonian.o : hamiltonian.F90 hamiltonian_inc.F90 lasers.o projector.o epot.o gauge_field.o hamiltonian_base.o pcm.o scdm.o functionals.o boundary_op.o oct_exchange.o scissor.o
+
+# DO NOT EDIT DIRECTLY --- use make depend to generate the dependencies and copy-paste the result here
+
+energy.o : energy.F90 
+kick.o : kick.F90 
+lasers.o : lasers.F90 lasers_inc.F90 
+species_pot.o : species_pot.F90 species_pot_inc.F90 
+rkb_projector.o : rkb_projector.F90 
+kb_projector.o : kb_projector.F90 kb_projector_inc.F90 
+hgh_projector.o : hgh_projector.F90 hgh_projector_inc.F90 
+projector.o : projector.F90 projector_inc.F90 rkb_projector.o kb_projector.o hgh_projector.o 
+epot.o : epot.F90 xc.o species_pot.o projector.o lasers.o kick.o ion_interaction.o gauge_field.o 
+hamiltonian_base.o : hamiltonian_base.F90 hamiltonian_base_inc.F90 projector_matrix.o projector.o hgh_projector.o kb_projector.o epot.o 
+hamiltonian.o : hamiltonian.F90 hamiltonian_inc.F90 functionals.o xc.o scissor.o scdm.o pcm.o projector.o oct_exchange.o lasers.o gauge_field.o epot.o hamiltonian_base.o energy.o boundary_op.o 
 scf_tol.o : scf_tol.F90 
-hamiltonian_base.o : hamiltonian_base.F90 hamiltonian_base_inc.F90 projector.o epot.o projector_matrix.o xc.o kb_projector.o hgh_projector.o 
-born_charges.o : born_charges.F90
-projector_matrix.o : projector_matrix.F90
-berry.o : berry.F90
-kick.o : kick.F90
-energy.o : energy.F90
-pcm.o : pcm.F90
-scdm.o : scdm.F90 scdm_inc.F90 xc.o
-functionals.o : functionals.F90 libvdwxc.o
-xc.o : xc.F90 kxc_inc.F90 fxc_inc.F90 vxc_inc.F90 functionals.o
-ion_interaction.o : ion_interaction.F90
-hirshfeld.o : hirshfeld.F90 species_pot.o
-libvdwxc.o : libvdwxc.F90
-vdw_ts.o : vdw_ts.F90 hirshfeld.o
-boundary_op.o : boundary_op.F90
-oct_exchange.o : oct_exchange_inc.F90 xc.o
-scissor.o : scissor.F90 scissor_inc.F90
-lda_u.o : lda_u.F90 lda_u_inc.F90 species_pot.o energy.o hamiltonian_base.o
+gauge_field.o : gauge_field.F90 projector.o 
+born_charges.o : born_charges.F90 
+projector_matrix.o : projector_matrix.F90 
+berry.o : berry.F90 
+pcm.o : pcm.F90 
+scdm.o : scdm.F90 scdm_inc.F90 xc.o 
+functionals.o : functionals.F90 libvdwxc.o 
+xc.o : xc.F90 kxc_inc.F90 fxc_inc.F90 vxc_inc.F90 functionals.o libvdwxc.o 
+ion_interaction.o : ion_interaction.F90 
+hirshfeld.o : hirshfeld.F90 species_pot.o 
+libvdwxc.o : libvdwxc.F90 
+vdw_ts.o : vdw_ts.F90 hirshfeld.o 
+vdw_ts_low.o : vdw_ts_low.c 
+boundary_op.o : boundary_op.F90 
+oct_exchange.o : oct_exchange.F90 oct_exchange_inc.F90 xc.o 
+scissor.o : scissor.F90 scissor_inc.F90 

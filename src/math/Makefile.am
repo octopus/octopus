@@ -84,46 +84,61 @@ noinst_HEADERS =                         \
 
 include $(srcdir)/../common-rules.make
 
+
+# This is to generate the dependencies. It makes use of the makedepf90
+# program of Erik Edelmann
+# (http://www.helsinki.fi/~eedelman/makedepf90.html). It should be run
+# from time to time (just typing make depend within the src
+# directory), substituting the dependencies below by the resulting new
+# dependencies. (For normal compilation of octopus, there is
+# absolutely no need of installing makedepf90).
 depend:
 	@makedepf90 $(libmath_a_SOURCES)
 
+
+# DO NOT EDIT DIRECTLY --- use make depend to generate the dependencies and copy-paste the result here
+
 blas.o : blas.F90 
-checksum.o : checksum.c
-checksum_interface.o : checksum_interface.F90
+checksum.o : checksum.c 
+checksum_interface.o : checksum_interface.F90 
 dablas.o : dablas.c 
-fft.o : fft.F90 fft_inc.F90 fftw.o pfft.o pnfft.o nfft.o lalg_basic.o loct_math.o math.o
-fftw.o : fftw.F90
-pfft.o : pfft.F90 fftw.o math.o
-pnfft.o : pnfft.F90 pnfft_inc.F90 pfft.o fftw.o math.o
-nfft_f.o : nfft_f.c
-nfft.o : nfft.F90 nfft_inc.F90 nfft_f.o fftw.o loct_math.o
-spline_filter.o: spline_filter.F90 splines.o
+fft.o : fft.F90 fft_inc.F90 pnfft.o pfft.o nfft.o loct_math.o lalg_basic.o fftw.o 
+fftw.o : fftw.F90 
+spline_filter.o : spline_filter.F90 loct_math.o splines.o 
 gauss_legendre.o : gauss_legendre.F90 
+loct_math.o : loct_math.F90 
 lalg_basic.o : lalg_basic.F90 lalg_basic_blas_inc.F90 blas.o 
-lalg_adv.o : lalg_adv.F90 lalg_adv_lapack_inc.F90 lapack.o scalapack.o
-lapack.o : lapack.F90
-loct_math.o : loct_math.F90
-math.o : math.F90 math_inc.F90 lalg_basic.o loct_math.o blas.o
-metis.o : metis.F90
-metis_f.o : metis_f.c
-oct_gsl_f.o : oct_gsl_f.c
+math.o : math.F90 math_inc.F90 loct_math.o lalg_basic.o 
+metis.o : metis.F90 
+metis_f.o : metis_f.c 
+lalg_adv.o : lalg_adv.F90 lalg_adv_lapack_inc.F90 scalapack.o 
+lapack.o : lapack.F90 
+oct_gsl_f.o : oct_gsl_f.c 
+minimizer_low.o : minimizer_low.c 
 ode_solver.o : ode_solver.F90 ode_solver_inc.F90 
-permutations.o : permutations.F90 math.o
-root_solver.o : root_solver.F90 root_solver_inc.F90 ode_solver.o lalg_adv.o 
-solvers.o : solvers.F90 solvers_inc.F90 lalg_adv.o lalg_basic.o blas.o loct_math.o
+permutations.o : permutations.F90 math.o 
+pfft.o : pfft.F90 math.o fftw.o 
+root_solver.o : root_solver.F90 root_solver_inc.F90 ode_solver.o lalg_adv.o
+solvers.o : solvers.F90 solvers_inc.F90 loct_math.o lalg_basic.o blas.o
 splines.o : splines.F90 loct_math.o
-sparskit.o : sparskit.F90 sparskit_inc.F90 blas.o
+sparskit.o : sparskit.F90
 symm_op.o : symm_op.F90 symm_op_inc.F90
-tdfunction.o : tdfunction.F90 splines.o fft.o math.o
+tdfunction.o : tdfunction.F90 splines.o math.o loct_math.o fft.o
 ylm.o : ylm.c
 young.o : young.F90 math.o
 scalapack.o : scalapack.F90
+nfft.o : nfft.F90
+nfft_f.o : nfft_f.c
 pblas.o : pblas.F90
+sgfft.o : sgfft.F90
 matrix.o : matrix.F90 matrix_inc.F90
-matrix_ops.o : matrix_ops.F90 matrix_ops_inc.F90 matrix.o lapack.o
+matrix_ops.o : matrix_ops.F90 matrix_ops_inc.F90 scalapack.o matrix.o
 compressed_sensing.o : compressed_sensing.F90 blas.o
+fftw_low.o : fftw_low.c
 minimizer.o : minimizer.F90 lalg_basic.o
+pnfft.o : pnfft.F90 pfft.o math.o loct_math.o pfft.o
 qshep.o : qshep.F90
 spline_low.o : spline_low.cc
-quickrnd.o : quickrnd.F90 
+quickrnd.o : quickrnd.F90
 accel_blas.o : accel_blas.F90 accel_blas_inc.F90
+cufft.o : cufft.cc

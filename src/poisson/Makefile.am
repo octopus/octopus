@@ -42,19 +42,29 @@ noinst_HEADERS =                       \
 
 include $(srcdir)/../common-rules.make
 
+
+# This is to generate the dependencies. It makes use of the makedepf90
+# program of Erik Edelmann
+# (http://www.helsinki.fi/~eedelman/makedepf90.html). It should be run
+# from time to time (just typing make depend within the src
+# directory), substituting the dependencies below by the resulting new
+# dependencies. (For normal compilation of octopus, there is
+# absolutely no need of installing makedepf90).
 depend:
 	makedepf90 $(libpoisson_a_SOURCES)
 
-poisson_cutoffs.o : poisson_cutoffs.c
+
+# DO NOT EDIT DIRECTLY --- use make depend to generate the dependencies and copy-paste the result here
+
+poisson_cutoffs.o : poisson_cutoffs.c 
 poisson_cutoff.o : poisson_cutoff.F90 
-poisson_libisf.o : poisson_libisf.F90
+poisson_isf.o : poisson_isf.F90 scaling_function.o 
 poisson_fft.o : poisson_fft.F90 poisson_cutoff.o 
+poisson_libisf.o : poisson_libisf.F90 
 poisson_corrections.o : poisson_corrections.F90 
 poisson_cg.o : poisson_cg.F90 poisson_corrections.o 
+poisson_no.o : poisson_no.F90 
 poisson_multigrid.o : poisson_multigrid.F90 poisson_corrections.o 
-poisson.o : poisson.F90 poisson_init_direct_inc.F90 solver_1d_solve_inc.F90 poisson_multigrid.o poisson_inc.F90 \
-  poisson_fft.o poisson_isf.o poisson_libisf.o poisson_cg.o poisson_corrections.o poisson_fmm.o
-scaling_function.o : scaling_function.F90 lazy_8_inc.F90
-poisson_isf.o : poisson_isf.F90 scaling_function.o
-poisson_fmm.o : poisson_fmm.F90
-poisson_no.o : poisson_no.F90
+poisson.o : poisson.F90 solver_1d_solve_inc.F90 poisson_inc.F90 poisson_init_direct_inc.F90 poisson_no.o poisson_multigrid.o poisson_libisf.o poisson_fmm.o poisson_fft.o poisson_isf.o poisson_corrections.o poisson_cg.o 
+scaling_function.o : scaling_function.F90 lazy_8_inc.F90 
+poisson_fmm.o : poisson_fmm.F90 

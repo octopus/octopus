@@ -34,12 +34,23 @@ noinst_HEADERS =     \
 
 include $(srcdir)/../common-rules.make
 
+
+# This is to generate the dependencies. It makes use of the makedepf90
+# program of Erik Edelmann
+# (http://www.helsinki.fi/~eedelman/makedepf90.html). It should be run
+# from time to time (just typing make depend within the src
+# directory), substituting the dependencies below by the resulting new
+# dependencies. (For normal compilation of octopus, there is
+# absolutely no need of installing makedepf90).
 depend:
 	@makedepf90 $(libscf_a_SOURCES)
 
-mix.o : mix.F90 mix_inc.F90
-lcao.o: lcao.F90 lcao_inc.F90
-scf.o: scf.F90 mix.o lcao.o mixing_metric.o
-rdmft.o: rdmft.F90 
-ground_state.o: ground_state.F90 scf.o rdmft.o lcao.o 
+
+# DO NOT EDIT DIRECTLY --- use make depend to generate the dependencies and copy-paste the result here
+
+mix.o : mix.F90 mix_inc.F90 
+lcao.o : lcao.F90 lcao_inc.F90 
+scf.o : scf.F90 mix.o lcao.o 
+rdmft.o : rdmft.F90 
+ground_state.o : ground_state.F90 scf.o rdmft.o lcao.o 
 mixing_metric.o : mixing_metric.F90

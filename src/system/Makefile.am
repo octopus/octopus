@@ -76,32 +76,43 @@ noinst_HEADERS =                        \
 
 include $(srcdir)/../common-rules.make
 
+
+# This is to generate the dependencies. It makes use of the makedepf90
+# program of Erik Edelmann
+# (http://www.helsinki.fi/~eedelman/makedepf90.html). It should be run
+# from time to time (just typing make depend within the src
+# directory), substituting the dependencies below by the resulting new
+# dependencies. (For normal compilation of octopus, there is
+# absolutely no need of installing makedepf90).
 depend:
 	@makedepf90 $(libsystem_a_SOURCES)
 
+
+# DO NOT EDIT DIRECTLY --- use make depend to generate the dependencies and copy-paste the result here
+
+energy_calc.o : energy_calc.F90 energy_calc_inc.F90 
 preconditioners.o : preconditioners.F90 preconditioners_inc.F90 
-subspace.o : preconditioners.o subspace_inc.F90
 linear_solver.o : linear_solver.F90 linear_solver_inc.F90 preconditioners.o 
-eigen_cg.o: eigen_cg.F90 eigen_cg_inc.F90 preconditioners.o
-eigen_lobpcg.o: eigen_cg.F90 eigen_lobpcg_inc.F90 preconditioners.o
-eigensolver.o: eigensolver.F90 eigen_evolution_inc.F90 eigen_plan_inc.F90 eigen_cg.o subspace.o eigen_lobpcg.o eigen_rmmdiis.o exponential.o eigen_arpack.o eigen_feast.o
-eigen_rmmdiis.o: eigen_rmmdiis.F90 eigen_rmmdiis_inc.F90 subspace.o
-eigen_arpack.o: eigen_arpack.F90 eigen_arpack_inc.F90
-eigen_feast.o: eigen_feast.F90 linear_solver.o
+eigen_cg.o : eigen_cg.F90 eigen_cg_inc.F90 preconditioners.o 
+eigen_feast.o : eigen_feast.F90 linear_solver.o 
+eigen_lobpcg.o : eigen_lobpcg.F90 eigen_lobpcg_inc.F90 preconditioners.o 
+eigen_rmmdiis.o : eigen_rmmdiis.F90 eigen_rmmdiis_inc.F90 subspace.o preconditioners.o 
+eigensolver.o : eigensolver.F90 eigen_evolution_inc.F90 eigen_plan_inc.F90 subspace.o preconditioners.o exponential.o energy_calc.o eigen_rmmdiis.o eigen_lobpcg.o eigen_feast.o eigen_cg.o eigen_arpack.o 
+subspace.o : subspace.F90 subspace_inc.F90 preconditioners.o 
 xc_oep.o : xc_oep.F90 xc_oep_inc.F90 xc_oep_sic_inc.F90 xc_oep_x_inc.F90 xc_kli_inc.F90 xc_kli_pauli_inc.F90 linear_solver.o 
-xc_ks_inversion.o : eigensolver.o
-v_ks.o : v_ks.F90 xc_oep.o energy_calc.o magnetic.o xc_ks_inversion.o current.o
-system.o : system.F90 v_ks.o energy_calc.o elf.o output.o live_config.o
-pert.o : pert.F90 pert_inc.F90
-output.o : output.F90 output_states_inc.F90 output_h_inc.F90 output_linear_response_inc.F90 output_etsf_inc.F90 output_berkeleygw_inc.F90 output_modelmb_inc.F90 output_me.o output_fio.o elf.o magnetic.o v_ks.o current.o
-live_config.o : live_config.F90
-output_fio.o: output_fio.F90
-output_me.o: output_me_inc.F90
-exponential.o : exponential.F90
-energy_calc.o : energy_calc.F90 energy_calc_inc.F90
-forces.o : forces.F90 forces_inc.F90
-elf.o : elf.F90
-magnetic.o : magnetic.F90
-current.o : current.F90
-partial_charges.o : partial_charges.F90
+xc_ks_inversion.o : xc_ks_inversion.F90 eigensolver.o 
+v_ks.o : v_ks.F90 xc_oep.o xc_ks_inversion.o magnetic.o energy_calc.o current.o 
+live_config.o : live_config.F90 
+output_fio.o : output_fio.F90 
+output_me.o : output_me.F90 output_me_inc.F90 
+output.o : output.F90 output_modelmb_inc.F90 output_linear_response_inc.F90 output_h_inc.F90 output_states_inc.F90 output_etsf_inc.F90 v_ks.o output_me.o output_fio.o magnetic.o elf.o current.o 
+system.o : system.F90 v_ks.o output.o live_config.o energy_calc.o elf.o 
+pert.o : pert.F90 pert_inc.F90 
+exponential.o : exponential.F90 
+forces.o : forces.F90 forces_inc.F90 
+elf.o : elf.F90 
+magnetic.o : magnetic.F90 
+eigen_arpack.o : eigen_arpack.F90 eigen_arpack_inc.F90 
+current.o : current.F90 
+partial_charges.o : partial_charges.F90 
 stress.o : stress.F90 v_ks.o

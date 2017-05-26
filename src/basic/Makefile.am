@@ -103,51 +103,63 @@ include $(srcdir)/../common-rules.make
 depend:
 	@makedepf90 $(libbasic_a_SOURCES)
 
-test_parameters.o : global.o
-xml.o: xml.F90
-types.o : types.F90
-blacs.o : blacs.F90
-mpi.o : mpi.F90 blacs.o
-hardware.o : hardware.F90
-varinfo.o : varinfo.F90 string.o
-string.o : string.F90 loct.o
-loct.o : loct.F90
-loct_pointer.o : loct_pointer.F90 loct_pointer_inc.F90 global.o messages.o profiling.o
-global.o : global.F90 mpi.o loct.o hardware.o varinfo.o Makefile
-debug.o : debug.F90 global.o parser.o
-unit.o : unit.F90 global.o
-parser.o : parser.F90 mpi.o loct.o global.o unit.o varinfo.F90
-messages.o : messages.F90 varinfo.o string.o mpi.o parser.o loct.o global.o unit.o debug.o
-sort.o : sort.F90 sort_inc.F90 messages.o global.o
-profiling.o : profiling.F90 mpi.o messages.o loct.o io.o global.o types.o sort.o
 
-command_line.o : command_line.F90 messages.o profiling.o
-io.o : io.F90 mpi.o messages.o parser.o loct.o global.o  
-unit_system.o : unit_system.F90 unit.o io.o messages.o parser.o global.o   varinfo.o
-write_iter.o : write_iter.F90
-io_binary_f.o : io_binary_f.F90 io_binary_f_inc.F90 io_binary.h profiling.o messages.o
-io_csv_f.o : io_csv_f.F90 io_binary.h messages.o
-kinds.o : kinds.F90
-path.o : path.F90 loct.o messages.o profiling.o global.o
-json.o : json.F90 kinds.o io.o messages.o profiling.o global.o
-json_parser.o : json_parser.F90 json.o kinds.o io.o messages.o profiling.o global.o
+# DO NOT EDIT DIRECTLY --- use make depend to generate the dependencies and copy-paste the result here
 
-accel.o : accel.F90 accel_inc.F90 global.o types.o profiling.o messages.o parser.o mpi.o io.o unit_system.o
+io_csv.o : io_csv.c io_binary.h 
+loct.o : loct.F90 
+loct_pointer.o : loct_pointer.F90 loct_pointer_inc.F90 profiling.o messages.o global.o 
+string.o : string.F90 loct.o 
+varinfo.o : varinfo.F90 string.o 
+mpi.o : mpi.F90 blacs.o 
+global.o : global.F90 varinfo.o mpi.o loct.o hardware.o 
+parser.o : parser.F90 varinfo.o unit.o mpi.o loct.o global.o 
+messages.o : messages.F90 varinfo.o unit.o string.o parser.o mpi.o loct.o debug.o global.o 
+io.o : io.F90 parser.o mpi.o messages.o loct.o global.o debug.o 
+io_binary.o : io_binary.c io_binary.h 
+kinds.o : kinds.F90 
+path.o : path.F90 profiling.o messages.o loct.o global.o 
+json.o : json.F90 profiling.o messages.o kinds.o global.o 
+json_parser.o : json_parser.F90 profiling.o mpi.o messages.o kinds.o json.o io.o global.o 
+mpi_lib.o : mpi_lib.F90 mpi_lib_inc.F90 profiling.o mpi_debug.o mpi.o messages.o global.o 
+unit.o : unit.F90 global.o 
+unit_system.o : unit_system.F90 varinfo.o unit.o parser.o messages.o io.o global.o 
 mpi_debug.o : mpi_debug.F90 mpi_debug_inc.F90 mpi.o messages.o loct.o global.o 
-mpi_lib.o : mpi_lib.F90 mpi_lib_inc.F90 mpi_debug.o mpi.o messages.o global.o profiling.o
-topology.o : topology.F90 utils.o mpi.o messages.o parser.o io.o global.o  profiling.o
-multicomm.o : multicomm.F90 varinfo.o utils.o mpi.o messages.o parser.o io.o global.o  profiling.o
-distributed.o: distributed.F90 multicomm.o profiling.o
-calc_mode_par.o : calc_mode_par.F90 multicomm.o messages.o
-blacs_proc_grid.o : blacs_proc_grid.F90 blacs.o mpi.o profiling.o messages.o global.o
-comm.o : comm.F90 comm_inc.F90 mpi.o messages.o global.o profiling.o types.o
-
-ialist.o : ialist.F90 global.o messages.o profiling.o
-iihash.o : iihash.F90 ialist.o global.o
-lookup.o : lookup.F90 global.o messages.o profiling.o loct_pointer.o
-utils.o : utils.F90 messages.o global.o unit.o unit_system.o string.o mpi.o loct.o
-
-space.o : space.F90 json.o parser.o messages.o
-
-openscad.o : openscad.F90 io.o messages.o profiling.o global.o polyhedron.o
-polyhedron.o : messages.o profiling.o global.o
+profiling.o : profiling.F90 varinfo.o types.o string.o sort.o parser.o mpi.o messages.o loct.o io.o global.o 
+utils.o : utils.F90 string.o unit_system.o unit.o mpi.o messages.o loct.o io.o global.o 
+topology.o : topology.F90 utils.o profiling.o parser.o mpi.o messages.o loct.o io.o global.o 
+multicomm.o : multicomm.F90 varinfo.o utils.o profiling.o parser.o mpi.o messages.o loct.o io.o global.o 
+getopt_f.o : getopt_f.c 
+command_line.o : command_line.F90 
+distributed.o : distributed.F90 varinfo.o profiling.o parser.o multicomm.o mpi.o messages.o loct.o io.o global.o 
+hardware.o : hardware.F90 
+ialist.o : ialist.F90 profiling.o messages.o global.o 
+iihash.o : iihash.F90 profiling.o messages.o global.o ialist.o 
+calc_mode_par.o : calc_mode_par.F90 multicomm.o messages.o global.o 
+recipes.o : recipes.c 
+varia.o : varia.c varia.h 
+oct_f.o : oct_f.c varia.h 
+oct_gdlib_f.o : oct_gdlib_f.c 
+write_iter.o : write_iter.F90 
+write_iter_low.o : write_iter_low.cc 
+varinfo_low.o : varinfo_low.c 
+signals.o : signals.c 
+io_binary_f.o : io_binary_f.F90 io_binary_f_inc.F90 io_binary.h profiling.o mpi.o messages.o global.o 
+io_csv_f.o : io_csv_f.F90 io_binary.h messages.o global.o 
+lookup.o : lookup.F90 profiling.o messages.o loct_pointer.o global.o 
+types.o : types.F90 
+accel.o : accel.F90 accel_inc.F90 unit_system.o profiling.o parser.o types.o mpi.o messages.o loct.o io.o global.o 
+space.o : space.F90 parser.o messages.o json.o global.o 
+blacs.o : blacs.F90 
+blacs_proc_grid.o : blacs_proc_grid.F90 profiling.o messages.o mpi.o blacs.o global.o 
+comm.o : comm.F90 comm_inc.F90 profiling.o types.o mpi.o messages.o global.o 
+openscad.o : openscad.F90 profiling.o polyhedron.o messages.o io.o global.o 
+polyhedron.o : polyhedron.F90 profiling.o io.o messages.o global.o 
+xml.o : xml.F90 
+xml_low.o : xml_low.c 
+test_parameters.o : test_parameters.F90 
+sort.o : sort.F90 sort_inc.F90 messages.o global.o 
+sort_low.o : sort_low.cc 
+debug.o : debug.F90 parser.o global.o 
+cuda.o : cuda.cc 
+cublas.o : cublas.cc
