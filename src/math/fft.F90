@@ -25,7 +25,7 @@
 module fft_oct_m
   use accel_oct_m
   use,intrinsic :: iso_c_binding
-#ifdef HAVE_OPENCL  
+#ifdef HAVE_OPENCL
   use cl
 #ifdef HAVE_CLFFT
   use clfft
@@ -37,9 +37,7 @@ module fft_oct_m
   use loct_math_oct_m
   use messages_oct_m
   use mpi_oct_m
-#if defined(HAVE_NFFT)
   use nfft_oct_m
-#endif
 #if defined(HAVE_OPENMP) && defined(HAVE_FFTW3_THREADS)
   use omp_lib
 #endif
