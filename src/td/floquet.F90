@@ -709,6 +709,8 @@ contains
         ! only use gs states for init, if they are not distributed
         if(.not. st%parallel_in_states .and. ierr == 0 &
            .and.  hm%F%init == OPTION__TDFLOQUETINITIALIZATION__F_GS) then
+           message(1) ='Info: Initialize Floquet states with gs wavefunctions'
+           call messages_info(1)
             ! initialize floquet states from scratch
             SAFE_ALLOCATE(temp_state1(1:gr%der%mesh%np,st%d%dim))
             SAFE_ALLOCATE(temp_state2(1:gr%der%mesh%np,hm%F%floquet_dim*st%d%dim))
@@ -955,9 +957,9 @@ contains
           call messages_write('Occupations checksum failed for kpoint = ')
           call messages_write(ik, fmt = '(i6)')
           call messages_write(':   gs_occ =  ')
-          call messages_write(sum_gs, fmt ='(e12.6)')
+          call messages_write(sum_gs, fmt ='(f12.8)')
           call messages_write('   floquet_occ =  ')
-          call messages_write(sum_dr, fmt ='(e12.6)')
+          call messages_write(sum_dr, fmt ='(f12.8)')
           call messages_warning()
         end if
       enddo
