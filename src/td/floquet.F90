@@ -957,9 +957,9 @@ contains
           call messages_write('Occupations checksum failed for kpoint = ')
           call messages_write(ik, fmt = '(i6)')
           call messages_write(':   gs_occ =  ')
-          call messages_write(sum_gs, fmt ='(f12.8)')
+          call messages_write(sum_gs, fmt ='(f12.6)')
           call messages_write('   floquet_occ =  ')
-          call messages_write(sum_dr, fmt ='(f12.8)')
+          call messages_write(sum_dr, fmt ='(f12.6)')
           call messages_warning()
         end if
       enddo
