@@ -20,21 +20,29 @@
 
 noinst_LIBRARIES = libsternheimer.a
 
-libsternheimer_a_SOURCES =   \
-	sternheimer.F90      \
-	em_resp_calc.F90     \
-	em_resp.F90          \
-	vdw.F90              \
-	phonons_lr.F90       \
-	kdotp_calc.F90       \
-	kdotp.F90
+# Fortran sources - keep in alphabetical order
+libsternheimer_f_srcs =                  \
+	em_resp_calc.F90                 \
+	em_resp.F90                      \
+	kdotp_calc.F90                   \
+	kdotp.F90                        \
+	phonons_lr.F90                   \
+	sternheimer.F90                  \
+	vdw.F90
 
-noinst_HEADERS =                 \
-	sternheimer_inc.F90      \
-	em_resp_inc.F90          \
-	em_resp_calc_inc.F90     \
-	phonons_lr_inc.F90       \
-        kdotp_calc_inc.F90
+# C/C++ sources - keep in alphabetical order
+libsternheimer_c_srcs =
+
+libsternheimer_a_SOURCES = $(libsternheimer_c_srcs) $(libsternheimer_f_srcs)
+
+# Include files - keep in alphabetical order
+noinst_HEADERS =                         \
+	em_resp_calc_inc.F90             \
+	em_resp_inc.F90                  \
+	kdotp_calc_inc.F90               \
+	phonons_lr_inc.F90               \
+	sternheimer_inc.F90 
+
 
 include $(srcdir)/../common-rules.make
 
@@ -47,15 +55,15 @@ include $(srcdir)/../common-rules.make
 # dependencies. (For normal compilation of octopus, there is
 # absolutely no need of installing makedepf90).
 depend:
-	@makedepf90 $(libsternheimer_a_SOURCES)
+	@makedepf90 $(libsternheimer_f_srcs)
 
 
 # DO NOT EDIT DIRECTLY --- use make depend to generate the dependencies and copy-paste the result here
 
-sternheimer.o : sternheimer.F90 sternheimer_inc.F90 
 em_resp_calc.o : em_resp_calc.F90 em_resp_calc_inc.F90 sternheimer.o 
 em_resp.o : em_resp.F90 em_resp_inc.F90 sternheimer.o kdotp_calc.o kdotp.o em_resp_calc.o 
-vdw.o : vdw.F90 sternheimer.o em_resp_calc.o em_resp.o 
-phonons_lr.o : phonons_lr.F90 phonons_lr_inc.F90 sternheimer.o kdotp_calc.o kdotp.o 
 kdotp_calc.o : kdotp_calc.F90 kdotp_calc_inc.F90 sternheimer.o 
-kdotp.o : kdotp.F90 sternheimer.o kdotp_calc.o
+kdotp.o : kdotp.F90 sternheimer.o kdotp_calc.o 
+phonons_lr.o : phonons_lr.F90 phonons_lr_inc.F90 sternheimer.o kdotp_calc.o kdotp.o 
+sternheimer.o : sternheimer.F90 sternheimer_inc.F90 
+vdw.o : vdw.F90 sternheimer.o em_resp_calc.o em_resp.o

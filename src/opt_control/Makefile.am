@@ -20,16 +20,41 @@
 
 noinst_LIBRARIES = libopt_control.a
 
-libopt_control_a_SOURCES = \
-	opt_control_global.F90 filter.F90 controlfunction.F90 opt_control_iter.F90 \
-	target.F90 propagation.F90 initst.F90 opt_control.F90
+# Fortran sources - keep in alphabetical order
+libopt_control_f_srcs =                  \
+	controlfunction.F90              \
+	filter.F90                       \
+	initst.F90                       \
+	opt_control.F90                  \
+	opt_control_global.F90           \
+	opt_control_iter.F90             \
+	propagation.F90                  \
+	target.F90
 
-noinst_HEADERS = \
-	controlfunction_trans_inc.F90 check_input_inc.F90 finalcheck_inc.F90 opt_control_c_inc.F90 \
-	target_density_inc.F90 target_velocity_inc.F90 target_hhg_inc.F90 target_groundstate_inc.F90 \
-	target_excited_inc.F90 target_gstransformation_inc.F90 target_exclude_inc.F90 \
-	target_userdefined_inc.F90 target_local_inc.F90 target_tdlocal_inc.F90 target_classical_inc.F90 \
-	target_spin_inc.F90
+# C/C++ sources - keep in alphabetical order
+libopt_control_c_srcs =
+
+libopt_control_a_SOURCES = $(libopt_control_c_srcs) $(libopt_control_f_srcs)
+
+# Include files - keep in alphabetical order
+noinst_HEADERS =                         \
+	check_input_inc.F90              \
+	controlfunction_trans_inc.F90    \
+	finalcheck_inc.F90               \
+	opt_control_c_inc.F90            \
+	target_classical_inc.F90         \
+	target_density_inc.F90           \
+	target_excited_inc.F90           \
+	target_exclude_inc.F90           \
+	target_groundstate_inc.F90       \
+	target_gstransformation_inc.F90  \
+	target_hhg_inc.F90               \
+	target_local_inc.F90             \
+	target_spin_inc.F90              \
+	target_tdlocal_inc.F90           \
+	target_userdefined_inc.F90       \
+	target_velocity_inc.F90 
+
 
 include $(srcdir)/../common-rules.make
 
@@ -47,11 +72,11 @@ depend:
 
 # DO NOT EDIT DIRECTLY --- use make depend to generate the dependencies and copy-paste the result here
 
-opt_control_global.o : opt_control_global.F90
-filter.o : filter.F90
-controlfunction.o : controlfunction.F90 controlfunction_trans_inc.F90 filter.o
-opt_control_iter.o : opt_control_iter.F90 controlfunction.o 
-target.o : target.F90 target_spin_inc.F90 target_classical_inc.F90 target_tdlocal_inc.F90 target_local_inc.F90 target_userdefined_inc.F90 target_exclude_inc.F90 target_gstransformation_inc.F90 target_excited_inc.F90 target_groundstate_inc.F90 target_hhg_inc.F90 target_velocity_inc.F90 target_density_inc.F90 opt_control_global.o 
-propagation.o : propagation.F90 target.o controlfunction.o 
+controlfunction.o : controlfunction.F90 controlfunction_trans_inc.F90 filter.o 
+filter.o : filter.F90 
 initst.o : initst.F90 
-opt_control.o : opt_control.F90 finalcheck_inc.F90 check_input_inc.F90 opt_control_c_inc.F90 target.o propagation.o opt_control_iter.o opt_control_global.o initst.o filter.o controlfunction.o
+opt_control.o : opt_control.F90 finalcheck_inc.F90 check_input_inc.F90 opt_control_c_inc.F90 target.o propagation.o opt_control_iter.o opt_control_global.o initst.o filter.o controlfunction.o 
+opt_control_global.o : opt_control_global.F90 
+opt_control_iter.o : opt_control_iter.F90 controlfunction.o 
+propagation.o : propagation.F90 target.o controlfunction.o 
+target.o : target.F90 target_spin_inc.F90 target_classical_inc.F90 target_tdlocal_inc.F90 target_local_inc.F90 target_userdefined_inc.F90 target_exclude_inc.F90 target_gstransformation_inc.F90 target_excited_inc.F90 target_groundstate_inc.F90 target_hhg_inc.F90 target_velocity_inc.F90 target_density_inc.F90 opt_control_global.o

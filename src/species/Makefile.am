@@ -20,24 +20,33 @@
 
 noinst_LIBRARIES = libspecies.a
 
-libspecies_a_SOURCES =     \
-	atomic.F90         \
-	logrid.F90         \
-	ps.F90             \
-	ps_cpi.F90         \
-	ps_cpi_file.F90    \
-	ps_fhi.F90         \
-	ps_fhi_file.F90    \
-	ps_hgh.F90         \
-	ps_in_grid.F90     \
-	ps_psf.F90         \
-	ps_psf_file.F90    \
-	ps_upf.F90         \
-	ps_qso.F90         \
-	species.F90        \
-	element.F90
+# Fortran sources - keep in alphabetical order
+libspecies_f_srcs =                         \
+	atomic.F90                       \
+	element.F90                      \
+	logrid.F90                       \
+	ps_cpi.F90                       \
+	ps_cpi_file.F90                  \
+	ps.F90                           \
+	ps_fhi.F90                       \
+	ps_fhi_file.F90                  \
+	ps_hgh.F90                       \
+	ps_in_grid.F90                   \
+	ps_psf.F90                       \
+	ps_psf_file.F90                  \
+	ps_qso.F90                       \
+	ps_upf.F90                       \
+	species.F90
 
-noinst_HEADERS = ps_pspio_inc.F90
+# C/C++ sources - keep in alphabetical order
+libspecies_c_srcs =
+
+libspecies_a_SOURCES = $(libspecies_c_srcs) $(libspecies_f_srcs)
+
+# Include files - keep in alphabetical order
+noinst_HEADERS =                         \
+	ps_pspio_inc.F90
+
 
 include $(srcdir)/../common-rules.make
 
@@ -50,23 +59,23 @@ include $(srcdir)/../common-rules.make
 # dependencies. (For normal compilation of octopus, there is
 # absolutely no need of installing makedepf90).
 depend:
-	@makedepf90 $(libspecies_a_SOURCES)
+	@makedepf90 $(libspecies_f_srcs)
 
 
 # DO NOT EDIT DIRECTLY --- use make depend to generate the dependencies and copy-paste the result here
 
 atomic.o : atomic.F90 logrid.o 
+element.o : element.F90 
 logrid.o : logrid.F90 
-ps.o : ps.F90 ps_pspio_inc.F90 ps_upf.o ps_psf.o ps_in_grid.o ps_qso.o ps_hgh.o ps_fhi.o ps_cpi.o logrid.o atomic.o 
 ps_cpi.o : ps_cpi.F90 ps_in_grid.o ps_cpi_file.o logrid.o atomic.o 
 ps_cpi_file.o : ps_cpi_file.F90 ps_in_grid.o 
+ps.o : ps.F90 ps_pspio_inc.F90 ps_upf.o ps_psf.o ps_in_grid.o ps_qso.o ps_hgh.o ps_fhi.o ps_cpi.o logrid.o atomic.o 
 ps_fhi.o : ps_fhi.F90 ps_in_grid.o ps_fhi_file.o ps_cpi.o ps_cpi_file.o atomic.o 
 ps_fhi_file.o : ps_fhi_file.F90 
 ps_hgh.o : ps_hgh.F90 logrid.o atomic.o 
 ps_in_grid.o : ps_in_grid.F90 logrid.o atomic.o 
 ps_psf.o : ps_psf.F90 ps_psf_file.o ps_in_grid.o logrid.o atomic.o 
 ps_psf_file.o : ps_psf_file.F90 ps_in_grid.o 
-ps_upf.o : ps_upf.F90 ps_in_grid.o atomic.o 
 ps_qso.o : ps_qso.F90 ps_in_grid.o atomic.o 
-species.o : species.F90 ps.o logrid.o element.o 
-element.o : element.F90
+ps_upf.o : ps_upf.F90 ps_in_grid.o atomic.o 
+species.o : species.F90 ps.o logrid.o element.o

@@ -20,17 +20,25 @@
 
 noinst_LIBRARIES = libscf.a
 
-libscf_a_SOURCES =        \
-	mix.F90           \
-	lcao.F90          \
-        scf.F90           \
-        rdmft.F90         \
-	ground_state.F90  \
-	mixing_metric.F90
+# Fortran sources - keep in alphabetical order
+libscf_f_srcs =                          \
+	ground_state.F90                 \
+	lcao.F90                         \
+	mix.F90                          \
+	mixing_metric.F90                \
+	rdmft.F90                        \
+	scf.F90
 
-noinst_HEADERS =     \
-	mix_inc.F90  \
-	lcao_inc.F90
+# C/C++ sources - keep in alphabetical order
+libscf_c_srcs =
+
+libscf_a_SOURCES = $(libscf_c_srcs) $(libscf_f_srcs)
+
+# Include files - keep in alphabetical order
+noinst_HEADERS =                         \
+	lcao_inc.F90                     \
+	mix_inc.F90
+
 
 include $(srcdir)/../common-rules.make
 
@@ -43,14 +51,14 @@ include $(srcdir)/../common-rules.make
 # dependencies. (For normal compilation of octopus, there is
 # absolutely no need of installing makedepf90).
 depend:
-	@makedepf90 $(libscf_a_SOURCES)
+	@makedepf90 $(libscf_f_srcs)
 
 
 # DO NOT EDIT DIRECTLY --- use make depend to generate the dependencies and copy-paste the result here
 
-mix.o : mix.F90 mix_inc.F90 
-lcao.o : lcao.F90 lcao_inc.F90 
-scf.o : scf.F90 mix.o lcao.o 
-rdmft.o : rdmft.F90 
 ground_state.o : ground_state.F90 scf.o rdmft.o lcao.o 
-mixing_metric.o : mixing_metric.F90
+lcao.o : lcao.F90 lcao_inc.F90 
+mix.o : mix.F90 mix_inc.F90 
+mixing_metric.o : mixing_metric.F90 
+rdmft.o : rdmft.F90 
+scf.o : scf.F90 mix.o lcao.o
