@@ -21,10 +21,6 @@
 
 module nfft_oct_m
 
-#if !defined(HAVE_NFFT)
-  integer, public :: nfft_dummy ! this avoids compilers complaining about empty module
-#else
-
   use,intrinsic :: iso_c_binding
   use fftw_params_oct_m
   use global_oct_m
@@ -34,6 +30,10 @@ module nfft_oct_m
   use varinfo_oct_m
 
   implicit none
+
+#if !defined(HAVE_NFFT)
+  integer, public :: nfft_dummy ! this avoids compilers complaining about empty module
+#else
 
   private
   public ::          &

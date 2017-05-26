@@ -118,27 +118,27 @@ minimizer_low.o : minimizer_low.c
 ode_solver.o : ode_solver.F90 ode_solver_inc.F90 
 permutations.o : permutations.F90 math.o 
 pfft.o : pfft.F90 math.o fftw.o 
-root_solver.o : root_solver.F90 root_solver_inc.F90 ode_solver.o lalg_adv.o
-solvers.o : solvers.F90 solvers_inc.F90 loct_math.o lalg_basic.o blas.o
-splines.o : splines.F90 loct_math.o
-sparskit.o : sparskit.F90
-symm_op.o : symm_op.F90 symm_op_inc.F90
-tdfunction.o : tdfunction.F90 splines.o math.o loct_math.o fft.o
-ylm.o : ylm.c
-young.o : young.F90 math.o
-scalapack.o : scalapack.F90
-nfft.o : nfft.F90
-nfft_f.o : nfft_f.c
-pblas.o : pblas.F90
-sgfft.o : sgfft.F90
-matrix.o : matrix.F90 matrix_inc.F90
-matrix_ops.o : matrix_ops.F90 matrix_ops_inc.F90 scalapack.o matrix.o
-compressed_sensing.o : compressed_sensing.F90 blas.o
-fftw_low.o : fftw_low.c
-minimizer.o : minimizer.F90 lalg_basic.o
-pnfft.o : pnfft.F90 pfft.o math.o loct_math.o pfft.o
-qshep.o : qshep.F90
-spline_low.o : spline_low.cc
-quickrnd.o : quickrnd.F90
-accel_blas.o : accel_blas.F90 accel_blas_inc.F90
-cufft.o : cufft.cc
+root_solver.o : root_solver.F90 root_solver_inc.F90 ode_solver.o lalg_adv.o 
+solvers.o : solvers.F90 solvers_inc.F90 loct_math.o lalg_basic.o blas.o 
+splines.o : splines.F90 loct_math.o 
+sparskit.o : sparskit.F90 
+symm_op.o : symm_op.F90 symm_op_inc.F90 
+tdfunction.o : tdfunction.F90 splines.o math.o loct_math.o fft.o 
+ylm.o : ylm.c 
+young.o : young.F90 math.o 
+scalapack.o : scalapack.F90 
+nfft.o : nfft.F90 loct_math.o fftw.o 
+nfft_f.o : nfft_f.c 
+pblas.o : pblas.F90 
+sgfft.o : sgfft.F90 
+matrix.o : matrix.F90 matrix_inc.F90 
+matrix_ops.o : matrix_ops.F90 matrix_ops_inc.F90 scalapack.o matrix.o 
+compressed_sensing.o : compressed_sensing.F90 blas.o 
+fftw_low.o : fftw_low.c 
+minimizer.o : minimizer.F90 lalg_basic.o 
+pnfft.o : pnfft.F90 pfft.o math.o loct_math.o pfft.o 
+qshep.o : qshep.F90 
+spline_low.o : spline_low.cc 
+quickrnd.o : quickrnd.F90 
+accel_blas.o : accel_blas.F90 accel_blas_inc.F90 
+cufft.o : cufft.cc 
