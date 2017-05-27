@@ -859,10 +859,11 @@ contains
              call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, gr%sb, filename, vec = dressed_st%occ)
            end if
                      
+         else
+                      
+           filename = FLOQUET_DIR//'/floquet_eigenvalues_'//trim(adjustl(iterstr))
+           call states_write_eigenvalues(filename, dressed_st%nst, dressed_st, gr%sb, eigens%diff)
          end if
-         
-         filename = FLOQUET_DIR//'/floquet_eigenvalues_'//trim(adjustl(iterstr))
-         call states_write_eigenvalues(filename, dressed_st%nst, dressed_st, gr%sb, eigens%diff)
          
          call restart_init(restart, RESTART_FLOQUET, RESTART_TYPE_DUMP, &
                            sys%mc, ierr, gr%der%mesh)
