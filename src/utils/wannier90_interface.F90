@@ -251,11 +251,12 @@ contains
     write(w90_win,'(a)') 'use_bloch_phases = .true.'
     write(w90_win,'(a)') ' '
 
-    write(w90_win,'(a)') 'begin atoms_cart'
+    write(w90_win,'(a)') 'begin atoms_frac'
     do ia=1,sys%geo%natoms
-       write(w90_win,'(a,2x,f12.8,f12.8,f12.6)') trim(sys%geo%atom(ia)%label), sys%geo%atom(ia)%x(1:3)
+       write(w90_win,'(a,2x,f12.8,f12.8,f12.6)') trim(sys%geo%atom(ia)%label), & 
+         matmul(sys%geo%atom(ia)%x(1:3), sys%gr%sb%klattice(1:3, 1:3))/(M_TWO*M_PI) 
     end do
-    write(w90_win,'(a)') 'end atoms_cart'
+    write(w90_win,'(a)') 'end atoms_frac'
     write(w90_win,'(a)') ' '
 
     write(w90_win,'(a10,i4)') 'num_bands ', st%nst
@@ -285,8 +286,8 @@ contains
     do ii=0,axis(1)-1
        do jj=0,axis(2)-1
           do kk=0,axis(3)-1
-             write(w90_win,'(f12.8,f12.8,f12.8)')  ii/real(axis(1)), jj/real(axis(2)), kk/real(axis(3))
-             write(oct_kpts,'(a6,f12.8,a3,f12.8,a3,f12.8)') ' 1. | ',  ii/real(axis(1)),' | ', jj/real(axis(2)), ' | ', kk/real(axis(3))
+             write(w90_win,'(f12.8,f12.8,f12.8)')  ii*M_ONE/(axis(1)*M_ONE), jj*M_ONE/(axis(2)*M_ONE),kk*M_ONE/(axis(3)*M_ONE)
+             write(oct_kpts,'(a6,f12.8,a3,f12.8,a3,f12.8)') ' 1. | ',  ii*M_ONE/(axis(1)*M_ONE) ,' | ', jj*M_ONE/(axis(2)*M_ONE), ' | ', kk*M_ONE/(axis(3)*M_ONE)
           end do
        end do
     end do
@@ -474,7 +475,6 @@ contains
                 do iz=nr(1,3),nr(2,3)
                    do iy=nr(1,2),nr(2,2)
                       do ix=nr(1,1),nr(2,1)
-                         ip = sys%gr%mesh%idx%lxyz_inv(ix, iy, iz)
                          ip=ip+1
                          state2(ip) =  state1(sys%gr%mesh%idx%lxyz_inv(ix, iy, iz),ispin)
                       end do
