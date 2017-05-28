@@ -732,7 +732,8 @@ contains
         str_center('['//trim(units_abbrev(units_out%length))//'/(' &
           //trim(units_abbrev(units_out%time**2))//')]', 15)
       
-      
+      wmax = maxval(weight(:))      
+
       do ii = 1, itot
         if (weight(idx(ii))/wmax > CNST(1E-6) .and.  ediff(ii) > M_ZERO) then
           write(iunit, '(1x,2es15.6)', advance='no') units_from_atomic(units_out%energy, ediff(ii)) , weight(idx(ii))  
