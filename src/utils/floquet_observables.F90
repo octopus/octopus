@@ -630,7 +630,7 @@ contains
     integer, allocatable :: mm(:), nn(:), alpha(:), beta(:), idx(:)
     
     integer :: idim, im, in, ista, istb, ik, itot, ii, i, imm, inn, spindim
-    FLOAT   :: omega, DE
+    FLOAT   :: omega, DE, wmax
     CMPLX   :: tmp(4)
     integer :: iunit
     character(len=1024):: filename, iter_name
@@ -730,9 +730,10 @@ contains
         str_center('['//trim(units_abbrev(units_out%length))//'/(' &
           //trim(units_abbrev(units_out%time**2))//')]', 15)
       
-      
+      wmax = maxval(weight(:))      
+
       do ii = 1, itot
-        if (weight(idx(ii)) > CNST(1E-15) .and.  ediff(ii) > M_ZERO) then
+        if (weight(idx(ii))/wmax > CNST(1E-6) .and.  ediff(ii) > M_ZERO) then
           write(iunit, '(1x,2es15.6)', advance='no') units_from_atomic(units_out%energy, ediff(ii)) , weight(idx(ii))  
           write(iunit, '(4i15)', advance='no') alpha(idx(ii)) , beta(idx(ii)), mm(idx(ii)), nn(idx(ii))
           write(iunit, '(4es15.6)') abs(mel(idx(ii),1)),abs(mel(idx(ii),2)),abs(mel(idx(ii),3)), fab(idx(ii))
