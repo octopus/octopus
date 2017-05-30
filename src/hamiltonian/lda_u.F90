@@ -291,7 +291,7 @@ contains
       !% present in the pseudopotential file. Only with the ACBN0 functional and the UseAllAtomicOrbitals 
       !% options activated.
       !%End
-      call parse_variable('DFTUMinimalAtomicSphere', .true., this%minimalAtomicSphere)
+      call parse_variable('DFTUMinimalAtomicSphere', .false., this%minimalAtomicSphere)
       if(this%minimalAtomicSphere) call messages_experimental("DFTUMinimalAtomicSphere")
     end if
   end if

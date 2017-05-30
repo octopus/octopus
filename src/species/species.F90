@@ -197,7 +197,7 @@ contains
     nullify(this%iwf_n)
     this%lmax=0
     this%lloc=0
-    this%hubbard_l=0
+    this%hubbard_l=-1
     this%hubbard_U=M_ZERO
 
     POP_SUB(species_nullify)

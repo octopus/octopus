@@ -489,10 +489,10 @@ contains
         end do
         if( this%np.lt.4) return
         do ip = m+1, this%np, 4
-          dotp = dotp + phi(this%map(ip),idim)*conjg(sphi(ip))
-          dotp = dotp + phi(this%map(ip+1),idim)*conjg(sphi(ip+1))
-          dotp = dotp + phi(this%map(ip+2),idim)*conjg(sphi(ip+2))
-          dotp = dotp + phi(this%map(ip+3),idim)*conjg(sphi(ip+3))
+          dotp = dotp + phi(this%map(ip),idim)*conjg(sphi(ip))     &
+                      + phi(this%map(ip+1),idim)*conjg(sphi(ip+1)) &
+                      + phi(this%map(ip+2),idim)*conjg(sphi(ip+2)) &
+                      + phi(this%map(ip+3),idim)*conjg(sphi(ip+3))
         end do
       end do
       dotp = dotp*this%mesh%vol_pp(1)

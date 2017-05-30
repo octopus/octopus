@@ -188,10 +188,10 @@ R_TYPE function X(dsubmesh_to_mesh_dotp)(this, dim, sphi, phi, reduce) result(do
       end do
       if( this%np.lt.4) return
       do ip = m+1, this%np, 4
-        dotp = dotp + phi(this%map(ip),idim)*sphi(ip)
-        dotp = dotp + phi(this%map(ip+1),idim)*sphi(ip+1)
-        dotp = dotp + phi(this%map(ip+2),idim)*sphi(ip+2)
-        dotp = dotp + phi(this%map(ip+3),idim)*sphi(ip+3)
+        dotp = dotp + phi(this%map(ip),idim)*sphi(ip) &
+                    + phi(this%map(ip+1),idim)*sphi(ip+1) &
+                    + phi(this%map(ip+2),idim)*sphi(ip+2) &
+                    + phi(this%map(ip+3),idim)*sphi(ip+3)
       end do
     end do
     dotp = dotp*this%mesh%vol_pp(1)

@@ -1071,7 +1071,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
   if( .not. this%useAllOrbitals ) then
     do ia = 1, geo%natoms
       hubbardl = species_hubbard_l(geo%atom(ia)%species)
-      if( hubbardl .eq. 0 ) cycle
+      if( hubbardl .eq. -1 ) cycle
       norb = norb+1
     end do
   else
@@ -1106,7 +1106,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
   do ia = 1, geo%natoms
     if(.not. this%useAllOrbitals) then
       hubbardl = species_hubbard_l(geo%atom(ia)%species)
-      if( hubbardl .eq. 0 ) cycle
+      if( hubbardl .eq. -1 ) cycle
       iorbset = iorbset + 1
       os => this%orbsets(iorbset)
       norb = 0
