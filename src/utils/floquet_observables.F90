@@ -144,6 +144,8 @@ program floquet_observables
   !% Calculate the HHG spectrum.
   !%Option f_wfs bit(7)
   !% Output Floquet states in the format defined by OutputFormat.
+  !%Option f_conductivity bit(8)
+  !% Calculate Floquet optical conductivity.
   !%End
   call parse_variable('FloquetObservableCalc', out_what, out_what)
   
@@ -298,6 +300,13 @@ program floquet_observables
     call messages_info()
 
     call out_floquet_wfs()
+  end if
+
+  if(iand(out_what, OPTION__FLOQUETOBSERVABLECALC__F_CONDUCTIVITY) /= 0) then
+    call messages_write('Calculate Floquet optical conductivity.')
+    call messages_info()
+
+    call calc_floquet_conductivity()
   end if
 
 
@@ -753,14 +762,21 @@ contains
                 fab(ii) = dressed_st%occ(istb,ik) * dressed_st%occ(ista,ik)
                 weight(ii) = sum(abs(mel(ii,1:3))**2) * dressed_st%occ(istb,ik) * dressed_st%occ(ista,ik) *ediff(ii)**wpow 
                 
+                weight(ii) = weight(ii) * dressed_st%d%kweights(ik)
+                
                 ii = ii + 1
               end do
             end do
             
           end do    
         end do    
-
+        
     end do
+    
+    if(dressed_st%parallel_in_states .or. dressed_st%d%kpt%parallel) then
+      call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm,  weight(:))
+    end if
+    
     
     call sort(ediff(:), idx(:))
     
@@ -914,12 +930,19 @@ contains
 !                   print *, ampl(1:3), ediff
                 
                 end do
+                
               end do
-            
             end do    
+            
           end do    
+          
+          ampl(1:dim) = ampl(1:dim) * dressed_st%d%kweights(ik)
 
       end do
+      
+      if(dressed_st%parallel_in_states .or. dressed_st%d%kpt%parallel) then
+        call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm,  ampl(:))
+      end if
       
       spect(ie,1:dim) = abs(ampl(1:dim))**2 *EE**wpow 
       
@@ -1038,6 +1061,201 @@ contains
     
     POP_SUB(out_floquet_wfs)
   end subroutine out_floquet_wfs
+
+
+  subroutine calc_floquet_conductivity()
+    
+    CMPLX, allocatable   :: u_ma(:,:), u_mb(:,:), sigma(:,:,:)
+    FLOAT, allocatable   :: spect(:,:)
+    
+    integer :: idim, im, in, ista, istb, ik, itot, ii, i, imm, inn, spindim, ie, dim
+    FLOAT   :: omega, DE, ediff, EE
+    CMPLX   :: melba(1:3), melab(1:3), tmp2(1:3,1:hm%F%spindim)
+    integer :: iunit, idir, jdir, dir
+    character(len=1024):: filename, iter_name, str
+    
+    PUSH_SUB(calc_floquet_conductivity)
+    
+    spindim = hm%F%spindim 
+    dim = sys%gr%sb%dim
+
+    
+    
+    itot = dressed_st%d%kpt%nglobal * dressed_st%nst**2 * hm%F%floquet_dim**2
+    
+    SAFE_ALLOCATE(sigma(1:obs%ne,1:3,1:3))
+    
+    SAFE_ALLOCATE(u_ma(1:sys%gr%mesh%np, hm%F%floquet_dim))
+    SAFE_ALLOCATE(u_mb(1:sys%gr%mesh%np, hm%F%floquet_dim))
+
+    
+    sigma(:,:,:) = M_z0
+
+    do idir = 1, 2 
+      do jdir = idir, 2 
+
+
+        write(message(1),'(a,i5,a,i5,a)') 'Calculate sigma(',idir,',', jdir,'):'
+        call messages_info(1)
+        
+        
+        if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, obs%ne)
+        
+        do ie = 1, obs%ne
+          EE= ie * obs%de
+
+          sigma(ie,idir,jdir) = M_z0
+    
+          do ik=dressed_st%d%kpt%start, dressed_st%d%kpt%end
+
+              do ista=dressed_st%st_start, dressed_st%st_end
+                call states_get_state(dressed_st, sys%gr%mesh, ista, ik, u_ma)
+        
+                do istb=dressed_st%st_start, dressed_st%st_end
+            
+                  if (ista == istb .and. idir /= jdir) cycle
+                  
+                  if (ista >= istb .and. idir == jdir) cycle
+                  
+                  !Cut out all the components suppressed by small occupations 
+                  if (dressed_st%occ(istb,ik) < 1E-14) cycle
+
+                  call states_get_state(dressed_st, sys%gr%mesh, istb, ik, u_mb)
+          
+                  DE = dressed_st%eigenval(istb,ik) - dressed_st%eigenval(ista,ik)
+
+                  if (idir /= jdir) then  !off diagonal terms first      
+                   
+                    melab(:) = M_z0
+                    melba(:) = M_z0
+                                      
+                    ! get the dipole matrix elements <<psi_a|J|psi_b >>
+                    do im=hm%F%order(1),hm%F%order(2)
+                      imm = im - hm%F%order(1) + 1
+            
+                      !<u_ma| J | u_mb>
+                      call current_calculate_mel(sys%gr%der, hm, sys%geo, &
+                                                 u_ma(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) ,&
+                                                 u_mb(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) , &
+                                                 ik, tmp2(:,:))
+                      do dir=1,dim
+                        melab(dir) = melab(dir) + sum(tmp2(dir,1:spindim))/ (hm%F%order(2)-hm%F%order(1))
+                      end do
+                  
+                      !<u_mb| J | u_ma>
+                      call current_calculate_mel(sys%gr%der, hm, sys%geo, &
+                                                 u_mb(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) ,&
+                                                 u_ma(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) , &
+                                                 ik, tmp2(:,:))
+                      do dir=1,dim
+                        melba(dir) = melba(dir) + sum(tmp2(dir,1:spindim))/ (hm%F%order(2)-hm%F%order(1))
+                      end do
+                  
+                    end do ! im loop
+
+                    sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + & 
+                                          melab(idir)*melba(jdir) * 1/(DE + EE + M_zi*obs%gamma) + &
+                                          melab(jdir)*melba(idir) * 1/(DE - EE + M_zi*obs%gamma) 
+
+                    sigma(ie,idir,jdir) = (-M_zI) * sigma(ie,idir,jdir) * dressed_st%occ(istb,ik)/DE
+
+
+                  else  ! diagonal terms idir=jdir 
+
+                    melab(:) = M_z0
+                                      
+                    ! get the dipole matrix elements <<psi_a|J|psi_b >>
+                    do im=hm%F%order(1),hm%F%order(2)
+                      imm = im - hm%F%order(1) + 1
+            
+                      !<u_ma| J | u_mb>
+                      call current_calculate_mel(sys%gr%der, hm, sys%geo, &
+                                                 u_ma(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) ,&
+                                                 u_mb(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) , &
+                                                 ik, tmp2(:,:))
+                      do dir=1,dim
+                        melab(dir) = melab(dir) + sum(tmp2(dir,1:spindim))/ (hm%F%order(2)-hm%F%order(1))
+                      end do
+                  
+                    end do ! im loop
+
+                    sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + & 
+                                          abs(melab(idir))**2 * 1/(DE - EE + M_zi*obs%gamma) 
+
+                    sigma(ie,idir,jdir) =  M_zI * sigma(ie,idir,jdir) * &
+                                          (dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik))/DE
+                    
+                  end if
+                  
+                end do ! istb loop   
+              end do ! ista loop   
+
+              
+              sigma(ie,idir,jdir) = sigma(ie,idir,jdir) * dressed_st%d%kweights(ik)
+             
+            end do ! ik loop
+          
+          
+
+          if(dressed_st%parallel_in_states .or. dressed_st%d%kpt%parallel) then
+            call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm,  sigma(ie,idir,jdir))
+          end if
+                  
+          if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ie, obs%ne)
+          
+        end do ! ie loop
+
+        if(mpi_grp_is_root(mpi_world)) write(*, "(1x)")
+        
+      end do            
+    end do
+    
+    
+    if(mpi_grp_is_root(mpi_world)) then
+      write(iter_name,'(i4)') hm%F%iter
+      filename = FLOQUET_DIR//'/floquet_conductivity_'//trim(adjustl(iter_name))
+      iunit = io_open(filename, action='write')
+
+      write(iunit, '(a1,a15)', advance = 'no') '#', str_center("w", 15)
+    
+      do idir = 1, 2 
+        do jdir = idir, 2 
+          write(str, '(a,i1,a,i1 ,a)') 'sigma(',idir,',', jdir,')'
+          write(iunit, '(2a15)', advance = 'no' )  str_center('Re['//trim(str)//']', 15),& 
+                                                   str_center('Im['//trim(str)//']', 15)
+        end do 
+      end do
+      write(iunit, '(1x)')
+
+                            
+      write(iunit, '(a1,1a15)') &
+            '#', str_center('['//trim(units_abbrev(units_out%energy)) // ']', 15)
+      
+      
+      do ie = 1, obs%ne
+        EE = ie * obs%de
+        
+        write(iunit, '(1x,es15.6)', advance = 'no') units_from_atomic(units_out%energy, EE)         
+        do idir = 1, 2 
+          do jdir = idir, 2 
+        
+            write(iunit, '(2es15.6)', advance ='no') real(sigma(ie,idir,jdir)), aimag(sigma(ie,idir,jdir))
+          end do
+        end do
+        write(iunit, '(1x)')
+          
+      end do  
+    
+      call io_close(iunit)
+    end if
+    
+    SAFE_DEALLOCATE_A(sigma)
+    
+    SAFE_DEALLOCATE_A(u_ma)
+    SAFE_DEALLOCATE_A(u_mb)
+
+    POP_SUB(calc_floquet_conductivity)    
+  end subroutine calc_floquet_conductivity
 
 
 
