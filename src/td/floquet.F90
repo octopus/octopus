@@ -849,7 +849,7 @@ contains
 
          
          write(iterstr,'(I5)') iter !hm%F_count
-         if (simul_box_is_periodic(gr%sb)) then
+         if (simul_box_is_periodic(gr%sb) .and. kpoints_have_zero_weight_path(gr%sb%kpoints)) then
            filename = 'floquet_multibands_'//trim(adjustl(iterstr))
 
            call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, gr%sb, filename)
