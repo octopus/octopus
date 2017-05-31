@@ -280,7 +280,10 @@ contains
     !%time-integral of the Floquet analysis.
     !%
     !%End
-    call parse_variable('TDFloquetSample',maxval(abs(this%order(:)))*3 ,this%nt)
+    this%nt = maxval(abs(this%order(:)))*3
+    if (this%order(:) == 0 ) this%nt = 3 
+    
+    call parse_variable('TDFloquetSample', this%nt, this%nt)
     call messages_print_var_value(stdout,'Number of Floquet time-sampling points', this%nT)
     this%dt = this%Tcycle/real(this%nT)
 
