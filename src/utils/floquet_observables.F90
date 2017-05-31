@@ -936,7 +936,7 @@ contains
             
           end do    
           
-          ampl(1:dim) = ampl(1:dim) * dressed_st%d%kweights(ik)
+          ampl(1:dim) = ampl(1:dim) * (1 + dressed_st%d%kweights(ik))
 
       end do
       
