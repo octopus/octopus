@@ -50,4 +50,6 @@ UseAllAtomicOrbitals = yes
 DFTUMinimalAtomicSphere = no
 OrbitalsTruncationMethod = full
 OrbitalsThreshold_LDAU = 0.05
+DFTUNormalizeOrbitals = no
 OutputLDA_U = occupation_matrices + effectiveU
+

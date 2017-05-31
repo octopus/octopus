@@ -437,7 +437,7 @@ contains
       end do
       if( this%np.lt.4) return
       do ip = m+1, this%np, 4
-        phi(this%map(ip)) = phi(this%map(ip)) + factor*sphi(ip)
+        phi(this%map(ip))   = phi(this%map(ip))   + factor*sphi(ip)
         phi(this%map(ip+1)) = phi(this%map(ip+1)) + factor*sphi(ip+1)
         phi(this%map(ip+2)) = phi(this%map(ip+2)) + factor*sphi(ip+2)
         phi(this%map(ip+3)) = phi(this%map(ip+3)) + factor*sphi(ip+3)
@@ -449,7 +449,7 @@ contains
       end do
       if( this%np.lt.4) return
       do ip = m+1, this%np, 4
-        phi(this%map(ip)) = phi(this%map(ip)) + sphi(ip)
+        phi(this%map(ip))   = phi(this%map(ip))   + sphi(ip)
         phi(this%map(ip+1)) = phi(this%map(ip+1)) + sphi(ip+1)
         phi(this%map(ip+2)) = phi(this%map(ip+2)) + sphi(ip+2)
         phi(this%map(ip+3)) = phi(this%map(ip+3)) + sphi(ip+3)

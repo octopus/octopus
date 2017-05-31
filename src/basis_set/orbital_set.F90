@@ -41,7 +41,9 @@ module orbital_set_oct_m
        orbital_set_nullify,             &
        orbital_set_init,                &
        orbital_set_end,                 &
-       orbital_set_update_phase
+       orbital_set_update_phase,        &
+       dorbital_set_get_coefficients,   &
+       zorbital_set_get_coefficients
 
   type orbital_set_t
     integer             :: nn, ll
@@ -164,5 +166,12 @@ contains
     POP_SUB(orbital_set_update_phase)
   end subroutine orbital_set_update_phase
 
+#include "undef.F90"
+#include "real.F90"
+#include "orbital_set_inc.F90"
+
+#include "undef.F90"
+#include "complex.F90"
+#include "orbital_set_inc.F90"
 
 end module orbital_set_oct_m

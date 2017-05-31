@@ -976,6 +976,14 @@ contains
             ks%calc%energy%Imintnvxc = ks%calc%energy%Imintnvxc + aimag(ctmp)          
           end if
         end do
+
+        if (.not. cmplxscl) then
+          hm%energy%int_dft_u = denergy_calc_electronic(hm, gr%der, st, terms = TERM_DFT_U)
+        else
+          ctmp = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_DFT_U)
+          hm%energy%int_dft_u   = real(ctmp)
+          hm%energy%Imint_dft_u = aimag(ctmp)  
+        end if
       end if
 
       call profiling_out(prof)

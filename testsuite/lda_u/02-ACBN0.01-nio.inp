@@ -64,4 +64,5 @@ ExtraStates = 2
 
 OrbitalsTruncationMethod = box
 OutputLDA_U = occupation_matrices + effectiveU
+DFTUNormalizeOrbitals = yes
 UseACBN0Functional = yes

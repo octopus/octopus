@@ -56,19 +56,8 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
       ! We first compute <phi m | psi> for all orbitals of the atom
       !
       os => this%orbsets(ios)
- 
-      do im = 1, os%norbs
-        !If we need to add the phase, we explicitly do the operation using the sphere
-        if(has_phase) then
-#ifdef R_TCOMPLEX
-          dot(im) = submesh_to_mesh_dotp(os%sphere, d%dim, os%orbitals(im)%eorb(1:os%sphere%np,ik),&
-                              psi(1:mesh%np,1:d%dim))
-#endif
-        else
-          dot(im) = submesh_to_mesh_dotp(os%sphere, d%dim, os%orbitals(im)%X(orb),&
-                               psi(1:mesh%np,1:d%dim))
-        end if
-      end do
+      ! 
+      call X(orbital_set_get_coefficients)(os, psi, ik, d%dim, has_phase, dot(1:os%norbs))
       !
       reduced2 = R_TOTYPE(M_ZERO)
       do im = 1, os%norbs
@@ -223,21 +212,11 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
  
       do ios = 1, this%norbsets
         os => this%orbsets(ios)
-        norbs = os%norbs
         !We first compute the matrix elemets <\psi | orb_m>
         !taking into account phase correction if needed 
-        do im = 1, norbs
-          if(present(phase)) then
-#ifdef R_TCOMPLEX
-            dot(im,ios) = submesh_to_mesh_dotp(os%sphere, st%d%dim, os%orbitals(im)%eorb(1:os%sphere%np,ik), &
-                                               psi(1:mesh%np,1:st%d%dim))
-#endif
-          else
-            dot(im,ios) = submesh_to_mesh_dotp(os%sphere, st%d%dim, os%orbitals(im)%X(orb), &
-                                               psi(1:mesh%np,1:st%d%dim))
-          end if 
-        end do !im
+        call X(orbital_set_get_coefficients)(os, psi, ik, st%d%dim, present(phase), dot(1:os%norbs,ios))
       end do !ios
+
 
       !We compute the on-site occupation of the site, if needed 
       if(this%useACBN0) then
@@ -820,20 +799,9 @@ end subroutine X(compute_coulomb_integrals)
       ! We first compute <phi m | psi> for all orbitals of the atom
       !
       os => this%orbsets(ios)
-      do im = 1, os%norbs
-        !If we need to add the phase, we explicitly do the operation using the sphere
-        !This does not change anything if the sphere occupies the full mesh or not
-        if(has_phase) then
-#ifdef R_TCOMPLEX
-          dot(im) = submesh_to_mesh_dotp(os%sphere, 1, os%orbitals(im)%eorb(1:os%sphere%np,ik),&
-                               psi(1:mesh%np,1:d%dim))
-#endif
-        else
-          dot(im) = submesh_to_mesh_dotp(os%sphere, 1, os%orbitals(im)%X(orb),&
-                               psi(1:mesh%np,1:d%dim))
-        end if
-      end do
-   
+      ! 
+      call X(orbital_set_get_coefficients)(os, psi, ik, d%dim, has_phase, dot)
+      !
       do im = 1, os%norbs
         ! sum_mp Vmmp <phi mp | psi >
         reduced = M_ZERO
@@ -984,34 +952,16 @@ end subroutine X(compute_coulomb_integrals)
        call batch_get_state(psib, ibatch, mesh%np, psi)
 
        !We first compute the matrix elemets <\psi | orb_m>
-       !taking into account phase correction if needed 
-       do im = 1, os%norbs
-         if(phase) then
-#ifdef R_TCOMPLEX
-           dot(im) = submesh_to_mesh_dotp(os%sphere, st%d%dim, os%orbitals(im)%eorb(1:os%sphere%np,iq), &
-                                               psi(1:mesh%np,1:st%d%dim))
-#endif
-         else
-           dot(im) = submesh_to_mesh_dotp(os%sphere, st%d%dim, os%orbitals(im)%X(orb), &
-                                               psi(1:mesh%np,1:st%d%dim))
-         end if
-       end do !im
+       !taking into account phase correction if needed   
+       ! 
+       call X(orbital_set_get_coefficients)(os, psi, iq, st%d%dim, phase, dot)
 
        do idir = 1, ndim
          call batch_get_state(grad_psib(idir), ibatch, mesh%np, gpsi)     
          !We first compute the matrix elemets <\psi | orb_m>
          !taking into account phase correction if needed 
-         do im = 1, os%norbs
-           if(phase) then
-#ifdef R_TCOMPLEX
-             gdot(im,idir) = submesh_to_mesh_dotp(os%sphere, st%d%dim, os%orbitals(im)%eorb(1:os%sphere%np,iq), &
-                                               gpsi(1:mesh%np,1:st%d%dim))
-#endif
-           else
-             gdot(im,idir) = submesh_to_mesh_dotp(os%sphere, st%d%dim, os%orbitals(im)%X(orb), &
-                                               gpsi(1:mesh%np,1:st%d%dim))
-           end if
-         end do !im 
+         ! 
+         call X(orbital_set_get_coefficients)(os, gpsi, iq, st%d%dim, phase, gdot(1:os%norbs,idir))
 
          do im = 1, os%norbs
            gradn(1:os%norbs,im,ispin,idir) = gradn(1:os%norbs,im,ispin,idir) &
@@ -1337,7 +1287,6 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, iorb, ispin, orb, trunca
   spec => geo%atom(iatom)%species
   ASSERT(iorb <= species_niwfs(spec))
  
-
   call orbital_nullify(orb)
 
   call species_iwf_ilm(spec, iorb, ispin_, ii, ll, mm)

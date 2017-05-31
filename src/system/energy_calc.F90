@@ -114,7 +114,6 @@ contains
         hm%energy%kinetic  = tnadd_energy + denergy_calc_electronic(hm, gr%der, st, terms = TERM_KINETIC)
         hm%energy%extern_local = external_energy + denergy_calc_electronic(hm, gr%der, st, terms = TERM_LOCAL_EXTERNAL)
         hm%energy%extern_non_local   = denergy_calc_electronic(hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL)
-        hm%energy%int_dft_u = denergy_calc_electronic(hm, gr%der, st, terms = TERM_DFT_U)
         hm%energy%extern = hm%energy%extern_local + hm%energy%extern_non_local
         evxctau = denergy_calc_electronic(hm, gr%der, st, terms = TERM_MGGA)
       else
@@ -129,10 +128,6 @@ contains
         etmp = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL)
         hm%energy%extern_non_local   = real(etmp)
         hm%energy%Imextern_non_local = aimag(etmp)
-
-        etmp = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_DFT_U)
-        hm%energy%int_dft_u   = real(etmp)
-        hm%energy%Imint_dft_u = aimag(etmp)
 
         hm%energy%extern   = hm%energy%extern_local   + hm%energy%extern_non_local 
         hm%energy%Imextern = hm%energy%Imextern_local + hm%energy%Imextern_non_local
