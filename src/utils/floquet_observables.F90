@@ -240,10 +240,10 @@ program floquet_observables
   !% <br>%</tt>
   !%
   !%End
-  obs%nst(1) = dressed_st%st_start
-  obs%nst(2) = dressed_st%st_end
-  obs%nkpt(1) = dressed_st%d%kpt%start 
-  obs%nkpt(2) = dressed_st%d%kpt%end
+  obs%nst(1) = 1
+  obs%nst(2) = dressed_st%nst
+  obs%nkpt(1) = 1 
+  obs%nkpt(2) = dressed_st%d%kpt%nglobal
   
   if(parse_block('FloquetObservableSelectStates', blk) == 0) then
     if(parse_block_cols(blk,0) /= 2) call messages_input_error('FloquetObservableSelectStates')
