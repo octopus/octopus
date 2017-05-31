@@ -1079,8 +1079,8 @@ contains
     FLOAT, allocatable   :: spect(:,:)
     
     integer :: idim, im, in, ista, istb, ik, itot, ii, i, imm, inn, spindim, ie, dim
-    FLOAT   :: omega, DE, ediff, EE, norm
-    CMPLX   :: melba(1:3), melab(1:3), tmp2(1:3,1:hm%F%spindim)
+    FLOAT   :: omega, DE, ediff, EE, norm, fact
+    CMPLX   :: melba(1:3), melab(1:3), tmp2(1:3,1:hm%F%spindim), ampl
     integer :: iunit, idir, jdir, dir
     character(len=1024):: filename, iter_name, str
     
@@ -1127,12 +1127,12 @@ contains
                   
                   if (ista >= istb .and. idir == jdir) cycle
                   
+                  DE = dressed_st%eigenval(istb,ik) - dressed_st%eigenval(ista,ik)
                   !Cut out all the components suppressed by small occupations 
-                  if (dressed_st%occ(istb,ik) < 1E-14) cycle
+                  if ((dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik))/DE < 1E-14) cycle
 
                   call states_get_state(dressed_st, sys%gr%mesh, istb, ik, u_mb)
           
-                  DE = dressed_st%eigenval(istb,ik) - dressed_st%eigenval(ista,ik)
 
                    
                   melab(:) = M_z0
@@ -1164,19 +1164,21 @@ contains
                 
                   end do ! im loop
 
-                  sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + & 
-                                        melab(idir)*melba(jdir) /(DE + EE + M_zi*obs%gamma) 
+                  
+                  ampl =  M_zI * (dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik))/DE * &
+                                  melab(idir)*melba(jdir) /(DE + EE + M_zi*obs%gamma) 
+                          
+                  if (idir == jdir) ampl = M_z2 * ampl
+                  
+                  ! sum over a and b         
+                  sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + ampl
 
-                  sigma(ie,idir,jdir) = M_zI * sigma(ie,idir,jdir) * &
-                                        (dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik))/DE
 
-
-                  if (idir == jdir) sigma(ie,idir,jdir) = M_z2 * sigma(ie,idir,jdir) 
                   
                 end do ! istb loop   
               end do ! ista loop   
 
-              
+              ! sum over kpoints 
               sigma(ie,idir,jdir) = sigma(ie,idir,jdir) * (1 + dressed_st%d%kweights(ik))
              
             end do ! ik loop
