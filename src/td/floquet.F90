@@ -968,7 +968,7 @@ contains
         do ik=1, dressed_st%d%kpt%nglobal
           sum_dr = sum(dressed_st%occ(:,ik))
           sum_gs = sum(gs_st%occ(:,ik))
-          if( sum_dr/sum_gs > 1E-5) then
+          if( abs(sum_dr/sum_gs - M_ONE) > 1E-5) then
             call messages_write('Occupations checksum failed for kpoint = ')
             call messages_write(ik, fmt = '(i6)')
             call messages_write(':   gs_occ =  ')
