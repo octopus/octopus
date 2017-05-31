@@ -960,21 +960,22 @@ contains
       end if
       
       
-      ! occupations checksum 
-      do ik=1, dressed_st%d%kpt%nglobal
-        sum_dr = sum(dressed_st%occ(:,ik))
-        sum_gs = sum(gs_st%occ(:,ik))
-        if( abs(sum_dr -sum_gs) > 1E-6) then
-          call messages_write('Occupations checksum failed for kpoint = ')
-          call messages_write(ik, fmt = '(i6)')
-          call messages_write(':   gs_occ =  ')
-          call messages_write(sum_gs, fmt ='(f12.6)')
-          call messages_write('   floquet_occ =  ')
-          call messages_write(sum_dr, fmt ='(f12.6)')
-          call messages_warning()
-        end if
-      enddo
-      
+      if (mpi_grp_is_root(mpi_world)) then    
+        ! occupations checksum 
+        do ik=1, dressed_st%d%kpt%nglobal
+          sum_dr = sum(dressed_st%occ(:,ik))
+          sum_gs = sum(gs_st%occ(:,ik))
+          if( abs(sum_dr -sum_gs) > 1E-6) then
+            call messages_write('Occupations checksum failed for kpoint = ')
+            call messages_write(ik, fmt = '(i6)')
+            call messages_write(':   gs_occ =  ')
+            call messages_write(sum_gs, fmt ='(f12.6)')
+            call messages_write('   floquet_occ =  ')
+            call messages_write(sum_dr, fmt ='(f12.6)')
+            call messages_warning()
+          end if
+        enddo
+      end if
       
       
       SAFE_DEALLOCATE_A(tmp)
