@@ -281,7 +281,7 @@ contains
     !%
     !%End
     this%nt = maxval(abs(this%order(:)))*3
-    if (this%order(:) == 0 ) this%nt = 3 
+    if (maxval(abs(this%order(:))) == 0 ) this%nt = 3 
     
     call parse_variable('TDFloquetSample', this%nt, this%nt)
     call messages_print_var_value(stdout,'Number of Floquet time-sampling points', this%nT)
