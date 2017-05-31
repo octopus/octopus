@@ -1079,7 +1079,7 @@ contains
     FLOAT, allocatable   :: spect(:,:)
     
     integer :: idim, im, in, ista, istb, ik, itot, ii, i, imm, inn, spindim, ie, dim
-    FLOAT   :: omega, DE, ediff, EE
+    FLOAT   :: omega, DE, ediff, EE, norm
     CMPLX   :: melba(1:3), melab(1:3), tmp2(1:3,1:hm%F%spindim)
     integer :: iunit, idir, jdir, dir
     character(len=1024):: filename, iter_name, str
@@ -1137,7 +1137,9 @@ contains
                    
                   melab(:) = M_z0
                   melba(:) = M_z0
-                                    
+                                   
+                  norm = (hm%F%order(2)-hm%F%order(1))
+                  if (norm == 0) norm = M_ONE                  
                   ! get the dipole matrix elements <<psi_a|J|psi_b >>
                   do im=hm%F%order(1),hm%F%order(2)
                     imm = im - hm%F%order(1) + 1
@@ -1148,7 +1150,7 @@ contains
                                                u_mb(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) , &
                                                ik, tmp2(:,:))
                     do dir=1,dim
-                      melab(dir) = melab(dir) + sum(tmp2(dir,1:spindim))/ (hm%F%order(2)-hm%F%order(1))
+                      melab(dir) = melab(dir) + sum(tmp2(dir,1:spindim))/ norm 
                     end do
                 
                     !<u_mb| J | u_ma>
@@ -1157,7 +1159,7 @@ contains
                                                u_ma(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) , &
                                                ik, tmp2(:,:))
                     do dir=1,dim
-                      melba(dir) = melba(dir) + sum(tmp2(dir,1:spindim))/ (hm%F%order(2)-hm%F%order(1))
+                      melba(dir) = melba(dir) + sum(tmp2(dir,1:spindim))/ norm 
                     end do
                 
                   end do ! im loop
