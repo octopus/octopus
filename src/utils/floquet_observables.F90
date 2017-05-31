@@ -101,15 +101,25 @@ program floquet_observables
   
   call messages_init()  
   call io_init()
+  
   call calc_mode_par_init()
 
   call fft_all_init()
   call unit_system_init()
   
+  call calc_mode_par_set_parallelization(P_STRATEGY_OTHER,   default = .false.)
+!   call calc_mode_par_set_parallelization(P_STRATEGY_KPOINTS, default = .true. )
+  call calc_mode_par_set_parallelization(P_STRATEGY_STATES,  default = .false.)
+!   call calc_mode_par_set_parallelization(P_STRATEGY_DOMAINS, default = .true. )
+  
+  
+  
   call system_init(sys)
   
   call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, &
                         sys%ks%xc_flags, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
+  
+  
   
   
 
@@ -1110,8 +1120,6 @@ contains
 
               do ista=dressed_st%st_start, dressed_st%st_end
                 call states_get_state(dressed_st, sys%gr%mesh, ista, ik, u_ma)
-
-!                 do istb=dressed_st%st_start, dressed_st%st_end
       
                 do istb=1, dressed_st%nst
             
@@ -1126,68 +1134,42 @@ contains
           
                   DE = dressed_st%eigenval(istb,ik) - dressed_st%eigenval(ista,ik)
 
-                  if (idir /= jdir) then  !off diagonal terms first      
                    
-                    melab(:) = M_z0
-                    melba(:) = M_z0
-                                      
-                    ! get the dipole matrix elements <<psi_a|J|psi_b >>
-                    do im=hm%F%order(1),hm%F%order(2)
-                      imm = im - hm%F%order(1) + 1
-            
-                      !<u_ma| J | u_mb>
-                      call current_calculate_mel(sys%gr%der, hm, sys%geo, &
-                                                 u_ma(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) ,&
-                                                 u_mb(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) , &
-                                                 ik, tmp2(:,:))
-                      do dir=1,dim
-                        melab(dir) = melab(dir) + sum(tmp2(dir,1:spindim))/ (hm%F%order(2)-hm%F%order(1))
-                      end do
-                  
-                      !<u_mb| J | u_ma>
-                      call current_calculate_mel(sys%gr%der, hm, sys%geo, &
-                                                 u_mb(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) ,&
-                                                 u_ma(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) , &
-                                                 ik, tmp2(:,:))
-                      do dir=1,dim
-                        melba(dir) = melba(dir) + sum(tmp2(dir,1:spindim))/ (hm%F%order(2)-hm%F%order(1))
-                      end do
-                  
-                    end do ! im loop
+                  melab(:) = M_z0
+                  melba(:) = M_z0
+                                    
+                  ! get the dipole matrix elements <<psi_a|J|psi_b >>
+                  do im=hm%F%order(1),hm%F%order(2)
+                    imm = im - hm%F%order(1) + 1
+          
+                    !<u_ma| J | u_mb>
+                    call current_calculate_mel(sys%gr%der, hm, sys%geo, &
+                                               u_ma(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) ,&
+                                               u_mb(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) , &
+                                               ik, tmp2(:,:))
+                    do dir=1,dim
+                      melab(dir) = melab(dir) + sum(tmp2(dir,1:spindim))/ (hm%F%order(2)-hm%F%order(1))
+                    end do
+                
+                    !<u_mb| J | u_ma>
+                    call current_calculate_mel(sys%gr%der, hm, sys%geo, &
+                                               u_mb(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) ,&
+                                               u_ma(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) , &
+                                               ik, tmp2(:,:))
+                    do dir=1,dim
+                      melba(dir) = melba(dir) + sum(tmp2(dir,1:spindim))/ (hm%F%order(2)-hm%F%order(1))
+                    end do
+                
+                  end do ! im loop
 
-                    sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + & 
-                                          melab(idir)*melba(jdir) * 1/(DE + EE + M_zi*obs%gamma) + &
-                                          melab(jdir)*melba(idir) * 1/(DE - EE + M_zi*obs%gamma) 
+                  sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + & 
+                                        melab(idir)*melba(jdir) /(DE + EE + M_zi*obs%gamma) 
 
-                    sigma(ie,idir,jdir) = (-M_zI) * sigma(ie,idir,jdir) * dressed_st%occ(istb,ik)/DE
+                  sigma(ie,idir,jdir) = M_zI * sigma(ie,idir,jdir) * &
+                                        (dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik))/DE
 
 
-                  else  ! diagonal terms idir=jdir 
-
-                    melab(:) = M_z0
-                                      
-                    ! get the dipole matrix elements <<psi_a|J|psi_b >>
-                    do im=hm%F%order(1),hm%F%order(2)
-                      imm = im - hm%F%order(1) + 1
-            
-                      !<u_ma| J | u_mb>
-                      call current_calculate_mel(sys%gr%der, hm, sys%geo, &
-                                                 u_ma(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) ,&
-                                                 u_mb(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) , &
-                                                 ik, tmp2(:,:))
-                      do dir=1,dim
-                        melab(dir) = melab(dir) + sum(tmp2(dir,1:spindim))/ (hm%F%order(2)-hm%F%order(1))
-                      end do
-                  
-                    end do ! im loop
-
-                    sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + & 
-                                          abs(melab(idir))**2 * 1/(DE - EE + M_zi*obs%gamma) 
-
-                    sigma(ie,idir,jdir) =  M_zI * sigma(ie,idir,jdir) * &
-                                          (dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik))/DE
-                    
-                  end if
+                  if (idir == jdir) sigma(ie,idir,jdir) = M_z2 * sigma(ie,idir,jdir) 
                   
                 end do ! istb loop   
               end do ! ista loop   
