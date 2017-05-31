@@ -920,7 +920,8 @@ contains
       SAFE_ALLOCATE(psi(1:mesh%np,gs_st%d%dim))
       SAFE_ALLOCATE(u_ma(1:mesh%np,hm%F%floquet_dim*hm%F%spindim))
       SAFE_ALLOCATE(tmp(gs_st%d%dim))
-
+      
+      dressed_st%occ(:,:) = M_ZERO
 
       do ik=dressed_st%d%kpt%start,dressed_st%d%kpt%end
 
@@ -951,18 +952,6 @@ contains
           enddo
         enddo
         
-        ! occupations checksum 
-        sum_dr = sum(dressed_st%occ(:,ik))
-        sum_gs = sum(gs_st%occ(:,ik))
-        if( abs(sum_dr -sum_gs) > 1E-6) then
-          call messages_write('Occupations checksum failed for kpoint = ')
-          call messages_write(ik, fmt = '(i6)')
-          call messages_write(':   gs_occ =  ')
-          call messages_write(sum_gs, fmt ='(f12.6)')
-          call messages_write('   floquet_occ =  ')
-          call messages_write(sum_dr, fmt ='(f12.6)')
-          call messages_warning()
-        end if
       enddo
       
       
