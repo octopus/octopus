@@ -1110,8 +1110,10 @@ contains
 
               do ista=dressed_st%st_start, dressed_st%st_end
                 call states_get_state(dressed_st, sys%gr%mesh, ista, ik, u_ma)
-        
-                do istb=dressed_st%st_start, dressed_st%st_end
+
+!                 do istb=dressed_st%st_start, dressed_st%st_end
+      
+                do istb=1, dressed_st%nst
             
                   if (ista == istb .and. idir /= jdir) cycle
                   
@@ -1191,7 +1193,7 @@ contains
               end do ! ista loop   
 
               
-              sigma(ie,idir,jdir) = sigma(ie,idir,jdir) * dressed_st%d%kweights(ik)
+              sigma(ie,idir,jdir) = sigma(ie,idir,jdir) * (1 + dressed_st%d%kweights(ik))
              
             end do ! ik loop
           
