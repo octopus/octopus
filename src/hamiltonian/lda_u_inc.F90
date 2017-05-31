@@ -977,10 +977,10 @@ end subroutine X(compute_coulomb_integrals)
        do imp = 1, os%norbs
         ff(1:ndim) = ff(1:ndim) - this%X(n)(im,imp,ispin,ios)/st%smear%el_per_state*gradn(im,imp,ispin,1:ndim)
        end do !imp
-     ff(1:ndim) = ff(1:ndim) + gradn(im, im, ispin,1:ndim)
+     ff(1:ndim) = ff(1:ndim) + CNST(0.5)*gradn(im, im, ispin,1:ndim)
      end do !im
 
-     force(1:ndim, iatom) = force(1:ndim, iatom) - CNST(0.5)*os%Ueff*ff(1:ndim)
+     force(1:ndim, iatom) = force(1:ndim, iatom) - os%Ueff*ff(1:ndim)
    end do !ios
 
    SAFE_DEALLOCATE_A(psi)

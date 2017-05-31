@@ -32,6 +32,7 @@ module v_ks_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
+  use hamiltonian_base_oct_m
   use index_oct_m
   use io_function_oct_m
   use lalg_basic_oct_m
@@ -978,9 +979,9 @@ contains
         end do
 
         if (.not. cmplxscl) then
-          hm%energy%int_dft_u = denergy_calc_electronic(hm, gr%der, st, terms = TERM_DFT_U)
+          hm%energy%int_dft_u = denergy_calc_electronic(hm, ks%gr%der, st, terms = TERM_DFT_U)
         else
-          ctmp = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_DFT_U)
+          ctmp = zenergy_calc_electronic(hm, ks%gr%der, st, terms = TERM_DFT_U)
           hm%energy%int_dft_u   = real(ctmp)
           hm%energy%Imint_dft_u = aimag(ctmp)  
         end if
