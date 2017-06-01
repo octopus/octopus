@@ -676,7 +676,7 @@ contains
     
     CMPLX, allocatable   :: mel(:,:), u_ma(:,:), u_nb(:,:)
     FLOAT, allocatable   :: ediff(:), weight(:), fab(:)
-    integer, allocatable :: mm(:), nn(:), alpha(:), beta(:), idx(:)
+    integer, allocatable :: mm(:), nn(:), alpha(:), beta(:), idx(:), kk(:)
     
     integer :: idim, im, in, ista, istb, ik, itot, ii, i, imm, inn, spindim
     FLOAT   :: omega, DE, wmax
@@ -716,17 +716,20 @@ contains
     weight(:) = M_ZERO
     mm(:) = 0
     nn(:) = 0
+    kk(:) = 0 
     alpha(:) = 0
     beta(:) = 0
     idx(:) = 0
     
     ii=1
-    do ik=dressed_st%d%kpt%start, dressed_st%d%kpt%end
+    do ik=1, dressed_st%d%nik
 
-        do ista=dressed_st%st_start, dressed_st%st_end
+        if(dressed_st%d%kpt%start > ik .or. ik > dressed_st%d%kpt%end) cycle
+          
+        do ista=1, dressed_st%nst
           call states_get_state(dressed_st, sys%gr%mesh, ista, ik, u_ma)
           
-          do istb=dressed_st%st_start, dressed_st%st_end
+          do istb=1, dressed_st%nst
             call states_get_state(dressed_st, sys%gr%mesh, istb, ik, u_nb)
 
             
@@ -743,6 +746,7 @@ contains
                 beta(ii) = istb 
                 nn(ii) = in  
                 mm(ii) = im 
+                kk(ii) = ik
 
                 ediff(ii) = DE + (in-im)*hm%F%omega
                 
@@ -785,6 +789,11 @@ contains
     
     if(dressed_st%parallel_in_states .or. dressed_st%d%kpt%parallel) then
       call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm,  weight(:))
+      call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm,  alpha(:))
+      call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm,  beta(:))
+      call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm,  nn(:))
+      call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm,  mm(:))
+      call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm,  kk(:))
     end if
     
     
@@ -820,8 +829,6 @@ contains
         str_center('['//trim(units_abbrev(units_out%length))//'/(' &
           //trim(units_abbrev(units_out%time**2))//')]', 15)
       
-      wmax = maxval(weight(:))      
-
       do ii = 1, itot
         if (weight(idx(ii))/wmax > CNST(1E-6) .and.  ediff(ii) > M_ZERO) then
           write(iunit, '(1x,2es15.6)', advance='no') units_from_atomic(units_out%energy, ediff(ii)) , weight(idx(ii))  
@@ -839,6 +846,7 @@ contains
     SAFE_DEALLOCATE_A(fab)
     SAFE_DEALLOCATE_A(mm)
     SAFE_DEALLOCATE_A(nn)
+    SAFE_DEALLOCATE_A(kk)
     SAFE_DEALLOCATE_A(alpha)
     SAFE_DEALLOCATE_A(beta)
     SAFE_DEALLOCATE_A(idx)
