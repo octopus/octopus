@@ -806,21 +806,25 @@ contains
       filename = FLOQUET_DIR//'/floquet_hhg_w_'//trim(adjustl(iter_name))
       iunit = io_open(filename, action='write')
     
+      write(iunit, '(a1,6a15)', advance ='no') '#', str_center("w", 15), str_center("strenght(w)", 15),&
+                                                    str_center("alpha", 15), str_center("beta", 15),&
+                                                    str_center("m", 15), str_center("n", 15)
+                                               
+      if (dressed_st%d%nik > 1 ) then
+        write(iunit, '(a1,1a15)', advance ='no')  str_center("ikpt", 15)
+      end if
+    
+    
       select case (obs%gauge)
+
       case (OPTION__FLOQUETOBSERVABLEGAUGE__F_VELOCITY)
-        write(iunit, '(a1,10a15)') '#', str_center("w", 15), str_center("strenght(w)", 15),&
-                                       str_center("alpha", 15), str_center("beta", 15),&
-                                       str_center("m", 15), str_center("n", 15),&
-                                       str_center("|<u_ma|ix|u_nb>|", 15), str_center("|<u_ma|iy|u_nb>|", 15),&
-                                       str_center("|<u_ma|iz|u_nb>|", 15), str_center("f_a*f_b", 15)
+        write(iunit, '(a1,4a15)')  str_center("|<u_ma|ix|u_nb>|", 15), str_center("|<u_ma|iy|u_nb>|", 15),&
+                                    str_center("|<u_ma|iz|u_nb>|", 15), str_center("f_a*f_b", 15)
           
       case (OPTION__FLOQUETOBSERVABLEGAUGE__F_LENGHT)
 
-        write(iunit, '(a1,10a15)') '#', str_center("w", 15), str_center("strenght(w)", 15),&
-                                       str_center("alpha", 15), str_center("beta", 15),&
-                                       str_center("m", 15), str_center("n", 15),&
-                                       str_center("|<u_ma|x|u_nb>|", 15), str_center("|<u_ma|y|u_nb>|", 15),&
-                                       str_center("|<u_ma|z|u_nb>|", 15), str_center("f_a*f_b", 15)
+        write(iunit, '(a1,4a15)')  str_center("|<u_ma|x|u_nb>|", 15), str_center("|<u_ma|y|u_nb>|", 15),&
+                                    str_center("|<u_ma|z|u_nb>|", 15), str_center("f_a*f_b", 15)
       end select
     
      
@@ -833,6 +837,9 @@ contains
         if (weight(idx(ii))/wmax > CNST(1E-6) .and.  ediff(ii) > M_ZERO) then
           write(iunit, '(1x,2es15.6)', advance='no') units_from_atomic(units_out%energy, ediff(ii)) , weight(idx(ii))  
           write(iunit, '(4i15)', advance='no') alpha(idx(ii)) , beta(idx(ii)), mm(idx(ii)), nn(idx(ii))
+          if (dressed_st%d%nik > 1 ) then
+             write(iunit, '(1i15)', advance='no') kk(idx(ii))
+          end if
           write(iunit, '(4es15.6)') abs(mel(idx(ii),1)),abs(mel(idx(ii),2)),abs(mel(idx(ii),3)), fab(idx(ii))
         end if
       end do  
