@@ -50,6 +50,7 @@ program wannier90_interface
   use states_dim_oct_m
   use states_io_oct_m
   use states_restart_oct_m
+  use submesh_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -71,17 +72,14 @@ program wannier90_interface
   character(len=512)   :: filename, str, str2
   integer              :: ist, ispin
   type(states_t)       :: st
-  logical              :: w90_setup, w90_output, w90_floquet, w90_unk
-  integer :: w90_nntot, w90_num_bands, w90_num_kpts    ! w90 input parameters
-  integer, allocatable ::  w90_nnk_list(:,:)           !
-  character(len=80) :: w90_prefix                      ! w90 input file prefix
-  integer :: w90_num_wann                              ! input paramter
-!not used for the momment
-!  logical :: w90_proj                                  ! whether to comput projections for  w90 intialization
-!  FLOAT, allocatable :: w90_proj_centers(:,:)          ! projections centers
-!  integer, allocatable ::  w90_proj_lmr(:,:)           ! definitions for real valued Y_lm*R_r
-!  integer :: w90_nproj                                 ! number of such projections
-
+  logical              :: w90_setup, w90_output, w90_floquet, w90_unk, w90_amn, w90_mmn
+  integer              ::w90_nntot, w90_num_bands, w90_num_kpts    ! w90 input parameters
+  integer, allocatable ::  w90_nnk_list(:,:)                       !
+  character(len=80)    :: w90_prefix                               ! w90 input file prefix
+  integer              :: w90_num_wann                             ! input paramter
+  FLOAT, allocatable :: w90_proj_centers(:,:)                      ! projections centers
+  integer, allocatable ::  w90_proj_lmr(:,:)                       ! definitions for real valued Y_lm*R_r
+  integer :: w90_nproj                                             ! number of such projections        
 
   call getopt_init(ierr)
   if(ierr /= 0) then
@@ -121,30 +119,51 @@ program wannier90_interface
   !%Default none
   !%Section Utilities::oct-wannier90_interface
   !%Description
-  !% Specifies what to do for the Wannier90 interface
-  !% Example: <tt>w90_setup + w90_floquet</tt>
+  !% Specifies which stage of the Wannier90 interface to use
   !%Option w90_setup bit(1)
-  !% Writes parts of the wannier90 input file <tt>w90_prefix.win</tt> corresponding to 
+  !% Writes parts of the wannier90 input file <tt>w90_prefix.win</tt> corresponding to
   !% the octopus inp file. Importantly it generates the correct form of Monkhorst-Pack mesh
   !% written to the file w90_kpoints that has to be used in a gs calculation of Octopus by
-  !% as <tt> input w90_kpoints <tt> instead of the <tt>%KpointsGrid<tt> block 
+  !% as <tt> input w90_kpoints </tt> instead of the <tt>%KpointsGrid</tt> block
   !%Option w90_output bit(2)
-  !% Generates the relevant files for a wannier90 run. This needs files generated 
-  !% by <tt>wannier90.x -pp w90 <tt>
+  !% Generates the relevant files for a wannier90 run, specified by the variable <tt>W90_interface_files</tt>.
+  !% This needs files previously generated
+  !% by <tt>wannier90.x -pp w90 </tt>
   !%Option w90_floquet bit(3)
-  !% Make interface for a Floquet structure. Takes care of different dimensionalities etc. 
-  !%
-  !%Option w90_unk bit(4)
-  !% write unk files for plotting routines of wannier90 
+  !% Make interface for a Floquet structure. Takes care of different dimensionalities etc.
   !%
   !%End
   call parse_variable('W90_interface_mode', w90_what, w90_what)
 
   w90_setup = iand(w90_what, OPTION__W90_INTERFACE_MODE__W90_SETUP) /= 0
   w90_output = iand(w90_what, OPTION__W90_INTERFACE_MODE__W90_OUTPUT) /= 0
-  w90_floquet = iand(w90_what, OPTION__W90_INTERFACE_MODE__W90_FLOQUET) /= 0
-  w90_unk = iand(w90_what, OPTION__W90_INTERFACE_MODE__W90_UNK) /= 0
 
+  !%Variable W90_interface_files
+  !%Type flag
+  !%Default w90_mmn
+  !%Section Utilities::oct-wannier90_interface
+  !%Description
+  !% Specifies which files to generate
+  !% Example: <tt>w90_mmn + w90_unk< /tt>
+  !%Option w90_mmn bit(1)
+  !% (see Wannier90 documentation)
+  !%Option w90_unk bit(2)
+  !% (see Wannier90 documentation)
+  !%Option w90_amn bit(3)
+  !% (see Wannier90 documentation)
+  !%End
+  w90_what = 0
+  call parse_variable('W90_interface_files', w90_what, w90_what)
+
+  w90_unk = iand(w90_what, OPTION__W90_INTERFACE_FILES__W90_UNK) /= 0
+  w90_mmn = iand(w90_what, OPTION__W90_INTERFACE_FILES__W90_MMN) /= 0
+  w90_amn = iand(w90_what, OPTION__W90_INTERFACE_FILES__W90_AMN) /= 0
+
+  ! default
+  if(w90_what == 0) then
+     w90_mmn = .true.
+     w90_amn = .true.
+  end if
 
   ! sanity checks
   if(w90_setup .and. w90_output) then
@@ -154,11 +173,6 @@ program wannier90_interface
 
   if(w90_floquet .and. .not. w90_setup .and. .not. w90_output) then
       message(1) = 'W90: w90_floquet has to be combined with either w90_setup or w90_output.'
-      call messages_fatal(1)
-  end if
-
-  if(w90_unk .and. .not. w90_output) then
-      message(1) = 'W90: w90_unk has to be combined with w90_output.'
       call messages_fatal(1)
   end if
 
@@ -208,9 +222,9 @@ program wannier90_interface
 
     ! ---- actual interface work ----------
     call read_wannier90_files()
-    call create_wannier90_mmn()
+    if(w90_mmn) call create_wannier90_mmn()
     if(w90_unk) call write_unk()
-
+    if(w90_amn) call create_wannier90_amn()
    end if
 
   call system_end(sys)
@@ -300,6 +314,7 @@ contains
     integer ::  w90_nnkp, itemp
     character(len=80) :: filename, dummy, dummy1
     logical :: exist
+    FLOAT :: dummyr(7)
 
     ! assume to use all bands and number of k-points is consistent with Wannier90
     ! input files. Consistncy is checked later
@@ -361,14 +376,42 @@ contains
 
 102 continue
 
-    close(w90_nnkp)
+    call io_close(w90_nnkp)
 
-    ! TODO here also read projections file, if necessary
+    if(w90_amn) then
+       ! parse file again for definitions of projections
+       w90_nnkp = io_open(trim(filename), action='read')
+       do while(.true.)
+          read(w90_nnkp,*,end=101) dummy, dummy1
+          if(dummy =='begin' .and. dummy1 == 'projections' ) then
+             goto 202
+          end if
+       end do
+       message(1) = 'W90: Did not find projections in w90.nnkp file'
+       call messages_fatal(2)
+
+       ! jump point when projections is found in file
+202    continue
+       read(w90_nnkp,*) w90_nproj
+       ! num_wann is given in w90.win, not double checked here
+       ! I assume that the wannier90.x -pp run has checked this
+       w90_num_wann = w90_nproj
+
+       SAFE_ALLOCATE(w90_proj_centers(w90_nproj,3))
+       SAFE_ALLOCATE(w90_proj_lmr(w90_nproj,3))
+       do ii=1,w90_nproj
+          read(w90_nnkp,*) w90_proj_centers(ii,1:3), w90_proj_lmr(ii,1:3)
+          ! skip a line for now
+          read(w90_nnkp,*) dummyr(1:7)
+       end do
+    end if
+
+    call io_close(w90_nnkp)
 
   end subroutine read_wannier90_files
 
   subroutine create_wannier90_mmn()
-    integer ::  ist, jst, ik, w90_mmn, w90_eig, w90_amn,  iknn, G(3), ii, jj, idim, idim2
+    integer ::  ist, jst, ik, w90_mmn, w90_eig,  iknn, G(3), ii, jj, idim, idim2
     FLOAT   ::  Gr(3), t1, t2
     character(len=80) :: filename
     CMPLX   :: overlap
@@ -482,13 +525,316 @@ contains
                 end do
                 write(unk_file) state2(:)
              end do
-             close(unk_file)
+             call io_close(unk_file)
           end if
        end do
     end do
 
   end subroutine write_unk
 
+  subroutine create_wannier90_amn()
+    integer ::  ist, jst, ik, w90_amn,  iknn, G(3), ii, jj, idim, idim2, iw, ip
+    FLOAT   ::  Gr(3), t1, t2, center(3), dd
+    character(len=80) :: filename
+    CMPLX   :: projection
+    CMPLX, allocatable :: state1(:,:), state2(:,:), orbital(:,:)
+    type(submesh_t) :: submesh
+    FLOAT, allocatable ::  rr(:,:), ylm(:)
+
+    ASSERT(st%d%kpt%start==1 .and. st%d%kpt%end==sys%gr%sb%kpoints%full%npoints)
+
+    ! precompute orbitals
+    SAFE_ALLOCATE(orbital(w90_nproj,1:sys%gr%mesh%np))
+    orbital = M_ZERO
+    do iw=1,w90_nproj
+      ! cartesian coordinate of orbital center
+      center(1:3) =  matmul(w90_proj_centers(iw,1:3),sys%gr%sb%rlattice(1:3,1:3))
+      call submesh_init(submesh, sys%gr%sb, sys%gr%mesh, center, CNST(2.0)*maxval(sys%gr%sb%lsize(:)))
+
+      ! make transpose table of submesh points for use in pwscf routine
+      SAFE_ALLOCATE(rr(1:3,submesh%np))
+      do ip=1,submesh%np
+         rr(1:3,ip) = submesh%x(ip,1:3)
+      end do
+
+      ! get ylm as submesh points
+      SAFE_ALLOCATE(ylm(1:submesh%np))
+      ! (this is a routine from pwscf)
+      call ylm_wannier(ylm,w90_proj_lmr(iw,1),w90_proj_lmr(iw,2),rr,submesh%np)
+
+      ! apply radial function
+      do ip=1,submesh%np
+         dd=sqrt(dot_product(submesh%x(ip,1:3),submesh%x(ip,1:3)))
+         ylm(ip) = ylm(ip)*M_TWO*exp(-dd)
+      end do
+
+      call submesh_add_to_mesh(submesh,ylm, orbital(iw, :))
+
+      SAFE_DEALLOCATE_A(ylm)
+      SAFE_DEALLOCATE_A(rr)
+    end do
+
+    filename = './'// trim(adjustl(w90_prefix))//'.amn'
+    w90_amn = io_open(trim(filename), action='write')
+
+    ! write header
+    if(mpi_grp_is_root(mpi_world)) then
+       write(w90_amn,*) ' '
+       write(w90_amn,*)  w90_num_bands, w90_num_kpts, w90_num_wann
+    end if
+
+    SAFE_ALLOCATE(state1(1:sys%gr%der%mesh%np, 1:st%d%dim))
+
+    do ist=1,w90_num_bands
+       do iw=1,w90_num_wann
+          do ik=1, w90_num_kpts
+             call states_get_state(st, sys%gr%der%mesh, ist, ik, state1)
+             projection = M_ZERO
+             do idim=1,st%d%dim
+                projection = projection + zmf_dotp(sys%gr%mesh,state1(1:sys%gr%mesh%np,idim),orbital(iw,1:sys%gr%mesh%np))
+             end do
+             write (w90_amn,'(I5,2x,I5,2x,I5,2x,e12.6,2x,e12.6)') ist, iw, ik, projection
+          end do
+       end do
+    end do
+    call io_close(w90_amn)
+
+    SAFE_DEALLOCATE_A(state1)
+    SAFE_DEALLOCATE_A(orbital)
+
+  end subroutine create_wannier90_amn
+
+
+  ! routine originally from Pwscf
+  subroutine ylm_wannier(ylm,l,mr,r,nr)
+  ! this routine returns in ylm(r) the values at the nr points r(1:3,1:nr)
+  ! of the spherical harmonic identified  by indices (l,mr)
+  ! in table 3.1 of the wannierf90 specification.
+  !
+  ! No reference to the particular ylm ordering internal to octopus
+  ! is assumed.
+  !
+  ! If ordering in wannier90 code is changed or extended this should be the
+  ! only place to be modified accordingly
+  !
+  
+     IMPLICIT NONE
+  ! I/O variables
+  !
+     INTEGER :: l, mr, nr
+     FLOAT :: ylm(nr), r(3,nr)
+  !
+  ! local variables
+  !
+  !     FLOAT, EXTERNAL ::  s, p_z,px,py, dz2, dxz, dyz, dx2my2, dxy 
+  !     FLOAT, EXTERNAL :: fz3, fxz2, fyz2, fzx2my2, fxyz, fxx2m3y2, fy3x2my2
+     FLOAT :: rr, cost, phi
+     INTEGER :: ir
+     FLOAT :: bs2, bs3, bs6, bs12
+     bs2 = 1.d0/sqrt(2.d0)
+     bs3=1.d0/sqrt(3.d0)
+     bs6 = 1.d0/sqrt(6.d0)
+     bs12 = 1.d0/sqrt(12.d0)
+  
+     IF (l > 3 .or. l < -5 ) stop 'ylm_wannier l out of range '
+     IF (l>=0) THEN
+        IF (mr < 1 .or. mr > 2*l+1) stop 'ylm_wannier mr out of range'
+     ELSE
+        IF (mr < 1 .or. mr > abs(l)+1 ) stop 'ylm_wannier mr out of range'
+     ENDIF
+  
+     DO ir=1, nr
+        rr = sqrt( r(1,ir)*r(1,ir) +  r(2,ir)*r(2,ir) + r(3,ir)*r(3,ir) )
+        IF (rr < M_EPSILON) then !stop 'ylm_wannier rr too small'
+           ylm(ir)=0
+           cycle
+        end IF
+        cost =  r(3,ir) / rr
+        !
+        !  beware the arc tan, it is defined modulo M_PI
+        !
+        IF (r(1,ir) > M_EPSILON) THEN
+           phi = atan( r(2,ir)/r(1,ir) )
+        ELSEIF (r(1,ir) < -M_EPSILON ) THEN
+           phi = atan( r(2,ir)/r(1,ir) ) + M_PI
+        ELSE
+           phi = sign( M_PI/2.d0,r(2,ir) )
+        ENDIF
+  
+  
+        IF (l==0) THEN   ! s orbital
+           ylm(ir) = s(cost,phi)
+        ENDIF
+        IF (l==1) THEN   ! p orbitals
+           IF (mr==1) ylm(ir) = p_z(cost,phi)
+           IF (mr==2) ylm(ir) = px(cost,phi)
+           IF (mr==3) ylm(ir) = py(cost,phi)
+        ENDIF
+        IF (l==2) THEN   ! d orbitals
+           IF (mr==1) ylm(ir) = dz2(cost,phi)
+           IF (mr==2) ylm(ir) = dxz(cost,phi)
+           IF (mr==3) ylm(ir) = dyz(cost,phi)
+           IF (mr==4) ylm(ir) = dx2my2(cost,phi)
+           IF (mr==5) ylm(ir) = dxy(cost,phi)
+        ENDIF
+        IF (l==3) THEN   ! f orbitals
+           IF (mr==1) ylm(ir) = fz3(cost,phi)
+           IF (mr==2) ylm(ir) = fxz2(cost,phi)
+           IF (mr==3) ylm(ir) = fyz2(cost,phi)
+           IF (mr==4) ylm(ir) = fzx2my2(cost,phi)
+           IF (mr==5) ylm(ir) = fxyz(cost,phi)
+           IF (mr==6) ylm(ir) = fxx2m3y2(cost,phi)
+           IF (mr==7) ylm(ir) = fy3x2my2(cost,phi)
+        ENDIF
+        IF (l==-1) THEN  !  sp hybrids
+           IF (mr==1) ylm(ir) = bs2 * ( s(cost,phi) + px(cost,phi) )
+           IF (mr==2) ylm(ir) = bs2 * ( s(cost,phi) - px(cost,phi) )
+        ENDIF
+        IF (l==-2) THEN  !  sp2 hybrids
+           IF (mr==1) ylm(ir) = bs3*s(cost,phi)-bs6*px(cost,phi)+bs2*py(cost,phi)
+           IF (mr==2) ylm(ir) = bs3*s(cost,phi)-bs6*px(cost,phi)-bs2*py(cost,phi)
+           IF (mr==3) ylm(ir) = bs3*s(cost,phi) +2.d0*bs6*px(cost,phi)
+        ENDIF
+        IF (l==-3) THEN  !  sp3 hybrids
+           IF (mr==1) ylm(ir) = 0.5d0*(s(cost,phi)+px(cost,phi)+py(cost,phi)+p_z(cost,phi))
+           IF (mr==2) ylm(ir) = 0.5d0*(s(cost,phi)+px(cost,phi)-py(cost,phi)-p_z(cost,phi))
+           IF (mr==3) ylm(ir) = 0.5d0*(s(cost,phi)-px(cost,phi)+py(cost,phi)-p_z(cost,phi))
+           IF (mr==4) ylm(ir) = 0.5d0*(s(cost,phi)-px(cost,phi)-py(cost,phi)+p_z(cost,phi))
+        ENDIF
+        IF (l==-4) THEN  !  sp3d hybrids
+           IF (mr==1) ylm(ir) = bs3*s(cost,phi)-bs6*px(cost,phi)+bs2*py(cost,phi)
+           IF (mr==2) ylm(ir) = bs3*s(cost,phi)-bs6*px(cost,phi)-bs2*py(cost,phi)
+           IF (mr==3) ylm(ir) = bs3*s(cost,phi) +2.d0*bs6*px(cost,phi)
+           IF (mr==4) ylm(ir) = bs2*p_z(cost,phi)+bs2*dz2(cost,phi)
+           IF (mr==5) ylm(ir) =-bs2*p_z(cost,phi)+bs2*dz2(cost,phi)
+        ENDIF
+        IF (l==-5) THEN  ! sp3d2 hybrids
+           IF (mr==1) ylm(ir) = bs6*s(cost,phi)-bs2*px(cost,phi)-bs12*dz2(cost,phi)+.5d0*dx2my2(cost,phi)
+           IF (mr==2) ylm(ir) = bs6*s(cost,phi)+bs2*px(cost,phi)-bs12*dz2(cost,phi)+.5d0*dx2my2(cost,phi)
+           IF (mr==3) ylm(ir) = bs6*s(cost,phi)-bs2*py(cost,phi)-bs12*dz2(cost,phi)-.5d0*dx2my2(cost,phi)
+           IF (mr==4) ylm(ir) = bs6*s(cost,phi)+bs2*py(cost,phi)-bs12*dz2(cost,phi)-.5d0*dx2my2(cost,phi)
+           IF (mr==5) ylm(ir) = bs6*s(cost,phi)-bs2*p_z(cost,phi)+bs3*dz2(cost,phi)
+           IF (mr==6) ylm(ir) = bs6*s(cost,phi)+bs2*p_z(cost,phi)+bs3*dz2(cost,phi)
+        ENDIF
+  
+     ENDDO
+  
+     RETURN
+   end subroutine ylm_wannier
+  
+    !======== l = 0 =====================================================================
+     FUNCTION s(cost,phi)
+       IMPLICIT NONE
+       FLOAT :: s, cost,phi
+       s = 1.d0/ sqrt((M_FOUR*M_PI))
+       RETURN
+    END FUNCTION s
+    !======== l = 1 =====================================================================
+    FUNCTION p_z(cost,phi)
+       IMPLICIT NONE
+       FLOAT ::p_z, cost,phi
+       p_z =  sqrt(3.d0/(M_FOUR*M_PI)) * cost
+       RETURN
+    END FUNCTION p_z
+    FUNCTION px(cost,phi)
+       IMPLICIT NONE
+       FLOAT ::px, cost, phi, sint
+       sint = sqrt(abs(1.d0 - cost*cost))
+       px =  sqrt(3.d0/(M_FOUR*M_PI)) * sint * cos(phi)
+       RETURN
+    END FUNCTION px
+    FUNCTION py(cost,phi)
+       IMPLICIT NONE
+       FLOAT ::py, cost, phi, sint
+       sint = sqrt(abs(1.d0 - cost*cost))
+       py =  sqrt(3.d0/(M_FOUR*M_PI)) * sint * sin(phi)
+       RETURN
+    END FUNCTION py
+    !======== l = 2 =====================================================================
+    FUNCTION dz2(cost,phi)
+       IMPLICIT NONE
+       FLOAT ::dz2, cost, phi
+       dz2 =  sqrt(1.25d0/(M_FOUR*M_PI)) * (3.d0* cost*cost-1.d0)
+       RETURN
+    END FUNCTION dz2
+    FUNCTION dxz(cost,phi)
+       IMPLICIT NONE
+       FLOAT ::dxz, cost, phi, sint
+       sint = sqrt(abs(1.d0 - cost*cost))
+       dxz =  sqrt(15.d0/(M_FOUR*M_PI)) * sint*cost * cos(phi)
+       RETURN
+    END FUNCTION dxz
+    FUNCTION dyz(cost,phi)
+       IMPLICIT NONE
+       FLOAT ::dyz, cost, phi, sint
+       sint = sqrt(abs(1.d0 - cost*cost))
+       dyz =  sqrt(15.d0/(M_FOUR*M_PI)) * sint*cost * sin(phi)
+       RETURN
+    END FUNCTION dyz
+    FUNCTION dx2my2(cost,phi)
+       IMPLICIT NONE
+       FLOAT ::dx2my2, cost, phi, sint
+       sint = sqrt(abs(1.d0 - cost*cost))
+       dx2my2 =  sqrt(3.75d0/(M_FOUR*M_PI)) * sint*sint * cos(2.d0*phi)
+       RETURN
+    END FUNCTION dx2my2
+    FUNCTION dxy(cost,phi)
+       IMPLICIT NONE
+       FLOAT ::dxy, cost, phi, sint
+       sint = sqrt(abs(1.d0 - cost*cost))
+       dxy =  sqrt(3.75d0/(M_FOUR*M_PI)) * sint*sint * sin(2.d0*phi)
+       RETURN
+    END FUNCTION dxy
+    !======== l = 3 =====================================================================
+    FUNCTION fz3(cost,phi)
+       IMPLICIT NONE
+       FLOAT ::fz3, cost, phi
+       fz3 =  0.25d0*sqrt(7.d0/M_PI) * ( 5.d0 * cost * cost - 3.d0 ) * cost
+       RETURN
+    END FUNCTION fz3
+    FUNCTION fxz2(cost,phi)
+       IMPLICIT NONE
+       FLOAT ::fxz2, cost, phi, sint
+       sint = sqrt(abs(1.d0 - cost*cost))
+       fxz2 =  0.25d0*sqrt(10.5d0/M_PI) * ( 5.d0 * cost * cost - 1.d0 ) * sint * cos(phi)
+       RETURN
+    END FUNCTION fxz2
+    FUNCTION fyz2(cost,phi)
+       IMPLICIT NONE
+       FLOAT ::fyz2, cost, phi, sint
+       sint = sqrt(abs(1.d0 - cost*cost))
+       fyz2 =  0.25d0*sqrt(10.5d0/M_PI) * ( 5.d0 * cost * cost - 1.d0 ) * sint * sin(phi)
+       RETURN
+    END FUNCTION fyz2
+    FUNCTION fzx2my2(cost,phi)
+       IMPLICIT NONE
+       FLOAT ::fzx2my2, cost, phi, sint
+       sint = sqrt(abs(1.d0 - cost*cost))
+       fzx2my2 =  0.25d0*sqrt(105d0/M_PI) * sint * sint * cost * cos(2.d0*phi)
+       RETURN
+    END FUNCTION fzx2my2
+    FUNCTION fxyz(cost,phi)
+       IMPLICIT NONE
+       FLOAT ::fxyz, cost, phi, sint
+       sint = sqrt(abs(1.d0 - cost*cost))
+       fxyz =  0.25d0*sqrt(105d0/M_PI) * sint * sint * cost * sin(2.d0*phi)
+       RETURN
+    END FUNCTION fxyz
+    FUNCTION fxx2m3y2(cost,phi)
+       IMPLICIT NONE
+       FLOAT ::fxx2m3y2, cost, phi, sint
+       sint = sqrt(abs(1.d0 - cost*cost))
+       fxx2m3y2 =  0.25d0*sqrt(17.5d0/M_PI) * sint * sint * sint * cos(3.d0*phi)
+       RETURN
+    END FUNCTION fxx2m3y2
+    FUNCTION fy3x2my2(cost,phi)
+       IMPLICIT NONE
+       FLOAT ::fy3x2my2, cost, phi, sint
+       sint = sqrt(abs(1.d0 - cost*cost))
+       fy3x2my2 =  0.25d0*sqrt(17.5d0/M_PI) * sint * sint * sint * sin(3.d0*phi)
+       RETURN
+    END FUNCTION fy3x2my2
+  
 end program wannier90_interface
 
 !! Local Variables:
