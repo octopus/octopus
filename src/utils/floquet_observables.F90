@@ -1128,6 +1128,10 @@ contains
                   if (ista >= istb .and. idir == jdir) cycle
                   
                   DE = dressed_st%eigenval(istb,ik) - dressed_st%eigenval(ista,ik)
+                  
+                  ! Skip divergence 
+                  if (DE < M_EPSILON) cycle                  
+                  
                   !Cut out all the components suppressed by small occupations 
                   if ((dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik))/DE < 1E-14) cycle
 
@@ -1139,7 +1143,8 @@ contains
                   melba(:) = M_z0
                                    
                   norm = (hm%F%order(2)-hm%F%order(1))
-                  if (norm == 0) norm = M_ONE                  
+                  if (norm == 0) norm = M_ONE  
+                                  
                   ! get the dipole matrix elements <<psi_a|J|psi_b >>
                   do im=hm%F%order(1),hm%F%order(2)
                     imm = im - hm%F%order(1) + 1
