@@ -22,9 +22,11 @@ program floquet_observables
   use calc_mode_par_oct_m
   use comm_oct_m
   use command_line_oct_m
+  use current_oct_m
   use geometry_oct_m
   use fft_oct_m
   use floquet_oct_m
+  use gauge_field_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
@@ -54,6 +56,7 @@ program floquet_observables
   use unit_system_oct_m
   use utils_oct_m
   use varinfo_oct_m
+  use xc_oct_m
   
   implicit none
 
@@ -64,6 +67,7 @@ program floquet_observables
     FLOAT   :: gamma ! lifetime
     integer :: nst (1:2) ! states output limits
     integer :: nkpt(1:2) ! kpoints output limits
+    integer :: gauge  ! the gauge used to calculate observables 
   end type fobs_t
 
 
@@ -104,6 +108,10 @@ program floquet_observables
   
   call system_init(sys)
   
+  call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, &
+                        sys%ks%xc_flags, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
+  
+  
 
   call floquet_init(sys,hm%F,sys%st%d%dim)
   gs_st => sys%st
@@ -136,11 +144,15 @@ program floquet_observables
   !% Calculate the HHG spectrum.
   !%Option f_wfs bit(7)
   !% Output Floquet states in the format defined by OutputFormat.
+  !%Option f_conductivity bit(8)
+  !% Calculate Floquet optical conductivity.
   !%End
   call parse_variable('FloquetObservableCalc', out_what, out_what)
   
 
   ! load floquet states only for certain tasks
+  ! Note: this way it makes impossible to combine options that needs all the Floquet 
+  ! states with the ones that don't UDG
   if(.not. (iand(out_what, OPTION__FLOQUETOBSERVABLECALC__F_TD_SPIN) /= 0) .and. &
      .not. (iand(out_what, OPTION__FLOQUETOBSERVABLECALC__F_WFS) /= 0) ) then
        call states_allocate_wfns(dressed_st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX)
@@ -148,6 +160,26 @@ program floquet_observables
        call messages_write('Read Floquet restart files.')
        call messages_info()
   end if
+  
+  !%Variable FloquetObservableGauge
+  !%Type flag
+  !%Default guess
+  !%Section Utilities::oct-floquet_observables
+  !%Description
+  !% Selects the gauge to be used for the calculation of the dipole matrix elements.
+  !% By default is chosen according to the laser field used.
+  !%Option f_velocity 1
+  !% The velocity gauge (use the current operator): <i|J|j> ~ <i|p.A|j> .
+  !%Option f_lenght 2
+  !% The length gauge: <i|r.E|j>.
+  !%End
+  obs%gauge = OPTION__FLOQUETOBSERVABLEGAUGE__F_LENGHT
+  if (gauge_field_is_applied(hm%ep%gfield) .or. simul_box_is_periodic(sys%gr%sb)) & 
+      obs%gauge = OPTION__FLOQUETOBSERVABLEGAUGE__F_VELOCITY
+
+  call parse_variable('FloquetObservableGauge', obs%gauge, obs%gauge)
+  call messages_print_var_option(stdout,'FloquetObservableGauge', obs%gauge)
+  
   
   !%Variable FloquetObservableEnergyMax
   !%Type float
@@ -270,9 +302,16 @@ program floquet_observables
     call out_floquet_wfs()
   end if
 
+  if(iand(out_what, OPTION__FLOQUETOBSERVABLECALC__F_CONDUCTIVITY) /= 0) then
+    call messages_write('Calculate Floquet optical conductivity.')
+    call messages_info()
+
+    call calc_floquet_conductivity()
+  end if
+
 
   
-
+  call hamiltonian_end(hm)
   call system_end(sys)
   call fft_all_end()
   call io_end()
@@ -630,9 +669,9 @@ contains
     integer, allocatable :: mm(:), nn(:), alpha(:), beta(:), idx(:)
     
     integer :: idim, im, in, ista, istb, ik, itot, ii, i, imm, inn, spindim
-    FLOAT   :: omega, DE
-    CMPLX   :: tmp(4)
-    integer :: iunit
+    FLOAT   :: omega, DE, wmax
+    CMPLX   :: tmp(1:4), tmp2(1:3,1:hm%F%spindim)
+    integer :: iunit, wpow
     character(len=1024):: filename, iter_name
     
     PUSH_SUB(calc_floquet_hhg_weights)
@@ -640,6 +679,13 @@ contains
     spindim = hm%F%spindim 
     
     itot = dressed_st%d%kpt%nglobal * dressed_st%nst**2 * hm%F%floquet_dim**2
+    
+    select case (obs%gauge)
+    case (OPTION__FLOQUETOBSERVABLEGAUGE__F_VELOCITY)
+      wpow = 2 
+    case (OPTION__FLOQUETOBSERVABLEGAUGE__F_LENGHT)
+      wpow = 4      
+    end select    
     
     SAFE_ALLOCATE(mel(1:itot, 1:3))
     SAFE_ALLOCATE(ediff(1:itot))
@@ -691,48 +737,83 @@ contains
                 ediff(ii) = DE + (in-im)*hm%F%omega
                 
                 ! get the dipole matrix elements 
-                mel(ii,:) = M_z0
-                do idim=1,spindim
-                  call zmf_multipoles(sys%gr%mesh, conjg(u_ma(:,(imm-1)*spindim+idim)) &
-                                                       * u_nb(:,(inn-1)*spindim+idim) , 1, tmp(:))
+                  select case (obs%gauge)
+                  case (OPTION__FLOQUETOBSERVABLEGAUGE__F_VELOCITY)
+                    call current_calculate_mel(sys%gr%der, hm, sys%geo, &
+                                               u_ma(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) ,&
+                                               u_nb(:,(inn-1)*spindim+1: (inn-1)*spindim +spindim) , &
+                                               ik, tmp2(:,:))
+                    mel(ii,:) = M_z0
+                    do idim=1,spindim
+                      mel(ii,1:3) = mel(ii, 1:3) + tmp2(1:3,idim)/ (hm%F%order(2)-hm%F%order(1))
+                    end do
+                      
+                  case (OPTION__FLOQUETOBSERVABLEGAUGE__F_LENGHT)
+                    mel(ii,:) = M_z0
+                    do idim=1,spindim
+                      call zmf_multipoles(sys%gr%mesh, conjg(u_ma(:,(imm-1)*spindim+idim)) &
+                                                           * u_nb(:,(inn-1)*spindim+idim) , 1, tmp(:))
+
+                      mel(ii,1:3) = mel(ii, 1:3) + tmp(2:4)/ (hm%F%order(2)-hm%F%order(1))
+                    end do
+                  end select
                   
-                  mel(ii,1:3) = mel(ii, 1:3) + tmp(2:4)/ (hm%F%order(2)-hm%F%order(1))
-                end do
                 
                 fab(ii) = dressed_st%occ(istb,ik) * dressed_st%occ(ista,ik)
-                weight(ii) = sum(abs(mel(ii,1:3))**2) * dressed_st%occ(istb,ik) * dressed_st%occ(ista,ik) *ediff(ii)**4 
+                weight(ii) = sum(abs(mel(ii,1:3))**2) * dressed_st%occ(istb,ik) * dressed_st%occ(ista,ik) *ediff(ii)**wpow 
                 
-!                 idx(ii)=ii
+                weight(ii) = weight(ii) * dressed_st%d%kweights(ik)
+                
                 ii = ii + 1
               end do
             end do
             
           end do    
         end do    
-
+        
     end do
     
+    if(dressed_st%parallel_in_states .or. dressed_st%d%kpt%parallel) then
+      call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm,  weight(:))
+    end if
+    
+    
     call sort(ediff(:), idx(:))
+    
+    wmax = maxval(weight(:))
     
     if(mpi_grp_is_root(mpi_world)) then
       write(iter_name,'(i4)') hm%F%iter
       filename = FLOQUET_DIR//'/floquet_hhg_w_'//trim(adjustl(iter_name))
       iunit = io_open(filename, action='write')
     
-      write(iunit, '(a1,10a15)') '#', str_center("w", 15), str_center("strenght(w)", 15),&
-                                     str_center("alpha", 15), str_center("beta", 15),&
-                                     str_center("m", 15), str_center("n", 15),&
-                                     str_center("|<u_ma|x|u_nb>|", 15), str_center("|<u_ma|y|u_nb>|", 15),&
-                                     str_center("|<u_ma|z|u_nb>|", 15), str_center("f_a*f_b", 15)
+      select case (obs%gauge)
+      case (OPTION__FLOQUETOBSERVABLEGAUGE__F_VELOCITY)
+        write(iunit, '(a1,10a15)') '#', str_center("w", 15), str_center("strenght(w)", 15),&
+                                       str_center("alpha", 15), str_center("beta", 15),&
+                                       str_center("m", 15), str_center("n", 15),&
+                                       str_center("|<u_ma|ix|u_nb>|", 15), str_center("|<u_ma|iy|u_nb>|", 15),&
+                                       str_center("|<u_ma|iz|u_nb>|", 15), str_center("f_a*f_b", 15)
+          
+      case (OPTION__FLOQUETOBSERVABLEGAUGE__F_LENGHT)
+
+        write(iunit, '(a1,10a15)') '#', str_center("w", 15), str_center("strenght(w)", 15),&
+                                       str_center("alpha", 15), str_center("beta", 15),&
+                                       str_center("m", 15), str_center("n", 15),&
+                                       str_center("|<u_ma|x|u_nb>|", 15), str_center("|<u_ma|y|u_nb>|", 15),&
+                                       str_center("|<u_ma|z|u_nb>|", 15), str_center("f_a*f_b", 15)
+      end select
+    
      
       write(iunit, '(a1,2a15)') &
         '#', str_center('['//trim(units_abbrev(units_out%energy)) // ']', 15), &
         str_center('['//trim(units_abbrev(units_out%length))//'/(' &
           //trim(units_abbrev(units_out%time**2))//')]', 15)
       
-      
+      wmax = maxval(weight(:))      
+
       do ii = 1, itot
-        if (weight(idx(ii)) > CNST(1E-14) .and.  ediff(ii) > M_ZERO) then
+        if (weight(idx(ii))/wmax > CNST(1E-6) .and.  ediff(ii) > M_ZERO) then
           write(iunit, '(1x,2es15.6)', advance='no') units_from_atomic(units_out%energy, ediff(ii)) , weight(idx(ii))  
           write(iunit, '(4i15)', advance='no') alpha(idx(ii)) , beta(idx(ii)), mm(idx(ii)), nn(idx(ii))
           write(iunit, '(4es15.6)') abs(mel(idx(ii),1)),abs(mel(idx(ii),2)),abs(mel(idx(ii),3)), fab(idx(ii))
@@ -763,15 +844,24 @@ contains
     CMPLX, allocatable   :: u_ma(:,:), u_nb(:,:)
     FLOAT, allocatable   :: spect(:,:)
     
-    integer :: idim, im, in, ista, istb, ik, itot, ii, i, imm, inn, spindim, ie
+    integer :: idim, im, in, ista, istb, ik, itot, ii, i, imm, inn, spindim, ie, dim
     FLOAT   :: omega, DE, ediff, EE
-    CMPLX   :: tmp(4), ampl(1:3), mel(1:3)
-    integer :: iunit
+    CMPLX   :: tmp(1:4), ampl(1:3), mel(1:3), tmp2(1:3,1:hm%F%spindim)
+    integer :: iunit, wpow
     character(len=1024):: filename, iter_name
     
     PUSH_SUB(calc_floquet_hhg)
     
     spindim = hm%F%spindim 
+    dim = sys%gr%sb%dim
+
+    select case (obs%gauge)
+    case (OPTION__FLOQUETOBSERVABLEGAUGE__F_VELOCITY)
+      wpow = 2 
+    case (OPTION__FLOQUETOBSERVABLEGAUGE__F_LENGHT)
+      wpow = 4      
+    end select    
+    
     
     itot = dressed_st%d%kpt%nglobal * dressed_st%nst**2 * hm%F%floquet_dim**2
     
@@ -781,6 +871,8 @@ contains
     SAFE_ALLOCATE(u_nb(1:sys%gr%mesh%np, hm%F%floquet_dim))
 
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, obs%ne)
+    
+    spect(:,:) = M_ZERO
 
     do ie = 1, obs%ne
       EE= ie * obs%de
@@ -793,8 +885,9 @@ contains
             call states_get_state(dressed_st, sys%gr%mesh, ista, ik, u_ma)
           
             do istb=dressed_st%st_start, dressed_st%st_end
-
-!               if (dressed_st%occ(istb,ik) * dressed_st%occ(ista,ik) < 1E-18) cycle
+              
+              !Cut out all the component suppressed by small occupations 
+              if (dressed_st%occ(istb,ik) * dressed_st%occ(ista,ik) < 1E-14) cycle
 
               call states_get_state(dressed_st, sys%gr%mesh, istb, ik, u_nb)
             
@@ -808,27 +901,50 @@ contains
                   imm = im - hm%F%order(1) + 1
 
                   ediff = DE + (in-im)*hm%F%omega
+                  
                 
                   ! get the dipole matrix elements 
-                  do idim=1,spindim
-                    call zmf_multipoles(sys%gr%mesh, conjg(u_ma(:,(imm-1)*spindim+idim)) &
-                                                         * u_nb(:,(inn-1)*spindim+idim) , 1, tmp(:))
+                  select case (obs%gauge)
+                  case (OPTION__FLOQUETOBSERVABLEGAUGE__F_VELOCITY)
+                    call current_calculate_mel(sys%gr%der, hm, sys%geo, &
+                                               u_ma(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) ,&
+                                               u_nb(:,(inn-1)*spindim+1: (inn-1)*spindim +spindim) , &
+                                               ik, tmp2(:,:))
+                    mel(:) = M_z0
+                    do idim=1,spindim
+                      mel(1:3) = mel( 1:3) + tmp2(1:3,idim)/ (hm%F%order(2)-hm%F%order(1))
+                    end do
+                      
+                  case (OPTION__FLOQUETOBSERVABLEGAUGE__F_LENGHT)                  
+                    mel(:) = M_z0
+                    do idim=1,spindim
+                      call zmf_multipoles(sys%gr%mesh, conjg(u_ma(:,(imm-1)*spindim+idim)) &
+                                                           * u_nb(:,(inn-1)*spindim+idim) , 1, tmp(:))
                   
-                    mel(1:3) = mel(1:3) + tmp(2:4)/(hm%F%order(2)-hm%F%order(1))
-                  end do
-                  ampl(1:3) = ampl(1:3)+ mel(1:3) * dressed_st%occ(istb,ik) * dressed_st%occ(ista,ik) &
+                      mel(1:dim) = mel(1:dim) + tmp(2:2+dim-1)/(hm%F%order(2)-hm%F%order(1))
+                    end do
+                  end select
+                  
+                  ampl(1:dim) = ampl(1:dim)+ mel(1:dim) * dressed_st%occ(istb,ik) * dressed_st%occ(ista,ik) &
                                          * aimag(1/(EE - ediff  + M_zi*obs%gamma))
 !                   print *, ampl(1:3), ediff
                 
                 end do
+                
               end do
-            
             end do    
+            
           end do    
+          
+          ampl(1:dim) = ampl(1:dim) * dressed_st%d%kweights(ik)
 
       end do
       
-      spect(ie,1:3) = abs(ampl(1:3))**2 *EE**4 
+      if(dressed_st%parallel_in_states .or. dressed_st%d%kpt%parallel) then
+        call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm,  ampl(:))
+      end if
+      
+      spect(ie,1:dim) = abs(ampl(1:dim))**2 *EE**wpow 
       
       if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ie, obs%ne)
       
@@ -871,10 +987,10 @@ contains
   subroutine out_floquet_wfs()
     
 
-    integer :: ik, ist, fdim 
+    integer :: ik, ist, fdim, spindim , im, imm
     integer :: nik, dim, nst, itot
     CMPLX, allocatable  ::  zpsi(:)
-    character(len=512)  ::  str3
+    character(len=512)  ::  str3, str4
     type(unit_t) :: fn_unit
     
     integer :: how
@@ -885,6 +1001,7 @@ contains
 
     fn_unit = units_out%length**(-sys%gr%mesh%sb%dim)
 
+    spindim = hm%F%spindim 
 
 
     ! prepare restart structure
@@ -905,17 +1022,31 @@ contains
         write(str2,'(I5)') ist
 
         ! read the floquet wavefunction for states ik,ist
-        do fdim = 1, dressed_st%d%dim
-           itot = fdim + (ist-1)*dressed_st%d%dim +  (ik-1)*dressed_st%nst*dressed_st%d%dim 
-           write(filename,'(i10.10)') itot
-           call zrestart_read_mesh_function(restart, trim(adjustl(filename)), sys%gr%mesh, zpsi, ierr)
+        do im=hm%F%order(1),hm%F%order(2)
+           imm = im - hm%F%order(1) + 1
+           do idim=1,spindim
+             fdim = (imm-1)*spindim+idim 
+             itot = fdim + (ist-1)*dressed_st%d%dim +  (ik-1)*dressed_st%nst*dressed_st%d%dim
+             write(filename,'(i10.10)') itot
+             ierr = 0
+             call zrestart_read_mesh_function(restart, trim(adjustl(filename)), sys%gr%mesh, zpsi, ierr)
 
-           print *, ierr, trim(adjustl(filename)), ik, ist, fdim
+             if (ierr > 0) then
+               write(message(1),'(2a)') "Failed to read from restart file ", trim(filename)
+               call messages_warning(2)
+               cycle
+             end if
 
-           write(str3,'(I5)') fdim - hm%F%order(1) - 1
-           filename = 'wfn_ik_'//trim(adjustl(str))//'_ist_'//trim(adjustl(str2))//'_m_'//trim(adjustl(str3))
-           call zio_function_output(how, FLOQUET_DIR, filename, sys%gr%mesh, zpsi, fn_unit, ierr)
-           
+             write(str3,'(I5)') im
+             if(spindim>1) then
+               filename = 'wfn_is_'//trim(adjustl(str4))//'_ik_'//trim(adjustl(str))//'_ist_'&
+                                   //trim(adjustl(str2))//'_m_'//trim(adjustl(str3))
+             else
+               filename = 'wfn_ik_'//trim(adjustl(str))//'_ist_'//trim(adjustl(str2))//'_m_'//trim(adjustl(str3))
+             end if
+             
+             call zio_function_output(how, FLOQUET_DIR, filename, sys%gr%mesh, zpsi, fn_unit, ierr)
+           end do
         end do
 
 
@@ -930,6 +1061,201 @@ contains
     
     POP_SUB(out_floquet_wfs)
   end subroutine out_floquet_wfs
+
+
+  subroutine calc_floquet_conductivity()
+    
+    CMPLX, allocatable   :: u_ma(:,:), u_mb(:,:), sigma(:,:,:)
+    FLOAT, allocatable   :: spect(:,:)
+    
+    integer :: idim, im, in, ista, istb, ik, itot, ii, i, imm, inn, spindim, ie, dim
+    FLOAT   :: omega, DE, ediff, EE
+    CMPLX   :: melba(1:3), melab(1:3), tmp2(1:3,1:hm%F%spindim)
+    integer :: iunit, idir, jdir, dir
+    character(len=1024):: filename, iter_name, str
+    
+    PUSH_SUB(calc_floquet_conductivity)
+    
+    spindim = hm%F%spindim 
+    dim = sys%gr%sb%dim
+
+    
+    
+    itot = dressed_st%d%kpt%nglobal * dressed_st%nst**2 * hm%F%floquet_dim**2
+    
+    SAFE_ALLOCATE(sigma(1:obs%ne,1:3,1:3))
+    
+    SAFE_ALLOCATE(u_ma(1:sys%gr%mesh%np, hm%F%floquet_dim))
+    SAFE_ALLOCATE(u_mb(1:sys%gr%mesh%np, hm%F%floquet_dim))
+
+    
+    sigma(:,:,:) = M_z0
+
+    do idir = 1, 2 
+      do jdir = idir, 2 
+
+
+        write(message(1),'(a,i5,a,i5,a)') 'Calculate sigma(',idir,',', jdir,'):'
+        call messages_info(1)
+        
+        
+        if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, obs%ne)
+        
+        do ie = 1, obs%ne
+          EE= ie * obs%de
+
+          sigma(ie,idir,jdir) = M_z0
+    
+          do ik=dressed_st%d%kpt%start, dressed_st%d%kpt%end
+
+              do ista=dressed_st%st_start, dressed_st%st_end
+                call states_get_state(dressed_st, sys%gr%mesh, ista, ik, u_ma)
+        
+                do istb=dressed_st%st_start, dressed_st%st_end
+            
+                  if (ista == istb .and. idir /= jdir) cycle
+                  
+                  if (ista >= istb .and. idir == jdir) cycle
+                  
+                  !Cut out all the components suppressed by small occupations 
+                  if (dressed_st%occ(istb,ik) < 1E-14) cycle
+
+                  call states_get_state(dressed_st, sys%gr%mesh, istb, ik, u_mb)
+          
+                  DE = dressed_st%eigenval(istb,ik) - dressed_st%eigenval(ista,ik)
+
+                  if (idir /= jdir) then  !off diagonal terms first      
+                   
+                    melab(:) = M_z0
+                    melba(:) = M_z0
+                                      
+                    ! get the dipole matrix elements <<psi_a|J|psi_b >>
+                    do im=hm%F%order(1),hm%F%order(2)
+                      imm = im - hm%F%order(1) + 1
+            
+                      !<u_ma| J | u_mb>
+                      call current_calculate_mel(sys%gr%der, hm, sys%geo, &
+                                                 u_ma(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) ,&
+                                                 u_mb(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) , &
+                                                 ik, tmp2(:,:))
+                      do dir=1,dim
+                        melab(dir) = melab(dir) + sum(tmp2(dir,1:spindim))/ (hm%F%order(2)-hm%F%order(1))
+                      end do
+                  
+                      !<u_mb| J | u_ma>
+                      call current_calculate_mel(sys%gr%der, hm, sys%geo, &
+                                                 u_mb(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) ,&
+                                                 u_ma(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) , &
+                                                 ik, tmp2(:,:))
+                      do dir=1,dim
+                        melba(dir) = melba(dir) + sum(tmp2(dir,1:spindim))/ (hm%F%order(2)-hm%F%order(1))
+                      end do
+                  
+                    end do ! im loop
+
+                    sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + & 
+                                          melab(idir)*melba(jdir) * 1/(DE + EE + M_zi*obs%gamma) + &
+                                          melab(jdir)*melba(idir) * 1/(DE - EE + M_zi*obs%gamma) 
+
+                    sigma(ie,idir,jdir) = (-M_zI) * sigma(ie,idir,jdir) * dressed_st%occ(istb,ik)/DE
+
+
+                  else  ! diagonal terms idir=jdir 
+
+                    melab(:) = M_z0
+                                      
+                    ! get the dipole matrix elements <<psi_a|J|psi_b >>
+                    do im=hm%F%order(1),hm%F%order(2)
+                      imm = im - hm%F%order(1) + 1
+            
+                      !<u_ma| J | u_mb>
+                      call current_calculate_mel(sys%gr%der, hm, sys%geo, &
+                                                 u_ma(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) ,&
+                                                 u_mb(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) , &
+                                                 ik, tmp2(:,:))
+                      do dir=1,dim
+                        melab(dir) = melab(dir) + sum(tmp2(dir,1:spindim))/ (hm%F%order(2)-hm%F%order(1))
+                      end do
+                  
+                    end do ! im loop
+
+                    sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + & 
+                                          abs(melab(idir))**2 * 1/(DE - EE + M_zi*obs%gamma) 
+
+                    sigma(ie,idir,jdir) =  M_zI * sigma(ie,idir,jdir) * &
+                                          (dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik))/DE
+                    
+                  end if
+                  
+                end do ! istb loop   
+              end do ! ista loop   
+
+              
+              sigma(ie,idir,jdir) = sigma(ie,idir,jdir) * dressed_st%d%kweights(ik)
+             
+            end do ! ik loop
+          
+          
+
+          if(dressed_st%parallel_in_states .or. dressed_st%d%kpt%parallel) then
+            call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm,  sigma(ie,idir,jdir))
+          end if
+                  
+          if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ie, obs%ne)
+          
+        end do ! ie loop
+
+        if(mpi_grp_is_root(mpi_world)) write(*, "(1x)")
+        
+      end do            
+    end do
+    
+    
+    if(mpi_grp_is_root(mpi_world)) then
+      write(iter_name,'(i4)') hm%F%iter
+      filename = FLOQUET_DIR//'/floquet_conductivity_'//trim(adjustl(iter_name))
+      iunit = io_open(filename, action='write')
+
+      write(iunit, '(a1,a15)', advance = 'no') '#', str_center("w", 15)
+    
+      do idir = 1, 2 
+        do jdir = idir, 2 
+          write(str, '(a,i1,a,i1 ,a)') 'sigma(',idir,',', jdir,')'
+          write(iunit, '(2a15)', advance = 'no' )  str_center('Re['//trim(str)//']', 15),& 
+                                                   str_center('Im['//trim(str)//']', 15)
+        end do 
+      end do
+      write(iunit, '(1x)')
+
+                            
+      write(iunit, '(a1,1a15)') &
+            '#', str_center('['//trim(units_abbrev(units_out%energy)) // ']', 15)
+      
+      
+      do ie = 1, obs%ne
+        EE = ie * obs%de
+        
+        write(iunit, '(1x,es15.6)', advance = 'no') units_from_atomic(units_out%energy, EE)         
+        do idir = 1, 2 
+          do jdir = idir, 2 
+        
+            write(iunit, '(2es15.6)', advance ='no') real(sigma(ie,idir,jdir)), aimag(sigma(ie,idir,jdir))
+          end do
+        end do
+        write(iunit, '(1x)')
+          
+      end do  
+    
+      call io_close(iunit)
+    end if
+    
+    SAFE_DEALLOCATE_A(sigma)
+    
+    SAFE_DEALLOCATE_A(u_ma)
+    SAFE_DEALLOCATE_A(u_mb)
+
+    POP_SUB(calc_floquet_conductivity)    
+  end subroutine calc_floquet_conductivity
 
 
 

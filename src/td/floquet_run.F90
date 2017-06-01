@@ -69,7 +69,8 @@ contains
   subroutine floquet_run_init()
     PUSH_SUB(floquet_run_init)
 
-    call calc_mode_par_set_parallelization(P_STRATEGY_OTHER, default = .true.)
+!     call calc_mode_par_set_parallelization(P_STRATEGY_OTHER, default = .true.)
+    call calc_mode_par_set_parallelization(P_STRATEGY_OTHER, default = .false.) ! enabled not by default
 
     POP_SUB(floquet_run_init)
   end subroutine floquet_run_init

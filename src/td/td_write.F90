@@ -2568,7 +2568,7 @@ contains
       end do
 
       do idir = 1, gr%mesh%sb%dim
-        write(aux, '(a2,i1,a1)') 'IntAbs(j)(', idir, ')'
+        write(aux, '(a,i1,a1)') 'IntAbs(j)(', idir, ')'
         call write_iter_header(out_total_current, aux)
       end do
       

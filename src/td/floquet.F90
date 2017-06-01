@@ -161,6 +161,20 @@ contains
     
     if (this%mode == FLOQUET_INTERACTING)  this%sample = .true.
     
+    !%Variable TDFloquetInitialization
+    !%Type flag
+    !%Default gs
+    !%Section Floquet
+    !%Description
+    !% Floquet diagonalization intial guess.
+    !%Option f_gs 0
+    !% Use ground state wavefunctions.
+    !%Option f_rand  1
+    !% Use random wavefunctions.
+    !%End
+    call parse_variable('TDFloquetInitialization', OPTION__TDFLOQUETINITIALIZATION__F_GS, this%init)
+    call messages_print_var_option(stdout, 'TDFloquetInitialization',  this%init)
+    
     !%Variable TDFloquetModeSampleOneCycle
     !%Type logical
     !%Default yes
@@ -633,9 +647,8 @@ contains
 
           call states_load(restart, dressed_st, gr, ierr, iter)
         else
-          ! this doesn't need to be fatal
           write(message(1),'(a)') 'Floquet restart structure not commensurate.'
-          call messages_fatal(1)
+          call messages_warning(1)
         end if
       end if
       
@@ -680,18 +693,24 @@ contains
       if(ierr == 0 .and. .not. fromScratch) then
          call states_berry_connection(FLOQUET_DIR,'floquet_berry_connection',dressed_st, gr,gr%sb)
       else
+        
+        ierr = 0 
+        if (hm%F%init == OPTION__TDFLOQUETINITIALIZATION__F_GS ) then
+          call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
 
-        call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
-
-        if(ierr == 0) call states_load(restart, sys%st, sys%gr, ierr, label = ": gs")
-        if (ierr /= 0) then
-          message(1) = 'Unable to read ground-state wavefunctions.'
-          message(2) = 'Floquet states will be randomly initialized.'
-          call messages_warning(2)
+          if(ierr == 0) call states_load(restart, sys%st, sys%gr, ierr, label = ": gs")
+          if (ierr /= 0) then
+            message(1) = 'Unable to read ground-state wavefunctions.'
+            message(2) = 'Floquet states will be randomly initialized.'
+            call messages_warning(2)
+          end if
+          call restart_end(restart)
         end if
-        call restart_end(restart)
         ! only use gs states for init, if they are not distributed
-        if(.not. st%parallel_in_states .and. ierr == 0 ) then
+        if(.not. st%parallel_in_states .and. ierr == 0 &
+           .and.  hm%F%init == OPTION__TDFLOQUETINITIALIZATION__F_GS) then
+           message(1) ='Info: Initialize Floquet states with gs wavefunctions'
+           call messages_info(1)
             ! initialize floquet states from scratch
             SAFE_ALLOCATE(temp_state1(1:gr%der%mesh%np,st%d%dim))
             SAFE_ALLOCATE(temp_state2(1:gr%der%mesh%np,hm%F%floquet_dim*st%d%dim))
@@ -711,6 +730,8 @@ contains
             SAFE_DEALLOCATE_A(temp_state1)
             SAFE_DEALLOCATE_A(temp_state2)
          else
+            message(1) ='Info: Initialize Floquet states with random wavefunctions'
+            call messages_info(1)
             ! randomize
             SAFE_ALLOCATE(temp_state1(1:gr%der%mesh%np,st%d%dim))
             SAFE_ALLOCATE(temp_state2(1:gr%der%mesh%np,hm%F%floquet_dim*st%d%dim))
@@ -828,7 +849,7 @@ contains
 
          
          write(iterstr,'(I5)') iter !hm%F_count
-         if (simul_box_is_periodic(gr%sb)) then
+         if (simul_box_is_periodic(gr%sb) .and. kpoints_have_zero_weight_path(gr%sb%kpoints)) then
            filename = 'floquet_multibands_'//trim(adjustl(iterstr))
 
            call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, gr%sb, filename)
@@ -838,10 +859,11 @@ contains
              call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, gr%sb, filename, vec = dressed_st%occ)
            end if
                      
+         else
+                      
+           filename = FLOQUET_DIR//'/floquet_eigenvalues_'//trim(adjustl(iterstr))
+           call states_write_eigenvalues(filename, dressed_st%nst, dressed_st, gr%sb, eigens%diff)
          end if
-         
-         filename = FLOQUET_DIR//'/floquet_eigenvalues_'//trim(adjustl(iterstr))
-         call states_write_eigenvalues(filename, dressed_st%nst, dressed_st, gr%sb, eigens%diff)
          
          call restart_init(restart, RESTART_FLOQUET, RESTART_TYPE_DUMP, &
                            sys%mc, ierr, gr%der%mesh)
@@ -933,20 +955,38 @@ contains
         sum_dr = sum(dressed_st%occ(:,ik))
         sum_gs = sum(gs_st%occ(:,ik))
         if( abs(sum_dr -sum_gs) > 1E-6) then
-          call messages_write('Occupations checksum failed for kpoint:')
+          call messages_write('Occupations checksum failed for kpoint = ')
           call messages_write(ik, fmt = '(i6)')
-          call messages_write('gs_occ = ')
-          call messages_write(sum_gs, fmt ='(e8.2)')
-          call messages_write('floquet_occ = ')
-          call messages_write(sum_dr, fmt ='(e8.2)')
+          call messages_write(':   gs_occ =  ')
+          call messages_write(sum_gs, fmt ='(f12.6)')
+          call messages_write('   floquet_occ =  ')
+          call messages_write(sum_dr, fmt ='(f12.6)')
           call messages_warning()
         end if
       enddo
       
-!       print *, "occsum = ", sum(dressed_st%occ(:,1))
-!       print *, "gs_occsum = ", sum(gs_st%occ(:,1))
-
-
+      
+      if(dressed_st%parallel_in_states .or. dressed_st%d%kpt%parallel) then
+        call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm,  dressed_st%occ(:,:))
+      end if
+      
+      
+      ! occupations checksum 
+      do ik=1, dressed_st%d%kpt%nglobal
+        sum_dr = sum(dressed_st%occ(:,ik))
+        sum_gs = sum(gs_st%occ(:,ik))
+        if( abs(sum_dr -sum_gs) > 1E-6) then
+          call messages_write('Occupations checksum failed for kpoint = ')
+          call messages_write(ik, fmt = '(i6)')
+          call messages_write(':   gs_occ =  ')
+          call messages_write(sum_gs, fmt ='(f12.6)')
+          call messages_write('   floquet_occ =  ')
+          call messages_write(sum_dr, fmt ='(f12.6)')
+          call messages_warning()
+        end if
+      enddo
+      
+      
       
       SAFE_DEALLOCATE_A(tmp)
       SAFE_DEALLOCATE_A(psi)
