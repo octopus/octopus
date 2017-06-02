@@ -209,19 +209,31 @@ oct_floquet_LDADD = $(top_builddir)/src/td/libtd.a \
 clean-local :
 	rm -rf *.dSYM
 
+
+# This is to generate the dependencies. It makes use of the makedepf90
+# program of Erik Edelmann
+# (http://www.helsinki.fi/~eedelman/makedepf90.html). It should be run
+# from time to time (just typing make depend within the src
+# directory), substituting the dependencies below by the resulting new
+# dependencies. (For normal compilation of octopus, there is
+# absolutely no need of installing makedepf90).
 depend:
 	@makedepf90 $(core_SRCS) $(oct_dielectric_function_SOURCES) $(oct_propagation_spectrum_SOURCES) $(oct_harmonic_spectrum_SOURCES) $(oct_xyz_anim_SOURCES) $(oct_casida_spectrum_SOURCES) $(oct_vibrational_spectrum_SOURCES) $(oct_infrared_spectrum_SOURCES) $(oct_center_geom_SOURCES) $(oct_help_SOURCES) $(oct_photoelectron_spectrum_SOURCES) $(oct_convert_SOURCES) $(oct_local_multipoles_SOURCES) $(oct_floquet_SOURCES)
 
+
+# DO NOT EDIT DIRECTLY --- use make depend to generate the dependencies and copy-paste the result here
+
+dielectric_function.o : dielectric_function.F90 
 propagation_spectrum.o : propagation_spectrum.F90 
 harmonic_spectrum.o : harmonic_spectrum.F90 
 xyzanim.o : xyzanim.F90 
 casida_spectrum.o : casida_spectrum.F90 
-phonon_spectrum.o : phonon_spectrum.F90 
+vibrational.o : vibrational.F90 
+infrared.o : infrared.F90 
 centergeom.o : centergeom.F90 
 help.o : help.F90 
-dielectric_function.o : dielectric_function.F90
-photoelectron_spectrum.o : photoelectron_spectrum.F90
-convert.o : convert.F90
-local_write.o : local_write.F90
-local_multipoles.o : local_multipoles.F90 local_write.o
+photoelectron_spectrum.o : photoelectron_spectrum.F90 
+convert.o : convert.F90 
+local_multipoles.o : local_multipoles.F90 local_write.o 
+local_write.o : local_write.F90 
 floquet.o : floquet.F90

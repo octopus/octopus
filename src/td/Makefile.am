@@ -20,48 +20,70 @@
 
 noinst_LIBRARIES = libtd.a
 
-libtd_a_SOURCES =                   \
-	pes.F90                           \
-	spectrum.F90                      \
-	td_calc.F90                       \
-	td_write.F90                      \
-	td.F90                            \
-	pes_spm.F90                       \
-	pes_mask.F90                      \
-	pes_flux.F90                      \
-	potential_interpolation.F90       \
-	propagator_base.F90               \
-	propagator_cn.F90                 \
-	propagator_etrs.F90               \
-	propagator_expmid.F90             \
-	propagator_magnus.F90             \
-	propagator_qoct.F90               \
-	propagator_rk.F90                 \
-	propagator.F90                    \
-  pes_out.F90
+# Fortran sources - keep in alphabetical order
+libtd_f_srcs =                           \
+	pes.F90                          \
+	pes_flux.F90                     \
+	pes_mask.F90                     \
+	pes_out.F90                      \
+	pes_spm.F90                      \
+	potential_interpolation.F90      \
+	propagator_base.F90              \
+	propagator_cn.F90                \
+	propagator_etrs.F90              \
+	propagator_expmid.F90            \
+	propagator.F90                   \
+	propagator_magnus.F90            \
+	propagator_qoct.F90              \
+	propagator_rk.F90                \
+	spectrum.F90                     \
+	td_calc.F90                      \
+	td.F90                           \
+	td_write.F90
 
-noinst_HEADERS =                    \
-	pes_mask_out_inc.F90              \
-  pes_flux_out_inc.F90   
+# C/C++ sources - keep in alphabetical order
+libtd_c_srcs =
+
+libtd_a_SOURCES = $(libtd_c_srcs) $(libtd_f_srcs)
+
+# Include files - keep in alphabetical order
+noinst_HEADERS =                         \
+	pes_mask_out_inc.F90             \
+	pes_flux_out_inc.F90   
+
 
 include $(srcdir)/../common-rules.make
 
-depend:
-	@makedepf90 $(libtd_a_SOURCES)
 
-pes.o: pes.F90 pes_mask.o pes_spm.o pes_flux.o
-pes_spm.o : pes_spm.F90
-pes_mask.o : pes_mask.F90 pes_mask_out_inc.F90
-pes_flux.o : pes_flux.F90 pes_flux_out_inc.F90
-spectrum.o: spectrum.F90
-propagator_base.o : propagator_base.F90 potential_interpolation.o
-propagator_cn.o : propagator_cn.F90 propagator_base.o
-propagator_etrs.o : propagator_etrs.F90 propagator_base.o
-propagator_expmid.o : propagator_expmid.F90 propagator_base.o
-propagator_magnus.o : propagator_magnus.F90 propagator_base.o
-propagator_qoct.o : propagator_qoct.F90 propagator_base.o
-propagator_rk.o : propagator_rk.F90 propagator_base.o
-propagator.o: propagator.F90 propagator_qoct.o propagator_rk.o propagator_cn.o propagator_magnus.o propagator_expmid.o propagator_etrs.o potential_interpolation.o propagator_base.o
-td_write.o: td_write.F90 spectrum.o td_calc.o
-td.o: td.F90 spectrum.o pes.o td_write.o propagator.o potential_interpolation.o
-pes_out.o: pes_out.F90
+# This is to generate the dependencies. It makes use of the makedepf90
+# program of Erik Edelmann
+# (http://www.helsinki.fi/~eedelman/makedepf90.html). It should be run
+# from time to time (just typing make depend within the src
+# directory), substituting the dependencies below by the resulting new
+# dependencies. (For normal compilation of octopus, there is
+# absolutely no need of installing makedepf90).
+
+depend:
+	@makedepf90 $(libtd_f_srcs)
+
+
+# DO NOT EDIT DIRECTLY --- use make depend to generate the dependencies and copy-paste the result here
+
+pes.o : pes.F90 pes_flux.o pes_spm.o pes_mask.o 
+pes_flux.o : pes_flux.F90 pes_flux_out_inc.F90 
+pes_mask.o : pes_mask.F90 pes_mask_out_inc.F90 
+pes_out.o : pes_out.F90 
+pes_spm.o : pes_spm.F90 
+potential_interpolation.o : potential_interpolation.F90 
+propagator_base.o : propagator_base.F90 potential_interpolation.o 
+propagator_cn.o : propagator_cn.F90 propagator_base.o potential_interpolation.o 
+propagator_etrs.o : propagator_etrs.F90 propagator_base.o potential_interpolation.o 
+propagator_expmid.o : propagator_expmid.F90 propagator_base.o potential_interpolation.o 
+propagator.o : propagator.F90 propagator_rk.o propagator_qoct.o propagator_magnus.o propagator_expmid.o propagator_etrs.o propagator_cn.o propagator_base.o potential_interpolation.o 
+propagator_magnus.o : propagator_magnus.F90 propagator_base.o potential_interpolation.o 
+propagator_qoct.o : propagator_qoct.F90 propagator_base.o potential_interpolation.o 
+propagator_rk.o : propagator_rk.F90 propagator_base.o potential_interpolation.o 
+spectrum.o : spectrum.F90 
+td_calc.o : td_calc.F90 
+td.o : td.F90 td_write.o propagator_base.o propagator.o potential_interpolation.o pes.o 
+td_write.o : td_write.F90 td_calc.o
