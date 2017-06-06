@@ -61,6 +61,7 @@ program oct_local_multipoles
     character(len=15), allocatable  :: lab(:)          !< declared name for each domain.
     integer, allocatable            :: dshape(:)       !< shape of box for each domain.
     logical, allocatable            :: inside(:,:)     !< relation of mesh points on each domain.
+    logical, allocatable            :: ions_inside(:,:)!< relation of ions inside each domain.
     FLOAT, allocatable              :: dcm(:,:)        !< store the center of mass of each domain on the real space.
     type(local_write_t)             :: writ            !< write option for local domains analysis.
   end type local_domain_t
@@ -381,7 +382,7 @@ contains
         if (ldupdate) call local_inside_domain(local, sys%st%rho(:,1))
       end if
 
-      call local_write_iter(local%writ, local%nd, local%domain, local%lab, local%inside, local%dcm, & 
+      call local_write_iter(local%writ, local%nd, local%lab, local%ions_inside, local%inside, local%dcm, & 
                               sys%gr, sys%st, hm, sys%ks, sys%geo, kick, iter, l_start, ldoverwrite)
       call loct_progress_bar(iter-l_start, l_end-l_start) 
     end do
@@ -453,6 +454,7 @@ contains
     SAFE_ALLOCATE(local%dshape(1:local%nd))
     SAFE_ALLOCATE(local%lab(1:local%nd))
     SAFE_ALLOCATE(local%inside(1:sys%gr%mesh%np, 1:local%nd))
+    SAFE_ALLOCATE(local%ions_inside(1:sys%geo%natoms, 1:local%nd))
     SAFE_ALLOCATE(local%dcm(1:sys%space%dim, 1:local%nd))
 
     block: do id = 1, local%nd
@@ -744,14 +746,18 @@ contains
           trim('local.general'), 'dens_ff2', sys%gr%mesh, ff2(:,1), unit_one, ierr, geo = sys%geo)
         call io_close(iunit)
       end if
-      call local_center_of_mass(lcl%nd, lcl%domain, sys%geo, lcl%dcm)
       call basins_end(basins)
     else
       do id = 1, lcl%nd
         call box_union_inside_vec(lcl%domain(id), sys%gr%mesh%np, sys%gr%mesh%x, lcl%inside(:,id))
       end do
-      call local_center_of_mass(lcl%nd, lcl%domain, sys%geo, lcl%dcm)
     end if
+
+    !Check for atom list inside each domain
+    call local_ions_inside(lcl%nd, lcl%inside, sys%geo, sys%gr%mesh, lcl%ions_inside, lcl%clist)
+
+    !Compute center of mass of each domain
+    call local_center_of_mass(lcl%nd, lcl%ions_inside, sys%geo, lcl%dcm)
 
     !Write restart file for local domains
     base_folder = "./restart/"
@@ -935,11 +941,86 @@ contains
     SAFE_DEALLOCATE_A(ffs)
     POP_SUB(add_dens_to_ion_x)
   end subroutine add_dens_to_ion_x
-
   ! ---------------------------------------------------------
-  subroutine local_center_of_mass(nd, dom, geo, center)
+  !Check for the ions inside each local domain.
+  subroutine local_ions_inside(nd, inside, geo, mesh, ions_inside, ions_list)
     integer,           intent(in)  :: nd 
-    type(box_union_t), intent(in)  :: dom(:)
+    logical,           intent(in)  :: inside(:,:)
+    type(geometry_t),  intent(in)  :: geo
+    type(mesh_t),      intent(in)  :: mesh
+    logical,           intent(out) :: ions_inside(:,:)
+    character(len=500),intent(out) :: ions_list(:)
+
+    integer              :: ia, id, ix, ic
+    integer, allocatable :: inside_tmp(:,:)
+    integer              :: rankmin
+    FLOAT                :: dmin
+    character(len=500)   :: chtmp
+
+    PUSH_SUB(local_ions_inside)
+
+    SAFE_ALLOCATE(inside_tmp(geo%natoms,nd))
+    inside_tmp = 0
+    ions_list = ""
+   
+    ions_inside = .false.
+    do ia = 1, geo%natoms
+      ix = mesh_nearest_point(mesh, geo%atom(ia)%x, dmin, rankmin )
+      if (rankmin /= mesh%mpi_grp%rank) cycle
+      do id = 1, nd
+        if (inside(ix, id)) inside_tmp(ia, id) = 1
+      end do
+    end do
+
+    if(mesh%parallel_in_domains) then
+      call comm_allreduce(mesh%mpi_grp%comm, inside_tmp, dim = (/geo%natoms,nd/))
+    end if                               
+
+    do ia = 1, geo%natoms
+      do id = 1, nd
+        if (inside_tmp(ia, id) == 1) ions_inside(ia, id) = .true.
+      end do
+    end do
+
+    SAFE_DEALLOCATE_A(inside_tmp)
+
+    !print list of atoms
+    do id = 1, nd
+      ic = 0
+      ix = 0
+      chtmp = ions_list(id)
+      do ia = 1, geo%natoms-1
+        if (ions_inside(ia, id)) then
+          if ( ic == 0 .or. .not.ions_inside(ia+1, id)) then
+            write(ions_list(id), '(a,i0)')trim(chtmp),ia
+          end if
+          if (ions_inside(ia+1,id)) then 
+            ic = ic + 1  
+            chtmp = trim(ions_list(id))//"-"
+          else
+            ic = 0
+            chtmp = trim(ions_list(id))//","
+          end if
+
+        else 
+          cycle 
+        end if
+      end do 
+
+      if (ions_inside(geo%natoms,id)) then
+        write(ions_list(id), '(a,i0)')trim(chtmp),ia
+      end if
+
+!      write(message(1),'(a,1x,i0,1x,a,1x,a)')'Atoms inside domain',id,':',trim(ions_list(id))
+!      call messages_warning(1)
+    end do
+
+    POP_SUB(local_ions_inside)
+  end subroutine local_ions_inside
+  ! ---------------------------------------------------------
+  subroutine local_center_of_mass(nd, ions_inside, geo, center)
+    integer,           intent(in)  :: nd 
+    logical,           intent(in)  :: ions_inside(:,:)
     type(geometry_t),  intent(in)  :: geo
     FLOAT,             intent(out) :: center(:,:)
 
@@ -954,7 +1035,7 @@ contains
     center(:,:) = M_ZERO
     do ia = 1, geo%natoms
       do  id = 1, nd
-        if (box_union_inside(dom(id), geo%atom(ia)%x)) then
+        if ( ions_inside(ia, id) ) then
           center(1:geo%space%dim,id) = center(1:geo%space%dim,id) &
                    + geo%atom(ia)%x(1:geo%space%dim)*species_mass(geo%atom(ia)%species)     
           sumw(id) = sumw(id) + species_mass(geo%atom(ia)%species)
