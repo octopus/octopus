@@ -15,11 +15,11 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
 module td_oct_m
+  use global_oct_m
   use boundary_op_oct_m
   use calc_mode_par_oct_m
   use density_oct_m
@@ -46,6 +46,7 @@ module td_oct_m
   use restart_oct_m
   use scdm_oct_m
   use scf_oct_m
+  use scissor_oct_m
   use simul_box_oct_m
   use states_oct_m
   use states_calc_oct_m
@@ -59,6 +60,9 @@ module td_oct_m
   use unit_system_oct_m
   use v_ks_oct_m
   use varinfo_oct_m
+  use messages_oct_m
+  use multicomm_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -90,6 +94,7 @@ module td_oct_m
     FLOAT                :: mu
     integer              :: dynamics
     integer              :: energy_update_iter
+    FLOAT                :: scissor
   end type td_t
 
 
@@ -274,10 +279,22 @@ contains
     !%End
     call parse_variable('RecalculateGSDuringEvolution', .false., td%recalculate_gs)
 
-    call messages_obsolete_variable('TDScissor')
+    !%Variable TDScissor 
+    !%Type float 
+    !%Default 0.0 
+    !%Section Time-Dependent 
+    !%Description 
+    !% (experimental) If set, a scissor operator will be applied in the 
+    !% Hamiltonian, shifting the excitation energies by the amount 
+    !% specified. By default, it is not applied. 
+    !%End 
+    call parse_variable('TDScissor', CNST(0.0), td%scissor) 
+    td%scissor = units_to_atomic(units_inp%energy, td%scissor) 
+    call messages_print_var_value(stdout, 'TDScissor', td%scissor)
 
     call propagator_init(sys%gr, sys%st, td%tr, &
-      ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(hm%ep%gfield))
+      ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(hm%ep%gfield), &
+          hm%family_is_mgga_with_exc)
     if(hm%ep%no_lasers>0.and.mpi_grp_is_root(mpi_world)) then
       call messages_print_stress(stdout, "Time-dependent external fields")
       call laser_write_info(hm%ep%lasers, stdout, td%dt, td%max_iter)
@@ -360,7 +377,7 @@ contains
       call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX, alloc_Left = cmplxscl)
     else
       call states_allocate_wfns(st, gr%mesh, alloc_Left = cmplxscl)
-      call scf_init(td%scf, sys%gr, sys%geo, sys%st, hm)
+      call scf_init(td%scf, sys%gr, sys%geo, sys%st, sys%mc, hm)
     end if
 
     if(hm%scdm_EXX) then
@@ -399,7 +416,11 @@ contains
     end if
 
     call td_write_init(write_handler, gr, st, hm, geo, sys%ks, &
-      ion_dynamics_ions_move(td%ions), gauge_field_is_applied(hm%ep%gfield), hm%ep%kick, td%iter, td%max_iter, td%dt)
+      ion_dynamics_ions_move(td%ions), gauge_field_is_applied(hm%ep%gfield), hm%ep%kick, td%iter, td%max_iter, td%dt, sys%mc)
+
+    if(td%scissor > M_EPSILON) then
+      call scissor_init(hm%scissor, st, gr, hm%d, td%scissor, sys%mc)
+    end if
 
     if(td%iter == 0) call td_run_zero_iter()
 
@@ -408,11 +429,10 @@ contains
     !call td_check_trotter(td, sys, h)
     td%iter = td%iter + 1
 
-    call restart_init(restart_dump, RESTART_TD, RESTART_TYPE_DUMP, st%dom_st_kpt_mpi_grp, ierr, mesh=gr%mesh)
+    call restart_init(restart_dump, RESTART_TD, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=gr%mesh)
     if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) then
       ! We will also use the TD restart directory as temporary storage during the time propagation
-      call restart_init(restart_load, RESTART_TD, RESTART_TYPE_DUMP, st%dom_st_kpt_mpi_grp, &
-        ierr, mesh=gr%mesh)
+      call restart_init(restart_load, RESTART_TD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
     end if
 
     call messages_print_stress(stdout, "Time-Dependent Simulation")
@@ -552,12 +572,21 @@ contains
         if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) then
           call messages_print_stress(stdout, 'Recalculating the ground state.')
           fromScratch = .false.
+          call states_deallocate_wfns(sys%st)
           call ground_state_run(sys, hm, fromScratch)
-          call states_load(restart_load, st, gr, ierr, iter=iter)
+          call states_allocate_wfns(sys%st, gr%mesh)
+          call td_load(restart_load, gr, st, hm, td, ierr)
           if (ierr /= 0) then
             message(1) = "Unable to load TD states."
             call messages_fatal(1)
           end if
+          if(.not. cmplxscl) then
+            call density_calc(st, gr, st%rho)
+          else
+            call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
+          end if
+          call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval=.true., time = iter*td%dt, calc_energy=.true.)
+          call forces_calculate(gr, geo, hm, st, iter*td%dt, td%dt)
           call messages_print_stress(stdout, "Time-dependent simulation proceeds")
           call print_header()
         end if
@@ -590,7 +619,7 @@ contains
       PUSH_SUB(td_run.init_wfs)
 
       if (.not. fromscratch) then
-        call restart_init(restart, RESTART_TD, RESTART_TYPE_LOAD, st%dom_st_kpt_mpi_grp, ierr, mesh=gr%mesh)
+        call restart_init(restart, RESTART_TD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
         if(ierr == 0) &
           call td_load(restart, gr, st, hm, td, ierr)
         if(ierr /= 0) then
@@ -610,7 +639,7 @@ contains
       end if
 
       if (fromScratch) then
-        call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, st%dom_st_kpt_mpi_grp, ierr, mesh=gr%mesh, exact=.true.)
+        call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
 
         if(.not. st%only_userdef_istates) then
           if(ierr == 0) call states_load(restart, st, gr, ierr, label = ": gs")
@@ -696,6 +725,11 @@ contains
         write(message(1),'(a)') 'Info: Freezing Hartree and exchange-correlation potentials.'
         call messages_info(1)
         call v_ks_freeze_hxc(sys%ks)
+
+        !In this case we should reload GS wavefunctions 
+        if(.not.fromScratch) then
+          call messages_not_implemented("TDFreezeOccupations with FromScratch=no")
+        end if
       end if
 
       x = minval(st%eigenval(st%st_start, :))
@@ -764,15 +798,15 @@ contains
 
       do iatom = 1, geo%natoms
         read(iunit, '(3es20.12)', advance='no') geo%atom(iatom)%x(1:gr%mesh%sb%dim)
-        geo%atom(iatom)%x(:) = units_to_atomic(units_inp%length, geo%atom(iatom)%x(:))
+        geo%atom(iatom)%x(:) = units_to_atomic(units_out%length, geo%atom(iatom)%x(:))
       end do
       do iatom = 1, geo%natoms
         read(iunit, '(3es20.12)', advance='no') geo%atom(iatom)%v(1:gr%mesh%sb%dim)
-        geo%atom(iatom)%v(:) = units_to_atomic(units_inp%velocity, geo%atom(iatom)%v(:))
+        geo%atom(iatom)%v(:) = units_to_atomic(units_out%velocity, geo%atom(iatom)%v(:))
       end do
       do iatom = 1, geo%natoms
         read(iunit, '(3es20.12)', advance='no') geo%atom(iatom)%f(1:gr%mesh%sb%dim)
-        geo%atom(iatom)%f(:) = units_to_atomic(units_inp%force, geo%atom(iatom)%f(:))
+        geo%atom(iatom)%f(:) = units_to_atomic(units_out%force, geo%atom(iatom)%f(:))
       end do
 
       call io_close(iunit)

@@ -16,7 +16,6 @@
  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  02110-1301, USA.
 
- $Id$
 */
 
 #include <config.h>
@@ -25,6 +24,9 @@
 #endif
 #include <stdlib.h>
 #include <unistd.h>
+#include <fortran_types.h>
+#include "string_f.h" /* fortran <-> c string compatibility issues */
+#include <string.h>
 
 void FC_FUNC_(block_signals, BLOCK_SIGNALS)(){
 #if defined(HAVE_SIGACTION) && defined(HAVE_SIGNAL_H)
@@ -53,12 +55,13 @@ void FC_FUNC_(unblock_signals, UNBLOCK_SIGNALS)(){
 #endif
 }
 
-void FC_FUNC_(dump_call_stack, DUMP_CALL_STACK)(void);
+void FC_FUNC_(dump_call_stack, DUMP_CALL_STACK)(fint *);
 
 #if defined(HAVE_SIGACTION) && defined(HAVE_SIGNAL_H)
 					       
 void segv_handler(int signum, siginfo_t * si, void * vd){
-  FC_FUNC_(dump_call_stack, DUMP_CALL_STACK)();
+  fint isignal = signum;
+  FC_FUNC_(dump_call_stack, DUMP_CALL_STACK)(&isignal);
   signal(signum, SIG_DFL);
   kill(getpid(), signum);
 }
@@ -73,12 +76,25 @@ void FC_FUNC_(trap_segfault, TRAP_SEGFAULT)(){
   act.sa_sigaction = segv_handler;
   act.sa_flags = SA_SIGINFO;
 
+  sigaction(SIGTERM, &act, 0);
+  sigaction(SIGKILL, &act, 0);
   sigaction(SIGSEGV, &act, 0);
   sigaction(SIGABRT, &act, 0);
   sigaction(SIGINT,  &act, 0);
+  sigaction(SIGBUS,  &act, 0);
+  sigaction(SIGILL,  &act, 0);
   sigaction(SIGTSTP, &act, 0);
   sigaction(SIGQUIT, &act, 0);
   sigaction(SIGFPE,  &act, 0);
+  sigaction(SIGHUP,  &act, 0);
   
+#endif
+}
+
+void FC_FUNC_(get_signal_description, GET_SIGNAL_DESCRIPTION)(fint * signum, STR_F_TYPE const signame STR_ARG1){
+#if defined(HAVE_STRSIGNAL) && defined(HAVE_STRING_H)
+  TO_F_STR1(strsignal(*signum), signame);
+#else
+  TO_F_STR1("(description not available)", signame);
 #endif
 }

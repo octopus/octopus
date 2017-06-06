@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -59,6 +58,7 @@ module hamiltonian_oct_m
   use pcm_oct_m
   use restart_oct_m
   use scdm_oct_m
+  use scissor_oct_m
   use simul_box_oct_m
   use smear_oct_m
   use species_oct_m
@@ -143,6 +143,8 @@ module hamiltonian_oct_m
 
     integer :: theory_level    !< copied from sys%ks
     integer :: xc_family       !< copied from sys%ks
+    integer :: xc_flags        !< copied from sys%ks
+    logical :: family_is_mgga_with_exc !< obtained from sys%ks
 
     type(epot_t) :: ep         !< handles the external potential
     type(pcm_t)  :: pcm        !< handles pcm variables
@@ -171,6 +173,8 @@ module hamiltonian_oct_m
     !> There may also be a exchange-like term, similar to the one necessary for time-dependent
     !! Hartree Fock, also useful only for the OCT equations
     type(oct_exchange_t) :: oct_exchange
+
+    type(scissor_t) :: scissor
 
     FLOAT :: current_time
     FLOAT :: Imcurrent_time  !< needed when cmplxscl%time = .true.
@@ -205,13 +209,16 @@ module hamiltonian_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_init(hm, gr, geo, st, theory_level, xc_family, subsys_hm)
+  subroutine hamiltonian_init(hm, gr, geo, st, theory_level, xc_family, xc_flags, &
+        family_is_mgga_with_exc, subsys_hm)
     type(hamiltonian_t),                        intent(out)   :: hm
     type(grid_t),                       target, intent(inout) :: gr
     type(geometry_t),                   target, intent(inout) :: geo
     type(states_t),                     target, intent(inout) :: st
     integer,                                    intent(in)    :: theory_level
     integer,                                    intent(in)    :: xc_family
+    integer,                                    intent(in)    :: xc_flags
+    logical,                                    intent(in)    :: family_is_mgga_with_exc
     type(base_hamiltonian_t), optional, target, intent(in)    :: subsys_hm
 
     integer :: iline, icol
@@ -225,6 +232,8 @@ contains
     ! make a couple of local copies
     hm%theory_level = theory_level
     hm%xc_family    = xc_family
+    hm%xc_flags     = xc_flags
+    hm%family_is_mgga_with_exc = family_is_mgga_with_exc
     call states_dim_copy(hm%d, st%d)
 
     !%Variable ParticleMass
@@ -293,7 +302,7 @@ contains
       SAFE_ALLOCATE(hm%vxc(1:gr%mesh%np, 1:hm%d%nspin))
       hm%vxc=M_ZERO
 
-      if(iand(hm%xc_family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) then
+      if(hm%family_is_mgga_with_exc) then
         SAFE_ALLOCATE(hm%vtau(1:gr%mesh%np, 1:hm%d%nspin))
         hm%vtau=M_ZERO
       end if
@@ -315,7 +324,7 @@ contains
         SAFE_ALLOCATE(hm%Imvxc(1:gr%mesh%np, 1:hm%d%nspin))
         hm%Imvxc=M_ZERO
 
-        if(iand(hm%xc_family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) then
+        if(hm%family_is_mgga_with_exc) then
           SAFE_ALLOCATE(hm%Imvtau(1:gr%mesh%np, 1:hm%d%nspin))
           hm%Imvtau=M_ZERO
         end if
@@ -325,7 +334,7 @@ contains
 
     hm%geo => geo
     !Initialize external potential
-    call epot_init(hm%ep, gr, hm%geo, hm%d%ispin, hm%d%nik, hm%cmplxscl%space, subsys_hm)
+    call epot_init(hm%ep, gr, hm%geo, hm%d%ispin, hm%d%nik, hm%cmplxscl%space, subsys_hm,hm%xc_family)
 
     ! Calculate initial value of the gauge vector field
     call gauge_field_init(hm%ep%gfield, gr%sb)
@@ -478,6 +487,8 @@ contains
     call parse_variable('TimeZero', .false., hm%time_zero)
     if(hm%time_zero) call messages_experimental('TimeZero')
 
+    call scissor_nullify(hm%scissor)
+
     call profiling_out(prof)
     POP_SUB(hamiltonian_init)
 
@@ -540,7 +551,7 @@ contains
     SAFE_DEALLOCATE_P(hm%Imvxc)
     SAFE_DEALLOCATE_P(hm%Imvtau)
     
-    if(iand(hm%xc_family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) then
+    if(hm%family_is_mgga_with_exc) then
       SAFE_DEALLOCATE_P(hm%vtau)
     end if
 
@@ -550,6 +561,8 @@ contains
     call bc_end(hm%bc)
 
     call states_dim_end(hm%d) 
+
+    if(hm%scissor%apply) call scissor_end(hm%scissor)
 
     ! this is a bit ugly, hf_st is initialized in v_ks_calc but deallocated here.
     if(associated(hm%hf_st))  then
@@ -817,8 +830,8 @@ contains
           call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d, &
             vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
         end do
-        call profiling_out(prof_phases)
 
+        call profiling_out(prof_phases)
       end if
 
       if(allocated(this%hm_base%uniform_vector_potential)) then
@@ -924,7 +937,8 @@ contains
     if(hamiltonian_base_has_magnetic(this%hm_base)) apply = .false.
     if(this%rashba_coupling**2 > M_ZERO) apply = .false.
     if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) apply = .false.
-    if(iand(this%xc_family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0)  apply = .false. 
+    if(this%family_is_mgga_with_exc)  apply = .false. 
+    if(this%scissor%apply) apply = .false.
     if(this%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) apply = .false.
     if(this%cmplxscl%space .and. accel_is_enabled()) apply = .false.
     if(associated(this%hm_base%phase) .and. accel_is_enabled()) apply = .false.
@@ -1085,7 +1099,7 @@ contains
     if (err /= 0) ierr = ierr + 4
 
     ! MGGAs and hybrid MGGAs have an extra term that also needs to be dumped
-    if (iand(hm%xc_family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) then
+    if (hm%family_is_mgga_with_exc) then
       lines(1) = '#     #spin    #nspin    filename'
       lines(2) = '%vtau'
       call restart_write(restart, iunit, lines, 2, err)
@@ -1181,7 +1195,7 @@ contains
 
     ! MGGAs and hybrid MGGAs have an extra term that also needs to be read
     err2 = 0
-    if (iand(hm%xc_family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) then
+    if (hm%family_is_mgga_with_exc) then
       do isp = 1, hm%d%nspin
         if (hm%d%nspin == 1) then
           write(filename, fmt='(a)') 'vtau'

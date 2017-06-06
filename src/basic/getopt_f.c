@@ -16,7 +16,6 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 	02110-1301, USA.
 
-	$Id$
 */
 
 #include <config.h>
@@ -261,7 +260,7 @@ void FC_FUNC_(getopt_harmonic_spectrum, GETOPT_HARMONIC_SPECTRUM)
       break;
 
     case 'v':
-      printf("octopus %s (svn version %s)\n", PACKAGE_VERSION, LATEST_SVN);
+      printf("octopus %s (git commit %s)\n", PACKAGE_VERSION, GIT_COMMIT);
       exit(0);
 
     case 'w':
@@ -346,7 +345,7 @@ void FC_FUNC_(getopt_help, GETOPT_HELP)
       break;
 
     case 'v':
-      printf("octopus %s (svn version %s)\n", PACKAGE_VERSION, LATEST_SVN);
+      printf("octopus %s (git commit %s)\n", PACKAGE_VERSION, GIT_COMMIT);
       exit(0);
 
     case 'l':
@@ -412,7 +411,7 @@ void FC_FUNC_(getopt_octopus, GETOPT_OCTOPUS)
       octopus_help();
       break;
     case 'v':
-      printf("octopus %s (svn version %s)\n", PACKAGE_VERSION, LATEST_SVN);
+      printf("octopus %s (git commit %s)\n", PACKAGE_VERSION, GIT_COMMIT);
       exit(0);
       break;
     case 'c':
@@ -465,7 +464,7 @@ void FC_FUNC_(getopt_casida_spectrum, GETOPT_CASIDA_SPECTRUM)
       casida_spectrum_help();
       break;
     case 'v':
-      printf("octopus %s (svn version %s)\n", PACKAGE_VERSION, LATEST_SVN);
+      printf("octopus %s (git commit %s)\n", PACKAGE_VERSION, GIT_COMMIT);
       exit(0);
     }
   }
@@ -512,7 +511,7 @@ void FC_FUNC_(getopt_center_geom, GETOPT_CENTER_GEOM)
       center_geom_help();
       break;
     case 'v':
-      printf("octopus %s (svn version %s)\n", PACKAGE_VERSION, LATEST_SVN);
+      printf("octopus %s (git commit %s)\n", PACKAGE_VERSION, GIT_COMMIT);
       exit(0);
     }
   }
@@ -559,7 +558,7 @@ void FC_FUNC_(getopt_dielectric_function, GETOPT_DIELECTRIC_FUNCTION)
       dielectric_function_help();
       break;
     case 'v':
-      printf("octopus %s (svn version %s)\n", PACKAGE_VERSION, LATEST_SVN);
+      printf("octopus %s (git commit %s)\n", PACKAGE_VERSION, GIT_COMMIT);
       exit(0);
     }
   }
@@ -610,7 +609,7 @@ void FC_FUNC_(getopt_propagation_spectrum, GETOPT_PROPAGATION_SPECTRUM)
       propagation_spectrum_help();
       break;
     case 'v':
-      printf("octopus %s (svn version %s)\n", PACKAGE_VERSION, LATEST_SVN);
+      printf("octopus %s (git commit %s)\n", PACKAGE_VERSION, GIT_COMMIT);
       exit(0);
     case 'r':
       TO_F_STR1(optarg, fname);
@@ -659,7 +658,7 @@ void FC_FUNC_(getopt_xyz_anim, GETOPT_XYZ_ANIM)
       xyz_anim_help();
       break;
     case 'v':
-      printf("octopus %s (svn version %s)\n", PACKAGE_VERSION, LATEST_SVN);
+      printf("octopus %s (git commit %s)\n", PACKAGE_VERSION, GIT_COMMIT);
       exit(0);
     }
   }
@@ -742,7 +741,7 @@ void FC_FUNC_(getopt_photoelectron_spectrum, GETOPT_PHOTOELECTRON_SPECTRUM)
       break;
 
     case 'v':
-      printf("octopus %s (svn version %s)\n", PACKAGE_VERSION, LATEST_SVN);
+      printf("octopus %s (git commit %s)\n", PACKAGE_VERSION, GIT_COMMIT);
       exit(0);
     break;
 

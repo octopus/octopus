@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -101,7 +100,7 @@ contains
     this%filename_dynmat = VIB_MODES_DIR//'dynamical_matrix_'//trim(this%suffix)
     if(mpi_grp_is_root(mpi_world)) then
       call io_mkdir(VIB_MODES_DIR)
-      call loct_rm(this%filename_dynmat)
+      call io_rm(this%filename_dynmat)
       call vibrations_out_dyn_matrix_header(this)
     end if
 

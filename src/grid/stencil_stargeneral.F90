@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: stencil_stargeneral.F90 10978 2013-07-11 15:28:46Z micael $
 
 #include "global.h"
 
@@ -25,6 +24,8 @@ module stencil_stargeneral_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use stencil_oct_m
+
+  implicit none
 
   private
   public ::                     &
@@ -254,7 +255,7 @@ contains
     integer, intent(in)          :: order
     integer, intent(out)         :: pol(:,:) !< pol(dim, order)
 
-    integer :: i, j, n
+    integer :: i, j, n, j1, j2
 
     PUSH_SUB(stencil_stargeneral_pol_lapl)
 

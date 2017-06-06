@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
   ! ----------------------------------------------------------------------
   !> 
@@ -348,7 +347,7 @@
     integer :: ierr
     PUSH_SUB(target_output_density)
     
-    call loct_mkdir(trim(dir))
+    call io_mkdir(trim(dir))
     if(outp%how /= 0) then
       if(tg%density_weight > M_ZERO) then
         call dio_function_output(outp%how, trim(dir), 'density_target', gr%mesh, &

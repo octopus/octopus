@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -24,6 +23,8 @@ module stencil_starplus_oct_m
   use messages_oct_m
   use profiling_oct_m
   use stencil_oct_m
+
+  implicit none
 
   private
   public ::                     &

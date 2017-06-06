@@ -15,7 +15,6 @@
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 ## 02110-1301, USA.
 ##
-## $Id: fft.m4 14470 2015-07-29 09:02:39Z dannert $
 ##
 
 AC_DEFUN([ACX_POKE],
@@ -46,7 +45,7 @@ AC_DEFUN([ACX_POKE],
 
     type(PokeGrid) :: grid
 
-    grid = PokeGrid(1.0_8, (/10, 10, 10/))
+    grid = PokeGrid((/1.0_8, 1.0_8, 1.0_8/), (/10, 10, 10/))
 
   ])"
 

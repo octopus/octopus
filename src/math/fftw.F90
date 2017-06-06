@@ -16,13 +16,55 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
 module fftw_params_oct_m
   use, intrinsic :: iso_c_binding
   implicit none
+
+  private
+
+  ! make public some needed symbols from the FFTW library
+  public :: fftw_cleanup,         &
+            fftw_execute_dft,     &
+            fftw_execute_dft_c2r, &
+            fftw_execute_dft_r2c, &
+            fftw_destroy_plan,    &
+            fftw_plan_dft_1d,     &
+            fftw_plan_dft_2d,     &
+            fftw_plan_dft_3d,     &
+            fftw_plan_dft_r2c_1d, &
+            fftw_plan_dft_r2c_2d, &
+            fftw_plan_dft_r2c_3d, &
+            fftw_plan_dft_c2r_1d, &
+            fftw_plan_dft_c2r_2d, &
+            fftw_plan_dft_c2r_3d, &
+            C_FFTW_R2R_KIND,      &
+            FFTW_R2HC,            &
+            FFTW_HC2R,            &
+            FFTW_DHT,             &
+            FFTW_REDFT00,         &
+            FFTW_REDFT01,         &
+            FFTW_REDFT10,         &
+            FFTW_REDFT11,         &
+            FFTW_RODFT00,         &
+            FFTW_RODFT01,         &
+            FFTW_RODFT10,         &
+            FFTW_RODFT11,         &
+            FFTW_FORWARD,         &
+            FFTW_BACKWARD,        &
+            FFTW_MEASURE,         &
+            FFTW_DESTROY_INPUT,   &
+            FFTW_UNALIGNED
+#ifdef HAVE_FFTW3_MPI
+  public :: FFTW_MPI_DEFAULT_BLOCK
+#endif
+#if defined(HAVE_OPENMP) && defined(HAVE_FFTW3_THREADS)
+  public :: fftw_init_threads,   &
+            fftw_plan_with_nthreads, &
+            fftw_cleanup_threads
+#endif
 
 #ifdef HAVE_FFTW3_MPI
   include "fftw3-mpi.f03"
@@ -32,11 +74,11 @@ module fftw_params_oct_m
 end module fftw_params_oct_m
 
 module fftw_oct_m
-  use,intrinsic :: iso_c_binding
+  use fftw_params_oct_m
   use global_oct_m
+  use, intrinsic :: iso_c_binding
   use messages_oct_m
   use profiling_oct_m
-  use fftw_params_oct_m
   implicit none
 
   private
@@ -45,14 +87,6 @@ module fftw_oct_m
     fftw_prepare_plan,       &
     fftw_prepare_plan_r2c,   &
     fftw_get_dims
-
-  ! make public some needed symbols from the FFTW library
-  public :: FFTW_BACKWARD, FFTW_FORWARD, FFTW_UNALIGNED, FFTW_MEASURE,&
-       &fftw_execute_dft, fftw_execute_dft_c2r, fftw_execute_dft_r2c, &
-       & fftw_destroy_plan, fftw_cleanup
-#if defined(HAVE_OPENMP) && defined(HAVE_FFTW3_THREADS)
-  public :: fftw_init_threads, fftw_plan_with_nthreads, fftw_cleanup_threads
-#endif
 
 contains
 

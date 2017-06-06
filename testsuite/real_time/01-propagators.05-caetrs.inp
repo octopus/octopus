@@ -27,8 +27,6 @@ TDPropagator = caetrs
 TDMaxSteps = 20
 TDTimeStep = 0.1
 
-SPARSKITSolver = sk_gmres
-
 TDDeltaStrength = 0.01
 TDPolarizationDirection = 1
 

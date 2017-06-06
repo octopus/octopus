@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 !> This module calculates the derivatives (gradients, Laplacians, etc.) 
 !! of a function. Note that the function whose derivative is to be calculated
@@ -277,6 +276,8 @@ subroutine X(derivatives_curl)(der, ff, op_ff, ghost_update, set_bc)
   ASSERT(der%dim==2 .or. der%dim==3)
   ASSERT(ubound(ff,    DIM=2) >= der%dim)
   ASSERT(ubound(op_ff, DIM=2) >= curl_dim(der%dim))
+
+  ASSERT(.not.der%mesh%sb%nonorthogonal)
 
   SAFE_ALLOCATE(tmp(1:der%mesh%np_part))
 

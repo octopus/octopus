@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -141,6 +140,7 @@ module output_oct_m
 
     type(output_bgw_t) :: bgw      !< parameters for BerkeleyGW output
     type(current_t)    :: current_calculator
+
   end type output_t
 
   integer, parameter, public ::              &
@@ -148,10 +148,11 @@ module output_oct_m
   
 contains
 
-  subroutine output_init(outp, sb, nst)
-    type(output_t),       intent(out) :: outp
-    type(simul_box_t),    intent(in)  :: sb
-    integer,              intent(in)  :: nst
+  subroutine output_init(outp, sb, nst, ks)
+    type(output_t),       intent(out)   :: outp
+    type(simul_box_t),    intent(in)    :: sb
+    integer,              intent(in)    :: nst
+    type(v_ks_t),         intent(inout) :: ks
 
     type(block_t) :: blk
     FLOAT :: norm
@@ -199,7 +200,7 @@ contains
     !% in the file <tt>geometry_classical.xyz</tt>.
     !% If <tt>OutputFormat = xcrysden</tt>, a file called <tt>geometry.xsf</tt> is written.
     !%Option current bit(5)
-    !% Outputs paramagnetic current density. The output file is called <tt>current-</tt>.
+    !% Outputs the total current density. The output file is called <tt>current-</tt>.
     !% For linear response, the filename is <tt>lr_current-</tt>.
     !%Option ELF bit(6)
     !% Outputs electron localization function (ELF). The output file is called <tt>elf-</tt>,
@@ -539,8 +540,11 @@ contains
     end if
 
     if(iand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
-      call current_init(outp%current_calculator)
+      call v_ks_calculate_current(ks, .true.)
+    else
+      call v_ks_calculate_current(ks, .false.)
     end if
+
 
     POP_SUB(output_init)
   end subroutine output_init
@@ -552,10 +556,6 @@ contains
 
     PUSH_SUB(output_end)
     
-    if(iand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
-      call current_end(outp%current_calculator)
-    end if
-
     POP_SUB(output_end)
 
   end subroutine output_end

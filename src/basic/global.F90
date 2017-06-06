@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -49,7 +48,7 @@ module global_oct_m
     logical :: devel_version !< If true then allow unstable parts of the code
     logical :: report_memory
     character(len=256) :: share       !< Name of the share dir
-    character(len=256) :: latest_svn  !< rcs info of latest svn commit
+    character(len=256) :: git_commit  !< hash of latest git commit
     character(len=50)  :: build_time  !< time octopus was compiled
     character(len=20)  :: version     !< version number
     character(len=256) :: cc
@@ -124,6 +123,7 @@ module global_oct_m
   character(len=*), public, parameter :: CASIDA_DIR = "casida/"
   character(len=*), public, parameter :: OCT_DIR = "opt-control/"
   character(len=*), public, parameter :: PCM_DIR = "pcm/"
+  character(len=*), public, parameter :: PARTITION_DIR = "partition/"
 
   ! End of declaration of public objects.
   ! ---------------------------------------------------------
@@ -170,7 +170,7 @@ contains
     else
       conf%share = SHARE_OCTOPUS
     end if
-    conf%latest_svn = LATEST_SVN
+    conf%git_commit = GIT_COMMIT
     conf%build_time = BUILD_TIME
     conf%version    = PACKAGE_VERSION
     conf%cc         = CC

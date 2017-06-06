@@ -1,5 +1,4 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id$
 
 Test       : testsuite/optimal_control/12-spintarget.test
 Program    : octopus

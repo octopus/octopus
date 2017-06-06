@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -101,8 +100,7 @@ contains
     case(oct_is_groundstate) 
       message(1) =  'Info: Using ground state for initial state.'
       call messages_info(1)
-      call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, psi%dom_st_kpt_mpi_grp, &
-                         ierr, mesh=sys%gr%mesh, exact=.true.)
+      call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
       if(ierr == 0) call states_load(restart, psi, sys%gr, ierr)
       if (ierr /= 0) then
         message(1) = "Unable to read wavefunctions."
@@ -139,8 +137,7 @@ contains
         call messages_fatal(2)
       end if
 
-      call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, psi%dom_st_kpt_mpi_grp, &
-        ierr, mesh=sys%gr%mesh, exact=.true.)
+      call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
       if(ierr /= 0) then
         message(1) = "Could not read states for OCTInitialTransformStates."
         call messages_fatal(1)

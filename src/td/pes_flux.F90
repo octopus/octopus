@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -27,7 +26,6 @@ module pes_flux_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
   use kpoints_oct_m
-  use io_binary_oct_m
   use io_function_oct_m
   use io_oct_m
   use lasers_oct_m
@@ -38,6 +36,7 @@ module pes_flux_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use multicomm_oct_m
   use parser_oct_m
   use par_vec_oct_m
   use profiling_oct_m
@@ -183,15 +182,15 @@ contains
     !% The shape of the surface.
     !%Option cub 1
     !% Uses a parallelepiped as surface. All surface points are grid points.
-    !% Choose the location of the surface with variable PES_Flux_Lsize 
+    !% Choose the location of the surface with variable <tt>PES_Flux_Lsize</tt>
     !% (default for 1D and 2D).
     !%Option sph 2
-    !% Constructs a sphere with radius PES_Flux_Radius. Points on the sphere 
+    !% Constructs a sphere with radius <tt>PES_Flux_Radius</tt>. Points on the sphere
     !% are interpolated by trilinear interpolation (default for 3D).
     !%Option pln 3
     !% This option is for periodic systems. 
     !% Constructs planes perpendicular to the non-periodic dimension 
-    !% symmetrically placed at positive and negative values of PES_Flux_Lsize. 
+    !% symmetrically placed at positive and negative values of <tt>PES_Flux_Lsize</tt>.
     !%End
     default_shape = M_SPHERICAL
     if(mdim <= 2) default_shape = M_CUBIC
@@ -210,7 +209,7 @@ contains
     !%Type block
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
-    !% Shifts the surface for PES_Flux_Shape = cub. The syntax is:
+    !% Shifts the surface for <tt>PES_Flux_Shape = cub</tt>. The syntax is:
     !%
     !% <tt>%PES_Flux_Offset
     !% <br>&nbsp;&nbsp;xshift | yshift | zshift
@@ -247,7 +246,7 @@ contains
         !%Default yes
         !%Section Time-Dependent::PhotoElectronSpectrum
         !%Description
-        !% For PES_Flux_Shape = cub, checks whether surface points are inside the 
+        !% For <tt>PES_Flux_Shape = cub</tt>, checks whether surface points are inside the
         !% absorbing zone and discards them if set to yes (default).
         !%End
         call parse_variable('PES_Flux_AvoidAB', .true., this%avoid_ab)
@@ -258,17 +257,17 @@ contains
       !%Type block
       !%Section Time-Dependent::PhotoElectronSpectrum
       !%Description
-      !% For PES_Flux_Shape = cub sets the dimensions along each direction. The syntax is:
+      !% For <tt>PES_Flux_Shape = cub</tt> sets the dimensions along each direction. The syntax is:
       !%
       !% <tt>%PES_Flux_Lsize
       !% <br>&nbsp;&nbsp;xsize | ysize | zsize
       !% <br>%
       !% </tt>
       !%
-      !% where xsize, ysize, and zsize are with respect to the origin. The surface can 
-      !% be shifted with PES_Flux_Offset.
-      !% If PES_Flux_Shape = pln specifies the position of two planes perpendicular to 
-      !% the non-periodic dimension symmetrically placed at PES_Flux_Lsize distance from 
+      !% where <tt>xsize</tt>, <tt>ysize</tt>, and <tt>zsize</tt> are with respect to the origin. The surface can
+      !% be shifted with <tt>PES_Flux_Offset</tt>.
+      !% If <tt>PES_Flux_Shape = pln</tt>, specifies the position of two planes perpendicular to
+      !% the non-periodic dimension symmetrically placed at <tt>PES_Flux_Lsize</tt> distance from
       !% the origin.
       !%End
       if(parse_block('PES_Flux_Lsize', blk) == 0) then
@@ -309,7 +308,7 @@ contains
       !%Type float
       !%Section Time-Dependent::PhotoElectronSpectrum
       !%Description
-      !% The radius of the sphere, if PES_Flux_Shape == sph.
+      !% The radius of the sphere, if <tt>PES_Flux_Shape == sph</tt>.
       !%End
       if(parse_is_defined('PES_Flux_Radius')) then
         call parse_variable('PES_Flux_Radius', M_ZERO, this%radius)
@@ -335,10 +334,10 @@ contains
 
     !%Variable PES_Flux_StepsThetaR
     !%Type integer
+    !%Default: 2 <tt>PES_Flux_Lmax</tt> + 1
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
-    !% Number of steps in theta (0 <= theta <= pi) for the spherical surface.
-    !% Default: <math>2 * PES_Flux_Lmax + 1</math>
+    !% Number of steps in <math>\theta</math> (<math>0 \le \theta \le \pi</math>) for the spherical surface.
     !%End
     if(this%shape == M_SPHERICAL) then
       call parse_variable('PES_Flux_StepsThetaR', 2*this%lmax + 1, nstepsthetar)
@@ -348,10 +347,10 @@ contains
 
     !%Variable PES_Flux_StepsPhiR
     !%Type integer
+    !%Default: 2 <tt>PES_Flux_Lmax</tt> + 1
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
-    !% Number of steps in phi (0 <= phi <= 2 pi) for the spherical surface.
-    !% Default: <math>2 * PES_Flux_Lmax + 1</math>
+    !% Number of steps in <math>\phi</math> (<math>0 \le \phi \le 2 \pi</math>) for the spherical surface.
     !%End
     if(this%shape == M_SPHERICAL) then
       call parse_variable('PES_Flux_StepsPhiR', 2*this%lmax + 1, nstepsphir)
@@ -441,9 +440,9 @@ contains
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
     !% Use memory to tabulate Volkov plane-wave components on the surface.
-    !% This option speeds up calculations by precomputing plane wave phases 
+    !% This option speeds up calculations by precomputing plane-wave phases
     !% on the suface. 
-    !% By default true when PES_Flux_Shape = cub.
+    !% By default true when <tt>PES_Flux_Shape = cub</tt>.
     !%End
     call parse_variable('PES_Flux_UseMemory', .true., this%usememory)
     call messages_print_var_value(stdout, "PES_Flux_UseMemory", this%usememory)            
@@ -473,7 +472,7 @@ contains
 
       if(this%usememory) then
         SAFE_ALLOCATE(k_dot_aux(1:this%nkpnts))
-        SAFE_ALLOCATE(this%conjgplanewf_cub(1:this%nkpnts, this%nsrfcpnts_start:this%nsrfcpnts_end, kptst:kptend))
+        SAFE_ALLOCATE(this%conjgplanewf_cub(1:this%nkpnts, this%nsrfcpnts_start:this%nsrfcpnts_end,kptst:kptend))
         this%conjgplanewf_cub = M_z0
 
         do ik = kptst, kptend
@@ -603,7 +602,7 @@ contains
       !%Default 45
       !%Section Time-Dependent::PhotoElectronSpectrum
       !%Description
-      !% Number of steps in theta (0 <= theta <= pi) for the spherical grid in k.
+      !% Number of steps in <math>\theta</math> (<math>0 \le \theta \le \pi</math>) for the spherical grid in k.
       !%End
       call parse_variable('PES_Flux_StepsThetaK', 45, this%nstepsthetak)
       if(this%nstepsthetak < 0) call messages_input_error('PES_Flux_StepsThetaK')
@@ -613,7 +612,7 @@ contains
       !%Default 90
       !%Section Time-Dependent::PhotoElectronSpectrum
       !%Description
-      !% Number of steps in phi (0 <= phi <= 2 pi) for the spherical grid in k.
+      !% Number of steps in <math>\phi</math> (<math>0 \le \phi \le 2 \pi</math>) for the spherical grid in k.
       !%End
       call parse_variable('PES_Flux_StepsPhiK', 90, this%nstepsphik)
       if(this%nstepsphik < 0) call messages_input_error('PES_Flux_StepsPhiK')
@@ -656,7 +655,7 @@ contains
       !%Type integer
       !%Section Time-Dependent::PhotoElectronSpectrum
       !%Description
-      !% Increase resolution in momentum by adding Gpoints in between adiacent 
+      !% Increase resolution in momentum by adding Gpoints in between adjacent
       !% Kpoints. For each additional Gpoint G an entire Kpoint grid centered at 
       !% G is added to the momentum grid. 
       !%End
@@ -683,9 +682,9 @@ contains
       !%Section Time-Dependent::PhotoElectronSpectrum
       !%Description
       !% Use a curvilinear momentum space grid that compensates the transformation 
-      !% used to obtain ARPES. With this choice ARPES data is lay out on a cartesian 
+      !% used to obtain ARPES. With this choice ARPES data is laid out on a Cartesian
       !% regular grid.
-      !% By default true when PES_Flux_Shape = pln.
+      !% By default true when <tt>PES_Flux_Shape = pln</tt>.
       !%End
       call parse_variable('PES_Flux_ARPES_grid', .true., this%arpes_grid)
       call messages_print_var_value(stdout, "PES_Flux_ARPES_grid", this%arpes_grid)       
@@ -693,11 +692,11 @@ contains
       
       !%Variable PES_Flux_EnergyGrid
       !%Type block
-      !%Section Time-Dependent
+      !%Section Time-Dependent::PhotoElectronSpectrum
       !%Description
       !% The block <tt>PES_Flux_EnergyGrid</tt> specifies the energy grid to 
       !% be used. Only for <tt> PES_Flux_Shape = pln</tt>.
-      !% <tt>%PES_Flux_EnergyGrid
+      !% <tt><br>%PES_Flux_EnergyGrid
       !% <br>&nbsp;&nbsp; Emin | Emax | DeltaE
       !% <br>%</tt>
       !%End
@@ -752,17 +751,19 @@ contains
     
       !%Variable PES_Flux_BZones
       !%Type block
-      !%Section Time-Dependent
+      !%Section Time-Dependent::PhotoElectronSpectrum
       !%Description
       !% The block <tt>PES_Flux_BZones</tt> specifies the number of Brillouin
       !% zones along each periodic dimensions. This value will be used 
       !% to generate the mesh in reciprocal space.
-      !% <tt>%PES_Flux_EnergyGrid
+      !%
+      !% <tt><br>%PES_Flux_EnergyGrid
       !% <br>&nbsp;&nbsp; NBZx | NBZy  
       !% <br>%</tt>
-      !% The option can also be specified with the same vale for each direction
+      !%
+      !% The option can also be specified with the same value for each direction
       !% as <tt>PES_Flux_BZones = NBZ</tt>. 
-      !% By default <tt>PES_Flux_BZones = 2</tt>, this means that we will have, 
+      !% By default <tt>PES_Flux_BZones = 2</tt>; this means that we will have,
       !% on top of the 1st zone, two additional zones at positive and negative 
       !% reciprocal lattice translation for each periodic dimension. 
       !%End

@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -220,8 +219,7 @@ contains
       end if
 
       ! we always need complex response
-      call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                        ierr, mesh=sys%gr%mesh, exact=.true.)
+      call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
       if(ierr == 0) then
         call states_look_and_load(gs_restart, sys%st, sys%gr, is_complex = .true.)
         call restart_end(gs_restart)
@@ -242,8 +240,7 @@ contains
 
       ! load wavefunctions
       if (.not. fromScratch) then
-        call restart_init(restart_load, RESTART_VDW, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                          ierr, mesh=sys%gr%mesh)
+        call restart_init(restart_load, RESTART_VDW, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
 
         do dir = 1, ndir
           write(dirname,'(a,i1,a)') "wfs_", dir, "_1_1"
@@ -263,8 +260,7 @@ contains
         call io_mkdir(VDW_DIR)               ! output data
       end if
 
-      call restart_init(restart_dump, RESTART_VDW, RESTART_TYPE_DUMP, sys%st%dom_st_kpt_mpi_grp, &
-                        ierr, mesh=sys%gr%mesh)
+      call restart_init(restart_dump, RESTART_VDW, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
 
       POP_SUB(vdw_run.init_)
     end subroutine init_

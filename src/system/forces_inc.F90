@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 subroutine X(forces_gather)(geo, force)
   type(geometry_t), intent(in)    :: geo
@@ -182,7 +181,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
       call boundaries_set(gr%der%boundaries, psib)
 
       ! set the phase for periodic systems
-      if(simul_box_is_periodic(gr%sb) .and. .not. kpoints_point_is_gamma(gr%sb%kpoints, ikpoint)) then
+      if(associated(hm%hm_base%phase)) then
         call X(hamiltonian_base_phase)(hm%hm_base, gr%der, gr%mesh%np_part, iq, .false., psib)
       end if
 

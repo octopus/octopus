@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -147,7 +146,7 @@ contains
 
     ! Figure out the starting wavefunction(s), and the target.
     call initial_state_init(sys, hm, initial_st)
-    call target_init(sys%gr, sys%geo, initial_st, td, controlfunction_w0(par), oct_target, oct, hm%ep)
+    call target_init(sys%gr, sys%geo, initial_st, td, controlfunction_w0(par), oct_target, oct, hm%ep, sys%mc)
 
     ! Sanity checks.
     call check_faulty_runmodes(sys, hm, td%tr)
@@ -254,8 +253,8 @@ contains
 
       call opt_control_state_null(psi)
       call opt_control_state_copy(psi, initial_st)
-      call oct_prop_init(prop_chi, "chi", sys%gr)
-      call oct_prop_init(prop_psi, "psi", sys%gr)
+      call oct_prop_init(prop_chi, "chi", sys%gr, sys%mc)
+      call oct_prop_init(prop_psi, "psi", sys%gr, sys%mc)
 
       call controlfunction_copy(par_new, par)
       ctr_loop: do
@@ -280,8 +279,8 @@ contains
       type(opt_control_state_t) :: psi
       PUSH_SUB(opt_control_run.scheme_wg05)
 
-      call oct_prop_init(prop_chi, "chi", sys%gr)
-      call oct_prop_init(prop_psi, "psi", sys%gr)
+      call oct_prop_init(prop_chi, "chi", sys%gr, sys%mc)
+      call oct_prop_init(prop_psi, "psi", sys%gr, sys%mc)
 
       if (oct%mode_fixed_fluence) then
         call controlfunction_set_alpha(par, sqrt( controlfunction_fluence(par) / controlfunction_targetfluence()))
@@ -314,8 +313,8 @@ contains
 
       call opt_control_state_null(qcpsi)
       call opt_control_state_copy(qcpsi, initial_st)
-      call oct_prop_init(prop_chi, "chi", sys%gr)
-      call oct_prop_init(prop_psi, "psi", sys%gr)
+      call oct_prop_init(prop_chi, "chi", sys%gr, sys%mc)
+      call oct_prop_init(prop_psi, "psi", sys%gr, sys%mc)
 
       call controlfunction_copy(par_prev, par)
       call propagate_forward(sys, hm, td, par, oct_target, qcpsi, prop_psi)
@@ -659,8 +658,8 @@ contains
 
     PUSH_SUB(f_striter)
 
-    call oct_prop_init(prop_chi, "chi", sys%gr)
-    call oct_prop_init(prop_psi, "psi", sys%gr)
+    call oct_prop_init(prop_chi, "chi", sys%gr, sys%mc)
+    call oct_prop_init(prop_psi, "psi", sys%gr, sys%mc)
 
     call controlfunction_to_realtime(par)
 

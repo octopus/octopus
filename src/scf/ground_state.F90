@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -96,8 +95,8 @@ contains
     if(.not. fromScratch) then
       ! load wavefunctions
       ! in RDMFT we need the full ground state
-      call restart_init(restart_load, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                        ierr, mesh=sys%gr%mesh, exact = (sys%ks%theory_level == RDMFT))
+      call restart_init(restart_load, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, &
+                        mesh=sys%gr%mesh, exact = (sys%ks%theory_level == RDMFT))
       if(ierr == 0) &
         call states_load(restart_load, sys%st, sys%gr, ierr)
 
@@ -110,7 +109,7 @@ contains
       end if
     end if
 
-    call scf_init(scfv, sys%gr, sys%geo, sys%st, hm)
+    call scf_init(scfv, sys%gr, sys%geo, sys%st, sys%mc, hm)
 
     if(fromScratch) then
       if(sys%ks%theory_level == RDMFT) then
@@ -128,7 +127,7 @@ contains
       call system_h_setup(sys, hm, calc_eigenval = .false.)
     end if
 
-    call restart_init(restart_dump, RESTART_GS, RESTART_TYPE_DUMP, sys%st%dom_st_kpt_mpi_grp, ierr, mesh=sys%gr%mesh)
+    call restart_init(restart_dump, RESTART_GS, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
 
     ! run self-consistency
     if (states_are_real(sys%st)) then

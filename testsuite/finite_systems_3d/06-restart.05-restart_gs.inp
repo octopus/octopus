@@ -1,5 +1,4 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id$
 
 # Now restart the previous calculation
 
@@ -16,3 +15,5 @@ SpinComponents = spin_polarized
 FilterPotentials = filter_none
 
 MixField = density
+
+WorkDir = "./workdir"

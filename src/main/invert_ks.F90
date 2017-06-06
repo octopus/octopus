@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -138,8 +137,7 @@ contains
 
     sys%ks%ks_inversion%aux_st%dom_st_kpt_mpi_grp = sys%st%dom_st_kpt_mpi_grp
     ! save files in restart format
-    call restart_init(restart, RESTART_GS, RESTART_TYPE_DUMP, sys%ks%ks_inversion%aux_st%dom_st_kpt_mpi_grp, &
-                      err, mesh = sys%gr%mesh)
+    call restart_init(restart, RESTART_GS, RESTART_TYPE_DUMP, sys%mc, err, mesh = sys%gr%mesh)
     call states_dump(restart, sys%ks%ks_inversion%aux_st, sys%gr, err, 0)
     if (err /= 0) then
       message(1) = "Unable to write states wavefunctions."

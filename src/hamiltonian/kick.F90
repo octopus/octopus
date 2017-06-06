@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: kick.F90 $
 
 #include "global.h"
 
@@ -268,7 +267,6 @@ contains
 
       !%Variable TDPolarizationDirection
       !%Type integer
-      !%Default 1
       !%Section Time-Dependent::Response::Dipole
       !%Description
       !% When a delta potential is included in a time-dependent run, this

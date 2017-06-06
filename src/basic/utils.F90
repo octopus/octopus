@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -190,7 +189,7 @@ contains
     message(1) = &
          "Version                : " // trim(conf%version)
     message(2) = &
-         "Revision               : "// trim(conf%latest_svn)
+         "Commit                 : "// trim(conf%git_commit)
     message(3) = &
          "Build time             : "// trim(conf%build_time)
     call messages_info(3)
@@ -205,12 +204,10 @@ contains
          "C compiler             : "//trim(conf%cc)
     message(2) = &
          "C compiler flags       : "//trim(conf%cflags)
-    message(3) = &
 #ifdef HAVE_FC_COMPILER_VERSION
-         "Fortran compiler       : "//trim(conf%fc) &
-         //" ("//compiler_version()//")"
+    message(3) = "Fortran compiler       : "//trim(conf%fc) //" ("//compiler_version()//")"
 #else
-         "Fortran compiler       : "//trim(conf%fc)
+    message(3) = "Fortran compiler       : "//trim(conf%fc)
 #endif
     message(4) = &
          "Fortran compiler flags : "//trim(conf%fcflags)

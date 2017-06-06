@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -75,6 +74,9 @@ module xc_ks_inversion_oct_m
   integer, public, parameter ::      &
     XC_ASYMPTOTICS_NONE    = 1,      &
     XC_ASYMPTOTICS_SC      = 2
+
+  integer, parameter ::              &
+    XC_FLAGS_NONE = 0
 
   type xc_ks_inversion_t
      integer             :: method
@@ -165,7 +167,8 @@ contains
 
       ! initialize densities, hamiltonian and eigensolver
       call states_densities_init(ks_inv%aux_st, gr, geo)
-      call hamiltonian_init(ks_inv%aux_hm, gr, geo, ks_inv%aux_st, INDEPENDENT_PARTICLES, XC_FAMILY_NONE)
+      call hamiltonian_init(ks_inv%aux_hm, gr, geo, ks_inv%aux_st, INDEPENDENT_PARTICLES, &
+                            XC_FAMILY_NONE, XC_FLAGS_NONE, .false.)
       call eigensolver_init(ks_inv%eigensolver, gr, ks_inv%aux_st)
     end if
 
@@ -581,8 +584,7 @@ contains
       aux_hm%vxc(:,jj) = vhxc(:,jj) - aux_hm%vhartree(1:np)
     end do
 
-!TODO: check that all arrays needed by hamiltonian update are sync'd in MPI
-!      fashion
+    !TODO: check that all arrays needed by hamiltonian update are sync`d in MPI fashion
 
     !calculate final density
 

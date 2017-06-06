@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -34,6 +33,7 @@ module io_oct_m
     io_workpath,         &
     io_open,             &
     io_mkdir,            &
+    io_rm,               &
     io_init,             &
     io_end,              &
     io_status,           &
@@ -42,13 +42,13 @@ module io_oct_m
     io_close,            &
     io_assign,           &
     io_get_extension,    &
-    io_switch_status,    &
     io_debug_on_the_fly, &
     iopar_read,          &
     iopar_backspace,     &
     iopar_find_line,     &
     io_skip_header,      &
-    io_file_exists
+    io_file_exists,      &
+    io_dir_exists
 
   integer, parameter :: min_lun=10, max_lun=99
   logical            :: lun_is_free(min_lun:max_lun)
@@ -124,8 +124,25 @@ contains
     !%Description
     !% By default, all files are written and read from the working directory,
     !% <i>i.e.</i> the directory from which the executable was launched. This behavior can
-    !% be changed by setting this variable: if you give it a name (other than ".")
-    !% the files are written and read in that directory.
+    !% be changed by setting this variable. If you set <tt>WorkDir</tt> to a name other than ".",
+    !% the following directories are written and read in that directory:
+    !%<ul>
+    !% <li>"casida/"</li>
+    !% <li>"em_resp_fd/"</li>
+    !% <li>"em_resp/"</li>
+    !% <li>"geom/"</li>
+    !% <li>"kdotp/"</li>
+    !% <li>"local.general"</li>
+    !% <li>"pcm/"</li>
+    !% <li>"profiling/"</li>
+    !% <li>"restart/"</li>
+    !% <li>"static/"</li>
+    !% <li>"td.general/"</li>
+    !% <li>"vdw/"</li>
+    !% <li>"vib_modes/"</li>
+    !%</ul>
+    !% Furthermore, some of the debug information (see <tt>Debug</tt>) is also written to <tt>WorkDir</tt> and
+    !% the non-absolute paths defined in <tt>OutputIterDir</tt> are relative to <tt>WorkDir</tt>.
     !%End
     call parse_variable('WorkDir', '.', work_dir)
     ! ... and if necessary create workdir (will not harm if work_dir is already there)
@@ -314,6 +331,20 @@ contains
   end subroutine io_mkdir
 
 
+  ! ---------------------------------------------------------
+  subroutine io_rm(fname)
+    character(len=*),  intent(in) :: fname
+
+    integer :: last_slash, pos, length
+
+    PUSH_SUB(io_rm)
+
+    call loct_rm(trim(io_workpath(fname)))
+
+    POP_SUB(io_rm)
+  end subroutine io_rm
+
+  
   ! ---------------------------------------------------------
   integer function io_open(file, action, status, form, position, die, recl, grp) result(iunit)
     character(len=*), intent(in) :: file, action
@@ -524,31 +555,6 @@ contains
 
 
   ! ---------------------------------------------------------
-  !> create status file for asynchronous communication with GUI
-  subroutine io_switch_status(status)
-    character(len=*), intent(in) :: status
-    
-    integer :: iunit
-
-    PUSH_SUB(io_switch_status)
-
-    ! only root node is taking care of file I/O
-    if(mpi_grp_is_root(mpi_world)) then 
-      ! remove possible leftovers first before we switch to new status
-      call loct_rm_status_files()
-
-      ! create empty status file 
-      iunit = io_open('exec/oct-status-'//trim(status), &
-        action='write', status='new')
-      call io_close(iunit)
-    end if
-
-    POP_SUB(io_switch_status)
-
-  end subroutine io_switch_status
-
-
-  ! ---------------------------------------------------------
   !> check if debug mode or message flushing should be enabled or 
   !! disabled on the fly
   subroutine io_debug_on_the_fly()
@@ -611,6 +617,17 @@ contains
     POP_SUB(io_file_exists)
   end function io_file_exists
 
+  !> Returns true if a dir with name 'dir' exists
+  ! ---------------------------------------------------------
+  logical function io_dir_exists(dir)
+    character(len=*), intent(in)  :: dir
+
+    PUSH_SUB(io_dir_exists)
+
+    io_dir_exists = loct_dir_exists(trim(io_workpath(dir)))
+
+    POP_SUB(io_dir_exists)
+  end function io_dir_exists
 
   ! ---------------------------------------------------------
   subroutine iopar_read(grp, iunit, lines, n_lines, ierr)
@@ -714,6 +731,8 @@ contains
 
   end subroutine io_skip_header
 
+  
+  
 end module io_oct_m
 
 !! Local Variables:

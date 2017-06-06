@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -114,7 +113,7 @@ contains
     call kpoints_distribute(sys%st%d, sys%mc)
     call states_distribute_nodes(sys%st, sys%mc)
     call grid_init_stage_2(sys%gr, sys%mc, sys%geo)
-    call output_init(sys%outp, sys%gr%sb, sys%st%nst)
+    call output_init(sys%outp, sys%gr%sb, sys%st%nst, sys%ks)
 
     nullify(sys%subsys_handle, subsys_states)
     if(ssys_config_use())then
@@ -131,7 +130,7 @@ contains
     call elf_init()
 
     call poisson_init(psolver, sys%gr%der, sys%mc, theta = sys%st%cmplxscl%theta)
-    if(poisson_is_multigrid(psolver)) call grid_create_multigrid(sys%gr, sys%geo)
+    if(poisson_is_multigrid(psolver)) call grid_create_multigrid(sys%gr, sys%geo, sys%mc)
 
     call v_ks_init(sys%ks, sys%gr, sys%st, sys%geo, sys%mc)
 

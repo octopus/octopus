@@ -1,5 +1,4 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id$
 
 Test       : Geometry optimization
 Program    : octopus
@@ -7,23 +6,23 @@ TestGroups : long-run, finite_systems_3d
 Enabled    : Yes
 
 Input      : 23-go-na2.01-steep.inp
-match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.41784564
+match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.41784559 
 match ; Force    [1] ; GREPFIELD(static/info, 'Forces on the ions', 5, 2) ; -0.000732
 match ; Force    [2] ; GREPFIELD(static/info, 'Forces on the ions', 5, 3) ; 0.000732
-match ; Geometry [1] ; LINEFIELD(min.xyz, 3, 4) ; -1.449084
+match ; Geometry [1] ; LINEFIELD(min.xyz, 3, 4) ; -1.449083
 match ; Geometry [2] ; LINEFIELD(min.xyz, 4, 4) ; 1.449083
 
 # the results differ because we stop simplex before it converges
 Input      : 23-go-na2.02-simplex.inp
-match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.41754016
+match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.41759614 
 match ; Force    [1] ; GREPFIELD(static/info, 'Forces on the ions', 5, 2) ; 0.002584
 match ; Force    [2] ; GREPFIELD(static/info, 'Forces on the ions', 5, 3) ; -0.002584
 match ; Geometry [1] ; LINEFIELD(min.xyz, 3, 4) ; -1.526284
 match ; Geometry [2] ; LINEFIELD(min.xyz, 4, 4) ; 1.384190
 
 Input      : 23-go-na2.03-fire.inp
-match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.41787611
-match ; Force    [1] ; GREPFIELD(static/info, 'Forces on the ions', 5, 2) ; -0.000114
-match ; Force    [2] ; GREPFIELD(static/info, 'Forces on the ions', 5, 3) ; 0.000114
-match ; Geometry [1] ; LINEFIELD(min.xyz, 3, 4) ; -1.461829
-match ; Geometry [2] ; LINEFIELD(min.xyz, 4, 4) ;  1.461829
+match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.41787822 
+match ; Force    [1] ; GREPFIELD(static/info, 'Forces on the ions', 5, 2) ; -0.000038
+match ; Force    [2] ; GREPFIELD(static/info, 'Forces on the ions', 5, 3) ; 0.000038
+match ; Geometry [1] ; LINEFIELD(min.xyz, 3, 4) ; -1.463432
+match ; Geometry [2] ; LINEFIELD(min.xyz, 4, 4) ;  1.463432

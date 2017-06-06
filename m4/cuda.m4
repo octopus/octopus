@@ -15,7 +15,6 @@
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 ## 02110-1301, USA.
 ##
-## $Id$
 ##
 
 AC_DEFUN([ACX_CUDA],
@@ -42,7 +41,7 @@ AC_DEFUN([ACX_CUDA],
   CFLAGS="$CFLAGS_CUDA $acx_cuda_save_CFLAGS"
 
   if test ! -z "$with_cuda_prefix"; then
-    LDFLAGS="-L$with_cuda_prefix/lib"
+    LDFLAGS="-L$with_cuda_prefix/lib64"
   else
     LDFLAGS=""
   fi

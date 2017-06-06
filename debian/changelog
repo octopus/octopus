@@ -1,3 +1,15 @@
+octopus (7.0) unstable; urgency=low
+
+  * Updated to version 7.0.
+
+ -- Micael Oliveira <micael@cfelm-pcx26575.desy.de>  Tue, 06 Jun 2017 09:48:09 +0200
+
+octopus (6.0) unstable; urgency=low
+
+  * Updated to version 6.0.
+
+ -- Micael Oliveira <micael.oliveira@mpsd.mpg.de>  Mon, 05 Sep 2016 12:18:07 +0200
+
 octopus (tetricus) UNRELEASED; urgency=medium
 
   * Development version.

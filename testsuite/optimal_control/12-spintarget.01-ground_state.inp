@@ -67,7 +67,6 @@ gfactor = -0.44
 # MISSING: References with typical values for confining
 # potentials.
 #*********************************************************
-omega_meV = 0.001
 omega_Ha = 0.001 * ( 1e3 / 27211.384)
 omega = omega_Ha * (epsilon^2/meff)
 
@@ -104,16 +103,16 @@ Spacing = 1.0
 GyroMagneticRatio = gfactor * meff 
 
 # This i the magnetic field, in teslas:
-B = 1.0
+mag_tesla = 1.0
 # Now we convert to atomic units:
-B = B * (1.0/1715.25539471980586102447) 
+mag_au = mag_tesla * (1.0/1715.25539471980586102447) 
 # Now we convert to effective atomic units:
-B = B * sqrt(epsilon^5) / (meff^2) 
+mag_effau = mag_au * sqrt(epsilon^5) / (meff^2) 
 # And now we divide by sqrt(epsilon):
-B = B / sqrt(epsilon)
+mag = mag_effau / sqrt(epsilon)
 
 %StaticMagneticField
-0 | 0 | B
+0 | 0 | mag
 %
 
 
@@ -125,11 +124,11 @@ B = B / sqrt(epsilon)
 #*********************************************************
 
 # First, we express lambda in meV*nm
-lambda = 0.05 * ( 1.0e2 )
+lambda_mevnm = 0.05 * ( 1.0e2 )
 # Then, we transform it into Ha * a0
-lambda = lambda * 0.00069446161
+lambda_haa0 = lambda_mevnm * 0.00069446161
 # And then, to (Ha*) * (a0*)
-lambda = lambda * (epsilon^2/meff) * (meff/epsilon)
+lambda = lambda_haa0 * (epsilon^2/meff) * (meff/epsilon)
 RashbaSpinOrbitCoupling = lambda
 
 
@@ -138,68 +137,7 @@ RashbaSpinOrbitCoupling = lambda
 #*********************************************************
 EigenSolver = cg
 #EigenSolverTolerance = 1.0e-6
-Mixing = 1.0
-MixingScheme = linear
 
-
-#*********************************************************
-#TD parameters
-#
-# MISSING: Typical "operation" times.
-#*********************************************************
-#Propagation times. For example,
-# 10 ps = 10000 fs = 413413.73395066120 a.u.[T] = 166.44865 e.a.u.[T] 
-
-# We will use the value of the confining harmonic potential frequency as
-# reference. The period associated to it is:
-period = 2*pi/omega
-# Then we will define the total propagation time in reference to that period:
-stime  = period
-# (For example, 2*period corresponds to 131.8877494489 e.a.u.[T] )
-# We want the time step to be an integer fraction of the propagation time:
-dt = period/400
-
-TDPropagator = exp_mid
-TDExponentialMethod = taylor
-TDExpOrder = 4
-TDPropagationTime = stime
-TDTimeStep = dt
-
-
-#*********************************************************
-#OCT parameters
-#*********************************************************
-OCTPenalty = 1.0
-OCTEps = 1.0e-6
-OCTMaxIter = 2
-OCTFixFluenceTo = -1
-OCTControlFunctionRepresentation = control_fourier_series_h
-OCTControlFunctionOmegaMax = (2*pi/stime)*1.5
-
-OCTInitialState = oct_is_groundstate
-
-#------------------------------------------
-#   If the target is a projection operator
-#------------------------------------------
-#OCTTargetOperator = oct_tg_gstransformation
-#%OCTTargetTransformStates
-#0 | 0 | 1 | 0  
-#%
-#------------------------------------------
-#   If the target is a spin operator
-#------------------------------------------
-OCTTargetOperator = oct_tg_spin
-%OCTTargetSpin
-0 | 0 | -1
-%
-
-OCTScheme  = oct_bfgs
-
-#OCTDoubleCheck = yes
-#OCTDumpIntermediate = yes
-
-#OCTCheckGradient = 0.0001
-#OCTNumberCheckPoints = 10
 
 #*********************************************************
 # Laser field parameters
@@ -217,10 +155,6 @@ OCTScheme  = oct_bfgs
 # Amplitude of the lser field
 # For example, 1000 V/m = 1000 * 1.94469046723545440170e-10 a.u.[EF] = 
 # 1000 * 2.785113504876579447118e-5 e.a.u.[EF]
-
-ampl_Vm = 1000
-ampl_au = ampl_Vm * 1.94469046723545440170e-10
-ampl = ampl_au * sqrt(epsilon^4/meff^5)
 
 %TDExternalFields
 electric_field | 1 | 1 | 0 | 0.0 | "envelope_function"

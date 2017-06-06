@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -25,8 +24,36 @@ module pfft_params_oct_m
   use fftw_params_oct_m
   implicit none
 
+  private
 
 #ifdef HAVE_PFFT
+  
+  ! make public some symbols from the pfft library
+  public :: pfft_cleanup,               &
+            pfft_create_procmesh_2d,    &
+            pfft_destroy_plan,          &
+            pfft_execute,               &
+            pfft_init,                  &
+            pfft_local_size_dft_r2c_3d, &
+            pfft_local_size_dft_3d,     &
+            pfft_plan_dft_c2r_3d,       &
+            pfft_plan_dft_r2c_3d,       &
+            pfft_plan_dft_3d,           &
+            PFFT_INT,                   &
+            PFFT_PTRDIFF_T,             &
+            PFFT_FLOAT,                 &
+            PFFT_DOUBLE,                &
+            PFFT_LDOUBLE,               &
+            PFFT_UNSIGNED,              &
+            PFFT_TRANSPOSED_IN,         &
+            PFFT_TRANSPOSED_OUT,        &
+            PFFT_ESTIMATE,              &
+            PFFT_TUNE,                  &
+            PFFT_DESTROY_INPUT,         &
+            PFFT_MEASURE,               &
+            PFFT_FORWARD,               &
+            PFFT_BACKWARD
+
   include "pfft.f03"
 #endif
 
@@ -53,10 +80,6 @@ module pfft_oct_m
     pfft_prepare_plan_c2r,     &
     pfft_prepare_plan_c2c,     &
     pfft_get_dims
-
-  ! make public some symbols from the pfft library
-  public :: pfft_create_procmesh_2d, pfft_init, pfft_cleanup, &
-    pfft_destroy_plan, pfft_execute
 
 contains
 

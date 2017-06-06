@@ -15,28 +15,26 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 
 #include "global.h"
 
 module nfft_oct_m
-
-#if !defined(HAVE_NFFT)
-  integer, public :: nfft_dummy ! this avoids compilers complaining about empty module
-#else
-
-  use,intrinsic :: iso_c_binding
   use fftw_params_oct_m
   use global_oct_m
+  use, intrinsic :: iso_c_binding
   use loct_math_oct_m
   use messages_oct_m
   use parser_oct_m
   use varinfo_oct_m
-
   implicit none
-
+  
   private
+  
+#if !defined(HAVE_NFFT)
+  integer, public :: nfft_dummy ! this avoids compilers complaining about empty module
+#else
+
   public ::          &
     nfft_t,          &
     nfft_copy_info,  &
@@ -48,7 +46,7 @@ module nfft_oct_m
     znfft_backward,  &
     dnfft_forward,   &
     dnfft_backward,  &
-    znfft_forward1, &
+    znfft_forward1,  &
     dnfft_forward1
 
   ! global constants

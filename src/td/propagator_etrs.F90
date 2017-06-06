@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -43,6 +42,7 @@ module propagator_etrs_oct_m
   use states_oct_m
   use types_oct_m
   use v_ks_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -105,7 +105,7 @@ contains
 
       call density_calc_end(dens_calc)
 
-      call v_ks_calc(ks, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield))
+      call v_ks_calc(ks, hm, st, geo, calc_current = .false.)
 
       call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
       call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
@@ -219,7 +219,7 @@ contains
 
     call density_calc_end(dens_calc)
 
-    call v_ks_calc(ks, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield))
+    call v_ks_calc(ks, hm, st, geo, calc_current = .false.)
 
     call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
     call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
@@ -270,7 +270,7 @@ contains
         call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
       end if
 
-      call v_ks_calc(ks, hm, st, geo, time = time, calc_current = gauge_field_is_applied(hm%ep%gfield))
+      call v_ks_calc(ks, hm, st, geo, time = time, calc_current = .false.)
 
       ! now check how much the potential changed
       do ip = 1, gr%mesh%np
@@ -337,24 +337,39 @@ contains
     type(density_calc_t)  :: dens_calc
     type(profile_t), save :: phase_prof
     integer               :: pnp, iprange
-    FLOAT, allocatable    :: vold(:, :), imvold(:, :)
+    FLOAT, allocatable    :: vold(:, :), imvold(:, :), vtauold(:, :), imvtauold(:, :)
     type(accel_mem_t)    :: phase_buff
 
     PUSH_SUB(td_aetrs)
 
     if(tr%method == PROP_CAETRS) then
       SAFE_ALLOCATE(vold(1:gr%mesh%np, 1:st%d%nspin))
-      if(hm%cmplxscl%space) then
-        SAFE_ALLOCATE(Imvold(1:gr%mesh%np, 1:st%d%nspin))
-        call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 2, vold, imvold)
+      if(hm%family_is_mgga_with_exc) then 
+        if(hm%cmplxscl%space) then
+          SAFE_ALLOCATE(Imvold(1:gr%mesh%np, 1:st%d%nspin))
+          call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 2, &
+                  vold, imvold, vtauold, imvtauold)
+          call lalg_copy(gr%mesh%np, st%d%nspin, Imvold, hm%Imvhxc)
+          call lalg_copy(gr%mesh%np, st%d%nspin, Imvtauold, hm%Imvtau)
+        else
+          call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 2, vold, vtau = vtauold)
+        end if
+        call lalg_copy(gr%mesh%np, st%d%nspin, vold, hm%vhxc)
+        call lalg_copy(gr%mesh%np, st%d%nspin, vtauold, hm%vtau)
       else
-        call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 2, vold)
-      end if
-      call lalg_copy(gr%mesh%np, st%d%nspin, vold, hm%vhxc)
-      if(hm%cmplxscl%space) call lalg_copy(gr%mesh%np, st%d%nspin, Imvold, hm%Imvhxc)
+        if(hm%cmplxscl%space) then
+          SAFE_ALLOCATE(Imvold(1:gr%mesh%np, 1:st%d%nspin))
+          call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 2, vold, imvold)
+          call lalg_copy(gr%mesh%np, st%d%nspin, Imvold, hm%Imvhxc)
+        else
+          call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 2, vold)
+        end if
+        call lalg_copy(gr%mesh%np, st%d%nspin, vold, hm%vhxc)
+      endif
+
       call hamiltonian_update(hm, gr%mesh, time = time - dt)
       call v_ks_calc_start(ks, hm, st, geo, time = time - dt, calc_energy = .false., &
-             calc_current = gauge_field_is_applied(hm%ep%gfield))
+             calc_current = .false.)
     end if
 
     ! propagate half of the time step with H(time - dt)
@@ -367,16 +382,33 @@ contains
     if(tr%method == PROP_CAETRS) then
       call v_ks_calc_finish(ks, hm)
 
-      call potential_interpolation_set(tr%vksold, gr%mesh%np, st%d%nspin, 1, hm%vhxc)
-      call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
-        tr%vksold%v_old(:, :, 1:3), time, tr%vksold%v_old(:, :, 0))
+      if(hm%family_is_mgga_with_exc) then 
+        !TODO: This does not support complex scaling for the apparently
+        call potential_interpolation_set(tr%vksold, gr%mesh%np, st%d%nspin, 1, hm%vhxc, vtau = hm%vtau)
+        call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
+           tr%vksold%v_old(:, :, 1:3), time, tr%vksold%v_old(:, :, 0))
+        call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
+           tr%vksold%vtau_old(:, :, 1:3), time, tr%vksold%vtau_old(:, :, 0))
+        forall(ispin = 1:st%d%nspin, ip = 1:gr%mesh%np)
+          vold(ip, ispin) =  CNST(0.5)*dt*(hm%vhxc(ip, ispin) - vold(ip, ispin))
+          vtauold(ip, ispin) =  CNST(0.5)*dt*(hm%vtau(ip, ispin) - vtauold(ip, ispin))
+        end forall      
+      else
+        !TODO: This does not support complex scaling for the apparently
+        call potential_interpolation_set(tr%vksold, gr%mesh%np, st%d%nspin, 1, hm%vhxc)
+        call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
+           tr%vksold%v_old(:, :, 1:3), time, tr%vksold%v_old(:, :, 0))
 
-      forall(ispin = 1:st%d%nspin, ip = 1:gr%mesh%np) 
-        vold(ip, ispin) =  CNST(0.5)*dt*(hm%vhxc(ip, ispin) - vold(ip, ispin))
-      end forall
+        forall(ispin = 1:st%d%nspin, ip = 1:gr%mesh%np)
+          vold(ip, ispin) =  CNST(0.5)*dt*(hm%vhxc(ip, ispin) - vold(ip, ispin))
+        end forall
+      end if
 
       ! copy vold to a cl buffer
       if(accel_is_enabled() .and. hamiltonian_apply_packed(hm, gr%mesh)) then
+        if(hm%family_is_mgga_with_exc) then
+          call messages_not_implemented('CAETRS propagator with accel and MGGA with energy functionals')
+        end if
         pnp = accel_padded_size(gr%mesh%np)
         call accel_create_buffer(phase_buff, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, pnp*st%d%nspin)
         ASSERT(ubound(vold, dim = 1) == gr%mesh%np)
@@ -387,7 +419,12 @@ contains
 
     end if
 
-    call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 0, hm%vhxc)
+    !TODO: This does not support complex scaling for the apparently
+    if(hm%family_is_mgga_with_exc) then
+      call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 0, hm%vhxc, vtau = hm%vtau)
+    else
+      call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 0, hm%vhxc)
+    end if
 
     ! move the ions to time t
     if(move_ions .and. ion_dynamics_ions_move(ions)) then

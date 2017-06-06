@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 
   ! ----------------------------------------------------------------------
@@ -79,7 +78,7 @@
     integer :: ierr
     PUSH_SUB(target_output_tdlocal)
     
-    call loct_mkdir(trim(dir))
+    call io_mkdir(trim(dir))
     call target_build_tdlocal(tg, gr, M_ZERO)
     if(outp%how /= 0) then
       call dio_function_output(outp%how, trim(dir), 'td_local_target', gr%mesh, &

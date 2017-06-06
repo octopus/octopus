@@ -1,5 +1,4 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id$
 
 CalculationMode = gs
 fromScratch = no
@@ -22,3 +21,5 @@ MixField = potential
 %
 
 FilterPotentials = filter_none
+
+WorkDir = "./workdir"

@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -513,6 +512,20 @@ contains
     call profiling_out(prof_init)
 #endif
 
+    ! Get some device information that we will need later
+    
+    ! total memory
+#ifdef HAVE_OPENCL
+    call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_GLOBAL_MEM_SIZE, accel%global_memory_size, cl_status)
+    call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_LOCAL_MEM_SIZE, accel%local_memory_size, cl_status)
+    call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_MAX_WORK_GROUP_SIZE, accel%max_workgroup_size, cl_status)
+#endif
+#ifdef HAVE_CUDA
+    call cuda_device_total_memory(accel%device%cuda_device, accel%global_memory_size)
+    call cuda_device_shared_memory(accel%device%cuda_device, accel%local_memory_size)
+    call cuda_device_max_threads_per_block(accel%device%cuda_device, accel%max_workgroup_size)
+#endif
+      
     if(mpi_grp_is_root(base_grp)) call device_info()
 
     ! now initialize the kernels
@@ -674,25 +687,10 @@ contains
       call messages_new_line()
 #endif
 
-      ! TOTAL MEMORY
-#ifdef HAVE_OPENCL
-      call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_GLOBAL_MEM_SIZE, accel%global_memory_size, cl_status)
-#endif
-#ifdef HAVE_CUDA
-      call cuda_device_total_memory(accel%device%cuda_device, accel%global_memory_size)
-#endif
       call messages_write('      Device memory          :')
       call messages_write(accel%global_memory_size, units = unit_megabytes)
       call messages_new_line()
 
-
-      ! SHARED/LOCAL MEMORY
-#ifdef HAVE_OPENCL
-      call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_LOCAL_MEM_SIZE, accel%local_memory_size, cl_status)
-#endif
-#ifdef HAVE_CUDA
-      call cuda_device_shared_memory(accel%device%cuda_device, accel%local_memory_size)
-#endif
       call messages_write('      Local/shared memory    :')
       call messages_write(accel%local_memory_size, units = unit_kilobytes)
       call messages_new_line()
@@ -715,13 +713,6 @@ contains
       call messages_new_line()
 #endif
 
-      ! Workgroup/block size
-#ifdef HAVE_OPENCL
-      call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_MAX_WORK_GROUP_SIZE, accel%max_workgroup_size, cl_status)
-#endif
-#ifdef HAVE_CUDA
-      call cuda_device_max_threads_per_block(accel%device%cuda_device, accel%max_workgroup_size)
-#endif
       call messages_write('      Max. group/block size  :')
       call messages_write(accel%max_workgroup_size)
       call messages_new_line()
@@ -852,19 +843,21 @@ contains
     this%flags = flags
     fsize = int(size, 8)*types_get_size(type)
 
-    ASSERT(fsize >= 0)
+    if(this%size > 0) then
 
 #ifdef HAVE_OPENCL
-    this%mem = clCreateBuffer(accel%context%cl_context, flags, fsize, ierr)
-    if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateBuffer")
+      this%mem = clCreateBuffer(accel%context%cl_context, flags, fsize, ierr)
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateBuffer")
 #endif
 #ifdef HAVE_CUDA
-    call cuda_mem_alloc(this%cuda_ptr, fsize)
+      call cuda_mem_alloc(this%cuda_ptr, fsize)
 #endif
     
-    INCR(buffer_alloc_count, 1)
-    INCR(allocated_mem, fsize)
-
+      INCR(buffer_alloc_count, 1)
+      INCR(allocated_mem, fsize)
+      
+    end if
+    
     POP_SUB(accel_create_buffer_4)
   end subroutine accel_create_buffer_4
 
@@ -886,19 +879,21 @@ contains
     this%flags = flags
     fsize = int(size, 8)*types_get_size(type)
 
-    ASSERT(fsize >= 0)
-
+    if(fsize > 0) then
+      
 #ifdef HAVE_OPENCL
-    this%mem = clCreateBuffer(accel%context%cl_context, flags, fsize, ierr)
-    if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateBuffer")
+      this%mem = clCreateBuffer(accel%context%cl_context, flags, fsize, ierr)
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateBuffer")
 #endif
 #ifdef HAVE_CUDA
-    call cuda_mem_alloc(this%cuda_ptr, fsize)
+      call cuda_mem_alloc(this%cuda_ptr, fsize)
 #endif
-    
-    INCR(buffer_alloc_count, 1)
-    INCR(allocated_mem, fsize)
+      
+      INCR(buffer_alloc_count, 1)
+      INCR(allocated_mem, fsize)
 
+    end if
+      
     POP_SUB(accel_create_buffer_8)
   end subroutine accel_create_buffer_8
   
@@ -911,17 +906,21 @@ contains
 
     PUSH_SUB(accel_release_buffer)
 
+    if(this%size > 0) then
+
 #ifdef HAVE_OPENCL
-    call clReleaseMemObject(this%mem, ierr)
-    if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clReleaseMemObject")
+      call clReleaseMemObject(this%mem, ierr)
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clReleaseMemObject")
 #endif
 #ifdef HAVE_CUDA
-    call cuda_mem_free(this%cuda_ptr)
+      call cuda_mem_free(this%cuda_ptr)
 #endif
-    
-    INCR(buffer_alloc_count, -1)
-    INCR(allocated_mem, -int(this%size, 8)*types_get_size(this%type))
+      
+      INCR(buffer_alloc_count, -1)
+      INCR(allocated_mem, -int(this%size, 8)*types_get_size(this%type))
 
+    end if
+    
     this%size = 0
     this%flags = 0
 
@@ -1038,6 +1037,11 @@ contains
     dim = ubound(globalsizes, dim = 1)
 
     ASSERT(dim == ubound(localsizes, dim = 1))
+
+    ! if one size is zero, there is nothing to do
+    if(any(globalsizes == 0)) return
+
+    ASSERT(all(localsizes > 0))
     ASSERT(all(localsizes <= accel_max_workgroup_size()))
     ASSERT(all(mod(globalsizes, localsizes) == 0))
 
@@ -1052,7 +1056,8 @@ contains
 #ifdef HAVE_CUDA
     gsizes(1:3) = gsizes(1:3)/lsizes(1:3)
     
-    ASSERT(all(gsizes <= 65535))
+    ASSERT(gsizes(1) < 2_8**31 - 1_8)
+    ASSERT(all(gsizes(2:3) <= 65535_8))
     
     call cuda_launch_kernel(kernel%cuda_kernel, gsizes(1), lsizes(1), kernel%cuda_shared_mem, kernel%arguments)
 
@@ -1103,8 +1108,10 @@ contains
 
     string = '#include "'//trim(filename)//'"'
 
-    call messages_write("Building CL program '"//trim(filename)//"'.")
-    call messages_info()
+    if(debug%info) then
+      call messages_write("Building CL program '"//trim(filename)//"'.")
+      call messages_info()
+    end if
 
     prog = clCreateProgramWithSource(accel%context%cl_context, trim(string), ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateProgramWithSource")
@@ -1473,18 +1480,22 @@ contains
 
     ASSERT(type == TYPE_CMPLX .or. type == TYPE_FLOAT)
 
-    nval_real = nval*types_get_size(type)/8
-    offset_real = optional_default(offset, 0)*types_get_size(type)/8
-    
-    call accel_set_kernel_arg(set_zero, 0, nval_real)
-    call accel_set_kernel_arg(set_zero, 1, offset_real)
-    call accel_set_kernel_arg(set_zero, 2, buffer)
+    if(nval > 0) then
+      
+      nval_real = nval*types_get_size(type)/8
+      offset_real = optional_default(offset, 0)*types_get_size(type)/8
+      
+      call accel_set_kernel_arg(set_zero, 0, nval_real)
+      call accel_set_kernel_arg(set_zero, 1, offset_real)
+      call accel_set_kernel_arg(set_zero, 2, buffer)
+      
+      bsize = accel_kernel_workgroup_size(set_zero)
+      
+      call accel_kernel_run(set_zero, (/ opencl_pad(nval_real, bsize) /), (/ bsize /))
+      call accel_finish()
 
-    bsize = accel_kernel_workgroup_size(set_zero)
-
-    call accel_kernel_run(set_zero, (/ opencl_pad(nval_real, bsize) /), (/ bsize /))
-    call accel_finish()
-
+    end if
+      
     POP_SUB(accel_set_buffer_to_zero)
   end subroutine accel_set_buffer_to_zero
 

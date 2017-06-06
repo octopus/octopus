@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -76,7 +75,8 @@ module multicomm_oct_m
 #endif
     multicomm_t,                     &
     multicomm_all_pairs_t,           &
-    multicomm_init, multicomm_end,   &
+    multicomm_init,                  &
+    multicomm_end,                   &
     multicomm_all_pairs_copy,        &
     multicomm_strategy_is_parallel,  &
     multicomm_is_slave,              &

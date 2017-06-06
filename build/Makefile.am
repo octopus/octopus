@@ -17,7 +17,6 @@
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 ## 02110-1301, USA.
 ##
-## $Id$
 
 EXTRA_DIST =                   \
 	mk_varinfo.pl          \
@@ -25,7 +24,7 @@ EXTRA_DIST =                   \
 	mk_kfunctionals_list.pl \
 	preprocess.pl          \
 	var2html.pl            \
-	svn_release_number.sh  \
+	git_commit_hash.sh     \
 	true_compiler.sh       \
 	octopus.spec.in
 

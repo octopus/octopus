@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: openscad.F90 9479 2012-10-04 22:11:39Z dstrubbe $
 
 #include "global.h"
 

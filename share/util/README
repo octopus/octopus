@@ -10,7 +10,7 @@ web page [3].
 
 [1] http://www.opendx.org
 [2] http://www.tc.cornell.edu/Services/Vis/dx/index.asp
-[3] http://www.tddft.org/programs/octopus/wiki/index.php/Releases
+[3] http://octopus-code.org/wiki/Releases
 
 
 display_mesh_index.gp is a gnuplot script to visualize files produced

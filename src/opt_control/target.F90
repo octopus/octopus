@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -41,6 +40,7 @@ module target_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use multicomm_oct_m
   use opt_control_global_oct_m
   use opt_control_state_oct_m
   use output_oct_m
@@ -179,7 +179,7 @@ contains
 
   ! ----------------------------------------------------------------------
   !> The target is initialized, mainly by reading from the inp file.
-  subroutine target_init(gr, geo, qcs, td, w0, tg, oct, ep)
+  subroutine target_init(gr, geo, qcs, td, w0, tg, oct, ep, mc)
     type(grid_t),     intent(in)    :: gr
     type(geometry_t), intent(in)    :: geo
     type(opt_control_state_t),   intent(inout) :: qcs
@@ -188,6 +188,7 @@ contains
     type(target_t),   intent(inout) :: tg
     type(oct_t),      intent(in)    :: oct
     type(epot_t),     intent(inout) :: ep
+    type(multicomm_t), intent(in)   :: mc
 
     integer :: ierr
     type(states_t), pointer :: stin
@@ -268,7 +269,7 @@ contains
     call states_deallocate_wfns(tg%st)
     call states_allocate_wfns(tg%st, gr%mesh, TYPE_CMPLX)
     nullify(tg%td_fitness)
-    call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, tg%st%dom_st_kpt_mpi_grp, ierr, mesh=gr%mesh, exact=.true.)
+    call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh, exact=.true.)
     if(ierr /= 0) then
       message(1) = "Could not read gs for OCTTargetOperator."
       call messages_fatal(1)

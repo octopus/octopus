@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -62,6 +61,8 @@ module io_function_oct_m
     zio_function_input,           &
     dio_function_output,          &
     zio_function_output,          &
+    dio_function_output_global,   &
+    zio_function_output_global,   &
     io_function_output_vector
     
 

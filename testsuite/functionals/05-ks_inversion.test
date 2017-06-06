@@ -1,5 +1,4 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id$
 
 Test       : KS Inversion
 Program    : octopus
@@ -14,10 +13,10 @@ match ; Density value 2                          ; LINEFIELD(static/density.y=0\
 
 # not implemented in parallel
 
-Precision : 7E-03
+Precision : 2E-02
 Input: 05-ks_inversion.02-two_particle.inp
 match ; XC potential                             ; LINEFIELD(static/vxc.y=0\,z=0, 302, 2);  -0.480168843099003
 
-Precision : 6.0E-03
+Precision : 9.0E-03
 Input: 05-ks_inversion.03-inversion.inp
 match ; KS inversion                             ; LINEFIELD(InvertKSconvergence,  19, 2) ; 0.00779439660595

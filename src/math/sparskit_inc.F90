@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 ! ---------------------------------------------------------
 subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)

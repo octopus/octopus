@@ -1,5 +1,4 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id$
 
 # Start a time-dependent calculation
 
@@ -18,3 +17,4 @@ TDPolarizationDirection = 1
 
 FilterPotentials = filter_none
 
+WorkDir = "./workdir"

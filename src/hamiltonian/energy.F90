@@ -16,7 +16,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -74,6 +73,7 @@ module energy_oct_m
     FLOAT :: Imentropy
     FLOAT :: Imts
     FLOAT :: Imberry
+
   end type energy_t
 
 contains
@@ -166,7 +166,6 @@ contains
     eout%Imts = ein%Imts
     eout%Imberry = ein%Imberry
 
-    
     POP_SUB(energy_copy)
   end subroutine energy_copy
 

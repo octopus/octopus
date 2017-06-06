@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# $Id$
 
 Test       : LOBPCG
 Program    : octopus
@@ -51,6 +50,7 @@ match ; Eigenvalue 2  ; GREPFIELD(static/info, ' 2   --', 3) ; -16.446975
 match ; Eigenvalue 3  ; GREPFIELD(static/info, ' 3   --', 3) ; -4.496133
 match ; Eigenvalue 4  ; GREPFIELD(static/info, ' 4   --', 3) ; -4.496133
 match ; Eigenvalue 5  ; GREPFIELD(static/info, ' 5   --', 3) ; -4.496133
+Precision : 0.0015
 match ; <Sx> 1        ; GREPFIELD(static/info, '1   --', 5) ; 0.3000
 match ; <Sy> 1        ; GREPFIELD(static/info, '1   --', 6) ; 0.3000
 match ; <Sz> 1        ; GREPFIELD(static/info, '1   --', 7) ; -0.2645

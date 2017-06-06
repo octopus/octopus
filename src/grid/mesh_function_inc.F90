@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 
 ! ---------------------------------------------------------
@@ -107,7 +106,7 @@ end function X(mf_nrm2_aux)
 
 ! ---------------------------------------------------------
 !> this function returns the dot product between two vectors
-R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu) result(dotp)
+R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu, np) result(dotp)
   type(mesh_t),      intent(in) :: mesh
   R_TYPE,            intent(in) :: f1(:), f2(:)
   logical, optional, intent(in) :: reduce
@@ -115,17 +114,19 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu) result(dotp)
      !< if true, use blas_dotu instead of blas_dot;
      !! no complex conjugation.  Default is false.
      !! has no effect if working with real version
+  integer, optional, intent(in) :: np
 
 #ifdef R_TCOMPLEX
   logical             :: dotu_
 #endif
-  integer             :: ip
+  integer             :: ip, np_
 
   call profiling_in(C_PROFILING_MF_DOTP, "MF_DOTP")
   PUSH_SUB(X(mf_dotp_1))
 
-  ASSERT(ubound(f1, dim = 1) == mesh%np .or. ubound(f1, dim = 1) == mesh%np_part)
-  ASSERT(ubound(f2, dim = 1) == mesh%np .or. ubound(f2, dim = 1) == mesh%np_part)
+  np_ = optional_default(np, mesh%np)
+  ASSERT(ubound(f1, dim = 1) == np_ .or. ubound(f1, dim = 1) == mesh%np_part)
+  ASSERT(ubound(f2, dim = 1) == np_ .or. ubound(f2, dim = 1) == mesh%np_part)
 
 #ifdef R_TCOMPLEX
   dotu_ = optional_default(dotu, .false.)
@@ -137,28 +138,28 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu) result(dotp)
 #ifdef R_TCOMPLEX
     if (.not. dotu_) then
 #endif
-      do ip = 1, mesh%np
-        dotp = dotp + mesh%vol_pp(ip)*R_CONJ(f1(ip))*f2(ip)
+      do ip = 1, np_
+        dotp = dotp + mesh%vol_pp(ip)*f1(ip)*f2(ip)
       end do
 #ifdef R_TCOMPLEX
     else
-      do ip = 1, mesh%np
-        dotp = dotp + mesh%vol_pp(ip)*f1(ip)*f2(ip)
+      do ip = 1, np_
+        dotp = dotp + mesh%vol_pp(ip)*R_CONJ(f1(ip))*f2(ip)
       end do
     end if
 #endif
-    call profiling_count_operations(mesh%np*(2*R_ADD + R_MUL))
+    call profiling_count_operations(np_*(2*R_ADD + R_MUL))
   else
 #ifdef R_TCOMPLEX
     if (.not. dotu_) then
 #endif
-      dotp = blas_dot(mesh%np, f1(1), 1, f2(1), 1)
+      dotp = blas_dot(np_, f1(1), 1, f2(1), 1)
 #ifdef R_TCOMPLEX
     else
-      dotp = blas_dotu(mesh%np, f1(1), 1, f2(1), 1)
+      dotp = blas_dotu(np_, f1(1), 1, f2(1), 1)
     end if
 #endif
-    call profiling_count_operations(mesh%np*(R_ADD + R_MUL))
+    call profiling_count_operations(np_*(R_ADD + R_MUL))
 
   end if
 
@@ -177,7 +178,7 @@ end function X(mf_dotp_1)
 
 
 ! ---------------------------------------------------------
-R_TYPE function X(mf_dotp_2)(mesh, dim, f1, f2, reduce, dotu) result(dotp)
+R_TYPE function X(mf_dotp_2)(mesh, dim, f1, f2, reduce, dotu, np) result(dotp)
   type(mesh_t),      intent(in) :: mesh
   integer,           intent(in) :: dim
   R_TYPE,            intent(in) :: f1(:,:), f2(:,:)
@@ -185,14 +186,15 @@ R_TYPE function X(mf_dotp_2)(mesh, dim, f1, f2, reduce, dotu) result(dotp)
   logical, optional, intent(in) :: dotu
      !< if true, use lalg_dotu instead of lalg_dot;
      !! no complex conjugation.  Default is false.
+  integer, optional, intent(in) :: np
 
-  integer :: idim
+  integer :: idim, np_
 
   PUSH_SUB(X(mf_dotp_2))
 
   dotp = R_TOTYPE(M_ZERO)
   do idim = 1, dim
-    dotp = dotp + X(mf_dotp_1)(mesh, f1(:, idim), f2(:, idim), reduce = .false., dotu = dotu)
+    dotp = dotp + X(mf_dotp_1)(mesh, f1(:, idim), f2(:, idim), reduce = .false., dotu = dotu, np = np)
   end do
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then

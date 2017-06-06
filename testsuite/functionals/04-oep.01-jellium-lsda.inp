@@ -1,15 +1,10 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id$
 #
 # This input files reproduces results from:
 # [M. Payami and T. Mahmoodi, J. Phys.: Condens. Matter 18, 75 (2006)].
 # All numbers from Table I may be obtained by properly choosing
 # r_s and N_electrons.
 #
-# However, they are not reproduced exactly, probably due to differences
-# in the numerical representation. This is a bit of a problem, since the
-# differences between KLI and full EXX are smaller than this (hopefully
-# only) numerical error.
 #
 # Figure 4 can also be obtained, although for some reason only if 
 # the density is divided by 2. I think that in the paper they slipped
@@ -35,8 +30,8 @@ jradius = r_s * (N_electrons)^(1.0/3.0)
 %
 
 BoxShape = sphere
-Radius  = 13.0
-Spacing = 0.35
+Radius  = 20.0
+Spacing = 0.75
 
 XCFunctional = lda_x + lda_c_pw
 

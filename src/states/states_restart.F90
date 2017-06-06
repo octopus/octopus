@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -32,6 +31,7 @@ module states_restart_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use multicomm_oct_m
   use multigrid_oct_m
   use parser_oct_m
   use profiling_oct_m
@@ -156,8 +156,9 @@ contains
     integer,    optional, intent(in)  :: st_start_writing
     logical,    optional, intent(in)  :: verbose
 
-    integer :: iunit_wfns, iunit_occs, iunit_states, root
+    integer :: iunit_wfns, iunit_occs, iunit_states
     integer :: err, err2(2), ik, idir, ist, idim, itot
+    integer :: root(1:P_STRATEGY_MAX)
     character(len=MAX_PATH_LEN) :: filename, filename1
     character(len=300) :: lines(3)
     logical :: lr_wfns_are_associated, should_write, cmplxscl, verbose_
@@ -231,7 +232,7 @@ contains
     end if
 
     itot = 1
-    root = 0
+    root = -1
     err2 = 0
     do ik = 1, st%d%nik
       kpoint = M_ZERO
@@ -239,7 +240,7 @@ contains
 
       do ist = 1, st%nst
         do idim = 1, st%d%dim
-          root = mod(itot - 1, gr%mesh%mpi_grp%size)
+          root(P_STRATEGY_DOMAINS) = mod(itot - 1, gr%mesh%mpi_grp%size)
           write(filename,'(i10.10)') itot
           
           if (st%have_left_states) filename1 = 'L'//trim(filename) !cmplxscl
@@ -272,27 +273,13 @@ contains
               if(st%d%kpt%start <= ik .and. ik <= st%d%kpt%end) then
                 if (states_are_real(st)) then
                   call states_get_state(st, gr%mesh, idim, ist, ik, dpsi)
-                  if (gr%mesh%parallel_in_domains) then
-#ifdef HAVE_MPI
-                    call vec_gather(gr%mesh%vp, root, rff_global, dpsi)
-#endif
-                  else
-                    rff_global = dpsi
-                  end if
-                  call drestart_write_mesh_function(restart, filename, gr%mesh, rff_global, err, root = root, is_global = .true.)
+                  call drestart_write_mesh_function(restart, filename, gr%mesh, dpsi, err, root = root)
                 else
                   call states_get_state(st, gr%mesh, idim, ist, ik, zpsi)
-                  if (gr%mesh%parallel_in_domains) then
-#ifdef HAVE_MPI
-                    call vec_gather(gr%mesh%vp, root, zff_global, zpsi)
-#endif
-                  else
-                    zff_global = zpsi
-                  end if
-                  call zrestart_write_mesh_function(restart, filename, gr%mesh, zff_global, err, root = root, is_global = .true.)
+                  call zrestart_write_mesh_function(restart, filename, gr%mesh, zpsi, err, root = root)
                   if(st%have_left_states) then!cmplxscl
                     call states_get_state(st, gr%mesh, idim, ist, ik, zpsi, left = .true.)
-                    call zrestart_write_mesh_function(restart, filename1, gr%mesh, zpsi, err)
+                    call zrestart_write_mesh_function(restart, filename1, gr%mesh, zpsi, err, root = root)
                   end if
                 end if
               else
@@ -305,7 +292,7 @@ contains
                     lr%ddl_psi(:, idim, ist, ik), err)
                 else
                   call zrestart_write_mesh_function(restart, filename, gr%mesh, &
-                    lr%zdl_psi(:, idim, ist, ik), err)      
+                    lr%zdl_psi(:, idim, ist, ik), err)
                 end if
               else
                 err = 0
@@ -820,6 +807,8 @@ contains
       call messages_info(1)
     end if
 
+    call restart_block_signals()
+
     !write the densities
     iunit = restart_open(restart, 'density')
     lines(1) = '#     #spin    #nspin    filename'
@@ -886,6 +875,8 @@ contains
       if (err /= 0) ierr = ierr + 16
     end if
     call restart_close(restart, iunit)
+
+    call restart_unblock_signals()
 
     if (debug%info) then
       message(1) = "Debug: Writing density restart done."

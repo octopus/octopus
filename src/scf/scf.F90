@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -119,11 +118,12 @@ module scf_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine scf_init(scf, gr, geo, st, hm, conv_force)
+  subroutine scf_init(scf, gr, geo, st, mc, hm, conv_force)
     type(scf_t),         intent(inout) :: scf
     type(grid_t),        intent(inout) :: gr
     type(geometry_t),    intent(in)    :: geo
     type(states_t),      intent(in)    :: st
+    type(multicomm_t),   intent(in)    :: mc
     type(hamiltonian_t), intent(in)    :: hm
     FLOAT,   optional,   intent(in)    :: conv_force
 
@@ -358,7 +358,7 @@ contains
     if(preconditioner_is_multigrid(scf%eigens%pre)) then
       if(.not. associated(gr%mgrid)) then
         SAFE_ALLOCATE(gr%mgrid)
-        call multigrid_init(gr%mgrid, geo, gr%cv,gr%mesh, gr%der, gr%stencil)
+        call multigrid_init(gr%mgrid, geo, gr%cv,gr%mesh, gr%der, gr%stencil, mc)
       end if
     end if
 
@@ -550,7 +550,7 @@ contains
     nspin = st%d%nspin
 
     if (present(restart_load)) then
-      if (restart_has_flag(restart_load, RESTART_RHO)) then
+      if (restart_has_flag(restart_load, RESTART_FLAG_RHO)) then
         ! Load density and used it to recalculated the KS potential.
         call states_load_rho(restart_load, st, gr, ierr)
         if (ierr /= 0) then
@@ -561,7 +561,7 @@ contains
         end if
       end if
 
-      if (restart_has_flag(restart_load, RESTART_VHXC)) then
+      if (restart_has_flag(restart_load, RESTART_FLAG_VHXC)) then
         call hamiltonian_load_vhxc(restart_load, hm, gr%mesh, ierr)
         if (ierr /= 0) then
           message(1) = 'Unable to read Vhxc. Vhxc will be calculated from states.'
@@ -571,7 +571,7 @@ contains
         end if
       end if
 
-      if (restart_has_flag(restart_load, RESTART_MIX)) then
+      if (restart_has_flag(restart_load, RESTART_FLAG_MIX)) then
         select case (scf%mix_field)
         case (OPTION__MIXFIELD__DENSITY)
           call mix_load(restart_load, scf%smix, gr%fine%mesh, ierr)
@@ -686,7 +686,7 @@ contains
             scf%eigens%converged = 0
             call eigensolver_run(scf%eigens, gr, st, hm, iter)
 
-            call v_ks_calc(ks, hm, st, geo)
+            call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
             call hamiltonian_update(hm, gr%mesh)
 
             dipole_prev = dipole
@@ -728,7 +728,7 @@ contains
 
       select case(scf%mix_field)
       case(OPTION__MIXFIELD__POTENTIAL)
-        call v_ks_calc(ks, hm, st, geo)
+        call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
         vout(1:gr%mesh%np, 1, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
         if(cmplxscl) Imvout(1:gr%mesh%np, 1, 1:nspin) = hm%Imvhxc(1:gr%mesh%np, 1:nspin)
 
@@ -822,7 +822,7 @@ contains
           st%zrho%Re(1:gr%fine%mesh%np, 1:nspin) =  real(zrhonew(1:gr%fine%mesh%np, 1, 1:nspin))                   
           st%zrho%Im(1:gr%fine%mesh%np, 1:nspin) = aimag(zrhonew(1:gr%fine%mesh%np, 1, 1:nspin))                    
         end if
-        call v_ks_calc(ks, hm, st, geo)
+        call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
       case (OPTION__MIXFIELD__POTENTIAL)
         ! mix input and output potentials
         call dmixing(scf%smix, vin, vout, vnew)
@@ -843,11 +843,15 @@ contains
         end do
 
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(ks, hm, st, geo)
+        call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
         
       case(OPTION__MIXFIELD__NONE)
-        call v_ks_calc(ks, hm, st, geo)
+        call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
       end select
+
+      !!NTD!!
+      !Here we mix the occupation matrices
+      !using mix_coefficient(scf%smix)
 
       ! Are we asked to stop? (Whenever Fortran is ready for signals, this should go away)
       scf%forced_finish = clean_stop(mc%master_comm)
@@ -909,7 +913,7 @@ contains
         exit
       end if
 
-      if(outp%what /= 0 .and. outp%duringscf .and. outp%output_interval /= 0 &
+      if(outp%what/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
         .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
         write(dirname,'(a,a,i4.4)') trim(outp%iter_dir),"scf.",iter
         call output_all(outp, gr, geo, st, hm, ks, dirname)
@@ -931,6 +935,9 @@ contains
         forcein(1:geo%natoms, 1:gr%sb%dim) = forceout(1:geo%natoms, 1:gr%sb%dim)
       end if
 
+      !!NTD!! 
+      !Here we copy the old occupation matrix
+
       if(scf%forced_finish) then
         call profiling_out(prof)
         exit
@@ -944,7 +951,8 @@ contains
 
     if(scf%lcao_restricted) call lcao_end(lcao)
 
-    if(scf%max_iter > 0 .and. scf%mix_field == OPTION__MIXFIELD__POTENTIAL) then
+    if((scf%max_iter > 0 .and. scf%mix_field == OPTION__MIXFIELD__POTENTIAL) &
+        .or. iand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
       call v_ks_calc(ks, hm, st, geo)
     end if
 
@@ -1005,6 +1013,9 @@ contains
 
     if(simul_box_is_periodic(gr%sb) .and. st%d%nik > st%d%nspin) &
       call states_write_bands(STATIC_DIR, st%nst, st, gr%sb)
+      if(iand(gr%sb%kpoints%method, KPOINTS_PATH) /= 0) &
+        call states_write_bandstructure(STATIC_DIR, st%nst, st, gr%sb)
+      
 
     POP_SUB(scf_run)
 

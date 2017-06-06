@@ -1,5 +1,4 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id$
 
 Test       : Tkatchenko-Scheffler van der Waals correction
 Program    : octopus

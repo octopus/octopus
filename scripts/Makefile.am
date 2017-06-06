@@ -17,6 +17,5 @@
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 ## 02110-1301, USA.
 ##
-## $Id: Makefile.am 2593 2006-11-20 10:58:15Z marques $
 
 dist_bin_SCRIPTS = oct-analyze_projections oct-vdW_c6 oct-check_deallocs

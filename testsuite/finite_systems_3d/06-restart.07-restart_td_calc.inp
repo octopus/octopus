@@ -1,5 +1,4 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id$
 
 # Finally restart the td calculation
 
@@ -16,3 +15,4 @@ TDMaxSteps = 10
 
 FilterPotentials = filter_none
 
+WorkDir = "./workdir"

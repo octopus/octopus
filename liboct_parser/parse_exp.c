@@ -16,7 +16,6 @@
  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  02110-1301, USA.
 
- $Id$
 */
 
 #include <stdio.h>
@@ -158,17 +157,17 @@ static int oct_parser_lex (){
       /* Get another character.                    */
       c = par_string[par_pos++];
     }while (c != '\0' && 
-	    ((startc && c!=startc) || (!startc && (isalnum(c) || c == '_' ))));
+	    ((startc && c!=startc) || (!startc && (isalnum(c) || c == '_' || c == '[' || c == ']'))));
     
     if(!startc) par_pos--;
     symbuf[i] = '\0';
-    
+
     if(!startc){
       s = getsym (symbuf);
       if (s == 0){
 	int jj;
 	for (jj = 0; reserved_symbols[jj] != 0; jj++){
-	  if(strcmp(symbuf, reserved_symbols[jj]) == 0){
+	  if(strcasecmp(symbuf, reserved_symbols[jj]) == 0){
 	    fprintf(stderr, "Parser error: trying to redefine reserved symbol '%s'.\n", symbuf);
 	    exit(1);
 	  }

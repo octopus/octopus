@@ -1,5 +1,4 @@
 # !/usr/bin/gnuplot -persist
-# $Id$
 #
 # replace 'mesh_index' by whatever filename you'd like to use (assumes mesh_index output mode of octopus)
 # delete space between hash and ! above and execute standalone

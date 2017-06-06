@@ -15,7 +15,6 @@
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 ## 02110-1301, USA.
 ##
-## $Id: pfft.m4 6722 2010-06-13 12:44:43Z joseba $
 ##
 
 AC_DEFUN([ACX_PFFT], [
@@ -23,7 +22,7 @@ AC_REQUIRE([ACX_FFTW])
 acx_pfft_ok=no
 
 dnl Check if the library was given in the command line
-AC_ARG_WITH(pfft-prefix, [AS_HELP_STRING([--with-pfft-prefix=<lib>], [PFFT version 1.0.7 is required, linked with a patched version of FFTW3.3.3. Source and more information at http://www-user.tu-chemnitz.de/~mpip/software.php])])
+AC_ARG_WITH(pfft-prefix, [AS_HELP_STRING([--with-pfft-prefix=<lib>], [PFFT version 1.0.8 is required, linked with a patched version of FFTW3.3.3. Source and more information at http://www-user.tu-chemnitz.de/~mpip/software.php])])
 
 case $with_pfft_prefix in
   yes | "") ;;
@@ -65,7 +64,7 @@ acx_pfft_save_FCFLAGS="$FCFLAGS"
 FCFLAGS_PFFT="$FCFLAGS_PFFT $FCFLAGS_FFTW"
 FCFLAGS="$FCFLAGS_PFFT $acx_pfft_save_FCFLAGS"
 
-# some symbols below will not be defined for version 1.0.4, making sure
+# some symbols below will not be defined for versions older than 1.0.8, making sure
 # we have a version that is able to work in our code
 testprogram="AC_LANG_PROGRAM([],[
     use,intrinsic :: iso_c_binding
@@ -81,7 +80,7 @@ testprogram="AC_LANG_PROGRAM([],[
     complex(C_DOUBLE_COMPLEX), allocatable :: data_out(:)
 
     fftplan = pfft_plan_dft_3d( n, data_in, data_out, comm_cart_2d, &
-     &     PFFT_FORWARD, PFFT_TRANSPOSED_OUT + PFFT_MEASURE + PFFT_DESTROY_INPUT)
+     &     PFFT_FORWARD, PFFT_TRANSPOSED_OUT + PFFT_MEASURE + PFFT_DESTROY_INPUT + PFFT_PADDED_R2C)
 
   ])"
 

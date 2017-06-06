@@ -1,5 +1,4 @@
 # -*- coding: utf-8 mode: shell-script -*-
-# $Id$
 
 CalculationMode = gs
 fromScratch = no
@@ -23,3 +22,5 @@ MaximumIter = 3
 FilterPotentials = filter_none
 
 MixField = density
+
+WorkDir = "./workdir"

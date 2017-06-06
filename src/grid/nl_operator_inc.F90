@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 ! ---------------------------------------------------------
 
@@ -107,11 +106,13 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   if(nri > 0) then
     if(.not.op%const_w) then
       call operate_non_const_weights()
-    else if(op%cmplx_op .or. X(function_global) == OP_FORTRAN) then
+    else if(op%cmplx_op) then
       call operate_const_weights()
     else if(accel_is_enabled() .and. batch_is_packed(fi) .and. batch_is_packed(fo)) then
       use_opencl = .true.
       call operate_opencl()
+    else if(X(function_global) == OP_FORTRAN) then
+      call operate_const_weights()
     else
       
 ! for the moment this is not implemented
@@ -220,6 +221,7 @@ contains
     else
 
       if(batch_is_packed(fi)) then
+        ASSERT(allocated(fo%pack%X(psi)))
         !$omp parallel do private(ll, ist, ii)
         do ll = 1, nri
           do ii = imin(ll) + 1, imax(ll)
@@ -335,8 +337,28 @@ contains
       call accel_set_kernel_arg(kernel_operate, 5, log2(eff_size))
       call accel_set_kernel_arg(kernel_operate, 6, fo%pack%buffer)
       call accel_set_kernel_arg(kernel_operate, 7, log2(eff_size))
+
       iarg = 7
 
+      npoints = op%mesh%np
+      if(op%mesh%parallel_in_domains) then
+        iarg = iarg + 1
+        select case(points_)
+        case(OP_INNER)
+          npoints = op%ninner
+          call accel_set_kernel_arg(kernel_operate, 0, op%ninner)
+          call accel_set_kernel_arg(kernel_operate, iarg, op%buff_inner)
+        case(OP_OUTER)
+          npoints = op%nouter
+          call accel_set_kernel_arg(kernel_operate, 0, op%nouter)
+          call accel_set_kernel_arg(kernel_operate, iarg, op%buff_outer)
+        case(OP_ALL)
+          call accel_set_kernel_arg(kernel_operate, iarg, op%buff_all)
+        case default
+          ASSERT(.false.)
+        end select
+      end if
+      
       if(accel_use_shared_mem()) then
         local_mem_size = accel_local_memory_size()
         isize = int(dble(local_mem_size)/(op%stencil%size*types_get_size(TYPE_INTEGER)))
@@ -363,25 +385,6 @@ contains
         call accel_set_kernel_arg(kernel_operate, iarg, TYPE_INTEGER, isize*op%stencil%size)
       end if
 
-      npoints = op%mesh%np
-      if(op%mesh%parallel_in_domains) then
-        iarg = iarg + 1
-        select case(points_)
-        case(OP_INNER)
-          npoints = op%ninner
-          call accel_set_kernel_arg(kernel_operate, 0, op%ninner)
-          call accel_set_kernel_arg(kernel_operate, iarg, op%buff_inner)
-        case(OP_OUTER)
-          npoints = op%nouter
-          call accel_set_kernel_arg(kernel_operate, 0, op%nouter)
-          call accel_set_kernel_arg(kernel_operate, iarg, op%buff_outer)
-        case(OP_ALL)
-          call accel_set_kernel_arg(kernel_operate, iarg, op%buff_all)
-        case default
-          ASSERT(.false.)
-        end select
-      end if
-      
       call accel_kernel_run(kernel_operate, (/eff_size, pad(op%mesh%np, bsize)/), (/eff_size, isize/))
 
       call profiling_count_transfers(npoints*(op%stencil%size + 2), isize)

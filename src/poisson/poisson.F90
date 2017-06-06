@@ -16,7 +16,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -224,7 +223,7 @@ contains
     !% Scaling Functions (isf) Poisson solver, but using an external
     !% library, taken from BigDFT 1.7.6. Only for finite systems.
     !% Parallelization in k-points requires <tt>PoissonSolverISFParallelData</tt> = no. Examples of the compilation can be
-    !% found in <a href=http://www.tddft.org/programs/octopus/wiki/index.php/Manual:Specific_architectures>Octopus</a>
+    !% found in <a href=http://octopus-code.org/wiki/Manual:Specific_architectures>Octopus</a>
     !% and <a href=http://bigdft.org/Wiki/index.php?title=Installation#Building_the_Poisson_Solver_library_only>
     !% BigDFT</a> documentation. Tested with the version bigdft-1.7.6.
     !%Option poke 11

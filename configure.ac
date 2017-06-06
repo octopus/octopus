@@ -15,12 +15,11 @@
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 ## 02110-1301, USA.
 ##
-## $Id$
 
 AC_PREREQ(2.59)
 # Note: the version string is written into ETSF_IO files, so when you update
 # this, update the results for test periodic_systems/09-etsf_io.test too.
-AC_INIT([Octopus],[mimus],[octopus-devel@tddft.org],[octopus])
+AC_INIT([Octopus],[7.0],[octopus-devel@tddft.org],[octopus])
 AC_CONFIG_SRCDIR([src/basic/global.F90])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE
@@ -97,7 +96,7 @@ AC_FUNC_STAT
 AC_CHECK_FUNCS([gettimeofday nanosleep sysconf getpid \
 strndup tcgetpgrp scandir alphasort \
 sigaction readdir closedir strchr strtod \
-perror strcasestr sbrk getopt_long uname ioctl])
+perror strcasestr sbrk getopt_long uname ioctl strsignal])
 
 ACX_ARCH
 

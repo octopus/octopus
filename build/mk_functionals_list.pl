@@ -17,7 +17,6 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 # 02110-1301, USA.
 #
-# $Id$
 
 
 use Getopt::Std;
@@ -64,7 +63,7 @@ print OUT <<"EndOfHeader";
 !% specified as a sum of an exchange functional and a
 !% correlation functional, or a single exchange-correlation functional
 !% (<i>e.g.</i> <tt>hyb_gga_xc_pbeh</tt>). For more information on the functionals, see
-!% <a href=http://www.tddft.org/programs/octopus/wiki/index.php/Libxc:manual#Available_functionals>
+!% <a href=http://octopus-code.org/wiki/Libxc:manual#Available_functionals>
 !% Libxc documentation</a>. The list provided here is from libxc 2.2.3; if you have
 !% linked against a different libxc version, you may have a somewhat different set
 !% of available functionals. Note that kinetic-energy functionals are not supported.

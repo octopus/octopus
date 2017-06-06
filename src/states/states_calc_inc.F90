@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 ! ---------------------------------------------------------
 !> Orthonormalizes nst orbitals in mesh (honours state parallelization).
@@ -1104,7 +1103,7 @@ subroutine X(states_rotate)(mesh, st, uu, ik)
         call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psicopy)
       end do
 
-      call states_parallel_gather(st, (/st%d%dim, size/), psicopy)
+      if(st%parallel_in_states) call states_parallel_gather(st, (/st%d%dim, size/), psicopy)
       
       do idim = 1, st%d%dim
         

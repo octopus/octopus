@@ -15,11 +15,11 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
 program octopus
+  use global_oct_m
   use calc_mode_par_oct_m
   use command_line_oct_m
   use io_oct_m
@@ -31,6 +31,7 @@ program octopus
   use string_oct_m
   use utils_oct_m
   use varinfo_oct_m
+  use messages_oct_m
 
   implicit none
 
@@ -116,7 +117,7 @@ program octopus
   call calc_mode_par_init()
   
   ! now we declare octopus as running
-  call io_switch_status('running')
+  call messages_switch_status('running')
   
   call profiling_init()
   
@@ -131,7 +132,7 @@ program octopus
 #endif
   
   ! run finished successfully
-  call io_switch_status('finished')
+  call messages_switch_status('finished')
   call io_end()
   
   call profiling_end()

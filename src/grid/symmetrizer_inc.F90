@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 !> supply field and symmfield, and/or field_vector and symmfield_vector
 subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_vector, suppress_warning)
@@ -103,7 +102,7 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
 
     ! iterate over all points that go to this point by a symmetry operation
     do iop = 1, nops
-      srcpoint = symm_op_apply_inv(this%mesh%sb%symm%ops(iop), destpoint)
+      srcpoint = symm_op_apply(this%mesh%sb%symm%ops(iop), destpoint) 
 
       ! move back to reference to origin at corner of cell
       srcpoint = srcpoint + lsize / 2

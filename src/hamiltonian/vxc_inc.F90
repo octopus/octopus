@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, deltaxc, vtau)
   type(derivatives_t),  intent(in)    :: der             !< Discretization and the derivative operators and details
@@ -65,17 +64,15 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   FLOAT, allocatable :: dedgd(:,:,:)   ! Derivative of the exchange or correlation energy wrt the gradient of the density
   FLOAT, allocatable :: dedldens(:,:)  ! Derivative of the exchange or correlation energy wrt the laplacian of the density
 
-  FLOAT, allocatable :: symmtmp(:, :)  ! Temporary vector for the symmetrizer
   FLOAT, allocatable :: vx(:)
   FLOAT, allocatable :: unp_dens(:), unp_dedd(:)
 
   integer :: ib, ip, isp, families, ixc, spin_channels, is, idir, ipstart, ipend
   FLOAT   :: rr, energy(1:2)
-  logical :: gga, mgga, libvdwxc
+  logical :: gga, mgga, mgga_withexc, libvdwxc
   type(profile_t), save :: prof, prof_libxc
   logical :: calc_energy
   type(xc_functl_t), pointer :: functl(:)
-  type(symmetrizer_t) :: symmetrizer
   type(distributed_t) :: distribution
   type(profile_t), save :: prof_gather
   
@@ -112,6 +109,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   ! initialize a couple of handy variables
   gga  = family_is_gga(xcs%family)
   mgga = family_is_mgga(xcs%family)
+  mgga_withexc = family_is_mgga_with_exc(xcs, ispin)
   if(mgga) then
     ASSERT(gga)
   end if
@@ -154,24 +152,6 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
       call states_calc_quantities(der, st, gi_kinetic_energy_density = tau, density_gradient = gdens, density_laplacian = ldens)
     else
       call states_calc_quantities(der, st, kinetic_energy_density = tau, density_gradient = gdens, density_laplacian = ldens)
-    end if
-
-    ! We have to symmetrize everything as they are calculated from the
-    ! wavefunctions.
-    if(st%symmetrize_density) then
-      SAFE_ALLOCATE(symmtmp(1:der%mesh%np, 1:der%mesh%sb%dim))
-      call symmetrizer_init(symmetrizer, der%mesh)
-      do isp = 1, spin_channels
-        call dsymmetrizer_apply(symmetrizer, field = tau(:, isp), symmfield = symmtmp(:, 1))
-        tau(1:der%mesh%np, isp) = symmtmp(1:der%mesh%np, 1)
-        call dsymmetrizer_apply(symmetrizer, field = ldens(:, isp), symmfield = symmtmp(:, 1))
-        ldens(1:der%mesh%np, isp) = symmtmp(1:der%mesh%np, 1)
-        call dsymmetrizer_apply(symmetrizer, field_vector = gdens(:, :, isp), symmfield_vector = symmtmp)
-        gdens(1:der%mesh%np, 1:der%mesh%sb%dim, isp) = symmtmp(1:der%mesh%np, 1:der%mesh%sb%dim)
-      end do
-
-      call symmetrizer_end(symmetrizer)
-      SAFE_DEALLOCATE_A(symmtmp)
     end if
 
     if(functl(FUNC_X)%id == XC_MGGA_X_TB09 .and. der%mesh%sb%periodic_dim == 3) then
@@ -323,7 +303,8 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
         ! XXXXX does this work correctly when functionals belong to
         ! different families and only one is mgga?
         call copy_local_to_global(l_dedldens, dedldens, n_block, spin_channels, ip)
-        call copy_local_to_global(l_dedtau, vtau, n_block, spin_channels, ip)
+        if(iand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC) /= 0 ) &
+          call copy_local_to_global(l_dedtau, vtau, n_block, spin_channels, ip)
       end if
 
     end do functl_loop
@@ -385,6 +366,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
       if(mgga) then
         do isp = 1, spin_channels
           call distributed_allgather(distribution, dedldens(:, isp))
+          if(mgga_withexc) &
           call distributed_allgather(distribution, vtau(:, isp))
         end do
       end if
@@ -404,7 +386,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   end if
 
   ! Definition of tau in libxc is different, so we need to divide vtau by a factor of two
-  if (present(vtau)) vtau = vtau / M_TWO
+  if (present(vtau) .and. mgga_withexc) vtau = vtau / M_TWO
 
   if(present(deltaxc)) deltaxc = M_ZERO
 
@@ -439,25 +421,6 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
 
 contains
 
-  function family_is_gga(family)
-    integer, intent(in) :: family
-    logical             :: family_is_gga
-
-    PUSH_SUB(xc_get_vxc.family_is_gga)
-    family_is_gga = iand(family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + &
-      XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA + XC_FAMILY_LIBVDWXC) /= 0
-    POP_SUB(xc_get_vxc.family_is_gga)
-  end function  family_is_gga
-
-  function family_is_mgga(family)
-    integer, intent(in) :: family
-    logical             :: family_is_mgga
-
-    PUSH_SUB(xc_get_vxc.family_is_mgga)
-    family_is_mgga = iand(family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0
-    POP_SUB(xc_get_vxc.family_is_mgga)
-  end function family_is_mgga
-
   ! ---------------------------------------------------------
   !> make a local copy with the correct memory order for libxc
   subroutine copy_global_to_local(global, local, n_block, spin_channels, ip)
@@ -467,13 +430,15 @@ contains
     integer, intent(in)  :: spin_channels
     integer, intent(in)  :: ip
 
-    integer :: ib
+    integer :: ib, is
 
     PUSH_SUB(xc_get_vxc.copy_global_to_local)
 
-    !$omp parallel do
-    do ib = 1, n_block
-      local(1:spin_channels, ib) = global(ib + ip - 1, 1:spin_channels)
+    do is = 1, spin_channels
+      !$omp parallel do
+      do ib = 1, n_block
+        local(is, ib) = global(ib + ip - 1, is)
+      end do
     end do
 
     POP_SUB(xc_get_vxc.copy_global_to_local)
@@ -487,13 +452,15 @@ contains
     integer, intent(in)    :: spin_channels
     integer, intent(in)    :: ip
 
-    integer :: ib
+    integer :: ib, is
 
     PUSH_SUB(xc_get_vxc.copy_local_to_global)
 
-    !$omp parallel do
-    do ib = 1, n_block
-      global(ib + ip - 1, 1:spin_channels) = global(ib + ip - 1, 1:spin_channels) + local(1:spin_channels, ib)
+    do is = 1, spin_channels
+      !$omp parallel do
+      do ib = 1, n_block
+        global(ib + ip - 1, is) = global(ib + ip - 1, is) + local(is, ib)
+      end do
     end do
 
     POP_SUB(xc_get_vxc.copy_local_to_global)
@@ -834,6 +801,47 @@ contains
   end subroutine mgga_process
 
 end subroutine xc_get_vxc
+
+  pure logical function family_is_gga(family)
+    integer, intent(in) :: family
+
+    family_is_gga = iand(family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + &
+      XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA + XC_FAMILY_LIBVDWXC) /= 0
+  end function  family_is_gga
+
+  pure logical function family_is_mgga(family)
+    integer, intent(in) :: family
+
+    family_is_mgga = iand(family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0
+  end function family_is_mgga
+
+  logical function family_is_mgga_with_exc(xcs, ispin)
+    type(xc_t),    target,  intent(in)    :: xcs
+    integer,                intent(in)    :: ispin
+
+    type(xc_functl_t), pointer :: functl(:)
+    integer :: ixc  
+
+    PUSH_SUB(family_is_mgga_with_exc)
+
+    !Pointer-shortcut for xcs%functional
+    !It helps to remember that for xcs%functional(:,:)
+    ! (1,:) => exchange,    (2,:) => correlation
+    ! (:,1) => unpolarized, (:,2) => polarized
+    if(ispin == UNPOLARIZED) then
+      functl => xcs%functional(:, 1)
+    else
+      functl => xcs%functional(:, 2)
+    end if
+
+    family_is_mgga_with_exc = .false.
+    do ixc = 1, 2
+        if((iand(functl(ixc)%family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) &
+           .and. (iand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC) /= 0 )) family_is_mgga_with_exc = .true.
+    end do
+
+    POP_SUB(family_is_mgga_with_exc)
+  end function family_is_mgga_with_exc
 
 ! -----------------------------------------------------
 

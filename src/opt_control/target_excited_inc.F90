@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 
   ! ----------------------------------------------------------------------
@@ -89,7 +88,7 @@
 
     PUSH_SUB(target_output_excited)
     
-    call loct_mkdir(trim(dir))
+    call io_mkdir(trim(dir))
     call output_states(tg%est%st, gr, geo, trim(dir)//'/st', outp)
     call excited_states_output(tg%est, trim(dir))
 

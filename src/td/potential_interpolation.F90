@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -51,6 +50,9 @@ module potential_interpolation_oct_m
   type potential_interpolation_t
     FLOAT, pointer      :: v_old(:, :, :) => null()
     FLOAT, pointer      :: Imv_old(:, :, :) => null()
+    FLOAT, pointer      :: vtau_old(:, :, :) => null()
+    FLOAT, pointer      :: Imvtau_old(:, :, :) => null()
+    logical             :: mgga_with_exc
   end type potential_interpolation_t
 
 contains
@@ -63,6 +65,8 @@ contains
     
     this%v_old => null()
     this%imv_old => null()
+    this%vtau_old => null()
+    this%imvtau_old => null()
 
     POP_SUB(potential_interpolation_nullify)
   end subroutine potential_interpolation_nullify
@@ -77,16 +81,19 @@ contains
 
     call loct_pointer_copy(vkso%v_old, vksi%v_old)
     call loct_pointer_copy(vkso%Imv_old, vksi%Imv_old)
+    call loct_pointer_copy(vkso%vtau_old, vksi%vtau_old)
+    call loct_pointer_copy(vkso%Imvtau_old, vksi%Imvtau_old)
 
     POP_SUB(potential_interpolation_copy)
   end subroutine potential_interpolation_copy
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  subroutine potential_interpolation_init(potential_interpolation, cmplxscl, np, nspin)
+  subroutine potential_interpolation_init(potential_interpolation, cmplxscl, np, nspin, mgga_with_exc)
     type(potential_interpolation_t), intent(inout) :: potential_interpolation
     logical, intent(in) :: cmplxscl
     integer, intent(in) :: np, nspin
+    logical, intent(in) :: mgga_with_exc
     
     PUSH_SUB(potential_interpolation_init)
 
@@ -97,6 +104,19 @@ contains
       SAFE_ALLOCATE(potential_interpolation%Imv_old(1:np, 1:nspin, 0:3))
       potential_interpolation%Imv_old(:, :, :) = M_ZERO
     end if
+
+    potential_interpolation%mgga_with_exc = mgga_with_exc
+
+    if(potential_interpolation%mgga_with_exc) then
+
+      SAFE_ALLOCATE(potential_interpolation%vtau_old(1:np, 1:nspin, 0:3))
+      potential_interpolation%vtau_old(:, :, :) = M_ZERO
+
+       if(cmplxscl) then
+        SAFE_ALLOCATE(potential_interpolation%Imvtau_old(1:np, 1:nspin, 0:3))
+        potential_interpolation%Imvtau_old(:, :, :) = M_ZERO
+      end if
+   end if
 
     POP_SUB(potential_interpolation_init)
   end subroutine potential_interpolation_init
@@ -111,17 +131,22 @@ contains
     ASSERT(associated(potential_interpolation%v_old)) 
     SAFE_DEALLOCATE_P(potential_interpolation%v_old)
     SAFE_DEALLOCATE_P(potential_interpolation%Imv_old) 
+    SAFE_DEALLOCATE_P(potential_interpolation%vtau_old)
+    SAFE_DEALLOCATE_P(potential_interpolation%Imvtau_old)
 
     POP_SUB(potential_interpolation_end)
   end subroutine potential_interpolation_end
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  subroutine potential_interpolation_run_zero_iter(potential_interpolation, np, nspin, vhxc, imvhxc)
+  subroutine potential_interpolation_run_zero_iter(potential_interpolation, np, nspin, vhxc, imvhxc, &
+                vtau, imvtau)
     type(potential_interpolation_t), intent(inout) :: potential_interpolation
     integer,           intent(in)    :: np, nspin
     FLOAT,             intent(in)    :: vhxc(:, :)
     FLOAT, optional,   intent(in)    :: imvhxc(:, :)
+    FLOAT, optional,   intent(in)    :: vtau(:, :)
+    FLOAT, optional,   intent(in)    :: imvtau(:, :)
 
     integer :: i, ispin, ip
     
@@ -137,17 +162,32 @@ contains
       end forall
     end if
 
+   if(present(vtau)) then
+      forall(i = 1:3, ispin = 1:nspin, ip = 1:np)
+        potential_interpolation%vtau_old(ip, ispin, i) = vtau(ip, ispin)
+      end forall
+    end if 
+
+    if(present(imvtau)) then
+      forall(i = 1:3, ispin = 1:nspin, ip = 1:np)
+        potential_interpolation%imvtau_old(ip, ispin, i) = imvtau(ip, ispin)
+      end forall
+    end if
+
     POP_SUB(potential_interpolation_run_zero_iter)
   end subroutine potential_interpolation_run_zero_iter
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  subroutine potential_interpolation_new(potential_interpolation, np, nspin, time, dt, vhxc, imvhxc)
+  subroutine potential_interpolation_new(potential_interpolation, np, nspin, time, dt, vhxc, imvhxc, &
+                vtau, imvtau)
     type(potential_interpolation_t), intent(inout) :: potential_interpolation
     integer,           intent(in)    :: np, nspin
     FLOAT,             intent(in)    :: time, dt
     FLOAT,             intent(in)    :: vhxc(:, :)
     FLOAT, optional,   intent(in)    :: imvhxc(:, :)
+    FLOAT, optional,   intent(in)    :: vtau(:, :)
+    FLOAT, optional,   intent(in)    :: imvtau(:, :)
 
     PUSH_SUB(potential_interpolation_new)
 
@@ -165,17 +205,37 @@ contains
         potential_interpolation%imv_old(:, :, 1:3), time, potential_interpolation%imv_old(:, :, 0))
     end if
 
+     if(present(vtau)) then
+      call lalg_copy(np, nspin, potential_interpolation%vtau_old(:, :, 2), potential_interpolation%vtau_old(:, :, 3))
+      call lalg_copy(np, nspin, potential_interpolation%vtau_old(:, :, 1), potential_interpolation%vtau_old(:, :, 2))
+      call lalg_copy(np, nspin, vtau(:, :),     potential_interpolation%vtau_old(:, :, 1))
+      call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
+        potential_interpolation%vtau_old(:, :, 1:3), time, potential_interpolation%vtau_old(:, :, 0))
+    end if
+
+    if(present(imvtau)) then
+      call lalg_copy(np, nspin, potential_interpolation%imvtau_old(:, :, 2), potential_interpolation%imvtau_old(:, :, 3))
+      call lalg_copy(np, nspin, potential_interpolation%imvtau_old(:, :, 1), potential_interpolation%imvtau_old(:, :, 2))
+      call lalg_copy(np, nspin, imvtau(:, :),     potential_interpolation%Imvtau_old(:, :, 1))
+      call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
+        potential_interpolation%Imvtau_old(:, :, 1:3), time, potential_interpolation%Imvtau_old(:, :, 0))
+    end if
+
+
     POP_SUB(potential_interpolation_new)
   end subroutine potential_interpolation_new
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  subroutine potential_interpolation_set(potential_interpolation, np, nspin, i, vhxc, imvhxc)
+  subroutine potential_interpolation_set(potential_interpolation, np, nspin, i, vhxc, imvhxc, &
+                vtau, imvtau)
     type(potential_interpolation_t), intent(inout) :: potential_interpolation
     integer,           intent(in)    :: np, nspin
     integer,           intent(in)    :: i
     FLOAT,             intent(inout) :: vhxc(:, :)
     FLOAT, optional,   intent(inout) :: imvhxc(:, :)
+    FLOAT, optional,   intent(in)    :: vtau(:, :)
+    FLOAT, optional,   intent(in)    :: imvtau(:, :)
 
     PUSH_SUB(potential_interpolation_set)
 
@@ -185,18 +245,29 @@ contains
       call lalg_copy(np, nspin, imvhxc, potential_interpolation%imv_old(:, :, i))
     end if
 
+    if(present(vtau)) then
+      call lalg_copy(np, nspin, vtau, potential_interpolation%vtau_old(:, :, i))
+    end if
+
+    if(present(imvtau)) then
+      call lalg_copy(np, nspin, imvtau, potential_interpolation%imvtau_old(:, :, i))
+    end if
+
 
     POP_SUB(potential_interpolation_set)
   end subroutine potential_interpolation_set
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  subroutine potential_interpolation_get(potential_interpolation, np, nspin, i, vhxc, imvhxc)
+  subroutine potential_interpolation_get(potential_interpolation, np, nspin, i, vhxc, imvhxc, &
+    vtau, imvtau)
     type(potential_interpolation_t), intent(inout) :: potential_interpolation
     integer,           intent(in)    :: np, nspin
     integer,           intent(in)    :: i
     FLOAT,             intent(inout) :: vhxc(:, :)
     FLOAT, optional,   intent(inout) :: imvhxc(:, :)
+    FLOAT, optional,   intent(inout) :: vtau(:, :)
+    FLOAT, optional,   intent(inout) :: imvtau(:, :)
 
     PUSH_SUB(potential_interpolation_set)
 
@@ -204,6 +275,14 @@ contains
     
     if(present(imvhxc)) then
       call lalg_copy(np, nspin, potential_interpolation%imv_old(:, :, i), imvhxc)
+    end if
+
+    if(present(vtau)) then
+      call lalg_copy(np, nspin, potential_interpolation%vtau_old(:, :, i), vtau)
+    end if
+
+    if(present(imvtau)) then
+      call lalg_copy(np, nspin, potential_interpolation%imvtau_old(:, :, i), imvtau)
     end if
 
     POP_SUB(potential_interpolation_set)
@@ -241,12 +320,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine potential_interpolation_interpolate(potential_interpolation, order, time, dt, t, vhxc, imvhxc)
+  subroutine potential_interpolation_interpolate(potential_interpolation, order, time, dt, t, vhxc, imvhxc, vtau, imvtau)
     type(potential_interpolation_t), intent(inout) :: potential_interpolation
     integer,           intent(in)    :: order
     FLOAT,             intent(in)    :: time, dt, t
     FLOAT,             intent(inout) :: vhxc(:, :)
     FLOAT, optional,   intent(inout) :: imvhxc(:, :)
+    FLOAT, optional,   intent(inout) :: vtau(:, :)
+    FLOAT, optional,   intent(inout) :: imvtau(:, :)
 
 
     PUSH_SUB(potential_interpolation_interpolate)
@@ -257,10 +338,23 @@ contains
       if(present(imvhxc)) then
         call interpolate( (/time, time - dt, time - M_TWO*dt/), potential_interpolation%Imv_old(:, :, 0:2), t, imvhxc(:, :))
       end if
+      if(present(vtau)) then
+        call interpolate( (/time, time - dt, time - M_TWO*dt/), potential_interpolation%vtau_old(:, :, 0:2), t, vtau(:, :))
+      end if
+       if(present(imvtau)) then
+        call interpolate( (/time, time - dt, time - M_TWO*dt/), potential_interpolation%Imvtau_old(:, :, 0:2), t, imvtau(:, :))
+      end if
+
     case(2)
       call interpolate( (/time, time-dt/), potential_interpolation%v_old(:, :, 0:1), t, vhxc(:, :))
       if(present(imvhxc)) then
         call interpolate( (/time, time-dt/), potential_interpolation%imv_old(:, :, 0:1), t, imvhxc(:, :))
+      end if
+      if(present(vtau)) then
+        call interpolate( (/time, time-dt/), potential_interpolation%vtau_old(:, :, 0:1), t, vtau(:, :))
+      end if
+      if(present(imvtau)) then
+        call interpolate( (/time, time-dt/), potential_interpolation%Imvtau_old(:, :, 0:1), t, imvtau(:, :))
       end if
     case default
        ASSERT(.false.)
@@ -296,16 +390,37 @@ contains
         if (cmplxscl) then
           zv_old = potential_interpolation%v_old(1:gr%mesh%np, is, ii) &
             + M_zI*potential_interpolation%Imv_old(1:gr%mesh%np, is, ii)
-          call zrestart_write_mesh_function(restart, filename, gr%mesh, zv_old, err, use_mpi_grp = .true.)
+          call zrestart_write_mesh_function(restart, filename, gr%mesh, zv_old, err)
         else
           call drestart_write_mesh_function(restart, filename, gr%mesh, &
-            potential_interpolation%v_old(1:gr%mesh%np, is, ii), err, use_mpi_grp = .true.)
+            potential_interpolation%v_old(1:gr%mesh%np, is, ii), err)
         end if
         ! the unit is energy actually, but this only for restart, and can be kept in atomic units
         ! for simplicity
         if (err /= 0) err2 = err2 + 1
       end do
     end do
+
+
+    if(potential_interpolation%mgga_with_exc) then
+      err2 = 0
+      do ii = 1, 2
+        do is = 1, nspin
+          write(filename,'(a6,i2.2,i3.3)') 'vtauprev_', ii, is
+          if (cmplxscl) then
+            zv_old = potential_interpolation%vtau_old(1:gr%mesh%np, is, ii) &
+              + M_zI*potential_interpolation%Imvtau_old(1:gr%mesh%np, is, ii)
+            call zrestart_write_mesh_function(restart, filename, gr%mesh, zv_old, err)
+          else
+            call drestart_write_mesh_function(restart, filename, gr%mesh, &
+              potential_interpolation%vtau_old(1:gr%mesh%np, is, ii), err)
+          end if
+          ! the unit is energy actually, but this only for restart, and can be kept in atomic units
+          ! for simplicity
+          if (err /= 0) err2 = err2 + 1
+        end do
+      end do
+    end if
 
     if (cmplxscl) then
       SAFE_DEALLOCATE_A(zv_old)
@@ -351,6 +466,28 @@ contains
         end if
       end do
     end do
+
+    if(potential_interpolation%mgga_with_exc) then
+      err2 = 0
+      do ii = 1, 2
+        do is = 1, nspin
+          write(filename,'(a,i2.2,i3.3)') 'vtauprev_', ii, is
+          if(cmplxscl) then
+            call zrestart_read_mesh_function(restart, trim(filename), gr%mesh, zv_old(1:gr%mesh%np), err)
+            potential_interpolation%vtau_old(1:gr%mesh%np, is, ii)   =  real(zv_old(1:gr%mesh%np))
+            potential_interpolation%imvtau_old(1:gr%mesh%np, is, ii) = aimag(zv_old(1:gr%mesh%np))
+          else
+            call drestart_read_mesh_function(restart, trim(filename), gr%mesh, &
+              potential_interpolation%vtau_old(1:gr%mesh%np, is, ii), err)
+          end if
+          if (err /= 0) then
+            err2 = err2 + 1
+            message(1) = "Unable to read VKS restart file '" // trim(filename) // "'"
+            call messages_warning(1)
+          end if
+        end do
+      end do
+    end if
 
     if (cmplxscl) then
       SAFE_DEALLOCATE_A(zv_old)

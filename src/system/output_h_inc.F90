@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
   ! ---------------------------------------------------------
   subroutine output_hamiltonian(hm, st, der, dir, outp, geo, grp)
@@ -182,9 +181,6 @@
 
     if(iand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
       if(states_are_complex(st)) then
-        ! calculate current first
-        SAFE_ALLOCATE(current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:hm%d%nspin))
-        call current_calculate(outp%current_calculator, der, hm, geo, st, current)
         do is = 1, hm%d%nspin
 
           if(st%d%nspin == 1) then
@@ -194,11 +190,10 @@
           end if
           
           call io_function_output_vector(outp%how, dir, fname, der%mesh, &
-            current(:, :, is), der%mesh%sb%dim, (unit_one/units_out%time)*units_out%length**(1 - der%mesh%sb%dim), err, &
+            st%current(:, :, is), der%mesh%sb%dim, (unit_one/units_out%time)*units_out%length**(1 - der%mesh%sb%dim), err, &
             geo = geo, grp = st%dom_st_kpt_mpi_grp, vector_dim_labels = (/'x', 'y', 'z'/))
 
         end do
-        SAFE_DEALLOCATE_A(current)
       else
         message(1) = 'No current density output for real states since it is identically zero.'
         call messages_warning(1)

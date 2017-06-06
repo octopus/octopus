@@ -16,7 +16,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -32,6 +31,7 @@ module restart_oct_m
   use mesh_batch_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use multicomm_oct_m
   use parser_oct_m
   use par_vec_oct_m
   use profiling_oct_m
@@ -98,6 +98,7 @@ module restart_oct_m
     character(len=MAX_PATH_LEN) :: pwd !< The current directory where the restart information is being loaded from or dumped to.
                                        !! It can be either dir or a subdirectory of dir.
     type(mpi_grp_t)   :: mpi_grp   !< Some operations require an mpi group to be used.
+    type(multicomm_t), pointer :: mc
     logical           :: has_mesh  !< If no, mesh info is not written or read, and mesh functions cannot be written or read.
     integer, pointer  :: map(:)    !< Map between the points of the stored mesh and the mesh used in the current calculations.
   end type restart_t
@@ -127,14 +128,16 @@ module restart_oct_m
                                 RESTART_VDW        =  8,  &
                                 RESTART_CASIDA     =  9,  &
                                 RESTART_OCT        =  10, &
+                                RESTART_PARTITION  =  11, &
                                 RESTART_PROJ       =  12
 
   integer, parameter :: RESTART_N_DATA_TYPES = 12
 
-  integer, parameter, public :: RESTART_STATES = 1, &
-                                RESTART_RHO    = 2, &
-                                RESTART_VHXC   = 4, &
-                                RESTART_MIX    = 8
+  integer, parameter, public :: RESTART_FLAG_STATES = 1,  &
+                                RESTART_FLAG_RHO    = 2,  &
+                                RESTART_FLAG_VHXC   = 4,  &
+                                RESTART_FLAG_MIX    = 8,  &
+                                RESTART_FLAG_SKIP   = 16
 
   type(restart_data_t) :: info(RESTART_N_DATA_TYPES)
 
@@ -208,11 +211,13 @@ contains
     info(RESTART_CASIDA)%tag = "Casida"
     info(RESTART_OCT)%tag = "Optimal Control"
     info(RESTART_PROJ)%tag = "GS for TDOutput"
+    info(RESTART_PARTITION)%tag = "Mesh Partition"
 
     ! Default flags and directories (flags not yet used)
     info(:)%basedir = 'restart'
     info(:)%flags = 0
-
+    info(RESTART_PARTITION)%flags = RESTART_FLAG_SKIP
+    
     info(RESTART_GS)%dir = GS_DIR
     info(RESTART_UNOCC)%dir = GS_DIR
     info(RESTART_TD)%dir = TD_DIR
@@ -224,11 +229,15 @@ contains
     info(RESTART_CASIDA)%dir = CASIDA_DIR
     info(RESTART_OCT)%dir = OCT_DIR
     info(RESTART_PROJ)%dir = GS_DIR
+    info(RESTART_PARTITION)%dir = PARTITION_DIR
 
     ! Read input
     call messages_obsolete_variable('RestartFileFormat', 'RestartOptions')
     call messages_obsolete_variable('TmpDir', 'RestartOptions')
     call messages_obsolete_variable('RestartDir', 'RestartOptions')
+    call messages_obsolete_variable('MeshPartitionRead', 'RestartOptions')
+    call messages_obsolete_variable('MeshPartitionWrite', 'RestartOptions')
+    call messages_obsolete_variable('MeshPartitionDir', 'RestartOptions')
 
     !%Variable RestartOptions
     !%Type block
@@ -280,7 +289,7 @@ contains
     !% are not available for that particular calculation, or might assume some of them always present, which will happen
     !% in case they are mandatory.
     !% 
-    !% Finally, note that the all the restart information of a given data type is always stored in a subdirectory of the
+    !% Finally, note that all the restart information of a given data type is always stored in a subdirectory of the
     !% specified path. The name of this subdirectory is fixed and cannot be changed. For example, ground-state information 
     !% will always be stored in a subdirectory named "gs". This makes it safe in most situations to use the same path for
     !% all the data types. The name of these subdirectories is indicated in the description of the data types below.
@@ -329,6 +338,10 @@ contains
     !% (data type) 
     !% The data for optimal control calculations.
     !% This information is stored under the "opt-control" subdirectory.
+    !%Option restart_partition 11
+    !% (data type) 
+    !% The data for the mesh partitioning.
+    !% This information is stored under the "partition" subdirectory.
     !%Option restart_proj 12
     !% (data type)
     !% The ground-state to be used with the td_occup and populations options of <tt>TDOutput</tt>.
@@ -344,7 +357,10 @@ contains
     !% Read the Hartree and XC potentials.
     !%Option restart_mix 8
     !% (flag)
-    !% Read the SCF mixing information.
+    !% Read the SCF mixing information.   
+    !%Option restart_skip 16
+    !% (flag)
+    !% This flag allows to selectively skip the reading and writting of specific restart information.
     !%End
     set = .false.
     if(parse_block('RestartOptions', blk) == 0) then
@@ -379,12 +395,12 @@ contains
 
   ! ---------------------------------------------------------
   !> Initializes a restart object.
-  subroutine restart_init(restart, data_type, type, mpi_grp, ierr, mesh, dir, exact)
+  subroutine restart_init(restart, data_type, type, mc, ierr, mesh, dir, exact)
     type(restart_t),             intent(out) :: restart   !< Restart information.
     integer,                     intent(in)  :: data_type !< Restart data type (RESTART_GS, RESTART_TD, etc)
     integer,                     intent(in)  :: type      !< Is this restart used for dumping (type = RESTART_TYPE_DUMP)
                                                           !! or for loading (type = RESTART_TYPE_LOAD)?
-    type(mpi_grp_t),             intent(in)  :: mpi_grp   !< The mpi group in charge of handling this restart.
+    type(multicomm_t), target,   intent(in)  :: mc        !< The multicommunicator in charge of handling this restart.
     integer,                     intent(out) :: ierr      !< Error code, if any. Required for LOAD, should not be present for DUMP.
     type(mesh_t),      optional, intent(in)  :: mesh      !< If present, depending on the type of restart, the mesh 
                                                           !! information is either dumped or the mesh compatibility is checked.
@@ -413,7 +429,8 @@ contains
     ! Some initializations
     restart%type = type
     nullify(restart%map)
-    restart%mpi_grp = mpi_grp
+    restart%mc => mc
+    call mpi_grp_init(restart%mpi_grp, mc%master_comm)
     restart%format = io_function_fill_how("Binary")
     if (data_type < RESTART_UNDEFINED .and. data_type > RESTART_N_DATA_TYPES) then
       message(1) = "Illegal data_type in restart_init"
@@ -476,7 +493,7 @@ contains
     restart%pwd = restart%dir
 
     ! Check if the directory already exists and create it if necessary
-    dir_exists = loct_dir_exists(trim(restart%pwd))
+    dir_exists = io_dir_exists(trim(restart%pwd))
     if (restart%type == RESTART_TYPE_DUMP .and. .not. dir_exists) then
       call io_mkdir(trim(restart%pwd), parents=.true.)
     end if
@@ -496,13 +513,13 @@ contains
         ! Dump the grid information. The main parameters of the grid should not change
         ! during the calculation, so we should only need to dump it once.
         if (present(mesh)) then
-          iunit = io_open(trim(restart%pwd)//'/mesh', action='write', die=.true., grp=mpi_grp)
+          iunit = io_open(trim(restart%pwd)//'/mesh', action='write', die=.true., grp=restart%mpi_grp)
           if (mpi_grp_is_root(restart%mpi_grp)) then
             write(iunit,'(a)') '# This file contains the necessary information to generate the'
             write(iunit,'(a)') '# grid with which the functions in this directory were calculated,'
             write(iunit,'(a)') '# except for the geometry of the system.'
           end if
-          call io_close(iunit, grp=mpi_grp)
+          call io_close(iunit, grp=restart%mpi_grp)
           
           call mesh_dump(mesh, restart%pwd, "mesh", restart%mpi_grp, ierr)
           if (ierr /= 0) then
@@ -611,9 +628,9 @@ contains
       select case (restart%type)
       case (RESTART_TYPE_LOAD)
         message(1) = "Info: Finished reading information from '"//trim(restart%dir)//"'."
-        call loct_rm(trim(restart%pwd)//"/loading")
+        call io_rm(trim(restart%pwd)//"/loading")
       case (RESTART_TYPE_DUMP)
-        call loct_rm(trim(restart%pwd)//"/dumping")
+        call io_rm(trim(restart%pwd)//"/dumping")
         message(1) = "Info: Finished writing information to '"//trim(restart%dir)//"'."
       end select
       call messages_info(1)
@@ -624,7 +641,8 @@ contains
     restart%skip = .true.
     SAFE_DEALLOCATE_P(restart%map)
     restart%has_mesh = .false.
-
+    nullify(restart%mc)
+    
     POP_SUB(restart_end)
   end subroutine restart_end
 
@@ -638,11 +656,11 @@ contains
   !! someone fixes them.
   function restart_dir(restart)
     type(restart_t), intent(in) :: restart
-    character(len=80) :: restart_dir
+    character(len=MAX_PATH_LEN) :: restart_dir
 
     PUSH_SUB(restart_dir)
 
-    restart_dir = restart%pwd
+    restart_dir = io_workpath(restart%pwd)
 
     POP_SUB(restart_dir)
   end function restart_dir
@@ -727,7 +745,7 @@ contains
 
     PUSH_SUB(restart_rm)
 
-    call loct_rm(trim(restart%pwd)//"/"//trim(name))
+    call io_rm(trim(restart%pwd)//"/"//trim(name))
 
     POP_SUB(restart_rm)
   end subroutine restart_rm
@@ -850,7 +868,7 @@ contains
   logical pure function restart_skip(restart)
     type(restart_t), intent(in) :: restart
 
-    restart_skip = restart%skip
+    restart_skip = restart%skip .or. restart_has_flag(restart, RESTART_FLAG_SKIP)
 
   end function restart_skip
 

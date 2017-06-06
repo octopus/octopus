@@ -17,7 +17,6 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 # 02110-1301, USA.
 #
-# $Id$
 
 
 use Getopt::Std;
@@ -78,7 +77,7 @@ print OUT <<"EndOfHeader";
 !%Description
 !% Defines the Kinetic Functional to be used in a Subsystem calculation,
 !% For more information on the functionals, see
-!% <a href=http://www.tddft.org/programs/octopus/wiki/index.php/Libxc:manual#Available_functionals>
+!% <a href=http://octopus-code.org/wiki/Libxc:manual#Available_functionals>
 !% Libxc documentation</a>. The list provided here is from libxc $version; if you have
 !% linked against a different libxc version, you may have a somewhat different set
 !% of available functionals.
