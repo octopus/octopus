@@ -660,6 +660,15 @@ contains
     end do
     ! FIXME: with cmplxscl we need to think how to treat 
     ! the ions dipole moment 
+
+    ! Setting center of mass as reference needed for non-neutral systems.
+    do id = 1, nd
+       do is = 1, st%d%nspin
+          multipole(2:gr%mesh%sb%dim+1, is, id) =  multipole(2:gr%mesh%sb%dim+1, is, id) &
+                                     - center(1:gr%mesh%sb%dim, id)*multipole(1, is, id)
+       end do
+    end do
+
     ! For transition densities or density differences there is no need to add the ionic dipole
     
     !%Variable LDIonicDipole
@@ -672,7 +681,7 @@ contains
     !%End
     call parse_variable('LDIonicDipole', .true., use_ionic_dipole)
     if (use_ionic_dipole) then
-      call local_geometry_dipole(nd, domain, geo, ionic_dipole)
+      call local_geometry_dipole(nd, domain, geo, center, ionic_dipole)
       do is = 1, st%d%nspin
         do id = 1, nd
           multipole(2:gr%mesh%sb%dim+1, is, id) = -ionic_dipole(1:gr%mesh%sb%dim, id)/st%d%nspin & 
@@ -725,10 +734,11 @@ contains
   end subroutine local_write_multipole
 
   ! ---------------------------------------------------------
-  subroutine local_geometry_dipole(nd, dom, geo, dipole)
+  subroutine local_geometry_dipole(nd, dom, geo, center, dipole)
     integer,           intent(in)  :: nd 
     type(box_union_t), intent(in)  :: dom(:)
     type(geometry_t),  intent(in)  :: geo
+    FLOAT,             intent(in)  :: center(:,:)
     FLOAT,             intent(inout) :: dipole(:,:)
 
     integer :: ia, id
@@ -745,6 +755,12 @@ contains
       end do
     end do
     dipole = P_PROTON_CHARGE*dipole
+
+    ! Setting center of mass as reference needed for non-neutral systems.
+    do id = 1, nd                                                                                         
+      dipole(1:geo%space%dim, id) = dipole(1:geo%space%dim, id) &
+                               - P_PROTON_CHARGE*ion_charge(id)*center(1:geo%space%dim, id)
+    end do
 
     POP_SUB(local_geometry_dipole)
   end subroutine local_geometry_dipole
