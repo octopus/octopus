@@ -231,12 +231,12 @@ contains
   end subroutine local_write_end
 
   ! ---------------------------------------------------------
-  subroutine local_write_iter(writ, nd, domain, lab, inside, center, gr, st, & 
+  subroutine local_write_iter(writ, nd, lab, ions_inside, inside, center, gr, st, & 
                               hm, ks, geo, kick, iter, l_start, ldoverwrite)
     type(local_write_t),    intent(inout) :: writ
     integer,                intent(in)    :: nd 
-    type(box_union_t),      intent(in)    :: domain(:)
     character(len=15),      intent(in)    :: lab(:)
+    logical,                intent(in)    :: ions_inside(:,:)
     logical,                intent(in)    :: inside(:,:)
     FLOAT  ,                intent(in)    :: center(:,:)
     type(grid_t),           intent(inout) :: gr
@@ -258,7 +258,7 @@ contains
     if(any(writ%out(LOCAL_OUT_MULTIPOLES,:)%write)) then
       if(.not.ldoverwrite)then
       end if
-      call local_write_multipole(writ%out(LOCAL_OUT_MULTIPOLES, :), nd, domain, lab, inside, center, & 
+      call local_write_multipole(writ%out(LOCAL_OUT_MULTIPOLES, :), nd, lab, ions_inside, inside, center, & 
                         gr, geo, st, writ%lmax, kick, iter, l_start, ldoverwrite, writ%how)
       if(mpi_grp_is_root(mpi_world)) then
         do id = 1, nd
@@ -520,23 +520,24 @@ contains
   end subroutine local_write_energy
 
   ! ---------------------------------------------------------
-  subroutine local_write_multipole(out_multip, nd, domain, lab, inside, center, & 
+  subroutine local_write_multipole(out_multip, nd, lab, ions_inside, inside, center, & 
                                 gr, geo, st, lmax, kick, iter, l_start, start, how)
-    type(local_write_prop_t),      intent(inout) :: out_multip(:)
+
+    type(local_write_prop_t), intent(inout) :: out_multip(:)
     integer,                  intent(in)    :: nd 
-    type(box_union_t),        intent(in)    :: domain(:)
     character(len=15),        intent(in)    :: lab(:)
+    logical,                  intent(in)    :: ions_inside(:,:)
     logical,                  intent(in)    :: inside(:,:)
     FLOAT,                    intent(in)    :: center(:,:)
-    type(grid_t),         intent(in) :: gr
-    type(geometry_t),     intent(in) :: geo
-    type(states_t),       intent(in) :: st
-    integer,              intent(in) :: lmax
-    type(kick_t),         intent(in) :: kick
-    integer,              intent(in) :: iter
-    integer,              intent(in) :: l_start
-    logical,              intent(in) :: start
-    integer,              intent(in) :: how
+    type(grid_t),             intent(in)    :: gr
+    type(geometry_t),         intent(in)    :: geo
+    type(states_t),           intent(in)    :: st
+    integer,                  intent(in)    :: lmax
+    type(kick_t),             intent(in)    :: kick
+    integer,                  intent(in)    :: iter
+    integer,                  intent(in)    :: l_start
+    logical,                  intent(in)    :: start
+    integer,                  intent(in)    :: how
 
     integer :: id, is, ll, mm, add_lm
     character(len=120) :: aux
@@ -663,10 +664,10 @@ contains
 
     ! Setting center of mass as reference needed for non-neutral systems.
     do id = 1, nd
-       do is = 1, st%d%nspin
-          multipole(2:gr%mesh%sb%dim+1, is, id) =  multipole(2:gr%mesh%sb%dim+1, is, id) &
-                                     - center(1:gr%mesh%sb%dim, id)*multipole(1, is, id)
-       end do
+      do is = 1, st%d%nspin
+        multipole(2:gr%mesh%sb%dim+1, is, id) =  multipole(2:gr%mesh%sb%dim+1, is, id) &
+                                   - center(1:gr%mesh%sb%dim, id)*multipole(1, is, id)
+      end do
     end do
 
     ! For transition densities or density differences there is no need to add the ionic dipole
@@ -681,7 +682,7 @@ contains
     !%End
     call parse_variable('LDIonicDipole', .true., use_ionic_dipole)
     if (use_ionic_dipole) then
-      call local_geometry_dipole(nd, domain, geo, center, ionic_dipole)
+      call local_geometry_dipole(nd, ions_inside, geo, center, ionic_dipole)
       do is = 1, st%d%nspin
         do id = 1, nd
           multipole(2:gr%mesh%sb%dim+1, is, id) = -ionic_dipole(1:gr%mesh%sb%dim, id)/st%d%nspin & 
@@ -734,30 +735,35 @@ contains
   end subroutine local_write_multipole
 
   ! ---------------------------------------------------------
-  subroutine local_geometry_dipole(nd, dom, geo, center, dipole)
+  subroutine local_geometry_dipole(nd, ions_inside, geo, center, dipole)
     integer,           intent(in)  :: nd 
-    type(box_union_t), intent(in)  :: dom(:)
+    logical,           intent(in)  :: ions_inside(:,:)
     type(geometry_t),  intent(in)  :: geo
     FLOAT,             intent(in)  :: center(:,:)
     FLOAT,             intent(inout) :: dipole(:,:)
 
     integer :: ia, id
+    FLOAT, allocatable :: ion_charge(:)
 
     PUSH_SUB(local_geometry_dipole)
+
+    SAFE_ALLOCATE(ion_charge(1:nd))
+    ion_charge = M_ZERO
 
     dipole(:,:) = M_ZERO
     do ia = 1, geo%natoms
       do  id = 1, nd
-        if (box_union_inside(dom(id), geo%atom(ia)%x)) then
+        if (ions_inside(ia, id)) then
           dipole(1:geo%space%dim, id) = dipole(1:geo%space%dim, id) + &
           species_zval(geo%atom(ia)%species)*(geo%atom(ia)%x(1:geo%space%dim))
+          ion_charge(id) = ion_charge(id) + species_zval(geo%atom(ia)%species)
         end if
       end do
     end do
-    dipole = P_PROTON_CHARGE*dipole
 
+    dipole = P_PROTON_CHARGE*dipole
     ! Setting center of mass as reference needed for non-neutral systems.
-    do id = 1, nd                                                                                         
+    do id = 1, nd
       dipole(1:geo%space%dim, id) = dipole(1:geo%space%dim, id) &
                                - P_PROTON_CHARGE*ion_charge(id)*center(1:geo%space%dim, id)
     end do
@@ -789,8 +795,8 @@ contains
     write(out_bld,'(a)')'.color red'
     write(out_bld,'(a,3(f12.6,2x),a)')'.sphere ',(units_from_atomic(units_out%length,center(ll)), ll= 1, 3),' 0.2' 
     do ll = 1, 3
-      dipolearrow(ll,1) = units_from_atomic(units_out%length, center(ll) - multipoles(ll))
-      dipolearrow(ll,2) = units_from_atomic(units_out%length, center(ll) + multipoles(ll))
+      dipolearrow(ll,1) = units_from_atomic(units_out%length, center(ll) - multipoles(ll)/2.0d0)
+      dipolearrow(ll,2) = units_from_atomic(units_out%length, center(ll) + multipoles(ll)/2.0d0)
     end do
     write(out_bld,'(a,6(f12.6,2x),a)')'.arrow ',(dipolearrow(ll,1), ll= 1, 3), &
                                      (dipolearrow(ll,2), ll= 1, 3), ' 0.1 0.5 0.90'
