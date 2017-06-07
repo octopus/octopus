@@ -93,7 +93,7 @@ subroutine X(dsubmesh_add_to_mesh)(this, sphi, phi, factor)
   PUSH_SUB(X(dsubmesh_add_to_mesh))
 
   if(present(factor)) then
-    !Loop unrolling inspired from BLAS axpy routine
+    !Loop unrolling inspired by BLAS axpy routine
     m = mod(this%np,4)
     do ip = 1, m
       phi(this%map(ip)) = phi(this%map(ip)) + factor*sphi(ip)
@@ -122,6 +122,24 @@ subroutine X(dsubmesh_add_to_mesh)(this, sphi, phi, factor)
   POP_SUB(X(dsubmesh_add_to_mesh))
 end subroutine X(dsubmesh_add_to_mesh)
 
+
+! ---------------------------------------------------------
+subroutine X(submesh_copy_from_mesh)(this, phi, sphi)
+  type(submesh_t),  intent(in)    :: this
+  R_TYPE,           intent(in)    :: phi(:)
+  R_TYPE,           intent(inout) :: sphi(:)
+
+  integer :: ip
+
+  PUSH_SUB(X(submesh_copy_from_mesh))
+
+  do ip = 1, this%np
+    sphi(ip) = phi(this%map(ip))
+  end do
+
+  POP_SUB(X(submesh_copy_from_mesh))
+end subroutine X(submesh_copy_from_mesh)
+ 
 ! ---------------------------------------------------------
 !> this function returns the the norm of a vector
 FLOAT function X(sm_nrm2)(sm, ff, reduce) result(nrm2)

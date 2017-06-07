@@ -62,6 +62,8 @@ module submesh_oct_m
     submesh_overlap,             &
     dsubmesh_to_submesh_dotp,    &
     zsubmesh_to_submesh_dotp,    &
+    dsubmesh_copy_from_mesh,          &
+    zsubmesh_copy_from_mesh,          &
     submesh_end
 
   type submesh_t
@@ -430,7 +432,7 @@ contains
     PUSH_SUB(zzdsubmesh_add_to_mesh)
    
     if(present(factor)) then
-      !Loop unrolling inspired from BLAS axpy routine
+      !Loop unrolling inspired by BLAS axpy routine
       m = mod(this%np,4)
       do ip = 1, m
         phi(this%map(ip)) = phi(this%map(ip)) + factor*sphi(ip)
