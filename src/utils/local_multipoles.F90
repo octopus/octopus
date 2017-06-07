@@ -25,6 +25,7 @@ program oct_local_multipoles
   use box_union_oct_m
   use calc_mode_par_oct_m
   use command_line_oct_m
+  use comm_oct_m
   use geometry_oct_m
   use global_oct_m
   use hamiltonian_oct_m
