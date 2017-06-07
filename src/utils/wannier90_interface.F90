@@ -72,7 +72,7 @@ program wannier90_interface
   character(len=512)   :: filename, str, str2
   integer              :: ist, ispin
   type(states_t)       :: st
-  logical              :: w90_setup, w90_output, w90_floquet, w90_unk, w90_amn, w90_mmn
+  logical              :: w90_setup, w90_output, w90_floquet, w90_unk, w90_amn, w90_mmn, w90_spinors
   integer              ::w90_nntot, w90_num_bands, w90_num_kpts    ! w90 input parameters
   integer, allocatable ::  w90_nnk_list(:,:)                       !
   character(len=80)    :: w90_prefix                               ! w90 input file prefix
@@ -80,6 +80,9 @@ program wannier90_interface
   FLOAT, allocatable :: w90_proj_centers(:,:)                      ! projections centers
   integer, allocatable ::  w90_proj_lmr(:,:)                       ! definitions for real valued Y_lm*R_r
   integer :: w90_nproj                                             ! number of such projections        
+  integer, allocatable :: w90_spin_proj_component(:)               ! up/down flag 
+  FLOAT, allocatable   :: w90_spin_proj_axis(:,:)                  ! spin axis (not implemented)
+
 
   call getopt_init(ierr)
   if(ierr /= 0) then
@@ -137,6 +140,7 @@ program wannier90_interface
 
   w90_setup = iand(w90_what, OPTION__W90_INTERFACE_MODE__W90_SETUP) /= 0
   w90_output = iand(w90_what, OPTION__W90_INTERFACE_MODE__W90_OUTPUT) /= 0
+  w90_floquet = iand(w90_what, OPTION__W90_INTERFACE_MODE__W90_FLOQUET) /= 0
 
   !%Variable W90_interface_files
   !%Type flag
@@ -223,7 +227,8 @@ program wannier90_interface
     ! ---- actual interface work ----------
     call read_wannier90_files()
     if(w90_mmn) call create_wannier90_mmn()
-    if(w90_unk) call write_unk()
+    if(w90_unk .and. w90_floquet) call write_unk_floquet()
+    if(w90_unk .and. .not. w90_floquet) call write_unk()
     if(w90_amn) call create_wannier90_amn()
    end if
 
@@ -381,29 +386,59 @@ contains
     if(w90_amn) then
        ! parse file again for definitions of projections
        w90_nnkp = io_open(trim(filename), action='read')
+
        do while(.true.)
-          read(w90_nnkp,*,end=101) dummy, dummy1
-          if(dummy =='begin' .and. dummy1 == 'projections' ) then
-             goto 202
+          read(w90_nnkp,*,end=201) dummy, dummy1
+
+          if(dummy =='begin' .and. (dummy1 == 'projections' .or. dummy1 == 'spinor_projections')) then
+
+              if(dummy1 == 'spinor_projections') then
+                 w90_spinors = .true.
+                 message(1) = 'W90: Spinor interface incomplete. Note there is no quantization axis implemented'
+                 call messages_warning(1)
+                 if(w90_floquet) then
+                    message(1) = 'W90: Flqouet spinors not implemented'
+                    call messages_fatal(1)
+                 end if
+              end if
+
+              read(w90_nnkp,*) w90_nproj
+              ! num_wann is given in w90.win, not double checked here
+              ! I assume that the wannier90.x -pp run has checked this
+              w90_num_wann = w90_nproj
+
+              SAFE_ALLOCATE(w90_proj_centers(w90_nproj,3))
+              SAFE_ALLOCATE(w90_proj_lmr(w90_nproj,3))
+              if(w90_spinors) SAFE_ALLOCATE(w90_spin_proj_component(w90_nproj))
+              if(w90_spinors) SAFE_ALLOCATE(w90_spin_proj_axis(w90_nproj,3))
+
+              do ii=1,w90_nproj
+                 read(w90_nnkp,*) w90_proj_centers(ii,1:3), w90_proj_lmr(ii,1:3)
+                 ! skip a line for now
+                 read(w90_nnkp,*) dummyr(1:7)
+                 if(w90_spinors) then
+                    read(w90_nnkp,*) w90_spin_proj_component(ii), w90_spin_proj_axis(ii,1:3)
+                    ! use octopus spindim conventions
+                    if(w90_spin_proj_component(ii) == -1) w90_spin_proj_component(ii) = 2
+                 end if
+              end do
+              !make sure we are at the end of the block
+              read(w90_nnkp,*) dummy
+              if(dummy /= 'end') then
+                 message(1) = 'W90: There dont seem to be enough projections in nnkpts file to.'
+                 call messages_fatal(1)
+              end if
+              goto 202
           end if
        end do
-       message(1) = 'W90: Did not find projections in w90.nnkp file'
-       call messages_fatal(2)
+
+       ! jump point when EOF found while looking for projections block
+201    message(1) = 'W90: Did not find projections block in w90.nnkp file'
+       call messages_fatal(1)
 
        ! jump point when projections is found in file
 202    continue
-       read(w90_nnkp,*) w90_nproj
-       ! num_wann is given in w90.win, not double checked here
-       ! I assume that the wannier90.x -pp run has checked this
-       w90_num_wann = w90_nproj
 
-       SAFE_ALLOCATE(w90_proj_centers(w90_nproj,3))
-       SAFE_ALLOCATE(w90_proj_lmr(w90_nproj,3))
-       do ii=1,w90_nproj
-          read(w90_nnkp,*) w90_proj_centers(ii,1:3), w90_proj_lmr(ii,1:3)
-          ! skip a line for now
-          read(w90_nnkp,*) dummyr(1:7)
-       end do
     end if
 
     call io_close(w90_nnkp)
@@ -510,7 +545,7 @@ contains
              unk_file = io_open(trim(filename), action='write',form='unformatted')
              ! write header
              write(unk_file) sys%gr%mesh%idx%ll(1:sys%gr%mesh%idx%dim), ik,  w90_num_bands
-             ! states 
+             ! states
              do ist=1,w90_num_bands
                 call states_get_state(st, sys%gr%der%mesh, ist, ik, state1)
                 ! reorder state
@@ -531,6 +566,63 @@ contains
     end do
 
   end subroutine write_unk
+
+  subroutine write_unk_floquet()
+    integer ::  ist, jst, ik, unk_file,  iknn, G(3), ii, jj, idim, idim2,  ispin
+    integer :: nr(2,3), ix, iy, iz, ip, im, imm
+    FLOAT   ::  Gr(3), t1, t2
+    character(len=80) :: filename, dirname
+    CMPLX   :: overlap
+    CMPLX, allocatable :: state1(:,:), state2(:)
+
+    ASSERT(st%d%kpt%start==1 .and. st%d%kpt%end==sys%gr%sb%kpoints%full%npoints)
+    ASSERT(sys%gr%mesh%np==sys%gr%mesh%np_global)
+
+    SAFE_ALLOCATE(state1(1:sys%gr%der%mesh%np, 1:st%d%dim))
+    SAFE_ALLOCATE(state2(1:sys%gr%der%mesh%np))
+
+    ! set boundaries of inner box
+    nr(1,:) = sys%gr%mesh%idx%nr(1,:) + sys%gr%mesh%idx%enlarge(:)
+    nr(2,:) = sys%gr%mesh%idx%nr(2,:) - sys%gr%mesh%idx%enlarge(:)
+
+    do im=hm%F%order(1),hm%F%order(2)
+      imm = im - hm%F%order(1) + 1
+      write(dirname,'(i3)') im
+      dirname = 'w90_floquet_subdir_'//trim(adjustl(dirname))
+      call io_mkdir(dirname)
+      do ik=1,w90_num_kpts
+        do ispin=1,hm%F%spindim
+
+          if(mpi_grp_is_root(mpi_world)) then
+            write(filename,'(a,i5.5,a1,i1)') '/UNK', ik,'.', ispin
+            filename = trim(adjustl(dirname))//trim(adjustl(filename))
+            unk_file = io_open(trim(filename), action='write',form='unformatted')
+            ! write header
+            write(unk_file) sys%gr%mesh%idx%ll(1:sys%gr%mesh%idx%dim), ik,  w90_num_bands
+            ! states
+            do ist=1,w90_num_bands
+              call states_get_state(st, sys%gr%der%mesh, ist, ik, state1)
+              ! reorder state
+              ip=0
+              do iz=nr(1,3),nr(2,3)
+                do iy=nr(1,2),nr(2,2)
+                  do ix=nr(1,1),nr(2,1)
+                    ip=ip+1
+                    state2(ip) =  state1(sys%gr%mesh%idx%lxyz_inv(ix, iy, iz),(imm-1)*hm%F%spindim+ispin)
+                  end do
+                end do
+              end do
+              write(unk_file) state2(:)
+            end do
+            call io_close(unk_file)
+          end if
+
+        end do
+      end do
+
+   end do
+
+  end subroutine write_unk_floquet
 
   subroutine create_wannier90_amn()
     integer ::  ist, jst, ik, w90_amn,  iknn, G(3), ii, jj, idim, idim2, iw, ip
@@ -591,7 +683,12 @@ contains
              call states_get_state(st, sys%gr%der%mesh, ist, ik, state1)
              projection = M_ZERO
              do idim=1,st%d%dim
-                projection = projection + zmf_dotp(sys%gr%mesh,state1(1:sys%gr%mesh%np,idim),orbital(iw,1:sys%gr%mesh%np))
+                if(.not.w90_spinors) then
+                   projection = projection + zmf_dotp(sys%gr%mesh,state1(1:sys%gr%mesh%np,idim),orbital(iw,1:sys%gr%mesh%np))
+                else
+                   if(idim == w90_spin_proj_component(iw)) &
+                       projection =  zmf_dotp(sys%gr%mesh,state1(1:sys%gr%mesh%np,idim),orbital(iw,1:sys%gr%mesh%np))
+                end if
              end do
              write (w90_amn,'(I5,2x,I5,2x,I5,2x,e12.6,2x,e12.6)') ist, iw, ik, projection
           end do
