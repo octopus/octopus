@@ -688,11 +688,18 @@ contains
     filename = "ldomains"
     call drestart_read_mesh_function(restart, trim(filename), sys%gr%mesh, inside, ierr) 
 
+    lcl%inside = .false.
     do ip = 1 , sys%gr%mesh%np
       do id = 1, lcl%nd
         if (iand(int(inside(ip)), 2**id) /= 0) lcl%inside(ip,id) = .true.
       end do
     end do
+
+     !Check for atom list inside each domain
+     call local_ions_inside(lcl%nd, lcl%inside, sys%geo, sys%gr%mesh, lcl%ions_inside, lcl%clist)
+
+     !Compute center of mass of each domain
+     call local_center_of_mass(lcl%nd, lcl%ions_inside, sys%geo, lcl%dcm)
     
     SAFE_DEALLOCATE_A(inside)
 
