@@ -101,15 +101,25 @@ program floquet_observables
   
   call messages_init()  
   call io_init()
+  
   call calc_mode_par_init()
 
   call fft_all_init()
   call unit_system_init()
   
+  call calc_mode_par_set_parallelization(P_STRATEGY_OTHER,   default = .false.)
+!   call calc_mode_par_set_parallelization(P_STRATEGY_KPOINTS, default = .true. )
+  call calc_mode_par_set_parallelization(P_STRATEGY_STATES,  default = .false.)
+!   call calc_mode_par_set_parallelization(P_STRATEGY_DOMAINS, default = .true. )
+  
+  
+  
   call system_init(sys)
   
   call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, &
                         sys%ks%xc_flags, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
+  
+  
   
   
 
@@ -230,10 +240,10 @@ program floquet_observables
   !% <br>%</tt>
   !%
   !%End
-  obs%nst(1) = dressed_st%st_start
-  obs%nst(2) = dressed_st%st_end
-  obs%nkpt(1) = dressed_st%d%kpt%start 
-  obs%nkpt(2) = dressed_st%d%kpt%end
+  obs%nst(1) = 1
+  obs%nst(2) = dressed_st%nst
+  obs%nkpt(1) = 1 
+  obs%nkpt(2) = dressed_st%d%kpt%nglobal
   
   if(parse_block('FloquetObservableSelectStates', blk) == 0) then
     if(parse_block_cols(blk,0) /= 2) call messages_input_error('FloquetObservableSelectStates')
@@ -666,7 +676,7 @@ contains
     
     CMPLX, allocatable   :: mel(:,:), u_ma(:,:), u_nb(:,:)
     FLOAT, allocatable   :: ediff(:), weight(:), fab(:)
-    integer, allocatable :: mm(:), nn(:), alpha(:), beta(:), idx(:)
+    integer, allocatable :: mm(:), nn(:), alpha(:), beta(:), idx(:), kk(:)
     
     integer :: idim, im, in, ista, istb, ik, itot, ii, i, imm, inn, spindim
     FLOAT   :: omega, DE, wmax
@@ -706,17 +716,20 @@ contains
     weight(:) = M_ZERO
     mm(:) = 0
     nn(:) = 0
+    kk(:) = 0 
     alpha(:) = 0
     beta(:) = 0
     idx(:) = 0
     
     ii=1
-    do ik=dressed_st%d%kpt%start, dressed_st%d%kpt%end
+    do ik=1, dressed_st%d%nik
 
-        do ista=dressed_st%st_start, dressed_st%st_end
+        if(dressed_st%d%kpt%start > ik .or. ik > dressed_st%d%kpt%end) cycle
+          
+        do ista=1, dressed_st%nst
           call states_get_state(dressed_st, sys%gr%mesh, ista, ik, u_ma)
           
-          do istb=dressed_st%st_start, dressed_st%st_end
+          do istb=1, dressed_st%nst
             call states_get_state(dressed_st, sys%gr%mesh, istb, ik, u_nb)
 
             
@@ -733,6 +746,7 @@ contains
                 beta(ii) = istb 
                 nn(ii) = in  
                 mm(ii) = im 
+                kk(ii) = ik
 
                 ediff(ii) = DE + (in-im)*hm%F%omega
                 
@@ -775,6 +789,11 @@ contains
     
     if(dressed_st%parallel_in_states .or. dressed_st%d%kpt%parallel) then
       call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm,  weight(:))
+      call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm,  alpha(:))
+      call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm,  beta(:))
+      call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm,  nn(:))
+      call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm,  mm(:))
+      call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm,  kk(:))
     end if
     
     
@@ -787,21 +806,25 @@ contains
       filename = FLOQUET_DIR//'/floquet_hhg_w_'//trim(adjustl(iter_name))
       iunit = io_open(filename, action='write')
     
+      write(iunit, '(a1,6a15)', advance ='no') '#', str_center("w", 15), str_center("strenght(w)", 15),&
+                                                    str_center("alpha", 15), str_center("beta", 15),&
+                                                    str_center("m", 15), str_center("n", 15)
+                                               
+      if (dressed_st%d%nik > 1 ) then
+        write(iunit, '(a1,1a15)', advance ='no')  str_center("ikpt", 15)
+      end if
+    
+    
       select case (obs%gauge)
+
       case (OPTION__FLOQUETOBSERVABLEGAUGE__F_VELOCITY)
-        write(iunit, '(a1,10a15)') '#', str_center("w", 15), str_center("strenght(w)", 15),&
-                                       str_center("alpha", 15), str_center("beta", 15),&
-                                       str_center("m", 15), str_center("n", 15),&
-                                       str_center("|<u_ma|ix|u_nb>|", 15), str_center("|<u_ma|iy|u_nb>|", 15),&
-                                       str_center("|<u_ma|iz|u_nb>|", 15), str_center("f_a*f_b", 15)
+        write(iunit, '(a1,4a15)')  str_center("|<u_ma|ix|u_nb>|", 15), str_center("|<u_ma|iy|u_nb>|", 15),&
+                                    str_center("|<u_ma|iz|u_nb>|", 15), str_center("f_a*f_b", 15)
           
       case (OPTION__FLOQUETOBSERVABLEGAUGE__F_LENGHT)
 
-        write(iunit, '(a1,10a15)') '#', str_center("w", 15), str_center("strenght(w)", 15),&
-                                       str_center("alpha", 15), str_center("beta", 15),&
-                                       str_center("m", 15), str_center("n", 15),&
-                                       str_center("|<u_ma|x|u_nb>|", 15), str_center("|<u_ma|y|u_nb>|", 15),&
-                                       str_center("|<u_ma|z|u_nb>|", 15), str_center("f_a*f_b", 15)
+        write(iunit, '(a1,4a15)')  str_center("|<u_ma|x|u_nb>|", 15), str_center("|<u_ma|y|u_nb>|", 15),&
+                                    str_center("|<u_ma|z|u_nb>|", 15), str_center("f_a*f_b", 15)
       end select
     
      
@@ -810,12 +833,13 @@ contains
         str_center('['//trim(units_abbrev(units_out%length))//'/(' &
           //trim(units_abbrev(units_out%time**2))//')]', 15)
       
-      wmax = maxval(weight(:))      
-
       do ii = 1, itot
         if (weight(idx(ii))/wmax > CNST(1E-6) .and.  ediff(ii) > M_ZERO) then
           write(iunit, '(1x,2es15.6)', advance='no') units_from_atomic(units_out%energy, ediff(ii)) , weight(idx(ii))  
           write(iunit, '(4i15)', advance='no') alpha(idx(ii)) , beta(idx(ii)), mm(idx(ii)), nn(idx(ii))
+          if (dressed_st%d%nik > 1 ) then
+             write(iunit, '(1i15)', advance='no') kk(idx(ii))
+          end if
           write(iunit, '(4es15.6)') abs(mel(idx(ii),1)),abs(mel(idx(ii),2)),abs(mel(idx(ii),3)), fab(idx(ii))
         end if
       end do  
@@ -829,6 +853,7 @@ contains
     SAFE_DEALLOCATE_A(fab)
     SAFE_DEALLOCATE_A(mm)
     SAFE_DEALLOCATE_A(nn)
+    SAFE_DEALLOCATE_A(kk)
     SAFE_DEALLOCATE_A(alpha)
     SAFE_DEALLOCATE_A(beta)
     SAFE_DEALLOCATE_A(idx)
@@ -936,7 +961,7 @@ contains
             
           end do    
           
-          ampl(1:dim) = ampl(1:dim) * dressed_st%d%kweights(ik)
+          ampl(1:dim) = ampl(1:dim) * (1 + dressed_st%d%kweights(ik))
 
       end do
       
@@ -1069,8 +1094,8 @@ contains
     FLOAT, allocatable   :: spect(:,:)
     
     integer :: idim, im, in, ista, istb, ik, itot, ii, i, imm, inn, spindim, ie, dim
-    FLOAT   :: omega, DE, ediff, EE
-    CMPLX   :: melba(1:3), melab(1:3), tmp2(1:3,1:hm%F%spindim)
+    FLOAT   :: omega, DE, ediff, EE, norm, fact
+    CMPLX   :: melba(1:3), melab(1:3), tmp2(1:3,1:hm%F%spindim), ampl
     integer :: iunit, idir, jdir, dir
     character(len=1024):: filename, iter_name, str
     
@@ -1110,88 +1135,71 @@ contains
 
               do ista=dressed_st%st_start, dressed_st%st_end
                 call states_get_state(dressed_st, sys%gr%mesh, ista, ik, u_ma)
-        
-                do istb=dressed_st%st_start, dressed_st%st_end
+      
+                do istb=1, dressed_st%nst
             
                   if (ista == istb .and. idir /= jdir) cycle
                   
                   if (ista >= istb .and. idir == jdir) cycle
                   
+                  DE = dressed_st%eigenval(istb,ik) - dressed_st%eigenval(ista,ik)
+                  
+                  ! Skip divergence 
+                  if (DE < M_EPSILON) cycle                  
+                  
                   !Cut out all the components suppressed by small occupations 
-                  if (dressed_st%occ(istb,ik) < 1E-14) cycle
+                  if ((dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik))/DE < 1E-14) cycle
 
                   call states_get_state(dressed_st, sys%gr%mesh, istb, ik, u_mb)
           
-                  DE = dressed_st%eigenval(istb,ik) - dressed_st%eigenval(ista,ik)
 
-                  if (idir /= jdir) then  !off diagonal terms first      
                    
-                    melab(:) = M_z0
-                    melba(:) = M_z0
-                                      
-                    ! get the dipole matrix elements <<psi_a|J|psi_b >>
-                    do im=hm%F%order(1),hm%F%order(2)
-                      imm = im - hm%F%order(1) + 1
-            
-                      !<u_ma| J | u_mb>
-                      call current_calculate_mel(sys%gr%der, hm, sys%geo, &
-                                                 u_ma(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) ,&
-                                                 u_mb(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) , &
-                                                 ik, tmp2(:,:))
-                      do dir=1,dim
-                        melab(dir) = melab(dir) + sum(tmp2(dir,1:spindim))/ (hm%F%order(2)-hm%F%order(1))
-                      end do
+                  melab(:) = M_z0
+                  melba(:) = M_z0
+                                   
+                  norm = (hm%F%order(2)-hm%F%order(1))
+                  if (norm == 0) norm = M_ONE  
+                                  
+                  ! get the dipole matrix elements <<psi_a|J|psi_b >>
+                  do im=hm%F%order(1),hm%F%order(2)
+                    imm = im - hm%F%order(1) + 1
+          
+                    !<u_ma| J | u_mb>
+                    call current_calculate_mel(sys%gr%der, hm, sys%geo, &
+                                               u_ma(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) ,&
+                                               u_mb(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) , &
+                                               ik, tmp2(:,:))
+                    do dir=1,dim
+                      melab(dir) = melab(dir) + sum(tmp2(dir,1:spindim))/ norm 
+                    end do
+                
+                    !<u_mb| J | u_ma>
+                    call current_calculate_mel(sys%gr%der, hm, sys%geo, &
+                                               u_mb(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) ,&
+                                               u_ma(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) , &
+                                               ik, tmp2(:,:))
+                    do dir=1,dim
+                      melba(dir) = melba(dir) + sum(tmp2(dir,1:spindim))/ norm 
+                    end do
+                
+                  end do ! im loop
+
                   
-                      !<u_mb| J | u_ma>
-                      call current_calculate_mel(sys%gr%der, hm, sys%geo, &
-                                                 u_mb(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) ,&
-                                                 u_ma(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) , &
-                                                 ik, tmp2(:,:))
-                      do dir=1,dim
-                        melba(dir) = melba(dir) + sum(tmp2(dir,1:spindim))/ (hm%F%order(2)-hm%F%order(1))
-                      end do
+                  ampl =  M_zI * (dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik))/DE * &
+                                  melab(idir)*melba(jdir) /(DE + EE + M_zi*obs%gamma) 
+                          
+                  if (idir == jdir) ampl = M_z2 * ampl
                   
-                    end do ! im loop
-
-                    sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + & 
-                                          melab(idir)*melba(jdir) * 1/(DE + EE + M_zi*obs%gamma) + &
-                                          melab(jdir)*melba(idir) * 1/(DE - EE + M_zi*obs%gamma) 
-
-                    sigma(ie,idir,jdir) = (-M_zI) * sigma(ie,idir,jdir) * dressed_st%occ(istb,ik)/DE
+                  ! sum over a and b         
+                  sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + ampl
 
 
-                  else  ! diagonal terms idir=jdir 
-
-                    melab(:) = M_z0
-                                      
-                    ! get the dipole matrix elements <<psi_a|J|psi_b >>
-                    do im=hm%F%order(1),hm%F%order(2)
-                      imm = im - hm%F%order(1) + 1
-            
-                      !<u_ma| J | u_mb>
-                      call current_calculate_mel(sys%gr%der, hm, sys%geo, &
-                                                 u_ma(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) ,&
-                                                 u_mb(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) , &
-                                                 ik, tmp2(:,:))
-                      do dir=1,dim
-                        melab(dir) = melab(dir) + sum(tmp2(dir,1:spindim))/ (hm%F%order(2)-hm%F%order(1))
-                      end do
-                  
-                    end do ! im loop
-
-                    sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + & 
-                                          abs(melab(idir))**2 * 1/(DE - EE + M_zi*obs%gamma) 
-
-                    sigma(ie,idir,jdir) =  M_zI * sigma(ie,idir,jdir) * &
-                                          (dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik))/DE
-                    
-                  end if
                   
                 end do ! istb loop   
               end do ! ista loop   
 
-              
-              sigma(ie,idir,jdir) = sigma(ie,idir,jdir) * dressed_st%d%kweights(ik)
+              ! sum over kpoints 
+              sigma(ie,idir,jdir) = sigma(ie,idir,jdir) * (1 + dressed_st%d%kweights(ik))
              
             end do ! ik loop
           

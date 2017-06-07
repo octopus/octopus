@@ -280,7 +280,10 @@ contains
     !%time-integral of the Floquet analysis.
     !%
     !%End
-    call parse_variable('TDFloquetSample',maxval(abs(this%order(:)))*3 ,this%nt)
+    this%nt = maxval(abs(this%order(:)))*3
+    if (maxval(abs(this%order(:))) == 0 ) this%nt = 3 
+    
+    call parse_variable('TDFloquetSample', this%nt, this%nt)
     call messages_print_var_value(stdout,'Number of Floquet time-sampling points', this%nT)
     this%dt = this%Tcycle/real(this%nT)
 
@@ -920,7 +923,8 @@ contains
       SAFE_ALLOCATE(psi(1:mesh%np,gs_st%d%dim))
       SAFE_ALLOCATE(u_ma(1:mesh%np,hm%F%floquet_dim*hm%F%spindim))
       SAFE_ALLOCATE(tmp(gs_st%d%dim))
-
+      
+      dressed_st%occ(:,:) = M_ZERO
 
       do ik=dressed_st%d%kpt%start,dressed_st%d%kpt%end
 
@@ -951,18 +955,6 @@ contains
           enddo
         enddo
         
-        ! occupations checksum 
-        sum_dr = sum(dressed_st%occ(:,ik))
-        sum_gs = sum(gs_st%occ(:,ik))
-        if( abs(sum_dr -sum_gs) > 1E-6) then
-          call messages_write('Occupations checksum failed for kpoint = ')
-          call messages_write(ik, fmt = '(i6)')
-          call messages_write(':   gs_occ =  ')
-          call messages_write(sum_gs, fmt ='(f12.6)')
-          call messages_write('   floquet_occ =  ')
-          call messages_write(sum_dr, fmt ='(f12.6)')
-          call messages_warning()
-        end if
       enddo
       
       
@@ -971,21 +963,22 @@ contains
       end if
       
       
-      ! occupations checksum 
-      do ik=1, dressed_st%d%kpt%nglobal
-        sum_dr = sum(dressed_st%occ(:,ik))
-        sum_gs = sum(gs_st%occ(:,ik))
-        if( abs(sum_dr -sum_gs) > 1E-6) then
-          call messages_write('Occupations checksum failed for kpoint = ')
-          call messages_write(ik, fmt = '(i6)')
-          call messages_write(':   gs_occ =  ')
-          call messages_write(sum_gs, fmt ='(f12.6)')
-          call messages_write('   floquet_occ =  ')
-          call messages_write(sum_dr, fmt ='(f12.6)')
-          call messages_warning()
-        end if
-      enddo
-      
+      if (mpi_grp_is_root(mpi_world)) then    
+        ! occupations checksum 
+        do ik=1, dressed_st%d%kpt%nglobal
+          sum_dr = sum(dressed_st%occ(:,ik))
+          sum_gs = sum(gs_st%occ(:,ik))
+          if( abs(sum_dr/sum_gs - M_ONE) > 1E-5) then
+            call messages_write('Occupations checksum failed for kpoint = ')
+            call messages_write(ik, fmt = '(i6)')
+            call messages_write(':   gs_occ =  ')
+            call messages_write(sum_gs, fmt ='(f12.6)')
+            call messages_write('   floquet_occ =  ')
+            call messages_write(sum_dr, fmt ='(f12.6)')
+            call messages_warning()
+          end if
+        enddo
+      end if
       
       
       SAFE_DEALLOCATE_A(tmp)
