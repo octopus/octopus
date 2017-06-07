@@ -31,7 +31,7 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
   integer :: is, ios2
   R_TYPE  :: reduced, reduced2
   R_TYPE, allocatable :: psi(:,:), hpsi(:,:)
-  R_TYPE, allocatable :: dot(:)
+  R_TYPE, allocatable :: dot(:), tmp(:)
   type(orbital_set_t), pointer  :: os, os2
   type(profile_t), save :: prof
 
@@ -41,6 +41,7 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
 
   SAFE_ALLOCATE(psi(1:mesh%np, 1:d%dim))
   SAFE_ALLOCATE(hpsi(1:mesh%np, 1:d%dim))
+  SAFE_ALLOCATE(tmp(1:this%max_np))
   SAFE_ALLOCATE(dot(1:this%maxnorbs))
 
   ispin = states_dim_get_spin_index(d, ik)
@@ -57,9 +58,10 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
       !
       os => this%orbsets(ios)
       ! 
-      call X(orbital_set_get_coefficients)(os, psi, ik, d%dim, has_phase, dot(1:os%norbs))
+      call X(orbital_set_get_coefficients)(os, d, psi, ik, has_phase, dot(1:os%norbs))
       !
       reduced2 = R_TOTYPE(M_ZERO)
+      tmp(1:os%sphere%np) = R_TOTYPE(M_ZERO)
       do im = 1, os%norbs
         ! sum_mp Vmmp <phi mp | psi >
         reduced = R_TOTYPE(M_ZERO)
@@ -83,18 +85,28 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
         !In case of phase, we have to apply the conjugate of the phase here
         if(has_phase) then
 #ifdef R_TCOMPLEX
-          do idim = 1, d%dim
-           call submesh_add_to_mesh(os%sphere, os%orbitals(im)%eorb(1:os%sphere%np,ik), & 
-                                    hpsi(1:mesh%np, idim), reduced)
+   !       do idim = 1, d%dim
+   !        call submesh_add_to_mesh(os%sphere, os%orbitals(im)%eorb(1:os%sphere%np,ik), & 
+   !                                 hpsi(1:mesh%np, idim), reduced)
+   !       end do
+          do is = 1, os%sphere%np
+           tmp(is) = tmp(is)+reduced*os%orbitals(im)%eorb(is,ik) 
           end do
 #endif
         else
-          do idim = 1, d%dim
-            call submesh_add_to_mesh(os%sphere, os%orbitals(im)%X(orb), &
-                                    hpsi(1:mesh%np, idim), reduced)
-          end do !idim
+   !       do idim = 1, d%dim
+   !         call submesh_add_to_mesh(os%sphere, os%orbitals(im)%X(orb), &
+   !                                 hpsi(1:mesh%np, idim), reduced)
+   !       end do !idim
+          do is = 1, os%sphere%np
+           tmp(is) = tmp(is)+reduced*os%orbitals(im)%X(orb)(is)             
+          end do
         end if
       end do !im
+
+      do idim = 1, d%dim
+        call submesh_add_to_mesh(os%sphere, tmp(1:os%sphere%np), hpsi(1:mesh%np, idim))
+      end do
 
   !    if(this%ACBN0_corrected .and. psib%states(ibatch)%ist <= this%st_end) then
   !      !We need to loop over the orbitals sharing the same quantum numbers
@@ -143,6 +155,7 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
   SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(hpsi)
   SAFE_DEALLOCATE_A(dot)
+  SAFE_DEALLOCATE_A(tmp)
 
   POP_SUB(lda_u_apply)
   call profiling_out(prof)
@@ -214,7 +227,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
         os => this%orbsets(ios)
         !We first compute the matrix elemets <\psi | orb_m>
         !taking into account phase correction if needed 
-        call X(orbital_set_get_coefficients)(os, psi, ik, st%d%dim, present(phase), dot(1:os%norbs,ios))
+        call X(orbital_set_get_coefficients)(os, st%d, psi, ik, present(phase), dot(1:os%norbs,ios))
       end do !ios
 
 
@@ -559,31 +572,35 @@ subroutine X(compute_ACBNO_U)(this, st)
  
   else !In the case of s orbitals, the expression is different
     ! sum_{alpha/=beta} P^alpha_{mmp}P^beta_{mpp,mppp}  
-    tmpU = M_ZERO
-    do ispin1 = 1, st%d%nspin
-      do ispin2 = 1, st%d%nspin
-        if(ispin1 /= ispin2) then
-          tmpU = tmpU + this%X(n_alt)(1,1,ispin1,ios)*this%X(n_alt)(1,1,ispin2,ios)
-        end if
-      end do
-    end do
-    ! These are the numerator of the ACBN0 U
-    numU = tmpU*this%coulomb(1,1,1,1,ios)
-
-    ! We compute the term
     ! sum_{alpha,beta} sum_{m,mp} N^alpha_{m}N^beta_{mp}
+    numU = M_ZERO
     denomU = M_ZERO
     do ispin1 = 1, st%d%nspin
       do ispin2 = 1, st%d%nspin
         if(ispin1 /= ispin2) then
+          numU = numU + this%X(n_alt)(1,1,ispin1,ios)*this%X(n_alt)(1,1,ispin2,ios)
           denomU = denomU + this%X(n)(1,1,ispin1,ios)*this%X(n)(1,1,ispin2,ios)
         end if
       end do
     end do
 
-    this%orbsets(ios)%Ueff = numU/denomU
-    this%orbsets(ios)%Ubar = numU/denomU
+    ! We have to be careful in the case of hydrogen atom for instance 
+    if(abs(denomU)> CNST(1.0e-3)) then
+      this%orbsets(ios)%Ubar = (numU/denomU)*this%coulomb(1,1,1,1,ios)
+    else
+      if( abs(numU-denomU) < CNST(1.0e-3)) then
+        this%orbsets(ios)%Ubar = this%coulomb(1,1,1,1,ios)
+      else
+        this%orbsets(ios)%Ubar = (numU/denomU)
+        write(message(1),'(a,a)')' Small denominator value for the s orbital ', this%orbsets(ios)%Ubar
+        write(message(2),'(a,a)')' to be multiplied by ', this%coulomb(1,1,1,1,ios)
+        call messages_warning(2) 
+        this%orbsets(ios)%Ubar = this%orbsets(ios)%Ubar*this%coulomb(1,1,1,1,ios) 
+      end if
+    end if
+    
     this%orbsets(ios)%Jbar = 0
+    this%orbsets(ios)%Ueff = this%orbsets(ios)%Ubar
   end if
   end do
 
@@ -800,7 +817,7 @@ end subroutine X(compute_coulomb_integrals)
       !
       os => this%orbsets(ios)
       ! 
-      call X(orbital_set_get_coefficients)(os, psi, ik, d%dim, has_phase, dot)
+      call X(orbital_set_get_coefficients)(os, d, psi, ik, has_phase, dot)
       !
       do im = 1, os%norbs
         ! sum_mp Vmmp <phi mp | psi >
@@ -954,14 +971,14 @@ end subroutine X(compute_coulomb_integrals)
        !We first compute the matrix elemets <\psi | orb_m>
        !taking into account phase correction if needed   
        ! 
-       call X(orbital_set_get_coefficients)(os, psi, iq, st%d%dim, phase, dot)
+       call X(orbital_set_get_coefficients)(os, st%d, psi, iq, phase, dot)
 
        do idir = 1, ndim
          call batch_get_state(grad_psib(idir), ibatch, mesh%np, gpsi)     
          !We first compute the matrix elemets <\psi | orb_m>
          !taking into account phase correction if needed 
          ! 
-         call X(orbital_set_get_coefficients)(os, gpsi, iq, st%d%dim, phase, gdot(1:os%norbs,idir))
+         call X(orbital_set_get_coefficients)(os, st%d, gpsi, iq, phase, gdot(1:os%norbs,idir))
 
          do im = 1, os%norbs
            gradn(1:os%norbs,im,ispin,idir) = gradn(1:os%norbs,im,ispin,idir) &

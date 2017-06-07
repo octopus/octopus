@@ -22,6 +22,7 @@
 module orbital_set_oct_m
   use global_oct_m
   use kpoints_oct_m
+  use mesh_function_oct_m
   use messages_oct_m
   use orbital_oct_m
   use poisson_oct_m
