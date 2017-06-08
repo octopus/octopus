@@ -58,7 +58,8 @@ libhamiltonian_a_SOURCES = $(libhamiltonian_c_srcs) $(libhamiltonian_f_srcs)
 
 # Include files - keep in alphabetical order
 noinst_HEADERS =                         \
-	fxc_inc.F90                      \
+        functionals_list.F90             \
+        fxc_inc.F90                      \
 	hamiltonian_base_inc.F90         \
 	hamiltonian_inc.F90              \
 	hgh_projector_inc.F90            \
