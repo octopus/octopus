@@ -75,3 +75,4 @@ simul_box.o : simul_box.F90 symmetries.o kpoints.o geometry.o atom.o
 symmetries.o : symmetries.F90 geometry.o spglib_f08.o 
 vibrations.o : vibrations.F90 simul_box.o geometry.o 
 xyz_adjust.o : xyz_adjust.F90 geometry.o
+spglib_f08.o : spglib_f08.f90
