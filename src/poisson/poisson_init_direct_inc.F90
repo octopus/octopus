@@ -377,7 +377,7 @@ subroutine poisson_solve_direct_sm(this, sm, pot, rho)
   FLOAT,           intent(in)  :: rho(:)
 
   FLOAT                :: prefactor, aa1, aa2, aa3, aa4
-  integer              :: ip, jp, dim
+  integer              :: ip, jp, dim, nthreads
   integer, allocatable :: ip_v(:), part_v(:)
   FLOAT                :: xx1(1:MAX_DIM), xx2(1:MAX_DIM), xx3(1:MAX_DIM), xx4(1:MAX_DIM)
 #ifdef HAVE_MPI
@@ -387,6 +387,15 @@ subroutine poisson_solve_direct_sm(this, sm, pot, rho)
 #endif
 
   PUSH_SUB(poisson_solve_direct_sm)
+
+  nthreads = 1
+#ifdef HAVE_OPENMP
+  !$omp parallel
+  !$omp master
+  nthreads = omp_get_num_threads()
+  !$omp end master
+  !$omp end parallel
+#endif
 
   dim = sm%mesh%sb%dim
 
@@ -419,7 +428,7 @@ subroutine poisson_solve_direct_sm(this, sm, pot, rho)
       aa3 = prefactor*rho(ip + 2)*sm%mesh%vol_pp(ip + 2)**(M_ONE - M_ONE/sm%mesh%sb%dim)
       aa4 = prefactor*rho(ip + 3)*sm%mesh%vol_pp(ip + 3)**(M_ONE - M_ONE/sm%mesh%sb%dim)
 
-      !$omp parallel do reduction(+:aa1,aa2,aa3,aa4)
+      !$omp parallel do reduction(+:aa1,aa2,aa3,aa4) schedule(dynamic,sm%np/nthreads)
       do jp = 1, sm%np
         if(ip     /= jp) aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - sm%x(jp, 1:dim))**2))*sm%mesh%vol_pp(sm%map(jp))
         if(ip + 1 /= jp) aa2 = aa2 + rho(jp)/sqrt(sum((xx2(1:dim) - sm%x(jp, 1:dim))**2))*sm%mesh%vol_pp(sm%map(jp))
@@ -434,7 +443,7 @@ subroutine poisson_solve_direct_sm(this, sm, pot, rho)
       aa3 = prefactor*rho(ip + 2)
       aa4 = prefactor*rho(ip + 3)
 
-      !$omp parallel do reduction(+:aa1,aa2,aa3,aa4)
+      !$omp parallel do reduction(+:aa1,aa2,aa3,aa4) schedule(dynamic,sm%np/nthreads)
       do jp = 1, sm%np
         if(ip     /= jp) aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - sm%x(jp, 1:dim))**2))
         if(ip + 1 /= jp) aa2 = aa2 + rho(jp)/sqrt(sum((xx2(1:dim) - sm%x(jp, 1:dim))**2))
@@ -450,6 +459,7 @@ subroutine poisson_solve_direct_sm(this, sm, pot, rho)
     pot(ip + 3) = sm%mesh%volume_element*aa4
     
   end do
+  
   
   do ip = ip, sm%np
 
