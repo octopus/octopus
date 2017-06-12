@@ -188,6 +188,12 @@ contains
     !% Generates output in <a href=http://plato.cgl.ucsf.edu/chimera/docs/UsersGuide/bild.html>BILD format</a>.
     !%Option vtk bit(20)
     !% Generates output in <a href=http://www.vtk.org/VTK/img/file-formats.pdf>VTK legacy format</a>.
+    !%Option integrate_xy bit(21)
+    !% Integrates the function in the x-y plane and the result on the <i>z</i> axis is printed.
+    !%Option integrate_xz bit(22)
+    !% Integrates the function in the x-z plane and the result on the <i>y</i> axis is printed
+    !%Option integrate_yz bit(23)
+    !% Integrates the function in the y-z plane and the result on the <i>x</i> axis is printed
     !%End
     call parse_variable('OutputFormat', 0, how)
     if(.not.varinfo_valid_option('OutputFormat', how, is_flag=.true.)) then
@@ -226,6 +232,18 @@ contains
       end if
       if(iand(how, OPTION__OUTPUTFORMAT__PLANE_Y) /= 0) then
         message(1) = "OutputFormat = plane_y not available with Dimensions <= 2."
+        call messages_fatal(1)
+      end if
+      if(iand(how, OPTION__OUTPUTFORMAT__INTEGRATE_XY) /= 0) then
+        message(1) = "OutputFormat = integrate_xy not available with Dimensions <= 2."
+        call messages_fatal(1)
+      end if
+      if(iand(how, OPTION__OUTPUTFORMAT__INTEGRATE_XZ) /= 0) then
+        message(1) = "OutputFormat = integrate_xz not available with Dimensions <= 2."
+        call messages_fatal(1)
+      end if
+      if(iand(how, OPTION__OUTPUTFORMAT__INTEGRATE_YZ) /= 0) then
+        message(1) = "OutputFormat = integrate_yz not available with Dimensions <= 2."
         call messages_fatal(1)
       end if
       if(iand(how, OPTION__OUTPUTFORMAT__DX) /= 0) then
@@ -280,6 +298,10 @@ contains
     if(index(where, "AxisZ")     /= 0) how = ior(how, OPTION__OUTPUTFORMAT__AXIS_Z)
     IF(index(where, "PlaneX")    /= 0) how = ior(how, OPTION__OUTPUTFORMAT__PLANE_X)
     if(index(where, "PlaneY")    /= 0) how = ior(how, OPTION__OUTPUTFORMAT__PLANE_Y)
+    if(index(where, "PlaneZ")    /= 0) how = ior(how, OPTION__OUTPUTFORMAT__PLANE_Z)
+    if(index(where, "IntegrateXY") /= 0) how = ior(how, OPTION__OUTPUTFORMAT__INTEGRATE_XY)
+    if(index(where, "IntegrateXZ") /= 0) how = ior(how, OPTION__OUTPUTFORMAT__INTEGRATE_XZ)
+    if(index(where, "IntegrateYZ") /= 0) how = ior(how, OPTION__OUTPUTFORMAT__INTEGRATE_YZ)
     if(index(where, "PlaneZ")    /= 0) how = ior(how, OPTION__OUTPUTFORMAT__PLANE_Z)
     if(index(where, "DX")        /= 0) how = ior(how, OPTION__OUTPUTFORMAT__DX)
     if(index(where, "XCrySDen")  /= 0) how = ior(how, OPTION__OUTPUTFORMAT__XCRYSDEN)
