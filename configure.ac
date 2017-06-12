@@ -347,6 +347,9 @@ AC_SUBST(FCEXTRALIBS)
 
 ACX_OCTOPUS_COMPILATION_INFO
 
+dnl needed for spglib
+AC_PROG_LIBTOOL
+
 #  external_libs/isf/Makefile
 #  external_libs/isf/src/Makefile
 #  external_libs/isf/flib/Makefile
@@ -359,8 +362,6 @@ AC_CONFIG_FILES([Makefile
   external_libs/metis-5.1/GKlib/Makefile
   external_libs/metis-5.1/libmetis/Makefile
   external_libs/qshep/Makefile
-  external_libs/spglib-1.5.2/Makefile
-  external_libs/spglib-1.5.2/src/Makefile
   external_libs/fortrancl/Makefile
   external_libs/bpdn/Makefile
   external_libs/yaml-0.1.4/Makefile
@@ -428,6 +429,8 @@ AC_CONFIG_FILES([Makefile
   testsuite/frozen/Makefile])
 AC_CONFIG_FILES([testsuite/oct-run_testsuite.sh], [chmod +x testsuite/oct-run_testsuite.sh])
 AC_CONFIG_FILES([doc/html/varsRightFrame.html])
+
+AC_CONFIG_SUBDIRS([external_libs/spglib-1.9.9])
 
 dnl if test x"$ac_build_libyaml" != x"skip" ; then
 dnl    AC_CONFIG_SUBDIRS([external_libs/yaml-0.1.4])
