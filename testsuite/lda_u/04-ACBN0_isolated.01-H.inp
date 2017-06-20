@@ -1,0 +1,25 @@
+CalculationMode = gs
+ExperimentalFeatures = yes
+
+%Coordinates
+ "H" | 0.0 | 0.0 | 0.0
+%
+
+Radius = 7
+
+FromScratch = yes
+ParStates = no
+ParDomains = no
+ParKPoints = auto
+
+LCAOStart= lcao_states
+
+ExtraStates = 1
+SpinComponents = polarized
+
+LDA_U = yes
+UseACBN0Functional = yes
+UseAllAtomicOrbitals = yes
+SkipSOrbitals = no
+OrbitalsThreshold_LDAU = 0.05
+OutputLDA_U = occupation_matrices + effectiveU

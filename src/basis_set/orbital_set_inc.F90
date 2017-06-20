@@ -27,7 +27,7 @@ subroutine X(orbital_set_get_coefficients)(os, st_d, psi, ik, has_phase, dot)
 
   integer :: im, ip, idim
   type(profile_t), save :: prof
-  R_TYPE, allocatable :: spsi(:,:)
+  R_TYPE, allocatable :: spsi(:)
 
   call profiling_in(prof, "ORBSET_GET_COEFFICIENTS")
 
@@ -38,30 +38,39 @@ subroutine X(orbital_set_get_coefficients)(os, st_d, psi, ik, has_phase, dot)
    call messages_fatal(1)
   end if
 
-  SAFE_ALLOCATE(spsi(1:os%sphere%np, 1:st_d%dim))
-  
-  do idim = 1, st_d%dim
-    call X(submesh_copy_from_mesh)(os%sphere, psi(1:os%sphere%mesh%np,idim), spsi(1:os%sphere%np,idim))
-  end do
-
-  do im = 1, os%norbs
+  if(os%sphere%mesh%use_curvilinear) then
+    do im = 1, os%norbs
+      !If we need to add the phase, we explicitly do the operation using the sphere
+      if(has_phase) then
+#ifdef R_TCOMPLEX
+        dot(im) = submesh_to_mesh_dotp(os%sphere, st_d%dim, os%eorb(1:os%sphere%np,im,ik),&
+                              psi(1:os%sphere%mesh%np, 1:st_d%dim))
+#endif
+      else
+        dot(im) = submesh_to_mesh_dotp(os%sphere, st_d%dim, os%X(orb)(1:os%sphere%np,im),&
+                               psi(1:os%sphere%mesh%np, 1:st_d%dim))
+      end if
+    end do
+    !
+  else
+    !
+    SAFE_ALLOCATE(spsi(1:os%sphere%np))
+    !
+    call X(submesh_copy_from_mesh)(os%sphere, psi(1:os%sphere%mesh%np,1), spsi(1:os%sphere%np))
+    !
     !If we need to add the phase, we explicitly do the operation using the sphere
     if(has_phase) then
 #ifdef R_TCOMPLEX
-!      dot(im) = submesh_to_mesh_dotp(os%sphere, st_d%dim, os%orbitals(im)%eorb(1:os%sphere%np,ik),&
-!                              psi(1:os%sphere%mesh%np, 1:d_dim))
-      dot(im) =  X(mf_dotp)(os%sphere%mesh, os%orbitals(im)%eorb(1:os%sphere%np,ik),&
-                               spsi(1:os%sphere%np,1), reduce = .false., np = os%sphere%np) 
+      call blas_gemv('C', os%sphere%np, os%norbs, R_TOTYPE(os%sphere%mesh%vol_pp(1)), &
+        os%eorb(1,1,ik),  os%sphere%np, spsi(1), 1, R_TOTYPE(M_ZERO), dot(1), 1)
 #endif
     else
-!      dot(im) = submesh_to_mesh_dotp(os%sphere, st_d%dim, os%orbitals(im)%X(orb)(1:os%sphere%np),&
-!                               psi(1:os%sphere%mesh%np, 1:d_dim))
-      dot(im) =  X(mf_dotp)(os%sphere%mesh, os%orbitals(im)%X(orb)(1:os%sphere%np),&
-                               spsi(1:os%sphere%np,1), reduce = .false., np = os%sphere%np)
+      call blas_gemv('T', os%sphere%np, os%norbs, R_TOTYPE(os%sphere%mesh%vol_pp(1)), &
+        os%X(orb)(1,1),  os%sphere%np, spsi(1), 1, R_TOTYPE(M_ZERO), dot(1), 1)
     end if
-  end do
-
-  SAFE_DEALLOCATE_A(spsi)
+    !
+    SAFE_DEALLOCATE_A(spsi)
+  end if
 
   POP_SUB(X(orbital_set_get_coefficients))
   call profiling_out(prof)

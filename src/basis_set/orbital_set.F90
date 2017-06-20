@@ -20,11 +20,11 @@
 #include "global.h"
 
 module orbital_set_oct_m
+  use blas_oct_m
   use global_oct_m
   use kpoints_oct_m
   use mesh_function_oct_m
   use messages_oct_m
-  use orbital_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use simul_box_oct_m
@@ -53,13 +53,16 @@ module orbital_set_oct_m
     type(submesh_t)     :: sphere             !> The submesh of the orbital
     CMPLX, pointer      :: phase(:,:)         !> Correction to the global phase 
                                               !> if the sphere cross the border of the box
-    type(orbital_t), pointer :: orbitals(:)   !> Orbitals of this set of orbitals
     FLOAT               :: Ueff               !> The effective U of the simplified rotational invariant form
     FLOAT               :: Ubar, Jbar
     type(species_t), pointer :: spec          
 
     FLOAT, pointer      :: dS(:,:,:)             !> Overlap matrix for each orbital with similar orbital on other atomic sites    
     CMPLX, pointer      :: zS(:,:,:)
+
+    FLOAT, pointer      :: dorb(:,:) !> The orbital, if real, on the submesh
+    CMPLX, pointer      :: zorb(:,:) !> The orbital, if complex, on the submesh
+    CMPLX, pointer      :: eorb(:,:,:) !> Orbitals with its phase factor
 
     type(poisson_t)  :: poisson               !> For computing the Coulomb integrals
   end type orbital_set_t
@@ -72,10 +75,12 @@ contains
   PUSH_SUB(orbital_set_nullify)
 
   nullify(this%phase)
-  nullify(this%orbitals)
   nullify(this%dS)
   nullify(this%zS)
   nullify(this%spec)
+  nullify(this%dorb)
+  nullify(this%zorb)
+  nullify(this%eorb)
 
   POP_SUB(orbital_set_nullify)
 
@@ -98,13 +103,12 @@ contains
   
    PUSH_SUB(orbital_set_end)  
 
-   do iorb = 1, this%norbs
-     call orbital_end(this%orbitals(iorb))
-   end do 
-   SAFE_DEALLOCATE_P(this%orbitals)
    SAFE_DEALLOCATE_P(this%phase)
    SAFE_DEALLOCATE_P(this%dS)
    SAFE_DEALLOCATE_P(this%zS)
+   SAFE_DEALLOCATE_P(this%dorb)
+   SAFE_DEALLOCATE_P(this%zorb)
+   SAFE_DEALLOCATE_P(this%eorb)
    nullify(this%spec)
    call submesh_end(this%sphere)
    
@@ -156,11 +160,9 @@ contains
 
       !We now compute the so-called Bloch sum of the localized orbitals
       do im = 1, os%norbs
-        !$omp parallel do
         do is = 1, ns
-          os%orbitals(im)%eorb(is,iq) = os%orbitals(im)%zorb(is)*os%phase(is, iq)
+          os%eorb(is,im,iq) = os%zorb(is,im)*os%phase(is, iq)
         end do
-        !$omp end parallel do
       end do
     end do
 

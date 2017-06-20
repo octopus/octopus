@@ -124,18 +124,26 @@ end subroutine X(dsubmesh_add_to_mesh)
 
 
 ! ---------------------------------------------------------
-subroutine X(submesh_copy_from_mesh)(this, phi, sphi)
+subroutine X(submesh_copy_from_mesh)(this, phi, sphi, conjugate)
   type(submesh_t),  intent(in)    :: this
   R_TYPE,           intent(in)    :: phi(:)
   R_TYPE,           intent(inout) :: sphi(:)
+  logical, optional,   intent(in) :: conjugate
+
 
   integer :: ip
 
   PUSH_SUB(X(submesh_copy_from_mesh))
 
-  do ip = 1, this%np
-    sphi(ip) = phi(this%map(ip))
-  end do
+  if(.not. optional_default(conjugate, .false.) ) then
+    do ip = 1, this%np
+      sphi(ip) = phi(this%map(ip))
+    end do
+  else
+    do ip = 1, this%np
+      sphi(ip) = R_CONJ(phi(this%map(ip)))
+    end do
+  end if
 
   POP_SUB(X(submesh_copy_from_mesh))
 end subroutine X(submesh_copy_from_mesh)

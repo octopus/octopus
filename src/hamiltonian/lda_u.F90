@@ -39,7 +39,6 @@ module lda_u_oct_m
   use messages_oct_m
   use multicomm_oct_m
   use mpi_oct_m
-  use orbital_oct_m
   use orbital_set_oct_m
   use parser_oct_m
   use periodic_copy_oct_m
