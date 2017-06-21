@@ -20,6 +20,8 @@
 #include "global.h"
 
 module orbital_set_oct_m
+  use batch_oct_m
+  use batch_ops_oct_m
   use blas_oct_m
   use global_oct_m
   use kpoints_oct_m
@@ -44,7 +46,9 @@ module orbital_set_oct_m
        orbital_set_end,                 &
        orbital_set_update_phase,        &
        dorbital_set_get_coefficients,   &
-       zorbital_set_get_coefficients
+       zorbital_set_get_coefficients,   &
+       dorbital_set_get_coeff_batch,    &
+       zorbital_set_get_coeff_batch
 
   type orbital_set_t
     integer             :: nn, ll

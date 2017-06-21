@@ -27,11 +27,11 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
   type(states_dim_t), intent(in) :: d
   logical,            intent(in) :: has_phase !True if the wavefunction has an associated phase
 
-  integer :: ibatch, idim, ios, imp, im, ispin
+  integer :: ibatch, ios, imp, im, ispin
   integer :: is, ios2
   R_TYPE  :: reduced, reduced2
   R_TYPE, allocatable :: psi(:,:), hpsi(:,:)
-  R_TYPE, allocatable :: dot(:), tmp(:)
+  R_TYPE, allocatable :: dot(:,:,:), tmp(:)
   type(orbital_set_t), pointer  :: os, os2
   type(profile_t), save :: prof
 
@@ -42,31 +42,34 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
   SAFE_ALLOCATE(psi(1:mesh%np, 1:d%dim))
   SAFE_ALLOCATE(hpsi(1:mesh%np, 1:d%dim))
   SAFE_ALLOCATE(tmp(1:this%max_np))
-  SAFE_ALLOCATE(dot(1:this%maxnorbs))
+  SAFE_ALLOCATE(dot(1:this%maxnorbs, 1:psib%nst, 1:this%norbsets))
+
+  ! We have to compute 
+  ! hpsi> += sum_m |phi m> sum_mp Vmmp <phi mp | psi >
+  !
+  ! We first compute <phi m | psi> for all orbitals of the atom
+  !
+  do ios = 1, this%norbsets
+    os => this%orbsets(ios)
+    call X(orbital_set_get_coeff_batch)(os, d, psib, ik, has_phase, dot(1:os%norbs,1:psib%nst,ios))
+  end do
 
   ispin = states_dim_get_spin_index(d, ik)
 
   do ibatch = 1, psib%nst
-    call batch_get_state(psib, ibatch, mesh%np, psi)
     call batch_get_state(hpsib,ibatch, mesh%np, hpsi)
 
     do ios = 1, this%norbsets 
-      ! We have to compute 
-      ! hpsi> += sum_m |phi m> sum_mp Vmmp <phi mp | psi >
-      !
-      ! We first compute <phi m | psi> for all orbitals of the atom
       !
       os => this%orbsets(ios)
       ! 
-      call X(orbital_set_get_coefficients)(os, d, psi, ik, has_phase, dot(1:os%norbs))
-      !
       reduced2 = R_TOTYPE(M_ZERO)
       tmp(1:os%sphere%np) = R_TOTYPE(M_ZERO)
       do im = 1, os%norbs
         ! sum_mp Vmmp <phi mp | psi >
         reduced = R_TOTYPE(M_ZERO)
         do imp = 1, os%norbs
-          reduced = reduced + this%X(V)(im,imp,ispin,ios)*dot(imp)
+          reduced = reduced + this%X(V)(im,imp,ispin,ios)*dot(imp,ibatch,ios)
         end do
        
  !       !We add a test to avoid out-of-bound problem for the LCAO 
@@ -85,16 +88,12 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
         !In case of phase, we have to apply the conjugate of the phase here
         if(has_phase) then
 #ifdef R_TCOMPLEX
-          do idim = 1, d%dim
-           call submesh_add_to_mesh(os%sphere, os%eorb(1:os%sphere%np,im,ik), & 
-                                    hpsi(1:mesh%np, idim), reduced)
-          end do
+          call submesh_add_to_mesh(os%sphere, os%eorb(1:os%sphere%np,im,ik), & 
+                                    hpsi(1:mesh%np, 1), reduced)
 #endif
         else
-          do idim = 1, d%dim
-            call submesh_add_to_mesh(os%sphere, os%X(orb)(1:os%sphere%np, im), &
-                                    hpsi(1:mesh%np, idim), reduced)
-          end do !idim
+          call submesh_add_to_mesh(os%sphere, os%X(orb)(1:os%sphere%np, im), &
+                                    hpsi(1:mesh%np, 1), reduced)
         end if
       end do !im
 
