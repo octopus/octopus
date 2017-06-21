@@ -17,6 +17,8 @@ LCAOStart= lcao_states
 ExtraStates = 1
 SpinComponents = polarized
 
+StatesPack = no
+
 LDA_U = yes
 UseACBN0Functional = yes
 UseAllAtomicOrbitals = yes
