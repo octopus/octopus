@@ -30,29 +30,23 @@ module ssys_handle_oct_m
 contains
   
   ! ---------------------------------------------------------
-  subroutine ssys_handle_init(this, geo, config)
-    type(base_handle_t), intent(out) :: this
-    type(geometry_t),    intent(in)  :: geo
-    type(json_object_t), intent(in)  :: config
+  subroutine ssys_handle__build__(this, geo, config)
+    type(base_handle_t), intent(inout) :: this
+    type(geometry_t),    intent(in)    :: geo
+    type(json_object_t), intent(in)    :: config
 
-    type(json_array_iterator_t)  :: iter
-    type(json_object_t), pointer :: cnfg
-    type(json_array_t),  pointer :: list
-    type(base_handle_t), pointer :: hndl
-    integer                      :: type, ierr
+    type(json_object_iterator_t)        :: iter
+    character(len=BASE_HANDLE_NAME_LEN) :: name
+    type(json_object_t),        pointer :: cnfg
+    type(base_handle_t),        pointer :: hndl
+    integer                             :: type, ierr
 
-    PUSH_SUB(ssys_handle_init)
+    PUSH_SUB(ssys_handle__build__)
 
-    nullify(cnfg, list, hndl)
-    call base_handle__init__(this, config)
-    call base_handle_get(this, type)
-    ASSERT(type==HNDL_TYPE_SSYS)
-    call json_get(config, "systems", list, ierr)
-    ASSERT(ierr==JSON_OK)
-    call json_init(iter, list)
+    call json_init(iter, config)
     do
       nullify(cnfg, hndl)
-      call json_next(iter, cnfg, ierr)
+      call json_next(iter, name, cnfg, ierr)
       if(ierr/=JSON_OK)exit
       call json_get(cnfg, "type", type, ierr)
       ASSERT(ierr==JSON_OK)
@@ -66,11 +60,34 @@ contains
         message(1) = "Unknown subsystems type."
         call messages_fatal(1)
       end select
-      call base_handle_sets(this, hndl, cnfg)
+      call base_handle_sets(this, name, hndl)
     end do
     call json_end(iter)
-    nullify(cnfg, list, hndl)
+    nullify(cnfg, hndl)
+
+    POP_SUB(ssys_handle__build__)
+  end subroutine ssys_handle__build__
+
+  ! ---------------------------------------------------------
+  subroutine ssys_handle_init(this, geo, config)
+    type(base_handle_t), intent(out) :: this
+    type(geometry_t),    intent(in)  :: geo
+    type(json_object_t), intent(in)  :: config
+
+    type(json_object_t), pointer :: dict
+    integer                      :: type, ierr
+
+    PUSH_SUB(ssys_handle_init)
+
+    nullify(dict)
+    call base_handle__init__(this, config)
+    call base_handle_get(this, type)
+    ASSERT(type==HNDL_TYPE_SSYS)
+    call json_get(config, "subsystems", dict, ierr)
+    ASSERT(ierr==JSON_OK)
+    call ssys_handle__build__(this, geo, dict)
     call base_handle__init__(this)
+    nullify(dict)
 
     POP_SUB(ssys_handle_init)
   end subroutine ssys_handle_init

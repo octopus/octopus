@@ -27,7 +27,6 @@ module ssys_config_oct_m
 
   public ::            &
     ssys_config_use,   &
-    ssys_config_add,   &
     ssys_config_parse
 
 contains
@@ -205,53 +204,26 @@ contains
   end subroutine ssys_config_parse_subsystems_block
 
   ! ---------------------------------------------------------
-  subroutine ssys_config_parse_systems(this, nspin, ndim)
-    type(json_array_t), intent(inout) :: this
-    integer,            intent(in)    :: nspin
-    integer,            intent(in)    :: ndim
+  subroutine ssys_config_parse_subsystems(this, nspin, ndim)
+    type(json_object_t), intent(inout) :: this
+    integer,             intent(in)    :: nspin
+    integer,             intent(in)    :: ndim
 
-    type(json_object_t)                 :: dict
-    type(json_object_t),        pointer :: cnfg, ocfg, icfg
-    type(json_array_t),         pointer :: frzn
-    type(json_object_iterator_t)        :: iter
-    character(len=BASE_HANDLE_NAME_LEN) :: name
-    integer                             :: type, ierr
+    type(json_object_t)          :: dict
+    type(json_object_t), pointer :: cnfg
 
-    PUSH_SUB(ssys_config_parse_systems)
+    PUSH_SUB(ssys_config_parse_subsystems)
 
-    nullify(cnfg, ocfg, icfg, frzn)
+    nullify(cnfg)
     call ssys_config_parse_subsystems_block(dict, ndim)
-    call json_init(iter, dict)
-    do
-      nullify(ocfg, icfg)
-      call json_next(iter, name, icfg, ierr)
-      if(ierr/=JSON_OK)exit
-      SAFE_ALLOCATE(ocfg)
-      call json_copy(ocfg, icfg)
-      call json_get(ocfg, "type", type, ierr)
-      ASSERT(ierr==JSON_OK)
-      select case(type)
-      case(HNDL_TYPE_FNIO)
-        if(.not.associated(frzn))then
-          SAFE_ALLOCATE(cnfg)
-          call frozen_config_parse(cnfg, nspin, ndim)
-          call json_append(this, cnfg)
-          call json_get(cnfg, "systems", frzn, ierr)
-          ASSERT(ierr==JSON_OK)
-          nullify(cnfg)
-        end if
-        call json_append(frzn, ocfg)
-      case default
-        message(1) = "Unknown subsystems type."
-        call messages_fatal(1)
-      end select
-    end do
-    call json_end(iter)
-    nullify(ocfg, icfg)
+    SAFE_ALLOCATE(cnfg)
+    call frozen_config_parse(cnfg, dict, nspin, ndim)
+    if(base_config_use(cnfg)) call json_set(this, "frozen", cnfg)
+    nullify(cnfg)
     call json_end(dict)
 
-    POP_SUB(ssys_config_parse_systems)
-  end subroutine ssys_config_parse_systems
+    POP_SUB(ssys_config_parse_subsystems)
+  end subroutine ssys_config_parse_subsystems
 
   ! ---------------------------------------------------------
   subroutine ssys_config_parse_external(this)
@@ -428,37 +400,17 @@ contains
   end function ssys_config_use
 
   ! ---------------------------------------------------------
-  subroutine ssys_config_add(this, that)
-    type(json_object_t), intent(inout) :: this
-    type(json_object_t), intent(in)    :: that
-
-    type(json_array_t), pointer :: list
-    integer                     :: ierr
-
-    PUSH_SUB(ssys_config_add)
-
-    nullify(list)
-    call json_get(this, "systems", list, ierr)
-    ASSERT(ierr==JSON_OK)
-    call json_append(list, that)
-    nullify(list)
-
-    POP_SUB(ssys_config_add)
-  end subroutine ssys_config_add
-
-  ! ---------------------------------------------------------
   subroutine ssys_config_parse(this, nspin, ndim)
     type(json_object_t), intent(out) :: this
     integer,             intent(in)  :: nspin
     integer,             intent(in)  :: ndim
 
     type(json_object_t), pointer :: cnfg
-    type(json_array_t),  pointer :: list
     integer                      :: ierr
 
     PUSH_SUB(ssys_config_parse)
 
-    nullify(cnfg, list)
+    nullify(cnfg)
     call base_config_parse(this, nspin, ndim)
     call json_set(this, "type", HNDL_TYPE_SSYS)
     call json_set(this, "name", "main")
@@ -466,10 +418,10 @@ contains
     ASSERT(ierr==JSON_OK)
     call ssys_config_parse_model(cnfg, nspin)
     nullify(cnfg)
-    call json_get(this, "systems", list, ierr)
+    call json_get(this, "subsystems", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call ssys_config_parse_systems(list, nspin, ndim)
-    nullify(cnfg, list)
+    call ssys_config_parse_subsystems(cnfg, nspin, ndim)
+    nullify(cnfg)
 
     POP_SUB(ssys_config_parse)
   end subroutine ssys_config_parse

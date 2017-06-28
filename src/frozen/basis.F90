@@ -287,6 +287,17 @@ contains
   end subroutine rotations_end
 
   ! ---------------------------------------------------------
+  elemental function basis_nrot(ndim) result(nrot)
+    integer, intent(in) :: ndim
+
+    integer :: nrot
+
+    nrot = 1
+    if(ndim>2) nrot = (ndim * (ndim - 1)) / 2
+
+  end function basis_nrot
+
+  ! ---------------------------------------------------------
   subroutine basis_init_array(this, space, r, theta)
     type(basis_t),                         intent(out) :: this
     type(space_t),                         intent(in)  :: space
@@ -304,7 +315,7 @@ contains
       call translation_init(this%trn, r(1:ns))
     end if
     if(present(theta))then
-      ns = min(this%dim, size(theta))
+      ns = min(basis_nrot(this%dim), size(theta))
       call rotations_init(this%rot, theta(1:ns))
     end if
     this%do = ( this%trn%do .or. this%rot%do )
@@ -328,6 +339,7 @@ contains
     if(ierr/=JSON_OK) nd = space%dim
     ASSERT(nd>0)
     nr = json_len(config, "r")
+    ASSERT(nr<=nd)
     if(nr>0)then
       SAFE_ALLOCATE(r(nr))
       r = 0.0_wp
@@ -335,6 +347,7 @@ contains
       ASSERT(ierr==JSON_OK)
     end if
     nt = json_len(config, "theta")
+    ASSERT(nt<=basis_nrot(nd))
     if(nt>0)then
       SAFE_ALLOCATE(theta(nt))
       theta = 0.0_wp
@@ -342,7 +355,7 @@ contains
       ASSERT(ierr==JSON_OK)
     end if
     nr = min(nr, nd, space%dim)
-    nt = min(nt, nd, space%dim)
+    nt = min(nt, basis_nrot(nd), basis_nrot(space%dim))
     if(nr>0)then
       if(nt>0)then
         call basis_init_array(this, space, r=r(1:nr), theta=theta(1:nt))

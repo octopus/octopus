@@ -4,30 +4,18 @@
 #undef LIST_TYPE_NAME
 #undef LIST_TYPE_MODULE_NAME
 
-#undef HASH_TEMPLATE_NAME
-#undef HASH_KEY_TEMPLATE_NAME
-#undef HASH_KEY_TYPE_NAME
-#undef HASH_KEY_TYPE_MODULE_NAME
-#undef HASH_KEY_FUNCTION_NAME
-#undef HASH_KEY_FUNCTION_MODULE_NAME
-#undef HASH_VAL_TEMPLATE_NAME
-#undef HASH_VAL_TYPE_NAME
-#undef HASH_VAL_TYPE_MODULE_NAME
-#undef HASH_INCLUDE_PREFIX
-#undef HASH_INCLUDE_HEADER
-#undef HASH_INCLUDE_BODY
-
-#define HASH_TEMPLATE_NAME base_system
-#define HASH_KEY_TEMPLATE_NAME json
-#define HASH_KEY_TYPE_NAME json_object_t
-#define HASH_VAL_TEMPLATE_NAME base_system
+#undef DICT_TEMPLATE_NAME
+#undef DICT_TYPE_NAME
+#undef DICT_TYPE_MODULE_NAME
+#undef DICT_INCLUDE_PREFIX
+#undef DICT_INCLUDE_HEADER
+#undef DICT_INCLUDE_BODY
 
 module base_system_oct_m
 
   use base_density_oct_m
   use base_geometry_oct_m
   use base_states_oct_m
-  use config_dict_oct_m
   use geometry_oct_m
   use global_oct_m
   use json_oct_m
@@ -43,9 +31,11 @@ module base_system_oct_m
 #undef LIST_INCLUDE_PREFIX
 #undef LIST_TEMPLATE_NAME
 
-#define HASH_INCLUDE_PREFIX
-#include "thash_inc.F90"
-#undef HASH_INCLUDE_PREFIX
+#define DICT_TEMPLATE_NAME base_system
+#define DICT_INCLUDE_PREFIX
+#include "tdict_inc.F90"
+#undef DICT_INCLUDE_PREFIX
+#undef DICT_TEMPLATE_NAME
 
 #define TEMPLATE_PREFIX base_system
 #define INCLUDE_PREFIX
@@ -95,9 +85,11 @@ module base_system_oct_m
 #undef LIST_INCLUDE_HEADER
 #undef LIST_TEMPLATE_NAME
 
-#define HASH_INCLUDE_HEADER
-#include "thash_inc.F90"
-#undef HASH_INCLUDE_HEADER
+#define DICT_TEMPLATE_NAME base_system
+#define DICT_INCLUDE_HEADER
+#include "tdict_inc.F90"
+#undef DICT_INCLUDE_HEADER
+#undef DICT_TEMPLATE_NAME
 
   integer, parameter :: BASE_SYSTEM_OK          = BASE_SYSTEM_HASH_OK
   integer, parameter :: BASE_SYSTEM_KEY_ERROR   = BASE_SYSTEM_HASH_KEY_ERROR
@@ -111,8 +103,7 @@ module base_system_oct_m
     type(space_t)                :: space
     type(base_geometry_t)        :: geom
     type(base_states_t)          :: st
-    type(config_dict_t)          :: dict
-    type(base_system_hash_t)     :: hash
+    type(base_system_dict_t)     :: dict
     type(base_system_list_t)     :: list
   end type base_system_t
 
@@ -137,7 +128,6 @@ module base_system_oct_m
   end interface base_system_set
 
   interface base_system_gets
-    module procedure base_system_gets_config
     module procedure base_system_gets_name
   end interface base_system_gets
 
@@ -174,9 +164,11 @@ contains
 #undef LIST_INCLUDE_BODY
 #undef LIST_TEMPLATE_NAME
 
-#define HASH_INCLUDE_BODY
-#include "thash_inc.F90"
-#undef HASH_INCLUDE_BODY
+#define DICT_TEMPLATE_NAME base_system
+#define DICT_INCLUDE_BODY
+#include "tdict_inc.F90"
+#undef DICT_INCLUDE_BODY
+#undef DICT_TEMPLATE_NAME
 
   ! ---------------------------------------------------------
   subroutine base_system__new__(this)
@@ -260,8 +252,7 @@ contains
     ASSERT(ierr==JSON_OK)
     call base_states__init__(this%st, cnfg)
     nullify(cnfg)
-    call config_dict_init(this%dict)
-    call base_system_hash_init(this%hash)
+    call base_system_dict_init(this%dict)
     call base_system_list_init(this%list)
 
     POP_SUB(base_system__init__begin)
@@ -310,27 +301,27 @@ contains
     type(base_system_t), intent(out) :: this
     type(base_system_t), intent(in)  :: that
 
-    type(base_system_iterator_t) :: iter
-    type(base_system_t), pointer :: osub, isub
-    type(json_object_t), pointer :: cnfg
-    integer                      :: ierr
+    type(base_system_iterator_t)        :: iter
+    character(len=BASE_SYSTEM_NAME_LEN) :: name
+    type(base_system_t),        pointer :: osub, isub
+    integer                             :: ierr
 
     PUSH_SUB(base_system_init_copy)
 
-    nullify(cnfg, osub, isub)
+    nullify(osub, isub)
     call base_system__init__(this, that)
     call base_system_init(iter, that)
     do
-      nullify(cnfg, osub, isub)
-      call base_system_next(iter, cnfg, isub, ierr)
+      nullify(osub, isub)
+      call base_system_next(iter, name, isub, ierr)
       if(ierr/=BASE_SYSTEM_OK)exit
       call base_system_new(this, osub)
       call base_system_init(osub, isub)
-      call base_system_sets(this, osub, cnfg)
+      call base_system_sets(this, name, osub)
     end do
     call base_system_end(iter)
     call base_system__init__(this)
-    nullify(cnfg, osub, isub)
+    nullify(osub, isub)
 
     POP_SUB(base_system_init_copy)
   end subroutine base_system_init_copy
@@ -481,58 +472,34 @@ contains
   end subroutine base_system__acc__
 
   ! ---------------------------------------------------------
-  subroutine base_system__sets__(this, that, config)
+  subroutine base_system__sets__(this, name, that)
     type(base_system_t), intent(inout) :: this
+    character(len=*),    intent(in)    :: name
     type(base_system_t), intent(in)    :: that
-    type(json_object_t), intent(in)    :: config
 
     PUSH_SUB(base_system__sets__)
 
     ASSERT(this%space==that%space)
-    call base_geometry_sets(this%geom, that%geom, config)
-    call base_states_sets(this%st, that%st, config)
+    call base_geometry_sets(this%geom, name, that%geom)
+    call base_states_sets(this%st, name, that%st)
 
     POP_SUB(base_system__sets__)
   end subroutine base_system__sets__
 
   ! ---------------------------------------------------------
-  subroutine base_system_sets(this, that, config)
+  subroutine base_system_sets(this, name, that)
     type(base_system_t), intent(inout) :: this
+    character(len=*),    intent(in)    :: name
     type(base_system_t), intent(in)    :: that
-    type(json_object_t), intent(in)    :: config
-
-    character(len=CONFIG_DICT_NAME_LEN) :: name
-    integer                             :: ierr
 
     PUSH_SUB(base_system_sets)
 
     ASSERT(associated(this%config))
-    call json_get(config, "name", name, ierr)
-    ASSERT(ierr==JSON_OK)
-    call config_dict_set(this%dict, trim(adjustl(name)), config)
-    call base_system_hash_set(this%hash, config, that)
-    call base_system__sets__(this, that, config)
+    call base_system_dict_set(this%dict, trim(adjustl(name)), that)
+    call base_system__sets__(this, name, that)
 
     POP_SUB(base_system_sets)
   end subroutine base_system_sets
-
-  ! ---------------------------------------------------------
-  subroutine base_system_gets_config(this, config, that)
-    type(base_system_t),  intent(in) :: this
-    type(json_object_t),  intent(in) :: config
-    type(base_system_t), pointer     :: that
-
-    integer :: ierr
-
-    PUSH_SUB(base_system_gets_config)
-
-    nullify(that)
-    ASSERT(associated(this%config))
-    call base_system_hash_get(this%hash, config, that, ierr)
-    if(ierr/=BASE_SYSTEM_OK) nullify(that)
-
-    POP_SUB(base_system_gets_config)
-  end subroutine base_system_gets_config
 
   ! ---------------------------------------------------------
   subroutine base_system_gets_name(this, name, that)
@@ -540,15 +507,11 @@ contains
     character(len=*),     intent(in) :: name
     type(base_system_t), pointer     :: that
 
-    type(json_object_t), pointer :: config
-    integer                      :: ierr
-
     PUSH_SUB(base_system_gets_name)
 
     nullify(that)
     ASSERT(associated(this%config))
-    call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
-    if(ierr==CONFIG_DICT_OK) call base_system_gets(this, config, that)
+    call base_system_dict_get(this%dict, trim(adjustl(name)), that)
 
     POP_SUB(base_system_gets_name)
   end subroutine base_system_gets_name
@@ -697,28 +660,28 @@ contains
     type(base_system_t), intent(inout) :: this
     type(base_system_t), intent(in)    :: that
 
-    type(base_system_iterator_t) :: iter
-    type(base_system_t), pointer :: osub, isub
-    type(json_object_t), pointer :: cnfg
-    integer                      :: ierr
+    type(base_system_iterator_t)        :: iter
+    character(len=BASE_SYSTEM_NAME_LEN) :: name
+    type(base_system_t),        pointer :: osub, isub
+    integer                             :: ierr
 
     PUSH_SUB(base_system_copy_type)
 
-    nullify(cnfg, osub, isub)
+    nullify(osub, isub)
     call base_system_end(this)
     call base_system__copy__(this, that)
     call base_system_init(iter, that)
     do
-      nullify(cnfg, osub, isub)
-      call base_system_next(iter, cnfg, isub, ierr)
+      nullify(osub, isub)
+      call base_system_next(iter, name, isub, ierr)
       if(ierr/=BASE_SYSTEM_OK)exit
       call base_system_new(this, osub)
       call base_system_copy(osub, isub)
-      call base_system_sets(this, osub, cnfg)
+      call base_system_sets(this, name, osub)
     end do
     call base_system_end(iter)
     call base_system__copy__(this)
-    nullify(cnfg, osub, isub)
+    nullify(osub, isub)
 
     POP_SUB(base_system_copy_type)
   end subroutine base_system_copy_type
@@ -733,8 +696,7 @@ contains
     call space_end(this%space)
     call base_geometry__end__(this%geom)
     call base_states__end__(this%st)
-    call config_dict_end(this%dict)
-    call base_system_hash_end(this%hash)
+    call base_system_dict_end(this%dict)
     call base_system_list_end(this%list)
 
     POP_SUB(base_system__end__)
@@ -768,11 +730,6 @@ contains
 #undef TEMPLATE_PREFIX
 
 end module base_system_oct_m
-
-#undef HASH_TEMPLATE_NAME
-#undef HASH_KEY_TEMPLATE_NAME
-#undef HASH_KEY_TYPE_NAME
-#undef HASH_VAL_TEMPLATE_NAME
 
 !! Local Variables:
 !! mode: f90

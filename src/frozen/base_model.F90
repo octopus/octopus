@@ -4,30 +4,18 @@
 #undef LIST_TYPE_NAME
 #undef LIST_TYPE_MODULE_NAME
 
-#undef HASH_TEMPLATE_NAME
-#undef HASH_KEY_TEMPLATE_NAME
-#undef HASH_KEY_TYPE_NAME
-#undef HASH_KEY_TYPE_MODULE_NAME
-#undef HASH_KEY_FUNCTION_NAME
-#undef HASH_KEY_FUNCTION_MODULE_NAME
-#undef HASH_VAL_TEMPLATE_NAME
-#undef HASH_VAL_TYPE_NAME
-#undef HASH_VAL_TYPE_MODULE_NAME
-#undef HASH_INCLUDE_PREFIX
-#undef HASH_INCLUDE_HEADER
-#undef HASH_INCLUDE_BODY
-
-#define HASH_TEMPLATE_NAME base_model
-#define HASH_KEY_TEMPLATE_NAME json
-#define HASH_KEY_TYPE_NAME json_object_t
-#define HASH_VAL_TEMPLATE_NAME base_model
+#undef DICT_TEMPLATE_NAME
+#undef DICT_TYPE_NAME
+#undef DICT_TYPE_MODULE_NAME
+#undef DICT_INCLUDE_PREFIX
+#undef DICT_INCLUDE_HEADER
+#undef DICT_INCLUDE_BODY
 
 module base_model_oct_m
 
   use base_geometry_oct_m
   use base_hamiltonian_oct_m
   use base_system_oct_m
-  use config_dict_oct_m
   use geometry_oct_m
   use global_oct_m
   use json_oct_m
@@ -42,9 +30,11 @@ module base_model_oct_m
 #undef LIST_INCLUDE_PREFIX
 #undef LIST_TEMPLATE_NAME
 
-#define HASH_INCLUDE_PREFIX
-#include "thash_inc.F90"
-#undef HASH_INCLUDE_PREFIX
+#define DICT_TEMPLATE_NAME base_model
+#define DICT_INCLUDE_PREFIX
+#include "tdict_inc.F90"
+#undef DICT_INCLUDE_PREFIX
+#undef DICT_TEMPLATE_NAME
 
 #define TEMPLATE_PREFIX base_model
 #define INCLUDE_PREFIX
@@ -93,13 +83,15 @@ module base_model_oct_m
 #undef LIST_INCLUDE_HEADER
 #undef LIST_TEMPLATE_NAME
 
-#define HASH_INCLUDE_HEADER
-#include "thash_inc.F90"
-#undef HASH_INCLUDE_HEADER
+#define DICT_TEMPLATE_NAME base_model
+#define DICT_INCLUDE_HEADER
+#include "tdict_inc.F90"
+#undef DICT_INCLUDE_HEADER
+#undef DICT_TEMPLATE_NAME
 
-  integer, parameter :: BASE_MODEL_OK          = BASE_MODEL_HASH_OK
-  integer, parameter :: BASE_MODEL_KEY_ERROR   = BASE_MODEL_HASH_KEY_ERROR
-  integer, parameter :: BASE_MODEL_EMPTY_ERROR = BASE_MODEL_HASH_EMPTY_ERROR
+  integer, parameter :: BASE_MODEL_OK          = BASE_MODEL_DICT_OK
+  integer, parameter :: BASE_MODEL_KEY_ERROR   = BASE_MODEL_DICT_KEY_ERROR
+  integer, parameter :: BASE_MODEL_EMPTY_ERROR = BASE_MODEL_DICT_EMPTY_ERROR
 
   type :: base_model_t
     private
@@ -108,8 +100,7 @@ module base_model_oct_m
     type(base_model_t),  pointer :: prnt   =>null()
     type(base_system_t)          :: sys
     type(base_hamiltonian_t)     :: hm
-    type(config_dict_t)          :: dict
-    type(base_model_hash_t)      :: hash
+    type(base_model_dict_t)      :: dict
     type(base_model_list_t)      :: list
   end type base_model_t
 
@@ -130,7 +121,6 @@ module base_model_oct_m
   end interface base_model_init
 
   interface base_model_gets
-    module procedure base_model_gets_config
     module procedure base_model_gets_name
   end interface base_model_gets
 
@@ -165,9 +155,11 @@ contains
 #undef LIST_INCLUDE_BODY
 #undef LIST_TEMPLATE_NAME
 
-#define HASH_INCLUDE_BODY
-#include "thash_inc.F90"
-#undef HASH_INCLUDE_BODY
+#define DICT_TEMPLATE_NAME base_model
+#define DICT_INCLUDE_BODY
+#include "tdict_inc.F90"
+#undef DICT_INCLUDE_BODY
+#undef DICT_TEMPLATE_NAME
 
   ! ---------------------------------------------------------
   subroutine base_model__new__(this)
@@ -243,8 +235,7 @@ contains
     ASSERT(ierr==JSON_OK)
     call base_system__init__(this%sys, cnfg)
     nullify(cnfg)
-    call config_dict_init(this%dict)
-    call base_model_hash_init(this%hash)
+    call base_model_dict_init(this%dict)
     call base_model_list_init(this%list)
 
     POP_SUB(base_model__init__begin)
@@ -254,22 +245,22 @@ contains
   subroutine base_model__build__(this)
     type(base_model_t), intent(inout) :: this
 
-    type(base_model_iterator_t)  :: iter
-    type(json_object_t), pointer :: cnfg
-    type(base_model_t),  pointer :: subs
-    integer                      :: ierr
+    type(base_model_iterator_t)        :: iter
+    character(len=BASE_MODEL_NAME_LEN) :: name
+    type(base_model_t),        pointer :: subs
+    integer                            :: ierr
 
     PUSH_SUB(base_model__build__)
 
     call base_model_init(iter, this)
     do
-      nullify(cnfg, subs)
-      call base_model_next(iter, cnfg, subs, ierr)
+      nullify(subs)
+      call base_model_next(iter, name, subs, ierr)
       if(ierr/=BASE_MODEL_OK)exit
-      call base_hamiltonian_sets(this%hm, subs%hm, cnfg)
+      call base_hamiltonian_sets(this%hm, name, subs%hm)
     end do
     call base_model_end(iter)
-    nullify(cnfg, subs)
+    nullify(subs)
 
     POP_SUB(base_model__build__)
   end subroutine base_model__build__
@@ -327,25 +318,25 @@ contains
     type(base_model_t), intent(out) :: this
     type(base_model_t), intent(in)  :: that
 
-    type(base_model_iterator_t)  :: iter
-    type(base_model_t),  pointer :: osub, isub
-    type(json_object_t), pointer :: cnfg
-    integer                      :: ierr
+    type(base_model_iterator_t)        :: iter
+    character(len=BASE_MODEL_NAME_LEN) :: name
+    type(base_model_t),        pointer :: osub, isub
+    integer                            :: ierr
 
     PUSH_SUB(base_model_init_copy)
 
     call base_model__init__(this, that)
     call base_model_init(iter, that)
     do
-      nullify(osub, isub, cnfg)
-      call base_model_next(iter, cnfg, isub, ierr)
+      nullify(osub, isub)
+      call base_model_next(iter, name, isub, ierr)
       if(ierr/=BASE_MODEL_OK)exit
       call base_model_new(this, osub)
       call base_model_init(osub, isub)
-      call base_model_sets(this, osub, cnfg)
+      call base_model_sets(this, name, osub)
     end do
     call base_model_end(iter)
-    nullify(osub, isub, cnfg)
+    nullify(osub, isub)
     call base_model__init__(this)
 
     POP_SUB(base_model_init_copy)
@@ -493,56 +484,32 @@ contains
   end subroutine base_model__acc__
 
   ! ---------------------------------------------------------
-  subroutine base_model__sets__(this, that, config)
+  subroutine base_model__sets__(this, name, that)
     type(base_model_t),  intent(inout) :: this
+    character(len=*),    intent(in)    :: name
     type(base_model_t),  intent(in)    :: that
-    type(json_object_t), intent(in)    :: config
 
     PUSH_SUB(base_model__sets__)
 
-    call base_system_sets(this%sys, that%sys, config)
+    call base_system_sets(this%sys, name, that%sys)
 
     POP_SUB(base_model__sets__)
   end subroutine base_model__sets__
 
   ! ---------------------------------------------------------
-  subroutine base_model_sets(this, that, config)
+  subroutine base_model_sets(this, name, that)
     type(base_model_t),  intent(inout) :: this
+    character(len=*),    intent(in)    :: name
     type(base_model_t),  intent(in)    :: that
-    type(json_object_t), intent(in)    :: config
-
-    character(len=CONFIG_DICT_NAME_LEN) :: name
-    integer                             :: ierr
 
     PUSH_SUB(base_model_sets)
 
     ASSERT(associated(this%config))
-    call json_get(config, "name", name, ierr)
-    ASSERT(ierr==JSON_OK)
-    call config_dict_set(this%dict, trim(adjustl(name)), config)
-    call base_model_hash_set(this%hash, config, that)
-    call base_model__sets__(this, that, config)
+    call base_model_dict_set(this%dict, trim(adjustl(name)), that)
+    call base_model__sets__(this, name, that)
 
     POP_SUB(base_model_sets)
   end subroutine base_model_sets
-
-  ! ---------------------------------------------------------
-  subroutine base_model_gets_config(this, config, that)
-    type(base_model_t),  intent(in) :: this
-    type(json_object_t), intent(in) :: config
-    type(base_model_t), pointer     :: that
-
-    integer :: ierr
-
-    PUSH_SUB(base_model_gets_config)
-
-    nullify(that)
-    ASSERT(associated(this%config))
-    call base_model_hash_get(this%hash, config, that, ierr)
-    if(ierr/=BASE_MODEL_OK) nullify(that)
-
-    POP_SUB(base_model_gets_config)
-  end subroutine base_model_gets_config
 
   ! ---------------------------------------------------------
   subroutine base_model_gets_name(this, name, that)
@@ -550,15 +517,11 @@ contains
     character(len=*),    intent(in) :: name
     type(base_model_t), pointer     :: that
 
-    type(json_object_t), pointer :: config
-    integer                      :: ierr
-
     PUSH_SUB(base_model_gets_name)
 
     nullify(that)
     ASSERT(associated(this%config))
-    call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
-    if(ierr==CONFIG_DICT_OK) call base_model_gets(this, config, that)
+    call base_model_dict_get(this%dict, trim(adjustl(name)), that)
 
     POP_SUB(base_model_gets_name)
   end subroutine base_model_gets_name
@@ -673,28 +636,28 @@ contains
     type(base_model_t), intent(inout) :: this
     type(base_model_t), intent(in)    :: that
 
-    type(base_model_iterator_t)  :: iter
-    type(base_model_t),  pointer :: osub, isub
-    type(json_object_t), pointer :: cnfg
-    integer                      :: ierr
+    type(base_model_iterator_t)        :: iter
+    character(len=BASE_MODEL_NAME_LEN) :: name
+    type(base_model_t),        pointer :: osub, isub
+    integer                            :: ierr
 
     PUSH_SUB(base_model_copy_type)
 
-    nullify(cnfg, osub, isub)
+    nullify(osub, isub)
     call base_model_end(this)
     call base_model__copy__(this, that)
     call base_model_init(iter, that)
     do
-      nullify(cnfg, osub, isub)
-      call base_model_next(iter, cnfg, isub, ierr)
+      nullify(osub, isub)
+      call base_model_next(iter, name, isub, ierr)
       if(ierr/=BASE_MODEL_OK)exit
       call base_model_new(this, osub)
       call base_model_copy(osub, isub)
-      call base_model_sets(this, osub, cnfg)
+      call base_model_sets(this, name, osub)
     end do
     call base_model_end(iter)
     call base_model__copy__(this)
-    nullify(cnfg, osub, isub)
+    nullify(osub, isub)
 
     POP_SUB(base_model_copy_type)
   end subroutine base_model_copy_type
@@ -708,8 +671,7 @@ contains
     nullify(this%config, this%sim, this%prnt)
     call base_hamiltonian__end__(this%hm)
     call base_system__end__(this%sys)
-    call config_dict_end(this%dict)
-    call base_model_hash_end(this%hash)
+    call base_model_dict_end(this%dict)
     call base_model_list_end(this%list)
 
     POP_SUB(base_model__end__)
@@ -743,11 +705,6 @@ contains
 #undef TEMPLATE_PREFIX
 
 end module base_model_oct_m
-
-#undef HASH_TEMPLATE_NAME
-#undef HASH_KEY_TEMPLATE_NAME
-#undef HASH_KEY_TYPE_NAME
-#undef HASH_VAL_TEMPLATE_NAME
 
 !! Local Variables:
 !! mode: f90

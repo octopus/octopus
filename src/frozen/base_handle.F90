@@ -4,28 +4,16 @@
 #undef LIST_TYPE_NAME
 #undef LIST_TYPE_MODULE_NAME
 
-#undef HASH_TEMPLATE_NAME
-#undef HASH_KEY_TEMPLATE_NAME
-#undef HASH_KEY_TYPE_NAME
-#undef HASH_KEY_TYPE_MODULE_NAME
-#undef HASH_KEY_FUNCTION_NAME
-#undef HASH_KEY_FUNCTION_MODULE_NAME
-#undef HASH_VAL_TEMPLATE_NAME
-#undef HASH_VAL_TYPE_NAME
-#undef HASH_VAL_TYPE_MODULE_NAME
-#undef HASH_INCLUDE_PREFIX
-#undef HASH_INCLUDE_HEADER
-#undef HASH_INCLUDE_BODY
-
-#define HASH_TEMPLATE_NAME base_handle
-#define HASH_KEY_TEMPLATE_NAME json
-#define HASH_KEY_TYPE_NAME json_object_t
-#define HASH_VAL_TEMPLATE_NAME base_handle
+#undef DICT_TEMPLATE_NAME
+#undef DICT_TYPE_NAME
+#undef DICT_TYPE_MODULE_NAME
+#undef DICT_INCLUDE_PREFIX
+#undef DICT_INCLUDE_HEADER
+#undef DICT_INCLUDE_BODY
 
 module base_handle_oct_m
 
   use base_model_oct_m
-  use config_dict_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
@@ -41,9 +29,11 @@ module base_handle_oct_m
 #undef LIST_INCLUDE_PREFIX
 #undef LIST_TEMPLATE_NAME
 
-#define HASH_INCLUDE_PREFIX
-#include "thash_inc.F90"
-#undef HASH_INCLUDE_PREFIX
+#define DICT_TEMPLATE_NAME base_handle
+#define DICT_INCLUDE_PREFIX
+#include "tdict_inc.F90"
+#undef DICT_INCLUDE_PREFIX
+#undef DICT_TEMPLATE_NAME
 
 #define TEMPLATE_PREFIX base_handle
 #define INCLUDE_PREFIX
@@ -94,15 +84,17 @@ module base_handle_oct_m
 #undef LIST_INCLUDE_HEADER
 #undef LIST_TEMPLATE_NAME
 
-#define HASH_INCLUDE_HEADER
-#include "thash_inc.F90"
-#undef HASH_INCLUDE_HEADER
+#define DICT_TEMPLATE_NAME base_handle
+#define DICT_INCLUDE_HEADER
+#include "tdict_inc.F90"
+#undef DICT_INCLUDE_HEADER
+#undef DICT_TEMPLATE_NAME
 
   integer, parameter :: HNDL_TYPE_NONE = 0
 
-  integer, parameter :: BASE_HANDLE_OK          = BASE_HANDLE_HASH_OK
-  integer, parameter :: BASE_HANDLE_KEY_ERROR   = BASE_HANDLE_HASH_KEY_ERROR
-  integer, parameter :: BASE_HANDLE_EMPTY_ERROR = BASE_HANDLE_HASH_EMPTY_ERROR
+  integer, parameter :: BASE_HANDLE_OK          = BASE_HANDLE_DICT_OK
+  integer, parameter :: BASE_HANDLE_KEY_ERROR   = BASE_HANDLE_DICT_KEY_ERROR
+  integer, parameter :: BASE_HANDLE_EMPTY_ERROR = BASE_HANDLE_DICT_EMPTY_ERROR
 
   type :: base_handle_t
     private
@@ -111,13 +103,13 @@ module base_handle_oct_m
     integer                      :: type   = HNDL_TYPE_NONE
     type(simulation_t)           :: sim
     type(base_model_t)           :: model
-    type(config_dict_t)          :: dict
-    type(base_handle_hash_t)     :: hash
+    type(base_handle_dict_t)     :: dict
     type(base_handle_list_t)     :: list
   end type base_handle_t
 
   interface base_handle__init__
     module procedure base_handle__init__begin
+    module procedure base_handle__init__build
     module procedure base_handle__init__finish
     module procedure base_handle__init__copy
   end interface base_handle__init__
@@ -134,7 +126,6 @@ module base_handle_oct_m
   end interface base_handle_init
 
   interface base_handle_gets
-    module procedure base_handle_gets_config
     module procedure base_handle_gets_name
   end interface base_handle_gets
 
@@ -167,9 +158,11 @@ contains
 #undef LIST_INCLUDE_BODY
 #undef LIST_TEMPLATE_NAME
 
-#define HASH_INCLUDE_BODY
-#include "thash_inc.F90"
-#undef HASH_INCLUDE_BODY
+#define DICT_TEMPLATE_NAME base_handle
+#define DICT_INCLUDE_BODY
+#include "tdict_inc.F90"
+#undef DICT_INCLUDE_BODY
+#undef DICT_TEMPLATE_NAME
 
   ! ---------------------------------------------------------
   subroutine base_handle__new__(this)
@@ -247,34 +240,43 @@ contains
     ASSERT(ierr==JSON_OK)
     call base_model__init__(this%model, cnfg)
     nullify(cnfg)
-    call config_dict_init(this%dict)
-    call base_handle_hash_init(this%hash)
+    call base_handle_dict_init(this%dict)
     call base_handle_list_init(this%list)
     
     POP_SUB(base_handle__init__begin)
   end subroutine base_handle__init__begin
 
   ! ---------------------------------------------------------
-  subroutine base_handle__init__build(this, list)
+  subroutine base_handle__init__build(this, config, handle_init)
     type(base_handle_t), intent(inout) :: this
-    type(json_array_t),  intent(in)    :: list
+    type(json_object_t), intent(in)    :: config
 
-    type(json_array_iterator_t)  :: iter
-    type(json_object_t), pointer :: cnfg
-    type(base_handle_t), pointer :: hndl
-    integer                      :: ierr
+    type(json_object_iterator_t)        :: iter
+    character(len=BASE_HANDLE_NAME_LEN) :: name
+    type(json_object_t),        pointer :: cnfg
+    type(base_handle_t),        pointer :: hndl
+    integer                             :: ierr
+
+    interface
+      subroutine handle_init(this, config)
+        use json_oct_m
+        import :: base_handle_t
+        type(base_handle_t), intent(out) :: this
+        type(json_object_t), intent(in)  :: config
+      end subroutine handle_init
+    end interface
 
     PUSH_SUB(base_handle__init__build)
 
-    call json_init(iter, list)
+    call json_init(iter, config)
     do
       nullify(cnfg, hndl)
-      call json_next(iter, cnfg, ierr)
+      call json_next(iter, name, cnfg, ierr)
       if(ierr/=JSON_OK)exit
       call base_handle_new(this, hndl)
-      call base_handle_init(hndl, cnfg)
+      call handle_init(hndl, cnfg)
       call base_handle__set__(hndl, this)
-      call base_handle_sets(this, hndl, cnfg)
+      call base_handle_sets(this, name, hndl)
     end do
     call json_end(iter)
     nullify(cnfg, hndl)
@@ -350,33 +352,20 @@ contains
       end subroutine handle_init
     end interface
 
-    type(json_array_iterator_t)   :: iter
-    type(json_object_t),  pointer :: cnfg
-    type(json_array_t),   pointer :: list
-    type(base_handle_t),  pointer :: hndl
-    integer                       :: ierr
+    type(json_object_t), pointer :: dict
+    integer                      :: ierr
 
     PUSH_SUB(base_handle_init_pass)
 
-    nullify(cnfg, list, hndl)
+    nullify(dict)
     call base_handle__init__(this, config)
-    call json_get(config, "systems", list, ierr)
+    call json_get(config, "subsystems", dict, ierr)
     if(ierr==JSON_OK)then
-      call json_init(iter, list)
-      do
-        nullify(cnfg, hndl)
-        call json_next(iter, cnfg, ierr)
-        if(ierr/=JSON_OK)exit
-        call base_handle_new(this, hndl)
-        call handle_init(hndl, cnfg)
-        call base_handle__set__(hndl, this)
-        call base_handle_sets(this, hndl, cnfg)
-      end do
-      call json_end(iter)
-      nullify(cnfg, hndl)
+      if(json_len(dict)>0)&
+        call base_handle__init__(this, dict, handle_init)
     end if
     call base_handle__init__(this)
-    nullify(list)
+    nullify(dict)
 
     POP_SUB(base_handle_init_pass)
   end subroutine base_handle_init_pass
@@ -386,26 +375,26 @@ contains
     type(base_handle_t), intent(out) :: this
     type(base_handle_t), intent(in)  :: that
 
-    type(base_handle_iterator_t) :: iter
-    type(base_handle_t), pointer :: osub, isub
-    type(json_object_t), pointer :: cnfg
-    integer                      :: ierr
+    type(base_handle_iterator_t)        :: iter
+    character(len=BASE_HANDLE_NAME_LEN) :: name
+    type(base_handle_t),        pointer :: osub, isub
+    integer                             :: ierr
 
     PUSH_SUB(base_handle_init_copy)
 
     call base_handle__init__(this, that)
     call base_handle_init(iter, that)
     do
-      nullify(cnfg, osub, isub)
-      call base_handle_next(iter, cnfg, isub, ierr)
+      nullify(osub, isub)
+      call base_handle_next(iter, name, isub, ierr)
       if(ierr/=BASE_HANDLE_OK)exit
       call base_handle_new(this, osub)
       call base_handle_init(osub, isub)
-      call base_handle_sets(this, osub, cnfg)
+      call base_handle_sets(this, name, osub)
     end do
     call base_handle_end(iter)
     call base_handle__init__(this)
-    nullify(cnfg, osub, isub)
+    nullify(osub, isub)
 
     POP_SUB(base_handle_init_copy)
   end subroutine base_handle_init_copy
@@ -415,7 +404,6 @@ contains
     type(base_handle_t), intent(inout) :: this
 
     type(base_handle_iterator_t) :: iter
-    type(json_object_t), pointer :: cnfg
     type(base_handle_t), pointer :: subs
     integer                      :: ierr
 
@@ -423,13 +411,13 @@ contains
 
     call base_handle_init(iter, this)
     do
-      nullify(cnfg, subs)
-      call base_handle_next(iter, cnfg, subs, ierr)
+      nullify(subs)
+      call base_handle_next(iter, subs, ierr)
       if(ierr/=BASE_HANDLE_OK)exit
-      call simulation_extend(this%sim, subs%sim, cnfg)
+      call simulation_extend(this%sim, subs%sim, subs%config)
     end do
     call base_handle_end(iter)
-    nullify(cnfg, subs)
+    nullify(subs)
 
     POP_SUB(base_handle__build__)
   end subroutine base_handle__build__
@@ -570,56 +558,32 @@ contains
   end subroutine base_handle__set__
 
   ! ---------------------------------------------------------
-  subroutine base_handle__sets__(this, that, config)
+  subroutine base_handle__sets__(this, name, that)
     type(base_handle_t), intent(inout) :: this
+    character(len=*),    intent(in)    :: name
     type(base_handle_t), intent(in)    :: that
-    type(json_object_t), intent(in)    :: config
 
     PUSH_SUB(base_handle__sets__)
 
-    call base_model_sets(this%model, that%model, config)
+    call base_model_sets(this%model, name, that%model)
 
     POP_SUB(base_handle__sets__)
   end subroutine base_handle__sets__
 
   ! ---------------------------------------------------------
-  subroutine base_handle_sets(this, that, config)
+  subroutine base_handle_sets(this, name, that)
     type(base_handle_t), intent(inout) :: this
+    character(len=*),    intent(in)    :: name
     type(base_handle_t), intent(in)    :: that
-    type(json_object_t), intent(in)    :: config
-
-    character(len=BASE_HANDLE_NAME_LEN) :: name
-    integer                             :: ierr
 
     PUSH_SUB(base_handle_sets)
 
     ASSERT(associated(this%config))
-    call json_get(config, "name", name, ierr)
-    ASSERT(ierr==JSON_OK)
-    call config_dict_set(this%dict, trim(adjustl(name)), config)
-    call base_handle_hash_set(this%hash, config, that)
-    call base_handle__sets__(this, that, config)
+    call base_handle_dict_set(this%dict, trim(adjustl(name)), that)
+    call base_handle__sets__(this, name, that)
 
     POP_SUB(base_handle_sets)
   end subroutine base_handle_sets
-
-  ! ---------------------------------------------------------
-  subroutine base_handle_gets_config(this, config, that)
-    type(base_handle_t),  intent(in) :: this
-    type(json_object_t),  intent(in) :: config
-    type(base_handle_t), pointer     :: that
-
-    integer :: ierr
-
-    PUSH_SUB(base_handle_gets_config)
-
-    nullify(that)
-    ASSERT(associated(this%config))
-    call base_handle_hash_get(this%hash, config, that, ierr)
-    if(ierr/=BASE_HANDLE_OK) nullify(that)
-
-    POP_SUB(base_handle_gets_config)
-  end subroutine base_handle_gets_config
 
   ! ---------------------------------------------------------
   subroutine base_handle_gets_name(this, name, that)
@@ -627,15 +591,11 @@ contains
     character(len=*),     intent(in) :: name
     type(base_handle_t), pointer     :: that
 
-    type(json_object_t), pointer :: config
-    integer                      :: ierr
-
     PUSH_SUB(base_handle_gets_name)
 
     nullify(that)
     ASSERT(associated(this%config))
-    call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
-    if(ierr==CONFIG_DICT_OK) call base_handle_gets(this, config, that)
+    call base_handle_dict_get(this%dict, trim(adjustl(name)), that)
 
     POP_SUB(base_handle_gets_name)
   end subroutine base_handle_gets_name
@@ -721,28 +681,28 @@ contains
     type(base_handle_t), intent(inout) :: this
     type(base_handle_t), intent(in)    :: that
 
-    type(base_handle_iterator_t) :: iter
-    type(base_handle_t), pointer :: osub, isub
-    type(json_object_t), pointer :: cnfg
-    integer                      :: ierr
+    type(base_handle_iterator_t)        :: iter
+    character(len=BASE_HANDLE_NAME_LEN) :: name
+    type(base_handle_t),        pointer :: osub, isub
+    integer                             :: ierr
 
     PUSH_SUB(base_handle_copy_type)
 
-    nullify(cnfg, osub, isub)
+    nullify(osub, isub)
     call base_handle_end(this)
     call base_handle__copy__(this, that)
     call base_handle_init(iter, that)
     do
-      nullify(cnfg, osub, isub)
-      call base_handle_next(iter, cnfg, isub, ierr)
+      nullify(osub, isub)
+      call base_handle_next(iter, name, isub, ierr)
       if(ierr/=BASE_HANDLE_OK)exit
       call base_handle_new(this, osub)
       call base_handle_copy(osub, isub)
-      call base_handle_sets(this, osub, cnfg)
+      call base_handle_sets(this, name, osub)
     end do
     call base_handle_end(iter)
     call base_handle__copy__(this)
-    nullify(cnfg, osub, isub)
+    nullify(osub, isub)
 
     POP_SUB(base_handle_copy_type)
   end subroutine base_handle_copy_type
@@ -757,8 +717,7 @@ contains
     this%type = HNDL_TYPE_NONE
     call simulation_end(this%sim)
     call base_model__end__(this%model)
-    call config_dict_end(this%dict)
-    call base_handle_hash_end(this%hash)
+    call base_handle_dict_end(this%dict)
     call base_handle_list_end(this%list)
 
     POP_SUB(base_handle__end__)
@@ -792,11 +751,6 @@ contains
 #undef TEMPLATE_PREFIX
 
 end module base_handle_oct_m
-
-#undef HASH_TEMPLATE_NAME
-#undef HASH_KEY_TEMPLATE_NAME
-#undef HASH_KEY_TYPE_NAME
-#undef HASH_VAL_TEMPLATE_NAME
 
 !! Local Variables:
 !! mode: f90

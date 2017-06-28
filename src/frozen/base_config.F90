@@ -17,13 +17,60 @@ module base_config_oct_m
 
   private
 
+  public ::               &
+    BASE_CONFIG_NAME_LEN
+  
   public ::            &
+    base_config_use,   &
+    base_config_add,   &
     base_config_parse
 
+  integer, parameter :: BASE_CONFIG_NAME_LEN = BASE_HANDLE_NAME_LEN
+  
   integer, parameter :: default_ndim  = 3
   integer, parameter :: default_nspin = 1
 
 contains
+
+  ! ---------------------------------------------------------
+  function base_config_use(this) result(that)
+    type(json_object_t), intent(in) :: this
+
+    type(json_object_t), pointer :: cnfg
+    integer                      :: ierr
+
+    logical :: that
+
+    PUSH_SUB(base_config_use)
+
+    nullify(cnfg)
+    call json_get(this, "subsystems", cnfg, ierr)
+    ASSERT(ierr==JSON_OK)
+    that = (json_len(cnfg)>0)
+    nullify(cnfg)
+
+    POP_SUB(base_config_use)
+  end function base_config_use
+
+  ! ---------------------------------------------------------
+  subroutine base_config_add(this, name, that)
+    type(json_object_t), intent(inout) :: this
+    character(len=*),    intent(in)    :: name
+    type(json_object_t), intent(in)    :: that
+
+    type(json_object_t), pointer :: cnfg
+    integer                      :: ierr
+
+    PUSH_SUB(base_config_add)
+
+    nullify(cnfg)
+    call json_get(this, "subsystems", cnfg, ierr)
+    ASSERT(ierr==JSON_OK)
+    call json_set(cnfg, name, that)
+    nullify(cnfg)
+
+    POP_SUB(base_config_add)
+  end subroutine base_config_add
 
   ! ---------------------------------------------------------
   subroutine base_config_parse_space(this, ndim)
@@ -220,10 +267,10 @@ contains
     call json_init(list)
     call json_set(this, "positions", list)
     nullify(list)
-    SAFE_ALLOCATE(list)
-    call json_init(list)
-    call json_set(this, "systems", list)
-    nullify(list)
+    SAFE_ALLOCATE(cnfg)
+    call json_init(cnfg)
+    call json_set(this, "subsystems", cnfg)
+    nullify(cnfg)
 
     POP_SUB(base_config_parse)
   end subroutine base_config_parse
