@@ -4,28 +4,16 @@
 #undef LIST_TYPE_NAME
 #undef LIST_TYPE_MODULE_NAME
 
-#undef HASH_TEMPLATE_NAME
-#undef HASH_KEY_TEMPLATE_NAME
-#undef HASH_KEY_TYPE_NAME
-#undef HASH_KEY_TYPE_MODULE_NAME
-#undef HASH_KEY_FUNCTION_NAME
-#undef HASH_KEY_FUNCTION_MODULE_NAME
-#undef HASH_VAL_TEMPLATE_NAME
-#undef HASH_VAL_TYPE_NAME
-#undef HASH_VAL_TYPE_MODULE_NAME
-#undef HASH_INCLUDE_PREFIX
-#undef HASH_INCLUDE_HEADER
-#undef HASH_INCLUDE_BODY
-
-#define HASH_TEMPLATE_NAME base_geometry
-#define HASH_KEY_TEMPLATE_NAME json
-#define HASH_KEY_TYPE_NAME json_object_t
-#define HASH_VAL_TEMPLATE_NAME base_geometry
+#undef DICT_TEMPLATE_NAME
+#undef DICT_TYPE_NAME
+#undef DICT_TYPE_MODULE_NAME
+#undef DICT_INCLUDE_PREFIX
+#undef DICT_INCLUDE_HEADER
+#undef DICT_INCLUDE_BODY
 
 module base_geometry_oct_m
 
   use atom_oct_m
-  use config_dict_oct_m
   use geo_build_oct_m
   use geo_intrf_oct_m
   use geometry_oct_m
@@ -42,9 +30,11 @@ module base_geometry_oct_m
 #undef LIST_INCLUDE_PREFIX
 #undef LIST_TEMPLATE_NAME
 
-#define HASH_INCLUDE_PREFIX
-#include "thash_inc.F90"
-#undef HASH_INCLUDE_PREFIX
+#define DICT_TEMPLATE_NAME base_geometry
+#define DICT_INCLUDE_PREFIX
+#include "tdict_inc.F90"
+#undef DICT_INCLUDE_PREFIX
+#undef DICT_TEMPLATE_NAME
 
 #define TEMPLATE_PREFIX base_geometry
 #define EXTENDED_TYPE
@@ -86,12 +76,14 @@ module base_geometry_oct_m
 #undef LIST_INCLUDE_HEADER
 #undef LIST_TEMPLATE_NAME
 
-#define HASH_INCLUDE_HEADER
-#include "thash_inc.F90"
-#undef HASH_INCLUDE_HEADER
+#define DICT_TEMPLATE_NAME base_geometry
+#define DICT_INCLUDE_HEADER
+#include "tdict_inc.F90"
+#undef DICT_INCLUDE_HEADER
+#undef DICT_TEMPLATE_NAME
 
-  integer, parameter :: BASE_GEOMETRY_OK          = CONFIG_DICT_OK
-  integer, parameter :: BASE_GEOMETRY_EMPTY_ERROR = CONFIG_DICT_EMPTY_ERROR
+  integer, parameter :: BASE_GEOMETRY_OK          = BASE_GEOMETRY_DICT_OK
+  integer, parameter :: BASE_GEOMETRY_EMPTY_ERROR = BASE_GEOMETRY_DICT_EMPTY_ERROR
 
   type :: base_geometry_t
     private
@@ -99,16 +91,15 @@ module base_geometry_oct_m
     type(space_t),         pointer :: space  =>null()
     type(base_geometry_t), pointer :: prnt   =>null()
     type(geo_intrf_t)              :: igeo
-    type(config_dict_t)            :: dict
-    type(base_geometry_hash_t)     :: hash
+    type(base_geometry_dict_t)     :: dict
     type(base_geometry_list_t)     :: list
   end type base_geometry_t
 
   type :: base_geometry_iterator_t
     private
-    type(base_geometry_t), pointer :: self =>null()
-    type(geo_intrf_iterator_t)     :: gitr
-    type(config_dict_iterator_t)   :: iter
+    type(base_geometry_t),      pointer :: self =>null()
+    type(geo_intrf_iterator_t)          :: gitr
+    type(base_geometry_dict_iterator_t) :: iter
   end type base_geometry_iterator_t
 
   interface base_geometry__init__
@@ -134,8 +125,8 @@ module base_geometry_oct_m
   end interface base_geometry_next
 
   interface base_geometry_gets
-    module procedure base_geometry_gets_config
-    module procedure base_geometry_gets_name
+    module procedure base_geometry_gets_type
+    module procedure base_geometry_gets_geometry
   end interface base_geometry_gets
 
   interface base_geometry_get
@@ -169,9 +160,11 @@ contains
 #undef LIST_INCLUDE_BODY
 #undef LIST_TEMPLATE_NAME
 
-#define HASH_INCLUDE_BODY
-#include "thash_inc.F90"
-#undef HASH_INCLUDE_BODY
+#define DICT_TEMPLATE_NAME base_geometry
+#define DICT_INCLUDE_BODY
+#include "tdict_inc.F90"
+#undef DICT_INCLUDE_BODY
+#undef DICT_TEMPLATE_NAME
 
   ! ---------------------------------------------------------
   subroutine base_geometry__new__(this)
@@ -247,8 +240,7 @@ contains
     call json_get(config, "molecule", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
     call geo_intrf_init(this%igeo, space, cnfg)
-    call config_dict_init(this%dict)
-    call base_geometry_hash_init(this%hash)
+    call base_geometry_dict_init(this%dict)
     call base_geometry_list_init(this%list)
 
     POP_SUB(base_geometry__init__begin)
@@ -261,8 +253,6 @@ contains
 
     type(base_geometry_iterator_t) :: iter
     type(base_geometry_t), pointer :: subs
-    type(json_object_t),   pointer :: cnfg
-    type(json_array_t),    pointer :: list
     type(geometry_t),      pointer :: pgeo
     type(geo_build_t)              :: bgeo
     integer                        :: ierr
@@ -272,23 +262,17 @@ contains
     call geo_build_init(bgeo, this%space)
     call base_geometry_init(iter, this)
     do
-      nullify(cnfg, list, subs, pgeo)
-      call base_geometry_next(iter, cnfg, subs, ierr)
+      nullify(subs, pgeo)
+      call base_geometry_next(iter, subs, ierr)
       if(ierr/=BASE_GEOMETRY_OK)exit
       call base_geometry_get(subs, pgeo)
       ASSERT(associated(pgeo))
-      call json_get(cnfg, "positions", list, ierr)
-      ASSERT(ierr==JSON_OK)
-      if(json_len(list)>0)then
-        call geo_build_extend(bgeo, pgeo, list)
-      else
-        call geo_build_extend(bgeo, pgeo)
-      end if
+      call geo_build_extend(bgeo, pgeo)
     end do
     call base_geometry_end(iter)
     call geo_build_export(bgeo, that)
     call geo_build_end(bgeo)
-    nullify(cnfg, list, subs, pgeo)
+    nullify(subs, pgeo)
 
     POP_SUB(base_geometry__build__)
   end subroutine base_geometry__build__
@@ -344,87 +328,76 @@ contains
     type(base_geometry_t), intent(out) :: this
     type(base_geometry_t), intent(in)  :: that
 
-    type(base_geometry_iterator_t) :: iter
-    type(base_geometry_t), pointer :: osub, isub
-    type(json_object_t),   pointer :: cnfg
-    integer                        :: ierr
+    type(base_geometry_iterator_t)        :: iter
+    character(len=BASE_GEOMETRY_NAME_LEN) :: name
+    type(base_geometry_t),        pointer :: osub, isub
+    integer                               :: ierr
 
     PUSH_SUB(base_geometry_init_copy)
 
-    nullify(cnfg, osub, isub)
+    nullify(osub, isub)
     call base_geometry__init__(this, that)
     call base_geometry_init(iter, that)
     do
-      nullify(cnfg, osub, isub)
-      call base_geometry_next(iter, cnfg, isub, ierr)
+      nullify(osub, isub)
+      call base_geometry_next(iter, name, isub, ierr)
       if(ierr/=BASE_GEOMETRY_OK)exit
       call base_geometry_new(this, osub)
       call base_geometry_init(osub, isub)
-      call base_geometry_sets(this, osub, cnfg)
+      call base_geometry_sets(this, name, osub)
     end do
     call base_geometry_end(iter)
     call base_geometry__init__(this)
-    nullify(cnfg, osub, isub)
+    nullify(osub, isub)
 
     POP_SUB(base_geometry_init_copy)
   end subroutine base_geometry_init_copy
 
   ! ---------------------------------------------------------
-  subroutine base_geometry_sets(this, that, config)
+  subroutine base_geometry_sets(this, name, that)
     type(base_geometry_t), intent(inout) :: this
+    character(len=*),      intent(in)    :: name
     type(base_geometry_t), intent(in)    :: that
-    type(json_object_t),   intent(in)    :: config
-
-    character(len=CONFIG_DICT_NAME_LEN) :: name
-    integer                             :: ierr
 
     PUSH_SUB(base_geometry_sets)
 
     ASSERT(associated(this%config))
-    call json_get(config, "name", name, ierr)
-    ASSERT(ierr==JSON_OK)
-    call config_dict_set(this%dict, trim(adjustl(name)), config)
-    call base_geometry_hash_set(this%hash, config, that)
+    call base_geometry_dict_set(this%dict, trim(adjustl(name)), that)
 
     POP_SUB(base_geometry_sets)
   end subroutine base_geometry_sets
 
   ! ---------------------------------------------------------
-  subroutine base_geometry_gets_config(this, config, that)
-    type(base_geometry_t),  intent(in) :: this
-    type(json_object_t),    intent(in) :: config
-    type(base_geometry_t), pointer     :: that
-
-    integer :: ierr
-
-    PUSH_SUB(base_geometry_gets_config)
-
-    nullify(that)
-    ASSERT(associated(this%config))
-    call base_geometry_hash_get(this%hash, config, that, ierr)
-    if(ierr/=BASE_GEOMETRY_OK) nullify(that)
-
-    POP_SUB(base_geometry_gets_config)
-  end subroutine base_geometry_gets_config
-
-  ! ---------------------------------------------------------
-  subroutine base_geometry_gets_name(this, name, that)
+  subroutine base_geometry_gets_type(this, name, that)
     type(base_geometry_t),  intent(in) :: this
     character(len=*),       intent(in) :: name
     type(base_geometry_t), pointer     :: that
 
-    type(json_object_t), pointer :: config
-    integer                      :: ierr
-
-    PUSH_SUB(base_geometry_gets_name)
+    PUSH_SUB(base_geometry_gets_type)
 
     nullify(that)
     ASSERT(associated(this%config))
-    call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
-    if(ierr==CONFIG_DICT_OK) call base_geometry_gets(this, config, that)
+    call base_geometry_dict_get(this%dict, trim(adjustl(name)), that)
 
-    POP_SUB(base_geometry_gets_name)
-  end subroutine base_geometry_gets_name
+    POP_SUB(base_geometry_gets_type)
+  end subroutine base_geometry_gets_type
+
+  ! ---------------------------------------------------------
+  subroutine base_geometry_gets_geometry(this, name, that)
+    type(base_geometry_t), intent(in) :: this
+    character(len=*),      intent(in) :: name
+    type(geometry_t),     pointer     :: that
+
+    type(base_geometry_t), pointer :: subs
+
+    PUSH_SUB(base_geometry_gets_geometry)
+
+    nullify(subs, that)
+    call base_geometry_gets(this, name, subs)
+    if(associated(subs)) call base_geometry_get(subs, that)
+    
+    POP_SUB(base_geometry_gets_geometry)
+  end subroutine base_geometry_gets_geometry
 
   ! ---------------------------------------------------------
   subroutine base_geometry_get_config(this, that)
@@ -508,28 +481,28 @@ contains
     type(base_geometry_t), intent(inout) :: this
     type(base_geometry_t), intent(in)    :: that
 
-    type(base_geometry_iterator_t)   :: iter
-    type(base_geometry_t),   pointer :: osub, isub
-    type(json_object_t), pointer :: cnfg
-    integer                      :: ierr
-
+    type(base_geometry_iterator_t)        :: iter
+    character(len=BASE_GEOMETRY_NAME_LEN) :: name
+    type(base_geometry_t),        pointer :: osub, isub
+    integer                               :: ierr
+    
     PUSH_SUB(base_geometry_copy_type)
 
-    nullify(cnfg, osub, isub)
+    nullify(osub, isub)
     call base_geometry_end(this)
     call base_geometry__copy__(this, that)
     call base_geometry_init(iter, that)
     do
-      nullify(cnfg, osub, isub)
-      call base_geometry_next(iter, cnfg, isub, ierr)
+      nullify(osub, isub)
+      call base_geometry_next(iter, name, isub, ierr)
       if(ierr/=BASE_GEOMETRY_OK)exit
       call base_geometry_new(this, osub)
       call base_geometry_copy(osub, isub)
-      call base_geometry_sets(this, osub, cnfg)
+      call base_geometry_sets(this, name, osub)
     end do
     call base_geometry_end(iter)
     call base_geometry__copy__(this)
-    nullify(cnfg, osub, isub)
+    nullify(osub, isub)
 
     POP_SUB(base_geometry_copy_type)
   end subroutine base_geometry_copy_type
@@ -542,8 +515,7 @@ contains
 
     nullify(this%config, this%prnt)
     call geo_intrf_end(this%igeo)
-    call config_dict_end(this%dict)
-    call base_geometry_hash_end(this%hash)
+    call base_geometry_dict_end(this%dict)
     call base_geometry_list_end(this%list)
 
     POP_SUB(base_geometry__end__)
@@ -660,11 +632,6 @@ contains
 #undef TEMPLATE_PREFIX
 
 end module base_geometry_oct_m
-
-#undef HASH_TEMPLATE_NAME
-#undef HASH_KEY_TEMPLATE_NAME
-#undef HASH_KEY_TYPE_NAME
-#undef HASH_VAL_TEMPLATE_NAME
 
 !! Local Variables:
 !! mode: f90

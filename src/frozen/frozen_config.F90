@@ -4,6 +4,7 @@ module frozen_config_oct_m
 
   use base_config_oct_m
   use base_hamiltonian_oct_m
+  use fio_handle_oct_m
   use frozen_handle_oct_m
   use global_oct_m
   use json_oct_m
@@ -91,8 +92,64 @@ contains
   end subroutine frozen_config_parse_model
 
   ! ---------------------------------------------------------
-  subroutine frozen_config_parse(this, nspin, ndim)
+  subroutine frozen_config_parse_positions(this)
+    type(json_object_t), intent(in) :: this
+
+    type(json_array_t),         pointer :: list
+    character(len=BASE_CONFIG_NAME_LEN) :: name
+    integer                             :: ierr
+    
+    PUSH_SUB(frozen_config_parse_positions)
+
+    nullify(list)
+    call json_get(this, "name", name, ierr)
+    ASSERT(ierr==JSON_OK)
+    call json_get(this, "positions", list, ierr)
+    ASSERT(ierr==JSON_OK)
+    if(json_len(list)<1)then
+      message(1) = "Frozen subsystem '"//trim(adjustl(name))//"' position(s) were not specified in the 'SubSystemCoordinates' block."
+      call messages_fatal(1)
+    end if
+    nullify(list)
+    
+    POP_SUB(frozen_config_parse_positions)
+  end subroutine frozen_config_parse_positions
+
+  ! ---------------------------------------------------------
+  subroutine frozen_config_parse_subsystems(this, dict)
+    type(json_object_t), intent(inout) :: this
+    type(json_object_t), intent(in)    :: dict
+
+    type(json_object_iterator_t)        :: iter
+    character(len=BASE_CONFIG_NAME_LEN) :: name
+    type(json_object_t),        pointer :: ocfg, icfg
+    integer                             :: type, ierr
+    
+    PUSH_SUB(frozen_config_parse_subsystems)
+
+    call json_init(iter, dict)
+    do
+      nullify(ocfg, icfg)
+      call json_next(iter, name, icfg, ierr)
+      if(ierr/=JSON_OK)exit
+      call json_get(icfg, "type", type, ierr)
+      ASSERT(ierr==JSON_OK)
+      if(type/=HNDL_TYPE_FNIO)cycle
+      SAFE_ALLOCATE(ocfg)
+      call json_copy(ocfg, icfg)
+      call json_set(this, trim(adjustl(name)), ocfg)
+      call frozen_config_parse_positions(ocfg)
+    end do
+    call json_end(iter)
+    nullify(ocfg, icfg)
+
+    POP_SUB(frozen_config_parse_subsystems)
+  end subroutine frozen_config_parse_subsystems
+
+  ! ---------------------------------------------------------
+  subroutine frozen_config_parse(this, dict, nspin, ndim)
     type(json_object_t), intent(out) :: this
+    type(json_object_t), intent(in)  :: dict
     integer,             intent(in)  :: nspin
     integer,             intent(in)  :: ndim
 
@@ -108,6 +165,10 @@ contains
     call json_get(this, "model", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
     call frozen_config_parse_model(cnfg)
+    nullify(cnfg)
+    call json_get(this, "subsystems", cnfg, ierr)
+    ASSERT(ierr==JSON_OK)
+    call frozen_config_parse_subsystems(cnfg, dict)
     nullify(cnfg)
 
     POP_SUB(frozen_config_parse)

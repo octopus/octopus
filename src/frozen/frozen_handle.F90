@@ -32,17 +32,44 @@ module frozen_handle_oct_m
 contains
 
   ! ---------------------------------------------------------
+  subroutine frozen_handle__build__(this, config)
+    type(base_handle_t), intent(inout) :: this
+    type(json_object_t), intent(in)    :: config
+
+    type(base_model_t), pointer :: modl
+
+    PUSH_SUB(frozen_handle__build__)
+
+    nullify(modl)
+    call base_handle_get(this, modl)
+    ASSERT(associated(modl))
+    call frozen_model__build__(modl, config)
+    nullify(modl)
+
+    POP_SUB(frozen_handle__build__)
+  end subroutine frozen_handle__build__
+
+  ! ---------------------------------------------------------
   subroutine frozen_handle_init(this, config)
     type(base_handle_t), intent(out) :: this
     type(json_object_t), intent(in)  :: config
 
-    integer :: type
+    type(json_object_t), pointer :: cnfg
+    integer                      :: type, ierr
 
     PUSH_SUB(frozen_handle_init)
 
-    call base_handle_init(this, config, fio_handle_init)
+    nullify(cnfg)
+    call base_handle__init__(this, config)
     call base_handle_get(this, type)
     ASSERT(type==HNDL_TYPE_FRZN)
+    call json_get(config, "subsystems", cnfg, ierr)
+    ASSERT(ierr==JSON_OK)
+    ASSERT(json_len(cnfg)>0)
+    call base_handle__init__(this, cnfg, fio_handle_init)
+    call frozen_handle__build__(this, cnfg)
+    nullify(cnfg)
+    call base_handle__init__(this)
 
     POP_SUB(frozen_handle_init)
   end subroutine frozen_handle_init
@@ -64,8 +91,10 @@ contains
     call base_handle_init(iter, this)
     do
       nullify(hndl, cnfg)
-      call base_handle_next(iter, cnfg, hndl, ierr)
+      call base_handle_next(iter, hndl, ierr)
       if(ierr/=BASE_HANDLE_OK)exit
+      call base_handle_get(hndl, cnfg)
+      ASSERT(associated(cnfg))
       call fio_handle_start(hndl, mpi_group)
       call frozen_handle__acc__(this, hndl, cnfg)
       call fio_handle_stop(hndl)

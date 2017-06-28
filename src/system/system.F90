@@ -20,6 +20,7 @@
 
 module system_oct_m
   use accel_oct_m
+  use base_config_oct_m
   use base_handle_oct_m
   use base_model_oct_m
   use base_states_oct_m
@@ -178,7 +179,7 @@ contains
     call ssys_config_parse(ssys_config, st%d%nspin, space%dim)
     SAFE_ALLOCATE(live_config)
     call live_config_parse(live_config, st, space)
-    call ssys_config_add(ssys_config, live_config)
+    call base_config_add(ssys_config, "live", live_config)
     nullify(live_config)
     call ssys_handle_init(this, geo, ssys_config)
     call ssys_handle_start(this, grid)

@@ -4,30 +4,18 @@
 #undef LIST_TYPE_NAME
 #undef LIST_TYPE_MODULE_NAME
 
-#undef HASH_TEMPLATE_NAME
-#undef HASH_KEY_TEMPLATE_NAME
-#undef HASH_KEY_TYPE_NAME
-#undef HASH_KEY_TYPE_MODULE_NAME
-#undef HASH_KEY_FUNCTION_NAME
-#undef HASH_KEY_FUNCTION_MODULE_NAME
-#undef HASH_VAL_TEMPLATE_NAME
-#undef HASH_VAL_TYPE_NAME
-#undef HASH_VAL_TYPE_MODULE_NAME
-#undef HASH_INCLUDE_PREFIX
-#undef HASH_INCLUDE_HEADER
-#undef HASH_INCLUDE_BODY
-
-#define HASH_TEMPLATE_NAME base_functional
-#define HASH_KEY_TEMPLATE_NAME json
-#define HASH_KEY_TYPE_NAME json_object_t
-#define HASH_VAL_TEMPLATE_NAME base_functional
+#undef DICT_TEMPLATE_NAME
+#undef DICT_TYPE_NAME
+#undef DICT_TYPE_MODULE_NAME
+#undef DICT_INCLUDE_PREFIX
+#undef DICT_INCLUDE_HEADER
+#undef DICT_INCLUDE_BODY
 
 module base_functional_oct_m
 
   use base_density_oct_m
   use base_states_oct_m
   use base_system_oct_m
-  use config_dict_oct_m
   use functional_oct_m
   use global_oct_m
   use json_oct_m
@@ -43,9 +31,11 @@ module base_functional_oct_m
 #undef LIST_INCLUDE_PREFIX
 #undef LIST_TEMPLATE_NAME
 
-#define HASH_INCLUDE_PREFIX
-#include "thash_inc.F90"
-#undef HASH_INCLUDE_PREFIX
+#define DICT_TEMPLATE_NAME base_functional
+#define DICT_INCLUDE_PREFIX
+#include "tdict_inc.F90"
+#undef DICT_INCLUDE_PREFIX
+#undef DICT_TEMPLATE_NAME
 
 #define TEMPLATE_PREFIX base_functional
 #define INCLUDE_PREFIX
@@ -98,13 +88,15 @@ module base_functional_oct_m
 #undef LIST_INCLUDE_HEADER
 #undef LIST_TEMPLATE_NAME
 
-#define HASH_INCLUDE_HEADER
-#include "thash_inc.F90"
-#undef HASH_INCLUDE_HEADER
+#define DICT_TEMPLATE_NAME base_functional
+#define DICT_INCLUDE_HEADER
+#include "tdict_inc.F90"
+#undef DICT_INCLUDE_HEADER
+#undef DICT_TEMPLATE_NAME
 
-  integer, parameter :: BASE_FUNCTIONAL_OK          = BASE_FUNCTIONAL_HASH_OK
-  integer, parameter :: BASE_FUNCTIONAL_KEY_ERROR   = BASE_FUNCTIONAL_HASH_KEY_ERROR
-  integer, parameter :: BASE_FUNCTIONAL_EMPTY_ERROR = BASE_FUNCTIONAL_HASH_EMPTY_ERROR
+  integer, parameter :: BASE_FUNCTIONAL_OK          = BASE_FUNCTIONAL_DICT_OK
+  integer, parameter :: BASE_FUNCTIONAL_KEY_ERROR   = BASE_FUNCTIONAL_DICT_KEY_ERROR
+  integer, parameter :: BASE_FUNCTIONAL_EMPTY_ERROR = BASE_FUNCTIONAL_DICT_EMPTY_ERROR
 
   type :: base_functional_raii_t
     private
@@ -123,8 +115,7 @@ module base_functional_oct_m
     real(kind=wp)                 :: energy  = 0.0_wp
     type(functional_t)            :: funct
     type(storage_t)               :: data
-    type(config_dict_t)           :: dict
-    type(base_functional_hash_t)  :: hash
+    type(base_functional_dict_t)  :: dict
     type(base_functional_raii_t)  :: raii
   end type base_functional_t
 
@@ -143,7 +134,6 @@ module base_functional_oct_m
   end interface base_functional_set
 
   interface base_functional_gets
-    module procedure base_functional_gets_config
     module procedure base_functional_gets_name
   end interface base_functional_gets
 
@@ -181,9 +171,11 @@ contains
 #undef LIST_INCLUDE_BODY
 #undef LIST_TEMPLATE_NAME
 
-#define HASH_INCLUDE_BODY
-#include "thash_inc.F90"
-#undef HASH_INCLUDE_BODY
+#define DICT_TEMPLATE_NAME base_functional
+#define DICT_INCLUDE_BODY
+#include "tdict_inc.F90"
+#undef DICT_INCLUDE_BODY
+#undef DICT_TEMPLATE_NAME
 
   ! ---------------------------------------------------------
   subroutine base_functional__new__(this)
@@ -286,8 +278,7 @@ contains
     if(.not.fuse) call json_set(cnfg, "allocate", .false.)
     call storage_init(this%data, cnfg)
     nullify(cnfg)
-    call config_dict_init(this%dict)
-    call base_functional_hash_init(this%hash)
+    call base_functional_dict_init(this%dict)
     call base_functional_list_init(this%raii%list)
 
     POP_SUB(base_functional__init__type)
@@ -326,26 +317,26 @@ contains
     type(base_functional_t), intent(out) :: this
     type(base_functional_t), intent(in)  :: that
 
-    type(base_functional_iterator_t) :: iter
-    type(base_functional_t), pointer :: osub, isub
-    type(json_object_t),     pointer :: cnfg
-    integer                          :: ierr
+    type(base_functional_iterator_t)        :: iter
+    character(len=BASE_FUNCTIONAL_NAME_LEN) :: name
+    type(base_functional_t),        pointer :: osub, isub
+    integer                                 :: ierr
 
     PUSH_SUB(base_functional_init_copy)
 
-    nullify(cnfg, osub, isub)
+    nullify(osub, isub)
     call base_functional__init__(this, that)
     call base_functional_init(iter, that)
     do
-      nullify(cnfg, osub, isub)
-      call base_functional_next(iter, cnfg, isub, ierr)
+      nullify(osub, isub)
+      call base_functional_next(iter, name, isub, ierr)
       if(ierr/=BASE_FUNCTIONAL_OK)exit
       call base_functional_new(this, osub)
       call base_functional_init(osub, isub)
-      call base_functional_sets(this, osub, cnfg)
+      call base_functional_sets(this, name, osub)
     end do
     call base_functional_end(iter)
-    nullify(cnfg, osub, isub)
+    nullify(osub, isub)
 
     POP_SUB(base_functional_init_copy)
   end subroutine base_functional_init_copy
@@ -564,42 +555,18 @@ contains
   end subroutine base_functional__sub__
 
   ! ---------------------------------------------------------
-  subroutine base_functional_sets(this, that, config)
+  subroutine base_functional_sets(this, name, that)
     type(base_functional_t), intent(inout) :: this
+    character(len=*),         intent(in)   :: name
     type(base_functional_t), intent(in)    :: that
-    type(json_object_t),    intent(in)    :: config
-
-    character(len=CONFIG_DICT_NAME_LEN) :: name
-    integer                             :: ierr
 
     PUSH_SUB(base_functional_sets)
 
     ASSERT(associated(this%config))
-    call json_get(config, "name", name, ierr)
-    ASSERT(ierr==JSON_OK)
-    call config_dict_set(this%dict, trim(adjustl(name)), config)
-    call base_functional_hash_set(this%hash, config, that)
+    call base_functional_dict_set(this%dict, trim(adjustl(name)),that)
 
     POP_SUB(base_functional_sets)
   end subroutine base_functional_sets
-
-  ! ---------------------------------------------------------
-  subroutine base_functional_gets_config(this, config, that)
-    type(base_functional_t),  intent(in) :: this
-    type(json_object_t),      intent(in) :: config
-    type(base_functional_t), pointer     :: that
-
-    integer :: ierr
-
-    PUSH_SUB(base_functional_gets_config)
-
-    nullify(that)
-    ASSERT(associated(this%config))
-    call base_functional_hash_get(this%hash, config, that, ierr)
-    if(ierr/=BASE_FUNCTIONAL_OK) nullify(that)
-
-    POP_SUB(base_functional_gets_config)
-  end subroutine base_functional_gets_config
 
   ! ---------------------------------------------------------
   subroutine base_functional_gets_name(this, name, that)
@@ -607,15 +574,11 @@ contains
     character(len=*),         intent(in) :: name
     type(base_functional_t), pointer     :: that
 
-    type(json_object_t), pointer :: config
-    integer                      :: ierr
-
     PUSH_SUB(base_functional_gets_name)
 
     nullify(that)
     ASSERT(associated(this%config))
-    call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
-    if(ierr==CONFIG_DICT_OK) call base_functional_gets(this, config, that)
+    call base_functional_dict_get(this%dict, trim(adjustl(name)), that)
 
     POP_SUB(base_functional_gets_name)
   end subroutine base_functional_gets_name
@@ -779,27 +742,27 @@ contains
     type(base_functional_t), intent(inout) :: this
     type(base_functional_t), intent(in)    :: that
 
-    type(base_functional_iterator_t) :: iter
-    type(base_functional_t), pointer :: osub, isub
-    type(json_object_t),    pointer :: cnfg
-    integer                         :: ierr
+    type(base_functional_iterator_t)        :: iter
+    character(len=BASE_FUNCTIONAL_NAME_LEN) :: name
+    type(base_functional_t),        pointer :: osub, isub
+    integer                                 :: ierr
 
     PUSH_SUB(base_functional_copy_type)
 
-    nullify(cnfg, osub, isub)
+    nullify(osub, isub)
     call base_functional_end(this)
     call base_functional__copy__(this, that)
     call base_functional_init(iter, that)
     do
-      nullify(cnfg, osub, isub)
-      call base_functional_next(iter, cnfg, isub, ierr)
+      nullify(osub, isub)
+      call base_functional_next(iter, name, isub, ierr)
       if(ierr/=BASE_FUNCTIONAL_OK)exit
       call base_functional_new(this, osub)
       call base_functional_copy(osub, isub)
-      call base_functional_sets(this, osub, cnfg)
+      call base_functional_sets(this, name, osub)
     end do
     call base_functional_end(iter)
-    nullify(cnfg, osub, isub)
+    nullify(osub, isub)
 
     POP_SUB(base_functional_copy_type)
   end subroutine base_functional_copy_type
@@ -816,8 +779,7 @@ contains
     this%energy = 0.0_wp
     call functional_end(this%funct)
     call storage_end(this%data)
-    call config_dict_end(this%dict)
-    call base_functional_hash_end(this%hash)
+    call base_functional_dict_end(this%dict)
     call base_functional_list_end(this%raii%list)
 
     POP_SUB(base_functional__end__)
@@ -851,11 +813,6 @@ contains
 #undef TEMPLATE_PREFIX
 
 end module base_functional_oct_m
-
-#undef HASH_TEMPLATE_NAME
-#undef HASH_KEY_TEMPLATE_NAME
-#undef HASH_KEY_TYPE_NAME
-#undef HASH_VAL_TEMPLATE_NAME
 
 !! Local Variables:
 !! mode: f90

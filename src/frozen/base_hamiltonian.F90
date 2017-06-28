@@ -4,19 +4,6 @@
 #undef LIST_TYPE_NAME
 #undef LIST_TYPE_MODULE_NAME
 
-#undef HASH_TEMPLATE_NAME
-#undef HASH_KEY_TEMPLATE_NAME
-#undef HASH_KEY_TYPE_NAME
-#undef HASH_KEY_TYPE_MODULE_NAME
-#undef HASH_KEY_FUNCTION_NAME
-#undef HASH_KEY_FUNCTION_MODULE_NAME
-#undef HASH_VAL_TEMPLATE_NAME
-#undef HASH_VAL_TYPE_NAME
-#undef HASH_VAL_TYPE_MODULE_NAME
-#undef HASH_INCLUDE_PREFIX
-#undef HASH_INCLUDE_HEADER
-#undef HASH_INCLUDE_BODY
-
 #undef DICT_TEMPLATE_NAME
 #undef DICT_TYPE_NAME
 #undef DICT_TYPE_MODULE_NAME
@@ -30,7 +17,6 @@ module base_hamiltonian_oct_m
   use base_potential_oct_m
   use base_system_oct_m
   use base_term_oct_m
-  use config_dict_oct_m
   use global_oct_m
   use json_oct_m
   use kinds_oct_m
@@ -45,17 +31,11 @@ module base_hamiltonian_oct_m
 #undef LIST_INCLUDE_PREFIX
 #undef LIST_TEMPLATE_NAME
 
-#define HASH_TEMPLATE_NAME base_hamiltonian
-#define HASH_KEY_TEMPLATE_NAME json
-#define HASH_KEY_TYPE_NAME json_object_t
-#define HASH_VAL_TEMPLATE_NAME base_hamiltonian
-#define HASH_INCLUDE_PREFIX
-#include "thash_inc.F90"
-#undef HASH_INCLUDE_PREFIX
-#undef HASH_TEMPLATE_NAME
-#undef HASH_KEY_TEMPLATE_NAME
-#undef HASH_KEY_TYPE_NAME
-#undef HASH_VAL_TEMPLATE_NAME
+#define DICT_TEMPLATE_NAME base_hamiltonian
+#define DICT_INCLUDE_PREFIX
+#include "tdict_inc.F90"
+#undef DICT_INCLUDE_PREFIX
+#undef DICT_TEMPLATE_NAME
 
 #define DICT_TEMPLATE_NAME hterm
 #define DICT_INCLUDE_PREFIX
@@ -121,17 +101,11 @@ module base_hamiltonian_oct_m
 #undef LIST_INCLUDE_HEADER
 #undef LIST_TEMPLATE_NAME
 
-#define HASH_TEMPLATE_NAME base_hamiltonian
-#define HASH_KEY_TEMPLATE_NAME json
-#define HASH_KEY_TYPE_NAME json_object_t
-#define HASH_VAL_TEMPLATE_NAME base_hamiltonian
-#define HASH_INCLUDE_HEADER
-#include "thash_inc.F90"
-#undef HASH_INCLUDE_HEADER
-#undef HASH_TEMPLATE_NAME
-#undef HASH_KEY_TEMPLATE_NAME
-#undef HASH_KEY_TYPE_NAME
-#undef HASH_VAL_TEMPLATE_NAME
+#define DICT_TEMPLATE_NAME base_hamiltonian
+#define DICT_INCLUDE_HEADER
+#include "tdict_inc.F90"
+#undef DICT_INCLUDE_HEADER
+#undef DICT_TEMPLATE_NAME
 
 #define DICT_TEMPLATE_NAME hterm
 #define DICT_INCLUDE_HEADER
@@ -145,9 +119,9 @@ module base_hamiltonian_oct_m
   integer, parameter :: HMLT_TYPE_FNCT = 3
   integer, parameter :: HMLT_TYPE_HMLT = 4
 
-  integer, parameter :: BASE_HAMILTONIAN_OK          = BASE_HAMILTONIAN_HASH_OK
-  integer, parameter :: BASE_HAMILTONIAN_KEY_ERROR   = BASE_HAMILTONIAN_HASH_KEY_ERROR
-  integer, parameter :: BASE_HAMILTONIAN_EMPTY_ERROR = BASE_HAMILTONIAN_HASH_EMPTY_ERROR
+  integer, parameter :: BASE_HAMILTONIAN_OK          = BASE_HAMILTONIAN_DICT_OK
+  integer, parameter :: BASE_HAMILTONIAN_KEY_ERROR   = BASE_HAMILTONIAN_DICT_KEY_ERROR
+  integer, parameter :: BASE_HAMILTONIAN_EMPTY_ERROR = BASE_HAMILTONIAN_DICT_EMPTY_ERROR
 
   type :: base_hamiltonian_raii_t
     private
@@ -173,8 +147,7 @@ module base_hamiltonian_oct_m
     real(kind=wp)                     :: energy = 0.0_wp
     type(storage_t)                   :: data
     type(hterm_dict_t)                :: hdct
-    type(config_dict_t)               :: dict
-    type(base_hamiltonian_hash_t)     :: hash
+    type(base_hamiltonian_dict_t)     :: dict
     type(base_hamiltonian_raii_t)     :: raii
   end type base_hamiltonian_t
 
@@ -226,7 +199,6 @@ module base_hamiltonian_oct_m
   end interface base_hamiltonian_set
 
   interface base_hamiltonian_gets
-    module procedure base_hamiltonian_gets_config
     module procedure base_hamiltonian_gets_name
   end interface base_hamiltonian_gets
 
@@ -266,17 +238,11 @@ contains
 #undef LIST_INCLUDE_BODY
 #undef LIST_TEMPLATE_NAME
 
-#define HASH_TEMPLATE_NAME base_hamiltonian
-#define HASH_KEY_TEMPLATE_NAME json
-#define HASH_KEY_TYPE_NAME json_object_t
-#define HASH_VAL_TEMPLATE_NAME base_hamiltonian
-#define HASH_INCLUDE_BODY
-#include "thash_inc.F90"
-#undef HASH_INCLUDE_BODY
-#undef HASH_TEMPLATE_NAME
-#undef HASH_KEY_TEMPLATE_NAME
-#undef HASH_KEY_TYPE_NAME
-#undef HASH_VAL_TEMPLATE_NAME
+#define DICT_TEMPLATE_NAME base_hamiltonian
+#define DICT_INCLUDE_BODY
+#include "tdict_inc.F90"
+#undef DICT_INCLUDE_BODY
+#undef DICT_TEMPLATE_NAME
 
 #define DICT_TEMPLATE_NAME hterm
 #define DICT_INCLUDE_BODY
@@ -640,10 +606,10 @@ contains
   end subroutine hterm__sub__
 
   ! ---------------------------------------------------------
-  recursive subroutine hterm__sets__(this, that, config)
-    type(hterm_t),       intent(inout) :: this
-    type(hterm_t),       intent(in)    :: that
-    type(json_object_t), intent(in)    :: config
+  recursive subroutine hterm__sets__(this, name, that)
+    type(hterm_t),    intent(inout) :: this
+    character(len=*), intent(in)    :: name
+    type(hterm_t),    intent(in)    :: that
 
     PUSH_SUB(hterm__sets__)
 
@@ -651,13 +617,13 @@ contains
     select case(this%type)
     case(HMLT_TYPE_NONE)
     case(HMLT_TYPE_TERM)
-      call base_term_sets(this%term, that%term, config)
+      call base_term_sets(this%term, name, that%term)
     case(HMLT_TYPE_POTN)
-      call base_potential_sets(this%potn, that%potn, config)
+      call base_potential_sets(this%potn, name, that%potn)
     case(HMLT_TYPE_FNCT)
-      call base_functional_sets(this%fnct, that%fnct, config)
+      call base_functional_sets(this%fnct, name, that%fnct)
     case(HMLT_TYPE_HMLT)
-      call base_hamiltonian_sets(this%hmlt, that%hmlt, config)
+      call base_hamiltonian_sets(this%hmlt, name, that%hmlt)
     case default
       message(1)="Unknown Hamiltonian term type."
       call messages_fatal(1)
@@ -1018,8 +984,7 @@ contains
     call storage_init(this%data, cnfg)
     nullify(cnfg)
     call hterm_dict_init(this%hdct)
-    call config_dict_init(this%dict)
-    call base_hamiltonian_hash_init(this%hash)
+    call base_hamiltonian_dict_init(this%dict)
     call base_hamiltonian__raii_init__(this%raii)
 
     POP_SUB(base_hamiltonian__iinit__)
@@ -1031,12 +996,12 @@ contains
     type(base_system_t),      intent(in)  :: sys
     type(json_object_t),      intent(in)  :: config
 
-    type(json_object_iterator_t)        :: iter
-    type(json_object_t),        pointer :: cnfg
-    type(base_system_t),        pointer :: psys
-    type(hterm_t),              pointer :: htrm
-    character(len=CONFIG_DICT_NAME_LEN) :: attr, sysn
-    integer                             :: type, ierr
+    type(json_object_iterator_t)                  :: iter
+    type(json_object_t),                  pointer :: cnfg
+    type(base_system_t),                  pointer :: psys
+    type(hterm_t),                        pointer :: htrm
+    character(len=BASE_HAMILTONIAN_DICT_NAME_LEN) :: attr, sysn
+    integer                                       :: type, ierr
 
     PUSH_SUB(base_hamiltonian__init__type)
 
@@ -1068,10 +1033,10 @@ contains
     type(base_hamiltonian_t), intent(out) :: this
     type(base_hamiltonian_t), intent(in)  :: that
 
-    type(hterm_dict_iterator_t)         :: iter
-    type(hterm_t),              pointer :: isub, osub
-    character(len=CONFIG_DICT_NAME_LEN) :: name
-    integer                             :: ierr
+    type(hterm_dict_iterator_t)                   :: iter
+    character(len=BASE_HAMILTONIAN_DICT_NAME_LEN) :: name
+    type(hterm_t),                        pointer :: isub, osub
+    integer                                       :: ierr
 
     PUSH_SUB(base_hamiltonian__init__copy)
 
@@ -1112,26 +1077,26 @@ contains
     type(base_hamiltonian_t), intent(out) :: this
     type(base_hamiltonian_t), intent(in)  :: that
 
-    type(base_hamiltonian_iterator_t) :: iter
-    type(base_hamiltonian_t), pointer :: osub, isub
-    type(json_object_t),      pointer :: cnfg
-    integer                           :: ierr
+    type(base_hamiltonian_iterator_t)             :: iter
+    character(len=BASE_HAMILTONIAN_DICT_NAME_LEN) :: name
+    type(base_hamiltonian_t),             pointer :: osub, isub
+    integer                                       :: ierr
 
     PUSH_SUB(base_hamiltonian_init_copy)
 
-    nullify(cnfg, osub, isub)
+    nullify(osub, isub)
     call base_hamiltonian__init__(this, that)
     call base_hamiltonian_init(iter, that)
     do
-      nullify(cnfg, osub, isub)
-      call base_hamiltonian_next(iter, cnfg, isub, ierr)
+      nullify(osub, isub)
+      call base_hamiltonian_next(iter, name, isub, ierr)
       if(ierr/=BASE_HAMILTONIAN_OK)exit
       call base_hamiltonian_new(this, osub)
       call base_hamiltonian_init(osub, isub)
-      call base_hamiltonian_sets(this, osub, cnfg)
+      call base_hamiltonian_sets(this, name, osub)
     end do
     call base_hamiltonian_end(iter)
-    nullify(cnfg, osub, isub)
+    nullify(osub, isub)
 
     POP_SUB(base_hamiltonian_init_copy)
   end subroutine base_hamiltonian_init_copy
@@ -1384,10 +1349,10 @@ contains
     type(base_hamiltonian_t), intent(inout) :: this
     type(base_hamiltonian_t), intent(in)    :: that
 
-    type(hterm_dict_iterator_t)         :: iter
-    type(hterm_t),              pointer :: mhtr, shtr
-    character(len=CONFIG_DICT_NAME_LEN) :: name
-    integer                             :: ierr
+    type(hterm_dict_iterator_t)                   :: iter
+    type(hterm_t),                        pointer :: mhtr, shtr
+    character(len=BASE_HAMILTONIAN_DICT_NAME_LEN) :: name
+    integer                                       :: ierr
 
     PUSH_SUB(base_hamiltonian__acc__hmlt)
 
@@ -1474,10 +1439,10 @@ contains
     type(base_hamiltonian_t), intent(inout) :: this
     type(base_hamiltonian_t), intent(in)    :: that
 
-    type(hterm_dict_iterator_t)         :: iter
-    type(hterm_t),              pointer :: mhtr, shtr
-    character(len=CONFIG_DICT_NAME_LEN) :: name
-    integer                             :: ierr
+    type(hterm_dict_iterator_t)                   :: iter
+    type(hterm_t),                        pointer :: mhtr, shtr
+    character(len=BASE_HAMILTONIAN_DICT_NAME_LEN) :: name
+    integer                                       :: ierr
 
     PUSH_SUB(base_hamiltonian__sub__hmlt)
 
@@ -1501,26 +1466,26 @@ contains
   end subroutine base_hamiltonian__sub__hmlt
 
   ! ---------------------------------------------------------
-  recursive subroutine base_hamiltonian__sets__(this, that, config)
+  recursive subroutine base_hamiltonian__sets__(this, name, that)
     type(base_hamiltonian_t), intent(inout) :: this
-    type(json_object_t),      intent(in)    :: config
+    character(len=*),         intent(in)    :: name
     type(base_hamiltonian_t), intent(in)    :: that
 
-    type(hterm_dict_iterator_t)         :: iter
-    character(len=CONFIG_DICT_NAME_LEN) :: name
-    type(hterm_t),              pointer :: mhtr, shtr
-    integer                             :: ierr
+    type(hterm_dict_iterator_t)                   :: iter
+    character(len=BASE_HAMILTONIAN_DICT_NAME_LEN) :: tnam
+    type(hterm_t),                        pointer :: mhtr, shtr
+    integer                                       :: ierr
 
     PUSH_SUB(base_hamiltonian__sets__)
 
     call hterm_dict_init(iter, that%hdct)
     do
       nullify(mhtr, shtr)
-      call hterm_dict_next(iter, name, shtr, ierr)
+      call hterm_dict_next(iter, tnam, shtr, ierr)
       if(ierr/=HTERM_DICT_OK)exit
-      call hterm_dict_get(this%hdct, name, mhtr, ierr)
+      call hterm_dict_get(this%hdct, tnam, mhtr, ierr)
       if(ierr/=HTERM_DICT_OK)cycle
-      call hterm__sets__(mhtr, shtr, config)
+      call hterm__sets__(mhtr, name, shtr)
     end do
     call hterm_dict_end(iter)
     nullify(mhtr, shtr)
@@ -1529,43 +1494,19 @@ contains
   end subroutine base_hamiltonian__sets__
 
   ! ---------------------------------------------------------
-  recursive subroutine base_hamiltonian_sets(this, that, config)
+  recursive subroutine base_hamiltonian_sets(this, name, that)
     type(base_hamiltonian_t), intent(inout) :: this
-    type(json_object_t),      intent(in)    :: config
+    character(len=*),         intent(in)    :: name
     type(base_hamiltonian_t), intent(in)    :: that
-
-    character(len=CONFIG_DICT_NAME_LEN) :: name
-    integer                             :: ierr
 
     PUSH_SUB(base_hamiltonian_sets)
 
     ASSERT(associated(this%config))
-    call json_get(config, "name", name, ierr)
-    ASSERT(ierr==JSON_OK)
-    call config_dict_set(this%dict, trim(adjustl(name)), config)
-    call base_hamiltonian_hash_set(this%hash, config, that)
-    call base_hamiltonian__sets__(this, that, config)
+    call base_hamiltonian_dict_set(this%dict, trim(adjustl(name)), that)
+    call base_hamiltonian__sets__(this, name, that)
 
     POP_SUB(base_hamiltonian_sets)
   end subroutine base_hamiltonian_sets
-
-  ! ---------------------------------------------------------
-  subroutine base_hamiltonian_gets_config(this, config, that)
-    type(base_hamiltonian_t),  intent(in) :: this
-    type(json_object_t),       intent(in) :: config
-    type(base_hamiltonian_t), pointer     :: that
-
-    integer :: ierr
-
-    PUSH_SUB(base_hamiltonian_gets_config)
-
-    nullify(that)
-    ASSERT(associated(this%config))
-    call base_hamiltonian_hash_get(this%hash, config, that, ierr)
-    if(ierr/=BASE_HAMILTONIAN_OK) nullify(that)
-
-    POP_SUB(base_hamiltonian_gets_config)
-  end subroutine base_hamiltonian_gets_config
 
   ! ---------------------------------------------------------
   subroutine base_hamiltonian_gets_name(this, name, that)
@@ -1573,15 +1514,11 @@ contains
     character(len=*),          intent(in) :: name
     type(base_hamiltonian_t), pointer     :: that
 
-    type(json_object_t), pointer :: config
-    integer                      :: ierr
-
     PUSH_SUB(base_hamiltonian_gets_name)
 
-    nullify(config, that)
+    nullify(that)
     ASSERT(associated(this%config))
-    call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
-    if(ierr==CONFIG_DICT_OK) call base_hamiltonian_gets(this, config, that)
+    call base_hamiltonian_dict_get(this%dict, trim(adjustl(name)), that)
 
     POP_SUB(base_hamiltonian_gets_name)
   end subroutine base_hamiltonian_gets_name
@@ -1782,10 +1719,10 @@ contains
     type(base_hamiltonian_t), intent(inout) :: this
     type(base_hamiltonian_t), intent(in)    :: that
 
-    type(hterm_dict_iterator_t)         :: iter
-    type(hterm_t),              pointer :: isub, osub
-    character(len=CONFIG_DICT_NAME_LEN) :: name
-    integer                             :: ierr
+    type(hterm_dict_iterator_t)                   :: iter
+    type(hterm_t),                        pointer :: isub, osub
+    character(len=BASE_HAMILTONIAN_DICT_NAME_LEN) :: name
+    integer                                       :: ierr
 
     PUSH_SUB(base_hamiltonian__copy__)
 
@@ -1815,27 +1752,27 @@ contains
     type(base_hamiltonian_t), intent(inout) :: this
     type(base_hamiltonian_t), intent(in)    :: that
 
-    type(base_hamiltonian_iterator_t) :: iter
-    type(base_hamiltonian_t), pointer :: osub, isub
-    type(json_object_t),      pointer :: cnfg
-    integer                           :: ierr
+    type(base_hamiltonian_iterator_t)        :: iter
+    character(len=BASE_HAMILTONIAN_NAME_LEN) :: name
+    type(base_hamiltonian_t),        pointer :: osub, isub
+    integer                                  :: ierr
 
     PUSH_SUB(base_hamiltonian_copy_type)
 
-    nullify(cnfg, osub, isub)
+    nullify(osub, isub)
     call base_hamiltonian_end(this)
     call base_hamiltonian__copy__(this, that)
     call base_hamiltonian_init(iter, that)
     do
-      nullify(cnfg, osub, isub)
-      call base_hamiltonian_next(iter, cnfg, isub, ierr)
+      nullify(osub, isub)
+      call base_hamiltonian_next(iter, name, isub, ierr)
       if(ierr/=BASE_HAMILTONIAN_OK)exit
       call base_hamiltonian_new(this, osub)
       call base_hamiltonian_copy(osub, isub)
-      call base_hamiltonian_sets(this, osub, cnfg)
+      call base_hamiltonian_sets(this, name, osub)
     end do
     call base_hamiltonian_end(iter)
-    nullify(cnfg, osub, isub)
+    nullify(osub, isub)
 
     POP_SUB(base_hamiltonian_copy_type)
   end subroutine base_hamiltonian_copy_type
@@ -1862,8 +1799,7 @@ contains
     this%energy = 0.0_wp
     call storage_end(this%data)
     call hterm_dict_end(this%hdct)
-    call config_dict_end(this%dict)
-    call base_hamiltonian_hash_end(this%hash)
+    call base_hamiltonian_dict_end(this%dict)
     call base_hamiltonian__raii_end__(this%raii)
 
     POP_SUB(base_hamiltonian__end__)
@@ -1897,13 +1833,6 @@ contains
 #undef TEMPLATE_PREFIX
 
 end module base_hamiltonian_oct_m
-
-#undef HASH_TEMPLATE_NAME
-#undef HASH_KEY_TEMPLATE_NAME
-#undef HASH_KEY_TYPE_NAME
-#undef HASH_VAL_TEMPLATE_NAME
-
-#undef DICT_TEMPLATE_NAME
 
 !! Local Variables:
 !! mode: f90

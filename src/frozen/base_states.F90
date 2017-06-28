@@ -4,28 +4,16 @@
 #undef LIST_TYPE_NAME
 #undef LIST_TYPE_MODULE_NAME
 
-#undef HASH_TEMPLATE_NAME
-#undef HASH_KEY_TEMPLATE_NAME
-#undef HASH_KEY_TYPE_NAME
-#undef HASH_KEY_TYPE_MODULE_NAME
-#undef HASH_KEY_FUNCTION_NAME
-#undef HASH_KEY_FUNCTION_MODULE_NAME
-#undef HASH_VAL_TEMPLATE_NAME
-#undef HASH_VAL_TYPE_NAME
-#undef HASH_VAL_TYPE_MODULE_NAME
-#undef HASH_INCLUDE_PREFIX
-#undef HASH_INCLUDE_HEADER
-#undef HASH_INCLUDE_BODY
-
-#define HASH_TEMPLATE_NAME base_states
-#define HASH_KEY_TEMPLATE_NAME json
-#define HASH_KEY_TYPE_NAME json_object_t
-#define HASH_VAL_TEMPLATE_NAME base_states
+#undef DICT_TEMPLATE_NAME
+#undef DICT_TYPE_NAME
+#undef DICT_TYPE_MODULE_NAME
+#undef DICT_INCLUDE_PREFIX
+#undef DICT_INCLUDE_HEADER
+#undef DICT_INCLUDE_BODY
 
 module base_states_oct_m
 
   use base_density_oct_m
-  use config_dict_oct_m
   use global_oct_m
   use json_oct_m
   use kinds_oct_m
@@ -39,9 +27,11 @@ module base_states_oct_m
 #undef LIST_INCLUDE_PREFIX
 #undef LIST_TEMPLATE_NAME
 
-#define HASH_INCLUDE_PREFIX
-#include "thash_inc.F90"
-#undef HASH_INCLUDE_PREFIX
+#define DICT_TEMPLATE_NAME base_states
+#define DICT_INCLUDE_PREFIX
+#include "tdict_inc.F90"
+#undef DICT_INCLUDE_PREFIX
+#undef DICT_TEMPLATE_NAME
 
 #define TEMPLATE_PREFIX base_states
 #define INCLUDE_PREFIX
@@ -91,9 +81,11 @@ module base_states_oct_m
 #undef LIST_INCLUDE_HEADER
 #undef LIST_TEMPLATE_NAME
 
-#define HASH_INCLUDE_HEADER
-#include "thash_inc.F90"
-#undef HASH_INCLUDE_HEADER
+#define DICT_TEMPLATE_NAME base_states
+#define DICT_INCLUDE_HEADER
+#include "tdict_inc.F90"
+#undef DICT_INCLUDE_HEADER
+#undef DICT_TEMPLATE_NAME
 
   integer, parameter :: BASE_STATES_OK          = BASE_STATES_HASH_OK
   integer, parameter :: BASE_STATES_KEY_ERROR   = BASE_STATES_HASH_KEY_ERROR
@@ -106,8 +98,7 @@ module base_states_oct_m
     type(base_states_t), pointer :: prnt   =>null()
     real(kind=wp)                :: charge = 0.0_wp
     type(base_density_t)         :: density
-    type(config_dict_t)          :: dict
-    type(base_states_hash_t)     :: hash
+    type(base_states_dict_t)     :: dict
     type(base_states_list_t)     :: list
   end type base_states_t
 
@@ -126,7 +117,6 @@ module base_states_oct_m
   end interface base_states_set
 
   interface base_states_gets
-    module procedure base_states_gets_config
     module procedure base_states_gets_type
     module procedure base_states_gets_density
     module procedure base_states_gets_density_1d
@@ -164,9 +154,11 @@ contains
 #undef LIST_INCLUDE_BODY
 #undef LIST_TEMPLATE_NAME
 
-#define HASH_INCLUDE_BODY
-#include "thash_inc.F90"
-#undef HASH_INCLUDE_BODY
+#define DICT_TEMPLATE_NAME base_states
+#define DICT_INCLUDE_BODY
+#include "tdict_inc.F90"
+#undef DICT_INCLUDE_BODY
+#undef DICT_TEMPLATE_NAME
 
   ! ---------------------------------------------------------
   subroutine base_states__new__(this)
@@ -245,8 +237,7 @@ contains
     ASSERT(ierr==JSON_OK)
     call base_density__init__(this%density, cnfg)
     nullify(cnfg)
-    call config_dict_init(this%dict)
-    call base_states_hash_init(this%hash)
+    call base_states_dict_init(this%dict)
     call base_states_list_init(this%list)
 
     POP_SUB(base_states__init__type)
@@ -283,26 +274,26 @@ contains
     type(base_states_t), intent(out) :: this
     type(base_states_t), intent(in)  :: that
 
-    type(base_states_iterator_t) :: iter
-    type(base_states_t), pointer :: osub, isub
-    type(json_object_t), pointer :: cnfg
-    integer                      :: ierr
+    type(base_states_iterator_t)        :: iter
+    character(len=BASE_STATES_NAME_LEN) :: name
+    type(base_states_t),        pointer :: osub, isub
+    integer                             :: ierr
 
     PUSH_SUB(base_states_init_copy)
 
-    nullify(cnfg, osub, isub)
+    nullify(osub, isub)
     call base_states__init__(this, that)
     call base_states_init(iter, that)
     do
-      nullify(cnfg, osub, isub)
-      call base_states_next(iter, cnfg, isub, ierr)
+      nullify(osub, isub)
+      call base_states_next(iter, name, isub, ierr)
       if(ierr/=BASE_STATES_OK)exit
       call base_states_new(this, osub)
       call base_states_init(osub, isub)
-      call base_states_sets(this, osub, cnfg)
+      call base_states_sets(this, name, osub)
     end do
     call base_states_end(iter)
-    nullify(cnfg, osub, isub)
+    nullify(osub, isub)
 
     POP_SUB(base_states_init_copy)
   end subroutine base_states_init_copy
@@ -455,72 +446,44 @@ contains
   end subroutine base_states__acc__
 
   ! ---------------------------------------------------------
-  subroutine base_states__sets__(this, that, config)
+  subroutine base_states__sets__(this, name, that)
     type(base_states_t), intent(inout) :: this
+    character(len=*),    intent(in)    :: name
     type(base_states_t), intent(in)    :: that
-    type(json_object_t), intent(in)    :: config
 
     PUSH_SUB(base_states__sets__)
 
-    call base_density_sets(this%density, that%density, config)
+    call base_density_sets(this%density, name, that%density)
 
     POP_SUB(base_states__sets__)
   end subroutine base_states__sets__
     
   ! ---------------------------------------------------------
-  subroutine base_states_sets(this, that, config)
+  subroutine base_states_sets(this, name, that)
     type(base_states_t), intent(inout) :: this
+    character(len=*),    intent(in)    :: name
     type(base_states_t), intent(in)    :: that
-    type(json_object_t), intent(in)    :: config
-
-    character(len=CONFIG_DICT_NAME_LEN) :: name
-    integer                             :: ierr
 
     PUSH_SUB(base_states_sets)
 
     ASSERT(associated(this%config))
-    call json_get(config, "name", name, ierr)
-    ASSERT(ierr==JSON_OK)
-    call config_dict_set(this%dict, trim(adjustl(name)), config)
-    call base_states_hash_set(this%hash, config, that)
-    call base_states__sets__(this, that, config)
+    call base_states_dict_set(this%dict, trim(adjustl(name)), that)
+    call base_states__sets__(this, name, that)
 
     POP_SUB(base_states_sets)
   end subroutine base_states_sets
     
-  ! ---------------------------------------------------------
-  subroutine base_states_gets_config(this, config, that)
-    type(base_states_t),  intent(in) :: this
-    type(json_object_t),  intent(in) :: config
-    type(base_states_t), pointer     :: that
-
-    integer :: ierr
-
-    PUSH_SUB(base_states_gets_config)
-
-    nullify(that)
-    ASSERT(associated(this%config))
-    call base_states_hash_get(this%hash, config, that, ierr)
-    if(ierr/=BASE_STATES_OK) nullify(that)
-
-    POP_SUB(base_states_gets_config)
-  end subroutine base_states_gets_config
-
   ! ---------------------------------------------------------
   subroutine base_states_gets_type(this, name, that)
     type(base_states_t),  intent(in) :: this
     character(len=*),     intent(in) :: name
     type(base_states_t), pointer     :: that
 
-    type(json_object_t), pointer :: config
-    integer                      :: ierr
-
     PUSH_SUB(base_states_gets_type)
 
     nullify(that)
     ASSERT(associated(this%config))
-    call config_dict_get(this%dict, trim(adjustl(name)), config, ierr)
-    if(ierr==CONFIG_DICT_OK) call base_states_gets(this, config, that)
+    call base_states_dict_get(this%dict, trim(adjustl(name)), that)
 
     POP_SUB(base_states_gets_type)
   end subroutine base_states_gets_type
@@ -692,27 +655,27 @@ contains
     type(base_states_t), intent(inout) :: this
     type(base_states_t), intent(in)    :: that
 
-    type(base_states_iterator_t) :: iter
-    type(base_states_t), pointer :: osub, isub
-    type(json_object_t), pointer :: cnfg
-    integer                      :: ierr
+    type(base_states_iterator_t)        :: iter
+    character(len=BASE_STATES_NAME_LEN) :: name
+    type(base_states_t),        pointer :: osub, isub
+    integer                             :: ierr
 
     PUSH_SUB(base_states_copy_type)
 
-    nullify(cnfg, osub, isub)
+    nullify(osub, isub)
     call base_states_end(this)
     call base_states__copy__(this, that)
     call base_states_init(iter, that)
     do
-      nullify(cnfg, osub, isub)
-      call base_states_next(iter, cnfg, isub, ierr)
+      nullify(osub, isub)
+      call base_states_next(iter, name, isub, ierr)
       if(ierr/=BASE_STATES_OK)exit
       call base_states_new(this, osub)
       call base_states_copy(osub, isub)
-      call base_states_sets(this, osub, cnfg)
+      call base_states_sets(this, name, osub)
     end do
     call base_states_end(iter)
-    nullify(cnfg, osub, isub)
+    nullify(osub, isub)
 
     POP_SUB(base_states_copy_type)
   end subroutine base_states_copy_type
@@ -726,8 +689,7 @@ contains
     nullify(this%config, this%sim, this%prnt)
     this%charge = 0.0_wp
     call base_density__end__(this%density)
-    call config_dict_end(this%dict)
-    call base_states_hash_end(this%hash)
+    call base_states_dict_end(this%dict)
     call base_states_list_end(this%list)
 
     POP_SUB(base_states__end__)
@@ -761,11 +723,6 @@ contains
 #undef TEMPLATE_PREFIX
 
 end module base_states_oct_m
-
-#undef HASH_TEMPLATE_NAME
-#undef HASH_KEY_TEMPLATE_NAME
-#undef HASH_KEY_TYPE_NAME
-#undef HASH_VAL_TEMPLATE_NAME
 
 !! Local Variables:
 !! mode: f90

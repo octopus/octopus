@@ -16,10 +16,29 @@ module frozen_model_oct_m
 
   private
 
-  public ::              &
+  public ::                &
+    frozen_model__build__, &
     frozen_model__acc__
 
 contains
+
+  ! ---------------------------------------------------------
+  subroutine frozen_model__build__(this, config)
+    type(base_model_t),  intent(inout) :: this
+    type(json_object_t), intent(in)    :: config
+
+    type(base_system_t), pointer :: sys
+
+    PUSH_SUB(frozen_model__build__)
+
+    nullify(sys)
+    call base_model_get(this, sys)
+    ASSERT(associated(sys))
+    call frozen_system__build__(sys, config)
+    nullify(sys)
+
+    POP_SUB(frozen_model__build__)
+  end subroutine frozen_model__build__
 
   ! ---------------------------------------------------------
   subroutine frozen_model__acc__(this, that, config)
