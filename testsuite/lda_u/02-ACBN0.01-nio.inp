@@ -1,11 +1,7 @@
 CalculationMode = gs
-
 PeriodicDimensions = 3
-
 BoxShape = parallelepiped
-
 ExperimentalFeatures = yes
-
 EigenSolver = rmmdiis
 
 a = 7.8809
@@ -64,5 +60,4 @@ ExtraStates = 2
 
 OrbitalsTruncationMethod = box
 OutputLDA_U = occupation_matrices + effectiveU
-DFTUNormalizeOrbitals = yes
 UseACBN0Functional = yes

@@ -26,6 +26,7 @@ SUBDIRS = \
 	functionals      \
 	real_time        \
 	linear_response  \
+        lda_u            \
 	optimal_control  \
 	periodic_systems \
         photo_electron   \

@@ -29,9 +29,8 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
 
   integer :: ibatch, ios, imp, im, ispin
   integer :: is, ios2
-  R_TYPE  :: reduced, reduced2
-  R_TYPE, allocatable :: psi(:,:), hpsi(:,:)
-  R_TYPE, allocatable :: dot(:,:,:), tmp(:)
+  R_TYPE  :: reduced2
+  R_TYPE, allocatable :: dot(:,:), reduced(:,:)
   type(orbital_set_t), pointer  :: os, os2
   type(profile_t), save :: prof
 
@@ -39,10 +38,10 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
 
   PUSH_SUB(lda_u_apply)
 
-  SAFE_ALLOCATE(psi(1:mesh%np, 1:d%dim))
-  SAFE_ALLOCATE(hpsi(1:mesh%np, 1:d%dim))
-  SAFE_ALLOCATE(tmp(1:this%max_np))
-  SAFE_ALLOCATE(dot(1:this%maxnorbs, 1:psib%nst, 1:this%norbsets))
+  SAFE_ALLOCATE(reduced(1:this%max_np,1:psib%nst))
+  SAFE_ALLOCATE(dot(1:this%maxnorbs, 1:psib%nst))
+
+  ispin = states_dim_get_spin_index(d, ik)
 
   ! We have to compute 
   ! hpsi> += sum_m |phi m> sum_mp Vmmp <phi mp | psi >
@@ -51,27 +50,25 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
   !
   do ios = 1, this%norbsets
     os => this%orbsets(ios)
-    call X(orbital_set_get_coeff_batch)(os, d, psib, ik, has_phase, dot(1:os%norbs,1:psib%nst,ios))
-  end do
+    call X(orbital_set_get_coeff_batch)(os, d, psib, ik, has_phase, dot(1:os%norbs,1:psib%nst))
 
-  ispin = states_dim_get_spin_index(d, ik)
-
-  do ibatch = 1, psib%nst
-    call batch_get_state(hpsib,ibatch, mesh%np, hpsi)
-
-    do ios = 1, this%norbsets 
+    !
+    reduced(:,:) = R_TOTYPE(M_ZERO) 
+    !
+    do ibatch = 1, psib%nst
       !
-      os => this%orbsets(ios)
-      ! 
-      reduced2 = R_TOTYPE(M_ZERO)
-      tmp(1:os%sphere%np) = R_TOTYPE(M_ZERO)
-      do im = 1, os%norbs
+      do im = 1,this%orbsets(ios)%norbs
         ! sum_mp Vmmp <phi mp | psi >
-        reduced = R_TOTYPE(M_ZERO)
-        do imp = 1, os%norbs
-          reduced = reduced + this%X(V)(im,imp,ispin,ios)*dot(imp,ibatch,ios)
+        do imp = 1, this%orbsets(ios)%norbs
+          reduced(im,ibatch) = reduced(im,ibatch) + this%X(V)(im,imp,ispin,ios)*dot(imp,ibatch)
         end do
-       
+      end do      
+    end do !ibatch
+ 
+    !We add the orbitals properly weighted to hpsi
+    call X(orbital_set_add_to_batch)(this%orbsets(ios), d, hpsib, ik, has_phase, reduced)
+  end do
+ 
  !       !We add a test to avoid out-of-bound problem for the LCAO 
  !       if(this%ACBN0_corrected .and. psib%states(ibatch)%ist <= this%st_end) then
  !         reduced = reduced + this%Vloc1(im,ispin,ios)*dot(im)
@@ -85,18 +82,6 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
  !         end do
  !       end if     
  
-        !In case of phase, we have to apply the conjugate of the phase here
-        if(has_phase) then
-#ifdef R_TCOMPLEX
-          call submesh_add_to_mesh(os%sphere, os%eorb(1:os%sphere%np,im,ik), & 
-                                    hpsi(1:mesh%np, 1), reduced)
-#endif
-        else
-          call submesh_add_to_mesh(os%sphere, os%X(orb)(1:os%sphere%np, im), &
-                                    hpsi(1:mesh%np, 1), reduced)
-        end if
-      end do !im
-
   !    if(this%ACBN0_corrected .and. psib%states(ibatch)%ist <= this%st_end) then
   !      !We need to loop over the orbitals sharing the same quantum numbers
   !      do ios2 = 1, this%norbsets
@@ -137,14 +122,8 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
   !      end do 
   !    end if
 
-    end do !ios
-    call batch_set_state(hpsib, ibatch, mesh%np, hpsi)
-  end do !ibatch
-
-  SAFE_DEALLOCATE_A(psi)
-  SAFE_DEALLOCATE_A(hpsi)
   SAFE_DEALLOCATE_A(dot)
-  SAFE_DEALLOCATE_A(tmp)
+  SAFE_DEALLOCATE_A(reduced)
 
   POP_SUB(lda_u_apply)
   call profiling_out(prof)
@@ -1178,7 +1157,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
     write(message(1),'(a,i2,a,f8.5,a)')    'Orbital set ', iorbset, ' has a value of U of ',&
                          this%orbsets(iorbset)%Ueff   , ' Ha.'
     write(message(2),'(a,i2,a)')    'It cotains ', this%orbsets(iorbset)%norbs, ' orbitals.'
-    write(message(3),'(a,f8.5,a,i5,a)') 'The radius is ', this%orbsets(iorbset)%sphere%radius, &
+    write(message(3),'(a,f8.5,a,i6,a)') 'The radius is ', this%orbsets(iorbset)%sphere%radius, &
                         ' Bohr,  with ', this%orbsets(iorbset)%sphere%np, ' grid points.'
      call messages_info(3)
   end do 

@@ -48,7 +48,9 @@ module orbital_set_oct_m
        dorbital_set_get_coefficients,   &
        zorbital_set_get_coefficients,   &
        dorbital_set_get_coeff_batch,    &
-       zorbital_set_get_coeff_batch
+       zorbital_set_get_coeff_batch,    &
+       dorbital_set_add_to_batch,       &
+       zorbital_set_add_to_batch
 
   type orbital_set_t
     integer             :: nn, ll

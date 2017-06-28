@@ -1,4 +1,6 @@
-CalculationMode = gs
+CalculationMode = go
+GOMethod = fire
+GOFireMass = 0.01
 ExperimentalFeatures = yes
 
 dist = 3.0
@@ -16,11 +18,12 @@ Radius = 7
 Spacing = 0.5
 
 FromScratch = yes
+GOCenter = yes
 
 FilterPotentials = filter_none
 
-ParDomains = no
 MixField = density
+ParDomains = no
 
 LDA_U = yes
 OrbitalsThreshold_LDAU = 0.1

@@ -62,8 +62,10 @@ module submesh_oct_m
     submesh_overlap,             &
     dsubmesh_to_submesh_dotp,    &
     zsubmesh_to_submesh_dotp,    &
-    dsubmesh_copy_from_mesh,          &
-    zsubmesh_copy_from_mesh,          &
+    dsubmesh_copy_from_mesh,     &
+    zsubmesh_copy_from_mesh,     &
+    dsubmesh_copy_from_mesh_batch,     &
+    zsubmesh_copy_from_mesh_batch,     &
     submesh_end
 
   type submesh_t

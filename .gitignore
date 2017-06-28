@@ -914,6 +914,10 @@
 /testsuite/functionals/Makefile
 /testsuite/functionals/Makefile.in
 
+# /testsuite/pseudopotentials/
+/testsuite/lda_u/Makefile
+/testsuite/lda_u/Makefile.in
+
 # /testsuite/linear_response/
 /testsuite/linear_response/*.log
 /testsuite/linear_response/config.status

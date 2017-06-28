@@ -44,7 +44,6 @@ FromScratch = yes
 ParStates = no
 ParDomains = no
 ParKPoints = auto
-CurrentDensity = gradient_corrected
 
 SpinComponents = polarized
 GuessMagnetDensity = user_defined

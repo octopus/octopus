@@ -136,17 +136,51 @@ subroutine X(submesh_copy_from_mesh)(this, phi, sphi, conjugate)
   PUSH_SUB(X(submesh_copy_from_mesh))
 
   if(.not. optional_default(conjugate, .false.) ) then
-    do ip = 1, this%np
+    forall(ip = 1:this%np)
       sphi(ip) = phi(this%map(ip))
-    end do
+    end forall
   else
-    do ip = 1, this%np
+    forall(ip = 1:this%np)
       sphi(ip) = R_CONJ(phi(this%map(ip)))
-    end do
+    end forall
   end if
 
   POP_SUB(X(submesh_copy_from_mesh))
 end subroutine X(submesh_copy_from_mesh)
+
+! ---------------------------------------------------------
+subroutine X(submesh_copy_from_mesh_batch)(this, psib, spsi)
+  type(submesh_t),  intent(in)    :: this
+  type(batch_t),    intent(in)    :: psib
+  R_TYPE,           intent(inout) :: spsi(:,:)
+
+  integer :: ip, ist, ii
+  type(profile_t), save :: prof
+
+  call profiling_in(prof, "SM_CP_MESH_BATCH")
+  PUSH_SUB(X(submesh_copy_from_mesh_batch))
+
+  ASSERT(batch_status(psib)/= BATCH_CL_PACKED)
+
+  select case(batch_status(psib))
+    case(BATCH_NOT_PACKED)
+      do ist = 1, psib%nst_linear
+        do ip = 1,this%np
+          spsi(ip,ist) = psib%states_linear(ist)%X(psi)(this%map(ip))
+        end do
+      end do
+    case(BATCH_PACKED)
+      do ip = 1, this%np
+        do ii = 1, psib%nst_linear
+          spsi(ii,ip) = psib%pack%X(psi)(ii,this%map(ip))
+        end do
+      end do
+  end select
+
+  POP_SUB(X(submesh_copy_from_mesh_batch))
+   call profiling_out(prof)
+end subroutine X(submesh_copy_from_mesh_batch)
+
  
 ! ---------------------------------------------------------
 !> this function returns the the norm of a vector

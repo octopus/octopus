@@ -41,6 +41,8 @@ KPointsUseSymmetries = no
 
 ExtraStates = 1
 
+StatesPack = yes
+
 LDA_U = yes
 UseACBN0Functional = yes
 UseAllAtomicOrbitals = yes
