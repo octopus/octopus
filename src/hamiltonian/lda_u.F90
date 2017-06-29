@@ -325,43 +325,9 @@ contains
 
   !We allocate the necessary ressources
   if (states_are_real(st)) then
-    SAFE_ALLOCATE(this%dn(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets))
-    this%dn(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets) = M_ZERO
-    SAFE_ALLOCATE(this%dV(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets))
-    this%dV(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets) = M_ZERO
-
-    !In case we use the ab-initio scheme, we need to allocate extra resources
-    if(this%useACBN0) then
-      SAFE_ALLOCATE(this%dn_alt(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets))
-      this%dn_alt(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets) = M_ZERO
-      SAFE_ALLOCATE(this%drenorm_occ(geo%nspecies,0:5,0:3,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end))
-      this%drenorm_occ(geo%nspecies,0:5,0:3,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end) = M_ZERO
-      if(this%ACBN0_corrected) then
-        SAFE_ALLOCATE(this%Vloc1(1:maxorbs,1:st%d%nspin,1:this%norbsets))
-        this%Vloc1(1:maxorbs,1:st%d%nspin,1:this%norbsets) = M_ZERO
-        SAFE_ALLOCATE(this%dVloc2(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets))
-        this%dVloc2(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets) = M_ZERO
-      end if
-    end if
+    call dlda_u_allocate(this, st)
   else
-    SAFE_ALLOCATE(this%zn(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets))
-    this%zn(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets) = cmplx(M_ZERO,M_ZERO)
-    SAFE_ALLOCATE(this%zV(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets))
-    this%zV(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets) = cmplx(M_ZERO,M_ZERO)
-
-    !In case we use the ab-initio scheme, we need to allocate extra resources
-    if(this%useACBN0) then
-      SAFE_ALLOCATE(this%zn_alt(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets))
-      this%zn_alt(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets) = cmplx(M_ZERO,M_ZERO)
-      SAFE_ALLOCATE(this%zrenorm_occ(geo%nspecies,0:5,0:3,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end))
-      this%zrenorm_occ(geo%nspecies,0:5,0:3,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end) = M_ZERO
-      if(this%ACBN0_corrected) then
-        SAFE_ALLOCATE(this%Vloc1(1:maxorbs,1:st%d%nspin,1:this%norbsets))
-        this%Vloc1(1:maxorbs,1:st%d%nspin,1:this%norbsets) = M_ZERO
-        SAFE_ALLOCATE(this%zVloc2(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets))
-        this%zVloc2(1:maxorbs,1:maxorbs,1:st%d%nspin,1:this%norbsets) = cmplx(M_ZERO,M_ZERO)
-      end if
-    end if
+    call zlda_u_allocate(this, st)
   end if
 
   call distributed_nullify(this%orbs_dist, this%norbsets)

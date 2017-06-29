@@ -178,14 +178,14 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
       call states_get_state(st, mesh, ist, ik, psi )
 
       if(present(phase)) then
+#ifdef R_TCOMPLEX
         ! Apply the phase that contains both the k-point and vector-potential terms.
-        do idim = 1, st%d%dim
-          !$omp parallel do
-          do ip = 1, mesh%np
-            psi(ip, idim) = phase(ip, ik)*psi(ip, idim)
-          end do
-          !$omp end parallel do
+        !$omp parallel do
+        do ip = 1, mesh%np
+          psi(ip, 1) = phase(ip, ik)*psi(ip, 1)
         end do
+        !$omp end parallel do
+#endif
       end if
 
       if(this%useACBN0) &
@@ -251,14 +251,14 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
 
   if(this%useACBN0 .and. .not.this%freeze_u) then
     if(this%nspins > 1 ) then
-      call X(compute_ACBNO_U)(this, st)
+      call X(compute_ACBNO_U)(this)
     else
-      call X(compute_ACBNO_U_restricted)(this, st)
+      call X(compute_ACBNO_U_restricted)(this)
     end if
   end if
 
 
-  call X(compute_dudarev_energy)(this, lda_u_energy, st)
+  call X(compute_dftu_energy)(this, lda_u_energy, st)
   call X(lda_u_update_potential)(this,st)
 
   POP_SUB(update_occ_matrices)
@@ -268,31 +268,31 @@ end subroutine X(update_occ_matrices)
 ! ---------------------------------------------------------
 !> This routine computes the value of the double counting term in the LDA+U energy
 ! ---------------------------------------------------------
-subroutine X(compute_dudarev_energy)(this, lda_u_energy, st)
+subroutine X(compute_dftu_energy)(this, energy, st)
   type(lda_u_t), intent(inout)    :: this
-  FLOAT, intent(inout)            :: lda_u_energy
+  FLOAT, intent(inout)            :: energy
   type(states_t), intent(in)      :: st 
 
   integer :: ios, imp, im, ispin
 
-  PUSH_SUB(compute_dudarev_energy)
+  PUSH_SUB(compute_dftu_energy)
 
-  lda_u_energy = M_ZERO
+  energy = M_ZERO
 
   do ios = 1, this%norbsets
     do ispin = 1, this%nspins
       !TODO: These are matrix operations, that could be optimized
       do im = 1, this%orbsets(ios)%norbs
         do imp = 1, this%orbsets(ios)%norbs
-          lda_u_energy = lda_u_energy - CNST(0.5)*this%orbsets(ios)%Ueff*abs(this%X(n)(im,imp,ispin,ios))**2/st%smear%el_per_state
+          energy = energy - CNST(0.5)*this%orbsets(ios)%Ueff*abs(this%X(n)(im,imp,ispin,ios))**2/st%smear%el_per_state
         end do
-        lda_u_energy = lda_u_energy + CNST(0.5)*this%orbsets(ios)%Ueff*this%X(n)(im,im,ispin,ios)
+        energy = energy + CNST(0.5)*this%orbsets(ios)%Ueff*real(this%X(n)(im,im,ispin,ios))
       end do
     end do
   end do
 
-  POP_SUB(compute_dudarev_energy)
-end subroutine X(compute_dudarev_energy)
+  POP_SUB(compute_dftu_energy)
+end subroutine X(compute_dftu_energy)
 
 
 ! ---------------------------------------------------------
@@ -470,9 +470,8 @@ end subroutine X(lda_u_ACBN0_correction)
 !> This routine computes the effective U following the expression 
 !> given in Agapito et al., Phys. Rev. X 5, 011006 (2015)
 ! ---------------------------------------------------------
-subroutine X(compute_ACBNO_U)(this, st)
+subroutine X(compute_ACBNO_U)(this)
   type(lda_u_t), intent(inout)    :: this
-  type(states_t),  intent(in)     :: st
   
   integer :: ios, im, imp, impp, imppp, ispin1, ispin2, norbs
   FLOAT   :: numU, numJ, denomU, denomJ, tmpU, tmpJ
@@ -497,11 +496,11 @@ subroutine X(compute_ACBNO_U)(this, st)
           ! sum_{alpha} P^alpha_{mmp}P^alpha_{mpp,mppp}
           tmpU = M_ZERO
           tmpJ = M_ZERO
-          do ispin1 = 1, st%d%nspin
-            do ispin2 = 1, st%d%nspin
-              tmpU = tmpU + this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin2,ios)
+          do ispin1 = 1, this%nspins
+            do ispin2 = 1, this%nspins
+              tmpU = tmpU + real(this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin2,ios))
             end do
-            tmpJ = tmpJ + this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin1,ios)
+            tmpJ = tmpJ + real(this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin1,ios))
           end do
           ! These are the numerator of the ACBN0 U and J
           numU = numU + tmpU*this%coulomb(im,imp,impp,imppp,ios)
@@ -513,8 +512,8 @@ subroutine X(compute_ACBNO_U)(this, st)
         ! sum_{alpha} sum_{m,mp/=m} N^alpha_{m}N^alpha_{mp}
         tmpJ = M_ZERO
         if(imp/=im) then
-          do ispin1 = 1, st%d%nspin
-            tmpJ = tmpJ + this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin1,ios)
+          do ispin1 = 1, this%nspins
+            tmpJ = tmpJ + real(this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin1,ios))
           end do
         end if
         denomJ = denomJ + tmpJ
@@ -523,10 +522,10 @@ subroutine X(compute_ACBNO_U)(this, st)
         ! We compute the term
         ! sum_{alpha,beta} sum_{m,mp} N^alpha_{m}N^beta_{mp}
         tmpU = M_ZERO
-        do ispin1 = 1, st%d%nspin
-          do ispin2 = 1, st%d%nspin
+        do ispin1 = 1, this%nspins
+          do ispin2 = 1, this%nspins
             if(ispin1 /= ispin2) then
-              tmpU = tmpU + this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin2,ios)
+              tmpU = tmpU + real(this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin2,ios))
             end if
           end do
         end do
@@ -543,11 +542,11 @@ subroutine X(compute_ACBNO_U)(this, st)
     ! sum_{alpha,beta} sum_{m,mp} N^alpha_{m}N^beta_{mp}
     numU = M_ZERO
     denomU = M_ZERO
-    do ispin1 = 1, st%d%nspin
-      do ispin2 = 1, st%d%nspin
+    do ispin1 = 1, this%nspins
+      do ispin2 = 1, this%nspins
         if(ispin1 /= ispin2) then
-          numU = numU + this%X(n_alt)(1,1,ispin1,ios)*this%X(n_alt)(1,1,ispin2,ios)
-          denomU = denomU + this%X(n)(1,1,ispin1,ios)*this%X(n)(1,1,ispin2,ios)
+          numU = numU + real(this%X(n_alt)(1,1,ispin1,ios)*this%X(n_alt)(1,1,ispin2,ios))
+          denomU = denomU + real(this%X(n)(1,1,ispin1,ios)*this%X(n)(1,1,ispin2,ios))
         end if
       end do
     end do
@@ -579,9 +578,8 @@ end subroutine X(compute_ACBNO_U)
 ! ---------------------------------------------------------
 !> This routine computes the effective Uin the spin-unpolarised case
 ! ---------------------------------------------------------
-subroutine X(compute_ACBNO_U_restricted)(this, st)
+subroutine X(compute_ACBNO_U_restricted)(this)
   type(lda_u_t), intent(inout)    :: this
-  type(states_t),  intent(in)     :: st
   
   integer :: ios, im, imp, impp, imppp, norbs
   FLOAT   :: numU, numJ, denomU, denomJ
@@ -601,21 +599,21 @@ subroutine X(compute_ACBNO_U_restricted)(this, st)
       do imp = 1,norbs
         do impp = 1, norbs
         do imppp = 1, norbs
-          numU = numU + this%X(n_alt)(im,imp,1,ios)*this%X(n_alt)(impp,imppp,1,ios) &
+          numU = numU + real(this%X(n_alt)(im,imp,1,ios)*this%X(n_alt)(impp,imppp,1,ios)) &
                              *this%coulomb(im,imp,impp,imppp,ios)
-          numJ = numJ + this%X(n_alt)(im,imp,1,ios)*this%X(n_alt)(impp,imppp,1,ios) &
+          numJ = numJ + real(this%X(n_alt)(im,imp,1,ios)*this%X(n_alt)(impp,imppp,1,ios)) &
                              *this%coulomb(im,imppp,impp,imp,ios)
         end do
         end do
         ! We compute the term
         ! sum_{m,mp/=m} N_{m}N_{mp}
         if(imp/=im) then
-          denomJ = denomJ + this%X(n)(im,im,1,ios)*this%X(n)(imp,imp,1,ios)
-          denomU = denomU + this%X(n)(im,im,1,ios)*this%X(n)(imp,imp,1,ios)
+          denomJ = denomJ + real(this%X(n)(im,im,1,ios)*this%X(n)(imp,imp,1,ios))
+          denomU = denomU + real(this%X(n)(im,im,1,ios)*this%X(n)(imp,imp,1,ios))
         end if
         ! We compute the term
         ! sum_{m,mp} N_{m}N_{mp}
-        denomU = denomU + this%X(n)(im,im,1,ios)*this%X(n)(imp,imp,1,ios)
+        denomU = denomU + real(this%X(n)(im,im,1,ios)*this%X(n)(imp,imp,1,ios))
       end do
       end do
       this%orbsets(ios)%Ueff = M_TWO*numU/denomU - numJ/denomJ
@@ -624,11 +622,11 @@ subroutine X(compute_ACBNO_U_restricted)(this, st)
  
     else !In the case of s orbitals, the expression is different
       ! P_{mmp}P_{mpp,mppp}(m,mp|mpp,mppp)  
-      numU = this%X(n_alt)(1,1,1,ios)*this%X(n_alt)(1,1,1,ios)*this%coulomb(1,1,1,1,ios)
+      numU = real(this%X(n_alt)(1,1,1,ios)*this%X(n_alt)(1,1,1,ios))*this%coulomb(1,1,1,1,ios)
 
       ! We compute the term
       ! sum_{alpha,beta} sum_{m,mp} N^alpha_{m}N^beta_{mp}
-      denomU = this%X(n)(1,1,1,ios)*this%X(n)(1,1,1,ios)
+      denomU = real(this%X(n)(1,1,1,ios)*this%X(n)(1,1,1,ios))
 
       this%orbsets(ios)%Ueff = 2*numU/denomU
       this%orbsets(ios)%Ubar = 2*numU/denomU
@@ -653,6 +651,10 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der, st)
   integer :: idone, ntodo
   FLOAT, allocatable :: tmp(:), vv(:), nn(:)
   type(orbital_set_t), pointer :: os
+  type(profile_t), save :: prof
+
+  call profiling_in(prof, "DFTU_COULOMB_INTEGRALS")
+
 
   PUSH_SUB(X(compute_coulomb_integrals))
 
@@ -743,6 +745,7 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der, st)
   SAFE_DEALLOCATE_A(tmp)
 
   POP_SUB(X(compute_coulomb_integrals))
+  call profiling_out(prof)
 end subroutine X(compute_coulomb_integrals)
 
  ! ---------------------------------------------------------
@@ -759,7 +762,7 @@ end subroutine X(compute_coulomb_integrals)
 
    integer :: ios, idim, idir, im, imp, is, ispin
    R_TYPE, allocatable :: dot(:)
-   R_TYPE, allocatable :: epsi(:,:)
+   R_TYPE, allocatable :: epsi(:)
    type(orbital_set_t), pointer  :: os 
    R_TYPE  :: reduced
    type(profile_t), save :: prof
@@ -768,7 +771,7 @@ end subroutine X(compute_coulomb_integrals)
 
    PUSH_SUB(lda_u_commute_r)
 
-   SAFE_ALLOCATE(epsi(1:this%max_np, d%dim))
+   SAFE_ALLOCATE(epsi(1:this%max_np))
    SAFE_ALLOCATE(dot(1:this%maxnorbs))
 
    ispin = states_dim_get_spin_index(d, ik)
@@ -801,22 +804,22 @@ end subroutine X(compute_coulomb_integrals)
         do idir = 1, mesh%sb%dim
           !In case of phase, we have to apply the conjugate of the phase here
           if(has_phase) then
+#ifdef R_TCOMPLEX
             !$omp parallel do
             do is = 1, os%sphere%np
-              epsi(is,1) = os%sphere%x(is,idir)*os%eorb(is,im,ik)
+              epsi(is) = os%sphere%x(is,idir)*os%eorb(is,im,ik)
             end do
             !$omp end parallel do
+#endif
           else
             !$omp parallel do
             do is = 1, os%sphere%np
-              epsi(is,1) = os%sphere%x(is,idir)*os%X(orb)(is,im)
+              epsi(is) = os%sphere%x(is,idir)*os%X(orb)(is,im)
             end do
             !$omp end parallel do
           end if
-          do idim = 1, d%dim
-            call submesh_add_to_mesh(os%sphere, epsi(1:os%sphere%np,1), &
-                                  gpsi(1:mesh%np,idir,idim), reduced)
-          end do !idim
+          call submesh_add_to_mesh(os%sphere, epsi(1:os%sphere%np), &
+                                  gpsi(1:mesh%np,idir,1), reduced)
         end do !idir
       end do !im
 
@@ -827,25 +830,23 @@ end subroutine X(compute_coulomb_integrals)
        ! We first compute <phi m| r | psi> for all orbitals of the atom
        !
        !
-       do idim = 1, d%dim
-         !$omp parallel do 
-         do is = 1, os%sphere%np
-           epsi(is,idim) = os%sphere%x(is,idir)*psi(os%sphere%map(is), idim)
-         end do
-         !$omp end parallel do
+       !$omp parallel do 
+       do is = 1, os%sphere%np
+         epsi(is) = os%sphere%x(is,idir)*psi(os%sphere%map(is),1)
        end do
+       !$omp end parallel do
      
        if(has_phase) then
 #ifdef R_TCOMPLEX
          do im = 1, os%norbs
            dot(im) = X(mf_dotp)(os%sphere%mesh, os%eorb(1:os%sphere%np,im,ik),&
-                               epsi(1:os%sphere%np,1), reduce = .false., np = os%sphere%np)
+                               epsi(1:os%sphere%np), reduce = .false., np = os%sphere%np)
          end do
 #endif
        else
          do im = 1, os%norbs
            dot(im) = X(mf_dotp)(os%sphere%mesh, os%X(orb)(1:os%sphere%np,im),&
-                               epsi(1:os%sphere%np,1), reduce = .false., np = os%sphere%np)
+                               epsi(1:os%sphere%np), reduce = .false., np = os%sphere%np)
          end do
        end if
  
@@ -867,16 +868,12 @@ end subroutine X(compute_coulomb_integrals)
          !In case of phase, we have to apply the conjugate of the phase here
          if(has_phase) then
 #ifdef R_TCOMPLEX
-           do idim = 1, d%dim
-             call submesh_add_to_mesh(os%sphere, os%eorb(1:os%sphere%np,im,ik), &
-                                 gpsi(1:mesh%np,idir,idim), reduced)
-           end do !idim
+           call submesh_add_to_mesh(os%sphere, os%eorb(1:os%sphere%np,im,ik), &
+                                 gpsi(1:mesh%np,idir,1), reduced)
 #endif
          else
-           do idim = 1, d%dim
-             call submesh_add_to_mesh(os%sphere, os%X(orb)(1:os%sphere%np,im), &
-                                gpsi(1:mesh%np,idir,idim), reduced)
-           end do !idim
+           call submesh_add_to_mesh(os%sphere, os%X(orb)(1:os%sphere%np,im), &
+                                gpsi(1:mesh%np,idir,1), reduced)
          end if
        end do !im
      end do
@@ -961,7 +958,7 @@ end subroutine X(compute_coulomb_integrals)
      ff(1:ndim) = ff(1:ndim) + CNST(0.5)*gradn(im, im, ispin,1:ndim)
      end do !im
 
-     force(1:ndim, iatom) = force(1:ndim, iatom) - os%Ueff*ff(1:ndim)
+     force(1:ndim, iatom) = force(1:ndim, iatom) - os%Ueff*real(ff(1:ndim))
    end do !ios
 
    SAFE_DEALLOCATE_A(psi)
@@ -1434,3 +1431,36 @@ end subroutine X(get_atomic_orbital)
     POP_SUB(X(lda_u_get_occupations))
   end subroutine X(lda_u_get_occupations)
 
+  ! ---------------------------------------------------------
+  subroutine X(lda_u_allocate)(this, st)
+    type(lda_u_t),  intent(inout) :: this
+    type(states_t), intent(in)    :: st
+
+    integer :: maxorbs, nspin
+
+    PUSH_SUB(X(lda_u_allocate))
+
+    maxorbs = this%maxnorbs
+    nspin = this%nspins
+
+    SAFE_ALLOCATE(this%X(n)(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets))
+    this%X(n)(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets) = R_TOTYPE(M_ZERO)
+    SAFE_ALLOCATE(this%X(V)(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets))
+    this%X(V)(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets) = R_TOTYPE(M_ZERO)
+
+    !In case we use the ab-initio scheme, we need to allocate extra resources
+    if(this%useACBN0) then
+      SAFE_ALLOCATE(this%X(n_alt)(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets))
+      this%X(n_alt)(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets) = R_TOTYPE(M_ZERO)
+      SAFE_ALLOCATE(this%X(renorm_occ)(this%nspecies,0:5,0:3,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end))
+      this%X(renorm_occ)(this%nspecies,0:5,0:3,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end) = R_TOTYPE(M_ZERO)
+      if(this%ACBN0_corrected) then
+        SAFE_ALLOCATE(this%Vloc1(1:maxorbs,1:nspin,1:this%norbsets))
+        this%Vloc1(1:maxorbs,1:nspin,1:this%norbsets) = M_ZERO
+        SAFE_ALLOCATE(this%X(Vloc2)(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets))
+        this%X(Vloc2)(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets) = R_TOTYPE(M_ZERO)
+      end if
+    end if
+
+    POP_SUB(X(lda_u_allocate))
+  end subroutine X(lda_u_allocate)
