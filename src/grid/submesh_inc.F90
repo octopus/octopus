@@ -154,7 +154,7 @@ subroutine X(submesh_copy_from_mesh_batch)(this, psib, spsi)
   type(batch_t),    intent(in)    :: psib
   R_TYPE,           intent(inout) :: spsi(:,:)
 
-  integer :: ip, ist, ii
+  integer :: ip, ist, ii, m
   type(profile_t), save :: prof
 
   call profiling_in(prof, "SM_CP_MESH_BATCH")
@@ -170,9 +170,16 @@ subroutine X(submesh_copy_from_mesh_batch)(this, psib, spsi)
         end do
       end do
     case(BATCH_PACKED)
+      m = mod(psib%nst_linear,4)
       do ip = 1, this%np
-        do ii = 1, psib%nst_linear
+        do ii = 1, m
           spsi(ii,ip) = psib%pack%X(psi)(ii,this%map(ip))
+        end do
+        do ii = m+1, psib%nst_linear, 4
+          spsi(ii,ip) = psib%pack%X(psi)(ii,this%map(ip))
+          spsi(ii+1,ip) = psib%pack%X(psi)(ii+1,this%map(ip))
+          spsi(ii+2,ip) = psib%pack%X(psi)(ii+2,this%map(ip))
+          spsi(ii+3,ip) = psib%pack%X(psi)(ii+3,this%map(ip))
         end do
       end do
   end select

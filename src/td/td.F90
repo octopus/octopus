@@ -379,8 +379,16 @@ contains
 
     ! Allocate wavefunctions during time-propagation
     if(td%dynamics == EHRENFEST) then
-      !complex wfs are required for Ehrenfest
-      call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX, alloc_Left = cmplxscl)
+      !Note: this is not really clean to do this
+      if(hm%lda_u%apply .and. states_are_real(st)) then
+        call lda_u_end(hm%lda_u)
+        !complex wfs are required for Ehrenfest
+        call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX, alloc_Left = cmplxscl)
+        call lda_u_init(hm%lda_u, gr, geo, st, sys%mc) 
+      else
+        !complex wfs are required for Ehrenfest
+        call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX, alloc_Left = cmplxscl)
+      end if 
     else
       call states_allocate_wfns(st, gr%mesh, alloc_Left = cmplxscl)
       call scf_init(td%scf, sys%gr, sys%geo, sys%st, sys%mc, hm)

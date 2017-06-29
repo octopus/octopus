@@ -33,6 +33,10 @@ dist_share_DATA =                                \
             04-ACBN0_isolated.test               \
             05-forces.01-Na2.inp                 \
             05-forces.02-Na2_go.inp              \
-            05-forces.test
+            05-forces.test                       \
+            06-laser.01-gs.inp                   \
+            06-laser.02-length_gauge.inp         \
+            06-laser.03-velocity_gauge.inp       \
+            06-laser.test                         
 
 CLEANFILES = *~ *.bak
