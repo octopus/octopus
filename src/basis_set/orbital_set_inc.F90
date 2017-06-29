@@ -214,11 +214,13 @@ subroutine X(orbital_set_add_to_batch)(os, st_d, psib, ik, has_phase, weight)
             forall (ip = 1:os%sphere%np)
               sorb(ip) = sorb(ip) + os%eorb(ip,iorb,ik)*tmp
             end forall
-          end do 
+          end do
+          !$omp parallel do 
           do ip = 1,os%sphere%np
             psib%states_linear(ist)%X(psi)(os%sphere%map(ip)) = &
                   psib%states_linear(ist)%X(psi)(os%sphere%map(ip)) + sorb(ip)
           end do
+          !$omp end parallel do
         end do
 #endif
       else
@@ -230,10 +232,12 @@ subroutine X(orbital_set_add_to_batch)(os, st_d, psib, ik, has_phase, weight)
               sorb(ip) = sorb(ip) + os%X(orb)(ip,iorb)*tmp
             end forall
           end do
+          !$omp parallel do
           do ip = 1,os%sphere%np
             psib%states_linear(ist)%X(psi)(os%sphere%map(ip)) = &
                   psib%states_linear(ist)%X(psi)(os%sphere%map(ip)) + sorb(ip)
           end do
+          !$omp end parallel do
         end do
       end if
 
@@ -248,10 +252,12 @@ subroutine X(orbital_set_add_to_batch)(os, st_d, psib, ik, has_phase, weight)
               sorb(ip) = sorb(ip) + os%eorb(ip,iorb,ik)*tmp
             end forall
           end do
+          !$omp parallel do
           do ip = 1,os%sphere%np
             psib%pack%X(psi)(ist,os%sphere%map(ip)) = psib%pack%X(psi)(ist,os%sphere%map(ip)) &
                               + sorb(ip)
           end do
+          !$omp end parallel do
         end do
 #endif
       else
@@ -263,10 +269,12 @@ subroutine X(orbital_set_add_to_batch)(os, st_d, psib, ik, has_phase, weight)
               sorb(ip) = sorb(ip) + os%X(orb)(ip,iorb)*tmp
             end forall
           end do
+          !$omp parallel do
           do ip = 1,os%sphere%np
             psib%pack%X(psi)(ist,os%sphere%map(ip)) = psib%pack%X(psi)(ist,os%sphere%map(ip)) &
                               + sorb(ip)
           end do
+          !$omp end parallel do
         end do
       end if
     end select

@@ -165,12 +165,15 @@ subroutine X(submesh_copy_from_mesh_batch)(this, psib, spsi)
   select case(batch_status(psib))
     case(BATCH_NOT_PACKED)
       do ist = 1, psib%nst_linear
+        !$omp parallel do
         do ip = 1,this%np
           spsi(ip,ist) = psib%states_linear(ist)%X(psi)(this%map(ip))
         end do
+        !$omp end parallel do
       end do
     case(BATCH_PACKED)
       m = mod(psib%nst_linear,4)
+      !$omp parallel do private(ii)
       do ip = 1, this%np
         do ii = 1, m
           spsi(ii,ip) = psib%pack%X(psi)(ii,this%map(ip))
@@ -182,6 +185,7 @@ subroutine X(submesh_copy_from_mesh_batch)(this, psib, spsi)
           spsi(ii+3,ip) = psib%pack%X(psi)(ii+3,this%map(ip))
         end do
       end do
+      !$omp end parallel do
   end select
 
   POP_SUB(X(submesh_copy_from_mesh_batch))
