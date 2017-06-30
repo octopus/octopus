@@ -50,7 +50,9 @@ module orbital_set_oct_m
        dorbital_set_get_coeff_batch,    &
        zorbital_set_get_coeff_batch,    &
        dorbital_set_add_to_batch,       &
-       zorbital_set_add_to_batch
+       zorbital_set_add_to_batch,       &
+       dorbital_set_add_to_psi,         &
+       zorbital_set_add_to_psi
 
   type orbital_set_t
     integer             :: nn, ll

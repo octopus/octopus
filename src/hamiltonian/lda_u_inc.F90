@@ -762,17 +762,18 @@ end subroutine X(compute_coulomb_integrals)
 
    integer :: ios, idim, idir, im, imp, is, ispin
    R_TYPE, allocatable :: dot(:)
-   R_TYPE, allocatable :: epsi(:)
+   R_TYPE, allocatable :: epsi(:,:)
    type(orbital_set_t), pointer  :: os 
-   R_TYPE  :: reduced
+   R_TYPE, allocatable  :: reduced(:)
    type(profile_t), save :: prof
 
    call profiling_in(prof, "DFTU_COMMUTE_R")
 
    PUSH_SUB(lda_u_commute_r)
 
-   SAFE_ALLOCATE(epsi(1:this%max_np))
+   SAFE_ALLOCATE(epsi(1:this%max_np,1))
    SAFE_ALLOCATE(dot(1:this%maxnorbs))
+   SAFE_ALLOCATE(reduced(1:this%maxnorbs))
 
    ispin = states_dim_get_spin_index(d, ik)
 
@@ -786,12 +787,13 @@ end subroutine X(compute_coulomb_integrals)
       ! 
       call X(orbital_set_get_coefficients)(os, d, psi, ik, has_phase, dot)
       !
+      reduced(:) = M_ZERO
       do im = 1, os%norbs
         ! sum_mp Vmmp <phi mp | psi >
-        reduced = M_ZERO
         do imp = 1, os%norbs
-          reduced = reduced + this%X(V)(im,imp,ispin,ios)*dot(imp)
+          reduced(im) = reduced(im) + this%X(V)(im,imp,ispin,ios)*dot(imp)
         end do
+      end do
 
       !  if(this%ACBN0_corrected) then
       !    reduced = reduced + this%Vloc1(im,ispin,ios)*dot(im)
@@ -801,27 +803,28 @@ end subroutine X(compute_coulomb_integrals)
       !    end do
       !  end if
 
-        do idir = 1, mesh%sb%dim
-          !In case of phase, we have to apply the conjugate of the phase here
-          if(has_phase) then
+      do idir = 1, mesh%sb%dim
+        do im = 1, os%norbs
+        !In case of phase, we have to apply the conjugate of the phase here
+        if(has_phase) then
 #ifdef R_TCOMPLEX
             !$omp parallel do
             do is = 1, os%sphere%np
-              epsi(is) = os%sphere%x(is,idir)*os%eorb(is,im,ik)
+              epsi(is,1) = os%sphere%x(is,idir)*os%eorb(is,im,ik)
             end do
             !$omp end parallel do
 #endif
           else
             !$omp parallel do
             do is = 1, os%sphere%np
-              epsi(is) = os%sphere%x(is,idir)*os%X(orb)(is,im)
+              epsi(is,1) = os%sphere%x(is,idir)*os%X(orb)(is,im)
             end do
             !$omp end parallel do
           end if
-          call submesh_add_to_mesh(os%sphere, epsi(1:os%sphere%np), &
-                                  gpsi(1:mesh%np,idir,1), reduced)
-        end do !idir
-      end do !im
+          call submesh_add_to_mesh(os%sphere, epsi(1:os%sphere%np,1), &
+                                  gpsi(1:mesh%np,idir,1), reduced(im))
+        end do !im
+      end do !idir
 
      do idir = 1, mesh%sb%dim
        ! We have to compute 
@@ -832,7 +835,7 @@ end subroutine X(compute_coulomb_integrals)
        !
        !$omp parallel do 
        do is = 1, os%sphere%np
-         epsi(is) = os%sphere%x(is,idir)*psi(os%sphere%map(is),1)
+         epsi(is,1) = os%sphere%x(is,idir)*psi(os%sphere%map(is),1)
        end do
        !$omp end parallel do
      
@@ -840,23 +843,24 @@ end subroutine X(compute_coulomb_integrals)
 #ifdef R_TCOMPLEX
          do im = 1, os%norbs
            dot(im) = X(mf_dotp)(os%sphere%mesh, os%eorb(1:os%sphere%np,im,ik),&
-                               epsi(1:os%sphere%np), reduce = .false., np = os%sphere%np)
+                               epsi(1:os%sphere%np,1), reduce = .false., np = os%sphere%np)
          end do
 #endif
        else
          do im = 1, os%norbs
            dot(im) = X(mf_dotp)(os%sphere%mesh, os%X(orb)(1:os%sphere%np,im),&
-                               epsi(1:os%sphere%np), reduce = .false., np = os%sphere%np)
+                               epsi(1:os%sphere%np,1), reduce = .false., np = os%sphere%np)
          end do
        end if
  
        do im = 1, os%norbs
          ! sum_mp Vmmp <phi mp|r| psi >
-         reduced = M_ZERO
          do imp = 1, os%norbs
-           reduced = reduced - this%X(V)(im,imp,ispin,ios)*dot(imp)
+           reduced(im) = reduced(im) - this%X(V)(im,imp,ispin,ios)*dot(imp)
          end do
+       end do
 
+       call X(orbital_set_add_to_psi)(os, d, gpsi(1:mesh%np,idir,1), ik, has_phase, reduced) 
        !  if(this%ACBN0_corrected) then
        !    reduced = reduced + this%Vloc1(im,ispin,ios)*dot(im)
        !    do imp = 1, os%norbs
@@ -865,18 +869,7 @@ end subroutine X(compute_coulomb_integrals)
        !    end do
        !  end if
 
-         !In case of phase, we have to apply the conjugate of the phase here
-         if(has_phase) then
-#ifdef R_TCOMPLEX
-           call submesh_add_to_mesh(os%sphere, os%eorb(1:os%sphere%np,im,ik), &
-                                 gpsi(1:mesh%np,idir,1), reduced)
-#endif
-         else
-           call submesh_add_to_mesh(os%sphere, os%X(orb)(1:os%sphere%np,im), &
-                                gpsi(1:mesh%np,idir,1), reduced)
-         end if
-       end do !im
-     end do
+     end do !idir
 
    end do !ios
 

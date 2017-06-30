@@ -136,13 +136,15 @@ subroutine X(submesh_copy_from_mesh)(this, phi, sphi, conjugate)
   PUSH_SUB(X(submesh_copy_from_mesh))
 
   if(.not. optional_default(conjugate, .false.) ) then
-    forall(ip = 1:this%np)
+    !$omp parallel do 
+    do ip = 1,this%np
       sphi(ip) = phi(this%map(ip))
-    end forall
+    end do
   else
-    forall(ip = 1:this%np)
+    !$omp parallel do 
+    do ip = 1,this%np
       sphi(ip) = R_CONJ(phi(this%map(ip)))
-    end forall
+    end do
   end if
 
   POP_SUB(X(submesh_copy_from_mesh))

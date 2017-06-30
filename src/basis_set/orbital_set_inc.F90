@@ -150,6 +150,44 @@ subroutine X(orbital_set_get_coeff_batch)(os, st_d, psib, ik, has_phase, dot)
   call profiling_out(prof)
 end subroutine X(orbital_set_get_coeff_batch)
 
+subroutine X(orbital_set_add_to_psi)(os, st_d, psi, ik, has_phase, weight)
+  type(orbital_set_t),  intent(in) :: os
+  type(states_dim_t),   intent(in) :: st_d
+  R_TYPE,            intent(inout) :: psi(:)
+  integer,              intent(in) :: ik
+  logical,              intent(in) :: has_phase !True if the wavefunction has an associated phase
+  R_TYPE,               intent(in) :: weight(:)
+
+  integer :: im, ip
+  type(profile_t), save :: prof
+
+  call profiling_in(prof, "ORBSET_ADD_TO_PSI")
+
+  PUSH_SUB(X(orbital_set_add_to_psi))
+
+  if(st_d%ispin == SPINORS) then
+   message(1) = "orbital_set_add_to_batch is not implemented with spinors."
+   call messages_fatal(1)
+  end if
+
+  !
+  do im = 1, os%norbs
+    !In case of phase, we have to apply the conjugate of the phase here
+    if(has_phase) then
+#ifdef R_TCOMPLEX
+      call submesh_add_to_mesh(os%sphere, os%eorb(1:os%sphere%np,im,ik), &
+                                psi(1:os%sphere%mesh%np), weight(im))
+#endif
+    else
+      call submesh_add_to_mesh(os%sphere, os%X(orb)(1:os%sphere%np, im), &
+                                psi(1:os%sphere%mesh%np), weight(im))
+    end if
+  end do
+
+  POP_SUB(X(orbital_set_add_to_psi))
+  call profiling_out(prof)
+end subroutine X(orbital_set_add_to_psi)
+
 
 subroutine X(orbital_set_add_to_batch)(os, st_d, psib, ik, has_phase, weight)
   type(orbital_set_t),  intent(in) :: os
