@@ -26,6 +26,7 @@ program floquet_observables
   use geometry_oct_m
   use fft_oct_m
   use floquet_oct_m
+  use forces_oct_m
   use gauge_field_oct_m
   use global_oct_m
   use grid_oct_m
@@ -47,6 +48,7 @@ program floquet_observables
   use system_oct_m
   use sort_oct_m
   use space_oct_m
+  use species_oct_m
   use string_oct_m
   use states_oct_m
   use states_dim_oct_m
@@ -112,16 +114,10 @@ program floquet_observables
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES,  default = .false.)
 !   call calc_mode_par_set_parallelization(P_STRATEGY_DOMAINS, default = .true. )
   
-  
-  
   call system_init(sys)
   
   call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, &
                         sys%ks%xc_flags, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
-  
-  
-  
-  
 
   call floquet_init(sys,hm%F,sys%st%d%dim)
   gs_st => sys%st
@@ -156,6 +152,8 @@ program floquet_observables
   !% Output Floquet states in the format defined by OutputFormat.
   !%Option f_conductivity bit(8)
   !% Calculate Floquet optical conductivity.
+  !%Option f_forces bit(9)
+  !% Calculate Floquet forces.
   !%End
   call parse_variable('FloquetObservableCalc', out_what, out_what)
   
@@ -319,7 +317,12 @@ program floquet_observables
     call calc_floquet_conductivity()
   end if
 
+  if(iand(out_what, OPTION__FLOQUETOBSERVABLECALC__F_FORCES) /= 0) then
+    call messages_write('Calculate Floquet forces.')
+    call messages_info()
 
+    call calc_floquet_forces()
+  end if
   
   call hamiltonian_end(hm)
   call system_end(sys)
@@ -1265,7 +1268,38 @@ contains
     POP_SUB(calc_floquet_conductivity)    
   end subroutine calc_floquet_conductivity
 
+  subroutine calc_floquet_forces()
 
+    type(geometry_t) :: geo
+    type(grid_t) :: gr
+    type(unit_t) :: fn_unit
+    
+    integer :: idim, iatom, ii, idir, iunit
+    character(len=1024):: filename
+
+    gr=sys%gr
+    geo=sys%geo
+
+    filename = FLOQUET_DIR//'/floquet_forces'
+    iunit = io_open(filename, action='write')
+
+    call forces_calculate(gr, geo, hm, dressed_st)
+
+    if(mpi_grp_is_root(mpi_world)) then
+       write(iunit,'(3a)') 'Floquet-forces on the ions [', trim(units_abbrev(units_out%force)), "]"
+       write(iunit,'(a,10x,99(14x,a))') ' Ion', (index2axis(idir), idir = 1, gr%sb%dim)
+       do iatom = 1, geo%natoms
+          write(iunit,'(i4,a10,10f15.6)') iatom, trim(species_label(geo%atom(iatom)%species)), &
+               (units_from_atomic(units_out%force, geo%atom(iatom)%f(idir)), idir=1, gr%sb%dim)
+       end do
+       write(iunit,'(1x,100a1)') ("-", ii = 1, 13 + gr%sb%dim * 15)
+       write(iunit,'(a14, 10f15.6)') " Max abs force", &
+            (units_from_atomic(units_out%force, maxval(abs(geo%atom(1:geo%natoms)%f(idir)))), idir=1, gr%sb%dim)
+       write(iunit,'(a14, 10f15.6)') " Total force", &
+            (units_from_atomic(units_out%force, sum(geo%atom(1:geo%natoms)%f(idir))), idir=1, gr%sb%dim)
+    end if
+
+  end subroutine calc_floquet_forces
 
   end program floquet_observables
 
