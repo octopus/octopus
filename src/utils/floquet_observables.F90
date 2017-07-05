@@ -23,6 +23,7 @@ program floquet_observables
   use comm_oct_m
   use command_line_oct_m
   use current_oct_m
+  use density_oct_m
   use geometry_oct_m
   use fft_oct_m
   use floquet_oct_m
@@ -53,6 +54,7 @@ program floquet_observables
   use states_oct_m
   use states_dim_oct_m
   use states_io_oct_m
+  use states_restart_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -154,6 +156,8 @@ program floquet_observables
   !% Calculate Floquet optical conductivity.
   !%Option f_forces bit(9)
   !% Calculate Floquet forces.
+  !%Option f_density_plot bit(10)
+  !% Plot the Floquet density.
   !%End
   call parse_variable('FloquetObservableCalc', out_what, out_what)
   
@@ -322,6 +326,13 @@ program floquet_observables
     call messages_info()
 
     call calc_floquet_forces()
+  end if
+
+  if(iand(out_what, OPTION__FLOQUETOBSERVABLECALC__F_DENSITY_PLOT) /= 0) then
+    call messages_write('Plot Floquet density.')
+    call messages_info()
+
+    call plot_floquet_density()
   end if
   
   call hamiltonian_end(hm)
@@ -1274,11 +1285,40 @@ contains
     type(grid_t) :: gr
     type(unit_t) :: fn_unit
     
-    integer :: idim, iatom, ii, idir, iunit
+    integer :: idim, iatom, ii, idir, iunit, ierr, ib
     character(len=1024):: filename
+
+    FLOAT, allocatable :: rho(:,:), rhoF(:,:)
 
     gr=sys%gr
     geo=sys%geo
+
+    SAFE_ALLOCATE(rho(1:gr%mesh%np,1))
+    SAFE_ALLOCATE(rhoF(1:gr%mesh%np,1))
+
+    call states_allocate_wfns(gs_st,gr%der%mesh, wfs_type = TYPE_CMPLX)
+    call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
+    if(ierr == 0) call states_load(restart, gs_st, gr, ierr)
+    if (ierr /= 0) then
+       message(1) = 'Unable to read ground-state wavefunctions.'
+       call messages_fatal(1)
+    end if
+    call restart_end(restart)
+
+    rho = M_ZERO
+    call density_calc(gs_st, gr,rho)
+    call dio_function_output(io_function_fill_how("AxisX"), ".", "rho",  gr%mesh, rho(:,1), unit_one, ierr)
+
+    rhoF = M_ZERO
+    call density_calc(dressed_st, gr,rhoF,ndim=hm%F%floquet_dim)
+    call dio_function_output(io_function_fill_how("AxisX"), ".", "rho_floquet",  gr%mesh, rhoF(:,1), unit_one, ierr)
+
+    ! diff 
+    rho = rho -rhoF
+    call dio_function_output(io_function_fill_how("AxisX"), ".", "rho_diff",  gr%mesh, rho(:,1), unit_one, ierr)
+    call dio_function_output(io_function_fill_how("PlaneX"), ".", "rho_diff",  gr%mesh, rho(:,1), unit_one, ierr)
+    call dio_function_output(io_function_fill_how("PlaneY"), ".", "rho_diff",  gr%mesh, rho(:,1), unit_one, ierr)
+    call dio_function_output(io_function_fill_how("PlaneZ"), ".", "rho_diff",  gr%mesh, rho(:,1), unit_one, ierr)
 
     filename = FLOQUET_DIR//'/floquet_forces'
     iunit = io_open(filename, action='write')
@@ -1300,6 +1340,51 @@ contains
     end if
 
   end subroutine calc_floquet_forces
+
+
+  subroutine plot_floquet_density()
+    type(grid_t) :: gr
+
+    integer :: idim, iatom, ii, idir, iunit, ierr, ib
+    character(len=1024):: filename
+
+    FLOAT, allocatable :: rho(:,:), rhoF(:,:)
+
+    gr=sys%gr
+
+    SAFE_ALLOCATE(rho(1:gr%mesh%np,1))
+    SAFE_ALLOCATE(rhoF(1:gr%mesh%np,1))
+
+    ! get groundstate density
+    call states_allocate_wfns(gs_st,gr%der%mesh, wfs_type = TYPE_CMPLX)
+    call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
+    if(ierr == 0) call states_load(restart, gs_st, gr, ierr)
+    if (ierr /= 0) then
+       message(1) = 'Unable to read ground-state wavefunctions.'
+       call messages_fatal(1)
+    end if
+    call restart_end(restart)
+
+    rho = M_ZERO
+    call density_calc(gs_st, gr,rho)
+
+    ! get Floquet density
+    rhoF = M_ZERO
+    call density_calc(dressed_st, gr,rhoF,ndim=hm%F%floquet_dim)
+    call dio_function_output(io_function_fill_how("PlaneX"), FLOQUET_DIR, "rho_floquet",  gr%mesh, rhoF(:,1), unit_one, ierr)
+    call dio_function_output(io_function_fill_how("PlaneY"), FLOQUET_DIR, "rho_floquet",  gr%mesh, rhoF(:,1), unit_one,ierr)
+    call dio_function_output(io_function_fill_how("PlaneZ"), FLOQUET_DIR, "rho_floquet",  gr%mesh, rhoF(:,1), unit_one,ierr)
+    ! difference
+    rho = rho -rhoF
+    call dio_function_output(io_function_fill_how("PlaneX"), FLOQUET_DIR, "rho_diff",  gr%mesh, rho(:,1), unit_one, ierr)
+    call dio_function_output(io_function_fill_how("PlaneY"), FLOQUET_DIR, "rho_diff",  gr%mesh, rho(:,1), unit_one, ierr)
+    call dio_function_output(io_function_fill_how("PlaneZ"), FLOQUET_DIR, "rho_diff",  gr%mesh, rho(:,1), unit_one, ierr)
+
+
+    SAFE_DEALLOCATE_A(rho)
+    SAFE_DEALLOCATE_A(rhoF)
+  end subroutine plot_floquet_density
+
 
   end program floquet_observables
 

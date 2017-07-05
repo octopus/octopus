@@ -131,13 +131,14 @@ contains
 
   ! ---------------------------------------------------
 
-  subroutine density_calc_accumulate(this, ik, psib, psibL)
+  subroutine density_calc_accumulate(this, ik, psib, psibL, dim)
     type(density_calc_t),         intent(inout) :: this
     integer,                      intent(in)    :: ik
     type(batch_t),                intent(inout) :: psib
     type(batch_t), optional,      intent(inout) :: psibL !< Left states
+    integer, optional,            intent(in)    :: dim
 
-    integer :: ist, ip, ispin
+    integer :: ist, ip, ispin, dim_
     FLOAT   :: nrm
     CMPLX   :: term, psi1, psi2
     CMPLX, allocatable :: psi(:), fpsi(:)
@@ -150,6 +151,13 @@ contains
 
     PUSH_SUB(density_calc_accumulate)
     call profiling_in(prof, "CALC_DENSITY")
+
+    dim_ = optional_default(dim, 1)
+
+    if(dim_ /= 1) then
+       ASSERT(.not. this%gr%have_fine_mesh)
+       ASSERT(.not.batch_status(psib)== BATCH_PACKED)
+    end if
 
     cmplxscl = associated(this%Imdensity)
     
@@ -165,7 +173,7 @@ contains
         if(states_are_real(this%st)) then
           do ist = 1, psib%nst
             forall(ip = 1:this%gr%mesh%np)
-              this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*psib%states(ist)%dpsi(ip, 1)**2
+              this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*psib%states(ist)%dpsi(ip,dim_)**2
             end forall
           end do
         else
@@ -173,16 +181,16 @@ contains
             do ist = 1, psib%nst
               forall(ip = 1:this%gr%mesh%np)
                 this%density(ip, ispin) = this%density(ip, ispin) + &
-                  weight(ist)*real(psibL%states(ist)%zpsi(ip, 1)*psib%states(ist)%zpsi(ip, 1))
+                  weight(ist)*real(psibL%states(ist)%zpsi(ip, dim_)*psib%states(ist)%zpsi(ip, dim_))
                 this%Imdensity(ip, ispin) = this%Imdensity(ip, ispin) + &
-                  weight(ist)*aimag(psibL%states(ist)%zpsi(ip, 1)*psib%states(ist)%zpsi(ip, 1))
+                  weight(ist)*aimag(psibL%states(ist)%zpsi(ip, dim_)*psib%states(ist)%zpsi(ip, dim_))
               end forall
             end do
           else
             do ist = 1, psib%nst
               forall(ip = 1:this%gr%mesh%np)
                 this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
-                  (real(psib%states(ist)%zpsi(ip, 1), REAL_PRECISION)**2 + aimag(psib%states(ist)%zpsi(ip, 1))**2)
+                  (real(psib%states(ist)%zpsi(ip, dim_), REAL_PRECISION)**2 + aimag(psib%states(ist)%zpsi(ip, dim_))**2)
               end forall
             end do
           end if
@@ -288,8 +296,8 @@ contains
       do ist = 1, psib%nst
         do ip = 1, this%gr%fine%mesh%np
 
-          psi1 = psib%states(ist)%zpsi(ip, 1)
-          psi2 = psib%states(ist)%zpsi(ip, 2)
+          psi1 = psib%states(ist)%zpsi(ip,(dim_-1)*2+1)
+          psi2 = psib%states(ist)%zpsi(ip,(dim_-1)*2+2)
 
           this%density(ip, 1) = this%density(ip, 1) + weight(ist)*(real(psi1, REAL_PRECISION)**2 + aimag(psi1)**2)
           this%density(ip, 2) = this%density(ip, 2) + weight(ist)*(real(psi2, REAL_PRECISION)**2 + aimag(psi2)**2)
@@ -372,19 +380,22 @@ contains
 
   ! ---------------------------------------------------------
   !> Computes the density from the orbitals in st. 
-  subroutine density_calc(st, gr, density, Imdensity)
+  subroutine density_calc(st, gr, density, Imdensity, ndim)
     type(states_t),          intent(inout)  :: st
     type(grid_t),            intent(in)     :: gr
     FLOAT,                   intent(out)    :: density(:, :)
     FLOAT, optional,         intent(out)    :: Imdensity(:, :)
+    integer, optional,       intent(in)     :: ndim
 
-    integer :: ik, ib
+    integer :: ik, ib,ndim_, idim
     type(density_calc_t) :: dens_calc
     logical :: cmplxscl
 
     PUSH_SUB(density_calc)
 
     ASSERT(ubound(density, dim = 1) == gr%fine%mesh%np .or. ubound(density, dim = 1) == gr%fine%mesh%np_part)
+
+    ndim_ = optional_default(ndim, 1)
 
     cmplxscl = present(Imdensity)
     
@@ -396,11 +407,13 @@ contains
     
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
-        if(cmplxscl) then
-          call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik), st%psibL(ib, ik))
-        else
-          call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
-        end if
+         do idim=1,ndim_
+            if(cmplxscl) then
+               call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik), st%psibL(ib, ik),dim=idim)
+            else
+               call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik),dim=idim)
+            end if
+         end do
       end do
     end do
 
