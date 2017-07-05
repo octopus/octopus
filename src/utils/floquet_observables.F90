@@ -1288,37 +1288,9 @@ contains
     integer :: idim, iatom, ii, idir, iunit, ierr, ib
     character(len=1024):: filename
 
-    FLOAT, allocatable :: rho(:,:), rhoF(:,:)
 
     gr=sys%gr
     geo=sys%geo
-
-    SAFE_ALLOCATE(rho(1:gr%mesh%np,1))
-    SAFE_ALLOCATE(rhoF(1:gr%mesh%np,1))
-
-    call states_allocate_wfns(gs_st,gr%der%mesh, wfs_type = TYPE_CMPLX)
-    call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
-    if(ierr == 0) call states_load(restart, gs_st, gr, ierr)
-    if (ierr /= 0) then
-       message(1) = 'Unable to read ground-state wavefunctions.'
-       call messages_fatal(1)
-    end if
-    call restart_end(restart)
-
-    rho = M_ZERO
-    call density_calc(gs_st, gr,rho)
-    call dio_function_output(io_function_fill_how("AxisX"), ".", "rho",  gr%mesh, rho(:,1), unit_one, ierr)
-
-    rhoF = M_ZERO
-    call density_calc(dressed_st, gr,rhoF,ndim=hm%F%floquet_dim)
-    call dio_function_output(io_function_fill_how("AxisX"), ".", "rho_floquet",  gr%mesh, rhoF(:,1), unit_one, ierr)
-
-    ! diff 
-    rho = rho -rhoF
-    call dio_function_output(io_function_fill_how("AxisX"), ".", "rho_diff",  gr%mesh, rho(:,1), unit_one, ierr)
-    call dio_function_output(io_function_fill_how("PlaneX"), ".", "rho_diff",  gr%mesh, rho(:,1), unit_one, ierr)
-    call dio_function_output(io_function_fill_how("PlaneY"), ".", "rho_diff",  gr%mesh, rho(:,1), unit_one, ierr)
-    call dio_function_output(io_function_fill_how("PlaneZ"), ".", "rho_diff",  gr%mesh, rho(:,1), unit_one, ierr)
 
     filename = FLOQUET_DIR//'/floquet_forces'
     iunit = io_open(filename, action='write')
