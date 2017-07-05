@@ -207,8 +207,7 @@ fint FC_FUNC_(xml_tag_get_attribute_value, XML_TAG_GET_ATTRIBUTE_VALUE)(tag_t **
   printf("Reading attribute \"%s\".\n", attname);
 #endif
 
-  strcpy(dec_attname, " ");
-  strcat(dec_attname, attname);
+  strcpy(dec_attname, attname);
   strcat(dec_attname, "=");
 
   free(attname);
@@ -224,6 +223,12 @@ fint FC_FUNC_(xml_tag_get_attribute_value, XML_TAG_GET_ATTRIBUTE_VALUE)(tag_t **
   while(res == NULL){
     fgets(buffer, sizeof(buffer), (*tag)->xml_file);
     res = strstr(buffer, dec_attname);
+    if(res != NULL && res != buffer){
+      /* if the result is not at the beginning of the buffer */
+      /* check that the attribute name is not just a part of the string */
+      /* the previous characted should be a blank space */
+      if(*(res - 1) != ' ') res = NULL;
+    }
     /* did we reach the end of the tag? */
     if(res == NULL && strchr(buffer, '>')) break;
   }
@@ -263,8 +268,7 @@ fint FC_FUNC_(xml_tag_get_attribute_float, XML_TAG_GET_ATTRIBUTE_FLOAT)
   printf("Reading attribute \"%s\".\n", attname);
 #endif
 
-  strcpy(dec_attname, " ");
-  strcat(dec_attname, attname);
+  strcpy(dec_attname, attname);
   strcat(dec_attname, "=");
 
   free(attname);
@@ -281,6 +285,12 @@ fint FC_FUNC_(xml_tag_get_attribute_float, XML_TAG_GET_ATTRIBUTE_FLOAT)
   while(res == NULL){
     fgets(buffer, sizeof(buffer), (*tag)->xml_file);
     res = strstr(buffer, dec_attname);
+    if(res != NULL && res != buffer){
+      /* if the result is not at the beginning of the buffer */
+      /* check that the attribute name is not just a part of the string */
+      /* the previous characted should be a blank space */
+      if(*(res - 1) != ' ') res = NULL;
+    }
     /* did we reach the end of the tag? */
     if(res == NULL && strchr(buffer, '>')) break;
   }
@@ -326,8 +336,7 @@ fint FC_FUNC_(xml_tag_get_attribute_string, XML_TAG_GET_ATTRIBUTE_STRING)
   printf("Reading attribute \"%s\".\n", attname);
 #endif
 
-  strcpy(dec_attname, " ");
-  strcat(dec_attname, attname);
+  strcpy(dec_attname, attname);
   strcat(dec_attname, "=");
 
   free(attname);
@@ -339,6 +348,12 @@ fint FC_FUNC_(xml_tag_get_attribute_string, XML_TAG_GET_ATTRIBUTE_STRING)
   while(res == NULL){
     fgets(buffer, sizeof(buffer), (*tag)->xml_file);
     res = strstr(buffer, dec_attname);
+    if(res != NULL && res != buffer){
+      /* if the result is not at the beginning of the buffer */
+      /* check that the attribute name is not just a part of the string */
+      /* the previous characted should be a blank space */
+      if(*(res - 1) != ' ') res = NULL;
+    }
     /* did we reach the end of the tag? */
     if(res == NULL && strchr(buffer, '>')) break;
   }
