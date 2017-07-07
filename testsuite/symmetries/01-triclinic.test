@@ -2,7 +2,7 @@
 
 Test       : Triclinic symmetries
 Program    : octopus
-TestGroups : long-run, periodic_systems
+TestGroups : long-run, periodic_systems, symmetries
 Enabled    : Yes
 
 Input      : 01-triclinic.01-spg1_angle.inp
@@ -11,7 +11,7 @@ match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;
 
 
 Input      : 01-triclinic.02-spg2_angle.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 1
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 2
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  2
 
 Input      : 01-triclinic.03-spg1_latvec.inp
@@ -20,5 +20,5 @@ match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;
 
 
 Input      : 01-triclinic.04-spg2_latvec.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 1
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 2
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  2

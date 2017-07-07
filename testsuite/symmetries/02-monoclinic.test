@@ -1,0 +1,58 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Monoclinic symmetries
+Program    : octopus
+TestGroups : long-run, periodic_systems, symmetries
+Enabled    : Yes
+
+Input      : 02-monoclinic.01-spg3_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 3
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2 
+
+Input      : 02-monoclinic.02-spg4_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 4
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  2
+
+Input      : 02-monoclinic.03-spg5_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 5
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  2
+
+Input      : 02-monoclinic.04-spg6_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 6
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  2
+
+Input      : 02-monoclinic.05-spg7_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 7
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  2
+
+Input      : 02-monoclinic.06-spg8_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 8
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  2
+
+Input      : 02-monoclinic.07-spg9_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 9
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
+
+Input      : 02-monoclinic.08-spg10_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 10
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  4
+
+Input      : 02-monoclinic.09-spg11_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 11
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  4
+
+Input      : 02-monoclinic.10-spg12_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 12
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  4
+
+Input      : 02-monoclinic.11-spg13_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 13
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  4
+
+Input      : 02-monoclinic.12-spg14_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 12
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  4
+
+Input      : 02-monoclinic.13-spg15_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 13
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  4

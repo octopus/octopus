@@ -1,0 +1,26 @@
+FromScratch=yes
+CalculationMode = gs
+PeriodicDimensions = 3
+ExperimentalFeatures = yes
+BoxShape = parallelepiped
+%LatticeParameters
+ 7 | 8 | 9
+ 90 | 80 | 90
+%
+Spacing = 0.8
+
+%ReducedCoordinates
+ "H" | 3.2000000000E-01 | 1.5000000000E-01 | 1.1000000000E-01
+ "H" | 9.8000000000E-01 | 3.2000000000E-01 | 8.9000000000E-01
+%
+
+%KPointsGrid
+ 1 | 1 | 1
+%
+
+TheoryLevel = independent_particles
+MaximumIter = 0
+LCAO = lcao_none
+
+FilterPotentials = filter_none
+
