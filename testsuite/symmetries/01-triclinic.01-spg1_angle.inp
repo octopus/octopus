@@ -19,7 +19,7 @@ Spacing = 0.8
 
 TheoryLevel = independent_particles
 MaximumIter = 0
-LCAO = lcao_none
+LCAOStart = lcao_none
 
 FilterPotentials = filter_none
 

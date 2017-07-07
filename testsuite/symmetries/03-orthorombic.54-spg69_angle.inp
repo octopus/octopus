@@ -10,7 +10,7 @@ BoxShape = parallelepiped
 Spacing = 0.8
 TheoryLevel = independent_particles
 MaximumIter = 0
-LCAO = lcao_none
+LCAOStart = lcao_none
 FilterPotentials = filter_none
 %ReducedCoordinates
 "H" | 9.0000000000E-02 | 1.3000000000E-01 | 2.1000000000E-01

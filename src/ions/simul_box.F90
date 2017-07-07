@@ -698,9 +698,9 @@ contains
           sb%rlattice_primitive(2,2) = sin(M_PI*angles(3)/CNST(180.0))
           sb%rlattice_primitive(3,2) = M_ZERO
           sb%rlattice_primitive(1,3) = cos(M_PI*angles(2)/CNST(180.0))
-          sb%rlattice_primitive(2,3) = (cos(M_PI*angles(1)/CNST(180.0))-sb%rlattice_primitive(2,1)* sb%rlattice_primitive(3,1))&
+          sb%rlattice_primitive(2,3) = (cos(M_PI*angles(1)/CNST(180.0))-sb%rlattice_primitive(1,2)* sb%rlattice_primitive(1,3))&
                                          /sb%rlattice_primitive(2,2) 
-          sb%rlattice_primitive(3,3) = sqrt(M_ONE-sb%rlattice_primitive(3,1)**2-sb%rlattice_primitive(3,2)**2)
+          sb%rlattice_primitive(3,3) = sqrt(M_ONE-sb%rlattice_primitive(1,3)**2-sb%rlattice_primitive(2,3)**2)
         end if
 
         if (parse_is_defined('LatticeVectors')) then
@@ -751,7 +751,6 @@ contains
 
     if(sb%nonorthogonal) &
       call messages_experimental('Non-orthogonal unit cells')
-
     end if
 
     sb%rlattice = M_ZERO

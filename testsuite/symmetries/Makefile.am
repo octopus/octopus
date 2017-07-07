@@ -18,7 +18,7 @@
 ## 02110-1301, USA.
 ##
 
-sharedir = $(pkgdatadir)/testsuite/
+sharedir = $(pkgdatadir)/testsuite/symmetries
 
 dist_share_DATA =                          \
 	01-triclinic.01-spg1_angle.inp	   \
