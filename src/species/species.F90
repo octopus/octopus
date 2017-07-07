@@ -234,8 +234,12 @@ contains
     !%Option hscv_pbe 5
     !% (experimental) PBE version of the HSCV pseudopotentials. Check the
     !% documentation of the option <tt>hscv_lda</tt> for details and warnings.
-    !%Option pseudodojo_pbe 6
+    !%Option pseudodojo_lda 100
+    !% (experimental) LDA version of the pseudopotentials of http://pseudo-dojo.org.
+    !%Option pseudodojo_pbe 101
     !% (experimental) PBE version of the pseudopotentials of http://pseudo-dojo.org.
+    !%Option pseudodojo_pbesol 102
+    !% (experimental) PBEsol version of the pseudopotentials of http://pseudo-dojo.org.
     !%End
 
     call parse_variable('PseudopotentialSet', OPTION__PSEUDOPOTENTIALSET__STANDARD, pseudo_set)
@@ -243,7 +247,9 @@ contains
     if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__SG15) call messages_experimental('PseudopotentialSet = sg15')
     if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__HSCV_LDA) call messages_experimental('PseudopotentialSet = hscv_lda')
     if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__HSCV_PBE) call messages_experimental('PseudopotentialSet = hscv_pbe')
+    if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_LDA) call messages_experimental('PseudopotentialSet = pseudodojo_lda')
     if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBE) call messages_experimental('PseudopotentialSet = pseudodojo_pbe')
+    if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL) call messages_experimental('PseudopotentialSet = pseudodojo_pbesol')
 
     POP_SUB(species_init_global)
   end subroutine species_init_global
@@ -507,8 +513,12 @@ contains
       fname = trim(conf%share)//'/pseudopotentials/hscv_lda.set'
     case(OPTION__PSEUDOPOTENTIALSET__HSCV_PBE)
       fname = trim(conf%share)//'/pseudopotentials/hscv_pbe.set'
+    case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_LDA)
+      fname = trim(conf%share)//'/pseudopotentials/pseudodojo_lda.set'
     case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBE)
       fname = trim(conf%share)//'/pseudopotentials/pseudodojo_pbe.set'
+    case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL)
+      fname = trim(conf%share)//'/pseudopotentials/pseudodojo_pbesol.set'
     case default
       ASSERT(.false.)
     end select
