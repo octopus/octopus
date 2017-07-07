@@ -1,0 +1,64 @@
+FromScratch=yes
+CalculationMode = gs
+PeriodicDimensions = 3
+ExperimentalFeatures = yes
+BoxShape = parallelepiped
+%LatticeParameters
+ 7 | 7 | 9
+ 90 | 90 | 90
+%
+Spacing = 0.8
+TheoryLevel = independent_particles
+MaximumIter = 0
+LCAO = lcao_none
+FilterPotentials = filter_none
+%ReducedCoordinates
+"H" |  |  | 
+"H" |  |  | 
+"H" |  |  | 
+"H" |  |  | 
+"H" |  |  | 
+"H" |  |  | 
+"H" |  |  | 
+"H" |  |  | 
+"H" |  |  | 
+"H" |  |  | 
+"H" |  |  | 
+"H" |  |  | 
+"H" |  |  | 
+"H" |  |  | 
+"H" |  |  | 
+"H" |  |  | 
+%
+FromScratch=yes
+CalculationMode = gs
+PeriodicDimensions = 3
+ExperimentalFeatures = yes
+BoxShape = parallelepiped
+%LatticeParameters
+ 7 | 7 | 9
+ 90 | 90 | 90
+%
+Spacing = 0.8
+TheoryLevel = independent_particles
+MaximumIter = 0
+LCAO = lcao_none
+FilterPotentials = filter_none
+%ReducedCoordinates
+"H" | 1.7000000000E-01 | 1.5000000000E-01 | 1.1000000000E-01
+"H" | 8.3000000000E-01 | 8.5000000000E-01 | 1.1000000000E-01
+"H" | 3.5000000000E-01 | 6.7000000000E-01 | 1.1000000000E-01
+"H" | 6.5000000000E-01 | 3.3000000000E-01 | 1.1000000000E-01
+"H" | 3.3000000000E-01 | 6.5000000000E-01 | 3.9000000000E-01
+"H" | 3.3000000000E-01 | 3.5000000000E-01 | 8.9000000000E-01
+"H" | 6.7000000000E-01 | 3.5000000000E-01 | 3.9000000000E-01
+"H" | 6.7000000000E-01 | 6.5000000000E-01 | 8.9000000000E-01
+"H" | 8.5000000000E-01 | 8.3000000000E-01 | 3.9000000000E-01
+"H" | 1.5000000000E-01 | 8.3000000000E-01 | 8.9000000000E-01
+"H" | 1.5000000000E-01 | 1.7000000000E-01 | 3.9000000000E-01
+"H" | 8.5000000000E-01 | 1.7000000000E-01 | 8.9000000000E-01
+"H" | 1.7000000000E-01 | 8.5000000000E-01 | 6.1000000000E-01
+"H" | 8.3000000000E-01 | 1.5000000000E-01 | 6.1000000000E-01
+"H" | 6.5000000000E-01 | 6.7000000000E-01 | 6.1000000000E-01
+"H" | 3.5000000000E-01 | 3.3000000000E-01 | 6.1000000000E-01
+%

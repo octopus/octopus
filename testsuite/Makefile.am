@@ -28,11 +28,11 @@ SUBDIRS = \
 	linear_response  \
 	optimal_control  \
 	periodic_systems \
-        photo_electron   \
-        complex_scaling  \
+	photo_electron   \
+	complex_scaling  \
 	pseudopotentials \
 	frozen           \
-        symmetries
+	symmetries
 
 bin_SCRIPTS = oct-run_regression_test.pl oct-run_testsuite.sh
 
