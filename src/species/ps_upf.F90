@@ -429,7 +429,7 @@ contains
     call xml_tag_end(tag)
     
     ! Read the mesh
-    ierr = xml_file_tag(upf2_file, 'PP_MESH', 0, tag)
+    ierr = xml_file_tag(upf2_file, 'PP_R', 0, tag)
     call check_error(ierr)
     
     ierr = xml_tag_get_attribute_value(tag, 'mesh', ps_upf%np)
@@ -452,6 +452,11 @@ contains
       startp = 1
     end if
 
+    call xml_tag_end(tag)
+    
+    ierr = xml_file_tag(upf2_file, 'PP_MESH', 0, tag)
+    call check_error(ierr)
+    
     SAFE_ALLOCATE(ps_upf%r(1:ps_upf%np))
     if(startp == 2) ps_upf%r(1) = CNST(0.0)
     ierr = xml_get_tag_value(tag, 'PP_R', ps_upf%np - startp + 1, ps_upf%r(startp:))
