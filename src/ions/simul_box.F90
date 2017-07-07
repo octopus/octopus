@@ -682,23 +682,23 @@ contains
           aa=sqrt(a2);
           cc=sqrt(1.0-a2);
           sb%rlattice_primitive(1,1) = aa
-          sb%rlattice_primitive(1,2) = M_ZERO
-          sb%rlattice_primitive(1,3) = cc
-          sb%rlattice_primitive(2,1) =-M_HALF*aa
+          sb%rlattice_primitive(2,1) = M_ZERO
+          sb%rlattice_primitive(3,1) = cc
+          sb%rlattice_primitive(1,2) =-M_HALF*aa
           sb%rlattice_primitive(2,2) = M_HALF*sqrt(M_THREE)*aa
-          sb%rlattice_primitive(2,3) = cc
-          sb%rlattice_primitive(3,1) =-M_HALF*aa
-          sb%rlattice_primitive(3,2) =-M_HALF*sqrt(M_THREE)*aa
+          sb%rlattice_primitive(3,2) = cc
+          sb%rlattice_primitive(1,3) =-M_HALF*aa
+          sb%rlattice_primitive(2,3) =-M_HALF*sqrt(M_THREE)*aa
           sb%rlattice_primitive(3,3) = cc
         else
           sb%rlattice_primitive(1,1) = M_ONE
-          sb%rlattice_primitive(1,2) = M_ZERO
-          sb%rlattice_primitive(1,3) = M_ZERO
-          sb%rlattice_primitive(2,1) = cos(M_PI*angles(3)/CNST(180.0))
+          sb%rlattice_primitive(2,1) = M_ZERO
+          sb%rlattice_primitive(3,1) = M_ZERO
+          sb%rlattice_primitive(1,2) = cos(M_PI*angles(3)/CNST(180.0))
           sb%rlattice_primitive(2,2) = sin(M_PI*angles(3)/CNST(180.0))
-          sb%rlattice_primitive(2,3) = M_ZERO
-          sb%rlattice_primitive(3,1) = cos(M_PI*angles(2)/CNST(180.0))
-          sb%rlattice_primitive(3,2) = (cos(M_PI*angles(1)/CNST(180.0))-sb%rlattice_primitive(2,1)* sb%rlattice_primitive(3,1))&
+          sb%rlattice_primitive(3,2) = M_ZERO
+          sb%rlattice_primitive(1,3) = cos(M_PI*angles(2)/CNST(180.0))
+          sb%rlattice_primitive(2,3) = (cos(M_PI*angles(1)/CNST(180.0))-sb%rlattice_primitive(2,1)* sb%rlattice_primitive(3,1))&
                                          /sb%rlattice_primitive(2,2) 
           sb%rlattice_primitive(3,3) = sqrt(M_ONE-sb%rlattice_primitive(3,1)**2-sb%rlattice_primitive(3,2)**2)
         end if

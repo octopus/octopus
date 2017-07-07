@@ -276,3 +276,4 @@ match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;
 Input      : 04-tetragonal.68-spg142_angle.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 142
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 16
+

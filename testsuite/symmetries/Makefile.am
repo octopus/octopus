@@ -168,6 +168,43 @@ dist_share_DATA =                          \
 	04-tetragonal.66-spg140_angle.inp      \
 	04-tetragonal.67-spg141_angle.inp      \
 	04-tetragonal.68-spg142_angle.inp      \
-	04-tetragonal.test
+	04-tetragonal.test                     \
+	07-cubic.01-spg195_angle.inp           \
+	07-cubic.02-spg196_angle.inp           \
+	07-cubic.03-spg197_angle.inp           \
+	07-cubic.04-spg198_angle.inp           \
+	07-cubic.05-spg199_angle.inp           \
+	07-cubic.06-spg200_angle.inp           \
+	07-cubic.07-spg201_angle.inp           \
+	07-cubic.08-spg202_angle.inp           \
+	07-cubic.09-spg203_angle.inp           \
+	07-cubic.10-spg204_angle.inp           \
+	07-cubic.11-spg205_angle.inp           \
+	07-cubic.12-spg206_angle.inp           \
+	07-cubic.13-spg207_angle.inp           \
+	07-cubic.14-spg208_angle.inp           \
+	07-cubic.15-spg209_angle.inp           \
+	07-cubic.16-spg210_angle.inp           \
+	07-cubic.17-spg211_angle.inp           \
+	07-cubic.18-spg212_angle.inp           \
+	07-cubic.19-spg213_angle.inp           \
+	07-cubic.20-spg214_angle.inp           \
+	07-cubic.21-spg215_angle.inp           \
+	07-cubic.22-spg216_angle.inp           \
+	07-cubic.23-spg217_angle.inp           \
+	07-cubic.24-spg218_angle.inp           \
+	07-cubic.25-spg219_angle.inp           \
+	07-cubic.26-spg220_angle.inp           \
+	07-cubic.27-spg221_angle.inp           \
+	07-cubic.28-spg222_angle.inp           \
+	07-cubic.29-spg223_angle.inp           \
+	07-cubic.30-spg224_angle.inp           \
+	07-cubic.31-spg225_angle.inp           \
+	07-cubic.32-spg226_angle.inp           \
+	07-cubic.33-spg227_angle.inp           \
+	07-cubic.34-spg228_angle.inp           \
+	07-cubic.35-spg229_angle.inp           \
+	07-cubic.36-spg230_angle.inp           \
+	07-cubic.test
 
 CLEANFILES = *~ *.bak

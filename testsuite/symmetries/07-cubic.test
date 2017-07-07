@@ -1,0 +1,150 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Cubic symmetries
+Program    : octopus
+TestGroups : long-run, periodic_systems, symmetries
+Enabled    : Yes
+
+Input      : 07-cubic.01-spg195_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 195
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 12
+
+Input      : 07-cubic.02-spg196_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 196
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 12
+
+Input      : 07-cubic.03-spg197_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 197
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 12
+
+Input      : 07-cubic.04-spg198_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 198
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 3
+
+Input      : 07-cubic.05-spg199_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 199
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 3
+
+Input      : 07-cubic.06-spg200_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 200
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 24
+
+Input      : 07-cubic.07-spg201_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 201
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 12
+
+Input      : 07-cubic.08-spg202_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 202
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 24
+
+Input      : 07-cubic.09-spg203_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 203
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 12
+
+Input      : 07-cubic.10-spg204_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 204
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 24
+
+Input      : 07-cubic.11-spg205_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 205
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 6
+
+Input      : 07-cubic.12-spg206_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 206
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 6
+
+Input      : 07-cubic.13-spg207_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 207
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 24
+
+Input      : 07-cubic.14-spg208_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 208
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 12
+
+Input      : 07-cubic.15-spg209_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 209
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 24
+
+Input      : 07-cubic.16-spg210_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 210
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 12
+
+Input      : 07-cubic.17-spg211_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 211
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 24
+
+Input      : 07-cubic.18-spg212_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 212
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 3
+
+Input      : 07-cubic.19-spg213_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 213
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 3
+
+Input      : 07-cubic.20-spg214_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 214
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 3
+
+Input      : 07-cubic.21-spg215_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 215
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 24
+
+Input      : 07-cubic.22-spg216_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 216
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 24
+
+Input      : 07-cubic.23-spg217_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 217
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 24
+
+Input      : 07-cubic.24-spg218_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 218
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 12
+
+Input      : 07-cubic.25-spg219_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 219
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 12
+
+Input      : 07-cubic.26-spg220_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 220
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 3
+
+Input      : 07-cubic.27-spg221_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 221
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 48
+
+Input      : 07-cubic.28-spg222_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 222
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 6
+
+Input      : 07-cubic.29-spg223_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 223
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 24
+
+Input      : 07-cubic.30-spg224_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 224
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 24
+
+Input      : 07-cubic.31-spg225_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 225
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 48
+
+Input      : 07-cubic.32-spg226_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 226
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 24
+
+Input      : 07-cubic.33-spg227_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 227
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 24
+
+Input      : 07-cubic.34-spg228_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 228
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 12
+
+Input      : 07-cubic.35-spg229_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 229
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 48
+
+Input      : 07-cubic.36-spg230_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 230
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 6
