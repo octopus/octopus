@@ -674,7 +674,7 @@ contains
       if( has_angles ) then
         !Converting the angles to LatticeVectors
         !See 57_iovars/ingeo.F90 in Abinit for details
-        if( (angles(1)-angles(2))< tol_angle .and. (angles(2)-angles(3))< tol_angle .and.  &
+        if( abs(angles(1)-angles(2))< tol_angle .and. abs(angles(2)-angles(3))< tol_angle .and.  &
                  (abs(angles(1)-90.0)+abs(angles(2)-90.0)+abs(angles(3)-90.0))> tol_angle ) then
 
           cosang=cos(M_PI*angles(1)/CNST(180.0));
