@@ -1,0 +1,24 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Triclinic symmetries
+Program    : octopus
+TestGroups : long-run, periodic_systems
+Enabled    : Yes
+
+Input      : 01-triclinic.01-spg1_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 1
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 1 
+
+
+Input      : 01-triclinic.02-spg2_angle.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 1
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  2
+
+Input      : 01-triclinic.03-spg1_latvec.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 1
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 1
+
+
+Input      : 01-triclinic.04-spg2_latvec.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 1
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  2
