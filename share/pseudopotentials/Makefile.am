@@ -28,6 +28,7 @@ dist_pp_DATA =           \
 	hgh_lda.set      \
 	hscv_lda.set     \
 	hscv_pbe.set     \
+	pseudodojo_pbe.set         \
 	elements
 
 # In order to get `make check' working with a `VPATH' build (e. g. to use
