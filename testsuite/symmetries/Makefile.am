@@ -25,20 +25,20 @@ dist_share_DATA =                                  \
 	01-triclinic.01-spg1_angle.inp             \
 	01-triclinic.02-spg2_angle.inp             \
         01-triclinic.03-spg1_latvec.inp            \
-        01-triclinic.02-spg2_latvec.inp            \
+        01-triclinic.04-spg2_latvec.inp            \
         02-monoclinic.test                         \
         02-monoclinic.01-spg3_angle.inp            \
-        02-monoclinic.01-spg4_angle.inp            \
-        02-monoclinic.01-spg5_angle.inp            \
-        02-monoclinic.01-spg6_angle.inp            \
-        02-monoclinic.01-spg7_angle.inp            \
-        02-monoclinic.01-spg8_angle.inp            \
-        02-monoclinic.01-spg9_angle.inp            \
-        02-monoclinic.01-spg10_angle.inp            \
-        02-monoclinic.01-spg11_angle.inp            \
-        02-monoclinic.01-spg12_angle.inp            \
-        02-monoclinic.01-spg13_angle.inp            \
-        02-monoclinic.01-spg14_angle.inp            \
-        02-monoclinic.01-spg15_angle.inp             
+        02-monoclinic.02-spg4_angle.inp            \
+        02-monoclinic.03-spg5_angle.inp            \
+        02-monoclinic.04-spg6_angle.inp            \
+        02-monoclinic.05-spg7_angle.inp            \
+        02-monoclinic.06-spg8_angle.inp            \
+        02-monoclinic.07-spg9_angle.inp            \
+        02-monoclinic.08-spg10_angle.inp            \
+        02-monoclinic.09-spg11_angle.inp            \
+        02-monoclinic.10-spg12_angle.inp            \
+        02-monoclinic.11-spg13_angle.inp            \
+        02-monoclinic.12-spg14_angle.inp            \
+        02-monoclinic.13-spg15_angle.inp             
 
 CLEANFILES = *~ *.bak
