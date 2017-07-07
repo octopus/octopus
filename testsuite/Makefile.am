@@ -25,14 +25,14 @@ SUBDIRS = \
 	finite_systems_3d \
 	functionals      \
 	real_time        \
+        symmetries       \
 	linear_response  \
 	optimal_control  \
 	periodic_systems \
 	photo_electron   \
 	complex_scaling  \
 	pseudopotentials \
-	frozen           \
-	symmetries
+	frozen           
 
 bin_SCRIPTS = oct-run_regression_test.pl oct-run_testsuite.sh
 

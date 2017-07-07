@@ -27,7 +27,6 @@ module symmetries_oct_m
   use profiling_oct_m
   use species_oct_m
   use symm_op_oct_m
-  use spglib_f08
   use lalg_adv_oct_m
 
 
@@ -112,6 +111,7 @@ contains
     character(len=6) :: group_name
     character(len=30) :: group_elements
     character(len=11) :: symbol
+    character(len=7) :: schoenflies
     integer :: natoms, identity(3,3)
     logical :: any_non_spherical, symmetries_compute, found_identity, is_supercell
 
@@ -200,7 +200,7 @@ contains
       ! get inverse matrix to extract reduced coordinates for spglib
       lattice(1:3, 1:3) = rlattice(1:3, 1:3)
       
-      SAFE_ALLOCATE(position(1:3, 1:geo%natoms))  ! transpose!!
+      SAFE_ALLOCATE(position(1:3,1:geo%natoms))  ! transpose!!
       SAFE_ALLOCATE(typs(1:geo%natoms))
 
       ! fix things for low-dimensional systems: higher dimension lattice constants set to 1
@@ -209,16 +209,29 @@ contains
       end do
 
       do iatom = 1, geo%natoms
-        position(1:3, iatom) = M_ZERO
-        ! Transform atomic positions to reduced coordinates
-        position(1:dim4syms, iatom) = matmul (geo%atom(iatom)%x(1:dim4syms),klattice(1:dim4syms,1:dim4syms))/(M_TWO*M_PI) 
+        position(1:3,iatom) = M_ZERO
+ 
+        if(.not. geo%reduced_coordinates) then
+          ! Transform atomic positions to reduced coordinates
+          position(1:dim4syms,iatom) = matmul(geo%atom(iatom)%x(1:dim4syms),klattice(1:dim4syms,1:dim4syms))/(M_TWO*M_PI) 
+        else
+          position(1:dim4syms,iatom) = geo%atom(iatom)%x(1:dim4syms)
+        end if
+        position(1:dim4syms,iatom) = position(1:dim4syms,iatom)- M_HALF
+        do idir = 1, dim4syms
+          position(idir,iatom) = position(idir,iatom) - anint(position(idir,iatom))
+        end do
+        position(1:dim4syms,iatom) = position(1:dim4syms,iatom) + M_HALF
+
         typs(iatom) = species_index(geo%atom(iatom)%species)
+
       end do
 
       ! transpose the lattice vectors for use in spglib as row-major matrix
       lattice(:,:) = transpose(lattice(:,:))
 
-      this%space_group = spg_get_international(symbol, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
+      call spg_get_international(this%space_group, symbol, lattice, &
+                 position, typs, geo%natoms, symprec)
 
       if(this%space_group == 0) then
         message(1) = "Symmetry analysis failed in spglib. Disabling symmetries."
@@ -238,18 +251,18 @@ contains
       end if
 
       write(message(1),'(a, i4)') 'Space group No. ', this%space_group
-      write(message(2),'(2a)') 'International: ', symbol
-      this%space_group = spg_get_schoenflies(symbol, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
-      write(message(3),'(2a)') 'Schoenflies: ', symbol
+      write(message(2),'(2a)') 'International: ', trim(symbol)
+      call spg_get_schoenflies(this%space_group, schoenflies, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
+      write(message(3),'(2a)') 'Schoenflies: ', trim(schoenflies)
       call messages_info(3)
 
-      max_size = spg_get_multiplicity(lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
+      call spg_get_multiplicity(max_size, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
 
       ! spglib returns row-major not column-major matrices!!! --DAS
       SAFE_ALLOCATE(rotation(1:3, 1:3, 1:max_size))
       SAFE_ALLOCATE(translation(1:3, 1:max_size))
 
-      fullnops = spg_get_symmetry(rotation(1, 1, 1), translation(1, 1), &
+      call spg_get_symmetry(fullnops, rotation(1, 1, 1), translation(1, 1), &
         max_size, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
 
       ! we need to check that it is not a supercell, as in the QE routine (sgam_at)

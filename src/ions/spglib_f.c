@@ -1,53 +1,237 @@
-/*
- Copyright (C) 2009 X. Andrade
+/* Copyright (C) 2008 Atsushi Togo */
+/* All rights reserved. */
 
- This program is free software; you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation; either version 2, or (at your option)
- any later version.
+/* This file is part of spglib. */
 
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
+/* Redistribution and use in source and binary forms, with or without */
+/* modification, are permitted provided that the following conditions */
+/* are met: */
 
- You should have received a copy of the GNU General Public License
- along with this program; if not, write to the Free Software
- Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
- 02110-1301, USA.
+/* * Redistributions of source code must retain the above copyright */
+/*   notice, this list of conditions and the following disclaimer. */
 
-*/
+/* * Redistributions in binary form must reproduce the above copyright */
+/*   notice, this list of conditions and the following disclaimer in */
+/*   the documentation and/or other materials provided with the */
+/*   distribution. */
 
-#include <config.h>
-#include <spglib.h>
-#include "string_f.h" /* Fortran <-> c string compatibility issues */
+/* * Neither the name of the phonopy project nor the names of its */
+/*   contributors may be used to endorse or promote products derived */
+/*   from this software without specific prior written permission. */
 
-int FC_FUNC_(spglib_get_multiplicity, SPGLIB_GET_MULTIPLICITY)
-     (double lattice[3][3], double position[][3],
-      const int types[], const int * num_atom, const double * symprec){
+/* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS */
+/* "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT */
+/* LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS */
+/* FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE */
+/* COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, */
+/* INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, */
+/* BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; */
+/* LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER */
+/* CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT */
+/* LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN */
+/* ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE */
+/* POSSIBILITY OF SUCH DAMAGE. */
 
-  return spg_get_multiplicity(lattice, position, types, *num_atom, *symprec);
+#include "spglib.h"
+#include <string.h>
+
+void spg_get_multiplicity_(int *size,
+			   double lattice[3][3],
+			   double position[][3],
+			   int types[],
+			   int *num_atom,
+			   double *symprec);
+void spg_get_symmetry_(int *nsym,
+		       int rot[][3][3],
+		       double trans[][3],
+		       int *size,
+		       double lattice[3][3],
+		       double position[][3],
+		       int types[],
+		       int *num_atom,
+		       double *symprec);
+void spg_get_smallest_lattice_(double smallest_lattice[3][3],
+			       double lattice[3][3],
+			       double *symprec);
+void spg_get_international_(int *spacegroup,
+			    char symbol[11],
+			    double lattice[3][3],
+			    double position[][3],
+			    int types[],
+			    int *num_atom,
+			    double *symprec);
+void spg_refine_cell_(double lattice[3][3],
+		      double position[][3],
+		      int types[],
+		      int *num_atom,
+		      double *symprec);
+void spg_get_schoenflies_(int *spacegroup,
+			  char symbol[7],
+			  double lattice[3][3],
+			  double position[][3],
+			  int types[],
+			  int *num_atom,
+			  double *symprec);
+void spg_find_primitive_(double lattice[3][3],
+			 double position[][3],
+			 int types[],
+			 int *num_atom,
+			 double *symprec);
+void spg_get_ir_reciprocal_mesh_(int *num_ir_grid,
+				 int grid_point[][3],
+				 int map[],
+				 int mesh[3],
+				 int is_shift[3],
+				 int *is_time_reversal,
+				 double lattice[3][3],
+				 double position[][3],
+				 int types[],
+				 int *num_atom,
+				 double *symprec);
+
+
+
+
+
+void spg_get_multiplicity_(int *size,
+			   double lattice[3][3],
+			   double position[][3],
+			   int types[],
+			   int *num_atom,
+			   double *symprec)
+{
+  *size = spg_get_multiplicity(lattice, position, types, *num_atom, *symprec);
 }
 
-int FC_FUNC_(spglib_get_symmetry, SPGLIB_GET_SYMMETRY)
-     (int rotation[][3][3], double translation[][3], const int * max_size, double lattice[3][3],
-      double position[][3], const int types[], const int * num_atom, const double * symprec){
-
-  return spg_get_symmetry(rotation, translation, *max_size, lattice, position, types, *num_atom, *symprec);
+void spg_get_symmetry_(int *nsym,
+		       int rot[][3][3],
+		       double trans[][3],
+		       int *size,
+		       double lattice[3][3],
+		       double position[][3],
+		       int types[],
+		       int *num_atom,
+		       double *symprec)
+{
+  *nsym = spg_get_symmetry(rot, trans, *size, lattice, position,
+			   types, *num_atom, *symprec);
 }
 
-int FC_FUNC_(spglib_get_international, SPGLIB_GET_INTERNATIONAL)(STR_F_TYPE symbol, double lattice[3][3], double position[][3],
-								 const int types[], const int * num_atom, const double * symprec STR_ARG1){
+void spg_get_international_(int *spacegroup,
+			    char symbol[11],
+			    double lattice[3][3],
+			    double position[][3],
+			    int types[],
+			    int *num_atom,
+			    double *symprec)
+{
   char symbol_c[11];
-  int space_group = spg_get_international(symbol_c, lattice, position, types, *num_atom, *symprec);
-  TO_F_STR1(symbol_c, symbol);
-  return space_group;
+  int i, length;
+
+  *spacegroup = spg_get_international(symbol_c, lattice, position, types,
+				      *num_atom, *symprec);
+  if (*spacegroup > 0) {
+    length = strlen(symbol_c);
+    strncpy(symbol, symbol_c, length);
+  } else {
+    length = 0;
+  }
+
+  for (i = length; i < 11; i++) {
+    symbol[i] = ' ';
+  }
 }
 
-int FC_FUNC_(spglib_get_schoenflies, SPGLIB_GET_SCHOENFLIES)(STR_F_TYPE symbol, double lattice[3][3], double position[][3],
-							     const int types[], const int * num_atom, const double * symprec STR_ARG1){
+void spg_refine_cell_(double lattice[3][3],
+		      double position[][3],
+		      int types[],
+		      int *num_atom,
+		      double *symprec)
+{
+  int num_atom_bravais;
+
+  num_atom_bravais = spg_refine_cell(lattice,
+				     position,
+				     types,
+				     *num_atom,
+				     *symprec);
+  *num_atom = num_atom_bravais;
+}
+
+
+void spg_get_schoenflies_(int *spacegroup,
+			  char symbol[7],
+			  double lattice[3][3],
+			  double position[][3],
+			  int types[],
+			  int *num_atom,
+			  double *symprec)
+{
   char symbol_c[10];
-  int space_group = spg_get_schoenflies(symbol_c, lattice, position, types, *num_atom, *symprec);
-  TO_F_STR1(symbol_c, symbol);
-  return space_group;
+  int i, length;
+    
+  *spacegroup = spg_get_schoenflies(symbol_c, lattice, position, types,
+				    *num_atom, *symprec);
+  if (*spacegroup > 0) {
+    length = strlen(symbol_c);
+    strncpy(symbol, symbol_c, length);
+  } else {
+    length = 0;
+  }
+
+  for (i = length; i < 7; i++) {
+    symbol[i] = ' ';
+  }
+}
+
+void spg_find_primitive_(double lattice[3][3],
+			 double position[][3],
+			 int types[],
+			 int *num_atom,
+			 double *symprec)
+{
+
+  *num_atom = spg_find_primitive(lattice, position, types, *num_atom,
+				 *symprec);
+}
+
+void spg_delaunay_reduce_(double lattice[3][3],
+			  double *symprec)
+{
+  spg_delaunay_reduce(lattice, *symprec);
+}
+
+void spg_niggli_reduce_(double lattice[3][3],
+			double *symprec)
+{
+  spg_niggli_reduce(lattice, *symprec);
+}
+
+void spg_get_ir_reciprocal_mesh_(int *num_ir_grid,
+				 int grid_point[][3],
+				 int map[],
+				 int mesh[3],
+				 int is_shift[3],
+				 int *is_time_reversal,
+				 double lattice[3][3],
+				 double position[][3],
+				 int types[],
+				 int *num_atom,
+				 double *symprec)
+{
+  int i;
+  *num_ir_grid = spg_get_ir_reciprocal_mesh(grid_point,
+					    map,
+					    mesh,
+					    is_shift,
+					    *is_time_reversal,
+					    lattice,
+					    position,
+					    types,
+					    *num_atom,
+					    *symprec);
+
+  for (i = 0; i < mesh[0] * mesh[1] * mesh[2]; i++) {
+    map[i]++;
+  }
 }
