@@ -399,7 +399,11 @@ AC_CONFIG_FILES([Makefile
   share/pseudopotentials/sg15/Makefile
   share/pseudopotentials/hscv/Makefile
   share/pseudopotentials/hscv/lda/Makefile
-  share/pseudopotentials/hscv/pbe/Makefile  
+  share/pseudopotentials/hscv/pbe/Makefile
+  share/pseudopotentials/pseudo_dojo/Makefile  
+  share/pseudopotentials/pseudo_dojo/pbe_s_sr/Makefile
+  share/pseudopotentials/pseudo_dojo/pbesol_s_sr/Makefile  
+  share/pseudopotentials/pseudo_dojo/pw_s_sr/Makefile
   share/recipes/Makefile
   share/recipes/da/Makefile
   share/recipes/de/Makefile
