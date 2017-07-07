@@ -419,10 +419,6 @@ contains
     call check_error(ierr)
     ps_upf%nlcc = str /= 'F'
 
-    if(ps_upf%nlcc) then
-      call messages_not_implemented('UPF version 2 with non-linear core corrections')
-    end if
-    
     ierr = xml_tag_get_attribute_value(tag, 'l_max', ps_upf%l_max)
     call check_error(ierr)
     
@@ -611,9 +607,17 @@ contains
     !     write(16, *) ip, ps_upf%r(ip), ps_upf%rho(ip)
     !   end do
     
-    !Non-linear core-corrections not supported at the moment
-    nullify(ps_upf%core_density)
-
+    !Non-linear core-corrections
+    if (ps_upf%nlcc) then
+      SAFE_ALLOCATE(ps_upf%core_density(1:ps_upf%np))
+      ps_upf%core_density(1) = CNST(0.0)
+      ierr = xml_get_tag_value(tag, 'PP_RHOATOM', ps_upf%np - startp + 1, ps_upf%rho(startp:))
+      call check_error(ierr)
+      call xml_tag_end(tag)
+    else
+      nullify(ps_upf%core_density)
+    end if
+    
     !Apparently j is not given in the file
     nullify(ps_upf%proj_j)
     ps_upf%j(1:ps_upf%n_wfs) = M_ZERO
