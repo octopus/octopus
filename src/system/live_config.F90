@@ -38,6 +38,7 @@ contains
     nullify(list)
     ASSERT(st%d%nspin>0)
     ASSERT(st%d%nspin<3)
+    call json_set(this, "external", .true.)
     call json_get(this, "charge", list, ierr)
     ASSERT(ierr==JSON_OK)
     ASSERT(st%d%nspin==json_len(list))
@@ -69,7 +70,6 @@ contains
     PUSH_SUB(live_config_parse_states)
 
     nullify(cnfg)
-    call json_set(this, "charge", st%qtot)
     call json_get(this, "density", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
     call live_config_parse_density(cnfg, st)

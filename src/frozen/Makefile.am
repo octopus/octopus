@@ -30,6 +30,8 @@ libfrozen_a_SOURCES =		\
 	domain.F90		\
 	simulation.F90		\
 	storage.F90		\
+	dnst.F90		\
+	dnst_intrf.F90		\
 	functional.F90		\
 	intrpl.F90		\
 	base_geometry.F90	\
@@ -71,8 +73,6 @@ libfrozen_a_SOURCES =		\
 	live_system.F90		\
 	live_model.F90		\
 	live_handle.F90		\
-	ssys_density.F90	\
-	ssys_states.F90		\
 	ssys_system.F90		\
 	ssys_ionic.F90		\
 	ssys_external.F90	\
@@ -109,10 +109,12 @@ geo_build.o	: geo_build.F90 										\
 grid_intrf.o    : grid_intrf.F90
 interface_xc.o	: interface_xc.F90
 domain.o 	: domain.F90 											\
-	basis.o													\
+	geo_intrf.o basis.o											\
 	tlist_inc.F90 template.h util.h
 simulation.o	: simulation.F90 domain.o grid_intrf.o
 storage.o 	: storage.F90 simulation.o
+dnst.o 		: dnst.F90 storage.o simulation.o
+dnst_intrf.o	: dnst_intrf.F90 dnst.o
 functional.o 	: functional.F90 storage.o simulation.o interface_xc.o
 intrpl.o 	: intrpl.F90 storage.o simulation.o domain.o
 
@@ -121,7 +123,7 @@ base_geometry.o 	: base_geometry.F90 									\
 	iterator_inc.F90 tdict_inc.F90 tdarr_inc.F90 thash_inc.F90 tlist_inc.F90 tpair_inc.F90 tsingle_inc.F90	\
 	template.h util.h
 base_density.o 		: base_density.F90 									\
-	storage.o simulation.o strng.o										\
+	dnst_intrf.o dnst.o storage.o simulation.o strng.o							\
 	iterator_inc.F90 tdict_inc.F90 tdarr_inc.F90 thash_inc.F90 tlist_inc.F90 tpair_inc.F90 tsingle_inc.F90 	\
 	template.h util.h
 base_states.o 		: base_states.F90 									\
@@ -197,11 +199,9 @@ live_system.o		: live_system.F90 live_geometry.o base_system.o base_geometry.o
 live_model.o		: live_model.F90 live_system.o base_model.o base_system.o
 live_handle.o		: live_handle.F90 live_model.o base_handle.o base_model.o
 
-ssys_density.o		: ssys_density.F90 base_density.o
-ssys_states.o		: ssys_states.F90 base_states.o
-ssys_system.o		: ssys_system.F90 ssys_states.o base_system.o
+ssys_system.o		: ssys_system.F90 base_system.o
 ssys_ionic.o		: ssys_ionic.F90 ssys_system.o base_term.o base_geometry.o
-ssys_external.o		: ssys_external.F90 ssys_density.o base_potential.o storage.o
+ssys_external.o		: ssys_external.F90 base_potential.o storage.o
 ssys_tnadd.o		: ssys_tnadd.F90 base_hamiltonian.o
 ssys_hamiltonian.o	: ssys_hamiltonian.F90 ssys_tnadd.o ssys_external.o ssys_ionic.o ssys_system.o		\
 	base_hamiltonian.o simulation.o

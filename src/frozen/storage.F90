@@ -765,17 +765,23 @@ contains
   end subroutine storage_get_mesh
 
   ! ---------------------------------------------------------
-  subroutine storage_get_storage_1d(this, that)
+  subroutine storage_get_storage_1d(this, that, dim)
     type(storage_t),              target, intent(in) :: this
     real(kind=wp), dimension(:), pointer             :: that
+    integer,                    optional, intent(in) :: dim
 
     PUSH_SUB(storage_get_storage_1d)
 
     nullify(that)
     if(this%alloc)then
       ASSERT(allocated(this%data))
-      ASSERT(this%ndim==1)
-      that => this%data(:,1)
+      if(present(dim))then
+        ASSERT(dim<=this%ndim)
+        that => this%data(:,dim)
+      else
+        ASSERT(this%ndim==1)
+        that => this%data(:,1)
+      end if
     end if
 
     POP_SUB(storage_get_storage_1d)

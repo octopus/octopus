@@ -3,6 +3,7 @@
 module fio_density_oct_m
 
   use base_density_oct_m
+  use basis_oct_m
   use global_oct_m
   use intrpl_oct_m
   use io_function_oct_m
@@ -13,6 +14,7 @@ module fio_density_oct_m
   use path_oct_m
   use profiling_oct_m
   use simulation_oct_m
+  use space_oct_m
   use storage_oct_m
 
   implicit none
@@ -26,23 +28,28 @@ module fio_density_oct_m
   public ::               &
     fio_density_intrpl_t
 
-  public ::                  &
-    fio_density_intrpl_init, &
-    fio_density_intrpl_eval, &
-    fio_density_intrpl_get,  &
-    fio_density_intrpl_copy, &
+  public ::                   &
+    fio_density_intrpl_init,  &
+    fio_density_intrpl_start, &
+    fio_density_intrpl_eval,  &
+    fio_density_intrpl_stop,  &
+    fio_density_intrpl_get,   &
+    fio_density_intrpl_copy,  &
     fio_density_intrpl_end
 
   type :: fio_density_intrpl_t
     private
     type(base_density_t), pointer :: self =>null()
+    type(simulation_t),   pointer :: sim  =>null()
+    type(json_object_t)           :: config
+    type(base_density_t)          :: dnst
     type(intrpl_t)                :: intrp
   end type fio_density_intrpl_t
 
-  interface fio_density_intrpl_eval
-    module procedure fio_density_intrpl_eval_1d
-    module procedure fio_density_intrpl_eval_md
-  end interface fio_density_intrpl_eval
+  interface fio_density_intrpl__eval__
+    module procedure fio_density_intrpl__eval__1d
+    module procedure fio_density_intrpl__eval__md
+  end interface fio_density_intrpl__eval__
 
   interface fio_density_intrpl_get
     module procedure fio_density_intrpl_get_info
@@ -163,17 +170,69 @@ contains
   end subroutine fio_density__load__
 
   ! ---------------------------------------------------------
+  pure subroutine fio_density_adjust_spin_1_n(this, that)
+    real(kind=wp),               intent(out) :: this
+    real(kind=wp), dimension(:), intent(in)  :: that
+
+    select case(size(that))
+    case(1)
+      this = that(1)
+    case(2)
+      this = sum(that)
+    case default
+      this = -1.0_wp
+    end select
+
+  end subroutine fio_density_adjust_spin_1_n
+
+  ! ---------------------------------------------------------
+  pure subroutine fio_density_adjust_spin_2_n(this, that)
+    real(kind=wp), dimension(:), intent(out) :: this
+    real(kind=wp), dimension(:), intent(in)  :: that
+
+    select case(size(that))
+    case(1)
+      this = 0.5_wp*that(1)
+    case(2)
+      this = that
+    case default
+      this = -1.0_wp
+    end select
+
+  end subroutine fio_density_adjust_spin_2_n
+
+  ! ---------------------------------------------------------
+  pure subroutine fio_density_adjust_spin(this, that)
+    real(kind=wp), dimension(:), intent(out) :: this
+    real(kind=wp), dimension(:), intent(in)  :: that
+
+    select case(size(this))
+    case(1)
+      call fio_density_adjust_spin_1_n(this(1), that)
+    case(2)
+      call fio_density_adjust_spin_2_n(this, that)
+    case default
+      this = -1.0_wp
+    end select
+
+  end subroutine fio_density_adjust_spin
+
+  ! ---------------------------------------------------------
   subroutine fio_density_intrpl_init(this, that, type)
     type(fio_density_intrpl_t),   intent(out) :: this
     type(base_density_t), target, intent(in)  :: that
     integer,            optional, intent(in)  :: type
 
-    type(storage_t), pointer :: data
+    type(json_object_t), pointer :: cnfg
+    type(storage_t),     pointer :: data
 
     PUSH_SUB(fio_density_intrpl_init)
 
-    nullify(data)
+    nullify(cnfg, data, this%sim)
     this%self => that
+    call base_density_get(that, cnfg)
+    ASSERT(associated(cnfg))
+    call json_copy(this%config, cnfg)
     call base_density_get(that, data)
     ASSERT(associated(data))
     call intrpl_init(this%intrp, data, type=type)
@@ -183,38 +242,134 @@ contains
   end subroutine fio_density_intrpl_init
 
   ! ---------------------------------------------------------
-  subroutine fio_density_intrpl_eval_1d(this, x, val)
+  subroutine fio_density_intrpl_start(this, sim, nspin)
+    type(fio_density_intrpl_t), intent(inout) :: this
+    type(simulation_t), target, intent(in)    :: sim
+    integer,                    intent(in)    :: nspin
+
+    real(kind=wp), dimension(:), allocatable :: ochrg, ichrg
+    integer                                  :: ispin, sspin
+
+    PUSH_SUB(fio_density_intrpl_start)
+
+    ASSERT(associated(this%self))
+    ASSERT(.not.associated(this%sim))
+    ASSERT(nspin>0)
+    ASSERT(nspin<3)
+    this%sim => sim
+    call json_set(this%config, "reduce", .false.)
+    call json_set(this%config, "static", .false.)
+    call json_set(this%config, "external", .false.)
+    call json_set(this%config, "nspin", nspin)
+    call base_density_get(this%self, nspin=sspin)
+    SAFE_ALLOCATE(ichrg(1:sspin))
+    do ispin = 1, sspin
+      call base_density_get(this%self, ichrg(ispin), ispin)
+    end do
+    SAFE_ALLOCATE(ochrg(1:nspin))
+    call fio_density_adjust_spin(ochrg, ichrg)
+    SAFE_DEALLOCATE_A(ichrg)
+    call json_set(this%config, "charge", ochrg)
+    SAFE_DEALLOCATE_A(ochrg)
+    call json_write(this%config)
+    call base_density__init__(this%dnst, this%config)
+    call base_density__start__(this%dnst, sim)
+
+    POP_SUB(fio_density_intrpl_start)
+  end subroutine fio_density_intrpl_start
+
+  ! ---------------------------------------------------------
+  subroutine fio_density_intrpl__eval__1d(this, x, val)
     type(fio_density_intrpl_t),  intent(in)  :: this
     real(kind=wp), dimension(:), intent(in)  :: x
     real(kind=wp),               intent(out) :: val
 
     integer :: ierr
 
-    PUSH_SUB(fio_density_intrpl_eval_1d)
+    PUSH_SUB(fio_density_intrpl__eval__1d)
 
     ierr = INTRPL_NI
     if(associated(this%self)) call intrpl_eval(this%intrp, x, val, ierr)
     if(ierr/=INTRPL_OK) val = 0.0_wp
 
-    POP_SUB(fio_density_intrpl_eval_1d)
-  end subroutine fio_density_intrpl_eval_1d
+    POP_SUB(fio_density_intrpl__eval__1d)
+  end subroutine fio_density_intrpl__eval__1d
 
   ! ---------------------------------------------------------
-  subroutine fio_density_intrpl_eval_md(this, x, val)
+  subroutine fio_density_intrpl__eval__md(this, x, val)
     type(fio_density_intrpl_t),  intent(in)  :: this
     real(kind=wp), dimension(:), intent(in)  :: x
     real(kind=wp), dimension(:), intent(out) :: val
 
     integer :: ierr
 
-    PUSH_SUB(fio_density_intrpl_eval_md)
+    PUSH_SUB(fio_density_intrpl__eval__md)
 
     ierr = INTRPL_NI
     if(associated(this%self)) call intrpl_eval(this%intrp, x, val, ierr)
     if(ierr/=INTRPL_OK) val = 0.0_wp
 
-    POP_SUB(fio_density_intrpl_eval_md)
-  end subroutine fio_density_intrpl_eval_md
+    POP_SUB(fio_density_intrpl__eval__md)
+  end subroutine fio_density_intrpl__eval__md
+
+  ! ---------------------------------------------------------
+  subroutine  fio_density_intrpl_eval(this, that, config)
+    type(fio_density_intrpl_t), target, intent(inout) :: this
+    type(base_density_t),              pointer        :: that
+    type(json_object_t),                intent(in)    :: config
+
+    real(kind=wp), dimension(:,:),   pointer :: dnst
+    real(kind=wp), dimension(:), allocatable :: x, irho
+    type(space_t),                   pointer :: space
+    type(mesh_t),                    pointer :: mesh
+    type(basis_t)                            :: basis
+    integer                                  :: indx, np, nspin
+
+    PUSH_SUB(fio_density_intrpl_eval)
+
+    nullify(that, dnst, space, mesh)
+    call simulation_get(this%sim, space)
+    ASSERT(associated(space))
+    ASSERT(space%dim>0)
+    SAFE_ALLOCATE(x(space%dim))
+    call basis_init(basis, space, config)
+    call simulation_get(this%sim, mesh)
+    ASSERT(associated(mesh))
+    call fio_density_intrpl_get(this, dim=nspin)
+    ASSERT(nspin>0)
+    ASSERT(nspin<3)
+    SAFE_ALLOCATE(irho(nspin))
+    that => this%dnst
+    call base_density_get(this%dnst, size=np)
+    call base_density_get(this%dnst, dnst)
+    ASSERT(associated(dnst))
+    do indx = 1, np
+      call basis_to_internal(basis, mesh%x(indx,1:space%dim), x)
+      call fio_density_intrpl__eval__(this, x, irho)
+      call fio_density_adjust_spin(dnst(indx,:), irho)
+    end do
+    call base_density__update__(this%dnst)
+    SAFE_DEALLOCATE_A(irho)
+    SAFE_DEALLOCATE_A(x)
+    nullify(dnst, space, mesh)
+    call basis_end(basis)
+
+    POP_SUB(fio_density_intrpl_eval)
+  end subroutine fio_density_intrpl_eval
+
+  ! ---------------------------------------------------------
+  subroutine fio_density_intrpl_stop(this)
+    type(fio_density_intrpl_t), intent(inout) :: this
+
+    PUSH_SUB(fio_density_intrpl_stop)
+
+    ASSERT(associated(this%self))
+    ASSERT(associated(this%sim))
+    nullify(this%sim)
+    call base_density__end__(this%dnst)
+
+    POP_SUB(fio_density_intrpl_stop)
+  end subroutine fio_density_intrpl_stop
 
   ! ---------------------------------------------------------
   subroutine fio_density_intrpl_get_info(this, type, dim, default)
@@ -253,6 +408,9 @@ contains
     call fio_density_intrpl_end(this)
     if(associated(that%self))then
       this%self => that%self
+      call json_copy(this%config, that%config)
+      this%sim => that%sim
+      if(associated(that%sim)) call base_density_copy(this%dnst, that%dnst)
       call intrpl_copy(this%intrp, that%intrp)
     end if
 
@@ -265,7 +423,12 @@ contains
 
     PUSH_SUB(fio_density_intrpl_end)
 
-    if(associated(this%self)) call intrpl_end(this%intrp)
+    if(associated(this%self))then
+      if(associated(this%sim)) call base_density_end(this%dnst)
+      nullify(this%sim)
+      call json_end(this%config)
+      call intrpl_end(this%intrp)
+    end if
     nullify(this%self)
 
     POP_SUB(fio_density_intrpl_end)

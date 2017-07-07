@@ -1752,7 +1752,7 @@ contains
         if(ispn==states_dim_get_spin_index(st%d, ik))&
           chrg = chrg + st%d%kweights(ik) * sum(st%occ(:,ik))
       end do
-      call base_density_set(dnst, chrg, ispn)
+      call base_density_set(dnst, chrg, spin=ispn)
       qtot = qtot + chrg
     end do
     ASSERT(.not.abs(M_ONE-min(st%qtot,qtot)/max(st%qtot,qtot))>epsilon(qtot))

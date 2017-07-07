@@ -54,10 +54,10 @@ module base_states_oct_m
   public ::                &
     base_states__init__,   &
     base_states__start__,  &
-    base_states__update__, &
-    base_states__stop__,   &
-    base_states__reset__,  &
     base_states__acc__,    &
+    base_states__update__, &
+    base_states__reset__,  &
+    base_states__stop__,   &
     base_states__copy__,   &
     base_states__end__
 
@@ -66,11 +66,12 @@ module base_states_oct_m
     base_states_del,    &
     base_states_init,   &
     base_states_start,  &
+    base_states_acc,    &
     base_states_update, &
+    base_states_reset,  &
     base_states_stop,   &
     base_states_sets,   &
     base_states_gets,   &
-    base_states_set,    &
     base_states_get,    &
     base_states_copy,   &
     base_states_end
@@ -96,7 +97,6 @@ module base_states_oct_m
     type(json_object_t), pointer :: config =>null()
     type(simulation_t),  pointer :: sim    =>null()
     type(base_states_t), pointer :: prnt   =>null()
-    real(kind=wp)                :: charge = 0.0_wp
     type(base_density_t)         :: density
     type(base_states_dict_t)     :: dict
     type(base_states_list_t)     :: list
@@ -112,10 +112,6 @@ module base_states_oct_m
     module procedure base_states_init_copy
   end interface base_states_init
 
-  interface base_states_set
-    module procedure base_states_set_info
-  end interface base_states_set
-
   interface base_states_gets
     module procedure base_states_gets_type
     module procedure base_states_gets_density
@@ -127,6 +123,7 @@ module base_states_oct_m
     module procedure base_states_get_info
     module procedure base_states_get_config
     module procedure base_states_get_simulation
+    module procedure base_states_get_charge
     module procedure base_states_get_density
     module procedure base_states_get_density_1d
     module procedure base_states_get_density_2d
@@ -231,8 +228,6 @@ contains
 
     nullify(cnfg)
     this%config => config
-    call json_get(this%config, "charge", this%charge, ierr)
-    if(ierr/=JSON_OK) this%charge = 0.0_wp
     call json_get(this%config, "density", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
     call base_density__init__(this%density, cnfg)
@@ -288,8 +283,12 @@ contains
       nullify(osub, isub)
       call base_states_next(iter, name, isub, ierr)
       if(ierr/=BASE_STATES_OK)exit
-      call base_states_new(this, osub)
-      call base_states_init(osub, isub)
+      if(base_states_list_index(this%list, isub)>0)then
+        call base_states_new(this, osub)
+        call base_states_init(osub, isub)
+      else
+        osub => isub
+      end if
       call base_states_sets(this, name, osub)
     end do
     call base_states_end(iter)
@@ -314,30 +313,20 @@ contains
   end subroutine base_states__start__
     
   ! ---------------------------------------------------------
-  recursive subroutine base_states_start(this, sim)
+  subroutine base_states__acc__(this, that)
     type(base_states_t), intent(inout) :: this
-    type(simulation_t),  intent(in)    :: sim
+    type(base_states_t), intent(in)    :: that
 
-    type(base_states_iterator_t) :: iter
-    type(base_states_t), pointer :: subs
-    integer                      :: ierr
+    PUSH_SUB(base_states__acc__)
 
-    PUSH_SUB(base_states_start)
+    ASSERT(associated(this%config))
+    ASSERT(associated(that%config))
+    ASSERT(associated(this%sim))
+    ASSERT(associated(that%sim))
+    call base_density__acc__(this%density, that%density)
 
-    nullify(subs)
-    call base_states_init(iter, this)
-    do
-      nullify(subs)
-      call base_states_next(iter, subs, ierr)
-      if(ierr/=BASE_STATES_OK)exit
-      call base_states_start(subs, sim)
-    end do
-    call base_states_end(iter)
-    nullify(subs)
-    call base_states__start__(this, sim)
-
-    POP_SUB(base_states_start)
-  end subroutine base_states_start
+    POP_SUB(base_states__acc__)
+  end subroutine base_states__acc__
 
   ! ---------------------------------------------------------
   subroutine base_states__update__(this)
@@ -353,29 +342,18 @@ contains
   end subroutine base_states__update__
 
   ! ---------------------------------------------------------
-  recursive subroutine base_states_update(this)
+  subroutine base_states__reset__(this)
     type(base_states_t), intent(inout) :: this
 
-    type(base_states_iterator_t) :: iter
-    type(base_states_t), pointer :: subs
-    integer                      :: ierr
+    PUSH_SUB(base_states__reset__)
 
-    PUSH_SUB(base_states_update)
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
+    call base_density__reset__(this%density)
 
-    call base_states_init(iter, this)
-    do
-      nullify(subs)
-      call base_states_next(iter, subs, ierr)
-      if(ierr/=BASE_STATES_OK)exit
-      call base_states_update(subs)
-    end do
-    call base_states_end(iter)
-    nullify(subs)
-    if(associated(this%sim)) call base_states__update__(this)
-
-    POP_SUB(base_states_update)
-  end subroutine base_states_update
-
+    POP_SUB(base_states__reset__)
+  end subroutine base_states__reset__
+    
   ! ---------------------------------------------------------
   subroutine base_states__stop__(this)
     type(base_states_t), intent(inout) :: this
@@ -391,59 +369,123 @@ contains
   end subroutine base_states__stop__
     
   ! ---------------------------------------------------------
-  recursive subroutine base_states_stop(this)
+  recursive subroutine base_states__apply__(this, operation)
     type(base_states_t), intent(inout) :: this
+
+    interface
+      subroutine operation(this)
+        import :: base_states_t
+        type(base_states_t), intent(inout) :: this
+      end subroutine operation
+    end interface
+
+    type(base_states_list_iterator_t) :: iter
+    type(base_states_t),      pointer :: subs
+
+    PUSH_SUB(base_states__apply__)
+
+    call base_states_list_init(iter, this%list)
+    do
+      nullify(subs)
+      call base_states_list_next(iter, subs)
+      if(.not.associated(subs))exit
+      call base_states__apply__(subs, operation)
+    end do
+    call base_states_list_end(iter)
+    nullify(subs)
+    call operation(this)
+
+    POP_SUB(base_states__apply__)
+  end subroutine base_states__apply__
+
+  ! ---------------------------------------------------------
+  subroutine base_states_start(this, sim)
+    type(base_states_t), intent(inout) :: this
+    type(simulation_t),   intent(in)    :: sim
+
+    PUSH_SUB(base_states_start)
+
+    call base_states__apply__(this, start)
+    
+    POP_SUB(base_states_start)
+    
+  contains
+
+    subroutine start(this)
+      type(base_states_t), intent(inout) :: this
+
+      PUSH_SUB(base_states_start.start)
+      
+      call base_states__start__(this, sim)
+
+      POP_SUB(base_states_start.start)
+    end subroutine start
+
+  end subroutine base_states_start
+
+  ! ---------------------------------------------------------
+  recursive subroutine base_states_acc(this)
+    type(base_states_t), intent(inout) :: this
+
+    character(len=BASE_STATES_NAME_LEN) :: name
 
     type(base_states_iterator_t) :: iter
     type(base_states_t), pointer :: subs
+    logical                      :: accu
     integer                      :: ierr
 
-    PUSH_SUB(base_states_stop)
+    PUSH_SUB(base_states_acc)
 
+    ASSERT(associated(this%config))
+    call base_states_get(this, reduce=accu)
+    if(accu) call base_states__reset__(this)
     call base_states_init(iter, this)
     do
       nullify(subs)
-      call base_states_next(iter, subs, ierr)
+      call base_states_next(iter, name, subs, ierr)
       if(ierr/=BASE_STATES_OK)exit
-      call base_states_stop(subs)
+      call base_states_acc(subs)
+      if(accu) call base_states__acc__(this, subs)
     end do
     call base_states_end(iter)
     nullify(subs)
-    call base_states__stop__(this)
+    if(accu) call base_states__update__(this)
+    
+    POP_SUB(base_states_acc)
+  end subroutine base_states_acc
 
+  ! ---------------------------------------------------------
+  subroutine base_states_update(this)
+    type(base_states_t), intent(inout) :: this
+
+    PUSH_SUB(base_states_update)
+
+    call base_states__apply__(this, base_states__update__)
+    
+    POP_SUB(base_states_update)
+  end subroutine base_states_update
+
+  ! ---------------------------------------------------------
+  subroutine base_states_reset(this)
+    type(base_states_t), intent(inout) :: this
+
+    PUSH_SUB(base_states_reset)
+
+    call base_states__apply__(this, base_states__reset__)
+    
+    POP_SUB(base_states_reset)
+  end subroutine base_states_reset
+
+  ! ---------------------------------------------------------
+  subroutine base_states_stop(this)
+    type(base_states_t), intent(inout) :: this
+
+    PUSH_SUB(base_states_stop)
+
+    call base_states__apply__(this, base_states__stop__)
+    
     POP_SUB(base_states_stop)
   end subroutine base_states_stop
-
-  ! ---------------------------------------------------------
-  subroutine base_states__reset__(this)
-    type(base_states_t), intent(inout) :: this
-
-    PUSH_SUB(base_states__reset__)
-
-    ASSERT(associated(this%config))
-    ASSERT(associated(this%sim))
-    this%charge = 0.0_wp
-    call base_density__reset__(this%density)
-
-    POP_SUB(base_states__reset__)
-  end subroutine base_states__reset__
-    
-  ! ---------------------------------------------------------
-  subroutine base_states__acc__(this, that)
-    type(base_states_t), intent(inout) :: this
-    type(base_states_t), intent(in)    :: that
-
-    PUSH_SUB(base_states__acc__)
-
-    ASSERT(associated(this%config))
-    ASSERT(associated(that%config))
-    ASSERT(associated(this%sim))
-    ASSERT(associated(that%sim))
-    this%charge = this%charge + that%charge
-    call base_density__acc__(this%density, that%density)
-
-    POP_SUB(base_states__acc__)
-  end subroutine base_states__acc__
 
   ! ---------------------------------------------------------
   subroutine base_states__sets__(this, name, that)
@@ -506,10 +548,11 @@ contains
   end subroutine base_states_gets_density
     
   ! ---------------------------------------------------------
-  subroutine base_states_gets_density_1d(this, name, that, total)
+  subroutine base_states_gets_density_1d(this, name, that, spin, total)
     type(base_states_t),          intent(in) :: this
     character(len=*),             intent(in) :: name
     real(kind=wp), dimension(:), pointer     :: that
+    integer,            optional, intent(in) :: spin
     logical,            optional, intent(in) :: total
 
     type(base_density_t), pointer :: dnst
@@ -518,7 +561,7 @@ contains
 
     nullify(that, dnst)
     call base_states_gets(this, name, dnst)
-    if(associated(dnst)) call base_density_get(dnst, that, total)
+    if(associated(dnst)) call base_density_get(dnst, that, spin, total)
 
     POP_SUB(base_states_gets_density_1d)
   end subroutine base_states_gets_density_1d
@@ -542,30 +585,31 @@ contains
   end subroutine base_states_gets_density_2d
 
   ! ---------------------------------------------------------
-  subroutine base_states_set_info(this, charge)
-    type(base_states_t),     intent(inout) :: this
-    real(kind=wp), optional, intent(in)    :: charge
-
-    PUSH_SUB(base_states_set_info)
-
-    if(present(charge)) this%charge = charge
-
-    POP_SUB(base_states_set_info)
-  end subroutine base_states_set_info
-    
-  ! ---------------------------------------------------------
-  subroutine base_states_get_info(this, charge, nspin)
-    type(base_states_t),     intent(in)  :: this
-    real(kind=wp), optional, intent(out) :: charge
-    integer,       optional, intent(out) :: nspin
+  subroutine base_states_get_info(this, nspin, reduce)
+    type(base_states_t), intent(in)  :: this
+    integer,   optional, intent(out) :: nspin
+    logical,   optional, intent(out) :: reduce
 
     PUSH_SUB(base_states_get_info)
 
-    if(present(charge)) charge = this%charge
-    call base_density_get(this%density, nspin=nspin)
+    call base_density_get(this%density, nspin=nspin, reduce=reduce)
 
     POP_SUB(base_states_get_info)
   end subroutine base_states_get_info
+    
+  ! ---------------------------------------------------------
+  subroutine base_states_get_charge(this, charge, spin, total)
+    type(base_states_t), intent(in)  :: this
+    real(kind=wp),       intent(out) :: charge
+    integer,   optional, intent(out) :: spin
+    logical,   optional, intent(out) :: total
+
+    PUSH_SUB(base_states_get_charge)
+
+    call base_density_get(this%density, charge, spin=spin, total=total)
+
+    POP_SUB(base_states_get_charge)
+  end subroutine base_states_get_charge
     
   ! ---------------------------------------------------------
   subroutine base_states_get_config(this, that)
@@ -606,15 +650,16 @@ contains
   end subroutine base_states_get_density
     
   ! ---------------------------------------------------------
-  subroutine base_states_get_density_1d(this, that, total)
+  subroutine base_states_get_density_1d(this, that, spin, total)
     type(base_states_t),          intent(in) :: this
     real(kind=wp), dimension(:), pointer     :: that
+    integer,            optional, intent(in) :: spin
     logical,            optional, intent(in) :: total
 
     PUSH_SUB(base_states_get_density_1d)
 
     nullify(that)
-    call base_density_get(this%density, that, total)
+    call base_density_get(this%density, that, spin, total)
 
     POP_SUB(base_states_get_density_1d)
   end subroutine base_states_get_density_1d
@@ -643,7 +688,6 @@ contains
     call base_states__end__(this)
     if(associated(that%config))then
       call base_states__init__(this, that)
-      this%charge = that%charge
       if(associated(that%sim)) call base_density__copy__(this%density, that%density)
     end if
 
@@ -670,8 +714,12 @@ contains
       nullify(osub, isub)
       call base_states_next(iter, name, isub, ierr)
       if(ierr/=BASE_STATES_OK)exit
-      call base_states_new(this, osub)
-      call base_states_copy(osub, isub)
+      if(base_states_list_index(this%list, isub)>0)then
+        call base_states_new(this, osub)
+        call base_states_copy(osub, isub)
+      else
+        osub => isub
+      end if
       call base_states_sets(this, name, osub)
     end do
     call base_states_end(iter)
@@ -687,7 +735,6 @@ contains
     PUSH_SUB(base_states__end__)
 
     nullify(this%config, this%sim, this%prnt)
-    this%charge = 0.0_wp
     call base_density__end__(this%density)
     call base_states_dict_end(this%dict)
     call base_states_list_end(this%list)
