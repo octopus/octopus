@@ -138,6 +138,7 @@ module base_system_oct_m
     module procedure base_system_get_space
     module procedure base_system_get_geom
     module procedure base_system_get_geometry
+    module procedure base_system_get_charge
     module procedure base_system_get_states
     module procedure base_system_get_density
   end interface base_system_get
@@ -530,17 +531,29 @@ contains
   end subroutine base_system_set_simulation
 
   ! ---------------------------------------------------------
-  subroutine base_system_get_info(this, charge, nspin)
-    type(base_system_t),     intent(in)  :: this
-    real(kind=wp), optional, intent(out) :: charge
-    integer,       optional, intent(out) :: nspin
+  subroutine base_system_get_info(this, nspin)
+    type(base_system_t), intent(in)  :: this
+    integer,             intent(out) :: nspin
 
     PUSH_SUB(base_system_get_info)
 
-    call base_states_get(this%st, charge=charge, nspin=nspin)
+    call base_states_get(this%st, nspin)
 
     POP_SUB(base_system_get_info)
   end subroutine base_system_get_info
+ 
+  ! ---------------------------------------------------------
+  subroutine base_system_get_charge(this, charge, spin)
+    type(base_system_t), intent(in)  :: this
+    real(kind=wp),       intent(out) :: charge
+    integer,   optional, intent(out) :: spin
+
+    PUSH_SUB(base_system_get_charge)
+
+    call base_states_get(this%st, charge, spin=spin)
+
+    POP_SUB(base_system_get_charge)
+  end subroutine base_system_get_charge
  
   ! ---------------------------------------------------------
   subroutine base_system_get_config(this, that)

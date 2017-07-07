@@ -226,6 +226,53 @@ contains
   end subroutine ssys_config_parse_subsystems
 
   ! ---------------------------------------------------------
+  subroutine ssys_config_parse_density(this)
+    type(json_object_t), intent(inout) :: this
+
+    PUSH_SUB(ssys_config_parse_density)
+
+    call json_set(this, "reduce", .true.)
+
+    POP_SUB(ssys_config_parse_density)
+  end subroutine ssys_config_parse_density
+
+  ! ---------------------------------------------------------
+  subroutine ssys_config_parse_states(this)
+    type(json_object_t), intent(inout) :: this
+
+    type(json_object_t), pointer :: cnfg
+    integer                      :: ierr
+
+    PUSH_SUB(ssys_config_parse_states)
+
+    nullify(cnfg)
+    call json_get(this, "density", cnfg, ierr)
+    ASSERT(ierr==JSON_OK)
+    call ssys_config_parse_density(cnfg)
+    nullify(cnfg)
+
+    POP_SUB(ssys_config_parse_states)
+  end subroutine ssys_config_parse_states
+
+  ! ---------------------------------------------------------
+  subroutine ssys_config_parse_system(this)
+    type(json_object_t), intent(inout) :: this
+
+    type(json_object_t), pointer :: cnfg
+    integer                      :: ierr
+
+    PUSH_SUB(ssys_config_parse_system)
+
+    nullify(cnfg)
+    call json_get(this, "states", cnfg, ierr)
+    ASSERT(ierr==JSON_OK)
+    call ssys_config_parse_states(cnfg)
+    nullify(cnfg)
+
+    POP_SUB(ssys_config_parse_system)
+  end subroutine ssys_config_parse_system
+
+  ! ---------------------------------------------------------
   subroutine ssys_config_parse_external(this)
     type(json_object_t), intent(out) :: this
 
@@ -378,6 +425,10 @@ contains
 
     PUSH_SUB(ssys_config_parse_model)
 
+    nullify(cnfg)
+    call json_get(this, "system", cnfg, ierr)
+    ASSERT(ierr==JSON_OK)
+    call ssys_config_parse_system(cnfg)
     nullify(cnfg)
     call json_get(this, "hamiltonian", cnfg, ierr)
     ASSERT(ierr==JSON_OK)

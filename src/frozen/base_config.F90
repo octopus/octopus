@@ -159,7 +159,6 @@ contains
 
     nullify(cnfg)
     call json_init(this)
-    call json_set(this, "charge", 0.0_wp)
     SAFE_ALLOCATE(cnfg)
     call base_config_parse_density(cnfg, nspin)
     call json_set(this, "density", cnfg)

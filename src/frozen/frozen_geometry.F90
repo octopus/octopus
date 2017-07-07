@@ -56,7 +56,7 @@ contains
       type(geo_build_t)                     :: bgeo
       integer                               :: ierr
 
-      PUSH_SUB(geometry__init__)
+      PUSH_SUB(frozen_geometry__build__.geometry__init__)
 
       call geo_build_init(bgeo, space)
       call json_init(iter, config)
@@ -76,7 +76,7 @@ contains
       call geo_build_export(bgeo, geom)
       call geo_build_end(bgeo)
 
-      POP_SUB(geometry__init__)
+      POP_SUB(frozen_geometry__build__.geometry__init__)
 
     end subroutine geometry__init__
 

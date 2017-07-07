@@ -19,6 +19,7 @@
 #include "global.h"
 
 module stress_oct_m
+  use base_states_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use born_charges_oct_m
@@ -61,7 +62,6 @@ module stress_oct_m
   use poisson_fft_oct_m
   use fft_oct_m
   use fourier_space_oct_m
-  use ssys_states_oct_m
   use double_grid_oct_m
   use submesh_oct_m
   use periodic_copy_oct_m
@@ -155,7 +155,7 @@ contains
       ! get density taking into account non-linear core corrections
       SAFE_ALLOCATE(rho(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
       !> Calculate the subsystems total density.
-      if(associated(st%subsys_st)) call ssys_states_acc(st%subsys_st)
+      if(associated(st%subsys_st)) call base_states_acc(st%subsys_st)
       call states_total_density(st, ks%gr%fine%mesh, rho)
 
       nullify(rho_total)

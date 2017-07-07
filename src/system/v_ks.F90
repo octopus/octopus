@@ -48,7 +48,6 @@ module v_ks_oct_m
   use pcm_oct_m 
   use simul_box_oct_m
   use species_oct_m
-  use ssys_states_oct_m
   use ssys_tnadd_oct_m
   use states_oct_m
   use states_dim_oct_m
@@ -737,7 +736,7 @@ contains
       ! get density taking into account non-linear core corrections
       SAFE_ALLOCATE(ks%calc%density(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
       !> Calculate the subsystems total density.
-      if(associated(st%subsys_st)) call ssys_states_acc(st%subsys_st)
+      if(associated(st%subsys_st)) call base_states_acc(st%subsys_st)
       if (.not. cmplxscl) then
         call states_total_density(st, ks%gr%fine%mesh, ks%calc%density)
       else
@@ -1050,6 +1049,7 @@ contains
 
       end if
       
+      nullify(density)
       if(ks%calc%calc_energy) then
         ! Now we calculate Int[n vxc] = energy%intnvxc
         ks%calc%energy%intnvxc = M_ZERO
@@ -1057,13 +1057,14 @@ contains
 
         if(hm%d%ispin == SPINORS .and. cmplxscl) &
           call messages_not_implemented('Complex Scaling with SPINORS')
-        nullify(density)
+        
         if(associated(st%subsys_st))then
           call base_states_get(st%subsys_st, density)
-          ASSERT(associated(density))
         else
           density => st%rho
         end if
+        ASSERT(associated(density))
+        
         do ispin = 1, hm%d%nspin
           if(ispin <= 2) then
             factor = M_ONE
@@ -1080,6 +1081,7 @@ contains
             ks%calc%energy%Imintnvxc = ks%calc%energy%Imintnvxc + aimag(ctmp)          
           end if
         end do
+        nullify(density)
       end if
 
       call profiling_out(prof)
