@@ -410,7 +410,7 @@ contains
     
     ierr = xml_tag_get_attribute_string(tag, 'pseudo_type', ps_upf%type)
     call check_error(ierr)
-    if(ps_upf%type /= 'NC') then
+    if(ps_upf%type /= 'NC' .and. ps_upf%type /= 'SL') then
       message(1) = "Octopus can only read norm-conserving pseudo-potentials from UPF format."
       call messages_fatal(1)
     end if
