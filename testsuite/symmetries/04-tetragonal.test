@@ -5,275 +5,275 @@ Program    : octopus
 TestGroups : long-run, periodic_systems, symmetries
 Enabled    : Yes
 
-Input      : 04-tetragonal.01-spg75_angle.inp
+Input      : 04-tetragonal.01-spg75.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 75
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 
-Input      : 04-tetragonal.02-spg76_angle.inp
+Input      : 04-tetragonal.02-spg76.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 76
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 1
 
-Input      : 04-tetragonal.03-spg77_angle.inp
+Input      : 04-tetragonal.03-spg77.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 77
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 
-Input      : 04-tetragonal.04-spg78_angle.inp
+Input      : 04-tetragonal.04-spg78.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 78
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 1
 
-Input      : 04-tetragonal.05-spg79_angle.inp
+Input      : 04-tetragonal.05-spg79.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 79
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 
-Input      : 04-tetragonal.06-spg80_angle.inp
+Input      : 04-tetragonal.06-spg80.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 80
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 1
 
-Input      : 04-tetragonal.07-spg81_angle.inp
+Input      : 04-tetragonal.07-spg81.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 81
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 
-Input      : 04-tetragonal.08-spg82_angle.inp
+Input      : 04-tetragonal.08-spg82.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 82
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 
-Input      : 04-tetragonal.09-spg83_angle.inp
+Input      : 04-tetragonal.09-spg83.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 83
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
 
-Input      : 04-tetragonal.10-spg84_angle.inp
+Input      : 04-tetragonal.10-spg84.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 84
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 
-Input      : 04-tetragonal.11-spg85_angle.inp
+Input      : 04-tetragonal.11-spg85.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 85
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 
-Input      : 04-tetragonal.12-spg86_angle.inp
+Input      : 04-tetragonal.12-spg86.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 86
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 
-Input      : 04-tetragonal.13-spg87_angle.inp
+Input      : 04-tetragonal.13-spg87.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 87
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
 
-Input      : 04-tetragonal.14-spg88_angle.inp
+Input      : 04-tetragonal.14-spg88.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 88
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 
-Input      : 04-tetragonal.15-spg89_angle.inp
+Input      : 04-tetragonal.15-spg89.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 89
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
 
-Input      : 04-tetragonal.16-spg90_angle.inp
+Input      : 04-tetragonal.16-spg90.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 90
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 
-Input      : 04-tetragonal.17-spg91_angle.inp
+Input      : 04-tetragonal.17-spg91.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 91
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 
-Input      : 04-tetragonal.18-spg92_angle.inp
+Input      : 04-tetragonal.18-spg92.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 92
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 
-Input      : 04-tetragonal.19-spg93_angle.inp
+Input      : 04-tetragonal.19-spg93.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 93
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 
-Input      : 04-tetragonal.20-spg94_angle.inp
+Input      : 04-tetragonal.20-spg94.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 94
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 
-Input      : 04-tetragonal.21-spg95_angle.inp
+Input      : 04-tetragonal.21-spg95.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 95
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 
-Input      : 04-tetragonal.22-spg96_angle.inp
+Input      : 04-tetragonal.22-spg96.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 96
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 
-Input      : 04-tetragonal.23-spg97_angle.inp
+Input      : 04-tetragonal.23-spg97.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 97
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
 
-Input      : 04-tetragonal.24-spg98_angle.inp
+Input      : 04-tetragonal.24-spg98.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 98
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 
-Input      : 04-tetragonal.25-spg99_angle.inp
+Input      : 04-tetragonal.25-spg99.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 99
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
 
-Input      : 04-tetragonal.26-spg100_angle.inp
+Input      : 04-tetragonal.26-spg100.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 100
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 
-Input      : 04-tetragonal.27-spg101_angle.inp
+Input      : 04-tetragonal.27-spg101.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 101
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 
-Input      : 04-tetragonal.28-spg102_angle.inp
+Input      : 04-tetragonal.28-spg102.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 102
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 
-Input      : 04-tetragonal.29-spg103_angle.inp
+Input      : 04-tetragonal.29-spg103.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 103
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 
-Input      : 04-tetragonal.30-spg104_angle.inp
+Input      : 04-tetragonal.30-spg104.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 104
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 
-Input      : 04-tetragonal.31-spg105_angle.inp
+Input      : 04-tetragonal.31-spg105.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 105
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 
-Input      : 04-tetragonal.32-spg106_angle.inp
+Input      : 04-tetragonal.32-spg106.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 106
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 
-Input      : 04-tetragonal.33-spg107_angle.inp
+Input      : 04-tetragonal.33-spg107.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 107
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
 
-Input      : 04-tetragonal.34-spg108_angle.inp
+Input      : 04-tetragonal.34-spg108.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 108
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 
-Input      : 04-tetragonal.35-spg109_angle.inp
+Input      : 04-tetragonal.35-spg109.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 109
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 
-Input      : 04-tetragonal.36-spg110_angle.inp
+Input      : 04-tetragonal.36-spg110.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 110
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 
-Input      : 04-tetragonal.37-spg111_angle.inp
+Input      : 04-tetragonal.37-spg111.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 111
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
 
-Input      : 04-tetragonal.38-spg112_angle.inp
+Input      : 04-tetragonal.38-spg112.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 112
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 
-Input      : 04-tetragonal.39-spg113_angle.inp
+Input      : 04-tetragonal.39-spg113.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 113
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 
-Input      : 04-tetragonal.40-spg114_angle.inp
+Input      : 04-tetragonal.40-spg114.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 114
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 
-Input      : 04-tetragonal.41-spg115_angle.inp
+Input      : 04-tetragonal.41-spg115.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 115
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
 
-Input      : 04-tetragonal.42-spg116_angle.inp
+Input      : 04-tetragonal.42-spg116.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 116
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 
-Input      : 04-tetragonal.43-spg117_angle.inp
+Input      : 04-tetragonal.43-spg117.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 117
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 
-Input      : 04-tetragonal.44-spg118_angle.inp
+Input      : 04-tetragonal.44-spg118.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 118
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 
-Input      : 04-tetragonal.45-spg119_angle.inp
+Input      : 04-tetragonal.45-spg119.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 119
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
 
-Input      : 04-tetragonal.46-spg120_angle.inp
+Input      : 04-tetragonal.46-spg120.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 120
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 
-Input      : 04-tetragonal.47-spg121_angle.inp
+Input      : 04-tetragonal.47-spg121.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 121
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
 
-Input      : 04-tetragonal.48-spg122_angle.inp
+Input      : 04-tetragonal.48-spg122.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 122
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 
-Input      : 04-tetragonal.49-spg123_angle.inp
+Input      : 04-tetragonal.49-spg123.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 123
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 16
 
-Input      : 04-tetragonal.50-spg124_angle.inp
+Input      : 04-tetragonal.50-spg124.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 124
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 16
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
 
-Input      : 04-tetragonal.51-spg125_angle.inp
+Input      : 04-tetragonal.51-spg125.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 125
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 16
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
 
-Input      : 04-tetragonal.52-spg126_angle.inp
+Input      : 04-tetragonal.52-spg126.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 126
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 16
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
 
-Input      : 04-tetragonal.53-spg127_angle.inp
+Input      : 04-tetragonal.53-spg127.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 127
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 16
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
 
-Input      : 04-tetragonal.54-spg128_angle.inp
+Input      : 04-tetragonal.54-spg128.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 128
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 16
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
 
-Input      : 04-tetragonal.55-spg129_angle.inp
+Input      : 04-tetragonal.55-spg129.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 129
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 16
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
 
-Input      : 04-tetragonal.56-spg130_angle.inp
+Input      : 04-tetragonal.56-spg130.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 130
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 16
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 
-Input      : 04-tetragonal.57-spg131_angle.inp
+Input      : 04-tetragonal.57-spg131.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 131
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 16
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
 
-Input      : 04-tetragonal.58-spg132_angle.inp
+Input      : 04-tetragonal.58-spg132.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 132
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 16
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
 
-Input      : 04-tetragonal.59-spg133_angle.inp
+Input      : 04-tetragonal.59-spg133.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 133
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 16
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 
-Input      : 04-tetragonal.60-spg134_angle.inp
+Input      : 04-tetragonal.60-spg134.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 134
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 16
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
 
-Input      : 04-tetragonal.61-spg135_angle.inp
+Input      : 04-tetragonal.61-spg135.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 135
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 16
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 
-Input      : 04-tetragonal.62-spg136_angle.inp
+Input      : 04-tetragonal.62-spg136.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 136
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 16
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
 
-Input      : 04-tetragonal.63-spg137_angle.inp
+Input      : 04-tetragonal.63-spg137.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 137
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 16
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
 
-Input      : 04-tetragonal.64-spg138_angle.inp
+Input      : 04-tetragonal.64-spg138.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 138
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 16
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 
-Input      : 04-tetragonal.65-spg139_angle.inp
+Input      : 04-tetragonal.65-spg139.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 139
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 16
 
-Input      : 04-tetragonal.66-spg140_angle.inp
+Input      : 04-tetragonal.66-spg140.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 140
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 16
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
 
-Input      : 04-tetragonal.67-spg141_angle.inp
+Input      : 04-tetragonal.67-spg141.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 141
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 16
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
 
-Input      : 04-tetragonal.68-spg142_angle.inp
+Input      : 04-tetragonal.68-spg142.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 142
-match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 16
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 

@@ -1,0 +1,21 @@
+FromScratch=yes
+CalculationMode = gs
+PeriodicDimensions = 3
+ExperimentalFeatures = yes
+BoxShape = parallelepiped
+%LatticeParameters
+  |  | 
+%
+%LatticeVectors
+  |  | 
+  |  | 
+  |  | 
+%
+Spacing = 0.8
+TheoryLevel = independent_particles
+MaximumIter = 0
+LCAOStart = lcao_none
+FilterPotentials = filter_none
+%ReducedCoordinates
+"H" |  |  | 
+%

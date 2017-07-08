@@ -224,7 +224,7 @@ contains
         position(1:dim4syms,iatom) = position(1:dim4syms,iatom) + M_HALF
 
         typs(iatom) = species_index(geo%atom(iatom)%species)
-
+        print *, position(1:dim4syms,iatom)
       end do
 
       ! transpose the lattice vectors for use in spglib as row-major matrix
