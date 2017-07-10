@@ -156,7 +156,7 @@ subroutine X(submesh_copy_from_mesh_batch)(this, psib, spsi)
   type(batch_t),    intent(in)    :: psib
   R_TYPE,           intent(inout) :: spsi(:,:)
 
-  integer :: ip, ist, ii, m
+  integer :: ip, ist, ii, m, ip_map
   type(profile_t), save :: prof
 
   call profiling_in(prof, "SM_CP_MESH_BATCH")
@@ -171,20 +171,20 @@ subroutine X(submesh_copy_from_mesh_batch)(this, psib, spsi)
         do ip = 1,this%np
           spsi(ip,ist) = psib%states_linear(ist)%X(psi)(this%map(ip))
         end do
-        !$omp end parallel do
       end do
     case(BATCH_PACKED)
       m = mod(psib%nst_linear,4)
-      !$omp parallel do private(ii)
+      !$omp parallel do private(ii,ip_map)
       do ip = 1, this%np
+        ip_map = this%map(ip)
         do ii = 1, m
-          spsi(ii,ip) = psib%pack%X(psi)(ii,this%map(ip))
+          spsi(ii,ip) = psib%pack%X(psi)(ii,ip_map)
         end do
         do ii = m+1, psib%nst_linear, 4
-          spsi(ii,ip) = psib%pack%X(psi)(ii,this%map(ip))
-          spsi(ii+1,ip) = psib%pack%X(psi)(ii+1,this%map(ip))
-          spsi(ii+2,ip) = psib%pack%X(psi)(ii+2,this%map(ip))
-          spsi(ii+3,ip) = psib%pack%X(psi)(ii+3,this%map(ip))
+          spsi(ii,ip) = psib%pack%X(psi)(ii,ip_map)
+          spsi(ii+1,ip) = psib%pack%X(psi)(ii+1,ip_map)
+          spsi(ii+2,ip) = psib%pack%X(psi)(ii+2,ip_map)
+          spsi(ii+3,ip) = psib%pack%X(psi)(ii+3,ip_map)
         end do
       end do
       !$omp end parallel do

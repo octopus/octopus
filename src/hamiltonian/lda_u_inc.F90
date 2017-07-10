@@ -37,8 +37,8 @@ subroutine X(lda_u_apply)(this, d, ik, psib, hpsib, has_phase)
 
   PUSH_SUB(lda_u_apply)
 
-  SAFE_ALLOCATE(reduced(1:this%max_np,1:psib%nst))
-  SAFE_ALLOCATE(dot(1:this%maxnorbs, 1:psib%nst))
+  SAFE_ALLOCATE(reduced(1:this%max_np,1:psib%nst_linear))
+  SAFE_ALLOCATE(dot(1:this%maxnorbs, 1:psib%nst_linear))
 
   ispin = states_dim_get_spin_index(d, ik)
 
@@ -49,12 +49,12 @@ subroutine X(lda_u_apply)(this, d, ik, psib, hpsib, has_phase)
   !
   do ios = 1, this%norbsets
     os => this%orbsets(ios)
-    call X(orbital_set_get_coeff_batch)(os, d, psib, ik, has_phase, dot(1:os%norbs,1:psib%nst))
+    call X(orbital_set_get_coeff_batch)(os, d, psib, ik, has_phase, dot(1:os%norbs,1:psib%nst_linear))
 
     !
     reduced(:,:) = R_TOTYPE(M_ZERO) 
     !
-    do ibatch = 1, psib%nst
+    do ibatch = 1, psib%nst_linear
       !
       do im = 1,this%orbsets(ios)%norbs
         ! sum_mp Vmmp <phi mp | psi >

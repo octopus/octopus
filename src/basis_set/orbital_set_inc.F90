@@ -38,7 +38,7 @@ subroutine X(orbital_set_get_coefficients)(os, st_d, psi, ik, has_phase, dot)
    call messages_fatal(1)
   end if
 
-  if(os%sphere%mesh%use_curvilinear) then
+!  if(.not.os%sphere%mesh%use_curvilinear) then
     do im = 1, os%norbs
       !If we need to add the phase, we explicitly do the operation using the sphere
       if(has_phase) then
@@ -52,25 +52,25 @@ subroutine X(orbital_set_get_coefficients)(os, st_d, psi, ik, has_phase, dot)
       end if
     end do
     !
-  else
-    !
-    SAFE_ALLOCATE(spsi(1:os%sphere%np))
-    !
-    call X(submesh_copy_from_mesh)(os%sphere, psi(1:os%sphere%mesh%np,1), spsi(1:os%sphere%np))
-    !
-    !If we need to add the phase, we explicitly do the operation using the sphere
-    if(has_phase) then
-#ifdef R_TCOMPLEX
-      call blas_gemv('C', os%sphere%np, os%norbs, R_TOTYPE(os%sphere%mesh%vol_pp(1)), &
-        os%eorb(1,1,ik),  os%sphere%np, spsi(1), 1, R_TOTYPE(M_ZERO), dot(1), 1)
-#endif
-    else
-      call blas_gemv('T', os%sphere%np, os%norbs, R_TOTYPE(os%sphere%mesh%vol_pp(1)), &
-        os%X(orb)(1,1),  os%sphere%np, spsi(1), 1, R_TOTYPE(M_ZERO), dot(1), 1)
-    end if
-    !
-    SAFE_DEALLOCATE_A(spsi)
-  end if
+ ! else
+ !   !
+ !   SAFE_ALLOCATE(spsi(1:os%sphere%np))
+ !   !
+ !   call X(submesh_copy_from_mesh)(os%sphere, psi(1:os%sphere%mesh%np,1), spsi(1:os%sphere%np))
+ !   !
+ !   !If we need to add the phase, we explicitly do the operation using the sphere
+ !   if(has_phase) then
+!#ifdef R_TCOMPLEX
+!      call blas_gemv('C', os%sphere%np, os%norbs, R_TOTYPE(os%sphere%mesh%volume_element), &
+!        os%eorb(1,1,ik),  os%sphere%np, spsi(1), 1, M_z0, dot(1), 1)
+!#endif
+!    else
+!      call blas_gemv('T', os%sphere%np, os%norbs, R_TOTYPE(os%sphere%mesh%volume_element), &
+!        os%X(orb)(1,1),  os%sphere%np, spsi(1), 1, R_TOTYPE(M_ZERO), dot(1), 1)
+!    end if
+!    !
+!    SAFE_DEALLOCATE_A(spsi)
+!  end if
 
   POP_SUB(X(orbital_set_get_coefficients))
   call profiling_out(prof)
@@ -98,7 +98,7 @@ subroutine X(orbital_set_get_coeff_batch)(os, st_d, psib, ik, has_phase, dot)
    call messages_fatal(1)
   end if
 
-  if(os%sphere%mesh%use_curvilinear .or. batch_status(psib) == BATCH_CL_PACKED) then
+!  if(os%sphere%mesh%use_curvilinear .or. batch_status(psib) == BATCH_CL_PACKED) then
     !
     SAFE_ALLOCATE(psi(1:os%sphere%mesh%np, 1:st_d%dim))
     do ist = 1, psib%nst
@@ -107,44 +107,44 @@ subroutine X(orbital_set_get_coeff_batch)(os, st_d, psib, ik, has_phase, dot)
     end do
     SAFE_DEALLOCATE_A(psi)
     !
-  else
-    !
-    select case(batch_status(psib))
-    case(BATCH_NOT_PACKED)
-      SAFE_ALLOCATE(spsi(1:os%sphere%np, 1:psib%nst))
+!  else
+!    !
+!    select case(batch_status(psib))
+!    case(BATCH_NOT_PACKED)
+!      SAFE_ALLOCATE(spsi(1:os%sphere%np, 1:psib%nst_linear))
+!
+!      call X(submesh_copy_from_mesh_batch)(os%sphere, psib, spsi)
+!      !
+!      !If we need to add the phase, we explicitly do the operation using the sphere
+!      if(has_phase) then
+!#ifdef R_TCOMPLEX
+!        call blas_gemm('C', 'N', os%norbs, psib%nst_linear, os%sphere%np, R_TOTYPE(os%sphere%mesh%volume_element), &
+!          os%eorb(1,1,ik),  os%sphere%np, spsi(1,1), os%sphere%np, M_z0, dot(1,1), os%norbs)
+!#endif
+!      else
+!        call blas_gemm('T', 'N', os%norbs, psib%nst_linear, os%sphere%np, R_TOTYPE(os%sphere%mesh%volume_element), &
+!          os%X(orb)(1,1),  os%sphere%np, spsi(1,1), os%sphere%np, R_TOTYPE(M_ZERO), dot(1,1), os%norbs)
+!      end if
 
-      call X(submesh_copy_from_mesh_batch)(os%sphere, psib, spsi)
-      !
-      !If we need to add the phase, we explicitly do the operation using the sphere
-      if(has_phase) then
-#ifdef R_TCOMPLEX
-        call blas_gemm('C', 'N', os%norbs, psib%nst, os%sphere%np, R_TOTYPE(os%sphere%mesh%vol_pp(1)), &
-          os%eorb(1,1,ik),  os%sphere%np, spsi(1,1), os%sphere%np, R_TOTYPE(M_ZERO), dot(1,1), os%norbs)
-#endif
-      else
-        call blas_gemm('T', 'N', os%norbs, psib%nst, os%sphere%np, R_TOTYPE(os%sphere%mesh%vol_pp(1)), &
-          os%X(orb)(1,1),  os%sphere%np, spsi(1,1), os%sphere%np, R_TOTYPE(M_ZERO), dot(1,1), os%norbs)
-      end if
-
-    case(BATCH_PACKED)
-      SAFE_ALLOCATE(spsi(1:psib%nst, 1:os%sphere%np))
-      !
-      call X(submesh_copy_from_mesh_batch)(os%sphere, psib, spsi)
-      !
-      !If we need to add the phase, we explicitly do the operation using the sphere
-      if(has_phase) then
-#ifdef R_TCOMPLEX
-        call blas_gemm('C', 'T', os%norbs, psib%nst, os%sphere%np, R_TOTYPE(os%sphere%mesh%vol_pp(1)), &
-          os%eorb(1,1,ik),  os%sphere%np, spsi(1,1), psib%nst, R_TOTYPE(M_ZERO), dot(1,1), os%norbs)
-#endif
-      else
-        call blas_gemm('T', 'T', os%norbs, psib%nst, os%sphere%np, R_TOTYPE(os%sphere%mesh%vol_pp(1)), &
-          os%X(orb)(1,1),  os%sphere%np, spsi(1,1), psib%nst, R_TOTYPE(M_ZERO), dot(1,1), os%norbs)
-      end if
-    end select
-    !
-    SAFE_DEALLOCATE_A(spsi)
-  end if
+ !   case(BATCH_PACKED)
+!      SAFE_ALLOCATE(spsi(1:psib%nst_linear, 1:os%sphere%np))
+!      !
+!      call X(submesh_copy_from_mesh_batch)(os%sphere, psib, spsi)
+!      !
+!      !If we need to add the phase, we explicitly do the operation using the sphere
+!      if(has_phase) then
+!#ifdef R_TCOMPLEX
+!        call blas_gemm('C', 'T', os%norbs, psib%nst_linear, os%sphere%np, R_TOTYPE(os%sphere%mesh%volume_element), &
+!          os%eorb(1,1,ik),  os%sphere%np, spsi(1,1), psib%nst, M_z0, dot(1,1), os%norbs)
+!#endif
+!      else
+!        call blas_gemm('T', 'T', os%norbs, psib%nst_linear, os%sphere%np, R_TOTYPE(os%sphere%mesh%volume_element), &
+!          os%X(orb)(1,1),  os%sphere%np, spsi(1,1), psib%nst, R_TOTYPE(M_ZERO), dot(1,1), os%norbs)
+!      end if
+!    end select
+!    !
+!    SAFE_DEALLOCATE_A(spsi)
+!  end if
 
   POP_SUB(X(orbital_set_get_coeff_batch))
   call profiling_out(prof)
