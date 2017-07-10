@@ -85,7 +85,7 @@ subroutine X(orbital_set_get_coeff_batch)(os, st_d, psib, ik, has_phase, dot)
   logical,              intent(in) :: has_phase !True if the wavefunction has an associated phase
   R_TYPE,            intent(inout) :: dot(:,:)
 
-  integer :: im, ip, idim, ist
+  integer :: ist
   type(profile_t), save :: prof
   R_TYPE, allocatable :: spsi(:,:), psi(:,:)
 

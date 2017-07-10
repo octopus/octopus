@@ -46,6 +46,7 @@ module lda_u_mixer_oct_m
     integer :: occsize
     logical :: realstates
     logical :: apply = .false.
+    logical :: mixU = .false.
 
     FLOAT, pointer :: dtmp_occ(:,:), tmpU(:,:)
     CMPLX, pointer :: ztmp_occ(:,:)
@@ -84,8 +85,10 @@ contains
      call mixfield_init( smix, mixer%mixfield_U, this%norbsets, 1, 1,  mix_d4(smix), TYPE_FLOAT )
      call mixfield_clear(mix_scheme(smix), mixer%mixfield_U)
      call mix_add_auxmixfield(smix, mixer%mixfield_U)
+     mixer%mixU = .true.
    else
      call mixfield_nullify(mixer%mixfield_U)
+     mixer%mixU = .false.
    end if
 
    POP_SUB(lda_u_mixer_init_auxmixer)
@@ -136,7 +139,8 @@ contains
    PUSH_SUB(lda_u_mixer_clear)
   
    call mixfield_clear(mix_scheme(smix), mixer%mixfield_occ)
-   call mixfield_clear(mix_scheme(smix), mixer%mixfield_U)
+   if( mixer%mixU ) &
+     call mixfield_clear(mix_scheme(smix), mixer%mixfield_U)
 
    POP_SUB(lda_u_mixer_clear)
  end subroutine lda_u_mixer_clear

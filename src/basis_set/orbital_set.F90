@@ -107,8 +107,6 @@ contains
    implicit none
    type(orbital_set_t), intent(inout) :: this
 
-   integer :: iorb
-  
    PUSH_SUB(orbital_set_end)  
 
    SAFE_DEALLOCATE_P(this%phase)

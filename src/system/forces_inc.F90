@@ -284,7 +284,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
       end if
 
       !The Hubbard forces
-      call X(lda_u_force)(hm%lda_u, gr%mesh, st, geo, iq, gr%mesh%sb%dim, psib, grad_psib, &
+      call X(lda_u_force)(hm%lda_u, gr%mesh, st, iq, gr%mesh%sb%dim, psib, grad_psib, &
                             force, associated(hm%hm_base%phase))  
 
       call batch_end(psib)

@@ -18,9 +18,8 @@
 !! $Id$
 
 
-subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
+subroutine X(lda_u_apply)(this, d, ik, psib, hpsib, has_phase)
   type(lda_u_t),      intent(in) :: this
-  type(mesh_t),       intent(in) :: mesh
   integer,            intent(in) :: ik
   type(batch_t),      intent(in) :: psib
   type(batch_t),   intent(inout) :: hpsib
@@ -28,7 +27,7 @@ subroutine X(lda_u_apply)(this, mesh, d, ik, psib, hpsib, has_phase)
   logical,            intent(in) :: has_phase !True if the wavefunction has an associated phase
 
   integer :: ibatch, ios, imp, im, ispin
-  integer :: is, ios2
+  integer :: ios2
   R_TYPE  :: reduced2
   R_TYPE, allocatable :: dot(:,:), reduced(:,:)
   type(orbital_set_t), pointer  :: os, os2
@@ -140,7 +139,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
   FLOAT, intent(inout)                 :: lda_u_energy
   CMPLX, pointer, optional             :: phase(:,:) 
 
-  integer :: ios, im, ik, ist, ispin, norbs, ip, idim, is
+  integer :: ios, im, ik, ist, ispin, norbs, ip, idim
   integer :: ios2, im2
   R_TYPE, allocatable :: psi(:,:) 
   R_TYPE, allocatable :: dot(:,:)
@@ -880,11 +879,10 @@ end subroutine X(compute_coulomb_integrals)
    call profiling_out(prof)
  end subroutine X(lda_u_commute_r)
 
- subroutine X(lda_u_force)(this, mesh, st, geo, iq, ndim, psib, grad_psib, force, phase)
+ subroutine X(lda_u_force)(this, mesh, st, iq, ndim, psib, grad_psib, force, phase)
    type(lda_u_t),             intent(in)    :: this
    type(mesh_t),              intent(in)    :: mesh 
    type(states_t),            intent(in)    :: st
-   type(geometry_t),          intent(in)    :: geo
    integer,                   intent(in)    :: iq, ndim
    type(batch_t),             intent(in)    :: psib
    type(batch_t),             intent(in)    :: grad_psib(:)
@@ -972,7 +970,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
   type(mesh_t),              intent(in)       :: mesh
   type(states_t),            intent(in)       :: st 
 
-  integer :: ia, iorb, norb, ispin, offset
+  integer :: ia, iorb, norb, offset
   integer ::  hubbardl, ii, nn, ll, mm, work, work2, iorbset
   FLOAT   :: norm
   FLOAT, allocatable :: minradii(:)
@@ -1245,7 +1243,9 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, iorb, ispin, os, orbind,
   type(species_t), pointer :: spec
   integer :: ii, ll, mm, ispin_
   FLOAT :: radius
+  #ifdef R_TCOMPLEX
   FLOAT, allocatable :: tmp(:)
+  #endif
   logical :: complex_ylms
 
   PUSH_SUB(X(get_atomic_orbital))

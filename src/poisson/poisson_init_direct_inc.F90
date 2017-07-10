@@ -397,6 +397,8 @@ subroutine poisson_solve_direct_sm(this, sm, pot, rho)
   !$omp end parallel
 #endif
 
+  ASSERT(.not.this%der%mesh%parallel_in_domains)
+
   dim = sm%mesh%sb%dim
 
   select case(dim)

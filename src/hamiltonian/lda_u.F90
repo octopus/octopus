@@ -356,7 +356,7 @@ contains
    implicit none
    type(lda_u_t), intent(inout) :: this
 
-   integer :: ios, ispin, iorb
+   integer :: ios
   
    PUSH_SUB(lda_u_end)  
 
