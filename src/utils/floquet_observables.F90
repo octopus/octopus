@@ -774,7 +774,7 @@ contains
                   
                 
                 fab(ii) = dressed_st%occ(istb,ik) * dressed_st%occ(ista,ik)
-                weight(ii) = sum(abs(mel(ii,1:3))**2) * dressed_st%occ(istb,ik) * dressed_st%occ(ista,ik) *ediff(ii)**wpow 
+                weight(ii) = sum(abs(mel(ii,1:3))**2) * dressed_st%occ(istb,ik) * dressed_st%occ(ista,ik) !*ediff(ii)**wpow 
                 
                 weight(ii) = weight(ii) * dressed_st%d%kweights(ik)
                 
@@ -788,6 +788,7 @@ contains
     end do
     
     if(dressed_st%parallel_in_states .or. dressed_st%d%kpt%parallel) then
+      call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm,  ediff(:))
       call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm,  weight(:))
       call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm,  alpha(:))
       call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm,  beta(:))
@@ -912,7 +913,7 @@ contains
             do istb=dressed_st%st_start, dressed_st%st_end
               
               !Cut out all the component suppressed by small occupations 
-              if (dressed_st%occ(istb,ik) * dressed_st%occ(ista,ik) < 1E-14) cycle
+              if (dressed_st%occ(istb,ik) * dressed_st%occ(ista,ik) < CNST(1E-7)) cycle
 
               call states_get_state(dressed_st, sys%gr%mesh, istb, ik, u_nb)
             
@@ -951,7 +952,7 @@ contains
                   end select
                   
                   ampl(1:dim) = ampl(1:dim)+ mel(1:dim) * dressed_st%occ(istb,ik) * dressed_st%occ(ista,ik) &
-                                         * aimag(1/(EE - ediff  + M_zi*obs%gamma))
+                                         * aimag(1/(ediff - EE  + M_zi*obs%gamma))
 !                   print *, ampl(1:3), ediff
                 
                 end do
@@ -968,6 +969,14 @@ contains
       if(dressed_st%parallel_in_states .or. dressed_st%d%kpt%parallel) then
         call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm,  ampl(:))
       end if
+      
+      if (obs%gauge == OPTION__FLOQUETOBSERVABLEGAUGE__F_VELOCITY) then
+        ! Add the contribute of the fundamental harmonic
+        ampl(1:dim) = ampl(1:dim)+ mel(1:dim) * dressed_st%occ(istb,ik) * dressed_st%occ(ista,ik) &
+                               * aimag(1/(EE - ediff  + M_zi*obs%gamma))
+        
+      end if
+      
       
       spect(ie,1:dim) = abs(ampl(1:dim))**2 *EE**wpow 
       
