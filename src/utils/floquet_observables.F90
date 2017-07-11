@@ -23,9 +23,11 @@ program floquet_observables
   use comm_oct_m
   use command_line_oct_m
   use current_oct_m
+  use density_oct_m
   use geometry_oct_m
   use fft_oct_m
   use floquet_oct_m
+  use forces_oct_m
   use gauge_field_oct_m
   use global_oct_m
   use grid_oct_m
@@ -47,10 +49,12 @@ program floquet_observables
   use system_oct_m
   use sort_oct_m
   use space_oct_m
+  use species_oct_m
   use string_oct_m
   use states_oct_m
   use states_dim_oct_m
   use states_io_oct_m
+  use states_restart_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -112,16 +116,10 @@ program floquet_observables
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES,  default = .false.)
 !   call calc_mode_par_set_parallelization(P_STRATEGY_DOMAINS, default = .true. )
   
-  
-  
   call system_init(sys)
   
   call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, &
                         sys%ks%xc_flags, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
-  
-  
-  
-  
 
   call floquet_init(sys,hm%F,sys%st%d%dim)
   gs_st => sys%st
@@ -156,6 +154,10 @@ program floquet_observables
   !% Output Floquet states in the format defined by OutputFormat.
   !%Option f_conductivity bit(8)
   !% Calculate Floquet optical conductivity.
+  !%Option f_forces bit(9)
+  !% Calculate Floquet forces.
+  !%Option f_density_plot bit(10)
+  !% Plot the Floquet density.
   !%End
   call parse_variable('FloquetObservableCalc', out_what, out_what)
   
@@ -319,7 +321,19 @@ program floquet_observables
     call calc_floquet_conductivity()
   end if
 
+  if(iand(out_what, OPTION__FLOQUETOBSERVABLECALC__F_FORCES) /= 0) then
+    call messages_write('Calculate Floquet forces.')
+    call messages_info()
 
+    call calc_floquet_forces()
+  end if
+
+  if(iand(out_what, OPTION__FLOQUETOBSERVABLECALC__F_DENSITY_PLOT) /= 0) then
+    call messages_write('Plot Floquet density.')
+    call messages_info()
+
+    call plot_floquet_density()
+  end if
   
   call hamiltonian_end(hm)
   call system_end(sys)
@@ -1274,6 +1288,83 @@ contains
     POP_SUB(calc_floquet_conductivity)    
   end subroutine calc_floquet_conductivity
 
+  subroutine calc_floquet_forces()
+
+    type(geometry_t) :: geo
+    type(grid_t) :: gr
+    type(unit_t) :: fn_unit
+    
+    integer :: idim, iatom, ii, idir, iunit, ierr, ib
+    character(len=1024):: filename
+
+
+    gr=sys%gr
+    geo=sys%geo
+
+    filename = FLOQUET_DIR//'/floquet_forces'
+    iunit = io_open(filename, action='write')
+
+    call forces_calculate(gr, geo, hm, dressed_st)
+
+    if(mpi_grp_is_root(mpi_world)) then
+       write(iunit,'(3a)') 'Floquet-forces on the ions [', trim(units_abbrev(units_out%force)), "]"
+       write(iunit,'(a,10x,99(14x,a))') ' Ion', (index2axis(idir), idir = 1, gr%sb%dim)
+       do iatom = 1, geo%natoms
+          write(iunit,'(i4,a10,10f15.6)') iatom, trim(species_label(geo%atom(iatom)%species)), &
+               (units_from_atomic(units_out%force, geo%atom(iatom)%f(idir)), idir=1, gr%sb%dim)
+       end do
+       write(iunit,'(1x,100a1)') ("-", ii = 1, 13 + gr%sb%dim * 15)
+       write(iunit,'(a14, 10f15.6)') " Max abs force", &
+            (units_from_atomic(units_out%force, maxval(abs(geo%atom(1:geo%natoms)%f(idir)))), idir=1, gr%sb%dim)
+       write(iunit,'(a14, 10f15.6)') " Total force", &
+            (units_from_atomic(units_out%force, sum(geo%atom(1:geo%natoms)%f(idir))), idir=1, gr%sb%dim)
+    end if
+
+  end subroutine calc_floquet_forces
+
+
+  subroutine plot_floquet_density()
+    type(grid_t) :: gr
+
+    integer :: idim, iatom, ii, idir, iunit, ierr, ib
+    character(len=1024):: filename
+
+    FLOAT, allocatable :: rho(:,:), rhoF(:,:)
+
+    gr=sys%gr
+
+    SAFE_ALLOCATE(rho(1:gr%mesh%np,1))
+    SAFE_ALLOCATE(rhoF(1:gr%mesh%np,1))
+
+    ! get groundstate density
+    call states_allocate_wfns(gs_st,gr%der%mesh, wfs_type = TYPE_CMPLX)
+    call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
+    if(ierr == 0) call states_load(restart, gs_st, gr, ierr)
+    if (ierr /= 0) then
+       message(1) = 'Unable to read ground-state wavefunctions.'
+       call messages_fatal(1)
+    end if
+    call restart_end(restart)
+
+    rho = M_ZERO
+    call density_calc(gs_st, gr,rho)
+
+    ! get Floquet density
+    rhoF = M_ZERO
+    call density_calc(dressed_st, gr,rhoF,ndim=hm%F%floquet_dim)
+    call dio_function_output(io_function_fill_how("PlaneX"), FLOQUET_DIR, "rho_floquet",  gr%mesh, rhoF(:,1), unit_one, ierr)
+    call dio_function_output(io_function_fill_how("PlaneY"), FLOQUET_DIR, "rho_floquet",  gr%mesh, rhoF(:,1), unit_one,ierr)
+    call dio_function_output(io_function_fill_how("PlaneZ"), FLOQUET_DIR, "rho_floquet",  gr%mesh, rhoF(:,1), unit_one,ierr)
+    ! difference
+    rho = rho -rhoF
+    call dio_function_output(io_function_fill_how("PlaneX"), FLOQUET_DIR, "rho_diff",  gr%mesh, rho(:,1), unit_one, ierr)
+    call dio_function_output(io_function_fill_how("PlaneY"), FLOQUET_DIR, "rho_diff",  gr%mesh, rho(:,1), unit_one, ierr)
+    call dio_function_output(io_function_fill_how("PlaneZ"), FLOQUET_DIR, "rho_diff",  gr%mesh, rho(:,1), unit_one, ierr)
+
+
+    SAFE_DEALLOCATE_A(rho)
+    SAFE_DEALLOCATE_A(rhoF)
+  end subroutine plot_floquet_density
 
 
   end program floquet_observables
