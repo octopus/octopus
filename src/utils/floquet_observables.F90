@@ -826,7 +826,7 @@ contains
                                                     str_center("alpha", 15), str_center("beta", 15),&
                                                     str_center("m", 15), str_center("n", 15)
                                                
-      if (dressed_st%d%nik > 1 ) then
+      if (dressed_st%d%kpt%nglobal > 1 ) then
         write(iunit, '(a1,1a15)', advance ='no')  str_center("ikpt", 15)
       end if
     
@@ -853,7 +853,7 @@ contains
         if (weight(idx(ii))/wmax > CNST(1E-6) .and.  ediff(ii) > M_ZERO) then
           write(iunit, '(1x,2es15.6)', advance='no') units_from_atomic(units_out%energy, ediff(ii)) , weight(idx(ii))  
           write(iunit, '(4i15)', advance='no') alpha(idx(ii)) , beta(idx(ii)), mm(idx(ii)), nn(idx(ii))
-          if (dressed_st%d%nik > 1 ) then
+          if (dressed_st%d%kpt%nglobal > 1 ) then
              write(iunit, '(1i15)', advance='no') kk(idx(ii))
           end if
           write(iunit, '(4es15.6)') abs(mel(idx(ii),1)),abs(mel(idx(ii),2)),abs(mel(idx(ii),3)), fab(idx(ii))
