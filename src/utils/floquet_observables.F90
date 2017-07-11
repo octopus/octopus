@@ -720,6 +720,7 @@ contains
     SAFE_ALLOCATE(alpha(1:itot))
     SAFE_ALLOCATE(beta(1:itot))
     SAFE_ALLOCATE(idx(1:itot))
+    SAFE_ALLOCATE(kk(1:itot))
     
     SAFE_ALLOCATE(u_ma(1:sys%gr%mesh%np, hm%F%floquet_dim))
     SAFE_ALLOCATE(u_nb(1:sys%gr%mesh%np, hm%F%floquet_dim))
@@ -748,7 +749,7 @@ contains
 
             
             DE = dressed_st%eigenval(istb,ik) - dressed_st%eigenval(ista,ik)
-!             print *, ista, istb, DE, dressed_st%eigenval(istb,ik), dressed_st%eigenval(ista,ik)
+!             print *, ista, istb, ik, DE, dressed_st%eigenval(istb,ik), dressed_st%eigenval(ista,ik)
             
             do in=hm%F%order(1),hm%F%order(2)
               inn = in - hm%F%order(1) + 1
