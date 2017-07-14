@@ -834,8 +834,8 @@ contains
       select case (obs%gauge)
 
       case (OPTION__FLOQUETOBSERVABLEGAUGE__F_VELOCITY)
-        write(iunit, '(a1,4a15)')  str_center("|<u_ma|ix|u_nb>|", 15), str_center("|<u_ma|iy|u_nb>|", 15),&
-                                    str_center("|<u_ma|iz|u_nb>|", 15), str_center("f_a*f_b", 15)
+        write(iunit, '(a1,4a15)')  str_center("|<u_ma|jx|u_nb>|", 15), str_center("|<u_ma|jy|u_nb>|", 15),&
+                                    str_center("|<u_ma|jz|u_nb>|", 15), str_center("f_a*f_b", 15)
           
       case (OPTION__FLOQUETOBSERVABLEGAUGE__F_LENGHT)
 
