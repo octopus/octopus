@@ -400,20 +400,26 @@ contains
     CMPLX,                intent(out)   :: cmel(:,:) ! the current vector cmel(1:der%mesh%sb%dim, 1:st%d%nspin)
 
     integer ::  idir, idim, iatom, ip, ib, ii, ierr, ispin
-    CMPLX, allocatable :: gpsi_j(:, :, :), ppsi_j(:,:)
+    CMPLX, allocatable :: gpsi_j(:, :, :), ppsi_j(:,:),  gpsi_i(:, :, :), ppsi_i(:,:)
 
     PUSH_SUB(current_calculate_mel)
 
+    SAFE_ALLOCATE(gpsi_i(1:der%mesh%np, 1:der%mesh%sb%dim, 1:hm%d%dim))
+    SAFE_ALLOCATE(ppsi_i(1:der%mesh%np_part,1:hm%d%dim))
     SAFE_ALLOCATE(gpsi_j(1:der%mesh%np, 1:der%mesh%sb%dim, 1:hm%d%dim))
     SAFE_ALLOCATE(ppsi_j(1:der%mesh%np_part,1:hm%d%dim))
 
     cmel = M_ZERO
 
     ispin = states_dim_get_spin_index(hm%d, ik)
+    ppsi_i(:,:) = M_ZERO        
+    ppsi_i(1:der%mesh%np,:) = psi_i(1:der%mesh%np,:)    
     ppsi_j(:,:) = M_ZERO        
     ppsi_j(1:der%mesh%np,:) = psi_j(1:der%mesh%np,:)    
+
       
     do idim = 1, hm%d%dim
+      call boundaries_set(der%boundaries, ppsi_i(:, idim))
       call boundaries_set(der%boundaries, ppsi_j(:, idim))
     end do
 
@@ -422,6 +428,7 @@ contains
       do idim = 1, hm%d%dim
         !$omp parallel do
         do ip = 1, der%mesh%np_part
+          ppsi_i(ip, idim) = hm%hm_base%phase(ip, ik)*ppsi_i(ip, idim)
           ppsi_j(ip, idim) = hm%hm_base%phase(ip, ik)*ppsi_j(ip, idim)
         end do
         !$omp end parallel do
@@ -429,6 +436,7 @@ contains
     end if
 
     do idim = 1, hm%d%dim
+      call zderivatives_grad(der, ppsi_i(:, idim), gpsi_i(:, :, idim), set_bc = .false.)
       call zderivatives_grad(der, ppsi_j(:, idim), gpsi_j(:, :, idim), set_bc = .false.)
     end do
     
@@ -439,6 +447,7 @@ contains
         do idir = 1, der%mesh%sb%dim
           !$omp parallel do
           do ip = 1, der%mesh%np
+            gpsi_i(ip, idir, idim) = (M_ONE+CNST(2.0)*hm%vtau(ip,ispin))*gpsi_i(ip, idir, idim)
             gpsi_j(ip, idir, idim) = (M_ONE+CNST(2.0)*hm%vtau(ip,ispin))*gpsi_j(ip, idir, idim)
           end do
           !$omp end parallel do
@@ -446,9 +455,11 @@ contains
       end do 
      
       !A nonlocal contribution from the pseudopotential must be included
+      call zprojector_commute_r_allatoms_alldir(hm%ep%proj, geo, der%mesh, hm%d%dim, ik, ppsi_i, gpsi_i)                 
       call zprojector_commute_r_allatoms_alldir(hm%ep%proj, geo, der%mesh, hm%d%dim, ik, ppsi_j, gpsi_j)                 
       !A nonlocal contribution from the scissor must be included
       if(hm%scissor%apply) then
+        call scissor_commute_r(hm%scissor, der%mesh, ik, ppsi_i, gpsi_i)
         call scissor_commute_r(hm%scissor, der%mesh, ik, ppsi_j, gpsi_j)
       end if
 
@@ -459,7 +470,8 @@ contains
       
       do idim = 1, hm%d%dim
           
-        cmel(idir,ispin) = zmf_dotp(der%mesh, psi_i(:, idim), gpsi_j(:, idir,idim))
+        cmel(idir,ispin) = M_zI * zmf_dotp(der%mesh, psi_i(:, idim), gpsi_j(:, idir,idim))
+!         cmel(idir,ispin) = cmel(idir,ispin) - M_zI * zmf_dotp(der%mesh, gpsi_i(:, idim), psi_j(:, idir,idim))
           
       end do
     end do
