@@ -716,18 +716,26 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine geometry_write_xyz(geo, fname, append, comment)
+  subroutine geometry_write_xyz(geo, fname, append, comment, length_unit)
     type(geometry_t),    intent(in) :: geo
     character(len=*),    intent(in) :: fname
     logical,             intent(in), optional :: append
     character(len=*),    intent(in), optional :: comment
+    type(unit_t),        intent(in), optional :: length_unit
 
     integer :: iatom, iunit
     character(len=6) position
+    type(unit_t) :: length_unit_
 
     if( .not. mpi_grp_is_root(mpi_world)) return
 
     PUSH_SUB(atom_write_xyz)
+
+    if(present(length_unit)) then
+      length_unit_ = length_unit
+    else
+      length_unit_ = units_out%length_xyz_file
+    end if
 
     position = 'asis'
     if(present(append)) then
@@ -739,10 +747,10 @@ contains
     if (present(comment)) then
       write(iunit, '(1x,a)') comment
     else
-      write(iunit, '(1x,a,a)') 'units: ', trim(units_abbrev(units_out%length_xyz_file))
+      write(iunit, '(1x,a,a)') 'units: ', trim(units_abbrev(length_unit_))
     end if
     do iatom = 1, geo%natoms
-      call atom_write_xyz(geo%atom(iatom), geo%space%dim, iunit)
+      call atom_write_xyz(geo%atom(iatom), geo%space%dim, iunit, length_unit_)
     end do
     call io_close(iunit)
 
@@ -751,7 +759,7 @@ contains
       write(iunit, '(i4)') geo%ncatoms
       write(iunit, '(1x)')
       do iatom = 1, geo%ncatoms
-        call atom_classical_write_xyz(geo%catom(iatom), geo%space%dim, iunit)
+        call atom_classical_write_xyz(geo%catom(iatom), geo%space%dim, iunit, length_unit_)
       end do
       call io_close(iunit)
     end if
