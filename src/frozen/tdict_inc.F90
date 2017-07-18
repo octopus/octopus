@@ -274,7 +274,6 @@ contains
     PUSH_SUB(TEMPLATE(dict_has_key))
 
     call strng_init(str, key)
-    call strng_tolower(str)
     has = TEMPLATE(hash_has_key)(this, str)
     call strng_end(str)
 
@@ -294,7 +293,6 @@ contains
 
     nullify(str)
     call strng_new(str, key)
-    call strng_tolower(str)
     has = TEMPLATE(hash_has_key)(this, str)
     call TEMPLATE(hash_set)(this, str, val)
     if(has) call strng_del(str)
@@ -316,7 +314,6 @@ contains
 
     nullify(val)
     call strng_init(str, key)
-    call strng_tolower(str)
     call TEMPLATE(hash_get)(this, str, val, ierr)
     call strng_end(str)
 
@@ -338,7 +335,6 @@ contains
 
     nullify(pkey, val)
     call strng_init(str, key)
-    call strng_tolower(str)
     call TEMPLATE(hash_del)(this, str, pkey, val, jerr)
     if(jerr==TEMPLATE(DICT_OK))call strng_del(pkey)
     call strng_end(str)

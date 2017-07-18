@@ -30,6 +30,26 @@ module ssys_handle_oct_m
 contains
   
   ! ---------------------------------------------------------
+  subroutine ssys_handle__init__(this)
+    use base_geometry_oct_m
+    use ssys_geometry_oct_m
+    type(base_handle_t), intent(inout) :: this
+
+    type(base_geometry_t), pointer :: pgeo
+
+    PUSH_SUB(ssys_handle__init__)
+
+    nullify(pgeo)
+    call base_handle_get(this, pgeo)
+    ASSERT(associated(pgeo))
+    call ssys_geometry__build__(pgeo)
+    nullify(pgeo)
+
+
+    POP_SUB(ssys_handle__init__)
+  end subroutine ssys_handle__init__
+
+  ! ---------------------------------------------------------
   subroutine ssys_handle__build__(this, geo, config)
     type(base_handle_t), intent(inout) :: this
     type(geometry_t),    intent(in)    :: geo
@@ -86,6 +106,7 @@ contains
     call json_get(config, "subsystems", dict, ierr)
     ASSERT(ierr==JSON_OK)
     call ssys_handle__build__(this, geo, dict)
+    call ssys_handle__init__(this)
     call base_handle__init__(this)
     nullify(dict)
 

@@ -13,8 +13,10 @@
 
 module base_model_oct_m
 
+  use base_density_oct_m
   use base_geometry_oct_m
   use base_hamiltonian_oct_m
+  use base_states_oct_m
   use base_system_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -129,6 +131,9 @@ module base_model_oct_m
     module procedure base_model_get_simulation
     module procedure base_model_get_space
     module procedure base_model_get_geometry
+    module procedure base_model_get_geom
+    module procedure base_model_get_density
+    module procedure base_model_get_states
     module procedure base_model_get_system
     module procedure base_model_get_hamiltonian
   end interface base_model_get
@@ -276,7 +281,6 @@ contains
 
     nullify(cnfg)
     ASSERT(associated(this%config))
-    call base_system__init__(this%sys)
     call json_get(this%config, "hamiltonian", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
     call base_hamiltonian__init__(this%hm, this%sys, cnfg)
@@ -491,7 +495,7 @@ contains
 
     PUSH_SUB(base_model__sets__)
 
-    call base_system_sets(this%sys, name, that%sys)
+    call base_system_set(this%sys, name, that%sys)
 
     POP_SUB(base_model__sets__)
   end subroutine base_model__sets__
@@ -506,7 +510,7 @@ contains
 
     ASSERT(associated(this%config))
     call base_model_dict_set(this%dict, trim(adjustl(name)), that)
-    call base_model__sets__(this, name, that)
+    call base_model__sets__(this, trim(adjustl(name)), that)
 
     POP_SUB(base_model_sets)
   end subroutine base_model_sets
@@ -577,6 +581,42 @@ contains
   end subroutine base_model_get_geometry
 
   ! ---------------------------------------------------------
+  subroutine base_model_get_geom(this, that)
+    type(base_model_t),     intent(in) :: this
+    type(base_geometry_t), pointer     :: that
+
+    PUSH_SUB(base_model_get_geom)
+
+    call base_system_get(this%sys, that)
+
+    POP_SUB(base_model_get_geom)
+  end subroutine base_model_get_geom
+
+  ! ---------------------------------------------------------
+  subroutine base_model_get_density(this, that)
+    type(base_model_t) ,   intent(in) :: this
+    type(base_density_t), pointer     :: that
+
+    PUSH_SUB(base_model_get_density)
+
+    call base_system_get(this%sys, that)
+
+    POP_SUB(base_model_get_density)
+  end subroutine base_model_get_density
+
+  ! ---------------------------------------------------------
+  subroutine base_model_get_states(this, that)
+    type(base_model_t) ,  intent(in) :: this
+    type(base_states_t), pointer     :: that
+
+    PUSH_SUB(base_model_get_states)
+
+    call base_system_get(this%sys, that)
+
+    POP_SUB(base_model_get_states)
+  end subroutine base_model_get_states
+
+  ! ---------------------------------------------------------
   subroutine base_model_get_system(this, that)
     type(base_model_t),   target, intent(in) :: this
     type(base_system_t), pointer             :: that
@@ -625,7 +665,6 @@ contains
 
     PUSH_SUB(base_model__copy__finish)
 
-    call base_system__copy__(this%sys)
     call base_model__build__(this)
 
     POP_SUB(base_model__copy__finish)

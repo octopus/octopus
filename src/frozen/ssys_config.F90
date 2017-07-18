@@ -226,12 +226,24 @@ contains
   end subroutine ssys_config_parse_subsystems
 
   ! ---------------------------------------------------------
+  subroutine ssys_config_parse_geometry(this)
+    type(json_object_t), intent(inout) :: this
+
+    PUSH_SUB(ssys_config_parse_geometry)
+
+    call json_set(this, "default", .false.)
+
+    POP_SUB(ssys_config_parse_geometry)
+  end subroutine ssys_config_parse_geometry
+
+  ! ---------------------------------------------------------
   subroutine ssys_config_parse_density(this)
     type(json_object_t), intent(inout) :: this
 
     PUSH_SUB(ssys_config_parse_density)
 
     call json_set(this, "reduce", .true.)
+    call json_set(this, "default", .true.)
 
     POP_SUB(ssys_config_parse_density)
   end subroutine ssys_config_parse_density
@@ -263,6 +275,10 @@ contains
 
     PUSH_SUB(ssys_config_parse_system)
 
+    nullify(cnfg)
+    call json_get(this, "geometry", cnfg, ierr)
+    ASSERT(ierr==JSON_OK)
+    call ssys_config_parse_geometry(cnfg)
     nullify(cnfg)
     call json_get(this, "states", cnfg, ierr)
     ASSERT(ierr==JSON_OK)

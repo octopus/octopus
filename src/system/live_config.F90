@@ -25,6 +25,17 @@ module live_config_oct_m
 contains
 
   ! ---------------------------------------------------------
+  subroutine live_config_parse_geometry(this)
+    type(json_object_t), intent(inout) :: this
+
+    PUSH_SUB(live_config_parse_geometry)
+
+    call json_set(this, "default", .false.)
+
+    POP_SUB(live_config_parse_geometry)
+  end subroutine live_config_parse_geometry
+
+  ! ---------------------------------------------------------
   subroutine live_config_parse_density(this, st)
     type(json_object_t), intent(inout) :: this
     type(states_t),      intent(in)    :: st
@@ -88,6 +99,10 @@ contains
 
     PUSH_SUB(live_config_parse_system)
 
+    nullify(cnfg)
+    call json_get(this, "geometry", cnfg, ierr)
+    ASSERT(ierr==JSON_OK)
+    call live_config_parse_geometry(cnfg)
     nullify(cnfg)
     call json_get(this, "states", cnfg, ierr)
     ASSERT(ierr==JSON_OK)

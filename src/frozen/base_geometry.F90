@@ -14,7 +14,6 @@
 module base_geometry_oct_m
 
   use atom_oct_m
-  use geo_build_oct_m
   use geo_intrf_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -48,27 +47,28 @@ module base_geometry_oct_m
 
   private
 
+  public ::                    &
+    BASE_GEOMETRY_OK,          &
+    BASE_GEOMETRY_KEY_ERROR,   &
+    BASE_GEOMETRY_EMPTY_ERROR
+
   public ::          &
     base_geometry_t
 
-  public ::                &
-    base_geometry__init__, &
-    base_geometry__copy__, &
+  public ::                 &
+    base_geometry__init__,  &
+    base_geometry__build__, &
+    base_geometry__copy__,  &
     base_geometry__end__
 
   public ::             &
     base_geometry_new,  &
     base_geometry_del,  &
     base_geometry_init, &
-    base_geometry_sets, &
-    base_geometry_gets, &
+    base_geometry_set,  &
     base_geometry_get,  &
     base_geometry_copy, &
     base_geometry_end
-
-  public ::                    &
-    BASE_GEOMETRY_OK,          &
-    BASE_GEOMETRY_EMPTY_ERROR
 
 #define LIST_TEMPLATE_NAME base_geometry
 #define LIST_INCLUDE_HEADER
@@ -83,6 +83,7 @@ module base_geometry_oct_m
 #undef DICT_TEMPLATE_NAME
 
   integer, parameter :: BASE_GEOMETRY_OK          = BASE_GEOMETRY_DICT_OK
+  integer, parameter :: BASE_GEOMETRY_KEY_ERROR   = BASE_GEOMETRY_DICT_KEY_ERROR
   integer, parameter :: BASE_GEOMETRY_EMPTY_ERROR = BASE_GEOMETRY_DICT_EMPTY_ERROR
 
   type :: base_geometry_t
@@ -103,15 +104,9 @@ module base_geometry_oct_m
   end type base_geometry_iterator_t
 
   interface base_geometry__init__
-    module procedure base_geometry__init__begin
+    module procedure base_geometry__init__type
     module procedure base_geometry__init__copy
-    module procedure base_geometry__init__finish
   end interface base_geometry__init__
-
-  interface base_geometry__copy__
-    module procedure base_geometry__copy__begin
-    module procedure base_geometry__copy__finish
-  end interface base_geometry__copy__
 
   interface base_geometry_init
     module procedure base_geometry_init_type
@@ -124,16 +119,17 @@ module base_geometry_oct_m
     module procedure base_geometry_iterator_next_geometry
   end interface base_geometry_next
 
-  interface base_geometry_gets
-    module procedure base_geometry_gets_type
-    module procedure base_geometry_gets_geometry
-  end interface base_geometry_gets
+  interface base_geometry_set
+    module procedure base_geometry_set_sub
+  end interface base_geometry_set
 
   interface base_geometry_get
     module procedure base_geometry_get_config
     module procedure base_geometry_get_space
     module procedure base_geometry_get_geometry
     module procedure base_geometry_get_geo_intrf
+    module procedure base_geometry_get_sub
+    module procedure base_geometry_get_sub_geometry
   end interface base_geometry_get
 
   interface base_geometry_copy
@@ -199,6 +195,7 @@ contains
 
     PUSH_SUB(base_geometry_new)
 
+    ASSERT(associated(this%config))
     nullify(that)
     call base_geometry__new__(that)
     that%prnt => this
@@ -225,7 +222,7 @@ contains
   end subroutine base_geometry_del
 
   ! ---------------------------------------------------------
-  subroutine base_geometry__init__begin(this, space, config)
+  subroutine base_geometry__iinit__(this, space, config)
     type(base_geometry_t),       intent(out) :: this
     type(space_t),       target, intent(in)  :: space
     type(json_object_t), target, intent(in)  :: config
@@ -233,67 +230,56 @@ contains
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
 
-    PUSH_SUB(base_geometry__init__begin)
+    PUSH_SUB(base_geometry__iinit__)
 
     this%config => config
     this%space => space
+    nullify(cnfg)
     call json_get(config, "molecule", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
     call geo_intrf_init(this%igeo, space, cnfg)
+    nullify(cnfg)
     call base_geometry_dict_init(this%dict)
     call base_geometry_list_init(this%list)
 
-    POP_SUB(base_geometry__init__begin)
-  end subroutine base_geometry__init__begin
+    POP_SUB(base_geometry__iinit__)
+  end subroutine base_geometry__iinit__
 
   ! ---------------------------------------------------------
-  subroutine base_geometry__build__(this, that)
-    type(base_geometry_t), intent(in)  :: this
-    type(geometry_t),      intent(out) :: that
+  subroutine base_geometry__init__type(this, space, config)
+    type(base_geometry_t),       intent(out) :: this
+    type(space_t),       target, intent(in)  :: space
+    type(json_object_t), target, intent(in)  :: config
 
-    type(base_geometry_iterator_t) :: iter
-    type(base_geometry_t), pointer :: subs
-    type(geometry_t),      pointer :: pgeo
-    type(geo_build_t)              :: bgeo
-    integer                        :: ierr
+    type(json_object_t), pointer :: cnfg
+    logical                      :: dflt
+    integer                      :: ierr
 
-    PUSH_SUB(base_geometry__build__)
+    PUSH_SUB(base_geometry__init__type)
 
-    call geo_build_init(bgeo, this%space)
-    call base_geometry_init(iter, this)
-    do
-      nullify(subs, pgeo)
-      call base_geometry_next(iter, subs, ierr)
-      if(ierr/=BASE_GEOMETRY_OK)exit
-      call base_geometry_get(subs, pgeo)
-      ASSERT(associated(pgeo))
-      call geo_build_extend(bgeo, pgeo)
-    end do
-    call base_geometry_end(iter)
-    call geo_build_export(bgeo, that)
-    call geo_build_end(bgeo)
-    nullify(subs, pgeo)
+    call base_geometry__iinit__(this, space, config)
+    nullify(cnfg)
+    call json_get(this%config, "default", dflt, ierr)
+    if(ierr/=JSON_OK) dflt = .true.
+    if(dflt) call geo_intrf_new(this%igeo, init)
 
-    POP_SUB(base_geometry__build__)
-  end subroutine base_geometry__build__
+    POP_SUB(base_geometry__init__type)
 
-  ! ---------------------------------------------------------
-  subroutine base_geometry__init__finish(this)
-    type(base_geometry_t), intent(inout) :: this
+  contains
 
-    type(geometry_t), pointer :: pgeo
+    subroutine init(this, space, config)
+      type(geometry_t),    intent(out) :: this
+      type(space_t),       intent(in)  :: space
+      type(json_object_t), intent(in)  :: config
 
-    PUSH_SUB(base_geometry__init__finish)
+      PUSH_SUB(base_geometry__init__type.init)
 
-    nullify(pgeo)
-    if(.not.geo_intrf_assoc(this%igeo))then
-      call geo_intrf_new(this%igeo, pgeo)
-      call base_geometry__build__(this, pgeo)
-      nullify(pgeo)
-    end if
+      call geometry_init_from_data_object(this, space, config)
 
-    POP_SUB(base_geometry__init__finish)
-  end subroutine base_geometry__init__finish
+      POP_SUB(base_geometry__init__type.init)
+    end subroutine init
+
+  end subroutine base_geometry__init__type
 
   ! ---------------------------------------------------------
   subroutine base_geometry__init__copy(this, that)
@@ -304,10 +290,44 @@ contains
 
     ASSERT(associated(that%config))
     ASSERT(associated(that%space))
-    call base_geometry__init__(this, that%space, that%config)
+    call base_geometry__iinit__(this, that%space, that%config)
+    call geo_intrf_copy(this%igeo, that%igeo)
 
     POP_SUB(base_geometry__init__copy)
   end subroutine base_geometry__init__copy
+
+  ! ---------------------------------------------------------
+  subroutine base_geometry__build__(this, build)
+    type(base_geometry_t), intent(inout)  :: this
+
+    interface
+      subroutine build(this, that, name)
+        import :: base_geometry_t
+        type(base_geometry_t), intent(inout) :: this
+        type(base_geometry_t), intent(in)    :: that
+        character(len=*),      intent(in)    :: name
+      end subroutine build
+    end interface
+
+    type(base_geometry_iterator_t)        :: iter
+    character(len=BASE_GEOMETRY_NAME_LEN) :: name
+    type(base_geometry_t),        pointer :: subs
+    integer                               :: ierr
+
+    PUSH_SUB(base_geometry__build__)
+
+    call base_geometry_init(iter, this)
+    do
+      nullify(subs)
+      call base_geometry_next(iter, name, subs, ierr)
+      if(ierr/=BASE_GEOMETRY_OK)exit
+      call build(this, subs, name)
+    end do
+    call base_geometry_end(iter)
+    nullify(subs)
+
+    POP_SUB(base_geometry__build__)
+  end subroutine base_geometry__build__
 
   ! ---------------------------------------------------------
   subroutine base_geometry_init_type(this, space, config)
@@ -318,7 +338,6 @@ contains
     PUSH_SUB(base_geometry_init_type)
 
     call base_geometry__init__(this, space, config)
-    call base_geometry__init__(this)
 
     POP_SUB(base_geometry_init_type)
   end subroutine base_geometry_init_type
@@ -328,76 +347,84 @@ contains
     type(base_geometry_t), intent(out) :: this
     type(base_geometry_t), intent(in)  :: that
 
-    type(base_geometry_iterator_t)        :: iter
-    character(len=BASE_GEOMETRY_NAME_LEN) :: name
-    type(base_geometry_t),        pointer :: osub, isub
-    integer                               :: ierr
-
     PUSH_SUB(base_geometry_init_copy)
 
-    nullify(osub, isub)
     call base_geometry__init__(this, that)
-    call base_geometry_init(iter, that)
-    do
-      nullify(osub, isub)
-      call base_geometry_next(iter, name, isub, ierr)
-      if(ierr/=BASE_GEOMETRY_OK)exit
-      call base_geometry_new(this, osub)
-      call base_geometry_init(osub, isub)
-      call base_geometry_sets(this, name, osub)
-    end do
-    call base_geometry_end(iter)
-    call base_geometry__init__(this)
-    nullify(osub, isub)
+    call base_geometry__build__(this, init)
 
     POP_SUB(base_geometry_init_copy)
+
+  contains
+
+    recursive subroutine init(this, isub, name)
+      type(base_geometry_t), intent(inout) :: this
+      type(base_geometry_t), intent(in)    :: isub
+      character(len=*),      intent(in)    :: name
+
+      type(base_geometry_t), pointer :: osub
+      
+      POP_SUB(base_geometry_init_copy.init)
+
+      nullify(osub)
+      if(base_geometry_list_index(that%list, isub)>0)then
+        call base_geometry_new(this, osub)
+        call base_geometry_init(osub, isub)
+        call base_geometry_set(this, name, osub)
+        nullify(osub)
+      else
+        call base_geometry_set(this, name, isub)
+      end if
+
+      PUSH_SUB(base_geometry_init_copy.init)
+    end subroutine init
+
   end subroutine base_geometry_init_copy
 
   ! ---------------------------------------------------------
-  subroutine base_geometry_sets(this, name, that)
+  subroutine base_geometry_set_sub(this, name, that)
     type(base_geometry_t), intent(inout) :: this
     character(len=*),      intent(in)    :: name
     type(base_geometry_t), intent(in)    :: that
 
-    PUSH_SUB(base_geometry_sets)
+    PUSH_SUB(base_geometry_set_sub)
 
     ASSERT(associated(this%config))
     call base_geometry_dict_set(this%dict, trim(adjustl(name)), that)
 
-    POP_SUB(base_geometry_sets)
-  end subroutine base_geometry_sets
+    POP_SUB(base_geometry_set_sub)
+  end subroutine base_geometry_set_sub
 
   ! ---------------------------------------------------------
-  subroutine base_geometry_gets_type(this, name, that)
+  subroutine base_geometry_get_sub(this, name, that)
     type(base_geometry_t),  intent(in) :: this
     character(len=*),       intent(in) :: name
     type(base_geometry_t), pointer     :: that
 
-    PUSH_SUB(base_geometry_gets_type)
+    PUSH_SUB(base_geometry_get_sub)
 
     nullify(that)
     ASSERT(associated(this%config))
     call base_geometry_dict_get(this%dict, trim(adjustl(name)), that)
 
-    POP_SUB(base_geometry_gets_type)
-  end subroutine base_geometry_gets_type
+    POP_SUB(base_geometry_get_sub)
+  end subroutine base_geometry_get_sub
 
   ! ---------------------------------------------------------
-  subroutine base_geometry_gets_geometry(this, name, that)
+  subroutine base_geometry_get_sub_geometry(this, name, that)
     type(base_geometry_t), intent(in) :: this
     character(len=*),      intent(in) :: name
     type(geometry_t),     pointer     :: that
 
     type(base_geometry_t), pointer :: subs
 
-    PUSH_SUB(base_geometry_gets_geometry)
+    PUSH_SUB(base_geometry_get_sub_geometry)
 
     nullify(subs, that)
-    call base_geometry_gets(this, name, subs)
+    call base_geometry_get(this, name, subs)
     if(associated(subs)) call base_geometry_get(subs, that)
     
-    POP_SUB(base_geometry_gets_geometry)
-  end subroutine base_geometry_gets_geometry
+    POP_SUB(base_geometry_get_sub_geometry)
+  end subroutine base_geometry_get_sub_geometry
 
   ! ---------------------------------------------------------
   subroutine base_geometry_get_config(this, that)
@@ -432,7 +459,9 @@ contains
 
     PUSH_SUB(base_geometry_get_geometry)
 
-    call geo_intrf_get(this%igeo, that)
+    nullify(that)
+    if(geo_intrf_assoc(this%igeo))&
+      call geo_intrf_get(this%igeo, that)
 
     POP_SUB(base_geometry_get_geometry)
   end subroutine base_geometry_get_geometry
@@ -445,66 +474,64 @@ contains
     PUSH_SUB(base_geometry_get_geo_intrf)
 
     nullify(that)
-    that => this%igeo
+    if(associated(this%config)) that => this%igeo
 
     POP_SUB(base_geometry_get_geo_intrf)
   end subroutine base_geometry_get_geo_intrf
 
   ! ---------------------------------------------------------
-  subroutine base_geometry__copy__begin(this, that)
+  subroutine base_geometry__copy__(this, that)
     type(base_geometry_t), intent(inout) :: this
     type(base_geometry_t), intent(in)    :: that
 
-    PUSH_SUB(base_geometry__copy__begin)
+    PUSH_SUB(base_geometry__copy__)
 
     call base_geometry__end__(this)
-    if(associated(that%config).and.associated(that%space))&
-      call base_geometry__init__(this, that)
+    if(associated(that%config).and.associated(that%space))then
+      call base_geometry__iinit__(this, that%space, that%config)
+      call geo_intrf_copy(this%igeo, that%igeo)
+    end if
 
-    POP_SUB(base_geometry__copy__begin)
-  end subroutine base_geometry__copy__begin
-
-  ! ---------------------------------------------------------
-  subroutine base_geometry__copy__finish(this)
-    type(base_geometry_t), intent(inout) :: this
-
-    PUSH_SUB(base_geometry__copy__finish)
-
-    if(associated(this%config).and.associated(this%space))&
-      call base_geometry__init__(this)
-
-    POP_SUB(base_geometry__copy__finish)
-  end subroutine base_geometry__copy__finish
+    POP_SUB(base_geometry__copy__)
+  end subroutine base_geometry__copy__
 
   ! ---------------------------------------------------------
   recursive subroutine base_geometry_copy_type(this, that)
     type(base_geometry_t), intent(inout) :: this
     type(base_geometry_t), intent(in)    :: that
 
-    type(base_geometry_iterator_t)        :: iter
-    character(len=BASE_GEOMETRY_NAME_LEN) :: name
-    type(base_geometry_t),        pointer :: osub, isub
-    integer                               :: ierr
-    
     PUSH_SUB(base_geometry_copy_type)
 
-    nullify(osub, isub)
     call base_geometry_end(this)
     call base_geometry__copy__(this, that)
-    call base_geometry_init(iter, that)
-    do
-      nullify(osub, isub)
-      call base_geometry_next(iter, name, isub, ierr)
-      if(ierr/=BASE_GEOMETRY_OK)exit
-      call base_geometry_new(this, osub)
-      call base_geometry_copy(osub, isub)
-      call base_geometry_sets(this, name, osub)
-    end do
-    call base_geometry_end(iter)
-    call base_geometry__copy__(this)
-    nullify(osub, isub)
+    call base_geometry__build__(this, copy)
 
     POP_SUB(base_geometry_copy_type)
+
+  contains
+
+    recursive subroutine copy(this, isub, name)
+      type(base_geometry_t), intent(inout) :: this
+      type(base_geometry_t), intent(in)    :: isub
+      character(len=*),      intent(in)    :: name
+
+      type(base_geometry_t), pointer :: osub
+      
+      POP_SUB(base_geometry_copy_type.copy)
+
+      nullify(osub)
+      if(base_geometry_list_index(that%list, isub)>0)then
+        call base_geometry_new(this, osub)
+        call base_geometry_copy(osub, isub)
+        call base_geometry_set(this, name, osub)
+        nullify(osub)
+      else
+        call base_geometry_set(this, name, isub)
+      end if
+
+      PUSH_SUB(base_geometry_copy_type.copy)
+    end subroutine copy
+
   end subroutine base_geometry_copy_type
 
   ! ---------------------------------------------------------
@@ -513,7 +540,7 @@ contains
 
     PUSH_SUB(base_geometry__end__)
 
-    nullify(this%config, this%prnt)
+    nullify(this%config, this%space, this%prnt)
     call geo_intrf_end(this%igeo)
     call base_geometry_dict_end(this%dict)
     call base_geometry_list_end(this%list)
@@ -557,8 +584,8 @@ contains
   ! ---------------------------------------------------------
   subroutine base_geometry_iterator_next_atom(this, atom, ierr)
     type(base_geometry_iterator_t), intent(inout) :: this
-    type(atom_t),              pointer        :: atom
-    integer,          optional, intent(out)   :: ierr
+    type(atom_t),                  pointer        :: atom
+    integer,              optional, intent(out)   :: ierr
 
     PUSH_SUB(base_geometry_iterator_next_atom)
 
@@ -570,8 +597,8 @@ contains
   ! ---------------------------------------------------------
   subroutine base_geometry_iterator_next_species(this, spec, ierr)
     type(base_geometry_iterator_t), intent(inout) :: this
-    type(species_t),           pointer        :: spec
-    integer,          optional, intent(out)   :: ierr
+    type(species_t),               pointer        :: spec
+    integer,              optional, intent(out)   :: ierr
 
     PUSH_SUB(base_geometry_iterator_next_species)
 
@@ -583,11 +610,11 @@ contains
   ! ---------------------------------------------------------
   subroutine base_geometry_iterator_next_geometry(this, geo, ierr)
     type(base_geometry_iterator_t), intent(inout) :: this
-    type(geometry_t),          pointer        :: geo
-    integer,          optional, intent(out)   :: ierr
+    type(geometry_t),              pointer        :: geo
+    integer,              optional, intent(out)   :: ierr
 
     type(base_geometry_t), pointer :: geometry
-    integer                    :: jerr
+    integer                        :: jerr
 
     PUSH_SUB(base_geometry_iterator_next_geometry)
 

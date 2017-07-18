@@ -34,6 +34,7 @@ module storage_oct_m
     storage_add,        &
     storage_sub,        &
     storage_reduce,     &
+    storage_set,        &
     storage_get,        &
     storage_transfer,   &
     storage_copy,       &
@@ -45,6 +46,7 @@ module storage_oct_m
     type(simulation_t),                pointer :: sim     =>null()
     type(grid_t),                      pointer :: grid    =>null()
     type(mesh_t),                      pointer :: mesh    =>null()
+    logical                                    :: lock    = .false.
     logical                                    :: fine    = .false.
     logical                                    :: alloc   = .false.
     logical                                    :: full    = .true.
@@ -80,6 +82,10 @@ module storage_oct_m
     module procedure storage_integrate_intg_all
     module procedure storage_integrate_dotp
   end interface storage_integrate
+
+  interface storage_set
+    module procedure storage_set_info
+  end interface storage_set
 
   interface storage_get
     module procedure storage_get_info
@@ -123,6 +129,7 @@ contains
     PUSH_SUB(storage_init_type)
 
     this%config => config
+    this%lock = .false.
     call json_get(this%config, "fine", this%fine, ierr)
     if(ierr/=JSON_OK) this%fine = .true.
     call json_get(this%config, "full", this%full, ierr)
@@ -152,6 +159,7 @@ contains
     fn = that%fine
     if(present(fine)) fn = fine
     if(associated(that%sim)) call storage_start(this, that%sim, ndim=nd, fine=fn)
+    call storage_set(this, lock=that%lock)
 
     POP_SUB(storage_init_copy)
   end subroutine storage_init_copy
@@ -169,6 +177,7 @@ contains
 
     ASSERT(associated(this%config))
     ASSERT(.not.associated(this%sim))
+    ASSERT(.not.this%lock)
     this%sim => sim
     call simulation_get(this%sim, this%grid)
     ASSERT(associated(this%grid))
@@ -223,7 +232,7 @@ contains
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
-    if(this%alloc.and.this%full)then
+    if(.not.this%lock.and.this%alloc.and.this%full)then
       do indx = 1, this%ndim
         call storage_update_aux(this, indx)
       end do
@@ -242,6 +251,7 @@ contains
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
+    ASSERT(.not.this%lock)
     call storage_dealloc(this)
     nullify(this%sim, this%grid, this%mesh)
     call json_get(this%config, "fine", this%fine, ierr)
@@ -261,6 +271,7 @@ contains
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
+    ASSERT(.not.this%lock)
     call storage_dealloc(this)
     if(this%alloc)then
       SAFE_ALLOCATE(this%data(1:this%size,1:this%ndim))
@@ -277,6 +288,7 @@ contains
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
+    ASSERT(.not.this%lock)
     if(allocated(this%data))then
       SAFE_DEALLOCATE_A(this%data)
     end if
@@ -292,6 +304,7 @@ contains
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
+    ASSERT(.not.this%lock)
     if(this%alloc)then
       if(allocated(this%data))then
         if((size(this%data,dim=1)/=this%size).or.&
@@ -334,7 +347,8 @@ contains
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
-    if(this%alloc) call storage_reset_aux(this, dim, default)
+    if(.not.this%lock.and.this%alloc)&
+      call storage_reset_aux(this, dim, default)
 
     POP_SUB(storage_reset_dim)
   end subroutine storage_reset_dim
@@ -350,7 +364,7 @@ contains
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
-    if(this%alloc)then
+    if(.not.this%lock.and.this%alloc)then
       do indx = 1, this%ndim
         call storage_reset_aux(this, indx, default)
       end do
@@ -520,9 +534,8 @@ contains
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
-    if(this%alloc)then
+    if(.not.this%lock.and.this%alloc)&
       call storage_mlt_aux(this, dim, mlt)
-    end if
 
     POP_SUB(storage_mlt_dim)
   end subroutine storage_mlt_dim
@@ -538,7 +551,7 @@ contains
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
-    if(this%alloc)then
+    if(.not.this%lock.and.this%alloc)then
       do indx = 1, this%ndim
         call storage_mlt_aux(this, indx, mlt)
       end do
@@ -581,7 +594,8 @@ contains
     ASSERT(this%ndim==that%ndim)
     ASSERT(this%size==that%size)
     ASSERT(this%default.equal.that%default)
-    if(this%alloc.and.that%alloc) call storage_add_aux(this, that, dim)
+    if(.not.this%lock.and.this%alloc.and.that%alloc)&
+      call storage_add_aux(this, that, dim)
 
     POP_SUB(storage_add_dim)
   end subroutine storage_add_dim
@@ -603,7 +617,7 @@ contains
     ASSERT(this%ndim==that%ndim)
     ASSERT(this%size==that%size)
     ASSERT(this%default.equal.that%default)
-    if(this%alloc.and.that%alloc)then
+    if(.not.this%lock.and.this%alloc.and.that%alloc)then
       do indx = 1, this%ndim
         call storage_add_aux(this, that, indx)
       end do
@@ -629,7 +643,7 @@ contains
     ASSERT(this%ndim==that%ndim)
     ASSERT(this%size==that%size)
     ASSERT(this%default.equal.that%default)
-    if(this%alloc.and.that%alloc)then
+    if(.not.this%lock.and.this%alloc.and.that%alloc)then
       do jndx = 1, this%ndim
         do indx = 1, this%mesh%np
           this%data(indx,jndx) = this%data(indx,jndx) - that%data(indx,jndx)
@@ -679,18 +693,30 @@ contains
     ASSERT(this%ndim<=that%ndim)
     ASSERT(this%size==that%size)
     ASSERT(this%default.equal.that%default)
-    if(this%alloc.and.that%alloc)then
+    if(.not.this%lock.and.this%alloc.and.that%alloc)&
       call storage_reduce_aux(this, that)
-    end if
 
     POP_SUB(storage_reduce)
   end subroutine storage_reduce
 
   ! ---------------------------------------------------------
-  subroutine storage_get_info(this, dim, size, fine, alloc, default)
+  subroutine storage_set_info(this, lock)
+    type(storage_t), intent(inout) :: this
+    logical,         intent(in)    :: lock
+
+    PUSH_SUB(storage_set_info)
+
+    this%lock = lock
+    
+    POP_SUB(storage_set_info)
+  end subroutine storage_set_info
+
+  ! ---------------------------------------------------------
+  subroutine storage_get_info(this, dim, size, lock, fine, alloc, default)
     type(storage_t), target, intent(in)  :: this
     integer,       optional, intent(out) :: dim
     integer,       optional, intent(out) :: size
+    logical,       optional, intent(out) :: lock
     logical,       optional, intent(out) :: fine
     logical,       optional, intent(out) :: alloc
     real(kind=wp), optional, intent(out) :: default
@@ -705,6 +731,7 @@ contains
       size = 0
       if(associated(this%mesh)) size = this%mesh%np
     end if
+    if(present(lock)) lock = this%lock
     if(present(fine)) fine = this%fine
     if(present(alloc)) alloc = this%alloc .and. associated(this%sim)
     if(present(default)) default = this%default
@@ -773,7 +800,7 @@ contains
     PUSH_SUB(storage_get_storage_1d)
 
     nullify(that)
-    if(this%alloc)then
+    if(.not.this%lock.and.this%alloc)then
       ASSERT(allocated(this%data))
       if(present(dim))then
         ASSERT(dim<=this%ndim)
@@ -795,7 +822,7 @@ contains
     PUSH_SUB(storage_get_storage_md)
 
     nullify(that)
-    if(this%alloc)then
+    if(.not.this%lock.and.this%alloc)then
       ASSERT(allocated(this%data))
       that => this%data
     end if
@@ -868,6 +895,7 @@ contains
     ASSERT(this%ndim==that%ndim)
     ASSERT(this%default.equal.that%default)
     ASSERT(this%alloc.and.that%alloc)
+    ASSERT(.not.this%lock)
     if(this%fine.eqv.that%fine)then
       ASSERT(associated(this%mesh,that%mesh))
       call storage_copy_aux(this, that)
@@ -918,10 +946,12 @@ contains
     this%ndim = that%ndim
     this%size = that%size
     this%default = that%default
+    this%lock = .false.
     if(associated(this%config).and.associated(this%sim))then
       call storage_realloc(this)
       if(this%alloc) call storage_copy_aux(this, that)
     end if
+    this%lock = that%lock
 
     POP_SUB(storage_copy)
   end subroutine storage_copy
@@ -933,13 +963,16 @@ contains
     PUSH_SUB(storage_end)
 
     nullify(this%config, this%sim, this%grid, this%mesh)
+    this%lock = .false.
     this%fine = .false.
     this%alloc = .false.
     this%full = .true.
     this%ndim = 0
     this%size = 0
     this%default = 0.0_wp
-    SAFE_DEALLOCATE_A(this%data)
+    if(allocated(this%data))then
+      SAFE_DEALLOCATE_A(this%data)
+    end if
 
     POP_SUB(storage_end)
   end subroutine storage_end
