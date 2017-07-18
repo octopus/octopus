@@ -57,11 +57,12 @@ module base_system_oct_m
 
   public ::                &
     base_system__init__,   &
+    base_system__build__,  &
     base_system__start__,  &
-    base_system__update__, &
-    base_system__stop__,   &
-    base_system__reset__,  &
     base_system__acc__,    &
+    base_system__update__, &
+    base_system__reset__,  &
+    base_system__stop__,   &
     base_system__copy__,   &
     base_system__end__
 
@@ -70,10 +71,10 @@ module base_system_oct_m
     base_system_del,    &
     base_system_init,   &
     base_system_start,  &
+    base_system_acc,    &
     base_system_update, &
+    base_system_reset,  &
     base_system_stop,   &
-    base_system_sets,   &
-    base_system_gets,   &
     base_system_set,    &
     base_system_get,    &
     base_system_copy,   &
@@ -108,15 +109,9 @@ module base_system_oct_m
   end type base_system_t
 
   interface base_system__init__
-    module procedure base_system__init__begin
-    module procedure base_system__init__finish
+    module procedure base_system__init__type
     module procedure base_system__init__copy
   end interface base_system__init__
-
-  interface base_system__copy__
-    module procedure base_system__copy__begin
-    module procedure base_system__copy__finish
-  end interface base_system__copy__
 
   interface base_system_init
     module procedure base_system_init_type
@@ -125,11 +120,8 @@ module base_system_oct_m
 
   interface base_system_set
     module procedure base_system_set_simulation
+    module procedure base_system_set_sub
   end interface base_system_set
-
-  interface base_system_gets
-    module procedure base_system_gets_name
-  end interface base_system_gets
 
   interface base_system_get
     module procedure base_system_get_info
@@ -141,6 +133,7 @@ module base_system_oct_m
     module procedure base_system_get_charge
     module procedure base_system_get_states
     module procedure base_system_get_density
+    module procedure base_system_get_sub
   end interface base_system_get
 
   interface base_system_copy
@@ -230,14 +223,14 @@ contains
   end subroutine base_system_del
 
   ! ---------------------------------------------------------
-  subroutine base_system__init__begin(this, config)
+  subroutine base_system__iinit__(this, config)
     type(base_system_t),         intent(out) :: this
     type(json_object_t), target, intent(in)  :: config
 
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
 
-    PUSH_SUB(base_system__init__begin)
+    PUSH_SUB(base_system__iinit__)
 
     nullify(cnfg)
     this%config => config
@@ -245,6 +238,24 @@ contains
     ASSERT(ierr==JSON_OK)
     call space_init(this%space, cnfg)
     nullify(cnfg)
+    call base_system_dict_init(this%dict)
+    call base_system_list_init(this%list)
+
+    POP_SUB(base_system__iinit__)
+  end subroutine base_system__iinit__
+
+  ! ---------------------------------------------------------
+  subroutine base_system__init__type(this, config)
+    type(base_system_t),         intent(out) :: this
+    type(json_object_t), target, intent(in)  :: config
+
+    type(json_object_t), pointer :: cnfg
+    integer                      :: ierr
+
+    PUSH_SUB(base_system__init__type)
+
+    nullify(cnfg)
+    call base_system__iinit__(this, config)
     call json_get(this%config, "geometry", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
     call base_geometry__init__(this%geom, this%space, cnfg)
@@ -253,22 +264,9 @@ contains
     ASSERT(ierr==JSON_OK)
     call base_states__init__(this%st, cnfg)
     nullify(cnfg)
-    call base_system_dict_init(this%dict)
-    call base_system_list_init(this%list)
 
-    POP_SUB(base_system__init__begin)
-  end subroutine base_system__init__begin
-
-  ! ---------------------------------------------------------
-  subroutine base_system__init__finish(this)
-    type(base_system_t), intent(inout) :: this
-
-    PUSH_SUB(base_system__init__finish)
-
-    call base_geometry__init__(this%geom)
-
-    POP_SUB(base_system__init__finish)
-  end subroutine base_system__init__finish
+    POP_SUB(base_system__init__type)
+  end subroutine base_system__init__type
 
   ! ---------------------------------------------------------
   subroutine base_system__init__copy(this, that)
@@ -278,11 +276,46 @@ contains
     PUSH_SUB(base_system__init__copy)
 
     ASSERT(associated(that%config))
-    call base_system__init__(this, that%config)
+    call base_system__iinit__(this, that%config)
+    call base_geometry__init__(this%geom, that%geom)
+    call base_states__init__(this%st, that%st)
     if(associated(that%sim)) call base_system__start__(this, that%sim)
 
     POP_SUB(base_system__init__copy)
   end subroutine base_system__init__copy
+
+  ! ---------------------------------------------------------
+  subroutine base_system__build__(this, build)
+    type(base_system_t), intent(inout) :: this
+
+    interface
+      subroutine build(this, that, name)
+        import :: base_system_t
+        type(base_system_t), intent(inout) :: this
+        type(base_system_t), intent(in)    :: that
+        character(len=*),    intent(in)    :: name
+      end subroutine build
+    end interface
+
+    type(base_system_iterator_t)        :: iter
+    character(len=BASE_SYSTEM_NAME_LEN) :: name
+    type(base_system_t),        pointer :: subs
+    integer                             :: ierr
+
+    PUSH_SUB(base_system__build__)
+
+    call base_system_init(iter, this)
+    do
+      nullify(subs)
+      call base_system_next(iter, name, subs, ierr)
+      if(ierr/=BASE_SYSTEM_OK)exit
+      call build(this, subs, name)
+    end do
+    call base_system_end(iter)
+    nullify(subs)
+
+    POP_SUB(base_system__build__)
+  end subroutine base_system__build__
 
   ! ---------------------------------------------------------
   subroutine base_system_init_type(this, config)
@@ -292,7 +325,6 @@ contains
     PUSH_SUB(base_system_init_type)
 
     call base_system__init__(this, config)
-    call base_system__init__(this)
 
     POP_SUB(base_system_init_type)
   end subroutine base_system_init_type
@@ -302,29 +334,37 @@ contains
     type(base_system_t), intent(out) :: this
     type(base_system_t), intent(in)  :: that
 
-    type(base_system_iterator_t)        :: iter
-    character(len=BASE_SYSTEM_NAME_LEN) :: name
-    type(base_system_t),        pointer :: osub, isub
-    integer                             :: ierr
-
     PUSH_SUB(base_system_init_copy)
 
-    nullify(osub, isub)
     call base_system__init__(this, that)
-    call base_system_init(iter, that)
-    do
-      nullify(osub, isub)
-      call base_system_next(iter, name, isub, ierr)
-      if(ierr/=BASE_SYSTEM_OK)exit
-      call base_system_new(this, osub)
-      call base_system_init(osub, isub)
-      call base_system_sets(this, name, osub)
-    end do
-    call base_system_end(iter)
-    call base_system__init__(this)
-    nullify(osub, isub)
+    call base_system__build__(this, init)
 
     POP_SUB(base_system_init_copy)
+
+  contains
+
+    recursive subroutine init(this, isub, name)
+      type(base_system_t), intent(inout) :: this
+      type(base_system_t), intent(in)    :: isub
+      character(len=*),    intent(in)    :: name
+
+      type(base_system_t), pointer :: osub
+      
+      POP_SUB(base_system_init_copy.init)
+
+      nullify(osub)
+      if(base_system_list_index(that%list, isub)>0)then
+        call base_system_new(this, osub)
+        call base_system_init(osub, isub)
+        call base_system_set(this, name, osub)
+        nullify(osub)
+      else
+        call base_system_set(this, name, isub)
+      end if
+
+      PUSH_SUB(base_system_init_copy.init)
+    end subroutine init
+
   end subroutine base_system_init_copy
 
   ! ---------------------------------------------------------
@@ -343,30 +383,20 @@ contains
   end subroutine base_system__start__
 
   ! ---------------------------------------------------------
-  recursive subroutine base_system_start(this, sim)
+  subroutine base_system__acc__(this, that)
     type(base_system_t), intent(inout) :: this
-    type(simulation_t),  intent(in)    :: sim
+    type(base_system_t), intent(in)    :: that
 
-    type(base_system_iterator_t) :: iter
-    type(base_system_t), pointer :: subs
-    integer                      :: ierr
+    PUSH_SUB(base_system__acc__)
 
-    PUSH_SUB(base_system_start)
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
+    ASSERT(associated(that%config))
+    ASSERT(associated(that%sim))
+    call base_states__acc__(this%st, that%st)
 
-    nullify(subs)
-    call base_system_init(iter, this)
-    do
-      nullify(subs)
-      call base_system_next(iter, subs, ierr)
-      if(ierr/=BASE_SYSTEM_OK)exit
-      call base_system_start(subs, sim)
-    end do
-    call base_system_end(iter)
-    nullify(subs)
-    call base_system__start__(this, sim)
-
-    POP_SUB(base_system_start)
-  end subroutine base_system_start
+    POP_SUB(base_system__acc__)
+  end subroutine base_system__acc__
 
   ! ---------------------------------------------------------
   subroutine base_system__update__(this)
@@ -382,29 +412,17 @@ contains
   end subroutine base_system__update__
 
   ! ---------------------------------------------------------
-  recursive subroutine base_system_update(this)
+  subroutine base_system__reset__(this)
     type(base_system_t), intent(inout) :: this
 
-    type(base_system_iterator_t) :: iter
-    type(base_system_t), pointer :: subs
-    integer                      :: ierr
+    PUSH_SUB(base_system__reset__)
 
-    PUSH_SUB(base_system_update)
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
+    call base_states__reset__(this%st)
 
-    nullify(subs)
-    call base_system_init(iter, this)
-    do
-      nullify(subs)
-      call base_system_next(iter, subs, ierr)
-      if(ierr/=BASE_SYSTEM_OK)exit
-      call base_system_update(subs)
-    end do
-    call base_system_end(iter)
-    nullify(subs)
-    call base_system__update__(this)
-
-    POP_SUB(base_system_update)
-  end subroutine base_system_update
+    POP_SUB(base_system__reset__)
+  end subroutine base_system__reset__
 
   ! ---------------------------------------------------------
   subroutine base_system__stop__(this)
@@ -421,101 +439,165 @@ contains
   end subroutine base_system__stop__
 
   ! ---------------------------------------------------------
-  recursive subroutine base_system_stop(this)
+  recursive subroutine base_system__apply__(this, operation)
+    type(base_system_t), intent(inout) :: this
+
+    interface
+      subroutine operation(this)
+        import :: base_system_t
+        type(base_system_t), intent(inout) :: this
+      end subroutine operation
+    end interface
+
+    type(base_system_list_iterator_t) :: iter
+    type(base_system_t),      pointer :: subs
+
+    PUSH_SUB(base_system__apply__)
+
+    call base_system_list_init(iter, this%list)
+    do
+      nullify(subs)
+      call base_system_list_next(iter, subs)
+      if(.not.associated(subs))exit
+      call base_system__apply__(subs, operation)
+    end do
+    call base_system_list_end(iter)
+    nullify(subs)
+    call operation(this)
+
+    POP_SUB(base_system__apply__)
+  end subroutine base_system__apply__
+
+  ! ---------------------------------------------------------
+  subroutine base_system_start(this, sim)
+    type(base_system_t), intent(inout) :: this
+    type(simulation_t),  intent(in)    :: sim
+
+    PUSH_SUB(base_system_start)
+
+    call base_system__apply__(this, start)
+
+    POP_SUB(base_system_start)
+    
+  contains
+
+    subroutine start(this)
+      type(base_system_t), intent(inout) :: this
+
+      PUSH_SUB(base_system_start.start)
+      
+      call base_system__start__(this, sim)
+
+      POP_SUB(base_system_start.start)
+    end subroutine start
+
+  end subroutine base_system_start
+
+  ! ---------------------------------------------------------
+  recursive subroutine base_system_acc(this)
     type(base_system_t), intent(inout) :: this
 
     type(base_system_iterator_t) :: iter
     type(base_system_t), pointer :: subs
-    integer                      :: ierr
+    logical                      :: accu
 
-    PUSH_SUB(base_system_stop)
+    PUSH_SUB(base_system_acc)
 
-    nullify(subs)
+    ASSERT(associated(this%config))
+    call base_system_get(this, reduce=accu)
+    if(accu) call base_system__reset__(this)
     call base_system_init(iter, this)
     do
       nullify(subs)
-      call base_system_next(iter, subs, ierr)
-      if(ierr/=BASE_SYSTEM_OK)exit
-      call base_system_stop(subs)
+      call base_system_next(iter, subs)
+      if(.not.associated(subs))exit
+      call base_system_acc(subs)
+      if(accu) call base_system__acc__(this, subs)
     end do
     call base_system_end(iter)
     nullify(subs)
-    call base_system__stop__(this)
+    if(accu) call base_system__update__(this)
+    
+    POP_SUB(base_system_acc)
+  end subroutine base_system_acc
+
+  ! ---------------------------------------------------------
+  subroutine base_system_update(this)
+    type(base_system_t), intent(inout) :: this
+
+    PUSH_SUB(base_system_update)
+
+    call base_system__apply__(this, base_system__update__)
+
+    POP_SUB(base_system_update)
+  end subroutine base_system_update
+
+  ! ---------------------------------------------------------
+  subroutine base_system_reset(this)
+    type(base_system_t), intent(inout) :: this
+
+    PUSH_SUB(base_system_reset)
+
+    call base_system__apply__(this, base_system__reset__)
+    
+    POP_SUB(base_system_reset)
+  end subroutine base_system_reset
+
+  ! ---------------------------------------------------------
+  subroutine base_system_stop(this)
+    type(base_system_t), intent(inout) :: this
+
+    PUSH_SUB(base_system_stop)
+
+    call base_system__apply__(this, base_system__stop__)
 
     POP_SUB(base_system_stop)
   end subroutine base_system_stop
 
   ! ---------------------------------------------------------
-  subroutine base_system__reset__(this)
-    type(base_system_t), intent(inout) :: this
-
-    PUSH_SUB(base_system__reset__)
-
-    ASSERT(associated(this%config))
-    ASSERT(associated(this%sim))
-    call base_states__reset__(this%st)
-
-    POP_SUB(base_system__reset__)
-  end subroutine base_system__reset__
-
-  ! ---------------------------------------------------------
-  subroutine base_system__acc__(this, that)
-    type(base_system_t), intent(inout) :: this
-    type(base_system_t), intent(in)    :: that
-
-    PUSH_SUB(base_system__acc__)
-
-    ASSERT(associated(this%config))
-    ASSERT(associated(this%sim))
-    call base_states__acc__(this%st, that%st)
-
-    POP_SUB(base_system__acc__)
-  end subroutine base_system__acc__
-
-  ! ---------------------------------------------------------
-  subroutine base_system__sets__(this, name, that)
+  subroutine base_system__set__(this, name, that)
     type(base_system_t), intent(inout) :: this
     character(len=*),    intent(in)    :: name
     type(base_system_t), intent(in)    :: that
 
-    PUSH_SUB(base_system__sets__)
+    PUSH_SUB(base_system__set__)
 
     ASSERT(this%space==that%space)
-    call base_geometry_sets(this%geom, name, that%geom)
-    call base_states_sets(this%st, name, that%st)
+    call base_geometry_set(this%geom, name, that%geom)
+    call base_states_set(this%st, name, that%st)
 
-    POP_SUB(base_system__sets__)
-  end subroutine base_system__sets__
+    POP_SUB(base_system__set__)
+  end subroutine base_system__set__
 
   ! ---------------------------------------------------------
-  subroutine base_system_sets(this, name, that)
+  subroutine base_system_set_sub(this, name, that)
     type(base_system_t), intent(inout) :: this
     character(len=*),    intent(in)    :: name
     type(base_system_t), intent(in)    :: that
 
-    PUSH_SUB(base_system_sets)
+    PUSH_SUB(base_system_set_sub)
 
     ASSERT(associated(this%config))
     call base_system_dict_set(this%dict, trim(adjustl(name)), that)
-    call base_system__sets__(this, name, that)
+    call base_system__set__(this, trim(adjustl(name)), that)
 
-    POP_SUB(base_system_sets)
-  end subroutine base_system_sets
+    POP_SUB(base_system_set_sub)
+  end subroutine base_system_set_sub
 
   ! ---------------------------------------------------------
-  subroutine base_system_gets_name(this, name, that)
+  subroutine base_system_get_sub(this, name, that)
     type(base_system_t),  intent(in) :: this
     character(len=*),     intent(in) :: name
     type(base_system_t), pointer     :: that
 
-    PUSH_SUB(base_system_gets_name)
+    PUSH_SUB(base_system_get_sub)
 
     nullify(that)
     ASSERT(associated(this%config))
     call base_system_dict_get(this%dict, trim(adjustl(name)), that)
 
-    POP_SUB(base_system_gets_name)
-  end subroutine base_system_gets_name
+    POP_SUB(base_system_get_sub)
+  end subroutine base_system_get_sub
 
   ! ---------------------------------------------------------
   subroutine base_system_set_simulation(this, that)
@@ -531,13 +613,14 @@ contains
   end subroutine base_system_set_simulation
 
   ! ---------------------------------------------------------
-  subroutine base_system_get_info(this, nspin)
+  subroutine base_system_get_info(this, nspin, reduce)
     type(base_system_t), intent(in)  :: this
-    integer,             intent(out) :: nspin
+    integer,   optional, intent(out) :: nspin
+    logical,   optional, intent(out) :: reduce
 
     PUSH_SUB(base_system_get_info)
 
-    call base_states_get(this%st, nspin)
+    call base_states_get(this%st, nspin=nspin, reduce=reduce)
 
     POP_SUB(base_system_get_info)
   end subroutine base_system_get_info
@@ -642,61 +725,60 @@ contains
   end subroutine base_system_get_density
 
   ! ---------------------------------------------------------
-  subroutine base_system__copy__begin(this, that)
+  subroutine base_system__copy__(this, that)
     type(base_system_t), intent(inout) :: this
     type(base_system_t), intent(in)    :: that
 
-    PUSH_SUB(base_system__copy__begin)
+    PUSH_SUB(base_system__copy__)
 
     call base_system__end__(this)
     if(associated(that%config))then
-      call base_system__init__(this, that)
-      if(associated(that%sim)) call base_states__copy__(this%st, that%st)
+      call base_system__iinit__(this, that%config)
+      this%sim => that%sim
+      call base_geometry__copy__(this%geom, that%geom)
+      call base_states__copy__(this%st, that%st)
     end if
 
-    POP_SUB(base_system__copy__begin)
-  end subroutine base_system__copy__begin
-
-  ! ---------------------------------------------------------
-  subroutine base_system__copy__finish(this)
-    type(base_system_t), intent(inout) :: this
-
-    PUSH_SUB(base_system__copy__finish)
-
-    call base_geometry__copy__(this%geom)
-
-    POP_SUB(base_system__copy__finish)
-  end subroutine base_system__copy__finish
+    POP_SUB(base_system__copy__)
+  end subroutine base_system__copy__
 
   ! ---------------------------------------------------------
   recursive subroutine base_system_copy_type(this, that)
     type(base_system_t), intent(inout) :: this
     type(base_system_t), intent(in)    :: that
 
-    type(base_system_iterator_t)        :: iter
-    character(len=BASE_SYSTEM_NAME_LEN) :: name
-    type(base_system_t),        pointer :: osub, isub
-    integer                             :: ierr
-
     PUSH_SUB(base_system_copy_type)
 
-    nullify(osub, isub)
     call base_system_end(this)
     call base_system__copy__(this, that)
-    call base_system_init(iter, that)
-    do
-      nullify(osub, isub)
-      call base_system_next(iter, name, isub, ierr)
-      if(ierr/=BASE_SYSTEM_OK)exit
-      call base_system_new(this, osub)
-      call base_system_copy(osub, isub)
-      call base_system_sets(this, name, osub)
-    end do
-    call base_system_end(iter)
-    call base_system__copy__(this)
-    nullify(osub, isub)
+    call base_system__build__(this, copy)
 
     POP_SUB(base_system_copy_type)
+
+  contains
+
+    recursive subroutine copy(this, isub, name)
+      type(base_system_t), intent(inout) :: this
+      type(base_system_t), intent(in)    :: isub
+      character(len=*),    intent(in)    :: name
+
+      type(base_system_t), pointer :: osub
+      
+      POP_SUB(base_system_copy_type.copy)
+
+      nullify(osub)
+      if(base_system_list_index(that%list, isub)>0)then
+        call base_system_new(this, osub)
+        call base_system_copy(osub, isub)
+        call base_system_set(this, name, osub)
+        nullify(osub)
+      else
+        call base_system_set(this, name, isub)
+      end if
+
+      PUSH_SUB(base_system_copy_type.copy)
+    end subroutine copy
+
   end subroutine base_system_copy_type
 
   ! ---------------------------------------------------------

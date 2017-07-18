@@ -2,13 +2,13 @@
 
 module live_handle_oct_m
 
+  use base_geometry_oct_m
   use base_handle_oct_m
-  use base_model_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use json_oct_m
-  use live_model_oct_m
+  use live_geometry_oct_m
   use messages_oct_m
   use profiling_oct_m
 
@@ -35,15 +35,15 @@ contains
     type(base_handle_t), intent(inout) :: this
     type(geometry_t),    intent(in)    :: geo
 
-    type(base_model_t), pointer :: that
+    type(base_geometry_t), pointer :: geom
 
     PUSH_SUB(live_handle__init__)
 
-    nullify(that)
-    call base_handle_get(this, that)
-    ASSERT(associated(that))
-    call live_model__init__(that, geo)
-    nullify(that)
+    nullify(geom)
+    call base_handle_get(this, geom)
+    ASSERT(associated(geom))
+    call live_geometry__init__(geom, geo)
+    nullify(geom)
 
     POP_SUB(live_handle__init__)
   end subroutine live_handle__init__

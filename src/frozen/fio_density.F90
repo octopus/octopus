@@ -4,6 +4,8 @@ module fio_density_oct_m
 
   use base_density_oct_m
   use basis_oct_m
+  use dnst_oct_m
+  use dnst_intrf_oct_m
   use global_oct_m
   use intrpl_oct_m
   use io_function_oct_m
@@ -62,33 +64,46 @@ contains
   subroutine fio_density__init__(this)
     type(base_density_t), intent(inout) :: this
 
-    type(json_object_t), pointer :: cnfg
-    type(json_array_t),  pointer :: list
-    real(kind=wp)                :: chrg
-    integer                      :: ispn, nspin, ierr
-    logical                      :: ipol
+    type(dnst_intrf_t), pointer :: idns
 
     PUSH_SUB(fio_density__init__)
 
-    nullify(cnfg, list)
-    call base_density_get(this, cnfg)
-    ASSERT(associated(cnfg))
-    call base_density_get(this, nspin=nspin)
-    call json_get(cnfg, "invertpolarization", ipol, ierr)
-    if(ierr/=JSON_OK) ipol = .false.
-    if(ipol.and.(nspin>1))then
-      call json_get(cnfg, "charge", list, ierr)
-      ASSERT(ierr==JSON_OK)
-      do ispn = 1, nspin
-        call json_get(list, ispn, chrg, ierr)
-        ASSERT(ierr==JSON_OK)
-        call base_density_set(this, chrg, nspin-ispn+1)
-      end do
-      nullify(list)
-    end if
-    nullify(cnfg)
+    nullify(idns)
+    call base_density_get(this, idns)
+    ASSERT(associated(idns))
+    call dnst_intrf_new(idns, init)
+    nullify(idns)
 
     POP_SUB(fio_density__init__)
+
+  contains
+    
+    subroutine init(this, config)
+      type(dnst_t),        intent(out) :: this
+      type(json_object_t), intent(in)  :: config
+      
+      real(kind=wp) :: chrb, chrt
+      integer       :: ispn, nspin, ierr
+      logical       :: ipol
+
+      PUSH_SUB(fio_density__init__.init)
+
+      call dnst_init(this, config)
+      call dnst_get(this, nspin=nspin)
+      call json_get(config, "invertpolarization", ipol, ierr)
+      if(ierr/=JSON_OK) ipol = .false.
+      if(ipol.and.(nspin>1))then
+        do ispn = 1, nspin/2
+          call dnst_get(this, chrb, spin=ispn)
+          call dnst_get(this, chrt, spin=nspin-ispn+1)
+          call dnst_set(this, chrt, spin=ispn)
+          call dnst_set(this, chrb, spin=nspin-ispn+1)
+        end do
+      end if
+
+      POP_SUB(fio_density__init__.init)
+    end subroutine init
+    
   end subroutine fio_density__init__
 
   ! ---------------------------------------------------------
@@ -165,6 +180,7 @@ contains
       nullify(cnfg, list)
       call base_density__update__(this)
     end if
+    !call base_density_set(this, static=.true.)
 
     POP_SUB(fio_density__load__)
   end subroutine fio_density__load__
@@ -258,8 +274,8 @@ contains
     ASSERT(nspin<3)
     this%sim => sim
     call json_set(this%config, "reduce", .false.)
-    call json_set(this%config, "static", .false.)
     call json_set(this%config, "external", .false.)
+    call json_set(this%config, "default", .true.)
     call json_set(this%config, "nspin", nspin)
     call base_density_get(this%self, nspin=sspin)
     SAFE_ALLOCATE(ichrg(1:sspin))
@@ -274,6 +290,7 @@ contains
     call json_write(this%config)
     call base_density__init__(this%dnst, this%config)
     call base_density__start__(this%dnst, sim)
+    call base_density_set(this%dnst, static=.true.)
 
     POP_SUB(fio_density_intrpl_start)
   end subroutine fio_density_intrpl_start
@@ -340,6 +357,7 @@ contains
     ASSERT(nspin<3)
     SAFE_ALLOCATE(irho(nspin))
     that => this%dnst
+    call base_density_set(this%dnst, static=.false.)
     call base_density_get(this%dnst, size=np)
     call base_density_get(this%dnst, dnst)
     ASSERT(associated(dnst))
@@ -349,6 +367,7 @@ contains
       call fio_density_adjust_spin(dnst(indx,:), irho)
     end do
     call base_density__update__(this%dnst)
+    call base_density_set(this%dnst, static=.true.)
     SAFE_DEALLOCATE_A(irho)
     SAFE_DEALLOCATE_A(x)
     nullify(dnst, space, mesh)

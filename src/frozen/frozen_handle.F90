@@ -2,9 +2,11 @@
 
 module frozen_handle_oct_m
 
+  use base_geometry_oct_m
   use base_handle_oct_m
   use base_model_oct_m
   use fio_handle_oct_m
+  use frozen_geometry_oct_m
   use frozen_model_oct_m
   use global_oct_m
   use grid_oct_m
@@ -32,22 +34,22 @@ module frozen_handle_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine frozen_handle__build__(this, config)
+  subroutine frozen_handle__init__(this, config)
     type(base_handle_t), intent(inout) :: this
     type(json_object_t), intent(in)    :: config
 
-    type(base_model_t), pointer :: modl
+    type(base_geometry_t), pointer :: pgeo
 
-    PUSH_SUB(frozen_handle__build__)
+    PUSH_SUB(frozen_handle__init__)
 
-    nullify(modl)
-    call base_handle_get(this, modl)
-    ASSERT(associated(modl))
-    call frozen_model__build__(modl, config)
-    nullify(modl)
+    nullify(pgeo)
+    call base_handle_get(this, pgeo)
+    ASSERT(associated(pgeo))
+    call frozen_geometry__init__(pgeo, config)
+    nullify(pgeo)
 
-    POP_SUB(frozen_handle__build__)
-  end subroutine frozen_handle__build__
+    POP_SUB(frozen_handle__init__)
+  end subroutine frozen_handle__init__
 
   ! ---------------------------------------------------------
   subroutine frozen_handle_init(this, config)
@@ -67,7 +69,7 @@ contains
     ASSERT(ierr==JSON_OK)
     ASSERT(json_len(cnfg)>0)
     call base_handle__init__(this, cnfg, fio_handle_init)
-    call frozen_handle__build__(this, cnfg)
+    call frozen_handle__init__(this, cnfg)
     nullify(cnfg)
     call base_handle__init__(this)
 

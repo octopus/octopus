@@ -36,9 +36,7 @@ module dnst_oct_m
     type(json_object_t),             pointer :: config =>null()
     type(simulation_t),              pointer :: sim    =>null()
     type(storage_t),                 pointer :: total  =>null()
-    logical                                  :: static = .false.
     logical                                  :: xtrnl  = .false.
-    logical                                  :: updt   = .false.
     integer                                  :: nspin  = 0
     real(kind=wp), dimension(:), allocatable :: charge
     type(storage_t)                          :: data
@@ -50,6 +48,7 @@ module dnst_oct_m
   end interface dnst_init
 
   interface dnst_set
+    module procedure dnst_set_info
     module procedure dnst_set_charge
   end interface dnst_set
 
@@ -77,11 +76,8 @@ contains
 
     nullify(cnfg)
     this%config => config
-    call json_get(this%config, "static", this%static, ierr)
-    if(ierr/=JSON_OK) this%static = .false.
     call json_get(this%config, "external", this%xtrnl, ierr)
     if(ierr/=JSON_OK) this%xtrnl = .false.
-    this%updt = .false.
     call json_get(this%config, "nspin", this%nspin, ierr)
     if(ierr/=JSON_OK) this%nspin = default_nspin
     ASSERT(this%nspin>0)
@@ -153,7 +149,6 @@ contains
       if(that%charge(ispn)>0.0_wp)then
         this%charge(ispn) = this%charge(ispn) + that%charge(ispn)
         call storage_add(this%data, that%data, ispn)
-        this%updt = .true.
       end if
     end do
 
@@ -165,44 +160,29 @@ contains
     type(dnst_t), intent(inout) :: this
 
     real(kind=wp) :: chrg, intg
+    logical       :: static
     integer       :: ispn
 
     PUSH_SUB(dnst_update)
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
-    if(.not.this%static)then
-      call storage_update(this%data)
-      if(.not.this%xtrnl)then
-        do ispn = 1, this%nspin
-          chrg = this%charge(ispn)
-          if(chrg>0.0_wp)then
-            call storage_integrate(this%data, ispn, intg)
-            ASSERT(.not.(intg<0.0_wp))
-            if(intg>0.0_wp) call storage_mlt(this%data, ispn, chrg/intg)
-          else
-            this%charge(ispn) = 0.0_wp
-            call storage_reset(this%data, ispn)
-          end if
-        end do
-      end if
-    end if
-    if(.not.this%static.or.this%updt)then
-      this%updt = .false.
-      if(this%nspin>1)then
-        call storage_reduce(this%total, this%data)
-        if(.not.this%xtrnl)then
-          chrg = sum(this%charge)
-          if(chrg>0.0_wp)then
-            call storage_integrate(this%total, intg)
-            ASSERT(.not.(intg<0.0_wp))
-            if(intg>0.0_wp) call storage_mlt(this%total, chrg/intg)
-          else
-            call storage_reset(this%total)
-          end if
+    call storage_get(this%data, lock=static)
+    call storage_update(this%data)
+    if(.not.(static.or.this%xtrnl))then
+      do ispn = 1, this%nspin
+        chrg = this%charge(ispn)
+        if(chrg>0.0_wp)then
+          call storage_integrate(this%data, ispn, intg)
+          ASSERT(.not.(intg<0.0_wp))
+          if(intg>0.0_wp) call storage_mlt(this%data, ispn, chrg/intg)
+        else
+          this%charge(ispn) = 0.0_wp
+          call storage_reset(this%data, ispn)
         end if
-      end if
+      end do
     end if
+    if(this%nspin>1) call storage_reduce(this%total, this%data)
 
     POP_SUB(dnst_update)
   end subroutine dnst_update
@@ -238,6 +218,20 @@ contains
   end subroutine dnst_stop
 
   ! ---------------------------------------------------------
+  subroutine dnst_set_info(this, static)
+    type(dnst_t), intent(inout) :: this
+    logical,      intent(in)    :: static
+
+    PUSH_SUB(dnst_set_info)
+
+    ASSERT(associated(this%config))
+    call storage_set(this%data, lock=static)
+    if(this%nspin>1) call storage_set(this%total, lock=static)
+
+    POP_SUB(dnst_set_info)
+  end subroutine dnst_set_info
+
+  ! ---------------------------------------------------------
   subroutine dnst_set_charge(this, charge, spin, total)
     type(dnst_t),      intent(inout) :: this
     real(kind=wp),     intent(in)    :: charge
@@ -268,10 +262,11 @@ contains
   end subroutine dnst_set_charge
 
   ! ---------------------------------------------------------
-  subroutine dnst_get_info(this, size, nspin, fine, use)
+  subroutine dnst_get_info(this, size, nspin, static, fine, use)
     type(dnst_t),      intent(in)  :: this
     integer, optional, intent(out) :: size
     integer, optional, intent(out) :: nspin
+    logical, optional, intent(out) :: static
     logical, optional, intent(out) :: fine
     logical, optional, intent(out) :: use
 
@@ -279,7 +274,7 @@ contains
 
     ASSERT(associated(this%config))
     if(present(nspin)) nspin = this%nspin
-    call storage_get(this%data, size=size, fine=fine, alloc=use)
+    call storage_get(this%data, size=size, lock=static, fine=fine, alloc=use)
 
     POP_SUB(dnst_get_info)
   end subroutine dnst_get_info
@@ -421,7 +416,6 @@ contains
     call dnst_end(this)
     if(associated(that%config))then
       call dnst_init(this, that)
-      this%updt = that%updt
       this%charge(:) = that%charge(:)
       if(associated(that%sim)) then
         call storage_copy(this%data, that%data)
@@ -444,9 +438,7 @@ contains
       SAFE_DEALLOCATE_P(this%total)
     end if
     nullify(this%total)
-    this%static = .false.
     this%xtrnl = .false.
-    this%updt = .false.
     this%nspin = 0
     SAFE_DEALLOCATE_A(this%charge)
     call storage_end(this%data)

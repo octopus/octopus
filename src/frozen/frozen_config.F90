@@ -22,12 +22,23 @@ module frozen_config_oct_m
 contains
 
   ! ---------------------------------------------------------
+  subroutine frozen_config_parse_geometry(this)
+    type(json_object_t), intent(inout) :: this
+
+    PUSH_SUB(frozen_config_parse_geometry)
+
+    call json_set(this, "default", .false.)
+
+    POP_SUB(frozen_config_parse_geometry)
+  end subroutine frozen_config_parse_geometry
+
+  ! ---------------------------------------------------------
   subroutine frozen_config_parse_density(this)
     type(json_object_t), intent(inout) :: this
 
     PUSH_SUB(frozen_config_parse_density)
 
-    call json_set(this, "static", .true.)
+    call json_set(this, "default", .true.)
     call json_set(this, "external", .true.)
 
     POP_SUB(frozen_config_parse_density)
@@ -60,6 +71,10 @@ contains
 
     PUSH_SUB(frozen_config_parse_system)
 
+    nullify(cnfg)
+    call json_get(this, "geometry", cnfg, ierr)
+    ASSERT(ierr==JSON_OK)
+    call frozen_config_parse_geometry(cnfg)
     nullify(cnfg)
     call json_get(this, "states", cnfg, ierr)
     ASSERT(ierr==JSON_OK)

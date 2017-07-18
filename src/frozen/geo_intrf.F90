@@ -25,6 +25,7 @@ module geo_intrf_oct_m
     geo_intrf_new,   &
     geo_intrf_del,   &
     geo_intrf_assoc, &
+    geo_intrf_alloc, &
     geo_intrf_init,  &
     geo_intrf_next,  &
     geo_intrf_set,   &
@@ -61,7 +62,7 @@ module geo_intrf_oct_m
 
   interface geo_intrf_new
     module procedure geo_intrf_new_geometry
-    module procedure geo_intrf_new_init
+    module procedure geo_intrf_new_pass
   end interface geo_intrf_new
 
   interface geo_intrf_init
@@ -115,10 +116,9 @@ contains
   end subroutine geo_intrf_new_geometry
 
   ! ---------------------------------------------------------
-  subroutine geo_intrf_new_init(this, that, geo_init)
+  subroutine geo_intrf_new_pass(this, geo_init)
     type(geo_intrf_t), intent(inout) :: this
-    type(geometry_t), pointer        :: that
-
+    
     interface
       subroutine geo_init(this, space, config)
         use geometry_oct_m
@@ -130,14 +130,17 @@ contains
       end subroutine geo_init
     end interface
 
-    PUSH_SUB(geo_intrf_new_init)
-    
-    nullify(that)
-    call geo_intrf_new(this, that)
-    call geo_init(that, this%space, this%config)
+    type(geometry_t), pointer :: pgeo
 
-    POP_SUB(geo_intrf_new_init)
-  end subroutine geo_intrf_new_init
+    PUSH_SUB(geo_intrf_new_pass)
+    
+    nullify(pgeo)
+    call geo_intrf_new(this, pgeo)
+    call geo_init(pgeo, this%space, this%config)
+    nullify(pgeo)
+
+    POP_SUB(geo_intrf_new_pass)
+  end subroutine geo_intrf_new_pass
 
   ! ---------------------------------------------------------
   subroutine geo_intrf_del(this)
@@ -178,6 +181,33 @@ contains
 
     POP_SUB(geo_intrf_assoc)
   end function geo_intrf_assoc
+
+  ! ---------------------------------------------------------
+  function geo_intrf_alloc(this) result(that)
+    type(geo_intrf_t), intent(in) :: this
+
+    logical :: that
+
+    PUSH_SUB(geo_intrf_alloc)
+
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%space))
+    select case(this%type)
+    case(GEO_NULL)
+      ASSERT(.not.associated(this%pgeo))
+      that = .false.
+    case(GEO_ASSC)
+      ASSERT(associated(this%pgeo))
+      that = .false.
+    case(GEO_ALLC)
+      ASSERT(associated(this%pgeo))
+      that = .true.
+    case default
+      ASSERT(.false.)
+    end select
+
+    POP_SUB(geo_intrf_alloc)
+  end function geo_intrf_alloc
 
   ! ---------------------------------------------------------
   subroutine geo_intrf_init_type(this, space, config)

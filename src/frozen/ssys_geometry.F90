@@ -1,6 +1,6 @@
 #include "global.h"
 
-module frozen_geometry_oct_m
+module ssys_geometry_oct_m
 
   use base_geometry_oct_m
   use geo_build_oct_m
@@ -16,20 +16,19 @@ module frozen_geometry_oct_m
 
   private
 
-  public ::                  &
-    frozen_geometry__init__
+  public ::                   &
+    ssys_geometry__build__
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine frozen_geometry__init__(this, config)
+  subroutine ssys_geometry__build__(this)
     type(base_geometry_t), intent(inout) :: this
-    type(json_object_t),   intent(in)    :: config
 
     type(geo_intrf_t), pointer :: igeo
     type(geo_build_t)          :: bgeo
 
-    PUSH_SUB(frozen_geometry__init__)
+    PUSH_SUB(ssys_geometry__build__)
 
     nullify(igeo)
     call base_geometry_get(this, igeo)
@@ -37,7 +36,7 @@ contains
     call geo_intrf_new(igeo, init)
     nullify(igeo)
 
-    POP_SUB(frozen_geometry__init__)
+    POP_SUB(ssys_geometry__build__)
 
   contains
     
@@ -48,7 +47,7 @@ contains
       type(json_object_t), intent(in)  :: gcfg
 
 
-      PUSH_SUB(frozen_geometry__init__.init)
+      PUSH_SUB(ssys_geometry__build__.init)
 
       ASSERT(json_len(gcfg)==0)
       call geo_build_init(bgeo, space)
@@ -56,7 +55,7 @@ contains
       call geo_build_export(bgeo, geom)
       call geo_build_end(bgeo)
 
-      POP_SUB(frozen_geometry__init__.init)
+      POP_SUB(ssys_geometry__build__.init)
     end subroutine init
 
     ! ---------------------------------------------------------
@@ -65,29 +64,22 @@ contains
       type(base_geometry_t), intent(in)    :: that
       character(len=*),      intent(in)    :: name
 
-      type(json_object_t), pointer :: cnfg
-      type(json_array_t),  pointer :: list
-      type(geometry_t),    pointer :: pgeo
-      integer                      :: ierr
+      type(geometry_t), pointer :: pgeo
 
-      PUSH_SUB(frozen_geometry__init__.build)
+      PUSH_SUB(ssys_geometry__build__.build)
 
-      nullify(cnfg, list, pgeo)
-      call json_get(config, trim(adjustl(name)), cnfg, ierr)
-      ASSERT(ierr==JSON_OK)
-      call json_get(cnfg, "positions", list, ierr)
-      ASSERT(ierr==JSON_OK)
-      ASSERT(json_len(list)>0)
+      nullify(pgeo)
       call base_geometry_get(that, pgeo)
       ASSERT(associated(pgeo))
-      call geo_build_extend(bgeo, pgeo, list)
+      call geo_build_extend(bgeo, pgeo)
+      nullify(pgeo)
 
-      POP_SUB(frozen_geometry__init__.build)
+      POP_SUB(ssys_geometry__build__.build)
     end subroutine build
 
-  end subroutine frozen_geometry__init__
+  end subroutine ssys_geometry__build__
 
-end module frozen_geometry_oct_m
+end module ssys_geometry_oct_m
 
 !! Local Variables:
 !! mode: f90

@@ -580,7 +580,6 @@ contains
         chrg = chrg + st%occ(indx,jndx) * st%d%kweights(jndx)
       end do
     end do
-    call json_set(this, "charge", chrg)
     call json_get(this, "density", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
     call output_parse_config_density(cnfg, st, grid, geo, fnst, chrg, dir, group)

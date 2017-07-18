@@ -1017,7 +1017,7 @@ contains
       if(ierr/=JSON_OK)cycle
       psys => this%sys
       call json_get(cnfg, "system", sysn, ierr)
-      if(ierr==JSON_OK) call base_system_gets(sys, sysn, psys)
+      if(ierr==JSON_OK) call base_system_get(sys, sysn, psys)
       ASSERT(associated(psys))
       call base_hamiltonian__inew__(this, attr, htrm)
       call hterm__init__(htrm, psys, cnfg)

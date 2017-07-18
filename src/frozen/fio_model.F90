@@ -2,11 +2,11 @@
 
 module fio_model_oct_m
 
+  use base_density_oct_m
   use base_hamiltonian_oct_m
   use base_model_oct_m
-  use base_system_oct_m
+  use fio_density_oct_m
   use fio_hamiltonian_oct_m
-  use fio_system_oct_m
   use global_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -16,43 +16,25 @@ module fio_model_oct_m
 
   private
 
-  public ::             &
-    fio_model__init__,  &
+  public ::            &
     fio_model__load__
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine fio_model__init__(this)
-    type(base_model_t), intent(inout) :: this
-
-    type(base_system_t), pointer :: sys
-
-    PUSH_SUB(fio_model__init__)
-
-    nullify(sys)
-    call base_model_get(this, sys)
-    ASSERT(associated(sys))
-    call fio_system__init__(sys)
-    nullify(sys)
-
-    POP_SUB(fio_model__init__)
-  end subroutine fio_model__init__
-
-  ! ---------------------------------------------------------
   subroutine fio_model__load__(this)
     type(base_model_t), intent(inout) :: this
 
-    type(base_system_t),      pointer :: sys
+    type(base_density_t),     pointer :: pdns
     type(base_hamiltonian_t), pointer :: hml
 
     PUSH_SUB(fio_model__load__)
 
-    nullify(sys, hml)
-    call base_model_get(this, sys)
-    ASSERT(associated(sys))
-    call fio_system__load__(sys)
-    nullify(sys)
+    nullify(pdns, hml)
+    call base_model_get(this, pdns)
+    ASSERT(associated(pdns))
+    call fio_density__load__(pdns)
+    nullify(pdns)
     call base_model_get(this, hml)
     ASSERT(associated(hml))
     call fio_hamiltonian__load__(hml)

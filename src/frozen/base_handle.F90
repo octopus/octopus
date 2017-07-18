@@ -13,7 +13,12 @@
 
 module base_handle_oct_m
 
+  use base_density_oct_m
+  use base_geometry_oct_m
+  use base_hamiltonian_oct_m
   use base_model_oct_m
+  use base_states_oct_m
+  use base_system_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
@@ -133,6 +138,11 @@ module base_handle_oct_m
     module procedure base_handle_get_info
     module procedure base_handle_get_config
     module procedure base_handle_get_simulation
+    module procedure base_handle_get_geom
+    module procedure base_handle_get_density
+    module procedure base_handle_get_states
+    module procedure base_handle_get_system
+    module procedure base_handle_get_hamiltonian
     module procedure base_handle_get_model
   end interface base_handle_get
 
@@ -636,6 +646,66 @@ contains
 
     POP_SUB(base_handle_get_simulation)
   end subroutine base_handle_get_simulation
+
+  ! ---------------------------------------------------------
+  subroutine base_handle_get_geom(this, that)
+    type(base_handle_t),    intent(in) :: this
+    type(base_geometry_t), pointer     :: that
+
+    PUSH_SUB(base_handle_get_geom)
+
+    call base_model_get(this%model, that)
+    
+    POP_SUB(base_handle_get_geom)
+  end subroutine base_handle_get_geom
+
+  ! ---------------------------------------------------------
+  subroutine base_handle_get_density(this, that)
+    type(base_handle_t),   intent(in) :: this
+    type(base_density_t), pointer     :: that
+
+    PUSH_SUB(base_handle_get_density)
+
+    call base_model_get(this%model, that)
+    
+    POP_SUB(base_handle_get_density)
+  end subroutine base_handle_get_density
+
+  ! ---------------------------------------------------------
+  subroutine base_handle_get_states(this, that)
+    type(base_handle_t),  intent(in) :: this
+    type(base_states_t), pointer     :: that
+
+    PUSH_SUB(base_handle_get_states)
+
+    call base_model_get(this%model, that)
+    
+    POP_SUB(base_handle_get_states)
+  end subroutine base_handle_get_states
+
+  ! ---------------------------------------------------------
+  subroutine base_handle_get_system(this, that)
+    type(base_handle_t),  intent(in) :: this
+    type(base_system_t), pointer     :: that
+
+    PUSH_SUB(base_handle_get_system)
+
+    call base_model_get(this%model, that)
+    
+    POP_SUB(base_handle_get_system)
+  end subroutine base_handle_get_system
+
+  ! ---------------------------------------------------------
+  subroutine base_handle_get_hamiltonian(this, that)
+    type(base_handle_t),       intent(in) :: this
+    type(base_hamiltonian_t), pointer     :: that
+
+    PUSH_SUB(base_handle_get_hamiltonian)
+
+    call base_model_get(this%model, that)
+    
+    POP_SUB(base_handle_get_hamiltonian)
+  end subroutine base_handle_get_hamiltonian
 
   ! ---------------------------------------------------------
   subroutine base_handle_get_model(this, that)

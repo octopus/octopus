@@ -111,6 +111,9 @@ contains
 
     nullify(cnfg)
     call json_init(this)
+    call json_set(this, "reduce", .false.)
+    call json_set(this, "external", .false.)
+    call json_set(this, "default", .true.)
     SAFE_ALLOCATE(cnfg)
     call base_config_parse_molecule(cnfg)
     call json_set(this, "molecule", cnfg)
@@ -137,6 +140,9 @@ contains
     SAFE_ALLOCATE(chrg(1:ispin))
     chrg = 0.0_wp
     call json_init(this)
+    call json_set(this, "reduce", .false.)
+    call json_set(this, "external", .false.)
+    call json_set(this, "default", .true.)
     call json_set(this, "nspin", ispin)
     call json_set(this, "charge", chrg)
     SAFE_DEALLOCATE_A(chrg)

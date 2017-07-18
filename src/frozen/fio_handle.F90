@@ -2,8 +2,10 @@
 
 module fio_handle_oct_m
 
+  use base_density_oct_m
   use base_handle_oct_m
   use base_model_oct_m
+  use fio_density_oct_m
   use fio_model_oct_m
   use fio_simulation_oct_m
   use global_oct_m
@@ -35,15 +37,15 @@ contains
   subroutine fio_handle__init__(this)
     type(base_handle_t), intent(inout) :: this
 
-    type(base_model_t), pointer :: modl
+    type(base_density_t),  pointer :: pdns
 
     PUSH_SUB(fio_handle__init__)
 
-    nullify(modl)
-    call base_handle_get(this, modl)
-    ASSERT(associated(modl))
-    call fio_model__init__(modl)
-    nullify(modl)
+    nullify(pdns)
+    call base_handle_get(this, pdns)
+    ASSERT(associated(pdns))
+    call fio_density__init__(pdns)
+    nullify(pdns)
 
     POP_SUB(fio_handle__init__)
   end subroutine fio_handle__init__

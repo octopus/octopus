@@ -256,6 +256,7 @@ contains
     PUSH_SUB(fio_config_parse_density)
 
     nullify(cnfg, list)
+    call json_set(this, "default", .false.)
     call json_get(this, "nspin", nspin, ierr)
     ASSERT(ierr==JSON_OK)
     call json_get(this, "dir", idir, ierr)

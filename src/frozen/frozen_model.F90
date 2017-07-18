@@ -2,11 +2,11 @@
 
 module frozen_model_oct_m
 
+  use base_density_oct_m
   use base_hamiltonian_oct_m
   use base_model_oct_m
-  use base_system_oct_m
+  use frozen_density_oct_m
   use frozen_hamiltonian_oct_m
-  use frozen_system_oct_m
   use global_oct_m
   use json_oct_m
   use messages_oct_m
@@ -16,29 +16,10 @@ module frozen_model_oct_m
 
   private
 
-  public ::                &
-    frozen_model__build__, &
+  public ::              &
     frozen_model__acc__
 
 contains
-
-  ! ---------------------------------------------------------
-  subroutine frozen_model__build__(this, config)
-    type(base_model_t),  intent(inout) :: this
-    type(json_object_t), intent(in)    :: config
-
-    type(base_system_t), pointer :: sys
-
-    PUSH_SUB(frozen_model__build__)
-
-    nullify(sys)
-    call base_model_get(this, sys)
-    ASSERT(associated(sys))
-    call frozen_system__build__(sys, config)
-    nullify(sys)
-
-    POP_SUB(frozen_model__build__)
-  end subroutine frozen_model__build__
 
   ! ---------------------------------------------------------
   subroutine frozen_model__acc__(this, that, config)
@@ -46,20 +27,20 @@ contains
     type(base_model_t),  intent(in)    :: that !> fio
     type(json_object_t), intent(in)    :: config
 
-    type(base_system_t),      pointer :: msys !> frozen
+    type(base_density_t),     pointer :: mdns !> frozen
     type(base_hamiltonian_t), pointer :: mhml !> frozen
-    type(base_system_t),      pointer :: ssys !> fio
+    type(base_density_t),     pointer :: sdns !> fio
     type(base_hamiltonian_t), pointer :: shml !> fio
 
     PUSH_SUB(frozen_model__acc__)
 
-    nullify(msys, mhml, ssys, shml)
-    call base_model_get(this, msys)
-    ASSERT(associated(msys))
-    call base_model_get(that, ssys)
-    ASSERT(associated(ssys))
-    call frozen_system__acc__(msys, ssys, config)
-    nullify(msys, ssys)
+    nullify(mdns, mhml, sdns, shml)
+    call base_model_get(this, mdns)
+    ASSERT(associated(mdns))
+    call base_model_get(that, sdns)
+    ASSERT(associated(sdns))
+    call frozen_density__acc__(mdns, sdns, config)
+    nullify(mdns, sdns)
     call base_model_get(this, mhml)
     ASSERT(associated(mhml))
     call base_model_get(that, shml)
