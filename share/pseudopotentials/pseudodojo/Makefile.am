@@ -19,5 +19,3 @@
 ##
 
 SUBDIRS = pbesol_s_sr  pbe_s_sr  pw_s_sr
-
-noinst_DATA = download_date
