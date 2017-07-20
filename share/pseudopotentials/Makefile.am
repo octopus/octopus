@@ -18,7 +18,7 @@
 ## 02110-1301, USA.
 ##
 
-SUBDIRS = PSF HGH extra sg15 hscv
+SUBDIRS = PSF HGH extra sg15 hscv pseudodojo
 
 ppdir = $(pkgdatadir)/pseudopotentials
 
