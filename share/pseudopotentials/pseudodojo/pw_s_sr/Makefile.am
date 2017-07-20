@@ -18,7 +18,7 @@
 ## 02110-1301, USA.
 ##
 
-pw_s_srdir = $(pkgdatadir)/pseudopotentials/pseudo_dojo/pw_s_sr
+pw_s_srdir = $(pkgdatadir)/pseudopotentials/pseudodojo/pw_s_sr
 
 dist_pw_s_sr_DATA = \
 	Ag.upf       \
