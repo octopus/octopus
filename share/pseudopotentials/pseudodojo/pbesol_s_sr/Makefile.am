@@ -18,7 +18,7 @@
 ## 02110-1301, USA.
 ##
 
-pbesol_s_srdir = $(pkgdatadir)/pseudopotentials/pseudo_dojo/pbesol_s_sr
+pbesol_s_srdir = $(pkgdatadir)/pseudopotentials/pseudodojo/pbesol_s_sr
 
 dist_pbesol_s_sr_DATA = \
 	Ag.upf       \
