@@ -599,8 +599,6 @@ contains
     ierr = xml_get_tag_value(tag, 'PP_RHOATOM', ps_upf%np - startp + 1, ps_upf%rho(startp:))
     call check_error(ierr)
     
-    call xml_tag_end(tag)
-
     !disabled debug output
     !   do ip = 1, ps_upf%np
     !     write(16, *) ip, ps_upf%r(ip), ps_upf%rho(ip)
@@ -612,10 +610,11 @@ contains
       ps_upf%core_density(1) = CNST(0.0)
       ierr = xml_get_tag_value(tag, 'PP_NLCC', ps_upf%np - startp + 1, ps_upf%rho(startp:))
       call check_error(ierr)
-      call xml_tag_end(tag)
     else
       nullify(ps_upf%core_density)
     end if
+
+    call xml_tag_end(tag)
     
     !Apparently j is not given in the file
     nullify(ps_upf%proj_j)
