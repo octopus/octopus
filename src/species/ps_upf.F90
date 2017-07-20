@@ -614,7 +614,7 @@ contains
     if (ps_upf%nlcc) then
       SAFE_ALLOCATE(ps_upf%core_density(1:ps_upf%np))
       ps_upf%core_density(1) = CNST(0.0)
-      ierr = xml_get_tag_value(tag, 'PP_NLCC', ps_upf%np - startp + 1, ps_upf%rho(startp:))
+      ierr = xml_get_tag_value(tag, 'PP_NLCC', ps_upf%np - startp + 1, ps_upf%core_density(startp:))
       call check_error(ierr)
     else
       nullify(ps_upf%core_density)
