@@ -46,7 +46,8 @@ static fint seek_tag(FILE ** xml_file, const char * tag, int index, const int en
   while(fgets(buffer, sizeof(buffer), *xml_file)){
 
 #ifdef XML_FILE_DEBUG
-    //    printf("line: %s\n", buffer);
+    //printf("SEEK TAG\n");
+    //printf("line: %s\n", buffer);
 #endif
     
     /* check for the tag */
@@ -64,17 +65,13 @@ static fint seek_tag(FILE ** xml_file, const char * tag, int index, const int en
       if(end_of_tag){
 	/* find where the tag is closed */
 	endchar = '>';
-      } else {
-	/* or where the list of attributes starts */
-	endchar = ' ';
-      }
-
+	
 #ifdef XML_FILE_DEBUG
-      printf("endchar = %c\n", endchar);
+	printf("endchar = |%c|\n", endchar);
 #endif
-      
-      found = 0;
-      while(!found){
+	
+	found = 0;
+	while(!found){
 	res = strchr(res, endchar);
 	if(res == NULL){
 	  fgetpos(*xml_file, &startpos);
@@ -86,23 +83,27 @@ static fint seek_tag(FILE ** xml_file, const char * tag, int index, const int en
 	} else {
 	  found = 1;
 	}
-      }
-      
+	}
+	
 #ifdef XML_FILE_DEBUG
-      printf("end found in line: %s", buffer);
+	printf("end found in line: %s", buffer);
 #endif
-      
-      assert(res[0] == endchar);
-      
-      if(!end_of_tag) res--;
+	
+	assert(res[0] == endchar);
+	
 
+	
+      } else {
+	if(!end_of_tag) res--;
+      }	
+      
 #ifdef XML_FILE_DEBUG
       /* go back to the beginning of the line */
       fsetpos(*xml_file, &startpos);
       
       /* and move to the end of the tag */
       fseek(*xml_file, res - buffer + 1, SEEK_CUR);
-
+      
       printf("what follows:\n");
       fgets(buffer, sizeof(buffer), *xml_file);
       printf("%s", buffer);
@@ -223,12 +224,14 @@ fint FC_FUNC_(xml_tag_get_attribute_value, XML_TAG_GET_ATTRIBUTE_VALUE)(tag_t **
   while(res == NULL){
     fgets(buffer, sizeof(buffer), (*tag)->xml_file);
     res = strstr(buffer, dec_attname);
-    if(res != NULL && res != buffer){
+#if 0
+    if(res != NULL && res != buffer){ 
       /* if the result is not at the beginning of the buffer */
       /* check that the attribute name is not just a part of the string */
       /* the previous characted should be a blank space */
       if(*(res - 1) != ' ') res = NULL;
     }
+#endif
     /* did we reach the end of the tag? */
     if(res == NULL && strchr(buffer, '>')) break;
   }
