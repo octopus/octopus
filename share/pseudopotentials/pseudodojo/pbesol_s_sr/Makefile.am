@@ -90,7 +90,8 @@ dist_pbesol_s_sr_DATA = \
 	Xe.upf       \
 	Y.upf        \
 	Zn.upf       \
-	Zr.upf
+	Zr.upf       \
+	download_date
 
 
 # In order to get `make check' working with a `VPATH' build (e. g. to use
