@@ -224,14 +224,12 @@ fint FC_FUNC_(xml_tag_get_attribute_value, XML_TAG_GET_ATTRIBUTE_VALUE)(tag_t **
   while(res == NULL){
     fgets(buffer, sizeof(buffer), (*tag)->xml_file);
     res = strstr(buffer, dec_attname);
-#if 0
     if(res != NULL && res != buffer){ 
       /* if the result is not at the beginning of the buffer */
       /* check that the attribute name is not just a part of the string */
       /* the previous characted should be a blank space */
       if(*(res - 1) != ' ') res = NULL;
     }
-#endif
     /* did we reach the end of the tag? */
     if(res == NULL && strchr(buffer, '>')) break;
   }
