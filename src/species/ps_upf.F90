@@ -576,10 +576,19 @@ contains
       
       ierr = xml_file_tag(upf2_file, trim(str), 0, wfs_tag)
       call check_error(ierr)
-      ierr = xml_tag_get_attribute_value(wfs_tag, 'n', ps_upf%n(iwfs))
-      call check_error(ierr)
+
       ierr = xml_tag_get_attribute_value(wfs_tag, 'l', ps_upf%l(iwfs))
       call check_error(ierr)
+
+      ierr = xml_tag_get_attribute_value(wfs_tag, 'n', ps_upf%n(iwfs))
+
+      !if n is not found, parse the label
+      if(ierr /= 0) then
+         ierr = xml_tag_get_attribute_string(wfs_tag, 'label', str)
+         call check_error(ierr)
+         read(str,'(i1)') ps_upf%n(iwfs)
+      end if
+      
       ierr = xml_tag_get_attribute_float(wfs_tag, 'occupation', ps_upf%occ(iwfs))
       call check_error(ierr)
       
