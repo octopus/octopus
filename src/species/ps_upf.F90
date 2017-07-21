@@ -389,7 +389,7 @@ contains
     type(ps_upf_t),   intent(inout) :: ps_upf
 
     integer :: ierr, startp, iproj, dij_size, iwfs
-    character(len=200) :: str
+    character(len=200) :: str, wf_label
     type(xml_tag_t)    :: tag, proj_tag, wfs_tag
     FLOAT :: mesh_min
     FLOAT, allocatable :: dij(:, :), dij_linear(:)
@@ -578,9 +578,9 @@ contains
 
       !if n is not found, parse the label
       if(ierr /= 0) then
-         ierr = xml_tag_get_attribute_string(wfs_tag, 'label', str)
-         call check_error(ierr)
-         read(str,'(i1)') ps_upf%n(iwfs)
+        ierr = xml_tag_get_attribute_string(wfs_tag, 'label', wf_label)
+        call check_error(ierr)
+        read(wf_label,'(i1)') ps_upf%n(iwfs)
       end if
       
       ierr = xml_tag_get_attribute_float(wfs_tag, 'occupation', ps_upf%occ(iwfs))
