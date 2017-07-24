@@ -21,10 +21,10 @@
 module ground_state_oct_m
   use calc_mode_par_oct_m
   use energy_calc_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
+  use io_function_oct_m
   use lcao_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -41,7 +41,6 @@ module ground_state_oct_m
   use states_io_oct_m
   use states_restart_oct_m
   use system_oct_m
-  use unit_system_oct_m
   use v_ks_oct_m
   use varinfo_oct_m
 
@@ -111,7 +110,7 @@ contains
       end if
     end if
 
-    call geometry_write_xyz(sys%geo, "exec/initial_coordinates", length_unit=unit_angstrom)
+    call write_extended_xyz_file("exec", "initial_coordinates", sys%geo, sys%gr%mesh)
 
     call scf_init(scfv, sys%gr, sys%geo, sys%st, sys%mc, hm)
 

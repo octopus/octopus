@@ -55,6 +55,7 @@ module io_function_oct_m
     io_function_read_how,         &
     io_function_fill_how,         &
     write_bild_forces_file,       &
+    write_extended_xyz_file,      &
     write_xsf_geometry,           &
     write_xsf_geometry_file,      &
     dio_function_input,           &
@@ -64,7 +65,7 @@ module io_function_oct_m
     dio_function_output_global,   &
     zio_function_output_global,   &
     io_function_output_vector
-    
+
 
 #if defined(HAVE_NETCDF)
  public ::                        &
@@ -362,6 +363,75 @@ contains
 
     POP_SUB(write_bild_forces_file)
   end subroutine write_bild_forces_file
+
+  ! ---------------------------------------------------------
+  !> Write extended xyz file with atom labels and positions in Angstroms.
+  !> Includes information about simulation box and periodicity when applicable.
+  subroutine write_extended_xyz_file(dir, fname, geo, mesh)
+    character(len=*), intent(in) :: dir
+    character(len=*), intent(in) :: fname
+    type(geometry_t), intent(in) :: geo
+    type(mesh_t),     intent(in) :: mesh
+
+    integer :: iunit
+    integer :: idir, idir2
+    FLOAT :: origin(3)
+    FLOAT :: position
+    logical :: has_3x3_cell
+    integer :: iatom
+
+    PUSH_SUB(write_extended_xyz_file)
+
+    has_3x3_cell = (mesh%sb%box_shape == PARALLELEPIPED) .and. (mesh%sb%dim == 3)
+    if(has_3x3_cell) then
+      ! Extended xyz coordinate system starts at zero, so we have to displace coordinates by cell center.
+      origin(:) = -M_HALF * sum(mesh%sb%rlattice, 1)
+    else
+      ! In this case we do not have a cell against which to align the atoms, so we do nothing.
+      origin(:) = M_ZERO
+    end if
+
+    call io_mkdir(dir)
+    iunit = io_open(trim(dir)//'/'//trim(fname)//'.xyz', action='write', position='asis')
+
+    ! Write lattice vectors: Lattice="R1x R1y ... R3z".
+    write(iunit, '(i6)') geo%natoms
+    if(has_3x3_cell) then
+      write(iunit, '(a)', advance='no') 'Lattice="'
+      do idir = 1, 3
+        do idir2 = 1, 3
+          write(iunit, '(x)', advance='no')
+          write(iunit, '(f10.6)', advance='no') units_from_atomic(unit_angstrom, mesh%sb%rlattice(idir2, idir))
+        end do
+      end do
+      write(iunit, '(ax)', advance='no') '"'
+    end if
+
+    ! We are going to write labels (string) and three position coordinates (real):
+    write(iunit, '(a)', advance='no') 'Properties=species:S:1:pos:R:3'
+
+    ! Write boundary conditions, e.g. pbc="T T F"
+    write(iunit, '(xaL1xL1xL1a)') &
+      'pbc="', 1 <= mesh%sb%periodic_dim, 2 <= mesh%sb%periodic_dim, 3 <= mesh%sb%periodic_dim, '"'
+
+    ! Now write actual labels/positions, possibly displaced by origin:
+    do iatom=1, geo%natoms
+      write(iunit, '(10a)', advance='no') geo%atom(iatom)%label
+      do idir=1, 3
+        if(idir <= mesh%sb%dim) then
+          position = geo%atom(iatom)%x(idir) - origin(idir)
+        else
+          position = M_ZERO
+        end if
+        write(iunit, '(xf10.6)', advance='no') units_from_atomic(unit_angstrom, position)
+      end do
+      write(iunit, '()')
+    end do
+
+    call io_close(iunit)
+
+    POP_SUB(write_extended_xyz_file)
+  end subroutine write_extended_xyz_file
 
   ! ---------------------------------------------------------
   subroutine write_xsf_geometry_file(dir, fname, geo, mesh, write_forces)
