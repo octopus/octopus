@@ -81,7 +81,9 @@ module floquet_oct_m
        floquet_hamiltonian_run_solver, &
        floquet_restart_dressed_st, &
        floquet_load_td_hamiltonians, &
-       floquet_td_hamiltonians_sample
+       floquet_td_hamiltonians_sample, &
+!HH
+ floquet_calc_occupations
 
   integer, public, parameter ::    &
        FLOQUET_NONE            = 0, &      
@@ -196,6 +198,15 @@ contains
     call parse_variable('TDFloquetModeCalcOccupations', .true., this%calc_occupations)
     call messages_print_var_value(stdout,'Calculate occupations',  this%calc_occupations)
 
+    !%Variable TDFloquetOccupationsCutDim
+    !%Type integer
+    !%Default 0
+    !%Section Floquet
+    !%Description
+    !% Number of outermost subdimension with occupations set to zero
+    !%End
+    call parse_variable('TDFloquetOccupationsCutDim', 0, this%occ_cut)
+    call messages_print_var_value(stdout,'Cut occupation of outer subdimensions',  this%occ_cut)
 
     !%Variable TDFloquetFrequency
     !%Type float
@@ -902,7 +913,8 @@ contains
       type(states_t), intent(inout)      :: dressed_st
 
       CMPLX, allocatable :: u_ma(:,:),  psi(:,:), tmp(:)
-      FLOAT :: omega, dt, sum_dr, sum_gs   
+      FLOAT :: omega, dt, sum_dr, sum_gs
+      FLOAT, allocatable :: occs_on_subdim(:)
       integer :: idx, im, it, ist, idim, nT, ik, ia, Fdim(2), imm
       
       type(states_t), pointer :: gs_st
@@ -923,7 +935,8 @@ contains
       SAFE_ALLOCATE(psi(1:mesh%np,gs_st%d%dim))
       SAFE_ALLOCATE(u_ma(1:mesh%np,hm%F%floquet_dim*hm%F%spindim))
       SAFE_ALLOCATE(tmp(gs_st%d%dim))
-      
+      SAFE_ALLOCATE(occs_on_subdim(hm%F%floquet_dim))
+
       dressed_st%occ(:,:) = M_ZERO
 
       do ik=dressed_st%d%kpt%start,dressed_st%d%kpt%end
@@ -945,14 +958,28 @@ contains
                                                                           u_ma(1:mesh%np,(imm-1)*gs_st%d%dim+idim))
                end do
                
-            end do 
-            if(hm%F%is_parallel) call comm_allreduce(hm%F%mpi_grp%comm, tmp(:))   
+            end do
+            if(hm%F%is_parallel) call comm_allreduce(hm%F%mpi_grp%comm, tmp(:))
             
             dressed_st%occ(ia,ik) = dressed_st%occ(ia,ik) + abs(sum(tmp(:)))**2 * gs_st%occ(ist,ik)
 !             print *, ist, "gs_st%occ(ist,:) =", gs_st%occ(ist,:)
 !             print *, tmp(:)
-            
+
           enddo
+          ! cut out occupations depending on sub-space dimensions
+          if(hm%F%occ_cut > 0) then
+            occs_on_subdim = M_ZERO
+            do imm=1,hm%F%floquet_dim
+              do idim=1,gs_st%d%dim
+                occs_on_subdim(imm) = occs_on_subdim(imm) + zmf_dotp(mesh,u_ma(1:mesh%np,(imm-1)*gs_st%d%dim+idim), &
+                                                                          u_ma(1:mesh%np,(imm-1)*gs_st%d%dim+idim))
+              end do
+            end do
+            print *, maxloc(occs_on_subdim,dim=1)
+            if(maxloc(occs_on_subdim,dim=1) <= hm%F%occ_cut .or. &
+              maxloc(occs_on_subdim,dim=1) >= hm%F%floquet_dim-hm%F%occ_cut)  dressed_st%occ(ia,ik) = M_ZERO
+         end if
+
         enddo
         
       enddo
@@ -961,13 +988,20 @@ contains
       if(dressed_st%parallel_in_states .or. dressed_st%d%kpt%parallel) then
         call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm,  dressed_st%occ(:,:))
       end if
-      
-      
-      if (mpi_grp_is_root(mpi_world)) then    
-        ! occupations checksum 
-        do ik=1, dressed_st%d%kpt%nglobal
-          sum_dr = sum(dressed_st%occ(:,ik))
-          sum_gs = sum(gs_st%occ(:,ik))
+
+! variant using reshape, probably wonrg, but woudl be faster
+!      SAFE_ALLOCATE(occs_on_subdim(1:gs_st%nst,hm%F%floquet_dim,1:dressed_st%d%kpt%nglobal))
+!      occs_on_subdim = reshape(dressed_st%occ(:,:),(/gs_st%nst,hm%F%floquet_dim,dressed_st%d%kpt%nglobal/))
+!      occs_on_subdim(1:gs_st%nst,1:hm%F%occ_cut,1:dressed_st%d%kpt%nglobal) = M_ZERO
+!      occs_on_subdim(1:gs_st%nst,hm%F%floquet_dim-hm%F%occ_cut:hm%F%floquet_dim,1:dressed_st%d%kpt%nglobal) = M_ZERO
+!      dressed_st%occ(:,:) = reshape(occs_on_subdim,(/dressed_st%nst,dressed_st%d%kpt%nglobal/))
+      SAFE_DEALLOCATE_A(occs_on_subdim)
+
+      ! occupations checksum 
+      do ik=1, dressed_st%d%kpt%nglobal
+        sum_dr = sum(dressed_st%occ(:,ik))
+        sum_gs = sum(gs_st%occ(:,ik))
+        if (mpi_grp_is_root(mpi_world)) then
           if( abs(sum_dr/sum_gs - M_ONE) > 1E-5) then
             call messages_write('Occupations checksum failed for kpoint = ')
             call messages_write(ik, fmt = '(i6)')
@@ -977,8 +1011,9 @@ contains
             call messages_write(sum_dr, fmt ='(f12.6)')
             call messages_warning()
           end if
-        enddo
-      end if
+        end if
+        dressed_st%occ(:,ik) = dressed_st%occ(:,ik)*sum_gs/sum_dr
+      end do
       
       
       SAFE_DEALLOCATE_A(tmp)
