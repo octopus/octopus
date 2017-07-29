@@ -374,56 +374,28 @@ contains
     type(mesh_t),     intent(in) :: mesh
 
     integer :: iunit
-    integer :: idir, idir2
-    FLOAT :: origin(3)
+    integer :: idir
     FLOAT :: position
-    logical :: has_3x3_cell
     integer :: iatom
 
     PUSH_SUB(write_extended_xyz_file)
 
-    has_3x3_cell = (mesh%sb%box_shape == PARALLELEPIPED) .and. (mesh%sb%dim == 3)
-    if(has_3x3_cell) then
-      ! Extended xyz coordinate system starts at zero, so we have to displace coordinates by cell center.
-      origin(:) = -M_HALF * sum(mesh%sb%rlattice, 1)
-    else
-      ! In this case we do not have a cell against which to align the atoms, so we do nothing.
-      origin(:) = M_ZERO
-    end if
-
     call io_mkdir(dir)
     iunit = io_open(trim(dir)//'/'//trim(fname)//'.xyz', action='write', position='asis')
 
-    ! Write lattice vectors: Lattice="R1x R1y ... R3z".
     write(iunit, '(i6)') geo%natoms
-    if(has_3x3_cell) then
-      write(iunit, '(a)', advance='no') 'Lattice="'
-      do idir = 1, 3
-        do idir2 = 1, 3
-          write(iunit, '(x)', advance='no')
-          write(iunit, '(f10.6)', advance='no') units_from_atomic(unit_angstrom, mesh%sb%rlattice(idir2, idir))
-        end do
-      end do
-      write(iunit, '(ax)', advance='no') '"'
-    end if
+    call simul_box_write_short_info(mesh%sb, iunit)
 
-    ! We are going to write labels (string) and three position coordinates (real):
-    write(iunit, '(a)', advance='no') 'Properties=species:S:1:pos:R:3'
-
-    ! Write boundary conditions, e.g. pbc="T T F"
-    write(iunit, '(xaL1xL1xL1a)') &
-      'pbc="', 1 <= mesh%sb%periodic_dim, 2 <= mesh%sb%periodic_dim, 3 <= mesh%sb%periodic_dim, '"'
-
-    ! Now write actual labels/positions, possibly displaced by origin:
+    ! xyz-style labels and positions:
     do iatom=1, geo%natoms
       write(iunit, '(10a)', advance='no') geo%atom(iatom)%label
       do idir=1, 3
         if(idir <= mesh%sb%dim) then
-          position = geo%atom(iatom)%x(idir) - origin(idir)
+          position = geo%atom(iatom)%x(idir)
         else
           position = M_ZERO
         end if
-        write(iunit, '(xf10.6)', advance='no') units_from_atomic(unit_angstrom, position)
+        write(iunit, '(xf11.6)', advance='no') units_from_atomic(unit_angstrom, position)
       end do
       write(iunit, '()')
     end do
