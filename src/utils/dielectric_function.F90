@@ -126,7 +126,7 @@ program dielectric_function
 
   energy_steps = int(spectrum%max_energy / spectrum%energy_step)
 
-  n0 = sqrt(sum(vecpot0(1:space%dim))**2)
+  n0 = sqrt(sum(vecpot0(1:space%dim)**2))
 
   SAFE_ALLOCATE(ftreal(0:energy_steps, 1:space%dim))
   SAFE_ALLOCATE(ftimag(0:energy_steps, 1:space%dim))
