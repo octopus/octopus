@@ -25,6 +25,7 @@ module orbital_set_oct_m
   use blas_oct_m
   use global_oct_m
   use kpoints_oct_m
+  use lalg_basic_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use poisson_oct_m
@@ -70,7 +71,8 @@ module orbital_set_oct_m
 
     FLOAT, pointer      :: dorb(:,:) !> The orbital, if real, on the submesh
     CMPLX, pointer      :: zorb(:,:) !> The orbital, if complex, on the submesh
-    CMPLX, pointer      :: eorb(:,:,:) !> Orbitals with its phase factor
+    CMPLX, pointer      :: eorb_submesh(:,:,:) !> Orbitals with its phase factor, on the submesh (for isolated system with TD phase)
+    CMPLX, pointer      :: eorb_mesh(:,:,:) !> Orbitals with its phase factor, on the mesh (for periodic systems GS and TD)
 
     type(poisson_t)  :: poisson               !> For computing the Coulomb integrals
   end type orbital_set_t
@@ -88,7 +90,8 @@ contains
   nullify(this%spec)
   nullify(this%dorb)
   nullify(this%zorb)
-  nullify(this%eorb)
+  nullify(this%eorb_submesh)
+  nullify(this%eorb_mesh)
 
   POP_SUB(orbital_set_nullify)
 
@@ -114,7 +117,8 @@ contains
    SAFE_DEALLOCATE_P(this%zS)
    SAFE_DEALLOCATE_P(this%dorb)
    SAFE_DEALLOCATE_P(this%zorb)
-   SAFE_DEALLOCATE_P(this%eorb)
+   SAFE_DEALLOCATE_P(this%eorb_submesh)
+   SAFE_DEALLOCATE_P(this%eorb_mesh)
    nullify(this%spec)
    call submesh_end(this%sphere)
    
@@ -164,12 +168,22 @@ contains
         os%phase(is, iq) = exp(M_zI*kr)
       end do
 
-      !We now compute the so-called Bloch sum of the localized orbitals
-      do im = 1, os%norbs
-        do is = 1, ns
-          os%eorb(is,im,iq) = os%zorb(is,im)*os%phase(is, iq)
+      if(simul_box_is_periodic(sb)) then
+        !We now compute the so-called Bloch sum of the localized orbitals
+        do im = 1, os%norbs
+          os%eorb_mesh(:,im,iq) = M_Z0
+          do is = 1, ns
+            os%eorb_mesh(os%sphere%map(is),im,iq) = os%eorb_mesh(os%sphere%map(is),im,iq) &
+                                                      + os%zorb(is,im)*os%phase(is, iq)
+          end do
         end do
-      end do
+      else !In the case of the isolated system, we still use the mesh 
+        do im = 1, os%norbs
+          do is = 1, ns
+            os%eorb_submesh(is,im,iq) = os%zorb(is,im)*os%phase(is, iq)
+          end do
+        end do
+      endif
     end do
 
     POP_SUB(orbital_set_update_phase)

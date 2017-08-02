@@ -770,7 +770,11 @@ end subroutine X(compute_coulomb_integrals)
 
    PUSH_SUB(lda_u_commute_r)
 
-   SAFE_ALLOCATE(epsi(1:this%max_np,1))
+   if(simul_box_is_periodic(mesh%sb)) then
+     SAFE_ALLOCATE(epsi(1:mesh%np,1))
+   else
+     SAFE_ALLOCATE(epsi(1:this%max_np,1))
+   end if
    SAFE_ALLOCATE(dot(1:this%maxnorbs))
    SAFE_ALLOCATE(reduced(1:this%maxnorbs))
 
@@ -807,11 +811,25 @@ end subroutine X(compute_coulomb_integrals)
         !In case of phase, we have to apply the conjugate of the phase here
         if(has_phase) then
 #ifdef R_TCOMPLEX
+          if(simul_box_is_periodic(mesh%sb)) then
+            epsi(:,1) = R_TOTYPE(M_ZERO)
             !$omp parallel do
             do is = 1, os%sphere%np
-              epsi(is,1) = os%sphere%x(is,idir)*os%eorb(is,im,ik)
+              epsi(os%sphere%map(is),1) = epsi(os%sphere%map(is),1) &
+                   + os%sphere%x(is,idir)*os%zorb(is,im)*os%phase(is,ik)
             end do
             !$omp end parallel do
+            call lalg_axpy(mesh%np, reduced(im), epsi(1:mesh%np,1), &
+                                  gpsi(1:mesh%np,idir,1))
+          else
+            !$omp parallel do
+            do is = 1, os%sphere%np
+              epsi(is,1) = os%sphere%x(is,idir)*os%eorb_submesh(is,im,ik)
+            end do
+            !$omp end parallel do
+            call submesh_add_to_mesh(os%sphere, epsi(1:os%sphere%np,1), &
+                                  gpsi(1:mesh%np,idir,1), reduced(im))
+          end if
 #endif
           else
             !$omp parallel do
@@ -819,9 +837,9 @@ end subroutine X(compute_coulomb_integrals)
               epsi(is,1) = os%sphere%x(is,idir)*os%X(orb)(is,im)
             end do
             !$omp end parallel do
-          end if
-          call submesh_add_to_mesh(os%sphere, epsi(1:os%sphere%np,1), &
+            call submesh_add_to_mesh(os%sphere, epsi(1:os%sphere%np,1), &
                                   gpsi(1:mesh%np,idir,1), reduced(im))
+          end if
         end do !im
       end do !idir
 
@@ -832,22 +850,35 @@ end subroutine X(compute_coulomb_integrals)
        ! We first compute <phi m| r | psi> for all orbitals of the atom
        !
        !
-       !$omp parallel do 
-       do is = 1, os%sphere%np
-         epsi(is,1) = os%sphere%x(is,idir)*psi(os%sphere%map(is),1)
-       end do
-       !$omp end parallel do
-     
+       if(simul_box_is_periodic(mesh%sb)) then
+         forall(is = 1:mesh%np)
+           epsi(is,1) = mesh%x(is,idir)*psi(is,1)
+         end forall
+       else
+         !$omp parallel do 
+         do is = 1, os%sphere%np
+           epsi(is,1) = os%sphere%x(is,idir)*psi(os%sphere%map(is),1)
+         end do
+         !$omp end parallel do
+       end if     
+
        if(has_phase) then
 #ifdef R_TCOMPLEX
-         do im = 1, os%norbs
-           dot(im) = X(mf_dotp)(os%sphere%mesh, os%eorb(1:os%sphere%np,im,ik),&
+         if(simul_box_is_periodic(mesh%sb)) then
+           do im = 1, os%norbs
+             dot(im) = X(mf_dotp)(mesh, os%eorb_mesh(1:mesh%np,im,ik),&
+                               epsi(1:mesh%np,1), reduce = .false.)
+           end do
+         else
+           do im = 1, os%norbs
+             dot(im) = X(mf_dotp)(mesh, os%eorb_submesh(1:os%sphere%np,im,ik),&
                                epsi(1:os%sphere%np,1), reduce = .false., np = os%sphere%np)
-         end do
+           end do
+         end if
 #endif
        else
          do im = 1, os%norbs
-           dot(im) = X(mf_dotp)(os%sphere%mesh, os%X(orb)(1:os%sphere%np,im),&
+           dot(im) = X(mf_dotp)(mesh, os%X(orb)(1:os%sphere%np,im),&
                                epsi(1:os%sphere%np,1), reduce = .false., np = os%sphere%np)
          end do
        end if
@@ -1131,8 +1162,13 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
   #ifdef R_TCOMPLEX
     SAFE_ALLOCATE(os%phase(1:os%sphere%np, st%d%kpt%start:st%d%kpt%end))
     os%phase(:,:) = M_ZERO
-    SAFE_ALLOCATE(os%eorb(1:os%sphere%np, 1:os%norbs, st%d%kpt%start:st%d%kpt%end))
-    os%eorb(:,:,:) = M_ZERO
+    if(simul_box_is_periodic(mesh%sb)) then 
+      SAFE_ALLOCATE(os%eorb_mesh(1:mesh%np, 1:os%norbs, st%d%kpt%start:st%d%kpt%end))
+      os%eorb_mesh(:,:,:) = M_ZERO
+    else
+      SAFE_ALLOCATE(os%eorb_submesh(1:os%sphere%np, 1:os%norbs, st%d%kpt%start:st%d%kpt%end))
+      os%eorb_submesh(:,:,:) = M_ZERO
+    end if
   #endif
 
     ! We need to know the maximum number of points in order to allocate a temporary array
@@ -1203,8 +1239,15 @@ subroutine X(build_overlap_matrices)(this, ik, has_phase)
           do im2 = 1, os2%norbs
             if(has_phase) then
  #ifdef R_TCOMPLEX
-              os%X(S)(im,im2,ios2) = zsubmesh_to_submesh_dotp(os2%sphere, os2%eorb(1:os2%sphere%np,im2,ik), &
-                    os%sphere, os%eorb(1:os%sphere%np,im,ik))
+              if(simul_box_is_periodic(os%sphere%mesh%sb)) then
+                os%X(S)(im,im2,ios2) = zmf_dotp(os%sphere%mesh, &
+                                          os2%eorb_mesh(1:os2%sphere%mesh%np,im2,ik), &
+                                          os%eorb_mesh(1:os%sphere%mesh%np,im,ik))
+              else
+                os%X(S)(im,im2,ios2) = zsubmesh_to_submesh_dotp(os2%sphere, &
+                                         os2%eorb_submesh(1:os2%sphere%np,im2,ik), &
+                                         os%sphere, os%eorb_submesh(1:os%sphere%np,im,ik))
+              end if
  #endif
             else
               os%X(S)(im,im2,ios2) = X(submesh_to_submesh_dotp)(os2%sphere, os2%X(orb)(1:os2%sphere%np,im2), &

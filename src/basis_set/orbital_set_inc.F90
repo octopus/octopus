@@ -38,39 +38,23 @@ subroutine X(orbital_set_get_coefficients)(os, st_d, psi, ik, has_phase, dot)
    call messages_fatal(1)
   end if
 
-!  if(.not.os%sphere%mesh%use_curvilinear) then
-    do im = 1, os%norbs
-      !If we need to add the phase, we explicitly do the operation using the sphere
-      if(has_phase) then
+  do im = 1, os%norbs
+    !If we need to add the phase, we explicitly do the operation using the sphere
+    if(has_phase) then
 #ifdef R_TCOMPLEX
-        dot(im) = submesh_to_mesh_dotp(os%sphere, st_d%dim, os%eorb(1:os%sphere%np,im,ik),&
-                              psi(1:os%sphere%mesh%np, 1:st_d%dim))
-#endif
+      if(simul_box_is_periodic(os%sphere%mesh%sb)) then
+        dot(im) = zmf_dotp(os%sphere%mesh, os%eorb_mesh(1:os%sphere%mesh%np,im,ik),&
+                              psi(1:os%sphere%mesh%np,1))
       else
-        dot(im) = submesh_to_mesh_dotp(os%sphere, st_d%dim, os%X(orb)(1:os%sphere%np,im),&
-                               psi(1:os%sphere%mesh%np, 1:st_d%dim))
-      end if
-    end do
-    !
- ! else
- !   !
- !   SAFE_ALLOCATE(spsi(1:os%sphere%np))
- !   !
- !   call X(submesh_copy_from_mesh)(os%sphere, psi(1:os%sphere%mesh%np,1), spsi(1:os%sphere%np))
- !   !
- !   !If we need to add the phase, we explicitly do the operation using the sphere
- !   if(has_phase) then
-!#ifdef R_TCOMPLEX
-!      call blas_gemv('C', os%sphere%np, os%norbs, R_TOTYPE(os%sphere%mesh%volume_element), &
-!        os%eorb(1,1,ik),  os%sphere%np, spsi(1), 1, M_z0, dot(1), 1)
-!#endif
-!    else
-!      call blas_gemv('T', os%sphere%np, os%norbs, R_TOTYPE(os%sphere%mesh%volume_element), &
-!        os%X(orb)(1,1),  os%sphere%np, spsi(1), 1, R_TOTYPE(M_ZERO), dot(1), 1)
-!    end if
-!    !
-!    SAFE_DEALLOCATE_A(spsi)
-!  end if
+        dot(im) = submesh_to_mesh_dotp(os%sphere, st_d%dim, os%eorb_submesh(1:os%sphere%np,im,ik),&
+                              psi(1:os%sphere%mesh%np, 1:st_d%dim))
+      endif 
+#endif
+    else
+      dot(im) = submesh_to_mesh_dotp(os%sphere, st_d%dim, os%X(orb)(1:os%sphere%np,im),&
+                             psi(1:os%sphere%mesh%np, 1:st_d%dim))
+    end if
+  end do
 
   POP_SUB(X(orbital_set_get_coefficients))
   call profiling_out(prof)
@@ -98,54 +82,13 @@ subroutine X(orbital_set_get_coeff_batch)(os, st_d, psib, ik, has_phase, dot)
    call messages_fatal(1)
   end if
 
-!  if(os%sphere%mesh%use_curvilinear .or. batch_status(psib) == BATCH_CL_PACKED) then
-    !
-    SAFE_ALLOCATE(psi(1:os%sphere%mesh%np, 1:st_d%dim))
-    do ist = 1, psib%nst
-      call batch_get_state(psib, ist, os%sphere%mesh%np, psi)
-      call X(orbital_set_get_coefficients)(os, st_d, psi, ik, has_phase, dot(1:os%norbs,ist))
-    end do
-    SAFE_DEALLOCATE_A(psi)
-    !
-!  else
-!    !
-!    select case(batch_status(psib))
-!    case(BATCH_NOT_PACKED)
-!      SAFE_ALLOCATE(spsi(1:os%sphere%np, 1:psib%nst_linear))
-!
-!      call X(submesh_copy_from_mesh_batch)(os%sphere, psib, spsi)
-!      !
-!      !If we need to add the phase, we explicitly do the operation using the sphere
-!      if(has_phase) then
-!#ifdef R_TCOMPLEX
-!        call blas_gemm('C', 'N', os%norbs, psib%nst_linear, os%sphere%np, R_TOTYPE(os%sphere%mesh%volume_element), &
-!          os%eorb(1,1,ik),  os%sphere%np, spsi(1,1), os%sphere%np, M_z0, dot(1,1), os%norbs)
-!#endif
-!      else
-!        call blas_gemm('T', 'N', os%norbs, psib%nst_linear, os%sphere%np, R_TOTYPE(os%sphere%mesh%volume_element), &
-!          os%X(orb)(1,1),  os%sphere%np, spsi(1,1), os%sphere%np, R_TOTYPE(M_ZERO), dot(1,1), os%norbs)
-!      end if
-
- !   case(BATCH_PACKED)
-!      SAFE_ALLOCATE(spsi(1:psib%nst_linear, 1:os%sphere%np))
-!      !
-!      call X(submesh_copy_from_mesh_batch)(os%sphere, psib, spsi)
-!      !
-!      !If we need to add the phase, we explicitly do the operation using the sphere
-!      if(has_phase) then
-!#ifdef R_TCOMPLEX
-!        call blas_gemm('C', 'T', os%norbs, psib%nst_linear, os%sphere%np, R_TOTYPE(os%sphere%mesh%volume_element), &
-!          os%eorb(1,1,ik),  os%sphere%np, spsi(1,1), psib%nst, M_z0, dot(1,1), os%norbs)
-!#endif
-!      else
-!        call blas_gemm('T', 'T', os%norbs, psib%nst_linear, os%sphere%np, R_TOTYPE(os%sphere%mesh%volume_element), &
-!          os%X(orb)(1,1),  os%sphere%np, spsi(1,1), psib%nst, R_TOTYPE(M_ZERO), dot(1,1), os%norbs)
-!      end if
-!    end select
-!    !
-!    SAFE_DEALLOCATE_A(spsi)
-!  end if
-
+  SAFE_ALLOCATE(psi(1:os%sphere%mesh%np, 1:st_d%dim))
+  do ist = 1, psib%nst
+    call batch_get_state(psib, ist, os%sphere%mesh%np, psi)
+    call X(orbital_set_get_coefficients)(os, st_d, psi, ik, has_phase, dot(1:os%norbs,ist))
+  end do
+  SAFE_DEALLOCATE_A(psi)
+  
   POP_SUB(X(orbital_set_get_coeff_batch))
   call profiling_out(prof)
 end subroutine X(orbital_set_get_coeff_batch)
@@ -175,8 +118,13 @@ subroutine X(orbital_set_add_to_psi)(os, st_d, psi, ik, has_phase, weight)
     !In case of phase, we have to apply the conjugate of the phase here
     if(has_phase) then
 #ifdef R_TCOMPLEX
-      call submesh_add_to_mesh(os%sphere, os%eorb(1:os%sphere%np,im,ik), &
+      if(simul_box_is_periodic(os%sphere%mesh%sb)) then
+        call lalg_axpy(os%sphere%mesh%np, weight(im), os%eorb_mesh(1:os%sphere%mesh%np,im,ik), &
+                                psi(1:os%sphere%mesh%np))
+      else
+        call submesh_add_to_mesh(os%sphere, os%eorb_submesh(1:os%sphere%np,im,ik), &
                                 psi(1:os%sphere%mesh%np), weight(im))
+      endif
 #endif
     else
       call submesh_add_to_mesh(os%sphere, os%X(orb)(1:os%sphere%np, im), &
@@ -197,7 +145,7 @@ subroutine X(orbital_set_add_to_batch)(os, st_d, psib, ik, has_phase, weight)
   logical,              intent(in) :: has_phase !True if the wavefunction has an associated phase
   R_TYPE,               intent(in) :: weight(:,:)
 
-  integer :: im, ip, iorb, ii, ist
+  integer :: ip, iorb, ii, ist
   type(profile_t), save :: prof
   R_TYPE, allocatable :: psi(:,:), sorb(:)
   R_TYPE :: tmp
@@ -211,26 +159,28 @@ subroutine X(orbital_set_add_to_batch)(os, st_d, psib, ik, has_phase, weight)
    call messages_fatal(1)
   end if
 
-  if(batch_is_packed(psib)) then
-    call batch_pack_was_modified(psib)
-  end if
-
+  call batch_pack_was_modified(psib)
 
   if(os%sphere%mesh%use_curvilinear .or. batch_status(psib) == BATCH_CL_PACKED) then
     !
     SAFE_ALLOCATE(psi(1:os%sphere%mesh%np, 1:st_d%dim))
     do ist = 1, psib%nst
       call batch_get_state(psib, ist, os%sphere%mesh%np, psi)
-      do im = 1, os%norbs
+      do iorb = 1, os%norbs
         !In case of phase, we have to apply the conjugate of the phase here
         if(has_phase) then
 #ifdef R_TCOMPLEX
-          call submesh_add_to_mesh(os%sphere, os%eorb(1:os%sphere%np,im,ik), &
-                                    psi(1:os%sphere%mesh%np, 1), weight(im,ist))
+          if(simul_box_is_periodic(os%sphere%mesh%sb)) then
+            call lalg_axpy(os%sphere%mesh%np, weight(iorb,ist),os%eorb_mesh(1:os%sphere%mesh%np,iorb,ik), &
+                                 psi(1:os%sphere%mesh%np,1))
+          else
+            call submesh_add_to_mesh(os%sphere, os%eorb_submesh(1:os%sphere%np,iorb,ik), &
+                                psi(1:os%sphere%mesh%np,1), weight(iorb,ist))
+          endif
 #endif
         else
-          call submesh_add_to_mesh(os%sphere, os%X(orb)(1:os%sphere%np, im), &
-                                    psi(1:os%sphere%mesh%np, 1), weight(im,ist))
+          call submesh_add_to_mesh(os%sphere, os%X(orb)(1:os%sphere%np, iorb), &
+                                    psi(1:os%sphere%mesh%np, 1), weight(iorb,ist))
         end if
       end do
       call batch_set_state(psib, ist, os%sphere%mesh%np, psi)
@@ -239,27 +189,41 @@ subroutine X(orbital_set_add_to_batch)(os, st_d, psib, ik, has_phase, weight)
     !
   else
     !
-    SAFE_ALLOCATE(sorb(1:os%sphere%np))
     select case(batch_status(psib))
     case(BATCH_NOT_PACKED)
       !
       if(has_phase) then
 #ifdef R_TCOMPLEX
-        do ist = 1, psib%nst_linear
-          sorb(:) = R_TOTYPE(M_ZERO)
-          do iorb = 1, os%norbs
-            tmp = weight(iorb,ist)
-            forall (ip = 1:os%sphere%np)
-              sorb(ip) = sorb(ip) + os%eorb(ip,iorb,ik)*tmp
-            end forall
+        if(simul_box_is_periodic(os%sphere%mesh%sb)) then
+          do ist = 1, psib%nst_linear
+            do iorb = 1, os%norbs
+              forall(ip = 1:os%sphere%mesh%np)
+                psib%states_linear(ist)%zpsi(ip) = &
+                   psib%states_linear(ist)%zpsi(ip) &
+                   + weight(iorb,ist)*os%eorb_mesh(ip,iorb,ik)
+              end forall
+            end do
           end do
-          do ip = 1,os%sphere%np
-            psib%states_linear(ist)%X(psi)(os%sphere%map(ip)) = &
-                  psib%states_linear(ist)%X(psi)(os%sphere%map(ip)) + sorb(ip)
+        else
+          SAFE_ALLOCATE(sorb(1:os%sphere%np))
+          do ist = 1, psib%nst_linear
+            sorb(:) = R_TOTYPE(M_ZERO)
+            do iorb = 1, os%norbs
+              tmp = weight(iorb,ist)
+              forall (ip = 1:os%sphere%np)
+                sorb(ip) = sorb(ip) + os%eorb_submesh(ip,iorb,ik)*tmp
+              end forall
+            end do
+            do ip = 1,os%sphere%np
+              psib%states_linear(ist)%zpsi(os%sphere%map(ip)) = &
+                    psib%states_linear(ist)%zpsi(os%sphere%map(ip)) + sorb(ip)
+            end do
           end do
-        end do
+          SAFE_DEALLOCATE_A(sorb)
+        end if
 #endif
       else
+        SAFE_ALLOCATE(sorb(1:os%sphere%np))
         do ist = 1, psib%nst_linear
           sorb(:) = R_TOTYPE(M_ZERO)
           do iorb = 1, os%norbs
@@ -273,26 +237,43 @@ subroutine X(orbital_set_add_to_batch)(os, st_d, psib, ik, has_phase, weight)
                   psib%states_linear(ist)%X(psi)(os%sphere%map(ip)) + sorb(ip)
           end do
         end do
+        SAFE_DEALLOCATE_A(sorb)
       end if
 
     case(BATCH_PACKED)
       if(has_phase) then
 #ifdef R_TCOMPLEX
-        do ist = 1, psib%nst_linear
-          sorb(:) = R_TOTYPE(M_ZERO)
-          do iorb = 1, os%norbs
-            tmp = weight(iorb,ist)
-            forall (ip = 1:os%sphere%np)
-              sorb(ip) = sorb(ip) + os%eorb(ip,iorb,ik)*tmp
-            end forall
+        if(simul_box_is_periodic(os%sphere%mesh%sb)) then
+          SAFE_ALLOCATE(sorb(1:os%sphere%mesh%np))
+          do ist = 1, psib%nst_linear
+            do iorb = 1, os%norbs
+              forall(ip = 1:os%sphere%mesh%np)
+                psib%pack%zpsi(ist,ip) = &
+                   psib%pack%zpsi(ist,ip) &
+                   + weight(iorb,ist)*os%eorb_mesh(ip,iorb,ik)
+              end forall 
+            end do
           end do
-          do ip = 1,os%sphere%np
-            psib%pack%X(psi)(ist,os%sphere%map(ip)) = psib%pack%X(psi)(ist,os%sphere%map(ip)) &
-                              + sorb(ip)
+        else
+          SAFE_ALLOCATE(sorb(1:os%sphere%np))
+          do ist = 1, psib%nst_linear
+            sorb(:) = R_TOTYPE(M_ZERO)
+            do iorb = 1, os%norbs
+              tmp = weight(iorb,ist)
+              forall (ip = 1:os%sphere%np)
+                sorb(ip) = sorb(ip) + os%eorb_submesh(ip,iorb,ik)*tmp
+              end forall
+            end do
+            do ip = 1,os%sphere%np
+              psib%pack%zpsi(ist,os%sphere%map(ip)) = psib%pack%zpsi(ist,os%sphere%map(ip)) &
+                                + sorb(ip)
+            end do
           end do
-        end do
+          SAFE_DEALLOCATE_A(sorb)
+        end if
 #endif
       else
+       SAFE_ALLOCATE(sorb(1:os%sphere%np))
        do ist = 1, psib%nst_linear
           sorb(:) = R_TOTYPE(M_ZERO)
           do iorb = 1, os%norbs
@@ -306,9 +287,9 @@ subroutine X(orbital_set_add_to_batch)(os, st_d, psib, ik, has_phase, weight)
                               + sorb(ip)
           end do
         end do
+        SAFE_DEALLOCATE_A(sorb)
       end if
     end select
-    SAFE_DEALLOCATE_A(sorb) 
   end if
 
   POP_SUB(X(orbital_set_add_to_batch))
