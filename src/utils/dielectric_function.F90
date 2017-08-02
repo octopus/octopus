@@ -88,8 +88,17 @@ program dielectric_function
 
   end if
 
-  message(1) = "This program assumes that the gauge field is in the 'x'"
-  message(2) = "direction, and that the 'y' and 'z' directions are equivalent."
+  select case(spectrum%dir)
+  case(SPECTRUM_X)
+    message(1) = "This program assumes that the gauge field is in the 'x'"
+    message(2) = "direction, and that the 'y' and 'z' directions are equivalent."
+  case(SPECTRUM_Y)
+    message(1) = "This program assumes that the gauge field is in the 'y'"
+    message(2) = "direction, and that the 'x' and 'z' directions are equivalent."
+  CASE(SPECTRUM_Z)
+    message(1) = "This program assumes that the gauge field is in the 'z'"
+    message(2) = "direction, and that the 'x' and 'y' directions are equivalent."
+  end select
   message(3) = "If this is not the case the dielectric function and the"
   message(4) = "susceptibility will be wrong."
   call messages_warning(4)
@@ -181,7 +190,7 @@ program dielectric_function
       end do
     end do
     
-    dielectric(1:space%dim, kk) = fullmat(1:space%dim, 1)
+    dielectric(1:space%dim, kk) = fullmat(1:space%dim, spectrum%dir)
 
     chi(1:space%dim, kk) = (dielectric(1:space%dim, kk) - vecpot0(1:space%dim)/n0)*sb%rcell_volume/(M_FOUR*M_PI)
   end do

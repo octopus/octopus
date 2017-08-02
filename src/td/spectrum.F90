@@ -85,6 +85,11 @@ module spectrum_oct_m
     SPECTRUM_FOURIER            = 1,  &
     SPECTRUM_COMPRESSED_SENSING = 2
 
+  integer, public, parameter :: &
+    SPECTRUM_X         = 1,     &
+    SPECTRUM_Y         = 2,     &
+    SPECTRUM_Z         = 3 
+
   type spectrum_t
     FLOAT   :: start_time          !< start time for the transform
     FLOAT   :: end_time            !< when to stop the transform
@@ -98,6 +103,7 @@ module spectrum_oct_m
     FLOAT   :: noise               !< the level of noise that is assumed in the time series for compressed sensing 
     type(cmplxscl_t) :: cmplxscl   !< the complex scaling parameters
     logical :: sigma_diag          !< diagonalize sigma tensor
+    integer :: dir                 !<Direction used to compute the dielectric function
   end type spectrum_t
 
   !> Module variables, necessary to compute the function hsfunction, called by
@@ -308,6 +314,21 @@ contains
     !%End
     call parse_variable('PropagationSpectrumSigmaDiagonalization', .false., spectrum%sigma_diag)
     call messages_print_var_value(stdout, 'PropagationSpectrumSigmaDiagonalization', spectrum%sigma_diag)
+
+    !%Variable DielectricFunctionMainDirection
+    !%Type integer
+    !%Section Utilities::oct-propagation_spectrum
+    !%Description
+    !% Decides along which direction to compute the dielectric function.
+    !%Option dir_x 1
+    !% Along the x direction.
+    !%Option dir_y 2
+    !% Along the y direction
+    !%Option dir_z 3
+    !% Along the z direction
+    !%End
+    call parse_variable('DielectricFunctionMainDirection',SPECTRUM_X, spectrum%dir)
+    call messages_print_var_option(stdout, 'DielectricFunctionMainDirection', spectrum%dir)
 
     call messages_print_stress(stdout)
 
