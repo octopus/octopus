@@ -1005,6 +1005,9 @@ contains
     call states_dump(restart, st, gr, err, iter=iter)
     if (err /= 0) ierr = ierr + 1
 
+    call states_dump_rho(restart, st, gr, ierr, iter=iter)
+    if (err /= 0) ierr = ierr + 1 
+
     cmplxscl = st%cmplxscl%space      
     call potential_interpolation_dump(td%tr%vksold, restart, gr, cmplxscl, st%d%nspin, err2)
     if (err2 /= 0) ierr = ierr + 2
