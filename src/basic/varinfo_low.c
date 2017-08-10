@@ -328,6 +328,13 @@ char *strcasestr (const char *haystack, const char *needle)
 }
 #endif
 
+/* used by liboct_parser/symbols.c */
+int varinfo_variable_exists(const char * var_name){
+  var_type *lvar;
+  for(lvar=vars; (lvar!=NULL) && (strcasecmp(var_name, lvar->name)!=0); lvar=lvar->next);
+  return (lvar != NULL);
+}
+
 void FC_FUNC_(varinfo_search_var, VARINFO_SEARCH_VAR)
   (const STR_F_TYPE name, var_type **var STR_ARG1)
 {

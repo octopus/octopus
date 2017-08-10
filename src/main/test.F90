@@ -30,6 +30,7 @@ program oct_test
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
+  use restart_oct_m
   use states_calc_oct_m
   use system_oct_m
   use test_parameters_oct_m
@@ -156,6 +157,7 @@ program oct_test
   call messages_print_var_value(stdout, "TestMaxBlockSize", test_param%max_blocksize)
   call messages_print_stress(stdout)
 
+  call restart_module_init()
   call fft_all_init()
   call unit_system_init()
 

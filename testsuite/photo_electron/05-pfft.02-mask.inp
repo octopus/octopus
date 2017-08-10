@@ -51,10 +51,10 @@ nc = nc_c + 2 * nc_u
 # TD
 #############################
 dt = 0.08
-T = nc*tc
+Tf = nc*tc
 
 TDTimeStep = dt
-TDPropagationTime = T
+TDPropagationTime = Tf
 
 
 FilterPotentials = filter_none

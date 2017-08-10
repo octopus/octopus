@@ -61,6 +61,8 @@ module io_function_oct_m
     zio_function_input,           &
     dio_function_output,          &
     zio_function_output,          &
+    dio_function_output_global,   &
+    zio_function_output_global,   &
     io_function_output_vector
     
 
@@ -106,44 +108,44 @@ contains
     !%Description
     !% Describes the format of the output files (see <tt>Output</tt>).
     !% Example: <tt>axis_x + plane_x + dx</tt>
-    !%Option axis_x 1
+    !%Option axis_x bit(0) 
     !% The values of the function on the <i>x</i> axis are printed. The string <tt>.y=0,z=0</tt> is appended
     !% to previous file names.
-    !%Option axis_y 2
+    !%Option axis_y bit(1)
     !% The values of the function on the <i>y</i> axis are printed. The string <tt>.x=0,z=0</tt> is appended
     !% to previous file names.
-    !%Option axis_z 4
+    !%Option axis_z bit(2)
     !% The values of the function on the <i>z</i> axis are printed. The string <tt>.x=0,y=0</tt> is appended
     !% to previous file names.
-    !%Option plane_x 8
+    !%Option plane_x bit(3)
     !% A plane slice at <i>x</i> = 0 is printed. The string <tt>.x=0</tt> is appended
     !% to previous file names.
-    !%Option plane_y 16
+    !%Option plane_y bit(4)
     !% A plane slice at <i>y</i> = 0 is printed. The string <tt>.y=0</tt> is appended
     !% to previous file names.
-    !%Option plane_z 32
+    !%Option plane_z bit(5)
     !% A plane slice at <i>z</i> = 0 is printed. The string <tt>.z=0</tt> is appended to
     !% previous file names.
-    !%Option dx 64
+    !%Option dx bit(6)
     !% For printing three-dimensional information, the open-source program
     !% visualization tool <a href=http://www.opendx.org>OpenDX</a> can be used. The string
     !% <tt>.dx</tt> is appended to previous file names. Available only in 3D.
-    !%Option netcdf 128
+    !%Option netcdf bit(7)
     !% Outputs in <a href=http://www.unidata.ucar.edu/packages/netcdf>NetCDF</a> format. This file
     !% can then be read, for example, by OpenDX. The string <tt>.ncdf</tt> is appended to previous file names.
     !% Requires the NetCDF library. Only writes the real part of complex functions.
-    !%Option mesh_index 512
+    !%Option mesh_index bit(8)
     !% Generates output files of a given quantity (density, wavefunctions, ...) which include
     !% the internal numbering of mesh points. Since this mode produces large datafiles this is only 
     !% useful for small meshes and debugging purposes.
     !% The output can also be used to display the mesh directly. A Gnuplot script for mesh visualization
     !% can be found under <tt>PREFIX/share/octopus/util/display_mesh_index.gp</tt>.
-    !%Option xcrysden 1024
+    !%Option xcrysden bit(9)
     !% A format for printing structures and three-dimensional information, which can be visualized by
     !% the free open-source program <a href=http://www.xcrysden.org>XCrySDen</a> and others. The string
     !% <tt>.xsf</tt> is appended to previous file names. Note that lattice vectors and coordinates are as
     !% specified by <tt>UnitsOutput</tt>. Available in 2D and 3D.
-    !%Option matlab 2048
+    !%Option matlab bit(10)
     !% In combination with <tt>plane_x</tt>, <tt>plane_y</tt> and
     !% <tt>plane_z</tt>, this option produces output files which are
     !% suitable for 2D Matlab functions like <tt>mesh()</tt>,
@@ -153,39 +155,45 @@ contains
     !%   >> density = load('static/density-1.x=0.matlab.abs');
     !%   >> mesh(density);
     !%</tt>
-    !%Option meshgrid 4096
+    !%Option meshgrid bit(11)
     !% Outputs in Matlab mode the internal mesh in a format similar to
     !%<tt>
     !%   >> [x,y] = meshgrid(-2:.2:2,-1:.15:1)
     !%</tt>
     !% The <i>x</i> meshgrid is contained in a file <tt>*.meshgrid.x</tt> and the <i>y</i>-grid can be found in
     !% <tt>*.meshgrid.y</tt>.
-    !%Option boundary_points 8192
+    !%Option boundary_points bit(12)
     !% This option includes the output of the mesh enlargement. Default is without.
     !% Supported only by <tt>binary</tt>, <tt>axis</tt>, <tt>plane</tt>, <tt>mesh_index</tt>,
     !% <tt>matlab</tt>, and <tt>openscad</tt> formats.
     !% Not all types of <tt>Output</tt> will have this information available. Not supported when parallel in domains.
-    !%Option binary 16384
+    !%Option binary bit(13)
     !% Plain binary, new format.
-    !%Option etsf 32768
+    !%Option etsf bit(14)
     !% <a href=http://www.etsf.eu/resources/software/standardization_project>ETSF file format</a>.
     !% Requires the ETSF_IO library. Applies only to <tt>Output = density</tt>, <tt>geometry</tt>,
     !% <tt>wfs</tt>, and/or <tt>wfs_fourier</tt>.
-    !%Option xyz 65536
+    !%Option xyz bit(15)
     !% Geometry will be output in XYZ format. Does not affect other outputs.
-    !%Option cube 131072
+    !%Option cube bit(16)
     !% Generates output in the <a href=http://paulbourke.net/dataformats/cube>cube file format</a>.
     !% Available only in 3D. Only writes the real part of complex functions.
-    !%Option openscad 262144
+    !%Option openscad bit(17)
     !% Generates output in <a href=http://www.openscad.org>OpenSCAD format</a> for 3D printing.
     !% Available only in 3D.
     !% Produces geometry and isosurface of the field, at <tt>OpenSCADIsovalue</tt>. (Experimental.)
-    !%Option json 524288
+    !%Option json bit(18)
     !% Generates output in JSON format.
-    !%Option bild 1048576
+    !%Option bild bit(19)
     !% Generates output in <a href=http://plato.cgl.ucsf.edu/chimera/docs/UsersGuide/bild.html>BILD format</a>.
-    !%Option vtk 2097152
+    !%Option vtk bit(20)
     !% Generates output in <a href=http://www.vtk.org/VTK/img/file-formats.pdf>VTK legacy format</a>.
+    !%Option integrate_xy bit(21)
+    !% Integrates the function in the x-y plane and the result on the <i>z</i> axis is printed.
+    !%Option integrate_xz bit(22)
+    !% Integrates the function in the x-z plane and the result on the <i>y</i> axis is printed
+    !%Option integrate_yz bit(23)
+    !% Integrates the function in the y-z plane and the result on the <i>x</i> axis is printed
     !%End
     call parse_variable('OutputFormat', 0, how)
     if(.not.varinfo_valid_option('OutputFormat', how, is_flag=.true.)) then
@@ -224,6 +232,18 @@ contains
       end if
       if(iand(how, OPTION__OUTPUTFORMAT__PLANE_Y) /= 0) then
         message(1) = "OutputFormat = plane_y not available with Dimensions <= 2."
+        call messages_fatal(1)
+      end if
+      if(iand(how, OPTION__OUTPUTFORMAT__INTEGRATE_XY) /= 0) then
+        message(1) = "OutputFormat = integrate_xy not available with Dimensions <= 2."
+        call messages_fatal(1)
+      end if
+      if(iand(how, OPTION__OUTPUTFORMAT__INTEGRATE_XZ) /= 0) then
+        message(1) = "OutputFormat = integrate_xz not available with Dimensions <= 2."
+        call messages_fatal(1)
+      end if
+      if(iand(how, OPTION__OUTPUTFORMAT__INTEGRATE_YZ) /= 0) then
+        message(1) = "OutputFormat = integrate_yz not available with Dimensions <= 2."
         call messages_fatal(1)
       end if
       if(iand(how, OPTION__OUTPUTFORMAT__DX) /= 0) then
@@ -278,6 +298,10 @@ contains
     if(index(where, "AxisZ")     /= 0) how = ior(how, OPTION__OUTPUTFORMAT__AXIS_Z)
     IF(index(where, "PlaneX")    /= 0) how = ior(how, OPTION__OUTPUTFORMAT__PLANE_X)
     if(index(where, "PlaneY")    /= 0) how = ior(how, OPTION__OUTPUTFORMAT__PLANE_Y)
+    if(index(where, "PlaneZ")    /= 0) how = ior(how, OPTION__OUTPUTFORMAT__PLANE_Z)
+    if(index(where, "IntegrateXY") /= 0) how = ior(how, OPTION__OUTPUTFORMAT__INTEGRATE_XY)
+    if(index(where, "IntegrateXZ") /= 0) how = ior(how, OPTION__OUTPUTFORMAT__INTEGRATE_XZ)
+    if(index(where, "IntegrateYZ") /= 0) how = ior(how, OPTION__OUTPUTFORMAT__INTEGRATE_YZ)
     if(index(where, "PlaneZ")    /= 0) how = ior(how, OPTION__OUTPUTFORMAT__PLANE_Z)
     if(index(where, "DX")        /= 0) how = ior(how, OPTION__OUTPUTFORMAT__DX)
     if(index(where, "XCrySDen")  /= 0) how = ior(how, OPTION__OUTPUTFORMAT__XCRYSDEN)

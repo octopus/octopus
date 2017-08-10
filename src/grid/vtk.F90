@@ -110,7 +110,7 @@ contains
       do iatom = 1, geo%natoms
         data(1:3, iatom) = geo%atom(iatom)%x(1:3)
       end do
-      call io_binary_write(trim(fullname), 3*geo%natoms, data, ierr, nohead = .true., fendian = is_little_endian())
+      call io_binary_write(io_workpath(fullname), 3*geo%natoms, data, ierr, nohead = .true., fendian = is_little_endian())
       SAFE_DEALLOCATE_A(data)
       iunit = io_open(trim(fullname), action='write', position = 'append')
       write(iunit, '(1a)') ''
@@ -129,7 +129,7 @@ contains
         idata(1, iatom) = 1
         idata(2, iatom) = iatom - 1
       end do
-      call io_binary_write(trim(fullname), 2*geo%natoms, idata, ierr, nohead = .true., fendian = is_little_endian())
+      call io_binary_write(io_workpath(fullname), 2*geo%natoms, idata, ierr, nohead = .true., fendian = is_little_endian())
       SAFE_DEALLOCATE_A(idata)
       iunit = io_open(trim(fullname), action='write', position = 'append')
       write(iunit, '(1a)') ''
@@ -152,7 +152,7 @@ contains
         idata(iatom, 1) = nint(species_z(geo%atom(iatom)%species))
       end do
       
-      call io_binary_write(trim(fullname), geo%natoms, idata, ierr, nohead = .true., fendian = is_little_endian())
+      call io_binary_write(io_workpath(fullname), geo%natoms, idata, ierr, nohead = .true., fendian = is_little_endian())
 
       SAFE_DEALLOCATE_A(idata)
 

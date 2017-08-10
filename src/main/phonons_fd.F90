@@ -71,8 +71,7 @@ contains
     call init_()
 
     ! load wavefunctions
-    call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-      ierr, mesh=sys%gr%mesh, exact=.true.)
+    call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
     if(ierr == 0) call states_load(gs_restart, sys%st, sys%gr, ierr)
     if (ierr /= 0) then
       message(1) = "Unable to read wavefunctions."
@@ -152,7 +151,7 @@ contains
 
     mesh => gr%mesh
 
-    call scf_init(scf, gr, geo, st, hm)
+    call scf_init(scf, gr, geo, st, mc, hm)
     SAFE_ALLOCATE(forces0(1:geo%natoms, 1:mesh%sb%dim))
     SAFE_ALLOCATE(forces (1:geo%natoms, 1:mesh%sb%dim))
     forces = M_ZERO

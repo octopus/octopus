@@ -25,6 +25,7 @@ program oct_local_multipoles
   use box_union_oct_m
   use calc_mode_par_oct_m
   use command_line_oct_m
+  use comm_oct_m
   use geometry_oct_m
   use global_oct_m
   use hamiltonian_oct_m
@@ -50,6 +51,7 @@ program oct_local_multipoles
   use utils_oct_m
   use varinfo_oct_m
   use multicomm_oct_m
+  use xc_oct_m
 
   implicit none
   
@@ -60,6 +62,7 @@ program oct_local_multipoles
     character(len=15), allocatable  :: lab(:)          !< declared name for each domain.
     integer, allocatable            :: dshape(:)       !< shape of box for each domain.
     logical, allocatable            :: inside(:,:)     !< relation of mesh points on each domain.
+    logical, allocatable            :: ions_inside(:,:)!< relation of ions inside each domain.
     FLOAT, allocatable              :: dcm(:,:)        !< store the center of mass of each domain on the real space.
     type(local_write_t)             :: writ            !< write option for local domains analysis.
   end type local_domain_t
@@ -92,7 +95,8 @@ program oct_local_multipoles
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
   call system_init(sys)
   call simul_box_init(sb, sys%geo, sys%space)
-  call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, sys%ks%xc_flags)
+  call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, &
+             sys%ks%xc_flags, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
 
   call local_domains()
 
@@ -321,8 +325,8 @@ contains
 
     if (ldrestart) then
       !TODO: check for domains & mesh compatibility 
-      call restart_init(restart_ld, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%gr%mesh%mpi_grp, &
-         err, dir=trim(ldrestart_folder), mesh = sys%gr%mesh)
+      call restart_init(restart_ld, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%mc, err, &
+                        dir=trim(ldrestart_folder), mesh = sys%gr%mesh)
       call local_restart(local, restart_ld)
       call restart_end(restart_ld)
     end if
@@ -338,8 +342,8 @@ contains
     else 
       restart_folder = folder
     end if
-    call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%gr%mesh%mpi_grp, & 
-         err, dir=trim(restart_folder), mesh = sys%gr%mesh)
+    call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%mc, err, &
+                      dir=trim(restart_folder), mesh = sys%gr%mesh)
 
 !!$    call loct_progress_bar(-1, l_end-l_start)
     do iter = l_start, l_end, l_step
@@ -379,7 +383,7 @@ contains
         if (ldupdate) call local_inside_domain(local, sys%st%rho(:,1))
       end if
 
-      call local_write_iter(local%writ, local%nd, local%domain, local%lab, local%inside, local%dcm, & 
+      call local_write_iter(local%writ, local%nd, local%lab, local%ions_inside, local%inside, local%dcm, & 
                               sys%gr, sys%st, hm, sys%ks, sys%geo, kick, iter, l_start, ldoverwrite)
       call loct_progress_bar(iter-l_start, l_end-l_start) 
     end do
@@ -451,6 +455,7 @@ contains
     SAFE_ALLOCATE(local%dshape(1:local%nd))
     SAFE_ALLOCATE(local%lab(1:local%nd))
     SAFE_ALLOCATE(local%inside(1:sys%gr%mesh%np, 1:local%nd))
+    SAFE_ALLOCATE(local%ions_inside(1:sys%geo%natoms, 1:local%nd))
     SAFE_ALLOCATE(local%dcm(1:sys%space%dim, 1:local%nd))
 
     block: do id = 1, local%nd
@@ -664,7 +669,8 @@ contains
     type(restart_t),      intent(in)    :: restart
 
     integer                     :: id, ip, iunit, ierr
-    character(len=MAX_PATH_LEN) :: filename, folder, tmp
+    character(len=MAX_PATH_LEN) :: filename, tmp
+    character(len=31) :: line(1)
     FLOAT, allocatable          :: inside(:)
 
     PUSH_SUB(local_restart)
@@ -673,23 +679,30 @@ contains
     call messages_info(1)
     SAFE_ALLOCATE(inside(1:sys%gr%mesh%np))
     !Read local domain information from ldomains.info 
-     folder = restart_dir(restart)
-     filename = "ldomains.info"
-     iunit = io_open(trim(folder)//'/'//trim(filename), action='read',status='old')
-     !read(iunit,'(a25,1x,i5)')tmp ,lcl%nd 
-     read(iunit,'(a25,1x,i5)')tmp ,ierr
+    filename = "ldomains.info"    
+    iunit = restart_open(restart, filename, status='old')
+    call restart_read(restart, iunit, line, 1, ierr)    
+    read(line(1),'(a25,1x,i5)') tmp, ierr
+    call restart_close(restart, iunit)
+    
+    filename = "ldomains"
+    call drestart_read_mesh_function(restart, trim(filename), sys%gr%mesh, inside, ierr) 
 
-     filename = "ldomains"
-     call drestart_read_mesh_function(restart, trim(filename), sys%gr%mesh, inside, ierr) 
-
-     do ip = 1 , sys%gr%mesh%np
-       do id = 1, lcl%nd
+    lcl%inside = .false.
+    do ip = 1 , sys%gr%mesh%np
+      do id = 1, lcl%nd
         if (iand(int(inside(ip)), 2**id) /= 0) lcl%inside(ip,id) = .true.
-       end do
-     end do
+      end do
+    end do
 
-     call io_close(iunit)
+     !Check for atom list inside each domain
+     call local_ions_inside(lcl%nd, lcl%inside, sys%geo, sys%gr%mesh, lcl%ions_inside, lcl%clist)
+
+     !Compute center of mass of each domain
+     call local_center_of_mass(lcl%nd, lcl%ions_inside, sys%geo, lcl%dcm)
+    
     SAFE_DEALLOCATE_A(inside)
+
     POP_SUB(local_restart)
   end subroutine local_restart
   ! ---------------------------------------------------------
@@ -741,14 +754,18 @@ contains
           trim('local.general'), 'dens_ff2', sys%gr%mesh, ff2(:,1), unit_one, ierr, geo = sys%geo)
         call io_close(iunit)
       end if
-      call local_center_of_mass(lcl%nd, lcl%domain, sys%geo, lcl%dcm)
       call basins_end(basins)
     else
       do id = 1, lcl%nd
         call box_union_inside_vec(lcl%domain(id), sys%gr%mesh%np, sys%gr%mesh%x, lcl%inside(:,id))
       end do
-      call local_center_of_mass(lcl%nd, lcl%domain, sys%geo, lcl%dcm)
     end if
+
+    !Check for atom list inside each domain
+    call local_ions_inside(lcl%nd, lcl%inside, sys%geo, sys%gr%mesh, lcl%ions_inside, lcl%clist)
+
+    !Compute center of mass of each domain
+    call local_center_of_mass(lcl%nd, lcl%ions_inside, sys%geo, lcl%dcm)
 
     !Write restart file for local domains
     base_folder = "./restart/"
@@ -756,8 +773,8 @@ contains
     filename = "ldomains"
     write(message(1),'(a,a)')'Info: Writing restart info to ', trim(filename)
     call messages_info(1)
-    call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_DUMP, sys%gr%mesh%mpi_grp, & 
-                  ierr, mesh=sys%gr%mesh, dir=trim(base_folder)//trim(folder)) 
+    call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_DUMP, sys%mc, ierr, &
+                      mesh=sys%gr%mesh, dir=trim(base_folder)//trim(folder)) 
     ff2 = M_ZERO
     SAFE_ALLOCATE(lines(1:lcl%nd+2))
     write(lines(1),'(a,1x,i5)')'Number of local domains =', lcl%nd
@@ -932,11 +949,86 @@ contains
     SAFE_DEALLOCATE_A(ffs)
     POP_SUB(add_dens_to_ion_x)
   end subroutine add_dens_to_ion_x
-
   ! ---------------------------------------------------------
-  subroutine local_center_of_mass(nd, dom, geo, center)
+  !Check for the ions inside each local domain.
+  subroutine local_ions_inside(nd, inside, geo, mesh, ions_inside, ions_list)
     integer,           intent(in)  :: nd 
-    type(box_union_t), intent(in)  :: dom(:)
+    logical,           intent(in)  :: inside(:,:)
+    type(geometry_t),  intent(in)  :: geo
+    type(mesh_t),      intent(in)  :: mesh
+    logical,           intent(out) :: ions_inside(:,:)
+    character(len=500),intent(out) :: ions_list(:)
+
+    integer              :: ia, id, ix, ic
+    integer, allocatable :: inside_tmp(:,:)
+    integer              :: rankmin
+    FLOAT                :: dmin
+    character(len=500)   :: chtmp
+
+    PUSH_SUB(local_ions_inside)
+
+    SAFE_ALLOCATE(inside_tmp(geo%natoms,nd))
+    inside_tmp = 0
+    ions_list = ""
+   
+    ions_inside = .false.
+    do ia = 1, geo%natoms
+      ix = mesh_nearest_point(mesh, geo%atom(ia)%x, dmin, rankmin )
+      if (rankmin /= mesh%mpi_grp%rank) cycle
+      do id = 1, nd
+        if (inside(ix, id)) inside_tmp(ia, id) = 1
+      end do
+    end do
+
+    if(mesh%parallel_in_domains) then
+      call comm_allreduce(mesh%mpi_grp%comm, inside_tmp, dim = (/geo%natoms,nd/))
+    end if                               
+
+    do ia = 1, geo%natoms
+      do id = 1, nd
+        if (inside_tmp(ia, id) == 1) ions_inside(ia, id) = .true.
+      end do
+    end do
+
+    SAFE_DEALLOCATE_A(inside_tmp)
+
+    !print list of atoms
+    do id = 1, nd
+      ic = 0
+      ix = 0
+      chtmp = ions_list(id)
+      do ia = 1, geo%natoms-1
+        if (ions_inside(ia, id)) then
+          if ( ic == 0 .or. .not.ions_inside(ia+1, id)) then
+            write(ions_list(id), '(a,i0)')trim(chtmp),ia
+          end if
+          if (ions_inside(ia+1,id)) then 
+            ic = ic + 1  
+            chtmp = trim(ions_list(id))//"-"
+          else
+            ic = 0
+            chtmp = trim(ions_list(id))//","
+          end if
+
+        else 
+          cycle 
+        end if
+      end do 
+
+      if (ions_inside(geo%natoms,id)) then
+        write(ions_list(id), '(a,i0)')trim(chtmp),ia
+      end if
+
+!      write(message(1),'(a,1x,i0,1x,a,1x,a)')'Atoms inside domain',id,':',trim(ions_list(id))
+!      call messages_warning(1)
+    end do
+
+    POP_SUB(local_ions_inside)
+  end subroutine local_ions_inside
+  ! ---------------------------------------------------------
+  subroutine local_center_of_mass(nd, ions_inside, geo, center)
+    integer,           intent(in)  :: nd 
+    logical,           intent(in)  :: ions_inside(:,:)
     type(geometry_t),  intent(in)  :: geo
     FLOAT,             intent(out) :: center(:,:)
 
@@ -951,7 +1043,7 @@ contains
     center(:,:) = M_ZERO
     do ia = 1, geo%natoms
       do  id = 1, nd
-        if (box_union_inside(dom(id), geo%atom(ia)%x)) then
+        if ( ions_inside(ia, id) ) then
           center(1:geo%space%dim,id) = center(1:geo%space%dim,id) &
                    + geo%atom(ia)%x(1:geo%space%dim)*species_mass(geo%atom(ia)%species)     
           sumw(id) = sumw(id) + species_mass(geo%atom(ia)%species)

@@ -49,7 +49,7 @@ This  is free software; see the source for copying conditions.  There is NO warr
 
 =head1 SEE ALSO
 
-The largest source of documentation is the octopus wiki: S<http://www.tddft.org/programs/octopus/wiki/>.
+The largest source of documentation is the octopus website: S<http://octopus-code.org>.
 
 At the usual standard locations, you will also find an info file, F<octopus.info>.
 

@@ -277,6 +277,8 @@ subroutine X(derivatives_curl)(der, ff, op_ff, ghost_update, set_bc)
   ASSERT(ubound(ff,    DIM=2) >= der%dim)
   ASSERT(ubound(op_ff, DIM=2) >= curl_dim(der%dim))
 
+  ASSERT(.not.der%mesh%sb%nonorthogonal)
+
   SAFE_ALLOCATE(tmp(1:der%mesh%np_part))
 
   op_ff(:,:) = R_TOTYPE(M_ZERO)

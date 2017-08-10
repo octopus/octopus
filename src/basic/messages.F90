@@ -41,7 +41,8 @@ module messages_oct_m
     messages_debug,             &
     messages_debug_marker,      &
     messages_debug_newlines,    &
-    delete_debug_trace,         &
+    messages_switch_status,     &
+    delete_debug_trace,         &    
     print_date,                 &
     time_diff,                  &
     time_sum,                   &
@@ -131,7 +132,7 @@ contains
     !% still under development and are not suitable for production
     !% runs. This should not be used unless you know what you are doing.
     !% See details on
-    !% <a href=http://www.tddft.org/programs/octopus/experimental_features>wiki page</a>.
+    !% <a href=http://octopus-code.org/experimental_features>wiki page</a>.
     !%End
     call parse_variable('ExperimentalFeatures', .false., conf%devel_version)
     
@@ -187,7 +188,7 @@ contains
         call messages_write('  wrong and should not  be considered as valid scientific data.  Check')
         call messages_new_line()
         call messages_new_line()
-        call messages_write('  http://www.tddft.org/programs/octopus/experimental_features')
+        call messages_write('  http://octopus-code.org/experimental_features')
         call messages_new_line()
         call messages_new_line()
         call messages_write('  or contact the octopus developers for details.')
@@ -322,7 +323,7 @@ contains
     end if
 
     ! switch file indicator to state aborted
-    call switch_status('aborted')
+    call messages_switch_status('aborted')
 
 #ifdef HAVE_MPI
     call MPI_Abort(mpi_world%comm, 999, mpi_err)
@@ -512,21 +513,24 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine switch_status(status)
+  !> create status file for asynchronous communication
+  subroutine messages_switch_status(status)
     character(len=*), intent(in) :: status
 
     ! only root node is taking care of file I/O
-    if(.not.mpi_grp_is_root(mpi_world)) return     
+    if (.not.mpi_grp_is_root(mpi_world)) return     
 
-    ! remove old status files first, before we switch to state aborted
-    call loct_rm_status_files()
+    ! remove old status files first, before we switch to state aborted   
+    call loct_rm('exec/oct-status-running')
+    call loct_rm('exec/oct-status-finished')
+    call loct_rm('exec/oct-status-aborted')
     
     ! create empty status file to indicate 'aborted state'
     open(unit=iunit_err, file='exec/oct-status-'//trim(status), &
       action='write', status='unknown')
     close(iunit_err)
     
-  end subroutine switch_status
+  end subroutine messages_switch_status
 
 
   ! ---------------------------------------------------------
@@ -1082,7 +1086,7 @@ contains
       call messages_write('If you still want to use this feature (at your own risk), check:')
       call messages_new_line()
       call messages_new_line()
-      call messages_write('http://www.tddft.org/programs/octopus/experimental_features')
+      call messages_write('http://octopus-code.org/experimental_features')
       call messages_new_line()
       call messages_fatal(only_root_writes = .true.)
     else
