@@ -110,7 +110,7 @@ contains
       end if
     end if
 
-    call write_extended_xyz_file("exec", "initial_coordinates", sys%geo, sys%gr%mesh)
+    call write_canonicalized_xyz_file("exec", "initial_coordinates", sys%geo, sys%gr%mesh)
 
     call scf_init(scfv, sys%gr, sys%geo, sys%st, sys%mc, hm)
 

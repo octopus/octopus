@@ -55,7 +55,7 @@ module io_function_oct_m
     io_function_read_how,         &
     io_function_fill_how,         &
     write_bild_forces_file,       &
-    write_extended_xyz_file,      &
+    write_canonicalized_xyz_file, &
     write_xsf_geometry,           &
     write_xsf_geometry_file,      &
     dio_function_input,           &
@@ -365,9 +365,11 @@ contains
   end subroutine write_bild_forces_file
 
   ! ---------------------------------------------------------
-  !> Write extended xyz file with atom labels and positions in Angstroms.
+  !> Write canonicalized xyz file with atom labels and positions in Angstroms.
   !> Includes information about simulation box and periodicity when applicable.
-  subroutine write_extended_xyz_file(dir, fname, geo, mesh)
+  !> This differs from a normal xyz file by including information about box
+  !> shape and always using Angstroms.
+  subroutine write_canonicalized_xyz_file(dir, fname, geo, mesh)
     character(len=*), intent(in) :: dir
     character(len=*), intent(in) :: fname
     type(geometry_t), intent(in) :: geo
@@ -378,7 +380,7 @@ contains
     FLOAT :: position
     integer :: iatom
 
-    PUSH_SUB(write_extended_xyz_file)
+    PUSH_SUB(write_canonicalized_xyz_file)
 
     call io_mkdir(dir)
     iunit = io_open(trim(dir)//'/'//trim(fname)//'.xyz', action='write', position='asis')
@@ -402,8 +404,8 @@ contains
 
     call io_close(iunit)
 
-    POP_SUB(write_extended_xyz_file)
-  end subroutine write_extended_xyz_file
+    POP_SUB(write_canonicalized_xyz_file)
+  end subroutine write_canonicalized_xyz_file
 
   ! ---------------------------------------------------------
   subroutine write_xsf_geometry_file(dir, fname, geo, mesh, write_forces)
