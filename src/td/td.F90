@@ -35,6 +35,7 @@ module td_oct_m
   use kick_oct_m
   use lasers_oct_m
   use lda_u_oct_m
+  use lda_u_io_oct_m
   use loct_oct_m
   use loct_math_oct_m
   use modelmb_exchange_syms_oct_m
@@ -1007,6 +1008,11 @@ contains
 
     call states_dump_rho(restart, st, gr, ierr, iter=iter)
     if (err /= 0) ierr = ierr + 1 
+
+    if(hm%lda_u%apply) then
+      call lda_u_dump(restart, hm%lda_u, st, ierr, iter=iter)
+      if (err /= 0) ierr = ierr + 1
+    end if
 
     cmplxscl = st%cmplxscl%space      
     call potential_interpolation_dump(td%tr%vksold, restart, gr, cmplxscl, st%d%nspin, err2)
