@@ -251,7 +251,7 @@ contains
     call states_fermi(sys%st, sys%gr%mesh)
 
     do iter = 1, max_iter
-      call eigensolver_run(eigens, sys%gr, sys%st, hm, 1, converged)
+      call eigensolver_run(eigens, sys%gr, sys%st, hm, 1, converged, sys%st%nst_conv)
 
       call write_iter_(sys%st)
 
@@ -373,7 +373,7 @@ contains
       write(str, '(a,i5)') 'Unoccupied states iteration #', iter
       call messages_print_stress(stdout, trim(str))
        
-      write(message(1),'(a,i6)') 'Converged eigenvectors: ', sum(eigens%converged(1:st%d%nik))
+      write(message(1),'(a,i6,a,i6)') 'Converged states: ', minval(eigens%converged(1:st%d%nik))
       call messages_info(1)
 
       call states_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb, eigens%diff, st_start = showstart, compact = .true.)

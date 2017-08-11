@@ -708,7 +708,7 @@ contains
       write(stdout, '(1x)')
     end if
 
-    if(present(conv)) conv = all(eigens%converged(st%d%kpt%start:st%d%kpt%end) == nstconv_)
+    if(present(conv)) conv = all(eigens%converged(st%d%kpt%start:st%d%kpt%end) >= nstconv_)
 
 #ifdef HAVE_MPI
     if(st%d%kpt%parallel) then

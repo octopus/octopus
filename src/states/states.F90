@@ -467,8 +467,8 @@ contains
       st%nst = ntot
     end if
 
-    st%nst = st%nst + nempty
     st%nst_conv = st%nst + nempty_conv
+    st%nst = st%nst + nempty
     if(st%nst == 0) then
       message(1) = "Cannot run with number of states = zero."
       call messages_fatal(1)
