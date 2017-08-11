@@ -222,11 +222,10 @@ contains
   end function atom_distance
 
   ! ---------------------------------------------------------
-  subroutine atom_write_xyz(this, dim, unit, length_unit)
+  subroutine atom_write_xyz(this, dim, unit)
     type(atom_t),      intent(in) :: this
     integer, optional, intent(in) :: dim
     integer,           intent(in) :: unit
-    type(unit_t),      intent(in) :: length_unit
 
     character(len=19) :: frmt
     integer           :: i, dim_
@@ -236,7 +235,7 @@ contains
     dim_=MAX_DIM
     if(present(dim))dim_=dim
     write(unit=frmt, fmt="(a5,i2.2,a4,i2.2,a6)") "(6x,a", LABEL_LEN, ",2x,", dim_,"f12.6)"
-    write(unit=unit, fmt=frmt) this%label, (units_from_atomic(length_unit, this%x(i)), i=1, dim_)
+    write(unit=unit, fmt=frmt) this%label, (units_from_atomic(units_out%length_xyz_file, this%x(i)), i=1, dim_)
 
     POP_SUB(atom_write_xyz)
 
@@ -354,11 +353,10 @@ contains
   end function atom_classical_get_label
   
   ! ---------------------------------------------------------
-  subroutine atom_classical_write_xyz(this, dim, unit, length_unit)
+  subroutine atom_classical_write_xyz(this, dim, unit)
     type(atom_classical_t), intent(in) :: this
     integer,      optional, intent(in) :: dim
     integer,                intent(in) :: unit
-    type(unit_t),           intent(in) :: length_unit
 
     character(len=27) :: frmt
     integer           :: i, dim_
@@ -368,7 +366,7 @@ contains
     if(present(dim))dim_=dim
     write(unit=frmt, fmt="(a10,i2.2,a15)") "(6x,a1,2x,", dim_, "f12.6,a3,f12.6)"
     write(unit=unit, fmt=frmt) this%label(1:1), &
-      (units_from_atomic(length_unit, this%x(i)), i=1, dim_), " # ", this%charge
+      (units_from_atomic(units_out%length_xyz_file, this%x(i)), i=1, dim_), " # ", this%charge
 
     POP_SUB(atom_classical_write_xyz)
   end subroutine atom_classical_write_xyz
