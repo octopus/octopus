@@ -812,22 +812,10 @@ end subroutine X(compute_coulomb_integrals)
         if(has_phase) then
 #ifdef R_TCOMPLEX
           if(simul_box_is_periodic(mesh%sb)) then
-            epsi(:,1) = R_TOTYPE(M_ZERO)
-            !$omp parallel do
-            do is = 1, os%sphere%np
-              epsi(os%sphere%map(is),1) = epsi(os%sphere%map(is),1) &
-                   + os%sphere%x(is,idir)*os%zorb(is,im)*os%phase(is,ik)
-            end do
-            !$omp end parallel do
-            call lalg_axpy(mesh%np, reduced(im), epsi(1:mesh%np,1), &
+            call lalg_axpy(mesh%np, reduced(im), os%reorb_mesh(1:mesh%np,idir,im,ik), &
                                   gpsi(1:mesh%np,idir,1))
           else
-            !$omp parallel do
-            do is = 1, os%sphere%np
-              epsi(is,1) = os%sphere%x(is,idir)*os%eorb_submesh(is,im,ik)
-            end do
-            !$omp end parallel do
-            call submesh_add_to_mesh(os%sphere, epsi(1:os%sphere%np,1), &
+            call submesh_add_to_mesh(os%sphere, os%reorb_submesh(1:os%sphere%np,idir,im,ik), &
                                   gpsi(1:mesh%np,idir,1), reduced(im))
           end if
 #endif
@@ -850,11 +838,7 @@ end subroutine X(compute_coulomb_integrals)
        ! We first compute <phi m| r | psi> for all orbitals of the atom
        !
        !
-       if(simul_box_is_periodic(mesh%sb)) then
-         forall(is = 1:mesh%np)
-           epsi(is,1) = mesh%x(is,idir)*psi(is,1)
-         end forall
-       else
+       if(.not.simul_box_is_periodic(mesh%sb)) then
          !$omp parallel do 
          do is = 1, os%sphere%np
            epsi(is,1) = os%sphere%x(is,idir)*psi(os%sphere%map(is),1)
@@ -866,8 +850,8 @@ end subroutine X(compute_coulomb_integrals)
 #ifdef R_TCOMPLEX
          if(simul_box_is_periodic(mesh%sb)) then
            do im = 1, os%norbs
-             dot(im) = X(mf_dotp)(mesh, os%eorb_mesh(1:mesh%np,im,ik),&
-                               epsi(1:mesh%np,1), reduce = .false.)
+             dot(im) = X(mf_dotp)(mesh, os%reorb_mesh(1:mesh%np,idir,im,ik),&
+                               psi(1:mesh%np,1), reduce = .false.)
            end do
          else
            do im = 1, os%norbs
@@ -1164,10 +1148,14 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
     os%phase(:,:) = M_ZERO
     if(simul_box_is_periodic(mesh%sb)) then 
       SAFE_ALLOCATE(os%eorb_mesh(1:mesh%np, 1:os%norbs, st%d%kpt%start:st%d%kpt%end))
-      os%eorb_mesh(:,:,:) = M_ZERO
+      os%eorb_mesh(:,:,:) = M_Z0
+      SAFE_ALLOCATE(os%reorb_mesh(1:mesh%np, 1:st%d%dim, 1:os%norbs, st%d%kpt%start:st%d%kpt%end))
+      os%reorb_mesh(:,:,:,:) = M_Z0
     else
       SAFE_ALLOCATE(os%eorb_submesh(1:os%sphere%np, 1:os%norbs, st%d%kpt%start:st%d%kpt%end))
-      os%eorb_submesh(:,:,:) = M_ZERO
+      os%eorb_submesh(:,:,:) = M_Z0
+      SAFE_ALLOCATE(os%reorb_submesh(1:os%sphere%np, 1:st%d%dim, 1:os%norbs, st%d%kpt%start:st%d%kpt%end))
+      os%reorb_submesh(:,:,:,:) = M_Z0
     end if
   #endif
 

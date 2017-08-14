@@ -73,6 +73,8 @@ module orbital_set_oct_m
     CMPLX, pointer      :: zorb(:,:) !> The orbital, if complex, on the submesh
     CMPLX, pointer      :: eorb_submesh(:,:,:) !> Orbitals with its phase factor, on the submesh (for isolated system with TD phase)
     CMPLX, pointer      :: eorb_mesh(:,:,:) !> Orbitals with its phase factor, on the mesh (for periodic systems GS and TD)
+    CMPLX, pointer      :: reorb_submesh(:,:,:,:) !> Orbitals with its phase factor multplied by the position operator
+    CMPLX, pointer      :: reorb_mesh(:,:,:,:)
 
     type(poisson_t)  :: poisson               !> For computing the Coulomb integrals
   end type orbital_set_t
@@ -92,6 +94,8 @@ contains
   nullify(this%zorb)
   nullify(this%eorb_submesh)
   nullify(this%eorb_mesh)
+  nullify(this%reorb_submesh)
+  nullify(this%reorb_mesh)  
 
   POP_SUB(orbital_set_nullify)
 
@@ -119,6 +123,8 @@ contains
    SAFE_DEALLOCATE_P(this%zorb)
    SAFE_DEALLOCATE_P(this%eorb_submesh)
    SAFE_DEALLOCATE_P(this%eorb_mesh)
+   SAFE_DEALLOCATE_P(this%reorb_submesh)
+   SAFE_DEALLOCATE_P(this%reorb_mesh)
    nullify(this%spec)
    call submesh_end(this%sphere)
    
@@ -135,7 +141,7 @@ contains
 
     integer :: ns, iq, is, ikpoint, im
     FLOAT   :: kr, kpoint(1:MAX_DIM)
-    integer :: ndim
+    integer :: idir,ndim
 
     PUSH_SUB(orbital_set_update_phase)
 
@@ -176,11 +182,23 @@ contains
             os%eorb_mesh(os%sphere%map(is),im,iq) = os%eorb_mesh(os%sphere%map(is),im,iq) &
                                                       + os%zorb(is,im)*os%phase(is, iq)
           end do
+          do idir = 1, ndim
+            os%reorb_mesh(:,idir,im,iq) = M_Z0
+            do is = 1, ns
+              os%reorb_mesh(os%sphere%map(is),idir,im,iq) = os%reorb_mesh(os%sphere%map(is),idir,im,iq) &
+                   + os%sphere%x(is,idir)*os%zorb(is,im)*os%phase(is,iq)
+            end do
+          end do
         end do
       else !In the case of the isolated system, we still use the mesh 
         do im = 1, os%norbs
           do is = 1, ns
             os%eorb_submesh(is,im,iq) = os%zorb(is,im)*os%phase(is, iq)
+          end do
+          do idir = 1, ndim
+            do is = 1, ns
+              os%reorb_submesh(is,idir,im,iq) = os%sphere%x(is,idir)*os%zorb(is,im)*os%phase(is,iq)
+            end do
           end do
         end do
       endif
