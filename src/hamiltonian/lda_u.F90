@@ -200,6 +200,7 @@ contains
   !% of the corresponding atom.
   !%End
   call parse_variable('OrbitalsTruncationMethod', OPTION__ORBITALSTRUNCATIONMETHOD__FULL, this%truncation)
+  call messages_print_var_value(stdout, 'OrbitalsTruncationMethod', this%truncation)
 
   !%Variable OrbitalsThreshold_LDAU
   !%Type float
@@ -214,6 +215,7 @@ contains
   !%End
   call parse_variable('OrbitalsThreshold_LDAU', CNST(0.01), this%orbitals_threshold)
   if(this%orbitals_threshold <= M_ZERO) call messages_input_error('OrbitalsThreshold_LDAU')
+  call messages_print_var_value(stdout, 'OrbitalsThreshold_LDAU', this%orbitals_threshold)
 
   !%Variable UseACBN0Functional
   !%Type logical
@@ -224,6 +226,7 @@ contains
   !% ACBN0 functional as defined in PRX 5, 011006 (2015) 
   !%End
   call parse_variable('UseACBN0Functional', .false., this%useACBN0)
+  call messages_print_var_value(stdout,  'UseACBN0Functional', this%useACBN0)
 
   !%Variable DFTUNormalizeOrbitals
   !%Type logical
@@ -233,6 +236,7 @@ contains
   !% If set to yes, Octopus will normalize the atomic orbitals
   !%End
   call parse_variable('DFTUNormalizeOrbitals', .true., this%normalizeOrbitals)
+  call messages_print_var_value(stdout, 'DFTUNormalizeOrbitals', this%normalizeOrbitals)
 
   if( this%useACBN0) then
     !%Variable UseAllAtomicOrbitals
@@ -278,7 +282,6 @@ contains
     !%End
     call parse_variable('DFTUIncludeOverlap', .false., this%IncludeOverlap)
     if(this%IncludeOverlap) call messages_experimental("DFTUIncludeOverlap")
-
 
     if(this%useAllOrbitals) then
       !%Variable DFTUMinimalAtomicSphere

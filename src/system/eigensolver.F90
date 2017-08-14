@@ -547,15 +547,17 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine eigensolver_run(eigens, gr, st, hm, iter, conv)
+  subroutine eigensolver_run(eigens, gr, st, hm, iter, conv, nstconv)
     type(eigensolver_t),  intent(inout) :: eigens
     type(grid_t),         intent(in)    :: gr
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(in)    :: hm
     integer,              intent(in)    :: iter
     logical,    optional, intent(out)   :: conv
+    integer,    optional, intent(in)    :: nstconv !< Number of states considered for 
+                                                   !< the convergence criteria
 
-    integer :: maxiter, ik, ist
+    integer :: maxiter, ik, ist, nstconv_
 #ifdef HAVE_MPI
     logical :: conv_reduced
     integer :: outcount, lmatvec
@@ -568,6 +570,11 @@ contains
     PUSH_SUB(eigensolver_run)
 
     if(present(conv)) conv = .false.
+    if(present(nstconv)) then 
+      nstconv_ = nstconv
+    else
+      nstconv_ = st%nst
+    end if
 
     eigens%matvec = 0
 
@@ -701,7 +708,7 @@ contains
       write(stdout, '(1x)')
     end if
 
-    if(present(conv)) conv = all(eigens%converged(st%d%kpt%start:st%d%kpt%end) == st%nst)
+    if(present(conv)) conv = all(eigens%converged(st%d%kpt%start:st%d%kpt%end) >= nstconv_)
 
 #ifdef HAVE_MPI
     if(st%d%kpt%parallel) then

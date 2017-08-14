@@ -35,6 +35,7 @@ module td_oct_m
   use kick_oct_m
   use lasers_oct_m
   use lda_u_oct_m
+  use lda_u_io_oct_m
   use loct_oct_m
   use loct_math_oct_m
   use modelmb_exchange_syms_oct_m
@@ -628,7 +629,7 @@ contains
       integer :: ierr, freeze_orbitals
       FLOAT :: x
       logical :: freeze_hxc, freeze_occ, freeze_u
-      type(restart_t) :: restart
+      type(restart_t) :: restart, restart_frozen
 
       PUSH_SUB(td_run.init_wfs)
 
@@ -770,13 +771,15 @@ contains
       !%End
       call parse_variable('TDFreezeOccupations', .false., freeze_occ)
       if(freeze_occ) then
-        write(message(1),'(a)') 'Info: Freezing occupation matrices that enters in the LDA+U potential.'
+        write(message(1),'(a)') 'Info: Freezing occupation matrices that enters in the DFT+U potential.'
         call messages_info(1)
         call lda_u_freeze_occ(hm%lda_u)
 
         !In this case we should reload GS wavefunctions 
-        if(.not.fromScratch) then 
-          call messages_not_implemented("TDFreezeOccupations with FromScratch=no") 
+        if(hm%lda_u%apply .and..not.fromScratch) then 
+          call restart_init(restart_frozen, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
+          call lda_u_load(restart_frozen, hm%lda_u, st, ierr)
+          call restart_end(restart_frozen)
         end if
       end if
 
@@ -789,13 +792,18 @@ contains
       !%End
       call parse_variable('TDFreezeU', .false., freeze_u)
       if(freeze_u) then
-        write(message(1),'(a)') 'Info: Freezing the effective U of LDA+U.'
+        write(message(1),'(a)') 'Info: Freezing the effective U of DFT+U.'
         call messages_info(1)
         call lda_u_freeze_u(hm%lda_u)
 
         !In this case we should reload GS wavefunctions
-        if(.not.fromScratch) then
-          call messages_not_implemented("TDFreezeU with FromScratch=no")
+        if(hm%lda_u%apply.and. hm%lda_u%useACBN0 .and. .not.fromScratch) then
+          call restart_init(restart_frozen, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
+          call lda_u_load(restart_frozen, hm%lda_u, st, ierr)
+          call restart_end(restart_frozen)    
+          write(message(1),'(a)') 'Loaded GS effective U of DFT+U'
+          call messages_info(1)
+          call lda_u_write_U(hm%lda_u, stdout)
         end if
       end if
 
@@ -1004,6 +1012,14 @@ contains
     ! first write resume file
     call states_dump(restart, st, gr, err, iter=iter)
     if (err /= 0) ierr = ierr + 1
+
+    call states_dump_rho(restart, st, gr, ierr, iter=iter)
+    if (err /= 0) ierr = ierr + 1 
+
+    if(hm%lda_u%apply) then
+      call lda_u_dump(restart, hm%lda_u, st, ierr, iter=iter)
+      if (err /= 0) ierr = ierr + 1
+    end if
 
     cmplxscl = st%cmplxscl%space      
     call potential_interpolation_dump(td%tr%vksold, restart, gr, cmplxscl, st%d%nspin, err2)
