@@ -197,16 +197,8 @@ contains
 
     else
 
-      ! get inverse matrix to extract reduced coordinates for spglib
-      lattice(1:3, 1:3) = rlattice(1:3, 1:3)
-      
       SAFE_ALLOCATE(position(1:3,1:geo%natoms))  ! transpose!!
       SAFE_ALLOCATE(typs(1:geo%natoms))
-
-      ! fix things for low-dimensional systems: higher dimension lattice constants set to 1
-      do idir = dim + 1, 3
-        lattice(idir, idir) = M_ONE
-      end do
 
       do iatom = 1, geo%natoms
         position(1:3,iatom) = M_ZERO
@@ -224,14 +216,26 @@ contains
         position(1:dim4syms,iatom) = position(1:dim4syms,iatom) + M_HALF
 
         typs(iatom) = species_index(geo%atom(iatom)%species)
-        print *, position(1:dim4syms,iatom)
       end do
 
+      ! get inverse matrix to extract reduced coordinates for spglib
+      lattice(1:3, 1:3) = rlattice(1:3, 1:3)
       ! transpose the lattice vectors for use in spglib as row-major matrix
       lattice(:,:) = transpose(lattice(:,:))
+      ! fix things for low-dimensional systems: higher dimension lattice constants set to 1
+      do idir = dim + 1, 3
+        lattice(idir, idir) = M_ONE
+      end do
 
-      call spg_get_international(this%space_group, symbol, lattice, &
-                 position, typs, geo%natoms, symprec)
+      call spg_get_international(this%space_group, symbol, lattice(1,1), &
+                 position(1,1), typs(1), geo%natoms, symprec)
+      call spg_get_schoenflies(this%space_group, schoenflies, lattice(1, 1), &
+                 position(1, 1), typs(1), geo%natoms, symprec)
+
+      write(message(1),'(a, i4)') 'Space group No. ', this%space_group
+      write(message(2),'(2a)') 'International: ', trim(symbol)
+      write(message(3),'(2a)') 'Schoenflies: ', trim(schoenflies)
+      call messages_info(3)
 
       if(this%space_group == 0) then
         message(1) = "Symmetry analysis failed in spglib. Disabling symmetries."
@@ -250,13 +254,8 @@ contains
         return
       end if
 
-      write(message(1),'(a, i4)') 'Space group No. ', this%space_group
-      write(message(2),'(2a)') 'International: ', trim(symbol)
-      call spg_get_schoenflies(this%space_group, schoenflies, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
-      write(message(3),'(2a)') 'Schoenflies: ', trim(schoenflies)
-      call messages_info(3)
-
-      call spg_get_multiplicity(max_size, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
+      call spg_get_multiplicity(max_size, lattice(1, 1), position(1, 1), &
+                                 typs(1), geo%natoms, symprec)
 
       ! spglib returns row-major not column-major matrices!!! --DAS
       SAFE_ALLOCATE(rotation(1:3, 1:3, 1:max_size))
@@ -264,6 +263,11 @@ contains
 
       call spg_get_symmetry(fullnops, rotation(1, 1, 1), translation(1, 1), &
         max_size, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
+
+      ! transpose due to array order difference between C and fortran
+      do iop = 1, fullnops
+        rotation(:,:,iop) = transpose(rotation(:,:,iop))
+      end do
 
       ! we need to check that it is not a supercell, as in the QE routine (sgam_at)
       ! they disable fractional translations if the identity has one, because the sym ops might not form a group.
