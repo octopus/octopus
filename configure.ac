@@ -347,9 +347,6 @@ AC_SUBST(FCEXTRALIBS)
 
 ACX_OCTOPUS_COMPILATION_INFO
 
-dnl needed for spglib
-AC_PROG_LIBTOOL
-
 #  external_libs/isf/Makefile
 #  external_libs/isf/src/Makefile
 #  external_libs/isf/flib/Makefile

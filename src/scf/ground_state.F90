@@ -24,6 +24,7 @@ module ground_state_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
+  use io_function_oct_m
   use lcao_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -108,6 +109,8 @@ contains
         fromScratch = .true.
       end if
     end if
+
+    call write_canonicalized_xyz_file("exec", "initial_coordinates", sys%geo, sys%gr%mesh)
 
     call scf_init(scfv, sys%gr, sys%geo, sys%st, sys%mc, hm)
 

@@ -55,13 +55,14 @@ module simul_box_oct_m
     simul_box_load,             &
     simul_box_end,              &
     simul_box_write_info,       &
+    simul_box_write_short_info, &
     simul_box_is_periodic,      &
     simul_box_has_zero_bc,      &
     simul_box_in_box,           &
     simul_box_in_box_vec,       &
     simul_box_atoms_in_box,     &
     simul_box_copy,             &
-    simul_box_periodic_atom_in_box 
+    simul_box_periodic_atom_in_box
 
   integer, parameter, public :: &
     SPHERE         = 1,         &
@@ -1037,6 +1038,51 @@ contains
     POP_SUB(simul_box_write_info)
   end subroutine simul_box_write_info
 
+  subroutine simul_box_write_short_info(sb, iunit)
+    type(simul_box_t), intent(in) :: sb
+    integer,           intent(in) :: iunit
+
+    integer :: idir1, idir2
+    character(len=12) :: buf
+
+    PUSH_SUB(simul_box_write_short_info)
+
+    write(iunit, '(a,i1,a)', advance='no') 'Dimensions = ', sb%dim, '; '
+    write(iunit, '(a,i1,a)', advance='no') 'PeriodicDimensions = ', sb%periodic_dim, '; '
+
+    write(iunit, '(a)', advance='no') 'BoxShape = '
+    select case(sb%box_shape)
+    case(SPHERE)
+      write(iunit, '(a,f11.6,a)', advance='no') 'sphere; Radius =', units_from_atomic(unit_angstrom, sb%rsize), ' Ang'
+    case(CYLINDER)
+      write(iunit, '(a,f11.6,a,f11.6,a)', advance='no') 'cylinder, Radius =', units_from_atomic(unit_angstrom, sb%rsize), &
+        ' Ang; Xlength =', units_from_atomic(unit_angstrom, sb%xsize), ' Ang'
+    case(MINIMUM)
+      write(iunit, '(a,f11.6,a)', advance='no') 'minimum; Radius =', units_from_atomic(unit_angstrom, sb%rsize), ' Ang'
+    case(PARALLELEPIPED)
+      write(iunit, '(a)', advance='no') 'parallelepiped; LatticeVectors[Ang] = '
+      do idir1 = 1, sb%dim
+        write(iunit, '(a)', advance='no') '['
+        do idir2 = 1, sb%dim
+          write(iunit, '(x,f11.6)', advance='no') units_from_atomic(unit_angstrom, sb%rlattice(idir2, idir1))
+        end do
+        write(iunit, '(a)', advance='no') ']'
+        if(idir1 < sb%dim) then
+          write(iunit, '(a)', advance='no') ', '
+        end if
+      end do
+    case(BOX_IMAGE)
+      write(iunit, '(a)', advance='no') 'box_image; BoxShapeImage = '//trim(sb%filename)
+    case(HYPERCUBE)
+      write(iunit, '(a)', advance='no') 'hypercube'  ! add parameters?
+    case(BOX_USDEF)
+      write(iunit, '(a)', advance='no') 'user_defined; BoxShapeUsDef = "'//trim(sb%user_def)//'"'
+    end select
+
+    write(iunit, '()')
+    POP_SUB(simul_box_write_short_info)
+
+  end subroutine simul_box_write_short_info
 
   !--------------------------------------------------------------
   !> Checks if a mesh point belongs to the actual mesh.

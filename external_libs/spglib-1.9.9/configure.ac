@@ -3,9 +3,7 @@
 
 AC_PREREQ(2.61)
 #AC_INIT([spglib], 1.9.1, [atz.togo@gmail.com])
-AC_INIT([spglib],
-        m4_esyscmd_s(grep VERSION src/version.h|awk '{printf("%d.", $3)}'|sed s/.$//),
-        [atz.togo@gmail.com])
+AC_INIT([spglib], 1.9.9, [atz.togo@gmail.com])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([src/spglib.c])
 AC_CONFIG_HEADER([config.h])
@@ -13,9 +11,8 @@ AC_CONFIG_MACRO_DIR([m4])
 
 # Checks for programs.
 AC_PROG_CC
-# AC_PROG_RANLIB
+AC_PROG_RANLIB
 AM_PROG_CC_C_O
-AM_PROG_LIBTOOL
 
 # Checks for libraries.
 AC_CHECK_FUNCS([sqrt])

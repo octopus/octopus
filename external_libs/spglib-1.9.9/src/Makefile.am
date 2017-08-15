@@ -1,4 +1,4 @@
-lib_LTLIBRARIES = libsymspg.la 
+noinst_LIBRARIES = libsymspg.a 
 
 spglib_c = \
 arithmetic.c \
@@ -43,10 +43,8 @@ spin.h \
 symmetry.h \
 version.h
 
-libsymspg_la_SOURCES = $(spglib_c) $(spglib_h)
+libsymspg_a_SOURCES = $(spglib_c) $(spglib_h)
 pkginclude_HEADERS = $(spglib_h)
-# libsymspg_la_LDFLAGS = -version-info 0:1:0
-libsymspg_la_LIBADD = -lm
 
 check_PROGRAMS = spglib_test
 spglib_test_SOURCES = test.c $(spglib_c) $(spglib_h)
