@@ -466,8 +466,9 @@ contains
     integer,               intent(in) :: periodic_dim
     integer,               intent(in) :: iunit
     
-    integer :: iop
-    
+    integer :: iop, ind
+    type(symm_op_t) :: tmpop   
+ 
     PUSH_SUB(symmetries_write_info)
     
     call messages_print_stress(iunit, 'Symmetries')
@@ -501,12 +502,17 @@ contains
       ! direction invariant and (for the moment) that do not have a translation
       write(message(1),'(a7,a31,12x,a33)') 'Index', 'Rotation matrix', 'Fractional translations'
       call messages_info(1,iunit = iunit)
-      do iop = 1, this%nops
-        if(symm_op_invariant(this%ops(this%nops), this%breakdir, real(symprec, REAL_PRECISION)) &
-         .and. .not. symm_op_has_translation(this%ops(this%nops), real(symprec, REAL_PRECISION))) then
-          write(message(1),'(i5,1x,a,2x,3(3i4,2x),3f12.6)') iop, ':', this%rotation(1:3, 1:3, iop), this%translation(1:3, iop)
+      ind = 0
+      do iop = 1, this%fullnops
+        call symm_op_init(tmpop, this%rotation(:, :, iop), real(this%translation(:, iop), REAL_PRECISION))
+
+        if(symm_op_invariant(tmpop, this%breakdir, real(symprec, REAL_PRECISION)) &
+         .and. .not. symm_op_has_translation(tmpop, real(symprec, REAL_PRECISION))) then
+          ind = ind + 1
+          write(message(1),'(i5,1x,a,2x,3(3i4,2x),3f12.6)') ind, ':', this%rotation(1:3, 1:3, iop), this%translation(1:3, iop)
           call messages_info(1,iunit = iunit)
         end if
+        call symm_op_end(tmpop)
       end do
       write(message(1), '(a,i5,a)') 'Info: The system has ', this%nops, ' symmetries that can be used.'
       call messages_info(iunit = iunit)
