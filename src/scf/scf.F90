@@ -63,6 +63,7 @@ module scf_oct_m
   use states_group_oct_m
   use states_io_oct_m
   use states_restart_oct_m
+  use symmetries_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -1131,6 +1132,8 @@ contains
         iunit = io_open(trim(dir) // "/" // trim(fname), action='write')
 
         call grid_write_info(gr, geo, iunit)
+ 
+        call symmetries_write_info(gr%mesh%sb%symm, gr%sb%periodic_dim, iunit)
 
         if(simul_box_is_periodic(gr%sb)) then
           call kpoints_write_info(gr%mesh%sb%kpoints, iunit)

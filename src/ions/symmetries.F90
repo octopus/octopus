@@ -44,13 +44,23 @@ module symmetries_oct_m
     symmetries_apply_kpoint,       &
     symmetries_space_group_number, &
     symmetries_have_break_dir,     &
-    symmetries_identity_index
+    symmetries_identity_index,     &
+    symmetries_write_info
 
   type symmetries_t
     type(symm_op_t), allocatable :: ops(:)
     integer                  :: nops
     FLOAT                    :: breakdir(1:3)
     integer                  :: space_group
+    logical                  :: any_non_spherical
+    logical                  :: symmetries_compute
+    character(len=6)         :: group_name
+    character(len=30)        :: group_elements
+    character(len=11)        :: symbol
+    character(len=7)         :: schoenflies
+    integer                  :: fullnops
+    integer, allocatable     :: rotation(:, :, :)
+    real(8), allocatable     :: translation(:, :)
   end type symmetries_t
 
   real(8), parameter :: symprec = CNST(1e-5)
@@ -98,43 +108,30 @@ contains
     FLOAT,               intent(in)  :: rlattice(:, :)
     FLOAT,               intent(in)  :: klattice(:, :)
 
-    integer :: max_size, fullnops, dim4syms
+    integer :: max_size, dim4syms
     integer :: idir, iatom, iop, verbosity, point_group
     real(8) :: determinant
     real(8) :: lattice(1:3, 1:3)
     real(8), allocatable :: position(:, :)
     integer, allocatable :: typs(:)
     type(block_t) :: blk
-    integer, allocatable :: rotation(:, :, :)
-    real(8), allocatable :: translation(:, :)
     type(symm_op_t) :: tmpop
-    character(len=6) :: group_name
-    character(len=30) :: group_elements
-    character(len=11) :: symbol
-    character(len=7) :: schoenflies
     integer :: natoms, identity(3,3)
-    logical :: any_non_spherical, symmetries_compute, found_identity, is_supercell
+    logical :: found_identity, is_supercell
 
     PUSH_SUB(symmetries_init)
 
-    call messages_print_stress(stdout, "Symmetries")
-
     ! if someone cares, they could try to analyze the symmetry point group of the individual species too
-    any_non_spherical = .false.
+    this%any_non_spherical = .false.
     do iatom = 1, geo%natoms
-      any_non_spherical = any_non_spherical                          .or. &
+      this%any_non_spherical = this%any_non_spherical                   .or. &
         species_type(geo%atom(iatom)%species) == SPECIES_USDEF          .or. &
         species_type(geo%atom(iatom)%species) == SPECIES_JELLIUM_SLAB   .or. &
         species_type(geo%atom(iatom)%species) == SPECIES_CHARGE_DENSITY .or. &
         species_type(geo%atom(iatom)%species) == SPECIES_FROM_FILE      .or. &
         species_type(geo%atom(iatom)%species) == SPECIES_FROZEN
-      if(any_non_spherical)exit
+      if(this%any_non_spherical)exit
     end do
-    if(any_non_spherical) then
-      message(1) = "Symmetries are disabled since non-spherically symmetric species may be present."
-      call messages_info(1)
-      call messages_print_stress(stdout)
-    end if
 
     !%Variable SymmetriesCompute
     !%Type logical
@@ -144,14 +141,9 @@ contains
     !% If disabled, <tt>Octopus</tt> will not compute
     !% nor print the symmetries.
     !%End
-    call parse_variable('SymmetriesCompute', (geo%natoms < 100), symmetries_compute)
-    if(.not. symmetries_compute) then
-      message(1) = "Symmetries have been disabled by SymmetriesCompute = false."
-      call messages_info(1)
-      call messages_print_stress(stdout)
-    end if
+    call parse_variable('SymmetriesCompute', (geo%natoms < 100), this%symmetries_compute)
 
-    if(any_non_spherical .or. .not. symmetries_compute) then
+    if(this%any_non_spherical .or. .not. this%symmetries_compute) then
       call init_identity()
 
       POP_SUB(symmetries_init)
@@ -168,6 +160,7 @@ contains
       ! for the moment symmetries are only used for information, so we compute them only on one node.
       if(mpi_grp_is_root(mpi_world)) then
         natoms = max(1,geo%natoms)
+        verbosity = -1
 
         SAFE_ALLOCATE(position(1:3, natoms))
         SAFE_ALLOCATE(typs(1:natoms))
@@ -178,22 +171,15 @@ contains
           typs(iatom) = species_index(geo%atom(iatom)%species)
         end forall
 
-        verbosity = -1
-        
-        if (symmetries_compute) then
+        if (this%symmetries_compute) then
           call symmetries_finite_init(geo%natoms, typs(1), position(1, 1), verbosity, point_group)
-          call symmetries_finite_get_group_name(point_group, group_name)
-          call symmetries_finite_get_group_elements(point_group, group_elements)
+          call symmetries_finite_get_group_name(point_group, this%group_name)
+          call symmetries_finite_get_group_elements(point_group, this%group_elements)
           call symmetries_finite_end()
-
-          call messages_write('Symmetry elements : '//trim(group_elements), new_line = .true.)
-          call messages_write('Symmetry group    : '//trim(group_name))
-          call messages_info()
         end if
+        SAFE_DEALLOCATE_A(position)
+        SAFE_DEALLOCATE_A(typs)
       end if
-
-      SAFE_DEALLOCATE_A(position)
-      SAFE_DEALLOCATE_A(typs)
 
     else
 
@@ -227,15 +213,10 @@ contains
         lattice(idir, idir) = M_ONE
       end do
 
-      call spg_get_international(this%space_group, symbol, lattice(1,1), &
+      call spg_get_international(this%space_group, this%symbol, lattice(1,1), &
                  position(1,1), typs(1), geo%natoms, symprec)
-      call spg_get_schoenflies(this%space_group, schoenflies, lattice(1, 1), &
+      call spg_get_schoenflies(this%space_group, this%schoenflies, lattice(1, 1), &
                  position(1, 1), typs(1), geo%natoms, symprec)
-
-      write(message(1),'(a, i4)') 'Space group No. ', this%space_group
-      write(message(2),'(2a)') 'International: ', trim(symbol)
-      write(message(3),'(2a)') 'Schoenflies: ', trim(schoenflies)
-      call messages_info(3)
 
       if(this%space_group == 0) then
         message(1) = "Symmetry analysis failed in spglib. Disabling symmetries."
@@ -248,8 +229,6 @@ contains
         end do
 
         call init_identity()
-        SAFE_DEALLOCATE_A(rotation)
-        SAFE_DEALLOCATE_A(translation)
         POP_SUB(symmetries_init)
         return
       end if
@@ -258,29 +237,29 @@ contains
                                  typs(1), geo%natoms, symprec)
 
       ! spglib returns row-major not column-major matrices!!! --DAS
-      SAFE_ALLOCATE(rotation(1:3, 1:3, 1:max_size))
-      SAFE_ALLOCATE(translation(1:3, 1:max_size))
+      SAFE_ALLOCATE(this%rotation(1:3, 1:3, 1:max_size))
+      SAFE_ALLOCATE(this%translation(1:3, 1:max_size))
 
-      call spg_get_symmetry(fullnops, rotation(1, 1, 1), translation(1, 1), &
+      call spg_get_symmetry(this%fullnops, this%rotation(1, 1, 1), this%translation(1, 1), &
         max_size, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
 
       ! transpose due to array order difference between C and fortran
-      do iop = 1, fullnops
-        rotation(:,:,iop) = transpose(rotation(:,:,iop))
+      do iop = 1, this%fullnops
+        this%rotation(:,:,iop) = transpose(this%rotation(:,:,iop))
       end do
 
       ! we need to check that it is not a supercell, as in the QE routine (sgam_at)
       ! they disable fractional translations if the identity has one, because the sym ops might not form a group.
       ! spglib may return duplicate operations in this case!
-      is_supercell = (fullnops > 48)
+      is_supercell = (this%fullnops > 48)
       found_identity = .false.
       identity = reshape((/1, 0, 0, 0, 1, 0, 0, 0, 1/), shape(identity))
-      do iop = 1, fullnops
-        if(all(rotation(1:3, 1:3, iop) == identity(1:3, 1:3))) then
+      do iop = 1, this%fullnops
+        if(all(this%rotation(1:3, 1:3, iop) == identity(1:3, 1:3))) then
           found_identity = .true.
-          if(any(abs(translation(1:3, iop)) > real(symprec, REAL_PRECISION))) then
+          if(any(abs(this%translation(1:3, iop)) > real(symprec, REAL_PRECISION))) then
             is_supercell = .true.
-            write(message(1),'(a,3f12.6)') 'Identity has a fractional translation ', translation(1:3, iop)
+            write(message(1),'(a,3f12.6)') 'Identity has a fractional translation ', this%translation(1:3, iop)
             call messages_info(1)
           end if
         end if
@@ -321,41 +300,31 @@ contains
 
       end if
 
-      SAFE_ALLOCATE(this%ops(1:fullnops))
+      SAFE_ALLOCATE(this%ops(1:this%fullnops))
 
 
       ! check all operations and leave those that kept the symmetry-breaking
       ! direction invariant and (for the moment) that do not have a translation
       this%nops = 0
-      write(message(1),'(a7,a31,12x,a33)') 'Index', 'Rotation matrix', 'Fractional translations'
-      call messages_info(1)
-      do iop = 1, fullnops
+      do iop = 1, this%fullnops
         ! sometimes spglib may return lattice vectors as 'fractional' translations        
-        translation(:, iop) = translation(:, iop) - nint(translation(:, iop) + CNST(0.5)*symprec)
-        call symm_op_init(tmpop, rotation(:, :, iop), real(translation(:, iop), REAL_PRECISION))
+        this%translation(:, iop) = this%translation(:, iop) - nint(this%translation(:, iop) + CNST(0.5)*symprec)
+        call symm_op_init(tmpop, this%rotation(:, :, iop), real(this%translation(:, iop), REAL_PRECISION))
 
         if(symm_op_invariant(tmpop, this%breakdir, real(symprec, REAL_PRECISION)) &
          .and. .not. symm_op_has_translation(tmpop, real(symprec, REAL_PRECISION))) then
           this%nops = this%nops + 1
           call symm_op_copy(tmpop, this%ops(this%nops))
-
-          write(message(1),'(i5,1x,a,2x,3(3i4,2x),3f12.6)') this%nops, ':', rotation(1:3, 1:3, iop), translation(1:3, iop)
-          call messages_info(1)
         end if
         call symm_op_end(tmpop)
       end do
 
-      write(message(1), '(a,i5,a)') 'Info: The system has ', this%nops, ' symmetries that can be used.'
-      call messages_info()
-
-      SAFE_DEALLOCATE_A(rotation)
-      SAFE_DEALLOCATE_A(translation)
       SAFE_DEALLOCATE_A(position)
       SAFE_DEALLOCATE_A(typs)
 
     end if
 
-    call messages_print_stress(stdout)
+    call symmetries_write_info(this, periodic_dim, stdout)
 
     POP_SUB(symmetries_init)
     
@@ -377,6 +346,8 @@ contains
 
   end subroutine symmetries_init
 
+  
+
   ! -------------------------------------------------------------------------------
   subroutine symmetries_copy(inp, outp)
     type(symmetries_t),  intent(in)  :: inp
@@ -394,6 +365,17 @@ contains
     do iop = 1, outp%nops
       call symm_op_copy(inp%ops(iop), outp%ops(iop))
     end do
+
+    outp%group_name = inp%group_name
+    outp%group_elements = inp%group_elements
+    outp%symbol = inp%symbol
+    outp%schoenflies = inp%schoenflies
+     
+    outp%fullnops = inp%fullnops
+    SAFE_ALLOCATE(outp%rotation(1:3,1:3,inp%fullnops))
+    SAFE_ALLOCATE(outp%translation(1:3,inp%fullnops))
+    outp%rotation = inp%rotation
+    outp%translation = inp%translation
 
     POP_SUB(symmetries_copy)
   end subroutine symmetries_copy
@@ -414,6 +396,9 @@ contains
 
       SAFE_DEALLOCATE_A(this%ops)
     end if
+
+    SAFE_DEALLOCATE_A(this%rotation)
+    SAFE_DEALLOCATE_A(this%translation)
     
     POP_SUB(symmetries_end)
   end subroutine symmetries_end
@@ -474,6 +459,63 @@ contains
     end do
 
   end function symmetries_identity_index
+
+  ! ---------------------------------------------------------
+  subroutine symmetries_write_info(this, periodic_dim, iunit)
+    type(symmetries_t),    intent(in) :: this
+    integer,               intent(in) :: periodic_dim
+    integer,               intent(in) :: iunit
+    
+    integer :: iop
+    
+    PUSH_SUB(symmetries_write_info)
+    
+    call messages_print_stress(iunit, 'Symmetries')
+
+    if(this%any_non_spherical) then
+      message(1) = "Symmetries are disabled since non-spherically symmetric species may be present."
+      call messages_info(1,iunit = iunit)
+      call messages_print_stress(iunit)
+    end if
+
+    if(.not. this%symmetries_compute) then
+      message(1) = "Symmetries have been disabled by SymmetriesCompute = false."
+      call messages_info(1,iunit = iunit)
+      call messages_print_stress(iunit)
+      return
+    end if
+
+    if (periodic_dim == 0) then
+      if (this%symmetries_compute) then
+        call messages_write('Symmetry elements : '//trim(this%group_elements), new_line = .true.)
+        call messages_write('Symmetry group    : '//trim(this%group_name))
+        call messages_info(iunit = iunit)
+      end if
+    else
+      write(message(1),'(a, i4)') 'Space group No. ', this%space_group
+      write(message(2),'(2a)') 'International: ', trim(this%symbol)
+      write(message(3),'(2a)') 'Schoenflies: ', trim(this%schoenflies)
+      call messages_info(3,iunit = iunit)
+
+      ! list all operations and leave those that kept the symmetry-breaking
+      ! direction invariant and (for the moment) that do not have a translation
+      write(message(1),'(a7,a31,12x,a33)') 'Index', 'Rotation matrix', 'Fractional translations'
+      call messages_info(1,iunit = iunit)
+      do iop = 1, this%nops
+        if(symm_op_invariant(this%ops(this%nops), this%breakdir, real(symprec, REAL_PRECISION)) &
+         .and. .not. symm_op_has_translation(this%ops(this%nops), real(symprec, REAL_PRECISION))) then
+          write(message(1),'(i5,1x,a,2x,3(3i4,2x),3f12.6)') iop, ':', this%rotation(1:3, 1:3, iop), this%translation(1:3, iop)
+          call messages_info(1,iunit = iunit)
+        end if
+      end do
+      write(message(1), '(a,i5,a)') 'Info: The system has ', this%nops, ' symmetries that can be used.'
+      call messages_info(iunit = iunit)
+    end if
+    call messages_print_stress(iunit)
+
+    POP_SUB(symmetries_write_info)
+  end subroutine symmetries_write_info
+
 
 end module symmetries_oct_m
 
