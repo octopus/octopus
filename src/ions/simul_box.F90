@@ -38,6 +38,7 @@ module simul_box_oct_m
   use space_oct_m
   use species_oct_m
   use string_oct_m
+  use symm_op_oct_m
   use symmetries_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -62,7 +63,8 @@ module simul_box_oct_m
     simul_box_in_box_vec,       &
     simul_box_atoms_in_box,     &
     simul_box_copy,             &
-    simul_box_periodic_atom_in_box
+    simul_box_periodic_atom_in_box, &
+    simul_box_kpoints_symmetry_check
 
   integer, parameter, public :: &
     SPHERE         = 1,         &
@@ -160,6 +162,8 @@ contains
     ! we need k-points for periodic systems
     only_gamma_kpoint = (sb%periodic_dim == 0)
     call kpoints_init(sb%kpoints, sb%symm, sb%dim, sb%rlattice, sb%klattice, only_gamma_kpoint)
+
+    call simul_box_kpoints_symmetry_check(sb, geo, sb%kpoints, sb%dim)
 
     POP_SUB(simul_box_init)
 
@@ -1587,6 +1591,56 @@ contains
 
     POP_SUB(simul_box_min_distance)
   end function simul_box_min_distance
+
+
+    ! ---------------------------------------------------------
+  subroutine simul_box_kpoints_symmetry_check(this, geo, kpoints, dim)
+    type(simul_box_t),  intent(in) :: this
+    type(geometry_t),   intent(in) :: geo
+    type(kpoints_t),    intent(in) :: kpoints
+    integer,            intent(in) :: dim
+
+    integer :: ii, iq,  iop, iatom, iatom_symm, ikpoint
+    FLOAT :: ratom(1:MAX_DIM)
+
+    PUSH_SUB(simul_box_kpoints_symmetry_check)
+
+    ! We want to use for instance that
+    !
+    ! \int dr f(Rr) V_iatom(r) \nabla f(R(v)) = R\int dr f(r) V_iatom(R*r) f(r)
+    !
+    ! and that the operator R should map the position of atom
+    ! iatom to the position of some other atom iatom_symm, so that
+    !
+    ! V_iatom(R*r) = V_iatom_symm(r)
+    !
+    do ikpoint = 1, kpoints%full%npoints
+      do ii = 1, kpoints_get_num_symmetry_ops(kpoints, ikpoint)
+        iop = kpoints_get_symmetry_ops(kpoints, ikpoint, ii)
+
+        do iatom = 1, geo%natoms
+          ratom = M_ZERO
+          ratom(1:dim) = symm_op_apply_inv(this%symm%ops(iop), geo%atom(iatom)%x)
+
+          call simul_box_periodic_atom_in_box(this, geo, ratom)
+
+          ! find iatom_symm
+          do iatom_symm = 1, geo%natoms
+            if(all(abs(ratom(1:dim) - geo%atom(iatom_symm)%x(1:dim)) < CNST(1.0e-5))) exit
+          end do
+
+          if(iatom_symm > geo%natoms) then
+            write(message(1),'(a,i6)') 'Internal error: could not find symmetric partner for atom number', iatom
+            write(message(2),'(a,i3,a)') 'with symmetry operation number ', iop, '.'
+            call messages_fatal(2)
+          end if
+
+        end do
+      end do
+    end do
+
+    POP_SUB(simul_box_kpoints_symmetry_check)
+  end subroutine simul_box_kpoints_symmetry_check
 
 end module simul_box_oct_m
 
