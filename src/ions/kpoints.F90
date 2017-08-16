@@ -367,6 +367,8 @@ contains
     write(message(1),'(a)') ' '
     call messages_info(1)
 
+    call kpoints_check_symmetries(this, symm, dim, klattice)
+
     POP_SUB(kpoints_init)
 
   contains
@@ -1342,18 +1344,111 @@ contains
 
   end function kpoints_have_zero_weight_path
  
+  !--------------------------------------------------------
   integer pure function kpoints_get_kpoint_method(this) 
     type(kpoints_t),    intent(in) :: this
 
     kpoints_get_kpoint_method = this%method
   end function kpoints_get_kpoint_method
 
+  !--------------------------------------------------------
   FLOAT pure function kpoints_get_path_coord(this, ind) result(coord)
     type(kpoints_t),    intent(in) :: this
     integer,            intent(in) :: ind
 
     coord = this%coord_along_path(ind)
   end function 
+
+  
+
+  !--------------------------------------------------------
+  subroutine kpoints_check_symmetries(this, symm, dim, klattice)
+    type(kpoints_t),    intent(in) :: this
+    type(symmetries_t), intent(in) :: symm    
+    integer,            intent(in) :: dim
+    FLOAT,              intent(in) :: klattice(:,:)
+    
+    FLOAT, allocatable :: klength2(:), kmap(:)    
+    FLOAT :: kpt(1:MAX_DIM), kpt_abs(1:MAX_DIM), diff(1:MAX_DIM), symlength2
+    integer :: nik, ik, ik2, iop, idim
+
+    PUSH_SUB(kpoints_check_symmetries)
+
+    if(.not.this%use_symmetries) return
+
+    nik = this%reduced%npoints
+
+    SAFE_ALLOCATE(klength2(1:nik))
+    !Let's store the length to ease the comparison latter
+    do ik=1, nik
+      klength2(ik) = sum(this%reduced%point(1:dim,ik)**2)
+    end do
+
+    !A simple map to tell if the k-point as a matching symmetric point or not
+    SAFE_ALLOCATE(kmap(1:nik))
+    do ik=1, nik
+      kmap(ik) = ik
+    end do
+
+    do ik = 1, nik
+      if(kpoints_point_is_gamma(this, ik)) cycle
+      if (kmap(ik) /= ik) cycle
+ 
+      do iop = 1, symmetries_number(symm)
+        if(iop == symmetries_identity_index(symm)) cycle 
+
+        !We apply the symmetry
+        call symmetries_apply_kpoint(symm, iop, this%reduced%red_point(1:dim, ik), kpt)
+        !We remove potential umklapp
+        do idim = 1, dim
+          kpt(idim)=kpt(idim)-anint(kpt(idim)+M_HALF*SYMPREC)
+        end do
+        call kpoints_to_absolute(klattice, kpt(1:dim), kpt_abs(1:dim), dim)
+        !We get the length of the symmetric k-point 
+        symlength2 = sum(kpt_abs(1:dim)**2)
+
+        ! remove (mark) k-points which already have a symmetric point
+        do ik2 = ik + 1, nik
+          if (kmap(ik2) /= ik2) cycle
+          if ( abs(klength2(ik2)-symlength2) > symprec) cycle  
+          
+          diff(1:dim) = kpt(1:dim)-this%reduced%red_point(1:dim, ik)  
+          do idim = 1, dim
+            diff(idim)=diff(idim)-anint(diff(idim))
+          end do
+          if(sum(abs(diff(1:dim))) < symprec ) then
+            kmap(ik2) = -ik
+            kmap(ik) = -ik2
+            exit
+          end if
+
+          if(this%use_time_reversal) then
+            diff(1:dim) = -kpt(1:dim)-this%reduced%red_point(1:dim, ik)
+            do idim = 1, dim
+              diff(idim)=diff(idim)-anint(diff(idim))
+            end do
+            if(sum(abs(diff(1:dim))) < symprec ) then
+              kmap(ik2) = -ik
+              kmap(ik) = -ik2
+              exit
+            end if
+          end if
+        end do
+        !In case we have not found a symnetric k-point...
+        if(kmap(ik) == ik) then
+          write(message(1),'(a,i5,a)') "The reduced k-point ", ik, " has no symmetric for the following symmetry"
+          write(message(2),'(i5,1x,a,2x,3(3i4,2x))') iop, ':', symm%rotation(1:3, 1:3, iop)
+          message(3) = "Change your k-point grid or use KPointsUseSymmetries=no."
+          call messages_fatal(3)    
+        end if
+      end do 
+    end do
+
+    SAFE_DEALLOCATE_A(klength2)
+    SAFE_DEALLOCATE_A(kmap)
+ 
+    POP_SUB(kpoints_check_symmetries)
+  end subroutine kpoints_check_symmetries
 
 end module kpoints_oct_m
 

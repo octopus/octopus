@@ -63,7 +63,7 @@ module symmetries_oct_m
     real(8), allocatable     :: translation(:, :)
   end type symmetries_t
 
-  real(8), parameter :: symprec = CNST(1e-5)
+  real(8), parameter, public :: SYMPREC = CNST(1e-5)
 
   !> NOTE: unfortunately, these routines use global variables shared among them
   interface
