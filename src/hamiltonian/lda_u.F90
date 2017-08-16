@@ -169,7 +169,6 @@ contains
   type(multicomm_t),         intent(in)    :: mc
 
   integer :: maxorbs, iat, ispin, iorb
-  real(8) :: mem, coef
 
   PUSH_SUB(lda_u_init)
 
@@ -200,7 +199,7 @@ contains
   !% of the corresponding atom.
   !%End
   call parse_variable('OrbitalsTruncationMethod', OPTION__ORBITALSTRUNCATIONMETHOD__FULL, this%truncation)
-  call messages_print_var_value(stdout, 'OrbitalsTruncationMethod', this%truncation)
+  call messages_print_var_option(stdout, 'OrbitalsTruncationMethod', this%truncation)
 
   !%Variable OrbitalsThreshold_LDAU
   !%Type float
@@ -308,23 +307,6 @@ contains
   this%nspins = st%d%nspin
   this%nspecies = geo%nspecies
   this%st_end = st%st_end
-
-  !We analyse the memeory and we print the requiered memory
-  !Thus, if there is not enough memory, the user knows with the code crashes
-  mem = 0.0_8
-  coef = 2.0_8
-  if (states_are_real(st)) coef = 1.0_8
-  mem = mem + coef*REAL_PRECISION*dble(maxorbs**2*st%d%nspin*this%norbsets*2) !Occupation matrices and potentials
-  mem = mem + coef*REAL_PRECISION*dble(maxorbs*st%d%nspin*this%norbsets)    !Orbital occupations
-  if(this%useACBN0) then
-    mem = mem + REAL_PRECISION*dble(maxorbs**4*st%d%nspin*this%norbsets) !Coulomb intergrals
-    mem = mem + REAL_PRECISION*dble(18*(st%d%kpt%end-st%d%kpt%start+1)*(st%st_end-st%st_start+1)) !On-site occupations
-  end if
-  call messages_new_line()
-  call messages_write('    Approximate memory requirement for LDA+U (for each task)   :')
-  call messages_write(mem, units = unit_megabytes)
-  call messages_new_line()
-  call messages_info()
 
   !We allocate the necessary ressources
   if (states_are_real(st)) then
