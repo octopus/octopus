@@ -100,7 +100,7 @@ contains
     !R_{cart} = A*R_{red}*A^{-1}
     !Where A is the matrix containing the lattice vectors as column
     this%rot_cart(1:3, 1:3)  = matmul(rlattice(1:3, 1:3), &
-                    matmul(rot(1:3, 1:3),klattice(1:3, 1:3)/ (M_TWO * M_PI)))
+                    matmul(rot(1:3, 1:3),transpose(klattice(1:3, 1:3))/ (M_TWO * M_PI)))
 
     if(present(trans)) then
       this%trans_red(1:3) = trans(1:3)
@@ -111,7 +111,7 @@ contains
     end if
 
     if(sum(abs(matmul(this%rot_cart,transpose(this%rot_cart)) &
-              -reshape((/1, 0, 0, 0, 1, 0, 0, 0, 1/), (/3, 3/))))>M_EPSILON) then
+              -reshape((/1, 0, 0, 0, 1, 0, 0, 0, 1/), (/3, 3/))))>CNST(1.0e-6)) then
       message(1) = "Internal error: This matrix is not a rotation matrix"
       write(message(2),'(3(3f7.3,2x))') this%rot_cart
       call messages_fatal(2) 
