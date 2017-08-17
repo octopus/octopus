@@ -41,8 +41,8 @@ module symm_op_oct_m
 
   type symm_op_t
     private
-    integer :: rotation(1:3, 1:3)
-    FLOAT   :: translation(1:3)
+    FLOAT  :: rotation(1:3, 1:3)
+    FLOAT  :: translation(1:3)
   end type symm_op_t
   
   interface symm_op_apply
@@ -70,6 +70,12 @@ contains
       this%translation(1:3) = M_ZERO
     end if
 
+    if(sum(abs(matmul(this%rotation,transpose(this%rotation)) &
+              -reshape((/1, 0, 0, 0, 1, 0, 0, 0, 1/), (/3, 3/))))>M_EPSILON) then
+      message(1) = "Internal error: This matrix is not a rotation matrix"
+      write(message(2),'(3(3f7.3,2x))') this%rotation
+      call messages_fatal(2) 
+    end if
     POP_SUB(symm_op_init)
   end subroutine symm_op_init
   
