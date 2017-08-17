@@ -26,6 +26,7 @@ module kpoints_oct_m
   use parser_oct_m
   use profiling_oct_m
   use sort_oct_m
+  use symm_op_oct_m
   use symmetries_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -305,6 +306,11 @@ contains
     if(parse_is_defined('KPointsReduced').or. parse_is_defined('KPoints')) then
       this%method = this%method + KPOINTS_USER
 
+      if(this%use_symmetries) then
+        write(message(1), '(a)') "User-defined k-points are not compatible with KPointsUseSymmetries=yes."
+        call messages_warning(1)
+      end if
+
       call read_user_kpoints()
     end if
 
@@ -312,6 +318,10 @@ contains
     if(parse_is_defined('KPointsPath')) then
       this%method = this%method + KPOINTS_PATH
        
+      if(this%use_symmetries) then
+        write(message(1), '(a)') "KPointsPath is not compatible with KPointsUseSymmetries=yes."
+        call messages_warning(1)
+      end if
       call read_path() 
     end if
 
@@ -367,7 +377,7 @@ contains
     write(message(1),'(a)') ' '
     call messages_info(1)
 
-    call kpoints_check_symmetries(this, symm, dim, klattice)
+    call kpoints_check_symmetries(this, this%full, symm, dim, klattice)
 
     POP_SUB(kpoints_init)
 
@@ -534,6 +544,8 @@ contains
       do ik = 1, this%reduced%npoints
         call kpoints_to_absolute(klattice, this%reduced%red_point(:, ik), this%reduced%point(:, ik), dim)
       end do
+
+!      call kpoints_check_symmetries(this, this%full, symm, dim, klattice)call kpoints_check_symmetries(this, this%full, symm, dim, klattice)
 
       POP_SUB(kpoints_init.read_MP)
     end subroutine read_MP
@@ -1362,11 +1374,12 @@ contains
   
 
   !--------------------------------------------------------
-  subroutine kpoints_check_symmetries(this, symm, dim, klattice)
-    type(kpoints_t),    intent(in) :: this
-    type(symmetries_t), intent(in) :: symm    
-    integer,            intent(in) :: dim
-    FLOAT,              intent(in) :: klattice(:,:)
+  subroutine kpoints_check_symmetries(this, grid, symm, dim, klattice)
+    type(kpoints_t),      intent(in) :: this
+    type(kpoints_grid_t), intent(in) :: grid
+    type(symmetries_t),   intent(in) :: symm    
+    integer,              intent(in) :: dim
+    FLOAT,                intent(in) :: klattice(:,:)
     
     FLOAT, allocatable :: klength2(:), kmap(:)    
     FLOAT :: kpt(1:MAX_DIM), kpt_abs(1:MAX_DIM), diff(1:MAX_DIM), symlength2
@@ -1376,29 +1389,33 @@ contains
 
     if(.not.this%use_symmetries) return
 
-    nik = this%reduced%npoints
+    nik = grid%npoints
 
     SAFE_ALLOCATE(klength2(1:nik))
     !Let's store the length to ease the comparison latter
-    do ik=1, nik
-      klength2(ik) = sum(this%reduced%point(1:dim,ik)**2)
+    do ik= 1, nik
+      klength2(ik) = sum(grid%point(1:dim,ik)**2)
     end do
 
     !A simple map to tell if the k-point as a matching symmetric point or not
     SAFE_ALLOCATE(kmap(1:nik))
-    do ik=1, nik
-      kmap(ik) = ik
-    end do
 
-    do ik = 1, nik
-      if(kpoints_point_is_gamma(this, ik)) cycle
-      if (kmap(ik) /= ik) cycle
- 
-      do iop = 1, symmetries_number(symm)
-        if(iop == symmetries_identity_index(symm)) cycle 
+    do iop = 1, symmetries_number(symm)
+      if(iop == symmetries_identity_index(symm)) cycle
+     
+      
+      write(message(1),'(i5,1x,a,2x,3(3i4,2x))') iop, ':', symm_op_rotation_matrix(symm%ops(iop))
+      call messages_info(1)
 
+      do ik=1, nik
+        kmap(ik) = ik
+      end do
+
+      do ik = 1, nik
+        if(kpoints_point_is_gamma(this, ik)) cycle
+        if (kmap(ik) /= ik) cycle
         !We apply the symmetry
-        call symmetries_apply_kpoint(symm, iop, this%reduced%red_point(1:dim, ik), kpt)
+        call symmetries_apply_kpoint(symm, iop, grid%red_point(1:dim, ik), kpt)
         !We remove potential umklapp
         do idim = 1, dim
           kpt(idim)=kpt(idim)-anint(kpt(idim)+M_HALF*SYMPREC)
@@ -1409,39 +1426,34 @@ contains
 
         ! remove (mark) k-points which already have a symmetric point
         do ik2 = ik + 1, nik
+          print *, "Comparing ", ik, " with ", ik2, " for iop=", iop
+          print *, kpt(1:dim)
+          print *, kpt_abs(1:dim), grid%point(1:dim, ik2)
+          print *, klength2(ik2), symlength2, klength2(ik)
+          print *, ''
           if (kmap(ik2) /= ik2) cycle
-          if ( abs(klength2(ik2)-symlength2) > symprec) cycle  
-          
-          diff(1:dim) = kpt(1:dim)-this%reduced%red_point(1:dim, ik)  
+          if ( abs(klength2(ik2) - symlength2) > SYMPREC ) cycle  
+
+          diff(1:dim) = kpt(1:dim)-grid%red_point(1:dim, ik2)  
           do idim = 1, dim
             diff(idim)=diff(idim)-anint(diff(idim))
           end do
           if(sum(abs(diff(1:dim))) < symprec ) then
-            kmap(ik2) = -ik
             kmap(ik) = -ik2
+            kmap(ik2) = -ik
             exit
-          end if
-
-          if(this%use_time_reversal) then
-            diff(1:dim) = -kpt(1:dim)-this%reduced%red_point(1:dim, ik)
-            do idim = 1, dim
-              diff(idim)=diff(idim)-anint(diff(idim))
-            end do
-            if(sum(abs(diff(1:dim))) < symprec ) then
-              kmap(ik2) = -ik
-              kmap(ik) = -ik2
-              exit
-            end if
           end if
         end do
         !In case we have not found a symnetric k-point...
         if(kmap(ik) == ik) then
-          write(message(1),'(a,i5,a)') "The reduced k-point ", ik, " has no symmetric for the following symmetry"
-          write(message(2),'(i5,1x,a,2x,3(3i4,2x))') iop, ':', symm%rotation(1:3, 1:3, iop)
+          write(message(1),'(a,i5,a2,3(f7.3,a2),a)') "The reduced k-point ", ik, " (", &
+           grid%red_point(1, ik), ", ", grid%red_point(2, ik), ", ", grid%red_point(3, ik),  &
+           ") ", "has no symmetric for the following symmetry"
+          write(message(2),'(i5,1x,a,2x,3(3i4,2x))') iop, ':', symm_op_rotation_matrix(symm%ops(iop))
           message(3) = "Change your k-point grid or use KPointsUseSymmetries=no."
           call messages_fatal(3)    
         end if
-      end do 
+      end do
     end do
 
     SAFE_DEALLOCATE_A(klength2)
