@@ -58,9 +58,6 @@ module symmetries_oct_m
     character(len=30)        :: group_elements
     character(len=11)        :: symbol
     character(len=7)         :: schoenflies
-    integer                  :: fullnops
-    integer, allocatable     :: rotation(:, :, :)
-    real(8), allocatable     :: translation(:, :)
   end type symmetries_t
 
   real(8), parameter, public :: SYMPREC = CNST(1e-5)
@@ -118,6 +115,10 @@ contains
     type(symm_op_t) :: tmpop
     integer :: natoms, identity(3,3)
     logical :: found_identity, is_supercell
+    integer                  :: fullnops
+    integer, allocatable     :: rotation(:, :, :)
+    real(8), allocatable     :: translation(:, :)
+
 
     PUSH_SUB(symmetries_init)
 
@@ -237,29 +238,29 @@ contains
                                  typs(1), geo%natoms, symprec)
 
       ! spglib returns row-major not column-major matrices!!! --DAS
-      SAFE_ALLOCATE(this%rotation(1:3, 1:3, 1:max_size))
-      SAFE_ALLOCATE(this%translation(1:3, 1:max_size))
+      SAFE_ALLOCATE(rotation(1:3, 1:3, 1:max_size))
+      SAFE_ALLOCATE(translation(1:3, 1:max_size))
 
-      call spg_get_symmetry(this%fullnops, this%rotation(1, 1, 1), this%translation(1, 1), &
+      call spg_get_symmetry(fullnops, rotation(1, 1, 1), translation(1, 1), &
         max_size, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
 
       ! transpose due to array order difference between C and fortran
-      do iop = 1, this%fullnops
-        this%rotation(:,:,iop) = transpose(this%rotation(:,:,iop))
+      do iop = 1, fullnops
+        rotation(:,:,iop) = transpose(rotation(:,:,iop))
       end do
 
       ! we need to check that it is not a supercell, as in the QE routine (sgam_at)
       ! they disable fractional translations if the identity has one, because the sym ops might not form a group.
       ! spglib may return duplicate operations in this case!
-      is_supercell = (this%fullnops > 48)
+      is_supercell = (fullnops > 48)
       found_identity = .false.
       identity = reshape((/1, 0, 0, 0, 1, 0, 0, 0, 1/), shape(identity))
-      do iop = 1, this%fullnops
-        if(all(this%rotation(1:3, 1:3, iop) == identity(1:3, 1:3))) then
+      do iop = 1, fullnops
+        if(all(rotation(1:3, 1:3, iop) == identity(1:3, 1:3))) then
           found_identity = .true.
-          if(any(abs(this%translation(1:3, iop)) > real(symprec, REAL_PRECISION))) then
+          if(any(abs(translation(1:3, iop)) > real(symprec, REAL_PRECISION))) then
             is_supercell = .true.
-            write(message(1),'(a,3f12.6)') 'Identity has a fractional translation ', this%translation(1:3, iop)
+            write(message(1),'(a,3f12.6)') 'Identity has a fractional translation ', translation(1:3, iop)
             call messages_info(1)
           end if
         end if
@@ -300,19 +301,19 @@ contains
 
       end if
 
-      SAFE_ALLOCATE(this%ops(1:this%fullnops))
+      SAFE_ALLOCATE(this%ops(1:fullnops))
 
 
       ! check all operations and leave those that kept the symmetry-breaking
       ! direction invariant and (for the moment) that do not have a translation
       this%nops = 0
-      do iop = 1, this%fullnops
+      do iop = 1, fullnops
         ! sometimes spglib may return lattice vectors as 'fractional' translations        
-        this%translation(:, iop) = this%translation(:, iop) - nint(this%translation(:, iop) + CNST(0.5)*symprec)
-        call symm_op_init(tmpop, this%rotation(:, :, iop), real(this%translation(:, iop), REAL_PRECISION))
+        translation(:, iop) = translation(:, iop) - nint(translation(:, iop) + CNST(0.5)*SYMPREC)
+        call symm_op_init(tmpop, rotation(:, :, iop), real(translation(:, iop), REAL_PRECISION))
 
-        if(symm_op_invariant(tmpop, this%breakdir, real(symprec, REAL_PRECISION)) &
-         .and. .not. symm_op_has_translation(tmpop, real(symprec, REAL_PRECISION))) then
+        if(symm_op_invariant(tmpop, this%breakdir, real(SYMPREC, REAL_PRECISION)) &
+         .and. .not. symm_op_has_translation(tmpop, real(SYMPREC, REAL_PRECISION))) then
           this%nops = this%nops + 1
           call symm_op_copy(tmpop, this%ops(this%nops))
         end if
@@ -321,6 +322,8 @@ contains
 
       SAFE_DEALLOCATE_A(position)
       SAFE_DEALLOCATE_A(typs)
+      SAFE_DEALLOCATE_A(rotation)
+      SAFE_DEALLOCATE_A(translation)
 
     end if
 
@@ -370,12 +373,6 @@ contains
     outp%group_elements = inp%group_elements
     outp%symbol = inp%symbol
     outp%schoenflies = inp%schoenflies
-     
-    outp%fullnops = inp%fullnops
-    SAFE_ALLOCATE(outp%rotation(1:3,1:3,inp%fullnops))
-    SAFE_ALLOCATE(outp%translation(1:3,inp%fullnops))
-    outp%rotation = inp%rotation
-    outp%translation = inp%translation
 
     POP_SUB(symmetries_copy)
   end subroutine symmetries_copy
@@ -397,9 +394,6 @@ contains
       SAFE_DEALLOCATE_A(this%ops)
     end if
 
-    SAFE_DEALLOCATE_A(this%rotation)
-    SAFE_DEALLOCATE_A(this%translation)
-    
     POP_SUB(symmetries_end)
   end subroutine symmetries_end
 
