@@ -41,7 +41,8 @@ module symmetries_oct_m
     symmetries_copy,               &
     symmetries_end,                &
     symmetries_number,             &
-    symmetries_apply_kpoint,       &
+    symmetries_apply_kpoint_red,   &
+    symmetries_apply_kpoint_cart,  &
     symmetries_space_group_number, &
     symmetries_have_break_dir,     &
     symmetries_identity_index,     &
@@ -310,9 +311,10 @@ contains
       do iop = 1, fullnops
         ! sometimes spglib may return lattice vectors as 'fractional' translations        
         translation(:, iop) = translation(:, iop) - nint(translation(:, iop) + CNST(0.5)*SYMPREC)
-        call symm_op_init(tmpop, rotation(:, :, iop), real(translation(:, iop), REAL_PRECISION))
+        call symm_op_init(tmpop, rotation(:, :, iop), rlattice, klattice, &
+                              real(translation(:, iop), REAL_PRECISION))
 
-        if(symm_op_invariant(tmpop, this%breakdir, real(SYMPREC, REAL_PRECISION)) &
+        if(symm_op_invariant_cart(tmpop, this%breakdir, real(SYMPREC, REAL_PRECISION)) &
          .and. .not. symm_op_has_translation(tmpop, real(SYMPREC, REAL_PRECISION))) then
           this%nops = this%nops + 1
           call symm_op_copy(tmpop, this%ops(this%nops))
@@ -339,7 +341,8 @@ contains
       
       SAFE_ALLOCATE(this%ops(1:1))
       this%nops = 1
-      call symm_op_init(this%ops(1), reshape((/1, 0, 0, 0, 1, 0, 0, 0, 1/), (/3, 3/)))
+      call symm_op_init(this%ops(1), reshape((/1, 0, 0, 0, 1, 0, 0, 0, 1/), (/3, 3/)), & 
+                  rlattice, klattice)
       this%breakdir = M_ZERO
       this%space_group = 1
       
@@ -407,20 +410,38 @@ contains
 
   ! -------------------------------------------------------------------------------
 
-  subroutine symmetries_apply_kpoint(this, iop, aa, bb)
+  subroutine symmetries_apply_kpoint_red(this, iop, aa, bb)
     type(symmetries_t),  intent(in)  :: this
     integer,             intent(in)  :: iop
     FLOAT,               intent(in)  :: aa(1:3)
     FLOAT,               intent(out) :: bb(1:3)
 
-    PUSH_SUB(symmetries_apply_kpoint)
+    PUSH_SUB(symmetries_apply_kpoint_red)
 
     ASSERT(0 < iop .and. iop <= this%nops)
 
-    bb(1:3) = symm_op_apply_inv(this%ops(iop), aa(1:3))
+    bb(1:3) = symm_op_apply_inv_red(this%ops(iop), aa(1:3))
 
-    POP_SUB(symmetries_apply_kpoint)
-  end subroutine symmetries_apply_kpoint
+    POP_SUB(symmetries_apply_kpoint_red)
+  end subroutine symmetries_apply_kpoint_red
+
+  ! -------------------------------------------------------------------------------
+
+  subroutine symmetries_apply_kpoint_cart(this, iop, aa, bb)
+    type(symmetries_t),  intent(in)  :: this
+    integer,             intent(in)  :: iop
+    FLOAT,               intent(in)  :: aa(1:3)
+    FLOAT,               intent(out) :: bb(1:3)
+
+    PUSH_SUB(symmetries_apply_kpoint_cart)
+
+    ASSERT(0 < iop .and. iop <= this%nops)
+
+    bb(1:3) = symm_op_apply_inv_cart(this%ops(iop), aa(1:3))
+
+    POP_SUB(symmetries_apply_kpoint_cart)
+  end subroutine symmetries_apply_kpoint_cart
+
 
   ! -------------------------------------------------------------------------------
 
@@ -497,8 +518,8 @@ contains
       write(message(1),'(a7,a31,12x,a33)') 'Index', 'Rotation matrix', 'Fractional translations'
       call messages_info(1,iunit = iunit)
       do iop = 1, this%nops
-        write(message(1),'(i5,1x,a,2x,3(3i4,2x),3f12.6)') iop, ':', symm_op_rotation_matrix(this%ops(iop)), &
-                                                                    symm_op_translation_vector(this%ops(iop))
+        write(message(1),'(i5,1x,a,2x,3(3i4,2x),3f12.6)') iop, ':', symm_op_rotation_matrix_red(this%ops(iop)), &
+                                                                    symm_op_translation_vector_red(this%ops(iop))
         call messages_info(1,iunit = iunit)
       end do
       write(message(1), '(a,i5,a)') 'Info: The system has ', this%nops, ' symmetries that can be used.'

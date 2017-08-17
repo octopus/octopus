@@ -102,7 +102,7 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
 
     ! iterate over all points that go to this point by a symmetry operation
     do iop = 1, nops
-      srcpoint = symm_op_apply(this%mesh%sb%symm%ops(iop), destpoint) 
+      srcpoint = symm_op_apply_red(this%mesh%sb%symm%ops(iop), destpoint) 
 
       ! move back to reference to origin at corner of cell
       srcpoint = srcpoint + lsize / 2
@@ -125,7 +125,7 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
         acc = acc + field_global(ipsrc)
       end if
       if(present(field_vector)) then
-        acc_vector(1:3) = acc_vector(1:3) + symm_op_apply(this%mesh%sb%symm%ops(iop), field_global_vector(ipsrc, 1:3))
+        acc_vector(1:3) = acc_vector(1:3) + symm_op_apply_cart(this%mesh%sb%symm%ops(iop), field_global_vector(ipsrc, 1:3))
       end if
     end do
     if(present(field)) &
@@ -168,28 +168,28 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
 end subroutine X(symmetrizer_apply)
 
 ! -------------------------------------------------------------------------------
-subroutine X(symmetrize_tensor)(symm, tensor)
+subroutine X(symmetrize_tensor_cart)(symm, tensor)
   type(symmetries_t), intent(in)    :: symm
   R_TYPE,             intent(inout) :: tensor(:,:) !< (3, 3)
   
   integer :: iop, nops
   R_TYPE :: tensor_symm(3, 3)
   
-  PUSH_SUB(X(symmetrize_tensor))
+  PUSH_SUB(X(symmetrize_tensor_cart))
 
   nops = symmetries_number(symm)
   
   tensor_symm(:,:) = M_ZERO
   do iop = 1, nops
     tensor_symm(:,:) = tensor_symm(:,:) + &
-      matmul(matmul(dble(transpose(symm_op_rotation_matrix(symm%ops(iop)))), tensor(1:3, 1:3)), &
-      dble(symm_op_rotation_matrix(symm%ops(iop))))
+      matmul(matmul(dble(transpose(symm_op_rotation_matrix_cart(symm%ops(iop)))), tensor(1:3, 1:3)), &
+      dble(symm_op_rotation_matrix_cart(symm%ops(iop))))
   end do
 
   tensor(1:3,1:3) = tensor_symm(1:3,1:3) / nops
 
-  POP_SUB(X(symmetrize_tensor))
-end subroutine X(symmetrize_tensor)
+  POP_SUB(X(symmetrize_tensor_cart))
+end subroutine X(symmetrize_tensor_cart)
 
 ! -------------------------------------------------------------------------------
 ! The magneto-optical response 
@@ -199,7 +199,7 @@ end subroutine X(symmetrize_tensor)
 ! However, it should change sign upon permutation in the order of axes (x,y -> y,x).
 ! Therefore, contribution from a rotation symmetry should be multiplied by the
 ! determinant of the rotation matrix ignoring signs of the rotation matrix elements.
-subroutine X(symmetrize_magneto_optics)(symm, tensor) 
+subroutine X(symmetrize_magneto_optics_cart)(symm, tensor) 
   type(symmetries_t),   intent(in)    :: symm 
   R_TYPE,               intent(inout) :: tensor(:,:,:) !< (3, 3, 3)
   
@@ -209,7 +209,7 @@ subroutine X(symmetrize_magneto_optics)(symm, tensor)
   integer :: idir1, idir2, idir3, ndir
   integer :: i1, i2, i3, det
   
-  PUSH_SUB(X(symmetrize_magneto_optics))
+  PUSH_SUB(X(symmetrize_magneto_optics_cart))
     
   ndir = 3
   
@@ -218,7 +218,7 @@ subroutine X(symmetrize_magneto_optics)(symm, tensor)
   tensor_symm(:,:,:) = M_ZERO
   
   do iop = 1, nops
-    rot = symm_op_rotation_matrix(symm%ops(iop))
+    rot = symm_op_rotation_matrix_cart(symm%ops(iop))
     det = abs(rot(1,1) * rot(2,2) * rot(3,3)) + abs(rot(1,2) * rot(2,3) * rot(3,1)) &
       + abs(rot(1,3) * rot(2,1) * rot(3,2)) - abs(rot(1,1) * rot(2,3) * rot(3,2)) &
       - abs(rot(1,2) * rot(2,1) * rot(3,3)) - abs(rot(1,3) * rot(2,2) * rot(3,1))
@@ -239,8 +239,8 @@ subroutine X(symmetrize_magneto_optics)(symm, tensor)
   end do
   tensor(1:3,1:3,1:3) = tensor_symm(1:3,1:3,1:3) / nops
 
-  POP_SUB(X(symmetrize_magneto_optics))
-end subroutine X(symmetrize_magneto_optics)
+  POP_SUB(X(symmetrize_magneto_optics_cart))
+end subroutine X(symmetrize_magneto_optics_cart)
 
 !! Local Variables:
 !! mode: f90

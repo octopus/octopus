@@ -377,8 +377,6 @@ contains
     write(message(1),'(a)') ' '
     call messages_info(1)
 
-    call kpoints_check_symmetries(this, this%full, symm, dim, klattice)
-
     POP_SUB(kpoints_init)
 
   contains
@@ -487,7 +485,17 @@ contains
       call kpoints_grid_generate(dim, this%nik_axis(1:dim), this%full%nshifts, &
                this%full%shifts(1:dim,1:this%full%nshifts), this%full%red_point)
 
+      do ik = 1, this%full%npoints
+        call kpoints_to_absolute(klattice, this%full%red_point(:, ik), this%full%point(:, ik), dim)
+      end do
+
       this%full%weight = M_ONE / this%full%npoints
+
+      if(this%use_symmetries) then
+        message(1) = "Checking if the generated full k-point grid is symmetric";
+        call messages_info(1)
+        call kpoints_check_symmetries(this%full, symm, dim, klattice)
+      end if
 
       call kpoints_grid_copy(this%full, this%reduced)
 
@@ -505,7 +513,7 @@ contains
         
         call kpoints_grid_reduce(symm, this%use_time_reversal, &
           this%reduced%npoints, dim, this%reduced%red_point, this%reduced%weight, symm_ops, num_symm_ops)
-        
+       
         ! sanity checks
         ASSERT(maxval(num_symm_ops) >= 1)
         if(this%use_time_reversal) then
@@ -536,16 +544,16 @@ contains
         this%symmetry_ops(1:this%reduced%npoints, 1) = 1
         
       end if
-      
-      do ik = 1, this%full%npoints
-        call kpoints_to_absolute(klattice, this%full%red_point(:, ik), this%full%point(:, ik), dim)
-      end do
-
+     
       do ik = 1, this%reduced%npoints
         call kpoints_to_absolute(klattice, this%reduced%red_point(:, ik), this%reduced%point(:, ik), dim)
       end do
 
-!      call kpoints_check_symmetries(this, this%full, symm, dim, klattice)call kpoints_check_symmetries(this, this%full, symm, dim, klattice)
+      if(this%use_symmetries) then
+        message(1) = "Checking if the generated irreducible k-point grid is symmetric";
+        call messages_info(1)
+        call kpoints_check_symmetries(this%reduced, symm, dim, klattice)
+      end if
 
       POP_SUB(kpoints_init.read_MP)
     end subroutine read_MP
@@ -1164,7 +1172,7 @@ contains
       do iop = 1, symmetries_number(symm)
         if(iop == symmetries_identity_index(symm)) cycle ! no need to check for the identity
 
-        call symmetries_apply_kpoint(symm, iop, reduced(1:dim, nreduced), tran)
+        call symmetries_apply_kpoint_red(symm, iop, reduced(1:dim, nreduced), tran)
         tran_inv(1:dim) = -tran(1:dim)
            
         ! remove (mark) k-points related to irreducible reduced by symmetry
@@ -1374,20 +1382,17 @@ contains
   
 
   !--------------------------------------------------------
-  subroutine kpoints_check_symmetries(this, grid, symm, dim, klattice)
-    type(kpoints_t),      intent(in) :: this
+  subroutine kpoints_check_symmetries(grid, symm, dim, klattice)
     type(kpoints_grid_t), intent(in) :: grid
     type(symmetries_t),   intent(in) :: symm    
     integer,              intent(in) :: dim
     FLOAT,                intent(in) :: klattice(:,:)
     
-    FLOAT, allocatable :: klength2(:), kmap(:)    
+    FLOAT, allocatable :: kmap(:), klength2(:)
     FLOAT :: kpt(1:MAX_DIM), kpt_abs(1:MAX_DIM), diff(1:MAX_DIM), symlength2
     integer :: nik, ik, ik2, iop, idim
 
     PUSH_SUB(kpoints_check_symmetries)
-
-    if(.not.this%use_symmetries) return
 
     nik = grid%npoints
 
@@ -1403,19 +1408,14 @@ contains
     do iop = 1, symmetries_number(symm)
       if(iop == symmetries_identity_index(symm)) cycle
      
-      
-      write(message(1),'(i5,1x,a,2x,3(3i4,2x))') iop, ':', symm_op_rotation_matrix(symm%ops(iop))
-      call messages_info(1)
-
       do ik=1, nik
         kmap(ik) = ik
       end do
 
       do ik = 1, nik
-        if(kpoints_point_is_gamma(this, ik)) cycle
-        if (kmap(ik) /= ik) cycle
+  !      if (kmap(ik) /= ik) cycle
         !We apply the symmetry
-        call symmetries_apply_kpoint(symm, iop, grid%red_point(1:dim, ik), kpt)
+        call symmetries_apply_kpoint_red(symm, iop, grid%red_point(1:dim, ik), kpt)
         !We remove potential umklapp
         do idim = 1, dim
           kpt(idim)=kpt(idim)-anint(kpt(idim)+M_HALF*SYMPREC)
@@ -1425,22 +1425,26 @@ contains
         symlength2 = sum(kpt_abs(1:dim)**2)
 
         ! remove (mark) k-points which already have a symmetric point
-        do ik2 = ik + 1, nik
-          print *, "Comparing ", ik, " with ", ik2, " for iop=", iop
-          print *, kpt(1:dim)
-          print *, kpt_abs(1:dim), grid%point(1:dim, ik2)
-          print *, klength2(ik2), symlength2, klength2(ik)
-          print *, ''
-          if (kmap(ik2) /= ik2) cycle
-          if ( abs(klength2(ik2) - symlength2) > SYMPREC ) cycle  
+        do ik2 = 1, nik
+!          if ( abs(klength2(ik2) - klength2(ik)) > SYMPREC ) cycle
+ !         if (kmap(ik2) /= ik2) cycle
+ !         if(iop == 2) then
+ !         print *, "Comparing ", ik, " with ", ik2, " for iop=", iop
+ !         print *, grid%red_point(1:dim, ik)
+ !         print *, kpt(1:dim)
+ !         print *, grid%red_point(1:dim, ik2)
+ !         print *, klength2(ik2), symlength2
+ !         print '(i5,1x,a,2x,3(3i4,2x))', iop, ':', symm_op_rotation_matrix_red(symm%ops(iop))
+ !         print *, ''
+ !         end if
 
           diff(1:dim) = kpt(1:dim)-grid%red_point(1:dim, ik2)  
           do idim = 1, dim
             diff(idim)=diff(idim)-anint(diff(idim))
           end do
+          !We found point corresponding to the symmetric kpoint
           if(sum(abs(diff(1:dim))) < symprec ) then
             kmap(ik) = -ik2
-            kmap(ik2) = -ik
             exit
           end if
         end do
@@ -1448,8 +1452,8 @@ contains
         if(kmap(ik) == ik) then
           write(message(1),'(a,i5,a2,3(f7.3,a2),a)') "The reduced k-point ", ik, " (", &
            grid%red_point(1, ik), ", ", grid%red_point(2, ik), ", ", grid%red_point(3, ik),  &
-           ") ", "has no symmetric for the following symmetry"
-          write(message(2),'(i5,1x,a,2x,3(3i4,2x))') iop, ':', symm_op_rotation_matrix(symm%ops(iop))
+           ") ", "has no symmetric in the k-point grid for the following symmetry"
+          write(message(2),'(i5,1x,a,2x,3(3i4,2x))') iop, ':', symm_op_rotation_matrix_red(symm%ops(iop))
           message(3) = "Change your k-point grid or use KPointsUseSymmetries=no."
           call messages_fatal(3)    
         end if

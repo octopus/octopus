@@ -176,7 +176,7 @@ contains
         do ik = 1, sb%kpoints%reduced%npoints
           do iop = 1, sb%kpoints%num_symmetry_ops(ik)
             iop2 = sb%kpoints%symmetry_ops(ik, iop)
-            if(.not. symm_op_invariant(sb%symm%ops(iop2), this%vecpot, CNST(1e-5))) then
+            if(.not. symm_op_invariant_cart(sb%symm%ops(iop2), this%vecpot, CNST(1e-5))) then
               message(1) = "The GaugeVectorField breaks (at least) one of the symmetries used to reduce the k-points."
               message(2) = "Set SymmetryBreakDir equal to GaugeVectorField."
               call messages_fatal(2)

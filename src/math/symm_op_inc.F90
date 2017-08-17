@@ -17,25 +17,47 @@
 !!
 
 ! -------------------------------------------------------------------------------
-pure function X(symm_op_apply)(this, aa) result(bb)
+pure function X(symm_op_apply_red)(this, aa) result(bb)
   type(symm_op_t),  intent(in)  :: this
   R_TYPE,           intent(in)  :: aa(:) !< (3)
   R_TYPE                        :: bb(1:3)
   
-  bb(1:3) = matmul(aa(1:3), this%rotation(1:3, 1:3)) + this%translation(1:3)
-  
-end function X(symm_op_apply)
+  bb(1:3) = matmul(dble(this%rot_red_inv(1:3, 1:3)), aa(1:3)) + this%trans_red(1:3)
+ 
+end function X(symm_op_apply_red)
 
 ! -------------------------------------------------------------------------------
-pure function X(symm_op_apply_inv)(this, aa) result(bb)
+pure function X(symm_op_apply_inv_red)(this, aa) result(bb)
   type(symm_op_t),  intent(in)  :: this
   R_TYPE,           intent(in)  :: aa(:) !< (3)
   R_TYPE                        :: bb(1:3)
   
-  bb(1:3) = aa(1:3) - this%translation(1:3)
-  bb(1:3) = matmul(this%rotation(1:3, 1:3), bb(1:3))
-  
-end function X(symm_op_apply_inv)
+  bb(1:3) = aa(1:3) - this%trans_red(1:3)
+  bb(1:3) = matmul(dble(this%rot_red(1:3, 1:3)), bb(1:3))
+
+end function X(symm_op_apply_inv_red)
+
+! -------------------------------------------------------------------------------
+pure function X(symm_op_apply_cart)(this, aa) result(bb)
+  type(symm_op_t),  intent(in)  :: this
+  R_TYPE,           intent(in)  :: aa(:) !< (3)
+  R_TYPE                        :: bb(1:3)
+
+  bb(1:3) = matmul(aa(1:3), this%rot_cart(1:3, 1:3)) + this%trans_cart(1:3)
+
+end function X(symm_op_apply_cart)
+
+! -------------------------------------------------------------------------------
+pure function X(symm_op_apply_inv_cart)(this, aa) result(bb)
+  type(symm_op_t),  intent(in)  :: this
+  R_TYPE,           intent(in)  :: aa(:) !< (3)
+  R_TYPE                        :: bb(1:3)
+
+  bb(1:3) = aa(1:3) - this%trans_cart(1:3)
+  bb(1:3) = matmul(this%rot_cart(1:3, 1:3), bb(1:3))
+
+end function X(symm_op_apply_inv_cart)
+
 
 !! Local Variables:
 !! mode: f90

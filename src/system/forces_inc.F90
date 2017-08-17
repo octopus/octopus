@@ -233,7 +233,11 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
                 if(projector_is_null(hm%ep%proj(iatom))) cycle
 
                 ratom = M_ZERO
-                ratom(1:gr%sb%dim) = symm_op_apply_inv(gr%sb%symm%ops(iop), geo%atom(iatom)%x)
+                if(geo%reduced_coordinates) then
+                  ratom(1:gr%sb%dim) = symm_op_apply_inv_red(gr%sb%symm%ops(iop), geo%atom(iatom)%x)
+                else
+                  ratom(1:gr%sb%dim) = symm_op_apply_inv_cart(gr%sb%symm%ops(iop), geo%atom(iatom)%x)
+                end if
 
                 call simul_box_periodic_atom_in_box(gr%sb, geo, ratom)
 
@@ -254,7 +258,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
                 end do
 
 
-                force_tmp = symm_op_apply(gr%sb%symm%ops(iop), force_psi)
+                force_tmp = symm_op_apply_cart(gr%sb%symm%ops(iop), force_psi)
 
                 force(1:gr%mesh%sb%dim, iatom) = force(1:gr%mesh%sb%dim, iatom) + &
                   force_tmp(1:gr%mesh%sb%dim)/kpoints_get_num_symmetry_ops(gr%sb%kpoints, ikpoint)
@@ -596,7 +600,7 @@ subroutine X(forces_born_charges)(gr, geo, ep, st, lr, lr2, born_charges)
   SAFE_DEALLOCATE_A(force_deriv)
 
   do iatom = 1, geo%natoms
-    call zsymmetrize_tensor(gr%sb%symm, born_charges%charge(:, :, iatom))
+    call zsymmetrize_tensor_cart(gr%sb%symm, born_charges%charge(:, :, iatom))
   end do
 
   POP_SUB(X(forces_born_charges))
