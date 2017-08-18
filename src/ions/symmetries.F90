@@ -331,7 +331,7 @@ contains
 
     end if
 
-    call symmetries_write_info(this, periodic_dim, stdout)
+    call symmetries_write_info(this, dim, periodic_dim, stdout)
 
     POP_SUB(symmetries_init)
     
@@ -478,9 +478,9 @@ contains
   end function symmetries_identity_index
 
   ! ---------------------------------------------------------
-  subroutine symmetries_write_info(this, periodic_dim, iunit)
+  subroutine symmetries_write_info(this, dim, periodic_dim, iunit)
     type(symmetries_t),    intent(in) :: this
-    integer,               intent(in) :: periodic_dim
+    integer,               intent(in) :: dim, periodic_dim
     integer,               intent(in) :: iunit
     
     integer :: iop, ind
@@ -515,11 +515,18 @@ contains
       write(message(3),'(2a)') 'Schoenflies: ', trim(this%schoenflies)
       call messages_info(3,iunit = iunit)
 
-      ! list all operations and leave those that kept the symmetry-breaking
-      ! direction invariant and (for the moment) that do not have a translation
       write(message(1),'(a7,a31,12x,a33)') 'Index', 'Rotation matrix', 'Fractional translations'
       call messages_info(1,iunit = iunit)
       do iop = 1, this%nops
+        ! list all operations and leave those that kept the symmetry-breaking
+        ! direction invariant and (for the moment) that do not have a translation
+        if(dim == 1) &
+        write(message(1),'(i5,1x,a,2x,1(1i4,2x),1f12.6)') iop, ':', symm_op_rotation_matrix_red(this%ops(iop)), &
+                                                                    symm_op_translation_vector_red(this%ops(iop))
+        if(dim == 2) &
+        write(message(1),'(i5,1x,a,2x,2(2i4,2x),2f12.6)') iop, ':', symm_op_rotation_matrix_red(this%ops(iop)), &
+                                                                    symm_op_translation_vector_red(this%ops(iop))
+        if(dim == 3) &
         write(message(1),'(i5,1x,a,2x,3(3i4,2x),3f12.6)') iop, ':', symm_op_rotation_matrix_red(this%ops(iop)), &
                                                                     symm_op_translation_vector_red(this%ops(iop))
         call messages_info(1,iunit = iunit)

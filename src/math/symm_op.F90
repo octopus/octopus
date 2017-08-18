@@ -209,7 +209,7 @@ contains
 
   function symm_op_rotation_matrix_cart(this) result(matrix)
     type(symm_op_t),  intent(in)  :: this
-    integer                       :: matrix(1:this%dim, 1:this%dim)
+    FLOAT                         :: matrix(1:this%dim, 1:this%dim)
 
     matrix(1:this%dim, 1:this%dim) = this%rot_cart(1:this%dim, 1:this%dim)
 

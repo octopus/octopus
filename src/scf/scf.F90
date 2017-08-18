@@ -1133,7 +1133,7 @@ contains
 
         call grid_write_info(gr, geo, iunit)
  
-        call symmetries_write_info(gr%mesh%sb%symm, gr%sb%periodic_dim, iunit)
+        call symmetries_write_info(gr%mesh%sb%symm, gr%sb%dim, gr%sb%periodic_dim, iunit)
 
         if(simul_box_is_periodic(gr%sb)) then
           call kpoints_write_info(gr%mesh%sb%kpoints, iunit)
