@@ -12,29 +12,39 @@ match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 );
 match ; S2 ; GREP(static/info, "  -1   0   0     0   1   0     0   0  -1", 60 ); 0.000000
 match ; S3 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
 match ; S4 ; GREP(static/info, "   1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 27
 
 Input      : 03-orthorombic.02-spg17.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 17
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "   1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
 
 Input      : 03-orthorombic.03-spg18.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 18
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
 
 Input      : 03-orthorombic.04-spg19.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 19
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 1
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
 
 Input      : 03-orthorombic.05-spg20.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 20
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "   0  -1   0    -1   0   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 24
 
 Input      : 03-orthorombic.06-spg21.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 21
@@ -43,6 +53,8 @@ match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 );
 match ; S2 ; GREP(static/info, "   0   1   0     1   0   0     0   0  -1", 60 ); 0.000000
 match ; S3 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
 match ; S4 ; GREP(static/info, "   0  -1   0    -1   0   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 21
 
 Input      : 03-orthorombic.07-spg22.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 22
@@ -51,6 +63,8 @@ match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 );
 match ; S2 ; GREP(static/info, "   0  -1   1     0  -1   0     1  -1   0", 60 ); 0.000000
 match ; S3 ; GREP(static/info, "   0   1  -1     1   0  -1     0   0  -1", 60 ); 0.000000
 match ; S4 ; GREP(static/info, "  -1   0   0    -1   0   1    -1   1   0", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 18
 
 Input      : 03-orthorombic.08-spg23.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 23
@@ -59,11 +73,15 @@ match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 );
 match ; S2 ; GREP(static/info, "   0   0   1    -1  -1  -1     1   0   0", 60 ); 0.000000
 match ; S3 ; GREP(static/info, "   0   1   0     1   0   0    -1  -1  -1", 60 ); 0.000000
 match ; S4 ; GREP(static/info, "  -1  -1  -1     0   0   1     0   1   0", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 18
 
 Input      : 03-orthorombic.09-spg24.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 24
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 1
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
 
 Input      : 03-orthorombic.10-spg25.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 25
@@ -72,58 +90,78 @@ match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 );
 match ; S2 ; GREP(static/info, "   1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
 match ; S3 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
 match ; S4 ; GREP(static/info, "  -1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 27
 
 Input      : 03-orthorombic.11-spg26.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 26
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
 
 Input      : 03-orthorombic.12-spg27.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 27
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
 
 Input      : 03-orthorombic.13-spg28.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 28
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
 
 Input      : 03-orthorombic.14-spg29.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 29
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 1
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
 
 Input      : 03-orthorombic.15-spg30.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 30
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
 
 Input      : 03-orthorombic.16-spg31.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 31
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
 
 Input      : 03-orthorombic.17-spg32.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 32
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
 
 Input      : 03-orthorombic.18-spg33.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 33
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 1
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
 
 Input      : 03-orthorombic.19-spg34.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 34
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
 
 Input      : 03-orthorombic.20-spg35.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 35
@@ -132,18 +170,24 @@ match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 );
 match ; S2 ; GREP(static/info, "   0  -1   0    -1   0   0     0   0   1", 60 ); 0.000000
 match ; S3 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
 match ; S4 ; GREP(static/info, "   0   1   0     1   0   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 21
 
 Input      : 03-orthorombic.21-spg36.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 36
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "   0   1   0     1   0   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 24
 
 Input      : 03-orthorombic.22-spg37.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 37
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
 
 Input      : 03-orthorombic.23-spg38.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 38
@@ -152,24 +196,32 @@ match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 );
 match ; S2 ; GREP(static/info, "   1   0   0     0   0   1     0   1   0", 60 ); 0.000000
 match ; S3 ; GREP(static/info, "  -1   0   0     0   0   1     0   1   0", 60 ); 0.000000
 match ; S4 ; GREP(static/info, "  -1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 21
 
 Input      : 03-orthorombic.24-spg39.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 39
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0   0   1     0   1   0", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 24
 
 Input      : 03-orthorombic.25-spg40.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 40
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0   0   1     0   1   0", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 24
 
 Input      : 03-orthorombic.26-spg41.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 41
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0   0   1     0   1   0", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 24
 
 Input      : 03-orthorombic.27-spg42.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 42
@@ -178,12 +230,16 @@ match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 );
 match ; S2 ; GREP(static/info, "   0   1  -1     0   1   0    -1   1   0", 60 ); 0.000000
 match ; S3 ; GREP(static/info, "   0   1  -1     1   0  -1     0   0  -1", 60 ); 0.000000
 match ; S4 ; GREP(static/info, "   1   0   0     1   0  -1     1  -1   0", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 18
 
 Input      : 03-orthorombic.28-spg43.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 43
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "   0   1  -1     1   0  -1     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 24
 
 Input      : 03-orthorombic.29-spg44.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 44
@@ -192,18 +248,24 @@ match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 );
 match ; S2 ; GREP(static/info, "   0   0  -1     1   1   1    -1   0   0", 60 ); 0.000000
 match ; S3 ; GREP(static/info, "   0   1   0     1   0   0    -1  -1  -1", 60 ); 0.000000
 match ; S4 ; GREP(static/info, "   1   1   1     0   0  -1     0  -1   0", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 18
 
 Input      : 03-orthorombic.30-spg45.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 45
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "   0   1   0     1   0   0    -1  -1  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 24
 
 Input      : 03-orthorombic.31-spg46.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 46
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "   0   1   0     1   0   0    -1  -1  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 24
 
 Input      : 03-orthorombic.32-spg47.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 47
@@ -216,6 +278,8 @@ match ; S5 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 );
 match ; S6 ; GREP(static/info, "   1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
 match ; S7 ; GREP(static/info, "   1   0   0     0   1   0     0   0  -1", 60 ); 0.000000
 match ; S8 ; GREP(static/info, "  -1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 27
 
 Input      : 03-orthorombic.33-spg48.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 48
@@ -224,6 +288,8 @@ match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 );
 match ; S2 ; GREP(static/info, "  -1   0   0     0   1   0     0   0  -1", 60 ); 0.000000
 match ; S3 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
 match ; S4 ; GREP(static/info, "   1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 27
 
 Input      : 03-orthorombic.34-spg49.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 49
@@ -232,6 +298,8 @@ match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 );
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
 match ; S3 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
 match ; S4 ; GREP(static/info, "   1   0   0     0   1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
 
 Input      : 03-orthorombic.35-spg50.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 50
@@ -240,6 +308,8 @@ match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 );
 match ; S2 ; GREP(static/info, "  -1   0   0     0   1   0     0   0  -1", 60 ); 0.000000
 match ; S3 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
 match ; S4 ; GREP(static/info, "   1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 27
 
 Input      : 03-orthorombic.36-spg51.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 51
@@ -248,12 +318,16 @@ match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 );
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
 match ; S3 ; GREP(static/info, "  -1   0   0     0   1   0     0   0  -1", 60 ); 0.000000
 match ; S4 ; GREP(static/info, "   1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
 
 Input      : 03-orthorombic.37-spg52.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 52
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
 
 Input      : 03-orthorombic.38-spg53.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 53
@@ -262,12 +336,16 @@ match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 );
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
 match ; S3 ; GREP(static/info, "   1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
 match ; S4 ; GREP(static/info, "  -1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
 
 Input      : 03-orthorombic.39-spg54.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 54
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
 
 Input      : 03-orthorombic.40-spg55.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 55
@@ -276,18 +354,24 @@ match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 );
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
 match ; S3 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
 match ; S4 ; GREP(static/info, "   1   0   0     0   1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
 
 Input      : 03-orthorombic.41-spg56.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 56
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
 
 Input      : 03-orthorombic.42-spg57.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 57
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
 
 Input      : 03-orthorombic.43-spg58.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 58
@@ -296,6 +380,8 @@ match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 );
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
 match ; S3 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
 match ; S4 ; GREP(static/info, "   1   0   0     0   1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
 
 Input      : 03-orthorombic.44-spg59.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 59
@@ -304,24 +390,32 @@ match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 );
 match ; S2 ; GREP(static/info, "   1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
 match ; S3 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
 match ; S4 ; GREP(static/info, "  -1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 27
 
 Input      : 03-orthorombic.45-spg60.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 60
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
 
 Input      : 03-orthorombic.46-spg61.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 61
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
 
 Input      : 03-orthorombic.47-spg62.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 62
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
 
 Input      : 03-orthorombic.48-spg63.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 63
@@ -330,6 +424,8 @@ match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 );
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
 match ; S3 ; GREP(static/info, "   0  -1   0    -1   0   0     0   0  -1", 60 ); 0.000000
 match ; S4 ; GREP(static/info, "   0   1   0     1   0   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 24
 
 Input      : 03-orthorombic.49-spg64.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 64
@@ -338,6 +434,8 @@ match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 );
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
 match ; S3 ; GREP(static/info, "   0  -1   0    -1   0   0     0   0  -1", 60 ); 0.000000
 match ; S4 ; GREP(static/info, "   0   1   0     1   0   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 24
 
 Input      : 03-orthorombic.50-spg65.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 65
@@ -350,6 +448,8 @@ match ; S5 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 );
 match ; S6 ; GREP(static/info, "   0  -1   0    -1   0   0     0   0  -1", 60 ); 0.000000
 match ; S7 ; GREP(static/info, "   1   0   0     0   1   0     0   0  -1", 60 ); 0.000000
 match ; S8 ; GREP(static/info, "   0   1   0     1   0   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 21
 
 Input      : 03-orthorombic.51-spg66.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 66
@@ -358,6 +458,8 @@ match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 );
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
 match ; S3 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
 match ; S4 ; GREP(static/info, "   1   0   0     0   1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
 
 Input      : 03-orthorombic.52-spg67.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 67
@@ -366,6 +468,8 @@ match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 );
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
 match ; S3 ; GREP(static/info, "   0  -1   0    -1   0   0     0   0  -1", 60 ); 0.000000
 match ; S4 ; GREP(static/info, "   0   1   0     1   0   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 24
 
 Input      : 03-orthorombic.53-spg68.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 68
@@ -374,6 +478,8 @@ match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 );
 match ; S2 ; GREP(static/info, "   0   1   0     1   0   0     0   0  -1", 60 ); 0.000000
 match ; S3 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
 match ; S4 ; GREP(static/info, "   0  -1   0    -1   0   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 21
 
 Input      : 03-orthorombic.54-spg69.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 69
@@ -386,6 +492,8 @@ match ; S5 ; GREP(static/info, "   0   1  -1     1   0  -1     0   0  -1", 60 );
 match ; S6 ; GREP(static/info, "  -1   0   0    -1   0   1    -1   1   0", 60 ); 0.000000
 match ; S7 ; GREP(static/info, "   0  -1   1    -1   0   1     0   0   1", 60 ); 0.000000
 match ; S8 ; GREP(static/info, "   1   0   0     1   0  -1     1  -1   0", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 18
 
 Input      : 03-orthorombic.55-spg70.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 70
@@ -394,6 +502,8 @@ match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 );
 match ; S2 ; GREP(static/info, "   0  -1   1     0  -1   0     1  -1   0", 60 ); 0.000000
 match ; S3 ; GREP(static/info, "   0   1  -1     1   0  -1     0   0  -1", 60 ); 0.000000
 match ; S4 ; GREP(static/info, "  -1   0   0    -1   0   1    -1   1   0", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 18
 
 Input      : 03-orthorombic.56-spg71.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 71
@@ -406,6 +516,8 @@ match ; S5 ; GREP(static/info, "   0   1   0     1   0   0    -1  -1  -1", 60 );
 match ; S6 ; GREP(static/info, "  -1  -1  -1     0   0   1     0   1   0", 60 ); 0.000000
 match ; S7 ; GREP(static/info, "   0  -1   0    -1   0   0     1   1   1", 60 ); 0.000000
 match ; S8 ; GREP(static/info, "   1   1   1     0   0  -1     0  -1   0", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 18
 
 Input      : 03-orthorombic.57-spg72.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 72
@@ -414,12 +526,16 @@ match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 );
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
 match ; S3 ; GREP(static/info, "   0   1   0     1   0   0    -1  -1  -1", 60 ); 0.000000
 match ; S4 ; GREP(static/info, "   0  -1   0    -1   0   0     1   1   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 24
 
 Input      : 03-orthorombic.58-spg73.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 73
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
 
 Input      : 03-orthorombic.59-spg74.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 74
@@ -428,4 +544,6 @@ match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 );
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
 match ; S3 ; GREP(static/info, "  -1  -1  -1     0   0   1     0   1   0", 60 ); 0.000000
 match ; S4 ; GREP(static/info, "   1   1   1     0   0  -1     0  -1   0", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 24
 
