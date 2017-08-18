@@ -1617,6 +1617,7 @@ contains
     do ikpoint = 1, kpoints%reduced%npoints
       do ii = 1, kpoints_get_num_symmetry_ops(kpoints, ikpoint)
         iop = kpoints_get_symmetry_ops(kpoints, ikpoint, ii)
+        if(iop == symmetries_identity_index(this%symm)) cycle
 
         do iatom = 1, geo%natoms
           ratom = M_ZERO

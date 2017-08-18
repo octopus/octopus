@@ -16,6 +16,10 @@ TheoryLevel = independent_particles
 MaximumIter = 0
 LCAOStart = lcao_none
 FilterPotentials = filter_none
+%KpointsGrid
+ 4 | 4 | 4 
+%
+KPointsUseSymmetries = yes
 %ReducedCoordinates
 "H" | 2.6000000000E-01 | 2.8000000000E-01 | 3.2000000000E-01
 "H" | 3.2000000000E-01 | 2.6000000000E-01 | 2.8000000000E-01

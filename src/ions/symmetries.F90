@@ -312,8 +312,9 @@ contains
       do iop = 1, fullnops
         ! sometimes spglib may return lattice vectors as 'fractional' translations        
         translation(:, iop) = translation(:, iop) - nint(translation(:, iop) + CNST(0.5)*SYMPREC)
-        call symm_op_init(tmpop, rotation(:, :, iop), rlattice, klattice, dim4syms, &
-                              real(translation(:, iop), REAL_PRECISION))
+        call symm_op_init(tmpop, rotation(1:3, 1:3, iop), rlattice(1:dim4syms,1:dim4syms), &
+                              klattice(1:dim4syms,1:dim4syms), dim4syms, &
+                              real(translation(1:3, iop), REAL_PRECISION))
 
         if(symm_op_invariant_cart(tmpop, this%breakdir, real(SYMPREC, REAL_PRECISION)) &
          .and. .not. symm_op_has_translation(tmpop, real(SYMPREC, REAL_PRECISION))) then

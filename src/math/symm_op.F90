@@ -72,7 +72,6 @@ module symm_op_oct_m
 
 contains
  
-  !TODO: We should handle the low-dimensional case 
   subroutine symm_op_init(this, rot, rlattice, klattice, dim, trans)
     type(symm_op_t),     intent(out) :: this
     integer,             intent(in)  :: rot(:, :)
@@ -91,7 +90,7 @@ contains
     this%rot_red = M_ZERO
     this%rot_red(1:dim, 1:dim) = rot(1:dim, 1:dim)
     do idim = dim+1,3
-      this%rot_red(idim,idim) = 1
+      this%rot_red(idim,idim) = M_ONE
     end do
 
     !The inverse operation is only given by its inverse, not the transpose  
@@ -114,7 +113,7 @@ contains
     this%rot_cart(1:dim, 1:dim)  = matmul(rlattice(1:dim, 1:dim), &
                     matmul(rot(1:dim, 1:dim),transpose(klattice(1:dim, 1:dim))/ (M_TWO * M_PI)))
     do idim = dim+1,3
-      this%rot_cart(idim,idim) = 1
+      this%rot_cart(idim,idim) = M_ONE
     end do
 
     this%trans_red(1:3) = M_ZERO
@@ -139,7 +138,8 @@ contains
     type(symm_op_t),     intent(out) :: outp
 
     PUSH_SUB(symm_op_copy)
-
+ 
+    outp%dim = inp%dim
     outp%rot_red(1:3, 1:3) =  inp%rot_red(1:3, 1:3)
     outp%rot_red_inv(1:3, 1:3) =  inp%rot_red_inv(1:3, 1:3)
     outp%trans_red(1:3) =  inp%trans_red(1:3)

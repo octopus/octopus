@@ -1420,6 +1420,7 @@ contains
       do ik = 1, nik
   !      if (kmap(ik) /= ik) cycle
         !We apply the symmetry
+ 
         call symmetries_apply_kpoint_red(symm, iop, grid%red_point(1:dim, ik), kpt)
         !We remove potential umklapp
         do idim = 1, dim
@@ -1453,16 +1454,14 @@ contains
             exit
           end if
 
-          if(time_reversal) then
-            diff(1:dim) = kpt(1:dim)+grid%red_point(1:dim, ik2)
-            do idim = 1, dim
-              diff(idim)=diff(idim)-anint(diff(idim))
-            end do
-            !We found point corresponding to the symmetric kpoint
-            if(sum(abs(diff(1:dim))) < symprec ) then
-              kmap(ik) = -ik2
-              exit
-            end if
+          diff(1:dim) = kpt(1:dim)+grid%red_point(1:dim, ik2)
+          do idim = 1, dim
+            diff(idim)=diff(idim)-anint(diff(idim))
+          end do
+          !We found point corresponding to the symmetric kpoint
+          if(time_reversal.and. sum(abs(diff(1:dim))) < symprec ) then
+            kmap(ik) = -ik2
+            exit
           end if
 
         end do
