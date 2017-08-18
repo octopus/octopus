@@ -19,42 +19,44 @@
 ! -------------------------------------------------------------------------------
 pure function X(symm_op_apply_red)(this, aa) result(bb)
   type(symm_op_t),  intent(in)  :: this
-  R_TYPE,           intent(in)  :: aa(:) !< (3)
-  R_TYPE                        :: bb(1:3)
+  R_TYPE,           intent(in)  :: aa(:) !< (this%dim)
+  R_TYPE                        :: bb(1:this%dim)
   
-  bb(1:3) = matmul(dble(this%rot_red_inv(1:3, 1:3)), aa(1:3)) + this%trans_red(1:3)
+  bb(1:this%dim) = matmul(dble(this%rot_red_inv(1:this%dim, 1:this%dim)), aa(1:this%dim)) &
+              + this%trans_red(1:this%dim)
  
 end function X(symm_op_apply_red)
 
 ! -------------------------------------------------------------------------------
 pure function X(symm_op_apply_inv_red)(this, aa) result(bb)
   type(symm_op_t),  intent(in)  :: this
-  R_TYPE,           intent(in)  :: aa(:) !< (3)
-  R_TYPE                        :: bb(1:3)
+  R_TYPE,           intent(in)  :: aa(:) !< (this%dim)
+  R_TYPE                        :: bb(1:this%dim)
   
-  bb(1:3) = aa(1:3) - this%trans_red(1:3)
-  bb(1:3) = matmul(dble(this%rot_red(1:3, 1:3)), bb(1:3))
+  bb(1:this%dim) = aa(1:this%dim) - this%trans_red(1:this%dim)
+  bb(1:this%dim) = matmul(dble(this%rot_red(1:this%dim, 1:this%dim)), bb(1:this%dim))
 
 end function X(symm_op_apply_inv_red)
 
 ! -------------------------------------------------------------------------------
 pure function X(symm_op_apply_cart)(this, aa) result(bb)
   type(symm_op_t),  intent(in)  :: this
-  R_TYPE,           intent(in)  :: aa(:) !< (3)
-  R_TYPE                        :: bb(1:3)
+  R_TYPE,           intent(in)  :: aa(:) !< (this%dim)
+  R_TYPE                        :: bb(1:this%dim)
 
-  bb(1:3) = matmul(aa(1:3), this%rot_cart(1:3, 1:3)) + this%trans_cart(1:3)
+  bb(1:this%dim) = matmul(aa(1:this%dim), this%rot_cart(1:this%dim, 1:this%dim)) &
+                            + this%trans_cart(1:this%dim)
 
 end function X(symm_op_apply_cart)
 
 ! -------------------------------------------------------------------------------
 pure function X(symm_op_apply_inv_cart)(this, aa) result(bb)
   type(symm_op_t),  intent(in)  :: this
-  R_TYPE,           intent(in)  :: aa(:) !< (3)
-  R_TYPE                        :: bb(1:3)
+  R_TYPE,           intent(in)  :: aa(:) !< (this%dim)
+  R_TYPE                        :: bb(1:this%dim)
 
-  bb(1:3) = aa(1:3) - this%trans_cart(1:3)
-  bb(1:3) = matmul(this%rot_cart(1:3, 1:3), bb(1:3))
+  bb(1:this%dim) = aa(1:this%dim) - this%trans_cart(1:this%dim)
+  bb(1:this%dim) = matmul(this%rot_cart(1:this%dim, 1:this%dim), bb(1:this%dim))
 
 end function X(symm_op_apply_inv_cart)
 

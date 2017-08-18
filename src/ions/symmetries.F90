@@ -135,6 +135,8 @@ contains
       if(this%any_non_spherical)exit
     end do
 
+    dim4syms = min(3,dim)
+
     !%Variable SymmetriesCompute
     !%Type logical
     !%Default (natoms < 100) ? true : false
@@ -152,7 +154,6 @@ contains
       return
     end if
 
-    dim4syms = min(3,dim)
     ! In all cases, we must check that the grid respects the symmetries. --DAS
 
     if (periodic_dim == 0) then
@@ -311,7 +312,7 @@ contains
       do iop = 1, fullnops
         ! sometimes spglib may return lattice vectors as 'fractional' translations        
         translation(:, iop) = translation(:, iop) - nint(translation(:, iop) + CNST(0.5)*SYMPREC)
-        call symm_op_init(tmpop, rotation(:, :, iop), rlattice, klattice, &
+        call symm_op_init(tmpop, rotation(:, :, iop), rlattice, klattice, dim4syms, &
                               real(translation(:, iop), REAL_PRECISION))
 
         if(symm_op_invariant_cart(tmpop, this%breakdir, real(SYMPREC, REAL_PRECISION)) &
@@ -342,7 +343,7 @@ contains
       SAFE_ALLOCATE(this%ops(1:1))
       this%nops = 1
       call symm_op_init(this%ops(1), reshape((/1, 0, 0, 0, 1, 0, 0, 0, 1/), (/3, 3/)), & 
-                  rlattice, klattice)
+                  rlattice, klattice, dim4syms)
       this%breakdir = M_ZERO
       this%space_group = 1
       

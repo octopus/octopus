@@ -46,6 +46,7 @@ module symm_op_oct_m
 
   type symm_op_t
     private
+    integer  :: dim
     integer  :: rot_red(1:3, 1:3)
     integer  :: rot_red_inv(1:3, 1:3)
     FLOAT    :: rot_cart(1:3, 1:3)
@@ -72,42 +73,55 @@ module symm_op_oct_m
 contains
  
   !TODO: We should handle the low-dimensional case 
-  subroutine symm_op_init(this, rot, rlattice, klattice, trans)
+  subroutine symm_op_init(this, rot, rlattice, klattice, dim, trans)
     type(symm_op_t),     intent(out) :: this
     integer,             intent(in)  :: rot(:, :)
     FLOAT,               intent(in)  :: rlattice(:, :), klattice(:, :)
+    integer,             intent(in)  :: dim
     FLOAT, optional,     intent(in)  :: trans(:)
+
+    integer :: idim
 
     PUSH_SUB(symm_op_init)
 
+    this%dim = dim
+
     !What comes out of spglib is the rotation matrix in fractional coordinates
     !This is not a rotation matrix!
-    this%rot_red(1:3, 1:3) = rot(1:3, 1:3)
+    this%rot_red = M_ZERO
+    this%rot_red(1:dim, 1:dim) = rot(1:dim, 1:dim)
+    do idim = dim+1,3
+      this%rot_red(idim,idim) = 1
+    end do
+
     !The inverse operation is only given by its inverse, not the transpose  
     !By Contrustion the reduced matrix also has a determinant of +1 
     ! Calculate the inverse of the matrix
-    this%rot_red_inv(1,1) = +(rot(2,2)*rot(3,3) - rot(2,3)*rot(3,2))
-    this%rot_red_inv(2,1) = -(rot(2,1)*rot(3,3) - rot(2,3)*rot(3,1))
-    this%rot_red_inv(3,1) = +(rot(2,1)*rot(3,2) - rot(2,2)*rot(3,1))
-    this%rot_red_inv(1,2) = -(rot(1,2)*rot(3,3) - rot(1,3)*rot(3,2))
-    this%rot_red_inv(2,2) = +(rot(1,1)*rot(3,3) - rot(1,3)*rot(3,1))
-    this%rot_red_inv(3,2) = -(rot(1,1)*rot(3,2) - rot(1,2)*rot(3,1))
-    this%rot_red_inv(1,3) = +(rot(1,2)*rot(2,3) - rot(1,3)*rot(2,2))
-    this%rot_red_inv(2,3) = -(rot(1,1)*rot(2,3) - rot(1,3)*rot(2,1))
-    this%rot_red_inv(3,3) = +(rot(1,1)*rot(2,2) - rot(1,2)*rot(2,1))
+    this%rot_red_inv(1,1) = +(this%rot_red(2,2)*this%rot_red(3,3) - this%rot_red(2,3)*this%rot_red(3,2))
+    this%rot_red_inv(2,1) = -(this%rot_red(2,1)*this%rot_red(3,3) - this%rot_red(2,3)*this%rot_red(3,1))
+    this%rot_red_inv(3,1) = +(this%rot_red(2,1)*this%rot_red(3,2) - this%rot_red(2,2)*this%rot_red(3,1))
+    this%rot_red_inv(1,2) = -(this%rot_red(1,2)*this%rot_red(3,3) - this%rot_red(1,3)*this%rot_red(3,2))
+    this%rot_red_inv(2,2) = +(this%rot_red(1,1)*this%rot_red(3,3) - this%rot_red(1,3)*this%rot_red(3,1))
+    this%rot_red_inv(3,2) = -(this%rot_red(1,1)*this%rot_red(3,2) - this%rot_red(1,2)*this%rot_red(3,1))
+    this%rot_red_inv(1,3) = +(this%rot_red(1,2)*this%rot_red(2,3) - this%rot_red(1,3)*this%rot_red(2,2))
+    this%rot_red_inv(2,3) = -(this%rot_red(1,1)*this%rot_red(2,3) - this%rot_red(1,3)*this%rot_red(2,1))
+    this%rot_red_inv(3,3) = +(this%rot_red(1,1)*this%rot_red(2,2) - this%rot_red(1,2)*this%rot_red(2,1))
 
     !This is a proper rotation matrix
     !R_{cart} = A*R_{red}*A^{-1}
     !Where A is the matrix containing the lattice vectors as column
-    this%rot_cart(1:3, 1:3)  = matmul(rlattice(1:3, 1:3), &
-                    matmul(rot(1:3, 1:3),transpose(klattice(1:3, 1:3))/ (M_TWO * M_PI)))
+    this%rot_cart = M_ZERO
+    this%rot_cart(1:dim, 1:dim)  = matmul(rlattice(1:dim, 1:dim), &
+                    matmul(rot(1:dim, 1:dim),transpose(klattice(1:dim, 1:dim))/ (M_TWO * M_PI)))
+    do idim = dim+1,3
+      this%rot_cart(idim,idim) = 1
+    end do
 
+    this%trans_red(1:3) = M_ZERO
+    this%trans_cart(1:3) = M_ZERO
     if(present(trans)) then
-      this%trans_red(1:3) = trans(1:3)
-      this%trans_cart(1:3) = matmul(rlattice,trans(1:3))
-    else
-      this%trans_red(1:3) = M_ZERO
-      this%trans_cart(1:3) = M_ZERO
+      this%trans_red(1:dim) = trans(1:dim)
+      this%trans_cart(1:dim) = matmul(rlattice(1:dim,1:dim),trans(1:dim))
     end if
 
     if(sum(abs(matmul(this%rot_cart,transpose(this%rot_cart)) &
@@ -155,7 +169,7 @@ contains
     FLOAT :: cc(1:3)
 
     cc = symm_op_apply_cart(this, aa)
-    invariant = all(abs(cc(1:3) - aa(1:3)) < prec)
+    invariant = all(abs(cc(1:this%dim) - aa(1:this%dim)) < prec)
 
   end function symm_op_invariant_cart
 
@@ -168,7 +182,7 @@ contains
     FLOAT :: cc(1:3)
 
     cc = symm_op_apply_red(this, aa)
-    invariant = all(abs(cc(1:3) - aa(1:3)) < prec)
+    invariant = all(abs(cc(1:this%dim) - aa(1:this%dim)) < prec)
 
   end function symm_op_invariant_red
 
@@ -177,7 +191,7 @@ contains
     type(symm_op_t),  intent(in)  :: this
     FLOAT,            intent(in)  :: prec
 
-    has = any(abs(this%trans_red(1:3)) >= prec)
+    has = any(abs(this%trans_red(1:this%dim)) >= prec)
 
   end function symm_op_has_translation
 
@@ -185,9 +199,9 @@ contains
 
   function symm_op_rotation_matrix_red(this) result(matrix)
     type(symm_op_t),  intent(in)  :: this
-    integer                       :: matrix(1:3, 1:3)
+    integer                       :: matrix(1:this%dim, 1:this%dim)
 
-    matrix(1:3, 1:3) = this%rot_red(1:3, 1:3)
+    matrix(1:this%dim, 1:this%dim) = this%rot_red(1:this%dim, 1:this%dim)
 
   end function symm_op_rotation_matrix_red
 
@@ -195,9 +209,9 @@ contains
 
   function symm_op_rotation_matrix_cart(this) result(matrix)
     type(symm_op_t),  intent(in)  :: this
-    integer                       :: matrix(1:3, 1:3)
+    integer                       :: matrix(1:this%dim, 1:this%dim)
 
-    matrix(1:3, 1:3) = this%rot_cart(1:3, 1:3)
+    matrix(1:this%dim, 1:this%dim) = this%rot_cart(1:this%dim, 1:this%dim)
 
   end function symm_op_rotation_matrix_cart
 
@@ -206,9 +220,9 @@ contains
  
   function symm_op_translation_vector_red(this) result(vector)
     type(symm_op_t),  intent(in)  :: this
-    FLOAT                         :: vector(1:3)
+    FLOAT                         :: vector(1:this%dim)
 
-    vector(1:3) = this%trans_red(1:3)
+    vector(1:this%dim) = this%trans_red(1:this%dim)
 
   end function symm_op_translation_vector_red
 
@@ -216,9 +230,9 @@ contains
 
   function symm_op_translation_vector_cart(this) result(vector)
     type(symm_op_t),  intent(in)  :: this
-    FLOAT                         :: vector(1:3)
+    FLOAT                         :: vector(1:this%dim)
 
-    vector(1:3) = this%trans_cart(1:3)
+    vector(1:this%dim) = this%trans_cart(1:this%dim)
 
   end function symm_op_translation_vector_cart
 
@@ -240,9 +254,9 @@ contains
   pure function isymm_op_apply_red(this, aa) result(bb)
     type(symm_op_t),  intent(in)  :: this
     integer,          intent(in)  :: aa(:) !< (3)
-    integer                       :: bb(1:3)
+    integer                       :: bb(1:this%dim)
 
-    bb(1:3) = nint(dsymm_op_apply_red(this, real(aa, REAL_PRECISION)))
+    bb(1:this%dim) = nint(dsymm_op_apply_red(this, real(aa, REAL_PRECISION)))
     
   end function isymm_op_apply_red
 
@@ -251,9 +265,9 @@ contains
   function isymm_op_apply_inv_red(this, aa) result(bb)
     type(symm_op_t),  intent(in)  :: this
     integer,          intent(in)  :: aa(:) !< (3)
-    integer                       :: bb(1:3)
+    integer                       :: bb(1:this%dim)
 
-    bb(1:3) = nint(dsymm_op_apply_inv_red(this, real(aa, REAL_PRECISION)))
+    bb(1:this%dim) = nint(dsymm_op_apply_inv_red(this, real(aa, REAL_PRECISION)))
     
   end function isymm_op_apply_inv_red
 
