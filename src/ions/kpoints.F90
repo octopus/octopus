@@ -494,7 +494,7 @@ contains
       if(this%use_symmetries) then
         message(1) = "Checking if the generated full k-point grid is symmetric";
         call messages_info(1)
-        call kpoints_check_symmetries(this%full, symm, dim, klattice)
+        call kpoints_check_symmetries(this%full, symm, dim, klattice, this%use_time_reversal)
       end if
 
       call kpoints_grid_copy(this%full, this%reduced)
@@ -548,12 +548,6 @@ contains
       do ik = 1, this%reduced%npoints
         call kpoints_to_absolute(klattice, this%reduced%red_point(:, ik), this%reduced%point(:, ik), dim)
       end do
-
-      if(this%use_symmetries) then
-        message(1) = "Checking if the generated irreducible k-point grid is symmetric";
-        call messages_info(1)
-        call kpoints_check_symmetries(this%reduced, symm, dim, klattice)
-      end if
 
       POP_SUB(kpoints_init.read_MP)
     end subroutine read_MP
@@ -1129,8 +1123,8 @@ contains
     FLOAT, allocatable :: reduced(:, :)
     
     FLOAT :: dw
-    integer ik, iop, ik2
-    FLOAT :: tran(MAX_DIM), tran_inv(MAX_DIM)
+    integer ik, iop, ik2, idim
+    FLOAT :: tran(MAX_DIM), diff(MAX_DIM)
     integer, allocatable :: kmap(:)
 
     PUSH_SUB(kpoints_grid_reduce)
@@ -1173,14 +1167,18 @@ contains
         if(iop == symmetries_identity_index(symm)) cycle ! no need to check for the identity
 
         call symmetries_apply_kpoint_red(symm, iop, reduced(1:dim, nreduced), tran)
-        tran_inv(1:dim) = -tran(1:dim)
            
         ! remove (mark) k-points related to irreducible reduced by symmetry
         do ik2 = ik + 1, nkpoints
           if (kmap(ik2) /= ik2) cycle
-          
+
+          diff(1:dim) = tran(1:dim)-kpoints(1:dim, ik2)
+          do idim = 1, dim
+            diff(idim)=diff(idim)-anint(diff(idim))
+          end do
+
           ! both the transformed rk ...
-          if (all( abs(tran(1:dim) - kpoints(1:dim, ik2)) <= CNST(1.0e-5))) then
+          if(sum(abs(diff(1:dim))) < symprec ) then 
             weights(nreduced) = weights(nreduced) + dw
             kmap(ik2) = nreduced
             INCR(num_symm_ops(nreduced), 1)
@@ -1188,14 +1186,20 @@ contains
             cycle
           end if
 
-          ! and its inverse
-          if (time_reversal .and. all(abs(tran_inv(1:dim) - kpoints(1:dim, ik2)) <= CNST(1.0e-5)) ) then
-            weights(nreduced) = weights(nreduced) + dw
-            kmap(ik2) = nreduced
-            INCR(num_symm_ops(nreduced), 1)
-            symm_ops(nreduced, num_symm_ops(nreduced)) = iop
+          if (time_reversal) then
+            diff(1:dim) = tran(1:dim)+kpoints(1:dim, ik2)
+            do idim = 1, dim
+              diff(idim)=diff(idim)-anint(diff(idim))
+            end do
+
+            ! and its inverse
+            if(sum(abs(diff(1:dim))) < symprec ) then
+              weights(nreduced) = weights(nreduced) + dw
+              kmap(ik2) = nreduced
+              INCR(num_symm_ops(nreduced), 1)
+              symm_ops(nreduced, num_symm_ops(nreduced)) = iop
+            end if
           end if
-          
         end do
       end do
     end do
@@ -1382,11 +1386,12 @@ contains
   
 
   !--------------------------------------------------------
-  subroutine kpoints_check_symmetries(grid, symm, dim, klattice)
+  subroutine kpoints_check_symmetries(grid, symm, dim, klattice, time_reversal)
     type(kpoints_grid_t), intent(in) :: grid
     type(symmetries_t),   intent(in) :: symm    
     integer,              intent(in) :: dim
     FLOAT,                intent(in) :: klattice(:,:)
+    logical,              intent(in) :: time_reversal
     
     FLOAT, allocatable :: kmap(:), klength2(:)
     FLOAT :: kpt(1:MAX_DIM), kpt_abs(1:MAX_DIM), diff(1:MAX_DIM), symlength2
@@ -1447,6 +1452,19 @@ contains
             kmap(ik) = -ik2
             exit
           end if
+
+          if(time_reversal) then
+            diff(1:dim) = kpt(1:dim)+grid%red_point(1:dim, ik2)
+            do idim = 1, dim
+              diff(idim)=diff(idim)-anint(diff(idim))
+            end do
+            !We found point corresponding to the symmetric kpoint
+            if(sum(abs(diff(1:dim))) < symprec ) then
+              kmap(ik) = -ik2
+              exit
+            end if
+          end if
+
         end do
         !In case we have not found a symnetric k-point...
         if(kmap(ik) == ik) then
