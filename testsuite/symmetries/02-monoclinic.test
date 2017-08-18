@@ -10,39 +10,53 @@ match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 3
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0   1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
 
 Input      : 02-monoclinic.02-spg4.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 4
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 1
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
 
 Input      : 02-monoclinic.03-spg5.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 5
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "   0   1   0     1   0   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 24
 
 Input      : 02-monoclinic.04-spg6.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 6
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "   1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
 
 Input      : 02-monoclinic.05-spg7.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 7
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 1
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
 
 Input      : 02-monoclinic.06-spg8.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 8
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "   0  -1   0    -1   0   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 24
 
 Input      : 02-monoclinic.07-spg9.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 9
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 1
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
 
 Input      : 02-monoclinic.08-spg10.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 10
@@ -51,12 +65,16 @@ match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 );
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
 match ; S3 ; GREP(static/info, "  -1   0   0     0   1   0     0   0  -1", 60 ); 0.000000
 match ; S4 ; GREP(static/info, "   1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
 
 Input      : 02-monoclinic.09-spg11.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 11
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
 
 Input      : 02-monoclinic.10-spg12.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 12
@@ -65,23 +83,32 @@ match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 );
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
 match ; S3 ; GREP(static/info, "   0   1   0     1   0   0     0   0  -1", 60 ); 0.000000
 match ; S4 ; GREP(static/info, "   0  -1   0    -1   0   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 24
 
 Input      : 02-monoclinic.11-spg13.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 13
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
 
 Input      : 02-monoclinic.12-spg14.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 14
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
 
 Input      : 02-monoclinic.13-spg15.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 15
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
+
 
 

@@ -9,10 +9,14 @@ Input      : 01-triclinic.01-spg1.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 1
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 1
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
 
 Input      : 01-triclinic.02-spg2.inp
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 2
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
 
