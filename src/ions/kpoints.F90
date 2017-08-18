@@ -1204,6 +1204,8 @@ contains
       end do
     end do
     
+    ASSERT(sum(weights(1:nreduced))-M_ONE<SYMPREC) 
+
     nkpoints = nreduced
     do ik = 1, nreduced
       kpoints(1:dim, ik) = reduced(1:dim, ik)
