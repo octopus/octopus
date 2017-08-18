@@ -268,8 +268,8 @@ subroutine output_etsf_geometry_write(geo, sb, ncid)
   SAFE_ALLOCATE(geometry%reduced_symmetry_translations(1:3, 1:symmetries_number(sb%symm)))
 
   do isymm = 1, symmetries_number(sb%symm)
-    geometry%reduced_symmetry_matrices(1:3, 1:3, isymm) = symm_op_rotation_matrix(sb%symm%ops(isymm))
-    geometry%reduced_symmetry_translations(1:3, isymm) = symm_op_translation_vector(sb%symm%ops(isymm))
+    geometry%reduced_symmetry_matrices(1:3, 1:3, isymm) = symm_op_rotation_matrix_red(sb%symm%ops(isymm))
+    geometry%reduced_symmetry_translations(1:3, isymm) = symm_op_translation_vector_red(sb%symm%ops(isymm))
   end do
 
   ! The species
