@@ -423,7 +423,7 @@ contains
 
     ASSERT(0 < iop .and. iop <= this%nops)
 
-    bb(1:3) = symm_op_apply_inv_red(this%ops(iop), aa(1:3))
+    bb(1:3) = symm_op_apply_transpose_red(this%ops(iop), aa(1:3))
 
     POP_SUB(symmetries_apply_kpoint_red)
   end subroutine symmetries_apply_kpoint_red

@@ -33,6 +33,7 @@ module symm_op_oct_m
        symm_op_end,                    &
        symm_op_apply_red,              &
        symm_op_apply_inv_red,          &
+       symm_op_apply_transpose_red,    &
        symm_op_invariant_red,          &
        symm_op_has_translation,        &
        symm_op_rotation_matrix_red,    &
@@ -65,6 +66,11 @@ module symm_op_oct_m
   interface symm_op_apply_inv_red
     module procedure isymm_op_apply_inv_red, dsymm_op_apply_inv_red, zsymm_op_apply_inv_red
   end interface symm_op_apply_inv_red
+
+  interface symm_op_apply_transpose_red
+    module procedure dsymm_op_apply_transpose_red, zsymm_op_apply_transpose_red
+  end interface symm_op_apply_transpose_red
+
 
   interface symm_op_apply_inv_cart
     module procedure dsymm_op_apply_inv_cart, zsymm_op_apply_inv_cart
