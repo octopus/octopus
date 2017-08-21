@@ -1172,11 +1172,6 @@ contains
 
             ! both the transformed rk ...
             if(sum(abs(diff(1:dim))) < SYMPREC ) then 
-              print *, ik, ik2, iop
-              print *, kpoints(1:dim, ik)
-              print *, tran(1:dim)
-              print *, kpoints(1:dim, ik2)
-              print *, ''
               kweight(ik) = kweight(ik) + kweight(ik2)
               kweight(ik2) = M_ZERO 
               weights(nreduced) = kweight(ik)
@@ -1194,12 +1189,6 @@ contains
 
             ! and its inverse
             if(sum(abs(diff(1:dim))) < SYMPREC ) then
-              print *, 'TR'
-              print *, ik, ik2, iop
-              print *, kpoints(1:dim, ik)
-              print *, tran(1:dim)
-              print *, kpoints(1:dim, ik2)
-              print *, ''
               kweight(ik) = kweight(ik) + kweight(ik2)
               kweight(ik2) = M_ZERO
               weights(nreduced) = kweight(ik)
@@ -1210,7 +1199,6 @@ contains
           end if
         end do
       end do
-      print *, 'Kpoint ', ik, ' has a weight of ', kweight(ik)
     end do
     
     ASSERT(sum(weights(1:nreduced))-M_ONE<SYMPREC) 
@@ -1432,9 +1420,7 @@ contains
       end do
 
       do ik = 1, nik
-  !      if (kmap(ik) /= ik) cycle
         !We apply the symmetry
- 
         call symmetries_apply_kpoint_red(symm, iop, grid%red_point(1:dim, ik), kpt)
         !We remove potential umklapp
         do idim = 1, dim
@@ -1446,17 +1432,6 @@ contains
 
         ! remove (mark) k-points which already have a symmetric point
         do ik2 = 1, nik
-!          if ( abs(klength2(ik2) - klength2(ik)) > SYMPREC ) cycle
- !         if (kmap(ik2) /= ik2) cycle
- !         if(iop == 2) then
- !         print *, "Comparing ", ik, " with ", ik2, " for iop=", iop
- !         print *, grid%red_point(1:dim, ik)
- !         print *, kpt(1:dim)
- !         print *, grid%red_point(1:dim, ik2)
- !         print *, klength2(ik2), symlength2
- !         print '(i5,1x,a,2x,3(3i4,2x))', iop, ':', symm_op_rotation_matrix_red(symm%ops(iop))
- !         print *, ''
- !         end if
 
           diff(1:dim) = kpt(1:dim)-grid%red_point(1:dim, ik2)  
           do idim = 1, dim
