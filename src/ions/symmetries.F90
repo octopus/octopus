@@ -42,7 +42,6 @@ module symmetries_oct_m
     symmetries_end,                &
     symmetries_number,             &
     symmetries_apply_kpoint_red,   &
-    symmetries_apply_kpoint_cart,  &
     symmetries_space_group_number, &
     symmetries_have_break_dir,     &
     symmetries_identity_index,     &
@@ -207,8 +206,10 @@ contains
         typs(iatom) = species_index(geo%atom(iatom)%species)
       end do
 
+      lattice = M_ZERO
+      !NOTE: Why "inverse matrix" ? (NTD)
       ! get inverse matrix to extract reduced coordinates for spglib
-      lattice(1:3, 1:3) = rlattice(1:3, 1:3)
+      lattice(1:dim, 1:dim) = rlattice(1:dim, 1:dim)
       ! transpose the lattice vectors for use in spglib as row-major matrix
       lattice(:,:) = transpose(lattice(:,:))
       ! fix things for low-dimensional systems: higher dimension lattice constants set to 1
@@ -246,9 +247,11 @@ contains
       call spg_get_symmetry(fullnops, rotation(1, 1, 1), translation(1, 1), &
         max_size, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
 
-      ! transpose due to array order difference between C and fortran
       do iop = 1, fullnops
+        ! transpose due to array order difference between C and fortran
         rotation(:,:,iop) = transpose(rotation(:,:,iop))
+        ! sometimes spglib may return lattice vectors as 'fractional' translations        
+        translation(:, iop) = translation(:, iop) - anint(translation(:, iop) + M_HALF*SYMPREC)
       end do
 
       ! we need to check that it is not a supercell, as in the QE routine (sgam_at)
@@ -310,8 +313,6 @@ contains
       ! direction invariant and (for the moment) that do not have a translation
       this%nops = 0
       do iop = 1, fullnops
-        ! sometimes spglib may return lattice vectors as 'fractional' translations        
-        translation(:, iop) = translation(:, iop) - nint(translation(:, iop) + CNST(0.5)*SYMPREC)
         call symm_op_init(tmpop, rotation(1:3, 1:3, iop), rlattice(1:dim4syms,1:dim4syms), &
                               klattice(1:dim4syms,1:dim4syms), dim4syms, &
                               real(translation(1:3, iop), REAL_PRECISION))
@@ -426,24 +427,6 @@ contains
 
     POP_SUB(symmetries_apply_kpoint_red)
   end subroutine symmetries_apply_kpoint_red
-
-  ! -------------------------------------------------------------------------------
-
-  subroutine symmetries_apply_kpoint_cart(this, iop, aa, bb)
-    type(symmetries_t),  intent(in)  :: this
-    integer,             intent(in)  :: iop
-    FLOAT,               intent(in)  :: aa(1:3)
-    FLOAT,               intent(out) :: bb(1:3)
-
-    PUSH_SUB(symmetries_apply_kpoint_cart)
-
-    ASSERT(0 < iop .and. iop <= this%nops)
-
-    bb(1:3) = symm_op_apply_inv_cart(this%ops(iop), aa(1:3))
-
-    POP_SUB(symmetries_apply_kpoint_cart)
-  end subroutine symmetries_apply_kpoint_cart
-
 
   ! -------------------------------------------------------------------------------
 

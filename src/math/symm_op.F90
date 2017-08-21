@@ -109,6 +109,8 @@ contains
     !This is a proper rotation matrix
     !R_{cart} = A*R_{red}*A^{-1}
     !Where A is the matrix containing the lattice vectors as column
+    !Note: here we use the fact that transpose(klattice) is the inverse of rlattice
+    !      (with a factor 2 \pi)
     this%rot_cart = M_ZERO
     this%rot_cart(1:dim, 1:dim)  = matmul(rlattice(1:dim, 1:dim), &
                     matmul(rot(1:dim, 1:dim),transpose(klattice(1:dim, 1:dim))/ (M_TWO * M_PI)))
@@ -123,6 +125,7 @@ contains
       this%trans_cart(1:dim) = matmul(rlattice(1:dim,1:dim),trans(1:dim))
     end if
 
+    !We check that the rotation matrix in cartesian space is indeed a rotation matrix
     if(sum(abs(matmul(this%rot_cart,transpose(this%rot_cart)) &
               -reshape((/1, 0, 0, 0, 1, 0, 0, 0, 1/), (/3, 3/))))>CNST(1.0e-6)) then
       message(1) = "Internal error: This matrix is not a rotation matrix"

@@ -1125,7 +1125,7 @@ contains
     FLOAT :: dw
     integer ik, iop, ik2, idim
     FLOAT :: tran(MAX_DIM), diff(MAX_DIM)
-    integer, allocatable :: kmap(:)
+    FLOAT, allocatable :: kweight(:)
 
     PUSH_SUB(kpoints_grid_reduce)
 
@@ -1134,12 +1134,11 @@ contains
     ! kmap is used to mark reducible k-points and also to
     ! map reducible to irreducible k-points
 
-    SAFE_ALLOCATE(kmap(1:nkpoints))
+    SAFE_ALLOCATE(kweight(1:nkpoints))
     SAFE_ALLOCATE(reduced(1:dim, 1:nkpoints))
 
-    forall(ik = 1:nkpoints) kmap(ik) = ik
-    
     dw = M_ONE / nkpoints
+    forall(ik = 1:nkpoints) kweight(ik) = dw   
 
     nreduced = 0
 
@@ -1147,43 +1146,53 @@ contains
     symm_ops(:, 1) = symmetries_identity_index(symm)
 
     do ik = 1, nkpoints
-      if (kmap(ik) /= ik) cycle
-      
+      if (kweight(ik) < SYMPREC) cycle
+
       ! new irreducible point
-      ! mark reduced with negative kmap
-      
+      ! has reduced non-zero weight      
       nreduced = nreduced + 1
       reduced(1:dim, nreduced) = kpoints(1:dim, ik)
-      
-      kmap(ik) = -nreduced
-      
-      weights(nreduced) = dw
+     
+      !No need to check Gamma
+      if(maxval(abs(kpoints(1:dim, ik))) < M_EPSILON) cycle
 
       if (ik == nkpoints) cycle
       
       ! operate with the symmetry operations
-      
       do iop = 1, symmetries_number(symm)
-        if(iop == symmetries_identity_index(symm)) cycle ! no need to check for the identity
+        if(iop == symmetries_identity_index(symm) .and. &
+           .not. time_reversal) cycle ! no need to check for the identity
 
         call symmetries_apply_kpoint_red(symm, iop, reduced(1:dim, nreduced), tran)
-           
+        !We remove potential umklapp
+        do idim = 1, dim
+          tran(idim)=tran(idim)-anint(tran(idim)+M_HALF*SYMPREC)
+        end do           
+
         ! remove (mark) k-points related to irreducible reduced by symmetry
         do ik2 = ik + 1, nkpoints
-          if (kmap(ik2) /= ik2) cycle
+          if (kweight(ik2) < SYMPREC) cycle
 
-          diff(1:dim) = tran(1:dim)-kpoints(1:dim, ik2)
-          do idim = 1, dim
-            diff(idim)=diff(idim)-anint(diff(idim))
-          end do
+          if(.not. iop==symmetries_identity_index(symm)) then ! no need to check for the identity
+            diff(1:dim) = tran(1:dim)-kpoints(1:dim, ik2)
+            do idim = 1, dim
+              diff(idim)=diff(idim)-anint(diff(idim))
+            end do
 
-          ! both the transformed rk ...
-          if(sum(abs(diff(1:dim))) < symprec ) then 
-            weights(nreduced) = weights(nreduced) + dw
-            kmap(ik2) = nreduced
-            INCR(num_symm_ops(nreduced), 1)
-            symm_ops(nreduced, num_symm_ops(nreduced)) = iop
-            cycle
+            ! both the transformed rk ...
+            if(sum(abs(diff(1:dim))) < SYMPREC ) then 
+              print *, ik, ik2, iop
+              print *, kpoints(1:dim, ik)
+              print *, tran(1:dim)
+              print *, kpoints(1:dim, ik2)
+              print *, ''
+              kweight(ik) = kweight(ik) + kweight(ik2)
+              kweight(ik2) = M_ZERO 
+              weights(nreduced) = kweight(ik)
+              INCR(num_symm_ops(nreduced), 1)
+              symm_ops(nreduced, num_symm_ops(nreduced)) = iop
+              cycle
+            end if
           end if
 
           if (time_reversal) then
@@ -1193,15 +1202,24 @@ contains
             end do
 
             ! and its inverse
-            if(sum(abs(diff(1:dim))) < symprec ) then
-              weights(nreduced) = weights(nreduced) + dw
-              kmap(ik2) = nreduced
+            if(sum(abs(diff(1:dim))) < SYMPREC ) then
+              print *, 'TR'
+              print *, ik, ik2, iop
+              print *, kpoints(1:dim, ik)
+              print *, tran(1:dim)
+              print *, kpoints(1:dim, ik2)
+              print *, ''
+              kweight(ik) = kweight(ik) + kweight(ik2)
+              kweight(ik2) = M_ZERO
+              weights(nreduced) = kweight(ik)
               INCR(num_symm_ops(nreduced), 1)
+             ! !We mark the symmetry+time-reversal operation as negative
               symm_ops(nreduced, num_symm_ops(nreduced)) = iop
             end if
           end if
         end do
       end do
+      print *, 'Kpoint ', ik, ' has a weight of ', kweight(ik)
     end do
     
     ASSERT(sum(weights(1:nreduced))-M_ONE<SYMPREC) 
@@ -1210,6 +1228,9 @@ contains
     do ik = 1, nreduced
       kpoints(1:dim, ik) = reduced(1:dim, ik)
     end do
+
+    SAFE_DEALLOCATE_A(kweight)
+    SAFE_DEALLOCATE_A(reduced)
 
     POP_SUB(kpoints_grid_reduce)
   end subroutine kpoints_grid_reduce
