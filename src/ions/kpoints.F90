@@ -1013,7 +1013,7 @@ contains
     nrm(1:npoints*nshifts) = M_ZERO
 
     maxcoord = CNST(1.0)
-    do idir = dim, 1, -1
+    do idir = 1, dim
       do ik = 1, npoints*nshifts
         nrm(ik) = nrm(ik) + coords(idir, ik)*maxcoord
       end do
