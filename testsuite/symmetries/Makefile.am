@@ -219,7 +219,7 @@ dist_share_DATA =                          \
 	05-hexagonal.50-spg192.inp       \
 	05-hexagonal.51-spg193.inp       \
 	05-hexagonal.52-spg194.inp       \
-	05-hexagonal.text                \
+	05-hexagonal.test                \
 	06-cubic.01-spg195.inp           \
 	06-cubic.02-spg196.inp           \
 	06-cubic.03-spg197.inp           \
