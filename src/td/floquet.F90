@@ -19,8 +19,10 @@
 
 module floquet_oct_m
   use iso_c_binding
+  use blas_oct_m
   use calc_mode_par_oct_m
   use comm_oct_m
+  use derivatives_oct_m
   use distributed_oct_m
   use eigensolver_oct_m
   use excited_states_oct_m
@@ -60,6 +62,7 @@ module floquet_oct_m
   use states_dim_oct_m
   use states_io_oct_m
   use states_restart_oct_m
+  use subspace_oct_m
   use system_oct_m
   use types_oct_m
   use unit_oct_m
@@ -81,9 +84,7 @@ module floquet_oct_m
        floquet_hamiltonian_run_solver, &
        floquet_restart_dressed_st, &
        floquet_load_td_hamiltonians, &
-       floquet_td_hamiltonians_sample, &
-!HH
- floquet_calc_occupations
+       floquet_td_hamiltonians_sample
 
   integer, public, parameter ::    &
        FLOQUET_NONE            = 0, &      
@@ -228,6 +229,23 @@ contains
     ! get time of one cycle
     this%Tcycle=M_TWO*M_PI/this%omega
 
+    !%Variable FloquetBZSolver
+    !%Type logical
+    !%Default no
+    !%Section Floquet
+    !%Description
+    !% Use dedicated Floquet solver for the Floquet Brillouin zone
+    !%End
+    call parse_variable('FloquetBZSolver', .false., this%FBZ_solver)
+    if(this%FBZ_solver) then
+      message(1) = "Info: Using Floquet-BZ solver"
+      call messages_info(1)
+      if(this%calc_occupations) then
+        message(1) = "Occupations for FBZ not implemented"
+        call messages_warning(1)
+        this%calc_occupations = .false.
+      end if
+    endif
 
     !%Variable TDFloquetMaximumSolverIterations
     !%Type integer
@@ -620,13 +638,12 @@ contains
 
       type(states_t) :: dressed_st
       PUSH_SUB(floquet_hamiltonian_solve)
-      
+
       call floquet_init_dressed_wfs(hm, sys, dressed_st, optional_default(fromScratch, .false.))  
 
       call floquet_hamiltonian_run_solver(hm, sys, dressed_st)
-      
+         
       call states_end(dressed_st)
-      
       
       POP_SUB(floquet_hamiltonian_solve)
     end subroutine floquet_hamiltonian_solve
@@ -695,7 +712,11 @@ contains
       st => sys%st
       
       ! initialize a state object with the Floquet dimension
-      call states_init(dressed_st, gr, hm%geo,floquet_dim=hm%F%floquet_dim)
+      if(.not.hm%F%FBZ_solver) then
+        call states_init(dressed_st, gr, hm%geo,floquet_dim=hm%F%floquet_dim)
+      else
+         call states_init(dressed_st, gr, hm%geo,floquet_dim=1)
+      end if
       call kpoints_distribute(dressed_st%d,sys%mc)
       call states_distribute_nodes(dressed_st,sys%mc)
       call states_exec_init(dressed_st, sys%mc)
@@ -720,30 +741,34 @@ contains
           end if
           call restart_end(restart)
         end if
-        ! only use gs states for init, if they are not distributed
-        if(.not. st%parallel_in_states .and. ierr == 0 &
-           .and.  hm%F%init == OPTION__TDFLOQUETINITIALIZATION__F_GS) then
-           message(1) ='Info: Initialize Floquet states with gs wavefunctions'
-           call messages_info(1)
+
+        if(hm%F%FBZ_solver) then
+          call states_copy(dressed_st, sys%st)
+        else
+          ! only use gs states for init, if they are not distributed 
+          if(.not. st%parallel_in_states .and. ierr == 0 &
+            .and.  hm%F%init == OPTION__TDFLOQUETINITIALIZATION__F_GS) then
+            message(1) ='Info: Initialize Floquet states with gs wavefunctions'
+            call messages_info(1)
             ! initialize floquet states from scratch
             SAFE_ALLOCATE(temp_state1(1:gr%der%mesh%np,st%d%dim))
             SAFE_ALLOCATE(temp_state2(1:gr%der%mesh%np,hm%F%floquet_dim*st%d%dim))
        
             do ik=st%d%kpt%start,st%d%kpt%end
-               do in=1,hm%F%floquet_dim
-                  do ist=st%st_start,st%st_end
-                     call states_get_state(st,gr%der%mesh,ist,ik,temp_state1)
-                     temp_state2(:,:) = M_ZERO
-                     do idim=1,st%d%dim
-                        temp_state2(1:gr%der%mesh%np,(in-1)*st%d%dim+idim) = temp_state1(1:gr%der%mesh%np,idim)
-                     end do
-                     call states_set_state(dressed_st,gr%der%mesh, (in-1)*st%nst+ist, ik,temp_state2)
-                  enddo
-               enddo
+              do in=1,hm%F%floquet_dim
+                do ist=st%st_start,st%st_end
+                  call states_get_state(st,gr%der%mesh,ist,ik,temp_state1)
+                  temp_state2(:,:) = M_ZERO
+                  do idim=1,st%d%dim
+                    temp_state2(1:gr%der%mesh%np,(in-1)*st%d%dim+idim) = temp_state1(1:gr%der%mesh%np,idim)
+                  end do
+                  call states_set_state(dressed_st,gr%der%mesh, (in-1)*st%nst+ist, ik,temp_state2)
+                enddo
+              enddo
             enddo
             SAFE_DEALLOCATE_A(temp_state1)
             SAFE_DEALLOCATE_A(temp_state2)
-         else
+          else
             message(1) ='Info: Initialize Floquet states with random wavefunctions'
             call messages_info(1)
             ! randomize
@@ -767,6 +792,7 @@ contains
             SAFE_DEALLOCATE_A(temp_state1)
             SAFE_DEALLOCATE_A(temp_state2)
          end if
+       end if
 
       end if
 
@@ -808,7 +834,8 @@ contains
 
       iter = hm%F%iter
 
-      hm%F%floquet_apply = .true.
+      if(.not.hm%F%FBZ_solver) hm%F%floquet_apply = .true.
+
       ! set dimension of Floquet Hamiltonian                                                    
       hm%d%dim = dressed_st%d%dim
       
@@ -818,7 +845,7 @@ contains
       have_gs= .false.
       if (hm%F%calc_occupations) then
         message(1) = 'Info: Read ground-state wavefunctions to calculate occupations.'
-         call messages_info(1)
+        call messages_info(1)
         
         call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
 
@@ -833,15 +860,19 @@ contains
         call restart_end(restart)
       end if
 
-
       converged=.false.
       maxiter = hm%F%max_solve_iter
       itime = loct_clock()
       do while(.not.converged.and.iter <= maxiter)
-         write(msg,'(a,i5)') 'Iter #', iter         
-         call messages_print_stress(stdout, trim(msg))
+
+         if(hm%F%FBZ_solver) then
+            call floquet_FBZ_eigensolver_run(eigens, sys, dressed_st, hm, 1,converged)
+         else
+           write(msg,'(a,i5)') 'Iter #', iter         
+           call messages_print_stress(stdout, trim(msg))
         
-         call eigensolver_run(eigens, gr, dressed_st, hm, 1,converged)
+           call eigensolver_run(eigens, gr, dressed_st, hm, 1,converged)
+         end if
          
          if (hm%F%calc_occupations .and. have_gs) then
            call floquet_calc_occupations(hm, sys, dressed_st)
@@ -1024,10 +1055,228 @@ contains
     
     end subroutine floquet_calc_occupations
     
+   subroutine floquet_FBZ_eigensolver_run(eigens, sys, st, hm, iter, conv)
+     type(eigensolver_t),  intent(inout) :: eigens
+     type(system_t),         intent(in)  :: sys
+     type(states_t),       intent(inout) :: st
+     type(hamiltonian_t),  intent(inout) :: hm
+     integer,              intent(in)    :: iter
+     logical,    optional, intent(out)   :: conv
 
+     type(states_t)        :: full_st
+     type(mesh_t), pointer :: mesh
+     integer               :: ik, ist
+     FLOAT                 :: diff
+     CMPLX, allocatable    :: full_state(:,:), state(:,:)
 
+     PUSH_SUB(floquet_FBZ_eigensolver_run)
+
+     ASSERT(st%nst == sys%st%nst )
+     
+     mesh => sys%gr%der%mesh
+
+     eigens%folded_spectrum = .true.
+
+     ! create temporary state object with a single allocated 
+     ! full Floquet-state
+     call states_init(full_st, sys%gr, hm%geo,floquet_dim=hm%F%floquet_dim)
+     call kpoints_distribute(full_st%d,sys%mc)
+     call states_distribute_nodes(full_st,sys%mc)
+     call states_exec_init(full_st, sys%mc)
+     full_st%nst = st%nst
+     call states_allocate_wfns(full_st,mesh, wfs_type = TYPE_CMPLX)
+
+     SAFE_ALLOCATE(full_state(1:mesh%np,1:full_st%d%dim))
+     SAFE_ALLOCATE(state(1:mesh%np,1:st%d%dim))
+
+     SAFE_ALLOCATE(eigens%spectrum_shift(1:st%nst))
+
+     do ik=st%d%kpt%start,st%d%kpt%end
+        hm%F%floquet_apply = .false.
+        hm%d%dim = st%d%dim
+        call floquet_FBZ_subspace_diag(sys%gr%der, st, hm, ik)
+        hm%F%floquet_apply = .true.
+        hm%d%dim = full_st%d%dim
+
+        ! to solve only for specific k-point we need to have
+        ! only one k-point in the states structure
+        full_st%d%kpt%start=ik
+        full_st%d%kpt%end = full_st%d%kpt%start
+
+        eigens%spectrum_shift(1:st%nst) = st%eigenval(1:st%nst,ik)
+
+        do ist=1,st%nst
+          ! set initial state
+          call states_get_state(st,mesh, ist, ik, state)
+          full_state = M_ZERO
+          full_state(1:mesh%np,-hm%F%order(1)+1:-hm%F%order(1)+st%d%dim) = state(1:mesh%np,1:st%d%dim)
+          call states_set_state(full_st,mesh, ist, ik, full_state)
+        end do
+        eigens%converged(:) = 0
+        call eigensolver_run(eigens, sys%gr, full_st, hm, 1,conv)
+
+     end do
+
+     call states_deallocate_wfns(full_st)
+     
+     hm%F%floquet_apply = .false.
+     POP_SUB(floquet_FBZ_eigensolver_run)
+
+   end subroutine floquet_FBZ_eigensolver_run
     
-    
-    
+   subroutine floquet_FBZ_subspace_diag(der, st, hm, ik)
+    type(derivatives_t),    intent(in)    :: der
+    type(states_t), target, intent(inout) :: st
+    type(hamiltonian_t),    intent(in)    :: hm
+    integer,                intent(in)    :: ik
+
+    CMPLX, allocatable :: evecs(:, :), rdiff(:), H0(:,:),P(:,:), Pd(:,:), Heff(:,:)
+    FLOAT, allocatable :: evalues(:), mix(:)
+    integer            :: block0, nst0, maxiter, nmix, ist, jj,ii
+    FLOAT              :: tol
+
+    PUSH_SUB(floquet_FBZ_subspace_diag)
+
+    SAFE_ALLOCATE(H0(1:st%nst, 1:st%nst)) ! the zero-block, this could be gs Hamiltonian(?)
+    SAFE_ALLOCATE( P(1:st%nst, 1:st%nst)) ! the off-diagonal intereaction block
+    SAFE_ALLOCATE(Pd(1:st%nst, 1:st%nst)) ! P^\dagger
+    SAFE_ALLOCATE(Heff(1:st%nst, 1:st%nst))
+    SAFE_ALLOCATE(evecs(1:st%nst, 1:st%nst))
+    SAFE_ALLOCATE(evalues(1:st%nst))
+
+    nmix = 3
+    SAFE_ALLOCATE(mix(nmix))
+
+    ! generate the blocks
+    call zsubspace_diag_hamiltonian(der, st, hm, ik, H0)
+    call floquet_subspace_interaction_block(der, st,hm,ik,P)
+    Pd(1:st%nst, 1:st%nst) = transpose(conjg(P))
+
+    maxiter = 100
+    tol = 1.E-7
+    do ist=1,st%nst
+      mix = M_ZERO!st%eigenval(ist,ik)
+      do ii=1,maxiter
+        call continued_fraction(st%nst, H0, P, Pd, st%eigenval(ist,ik), hm%F%omega, hm%F%order(1),Heff)
+        call lalg_eigensolve(st%nst, Heff, evalues)
+        st%eigenval(ist,ik) = (sum(mix)+evalues(ist))/(nmix+1)
+        if(abs(st%eigenval(ist,ik)-mix(1)) < tol) then
+          evecs(ist,:) = Heff(ist,:)
+          exit
+        end if
+        ! shift mixing vector
+        do jj=nmix,2,-1
+           mix(jj) = mix(jj-1)
+        end do
+        mix(1) = st%eigenval(ist,ik)
+      end do
+    end do
+    print *, 'FBZ from subspace', st%eigenval(1:st%nst,ik)
+
+    call states_rotate(der%mesh, st, evecs, ik)
+
+    SAFE_DEALLOCATE_A(H0)
+    SAFE_DEALLOCATE_A( P)
+    SAFE_DEALLOCATE_A(Pd)
+    SAFE_DEALLOCATE_A(Heff)
+    SAFE_DEALLOCATE_A(evecs)
+    SAFE_DEALLOCATE_A(evalues)
+
+    POP_SUB(floquet_FBZ_subspace_diag)
+
+    contains
+      subroutine continued_fraction(nn,H0, P, Pd, Q, omega, order,Heff)
+        integer :: nn
+        CMPLX  :: H0(nn,nn), P(nn,nn), Pd(nn,nn), Heff(nn,nn)
+        FLOAT  ::  Q, omega
+        integer :: order, ii
+
+        FLOAT   :: one(nn,nn)
+        CMPLX  :: Heff_plus(nn,nn)
+        CMPLX  :: Heff_minus(nn,nn)
+
+        one = M_ZERO
+        do ii=1,nn
+           one(ii,ii) = M_ONE
+        end do
+
+        Heff_minus(:,:) = M_ZERO
+        Heff_plus(:,:)  = M_ZERO
+
+        do ii=order,1,-1
+           Heff_minus(:,:) = (Q-ii*omega)*one(:,:)-H0(:,:)-Heff_minus(:,:)
+           Heff_plus(:,:)  = (Q+ii*omega)*one(:,:)-H0(:,:)-Heff_plus(:,:)
+
+           Heff_minus = lalg_inverter(nn, Heff_minus)
+           Heff_plus  = lalg_inverter(nn, Heff_plus)
+           
+           Heff_minus = matmul(matmul(Pd,Heff_minus),P)
+           Heff_plus = matmul(matmul(P,Heff_plus),Pd)
+        end do
+
+        Heff = H0+Heff_minus+Heff_plus
+
+      end subroutine continued_fraction
+
+      subroutine floquet_subspace_interaction_block(der,st,hm,ik,mat)
+        type(derivatives_t),    intent(in)    :: der
+        type(states_t), target, intent(inout) :: st
+        type(hamiltonian_t),    intent(in)    :: hm
+        integer,                intent(in)    :: ik
+        CMPLX,                  intent(out)   :: mat(:,:)
+
+        CMPLX, allocatable     :: psi(:,:,:), hpsi(:,:,:), state1(:,:),state2(:,:)
+        integer                :: ist, idim, it
+        CMPLX :: alpha, beta
+       
+        PUSH_SUB(floquet_subspace_interaction_block)
+        
+        ASSERT(hm%F%floquet_apply == .false.)
+
+        SAFE_ALLOCATE(psi(1:st%nst, 1:st%d%dim, 1:der%mesh%np))
+        SAFE_ALLOCATE(hpsi(1:st%nst, 1:st%d%dim, 1:der%mesh%np))
+        SAFE_ALLOCATE(state1(1:der%mesh%np_part,1:st%d%dim))
+        SAFE_ALLOCATE(state2(1:der%mesh%np_part,1:st%d%dim))
+
+        hpsi = M_ZERO
+        do ist=1,st%nst
+          call states_get_state(st, der%mesh, ist, ik, state1)
+          do idim=1,st%d%dim
+            psi(ist,idim,1:der%mesh%np) = state1(1:der%mesh%np,idim)
+          end do
+          do it=1,hm%F%nT
+             call zhamiltonian_apply(hm%td_hm(it), der,state1, state2, ist, ik)!, time=it*hm%F%dt)
+             do idim=1,st%d%dim
+               hpsi(ist,idim,1:der%mesh%np) = hpsi(ist,idim,1:der%mesh%np) + &
+                                             exp(-M_zI*hm%F%omega*it*hm%F%dt)/hm%F%nT*state2(1:der%mesh%np,idim)
+             end do
+          end do
+        end do
+
+        alpha = der%mesh%volume_element
+        beta  = CNST(1.0)
+        call blas_gemm(transa = 'n',     &
+                       transb = 'c',     &
+                       m = st%nst,       &
+                       n = st%nst,       &
+                       k = der%mesh%np*st%d%dim,   &
+                       alpha = alpha,              &
+                       a = hpsi(1, 1, 1),          &
+                       lda = ubound(hpsi, dim = 1),&
+                       b = psi(1, 1, 1),           &
+                       ldb = ubound(psi, dim = 1), &
+                       beta = beta ,               &
+                       c = mat(1, 1),              &                        
+                       ldc = ubound(mat, dim = 1))
+
+        SAFE_DEALLOCATE_A(psi)
+        SAFE_DEALLOCATE_A(hpsi)
+        SAFE_DEALLOCATE_A(state1)
+        SAFE_DEALLOCATE_A(state2)
+
+        POP_SUB(floquet_subspace_interaction_block)
+      end subroutine floquet_subspace_interaction_block
+
+   end subroutine floquet_FBZ_subspace_diag
 
 end module floquet_oct_m

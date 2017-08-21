@@ -18,7 +18,7 @@
 
 ! ---------------------------------------------------------
 !> conjugate-gradients method.
-subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff)
+subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,fold,shift)
   type(grid_t),           intent(in)    :: gr
   type(states_t),         intent(inout) :: st
   type(hamiltonian_t),    intent(in)    :: hm
@@ -28,14 +28,19 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff)
   integer,                intent(inout) :: converged
   integer,                intent(in)    :: ik
   FLOAT,        optional, intent(out)   :: diff(:) !< (1:st%nst)
+  logical,      optional, intent(in)   ::  fold ! use folded spectrum operator (H-shift)^2
+  FLOAT,        optional, intent(in)   :: shift(:)
 
-  R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), ppsi(:,:), psi(:, :)
+  R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), ppsi(:,:), psi(:, :), psi2(:, :), g2(:,:)
   R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
   real(8)  :: cg0, e0, res
-  integer  :: ist, iter, maxter, idim, ip
+  integer  :: ist, iter, maxter, idim, ip, jst, im
   R_TYPE   :: sb(3)
+  logical   :: fold_
 
   PUSH_SUB(X(eigensolver_cg2))
+
+  fold_ = optional_default(fold,.false.)
 
   maxter = niter
   niter = 0
@@ -46,6 +51,9 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff)
   SAFE_ALLOCATE(    g(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(   g0(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE( ppsi(1:gr%mesh%np, 1:st%d%dim))
+  if(fold_) then
+    SAFE_ALLOCATE( psi2(1:gr%mesh%np_part, 1:st%d%dim))
+  end if
   h_psi = R_TOTYPE(M_ZERO)
   cg    = R_TOTYPE(M_ZERO)
   g     = R_TOTYPE(M_ZERO)
@@ -71,6 +79,13 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff)
 
     ! Calculate starting gradient: |hpsi> = H|psi>
     call X(hamiltonian_apply)(hm, gr%der, psi, h_psi, ist, ik)
+
+    if(fold_) then
+      psi2 = M_ZERO
+      call X(hamiltonian_apply)(hm, gr%der, h_psi, psi2, ist, ik)
+      ! h_psi = (H-shift)^2 psi 
+      h_psi = 0.01*(psi2 - M_TWO*shift(ist)*h_psi + shift(ist)**2*psi)
+    end if
 
     ! Calculates starting eigenvalue: e(p) = <psi(p)|H|psi>
     st%eigenval(ist, ik) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_psi))
@@ -125,7 +140,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff)
                ' ist ', ist, ' iter ', iter, ' res ', res, " max ", maxter
           call messages_info(1)
         end if
-
         exit
       end if
 
@@ -140,19 +154,26 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff)
         !gamma = gg/gg0        ! (Fletcher-Reeves)
         gamma = (gg - gg1)/gg0   ! (Polack-Ribiere)
         gg0 = gg
-        
+
         norma = gamma*cg0*sin(theta)
-        
+
         forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
           cg(ip, idim) = gamma*cg(ip, idim) + g(ip, idim) - norma*psi(ip, idim)
         end forall
-        
+
         call profiling_count_operations(st%d%dim*gr%mesh%np*(2*R_ADD + 2*R_MUL))
 
       end if
 
       ! cg contains now the conjugate gradient
       call X(hamiltonian_apply)(hm, gr%der, cg, ppsi, ist, ik)
+
+      if(fold_) then
+         psi2 = M_ZERO
+         call X(hamiltonian_apply)(hm, gr%der, ppsi, psi2, ist, ik)
+         ! h_psi = (H-shift)^2 psi
+         ppsi = 0.01*(psi2 - M_TWO*shift(ist)*ppsi + shift(ist)**2*cg)
+      end if
 
       ! Line minimization.
       a0 = X(mf_dotp) (gr%mesh, st%d%dim, psi, ppsi, reduce = .false.)
@@ -207,6 +228,20 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff)
 
     end do iter_loop
 
+    ! if the folded operator was used, compute the actual eigenvalue
+    if(fold_) then
+        h_psi = M_ZERO
+      call X(hamiltonian_apply)(hm, gr%der, psi, h_psi, ist, ik)
+      st%eigenval(ist, ik) = X(mf_dotp) (gr%mesh, st%d%dim, psi, h_psi, reduce = .false.)
+      if(gr%mesh%parallel_in_domains) then
+        call comm_allreduce(gr%mesh%vp%comm, st%eigenval(ist, ik))
+      end if
+print *, 'E,res,shift', st%eigenval(ist, ik),X(states_residue)(gr%mesh, st%d%dim, h_psi, st%eigenval(ist, ik), psi), shift(ist)
+do im=1,hm%F%floquet_dim
+   print *, 'im',  X(mf_nrm2) (gr%mesh, psi(1:gr%mesh%np_part,im))
+end do
+    end if
+
     call states_set_state(st, gr%mesh, ist, ik, psi)
 
     niter = niter + iter + 1
@@ -228,7 +263,9 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff)
   SAFE_DEALLOCATE_A(g0)
   SAFE_DEALLOCATE_A(cg)
   SAFE_DEALLOCATE_A(ppsi)
-
+  if(fold_) then
+    SAFE_DEALLOCATE_A(psi2)
+  end if
   POP_SUB(X(eigensolver_cg2))
 end subroutine X(eigensolver_cg2)
 
