@@ -71,10 +71,17 @@ module symm_op_oct_m
     module procedure dsymm_op_apply_transpose_red, zsymm_op_apply_transpose_red
   end interface symm_op_apply_transpose_red
 
-
   interface symm_op_apply_inv_cart
     module procedure dsymm_op_apply_inv_cart, zsymm_op_apply_inv_cart
   end interface symm_op_apply_inv_cart
+
+  interface symm_op_invariant_cart
+    module procedure dsymm_op_invariant_cart, zsymm_op_invariant_cart
+  end interface symm_op_invariant_cart
+
+  interface symm_op_invariant_red
+    module procedure dsymm_op_invariant_red, zsymm_op_invariant_red
+  end interface symm_op_invariant_red
 
 contains
  
@@ -169,32 +176,6 @@ contains
     POP_SUB(symm_op_end)
   end subroutine symm_op_end
   
-  ! -------------------------------------------------------------------------------
-  logical pure function symm_op_invariant_cart(this, aa, prec) result(invariant)
-    type(symm_op_t),  intent(in)  :: this
-    FLOAT,            intent(in)  :: aa(:)
-    FLOAT,            intent(in)  :: prec
-
-    FLOAT :: cc(1:3)
-
-    cc = symm_op_apply_cart(this, aa)
-    invariant = all(abs(cc(1:this%dim) - aa(1:this%dim)) < prec)
-
-  end function symm_op_invariant_cart
-
-  ! -------------------------------------------------------------------------------
- logical pure function symm_op_invariant_red(this, aa, prec) result(invariant)
-    type(symm_op_t),  intent(in)  :: this
-    FLOAT,            intent(in)  :: aa(:)
-    FLOAT,            intent(in)  :: prec
-
-    FLOAT :: cc(1:3)
-
-    cc = symm_op_apply_red(this, aa)
-    invariant = all(abs(cc(1:this%dim) - aa(1:this%dim)) < prec)
-
-  end function symm_op_invariant_red
-
   ! -------------------------------------------------------------------------------
   logical pure function symm_op_has_translation(this, prec) result(has)
     type(symm_op_t),  intent(in)  :: this

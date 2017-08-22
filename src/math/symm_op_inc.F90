@@ -72,6 +72,31 @@ pure function X(symm_op_apply_inv_cart)(this, aa) result(bb)
 
 end function X(symm_op_apply_inv_cart)
 
+! -------------------------------------------------------------------------------
+logical pure function X(symm_op_invariant_cart)(this, aa, prec) result(invariant)
+  type(symm_op_t),  intent(in)  :: this
+  R_TYPE,           intent(in)  :: aa(:)
+  FLOAT,            intent(in)  :: prec
+
+  R_TYPE :: cc(1:3)
+
+  cc = symm_op_apply_cart(this, aa)
+  invariant = all(abs(cc(1:this%dim) - aa(1:this%dim)) < prec)
+
+end function X(symm_op_invariant_cart)
+
+! -------------------------------------------------------------------------------
+logical pure function X(symm_op_invariant_red)(this, aa, prec) result(invariant)
+  type(symm_op_t),  intent(in)  :: this
+  R_TYPE,           intent(in)  :: aa(:)
+  FLOAT,            intent(in)  :: prec
+
+  R_TYPE :: cc(1:3)
+
+  cc = symm_op_apply_red(this, aa)
+  invariant = all(abs(cc(1:this%dim) - aa(1:this%dim)) < prec)
+
+end function X(symm_op_invariant_red)
 
 !! Local Variables:
 !! mode: f90
