@@ -800,6 +800,17 @@ contains
 
     if(.not.sb%kpoints%use_symmetries) return
 
+    !If all the axis have the same spacing and the same length
+    !the grid is by obviously symmetric 
+    !Indeed, reduced coordinates are proportional to the point index
+    !and the reduced rotation are integer matrices
+    !The result of the product is also proportional to an integer
+    !and therefore belong to the grid.
+    if(mesh%idx%ll(1) == mesh%idx%ll(2) .and.     &
+        mesh%idx%ll(2) == mesh%idx%ll(3) .and.    &
+         mesh%spacing(1) == mesh%spacing(2) .and. &
+          mesh%spacing(2) == mesh%spacing(3) ) return 
+
     PUSH_SUB(mesh_check_symmetries)
 
     message(1) = "Checking if the real-space grid is symmetric";
