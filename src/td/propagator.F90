@@ -578,6 +578,7 @@ contains
       end if
     end if
 
+
     if(gauge_field_is_applied(hm%ep%gfield) .and. .not. propagator_ions_are_propagated(tr)) then
       call gauge_field_propagate(hm%ep%gfield, dt, time)
     end if
@@ -601,6 +602,9 @@ contains
       call gauge_field_get_force(hm%ep%gfield, gr, st)
       call gauge_field_propagate_vel(hm%ep%gfield, dt)
     end if
+
+    if(ion_dynamics_ions_move(ions)) &
+      call lda_u_update_basis(hm%lda_u, gr, geo, st)
 
     !We update the occupation matrices
     call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
@@ -669,7 +673,7 @@ contains
     !TODO: we should update the occupation matrices here 
     ! NTD: Who calls fermi ? 
     if(hm%lda_u%apply) then
-      call messages_not_implemented("lda+u with propagator_dt_bo")  
+      call messages_not_implemented("DFT+U with propagator_dt_bo")  
     end if
 
     call hamiltonian_epot_generate(hm, gr, geo, st, time = iter*dt)

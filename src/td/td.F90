@@ -374,7 +374,7 @@ contains
 
     if(simul_box_is_periodic(gr%mesh%sb)) call messages_experimental('Time propagation for periodic systems')
 
-    if(ion_dynamics_ions_move(td%ions) .and. hm%lda_u%apply ) call messages_not_implemented("dft+u with MoveIons=yes") 
+    if(ion_dynamics_ions_move(td%ions) .and. hm%lda_u%apply ) call messages_experimental("DFT+U with MoveIons=yes") 
 
     call td_init(td, sys, hm)
 
