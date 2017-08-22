@@ -282,11 +282,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_init(st, gr, geo, floquet_dim)
+  subroutine states_init(st, gr, geo, floquet_dim,floquet_FBZ)
     type(states_t), target, intent(inout) :: st
     type(grid_t),           intent(in)    :: gr
     type(geometry_t),       intent(in)    :: geo
     integer, optional, intent(in)         :: floquet_dim
+    logical, optional, intent(in)         :: floquet_FBZ
 
     FLOAT :: excess_charge
     integer :: nempty, ntot, default, nthreads
@@ -451,7 +452,9 @@ contains
 
     if(optional_default(floquet_dim,1) > 1) then
       st%d%dim = st%d%dim*floquet_dim
-      st%nst = st%nst*floquet_dim
+      if(.not.optional_default(floquet_FBZ,.false.)) then
+        st%nst = st%nst*floquet_dim
+      end if
     end if
 
     !%Variable StatesBlockSize

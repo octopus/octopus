@@ -29,7 +29,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
   integer,                intent(in)    :: ik
   FLOAT,        optional, intent(out)   :: diff(:) !< (1:st%nst)
   logical,      optional, intent(in)   ::  fold ! use folded spectrum operator (H-shift)^2
-  FLOAT,        optional, intent(in)   :: shift(:)
+  FLOAT,pointer, optional, intent(in)   :: shift(:,:)
 
   R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), ppsi(:,:), psi(:, :), psi2(:, :), g2(:,:)
   R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
@@ -41,6 +41,10 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
   PUSH_SUB(X(eigensolver_cg2))
 
   fold_ = optional_default(fold,.false.)
+
+  if(fold_) then
+    ASSERT(associated(shift))
+  end if
 
   maxter = niter
   niter = 0
@@ -84,7 +88,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
       psi2 = M_ZERO
       call X(hamiltonian_apply)(hm, gr%der, h_psi, psi2, ist, ik)
       ! h_psi = (H-shift)^2 psi 
-      h_psi = 0.01*(psi2 - M_TWO*shift(ist)*h_psi + shift(ist)**2*psi)
+      h_psi = 0.01*(psi2 - M_TWO*shift(ist,ik)*h_psi + shift(ist,ik)**2*psi)
     end if
 
     ! Calculates starting eigenvalue: e(p) = <psi(p)|H|psi>
@@ -172,7 +176,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
          psi2 = M_ZERO
          call X(hamiltonian_apply)(hm, gr%der, ppsi, psi2, ist, ik)
          ! h_psi = (H-shift)^2 psi
-         ppsi = 0.01*(psi2 - M_TWO*shift(ist)*ppsi + shift(ist)**2*cg)
+         ppsi = 0.01*(psi2 - M_TWO*shift(ist,ik)*ppsi + shift(ist,ik)**2*cg)
       end if
 
       ! Line minimization.
@@ -236,10 +240,10 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
       if(gr%mesh%parallel_in_domains) then
         call comm_allreduce(gr%mesh%vp%comm, st%eigenval(ist, ik))
       end if
-print *, 'E,res,shift', st%eigenval(ist, ik),X(states_residue)(gr%mesh, st%d%dim, h_psi, st%eigenval(ist, ik), psi), shift(ist)
-do im=1,hm%F%floquet_dim
-   print *, 'im',  X(mf_nrm2) (gr%mesh, psi(1:gr%mesh%np_part,im))
-end do
+      res = X(states_residue)(gr%mesh, st%d%dim, h_psi, st%eigenval(ist, ik), psi)
+      !do im=1,hm%F%floquet_dim
+      !   print *, 'im',  X(mf_nrm2) (gr%mesh, psi(1:gr%mesh%np_part,im))
+      !end do
     end if
 
     call states_set_state(st, gr%mesh, ist, ik, psi)

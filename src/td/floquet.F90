@@ -84,7 +84,8 @@ module floquet_oct_m
        floquet_hamiltonian_run_solver, &
        floquet_restart_dressed_st, &
        floquet_load_td_hamiltonians, &
-       floquet_td_hamiltonians_sample
+       floquet_td_hamiltonians_sample, &
+       floquet_calc_occupations
 
   integer, public, parameter ::    &
        FLOQUET_NONE            = 0, &      
@@ -712,11 +713,7 @@ contains
       st => sys%st
       
       ! initialize a state object with the Floquet dimension
-      if(.not.hm%F%FBZ_solver) then
-        call states_init(dressed_st, gr, hm%geo,floquet_dim=hm%F%floquet_dim)
-      else
-         call states_init(dressed_st, gr, hm%geo,floquet_dim=1)
-      end if
+      call states_init(dressed_st, gr, hm%geo,floquet_dim=hm%F%floquet_dim,floquet_FBZ=hm%F%FBZ_solver)
       call kpoints_distribute(dressed_st%d,sys%mc)
       call states_distribute_nodes(dressed_st,sys%mc)
       call states_exec_init(dressed_st, sys%mc)
@@ -742,59 +739,56 @@ contains
           call restart_end(restart)
         end if
 
-        if(hm%F%FBZ_solver) then
-          call states_copy(dressed_st, sys%st)
-        else
-          ! only use gs states for init, if they are not distributed 
-          if(.not. st%parallel_in_states .and. ierr == 0 &
-            .and.  hm%F%init == OPTION__TDFLOQUETINITIALIZATION__F_GS) then
-            message(1) ='Info: Initialize Floquet states with gs wavefunctions'
-            call messages_info(1)
-            ! initialize floquet states from scratch
-            SAFE_ALLOCATE(temp_state1(1:gr%der%mesh%np,st%d%dim))
-            SAFE_ALLOCATE(temp_state2(1:gr%der%mesh%np,hm%F%floquet_dim*st%d%dim))
+        ! only use gs states for init, if they are not distributed 
+        if(.not. st%parallel_in_states .and. ierr == 0 &
+           .and.  hm%F%init == OPTION__TDFLOQUETINITIALIZATION__F_GS &
+           .and. .not. hm%F%FBZ_solver) then
+          message(1) ='Info: Initialize Floquet states with gs wavefunctions'
+          call messages_info(1)
+          ! initialize floquet states from scratch
+          SAFE_ALLOCATE(temp_state1(1:gr%der%mesh%np,st%d%dim))
+          SAFE_ALLOCATE(temp_state2(1:gr%der%mesh%np,hm%F%floquet_dim*st%d%dim))
        
-            do ik=st%d%kpt%start,st%d%kpt%end
-              do in=1,hm%F%floquet_dim
-                do ist=st%st_start,st%st_end
-                  call states_get_state(st,gr%der%mesh,ist,ik,temp_state1)
-                  temp_state2(:,:) = M_ZERO
-                  do idim=1,st%d%dim
-                    temp_state2(1:gr%der%mesh%np,(in-1)*st%d%dim+idim) = temp_state1(1:gr%der%mesh%np,idim)
-                  end do
-                  call states_set_state(dressed_st,gr%der%mesh, (in-1)*st%nst+ist, ik,temp_state2)
-                enddo
+          do ik=st%d%kpt%start,st%d%kpt%end
+            do in=1,hm%F%floquet_dim
+              do ist=st%st_start,st%st_end
+                call states_get_state(st,gr%der%mesh,ist,ik,temp_state1)
+                temp_state2(:,:) = M_ZERO
+                do idim=1,st%d%dim
+                  temp_state2(1:gr%der%mesh%np,(in-1)*st%d%dim+idim) = temp_state1(1:gr%der%mesh%np,idim)
+                end do
+                call states_set_state(dressed_st,gr%der%mesh, (in-1)*st%nst+ist, ik,temp_state2)
               enddo
             enddo
-            SAFE_DEALLOCATE_A(temp_state1)
-            SAFE_DEALLOCATE_A(temp_state2)
-          else
-            message(1) ='Info: Initialize Floquet states with random wavefunctions'
-            call messages_info(1)
-            ! randomize
-            SAFE_ALLOCATE(temp_state1(1:gr%der%mesh%np,st%d%dim))
-            SAFE_ALLOCATE(temp_state2(1:gr%der%mesh%np,hm%F%floquet_dim*st%d%dim))
-            do ik=st%d%kpt%start,st%d%kpt%end
-               do ist=dressed_st%st_start,dressed_st%st_end
-
-                  do in=1,hm%F%floquet_dim*st%d%dim  
-                     if(dressed_st%randomization == PAR_INDEPENDENT) then
-                        call zmf_random(gr%der%mesh, temp_state2(:,in), gr%der%mesh%vp%xlocal-1, &
+          enddo
+          SAFE_DEALLOCATE_A(temp_state1)
+          SAFE_DEALLOCATE_A(temp_state2)
+        else
+          message(1) ='Info: Initialize Floquet states with random wavefunctions'
+          call messages_info(1)
+          ! randomize
+          SAFE_ALLOCATE(temp_state1(1:gr%der%mesh%np,st%d%dim))
+          SAFE_ALLOCATE(temp_state2(1:gr%der%mesh%np,hm%F%floquet_dim*st%d%dim))
+          do ik=st%d%kpt%start,st%d%kpt%end
+            do ist=dressed_st%st_start,dressed_st%st_end
+                
+              do in=1,hm%F%floquet_dim*st%d%dim  
+                if(dressed_st%randomization == PAR_INDEPENDENT) then
+                  call zmf_random(gr%der%mesh, temp_state2(:,in), gr%der%mesh%vp%xlocal-1, &
                              seed=mpi_world%rank, normalized= .true.)
-                     else
-                        call zmf_random(gr%der%mesh, temp_state2(:, in),seed=mpi_world%rank,normalized = .true.)
-                     end if
-                  enddo
+                else
+                  call zmf_random(gr%der%mesh, temp_state2(:, in),seed=mpi_world%rank,normalized = .true.)
+                end if
+              enddo
+                
+              call states_set_state(dressed_st,gr%der%mesh, ist, ik,temp_state2)
+            end do
+          enddo
+          SAFE_DEALLOCATE_A(temp_state1)
+          SAFE_DEALLOCATE_A(temp_state2)
+        end if
 
-                  call states_set_state(dressed_st,gr%der%mesh, ist, ik,temp_state2)
-               end do
-            enddo
-            SAFE_DEALLOCATE_A(temp_state1)
-            SAFE_DEALLOCATE_A(temp_state2)
-         end if
-       end if
-
-      end if
+    end if
 
       
       POP_SUB(floquet_init_dressed_wfs)
@@ -842,6 +836,9 @@ contains
       call eigensolver_init(eigens, gr, dressed_st)
       eigens%converged(:) = 0
 
+      ! the subspace diagonalization is hardcoded (and only applied once)
+      if(hm%F%FBZ_solver) eigens%sdiag%method = OPTION__SUBSPACEDIAGONALIZATION__NONE
+
       have_gs= .false.
       if (hm%F%calc_occupations) then
         message(1) = 'Info: Read ground-state wavefunctions to calculate occupations.'
@@ -865,12 +862,12 @@ contains
       itime = loct_clock()
       do while(.not.converged.and.iter <= maxiter)
 
-         if(hm%F%FBZ_solver) then
-            call floquet_FBZ_eigensolver_run(eigens, sys, dressed_st, hm, 1,converged)
-         else
-           write(msg,'(a,i5)') 'Iter #', iter         
-           call messages_print_stress(stdout, trim(msg))
+         write(msg,'(a,i5)') 'Iter #', iter         
+         call messages_print_stress(stdout, trim(msg))
         
+         if(hm%F%FBZ_solver) then
+            call floquet_FBZ_eigensolver_run(eigens, sys, dressed_st, hm, iter,converged)
+         else
            call eigensolver_run(eigens, gr, dressed_st, hm, 1,converged)
          end if
          
@@ -1063,11 +1060,11 @@ contains
      integer,              intent(in)    :: iter
      logical,    optional, intent(out)   :: conv
 
-     type(states_t)        :: full_st
+     type(states_t)        :: sub_st
      type(mesh_t), pointer :: mesh
      integer               :: ik, ist
      FLOAT                 :: diff
-     CMPLX, allocatable    :: full_state(:,:), state(:,:)
+     CMPLX, allocatable    :: full_state(:,:), sub_state(:,:)
 
      PUSH_SUB(floquet_FBZ_eigensolver_run)
 
@@ -1077,47 +1074,45 @@ contains
 
      eigens%folded_spectrum = .true.
 
-     ! create temporary state object with a single allocated 
-     ! full Floquet-state
-     call states_init(full_st, sys%gr, hm%geo,floquet_dim=hm%F%floquet_dim)
-     call kpoints_distribute(full_st%d,sys%mc)
-     call states_distribute_nodes(full_st,sys%mc)
-     call states_exec_init(full_st, sys%mc)
-     full_st%nst = st%nst
-     call states_allocate_wfns(full_st,mesh, wfs_type = TYPE_CMPLX)
+     if(iter ==0) then
+       ! create temporary state object with gs dimensions that is passed to the
+       ! subspace diag 
+       call states_copy(sub_st,sys%st)
 
-     SAFE_ALLOCATE(full_state(1:mesh%np,1:full_st%d%dim))
-     SAFE_ALLOCATE(state(1:mesh%np,1:st%d%dim))
+       SAFE_ALLOCATE(full_state(1:mesh%np,1:st%d%dim))
+       SAFE_ALLOCATE(sub_state(1:mesh%np,1:sub_st%d%dim))
 
-     SAFE_ALLOCATE(eigens%spectrum_shift(1:st%nst))
+       SAFE_ALLOCATE(eigens%spectrum_shift(1:st%nst,st%d%nik))
 
-     do ik=st%d%kpt%start,st%d%kpt%end
-        hm%F%floquet_apply = .false.
-        hm%d%dim = st%d%dim
-        call floquet_FBZ_subspace_diag(sys%gr%der, st, hm, ik)
-        hm%F%floquet_apply = .true.
-        hm%d%dim = full_st%d%dim
-
-        ! to solve only for specific k-point we need to have
-        ! only one k-point in the states structure
-        full_st%d%kpt%start=ik
-        full_st%d%kpt%end = full_st%d%kpt%start
-
-        eigens%spectrum_shift(1:st%nst) = st%eigenval(1:st%nst,ik)
-
-        do ist=1,st%nst
-          ! set initial state
-          call states_get_state(st,mesh, ist, ik, state)
-          full_state = M_ZERO
-          full_state(1:mesh%np,-hm%F%order(1)+1:-hm%F%order(1)+st%d%dim) = state(1:mesh%np,1:st%d%dim)
-          call states_set_state(full_st,mesh, ist, ik, full_state)
-        end do
-        eigens%converged(:) = 0
-        call eigensolver_run(eigens, sys%gr, full_st, hm, 1,conv)
-
-     end do
-
-     call states_deallocate_wfns(full_st)
+       hm%F%floquet_apply = .false.
+       hm%d%dim = sys%st%d%dim
+       do ik=st%d%kpt%start,st%d%kpt%end
+         call floquet_FBZ_subspace_diag(sys%gr%der, sub_st, hm, ik)
+       end do
+       hm%F%floquet_apply = .true.
+       hm%d%dim = st%d%dim
+       
+       eigens%spectrum_shift(1:st%nst,1:st%d%nik) = sub_st%eigenval(1:st%nst,1:st%d%nik)
+       
+       do ik=st%d%kpt%start,st%d%kpt%end
+         do ist=1,st%nst
+           ! set initial state
+           call states_get_state(sub_st,mesh, ist, ik, sub_state)
+           full_state = M_ZERO
+           full_state(1:mesh%np,-hm%F%order(1)+1:-hm%F%order(1)+sub_st%d%dim) = sub_state(1:mesh%np,1:sub_st%d%dim)
+           call states_set_state(st,mesh, ist, ik, full_state)
+         end do
+       end do
+       call states_end(sub_st)
+       
+       SAFE_DEALLOCATE_A(full_state)
+       SAFE_DEALLOCATE_A(sub_state)
+     end if
+     
+     hm%F%floquet_apply = .true.
+     call eigensolver_run(eigens, sys%gr, st, hm, iter,conv)
+     
+     ! put here floquet-dimension analysis for convergence etc. ..
      
      hm%F%floquet_apply = .false.
      POP_SUB(floquet_FBZ_eigensolver_run)
