@@ -19,10 +19,12 @@
 #include "global.h"
   
 module kpoints_oct_m
+  use distributed_oct_m
   use geometry_oct_m
   use global_oct_m
   use loct_oct_m
   use messages_oct_m
+  use mpi_oct_m
   use parser_oct_m
   use profiling_oct_m
   use sort_oct_m
@@ -1395,62 +1397,73 @@ contains
     FLOAT,                intent(in) :: klattice(:,:)
     logical,              intent(in) :: time_reversal
     
-    FLOAT, allocatable :: kmap(:), klength2(:)
+    integer, allocatable :: kmap(:)
+   ! FLOAT, allocatable :: klength2(:)
     FLOAT :: kpt(1:MAX_DIM), kpt_abs(1:MAX_DIM), diff(1:MAX_DIM), symlength2
-    integer :: nik, ik, ik2, iop, idim
+    integer :: nk, ik, ik2, iop, idim
+    type(distributed_t) :: kpt_dist
 
     PUSH_SUB(kpoints_check_symmetries)
 
-    nik = grid%npoints
+    nk = grid%npoints
 
-    SAFE_ALLOCATE(klength2(1:nik))
-    !Let's store the length to ease the comparison latter
-    do ik= 1, nik
-      klength2(ik) = sum(grid%point(1:dim,ik)**2)
-    end do
+    !We distribute the k-points here for this routine, independently of the rest of the code
+    call distributed_nullify(kpt_dist, nk)
+ #ifdef HAVE_MPI
+  call distributed_init(kpt_dist, nk, MPI_COMM_WORLD, "kpt_check")
+ #endif
+
+ !   SAFE_ALLOCATE(klength2(1:nk))
+ !   !Let's store the length to ease the comparison latter
+ !   do ik= 1, nk
+ !     klength2(ik) = sum(grid%point(1:dim,ik)**2)
+ !   end do
 
     !A simple map to tell if the k-point as a matching symmetric point or not
-    SAFE_ALLOCATE(kmap(1:nik))
+    SAFE_ALLOCATE(kmap(kpt_dist%start:kpt_dist%end))
 
     do iop = 1, symmetries_number(symm)
-      if(iop == symmetries_identity_index(symm)) cycle
-     
-      do ik=1, nik
-        kmap(ik) = ik
-      end do
+      if(iop == symmetries_identity_index(symm) .and. &
+            .not. time_reversal) cycle
 
-      do ik = 1, nik
+      forall(ik=kpt_dist%start:kpt_dist%end)  kmap(ik) = ik
+
+      do ik = kpt_dist%start, kpt_dist%end
         !We apply the symmetry
         call symmetries_apply_kpoint_red(symm, iop, grid%red_point(1:dim, ik), kpt)
         !We remove potential umklapp
         do idim = 1, dim
           kpt(idim)=kpt(idim)-anint(kpt(idim)+M_HALF*SYMPREC)
         end do
-        call kpoints_to_absolute(klattice, kpt(1:dim), kpt_abs(1:dim), dim)
-        !We get the length of the symmetric k-point 
-        symlength2 = sum(kpt_abs(1:dim)**2)
+    !    call kpoints_to_absolute(klattice, kpt(1:dim), kpt_abs(1:dim), dim)
+    !    !We get the length of the symmetric k-point 
+    !    symlength2 = sum(kpt_abs(1:dim)**2)
 
         ! remove (mark) k-points which already have a symmetric point
-        do ik2 = 1, nik
+        do ik2 = 1, nk
 
-          diff(1:dim) = kpt(1:dim)-grid%red_point(1:dim, ik2)  
-          do idim = 1, dim
-            diff(idim)=diff(idim)-anint(diff(idim))
-          end do
-          !We found point corresponding to the symmetric kpoint
-          if(sum(abs(diff(1:dim))) < symprec ) then
-            kmap(ik) = -ik2
-            exit
+          if(iop /= symmetries_identity_index(symm)) then
+            diff(1:dim) = kpt(1:dim)-grid%red_point(1:dim, ik2)  
+            do idim = 1, dim
+              diff(idim)=diff(idim)-anint(diff(idim))
+            end do
+            !We found point corresponding to the symmetric kpoint
+            if(sum(abs(diff(1:dim))) < symprec ) then
+              kmap(ik) = -ik2
+              exit
+            end if
           end if
-
-          diff(1:dim) = kpt(1:dim)+grid%red_point(1:dim, ik2)
-          do idim = 1, dim
-            diff(idim)=diff(idim)-anint(diff(idim))
-          end do
-          !We found point corresponding to the symmetric kpoint
-          if(time_reversal.and. sum(abs(diff(1:dim))) < symprec ) then
-            kmap(ik) = -ik2
-            exit
+ 
+          if(time_reversal) then
+            diff(1:dim) = kpt(1:dim)+grid%red_point(1:dim, ik2)
+            do idim = 1, dim
+              diff(idim)=diff(idim)-anint(diff(idim))
+            end do
+            !We found point corresponding to the symmetric kpoint
+            if(sum(abs(diff(1:dim))) < symprec ) then
+              kmap(ik) = -ik2
+              exit
+            end if
           end if
 
         end do
@@ -1459,15 +1472,17 @@ contains
           write(message(1),'(a,i5,a2,3(f7.3,a2),a)') "The reduced k-point ", ik, " (", &
            grid%red_point(1, ik), ", ", grid%red_point(2, ik), ", ", grid%red_point(3, ik),  &
            ") ", "has no symmetric in the k-point grid for the following symmetry"
-          write(message(2),'(i5,1x,a,2x,3(3i4,2x))') iop, ':', symm_op_rotation_matrix_red(symm%ops(iop))
+          write(message(2),'(i5,1x,a,2x,3(3i4,2x))') iop, ':', transpose(symm_op_rotation_matrix_red(symm%ops(iop)))
           message(3) = "Change your k-point grid or use KPointsUseSymmetries=no."
           call messages_fatal(3)    
         end if
       end do
     end do
 
-    SAFE_DEALLOCATE_A(klength2)
+   ! SAFE_DEALLOCATE_A(klength2)
     SAFE_DEALLOCATE_A(kmap)
+
+   call distributed_end(kpt_dist)
  
     POP_SUB(kpoints_check_symmetries)
   end subroutine kpoints_check_symmetries
