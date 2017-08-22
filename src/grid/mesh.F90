@@ -37,6 +37,8 @@ module mesh_oct_m
   use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
+  use symmetries_oct_m
+  use symm_op_oct_m
   use species_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -64,7 +66,8 @@ module mesh_oct_m
     mesh_x_global,                 &
     mesh_write_fingerprint,        &
     mesh_read_fingerprint,         &
-    mesh_compact_boundaries
+    mesh_compact_boundaries,       &
+    mesh_check_symmetries
 
   !> Describes mesh distribution to nodes.
   !!
@@ -785,6 +788,65 @@ contains
          simul_box_has_zero_bc(mesh%sb)
 
   end function mesh_compact_boundaries
+
+
+  ! ---------------------------------------------------------
+  subroutine mesh_check_symmetries(mesh, sb)
+    type(mesh_t),       intent(in) :: mesh
+    type(simul_box_t),  intent(in) :: sb
+
+    integer :: ikpoint, ii, iop, ip, idim, nops
+    FLOAT :: destpoint(1:3), srcpoint(1:3), lsize(1:3), offset(1:3)
+
+    if(.not.sb%kpoints%use_symmetries) return
+
+    PUSH_SUB(mesh_check_symmetries)
+
+    message(1) = "Checking if the real-space grid is symmetric";
+    call messages_info(1)
+
+    lsize(1:3) = mesh%idx%ll(1:3)
+    offset(1:3) = mesh%idx%nr(1, 1:3) + mesh%idx%enlarge(1:3)
+
+    nops = symmetries_number(mesh%sb%symm)
+
+    do ip = 1, mesh%np
+      !We use floating point coordinates to check if the symmetric point 
+      !belong to the grid.
+      !If yes, it should have integer reduced coordinates 
+      if(mesh%parallel_in_domains) then
+        ! convert to global point
+        destpoint(1:3) = dble(mesh%idx%lxyz(mesh%vp%local(mesh%vp%xlocal + ip - 1), 1:3) - offset(1:3))
+      else
+        destpoint(1:3) = dble(mesh%idx%lxyz(ip, 1:3) - offset(1:3))
+      end if
+      ! offset moves corner of cell to origin, in integer mesh coordinates
+      ASSERT(all(destpoint >= 0))
+      ASSERT(all(destpoint < lsize))
+
+      ! move to center of cell in real coordinates
+      destpoint = destpoint - lsize / 2
+
+      !convert to proper reduced coordinates
+      forall(idim = 1:3) destpoint(idim) = destpoint(idim)/lsize(idim)
+
+      ! iterate over all points that go to this point by a symmetry operation
+      do iop = 1, nops
+        srcpoint = symm_op_apply_red(mesh%sb%symm%ops(iop), destpoint) 
+
+        !We now come back to waht should be an integer, if the symmetric point beloings to the grid
+        forall(idim = 1:3) srcpoint(idim) = srcpoint(idim)*lsize(idim)
+
+        if(any(srcpoint-anint(srcpoint)> SYMPREC)) then
+          message(1) = "The real-space grid breaks at least one of the symmetries of the system."
+          message(2) = "Change your spacing or use KPointsUseSymmetries=no."
+          call messages_fatal(2)
+        end if
+      end do
+    end do
+
+    POP_SUB(mesh_check_symmetries)
+  end subroutine
 
 end module mesh_oct_m
 
