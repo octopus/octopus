@@ -234,9 +234,9 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
 
                 ratom = M_ZERO
                 if(geo%reduced_coordinates) then
-                  ratom(1:gr%sb%dim) = symm_op_apply_inv_red(gr%sb%symm%ops(iop), geo%atom(iatom)%x)
+                  ratom(1:gr%sb%dim) = symm_op_apply_red(gr%sb%symm%ops(iop), geo%atom(iatom)%x)
                 else
-                  ratom(1:gr%sb%dim) = symm_op_apply_inv_cart(gr%sb%symm%ops(iop), geo%atom(iatom)%x)
+                  ratom(1:gr%sb%dim) = symm_op_apply_cart(gr%sb%symm%ops(iop), geo%atom(iatom)%x)
                 end if
 
                 call simul_box_periodic_atom_in_box(gr%sb, geo, ratom)

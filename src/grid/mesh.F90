@@ -805,8 +805,8 @@ contains
     message(1) = "Checking if the real-space grid is symmetric";
     call messages_info(1)
 
-    lsize(1:3) = mesh%idx%ll(1:3)
-    offset(1:3) = mesh%idx%nr(1, 1:3) + mesh%idx%enlarge(1:3)
+    lsize(1:3) = dble(mesh%idx%ll(1:3))
+    offset(1:3) = dble(mesh%idx%nr(1, 1:3) + mesh%idx%enlarge(1:3))
 
     nops = symmetries_number(mesh%sb%symm)
 
@@ -825,7 +825,7 @@ contains
       ASSERT(all(destpoint < lsize))
 
       ! move to center of cell in real coordinates
-      destpoint = destpoint - lsize / 2
+      destpoint = destpoint - lsize * M_HALF
 
       !convert to proper reduced coordinates
       forall(idim = 1:3) destpoint(idim) = destpoint(idim)/lsize(idim)
@@ -834,6 +834,9 @@ contains
       do iop = 1, nops
         srcpoint = symm_op_apply_red(mesh%sb%symm%ops(iop), destpoint) 
 
+        ! move back to reference to origin at corner of cell
+        srcpoint = srcpoint + lsize * M_HALF
+ 
         !We now come back to waht should be an integer, if the symmetric point beloings to the grid
         forall(idim = 1:3) srcpoint(idim) = srcpoint(idim)*lsize(idim)
 

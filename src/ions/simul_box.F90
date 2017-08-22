@@ -1622,9 +1622,9 @@ contains
         do iatom = 1, geo%natoms
           ratom = M_ZERO
           if(geo%reduced_coordinates) then
-            ratom(1:this%dim) = symm_op_apply_inv_red(this%symm%ops(iop), geo%atom(iatom)%x)
+            ratom(1:this%dim) = symm_op_apply_red(this%symm%ops(iop), geo%atom(iatom)%x)
           else
-            ratom(1:this%dim) = symm_op_apply_inv_cart(this%symm%ops(iop), geo%atom(iatom)%x)
+            ratom(1:this%dim) = symm_op_apply_cart(this%symm%ops(iop), geo%atom(iatom)%x)
           end if
      
           call simul_box_periodic_atom_in_box(this, geo, ratom)
