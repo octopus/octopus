@@ -657,7 +657,7 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der, st)
 
   PUSH_SUB(X(compute_coulomb_integrals))
 
-  ASSERT(.not. st%parallel_in_states)
+  ASSERT(.not. mesh%parallel_in_domains)
   
   SAFE_ALLOCATE(nn(1:this%max_np))
   SAFE_ALLOCATE(vv(1:this%max_np))
