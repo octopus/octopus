@@ -38,6 +38,16 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
   call profiling_in(prof_hamiltonian, "HAMILTONIAN")
   PUSH_SUB(X(hamiltonian_apply_batch))
 
+#if defined(R_TCOMPLEX)
+  if(hm%opt_for_solids)then
+    call zhamiltonian_apply_opt_solids (hm, der, psib, hpsib, ik, time, Imtime, terms, set_bc)
+
+    POP_SUB(zhamiltonian_apply_batch)
+    call profiling_out(prof_hamiltonian)
+    return
+  end if
+#endif
+
   ASSERT(batch_status(psib) == batch_status(hpsib))
 
   if(present(time)) then

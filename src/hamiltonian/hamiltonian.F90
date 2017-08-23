@@ -72,6 +72,9 @@ module hamiltonian_oct_m
   use xc_oct_m
   use xc_functl_oct_m
   use XC_F90(lib_m)
+  use cube_oct_m
+  use cube_function_oct_m
+  use fft_oct_m
 
   implicit none
 
@@ -189,7 +192,17 @@ module hamiltonian_oct_m
     type(scdm_t)  :: scdm
 
     logical :: time_zero
+
+! Valiables for optimized Hamiltonian for solids.
+! These valiables will be moved somewhere else.
+    logical :: opt_for_solids
+    FLOAT, allocatable :: G2(:,:,:), Gvec(:,:,:,:), Gvec_G(:,:,:,:)
+
   end type hamiltonian_t
+
+! working space for optimized Hamiltonian for solids
+  type(cube_t) :: psib_cube
+  type(cube_function_t) :: psib_cf
 
   integer, public, parameter :: &
     LENGTH     = 1,             &
@@ -488,6 +501,23 @@ contains
     if(hm%time_zero) call messages_experimental('TimeZero')
 
     call scissor_nullify(hm%scissor)
+
+
+    !%Variable OptimizedHamiltonianSolids
+    !%Type logical
+    !%Default no
+    !%Section Execution::Optimization
+    !%Description
+    !% (Experimental) If set to yes, Octopus employs an optimized Hamiltonian 
+    !% operation for crystalline solids.
+    !%End
+!    call parse_variable('OptimizedHamiltonianSolids', .false., hm%opt_for_solids)
+! For tests, default is temporary set to .true.
+    call parse_variable('OptimizedHamiltonianSolids', .true., hm%opt_for_solids)
+!! Experimental warning is temporary removed for tests.
+!    if(hm%opt_for_solids) call messages_experimental('OptimizedHamiltonianSolids')
+
+    if(hm%opt_for_solids) call init_ham_opt_solids(hm,gr)
 
     call profiling_out(prof)
     POP_SUB(hamiltonian_init)
@@ -1229,6 +1259,256 @@ contains
     POP_SUB(hamiltonian_load_vhxc)
   end subroutine hamiltonian_load_vhxc
 
+  ! -----------------------------------------------------------------
+  subroutine zhamiltonian_apply_opt_solids (hm, der, psib, hpsib, ik, time, Imtime, terms, set_bc)
+
+  type(hamiltonian_t),   intent(in)    :: hm
+  type(derivatives_t),   intent(in)    :: der
+  type(batch_t), target, intent(inout) :: psib
+  type(batch_t), target, intent(inout) :: hpsib
+  integer,               intent(in)    :: ik
+  FLOAT, optional,       intent(in)    :: time
+  FLOAT, optional,       intent(in)    :: Imtime
+  integer, optional,     intent(in)    :: terms
+  logical, optional,     intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
+
+  logical :: apply_phase, pack
+  integer :: ii
+  type(batch_t), pointer :: epsib
+  type(derivatives_handle_batch_t) :: handle
+  integer :: terms_
+  type(projection_t) :: projection
+  
+  PUSH_SUB(zhamiltonian_apply_opt_solids)
+
+  ASSERT(batch_status(psib) == batch_status(hpsib))
+
+  if(present(time)) then
+    if(abs(time - hm%current_time) > CNST(1e-10)) then
+      write(message(1),'(a)') 'hamiltonian_apply_batch time assertion failed.'
+      write(message(2),'(a,f12.6,a,f12.6)') 'time = ', time, '; hm%current_time = ', hm%current_time
+      call messages_fatal(2)
+    end if
+  end if
+
+  if(present(Imtime)) then
+    ASSERT(abs(Imtime - hm%Imcurrent_time) < CNST(1e-10))
+  end if
+
+  ! all terms are enabled by default
+  terms_ = optional_default(terms, TERM_ALL)
+
+  ASSERT(batch_is_ok(psib))
+  ASSERT(batch_is_ok(hpsib))
+  ASSERT(psib%nst == hpsib%nst)
+  ASSERT(ik >= hm%d%kpt%start .and. ik <= hm%d%kpt%end)
+
+  apply_phase = associated(hm%hm_base%phase)
+
+  pack = hamiltonian_apply_packed(hm, der%mesh) &
+    .and. (accel_is_enabled() .or. psib%nst_linear > 1) &
+    .and. terms_ == TERM_ALL
+
+  if(pack) then
+    call batch_pack(psib)
+    call batch_pack(hpsib, copy = .false.)
+  end if
+
+  if(optional_default(set_bc, .true.)) call boundaries_set(der%boundaries, psib)
+
+  if(apply_phase) then
+    SAFE_ALLOCATE(epsib)
+    call batch_copy(psib, epsib)
+  else
+    epsib => psib
+  end if
+
+  if(apply_phase) then ! we copy psi to epsi applying the exp(i k.r) phase
+    call zhamiltonian_base_phase(hm%hm_base, der, der%mesh%np_part, ik, .false., epsib, src = psib)
+  end if
+
+  if(iand(TERM_KINETIC, terms_) /= 0) then
+    ASSERT(associated(hm%hm_base%kinetic))
+    call profiling_in(prof_kinetic_start, "KINETIC_START")
+    call zderivatives_batch_start(hm%hm_base%kinetic, der, epsib, hpsib, handle, set_bc = .false., factor = -M_HALF/hm%mass)
+    call profiling_out(prof_kinetic_start)
+
+    call profiling_in(prof_kinetic_finish, "KINETIC_FINISH")
+    call zderivatives_batch_finish(handle)
+    call profiling_out(prof_kinetic_finish)
+
+    if(hm%cmplxscl%space) call batch_scal(der%mesh%np, exp(-M_TWO*M_zI*hm%cmplxscl%theta), hpsib)
+  else
+    call batch_set_zero(hpsib)
+  end if
+
+  ! apply the local potential
+  if (iand(TERM_LOCAL_POTENTIAL, terms_) /= 0) then
+    call zhamiltonian_base_local(hm%hm_base, der%mesh, hm%d, states_dim_get_spin_index(hm%d, ik), epsib, hpsib)
+  else if(iand(TERM_LOCAL_EXTERNAL, terms_) /= 0) then
+    call zhamiltonian_external(hm, der%mesh, epsib, hpsib)
+  end if
+
+  ! and the non-local one
+  if (hm%ep%non_local .and. iand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0) then
+    if(hm%hm_base%apply_projector_matrices) then
+      call zhamiltonian_base_nlocal_start(hm%hm_base, der%mesh, hm%d, ik, epsib, projection)
+      call zhamiltonian_base_nlocal_finish(hm%hm_base, der%mesh, hm%d, ik, projection, hpsib)
+    else
+      ASSERT(.not. batch_is_packed(hpsib))
+      call zproject_psi_batch(der%mesh, hm%ep%proj, hm%ep%natoms, hm%d%dim, epsib, hpsib, ik)
+    end if
+  end if
+
+  if (iand(TERM_OTHERS, terms_) /= 0 .and. hamiltonian_base_has_magnetic(hm%hm_base)) then
+    call zhamiltonian_base_magnetic(hm%hm_base, der, hm%d, hm%ep, &
+             states_dim_get_spin_index(hm%d, ik), epsib, hpsib)
+  end if
+  
+  if (iand(TERM_OTHERS, terms_) /= 0 ) then
+    call zhamiltonian_base_rashba(hm%hm_base, der, hm%d, epsib, hpsib)
+  end if
+
+  if (iand(TERM_OTHERS, terms_) /= 0) then
+
+    call profiling_in(prof_exx, "EXCHANGE_OPERATOR")
+    select case(hm%theory_level)
+
+    case(HARTREE)
+      call zexchange_operator_hartree(hm, der, ik, hm%exx_coef, epsib, hpsib)
+
+    case(HARTREE_FOCK)
+      if(hm%scdm_EXX)  then
+        call zscdm_exchange_operator(hm, der, epsib, hpsib, ik, hm%exx_coef)
+      else
+        ! standard HF 
+        call zexchange_operator(hm, der, ik, hm%exx_coef, epsib, hpsib)
+      end if
+
+    case(RDMFT)
+      call zrdmft_exchange_operator(hm, der, ik, epsib, hpsib)
+
+    end select
+    call profiling_out(prof_exx)
+    
+  end if
+
+  if (iand(TERM_MGGA, terms_) /= 0 .and. hm%family_is_mgga_with_exc) then
+    call zh_mgga_terms(hm, der, ik, epsib, hpsib)
+  end if
+
+  if(iand(TERM_OTHERS, terms_) /= 0 .and. hm%scissor%apply) then
+    call zscissor_apply(hm%scissor, der%mesh, ik, epsib, hpsib)
+  end if
+
+  if(apply_phase) then
+    call zhamiltonian_base_phase(hm%hm_base, der, der%mesh%np, ik, .true., hpsib)
+    call batch_end(epsib)
+    SAFE_DEALLOCATE_P(epsib)
+  end if
+
+  if(pack) then
+    call batch_unpack(psib, copy = .false.)
+    call batch_unpack(hpsib)
+  end if
+
+
+  POP_SUB(zhamiltonian_apply_opt_solids)    
+
+    
+  end subroutine zhamiltonian_apply_opt_solids
+  
+  subroutine init_ham_opt_solids(this, gr)
+    implicit none
+    type(hamiltonian_t),                        intent(inout)   :: this
+    type(grid_t),                               intent(in) :: gr
+    integer :: box(MAX_DIM), fft_type
+    
+    box(:) = gr%der%mesh%idx%ll(:)
+    fft_type = FFT_COMPLEX
+    
+    ! this%cube should be initialized.
+    call cube_init(psib_cube, box, gr%der%mesh%sb, fft_type = fft_type, verbose = .true., &
+      need_partition=.not.gr%der%mesh%parallel_in_domains)
+    call cube_function_null(psib_cf)
+    call zcube_function_alloc_rs(psib_cube, psib_cf)
+    
+    call kinetic_energy_fft_init(this, gr%der%mesh, psib_cube)
+    
+  end subroutine init_ham_opt_solids
+  
+  !-----------------------------------------------------------------
+  subroutine kinetic_energy_fft_init(this, mesh, cube)
+    type(hamiltonian_t), intent(inout) :: this
+    type(mesh_t),        intent(in)    :: mesh
+    type(cube_t),        intent(inout) :: cube
+    
+    integer :: ix, iy, iz, ixx(3), db(3)
+    FLOAT :: temp(3), modg2
+    FLOAT :: gg(3)
+    FLOAT, allocatable :: fft_Coulb_FS(:,:,:)
+    
+    PUSH_SUB(kinetic_energy_fft_init)
+    
+    db(1:3) = cube%rs_n_global(1:3)
+    
+    ! store the Fourier transform of the Coulomb interaction
+
+    SAFE_ALLOCATE(this%G2(1:db(1),1:db(2),1:db(3)))
+    SAFE_ALLOCATE(this%Gvec(1:db(1),1:db(2),1:db(3),3))
+    
+    temp(1:3) = M_TWO*M_PI/(db(1:3)*mesh%spacing(1:3))
+    
+    do ix = 1, cube%fs_n_global(1)
+      ixx(1) = pad_feq(ix, db(1), .true.)
+      do iy = 1, cube%fs_n_global(2)
+        ixx(2) = pad_feq(iy, db(2), .true.)
+        do iz = 1, cube%fs_n_global(3)
+          ixx(3) = pad_feq(iz, db(3), .true.)
+          
+          gg(1:3) = ixx(1:3) * temp(1:3)
+          gg(1:3) = matmul(mesh%sb%klattice_primitive(1:3,1:3),gg(1:3))
+          modg2 = sum(gg(1:3)**2)
+
+#ifdef HAVE_NFFT
+          !HH not very elegant
+          if(cube%fft%library.eq.FFTLIB_NFFT) modg2=cube%Lfs(ix,1)**2+cube%Lfs(iy,2)**2+cube%Lfs(iz,3)**2
+#endif
+          
+          this%G2(ix,iy,iz) = modg2
+          this%Gvec(ix, iy, iz, 1) = gg(1)
+          this%Gvec(ix, iy, iz, 2) = gg(2)
+          this%Gvec(ix, iy, iz, 3) = gg(3)
+          
+        end do
+      end do
+      
+    end do
+    
+    
+    POP_SUB(kinetic_energy_fft_init)
+  end subroutine kinetic_energy_fft_init
+  !-----------------------------------------------------------------
+  subroutine kinetic_energy_fft(hm, psib, hpsib, ik)
+    implicit none
+    type(hamiltonian_t),   intent(in) :: hm
+    type(batch_t),         intent(in)    :: psib
+    type(batch_t),         intent(out)   :: hpsib
+    integer,               intent(in)    :: ik
+    integer :: ii, ist
+
+    PUSH_SUB(kinetic_energy_fft_init)
+
+    do ii = 1, psib%nst_linear
+      ist = batch_linear_to_ist(psib, ii)
+
+
+
+    end do
+
+    POP_SUB(kinetic_energy_fft_init)
+  end subroutine kinetic_energy_fft
+  !-----------------------------------------------------------------
 
 
 #include "undef.F90"
