@@ -87,6 +87,7 @@ module derivatives_oct_m
     dderivatives_curl,                  &
     zderivatives_curl
 
+  logical,parameter,public :: Default_false_StatesPack = .false.
 
   integer, parameter ::     &
     DER_BC_ZERO_F    = 0,   &  !< function is zero at the boundaries

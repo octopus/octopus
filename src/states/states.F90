@@ -1336,7 +1336,7 @@ contains
     !% execution will stop with an error.
     !%End
 
-    call parse_variable('StatesPack', .false., st%d%pack_states)
+    call parse_variable('StatesPack', Default_false_StatesPack, st%d%pack_states)
     if(st%d%pack_states) call messages_experimental('StatesPack')
 
     !%Variable StatesOrthogonalization

@@ -432,7 +432,7 @@ contains
       call init_phase()
     ! no e^ik phase needed for Gamma-point-only periodic calculations
 
-    call parse_variable('StatesPack', .true., hm%apply_packed)
+    call parse_variable('StatesPack', Default_false_StatesPack, hm%apply_packed)
 
     call pcm_init(hm%pcm, geo, gr, st%qtot, st%val_charge)  !< initializes PCM  
     if(hm%pcm%run_pcm .and. hm%theory_level /= KOHN_SHAM_DFT) &
