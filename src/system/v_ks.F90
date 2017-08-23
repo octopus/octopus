@@ -1227,10 +1227,11 @@ contains
       end if
     end if
 
+    !GGIL: 13/04/2017 - including time-dependent flag
     !> PCM reaction field due to the electronic density
     if (hm%pcm%run_pcm .and. pcm_update(hm%pcm,hm%current_time)) then
     !> Generates the real-space PCM potential due to electrons during the SCF calculation.
-        call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_h = pot)
+        call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_h = pot, time_present = ks%calc%time_present)
         
         ! Calculating the PCM term renormalizing the sum of the single-particle energies
         hm%energy%pcm_corr = dmf_dotp( ks%gr%fine%mesh, ks%calc%total_density, hm%pcm%v_e_rs + hm%pcm%v_n_rs )
