@@ -22,22 +22,22 @@ Enabled    : Yes
 # this calculation seems numerically unstable!
 Input     : 07-sic.01-gs.inp
 
-Precision : 5e-03
+Precision : 6e-03
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;   -20.802375655
 Precision : 1e-06
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;     0.00000000
-Precision : 3e-03
+Precision : 4e-03
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;    -5.360358025
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;    18.0396075
-Precision : 1.6e-03
+Precision : 1.7e-03
 match ; Int[n*v_xc]        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -5.88121341
-Precision : 9e-04
+Precision : 1e-03
 match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ;    -3.28357621
 Precision : 1e-06
 match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;     0.00000000
 Precision : 3e-03
 match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;     7.81172239
-Precision : 5e-03
+Precision : 6e-03
 match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;   -43.366675575
 
 Precision : 4e-04

@@ -80,8 +80,7 @@ contains
     call init_()
 
     ! load wavefunctions
-    call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                      ierr, mesh=sys%gr%mesh, exact=.true.)
+    call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
     if(ierr == 0) call states_load(gs_restart, sys%st, sys%gr, ierr)
     if (ierr /= 0) then
       message(1) = "Unable to read wavefunctions."
@@ -108,12 +107,10 @@ contains
     diagonal_done = .false.
     field_written = .false.
 
-    call restart_init(restart_dump, RESTART_EM_RESP_FD, RESTART_TYPE_DUMP, sys%st%dom_st_kpt_mpi_grp, &
-      ierr, mesh=sys%gr%mesh)
+    call restart_init(restart_dump, RESTART_EM_RESP_FD, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
 
     if(.not. fromScratch) then
-      call restart_init(restart_load, RESTART_EM_RESP_FD, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                        ierr, mesh=sys%gr%mesh)
+      call restart_init(restart_load, RESTART_EM_RESP_FD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
       if(ierr == 0) then
         iunit = restart_open(restart_load, RESTART_FILE)
       else

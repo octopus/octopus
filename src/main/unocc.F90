@@ -100,12 +100,6 @@ contains
       
     end if
 
-    SAFE_ALLOCATE(occ_states(1:sys%st%d%nik))
-    do ik = 1, sys%st%d%nik
-      call occupied_states(sys%st, ik, n_filled, n_partially_filled, n_half_filled)
-      occ_states(ik) = n_filled + n_partially_filled + n_half_filled
-    end do
-
     call init_(sys%gr%mesh, sys%st)
     converged = .false.
 
@@ -116,8 +110,7 @@ contains
     
     read_gs = .true.
     if (.not. fromScratch) then
-      call restart_init(restart_load_unocc, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                        ierr, mesh=sys%gr%mesh, exact=.true.)
+      call restart_init(restart_load_unocc, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
 
       if(ierr == 0) then
         call states_load(restart_load_unocc, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
@@ -131,8 +124,7 @@ contains
         read_gs = .false.
     end if
 
-    call restart_init(restart_load_gs, RESTART_GS, RESTART_TYPE_LOAD, sys%st%dom_st_kpt_mpi_grp, &
-                      ierr_rho, mesh=sys%gr%mesh, exact=.true.)
+    call restart_init(restart_load_gs, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr_rho, mesh=sys%gr%mesh, exact=.true.)
 
     if(ierr_rho == 0) then
       if (read_gs) then
@@ -144,6 +136,12 @@ contains
     else
       write_density = .true.
     end if
+
+    SAFE_ALLOCATE(occ_states(1:sys%st%d%nik))
+    do ik = 1, sys%st%d%nik
+      call occupied_states(sys%st, ik, n_filled, n_partially_filled, n_half_filled)
+      occ_states(ik) = n_filled + n_partially_filled + n_half_filled
+    end do
 
     is_orbital_dependent = (sys%ks%theory_level == HARTREE .or. sys%ks%theory_level == HARTREE_FOCK .or. &
       (sys%ks%theory_level == KOHN_SHAM_DFT .and. xc_is_orbital_dependent(sys%ks%xc)))
@@ -228,8 +226,7 @@ contains
 
     if(.not. bandstructure_mode) then
       ! Restart dump should be initialized after restart_load, as the mesh might have changed
-      call restart_init(restart_dump, RESTART_UNOCC, RESTART_TYPE_DUMP, sys%st%dom_st_kpt_mpi_grp, &
-                      ierr, mesh=sys%gr%mesh)
+      call restart_init(restart_dump, RESTART_UNOCC, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
 
       ! make sure the density is defined on the same mesh as the wavefunctions that will be written
       if(write_density) &
