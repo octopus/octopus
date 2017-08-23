@@ -408,7 +408,7 @@ subroutine pes_mask_map_from_state(restart, idx, ll, psiG)
   integer,          intent(in)  :: ll(:)
   CMPLX, target,    intent(out) :: psiG(:,:,:)
 
-  character(len=80) :: filename, path
+  character(len=80) :: filename
   integer ::  np, err, iunit 
   character(len=128) :: lines(2)
 
@@ -417,14 +417,9 @@ subroutine pes_mask_map_from_state(restart, idx, ll, psiG)
   psiG = M_Z0
   np = product(ll(:))
   
-  write(filename,'(i10.10)') idx
+  write(filename,'(a,i10.10)') 'pes_', idx
 
-  path = trim(restart_dir(restart))//'/pes_'//trim(filename)//'.obf'
-  call io_binary_read(path, np, psiG(:,:,:), err)
-  if (err /= 0) then
-    message(1) = "Unable to read PES mask restart data from '"//trim(path)//"'."
-    call messages_warning(1)
-  end if
+  call zrestart_read_binary(restart, filename, np, psiG(:,:,:), err)
 
   POP_SUB(pes_mask_map_from_state)  
 end subroutine pes_mask_map_from_state
@@ -2243,19 +2238,10 @@ subroutine pes_mask_load(restart, mask, st, ierr)
       do idim = 1, st%d%dim
         itot = ist + (ik-1) * st%nst+  (idim-1) * st%nst*st%d%kpt%nglobal
 
-        write(filename,'(i10.10)') itot
+        write(filename,'(a,i10.10)') 'pes_', itot
 
-        !FIXME: the following should not use io_binary_read directly. Instead, the
-        !task of reading the function to the file should be done by the restart module.
-       
-        path = trim(restart_dir(restart))//'/pes_'//trim(filename)//'.obf'
-        
-        call io_binary_read(path,np, mask%k(:,:,:, idim, ist, ik), err)
-        if (err /= 0) then
-          err2 = err2 + 1
-          message(1) = "Unable to read PES mask restart data from '"//trim(path)//"'."
-          call messages_warning(1)
-        end if
+        call zrestart_read_binary(restart, filename, np, mask%k(:,:,:, idim, ist, ik), err)
+        if (err /= 0) err2 = err2 + 1
 
       end do
     end do

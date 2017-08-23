@@ -166,6 +166,7 @@ int parse_input(const char *file_in, int set_used)
 		sprintf(mtxel, "%s[%i][%i] = %s", rec->name, l, col, tok2);
 		parse_exp(mtxel, &pc);
 		free(mtxel);
+		free(tok2);
 
 		rec->value.block->lines[l].n++;
 	      }

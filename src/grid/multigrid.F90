@@ -29,6 +29,7 @@ module multigrid_oct_m
   use mesh_oct_m
   use mesh_init_oct_m
   use messages_oct_m
+  use multicomm_oct_m
   use par_vec_oct_m
   use stencil_oct_m
   use transfer_table_oct_m
@@ -86,13 +87,14 @@ contains
   end subroutine multigrid_level_nullify
 
   ! ---------------------------------------------------------
-  subroutine multigrid_init(mgrid, geo, cv, mesh, der, stencil)
+  subroutine multigrid_init(mgrid, geo, cv, mesh, der, stencil, mc)
     type(multigrid_t),     target, intent(out) :: mgrid
     type(geometry_t),              intent(in)  :: geo
     type(curvilinear_t),           intent(in)  :: cv
     type(mesh_t),          target, intent(in)  :: mesh
     type(derivatives_t),   target, intent(in)  :: der
     type(stencil_t),               intent(in)  :: stencil
+    type(multicomm_t),             intent(in)  :: mc
 
     integer :: i, n_levels, np
 
@@ -145,7 +147,7 @@ contains
 
       call derivatives_init(mgrid%level(i)%der, mesh%sb, cv%method /= CURV_METHOD_UNIFORM)
 
-      call mesh_init_stage_3(mgrid%level(i)%mesh, stencil, mesh%mpi_grp, parent = mgrid%level(i - 1)%mesh)
+      call mesh_init_stage_3(mgrid%level(i)%mesh, stencil, mc, parent = mgrid%level(i - 1)%mesh)
 
       call multigrid_get_transfer_tables(mgrid%level(i)%tt, mgrid%level(i-1)%mesh, mgrid%level(i)%mesh)
 
