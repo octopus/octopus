@@ -1,0 +1,35 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Real space symmetrization 
+Program    : octopus
+TestGroups : long-run, periodic_systems, symmetries
+Enabled    : Yes
+
+Input : 07-symmetrization.01-spg1_nosym.inp
+
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -0.45341956
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -0.17694699
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.23647347
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  0.10839651
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.18669592
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.03907491
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  0.38598445
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -0.54508393
+
+match ; Eigenvalue [  k=1, n=1   ] ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -0.249225
+
+
+#Here the reference values should be copied from the calculation without symmetries
+Input : 07-symmetrization.02-spg1_sym.inp
+
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -0.45341956
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -0.17694699
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.23647347
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  0.10839651
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.18669592
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.03907491
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  0.38598445
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -0.54508393
+
+match ; Eigenvalue [  k=1, n=1   ] ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -0.249225
+

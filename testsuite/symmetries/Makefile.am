@@ -256,6 +256,29 @@ dist_share_DATA =                          \
 	06-cubic.34-spg228.inp           \
 	06-cubic.35-spg229.inp           \
 	06-cubic.36-spg230.inp           \
-	06-cubic.test
+	06-cubic.test                    \
+	07-symmetrization.01-spg1_nosym.inp  \
+	07-symmetrization.02-spg1_sym.inp    \
+	07-symmetrization.09-spg143_nosym.inp\
+	07-symmetrization.10-spg143_sym.inp  \
+	07-symmetrization.11-spg195_nosym.inp\
+	07-symmetrization.12-spg195_sym.inp  \
+	07-symmetrization.test               \
+	08-symmetrization.01-spg3_nosym.inp  \
+	08-symmetrization.02-spg3_sym.inp    \
+	08-symmetrization.test               \
+	09-symmetrization.01-spg16_nosym.inp \
+        09-symmetrization.02-spg16_sym.inp   \
+	09.symmetrization.test               \
+	10-symmetrization.01-spg75_nosym.inp \
+        10-symmetrization.02-spg75_sym.inp   \
+	10.symmetrization.test               \
+	11-symmetrization.01-spg143_nosym.inp\
+        11-symmetrization.02-spg143_sym.inp  \
+	11.symmetrization.test
+
+
+
+
 
 CLEANFILES = *~ *.bak

@@ -1,0 +1,51 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Real space symmetrization 
+Program    : octopus
+TestGroups : long-run, periodic_systems, symmetries
+Enabled    : Yes
+
+Input : 08-symmetrization.01-spg3_nosym.inp
+
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -1.00598572
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -0.33301865
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.54228942
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  0.27913186
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.40715490
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.08258329
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  0.71895435
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -1.18131500
+
+match ; Eigenvalue [  k=1, n=1   ] ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -0.300110
+
+match ; Force 1 (x)   ; GREPFIELD(static/info, '1         H', 3) ; -0.045448
+match ; Force 1 (y)   ; GREPFIELD(static/info, '1         H', 4) ;  0.000001
+match ; Force 1 (z)   ; GREPFIELD(static/info, '1         H', 5) ; -0.036101
+
+match ; Force 2 (x)   ; GREPFIELD(static/info, '2         H', 3) ;  0.045447
+match ; Force 2 (y)   ; GREPFIELD(static/info, '2         H', 4) ;  0.000001
+match ; Force 2 (z)   ; GREPFIELD(static/info, '2         H', 5) ;  0.036100
+
+#Here the reference values should be copied from the calculation without symmetries
+Input : 08-symmetrization.02-spg3_sym.inp
+
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -1.00598572
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -0.33301865
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.54228942
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  0.27913186
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.40715490
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.08258329
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  0.71895435
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -1.18131500
+
+match ; Eigenvalue [  k=1, n=1   ] ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -0.300110
+
+match ; Force 1 (x)   ; GREPFIELD(static/info, '1         H', 3) ; -0.045448
+match ; Force 1 (y)   ; GREPFIELD(static/info, '1         H', 4) ;  0.000001
+match ; Force 1 (z)   ; GREPFIELD(static/info, '1         H', 5) ; -0.036101
+
+match ; Force 2 (x)   ; GREPFIELD(static/info, '2         H', 3) ;  0.045447
+match ; Force 2 (y)   ; GREPFIELD(static/info, '2         H', 4) ;  0.000001
+match ; Force 2 (z)   ; GREPFIELD(static/info, '2         H', 5) ;  0.036100
+
+

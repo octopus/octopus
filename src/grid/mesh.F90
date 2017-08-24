@@ -796,7 +796,8 @@ contains
     type(simul_box_t),  intent(in) :: sb
 
     integer :: ikpoint, ii, iop, ip, idim, nops
-    FLOAT :: destpoint(1:3), srcpoint(1:3), lsize(1:3), offset(1:3)
+    FLOAT :: destpoint(1:3), srcpoint(1:3)
+    integer :: lsize(1:3), offset(1:3)
 
     if(.not.sb%kpoints%use_symmetries) return
 
@@ -816,8 +817,8 @@ contains
     message(1) = "Checking if the real-space grid is symmetric";
     call messages_info(1)
 
-    lsize(1:3) = dble(mesh%idx%ll(1:3))
-    offset(1:3) = dble(mesh%idx%nr(1, 1:3) + mesh%idx%enlarge(1:3))
+    lsize(1:3) = mesh%idx%ll(1:3)
+    offset(1:3) = mesh%idx%nr(1, 1:3) + mesh%idx%enlarge(1:3)
 
     nops = symmetries_number(mesh%sb%symm)
 
@@ -836,26 +837,27 @@ contains
       ASSERT(all(destpoint < lsize))
 
       ! move to center of cell in real coordinates
-      destpoint = destpoint - lsize * M_HALF
+      destpoint = destpoint - lsize / 2
 
       !convert to proper reduced coordinates
-      forall(idim = 1:3) destpoint(idim) = destpoint(idim)/lsize(idim)
+      forall(idim = 1:3) destpoint(idim) = destpoint(idim)/dble(lsize(idim))
 
       ! iterate over all points that go to this point by a symmetry operation
       do iop = 1, nops
-        srcpoint = symm_op_apply_red(mesh%sb%symm%ops(iop), destpoint) 
+        srcpoint = symm_op_apply_inv_red(mesh%sb%symm%ops(iop), destpoint) 
+
+        !We now come back to what should be an integer, if the symmetric point beloings to the grid
+        forall(idim = 1:3) srcpoint(idim) = srcpoint(idim)*dble(lsize(idim))
 
         ! move back to reference to origin at corner of cell
-        srcpoint = srcpoint + lsize * M_HALF
+        srcpoint = srcpoint + lsize / 2
 
         srcpoint(1:3) = srcpoint(1:3) + offset(1:3)
  
-        !We now come back to waht should be an integer, if the symmetric point beloings to the grid
-        forall(idim = 1:3) srcpoint(idim) = srcpoint(idim)*lsize(idim)
-
         if(any(srcpoint-anint(srcpoint)> SYMPREC)) then
           message(1) = "The real-space grid breaks at least one of the symmetries of the system."
           message(2) = "Change your spacing or use KPointsUseSymmetries=no."
+          print *, srcpoint, destpoint
           call messages_fatal(2)
         end if
       end do

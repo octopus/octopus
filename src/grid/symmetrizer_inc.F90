@@ -28,7 +28,7 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
     !! but rather to construct the quantity properly from reduced k-points
 
   integer :: ip, iop, nops, ipsrc, idir
-  integer :: destpoint(1:3), srcpoint(1:3), lsize(1:3), offset(1:3)
+  FLOAT :: destpoint(1:3), srcpoint(1:3), lsize(1:3), offset(1:3)
   R_TYPE  :: acc, acc_vector(1:3)
   FLOAT   :: weight, maxabsdiff, maxabs
   R_TYPE, pointer :: field_global(:), field_global_vector(:, :)
@@ -77,15 +77,15 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
   nops = symmetries_number(this%mesh%sb%symm)
   weight = M_ONE/nops
 
-  lsize(1:3) = this%mesh%idx%ll(1:3)
-  offset(1:3) = this%mesh%idx%nr(1, 1:3) + this%mesh%idx%enlarge(1:3)
+  lsize(1:3) = dble(this%mesh%idx%ll(1:3))
+  offset(1:3) = dble(this%mesh%idx%nr(1, 1:3) + this%mesh%idx%enlarge(1:3))
 
   do ip = 1, this%mesh%np
     if(this%mesh%parallel_in_domains) then
       ! convert to global point
-      destpoint(1:3) = this%mesh%idx%lxyz(vp%local(vp%xlocal + ip - 1), 1:3) - offset(1:3)
+      destpoint(1:3) = dble(this%mesh%idx%lxyz(vp%local(vp%xlocal + ip - 1), 1:3)) - offset(1:3)
     else
-      destpoint(1:3) = this%mesh%idx%lxyz(ip, 1:3) - offset(1:3)
+      destpoint(1:3) = dble(this%mesh%idx%lxyz(ip, 1:3)) - offset(1:3)
     end if
     ! offset moves corner of cell to origin, in integer mesh coordinates
 
@@ -93,7 +93,10 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
     ASSERT(all(destpoint < lsize))
 
     ! move to center of cell in real coordinates
-    destpoint = destpoint - lsize / 2
+    destpoint = destpoint - lsize * M_HALF
+
+    !convert to proper reduced coordinates
+    forall(idir = 1:3) destpoint(idir) = destpoint(idir)/lsize(idir)
 
     if(present(field)) &
       acc = M_ZERO
@@ -102,10 +105,15 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
 
     ! iterate over all points that go to this point by a symmetry operation
     do iop = 1, nops
-      srcpoint = symm_op_apply_red(this%mesh%sb%symm%ops(iop), destpoint) 
+      srcpoint = symm_op_apply_inv_red(this%mesh%sb%symm%ops(iop), destpoint) 
+
+      !We now come back to waht should be an integer, if the symmetric point beloings to the grid
+      !At this point, this is already checked
+      forall(idir = 1:3) srcpoint(idir) = srcpoint(idir)*lsize(idir)  
 
       ! move back to reference to origin at corner of cell
-      srcpoint = srcpoint + lsize / 2
+      srcpoint = srcpoint + lsize * M_HALF
+
       ! apply periodic boundary conditions in periodic directions
       do idir = 1, this%mesh%sb%periodic_dim
         if(srcpoint(idir) < 0) then
@@ -119,13 +127,13 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
       ASSERT(all(srcpoint < lsize))
       srcpoint(1:3) = srcpoint(1:3) + offset(1:3)
 
-      ipsrc = this%mesh%idx%lxyz_inv(srcpoint(1), srcpoint(2), srcpoint(3))
+      ipsrc = this%mesh%idx%lxyz_inv(anint(srcpoint(1)), anint(srcpoint(2)), anint(srcpoint(3)))
 
       if(present(field)) then
         acc = acc + field_global(ipsrc)
       end if
       if(present(field_vector)) then
-        acc_vector(1:3) = acc_vector(1:3) + symm_op_apply_cart(this%mesh%sb%symm%ops(iop), field_global_vector(ipsrc, 1:3))
+        acc_vector(1:3) = acc_vector(1:3) + symm_op_apply_inv_cart(this%mesh%sb%symm%ops(iop), field_global_vector(ipsrc, 1:3))
       end if
     end do
     if(present(field)) &
