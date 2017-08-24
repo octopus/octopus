@@ -34,6 +34,12 @@ match ; Force 3 (x)   ; GREPFIELD(static/info, '3        Na', 3) ; -0.290965
 match ; Force 3 (y)   ; GREPFIELD(static/info, '3        Na', 4) ;  0.030213
 match ; Force 3 (z)   ; GREPFIELD(static/info, '3        Na', 5) ;  0.000226
 
+match ; Partial charge  1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2)  ; 1.0
+match ; Partial charge  2 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3)  ; 1.0
+match ; Density value 1   ; LINEFIELD(static/density.y=0\,z=0,  2, 2)   ; 1.08708406752049E-002
+match ; Density value 2   ; LINEFIELD(static/density.y=0\,z=0,  3, 2)   ; 1.01244851920716E-002
+match ; Bader value 1     ; LINEFIELD(static/bader-sp1.y=0\,z=0,  6, 2) ; 1.06114896361581E-002
+match ; Bader value 2     ; LINEFIELD(static/bader-sp1.y=0\,z=0, 10, 2) ; 1.10977781867224E-002
 
 #Here the reference values should be copied from the calculation without symmetries
 Input : 11-symmetrization.02-spg143_sym.inp
@@ -64,4 +70,11 @@ match ; Force 2 (z)   ; GREPFIELD(static/info, '2        Na', 5) ; -0.000202
 match ; Force 3 (x)   ; GREPFIELD(static/info, '3        Na', 3) ; -0.290965
 match ; Force 3 (y)   ; GREPFIELD(static/info, '3        Na', 4) ;  0.030213
 match ; Force 3 (z)   ; GREPFIELD(static/info, '3        Na', 5) ;  0.000226
+
+match ; Partial charge  1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2)  ; 1.0
+match ; Partial charge  2 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3)  ; 1.0
+match ; Density value 1   ; LINEFIELD(static/density.y=0\,z=0,  2, 2)   ; 1.08708406752049E-002
+match ; Density value 2   ; LINEFIELD(static/density.y=0\,z=0,  3, 2)   ; 1.01244851920716E-002
+match ; Bader value 1     ; LINEFIELD(static/bader-sp1.y=0\,z=0,  6, 2) ; 1.06114896361581E-002
+match ; Bader value 2     ; LINEFIELD(static/bader-sp1.y=0\,z=0, 10, 2) ; 1.10977781867224E-002
 
