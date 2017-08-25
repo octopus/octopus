@@ -6,7 +6,7 @@ TestGroups : long-run, periodic_systems, symmetries
 Enabled    : Yes
 
 Input      : 04-tetragonal.01-spg75.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 75
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 75
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
@@ -77,7 +77,7 @@ match ; kpt 35 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 );
 match ; kpt 36 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 04-tetragonal.03-spg77.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 77
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 77
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
@@ -158,7 +158,7 @@ match ; kpt 35 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 );
 match ; kpt 36 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 04-tetragonal.05-spg79.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 79
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 79
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "   0   1   0     1   0   0    -1  -1  -1", 60 ); 0.000000
@@ -574,7 +574,7 @@ match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 
 match ; kpt 8 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
 match ; kpt 9 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
 match ; kpt 10 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.06250
-match ; kpt 11 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.06250
 match ; kpt 12 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.06250
 match ; kpt 13 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.06250
 match ; kpt 14 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.03125
@@ -712,7 +712,7 @@ match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 
 match ; kpt 8 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
 match ; kpt 9 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
 match ; kpt 10 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.06250
-match ; kpt 11 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.06250
 match ; kpt 12 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.06250
 match ; kpt 13 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.06250
 match ; kpt 14 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.03125
@@ -783,7 +783,7 @@ match ; kpt 17 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 );
 match ; kpt 18 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 04-tetragonal.25-spg99.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 99
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 99
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "   1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
@@ -815,7 +815,7 @@ match ; kpt 17 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 );
 match ; kpt 18 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 04-tetragonal.26-spg100.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 100
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 100
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
@@ -843,7 +843,7 @@ match ; kpt 17 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 );
 match ; kpt 18 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 04-tetragonal.27-spg101.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 101
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 101
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "   0   1   0     1   0   0     0   0   1", 60 ); 0.000000
@@ -874,7 +874,7 @@ match ; kpt 20 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 );
 match ; kpt 21 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 04-tetragonal.28-spg102.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 102
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 102
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "   0   1   0     1   0   0     0   0   1", 60 ); 0.000000
@@ -905,7 +905,7 @@ match ; kpt 20 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 );
 match ; kpt 21 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 04-tetragonal.29-spg103.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 103
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 103
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
@@ -933,7 +933,7 @@ match ; kpt 17 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 );
 match ; kpt 18 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 04-tetragonal.30-spg104.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 104
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 104
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
@@ -961,7 +961,7 @@ match ; kpt 17 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 );
 match ; kpt 18 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 04-tetragonal.31-spg105.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 105
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 105
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
@@ -998,7 +998,7 @@ match ; kpt 26 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 );
 match ; kpt 27 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 04-tetragonal.32-spg106.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 106
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 106
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
@@ -1036,7 +1036,7 @@ match ; kpt 29 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 );
 match ; kpt 30 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 04-tetragonal.33-spg107.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 107
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 107
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "   0   0  -1     1   1   1    -1   0   0", 60 ); 0.000000
@@ -1063,7 +1063,7 @@ match ; kpt 12 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 );
 match ; kpt 13 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 04-tetragonal.34-spg108.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 108
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 108
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "   0   1   0     1   0   0    -1  -1  -1", 60 ); 0.000000
