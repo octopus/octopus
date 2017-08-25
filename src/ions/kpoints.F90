@@ -1195,8 +1195,8 @@ contains
               kweight(ik2) = M_ZERO
               weights(nreduced) = kweight(ik)
               INCR(num_symm_ops(nreduced), 1)
-             ! !We mark the symmetry+time-reversal operation as negative
-              symm_ops(nreduced, num_symm_ops(nreduced)) = iop
+              !We mark the symmetry+time-reversal operation as negative
+              symm_ops(nreduced, num_symm_ops(nreduced)) = -iop
             end if
           end if
         end do
@@ -1398,7 +1398,6 @@ contains
     logical,              intent(in) :: time_reversal
     
     integer, allocatable :: kmap(:)
-   ! FLOAT, allocatable :: klength2(:)
     FLOAT :: kpt(1:MAX_DIM), kpt_abs(1:MAX_DIM), diff(1:MAX_DIM), symlength2
     integer :: nk, ik, ik2, iop, idim
     type(distributed_t) :: kpt_dist
@@ -1412,12 +1411,6 @@ contains
  #ifdef HAVE_MPI
   call distributed_init(kpt_dist, nk, MPI_COMM_WORLD, "kpt_check")
  #endif
-
- !   SAFE_ALLOCATE(klength2(1:nk))
- !   !Let's store the length to ease the comparison latter
- !   do ik= 1, nk
- !     klength2(ik) = sum(grid%point(1:dim,ik)**2)
- !   end do
 
     !A simple map to tell if the k-point as a matching symmetric point or not
     SAFE_ALLOCATE(kmap(kpt_dist%start:kpt_dist%end))
@@ -1435,9 +1428,6 @@ contains
         do idim = 1, dim
           kpt(idim)=kpt(idim)-anint(kpt(idim)+M_HALF*SYMPREC)
         end do
-    !    call kpoints_to_absolute(klattice, kpt(1:dim), kpt_abs(1:dim), dim)
-    !    !We get the length of the symmetric k-point 
-    !    symlength2 = sum(kpt_abs(1:dim)**2)
 
         ! remove (mark) k-points which already have a symmetric point
         do ik2 = 1, nk
@@ -1479,10 +1469,9 @@ contains
       end do
     end do
 
-   ! SAFE_DEALLOCATE_A(klength2)
     SAFE_DEALLOCATE_A(kmap)
 
-   call distributed_end(kpt_dist)
+    call distributed_end(kpt_dist)
  
     POP_SUB(kpoints_check_symmetries)
   end subroutine kpoints_check_symmetries

@@ -1600,7 +1600,7 @@ contains
     type(kpoints_t),    intent(in) :: kpoints
     integer,            intent(in) :: dim
 
-    integer :: ii, iq,  iop, iatom, iatom_symm, ikpoint
+    integer :: iop, iatom, iatom_symm, ikpoint
     FLOAT :: ratom(1:MAX_DIM)
 
     PUSH_SUB(simul_box_symmetry_check)
@@ -1614,33 +1614,30 @@ contains
     !
     ! V_iatom(R*r) = V_iatom_symm(r)
     !
-    do ikpoint = 1, kpoints%reduced%npoints
-      do ii = 1, kpoints_get_num_symmetry_ops(kpoints, ikpoint)
-        iop = kpoints_get_symmetry_ops(kpoints, ikpoint, ii)
-        if(iop == symmetries_identity_index(this%symm)) cycle
+    do iop = 1, symmetries_number(this%symm)
+      if(iop == symmetries_identity_index(this%symm)) cycle
 
-        do iatom = 1, geo%natoms
-          ratom = M_ZERO
-          if(geo%reduced_coordinates) then
-            ratom(1:this%dim) = symm_op_apply_red(this%symm%ops(iop), geo%atom(iatom)%x)
-          else
-            ratom(1:this%dim) = symm_op_apply_cart(this%symm%ops(iop), geo%atom(iatom)%x)
-          end if
+      do iatom = 1, geo%natoms
+        ratom = M_ZERO
+        if(geo%reduced_coordinates) then
+          ratom(1:this%dim) = symm_op_apply_red(this%symm%ops(iop), geo%atom(iatom)%x)
+        else
+          ratom(1:this%dim) = symm_op_apply_cart(this%symm%ops(iop), geo%atom(iatom)%x)
+        end if
      
-          call simul_box_periodic_atom_in_box(this, geo, ratom)
+        call simul_box_periodic_atom_in_box(this, geo, ratom)
 
-          ! find iatom_symm
-          do iatom_symm = 1, geo%natoms
-            if(all(abs(ratom(1:dim) - geo%atom(iatom_symm)%x(1:dim)) < CNST(1.0e-5))) exit
-          end do
-
-          if(iatom_symm > geo%natoms) then
-            write(message(1),'(a,i6)') 'Internal error: could not find symmetric partner for atom number', iatom
-            write(message(2),'(a,i3,a)') 'with symmetry operation number ', iop, '.'
-            call messages_fatal(2)
-          end if
-
+        ! find iatom_symm
+        do iatom_symm = 1, geo%natoms
+          if(all(abs(ratom(1:dim) - geo%atom(iatom_symm)%x(1:dim)) < CNST(1.0e-5))) exit
         end do
+
+        if(iatom_symm > geo%natoms) then
+          write(message(1),'(a,i6)') 'Internal error: could not find symmetric partner for atom number', iatom
+          write(message(2),'(a,i3,a)') 'with symmetry operation number ', iop, '.'
+          call messages_fatal(2)
+        end if
+
       end do
     end do
 

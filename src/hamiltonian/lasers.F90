@@ -256,7 +256,7 @@ contains
     character(len=200) :: scalar_pot_expression
     character(len=200) :: envelope_expression, phase_expression
     FLOAT :: omega0, rr, pot_re, pot_im, xx(MAX_DIM)
-    integer :: ik, iop, iop2 
+    integer :: iop 
 
     PUSH_SUB(laser_init)
 
@@ -429,17 +429,14 @@ contains
     end if
 
     if(mesh%sb%kpoints%use_symmetries) then
-      do ik = 1, mesh%sb%kpoints%reduced%npoints
-        do iop = 1, kpoints_get_num_symmetry_ops(mesh%sb%kpoints, ik)
-          iop2 = kpoints_get_symmetry_ops(mesh%sb%kpoints, ik, iop)
-          if(iop2 == symmetries_identity_index(mesh%sb%symm)) cycle
-          do il = 1, no_l
-            if(.not. symm_op_invariant_cart(mesh%sb%symm%ops(iop2), lasers(il)%pol(:), SYMPREC)) then
-              message(1) = "The lasers break (at least) one of the symmetries used to reduce the k-points."
-              message(2) = "Set SymmetryBreakDir accordingly to your laser fields."
-              call messages_fatal(2)
-            end if
-          end do
+      do iop = 1, symmetries_number(mesh%sb%symm)
+        if(iop == symmetries_identity_index(mesh%sb%symm)) cycle
+        do il = 1, no_l
+          if(.not. symm_op_invariant_cart(mesh%sb%symm%ops(iop), lasers(il)%pol(:), SYMPREC)) then
+            message(1) = "The lasers break (at least) one of the symmetries used to reduce the k-points."
+            message(2) = "Set SymmetryBreakDir accordingly to your laser fields."
+            call messages_fatal(2)
+          end if
         end do
       end do
     end if

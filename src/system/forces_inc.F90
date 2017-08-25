@@ -228,6 +228,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
             do ii = 1, kpoints_get_num_symmetry_ops(gr%sb%kpoints, ikpoint)
 
               iop = kpoints_get_symmetry_ops(gr%sb%kpoints, ikpoint, ii)
+              if(iop < 0 ) cycle !Time reversal symmetry
 
               do iatom = 1, geo%natoms
                 if(projector_is_null(hm%ep%proj(iatom))) cycle
