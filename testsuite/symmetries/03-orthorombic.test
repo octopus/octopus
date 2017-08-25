@@ -324,7 +324,7 @@ match ; kpt 35 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 );
 match ; kpt 36 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 03-orthorombic.10-spg25.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 25
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 25
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "   1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
@@ -361,7 +361,7 @@ match ; kpt 26 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 );
 match ; kpt 27 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 03-orthorombic.11-spg26.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 26
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 26
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0   1   0     0   0   1", 60 ); 0.000000
@@ -399,7 +399,7 @@ match ; kpt 29 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 );
 match ; kpt 30 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 03-orthorombic.12-spg27.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 27
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 27
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
@@ -437,7 +437,7 @@ match ; kpt 29 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 );
 match ; kpt 30 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 03-orthorombic.13-spg28.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 28
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 28
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
@@ -475,7 +475,7 @@ match ; kpt 29 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 );
 match ; kpt 30 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 03-orthorombic.14-spg29.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 29
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 29
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 1
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
@@ -518,7 +518,7 @@ match ; kpt 35 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 );
 match ; kpt 36 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 03-orthorombic.15-spg30.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 30
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 30
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
@@ -556,7 +556,7 @@ match ; kpt 29 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 );
 match ; kpt 30 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 03-orthorombic.16-spg31.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 31
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 31
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0   1   0     0   0   1", 60 ); 0.000000
@@ -594,7 +594,7 @@ match ; kpt 29 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 );
 match ; kpt 30 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 03-orthorombic.17-spg32.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 32
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 32
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
@@ -632,7 +632,7 @@ match ; kpt 29 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 );
 match ; kpt 30 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 03-orthorombic.18-spg33.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 33
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 33
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 1
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
@@ -675,7 +675,7 @@ match ; kpt 35 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 );
 match ; kpt 36 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 03-orthorombic.19-spg34.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 34
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 34
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
@@ -713,7 +713,7 @@ match ; kpt 29 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 );
 match ; kpt 30 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 03-orthorombic.20-spg35.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 35
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 35
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "   0  -1   0    -1   0   0     0   0   1", 60 ); 0.000000
@@ -744,7 +744,7 @@ match ; kpt 20 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 );
 match ; kpt 21 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 03-orthorombic.21-spg36.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 36
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 36
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "   0   1   0     1   0   0     0   0   1", 60 ); 0.000000
@@ -776,7 +776,7 @@ match ; kpt 23 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 );
 match ; kpt 24 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 03-orthorombic.22-spg37.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 37
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 37
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
@@ -814,7 +814,7 @@ match ; kpt 29 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 );
 match ; kpt 30 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 03-orthorombic.23-spg38.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 38
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 38
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "   1   0   0     0   0   1     0   1   0", 60 ); 0.000000
@@ -845,7 +845,7 @@ match ; kpt 20 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 );
 match ; kpt 21 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 03-orthorombic.24-spg39.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 39
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 39
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0   0   1     0   1   0", 60 ); 0.000000
@@ -877,7 +877,7 @@ match ; kpt 23 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 );
 match ; kpt 24 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 03-orthorombic.25-spg40.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 40
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 40
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0   0   1     0   1   0", 60 ); 0.000000
@@ -909,7 +909,7 @@ match ; kpt 23 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 );
 match ; kpt 24 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 03-orthorombic.26-spg41.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 41
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 41
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     0   0   1     0   1   0", 60 ); 0.000000
@@ -941,7 +941,7 @@ match ; kpt 23 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 );
 match ; kpt 24 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 03-orthorombic.27-spg42.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 42
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 42
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "   0   1  -1     0   1   0    -1   1   0", 60 ); 0.000000
@@ -1001,7 +1001,7 @@ match ; kpt 23 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 );
 match ; kpt 24 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 03-orthorombic.29-spg44.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 44
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 44
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "   0   0  -1     1   1   1    -1   0   0", 60 ); 0.000000
@@ -1029,7 +1029,7 @@ match ; kpt 17 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 );
 match ; kpt 18 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 03-orthorombic.30-spg45.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 45
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 45
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "   0   1   0     1   0   0    -1  -1  -1", 60 ); 0.000000
@@ -1061,7 +1061,7 @@ match ; kpt 23 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 );
 match ; kpt 24 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 03-orthorombic.31-spg46.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 46
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 46
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "   0   1   0     1   0   0    -1  -1  -1", 60 ); 0.000000
