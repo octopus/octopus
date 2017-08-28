@@ -75,6 +75,7 @@ module hamiltonian_oct_m
   use cube_oct_m
   use cube_function_oct_m
   use fft_oct_m
+  use fourier_space_oct_m
 
   implicit none
 
@@ -201,8 +202,10 @@ module hamiltonian_oct_m
   end type hamiltonian_t
 
 ! working space for optimized Hamiltonian for solids
-  type(cube_t) :: psib_cube
-  type(cube_function_t) :: psib_cf
+  type(cube_t)         ,target  :: psib_cube
+  type(cube_function_t),target  :: psib_cf
+  logical,parameter :: fft_lap_switch = .true. ! temporal swith should be removed later.
+  CMPLX, allocatable :: psi(:,:), hpsi(:,:)
 
   integer, public, parameter :: &
     LENGTH     = 1,             &
@@ -511,9 +514,7 @@ contains
     !% (Experimental) If set to yes, Octopus employs an optimized Hamiltonian 
     !% operation for crystalline solids.
     !%End
-!    call parse_variable('OptimizedHamiltonianSolids', .false., hm%opt_for_solids)
-! For tests, default is temporary set to .true.
-    call parse_variable('OptimizedHamiltonianSolids', .true., hm%opt_for_solids)
+    call parse_variable('OptimizedHamiltonianSolids', .false., hm%opt_for_solids)
 !! Experimental warning is temporary removed for tests.
 !    if(hm%opt_for_solids) call messages_experimental('OptimizedHamiltonianSolids')
 
@@ -1328,16 +1329,21 @@ contains
   end if
 
   if(iand(TERM_KINETIC, terms_) /= 0) then
-    ASSERT(associated(hm%hm_base%kinetic))
-    call profiling_in(prof_kinetic_start, "KINETIC_START")
-    call zderivatives_batch_start(hm%hm_base%kinetic, der, epsib, hpsib, handle, set_bc = .false., factor = -M_HALF/hm%mass)
-    call profiling_out(prof_kinetic_start)
+    if(fft_lap_switch)then
+      call kinetic_energy_fft(hm, der, psib, hpsib, ik)
+      call zhamiltonian_base_phase(hm%hm_base, der, der%mesh%np, ik, .false., hpsib)
+    else
+      ASSERT(associated(hm%hm_base%kinetic))
+      call profiling_in(prof_kinetic_start, "KINETIC_START")
+      call zderivatives_batch_start(hm%hm_base%kinetic, der, epsib, hpsib, handle, set_bc = .false., factor = -M_HALF/hm%mass)
+      call profiling_out(prof_kinetic_start)
 
-    call profiling_in(prof_kinetic_finish, "KINETIC_FINISH")
-    call zderivatives_batch_finish(handle)
-    call profiling_out(prof_kinetic_finish)
+      call profiling_in(prof_kinetic_finish, "KINETIC_FINISH")
+      call zderivatives_batch_finish(handle)
+      call profiling_out(prof_kinetic_finish)
 
-    if(hm%cmplxscl%space) call batch_scal(der%mesh%np, exp(-M_TWO*M_zI*hm%cmplxscl%theta), hpsib)
+      if(hm%cmplxscl%space) call batch_scal(der%mesh%np, exp(-M_TWO*M_zI*hm%cmplxscl%theta), hpsib)
+    end if
   else
     call batch_set_zero(hpsib)
   end if
@@ -1432,8 +1438,13 @@ contains
       need_partition=.not.gr%der%mesh%parallel_in_domains)
     call cube_function_null(psib_cf)
     call zcube_function_alloc_rs(psib_cube, psib_cf)
+    call cube_function_alloc_fs(psib_cube, psib_cf)
     
     call kinetic_energy_fft_init(this, gr%der%mesh, psib_cube)
+    SAFE_ALLOCATE(psi(1:gr%der%mesh%np, 1:this%d%dim))
+    SAFE_ALLOCATE(hpsi(1:gr%der%mesh%np, 1:this%d%dim))
+
+
     
   end subroutine init_ham_opt_solids
   
@@ -1489,24 +1500,80 @@ contains
     POP_SUB(kinetic_energy_fft_init)
   end subroutine kinetic_energy_fft_init
   !-----------------------------------------------------------------
-  subroutine kinetic_energy_fft(hm, psib, hpsib, ik)
+  subroutine kinetic_energy_fft(hm, der, psib, hpsib, ik)
     implicit none
-    type(hamiltonian_t),   intent(in) :: hm
-    type(batch_t),         intent(in)    :: psib
-    type(batch_t),         intent(out)   :: hpsib
+    type(hamiltonian_t),   intent(in)    :: hm
+    type(derivatives_t),   intent(in)    :: der
+    type(batch_t), target, intent(inout) :: psib
+    type(batch_t), target, intent(inout) :: hpsib
     integer,               intent(in)    :: ik
-    integer :: ii, ist
+    integer :: ist, ibatch
 
     PUSH_SUB(kinetic_energy_fft_init)
 
-    do ii = 1, psib%nst_linear
-      ist = batch_linear_to_ist(psib, ii)
 
+    do ibatch = 1, psib%nst
+      ist = psib%states(ibatch)%ist
+      call batch_get_state(psib, ibatch, der%mesh%np, psi)
+
+! Domain parallelization is not available yet.
+      call zmesh_to_cube(der%mesh,                     &
+                         psi(:,1), &
+                         psib_cube,                    &
+                         psib_cf)
+
+      call zcube_function_rs2fs(psib_cube, psib_cf)
+      call apply_kinetic_energy_in_fourier_space
+      call zcube_function_fs2rs(psib_cube, psib_cf)
+
+      call zcube_to_mesh(psib_cube, &
+                         psib_cf,   &
+                         der%mesh,      &
+                         hpsi(:,1))
+
+      call batch_set_state(hpsib, ibatch, der%mesh%np, hpsi)
 
 
     end do
 
     POP_SUB(kinetic_energy_fft_init)
+
+    contains
+
+      subroutine apply_kinetic_energy_in_fourier_space
+        type(cube_t),          pointer             :: cube
+        type(cube_function_t), pointer             :: cf
+        integer :: ii, jj, kk
+
+        FLOAT   :: kpoint(1:MAX_DIM), kac(1:MAX_DIM)
+        FLOAT   :: fact, kac2
+
+
+        cube => psib_cube
+        cf => psib_cf
+
+        kpoint(1:der%mesh%sb%dim) = &
+          kpoints_get_point(der%mesh%sb%kpoints, states_dim_get_kpoint_index(hm%d, ik))
+        kac = kpoint ! + vector potential 
+        kac2 = sum(kac(1:3)**2)
+
+        do kk = 1, cube%fs_n(3)
+          do jj = 1, cube%fs_n(2)
+            do ii = 1, cube%fs_n(1)
+              fact =    M_HALF* ( hm%G2(ii,jj,kk) + kac2) &
+                      - hm%Gvec(ii,jj,kk,1)*kac(1) &
+                      - hm%Gvec(ii,jj,kk,2)*kac(2) &
+                      - hm%Gvec(ii,jj,kk,3)*kac(3) 
+
+              
+              cf%fs(ii, jj, kk) = cf%fs(ii, jj, kk)*fact
+            end do
+          end do
+        end do
+
+
+      end subroutine apply_kinetic_energy_in_fourier_space
+
   end subroutine kinetic_energy_fft
   !-----------------------------------------------------------------
 
