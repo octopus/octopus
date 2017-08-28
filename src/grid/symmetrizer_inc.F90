@@ -119,8 +119,9 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
         if(srcpoint(idir) < 0) then
           srcpoint(idir) = srcpoint(idir) + lsize(idir)
           ASSERT(srcpoint(idir) >= 0)
-        else if(srcpoint(idir) >= lsize(idir)) then
-          srcpoint(idir) = mod(srcpoint(idir), lsize(idir))
+        end if
+        if(srcpoint(idir) + M_HALF*SYMPREC >= lsize(idir)) then
+          srcpoint(idir) = mod(srcpoint(idir)+M_HALF*SYMPREC, lsize(idir))
         end if
       end do
       ASSERT(all(srcpoint >= 0))
