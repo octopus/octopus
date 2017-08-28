@@ -94,7 +94,7 @@ module fft_oct_m
        FFTLIB_PNFFT = 5
        
   integer, parameter :: &
-    FFT_MAX  = 10, &
+    FFT_MAX  = 15, &
     FFT_NULL = -1
   
   type fft_t
