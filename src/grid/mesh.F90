@@ -843,7 +843,7 @@ contains
 
       ! iterate over all points that go to this point by a symmetry operation
       do iop = 1, nops
-        srcpoint = symm_op_apply_red(mesh%sb%symm%ops(iop), destpoint) 
+        srcpoint = symm_op_apply_inv_red(mesh%sb%symm%ops(iop), destpoint) 
 
         !We now come back to what should be an integer, if the symmetric point beloings to the grid
         forall(idim = 1:3) srcpoint(idim) = srcpoint(idim)*lsize(idim)
@@ -856,12 +856,12 @@ contains
         if(any(srcpoint-anint(srcpoint)> SYMPREC)) then
           message(1) = "The real-space grid breaks at least one of the symmetries of the system."
           message(2) = "Change your spacing or use KPointsUseSymmetries=no."
-       !   print '(3(3i4,2x))', symm_op_rotation_matrix_red(mesh%sb%symm%ops(iop))
-       !   print *, srcpoint
-       !   print *, destpoint
-       !   print *, offset
-       !   print *, mesh%idx%lxyz(ip, 1:3)
-       !   print *, lsize
+          !print '(3(3i4,2x))', symm_op_rotation_matrix_red(mesh%sb%symm%ops(iop))
+          !print *, srcpoint
+          !print *, destpoint
+          !print *, offset
+          !print *, mesh%idx%lxyz(ip, 1:3)
+          !print *, lsize
           call messages_fatal(2)
         end if
       end do

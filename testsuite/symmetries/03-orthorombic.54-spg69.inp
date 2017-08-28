@@ -11,7 +11,9 @@ BoxShape = parallelepiped
  3.5000000000E+00 | 2.7554552981E-16 | 4.5000000000E+00
  3.5000000000E+00 | 4.0000000000E+00 | 0.0000000000E+00
 %
-Spacing = 0.8
+%Spacing
+ 0.8 | 0.7 | 0.7
+%
 TheoryLevel = independent_particles
 MaximumIter = 0
 LCAOStart = lcao_none
