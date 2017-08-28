@@ -6,7 +6,7 @@ TestGroups : long-run, periodic_systems, symmetries
 Enabled    : Yes
 
 Input      : 05-hexagonal.01-spg143.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 143
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 143
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 3
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "   0   1   0    -1  -1   0     0   0   1", 60 ); 0.000000
@@ -232,7 +232,7 @@ match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 
 match ; kpt 5 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
 match ; kpt 6 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.09375
 match ; kpt 7 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.09375
-match ; kpt 8 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.09375
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.09375
 match ; kpt 9 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.18750
 match ; kpt 10 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
 match ; kpt 11 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.09375
@@ -288,7 +288,7 @@ match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 
 match ; kpt 8 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
 match ; kpt 9 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
 match ; kpt 10 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.06250
-match ; kpt 11 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.06250
 match ; kpt 12 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.06250
 match ; kpt 13 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.06250
 match ; kpt 14 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.03125
@@ -352,7 +352,7 @@ match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 
 match ; kpt 8 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
 match ; kpt 9 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
 match ; kpt 10 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.06250
-match ; kpt 11 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.06250
 match ; kpt 12 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.06250
 match ; kpt 13 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.06250
 match ; kpt 14 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.03125
@@ -393,7 +393,7 @@ match ; kpt 12 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 );
 match ; kpt 13 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 05-hexagonal.14-spg156.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 156
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 156
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 6
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "   0  -1   0    -1   0   0     0   0   1", 60 ); 0.000000
@@ -410,7 +410,7 @@ match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 
 match ; kpt 5 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
 match ; kpt 6 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.09375
 match ; kpt 7 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.09375
-match ; kpt 8 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.09375
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.09375
 match ; kpt 9 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.18750
 match ; kpt 10 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
 match ; kpt 11 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.09375
@@ -418,7 +418,7 @@ match ; kpt 12 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 );
 match ; kpt 13 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.09375
 
 Input      : 05-hexagonal.15-spg157.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 157
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 157
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 6
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "   0   1   0     1   0   0     0   0   1", 60 ); 0.000000
@@ -443,7 +443,7 @@ match ; kpt 12 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 );
 match ; kpt 13 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.09375
 
 Input      : 05-hexagonal.16-spg158.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 158
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 158
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 3
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "   0   1   0    -1  -1   0     0   0   1", 60 ); 0.000000
@@ -466,7 +466,7 @@ match ; kpt 13 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 );
 match ; kpt 14 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.09375
 
 Input      : 05-hexagonal.17-spg159.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 159
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 159
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 3
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "   0   1   0    -1  -1   0     0   0   1", 60 ); 0.000000
@@ -617,7 +617,7 @@ match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 
 match ; kpt 5 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
 match ; kpt 6 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.09375
 match ; kpt 7 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.09375
-match ; kpt 8 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.09375
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.09375
 match ; kpt 9 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.18750
 match ; kpt 10 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
 match ; kpt 11 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.09375
@@ -708,7 +708,7 @@ match ; kpt 13 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 );
 match ; kpt 14 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 05-hexagonal.26-spg168.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 168
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 168
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 6
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "   0   1   0    -1  -1   0     0   0   1", 60 ); 0.000000
@@ -894,7 +894,7 @@ match ; kpt 29 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 );
 match ; kpt 30 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 05-hexagonal.31-spg173.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 173
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 173
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 3
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1  -1   0     1   0   0     0   0   1", 60 ); 0.000000
@@ -1043,7 +1043,7 @@ match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 
 match ; kpt 8 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
 match ; kpt 9 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
 match ; kpt 10 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.06250
-match ; kpt 11 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.06250
 match ; kpt 12 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.06250
 match ; kpt 13 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.06250
 match ; kpt 14 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.03125
@@ -1075,7 +1075,7 @@ match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 
 match ; kpt 8 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
 match ; kpt 9 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
 match ; kpt 10 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.06250
-match ; kpt 11 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.06250
 match ; kpt 12 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.06250
 match ; kpt 13 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.06250
 match ; kpt 14 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.03125
@@ -1170,7 +1170,7 @@ match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 
 match ; kpt 5 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
 match ; kpt 6 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.09375
 match ; kpt 7 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.09375
-match ; kpt 8 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.09375
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.09375
 match ; kpt 9 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.18750
 match ; kpt 10 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
 match ; kpt 11 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.09375
@@ -1178,7 +1178,7 @@ match ; kpt 12 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 );
 match ; kpt 13 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.09375
 
 Input      : 05-hexagonal.41-spg183.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 183
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 183
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 12
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "   0   1   0     1   0   0     0   0   1", 60 ); 0.000000
@@ -1208,7 +1208,7 @@ match ; kpt 11 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 );
 match ; kpt 12 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.09375
 
 Input      : 05-hexagonal.42-spg184.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 184
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 184
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 6
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "   0   1   0    -1  -1   0     0   0   1", 60 ); 0.000000
@@ -1232,7 +1232,7 @@ match ; kpt 11 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 );
 match ; kpt 12 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.09375
 
 Input      : 05-hexagonal.43-spg185.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 185
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 185
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 6
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "   0   1   0    -1  -1   0     0   0   1", 60 ); 0.000000
@@ -1257,7 +1257,7 @@ match ; kpt 12 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 );
 match ; kpt 13 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.09375
 
 Input      : 05-hexagonal.44-spg186.inp
-match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 186
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 186
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 6
 match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
 match ; S2 ; GREP(static/info, "  -1   0   0     1   1   0     0   0   1", 60 ); 0.000000
@@ -1274,7 +1274,7 @@ match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 
 match ; kpt 5 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
 match ; kpt 6 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.09375
 match ; kpt 7 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.09375
-match ; kpt 8 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.09375
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.09375
 match ; kpt 9 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.18750
 match ; kpt 10 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
 match ; kpt 11 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.09375
@@ -1517,7 +1517,7 @@ match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 
 match ; kpt 5 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
 match ; kpt 6 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.09375
 match ; kpt 7 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.09375
-match ; kpt 8 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.09375
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.09375
 match ; kpt 9 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.18750
 match ; kpt 10 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
 match ; kpt 11 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.09375
