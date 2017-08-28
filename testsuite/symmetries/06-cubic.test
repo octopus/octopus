@@ -55,7 +55,7 @@ match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 
 match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.12500
 match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.06250
 match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.09375
-match ; kpt 5 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.37500
+match ; kpt 5 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.37500
 match ; kpt 6 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.18750
 match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.04688
 match ; kpt 8 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.09375
@@ -83,7 +83,7 @@ match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 
 match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.37500
 match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.03125
 match ; kpt 6 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.09375
-match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.18750
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.18750
 match ; kpt 8 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 06-cubic.04-spg198.inp
@@ -235,7 +235,7 @@ match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 
 match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.12500
 match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.06250
 match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.09375
-match ; kpt 5 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.37500
+match ; kpt 5 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.37500
 match ; kpt 6 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.18750
 match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.04688
 match ; kpt 8 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.09375
@@ -261,7 +261,7 @@ match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 
 match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.12500
 match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.06250
 match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.09375
-match ; kpt 5 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.37500
+match ; kpt 5 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.37500
 match ; kpt 6 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.18750
 match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.04688
 match ; kpt 8 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.09375
@@ -301,7 +301,7 @@ match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 
 match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.37500
 match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.03125
 match ; kpt 6 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.09375
-match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.18750
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.18750
 match ; kpt 8 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 06-cubic.11-spg205.inp
@@ -458,7 +458,7 @@ match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 
 match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.12500
 match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.06250
 match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.09375
-match ; kpt 5 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.37500
+match ; kpt 5 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.37500
 match ; kpt 6 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.18750
 match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.04688
 match ; kpt 8 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.09375
@@ -484,7 +484,7 @@ match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 
 match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.12500
 match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.06250
 match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.09375
-match ; kpt 5 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.37500
+match ; kpt 5 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.37500
 match ; kpt 6 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.18750
 match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.04688
 match ; kpt 8 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.09375
@@ -524,7 +524,7 @@ match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 
 match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.37500
 match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.03125
 match ; kpt 6 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.09375
-match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.18750
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.18750
 match ; kpt 8 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 06-cubic.18-spg212.inp
@@ -669,7 +669,7 @@ match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 
 match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.12500
 match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.06250
 match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.09375
-match ; kpt 5 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.37500
+match ; kpt 5 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.37500
 match ; kpt 6 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.18750
 match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.04688
 match ; kpt 8 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.09375
@@ -709,7 +709,7 @@ match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 
 match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.37500
 match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.03125
 match ; kpt 6 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.09375
-match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.18750
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.18750
 match ; kpt 8 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 06-cubic.24-spg218.inp
@@ -762,7 +762,7 @@ match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 
 match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.12500
 match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.06250
 match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.09375
-match ; kpt 5 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.37500
+match ; kpt 5 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.37500
 match ; kpt 6 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.18750
 match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.04688
 match ; kpt 8 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.09375
@@ -1018,7 +1018,7 @@ match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 
 match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.12500
 match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.06250
 match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.09375
-match ; kpt 5 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.37500
+match ; kpt 5 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.37500
 match ; kpt 6 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.18750
 match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.04688
 match ; kpt 8 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.09375
@@ -1056,7 +1056,7 @@ match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 
 match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.12500
 match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.06250
 match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.09375
-match ; kpt 5 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.37500
+match ; kpt 5 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.37500
 match ; kpt 6 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.18750
 match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.04688
 match ; kpt 8 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.09375
@@ -1120,7 +1120,7 @@ match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 
 match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.12500
 match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.06250
 match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.09375
-match ; kpt 5 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.37500
+match ; kpt 5 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.37500
 match ; kpt 6 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.18750
 match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.04688
 match ; kpt 8 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.09375
@@ -1184,7 +1184,7 @@ match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 
 match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.37500
 match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.03125
 match ; kpt 6 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.09375
-match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.18750
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.18750
 match ; kpt 8 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
 
 Input      : 06-cubic.36-spg230.inp
