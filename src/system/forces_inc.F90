@@ -131,12 +131,15 @@ end subroutine X(total_force_from_local_potential)
 !! First-principles calculations in real-space formalism: Electronic configurations
 !! and transport properties of nanostructures, Imperial College Press (2005)
 !! Section 1.6, page 12
-subroutine X(forces_from_potential)(gr, geo, hm, st, force)
+subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl)
   type(grid_t),                   intent(inout) :: gr
   type(geometry_t),               intent(inout) :: geo
   type(hamiltonian_t),            intent(inout) :: hm
   type(states_t),                 intent(inout) :: st
   FLOAT,                          intent(out)   :: force(:, :)
+  FLOAT,                          intent(out)   :: force_loc(:, :)
+  FLOAT,                          intent(out)   :: force_nl(:, :)
+
 
   type(symmetrizer_t) :: symmetrizer
   integer :: iatom, ist, iq, idim, idir, np, np_part, ikpoint, iop, ii, iatom_symm
@@ -144,7 +147,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
   FLOAT :: ratom(1:MAX_DIM)
   R_TYPE, allocatable :: psi(:, :)
   R_TYPE, allocatable :: grad_psi(:, :, :)
-  FLOAT,  allocatable :: grad_rho(:, :), force_loc(:, :), force_psi(:), force_tmp(:)
+  FLOAT,  allocatable :: grad_rho(:, :), force_psi(:), force_tmp(:)
   FLOAT, allocatable :: symmtmp(:, :)
   type(batch_t) :: psib, grad_psib(1:MAX_DIM)
   FLOAT :: kweight
@@ -162,6 +165,8 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
   SAFE_ALLOCATE(force_tmp(1:gr%mesh%sb%dim))
 
   force = M_ZERO
+  force_loc = M_ZERO
+  force_nl = M_ZERO
 
   ! even if there is no fine mesh, we need to make another copy
   SAFE_ALLOCATE(psi(1:np_part, 1:st%d%dim))
@@ -267,7 +272,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
                 !Let's now apply the symmetry to the force
                 !Note: here we are working with reduced quantities
                 force_tmp(1:gr%sb%dim) = symm_op_apply_inv_red(gr%sb%symm%ops(iop), force_psi)
-                force(1:gr%sb%dim, iatom) = force(1:gr%mesh%sb%dim, iatom) + &
+                force_nl(1:gr%sb%dim, iatom) = force_nl(1:gr%mesh%sb%dim, iatom) + &
                   force_tmp(1:gr%mesh%sb%dim)
 
               end do
@@ -285,7 +290,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
                   R_REAL(X(projector_matrix_element)(hm%ep%proj(iatom), st%d%dim, iq, psi, grad_psi(:, idir, :)))
               end do
 
-              force(1:gr%mesh%sb%dim, iatom) = force(1:gr%mesh%sb%dim, iatom) + force_psi(1:gr%mesh%sb%dim)
+              force_nl(1:gr%mesh%sb%dim, iatom) = force_nl(1:gr%mesh%sb%dim, iatom) + force_psi(1:gr%mesh%sb%dim)
             end do
 
           end if
@@ -309,13 +314,11 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
 #if defined(HAVE_MPI)
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
     call profiling_in(prof_comm, "FORCES_COMM")
-    call comm_allreduce(st%st_kpt_mpi_grp%comm, force)
+    call comm_allreduce(st%st_kpt_mpi_grp%comm, force_nl)
     call comm_allreduce(st%st_kpt_mpi_grp%comm, grad_rho)
     call profiling_out(prof_comm)
   end if
 #endif
-
-  SAFE_ALLOCATE(force_loc(1:gr%mesh%sb%dim, 1:geo%natoms))
 
   if(st%symmetrize_density) then
     call symmetrizer_init(symmetrizer, gr%mesh)
@@ -332,7 +335,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
 
   do iatom = 1, geo%natoms
     do idir = 1, gr%mesh%sb%dim
-      force(idir, iatom) = force(idir, iatom) + force_loc(idir, iatom)
+      force(idir, iatom) = force_nl(idir, iatom) + force_loc(idir, iatom)
     end do
   end do
 
@@ -342,12 +345,15 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
      forall (iatom = 1:geo%natoms)
         force(1:gr%mesh%sb%dim,iatom) = &
           matmul(gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim),force(1:gr%mesh%sb%dim,iatom))
+        force_loc(1:gr%mesh%sb%dim,iatom) = &
+          matmul(gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim),force_loc(1:gr%mesh%sb%dim,iatom))
+        force_nl(1:gr%mesh%sb%dim,iatom) = &
+          matmul(gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim),force_nl(1:gr%mesh%sb%dim,iatom))
      end forall
   end if
 
   SAFE_DEALLOCATE_A(force_tmp)
   SAFE_DEALLOCATE_A(force_psi)
-  SAFE_DEALLOCATE_A(force_loc)
   SAFE_DEALLOCATE_A(grad_rho)
   
   POP_SUB(X(forces_from_potential))

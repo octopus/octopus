@@ -1196,7 +1196,7 @@ contains
         end if
         ! otherwise, these values are uninitialized, and unknown.
 
-        if(scf%calc_force) call forces_write_info(iunit, geo, gr%sb)
+        if(scf%calc_force) call forces_write_info(iunit, geo, gr%sb, dir)
 
         if(scf%calc_stress) then
            write(iunit,'(a)') "Stress tensor [H/b^3]"

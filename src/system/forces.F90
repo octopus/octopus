@@ -272,7 +272,7 @@ contains
 
     integer :: j, iatom, idir
     FLOAT :: x(MAX_DIM), time, global_force(1:MAX_DIM)
-    FLOAT, allocatable :: force(:, :)
+    FLOAT, allocatable :: force(:, :), force_loc(:, :), force_nl(:, :)
     type(profile_t), save :: forces_prof
 
     call profiling_in(forces_prof, "FORCES")
@@ -282,9 +282,20 @@ contains
     time = M_ZERO
     if(present(t)) time = t
 
+    !We initialize the different components of the force to zero
+    do iatom = 1, geo%natoms
+      geo%atom(iatom)%f_ii(1:gr%sb%dim) = M_ZERO
+      geo%atom(iatom)%f_vdw(1:gr%sb%dim) = M_ZERO
+      geo%atom(iatom)%f_loc(1:gr%sb%dim) = M_ZERO
+      geo%atom(iatom)%f_nl(1:gr%sb%dim) = M_ZERO
+      geo%atom(iatom)%f_fields(1:gr%sb%dim) = M_ZERO
+    end do
+
     ! the ion-ion and vdw terms are already calculated
     do iatom = 1, geo%natoms
       geo%atom(iatom)%f(1:gr%sb%dim) = hm%ep%fii(1:gr%sb%dim, iatom) + hm%ep%vdw_forces(1:gr%sb%dim, iatom)
+      geo%atom(iatom)%f_ii(1:gr%sb%dim) = hm%ep%fii(1:gr%sb%dim, iatom)
+      geo%atom(iatom)%f_vdw(1:gr%sb%dim) = hm%ep%vdw_forces(1:gr%sb%dim, iatom)
     end do
 
     if(present(t)) then
@@ -293,26 +304,38 @@ contains
       ! the ion-ion term is already calculated
       do iatom = 1, geo%natoms
         geo%atom(iatom)%f(1:gr%sb%dim) = geo%atom(iatom)%f(1:gr%sb%dim) + global_force(1:gr%sb%dim)
+        geo%atom(iatom)%f_ii(1:gr%sb%dim) = geo%atom(iatom)%f_ii(1:gr%sb%dim) + global_force(1:gr%sb%dim)
       end do
     end if
 
     SAFE_ALLOCATE(force(1:gr%mesh%sb%dim, 1:geo%natoms))
-    
+    SAFE_ALLOCATE(force_loc(1:gr%mesh%sb%dim, 1:geo%natoms))
+    SAFE_ALLOCATE(force_nl(1:gr%mesh%sb%dim, 1:geo%natoms))
+   
+ 
     if (states_are_real(st) ) then 
-      call dforces_from_potential(gr, geo, hm, st, force)
+      call dforces_from_potential(gr, geo, hm, st, force, force_loc, force_nl)
     else
-      call zforces_from_potential(gr, geo, hm, st, force)
+      call zforces_from_potential(gr, geo, hm, st, force, force_loc, force_nl)
     end if
 
-    if(hm%ep%force_total_enforce) call forces_set_total_to_zero(geo, force)
+    if(hm%ep%force_total_enforce) then
+      call forces_set_total_to_zero(geo, force)
+      call forces_set_total_to_zero(geo, force_loc)
+      call forces_set_total_to_zero(geo, force_nl)
+    end if
 
     do iatom = 1, geo%natoms
       do idir = 1, gr%mesh%sb%dim
         geo%atom(iatom)%f(idir) = geo%atom(iatom)%f(idir) + force(idir, iatom)
+        geo%atom(iatom)%f_loc(idir) = force_loc(idir, iatom)
+        geo%atom(iatom)%f_nl(idir) = force_nl(idir, iatom)
       end do
     end do
 
     SAFE_DEALLOCATE_A(force)
+    SAFE_DEALLOCATE_A(force_loc)
+    SAFE_DEALLOCATE_A(force_nl)
     
     !\todo forces due to the magnetic fields (static and time-dependent)
     if(present(t)) then
@@ -325,6 +348,7 @@ contains
             ! Here the proton charge is +1, since the electric field has the usual sign.
             geo%atom(iatom)%f(1:gr%mesh%sb%dim) = geo%atom(iatom)%f(1:gr%mesh%sb%dim) &
              + species_zval(geo%atom(iatom)%species)*x(1:gr%mesh%sb%dim)
+            geo%atom(iatom)%f_fields(1:gr%mesh%sb%dim) = species_zval(geo%atom(iatom)%species)*x(1:gr%mesh%sb%dim)
           end do
     
         case(E_FIELD_VECTOR_POTENTIAL)
@@ -339,6 +363,8 @@ contains
             ! Also here the proton charge is +1
             geo%atom(iatom)%f(1:gr%mesh%sb%dim) = geo%atom(iatom)%f(1:gr%mesh%sb%dim) &
              + species_zval(geo%atom(iatom)%species)*x(1:gr%mesh%sb%dim)
+            geo%atom(iatom)%f_fields(1:gr%mesh%sb%dim) = geo%atom(iatom)%f_fields(1:gr%mesh%sb%dim) &
+               + species_zval(geo%atom(iatom)%species)*x(1:gr%mesh%sb%dim)
           end do
 
         case(E_FIELD_MAGNETIC, E_FIELD_SCALAR_POTENTIAL)
@@ -354,6 +380,8 @@ contains
         ! Here the proton charge is +1, since the electric field has the usual sign.
         geo%atom(iatom)%f(1:gr%mesh%sb%dim) = geo%atom(iatom)%f(1:gr%mesh%sb%dim) &
           + species_zval(geo%atom(iatom)%species)*hm%ep%E_field(1:gr%mesh%sb%dim)
+        geo%atom(iatom)%f_fields(1:gr%mesh%sb%dim) = geo%atom(iatom)%f_fields(1:gr%mesh%sb%dim) &
+               + species_zval(geo%atom(iatom)%species)*hm%ep%E_field(1:gr%mesh%sb%dim)
       end do
     end if
     
@@ -391,14 +419,17 @@ contains
 
  ! ----------------------------------------------------------------------
 
-  subroutine forces_write_info(iunit, geo, sb)
+  subroutine forces_write_info(iunit, geo, sb, dir)
     integer,             intent(in)    :: iunit
     type(geometry_t),    intent(in)    :: geo
     type(simul_box_t),   intent(in)    :: sb
+    character(len=*),    intent(in)    :: dir
 
-    integer :: iatom, idir, ii
+    integer :: iatom, idir, ii, iunit2
     FLOAT:: rr(1:3), ff(1:3), torque(1:3)
-    
+
+    if(.not.mpi_grp_is_root(mpi_world)) return    
+
     PUSH_SUB(forces_write_info)
 
     write(iunit,'(3a)') 'Forces on the ions [', trim(units_abbrev(units_out%force)), "]"
@@ -425,6 +456,20 @@ contains
       write(iunit,'(a14, 10f15.6)') ' Total torque', &
               (units_from_atomic(units_out%force*units_out%length, torque(idir)), idir = 1, 3)
     end if
+
+
+    iunit2 = io_open(trim(dir)//'/forces', action='write', position='asis')
+    write(iunit2,'(a)') ' # Total force (x,y,z) Ion-Ion (x,y,z) VdW (x,y,z) Local (x,y,z) NL (x,y,z) Fields (x,y,z)'
+    do iatom = 1, geo%natoms
+       write(iunit2,'(i4,a10,18f15.6)') iatom, trim(species_label(geo%atom(iatom)%species)), &
+                 (units_from_atomic(units_out%force, geo%atom(iatom)%f(idir)), idir=1, sb%dim), &
+                 (units_from_atomic(units_out%force, geo%atom(iatom)%f_ii(idir)), idir=1, sb%dim), &
+                 (units_from_atomic(units_out%force, geo%atom(iatom)%f_vdw(idir)), idir=1, sb%dim), &
+                 (units_from_atomic(units_out%force, geo%atom(iatom)%f_loc(idir)), idir=1, sb%dim), &
+                 (units_from_atomic(units_out%force, geo%atom(iatom)%f_nl(idir)), idir=1, sb%dim), &
+                 (units_from_atomic(units_out%force, geo%atom(iatom)%f_fields(idir)), idir=1, sb%dim)
+    end do
+    call io_close(iunit2) 
 
     POP_SUB(forces_write_info)
 
