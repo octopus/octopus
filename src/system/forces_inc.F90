@@ -147,6 +147,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
   FLOAT,  allocatable :: grad_rho(:, :), force_loc(:, :), force_psi(:), force_tmp(:)
   FLOAT, allocatable :: symmtmp(:, :)
   type(batch_t) :: psib, grad_psib(1:MAX_DIM)
+  FLOAT :: kweight
 
   PUSH_SUB(X(forces_from_potential))
 
@@ -225,19 +226,24 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
             !
             ! V_iatom(R*r) = V_iatom_symm(r)
             !
+
+            !We apply N symmetries, so we have to use the proper weight
+            kweight = st%d%kweights(iq) / kpoints_get_num_symmetry_ops(gr%sb%kpoints, ikpoint)
+
             do ii = 1, kpoints_get_num_symmetry_ops(gr%sb%kpoints, ikpoint)
 
-              iop = kpoints_get_symmetry_ops(gr%sb%kpoints, ikpoint, ii)
-              if(iop < 0 ) cycle !Time reversal symmetry
+              iop = abs(kpoints_get_symmetry_ops(gr%sb%kpoints, ikpoint, ii))
+              !if(iop < 0 ) cycle !Time reversal symmetry
 
               do iatom = 1, geo%natoms
                 if(projector_is_null(hm%ep%proj(iatom))) cycle
 
+                !Let's find the atom that correspond to this one, once symmetry is applied
                 ratom = M_ZERO
                 if(geo%reduced_coordinates) then
-                  ratom(1:gr%sb%dim) = symm_op_apply_red(gr%sb%symm%ops(iop), geo%atom(iatom)%x)
+                  ratom(1:gr%sb%dim) = symm_op_apply_inv_red(gr%sb%symm%ops(iop), geo%atom(iatom)%x)
                 else
-                  ratom(1:gr%sb%dim) = symm_op_apply_cart(gr%sb%symm%ops(iop), geo%atom(iatom)%x)
+                  ratom(1:gr%sb%dim) = symm_op_apply_inv_cart(gr%sb%symm%ops(iop), geo%atom(iatom)%x)
                 end if
 
                 call simul_box_periodic_atom_in_box(gr%sb, geo, ratom)
@@ -254,15 +260,15 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
                 end if
 
                 do idir = 1, gr%mesh%sb%dim
-                  force_psi(idir) = - M_TWO * st%d%kweights(iq) * st%occ(ist, iq) * &
+                  force_psi(idir) = - M_TWO * kweight * st%occ(ist, iq) * &
                     R_REAL(X(projector_matrix_element)(hm%ep%proj(iatom_symm), st%d%dim, iq, psi, grad_psi(:, idir, :)))
                 end do
 
-
-                force_tmp(1:gr%sb%dim) = symm_op_apply_cart(gr%sb%symm%ops(iop), force_psi)
-
+                !Let's now apply the symmetry to the force
+                !Note: here we are working with reduced quantities
+                force_tmp(1:gr%sb%dim) = symm_op_apply_inv_red(gr%sb%symm%ops(iop), force_psi)
                 force(1:gr%sb%dim, iatom) = force(1:gr%mesh%sb%dim, iatom) + &
-                  force_tmp(1:gr%mesh%sb%dim)/kpoints_get_num_symmetry_ops(gr%sb%kpoints, ikpoint)
+                  force_tmp(1:gr%mesh%sb%dim)
 
               end do
 

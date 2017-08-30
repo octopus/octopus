@@ -17,7 +17,8 @@
 !!
 
 !> supply field and symmfield, and/or field_vector and symmfield_vector
-subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_vector, suppress_warning)
+subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_vector, &
+          suppress_warning, reduced_quantity)
   type(symmetrizer_t), target, intent(in)    :: this
   R_TYPE,    optional, target, intent(in)    :: field(:) !< (this%mesh%np)
   R_TYPE,    optional, target, intent(in)    :: field_vector(:, :)  !< (this%mesh%np, 3)
@@ -26,6 +27,7 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
   logical,           optional, intent(in)    :: suppress_warning !< use to avoid output of discrepancy,
     !! for forces, where this routine is not used to symmetrize something already supposed to be symmetric,
     !! but rather to construct the quantity properly from reduced k-points
+  logical,           optional, intent(in)    :: reduced_quantity
 
   integer :: ip, iop, nops, ipsrc, idir
   FLOAT :: destpoint(1:3), srcpoint(1:3), lsize(1:3), offset(1:3)
@@ -107,7 +109,7 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
     do iop = 1, nops
       srcpoint = symm_op_apply_inv_red(this%mesh%sb%symm%ops(iop), destpoint) 
 
-      !We now come back to waht should be an integer, if the symmetric point beloings to the grid
+      !We now come back to wha:t should be an integer, if the symmetric point beloings to the grid
       !At this point, this is already checked
       forall(idir = 1:3) srcpoint(idir) = srcpoint(idir)*lsize(idir)  
 
@@ -134,7 +136,11 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
         acc = acc + field_global(ipsrc)
       end if
       if(present(field_vector)) then
-        acc_vector(1:3) = acc_vector(1:3) + symm_op_apply_inv_cart(this%mesh%sb%symm%ops(iop), field_global_vector(ipsrc, 1:3))
+        if(.not.optional_default(reduced_quantity, .false.)) then
+          acc_vector(1:3) = acc_vector(1:3) + symm_op_apply_inv_cart(this%mesh%sb%symm%ops(iop), field_global_vector(ipsrc, 1:3))
+        else
+          acc_vector(1:3) = acc_vector(1:3) + symm_op_apply_inv_red(this%mesh%sb%symm%ops(iop), field_global_vector(ipsrc, 1:3))
+        end if
       end if
     end do
     if(present(field)) &

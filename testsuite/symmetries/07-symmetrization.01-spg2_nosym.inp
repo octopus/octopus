@@ -11,15 +11,16 @@ BoxShape = parallelepiped
  8.7155742748E-02 | 9.9619469809E-01 | 0.0000000000E+00
  1.7364817767E-01 | 3.2813435772E-01 | 9.2853333471E-01
 %
-Spacing = 0.5
-LCAOStart = lcao_none
+Spacing = 0.55
+LCAOStart = lcao_states
 FilterPotentials = filter_none
 %KpointsGrid
  4 | 4 | 4 
 %
-KPointsUseSymmetries = yes
+KPointsUseSymmetries = no
 %ReducedCoordinates
-"H" | 1.7000000000E-01 | 1.5000000000E-01 | 1.1000000000E-01
+"Si" | 1.7000000000E-01 | 1.5000000000E-01 | 1.1000000000E-01
+"Si" | 8.3000000000E-01 | 8.5000000000E-01 | 8.9000000000E-01
 %
 
 Output = bader + density

@@ -5,41 +5,67 @@ Program    : octopus
 TestGroups : long-run, periodic_systems, symmetries
 Enabled    : Yes
 
-Input : 07-symmetrization.01-spg1_nosym.inp
-
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -0.45341956
-match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -0.17694699
-match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.23647347
-match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  0.10839651
-match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.18669592
-match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.03907491
-match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  0.38598445
-match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -0.54508393
-
-match ; Eigenvalue [  k=1, n=1   ] ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -0.249225
-
-match ; Partial charge  1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2)  ; 1.0
-match ; Density value 1   ; LINEFIELD(static/density.y=0\,z=0,  2, 2) ; 1.90898148364077E-003
-match ; Density value 2   ; LINEFIELD(static/density.y=0\,z=0,  3, 2) ; 1.12998977270926E-003
-match ; Bader value 1     ; LINEFIELD(static/bader-sp1.y=0\,z=0,  2, 2) ; 2.99966048833721E-003
-match ; Bader value 2     ; LINEFIELD(static/bader-sp1.y=0\,z=0,  3, 2) ; 1.64108197160528E-003
+#Input : 07-symmetrization.01-spg2_nosym.inp
+#
+#match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -7.80872076
+#match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -6.54536956
+#match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -1.00825922
+#match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  0.90559796
+#match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -1.79242790
+#match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.35324549
+#match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  2.57198173
+#match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -2.59525738
+#
+#match ; Eigenvalue [  k=1, n=1   ] ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -0.326015
+#match ; Eigenvalue [  k=1, n=2   ] ; GREPFIELD(static/info, '#k =   1', 3, 2) ; -0.086281
+#match ; Eigenvalue [  k=1, n=3   ] ; GREPFIELD(static/info, '#k =   1', 3, 3) ; -0.013405
+#match ; Eigenvalue [  k=1, n=4   ] ; GREPFIELD(static/info, '#k =   1', 3, 4) ;  0.030492
+#
+#match ; Force 1 (x)   ; GREPFIELD(static/info, '1        Si', 3) ; -0.008928
+#match ; Force 1 (y)   ; GREPFIELD(static/info, '1        Si', 4) ; -0.005675
+#match ; Force 1 (z)   ; GREPFIELD(static/info, '1        Si', 5) ; -0.007488
+#match ; Force 2 (x)   ; GREPFIELD(static/info, '2        Si', 3) ;  0.008927
+#match ; Force 2 (y)   ; GREPFIELD(static/info, '2        Si', 4) ;  0.005673
+#match ; Force 2 (z)   ; GREPFIELD(static/info, '2        Si', 5) ;  0.007486
+#
+#match ; Partial charge  1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2)  ; 4.0
+#
+##The following values should be the same by symmetries
+#match ; Density value 1   ; LINEFIELD(static/density.y=0\,z=0,  2, 2) ; 3.66443374687087E-002
+#match ; Density value 2   ; LINEFIELD(static/density.y=0\,z=0, 14, 2) ; 3.66443875019183E-002
+#match ; Bader value 1     ; LINEFIELD(static/bader-sp1.y=0\,z=0,  2, 2) ; -4.71277006299386E-003
+#match ; Bader value 2     ; LINEFIELD(static/bader-sp1.y=0\,z=0, 14, 2) ; -4.71308282528424E-003
 
 #Here the reference values should be copied from the calculation without symmetries
-Input : 07-symmetrization.02-spg1_sym.inp
+Input : 07-symmetrization.02-spg2_sym.inp
 
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -0.45341956
-match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -0.17694699
-match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.23647347
-match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  0.10839651
-match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.18669592
-match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.03907491
-match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  0.38598445
-match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -0.54508393
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -7.80872076
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -6.54536956
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -1.00825922
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  0.90559796
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -1.79242790
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.35324549
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  2.57198173
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -2.59525738
 
-match ; Eigenvalue [  k=1, n=1   ] ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -0.249225
+match ; Eigenvalue [  k=1, n=1   ] ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -0.326015
+match ; Eigenvalue [  k=1, n=2   ] ; GREPFIELD(static/info, '#k =   1', 3, 2) ; -0.086281
+match ; Eigenvalue [  k=1, n=3   ] ; GREPFIELD(static/info, '#k =   1', 3, 3) ; -0.013405
+match ; Eigenvalue [  k=1, n=4   ] ; GREPFIELD(static/info, '#k =   1', 3, 4) ;  0.030492
 
-match ; Partial charge  1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2)  ; 1.0
-match ; Density value 1   ; LINEFIELD(static/density.y=0\,z=0,  2, 2) ; 1.90898148364077E-003
-match ; Density value 2   ; LINEFIELD(static/density.y=0\,z=0,  3, 2) ; 1.12998977270926E-003
-match ; Bader value 1     ; LINEFIELD(static/bader-sp1.y=0\,z=0,  2, 2) ; 2.99966048833721E-003
-match ; Bader value 2     ; LINEFIELD(static/bader-sp1.y=0\,z=0,  3, 2) ; 1.64108197160528E-003
+match ; Force 1 (x)   ; GREPFIELD(static/info, '1        Si', 3) ; -0.008928
+match ; Force 1 (y)   ; GREPFIELD(static/info, '1        Si', 4) ; -0.005675
+match ; Force 1 (z)   ; GREPFIELD(static/info, '1        Si', 5) ; -0.007488
+match ; Force 2 (x)   ; GREPFIELD(static/info, '2        Si', 3) ;  0.008927
+match ; Force 2 (y)   ; GREPFIELD(static/info, '2        Si', 4) ;  0.005673
+match ; Force 2 (z)   ; GREPFIELD(static/info, '2        Si', 5) ;  0.007486
+
+match ; Partial charge  1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2)  ; 4.0
+
+#The following values should be the same by symmetries
+match ; Density value 1   ; LINEFIELD(static/density.y=0\,z=0,  2, 2) ; 3.66443374687087E-002
+match ; Density value 2   ; LINEFIELD(static/density.y=0\,z=0, 14, 2) ; 3.66443875019183E-002
+match ; Bader value 1     ; LINEFIELD(static/bader-sp1.y=0\,z=0,  2, 2) ; -4.71277006299386E-003
+match ; Bader value 2     ; LINEFIELD(static/bader-sp1.y=0\,z=0, 14, 2) ; -4.71308282528424E-003
+
+
