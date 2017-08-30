@@ -55,6 +55,9 @@ module forces_oct_m
   use symm_op_oct_m
   use symmetrizer_oct_m
   use types_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use utils_oct_m
 
   implicit none
 
@@ -68,7 +71,8 @@ module forces_oct_m
     dforces_born_charges,      &
     zforces_born_charges,      &
     total_force_calculate,     &
-    forces_costate_calculate
+    forces_costate_calculate,  &
+    forces_write_info
 
   type(profile_t), save :: prof_comm
 
@@ -383,6 +387,48 @@ contains
     SAFE_DEALLOCATE_A(total_force)
     POP_SUB(forces_set_total_to_zero)
   end subroutine forces_set_total_to_zero
+
+
+ ! ----------------------------------------------------------------------
+
+  subroutine forces_write_info(iunit, geo, sb)
+    integer,             intent(in)    :: iunit
+    type(geometry_t),    intent(in)    :: geo
+    type(simul_box_t),   intent(in)    :: sb
+
+    integer :: iatom, idir, ii
+    FLOAT:: rr(1:3), ff(1:3), torque(1:3)
+    
+    PUSH_SUB(forces_write_info)
+
+    write(iunit,'(3a)') 'Forces on the ions [', trim(units_abbrev(units_out%force)), "]"
+    write(iunit,'(a,10x,99(14x,a))') ' Ion', (index2axis(idir), idir = 1, sb%dim)
+    do iatom = 1, geo%natoms
+      write(iunit,'(i4,a10,10f15.6)') iatom, trim(species_label(geo%atom(iatom)%species)), &
+              (units_from_atomic(units_out%force, geo%atom(iatom)%f(idir)), idir=1, sb%dim)
+    end do
+    write(iunit,'(1x,100a1)') ("-", ii = 1, 13 + sb%dim * 15)
+    write(iunit,'(a14, 10f15.6)') " Max abs force", &
+            (units_from_atomic(units_out%force, maxval(abs(geo%atom(1:geo%natoms)%f(idir)))), idir=1, sb%dim)
+    write(iunit,'(a14, 10f15.6)') " Total force", &
+            (units_from_atomic(units_out%force, sum(geo%atom(1:geo%natoms)%f(idir))), idir=1, sb%dim)
+
+    if(geo%space%dim == 2 .or. geo%space%dim == 3) then
+      rr = M_ZERO
+      ff = M_ZERO
+      torque = M_ZERO
+      do iatom = 1, geo%natoms
+        rr(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim)
+        ff(1:geo%space%dim) = geo%atom(iatom)%f(1:geo%space%dim)
+        torque(1:3) = torque(1:3) + dcross_product(rr, ff)
+      end do
+      write(iunit,'(a14, 10f15.6)') ' Total torque', &
+              (units_from_atomic(units_out%force*units_out%length, torque(idir)), idir = 1, 3)
+    end if
+
+    POP_SUB(forces_write_info)
+
+  end subroutine forces_write_info
 
 #include "undef.F90"
 #include "real.F90"
