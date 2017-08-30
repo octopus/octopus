@@ -109,7 +109,7 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
     do iop = 1, nops
       srcpoint = symm_op_apply_inv_red(this%mesh%sb%symm%ops(iop), destpoint) 
 
-      !We now come back to wha:t should be an integer, if the symmetric point beloings to the grid
+      !We now come back to what should be an integer, if the symmetric point beloings to the grid
       !At this point, this is already checked
       forall(idir = 1:3) srcpoint(idir) = srcpoint(idir)*lsize(idir)  
 
