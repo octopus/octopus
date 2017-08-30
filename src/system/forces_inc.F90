@@ -337,13 +337,13 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
   end do
 
 
- ! ! transformation from reduced coordinates to Cartesian coordinates
- ! if (simul_box_is_periodic(gr%mesh%sb) .and. gr%mesh%sb%nonorthogonal ) then
- !    forall (iatom = 1:geo%natoms)
- !       force(1:gr%mesh%sb%dim,iatom) = &
- !         matmul(gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim),force(1:gr%mesh%sb%dim,iatom))
- !    end forall
- ! end if
+  ! transformation from reduced coordinates to Cartesian coordinates
+  if (simul_box_is_periodic(gr%mesh%sb) .and. gr%mesh%sb%nonorthogonal ) then
+     forall (iatom = 1:geo%natoms)
+        force(1:gr%mesh%sb%dim,iatom) = &
+          matmul(gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim),force(1:gr%mesh%sb%dim,iatom))
+     end forall
+  end if
 
   SAFE_DEALLOCATE_A(force_tmp)
   SAFE_DEALLOCATE_A(force_psi)
