@@ -1065,6 +1065,7 @@ contains
      integer               :: ik, ist
      FLOAT                 :: diff
      CMPLX, allocatable    :: full_state(:,:), sub_state(:,:)
+     character(len=80) :: filename
 
      PUSH_SUB(floquet_FBZ_eigensolver_run)
 
@@ -1092,6 +1093,9 @@ contains
        hm%F%floquet_apply = .true.
        hm%d%dim = st%d%dim
        
+       filename = 'subspace_bands'
+       call states_write_bandstructure(FLOQUET_DIR, sub_st%nst, sub_st, sys%gr%sb, filename)
+
        eigens%spectrum_shift(1:st%nst,1:st%d%nik) = sub_st%eigenval(1:st%nst,1:st%d%nik)
        
        do ik=st%d%kpt%start,st%d%kpt%end
@@ -1118,55 +1122,86 @@ contains
      POP_SUB(floquet_FBZ_eigensolver_run)
 
    end subroutine floquet_FBZ_eigensolver_run
-    
+
    subroutine floquet_FBZ_subspace_diag(der, st, hm, ik)
     type(derivatives_t),    intent(in)    :: der
     type(states_t), target, intent(inout) :: st
     type(hamiltonian_t),    intent(in)    :: hm
     integer,                intent(in)    :: ik
 
-    CMPLX, allocatable :: evecs(:, :), rdiff(:), H0(:,:),P(:,:), Pd(:,:), Heff(:,:)
-    FLOAT, allocatable :: evalues(:), mix(:)
-    integer            :: block0, nst0, maxiter, nmix, ist, jj,ii
+    CMPLX, allocatable :: evecs(:, :), evecs_sectors(:,:,:),rdiff(:), H0(:,:), one(:,:), HF(:,:), P(:,:), Pd(:,:), Heff(:,:), vec(:)
+    FLOAT, allocatable :: evalues_full(:), mix(:), evecs_norms(:,:), evalues0(:), evals_diff(:,:), evecs_diff(:,:)
+    integer            :: block0, nst0, maxiter, nmix, ist,jst, im,in, jj,ii, Fdim, it, pos
     FLOAT              :: tol
 
-    PUSH_SUB(floquet_FBZ_subspace_diag)
+    PUSH_SUB(floquet_FBZ_subspace_diag2)
+
+    ASSERT(hm%F%order(1) == -hm%F%order(2))
+
+    Fdim=hm%F%floquet_dim
 
     SAFE_ALLOCATE(H0(1:st%nst, 1:st%nst)) ! the zero-block, this could be gs Hamiltonian(?)
     SAFE_ALLOCATE( P(1:st%nst, 1:st%nst)) ! the off-diagonal intereaction block
-    SAFE_ALLOCATE(Pd(1:st%nst, 1:st%nst)) ! P^\dagger
+    SAFE_ALLOCATE(Pd(1:st%nst, 1:st%nst)) ! P^\dagger  
+    SAFE_ALLOCATE(HF(1:st%nst*Fdim, 1:st%nst*Fdim)) ! the full Floquet matrix
+    SAFE_ALLOCATE(one(1:st%nst, 1:st%nst)) 
+    SAFE_ALLOCATE(evecs(1:st%nst*Fdim, 1:st%nst*Fdim))
+    SAFE_ALLOCATE(evalues_full(1:st%nst*Fdim))
+    SAFE_ALLOCATE(evalues0(1:st%nst))
     SAFE_ALLOCATE(Heff(1:st%nst, 1:st%nst))
-    SAFE_ALLOCATE(evecs(1:st%nst, 1:st%nst))
-    SAFE_ALLOCATE(evalues(1:st%nst))
+    SAFE_ALLOCATE(evals_diff(1:st%nst*Fdim, 1:st%nst))
 
-    nmix = 3
-    SAFE_ALLOCATE(mix(nmix))
-
-    ! generate the blocks
-    call zsubspace_diag_hamiltonian(der, st, hm, ik, H0)
-    call floquet_subspace_interaction_block(der, st,hm,ik,P)
-    Pd(1:st%nst, 1:st%nst) = transpose(conjg(P))
-
-    maxiter = 100
-    tol = 1.E-7
+    one = M_ZERO
     do ist=1,st%nst
-      mix = M_ZERO!st%eigenval(ist,ik)
-      do ii=1,maxiter
-        call continued_fraction(st%nst, H0, P, Pd, st%eigenval(ist,ik), hm%F%omega, hm%F%order(1),Heff)
-        call lalg_eigensolve(st%nst, Heff, evalues)
-        st%eigenval(ist,ik) = (sum(mix)+evalues(ist))/(nmix+1)
-        if(abs(st%eigenval(ist,ik)-mix(1)) < tol) then
-          evecs(ist,:) = Heff(ist,:)
-          exit
-        end if
-        ! shift mixing vector
-        do jj=nmix,2,-1
-           mix(jj) = mix(jj-1)
-        end do
-        mix(1) = st%eigenval(ist,ik)
-      end do
+      one(ist,ist) = M_ONE
     end do
-    print *, 'FBZ from subspace', st%eigenval(1:st%nst,ik)
+
+    ! get the action of H0 on the states
+    call zsubspace_diag_hamiltonian(der, st, hm, ik, H0)
+    P = M_ZERO
+    do it=1,hm%F%nT
+       Pd = M_ZERO
+       call zsubspace_diag_hamiltonian(der, st, hm%td_hm(it), ik, Pd)
+       P = P + Pd*exp(-M_zI*hm%F%omega*it*hm%F%dt)/hm%F%nT
+    end do
+    Pd(1:st%nst, 1:st%nst) = transpose(conjg(P))
+    ! construct the full matrix by shifting the H0 action
+    HF = M_ZERO
+    do im=1,Fdim
+      HF((im-1)*st%nst+1:im*st%nst , (im-1)*st%nst+1:im*st%nst) = H0+(im-hm%F%order(2)-1)*hm%F%omega*one
+      if(im>1) HF((im-2)*st%nst+1:(im-1)*st%nst , (im-1)*st%nst+1:im*st%nst) = Pd(1:st%nst,1:st%nst)
+      if(im<Fdim) HF(im*st%nst+1:(im+1)*st%nst , (im-1)*st%nst+1:im*st%nst) = P(1:st%nst,1:st%nst)
+    end do
+
+    call lalg_eigensolve(st%nst*Fdim, HF, evalues_full)
+
+    !write(*,'(a)',advance='no') 'XX '
+    !do ist=1,st%nst*Fdim
+    !   write(*,'(e12.6,a)',advance='no')  evalues_full(ist), ' '
+    !end do
+    !write(*,'(A)') ''
+
+    ! filter the zero harmonics
+    tol = 1.e-9
+    jst = 1
+    do ist=1,st%nst*Fdim
+       ! for comparison use only dim=1 in downfolding
+       call continued_fraction(st%nst, H0, P, Pd, evalues_full(ist), hm%F%omega, 1,Heff)
+       call lalg_eigensolve(st%nst, Heff, evalues0)
+       do jst=1,st%nst
+         evals_diff(ist,jst) = abs(evalues_full(ist) - evalues0(jst))
+       end do
+
+    end do
+
+    do jst=1,st%nst
+      pos = minloc(evals_diff(:,jst),dim=1)
+      st%eigenval(jst,ik) = evalues_full(pos)
+      ! get full dim downfolded eigenvectors
+      call continued_fraction(st%nst, H0, P, Pd, evalues_full(pos), hm%F%omega, hm%F%order(2),Heff)
+      call lalg_eigensolve(st%nst, Heff, evalues0)
+      evecs(jst,1:st%nst) = Heff(jst,1:st%nst)
+    end do
 
     call states_rotate(der%mesh, st, evecs, ik)
 
@@ -1175,12 +1210,17 @@ contains
     SAFE_DEALLOCATE_A(Pd)
     SAFE_DEALLOCATE_A(Heff)
     SAFE_DEALLOCATE_A(evecs)
-    SAFE_DEALLOCATE_A(evalues)
+    SAFE_DEALLOCATE_A(evalues_full)
+    SAFE_DEALLOCATE_A(evalues0)
+    SAFE_DEALLOCATE_A(evals_diff)
+    SAFE_DEALLOCATE_A(HF)
+    SAFE_DEALLOCATE_A(one)
 
     POP_SUB(floquet_FBZ_subspace_diag)
 
-    contains
-      subroutine continued_fraction(nn,H0, P, Pd, Q, omega, order,Heff)
+   end subroutine floquet_FBZ_subspace_diag
+
+    subroutine continued_fraction(nn,H0, P, Pd, Q, omega, order,Heff)
         integer :: nn
         CMPLX  :: H0(nn,nn), P(nn,nn), Pd(nn,nn), Heff(nn,nn)
         FLOAT  ::  Q, omega
@@ -1202,8 +1242,8 @@ contains
            Heff_minus(:,:) = (Q-ii*omega)*one(:,:)-H0(:,:)-Heff_minus(:,:)
            Heff_plus(:,:)  = (Q+ii*omega)*one(:,:)-H0(:,:)-Heff_plus(:,:)
 
-           Heff_minus = lalg_inverter(nn, Heff_minus)
-           Heff_plus  = lalg_inverter(nn, Heff_plus)
+           call lalg_sym_inverter('u',nn, Heff_minus)
+           call lalg_sym_inverter('u',nn, Heff_plus)
            
            Heff_minus = matmul(matmul(Pd,Heff_minus),P)
            Heff_plus = matmul(matmul(P,Heff_plus),Pd)
@@ -1212,66 +1252,5 @@ contains
         Heff = H0+Heff_minus+Heff_plus
 
       end subroutine continued_fraction
-
-      subroutine floquet_subspace_interaction_block(der,st,hm,ik,mat)
-        type(derivatives_t),    intent(in)    :: der
-        type(states_t), target, intent(inout) :: st
-        type(hamiltonian_t),    intent(in)    :: hm
-        integer,                intent(in)    :: ik
-        CMPLX,                  intent(out)   :: mat(:,:)
-
-        CMPLX, allocatable     :: psi(:,:,:), hpsi(:,:,:), state1(:,:),state2(:,:)
-        integer                :: ist, idim, it
-        CMPLX :: alpha, beta
-       
-        PUSH_SUB(floquet_subspace_interaction_block)
-        
-        ASSERT(hm%F%floquet_apply == .false.)
-
-        SAFE_ALLOCATE(psi(1:st%nst, 1:st%d%dim, 1:der%mesh%np))
-        SAFE_ALLOCATE(hpsi(1:st%nst, 1:st%d%dim, 1:der%mesh%np))
-        SAFE_ALLOCATE(state1(1:der%mesh%np_part,1:st%d%dim))
-        SAFE_ALLOCATE(state2(1:der%mesh%np_part,1:st%d%dim))
-
-        hpsi = M_ZERO
-        do ist=1,st%nst
-          call states_get_state(st, der%mesh, ist, ik, state1)
-          do idim=1,st%d%dim
-            psi(ist,idim,1:der%mesh%np) = state1(1:der%mesh%np,idim)
-          end do
-          do it=1,hm%F%nT
-             call zhamiltonian_apply(hm%td_hm(it), der,state1, state2, ist, ik)!, time=it*hm%F%dt)
-             do idim=1,st%d%dim
-               hpsi(ist,idim,1:der%mesh%np) = hpsi(ist,idim,1:der%mesh%np) + &
-                                             exp(-M_zI*hm%F%omega*it*hm%F%dt)/hm%F%nT*state2(1:der%mesh%np,idim)
-             end do
-          end do
-        end do
-
-        alpha = der%mesh%volume_element
-        beta  = CNST(1.0)
-        call blas_gemm(transa = 'n',     &
-                       transb = 'c',     &
-                       m = st%nst,       &
-                       n = st%nst,       &
-                       k = der%mesh%np*st%d%dim,   &
-                       alpha = alpha,              &
-                       a = hpsi(1, 1, 1),          &
-                       lda = ubound(hpsi, dim = 1),&
-                       b = psi(1, 1, 1),           &
-                       ldb = ubound(psi, dim = 1), &
-                       beta = beta ,               &
-                       c = mat(1, 1),              &                        
-                       ldc = ubound(mat, dim = 1))
-
-        SAFE_DEALLOCATE_A(psi)
-        SAFE_DEALLOCATE_A(hpsi)
-        SAFE_DEALLOCATE_A(state1)
-        SAFE_DEALLOCATE_A(state2)
-
-        POP_SUB(floquet_subspace_interaction_block)
-      end subroutine floquet_subspace_interaction_block
-
-   end subroutine floquet_FBZ_subspace_diag
 
 end module floquet_oct_m
