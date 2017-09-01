@@ -95,7 +95,7 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
     ASSERT(all(destpoint < lsize))
 
     ! move to center of cell in real coordinates
-    destpoint = destpoint - lsize * M_HALF
+    destpoint = destpoint - dble(int(lsize)/2)
 
     !convert to proper reduced coordinates
     forall(idir = 1:3) destpoint(idir) = destpoint(idir)/lsize(idir)
@@ -107,14 +107,14 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
 
     ! iterate over all points that go to this point by a symmetry operation
     do iop = 1, nops
-      srcpoint = symm_op_apply_inv_red(this%mesh%sb%symm%ops(iop), destpoint) 
+      srcpoint = symm_op_apply_red(this%mesh%sb%symm%ops(iop), destpoint) 
 
       !We now come back to what should be an integer, if the symmetric point beloings to the grid
       !At this point, this is already checked
       forall(idir = 1:3) srcpoint(idir) = srcpoint(idir)*lsize(idir)  
 
       ! move back to reference to origin at corner of cell
-      srcpoint = srcpoint + lsize * M_HALF
+      srcpoint = srcpoint + dble(int(lsize)/2)
 
       ! apply periodic boundary conditions in periodic directions
       do idir = 1, this%mesh%sb%periodic_dim

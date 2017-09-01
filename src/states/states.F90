@@ -587,11 +587,7 @@ contains
     !% When enabled the density is symmetrized. Currently, this can
     !% only be done for periodic systems. (Experimental.)
     !%End
-    if(gr%sb%kpoints%use_symmetries) then
-      call parse_variable('SymmetrizeDensity', .true., st%symmetrize_density)
-    else
-      call parse_variable('SymmetrizeDensity', .false., st%symmetrize_density)
-    end if
+    call parse_variable('SymmetrizeDensity', gr%sb%kpoints%use_symmetries, st%symmetrize_density)
     call messages_print_var_value(stdout, 'SymmetrizeDensity', st%symmetrize_density)
 
     ! Why? Resulting discrepancies can be suspiciously large even at SCF convergence;
@@ -2238,7 +2234,7 @@ contains
     ! We have to symmetrize everything as they are calculated from the
     ! wavefunctions.
     ! This must be done before compute the gauge-invariant kinetic energy density 
-    if(der%mesh%sb%kpoints%use_symmetries.or.st%symmetrize_density) then
+    if(st%symmetrize_density) then
       SAFE_ALLOCATE(symm(1:der%mesh%np, 1:der%mesh%sb%dim))
       call symmetrizer_init(symmetrizer, der%mesh)
       do is = 1, st%d%nspin

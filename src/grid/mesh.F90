@@ -836,7 +836,7 @@ contains
       ASSERT(all(destpoint < lsize))
 
       ! move to center of cell in real coordinates
-      destpoint = destpoint - lsize*M_HALF
+      destpoint = destpoint - dble(int(lsize)/2)
 
       !convert to proper reduced coordinates
       forall(idim = 1:3) destpoint(idim) = destpoint(idim)/lsize(idim)
@@ -849,7 +849,7 @@ contains
         forall(idim = 1:3) srcpoint(idim) = srcpoint(idim)*lsize(idim)
 
         ! move back to reference to origin at corner of cell
-        srcpoint = srcpoint + lsize*M_HALF
+        srcpoint = srcpoint + dble(int(lsize)/2)
 
         srcpoint(1:3) = srcpoint(1:3) + offset(1:3)
  

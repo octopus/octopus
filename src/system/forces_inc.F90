@@ -143,11 +143,12 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl)
 
   type(symmetrizer_t) :: symmetrizer
   integer :: iatom, ist, iq, idim, idir, np, np_part, ikpoint, iop, ii, iatom_symm
-  integer :: ib, maxst, minst
+  integer :: ib, maxst, minst, ip
   FLOAT :: ratom(1:MAX_DIM)
   R_TYPE, allocatable :: psi(:, :)
   R_TYPE, allocatable :: grad_psi(:, :, :)
-  FLOAT,  allocatable :: grad_rho(:, :), force_psi(:), force_tmp(:)
+  FLOAT,  pointer :: grad_rho(:, :)
+  FLOAT,  allocatable :: force_psi(:), force_tmp(:)
   FLOAT, allocatable :: symmtmp(:, :)
   type(batch_t) :: psib, grad_psib(1:MAX_DIM)
   FLOAT :: kweight
@@ -269,9 +270,15 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl)
                     R_REAL(X(projector_matrix_element)(hm%ep%proj(iatom_symm), st%d%dim, iq, psi, grad_psi(:, idir, :)))
                 end do
 
+                ! We convert the force to Cartesian coordinates before symmetrization
+                ! Grad_xyw = Bt Grad_uvw, see Chelikowsky after Eq. 10
+                if (simul_box_is_periodic(gr%mesh%sb) .and. gr%mesh%sb%nonorthogonal ) then 
+                  force_psi(1:gr%mesh%sb%dim) = matmul(gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim),force_psi(1:gr%mesh%sb%dim))
+                end if
+
                 !Let's now apply the symmetry to the force
                 !Note: here we are working with reduced quantities
-                force_tmp(1:gr%sb%dim) = symm_op_apply_inv_red(gr%sb%symm%ops(iop), force_psi)
+                force_tmp(1:gr%sb%dim) = symm_op_apply_cart(gr%sb%symm%ops(iop), force_psi)
                 force_nl(1:gr%sb%dim, iatom) = force_nl(1:gr%mesh%sb%dim, iatom) + &
                   force_tmp(1:gr%mesh%sb%dim)
 
@@ -289,6 +296,11 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl)
                 force_psi(idir) = - M_TWO * st%d%kweights(iq) * st%occ(ist, iq) * &
                   R_REAL(X(projector_matrix_element)(hm%ep%proj(iatom), st%d%dim, iq, psi, grad_psi(:, idir, :)))
               end do
+
+              ! We convert the forces to Cartesian coordinates
+              if (simul_box_is_periodic(gr%mesh%sb) .and. gr%mesh%sb%nonorthogonal ) then
+                force_psi(1:gr%mesh%sb%dim) = matmul(gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim),force_psi(1:gr%mesh%sb%dim))
+              end if
 
               force_nl(1:gr%mesh%sb%dim, iatom) = force_nl(1:gr%mesh%sb%dim, iatom) + force_psi(1:gr%mesh%sb%dim)
             end do
@@ -311,6 +323,18 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl)
   SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(grad_psi)
 
+ ! in this case we need to convert to Cartesian coordinates at the end
+ ! TODO: integrate this to the routine X(hamiltonian_base_nlocal_force)
+ if(hm%hm_base%apply_projector_matrices .and. .not. accel_is_enabled() .and. &
+        .not. (st%symmetrize_density .and. gr%sb%kpoints%use_symmetries)) then
+   ! We convert the forces to Cartesian coordinates
+   if (simul_box_is_periodic(gr%mesh%sb) .and. gr%mesh%sb%nonorthogonal ) then
+     do iatom = 1, geo%natoms
+       force_nl(1:gr%mesh%sb%dim,iatom) = matmul(gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim),force_nl(1:gr%mesh%sb%dim,iatom))
+     end do
+   end if
+ end if
+ 
 #if defined(HAVE_MPI)
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
     call profiling_in(prof_comm, "FORCES_COMM")
@@ -319,6 +343,15 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl)
     call profiling_out(prof_comm)
   end if
 #endif
+
+  ! We convert the gradient of the density to cartesian coordinates before symmetrization
+  ! as the two operation do not commute
+  ! Grad_xyw = Bt Grad_uvw, see Chelikowsky after Eq. 10
+  if (simul_box_is_periodic(gr%mesh%sb) .and. gr%mesh%sb%nonorthogonal )  then
+    do ip = 1, gr%mesh%np
+      grad_rho(ip, 1:gr%mesh%sb%dim) = matmul(gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim),grad_rho(ip, 1:gr%mesh%sb%dim))
+    end do
+  end if
 
   if(st%symmetrize_density) then
     call symmetrizer_init(symmetrizer, gr%mesh)
@@ -340,21 +373,9 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl)
   end do
 
 
-  ! transformation from reduced coordinates to Cartesian coordinates
-  if (simul_box_is_periodic(gr%mesh%sb) .and. gr%mesh%sb%nonorthogonal ) then
-     forall (iatom = 1:geo%natoms)
-        force(1:gr%mesh%sb%dim,iatom) = &
-          matmul(gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim),force(1:gr%mesh%sb%dim,iatom))
-        force_loc(1:gr%mesh%sb%dim,iatom) = &
-          matmul(gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim),force_loc(1:gr%mesh%sb%dim,iatom))
-        force_nl(1:gr%mesh%sb%dim,iatom) = &
-          matmul(gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim),force_nl(1:gr%mesh%sb%dim,iatom))
-     end forall
-  end if
-
   SAFE_DEALLOCATE_A(force_tmp)
   SAFE_DEALLOCATE_A(force_psi)
-  SAFE_DEALLOCATE_A(grad_rho)
+  SAFE_DEALLOCATE_P(grad_rho)
   
   POP_SUB(X(forces_from_potential))
 end subroutine X(forces_from_potential)
