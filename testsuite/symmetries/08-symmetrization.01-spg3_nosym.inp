@@ -12,16 +12,19 @@ BoxShape = parallelepiped
  1.7364817767E-01 | 5.0599455709E-17 | 9.8480775301E-01
 %
 Spacing = 0.5
-LCAOStart = lcao_none
+LCAOStart = lcao_states
 FilterPotentials = filter_none
+ExtraStates = 1
 %KpointsGrid
  4 | 4 | 4 
 %
 KPointsUseSymmetries = no
 %ReducedCoordinates
-"H" | 1.7000000000E-01 | 1.5000000000E-01 | 1.1000000000E-01
-"H" | 8.3000000000E-01 | 1.5000000000E-01 | 8.9000000000E-01
+"Si" | 1.7000000000E-01 | 1.5000000000E-01 | 1.1000000000E-01
+"Si" | 8.3000000000E-01 | 1.5000000000E-01 | 8.9000000000E-01
 %
+
+XCFunctional = mgga_x_rpp09 + lda_c_pz
 
 Output = bader + density
 OutputFormat = axis_x
