@@ -11,15 +11,15 @@ BoxShape = parallelepiped
  -5.0000000000E-01 | 8.6602540378E-01 | 0.0000000000E+00
  6.1232339957E-17 | 1.0605752387E-16 | 1.0000000000E+00
 %
-Spacing = 0.5
-LCAOStart = lcao_none
+Spacing = 0.55
+LCAOStart = lcao_states
 FilterPotentials = filter_none
 ExtraStates = 1
 
 XCFunctional = gga_x_pbe + gga_c_pbe
 
 %KpointsGrid
- 3 | 3 | 3 
+ 4 | 4 | 4 
 %
 KPointsUseSymmetries = yes
 %ReducedCoordinates
