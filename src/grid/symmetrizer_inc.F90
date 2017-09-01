@@ -120,13 +120,13 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
       do idir = 1, this%mesh%sb%periodic_dim
         if(srcpoint(idir) < 0) then
           srcpoint(idir) = srcpoint(idir) + lsize(idir)
-          ASSERT(srcpoint(idir) >= 0)
+          ASSERT(srcpoint(idir) >= -SYMPREC)
         end if
         if(srcpoint(idir) + M_HALF*SYMPREC >= lsize(idir)) then
           srcpoint(idir) = mod(srcpoint(idir)+M_HALF*SYMPREC, lsize(idir))
         end if
       end do
-      ASSERT(all(srcpoint >= 0))
+      ASSERT(all(srcpoint >= -SYMPREC))
       ASSERT(all(srcpoint < lsize))
       srcpoint(1:3) = srcpoint(1:3) + offset(1:3)
 
