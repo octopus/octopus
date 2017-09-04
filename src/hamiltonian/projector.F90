@@ -238,15 +238,15 @@ contains
         kr = sum(kpoint(1:ndim)*(this%sphere%x(is, 1:ndim) - this%sphere%mesh%x(this%sphere%map(is), 1:ndim)))
 
         if(present(vec_pot)) then
-          if(allocated(vec_pot)) kr = kr + &
+          if(allocated(vec_pot)) kr = kr - &
             sum(vec_pot(1:ndim)*(this%sphere%x(is, 1:ndim)- this%sphere%mesh%x(this%sphere%map(is), 1:ndim)))
         end if
 
         if(present(vec_pot_var)) then
-          if(allocated(vec_pot_var)) kr = kr + sum(vec_pot_var(1:ndim, this%sphere%map(is))*this%sphere%x(is, 1:ndim))
+          if(allocated(vec_pot_var)) kr = kr - sum(vec_pot_var(1:ndim, this%sphere%map(is))*this%sphere%x(is, 1:ndim))
         end if
 
-        this%phase(is, iq) = exp(-M_zI*kr)
+        this%phase(is, iq) = exp(M_zI*kr)
       end do
 
     end do
