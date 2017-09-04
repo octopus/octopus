@@ -508,7 +508,7 @@ contains
       do ik = hm%d%kpt%start, hm%d%kpt%end
         kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(hm%d, ik))
         forall (ip = 1:gr%mesh%np_part)
-          hm%hm_base%phase(ip, ik) = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%sb%dim) * kpoint(1:gr%sb%dim)))
+          hm%hm_base%phase(ip, ik) = exp(M_zI * sum(gr%mesh%x(ip, 1:gr%sb%dim) * kpoint(1:gr%sb%dim)))
         end forall
       end do
 
@@ -848,8 +848,8 @@ contains
           kpoint(1:mesh%sb%dim) = kpoints_get_point(mesh%sb%kpoints, states_dim_get_kpoint_index(this%d, ik))
 
           forall (ip = 1:mesh%np_part)
-            this%hm_base%phase(ip, ik) = exp(-M_zI*sum(mesh%x(ip, 1:mesh%sb%dim)*(kpoint(1:mesh%sb%dim) &
-              + this%hm_base%uniform_vector_potential(1:mesh%sb%dim))))
+            this%hm_base%phase(ip, ik) = exp(M_zI*sum(mesh%x(ip, 1:mesh%sb%dim)*(kpoint(1:mesh%sb%dim) &
+              - this%hm_base%uniform_vector_potential(1:mesh%sb%dim))))
           end forall
         end do
         if(accel_is_enabled()) then
