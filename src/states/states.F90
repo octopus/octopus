@@ -2153,7 +2153,7 @@ contains
             if (.not.(states_are_real(st))) then
               jp(1:der%mesh%np, i_dim, is) = jp(1:der%mesh%np, i_dim, is) + &
                     ww*aimag(psi_gpsi(1:der%mesh%np)) &
-                  - ww*abs_wf_psi(1:der%mesh%np)*kpoint(i_dim)
+                  + ww*abs_wf_psi(1:der%mesh%np)*kpoint(i_dim)
             else
               jp(1:der%mesh%np, i_dim, is) = M_ZERO
             end if
@@ -2162,7 +2162,7 @@ contains
           if (associated(tau)) then
             tau (1:der%mesh%np, is)   = tau (1:der%mesh%np, is)        + &
                  ww*(abs_gwf_psi(1:der%mesh%np) + abs(kpoint(i_dim))**2*abs_wf_psi(1:der%mesh%np)  &
-                     - M_TWO*aimag(psi_gpsi(1:der%mesh%np))*kpoint(i_dim))
+                     + M_TWO*aimag(psi_gpsi(1:der%mesh%np))*kpoint(i_dim))
           end if
 
           if(st%d%ispin == SPINORS) then
