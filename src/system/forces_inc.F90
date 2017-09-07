@@ -433,7 +433,7 @@ subroutine X(total_force_from_potential)(gr, geo, ep, st, x)
           !Note this phase is not correct in general. We should use the phase from the Hamiltonian
           !Here we recompute it, and moreover the vector potential is missing
           do ip = 1, np_part
-            phase = exp(-M_zI*sum(kpoint(1:gr%sb%dim)*gr%mesh%x(ip, 1:gr%sb%dim)))
+            phase = exp(M_zI*sum(kpoint(1:gr%sb%dim)*gr%mesh%x(ip, 1:gr%sb%dim)))
             psi(ip, idim) = phase*psi(ip, idim)
           end do
         end if
@@ -550,7 +550,7 @@ subroutine X(forces_derivative)(gr, geo, ep, st, lr, lr2, force_deriv)
           !Note this phase is not correct in general. We should use the phase from the Hamiltonian
           !Here we recompute it, and moreover the vector potential is missing
           do ip = 1, np_part
-            phase = exp(-M_zI*sum(kpoint(1:gr%sb%dim)*gr%mesh%x(ip, 1:gr%sb%dim)))
+            phase = exp(M_zI*sum(kpoint(1:gr%sb%dim)*gr%mesh%x(ip, 1:gr%sb%dim)))
             psi(ip, idim) = phase*psi(ip, idim)
             dl_psi(ip, idim) = phase*dl_psi(ip, idim)
             dl_psi2(ip, idim) = phase*dl_psi2(ip, idim)
