@@ -65,7 +65,8 @@ contains
   end function kdotp_wfs_tag
 
 ! ---------------------------------------------------------
-!> v = (dE_nk/dk)/hbar = -Im < u_nk | -i grad | u_nk >
+!> v = (dE_nk/dk)/hbar = Re < u_nk | -i grad | u_nk >
+!>                     = Im < u_nk |    grad | u_nk >
 !! This is identically zero for real wavefunctions.
 subroutine zcalc_band_velocity(sys, hm, pert, velocity)
   type(system_t),      intent(inout) :: sys
@@ -94,7 +95,7 @@ subroutine zcalc_band_velocity(sys, hm, pert, velocity)
       do idir = 1, sys%gr%sb%periodic_dim
         call pert_setup_dir(pert, idir)
         call zpert_apply(pert, sys%gr, sys%geo, hm, ik, psi, pertpsi)
-        velocity(idir, ist, ik) = -aimag(zmf_dotp(sys%gr%mesh, sys%st%d%dim, psi, pertpsi))
+        velocity(idir, ist, ik) = aimag(zmf_dotp(sys%gr%mesh, sys%st%d%dim, psi, pertpsi))
       end do
     end do
   end do
