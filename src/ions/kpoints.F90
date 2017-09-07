@@ -1120,7 +1120,14 @@ contains
     FLOAT :: tran(MAX_DIM), diff(MAX_DIM)
     FLOAT, allocatable :: kweight(:)
 
+    FLOAT :: PREC
+
     PUSH_SUB(kpoints_grid_reduce)
+
+    ! In case of really dense k-point grid, 1/nkpoints is might be smaller
+    ! the SYMPREC, causing problems
+    ! Therefore we use PREC in the following
+    PREC = min(SYMPREC, M_ONE/(nkpoints*100))
 
     ! reduce to irreducible zone
 
@@ -1139,7 +1146,7 @@ contains
     symm_ops(:, 1) = symmetries_identity_index(symm)
 
     do ik = 1, nkpoints
-      if (kweight(ik) < SYMPREC) cycle
+      if (kweight(ik) < PREC) cycle
 
       ! new irreducible point
       ! has reduced non-zero weight      
@@ -1159,12 +1166,12 @@ contains
         call symmetries_apply_kpoint_red(symm, iop, reduced(1:dim, nreduced), tran)
         !We remove potential umklapp
         do idim = 1, dim
-          tran(idim)=tran(idim)-anint(tran(idim)+M_HALF*SYMPREC)
+          tran(idim)=tran(idim)-anint(tran(idim)+M_HALF*PREC)
         end do           
 
         ! remove (mark) k-points related to irreducible reduced by symmetry
         do ik2 = ik + 1, nkpoints
-          if (kweight(ik2) < SYMPREC) cycle
+          if (kweight(ik2) < PREC) cycle
 
           if(.not. iop==symmetries_identity_index(symm)) then ! no need to check for the identity
             diff(1:dim) = tran(1:dim)-kpoints(1:dim, ik2)
@@ -1173,7 +1180,7 @@ contains
             end do
 
             ! both the transformed rk ...
-            if(sum(abs(diff(1:dim))) < SYMPREC ) then 
+            if(sum(abs(diff(1:dim))) < PREC ) then 
               kweight(ik) = kweight(ik) + kweight(ik2)
               kweight(ik2) = M_ZERO 
               weights(nreduced) = kweight(ik)
@@ -1190,7 +1197,7 @@ contains
             end do
 
             ! and its inverse
-            if(sum(abs(diff(1:dim))) < SYMPREC ) then
+            if(sum(abs(diff(1:dim))) < PREC ) then
               kweight(ik) = kweight(ik) + kweight(ik2)
               kweight(ik2) = M_ZERO
               weights(nreduced) = kweight(ik)
@@ -1203,7 +1210,7 @@ contains
       end do
     end do
     
-    ASSERT(sum(weights(1:nreduced))-M_ONE<SYMPREC) 
+    ASSERT(sum(weights(1:nreduced))-M_ONE<PREC) 
 
     nkpoints = nreduced
     do ik = 1, nreduced
