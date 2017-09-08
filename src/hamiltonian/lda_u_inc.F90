@@ -770,6 +770,8 @@ end subroutine X(compute_coulomb_integrals)
 
    PUSH_SUB(lda_u_commute_r)
 
+   if(d%ispin == SPINORS) call messages_not_implemented("DFT+U potential commutator with spinors")
+
    if(simul_box_is_periodic(mesh%sb)) then
      SAFE_ALLOCATE(epsi(1:mesh%np,1))
    else
@@ -928,6 +930,7 @@ end subroutine X(compute_coulomb_integrals)
    FLOAT :: weight
 
    if(.not. this%apply) return
+   if(st%d%ispin == SPINORS) call messages_not_implemented("Hubbard forces with spinors")
 
    PUSH_SUB(X(lda_u_force))
 

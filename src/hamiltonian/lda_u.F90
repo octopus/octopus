@@ -176,7 +176,6 @@ contains
 
   call messages_print_stress(stdout, "DFT+U")
  
-!  if(st%parallel_in_states) call messages_not_implemented("lda+u parallel in states")
   if(gr%mesh%parallel_in_domains) call messages_not_implemented("dft+u parallel in domains")
   if(st%d%ispin == SPINORS) call messages_not_implemented("dft+u with spinors") 
 
@@ -238,6 +237,8 @@ contains
   call messages_print_var_value(stdout, 'DFTUNormalizeOrbitals', this%normalizeOrbitals)
 
   if( this%useACBN0) then
+    if(st%d%ispin == SPINORS) call messages_not_implemented("ACBN0 with spinors")
+
     !%Variable UseAllAtomicOrbitals
     !%Type logical
     !%Default no
