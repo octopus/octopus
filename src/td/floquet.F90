@@ -741,26 +741,38 @@ contains
 
         ! only use gs states for init, if they are not distributed 
         if(.not. st%parallel_in_states .and. ierr == 0 &
-           .and.  hm%F%init == OPTION__TDFLOQUETINITIALIZATION__F_GS &
-           .and. .not. hm%F%FBZ_solver) then
+           .and.  hm%F%init == OPTION__TDFLOQUETINITIALIZATION__F_GS ) then
           message(1) ='Info: Initialize Floquet states with gs wavefunctions'
           call messages_info(1)
           ! initialize floquet states from scratch
           SAFE_ALLOCATE(temp_state1(1:gr%der%mesh%np,st%d%dim))
           SAFE_ALLOCATE(temp_state2(1:gr%der%mesh%np,hm%F%floquet_dim*st%d%dim))
-       
-          do ik=st%d%kpt%start,st%d%kpt%end
-            do in=1,hm%F%floquet_dim
+          
+          if(hm%F%FBZ_solver) then
+            do ik=st%d%kpt%start,st%d%kpt%end
               do ist=st%st_start,st%st_end
                 call states_get_state(st,gr%der%mesh,ist,ik,temp_state1)
                 temp_state2(:,:) = M_ZERO
                 do idim=1,st%d%dim
-                  temp_state2(1:gr%der%mesh%np,(in-1)*st%d%dim+idim) = temp_state1(1:gr%der%mesh%np,idim)
+                  temp_state2(1:gr%der%mesh%np,(-hm%F%order(1)+1)*st%d%dim+idim) = temp_state1(1:gr%der%mesh%np,idim)
                 end do
-                call states_set_state(dressed_st,gr%der%mesh, (in-1)*st%nst+ist, ik,temp_state2)
+                call states_set_state(dressed_st,gr%der%mesh, ist, ik,temp_state2)
               enddo
             enddo
-          enddo
+          else
+             do ik=st%d%kpt%start,st%d%kpt%end
+              do in=1,hm%F%floquet_dim
+                do ist=st%st_start,st%st_end
+                  call states_get_state(st,gr%der%mesh,ist,ik,temp_state1)
+                  temp_state2(:,:) = M_ZERO
+                  do idim=1,st%d%dim
+                    temp_state2(1:gr%der%mesh%np,(in-1)*st%d%dim+idim) = temp_state1(1:gr%der%mesh%np,idim)
+                  end do
+                  call states_set_state(dressed_st,gr%der%mesh, (in-1)*st%nst+ist, ik,temp_state2)
+                enddo
+              enddo
+            enddo
+          end if
           SAFE_DEALLOCATE_A(temp_state1)
           SAFE_DEALLOCATE_A(temp_state2)
         else
@@ -1062,9 +1074,9 @@ contains
 
      type(states_t)        :: sub_st
      type(mesh_t), pointer :: mesh
-     integer               :: ik, ist
+     integer               :: ik, ist, idim, im
      FLOAT                 :: diff
-     CMPLX, allocatable    :: full_state(:,:), sub_state(:,:)
+     CMPLX, allocatable    :: full_state(:,:), sub_state(:,:), full_state2(:,:)
      character(len=80) :: filename
 
      PUSH_SUB(floquet_FBZ_eigensolver_run)
@@ -1076,41 +1088,30 @@ contains
      eigens%folded_spectrum = .true.
 
      if(iter ==0) then
-       ! create temporary state object with gs dimensions that is passed to the
-       ! subspace diag 
-       call states_copy(sub_st,sys%st)
-
-       SAFE_ALLOCATE(full_state(1:mesh%np,1:st%d%dim))
-       SAFE_ALLOCATE(sub_state(1:mesh%np,1:sub_st%d%dim))
-
        SAFE_ALLOCATE(eigens%spectrum_shift(1:st%nst,st%d%nik))
 
-       hm%F%floquet_apply = .false.
-       hm%d%dim = sys%st%d%dim
+       st%eigenval = M_ZERO
        do ik=st%d%kpt%start,st%d%kpt%end
-         call floquet_FBZ_subspace_diag(sys%gr%der, sub_st, hm, ik)
+         call floquet_FBZ_start(sys,st, hm, ik)
        end do
-       hm%F%floquet_apply = .true.
-       hm%d%dim = st%d%dim
-       
-       filename = 'subspace_bands'
-       call states_write_bandstructure(FLOQUET_DIR, sub_st%nst, sub_st, sys%gr%sb, filename)
+       call comm_allreduce(st%st_kpt_mpi_grp%comm,  st%eigenval(:,:))
 
-       eigens%spectrum_shift(1:st%nst,1:st%d%nik) = sub_st%eigenval(1:st%nst,1:st%d%nik)
-       
-       do ik=st%d%kpt%start,st%d%kpt%end
-         do ist=1,st%nst
-           ! set initial state
-           call states_get_state(sub_st,mesh, ist, ik, sub_state)
-           full_state = M_ZERO
-           full_state(1:mesh%np,-hm%F%order(1)+1:-hm%F%order(1)+sub_st%d%dim) = sub_state(1:mesh%np,1:sub_st%d%dim)
-           call states_set_state(st,mesh, ist, ik, full_state)
-         end do
-       end do
-       call states_end(sub_st)
-       
-       SAFE_DEALLOCATE_A(full_state)
-       SAFE_DEALLOCATE_A(sub_state)
+       filename = 'FBZ_start_bands'
+       call states_write_bandstructure(FLOQUET_DIR, st%nst, st, sys%gr%sb, filename)
+
+       eigens%spectrum_shift(1:st%nst,1:st%d%nik) = st%eigenval(1:st%nst,1:st%d%nik)
+
+!SAFE_ALLOCATE(full_state(1:mesh%np,1:st%d%dim))             
+!SAFE_ALLOCATE(full_state2(1:mesh%np,1:st%d%dim))
+!do ik=st%d%kpt%start,st%d%kpt%end 
+!  do ist=1,st%nst
+!    call states_get_state(st,sys%gr%der%mesh, ist, ik, full_state)
+!    call zhamiltonian_apply(hm, sys%gr%der, full_state, full_state2, ist, ik)
+!  !  print *, ik, ist, zstates_residue(sys%gr%mesh, st%d%dim, full_state2, st%eigenval(ist, ik),full_state)
+!  print *, st%eigenval(ist, ik),  zmf_dotp(sys%gr%mesh, st%d%dim, full_state, full_state2, reduce = .false.)
+!  end do
+!end do
+
      end if
      
      hm%F%floquet_apply = .true.
@@ -1123,20 +1124,65 @@ contains
 
    end subroutine floquet_FBZ_eigensolver_run
 
-   subroutine floquet_FBZ_subspace_diag(der, st, hm, ik)
-    type(derivatives_t),    intent(in)    :: der
+   subroutine floquet_FBZ_subspace_diag(sys, st,  hm, ik)
+    type(system_t),    intent(in)    :: sys
     type(states_t), target, intent(inout) :: st
-    type(hamiltonian_t),    intent(in)    :: hm
+    type(hamiltonian_t),    intent(inout)    :: hm
     integer,                intent(in)    :: ik
 
-    CMPLX, allocatable :: evecs(:, :), evecs_sectors(:,:,:),rdiff(:), H0(:,:), one(:,:), HF(:,:), P(:,:), Pd(:,:), Heff(:,:), vec(:)
+    type(states_t), pointer      :: sub_st
+    type(derivatives_t), pointer :: der
+    CMPLX, allocatable :: evecs(:, :), rdiff(:), H0(:,:), one(:,:), HF(:,:), P(:,:), Pd(:,:), Heff(:,:)
+    CMPLX, allocatable :: rot_state(:,:), state(:,:)
     FLOAT, allocatable :: evalues_full(:), mix(:), evecs_norms(:,:), evalues0(:), evals_diff(:,:), evecs_diff(:,:)
-    integer            :: block0, nst0, maxiter, nmix, ist,jst, im,in, jj,ii, Fdim, it, pos
+    integer            :: block0, nst0, maxiter, nmix, ist,jst, im,in, jj,ii, Fdim, it, pos, idim
     FLOAT              :: tol
 
-    PUSH_SUB(floquet_FBZ_subspace_diag2)
+    PUSH_SUB(floquet_FBZ_subspace_diag)
 
     ASSERT(hm%F%order(1) == -hm%F%order(2))
+
+    der => sys%gr%der
+    sub_st => sys%st
+
+    Fdim=hm%F%floquet_dim
+    SAFE_ALLOCATE(H0(1:st%nst, 1:st%nst)) ! the zero-block, this could be gs Hamiltonian(?)
+    SAFE_ALLOCATE( P(1:st%nst, 1:st%nst)) ! the off-diagonal intereaction block
+    SAFE_ALLOCATE(Pd(1:st%nst, 1:st%nst)) ! P^\dagger
+    SAFE_ALLOCATE(HF(1:st%nst*Fdim, 1:st%nst*Fdim)) ! the full Floquet matrix
+    SAFE_ALLOCATE(one(1:st%nst, 1:st%nst))
+    SAFE_ALLOCATE(evecs(1:st%nst*Fdim, 1:st%nst))
+    SAFE_ALLOCATE(evalues_full(1:st%nst*Fdim))
+    SAFE_ALLOCATE(evalues0(1:st%nst))
+    SAFE_ALLOCATE(Heff(1:st%nst, 1:st%nst))
+    SAFE_ALLOCATE(evals_diff(1:st%nst*Fdim, 1:st%nst))
+    evecs = M_ZERO
+    
+    call zsubspace_diag_hamiltonian(der,  sub_st, hm, ik, HF)
+
+    PUSH_SUB(floquet_FBZ_subspace_diag)
+   end subroutine floquet_FBZ_subspace_diag
+
+   subroutine floquet_FBZ_start(sys, st,  hm, ik)
+    type(system_t),    intent(in)    :: sys
+    type(states_t), target, intent(inout) :: st
+    type(hamiltonian_t),    intent(inout)    :: hm
+    integer,                intent(in)    :: ik
+
+    type(states_t), pointer      :: sub_st
+    type(derivatives_t), pointer :: der
+    CMPLX, allocatable :: evecs(:, :), rdiff(:), H0(:,:), one(:,:), HF(:,:), P(:,:), Pd(:,:), Heff(:,:)
+    CMPLX, allocatable :: rot_state(:,:), state(:,:)
+    FLOAT, allocatable :: evalues_full(:), mix(:), evecs_norms(:,:), evalues0(:), evals_diff(:,:)
+    integer            :: block0, nst0, maxiter, nmix, ist,jst, im,in, jj,ii, Fdim, it, pos, idim
+    FLOAT              :: tol
+
+    PUSH_SUB(floquet_FBZ_start)
+
+    ASSERT(hm%F%order(1) == -hm%F%order(2))
+
+    der => sys%gr%der
+    sub_st => sys%st
 
     Fdim=hm%F%floquet_dim
 
@@ -1145,24 +1191,27 @@ contains
     SAFE_ALLOCATE(Pd(1:st%nst, 1:st%nst)) ! P^\dagger  
     SAFE_ALLOCATE(HF(1:st%nst*Fdim, 1:st%nst*Fdim)) ! the full Floquet matrix
     SAFE_ALLOCATE(one(1:st%nst, 1:st%nst)) 
-    SAFE_ALLOCATE(evecs(1:st%nst*Fdim, 1:st%nst*Fdim))
+    SAFE_ALLOCATE(evecs(1:st%nst*Fdim, 1:st%nst))
     SAFE_ALLOCATE(evalues_full(1:st%nst*Fdim))
     SAFE_ALLOCATE(evalues0(1:st%nst))
     SAFE_ALLOCATE(Heff(1:st%nst, 1:st%nst))
     SAFE_ALLOCATE(evals_diff(1:st%nst*Fdim, 1:st%nst))
+    evecs = M_ZERO
 
     one = M_ZERO
     do ist=1,st%nst
       one(ist,ist) = M_ONE
     end do
 
+    hm%F%floquet_apply = .false.
+    hm%d%dim = sys%st%d%dim
     ! get the action of H0 on the states
-    call zsubspace_diag_hamiltonian(der, st, hm, ik, H0)
+    call zsubspace_diag_hamiltonian(der,  sub_st, hm, ik, H0)
     P = M_ZERO
     do it=1,hm%F%nT
-       Pd = M_ZERO
-       call zsubspace_diag_hamiltonian(der, st, hm%td_hm(it), ik, Pd)
-       P = P + Pd*exp(-M_zI*hm%F%omega*it*hm%F%dt)/hm%F%nT
+      Pd = M_ZERO
+      call zsubspace_diag_hamiltonian(der, sub_st, hm%td_hm(it), ik, Pd)
+      P = P + Pd*exp(-M_zI*hm%F%omega*it*hm%F%dt)/hm%F%nT
     end do
     Pd(1:st%nst, 1:st%nst) = transpose(conjg(P))
     ! construct the full matrix by shifting the H0 action
@@ -1172,38 +1221,50 @@ contains
       if(im>1) HF((im-2)*st%nst+1:(im-1)*st%nst , (im-1)*st%nst+1:im*st%nst) = Pd(1:st%nst,1:st%nst)
       if(im<Fdim) HF(im*st%nst+1:(im+1)*st%nst , (im-1)*st%nst+1:im*st%nst) = P(1:st%nst,1:st%nst)
     end do
+    hm%F%floquet_apply = .true.
+    hm%d%dim = st%d%dim
 
     call lalg_eigensolve(st%nst*Fdim, HF, evalues_full)
 
-    !write(*,'(a)',advance='no') 'XX '
-    !do ist=1,st%nst*Fdim
-    !   write(*,'(e12.6,a)',advance='no')  evalues_full(ist), ' '
-    !end do
-    !write(*,'(A)') ''
-
-    ! filter the zero harmonics
+    ! filter the zero harmonics by downfolding residual
     tol = 1.e-9
     jst = 1
     do ist=1,st%nst*Fdim
-       ! for comparison use only dim=1 in downfolding
-       call continued_fraction(st%nst, H0, P, Pd, evalues_full(ist), hm%F%omega, 1,Heff)
-       call lalg_eigensolve(st%nst, Heff, evalues0)
-       do jst=1,st%nst
-         evals_diff(ist,jst) = abs(evalues_full(ist) - evalues0(jst))
-       end do
+      ! for comparison use only dim=1 in downfolding
+      call continued_fraction(st%nst, H0, P, Pd, evalues_full(ist), hm%F%omega, 1,Heff)
+      call lalg_eigensolve(st%nst, Heff, evalues0)
+      do jst=1,st%nst
+        evals_diff(ist,jst) = abs(evalues_full(ist) - evalues0(jst))
+      end do
 
     end do
 
     do jst=1,st%nst
       pos = minloc(evals_diff(:,jst),dim=1)
       st%eigenval(jst,ik) = evalues_full(pos)
-      ! get full dim downfolded eigenvectors
-      call continued_fraction(st%nst, H0, P, Pd, evalues_full(pos), hm%F%omega, hm%F%order(2),Heff)
-      call lalg_eigensolve(st%nst, Heff, evalues0)
-      evecs(jst,1:st%nst) = Heff(jst,1:st%nst)
+      evecs(1:st%nst*Fdim,jst) = HF(1:st%nst*Fdim,pos) 
     end do
 
-    call states_rotate(der%mesh, st, evecs, ik)
+!   call states_rotate(der%mesh, dressed_st, evecs, ik)
+
+    ! rotate states by hand
+    SAFE_ALLOCATE(    state(1:der%mesh%np,1:sub_st%d%dim))
+    SAFE_ALLOCATE(rot_state(1:der%mesh%np,1:st%d%dim))
+    do ist=1,st%nst
+       rot_state = M_ZERO
+       do jst=1,st%nst
+          call states_get_state(sub_st,der%mesh, jst, ik, state)
+          do im=1,Fdim
+             do idim=1,sub_st%d%dim
+               rot_state(1:der%mesh%np,(im-1)*sub_st%d%dim+idim) =  rot_state(1:der%mesh%np,(im-1)*sub_st%d%dim+idim)+ & 
+                                                                   evecs((im-1)*st%nst+jst,ist)*state(1:der%mesh%np,idim)
+             end do
+          end do
+       end do
+       call states_set_state(st,der%mesh, ist, ik, rot_state)
+    end do
+    SAFE_DEALLOCATE_A(state)
+    SAFE_DEALLOCATE_A(rot_state)
 
     SAFE_DEALLOCATE_A(H0)
     SAFE_DEALLOCATE_A( P)
@@ -1216,9 +1277,9 @@ contains
     SAFE_DEALLOCATE_A(HF)
     SAFE_DEALLOCATE_A(one)
 
-    POP_SUB(floquet_FBZ_subspace_diag)
+    POP_SUB(floquet_FBZ_start)
 
-   end subroutine floquet_FBZ_subspace_diag
+   end subroutine floquet_FBZ_start
 
     subroutine continued_fraction(nn,H0, P, Pd, Q, omega, order,Heff)
         integer :: nn
@@ -1252,5 +1313,65 @@ contains
         Heff = H0+Heff_minus+Heff_plus
 
       end subroutine continued_fraction
+
+      subroutine floquet_FBZ_filter(sys, hm, st_full, st_filtered)
+        type(system_t),    intent(in)    :: sys
+        type(hamiltonian_t),    intent(inout) :: hm
+        type(states_t),     intent(in) :: st_full
+        type(states_t),     intent(out):: st_filtered
+        
+        integer :: ik,ist, Fdim, spindim, count, idim, im
+        FLOAT, allocatable :: norms(:,:)
+        CMPLX, allocatable :: state(:,:), state_reshape(:,:,:)
+
+        PUSH_SUB(floquet_FBZ_filter)
+
+        ASSERT(st_full%d%kpt%start == st_filtered%d%kpt%start)
+        ASSERT(st_full%d%kpt%end == st_filtered%d%kpt%end)
+        ASSERT(st_full%d%dim == st_filtered%d%dim)
+
+        Fdim = hm%F%floquet_dim
+        spindim = hm%F%spindim
+        SAFE_ALLOCATE(norms(1:st_full%nst,1:Fdim))
+        SAFE_ALLOCATE(state(1:sys%gr%mesh%np,1:st_full%d%dim))
+        SAFE_ALLOCATE(state_reshape(1:sys%gr%mesh%np,1:spindim,1:Fdim))
+
+        do ik=st_full%d%kpt%start,st_full%d%kpt%end
+           norms = M_ZERO
+           do ist=1,st_full%nst
+              call states_get_state(st_full,sys%gr%mesh, ist, ik, state)
+              state_reshape = reshape(state,(/sys%gr%mesh%np,spindim,Fdim/))
+              do im=1,Fdim
+                do idim=1,spindim
+                  norms(ist,im) = norms(ist,im)+ zmf_nrm2(sys%gr%mesh, state_reshape(:,idim,im))
+                end do
+              end do
+           end do
+           
+           count = 0
+           do ist=1,st_full%nst
+              if(minloc(norms(ist,:),dim=1) == Fdim/2+1) then
+                count = count + 1
+                if(count .le. st_filtered%nst ) then
+                  call states_get_state(st_full    ,sys%gr%mesh,   ist, ik, state)
+                  call states_set_state(st_filtered,sys%gr%mesh, count, ik, state)
+                else
+                  call messages_write('FBZ filtering is ambigous for kpoint = ')
+                  call messages_write(ik, fmt = '(i6)')
+                  call messages_warning()
+                end if
+                count = count + 1
+              end if
+           end do
+
+        end do
+        
+        SAFE_DEALLOCATE_A(norms)
+        SAFE_DEALLOCATE_A(state)
+        SAFE_DEALLOCATE_A(state_reshape)
+
+        POP_SUB(floquet_FBZ_filter)
+      end subroutine floquet_FBZ_filter
+        
 
 end module floquet_oct_m
