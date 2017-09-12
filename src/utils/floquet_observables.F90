@@ -1302,6 +1302,19 @@ contains
     gr=sys%gr
     geo=sys%geo
 
+    ! re-calculate occupations in case 
+    if(hm%F%occ_cut > 0) then
+       call states_allocate_wfns(gs_st,gr%der%mesh, wfs_type = TYPE_CMPLX)
+       call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
+       if(ierr == 0) call states_load(restart, gs_st, gr, ierr)
+       if (ierr /= 0) then
+          message(1) = 'Unable to read ground-state wavefunctions.'
+          call messages_fatal(1)
+       end if
+       call restart_end(restart)
+       call floquet_calc_occupations(hm, sys, dressed_st)
+    end if
+
     filename = FLOQUET_DIR//'/floquet_forces'
     iunit = io_open(filename, action='write')
 

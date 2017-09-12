@@ -63,7 +63,8 @@ module subspace_oct_m
     subspace_t,           &
     subspace_init,        &
     dsubspace_diag,       &
-    zsubspace_diag
+    zsubspace_diag, &
+    zsubspace_diag_hamiltonian
 
   type subspace_t
     integer :: method

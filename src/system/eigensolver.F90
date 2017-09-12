@@ -88,6 +88,8 @@ module eigensolver_oct_m
 
     logical :: save_mem
     logical :: skip_finite_weight_kpoints
+    logical :: folded_spectrum
+    FLOAT,pointer   :: spectrum_shift(:,:)
   end type eigensolver_t
 
 
@@ -447,6 +449,13 @@ contains
     call messages_obsolete_variable('EigensolverFinalTolerance', 'EigensolverTolerance')
     call messages_obsolete_variable('EigensolverFinalToleranceIteration')
 
+    ! this is an internal option that makes the solver use the 
+    ! folded operator (H-shift)^2 to converge first eigenvalues around
+    ! the vakues of shift 
+    ! c.f. L. W. Wang and A. Zunger 
+    ! JCP 100, 2394 (1994); doi: http://dx.doi.org/10.1063/1.466486
+    eigens%folded_spectrum = .false.
+
     !%Variable EigensolverTolerance
     !%Type float
     !%Section SCF::Eigensolver
@@ -649,7 +658,13 @@ contains
         case(RS_CG_NEW)
           call zeigensolver_cg2_new(gr, st, hm, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_CG)
-          call zeigensolver_cg2(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+           if(eigens%folded_spectrum) then
+             call zeigensolver_cg2(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, & 
+                                eigens%diff(:, ik),fold=eigens%folded_spectrum, shift=eigens%spectrum_shift)
+           else
+              call zeigensolver_cg2(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, &
+                                eigens%diff(:, ik))
+           end if
         case(RS_PLAN)
           call zeigensolver_plan(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik))
@@ -686,7 +701,7 @@ contains
         
       end if
 
-      if(st%calc_eigenval) then
+      if(st%calc_eigenval.and..not.eigens%folded_spectrum) then
         ! recheck convergence after subspace diagonalization, since states may have reordered
         eigens%converged(ik) = 0
         do ist = 1, st%nst
