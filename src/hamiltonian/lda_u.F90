@@ -177,7 +177,6 @@ contains
   call messages_print_stress(stdout, "DFT+U")
  
   if(gr%mesh%parallel_in_domains) call messages_not_implemented("dft+u parallel in domains")
-  if(st%d%ispin == SPINORS) call messages_not_implemented("dft+u with spinors") 
 
   this%apply = .true.
 

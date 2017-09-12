@@ -37,6 +37,8 @@ dist_share_DATA =                                \
             06-laser.01-gs.inp                   \
             06-laser.02-length_gauge.inp         \
             06-laser.03-velocity_gauge.inp       \
-            06-laser.test                         
+            06-laser.test                        \
+            01.noncollinear.01-U5-gs.inp         \
+            07-noncollinear.test 
 
 CLEANFILES = *~ *.bak

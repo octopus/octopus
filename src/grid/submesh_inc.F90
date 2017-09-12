@@ -234,38 +234,33 @@ end function X(sm_nrm2)
 
 !------------------------------------------------------------
 
-R_TYPE function X(dsubmesh_to_mesh_dotp)(this, dim, sphi, phi, reduce) result(dotp)
+R_TYPE function X(dsubmesh_to_mesh_dotp)(this, sphi, phi, reduce) result(dotp)
   type(submesh_t),   intent(in) :: this
-  integer,           intent(in) :: dim
   FLOAT,             intent(in) :: sphi(:)
-  R_TYPE,            intent(in) :: phi(:, :)
+  R_TYPE,            intent(in) :: phi(:)
   logical, optional, intent(in) :: reduce
 
-  integer :: is, idim, m, ip
+  integer :: is, m, ip
 
   PUSH_SUB(X(dsubmesh_to_mesh_dotp))
 
   dotp = R_TOTYPE(M_ZERO)
 
   if(this%mesh%use_curvilinear) then
-    do idim = 1, dim
-      do is = 1, this%np
-        dotp = dotp + this%mesh%vol_pp(this%map(is))*phi(this%map(is), idim)*sphi(is)
-      end do
+    do is = 1, this%np
+      dotp = dotp + this%mesh%vol_pp(this%map(is))*phi(this%map(is))*sphi(is)
     end do
   else
-    do idim = 1, dim
-      m = mod(this%np,4)
-      do ip = 1, m
-        dotp = dotp + phi(this%map(ip),idim)*sphi(ip)
-      end do
-      if( this%np.lt.4) return
-      do ip = m+1, this%np, 4
-        dotp = dotp + phi(this%map(ip),idim)*sphi(ip) &
-                    + phi(this%map(ip+1),idim)*sphi(ip+1) &
-                    + phi(this%map(ip+2),idim)*sphi(ip+2) &
-                    + phi(this%map(ip+3),idim)*sphi(ip+3)
-      end do
+    m = mod(this%np,4)
+    do ip = 1, m
+      dotp = dotp + phi(this%map(ip))*sphi(ip)
+    end do
+    if( this%np.lt.4) return
+    do ip = m+1, this%np, 4
+      dotp = dotp + phi(this%map(ip))*sphi(ip) &
+                  + phi(this%map(ip+1))*sphi(ip+1) &
+                  + phi(this%map(ip+2))*sphi(ip+2) &
+                  + phi(this%map(ip+3))*sphi(ip+3)
     end do
     dotp = dotp*this%mesh%vol_pp(1)
   end if

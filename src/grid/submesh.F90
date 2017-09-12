@@ -466,38 +466,33 @@ contains
 
   !------------------------------------------------------------
 
-  CMPLX function zzsubmesh_to_mesh_dotp(this, dim, sphi, phi, reduce) result(dotp)
+  CMPLX function zzsubmesh_to_mesh_dotp(this, sphi, phi, reduce) result(dotp)
     type(submesh_t),   intent(in) :: this
-    integer,           intent(in) :: dim
     CMPLX,             intent(in) :: sphi(:)
-    CMPLX,             intent(in) :: phi(:, :)
+    CMPLX,             intent(in) :: phi(:)
     logical, optional, intent(in) :: reduce
   
-    integer :: is, idim, m, ip
+    integer :: is, m, ip
   
     PUSH_SUB(zzsubmesh_to_mesh_dotp)
   
     dotp = cmplx(M_ZERO)
   
     if(this%mesh%use_curvilinear) then
-      do idim = 1, dim
-        do is = 1, this%np
-          dotp = dotp + this%mesh%vol_pp(this%map(is))*phi(this%map(is), idim)*conjg(sphi(is))
-        end do
+      do is = 1, this%np
+        dotp = dotp + this%mesh%vol_pp(this%map(is))*phi(this%map(is))*conjg(sphi(is))
       end do
     else
-      do idim = 1, dim
-        m = mod(this%np,4)
-        do ip = 1, m
-          dotp = dotp + phi(this%map(ip),idim)*conjg(sphi(ip))
-        end do
-        if( this%np.lt.4) return
-        do ip = m+1, this%np, 4
-          dotp = dotp + phi(this%map(ip),idim)*conjg(sphi(ip))     &
-                      + phi(this%map(ip+1),idim)*conjg(sphi(ip+1)) &
-                      + phi(this%map(ip+2),idim)*conjg(sphi(ip+2)) &
-                      + phi(this%map(ip+3),idim)*conjg(sphi(ip+3))
-        end do
+      m = mod(this%np,4)
+      do ip = 1, m
+        dotp = dotp + phi(this%map(ip))*conjg(sphi(ip))
+      end do
+      if( this%np.lt.4) return
+      do ip = m+1, this%np, 4
+        dotp = dotp + phi(this%map(ip))*conjg(sphi(ip))     &
+                    + phi(this%map(ip+1))*conjg(sphi(ip+1)) &
+                    + phi(this%map(ip+2))*conjg(sphi(ip+2)) &
+                    + phi(this%map(ip+3))*conjg(sphi(ip+3))
       end do
       dotp = dotp*this%mesh%vol_pp(1)
     end if

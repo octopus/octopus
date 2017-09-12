@@ -23,7 +23,7 @@ subroutine X(orbital_set_get_coefficients)(os, st_d, psi, ik, has_phase, dot)
   R_TYPE,               intent(in) :: psi(:,:)
   integer,              intent(in) :: ik
   logical,              intent(in) :: has_phase !True if the wavefunction has an associated phase
-  R_TYPE,            intent(inout) :: dot(:)
+  R_TYPE,            intent(inout) :: dot(:,:)
 
   integer :: im, ip, idim
   type(profile_t), save :: prof
@@ -33,26 +33,27 @@ subroutine X(orbital_set_get_coefficients)(os, st_d, psi, ik, has_phase, dot)
 
   PUSH_SUB(X(orbital_set_get_coefficients))
 
-  if(st_d%ispin == SPINORS) then
-   message(1) = "orbital_set_get_coefficients is not implemented with spinors."
-   call messages_fatal(1)
-  end if
-
   do im = 1, os%norbs
     !If we need to add the phase, we explicitly do the operation using the sphere
     if(has_phase) then
 #ifdef R_TCOMPLEX
       if(simul_box_is_periodic(os%sphere%mesh%sb)) then
-        dot(im) = zmf_dotp(os%sphere%mesh, os%eorb_mesh(1:os%sphere%mesh%np,im,ik),&
-                              psi(1:os%sphere%mesh%np,1))
+        do idim = 1,st_d%dim
+          dot(idim,im) = zmf_dotp(os%sphere%mesh, os%eorb_mesh(1:os%sphere%mesh%np,im,ik),&
+                              psi(1:os%sphere%mesh%np,idim))
+        end do
       else
-        dot(im) = submesh_to_mesh_dotp(os%sphere, st_d%dim, os%eorb_submesh(1:os%sphere%np,im,ik),&
-                              psi(1:os%sphere%mesh%np, 1:st_d%dim))
+        do idim = 1,st_d%dim
+          dot(idim, im) = submesh_to_mesh_dotp(os%sphere, os%eorb_submesh(1:os%sphere%np,im,ik),&
+                              psi(1:os%sphere%mesh%np, idim))
+        end do
       endif 
 #endif
     else
-      dot(im) = submesh_to_mesh_dotp(os%sphere, st_d%dim, os%X(orb)(1:os%sphere%np,im),&
-                             psi(1:os%sphere%mesh%np, 1:st_d%dim))
+      do idim = 1,st_d%dim
+        dot(idim,im) = submesh_to_mesh_dotp(os%sphere, os%X(orb)(1:os%sphere%np,im),&
+                               psi(1:os%sphere%mesh%np, idim))
+      end do
     end if
   end do
 
@@ -67,7 +68,7 @@ subroutine X(orbital_set_get_coeff_batch)(os, st_d, psib, ik, has_phase, dot)
   type(batch_t),        intent(in) :: psib
   integer,              intent(in) :: ik
   logical,              intent(in) :: has_phase !True if the wavefunction has an associated phase
-  R_TYPE,            intent(inout) :: dot(:,:)
+  R_TYPE,            intent(inout) :: dot(:,:,:)
 
   integer :: ist
   type(profile_t), save :: prof
@@ -77,15 +78,10 @@ subroutine X(orbital_set_get_coeff_batch)(os, st_d, psib, ik, has_phase, dot)
 
   PUSH_SUB(X(orbital_set_get_coeff_batch))
 
-  if(st_d%ispin == SPINORS) then
-   message(1) = "orbital_set_get_coeff_batch is not implemented with spinors."
-   call messages_fatal(1)
-  end if
-
   SAFE_ALLOCATE(psi(1:os%sphere%mesh%np, 1:st_d%dim))
   do ist = 1, psib%nst
     call batch_get_state(psib, ist, os%sphere%mesh%np, psi)
-    call X(orbital_set_get_coefficients)(os, st_d, psi, ik, has_phase, dot(1:os%norbs,ist))
+    call X(orbital_set_get_coefficients)(os, st_d, psi, ik, has_phase, dot(1:st_d%dim,1:os%norbs,ist))
   end do
   SAFE_DEALLOCATE_A(psi)
   
@@ -108,12 +104,6 @@ subroutine X(orbital_set_add_to_psi)(os, st_d, psi, ik, has_phase, weight)
 
   PUSH_SUB(X(orbital_set_add_to_psi))
 
-  if(st_d%ispin == SPINORS) then
-   message(1) = "orbital_set_add_to_batch is not implemented with spinors."
-   call messages_fatal(1)
-  end if
-
-  !
   do im = 1, os%norbs
     !In case of phase, we have to apply the conjugate of the phase here
     if(has_phase) then
@@ -145,7 +135,7 @@ subroutine X(orbital_set_add_to_batch)(os, st_d, psib, ik, has_phase, weight)
   logical,              intent(in) :: has_phase !True if the wavefunction has an associated phase
   R_TYPE,               intent(in) :: weight(:,:)
 
-  integer :: ip, iorb, ii, ist
+  integer :: ip, iorb, ii, ist, idim, bind
   type(profile_t), save :: prof
   R_TYPE, allocatable :: psi(:,:), sorb(:)
   R_TYPE :: tmp
@@ -153,11 +143,6 @@ subroutine X(orbital_set_add_to_batch)(os, st_d, psib, ik, has_phase, weight)
   call profiling_in(prof, "ORBSET_ADD_TO_BATCH")
 
   PUSH_SUB(X(orbital_set_add_to_batch))
-
-  if(st_d%ispin == SPINORS) then
-   message(1) = "orbital_set_add_to_batch is not implemented with spinors."
-   call messages_fatal(1)
-  end if
 
   call batch_pack_was_modified(psib)
 
@@ -167,22 +152,25 @@ subroutine X(orbital_set_add_to_batch)(os, st_d, psib, ik, has_phase, weight)
     do ist = 1, psib%nst
       call batch_get_state(psib, ist, os%sphere%mesh%np, psi)
       do iorb = 1, os%norbs
-        !In case of phase, we have to apply the conjugate of the phase here
-        if(has_phase) then
+        do idim = 1, st_d%dim
+         bind = batch_ist_idim_to_linear(psib, (/ist, idim/))
+          !In case of phase, we have to apply the conjugate of the phase here
+          if(has_phase) then
 #ifdef R_TCOMPLEX
-          if(simul_box_is_periodic(os%sphere%mesh%sb)) then
-            call lalg_axpy(os%sphere%mesh%np, weight(iorb,ist),os%eorb_mesh(1:os%sphere%mesh%np,iorb,ik), &
-                                 psi(1:os%sphere%mesh%np,1))
-          else
-            call submesh_add_to_mesh(os%sphere, os%eorb_submesh(1:os%sphere%np,iorb,ik), &
-                                psi(1:os%sphere%mesh%np,1), weight(iorb,ist))
-          endif
+            if(simul_box_is_periodic(os%sphere%mesh%sb)) then
+              call lalg_axpy(os%sphere%mesh%np, weight(iorb,bind),os%eorb_mesh(1:os%sphere%mesh%np,iorb,ik), &
+                                   psi(1:os%sphere%mesh%np,idim))
+            else
+              call submesh_add_to_mesh(os%sphere, os%eorb_submesh(1:os%sphere%np,iorb,ik), &
+                                  psi(1:os%sphere%mesh%np,idim), weight(iorb,bind))
+            endif
 #endif
-        else
-          call submesh_add_to_mesh(os%sphere, os%X(orb)(1:os%sphere%np, iorb), &
-                                    psi(1:os%sphere%mesh%np, 1), weight(iorb,ist))
-        end if
-      end do
+          else
+            call submesh_add_to_mesh(os%sphere, os%X(orb)(1:os%sphere%np, iorb), &
+                                    psi(1:os%sphere%mesh%np,idim), weight(iorb,bind))
+          end if
+        end do !idim
+      end do ! iorb
       call batch_set_state(psib, ist, os%sphere%mesh%np, psi)
     end do
     SAFE_DEALLOCATE_A(psi)
@@ -197,10 +185,10 @@ subroutine X(orbital_set_add_to_batch)(os, st_d, psib, ik, has_phase, weight)
         if(simul_box_is_periodic(os%sphere%mesh%sb)) then
           do ist = 1, psib%nst_linear
             do iorb = 1, os%norbs
+              tmp =  weight(iorb,ist)
               forall(ip = 1:os%sphere%mesh%np)
                 psib%states_linear(ist)%zpsi(ip) = &
-                   psib%states_linear(ist)%zpsi(ip) &
-                   + weight(iorb,ist)*os%eorb_mesh(ip,iorb,ik)
+                   psib%states_linear(ist)%zpsi(ip) + tmp*os%eorb_mesh(ip,iorb,ik)
               end forall
             end do
           end do
@@ -244,13 +232,12 @@ subroutine X(orbital_set_add_to_batch)(os, st_d, psib, ik, has_phase, weight)
       if(has_phase) then
 #ifdef R_TCOMPLEX
         if(simul_box_is_periodic(os%sphere%mesh%sb)) then
-          SAFE_ALLOCATE(sorb(1:os%sphere%mesh%np))
           do ist = 1, psib%nst_linear
             do iorb = 1, os%norbs
+              tmp = weight(iorb,ist)
               forall(ip = 1:os%sphere%mesh%np)
                 psib%pack%zpsi(ist,ip) = &
-                   psib%pack%zpsi(ist,ip) &
-                   + weight(iorb,ist)*os%eorb_mesh(ip,iorb,ik)
+                   psib%pack%zpsi(ist,ip) + tmp*os%eorb_mesh(ip,iorb,ik)
               end forall 
             end do
           end do
