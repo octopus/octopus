@@ -94,8 +94,8 @@ module lda_u_oct_m
     FLOAT, pointer           :: dn_alt(:,:,:,:) !> Stores the renomalized occ. matrices
     CMPLX, pointer           :: zn_alt(:,:,:,:) !> if the ACBN0 functional is used  
   
-    FLOAT, pointer           :: drenorm_occ(:,:,:,:,:) !> On-site occupations (for the ACBN0 functional)  
-    CMPLX, pointer           :: zrenorm_occ(:,:,:,:,:)
+    FLOAT, pointer           :: drenorm_occ(:,:,:,:,:,:) !> On-site occupations (for the ACBN0 functional)  
+    CMPLX, pointer           :: zrenorm_occ(:,:,:,:,:,:)
  
     FLOAT, pointer           :: coulomb(:,:,:,:,:) !>Coulomb integrals for all the system
                                                    !> (for the ACBN0 functional) 
@@ -104,6 +104,7 @@ module lda_u_oct_m
 
     integer             :: norbsets           !> Number of orbital sets 
     integer             :: nspins
+    integer             :: spin_channels
     integer             :: nspecies        
     integer             :: st_end
     integer             :: maxnorbs           !> Maximal number of orbitals for all the atoms
@@ -136,6 +137,7 @@ contains
   this%max_np = 0
   this%maxnorbs = 0
   this%nspins = 0
+  this%spin_channels = 0
   this%nspecies = 0
   this%freeze_occ = .false.
   this%freeze_u = .false.
@@ -236,8 +238,6 @@ contains
   call messages_print_var_value(stdout, 'DFTUNormalizeOrbitals', this%normalizeOrbitals)
 
   if( this%useACBN0) then
-    if(st%d%ispin == SPINORS) call messages_not_implemented("ACBN0 with spinors")
-
     !%Variable UseAllAtomicOrbitals
     !%Type logical
     !%Default no
@@ -305,6 +305,7 @@ contains
   end if
   maxorbs = this%maxnorbs
   this%nspins = st%d%nspin
+  this%spin_channels = st%spin_channels
   this%nspecies = geo%nspecies
   this%st_end = st%st_end
 

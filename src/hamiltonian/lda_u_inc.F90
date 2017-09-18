@@ -200,7 +200,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
       end if
 
       if(this%useACBN0) &
-        this%X(renorm_occ)(:,:,:,ist,ik) = R_TOTYPE(M_ZERO)
+        this%X(renorm_occ)(:,:,:,:,ist,ik) = R_TOTYPE(M_ZERO)
  
       do ios = 1, this%norbsets
         os => this%orbsets(ios)
@@ -213,7 +213,6 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
       !We compute the on-site occupation of the site, if needed 
       if(this%useACBN0) then
         !See below the use of dot(1,...
-        ASSERT(st%d%ispin /= SPINORS)
         do ios = 1, this%norbsets
           os => this%orbsets(ios)
           norbs = this%orbsets(ios)%norbs
@@ -221,9 +220,10 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
             !This sum runs over all the orbitals of the same type as im
             do ios2 = 1, this%norbsets
               do im2 = 1, this%orbsets(ios2)%norbs
-                this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,ist,ik) = &
-                   this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,ist,ik) &
-                     + R_CONJ(dot(1,im,ios))*dot(1,im2,ios2)*os%X(S)(im,im2,ios2)
+                do idim = 1, st%d%dim
+                this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,idim,ist,ik) = &
+                   this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,idim,ist,ik) &
+                     + R_CONJ(dot(idim,im,ios))*dot(idim,im2,ios2)*os%X(S)(im,im2,ios2)
                 
               end do
             end do
@@ -243,7 +243,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
                                            + weight*dot(1,1:norbs,ios)*R_CONJ(dot(1,im,ios))
               !We compute the renomalized occupation matrices
               if(this%useACBN0) then
-                renorm_weight = this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,ist,ik)*weight
+                renorm_weight = this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,1,ist,ik)*weight
                 this%X(n_alt)(1:norbs,im,ispin,ios) = this%X(n_alt)(1:norbs,im,ispin,ios) &
                                            + renorm_weight*dot(1,1:norbs,ios)*R_CONJ(dot(1,im,ios))
               end if 
@@ -269,11 +269,14 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
             if(this%useACBN0) then
               !See below the use of dot(1,...
               ASSERT(st%d%ispin /= SPINORS)
-              renorm_weight = this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,ist,ik)*weight
+              renorm_weight = this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,1,ist,ik)*weight
               this%X(n_alt)(1:norbs,im,1,ios) = this%X(n_alt)(1:norbs,im,1,ios) &
                                          + renorm_weight*dot(1,1:norbs,ios)*R_CONJ(dot(1,im,ios))
+              renorm_weight = this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,2,ist,ik)*weight
               this%X(n_alt)(1:norbs,im,2,ios) = this%X(n_alt)(1:norbs,im,2,ios) &
                                          + renorm_weight*dot(2,1:norbs,ios)*R_CONJ(dot(2,im,ios))
+              renorm_weight = sqrt(this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,1,ist,ik) &
+                              *this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,2,ist,ik))*weight
               this%X(n_alt)(1:norbs,im,3,ios) = this%X(n_alt)(1:norbs,im,3,ios) &
                                          + renorm_weight*dot(1,1:norbs,ios)*R_CONJ(dot(2,im,ios))
               this%X(n_alt)(1:norbs,im,4,ios) = this%X(n_alt)(1:norbs,im,4,ios) &
@@ -335,7 +338,7 @@ subroutine X(compute_dftu_energy)(this, energy, st)
         do imp = 1, this%orbsets(ios)%norbs
           energy = energy - CNST(0.5)*this%orbsets(ios)%Ueff*abs(this%X(n)(im,imp,ispin,ios))**2/st%smear%el_per_state
         end do
-        if(ispin <= st%d%spin_channels) &
+        if(ispin <= this%spin_channels) &
           energy = energy + CNST(0.5)*this%orbsets(ios)%Ueff*real(this%X(n)(im,im,ispin,ios))
       end do
     end do
@@ -369,7 +372,7 @@ subroutine X(lda_u_update_potential)(this, st)
       do im = 1, norbs
         this%X(V)(1:norbs,im,ispin,ios) = - this%orbsets(ios)%Ueff*this%X(n)(1:norbs,im,ispin,ios)/st%smear%el_per_state
         ! Only the diagonal part in spin space (for spinors)
-        if(ispin <= st%d%spin_channels) &
+        if(ispin <= this%spin_channels) &
           this%X(V)(im,im,ispin,ios) = this%X(V)(im,im,ispin,ios) + CNST(0.5)*this%orbsets(ios)%Ueff
       end do
     end do
@@ -548,12 +551,16 @@ subroutine X(compute_ACBNO_U)(this)
           ! sum_{alpha} P^alpha_{mmp}P^alpha_{mpp,mppp}
           tmpU = M_ZERO
           tmpJ = M_ZERO
-          do ispin1 = 1, this%nspins
-            do ispin2 = 1, this%nspins
+          do ispin1 = 1, this%spin_channels
+            do ispin2 = 1, this%spin_channels
               tmpU = tmpU + real(this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin2,ios))
             end do
             tmpJ = tmpJ + real(this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin1,ios))
           end do
+          if(this%nspins>this%spin_channels) then !Spinors
+            tmpJ = tmpJ + real(this%X(n_alt)(im,imp,3,ios)*this%X(n_alt)(impp,imppp,4,ios) &
+                              +this%X(n_alt)(im,imp,4,ios)*this%X(n_alt)(impp,imppp,3,ios))
+          end if
           ! These are the numerator of the ACBN0 U and J
           numU = numU + tmpU*this%coulomb(im,imp,impp,imppp,ios)
           numJ = numJ + tmpJ*this%coulomb(im,imppp,impp,imp,ios) 
@@ -563,24 +570,36 @@ subroutine X(compute_ACBNO_U)(this)
         ! We compute the term
         ! sum_{alpha} sum_{m,mp/=m} N^alpha_{m}N^alpha_{mp}
         tmpJ = M_ZERO
+        tmpU - M_ZERO
         if(imp/=im) then
-          do ispin1 = 1, this%nspins
+          do ispin1 = 1, this%spin_channels
             tmpJ = tmpJ + real(this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin1,ios))
+            tmpU = tmpU + real(this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin1,ios))
           end do
+          if(this%nspins>this%spin_channels) then !Spinors
+            tmpJ = tmpJ + real(this%X(n)(im,im,3,ios)*this%X(n)(imp,imp,4,ios) &
+                              +this%X(n)(im,im,4,ios)*this%X(n)(imp,imp,3,ios))
+          end if
         end if
         denomJ = denomJ + tmpJ
-        denomU = denomU + tmpJ
 
         ! We compute the term
         ! sum_{alpha,beta} sum_{m,mp} N^alpha_{m}N^beta_{mp}
-        tmpU = M_ZERO
-        do ispin1 = 1, this%nspins
-          do ispin2 = 1, this%nspins
+        do ispin1 = 1, this%spin_channels
+          do ispin2 = 1, this%spin_channels
             if(ispin1 /= ispin2) then
               tmpU = tmpU + real(this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin2,ios))
             end if
           end do
         end do
+
+        if(this%nspins>this%spin_channels) then !Spinors
+          if(im == imp) then
+            tmpU = tmpU + real(this%X(n)(im,im,3,ios)*this%X(n)(im,im,4,ios) &
+                              +this%X(n)(im,im,4,ios)*this%X(n)(im,im,3,ios))
+          end if
+        end if        
+
         denomU = denomU + tmpU
  
       end do
@@ -594,14 +613,18 @@ subroutine X(compute_ACBNO_U)(this)
     ! sum_{alpha,beta} sum_{m,mp} N^alpha_{m}N^beta_{mp}
     numU = M_ZERO
     denomU = M_ZERO
-    do ispin1 = 1, this%nspins
-      do ispin2 = 1, this%nspins
+    do ispin1 = 1, this%spin_channels
+      do ispin2 = 1, this%spin_channels
         if(ispin1 /= ispin2) then
           numU = numU + real(this%X(n_alt)(1,1,ispin1,ios)*this%X(n_alt)(1,1,ispin2,ios))
           denomU = denomU + real(this%X(n)(1,1,ispin1,ios)*this%X(n)(1,1,ispin2,ios))
         end if
       end do
     end do
+    if(this%nspins>this%spin_channels) then !Spinors
+      denomU = denomU + real(this%X(n)(1,1,3,ios)*this%X(n)(1,1,4,ios) & 
+                            +this%X(n)(1,1,4,ios)*this%X(n)(1,1,3,ios))
+    end if
 
     ! We have to be careful in the case of hydrogen atom for instance 
     if(abs(denomU)> CNST(1.0e-3)) then
@@ -1557,8 +1580,8 @@ end subroutine X(get_atomic_orbital)
     if(this%useACBN0) then
       SAFE_ALLOCATE(this%X(n_alt)(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets))
       this%X(n_alt)(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets) = R_TOTYPE(M_ZERO)
-      SAFE_ALLOCATE(this%X(renorm_occ)(this%nspecies,0:5,0:3,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end))
-      this%X(renorm_occ)(this%nspecies,0:5,0:3,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end) = R_TOTYPE(M_ZERO)
+      SAFE_ALLOCATE(this%X(renorm_occ)(this%nspecies,0:5,0:3,st%d%dim,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end))
+      this%X(renorm_occ)(this%nspecies,0:5,0:3,st%d%dim,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end) = R_TOTYPE(M_ZERO)
       if(this%ACBN0_corrected) then
         SAFE_ALLOCATE(this%Vloc1(1:maxorbs,1:nspin,1:this%norbsets))
         this%Vloc1(1:maxorbs,1:nspin,1:this%norbsets) = M_ZERO
