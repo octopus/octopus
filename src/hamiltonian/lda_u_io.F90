@@ -47,9 +47,6 @@ module lda_u_io_oct_m
        lda_u_load,                      &
        lda_u_dump
 
-  character(len=1), parameter :: &
-    l_notation(0:3) = (/ 's', 'p', 'd', 'f' /)
-
 contains
 
  !> Prints the occupation matrices at the end of the scf calculation.

@@ -61,7 +61,7 @@ subroutine X(lda_u_apply)(this, d, ik, psib, hpsib, has_phase)
         ! sum_mp Vmmp <phi mp | psi >
         do imp = 1, this%orbsets(ios)%norbs
 
-          !Note here that V_{mm'} =U/2(delta_{mmp}-2n_{mpm})
+          !Note here that V_{mmp} =U/2(delta_{mmp}-2n_{mpm})
           if(d%ispin /= SPINORS) then
             reduced(im,ibatch) = reduced(im,ibatch) + this%X(V)(im,imp,ispin,ios)*dot(1,imp,ibatch)
           else
@@ -224,7 +224,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
                 this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,idim,ist,ik) = &
                    this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,idim,ist,ik) &
                      + R_CONJ(dot(idim,im,ios))*dot(idim,im2,ios2)*os%X(S)(im,im2,ios2)
-                
+                end do 
               end do
             end do
           end do
@@ -267,8 +267,6 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
                                       + weight*dot(2,1:norbs,ios)*R_CONJ(dot(1,im,ios))
             !We compute the renomalized occupation matrices
             if(this%useACBN0) then
-              !See below the use of dot(1,...
-              ASSERT(st%d%ispin /= SPINORS)
               renorm_weight = this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,1,ist,ik)*weight
               this%X(n_alt)(1:norbs,im,1,ios) = this%X(n_alt)(1:norbs,im,1,ios) &
                                          + renorm_weight*dot(1,1:norbs,ios)*R_CONJ(dot(1,im,ios))
@@ -401,6 +399,8 @@ subroutine X(lda_u_ACBN0_correction)(this)
   FLOAT :: B, C, D, weight
 
   PUSH_SUB(lda_u_ACBN0_correction)
+
+  if(this%nspins /= this%spin_channels) call messages_not_implemented("Hubbard forces with spinors")
 
   this%Vloc1(1:this%maxnorbs,1:this%nspins,1:this%norbsets) = M_ZERO
   this%X(Vloc2)(1:this%maxnorbs,1:this%maxnorbs,1:this%nspins,1:this%norbsets) = R_TOTYPE(M_ZERO)
@@ -570,7 +570,7 @@ subroutine X(compute_ACBNO_U)(this)
         ! We compute the term
         ! sum_{alpha} sum_{m,mp/=m} N^alpha_{m}N^alpha_{mp}
         tmpJ = M_ZERO
-        tmpU - M_ZERO
+        tmpU = M_ZERO
         if(imp/=im) then
           do ispin1 = 1, this%spin_channels
             tmpJ = tmpJ + real(this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin1,ios))
@@ -1086,7 +1086,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
   type(mesh_t),              intent(in)       :: mesh
   type(states_t),            intent(in)       :: st 
 
-  integer :: ia, iorb, norb, offset
+  integer :: ia, iorb, norb, offset, ios
   integer ::  hubbardl, ii, nn, ll, mm, work, work2, iorbset
   FLOAT   :: norm
   FLOAT, allocatable :: minradii(:)
@@ -1262,19 +1262,19 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
 
   end do  
 
-  do iorbset = 1, this%norbsets
-    if(this%orbsets(iorbset)%sphere%np == -1) then
+  do ios = 1, this%norbsets
+    if(this%orbsets(ios)%sphere%np == -1) then
        write(message(1),'(a,a4,i1,a1,a)')    'The orbital ',trim(species_label(this%orbsets(ios)%spec)), &
                       this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), ' has no grid point.'
        write(message(2),'(a)') 'Change the input file or use a pseudopotential that contains these orbitals.'
        call messages_fatal(1)
     end if
 
-    write(message(1),'(a,i2,a,f8.5,a)')    'Orbital set ', iorbset, ' has a value of U of ',&
-                         this%orbsets(iorbset)%Ueff   , ' Ha.'
-    write(message(2),'(a,i2,a)')    'It cotains ', this%orbsets(iorbset)%norbs, ' orbitals.'
-    write(message(3),'(a,f8.5,a,i6,a)') 'The radius is ', this%orbsets(iorbset)%sphere%radius, &
-                        ' Bohr,  with ', this%orbsets(iorbset)%sphere%np, ' grid points.'
+    write(message(1),'(a,i2,a,f8.5,a)')    'Orbital set ', ios, ' has a value of U of ',&
+                         this%orbsets(ios)%Ueff   , ' Ha.'
+    write(message(2),'(a,i2,a)')    'It cotains ', this%orbsets(ios)%norbs, ' orbitals.'
+    write(message(3),'(a,f8.5,a,i6,a)') 'The radius is ', this%orbsets(ios)%sphere%radius, &
+                        ' Bohr,  with ', this%orbsets(ios)%sphere%np, ' grid points.'
      call messages_info(3)
   end do 
 

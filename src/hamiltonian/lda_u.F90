@@ -81,8 +81,11 @@ module lda_u_oct_m
        dlda_u_commute_r,                &
        zlda_u_commute_r,                &
        dlda_u_force,                    &
-       zlda_u_force
+       zlda_u_force,                    &
+       l_notation
 
+  character(len=1), parameter :: &
+    l_notation(0:3) = (/ 's', 'p', 'd', 'f' /)
 
   type lda_u_t
     logical                  :: apply
@@ -305,7 +308,7 @@ contains
   end if
   maxorbs = this%maxnorbs
   this%nspins = st%d%nspin
-  this%spin_channels = st%spin_channels
+  this%spin_channels = st%d%spin_channels
   this%nspecies = geo%nspecies
   this%st_end = st%st_end
 
