@@ -69,7 +69,7 @@ subroutine X(vtk_out_cf)(filename, fieldname, ierr, cf_in, cube, spacing, unit)
   end forall
 
   ! Paraview likes BigEndian binaries
-  call io_binary_write(trim(filename), np, R_REAL(cf_out%X(RS)(:,:,:)),&
+  call io_binary_write(io_workpath(filename), np, R_REAL(cf_out%X(RS)(:,:,:)),&
     ierr, nohead = .true., fendian = is_little_endian())
 
 #ifdef R_TCOMPLEX
@@ -82,7 +82,7 @@ subroutine X(vtk_out_cf)(filename, fieldname, ierr, cf_in, cube, spacing, unit)
 
   call io_close(iunit)
 
-  call io_binary_write(trim(filename), np, R_AIMAG(cf_out%X(RS)(:,:,:)),&
+  call io_binary_write(io_workpath(filename), np, R_AIMAG(cf_out%X(RS)(:,:,:)),&
     ierr, nohead = .true., fendian = is_little_endian())
 
 #endif
@@ -148,7 +148,7 @@ subroutine X(vtk_out_cf_vector)(filename, fieldname, ierr, cf_in, vector_dim, cu
   end forall
 
   ! Paraview likes BigEndian binaries
-  call io_binary_write(trim(filename), vector_dim*np, cfout(:, :, :, :), ierr, &
+  call io_binary_write(io_workpath(filename), vector_dim*np, cfout(:, :, :, :), ierr, &
     nohead = .true., fendian = is_little_endian())
 
 #ifdef R_TCOMPLEX
@@ -165,7 +165,7 @@ subroutine X(vtk_out_cf_vector)(filename, fieldname, ierr, cf_in, vector_dim, cu
     cfout(ivd, i1,i2,i3) = R_AIMAG(units_from_atomic(unit, cf_in(ivd)%X(RS)(i1,i2,i3)))
   end forall
   
-  call io_binary_write(trim(filename), vector_dim*np, cfout(:, :, :, :), ierr, &
+  call io_binary_write(io_workpath(filename), vector_dim*np, cfout(:, :, :, :), ierr, &
     nohead = .true., fendian = is_little_endian())
 
 #endif
@@ -277,7 +277,7 @@ subroutine X(vtk_out_cf_structured)(filename, fieldname, ierr, cf_in, cube, unit
       end do
     end do
 
-    call io_binary_write(trim(filename), np*3, pnts1(:,:,:,:) ,&
+    call io_binary_write(io_workpath(filename), np*3, pnts1(:,:,:,:) ,&
       ierr, nohead = .true., fendian = is_little_endian())
 
     SAFE_DEALLOCATE_A(pnts1)
@@ -301,7 +301,7 @@ subroutine X(vtk_out_cf_structured)(filename, fieldname, ierr, cf_in, cube, unit
     end forall
 
 
-    call io_binary_write(trim(filename), np, R_REAL(cf_out%X(RS)(:,:,:)),&
+    call io_binary_write(io_workpath(filename), np, R_REAL(cf_out%X(RS)(:,:,:)),&
       ierr, nohead = .true., fendian = is_little_endian())
 
 
@@ -313,7 +313,7 @@ subroutine X(vtk_out_cf_structured)(filename, fieldname, ierr, cf_in, cube, unit
     write(iunit, '(1a)') 'LOOKUP_TABLE default'
     call io_close(iunit)
 
-    call io_binary_write(trim(filename), np, R_AIMAG(cf_out%X(RS)(:,:,:)),&
+    call io_binary_write(io_workpath(filename), np, R_AIMAG(cf_out%X(RS)(:,:,:)),&
       ierr, nohead = .true., fendian = is_little_endian())
 
 #endif

@@ -750,7 +750,7 @@ contains
       do i = 1, nderiv
 !MJV 10 nov 2016: changed n to i below in sol(:,n): was only erroneous in cube case when several
 !derivatives are calculated in 1 batch by this subroutine. All weights contained
-!the last derivative's weights (gradient z)
+!the last derivative`s weights (gradient z)
 !op(1) is used systematically above to get dimensions, but here we have to save
 !all operator stencil weights
 ! once we are happy and convinced, remove this comment

@@ -1056,7 +1056,8 @@ contains
 #ifdef HAVE_CUDA
     gsizes(1:3) = gsizes(1:3)/lsizes(1:3)
     
-    ASSERT(all(gsizes <= 65535))
+    ASSERT(gsizes(1) < 2_8**31 - 1_8)
+    ASSERT(all(gsizes(2:3) <= 65535_8))
     
     call cuda_launch_kernel(kernel%cuda_kernel, gsizes(1), lsizes(1), kernel%cuda_shared_mem, kernel%arguments)
 

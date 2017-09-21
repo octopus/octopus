@@ -519,14 +519,9 @@ subroutine pes_flux_map_from_state_1(restart, idx, np, psiG)
   
   write(filename,'(i10.10)') idx
 
-  path = trim(restart_dir(restart))//"/pesflux1."//trim(filename)//".obf"
+  path = "pesflux1."//trim(filename)
   
-  
-  call io_binary_read(path, np, psiG(:), err)
-  if (err /= 0) then
-    message(1) = "Unable to read PES mask restart data from '"//trim(path)//"'."
-    call messages_warning(1)
-  end if
+  call zrestart_read_binary(restart, path, np, psiG(:), err)
 
   POP_SUB(pes_flux_map_from_state_1)  
 end subroutine pes_flux_map_from_state_1
@@ -750,14 +745,10 @@ subroutine pes_flux_map_from_state_2(restart, idx, np, psiG)
   
   write(filename,'(i10.10)') idx
 
-  path = trim(restart_dir(restart))//"/pesflux1."//trim(filename)//".obf"
+  path = "pesflux1."//trim(filename)
   
   
-  call io_binary_read(path, np, psiG(:,:), err)
-  if (err /= 0) then
-    message(1) = "Unable to read PES mask restart data from '"//trim(path)//"'."
-    call messages_warning(1)
-  end if
+  call zrestart_read_binary(restart, path, np, psiG(:,:), err)
 
   POP_SUB(pes_flux_map_from_state_2)  
 end subroutine pes_flux_map_from_state_2
@@ -1145,9 +1136,9 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
   type(states_t),   intent(in)  :: st
   integer,          intent(out) :: ierr
 
-  integer          :: stst, stend, kptst, kptend, sdim, mdim
-  integer          :: ist, ik, isdim, itot
+  integer          :: ist, ik, idim, itot
   integer          :: err
+  integer          :: root(1:P_STRATEGY_MAX)
   character(len=128) :: filename
 
   CMPLX, pointer    :: psi1(:), psi2(:,:)
@@ -1155,78 +1146,68 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
   
   PUSH_SUB(pes_flux_dump)
 
-  stst   = st%st_start
-  stend  = st%st_end
-  kptst  = st%d%kpt%start
-  kptend = st%d%kpt%end
-  sdim   = st%d%dim
-  mdim   = mesh%sb%dim
-
-
 
   if(debug%info) then
     message(1) = "Debug: Writing pes_flux restart."
     call messages_info(1)
   end if
 
-  do ik = kptst, kptend
-    do ist = stst, stend
-      do isdim = 1, sdim
+  ierr = 0
+  root = -1
+  itot = 1
+  do ik = 1, st%d%nik
+    do ist = 1, st%nst
+      do idim = 1, st%d%dim
+        root(P_STRATEGY_DOMAINS) = mod(itot - 1, mesh%mpi_grp%size)
+        write(filename,'(a,i10.10)') "pesflux1.", itot
 
-        itot = ist + (ik-1) * st%nst+  (isdim-1) * st%nst*st%d%kpt%nglobal
-
-        write(filename,'(i10.10)') itot
-        write(filename,'(a)') trim(restart_dir(restart))//"/pesflux1."//trim(filename)//".obf"
-        
-        
-        if(mpi_grp_is_root(mesh%mpi_grp)) then
+        if (st%st_start <= ist .and. ist <= st%st_end .and. st%d%kpt%start <= ik .and. ik <= st%d%kpt%end) then
           if(this%shape == M_SPHERICAL) then
             SAFE_ALLOCATE(psi2(1:this%nk, 1:this%nstepsomegak))
-            psi2(:, :) = this%spctramp_sph(ist, isdim, ik, :, :)
-            call io_binary_write(trim(filename), this%nk * this%nstepsomegak, psi2(:,:), err)
+            psi2(:, :) = this%spctramp_sph(ist, idim, ik, :, :)
+            call zrestart_write_binary(restart, filename, this%nk * this%nstepsomegak, psi2(:,:), err, root = root)
             SAFE_DEALLOCATE_P(psi2)
             
-
           else
-            SAFE_ALLOCATE(psi1(1:this%nkpnts))            
-            psi1(:) = this%spctramp_cub(ist, isdim, ik, :)
-            call io_binary_write(trim(filename), this%nkpnts, psi1(:), err)
+            SAFE_ALLOCATE(psi1(1:this%nkpnts))
+            psi1(:) = this%spctramp_cub(ist, idim, ik, :)
+            call zrestart_write_binary(restart, filename, this%nkpnts, psi1(:), err, root = root)
             SAFE_DEALLOCATE_P(psi1)
-            
+
           end if
         end if
 
-        if (err /= 0) then
-          message(1) = "Unable to write restart information to '"//trim(filename)//"'."
-          call messages_warning(1)
-          ierr = ierr + 1
-        end if
-        
+        if (err /= 0) ierr = ierr + 1
+        itot = itot + 1
       end do
     end do
-    if(this%shape == M_PLANES) then
-      write(filename,'(i5.5)') ik
-      write(filename,'(a)') trim(restart_dir(restart))//"/pesflux4-kpt"//trim(filename)//".obf"
-      
-      SAFE_ALLOCATE(psi1(this%nkpnts))
-      psi1(:)=this%conjgphase_prev_cub(:,ik)
-      call io_binary_write(filename, this%nkpnts, psi1(:), err)
-      SAFE_DEALLOCATE_P(psi1)
-
-      if (err /= 0) then
-        message(1) = "Unable to write restart information to '"//trim(filename)//"'."
-        call messages_warning(1)
-        ierr = ierr + 1
-      end if
-    end if
-    
   end do
+
+  if(this%shape == M_PLANES) then
+    root(P_STRATEGY_MAX) = 0
+    root(P_STRATEGY_KPOINTS) = -1
+    do ik = 1, st%d%nik
+      root(P_STRATEGY_DOMAINS) = mod(ik - 1, mesh%mpi_grp%size)
+      write(filename,'(a,i5.5)') "pesflux4-kpt", ik
+
+      if (st%d%kpt%start <= ik .and. ik <= st%d%kpt%end) then
+        SAFE_ALLOCATE(psi1(this%nkpnts))
+        psi1(:)=this%conjgphase_prev_cub(:,ik)
+        call zrestart_write_binary(restart, filename, this%nkpnts, psi1(:), err)
+        SAFE_DEALLOCATE_P(psi1)
+      else
+        err = 0
+      end if
+      if (err /= 0) ierr = ierr + 1
+    end do
+    
+  end if
 
   if(this%shape == M_SPHERICAL) then
     call zrestart_write_binary(restart, 'pesflux4', this%nk * this%nstepsomegak, this%conjgphase_prev_sph, err)
   else 
     if (this%shape /= M_PLANES) &
-        call zrestart_write_binary(restart, 'pesflux4', this%nkpnts, this%conjgphase_prev_cub(:,:), err)
+      call zrestart_write_binary(restart, 'pesflux4', this%nkpnts, this%conjgphase_prev_cub(:,:), err)
   end if
   if(err /= 0) ierr = ierr + 2
 
@@ -1278,45 +1259,35 @@ subroutine pes_flux_load(restart, this, mesh, st, ierr)
       do isdim = 1, sdim
         itot = ist + (ik-1) * st%nst+  (isdim-1) * st%nst*st%d%kpt%nglobal
 
-        write(filename,'(i10.10)') itot
-        write(filename,'(a)') trim(restart_dir(restart))//"/pesflux1."//trim(filename)//".obf"
+        write(filename,'(a,i10.10)') "pesflux1.", itot
 
         if(this%shape == M_SPHERICAL) then
           SAFE_ALLOCATE(psi2(1:this%nk, 1:this%nstepsomegak))
-          call io_binary_read(trim(filename),this%nk * this%nstepsomegak, psi2(:,:), err)
+          call zrestart_read_binary(restart, filename, this%nk * this%nstepsomegak, psi2(:,:), err)
           this%spctramp_sph(ist, isdim, ik, :, :) = psi2(:, :)
           SAFE_DEALLOCATE_P(psi2)
             
         else
           SAFE_ALLOCATE(psi1(1:this%nkpnts))
-          call io_binary_read(trim(filename), this%nkpnts, psi1(:), err)
+          call zrestart_read_binary(restart, filename, this%nkpnts, psi1(:), err)
           this%spctramp_cub(ist, isdim, ik, :) =  psi1(:)
           SAFE_DEALLOCATE_P(psi1)
 
         end if
-        if (err /= 0) then
-          message(1) = "Unable to read restart information from '"//trim(filename)//"'."
-          call messages_warning(1)
-          ierr = ierr + 1
-        end if
+        if (err /= 0) ierr = ierr + 1
 
       end do
     end do
     
     if(this%shape == M_PLANES) then
-      write(filename,'(i5.5)') ik
-      write(filename,'(a)') trim(restart_dir(restart))//"/pesflux4-kpt"//trim(filename)//".obf"
+      write(filename,'(a,i5.5)') "pesflux4-kpt", ik
       
       SAFE_ALLOCATE(psi1(this%nkpnts))
-      call io_binary_read(filename, this%nkpnts, psi1(:), err)
+      call zrestart_read_binary(restart, filename, this%nkpnts, psi1(:), err)
       this%conjgphase_prev_cub(:,ik)=psi1(:)
       SAFE_DEALLOCATE_P(psi1)
 
-      if (err /= 0) then
-        message(1) = "Unable to read restart information to '"//trim(filename)//"'."
-        call messages_warning(1)
-        ierr = ierr + 1
-      end if
+      if (err /= 0) ierr = ierr + 1
     end if
         
   end do
@@ -1324,8 +1295,8 @@ subroutine pes_flux_load(restart, this, mesh, st, ierr)
   if(this%shape == M_SPHERICAL) then
     call zrestart_read_binary(restart, 'pesflux4', this%nk * this%nstepsomegak, this%conjgphase_prev_sph, err)
   else
-     if (this%shape /= M_PLANES) &
-          call zrestart_read_binary(restart, 'pesflux4', this%nkpnts, this%conjgphase_prev_cub(:,:), err)
+    if (this%shape /= M_PLANES) &
+      call zrestart_read_binary(restart, 'pesflux4', this%nkpnts, this%conjgphase_prev_cub(:,:), err)
   end if
   if(err /= 0) ierr = ierr + 2
  
