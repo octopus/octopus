@@ -28,6 +28,7 @@ program oct_local_multipoles
   use comm_oct_m
   use geometry_oct_m
   use global_oct_m
+  use grid_oct_m
   use hamiltonian_oct_m
   use io_oct_m
   use io_binary_oct_m
@@ -38,6 +39,7 @@ program oct_local_multipoles
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use multigrid_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
@@ -45,6 +47,7 @@ program oct_local_multipoles
   use species_oct_m
   use species_pot_oct_m
   use simul_box_oct_m
+  use states_oct_m
   use system_oct_m    
   use unit_oct_m
   use unit_system_oct_m
@@ -118,7 +121,7 @@ contains
   subroutine local_domains()
     type(local_domain_t)           :: local
     integer                        :: err, iter, l_start, l_end, l_step
-    integer                        :: ia, n_spec_def, read_data, iunit, ispec
+    integer                        :: ia, n_spec_def, read_data, iunit, is, ispec
     integer                        :: length, folder_index
     FLOAT                          :: default_dt, dt
     character(len=MAX_PATH_LEN)    :: filename, folder, folder_default, radiifile
@@ -369,11 +372,18 @@ contains
       ! TODO: Find the function that reads the density. Which one?
       ! FIXME: why only real functions? Please generalize.
       ! TODO: up to know the local_multipoles utlity acts over density functions, which are real.
-      if(err == 0) &
-        call drestart_read_mesh_function(restart, trim(filename), sys%gr%mesh, sys%st%rho(:,1), err) 
+        call load_mesh_function(restart, sys%st, sys%gr, err, filename)
+        !call drestart_read_mesh_function(restart, trim(filename), sys%gr%mesh, sys%st%rho(:,1), err) 
       if (err /= 0 ) then
         write(message(1),*) 'While reading density: "', trim(filename), '", error code:', err
         call messages_fatal(1)
+      end if
+
+      !TODO: sum up both spin contributions to get the total density.
+      if (sys%st%d%nspin > 1) then
+        do is = 2, sys%st%d%nspin
+          sys%st%rho(:,1) = sys%st%rho(:, 1) + sys%st%rho(:, is)
+        end do
       end if
 
       ! Look for the mesh points inside local domains
@@ -941,9 +951,11 @@ contains
     SAFE_ALLOCATE(ffs(1:sys%gr%mesh%np))
     do ia = 1, geo%natoms
       call species_get_density(geo%atom(ia)%species, geo%atom(ia)%x, sys%gr%mesh, ffs)
-      do is = 1, sys%st%d%nspin
-        ff(1:sys%gr%mesh%np,is) = ff(1:sys%gr%mesh%np, is) - ffs(1:sys%gr%mesh%np)
-      end do
+      !TODO: is necessary to do it for sys%st%d%nspin > 1? 
+      !      the total density is computed just after read the mesh file.
+      !do is = 1, sys%st%d%nspin
+        ff(1:sys%gr%mesh%np, 1) = ff(1:sys%gr%mesh%np, 1) - ffs(1:sys%gr%mesh%np)
+      !end do
     end do
 
     SAFE_DEALLOCATE_A(ffs)
@@ -1058,6 +1070,107 @@ contains
 
     POP_SUB(local_center_of_mass)
   end subroutine local_center_of_mass
+  ! ---------------------------------------------------------
+  ! TODO: this is a modified copy from states_load_rho  from states_restart.F90
+  subroutine load_mesh_function(restart, st, gr, ierr, filename_)
+    type(restart_t), intent(in)    :: restart
+    type(states_t),  intent(inout) :: st
+    type(grid_t),    intent(in)    :: gr
+    integer,         intent(out)   :: ierr
+    character(len=MAX_PATH_LEN), optional, intent(in) :: filename_
+
+    integer              :: err, err2, isp
+    character(len=MAX_PATH_LEN)    :: filename, file_
+    FLOAT, allocatable   :: rho_coarse(:)
+    CMPLX, allocatable   :: zrho(:), zrho_coarse(:)
+
+    PUSH_SUB(load_mesh_function)
+
+    ierr = 0
+
+    if (restart_skip(restart)) then
+      ierr = -1
+      POP_SUB(states_load_rho)
+      return
+    end if
+
+    if (debug%info) then
+      message(1) = "Debug: Reading density restart."
+      call messages_info(1)
+    end if
+
+    ! skip for now, since we know what the files are going to be called
+    !read the densities
+!    iunit_rho = io_open(trim(dir)//'/density', action='write')
+!    call iopar_read(st%dom_st_kpt_mpi_grp, iunit_rho, line, err)
+!    call iopar_read(st%dom_st_kpt_mpi_grp, iunit_rho, line, err)
+!   we could read the iteration 'iter' too, not sure if that is useful.
+
+    if(gr%have_fine_mesh) then
+      if(st%cmplxscl%space) then
+        SAFE_ALLOCATE(zrho(1:gr%fine%mesh%np))
+        SAFE_ALLOCATE(zrho_coarse(1:gr%mesh%np_part))
+      else
+        SAFE_ALLOCATE(rho_coarse(1:gr%mesh%np_part))
+      end if
+    end if
+
+    if (present(filename_)) then
+      file_ = trim(filename_)
+    else
+      file_ ='density'
+    end if
+
+    err2 = 0
+    do isp = 1, st%d%nspin
+      if(st%d%nspin>1) then
+        write(filename, fmt='(a,i1)') trim(file_)//'-sp', isp
+      end if
+!      if(mpi_grp_is_root(st%dom_st_kpt_mpi_grp)) then
+!        read(iunit_rho, '(i8,a,i8,a)') isp, ' | ', st%d%nspin, ' | "'//trim(adjustl(filename))//'"'
+!      end if
+      if(gr%have_fine_mesh)then
+        if(st%cmplxscl%space) then
+          call zrestart_read_mesh_function(restart, filename, gr%mesh, zrho_coarse, err)
+          call zmultigrid_coarse2fine(gr%fine%tt, gr%der, gr%fine%mesh, zrho_coarse, zrho, order = 2)
+          st%zrho%Re(:,isp) =  real(zrho, REAL_PRECISION)
+          st%zrho%Im(:,isp) = aimag(zrho)
+        else
+          call drestart_read_mesh_function(restart, filename, gr%mesh, rho_coarse, err)
+          call dmultigrid_coarse2fine(gr%fine%tt, gr%der, gr%fine%mesh, rho_coarse, st%rho(:,isp), order = 2)
+        end if
+      else
+        if(st%cmplxscl%space) then
+          call zrestart_read_mesh_function(restart, filename, gr%mesh, zrho, err)
+          st%zrho%Re(:,isp) =  real(zrho, REAL_PRECISION)
+          st%zrho%Im(:,isp) = aimag(zrho)
+        else
+          call drestart_read_mesh_function(restart, filename, gr%mesh, st%rho(:,isp), err)
+        end if
+      end if
+      if (err /= 0) err2 = err2 + 1
+
+    end do
+    if (err2 /= 0) ierr = ierr + 1
+
+    if(gr%have_fine_mesh)then
+      if(st%cmplxscl%space) then
+         SAFE_DEALLOCATE_A(zrho_coarse)
+      else
+        SAFE_DEALLOCATE_A(rho_coarse)
+      end if
+    end if
+    if(st%cmplxscl%space) then
+      SAFE_DEALLOCATE_A(zrho)
+    end if
+
+    if (debug%info) then
+      message(1) = "Debug: Reading density restart done."
+      call messages_info(1)
+    end if
+
+    POP_SUB(load_mesh_function)
+  end subroutine load_mesh_function
 
 end program oct_local_multipoles
 
