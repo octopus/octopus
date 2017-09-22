@@ -878,7 +878,9 @@ contains
   logical pure function restart_has_flag(restart, flag)
     type(restart_t), intent(in) :: restart
     integer,         intent(in) :: flag
-
+    
+    restart_has_flag = .false.
+    if (restart%data_type /= -1) &
     restart_has_flag = iand(info(restart%data_type)%flags, flag) /= 0
 
   end function restart_has_flag
