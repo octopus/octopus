@@ -827,6 +827,7 @@ contains
 
       type(grid_t),   pointer :: gr
       type(states_t), pointer :: st
+       type(states_t)         :: FBZ_st
         
       FLOAT, allocatable :: spect(:,:), me(:,:)  
  
@@ -834,7 +835,6 @@ contains
  
       gr => sys%gr
       st => sys%st
-
 
       call messages_print_stress(stdout, 'Floquet diagonalization')
 
@@ -929,7 +929,19 @@ contains
       end do
 
       call eigensolver_end(eigens)
-      !
+
+      ! filter the FBZ
+      if(.not.hm%F%FBZ_solver) then
+         ! this triggers FBZ allocation 
+         hm%F%FBZ_solver = .true.
+         call floquet_init_dressed_wfs(hm, sys, FBZ_st, fromScratch=.true.)
+         ! reset flag
+         hm%F%FBZ_solver = .false.
+         call floquet_FBZ_filter(sys, hm, dressed_st, FBZ_st)
+         filename = 'FBZ_bands'
+         call states_write_bandstructure(FLOQUET_DIR, FBZ_st%nst, FBZ_st, gr%sb, filename)
+         call states_end(FBZ_st)
+      end if
       
       !switch off floquet hamiltonian                                                           
       hm%F%floquet_apply = .false.                                                               
@@ -1318,11 +1330,11 @@ contains
         type(system_t),    intent(in)    :: sys
         type(hamiltonian_t),    intent(inout) :: hm
         type(states_t),     intent(in) :: st_full
-        type(states_t),     intent(out):: st_filtered
+        type(states_t),     intent(inout):: st_filtered
         
-        integer :: ik,ist, Fdim, spindim, count, idim, im
+        integer :: ik,ist,jst, Fdim, spindim, count, idim, im
         FLOAT, allocatable :: norms(:,:)
-        CMPLX, allocatable :: state(:,:), state_reshape(:,:,:)
+        CMPLX, allocatable :: state(:,:), state_reshape(:,:,:), state0(:,:)
 
         PUSH_SUB(floquet_FBZ_filter)
 
@@ -1350,24 +1362,48 @@ contains
            
            count = 0
            do ist=1,st_full%nst
-              if(minloc(norms(ist,:),dim=1) == Fdim/2+1) then
+              if(maxloc(norms(ist,:),dim=1) == Fdim/2+1) then
                 count = count + 1
                 if(count .le. st_filtered%nst ) then
                   call states_get_state(st_full    ,sys%gr%mesh,   ist, ik, state)
                   call states_set_state(st_filtered,sys%gr%mesh, count, ik, state)
+                  st_filtered%eigenval(count,ik) = st_full%eigenval(ist,ik)
                 else
                   call messages_write('FBZ filtering is ambigous for kpoint = ')
                   call messages_write(ik, fmt = '(i6)')
                   call messages_warning()
                 end if
-                count = count + 1
               end if
            end do
 
         end do
-        
+
+        ! verify the FBZ contains only unique states by checking sectorwise orthogonality 
+        SAFE_ALLOCATE(state0(1:sys%gr%mesh%np,1:spindim))
+        do ik=st_filtered%d%kpt%start,st_filtered%d%kpt%end
+          do ist=1,st_filtered%nst
+            call states_get_state(st_filtered,sys%gr%mesh, ist, ik, state)
+            state_reshape = reshape(state,(/sys%gr%mesh%np,spindim,Fdim/))
+            state0(1:sys%gr%mesh%np,1:spindim) =  state_reshape(1:sys%gr%mesh%np,1:spindim,Fdim/2+1)
+            do jst=1,ist-1
+               call states_get_state(st_filtered,sys%gr%mesh, jst, ik, state)
+               state_reshape = reshape(state,(/sys%gr%mesh%np,spindim,Fdim/))
+               do im=1,Fdim
+                  do idim=1,spindim
+                     ! this should be zero, but under no circumstance can it be close to the norm of state0
+                     if(abs(zmf_dotp(sys%gr%mesh, state0(:,idim),state_reshape(:,idim,im))) .gt. M_HALF*zmf_nrm2(sys%gr%mesh, state0(:,idim))) then
+                        message(1) = 'FBZ filtering failed'
+                        call messages_warning(1)
+                     end if
+                  end do
+               end do
+             end do
+           end do
+         end do
+
         SAFE_DEALLOCATE_A(norms)
         SAFE_DEALLOCATE_A(state)
+        SAFE_DEALLOCATE_A(state0)
         SAFE_DEALLOCATE_A(state_reshape)
 
         POP_SUB(floquet_FBZ_filter)
