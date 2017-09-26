@@ -42,6 +42,9 @@ module pcm_oct_m
   use io_function_oct_m
   use mesh_function_oct_m
 
+  !< equation-of-motion pcm module
+  use eom_pcm_tdplas_m!, only: pcm_charges_propagation, debye
+
   implicit none
 
   private
@@ -49,7 +52,7 @@ module pcm_oct_m
   public ::                 &
     pcm_t,                  &
     pcm_sphere_t,           &
-    pcm_tessera_t,          &
+    !pcm_tessera_t,          &
     pcm_init,               &
     pcm_end,                &
     pcm_charges,            &
@@ -74,12 +77,12 @@ module pcm_oct_m
   !> The resulting cavity is discretized by a set of tesserae defined in 3d.  
   integer, parameter :: pcm_dim_space = 3
 
-  type :: pcm_tessera_t
-    FLOAT :: point(1:pcm_dim_space)  !< representative point of the tessera  
-    FLOAT :: area                    !< area of the tessera
-    FLOAT :: normal(1:pcm_dim_space) !< unitary outgoing vector normal to the tessera surface  
-    FLOAT :: r_sphere                !< radius of the sphere to which the tessera belongs
-  end type pcm_tessera_t
+  !type :: pcm_tessera_t
+  !  FLOAT :: point(1:pcm_dim_space)  !< representative point of the tessera  
+  !  FLOAT :: area                    !< area of the tessera
+  !  FLOAT :: normal(1:pcm_dim_space) !< unitary outgoing vector normal to the tessera surface  
+  !  FLOAT :: r_sphere                !< radius of the sphere to which the tessera belongs
+  !end type pcm_tessera_t
 
   type pcm_t
     logical                          :: run_pcm       !< If .true., PCM calculation is enabled
@@ -113,6 +116,10 @@ module pcm_oct_m
                                                       !< the Hartree potential at the tesserae 
     FLOAT                            :: epsilon_0     !< Static dielectric constant of the solvent 
     FLOAT                            :: epsilon_infty !< Infinite-frequency dielectric constant of the solvent
+    character(len=3)                 :: which_eps     !< Dielectric function model, either Debye's or Drude-Lorentz
+    type(debye_param_t)		     :: deb 	      !< Debye's parameter
+    type(drude_param_t)		     :: drl 	      !< Drude-Lorentz's parameter
+    logical                          :: eom           !< Logical flag for polarization charges propagation through an EoM
     FLOAT                            :: gaussian_width!< Parameter to change the width of density of polarization charges  
 !     integer                          :: n_vertices    !< Number of grid points used to interpolate the Hartree potential
                                                       !! at the tesserae 
@@ -154,6 +161,8 @@ module pcm_oct_m
 
   integer, parameter :: CM_GS = 1, &
                         CM_TD = 3
+
+  FLOAT :: dt !< time-step of propagation
 
 contains
 
@@ -254,6 +263,33 @@ contains
     call parse_variable('PCMRadiusScaling', default_value, pcm%scale_r)
     call messages_print_var_value(stdout, "PCMRadiusScaling", pcm%scale_r)
 
+    !%Variable PCMNonequilibrium
+    !%Type logical
+    !%Default no
+    !%Section Hamiltonian::PCM
+    !%Description
+    !% If .false. the solvent polarization follows instantaneously the changes in solute density.  
+    !% If .true. the solvent polarization is splitted in two terms: 
+    !% one that follows instantaneously the changes in solute density (dynamical polarization charges),  
+    !% and another that lag behind in the evolution of the solute density (inertial polarization charges).    
+    !% Either case evolution is history independent.    
+    !%End
+    call parse_variable('PCMNonequilibrium', .false., pcm%noneq)
+    call messages_print_var_value(stdout, "PCMNonequilibrium", pcm%noneq)
+
+    !%Variable PCMEoM
+    !%Type logical
+    !%Default no
+    !%Section Hamiltonian::PCM
+    !%Description
+    !% If .false. the propagation of the solvent polarization charges is history independent. 
+    !% If .true. the propagation of the solvent polarization charges follows an equation of motion. 
+    !% For the moment, the choices of equation of motion ensue from either Debye (default) or Drude-Lorentz dielectric models.
+    !% You can change the default model by setting the variable PCMEpsilonModel to the other available value 'drl'.
+    !%End
+    call parse_variable('PCMEoM', .false., pcm%eom)
+    call messages_print_var_value(stdout, "PCMEoM", pcm%eom)
+
     !%Variable PCMStaticEpsilon
     !%Type float
     !%Default 1.0
@@ -275,18 +311,70 @@ contains
     call parse_variable('PCMDynamicEpsilon', pcm%epsilon_0, pcm%epsilon_infty)
     call messages_print_var_value(stdout, "PCMDynamicEpsilon", pcm%epsilon_infty)
 
-    !%Variable PCMNonequilibrium
-    !%Type logical
-    !%Default .true.
+    !%Variable PCMEpsilonModel
+    !%Type string
+    !%Default 'deb'
     !%Section Hamiltonian::PCM
     !%Description
-    !% If .false. the solvent polarization follows instantaneously the changes in solute density.  
-    !% If .true. the solvent polarization is splitted in two terms: 
-    !% one that follows instantaneously the changes in solute density (dynamical polarization charges),  
-    !% and another that lag behind in the evolution of the solute density (inertial polarization charges).    
+    !% Define the dielectric function model. For the moment, the choice is between:
+    !% 1) Debye's model ('deb'): <math>\varepsilon(\omega)=\varepsilon_d+\frac{\varepsilon_0-\varepsilon_d}{1-i\omega\tau}</math>    
+    !% 2) Drude-Lorentz's ('drl') model: <math>\varepsilon(\omega)=1+\frac{A}{\omega_0^2-\omega^2+i\gamma\omega}</math>   
     !%End
-    call parse_variable('PCMNonequilibrium', .true., pcm%noneq)
-    call messages_print_var_value(stdout, "PCMNonequilibrium", pcm%noneq)
+    call parse_variable('PCMEpsilonModel', 'deb', pcm%which_eps)
+    call messages_print_var_value(stdout, "PCMEpsilonModel", pcm%which_eps)
+
+    if(pcm%which_eps/='deb'.and.pcm%which_eps/='drl') then
+      call messages_write('Sorry, only Debye or Drude-Lorentz dielectric models are available.')
+      call messages_new_line()
+      call messages_write('To spare you some time, Octopus will proceed with the default choice (Debye).')        
+      call messages_new_line()
+      call messages_write('You may change PCMEpsilonModel value for a Drude-Lorentz run.')        
+      call messages_warning()
+    end if
+
+    pcm%deb%eps_d=pcm%epsilon_infty
+
+    !< re-parse TDTimeStep to propagate polarization charges
+    call parse_variable('TDTimeStep', M_ZERO, dt, unit = units_inp%time)
+
+    !%Variable PCMDebyeRelaxTime
+    !%Type float
+    !%Default 0.0
+    !%Section Hamiltonian::PCM
+    !%Description
+    !% Relaxation time of the solvent within Debye's model (<math>\tau</math>).
+    !% Recall Debye's dieletric function: <math>\varepsilon(\omega)=\varepsilon_d+\frac{\varepsilon_0-\varepsilon_d}{1-i\omega\tau}</math>    
+    !%End
+    call parse_variable('PCMDebyeRelaxTime', M_ZERO, pcm%deb%tau)
+    call messages_print_var_value(stdout, "PCMDebyeRelaxTime", pcm%deb%tau)
+
+    if( pcm%deb%tau == M_ZERO .and. pcm%eom ) pcm%eom = .false.
+
+    !%Variable PCMPlasmaFrequency
+    !%Type float
+    !%Default <math>\sqrt{1/(\varepsilon_0-1)}</math>
+    !%Section Hamiltonian::PCM
+    !%Description
+    !% Plasma frequency of the solvent within Drude-Lorentz model (<math>\omega_0</math>).
+    !% Default values of <math>\omega_0</math>   
+    !% Recall Drude-Lorentz dielectric function: <math>\varepsilon(\omega)=1+\frac{A}{\omega_0^2-\omega^2+i\gamma\omega}</math>   
+    !%End
+    call parse_variable('PCMPlasmaFrequency', sqrt(M_ONE/(pcm%epsilon_0-M_ONE)), pcm%drl%w0)
+    call messages_print_var_value(stdout, "PCMPlasmaFrequency", pcm%drl%w0)
+
+    !%Variable PCMDrudeLDamping
+    !%Type float
+    !%Default 0.0
+    !%Section Hamiltonian::PCM
+    !%Description
+    !% Damping factor of the solvent charges oscillations within Drude-Lorentz model (<math>\gamma</math>).
+    !% Recall Drude-Lorentz dielectric function: <math>\varepsilon(\omega)=1+\frac{A}{\omega_0^2-\omega^2+i\gamma\omega}</math>   
+    !%End
+    call parse_variable('PCMDrudeLDamping', M_ZERO, pcm%drl%gm)
+    call messages_print_var_value(stdout, "PCMDrudeLDamping", pcm%drl%gm)
+
+    !< Parameter (<math>A</math>) interpolating Drude-Lorentz dielectric function to its static value (<math>\varepsilon_0</math>).
+    pcm%drl%aa=(pcm%epsilon_0-M_ONE)*pcm%drl%w0**2
     
     !%Variable PCMUpdateIter
     !%Type integer
@@ -606,7 +694,7 @@ contains
       call messages_new_line()        
       call messages_warning()
      else if ( pcm%noneq .and. CM == CM_GS ) then 
-      call messages_write('Non-equilbrium PCM is not active in a time-independent run (CalculationMode = gs).')        
+      call messages_write('Non-equilbrium PCM is not active in a time-independent run (e.g., CalculationMode = gs).')        
       call messages_new_line()
       call messages_write('You set epsilon_infty /= epsilon_0, but epsilon_infty is not relevant for CalculationMode = gs.')
       call messages_new_line()
@@ -802,38 +890,47 @@ contains
     if (calc == PCM_ELECTRONS) then
      
       call pcm_v_electrons_cav_li(pcm%v_e, v_h, pcm, mesh)
-      !< inertial/dynamical partition
-      if( td_calc_mode .and. pcm%epsilon_infty /= pcm%epsilon_0 .and. pcm%noneq ) then  
-       select case (pcm%iter)
-       case(1)
-        !< calculating inertial polarization charges (once and for all)
-        !< calculated in two steps to guarantee correct renormalization: Gauss law is recovered at each step.
-        !< (first step) calculating polarization charges equilibrated with the initial Hartree potential (just once)
-        call pcm_charges(pcm%q_e, pcm%qtot_e, pcm%v_e, pcm%matrix, pcm%n_tesserae, &
-                         pcm%q_e_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_e)
-	!< (second step) calculating initial dynamic polarization charges 
-	!< don't pay attention to the use of q_e_in and qtot_e_in, whose role here is only auxiliary
-        call pcm_charges(pcm%q_e_in, pcm%qtot_e_in, pcm%v_e, pcm%matrix_d, pcm%n_tesserae, &
-                         pcm%q_e_nominal, pcm%epsilon_infty, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_e)
-        !< (finally) the inertial polarization charges
-        pcm%q_e_in = pcm%q_e - pcm%q_e_in
-        pcm%qtot_e_in = pcm%qtot_e - pcm%qtot_e_in
-       case default
-        !< calculating dynamical polarization charges (each time)
-        call pcm_charges(pcm%q_e, pcm%qtot_e, pcm%v_e, pcm%matrix_d, pcm%n_tesserae, &
-                         pcm%q_e_nominal, pcm%epsilon_infty, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_e)
+      if( td_calc_mode .and. pcm%epsilon_infty /= pcm%epsilon_0 .and. pcm%noneq ) then
+       !< BEGIN - equation-of-motion propagation or inertial/dynamical charge splitting
+       if( pcm%eom ) then	!< equation-of-motion propagation     
+        select case (pcm%which_eps)
+         case('drl')
+          call pcm_charges_propagation(pcm%q_e, pcm%v_e, dt, pcm%tess, pcm%epsilon_0, 'drl', this_drl = pcm%drl)
+         case default
+          call pcm_charges_propagation(pcm%q_e, pcm%v_e, dt, pcm%tess, pcm%epsilon_0, 'deb', this_deb = pcm%deb)
+        end select
+       else			!< inertial/dynamical partition
+        select case (pcm%iter)
+        case(1)
+         !< calculating inertial polarization charges (once and for all)
+         !< calculated in two steps to guarantee correct renormalization: Gauss law is recovered at each step.
+         !< (first step) calculating polarization charges equilibrated with the initial Hartree potential (just once)
+         call pcm_charges(pcm%q_e, pcm%qtot_e, pcm%v_e, pcm%matrix, pcm%n_tesserae, &
+                          pcm%q_e_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_e)
+	 !< (second step) calculating initial dynamic polarization charges 
+	 !< don't pay attention to the use of q_e_in and qtot_e_in, whose role here is only auxiliary
+         call pcm_charges(pcm%q_e_in, pcm%qtot_e_in, pcm%v_e, pcm%matrix_d, pcm%n_tesserae, &
+                          pcm%q_e_nominal, pcm%epsilon_infty, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_e)
+         !< (finally) the inertial polarization charges
+         pcm%q_e_in = pcm%q_e - pcm%q_e_in
+         pcm%qtot_e_in = pcm%qtot_e - pcm%qtot_e_in
+        case default
+         !< calculating dynamical polarization charges (each time)
+         call pcm_charges(pcm%q_e, pcm%qtot_e, pcm%v_e, pcm%matrix_d, pcm%n_tesserae, &
+                          pcm%q_e_nominal, pcm%epsilon_infty, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_e)
 
-        pcm%q_e = pcm%q_e + pcm%q_e_in
-        pcm%qtot_e = pcm%qtot_e + pcm%qtot_e_in
-       end select
-      else
+         pcm%q_e = pcm%q_e + pcm%q_e_in
+         pcm%qtot_e = pcm%qtot_e + pcm%qtot_e_in
+        end select
+       end if !< END - equation-of-motion propagation or inertial/dynamical charge splitting
+      else !< BEGIN - pcm charges propagation in equilibrium with solute
        !< calculating polarization charges to be equilibrated (upon self-consitency) with the ground state Hartree potential (always).
        call pcm_charges(pcm%q_e, pcm%qtot_e, pcm%v_e, pcm%matrix, pcm%n_tesserae, &
                         pcm%q_e_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_e)
 
        pcm%q_e_in = pcm%q_e
        pcm%qtot_e_in = pcm%qtot_e
-      end if
+      end if !< END - pcm charges propagation in equilibrium with solute
       if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_e, pcm%qtot_e, mesh, pcm%rho_e)
       call pcm_pot_rs(pcm, pcm%v_e_rs, pcm%q_e, pcm%rho_e, mesh )
 
