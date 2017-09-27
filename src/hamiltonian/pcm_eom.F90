@@ -17,7 +17,7 @@
 !!
 #include "global.h"
 
-module eom_pcm_tdplas_m
+module pcm_eom_oct_m
   use global_oct_m
   use messages_oct_m
   private
@@ -419,7 +419,7 @@ module eom_pcm_tdplas_m
    POP_SUB(do_TS_matrix)
   end subroutine do_TS_matrix
 
-end module eom_pcm_tdplas_m
+end module pcm_eom_oct_m
 
 !! Local Variables:
 !! mode: f90

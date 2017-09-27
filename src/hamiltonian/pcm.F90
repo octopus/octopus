@@ -43,7 +43,7 @@ module pcm_oct_m
   use mesh_function_oct_m
 
   !< equation-of-motion pcm module
-  use eom_pcm_tdplas_m!, only: pcm_charges_propagation, debye
+  use pcm_eom_oct_m !, only: pcm_charges_propagation, debye
 
   implicit none
 
