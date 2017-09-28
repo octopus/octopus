@@ -620,7 +620,7 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, cmplxscl_th, inside)
 
   ff2(1:mesh%np) = ff(1:mesh%np)
   multipole(1) = X(mf_integrate)(mesh, ff2, mask = inside)
-  
+
   if(lmax > 0) then
     do idim = 1, 3
       ff2(1:mesh%np) = ff(1:mesh%np) * mesh%x(1:mesh%np, idim) * factor
@@ -649,13 +649,14 @@ end subroutine X(mf_multipoles)
 
 
 !--------------------------------------------------------------
-subroutine X(mf_local_multipoles) (mesh, n_domains, ff, lmax, multipole, inside)
+subroutine X(mf_local_multipoles) (mesh, n_domains, ff, lmax, multipole, inside, cmplxscl_th)
   type(mesh_t),      intent(in)  :: mesh
   integer,           intent(in)  :: n_domains
   R_TYPE,            intent(in)  :: ff(:)
   integer,           intent(in)  :: lmax
   R_TYPE,            intent(out) :: multipole(:,:) !< ((lmax + 1)**2, n_domains)
   logical,           intent(in)  :: inside(:,:) !< (mesh%np, n_domains)
+  FLOAT, optional,   intent(in)  :: cmplxscl_th !< the space complex scaling angle cmplxscl%theta
 
   integer :: idom
 
@@ -663,7 +664,11 @@ subroutine X(mf_local_multipoles) (mesh, n_domains, ff, lmax, multipole, inside)
 
   do idom = 1, n_domains
     ! FIXME: should have cmplxscl_theta passed here too.
-    call X(mf_multipoles) (mesh, ff, lmax, multipole(:, idom), inside = inside(:, idom))
+    if (present(cmplxscl_th)) then
+      call X(mf_multipoles) (mesh, ff, lmax, multipole(:, idom), cmplxscl_th = cmplxscl_th, inside = inside(:, idom))
+    else
+      call X(mf_multipoles) (mesh, ff, lmax, multipole(:, idom), inside = inside(:, idom))
+    end if
   end do
 
   POP_SUB(X(mf_local_multipoles))
