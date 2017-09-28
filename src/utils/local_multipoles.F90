@@ -124,6 +124,7 @@ contains
     integer                        :: ia, n_spec_def, read_data, iunit, is, ispec
     integer                        :: length, folder_index
     FLOAT                          :: default_dt, dt
+    FLOAT, ALLOCATABLE             :: rho(:)
     character(len=MAX_PATH_LEN)    :: filename, folder, folder_default, radiifile
     character(len=MAX_PATH_LEN)    :: in_folder, restart_folder, basename, frmt, ldrestart_folder
     character(len=15)              :: lab
@@ -368,10 +369,6 @@ contains
           filename = basename
         end if
       end if
-      ! FIXME: there is a special function for reading the density. Why not use that?
-      ! TODO: Find the function that reads the density. Which one?
-      ! FIXME: why only real functions? Please generalize.
-      ! TODO: up to know the local_multipoles utlity acts over density functions, which are real.
         call load_mesh_function(restart, sys%st, sys%gr, err, filename)
         !call drestart_read_mesh_function(restart, trim(filename), sys%gr%mesh, sys%st%rho(:,1), err) 
       if (err /= 0 ) then
@@ -379,19 +376,21 @@ contains
         call messages_fatal(1)
       end if
 
-      !TODO: sum up both spin contributions to get the total density.
+      !Local Analysis performed over the real part of the total density.
+      SAFE_ALLOCATE(rho(1:sys%gr%mesh%np))
       if (sys%st%d%nspin > 1) then
-        do is = 2, sys%st%d%nspin
-          sys%st%rho(:,1) = sys%st%rho(:, 1) + sys%st%rho(:, is)
+        do is = 1, sys%st%d%nspin
+          rho(:) = rho(:) + sys%st%rho(:, is)
         end do
       end if
 
       ! Look for the mesh points inside local domains
       if(iter == l_start .and. .not.ldrestart) then
-        call local_inside_domain(local, sys%st%rho(:,1))
+        call local_inside_domain(local, rho(:))
       else
-        if (ldupdate) call local_inside_domain(local, sys%st%rho(:,1))
+        if (ldupdate) call local_inside_domain(local, rho(:))
       end if
+      SAFE_DEALLOCATE_A(rho)
 
       call local_write_iter(local%writ, local%nd, local%lab, local%ions_inside, local%inside, local%dcm, & 
                               sys%gr, sys%st, hm, sys%ks, sys%geo, kick, iter, l_start, ldoverwrite)
@@ -1071,7 +1070,7 @@ contains
     POP_SUB(local_center_of_mass)
   end subroutine local_center_of_mass
   ! ---------------------------------------------------------
-  ! TODO: this is a modified copy from states_load_rho  from states_restart.F90
+  ! TODO: this is a modified copy of states_load_rho  from states_restart.F90
   subroutine load_mesh_function(restart, st, gr, ierr, filename_)
     type(restart_t), intent(in)    :: restart
     type(states_t),  intent(inout) :: st
@@ -1106,9 +1105,10 @@ contains
 !    call iopar_read(st%dom_st_kpt_mpi_grp, iunit_rho, line, err)
 !   we could read the iteration 'iter' too, not sure if that is useful.
 
+    if(st%cmplxscl%space) SAFE_ALLOCATE(zrho(1:gr%mesh%np_part))
+
     if(gr%have_fine_mesh) then
       if(st%cmplxscl%space) then
-        SAFE_ALLOCATE(zrho(1:gr%fine%mesh%np))
         SAFE_ALLOCATE(zrho_coarse(1:gr%mesh%np_part))
       else
         SAFE_ALLOCATE(rho_coarse(1:gr%mesh%np_part))
@@ -1116,15 +1116,15 @@ contains
     end if
 
     if (present(filename_)) then
-      file_ = trim(filename_)
+      filename = trim(filename_)
     else
-      file_ ='density'
+      filename ='density'
     end if
 
     err2 = 0
     do isp = 1, st%d%nspin
       if(st%d%nspin>1) then
-        write(filename, fmt='(a,i1)') trim(file_)//'-sp', isp
+        write(filename, fmt='(a,i1)') trim(filename)//'-sp', isp
       end if
 !      if(mpi_grp_is_root(st%dom_st_kpt_mpi_grp)) then
 !        read(iunit_rho, '(i8,a,i8,a)') isp, ' | ', st%d%nspin, ' | "'//trim(adjustl(filename))//'"'
