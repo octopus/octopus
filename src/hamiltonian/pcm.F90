@@ -332,7 +332,9 @@ contains
       call messages_warning()
     end if
 
-    pcm%deb%eps_d=pcm%epsilon_infty
+    !> packing Debye parameters for convenience
+    pcm%deb%eps_0 = pcm%epsilon_0
+    pcm%deb%eps_d = pcm%epsilon_infty
 
     !< re-parse TDTimeStep to propagate polarization charges
     call parse_variable('TDTimeStep', M_ZERO, dt, unit = units_inp%time)
@@ -895,9 +897,9 @@ contains
        if( pcm%eom ) then	!< equation-of-motion propagation     
         select case (pcm%which_eps)
          case('drl')
-          call pcm_charges_propagation(pcm%q_e, pcm%v_e, dt, pcm%tess, pcm%epsilon_0, 'drl', this_drl = pcm%drl)
+          call pcm_charges_propagation(pcm%q_e, pcm%v_e, dt, pcm%tess, 'drl', this_drl = pcm%drl)
          case default
-          call pcm_charges_propagation(pcm%q_e, pcm%v_e, dt, pcm%tess, pcm%epsilon_0, 'deb', this_deb = pcm%deb)
+          call pcm_charges_propagation(pcm%q_e, pcm%v_e, dt, pcm%tess, 'deb', this_deb = pcm%deb)
         end select
        else			!< inertial/dynamical partition
         select case (pcm%iter)

@@ -24,6 +24,7 @@ module pcm_eom_oct_m
   public :: pcm_charges_propagation, pcm_tessera_t, debye_param_t, drude_param_t 
   save
 
+  !> tesselation derived type
   type :: pcm_tessera_t
     FLOAT :: point(1:3)  !< representative point of the tessera  
     FLOAT :: area        !< area of the tessera
@@ -31,50 +32,57 @@ module pcm_eom_oct_m
     FLOAT :: r_sphere    !< radius of the sphere to which the tessera belongscd
   end type pcm_tessera_t
 
+  type(pcm_tessera_t), allocatable :: cts_act(:) !< tesselation arrays (nts_act)
+  integer :: nts_act				 !< number of tesserae
+
+  !> set of parameters for Debye dielectric model
   type :: debye_param_t
-    FLOAT :: eps_d
-    FLOAT :: tau
+    FLOAT :: eps_0 !< static  dielectric constant (at ZERO     frequency of the field)
+    FLOAT :: eps_d !< dynamic dielectric constant (at INFINITE frequency of the field)
+    FLOAT :: tau   !< Debye relaxation time
   end type debye_param_t
 
+  !> set of parameters for Drude-Lorentz dielectric model
+  !> no parameter allows the match with the dynamic dielectric constant
   type :: drude_param_t
-    FLOAT :: aa
-    FLOAT :: gm
-    FLOAT :: w0
+    FLOAT :: aa !< parameter matching the static dielectric constant
+    FLOAT :: gm !< damping of the plasma oscillation
+    FLOAT :: w0 !< plasma frequency
   end type drude_param_t
-
-  type(pcm_tessera_t), allocatable :: cts_act(:)
 
   type(debye_param_t) :: deb
   type(drude_param_t) :: drl
 
-  integer :: nts_act
+  character(3) :: which_eps			 !< character flag for Debye ('deb') and Drude-Lorentz models ('drl')
 
-  FLOAT :: eps_0
-  character(3) :: which_eps
+  FLOAT :: dt 					 !< time-step of the propagation
 
+  FLOAT, allocatable :: q_tp(:), dq_tp(:)	 !< polarization charges and variation of in it in the previous iteration
+  FLOAT, allocatable :: pot_tp(:)		 !< potential in previous iteration
+                                                 !< See Chem.Phys.Lett. 429 (2006) 310-316 for Velocity-Verlet (VV) algorithm... 
+  FLOAT :: f1, f2, f3, f4, f5			 !< auxiliar constants for VV
+  FLOAT, allocatable :: force(:),force_p(:)	 !< analogous to force in the equation of motion for the pol.charges
+
+  						 !< In J.Phys.Chem.A 2015, 119, 5405-5416...
+  FLOAT, allocatable :: cals(:,:),cald(:,:)	 !< Calderon matrices S and D from Eq.(5), ibid.
+  FLOAT, allocatable :: eigv(:),eigt(:,:)        !< \Lambda and T matrices from Eq.(10), ibid.
+  FLOAT, allocatable :: sm12(:,:),sp12(:,:)      !< S^{-1/2} and S^{1/2}
+  FLOAT, allocatable :: matq0(:,:),matqd(:,:)    !< Q^{IEF(d)}_0 (not used in ref.) and Q^{IEF(d)}_d from Eq.(18) with eps_0/eps_d
+  FLOAT, allocatable :: matqv(:,:),matqq(:,:)    !< \tilde{Q} and R matrices from Eq.(38)-(39), respectively
+                                                 !< Q^{IEF(d)}_d, \tilde{Q} and R matrices are those that enter the EOM eq.(37)
+  !> numerical literals
   FLOAT, parameter :: zero=0.d0
   FLOAT, parameter :: one=1.d0
   FLOAT, parameter :: two=2.d0
   FLOAT, parameter :: pi=3.141592653589793D+00
   FLOAT, parameter :: twp=two*pi
 
-  FLOAT :: dt
-
-  FLOAT, allocatable :: q_tp(:),dq_tp(:)
-  FLOAT, allocatable :: pot_tp(:)
-  FLOAT :: f1,f2,f3,f4,f5
-  FLOAT, allocatable :: force(:),force_p(:)
-
-  FLOAT, allocatable :: cals(:,:),cald(:,:)
-  FLOAT, allocatable :: sm1(:,:)
-  FLOAT, allocatable :: eigv(:),eigt(:,:)
-  FLOAT, allocatable :: sm12(:,:),sp12(:,:)
-  FLOAT, allocatable :: matq0(:,:),matqd(:,:)
-  FLOAT, allocatable :: matqv(:,:),matqq(:,:)
-
   contains
 
-  subroutine pcm_charges_propagation(q_t, pot_t, this_dt, this_cts_act, this_eps_0, this_eps, this_deb, this_drl) 
+  !------------------------------------------------------------------------------------------------------------------------------
+  !> Driving subroutine for the Equation of Motion (EOM) propagation of the polarization charges
+  !> within the Integral Equation Formalism (IEF) formulation of the Polarization Continuum Model (PCM).
+  subroutine pcm_charges_propagation(q_t, pot_t, this_dt, this_cts_act, this_eps, this_deb, this_drl) 
    save
    FLOAT, intent(out) :: q_t(:)
    FLOAT, intent(in)  :: pot_t(:)
@@ -83,15 +91,9 @@ module pcm_eom_oct_m
 
    type(pcm_tessera_t), intent(in) :: this_cts_act(:)
 
-   FLOAT, intent(in) :: this_eps_0
-   character(*), intent(in) :: this_eps
-   type(debye_param_t), optional, intent(in) :: this_deb ! By now, these arguments are both optional,
-   type(drude_param_t), optional, intent(in) :: this_drl ! and at least one of them should be required.
-							 ! A tentative solution: using interface driving
-							 ! directly to each case and adding them to the module. E.g.
-							 !interface pcm_charges_propagation
-    							 !module procedure pcm_charges_propagation_deb, pcm_charges_propagation_drl
-  							 !end interface
+   character(*), intent(in) :: this_eps !< type of dielectric model to be used, either Debye ('deb') or Drude-Lorentz ('drl')
+   type(debye_param_t), optional, intent(in) :: this_deb
+   type(drude_param_t), optional, intent(in) :: this_drl 
 
    logical :: firsttime=.true.
 
@@ -104,15 +106,16 @@ module pcm_eom_oct_m
     if (size(q_t) /= nts_act) stop
     allocate(cts_act(nts_act))
     cts_act=this_cts_act
-    eps_0=this_eps_0
     which_eps=this_eps
     if (which_eps=='deb' .and. .not.(present(this_deb))) then
-     stop 'Debye dielectric function requires three parameters!'
+     message(1) = "pcm_charges_propagation: EOM-PCM error. Debye dielectric function requires three parameters."
+     call messages_fatal(1)
     else if (which_eps=='deb' .and. present(this_deb)) then
      deb=this_deb
     endif
     if (which_eps=='drl' .and. .not.(present(this_drl))) then
-     stop 'Drude-Lorentz dielectric function requires three parameters!'
+     message(1) = "pcm_charges_propagation: EOM-PCM error. Drude-Lorentz dielectric function requires three parameters."
+     call messages_fatal(1)
     else if (which_eps=='drl' .and. present(this_drl)) then
      drl=this_drl
     endif
@@ -134,7 +137,8 @@ module pcm_eom_oct_m
    elseif( which_eps .eq. "drl" ) then
     call pcm_ief_prop_vv_ief_drl(pot_t,q_t)
    else
-    stop 'Only Debye or Drude-Lorent is allowed!'
+    message(1) = "pcm_charges_propagation: EOM-PCM error. Only Debye or Drude-Lorent dielectric models are allowed."
+    call messages_fatal(1)
    endif
    q_tp=q_t
    pot_tp=pot_t
@@ -142,6 +146,8 @@ module pcm_eom_oct_m
    POP_SUB(pcm_charges_propagation)
   end subroutine pcm_charges_propagation
 
+  !------------------------------------------------------------------------------------------------------------------------------
+  !> Polarization charges initialization in equilibrium with the initial potential.
   subroutine init_charges(pot_t)
    FLOAT, intent(in)  :: pot_t(:)
 
@@ -149,23 +155,45 @@ module pcm_eom_oct_m
 
    allocate(q_tp(nts_act))
    allocate(pot_tp(nts_act))
-   q_tp=matmul(matq0,pot_t)
-   pot_tp=pot_t
+   q_tp=matmul(matq0,pot_t) !< applying the static IEF-PCM response matrix (corresponging to epsilon_0)
+   pot_tp=pot_t             !< to the initial potential, which is assumed to be the ground state potential (!)
    if( which_eps .eq. "drl" ) then
     allocate(dq_tp(nts_act))
     allocate(force_p(nts_act))
     allocate(force(nts_act))
     dq_tp=zero
     force_p=zero
-    call init_vv_propagator
+    call init_vv_propagator !< initializing Velocity-Verlet algorithm for the integration of EOM-PCM for Drude-Lorentz
    endif
 
    POP_SUB(init_charges)
   end subroutine
 
+  !------------------------------------------------------------------------------------------------------------------------------
+  !> Euler method for integrating first order EOM for the polarization charges within IEF-PCM
+  !> in the case of Debye dielectric functions.
+  subroutine pcm_ief_prop_deb(pot_t,q_t)
+   FLOAT, intent(in)  :: pot_t(:)
+   FLOAT, intent(out) :: q_t(:)
+
+   PUSH_SUB(pcm_ief_prop_deb)
+
+   !> Eq.(47) in S. Corni, S. Pipolo and R. Cammi, J.Phys.Chem.A 2015, 119, 5405-5416.
+   q_t(:) = q_tp(:) - dt*matmul(matqq,q_tp)   + &
+		      dt*matmul(matqv,pot_tp) + &
+			 matmul(matqd,pot_t-pot_tp)
+
+   POP_SUB(pcm_ief_prop_deb)
+  end subroutine pcm_ief_prop_deb
+
+  !------------------------------------------------------------------------------------------------------------------------------
+  !> Subroutine to initialize numerical constants required by the Velocity-Verlet (VV) algorithm.
   subroutine init_vv_propagator
    PUSH_SUB(init_vv_propagator)
 
+   !> See E. Vanden-Eijnden, G. Ciccotti, Chem.Phys.Lett. 429 (2006) 310-316.
+   !> Using the scheme in Eq.(21) and (17), ibid.
+   !> See subroutine pcm_ief_prop_vv_ief_drl
    f1=dt*(1.d0-dt*0.5d0*drl%gm)
    f2=dt*dt*0.5d0
    f3=1.d0-dt*drl%gm*(1.d0-dt*0.5*drl%gm)
@@ -175,25 +203,17 @@ module pcm_eom_oct_m
    POP_SUB(init_vv_propagator)
   end subroutine init_vv_propagator
 
-  subroutine pcm_ief_prop_deb(pot_t,q_t)
-   FLOAT, intent(in)  :: pot_t(:)
-   FLOAT, intent(out) :: q_t(:)
-
-   PUSH_SUB(pcm_ief_prop_deb)
-
-   q_t(:) = q_tp(:) - dt*matmul(matqq,q_tp)   + &
-		      dt*matmul(matqv,pot_tp) + &
-			 matmul(matqd,pot_t-pot_tp)
-
-   POP_SUB(pcm_ief_prop_deb)
-  end subroutine pcm_ief_prop_deb
-
+  !------------------------------------------------------------------------------------------------------------------------------
+  !> VV algorithm for integrating second order EOM for the polarization charges within IEF-PCM
+  !> in the case of Drude-Lorentz dielectric functions.
   subroutine pcm_ief_prop_vv_ief_drl(pot_t,q_t)
    FLOAT, intent(in)  :: pot_t(:)
    FLOAT, intent(out) :: q_t(:)
 
    PUSH_SUB(pcm_ief_prop_vv_ief_drl)
 
+   !> From Eq.(15) S. Pipolo and S. Corni, J.Phys.Chem.C 2016, 120, 28774-28781.
+   !> Using the scheme in Eq.(21) and (17) of E. Vanden-Eijnden, G. Ciccotti, Chem.Phys.Lett. 429 (2006) 310-316.
    q_t = q_tp + f1*dq_tp + f2*force_p
    force = -matmul(matqq,q_t) + matmul(matqv,pot_t)
    dq_tp = f3*dq_tp + f4*(force+force_p) -f5*force_p
@@ -203,6 +223,8 @@ module pcm_eom_oct_m
    POP_SUB(pcm_ief_prop_vv_ief_drl)
   end subroutine pcm_ief_prop_vv_ief_drl
 
+  !------------------------------------------------------------------------------------------------------------------------------
+  !> Boundary Element Method (BEM) EOM-IEF-PCM matrices initialization.
   subroutine init_BEM
    PUSH_SUB(init_BEM)
 
@@ -215,6 +237,12 @@ module pcm_eom_oct_m
    POP_SUB(init_BEM)
   end subroutine init_BEM
 
+  !------------------------------------------------------------------------------------------------------------------------------
+  !> Subroutine to build the required BEM matrices for the EOM-IEF-PCM for Debye and Drude-Lorentz cases.
+  !> Following from
+  !> Ref.1 - J.Phys.Chem.A 2015, 119, 5405-5416.    - Debye case
+  !> Ref.2 - J.Phys.Chem.C 2016, 120, 28-774-28781. - Drude-Lorentz case
+  !> The matrices are required for the EOMs, eq.(37) in Ref.1 and eq.(15) in Ref.2 
   subroutine do_PCM_propMat
    integer :: i,j
    FLOAT, allocatable :: scr4(:,:),scr1(:,:)
@@ -226,11 +254,13 @@ module pcm_eom_oct_m
 
    PUSH_SUB(do_PCM_propMat)
 
-   sgn=one
+   sgn=one ! In the case of NP this is -one because the normal to the cavity is always pointing outward 
+           ! and the field created by a positive unit charge outside the cavity is directed inward.
 
    allocate(cals(nts_act,nts_act),cald(nts_act,nts_act))
    allocate(Kdiag0(nts_act),Kdiagd(nts_act))
    allocate(fact1(nts_act),fact2(nts_act))
+   !> generate Calderon S and D matrices
    do i=1,nts_act
     do j=1,nts_act
      call green_s(i,j,temp)
@@ -245,22 +275,22 @@ module pcm_eom_oct_m
    allocate(scr4(nts_act,nts_act),scr1(nts_act,nts_act))
    allocate(scr2(nts_act,nts_act),scr3(nts_act,nts_act))
    if (which_eps .eq. "deb") then
-    fac_eps0=(eps_0+1)/(eps_0-1)
-    Kdiag0(:)=(twp-sgn*eigv(:))/(twp*fac_eps0-sgn*eigv(:))
+    fac_eps0=(deb%eps_0+1)/(deb%eps_0-1)			 
+    Kdiag0(:)=(twp-sgn*eigv(:))/(twp*fac_eps0-sgn*eigv(:)) !< Eq.(14) with eps_0 in Ref.1
     fac_epsd=(deb%eps_d+1)/(deb%eps_d-1)
-    Kdiagd(:)=(twp-sgn*eigv(:))/(twp*fac_epsd-sgn*eigv(:))
-    fact1(:)=((twp-sgn*eigv(:))*eps_0+twp+eigv(:))/ &
+    Kdiagd(:)=(twp-sgn*eigv(:))/(twp*fac_epsd-sgn*eigv(:)) !< Eq.(14) with eps_d, ibid.
+    fact1(:)=((twp-sgn*eigv(:))*deb%eps_0+twp+eigv(:))/ &  !< inverse of Eq.(32), ibid.
     ((twp-sgn*eigv(:))*deb%eps_d+twp+eigv(:))/deb%tau
-    fact2(:)=Kdiag0(:)*fact1(:)
+    fact2(:)=Kdiag0(:)*fact1(:)                            !< tau^{-1}K_0 in Eq.(38), ibid.
    elseif (which_eps .eq. "drl") then
-    Kdiagd(:)=0.d0
-    fact2(:)=(twp-sgn*eigv(:))*drl%aa/(two*twp)
+    Kdiagd(:)=0.d0                                         !< from Eq.(10) up in Ref.2
+    fact2(:)=(twp-sgn*eigv(:))*drl%aa/(two*twp)		   !< Eq.(10) down
     do i=1,nts_act
      if(fact2(i).lt.0.d0) fact2(i)=0d0
     enddo
     if (drl%w0.eq.0.d0) drl%w0=1.d-8
-    fact1(:)=fact2(:)+drl%w0*drl%w0
-    Kdiag0(:)=fact2(:)/fact1(:)
+    fact1(:)=fact2(:)+drl%w0*drl%w0                        !< Eq.(19), ibid.
+    Kdiag0(:)=fact2(:)/fact1(:)				   !< from Eq.(10) up, ibid.
    endif
    scr3=matmul(sm12,eigt)
    scr2=matmul(transpose(eigt),sp12)
@@ -268,19 +298,19 @@ module pcm_eom_oct_m
    do i=1,nts_act
     scr1(:,i)=scr3(:,i)*fact1(i)
    enddo
-   matqq=matmul(scr1,scr2)
+   matqq=matmul(scr1,scr2)				   !< Eq.(39) in Ref.1 and Eq.(16) in Ref.2
    do i=1,nts_act
     scr1(:,i)=scr3(:,i)*fact2(i)
    enddo
-   matqv=-matmul(scr1,scr4)
+   matqv=-matmul(scr1,scr4)				   !< Eq.(38) in Ref.1 and Eq.(17) in Ref.2
    do i=1,nts_act
     scr1(:,i)=scr3(:,i)*Kdiag0(i)
    enddo
-   matq0=-matmul(scr1,scr4)
+   matq0=-matmul(scr1,scr4)				   !< from Eq.(14) and (18) for eps_0 in Ref.1
    do i=1,nts_act
     scr1(:,i)=scr3(:,i)*Kdiagd(i)
    enddo
-   matqd=-matmul(scr1,scr4)
+   matqd=-matmul(scr1,scr4)			           !< from Eq.(14) and (18) for eps_d, ibid.
    deallocate(scr4,scr1)
    deallocate(scr2,scr3)
    deallocate(fact1,fact2)
@@ -290,6 +320,9 @@ module pcm_eom_oct_m
    POP_SUB(do_PCM_propMat)
   end subroutine do_PCM_propMat
 
+  !------------------------------------------------------------------------------------------------------------------------------
+  !> Subroutine to build BEM matrix corresponding to the Calderon operator D, using the Green function of an isotropic medium (!)
+  !> Only solvents can be treated with this. To be changed for surfaces, spherical nanoparticles, etc.
   subroutine green_d(i,j,value)
    integer, intent(in)  :: i,j
    FLOAT   , intent(out) :: value
@@ -300,15 +333,18 @@ module pcm_eom_oct_m
    if (i.ne.j) then
     diff=cts_act(i)%point-cts_act(j)%point
     dist=sqrt(dot_product(diff,diff))
-    value=dot_product(cts_act(j)%normal,diff)/dist**3
+    value=dot_product(cts_act(j)%normal,diff)/dist**3      !< Eq.(5) in Refs.1-2
    else
     value=-1.0694*sqrt(two*twp*cts_act(i)%area)
-    value=value/(2.d0*cts_act(i)%r_sphere)/cts_act(i)%area
+    value=value/(2.d0*cts_act(i)%r_sphere)/cts_act(i)%area !< diagonal part is a bit cumbersome
    endif
 
    POP_SUB(green_d)
   end subroutine green_d
 
+  !------------------------------------------------------------------------------------------------------------------------------
+  !> Subroutine to build BEM matrix corresponding to the Calderon operator S, using the Green function of an isotropic medium (!)
+  !> Only solvents can be treated with this. To be changed for surfaces, spherical nanoparticles, etc.    
   subroutine green_s(i,j,value)
    integer, intent(in):: i,j
    FLOAT, intent(out) :: value
@@ -319,14 +355,15 @@ module pcm_eom_oct_m
    if (i.ne.j) then
     diff=cts_act(i)%point-cts_act(j)%point
     dist=sqrt(dot_product(diff,diff))
-    value=one/dist
+    value=one/dist 					   !< Eq.(5) in Refs.1-2
    else
-    value=1.0694*sqrt(two*twp/cts_act(i)%area)
+    value=1.0694*sqrt(two*twp/cts_act(i)%area)		   !< diagonal part is a bit cumbersome
    endif
 
    POP_SUB(green_s)
   end subroutine green_s
 
+  !------------------------------------------------------------------------------------------------------------------------------
   subroutine allocate_TS_matrix
    PUSH_SUB(allocate_TS_matrix)
 
@@ -338,6 +375,7 @@ module pcm_eom_oct_m
    POP_SUB(allocate_TS_matrix)
   end subroutine allocate_TS_matrix
 
+  !------------------------------------------------------------------------------------------------------------------------------
   subroutine deallocate_TS_matrix
    PUSH_SUB(deallocate_TS_matrix)
 
@@ -349,6 +387,7 @@ module pcm_eom_oct_m
    POP_SUB(deallocate_TS_matrix)
   end subroutine deallocate_TS_matrix
 
+  !------------------------------------------------------------------------------------------------------------------------------
   subroutine do_TS_matrix
    integer :: i,j
    integer :: info,lwork,liwork
@@ -384,22 +423,22 @@ module pcm_eom_oct_m
     scr1(:,i)=eigt(:,i)*sqrt(eigv(i))
    enddo
    eigt_t=transpose(eigt)
-   sp12=matmul(scr1,eigt_t)
+   sp12=matmul(scr1,eigt_t) 		 !< building S^{1/2} to be used in R (Ref.1) and Q_{\omega} (Ref.2)
    do i=1,nts_act
     scr1(:,i)=eigt(:,i)/sqrt(eigv(i))
    enddo
-   sm12=matmul(scr1,eigt_t)
+   sm12=matmul(scr1,eigt_t) 		 !< building S^{-1/2} to be used in R and \tilde{Q} (Ref.1) and Q_{\omega} and Q_f (Ref.2)
    do i=1,nts_act
     scr1(:,i)=cald(:,i)*cts_act(i)%area
    enddo
-   scr2=matmul(matmul(sm12,scr1),sp12)
+   scr2=matmul(matmul(sm12,scr1),sp12)   !< Eq.(10) in Ref.1
    do j=1,nts_act
     do i=1,nts_act
-     eigt(i,j)=0.5*(scr2(i,j)+scr2(j,i))
+     eigt(i,j)=0.5*(scr2(i,j)+scr2(j,i)) !< re-symmetrizing for numerical reasons
     enddo
    enddo
    call dsyevd(jobz,uplo,nts_act,eigt,nts_act,eigv,work,lwork, &
-               iwork,liwork,info)
+               iwork,liwork,info)	 !< obtaining \Lambda (eigv) and T (eigt), Eq.(10), ibid.
 
    if (which_eps .eq. 'drl') then
     scr1=matmul(sm12,eigt)
