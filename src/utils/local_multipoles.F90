@@ -378,11 +378,10 @@ contains
 
       !Local Analysis performed over the real part of the total density.
       SAFE_ALLOCATE(rho(1:sys%gr%mesh%np))
-      if (sys%st%d%nspin > 1) then
-        do is = 1, sys%st%d%nspin
-          rho(:) = rho(:) + sys%st%rho(:, is)
-        end do
-      end if
+      rho(:) = M_ZERO
+      do is = 1, sys%st%d%nspin
+        rho(:) = rho(:) + sys%st%rho(1:sys%gr%mesh%np, is)
+      end do
 
       ! Look for the mesh points inside local domains
       if(iter == l_start .and. .not.ldrestart) then
@@ -1117,15 +1116,15 @@ contains
     end if
 
     if (present(filename_)) then
-      filename = trim(filename_)
+      file_ = trim(filename_)
     else
-      filename ='density'
+      file_ ='density'
     end if
 
     err2 = 0
     do isp = 1, st%d%nspin
       if(st%d%nspin>1) then
-        write(filename, fmt='(a,i1)') trim(filename)//'-sp', isp
+        write(filename, fmt='(a,i1)') trim(file_)//'-sp', isp
       end if
 !      if(mpi_grp_is_root(st%dom_st_kpt_mpi_grp)) then
 !        read(iunit_rho, '(i8,a,i8,a)') isp, ' | ', st%d%nspin, ' | "'//trim(adjustl(filename))//'"'

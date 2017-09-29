@@ -348,14 +348,18 @@ contains
 
           if(st%cmplxscl%space) then
             call zio_function_output(how, &
-               trim(folder), trim(out_name), gr%mesh, tmp_zrho(1:gr%mesh%np), units_out%length, ierr, geo = geo)
+               trim(folder), trim(out_name), gr%mesh, tmp_zrho(1:gr%mesh%np), &
+               units_out%length**(-gr%mesh%sb%dim), ierr, geo = geo)
             call dio_function_output(how, &
-              trim(folder), trim(out_name)//'.Re', gr%mesh, REAL(tmp_zrho(1:gr%mesh%np)), units_out%length, ierr, geo = geo)
+              trim(folder), trim(out_name)//'.Re', gr%mesh, REAL(tmp_zrho(1:gr%mesh%np)), &
+              units_out%length**(-gr%mesh%sb%dim), ierr, geo = geo)
             call dio_function_output(how, &
-              trim(folder), trim(out_name)//'.Im', gr%mesh, AIMAG(tmp_zrho(1:gr%mesh%np)), units_out%length, ierr, geo = geo)
+              trim(folder), trim(out_name)//'.Im', gr%mesh, AIMAG(tmp_zrho(1:gr%mesh%np)), &
+              units_out%length**(-gr%mesh%sb%dim), ierr, geo = geo)
           else
             call dio_function_output(how, &
-              trim(folder), trim(out_name), gr%mesh, tmp_rho(1:gr%mesh%np), units_out%length, ierr, geo = geo)
+              trim(folder), trim(out_name), gr%mesh, tmp_rho(1:gr%mesh%np), &
+              units_out%length**(-gr%mesh%sb%dim), ierr, geo = geo)
           end if
         end if
 
@@ -373,7 +377,7 @@ contains
             write(out_name, '(a,i7.7)')'vh.',iter
             if (st%d%nspin > 1) write(out_name, '(a,a3,i0)')trim(out_name),'-sp',is
             call dio_function_output(how, &
-              trim(folder), trim(out_name), gr%mesh, tmp_vh, units_out%length, ierr, geo = geo)
+              trim(folder), trim(out_name), gr%mesh, tmp_vh, units_out%energy, ierr, geo = geo)
           !Computes XC potential
             st%rho(:,is) = M_ZERO
             do ix = 1, gr%mesh%np
@@ -384,7 +388,7 @@ contains
             write(out_name, '(a,i7.7)')'vxc.',iter
             if (st%d%nspin > 1) write(out_name, '(a,a3,i0)')trim(out_name),'-sp',is
             call dio_function_output(how, &
-              trim(folder), trim(out_name), gr%mesh, hm%vxc(:,is), units_out%length, ierr, geo = geo)
+              trim(folder), trim(out_name), gr%mesh, hm%vxc(:,is), units_out%energy, ierr, geo = geo)
             st%rho(:,is) = st_rho(:)
           end if
         end if
@@ -398,13 +402,13 @@ contains
 !        folder = 'local.general/potential/'
 !        write(out_name, '(a,i0,a1,i7.7)')'global-vh.',is,'.',iter
 !        call dio_function_output(how, &
-!          trim(folder), trim(out_name), gr%mesh, hm%vhartree, units_out%length, ierr, geo = geo)
+!          trim(folder), trim(out_name), gr%mesh, hm%vhartree, units_out%energy, ierr, geo = geo)
 !      !Computes global XC potential
 !        call v_ks_calc(ks, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
 !        folder = 'local.general/potential/'
 !        write(out_name, '(a,i0,a1,i7.7)')'global-vxc.',is,'.',iter
 !        call dio_function_output(how, &
-!          trim(folder), trim(out_name), gr%mesh, hm%vxc(:,is), units_out%length, ierr, geo = geo)
+!          trim(folder), trim(out_name), gr%mesh, hm%vxc(:,is), units_out%energy, ierr, geo = geo)
 !      end do
 !    end if
 
