@@ -388,6 +388,7 @@ module pcm_eom_oct_m
   end subroutine deallocate_TS_matrix
 
   !------------------------------------------------------------------------------------------------------------------------------
+  !> Subroutine to build matrices S^{1/2}, S^{-1/2}, T and \Lambda (notation of Refs.1-2)
   subroutine do_TS_matrix
    integer :: i,j
    integer :: info,lwork,liwork
@@ -431,7 +432,7 @@ module pcm_eom_oct_m
    do i=1,nts_act
     scr1(:,i)=cald(:,i)*cts_act(i)%area
    enddo
-   scr2=matmul(matmul(sm12,scr1),sp12)   !< Eq.(10) in Ref.1
+   scr2=matmul(matmul(sm12,scr1),sp12)   !< Eq.(10) in Ref.1 (paragraph after Eq.(9), Ref.2)
    do j=1,nts_act
     do i=1,nts_act
      eigt(i,j)=0.5*(scr2(i,j)+scr2(j,i)) !< re-symmetrizing for numerical reasons
@@ -440,17 +441,6 @@ module pcm_eom_oct_m
    call dsyevd(jobz,uplo,nts_act,eigt,nts_act,eigv,work,lwork, &
                iwork,liwork,info)	 !< obtaining \Lambda (eigv) and T (eigt), Eq.(10), ibid.
 
-   if (which_eps .eq. 'drl') then
-    scr1=matmul(sm12,eigt)
-    scr2=transpose(scr1)
-    do i=1,nts_act
-     fact2=(twp-sgn*eigv(i))*drl%aa/(two*twp)
-     fact1=fact2+drl%w0*drl%w0
-     if (fact1.lt.0.d0) eigv(i)=-twp
-     scr1(:,i)=scr1(:,i)*fact2/fact1
-    enddo
-    eigt_t=-matmul(scr1,scr2)
-   endif
    if(allocated(cals).and.allocated(cald)) deallocate(cals,cald)
    deallocate(work)
    deallocate(scr1,scr2,eigt_t)
