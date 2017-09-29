@@ -1105,14 +1105,15 @@ contains
 !    call iopar_read(st%dom_st_kpt_mpi_grp, iunit_rho, line, err)
 !   we could read the iteration 'iter' too, not sure if that is useful.
 
-    if(st%cmplxscl%space) SAFE_ALLOCATE(zrho(1:gr%mesh%np_part))
-
     if(gr%have_fine_mesh) then
       if(st%cmplxscl%space) then
+        SAFE_ALLOCATE(zrho(1:gr%fine%mesh%np))
         SAFE_ALLOCATE(zrho_coarse(1:gr%mesh%np_part))
       else
         SAFE_ALLOCATE(rho_coarse(1:gr%mesh%np_part))
       end if
+    else
+      if(st%cmplxscl%space) SAFE_ALLOCATE(zrho(1:gr%mesh%np_part))
     end if
 
     if (present(filename_)) then
