@@ -269,10 +269,11 @@ contains
     !%Section Hamiltonian::PCM
     !%Description
     !% If .false. the solvent polarization follows instantaneously the changes in solute density.  
-    !% If .true. the solvent polarization is splitted in two terms: 
+    !% If .true. the solvent polarization charges either:
+    !% 1) evolves following an equation of motion (when PCMEoM is also true); or
+    !% 2) they are splitted in two terms: 
     !% one that follows instantaneously the changes in solute density (dynamical polarization charges),  
-    !% and another that lag behind in the evolution of the solute density (inertial polarization charges).    
-    !% Either case evolution is history independent.    
+    !% and another that lag behind in the evolution of the solute density (inertial polarization charges).        
     !%End
     call parse_variable('PCMNonequilibrium', .false., pcm%noneq)
     call messages_print_var_value(stdout, "PCMNonequilibrium", pcm%noneq)
