@@ -304,72 +304,119 @@ contains
 
     integer            :: id, is, ix, ierr
     character(len=120) :: folder, out_name
+
     FLOAT, allocatable :: tmp_rho(:),st_rho(:)
     FLOAT, allocatable :: tmp_vh(:)
 
+    COMPLEX(8), allocatable :: tmp_zrho(:),st_zrho(:)
+    COMPLEX(8), allocatable :: tmp_zvh(:)
+
     PUSH_SUB(local_write_density)
 
-    SAFE_ALLOCATE(tmp_rho(1:gr%mesh%np))
-    SAFE_ALLOCATE(st_rho(1:gr%mesh%np_part))
-    SAFE_ALLOCATE(tmp_vh(1:gr%mesh%np))
+    if(st%cmplxscl%space) then
+      SAFE_ALLOCATE(tmp_zrho(1:gr%mesh%np))
+      SAFE_ALLOCATE(st_zrho(1:gr%mesh%np_part))
+      SAFE_ALLOCATE(tmp_zvh(1:gr%mesh%np))
+    else
+      SAFE_ALLOCATE(tmp_rho(1:gr%mesh%np))
+      SAFE_ALLOCATE(st_rho(1:gr%mesh%np_part))
+      SAFE_ALLOCATE(tmp_vh(1:gr%mesh%np))
+    end if
 
     ! FIXME: use just v_ks_calc subroutine for either compute vhartree and vxc
     do id = 1, nd
       do is = 1, st%d%nspin
-        tmp_rho = M_ZERO
-        st_rho(:) = st%rho(:, is)
-        do ix = 1, gr%mesh%np 
-          if (inside(ix, id)) tmp_rho(ix) = st_rho(ix)
-        end do
+        ! Output mesh function. 
+        if(st%cmplxscl%space) then
+          tmp_zrho = M_ZERO
+          st_zrho(:) = st%zrho%Re(:,is) + M_zI * st%zrho%Im(:,is)
+          do ix = 1, gr%mesh%np 
+            if (inside(ix, id)) tmp_zrho(ix) = st_zrho(ix)
+          end do
+        else
+          tmp_rho = M_ZERO
+          st_rho(:) = st%rho(:, is)
+          do ix = 1, gr%mesh%np 
+            if (inside(ix, id)) tmp_rho(ix) = st_rho(ix)
+          end do
+        end if
+
         if (out_dens(id)%write) then
           folder = 'local.general/densities/'//trim(lab(id))//'.densities/'
-          write(out_name, '(a,a1,i0,a1,i7.7)')trim(lab(id)),'.',is,'.',iter
-          call dio_function_output(how, &
-            trim(folder), trim(out_name), gr%mesh, tmp_rho(1:gr%mesh%np), units_out%length, ierr, geo = geo)
+          write(out_name, '(a,a1,i7.7)')trim(lab(id)),'.',iter
+          if (st%d%nspin > 1) write(out_name, '(a,a3,i0)')trim(out_name),'-sp',is
+
+          if(st%cmplxscl%space) then
+            call zio_function_output(how, &
+               trim(folder), trim(out_name), gr%mesh, tmp_zrho(1:gr%mesh%np), units_out%length, ierr, geo = geo)
+            call dio_function_output(how, &
+              trim(folder), trim(out_name)//'.Re', gr%mesh, REAL(tmp_zrho(1:gr%mesh%np)), units_out%length, ierr, geo = geo)
+            call dio_function_output(how, &
+              trim(folder), trim(out_name)//'.Im', gr%mesh, AIMAG(tmp_zrho(1:gr%mesh%np)), units_out%length, ierr, geo = geo)
+          else
+            call dio_function_output(how, &
+              trim(folder), trim(out_name), gr%mesh, tmp_rho(1:gr%mesh%np), units_out%length, ierr, geo = geo)
+          end if
         end if
+
+        !FIXME: Generalize for complex mesh functions.
+        !Output Potential computed using the mesh function.
         if (out_pot(id)%write) then
-        !Computes Hartree potential just for n[r], r belongs to id domain.
-          tmp_vh = M_ZERO
-          call dpoisson_solve(psolver, tmp_vh, tmp_rho)
-          folder = 'local.general/potential/'//trim(lab(id))//'.potential/'
-          write(out_name, '(a,i0,a1,i7.7)')'vh.',is,'.',iter
-          call dio_function_output(how, &
-            trim(folder), trim(out_name), gr%mesh, tmp_vh, units_out%length, ierr, geo = geo)
-        !Computes XC potential
-          st%rho(:,is) = M_ZERO
-          do ix = 1, gr%mesh%np
-            if (inside(ix, id)) st%rho(ix, is) = st_rho(ix)
-          end do
-          call v_ks_calc(ks, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
-          folder = 'local.general/potential/'//trim(lab(id))//'.potential/'
-          write(out_name, '(a,i0,a1,i7.7)')'vxc.',is,'.',iter
-          call dio_function_output(how, &
-            trim(folder), trim(out_name), gr%mesh, hm%vxc(:,is), units_out%length, ierr, geo = geo)
-          st%rho(:,is) = st_rho(:)
+          if(st%cmplxscl%space) then
+            message(1) = 'Potentials in Local Multipoles are still not implemented for complex functions'
+            call messages_fatal(1)
+          else
+          !Computes Hartree potential just for n[r], r belongs to id domain.
+            tmp_vh = M_ZERO
+            call dpoisson_solve(psolver, tmp_vh, tmp_rho)
+            folder = 'local.general/potential/'//trim(lab(id))//'.potential/'
+            write(out_name, '(a,i7.7)')'vh.',iter
+            if (st%d%nspin > 1) write(out_name, '(a,a3,i0)')trim(out_name),'-sp',is
+            call dio_function_output(how, &
+              trim(folder), trim(out_name), gr%mesh, tmp_vh, units_out%length, ierr, geo = geo)
+          !Computes XC potential
+            st%rho(:,is) = M_ZERO
+            do ix = 1, gr%mesh%np
+              if (inside(ix, id)) st%rho(ix, is) = st_rho(ix)
+            end do
+            call v_ks_calc(ks, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
+            folder = 'local.general/potential/'//trim(lab(id))//'.potential/'
+            write(out_name, '(a,i7.7)')'vxc.',iter
+            if (st%d%nspin > 1) write(out_name, '(a,a3,i0)')trim(out_name),'-sp',is
+            call dio_function_output(how, &
+              trim(folder), trim(out_name), gr%mesh, hm%vxc(:,is), units_out%length, ierr, geo = geo)
+            st%rho(:,is) = st_rho(:)
+          end if
         end if
       end do
     end do
 
-    if (any(out_pot(:)%write)) then
-      do is = 1, st%d%nspin
-      !Computes Hartree potential
-        call dpoisson_solve(psolver, hm%vhartree, st%rho(1:gr%mesh%np, is))
-        folder = 'local.general/potential/'
-        write(out_name, '(a,i0,a1,i7.7)')'global-vh.',is,'.',iter
-        call dio_function_output(how, &
-          trim(folder), trim(out_name), gr%mesh, hm%vhartree, units_out%length, ierr, geo = geo)
-      !Computes global XC potential
-        call v_ks_calc(ks, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
-        folder = 'local.general/potential/'
-        write(out_name, '(a,i0,a1,i7.7)')'global-vxc.',is,'.',iter
-        call dio_function_output(how, &
-          trim(folder), trim(out_name), gr%mesh, hm%vxc(:,is), units_out%length, ierr, geo = geo)
-      end do
-    end if
+!    if (any(out_pot(:)%write)) then
+!      do is = 1, st%d%nspin
+!      !Computes Hartree potential
+!        call dpoisson_solve(psolver, hm%vhartree, st%rho(1:gr%mesh%np, is))
+!        folder = 'local.general/potential/'
+!        write(out_name, '(a,i0,a1,i7.7)')'global-vh.',is,'.',iter
+!        call dio_function_output(how, &
+!          trim(folder), trim(out_name), gr%mesh, hm%vhartree, units_out%length, ierr, geo = geo)
+!      !Computes global XC potential
+!        call v_ks_calc(ks, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
+!        folder = 'local.general/potential/'
+!        write(out_name, '(a,i0,a1,i7.7)')'global-vxc.',is,'.',iter
+!        call dio_function_output(how, &
+!          trim(folder), trim(out_name), gr%mesh, hm%vxc(:,is), units_out%length, ierr, geo = geo)
+!      end do
+!    end if
 
-    SAFE_DEALLOCATE_A(tmp_vh)
-    SAFE_DEALLOCATE_A(st_rho)
-    SAFE_DEALLOCATE_A(tmp_rho)
+    if(st%cmplxscl%space) then
+      SAFE_DEALLOCATE_A(tmp_zvh)
+      SAFE_DEALLOCATE_A(st_zrho)
+      SAFE_DEALLOCATE_A(tmp_zrho)
+    else
+      SAFE_DEALLOCATE_A(tmp_vh)
+      SAFE_DEALLOCATE_A(st_rho)
+      SAFE_DEALLOCATE_A(tmp_rho)
+    end if
     POP_SUB(local_write_density)
   end subroutine local_write_density
 
