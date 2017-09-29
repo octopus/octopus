@@ -1125,6 +1125,8 @@ contains
     do isp = 1, st%d%nspin
       if(st%d%nspin>1) then
         write(filename, fmt='(a,i1)') trim(file_)//'-sp', isp
+      else
+        filename = file_
       end if
 !      if(mpi_grp_is_root(st%dom_st_kpt_mpi_grp)) then
 !        read(iunit_rho, '(i8,a,i8,a)') isp, ' | ', st%d%nspin, ' | "'//trim(adjustl(filename))//'"'
