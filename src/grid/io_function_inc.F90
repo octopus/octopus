@@ -736,6 +736,9 @@ subroutine X(io_function_output_global) (how, dir, fname, mesh, ff, unit, ierr, 
   if(iand(how, OPTION__OUTPUTFORMAT__PLANE_X)    /= 0) call out_plane(1, 2, 3) ! x=0; y; z;
   if(iand(how, OPTION__OUTPUTFORMAT__PLANE_Y)    /= 0) call out_plane(2, 1, 3) ! y=0; x; z;
   if(iand(how, OPTION__OUTPUTFORMAT__PLANE_Z)    /= 0) call out_plane(3, 1, 2) ! z=0; x; y;
+  if(iand(how, OPTION__OUTPUTFORMAT__INTEGRATE_XY)    /= 0) call out_integrate_plane(1, 2, 3) ! \int dx dy; z;
+  if(iand(how, OPTION__OUTPUTFORMAT__INTEGRATE_XZ)    /= 0) call out_integrate_plane(1, 3, 2) ! \int dx dz; y;
+  if(iand(how, OPTION__OUTPUTFORMAT__INTEGRATE_YZ)    /= 0) call out_integrate_plane(2, 3, 1) ! \int dy dz; x;
   if(iand(how, OPTION__OUTPUTFORMAT__MESH_INDEX) /= 0) call out_mesh_index()
   if(iand(how, OPTION__OUTPUTFORMAT__DX)         /= 0) call out_dx()
   if(iand(how, OPTION__OUTPUTFORMAT__XCRYSDEN)   /= 0) then
@@ -881,6 +884,57 @@ contains
 
     POP_SUB(X(io_function_output_global).out_plane)
   end subroutine out_plane
+
+   ! ---------------------------------------------------------
+  subroutine out_integrate_plane(d1, d2, d3)
+    integer, intent(in) :: d1, d2, d3
+
+    integer :: ix, iy, iz, np
+    integer :: ixvect(MAX_DIM)
+    integer :: ixvect_test(MAX_DIM)
+    FLOAT   :: xx(1:MAX_DIM), zz
+    R_TYPE  :: fu
+
+    PUSH_SUB(X(io_function_output_global).out_integrate_plane)
+
+    filename = trim(dir)//'/'//trim(fname)//".int_d"//index2axis(d1)//"d"//index2axis(d2)
+    iunit = io_open(filename, action='write')
+
+    write(iunit, mfmtheader, iostat=ierr) '#', index2axis(d1), 'Re', 'Im'
+
+    do iz = mesh%idx%nr(1, d3), mesh%idx%nr(2, d3)
+ 
+      fu = R_TOTYPE(M_ZERO)
+      np = 0
+      ixvect(d3) = iz
+      do ix = mesh%idx%nr(1, d1), mesh%idx%nr(2, d1)
+        do iy = mesh%idx%nr(1, d2), mesh%idx%nr(2, d2)
+       
+          ixvect(d1) = ix
+          ixvect(d2) = iy
+          ip = index_from_coords(mesh%idx, ixvect)
+         
+          if(ip <= np_max .and. ip > 0) then
+            xx = units_from_atomic(units_out%length, mesh_x_global(mesh, ip))
+            if(mesh%use_curvilinear) then
+              fu = fu + units_from_atomic(unit, ff(ip))*mesh%vol_pp(ip)
+            else
+              fu = fu + units_from_atomic(unit, ff(ip))
+            end if
+            zz = xx(d3)
+            np = np + 1
+          end if
+        end do
+      end do
+     
+      if(.not.mesh%use_curvilinear) fu = fu*mesh%volume_element
+      if(np > 0 ) write(iunit, mformat, iostat=ierr) zz, fu
+    end do
+
+    call io_close(iunit)
+
+    POP_SUB(X(io_function_output_global).out_integrate_plane)
+  end subroutine out_integrate_plane
 
 
   ! ---------------------------------------------------------
