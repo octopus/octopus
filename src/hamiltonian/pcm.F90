@@ -116,9 +116,9 @@ module pcm_oct_m
                                                       !< the Hartree potential at the tesserae 
     FLOAT                            :: epsilon_0     !< Static dielectric constant of the solvent 
     FLOAT                            :: epsilon_infty !< Infinite-frequency dielectric constant of the solvent
-    character(len=3)                 :: which_eps     !< Dielectric function model, either Debye's or Drude-Lorentz
-    type(debye_param_t)		     :: deb 	      !< Debye's parameter
-    type(drude_param_t)		     :: drl 	      !< Drude-Lorentz's parameter
+    character(len=3)                 :: which_eps     !< Dielectric function model, either Debye or Drude-Lorentz
+    type(debye_param_t)		     :: deb 	      !< Debye parameters
+    type(drude_param_t)		     :: drl 	      !< Drude-Lorentz parameters
     logical                          :: eom           !< Logical flag for polarization charges propagation through an EoM
     FLOAT                            :: gaussian_width!< Parameter to change the width of density of polarization charges  
 !     integer                          :: n_vertices    !< Number of grid points used to interpolate the Hartree potential
@@ -283,14 +283,14 @@ contains
     !%Default no
     !%Section Hamiltonian::PCM
     !%Description
-    !% If .false. the propagation of the solvent polarization charges is history independent. 
-    !% If .true. the propagation of the solvent polarization charges follows an equation of motion. 
+    !% If .false. the propagation of the solvent polarization charges is history independent.
+    !% If .true. the propagation of the solvent polarization charges follows an equation of motion.
     !% For the moment, the choices of equation of motion ensue from either Debye (default) or Drude-Lorentz dielectric models.
-    !% You can change the default model by setting the variable PCMEpsilonModel to the other available value 'drl'.
+    !% You can change the default model by setting the variable PCM Epsilon Model to the other available value 'drl'.
     !%End
     call parse_variable('PCMEoM', .false., pcm%eom)
     call messages_print_var_value(stdout, "PCMEoM", pcm%eom)
-
+    
     !%Variable PCMStaticEpsilon
     !%Type float
     !%Default 1.0
@@ -318,8 +318,8 @@ contains
     !%Section Hamiltonian::PCM
     !%Description
     !% Define the dielectric function model. For the moment, the choice is between:
-    !% 1) Debye's model ('deb'): <math>\varepsilon(\omega)=\varepsilon_d+\frac{\varepsilon_0-\varepsilon_d}{1-i\omega\tau}</math>    
-    !% 2) Drude-Lorentz's ('drl') model: <math>\varepsilon(\omega)=1+\frac{A}{\omega_0^2-\omega^2+i\gamma\omega}</math>   
+    !% 1) Debye model ('deb'): <math>\varepsilon(\omega)=\varepsilon_d+\frac{\varepsilon_0-\varepsilon_d}{1-i\omega\tau}</math>
+    !% 2) Drude-Lorentz ('drl') model: <math>\varepsilon(\omega)=1+\frac{A}{\omega_0^2-\omega^2+i\gamma\omega}</math>
     !%End
     call parse_variable('PCMEpsilonModel', 'deb', pcm%which_eps)
     call messages_print_var_value(stdout, "PCMEpsilonModel", pcm%which_eps)
@@ -345,8 +345,8 @@ contains
     !%Default 0.0
     !%Section Hamiltonian::PCM
     !%Description
-    !% Relaxation time of the solvent within Debye's model (<math>\tau</math>).
-    !% Recall Debye's dieletric function: <math>\varepsilon(\omega)=\varepsilon_d+\frac{\varepsilon_0-\varepsilon_d}{1-i\omega\tau}</math>    
+    !% Relaxation time of the solvent within Debye model (<math>\tau</math>).
+    !% Recall Debye dieletric function: <math>\varepsilon(\omega)=\varepsilon_d+\frac{\varepsilon_0-\varepsilon_d}{1-i\omega\tau}</math>    
     !%End
     call parse_variable('PCMDebyeRelaxTime', M_ZERO, pcm%deb%tau)
     call messages_print_var_value(stdout, "PCMDebyeRelaxTime", pcm%deb%tau)
@@ -911,7 +911,7 @@ contains
          call pcm_charges(pcm%q_e, pcm%qtot_e, pcm%v_e, pcm%matrix, pcm%n_tesserae, &
                           pcm%q_e_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_e)
 	 !< (second step) calculating initial dynamic polarization charges 
-	 !< don't pay attention to the use of q_e_in and qtot_e_in, whose role here is only auxiliary
+	 !< dont pay attention to the use of q_e_in and qtot_e_in, whose role here is only auxiliary
          call pcm_charges(pcm%q_e_in, pcm%qtot_e_in, pcm%v_e, pcm%matrix_d, pcm%n_tesserae, &
                           pcm%q_e_nominal, pcm%epsilon_infty, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_e)
          !< (finally) the inertial polarization charges
