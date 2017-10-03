@@ -70,12 +70,9 @@ module pcm_eom_oct_m
   FLOAT, allocatable :: matq0(:,:),matqd(:,:)    !< Q^{IEF(d)}_0 (not used in ref.) and Q^{IEF(d)}_d from Eq.(18) with eps_0/eps_d
   FLOAT, allocatable :: matqv(:,:),matqq(:,:)    !< \tilde{Q} and R matrices from Eq.(38)-(39), respectively
                                                  !< Q^{IEF(d)}_d, \tilde{Q} and R matrices are those that enter the EOM eq.(37)
-  !> numerical literals
-  FLOAT, parameter :: zero=0.d0
-  FLOAT, parameter :: one=1.d0
-  FLOAT, parameter :: two=2.d0
-  FLOAT, parameter :: pi=3.141592653589793D+00
-  FLOAT, parameter :: twp=two*pi
+  !> mathematical constants
+  FLOAT, parameter :: twopi=M_TWO*M_Pi
+  FLOAT, parameter :: fourpi=M_FOUR*M_Pi
 
   contains
 
@@ -103,7 +100,10 @@ module pcm_eom_oct_m
    if(firsttime) then
     dt=this_dt
     nts_act=size(this_cts_act)
-    if (size(q_t) /= nts_act) stop
+    if (size(q_t) /= nts_act) then
+      message(1) = "pcm_charges_propagation: Number of tesserae do not coincide with size of PCM charges array."
+      call messages_fatal(1)     
+    endif 
     allocate(cts_act(nts_act))
     cts_act=this_cts_act
     which_eps=this_eps
@@ -128,7 +128,7 @@ module pcm_eom_oct_m
    endif
 
    if( which_eps .eq. "deb") then
-    if( deb%tau /= zero ) then
+    if( deb%tau /= M_ZERO ) then
      call pcm_ief_prop_deb(pot_t,q_t)
     else
      POP_SUB(pcm_charges_propagation)
@@ -140,8 +140,8 @@ module pcm_eom_oct_m
     message(1) = "pcm_charges_propagation: EOM-PCM error. Only Debye or Drude-Lorent dielectric models are allowed."
     call messages_fatal(1)
    endif
-   q_tp=q_t
-   pot_tp=pot_t
+   q_tp   = q_t
+   pot_tp = pot_t
 
    POP_SUB(pcm_charges_propagation)
   end subroutine pcm_charges_propagation
@@ -161,8 +161,8 @@ module pcm_eom_oct_m
     allocate(dq_tp(nts_act))
     allocate(force_p(nts_act))
     allocate(force(nts_act))
-    dq_tp=zero
-    force_p=zero
+    dq_tp=M_ZERO
+    force_p=M_ZERO
     call init_vv_propagator !< initializing Velocity-Verlet algorithm for the integration of EOM-PCM for Drude-Lorentz
    endif
 
@@ -254,8 +254,8 @@ module pcm_eom_oct_m
 
    PUSH_SUB(do_PCM_propMat)
 
-   sgn=one ! In the case of NP this is -one because the normal to the cavity is always pointing outward 
-           ! and the field created by a positive unit charge outside the cavity is directed inward.
+   sgn=M_ONE ! In the case of NP this is -one because the normal to the cavity is always pointing outward 
+             ! and the field created by a positive unit charge outside the cavity is directed inward.
 
    allocate(cals(nts_act,nts_act),cald(nts_act,nts_act))
    allocate(Kdiag0(nts_act),Kdiagd(nts_act))
@@ -275,22 +275,22 @@ module pcm_eom_oct_m
    allocate(scr4(nts_act,nts_act),scr1(nts_act,nts_act))
    allocate(scr2(nts_act,nts_act),scr3(nts_act,nts_act))
    if (which_eps .eq. "deb") then
-    fac_eps0=(deb%eps_0+1)/(deb%eps_0-1)			 
-    Kdiag0(:)=(twp-sgn*eigv(:))/(twp*fac_eps0-sgn*eigv(:)) !< Eq.(14) with eps_0 in Ref.1
-    fac_epsd=(deb%eps_d+1)/(deb%eps_d-1)
-    Kdiagd(:)=(twp-sgn*eigv(:))/(twp*fac_epsd-sgn*eigv(:)) !< Eq.(14) with eps_d, ibid.
-    fact1(:)=((twp-sgn*eigv(:))*deb%eps_0+twp+eigv(:))/ &  !< inverse of Eq.(32), ibid.
-    ((twp-sgn*eigv(:))*deb%eps_d+twp+eigv(:))/deb%tau
-    fact2(:)=Kdiag0(:)*fact1(:)                            !< tau^{-1}K_0 in Eq.(38), ibid.
+    fac_eps0=(deb%eps_0+M_ONE)/(deb%eps_0-M_ONE)			 
+    Kdiag0(:)=(twopi-sgn*eigv(:))/(twopi*fac_eps0-sgn*eigv(:)) !< Eq.(14) with eps_0 in Ref.1
+    fac_epsd=(deb%eps_d+M_ONE)/(deb%eps_d-M_ONE)
+    Kdiagd(:)=(twopi-sgn*eigv(:))/(twopi*fac_epsd-sgn*eigv(:)) !< Eq.(14) with eps_d, ibid.
+    fact1(:)=((twopi-sgn*eigv(:))*deb%eps_0+twopi+eigv(:))/ &  !< inverse of Eq.(32), ibid.
+    ((twopi-sgn*eigv(:))*deb%eps_d+twopi+eigv(:))/deb%tau
+    fact2(:)=Kdiag0(:)*fact1(:)				       !< tau^{-1}K_0 in Eq.(38), ibid.
    elseif (which_eps .eq. "drl") then
-    Kdiagd(:)=0.d0                                         !< from Eq.(10) up in Ref.2
-    fact2(:)=(twp-sgn*eigv(:))*drl%aa/(two*twp)		   !< Eq.(10) down
+    Kdiagd(:)=M_ZERO					       !< from Eq.(10) up in Ref.2
+    fact2(:)=(twopi-sgn*eigv(:))*drl%aa/fourpi		       !< Eq.(10) down
     do i=1,nts_act
-     if(fact2(i).lt.0.d0) fact2(i)=0d0
+     if(fact2(i).lt.M_ZERO) fact2(i)=M_ZERO
     enddo
-    if (drl%w0.eq.0.d0) drl%w0=1.d-8
-    fact1(:)=fact2(:)+drl%w0*drl%w0                        !< Eq.(19), ibid.
-    Kdiag0(:)=fact2(:)/fact1(:)				   !< from Eq.(10) up, ibid.
+    if (drl%w0.eq.M_ZERO) drl%w0=1.d-8
+    fact1(:)=fact2(:)+drl%w0*drl%w0			       !< Eq.(19), ibid.
+    Kdiag0(:)=fact2(:)/fact1(:)				       !< from Eq.(10) up, ibid.
    endif
    scr3=matmul(sm12,eigt)
    scr2=matmul(transpose(eigt),sp12)
@@ -298,19 +298,19 @@ module pcm_eom_oct_m
    do i=1,nts_act
     scr1(:,i)=scr3(:,i)*fact1(i)
    enddo
-   matqq=matmul(scr1,scr2)				   !< Eq.(39) in Ref.1 and Eq.(16) in Ref.2
+   matqq=matmul(scr1,scr2)				       !< Eq.(39) in Ref.1 and Eq.(16) in Ref.2
    do i=1,nts_act
     scr1(:,i)=scr3(:,i)*fact2(i)
    enddo
-   matqv=-matmul(scr1,scr4)				   !< Eq.(38) in Ref.1 and Eq.(17) in Ref.2
+   matqv=-matmul(scr1,scr4)				       !< Eq.(38) in Ref.1 and Eq.(17) in Ref.2
    do i=1,nts_act
     scr1(:,i)=scr3(:,i)*Kdiag0(i)
    enddo
-   matq0=-matmul(scr1,scr4)				   !< from Eq.(14) and (18) for eps_0 in Ref.1
+   matq0=-matmul(scr1,scr4)				       !< from Eq.(14) and (18) for eps_0 in Ref.1
    do i=1,nts_act
     scr1(:,i)=scr3(:,i)*Kdiagd(i)
    enddo
-   matqd=-matmul(scr1,scr4)			           !< from Eq.(14) and (18) for eps_d, ibid.
+   matqd=-matmul(scr1,scr4)				       !< from Eq.(14) and (18) for eps_d, ibid.
    deallocate(scr4,scr1)
    deallocate(scr2,scr3)
    deallocate(fact1,fact2)
@@ -333,10 +333,10 @@ module pcm_eom_oct_m
    if (i.ne.j) then
     diff=cts_act(i)%point-cts_act(j)%point
     dist=sqrt(dot_product(diff,diff))
-    value=dot_product(cts_act(j)%normal,diff)/dist**3      !< Eq.(5) in Refs.1-2
+    value=dot_product(cts_act(j)%normal,diff)/dist**3	    !< Eq.(5) in Refs.1-2
    else
-    value=-1.0694*sqrt(two*twp*cts_act(i)%area)
-    value=value/(2.d0*cts_act(i)%r_sphere)/cts_act(i)%area !< diagonal part is a bit cumbersome
+    value=-1.0694*sqrt(fourpi*cts_act(i)%area)
+    value=value/(M_TWO*cts_act(i)%r_sphere)/cts_act(i)%area !< diagonal part is a bit cumbersome
    endif
 
    POP_SUB(green_d)
@@ -355,9 +355,9 @@ module pcm_eom_oct_m
    if (i.ne.j) then
     diff=cts_act(i)%point-cts_act(j)%point
     dist=sqrt(dot_product(diff,diff))
-    value=one/dist 					   !< Eq.(5) in Refs.1-2
+    value=M_ONE/dist					    !< Eq.(5) in Refs.1-2
    else
-    value=1.0694*sqrt(two*twp/cts_act(i)%area)		   !< diagonal part is a bit cumbersome
+    value=1.0694*sqrt(fourpi/cts_act(i)%area)		    !< diagonal part is a bit cumbersome
    endif
 
    POP_SUB(green_s)
@@ -406,7 +406,7 @@ module pcm_eom_oct_m
    allocate(work(1+6*nts_act+2*nts_act*nts_act))
    allocate(iwork(3+5*nts_act))
 
-   sgn=one
+   sgn=M_ONE
 
    jobz = 'V'
    uplo = 'U'
@@ -416,7 +416,7 @@ module pcm_eom_oct_m
    call dsyevd(jobz,uplo,nts_act,eigt,nts_act,eigv,work,lwork, &
                iwork,liwork,info)
    do i=1,nts_act
-    if(eigv(i).lt.0.d0) then
+    if(eigv(i).lt.M_ZERO) then
      write(6,*) "WARNING:",i," eig of S is negative!"
      write(6,*) "   I put it to 1e-8"
      eigv(i)=1.d-8

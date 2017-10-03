@@ -1231,29 +1231,40 @@ contains
       end if
     end if
 
-    !GGIL: 02/10/2017 - local field effects within PCM
-    ! here the external potential is packed
-    SAFE_ALLOCATE(potx(1:ks%gr%mesh%np))
-    potx = M_ZERO
-    ! electrostatic potential (if they were)
-    potx(:) = potx(:) + hm%ep%v_static(:)
-    ! electrostatic potential from field (if they were)
-    ! dipole approximation is used
-    do ii = 1, ks%gr%mesh%sb%dim
-     ! The -1 sign is missing here. Check epot.F90 for the explanation.
-     potx(:) = potx(:) + hm%ep%E_field(ii)*ks%gr%mesh%x(:, ii)
-    end do
-    ! electrostatic potential from laser (if they were)
-    ! valid only in the long-wavelength limit          
-    do ii = 1, hm%ep%no_lasers        
-     call laser_potential(hm%ep%lasers(ii), ks%gr%mesh, potx, ks%calc%time)
-    end do
-
     !GGIL: 13/04/2017 - including time-dependent flag
     !> PCM reaction field due to the electronic density
     if (hm%pcm%run_pcm .and. pcm_update(hm%pcm,hm%current_time)) then
-    !> Generates the real-space PCM potential due to electrons during the SCF calculation.
-        call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_h = pot + potx, time_present = ks%calc%time_present)
+
+     !GGIL: 02/10/2017 - local field effects within PCM
+     ! here the external potential is packed
+     if( hm%pcm%localf ) then
+      SAFE_ALLOCATE(potx(1:ks%gr%mesh%np))
+      potx = M_ZERO
+      ! electrostatic potential (if they were)
+      if(associated(hm%ep%v_static)) then
+       potx(:) = potx(:) + hm%ep%v_static(:)
+      end if
+      ! electrostatic potential from field (if they were)
+      ! dipole approximation is used
+      if(associated(hm%ep%E_field)) then
+       do ii = 1, ks%gr%mesh%sb%dim
+        ! The -1 sign is missing here. Check epot.F90 for the explanation.
+        potx(:) = potx(:) + hm%ep%E_field(ii)*ks%gr%mesh%x(:, ii)
+       end do
+      end if
+      ! electrostatic potential from laser (if they were)
+      ! valid only in the long-wavelength limit
+      if( ks%calc%time_present .and. associated(hm%ep%lasers)) then          
+       do ii = 1, hm%ep%no_lasers        
+        call laser_potential(hm%ep%lasers(ii), ks%gr%mesh, potx, ks%calc%time)
+       end do
+      end if
+      call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_h = pot + potx, time_present = ks%calc%time_present)
+     else
+      !> Generates the real-space PCM potential due to electrons during the SCF calculation.
+      call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_h = pot, time_present = ks%calc%time_present)
+     end if
+
         
         ! Calculating the PCM term renormalizing the sum of the single-particle energies
         hm%energy%pcm_corr = dmf_dotp( ks%gr%fine%mesh, ks%calc%total_density, hm%pcm%v_e_rs + hm%pcm%v_n_rs )

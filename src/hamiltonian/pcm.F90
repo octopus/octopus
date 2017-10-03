@@ -120,6 +120,7 @@ module pcm_oct_m
     type(debye_param_t)		     :: deb 	      !< Debye parameters
     type(drude_param_t)		     :: drl 	      !< Drude-Lorentz parameters
     logical                          :: eom           !< Logical flag for polarization charges propagation through an EoM
+    logical                          :: localf        !< Logical flag to include polarization charges due to external field
     FLOAT                            :: gaussian_width!< Parameter to change the width of density of polarization charges  
 !     integer                          :: n_vertices    !< Number of grid points used to interpolate the Hartree potential
                                                       !! at the tesserae 
@@ -164,6 +165,9 @@ module pcm_oct_m
 
   FLOAT :: dt !< time-step of propagation
 
+  integer, parameter :: n_tess_sphere = 60 !< minimum number of tesserae per sphere
+					   !< cannot be changed without changing cav_gen subroutine
+
 contains
 
 
@@ -185,7 +189,7 @@ contains
     FLOAT              :: default_value
     FLOAT              :: vdw_radius
 
-    type(pcm_tessera_t) :: dum2(1)
+    type(pcm_tessera_t), allocatable :: dum2(:)
 
     logical :: band
     logical :: add_spheres_h
@@ -378,6 +382,18 @@ contains
 
     !< Parameter (<math>A</math>) interpolating Drude-Lorentz dielectric function to its static value (<math>\varepsilon_0</math>).
     pcm%drl%aa=(pcm%epsilon_0-M_ONE)*pcm%drl%w0**2
+
+    !%Variable PCMLocalField
+    !%Type logical
+    !%Default no
+    !%Section Hamiltonian::PCM
+    !%Description
+    !% This variable is a flag for including local field effects.
+    !% If .false. solvent polarization is only due to the solute.
+    !% If .true.  solvent polarization is due to both the solute and the external field applied.
+    !%End
+    call parse_variable('PCMLocalField', .false., pcm%localf)
+    call messages_print_var_value(stdout, "PCMLocalField", pcm%localf)
     
     !%Variable PCMUpdateIter
     !%Type integer
@@ -546,8 +562,10 @@ contains
       !%End
       call parse_variable('PCMTessSubdivider', 1, subdivider)
 
-      !> Counting the number of tesserae
-      call cav_gen(0, subdivider, pcm%n_spheres, pcm%spheres, pcm%n_tesserae, dum2, pcm%info_unit)
+      SAFE_ALLOCATE(dum2(1:subdivider*n_tess_sphere*pcm%n_spheres))
+
+      !> Counting the number of tesserae and generating the Van der Waals discretized surface of the solute system
+      call cav_gen(subdivider, pcm%n_spheres, pcm%spheres, pcm%n_tesserae, dum2, pcm%info_unit)
 
       SAFE_ALLOCATE(pcm%tess(1:pcm%n_tesserae))
 
@@ -558,8 +576,9 @@ contains
         pcm%tess(ia)%normal   = M_ZERO
       end do
 
-      !> Generating the Van der Waals discretized surface of the solute system
-      call cav_gen(1, subdivider, pcm%n_spheres, pcm%spheres, pcm%n_tesserae, pcm%tess, pcm%info_unit)
+      pcm%tess = dum2(1:pcm%n_tesserae)
+
+      SAFE_DEALLOCATE_A(dum2)
 
       message(1) = "Info: van der Waals surface has been calculated"
       call messages_info(1)
@@ -895,7 +914,7 @@ contains
       call pcm_v_electrons_cav_li(pcm%v_e, v_h, pcm, mesh)
       if( td_calc_mode .and. pcm%epsilon_infty /= pcm%epsilon_0 .and. pcm%noneq ) then
        !< BEGIN - equation-of-motion propagation or inertial/dynamical charge splitting
-       if( pcm%eom ) then	!< equation-of-motion propagation     
+       if( pcm%eom ) then	!< equation-of-motion propagation
         select case (pcm%which_eps)
          case('drl')
           call pcm_charges_propagation(pcm%q_e, pcm%v_e, dt, pcm%tess, 'drl', this_drl = pcm%drl)
@@ -1772,8 +1791,7 @@ contains
   !> It builds the solute cavity surface and calculates the vertices,
   !! representative points and areas of the tesserae by using the 
   !! Gauss-Bonnet theorem.
-  subroutine cav_gen(i_count, tess_sphere, nesf, sfe, nts, cts, unit_pcminfo)
-    integer,              intent(in)    :: i_count
+  subroutine cav_gen(tess_sphere, nesf, sfe, nts, cts, unit_pcminfo)
     integer,              intent(in)    :: tess_sphere
     type(pcm_sphere_t),   intent(inout) :: sfe(:) !< (1:pcm%n_spheres)
     integer,              intent(in)    :: nesf
@@ -1785,7 +1803,7 @@ contains
     integer, parameter :: dim_angles = 24
     integer, parameter :: dim_ten = 10
     integer, parameter :: dim_vertices = 122
-    integer, parameter :: n_tess_sphere = 60
+    !integer, parameter :: n_tess_sphere = 60 ! now a global variable of pcm module
     integer, parameter :: max_vertices = 6
     integer, parameter :: mxts = 10000
 
@@ -1902,7 +1920,7 @@ contains
       118, 112, 122, 29, 28, 118, 119, 113, 122, 30, 29, 119, 120,   &
       114, 122, 31, 30, 120, 121, 115, 122, 27, 31, 121, 117, 116 /
 
-    if (i_count == 0 .and.  mpi_grp_is_root(mpi_world)) then
+    if (mpi_grp_is_root(mpi_world)) then
       if (tess_sphere == 1) then
         write(unit_pcminfo,'(A1)')  '#' 
         write(unit_pcminfo,'(A34)') '# Number of tesserae / sphere = 60'
@@ -2043,21 +2061,17 @@ contains
           call messages_warning(1)     
         end if
 
-        if (i_count ==  1) then
           cts(nn)%point(1)  = xctst(its)
           cts(nn)%point(2)  = yctst(its)
           cts(nn)%point(3)  = zctst(its)
           cts(nn)%normal(:) = nctst(:,its)
           cts(nn)%area      = ast(its)
           cts(nn)%r_sphere  = sfe(isfet(its))%r
-        end if
 
       end do
     end do !> loop through the spheres
 
     nts = nn
-
-    if (i_count == 1) then
 
       !> checks if two tesseare are too close
       test = CNST(0.1)
@@ -2113,7 +2127,7 @@ contains
             do ii = ja+1, nts
               cts(ii-1) = cts(ii)
             end do
-            nts = nts -1 
+            nts = nts -1 ! updating number of tesserae
             band_iter = .false.
             exit loop_ia
 
@@ -2143,7 +2157,6 @@ contains
       cts(:)%point(2) = cts(:)%point(2)*P_Ang
       cts(:)%point(3) = cts(:)%point(3)*P_Ang
       cts(:)%r_sphere = cts(:)%r_sphere*P_Ang
-    end if
 
     sfe(:)%x=sfe(:)%x*P_Ang
     sfe(:)%y=sfe(:)%y*P_Ang
