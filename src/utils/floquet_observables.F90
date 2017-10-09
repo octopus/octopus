@@ -1215,15 +1215,13 @@ contains
                   if (idir == jdir) ampl = M_z2 * ampl
                   
                   ! sum over a and b         
-                  sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + ampl
+                  sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + ampl*dressed_st%d%kweights(ik)
 
 
                   
                 end do ! istb loop   
               end do ! ista loop   
 
-              ! sum over kpoints 
-              sigma(ie,idir,jdir) = sigma(ie,idir,jdir) * (1 + dressed_st%d%kweights(ik))
              
             end do ! ik loop
           
