@@ -730,6 +730,7 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der, st)
 
   call profiling_in(prof, "DFTU_COULOMB_INTEGRALS")
 
+  if(this%nspin > 1) call messages_not_implemented("Coulomb integrals with spinors")
 
   PUSH_SUB(X(compute_coulomb_integrals))
 
@@ -767,7 +768,7 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der, st)
 
         !$omp parallel do
         do ip=1,np_sphere
-          nn(ip)  = real(os%X(orb)(ip,ist))*real(os%X(orb)(ip,jst))
+          nn(ip)  = real(os%X(orb)(ip,1,ist))*real(os%X(orb)(ip,1,jst))
         end do
         !$omp end parallel do    
 
@@ -783,7 +784,7 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der, st)
 
             !$omp parallel do
             do ip=1,np_sphere
-             tmp(ip) = vv(ip)*real(os%X(orb)(ip,lst))*real(os%X(orb)(ip,kst))
+             tmp(ip) = vv(ip)*real(os%X(orb)(ip,1,lst))*real(os%X(orb)(ip,1,kst))
             end do
             !$omp end parallel do
 
@@ -894,7 +895,7 @@ end subroutine X(compute_coulomb_integrals)
             !$omp parallel do
             do is = 1, os%sphere%np
               epsi(os%sphere%map(is),1) = epsi(os%sphere%map(is),1) &
-                   + os%sphere%x(is,idir)*os%zorb(is,im)*os%phase(is,ik)
+                   + os%sphere%x(is,idir)*os%zorb(is,1,im)*os%phase(is,ik)
             end do
             !$omp end parallel do
             call lalg_axpy(mesh%np, reduced(1,im), epsi(1:mesh%np,1), &
@@ -902,7 +903,7 @@ end subroutine X(compute_coulomb_integrals)
           else
             !$omp parallel do
             do is = 1, os%sphere%np
-              epsi(is,1) = os%sphere%x(is,idir)*os%eorb_submesh(is,im,ik)
+              epsi(is,1) = os%sphere%x(is,idir)*os%eorb_submesh(is,1,im,ik)
             end do
             !$omp end parallel do
             call submesh_add_to_mesh(os%sphere, epsi(1:os%sphere%np,1), &
@@ -912,7 +913,7 @@ end subroutine X(compute_coulomb_integrals)
           else
             !$omp parallel do
             do is = 1, os%sphere%np
-              epsi(is,1) = os%sphere%x(is,idir)*os%X(orb)(is,im)
+              epsi(is,1) = os%sphere%x(is,idir)*os%X(orb)(is,1,im)
             end do
             !$omp end parallel do
             call submesh_add_to_mesh(os%sphere, epsi(1:os%sphere%np,1), &
@@ -945,14 +946,14 @@ end subroutine X(compute_coulomb_integrals)
          if(simul_box_is_periodic(mesh%sb)) then
            do im = 1, os%norbs
              do idim = 1, d%dim
-               dot(idim,im) = X(mf_dotp)(mesh, os%eorb_mesh(1:mesh%np,im,ik),&
+               dot(idim,im) = X(mf_dotp)(mesh, os%eorb_mesh(1:mesh%np,idim,im,ik),&
                                epsi(1:mesh%np,idim), reduce = .false.)
              end do
            end do
          else
            do im = 1, os%norbs
              do idim = 1, d%dim
-               dot(idim,im) = X(mf_dotp)(mesh, os%eorb_submesh(1:os%sphere%np,im,ik),&
+               dot(idim,im) = X(mf_dotp)(mesh, os%eorb_submesh(1:os%sphere%np,idim,im,ik),&
                                epsi(1:os%sphere%np,idim), reduce = .false., np = os%sphere%np)
              end do
            end do
@@ -961,7 +962,7 @@ end subroutine X(compute_coulomb_integrals)
        else
          do im = 1, os%norbs
            do idim = 1, d%dim
-             dot(idim,im) = X(mf_dotp)(mesh, os%X(orb)(1:os%sphere%np,im),&
+             dot(idim,im) = X(mf_dotp)(mesh, os%X(orb)(1:os%sphere%np,idim,im),&
                                epsi(1:os%sphere%np,idim), reduce = .false., np = os%sphere%np)
            end do
          end do
@@ -974,7 +975,7 @@ end subroutine X(compute_coulomb_integrals)
          end do
        end do
 
-       call X(orbital_set_add_to_psi)(os, d, gpsi(1:mesh%np,idir,1), ik, has_phase, reduced(1,1:os%norbs)) 
+       call X(orbital_set_add_to_psi)(os, d, gpsi(1:mesh%np,idir,1:d%dim), ik, has_phase, reduced(1,1:os%norbs)) 
        !  if(this%ACBN0_corrected) then
        !    reduced = reduced + this%Vloc1(im,ispin,ios)*dot(im)
        !    do imp = 1, os%norbs
@@ -1086,7 +1087,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
   type(mesh_t),              intent(in)       :: mesh
   type(states_t),            intent(in)       :: st 
 
-  integer :: ia, iorb, norb, offset, ios
+  integer :: ia, iorb, norb, offset, ios, idim
   integer ::  hubbardl, ii, nn, ll, mm, work, work2, iorbset
   FLOAT   :: norm
   FLOAT, allocatable :: minradii(:)
@@ -1224,13 +1225,18 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
   do iorbset = 1, this%norbsets
     os => this%orbsets(iorbset)
     do iorb = 1, os%norbs
+      norm = M_ZERO
+      do idim = 1, os%ndim
+        norm = sqrt(X(sm_nrm2)(os%sphere, os%X(orb)(1:os%sphere%np,idim,iorb)))
+      end do
       if(this%normalizeOrbitals) then
-        norm = X(sm_nrm2)(os%sphere, os%X(orb)(1:os%sphere%np,iorb))
-        os%X(orb)(1:os%sphere%np,iorb) =  &
-          os%X(orb)(1:os%sphere%np,iorb) /sqrt(norm)
+        do idim = 1, os%ndim
+          os%X(orb)(1:os%sphere%np,idim,iorb) =  &
+            os%X(orb)(1:os%sphere%np,idim,iorb)/norm
+        end do
       else
         write(message(1),'(a,i3,a,i3,a,f8.5)') 'Info: Orbset ', iorbset, ' Orbital ', iorb, &
-                           ' norm= ',  X(sm_nrm2)(os%sphere, os%X(orb)(1:os%sphere%np,iorb))
+                           ' norm= ',  norm
         call messages_info(1)
       end if
     end do
@@ -1248,11 +1254,11 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
     SAFE_ALLOCATE(os%phase(1:os%sphere%np, st%d%kpt%start:st%d%kpt%end))
     os%phase(:,:) = M_ZERO
     if(simul_box_is_periodic(mesh%sb)) then 
-      SAFE_ALLOCATE(os%eorb_mesh(1:mesh%np, 1:os%norbs, st%d%kpt%start:st%d%kpt%end))
-      os%eorb_mesh(:,:,:) = M_ZERO
+      SAFE_ALLOCATE(os%eorb_mesh(1:mesh%np, 1:os%ndim, 1:os%norbs, st%d%kpt%start:st%d%kpt%end))
+      os%eorb_mesh(:,:,:,:) = M_ZERO
     else
-      SAFE_ALLOCATE(os%eorb_submesh(1:os%sphere%np, 1:os%norbs, st%d%kpt%start:st%d%kpt%end))
-      os%eorb_submesh(:,:,:) = M_ZERO
+      SAFE_ALLOCATE(os%eorb_submesh(1:os%sphere%np, 1:os%ndim, 1:os%norbs, st%d%kpt%start:st%d%kpt%end))
+      os%eorb_submesh(:,:,:,:) = M_ZERO
     end if
   #endif
 
@@ -1307,6 +1313,9 @@ subroutine X(build_overlap_matrices)(this, ik, has_phase)
   type(orbital_set_t), pointer :: os, os2
 !  R_TYPE, allocatable :: orb1(:,:), orb2(:)
 
+  if(this%nspins > this%spin_channels .and. this%IncludeOverlap) &
+      call messages_not_implemented("Overlap matrices with spinors")
+
   PUSH_SUB(X(build_overlap_matrices))
 
   np = this%orbsets(1)%sphere%mesh%np
@@ -1333,17 +1342,17 @@ subroutine X(build_overlap_matrices)(this, ik, has_phase)
  #ifdef R_TCOMPLEX
               if(simul_box_is_periodic(os%sphere%mesh%sb)) then
                 os%X(S)(im,im2,ios2) = zmf_dotp(os%sphere%mesh, &
-                                          os2%eorb_mesh(1:os2%sphere%mesh%np,im2,ik), &
-                                          os%eorb_mesh(1:os%sphere%mesh%np,im,ik))
+                                          os2%eorb_mesh(1:os2%sphere%mesh%np,1,im2,ik), &
+                                          os%eorb_mesh(1:os%sphere%mesh%np,1,im,ik))
               else
                 os%X(S)(im,im2,ios2) = zsubmesh_to_submesh_dotp(os2%sphere, &
-                                         os2%eorb_submesh(1:os2%sphere%np,im2,ik), &
-                                         os%sphere, os%eorb_submesh(1:os%sphere%np,im,ik))
+                                         os2%eorb_submesh(1:os2%sphere%np,1,im2,ik), &
+                                         os%sphere, os%eorb_submesh(1:os%sphere%np,1,im,ik))
               end if
  #endif
             else
-              os%X(S)(im,im2,ios2) = X(submesh_to_submesh_dotp)(os2%sphere, os2%X(orb)(1:os2%sphere%np,im2), &
-                   os%sphere, os%X(orb)(1:os%sphere%np,im))
+              os%X(S)(im,im2,ios2) = X(submesh_to_submesh_dotp)(os2%sphere, os2%X(orb)(1:os2%sphere%np,1,im2), &
+                   os%sphere, os%X(orb)(1:os%sphere%np,1,im))
             end if
          !   if(ios == ios2 ) then
          !     print *, ios, ios2, im, im2, os%X(S)(im,im2,ios2)
@@ -1382,6 +1391,9 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, iorb, ispin, os, orbind,
   FLOAT, allocatable :: tmp(:)
   #endif
   logical :: complex_ylms
+
+  !This routine is not valid for non-collinear spin case
+  ASSERT(os%ndim == 1)
 
   PUSH_SUB(X(get_atomic_orbital))
 
@@ -1453,8 +1465,8 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, iorb, ispin, os, orbind,
   end if
 
   if(.not.associated(os%X(orb))) then
-    SAFE_ALLOCATE(os%X(orb)(1:sm%np,1:os%norbs))
-    os%X(orb)(:,:) = R_TOTYPE(M_ZERO)
+    SAFE_ALLOCATE(os%X(orb)(1:sm%np,1:os%ndim,1:os%norbs))
+    os%X(orb)(:,:,:) = R_TOTYPE(M_ZERO)
   end if
 
   !This is a bit dirty.
@@ -1467,12 +1479,12 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, iorb, ispin, os, orbind,
     SAFE_ALLOCATE(tmp(1:sm%np))
     call dspecies_get_orbital_submesh(spec, sm, ii, ll, mm, ispin_, geo%atom(iatom)%x, &
                                            tmp)
-    os%X(orb)(1:sm%np,orbind) = tmp(1:sm%np)
+    os%X(orb)(1:sm%np,1,orbind) = tmp(1:sm%np)
     SAFE_DEALLOCATE_A(tmp)
   else
   #endif
     call X(species_get_orbital_submesh)(spec, sm, ii, ll, mm, ispin_, geo%atom(iatom)%x,&
-                                         os%X(orb)(1:sm%np,orbind))
+                                         os%X(orb)(1:sm%np,1,orbind))
   #ifdef R_TCOMPLEX
   end if
   #endif

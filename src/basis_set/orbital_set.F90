@@ -58,6 +58,7 @@ module orbital_set_oct_m
   type orbital_set_t
     integer             :: nn, ll
     integer             :: norbs
+    integer             :: ndim
     integer             :: iatom 
     type(submesh_t)     :: sphere             !> The submesh of the orbital
     CMPLX, pointer      :: phase(:,:)         !> Correction to the global phase 
@@ -69,10 +70,10 @@ module orbital_set_oct_m
     FLOAT, pointer      :: dS(:,:,:)             !> Overlap matrix for each orbital with similar orbital on other atomic sites    
     CMPLX, pointer      :: zS(:,:,:)
 
-    FLOAT, pointer      :: dorb(:,:) !> The orbital, if real, on the submesh
-    CMPLX, pointer      :: zorb(:,:) !> The orbital, if complex, on the submesh
-    CMPLX, pointer      :: eorb_submesh(:,:,:) !> Orbitals with its phase factor, on the submesh (for isolated system with TD phase)
-    CMPLX, pointer      :: eorb_mesh(:,:,:) !> Orbitals with its phase factor, on the mesh (for periodic systems GS and TD)
+    FLOAT, pointer      :: dorb(:,:,:) !> The orbital, if real, on the submesh
+    CMPLX, pointer      :: zorb(:,:,:) !> The orbital, if complex, on the submesh
+    CMPLX, pointer      :: eorb_submesh(:,:,:,:) !> Orbitals with its phase factor, on the submesh (for isolated system with TD phase)
+    CMPLX, pointer      :: eorb_mesh(:,:,:,:) !> Orbitals with its phase factor, on the mesh (for periodic systems GS and TD)
 
     type(poisson_t)  :: poisson               !> For computing the Coulomb integrals
   end type orbital_set_t
@@ -133,7 +134,7 @@ contains
     FLOAT, optional,  allocatable, intent(in)    :: vec_pot(:) !< (sb%dim)
     FLOAT, optional,  allocatable, intent(in)    :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)
 
-    integer :: ns, iq, is, ikpoint, im
+    integer :: ns, iq, is, ikpoint, im, idim
     FLOAT   :: kr, kpoint(1:MAX_DIM)
     integer :: ndim
 
@@ -171,16 +172,20 @@ contains
       if(simul_box_is_periodic(sb)) then
         !We now compute the so-called Bloch sum of the localized orbitals
         do im = 1, os%norbs
-          os%eorb_mesh(:,im,iq) = M_Z0
-          do is = 1, ns
-            os%eorb_mesh(os%sphere%map(is),im,iq) = os%eorb_mesh(os%sphere%map(is),im,iq) &
-                                                      + os%zorb(is,im)*os%phase(is, iq)
+          os%eorb_mesh(:,:,im,iq) = M_Z0
+          do idim = 1, os%ndim
+            do is = 1, ns
+              os%eorb_mesh(os%sphere%map(is),im,idim,iq) = os%eorb_mesh(os%sphere%map(is),im,idim,iq) &
+                                                        + os%zorb(is,idim,im)*os%phase(is, iq)
+            end do
           end do
         end do
       else !In the case of the isolated system, we still use the mesh 
         do im = 1, os%norbs
-          do is = 1, ns
-            os%eorb_submesh(is,im,iq) = os%zorb(is,im)*os%phase(is, iq)
+          do idim = 1, os%ndim
+            do is = 1, ns
+              os%eorb_submesh(is,idim,im,iq) = os%zorb(is,idim,im)*os%phase(is, iq)
+            end do
           end do
         end do
       endif
