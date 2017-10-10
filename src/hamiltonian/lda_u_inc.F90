@@ -400,7 +400,7 @@ subroutine X(lda_u_ACBN0_correction)(this)
 
   PUSH_SUB(lda_u_ACBN0_correction)
 
-  if(this%nspins /= this%spin_channels) call messages_not_implemented("Hubbard forces with spinors")
+  if(this%nspins /= this%spin_channels) call messages_not_implemented("ACBN0 correction with spinors")
 
   this%Vloc1(1:this%maxnorbs,1:this%nspins,1:this%norbsets) = M_ZERO
   this%X(Vloc2)(1:this%maxnorbs,1:this%maxnorbs,1:this%nspins,1:this%norbsets) = R_TOTYPE(M_ZERO)
@@ -488,7 +488,7 @@ subroutine X(lda_u_ACBN0_correction)(this)
           do ispin2 = 1, this%nspins
             this%X(Vloc2)(im,imp,ispin1,ios) = this%X(Vloc2)(im,imp,ispin1,ios) &
                + weight*this%X(n_alt)(impp,imppp,ispin2,ios) &
-                 * (this%coulomb(im,imp,impp,imppp,ios) + this%coulomb(impp,imppp,im,imp,ios))
+                 * (this%coulomb(im,imp,impp,imppp,1,1,ios) + this%coulomb(impp,imppp,im,imp,1,1,ios))
           end do 
         end do !imppp
         end do !impp
@@ -504,7 +504,7 @@ subroutine X(lda_u_ACBN0_correction)(this)
        do imppp = 1, norbs
          this%X(Vloc2)(im,imp,ispin1,ios) = this%X(Vloc2)(im,imp,ispin1,ios) &
              + weight*this%X(n_alt)(impp,imppp,ispin1,ios) &
-               * (this%coulomb(im,imppp,impp,imp,ios) + this%coulomb(impp,imp,im,imppp,ios))
+               * (this%coulomb(im,imppp,impp,imp,1,1,ios) + this%coulomb(impp,imp,im,imppp,1,1,ios))
        end do !imppp
        end do !impp
      end do !imp
@@ -553,17 +553,21 @@ subroutine X(compute_ACBNO_U)(this)
           tmpJ = M_ZERO
           do ispin1 = 1, this%spin_channels
             do ispin2 = 1, this%spin_channels
-              tmpU = tmpU + real(this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin2,ios))
+              tmpU = tmpU + real(this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin2,ios))&
+                           * this%coulomb(im,imp,impp,imppp,ispin1,ispin2,ios)
             end do
-            tmpJ = tmpJ + real(this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin1,ios))
+            tmpJ = tmpJ + real(this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin1,ios))&
+                          * this%coulomb(im,imppp,impp,imp,ispin1,ispin1,ios)
           end do
           if(this%nspins>this%spin_channels) then !Spinors
             tmpJ = tmpJ + real(this%X(n_alt)(im,imp,3,ios)*this%X(n_alt)(impp,imppp,4,ios) &
-                              +this%X(n_alt)(im,imp,4,ios)*this%X(n_alt)(impp,imppp,3,ios))
+                               * this%coulomb(im,imppp,impp,imp,1,2,ios)                   &
+                              +this%X(n_alt)(im,imp,4,ios)*this%X(n_alt)(impp,imppp,3,ios) &
+                               * this%coulomb(im,imppp,impp,imp,2,1,ios))
           end if
           ! These are the numerator of the ACBN0 U and J
-          numU = numU + tmpU*this%coulomb(im,imp,impp,imppp,ios)
-          numJ = numJ + tmpJ*this%coulomb(im,imppp,impp,imp,ios) 
+          numU = numU + tmpU
+          numJ = numJ + tmpJ
         end do
         end do
 
@@ -616,7 +620,8 @@ subroutine X(compute_ACBNO_U)(this)
     do ispin1 = 1, this%spin_channels
       do ispin2 = 1, this%spin_channels
         if(ispin1 /= ispin2) then
-          numU = numU + real(this%X(n_alt)(1,1,ispin1,ios)*this%X(n_alt)(1,1,ispin2,ios))
+          numU = numU + real(this%X(n_alt)(1,1,ispin1,ios)*this%X(n_alt)(1,1,ispin2,ios)) &
+                          *this%coulomb(1,1,1,1,ispin1,ispin2,ios)
           denomU = denomU + real(this%X(n)(1,1,ispin1,ios)*this%X(n)(1,1,ispin2,ios))
         end if
       end do
@@ -628,16 +633,16 @@ subroutine X(compute_ACBNO_U)(this)
 
     ! We have to be careful in the case of hydrogen atom for instance 
     if(abs(denomU)> CNST(1.0e-3)) then
-      this%orbsets(ios)%Ubar = (numU/denomU)*this%coulomb(1,1,1,1,ios)
+      this%orbsets(ios)%Ubar = (numU/denomU)
     else
       if( abs(numU-denomU) < CNST(1.0e-3)) then
-        this%orbsets(ios)%Ubar = this%coulomb(1,1,1,1,ios)
+        this%orbsets(ios)%Ubar = sum(this%coulomb(1,1,1,1,1:this%spin_channels,1:this%spin_channels,ios))
       else
         this%orbsets(ios)%Ubar = (numU/denomU)
         write(message(1),'(a,a)')' Small denominator value for the s orbital ', this%orbsets(ios)%Ubar
-        write(message(2),'(a,a)')' to be multiplied by ', this%coulomb(1,1,1,1,ios)
+        write(message(2),'(a,a)')' to be multiplied by ',  sum(this%coulomb(1,1,1,1,1:this%spin_channels,1:this%spin_channels,ios))
         call messages_warning(2) 
-        this%orbsets(ios)%Ubar = this%orbsets(ios)%Ubar*this%coulomb(1,1,1,1,ios) 
+        this%orbsets(ios)%Ubar = this%orbsets(ios)%Ubar* sum(this%coulomb(1,1,1,1,1:this%spin_channels,1:this%spin_channels,ios))
       end if
     end if
     
@@ -675,9 +680,9 @@ subroutine X(compute_ACBNO_U_restricted)(this)
         do impp = 1, norbs
         do imppp = 1, norbs
           numU = numU + real(this%X(n_alt)(im,imp,1,ios)*this%X(n_alt)(impp,imppp,1,ios)) &
-                             *this%coulomb(im,imp,impp,imppp,ios)
+                             *this%coulomb(im,imp,impp,imppp,1,1,ios)
           numJ = numJ + real(this%X(n_alt)(im,imp,1,ios)*this%X(n_alt)(impp,imppp,1,ios)) &
-                             *this%coulomb(im,imppp,impp,imp,ios)
+                             *this%coulomb(im,imppp,impp,imp,1,1,ios)
         end do
         end do
         ! We compute the term
@@ -697,7 +702,7 @@ subroutine X(compute_ACBNO_U_restricted)(this)
  
     else !In the case of s orbitals, the expression is different
       ! P_{mmp}P_{mpp,mppp}(m,mp|mpp,mppp)  
-      numU = real(this%X(n_alt)(1,1,1,ios)*this%X(n_alt)(1,1,1,ios))*this%coulomb(1,1,1,1,ios)
+      numU = real(this%X(n_alt)(1,1,1,ios)*this%X(n_alt)(1,1,1,ios))*this%coulomb(1,1,1,1,1,1,ios)
 
       ! We compute the term
       ! sum_{alpha,beta} sum_{m,mp} N^alpha_{m}N^beta_{mp}
@@ -722,6 +727,7 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der, st)
   type(states_t),     intent(in)  :: st
 
   integer :: ist, jst, kst, lst, ijst, klst
+  integer :: is1, is2
   integer :: norbs, np_sphere, ios, ip
   integer :: idone, ntodo
   FLOAT, allocatable :: tmp(:), vv(:), nn(:)
@@ -729,8 +735,6 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der, st)
   type(profile_t), save :: prof
 
   call profiling_in(prof, "DFTU_COULOMB_INTEGRALS")
-
-  if(this%nspin > 1) call messages_not_implemented("Coulomb integrals with spinors")
 
   PUSH_SUB(X(compute_coulomb_integrals))
 
@@ -740,8 +744,8 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der, st)
   SAFE_ALLOCATE(vv(1:this%max_np))
   SAFE_ALLOCATE(tmp(1:this%max_np))
 
-  SAFE_ALLOCATE(this%coulomb(1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%norbsets))
-  this%coulomb(1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%norbsets) = M_ZERO
+  SAFE_ALLOCATE(this%coulomb(1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:st%d%dim, 1:st%d%dim, 1:this%norbsets))
+  this%coulomb(1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:st%d%dim,1:st%d%dim,1:this%norbsets) = M_ZERO
 
   !Lets counts the number of orbital to treat, to display a progress bar
   ntodo = 0
@@ -766,54 +770,66 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der, st)
         if(jst > ist) cycle
         ijst=ijst+1
 
-        !$omp parallel do
-        do ip=1,np_sphere
-          nn(ip)  = real(os%X(orb)(ip,1,ist))*real(os%X(orb)(ip,1,jst))
-        end do
-        !$omp end parallel do    
+        do is1 = 1, st%d%dim
 
-        !Here it is important to use a non-periodic poisson solver, e.g. the direct solver
-        call dpoisson_solve_sm(os%poisson, os%sphere, vv(1:np_sphere), nn(1:np_sphere))
+          !$omp parallel do
+          do ip=1,np_sphere
+            nn(ip)  = real(os%X(orb)(ip,is1,ist))*real(os%X(orb)(ip,is1,jst))
+          end do
+          !$omp end parallel do    
 
-        klst=0
-        do kst = 1, norbs
-          do lst = 1, norbs
-            if(lst > kst) cycle
-            klst=klst+1
-            if(klst > ijst) cycle
+          !Here it is important to use a non-periodic poisson solver, e.g. the direct solver
+          call dpoisson_solve_sm(os%poisson, os%sphere, vv(1:np_sphere), nn(1:np_sphere))
 
-            !$omp parallel do
-            do ip=1,np_sphere
-             tmp(ip) = vv(ip)*real(os%X(orb)(ip,1,lst))*real(os%X(orb)(ip,1,kst))
-            end do
-            !$omp end parallel do
+          klst=0
+          do kst = 1, norbs
+            do lst = 1, norbs
+              if(lst > kst) cycle
+              klst=klst+1
+              if(klst > ijst) cycle
 
-            this%coulomb(ist,jst,kst,lst,ios) = dsm_integrate(mesh, os%sphere, tmp(1:np_sphere))
+              do is2 = 1, st%d%dim
 
-            if(abs(this%coulomb(ist,jst,kst,lst,ios))<CNST(1.0e-12)) then
-              this%coulomb(ist,jst,kst,lst,ios) = M_ZERO
-            else
-              this%coulomb(kst,lst,ist,jst,ios) = this%coulomb(ist,jst,kst,lst,ios)              
-              this%coulomb(jst,ist,lst,kst,ios) = this%coulomb(ist,jst,kst,lst,ios)
-              this%coulomb(lst,kst,jst,ist,ios) = this%coulomb(ist,jst,kst,lst,ios)
-              this%coulomb(jst,ist,kst,lst,ios) = this%coulomb(ist,jst,kst,lst,ios)
-              this%coulomb(lst,kst,ist,jst,ios) = this%coulomb(ist,jst,kst,lst,ios)              
-              this%coulomb(ist,jst,lst,kst,ios) = this%coulomb(ist,jst,kst,lst,ios)
-              this%coulomb(kst,lst,jst,ist,ios) = this%coulomb(ist,jst,kst,lst,ios)              
-            end if
-         
-            !Update the progress bar
-            idone = idone + 1
-            if(mpi_world%rank == 0) call loct_progress_bar(idone, ntodo)
-          end do !lst
-        end do !kst
+                !$omp parallel do
+                do ip=1,np_sphere
+                 tmp(ip) = vv(ip)*real(os%X(orb)(ip,is2,lst))*real(os%X(orb)(ip,is2,kst))
+                end do
+                !$omp end parallel do
+
+                this%coulomb(ist,jst,kst,lst,is1,is2,ios) = dsm_integrate(mesh, os%sphere, tmp(1:np_sphere))
+
+                if(abs(this%coulomb(ist,jst,kst,lst,is1,is2,ios))<CNST(1.0e-12)) then
+                  this%coulomb(ist,jst,kst,lst,is1,is2,ios) = M_ZERO
+                else
+                  this%coulomb(kst,lst,ist,jst,is1,is2,ios) = this%coulomb(ist,jst,kst,lst,is1,is2,ios)
+                  this%coulomb(jst,ist,lst,kst,is1,is2,ios) = this%coulomb(ist,jst,kst,lst,is1,is2,ios)
+                  this%coulomb(lst,kst,jst,ist,is1,is2,ios) = this%coulomb(ist,jst,kst,lst,is1,is2,ios)
+                  this%coulomb(jst,ist,kst,lst,is1,is2,ios) = this%coulomb(ist,jst,kst,lst,is1,is2,ios)
+                  this%coulomb(lst,kst,ist,jst,is1,is2,ios) = this%coulomb(ist,jst,kst,lst,is1,is2,ios)
+                  this%coulomb(ist,jst,lst,kst,is1,is2,ios) = this%coulomb(ist,jst,kst,lst,is1,is2,ios)
+                  this%coulomb(kst,lst,jst,ist,is1,is2,ios) = this%coulomb(ist,jst,kst,lst,is1,is2,ios)
+                end if
+              
+              end do !is2
+              !Update the progress bar
+              idone = idone + 1
+              if(mpi_world%rank == 0) call loct_progress_bar(idone, ntodo)
+            end do !lst
+          end do !kst
+        end do !is1
       end do !jst
     end do !ist
     call poisson_end(os%poisson)
   end do !iorb
 
   if(this%orbs_dist%parallel) then
-    call comm_allreduce(this%orbs_dist%mpi_grp%comm, this%coulomb)
+    do ios = 1, this%norbsets
+      do is2 = 1, st%d%dim
+        do is1 = 1, st%d%dim
+          call comm_allreduce(this%orbs_dist%mpi_grp%comm, this%coulomb(:,:,:,:,is1,is2,ios))
+        end do
+      end do
+    end do
   end if
  
   SAFE_DEALLOCATE_A(nn)

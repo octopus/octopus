@@ -100,7 +100,7 @@ module lda_u_oct_m
     FLOAT, pointer           :: drenorm_occ(:,:,:,:,:,:) !> On-site occupations (for the ACBN0 functional)  
     CMPLX, pointer           :: zrenorm_occ(:,:,:,:,:,:)
  
-    FLOAT, pointer           :: coulomb(:,:,:,:,:) !>Coulomb integrals for all the system
+    FLOAT, pointer           :: coulomb(:,:,:,:,:,:,:) !>Coulomb integrals for all the system
                                                    !> (for the ACBN0 functional) 
  
     type(orbital_set_t), pointer :: orbsets(:)   !> All the orbital setss of the system
