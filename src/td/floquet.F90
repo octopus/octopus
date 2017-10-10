@@ -25,6 +25,7 @@ module floquet_oct_m
   use derivatives_oct_m
   use distributed_oct_m
   use eigensolver_oct_m
+  use energy_calc_oct_m
   use excited_states_oct_m
   use gauge_field_oct_m
   use geometry_oct_m
@@ -885,7 +886,12 @@ contains
          
          if (hm%F%calc_occupations .and. have_gs) then
            call floquet_calc_occupations(hm, sys, dressed_st)
+           call energy_calc_total(hm, gr, dressed_st, iunit = 0)
+           write(message(1),'(a,es15.8,4a)') 'Energy tot: ', units_from_atomic(units_out%energy, hm%energy%total) &
+                                                           , ' [',  trim(units_abbrev(units_out%energy)), ']'
+           call messages_info(1)
          end if 
+
          
          call smear_find_fermi_energy(dressed_st%smear, dressed_st%eigenval, dressed_st%occ, dressed_st%qtot, &
            dressed_st%d%nik, dressed_st%nst, dressed_st%d%kweights)
