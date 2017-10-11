@@ -100,9 +100,11 @@ module lda_u_oct_m
     FLOAT, pointer           :: drenorm_occ(:,:,:,:,:,:) !> On-site occupations (for the ACBN0 functional)  
     CMPLX, pointer           :: zrenorm_occ(:,:,:,:,:,:)
  
-    FLOAT, pointer           :: coulomb(:,:,:,:,:,:,:) !>Coulomb integrals for all the system
-                                                   !> (for the ACBN0 functional) 
- 
+    FLOAT, pointer           :: coulomb(:,:,:,:,:) !>Coulomb integrals for all the system
+                                                       !> (for the ACBN0 functional) 
+    CMPLX, pointer           :: zcoulomb(:,:,:,:,:,:,:) !>Coulomb integrals for all the system
+                                                        !> (for the ACBN0 functional with spinors) 
+
     type(orbital_set_t), pointer :: orbsets(:)   !> All the orbital setss of the system
 
     integer             :: norbsets           !> Number of orbital sets 
@@ -153,6 +155,7 @@ contains
   nullify(this%dV)
   nullify(this%zV)
   nullify(this%coulomb)
+  nullify(this%zcoulomb)
   nullify(this%drenorm_occ)
   nullify(this%zrenorm_occ)
   nullify(this%Vloc1)
@@ -326,11 +329,16 @@ contains
 
   if(this%useACBN0) then
     write(message(1),'(a)')    'Computing the Coulomb integrals localized orbital basis.'
-    call messages_info(1) 
-    if (states_are_real(st)) then
-      call dcompute_coulomb_integrals(this, gr%mesh, gr%der, st)
+    call messages_info(1)
+    if(st%d%dim == 1) then 
+      if (states_are_real(st)) then
+        call dcompute_coulomb_integrals(this, gr%mesh, gr%der, st)
+      else
+        call zcompute_coulomb_integrals(this, gr%mesh, gr%der, st)
+      end if
     else
-      call zcompute_coulomb_integrals(this, gr%mesh, gr%der, st)
+      ASSERT(.not.states_are_real(st))
+      call compute_complex_coulomb_integrals(this, gr%mesh, gr%der, st)
     end if
   end if
 
@@ -358,6 +366,7 @@ contains
    SAFE_DEALLOCATE_P(this%dV)
    SAFE_DEALLOCATE_P(this%zV) 
    SAFE_DEALLOCATE_P(this%coulomb)
+   SAFE_DEALLOCATE_P(this%zcoulomb)
    SAFE_DEALLOCATE_P(this%drenorm_occ)
    SAFE_DEALLOCATE_P(this%zrenorm_occ)
    SAFE_DEALLOCATE_P(this%Vloc1)
@@ -578,6 +587,131 @@ contains
 
     POP_SUB(find_minimal_atomic_spheres) 
   end subroutine find_minimal_atomic_spheres
+
+! ---------------------------------------------------------
+! TODO: Merge this with the two_body routine in system/output_me_inc.F90
+subroutine compute_complex_coulomb_integrals (this, mesh, der, st)
+  type(lda_u_t),   intent(inout)  :: this
+  type(mesh_t),       intent(in)  :: mesh
+  type(derivatives_t), intent(in) :: der
+  type(states_t),     intent(in)  :: st
+
+  integer :: ist, jst, kst, lst, ijst, klst
+  integer :: is1, is2
+  integer :: norbs, np_sphere, ios, ip
+  integer :: idone, ntodo
+  CMPLX, allocatable :: tmp(:), vv(:,:), nn(:,:)
+  type(orbital_set_t), pointer :: os
+  type(profile_t), save :: prof
+
+  call profiling_in(prof, "DFTU_COMPEX_COULOMB_INTEGRALS")
+
+  PUSH_SUB(compute_complex_coulomb_integrals_complex)
+
+  ASSERT(.not. st%parallel_in_states)
+
+  SAFE_ALLOCATE(nn(1:this%max_np,st%d%dim))
+  SAFE_ALLOCATE(vv(1:this%max_np,st%d%dim))
+  SAFE_ALLOCATE(tmp(1:this%max_np))
+
+  SAFE_ALLOCATE(this%zcoulomb(1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:st%d%dim, 1:st%d%dim, 1:this%norbsets))
+  this%zcoulomb(1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:st%d%dim,1:st%d%dim,1:this%norbsets) = M_ZERO
+
+  !Lets counts the number of orbital to treat, to display a progress bar
+  ntodo = 0
+  do ios = this%orbs_dist%start, this%orbs_dist%end
+    norbs = this%orbsets(ios)%norbs
+    ntodo= ntodo + ((norbs+1)*norbs/2)*((norbs+1)*norbs/2+1)/2
+  end do
+  idone = 0
+  if(mpi_world%rank == 0) call loct_progress_bar(-1, ntodo)
+
+
+  do ios = this%orbs_dist%start, this%orbs_dist%end
+    os => this%orbsets(ios)
+    norbs = os%norbs
+    np_sphere = os%sphere%np
+
+    call poisson_init_sm(os%poisson, psolver, der, os%sphere)
+
+    ijst=0
+    do ist = 1, norbs
+
+      do jst = 1, norbs
+       ! if(jst > ist) cycle
+        ijst=ijst+1
+
+        do is1 = 1, st%d%dim
+          !$omp parallel do
+          do ip=1,np_sphere
+            nn(ip,is1)  = os%zorb(ip,is1,ist)*os%zorb(ip,is1,jst)
+          end do
+          !$omp end parallel do    
+
+          !Here it is important to use a non-periodic poisson solver, e.g. the direct solver
+          call zpoisson_solve_sm(os%poisson, os%sphere, vv(1:np_sphere,is1), nn(1:np_sphere,is1))
+        end do !is1  
+
+        klst=0
+        do kst = 1, norbs
+          do lst = 1, norbs
+       !     if(lst > kst) cycle
+            klst=klst+1
+       !     if(klst > ijst) cycle
+
+            do is1 = 1, st%d%dim
+              do is2 = 1, st%d%dim
+
+                !$omp parallel do
+                do ip=1,np_sphere
+                 tmp(ip) = vv(ip,is1)*os%zorb(ip,is2,lst)*os%zorb(ip,is2,kst)
+                end do
+                !$omp end parallel do
+
+                this%zcoulomb(ist,jst,kst,lst,is1,is2,ios) = zsm_integrate(mesh, os%sphere, tmp(1:np_sphere))
+              end do !is2
+            end do !is1
+
+              do is1 = 1, st%d%dim
+              do is2 = 1, st%d%dim
+                if(abs(this%zcoulomb(ist,jst,kst,lst,is1,is2,ios))<CNST(1.0e-12)) then
+                  this%zcoulomb(ist,jst,kst,lst,is1,is2,ios) = M_ZERO
+           !     else
+           !       this%zcoulomb(kst,lst,ist,jst,is2,is1,ios) = this%zcoulomb(ist,jst,kst,lst,is1,is2,ios)
+           !       this%zcoulomb(jst,ist,lst,kst,is2,is1,ios) = conjg(this%zcoulomb(ist,jst,kst,lst,is1,is2,ios))
+           !       this%zcoulomb(lst,kst,jst,ist,is2,is1,ios) = conjg(this%zcoulomb(ist,jst,kst,lst,is1,is2,ios))
+                end if
+
+              end do !is2
+
+              idone = idone + 1
+              if(mpi_world%rank == 0) call loct_progress_bar(idone, ntodo)
+            end do !lst
+          end do !kst
+        end do !is1
+      end do !jst
+    end do !ist
+    call poisson_end(os%poisson)
+  end do !iorb
+
+  if(this%orbs_dist%parallel) then
+    do ios = 1, this%norbsets
+      do is2 = 1, st%d%dim
+        do is1 = 1, st%d%dim
+          call comm_allreduce(this%orbs_dist%mpi_grp%comm, this%zcoulomb(:,:,:,:,is1,is2,ios))
+        end do
+      end do
+    end do
+  end if
+
+  SAFE_DEALLOCATE_A(nn)
+  SAFE_DEALLOCATE_A(vv)
+  SAFE_DEALLOCATE_A(tmp)
+
+  POP_SUB(compute_complex_coulomb_integrals)
+  call profiling_out(prof)
+end subroutine compute_complex_coulomb_integrals
+
 
 #include "undef.F90"
 #include "real.F90"

@@ -56,7 +56,8 @@ module orbital_set_oct_m
        zorbital_set_add_to_psi
 
   type orbital_set_t
-    integer             :: nn, ll
+    integer             :: nn, ll, ii
+    FLOAT               :: jj
     integer             :: norbs
     integer             :: ndim
     integer             :: iatom 
@@ -65,6 +66,7 @@ module orbital_set_oct_m
                                               !> if the sphere cross the border of the box
     FLOAT               :: Ueff               !> The effective U of the simplified rotational invariant form
     FLOAT               :: Ubar, Jbar
+    FLOAT               :: radius
     type(species_t), pointer :: spec          
 
     FLOAT, pointer      :: dS(:,:,:)             !> Overlap matrix for each orbital with similar orbital on other atomic sites    
@@ -175,12 +177,12 @@ contains
           os%eorb_mesh(:,:,im,iq) = M_Z0
           do idim = 1, os%ndim
             do is = 1, ns
-              os%eorb_mesh(os%sphere%map(is),im,idim,iq) = os%eorb_mesh(os%sphere%map(is),im,idim,iq) &
+              os%eorb_mesh(os%sphere%map(is),idim,im,iq) = os%eorb_mesh(os%sphere%map(is),idim,im,iq) &
                                                         + os%zorb(is,idim,im)*os%phase(is, iq)
             end do
           end do
         end do
-      else !In the case of the isolated system, we still use the mesh 
+      else !In the case of the isolated system, we still use the submesh 
         do im = 1, os%norbs
           do idim = 1, os%ndim
             do is = 1, ns

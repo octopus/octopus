@@ -68,6 +68,7 @@ module species_oct_m
     species_jthick,                &
     species_hubbard_l,             &
     species_hubbard_u,             &
+    species_hubbard_j,             &
     species_sigma,                 &
     species_omega,                 &
     species_mass,                  &
@@ -152,6 +153,7 @@ module species_oct_m
  
     integer :: hubbard_l          !< For the LDA+U, the angular momentum for the applied U
     FLOAT   :: hubbard_U          !< For the LDA+U, the effective U
+    FLOAT   :: hubbard_j          !< For the LDA+U, j (l-1/2 or l+1/2)
   end type species_t
 
   interface species_end
@@ -199,6 +201,7 @@ contains
     this%lloc=0
     this%hubbard_l=-1
     this%hubbard_U=M_ZERO
+    this%hubbard_j=M_ZERO
 
     POP_SUB(species_nullify)
   end subroutine species_nullify
@@ -468,6 +471,8 @@ contains
     !% The angular-momentum for which the effective U will be applied.
     !%Option hubbard_u -10018
     !% The effective U that will be used for the LDA+U calculations.
+    !%Option hubbard_j -10019
+    !% The value of j (hubbard_l-1/2 or hubbard_l+1/2) on which the effective U is applied.
     !%End
 
     call messages_obsolete_variable('SpecieAllElectronSigma', 'Species')
@@ -1073,6 +1078,13 @@ contains
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
+  FLOAT pure function species_hubbard_j(spec)
+    type(species_t), intent(in) :: spec
+    species_hubbard_j = spec%hubbard_j
+  end function species_hubbard_j
+  ! ---------------------------------------------------------
+
+  ! ---------------------------------------------------------
   pure subroutine species_iwf_ilm(spec, j, is, i, l, m)
     type(species_t), intent(in) :: spec
     integer, intent(in)         :: j, is
@@ -1343,6 +1355,7 @@ contains
     this%lloc=that%lloc
     this%hubbard_l=that%hubbard_l
     this%hubbard_U=that%hubbard_U
+    this%hubbard_j=that%hubbard_j
 
     POP_SUB(species_copy)
   end subroutine species_copy
@@ -1439,8 +1452,9 @@ contains
     write(iunit, '(a,f15.2)') 'def_h = ', spec%def_h
     if (spec%type /= SPECIES_USDEF ) write(iunit, '(a,i3)')    'lmax  = ', spec%lmax
     if (spec%type /= SPECIES_USDEF ) write(iunit, '(a,i3)')    'lloc  = ', spec%lloc
-    write(iunit, '(a,i3)')    'hubbard_l  = ', spec%hubbard_l
+    write(iunit, '(a,i3)')    'hubbard_l = ', spec%hubbard_l
     write(iunit, '(a,f15.2)') 'hubbard_U = ', spec%hubbard_U
+    write(iunit, '(a,f15.2)') 'hubbard_j = ', spec%hubbard_j
 
     if(species_is_ps(spec)) then
        if(debug%info) call ps_debug(spec%ps, trim(dirname))
@@ -1622,6 +1636,15 @@ contains
      case(OPTION__SPECIES__HUBBARD_U)
         call check_duplication(OPTION__SPECIES__HUBBARD_U)
         call parse_block_float(blk, row, icol + 1, spec%hubbard_u, unit = units_inp%energy)
+
+     case(OPTION__SPECIES__HUBBARD_J)
+        call check_duplication(OPTION__SPECIES__HUBBARD_J)
+        call parse_block_float(blk, row, icol + 1, spec%hubbard_j)
+
+        if(abs(spec%hubbard_j-spec%hubbard_l) /= M_HALF) then
+          call messages_input_error('Species', "The 'hubbard_j' parameter in species "//trim(spec%label)//" can only be hubbard_l +/- 1/2")
+        end if
+
 
       case(OPTION__SPECIES__MASS)
         call check_duplication(OPTION__SPECIES__MASS)

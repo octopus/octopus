@@ -301,7 +301,11 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
 
   if(this%useACBN0 .and. .not.this%freeze_u) then
     if(this%nspins > 1 ) then
-      call X(compute_ACBNO_U)(this)
+      if(this%nspins == this%spin_channels) then
+        call X(compute_ACBNO_U)(this)
+      else
+        call X(compute_ACBNO_U_spinors)(this)
+      end if
     else
       call X(compute_ACBNO_U_restricted)(this)
     end if
@@ -488,7 +492,7 @@ subroutine X(lda_u_ACBN0_correction)(this)
           do ispin2 = 1, this%nspins
             this%X(Vloc2)(im,imp,ispin1,ios) = this%X(Vloc2)(im,imp,ispin1,ios) &
                + weight*this%X(n_alt)(impp,imppp,ispin2,ios) &
-                 * (this%coulomb(im,imp,impp,imppp,1,1,ios) + this%coulomb(impp,imppp,im,imp,1,1,ios))
+                 * (this%coulomb(im,imp,impp,imppp,ios) + this%coulomb(impp,imppp,im,imp,ios))
           end do 
         end do !imppp
         end do !impp
@@ -504,7 +508,7 @@ subroutine X(lda_u_ACBN0_correction)(this)
        do imppp = 1, norbs
          this%X(Vloc2)(im,imp,ispin1,ios) = this%X(Vloc2)(im,imp,ispin1,ios) &
              + weight*this%X(n_alt)(impp,imppp,ispin1,ios) &
-               * (this%coulomb(im,imppp,impp,imp,1,1,ios) + this%coulomb(impp,imp,im,imppp,1,1,ios))
+               * (this%coulomb(im,imppp,impp,imp,ios) + this%coulomb(impp,imp,im,imppp,ios))
        end do !imppp
        end do !impp
      end do !imp
@@ -531,6 +535,8 @@ subroutine X(compute_ACBNO_U)(this)
   integer :: ios, im, imp, impp, imppp, ispin1, ispin2, norbs
   FLOAT   :: numU, numJ, denomU, denomJ, tmpU, tmpJ
 
+  ASSERT(this%nspins == this%spin_channels)
+
   PUSH_SUB(compute_ACBNO_U)
 
   do ios = 1, this%norbsets
@@ -551,23 +557,16 @@ subroutine X(compute_ACBNO_U)(this)
           ! sum_{alpha} P^alpha_{mmp}P^alpha_{mpp,mppp}
           tmpU = M_ZERO
           tmpJ = M_ZERO
+    
           do ispin1 = 1, this%spin_channels
             do ispin2 = 1, this%spin_channels
-              tmpU = tmpU + real(this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin2,ios))&
-                           * this%coulomb(im,imp,impp,imppp,ispin1,ispin2,ios)
+              tmpU = tmpU + real(this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin2,ios))
             end do
-            tmpJ = tmpJ + real(this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin1,ios))&
-                          * this%coulomb(im,imppp,impp,imp,ispin1,ispin1,ios)
+            tmpJ = tmpJ + real(this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin1,ios))
           end do
-          if(this%nspins>this%spin_channels) then !Spinors
-            tmpJ = tmpJ + real(this%X(n_alt)(im,imp,3,ios)*this%X(n_alt)(impp,imppp,4,ios) &
-                               * this%coulomb(im,imppp,impp,imp,1,2,ios)                   &
-                              +this%X(n_alt)(im,imp,4,ios)*this%X(n_alt)(impp,imppp,3,ios) &
-                               * this%coulomb(im,imppp,impp,imp,2,1,ios))
-          end if
           ! These are the numerator of the ACBN0 U and J
-          numU = numU + tmpU
-          numJ = numJ + tmpJ
+          numU = numU + tmpU*this%coulomb(im,imp,impp,imppp,ios)
+          numJ = numJ + tmpJ*this%coulomb(im,imppp,impp,imp,ios)
         end do
         end do
 
@@ -597,13 +596,6 @@ subroutine X(compute_ACBNO_U)(this)
           end do
         end do
 
-        if(this%nspins>this%spin_channels) then !Spinors
-          if(im == imp) then
-            tmpU = tmpU + real(this%X(n)(im,im,3,ios)*this%X(n)(im,im,4,ios) &
-                              +this%X(n)(im,im,4,ios)*this%X(n)(im,im,3,ios))
-          end if
-        end if        
-
         denomU = denomU + tmpU
  
       end do
@@ -620,29 +612,24 @@ subroutine X(compute_ACBNO_U)(this)
     do ispin1 = 1, this%spin_channels
       do ispin2 = 1, this%spin_channels
         if(ispin1 /= ispin2) then
-          numU = numU + real(this%X(n_alt)(1,1,ispin1,ios)*this%X(n_alt)(1,1,ispin2,ios)) &
-                          *this%coulomb(1,1,1,1,ispin1,ispin2,ios)
+          numU = numU + real(this%X(n_alt)(1,1,ispin1,ios)*this%X(n_alt)(1,1,ispin2,ios)) 
           denomU = denomU + real(this%X(n)(1,1,ispin1,ios)*this%X(n)(1,1,ispin2,ios))
         end if
       end do
     end do
-    if(this%nspins>this%spin_channels) then !Spinors
-      denomU = denomU + real(this%X(n)(1,1,3,ios)*this%X(n)(1,1,4,ios) & 
-                            +this%X(n)(1,1,4,ios)*this%X(n)(1,1,3,ios))
-    end if
 
     ! We have to be careful in the case of hydrogen atom for instance 
     if(abs(denomU)> CNST(1.0e-3)) then
-      this%orbsets(ios)%Ubar = (numU/denomU)
+      this%orbsets(ios)%Ubar = (numU/denomU)*this%coulomb(1,1,1,1,ios)
     else
       if( abs(numU-denomU) < CNST(1.0e-3)) then
-        this%orbsets(ios)%Ubar = sum(this%coulomb(1,1,1,1,1:this%spin_channels,1:this%spin_channels,ios))
+        this%orbsets(ios)%Ubar = this%coulomb(1,1,1,1,ios)
       else
         this%orbsets(ios)%Ubar = (numU/denomU)
         write(message(1),'(a,a)')' Small denominator value for the s orbital ', this%orbsets(ios)%Ubar
-        write(message(2),'(a,a)')' to be multiplied by ',  sum(this%coulomb(1,1,1,1,1:this%spin_channels,1:this%spin_channels,ios))
+        write(message(2),'(a,a)')' to be multiplied by ',  this%coulomb(1,1,1,1,ios)
         call messages_warning(2) 
-        this%orbsets(ios)%Ubar = this%orbsets(ios)%Ubar* sum(this%coulomb(1,1,1,1,1:this%spin_channels,1:this%spin_channels,ios))
+        this%orbsets(ios)%Ubar = this%orbsets(ios)%Ubar*this%coulomb(1,1,1,1,ios)
       end if
     end if
     
@@ -680,9 +667,9 @@ subroutine X(compute_ACBNO_U_restricted)(this)
         do impp = 1, norbs
         do imppp = 1, norbs
           numU = numU + real(this%X(n_alt)(im,imp,1,ios)*this%X(n_alt)(impp,imppp,1,ios)) &
-                             *this%coulomb(im,imp,impp,imppp,1,1,ios)
+                             *this%coulomb(im,imp,impp,imppp,ios)
           numJ = numJ + real(this%X(n_alt)(im,imp,1,ios)*this%X(n_alt)(impp,imppp,1,ios)) &
-                             *this%coulomb(im,imppp,impp,imp,1,1,ios)
+                             *this%coulomb(im,imppp,impp,imp,ios)
         end do
         end do
         ! We compute the term
@@ -702,7 +689,7 @@ subroutine X(compute_ACBNO_U_restricted)(this)
  
     else !In the case of s orbitals, the expression is different
       ! P_{mmp}P_{mpp,mppp}(m,mp|mpp,mppp)  
-      numU = real(this%X(n_alt)(1,1,1,ios)*this%X(n_alt)(1,1,1,ios))*this%coulomb(1,1,1,1,1,1,ios)
+      numU = real(this%X(n_alt)(1,1,1,ios)*this%X(n_alt)(1,1,1,ios))*this%coulomb(1,1,1,1,ios)
 
       ! We compute the term
       ! sum_{alpha,beta} sum_{m,mp} N^alpha_{m}N^beta_{mp}
@@ -717,6 +704,124 @@ subroutine X(compute_ACBNO_U_restricted)(this)
   POP_SUB(compute_ACBNO_U_restricted)  
 end subroutine X(compute_ACBNO_U_restricted)
 
+! ---------------------------------------------------------
+!> This routine computes the effective U in the non-collinear case 
+! ---------------------------------------------------------
+subroutine X(compute_ACBNO_U_spinors)(this)
+  type(lda_u_t), intent(inout)    :: this
+
+  integer :: ios, im, imp, impp, imppp, ispin1, ispin2, norbs
+  CMPLX   :: numU, numJ, tmpU, tmpJ, denomU, denomJ
+
+  PUSH_SUB(compute_ACBNO_U_spinors)
+
+  do ios = 1, this%norbsets
+    norbs = this%orbsets(ios)%norbs
+    numU = M_ZERO
+    numJ = M_ZERO
+    denomU = M_ZERO
+    denomJ = M_ZERO
+
+    if(norbs > 1) then
+
+      do im = 1, norbs
+      do imp = 1,norbs
+        do impp = 1, norbs
+        do imppp = 1, norbs
+          ! We first compute the terms
+          ! sum_{alpha,beta} P^alpha_{mmp}P^beta_{mpp,mppp}  
+          ! sum_{alpha} P^alpha_{mmp}P^alpha_{mpp,mppp}
+          tmpU = M_ZERO
+          tmpJ = M_ZERO
+
+          do ispin1 = 1, this%spin_channels
+            do ispin2 = 1, this%spin_channels
+              tmpU = tmpU + this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin2,ios)&
+                           * this%zcoulomb(im,imp,impp,imppp,ispin1,ispin2,ios)
+            end do
+            tmpJ = tmpJ + this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin1,ios)&
+                          * this%zcoulomb(im,imppp,impp,imp,ispin1,ispin1,ios)
+          end do
+          tmpJ = tmpJ + this%X(n_alt)(im,imp,3,ios)*this%X(n_alt)(impp,imppp,4,ios) &
+                             * this%zcoulomb(im,imppp,impp,imp,1,2,ios)                   &
+                            +this%X(n_alt)(im,imp,4,ios)*this%X(n_alt)(impp,imppp,3,ios) &
+                             * this%zcoulomb(im,imppp,impp,imp,2,1,ios)
+          ! These are the numerator of the ACBN0 U and J
+          numU = numU + tmpU
+          numJ = numJ + tmpJ
+        end do
+        end do
+
+        ! We compute the term
+        ! sum_{alpha} sum_{m,mp/=m} N^alpha_{m}N^alpha_{mp}
+        tmpJ = M_ZERO
+        tmpU = M_ZERO
+        if(imp/=im) then
+          do ispin1 = 1, this%spin_channels
+            tmpJ = tmpJ + this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin1,ios)
+            tmpU = tmpU + this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin1,ios)
+          end do
+          tmpJ = tmpJ + this%X(n)(im,im,3,ios)*this%X(n)(imp,imp,4,ios) &
+                            +this%X(n)(im,im,4,ios)*this%X(n)(imp,imp,3,ios)
+        end if
+        denomJ = denomJ + tmpJ
+
+        ! We compute the term
+        ! sum_{alpha,beta} sum_{m,mp} N^alpha_{m}N^beta_{mp}
+        do ispin1 = 1, this%spin_channels
+          do ispin2 = 1, this%spin_channels
+            if(ispin1 /= ispin2) then
+              tmpU = tmpU + this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin2,ios)
+            end if
+          end do
+        end do
+
+        if(im == imp) then
+          tmpU = tmpU + this%X(n)(im,im,3,ios)*this%X(n)(im,im,4,ios) &
+                            +this%X(n)(im,im,4,ios)*this%X(n)(im,im,3,ios)
+        end if
+
+        denomU = denomU + tmpU
+      end do
+      end do
+      this%orbsets(ios)%Ueff = real(numU)/real(denomU) - real(numJ)/real(denomJ)
+      this%orbsets(ios)%Ubar = real(numU)/real(denomU)
+      this%orbsets(ios)%Jbar = real(numJ)/real(denomJ)
+
+  else !In the case of s orbitals, the expression is different
+    ! sum_{alpha/=beta} P^alpha_{mmp}P^beta_{mpp,mppp}  
+    ! sum_{alpha,beta} sum_{m,mp} N^alpha_{m}N^beta_{mp}
+    numU = M_ZERO
+    denomU = M_ZERO
+    do ispin1 = 1, this%spin_channels
+      do ispin2 = 1, this%spin_channels
+        if(ispin1 /= ispin2) then
+          numU = numU + this%X(n_alt)(1,1,ispin1,ios)*this%X(n_alt)(1,1,ispin2,ios) &
+                          *this%zcoulomb(1,1,1,1,ispin1,ispin2,ios)
+          denomU = denomU + this%X(n)(1,1,ispin1,ios)*this%X(n)(1,1,ispin2,ios)
+        end if
+      end do
+    end do
+    denomU = denomU + this%X(n)(1,1,3,ios)*this%X(n)(1,1,4,ios) &
+                          +this%X(n)(1,1,4,ios)*this%X(n)(1,1,3,ios)
+
+    ! We have to be careful in the case of hydrogen atom for instance 
+    if(abs(denomU)> CNST(1.0e-3)) then
+      this%orbsets(ios)%Ubar = (real(numU)/real(denomU))
+    else
+      write(message(1),'(a,a)')' Small denominator value for the s orbital ', this%orbsets(ios)%Ubar
+      write(message(2),'(a)')' U is set to zero '
+      call messages_warning(2)
+      this%orbsets(ios)%Ubar = M_ZERO
+    end if
+    this%orbsets(ios)%Jbar = 0
+    this%orbsets(ios)%Ueff = this%orbsets(ios)%Ubar
+  end if
+  end do
+
+  POP_SUB(compute_ACBNO_U_spinors)
+end subroutine X(compute_ACBNO_U_spinors)
+
 
 ! ---------------------------------------------------------
 ! TODO: Merge this with the two_body routine in system/output_me_inc.F90
@@ -727,7 +832,6 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der, st)
   type(states_t),     intent(in)  :: st
 
   integer :: ist, jst, kst, lst, ijst, klst
-  integer :: is1, is2
   integer :: norbs, np_sphere, ios, ip
   integer :: idone, ntodo
   FLOAT, allocatable :: tmp(:), vv(:), nn(:)
@@ -744,8 +848,8 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der, st)
   SAFE_ALLOCATE(vv(1:this%max_np))
   SAFE_ALLOCATE(tmp(1:this%max_np))
 
-  SAFE_ALLOCATE(this%coulomb(1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:st%d%dim, 1:st%d%dim, 1:this%norbsets))
-  this%coulomb(1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:st%d%dim,1:st%d%dim,1:this%norbsets) = M_ZERO
+  SAFE_ALLOCATE(this%coulomb(1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs, 1:this%norbsets))
+  this%coulomb(1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%norbsets) = M_ZERO
 
   !Lets counts the number of orbital to treat, to display a progress bar
   ntodo = 0
@@ -770,66 +874,54 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der, st)
         if(jst > ist) cycle
         ijst=ijst+1
 
-        do is1 = 1, st%d%dim
+        !$omp parallel do
+        do ip=1,np_sphere
+          nn(ip)  = real(os%X(orb)(ip,1,ist))*real(os%X(orb)(ip,1,jst))
+        end do
+        !$omp end parallel do    
 
-          !$omp parallel do
-          do ip=1,np_sphere
-            nn(ip)  = real(os%X(orb)(ip,is1,ist))*real(os%X(orb)(ip,is1,jst))
-          end do
-          !$omp end parallel do    
+        !Here it is important to use a non-periodic poisson solver, e.g. the direct solver
+        call dpoisson_solve_sm(os%poisson, os%sphere, vv(1:np_sphere), nn(1:np_sphere))
 
-          !Here it is important to use a non-periodic poisson solver, e.g. the direct solver
-          call dpoisson_solve_sm(os%poisson, os%sphere, vv(1:np_sphere), nn(1:np_sphere))
+        klst=0
+        do kst = 1, norbs
+          do lst = 1, norbs
+            if(lst > kst) cycle
+            klst=klst+1
+            if(klst > ijst) cycle
 
-          klst=0
-          do kst = 1, norbs
-            do lst = 1, norbs
-              if(lst > kst) cycle
-              klst=klst+1
-              if(klst > ijst) cycle
+            !$omp parallel do
+            do ip=1,np_sphere
+              tmp(ip) = vv(ip)*real(os%X(orb)(ip,1,lst))*real(os%X(orb)(ip,1,kst))
+            end do
+            !$omp end parallel do
 
-              do is2 = 1, st%d%dim
+            this%coulomb(ist,jst,kst,lst,ios) = dsm_integrate(mesh, os%sphere, tmp(1:np_sphere))
 
-                !$omp parallel do
-                do ip=1,np_sphere
-                 tmp(ip) = vv(ip)*real(os%X(orb)(ip,is2,lst))*real(os%X(orb)(ip,is2,kst))
-                end do
-                !$omp end parallel do
-
-                this%coulomb(ist,jst,kst,lst,is1,is2,ios) = dsm_integrate(mesh, os%sphere, tmp(1:np_sphere))
-
-                if(abs(this%coulomb(ist,jst,kst,lst,is1,is2,ios))<CNST(1.0e-12)) then
-                  this%coulomb(ist,jst,kst,lst,is1,is2,ios) = M_ZERO
-                else
-                  this%coulomb(kst,lst,ist,jst,is1,is2,ios) = this%coulomb(ist,jst,kst,lst,is1,is2,ios)
-                  this%coulomb(jst,ist,lst,kst,is1,is2,ios) = this%coulomb(ist,jst,kst,lst,is1,is2,ios)
-                  this%coulomb(lst,kst,jst,ist,is1,is2,ios) = this%coulomb(ist,jst,kst,lst,is1,is2,ios)
-                  this%coulomb(jst,ist,kst,lst,is1,is2,ios) = this%coulomb(ist,jst,kst,lst,is1,is2,ios)
-                  this%coulomb(lst,kst,ist,jst,is1,is2,ios) = this%coulomb(ist,jst,kst,lst,is1,is2,ios)
-                  this%coulomb(ist,jst,lst,kst,is1,is2,ios) = this%coulomb(ist,jst,kst,lst,is1,is2,ios)
-                  this%coulomb(kst,lst,jst,ist,is1,is2,ios) = this%coulomb(ist,jst,kst,lst,is1,is2,ios)
-                end if
+            if(abs(this%coulomb(ist,jst,kst,lst,ios))<CNST(1.0e-12)) then
+              this%coulomb(ist,jst,kst,lst,ios) = M_ZERO
+            else
+              this%coulomb(kst,lst,ist,jst,ios) = this%coulomb(ist,jst,kst,lst,ios)
+              this%coulomb(jst,ist,lst,kst,ios) = this%coulomb(ist,jst,kst,lst,ios)
+              this%coulomb(lst,kst,jst,ist,ios) = this%coulomb(ist,jst,kst,lst,ios)
+              this%coulomb(jst,ist,kst,lst,ios) = this%coulomb(ist,jst,kst,lst,ios)
+              this%coulomb(lst,kst,ist,jst,ios) = this%coulomb(ist,jst,kst,lst,ios)
+              this%coulomb(ist,jst,lst,kst,ios) = this%coulomb(ist,jst,kst,lst,ios)
+              this%coulomb(kst,lst,jst,ist,ios) = this%coulomb(ist,jst,kst,lst,ios)
+            end if
               
-              end do !is2
-              !Update the progress bar
-              idone = idone + 1
-              if(mpi_world%rank == 0) call loct_progress_bar(idone, ntodo)
-            end do !lst
-          end do !kst
-        end do !is1
+          !Update the progress bar
+          idone = idone + 1
+          if(mpi_world%rank == 0) call loct_progress_bar(idone, ntodo)
+          end do !lst
+        end do !kst
       end do !jst
     end do !ist
     call poisson_end(os%poisson)
   end do !iorb
 
   if(this%orbs_dist%parallel) then
-    do ios = 1, this%norbsets
-      do is2 = 1, st%d%dim
-        do is1 = 1, st%d%dim
-          call comm_allreduce(this%orbs_dist%mpi_grp%comm, this%coulomb(:,:,:,:,is1,is2,ios))
-        end do
-      end do
-    end do
+    call comm_allreduce(this%orbs_dist%mpi_grp%comm, this%coulomb)
   end if
  
   SAFE_DEALLOCATE_A(nn)
@@ -1103,9 +1195,9 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
   type(mesh_t),              intent(in)       :: mesh
   type(states_t),            intent(in)       :: st 
 
-  integer :: ia, iorb, norb, offset, ios, idim
+  integer :: ia, iorb, norb, ntotorb, offset, ios, idim
   integer ::  hubbardl, ii, nn, ll, mm, work, work2, iorbset
-  FLOAT   :: norm
+  FLOAT   :: norm, hubbardj, radius
   FLOAT, allocatable :: minradii(:)
   logical :: hasSorbitals
   type(orbital_set_t), pointer :: os
@@ -1124,7 +1216,13 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
     do ia = 1, geo%natoms
       hubbardl = species_hubbard_l(geo%atom(ia)%species)
       if( hubbardl .eq. -1 ) cycle
-      norb = norb+1
+      !In case of SOC, the orbitals are splitted
+      !We multiply by two, except if the user wants to only have one value of j
+      if(st%d%dim > 1 .and. species_hubbard_j(geo%atom(ia)%species) == M_ZERO) then
+        norb = norb + 2
+      else
+        norb = norb+1
+      end if
     end do
   else
     do ia = 1, geo%natoms
@@ -1136,9 +1234,14 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
         work = max(work, ii)
       end do
       if(this%skipSOrbitals .and. hasSorbitals ) work = work-1
+      !In case of SOC, the orbitals are splitted
+      !We multiply by two, except if the user wants to only have one value of j
+      if(st%d%dim > 1 .and. species_hubbard_j(geo%atom(ia)%species) == M_ZERO) &
+        work = 2*work
       norb = norb + work
     end do
   end if
+
 
   write(message(1),'(a, i3, a)')    'Found ', norb, ' orbital sets.'
   call messages_info(1)
@@ -1156,84 +1259,105 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
 
   iorbset = 0
   do ia = 1, geo%natoms
-    if(.not. this%useAllOrbitals) then
-      hubbardl = species_hubbard_l(geo%atom(ia)%species)
-      if( hubbardl .eq. -1 ) cycle
-      iorbset = iorbset + 1
-      os => this%orbsets(iorbset)
-      norb = 0
-      do iorb = 1, species_niwfs(geo%atom(ia)%species)
-        call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
-        call species_iwf_n(geo%atom(ia)%species, iorb, 1, nn )
-        if(ll .eq. hubbardl ) then 
-          norb = norb + 1
-          os%ll = hubbardl
-          os%nn = nn
-        end if
-      end do
-      os%norbs = norb
-      os%Ueff = species_hubbard_u(geo%atom(ia)%species)
-      os%spec => geo%atom(ia)%species
-      os%iatom = ia
-      call submesh_null(os%sphere)
-      norb = 0
-      do iorb = 1, species_niwfs(geo%atom(ia)%species)
-        call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
-        if(ll .eq. hubbardl ) then
-          norb  = norb + 1
-         ! We obtain the orbital
-          call X(get_atomic_orbital)(geo, mesh, os%sphere, ia, iorb, 1, os, norb, &
-                        this%truncation, this%orbitals_threshold)
-        endif
-      end do
-    else !useAllOrbitals
-      work = 0
-      hasSorbitals = .false.
-      do iorb = 1, species_niwfs(geo%atom(ia)%species)
-        call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
-        if(ll == 0) hasSorbitals = .true.
-        work = max(work, ii)          
-      end do
-      if(this%skipSOrbitals .and. hasSorbitals ) work = work-1
-
-      !We loop over the orbital sets of the atom ia
-      do norb = 1, work
-        os => this%orbsets(iorbset+norb)
-        !We count the number of orbital for this orbital set
-        work2 = 0
+    do idim = 1, st%d%dim
+      hubbardj = species_hubbard_j(geo%atom(ia)%species)
+      if( idim > 1 .and. hubbardj /= M_ZERO) cycle
+      if(.not. this%useAllOrbitals) then
+        hubbardl = species_hubbard_l(geo%atom(ia)%species)
+        if( hubbardl .eq. -1 ) cycle
+        iorbset = iorbset + 1
+        os => this%orbsets(iorbset)
+        norb = 0
         do iorb = 1, species_niwfs(geo%atom(ia)%species)
           call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
           call species_iwf_n(geo%atom(ia)%species, iorb, 1, nn )
-          if(ii == norb+offset) then
-            work2 = work2 + 1
-            os%ll = ll
+          if(ll .eq. hubbardl ) then 
+            norb = norb + 1
+            os%ll = hubbardl
             os%nn = nn
+            if( hubbardj /= M_ZERO ) then
+              os%jj = hubbardj 
+            else
+              os%jj = real(os%ll + idim) - M_THREE/M_TWO
+            end if
+            os%ii = ii
+            os%radius = get_orbial_radius(geo, mesh, ia, iorb, 1, &
+                           this%truncation, this%orbitals_threshold)
           end if
         end do
-        os%norbs = work2
+        !In case of spinors, we adjust the number of orbitals
+        if(st%d%dim > 1 ) then
+          os%norbs = norb + int(M_TWO*(os%jj-os%ll))
+        else
+          os%norbs = norb
+        end if
         os%Ueff = species_hubbard_u(geo%atom(ia)%species)
         os%spec => geo%atom(ia)%species
         os%iatom = ia
-        call submesh_null(os%sphere)        
- 
-        work2 = 0
+        os%ndim = st%d%dim
+        call submesh_null(os%sphere)
+        do iorb = 1, os%norbs
+          ! We obtain the orbital
+          call X(get_atomic_orbital)(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
+                                          os, iorb, os%radius, st%d%dim)
+        end do
+      else !useAllOrbitals
+        work = 0
+        hasSorbitals = .false.
         do iorb = 1, species_niwfs(geo%atom(ia)%species)
           call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
-          if(ii == norb+offset) then
-            work2  = work2 + 1
-            ! We obtain the orbital
-            if(this%minimalAtomicSphere) then
-              call X(get_atomic_orbital)(geo, mesh, os%sphere, ia, iorb, 1, os, work2,&
-                         this%truncation, this%orbitals_threshold, minradii(ia))
-            else
-              call X(get_atomic_orbital)(geo, mesh, os%sphere, ia, iorb, 1, os, work2,&
-                         this%truncation, this%orbitals_threshold)
+          if(ll == 0) hasSorbitals = .true.
+          work = max(work, ii)          
+        end do
+        if(this%skipSOrbitals .and. hasSorbitals ) work = work-1
+
+        !We loop over the orbital sets of the atom ia
+        do norb = 1, work
+          os => this%orbsets(iorbset+norb)
+          !We count the number of orbital for this orbital set
+          work2 = 0
+          do iorb = 1, species_niwfs(geo%atom(ia)%species)
+            call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
+            call species_iwf_n(geo%atom(ia)%species, iorb, 1, nn )
+            if(ii == norb+offset) then
+              work2 = work2 + 1
+              os%ll = ll
+              os%nn = nn
+              if( hubbardj /= M_ZERO ) then
+                os%jj = hubbardj
+              else
+                os%jj = ll + idim - M_THREE/M_TWO
+              end if
+              os%ii = ii
+              if(this%minimalAtomicSphere) then
+                radius = minradii(ia)
+              else
+                os%radius = get_orbial_radius(geo, mesh, ia, iorb, 1, &
+                                 this%truncation, this%orbitals_threshold)
+              end if
             end if
+          end do
+          !In case of spinors, we adjust the number of orbitals
+          if(st%d%dim > 1 ) then
+            os%norbs = work2 + M_TWO*(os%jj-os%ll)
+          else
+            os%norbs = work2
           end if
-        end do !iorb
-      end do !norb
-      iorbset = iorbset + work
-    end if
+          os%Ueff = species_hubbard_u(geo%atom(ia)%species)
+          os%spec => geo%atom(ia)%species
+          os%iatom = ia
+          os%ndim = st%d%dim
+          call submesh_null(os%sphere)        
+
+          do work2 = 1, os%norbs 
+            ! We obtain the orbital
+            call X(get_atomic_orbital)(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
+                                               os, work2, os%radius, st%d%dim)
+          end do !work2
+        end do !norb
+        iorbset = iorbset + work
+      end if
+    end do
   end do
 
   ! We have to normalize the orbitals, 
@@ -1387,47 +1511,30 @@ end subroutine X(build_overlap_matrices)
 !> This routine returns the atomic orbital basis -- provided
 !! by the pseudopotential structure in geo.
 ! ---------------------------------------------------------
-subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, iorb, ispin, os, orbind,truncation, threshold, minradius)
+subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, radius, d_dim)
   type(mesh_t),             intent(in)    :: mesh
   type(geometry_t), target, intent(in)    :: geo
   type(submesh_t),          intent(inout) :: sm
-  integer,                  intent(in)    :: iatom
-  integer,                  intent(in)    :: iorb
-  integer,                  intent(in)    :: ispin
+  integer,                  intent(in)    :: iatom, ii, ll
+  FLOAT,                    intent(in)    :: jj
   type(orbital_set_t),      intent(inout) :: os
   integer,                  intent(in)    :: orbind
-  integer,                  intent(in)    :: truncation
-  FLOAT,                    intent(in)    :: threshold
-  FLOAT, optional,          intent(in)    :: minradius
+  FLOAT,                    intent(in)    :: radius
+  integer,                  intent(in)    :: d_dim
 
   type(species_t), pointer :: spec
-  integer :: ii, ll, mm, ispin_
-  FLOAT :: radius
   #ifdef R_TCOMPLEX
   FLOAT, allocatable :: tmp(:)
   #endif
-  logical :: complex_ylms
-
-  !This routine is not valid for non-collinear spin case
-  ASSERT(os%ndim == 1)
+  integer :: is, mm, kappa
+  FLOAT :: mu
 
   PUSH_SUB(X(get_atomic_orbital))
 
-  ispin_ = ispin 
-
   spec => geo%atom(iatom)%species
-  ASSERT(iorb <= species_niwfs(spec))
- 
-  call species_iwf_ilm(spec, iorb, ispin_, ii, ll, mm)
 
   if(sm%np == -1) then
     
-    if(.not.present(minradius)) then
-      radius = get_orbial_radius(geo, mesh, iatom, iorb, ispin, truncation, threshold)
-    else
-      radius = minradius
-    end if
-
     if(mesh%sb%box_shape == MINIMUM .and. radius > mesh%sb%rsize) then
       message(1) = "The radius of an orbital set is bigger than the radius of the simulatio box."
       message(2) = "Increase the value of Radius or decrease the value of OrbitalsThreshold_LDAU."
@@ -1485,25 +1592,50 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, iorb, ispin, os, orbind,
     os%X(orb)(:,:,:) = R_TOTYPE(M_ZERO)
   end if
 
-  !This is a bit dirty.
-  complex_ylms = .false.
+  if(d_dim == 1) then
 
-  !We get the orbital from the pseudopotential
-  #ifdef R_TCOMPLEX
-  if(.not. complex_ylms) then
+    mm = orbind-1-ll
+
+    !We get the orbital from the pseudopotential
+    #ifdef R_TCOMPLEX
     !In this case we want to get a real orbital and to store it in complex array
     SAFE_ALLOCATE(tmp(1:sm%np))
-    call dspecies_get_orbital_submesh(spec, sm, ii, ll, mm, ispin_, geo%atom(iatom)%x, &
-                                           tmp)
+    call dspecies_get_orbital_submesh(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x, &
+                                          tmp)
     os%X(orb)(1:sm%np,1,orbind) = tmp(1:sm%np)
     SAFE_DEALLOCATE_A(tmp)
-  else
-  #endif
-    call X(species_get_orbital_submesh)(spec, sm, ii, ll, mm, ispin_, geo%atom(iatom)%x,&
+    #else
+      call X(species_get_orbital_submesh)(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x,&
                                          os%X(orb)(1:sm%np,1,orbind))
-  #ifdef R_TCOMPLEX
+    #endif
+  else
+    !see for instance https://arxiv.org/pdf/1011.3433.pdf
+    kappa = (ll-jj)*(2*jj+1)
+    mu = orbind-1-abs(kappa)+M_HALF
+
+    mm = int(mu-M_HALF)
+    if(abs(mm) <= ll) then
+      call X(species_get_orbital_submesh)(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x,&
+                                         os%X(orb)(1:sm%np,1,orbind))
+    else
+       os%X(orb)(1:sm%np,1,orbind) = M_ZERO
+    end if
+
+    mm = int(mu+M_HALF)
+    if(abs(mm) <= ll) then
+      call X(species_get_orbital_submesh)(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x,&
+                                         os%X(orb)(1:sm%np,2,orbind))
+    else
+      os%X(orb)(1:sm%np,2,orbind) = M_ZERO
+    end if
+
+    !do is=1,sm%np
+    !  os%X(orb)(is,1,orbind) = (kappa/abs(kappa))*os%X(orb)(is,1,orbind)*sqrt((kappa-mu+M_HALF)/(M_TWO*kappa+M_ONE))
+    !  os%X(orb)(is,2,orbind) = os%X(orb)(is,2,orbind)*sqrt((kappa+mu+M_HALF)/(M_TWO*kappa+M_ONE))
+    !end do
+    
   end if
-  #endif
+
 
   POP_SUB(X(get_atomic_orbital))
 

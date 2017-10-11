@@ -151,12 +151,24 @@ contains
        trim(units_abbrev(units_out%energy)),']:'
      write(iunit,'(a,6x,14x,a)') ' Orbital',  'U'
      do ios = 1, this%norbsets
-      if(this%orbsets(ios)%nn /= 0 ) then
-        write(iunit,'(i4,a10, 2x, i1, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                      this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), this%orbsets(ios)%Ueff  
+       if(this%nspins == this%spin_channels) then 
+         if(this%orbsets(ios)%nn /= 0 ) then
+           write(iunit,'(i4,a10, 2x, i1, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                        this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), this%orbsets(ios)%Ueff  
+         else
+           write(iunit,'(i4,a10, 3x, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                                l_notation(this%orbsets(ios)%ll), this%orbsets(ios)%Ueff
+         end if
       else
-        write(iunit,'(i4,a10, 3x, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                              l_notation(this%orbsets(ios)%ll), this%orbsets(ios)%Ueff
+        if(this%orbsets(ios)%nn /= 0 ) then
+           write(iunit,'(i4,a10, 2x, i1, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                        this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
+                        int(M_TWO*(this%orbsets(ios)%jj)), '/2', this%orbsets(ios)%Ueff
+         else
+           write(iunit,'(i4,a10, 3x, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                                l_notation(this%orbsets(ios)%ll), &
+                         int(M_TWO*(this%orbsets(ios)%jj)), '/2', this%orbsets(ios)%Ueff
+         end if 
       end if
      end do
    end if

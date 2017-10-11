@@ -79,6 +79,7 @@ module poisson_oct_m
     dpoisson_solve,              &
     zpoisson_solve,              &
     dpoisson_solve_sm,           &
+    zpoisson_solve_sm,           &
     poisson_solve_batch,         &
     poisson_solver_is_iterative, &
     poisson_solver_has_free_bc,  &
@@ -920,50 +921,6 @@ contains
     POP_SUB(poisson_init_sm)
   end subroutine poisson_init_sm
 
-  !> Calculates the Poisson equation.
-  !! Given the density returns the corresponding potential.
-  !!
-  !! Different solvers are available that can be chosen in the input file
-  !! with the "PoissonSolver" parameter
-  subroutine dpoisson_solve_sm(this, sm, pot, rho, all_nodes)
-    type(poisson_t),      intent(in)    :: this
-    type(submesh_t),      intent(in)    :: sm
-    FLOAT,                intent(inout) :: pot(:) !< Local size of the \b potential vector. 
-    FLOAT,                intent(inout) :: rho(:) !< Local size of the \b density (rho) vector.
-    !> Is the Poisson solver allowed to utilise
-    !! all nodes or only the domain nodes for
-    !! its calculations? (Defaults to .true.)
-    logical, optional,    intent(in)    :: all_nodes 
-    type(derivatives_t), pointer :: der
-    type(cube_function_t) :: crho, cpot
-
-    logical               :: all_nodes_value
-    type(profile_t), save :: prof
-
-    call profiling_in(prof, 'POISSON_SOLVE_SM')
-    PUSH_SUB(dpoisson_solve_sm)
-
-    der => this%der
-
-    ASSERT(ubound(pot, dim = 1) == sm%np_part .or. ubound(pot, dim = 1) == sm%np)
-    ASSERT(ubound(rho, dim = 1) == sm%np_part .or. ubound(rho, dim = 1) == sm%np)
-
-    ! Check optional argument and set to default if necessary.
-    if(present(all_nodes)) then
-      all_nodes_value = all_nodes
-    else
-      all_nodes_value = this%all_nodes_default
-    end if
-
-    ASSERT(this%method /= POISSON_NULL)
-    ASSERT(this%der%mesh%sb%dim /= 1)  
-    call poisson_solve_direct_sm(this, sm, pot, rho)
-
-    POP_SUB(dpoisson_solve_sm)
-    call profiling_out(prof)
-  end subroutine dpoisson_solve_sm
-
-
   !-----------------------------------------------------------------
   !> This routine checks the Hartree solver selected in the input
   !! file by calculating numerically and analytically the Hartree
@@ -1289,10 +1246,12 @@ contains
 #include "undef.F90"
 #include "real.F90"
 #include "poisson_inc.F90"
+#include "poisson_direct_sm_inc.F90"
 #include "solver_1d_solve_inc.F90"
 #include "undef.F90"
 #include "complex.F90"
 #include "poisson_inc.F90"
+#include "poisson_direct_sm_inc.F90"
 #include "solver_1d_solve_inc.F90"
 
 end module poisson_oct_m
