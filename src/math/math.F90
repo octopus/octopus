@@ -238,10 +238,11 @@ contains
 
     if (mi < 0) then
       ylm = conjg(ylm)
+    end if
       do i = 1, abs(mi)
         ylm = -ylm
       end do
-    end if
+    !end if
 
   end subroutine ylmr
 

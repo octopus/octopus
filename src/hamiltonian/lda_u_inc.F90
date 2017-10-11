@@ -1367,8 +1367,9 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
     do iorb = 1, os%norbs
       norm = M_ZERO
       do idim = 1, os%ndim
-        norm = sqrt(X(sm_nrm2)(os%sphere, os%X(orb)(1:os%sphere%np,idim,iorb)))
+        norm = norm + X(sm_nrm2)(os%sphere, os%X(orb)(1:os%sphere%np,idim,iorb))
       end do
+      norm = sqrt(norm)
       if(this%normalizeOrbitals) then
         do idim = 1, os%ndim
           os%X(orb)(1:os%sphere%np,idim,iorb) =  &
@@ -1629,10 +1630,10 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
       os%X(orb)(1:sm%np,2,orbind) = M_ZERO
     end if
 
-    !do is=1,sm%np
-    !  os%X(orb)(is,1,orbind) = (kappa/abs(kappa))*os%X(orb)(is,1,orbind)*sqrt((kappa-mu+M_HALF)/(M_TWO*kappa+M_ONE))
-    !  os%X(orb)(is,2,orbind) = os%X(orb)(is,2,orbind)*sqrt((kappa+mu+M_HALF)/(M_TWO*kappa+M_ONE))
-    !end do
+    do is=1,sm%np
+      os%X(orb)(is,1,orbind) = (-kappa/abs(kappa))*os%X(orb)(is,1,orbind)*sqrt((kappa-mu+M_HALF)/(M_TWO*kappa+M_ONE))
+      os%X(orb)(is,2,orbind) = os%X(orb)(is,2,orbind)*sqrt((kappa+mu+M_HALF)/(M_TWO*kappa+M_ONE))
+    end do
     
   end if
 
