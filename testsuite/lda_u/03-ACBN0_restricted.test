@@ -1,6 +1,6 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
-Test       : ACBN0 functional for (AF) NiO and LiF bulk crystals
+Test       : ACBN0 functional for LiF bulk crystals - spin restricted case
 Program    : octopus
 TestGroups : short-run, periodic_systems, lda_u
 Enabled    : Yes
