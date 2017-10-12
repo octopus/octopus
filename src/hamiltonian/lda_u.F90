@@ -621,7 +621,7 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st)
   ntodo = 0
   do ios = this%orbs_dist%start, this%orbs_dist%end
     norbs = this%orbsets(ios)%norbs
-    ntodo= ntodo + ((norbs+1)*norbs/2)*((norbs+1)*norbs/2+1)/2
+    ntodo= ntodo + norbs**4*4!((norbs+1)*norbs/2)*((norbs+1)*norbs/2+1)/2
   end do
   idone = 0
   if(mpi_world%rank == 0) call loct_progress_bar(-1, ntodo)
@@ -672,7 +672,7 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st)
               end do !is2
             end do !is1
 
-              do is1 = 1, st%d%dim
+            do is1 = 1, st%d%dim
               do is2 = 1, st%d%dim
                 if(abs(this%zcoulomb(ist,jst,kst,lst,is1,is2,ios))<CNST(1.0e-12)) then
                   this%zcoulomb(ist,jst,kst,lst,is1,is2,ios) = M_ZERO
@@ -683,12 +683,12 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st)
                 end if
 
               end do !is2
+            end do !is1
 
-              idone = idone + 1
-              if(mpi_world%rank == 0) call loct_progress_bar(idone, ntodo)
-            end do !lst
-          end do !kst
-        end do !is1
+            idone = idone + 1
+            if(mpi_world%rank == 0) call loct_progress_bar(idone, ntodo)
+          end do !lst
+        end do !kst
       end do !jst
     end do !ist
     call poisson_end(os%poisson)

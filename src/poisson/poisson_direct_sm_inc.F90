@@ -28,11 +28,6 @@ subroutine X(poisson_solve_direct_sm)(this, sm, pot, rho)
   integer              :: ip, jp, dim, nthreads
   integer, allocatable :: ip_v(:), part_v(:)
   FLOAT                :: xx1(1:MAX_DIM), xx2(1:MAX_DIM), xx3(1:MAX_DIM), xx4(1:MAX_DIM)
-#ifdef HAVE_MPI
-  FLOAT                :: xx(1:this%der%mesh%sb%dim), yy(1:this%der%mesh%sb%dim) 
-  FLOAT                :: tmp, xg(MAX_DIM)
-  FLOAT, allocatable   :: pvec(:) 
-#endif
 
   PUSH_SUB(X(poisson_solve_direct_sm))
 
@@ -113,7 +108,7 @@ subroutine X(poisson_solve_direct_sm)(this, sm, pot, rho)
   
   do ip = ip, sm%np
 
-    aa1 = CNST(0.0)
+    aa1 = R_TOTYPE(M_ZERO)
 
     xx1(1:dim) = sm%x(ip,1:dim)
     if(sm%mesh%use_curvilinear) then
