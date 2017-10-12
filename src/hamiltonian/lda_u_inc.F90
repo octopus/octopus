@@ -199,9 +199,6 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
 #endif
       end if
 
-      if(this%useACBN0) &
-        this%X(renorm_occ)(:,:,:,:,ist,ik) = R_TOTYPE(M_ZERO)
- 
       do ios = 1, this%norbsets
         os => this%orbsets(ios)
         !We first compute the matrix elemets <\psi | orb_m>
@@ -212,7 +209,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
 
       !We compute the on-site occupation of the site, if needed 
       if(this%useACBN0) then
-        !See below the use of dot(1,...
+        this%X(renorm_occ)(:,:,:,:,ist,ik) = R_TOTYPE(M_ZERO)
         do ios = 1, this%norbsets
           os => this%orbsets(ios)
           norbs = this%orbsets(ios)%norbs

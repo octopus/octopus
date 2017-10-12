@@ -213,7 +213,7 @@ subroutine compute_ACBNO_U_noncollinear(this)
         end do
 
         if(im == imp) then
-          tmpU = tmpU + this%zn(im,im,3,ios)*this%zn(im,im,4,ios) &
+          tmpU = tmpU - this%zn(im,im,3,ios)*this%zn(im,im,4,ios) &
                             +this%zn(im,im,4,ios)*this%zn(im,im,3,ios)
         end if
 
