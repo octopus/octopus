@@ -304,7 +304,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
       if(this%nspins == this%spin_channels) then
         call X(compute_ACBNO_U)(this)
       else
-        call X(compute_ACBNO_U_spinors)(this)
+        call compute_ACBNO_U_noncollinear(this)
       end if
     else
       call X(compute_ACBNO_U_restricted)(this)
@@ -703,125 +703,6 @@ subroutine X(compute_ACBNO_U_restricted)(this)
 
   POP_SUB(compute_ACBNO_U_restricted)  
 end subroutine X(compute_ACBNO_U_restricted)
-
-! ---------------------------------------------------------
-!> This routine computes the effective U in the non-collinear case 
-! ---------------------------------------------------------
-subroutine X(compute_ACBNO_U_spinors)(this)
-  type(lda_u_t), intent(inout)    :: this
-
-  integer :: ios, im, imp, impp, imppp, ispin1, ispin2, norbs
-  CMPLX   :: numU, numJ, tmpU, tmpJ, denomU, denomJ
-
-  PUSH_SUB(compute_ACBNO_U_spinors)
-
-  do ios = 1, this%norbsets
-    norbs = this%orbsets(ios)%norbs
-    numU = M_ZERO
-    numJ = M_ZERO
-    denomU = M_ZERO
-    denomJ = M_ZERO
-
-    if(norbs > 1) then
-
-      do im = 1, norbs
-      do imp = 1,norbs
-        do impp = 1, norbs
-        do imppp = 1, norbs
-          ! We first compute the terms
-          ! sum_{alpha,beta} P^alpha_{mmp}P^beta_{mpp,mppp}  
-          ! sum_{alpha} P^alpha_{mmp}P^alpha_{mpp,mppp}
-          tmpU = M_ZERO
-          tmpJ = M_ZERO
-
-          do ispin1 = 1, this%spin_channels
-            do ispin2 = 1, this%spin_channels
-              tmpU = tmpU + this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin2,ios)&
-                           * this%zcoulomb(im,imp,impp,imppp,ispin1,ispin2,ios)
-            end do
-            tmpJ = tmpJ + this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin1,ios)&
-                          * this%zcoulomb(im,imppp,impp,imp,ispin1,ispin1,ios)
-          end do
-          tmpJ = tmpJ + this%X(n_alt)(im,imp,3,ios)*this%X(n_alt)(impp,imppp,4,ios) &
-                             * this%zcoulomb(im,imppp,impp,imp,1,2,ios)                   &
-                            +this%X(n_alt)(im,imp,4,ios)*this%X(n_alt)(impp,imppp,3,ios) &
-                             * this%zcoulomb(im,imppp,impp,imp,2,1,ios)
-          ! These are the numerator of the ACBN0 U and J
-          numU = numU + tmpU
-          numJ = numJ + tmpJ
-        end do
-        end do
-
-        ! We compute the term
-        ! sum_{alpha} sum_{m,mp/=m} N^alpha_{m}N^alpha_{mp}
-        tmpJ = M_ZERO
-        tmpU = M_ZERO
-        if(imp/=im) then
-          do ispin1 = 1, this%spin_channels
-            tmpJ = tmpJ + this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin1,ios)
-            tmpU = tmpU + this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin1,ios)
-          end do
-          tmpJ = tmpJ + this%X(n)(im,im,3,ios)*this%X(n)(imp,imp,4,ios) &
-                            +this%X(n)(im,im,4,ios)*this%X(n)(imp,imp,3,ios)
-        end if
-        denomJ = denomJ + tmpJ
-
-        ! We compute the term
-        ! sum_{alpha,beta} sum_{m,mp} N^alpha_{m}N^beta_{mp}
-        do ispin1 = 1, this%spin_channels
-          do ispin2 = 1, this%spin_channels
-            if(ispin1 /= ispin2) then
-              tmpU = tmpU + this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin2,ios)
-            end if
-          end do
-        end do
-
-        if(im == imp) then
-          tmpU = tmpU + this%X(n)(im,im,3,ios)*this%X(n)(im,im,4,ios) &
-                            +this%X(n)(im,im,4,ios)*this%X(n)(im,im,3,ios)
-        end if
-
-        denomU = denomU + tmpU
-      end do
-      end do
-      this%orbsets(ios)%Ueff = real(numU)/real(denomU) - real(numJ)/real(denomJ)
-      this%orbsets(ios)%Ubar = real(numU)/real(denomU)
-      this%orbsets(ios)%Jbar = real(numJ)/real(denomJ)
-
-  else !In the case of s orbitals, the expression is different
-    ! sum_{alpha/=beta} P^alpha_{mmp}P^beta_{mpp,mppp}  
-    ! sum_{alpha,beta} sum_{m,mp} N^alpha_{m}N^beta_{mp}
-    numU = M_ZERO
-    denomU = M_ZERO
-    do ispin1 = 1, this%spin_channels
-      do ispin2 = 1, this%spin_channels
-        if(ispin1 /= ispin2) then
-          numU = numU + this%X(n_alt)(1,1,ispin1,ios)*this%X(n_alt)(1,1,ispin2,ios) &
-                          *this%zcoulomb(1,1,1,1,ispin1,ispin2,ios)
-          denomU = denomU + this%X(n)(1,1,ispin1,ios)*this%X(n)(1,1,ispin2,ios)
-        end if
-      end do
-    end do
-    denomU = denomU + this%X(n)(1,1,3,ios)*this%X(n)(1,1,4,ios) &
-                          +this%X(n)(1,1,4,ios)*this%X(n)(1,1,3,ios)
-
-    ! We have to be careful in the case of hydrogen atom for instance 
-    if(abs(denomU)> CNST(1.0e-3)) then
-      this%orbsets(ios)%Ubar = (real(numU)/real(denomU))
-    else
-      write(message(1),'(a,a)')' Small denominator value for the s orbital ', this%orbsets(ios)%Ubar
-      write(message(2),'(a)')' U is set to zero '
-      call messages_warning(2)
-      this%orbsets(ios)%Ubar = M_ZERO
-    end if
-    this%orbsets(ios)%Jbar = 0
-    this%orbsets(ios)%Ueff = this%orbsets(ios)%Ubar
-  end if
-  end do
-
-  POP_SUB(compute_ACBNO_U_spinors)
-end subroutine X(compute_ACBNO_U_spinors)
-
 
 ! ---------------------------------------------------------
 ! TODO: Merge this with the two_body routine in system/output_me_inc.F90
