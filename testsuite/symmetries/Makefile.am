@@ -259,13 +259,11 @@ dist_share_DATA =                          \
 	06-cubic.test                    \
 	07-symmetrization_lda.01-spg2_sym.inp    \
 	07-symmetrization_lda.02-spg16_sym.inp   \
+	07-symmetrization_lda.03-spg75_sym.inp   \
 	07-symmetrization_lda.test               \
 	08-symmetrization.01-spg3_nosym.inp  \
 	08-symmetrization.02-spg3_sym.inp    \
 	08-symmetrization.test               \
-	10-symmetrization.01-spg75_nosym.inp \
-	10-symmetrization.02-spg75_sym.inp   \
-	10-symmetrization.test               \
 	11-symmetrization.01-spg143_nosym.inp\
 	11-symmetrization.02-spg143_sym.inp  \
 	11-symmetrization.test
