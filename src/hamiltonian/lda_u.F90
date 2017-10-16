@@ -81,8 +81,11 @@ module lda_u_oct_m
        dlda_u_commute_r,                &
        zlda_u_commute_r,                &
        dlda_u_force,                    &
-       zlda_u_force
+       zlda_u_force,                    &
+       l_notation
 
+  character(len=1), parameter :: &
+    l_notation(0:3) = (/ 's', 'p', 'd', 'f' /)
 
   type lda_u_t
     logical                  :: apply
@@ -94,8 +97,8 @@ module lda_u_oct_m
     FLOAT, pointer           :: dn_alt(:,:,:,:) !> Stores the renomalized occ. matrices
     CMPLX, pointer           :: zn_alt(:,:,:,:) !> if the ACBN0 functional is used  
   
-    FLOAT, pointer           :: drenorm_occ(:,:,:,:,:) !> On-site occupations (for the ACBN0 functional)  
-    CMPLX, pointer           :: zrenorm_occ(:,:,:,:,:)
+    FLOAT, pointer           :: drenorm_occ(:,:,:,:,:,:) !> On-site occupations (for the ACBN0 functional)  
+    CMPLX, pointer           :: zrenorm_occ(:,:,:,:,:,:)
  
     FLOAT, pointer           :: coulomb(:,:,:,:,:) !>Coulomb integrals for all the system
                                                    !> (for the ACBN0 functional) 
@@ -104,6 +107,7 @@ module lda_u_oct_m
 
     integer             :: norbsets           !> Number of orbital sets 
     integer             :: nspins
+    integer             :: spin_channels
     integer             :: nspecies        
     integer             :: st_end
     integer             :: maxnorbs           !> Maximal number of orbitals for all the atoms
@@ -136,6 +140,7 @@ contains
   this%max_np = 0
   this%maxnorbs = 0
   this%nspins = 0
+  this%spin_channels = 0
   this%nspecies = 0
   this%freeze_occ = .false.
   this%freeze_u = .false.
@@ -169,7 +174,6 @@ contains
   type(multicomm_t),         intent(in)    :: mc
 
   integer :: maxorbs, iat, ispin, iorb
-  real(8) :: mem, coef
 
   PUSH_SUB(lda_u_init)
 
@@ -177,9 +181,7 @@ contains
 
   call messages_print_stress(stdout, "DFT+U")
  
-!  if(st%parallel_in_states) call messages_not_implemented("lda+u parallel in states")
   if(gr%mesh%parallel_in_domains) call messages_not_implemented("dft+u parallel in domains")
-  if(st%d%ispin == SPINORS) call messages_not_implemented("dft+u with spinors") 
 
   this%apply = .true.
 
@@ -200,7 +202,7 @@ contains
   !% of the corresponding atom.
   !%End
   call parse_variable('OrbitalsTruncationMethod', OPTION__ORBITALSTRUNCATIONMETHOD__FULL, this%truncation)
-  call messages_print_var_value(stdout, 'OrbitalsTruncationMethod', this%truncation)
+  call messages_print_var_option(stdout, 'OrbitalsTruncationMethod', this%truncation)
 
   !%Variable OrbitalsThreshold_LDAU
   !%Type float
@@ -306,25 +308,9 @@ contains
   end if
   maxorbs = this%maxnorbs
   this%nspins = st%d%nspin
+  this%spin_channels = st%d%spin_channels
   this%nspecies = geo%nspecies
   this%st_end = st%st_end
-
-  !We analyse the memeory and we print the requiered memory
-  !Thus, if there is not enough memory, the user knows with the code crashes
-  mem = 0.0_8
-  coef = 2.0_8
-  if (states_are_real(st)) coef = 1.0_8
-  mem = mem + coef*REAL_PRECISION*dble(maxorbs**2*st%d%nspin*this%norbsets*2) !Occupation matrices and potentials
-  mem = mem + coef*REAL_PRECISION*dble(maxorbs*st%d%nspin*this%norbsets)    !Orbital occupations
-  if(this%useACBN0) then
-    mem = mem + REAL_PRECISION*dble(maxorbs**4*st%d%nspin*this%norbsets) !Coulomb intergrals
-    mem = mem + REAL_PRECISION*dble(18*(st%d%kpt%end-st%d%kpt%start+1)*(st%st_end-st%st_start+1)) !On-site occupations
-  end if
-  call messages_new_line()
-  call messages_write('    Approximate memory requirement for LDA+U (for each task)   :')
-  call messages_write(mem, units = unit_megabytes)
-  call messages_new_line()
-  call messages_info()
 
   !We allocate the necessary ressources
   if (states_are_real(st)) then

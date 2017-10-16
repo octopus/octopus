@@ -1262,7 +1262,7 @@ contains
             if (mag(2) == M_ZERO) then
               phi = M_ZERO
             elseif (mag(2) < M_ZERO) then
-              phi = M_PI*M_TWOTHIRD
+              phi = M_PI*CNST(3.0/2.0)
             elseif (mag(2) > M_ZERO) then
               phi = M_PI*M_HALF
             end if
