@@ -1287,7 +1287,7 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
         itot = itot + 1
       end do
     end do
-<<<<<<< HEAD
+
     if(this%shape == M_PLANES) then
       write(filename,'(i5.5)') ik
       write(filename,'(a)') trim(restart_dir(restart))//"/pesflux4-kpt"//trim(filename)//".obf"
@@ -1306,9 +1306,6 @@ end if
     call MPI_Barrier(st%mpi_grp%comm, mpi_err)
   end if
 #endif
-=======
-  end do
->>>>>>> develop
 
   if(this%shape == M_PLANES) then
     root(P_STRATEGY_MAX) = 0
