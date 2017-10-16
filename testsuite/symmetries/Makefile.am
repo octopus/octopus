@@ -261,9 +261,8 @@ dist_share_DATA =                          \
 	07-symmetrization_lda.02-spg16_sym.inp   \
 	07-symmetrization_lda.03-spg75_sym.inp   \
 	07-symmetrization_lda.test               \
-	08-symmetrization.01-spg3_nosym.inp  \
-	08-symmetrization.02-spg3_sym.inp    \
-	08-symmetrization.test               \
+	08-symmetrization_mgga.01-spg3_sym.inp    \
+	08-symmetrization_mgga.test               \
 	09-symmetrization_gga.01-spg143_sym.inp  \
 	09-symmetrization_gga.test
 
