@@ -1406,7 +1406,7 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
   FLOAT, allocatable :: tmp(:)
   #endif
   integer :: is, mm, kappa
-  FLOAT :: mu
+  FLOAT :: mu, coeff
 
   PUSH_SUB(X(get_atomic_orbital))
 
@@ -1496,25 +1496,38 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
     if(abs(mm) <= ll) then
       call X(species_get_orbital_submesh)(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x,&
                                          os%X(orb)(1:sm%np,1,orbind))
+!     SAFE_ALLOCATE(tmp(1:sm%np))
+ !   call dspecies_get_orbital_submesh(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x, &
+ !                                         tmp)
+ !   os%X(orb)(1:sm%np,1,orbind) = tmp(1:sm%np)
+ !   SAFE_DEALLOCATE_A(tmp)
+    
+      coeff = sqrt((kappa-mu+M_HALF)/(M_TWO*kappa+M_ONE)) 
+      do is=1,sm%np
+        os%X(orb)(is,1,orbind) = coeff*os%X(orb)(is,1,orbind)
+      end do
     else
        os%X(orb)(1:sm%np,1,orbind) = M_ZERO
     end if
 
     mm = int(mu+M_HALF)
     if(abs(mm) <= ll) then
-      call X(species_get_orbital_submesh)(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x,&
-                                         os%X(orb)(1:sm%np,2,orbind))
+      call X(species_get_orbital_submesh)(spec, sm, ii, ll, mm, 2, geo%atom(iatom)%x,&
+                                        os%X(orb)(1:sm%np,2,orbind))
+ !   SAFE_ALLOCATE(tmp(1:sm%np))
+ !   call zspecies_get_orbital_submesh(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x, &
+ !                                         tmp)
+ !   os%X(orb)(1:sm%np,2,orbind) = tmp(1:sm%np)
+ !   SAFE_DEALLOCATE_A(tmp)
+      coeff = (-kappa/abs(kappa))*sqrt((kappa+mu+M_HALF)/(M_TWO*kappa+M_ONE))
+      do is=1,sm%np
+        os%X(orb)(is,2,orbind) = coeff*os%X(orb)(is,2,orbind)
+      end do
     else
       os%X(orb)(1:sm%np,2,orbind) = M_ZERO
     end if
 
-    do is=1,sm%np
-      os%X(orb)(is,1,orbind) = (-kappa/abs(kappa))*os%X(orb)(is,1,orbind)*sqrt((kappa-mu+M_HALF)/(M_TWO*kappa+M_ONE))
-      os%X(orb)(is,2,orbind) = os%X(orb)(is,2,orbind)*sqrt((kappa+mu+M_HALF)/(M_TWO*kappa+M_ONE))
-    end do
-    
   end if
-
 
   POP_SUB(X(get_atomic_orbital))
 
