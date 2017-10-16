@@ -276,7 +276,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl)
                   force_psi(1:gr%mesh%sb%dim) = matmul(gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim),force_psi(1:gr%mesh%sb%dim))
                 end if
 
-                !Let's now apply the symmetry to the force
+                !Let us now apply the symmetry to the force
                 !Note: here we are working with reduced quantities
                 force_tmp(1:gr%sb%dim) = symm_op_apply_cart(gr%sb%symm%ops(iop), force_psi)
                 force_nl(1:gr%sb%dim, iatom) = force_nl(1:gr%mesh%sb%dim, iatom) + &
@@ -355,10 +355,10 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl)
 
   if(st%symmetrize_density) then
     call symmetrizer_init(symmetrizer, gr%mesh)
-    SAFE_ALLOCATE(symmtmp(1:gr%mesh%np, 1:3))
+    SAFE_ALLOCATE(symmtmp(1:gr%mesh%np, 1:gr%mesh%sb%dim))
 
     call dsymmetrizer_apply(symmetrizer, field_vector = grad_rho, symmfield_vector = symmtmp, suppress_warning = .true.)
-    grad_rho(1:gr%mesh%np, 1:3) = symmtmp(1:gr%mesh%np, 1:3)
+    grad_rho(1:gr%mesh%np, 1:gr%mesh%sb%dim) = symmtmp(1:gr%mesh%np, 1:gr%mesh%sb%dim)
 
     SAFE_DEALLOCATE_A(symmtmp)
     call symmetrizer_end(symmetrizer)
@@ -396,6 +396,8 @@ subroutine X(total_force_from_potential)(gr, geo, ep, st, x)
   CMPLX :: phase
 
   PUSH_SUB(X(total_force_from_potential))
+
+  ASSERT(.not. st%symmetrize_density)
 
   np = gr%mesh%np
   np_part = gr%mesh%np_part
@@ -505,6 +507,8 @@ subroutine X(forces_derivative)(gr, geo, ep, st, lr, lr2, force_deriv)
   CMPLX, allocatable  :: force_local(:, :)
 
   PUSH_SUB(X(forces_derivative))
+
+  ASSERT(.not. st%symmetrize_density)
 
   np      = gr%mesh%np
   np_part = gr%mesh%np_part

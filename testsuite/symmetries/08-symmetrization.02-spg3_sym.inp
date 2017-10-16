@@ -19,6 +19,7 @@ ExtraStates = 1
  4 | 4 | 4 
 %
 KPointsUseSymmetries = yes
+KPointsUseTimeReversal = no
 %ReducedCoordinates
 "Si" | 1.7000000000E-01 | 1.5000000000E-01 | 1.1000000000E-01
 "Si" | 8.3000000000E-01 | 1.5000000000E-01 | 8.9000000000E-01

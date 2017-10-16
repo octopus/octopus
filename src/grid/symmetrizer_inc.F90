@@ -64,6 +64,7 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
   end if
 
   if(present(field_vector)) then
+    ASSERT(ubound(field_vector, dim=2) == 3)
     if(this%mesh%parallel_in_domains) then
       SAFE_ALLOCATE(field_global_vector(1:this%mesh%np_global, 1:3))
       do idir = 1, 3
