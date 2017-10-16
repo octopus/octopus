@@ -243,7 +243,7 @@ contains
     if(this%solver%solver == OPTION__LINEARSOLVER__MULTIGRID .or. preconditioner_is_multigrid(this%solver%pre)) then
       if(.not. associated(sys%gr%mgrid)) then
         SAFE_ALLOCATE(sys%gr%mgrid)
-        call multigrid_init(sys%gr%mgrid, sys%geo, sys%gr%cv, sys%gr%mesh, sys%gr%der, sys%gr%stencil)
+        call multigrid_init(sys%gr%mgrid, sys%geo, sys%gr%cv, sys%gr%mesh, sys%gr%der, sys%gr%stencil, sys%mc)
       end if
     end if
 

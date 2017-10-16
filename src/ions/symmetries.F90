@@ -218,7 +218,7 @@ contains
       ! transpose the lattice vectors for use in spglib as row-major matrix
       lattice(:,:) = transpose(lattice(:,:))
 
-      this%space_group = spglib_get_international(symbol, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
+      this%space_group = spg_get_international(symbol, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
 
       if(this%space_group == 0) then
         message(1) = "Symmetry analysis failed in spglib. Disabling symmetries."
@@ -239,17 +239,17 @@ contains
 
       write(message(1),'(a, i4)') 'Space group No. ', this%space_group
       write(message(2),'(2a)') 'International: ', symbol
-      this%space_group = spglib_get_schoenflies(symbol, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
+      this%space_group = spg_get_schoenflies(symbol, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
       write(message(3),'(2a)') 'Schoenflies: ', symbol
       call messages_info(3)
 
-      max_size = spglib_get_multiplicity(lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
+      max_size = spg_get_multiplicity(lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
 
       ! spglib returns row-major not column-major matrices!!! --DAS
       SAFE_ALLOCATE(rotation(1:3, 1:3, 1:max_size))
       SAFE_ALLOCATE(translation(1:3, 1:max_size))
 
-      fullnops = spglib_get_symmetry(rotation(1, 1, 1), translation(1, 1), &
+      fullnops = spg_get_symmetry(rotation(1, 1, 1), translation(1, 1), &
         max_size, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
 
       ! we need to check that it is not a supercell, as in the QE routine (sgam_at)

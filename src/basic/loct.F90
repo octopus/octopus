@@ -37,7 +37,6 @@ module loct_oct_m
     loct_mkdir,              &
     loct_stat,               &
     loct_rm,                 &
-    loct_rm_status_files,    &
     loct_dir_exists,         &
     loct_number_of_lines,    &
     loct_break_C_string,     &
@@ -290,14 +289,6 @@ contains
     deallocate(list)
 
   end function loct_isinstringlist
-
-  subroutine loct_rm_status_files()
-
-    call loct_rm('exec/oct-status-running')
-    call loct_rm('exec/oct-status-finished')
-    call loct_rm('exec/oct-status-aborted')
-
-  end subroutine loct_rm_status_files
 
 
   logical function loct_dir_exists(dirname) result(exists)

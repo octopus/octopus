@@ -168,7 +168,7 @@ contains
       ! initialize densities, hamiltonian and eigensolver
       call states_densities_init(ks_inv%aux_st, gr, geo)
       call hamiltonian_init(ks_inv%aux_hm, gr, geo, ks_inv%aux_st, INDEPENDENT_PARTICLES, &
-                            XC_FAMILY_NONE, XC_FLAGS_NONE)
+                            XC_FAMILY_NONE, XC_FLAGS_NONE, .false.)
       call eigensolver_init(ks_inv%eigensolver, gr, ks_inv%aux_st)
     end if
 
@@ -584,8 +584,7 @@ contains
       aux_hm%vxc(:,jj) = vhxc(:,jj) - aux_hm%vhartree(1:np)
     end do
 
-!TODO: check that all arrays needed by hamiltonian update are sync'd in MPI
-!      fashion
+    !TODO: check that all arrays needed by hamiltonian update are sync`d in MPI fashion
 
     !calculate final density
 

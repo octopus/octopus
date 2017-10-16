@@ -26,7 +26,6 @@ module pes_flux_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
   use kpoints_oct_m
-  use io_binary_oct_m
   use io_function_oct_m
   use io_oct_m
   use lasers_oct_m
@@ -37,6 +36,7 @@ module pes_flux_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use multicomm_oct_m
   use parser_oct_m
   use par_vec_oct_m
   use profiling_oct_m

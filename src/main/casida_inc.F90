@@ -652,7 +652,7 @@ contains
           if(ii < 1 .or. aa < 1 .or. ik < 1) then
             message(1) = "Illegal indices in '" // trim(restart_file) // "': working from scratch."
             call messages_warning(1)
-            call loct_rm(trim(restart_file))
+            call restart_rm(cas%restart_load, trim(restart_file))
             ! if file is corrupt, do not trust anything that was read
             is_saved = .false.
             exit
@@ -766,7 +766,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
   SAFE_ALLOCATE(cas%X(mat2)(1:cas%n_pairs, 1:cas%n_pairs))
   SAFE_ALLOCATE(cas%X(w2)(1:cas%n_pairs))
 
-  call restart_init(restart_vib, RESTART_VIB_MODES, RESTART_TYPE_LOAD, mpi_world, ierr, mesh = sys%gr%mesh)
+  call restart_init(restart_vib, RESTART_VIB_MODES, RESTART_TYPE_LOAD, sys%mc, ierr, mesh = sys%gr%mesh)
 
   do iatom = 1, sys%geo%natoms
     do idir = 1, mesh%sb%dim
@@ -882,7 +882,7 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
         if(ii < 1 .or. aa < 1 .or. ik < 1) then
           message(1) = "Illegal indices in '" // trim(restart_filename) // "': working from scratch."
           call messages_warning(1)
-          call loct_rm(trim(restart_filename))
+          call restart_rm(cas%restart_load, trim(restart_filename))
           ! if file is corrupt, do not trust anything that was read
           is_saved = .false.
           exit

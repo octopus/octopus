@@ -249,17 +249,8 @@
 /external_libs/qshep/*__genmod.*
 /external_libs/qshep/*.o
 
-# /external_libs/spglib-1.5.2/
-/external_libs/spglib-1.5.2/Makefile
-/external_libs/spglib-1.5.2/Makefile.in
-
-# /external_libs/spglib-1.5.2/src/
-/external_libs/spglib-1.5.2/src/Makefile
-/external_libs/spglib-1.5.2/src/Makefile.in
-/external_libs/spglib-1.5.2/src/*.mod
-/external_libs/spglib-1.5.2/src/.deps
-/external_libs/spglib-1.5.2/src/*.a
-/external_libs/spglib-1.5.2/src/*.o
+# /external_libs/spglib-1.9.9/
+/external_libs/spglib-1.9.9/src/*.a
 
 # /external_libs/yaml-0.1.4/
 /external_libs/yaml-0.1.4/Makefile
@@ -854,7 +845,6 @@
 /testsuite/finite_systems_1d/config.h.in
 /testsuite/finite_systems_1d/build-aux
 /testsuite/finite_systems_1d/build-stamp
-/testsuite/finite_systems_1d/*.test
 /testsuite/finite_systems_1d/semantic.cache
 
 # /testsuite/finite_systems_2d/
@@ -875,7 +865,6 @@
 /testsuite/finite_systems_2d/config.h.in
 /testsuite/finite_systems_2d/build-aux
 /testsuite/finite_systems_2d/build-stamp
-/testsuite/finite_systems_2d/*.test
 /testsuite/finite_systems_2d/semantic.cache
 
 # /testsuite/finite_systems_3d/
@@ -896,7 +885,6 @@
 /testsuite/finite_systems_3d/config.h.in
 /testsuite/finite_systems_3d/build-aux
 /testsuite/finite_systems_3d/build-stamp
-/testsuite/finite_systems_3d/*.test
 /testsuite/finite_systems_3d/semantic.cache
 
 # /testsuite/frozen/
@@ -925,7 +913,6 @@
 /testsuite/linear_response/config.h.in
 /testsuite/linear_response/build-aux
 /testsuite/linear_response/build-stamp
-/testsuite/linear_response/*.test
 /testsuite/linear_response/semantic.cache
 
 # /testsuite/optimal_control/
@@ -946,7 +933,6 @@
 /testsuite/optimal_control/config.h.in
 /testsuite/optimal_control/build-aux
 /testsuite/optimal_control/build-stamp
-/testsuite/optimal_control/*.test
 /testsuite/optimal_control/semantic.cache
 
 # /testsuite/periodic_systems/
@@ -967,7 +953,6 @@
 /testsuite/periodic_systems/config.h.in
 /testsuite/periodic_systems/build-aux
 /testsuite/periodic_systems/build-stamp
-/testsuite/periodic_systems/*.test
 /testsuite/periodic_systems/semantic.cache
 
 # /testsuite/photo_electron/
@@ -988,7 +973,6 @@
 /testsuite/photo_electron/config.h.in
 /testsuite/photo_electron/build-aux
 /testsuite/photo_electron/build-stamp
-/testsuite/photo_electron/*.test
 /testsuite/photo_electron/semantic.cache
 
 # /testsuite/pseudopotentials/
@@ -1013,5 +997,4 @@
 /testsuite/real_time/config.h.in
 /testsuite/real_time/build-aux
 /testsuite/real_time/build-stamp
-/testsuite/real_time/*.test
 /testsuite/real_time/semantic.cache

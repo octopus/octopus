@@ -627,7 +627,7 @@ contains
         ! the grid is different, so we read the coordinates.
         SAFE_ALLOCATE(read_lxyz(1:read_np_part, 1:mesh%sb%dim))
         ASSERT(allocated(mesh%idx%lxyz))
-        call io_binary_read(trim(dir)//'/lxyz.obf', read_np_part*mesh%sb%dim, read_lxyz, err)
+        call io_binary_read(trim(io_workpath(dir))//'/lxyz.obf', read_np_part*mesh%sb%dim, read_lxyz, err)
         if (err /= 0) then
           ierr = ierr + 4
           message(1) = "Unable to read index map from '"//trim(dir)//"'."
