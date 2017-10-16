@@ -2,7 +2,7 @@
 
 Test       : Silicon crystal
 Program    : octopus
-TestGroups : long-run, periodic_systems
+TestGroups : long-run, periodic_systems, symmetries
 Enabled    : Yes
 
 Input      : 04-silicon.01-gs.inp

@@ -508,8 +508,6 @@ subroutine X(forces_derivative)(gr, geo, ep, st, lr, lr2, force_deriv)
 
   PUSH_SUB(X(forces_derivative))
 
-  ASSERT(.not. st%symmetrize_density)
-
   np      = gr%mesh%np
   np_part = gr%mesh%np_part
 
