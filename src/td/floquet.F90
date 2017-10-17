@@ -886,6 +886,7 @@ contains
          
          if (hm%F%calc_occupations .and. have_gs) then
            call floquet_calc_occupations(hm, sys, dressed_st)
+           call v_ks_calc(sys%ks, hm, dressed_st, sys%geo)
            call energy_calc_total(hm, gr, dressed_st, iunit = 0)
            write(message(1),'(a,es15.8,4a)') 'Energy tot: ', units_from_atomic(units_out%energy, hm%energy%total) &
                                                            , ' [',  trim(units_abbrev(units_out%energy)), ']'
