@@ -45,7 +45,7 @@ match ; VXC  ; SIZE(static/VXC)  ;   41812
 # The two k-points are equivalent by time-reversal symmetry,
 # so results should be identical between them.
 
-match ; vxc k 1 z       ; LINEFIELD(static/vxc.dat,   1, 3);    -0.25
+match ; vxc k 1 z       ; LINEFIELD(static/vxc.dat,   1, 3);    0.25
 match ; vxc k 1 diag    ; LINEFIELD(static/vxc.dat,   1, 4);    18
 match ; vxc k 1 offdiag ; LINEFIELD(static/vxc.dat,   1, 5);   324
 match ; vxc k 1 2 Re    ; LINEFIELD(static/vxc.dat,   3, 3);   -10.77421748
@@ -54,7 +54,7 @@ match ; vxc k 1 8 8 Re  ; LINEFIELD(static/vxc.dat, 153, 4);   -10.6717566
 match ; vxc k 1 8 8 Im  ; LINEFIELD(static/vxc.dat, 153, 5);     0.0
 # unfortunately, offdiagonals are dependent on arbitrary phases, cannot be tested
 
-match ; vxc k 2 z       ; LINEFIELD(static/vxc.dat, 344, 3);    -0.25
+match ; vxc k 2 z       ; LINEFIELD(static/vxc.dat, 344, 3);    0.25
 match ; vxc k 2 diag    ; LINEFIELD(static/vxc.dat, 344, 4);    18
 match ; vxc k 2 offdiag ; LINEFIELD(static/vxc.dat, 344, 5);   324
 match ; vxc k 1 1 Re    ; LINEFIELD(static/vxc.dat, 352, 3);   -10.671756
