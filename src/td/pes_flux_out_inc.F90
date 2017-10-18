@@ -1287,26 +1287,6 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
         itot = itot + 1
       end do
     end do
-  
-    if(this%shape == M_PLANES) then
-      write(filename,'(i5.5)') ik
-      write(filename,'(a)') trim(restart_dir(restart))//"/pesflux4-kpt"//trim(filename)//".obf"
-    end if
-
-if(mpi_grp_is_root(st%mpi_grp)) then      
-      SAFE_ALLOCATE(psi1(this%nkpnts))
-      psi1(:)=this%conjgphase_prev_cub(:,ik)
-      call io_binary_write(filename, this%nkpnts, psi1(:), err)
-      SAFE_DEALLOCATE_P(psi1)
-end if
-
-#if defined(HAVE_MPI)
-  if(st%mpi_grp%size > 1) then
-    call MPI_Bcast(err, 1, MPI_INTEGER, 0, st%mpi_grp%comm, mpi_err)
-    call MPI_Barrier(st%mpi_grp%comm, mpi_err)
-  end if
-#endif
-
   end do
 
   if(this%shape == M_PLANES) then
@@ -1326,8 +1306,10 @@ end if
       end if
       if (err /= 0) ierr = ierr + 1
     end do
-    
+  
   end if
+
+
 
   if(this%shape == M_SPHERICAL) then
     call zrestart_write_binary(restart, 'pesflux4', this%nk * this%nstepsomegak, this%conjgphase_prev_sph, err)
