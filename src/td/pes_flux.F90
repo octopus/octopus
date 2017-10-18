@@ -777,7 +777,6 @@ contains
       !%End
     
       NBZ(:) = 1
-      if (.not. kpoints_have_zero_weight_path(sb%kpoints)) NBZ(1:pdim) = 2
       if(parse_block('PES_Flux_BZones', blk) == 0) then
 
         call parse_block_integer(blk, 0, 0, NBZ(1))
