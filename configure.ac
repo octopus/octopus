@@ -113,9 +113,9 @@ AC_ARG_ENABLE(opencl, AS_HELP_STRING([--enable-opencl], [OpenCL support (experim
 
 if test -n "${enable_openmp}" -a x"${enable_openmp}" != x"no"; then
   HAVE_OPENMP=1
-  if test -n "${enable_openmp_simd}" -a x"${enable_openmp_simd}" != x"no"; then
-    HAVE_OPENMP_SIMD=1
-  fi
+fi
+if test -n "${enable_openmp_simd}" -a x"${enable_openmp_simd}" != x"no"; then
+  HAVE_OPENMP_SIMD=1
 fi
 
 
