@@ -638,6 +638,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
         do iproj = 1, nprojs
           do ist = 1, nst
             aa = CNST(0.0)
+            !$omp simd reduction (+:aa)
             do ip = 1, npoints
               aa = aa + pmat%projectors(ip, iproj)*psib%states_linear(ist)%X(psi)(pmat%map(ip))
             end do
@@ -686,6 +687,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
         do iproj = 1, nprojs
           do ist = 1, nst
             aa = CNST(0.0)
+            !$omp simd reduction (+:aa)
             do ip = 1, npoints
               aa = aa + pmat%projectors(ip, iproj)*psib%states_linear(ist)%X(psi)(pmat%map(ip))*this%projector_phases(ip, imat, ik)
             end do
