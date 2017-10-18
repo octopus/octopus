@@ -241,6 +241,7 @@ contains
     ASSERT(dim <= MAX_DIM)
 
     call kpoints_nullify(this)
+    this%nik_axis(1:MAX_DIM) = 1
 
     SAFE_ALLOCATE(this%klattice(1:dim, 1:dim))
     this%klattice(1:dim, 1:dim) = klattice(1:dim, 1:dim)
@@ -607,8 +608,6 @@ contains
         end do
       end do
 
-      !We do not use axis
-      this%nik_axis(1:MAX_DIM) = 1
 
       !We do not have shifts
       nshifts = 1
