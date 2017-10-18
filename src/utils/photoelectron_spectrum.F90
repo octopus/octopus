@@ -47,6 +47,9 @@ program photoelectron_spectrum
   use unit_system_oct_m
   use utils_oct_m
   use varinfo_oct_m
+
+  use mpi_oct_m
+  
   
   implicit none
 
@@ -92,6 +95,7 @@ program photoelectron_spectrum
   integer              :: pes_method, option 
 
   type(multicomm_t)    :: mc
+  integer              :: index_range(4)
 
   call getopt_init(ierr)
   if(ierr /= 0) then
@@ -231,6 +235,11 @@ program photoelectron_spectrum
     
   end if
 
+  
+  ! Intialize mc 
+  call multicomm_init(mc, mpi_world, P_STRATEGY_KPOINTS, P_STRATEGY_KPOINTS, &
+                      mpi_world%size, index_range, (/ 5000, 1, 1, 1 /))
+  index_range(:) = 100000        
   
   
   call restart_module_init()
