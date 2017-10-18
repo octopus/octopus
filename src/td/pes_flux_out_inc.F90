@@ -267,6 +267,8 @@ subroutine pes_flux_pmesh_pln(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, 
 
   integer :: nkpt, kpth_dir, ig, igpt
   FLOAT :: zero_thr
+  
+  logical :: use_zweight_path
 
 
   PUSH_SUB(pes_flux_pmesh_pln)
@@ -287,8 +289,9 @@ subroutine pes_flux_pmesh_pln(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, 
       
   zero_thr = M_EPSILON    
 
+  use_zweight_path = (krng(1)>1) ! a dirty way to check whether we want to use the path or not 
       
-  if ( kpoints_have_zero_weight_path(kpoints)) then     
+  if ( kpoints_have_zero_weight_path(kpoints) .and. use_zweight_path) then     
     ! supporting paths only along the kx and ky directions in 
     ! reciprocal space
 !     kpth_dir = -1
@@ -313,7 +316,6 @@ subroutine pes_flux_pmesh_pln(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, 
 
 
   end if
-  
   SAFE_ALLOCATE(ikidx(maxval(nk(1:3)),1:3))
 !   call flip_sign_Lkpt_idx(dim, nk(:), ikidx(:,:), kpoints_have_zero_weight_path(kpoints))
   call flip_sign_Lkpt_idx(dim, nk(:), ikidx(:,:), do_nothing = .true.)
@@ -858,6 +860,83 @@ subroutine pes_flux_map_from_state_2(restart, idx, np, psiG)
 
   POP_SUB(pes_flux_map_from_state_2)  
 end subroutine pes_flux_map_from_state_2
+
+
+
+! ---------------------------------------------------------
+subroutine pes_flux_out_energy(this, pesK, file, ll, pmesh, Ekin)
+  type(pes_flux_t),  intent(in) :: this
+  FLOAT,             intent(in) :: pesK(:,:,:)
+  character(len=*),  intent(in) :: file
+  integer,           intent(in) :: ll(:)  
+  FLOAT,             intent(in) :: pmesh(:,:,:,:)  
+  FLOAT,             intent(in) :: Ekin(:,:,:)
+
+
+  PUSH_SUB(pes_flux_out_energy)
+
+  select case (this%shape)
+  
+  case (M_SPHERICAL)
+    call messages_not_implemented("Energy-resolved PES for the flux method with spherical surfaces because is not needed")
+  ! not needed
+  
+  case (M_CUBIC)
+    call messages_not_implemented("Energy-resolved PES for the flux method with cubic surfaces") 
+
+  case (M_PLANES)
+    call pes_flux_out_energy_pln(pesK, file, ll, pmesh, Ekin)
+  
+  end select
+
+
+  POP_SUB(pes_flux_out_energy)
+end subroutine pes_flux_out_energy
+
+
+! ---------------------------------------------------------
+subroutine pes_flux_out_energy_pln(arpes, file, ll, pmesh, Ekin)
+  FLOAT,             intent(in) :: arpes(:,:,:)
+  character(len=*),  intent(in) :: file
+  integer,           intent(in) :: ll(:)  
+  FLOAT,             intent(in) :: pmesh(:,:,:,:)  
+  FLOAT,             intent(in) :: Ekin(:,:,:)
+  
+  integer :: iunit, ip, ie
+  FLOAT   :: dp, length, pp(1:2), pdiff(1:2)
+  
+  
+  PUSH_SUB(pes_flux_out_energy_pln)
+
+  
+  iunit = io_open(file, action='write')
+  write(iunit, '(a)') '##################################################'
+  write(iunit, '(a1,a18,2x,a18,2x,a18)') '#', &
+                                    str_center("E", 18),  str_center("P[E]", 18)
+
+  write(iunit, '(a1,a18,2x,a18,2x,a18)') '#', &
+                                    str_center('['//trim(units_abbrev(units_out%energy)) // ']', 18), &
+                                    str_center('[1/' //trim(units_abbrev(units_out%energy))//']', 18)
+  write(iunit, '(a)') '##################################################'
+  
+
+  do ie = 1, ll(3) 
+    write(iunit, '(es19.12,2x,es19.12,2x,es19.12)')   &
+                                    units_from_atomic(units_out%energy, Ekin(1,1,ie)), &
+                                    sum(arpes(:,:,ie))
+  end do      
+  
+  
+  call io_close(iunit)
+
+
+  POP_SUB(pes_flux_out_energy_pln)
+end subroutine pes_flux_out_energy_pln
+
+
+
+
+
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

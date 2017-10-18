@@ -46,6 +46,7 @@ module pes_flux_oct_m
   use sort_oct_m
   use states_oct_m
   use states_dim_oct_m
+  use string_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
@@ -64,7 +65,8 @@ module pes_flux_oct_m
     pes_flux_dump,             &
     pes_flux_reciprocal_mesh_gen, &
     pes_flux_pmesh,            &
-    pes_flux_map_from_states
+    pes_flux_map_from_states,  &
+    pes_flux_out_energy
 
   type pes_flux_t
     integer          :: nkpnts                         !< total number of k-points
