@@ -1299,7 +1299,7 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
       if (st%d%kpt%start <= ik .and. ik <= st%d%kpt%end) then
         SAFE_ALLOCATE(psi1(this%nkpnts))
         psi1(:)=this%conjgphase_prev_cub(:,ik)
-        call zrestart_write_binary(restart, filename, this%nkpnts, psi1(:), err)
+        call zrestart_write_binary(restart, filename, this%nkpnts, psi1(:), err, root = root)
         SAFE_DEALLOCATE_P(psi1)
       else
         err = 0
