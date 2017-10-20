@@ -1,0 +1,2165 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Orthorombic symmetries
+Program    : octopus
+TestGroups : long-run, periodic_systems, symmetries
+Enabled    : Yes
+
+Input      : 03-orthorombic.01-spg16.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 16
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0   1   0     0   0  -1", 60 ); 0.000000
+match ; S3 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; S4 ; GREP(static/info, "   1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 27
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 8 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 10 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 11 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 12 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 14 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.12500
+match ; kpt 15 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 16 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 17 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 18 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 20 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 22 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 23 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.06250
+match ; kpt 24 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 25 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 26 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 27 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.02-spg17.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 17
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "   1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 8 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 10 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 11 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 12 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 15 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 17 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 18 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.0000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 20 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.06250
+match ; kpt 21 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 22 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 23 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 24 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 25 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 26 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.06250
+match ; kpt 27 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 28 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 29 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 30 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.03-spg18.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 18
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 15 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 16 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 17 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 18 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 20 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 22 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 23 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 24 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 25 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 26 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 27 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 28 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 29 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 30 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.04-spg19.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 19
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 1
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 15 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 17 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 20 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 22 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 23 ; GREP(static/info, "      0.0000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 24 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 25 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 26 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 27 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 28 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 29 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 30 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 31 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 32 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 33 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 34 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 35 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 36 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.05-spg20.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 20
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "   0  -1   0    -1   0   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 24
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.06250
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 6 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 11 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 14 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 15 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 17 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 19 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.06250
+match ; kpt 20 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 22 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.06250
+match ; kpt 23 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 24 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.06-spg21.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 21
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "   0   1   0     1   0   0     0   0  -1", 60 ); 0.000000
+match ; S3 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; S4 ; GREP(static/info, "   0  -1   0    -1   0   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 21
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.06250
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 6 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.12500
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 11 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 12 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.12500
+match ; kpt 13 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 14 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 15 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 16 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.06250
+match ; kpt 17 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.06250
+match ; kpt 20 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.07-spg22.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 22
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "   0  -1   1     0  -1   0     1  -1   0", 60 ); 0.000000
+match ; S3 ; GREP(static/info, "   0   1  -1     1   0  -1     0   0  -1", 60 ); 0.000000
+match ; S4 ; GREP(static/info, "  -1   0   0    -1   0   1    -1   1   0", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 18
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.12500
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.06250
+match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.12500
+match ; kpt 6 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 8 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.12500
+match ; kpt 10 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.0000     -0.2500      0.2500", 51 ); 0.06250
+match ; kpt 13 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.12500
+match ; kpt 14 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 15 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 17 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.08-spg23.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 23
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "   0   0   1    -1  -1  -1     1   0   0", 60 ); 0.000000
+match ; S3 ; GREP(static/info, "   0   1   0     1   0   0    -1  -1  -1", 60 ); 0.000000
+match ; S4 ; GREP(static/info, "  -1  -1  -1     0   0   1     0   1   0", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 18
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.06250
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.12500
+match ; kpt 6 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.12500
+match ; kpt 7 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.12500
+match ; kpt 10 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 11 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.06250
+match ; kpt 14 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 15 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.06250
+match ; kpt 17 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.09-spg24.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 24
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 1
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 15 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 17 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 20 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 22 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 23 ; GREP(static/info, "      0.0000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 24 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 25 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 26 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 27 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 28 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 29 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 30 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 31 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 32 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 33 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 34 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 35 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 36 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.10-spg25.inp
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 25
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "   1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; S3 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; S4 ; GREP(static/info, "  -1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 27
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 8 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 10 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 11 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 12 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 14 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.12500
+match ; kpt 15 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 16 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 17 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 18 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 20 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 22 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 23 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.06250
+match ; kpt 24 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 25 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 26 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 27 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.11-spg26.inp
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 26
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 8 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 10 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 11 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 12 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 15 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 17 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 18 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.0000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 20 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.06250
+match ; kpt 21 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 22 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 23 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 24 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 25 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 26 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.06250
+match ; kpt 27 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 28 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 29 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 30 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.12-spg27.inp
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 27
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 15 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 16 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 17 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 18 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 20 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 22 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 23 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 24 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 25 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 26 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 27 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 28 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 29 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 30 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.13-spg28.inp
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 28
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 15 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 16 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 17 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 18 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 20 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 22 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 23 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 24 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 25 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 26 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 27 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 28 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 29 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 30 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.14-spg29.inp
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 29
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 1
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 15 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 17 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 20 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 22 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 23 ; GREP(static/info, "      0.0000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 24 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 25 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 26 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 27 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 28 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 29 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 30 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 31 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 32 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 33 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 34 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 35 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 36 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.15-spg30.inp
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 30
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 15 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 16 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 17 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 18 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 20 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 22 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 23 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 24 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 25 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 26 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 27 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 28 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 29 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 30 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.16-spg31.inp
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 31
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 8 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 10 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 11 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 12 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 15 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 17 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 18 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.0000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 20 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.06250
+match ; kpt 21 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 22 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 23 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 24 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 25 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 26 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.06250
+match ; kpt 27 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 28 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 29 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 30 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.17-spg32.inp
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 32
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 15 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 16 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 17 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 18 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 20 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 22 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 23 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 24 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 25 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 26 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 27 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 28 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 29 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 30 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.18-spg33.inp
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 33
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 1
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 15 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 17 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 20 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 22 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 23 ; GREP(static/info, "      0.0000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 24 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 25 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 26 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 27 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 28 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 29 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 30 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 31 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 32 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 33 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 34 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 35 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 36 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.19-spg34.inp
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 34
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 15 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 16 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 17 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 18 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 20 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 22 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 23 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 24 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 25 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 26 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 27 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 28 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 29 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 30 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.20-spg35.inp
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 35
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "   0  -1   0    -1   0   0     0   0   1", 60 ); 0.000000
+match ; S3 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; S4 ; GREP(static/info, "   0   1   0     1   0   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 21
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.06250
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 6 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.12500
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 11 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 12 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.12500
+match ; kpt 13 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 14 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 15 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 16 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.06250
+match ; kpt 17 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.06250
+match ; kpt 20 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.21-spg36.inp
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 36
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "   0   1   0     1   0   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 24
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.06250
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 6 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 11 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 14 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 15 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 17 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 19 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.06250
+match ; kpt 20 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 22 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.06250
+match ; kpt 23 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 24 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.22-spg37.inp
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 37
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 15 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 16 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 17 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 18 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 20 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 22 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 23 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 24 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 25 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 26 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 27 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 28 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 29 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 30 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.23-spg38.inp
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 38
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "   1   0   0     0   0   1     0   1   0", 60 ); 0.000000
+match ; S3 ; GREP(static/info, "  -1   0   0     0   0   1     0   1   0", 60 ); 0.000000
+match ; S4 ; GREP(static/info, "  -1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 21
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.12500
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 7 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 8 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.06250
+match ; kpt 9 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 10 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 11 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 12 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 14 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.12500
+match ; kpt 15 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 16 ; GREP(static/info, "      0.0000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 17 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.06250
+match ; kpt 18 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 20 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.24-spg39.inp
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 39
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0   0   1     0   1   0", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 24
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.06250
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 15 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 16 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 17 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 18 ; GREP(static/info, "      0.0000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 20 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 22 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 23 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 24 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.25-spg40.inp
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 40
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0   0   1     0   1   0", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 24
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.06250
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 15 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 16 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 17 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 18 ; GREP(static/info, "      0.0000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 20 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 22 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 23 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 24 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.26-spg41.inp
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 41
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0   0   1     0   1   0", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 24
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.06250
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 15 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 16 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 17 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 18 ; GREP(static/info, "      0.0000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 20 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 22 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 23 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 24 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.27-spg42.inp
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 42
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "   0   1  -1     0   1   0    -1   1   0", 60 ); 0.000000
+match ; S3 ; GREP(static/info, "   0   1  -1     1   0  -1     0   0  -1", 60 ); 0.000000
+match ; S4 ; GREP(static/info, "   1   0   0     1   0  -1     1  -1   0", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 18
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.12500
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.06250
+match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.12500
+match ; kpt 6 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 8 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.12500
+match ; kpt 10 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.0000     -0.2500      0.2500", 51 ); 0.06250
+match ; kpt 13 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.12500
+match ; kpt 14 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 15 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 17 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.28-spg43.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 43
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "   0   1  -1     1   0  -1     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 24
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.06250
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 6 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 10 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.06250
+match ; kpt 11 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 12 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "      0.0000     -0.2500      0.2500", 51 ); 0.06250
+match ; kpt 14 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 15 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.06250
+match ; kpt 16 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 17 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.06250
+match ; kpt 20 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 21 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.06250
+match ; kpt 22 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 23 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 24 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.29-spg44.inp
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 44
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "   0   0  -1     1   1   1    -1   0   0", 60 ); 0.000000
+match ; S3 ; GREP(static/info, "   0   1   0     1   0   0    -1  -1  -1", 60 ); 0.000000
+match ; S4 ; GREP(static/info, "   1   1   1     0   0  -1     0  -1   0", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 18
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.06250
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.12500
+match ; kpt 6 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.12500
+match ; kpt 7 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.12500
+match ; kpt 10 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 11 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.06250
+match ; kpt 14 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 15 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.06250
+match ; kpt 17 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.30-spg45.inp
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 45
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "   0   1   0     1   0   0    -1  -1  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 24
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.06250
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.06250
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 14 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 15 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 17 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 19 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 20 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.06250
+match ; kpt 21 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 22 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 23 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 24 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.31-spg46.inp
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 46
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "   0   1   0     1   0   0    -1  -1  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 24
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.06250
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.06250
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 14 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 15 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 17 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 19 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 20 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.06250
+match ; kpt 21 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 22 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 23 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 24 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.32-spg47.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 47
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0   1   0     0   0  -1", 60 ); 0.000000
+match ; S3 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; S4 ; GREP(static/info, "   1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; S5 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; S6 ; GREP(static/info, "   1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; S7 ; GREP(static/info, "   1   0   0     0   1   0     0   0  -1", 60 ); 0.000000
+match ; S8 ; GREP(static/info, "  -1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 27
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 8 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 10 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 11 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 12 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 14 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.12500
+match ; kpt 15 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 16 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 17 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 18 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 20 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 22 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 23 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.06250
+match ; kpt 24 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 25 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 26 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 27 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.33-spg48.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 48
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0   1   0     0   0  -1", 60 ); 0.000000
+match ; S3 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; S4 ; GREP(static/info, "   1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 27
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 8 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 10 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 11 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 12 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 14 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.12500
+match ; kpt 15 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 16 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 17 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 18 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 20 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 22 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 23 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.06250
+match ; kpt 24 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 25 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 26 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 27 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.34-spg49.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 49
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; S3 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; S4 ; GREP(static/info, "   1   0   0     0   1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 15 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 16 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 17 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 18 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 20 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 22 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 23 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 24 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 25 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 26 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 27 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 28 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 29 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 30 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.35-spg50.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 50
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0   1   0     0   0  -1", 60 ); 0.000000
+match ; S3 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; S4 ; GREP(static/info, "   1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 27
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 8 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 10 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 11 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 12 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 14 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.12500
+match ; kpt 15 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 16 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 17 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 18 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 20 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 22 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 23 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.06250
+match ; kpt 24 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 25 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 26 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 27 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.36-spg51.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 51
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; S3 ; GREP(static/info, "  -1   0   0     0   1   0     0   0  -1", 60 ); 0.000000
+match ; S4 ; GREP(static/info, "   1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 8 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 10 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 11 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 15 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 16 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 17 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 18 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 20 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 22 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 23 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 24 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 25 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 26 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.06250
+match ; kpt 27 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 28 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 29 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 30 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.37-spg52.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 52
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 15 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 17 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 20 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 22 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 23 ; GREP(static/info, "      0.0000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 24 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 25 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 26 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 27 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 28 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 29 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 30 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 31 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 32 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 33 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 34 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 35 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 36 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.38-spg53.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 53
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; S3 ; GREP(static/info, "   1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; S4 ; GREP(static/info, "  -1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 8 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 10 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 11 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 12 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 15 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 17 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 18 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.0000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 20 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.06250
+match ; kpt 21 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 22 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 23 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 24 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 25 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 26 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.06250
+match ; kpt 27 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 28 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 29 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 30 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.39-spg54.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 54
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 15 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 17 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 20 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 22 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 23 ; GREP(static/info, "      0.0000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 24 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 25 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 26 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 27 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 28 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 29 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 30 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 31 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 32 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 33 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 34 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 35 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 36 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.40-spg55.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 55
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; S3 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; S4 ; GREP(static/info, "   1   0   0     0   1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 15 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 16 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 17 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 18 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 20 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 22 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 23 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 24 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 25 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 26 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 27 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 28 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 29 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 30 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.41-spg56.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 56
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 15 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 17 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 20 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 22 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 23 ; GREP(static/info, "      0.0000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 24 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 25 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 26 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 27 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 28 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 29 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 30 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 31 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 32 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 33 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 34 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 35 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 36 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.42-spg57.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 57
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 15 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 17 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 20 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 22 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 23 ; GREP(static/info, "      0.0000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 24 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 25 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 26 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 27 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 28 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 29 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 30 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 31 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 32 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 33 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 34 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 35 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 36 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.43-spg58.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 58
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; S3 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; S4 ; GREP(static/info, "   1   0   0     0   1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 15 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 16 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 17 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 18 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 20 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 22 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 23 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 24 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 25 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 26 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 27 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 28 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 29 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 30 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.44-spg59.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 59
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "   1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; S3 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; S4 ; GREP(static/info, "  -1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 27
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 8 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 10 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 11 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 12 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 14 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.12500
+match ; kpt 15 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 16 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 17 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 18 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 20 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 22 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 23 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.06250
+match ; kpt 24 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 25 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 26 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 27 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.45-spg60.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 60
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 15 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 17 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 20 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 22 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 23 ; GREP(static/info, "      0.0000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 24 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 25 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 26 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 27 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 28 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 29 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 30 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 31 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 32 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 33 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 34 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 35 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 36 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.46-spg61.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 61
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 15 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 17 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 20 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 22 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 23 ; GREP(static/info, "      0.0000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 24 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 25 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 26 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 27 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 28 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 29 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 30 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 31 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 32 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 33 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 34 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 35 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 36 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.47-spg62.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 62
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 15 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 17 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 20 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 22 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 23 ; GREP(static/info, "      0.0000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 24 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 25 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 26 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 27 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 28 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 29 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 30 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 31 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 32 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 33 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 34 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 35 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 36 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.48-spg63.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 63
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; S3 ; GREP(static/info, "   0  -1   0    -1   0   0     0   0  -1", 60 ); 0.000000
+match ; S4 ; GREP(static/info, "   0   1   0     1   0   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 24
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.06250
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 6 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 11 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 14 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 15 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 17 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 19 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.06250
+match ; kpt 20 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 22 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.06250
+match ; kpt 23 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 24 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.49-spg64.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 64
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; S3 ; GREP(static/info, "   0  -1   0    -1   0   0     0   0  -1", 60 ); 0.000000
+match ; S4 ; GREP(static/info, "   0   1   0     1   0   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 24
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.06250
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 6 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 11 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 14 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 15 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 17 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 19 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.06250
+match ; kpt 20 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 22 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.06250
+match ; kpt 23 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 24 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.50-spg65.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 65
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "   0   1   0     1   0   0     0   0  -1", 60 ); 0.000000
+match ; S3 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; S4 ; GREP(static/info, "   0  -1   0    -1   0   0     0   0   1", 60 ); 0.000000
+match ; S5 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; S6 ; GREP(static/info, "   0  -1   0    -1   0   0     0   0  -1", 60 ); 0.000000
+match ; S7 ; GREP(static/info, "   1   0   0     0   1   0     0   0  -1", 60 ); 0.000000
+match ; S8 ; GREP(static/info, "   0   1   0     1   0   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 21
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.06250
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 6 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.12500
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 11 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 12 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.12500
+match ; kpt 13 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 14 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 15 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 16 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.06250
+match ; kpt 17 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.06250
+match ; kpt 20 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.51-spg66.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 66
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; S3 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; S4 ; GREP(static/info, "   1   0   0     0   1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 30
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 15 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 16 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 17 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 18 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 20 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 22 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 23 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 24 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 25 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 26 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 27 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 28 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 29 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 30 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.52-spg67.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 67
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; S3 ; GREP(static/info, "   0  -1   0    -1   0   0     0   0  -1", 60 ); 0.000000
+match ; S4 ; GREP(static/info, "   0   1   0     1   0   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 24
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.06250
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 6 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 11 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 14 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 15 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 17 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 19 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.06250
+match ; kpt 20 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 22 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.06250
+match ; kpt 23 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 24 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.53-spg68.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 68
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "   0   1   0     1   0   0     0   0  -1", 60 ); 0.000000
+match ; S3 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0   1", 60 ); 0.000000
+match ; S4 ; GREP(static/info, "   0  -1   0    -1   0   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 21
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.06250
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 6 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.12500
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 11 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 12 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.12500
+match ; kpt 13 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 14 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 15 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 16 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.06250
+match ; kpt 17 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.06250
+match ; kpt 20 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.54-spg69.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 69
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "   0  -1   1     0  -1   0     1  -1   0", 60 ); 0.000000
+match ; S3 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; S4 ; GREP(static/info, "   0   1  -1     0   1   0    -1   1   0", 60 ); 0.000000
+match ; S5 ; GREP(static/info, "   0   1  -1     1   0  -1     0   0  -1", 60 ); 0.000000
+match ; S6 ; GREP(static/info, "  -1   0   0    -1   0   1    -1   1   0", 60 ); 0.000000
+match ; S7 ; GREP(static/info, "   0  -1   1    -1   0   1     0   0   1", 60 ); 0.000000
+match ; S8 ; GREP(static/info, "   1   0   0     1   0  -1     1  -1   0", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 18
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.12500
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.06250
+match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.12500
+match ; kpt 6 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 8 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.12500
+match ; kpt 10 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.0000     -0.2500      0.2500", 51 ); 0.06250
+match ; kpt 13 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.12500
+match ; kpt 14 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 15 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 17 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.55-spg70.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 70
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "   0  -1   1     0  -1   0     1  -1   0", 60 ); 0.000000
+match ; S3 ; GREP(static/info, "   0   1  -1     1   0  -1     0   0  -1", 60 ); 0.000000
+match ; S4 ; GREP(static/info, "  -1   0   0    -1   0   1    -1   1   0", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 18
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.12500
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.06250
+match ; kpt 4 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.12500
+match ; kpt 6 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 7 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 8 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.12500
+match ; kpt 10 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.0000     -0.2500      0.2500", 51 ); 0.06250
+match ; kpt 13 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.12500
+match ; kpt 14 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 15 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 17 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.56-spg71.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 71
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 8
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "   0   0   1    -1  -1  -1     1   0   0", 60 ); 0.000000
+match ; S3 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; S4 ; GREP(static/info, "   0   0  -1     1   1   1    -1   0   0", 60 ); 0.000000
+match ; S5 ; GREP(static/info, "   0   1   0     1   0   0    -1  -1  -1", 60 ); 0.000000
+match ; S6 ; GREP(static/info, "  -1  -1  -1     0   0   1     0   1   0", 60 ); 0.000000
+match ; S7 ; GREP(static/info, "   0  -1   0    -1   0   0     1   1   1", 60 ); 0.000000
+match ; S8 ; GREP(static/info, "   1   1   1     0   0  -1     0  -1   0", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 18
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.06250
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.12500
+match ; kpt 6 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.12500
+match ; kpt 7 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.12500
+match ; kpt 10 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 11 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.06250
+match ; kpt 14 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 15 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.06250
+match ; kpt 17 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.57-spg72.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 72
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; S3 ; GREP(static/info, "   0   1   0     1   0   0    -1  -1  -1", 60 ); 0.000000
+match ; S4 ; GREP(static/info, "   0  -1   0    -1   0   0     1   1   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 24
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.06250
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 7 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 14 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 15 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 17 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 19 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 20 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.06250
+match ; kpt 21 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 22 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 23 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 24 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.58-spg73.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 73
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 15 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 17 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 20 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 22 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 23 ; GREP(static/info, "      0.0000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 24 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 25 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 26 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 27 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 28 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 29 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 30 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 31 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 32 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 33 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 34 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 35 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 36 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 03-orthorombic.59-spg74.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 74
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 4
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; S3 ; GREP(static/info, "  -1  -1  -1     0   0   1     0   1   0", 60 ); 0.000000
+match ; S4 ; GREP(static/info, "   1   1   1     0   0  -1     0  -1   0", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 24
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.06250
+match ; kpt 6 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 7 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.06250
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.06250
+match ; kpt 10 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.06250
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 15 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.06250
+match ; kpt 16 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.06250
+match ; kpt 17 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.06250
+match ; kpt 18 ; GREP(static/info, "      0.0000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 20 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 22 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 23 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 24 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563

@@ -998,3 +998,7 @@
 /testsuite/real_time/build-aux
 /testsuite/real_time/build-stamp
 /testsuite/real_time/semantic.cache
+
+# /testsuite/symmetries/
+/testsuite/symmetries/Makefile
+/testsuite/symmetries/Makefile.in
