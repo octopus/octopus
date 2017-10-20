@@ -86,7 +86,10 @@ module floquet_oct_m
        floquet_restart_dressed_st, &
        floquet_load_td_hamiltonians, &
        floquet_td_hamiltonians_sample, &
-       floquet_calc_occupations
+       floquet_calc_occupations,  &
+       floquet_td_state,          &
+       floquet_FBZ_filter,        &
+       floquet_calc_FBZ_coefficients
 
   integer, public, parameter ::    &
        FLOQUET_NONE            = 0, &      
@@ -242,11 +245,6 @@ contains
     if(this%FBZ_solver) then
       message(1) = "Info: Using Floquet-BZ solver"
       call messages_info(1)
-      if(this%calc_occupations) then
-        message(1) = "Occupations for FBZ not implemented"
-        call messages_warning(1)
-        this%calc_occupations = .false.
-      end if
     endif
 
     !%Variable TDFloquetMaximumSolverIterations
@@ -828,7 +826,7 @@ contains
 
       type(grid_t),   pointer :: gr
       type(states_t), pointer :: st
-       type(states_t)         :: FBZ_st
+      type(states_t)         :: FBZ_st
         
       FLOAT, allocatable :: spect(:,:), me(:,:)  
  
@@ -885,7 +883,11 @@ contains
          end if
          
          if (hm%F%calc_occupations .and. have_gs) then
-           call floquet_calc_occupations(hm, sys, dressed_st)
+           if(hm%F%FBZ_solver) then
+             call floquet_calc_FBZ_coefficients(hm, sys, dressed_st, st, M_ZERO)
+           else     
+             call floquet_calc_occupations(hm, sys, dressed_st)
+           end if
            call v_ks_calc(sys%ks, hm, dressed_st, sys%geo)
            call energy_calc_total(hm, gr, dressed_st, iunit = 0)
            write(message(1),'(a,es15.8,4a)') 'Energy tot: ', units_from_atomic(units_out%energy, hm%energy%total) &
@@ -945,8 +947,13 @@ contains
          ! reset flag
          hm%F%FBZ_solver = .false.
          call floquet_FBZ_filter(sys, hm, dressed_st, FBZ_st)
-         filename = 'FBZ_bands'
-         call states_write_bandstructure(FLOQUET_DIR, FBZ_st%nst, FBZ_st, gr%sb, filename)
+         if (simul_box_is_periodic(sys%gr%sb) .and. kpoints_have_zero_weight_path(sys%gr%sb%kpoints)) then
+           filename = 'FBZ_bands'
+           call states_write_bandstructure(FLOQUET_DIR, FBZ_st%nst, FBZ_st, sys%gr%sb, filename, vec = FBZ_st%occ)
+         else
+           filename = trim(FLOQUET_DIR)//'FBZ_eigenvalues'
+           call states_write_eigenvalues(filename, FBZ_st%nst, FBZ_st, sys%gr%sb)
+         end if
          call states_end(FBZ_st)
       end if
       
@@ -964,6 +971,34 @@ contains
 
     end subroutine floquet_hamiltonian_run_solver
 
+    !--------------------------------
+    subroutine floquet_td_state(F,mesh,F_psi,F_eval,time,psi_t)
+  
+    type(floquet_t) :: F
+    type(mesh_t)    :: mesh
+    CMPLX   :: F_psi(:,:)
+    integer :: ik, ist
+    FLOAT   :: F_eval
+    FLOAT   :: time
+    CMPLX   :: psi_t(:,:)
+  
+    integer :: idim, im, imm
+  
+    psi_t = M_z0
+    do im= F%order(1),F%order(2)
+      imm = im - F%order(1) + 1
+      do idim=1,F%spindim
+        psi_t(1:mesh%np,idim)  =  psi_t(1:mesh%np,idim) + &
+                                  exp(M_zI*im*F%omega*time)*F_psi(1:mesh%np,(imm-1)*F%spindim+idim)
+      end do
+    end do
+    psi_t(1:mesh%np,:) = exp(-M_zI*F_eval*time)* psi_t(1:mesh%np,:)
+
+    ! normalize td-state
+    !psi_t(1:mesh%np,1:F%spindim)  = M_ONE/zmf_nrm2(mesh,F%spindim,psi_t)*psi_t(1:mesh%np,1:F%spindim) 
+
+    end subroutine floquet_td_state
+    
 
     !--------------------------------------------
     subroutine floquet_calc_occupations(hm, sys, dressed_st)
@@ -1082,6 +1117,100 @@ contains
       POP_SUB(floquet_calc_occupations)
     
     end subroutine floquet_calc_occupations
+
+
+    !--------------------------------------------
+    subroutine floquet_calc_FBZ_coefficients(hm, sys, FBZ_st, ref_st, time)
+      type(hamiltonian_t), intent(inout) :: hm
+      type(system_t), intent(inout)      :: sys
+      type(states_t), intent(inout)      :: FBZ_st
+      type(states_t), intent(in)         :: ref_st
+      FLOAT,          intent(in)         :: time            
+
+      CMPLX, allocatable ::  psi(:,:), u_m(:,:), matba(:,:)
+      CMPLX, allocatable ::  Fpsi_a(:,:), Fpsi_b(:,:), rhs(:,:), sol(:,:)    
+      integer :: ib, ia , ik, ist, idim            
+      type(mesh_t),   pointer :: mesh
+
+      PUSH_SUB(floquet_calc_FBZ_coefficients)
+
+      ASSERT(FBZ_st%nst==ref_st%nst)
+
+      mesh  => sys%gr%der%mesh
+      
+      SAFE_ALLOCATE(matba(1:FBZ_st%nst,1:FBZ_st%nst))
+      SAFE_ALLOCATE(rhs(1,1:FBZ_st%nst))
+      SAFE_ALLOCATE(sol(1,1:FBZ_st%nst))
+
+      SAFE_ALLOCATE(psi(1:mesh%np,ref_st%d%dim))
+      SAFE_ALLOCATE(Fpsi_a(1:mesh%np,FBZ_st%d%dim))
+      SAFE_ALLOCATE(Fpsi_b(1:mesh%np,FBZ_st%d%dim))
+      SAFE_ALLOCATE(u_m(1:mesh%np,hm%F%floquet_dim*hm%F%spindim))
+      
+      if (.not. associated(FBZ_st%coeff)) then
+        SAFE_ALLOCATE(FBZ_st%coeff(1:FBZ_st%nst,FBZ_st%d%nik))
+      end if
+
+      FBZ_st%coeff(:,:) = M_z0
+
+      do ik=FBZ_st%d%kpt%start,FBZ_st%d%kpt%end
+        rhs(:,:) = M_z0
+        matba(:,:) = M_z0
+        
+        do ib=FBZ_st%st_start,FBZ_st%st_end
+          call states_get_state(FBZ_st, mesh, ib, ik, u_m)
+          call floquet_td_state(hm%F,mesh,u_m,FBZ_st%eigenval(ib,ik),time,Fpsi_b)
+
+          do ia=1,FBZ_st%nst
+            call states_get_state(FBZ_st, mesh, ia, ik, u_m)
+            call floquet_td_state(hm%F,mesh,u_m,FBZ_st%eigenval(ia,ik),time,Fpsi_a)
+            do idim=1,hm%F%spindim
+              matba(ib,ia) = matba(ib,ia) + zmf_dotp(mesh, Fpsi_b(1:mesh%np,idim), Fpsi_a(1:mesh%np,idim))
+            end do
+            
+          end do !ia
+          
+          do ist=1,ref_st%nst
+            call states_get_state(ref_st, mesh, ist, ik, psi)
+            do idim=1,hm%F%spindim
+              rhs(1,ib) = rhs(1,ib) + ref_st%occ(ist,ik)*zmf_dotp(mesh, Fpsi_b(1:mesh%np,idim), psi(1:mesh%np,idim))
+            end do           
+
+          end do! ist
+        end do !ib
+        if(FBZ_st%parallel_in_states)  then 
+          call comm_allreduce(FBZ_st%mpi_grp%comm, rhs) 
+          call comm_allreduce(FBZ_st%mpi_grp%comm, matba) 
+        end if
+        
+        
+        ! solve coefficient system
+        call lalg_linsyssolve(FBZ_st%nst, 1, matba, rhs, sol)
+        FBZ_st%coeff(:,ik) = sol(1,:)
+        
+      end do! ik
+      
+      
+      if(FBZ_st%parallel_in_states .or. FBZ_st%d%kpt%parallel) then
+        call comm_allreduce(FBZ_st%st_kpt_mpi_grp%comm,  FBZ_st%coeff)
+      end if
+
+      FBZ_st%occ(:,:) =  abs(FBZ_st%coeff(:,:))**2
+      
+      
+      SAFE_DEALLOCATE_A(psi)
+      SAFE_DEALLOCATE_A(u_m)
+      SAFE_DEALLOCATE_A(Fpsi_a)
+      SAFE_DEALLOCATE_A(Fpsi_b)
+      
+      SAFE_DEALLOCATE_A(matba)
+      SAFE_DEALLOCATE_A(rhs)
+      SAFE_DEALLOCATE_A(sol)
+    
+      POP_SUB(floquet_calc_FBZ_coefficients)    
+    end subroutine floquet_calc_FBZ_coefficients
+
+
     
    subroutine floquet_FBZ_eigensolver_run(eigens, sys, st, hm, iter, conv)
      type(eigensolver_t),  intent(inout) :: eigens
@@ -1115,8 +1244,13 @@ contains
        end do
        call comm_allreduce(st%st_kpt_mpi_grp%comm,  st%eigenval(:,:))
 
-       filename = 'FBZ_start_bands'
-       call states_write_bandstructure(FLOQUET_DIR, st%nst, st, sys%gr%sb, filename)
+       if (simul_box_is_periodic(sys%gr%sb) .and. kpoints_have_zero_weight_path(sys%gr%sb%kpoints)) then
+         filename = 'FBZ_start_bands'
+         call states_write_bandstructure(FLOQUET_DIR, st%nst, st, sys%gr%sb, filename)
+       else                    
+         filename = FLOQUET_DIR//'/FBZ_start_eigenvalues'
+         call states_write_eigenvalues(filename, st%nst, st, sys%gr%sb)
+       end if
 
        eigens%spectrum_shift(1:st%nst,1:st%d%nik) = st%eigenval(1:st%nst,1:st%d%nik)
 
