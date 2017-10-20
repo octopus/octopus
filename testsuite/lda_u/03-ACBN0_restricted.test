@@ -18,7 +18,7 @@ match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;  -30.9
 match ; Hubbard energy     ; GREPFIELD(static/info, 'Hubbard     =', 3) ;   0.10412475
 
 match ; k-point 2 (x) ; GREPFIELD(static/info, '#k =   2', 7) ;  0.000000
-match ; k-point 2 (y) ; GREPFIELD(static/info, '#k =   2', 8) ; -0.500000
+match ; k-point 2 (y) ; GREPFIELD(static/info, '#k =   2', 8) ;  0.500000
 match ; k-point 2 (z) ; GREPFIELD(static/info, '#k =   2', 9) ;  0.000000
 match ; Eigenvalue  1 ; GREPFIELD(static/info, '#k =   2', 3, 1) ;  -0.932252
 match ; Eigenvalue  3 ; GREPFIELD(static/info, '#k =   2', 3, 3) ;  -0.398613

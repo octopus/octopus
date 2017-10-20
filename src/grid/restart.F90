@@ -493,7 +493,7 @@ contains
     restart%pwd = restart%dir
 
     ! Check if the directory already exists and create it if necessary
-    dir_exists = loct_dir_exists(trim(restart%pwd))
+    dir_exists = io_dir_exists(trim(restart%pwd))
     if (restart%type == RESTART_TYPE_DUMP .and. .not. dir_exists) then
       call io_mkdir(trim(restart%pwd), parents=.true.)
     end if
@@ -628,9 +628,9 @@ contains
       select case (restart%type)
       case (RESTART_TYPE_LOAD)
         message(1) = "Info: Finished reading information from '"//trim(restart%dir)//"'."
-        call loct_rm(trim(restart%pwd)//"/loading")
+        call io_rm(trim(restart%pwd)//"/loading")
       case (RESTART_TYPE_DUMP)
-        call loct_rm(trim(restart%pwd)//"/dumping")
+        call io_rm(trim(restart%pwd)//"/dumping")
         message(1) = "Info: Finished writing information to '"//trim(restart%dir)//"'."
       end select
       call messages_info(1)
@@ -656,11 +656,11 @@ contains
   !! someone fixes them.
   function restart_dir(restart)
     type(restart_t), intent(in) :: restart
-    character(len=80) :: restart_dir
+    character(len=MAX_PATH_LEN) :: restart_dir
 
     PUSH_SUB(restart_dir)
 
-    restart_dir = restart%pwd
+    restart_dir = io_workpath(restart%pwd)
 
     POP_SUB(restart_dir)
   end function restart_dir
@@ -745,7 +745,7 @@ contains
 
     PUSH_SUB(restart_rm)
 
-    call loct_rm(trim(restart%pwd)//"/"//trim(name))
+    call io_rm(trim(restart%pwd)//"/"//trim(name))
 
     POP_SUB(restart_rm)
   end subroutine restart_rm

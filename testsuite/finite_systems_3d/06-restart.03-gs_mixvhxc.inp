@@ -18,3 +18,5 @@ MaximumIter = 3
 MixField = potential
 
 FilterPotentials = filter_none
+
+WorkDir = "./workdir"

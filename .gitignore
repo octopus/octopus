@@ -249,17 +249,8 @@
 /external_libs/qshep/*__genmod.*
 /external_libs/qshep/*.o
 
-# /external_libs/spglib-1.5.2/
-/external_libs/spglib-1.5.2/Makefile
-/external_libs/spglib-1.5.2/Makefile.in
-
-# /external_libs/spglib-1.5.2/src/
-/external_libs/spglib-1.5.2/src/Makefile
-/external_libs/spglib-1.5.2/src/Makefile.in
-/external_libs/spglib-1.5.2/src/*.mod
-/external_libs/spglib-1.5.2/src/.deps
-/external_libs/spglib-1.5.2/src/*.a
-/external_libs/spglib-1.5.2/src/*.o
+# /external_libs/spglib-1.9.9/
+/external_libs/spglib-1.9.9/src/*.a
 
 # /external_libs/yaml-0.1.4/
 /external_libs/yaml-0.1.4/Makefile
@@ -1021,3 +1012,7 @@
 /testsuite/real_time/build-aux
 /testsuite/real_time/build-stamp
 /testsuite/real_time/semantic.cache
+
+# /testsuite/symmetries/
+/testsuite/symmetries/Makefile
+/testsuite/symmetries/Makefile.in

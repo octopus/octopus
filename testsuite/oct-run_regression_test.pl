@@ -569,13 +569,14 @@ sub run_match_new {
     print "   Calculated value : ".$value."\n";
     print "   Reference value  : ".$ref_value."\n";
     print "   Difference       : ".abs($ref_value - $value)."\n";
-    if(abs($ref_value) > 1.0e-12) {
-      print "   Deviation [%]    : ".(abs($ref_value - $value)/abs($ref_value)*100.0)."\n";
+    if(abs($ref_value)>1e-10) {
+    print "   Deviation [%]    : ".(abs($ref_value - $value)/abs($ref_value)*100.0)."\n";
     }
     print "   Tolerance        : ".$precnum."\n";
-    if(abs($ref_value) > 1.0e-12) {
-      print "   Tolerance [%]    : ".($precnum/abs($ref_value)*100.0)."\n\n";
+    if(abs($ref_value)>1e-10) {
+    print "   Tolerance [%]    : ".($precnum/abs($ref_value)*100.0)."\n";
     }
+    print "\n";
     
   }
 

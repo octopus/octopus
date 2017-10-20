@@ -66,6 +66,7 @@ module scf_oct_m
   use states_group_oct_m
   use states_io_oct_m
   use states_restart_oct_m
+  use symmetries_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -1166,7 +1167,6 @@ contains
 
       type(partial_charges_t) :: partial_charges
       integer :: iunit, idir, iatom, ii
-      FLOAT:: rr(1:3), ff(1:3), torque(1:3)
       FLOAT, allocatable :: hirshfeld_charges(:)
 
       PUSH_SUB(scf_run.scf_write_static)
@@ -1176,6 +1176,8 @@ contains
         iunit = io_open(trim(dir) // "/" // trim(fname), action='write')
 
         call grid_write_info(gr, geo, iunit)
+ 
+        call symmetries_write_info(gr%mesh%sb%symm, gr%sb%dim, gr%sb%periodic_dim, iunit)
 
         if(simul_box_is_periodic(gr%sb)) then
           call kpoints_write_info(gr%mesh%sb%kpoints, iunit)
@@ -1244,38 +1246,7 @@ contains
         end if
         ! otherwise, these values are uninitialized, and unknown.
 
-        if(scf%calc_force) then
-          write(iunit,'(3a)') 'Forces on the ions [', trim(units_abbrev(units_out%force)), "]"
-          write(iunit,'(a,10x,99(14x,a))') ' Ion', (index2axis(idir), idir = 1, gr%sb%dim)
-          do iatom = 1, geo%natoms
-            write(iunit,'(i4,a10,10f15.6)') iatom, trim(species_label(geo%atom(iatom)%species)), &
-              (units_from_atomic(units_out%force, geo%atom(iatom)%f(idir)), idir=1, gr%sb%dim)
-          end do
-          write(iunit,'(1x,100a1)') ("-", ii = 1, 13 + gr%sb%dim * 15)
-          write(iunit,'(a14, 10f15.6)') " Max abs force", &
-            (units_from_atomic(units_out%force, maxval(abs(geo%atom(1:geo%natoms)%f(idir)))), idir=1, gr%sb%dim)
-          write(iunit,'(a14, 10f15.6)') " Total force", &
-            (units_from_atomic(units_out%force, sum(geo%atom(1:geo%natoms)%f(idir))), idir=1, gr%sb%dim)
-
-          if(geo%space%dim == 2 .or. geo%space%dim == 3) then
-
-            rr = CNST(0.0)
-            ff = CNST(0.0)
-            torque = CNST(0.0)
-            do iatom = 1, geo%natoms
-              rr(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim)
-              ff(1:geo%space%dim) = geo%atom(iatom)%f(1:geo%space%dim)
-              torque(1:3) = torque(1:3) + dcross_product(rr, ff)
-            end do
-
-            write(iunit,'(a14, 10f15.6)') ' Total torque', &
-              (units_from_atomic(units_out%force*units_out%length, torque(idir)), idir = 1, 3)
-
-          end if
-
-          write(iunit,'(1x)')
-
-        end if
+        if(scf%calc_force) call forces_write_info(iunit, geo, gr%sb, dir)
 
         if(scf%calc_stress) then
            write(iunit,'(a)') "Stress tensor [H/b^3]"

@@ -1245,8 +1245,8 @@ contains
       
       ! symmetry is not analyzed by Octopus for finite systems, but we only need it for periodic ones
       do itran = 1, symmetries_number(gr%sb%symm)
-        mtrx(:,:, itran) = symm_op_rotation_matrix(gr%sb%symm%ops(itran))
-        tnp(:, itran) = symm_op_translation_vector(gr%sb%symm%ops(itran))
+        mtrx(:,:, itran) = symm_op_rotation_matrix_red(gr%sb%symm%ops(itran))
+        tnp(:, itran) = symm_op_translation_vector_red(gr%sb%symm%ops(itran))
       end do
       ! some further work on conventions of mtrx and tnp is required!
       

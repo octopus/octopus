@@ -56,7 +56,7 @@ match ; Local Magnetic Moment (Li) ; GREPFIELD(static/info, '1        Li', 3);  
 match ; Local Magnetic Moment (F)  ; GREPFIELD(static/info, '2         F', 3);  0.000000
 
 match ; k-point 2 (x) ; GREPFIELD(static/info, '#k =   2', 7) ;  0.000000
-match ; k-point 2 (y) ; GREPFIELD(static/info, '#k =   2', 8) ; -0.500000
+match ; k-point 2 (y) ; GREPFIELD(static/info, '#k =   2', 8) ;  0.500000
 match ; k-point 2 (z) ; GREPFIELD(static/info, '#k =   2', 9) ;  0.000000
 match ; Eigenvalue  1 up ; GREPFIELD(static/info, '#k =   2', 3, 1) ;  -0.932252
 match ; Eigenvalue  1 dn ; GREPFIELD(static/info, '#k =   2', 3, 2) ;  -0.932252

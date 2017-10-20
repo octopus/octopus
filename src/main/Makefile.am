@@ -66,15 +66,27 @@ CLEANFILES += octopus oct-test
 clean-local :
 	rm -rf *.dSYM
 
+
+# This is to generate the dependencies. It makes use of the makedepf90
+# program of Erik Edelmann
+# (http://www.helsinki.fi/~eedelman/makedepf90.html). It should be run
+# from time to time (just typing make depend within the src
+# directory), substituting the dependencies below by the resulting new
+# dependencies. (For normal compilation of octopus, there is
+# absolutely no need of installing makedepf90).
 depend:
 	@makedepf90 $(octopus_SOURCES) $(oct_test_sources)
 
-unocc.o : unocc.F90
+
+# DO NOT EDIT DIRECTLY --- use make depend to generate the dependencies and copy-paste the result here
+
+invert_ks.o : invert_ks.F90 
+memory.o : memory.F90 
+unocc.o : unocc.F90 
 static_pol.o : static_pol.F90 
 geom_opt.o : geom_opt.F90 
 phonons_fd.o : phonons_fd.F90 
 casida.o : casida.F90 casida_inc.F90 
 pulpo.o : pulpo.F90 
-run.o : run.F90 unocc.o static_pol.o pulpo.o phonons_fd.o geom_opt.o casida.o memory.o invert_ks.o
+run.o : run.F90 unocc.o static_pol.o pulpo.o phonons_fd.o memory.o invert_ks.o geom_opt.o casida.o 
 main.o : main.F90 run.o 
-memory.o : memory.F90

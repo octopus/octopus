@@ -36,6 +36,7 @@ module geom_opt_oct_m
   use mpi_oct_m 
   use output_oct_m
   use profiling_oct_m
+  use read_coords_oct_m
   use restart_oct_m
   use scf_oct_m
   use simul_box_oct_m
@@ -76,6 +77,7 @@ module geom_opt_oct_m
     integer                      :: size
     integer                      :: fixed_atom
     type(restart_t)              :: restart_dump
+    
   end type geom_opt_t
 
   type(geom_opt_t), save :: g_opt
@@ -200,6 +202,7 @@ contains
       character(len=100) :: filename
       FLOAT :: default_toldr
       real(8) :: default_step
+      type(read_coords_info) :: xyz
 
       PUSH_SUB(geom_opt_run.init_)
 
@@ -418,9 +421,89 @@ contains
       if(.not.varinfo_valid_option('GOObjective', g_opt%what2minimize)) call messages_input_error('GOObjective')
       call messages_print_var_option(stdout, "GOObjective", g_opt%what2minimize)
 
-      call loct_rm("geom/optimization.log")
 
-      call loct_rm("./work-geom.xyz")
+      !%Variable XYZGOConstrains
+      !%Type string
+      !%Section Calculation Modes::Geometry Optimization
+      !%Description
+      !% <tt>Octopus</tt> will try to read the coordinate-dependent constrains from the XYZ file 
+      !% specified by the variable <tt>XYZGOConstrains</tt>.
+      !% Note: It is important for the contrains to maintain the ordering 
+      !% in which the atoms were defined in the coordinates specifications.
+      !% Moreover, constrains impose fixed absolute coordinates, therefore
+      !% constrains are not compatible with GOCenter = yes
+      !%End
+
+      !%Variable XSFGOConstrains
+      !%Type string
+      !%Section Calculation Modes::Geometry Optimization
+      !%Description
+      !% Like <tt>XYZGOConstrains</tt> but in XCrySDen format, as in <tt>XSFCoordinates</tt>.
+      !%End
+
+      !%Variable PDBGOConstrains
+      !%Type string
+      !%Section Calculation Modes::Geometry Optimization
+      !%Description
+      !% Like <tt>XYZGOConstrains</tt> but in PDB format, as in <tt>PDBCoordinates</tt>.
+      !%End
+
+      !%Variable GOConstrains
+      !%Type block
+      !%Section Calculation Modes::Geometry Optimization
+      !%Description
+      !% If <tt>XYZGOConstrains</tt>, <tt>PDBConstrains</tt>, and <tt>XSFGOConstrains</tt>
+      !% are not present, <tt>Octopus</tt> will try to fetch the geometry optimization
+      !% contrains from this block. If this block is not present, <tt>Octopus</tt>
+      !% will not set any constrains. The format of this block can be
+      !% illustrated by this example:
+      !%
+      !% <tt>%GOConstrains
+      !% <br>&nbsp;&nbsp;'C'  |      1 | 0 | 0
+      !% <br>&nbsp;&nbsp;'O'  | &nbsp;1 | 0 | 0
+      !% <br>%</tt>
+      !%
+      !% It describes one carbon and one oxygen where the distance along the
+      !% x axis is fixed.
+      !%
+      !% Note: It is important for the constrains to maintain the ordering 
+      !% in which the atoms were defined in the coordinates specifications.
+      !% Moreover, constrains impose fixed absolute coordinates, therefore
+      !% constrains are not compatible with GOCenter = yes
+      !%End
+
+      call read_coords_init(xyz)
+      call read_coords_read('GOConstrains', xyz, g_opt%geo%space)
+      if(xyz%source /= READ_COORDS_ERR) then
+        !Sanity check
+        if(g_opt%geo%natoms /= xyz%n) then
+          write(message(1), '(a,i4,a,i4)') 'I need exactly ', g_opt%geo%natoms, ' constrains, but I found ', xyz%n
+          call messages_fatal(1)
+        end if
+        ! copy information and adjust units
+        do iatom = 1, g_opt%geo%natoms
+          if(all(xyz%atom(iatom)%x(1:g_opt%dim) == M_ZERO &
+                 .or.xyz%atom(iatom)%x(1:g_opt%dim) == M_ONE)) then
+            g_opt%geo%atom(iatom)%c = xyz%atom(iatom)%x
+          else
+            write(message(1), '(a)') 'Constrains can only be 0 or 1.'
+            call messages_fatal(1)
+          end if
+        end do
+
+        call read_coords_end(xyz)
+       
+        if(g_opt%fixed_atom /= 0) &
+          call messages_not_implemented("GOCenter with constrains") 
+      else
+        do iatom = 1, g_opt%geo%natoms
+          g_opt%geo%atom(iatom)%c = M_ZERO
+        end do
+      end if
+
+      call io_rm("geom/optimization.log")
+
+      call io_rm("work-geom.xyz")
 
       if(.not. fromScratch) then
         inquire(file = './last.xyz', exist = does_exist)
@@ -438,7 +521,7 @@ contains
         write(filename, '(a,i4.4,a)') "geom/go.", iter, ".xyz"
         inquire(file = trim(filename), exist = does_exist)
         if(does_exist) then
-          call loct_rm(trim(filename))
+          call io_rm(trim(filename))
           iter = iter + 1
         else
           exit
@@ -668,7 +751,11 @@ contains
       if(gopt%fixed_atom == iatom) cycle
       if(.not. gopt%geo%atom(iatom)%move) cycle
       do idir = 1, gopt%dim
-        grad(icoord) = -gopt%geo%atom(iatom)%f(idir)
+        if(gopt%geo%atom(iatom)%c(idir) == M_ZERO) then
+          grad(icoord) = -gopt%geo%atom(iatom)%f(idir)
+        else
+          grad(icoord) = M_ZERO
+        end if
         if(gopt%fixed_atom /= 0) grad(icoord) = grad(icoord) + gopt%geo%atom(gopt%fixed_atom)%f(idir)
         icoord = icoord + 1
       end do
@@ -692,7 +779,8 @@ contains
       if(gopt%fixed_atom == iatom) cycle      
       if(.not. gopt%geo%atom(iatom)%move) cycle
       do idir = 1, gopt%dim
-        gopt%geo%atom(iatom)%x(idir) = coords(icoord)
+        if(gopt%geo%atom(iatom)%c(idir) == M_ZERO) &
+          gopt%geo%atom(iatom)%x(idir) = coords(icoord)
         if(gopt%fixed_atom /= 0) then
           gopt%geo%atom(iatom)%x(idir) = gopt%geo%atom(iatom)%x(idir) + gopt%geo%atom(gopt%fixed_atom)%x(idir)
         end if

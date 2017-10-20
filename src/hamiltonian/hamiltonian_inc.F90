@@ -768,7 +768,7 @@ subroutine X(h_mgga_terms) (hm, der, ik, psib, hpsib)
   type(batch_t),       intent(inout) :: psib
   type(batch_t),       intent(inout) :: hpsib
 
-  integer :: ispin, ii, idir
+  integer :: ispin, ii, idir, ip
   R_TYPE, allocatable :: grad(:,:), diverg(:)
   type(batch_t) :: divb
   type(batch_t), allocatable :: gradb(:)
@@ -797,6 +797,13 @@ subroutine X(h_mgga_terms) (hm, der, ik, psib, hpsib)
       call batch_get_state(gradb(idir), ii, der%mesh%np, grad(:, idir))
     end do
     
+    ! Grad_xyw = Bt Grad_uvw, see Chelikowsky after Eq. 10
+    if (simul_box_is_periodic(der%mesh%sb) .and. der%mesh%sb%nonorthogonal ) then
+      forall (ip = 1:der%mesh%np)
+        grad(ip, 1:der%dim) = matmul(der%mesh%sb%klattice_primitive(1:der%dim, 1:der%dim),grad(ip, 1:der%dim))
+      end forall
+    end if
+
     do idir = 1, der%mesh%sb%dim
       grad(1:der%mesh%np, idir) = grad(1:der%mesh%np, idir)*hm%vtau(1:der%mesh%np, ispin)
     end do
