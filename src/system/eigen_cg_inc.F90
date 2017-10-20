@@ -54,7 +54,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
   SAFE_ALLOCATE(   cg(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(    g(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(   g0(1:gr%mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE( ppsi(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE( ppsi(1:gr%mesh%np_part, 1:st%d%dim))
   if(fold_) then
     SAFE_ALLOCATE( psi2(1:gr%mesh%np_part, 1:st%d%dim))
   end if
@@ -88,7 +88,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
       psi2 = M_ZERO
       call X(hamiltonian_apply)(hm, gr%der, h_psi, psi2, ist, ik)
       ! h_psi = (H-shift)^2 psi 
-      h_psi = 0.01*(psi2 - M_TWO*shift(ist,ik)*h_psi + shift(ist,ik)**2*psi)
+      h_psi = M_ONE*(psi2 - M_TWO*shift(ist,ik)*h_psi + shift(ist,ik)**2*psi)
     end if
 
     ! Calculates starting eigenvalue: e(p) = <psi(p)|H|psi>
@@ -176,7 +176,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
          psi2 = M_ZERO
          call X(hamiltonian_apply)(hm, gr%der, ppsi, psi2, ist, ik)
          ! h_psi = (H-shift)^2 psi
-         ppsi = 0.01*(psi2 - M_TWO*shift(ist,ik)*ppsi + shift(ist,ik)**2*cg)
+         ppsi = M_ONE*(psi2 - M_TWO*shift(ist,ik)*ppsi + shift(ist,ik)**2*cg)
       end if
 
       ! Line minimization.
