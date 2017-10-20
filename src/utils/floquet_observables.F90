@@ -89,6 +89,7 @@ program floquet_observables
   integer              :: ist, ispin  
   type(states_t)          :: dressed_st 
   type(states_t), pointer ::    gs_st
+  type(states_t)         :: FBZ_st
 
   type(fobs_t)         :: obs
 
@@ -124,7 +125,7 @@ program floquet_observables
   call floquet_init(sys,hm%F,sys%st%d%dim)
   gs_st => sys%st
 
-  call states_init(dressed_st, sys%gr, sys%geo,floquet_dim=hm%F%floquet_dim)
+  call states_init(dressed_st, sys%gr, sys%geo,floquet_dim=hm%F%floquet_dim,floquet_FBZ=hm%F%FBZ_solver)
   call kpoints_distribute(dressed_st%d,sys%mc)
   call states_distribute_nodes(dressed_st,sys%mc)
   call states_exec_init(dressed_st, sys%mc)
@@ -158,6 +159,8 @@ program floquet_observables
   !% Calculate Floquet forces.
   !%Option f_density_plot bit(10)
   !% Plot the Floquet density.
+  !%Option f_FBZ_bands bit(11)
+  !% Plot the Floquet FBZ bands by filtering.
   !%End
   call parse_variable('FloquetObservableCalc', out_what, out_what)
   
@@ -171,6 +174,26 @@ program floquet_observables
        call floquet_restart_dressed_st(hm, sys, dressed_st, ierr)
        call messages_write('Read Floquet restart files.')
        call messages_info()
+       
+       ! we are in the Floquet Brillouin zone (FBZ)  
+       if(hm%F%FBZ_solver) then
+         call messages_write('Calculate FBZ coefficients.')
+         call messages_info()
+         
+         ! get groundstate states
+         call states_allocate_wfns(gs_st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX)
+         call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+         if(ierr == 0) call states_load(restart, gs_st, sys%gr, ierr)
+         if (ierr /= 0) then
+            message(1) = 'Unable to read ground-state wavefunctions.'
+            call messages_fatal(1)
+         end if
+         call restart_end(restart)
+         
+         call floquet_calc_FBZ_coefficients(hm, sys, dressed_st, gs_st, M_ZERO)
+         call states_write_eigenvalues(stdout, dressed_st%nst, dressed_st, sys%gr%sb, &
+                                       compact = .true.)     
+       end if 
   end if
   
   !%Variable FloquetObservableGauge
@@ -271,6 +294,7 @@ program floquet_observables
 
 
 
+
   if(iand(out_what, OPTION__FLOQUETOBSERVABLECALC__F_NORMS) /= 0) then
     call messages_write('Calculate norms of Floquet subspaces.')
     call messages_info()
@@ -345,11 +369,55 @@ program floquet_observables
   end if
 
   if(iand(out_what, OPTION__FLOQUETOBSERVABLECALC__F_DENSITY_PLOT) /= 0) then
-    call messages_write('Plot Floquet density.')
+    call messages_write('Output Floquet density.')
     call messages_info()
 
     call plot_floquet_density()
   end if
+
+  if(iand(out_what, OPTION__FLOQUETOBSERVABLECALC__F_FBZ_BANDS) /= 0) then
+    call messages_write('Output FBZ bands.')
+    call messages_info()
+    
+    ! filter the FBZ
+     ! this triggers FBZ allocation 
+     hm%F%FBZ_solver = .true.
+!      call floquet_init_dressed_wfs(hm, sys, FBZ_st, fromScratch=.true.)
+     
+    !init FBZ states
+     call states_init(FBZ_st, sys%gr, sys%geo,floquet_dim=hm%F%floquet_dim, floquet_FBZ=.true.)
+     call kpoints_distribute(FBZ_st%d,sys%mc)
+     call states_distribute_nodes(FBZ_st,sys%mc)
+     call states_exec_init(FBZ_st, sys%mc)
+     call states_allocate_wfns(FBZ_st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX)
+     
+     
+     ! get groundstate density
+     call states_allocate_wfns(gs_st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX)
+     call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+     if(ierr == 0) call states_load(restart, gs_st, sys%gr, ierr)
+     if (ierr /= 0) then
+        message(1) = 'Unable to read ground-state wavefunctions.'
+        call messages_fatal(1)
+     end if
+     call restart_end(restart)
+     
+     ! reset flag
+     hm%F%FBZ_solver = .false.
+     call floquet_FBZ_filter(sys, hm, dressed_st, FBZ_st)
+     call floquet_calc_FBZ_coefficients(hm, sys, FBZ_st, gs_st, M_ZERO)
+     if (simul_box_is_periodic(sys%gr%sb) .and. kpoints_have_zero_weight_path(sys%gr%sb%kpoints)) then
+       filename = 'FBZ_bands'
+       call states_write_bandstructure(FLOQUET_DIR, FBZ_st%nst, FBZ_st, sys%gr%sb, filename, vec = FBZ_st%occ)
+     else
+       filename = trim(FLOQUET_DIR)//'FBZ_eigenvalues'
+       call states_write_eigenvalues(filename, FBZ_st%nst, FBZ_st, sys%gr%sb)
+     end if
+     
+     call states_end(FBZ_st)
+    
+  end if
+
   
   call hamiltonian_end(hm)
   call system_end(sys)
@@ -595,7 +663,7 @@ contains
 
       do it=1,hm%F%nT
         time = hm%F%Tcycle/hm%F%nT*it
-        call floquet_td_state(hm%F,sys%gr%mesh,F_psi,time,psi_t)
+        call floquet_td_state(hm%F,sys%gr%mesh,F_psi, M_ZERO, time,psi_t)
         spin(1:3) = state_spin(sys%gr%mesh, psi_t) 
         write(iunit,'(e12.6,2x,e12.6,2x,e12.6,2x,e12.6)') time, spin(1:3)
       end do
@@ -613,30 +681,7 @@ contains
   SAFE_DEALLOCATE_A(states_input)
   end subroutine calc_floquet_td_spin
 
-  !--------------------------------
-  subroutine floquet_td_state(F,mesh,F_psi,time,psi_t)
-  
-  type(floquet_t) :: F
-  type(mesh_t)    :: mesh
-  CMPLX   :: F_psi(:,:)
-  integer :: ik, ist
-  FLOAT   :: time
-  CMPLX   :: psi_t(:,:)
-  
-  integer :: idim, im, imm
-  
-  psi_t = M_ZERO
-  do im= F%order(1),F%order(2)
-    imm = im - F%order(1) + 1
-    do idim=1,F%spindim
-      psi_t(1:mesh%np,idim)  =  psi_t(1:mesh%np,idim) + exp(-M_zI*im*F%omega*time)*F_psi(1:mesh%np,(imm-1)*F%spindim+idim)
-    end do
-  end do
 
-  ! normalize td-state
-  psi_t(1:mesh%np,1:F%spindim)  = M_ONE/zmf_nrm2(mesh,F%spindim,psi_t)*psi_t(1:mesh%np,1:F%spindim) 
-
-  end subroutine floquet_td_state
   
   
   
@@ -1338,8 +1383,8 @@ contains
     
     sigma(:,:,:) = M_z0
 
-    do idir = 1, 2 
-      do jdir = idir, 2 
+    do idir = 1, dim   
+      do jdir = idir, dim 
 
 
         write(message(1),'(a,i5,a,i5,a)') 'Calculate sigma(',idir,',', jdir,'):'
