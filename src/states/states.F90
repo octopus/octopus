@@ -213,6 +213,9 @@ module states_oct_m
     logical                     :: packed
 
     integer                     :: randomization      !< Method used to generate random states
+
+    CMPLX, pointer              :: coeff(:,:)         !< complex coefficients
+
   end type states_t
 
   !> Method used to generate random states
@@ -277,6 +280,8 @@ contains
 
     st%packed = .false.
 
+    nullify(st%coeff)
+    
     POP_SUB(states_null)
   end subroutine states_null
 
@@ -1600,6 +1605,10 @@ contains
 
     if(st%parallel_in_states) then
       SAFE_DEALLOCATE_P(st%ap%schedule)
+    end if
+
+    if (associated(st%coeff)) then
+      SAFE_DEALLOCATE_P(st%coeff)
     end if
 
     POP_SUB(states_end)

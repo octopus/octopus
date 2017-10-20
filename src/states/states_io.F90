@@ -96,7 +96,7 @@ contains
     integer :: ik, ikk, ist, ns, is, idir, st_start_, iflat, iqn, homo_index, not_printed
     logical :: print_eigenval
     FLOAT :: kpoint(1:MAX_DIM), max_error
-    character(len=120) :: tmp_str(max(MAX_DIM, 3)), cspin
+    character(len=1024) :: tmp_str(max(MAX_DIM, 4)), cspin
 
     FLOAT, allocatable :: flat_eigenval(:)
     integer, allocatable :: flat_indices(:, :)
@@ -139,6 +139,8 @@ contains
             '#st',' Spin',' Eigenvalue', 'Occupation'
         end if
       end if
+      if(associated(st%coeff)) &
+        write(message(1),'(a,a10,a,a10)') trim(message(1)), ' Re[coeff]', ' Im[coeff]'
       if(present(error)) &
         write(message(1),'(a,a10)') trim(message(1)), ' Error'
       call messages_info(1, iunit)
@@ -176,6 +178,11 @@ contains
               else
                 write(tmp_str(2), '(1x,f12.6,3x,f12.6)') &
                   units_from_atomic(units_out%energy, st%eigenval(ist, ik+is)), st%occ(ist, ik+is)
+              end if
+              if(associated(st%coeff)) then
+                write(tmp_str(4), '(1x,f12.6,1x,f12.6)') &
+                                       real(st%coeff(ist, ik+is)), aimag(st%coeff(ist, ik+is))                                       
+                tmp_str(2)=trim(tmp_str(2))//trim(tmp_str(4))
               end if
               if(present(error)) write(tmp_str(3), '(a7,es7.1,a1)')'      (', error(ist, ik+is), ')'
             end if
