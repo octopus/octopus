@@ -36,6 +36,7 @@ FCFLAGS_MODS = \
 	@F90_MODULE_FLAG@$(top_builddir)/src/opt_control \
 	@F90_MODULE_FLAG@$(top_builddir)/src/sternheimer         \
 	@F90_MODULE_FLAG@$(top_builddir)/external_libs/bpdn      \
+	@F90_MODULE_FLAG@$(top_builddir)/external_libs/dftd3     \
 	@F90_MODULE_FLAG@$(top_builddir)/external_libs/spglib-1.9.9/src/
 
 AM_CPPFLAGS = \
@@ -78,9 +79,16 @@ core_LIBS = \
 	@GSL_LIBS@ @LIBS_LIBXC@ @FCEXTRALIBS@
 
 external_LIBS = \
+<<<<<<< HEAD
 	$(top_builddir)/external_libs/qshep/libqshep.a            \
 	$(top_builddir)/external_libs/spglib-1.9.9/src/libsymspg.a      \
 	$(top_builddir)/external_libs/bpdn/libbpdn.a \
+=======
+	$(top_builddir)/external_libs/qshep/libqshep.a                  \
+	$(top_builddir)/external_libs/spglib-1.5.2/src/libspglib.a      \
+	$(top_builddir)/external_libs/bpdn/libbpdn.a                    \
+	$(top_builddir)/external_libs/dftd3/libdftd3.a                  \
+>>>>>>> Link and include the dftd3 library.
 	$(top_builddir)/external_libs/yaml-0.1.4/src/libyaml.a
 # we should not have libyaml here if we used an external one...
 
