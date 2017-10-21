@@ -31,6 +31,7 @@ module subspace_oct_m
   use elpa1
   use elpa2
 #endif
+!  use floquet_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
@@ -105,6 +106,8 @@ contains
       !%Option scalapack 3
       !% State-parallelized version using ScaLAPACK. (Requires that
       !% Octopus was compiled with ScaLAPACK support.)
+      !%Option floquet_ss 4
+      !% (default and only option for floquet calculation mode, do not use!)
       !%End
 
       default = OPTION__SUBSPACEDIAGONALIZATION__STANDARD

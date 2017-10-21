@@ -53,6 +53,9 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
     
   case(OPTION__SUBSPACEDIAGONALIZATION__STANDARD)
     call X(subspace_diag_standard)(der, st, hm, ik, eigenval, diff)
+
+!  case(OPTION__SUBSPACEDIAGONALIZATION__FLOQUET_SS)
+!     call X(floquet_FBZ_subspace_diag)(der, st, hm, ik)
     
   case(OPTION__SUBSPACEDIAGONALIZATION__NONE)
     ! do nothing
