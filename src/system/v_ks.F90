@@ -150,7 +150,7 @@ contains
     type(geometry_t),     intent(inout) :: geo
     type(multicomm_t),    intent(in)    :: mc  
 
-    integer :: x_id, c_id, xk_id, ck_id, default, val
+    integer :: x_id, c_id, xk_id, ck_id, default, val, iatom
     logical :: parsed_theory_level
     type(dftd3_input) :: d3_input
     
@@ -412,6 +412,13 @@ contains
       case(OPTION__VDWCORRECTION__VDW_D3)
         ks%vdw_self_consistent = .false.
 
+        do iatom = 1, geo%natoms
+          if(.not. species_represents_real_atom(geo%atom(iatom)%species)) then
+            call messages_write('vdw_d3 is not implemented when non-atomic species are present')
+            call messages_fatal()
+          end if
+        end do
+        
         call dftd3_init(ks%vdw_d3, d3_input)
         call dftd3_set_functional(ks%vdw_d3, func = 'dftb3', version = 4, tz = .false.)
 
