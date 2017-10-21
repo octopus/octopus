@@ -48,6 +48,7 @@ module v_ks_oct_m
   use profiling_oct_m
   use pcm_oct_m 
   use simul_box_oct_m
+  use species_oct_m
   use ssys_states_oct_m
   use ssys_tnadd_oct_m
   use states_oct_m
@@ -62,6 +63,9 @@ module v_ks_oct_m
   use xc_ks_inversion_oct_m
   use xc_OEP_oct_m
 
+  ! from the dftd3 library
+  use dftd3_api
+  
   implicit none
 
   private
@@ -132,6 +136,7 @@ module v_ks_oct_m
     integer                  :: vdw_correction
     logical                  :: vdw_self_consistent
     type(vdw_ts_t)           :: vdw_ts
+    type(dftd3_calc)         :: vdw_d3
     logical                  :: include_td_field
   end type v_ks_t
 
@@ -147,6 +152,7 @@ contains
 
     integer :: x_id, c_id, xk_id, ck_id, default, val
     logical :: parsed_theory_level
+    type(dftd3_input) :: d3_input
     
     PUSH_SUB(v_ks_init)
 
@@ -377,26 +383,37 @@ contains
     !%Option vdw_ts 1
     !% The scheme of Tkatchenko and Scheffler, Phys. Rev. Lett. 102
     !% 073005 (2009).
+    !%Option vdw_d3 3
+    !% The DFT-D3 scheme of S. Grimme, J. Antony, S. Ehrlich, and
+    !% S. Krieg, J. Chem. Phys. 132, 154104 (2010).
     !%End
     call parse_variable('VDWCorrection', OPTION__VDWCORRECTION__NONE, ks%vdw_correction)
     
     if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
       call messages_experimental('VDWCorrection')
 
-      !%Variable VDWSelfConsistent
-      !%Type logical
-      !%Default yes
-      !%Section Hamiltonian::XC
-      !%Description
-      !% This variable controls whether the VDW correction is applied
-      !% self-consistently, the default, or just as a correction to
-      !% the total energy.
-      !%End
-      call parse_variable('VDWSelfConsistent', .true., ks%vdw_self_consistent)
-
       select case(ks%vdw_correction)
       case(OPTION__VDWCORRECTION__VDW_TS)
+
+        !%Variable VDWSelfConsistent
+        !%Type logical
+        !%Default yes
+        !%Section Hamiltonian::XC
+        !%Description
+        !% This variable controls whether the VDW correction is applied
+        !% self-consistently, the default, or just as a correction to
+        !% the total energy. This option only works with vdw_ts.
+        !%End
+        call parse_variable('VDWSelfConsistent', .true., ks%vdw_self_consistent)
+
         call vdw_ts_init(ks%vdw_ts, geo, gr%fine%der, st)
+
+      case(OPTION__VDWCORRECTION__VDW_D3)
+        ks%vdw_self_consistent = .false.
+
+        call dftd3_init(ks%vdw_d3, d3_input)
+        call dftd3_set_functional(ks%vdw_d3, func = 'dftb3', version = 4, tz = .false.)
+
       case default
         ASSERT(.false.)
       end select
@@ -820,9 +837,12 @@ contains
       logical :: cmplxscl
       FLOAT :: factor
       CMPLX :: ctmp
-      integer :: ispin
+      integer :: ispin, iatom
       FLOAT, allocatable :: vvdw(:)
       FLOAT, dimension(:,:), pointer :: density
+      FLOAT, allocatable :: coords(:, :)
+      FLOAT :: vdw_stress(1:3, 1:3)
+      integer, allocatable :: atnum(:)
       
       PUSH_SUB(v_ks_calc_start.v_a_xc)
       call profiling_in(prof, "XC")
@@ -925,6 +945,25 @@ contains
         case(OPTION__VDWCORRECTION__VDW_TS)
           vvdw = CNST(0.0)
           call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, st%rho, ks%calc%energy%vdw, vvdw, ks%calc%vdw_forces)
+
+        case(OPTION__VDWCORRECTION__VDW_D3)
+
+          SAFE_ALLOCATE(coords(1:3, geo%natoms))
+          SAFE_ALLOCATE(atnum(geo%natoms))
+
+          do iatom = 1, geo%natoms
+            atnum(iatom) = nint(species_z(geo%atom(iatom)%species))
+            coords(1:3, iatom) = geo%atom(iatom)%x(1:3)
+          end do
+          
+          if(simul_box_is_periodic(ks%gr%sb)) then
+            call dftd3_pbc_dispersion(ks%vdw_d3, coords, atnum, ks%gr%sb%rlattice, ks%calc%energy%vdw, ks%calc%vdw_forces, vdw_stress)
+          else
+            call dftd3_dispersion(ks%vdw_d3, coords, atnum, ks%calc%energy%vdw, ks%calc%vdw_forces)
+          end if
+
+          SAFE_DEALLOCATE_A(coords)
+          SAFE_DEALLOCATE_A(atnum)
           
         case default
           ASSERT(.false.)
