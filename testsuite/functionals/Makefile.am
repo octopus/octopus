@@ -131,6 +131,8 @@ dist_share_DATA =                                  \
 	10-vdw_d3_dna.01-gs_novdw.inp              \
 	10-vdw_d3_dna.02-gs_d3.inp                 \
 	10-vdw_d3_dna.test                         \
-	10-vdw_d3_dna.xyz
+	10-vdw_d3_dna.xyz                          \
+	11-vdw_d3.test                             \
+	11-vdw_d3.01-gs.inp
 
 CLEANFILES = *~ *.bak
