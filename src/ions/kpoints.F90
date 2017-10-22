@@ -286,6 +286,8 @@ contains
     !%End
     default_timereversal = this%use_symmetries .and. .not. symmetries_have_break_dir(symm)
     call parse_variable('KPointsUseTimeReversal', default_timereversal, this%use_time_reversal)
+    if(this%use_time_reversal) &
+      call messages_experimental("KPointsUseTimeReversal")
 
     !We determine the method used to define k-point
     this%method = 0
