@@ -1314,7 +1314,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
 
     write(message(1),'(a,i2,a,f8.5,a)')    'Orbital set ', ios, ' has a value of U of ',&
                          this%orbsets(ios)%Ueff   , ' Ha.'
-    write(message(2),'(a,i2,a)')    'It cotains ', this%orbsets(ios)%norbs, ' orbitals.'
+    write(message(2),'(a,i2,a)')    'It contains ', this%orbsets(ios)%norbs, ' orbitals.'
     write(message(3),'(a,f8.5,a,i6,a)') 'The radius is ', this%orbsets(ios)%sphere%radius, &
                         ' Bohr,  with ', this%orbsets(ios)%sphere%np, ' grid points.'
      call messages_info(3)
