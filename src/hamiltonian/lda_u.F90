@@ -126,6 +126,7 @@ module lda_u_oct_m
     logical             :: freeze_u           !> U is not recomputed during TD evolution
     logical             :: normalizeOrbitals  !> Do we normalize the orbitals 
     logical             :: minimalAtomicSphere!> Use the smallest atomic orbital radius for all of them
+    logical             :: jdeporbitals       !> J-dependent spherical harmonics (for noncollinear spin)
  
     type(distributed_t) :: orbs_dist
   end type lda_u_t
@@ -147,6 +148,7 @@ contains
   this%freeze_occ = .false.
   this%freeze_u = .false.
   this%IncludeOverlap = .false.
+  this%jdeporbitals = .false.
 
   nullify(this%dn)
   nullify(this%zn)
@@ -243,6 +245,19 @@ contains
   call parse_variable('DFTUNormalizeOrbitals', .true., this%normalizeOrbitals)
   call messages_print_var_value(stdout, 'DFTUNormalizeOrbitals', this%normalizeOrbitals)
 
+  !%Variable DFTUjdependentorbitals
+  !%Type logical
+  !%Default yes
+  !%Section Hamiltonian::DFT+U
+  !%Description
+  !% If set to yes, Octopus will use the j-dependent spherical harmonics as basis
+  !% instead of the usual spherical harmonics for describing the radial part of the
+  !% atomic orbitals. Only for noncollinear spins.
+  !%End
+  call parse_variable('DFTUjdependentorbitals', .false., this%jdeporbitals)
+  call messages_print_var_value(stdout, 'DFTUjdependentorbitals', this%jdeporbitals)
+  if(this%jdeporbitals) call messages_experimental("DFTUjdependentorbitals")
+
   if( this%useACBN0) then
     !%Variable UseAllAtomicOrbitals
     !%Type logical
@@ -330,7 +345,7 @@ contains
   if(this%useACBN0) then
     write(message(1),'(a)')    'Computing the Coulomb integrals localized orbital basis.'
     call messages_info(1)
-    if(st%d%dim == 1) then 
+    if(st%d%dim == 1 .or. this%jdeporbitals == .false. ) then 
       if (states_are_real(st)) then
         call dcompute_coulomb_integrals(this, gr%mesh, gr%der, st)
       else
@@ -449,8 +464,7 @@ contains
      call dupdate_occ_matrices(this, mesh, st, energy%dft_u)
    else
      if(associated(hm_base%phase)) then
-       call zupdate_occ_matrices(this, mesh, st, energy%dft_u,&
-                                hm_base%phase)
+       call zupdate_occ_matrices(this, mesh, st, energy%dft_u, hm_base%phase)
      else
        call zupdate_occ_matrices(this, mesh, st, energy%dft_u)
      end if
@@ -473,7 +487,7 @@ contains
    PUSH_SUB(lda_u_build_phase_correction)
 
    do ios = 1, this%norbsets
-     call  orbital_set_update_phase(this%orbsets(ios), sb, std, vec_pot, vec_pot_var)
+     call orbital_set_update_phase(this%orbsets(ios), sb, std, vec_pot, vec_pot_var)
    end do
   
    POP_SUB(lda_u_build_phase_correction)

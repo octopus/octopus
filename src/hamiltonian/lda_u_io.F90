@@ -151,7 +151,7 @@ contains
        trim(units_abbrev(units_out%energy)),']:'
      write(iunit,'(a,6x,14x,a)') ' Orbital',  'U'
      do ios = 1, this%norbsets
-       if(this%nspins == this%spin_channels) then 
+       if(this%nspins == this%spin_channels .or. this%jdeporbitals == .false.) then 
          if(this%orbsets(ios)%nn /= 0 ) then
            write(iunit,'(i4,a10, 2x, i1, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
                         this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), this%orbsets(ios)%Ueff  

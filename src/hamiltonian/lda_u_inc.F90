@@ -298,7 +298,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
 
   if(this%useACBN0 .and. .not.this%freeze_u) then
     if(this%nspins > 1 ) then
-      if(this%nspins == this%spin_channels) then
+      if(this%nspins == this%spin_channels .or. this%jdeporbitals == .false.) then
         call X(compute_ACBNO_U)(this)
       else
         call compute_ACBNO_U_noncollinear(this)
@@ -532,7 +532,7 @@ subroutine X(compute_ACBNO_U)(this)
   integer :: ios, im, imp, impp, imppp, ispin1, ispin2, norbs
   FLOAT   :: numU, numJ, denomU, denomJ, tmpU, tmpJ
 
-  ASSERT(this%nspins == this%spin_channels)
+  ASSERT(this%nspins == this%spin_channels .or. .not. this%jdeporbitals)
 
   PUSH_SUB(compute_ACBNO_U)
 
@@ -561,6 +561,10 @@ subroutine X(compute_ACBNO_U)(this)
             end do
             tmpJ = tmpJ + real(this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin1,ios))
           end do
+          if(this%nspins>this%spin_channels) then !Spinors
+            tmpJ = tmpJ + real(this%X(n_alt)(im,imp,3,ios)*this%X(n_alt)(impp,imppp,4,ios) &
+                              +this%X(n_alt)(im,imp,4,ios)*this%X(n_alt)(impp,imppp,3,ios))
+          end if
           ! These are the numerator of the ACBN0 U and J
           numU = numU + tmpU*this%coulomb(im,imp,impp,imppp,ios)
           numJ = numJ + tmpJ*this%coulomb(im,imppp,impp,imp,ios)
@@ -593,6 +597,13 @@ subroutine X(compute_ACBNO_U)(this)
           end do
         end do
 
+        if(this%nspins>this%spin_channels) then !Spinors
+          if(im == imp) then
+            tmpU = tmpU + real(this%X(n)(im,im,3,ios)*this%X(n)(im,im,4,ios) &
+                              +this%X(n)(im,im,4,ios)*this%X(n)(im,im,3,ios))
+          end if
+        end if 
+
         denomU = denomU + tmpU
  
       end do
@@ -614,6 +625,11 @@ subroutine X(compute_ACBNO_U)(this)
         end if
       end do
     end do
+
+    if(this%nspins>this%spin_channels) then !Spinors
+      denomU = denomU + real(this%X(n)(1,1,3,ios)*this%X(n)(1,1,4,ios) & 
+                            +this%X(n)(1,1,4,ios)*this%X(n)(1,1,3,ios))
+    end if
 
     ! We have to be careful in the case of hydrogen atom for instance 
     if(abs(denomU)> CNST(1.0e-3)) then
@@ -1096,7 +1112,8 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
       if( hubbardl .eq. -1 ) cycle
       !In case of SOC, the orbitals are splitted
       !We multiply by two, except if the user wants to only have one value of j
-      if(st%d%dim > 1 .and. species_hubbard_j(geo%atom(ia)%species) == M_ZERO) then
+      if(st%d%dim > 1 .and. this%jdeporbitals == .true. &
+             .and. species_hubbard_j(geo%atom(ia)%species) == M_ZERO) then
         norb = norb + 2
       else
         norb = norb+1
@@ -1114,7 +1131,8 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
       if(this%skipSOrbitals .and. hasSorbitals ) work = work-1
       !In case of SOC, the orbitals are splitted
       !We multiply by two, except if the user wants to only have one value of j
-      if(st%d%dim > 1 .and. species_hubbard_j(geo%atom(ia)%species) == M_ZERO) &
+      if(st%d%dim > 1 .and. this%jdeporbitals == .true. &
+             .and. species_hubbard_j(geo%atom(ia)%species) == M_ZERO) &
         work = 2*work
       norb = norb + work
     end do
@@ -1139,7 +1157,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
   do ia = 1, geo%natoms
     do idim = 1, st%d%dim
       hubbardj = species_hubbard_j(geo%atom(ia)%species)
-      if( idim > 1 .and. hubbardj /= M_ZERO) cycle
+      if( idim > 1 .and. (hubbardj /= M_ZERO .or. this%jdeporbitals == .false.) ) cycle
       if(.not. this%useAllOrbitals) then
         hubbardl = species_hubbard_l(geo%atom(ia)%species)
         if( hubbardl .eq. -1 ) cycle
@@ -1153,7 +1171,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
             norb = norb + 1
             os%ll = hubbardl
             os%nn = nn
-            if( hubbardj /= M_ZERO ) then
+            if( hubbardj /= M_ZERO .and. this%jdeporbitals ) then
               os%jj = hubbardj 
             else
               os%jj = real(os%ll + idim) - M_THREE/M_TWO
@@ -1164,20 +1182,21 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
           end if
         end do
         !In case of spinors, we adjust the number of orbitals
-        if(st%d%dim > 1 ) then
+        if(st%d%dim > 1 .and. this%jdeporbitals ) then
           os%norbs = norb + int(M_TWO*(os%jj-os%ll))
+          os%ndim = st%d%dim
         else
           os%norbs = norb
+          os%ndim = 1
         end if
         os%Ueff = species_hubbard_u(geo%atom(ia)%species)
         os%spec => geo%atom(ia)%species
         os%iatom = ia
-        os%ndim = st%d%dim
         call submesh_null(os%sphere)
         do iorb = 1, os%norbs
           ! We obtain the orbital
           call X(get_atomic_orbital)(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
-                                          os, iorb, os%radius, st%d%dim)
+                                          os, iorb, os%radius, os%ndim)
         end do
       else !useAllOrbitals
         work = 0
@@ -1201,7 +1220,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
               work2 = work2 + 1
               os%ll = ll
               os%nn = nn
-              if( hubbardj /= M_ZERO ) then
+              if( hubbardj /= M_ZERO .and. this%jdeporbitals ) then
                 os%jj = hubbardj
               else
                 os%jj = ll + idim - M_THREE/M_TWO
@@ -1216,21 +1235,22 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
             end if
           end do
           !In case of spinors, we adjust the number of orbitals
-          if(st%d%dim > 1 ) then
+          if(st%d%dim > 1 .and. this%jdeporbitals ) then
             os%norbs = work2 + M_TWO*(os%jj-os%ll)
+            os%ndim = st%d%dim
           else
             os%norbs = work2
+            os%ndim = 1
           end if
           os%Ueff = species_hubbard_u(geo%atom(ia)%species)
           os%spec => geo%atom(ia)%species
           os%iatom = ia
-          os%ndim = st%d%dim
           call submesh_null(os%sphere)        
 
           do work2 = 1, os%norbs 
             ! We obtain the orbital
             call X(get_atomic_orbital)(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
-                                               os, work2, os%radius, st%d%dim)
+                                               os, work2, os%radius, os%ndim)
           end do !work2
         end do !norb
         iorbset = iorbset + work
@@ -1476,17 +1496,16 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
     mm = orbind-1-ll
 
     !We get the orbital from the pseudopotential
-    #ifdef R_TCOMPLEX
+  #ifdef R_TCOMPLEX
     !In this case we want to get a real orbital and to store it in complex array
     SAFE_ALLOCATE(tmp(1:sm%np))
-    call dspecies_get_orbital_submesh(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x, &
-                                          tmp)
+    call dspecies_get_orbital_submesh(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x, tmp)
     os%X(orb)(1:sm%np,1,orbind) = tmp(1:sm%np)
     SAFE_DEALLOCATE_A(tmp)
-    #else
+  #else
       call X(species_get_orbital_submesh)(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x,&
                                          os%X(orb)(1:sm%np,1,orbind))
-    #endif
+  #endif
   else
     !see for instance https://arxiv.org/pdf/1011.3433.pdf
     kappa = (ll-jj)*(2*jj+1)
@@ -1496,12 +1515,6 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
     if(abs(mm) <= ll) then
       call X(species_get_orbital_submesh)(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x,&
                                          os%X(orb)(1:sm%np,1,orbind))
-!     SAFE_ALLOCATE(tmp(1:sm%np))
- !   call dspecies_get_orbital_submesh(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x, &
- !                                         tmp)
- !   os%X(orb)(1:sm%np,1,orbind) = tmp(1:sm%np)
- !   SAFE_DEALLOCATE_A(tmp)
-    
       coeff = sqrt((kappa-mu+M_HALF)/(M_TWO*kappa+M_ONE)) 
       do is=1,sm%np
         os%X(orb)(is,1,orbind) = coeff*os%X(orb)(is,1,orbind)
@@ -1514,11 +1527,6 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
     if(abs(mm) <= ll) then
       call X(species_get_orbital_submesh)(spec, sm, ii, ll, mm, 2, geo%atom(iatom)%x,&
                                         os%X(orb)(1:sm%np,2,orbind))
- !   SAFE_ALLOCATE(tmp(1:sm%np))
- !   call zspecies_get_orbital_submesh(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x, &
- !                                         tmp)
- !   os%X(orb)(1:sm%np,2,orbind) = tmp(1:sm%np)
- !   SAFE_DEALLOCATE_A(tmp)
       coeff = (-kappa/abs(kappa))*sqrt((kappa+mu+M_HALF)/(M_TWO*kappa+M_ONE))
       do is=1,sm%np
         os%X(orb)(is,2,orbind) = coeff*os%X(orb)(is,2,orbind)

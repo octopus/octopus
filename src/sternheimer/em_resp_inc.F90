@@ -488,7 +488,7 @@ subroutine X(calc_properties_linear)()
         message(1) = "Info: Calculating (frequency-dependent) Born effective charges."
         call messages_info(1)
       
-        call X(forces_born_charges)(sys%gr, sys%geo, hm%ep, sys%st, &
+        call X(forces_born_charges)(sys%gr, sys%geo, hm, hm%ep, sys%st, &
           lr = em_vars%lr(:, 1, ifactor), lr2 = em_vars%lr(:, em_vars%nsigma, ifactor), &
           Born_charges = em_vars%Born_charges(ifactor))
       end if
