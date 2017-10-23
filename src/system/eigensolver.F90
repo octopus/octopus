@@ -570,7 +570,7 @@ contains
     type(eigensolver_t),  intent(inout) :: eigens
     type(grid_t),         intent(in)    :: gr
     type(states_t),       intent(inout) :: st
-    type(hamiltonian_t),  intent(in)    :: hm
+    type(hamiltonian_t),  intent(inout) :: hm
     integer,              intent(in)    :: iter
     logical,    optional, intent(out)   :: conv
 

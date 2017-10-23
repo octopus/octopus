@@ -22,7 +22,7 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
   type(subspace_t),       intent(in)    :: this
   type(derivatives_t),    intent(in)    :: der
   type(states_t), target, intent(inout) :: st
-  type(hamiltonian_t),    intent(in)    :: hm
+  type(hamiltonian_t),    intent(inout) :: hm
   integer,                intent(in)    :: ik
   FLOAT,                  intent(out)   :: eigenval(:)
   FLOAT, optional,        intent(out)   :: diff(:)
@@ -54,8 +54,8 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
   case(OPTION__SUBSPACEDIAGONALIZATION__STANDARD)
     call X(subspace_diag_standard)(der, st, hm, ik, eigenval, diff)
 
-!  case(OPTION__SUBSPACEDIAGONALIZATION__FLOQUET_SS)
-!     call X(floquet_FBZ_subspace_diag)(der, st, hm, ik)
+ case(OPTION__SUBSPACEDIAGONALIZATION__FLOQUET_SS)
+    call zfloquet_FBZ_subspace_diag(der, st, hm, ik)
     
   case(OPTION__SUBSPACEDIAGONALIZATION__NONE)
     ! do nothing

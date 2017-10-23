@@ -89,8 +89,8 @@ module floquet_oct_m
        floquet_calc_occupations,  &
        floquet_td_state,          &
        floquet_FBZ_filter,        &
-       zfloquet_FBZ_subspace_diag, &
-       dfloquet_FBZ_subspace_diag, &
+!        zfloquet_FBZ_subspace_diag, &
+!        dfloquet_FBZ_subspace_diag, &
        floquet_calc_FBZ_coefficients 
 
   integer, public, parameter ::    &
@@ -1243,7 +1243,7 @@ contains
 
        st%eigenval = M_ZERO
        do ik=st%d%kpt%start,st%d%kpt%end
-         call zfloquet_FBZ_subspace_diag(sys%gr%der, st, hm, ik, start=.true.,gs_st=sys%st)
+         call zfloquet_FBZ_subspace_diag(sys%gr%der, st, hm, ik, start=.true.)
        end do
        call comm_allreduce(st%st_kpt_mpi_grp%comm,  st%eigenval(:,:))
 
@@ -1280,193 +1280,6 @@ contains
 
    end subroutine floquet_FBZ_eigensolver_run
 
-
-   subroutine zfloquet_FBZ_subspace_diag(der, st,  hm, ik, start,gs_st)
-    type(derivatives_t),    intent(in)    :: der
-    type(states_t), target, intent(inout) :: st
-    type(hamiltonian_t),    intent(inout) :: hm
-    integer,                intent(in)    :: ik
-    logical, optional,      intent(in)    :: start
-    type(states_t),pointer, optional, intent(in)  :: gs_st
-
-    type(states_t), pointer      :: sub_st
-    CMPLX, allocatable :: evecs(:, :), rdiff(:), H0(:,:), one(:,:), HF(:,:), P(:,:), Pd(:,:), Heff(:,:)
-    CMPLX, allocatable :: rot_state(:,:), state(:,:)
-    FLOAT, allocatable :: evalues_full(:), mix(:), evecs_norms(:,:), evalues0(:), evals_diff(:,:)
-    integer            :: block0, nst0, maxiter, nmix, ist,jst, im,in, jj,ii, Fdim, it, pos, idim
-    type(states_t)     :: rotated_st
-    logical            :: start_
-
-    PUSH_SUB(floquet_FBZ_subspace_diag)
-
-    ASSERT(hm%F%order(1) == -hm%F%order(2))
-
-    start_ = optional_default(start,.false.)
-    if(start_) then
-       ASSERT(present(gs_st))
-    end if
-
-    !for the initial case we expand in the groundstate
-    if(start) then
-       sub_st => gs_st
-    else
-       ! for all regular iterations the Hamiltonian is expanded in the input st-object 
-       sub_st => st
-    end if
-    Fdim=hm%F%floquet_dim
-
-    SAFE_ALLOCATE(H0(1:st%nst, 1:st%nst)) ! the zero-block, this could be gs Hamiltonian(?)
-    SAFE_ALLOCATE( P(1:st%nst, 1:st%nst)) ! the off-diagonal intereaction block
-    SAFE_ALLOCATE(Pd(1:st%nst, 1:st%nst)) ! P^\dagger  
-    SAFE_ALLOCATE(HF(1:st%nst*Fdim, 1:st%nst*Fdim)) ! the full Floquet matrix
-    SAFE_ALLOCATE(one(1:st%nst, 1:st%nst)) 
-    SAFE_ALLOCATE(evecs(1:st%nst*Fdim, 1:st%nst))
-    SAFE_ALLOCATE(evalues_full(1:st%nst*Fdim))
-    SAFE_ALLOCATE(evalues0(1:st%nst))
-    SAFE_ALLOCATE(Heff(1:st%nst, 1:st%nst))
-    SAFE_ALLOCATE(evals_diff(1:st%nst*Fdim, 1:st%nst))
-    evecs = M_ZERO
-
-    one = M_ZERO
-    do ist=1,st%nst
-      one(ist,ist) = M_ONE
-    end do
-
-    hm%F%floquet_apply = .false.
-    hm%d%dim = hm%F%spindim !st%d%dim
-    ! get the action of H0 on the states
-    call zsubspace_diag_hamiltonian(der,  sub_st, hm, ik, H0)
-    P = M_ZERO
-    do it=1,hm%F%nT
-      Pd = M_ZERO
-      call zsubspace_diag_hamiltonian(der, sub_st, hm%td_hm(it), ik, Pd)
-      P = P + Pd*exp(-M_zI*hm%F%omega*it*hm%F%dt)/hm%F%nT
-    end do
-    Pd(1:st%nst, 1:st%nst) = transpose(conjg(P))
-    ! construct the full matrix by shifting the H0 action
-    HF = M_ZERO
-    do im=1,Fdim
-      HF((im-1)*st%nst+1:im*st%nst , (im-1)*st%nst+1:im*st%nst) = H0+(im-hm%F%order(2)-1)*hm%F%omega*one
-      if(im>1) HF((im-2)*st%nst+1:(im-1)*st%nst , (im-1)*st%nst+1:im*st%nst) = Pd(1:st%nst,1:st%nst)
-      if(im<Fdim) HF(im*st%nst+1:(im+1)*st%nst , (im-1)*st%nst+1:im*st%nst) = P(1:st%nst,1:st%nst)
-    end do
-    hm%F%floquet_apply = .true.
-    hm%d%dim = st%d%dim
-
-    call lalg_eigensolve(st%nst*Fdim, HF, evalues_full)
-
-    ! if this is the initial step filter the zero harmonics by downfolding residual
-    if (start_) then
-      do ist=1,st%nst*Fdim
-        ! for comparison use only dim=1 in downfolding
-        call continued_fraction(st%nst, H0, P, Pd, evalues_full(ist), hm%F%omega, 1,Heff)
-        call lalg_eigensolve(st%nst, Heff, evalues0)
-        do jst=1,st%nst
-          evals_diff(ist,jst) = abs(evalues_full(ist) - evalues0(jst))
-        end do
-      end do
-    else
-      ! for all regular iterations we filter the FBZ by comparison with input
-      do ist=1,st%nst*Fdim
-        do jst=1,st%nst
-          evals_diff(ist,jst) = abs(evalues_full(ist) - st%eigenval(jst,ik))
-        end do
-      end do
-    end if
-
-    ! keep states with those eigenvalues that have the smallest difference to input (or downfolded)
-    do jst=1,st%nst
-      pos = minloc(evals_diff(:,jst),dim=1)
-      st%eigenval(jst,ik) = evalues_full(pos)
-      evecs(1:st%nst*Fdim,jst) = HF(1:st%nst*Fdim,pos) 
-    end do
-
-!   call states_rotate(der%mesh, dressed_st, evecs, ik)
-
-    ! at this point we overwrite the input st-object with the states from the matrix diagonalization
-    ! so we have to create a temporary (rotated) states object 
-    ! Nota bene that for the regular iteration cases sub_st is jsut a pointer to the input states object st
-    call states_copy(rotated_st, st)
-    ! rotate states by hand
-    SAFE_ALLOCATE(    state(1:der%mesh%np,1:sub_st%d%dim))
-    SAFE_ALLOCATE(rot_state(1:der%mesh%np,1:st%d%dim))
-    do ist=1,st%nst
-       rot_state = M_ZERO
-       do jst=1,st%nst
-          call states_get_state(sub_st,der%mesh, jst, ik, state)
-          do im=1,Fdim
-             do idim=1,sub_st%d%dim
-               rot_state(1:der%mesh%np,(im-1)*sub_st%d%dim+idim) =  rot_state(1:der%mesh%np,(im-1)*sub_st%d%dim+idim)+ & 
-                                                                   evecs((im-1)*st%nst+jst,ist)*state(1:der%mesh%np,idim)
-             end do
-          end do
-       end do
-       call states_set_state(rotated_st,der%mesh, ist, ik, rot_state)
-    end do
-    SAFE_DEALLOCATE_A(state)
-    SAFE_DEALLOCATE_A(rot_state)
-
-    ! now overwrite the input obeject
-    call states_copy(st,rotated_st)
-    call states_end(rotated_st)
-
-    SAFE_DEALLOCATE_A(H0)
-    SAFE_DEALLOCATE_A( P)
-    SAFE_DEALLOCATE_A(Pd)
-    SAFE_DEALLOCATE_A(Heff)
-    SAFE_DEALLOCATE_A(evecs)
-    SAFE_DEALLOCATE_A(evalues_full)
-    SAFE_DEALLOCATE_A(evalues0)
-    SAFE_DEALLOCATE_A(evals_diff)
-    SAFE_DEALLOCATE_A(HF)
-    SAFE_DEALLOCATE_A(one)
-
-    POP_SUB(floquet_FBZ_subspace_diag)
-
-    end subroutine zfloquet_FBZ_subspace_diag
-
-    ! dummy
-    subroutine dfloquet_FBZ_subspace_diag(der, st,  hm, ik, start,gs_st)
-       type(derivatives_t),    intent(in)    :: der
-       type(states_t), target, intent(inout) :: st
-       type(hamiltonian_t),    intent(inout) :: hm
-       integer,                intent(in)    :: ik
-       logical, optional,      intent(in)    :: start
-       type(states_t),pointer, optional, intent(in)  :: gs_st
-    end subroutine dfloquet_FBZ_subspace_diag
-
-    subroutine continued_fraction(nn,H0, P, Pd, Q, omega, order,Heff)
-        integer :: nn
-        CMPLX  :: H0(nn,nn), P(nn,nn), Pd(nn,nn), Heff(nn,nn)
-        FLOAT  ::  Q, omega
-        integer :: order, ii
-
-        FLOAT   :: one(nn,nn)
-        CMPLX  :: Heff_plus(nn,nn)
-        CMPLX  :: Heff_minus(nn,nn)
-
-        one = M_ZERO
-        do ii=1,nn
-           one(ii,ii) = M_ONE
-        end do
-
-        Heff_minus(:,:) = M_ZERO
-        Heff_plus(:,:)  = M_ZERO
-
-        do ii=order,1,-1
-           Heff_minus(:,:) = (Q-ii*omega)*one(:,:)-H0(:,:)-Heff_minus(:,:)
-           Heff_plus(:,:)  = (Q+ii*omega)*one(:,:)-H0(:,:)-Heff_plus(:,:)
-
-           call lalg_sym_inverter('u',nn, Heff_minus)
-           call lalg_sym_inverter('u',nn, Heff_plus)
-           
-           Heff_minus = matmul(matmul(Pd,Heff_minus),P)
-           Heff_plus = matmul(matmul(P,Heff_plus),Pd)
-        end do
-
-        Heff = H0+Heff_minus+Heff_plus
-
-      end subroutine continued_fraction
 
       subroutine floquet_FBZ_filter(sys, hm, st_full, st_filtered)
         type(system_t),    intent(in)    :: sys
