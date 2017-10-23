@@ -207,8 +207,8 @@ program floquet_observables
   !% The velocity gauge (use the current operator): <i|J|j> ~ <i|p.A|j> .
   !%Option f_length 2
   !% The length gauge: <i|r.E|j>.
-  !%Option f_length_new 3
-  !% The length gauge new
+  !%Option f_length_FBZ 3
+  !% The length gauge FBZ
   !%Option f_one 4
   !% No matrix element, only energy difference
   !%End
@@ -353,8 +353,8 @@ program floquet_observables
     case (OPTION__FLOQUETOBSERVABLEGAUGE__F_LENGTH)
         call calc_floquet_conductivity()
   
-    case (OPTION__FLOQUETOBSERVABLEGAUGE__F_LENGTH_NEW)
-        call calc_floquet_conductivity_length_gauge_new()
+    case (OPTION__FLOQUETOBSERVABLEGAUGE__F_LENGTH_FBZ)
+        call calc_floquet_conductivity_length_gauge_FBZ()
 
     case (OPTION__FLOQUETOBSERVABLEGAUGE__F_ONE)
         call calc_floquet_conductivity()
@@ -1173,127 +1173,139 @@ contains
   end subroutine out_floquet_wfs
  
 
-  subroutine calc_floquet_conductivity_length_gauge_new()
+  subroutine calc_floquet_conductivity_length_gauge_FBZ()
   
-    ! future development will be in this part  
-    CMPLX, allocatable   :: u_ma(:,:), u_mb(:,:), sigma(:,:,:)
+    ! Use floquet brillouin zone (FBZ) solver to calculate the conductivity
+    ! type(states_t), intent(in)      :: FBZ_st
+    CMPLX, allocatable   :: u_a(:,:), u_b(:,:), u_c(:,:), sigma(:,:,:)
     FLOAT, allocatable   :: spect(:,:)
     
-    integer :: idim, im, in, ista, istb, ik, itot, ii, i, imm, inn, spindim, ie, dim
-    FLOAT   :: omega, DE, ediff, EE, norm, fact
-    CMPLX   :: melba(1:3), melab(1:3), tmp(1:4), ampl
+    integer :: idim, im, in, il, ista, istb,istc, ik, itot, ii, i, imm, inn,ill, spindim, ie, dim
+    FLOAT   :: omega, DE_bc, DE_ca, EE, norm, fact
+    CMPLX   :: dn_cb(1:3), dm_ac(1:3), tmp(1:4), ampl
     integer :: iunit, idir, jdir, dir
     character(len=1024):: filename, iter_name, str
     
-    CMPLX, allocatable :: psi(:,:,:), hpsi(:,:,:), temp_state1(:,:), temp_state2(:,:)
-    PUSH_SUB(calc_floquet_conductivity_length_gauge_new)
+    !CMPLX, allocatable :: psi(:,:,:), hpsi(:,:,:), temp_state1(:,:), temp_state2(:,:)
+    
+    PUSH_SUB(calc_floquet_conductivity_length_gauge_FBZ)
     
     spindim = hm%F%spindim 
-    print *, 'l new spindim', spindim                
+    print *, 'FBZ method spindim', spindim                
     dim = sys%gr%sb%dim
       
     
-    itot = dressed_st%d%kpt%nglobal * dressed_st%nst**2 * hm%F%floquet_dim**2
+    !itot = FBZ_st%d%kpt%nglobal * FBZ_st%nst**2 * hm%F%floquet_dim**2
     
     SAFE_ALLOCATE(sigma(1:obs%ne,1:3,1:3))
     
-    SAFE_ALLOCATE(u_ma(1:sys%gr%mesh%np, hm%F%floquet_dim))
-    SAFE_ALLOCATE(u_mb(1:sys%gr%mesh%np, hm%F%floquet_dim))
-
+    SAFE_ALLOCATE(u_a(1:sys%gr%mesh%np, hm%F%floquet_dim))
+    print *, 'u_a allocated'
+    SAFE_ALLOCATE(u_b(1:sys%gr%mesh%np, hm%F%floquet_dim))
+    print *, 'u_b allocated'
+    SAFE_ALLOCATE(u_c(1:sys%gr%mesh%np, hm%F%floquet_dim))
+    print *, 'u_c allocated'
+   
     
     sigma(:,:,:) = M_z0
+    print *,'forder start end' , hm%F%order(1), hm%F%order(2)
 
     do idir = 1, 2 
       do jdir = idir, 2 
 
-
         write(message(1),'(a,i5,a,i5,a)') 'Calculate sigma(',idir,',', jdir,'):'
-        call messages_info(1)
-        
-        
-        
+        call messages_info(1) 
    
-        do ik=dressed_st%d%kpt%start, dressed_st%d%kpt%end
+   
+        do ik=FBZ_st%d%kpt%start, FBZ_st%d%kpt%end
 
-            do ista=dressed_st%st_start, dressed_st%st_end
-              call states_get_state(dressed_st, sys%gr%mesh, ista, ik, u_ma)
-    
-              do istb=1, dressed_st%nst
-                !if (ista == istb) cycle
-          
-                !if (ista == istb .and. idir /= jdir) cycle
+          do ista=FBZ_st%st_start, FBZ_st%st_end
+            ! call states_get_state(FBZ_st, sys%gr%mesh, ista, ik, u_ma)
+            print *, 'ista loop' 
+            do istb=1, FBZ_st%nst
+              print *, 'istb loop'
+              do istc=1, FBZ_st%nst
                 
-                !if (ista >= istb .and. idir == jdir) cycle
+                DE_bc = FBZ_st%eigenval(istb,ik) - FBZ_st%eigenval(istc,ik)
+                DE_ca = FBZ_st%eigenval(istc,ik) - FBZ_st%eigenval(ista,ik)
                 
-                DE = dressed_st%eigenval(istb,ik) - dressed_st%eigenval(ista,ik)
-                
-                ! Skip divergence 
-                if (abs(DE) < M_EPSILON) cycle                  
-                
-                !Cut out all the components suppressed by small occupations 
-                if (abs((dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik))/DE) < 1E-14) cycle
-                !if ((dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik)) < 1E-14) cycle
-
-                call states_get_state(dressed_st, sys%gr%mesh, istb, ik, u_mb)
-        
+                call states_get_state(FBZ_st, sys%gr%mesh, ista, ik, u_a)
+                print *,'u_a got'
+                call states_get_state(FBZ_st, sys%gr%mesh, istb, ik, u_b)
+                print *,'u_b got'
+                call states_get_state(FBZ_st, sys%gr%mesh, istc, ik, u_c)
+                print *,'u_c got'
+      
 
                  
-                melab(:) = M_z0
-                melba(:) = M_z0
+                dm_ac(:) = M_z0
+                dn_cb(:) = M_z0
                                  
                 norm = (hm%F%order(2)-hm%F%order(1))
                 if (norm == 0) norm = M_ONE  
-                ! get the dipole matrix elements <<psi_a|r|psi_b >>
+                ! get the dipole matrix elements dn_cb and dm_ac
                 do im=hm%F%order(1),hm%F%order(2)
                   imm = im - hm%F%order(1) + 1
-        
-                  !<u_ma| r | u_mb>
-                  do idim=1,spindim
-                    call zmf_multipoles(sys%gr%mesh, conjg(u_ma(:,(imm-1)*spindim+idim)) &
-                                                         * u_mb(:,(imm-1)*spindim+idim) , 1, tmp(:))
 
-                    melab(:) = melab(:) + tmp(2:4)
-                  end do 
-                      
-                  !<u_mb| r | u_ma>
-                  do idim=1,spindim
-                    call zmf_multipoles(sys%gr%mesh, conjg(u_mb(:,(imm-1)*spindim+idim)) &
-                                                         * u_ma(:,(imm-1)*spindim+idim) , 1, tmp(:))
+                  do in=hm%F%order(1),hm%F%order(2)
+                    inn = in - hm%F%order(1) + 1
 
-                    melba(:) = melba(:) + tmp(2:4)
-                  end do 
-                      
-              
+                    do il=hm%F%order(1), hm%F%order(2)
+                      ill = il - hm%F%order(1) + 1
+                      ! print *, 'imm , inn, ill', imm,inn,ill
+                      if (hm%F%order(1) < inn+ill < hm%F%order(2)) then
+                      !\sum_l <u_(n+l)c| r | u_lb>
+                        do idim=1,spindim
+                          call zmf_multipoles(sys%gr%mesh, conjg(u_c(:,(inn+ill-1)*spindim+idim)) &
+                                                               * u_b(:,(inn-1)*spindim+idim) , 1, tmp(:))
+  
+                          dn_cb(:) = dn_cb(:) + tmp(2:4)
+                        end do
+                      end if
+                          
+                      !\sum_l <u_(m+l)a| r | u_lc>
+                      if (hm%F%order(1) < imm+ill < hm%F%order(2)) then
+                        do idim=1,spindim
+                          call zmf_multipoles(sys%gr%mesh, conjg(u_a(:,(imm+ill-1)*spindim+idim)) &
+                                                               * u_c(:,(imm-1)*spindim+idim) , 1, tmp(:))
+
+                          dm_ac(:) = dm_ac(:) + tmp(2:4)
+                        end do 
+                      end if
+
+                    end do ! il loop
+                
+                    do ie = 1, obs%ne
+                        EE= ie * obs%de
+
+                        ampl =  M_zI * conjg(FBZ_st%coeff(ista,ik)) *FBZ_st%coeff(istb,ik) * &
+                                dm_ac(idir)*dn_cb(jdir)* &
+                                (1/(DE_bc - inn * M_zI*hm%F%omega  + EE + M_zi*obs%gamma)- &
+                                 1/(DE_ca - imm * M_zI*hm%F%omega  + EE + M_zi*obs%gamma) )
+                                
+                        if (idir == jdir) ampl = M_z2 * ampl
+                        
+                        ! sum over a and b         
+                        sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + ampl
+                    end do ! ie loop
+
+                  end do ! in loop
                 end do ! im loop
+
+                        
                 !print *, ik, ista, istb, DE
 
-                if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, obs%ne)
 
-                do ie = 1, obs%ne
-                   EE= ie * obs%de
+              end do ! istc loop
+            end do ! istb loop   
+          end do ! ista loop   
 
-                         ampl =  M_zI * (dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik)) * &
-                                         melab(idir)*melba(jdir) /(DE + EE + M_zi*obs%gamma) 
-                                 
-                         if (idir == jdir) ampl = M_z2 * ampl
-                         
-                         ! sum over a and b         
-                         sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + ampl
-
-                 if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ie, obs%ne)
-                 
-               end do ! ie loop
-
-                
-              end do ! istb loop   
-            end do ! ista loop   
-
-            ! sum over kpoints
-            sigma(ie,idir,jdir) = sigma(ie,idir,jdir) * (dressed_st%d%kweights(ik))
+          ! sum over kpoints
+          sigma(ie,idir,jdir) = sigma(ie,idir,jdir) * (FBZ_st%d%kweights(ik))
            
-          end do ! ik loop
-        if(dressed_st%parallel_in_states .or. dressed_st%d%kpt%parallel) then
-          call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm,  sigma(:,idir,jdir))
+        end do ! ik loop
+        if(FBZ_st%parallel_in_states .or. FBZ_st%d%kpt%parallel) then
+          call comm_allreduce(FBZ_st%st_kpt_mpi_grp%comm,  sigma(:,idir,jdir))
         end if
                 
         
@@ -1308,7 +1320,7 @@ contains
     
     if(mpi_grp_is_root(mpi_world)) then
       write(iter_name,'(i4)') hm%F%iter
-      filename = FLOQUET_DIR//'/floquet_conductivity_l_new'//trim(adjustl(iter_name))
+      filename = FLOQUET_DIR//'/floquet_conductivity_l_FBZ'//trim(adjustl(iter_name))
       iunit = io_open(filename, action='write')
 
       write(iunit, '(a1,a15)', advance = 'no') '#', str_center("w", 15)
@@ -1346,12 +1358,13 @@ contains
     
     SAFE_DEALLOCATE_A(sigma)
     
-    SAFE_DEALLOCATE_A(u_ma)
-    SAFE_DEALLOCATE_A(u_mb)
+    SAFE_DEALLOCATE_A(u_a)
+    SAFE_DEALLOCATE_A(u_b)
+    SAFE_DEALLOCATE_A(u_c)
 
-    POP_SUB(calc_floquet_conductivity_length_gauge_new)    
+    POP_SUB(calc_floquet_conductivity_length_gauge_FBZ)    
 
-  end subroutine calc_floquet_conductivity_length_gauge_new
+  end subroutine calc_floquet_conductivity_length_gauge_FBZ
 
 
   subroutine calc_floquet_conductivity()
@@ -1383,6 +1396,7 @@ contains
     
     sigma(:,:,:) = M_z0
 
+    print *,'forder start end' , hm%F%order(1), hm%F%order(2)
     do idir = 1, dim   
       do jdir = idir, dim 
 
