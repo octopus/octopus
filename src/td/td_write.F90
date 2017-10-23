@@ -216,6 +216,7 @@ contains
     !% (zero-time) wavefunctions to the file
     !% <tt>td.general/projections.XXX</tt>. Only use this option if
     !% you really need it, as it might be computationally expensive. See <tt>TDProjStateStart</tt>.
+    !% The output interval of this quantity is controled by the variable <tt>TDOutputComputeInterval</tt>
     !%Option local_mag_moments 512
     !% If set, outputs the local magnetic moments, integrated in sphere centered around each atom.
     !% The radius of the sphere can be set with <tt>LocalMagneticMomentsSphereRadius</tt>.
@@ -258,6 +259,7 @@ contains
     !%Option n_excited_el 1048576
     !% Output the number of excited electrons, based on the projections 
     !% of the time evolved wave-functions on the ground-state wave-functions. 
+    !% The output interval of this quantity is controled by the variable <tt>TDOutputComputeInterval</tt>
     !%Option coordinates_sep 2097152
     !% Writes geometries in a separate file.
     !%Option velocities_sep 4194304
