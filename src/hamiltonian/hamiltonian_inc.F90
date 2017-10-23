@@ -1015,9 +1015,26 @@ subroutine  X(apply_floquet_hamiltonian)(hm, der, psib, hpsib, ik, time, Imtime,
   call batch_init(small_psib,spindim,psib%nst)
   call X(batch_allocate)(small_psib,1,psib%nst,der%mesh%np_part)
 
-  do idx=hm%F%flat_idx%start, hm%F%flat_idx%end
-     it = hm%F%idx_map(idx,1)
-     im = hm%F%idx_map(idx,2)
+  select case (hm%F%boson)
+  case (OPTION__FLOQUETBOSON__CLASSICAL_FLOQUET)
+    
+    do idx=hm%F%flat_idx%start, hm%F%flat_idx%end
+      it = hm%F%idx_map(idx,1)
+      im = hm%F%idx_map(idx,2)
+      call get_small_batch(psib,im,small_psib)
+      call X(hamiltonian_apply_batch2)(hm%td_hm(it), der, small_psib , small_hpsib, ik, &
+                time = time, terms = terms, Imtime = Imtime, set_bc = set_bc)
+
+      ! sum the contributions of im to the in components of the matrix product
+      do in=Fdim(1),Fdim(2)
+        call set_big_batch_axpy(small_hpsib,in, exp(M_zI*(im-in)*omega*it*dt)/nT, hpsib)
+      end do
+    end do
+
+  case (OPTION__FLOQUETBOSON__QED_PHOTON)
+
+    do idx=hm%F%flat_idx%start, hm%F%flat_idx%end
+      im = hm%F%idx_map(idx,2)
       call get_small_batch(psib,im,small_psib)
       call X(hamiltonian_apply_batch2)(hm%td_hm(it), der, small_psib , small_hpsib, ik, &
               time = time, terms = terms, Imtime = Imtime, set_bc = set_bc)
@@ -1026,7 +1043,14 @@ subroutine  X(apply_floquet_hamiltonian)(hm, der, psib, hpsib, ik, time, Imtime,
       do in=Fdim(1),Fdim(2)
         call set_big_batch_axpy(small_hpsib,in, exp(M_zI*(im-in)*omega*it*dt)/nT, hpsib)
       end do
-  end do
+    end do
+  
+
+  case (OPTION__FLOQUETBOSON__QED_PHONON)
+    ! stay tuned!
+    
+  
+  end select
   
   if(hm%F%is_parallel) call allreduce_batch(hm%F%mpi_grp%comm, hpsib)
 

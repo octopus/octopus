@@ -123,6 +123,22 @@ contains
     this%sample = .false.
     
 
+    !%Variable FloquetBoson
+    !%Type flag
+    !%Default classical
+    !%Section Floquet
+    !%Description
+    !% Don't use it now!!
+    !%Option classical_floquet 0
+    !%
+    !%Option qed_photon 1
+    !% 
+    !%Option qed_phonon 2
+    !% 
+    !%End
+    call parse_variable('FloquetBoson', OPTION__FLOQUETBOSON__CLASSICAL_FLOQUET, this%boson)
+    call messages_print_var_option(stdout, 'FloquetBoson',  this%boson)
+
 
     !%Variable TDFloquetMode
     !%Type flag
