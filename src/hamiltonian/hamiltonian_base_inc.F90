@@ -492,7 +492,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
   type(projection_t),               intent(out)   :: projection
 
   integer :: ist, ip, iproj, imat, nreal, iprojection
-  integer :: npoints, nprojs, nst
+  integer :: npoints, nprojs, nst, maxnpoints
   integer, allocatable :: ind(:)
   R_TYPE :: aa, bb, cc, dd
   CMPLX :: phase
@@ -501,6 +501,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
   type(profile_t), save :: cl_prof
   type(accel_kernel_t), save, target :: ker_proj_bra, ker_proj_bra_phase
   type(accel_kernel_t), pointer :: kernel
+  R_TYPE, allocatable :: tmp_array(:)
   
   if(.not. this%apply_projector_matrices) return
 
@@ -583,14 +584,18 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
   SAFE_ALLOCATE(ind(1:this%nprojector_matrices))
 
   iprojection = 0
+  maxnpoints = 0
   do imat = 1, this%nprojector_matrices
     pmat => this%projector_matrices(imat)
     npoints = pmat%npoints
+    maxnpoints = max(maxnpoints, npoints)
     nprojs = pmat%nprojs
     ind(imat) = iprojection
     iprojection = iprojection + nprojs
     call profiling_count_operations(nprojs*(R_ADD + R_MUL)*npoints + nst*nprojs)
   end do
+
+  SAFE_ALLOCATE(tmp_array(1:maxnpoints))
 
   !$omp parallel do private(imat, pmat, iprojection, npoints, nprojs, iproj, ist, aa, bb, cc, dd, ip)
   do imat = 1, this%nprojector_matrices
@@ -635,11 +640,14 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 
       else
 
-        do iproj = 1, nprojs
-          do ist = 1, nst
+        do ist = 1, nst
+          do ip = 1, npoints
+            tmp_array(ip) = psib%states_linear(ist)%X(psi)(pmat%map(ip))
+          end do
+          do iproj = 1, nprojs
             aa = CNST(0.0)
             do ip = 1, npoints
-              aa = aa + pmat%projectors(ip, iproj)*psib%states_linear(ist)%X(psi)(pmat%map(ip))
+              aa = aa + pmat%projectors(ip, iproj)*tmp_array(ip)
             end do
             projection%X(projection)(ist, iprojection + iproj) = pmat%scal(iproj)*aa
           end do
@@ -683,15 +691,17 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 
       else
 
-        do iproj = 1, nprojs
-          do ist = 1, nst
+        do ist = 1, nst
+          do ip = 1, npoints
+            tmp_array(ip) = psib%states_linear(ist)%X(psi)(pmat%map(ip))*this%projector_phases(ip, imat, ik)
+          end do
+          do iproj = 1, nprojs
             aa = CNST(0.0)
             do ip = 1, npoints
-              aa = aa + pmat%projectors(ip, iproj)*psib%states_linear(ist)%X(psi)(pmat%map(ip))*this%projector_phases(ip, imat, ik)
+              aa = aa + pmat%projectors(ip, iproj)*tmp_array(ip)
             end do
             projection%X(projection)(ist, iprojection + iproj) = pmat%scal(iproj)*aa
           end do
-
         end do
 
       end if
@@ -701,6 +711,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
   end do
 
   SAFE_DEALLOCATE_A(ind)
+  SAFE_DEALLOCATE_A(tmp_array)
 
   POP_SUB(X(hamiltonian_base_nlocal_start))
   call profiling_out(prof_vnlpsi_start)
