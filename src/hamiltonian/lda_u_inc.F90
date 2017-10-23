@@ -209,7 +209,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
 
       !We compute the on-site occupation of the site, if needed 
       if(this%useACBN0) then
-        this%X(renorm_occ)(:,:,:,:,ist,ik) = R_TOTYPE(M_ZERO)
+        this%X(renorm_occ)(:,:,:,ist,ik) = R_TOTYPE(M_ZERO)
         do ios = 1, this%norbsets
           os => this%orbsets(ios)
           norbs = this%orbsets(ios)%norbs
@@ -218,10 +218,10 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
             do ios2 = 1, this%norbsets
               do im2 = 1, this%orbsets(ios2)%norbs
                 do idim = 1, st%d%dim
-                this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,idim,ist,ik) = &
-                   this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,idim,ist,ik) &
+                  this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,ist,ik) = &
+                   this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,ist,ik) &
                      + R_CONJ(dot(idim,im,ios))*dot(idim,im2,ios2)*os%X(S)(im,im2,ios2)
-                end do 
+                end do
               end do
             end do
           end do
@@ -240,7 +240,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
                                            + weight*dot(1,1:norbs,ios)*R_CONJ(dot(1,im,ios))
               !We compute the renomalized occupation matrices
               if(this%useACBN0) then
-                renorm_weight = this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,1,ist,ik)*weight
+                renorm_weight = this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,ist,ik)*weight
                 this%X(n_alt)(1:norbs,im,ispin,ios) = this%X(n_alt)(1:norbs,im,ispin,ios) &
                                            + renorm_weight*dot(1,1:norbs,ios)*R_CONJ(dot(1,im,ios))
               end if 
@@ -264,14 +264,11 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
                                       + weight*dot(2,1:norbs,ios)*R_CONJ(dot(1,im,ios))
             !We compute the renomalized occupation matrices
             if(this%useACBN0) then
-              renorm_weight = this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,1,ist,ik)*weight
+              renorm_weight = this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,ist,ik)*weight
               this%X(n_alt)(1:norbs,im,1,ios) = this%X(n_alt)(1:norbs,im,1,ios) &
                                          + renorm_weight*dot(1,1:norbs,ios)*R_CONJ(dot(1,im,ios))
-              renorm_weight = this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,2,ist,ik)*weight
               this%X(n_alt)(1:norbs,im,2,ios) = this%X(n_alt)(1:norbs,im,2,ios) &
                                          + renorm_weight*dot(2,1:norbs,ios)*R_CONJ(dot(2,im,ios))
-              renorm_weight = sqrt(this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,1,ist,ik) &
-                              *this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,2,ist,ik))*weight
               this%X(n_alt)(1:norbs,im,3,ios) = this%X(n_alt)(1:norbs,im,3,ios) &
                                          + renorm_weight*dot(1,1:norbs,ios)*R_CONJ(dot(2,im,ios))
               this%X(n_alt)(1:norbs,im,4,ios) = this%X(n_alt)(1:norbs,im,4,ios) &
@@ -599,7 +596,7 @@ subroutine X(compute_ACBNO_U)(this)
 
         if(this%nspins>this%spin_channels) then !Spinors
           if(im == imp) then
-            tmpU = tmpU + real(this%X(n)(im,im,3,ios)*this%X(n)(im,im,4,ios) &
+            tmpU = tmpU - real(this%X(n)(im,im,3,ios)*this%X(n)(im,im,4,ios) &
                               +this%X(n)(im,im,4,ios)*this%X(n)(im,im,3,ios))
           end if
         end if 
@@ -1640,8 +1637,8 @@ end subroutine X(get_atomic_orbital)
     if(this%useACBN0) then
       SAFE_ALLOCATE(this%X(n_alt)(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets))
       this%X(n_alt)(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets) = R_TOTYPE(M_ZERO)
-      SAFE_ALLOCATE(this%X(renorm_occ)(this%nspecies,0:5,0:3,st%d%dim,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end))
-      this%X(renorm_occ)(this%nspecies,0:5,0:3,st%d%dim,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end) = R_TOTYPE(M_ZERO)
+      SAFE_ALLOCATE(this%X(renorm_occ)(this%nspecies,0:5,0:3,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end))
+      this%X(renorm_occ)(this%nspecies,0:5,0:3,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end) = R_TOTYPE(M_ZERO)
       if(this%ACBN0_corrected) then
         SAFE_ALLOCATE(this%Vloc1(1:maxorbs,1:nspin,1:this%norbsets))
         this%Vloc1(1:maxorbs,1:nspin,1:this%norbsets) = M_ZERO

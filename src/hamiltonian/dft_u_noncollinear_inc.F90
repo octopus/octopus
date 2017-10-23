@@ -34,7 +34,7 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st)
 
   call profiling_in(prof, "DFTU_COMPEX_COULOMB_INTEGRALS")
 
-  PUSH_SUB(compute_complex_coulomb_integrals_complex)
+  PUSH_SUB(compute_complex_coulomb_integrals)
 
   ASSERT(.not. st%parallel_in_states)
 
@@ -198,7 +198,7 @@ subroutine compute_ACBNO_U_noncollinear(this)
             tmpU = tmpU + this%zn(im,im,ispin1,ios)*this%zn(imp,imp,ispin1,ios)
           end do
           tmpJ = tmpJ + this%zn(im,im,3,ios)*this%zn(imp,imp,4,ios) &
-                            +this%zn(im,im,4,ios)*this%zn(imp,imp,3,ios)
+                      + this%zn(im,im,4,ios)*this%zn(imp,imp,3,ios)
         end if
         denomJ = denomJ + tmpJ
 
@@ -213,10 +213,9 @@ subroutine compute_ACBNO_U_noncollinear(this)
         end do
 
         if(im == imp) then
-          tmpU = tmpU - this%zn(im,im,3,ios)*this%zn(im,im,4,ios) &
-                            +this%zn(im,im,4,ios)*this%zn(im,im,3,ios)
+          tmpU = tmpU - (this%zn(im,im,3,ios)*this%zn(im,im,4,ios) &
+                            +this%zn(im,im,4,ios)*this%zn(im,im,3,ios))
         end if
-
         denomU = denomU + tmpU
       end do
       end do

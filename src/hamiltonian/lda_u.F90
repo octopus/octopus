@@ -97,8 +97,8 @@ module lda_u_oct_m
     FLOAT, pointer           :: dn_alt(:,:,:,:) !> Stores the renomalized occ. matrices
     CMPLX, pointer           :: zn_alt(:,:,:,:) !> if the ACBN0 functional is used  
   
-    FLOAT, pointer           :: drenorm_occ(:,:,:,:,:,:) !> On-site occupations (for the ACBN0 functional)  
-    CMPLX, pointer           :: zrenorm_occ(:,:,:,:,:,:)
+    FLOAT, pointer           :: drenorm_occ(:,:,:,:,:) !> On-site occupations (for the ACBN0 functional)  
+    CMPLX, pointer           :: zrenorm_occ(:,:,:,:,:)
  
     FLOAT, pointer           :: coulomb(:,:,:,:,:) !>Coulomb integrals for all the system
                                                        !> (for the ACBN0 functional) 
@@ -256,6 +256,10 @@ contains
   !%End
   call parse_variable('DFTUjdependentorbitals', .false., this%jdeporbitals)
   call messages_print_var_value(stdout, 'DFTUjdependentorbitals', this%jdeporbitals)
+  if(st%d%ispin /= SPINORS) then
+    message(1) = "DFTUjdependentorbitals can only be used with spinors."
+    call messages_fatal(1) 
+  end if
   if(this%jdeporbitals) call messages_experimental("DFTUjdependentorbitals")
 
   if( this%useACBN0) then
@@ -343,9 +347,9 @@ contains
  #endif 
 
   if(this%useACBN0) then
-    write(message(1),'(a)')    'Computing the Coulomb integrals localized orbital basis.'
     call messages_info(1)
     if(st%d%dim == 1 .or. this%jdeporbitals == .false. ) then 
+      write(message(1),'(a)')    'Computing the Coulomb integrals of the localized basis.'
       if (states_are_real(st)) then
         call dcompute_coulomb_integrals(this, gr%mesh, gr%der, st)
       else
@@ -353,6 +357,7 @@ contains
       end if
     else
       ASSERT(.not.states_are_real(st))
+      write(message(1),'(a)')    'Computing complex Coulomb integrals of the localized basis.'
       call compute_complex_coulomb_integrals(this, gr%mesh, gr%der, st)
     end if
   end if
