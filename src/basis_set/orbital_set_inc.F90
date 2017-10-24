@@ -200,7 +200,7 @@ subroutine X(orbital_set_add_to_batch)(os, st_d, psib, ik, has_phase, weight)
               ep = sp - 1 + min(block_size, os%sphere%mesh%np - sp + 1)
               do iorb = 1, os%norbs
                 tmp =  weight(iorb,ist)
-                forall(ip = sp:ep)!1:os%sphere%mesh%np)
+                forall(ip = sp:ep)
                 psib%states_linear(ist)%zpsi(ip) = &
                    psib%states_linear(ist)%zpsi(ip) + tmp*os%eorb_mesh(ip,idim,iorb,ik)
                 end forall
@@ -246,34 +246,39 @@ subroutine X(orbital_set_add_to_batch)(os, st_d, psib, ik, has_phase, weight)
       end if
 
     case(BATCH_PACKED)
+      !
       if(has_phase) then
 #ifdef R_TCOMPLEX
         if(simul_box_is_periodic(os%sphere%mesh%sb)) then
-          do ist = 1, psib%nst_linear -4 + 1, 4
-            idim1 = min(batch_linear_to_idim(psib,ist), os%ndim)
-            idim2 = min(batch_linear_to_idim(psib,ist+1), os%ndim)
-            idim3 = min(batch_linear_to_idim(psib,ist+2), os%ndim)
-            idim4 = min(batch_linear_to_idim(psib,ist+3), os%ndim)
-            do iorb = 1, os%norbs
-              forall(ip = 1:os%sphere%mesh%np)
-                psib%pack%zpsi(ist,ip) = &
-                   psib%pack%zpsi(ist,ip) + weight(iorb,ist)*os%eorb_mesh(ip,idim1,iorb,ik)
-                psib%pack%zpsi(ist+1,ip) = &
-                   psib%pack%zpsi(ist+1,ip) + weight(iorb,ist+1)*os%eorb_mesh(ip,idim2,iorb,ik)
-                psib%pack%zpsi(ist+2,ip) = &
-                   psib%pack%zpsi(ist+2,ip) + weight(iorb,ist+2)*os%eorb_mesh(ip,idim3,iorb,ik)
-                psib%pack%zpsi(ist+3,ip) = &
-                   psib%pack%zpsi(ist+3,ip) + weight(iorb,ist+3)*os%eorb_mesh(ip,idim4,iorb,ik)
-              end forall 
-            end do
-          end do
-          do ist = ist, psib%nst_linear
-            idim = min(batch_linear_to_idim(psib,ist), os%ndim)
-            do iorb = 1, os%norbs
-              forall(ip = 1:os%sphere%mesh%np)
-                psib%pack%zpsi(ist,ip) = &
-                   psib%pack%zpsi(ist,ip) + weight(iorb,ist)*os%eorb_mesh(ip,idim,iorb,ik)
-              end forall
+          do iorb = 1, os%norbs
+            do sp = 1, os%sphere%mesh%np, block_size
+              ep = sp - 1 + min(block_size, os%sphere%mesh%np - sp + 1)
+              do ist = 1, psib%nst_linear - 4 + 1, 4
+                idim1 = min(batch_linear_to_idim(psib,ist), os%ndim)
+                idim2 = min(batch_linear_to_idim(psib,ist+1), os%ndim)
+                idim3 = min(batch_linear_to_idim(psib,ist+2), os%ndim)
+                idim4 = min(batch_linear_to_idim(psib,ist+3), os%ndim)
+
+                do ip = sp,ep !1:os%sphere%mesh%np)
+                  psib%pack%zpsi(ist,ip) = &
+                     psib%pack%zpsi(ist,ip) + weight(iorb,ist)*os%eorb_mesh(ip,idim1,iorb,ik)
+                  psib%pack%zpsi(ist+1,ip) = &
+                     psib%pack%zpsi(ist+1,ip) + weight(iorb,ist+1)*os%eorb_mesh(ip,idim2,iorb,ik)
+                  psib%pack%zpsi(ist+2,ip) = &
+                     psib%pack%zpsi(ist+2,ip) + weight(iorb,ist+2)*os%eorb_mesh(ip,idim3,iorb,ik)
+                  psib%pack%zpsi(ist+3,ip) = &
+                    psib%pack%zpsi(ist+3,ip) + weight(iorb,ist+3)*os%eorb_mesh(ip,idim4,iorb,ik)
+                end do !forall 
+              end do
+
+              do ist = ist, psib%nst_linear
+                idim = min(batch_linear_to_idim(psib,ist), os%ndim)
+                ! forall(ip = 1:os%sphere%mesh%np)
+                do ip=sp,ep
+                  psib%pack%zpsi(ist,ip) = &
+                     psib%pack%zpsi(ist,ip) + weight(iorb,ist)*os%eorb_mesh(ip,idim,iorb,ik)
+                end do! forall
+              end do
             end do
           end do
 
