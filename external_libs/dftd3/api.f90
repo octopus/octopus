@@ -273,7 +273,7 @@ contains
         & stress, latvecs, rep_vdw, rep_cn, this%rthr, .false., this%cn_thr)
     ! Note, the stress variable in pbcgdisp contains the *lattice derivatives*
     ! on return, so it needs to be converted to obtain the stress tensor.
-    stress(:,:) = -matmul(stress, transpose(latvecs))&
+    stress(1:3, 1:3) = -matmul(stress(1:3, 1:3), transpose(latvecs(1:3, 1:3)))&
         & / abs(determinant(latvecs))
     
   end subroutine dftd3_pbc_dispersion
