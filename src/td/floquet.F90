@@ -128,7 +128,7 @@ contains
     !%Default classical
     !%Section Floquet
     !%Description
-    !% Don't use it now!!
+    !% Dont use it now!!
     !%Option classical_floquet 0
     !%
     !%Option qed_photon 1
@@ -137,7 +137,6 @@ contains
     !% 
     !%End
     call parse_variable('FloquetBoson', OPTION__FLOQUETBOSON__CLASSICAL_FLOQUET, this%boson)
-    call messages_print_var_option(stdout, 'FloquetBoson',  this%boson)
 
 
     !%Variable TDFloquetMode
@@ -173,8 +172,15 @@ contains
     end if
     
     
+    if (this%boson == OPTION__FLOQUETBOSON__CLASSICAL_FLOQUET) then
+      call messages_print_stress(stdout, 'Floquet')
+    else
+      call messages_print_stress(stdout, 'Floquet QED')
+    end if  
+      
 
-    call messages_print_stress(stdout, 'Floquet')
+    call messages_print_var_option(stdout, 'FloquetBoson',  this%boson)
+
     call messages_print_var_option(stdout, 'TDFloquetMode',  this%mode)
 
     if(this%mode==FLOQUET_FROZEN_PHONON) then
@@ -201,15 +207,46 @@ contains
     call parse_variable('TDFloquetInitialization', OPTION__TDFLOQUETINITIALIZATION__F_GS, this%init)
     call messages_print_var_option(stdout, 'TDFloquetInitialization',  this%init)
     
-    !%Variable TDFloquetModeSampleOneCycle
-    !%Type logical
-    !%Default yes
+    !%Variable TDFloquetDimension
+    !%Type integer
+    !%Default -1
     !%Section Floquet
     !%Description
-    !% Stop sampling Floquet Hamiltoninans after the first cycle.
+    !% Order of Floquet Hamiltonian. If negative number is given, downfolding
+    !%is performed.
+    !% If entered as a block allows to specify asymmetric dimensions 
+    !%
+    !% <tt>%TDFloquetDimension
+    !% <br>&nbsp;&nbsp; mindim| maxdim 
+    !% <br>%</tt>
+    !%
     !%End
-    call parse_variable('TDFloquetModeSampleOneCycle', .true., this%sample_one_only)
-    call messages_print_var_value(stdout,'TDFloquetModeSampleOneCycle',  this%sample_one_only)
+    this%order(:)=-1
+    
+    if(parse_block('TDFloquetDimension', blk) == 0) then
+      if(parse_block_cols(blk,0) < 2) call messages_input_error('TDFloquetDimension')
+      do idim = 1, 2
+        call parse_block_integer(blk, 0, idim - 1, this%order(idim))
+      end do
+    else
+      call parse_variable('TDFloquetDimension',-1,this%order(2))
+      this%order(1)= -this%order(2)
+    end if
+    
+    if(this%order(2) >= 0) then
+      write(message(1),'(a,i5,a,i5,a)') 'Info: Floque-Hamiltonian tensor dimension [min,max]: [',&
+                                         this%order(1),',', this%order(2),']'
+      call messages_info(1)
+      !Dimension of multiphoton Floquet-Hamiltonian
+      this%floquet_dim = this%order(2)-this%order(1)+1
+
+    else
+      message(1) = 'Floquet-Hamiltonian downfolding not implemented for interacting propagation.'
+      call messages_fatal(1)
+      !this%downfolding = .true.
+      !this%Forder = 1
+      !this%Fdim = 3
+    endif
 
 
     !%Variable TDFloquetModeCalcOccupations
@@ -252,19 +289,6 @@ contains
     ! get time of one cycle
     this%Tcycle=M_TWO*M_PI/this%omega
 
-    !%Variable FloquetBZSolver
-    !%Type logical
-    !%Default no
-    !%Section Floquet
-    !%Description
-    !% Use dedicated Floquet solver for the Floquet Brillouin zone
-    !%End
-    call parse_variable('FloquetBZSolver', .false., this%FBZ_solver)
-    if(this%FBZ_solver) then
-      message(1) = "Info: Using Floquet-BZ solver"
-      call messages_info(1)
-    endif
-
     !%Variable TDFloquetMaximumSolverIterations
     !%Type integer
     !%Default 35
@@ -277,79 +301,114 @@ contains
     call messages_print_var_value(stdout,'Maximum eigensolver iterations', this%max_solve_iter)
 
 
-    !%Variable TDFloquetDimension
-    !%Type integer
-    !%Default -1
-    !%Section Floquet
-    !%Description
-    !% Order of Floquet Hamiltonian. If negative number is given, downfolding
-    !%is performed.
-    !% If entered as a block allows to specify asymmetric dimensions 
-    !%
-    !% <tt>%TDFloquetDimension
-    !% <br>&nbsp;&nbsp; mindim| maxdim 
-    !% <br>%</tt>
-    !%
-    !%End
-    this%order(:)=-1
+    if (this%boson == OPTION__FLOQUETBOSON__CLASSICAL_FLOQUET) then
+
+      !%Variable FloquetBZSolver
+      !%Type logical
+      !%Default no
+      !%Section Floquet
+      !%Description
+      !% Use dedicated Floquet solver for the Floquet Brillouin zone
+      !%End
+      call parse_variable('FloquetBZSolver', .false., this%FBZ_solver)
+      if(this%FBZ_solver) then
+        message(1) = "Info: Using Floquet-BZ solver"
+        call messages_info(1)
+      endif
+
+
+      !%Variable TDFloquetModeSampleOneCycle
+      !%Type logical
+      !%Default yes
+      !%Section Floquet
+      !%Description
+      !% Stop sampling Floquet Hamiltoninans after the first cycle.
+      !%End
+      call parse_variable('TDFloquetModeSampleOneCycle', .true., this%sample_one_only)
+      call messages_print_var_value(stdout,'TDFloquetModeSampleOneCycle',  this%sample_one_only)
+
+      !%Variable TDFloquetSample
+      !%Type integer
+      !%Default TDFloquetDimension*3
+      !%Section Floquet
+      !%Description
+      !% Number of points on which one Floquet cycle is sampled in the
+      !%time-integral of the Floquet analysis.
+      !%
+      !%End
+      this%nt = maxval(abs(this%order(:)))*3
+      if (maxval(abs(this%order(:))) == 0 ) this%nt = 3 
     
-    if(parse_block('TDFloquetDimension', blk) == 0) then
-      if(parse_block_cols(blk,0) < 2) call messages_input_error('TDFloquetDimension')
-      do idim = 1, 2
-        call parse_block_integer(blk, 0, idim - 1, this%order(idim))
-      end do
-    else
-      call parse_variable('TDFloquetDimension',-1,this%order(2))
-      this%order(1)= -this%order(2)
+      call parse_variable('TDFloquetSample', this%nt, this%nt)
+      call messages_print_var_value(stdout,'Number of Floquet time-sampling points', this%nT)
+      this%dt = this%Tcycle/real(this%nT)
+
+
+      this%count = 1
+
+      ! re-read time step from input
+      call parse_variable('TDTimeStep', M_ZERO, time_step, unit = units_inp%time)
+      if(time_step == M_ZERO) then
+         message(1) = 'Did not find time-step in Floquet init, please give a value for TDTimeStep'
+        call messages_fatal(1)
+      end if
+      this%interval = int(this%dt/time_step)
+      this%ncycle = this%interval*this%nT
+
+
+      call messages_print_var_value(stdout,'Steps in Floquet time-sampling interval',  this%interval)
+      call messages_print_var_value(stdout,'Steps in Floquet time-sampling cycle',  this%ncycle)
+
     end if
     
-    if(this%order(2) >= 0) then
-      write(message(1),'(a,i5,a,i5,a)') 'Info: Floque-Hamiltonian tensor dimension [min,max]: [',&
-                                         this%order(1),',', this%order(2),']'
-      call messages_info(1)
-      !Dimension of multiphoton Floquet-Hamiltonian
-      this%floquet_dim = this%order(2)-this%order(1)+1
-
-    else
-      message(1) = 'Floquet-Hamiltonian downfolding not implemented for interacting propagation.'
-      call messages_fatal(1)
-      !this%downfolding = .true.
-      !this%Forder = 1
-      !this%Fdim = 3
-    endif
-
-    !%Variable TDFloquetSample
-    !%Type integer
-    !%Default TDFloquetDimension*3
-    !%Section Floquet
-    !%Description
-    !% Number of points on which one Floquet cycle is sampled in the
-    !%time-integral of the Floquet analysis.
-    !%
-    !%End
-    this%nt = maxval(abs(this%order(:)))*3
-    if (maxval(abs(this%order(:))) == 0 ) this%nt = 3 
+    if (this%boson == OPTION__FLOQUETBOSON__QED_PHOTON) then
+      
+      this%mode = FLOQUET_NON_INTERACTING
+      this%nt = 1
+      
+      !%Variable FloquetCavityLambda
+      !%Type float
+      !%Default 1
+      !%Section Floquet
+      !%Description
+      !% Dont use it
+      !%
+      !%End
+      call parse_variable('FloquetCavityLambda', M_ONE, this%lambda, unit_one)
+      call messages_print_var_value(stdout,'Cavity lambda', this%lambda)
+      
+      !%Variable FloquetCavityModePolarization
+      !%Type float
+      !%Default (1,0,0)
+      !%Section Floquet
+      !%Description
+      !%
+      !% <tt>%FloquetCavityModePolarization
+      !% <br>&nbsp;&nbsp; x | y | z
+      !% <br>%</tt>
+      !%
+      !%End
+      this%pol(:)=(/M_ONE,M_ZERO,M_ZERO/)
     
-    call parse_variable('TDFloquetSample', this%nt, this%nt)
-    call messages_print_var_value(stdout,'Number of Floquet time-sampling points', this%nT)
-    this%dt = this%Tcycle/real(this%nT)
+      if(parse_block('FloquetCavityModePolarization', blk) == 0) then
+        if(parse_block_cols(blk,0) < 3) call messages_input_error('FloquetCavityModePolarization')
+        do idim = 1, 3
+          call parse_block_float(blk, 0, idim - 1, this%pol(idim))
+        end do
+      end if
+      
+      this%pol(:)=this%pol(:)/sqrt(sum(this%pol(:)**2))
 
+      write(message(1),'(a,e8.2,a,e8.2,a,e8.2,a)') 'Info: Cavity polarization direction : (',&
+                                         this%pol(1),',', this%pol(2),',',this%pol(3),')'
+      call messages_info(1)
 
-    this%count = 1
+      
+      
+    end if
+
     this%spindim = dim
 
-    ! re-read time step from input
-    call parse_variable('TDTimeStep', M_ZERO, time_step, unit = units_inp%time)
-    if(time_step == M_ZERO) then
-       message(1) = 'Did not find time-step in Floquet init, please give a value for TDTimeStep'
-      call messages_fatal(1)
-    end if
-    this%interval = int(this%dt/time_step)
-    this%ncycle = this%interval*this%nT
-
-
-    call messages_print_var_value(stdout,'Steps in Floquet time-sampling interval',  this%interval)
-    call messages_print_var_value(stdout,'Steps in Floquet time-sampling cycle',  this%ncycle)
 
     ! distribute the stacked loop of the Floquet-Hamiltonian
     call distributed_init(this%flat_idx,this%nT*this%floquet_dim,sys%mc%group_comm(P_STRATEGY_OTHER),"Floquet-flat-index")
@@ -959,7 +1018,7 @@ contains
       call eigensolver_end(eigens)
 
       ! filter the FBZ
-      if(.not.hm%F%FBZ_solver) then
+      if(.not.hm%F%FBZ_solver .and. hm%F%boson == OPTION__FLOQUETBOSON__CLASSICAL_FLOQUET) then
          ! this triggers FBZ allocation 
          hm%F%FBZ_solver = .true.
          call floquet_init_dressed_wfs(hm, sys, FBZ_st, fromScratch=.true.)

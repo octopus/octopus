@@ -990,8 +990,8 @@ subroutine  X(apply_floquet_hamiltonian)(hm, der, psib, hpsib, ik, time, Imtime,
   type(batch_t) :: small_psib, small_hpsib
   integer :: in, im, spindim, Fdim(2), idim, ist
   integer :: it,  nT, idx
-  FLOAT :: omega, Tcycle, dt
-  CMPLX, allocatable :: vec(:)
+  FLOAT :: omega, Tcycle, dt, lam
+  CMPLX, allocatable :: vec(:), psi(:,:),  gppsi(:,:)
 
   R_TYPE, allocatable :: small_temp(:,:)
 
@@ -1002,6 +1002,7 @@ subroutine  X(apply_floquet_hamiltonian)(hm, der, psib, hpsib, ik, time, Imtime,
   omega=hm%F%omega
   Fdim(:)=hm%F%order(:)
   spindim = hm%F%spindim
+  lam = hm%F%lambda
 
   ! zero hpsi
   do ist=1,hpsib%nst
@@ -1032,19 +1033,34 @@ subroutine  X(apply_floquet_hamiltonian)(hm, der, psib, hpsib, ik, time, Imtime,
     end do
 
   case (OPTION__FLOQUETBOSON__QED_PHOTON)
+    SAFE_ALLOCATE(psi(1:der%mesh%np_part,1:spindim))
+    SAFE_ALLOCATE(gppsi(1:der%mesh%np_part,1:spindim))
 
     do idx=hm%F%flat_idx%start, hm%F%flat_idx%end
       im = hm%F%idx_map(idx,2)
       call get_small_batch(psib,im,small_psib)
-      call X(hamiltonian_apply_batch2)(hm%td_hm(it), der, small_psib , small_hpsib, ik, &
+      call X(hamiltonian_apply_batch2)(hm, der, small_psib , small_hpsib, ik, &
               time = time, terms = terms, Imtime = Imtime, set_bc = set_bc)
 
-      ! sum the contributions of im to the in components of the matrix product
-      do in=Fdim(1),Fdim(2)
-        call set_big_batch_axpy(small_hpsib,in, exp(M_zI*(im-in)*omega*it*dt)/nT, hpsib)
+      call set_big_batch_axpy(small_hpsib,im, M_z1, hpsib)
+      
+      do ist=1,psib%nst
+        call batch_get_state(small_psib,ist,der%mesh%np,psi)
+        call grad_dot_pol(der, hm, hm%geo, ik, hm%F%pol(:), psi, gppsi)
+        call batch_set_state(small_hpsib,ist,der%mesh%np,gppsi)
       end do
+      
+
+      if (im+1<=Fdim(2)) call set_big_batch_axpy(small_hpsib,im+1,  M_zI*lam*sqrt(TOFLOAT(im+1))  , hpsib)
+      if (im-1>=Fdim(1)) call set_big_batch_axpy(small_hpsib,im-1, -M_zI*lam*sqrt(TOFLOAT(im)), hpsib)
+      if (im+2<=Fdim(2)) call set_big_batch_axpy(small_psib,im+2, lam**2/M_z2*sqrt(TOFLOAT(im+1))  *sqrt(TOFLOAT(im+2)), hpsib)
+      if (im-2>=Fdim(1)) call set_big_batch_axpy(small_psib,im-2, lam**2/M_z2*sqrt(TOFLOAT(im))*sqrt(TOFLOAT(im-1)), hpsib)
+
+      
     end do
-  
+    SAFE_DEALLOCATE_A(psi)
+    SAFE_DEALLOCATE_A(gppsi)
+    
 
   case (OPTION__FLOQUETBOSON__QED_PHONON)
     ! stay tuned!

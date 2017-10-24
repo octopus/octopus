@@ -114,7 +114,7 @@ contains
       call v_ks_calc(sys%ks, hm, sys%st, sys%geo)
                   
       call floquet_init(sys,hm%F,sys%st%d%dim)
-      call floquet_hamiltonians_init(hm ,sys%gr, sys%st, sys)
+      if (hm%F%boson == OPTION__FLOQUETBOSON__CLASSICAL_FLOQUET) call floquet_hamiltonians_init(hm ,sys%gr, sys%st, sys)
       call floquet_hamiltonian_solve(hm,sys%gr,sys,sys%st, fromScratch)
       
     else

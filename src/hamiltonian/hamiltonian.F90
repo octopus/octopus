@@ -120,7 +120,7 @@ module hamiltonian_oct_m
     integer :: nT, ncycle, interval, count, floquet_dim, spindim, order(2), mode, boson
     integer :: max_solve_iter, iter, init, occ_cut 
     logical ::  downfolding, sample, sample_one_only, FBZ_solver
-    FLOAT :: omega, Tcycle, dt, pes_omega, pol(1:MAX_DIM)
+    FLOAT :: omega, Tcycle, dt, pes_omega, pol(1:MAX_DIM), lambda
     FLOAT, pointer :: frozen_distortion(:,:)
     logical :: is_parallel 
     logical :: calc_occupations
@@ -1264,6 +1264,93 @@ contains
 
     POP_SUB(hamiltonian_load_vhxc)
   end subroutine hamiltonian_load_vhxc
+
+
+  ! ---------------------------------------------------------
+  ! dipole operator in the velocity gauge
+  ! gppsi = grad(psi).pol
+  ! note that to have p.pol there is a factor -i missing
+
+  subroutine grad_dot_pol(der, hm, geo, ik, pol, psi, gppsi)
+    type(derivatives_t),  intent(in)    :: der
+    type(hamiltonian_t),  intent(in)    :: hm
+    type(geometry_t),     intent(in)    :: geo
+    integer,              intent(in)    :: ik
+    FLOAT,                intent(in)    :: pol(:)
+    CMPLX,                intent(in)    :: psi(:,:)
+    CMPLX,                intent(out)   :: gppsi(:,:)
+
+    integer ::  idir, idim, iatom, ip, ib, ii, ierr, ispin, dim
+    CMPLX, allocatable :: gpsi(:, :, :), ppsi(:,:)
+
+    PUSH_SUB(grad_dot_pol)
+
+    dim = size(psi,dim=2)
+
+    SAFE_ALLOCATE(gpsi(1:der%mesh%np, 1:der%mesh%sb%dim, 1:dim))
+    SAFE_ALLOCATE(ppsi(1:der%mesh%np_part,1:dim))
+
+
+    ispin = states_dim_get_spin_index(hm%d, ik)
+    ppsi(:,:) = M_z0
+    ppsi(1:der%mesh%np,:) = psi(1:der%mesh%np,:)    
+    
+      
+    do idim = 1, dim
+      call boundaries_set(der%boundaries, ppsi(:, idim))
+    end do
+
+    if(associated(hm%hm_base%phase)) then 
+      ! Apply the phase that contains both the k-point and vector-potential terms.
+      do idim = 1, dim
+        !$omp parallel do
+        do ip = 1, der%mesh%np_part
+          ppsi(ip, idim) = hm%hm_base%phase(ip, ik)*ppsi(ip, idim)
+        end do
+        !$omp end parallel do
+      end do
+    end if
+
+    do idim = 1, dim
+      call zderivatives_grad(der, ppsi(:, idim), gpsi(:, :, idim), set_bc = .false.)
+    end do
+    
+    !A nonlocal contribution from the MGGA potential must be included
+    !This must be done first, as this is like a position-dependent mass 
+    if(hm%family_is_mgga_with_exc) then
+      do idim = 1, dim
+        do idir = 1, der%mesh%sb%dim
+          !$omp parallel do
+          do ip = 1, der%mesh%np
+            gpsi(ip, idir, idim) = (M_ONE+CNST(2.0)*hm%vtau(ip,ispin))*gpsi(ip, idir, idim)
+          end do
+          !$omp end parallel do
+        end do
+      end do 
+     
+      !A nonlocal contribution from the pseudopotential must be included
+      call zprojector_commute_r_allatoms_alldir(hm%ep%proj, geo, der%mesh, dim, ik, ppsi, gpsi)                 
+      !A nonlocal contribution from the scissor must be included
+      if(hm%scissor%apply) then
+        call scissor_commute_r(hm%scissor, der%mesh, ik, ppsi, gpsi)
+      end if
+
+    end if
+
+
+    gppsi(:,:) = M_z0
+    do idir = 1, der%mesh%sb%dim
+       gppsi(1:der%mesh%np,:) = pol(idir) * gpsi(1:der%mesh%np, idir,:)
+    end do
+
+    SAFE_DEALLOCATE_A(gpsi)
+    SAFE_DEALLOCATE_A(ppsi)
+
+    POP_SUB(grad_dot_pol)
+
+  end subroutine grad_dot_pol
+
+
 
 
 
