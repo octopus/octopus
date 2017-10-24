@@ -1176,7 +1176,7 @@ contains
   subroutine calc_floquet_conductivity_length_gauge_FBZ()
   
     ! Use floquet brillouin zone (FBZ) solver to calculate the conductivity
-    ! type(states_t), intent(in)      :: FBZ_st
+    ! type(states_t), intent(in)      :: dressed_st
     CMPLX, allocatable   :: u_a(:,:), u_b(:,:), u_c(:,:), sigma(:,:,:)
     FLOAT, allocatable   :: spect(:,:)
     
@@ -1195,16 +1195,13 @@ contains
     dim = sys%gr%sb%dim
       
     
-    !itot = FBZ_st%d%kpt%nglobal * FBZ_st%nst**2 * hm%F%floquet_dim**2
+    !itot = dressed_st%d%kpt%nglobal * dressed_st%nst**2 * hm%F%floquet_dim**2
     
     SAFE_ALLOCATE(sigma(1:obs%ne,1:3,1:3))
     
     SAFE_ALLOCATE(u_a(1:sys%gr%mesh%np, hm%F%floquet_dim))
-    print *, 'u_a allocated'
     SAFE_ALLOCATE(u_b(1:sys%gr%mesh%np, hm%F%floquet_dim))
-    print *, 'u_b allocated'
     SAFE_ALLOCATE(u_c(1:sys%gr%mesh%np, hm%F%floquet_dim))
-    print *, 'u_c allocated'
    
     
     sigma(:,:,:) = M_z0
@@ -1217,24 +1214,19 @@ contains
         call messages_info(1) 
    
    
-        do ik=FBZ_st%d%kpt%start, FBZ_st%d%kpt%end
+        do ik=dressed_st%d%kpt%start, dressed_st%d%kpt%end
 
-          do ista=FBZ_st%st_start, FBZ_st%st_end
-            ! call states_get_state(FBZ_st, sys%gr%mesh, ista, ik, u_ma)
-            print *, 'ista loop' 
-            do istb=1, FBZ_st%nst
-              print *, 'istb loop'
-              do istc=1, FBZ_st%nst
+          do ista=dressed_st%st_start, dressed_st%st_end
+            ! call states_get_state(dressed_st, sys%gr%mesh, ista, ik, u_ma)
+            do istb=1, dressed_st%nst
+              do istc=1, dressed_st%nst
                 
-                DE_bc = FBZ_st%eigenval(istb,ik) - FBZ_st%eigenval(istc,ik)
-                DE_ca = FBZ_st%eigenval(istc,ik) - FBZ_st%eigenval(ista,ik)
+                DE_bc = dressed_st%eigenval(istb,ik) - dressed_st%eigenval(istc,ik)
+                DE_ca = dressed_st%eigenval(istc,ik) - dressed_st%eigenval(ista,ik)
                 
-                call states_get_state(FBZ_st, sys%gr%mesh, ista, ik, u_a)
-                print *,'u_a got'
-                call states_get_state(FBZ_st, sys%gr%mesh, istb, ik, u_b)
-                print *,'u_b got'
-                call states_get_state(FBZ_st, sys%gr%mesh, istc, ik, u_c)
-                print *,'u_c got'
+                call states_get_state(dressed_st, sys%gr%mesh, ista, ik, u_a)
+                call states_get_state(dressed_st, sys%gr%mesh, istb, ik, u_b)
+                call states_get_state(dressed_st, sys%gr%mesh, istc, ik, u_c)
       
 
                  
@@ -1252,22 +1244,23 @@ contains
 
                     do il=hm%F%order(1), hm%F%order(2)
                       ill = il - hm%F%order(1) + 1
-                      ! print *, 'imm , inn, ill', imm,inn,ill
-                      if (hm%F%order(1) < inn+ill < hm%F%order(2)) then
+
                       !\sum_l <u_(n+l)c| r | u_lb>
+                      if (in+il .ge. hm%F%order(1) .and. in+il .le. hm%F%order(2)) then
+                        print *,'in+il' ,in+il-hm%F%order(1), in+il
                         do idim=1,spindim
-                          call zmf_multipoles(sys%gr%mesh, conjg(u_c(:,(inn+ill-1)*spindim+idim)) &
-                                                               * u_b(:,(inn-1)*spindim+idim) , 1, tmp(:))
+                          call zmf_multipoles(sys%gr%mesh, conjg(u_c(:,(in+il-hm%F%order(1))*spindim+idim)) &
+                                                               * u_b(:,(ill-1)*spindim+idim) , 1, tmp(:))
   
                           dn_cb(:) = dn_cb(:) + tmp(2:4)
                         end do
                       end if
                           
                       !\sum_l <u_(m+l)a| r | u_lc>
-                      if (hm%F%order(1) < imm+ill < hm%F%order(2)) then
+                      if (im+il .ge. hm%F%order(1) .and. im+il .le. hm%F%order(2)) then
                         do idim=1,spindim
-                          call zmf_multipoles(sys%gr%mesh, conjg(u_a(:,(imm+ill-1)*spindim+idim)) &
-                                                               * u_c(:,(imm-1)*spindim+idim) , 1, tmp(:))
+                          call zmf_multipoles(sys%gr%mesh, conjg(u_a(:,(im+il-hm%F%order(1))*spindim+idim)) &
+                                                               * u_c(:,(ill-1)*spindim+idim) , 1, tmp(:))
 
                           dm_ac(:) = dm_ac(:) + tmp(2:4)
                         end do 
@@ -1278,10 +1271,12 @@ contains
                     do ie = 1, obs%ne
                         EE= ie * obs%de
 
-                        ampl =  M_zI * conjg(FBZ_st%coeff(ista,ik)) *FBZ_st%coeff(istb,ik) * &
+                        ampl =  M_zI *  conjg(dressed_st%coeff(ista,ik)) *dressed_st%coeff(istb,ik) * &
                                 dm_ac(idir)*dn_cb(jdir)* &
-                                (1/(DE_bc - inn * M_zI*hm%F%omega  + EE + M_zi*obs%gamma)- &
-                                 1/(DE_ca - imm * M_zI*hm%F%omega  + EE + M_zi*obs%gamma) )
+                                (1/(DE_bc - in * M_zI*hm%F%omega  + EE + M_zi*obs%gamma)+ &
+                                 1/(DE_bc - in * M_zI*hm%F%omega  - EE + M_zi*obs%gamma)- & 
+                                 1/(DE_ca - im * M_zI*hm%F%omega  + EE + M_zi*obs%gamma)- & 
+                                 1/(DE_ca - im * M_zI*hm%F%omega  - EE + M_zi*obs%gamma) )
                                 
                         if (idir == jdir) ampl = M_z2 * ampl
                         
@@ -1301,11 +1296,11 @@ contains
           end do ! ista loop   
 
           ! sum over kpoints
-          sigma(ie,idir,jdir) = sigma(ie,idir,jdir) * (FBZ_st%d%kweights(ik))
+          sigma(ie,idir,jdir) = sigma(ie,idir,jdir) * (dressed_st%d%kweights(ik))
            
         end do ! ik loop
-        if(FBZ_st%parallel_in_states .or. FBZ_st%d%kpt%parallel) then
-          call comm_allreduce(FBZ_st%st_kpt_mpi_grp%comm,  sigma(:,idir,jdir))
+        if(dressed_st%parallel_in_states .or. dressed_st%d%kpt%parallel) then
+          call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm,  sigma(:,idir,jdir))
         end if
                 
         
