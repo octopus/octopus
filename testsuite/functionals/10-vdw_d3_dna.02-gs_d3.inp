@@ -20,4 +20,8 @@ TotalStates = 128
 
 VDWCorrection = vdw_d3
 
+# Using this parametrization for an actual calculation does not make
+# sense. We do it here to compare with reference results.
+VDWD3Functional = 'dftb3'
+
 ExperimentalFeatures = yes

@@ -153,6 +153,7 @@ contains
     integer :: x_id, c_id, xk_id, ck_id, default, val, iatom
     logical :: parsed_theory_level
     type(dftd3_input) :: d3_input
+    character(len=20) :: d3func_def, d3func
     
     PUSH_SUB(v_ks_init)
 
@@ -418,9 +419,52 @@ contains
             call messages_fatal()
           end if
         end do
+
+        d3func_def = ''
+
+        ! The list of valid values can be found in 'external_libs/dftd3/core.f90'.
+        ! For the moment I include the most common ones.
+        if(x_id == OPTION__XCFUNCTIONAL__GGA_X_B88 .and. c_id*1000 == OPTION__XCFUNCTIONAL__GGA_C_LYP) &
+          d3func_def = 'b-lyp'
+        if(x_id == OPTION__XCFUNCTIONAL__GGA_X_PBE .and. c_id*1000 == OPTION__XCFUNCTIONAL__GGA_C_PBE) &
+          d3func_def = 'pbe'
+        if(x_id == OPTION__XCFUNCTIONAL__GGA_X_PBE_SOL .and. c_id*1000 == OPTION__XCFUNCTIONAL__GGA_C_PBE_SOL) &
+          d3func_def = 'pbesol'
+        if(c_id*1000 == OPTION__XCFUNCTIONAL__HYB_GGA_XC_B3LYP) &
+          d3func_def = 'b3-lyp'
+        if(c_id*1000 == OPTION__XCFUNCTIONAL__HYB_GGA_XC_PBEH) &
+          d3func_def = 'pbe0'
+
+        !%Variable VDWD3Functional
+        !%Type string
+        !%Section Hamiltonian::XC
+        !%Description
+        !% (Experimental) You can use this variable to override the
+        !% parametrization used by the DFT-D3 van deer Waals
+        !% correction. Normally you need not set this variable, as the
+        !% proper value will be selected by Octopus (if available).
+        !%
+        !% This variable takes a string value, the valid values can
+        !% be found in the source file 'external_libs/dftd3/core.f90'.
+        !% For example you can use:
+        !%
+        !%  VDWD3Functional = 'pbe'
+        !%
+        !%End
+        if(parse_is_defined('VDWD3Functional')) call messages_experimental('VDWD3Functional')
+        call parse_variable('VDWD3Functional', d3func_def, d3func)
+        
+        if(d3func == '') then
+          call messages_write('Cannot find  a matching parametrization  of DFT-D3 for the current')
+          call messages_new_line()
+          call messages_write('XCFunctional.  Please select a different XCFunctional, or select a')
+          call messages_new_line()
+          call messages_write('functional for DFT-D3 using the <tt>VDWD3Functional</tt> variable.')
+          call messages_fatal()
+        end if
         
         call dftd3_init(ks%vdw_d3, d3_input)
-        call dftd3_set_functional(ks%vdw_d3, func = 'dftb3', version = 4, tz = .false.)
+        call dftd3_set_functional(ks%vdw_d3, func = d3func, version = 4, tz = .false.)
 
       case default
         ASSERT(.false.)
