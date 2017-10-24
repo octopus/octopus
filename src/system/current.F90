@@ -409,12 +409,12 @@ contains
     SAFE_ALLOCATE(gpsi_j(1:der%mesh%np, 1:der%mesh%sb%dim, 1:hm%d%dim))
     SAFE_ALLOCATE(ppsi_j(1:der%mesh%np_part,1:hm%d%dim))
 
-    cmel = M_ZERO
+    cmel = M_z0
 
     ispin = states_dim_get_spin_index(hm%d, ik)
-    ppsi_i(:,:) = M_ZERO        
+    ppsi_i(:,:) = M_z0        
     ppsi_i(1:der%mesh%np,:) = psi_i(1:der%mesh%np,:)    
-    ppsi_j(:,:) = M_ZERO        
+    ppsi_j(:,:) = M_z0        
     ppsi_j(1:der%mesh%np,:) = psi_j(1:der%mesh%np,:)    
 
       
@@ -479,6 +479,8 @@ contains
 
     
 
+    SAFE_DEALLOCATE_A(gpsi_i)
+    SAFE_DEALLOCATE_A(ppsi_i)
     SAFE_DEALLOCATE_A(gpsi_j)
     SAFE_DEALLOCATE_A(ppsi_j)
 
