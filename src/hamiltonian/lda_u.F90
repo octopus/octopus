@@ -256,7 +256,7 @@ contains
   !%End
   call parse_variable('DFTUjdependentorbitals', .false., this%jdeporbitals)
   call messages_print_var_value(stdout, 'DFTUjdependentorbitals', this%jdeporbitals)
-  if(st%d%ispin /= SPINORS) then
+  if(st%d%ispin /= SPINORS .and. this%jdeporbitals) then
     message(1) = "DFTUjdependentorbitals can only be used with spinors."
     call messages_fatal(1) 
   end if
