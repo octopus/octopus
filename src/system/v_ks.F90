@@ -413,13 +413,18 @@ contains
       case(OPTION__VDWCORRECTION__VDW_D3)
         ks%vdw_self_consistent = .false.
 
+        if(ks%gr%sb%dim /= 3) then
+          call messages_write('vdw_d3 can only be used in 3-dimensional systems')
+          call messages_fatal()
+        end if
+        
         do iatom = 1, geo%natoms
           if(.not. species_represents_real_atom(geo%atom(iatom)%species)) then
             call messages_write('vdw_d3 is not implemented when non-atomic species are present')
             call messages_fatal()
           end if
         end do
-
+         
         d3func_def = ''
 
         ! The list of valid values can be found in 'external_libs/dftd3/core.f90'.
@@ -462,7 +467,14 @@ contains
           call messages_write('functional for DFT-D3 using the <tt>VDWD3Functional</tt> variable.')
           call messages_fatal()
         end if
-        
+
+        if(ks%gr%sb%periodic_dim /= 0 .and. ks%gr%sb%periodic_dim /= 3) then
+          call messages_write('For partially periodic systems,  the vdw_d3 interaction is assumed')
+          call messages_new_line()
+          call messages_write('to be periodic in three dimensions.')
+          call messages_warning()
+        end if
+          
         call dftd3_init(ks%vdw_d3, d3_input)
         call dftd3_set_functional(ks%vdw_d3, func = d3func, version = 4, tz = .false.)
 
