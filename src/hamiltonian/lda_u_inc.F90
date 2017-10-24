@@ -1505,7 +1505,7 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
   #endif
   else
     !see for instance https://arxiv.org/pdf/1011.3433.pdf
-    kappa = (ll-jj)*(2*jj+1)
+    kappa = (ll-jj)*(M_TWO*jj+M_ONE)
     mu = orbind-1-abs(kappa)+M_HALF
 
     mm = int(mu-M_HALF)
