@@ -62,6 +62,10 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
 
   integer :: n_s, jj, idim, kk
   R_TYPE, allocatable :: bra(:, :, :)
+  type(profile_t), save :: prof
+
+  call profiling_in(prof, "HGH_PROJECT_BRA")
+
 
 #ifndef R_TCOMPLEX
   ASSERT(reltype == 0)
@@ -98,6 +102,8 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
 
   SAFE_DEALLOCATE_A(bra)
 
+  call profiling_out(prof)
+
 end subroutine X(hgh_project_bra)
 
 !-------------------------------------------------------------------------
@@ -112,6 +118,10 @@ subroutine X(hgh_project_ket)(hgh_p, dim, reltype, uvpsi, ppsi)
   integer :: n_s, ii, jj, idim
   integer :: kk
   CMPLX, allocatable :: lp_psi(:, :, :)
+
+  type(profile_t), save :: prof
+
+  call profiling_in(prof, "HGH_PROJECT_KET")
 
   n_s = hgh_p%n_s
 
@@ -144,7 +154,9 @@ subroutine X(hgh_project_ket)(hgh_p, dim, reltype, uvpsi, ppsi)
     SAFE_DEALLOCATE_A(lp_psi)
    
   end if
-  
+
+  call profiling_out(prof)  
+
 end subroutine X(hgh_project_ket)
 
 !! Local Variables:
