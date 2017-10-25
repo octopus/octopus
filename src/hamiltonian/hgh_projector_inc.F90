@@ -63,8 +63,17 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
   integer :: n_s, jj, idim, kk
   R_TYPE, allocatable :: bra(:, :, :)
   type(profile_t), save :: prof
+  R_TYPE :: uvpsu_tmp(1:3)
+  integer :: block_size, size, sp, ep
 
   call profiling_in(prof, "HGH_PROJECT_BRA")
+
+  ! This routine uses blocking to optimize cache usage. One block of
+  ! |phi> is loaded in cache L1 and then then we calculate the dot
+  ! product of it with the corresponding blocks of |psi_k>, next we
+  ! load another block and do the same. This way we only have to load
+  ! |psi> from the L2 or memory.
+  block_size = hardware%X(block_size)
 
 
 #ifndef R_TCOMPLEX
@@ -103,17 +112,23 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
 
   else
 
+    
+
     do idim = 1, dim
-      do jj = 1, 3
-        uvpsi(idim, hgh_index(4, jj)) = sum(psi(1:n_s, idim)*hgh_p%p(1:n_s, jj))*mesh%volume_element
-        if(reltype == 1) then
-          do kk = 1, 3
-            uvpsi(idim, hgh_index(kk, jj)) = sum(psi(1:n_s, idim)*hgh_p%lp(1:n_s, kk, jj))*mesh%volume_element
-          end do
-        end if
+      do sp = 1, n_s, block_size
+        ep = sp - 1 + min(block_size, n_s - sp + 1)
+        do jj = 1, 3
+          uvpsi(idim, hgh_index(4, jj)) = uvpsi(idim, hgh_index(4, jj)) + &
+                            sum(psi(sp:ep, idim)*hgh_p%p(sp:ep, jj))*mesh%volume_element
+          if(reltype == 1) then
+            do kk = 1, 3
+              uvpsi(idim, hgh_index(kk, jj)) =  uvpsi(idim, hgh_index(kk, jj)) + &
+                  sum(psi(sp:ep, idim)*hgh_p%lp(sp:ep, kk, jj))*mesh%volume_element
+            end do
+          end if
+        end do
       end do
     end do
-  
   end if
 
   call profiling_out(prof)
