@@ -79,6 +79,9 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
   bra = M_ZERO
 
   if(mesh%use_curvilinear) then
+    SAFE_ALLOCATE(bra(1:n_s, 1:4, 1:3))
+    bra = M_ZERO
+
     do jj = 1, 3
       if(reltype == 1) then
         do kk = 1, 3
@@ -87,20 +90,31 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
       end if
       bra(1:n_s, 4, jj) = hgh_p%p(1:n_s, jj)*mesh%vol_pp(sm%map(1:n_s))
     end do
-  else
-    if(reltype == 1) bra(1:n_s, 1:3, 1:3) = hgh_p%lp(1:n_s, 1:3, 1:3)*mesh%volume_element
-    bra(1:n_s, 4, 1:3) = hgh_p%p(1:n_s, 1:3)*mesh%volume_element
-  end if
 
-  do idim = 1, dim
-    do kk = 1, 4
-      do jj = 1, 3
-        uvpsi(idim, hgh_index(kk, jj)) = sum(psi(1:n_s, idim)*bra(1:n_s, kk, jj))
+    do idim = 1, dim
+      do kk = 1, 4 
+        do jj = 1, 3
+          uvpsi(idim, hgh_index(kk, jj)) = sum(psi(1:n_s, idim)*bra(1:n_s, kk, jj))
+        end do
       end do
     end do
-  end do
 
-  SAFE_DEALLOCATE_A(bra)
+    SAFE_DEALLOCATE_A(bra)
+
+  else
+
+    do idim = 1, dim
+      do jj = 1, 3
+        uvpsi(idim, hgh_index(4, jj)) = sum(psi(1:n_s, idim)*hgh_p%p(1:n_s, jj))*mesh%volume_element
+        if(reltype == 1) then
+          do kk = 1, 3
+            uvpsi(idim, hgh_index(kk, jj)) = sum(psi(1:n_s, idim)*hgh_p%lp(1:n_s, kk, jj))*mesh%volume_element
+          end do
+        end if
+      end do
+    end do
+  
+  end if
 
   call profiling_out(prof)
 
