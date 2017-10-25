@@ -991,18 +991,18 @@ contains
          
          write(iterstr,'(I5)') iter !hm%F_count
          if (simul_box_is_periodic(gr%sb) .and. kpoints_have_zero_weight_path(gr%sb%kpoints)) then
-           filename = 'floquet_multibands_'//trim(adjustl(iterstr))
+           filename = 'floquet_multibands_'!//trim(adjustl(iterstr))
 
            call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, gr%sb, filename)
            
            if (hm%F%calc_occupations .and. have_gs) then                                 
-             filename = 'floquet_multibands_occ_'//trim(adjustl(iterstr))
+             filename = 'floquet_multibands_occ_'!//trim(adjustl(iterstr))
              call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, gr%sb, filename, vec = dressed_st%occ)
            end if
                      
          else
                       
-           filename = FLOQUET_DIR//'/floquet_eigenvalues_'//trim(adjustl(iterstr))
+           filename = FLOQUET_DIR//'/floquet_eigenvalues_'!//trim(adjustl(iterstr))
            call states_write_eigenvalues(filename, dressed_st%nst, dressed_st, gr%sb, eigens%diff)
          end if
          
