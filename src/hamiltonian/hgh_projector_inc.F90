@@ -173,7 +173,6 @@ subroutine X(hgh_project_ket)(hgh_p, dim, reltype, uvpsi, ppsi)
         do ii = 1, 3
           weight = R_TOTYPE(M_ZERO)
           do jj = 1, 3
-   !         lp_psi(1:n_s, kk, idim) = lp_psi(1:n_s, kk, idim) + hgh_p%k(ii, jj)*uvpsi(idim, hgh_index(kk, jj))*hgh_p%p(1:n_s, ii)
             weight = weight + hgh_p%k(ii, jj)*uvpsi(idim, hgh_index(kk, jj))
           end do
            lp_psi(1:n_s, kk, idim) = lp_psi(1:n_s, kk, idim) + weight*hgh_p%p(1:n_s, ii)
