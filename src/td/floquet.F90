@@ -374,7 +374,7 @@ contains
       !% Dont use it
       !%
       !%End
-      call parse_variable('FloquetCavityLambda', M_ONE, this%lambda, unit_one)
+      call parse_variable('FloquetCavityLambda', M_ONE, this%lambda)
       call messages_print_var_value(stdout,'Cavity lambda', this%lambda)
       
       !%Variable FloquetCavityModePolarization
@@ -794,8 +794,8 @@ contains
       call states_distribute_nodes(dressed_st,sys%mc)
       call states_exec_init(dressed_st, sys%mc)
       call states_allocate_wfns(dressed_st,gr%der%mesh, wfs_type = TYPE_CMPLX)
+      call states_densities_init(dressed_st, sys%gr, sys%geo)
 
-  
       call floquet_restart_dressed_st(hm, sys, dressed_st, ierr, fromScratch)
       
       if(ierr == 0 .and. .not. fromScratch) then
