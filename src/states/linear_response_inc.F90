@@ -141,10 +141,6 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
 
   PUSH_SUB(X(lr_build_dl_rho))
 
-  if(st%d%ispin == SPINORS) then
-    call messages_not_implemented('linear response density for spinors')
-  end if
-
   ! correction to density response due to shift in Fermi level
   ! it is zero without smearing since there is no Fermi level
   ! it is zero if the occupations are fixed since there is no Fermi level
@@ -153,6 +149,10 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
   ! changes the charge of the system, as in "computational alchemy" (PRL 66 2116 (1991)).
   ! n(r,E_F) * dV_SCF = dl_rho, before correction.
   is_ef_shift = .not. smear_is_semiconducting(st%smear) .and. st%smear%method /= SMEAR_FIXED_OCC
+
+  if(st%d%ispin == SPINORS .and. is_ef_shift) then
+    call messages_not_implemented('linear response density for spinors with smearing') 
+  end if
   
   ! initialize density
   do isigma = 1, nsigma
@@ -185,6 +185,36 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
           lr(1)%X(dl_rho)(ip, ispin) = lr(1)%X(dl_rho)(ip, ispin) + cc
           lr(2)%X(dl_rho)(ip, ispin) = lr(2)%X(dl_rho)(ip, ispin) + R_CONJ(cc)
         end do
+      end if
+
+      if(st%d%ispin == SPINORS) then  
+        if(nsigma == 1) then  ! either omega purely real or purely imaginary
+          do ip = 1, mesh%np
+            dd = weight*psi(ip, 2)*R_CONJ(lr(1)%X(dl_psi)(ip, 2, ist, ik))
+            lr(1)%X(dl_rho)(ip, 2) = lr(1)%X(dl_rho)(ip, 2) + dd + R_CONJ(dd)
+            dd = weight*psi(ip, 1)*R_CONJ(lr(1)%X(dl_psi)(ip, 2, ist, ik))
+            lr(1)%X(dl_rho)(ip, 3) = lr(1)%X(dl_rho)(ip, 3) + dd
+            lr(1)%X(dl_rho)(ip, 4) = lr(1)%X(dl_rho)(ip, 4) + R_CONJ(dd)
+            dd = weight*psi(ip, 2)*R_CONJ(lr(1)%X(dl_psi)(ip, 1, ist, ik))
+            lr(1)%X(dl_rho)(ip, 3) = lr(1)%X(dl_rho)(ip, 3) + R_CONJ(dd)
+            lr(1)%X(dl_rho)(ip, 4) = lr(1)%X(dl_rho)(ip, 4) + dd
+          end do
+        else
+          do ip = 1, mesh%np
+            cc = weight*(R_CONJ(psi(ip, 2))*lr(1)%X(dl_psi)(ip, 2, ist, ik) + &
+              psi(ip, 2)*R_CONJ(lr(2)%X(dl_psi)(ip, 2, ist, ik)))
+            lr(1)%X(dl_rho)(ip, 2) = lr(1)%X(dl_rho)(ip, 2) + cc
+            lr(2)%X(dl_rho)(ip, 2) = lr(2)%X(dl_rho)(ip, 2) + R_CONJ(cc)
+            cc = weight*(R_CONJ(psi(ip, 2))*lr(1)%X(dl_psi)(ip, 1, ist, ik) + &
+              psi(ip, 1)*R_CONJ(lr(2)%X(dl_psi)(ip, 2, ist, ik)))
+            lr(1)%X(dl_rho)(ip, 3) = lr(1)%X(dl_rho)(ip, 3) + cc
+            lr(2)%X(dl_rho)(ip, 4) = lr(2)%X(dl_rho)(ip, 4) + R_CONJ(cc)
+            cc = weight*(R_CONJ(psi(ip, 1))*lr(1)%X(dl_psi)(ip, 2, ist, ik) + &
+              psi(ip, 2)*R_CONJ(lr(2)%X(dl_psi)(ip, 1, ist, ik)))
+            lr(1)%X(dl_rho)(ip, 4) = lr(1)%X(dl_rho)(ip, 4) + cc
+            lr(2)%X(dl_rho)(ip, 3) = lr(2)%X(dl_rho)(ip, 3) + R_CONJ(cc)
+          end do
+        end if        
       end if
 
       if(is_ef_shift) then

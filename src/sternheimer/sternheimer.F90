@@ -254,6 +254,7 @@ contains
       call scf_tol_init(this%scf_tol, sys%st%qtot)
     end if
 
+    if(sys%st%d%ispin == SPINORS .and. this%add_fxc) call messages_not_implemented('fxc for spinors') 
     if(this%add_fxc) call sternheimer_build_fxc(this, sys%gr%mesh, sys%st, sys%ks)
 
     nullify(this%drhs)

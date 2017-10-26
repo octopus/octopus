@@ -149,6 +149,13 @@ contains
       call messages_not_implemented('Dynamical magnetic response')
     end if
 
+    if(sys%st%d%ispin == SPINORS) then
+      if(em_vars%calc_hyperpol) call messages_not_implemented('hyperpolarizability with spinors')  
+      if(em_vars%calc_magnetooptics) call messages_not_implemented('magnetooptics with spinors')
+      if(em_vars%calc_rotatory) call messages_not_implemented('circular dichroism with spinors')
+      if(em_vars%calc_Born) call messages_not_implemented('Born charges with spinors')
+    end if
+
     complex_wfs = states_are_complex(sys%st)
     complex_response = (em_vars%eta > M_EPSILON) .or. states_are_complex(sys%st)
     call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)

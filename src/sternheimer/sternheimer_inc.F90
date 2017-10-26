@@ -180,9 +180,12 @@ subroutine X(sternheimer_solve)(                           &
 
             if(calculate_rho) then
               call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
-              do idim = 1, st%d%dim
-                rhs(1:mesh%np, idim, ii) = rhs(1:mesh%np, idim, ii) - hvar(1:mesh%np, ispin, sigma)*psi(1:mesh%np, idim)
-              end do
+              rhs(1:mesh%np, 1, ii) = rhs(1:mesh%np, 1, ii) - hvar(1:mesh%np, ispin, sigma)*psi(1:mesh%np, 1)
+              if(st%d%ispin == SPINORS) then
+                rhs(1:mesh%np, 1, ii) = rhs(1:mesh%np, 1, ii) - hvar(1:mesh%np, 3, sigma)*psi(1:mesh%np, 2)
+                rhs(1:mesh%np, 2, ii) = rhs(1:mesh%np, 2, ii) - hvar(1:mesh%np, 2, sigma)*psi(1:mesh%np, 2) &
+                  - hvar(1:mesh%np, 4, sigma)*psi(1:mesh%np, 1)
+              end if
             end if
 
             if(sternheimer_have_inhomog(this)) then
@@ -511,7 +514,7 @@ subroutine X(calc_hvar)(add_hartree, sys, lr_rho, nsigma, hvar, fxc)
     SAFE_ALLOCATE(    tmp(1:np))
     SAFE_ALLOCATE(hartree(1:np))
     do ip = 1, np
-      tmp(ip) = sum(lr_rho(ip, 1:sys%st%d%nspin))
+      tmp(ip) = sum(lr_rho(ip, 1:sys%st%d%spin_channels))
     end do
     hartree(1:np) = R_TOTYPE(M_ZERO)
     call X(poisson_solve)(psolver, hartree, tmp, all_nodes = .false.)
@@ -519,17 +522,17 @@ subroutine X(calc_hvar)(add_hartree, sys, lr_rho, nsigma, hvar, fxc)
     SAFE_DEALLOCATE_A(tmp)
   end if
 
-  do ispin = 1, sys%st%d%nspin
-    !* initialize
-    hvar(1:np, ispin, 1) = M_ZERO
+ !* initialize
+  hvar(:, :, :) = M_ZERO
 
+  do ispin = 1, sys%st%d%spin_channels
     !* hartree
     if (abs(coeff_hartree) > M_EPSILON) &
       hvar(1:np, ispin, 1) = hvar(1:np, ispin, 1) + coeff_hartree * hartree(1:np)
     
     !* fxc
     if(present(fxc)) then
-      do ispin2 = 1, sys%st%d%nspin
+      do ispin2 = 1, sys%st%d%spin_channels
         hvar(1:np, ispin, 1) = hvar(1:np, ispin, 1) + fxc(1:np, ispin, ispin2)*lr_rho(1:np, ispin2)
       end do
     end if
