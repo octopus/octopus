@@ -1797,7 +1797,7 @@ contains
           call messages_fatal(1)
        end if
        call restart_end(restart)
-       call floquet_calc_occupations(hm, sys, dressed_st)
+       call floquet_calc_occupations(hm, sys, dressed_st, gs_st)
     end if
 
     filename = FLOQUET_DIR//'/floquet_forces'
