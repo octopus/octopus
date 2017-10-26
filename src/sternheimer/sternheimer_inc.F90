@@ -149,109 +149,109 @@ subroutine X(sternheimer_solve)(                           &
         est = states_block_max(st, ib)
         
         if(this%nstates == 0 .or. (sst .ge. (sys%st%nst - this%nstates + 1)))  then
-        do sigma = 1, nsigma
+          do sigma = 1, nsigma
 
-          if(sigma == 1) then 
-            omega_sigma = omega
-          else 
-            omega_sigma = -R_CONJ(omega)
-          end if
+            if(sigma == 1) then 
+              omega_sigma = omega
+            else 
+              omega_sigma = -R_CONJ(omega)
+            end if
 
-          !calculate the RHS of the Sternheimer eq
+            !calculate the RHS of the Sternheimer eq
 
-          call batch_init(rhsb, st%d%dim, sst, est, rhs)
+            call batch_init(rhsb, st%d%dim, sst, est, rhs)
           
-          if(sternheimer_have_rhs(this)) then
-            call batch_init(orhsb, st%d%dim, sst, est, this%X(rhs)(:, :, sst:, ik - st%d%kpt%start + 1))
-            call batch_copy_data(mesh%np, orhsb, rhsb)
-            call batch_end(orhsb)
-          else
-            call X(pert_apply_batch)(perturbation, sys%gr, sys%geo, hm, ik, st%group%psib(ib, ik), rhsb)
-          end if
+            if(sternheimer_have_rhs(this)) then
+              call batch_init(orhsb, st%d%dim, sst, est, this%X(rhs)(:, :, sst:, ik - st%d%kpt%start + 1))
+              call batch_copy_data(mesh%np, orhsb, rhsb)
+              call batch_end(orhsb)
+            else
+              call X(pert_apply_batch)(perturbation, sys%gr, sys%geo, hm, ik, st%group%psib(ib, ik), rhsb)
+            end if
 
-          call batch_end(rhsb)
+            call batch_end(rhsb)
 
-          ii = 0
-          do ist = sst, est
-            ii = ii + 1
-            
-            do idim = 1, st%d%dim
-              rhs(1:mesh%np, idim, ii) = -rhs(1:mesh%np, idim, ii)
+            ii = 0
+            do ist = sst, est
+              ii = ii + 1
+             
+              do idim = 1, st%d%dim
+                rhs(1:mesh%np, idim, ii) = -rhs(1:mesh%np, idim, ii)
+              end do
+
+              if(calculate_rho) then
+                call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
+                rhs(1:mesh%np, 1, ii) = rhs(1:mesh%np, 1, ii) - hvar(1:mesh%np, ispin, sigma)*psi(1:mesh%np, 1)
+                if(st%d%ispin == SPINORS) then
+                  rhs(1:mesh%np, 1, ii) = rhs(1:mesh%np, 1, ii) - hvar(1:mesh%np, 3, sigma)*psi(1:mesh%np, 2)
+                  rhs(1:mesh%np, 2, ii) = rhs(1:mesh%np, 2, ii) - hvar(1:mesh%np, 2, sigma)*psi(1:mesh%np, 2) &
+                    - hvar(1:mesh%np, 4, sigma)*psi(1:mesh%np, 1)
+                end if
+              end if
+
+              if(sternheimer_have_inhomog(this)) then
+                forall(idim = 1:st%d%dim, ip = 1:mesh%np)
+                  rhs(ip, idim, ii) = rhs(ip, idim, ii) + this%X(inhomog)(ip, idim, ist, ik - st%d%kpt%start + 1, sigma)
+                end forall
+              end if
+
+              if(conv_last .and. this%last_occ_response .and. .not. this%occ_response_by_sternheimer) &
+                rhs_full(:, :, ii) = rhs(:, :, ii)
+
+              call X(lr_orth_vector)(mesh, st, rhs(:, :, ii), ist, ik, omega_sigma, &
+                min_proj = conv_last .and. this%last_occ_response .and. this%occ_response_by_sternheimer)
+
             end do
 
-            if(calculate_rho) then
-              call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
-              rhs(1:mesh%np, 1, ii) = rhs(1:mesh%np, 1, ii) - hvar(1:mesh%np, ispin, sigma)*psi(1:mesh%np, 1)
-              if(st%d%ispin == SPINORS) then
-                rhs(1:mesh%np, 1, ii) = rhs(1:mesh%np, 1, ii) - hvar(1:mesh%np, 3, sigma)*psi(1:mesh%np, 2)
-                rhs(1:mesh%np, 2, ii) = rhs(1:mesh%np, 2, ii) - hvar(1:mesh%np, 2, sigma)*psi(1:mesh%np, 2) &
-                  - hvar(1:mesh%np, 4, sigma)*psi(1:mesh%np, 1)
+            !solve the Sternheimer equation
+            call batch_init(dlpsib, st%d%dim, sst, est, lr(sigma)%X(dl_psi)(:, :, sst:, ik))
+            call batch_init(rhsb, st%d%dim, sst, est, rhs)
+
+            call X(linear_solver_solve_HXeY_batch)(this%solver, hm, sys%gr, sys%st, ik, &
+              dlpsib, rhsb, -sys%st%eigenval(sst:est, ik) + omega_sigma, tol, &
+              residue(sigma, sst:est), conv_iters(sigma, sst:est), occ_response = this%occ_response)
+
+            call batch_end(dlpsib)
+            call batch_end(rhsb)
+
+            !re-orthogonalize the resulting vector
+            ii = 0
+            do ist = sst, est
+              ii = ii + 1
+
+              if (this%preorthogonalization) then 
+                ! should remove degenerate states here too
+                if (this%occ_response) then
+                  call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
+                  proj = X(mf_dotp)(mesh, st%d%dim, psi, lr(sigma)%X(dl_psi)(:, :, ist, ik))
+                  do idim = 1, st%d%dim
+                    call lalg_axpy(mesh%np, -proj, psi(:, idim), lr(sigma)%X(dl_psi)(:, idim, ist, ik))
+                  end do
+                else
+                  call X(lr_orth_vector)(mesh, st, lr(sigma)%X(dl_psi)(1:mesh%np_part, 1:st%d%dim, ist, ik), ist, ik, omega_sigma)
+                end if
               end if
+
+              dpsimod(sigma, ist) = X(mf_nrm2)(mesh, st%d%dim, lr(sigma)%X(dl_psi)(:, :, ist, ik))
+
+            end do !ist
+  
+            if(conv_last .and. this%last_occ_response .and. .not. this%occ_response_by_sternheimer) then
+              call X(sternheimer_add_occ)(sys, lr(sigma)%X(dl_psi)(:, :, :, ik), rhs_full, sst, est, ik, omega_sigma, CNST(1e-5))
             end if
 
-            if(sternheimer_have_inhomog(this)) then
-              forall(idim = 1:st%d%dim, ip = 1:mesh%np)
-                rhs(ip, idim, ii) = rhs(ip, idim, ii) + this%X(inhomog)(ip, idim, ist, ik - st%d%kpt%start + 1, sigma)
-              end forall
-            end if
-
-            if(conv_last .and. this%last_occ_response .and. .not. this%occ_response_by_sternheimer) &
-              rhs_full(:, :, ii) = rhs(:, :, ii)
-
-            call X(lr_orth_vector)(mesh, st, rhs(:, :, ii), ist, ik, omega_sigma, &
-              min_proj = conv_last .and. this%last_occ_response .and. this%occ_response_by_sternheimer)
-
-          end do
-
-          !solve the Sternheimer equation
-          call batch_init(dlpsib, st%d%dim, sst, est, lr(sigma)%X(dl_psi)(:, :, sst:, ik))
-          call batch_init(rhsb, st%d%dim, sst, est, rhs)
-
-          call X(linear_solver_solve_HXeY_batch)(this%solver, hm, sys%gr, sys%st, ik, &
-            dlpsib, rhsb, -sys%st%eigenval(sst:est, ik) + omega_sigma, tol, &
-            residue(sigma, sst:est), conv_iters(sigma, sst:est), occ_response = this%occ_response)
-
-          call batch_end(dlpsib)
-          call batch_end(rhsb)
-
-          !re-orthogonalize the resulting vector
-          ii = 0
-          do ist = sst, est
-            ii = ii + 1
-
-            if (this%preorthogonalization) then 
-              ! should remove degenerate states here too
-              if (this%occ_response) then
-                call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
-                proj = X(mf_dotp)(mesh, st%d%dim, psi, lr(sigma)%X(dl_psi)(:, :, ist, ik))
-                do idim = 1, st%d%dim
-                  call lalg_axpy(mesh%np, -proj, psi(:, idim), lr(sigma)%X(dl_psi)(:, idim, ist, ik))
-                end do
-              else
-                call X(lr_orth_vector)(mesh, st, lr(sigma)%X(dl_psi)(1:mesh%np_part, 1:st%d%dim, ist, ik), ist, ik, omega_sigma)
-              end if
-            end if
-
-            dpsimod(sigma, ist) = X(mf_nrm2)(mesh, st%d%dim, lr(sigma)%X(dl_psi)(:, :, ist, ik))
-
-          end do !ist
-
-          if(conv_last .and. this%last_occ_response .and. .not. this%occ_response_by_sternheimer) then
-            call X(sternheimer_add_occ)(sys, lr(sigma)%X(dl_psi)(:, :, :, ik), rhs_full, sst, est, ik, omega_sigma, CNST(1e-5))
-          end if
-
-        end do !sigma
-
-        do ist = sst, est
-          do sigma = 1, nsigma
-            states_conv = states_conv .and. (residue(sigma, ist) < tol)
-            total_iter = total_iter + conv_iters(sigma, ist)
-
-            write(message(1), '(i5, i5, f20.6, i8, e20.6)') &
-              ik, (3 - 2*sigma)*ist, dpsimod(sigma, ist), conv_iters(sigma, ist), residue(sigma, ist)
-            call messages_info(1)
           end do !sigma
-        end do !ist
+
+          do ist = sst, est
+            do sigma = 1, nsigma
+              states_conv = states_conv .and. (residue(sigma, ist) < tol)
+              total_iter = total_iter + conv_iters(sigma, ist)
+
+              write(message(1), '(i5, i5, f20.6, i8, e20.6)') &
+                ik, (3 - 2*sigma)*ist, dpsimod(sigma, ist), conv_iters(sigma, ist), residue(sigma, ist)
+              call messages_info(1)
+            end do !sigma
+          end do !ist
         end if
       end do !sst
     end do !ik
