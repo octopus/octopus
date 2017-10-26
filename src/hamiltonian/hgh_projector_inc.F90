@@ -156,10 +156,12 @@ subroutine X(hgh_project_ket)(hgh_p, dim, reltype, uvpsi, ppsi)
   n_s = hgh_p%n_s
 
   do idim = 1, dim
-    do jj = 1, 3
-      do ii = 1, 3
-        ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + hgh_p%h(ii, jj)*uvpsi(idim, hgh_index(4, jj))*hgh_p%p(1:n_s, ii)
+    do ii = 1, 3
+      weight = R_TOTYPE(M_ZERO)
+      do jj = 1, 3
+        weight = weight + hgh_p%h(ii, jj)*uvpsi(idim, hgh_index(4, jj))
       end do
+      ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + weight*hgh_p%p(1:n_s, ii)
     end do
   end do
   
@@ -175,7 +177,7 @@ subroutine X(hgh_project_ket)(hgh_p, dim, reltype, uvpsi, ppsi)
           do jj = 1, 3
             weight = weight + hgh_p%k(ii, jj)*uvpsi(idim, hgh_index(kk, jj))
           end do
-           lp_psi(1:n_s, kk, idim) = lp_psi(1:n_s, kk, idim) + weight*hgh_p%p(1:n_s, ii)
+          lp_psi(1:n_s, kk, idim) = lp_psi(1:n_s, kk, idim) + weight*hgh_p%p(1:n_s, ii)
         end do
       end do
     end do
