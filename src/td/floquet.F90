@@ -971,7 +971,7 @@ contains
            else     
              call floquet_calc_occupations(hm, sys, dressed_st)
            end if
-          call density_calc(dressed_st, sys%gr,dressed_st%rho)
+           call density_calc(dressed_st, sys%gr,dressed_st%rho)
            call v_ks_calc(sys%ks, hm, dressed_st, sys%geo)
            call energy_calc_total(hm, gr, dressed_st, iunit = 0)
            write(message(1),'(a,es15.8,4a)') 'Energy tot: ', units_from_atomic(units_out%energy, hm%energy%total) &
