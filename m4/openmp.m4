@@ -64,3 +64,50 @@ else
   m4_default([$1], [AC_DEFINE(HAVE_OPENMP,1,[Define if OpenMP is enabled])])
 fi
 ])dnl AX_OPENMP
+
+
+
+
+AC_DEFUN([AX_OPENMP_SIMD], [
+AC_PREREQ(2.59) dnl for _AC_LANG_PREFIX
+
+AC_CACHE_CHECK([for OpenMP SIMP flag of _AC_LANG compiler], ax_cv_[]_AC_LANG_ABBREV[]_openmp_simd, [save[]_AC_LANG_PREFIX[]FLAGS=$[]_AC_LANG_PREFIX[]FLAGS
+ax_cv_[]_AC_LANG_ABBREV[]_openmp_simd=unknown
+# Flags to try:  -fopenmp-simd (gcc), -qopenmp-simd (Intel),  (SGI & PGI),
+#                 (Sun),  (Tru64), (AIX), none
+ax_openmp_simd_flags=" -qopenmp-simd -fopenmp-simd none"
+if test "x$OPENMP_SIMD_[]_AC_LANG_PREFIX[]FLAGS" != x; then
+  ax_openmp_simd_flags="$OPENMP_SIMD_[]_AC_LANG_PREFIX[]FLAGS $ax_openmp_simd_flags"
+fi
+
+testprog="AC_LANG_PROGRAM([],[
+  use OMP_lib
+  implicit none
+  integer :: a(128)
+  integer :: i
+  
+  !$OMP PARALLEL DO SIMD SAFELEN(4)
+  do i = 1,128
+    a(i) = i
+  end do
+  ])"
+
+for ax_openmp_simd_flag in $ax_openmp_simd_flags; do
+  case $ax_openmp_simd_flag in
+    none) []_AC_LANG_PREFIX[]FLAGS="$save[]_AC_LANG_PREFIX[] $_AC_LANG_PREFIX[]FLAGS" ;;
+    *) []_AC_LANG_PREFIX[]FLAGS="$save[]_AC_LANG_PREFIX[]FLAGS $ax_openmp_simd_flag";;
+  esac
+  AC_LINK_IFELSE($testprog,
+        [ax_cv_[]_AC_LANG_ABBREV[]_openmp_simd=$ax_openmp_simd_flag; break])
+done
+[]_AC_LANG_PREFIX[]FLAGS=$save[]_AC_LANG_PREFIX[]FLAGS
+])
+if test "x$ax_cv_[]_AC_LANG_ABBREV[]_openmp_simd" = "xunknown"; then
+  m4_default([$2],:)
+else
+  if test "x$ax_cv_[]_AC_LANG_ABBREV[]_openmp_simd" != "xnone"; then
+    OPENMP_SIMD_[]_AC_LANG_PREFIX[]FLAGS=$ax_cv_[]_AC_LANG_ABBREV[]_openmp_simd
+  fi
+  m4_default([$1], [AC_DEFINE(HAVE_OPENMP_SIMD,1,[Define if OpenMP SIMD is enabled])])
+fi
+])dnl AX_OPENMP_SIMD

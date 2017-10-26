@@ -619,6 +619,7 @@
 /src/basic/Makefile.in
 /src/basic/.deps
 /src/basic/*_oct.f90
+/src/basic/*.optrpt
 
 # /src/basis_set/
 /src/basis_set/*.mod
@@ -639,6 +640,7 @@
 /src/frozen/Makefile
 /src/frozen/.deps
 /src/frozen/*_oct.f90
+/src/frozen/*.optrpt
 
 # /src/grid/
 /src/grid/*.o
@@ -649,6 +651,7 @@
 /src/grid/.deps
 /src/grid/Makefile
 /src/grid/*_oct.f90
+/src/grid/*.optrpt
 
 # /src/hamiltonian/
 /src/hamiltonian/*.o
@@ -659,6 +662,7 @@
 /src/hamiltonian/Makefile.in
 /src/hamiltonian/.deps
 /src/hamiltonian/*_oct.f90
+/src/hamiltonian/*.optrpt
 
 # /src/include/
 /src/include/*.o
@@ -670,6 +674,7 @@
 /src/include/options.h
 /src/include/Makefile.in
 /src/include/Makefile
+/src/include/*.optrpt
 
 # /src/ions/
 /src/ions/*.o
@@ -680,6 +685,7 @@
 /src/ions/Makefile
 /src/ions/.deps
 /src/ions/*_oct.f90
+/src/ions/*.optrpt
 
 # /src/main/
 /src/main/*.o
@@ -694,6 +700,7 @@
 /src/main/octopus_mpi
 /src/main/*.dSYM
 /src/main/*_oct.f90
+/src/main/*.optrpt
 
 # /src/math/
 /src/math/*.o
@@ -704,6 +711,7 @@
 /src/math/Makefile.in
 /src/math/Makefile
 /src/math/*_oct.f90
+/src/math/*.optrpt
 
 # /src/opt_control/
 /src/opt_control/*.o
@@ -713,6 +721,7 @@
 /src/opt_control/Makefile.in
 /src/opt_control/Makefile
 /src/opt_control/*_oct.f90
+/src/opt_control/*.optrpt
 
 # /src/poisson/
 /src/poisson/*.o
@@ -723,6 +732,7 @@
 /src/poisson/*~
 /src/poisson/.deps
 /src/poisson/*_oct.f90
+/src/poisson/*.optrpt
 
 # /src/scf/
 /src/scf/*.o
@@ -732,6 +742,7 @@
 /src/scf/Makefile.in
 /src/scf/Makefile
 /src/scf/*_oct.f90
+/src/scf/*.optrpt
 
 # /src/species/
 /src/species/Makefile.in
@@ -742,6 +753,7 @@
 /src/species/*~
 /src/species/.deps
 /src/species/*_oct.f90
+/src/species/*.optrpt
 
 # /src/states/
 /src/states/*.o
@@ -752,6 +764,7 @@
 /src/states/*~
 /src/states/.deps
 /src/states/*_oct.f90
+/src/states/*.optrpt
 
 # /src/sternheimer/
 /src/sternheimer/*.o
@@ -762,6 +775,7 @@
 /src/sternheimer/Makefile.in
 /src/sternheimer/.deps
 /src/sternheimer/*_oct.f90
+/src/sternheimer/*.optrpt
 
 # /src/system/
 /src/system/*.o
@@ -771,6 +785,7 @@
 /src/system/Makefile
 /src/system/Makefile.in
 /src/system/*_oct.f90
+/src/system/*.optrpt
 
 # /src/td/
 /src/td/Makefile.in
@@ -780,6 +795,7 @@
 /src/td/*.mod
 /src/td/*~
 /src/td/*_oct.f90
+/src/td/*.optrpt
 
 # /src/utils/
 /src/utils/*.o
@@ -806,6 +822,7 @@
 /src/utils/oct-floquet
 /src/utils/*.dSYM
 /src/utils/*_oct.f90
+/src/utils/*.optrpt
 
 # /testsuite/
 /testsuite/*.log
