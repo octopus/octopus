@@ -27,6 +27,7 @@ module floquet_oct_m
   use eigensolver_oct_m
   use energy_calc_oct_m
   use excited_states_oct_m
+  use forces_oct_m
   use gauge_field_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -65,10 +66,12 @@ module floquet_oct_m
   use states_oct_m
   use states_restart_oct_m
   use subspace_oct_m
+  use species_oct_m
   use system_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
+  use utils_oct_m
   use varinfo_oct_m
   use v_ks_oct_m
   use write_iter_oct_m
@@ -900,7 +903,7 @@ contains
       character(len=80) :: iterstr
       character(len=40) :: msg
       integer :: file
-      integer :: iunit
+      integer :: iunit, ii, iatom, idir
       real(8) :: itime, etime
 
       type(grid_t),   pointer :: gr
@@ -1042,7 +1045,23 @@ contains
         iunit = io_open(trim(FLOQUET_DIR) // "/info" , action='write')
         write(iunit, '(3a)') 'Energy [', trim(units_abbrev(units_out%energy)), ']:'
         call energy_calc_total(hm, gr, st, iunit, full = .true.)
-        call io_close(iunit)
+        write(iunit,'(1x)')
+        
+        call forces_calculate(gr, sys%geo, hm, dressed_st)
+
+        write(iunit,'(3a)') 'Floquet-forces on the ions [', trim(units_abbrev(units_out%force)), "]"
+        write(iunit,'(a,10x,99(14x,a))') ' Ion', (index2axis(idir), idir = 1, gr%sb%dim)
+        do iatom = 1, sys%geo%natoms
+          write(iunit,'(i4,a10,10f15.6)') iatom, trim(species_label(sys%geo%atom(iatom)%species)), &
+               (units_from_atomic(units_out%force, sys%geo%atom(iatom)%f(idir)), idir=1, gr%sb%dim)
+        end do
+        write(iunit,'(1x,100a1)') ("-", ii = 1, 13 + gr%sb%dim * 15)
+        write(iunit,'(a14, 10f15.6)') " Max abs force", &
+            (units_from_atomic(units_out%force, maxval(abs(sys%geo%atom(1:sys%geo%natoms)%f(idir)))), idir=1, gr%sb%dim)
+        write(iunit,'(a14, 10f15.6)') " Total force", &
+            (units_from_atomic(units_out%force, sum(sys%geo%atom(1:sys%geo%natoms)%f(idir))), idir=1, gr%sb%dim)
+
+        call io_close(iunit)        
       end if
       
       call output_all(sys%outp, sys%gr, sys%geo, dressed_st, hm, sys%ks, trim(FLOQUET_DIR))
