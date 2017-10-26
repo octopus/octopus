@@ -18,10 +18,10 @@
 #include "global.h"
 
 module floquet_oct_m
-  use iso_c_binding
   use blas_oct_m
   use calc_mode_par_oct_m
   use comm_oct_m
+  use density_oct_m
   use derivatives_oct_m
   use distributed_oct_m
   use eigensolver_oct_m
@@ -31,25 +31,26 @@ module floquet_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
   use hamiltonian_base_oct_m
-  use output_oct_m
-  use io_oct_m
+  use hamiltonian_oct_m
   use ion_dynamics_oct_m
+  use io_oct_m
+  use iso_c_binding
   use kick_oct_m
   use kpoints_oct_m
-  use lasers_oct_m
   use lalg_adv_oct_m
-  use loct_oct_m
+  use lasers_oct_m
   use loct_math_oct_m
+  use loct_oct_m
   use magnetic_oct_m
   use math_oct_m
   use mesh_function_oct_m
   use mesh_oct_m
   use messages_oct_m
-  use mpi_oct_m
   use mpi_lib_oct_m
+  use mpi_oct_m
   use multicomm_oct_m
+  use output_oct_m
   use parser_oct_m
   use partial_charges_oct_m
   use pert_oct_m
@@ -58,10 +59,10 @@ module floquet_oct_m
   use scf_oct_m
   use simul_box_oct_m
   use smear_oct_m
-  use states_oct_m
   use states_calc_oct_m
   use states_dim_oct_m
   use states_io_oct_m
+  use states_oct_m
   use states_restart_oct_m
   use subspace_oct_m
   use system_oct_m
@@ -966,6 +967,7 @@ contains
            else     
              call floquet_calc_occupations(hm, sys, dressed_st)
            end if
+          call density_calc(dressed_st, sys%gr,dressed_st%rho)
            call v_ks_calc(sys%ks, hm, dressed_st, sys%geo)
            call energy_calc_total(hm, gr, dressed_st, iunit = 0)
            write(message(1),'(a,es15.8,4a)') 'Energy tot: ', units_from_atomic(units_out%energy, hm%energy%total) &
@@ -1034,6 +1036,8 @@ contains
          end if
          call states_end(FBZ_st)
       end if
+      
+      call output_all(sys%outp, sys%gr, sys%geo, dressed_st, hm, sys%ks, trim(FLOQUET_DIR))
       
       !switch off floquet hamiltonian                                                           
       hm%F%floquet_apply = .false.                                                               

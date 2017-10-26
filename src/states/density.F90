@@ -380,14 +380,13 @@ contains
 
   ! ---------------------------------------------------------
   !> Computes the density from the orbitals in st. 
-  subroutine density_calc(st, gr, density, Imdensity, ndim)
+  subroutine density_calc(st, gr, density, Imdensity)
     type(states_t),          intent(inout)  :: st
     type(grid_t),            intent(in)     :: gr
     FLOAT,                   intent(out)    :: density(:, :)
     FLOAT, optional,         intent(out)    :: Imdensity(:, :)
-    integer, optional,       intent(in)     :: ndim
 
-    integer :: ik, ib,ndim_, idim
+    integer :: ik, ib,ndim, idim, dim_stride
     type(density_calc_t) :: dens_calc
     logical :: cmplxscl
 
@@ -395,8 +394,28 @@ contains
 
     ASSERT(ubound(density, dim = 1) == gr%fine%mesh%np .or. ubound(density, dim = 1) == gr%fine%mesh%np_part)
 
-    ndim_ = optional_default(ndim, 1)
+    ndim = 1
+    dim_stride = 1
+    
+    select case(st%d%ispin)
+    case(UNPOLARIZED)
+      if(st%d%dim>1) then
+        ndim = st%d%dim
+      end if
 
+    case(SPIN_POLARIZED)
+      if(st%d%dim>1) then
+        ndim = st%d%dim
+      end if
+
+    case(SPINORS)
+      if(st%d%dim>2) then
+        dim_stride = 2
+        ndim = st%d%dim
+      end if
+
+    end select
+    
     cmplxscl = present(Imdensity)
     
     if (cmplxscl) then
@@ -407,7 +426,7 @@ contains
     
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
-         do idim=1,ndim_
+         do idim=1,ndim, dim_stride
             if(cmplxscl) then
                call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik), st%psibL(ib, ik),dim=idim)
             else
