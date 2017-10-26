@@ -397,6 +397,8 @@ contains
     ndim = 1
     dim_stride = 1
     
+    ! In order to handle the cases where st%d%dim encodes more than 
+    ! just spinors we contract the additional dimensions
     select case(st%d%ispin)
     case(UNPOLARIZED)
       if(st%d%dim>1) then
