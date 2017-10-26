@@ -20,7 +20,6 @@
 
 module hgh_projector_oct_m
   use atom_oct_m
-  use blas_oct_m
   use comm_oct_m
   use global_oct_m
   use hardware_oct_m
@@ -129,7 +128,7 @@ contains
 
   ! ---------------------------------------------------------
   !> index from (1:3, 1:4) to linear array
-  integer function hgh_index(kk, jj)
+  pure integer function hgh_index(kk, jj)
     integer, intent(in) :: kk
     integer, intent(in) :: jj
 

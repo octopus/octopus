@@ -82,8 +82,6 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
   n_s = hgh_p%n_s
   uvpsi = M_ZERO
 
-  bra = M_ZERO
-
   if(mesh%use_curvilinear) then
 
     SAFE_ALLOCATE(bra(1:n_s, 1:4, 1:3))
@@ -118,7 +116,7 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
                             sum(psi(sp:ep, idim)*hgh_p%p(sp:ep, jj))*mesh%volume_element
           if(reltype == 1) then
             do kk = 1, 3
-              uvpsi(idim, hgh_index(kk, jj)) =  uvpsi(idim, hgh_index(kk, jj)) + &
+              uvpsi(idim, hgh_index(kk, jj)) = uvpsi(idim, hgh_index(kk, jj)) + &
                   sum(psi(sp:ep, idim)*hgh_p%lp(sp:ep, kk, jj))*mesh%volume_element
             end do
           end if
