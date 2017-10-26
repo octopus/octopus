@@ -111,6 +111,7 @@ module sternheimer_oct_m
      logical               :: last_occ_response
      logical               :: occ_response_by_sternheimer
      logical               :: preorthogonalization
+     integer               :: nstates
   end type sternheimer_t
   
   type(profile_t), save :: prof, prof_hvar
@@ -173,6 +174,20 @@ contains
       (sys%st%smear%method == SMEAR_FIXED_OCC .and. sys%st%smear%integral_occs)) &
       .and. .not. this%occ_response
     call parse_variable('Preorthogonalization', default_preorthog, this%preorthogonalization) 
+
+    !%Variable ResponseStates
+    !%Type integer
+    !%Default 0
+    !%Section Linear Response::Sternheimer 
+    !%Description
+    !% The number of states included in the response calculation.
+    !%End
+    call parse_variable('ResponseStates', 0, this%nstates)
+    if (this%nstates < 0) then
+      write(message(1), '(a,i5,a)') "Input: '", this%nstates, "' is not a valid value for ResponseStates."
+      message(2) = '(0 <= ResponseStates)'
+      call messages_fatal(2)
+    end if
 
     !%Variable HamiltonianVariation
     !%Type integer

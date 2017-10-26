@@ -148,6 +148,7 @@ subroutine X(sternheimer_solve)(                           &
         sst = states_block_min(st, ib)
         est = states_block_max(st, ib)
         
+        if(this%nstates == 0 .or. (sst .ge. (sys%st%nst - this%nstates + 1)))  then
         do sigma = 1, nsigma
 
           if(sigma == 1) then 
@@ -251,7 +252,7 @@ subroutine X(sternheimer_solve)(                           &
             call messages_info(1)
           end do !sigma
         end do !ist
-
+        end if
       end do !sst
     end do !ik
 
