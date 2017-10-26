@@ -1340,7 +1340,7 @@ contains
 
     gppsi(:,:) = M_z0
     do idir = 1, der%mesh%sb%dim
-       gppsi(1:der%mesh%np,:) = pol(idir) * gpsi(1:der%mesh%np, idir,:)
+       gppsi(1:der%mesh%np,:) = gppsi(1:der%mesh%np,:) + pol(idir) * gpsi(1:der%mesh%np, idir,:)
     end do
 
     SAFE_DEALLOCATE_A(gpsi)
