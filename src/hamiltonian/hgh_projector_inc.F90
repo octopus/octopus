@@ -63,8 +63,7 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
   integer :: n_s, jj, idim, kk
   R_TYPE, allocatable :: bra(:, :, :)
   type(profile_t), save :: prof
-  R_TYPE :: uvpsu_tmp(1:3)
-  integer :: block_size, size, sp, ep
+  integer :: block_size, sp, ep
 
   call profiling_in(prof, "HGH_PROJECT_BRA")
 
@@ -83,11 +82,10 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
   n_s = hgh_p%n_s
   uvpsi = M_ZERO
 
-  SAFE_ALLOCATE(bra(1:n_s, 1:4, 1:3))
-
   bra = M_ZERO
 
   if(mesh%use_curvilinear) then
+
     SAFE_ALLOCATE(bra(1:n_s, 1:4, 1:3))
     bra = M_ZERO
 
@@ -111,8 +109,6 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
     SAFE_DEALLOCATE_A(bra)
 
   else
-
-    
 
     do idim = 1, dim
       do sp = 1, n_s, block_size
@@ -148,6 +144,7 @@ subroutine X(hgh_project_ket)(hgh_p, dim, reltype, uvpsi, ppsi)
   integer :: kk
   CMPLX, allocatable :: lp_psi(:, :, :)
   R_TYPE :: weight
+  CMPLX  :: zweight
 
   type(profile_t), save :: prof
 
@@ -173,11 +170,11 @@ subroutine X(hgh_project_ket)(hgh_p, dim, reltype, uvpsi, ppsi)
     do idim = 1, dim
       do kk = 1, 3
         do ii = 1, 3
-          weight = R_TOTYPE(M_ZERO)
+          zweight = M_z0
           do jj = 1, 3
-            weight = weight + hgh_p%k(ii, jj)*uvpsi(idim, hgh_index(kk, jj))
+            zweight = zweight + hgh_p%k(ii, jj)*uvpsi(idim, hgh_index(kk, jj))
           end do
-          lp_psi(1:n_s, kk, idim) = lp_psi(1:n_s, kk, idim) + weight*hgh_p%p(1:n_s, ii)
+          lp_psi(1:n_s, kk, idim) = lp_psi(1:n_s, kk, idim) + zweight*hgh_p%p(1:n_s, ii)
         end do
       end do
     end do
