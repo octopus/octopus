@@ -900,6 +900,7 @@ contains
       character(len=80) :: iterstr
       character(len=40) :: msg
       integer :: file
+      integer :: iunit
       real(8) :: itime, etime
 
       type(grid_t),   pointer :: gr
@@ -1035,6 +1036,13 @@ contains
            call states_write_eigenvalues(filename, FBZ_st%nst, FBZ_st, sys%gr%sb)
          end if
          call states_end(FBZ_st)
+      end if
+      
+      if(mpi_grp_is_root(mpi_world)) then
+        iunit = io_open(trim(FLOQUET_DIR) // "/info" , action='write')
+        write(iunit, '(3a)') 'Energy [', trim(units_abbrev(units_out%energy)), ']:'
+        call energy_calc_total(hm, gr, st, iunit, full = .true.)
+        call io_close(iunit)
       end if
       
       call output_all(sys%outp, sys%gr, sys%geo, dressed_st, hm, sys%ks, trim(FLOQUET_DIR))
