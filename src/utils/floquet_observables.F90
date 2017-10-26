@@ -727,21 +727,38 @@ contains
     call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm, norms)
 
     if(mpi_world%rank==0) then
-       write(iter_name,'(i4)') iter 
-       do ik=kpoints%reduced%npoints-kpoints%nik_skip+1, kpoints%reduced%npoints
+      if (kpoints_have_zero_weight_path(kpoints)) then
+        do ik=kpoints%reduced%npoints-kpoints%nik_skip+1, kpoints%reduced%npoints
           write(ik_name,'(i4)') ik
-          filename = FLOQUET_DIR//'/floquet_norms_ik_'//trim(adjustl(ik_name))//'_iter_'//trim(adjustl(iter_name))
+          filename = FLOQUET_DIR//'/norms_ik_'//trim(adjustl(ik_name))
           iunit = io_open(filename, action='write')
-          
-           do ist=1,dressed_st%nst
-              do in=1,floquet_dim
-                 write(iunit,'(i4,a1,e12.6,a1,i4,a1,e12.6)') ist, '', dressed_st%eigenval(ist,ik), ' ',in, ' ', norms(ik,ist,in)
-             end do
-             write(iunit,'(a1)') ' '
+      
+          do ist=1,dressed_st%nst
+            do in=1,floquet_dim
+              write(iunit,'(i4,a1,e12.6,a1,i4,a1,e12.6)') ist, '', dressed_st%eigenval(ist,ik), ' ',in, ' ', norms(ik,ist,in)
+            end do
+            write(iunit,'(a1)') ' '
           end do
 
           call io_close(iunit)
-       end do
+        end do
+      else
+        do ik=1,kpoints%reduced%npoints
+          write(ik_name,'(i4)') ik
+          filename = FLOQUET_DIR//'/norms_ik_'//trim(adjustl(ik_name))
+          iunit = io_open(filename, action='write')
+      
+          do ist=1,dressed_st%nst
+            do in=1,floquet_dim
+              write(iunit,'(i4,a1,e12.6,a1,i4,a1,e12.6)') ist, '', dressed_st%eigenval(ist,ik), ' ',in, ' ', norms(ik,ist,in)
+            end do
+            write(iunit,'(a1)') ' '
+          end do
+
+          call io_close(iunit)
+        end do        
+        
+      end if
     end if
 
     SAFE_DEALLOCATE_A(temp_state1)
