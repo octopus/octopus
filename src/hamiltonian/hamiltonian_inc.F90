@@ -1006,7 +1006,7 @@ subroutine  X(apply_floquet_hamiltonian)(hm, der, psib, hpsib, ik, time, Imtime,
 
   ! zero hpsi
   do ist=1,hpsib%nst
-    hpsib%states(ist)%X(psi)(:,:) = M_ZERO
+    hpsib%states(ist)%X(psi)(:,:) = R_TOTYPE(M_ZERO)
   end do
 
   call batch_init(small_hpsib,spindim,hpsib%nst)
