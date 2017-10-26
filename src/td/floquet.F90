@@ -126,7 +126,8 @@ contains
     ! Default values
     this%floquet_apply = .false.
     this%sample = .false.
-    
+    this%FBZ_solver = .false.
+    this%sample_one_only  = .true.
 
     !%Variable FloquetBoson
     !%Type flag
