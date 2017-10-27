@@ -1857,7 +1857,7 @@ contains
 
     ! get Floquet density
     rhoF = M_ZERO
-    call density_calc(dressed_st, gr,rhoF,ndim=hm%F%floquet_dim)
+    call density_calc(dressed_st, gr,rhoF)
     call dio_function_output(io_function_fill_how("PlaneX"), FLOQUET_DIR, "rho_floquet",  gr%mesh, rhoF(:,1), unit_one, ierr)
     call dio_function_output(io_function_fill_how("PlaneY"), FLOQUET_DIR, "rho_floquet",  gr%mesh, rhoF(:,1), unit_one,ierr)
     call dio_function_output(io_function_fill_how("PlaneZ"), FLOQUET_DIR, "rho_floquet",  gr%mesh, rhoF(:,1), unit_one,ierr)
