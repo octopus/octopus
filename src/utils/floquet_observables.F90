@@ -72,6 +72,7 @@ program floquet_observables
     integer :: nst (1:2) ! states output limits
     integer :: nkpt(1:2) ! kpoints output limits
     integer :: gauge  ! the gauge used to calculate observables 
+    FLOAT   :: time0  ! probe time
   end type fobs_t
 
 
@@ -167,7 +168,7 @@ program floquet_observables
 
   ! load floquet states only for certain tasks
   ! Note: this way it makes impossible to combine options that needs all the Floquet 
-  ! states with the ones that don't UDG
+  ! states with the ones that do not UDG
   if(.not. (iand(out_what, OPTION__FLOQUETOBSERVABLECALC__F_TD_SPIN) /= 0) .and. &
      .not. (iand(out_what, OPTION__FLOQUETOBSERVABLECALC__F_WFS) /= 0) ) then
        call states_allocate_wfns(dressed_st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX)
@@ -253,6 +254,17 @@ program floquet_observables
   !%End
   call parse_variable('FloquetObservableLifetimeBroadening', CNST(0.001), obs%gamma, units_inp%energy)
   call messages_print_var_value(stdout,'FloquetObservableLifetimeBroadening', obs%gamma)
+
+
+  !%Variable FloquetObservableProbeTime
+  !%Type float
+  !%Default 0.0
+  !%Section Utilities::oct-floquet_observables
+  !%Description
+  !% Probe time.
+  !%End
+  call parse_variable('FloquetObservableProbeTime', M_ZERO, obs%time0, units_inp%time)
+  call messages_print_var_value(stdout,'FloquetObservableProbeTime', obs%time0)
   
   
 
@@ -1196,7 +1208,7 @@ contains
   
     ! Use floquet brillouin zone (FBZ) solver to calculate the conductivity
     ! Reduced equation, refer to equation 21
-    CMPLX, allocatable   :: u_a(:,:), u_b(:,:), u_c(:,:), sigma(:,:,:)
+    CMPLX, allocatable   :: u_a(:,:), u_b(:,:), sigma(:,:,:)
     FLOAT, allocatable   :: spect(:,:)
     
     integer :: idim, im, in, il, ista, istb, ik, itot, ii, i, imm, inn, spindim, ie, dim
@@ -1209,7 +1221,6 @@ contains
     PUSH_SUB(calc_floquet_conductivity_length_gauge_FBZ21)
     
     spindim = hm%F%spindim 
-    print *, 'FBZ method spindim', spindim                
     dim = sys%gr%sb%dim
       
     
@@ -1221,10 +1232,9 @@ contains
    
     
     sigma(:,:,:) = M_z0
-    print *,'forder start end' , hm%F%order(1), hm%F%order(2)
 
-    do idir = 1, 1
-      do jdir = idir, 1 
+    do idir = 1, dim
+      do jdir = idir, dim 
 
         write(message(1),'(a,i5,a,i5,a)') 'Calculate sigma(',idir,',', jdir,'):'
         call messages_info(1) 
@@ -1238,9 +1248,7 @@ contains
             do istb=1, dressed_st%nst
                 
               DE_ab = dressed_st%eigenval(ista,ik) - dressed_st%eigenval(istb,ik)
-              
               call states_get_state(dressed_st, sys%gr%mesh, istb, ik, u_b)
-      
                                
               ! get the dipole matrix elements dn_cb and dm_ac
               do im=hm%F%order(1),hm%F%order(2)
@@ -1252,42 +1260,43 @@ contains
                 do in=hm%F%order(1),hm%F%order(2)
                   inn = in - hm%F%order(1) + 1
 
-
-                  !\sum_n <u_(m+n)a| r | u_nb> AND \sum_n <u_(m+n)b| r | u_na>
-                  if (imm+inn >= 1 .and. imm+inn <= hm%F%floquet_dim) then
-!                     print *,'im+in' ,im+in-hm%F%order(1), im+in
+                  !\sum_n <u_(n-m)a| r | u_nb> AND \sum_n <u_(n-m)b| r | u_na>
+                  if (-im+in .ge. hm%F%order(1) .and. -im+in .le. hm%F%order(2)) then
+                    
                     do idim=1,spindim
-                      call zmf_multipoles(sys%gr%mesh, conjg(u_a(:,(imm+inn-1)*spindim+idim)) &
-                                                           * u_b(:,(inn-1)*spindim+idim) , 1, tmp(:))
-  
+                      call zmf_multipoles(sys%gr%mesh, conjg(u_a(:,(-im+in-hm%F%order(1))*spindim+idim)) &
+                                                           * u_b(:,(inn-1)*spindim+idim) , 1, tmp(:))  
                       dm_ab(:) = dm_ab(:) + tmp(2:4)
-                      call zmf_multipoles(sys%gr%mesh, conjg(u_b(:,(imm+inn-1)*spindim+idim)) &
-                                                           * u_a(:,(inn-1)*spindim+idim) , 1, tmp(:))
 
+                      call zmf_multipoles(sys%gr%mesh, conjg(u_b(:,(-im+in-hm%F%order(1))*spindim+idim)) &
+                                                           * u_a(:,(inn-1)*spindim+idim) , 1, tmp(:))
                       dm_ba(:) = dm_ba(:) + tmp(2:4)
+
                     end do
                   end if
                       
-                  !\sum_l <u_(m+l)a| r | u_lc>
+                  !\sum_n <u_(n-m)a| r | u_nc>
 
                 end do ! in loop
              
                 do ie = 1, obs%ne
                   EE= ie * obs%de
 
-! <<<<<<< Updated upstream
 !                   ampl =  M_zI * &
 !                            (conjg(dressed_st%coeff(ista,ik)) *dressed_st%coeff(ista,ik)-&
 !                            conjg(dressed_st%coeff(istb,ik)) *dressed_st%coeff(istb,ik)) * &
 !                            dm_ba(idir)*dm_ab(jdir)* &
 !                           (1/(DE_ab - im * M_zI*hm%F%omega  + EE + M_zi*obs%gamma) + &
 !                            1/(DE_ab - im * M_zI*hm%F%omega  - EE - M_zi*obs%gamma) )
-! =======
+
                   ampl = 1/M_z2 * (abs(dressed_st%coeff(ista,ik))**2- abs(dressed_st%coeff(istb,ik))**2) * dm_ba(idir)*dm_ab(jdir)* &
-                          (1/(DE_ab - im * hm%F%omega  + EE + M_zI*obs%gamma) + &
-                           1/(DE_ab - im * hm%F%omega  - EE - M_zI*obs%gamma) ) 
+                          (1/(DE_ab - im * hm%F%omega  + EE - M_zI*obs%gamma) + &
+                           1/(DE_ab - im * hm%F%omega  - EE + M_zI*obs%gamma) )
+                          
+                  ampl = ampl * exp(M_zI*(2*im*hm%F%omega - EE)*obs%time0)
                           
                   if (idir == jdir) ampl = M_z2 * ampl
+                 
                   
                   ! sum over a, b, im and ik        
                   sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + ampl * (dressed_st%d%kweights(ik))
@@ -1351,7 +1360,6 @@ contains
     
     SAFE_DEALLOCATE_A(u_a)
     SAFE_DEALLOCATE_A(u_b)
-    SAFE_DEALLOCATE_A(u_c)
 
     POP_SUB(calc_floquet_conductivity_length_gauge_FBZ21)    
 
