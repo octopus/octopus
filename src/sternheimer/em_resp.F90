@@ -1113,7 +1113,6 @@ contains
           write(iunit, '(a1,a20)', advance = 'no') '#', str_center('[' // trim(units_abbrev(units_out%energy)) // ']', 20) 
           do idir = 1, 3
             write(iunit, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
-            write(iunit, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
             do idir2 = 1, 3
               write(iunit, '(a20)', advance = 'no')  str_center('[ - ]', 20)
             end do
