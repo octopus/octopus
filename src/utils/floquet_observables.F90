@@ -1202,7 +1202,7 @@ contains
     
     integer :: idim, im, in, il, ista, istb, ik, itot, ii, i, imm, inn, spindim, ie, dim
     FLOAT   :: omega, DE_ab,  EE, norm, fact
-    CMPLX   :: dn_ba(1:3), dn_ab(1:3), tmp(1:4), ampl
+    CMPLX   :: dm_ba(1:3), dm_ab(1:3), tmp(1:4), ampl
     integer :: iunit, idir, jdir, dir
     character(len=1024):: filename, iter_name, str
     
@@ -1224,8 +1224,8 @@ contains
     sigma(:,:,:) = M_z0
     print *,'forder start end' , hm%F%order(1), hm%F%order(2)
 
-    do idir = 1, 2 
-      do jdir = idir, 2 
+    do idir = 1, dim 
+      do jdir = idir, dim 
 
         write(message(1),'(a,i5,a,i5,a)') 'Calculate sigma(',idir,',', jdir,'):'
         call messages_info(1) 
@@ -1244,8 +1244,8 @@ contains
       
 
                
-              dn_ab(:) = M_z0
-              dn_ba(:) = M_z0
+              dm_ab(:) = M_z0
+              dm_ba(:) = M_z0
                                
               norm = (hm%F%order(2)-hm%F%order(1))
               if (norm == 0) norm = M_ONE  
@@ -1259,16 +1259,16 @@ contains
 
                   !\sum_l <u_(m+n)a| r | u_nb> AND \sum_l <u_(m+n)b| r | u_nc>
                   if (im+in .ge. hm%F%order(1) .and. im+in .le. hm%F%order(2)) then
-                    print *,'im+in' ,im+in-hm%F%order(1), im+in
+                    ! print *,'im+in' ,im+in-hm%F%order(1), im+in
                     do idim=1,spindim
                       call zmf_multipoles(sys%gr%mesh, conjg(u_a(:,(im+in-hm%F%order(1))*spindim+idim)) &
                                                            * u_b(:,(inn-1)*spindim+idim) , 1, tmp(:))
   
-                      dn_ab(:) = dn_ab(:) + tmp(2:4)
+                      dm_ab(:) = dm_ab(:) + tmp(2:4)
                       call zmf_multipoles(sys%gr%mesh, conjg(u_b(:,(im+in-hm%F%order(1))*spindim+idim)) &
                                                            * u_a(:,(inn-1)*spindim+idim) , 1, tmp(:))
 
-                      dn_ba(:) = dn_ba(:) + tmp(2:4)
+                      dm_ba(:) = dm_ba(:) + tmp(2:4)
                     end do
                   end if
                       
@@ -1279,10 +1279,11 @@ contains
                 do ie = 1, obs%ne
                   EE= ie * obs%de
 
-                  ampl =  M_zI *  (conjg(dressed_st%coeff(ista,ik)) *dressed_st%coeff(ista,ik)-&
-                                   conjg(dressed_st%coeff(istb,ik)) *dressed_st%coeff(istb,ik)) * &
-                          dn_ba(idir)*dn_ab(jdir)* &
-                          (1/(DE_ab - im * M_zI*hm%F%omega  + EE + M_zi*obs%gamma)+ &
+                  ampl =  M_zI * &
+                           (conjg(dressed_st%coeff(ista,ik)) *dressed_st%coeff(ista,ik)-&
+                           conjg(dressed_st%coeff(istb,ik)) *dressed_st%coeff(istb,ik)) * &
+                           dm_ba(idir)*dm_ab(jdir)* &
+                          (1/(DE_ab - im * M_zI*hm%F%omega  + EE + M_zi*obs%gamma) + &
                            1/(DE_ab - im * M_zI*hm%F%omega  - EE - M_zi*obs%gamma) ) 
                           
                   if (idir == jdir) ampl = M_z2 * ampl
@@ -1320,7 +1321,8 @@ contains
     
     if(mpi_grp_is_root(mpi_world)) then
       write(iter_name,'(i4)') hm%F%iter
-      filename = FLOQUET_DIR//'/floquet_conductivity_l_FBZ21_'//trim(adjustl(iter_name))
+      filename = FLOQUET_DIR//'/floquet_conductivity_l_FBZ21'
+      !filename = FLOQUET_DIR//'/floquet_conductivity_l_FBZ21_'//trim(adjustl(iter_name))
       iunit = io_open(filename, action='write')
 
       write(iunit, '(a1,a15)', advance = 'no') '#', str_center("w", 15)
@@ -1400,8 +1402,8 @@ contains
     sigma(:,:,:) = M_z0
     print *,'forder start end' , hm%F%order(1), hm%F%order(2)
 
-    do idir = 1, 2 
-      do jdir = idir, 2 
+    do idir = 1, dim 
+      do jdir = idir, dim 
 
         write(message(1),'(a,i5,a,i5,a)') 'Calculate sigma(',idir,',', jdir,'):'
         call messages_info(1) 
@@ -1451,7 +1453,7 @@ contains
                       ill = il - hm%F%order(1) + 1
 
                       if (in+il .ge. hm%F%order(1) .and. in+il .le. hm%F%order(2)) then
-                        print *,'in+il' ,in+il-hm%F%order(1), in+il
+                        ! print *,'in+il' ,in+il-hm%F%order(1), in+il
                         do idim=1,spindim
                           call zmf_multipoles(sys%gr%mesh, conjg(u_c(:,(in+il-hm%F%order(1))*spindim+idim)) &
                                                                * u_b(:,(ill-1)*spindim+idim) , 1, tmp(:))
@@ -1466,8 +1468,9 @@ contains
                     do ie = 1, obs%ne
                         EE= ie * obs%de
 
-                        ampl =  M_zI *  conjg(dressed_st%coeff(ista,ik)) *dressed_st%coeff(istb,ik) * &
-                                dm_ac(idir)*dn_cb(jdir)* &
+                        ampl =  M_zI * &
+                                 conjg(dressed_st%coeff(ista,ik)) *dressed_st%coeff(istb,ik) * &
+                                 dm_ac(idir)*dn_cb(jdir)* &
                                 (1/(DE_bc - in * M_zI*hm%F%omega  + EE + M_zi*obs%gamma)+ &
                                  1/(DE_bc - in * M_zI*hm%F%omega  - EE - M_zi*obs%gamma)- & 
                                  1/(DE_ca - im * M_zI*hm%F%omega  + EE + M_zi*obs%gamma)- & 
@@ -1510,7 +1513,8 @@ contains
     
     if(mpi_grp_is_root(mpi_world)) then
       write(iter_name,'(i4)') hm%F%iter
-      filename = FLOQUET_DIR//'/floquet_conductivity_l_FBZ_'//trim(adjustl(iter_name))
+      filename = FLOQUET_DIR//'/floquet_conductivity_l_FBZ'
+      !filename = FLOQUET_DIR//'/floquet_conductivity_l_FBZ_'//trim(adjustl(iter_name))
       iunit = io_open(filename, action='write')
 
       write(iunit, '(a1,a15)', advance = 'no') '#', str_center("w", 15)
@@ -1696,8 +1700,10 @@ contains
                   do ie = 1, obs%ne
                     EE= ie * obs%de
                  
-                            ampl =  M_zI * (dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik)) * &
-                                            melab(idir)*melba(jdir) /(DE + EE + M_zi*obs%gamma) 
+                            ampl =  M_zI * &
+                                     (dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik)) * &
+                                      melab(idir)*melba(jdir) * &
+                                     1/(DE + EE + M_zi*obs%gamma) 
                                     
                             if (idir == jdir) ampl = M_z2 * ampl
                             
@@ -1745,7 +1751,8 @@ contains
     
     if(mpi_grp_is_root(mpi_world)) then
       write(iter_name,'(i4)') hm%F%iter
-      filename = FLOQUET_DIR//'/floquet_conductivity_'//trim(gauge)//'_'//trim(adjustl(iter_name))
+      filename = FLOQUET_DIR//'/floquet_conductivity_'//trim(gauge)
+      ! filename = FLOQUET_DIR//'/floquet_conductivity_'//trim(gauge)//'_'//trim(adjustl(iter_name))
       iunit = io_open(filename, action='write')
 
       write(iunit, '(a1,a15)', advance = 'no') '#', str_center("w", 15)
