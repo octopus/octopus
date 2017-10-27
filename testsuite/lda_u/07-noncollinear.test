@@ -5,6 +5,8 @@ Program    : octopus
 TestGroups : long-run, periodic_systems, lda_u
 Enabled    : Yes
 
+Processors : 4
+
 Input      : 07-noncollinear.01-U5-gs.inp
 
 match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 8

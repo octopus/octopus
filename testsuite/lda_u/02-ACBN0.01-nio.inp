@@ -50,9 +50,8 @@ GuessMagnetDensity = user_defined
 
 LCAOStart= lcao_states
 
-nk = 2
 %KPointsGrid
-nk | nk | nk
+2 | 2 | 1
 %
 KPointsUseSymmetries = no
 

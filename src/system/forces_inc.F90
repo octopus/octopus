@@ -131,7 +131,7 @@ end subroutine X(total_force_from_local_potential)
 !! First-principles calculations in real-space formalism: Electronic configurations
 !! and transport properties of nanostructures, Imperial College Press (2005)
 !! Section 1.6, page 12
-subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl)
+subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl, force_u)
   type(grid_t),                   intent(inout) :: gr
   type(geometry_t),               intent(inout) :: geo
   type(hamiltonian_t),            intent(in)    :: hm
@@ -139,6 +139,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl)
   FLOAT,                          intent(out)   :: force(:, :)
   FLOAT,                          intent(out)   :: force_loc(:, :)
   FLOAT,                          intent(out)   :: force_nl(:, :)
+  FLOAT,                          intent(out)   :: force_u(:, :)
 
 
   type(symmetrizer_t) :: symmetrizer
@@ -168,6 +169,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl)
   force = M_ZERO
   force_loc = M_ZERO
   force_nl = M_ZERO
+  force_u = M_ZERO
 
   ! even if there is no fine mesh, we need to make another copy
   SAFE_ALLOCATE(psi(1:np_part, 1:st%d%dim))
@@ -313,7 +315,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl)
 
       !The Hubbard forces
       call X(lda_u_force)(hm%lda_u, gr%mesh, st, iq, gr%mesh%sb%dim, psib, grad_psib, &
-                            force, associated(hm%hm_base%phase))  
+                            force_u, associated(hm%hm_base%phase))  
 
       call batch_end(psib)
       do idir = 1, gr%mesh%sb%dim
@@ -371,7 +373,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl)
 
   do iatom = 1, geo%natoms
     do idir = 1, gr%mesh%sb%dim
-      force(idir, iatom) = force_nl(idir, iatom) + force_loc(idir, iatom)
+      force(idir, iatom) = force_nl(idir, iatom) + force_loc(idir, iatom) + force_u(idir, iatom)
     end do
   end do
 
