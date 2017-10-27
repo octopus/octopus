@@ -300,7 +300,7 @@ program floquet_observables
     call messages_write('Calculate norms of Floquet subspaces.')
     call messages_info()
 
-    call calc_floquet_norms(sys%gr%der%mesh,sys%gr%sb%kpoints,gs_st,dressed_st, hm%F%iter,hm%F%floquet_dim)
+    call calc_floquet_norms(sys%gr%der%mesh,sys%gr%sb%kpoints,dressed_st, hm%F%iter,hm%F%floquet_dim)
   end if
 
   if(iand(out_what, OPTION__FLOQUETOBSERVABLECALC__F_ARPES) /= 0) then
@@ -691,10 +691,10 @@ contains
   
   
   !--------------------------------------------
-  subroutine calc_floquet_norms(mesh,kpoints,st,dressed_st,iter,floquet_dim)
+  subroutine calc_floquet_norms(mesh,kpoints,st,iter,floquet_dim)
     type(mesh_t), intent(in) :: mesh
     type(kpoints_t), intent(in) :: kpoints
-    type(states_t), intent(in) :: st,dressed_st
+    type(states_t), intent(in) :: st
     integer :: iter , floquet_dim
 
     integer :: maxiter, ik, in, im, ist, idim, ierr, nik, dim, nst, iunit
@@ -702,29 +702,28 @@ contains
     FLOAT, allocatable :: norms(:,:,:)
     character(len=1024):: ik_name,iter_name, filename
 
-    SAFE_ALLOCATE(temp_state1(1:mesh%np,st%d%dim))
-    SAFE_ALLOCATE(temp_state2(1:mesh%np,floquet_dim*st%d%dim))
-    SAFE_ALLOCATE(norms(1:kpoints%reduced%npoints,1:dressed_st%nst,floquet_dim))
+    SAFE_ALLOCATE(temp_state1(1:mesh%np,hm%F%spindim))
+    SAFE_ALLOCATE(temp_state2(1:mesh%np,st%d%dim))
+    SAFE_ALLOCATE(norms(1:kpoints%reduced%npoints,1:st%nst,floquet_dim))
 
     norms = M_ZERO
    
 
     do ik=st%d%kpt%start,st%d%kpt%end
-      do in=1,floquet_dim
-        do ist=st%st_start,st%st_end
-          call states_get_state(dressed_st, mesh, (in-1)*st%nst+ist, ik,temp_state2)
+      do ist=st%st_start,st%st_end
+          call states_get_state(st, mesh, ist, ik,temp_state2)
 
           do im=1,floquet_dim
-            do idim=1,st%d%dim
-              temp_state1(1:mesh%np,idim) = temp_state2(1:mesh%np,(im-1)*st%d%dim+idim)
+            do idim=1,hm%F%spindim
+              temp_state1(1:mesh%np,idim) = temp_state2(1:mesh%np,(im-1)*hm%F%spindim+idim)
             end do
-            norms(ik,(in-1)*st%nst+ist,im) = zmf_nrm2(mesh,st%d%dim,temp_state1)
+            norms(ik,ist,im) = zmf_nrm2(mesh,hm%F%spindim,temp_state1)
           end do
-        enddo
-      enddo
-    enddo
+          
+      end do
+    end do
     
-    call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm, norms)
+    call comm_allreduce(st%st_kpt_mpi_grp%comm, norms)
 
     if(mpi_world%rank==0) then
       if (kpoints_have_zero_weight_path(kpoints)) then
@@ -733,9 +732,9 @@ contains
           filename = FLOQUET_DIR//'/norms_ik_'//trim(adjustl(ik_name))
           iunit = io_open(filename, action='write')
       
-          do ist=1,dressed_st%nst
+          do ist=1,st%nst
             do in=1,floquet_dim
-              write(iunit,'(i4,a1,e12.6,a1,i4,a1,e12.6)') ist, '', dressed_st%eigenval(ist,ik), ' ',in, ' ', norms(ik,ist,in)
+              write(iunit,'(i4,a1,e12.6,a1,i4,a1,e12.6)') ist, '', st%eigenval(ist,ik), ' ',in, ' ', norms(ik,ist,in)
             end do
             write(iunit,'(a1)') ' '
           end do
@@ -748,9 +747,9 @@ contains
           filename = FLOQUET_DIR//'/norms_ik_'//trim(adjustl(ik_name))
           iunit = io_open(filename, action='write')
       
-          do ist=1,dressed_st%nst
+          do ist=1,st%nst
             do in=1,floquet_dim
-              write(iunit,'(i4,a1,e12.6,a1,i4,a1,e12.6)') ist, '', dressed_st%eigenval(ist,ik), ' ',in, ' ', norms(ik,ist,in)
+              write(iunit,'(i4,a1,e12.6,a1,i4,a1,e12.6)') ist, '', st%eigenval(ist,ik), ' ',in, ' ', norms(ik,ist,in)
             end do
             write(iunit,'(a1)') ' '
           end do
