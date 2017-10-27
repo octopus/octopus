@@ -1224,8 +1224,8 @@ contains
     sigma(:,:,:) = M_z0
     print *,'forder start end' , hm%F%order(1), hm%F%order(2)
 
-    do idir = 1, dim 
-      do jdir = idir, dim 
+    do idir = 1, 1
+      do jdir = idir, 1 
 
         write(message(1),'(a,i5,a,i5,a)') 'Calculate sigma(',idir,',', jdir,'):'
         call messages_info(1) 
@@ -1233,39 +1233,36 @@ contains
    
         do ik=dressed_st%d%kpt%start, dressed_st%d%kpt%end
 
-          do ista=dressed_st%st_start, dressed_st%st_end
-            ! call states_get_state(dressed_st, sys%gr%mesh, ista, ik, u_ma)
+          do ista=1, dressed_st%nst
+            call states_get_state(dressed_st, sys%gr%mesh, ista, ik, u_a)
+            
             do istb=1, dressed_st%nst
                 
               DE_ab = dressed_st%eigenval(ista,ik) - dressed_st%eigenval(istb,ik)
               
-              call states_get_state(dressed_st, sys%gr%mesh, ista, ik, u_a)
               call states_get_state(dressed_st, sys%gr%mesh, istb, ik, u_b)
       
-
-               
-              dm_ab(:) = M_z0
-              dm_ba(:) = M_z0
                                
-              norm = (hm%F%order(2)-hm%F%order(1))
-              if (norm == 0) norm = M_ONE  
               ! get the dipole matrix elements dn_cb and dm_ac
               do im=hm%F%order(1),hm%F%order(2)
                 imm = im - hm%F%order(1) + 1
+
+                dm_ab(:) = M_z0
+                dm_ba(:) = M_z0
 
                 do in=hm%F%order(1),hm%F%order(2)
                   inn = in - hm%F%order(1) + 1
 
 
-                  !\sum_l <u_(m+n)a| r | u_nb> AND \sum_l <u_(m+n)b| r | u_nc>
-                  if (im+in .ge. hm%F%order(1) .and. im+in .le. hm%F%order(2)) then
-                    ! print *,'im+in' ,im+in-hm%F%order(1), im+in
+                  !\sum_n <u_(m+n)a| r | u_nb> AND \sum_n <u_(m+n)b| r | u_na>
+                  if (imm+inn >= 1 .and. imm+inn <= hm%F%floquet_dim) then
+!                     print *,'im+in' ,im+in-hm%F%order(1), im+in
                     do idim=1,spindim
-                      call zmf_multipoles(sys%gr%mesh, conjg(u_a(:,(im+in-hm%F%order(1))*spindim+idim)) &
+                      call zmf_multipoles(sys%gr%mesh, conjg(u_a(:,(imm+inn-1)*spindim+idim)) &
                                                            * u_b(:,(inn-1)*spindim+idim) , 1, tmp(:))
   
                       dm_ab(:) = dm_ab(:) + tmp(2:4)
-                      call zmf_multipoles(sys%gr%mesh, conjg(u_b(:,(im+in-hm%F%order(1))*spindim+idim)) &
+                      call zmf_multipoles(sys%gr%mesh, conjg(u_b(:,(imm+inn-1)*spindim+idim)) &
                                                            * u_a(:,(inn-1)*spindim+idim) , 1, tmp(:))
 
                       dm_ba(:) = dm_ba(:) + tmp(2:4)
@@ -1279,41 +1276,35 @@ contains
                 do ie = 1, obs%ne
                   EE= ie * obs%de
 
-                  ampl =  M_zI * &
-                           (conjg(dressed_st%coeff(ista,ik)) *dressed_st%coeff(ista,ik)-&
-                           conjg(dressed_st%coeff(istb,ik)) *dressed_st%coeff(istb,ik)) * &
-                           dm_ba(idir)*dm_ab(jdir)* &
-                          (1/(DE_ab - im * M_zI*hm%F%omega  + EE + M_zi*obs%gamma) + &
-                           1/(DE_ab - im * M_zI*hm%F%omega  - EE - M_zi*obs%gamma) ) 
+! <<<<<<< Updated upstream
+!                   ampl =  M_zI * &
+!                            (conjg(dressed_st%coeff(ista,ik)) *dressed_st%coeff(ista,ik)-&
+!                            conjg(dressed_st%coeff(istb,ik)) *dressed_st%coeff(istb,ik)) * &
+!                            dm_ba(idir)*dm_ab(jdir)* &
+!                           (1/(DE_ab - im * M_zI*hm%F%omega  + EE + M_zi*obs%gamma) + &
+!                            1/(DE_ab - im * M_zI*hm%F%omega  - EE - M_zi*obs%gamma) )
+! =======
+                  ampl = 1/M_z2 * (abs(dressed_st%coeff(ista,ik))**2- abs(dressed_st%coeff(istb,ik))**2) * dm_ba(idir)*dm_ab(jdir)* &
+                          (1/(DE_ab - im * hm%F%omega  + EE + M_zI*obs%gamma) + &
+                           1/(DE_ab - im * hm%F%omega  - EE - M_zI*obs%gamma) ) 
                           
                   if (idir == jdir) ampl = M_z2 * ampl
                   
-                  ! sum over a and b         
-                  sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + ampl
+                  ! sum over a, b, im and ik        
+                  sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + ampl * (dressed_st%d%kweights(ik))
                 end do ! ie loop
-
+                
               end do ! im loop
-
-                      
-              !print *, ik, ista, istb, DE
-
-
             end do ! istb loop   
           end do ! ista loop   
-
-          ! sum over kpoints
-          sigma(ie,idir,jdir) = sigma(ie,idir,jdir) * (dressed_st%d%kweights(ik))
            
         end do ! ik loop
-        if(dressed_st%parallel_in_states .or. dressed_st%d%kpt%parallel) then
-          call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm,  sigma(:,idir,jdir))
+        
+        if(dressed_st%d%kpt%parallel) then
+          call comm_allreduce(dressed_st%d%kpt%mpi_grp%comm,  sigma(:,idir,jdir))
         end if
-                
-        
-        
 
-
-      if(mpi_grp_is_root(mpi_world)) write(*, "(1x)")
+!       if(mpi_grp_is_root(mpi_world)) write(*, "(1x)")
         
       end do    !jdir      
     end do    !idir
@@ -1321,8 +1312,7 @@ contains
     
     if(mpi_grp_is_root(mpi_world)) then
       write(iter_name,'(i4)') hm%F%iter
-      filename = FLOQUET_DIR//'/floquet_conductivity_l_FBZ21'
-      !filename = FLOQUET_DIR//'/floquet_conductivity_l_FBZ21_'//trim(adjustl(iter_name))
+      filename = FLOQUET_DIR//'/conductivity_l_FBZ21'
       iunit = io_open(filename, action='write')
 
       write(iunit, '(a1,a15)', advance = 'no') '#', str_center("w", 15)
