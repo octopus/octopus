@@ -31,6 +31,7 @@ module em_resp_oct_m
   use kdotp_oct_m
   use kdotp_calc_oct_m
   use lalg_basic_oct_m
+  use lalg_adv_oct_m
   use linear_response_oct_m
   use loct_oct_m
   use mesh_oct_m
@@ -1043,6 +1044,9 @@ contains
       FLOAT :: cross(MAX_DIM, MAX_DIM), crossp(MAX_DIM, MAX_DIM)
       FLOAT :: cross_sum, crossp_sum, anisotropy
       integer :: idir, idir2
+      CMPLX, allocatable :: w(:)
+      integer :: info
+      character(len=20) :: header_string
       
       PUSH_SUB(em_resp_output.out_polarizability)
   
@@ -1093,6 +1097,43 @@ contains
         write(iunit,'(a)', advance = 'yes')
   
         call io_close(iunit)
+
+        if(gr%sb%dim == 3) then
+          iunit = io_open(trim(dirname)//'/cross_section_diag', action='write')
+
+          write(iunit, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)
+          do idir = 1, 3
+            write(iunit, '(a20)', advance = 'no') str_center("Real part", 20)
+            do idir2 = 1, 3
+              write(header_string,'(a7,i1,a1,i1,a1)') 'vector(', idir, ',', idir2, ')'
+              write(iunit, '(a20)', advance = 'no') str_center(trim(header_string), 20)
+            end do
+          end do
+          write(iunit, '(1x)')
+          write(iunit, '(a1,a20)', advance = 'no') '#', str_center('[' // trim(units_abbrev(units_out%energy)) // ']', 20) 
+          do idir = 1, 3
+            write(iunit, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
+            write(iunit, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
+            do idir2 = 1, 3
+              write(iunit, '(a20)', advance = 'no')  str_center('[ - ]', 20)
+            end do
+          end do
+          write(iunit, '(1x)')
+
+          SAFE_ALLOCATE(w(1:3))
+          write(iunit,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, em_vars%freq_factor(ifactor)*em_vars%omega(iomega))
+          call lalg_eigensolve_nonh(3, cross, w, err_code = info, sort_eigenvectors = .true.)
+          do idir = 3, 1, -1
+            write(iunit,'(2e20.8)', advance = 'no') real(w(idir))
+            do idir2 = 1, 3
+              write(iunit,'(e20.8)', advance = 'no') cross(idir2, idir)
+            end do
+          end do 
+          write(iunit, '(1x)')
+
+          call io_close(iunit)
+          SAFE_DEALLOCATE_A(w)
+        end if
       end if
       
       POP_SUB(em_resp_output.out_polarizability)
