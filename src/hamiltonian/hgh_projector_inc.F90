@@ -142,11 +142,16 @@ subroutine X(hgh_project_ket)(hgh_p, dim, reltype, uvpsi, ppsi)
   integer :: kk
   CMPLX, allocatable :: lp_psi(:, :, :)
   R_TYPE :: weight(3,dim)
-  CMPLX  :: zweight(3,3,dim), total_weight
+  CMPLX  :: zweight(3,3,dim), total_weight(dim)
 
   type(profile_t), save :: prof
 
+  integer :: block_size, sp, ep
+
   call profiling_in(prof, "HGH_PROJECT_KET")
+
+  !Cache blocking, in order to reuse the projector for each spinor components
+  block_size = hardware%X(block_size)
 
   n_s = hgh_p%n_s
 
@@ -159,7 +164,6 @@ subroutine X(hgh_project_ket)(hgh_p, dim, reltype, uvpsi, ppsi)
       do jj = 1, 3
         weight(ii,idim) = weight(ii,idim) + hgh_p%h(ii, jj)*uvpsi(idim, hgh_index(4, jj))
       end do
-!      ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + weight*hgh_p%p(1:n_s, ii)
     end do
   end do
   
@@ -181,22 +185,30 @@ subroutine X(hgh_project_ket)(hgh_p, dim, reltype, uvpsi, ppsi)
     end do
 
    !We now apply the projectors
-   do ii = 1, 3
-      total_weight = M_zI*M_HALF*( zweight(3, ii, 1) + zweight(1, ii, 2) - M_zI*zweight(2, ii, 2))
-      total_weight = total_weight + weight(ii,1)
-      ppsi(1:n_s, 1) = ppsi(1:n_s, 1) + total_weight * hgh_p%p(1:n_s, ii)
+ 
+   do sp = 1, n_s, block_size
+     ep = sp - 1 + min(block_size, n_s - sp + 1) 
+     do ii = 1, 3
+      total_weight(1) = M_zI*M_HALF*( zweight(3, ii, 1) + zweight(1, ii, 2) - M_zI*zweight(2, ii, 2))
+      total_weight(1) = total_weight(1) + weight(ii,1)
 
-      total_weight =  M_zI*M_HALF*(-zweight(3, ii, 2) + zweight(1, ii, 1) + M_zI*zweight(2, ii, 1))
-      total_weight = total_weight + weight(ii,2)
-      ppsi(1:n_s, 2) = ppsi(1:n_s, 2) + total_weight * hgh_p%p(1:n_s, ii)
+      ppsi(sp:ep, 1) = ppsi(sp:ep, 1) + total_weight(1) * hgh_p%p(sp:ep, ii)
+     
+      total_weight(2) =  M_zI*M_HALF*(-zweight(3, ii, 2) + zweight(1, ii, 1) + M_zI*zweight(2, ii, 1))
+      total_weight(2) = total_weight(2) + weight(ii,2)
+ 
+      ppsi(sp:ep, 2) = ppsi(sp:ep, 2) + total_weight(2) * hgh_p%p(sp:ep, ii)
+      end do
    end do
 
   else
 
     !We now apply the projectors
-    do idim = 1, dim
-      do ii = 1, 3
-        ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + weight(ii,dim)*hgh_p%p(1:n_s, ii)
+    do ii = 1, 3
+      do sp = 1, n_s, block_size
+        ep = sp - 1 + min(block_size, n_s - sp + 1)
+        ppsi(sp:ep, 1) = ppsi(sp:ep, 1) + weight(ii,1)*hgh_p%p(sp:ep, ii)
+        ppsi(sp:ep, 2) = ppsi(sp:ep, 2) + weight(ii,2)*hgh_p%p(sp:ep, ii)    
       end do
     end do
 
