@@ -141,8 +141,8 @@ subroutine X(hgh_project_ket)(hgh_p, dim, reltype, uvpsi, ppsi)
   integer :: n_s, ii, jj, idim
   integer :: kk
   CMPLX, allocatable :: lp_psi(:, :, :)
-  R_TYPE :: weight
-  CMPLX  :: zweight
+  R_TYPE :: weight(3,dim)
+  CMPLX  :: zweight(3,3,dim), total_weight
 
   type(profile_t), save :: prof
 
@@ -150,38 +150,56 @@ subroutine X(hgh_project_ket)(hgh_p, dim, reltype, uvpsi, ppsi)
 
   n_s = hgh_p%n_s
 
+  weight(1:3, 1:dim) = M_ZERO
+
+  !We first compute for each value of ii and idim the weight of the projector hgh_p%p(1:n_s, ii)
+  !Doing that we need to only apply once the each projector
   do idim = 1, dim
     do ii = 1, 3
-      weight = R_TOTYPE(M_ZERO)
       do jj = 1, 3
-        weight = weight + hgh_p%h(ii, jj)*uvpsi(idim, hgh_index(4, jj))
+        weight(ii,idim) = weight(ii,idim) + hgh_p%h(ii, jj)*uvpsi(idim, hgh_index(4, jj))
       end do
-      ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + weight*hgh_p%p(1:n_s, ii)
+!      ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + weight*hgh_p%p(1:n_s, ii)
     end do
   end do
   
   if (reltype == 1) then
 
-    SAFE_ALLOCATE(lp_psi(1:n_s, 1:3, 1:dim))
-    lp_psi = M_Z0
+    !We compute for each value of ii, kk and idim the weight of the projector hgh_p%p(1:n_s, ii)
+    !Doing that we need to only apply once the each projector 
+    zweight(1:3,1:3,1:dim) = M_z0
 
     do idim = 1, dim
       do kk = 1, 3
         do ii = 1, 3
-          zweight = M_z0
           do jj = 1, 3
-            zweight = zweight + hgh_p%k(ii, jj)*uvpsi(idim, hgh_index(kk, jj))
+            zweight(kk,ii,idim) = zweight(kk,ii,idim) &
+                             + hgh_p%k(ii, jj)*uvpsi(idim, hgh_index(kk, jj))
           end do
-          lp_psi(1:n_s, kk, idim) = lp_psi(1:n_s, kk, idim) + zweight*hgh_p%p(1:n_s, ii)
         end do
       end do
     end do
 
-    ppsi(1:n_s, 1) = ppsi(1:n_s, 1) + M_zI*M_HALF*( lp_psi(1:n_s, 3, 1) + lp_psi(1:n_s, 1, 2) - M_zI*lp_psi(1:n_s, 2, 2))
-    ppsi(1:n_s, 2) = ppsi(1:n_s, 2) + M_zI*M_HALF*(-lp_psi(1:n_s, 3, 2) + lp_psi(1:n_s, 1, 1) + M_zI*lp_psi(1:n_s, 2, 1))
-    
-    SAFE_DEALLOCATE_A(lp_psi)
-   
+   !We now apply the projectors
+   do ii = 1, 3
+      total_weight = M_zI*M_HALF*( zweight(3, ii, 1) + zweight(1, ii, 2) - M_zI*zweight(2, ii, 2))
+      total_weight = total_weight + weight(ii,1)
+      ppsi(1:n_s, 1) = ppsi(1:n_s, 1) + total_weight * hgh_p%p(1:n_s, ii)
+
+      total_weight =  M_zI*M_HALF*(-zweight(3, ii, 2) + zweight(1, ii, 1) + M_zI*zweight(2, ii, 1))
+      total_weight = total_weight + weight(ii,2)
+      ppsi(1:n_s, 2) = ppsi(1:n_s, 2) + total_weight * hgh_p%p(1:n_s, ii)
+   end do
+
+  else
+
+    !We now apply the projectors
+    do idim = 1, dim
+      do ii = 1, 3
+        ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + weight(ii,dim)*hgh_p%p(1:n_s, ii)
+      end do
+    end do
+
   end if
 
   call profiling_out(prof)  
