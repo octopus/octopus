@@ -322,6 +322,17 @@ contains
         call messages_info(1)
       endif
 
+      !%Variable FloquetFBZStartDownfoldingScfSteps
+      !%Type integer
+      !%Default 200
+      !%Section Floquet
+      !%Description
+      !% Expert option. 
+      !%
+      !%End    
+      call parse_variable('FloquetFBZStartDownfoldingScfSteps', 200, this%cf_nsteps)
+      call messages_print_var_value(stdout,'FloquetFBZStartDownfoldingScfSteps', this%cf_nsteps)
+
 
       !%Variable TDFloquetModeSampleOneCycle
       !%Type logical
@@ -1031,10 +1042,10 @@ contains
          hm%F%FBZ_solver = .false.
          call floquet_FBZ_filter(sys, hm, dressed_st, FBZ_st)
          if (simul_box_is_periodic(sys%gr%sb) .and. kpoints_have_zero_weight_path(sys%gr%sb%kpoints)) then
-           filename = 'FBZ_bands'
+           filename = 'FBZ_filtered_bands'
            call states_write_bandstructure(FLOQUET_DIR, FBZ_st%nst, FBZ_st, sys%gr%sb, filename, vec = FBZ_st%occ)
          else
-           filename = trim(FLOQUET_DIR)//'FBZ_eigenvalues'
+           filename = trim(FLOQUET_DIR)//'FBZ_filtered_eigenvalues'
            call states_write_eigenvalues(filename, FBZ_st%nst, FBZ_st, sys%gr%sb)
          end if
          call states_end(FBZ_st)

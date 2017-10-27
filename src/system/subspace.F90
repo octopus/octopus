@@ -164,7 +164,8 @@ contains
     FLOAT, allocatable :: evalues_full(:), mix(:), evecs_norms(:,:), evalues0(:), evals_diff(:,:), evecs_reshape(:,:,:)
     integer            :: block0, nst0, maxiter, nmix, ist,jst, im,in, jj,ii, Fdim, it, pos, idim
     logical            :: start_
-
+    FLOAT, allocatable :: overlap(:)    
+    
     PUSH_SUB(floquet_FBZ_subspace_diag)
 
     ASSERT(hm%F%order(1) == -hm%F%order(2))
@@ -184,6 +185,7 @@ contains
     SAFE_ALLOCATE(Heff(1:st%nst, 1:st%nst))
     SAFE_ALLOCATE(evals_diff(1:st%nst*Fdim, 1:st%nst))
     SAFE_ALLOCATE(evecs_reshape(1:st%nst,1:hm%F%spindim,1:Fdim))
+    SAFE_ALLOCATE(overlap(1:st%nst*Fdim))
     evecs = M_ZERO
 
     one = M_ZERO
@@ -216,13 +218,25 @@ contains
 
     ! if this is the initial step filter the zero harmonics by downfolding residual
     if (start_) then
-      do ist=1,st%nst*Fdim
-        ! for comparison use only dim=1 in downfolding
-        call continued_fraction(st%nst, H0, P, Pd, evalues_full(ist), hm%F%omega, 1,Heff)
-        call lalg_eigensolve(st%nst, Heff, evalues0)
-        do jst=1,st%nst
-          evals_diff(ist,jst) = abs(evalues_full(ist) - evalues0(jst))
+      do ist=1,st%nst
+        ! SCF cycle that should find a state approximating the zero sector of the zero harmonic (full state)
+        do ii=1,hm%F%cf_nsteps
+          call continued_fraction(st%nst, H0, P, Pd,st%eigenval(ist,ik), hm%F%omega, Fdim/2,Heff)
+          call lalg_eigensolve(st%nst, Heff, evalues0)
+          do jst=1,st%nst
+            evals_diff(ist,jst) = abs(st%eigenval(ist,ik) - evalues0(jst))
+          end do
+          pos = minloc(evals_diff(ist,:),dim=1)
+          st%eigenval(ist,ik) = evalues0(pos)   
+        end do ! end cycle 
+        ! find state that has a zero sector that most resembles the downfolding result
+        do jst=1,st%nst*Fdim
+          overlap(jst)= abs(dot_product(HF((hm%F%order(2))*st%nst+1:(hm%F%order(2)+1)*st%nst,jst),Heff(1:st%nst,ist))) 
         end do
+        pos = maxloc(overlap,dim=1)
+        evecs(1:st%nst*Fdim,ist) = HF(1:st%nst*Fdim,pos)
+        st%eigenval(ist,ik) = evalues_full(pos)
+
       end do
     else
       ! for all regular iterations we filter the FBZ by comparison with input
@@ -231,14 +245,14 @@ contains
           evals_diff(ist,jst) = abs(evalues_full(ist) - st%eigenval(jst,ik))
         end do
       end do
-    end if
 
-    ! keep states with those eigenvalues that have the smallest difference to input (or downfolded)
+    ! keep states with those eigenvalues that have the smallest difference to input
     do jst=1,st%nst
       pos = minloc(evals_diff(:,jst),dim=1)
       st%eigenval(jst,ik) = evalues_full(pos)
       evecs(1:st%nst*Fdim,jst) = HF(1:st%nst*Fdim,pos) 
     end do
+  end if
 
 
     ! rotate states by hand
@@ -282,6 +296,7 @@ contains
     SAFE_DEALLOCATE_A(evals_diff)
     SAFE_DEALLOCATE_A(HF)
     SAFE_DEALLOCATE_A(one)
+    SAFE_DEALLOCATE_A(overlap)
 
     POP_SUB(floquet_FBZ_subspace_diag)
 
