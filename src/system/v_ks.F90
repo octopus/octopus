@@ -905,7 +905,7 @@ contains
       FLOAT, allocatable :: vvdw(:)
       FLOAT, dimension(:,:), pointer :: density
       FLOAT, allocatable :: coords(:, :)
-      FLOAT :: vdw_stress(1:3, 1:3)
+      FLOAT :: vdw_stress(1:3, 1:3), latvec(1:3, 1:3)
       integer, allocatable :: atnum(:)
       
       PUSH_SUB(v_ks_calc_start.v_a_xc)
@@ -1000,7 +1000,8 @@ contains
       end if
 
       if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
-
+        ASSERT(geo%space%dim == 3)
+        
         SAFE_ALLOCATE(vvdw(1:ks%gr%fine%mesh%np))
         SAFE_ALLOCATE(ks%calc%vdw_forces(1:geo%space%dim, 1:geo%natoms))
 
@@ -1021,7 +1022,8 @@ contains
           end do
           
           if(simul_box_is_periodic(ks%gr%sb)) then
-            call dftd3_pbc_dispersion(ks%vdw_d3, coords, atnum, ks%gr%sb%rlattice, ks%calc%energy%vdw, ks%calc%vdw_forces, vdw_stress)
+            latvec(1:3, 1:3) = ks%gr%sb%rlattice(1:3, 1:3) !make a copy as rlattice goes up to MAX_DIM
+            call dftd3_pbc_dispersion(ks%vdw_d3, coords, atnum, latvec, ks%calc%energy%vdw, ks%calc%vdw_forces, vdw_stress)
           else
             call dftd3_dispersion(ks%vdw_d3, coords, atnum, ks%calc%energy%vdw, ks%calc%vdw_forces)
           end if
