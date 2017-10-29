@@ -28,7 +28,6 @@ module atomic_orbital_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use species_oct_m
-  use species_pot_oct_m
   use submesh_oct_m
  
   implicit none
@@ -36,6 +35,8 @@ module atomic_orbital_oct_m
   private
 
   public ::                             &
+           datomic_orbital_get_submesh, &
+           zatomic_orbital_get_submesh, &
            dget_atomic_orbital,         &
            zget_atomic_orbital
 

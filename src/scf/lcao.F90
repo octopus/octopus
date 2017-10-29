@@ -20,6 +20,7 @@
 
 module lcao_oct_m
   use atom_oct_m
+  use atomic_orbital_oct_m
   use batch_oct_m
   use blacs_proc_grid_oct_m
   use geometry_oct_m

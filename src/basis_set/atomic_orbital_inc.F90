@@ -110,11 +110,11 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
   #ifdef R_TCOMPLEX
     !In this case we want to get a real orbital and to store it in complex array
     SAFE_ALLOCATE(tmp(1:sm%np))
-    call dspecies_get_orbital_submesh(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x, tmp)
+    call datomic_orbital_get_submesh(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x, tmp)
     os%X(orb)(1:sm%np,1,orbind) = tmp(1:sm%np)
     SAFE_DEALLOCATE_A(tmp)
   #else
-      call X(species_get_orbital_submesh)(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x,&
+      call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x,&
                                          os%X(orb)(1:sm%np,1,orbind))
   #endif
   else
@@ -124,7 +124,7 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
 
     mm = int(mu-M_HALF)
     if(abs(mm) <= ll) then
-      call X(species_get_orbital_submesh)(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x,&
+      call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x,&
                                          os%X(orb)(1:sm%np,1,orbind))
       coeff = sqrt((kappa-mu+M_HALF)/(M_TWO*kappa+M_ONE)) 
       do is=1,sm%np
@@ -136,7 +136,7 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
 
     mm = int(mu+M_HALF)
     if(abs(mm) <= ll) then
-      call X(species_get_orbital_submesh)(spec, sm, ii, ll, mm, 2, geo%atom(iatom)%x,&
+      call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm, 2, geo%atom(iatom)%x,&
                                         os%X(orb)(1:sm%np,2,orbind))
       coeff = (-kappa/abs(kappa))*sqrt((kappa+mu+M_HALF)/(M_TWO*kappa+M_ONE))
       do is=1,sm%np
@@ -151,4 +151,100 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
   POP_SUB(X(get_atomic_orbital))
 
 end subroutine X(get_atomic_orbital)
+
+
+
+  ! ---------------------------------------------------------
+  subroutine X(atomic_orbital_get_submesh)(species, submesh, ii, ll, mm, ispin, pos, phi, derivative)
+    type(species_t), target, intent(in)  :: species       !< The species.
+    type(submesh_t),         intent(in)  :: submesh    !< The submesh descriptor where the orbital will be calculated.
+    integer,                 intent(in)  :: ii
+    integer,                 intent(in)  :: ll
+    integer,                 intent(in)  :: mm
+    integer,                 intent(in)  :: ispin      !< The spin index.
+    FLOAT,                   intent(in)  :: pos(:)     !< The position of the atom.
+    R_TYPE,                  intent(out) :: phi(:)     !< The function defined in the mesh where the orbitals is returned.
+    logical,       optional, intent(in)  :: derivative !< If present and .true. returns the derivative of the orbital.
+
+    integer :: ip, nn(3), idir
+    FLOAT :: sqrtw, ww
+    R_TYPE, allocatable :: ylm(:)
+    type(ps_t), pointer :: ps
+    type(spline_t) :: dur
+    logical :: derivative_
+    
+    if(submesh%np == 0) return
+
+    PUSH_SUB(X(atomic_orbital_get_submesh))
+
+    derivative_ = optional_default(derivative, .false.)
+
+    ASSERT(ubound(phi, dim = 1) >= submesh%np)
+
+    if(species_represents_real_atom(species) .and. submesh%mesh%sb%dim == 3) then
+      ps => species_ps(species)
+      
+      forall(ip = 1:submesh%np) phi(ip) = submesh%x(ip, 0)
+
+      if(species_is_ps(species)) then
+        if(.not. derivative_) then
+          call spline_eval_vec(ps%ur(ii, ispin), submesh%np, phi)
+        else
+          call spline_init(dur)
+          call spline_der(ps%ur(ii, ispin), dur)
+          call spline_eval_vec(dur, submesh%np, phi)
+          call spline_end(dur)
+        end if
+      else
+        ! FIXME: cache result somewhat. e.g. re-use result for each m. and use recursion relation.
+        do ip = 1, submesh%np
+          ww = species_zval(species)*submesh%x(ip, 0)/ii
+          phi(ip) = sqrt( (2*species_zval(species)/ii)**3 * factorial(ii - ll - 1) / (2*ii*factorial(ii+ll)) ) * &
+            exp(-ww) * (2 * ww)**ll * loct_sf_laguerre_n(ii-ll-1, real(2*ll + 1, REAL_PRECISION), 2*ww)
+        end do
+      end if
+
+      SAFE_ALLOCATE(ylm(1:submesh%np))
+
+#ifdef R_TCOMPLEX
+      ! complex spherical harmonics. FIXME: vectorize
+      do ip = 1, submesh%np
+        call ylmr(submesh%x(ip, 1), submesh%x(ip, 2), submesh%x(ip, 3), ll, mm, ylm(ip))
+      end do
+#else
+      ! real spherical harmonics
+      call loct_ylm(submesh%np, submesh%x(1, 1), submesh%x(1, 2), submesh%x(1, 3), ll, mm, ylm(1))
+#endif      
+
+      do ip = 1, submesh%np
+        phi(ip) = phi(ip)*ylm(ip)
+      end do
+
+      SAFE_DEALLOCATE_A(ylm)
+
+      nullify(ps)
+
+    else
+      
+      ASSERT(.not. derivative_)
+      ! Question: why not implemented derivatives here?
+      ! Answer: because they are linearly dependent with lower-order Hermite polynomials.
+
+      ww = species_omega(species)
+      sqrtw = sqrt(ww)
+
+      ! FIXME: this is a pretty dubious way to handle l and m quantum numbers. Why not use ylm?
+      nn = (/ii, ll, mm/)
+
+      do ip = 1, submesh%np
+        phi(ip) = exp(-ww*submesh%x(ip, 0)**2/M_TWO)
+        do idir = 1, submesh%mesh%sb%dim
+          phi(ip) = phi(ip) * hermite(nn(idir) - 1, submesh%x(ip, idir)*sqrtw)
+        end do
+      end do
+      
+    end if
+
+    POP_SUB(X(atomic_orbital_get_submesh))
+  end subroutine X(atomic_orbital_get_submesh)
 
