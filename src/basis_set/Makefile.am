@@ -20,15 +20,20 @@
 
 noinst_LIBRARIES = libbasis_set.a
 
-libbasis_set_a_SOURCES =                 \
-                    orbital_set.F90
+# Fortran sources - keep in alphabetical order
+libbasis_set_a_SOURCES =             \
+		atomic_orbital.F90   \
+		orbital_set.F90
 
-noinst_HEADERS =                         \
-                    orbital_set_inc.F90
+# Include files - keep this in alphabetical order
+noinst_HEADERS =                        \
+		atomic_orbital_inc.F90  \
+		orbital_set_inc.F90
 
 include $(srcdir)/../common-rules.make
 
 depend:
 	@makedepf90 $(libbasis_set_a_SOURCES)
 
+atomic_orbital.o : atomic_orbital.F90 atomic_orbital_inc.F90 orbital_set.o
 orbital_set.o : orbital_set.F90 orbital_set_inc.F90

@@ -20,6 +20,7 @@
 #include "global.h"
 
 module lda_u_oct_m
+  use atomic_orbital_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use comm_oct_m
