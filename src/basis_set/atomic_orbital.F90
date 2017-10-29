@@ -22,12 +22,16 @@
 module atomic_orbital_oct_m
   use geometry_oct_m
   use global_oct_m
+  use loct_math_oct_m
+  use math_oct_m
   use mesh_oct_m
   use messages_oct_m
   use orbital_set_oct_m
   use profiling_oct_m
+  use ps_oct_m
   use simul_box_oct_m
   use species_oct_m
+  use splines_oct_m
   use submesh_oct_m
  
   implicit none
