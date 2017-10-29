@@ -348,7 +348,7 @@ contains
 
   if(this%useACBN0) then
     call messages_info(1)
-    if(st%d%dim == 1 .or. this%jdeporbitals == .false. ) then 
+    if(st%d%dim == 1 .or. .not. this%jdeporbitals) then 
       write(message(1),'(a)')    'Computing the Coulomb integrals of the localized basis.'
       if (states_are_real(st)) then
         call dcompute_coulomb_integrals(this, gr%mesh, gr%der, st)

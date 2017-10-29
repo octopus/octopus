@@ -295,7 +295,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
 
   if(this%useACBN0 .and. .not.this%freeze_u) then
     if(this%nspins > 1 ) then
-      if(this%nspins == this%spin_channels .or. this%jdeporbitals == .false.) then
+      if(this%nspins == this%spin_channels .or. .not. this%jdeporbitals) then
         call X(compute_ACBNO_U)(this)
       else
         call compute_ACBNO_U_noncollinear(this)
@@ -1109,7 +1109,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
       if( hubbardl .eq. -1 ) cycle
       !In case of SOC, the orbitals are splitted
       !We multiply by two, except if the user wants to only have one value of j
-      if(st%d%dim > 1 .and. this%jdeporbitals == .true. &
+      if(st%d%dim > 1 .and. this%jdeporbitals &
              .and. species_hubbard_j(geo%atom(ia)%species) == M_ZERO) then
         norb = norb + 2
       else
@@ -1128,7 +1128,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
       if(this%skipSOrbitals .and. hasSorbitals ) work = work-1
       !In case of SOC, the orbitals are splitted
       !We multiply by two, except if the user wants to only have one value of j
-      if(st%d%dim > 1 .and. this%jdeporbitals == .true. &
+      if(st%d%dim > 1 .and. this%jdeporbitals &
              .and. species_hubbard_j(geo%atom(ia)%species) == M_ZERO) &
         work = 2*work
       norb = norb + work
@@ -1154,7 +1154,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
   do ia = 1, geo%natoms
     do idim = 1, st%d%dim
       hubbardj = species_hubbard_j(geo%atom(ia)%species)
-      if( idim > 1 .and. (hubbardj /= M_ZERO .or. this%jdeporbitals == .false.) ) cycle
+      if( idim > 1 .and. (hubbardj /= M_ZERO .or. .not. this%jdeporbitals ) ) cycle
       if(.not. this%useAllOrbitals) then
         hubbardl = species_hubbard_l(geo%atom(ia)%species)
         if( hubbardl .eq. -1 ) cycle
