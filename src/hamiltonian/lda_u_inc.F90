@@ -848,9 +848,9 @@ end subroutine X(compute_coulomb_integrals)
    PUSH_SUB(lda_u_commute_r)
 
    if(simul_box_is_periodic(mesh%sb)) then
-     SAFE_ALLOCATE(epsi(1:mesh%np,1))
+     SAFE_ALLOCATE(epsi(1:mesh%np,1:d%dim))
    else
-     SAFE_ALLOCATE(epsi(1:this%max_np,1))
+     SAFE_ALLOCATE(epsi(1:this%max_np,1:d%dim))
    end if
    SAFE_ALLOCATE(dot(1:d%dim,1:this%maxnorbs))
    SAFE_ALLOCATE(reduced(1:d%dim,1:this%maxnorbs))
