@@ -50,6 +50,7 @@ module subspace_oct_m
   use preconditioners_oct_m
   use profiling_oct_m
   use scalapack_oct_m
+  use sort_oct_m
   use states_oct_m
   use states_calc_oct_m
   use states_parallel_oct_m
@@ -160,12 +161,13 @@ contains
     logical, optional,      intent(in)    :: start
 
     CMPLX, allocatable :: evecs(:, :), rdiff(:), H0(:,:), one(:,:), HF(:,:), P(:,:), Pd(:,:), Heff(:,:)
-    CMPLX, allocatable :: rot_state(:,:,:), state(:,:)
-    FLOAT, allocatable :: evalues_full(:), mix(:), evecs_norms(:,:), evalues0(:), evals_diff(:,:), evecs_reshape(:,:,:)
-    integer            :: block0, nst0, maxiter, nmix, ist,jst, im,in, jj,ii, Fdim, it, pos, idim
+    CMPLX, allocatable :: rot_state(:,:,:), state(:,:),  evecs_temp(:,:)
+    FLOAT, allocatable :: evalues_full(:), mix(:),norms(:), evalues0(:), evals_diff(:,:), evecs_reshape(:,:)
+    integer            :: block0, nst0, maxiter, nmix, ist,jst, im,in, jj,ii, Fdim, it, pos, idim, imm, inn
+    integer, allocatable :: idx(:)
     logical            :: start_
     FLOAT, allocatable :: overlap(:)    
-    
+FLOAT :: temp    
     PUSH_SUB(floquet_FBZ_subspace_diag)
 
     ASSERT(hm%F%order(1) == -hm%F%order(2))
@@ -180,11 +182,14 @@ contains
     SAFE_ALLOCATE(HF(1:st%nst*Fdim, 1:st%nst*Fdim)) ! the full Floquet matrix
     SAFE_ALLOCATE(one(1:st%nst, 1:st%nst)) 
     SAFE_ALLOCATE(evecs(1:st%nst*Fdim, 1:st%nst))
+SAFE_ALLOCATE(evecs_temp(1:st%nst*Fdim, 1:st%nst))
     SAFE_ALLOCATE(evalues_full(1:st%nst*Fdim))
     SAFE_ALLOCATE(evalues0(1:st%nst))
     SAFE_ALLOCATE(Heff(1:st%nst, 1:st%nst))
     SAFE_ALLOCATE(evals_diff(1:st%nst*Fdim, 1:st%nst))
-    SAFE_ALLOCATE(evecs_reshape(1:st%nst,1:hm%F%spindim,1:Fdim))
+    SAFE_ALLOCATE(evecs_reshape(1:st%nst,1:Fdim))
+    SAFE_ALLOCATE(norms(1:st%nst*Fdim))
+    SAFE_ALLOCATE(idx(1:st%nst*Fdim))
     SAFE_ALLOCATE(overlap(1:st%nst*Fdim))
     evecs = M_ZERO
 
@@ -192,6 +197,8 @@ contains
     do ist=1,st%nst
       one(ist,ist) = M_ONE
     end do
+
+    call sort(st%eigenval(1:st%nst,ik), idx)
 
     hm%F%floquet_apply = .false.
     hm%d%dim = hm%F%spindim !st%d%dim
@@ -234,25 +241,51 @@ contains
           overlap(jst)= abs(dot_product(HF((hm%F%order(2))*st%nst+1:(hm%F%order(2)+1)*st%nst,jst),Heff(1:st%nst,ist))) 
         end do
         pos = maxloc(overlap,dim=1)
-        evecs(1:st%nst*Fdim,ist) = HF(1:st%nst*Fdim,pos)
+        evecs_temp(1:st%nst*Fdim,ist) = HF(1:st%nst*Fdim,pos)
         st%eigenval(ist,ik) = evalues_full(pos)
 
       end do
+
+      call sort(st%eigenval(1:st%nst,ik), idx)
+      
+      do jst=1,st%nst
+        evecs(1:st%nst*Fdim,jst) =  evecs_temp(1:st%nst*Fdim,idx(jst))
+      end do
     else
-      ! for all regular iterations we filter the FBZ by comparison with input
-      do ist=1,st%nst*Fdim
-        do jst=1,st%nst
-          evals_diff(ist,jst) = abs(evalues_full(ist) - st%eigenval(jst,ik))
-        end do
+!      ! for all regular iterations we filter the FBZ by comparison with input
+!      do ist=1,st%nst*Fdim
+!        do jst=1,st%nst
+!          evals_diff(ist,jst) = abs(evalues_full(ist) - st%eigenval(jst,ik))
+!        end do
+!      end do
+!
+!      ! keep states with those eigenvalues that have the smallest difference to input
+!      do jst=1,st%nst
+!        pos = minloc(evals_diff(:,jst),dim=1)
+!        st%eigenval(jst,ik) = evalues_full(pos)
+!        evecs(1:st%nst*Fdim,jst) = HF(1:st%nst*Fdim,pos) 
+!      end do
+     norms = M_ONE
+     do ist=1,st%nst*Fdim 
+       evecs_reshape = reshape(HF(:,ist),(/st%nst,Fdim/))
+       norms(ist) = sqrt(dot_product(evecs_reshape(1:st%nst,Fdim/2+1),evecs_reshape(1:st%nst,Fdim/2+1)))
+     end do
+
+     call sort(norms, idx)
+
+     do jst=1,st%nst 
+        pos = idx(st%nst*Fdim+1-jst)
+        st%eigenval(jst,ik) = evalues_full(pos) 
+        evecs_temp(1:st%nst*Fdim,jst) = HF(1:st%nst*Fdim,pos)
+     end do
+
+     call sort(st%eigenval(1:st%nst,ik), idx)
+
+      do jst=1,st%nst
+        evecs(1:st%nst*Fdim,jst) =  evecs_temp(1:st%nst*Fdim,idx(jst))
       end do
 
-    ! keep states with those eigenvalues that have the smallest difference to input
-    do jst=1,st%nst
-      pos = minloc(evals_diff(:,jst),dim=1)
-      st%eigenval(jst,ik) = evalues_full(pos)
-      evecs(1:st%nst*Fdim,jst) = HF(1:st%nst*Fdim,pos) 
-    end do
-  end if
+   end if
 
 
     ! rotate states by hand
@@ -260,16 +293,18 @@ contains
     SAFE_ALLOCATE(rot_state(1:st%nst,1:der%mesh%np,1:st%d%dim))
     rot_state = M_z0
     do ist=1,st%nst
-       evecs_reshape = reshape(evecs(:,ist),(/st%nst,hm%F%spindim,Fdim/))
+       evecs_reshape = reshape(evecs(:,ist),(/st%nst,Fdim/))
        do jst=1,st%nst
           call states_get_state(st,der%mesh, jst, ik, state)
-          do im=1,Fdim
-            do in=1,Fdim
+          do im=hm%F%order(1),hm%F%order(2)
+             imm = im - hm%F%order(1) + 1
+            do in=hm%F%order(1),hm%F%order(2)
+               inn = in - hm%F%order(1) + 1
 !               if(im-in > Fdim .or. im-in < 1) cycle
-              if(im+in > Fdim ) cycle
+              if(im-in-hm%F%order(1) > Fdim .or. im-in-hm%F%order(1) < 0) cycle
               do idim=1,hm%F%spindim
-                rot_state(ist,1:der%mesh%np,(im-1)*hm%F%spindim+idim) =  rot_state(ist,1:der%mesh%np,(im-1)*hm%F%spindim+idim)+ & 
-                                                                   evecs_reshape(jst,idim,im)*state(1:der%mesh%np,(im+in-1)*hm%F%spindim+idim)
+                rot_state(ist,1:der%mesh%np,(imm-1)*hm%F%spindim+idim) =  rot_state(ist,1:der%mesh%np,(imm-1)*hm%F%spindim+idim)+ & 
+                                                                   evecs_reshape(jst,imm)*state(1:der%mesh%np,(im-in-hm%F%order(1)-1)*hm%F%spindim+idim)
               end do
             end do
           end do
@@ -278,7 +313,10 @@ contains
     end do
   
     do ist=1,st%nst
-      call states_set_state(st,der%mesh, ist, ik, rot_state(ist,1:der%mesh%np,1:st%d%dim))
+       state(1:der%mesh%np,1:st%d%dim) = rot_state(ist,1:der%mesh%np,1:st%d%dim)
+       state(1:der%mesh%np,1:st%d%dim) = state(1:der%mesh%np,1:st%d%dim)/zmf_nrm2(der%mesh,st%d%dim,state(1:der%mesh%np,1:st%d%dim))
+!       print *,ist, zmf_nrm2(der%mesh,st%d%dim,state(1:der%mesh%np,1:st%d%dim))
+      call states_set_state(st,der%mesh, ist, ik, state(1:der%mesh%np,1:st%d%dim))
     end do
 
     SAFE_DEALLOCATE_A(state)
@@ -297,6 +335,9 @@ contains
     SAFE_DEALLOCATE_A(HF)
     SAFE_DEALLOCATE_A(one)
     SAFE_DEALLOCATE_A(overlap)
+    SAFE_DEALLOCATE_A(norms)
+    SAFE_DEALLOCATE_A(idx)
+    SAFE_DEALLOCATE_A(evecs_temp)
 
     POP_SUB(floquet_FBZ_subspace_diag)
 
