@@ -836,6 +836,7 @@ end subroutine X(compute_coulomb_integrals)
    logical,            intent(in) :: has_phase !True if the wavefunction has an associated phase 
 
    integer :: ios, idim, idir, im, imp, is, ispin
+   integer :: idim_orb
    R_TYPE, allocatable :: dot(:,:)
    R_TYPE, allocatable :: epsi(:,:)
    type(orbital_set_t), pointer  :: os 
@@ -845,8 +846,6 @@ end subroutine X(compute_coulomb_integrals)
    call profiling_in(prof, "DFTU_COMMUTE_R")
 
    PUSH_SUB(lda_u_commute_r)
-
-   if(d%ispin == SPINORS) call messages_not_implemented("DFT+U potential commutator with spinors")
 
    if(simul_box_is_periodic(mesh%sb)) then
      SAFE_ALLOCATE(epsi(1:mesh%np,1))
@@ -872,7 +871,14 @@ end subroutine X(compute_coulomb_integrals)
       do im = 1, os%norbs
         ! sum_mp Vmmp <phi mp | psi >
         do imp = 1, os%norbs
-          reduced(1,im) = reduced(1,im) + this%X(V)(im,imp,ispin,ios)*dot(1,imp)
+          if(d%ispin /= SPINORS) then
+            reduced(1,im) = reduced(1,im) + this%X(V)(im,imp,ispin,ios)*dot(1,imp)
+          else
+            reduced(1,im) = reduced(1,im) + this%X(V)(im,imp,1,ios)*dot(1,imp)
+            reduced(1,im) = reduced(1,im) + this%X(V)(im,imp,3,ios)*dot(2,imp)
+            reduced(2,im) = reduced(2,im) + this%X(V)(im,imp,4,ios)*dot(1,imp)
+            reduced(2,im) = reduced(2,im) + this%X(V)(im,imp,2,ios)*dot(2,imp)
+          end if
         end do
       end do
 
@@ -885,40 +891,43 @@ end subroutine X(compute_coulomb_integrals)
       !  end if
 
       do idir = 1, mesh%sb%dim
-        do im = 1, os%norbs
-        !In case of phase, we have to apply the conjugate of the phase here
-        if(has_phase) then
+        do idim = 1, d%dim
+          idim_orb = min(idim,os%ndim)
+          do im = 1, os%norbs
+          !In case of phase, we have to apply the conjugate of the phase here
+          if(has_phase) then
 #ifdef R_TCOMPLEX
-          if(simul_box_is_periodic(mesh%sb)) then
-            epsi(:,1) = R_TOTYPE(M_ZERO)
-            !$omp parallel do
-            do is = 1, os%sphere%np
-              epsi(os%sphere%map(is),1) = epsi(os%sphere%map(is),1) &
-                   + os%sphere%x(is,idir)*os%zorb(is,1,im)*os%phase(is,ik)
-            end do
-            !$omp end parallel do
-            call lalg_axpy(mesh%np, reduced(1,im), epsi(1:mesh%np,1), &
-                                  gpsi(1:mesh%np,idir,1))
-          else
-            !$omp parallel do
-            do is = 1, os%sphere%np
-              epsi(is,1) = os%sphere%x(is,idir)*os%eorb_submesh(is,1,im,ik)
-            end do
-            !$omp end parallel do
-            call submesh_add_to_mesh(os%sphere, epsi(1:os%sphere%np,1), &
-                                  gpsi(1:mesh%np,idir,1), reduced(1,im))
-          end if
+            if(simul_box_is_periodic(mesh%sb)) then
+              epsi(:,idim) = R_TOTYPE(M_ZERO)
+              !$omp parallel do
+              do is = 1, os%sphere%np
+                  epsi(os%sphere%map(is),idim) = epsi(os%sphere%map(is),idim) &
+                     + os%sphere%x(is,idir)*os%zorb(is,idim_orb,im)*os%phase(is,ik)
+              end do
+              !$omp end parallel do
+              call lalg_axpy(mesh%np, reduced(idim,im), epsi(1:mesh%np,idim), &
+                                  gpsi(1:mesh%np,idir,idim))
+            else
+              !$omp parallel do
+              do is = 1, os%sphere%np
+                epsi(is,idim) = os%sphere%x(is,idir)*os%eorb_submesh(is,idim_orb,im,ik)
+              end do
+              !$omp end parallel do
+              call submesh_add_to_mesh(os%sphere, epsi(1:os%sphere%np,idim), &
+                                  gpsi(1:mesh%np,idir,idim), reduced(idim,im))
+            end if
 #endif
-          else
-            !$omp parallel do
-            do is = 1, os%sphere%np
-              epsi(is,1) = os%sphere%x(is,idir)*os%X(orb)(is,1,im)
-            end do
-            !$omp end parallel do
-            call submesh_add_to_mesh(os%sphere, epsi(1:os%sphere%np,1), &
-                                  gpsi(1:mesh%np,idir,1), reduced(1,im))
-          end if
-        end do !im
+            else
+              !$omp parallel do
+              do is = 1, os%sphere%np
+                epsi(is,idim) = os%sphere%x(is,idir)*os%X(orb)(is,idim_orb,im)
+              end do
+              !$omp end parallel do
+              call submesh_add_to_mesh(os%sphere, epsi(1:os%sphere%np,idim), &
+                                    gpsi(1:mesh%np,idir,idim), reduced(idim,im))
+            end if
+          end do !im
+        end do !idim
       end do !idir
 
      do idir = 1, mesh%sb%dim
@@ -970,11 +979,20 @@ end subroutine X(compute_coulomb_integrals)
        do im = 1, os%norbs
          ! sum_mp Vmmp <phi mp|r| psi >
          do imp = 1, os%norbs
-           reduced(1,im) = reduced(1,im) - this%X(V)(im,imp,ispin,ios)*dot(1,imp)
+           if(d%ispin /= SPINORS) then
+             reduced(1,im) = reduced(1,im) - this%X(V)(im,imp,ispin,ios)*dot(1,imp)
+            else
+              reduced(1,im) = reduced(1,im) - this%X(V)(im,imp,1,ios)*dot(1,imp)
+              reduced(1,im) = reduced(1,im) - this%X(V)(im,imp,3,ios)*dot(2,imp)
+              reduced(2,im) = reduced(2,im) - this%X(V)(im,imp,4,ios)*dot(1,imp)
+              reduced(2,im) = reduced(2,im) - this%X(V)(im,imp,2,ios)*dot(2,imp)
+            end if
          end do
+
        end do
 
-       call X(orbital_set_add_to_psi)(os, d, gpsi(1:mesh%np,idir,1:d%dim), ik, has_phase, reduced(1,1:os%norbs)) 
+       call X(orbital_set_add_to_psi)(os, d, gpsi(1:mesh%np,idir,1:d%dim), ik, has_phase, &
+                                         reduced(1:d%dim,1:os%norbs)) 
        !  if(this%ACBN0_corrected) then
        !    reduced = reduced + this%Vloc1(im,ispin,ios)*dot(im)
        !    do imp = 1, os%norbs

@@ -98,7 +98,7 @@ subroutine X(orbital_set_add_to_psi)(os, st_d, psi, ik, has_phase, weight)
   R_TYPE,            intent(inout) :: psi(:,:)
   integer,              intent(in) :: ik
   logical,              intent(in) :: has_phase !True if the wavefunction has an associated phase
-  R_TYPE,               intent(in) :: weight(:)
+  R_TYPE,               intent(in) :: weight(:,:)
 
   integer :: im, ip, idim
   type(profile_t), save :: prof
@@ -113,16 +113,16 @@ subroutine X(orbital_set_add_to_psi)(os, st_d, psi, ik, has_phase, weight)
       if(has_phase) then
 #ifdef R_TCOMPLEX
         if(simul_box_is_periodic(os%sphere%mesh%sb)) then
-          call lalg_axpy(os%sphere%mesh%np, weight(im), os%eorb_mesh(1:os%sphere%mesh%np,idim,im,ik), &
+          call lalg_axpy(os%sphere%mesh%np, weight(idim,im), os%eorb_mesh(1:os%sphere%mesh%np,idim,im,ik), &
                                   psi(1:os%sphere%mesh%np,idim))
         else
           call submesh_add_to_mesh(os%sphere, os%eorb_submesh(1:os%sphere%np,idim,im,ik), &
-                                  psi(1:os%sphere%mesh%np,idim), weight(im))
+                                  psi(1:os%sphere%mesh%np,idim), weight(idim,im))
         endif
 #endif
       else
         call submesh_add_to_mesh(os%sphere, os%X(orb)(1:os%sphere%np,idim, im), &
-                                  psi(1:os%sphere%mesh%np,idim), weight(im))
+                                  psi(1:os%sphere%mesh%np,idim), weight(idim,im))
       end if
     end do
   end do
