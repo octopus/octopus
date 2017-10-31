@@ -30,6 +30,7 @@ module output_oct_m
   use current_oct_m
   use density_oct_m
   use derivatives_oct_m
+  use dos_oct_m
   use elf_oct_m
 #if defined(HAVE_ETSF_IO)
   use etsf_io
