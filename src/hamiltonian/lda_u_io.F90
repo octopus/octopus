@@ -122,13 +122,65 @@ contains
    type(lda_u_t),     intent(in)    :: this
    character(len=*),  intent(in)    :: dir
 
-   integer :: iunit
+   integer :: iunit, ios
 
    PUSH_SUB(lda_u_write_effectiveU)
 
    if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
      iunit = io_open(trim(dir) // "/effectiveU", action='write')
      call lda_u_write_U(this, iunit)
+
+     write(iunit, '(a,a,a,f7.3,a)') 'Hubbard U [', &
+       trim(units_abbrev(units_out%energy)),']:'
+     write(iunit,'(a,6x,14x,a)') ' Orbital',  'U'
+     do ios = 1, this%norbsets
+       if(this%nspins == this%spin_channels .or. .not. this%jdeporbitals) then
+         if(this%orbsets(ios)%nn /= 0 ) then
+           write(iunit,'(i4,a10, 2x, i1, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                        this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), this%orbsets(ios)%Ubar
+         else
+           write(iunit,'(i4,a10, 3x, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                                l_notation(this%orbsets(ios)%ll), this%orbsets(ios)%Ubar
+         end if
+      else
+        if(this%orbsets(ios)%nn /= 0 ) then
+           write(iunit,'(i4,a10, 2x, i1, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                        this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
+                        int(M_TWO*(this%orbsets(ios)%jj)), '/2', this%orbsets(ios)%Ubar
+         else
+           write(iunit,'(i4,a10, 3x, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                                l_notation(this%orbsets(ios)%ll), &
+                         int(M_TWO*(this%orbsets(ios)%jj)), '/2', this%orbsets(ios)%Ubar
+         end if
+      end if
+     end do
+
+
+     write(iunit, '(a,a,a,f7.3,a)') 'Hund J [', &
+       trim(units_abbrev(units_out%energy)),']:'
+     write(iunit,'(a,6x,14x,a)') ' Orbital',  'J'
+     do ios = 1, this%norbsets
+       if(this%nspins == this%spin_channels .or. .not. this%jdeporbitals) then
+         if(this%orbsets(ios)%nn /= 0 ) then
+           write(iunit,'(i4,a10, 2x, i1, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                        this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), this%orbsets(ios)%Jbar
+         else
+           write(iunit,'(i4,a10, 3x, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                                l_notation(this%orbsets(ios)%ll), this%orbsets(ios)%Jbar
+         end if
+      else
+        if(this%orbsets(ios)%nn /= 0 ) then
+           write(iunit,'(i4,a10, 2x, i1, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                        this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
+                        int(M_TWO*(this%orbsets(ios)%jj)), '/2', this%orbsets(ios)%Jbar
+         else
+           write(iunit,'(i4,a10, 3x, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                                l_notation(this%orbsets(ios)%ll), &
+                         int(M_TWO*(this%orbsets(ios)%jj)), '/2', this%orbsets(ios)%Jbar
+         end if
+      end if
+     end do
+
      call io_close(iunit)
    end if
 

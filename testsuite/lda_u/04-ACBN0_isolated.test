@@ -25,7 +25,7 @@ match ; Eigenvalue   [2up] ; GREPFIELD(static/info, '2   dn', 3) ; 0.140110
 
 match ; Occupation 1s up ; LINEFIELD(static/occ_matrices, -3, 1) ; 0.97344171
 
-match ; U  ; LINEFIELD(static/effectiveU, -1, 4) ; 0.596803
+match ; U  ; LINEFIELD(static/effectiveU, -4, 4) ; 0.596803
 
 
 Input      : 04-ACBN0_isolated.02-H_packed.inp
@@ -48,5 +48,5 @@ match ; Eigenvalue   [2up] ; GREPFIELD(static/info, '2   dn', 3) ; 0.140110
 
 match ; Occupation 1s up ; LINEFIELD(static/occ_matrices, -3, 1) ; 0.97344171
 
-match ; U  ; LINEFIELD(static/effectiveU, -1, 4) ; 0.596803
+match ; U  ; LINEFIELD(static/effectiveU, -4, 4) ; 0.596803
 
