@@ -7,7 +7,7 @@ Enabled    : Yes
 
 Input      : 03-ACBN0_restricted.01-lif.inp
 
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  -24.24557725
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  -24.24543530
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;  -14.42250723
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;  -4.40333197
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;   8.28619904
@@ -28,5 +28,5 @@ match ; Eigenvalue  5 ; GREPFIELD(static/info, '#k =   2', 3, 5) ;   0.304097
 match ; Occupation F 2p2 ; LINEFIELD(static/occ_matrices, -2, 3) ; 1.92380298
 match ; Occupation F 2p3 ; LINEFIELD(static/occ_matrices, -1, 5) ; 1.92380298
 
-match ; U2p Li  ; LINEFIELD(static/effectiveU, -2, 4) ; 0.074907
-match ; U2p F  ; LINEFIELD(static/effectiveU, -1, 4) ; 0.474155
+match ; U2p Li  ; LINEFIELD(static/effectiveU, -10, 4) ; 0.074907
+match ; U2p F  ; LINEFIELD(static/effectiveU, -9, 4) ; 0.474155

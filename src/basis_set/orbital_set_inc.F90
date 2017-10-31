@@ -37,7 +37,7 @@ subroutine X(orbital_set_get_coefficients)(os, st_d, psi, ik, has_phase, dot)
     !If we need to add the phase, we explicitly do the operation using the sphere
     if(has_phase) then
 #ifdef R_TCOMPLEX
-      if(simul_box_is_periodic(os%sphere%mesh%sb)) then
+      if(simul_box_is_periodic(os%sphere%mesh%sb) .and. .not. os%submeshforperiodic) then
         do idim = 1,st_d%dim
           idim_orb = min(idim,os%ndim)
           dot(idim,im) = zmf_dotp(os%sphere%mesh, os%eorb_mesh(1:os%sphere%mesh%np,idim_orb,im,ik),&
@@ -112,7 +112,7 @@ subroutine X(orbital_set_add_to_psi)(os, st_d, psi, ik, has_phase, weight)
       !In case of phase, we have to apply the conjugate of the phase here
       if(has_phase) then
 #ifdef R_TCOMPLEX
-        if(simul_box_is_periodic(os%sphere%mesh%sb)) then
+        if(simul_box_is_periodic(os%sphere%mesh%sb) .and. .not. os%submeshforperiodic) then
           call lalg_axpy(os%sphere%mesh%np, weight(idim,im), os%eorb_mesh(1:os%sphere%mesh%np,idim,im,ik), &
                                   psi(1:os%sphere%mesh%np,idim))
         else
@@ -168,7 +168,7 @@ subroutine X(orbital_set_add_to_batch)(os, st_d, psib, ik, has_phase, weight)
           !In case of phase, we have to apply the conjugate of the phase here
           if(has_phase) then
 #ifdef R_TCOMPLEX
-            if(simul_box_is_periodic(os%sphere%mesh%sb)) then
+            if(simul_box_is_periodic(os%sphere%mesh%sb) .and. .not. os%submeshforperiodic) then
               call lalg_axpy(os%sphere%mesh%np, weight(iorb,bind),os%eorb_mesh(1:os%sphere%mesh%np,idim_orb,iorb,ik), &
                                    psi(1:os%sphere%mesh%np,idim))
             else
@@ -193,7 +193,7 @@ subroutine X(orbital_set_add_to_batch)(os, st_d, psib, ik, has_phase, weight)
       !
       if(has_phase) then
 #ifdef R_TCOMPLEX
-        if(simul_box_is_periodic(os%sphere%mesh%sb)) then
+        if(simul_box_is_periodic(os%sphere%mesh%sb) .and. .not. os%submeshforperiodic) then
           do ist = 1, psib%nst_linear
             idim = min(batch_linear_to_idim(psib,ist),os%ndim)
             do sp = 1, os%sphere%mesh%np, block_size
@@ -249,7 +249,7 @@ subroutine X(orbital_set_add_to_batch)(os, st_d, psib, ik, has_phase, weight)
       !
       if(has_phase) then
 #ifdef R_TCOMPLEX
-        if(simul_box_is_periodic(os%sphere%mesh%sb)) then
+        if(simul_box_is_periodic(os%sphere%mesh%sb) .and. .not. os%submeshforperiodic) then
           do iorb = 1, os%norbs
             do sp = 1, os%sphere%mesh%np, block_size
               ep = sp - 1 + min(block_size, os%sphere%mesh%np - sp + 1)

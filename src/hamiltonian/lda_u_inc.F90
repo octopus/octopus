@@ -847,7 +847,7 @@ end subroutine X(compute_coulomb_integrals)
 
    PUSH_SUB(lda_u_commute_r)
 
-   if(simul_box_is_periodic(mesh%sb)) then
+   if(simul_box_is_periodic(mesh%sb) .and. .not. this%submeshforperiodic) then
      SAFE_ALLOCATE(epsi(1:mesh%np,1:d%dim))
    else
      SAFE_ALLOCATE(epsi(1:this%max_np,1:d%dim))
@@ -897,7 +897,7 @@ end subroutine X(compute_coulomb_integrals)
           !In case of phase, we have to apply the conjugate of the phase here
           if(has_phase) then
 #ifdef R_TCOMPLEX
-            if(simul_box_is_periodic(mesh%sb)) then
+            if(simul_box_is_periodic(mesh%sb) .and. .not. this%submeshforperiodic) then
               epsi(:,idim) = R_TOTYPE(M_ZERO)
               !$omp parallel do
               do is = 1, os%sphere%np
@@ -937,7 +937,7 @@ end subroutine X(compute_coulomb_integrals)
        ! We first compute <phi m| r | psi> for all orbitals of the atom
        !
        !
-       if(simul_box_is_periodic(mesh%sb)) then
+       if(simul_box_is_periodic(mesh%sb) .and. .not. this%submeshforperiodic) then
          forall(is = 1:mesh%np)
            epsi(is,1) = mesh%x(is,idir)*psi(is,1)
          end forall
@@ -951,7 +951,7 @@ end subroutine X(compute_coulomb_integrals)
 
        if(has_phase) then
 #ifdef R_TCOMPLEX
-         if(simul_box_is_periodic(mesh%sb)) then
+         if(simul_box_is_periodic(mesh%sb) .and. .not. this%submeshforperiodic) then
            do im = 1, os%norbs
              do idim = 1, d%dim
                dot(idim,im) = X(mf_dotp)(mesh, os%eorb_mesh(1:mesh%np,idim,im,ik),&
@@ -1205,6 +1205,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
           os%ndim = 1
         end if
         os%Ueff = species_hubbard_u(geo%atom(ia)%species)
+        os%submeshforperiodic = this%submeshforperiodic
         os%spec => geo%atom(ia)%species
         os%iatom = ia
         call submesh_null(os%sphere)
@@ -1258,6 +1259,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
             os%ndim = 1
           end if
           os%Ueff = species_hubbard_u(geo%atom(ia)%species)
+          os%submeshforperiodic = this%submeshforperiodic
           os%spec => geo%atom(ia)%species
           os%iatom = ia
           call submesh_null(os%sphere)        
@@ -1307,7 +1309,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
   #ifdef R_TCOMPLEX
     SAFE_ALLOCATE(os%phase(1:os%sphere%np, st%d%kpt%start:st%d%kpt%end))
     os%phase(:,:) = M_ZERO
-    if(simul_box_is_periodic(mesh%sb)) then 
+    if(simul_box_is_periodic(mesh%sb) .and. .not. this%submeshforperiodic) then 
       SAFE_ALLOCATE(os%eorb_mesh(1:mesh%np, 1:os%ndim, 1:os%norbs, st%d%kpt%start:st%d%kpt%end))
       os%eorb_mesh(:,:,:,:) = M_ZERO
     else
@@ -1394,7 +1396,7 @@ subroutine X(build_overlap_matrices)(this, ik, has_phase)
           do im2 = 1, os2%norbs
             if(has_phase) then
  #ifdef R_TCOMPLEX
-              if(simul_box_is_periodic(os%sphere%mesh%sb)) then
+              if(simul_box_is_periodic(os%sphere%mesh%sb) .and. .not. this%submeshforperiodic) then
                 os%X(S)(im,im2,ios2) = zmf_dotp(os%sphere%mesh, &
                                           os2%eorb_mesh(1:os2%sphere%mesh%np,1,im2,ik), &
                                           os%eorb_mesh(1:os%sphere%mesh%np,1,im,ik))

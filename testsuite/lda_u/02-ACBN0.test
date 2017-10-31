@@ -37,14 +37,14 @@ match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   1', 3, 17) ; -0.175496
 match ; Occupation O2 down 2p2 ; LINEFIELD(static/occ_matrices, -2, 3) ; 0.71639627
 match ; Occupation O2 down 2p3 ; LINEFIELD(static/occ_matrices, -1, 5) ; 0.71733544
 
-match ; U3d Ni1 ; LINEFIELD(static/effectiveU, -4, 4) ; 0.305671
-match ; U3d Ni2 ; LINEFIELD(static/effectiveU, -3, 4) ; 0.305291 
-match ; U2p O1  ; LINEFIELD(static/effectiveU, -2, 4) ; 0.169702 
-match ; U2p O2  ; LINEFIELD(static/effectiveU, -1, 4) ; 0.169703
+match ; U3d Ni1 ; LINEFIELD(static/effectiveU, -16, 4) ; 0.305671
+match ; U3d Ni2 ; LINEFIELD(static/effectiveU, -15, 4) ; 0.305578 
+match ; U2p O1  ; LINEFIELD(static/effectiveU, -14, 4) ; 0.169702 
+match ; U2p O2  ; LINEFIELD(static/effectiveU, -13, 4) ; 0.169703
 
 Input      : 02-ACBN0.02-lif.inp
 
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  -24.24557725
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  -24.24543530
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;  -14.42250723
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;  -4.40333197
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;   8.28619904
@@ -69,5 +69,5 @@ match ; Eigenvalue  5 up ; GREPFIELD(static/info, '#k =   2', 3, 9) ;   0.304097
 match ; Occupation F down 2p2 ; LINEFIELD(static/occ_matrices, -2, 3) ; 0.96190150
 match ; Occupation F down 2p3 ; LINEFIELD(static/occ_matrices, -1, 5) ; 0.96190150
 
-match ; U2p Li  ; LINEFIELD(static/effectiveU, -2, 4) ; 0.074907
-match ; U2p F   ; LINEFIELD(static/effectiveU, -1, 4) ; 0.474155
+match ; U2p Li  ; LINEFIELD(static/effectiveU, -10, 4) ; 0.074907
+match ; U2p F   ; LINEFIELD(static/effectiveU, -9, 4) ; 0.474155

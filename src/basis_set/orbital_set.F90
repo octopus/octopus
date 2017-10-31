@@ -78,6 +78,8 @@ module orbital_set_oct_m
     CMPLX, pointer      :: eorb_submesh(:,:,:,:) !> Orbitals with its phase factor, on the submesh (for isolated system with TD phase)
     CMPLX, pointer      :: eorb_mesh(:,:,:,:) !> Orbitals with its phase factor, on the mesh (for periodic systems GS and TD)
 
+    logical             :: submeshforperiodic !> Do we use or not submeshes for the orbitals
+
     type(poisson_t)  :: poisson               !> For computing the Coulomb integrals
   end type orbital_set_t
 
@@ -172,7 +174,7 @@ contains
         os%phase(is, iq) = exp(M_zI*kr)
       end do
 
-      if(simul_box_is_periodic(sb)) then
+      if(simul_box_is_periodic(sb) .and. .not. os%submeshforperiodic) then
         !We now compute the so-called Bloch sum of the localized orbitals
         do im = 1, os%norbs
           os%eorb_mesh(:,:,im,iq) = M_Z0

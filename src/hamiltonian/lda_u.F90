@@ -128,7 +128,8 @@ module lda_u_oct_m
     logical             :: normalizeOrbitals  !> Do we normalize the orbitals 
     logical             :: minimalAtomicSphere!> Use the smallest atomic orbital radius for all of them
     logical             :: jdeporbitals       !> J-dependent spherical harmonics (for noncollinear spin)
- 
+    logical             :: submeshforperiodic !> Do we use or not submeshes for the orbitals
+
     type(distributed_t) :: orbs_dist
   end type lda_u_t
 
@@ -262,6 +263,19 @@ contains
     call messages_fatal(1) 
   end if
   if(this%jdeporbitals) call messages_experimental("DFTUjdependentorbitals")
+
+  !%Variable DFTUSubmeshForPeriodic
+  !%Type logical
+  !%Default no
+  !%Section Hamiltonian::DFT+U
+  !%Description
+  !% If set to yes, Octopus will use submeshes to internally store the orbitals with
+  !% their phase instead of storing them on the mesh. This is usually slower for small
+  !% periodic systems, but becomes advantageous for large supercells.
+  !%End
+  call parse_variable('DFTUSubmeshForPeriodic', .false., this%submeshforperiodic)
+  call messages_print_var_value(stdout, 'DFTUSubmeshForPeriodic', this%submeshforperiodic)
+
 
   if( this%useACBN0) then
     !%Variable UseAllAtomicOrbitals
