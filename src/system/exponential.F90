@@ -208,7 +208,7 @@ contains
   !! \phi(x) = (e^x - 1)/x
   !! \f]
   ! ---------------------------------------------------------
-  subroutine exponential_apply(te, der, hm, zpsi, ist, ik, deltat, time, order, vmagnus, imag_time, Imtime, Imdeltat)
+  subroutine exponential_apply(te, der, hm, zpsi, ist, ik, deltat, order, vmagnus, imag_time, Imdeltat)
     type(exponential_t), intent(inout) :: te
     type(derivatives_t), intent(in)    :: der
     type(hamiltonian_t), intent(in)    :: hm
@@ -216,11 +216,9 @@ contains
     integer,             intent(in)    :: ik
     CMPLX,               intent(inout) :: zpsi(:, :)
     FLOAT,               intent(in)    :: deltat
-    FLOAT,               intent(in)    :: time
     integer, optional,   intent(inout) :: order
     FLOAT,   optional,   intent(in)    :: vmagnus(der%mesh%np, hm%d%nspin, 2)
     logical, optional,   intent(in)    :: imag_time
-    FLOAT,   optional,   intent(in)    :: Imtime   !< Imaginary part of the time - needed for cmplxscl\%time
     FLOAT,   optional,   intent(in)    :: Imdeltat !< also needed for cmplxscl\%time
 
     CMPLX   :: timestep
@@ -230,16 +228,8 @@ contains
     PUSH_SUB(exponential_apply)
     call profiling_in(exp_prof, "EXPONENTIAL")
 
-    
-    if(present(Imtime)) then
-      ASSERT(present(Imdeltat)) 
-    end if
-    
-    ! In order to make things clear is better not to mix the two
-    ! even if imag_time = .true. is a particular case of the
-    ! general complex time with time = 0 and Imtime = t 
     if (present(imag_time)) then
-      ASSERT(.not. present(Imtime)) 
+      ASSERT(.not. present(Imdeltat)) 
     end if
 
     ! The only method that is currently taking care of the presence of an inhomogeneous
@@ -273,7 +263,7 @@ contains
       end if
     end if
 
-    if(present(Imtime)) then
+    if(present(Imdeltat)) then
       select case(te%exp_method)
         case(EXP_TAYLOR, EXP_LANCZOS)
           timestep = timestep + M_zI*Imdeltat
@@ -312,11 +302,7 @@ contains
       if(apply_magnus) then
         call zmagnus(hm, der, psi, oppsi, ik, vmagnus)
         else
-          if(present(Imtime)) then
-            call zhamiltonian_apply(hm, der, psi, oppsi, ist, ik, time, Imtime = Imtime)
-          else 
-            call zhamiltonian_apply(hm, der, psi, oppsi, ist, ik, time)
-          end if
+        call zhamiltonian_apply(hm, der, psi, oppsi, ist, ik)
       end if
 
       POP_SUB(exponential_apply.operate)
@@ -577,16 +563,14 @@ contains
 
   end subroutine exponential_apply
 
-  subroutine exponential_apply_batch(te, der, hm, psib, ik, deltat, time, Imdeltat, Imtime, psib2, deltat2, Imdeltat2)
+  subroutine exponential_apply_batch(te, der, hm, psib, ik, deltat, Imdeltat, psib2, deltat2, Imdeltat2)
     type(exponential_t),             intent(inout) :: te
     type(derivatives_t),             intent(inout) :: der
     type(hamiltonian_t),             intent(inout) :: hm
     integer,                         intent(in)    :: ik
     type(batch_t), target,           intent(inout) :: psib
     FLOAT,                           intent(in)    :: deltat
-    FLOAT,                           intent(in)    :: time
     FLOAT, optional,                 intent(in)    :: Imdeltat
-    FLOAT, optional,                 intent(in)    :: Imtime
     type(batch_t), target, optional, intent(inout) :: psib2
     FLOAT, optional,                 intent(in)    :: deltat2
     FLOAT, optional,                 intent(in)    :: Imdeltat2
@@ -601,7 +585,7 @@ contains
     ASSERT(present(psib2) .eqv. present(deltat2))
     
     cmplxscl = .false.
-    if(present(Imdeltat) .and. present(Imtime)) cmplxscl = .true. 
+    if(present(Imdeltat)) cmplxscl = .true. 
 
     if(cmplxscl .and. present(psib2)) then
       ASSERT(present(Imdeltat2))
@@ -618,17 +602,16 @@ contains
         ist  =  psib%states(ii)%ist
 
         if (cmplxscl) then
-          call exponential_apply(te, der, hm, psi, ist, ik, deltat, time, Imdeltat = Imdeltat, Imtime = Imtime )
+          call exponential_apply(te, der, hm, psi, ist, ik, deltat, Imdeltat = Imdeltat)
         else 
-          call exponential_apply(te, der, hm, psi, ist, ik, deltat, time)
+          call exponential_apply(te, der, hm, psi, ist, ik, deltat)
         end if
 
         if(present(psib2)) then
           if (cmplxscl) then
-            call exponential_apply(te, der, hm, psib2%states(ii)%zpsi, ist, ik, deltat2, time, &
-              Imdeltat = Imdeltat2, Imtime = Imtime)
+            call exponential_apply(te, der, hm, psib2%states(ii)%zpsi, ist, ik, deltat2, Imdeltat = Imdeltat2)
           else 
-            call exponential_apply(te, der, hm, psib2%states(ii)%zpsi, ist, ik, deltat2, time)
+            call exponential_apply(te, der, hm, psib2%states(ii)%zpsi, ist, ik, deltat2)
           end if
         end if
         
@@ -690,11 +673,7 @@ contains
         !  go haywire on the first step of dynamics (often NaN) and with debugging options
         !  the code stops in ZAXPY below without saying why.
 
-        if(cmplxscl) then
-          call zhamiltonian_apply_batch(hm, der, psi1b, hpsi1b, ik, time, Imtime)
-        else
-          call zhamiltonian_apply_batch(hm, der, psi1b, hpsi1b, ik, time)
-        end if
+        call zhamiltonian_apply_batch(hm, der, psi1b, hpsi1b, ik)
         
         if(zfact_is_real) then
           call batch_axpy(der%mesh%np, real(zfact, REAL_PRECISION), hpsi1b, psib)
@@ -759,9 +738,9 @@ contains
       zfact = zfact * deltat / i
       
       if (i == 1) then
-        call zhamiltonian_apply_all(hm, xc, der, st, hst1, t)
+        call zhamiltonian_apply_all(hm, xc, der, st, hst1)
       else
-        call zhamiltonian_apply_all(hm, xc, der, st1, hst1, t)
+        call zhamiltonian_apply_all(hm, xc, der, st1, hst1)
       end if
 
       do ik = st%d%kpt%start, st%d%kpt%end
@@ -797,9 +776,9 @@ contains
         zfact = zfact * deltat / (i+1)
       
         if (i == 1) then
-          call zhamiltonian_apply_all(hm, xc, der, hm%inh_st, hst1, t)
+          call zhamiltonian_apply_all(hm, xc, der, hm%inh_st, hst1)
         else
-          call zhamiltonian_apply_all(hm, xc, der, st1, hst1, t)
+          call zhamiltonian_apply_all(hm, xc, der, st1, hst1)
         end if
 
         do ik = st%d%kpt%start, st%d%kpt%end
