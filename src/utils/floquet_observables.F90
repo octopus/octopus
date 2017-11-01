@@ -370,8 +370,12 @@ program floquet_observables
         call calc_floquet_conductivity_length_gauge_FBZ()
 
     case (OPTION__FLOQUETOBSERVABLEGAUGE__F_LENGTH_FBZ21)
-        call calc_floquet_conductivity_length_gauge_FBZ21()
-
+        if (hm%F%FBZ_solver == .true.) then 
+          call calc_floquet_conductivity_length_gauge_FBZ21(dressed_st)
+        else
+          call get_FBZ_st(dressed_st, FBZ_st)
+          call calc_floquet_conductivity_length_gauge_FBZ21(FBZ_st)
+        end if
     case (OPTION__FLOQUETOBSERVABLEGAUGE__F_ONE)
         call calc_floquet_conductivity()
     end select 
@@ -443,7 +447,30 @@ program floquet_observables
   call global_end()
 
 contains 
-    
+  subroutine get_FBZ_st(dressed_st, FBZ_st)
+    type(states_t), intent(in)  :: dressed_st
+    type(states_t), intent(out) :: FBZ_st
+    PUSH_SUB(get_FBZ_st)
+    if(.not.hm%F%FBZ_solver .and. hm%F%boson == OPTION__FLOQUETBOSON__CLASSICAL_FLOQUET) then
+      ! this triggers FBZ allocation                                                                                                                                   
+      hm%F%FBZ_solver = .true.
+      ! call states_init(FBZ_st, sys%gr, sys%geo,floquet_dim=hm%F%floquet_dim,floquet_FBZ=.true.)
+      call floquet_init_dressed_wfs(hm, sys, FBZ_st, fromScratch=.true.)
+      ! reset flag                                                                                                                                                     
+      hm%F%FBZ_solver = .false.
+      call floquet_FBZ_filter(sys, hm, dressed_st, FBZ_st)
+!      if (simul_box_is_periodic(sys%gr%sb) .and. kpoints_have_zero_weight_path(sys%gr%sb%kpoints)) then
+!        filename = 'FBZ_filtered_bands'
+!        call states_write_bandstructure(FLOQUET_DIR, FBZ_st%nst, FBZ_st, sys%gr%sb, filename, vec = FBZ_st%occ)
+!      else
+!        filename = trim(FLOQUET_DIR)//'FBZ_filtered_eigenvalues'
+!        call states_write_eigenvalues(filename, FBZ_st%nst, FBZ_st, sys%gr%sb)
+!      end if
+    end if
+    POP_SUB(get_FBZ_st)
+  end subroutine get_FBZ_st 
+
+
   subroutine calc_floquet_arpes()
   
   FLOAT, allocatable :: spect(:,:), me(:,:) 
@@ -1204,8 +1231,8 @@ contains
     POP_SUB(out_floquet_wfs)
   end subroutine out_floquet_wfs
  
-  subroutine calc_floquet_conductivity_length_gauge_FBZ21()
-  
+  subroutine calc_floquet_conductivity_length_gauge_FBZ21(dressed_st)
+    type(states_t), intent(in) :: dressed_st 
     ! Use floquet brillouin zone (FBZ) solver to calculate the conductivity
     ! Reduced equation, refer to equation 21
     CMPLX, allocatable   :: u_a(:,:), u_b(:,:), sigma(:,:,:)
@@ -1476,7 +1503,7 @@ contains
                         if (idir == jdir) ampl = M_z2 * ampl
                         
                         ! sum over a and b         
-                        sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + ampl
+                        sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + ampl* (dressed_st%d%kweights(ik))
                     end do ! ie loop
 
                   end do ! in loop
@@ -1490,8 +1517,6 @@ contains
             end do ! istb loop   
           end do ! ista loop   
 
-          ! sum over kpoints
-          sigma(ie,idir,jdir) = sigma(ie,idir,jdir) * (dressed_st%d%kweights(ik))
            
         end do ! ik loop
         if(dressed_st%parallel_in_states .or. dressed_st%d%kpt%parallel) then
