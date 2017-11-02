@@ -1192,7 +1192,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
               os%jj = real(os%ll + idim) - M_THREE/M_TWO
             end if
             os%ii = ii
-            os%radius = get_orbial_radius(geo, mesh, ia, iorb, 1, &
+            os%radius = get_orbital_radius(geo, mesh, ia, iorb, 1, &
                            this%truncation, this%orbitals_threshold)
           end if
         end do
@@ -1245,7 +1245,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
               if(this%minimalAtomicSphere) then
                 radius = minradii(ia)
               else
-                os%radius = get_orbial_radius(geo, mesh, ia, iorb, 1, &
+                os%radius = get_orbital_radius(geo, mesh, ia, iorb, 1, &
                                  this%truncation, this%orbitals_threshold)
               end if
             end if

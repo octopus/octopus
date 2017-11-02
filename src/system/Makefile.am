@@ -57,7 +57,6 @@ libsystem_a_SOURCES = $(libsystem_c_srcs) $(libsystem_f_srcs)
 
 # Include files - keep in alphabetical order
 noinst_HEADERS =                         \
-	dos_inc.F90                      \
 	eigen_arpack_inc.F90             \
 	eigen_cg_inc.F90                 \
 	eigen_evolution_inc.F90          \
@@ -101,7 +100,7 @@ depend:
 # DO NOT EDIT DIRECTLY --- use make depend to generate the dependencies and copy-paste the result here
 
 current.o : current.F90 
-dos.o : dos.F90 dos_inc.F90
+dos.o : dos.F90
 eigen_arpack.o : eigen_arpack.F90 eigen_arpack_inc.F90 
 eigen_cg.o : eigen_cg.F90 eigen_cg_inc.F90 preconditioners.o 
 eigen_feast.o : eigen_feast.F90 linear_solver.o 

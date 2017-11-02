@@ -213,7 +213,7 @@ contains
       call messages_info(3)
     end if
 
-    call output_states(st,gr,geo,STATIC_DIR,outp)  
+    call output_states(st,gr,geo,hm,STATIC_DIR,outp)  
     call rdmft_end()
  
     POP_SUB(scf_rdmft) 

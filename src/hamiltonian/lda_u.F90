@@ -83,6 +83,7 @@ module lda_u_oct_m
        zlda_u_commute_r,                &
        dlda_u_force,                    &
        zlda_u_force,                    &
+       get_orbital_radius,              &
        l_notation
 
   character(len=1), parameter :: &
@@ -557,7 +558,7 @@ contains
   end subroutine lda_u_get_effectiveU
 
   ! ---------------------------------------------------------
-  FLOAT function get_orbial_radius(geo, mesh, ia, iorb, ispin, truncation, threshold) result(radius)
+  FLOAT function get_orbital_radius(geo, mesh, ia, iorb, ispin, truncation, threshold) result(radius)
     type(geometry_t), target, intent(in)   :: geo
     type(mesh_t),             intent(in)   :: mesh
     integer,                  intent(in)   :: ia, iorb, ispin
@@ -595,7 +596,7 @@ contains
       radius = max(radius, CNST(2.0)*maxval(mesh%spacing(1:mesh%sb%dim)))
 
     POP_SUB(get_orbital_radius)
-  end function get_orbial_radius
+  end function get_orbital_radius
 
   ! ---------------------------------------------------------
   subroutine find_minimal_atomic_spheres(geo, mesh, minradii, truncation, threshold)
@@ -613,9 +614,9 @@ contains
 
      if(species_niwfs(geo%atom(ia)%species) < 1) cycle
 
-      minradii(ia) = get_orbial_radius(geo, mesh, ia, 1, 1, truncation, threshold)
+      minradii(ia) = get_orbital_radius(geo, mesh, ia, 1, 1, truncation, threshold)
       do iorb = 2, species_niwfs(geo%atom(ia)%species)
-        minradii(ia) = min(minradii(ia), get_orbial_radius(geo, mesh, ia, iorb, 1, truncation, threshold))
+        minradii(ia) = min(minradii(ia), get_orbital_radius(geo, mesh, ia, iorb, 1, truncation, threshold))
       end do !iorb
     end do !ia
 
