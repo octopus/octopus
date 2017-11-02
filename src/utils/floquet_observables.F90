@@ -454,18 +454,19 @@ contains
     if(.not.hm%F%FBZ_solver .and. hm%F%boson == OPTION__FLOQUETBOSON__CLASSICAL_FLOQUET) then
       ! this triggers FBZ allocation                                                                                                                                   
       hm%F%FBZ_solver = .true.
-      ! call states_init(FBZ_st, sys%gr, sys%geo,floquet_dim=hm%F%floquet_dim,floquet_FBZ=.true.)
-      call floquet_init_dressed_wfs(hm, sys, FBZ_st, fromScratch=.true.)
+      call states_init(FBZ_st, sys%gr, sys%geo,floquet_dim=hm%F%floquet_dim,floquet_FBZ=.true.)
+      ! print *, 'FBZ_st dim t', FBZ_st%d%dim, dressed_st%d%dim, sys%st%d%dim
+      call floquet_init_dressed_wfs(hm, sys, FBZ_st, fromScratch=.false.)
       ! reset flag                                                                                                                                                     
       hm%F%FBZ_solver = .false.
       call floquet_FBZ_filter(sys, hm, dressed_st, FBZ_st)
-!      if (simul_box_is_periodic(sys%gr%sb) .and. kpoints_have_zero_weight_path(sys%gr%sb%kpoints)) then
-!        filename = 'FBZ_filtered_bands'
-!        call states_write_bandstructure(FLOQUET_DIR, FBZ_st%nst, FBZ_st, sys%gr%sb, filename, vec = FBZ_st%occ)
-!      else
-!        filename = trim(FLOQUET_DIR)//'FBZ_filtered_eigenvalues'
-!        call states_write_eigenvalues(filename, FBZ_st%nst, FBZ_st, sys%gr%sb)
-!      end if
+      if (simul_box_is_periodic(sys%gr%sb) .and. kpoints_have_zero_weight_path(sys%gr%sb%kpoints)) then
+        filename = 'filtered_bands'
+        call states_write_bandstructure(FLOQUET_DIR, FBZ_st%nst, FBZ_st, sys%gr%sb, filename, vec = FBZ_st%occ)
+      else
+        filename = trim(FLOQUET_DIR)//'filtered_eigenvalues'
+        call states_write_eigenvalues(filename, FBZ_st%nst, FBZ_st, sys%gr%sb)
+      end if
     end if
     POP_SUB(get_FBZ_st)
   end subroutine get_FBZ_st 
@@ -1267,7 +1268,8 @@ contains
         call messages_info(1) 
    
    
-        do ik=dressed_st%d%kpt%start, dressed_st%d%kpt%end
+        do ik=1, 1
+        !do ik=dressed_st%d%kpt%start, dressed_st%d%kpt%end
 
           do ista=1, dressed_st%nst
             call states_get_state(dressed_st, sys%gr%mesh, ista, ik, u_a)
@@ -1316,9 +1318,11 @@ contains
 !                           (1/(DE_ab - im * M_zI*hm%F%omega  + EE + M_zi*obs%gamma) + &
 !                            1/(DE_ab - im * M_zI*hm%F%omega  - EE - M_zi*obs%gamma) )
 
-                  ampl = 1/M_z2 * (abs(dressed_st%coeff(ista,ik))**2- abs(dressed_st%coeff(istb,ik))**2) * dm_ba(idir)*dm_ab(jdir)* &
-                          (1/(DE_ab - im * hm%F%omega  + EE - M_zI*obs%gamma) + &
-                           1/(DE_ab - im * hm%F%omega  - EE + M_zI*obs%gamma) )
+                  ampl = M_zI *&
+                           ! (dressed_st%occ(ista,ik)- dressed_st%occ(istb,ik)) *&
+                           ! dm_ba(idir)*dm_ab(jdir)* &
+                          (1/(DE_ab + im * hm%F%omega  + EE - M_zI*obs%gamma) )!+ &
+                           !1/(DE_ab - im * hm%F%omega  - EE + M_zI*obs%gamma) )
                           
                   ampl = ampl * exp(M_zI*(2*im*hm%F%omega - EE)*obs%time0)
                           
@@ -1535,7 +1539,7 @@ contains
     
     if(mpi_grp_is_root(mpi_world)) then
       write(iter_name,'(i4)') hm%F%iter
-      filename = FLOQUET_DIR//'/floquet_conductivity_l_FBZ'
+      filename = FLOQUET_DIR//'/conductivity_l_FBZ'
       !filename = FLOQUET_DIR//'/floquet_conductivity_l_FBZ_'//trim(adjustl(iter_name))
       iunit = io_open(filename, action='write')
 
@@ -1723,8 +1727,8 @@ contains
                     EE= ie * obs%de
                  
                             ampl =  M_zI * &
-                                     (dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik)) * &
-                                      melab(idir)*melba(jdir) * &
+                                     !(dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik)) * &
+                                     ! melab(idir)*melba(jdir) * &
                                      1/(DE + EE + M_zi*obs%gamma) 
                                     
                             if (idir == jdir) ampl = M_z2 * ampl
@@ -1773,7 +1777,7 @@ contains
     
     if(mpi_grp_is_root(mpi_world)) then
       write(iter_name,'(i4)') hm%F%iter
-      filename = FLOQUET_DIR//'/floquet_conductivity_'//trim(gauge)
+      filename = FLOQUET_DIR//'/conductivity_'//trim(gauge)
       ! filename = FLOQUET_DIR//'/floquet_conductivity_'//trim(gauge)//'_'//trim(adjustl(iter_name))
       iunit = io_open(filename, action='write')
 
