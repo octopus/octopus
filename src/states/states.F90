@@ -322,6 +322,12 @@ contains
     ! Use of spinors requires complex wavefunctions.
     if (st%d%ispin == SPINORS) st%priv%wfs_type = TYPE_CMPLX
 
+    if(st%d%ispin /= UNPOLARIZED .and. gr%sb%kpoints%use_time_reversal) then
+      message(1) = "Time reversal symmetry is only implemented for unpolarized spins."
+      message(2) = "Use KPointsUseTimeReversal = no."
+      call messages_fatal(2)
+    end if
+      
 
     !%Variable ExcessCharge
     !%Type float
