@@ -712,13 +712,13 @@ contains
   !> Note that this routine not only computes the exponential, but
   !! also an extra term if there is a inhomogeneous term in the
   !! Hamiltonian hm.
-  subroutine exponential_apply_all(te, der, hm, xc, st, deltat, t, order)
+  subroutine exponential_apply_all(te, der, hm, xc, st, deltat, order)
     type(exponential_t), intent(inout) :: te
     type(derivatives_t), intent(inout) :: der
     type(hamiltonian_t), intent(inout) :: hm
     type(xc_t),          intent(in)    :: xc
     type(states_t),      intent(inout) :: st
-    FLOAT,               intent(in)    :: deltat, t
+    FLOAT,               intent(in)    :: deltat
     integer, optional,   intent(inout) :: order
 
     integer :: ik, ib, i
