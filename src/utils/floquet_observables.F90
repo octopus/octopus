@@ -1296,9 +1296,13 @@ contains
                       call zmf_multipoles(sys%gr%mesh, conjg(u_a(:,(-im+in-hm%F%order(1))*spindim+idim)) &
                                                            * u_b(:,(inn-1)*spindim+idim) , 1, tmp(:))  
                       dm_ab(:) = dm_ab(:) + tmp(2:4)
-
-                      call zmf_multipoles(sys%gr%mesh, conjg(u_b(:,(-im+in-hm%F%order(1))*spindim+idim)) &
-                                                           * u_a(:,(inn-1)*spindim+idim) , 1, tmp(:))
+                    end do
+                  end if
+               
+                  if (im+in .ge. hm%F%order(1) .and. im+in .le. hm%F%order(2)) then
+                    do idim=1,spindim
+                      call zmf_multipoles(sys%gr%mesh, conjg(u_b(:,(im+in-hm%F%order(1))*spindim+idim)) &
+                                                           * u_a(:,(in-hm%F%order(1))*spindim+idim) , 1, tmp(:))
                       dm_ba(:) = dm_ba(:) + tmp(2:4)
 
                     end do
@@ -1319,12 +1323,12 @@ contains
 !                            1/(DE_ab - im * M_zI*hm%F%omega  - EE - M_zi*obs%gamma) )
 
                   ampl = M_zI *&
-                           ! (dressed_st%occ(ista,ik)- dressed_st%occ(istb,ik)) *&
-                           ! dm_ba(idir)*dm_ab(jdir)* &
-                          (1/(DE_ab + im * hm%F%omega  + EE - M_zI*obs%gamma) )!+ &
-                           !1/(DE_ab - im * hm%F%omega  - EE + M_zI*obs%gamma) )
+                            (dressed_st%occ(ista,ik)- dressed_st%occ(istb,ik)) *&
+                            dm_ba(idir)*dm_ab(jdir)* &
+                          (1/(DE_ab - im * hm%F%omega  + EE + M_zI*obs%gamma) + &
+                           1/(DE_ab - im * hm%F%omega  - EE - M_zI*obs%gamma) )
                           
-                  ampl = ampl * exp(M_zI*(2*im*hm%F%omega - EE)*obs%time0)
+                  !ampl = ampl * exp(M_zI*(2*im*hm%F%omega - EE)*obs%time0)
                           
                   if (idir == jdir) ampl = M_z2 * ampl
                  
@@ -1640,7 +1644,7 @@ contains
                 DE = dressed_st%eigenval(istb,ik) - dressed_st%eigenval(ista,ik)
                 
                 ! Skip divergence 
-                if (abs(DE) < M_EPSILON) cycle                  
+                ! if (abs(DE) < M_EPSILON) cycle                  
                 
                 !Cut out all the components suppressed by small occupations 
                 if (abs((dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik))/DE) < 1E-14) cycle
@@ -1727,8 +1731,8 @@ contains
                     EE= ie * obs%de
                  
                             ampl =  M_zI * &
-                                     !(dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik)) * &
-                                     ! melab(idir)*melba(jdir) * &
+                                     (dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik)) * &
+                                      melab(idir)*melba(jdir) * &
                                      1/(DE + EE + M_zi*obs%gamma) 
                                     
                             if (idir == jdir) ampl = M_z2 * ampl
