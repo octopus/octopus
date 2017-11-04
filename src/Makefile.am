@@ -27,8 +27,8 @@ SUBDIRS =                \
 	grid             \
 	poisson          \
 	frozen           \
-	states           \
         basis_set        \
+	states           \
 	hamiltonian      \
 	system           \
 	scf              \

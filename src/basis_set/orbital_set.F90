@@ -23,6 +23,8 @@ module orbital_set_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use blas_oct_m
+  use distributed_oct_m
+  use geometry_oct_m
   use global_oct_m
   use hardware_oct_m
   use kpoints_oct_m
@@ -33,7 +35,6 @@ module orbital_set_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use species_oct_m
-  use states_dim_oct_m
   use submesh_oct_m
   use types_oct_m  
  
@@ -54,7 +55,8 @@ module orbital_set_oct_m
        dorbital_set_add_to_batch,       &
        zorbital_set_add_to_batch,       &
        dorbital_set_add_to_psi,         &
-       zorbital_set_add_to_psi
+       zorbital_set_add_to_psi,         &
+       orbital_set_count
 
   type orbital_set_t
     integer             :: nn, ll, ii
@@ -132,10 +134,11 @@ contains
  end subroutine orbital_set_end
 
   !> Build the phase correction to the global phase in case the orbital crosses the border of the simulaton box
-  subroutine orbital_set_update_phase(os, sb, std, vec_pot, vec_pot_var)
+  subroutine orbital_set_update_phase(os, sb, kpt, spin_polarized, vec_pot, vec_pot_var)
     type(orbital_set_t),           intent(inout) :: os
     type(simul_box_t),             intent(in)    :: sb
-    type(states_dim_t),            intent(in)    :: std
+    type(distributed_t),           intent(in)    :: kpt
+    logical,                       intent(in)    :: spin_polarized
     FLOAT, optional,  allocatable, intent(in)    :: vec_pot(:) !< (sb%dim)
     FLOAT, optional,  allocatable, intent(in)    :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)
 
@@ -148,8 +151,13 @@ contains
     ns = os%sphere%np
     ndim = sb%dim
 
-    do iq = std%kpt%start, std%kpt%end
-      ikpoint = states_dim_get_kpoint_index(std, iq)
+    do iq = kpt%start, kpt%end
+      !This is durty but avoids to refer to states_get_kpoint_index
+      if(spin_polarized) then
+        ikpoint = 1 + (iq - 1)/2
+      else
+        ikpoint = iq
+      end if
 
       ! if this fails, it probably means that sb is not compatible with std
       ASSERT(ikpoint <= kpoints_number(sb%kpoints))
@@ -188,9 +196,9 @@ contains
       else !In the case of the isolated system, we still use the submesh 
         do im = 1, os%norbs
           do idim = 1, os%ndim
-            do is = 1, ns
+            forall(is=1:ns)
               os%eorb_submesh(is,idim,im,iq) = os%zorb(is,idim,im)*os%phase(is, iq)
-            end do
+            end forall
           end do
         end do
       endif
@@ -198,6 +206,25 @@ contains
 
     POP_SUB(orbital_set_update_phase)
   end subroutine orbital_set_update_phase
+
+  integer function orbital_set_count(geo, ia, iselect) result(norb)
+    type(geometry_t),     intent(in) :: geo
+    integer,              intent(in) :: ia
+    integer, optional,    intent(in) :: iselect
+
+    integer :: iorb, ii, ll, mm
+
+    !We count the number of orbital sets we have for a given atom
+    norb = 0
+    do iorb = 1, species_niwfs(geo%atom(ia)%species)
+      call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
+      if(present(iselect)) then
+        if(ii == iselect) norb = norb + 1
+      else
+        norb = max(norb, ii)
+      end if
+    end do
+  end function orbital_set_count
 
 #include "undef.F90"
 #include "real.F90"

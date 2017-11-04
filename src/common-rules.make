@@ -28,8 +28,8 @@ FCFLAGS_MODS = \
 	@F90_MODULE_FLAG@$(top_builddir)/src/grid    	 \
 	@F90_MODULE_FLAG@$(top_builddir)/src/poisson 	 \
 	@F90_MODULE_FLAG@$(top_builddir)/src/frozen      \
-	@F90_MODULE_FLAG@$(top_builddir)/src/states  	 \
         @F90_MODULE_FLAG@$(top_builddir)/src/basis_set   \
+	@F90_MODULE_FLAG@$(top_builddir)/src/states  	 \
 	@F90_MODULE_FLAG@$(top_builddir)/src/system   	 \
 	@F90_MODULE_FLAG@$(top_builddir)/src/hamiltonian \
 	@F90_MODULE_FLAG@$(top_builddir)/src/scf     	 \

@@ -49,7 +49,7 @@ subroutine X(lda_u_apply)(this, d, ik, psib, hpsib, has_phase)
   !
   do ios = 1, this%norbsets
     os => this%orbsets(ios)
-    call X(orbital_set_get_coeff_batch)(os, d, psib, ik, has_phase, dot(1:d%dim,1:os%norbs,1:psib%nst))
+    call X(orbital_set_get_coeff_batch)(os, d%dim, psib, ik, has_phase, dot(1:d%dim,1:os%norbs,1:psib%nst))
 
     !
     reduced(:,:) = R_TOTYPE(M_ZERO) 
@@ -75,7 +75,7 @@ subroutine X(lda_u_apply)(this, d, ik, psib, hpsib, has_phase)
     end do !ibatch
  
     !We add the orbitals properly weighted to hpsi
-    call X(orbital_set_add_to_batch)(this%orbsets(ios), d, hpsib, ik, has_phase, reduced)
+    call X(orbital_set_add_to_batch)(this%orbsets(ios), d%dim, hpsib, ik, has_phase, reduced)
   end do
  
  !       !We add a test to avoid out-of-bound problem for the LCAO 
@@ -203,7 +203,8 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
         os => this%orbsets(ios)
         !We first compute the matrix elemets <\psi | orb_m>
         !taking into account phase correction if needed 
-        call X(orbital_set_get_coefficients)(os, st%d, psi, ik, present(phase), dot(1:st%d%dim,1:os%norbs,ios))
+        call X(orbital_set_get_coefficients)(os, st%d%dim, psi, ik, present(phase), &
+                            dot(1:st%d%dim,1:os%norbs,ios))
       end do !ios
 
 
@@ -865,7 +866,7 @@ end subroutine X(compute_coulomb_integrals)
       !
       os => this%orbsets(ios)
       ! 
-      call X(orbital_set_get_coefficients)(os, d, psi, ik, has_phase, dot)
+      call X(orbital_set_get_coefficients)(os, d%dim, psi, ik, has_phase, dot)
       !
       reduced(:,:) = M_ZERO
       do im = 1, os%norbs
@@ -991,7 +992,7 @@ end subroutine X(compute_coulomb_integrals)
 
        end do
 
-       call X(orbital_set_add_to_psi)(os, d, gpsi(1:mesh%np,idir,1:d%dim), ik, has_phase, &
+       call X(orbital_set_add_to_psi)(os, d%dim, gpsi(1:mesh%np,idir,1:d%dim), ik, has_phase, &
                                          reduced(1:d%dim,1:os%norbs)) 
        !  if(this%ACBN0_corrected) then
        !    reduced = reduced + this%Vloc1(im,ispin,ios)*dot(im)
@@ -1057,14 +1058,14 @@ end subroutine X(compute_coulomb_integrals)
        !We first compute the matrix elemets <\psi | orb_m>
        !taking into account phase correction if needed   
        ! 
-       call X(orbital_set_get_coefficients)(os, st%d, psi, iq, phase, dot)
+       call X(orbital_set_get_coefficients)(os, st%d%dim, psi, iq, phase, dot)
 
        do idir = 1, ndim
          call batch_get_state(grad_psib(idir), ibatch, mesh%np, gpsi)     
          !We first compute the matrix elemets <\psi | orb_m>
          !taking into account phase correction if needed 
          ! 
-         call X(orbital_set_get_coefficients)(os, st%d, gpsi, iq, phase, gdot(1:st%d%dim,1:os%norbs,idir))
+         call X(orbital_set_get_coefficients)(os, st%d%dim, gpsi, iq, phase, gdot(1:st%d%dim,1:os%norbs,idir))
 
          do im = 1, os%norbs
            gradn(1:os%norbs,im,ispin,idir) = gradn(1:os%norbs,im,ispin,idir) &
@@ -1112,9 +1113,6 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
   type(orbital_set_t), pointer :: os
 
   PUSH_SUB(X(construct_orbital_basis))
-
-  offset = 0
-  if(this%skipSOrbitals) offset = 1
 
   write(message(1),'(a)')    'Building the LDA+U localized orbital basis.'
   call messages_info(1)
@@ -1192,7 +1190,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
               os%jj = real(os%ll + idim) - M_THREE/M_TWO
             end if
             os%ii = ii
-            os%radius = get_orbital_radius(geo, mesh, ia, iorb, 1, &
+            os%radius = atomic_orbital_get_radius(geo, mesh, ia, iorb, 1, &
                            this%truncation, this%orbitals_threshold)
           end if
         end do
@@ -1222,17 +1220,19 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
           if(ll == 0) hasSorbitals = .true.
           work = max(work, ii)          
         end do
-        if(this%skipSOrbitals .and. hasSorbitals ) work = work-1
+
+        offset = 0
+        if(this%skipSOrbitals) offset = 1
 
         !We loop over the orbital sets of the atom ia
-        do norb = 1, work
+        do norb = offset, work
           os => this%orbsets(iorbset+norb)
           !We count the number of orbital for this orbital set
           work2 = 0
           do iorb = 1, species_niwfs(geo%atom(ia)%species)
             call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
             call species_iwf_n(geo%atom(ia)%species, iorb, 1, nn )
-            if(ii == norb+offset) then
+            if(ii == norb) then
               work2 = work2 + 1
               os%ll = ll
               os%nn = nn
@@ -1245,7 +1245,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
               if(this%minimalAtomicSphere) then
                 radius = minradii(ia)
               else
-                os%radius = get_orbital_radius(geo, mesh, ia, iorb, 1, &
+                os%radius = atomic_orbital_get_radius(geo, mesh, ia, iorb, 1, &
                                  this%truncation, this%orbitals_threshold)
               end if
             end if
@@ -1270,7 +1270,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
                                                os, work2, os%radius, os%ndim)
           end do !work2
         end do !norb
-        iorbset = iorbset + work
+        iorbset = iorbset + work - offset
       end if
     end do
   end do
@@ -1522,8 +1522,8 @@ end subroutine X(build_overlap_matrices)
     if(this%useACBN0) then
       SAFE_ALLOCATE(this%X(n_alt)(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets))
       this%X(n_alt)(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets) = R_TOTYPE(M_ZERO)
-      SAFE_ALLOCATE(this%X(renorm_occ)(this%nspecies,0:5,0:3,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end))
-      this%X(renorm_occ)(this%nspecies,0:5,0:3,st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end) = R_TOTYPE(M_ZERO)
+      SAFE_ALLOCATE(this%X(renorm_occ)(this%nspecies,0:5,0:(MAX_L-1),st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end))
+      this%X(renorm_occ)(this%nspecies,0:5,0:(MAX_L-1),st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end) = R_TOTYPE(M_ZERO)
       if(this%ACBN0_corrected) then
         SAFE_ALLOCATE(this%Vloc1(1:maxorbs,1:nspin,1:this%norbsets))
         this%Vloc1(1:maxorbs,1:nspin,1:this%norbsets) = M_ZERO

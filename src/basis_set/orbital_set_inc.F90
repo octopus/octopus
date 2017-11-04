@@ -17,9 +17,9 @@
 !!
 !! $Id$
 
-subroutine X(orbital_set_get_coefficients)(os, st_d, psi, ik, has_phase, dot)
+subroutine X(orbital_set_get_coefficients)(os, ndim, psi, ik, has_phase, dot)
   type(orbital_set_t),  intent(in) :: os
-  type(states_dim_t),   intent(in) :: st_d
+  integer,              intent(in) :: ndim
   R_TYPE,               intent(in) :: psi(:,:)
   integer,              intent(in) :: ik
   logical,              intent(in) :: has_phase !True if the wavefunction has an associated phase
@@ -38,13 +38,13 @@ subroutine X(orbital_set_get_coefficients)(os, st_d, psi, ik, has_phase, dot)
     if(has_phase) then
 #ifdef R_TCOMPLEX
       if(simul_box_is_periodic(os%sphere%mesh%sb) .and. .not. os%submeshforperiodic) then
-        do idim = 1,st_d%dim
+        do idim = 1, ndim
           idim_orb = min(idim,os%ndim)
           dot(idim,im) = zmf_dotp(os%sphere%mesh, os%eorb_mesh(1:os%sphere%mesh%np,idim_orb,im,ik),&
                               psi(1:os%sphere%mesh%np,idim))
         end do
       else
-        do idim = 1,st_d%dim
+        do idim = 1, ndim
           idim_orb = min(idim,os%ndim)
           dot(idim, im) = submesh_to_mesh_dotp(os%sphere, os%eorb_submesh(1:os%sphere%np,idim_orb,im,ik),&
                               psi(1:os%sphere%mesh%np, idim))
@@ -52,7 +52,7 @@ subroutine X(orbital_set_get_coefficients)(os, st_d, psi, ik, has_phase, dot)
       endif 
 #endif
     else
-      do idim = 1,st_d%dim
+      do idim = 1, ndim
         idim_orb = min(idim,os%ndim)
         dot(idim,im) = submesh_to_mesh_dotp(os%sphere, os%X(orb)(1:os%sphere%np,idim_orb,im),&
                                psi(1:os%sphere%mesh%np, idim))
@@ -65,9 +65,9 @@ subroutine X(orbital_set_get_coefficients)(os, st_d, psi, ik, has_phase, dot)
 end subroutine X(orbital_set_get_coefficients)
 
 
-subroutine X(orbital_set_get_coeff_batch)(os, st_d, psib, ik, has_phase, dot)
+subroutine X(orbital_set_get_coeff_batch)(os, ndim, psib, ik, has_phase, dot)
   type(orbital_set_t),  intent(in) :: os
-  type(states_dim_t),   intent(in) :: st_d
+  integer,              intent(in) :: ndim
   type(batch_t),        intent(in) :: psib
   integer,              intent(in) :: ik
   logical,              intent(in) :: has_phase !True if the wavefunction has an associated phase
@@ -81,10 +81,10 @@ subroutine X(orbital_set_get_coeff_batch)(os, st_d, psib, ik, has_phase, dot)
 
   PUSH_SUB(X(orbital_set_get_coeff_batch))
 
-  SAFE_ALLOCATE(psi(1:os%sphere%mesh%np, 1:st_d%dim))
+  SAFE_ALLOCATE(psi(1:os%sphere%mesh%np, 1:ndim))
   do ist = 1, psib%nst
     call batch_get_state(psib, ist, os%sphere%mesh%np, psi)
-    call X(orbital_set_get_coefficients)(os, st_d, psi, ik, has_phase, dot(1:st_d%dim,1:os%norbs,ist))
+    call X(orbital_set_get_coefficients)(os, ndim, psi, ik, has_phase, dot(1:ndim,1:os%norbs,ist))
   end do
   SAFE_DEALLOCATE_A(psi)
   
@@ -92,15 +92,15 @@ subroutine X(orbital_set_get_coeff_batch)(os, st_d, psib, ik, has_phase, dot)
   call profiling_out(prof)
 end subroutine X(orbital_set_get_coeff_batch)
 
-subroutine X(orbital_set_add_to_psi)(os, st_d, psi, ik, has_phase, weight)
+subroutine X(orbital_set_add_to_psi)(os, ndim, psi, ik, has_phase, weight)
   type(orbital_set_t),  intent(in) :: os
-  type(states_dim_t),   intent(in) :: st_d
+  integer,              intent(in) :: ndim
   R_TYPE,            intent(inout) :: psi(:,:)
   integer,              intent(in) :: ik
   logical,              intent(in) :: has_phase !True if the wavefunction has an associated phase
   R_TYPE,               intent(in) :: weight(:,:)
 
-  integer :: im, ip, idim
+  integer :: im, ip, idim, idim_orb
   type(profile_t), save :: prof
 
   call profiling_in(prof, "ORBSET_ADD_TO_PSI")
@@ -108,20 +108,21 @@ subroutine X(orbital_set_add_to_psi)(os, st_d, psi, ik, has_phase, weight)
   PUSH_SUB(X(orbital_set_add_to_psi))
 
   do im = 1, os%norbs
-    do idim = 1, os%ndim
+    do idim = 1, ndim
+      idim_orb = min(idim,os%ndim)
       !In case of phase, we have to apply the conjugate of the phase here
       if(has_phase) then
 #ifdef R_TCOMPLEX
         if(simul_box_is_periodic(os%sphere%mesh%sb) .and. .not. os%submeshforperiodic) then
-          call lalg_axpy(os%sphere%mesh%np, weight(idim,im), os%eorb_mesh(1:os%sphere%mesh%np,idim,im,ik), &
+          call lalg_axpy(os%sphere%mesh%np, weight(idim,im), os%eorb_mesh(1:os%sphere%mesh%np,idim_orb,im,ik), &
                                   psi(1:os%sphere%mesh%np,idim))
         else
-          call submesh_add_to_mesh(os%sphere, os%eorb_submesh(1:os%sphere%np,idim,im,ik), &
+          call submesh_add_to_mesh(os%sphere, os%eorb_submesh(1:os%sphere%np,idim_orb,im,ik), &
                                   psi(1:os%sphere%mesh%np,idim), weight(idim,im))
         endif
 #endif
       else
-        call submesh_add_to_mesh(os%sphere, os%X(orb)(1:os%sphere%np,idim, im), &
+        call submesh_add_to_mesh(os%sphere, os%X(orb)(1:os%sphere%np,idim_orb, im), &
                                   psi(1:os%sphere%mesh%np,idim), weight(idim,im))
       end if
     end do
@@ -132,9 +133,9 @@ subroutine X(orbital_set_add_to_psi)(os, st_d, psi, ik, has_phase, weight)
 end subroutine X(orbital_set_add_to_psi)
 
 
-subroutine X(orbital_set_add_to_batch)(os, st_d, psib, ik, has_phase, weight)
+subroutine X(orbital_set_add_to_batch)(os, ndim, psib, ik, has_phase, weight)
   type(orbital_set_t),  intent(in) :: os
-  type(states_dim_t),   intent(in) :: st_d
+  integer,              intent(in) :: ndim
   type(batch_t),     intent(inout) :: psib
   integer,              intent(in) :: ik
   logical,              intent(in) :: has_phase !True if the wavefunction has an associated phase
@@ -158,11 +159,11 @@ subroutine X(orbital_set_add_to_batch)(os, st_d, psib, ik, has_phase, weight)
 
   if(os%sphere%mesh%use_curvilinear .or. batch_status(psib) == BATCH_CL_PACKED) then
     !
-    SAFE_ALLOCATE(psi(1:os%sphere%mesh%np, 1:st_d%dim))
+    SAFE_ALLOCATE(psi(1:os%sphere%mesh%np, 1:ndim))
     do ist = 1, psib%nst
       call batch_get_state(psib, ist, os%sphere%mesh%np, psi)
       do iorb = 1, os%norbs
-        do idim = 1, st_d%dim
+        do idim = 1, ndim
          idim_orb = min(idim,os%ndim)
          bind = batch_ist_idim_to_linear(psib, (/ist, idim/))
           !In case of phase, we have to apply the conjugate of the phase here

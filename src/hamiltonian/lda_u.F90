@@ -82,12 +82,8 @@ module lda_u_oct_m
        dlda_u_commute_r,                &
        zlda_u_commute_r,                &
        dlda_u_force,                    &
-       zlda_u_force,                    &
-       get_orbital_radius,              &
-       l_notation
+       zlda_u_force
 
-  character(len=1), parameter :: &
-    l_notation(0:3) = (/ 's', 'p', 'd', 'f' /)
 
   type lda_u_t
     logical                  :: apply
@@ -508,7 +504,8 @@ contains
    PUSH_SUB(lda_u_build_phase_correction)
 
    do ios = 1, this%norbsets
-     call orbital_set_update_phase(this%orbsets(ios), sb, std, vec_pot, vec_pot_var)
+     call orbital_set_update_phase(this%orbsets(ios), sb, std%kpt, (std%ispin==SPIN_POLARIZED), &
+                                        vec_pot, vec_pot_var)
    end do
   
    POP_SUB(lda_u_build_phase_correction)
@@ -558,47 +555,6 @@ contains
   end subroutine lda_u_get_effectiveU
 
   ! ---------------------------------------------------------
-  FLOAT function get_orbital_radius(geo, mesh, ia, iorb, ispin, truncation, threshold) result(radius)
-    type(geometry_t), target, intent(in)   :: geo
-    type(mesh_t),             intent(in)   :: mesh
-    integer,                  intent(in)   :: ia, iorb, ispin
-    integer,                  intent(in)   :: truncation
-    FLOAT,                    intent(in)   :: threshold
-
-    type(species_t), pointer :: spec
-    integer :: ii, ll, mm
-
-    PUSH_SUB(get_orbital_radius)
-
-    spec => geo%atom(ia)%species
-    call species_iwf_ilm(spec, iorb, ispin, ii, ll, mm)
-
-    if(truncation == OPTION__ORBITALSTRUNCATIONMETHOD__FULL) then
-      radius = species_get_iwf_radius(spec, ii, ispin, threshold)
-    else
-      radius = species_get_iwf_radius(spec, ii, ispin)
-
-      if(truncation == OPTION__ORBITALSTRUNCATIONMETHOD__BOX) then
-        ! if the orbital is larger than the size of the box, we restrict it to this size, 
-        ! otherwise the orbital will overlap more than one time with the simulation box.
-        ! This would induces phase problem if the complete mesh is used instead of the sphere
-        radius = min(radius, minval(mesh%sb%lsize(1:mesh%sb%dim)-mesh%spacing(1:mesh%sb%dim)*CNST(1.01)))
-      else
-        !If asked, we truncate the orbital to the radius on the projector spheres 
-        !of the NL part of the pseudopotential.
-        !This is a way to garanty no overlap between orbitals of different atoms.
-        if(species_is_ps(spec)) &
-          radius = min(radius,species_get_ps_radius(spec))
-        end if
-        
-      end if
-      ! make sure that if the spacing is too large, the orbitals fit in a few points at least
-      radius = max(radius, CNST(2.0)*maxval(mesh%spacing(1:mesh%sb%dim)))
-
-    POP_SUB(get_orbital_radius)
-  end function get_orbital_radius
-
-  ! ---------------------------------------------------------
   subroutine find_minimal_atomic_spheres(geo, mesh, minradii, truncation, threshold)
     type(geometry_t), target, intent(in)    :: geo
     type(mesh_t),             intent(in)    :: mesh
@@ -614,9 +570,9 @@ contains
 
      if(species_niwfs(geo%atom(ia)%species) < 1) cycle
 
-      minradii(ia) = get_orbital_radius(geo, mesh, ia, 1, 1, truncation, threshold)
+      minradii(ia) = atomic_orbital_get_radius(geo, mesh, ia, 1, 1, truncation, threshold)
       do iorb = 2, species_niwfs(geo%atom(ia)%species)
-        minradii(ia) = min(minradii(ia), get_orbital_radius(geo, mesh, ia, iorb, 1, truncation, threshold))
+        minradii(ia) = min(minradii(ia), atomic_orbital_get_radius(geo, mesh, ia, iorb, 1, truncation, threshold))
       end do !iorb
     end do !ia
 

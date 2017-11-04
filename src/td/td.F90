@@ -283,6 +283,8 @@ contains
     !% <tt>RestartWriteInterval</tt> time steps.
     !%End
     call parse_variable('RecalculateGSDuringEvolution', .false., td%recalculate_gs)
+    if( hm%lda_u%apply .and. td%recalculate_gs) &
+      call messages_not_implemented("DFT+U with RecalculateGSDuringEvolution=yes")
 
     !%Variable TDScissor 
     !%Type float 

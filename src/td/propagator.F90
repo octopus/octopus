@@ -671,7 +671,6 @@ contains
     end if
 
     !TODO: we should update the occupation matrices here 
-    ! NTD: Who calls fermi ? 
     if(hm%lda_u%apply) then
       call messages_not_implemented("DFT+U with propagator_dt_bo")  
     end if

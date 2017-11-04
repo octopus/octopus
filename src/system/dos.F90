@@ -35,6 +35,7 @@ module dos_oct_m
   use simul_box_oct_m
   use species_oct_m
   use states_oct_m
+  use states_dim_oct_m
   use submesh_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -281,13 +282,8 @@ contains
       SAFE_ALLOCATE(weight(1:st%d%nik,1:st%nst))
 
       do ia = 1, geo%natoms
-
         !We first count how many orbital set we have
-        work = 0
-        do iorb = 1, species_niwfs(geo%atom(ia)%species)
-          call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
-          work = max(work, ii)
-        end do
+        work = orbital_set_count(geo, ia)
 
         !We loop over the orbital sets of the atom ia
         do norb = 1, work
@@ -302,7 +298,7 @@ contains
               os%ll = ll
               os%nn = nn
               os%ii = ii
-              os%radius = get_orbital_radius(geo, mesh, ia, iorb, 1, &
+              os%radius = atomic_orbital_get_radius(geo, mesh, ia, iorb, 1, &
                                 OPTION__ORBITALSTRUNCATIONMETHOD__FULL, CNST(0.01))
               work2 = work2 + 1
             end if
@@ -346,8 +342,9 @@ contains
               SAFE_ALLOCATE(os%eorb_submesh(1:os%sphere%np, 1:os%ndim, 1:os%norbs, st%d%kpt%start:st%d%kpt%end))
               os%eorb_submesh(:,:,:,:) = M_ZERO
             end if
-            call orbital_set_update_phase(os, sb, st%d, vec_pot = hm%hm_base%uniform_vector_potential, &
-                                                       vec_pot_var = hm%hm_base%vector_potential)
+            call orbital_set_update_phase(os, sb, st%d%kpt, (st%d%ispin==SPIN_POLARIZED), &
+                                            vec_pot = hm%hm_base%uniform_vector_potential, &
+                                            vec_pot_var = hm%hm_base%vector_potential)
           end if
 
           if(mpi_grp_is_root(mpi_world)) then
@@ -376,8 +373,12 @@ contains
            do ik = st%d%kpt%start, st%d%kpt%end
             if(states_are_real(st)) then
               call states_get_state(st, mesh, ist, ik, dpsi )
-              call dorbital_set_get_coefficients(os, st%d, dpsi, ik, .false., ddot(1:st%d%dim,1:os%norbs))
-
+              call dorbital_set_get_coefficients(os, st%d%dim, dpsi, ik, .false., ddot(1:st%d%dim,1:os%norbs))
+              do iorb = 1, os%norbs
+                do idim = 1, st%d%dim
+                  weight(ik,ist) = weight(ik,ist) + st%d%kweights(ik)*abs(ddot(idim,iorb))**2
+                end do
+              end do
             else
               call states_get_state(st, mesh, ist, ik, zpsi )
               if(associated(hm%hm_base%phase)) then
@@ -390,19 +391,15 @@ contains
                 !$omp end parallel do
               end do
               end if
-              call zorbital_set_get_coefficients(os, st%d, zpsi, ik, associated(hm%hm_base%phase), &
+              call zorbital_set_get_coefficients(os, st%d%dim, zpsi, ik, associated(hm%hm_base%phase), &
                                  zdot(1:st%d%dim,1:os%norbs))
-            end if
- 
-            do iorb = 1, os%norbs
-              do idim = 1, st%d%dim
-                if(states_are_real(st)) then
-                  weight(ik,ist) = weight(ik,ist) + st%d%kweights(ik)*abs(ddot(idim,iorb))**2
-                else
+
+              do iorb = 1, os%norbs
+                do idim = 1, st%d%dim
                   weight(ik,ist) = weight(ik,ist) + st%d%kweights(ik)*abs(zdot(idim,iorb))**2
-                end if
+                end do
               end do
-            end do
+            end if
            end do
           end do
 
