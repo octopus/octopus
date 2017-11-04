@@ -473,17 +473,21 @@ contains
     !% relevant kind of run (<i>e.g.</i> <tt>static</tt> for <tt>CalculationMode = gs</tt>).
     !% Time-dependent simulations print only per iteration, including always the last. The frequency of output per iteration
     !% (available for <tt>CalculationMode</tt> = <tt>gs</tt>, <tt>unocc</tt>,  <tt>td</tt>, and <tt>opt_control</tt>)
-    !% is set by <tt>OutputInterval</tt> and the directory is set by <tt>OutputIterDir</tt>.
+    !% is set by <tt>OutputInterval</tt> and the directory is set by <tt>OutputIterDir/effectiveU</tt>.
     !% For linear-response run modes, the derivatives of many quantities can be printed, as listed in
     !% the options below. Indices in the filename are labelled as follows:
     !% <tt>sp</tt> = spin (or spinor component), <tt>k</tt> = <i>k</i>-point, <tt>st</tt> = state/band.
     !% There is no tag for directions, given as a letter. The perturbation direction is always
     !% the last direction for linear-response quantities, and a following +/- indicates the sign of the frequency.
-    !% Example: <tt>density + potential</tt>
+    !% Example: <tt>occupation_matrices + effectiveU</tt>
     !%Option occupation_matrices  bit(0)
     !% Outputs the occupation matrices of LDA+U
     !%Option effectiveU bit(1)
     !% Outputs the value of the effectiveU for each atoms 
+    !%Option magnetization bit(18)
+    !% Outputs file containing structure and magnetization of the localized subspace 
+    !% on the atoms as a vector associated with each atom, which can be visualized.
+    !% For the moment, it only works if a +U is added on one type of orbital per atom. 
     !%End
     call parse_variable('OutputLDA_U', 0, outp%what_lda_u)
 
@@ -672,6 +676,11 @@ contains
     if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__EFFECTIVEU) /= 0&
        .and. hm%lda_u%apply) then
       call lda_u_write_effectiveU(dir, hm%lda_u)
+    end if
+
+    if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__MAGNETIZATION) /= 0&
+       .and. hm%lda_u%apply) then
+      call lda_u_write_magnetization(dir, hm%lda_u, geo, gr%mesh, st)
     end if
 
     call profiling_out(prof)

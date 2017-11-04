@@ -26,7 +26,9 @@ module lda_u_io_oct_m
   use global_oct_m
   use grid_oct_m
   use io_oct_m
+  use io_function_oct_m
   use lda_u_oct_m
+  use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
   use profiling_oct_m
@@ -45,6 +47,7 @@ module lda_u_io_oct_m
        lda_u_write_occupation_matrices, &
        lda_u_write_effectiveU,          &
        lda_u_write_U,                   &
+       lda_u_write_magnetization,       &
        lda_u_load,                      &
        lda_u_dump
 
@@ -188,6 +191,52 @@ contains
    POP_SUB(lda_u_write_effectiveU)
  end subroutine lda_u_write_effectiveU
 
+
+ !--------------------------------------------------------- 
+ subroutine lda_u_write_magnetization(dir, this, geo, mesh, st)
+   type(lda_u_t),     intent(in)    :: this
+   character(len=*),  intent(in)    :: dir
+   type(geometry_t),  intent(in)    :: geo
+   type(mesh_t),      intent(in)    :: mesh
+   type(states_t),    intent(in)    :: st
+
+   integer :: iunit, ia, ios, im
+   FLOAT, allocatable :: mm(:,:)
+
+   PUSH_SUB(lda_u_write_magnetization)
+
+   if( .not. mpi_grp_is_root(mpi_world)) return
+
+   call io_mkdir(dir)
+    iunit = io_open(trim(dir)//'magnetization.xsf', action='write', position='asis')
+
+    if(this%nspins > 1) then
+      SAFE_ALLOCATE(mm(1:geo%natoms, 1:mesh%sb%dim))
+      mm(1:geo%natoms, 1:mesh%sb%dim) = M_ZERO
+      !We compute the magnetization vector for each orbital set
+      do ios = 1, this%norbsets
+        ia = this%orbsets(ios)%iatom
+        do im = 1, this%orbsets(ios)%norbs
+          if (states_are_real(st)) then
+            mm(ia, 3) = mm(ia, 3) + this%dn(im,im,1,ios) - this%dn(im,im,2,ios) 
+          else
+            mm(ia, 3) = mm(ia, 3) + real(this%zn(im,im,1,ios) - this%zn(im,im,2,ios))
+            !Spinors
+            if(this%nspins /= this%spin_channels) then
+              mm(ia, 1) = mm(ia, 1) + 2*real(this%zn(im,im,3,ios))
+              mm(ia, 2) = mm(ia, 2) - 2*aimag(this%zn(im,im,3,ios))
+            end if
+          end if  
+        end do !im
+      end do ! ios
+      call write_xsf_geometry(iunit, geo, mesh, forces = mm)
+      SAFE_DEALLOCATE_A(mm)
+    end if
+
+    call io_close(iunit)
+
+   POP_SUB(lda_u_write_magnetization)
+ end subroutine lda_u_write_magnetization
 
  !--------------------------------------------------------- 
  subroutine lda_u_write_U(this, iunit)
