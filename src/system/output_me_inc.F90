@@ -260,9 +260,10 @@ subroutine X(output_me_ks_multipoles1d)(fname, st, gr, ll, ik)
   POP_SUB(X(output_me_ks_multipoles1d))
 end subroutine X(output_me_ks_multipoles1d)
 
+! NH: This code was part of the output_me_one_body subroutine
+! NH: No idea what it does, no documentation as far as I can tell
 
-! ---------------------------------------------------------
-subroutine X(one_body) (dir, gr, geo, st, hm)
+subroutine X(output_me_gauge)(dir, gr, geo, st, hm)
   use xc_oct_m
 
   character(len=*),    intent(in)    :: dir
@@ -274,43 +275,18 @@ subroutine X(one_body) (dir, gr, geo, st, hm)
   integer ist, jst, iunit, idir, iatom, np
   R_TYPE :: me, exp_r, exp_g, corr
   R_TYPE, allocatable :: gpsi(:,:), cpsi(:,:)
-  R_TYPE, allocatable :: psii(:, :), psij(:, :)
+  R_TYPE, allocatable :: psii(:,:), psij(:,:)
 
   SAFE_ALLOCATE(psii(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(psij(1:gr%mesh%np_part, 1:st%d%dim))
-  
-  PUSH_SUB(X(one_body))
-
-  np = gr%mesh%np
-
-  ASSERT(.not. st%parallel_in_states)
-  if(gr%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("OutputMatrixElements=two_body with k-points")
-  if(hm%family_is_mgga_with_exc) &
-    call messages_not_implemented("OutputMatrixElements=one_body with MGGA") 
-  ! how to do this properly? states_matrix
-  iunit = io_open(trim(dir)//'/output_me_one_body', action='write')
-
-  do ist = 1, st%nst
-
-    call states_get_state(st, gr%mesh, ist, 1, psii)
-    
-    do jst = 1, st%nst
-      if(jst > ist) cycle
-      
-      call states_get_state(st, gr%mesh, jst, 1, psij)
-
-      psij(1:np, 1) = R_CONJ(psii(1:np, 1))*hm%Vhxc(1:np, 1)*psij(1:np, 1)
-
-      me = st%eigenval(ist,1) - X(mf_integrate)(gr%mesh, psij(:, 1))
-
-      write(iunit, *) ist, jst, me
-    end do
-  end do
-
   SAFE_ALLOCATE(gpsi(1:gr%mesh%np_part, 1:gr%sb%dim))
   SAFE_ALLOCATE(cpsi(1:gr%mesh%np_part, 1:1))
 
+  PUSH_SUB(X(output_me_gauge))
+
   iunit = io_open(trim(dir)//'/output_me_gauge', action='write')
+
+  np = gr%mesh%np
 
   do ist = 1, st%nst
 
@@ -321,13 +297,11 @@ subroutine X(one_body) (dir, gr, geo, st, hm)
       if(st%occ(jst, 1) > CNST(0.0001)) cycle
 
       call states_get_state(st, gr%mesh, jst, 1, psij)
-
       call X(derivatives_grad)(gr%der, psij(:, 1), gpsi)
        
       do idir = 1, 3
          exp_r = X(mf_integrate)(gr%mesh, R_CONJ(psii(1:np, 1))*gr%mesh%x(1:np, idir)*psij(1:np, 1))
-         exp_g = X(mf_integrate)(gr%mesh, R_CONJ(psii(1:np, 1))*gpsi(1:np, idir))
-         
+         exp_g = X(mf_integrate)(gr%mesh, R_CONJ(psii(1:np, 1))*gpsi(1:np, idir))       
          corr = M_ZERO
          do iatom = 1, geo%natoms
            cpsi = M_ZERO
@@ -350,9 +324,9 @@ subroutine X(one_body) (dir, gr, geo, st, hm)
   SAFE_DEALLOCATE_A(psij)
 
   call io_close(iunit)
-  POP_SUB(X(one_body))
-end subroutine X(one_body)
+ ! POP_SUB(X(output_me_gauge))
 
+end subroutine X(output_me_gauge)
 
 !! Local Variables:
 !! mode: f90

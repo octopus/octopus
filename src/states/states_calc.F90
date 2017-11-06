@@ -33,6 +33,7 @@ module states_calc_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
+  use hamiltonian_oct_m
   use hardware_oct_m
   use io_oct_m
   use kpoints_oct_m
@@ -97,6 +98,8 @@ module states_calc_oct_m
     states_sort_complex,            &
     dstates_calc_projections,       &
     zstates_calc_projections,       &
+    dstates_me_one_body,            &
+    zstates_me_one_body,            &
     dstates_me_two_body,            &
     zstates_me_two_body
 

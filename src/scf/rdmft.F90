@@ -1024,7 +1024,6 @@ contains
     SAFE_DEALLOCATE_A(dpsi)
     SAFE_DEALLOCATE_A(dpsi2)
     
-
     POP_SUB(rdm_integrals) 
 
   end subroutine rdm_integrals

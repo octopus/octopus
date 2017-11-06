@@ -147,7 +147,7 @@ contains
 
     integer :: id, ll, mm, ik, iunit
     character(len=256) :: fname
-    FLOAT, allocatable :: twoint(:)
+    FLOAT, allocatable :: oneint(:), twoint(:)
     integer, allocatable :: iindex(:), jindex(:), kindex(:), lindex(:)
     
     PUSH_SUB(output_me)
@@ -213,10 +213,40 @@ contains
     if(iand(this%what, output_me_one_body) /= 0) then
       message(1) = "Computing one-body matrix elements"
       call messages_info(1)
+
+      ASSERT(.not. st%parallel_in_states)
+      if(gr%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("OutputMatrixElements=two_body with k-points")
+      if(hm%family_is_mgga_with_exc) &
+      call messages_not_implemented("OutputMatrixElements=one_body with MGGA") 
+      ! how to do this properly? states_matrix
+      iunit = io_open(trim(dir)//'/output_me_one_body', action='write')
+
+      id = st%nst*(st%nst+1)/2
+
+      SAFE_ALLOCATE(oneint(1:id))
+      SAFE_ALLOCATE(iindex(1:id))
+      SAFE_ALLOCATE(jindex(1:id))
+
       if (states_are_real(st)) then
-        call done_body(dir, gr, geo, st, hm)
+        call dstates_me_one_body(dir, gr, geo, st, hm, id, iindex, jindex, oneint)
       else
-        call zone_body(dir, gr, geo, st, hm)
+        call zstates_me_one_body(dir, gr, geo, st, hm, id, iindex, jindex, oneint)
+      end if
+
+      do ll = 1, id
+        write(iunit, *) iindex(ll), jindex(ll), oneint(ll)
+      enddo
+
+      SAFE_DEALLOCATE_A(iindex)
+      SAFE_DEALLOCATE_A(jindex)
+      SAFE_DEALLOCATE_A(oneint)
+      call io_close(iunit)
+
+
+      if (states_are_real(st)) then
+        call doutput_me_gauge(dir, gr, geo, st, hm)
+      else
+        call zoutput_me_gauge(dir, gr, geo, st, hm)
       end if
     end if
 
