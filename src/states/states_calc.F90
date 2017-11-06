@@ -97,8 +97,8 @@ module states_calc_oct_m
     states_sort_complex,            &
     dstates_calc_projections,       &
     zstates_calc_projections,       &
-    dme_two_body,                   &
-    zme_two_body
+    dstates_me_two_body,            &
+    zstates_me_two_body
 
   interface states_rotate
     module procedure dstates_rotate, zstates_rotate
