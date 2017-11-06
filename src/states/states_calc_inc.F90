@@ -1398,7 +1398,7 @@ subroutine X(states_calc_projections)(mesh, st, gs_st, ik, proj)
 end subroutine X(states_calc_projections)
 
 ! ---------------------------------------------------------
-subroutine X(me_two_body) (gr, st, nint, iindex, jindex, kindex, lindex, twoint)
+subroutine X(states_me_two_body) (gr, st, nint, iindex, jindex, kindex, lindex, twoint)
   type(grid_t),     intent(inout)           :: gr
   type(states_t),   intent(in)              :: st
   integer,          intent(in)              :: nint
@@ -1475,7 +1475,7 @@ subroutine X(me_two_body) (gr, st, nint, iindex, jindex, kindex, lindex, twoint)
   SAFE_DEALLOCATE_A(psil)
 
   POP_SUB(X(me_two_body))
-end subroutine X(me_two_body)
+end subroutine X(states_me_two_body)
 
 
 !! Local Variables:
