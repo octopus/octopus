@@ -237,9 +237,9 @@ contains
       SAFE_ALLOCATE(lindex(1:id))
 
       if (states_are_real(st)) then
-        call dme_two_body(gr, st, id, iindex, jindex, kindex, lindex, twoint)
+        call dstates_me_two_body(gr, st, id, iindex, jindex, kindex, lindex, twoint)
       else
-        call zme_two_body(gr, st, id, iindex, jindex, kindex, lindex, twoint)
+        call zstates_me_two_body(gr, st, id, iindex, jindex, kindex, lindex, twoint)
       end if
       
       do ll = 1, id
