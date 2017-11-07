@@ -1050,12 +1050,17 @@ contains
          end if
          call states_end(FBZ_st)
       end if
+
+      if(mpi_grp_is_root(mpi_world)) then
+        iunit = io_open(trim(FLOQUET_DIR) // "/info" , action='write')
+      else
+        iunit = 0
+      end if
       
       call energy_calc_total(hm, gr, dressed_st, iunit, full = .true.)
       call forces_calculate(gr, sys%geo, hm, dressed_st)
 
       if(mpi_grp_is_root(mpi_world)) then
-        iunit = io_open(trim(FLOQUET_DIR) // "/info" , action='write')
         write(iunit, '(3a)') 'Energy [', trim(units_abbrev(units_out%energy)), ']:'
         write(iunit,'(1x)')
         
