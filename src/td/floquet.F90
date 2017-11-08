@@ -1377,7 +1377,7 @@ contains
         matba(:,:) = M_z0
         
         do ib=FBZ_st%st_start,FBZ_st%st_end
-          print *,'test info', ik, ib, FBZ_st%d%kpt%start, FBZ_st%d%kpt%end,FBZ_st%st_start,FBZ_st%st_end
+          !print *,'test info', ik, ib, FBZ_st%d%kpt%start, FBZ_st%d%kpt%end,FBZ_st%st_start,FBZ_st%st_end
           call states_get_state(FBZ_st, mesh, ib, ik, u_m)
           call floquet_td_state(hm%F,mesh,u_m,FBZ_st%eigenval(ib,ik),time,Fpsi_b)
 
