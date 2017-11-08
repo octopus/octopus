@@ -387,7 +387,7 @@ program floquet_observables
         end if
 
     case (OPTION__FLOQUETOBSERVABLEGAUGE__F_LENGTH_FBZ21)
-        if (hm%F%FBZ_solver == .true.) then 
+        if (hm%F%FBZ_solver .eqv. .true.) then 
           call calc_floquet_conductivity_length_gauge_FBZ21(dressed_st)
         else
           call get_FBZ_st(dressed_st, FBZ_st)
