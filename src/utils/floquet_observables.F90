@@ -1256,9 +1256,9 @@ contains
     CMPLX, allocatable   :: u_a(:,:), u_b(:,:), sigma(:,:,:)
     FLOAT, allocatable   :: spect(:,:)
     
-    integer :: idim, im, in, il, ista, istb, ik, itot, ii, i, imm, inn, spindim, ie, dim
+    integer :: idim, im, in, il, ista, istb, ik, itot, ii, i, imm, inn, ill, spindim, ie, dim
     FLOAT   :: omega, DE_ab,  EE, norm, fact
-    CMPLX   :: dm_ba(1:3), dm_ab(1:3), tmp(1:4), ampl
+    CMPLX   :: dn_ba(1:3), dm_ab(1:3), tmp(1:4), ampl
     integer :: iunit, idir, jdir, dir
     character(len=1024):: filename, iter_name, str
     
@@ -1294,63 +1294,66 @@ contains
             imm = im - hm%F%order(1) + 1
 
             dm_ab(:) = M_z0
-            dm_ba(:) = M_z0
 
-            do in=hm%F%order(1),hm%F%order(2)
-              inn = in - hm%F%order(1) + 1
-
-              !\sum_n <u_(n-m)a| r | u_nb> AND \sum_n <u_(n-m)b| r | u_na>
-              if (-im+in .ge. hm%F%order(1) .and. -im+in .le. hm%F%order(2)) then
+            do il=hm%F%order(1), hm%F%order(2)
+              ill = il - hm%F%order(1) + 1
+              !\sum_n <u_(l-m)a| r | u_lb> AND \sum_n <u_(l-m)b| r | u_la>
+              if (-im+il .ge. hm%F%order(1) .and. -im+il .le. hm%F%order(2)) then
                 
                 do idim=1,spindim
-                  call zmf_multipoles(sys%gr%mesh, conjg(u_a(:,(-im+in-hm%F%order(1))*spindim+idim)) &
-                                                       * u_b(:,(inn-1)*spindim+idim) , 1, tmp(:))  
+                  call zmf_multipoles(sys%gr%mesh, conjg(u_a(:,(-im+il-hm%F%order(1))*spindim+idim)) &
+                                                       * u_b(:,(ill-1)*spindim+idim) , 1, tmp(:))  
                   dm_ab(:) = dm_ab(:) + tmp(2:4)
                 end do
               end if
-           
-              if (im+in .ge. hm%F%order(1) .and. im+in .le. hm%F%order(2)) then
-                do idim=1,spindim
-                  call zmf_multipoles(sys%gr%mesh, conjg(u_b(:,(im+in-hm%F%order(1))*spindim+idim)) &
-                                                       * u_a(:,(in-hm%F%order(1))*spindim+idim) , 1, tmp(:))
-                  dm_ba(:) = dm_ba(:) + tmp(2:4)
+            end do ! il
 
-                end do
-              end if
+            do in=hm%F%order(1),hm%F%order(2)
+              inn = in - hm%F%order(1) + 1
+              dn_ba(:) = M_z0
+
+              do il = hm%F%order(1), hm%F%order(2)
+                ill = il - hm%F%order(1) + 1
+                if (-in+il .ge. hm%F%order(1) .and. -in+il .le. hm%F%order(2)) then
+                  do idim=1,spindim
+                    call zmf_multipoles(sys%gr%mesh, conjg(u_b(:,(-in+il-hm%F%order(1))*spindim+idim)) &
+                                                         * u_a(:,(il-hm%F%order(1))*spindim+idim) , 1, tmp(:))
+                    dn_ba(:) = dn_ba(:) + tmp(2:4)
+
+                  end do
+                end if
                   
-              !\sum_n <u_(n-m)a| r | u_nc>
-
-            end do ! in loop
+              end do ! il loop
          
-            do ie = 1, obs%ne
-              EE= ie * obs%de
-              do idir = 1, dim
-                do jdir = idir, dim   
+              do ie = 1, obs%ne
+                EE= ie * obs%de
+                do idir = 1, dim
+                  do jdir = idir, dim   
 
-!                 ampl =  M_zI * &
-!                          (conjg(dressed_st%coeff(ista,ik)) *dressed_st%coeff(ista,ik)-&
-!                          conjg(dressed_st%coeff(istb,ik)) *dressed_st%coeff(istb,ik)) * &
-!                          dm_ba(idir)*dm_ab(jdir)* &
-!                         (1/(DE_ab - im * M_zI*hm%F%omega  + EE + M_zi*obs%gamma) + &
-!                          1/(DE_ab - im * M_zI*hm%F%omega  - EE - M_zi*obs%gamma) )
+!                   ampl =  M_zI * &
+!                            (conjg(dressed_st%coeff(ista,ik)) *dressed_st%coeff(ista,ik)-&
+!                            conjg(dressed_st%coeff(istb,ik)) *dressed_st%coeff(istb,ik)) * &
+!                            dm_ba(idir)*dm_ab(jdir)* &
+!                           (1/(DE_ab - im * M_zI*hm%F%omega  + EE + M_zi*obs%gamma) + &
+!                            1/(DE_ab - im * M_zI*hm%F%omega  - EE - M_zi*obs%gamma) )
 
-                ampl = M_zI *&
-                          (dressed_st%occ(ista,ik)- dressed_st%occ(istb,ik)) *&
-                          dm_ba(idir)*dm_ab(jdir)* &
-                        (1/(DE_ab - im * hm%F%omega  + EE + M_zI*obs%gamma) + &
-                         1/(DE_ab - im * hm%F%omega  - EE - M_zI*obs%gamma) )
-                        
-                !ampl = ampl * exp(M_zI*(2*im*hm%F%omega - EE)*obs%time0)
-                        
-                if (idir == jdir) ampl = M_z2 * ampl
-               
-                
-                ! sum over a, b, im and ik        
-                sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + ampl * (dressed_st%d%kweights(ik))
-                end do    !jdir      
-              end do    !idir
-            end do ! ie loop
-            
+                  ampl = M_zI *&
+                            (dressed_st%occ(ista,ik)- dressed_st%occ(istb,ik)) *&
+                            dn_ba(idir)*dm_ab(jdir)* &
+                          (1/(DE_ab - in * hm%F%omega  + EE + M_zI*obs%gamma)) !+ &
+                         !  1/(DE_ab - in * hm%F%omega  - EE - M_zI*obs%gamma) )
+                          
+                  !ampl = ampl * exp(M_zI*(2*im*hm%F%omega - EE)*obs%time0)
+                          
+                  if (idir == jdir) ampl = M_z2 * ampl
+                 
+                  
+                  ! sum over a, b, im and ik        
+                  sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + ampl * (dressed_st%d%kweights(ik))
+                  end do    !jdir      
+                end do    !idir
+              end do ! ie loop
+            end do ! in loop
           end do ! im loop
         end do ! istb loop   
       end do ! ista loop   
