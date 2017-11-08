@@ -367,7 +367,24 @@ program floquet_observables
         call calc_floquet_conductivity()
   
     case (OPTION__FLOQUETOBSERVABLEGAUGE__F_LENGTH_FBZ)
-        call calc_floquet_conductivity_length_gauge_FBZ()
+        if (hm%F%FBZ_solver == .true.) then 
+          call calc_floquet_conductivity_length_gauge_FBZ(dressed_st)
+        else
+          call get_FBZ_st(dressed_st, FBZ_st)
+          !hm%F%FBZ_solver = .true.
+         ! get groundstate states
+          call states_allocate_wfns(gs_st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX)
+          call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+          if(ierr == 0) call states_load(restart, gs_st, sys%gr, ierr)
+          if (ierr /= 0) then
+             message(1) = 'Unable to read ground-state wavefunctions.'
+             call messages_fatal(1)
+          end if
+          call restart_end(restart)
+          call floquet_calc_FBZ_coefficients(hm, sys, FBZ_st, gs_st, M_ZERO)
+          !hm%F%FBZ_solver = .false.
+          call calc_floquet_conductivity_length_gauge_FBZ(FBZ_st)
+        end if
 
     case (OPTION__FLOQUETOBSERVABLEGAUGE__F_LENGTH_FBZ21)
         if (hm%F%FBZ_solver == .true.) then 
@@ -1261,96 +1278,89 @@ contains
     
     sigma(:,:,:) = M_z0
 
-    do idir = 1, dim
-      do jdir = idir, dim 
+    do ik=1, 1
+    !do ik=dressed_st%d%kpt%start, dressed_st%d%kpt%end
 
-        write(message(1),'(a,i5,a,i5,a)') 'Calculate sigma(',idir,',', jdir,'):'
-        call messages_info(1) 
-   
-   
-        do ik=1, 1
-        !do ik=dressed_st%d%kpt%start, dressed_st%d%kpt%end
-
-          do ista=1, dressed_st%nst
-            call states_get_state(dressed_st, sys%gr%mesh, ista, ik, u_a)
+      do ista=1, dressed_st%nst
+        call states_get_state(dressed_st, sys%gr%mesh, ista, ik, u_a)
+        
+        do istb=1, dressed_st%nst
             
-            do istb=1, dressed_st%nst
+          DE_ab = dressed_st%eigenval(ista,ik) - dressed_st%eigenval(istb,ik)
+          call states_get_state(dressed_st, sys%gr%mesh, istb, ik, u_b)
+                           
+          ! get the dipole matrix elements dn_cb and dm_ac
+          do im=hm%F%order(1),hm%F%order(2)
+            imm = im - hm%F%order(1) + 1
+
+            dm_ab(:) = M_z0
+            dm_ba(:) = M_z0
+
+            do in=hm%F%order(1),hm%F%order(2)
+              inn = in - hm%F%order(1) + 1
+
+              !\sum_n <u_(n-m)a| r | u_nb> AND \sum_n <u_(n-m)b| r | u_na>
+              if (-im+in .ge. hm%F%order(1) .and. -im+in .le. hm%F%order(2)) then
                 
-              DE_ab = dressed_st%eigenval(ista,ik) - dressed_st%eigenval(istb,ik)
-              call states_get_state(dressed_st, sys%gr%mesh, istb, ik, u_b)
-                               
-              ! get the dipole matrix elements dn_cb and dm_ac
-              do im=hm%F%order(1),hm%F%order(2)
-                imm = im - hm%F%order(1) + 1
-
-                dm_ab(:) = M_z0
-                dm_ba(:) = M_z0
-
-                do in=hm%F%order(1),hm%F%order(2)
-                  inn = in - hm%F%order(1) + 1
-
-                  !\sum_n <u_(n-m)a| r | u_nb> AND \sum_n <u_(n-m)b| r | u_na>
-                  if (-im+in .ge. hm%F%order(1) .and. -im+in .le. hm%F%order(2)) then
-                    
-                    do idim=1,spindim
-                      call zmf_multipoles(sys%gr%mesh, conjg(u_a(:,(-im+in-hm%F%order(1))*spindim+idim)) &
-                                                           * u_b(:,(inn-1)*spindim+idim) , 1, tmp(:))  
-                      dm_ab(:) = dm_ab(:) + tmp(2:4)
-                    end do
-                  end if
-               
-                  if (im+in .ge. hm%F%order(1) .and. im+in .le. hm%F%order(2)) then
-                    do idim=1,spindim
-                      call zmf_multipoles(sys%gr%mesh, conjg(u_b(:,(im+in-hm%F%order(1))*spindim+idim)) &
-                                                           * u_a(:,(in-hm%F%order(1))*spindim+idim) , 1, tmp(:))
-                      dm_ba(:) = dm_ba(:) + tmp(2:4)
-
-                    end do
-                  end if
-                      
-                  !\sum_n <u_(n-m)a| r | u_nc>
-
-                end do ! in loop
-             
-                do ie = 1, obs%ne
-                  EE= ie * obs%de
-
-!                   ampl =  M_zI * &
-!                            (conjg(dressed_st%coeff(ista,ik)) *dressed_st%coeff(ista,ik)-&
-!                            conjg(dressed_st%coeff(istb,ik)) *dressed_st%coeff(istb,ik)) * &
-!                            dm_ba(idir)*dm_ab(jdir)* &
-!                           (1/(DE_ab - im * M_zI*hm%F%omega  + EE + M_zi*obs%gamma) + &
-!                            1/(DE_ab - im * M_zI*hm%F%omega  - EE - M_zi*obs%gamma) )
-
-                  ampl = M_zI *&
-                            (dressed_st%occ(ista,ik)- dressed_st%occ(istb,ik)) *&
-                            dm_ba(idir)*dm_ab(jdir)* &
-                          (1/(DE_ab - im * hm%F%omega  + EE + M_zI*obs%gamma) + &
-                           1/(DE_ab - im * hm%F%omega  - EE - M_zI*obs%gamma) )
-                          
-                  !ampl = ampl * exp(M_zI*(2*im*hm%F%omega - EE)*obs%time0)
-                          
-                  if (idir == jdir) ampl = M_z2 * ampl
-                 
-                  
-                  ! sum over a, b, im and ik        
-                  sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + ampl * (dressed_st%d%kweights(ik))
-                end do ! ie loop
-                
-              end do ! im loop
-            end do ! istb loop   
-          end do ! ista loop   
+                do idim=1,spindim
+                  call zmf_multipoles(sys%gr%mesh, conjg(u_a(:,(-im+in-hm%F%order(1))*spindim+idim)) &
+                                                       * u_b(:,(inn-1)*spindim+idim) , 1, tmp(:))  
+                  dm_ab(:) = dm_ab(:) + tmp(2:4)
+                end do
+              end if
            
-        end do ! ik loop
-        
-        if(dressed_st%d%kpt%parallel) then
-          call comm_allreduce(dressed_st%d%kpt%mpi_grp%comm,  sigma(:,idir,jdir))
-        end if
+              if (im+in .ge. hm%F%order(1) .and. im+in .le. hm%F%order(2)) then
+                do idim=1,spindim
+                  call zmf_multipoles(sys%gr%mesh, conjg(u_b(:,(im+in-hm%F%order(1))*spindim+idim)) &
+                                                       * u_a(:,(in-hm%F%order(1))*spindim+idim) , 1, tmp(:))
+                  dm_ba(:) = dm_ba(:) + tmp(2:4)
 
-!       if(mpi_grp_is_root(mpi_world)) write(*, "(1x)")
-        
-      end do    !jdir      
-    end do    !idir
+                end do
+              end if
+                  
+              !\sum_n <u_(n-m)a| r | u_nc>
+
+            end do ! in loop
+         
+            do ie = 1, obs%ne
+              EE= ie * obs%de
+              do idir = 1, dim
+                do jdir = idir, dim   
+
+!                 ampl =  M_zI * &
+!                          (conjg(dressed_st%coeff(ista,ik)) *dressed_st%coeff(ista,ik)-&
+!                          conjg(dressed_st%coeff(istb,ik)) *dressed_st%coeff(istb,ik)) * &
+!                          dm_ba(idir)*dm_ab(jdir)* &
+!                         (1/(DE_ab - im * M_zI*hm%F%omega  + EE + M_zi*obs%gamma) + &
+!                          1/(DE_ab - im * M_zI*hm%F%omega  - EE - M_zi*obs%gamma) )
+
+                ampl = M_zI *&
+                          (dressed_st%occ(ista,ik)- dressed_st%occ(istb,ik)) *&
+                          dm_ba(idir)*dm_ab(jdir)* &
+                        (1/(DE_ab - im * hm%F%omega  + EE + M_zI*obs%gamma) + &
+                         1/(DE_ab - im * hm%F%omega  - EE - M_zI*obs%gamma) )
+                        
+                !ampl = ampl * exp(M_zI*(2*im*hm%F%omega - EE)*obs%time0)
+                        
+                if (idir == jdir) ampl = M_z2 * ampl
+               
+                
+                ! sum over a, b, im and ik        
+                sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + ampl * (dressed_st%d%kweights(ik))
+                end do    !jdir      
+              end do    !idir
+            end do ! ie loop
+            
+          end do ! im loop
+        end do ! istb loop   
+      end do ! ista loop   
+       
+    end do ! ik loop
+    
+    if(dressed_st%d%kpt%parallel) then
+      call comm_allreduce(dressed_st%d%kpt%mpi_grp%comm,  sigma(:,:,:))
+    end if
+
     
     
     if(mpi_grp_is_root(mpi_world)) then
@@ -1400,10 +1410,10 @@ contains
 
   end subroutine calc_floquet_conductivity_length_gauge_FBZ21
 
-  subroutine calc_floquet_conductivity_length_gauge_FBZ()
+  subroutine calc_floquet_conductivity_length_gauge_FBZ(dressed_st)
   
     ! Use floquet brillouin zone (FBZ) solver to calculate the conductivity
-    ! type(states_t), intent(in)      :: dressed_st
+    type(states_t), intent(in)      :: dressed_st
     CMPLX, allocatable   :: u_a(:,:), u_b(:,:), u_c(:,:), sigma(:,:,:)
     FLOAT, allocatable   :: spect(:,:)
     
@@ -1434,112 +1444,107 @@ contains
     sigma(:,:,:) = M_z0
     print *,'forder start end' , hm%F%order(1), hm%F%order(2)
 
-    do idir = 1, dim 
-      do jdir = idir, dim 
-
-        write(message(1),'(a,i5,a,i5,a)') 'Calculate sigma(',idir,',', jdir,'):'
-        call messages_info(1) 
-   
-   
-        do ik=dressed_st%d%kpt%start, dressed_st%d%kpt%end
-
-          do ista=dressed_st%st_start, dressed_st%st_end
-            ! call states_get_state(dressed_st, sys%gr%mesh, ista, ik, u_ma)
-            do istb=1, dressed_st%nst
-              do istc=1, dressed_st%nst
-                
-                DE_bc = dressed_st%eigenval(istb,ik) - dressed_st%eigenval(istc,ik)
-                DE_ca = dressed_st%eigenval(istc,ik) - dressed_st%eigenval(ista,ik)
-                
-                call states_get_state(dressed_st, sys%gr%mesh, ista, ik, u_a)
-                call states_get_state(dressed_st, sys%gr%mesh, istb, ik, u_b)
-                call states_get_state(dressed_st, sys%gr%mesh, istc, ik, u_c)
-      
-                                 
-                norm = (hm%F%order(2)-hm%F%order(1))
-                if (norm == 0) norm = M_ONE  
-                ! get the dipole matrix elements dn_cb and dm_ac
-                do im=hm%F%order(1),hm%F%order(2)
-                  imm = im - hm%F%order(1) + 1
-                  
-                  !\sum_l <u_(m+l)a| r | u_lc>
-                  dm_ac = M_z0
-                  do il=hm%F%order(1), hm%F%order(2)
-                    ill = il - hm%F%order(1) + 1
-                    if ( im+il .ge. hm%F%order(1) .and. im+il .le. hm%F%order(2)) then
-                      do idim=1,spindim
-                        call zmf_multipoles(sys%gr%mesh, conjg(u_a(:,(im+il-hm%F%order(1))*spindim+idim)) &
-                                                             * u_c(:,(ill-1)*spindim+idim) , 1, tmp(:))
-
-                        dm_ac(:) = dm_ac(:) + tmp(2:4)
-                      end do ! idim loop
-                    end if
-                  
-                  end do ! il loop
-
-                  do in=hm%F%order(1),hm%F%order(2)
-                    inn = in - hm%F%order(1) + 1
-                    !\sum_l <u_(n+l)c| r | u_lb>
-                    dn_cb = M_z0 
-                    do il=hm%F%order(1), hm%F%order(2)
-                      ill = il - hm%F%order(1) + 1
-
-                      if (in+il .ge. hm%F%order(1) .and. in+il .le. hm%F%order(2)) then
-                        ! print *,'in+il' ,in+il-hm%F%order(1), in+il
-                        do idim=1,spindim
-                          call zmf_multipoles(sys%gr%mesh, conjg(u_c(:,(in+il-hm%F%order(1))*spindim+idim)) &
-                                                               * u_b(:,(ill-1)*spindim+idim) , 1, tmp(:))
   
-                          dn_cb(:) = dn_cb(:) + tmp(2:4)
-                        end do ! idim loop
-                      end if
-                          
+   
+    do ik=dressed_st%d%kpt%start, dressed_st%d%kpt%end
 
-                    end do ! il loop
-                
-                    do ie = 1, obs%ne
-                        EE= ie * obs%de
-
-                        ampl =  M_zI * &
-                                 conjg(dressed_st%coeff(ista,ik)) *dressed_st%coeff(istb,ik) * &
-                                 dm_ac(idir)*dn_cb(jdir)* &
-                                (1/(DE_bc - in * M_zI*hm%F%omega  + EE + M_zi*obs%gamma)+ &
-                                 1/(DE_bc - in * M_zI*hm%F%omega  - EE - M_zi*obs%gamma)- & 
-                                 1/(DE_ca - im * M_zI*hm%F%omega  + EE + M_zi*obs%gamma)- & 
-                                 1/(DE_ca - im * M_zI*hm%F%omega  - EE - M_zi*obs%gamma) )
-                                
-                        if (idir == jdir) ampl = M_z2 * ampl
-                        
-                        ! sum over a and b         
-                        sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + ampl* (dressed_st%d%kweights(ik))
-                    end do ! ie loop
-
-                  end do ! in loop
-                end do ! im loop
-
-                        
-                !print *, ik, ista, istb, DE
-
-
-              end do ! istc loop
-            end do ! istb loop   
-          end do ! ista loop   
-
-           
-        end do ! ik loop
-        if(dressed_st%parallel_in_states .or. dressed_st%d%kpt%parallel) then
-          call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm,  sigma(:,idir,jdir))
-        end if
-                
-        
-        
-
-
-      if(mpi_grp_is_root(mpi_world)) write(*, "(1x)")
-        
-      end do    !jdir      
-    end do    !idir
+      do ista=dressed_st%st_start, dressed_st%st_end
+        ! call states_get_state(dressed_st, sys%gr%mesh, ista, ik, u_ma)
+        call states_get_state(dressed_st, sys%gr%mesh, ista, ik, u_a)
+        do istb=1, dressed_st%nst
+          call states_get_state(dressed_st, sys%gr%mesh, istb, ik, u_b)
+          do istc=1, dressed_st%nst
+            
+            DE_bc = dressed_st%eigenval(istb,ik) - dressed_st%eigenval(istc,ik)
+            DE_ca = dressed_st%eigenval(istc,ik) - dressed_st%eigenval(ista,ik)
+            
+            call states_get_state(dressed_st, sys%gr%mesh, istc, ik, u_c)
     
+                             
+            ! get the dipole matrix elements dn_cb and dm_ac
+            do im=hm%F%order(1),hm%F%order(2)
+              imm = im - hm%F%order(1) + 1
+              
+              !\sum_l <u_(m+l)a| r | u_lc>
+              dm_ac = M_z0
+              do il=hm%F%order(1), hm%F%order(2)
+                ill = il - hm%F%order(1) + 1
+                if ( im+il .ge. hm%F%order(1) .and. im+il .le. hm%F%order(2)) then
+                  do idim=1,spindim
+                    call zmf_multipoles(sys%gr%mesh, conjg(u_a(:,(im+il-hm%F%order(1))*spindim+idim)) &
+                                                         * u_c(:,(ill-1)*spindim+idim) , 1, tmp(:))
+
+                    dm_ac(:) = dm_ac(:) + tmp(2:4)
+                  end do ! idim loop
+                end if
+              
+              end do ! il loop
+
+              do in=hm%F%order(1),hm%F%order(2)
+                inn = in - hm%F%order(1) + 1
+                !\sum_l <u_(n+l)c| r | u_lb>
+                dn_cb = M_z0 
+                do il=hm%F%order(1), hm%F%order(2)
+                  ill = il - hm%F%order(1) + 1
+
+                  if (in+il .ge. hm%F%order(1) .and. in+il .le. hm%F%order(2)) then
+                    ! print *,'in+il' ,in+il-hm%F%order(1), in+il
+                    do idim=1,spindim
+                      call zmf_multipoles(sys%gr%mesh, conjg(u_c(:,(in+il-hm%F%order(1))*spindim+idim)) &
+                                                           * u_b(:,(ill-1)*spindim+idim) , 1, tmp(:))
+  
+                      dn_cb(:) = dn_cb(:) + tmp(2:4)
+                    end do ! idim loop
+                  end if
+                      
+
+                end do ! il loop
+            
+                do ie = 1, obs%ne
+                  EE= ie * obs%de
+                  do idir = 1, dim 
+                    do jdir = idir, dim 
+                      ! print *,'jdir', jdir
+                      ! write(message(1),'(a,i5,a,i5,a)') 'Calculate sigma(',idir,',', jdir,'):'
+                      ! call messages_info(1) 
+                      ampl =  M_zI * &
+                               conjg(dressed_st%coeff(ista,ik)) *dressed_st%coeff(istb,ik) * &
+                               dm_ac(idir)*dn_cb(jdir)* &
+                              (1/(DE_bc - in * M_zI*hm%F%omega  + EE + M_zi*obs%gamma)+ &
+                               1/(DE_bc - in * M_zI*hm%F%omega  - EE - M_zi*obs%gamma)- & 
+                               1/(DE_ca - im * M_zI*hm%F%omega  + EE + M_zi*obs%gamma)- & 
+                               1/(DE_ca - im * M_zI*hm%F%omega  - EE - M_zi*obs%gamma) )
+                      if (idir == jdir) ampl = M_z2 * ampl
+                      
+                      ! sum over a and b         
+                      sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + ampl* (dressed_st%d%kweights(ik))
+                      ! if(mpi_grp_is_root(mpi_world)) write(*, "(1x)")
+                        
+                      end do    !jdir      
+                    end do    !idir
+    
+                end do ! ie loop
+
+              end do ! in loop
+            end do ! im loop
+
+                    
+            !print *, ik, ista, istb, DE
+
+
+          end do ! istc loop
+        end do ! istb loop   
+      end do ! ista loop   
+ 
+    end do ! ik loop
+               
+        
+    if(dressed_st%parallel_in_states .or. dressed_st%d%kpt%parallel) then
+      call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm,  sigma(:,:,:))
+    end if
+        
+
+
     
     if(mpi_grp_is_root(mpi_world)) then
       write(iter_name,'(i4)') hm%F%iter
