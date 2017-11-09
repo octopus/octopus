@@ -1616,162 +1616,149 @@ contains
     sigma(:,:,:) = M_z0
 
     print *,'forder start end' , hm%F%order(1), hm%F%order(2)
-    do idir = 1, dim   
-      do jdir = idir, dim 
-
-
-        write(message(1),'(a,i5,a,i5,a)') 'Calculate sigma(',idir,',', jdir,'):'
-        call messages_info(1)
         
     
-        do ik=dressed_st%d%kpt%start, dressed_st%d%kpt%end
+    do ik=dressed_st%d%kpt%start, dressed_st%d%kpt%end
+      do ista=dressed_st%st_start, dressed_st%st_end
+        call states_get_state(dressed_st, sys%gr%mesh, ista, ik, u_ma)
+        do istb=1, dressed_st%nst
+          if (ista == istb) cycle
+          DE = dressed_st%eigenval(istb,ik) - dressed_st%eigenval(ista,ik)
+          
+          !Cut out all the components suppressed by small occupations 
+          if (abs((dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik))/DE) < 1E-14) cycle
 
-            do ista=dressed_st%st_start, dressed_st%st_end
-              call states_get_state(dressed_st, sys%gr%mesh, ista, ik, u_ma)
+          call states_get_state(dressed_st, sys%gr%mesh, istb, ik, u_mb)
     
-              do istb=1, dressed_st%nst
-                !if (ista == istb) cycle
+
+          melab(:) = M_z0
+          melba(:) = M_z0
+                           
+          norm = (hm%F%order(2)-hm%F%order(1))
+          if (norm == 0) norm = M_ONE  
           
-                !if (ista == istb .and. idir /= jdir) cycle
-                
-                !if (ista >= istb .and. idir == jdir) cycle
-                
-                DE = dressed_st%eigenval(istb,ik) - dressed_st%eigenval(ista,ik)
-                
-                ! Skip divergence 
-                ! if (abs(DE) < M_EPSILON) cycle                  
-                
-                !Cut out all the components suppressed by small occupations 
-                if (abs((dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik))/DE) < 1E-14) cycle
+          select case (obs%gauge)
 
-                call states_get_state(dressed_st, sys%gr%mesh, istb, ik, u_mb)
-        
-
-                 
-                melab(:) = M_z0
-                melba(:) = M_z0
-                                 
-                norm = (hm%F%order(2)-hm%F%order(1))
-                if (norm == 0) norm = M_ONE  
-                
-                select case (obs%gauge)
-
-                case (OPTION__FLOQUETOBSERVABLEGAUGE__F_VELOCITY)
-                  ! get the dipole matrix elements <<psi_a|J|psi_b >>
-                  do im=hm%F%order(1),hm%F%order(2)
-                    imm = im - hm%F%order(1) + 1
+          case (OPTION__FLOQUETOBSERVABLEGAUGE__F_VELOCITY)
+            ! get the dipole matrix elements <<psi_a|J|psi_b >>
+            do im=hm%F%order(1),hm%F%order(2)
+              imm = im - hm%F%order(1) + 1
+    
+              !<u_ma| J | u_mb>
+              call current_calculate_mel(sys%gr%der, hm, sys%geo, &
+                                         u_ma(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) ,&
+                                         u_mb(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) , &
+                                         ik, tmp2(:,:))
+              do dir=1,dim
+                melab(dir) = melab(dir) + sum(tmp2(dir,1:spindim)) !/ norm 
+              end do
           
-                    !<u_ma| J | u_mb>
-                    call current_calculate_mel(sys%gr%der, hm, sys%geo, &
-                                               u_ma(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) ,&
-                                               u_mb(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) , &
-                                               ik, tmp2(:,:))
-                    do dir=1,dim
-                      melab(dir) = melab(dir) + sum(tmp2(dir,1:spindim)) !/ norm 
-                    end do
-                
-                    !<u_mb| J | u_ma>
-                    call current_calculate_mel(sys%gr%der, hm, sys%geo, &
-                                               u_mb(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) ,&
-                                               u_ma(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) , &
-                                               ik, tmp2(:,:))
-                    do dir=1,dim
-                      melba(dir) = melba(dir) + sum(tmp2(dir,1:spindim)) !/ norm 
-                    end do
-                
-                  end do ! im loop
-                  ! I moved ie cycle inside to save time but the progress bar will be ill defined
-                  do ie = 1, obs%ne
-                    EE= ie * obs%de
-                    !if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, obs%ne)
-
-                 
-                            ampl =  M_zI * (dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik))/DE * &
-                                            melab(idir)*melba(jdir) /(DE + EE + M_zi*obs%gamma) 
-                                    
-                            if (idir == jdir) ampl = M_z2 * ampl
-                            
-                            ! sum over a and b         
-                            sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + ampl
-                    !if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ie, obs%ne)
-
-                  end do ! ie loop
-                  gauge = 'v'
-
-                case (OPTION__FLOQUETOBSERVABLEGAUGE__F_LENGTH)
-                  ! get the dipole matrix elements <<psi_a|r|psi_b >>
-                  do im=hm%F%order(1),hm%F%order(2)
-                    imm = im - hm%F%order(1) + 1
+              !<u_mb| J | u_ma>
+              call current_calculate_mel(sys%gr%der, hm, sys%geo, &
+                                         u_mb(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) ,&
+                                         u_ma(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) , &
+                                         ik, tmp2(:,:))
+              do dir=1,dim
+                melba(dir) = melba(dir) + sum(tmp2(dir,1:spindim)) !/ norm 
+              end do
           
-                    !<u_ma| r | u_mb>
-                    do idim=1,spindim
-                      call zmf_multipoles(sys%gr%mesh, conjg(u_ma(:,(imm-1)*spindim+idim)) &
-                                                           * u_mb(:,(imm-1)*spindim+idim) , 1, tmp(:))
+            end do ! im loop
 
-                      melab(:) = melab(:) + tmp(2:4)
-                    end do 
-                        
-                    !<u_mb| r | u_ma>
-                    do idim=1,spindim
-                      call zmf_multipoles(sys%gr%mesh, conjg(u_mb(:,(imm-1)*spindim+idim)) &
-                                                           * u_ma(:,(imm-1)*spindim+idim) , 1, tmp(:))
 
-                      melba(:) = melba(:) + tmp(2:4)
-                    end do 
-                        
-                
-                  end do ! im loop
+            do ie = 1, obs%ne
+              EE= ie * obs%de
 
-                  do ie = 1, obs%ne
-                    EE= ie * obs%de
-                 
-                            ampl =  M_zI * &
-                                     (dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik)) * &
-                                      melab(idir)*melba(jdir) * &
-                                     1/(DE + EE + M_zi*obs%gamma) 
-                                    
-                            if (idir == jdir) ampl = M_z2 * ampl
-                            
-                            ! sum over a and b         
-                            sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + ampl
-                    
-                  end do ! ie loop
-                  gauge = 'l'
-                case (OPTION__FLOQUETOBSERVABLEGAUGE__F_ONE)
-                  do ie = 1, obs%ne
-                    EE= ie * obs%de
-                 
-                            ampl =  M_zI * (dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik)) &
-                                             /(DE + EE + M_zi*obs%gamma) 
-                                    
-                            if (idir == jdir) ampl = M_z2 * ampl
-                            
-                            sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + ampl
-                    
-                  end do ! ie loop
-                  gauge = 'o'
+              do idir = 1, dim   
+                do jdir = idir, dim 
 
-                end select
-              end do ! istb loop   
-            end do ! ista loop   
+                      ampl =  M_zI * (dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik))/DE/EE * &
+                                      melab(idir)*melba(jdir) /(DE + EE + M_zi*obs%gamma) 
+                              
+                      if (idir == jdir) ampl = M_z2 * ampl
+                      
+                      ! sum over a and b         
+                      sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + ampl * dressed_st%d%kweights(ik)
+                end do ! jdir
+              end do ! idir
+            end do ! ie loop
+            gauge = 'v'
 
-            ! sum over kpoints 
-            sigma(:,idir,jdir) = sigma(:,idir,jdir) *  dressed_st%d%kweights(ik)
+          case (OPTION__FLOQUETOBSERVABLEGAUGE__F_LENGTH)
+            ! get the dipole matrix elements <<psi_a|r|psi_b >>
+            do im=hm%F%order(1),hm%F%order(2)
+              imm = im - hm%F%order(1) + 1
+    
+              !<u_ma| r | u_mb>
+              do idim=1,spindim
+                call zmf_multipoles(sys%gr%mesh, conjg(u_ma(:,(imm-1)*spindim+idim)) &
+                                                     * u_mb(:,(imm-1)*spindim+idim) , 1, tmp(:))
+
+                melab(:) = melab(:) + tmp(2:4)
+              end do 
+                  
+              !<u_mb| r | u_ma>
+              do idim=1,spindim
+                call zmf_multipoles(sys%gr%mesh, conjg(u_mb(:,(imm-1)*spindim+idim)) &
+                                                     * u_ma(:,(imm-1)*spindim+idim) , 1, tmp(:))
+
+                melba(:) = melba(:) + tmp(2:4)
+              end do 
+                  
+          
+            end do ! im loop
+
+            do ie = 1, obs%ne
+              do idir = 1,dim
+                do jdir = idir, dim
+              EE= ie * obs%de
            
-          end do ! ik loop
-        
-        
+                      ampl =  M_zI * &
+                               (dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik)) * &
+                                melab(idir)*melba(jdir) * &
+                               1/(DE + EE + M_zi*obs%gamma) 
+                              
+                      if (idir == jdir) ampl = M_z2 * ampl
+                      
+                      ! sum over a and b         
+              
+                      sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + ampl * dressed_st%d%kweights(ik)
+                end do ! jdir
+              end do ! idir
+            end do ! ie loop
+            gauge = 'l'
+          case (OPTION__FLOQUETOBSERVABLEGAUGE__F_ONE)
+            do ie = 1, obs%ne
+              do idir = 1,dim
+                do jdir = idir, dim
+              EE= ie * obs%de
+           
+                      ampl =  M_zI * (dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik)) &
+                                       /(DE + EE + M_zi*obs%gamma) 
+                              
+                      if (idir == jdir) ampl = M_z2 * ampl
+                      
+                      sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + ampl*dressed_st%d%kweights(ik)
+                      
+                    end do  ! jdir          
+                  end do ! idir
+              
+            end do ! ie loop
+            gauge = 'o'
 
-        if(dressed_st%parallel_in_states .or. dressed_st%d%kpt%parallel) then
-          call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm,  sigma(:,idir,jdir))
-        end if
+          end select
+
+        end do ! istb loop   
+      end do ! ista loop   
+    end do ! ik loop
+    
+    
+
+    if(dressed_st%parallel_in_states .or. dressed_st%d%kpt%parallel) then
+      call comm_allreduce(dressed_st%st_kpt_mpi_grp%comm,  sigma(:,:,:))
+    end if
                   
           
 
-        if(mpi_grp_is_root(mpi_world)) write(*, "(1x)")
-        
-      end do            
-    end do
     
     
     if(mpi_grp_is_root(mpi_world)) then
