@@ -72,6 +72,7 @@ program floquet_observables
     integer :: nst (1:2) ! states output limits
     integer :: nkpt(1:2) ! kpoints output limits
     integer :: gauge  ! the gauge used to calculate observables 
+    integer :: fc_method ! the method used to calculate floquet conductivity
     FLOAT   :: time0  ! probe time
   end type fobs_t
 
@@ -208,11 +209,6 @@ program floquet_observables
   !% The velocity gauge (use the current operator): <i|J|j> ~ <i|p.A|j> .
   !%Option f_length 2
   !% The length gauge: <i|r.E|j>.
-  !%Option f_length_FBZ 3
-  !% The length gauge FBZ
-  !%Option f_length_FBZ21 4
-  !%Option f_one 5
-  !% No matrix element, only energy difference
   !%End
   obs%gauge = OPTION__FLOQUETOBSERVABLEGAUGE__F_LENGTH
   if (gauge_field_is_applied(hm%ep%gfield) .or. simul_box_is_periodic(sys%gr%sb)) & 
@@ -220,7 +216,26 @@ program floquet_observables
 
   call parse_variable('FloquetObservableGauge', obs%gauge, obs%gauge)
   call messages_print_var_option(stdout,'FloquetObservableGauge', obs%gauge)
-  
+
+
+  !%Variable FloquetConductivityMethod
+  !%Type flag
+  !%Default guess
+  !%Section Utilities::oct-floquet_observables
+  !%Description
+  !% Selects the method to be used for the calculation of optical conductivity. 
+  !%Option f_Oka 1
+  !% Use oka's equation
+  !%Option f_FBZ 2
+  !% Use 19
+  !%Option f_FBZ21 3
+  !% Use 21
+  !%End
+  obs%fc_method = OPTION__FLOQUETCONDUCTIVITYMETHOD__F_OKA
+
+  call parse_variable('FloquetConductivityMethod', obs%fc_method, obs%fc_method)
+  call messages_print_var_option(stdout,'FloquetConductivityMethod', obs%fc_method)
+
   
   !%Variable FloquetObservableEnergyMax
   !%Type float
@@ -359,14 +374,11 @@ program floquet_observables
     call messages_write('Calculate Floquet optical conductivity.')
     call messages_info()
     ! two different gauges
-    select case(obs%gauge)
-    case (OPTION__FLOQUETOBSERVABLEGAUGE__F_VELOCITY)
+    select case(obs%fc_method)
+    case (OPTION__FLOQUETCONDUCTIVITYMETHOD__F_OKA)
         call calc_floquet_conductivity()
   
-    case (OPTION__FLOQUETOBSERVABLEGAUGE__F_LENGTH)
-        call calc_floquet_conductivity()
-  
-    case (OPTION__FLOQUETOBSERVABLEGAUGE__F_LENGTH_FBZ)
+    case (OPTION__FLOQUETCONDUCTIVITYMETHOD__F_FBZ)
         if (hm%F%FBZ_solver == .true.) then 
           call calc_floquet_conductivity_length_gauge_FBZ(dressed_st)
         else
@@ -386,15 +398,13 @@ program floquet_observables
           call calc_floquet_conductivity_length_gauge_FBZ(FBZ_st)
         end if
 
-    case (OPTION__FLOQUETOBSERVABLEGAUGE__F_LENGTH_FBZ21)
+    case (OPTION__FLOQUETCONDUCTIVITYMETHOD__F_FBZ21)
         if (hm%F%FBZ_solver .eqv. .true.) then 
           call calc_floquet_conductivity_length_gauge_FBZ21(dressed_st)
         else
           call get_FBZ_st(dressed_st, FBZ_st)
           call calc_floquet_conductivity_length_gauge_FBZ21(FBZ_st)
         end if
-    case (OPTION__FLOQUETOBSERVABLEGAUGE__F_ONE)
-        call calc_floquet_conductivity()
     end select 
   end if
 
@@ -1477,7 +1487,8 @@ contains
 
                     dm_ac(:) = dm_ac(:) + tmp(2:4)
                   end do ! idim loop
-                end if
+ 
+               end if
               
               end do ! il loop
 
@@ -1622,24 +1633,18 @@ contains
       do ista=dressed_st%st_start, dressed_st%st_end
         call states_get_state(dressed_st, sys%gr%mesh, ista, ik, u_ma)
         do istb=1, dressed_st%nst
-          if (ista == istb) cycle
-          DE = dressed_st%eigenval(istb,ik) - dressed_st%eigenval(ista,ik)
-          
-          !Cut out all the components suppressed by small occupations 
-          if (abs((dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik))/DE) < 1E-14) cycle
-
           call states_get_state(dressed_st, sys%gr%mesh, istb, ik, u_mb)
-    
+          DE = dressed_st%eigenval(istb,ik) - dressed_st%eigenval(ista,ik)
 
           melab(:) = M_z0
           melba(:) = M_z0
                            
-          norm = (hm%F%order(2)-hm%F%order(1))
-          if (norm == 0) norm = M_ONE  
-          
           select case (obs%gauge)
 
           case (OPTION__FLOQUETOBSERVABLEGAUGE__F_VELOCITY)
+            if (ista == istb) cycle
+            !Cut out all the components suppressed by small occupations 
+            if (abs((dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik))/DE) < 1E-14) cycle
             ! get the dipole matrix elements <<psi_a|J|psi_b >>
             do im=hm%F%order(1),hm%F%order(2)
               imm = im - hm%F%order(1) + 1
@@ -1650,7 +1655,7 @@ contains
                                          u_mb(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) , &
                                          ik, tmp2(:,:))
               do dir=1,dim
-                melab(dir) = melab(dir) + sum(tmp2(dir,1:spindim)) !/ norm 
+                melab(dir) = melab(dir) + sum(tmp2(dir,1:spindim))  
               end do
           
               !<u_mb| J | u_ma>
@@ -1659,7 +1664,7 @@ contains
                                          u_ma(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) , &
                                          ik, tmp2(:,:))
               do dir=1,dim
-                melba(dir) = melba(dir) + sum(tmp2(dir,1:spindim)) !/ norm 
+                melba(dir) = melba(dir) + sum(tmp2(dir,1:spindim)) 
               end do
           
             end do ! im loop
@@ -1671,13 +1676,13 @@ contains
               do idir = 1, dim   
                 do jdir = idir, dim 
 
-                      ampl =  M_zI * (dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik))/DE/EE * &
-                                      melab(idir)*melba(jdir) /(DE + EE + M_zi*obs%gamma) 
-                              
-                      if (idir == jdir) ampl = M_z2 * ampl
-                      
-                      ! sum over a and b         
-                      sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + ampl * dressed_st%d%kweights(ik)
+                  ampl =  M_zI * (dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik))/DE/EE * &
+                                  melab(idir)*melba(jdir) /(DE + EE + M_zi*obs%gamma) 
+                          
+                  if (idir == jdir) ampl = M_z2 * ampl
+                  
+                  ! sum over a and b         
+                  sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + ampl * dressed_st%d%kweights(ik)
                 end do ! jdir
               end do ! idir
             end do ! ie loop
@@ -1708,9 +1713,9 @@ contains
             end do ! im loop
 
             do ie = 1, obs%ne
+              EE= ie * obs%de
               do idir = 1,dim
                 do jdir = idir, dim
-              EE= ie * obs%de
            
                       ampl =  M_zI * &
                                (dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik)) * &
@@ -1726,25 +1731,6 @@ contains
               end do ! idir
             end do ! ie loop
             gauge = 'l'
-          case (OPTION__FLOQUETOBSERVABLEGAUGE__F_ONE)
-            do ie = 1, obs%ne
-              do idir = 1,dim
-                do jdir = idir, dim
-              EE= ie * obs%de
-           
-                      ampl =  M_zI * (dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik)) &
-                                       /(DE + EE + M_zi*obs%gamma) 
-                              
-                      if (idir == jdir) ampl = M_z2 * ampl
-                      
-                      sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + ampl*dressed_st%d%kweights(ik)
-                      
-                    end do  ! jdir          
-                  end do ! idir
-              
-            end do ! ie loop
-            gauge = 'o'
-
           end select
 
         end do ! istb loop   
