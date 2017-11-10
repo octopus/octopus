@@ -1398,14 +1398,15 @@ subroutine X(states_calc_projections)(mesh, st, gs_st, ik, proj)
 end subroutine X(states_calc_projections)
 
 ! ---------------------------------------------------------
-subroutine X(states_me_one_body)(dir, gr, geo, st, hm, nint, iindex, jindex, oneint)
+subroutine X(states_me_one_body)(dir, gr, geo, st, nspin, vhxc, nint, iindex, jindex, oneint)
   use xc_oct_m
 
   character(len=*),    intent(in)    :: dir
   type(grid_t),        intent(inout) :: gr
   type(geometry_t),    intent(in)    :: geo
   type(states_t),      intent(inout) :: st
-  type(hamiltonian_t), intent(in)    :: hm
+  integer,             intent(in)    :: nspin
+  FLOAT,               intent(in)    :: vhxc(1:gr%mesh%np, nspin)
   integer,             intent(in)    :: nint
   integer,             intent(out)   :: iindex(1:nint)
   integer,             intent(out)   :: jindex(1:nint)
@@ -1432,7 +1433,7 @@ subroutine X(states_me_one_body)(dir, gr, geo, st, hm, nint, iindex, jindex, one
       
       call states_get_state(st, gr%mesh, jst, 1, psij)
 
-      psij(1:np, 1) = R_CONJ(psii(1:np, 1))*hm%Vhxc(1:np, 1)*psij(1:np, 1)
+      psij(1:np, 1) = R_CONJ(psii(1:np, 1))*vhxc(1:np, 1)*psij(1:np, 1)
 
       me = - X(mf_integrate)(gr%mesh, psij(:, 1))
 
@@ -1442,8 +1443,6 @@ subroutine X(states_me_one_body)(dir, gr, geo, st, hm, nint, iindex, jindex, one
       jindex(iint) = jst
       oneint(iint) = me
       iint = iint + 1
-
-!      me = st%eigenval(ist,1) - X(mf_integrate)(gr%mesh, psij(:, 1))
 
     end do
   end do

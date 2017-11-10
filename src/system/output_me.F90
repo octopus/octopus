@@ -228,9 +228,9 @@ contains
       SAFE_ALLOCATE(jindex(1:id))
 
       if (states_are_real(st)) then
-        call dstates_me_one_body(dir, gr, geo, st, hm, id, iindex, jindex, oneint)
+        call dstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex, jindex, oneint)
       else
-        call zstates_me_one_body(dir, gr, geo, st, hm, id, iindex, jindex, oneint)
+        call zstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex, jindex, oneint)
       end if
 
       do ll = 1, id

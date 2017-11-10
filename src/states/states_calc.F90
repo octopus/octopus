@@ -33,7 +33,6 @@ module states_calc_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
   use hardware_oct_m
   use io_oct_m
   use kpoints_oct_m
