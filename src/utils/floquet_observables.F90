@@ -1286,98 +1286,67 @@ contains
             melab(:) = M_z0
             melba(:) = M_z0
                              
-            select case (obs%gauge)
-
-            case (OPTION__FLOQUETOBSERVABLEGAUGE__F_VELOCITY)
-              if (ista == istb) cycle
-              !Cut out all the components suppressed by small occupations 
-              if (abs((dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik))/DE) < 1E-14) cycle
-              ! get the dipole matrix elements <<psi_a|J|psi_b >>
-              do im=hm%F%order(1),hm%F%order(2)
-                imm = im - hm%F%order(1) + 1
+            if (ista == istb) cycle
+            !Cut out all the components suppressed by small occupations 
+            if (abs((dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik))/DE) < 1E-14) cycle
+            ! get the dipole matrix elements <<psi_a|J|psi_b >>
+            ! get the dipole matrix elements <<psi_a|r|psi_b >>
+            do im=hm%F%order(1),hm%F%order(2)
+              imm = im - hm%F%order(1) + 1
       
+              select case (obs%gauge)
+
+              case (OPTION__FLOQUETOBSERVABLEGAUGE__F_VELOCITY)
                 !<u_a| J | u_b>
                 call current_calculate_mel(sys%gr%der, hm, sys%geo, &
                                            u_a(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) ,&
                                            u_b(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) , &
                                            ik, tmp2(:,:))
                 do dir=1,dim
-                  melab(dir) = melab(dir) + sum(tmp2(dir,1:spindim))  
+                  melab(dir) = melab(dir) + sum(tmp2(dir,1:spindim))/DE  
                 end do
-            
                 !<u_b| J | u_a>
                 call current_calculate_mel(sys%gr%der, hm, sys%geo, &
                                            u_b(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) ,&
                                            u_a(:,(imm-1)*spindim+1: (imm-1)*spindim +spindim) , &
                                            ik, tmp2(:,:))
                 do dir=1,dim
-                  melba(dir) = melba(dir) + sum(tmp2(dir,1:spindim)) 
+                  melba(dir) = melba(dir) + sum(tmp2(dir,1:spindim))/DE 
                 end do
-            
-              end do ! im loop
-
-
-              do ie = 1, obs%ne
-                EE= ie * obs%de
-
-                do idir = 1, dim   
-                  do jdir = idir, dim 
-
-                    ampl =  M_zI * (dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik))/DE/EE * &
-                                    melab(idir)*melba(jdir) /(DE + EE + M_zi*obs%gamma) 
-                            
-                    if (idir == jdir) ampl = M_z2 * ampl
-                    
-                    ! sum over a and b         
-                    sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + ampl * dressed_st%d%kweights(ik)
-                  end do ! jdir
-                end do ! idir
-              end do ! ie loop
-
-
-            case (OPTION__FLOQUETOBSERVABLEGAUGE__F_LENGTH)
-              ! get the dipole matrix elements <<psi_a|r|psi_b >>
-              do im=hm%F%order(1),hm%F%order(2)
-                imm = im - hm%F%order(1) + 1
-      
-                !<u_a| r | u_b>
+              case (OPTION__FLOQUETOBSERVABLEGAUGE__F_LENGTH)
+                !<u_a| r | u_b> and !<u_b| r | u_a>
                 do idim=1,spindim
                   call zmf_multipoles(sys%gr%mesh, conjg(u_a(:,(imm-1)*spindim+idim)) &
                                                        * u_b(:,(imm-1)*spindim+idim) , 1, tmp(:))
 
                   melab(:) = melab(:) + tmp(2:4)
-                end do 
-                    
-                !<u_b| r | u_a>
-                do idim=1,spindim
                   call zmf_multipoles(sys%gr%mesh, conjg(u_b(:,(imm-1)*spindim+idim)) &
                                                        * u_a(:,(imm-1)*spindim+idim) , 1, tmp(:))
 
                   melba(:) = melba(:) + tmp(2:4)
                 end do 
                     
-            
-              end do ! im loop
+              end select
+            end do ! im loop
 
-              do ie = 1, obs%ne
-                EE= ie * obs%de
-                do idir = 1,dim
-                  do jdir = idir, dim
-             
-                        ampl =  M_zI * &
-                                 (dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik)) * &
-                                  melab(idir)*melba(jdir) * &
-                                 1/(DE + EE + M_zi*obs%gamma) 
-                                
-                        if (idir == jdir) ampl = M_z2 * ampl
-                        
-                        ! sum over a and b         
-                
-                        sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + ampl * dressed_st%d%kweights(ik)
-                  end do ! jdir
-                end do ! idir
-              end do ! ie loop
-            end select
+            do ie = 1, obs%ne
+              EE= ie * obs%de
+              do idir = 1,dim
+                do jdir = idir, dim
+            
+                  ampl =  M_zI * &
+                           (dressed_st%occ(istb,ik) - dressed_st%occ(ista,ik)) * &
+                            melab(idir)*melba(jdir) * &
+                           1/(DE + EE + M_zi*obs%gamma) 
+                          
+                  if (idir == jdir) ampl = M_z2 * ampl
+                  
+                  ! sum over a and b         
+              
+                  sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + ampl * dressed_st%d%kweights(ik)
+                end do ! jdir
+              end do ! idir
+            end do ! ie loop
 
           end do ! istb loop   
         end do ! ista loop   
@@ -1426,12 +1395,23 @@ contains
                 do il=hm%F%order(1), hm%F%order(2)
                   ill = il - hm%F%order(1) + 1
                   if ( -im+il .ge. hm%F%order(1) .and. -im+il .le. hm%F%order(2)) then
-                    do idim=1,spindim
-                      call zmf_multipoles(sys%gr%mesh, conjg(u_a(:,(-im+il-hm%F%order(1))*spindim+idim)) &
-                                                           * u_c(:,(ill-1)*spindim+idim) , 1, tmp(:))
+                    select case (obs%gauge)
+                    case (OPTION__FLOQUETOBSERVABLEGAUGE__F_VELOCITY)
+                      !<u_a| J | u_b>
+                      call current_calculate_mel(sys%gr%der, hm, sys%geo, &
+                              u_a(:,(-im+il-hm%F%order(1))*spindim+1: (-im+il-hm%F%order(1))*spindim +spindim) ,&
+                              u_c(:,(ill-1)*spindim+1: (ill-1)*spindim +spindim) , ik, tmp2(:,:))
+                      do dir=1,dim
+                        dm_ac(dir) = dm_ac(dir) + sum(tmp2(dir,1:spindim))/DE_ca  
+                      end do
+                    case (OPTION__FLOQUETOBSERVABLEGAUGE__F_LENGTH)
+                      do idim=1,spindim
+                        call zmf_multipoles(sys%gr%mesh, conjg(u_a(:,(-im+il-hm%F%order(1))*spindim+idim)) &
+                                                             * u_c(:,(ill-1)*spindim+idim) , 1, tmp(:))
 
-                      dm_ac(:) = dm_ac(:) + tmp(2:4)
-                    end do ! idim loop
+                        dm_ac(:) = dm_ac(:) + tmp(2:4)
+                      end do ! idim loop
+                    end select
  
                  end if
                 
@@ -1445,12 +1425,23 @@ contains
                     ill = il - hm%F%order(1) + 1
 
                     if (-in+il .ge. hm%F%order(1) .and. -in+il .le. hm%F%order(2)) then
-                      do idim=1,spindim
-                        call zmf_multipoles(sys%gr%mesh, conjg(u_c(:,(-in+il-hm%F%order(1))*spindim+idim)) &
-                                                             * u_b(:,(ill-1)*spindim+idim) , 1, tmp(:))
+                    select case (obs%gauge)
+                      case (OPTION__FLOQUETOBSERVABLEGAUGE__F_VELOCITY)
+                        !<u_a| J | u_b>
+                        call current_calculate_mel(sys%gr%der, hm, sys%geo, &
+                                u_c(:,(-in+il-hm%F%order(1))*spindim+1: (-in+il-hm%F%order(1))*spindim +spindim),&
+                                u_b(:,(ill-1)*spindim+1: (ill-1)*spindim +spindim) , ik, tmp2(:,:))
+                        do dir=1,dim
+                          dn_cb(dir) = dn_cb(dir) + sum(tmp2(dir,1:spindim))/DE_bc  
+                        end do
+                      case (OPTION__FLOQUETOBSERVABLEGAUGE__F_LENGTH)
+                        do idim=1,spindim
+                          call zmf_multipoles(sys%gr%mesh, conjg(u_c(:,(-in+il-hm%F%order(1))*spindim+idim)) &
+                                                               * u_b(:,(ill-1)*spindim+idim) , 1, tmp(:))
   
-                        dn_cb(:) = dn_cb(:) + tmp(2:4)
-                      end do ! idim loop
+                          dn_cb(:) = dn_cb(:) + tmp(2:4)
+                        end do ! idim loop
+                      end select
                     end if
                         
 
@@ -1499,15 +1490,17 @@ contains
      
       
       sigma(:,:,:) = M_z0
-
+      print *, 'FBZ21 nst', dressed_st%nst
       do ik=dressed_st%d%kpt%start, dressed_st%d%kpt%end
 
         do ista=dressed_st%st_start, dressed_st%st_end
           call states_get_state(dressed_st, sys%gr%mesh, ista, ik, u_a)
           
           do istb=1, dressed_st%nst
+            ! if (ista == istb) cycle
               
             DE_ab = dressed_st%eigenval(ista,ik) - dressed_st%eigenval(istb,ik)
+            ! print *, ista, istb, 'energy diff', DE_ab
             call states_get_state(dressed_st, sys%gr%mesh, istb, ik, u_b)
                              
             ! get the dipole matrix elements dn_cb and dm_ac
@@ -1521,11 +1514,24 @@ contains
                 !\sum_n <u_(l-m)a| r | u_lb> AND \sum_n <u_(l-m)b| r | u_la>
                 if (-im+il .ge. hm%F%order(1) .and. -im+il .le. hm%F%order(2)) then
                   
-                  do idim=1,spindim
-                    call zmf_multipoles(sys%gr%mesh, conjg(u_a(:,(-im+il-hm%F%order(1))*spindim+idim)) &
-                                                         * u_b(:,(ill-1)*spindim+idim) , 1, tmp(:))  
-                    dm_ab(:) = dm_ab(:) + tmp(2:4)
-                  end do
+                  select case (obs%gauge)
+                  case (OPTION__FLOQUETOBSERVABLEGAUGE__F_VELOCITY)
+                    !<u_a| J | u_b>
+                    call current_calculate_mel(sys%gr%der, hm, sys%geo, &
+                            u_a(:,(-im+il-hm%F%order(1))*spindim+1: (-im+il-hm%F%order(1))*spindim +spindim) ,&
+                            u_b(:,(ill-1)*spindim+1: (ill-1)*spindim +spindim) , ik, tmp2(:,:))
+                    if (abs(-DE_ab-im*hm%F%omega)>1E-5) then
+                    do dir=1,dim
+                      dm_ab(dir) = dm_ab(dir) + sum(tmp2(dir,1:spindim)) /(-DE_ab-im*hm%F%omega) 
+                    end do
+                    end if 
+                  case (OPTION__FLOQUETOBSERVABLEGAUGE__F_LENGTH)
+                    do idim=1,spindim
+                      call zmf_multipoles(sys%gr%mesh, conjg(u_a(:,(-im+il-hm%F%order(1))*spindim+idim)) &
+                                                           * u_b(:,(ill-1)*spindim+idim) , 1, tmp(:))  
+                      dm_ab(:) = dm_ab(:) + tmp(2:4)
+                    end do
+                  end select
                 end if
               end do ! il
 
@@ -1536,12 +1542,24 @@ contains
                 do il = hm%F%order(1), hm%F%order(2)
                   ill = il - hm%F%order(1) + 1
                   if (-in+il .ge. hm%F%order(1) .and. -in+il .le. hm%F%order(2)) then
-                    do idim=1,spindim
-                      call zmf_multipoles(sys%gr%mesh, conjg(u_b(:,(-in+il-hm%F%order(1))*spindim+idim)) &
-                                                           * u_a(:,(il-hm%F%order(1))*spindim+idim) , 1, tmp(:))
-                      dn_ba(:) = dn_ba(:) + tmp(2:4)
-
-                    end do
+                    select case (obs%gauge)
+                    case (OPTION__FLOQUETOBSERVABLEGAUGE__F_VELOCITY)
+                      !<u_a| J | u_b>
+                      call current_calculate_mel(sys%gr%der, hm, sys%geo, &
+                              u_b(:,(-in+il-hm%F%order(1))*spindim+1: (-in+il-hm%F%order(1))*spindim +spindim) ,&
+                              u_a(:,(ill-1)*spindim+1: (ill-1)*spindim +spindim) , ik, tmp2(:,:))
+                    if (abs(DE_ab-in*hm%F%omega)>1E-5) then
+                      do dir=1,dim
+                        dn_ba(dir) = dn_ba(dir) + sum(tmp2(dir,1:spindim))/(DE_ab-in*hm%F%omega) 
+                      end do
+                    end if
+                    case (OPTION__FLOQUETOBSERVABLEGAUGE__F_LENGTH)
+                      do idim=1,spindim
+                        call zmf_multipoles(sys%gr%mesh, conjg(u_b(:,(-in+il-hm%F%order(1))*spindim+idim)) &
+                                                             * u_a(:,(il-hm%F%order(1))*spindim+idim) , 1, tmp(:))
+                        dn_ba(:) = dn_ba(:) + tmp(2:4)
+                      end do
+                    end select
                   end if
                     
                 end do ! il loop
@@ -1550,27 +1568,17 @@ contains
                   EE= ie * obs%de
                   do idir = 1, dim
                     do jdir = idir, dim   
-
-!                     ampl =  M_zI * &
-!                              (conjg(dressed_st%coeff(ista,ik)) *dressed_st%coeff(ista,ik)-&
-!                              conjg(dressed_st%coeff(istb,ik)) *dressed_st%coeff(istb,ik)) * &
-!                              dm_ba(idir)*dm_ab(jdir)* &
-!                             (1/(DE_ab - im * M_zI*hm%F%omega  + EE + M_zi*obs%gamma) + &
-!                              1/(DE_ab - im * M_zI*hm%F%omega  - EE - M_zi*obs%gamma) )
-
-                    ampl = M_zI *&
-                              (dressed_st%occ(ista,ik)- dressed_st%occ(istb,ik)) *&
-                              dn_ba(idir)*dm_ab(jdir)* &
-                            (1/(DE_ab - in * hm%F%omega  + EE + M_zI*obs%gamma)) !+ &
-                           !  1/(DE_ab - in * hm%F%omega  - EE - M_zI*obs%gamma) )
-                            
-                    !ampl = ampl * exp(M_zI*(2*im*hm%F%omega - EE)*obs%time0)
-                            
-                    if (idir == jdir) ampl = M_z2 * ampl
+                        ampl = M_zI *&
+                                   (dressed_st%occ(ista,ik)- dressed_st%occ(istb,ik)) *&
+                                   dn_ba(idir)*dm_ab(jdir)* &
+                                 (1/(DE_ab - in * hm%F%omega  + EE + M_zI*obs%gamma)) !+ &
+                                !  1/(DE_ab - in * hm%F%omega  - EE - M_zI*obs%gamma) )
+                                   
+                           !ampl = ampl * exp(M_zI*(2*im*hm%F%omega - EE)*obs%time0)
+                        if (idir == jdir) ampl = M_z2 * ampl
                    
-                    
-                    ! sum over a, b, im and ik        
-                    sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + ampl * (dressed_st%d%kweights(ik))
+                        ! sum over a, b, im and ik        
+                        sigma(ie,idir,jdir) = sigma(ie,idir,jdir) + ampl * (dressed_st%d%kweights(ik))
                     end do    !jdir      
                   end do    !idir
                 end do ! ie loop
