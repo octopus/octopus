@@ -1388,6 +1388,7 @@ contains
                                
               ! get the dipole matrix elements dn_cb and dm_ac
               do im=hm%F%order(1),hm%F%order(2)
+                if (abs(DE_ca-im*hm%F%omega)<1E-14) cycle
                 imm = im - hm%F%order(1) + 1
                 
                 !\sum_l <u_(l-m)a| r | u_lc>
@@ -1402,7 +1403,7 @@ contains
                               u_a(:,(-im+il-hm%F%order(1))*spindim+1: (-im+il-hm%F%order(1))*spindim +spindim) ,&
                               u_c(:,(ill-1)*spindim+1: (ill-1)*spindim +spindim) , ik, tmp2(:,:))
                       do dir=1,dim
-                        dm_ac(dir) = dm_ac(dir) + sum(tmp2(dir,1:spindim))/DE_ca  
+                        dm_ac(dir) = dm_ac(dir) + sum(tmp2(dir,1:spindim))/(DE_ca -im * hm%F%omega) 
                       end do
                     case (OPTION__FLOQUETOBSERVABLEGAUGE__F_LENGTH)
                       do idim=1,spindim
@@ -1418,6 +1419,7 @@ contains
                 end do ! il loop
 
                 do in=hm%F%order(1),hm%F%order(2)
+                  if (abs(DE_bc-in*hm%F%omega)<1e-14) cycle
                   inn = in - hm%F%order(1) + 1
                   !\sum_l <u_(l-n)c| r | u_lb>
                   dn_cb = M_z0 
@@ -1432,7 +1434,7 @@ contains
                                 u_c(:,(-in+il-hm%F%order(1))*spindim+1: (-in+il-hm%F%order(1))*spindim +spindim),&
                                 u_b(:,(ill-1)*spindim+1: (ill-1)*spindim +spindim) , ik, tmp2(:,:))
                         do dir=1,dim
-                          dn_cb(dir) = dn_cb(dir) + sum(tmp2(dir,1:spindim))/DE_bc  
+                          dn_cb(dir) = dn_cb(dir) + sum(tmp2(dir,1:spindim))/(DE_bc-in*hm%F%omega)  
                         end do
                       case (OPTION__FLOQUETOBSERVABLEGAUGE__F_LENGTH)
                         do idim=1,spindim
@@ -1505,8 +1507,8 @@ contains
                              
             ! get the dipole matrix elements dn_cb and dm_ac
             do im=hm%F%order(1),hm%F%order(2)
+              if (abs(-DE_ab-im * hm%F%omega)<1E-14) cycle
               imm = im - hm%F%order(1) + 1
-
               dm_ab(:) = M_z0
 
               do il=hm%F%order(1), hm%F%order(2)
@@ -1536,6 +1538,7 @@ contains
               end do ! il
 
               do in=hm%F%order(1),hm%F%order(2)
+                if (abs(DE_ab-in * hm%F%omega)<1E-14) cycle
                 inn = in - hm%F%order(1) + 1
                 dn_ba(:) = M_z0
 
@@ -1568,6 +1571,7 @@ contains
                   EE= ie * obs%de
                   do idir = 1, dim
                     do jdir = idir, dim   
+                      if (abs(DE_ab-in*hm%F%omega)<1e-7) ampl=0
                         ampl = M_zI *&
                                    (dressed_st%occ(ista,ik)- dressed_st%occ(istb,ik)) *&
                                    dn_ba(idir)*dm_ab(jdir)* &
