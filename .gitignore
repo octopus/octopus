@@ -891,6 +891,10 @@
 /testsuite/frozen/Makefile
 /testsuite/frozen/Makefile.in
 
+# /testsuite/floquet/
+/testsuite/floquet/Makefile
+/testsuite/floquet/Makefile.in
+
 # /testsuite/functionals/
 /testsuite/functionals/Makefile
 /testsuite/functionals/Makefile.in
