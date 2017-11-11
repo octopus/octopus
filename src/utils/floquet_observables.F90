@@ -375,7 +375,7 @@ program floquet_observables
     call messages_info()
     ! two different gauges
   
-    if (hm%F%FBZ_solver == .false. .and. obs%fc_method == OPTION__FLOQUETCONDUCTIVITYMETHOD__F_FBZ) then
+    if (hm%F%FBZ_solver .eqv..false. .and. obs%fc_method == OPTION__FLOQUETCONDUCTIVITYMETHOD__F_FBZ) then
       call get_FBZ_st(dressed_st, FBZ_st)
      ! get groundstate states
       call states_allocate_wfns(gs_st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX)
@@ -388,7 +388,7 @@ program floquet_observables
       call restart_end(restart)
       call floquet_calc_FBZ_coefficients(hm, sys, FBZ_st, gs_st, M_ZERO)
       call calc_floquet_conductivity(FBZ_st)
-    else if (hm%F%FBZ_solver == .false. .and. obs%fc_method == OPTION__FLOQUETCONDUCTIVITYMETHOD__F_FBZ21) then
+    else if (hm%F%FBZ_solver .eqv. .false. .and. obs%fc_method == OPTION__FLOQUETCONDUCTIVITYMETHOD__F_FBZ21) then
       call get_FBZ_st(dressed_st, FBZ_st)
       call calc_floquet_conductivity(FBZ_st)
     else
