@@ -1,0 +1,69 @@
+CalculationMode = floquet
+ExperimentalFeatures = yes
+FromScratch = yes
+
+ParKpoints = auto
+ParDomains = no
+ParStates  = no
+ParOther   = no
+
+omega = 0.1
+AA = 0.1
+
+FloquetFrequency = omega
+FloquetDimension = 1
+FloquetMode = interacting
+
+MoveIons = yes
+
+TheoryLevel = independent_particles
+PeriodicDimensions = 1
+Dimensions = 1
+
+BoxShape = parallelepiped
+Spacing = 0.2
+Lsize = 5
+
+V0=-0.1
+b= 1
+
+%Species
+"box" | species_user_defined | potential_formula | "V0*step(x+b/2)*step(b/2-x)" | valence | 1
+%
+
+%Coordinates
+"box" | 2
+"box" | -2
+%
+
+%KpointsGrid
+6
+%
+
+%KPointsPath
+1 
+-0.5  
+0.5 
+%
+
+Extrastates = 3
+
+
+tc= 2*pi/omega
+
+%TDfunctions
+"left"  | tdf_from_expr | " AA/2*sin(omega*t)"
+"right" | tdf_from_expr | "-AA/2*sin(omega*t)"
+"zero" | tdf_from_expr | "0.0"
+%
+
+
+%IonsTimeDependentDisplacements
+ 1 | "left"  | "zero" | "zero"
+ 2 | "right" | "zero" | "zero"
+%
+
+
+TDPropagationTime = 4*tc
+TDTimeStep = 0.05
+

@@ -1,0 +1,43 @@
+CalculationMode = gs
+ExperimentalFeatures = yes
+FromScratch = yes
+
+ParKpoints = auto
+ParDomains = no
+ParStates  = no
+ParOther   = no
+
+TheoryLevel = independent_particles
+PeriodicDimensions = 1
+Dimensions = 1
+
+BoxShape = parallelepiped
+Spacing = 0.2
+Lsize = 5
+
+V0=-0.1
+b= 1
+
+%Species
+"box" | species_user_defined | potential_formula | "V0*step(x+b/2)*step(b/2-x)" | valence | 1
+%
+
+%Coordinates
+"box" | 2
+"box" | -2
+%
+
+%KpointsGrid
+6
+%
+
+%KPointsPath
+1 
+-0.5  
+0.5 
+%
+
+Extrastates = 3
+
+
+

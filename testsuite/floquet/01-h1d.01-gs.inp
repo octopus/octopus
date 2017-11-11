@@ -1,0 +1,19 @@
+CalculationMode=gs
+ExperimentalFeatures = yes
+
+BoxShape = sphere
+Spacing = 0.5
+Radius = 20
+
+Dimensions = 1
+TheoryLevel = independent_particles
+ExtraStates = 3
+
+%Coordinates
+ 'H1d' | 0
+%
+
+%Species
+"H1d" | species_user_defined | potential_formula | "-1/sqrt(1+(x)^2)" | valence | 1
+%
+

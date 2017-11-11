@@ -1,0 +1,63 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Floquet calculation 
+Program    : octopus
+TestGroups : short-run, floquet
+Enabled    : Yes
+
+
+# Ground state 
+Processors : 1
+Input      : 01-h1d.01-gs.inp
+
+
+# Floquet non-interacting 5 iterations
+Processors : 1
+Input      : 01-h1d.02-floquet_nint.inp
+#Check total energy
+match ; Total energy ; LINEFIELD(floquet/info, 1, 3) ; -0.66978746
+#Check eigenvalues
+match ; e1 energy    ; GREPFIELD(floquet/eigenvalues,  '4   --', 3) ;   -0.669792
+match ; e1 occ       ; GREPFIELD(floquet/eigenvalues,  '4   --', 4) ;    0.999979
+match ; e2 energy    ; GREPFIELD(floquet/eigenvalues,  '7   --', 3) ;   -0.474852
+match ; e2 occ       ; GREPFIELD(floquet/eigenvalues,  '7   --', 4) ;    0.000021
+match ; e3 energy    ; GREPFIELD(floquet/eigenvalues,  '10   --', 3) ;   -0.434105 
+match ; e3 occ       ; GREPFIELD(floquet/eigenvalues,  '10   --', 4) ;    0.000000
+
+
+
+
+# Floquet non-interacting restart up to 10 iterations
+Processors : 1
+Input      : 01-h1d.03-floquet_nint_restart.inp
+#Check total energy
+match ; Total energy ; LINEFIELD(floquet/info, 1, 3) ; -0.66978746
+#Check eigenvalues
+match ; e1 energy    ; GREPFIELD(floquet/eigenvalues,  '4   --', 3) ;   -0.669792
+match ; e1 occ       ; GREPFIELD(floquet/eigenvalues,  '4   --', 4) ;    0.999979
+match ; e2 energy    ; GREPFIELD(floquet/eigenvalues,  '7   --', 3) ;   -0.474852
+match ; e2 occ       ; GREPFIELD(floquet/eigenvalues,  '7   --', 4) ;    0.000021
+match ; e3 energy    ; GREPFIELD(floquet/eigenvalues,  '10   --', 3) ;   -0.434105 
+match ; e3 occ       ; GREPFIELD(floquet/eigenvalues,  '10   --', 4) ;    0.000000
+
+# Sample time dependent Hamiltonian for Floquet interacting 
+Processors : 1
+Input      : 01-h1d.04-floquet_td_sample.inp
+
+
+# Floquet interacting
+Processors : 1
+Input      : 01-h1d.05-floquet_int.inp
+#Check total energy
+match ; Total energy ; LINEFIELD(floquet/info, 1, 3) ; -0.66978672
+#Check eigenvalues
+match ; e1 energy    ; GREPFIELD(floquet/eigenvalues,  '4   --', 3) ;   -0.669781
+match ; e1 occ       ; GREPFIELD(floquet/eigenvalues,  '4   --', 4) ;    0.998540
+match ; e2 energy    ; GREPFIELD(floquet/eigenvalues,  '7   --', 3) ;   -0.474883
+match ; e2 occ       ; GREPFIELD(floquet/eigenvalues,  '7   --', 4) ;    0.000009
+match ; e3 energy    ; GREPFIELD(floquet/eigenvalues,  '10   --', 3) ;   -0.433809 
+match ; e3 occ       ; GREPFIELD(floquet/eigenvalues,  '10   --', 4) ;    0.000000
+
+
+
+

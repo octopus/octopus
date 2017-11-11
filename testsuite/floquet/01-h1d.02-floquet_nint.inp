@@ -1,0 +1,54 @@
+CalculationMode=floquet
+ExperimentalFeatures = yes
+FromScratch=yes
+
+ParKpoints = no
+ParDomains = no
+ParStates  = no
+ParOther   = no
+
+omega = 0.2
+
+FloquetMaximumSolverIterations = 5
+FloquetFrequency = omega
+FloquetDimension = 2
+FloquetMode = non_interacting
+
+BoxShape = sphere
+Spacing = 0.5
+Radius = 20
+
+Dimensions = 1
+TheoryLevel = independent_particles
+ExtraStates = 3
+
+%Coordinates
+ 'H1d' | 0
+%
+
+
+%Species
+"H1d" | species_user_defined | potential_formula | "-1/sqrt(1+(x)^2)" | valence | 1
+%
+
+### LASER ###
+nPulses = 10
+tc = 2*pi/omega
+II  =  1E11
+EE = sqrt(II/3.51e+16)
+
+tau0 = nPulses*tc
+tau1 = 1*tc
+t0 = tau0/2+tau1
+
+%TDExternalFields
+  electric_field | 1 | 0 | 0 | omega | "ramp" 
+%
+
+%TDFunctions
+  "ramp" | tdf_trapezoidal | EE | tau0 | t0 | tau1
+%
+
+
+TDTimeStep = 0.1
+TDPropagationTime = tc*10

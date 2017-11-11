@@ -1,0 +1,47 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Floquet calculation periodic system
+Program    : octopus
+TestGroups : short-run, floquet
+Enabled    : Yes
+
+
+# Ground state 
+Processors : 2
+Input      : 02-KP.01-gs.inp
+
+# Sample time-dependent Hamiltonians with moving ions 
+Processors : 2
+Input      : 02-KP.02-floquet_td_sample.inp
+
+
+# Floquet interacting phonons
+Processors : 2
+Input      : 02-KP.03-floquet_int.inp
+#Check the floquet bands
+match ; Flouqet band 1 kpt 1 ; LINEFIELD(floquet/bands, 2, 3) ; -0.07785434 
+match ; Flouqet band 4 kpt 1 ; LINEFIELD(floquet/bands, 2, 6) ;  0.03399481
+match ; Flouqet band 1 kpt 2 ; LINEFIELD(floquet/bands, 3, 3) ; -0.07785434 
+match ; Flouqet band 4 kpt 2 ; LINEFIELD(floquet/bands, 3, 6) ;  0.03399481
+
+# Floquet frozen phonons 
+Processors : 2
+Input      : 02-KP.04-floquet_frozen_phonon.inp
+#Check the floquet bands
+match ; Flouqet band 1 kpt 1 ; LINEFIELD(floquet/bands, 2, 3) ; -0.07785434
+match ; Flouqet band 4 kpt 1 ; LINEFIELD(floquet/bands, 2, 6) ;  0.03399481
+match ; Flouqet band 1 kpt 2 ; LINEFIELD(floquet/bands, 3, 3) ; -0.07785434
+match ; Flouqet band 4 kpt 2 ; LINEFIELD(floquet/bands, 3, 6) ;  0.03399481
+
+#Check the floquet bo-bands
+match ; BO band 1 kpt 1 ; LINEFIELD(floquet/BO_bands_1, 2, 3) ; 0.02214566
+match ; BO band 2 kpt 1 ; LINEFIELD(floquet/BO_bands_1, 2, 4) ; 0.03399481 
+
+ 
+
+
+
+
+
+
+

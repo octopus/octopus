@@ -23,13 +23,14 @@ SUBDIRS = \
 	finite_systems_1d \
 	finite_systems_2d \
 	finite_systems_3d \
+  floquet          \ 
 	functionals      \
 	real_time        \
 	linear_response  \
 	optimal_control  \
 	periodic_systems \
-        photo_electron   \
-        complex_scaling  \
+  photo_electron   \
+  complex_scaling  \
 	pseudopotentials \
 	frozen
 
