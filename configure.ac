@@ -19,7 +19,7 @@
 AC_PREREQ(2.59)
 # Note: the version string is written into ETSF_IO files, so when you update
 # this, update the results for test periodic_systems/09-etsf_io.test too.
-AC_INIT([Octopus],[mimus],[octopus-devel@tddft.org],[octopus])
+AC_INIT([Octopus],[wolfi],[octopus-devel@tddft.org],[octopus])
 AC_CONFIG_SRCDIR([src/basic/global.F90])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE
@@ -359,8 +359,6 @@ AC_CONFIG_FILES([Makefile
   external_libs/metis-5.1/GKlib/Makefile
   external_libs/metis-5.1/libmetis/Makefile
   external_libs/qshep/Makefile
-  external_libs/spglib-1.5.2/Makefile
-  external_libs/spglib-1.5.2/src/Makefile
   external_libs/fortrancl/Makefile
   external_libs/bpdn/Makefile
   external_libs/yaml-0.1.4/Makefile
@@ -429,6 +427,8 @@ AC_CONFIG_FILES([Makefile
   testsuite/frozen/Makefile])
 AC_CONFIG_FILES([testsuite/oct-run_testsuite.sh], [chmod +x testsuite/oct-run_testsuite.sh])
 AC_CONFIG_FILES([doc/html/varsRightFrame.html])
+
+AC_CONFIG_SUBDIRS([external_libs/spglib-1.9.9])
 
 dnl if test x"$ac_build_libyaml" != x"skip" ; then
 dnl    AC_CONFIG_SUBDIRS([external_libs/yaml-0.1.4])

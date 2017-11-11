@@ -28,7 +28,6 @@ Dependencies:
   Newuoa (internal/optional)
   NFFT (optional)
   OpenCL (optional)
-  PAPI (optional
   PFFT-Chemnitz (optional)
   PNFFT (optional)
   pspio (optional)
@@ -40,6 +39,7 @@ Website:
   http://octopus-code.org/
 
 New releases:
+  2017/06/06 Version 7.0
   2016/09/05 Version 6.0
   2016/01/11 Version 5.0.1
   2015/10/07 Version 5.0.0

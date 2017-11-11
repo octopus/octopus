@@ -267,7 +267,6 @@ contains
 
       !%Variable TDPolarizationDirection
       !%Type integer
-      !%Default 1
       !%Section Time-Dependent::Response::Dipole
       !%Description
       !% When a delta potential is included in a time-dependent run, this

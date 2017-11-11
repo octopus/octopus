@@ -118,11 +118,12 @@ module scf_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine scf_init(scf, gr, geo, st, hm, conv_force)
+  subroutine scf_init(scf, gr, geo, st, mc, hm, conv_force)
     type(scf_t),         intent(inout) :: scf
     type(grid_t),        intent(inout) :: gr
     type(geometry_t),    intent(in)    :: geo
     type(states_t),      intent(in)    :: st
+    type(multicomm_t),   intent(in)    :: mc
     type(hamiltonian_t), intent(in)    :: hm
     FLOAT,   optional,   intent(in)    :: conv_force
 
@@ -357,7 +358,7 @@ contains
     if(preconditioner_is_multigrid(scf%eigens%pre)) then
       if(.not. associated(gr%mgrid)) then
         SAFE_ALLOCATE(gr%mgrid)
-        call multigrid_init(gr%mgrid, geo, gr%cv,gr%mesh, gr%der, gr%stencil)
+        call multigrid_init(gr%mgrid, geo, gr%cv,gr%mesh, gr%der, gr%stencil, mc)
       end if
     end if
 
@@ -549,7 +550,7 @@ contains
     nspin = st%d%nspin
 
     if (present(restart_load)) then
-      if (restart_has_flag(restart_load, RESTART_RHO)) then
+      if (restart_has_flag(restart_load, RESTART_FLAG_RHO)) then
         ! Load density and used it to recalculated the KS potential.
         call states_load_rho(restart_load, st, gr, ierr)
         if (ierr /= 0) then
@@ -560,7 +561,7 @@ contains
         end if
       end if
 
-      if (restart_has_flag(restart_load, RESTART_VHXC)) then
+      if (restart_has_flag(restart_load, RESTART_FLAG_VHXC)) then
         call hamiltonian_load_vhxc(restart_load, hm, gr%mesh, ierr)
         if (ierr /= 0) then
           message(1) = 'Unable to read Vhxc. Vhxc will be calculated from states.'
@@ -570,7 +571,7 @@ contains
         end if
       end if
 
-      if (restart_has_flag(restart_load, RESTART_MIX)) then
+      if (restart_has_flag(restart_load, RESTART_FLAG_MIX)) then
         select case (scf%mix_field)
         case (OPTION__MIXFIELD__DENSITY)
           call mix_load(restart_load, scf%smix, gr%fine%mesh, ierr)

@@ -27,6 +27,11 @@ module xc_functl_oct_m
 
   implicit none
 
+  ! Although the following file only contain comments, we include it here to make sure it exists.
+  ! Otherwise the code might compile, but not run properly, as the variables documentations
+  ! will be incomplete.
+#include "functionals_list.F90"
+  
   private
   public ::                     &
     xc_functl_t,                &

@@ -124,6 +124,7 @@ module global_oct_m
   character(len=*), public, parameter :: OCT_DIR = "opt-control/"
   character(len=*), public, parameter :: PCM_DIR = "pcm/"
   character(len=*), public, parameter :: FLOQUET_DIR = "floquet/"
+  character(len=*), public, parameter :: PARTITION_DIR = "partition/"
 
   ! End of declaration of public objects.
   ! ---------------------------------------------------------

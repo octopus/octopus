@@ -77,7 +77,7 @@
     type(output_t),         intent(in)  :: outp
     PUSH_SUB(target_output_gstransformation)
     
-    call loct_mkdir(trim(dir))
+    call io_mkdir(trim(dir))
     call output_states(tg%st, gr, geo, trim(dir), outp)
 
     POP_SUB(target_output_gstransformation)

@@ -119,7 +119,7 @@ program octopus
   call calc_mode_par_init()
   
   ! now we declare octopus as running
-  call io_switch_status('running')
+  call messages_switch_status('running')
   
   call profiling_init()
   
@@ -134,7 +134,7 @@ program octopus
 #endif
   
   ! run finished successfully
-  call io_switch_status('finished')
+  call messages_switch_status('finished')
   call io_end()
   
   call profiling_end()

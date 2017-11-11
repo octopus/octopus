@@ -61,6 +61,7 @@ module geometry_oct_m
     cm_pos,                          &
     cm_vel,                          &
     geometry_write_xyz,              &
+    geometry_read_xyz,               &
     geometry_write_openscad,         &
     geometry_val_charge,             &
     geometry_grid_defaults,          &
@@ -770,6 +771,43 @@ contains
 
     POP_SUB(atom_write_xyz)
   end subroutine geometry_write_xyz
+
+  ! ---------------------------------------------------------
+  subroutine geometry_read_xyz(geo, fname, comment)
+    type(geometry_t),    intent(inout) :: geo
+    character(len=*),    intent(in) :: fname
+    character(len=*),    intent(in), optional :: comment
+
+    integer :: iatom, iunit
+    character(len=6) position
+
+    PUSH_SUB(atom_read_xyz)
+
+    iunit = io_open(trim(fname)//'.xyz', action='read', position='rewind')
+
+    read(iunit, '(i4)') geo%natoms
+    if (present(comment)) then
+      read(iunit, *) 
+    else
+      read(iunit, *)  
+    end if
+    do iatom = 1, geo%natoms
+      call atom_read_xyz(geo%atom(iatom), geo%space%dim, iunit)
+    end do
+    call io_close(iunit)
+
+    if(geo%ncatoms > 0) then
+      iunit = io_open(trim(fname)//'_classical.xyz', action='read', position='rewind')
+      read(iunit, '(i4)') geo%ncatoms
+      read(iunit, *)
+      do iatom = 1, geo%ncatoms
+        call atom_classical_read_xyz(geo%catom(iatom), geo%space%dim, iunit)
+      end do
+      call io_close(iunit)
+    end if
+
+    POP_SUB(atom_read_xyz)
+  end subroutine geometry_read_xyz
 
 
   ! ---------------------------------------------------------
