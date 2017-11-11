@@ -502,7 +502,7 @@ contains
                                sys%ks%xc_family,sys%ks%xc_flags,  family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
          call hamiltonian_epot_generate(this%td_hm(it), gr, this%td_hm(it)%geo, st, time=M_ZERO)
 
-         call scf_init(scf,gr,this%td_hm(it)%geo,st,this%td_hm(it))
+         call scf_init(scf,gr,this%td_hm(it)%geo,st,sys%mc,this%td_hm(it),conv_force = CNST(1e-8))
          call scf_run(scf,sys%mc,gr,this%td_hm(it)%geo,st,sys%ks,this%td_hm(it),sys%outp, gs_run=.false.)
          call scf_end(scf)
 
