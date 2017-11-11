@@ -145,7 +145,7 @@ contains
     call parse_variable('FloquetBoson', OPTION__FLOQUETBOSON__CLASSICAL_FLOQUET, this%boson)
 
 
-    !%Variable TDFloquetMode
+    !%Variable FloquetMode
     !%Type flag
     !%Default non_interacting
     !%Section Floquet
@@ -161,7 +161,7 @@ contains
     !%
     !%End
 
-    call parse_variable('TDFloquetMode', FLOQUET_NONE, this%mode)
+    call parse_variable('FloquetMode', FLOQUET_NONE, this%mode)
 
 
     if (this%mode == FLOQUET_NONE) then
@@ -187,19 +187,19 @@ contains
 
     call messages_print_var_option(stdout, 'FloquetBoson',  this%boson)
 
-    call messages_print_var_option(stdout, 'TDFloquetMode',  this%mode)
+    call messages_print_var_option(stdout, 'FloquetMode',  this%mode)
 
     if(this%mode==FLOQUET_FROZEN_PHONON) then
        if(.not.parse_is_defined('IonsTimeDependentDisplacements')) then
           write(message(1),'(a)') 'Please specify IonsTimeDependentDisplacements in order'
-          write(message(2),'(a)') 'to use TDFloquetMode=frozen_phonon'
+          write(message(2),'(a)') 'to use FloquetMode=frozen_phonon'
           call messages_fatal(2) 
        end if
     end if
     
     if (this%mode == FLOQUET_INTERACTING)  this%sample = .true.
     
-    !%Variable TDFloquetInitialization
+    !%Variable FloquetInitialization
     !%Type flag
     !%Default gs
     !%Section Floquet
@@ -210,10 +210,10 @@ contains
     !%Option f_rand  1
     !% Use random wavefunctions.
     !%End
-    call parse_variable('TDFloquetInitialization', OPTION__TDFLOQUETINITIALIZATION__F_GS, this%init)
-    call messages_print_var_option(stdout, 'TDFloquetInitialization',  this%init)
+    call parse_variable('FloquetInitialization', OPTION__FLOQUETINITIALIZATION__F_GS, this%init)
+    call messages_print_var_option(stdout, 'FloquetInitialization',  this%init)
     
-    !%Variable TDFloquetDimension
+    !%Variable FloquetDimension
     !%Type integer
     !%Default -1
     !%Section Floquet
@@ -222,20 +222,20 @@ contains
     !%is performed.
     !% If entered as a block allows to specify asymmetric dimensions 
     !%
-    !% <tt>%TDFloquetDimension
+    !% <tt>%FloquetDimension
     !% <br>&nbsp;&nbsp; mindim| maxdim 
     !% <br>%</tt>
     !%
     !%End
     this%order(:)=-1
     
-    if(parse_block('TDFloquetDimension', blk) == 0) then
-      if(parse_block_cols(blk,0) < 2) call messages_input_error('TDFloquetDimension')
+    if(parse_block('FloquetDimension', blk) == 0) then
+      if(parse_block_cols(blk,0) < 2) call messages_input_error('FloquetDimension')
       do idim = 1, 2
         call parse_block_integer(blk, 0, idim - 1, this%order(idim))
       end do
     else
-      call parse_variable('TDFloquetDimension',-1,this%order(2))
+      call parse_variable('FloquetDimension',-1,this%order(2))
       this%order(1)= -this%order(2)
     end if
     
@@ -255,27 +255,27 @@ contains
     endif
 
 
-    !%Variable TDFloquetModeCalcOccupations
+    !%Variable FloquetModeCalcOccupations
     !%Type logical
     !%Default yes
     !%Section Floquet
     !%Description
     !% Calculate occupations of Floquet states.
     !%End
-    call parse_variable('TDFloquetModeCalcOccupations', .true., this%calc_occupations)
+    call parse_variable('FloquetModeCalcOccupations', .true., this%calc_occupations)
     call messages_print_var_value(stdout,'Calculate occupations',  this%calc_occupations)
 
-    !%Variable TDFloquetOccupationsCutDim
+    !%Variable FloquetOccupationsCutDim
     !%Type integer
     !%Default 0
     !%Section Floquet
     !%Description
     !% Number of outermost subdimension with occupations set to zero
     !%End
-    call parse_variable('TDFloquetOccupationsCutDim', 0, this%occ_cut)
+    call parse_variable('FloquetOccupationsCutDim', 0, this%occ_cut)
     call messages_print_var_value(stdout,'Cut occupation of outer subdimensions',  this%occ_cut)
 
-    !%Variable TDFloquetFrequency
+    !%Variable FloquetFrequency
     !%Type float
     !%Default 0
     !%Section Floquet
@@ -285,17 +285,17 @@ contains
     !% Other options will work, but likely be nonsense.
     !%
     !%End
-    call parse_variable('TDFloquetFrequency', M_ZERO, this%omega, units_inp%energy)
+    call parse_variable('FloquetFrequency', M_ZERO, this%omega, units_inp%energy)
     call messages_print_var_value(stdout,'Frequency used for Floquet analysis', this%omega)
     if(this%omega==M_ZERO) then
-      message(1) = "Please give a non-zero value for TDFloquetFrequency"
+      message(1) = "Please give a non-zero value for FloquetFrequency"
       call messages_fatal(1)
     endif
 
     ! get time of one cycle
     this%Tcycle=M_TWO*M_PI/this%omega
 
-    !%Variable TDFloquetMaximumSolverIterations
+    !%Variable FloquetMaximumSolverIterations
     !%Type integer
     !%Default 35
     !%Section Floquet
@@ -303,7 +303,7 @@ contains
     !% Maximumn Number of calls to eigensolver for solving the Floquet Hamiltonian
     !%
     !%End
-    call parse_variable('TDFloquetMaximumSolverIterations ', 35 ,this%max_solve_iter)
+    call parse_variable('FloquetMaximumSolverIterations ', 35 ,this%max_solve_iter)
     call messages_print_var_value(stdout,'Maximum eigensolver iterations', this%max_solve_iter)
 
 
@@ -334,19 +334,19 @@ contains
       call messages_print_var_value(stdout,'FloquetFBZStartDownfoldingScfSteps', this%cf_nsteps)
 
 
-      !%Variable TDFloquetModeSampleOneCycle
+      !%Variable FloquetModeSampleOneCycle
       !%Type logical
       !%Default yes
       !%Section Floquet
       !%Description
       !% Stop sampling Floquet Hamiltoninans after the first cycle.
       !%End
-      call parse_variable('TDFloquetModeSampleOneCycle', .true., this%sample_one_only)
-      call messages_print_var_value(stdout,'TDFloquetModeSampleOneCycle',  this%sample_one_only)
+      call parse_variable('FloquetModeSampleOneCycle', .true., this%sample_one_only)
+      call messages_print_var_value(stdout,'FloquetModeSampleOneCycle',  this%sample_one_only)
 
-      !%Variable TDFloquetSample
+      !%Variable FloquetSample
       !%Type integer
-      !%Default TDFloquetDimension*3
+      !%Default FloquetDimension*3
       !%Section Floquet
       !%Description
       !% Number of points on which one Floquet cycle is sampled in the
@@ -356,7 +356,7 @@ contains
       this%nt = maxval(abs(this%order(:)))*3
       if (maxval(abs(this%order(:))) == 0 ) this%nt = 3 
     
-      call parse_variable('TDFloquetSample', this%nt, this%nt)
+      call parse_variable('FloquetSample', this%nt, this%nt)
       call messages_print_var_value(stdout,'Number of Floquet time-sampling points', this%nT)
       this%dt = this%Tcycle/real(this%nT)
 
@@ -820,7 +820,7 @@ contains
       else
         
         ierr = 0 
-        if (hm%F%init == OPTION__TDFLOQUETINITIALIZATION__F_GS ) then
+        if (hm%F%init == OPTION__FLOQUETINITIALIZATION__F_GS ) then
           call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
 
           if(ierr == 0) call states_load(restart, sys%st, sys%gr, ierr, label = ": gs")
@@ -834,7 +834,7 @@ contains
 
         ! only use gs states for init, if they are not distributed 
         if(.not. st%parallel_in_states .and. ierr == 0 &
-           .and.  hm%F%init == OPTION__TDFLOQUETINITIALIZATION__F_GS ) then
+           .and.  hm%F%init == OPTION__FLOQUETINITIALIZATION__F_GS ) then
           message(1) ='Info: Initialize Floquet states with gs wavefunctions'
           call messages_info(1)
           ! initialize floquet states from scratch

@@ -92,7 +92,7 @@ contains
 
     call io_mkdir(FLOQUET_DIR)
 
-    call parse_variable('TDFloquetMode', FLOQUET_NON_INTERACTING, mode) 
+    call parse_variable('FloquetMode', FLOQUET_NON_INTERACTING, mode) 
 
     ! Needed to read info about laser, timestep, etc. 
     call td_init(td, sys, hm)    

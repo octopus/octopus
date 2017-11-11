@@ -254,7 +254,7 @@ contains
     !% k- and/or state parallelization
     !%Option td_floquet 524288
     !% Compute non-interacting Floquet bandstructure according to further options: 
-    !% TDFloquetFrequency, TDFloquetSample, TDFloquetDimension.
+    !% FloquetFrequency, FloquetSample, FloquetDimension.
     !% This is done only once per td-run at t=0.
     !% works only in k- and/or state parallelization
     !%Option n_excited_el 1048576
