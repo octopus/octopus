@@ -19,7 +19,6 @@
 #include "global.h"
 
 module output_me_oct_m
-  use comm_oct_m
   use derivatives_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -52,7 +51,6 @@ module output_me_oct_m
   public ::           &
     output_me_t,      &
     output_me_init,   &
-    output_me_end,    &
     output_me
 
   type output_me_t
@@ -61,8 +59,7 @@ module output_me_oct_m
     !! be printed: e.g. if ksmultipoles = 3, the dipole, quadrupole and 
     !! octopole matrix elements (between Kohn-Sham or single-particle orbitals).
     !! In 2D, only the dipole moments are printed.
-    integer          :: ks_multipoles  
-    integer, pointer :: list_ij(:,:)    
+    integer :: ks_multipoles      
   end type output_me_t
 
   integer, parameter, public :: &
@@ -70,18 +67,14 @@ module output_me_oct_m
     OUTPUT_ME_ANG_MOMENTUM   =   2, &
     OUTPUT_ME_ONE_BODY       =   4, &
     OUTPUT_ME_TWO_BODY       =   8, &
-    OUTPUT_ME_KS_MULTIPOLES  =  16, &
-    OUTPUT_ME_KS_TRANSITION_DIPOLE = 32
-    
+    OUTPUT_ME_KS_MULTIPOLES  =  16
+
 contains
   
   ! ---------------------------------------------------------
   subroutine output_me_init(this, sb)
     type(output_me_t), intent(out) :: this
     type(simul_box_t), intent(in)  :: sb
-
-    integer        :: i, nidx
-    type(block_t)  :: blk
 
     PUSH_SUB(output_me_init)
 
@@ -106,9 +99,6 @@ contains
     !% Not available with states parallelization.
     !%Option ks_multipoles 16
     !% See <tt>OutputMEMultipoles</tt>. Not available with states parallelization.
-    !%Option ks_transition_dipole 32
-    !% Transition dipole matrix elements between states. If periodic K-point resolved.
-    !% States must be specified with OutputMEDipoleIndices. 
     !%End
 
     call parse_variable('OutputMatrixElements', 0, this%what)
@@ -141,49 +131,9 @@ contains
       !%End
       call parse_variable('OutputMEMultipoles', 1, this%ks_multipoles)
     end if
-    
-    if(iand(this%what, OUTPUT_ME_KS_TRANSITION_DIPOLE) /= 0) then
-      !%Variable OutputMEDipoleIndices
-      !%Type block
-      !%Section Time-Dependent::Propagation
-      !%Description
-      !% Specify a list of states index paris to be used to calculate matrix elements.      !%
-      !%
-      !%End
-      nidx = 0
-      if(parse_block('OutputMEDipoleIndices', blk) == 0) then
-        nidx= parse_block_n(blk)
-        
-        SAFE_ALLOCATE(this%list_ij(1:nidx,1:2))
-
-        do i = 1, nidx
-          call parse_block_integer(blk, i-1, 0, this%list_ij(i,1))
-          call parse_block_integer(blk, i-1, 1, this%list_ij(i,2))
-        end do
-      else 
-        SAFE_ALLOCATE(this%list_ij(1:1,1:2))
-        this%list_ij(1,:)=(/1,1/)
-        message(1) = "No OutputMEDipoleIndices specified."
-        message(2) = "OutputMatrixElements = ks_transition_dipole will produce garbage."
-        call messages_warning(2)
-
-      end if
-      
-    end if    
-    
 
     POP_SUB(output_me_init)
   end subroutine output_me_init
-
-  ! ---------------------------------------------------------
-  subroutine output_me_end(this)
-    type(output_me_t), intent(out) :: this
-    PUSH_SUB(output_me_end)
-    
-    SAFE_DEALLOCATE_P(this%list_ij)
-      
-    POP_SUB(output_me_end)
-  end subroutine output_me_end
 
 
   ! ---------------------------------------------------------
@@ -200,17 +150,17 @@ contains
     
     PUSH_SUB(output_me)
 
-    if(iand(this%what, OUTPUT_ME_MOMENTUM) /= 0) then
+    if(iand(this%what, output_me_momentum) /= 0) then
       write(fname,'(2a)') trim(dir), '/ks_me_momentum'
       call output_me_out_momentum(fname, st, gr)
     end if
 
-    if(iand(this%what, OUTPUT_ME_ANG_MOMENTUM) /= 0) then
+    if(iand(this%what, output_me_ang_momentum) /= 0) then
       write(fname,'(2a)') trim(dir), '/ks_me_angular_momentum'
       call output_me_out_ang_momentum(fname, st, gr)
     end if
 
-    if(iand(this%what, OUTPUT_ME_KS_MULTIPOLES) /= 0) then
+    if(iand(this%what, output_me_ks_multipoles) /= 0) then
       ! The content of each file should be clear from the header of each file.
       id = 1
       do ik = 1, st%d%nik
@@ -258,7 +208,7 @@ contains
       end do
     end if
 
-    if(iand(this%what, OUTPUT_ME_ONE_BODY) /= 0) then
+    if(iand(this%what, output_me_one_body) /= 0) then
       message(1) = "Computing one-body matrix elements"
       call messages_info(1)
       if (states_are_real(st)) then
@@ -268,7 +218,7 @@ contains
       end if
     end if
 
-    if(iand(this%what, OUTPUT_ME_TWO_BODY) /= 0) then
+    if(iand(this%what, output_me_two_body) /= 0) then
       message(1) = "Computing two-body matrix elements"
       call messages_info(1)
       if (states_are_real(st)) then
@@ -277,18 +227,6 @@ contains
         call ztwo_body(dir, gr, st)
       end if
     end if
-
-    if(iand(this%what, OUTPUT_ME_KS_TRANSITION_DIPOLE) /= 0) then
-      message(1) = "Computing dipole transition matrix elements"
-      call messages_info(1)
-      if (states_are_real(st)) then
-        call doutput_me_transition_dipole(dir, gr, st, this%list_ij)
-      else
-        call zoutput_me_transition_dipole(dir, gr, st, this%list_ij)
-      end if
-    end if
-    
-    
 
     POP_SUB(output_me)
   end subroutine output_me
