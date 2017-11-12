@@ -22,7 +22,6 @@ module td_write_oct_m
   use iso_c_binding
   use comm_oct_m
   use excited_states_oct_m
-  use floquet_oct_m
   use gauge_field_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -53,7 +52,6 @@ module td_write_oct_m
   use states_calc_oct_m
   use states_dim_oct_m
   use states_restart_oct_m
-  use system_oct_m
   use td_calc_oct_m
   use types_oct_m
   use unit_oct_m
@@ -100,12 +98,11 @@ module td_write_oct_m
     OUT_TOTAL_CURRENT = 17, &
     OUT_PARTIAL_CHARGES = 18, &
     OUT_KP_PROJ     = 19, &
-    OUT_FLOQUET     = 20, &
-    OUT_N_EX        = 21, &
-    OUT_SEPARATE_COORDS  = 22, &
-    OUT_SEPARATE_VELOCITY= 23, &
-    OUT_SEPARATE_FORCES  = 24, &
-    OUT_MAX         = 24
+    OUT_N_EX        = 20, &
+    OUT_SEPARATE_COORDS  = 21, &
+    OUT_SEPARATE_VELOCITY= 22, &
+    OUT_SEPARATE_FORCES  = 23, &
+    OUT_MAX         = 23
   
   type td_write_t
     private
@@ -252,19 +249,14 @@ contains
     !% restart_proj (see %RestartOptions). This is an alternative to the option
     !% td_occup, with a formating more suitable for k-points and works only in 
     !% k- and/or state parallelization
-    !%Option td_floquet 524288
-    !% Compute non-interacting Floquet bandstructure according to further options: 
-    !% FloquetFrequency, FloquetSample, FloquetDimension.
-    !% This is done only once per td-run at t=0.
-    !% works only in k- and/or state parallelization
-    !%Option n_excited_el 1048576
+    !%Option n_excited_el 524288
     !% Output the number of excited electrons, based on the projections 
     !% of the time evolved wave-functions on the ground-state wave-functions. 
-    !%Option coordinates_sep 2097152
+    !%Option coordinates_sep 1048576
     !% Writes geometries in a separate file.
-    !%Option velocities_sep 4194304
+    !%Option velocities_sep 2097152
     !% Writes velocities in a separate file.
-    !%Option forces_sep 8388608
+    !%Option forces_sep 4194304
     !% Writes forces in a separate file.
     !%End
 
@@ -290,7 +282,6 @@ contains
     if(writ%out(OUT_TOTAL_CURRENT)%write) call messages_experimental('TDOutput = total_current')
     if(writ%out(OUT_PARTIAL_CHARGES)%write) call messages_experimental('TDOutput = partial_charges')
     if(writ%out(OUT_KP_PROJ)%write) call messages_experimental('TDOutput = td_kpoint_occup')
-    if(writ%out(OUT_FLOQUET)%write) call messages_experimental('TDOutput = td_floquet')
     if(writ%out(OUT_N_EX)%write) call messages_experimental('TDOutput = n_excited_el')
 
     if(writ%out(OUT_KP_PROJ)%write) then  
@@ -575,10 +566,6 @@ contains
         call write_iter_init(writ%out(OUT_KP_PROJ)%handle, first, &
           units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/projections")))
 
-      if(writ%out(OUT_FLOQUET)%write) &
-        call write_iter_init(writ%out(OUT_FLOQUET)%handle, first, &
-          units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/floquet_bands")))
-
       if(writ%out(OUT_GAUGE_FIELD)%write) &
         call write_iter_init(writ%out(OUT_GAUGE_FIELD)%handle, &
         first, units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/gauge_field")))
@@ -656,7 +643,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_iter(writ, gr, st, hm, geo, kick, dt, sys, iter)
+  subroutine td_write_iter(writ, gr, st, hm, geo, kick, dt,ks, iter)
     type(td_write_t),    intent(inout) :: writ !< Write object
     type(grid_t),        intent(inout) :: gr   !< The grid
     type(states_t),      intent(inout) :: st   !< State object
@@ -664,7 +651,7 @@ contains
     type(geometry_t),    intent(inout) :: geo  !< Geometry object
     type(kick_t),        intent(in)    :: kick !< The kick
     FLOAT,               intent(in)    :: dt   !< Delta T, time interval
-    type(system_t),      intent(inout)  :: sys
+    type(v_ks_t),        intent(in)    :: ks  
     integer,             intent(in)    :: iter !< Iteration number
     type(profile_t), save :: prof
 
@@ -690,9 +677,6 @@ contains
       if (mpi_grp_is_root(mpi_world)) call write_iter_set(writ%out(OUT_PROJ)%handle, iter)
       call td_write_proj(writ%out(OUT_PROJ)%handle, gr, geo, st, writ%gs_st, kick, iter)
     end if
-
-    if(writ%out(OUT_FLOQUET)%write) &
-      call td_write_floquet(writ%out(OUT_FLOQUET)%handle,hm, gr, st, sys, iter)
 
     if(writ%out(OUT_KP_PROJ)%write) &
       call td_write_proj_kp(writ%out(OUT_KP_PROJ)%handle,hm, gr, st, writ%gs_st, iter)
@@ -2655,40 +2639,6 @@ contains
 
     POP_SUB(td_write_partial_charges)
   end subroutine td_write_partial_charges
-
-
-  subroutine td_write_floquet(out_floquet, hm, gr, st, sys, iter)
-    type(c_ptr),       intent(inout)   :: out_floquet
-    type(hamiltonian_t), intent(inout) :: hm
-    type(grid_t),      intent(inout)   :: gr
-    type(states_t),    intent(inout)   :: st !< at iter=0 this is the ggroundstate
-    type(system_t),    intent(inout)  :: sys
-    integer,           intent(in)      :: iter
-
-    PUSH_SUB(td_write_floquet)
-
-    if(iter==0) then
-      call floquet_init(sys,hm%F,st%d%dim)
-      call floquet_hamiltonians_init(hm ,gr, st, sys)
-      if(hm%F%mode == FLOQUET_NON_INTERACTING .or. hm%F%mode == FLOQUET_FROZEN_PHONON) &
-           call floquet_hamiltonian_solve(hm,gr,sys,st)
-    else
-      ! check if we are at a Floquet sampling step                                                
-      if(mod(iter,hm%F%interval)==0) then
-        message(1) = 'Floquet-Hamiltonian update'
-        call messages_info(1)
-        call floquet_hamiltonian_update(hm,st,gr,sys,iter)
-        
-        ! in case a cycle is complete: solve and write bandstructure
-        if(mod(iter,hm%F%ncycle)==0) then
-          call floquet_hamiltonian_solve(hm,gr,sys,st)
-        end if
-      end if
-    end if
-
-    POP_SUB(td_write_floquet)
-
-  end subroutine td_write_floquet
 
 
   ! ---------------------------------------------------------

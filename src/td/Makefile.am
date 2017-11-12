@@ -88,6 +88,6 @@ propagator_rk.o : propagator_rk.F90 propagator_base.o potential_interpolation.o
 spectrum.o : spectrum.F90 
 td_calc.o : td_calc.F90 
 td.o : td.F90 td_write.o propagator_base.o propagator.o potential_interpolation.o pes.o floquet.o
-td_write.o : td_write.F90 td_calc.o floquet.o
+td_write.o : td_write.F90 td_calc.o
 floquet.o : floquet.F90
 floquet_run.o : floquet_run.F90 floquet.o td.o

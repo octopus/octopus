@@ -347,7 +347,6 @@ contains
     type(system_t), target, intent(inout) :: sys
     type(hamiltonian_t),    intent(inout) :: hm
     logical,                intent(inout) :: fromScratch
-    
 
     type(td_t)                :: td
     type(td_write_t)          :: write_handler
@@ -509,7 +508,7 @@ contains
         end if
       end if      
 
-      call td_write_iter(write_handler, gr, st, hm, geo, hm%ep%kick, td%dt, sys, iter)
+      call td_write_iter(write_handler, gr, st, hm, geo, hm%ep%kick, td%dt, sys%ks, iter)
 
       ! write down data
       call check_point()
@@ -776,7 +775,7 @@ contains
     subroutine td_run_zero_iter()
       PUSH_SUB(td_run.td_run_zero_iter)
 
-      call td_write_iter(write_handler, gr, st, hm, geo, hm%ep%kick, td%dt, sys, 0)
+      call td_write_iter(write_handler, gr, st, hm, geo, hm%ep%kick, td%dt, sys%ks, 0)
 
       ! I apply the delta electric field *after* td_write_iter, otherwise the
       ! dipole matrix elements in write_proj are wrong
