@@ -534,8 +534,8 @@ contains
     SAFE_ALLOCATE(state2(1:sys%gr%der%mesh%np))
 
     ! set boundaries of inner box
-    nr(1,:) = sys%gr%mesh%idx%nr(1,:) + sys%gr%mesh%idx%enlarge(:)
-    nr(2,:) = sys%gr%mesh%idx%nr(2,:) - sys%gr%mesh%idx%enlarge(:)
+    nr(1,1:3) = sys%gr%mesh%idx%nr(1,1:3) + sys%gr%mesh%idx%enlarge(1:3)
+    nr(2,1:3) = sys%gr%mesh%idx%nr(2,1:3) - sys%gr%mesh%idx%enlarge(1:3)
 
     do ik=1,w90_num_kpts
        do ispin=1,st%d%dim
@@ -582,8 +582,8 @@ contains
     SAFE_ALLOCATE(state2(1:sys%gr%der%mesh%np))
 
     ! set boundaries of inner box
-    nr(1,:) = sys%gr%mesh%idx%nr(1,:) + sys%gr%mesh%idx%enlarge(:)
-    nr(2,:) = sys%gr%mesh%idx%nr(2,:) - sys%gr%mesh%idx%enlarge(:)
+    nr(1,1:3) = sys%gr%mesh%idx%nr(1,1:3) + sys%gr%mesh%idx%enlarge(1:3)
+    nr(2,1:3) = sys%gr%mesh%idx%nr(2,1:3) - sys%gr%mesh%idx%enlarge(1:3)
 
     do im=hm%F%order(1),hm%F%order(2)
       imm = im - hm%F%order(1) + 1
