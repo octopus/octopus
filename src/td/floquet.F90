@@ -405,7 +405,7 @@ contains
       !% <br>%</tt>
       !%
       !%End
-      this%pol(:)=(/M_ONE,M_ZERO,M_ZERO/)
+      this%pol(1:3)=(/M_ONE,M_ZERO,M_ZERO/)
     
       if(parse_block('FloquetCavityModePolarization', blk) == 0) then
         if(parse_block_cols(blk,0) < 3) call messages_input_error('FloquetCavityModePolarization')
