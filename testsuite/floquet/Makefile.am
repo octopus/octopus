@@ -28,6 +28,9 @@ dist_share_DATA = \
   01-h1d.05-floquet_int.inp                 \
   01-h1d.test                               \
   02-KP.01-gs.inp                           \
+  02-KP.02-floquet_td_sample.inp            \
+  02-KP.03-floquet_int.inp                  \
+  02-KP.04-floquet_frozen_phonon.inp        \
   02-KP.test                                 
 
 CLEANFILES = *~ *.bak
