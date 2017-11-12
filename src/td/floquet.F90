@@ -816,7 +816,7 @@ contains
       call floquet_restart_dressed_st(hm, sys, dressed_st, ierr, fromScratch)
       
       if(ierr == 0 .and. .not. fromScratch) then
-         call states_berry_connection(FLOQUET_DIR,'floquet_berry_connection',dressed_st, gr,gr%sb)
+        continue
       else
         
         ierr = 0 

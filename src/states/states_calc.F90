@@ -58,7 +58,6 @@ module states_calc_oct_m
   use smear_oct_m
   use states_oct_m
   use states_dim_oct_m
-  use states_io_oct_m
   use states_parallel_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -96,8 +95,7 @@ module states_calc_oct_m
     states_orthogonalize_cproduct,  &
     states_sort_complex,            &
     dstates_calc_projections,       &
-    zstates_calc_projections,       &
-    states_berry_connection
+    zstates_calc_projections
 
   interface states_rotate
     module procedure dstates_rotate, zstates_rotate
@@ -400,114 +398,6 @@ contains
       call zstates_calc_momentum(st, der, momentum)
     end if
   end subroutine states_calc_momentum
-
-  ! ---------------------------------------------------------
-  ! compute Berry-phase as 
-  ! berry_{i,k}=-Im[ log( \Product_{ik-loop} <i,k | i, k+ik> ) ]/dk^2
-  subroutine states_berry_connection(dir,filename,st,gr,sb)
-    character(len=*)        :: dir
-    character(len=*)        :: filename
-    type(states_t),    intent(inout)  :: st
-    type(grid_t), intent(in)      :: gr
-    type(simul_box_t), intent(in)     :: sb
-
-    integer :: idim, ist, ik, npath, loop(5), iloop,nsegment
-    FLOAT   :: diff, diff_old, kpoint1(1:sb%dim), kpoint2(1:sb%dim), dk1, dk2
-    CMPLX   :: product, dotproduct
-    CMPLX, allocatable :: temp_state1(:,:), temp_state2(:,:)
-    FLOAT, allocatable :: berry(:,:)
-    logical :: compute_berry
-    PUSH_SUB(states_berry_connection)
-
-    !%Variable ComputeBerryConnectionAlongPath
-    !%Type logical
-    !%Default no
-    !%Section States
-    !%Description
-    !%
-    !%End
-    call parse_variable('ComputeBerryConnectionAlongPath', .false.,compute_berry)
-
-    if(.not. compute_berry) then
-        POP_SUB(states_berry_connection)
-        return
-    end if
-
-    ASSERT(.not.st%d%kpt%parallel)
-
-    SAFE_ALLOCATE(temp_state1(1:gr%der%mesh%np,st%d%dim))
-    SAFE_ALLOCATE(temp_state2(1:gr%der%mesh%np,st%d%dim))
-    SAFE_ALLOCATE(berry(1:st%nst,1:gr%sb%kpoints%reduced%npoints))
-    berry(1:st%nst,1:gr%sb%kpoints%reduced%npoints) = M_ZERO
-
-    npath = SIZE(sb%kpoints%coord_along_path)
-    if(mod(npath-1,2) /= 0) then
-       print *, 'npath', npath-1
-       message(1) = 'Found odd number of k-point in path. For Berry calculation need a double path'
-       call messages_fatal(1)
-    else
-       nsegment = (npath)/2
-    end if
-
-    do ik = st%d%nik-npath+1, st%d%nik-nsegment
-        kpoint1(1:sb%dim) = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, ik ), &
-                                                   absolute_coordinates=.false.)
-        kpoint2(1:sb%dim) = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, ik + nsegment), &
-                                                   absolute_coordinates=.false.)
-
-        diff = dot_product(kpoint1-kpoint2,kpoint1-kpoint2)
-
-!        if(ik>st%d%nik-npath+1) then
-!           if(diff /= diff_old) then
-!              print *, diff, diff_old
-!               message(1) = 'Path seems to be unevenly spaced. Check KPointsPath layout.'
-!               call messages_fatal(1)
-!            end if
-!           diff_old = diff
-!        endif
-
-     end do
-
-     dk2 = sqrt(diff)
-
-     ! find k-sampling step size
-     kpoint1(1:sb%dim) = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, st%d%nik-npath+1 ), &
-          absolute_coordinates=.false.)
-     kpoint2(1:sb%dim) = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, st%d%nik-npath+2), &
-          absolute_coordinates=.false.)
-
-     dk1 = sqrt(dot_product(kpoint1-kpoint2,kpoint1-kpoint2))
-
-     write(message(1),'(a,e12.6,a,e12.6)')  'Berry: Found k-path spacings ', dk1,' ',dk2
-     call messages_info(1)
-
-     ! for each band go through path and compute the loop product of states
-     loop = (/0,1,nsegment,nsegment-1,0/)
-     do ist=st%st_start,st%st_end
-         do ik = st%d%nik-npath+1, st%d%nik-nsegment
-            product = M_ONE
-            do iloop=1,4
-               call states_get_state(st,gr%der%mesh,ist,ik+loop(iloop)  ,temp_state1)
-               call states_get_state(st,gr%der%mesh,ist,ik+loop(iloop+1),temp_state2)
-
-write(123,*) kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, ik+loop(iloop) ), &
-                                                   absolute_coordinates=.false.)
-               dotproduct = M_ZERO
-               do idim=1,st%d%dim
-                  dotproduct = dotproduct+zmf_dotp(gr%der%mesh,temp_state1(:,idim),temp_state2(:,idim))
-               end do
-               product = product*dotproduct
-            end do
-write(123,*) ' '
-            berry(ist,ik) = -aimag(log(product))/(dk1*dk2)
-         end do
-      end do
-
-      ! overwrite eigenvalue array of state object for easy output
-       st%eigenval(1:st%nst,1:gr%sb%kpoints%reduced%npoints) = berry(1:st%nst,1:gr%sb%kpoints%reduced%npoints)
-       call states_write_bandstructure(dir, st%nst, st, gr%sb, filename)
-
-    end subroutine states_berry_connection
 
 #include "undef.F90"
 #include "real.F90"
