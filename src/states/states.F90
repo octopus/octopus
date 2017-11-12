@@ -112,7 +112,8 @@ module states_oct_m
     cmplx_array2_t,                   &
     states_count_pairs,               &
     occupied_states,                  &
-    states_type
+    states_type,                      &
+    state_spin
 
   !>cmplxscl: complex 2D matrices 
   type cmplx_array2_t    
@@ -212,6 +213,9 @@ module states_oct_m
     logical                     :: packed
 
     integer                     :: randomization      !< Method used to generate random states
+
+    CMPLX, pointer              :: coeff(:,:)         !< complex coefficients
+
   end type states_t
 
   !> Method used to generate random states
@@ -276,15 +280,19 @@ contains
 
     st%packed = .false.
 
+    nullify(st%coeff)
+    
     POP_SUB(states_null)
   end subroutine states_null
 
 
   ! ---------------------------------------------------------
-  subroutine states_init(st, gr, geo)
+  subroutine states_init(st, gr, geo, floquet_dim,floquet_FBZ)
     type(states_t), target, intent(inout) :: st
     type(grid_t),           intent(in)    :: gr
     type(geometry_t),       intent(in)    :: geo
+    integer, optional, intent(in)         :: floquet_dim
+    logical, optional, intent(in)         :: floquet_FBZ
 
     FLOAT :: excess_charge
     integer :: nempty, ntot, default, nthreads
@@ -451,6 +459,13 @@ contains
     if(st%nst == 0) then
       message(1) = "Cannot run with number of states = zero."
       call messages_fatal(1)
+    end if
+
+    if(optional_default(floquet_dim,1) > 1) then
+      st%d%dim = st%d%dim*floquet_dim
+      if(.not.optional_default(floquet_FBZ,.false.)) then
+        st%nst = st%nst*floquet_dim
+      end if
     end if
 
     !%Variable StatesBlockSize
@@ -1592,6 +1607,10 @@ contains
 
     if(st%parallel_in_states) then
       SAFE_DEALLOCATE_P(st%ap%schedule)
+    end if
+
+    if (associated(st%coeff)) then
+      SAFE_DEALLOCATE_P(st%coeff)
     end if
 
     POP_SUB(states_end)
