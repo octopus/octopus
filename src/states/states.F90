@@ -2756,7 +2756,7 @@ contains
 
     POP_SUB(occupied_states)
   end subroutine occupied_states
-
+  
 #include "undef.F90"
 #include "real.F90"
 #include "states_inc.F90"
