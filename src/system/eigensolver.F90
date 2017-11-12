@@ -451,7 +451,7 @@ contains
 
     ! this is an internal option that makes the solver use the 
     ! folded operator (H-shift)^2 to converge first eigenvalues around
-    ! the vakues of shift 
+    ! the values of shift 
     ! c.f. L. W. Wang and A. Zunger 
     ! JCP 100, 2394 (1994); doi: http://dx.doi.org/10.1063/1.466486
     eigens%folded_spectrum = .false.
@@ -660,7 +660,7 @@ contains
         case(RS_CG)
            if(eigens%folded_spectrum) then
              call zeigensolver_cg2(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, & 
-                                eigens%diff(:, ik),fold=eigens%folded_spectrum, shift=eigens%spectrum_shift)
+                                eigens%diff(:, ik), shift=eigens%spectrum_shift)
            else
               call zeigensolver_cg2(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, &
                                 eigens%diff(:, ik))

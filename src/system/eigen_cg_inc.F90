@@ -18,7 +18,7 @@
 
 ! ---------------------------------------------------------
 !> conjugate-gradients method.
-subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,fold,shift)
+subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,shift)
   type(grid_t),           intent(in)    :: gr
   type(states_t),         intent(inout) :: st
   type(hamiltonian_t),    intent(in)    :: hm
@@ -28,7 +28,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
   integer,                intent(inout) :: converged
   integer,                intent(in)    :: ik
   FLOAT,        optional, intent(out)   :: diff(:) !< (1:st%nst)
-  logical,      optional, intent(in)   ::  fold ! use folded spectrum operator (H-shift)^2
   FLOAT,pointer, optional, intent(in)   :: shift(:,:)
 
   R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), ppsi(:,:), psi(:, :), psi2(:, :), g2(:,:)
@@ -36,11 +35,11 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
   real(8)  :: cg0, e0, res
   integer  :: ist, iter, maxter, idim, ip, jst, im
   R_TYPE   :: sb(3)
-  logical   :: fold_
+  logical   :: fold_ ! use folded spectrum operator (H-shift)^2
 
   PUSH_SUB(X(eigensolver_cg2))
 
-  fold_ = optional_default(fold,.false.)
+  fold_ =  present(shift)
 
   if(fold_) then
     ASSERT(associated(shift))
