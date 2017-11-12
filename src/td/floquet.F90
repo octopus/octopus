@@ -106,11 +106,7 @@ module floquet_oct_m
 
 contains
   
-  
-  
-  
-  !------------------------------------------------------------------------
-  
+  !------------------------------------------------------------------------  
   subroutine floquet_init(sys,this,dim)
     type(system_t), intent(in)       :: sys
     type(floquet_t),    intent(out)  :: this
