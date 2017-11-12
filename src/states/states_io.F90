@@ -55,11 +55,37 @@ module states_io_oct_m
     states_write_bands,               &
     states_write_bandstructure
 
+  interface states_write_eigenvalues
+    module procedure states_write_eigenvalues_u, states_write_eigenvalues_f
+  end interface states_write_eigenvalues
+
 contains
+
+  subroutine states_write_eigenvalues_f(filename, nst,st, sb, error, st_start, compact)
+    character(len=*),  intent(in) :: filename
+    integer,           intent(in) :: nst
+    type(states_t),    intent(in) :: st
+    type(simul_box_t), intent(in) :: sb
+    FLOAT, optional,   intent(in) :: error(:,:) !< (nst, st%d%nik)
+    integer, optional, intent(in) :: st_start
+    logical, optional, intent(in) :: compact
+    
+    integer :: iunit
+    
+    PUSH_SUB(states_write_eigenvalues_f)
+    
+    iunit = io_open(filename, action='write')
+
+    call states_write_eigenvalues_u(iunit, nst, st, sb, error, st_start, compact)
+    call io_close(iunit)
+    
+    POP_SUB(states_write_eigenvalues_f)
+    
+  end subroutine states_write_eigenvalues_f
 
   ! ---------------------------------------------------------
 
-  subroutine states_write_eigenvalues(iunit, nst, st, sb, error, st_start, compact)
+  subroutine states_write_eigenvalues_u(iunit, nst, st, sb, error, st_start, compact)
     integer,           intent(in) :: iunit, nst
     type(states_t),    intent(in) :: st
     type(simul_box_t), intent(in) :: sb
@@ -70,16 +96,16 @@ contains
     integer :: ik, ikk, ist, ns, is, idir, st_start_, iflat, iqn, homo_index, not_printed
     logical :: print_eigenval
     FLOAT :: kpoint(1:MAX_DIM), max_error
-    character(len=120) :: tmp_str(max(MAX_DIM, 3)), cspin
+    character(len=1024) :: tmp_str(max(MAX_DIM, 4)), cspin
 
     FLOAT, allocatable :: flat_eigenval(:)
     integer, allocatable :: flat_indices(:, :)
     integer, parameter :: print_range = 8
 
-    PUSH_SUB(states_write_eigenvalues)
+    PUSH_SUB(states_write_eigenvalues_u)
 
     if(.not. st%calc_eigenval) then
-      POP_SUB(states_write_eigenvalues)
+      POP_SUB(states_write_eigenvalues_u)
       return
     end if
     
@@ -89,7 +115,7 @@ contains
 
 
     if(.not. mpi_grp_is_root(mpi_world)) then
-      POP_SUB(states_write_eigenvalues)
+      POP_SUB(states_write_eigenvalues_u)
       return
     end if
 
@@ -113,6 +139,8 @@ contains
             '#st',' Spin',' Eigenvalue', 'Occupation'
         end if
       end if
+      if(associated(st%coeff)) &
+        write(message(1),'(a,a10,a,a10)') trim(message(1)), ' Re[coeff]', ' Im[coeff]'
       if(present(error)) &
         write(message(1),'(a,a10)') trim(message(1)), ' Error'
       call messages_info(1, iunit)
@@ -150,6 +178,11 @@ contains
               else
                 write(tmp_str(2), '(1x,f12.6,3x,f12.6)') &
                   units_from_atomic(units_out%energy, st%eigenval(ist, ik+is)), st%occ(ist, ik+is)
+              end if
+              if(associated(st%coeff)) then
+                write(tmp_str(4), '(1x,f12.6,1x,f12.6)') &
+                                       real(st%coeff(ist, ik+is)), aimag(st%coeff(ist, ik+is))                                       
+                tmp_str(2)=trim(tmp_str(2))//trim(tmp_str(4))
               end if
               if(present(error)) write(tmp_str(3), '(a7,es7.1,a1)')'      (', error(ist, ik+is), ')'
             end if
@@ -322,7 +355,7 @@ contains
       call messages_info(1, iunit)
     end if
 
-    POP_SUB(states_write_eigenvalues)
+    POP_SUB(states_write_eigenvalues_u)
     
   contains
 
@@ -333,14 +366,14 @@ contains
       character(len=ndiv) :: line
       FLOAT :: emin, emax, de
       
-      PUSH_SUB(states_write_eigenvalues.print_dos)
+      PUSH_SUB(states_write_eigenvalues_u.print_dos)
 
       emin = flat_eigenval(1)
       emax = flat_eigenval(st%d%nik*nst)
       de = (emax - emin)/(ndiv - 1.0)
 
       if(de < M_EPSILON) then
-        POP_SUB(states_write_eigenvalues.print_dos)
+        POP_SUB(states_write_eigenvalues_u.print_dos)
         return
       end if
       
@@ -385,10 +418,10 @@ contains
       call messages_new_line()
       call messages_info()
 
-      POP_SUB(states_write_eigenvalues.print_dos)
+      POP_SUB(states_write_eigenvalues_u.print_dos)
     end subroutine print_dos
     
-  end subroutine states_write_eigenvalues
+  end subroutine states_write_eigenvalues_u
 
 
   ! ---------------------------------------------------------
@@ -957,16 +990,18 @@ contains
 
     ! ---------------------------------------------------------
 
-  subroutine states_write_bandstructure(dir, nst, st, sb)
+  subroutine states_write_bandstructure(dir, nst, st, sb, filename, vec)
     character(len=*),  intent(in) :: dir
     integer,           intent(in) :: nst
     type(states_t),    intent(in) :: st
     type(simul_box_t), intent(in) :: sb
+    character(len=*) :: filename
+    FLOAT, optional :: vec(:,:)           ! optional observable to be printed together  with the bandstrucure
+                                          ! it must have the same structure as st%eigenval(:,:)
 
     integer :: idir, ist, ik, ns, is,npath
     integer, allocatable :: iunit(:)
     FLOAT   :: red_kpoint(1:MAX_DIM)
-    character(len=80) :: filename
 
     if(.not. mpi_grp_is_root(mpi_world)) return
 
@@ -980,9 +1015,7 @@ contains
 
     do is = 0, ns-1
       if (ns > 1) then
-        write(filename, '(a,i1.1,a)') 'bandstructure-sp', is+1
-      else
-        write(filename, '(a)') 'bandstructure'
+        write(filename, '(a,i1.1,a)') trim(adjustl(filename))//'-sp', is+1
       end if
       iunit(is) = io_open(trim(dir)//'/'//trim(filename), action='write')    
 
@@ -1009,6 +1042,10 @@ contains
         end do
         do ist = 1, nst
           write(iunit(is),'(1x,f14.8)',advance='no') units_from_atomic(units_out%energy, st%eigenval(ist, ik + is))
+          if (present(vec)) then
+            write(iunit(is),'(1x,e14.8E3)',advance='no') units_from_atomic(unit_one, vec(ist, ik + is))
+          end if
+          
         end do
       end do
       do is = 0, ns-1
