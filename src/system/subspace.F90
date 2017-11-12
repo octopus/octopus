@@ -31,7 +31,6 @@ module subspace_oct_m
   use elpa1
   use elpa2
 #endif
-!   use floquet_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
