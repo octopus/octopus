@@ -25,6 +25,7 @@ dist_doc_DATA = \
 	sections.js \
 	vars_index.html \
 	Execution.html \
+	Floquet.html \
 	Calculation_Modes.html \
 	Hamiltonian.html \
 	Linear_Response.html \
@@ -43,6 +44,7 @@ alpha.js: RUN_SCRIPT
 sections.js: RUN_SCRIPT
 vars_index.html: RUN_SCRIPT
 Execution.html: RUN_SCRIPT
+Floquet.html: RUN_SCRIPT
 Calculation_Modes.html: RUN_SCRIPT
 Hamiltonian.html: RUN_SCRIPT
 Linear_Response.html: RUN_SCRIPT
