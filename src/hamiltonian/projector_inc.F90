@@ -73,6 +73,8 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   PUSH_SUB(X(project_psi_batch))
   call profiling_in(prof, "VNLPSI")
 
+  ASSERT(.not.batch_is_packed(psib))
+
   ! generate the reduce buffer and related structures
   SAFE_ALLOCATE(ireduce(1:npj, 0:MAX_L, -MAX_L:MAX_L, 1:psib%nst))
   nreduce = 0

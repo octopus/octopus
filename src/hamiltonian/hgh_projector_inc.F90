@@ -62,6 +62,18 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
 
   integer :: n_s, jj, idim, kk
   R_TYPE, allocatable :: bra(:, :, :)
+  type(profile_t), save :: prof
+  integer :: block_size, sp, ep
+
+  call profiling_in(prof, "HGH_PROJECT_BRA")
+
+  ! This routine uses blocking to optimize cache usage. One block of
+  ! |phi> is loaded in cache L1 and then then we calculate the dot
+  ! product of it with the corresponding blocks of |psi_k>, next we
+  ! load another block and do the same. This way we only have to load
+  ! |psi> from the L2 or memory.
+  block_size = hardware%X(block_size)
+
 
 #ifndef R_TCOMPLEX
   ASSERT(reltype == 0)
@@ -70,11 +82,11 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
   n_s = hgh_p%n_s
   uvpsi = M_ZERO
 
-  SAFE_ALLOCATE(bra(1:n_s, 1:4, 1:3))
-
-  bra = M_ZERO
-
   if(mesh%use_curvilinear) then
+
+    SAFE_ALLOCATE(bra(1:n_s, 1:4, 1:3))
+    bra = M_ZERO
+
     do jj = 1, 3
       if(reltype == 1) then
         do kk = 1, 3
@@ -83,20 +95,37 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
       end if
       bra(1:n_s, 4, jj) = hgh_p%p(1:n_s, jj)*mesh%vol_pp(sm%map(1:n_s))
     end do
-  else
-    if(reltype == 1) bra(1:n_s, 1:3, 1:3) = hgh_p%lp(1:n_s, 1:3, 1:3)*mesh%volume_element
-    bra(1:n_s, 4, 1:3) = hgh_p%p(1:n_s, 1:3)*mesh%volume_element
-  end if
 
-  do idim = 1, dim
-    do kk = 1, 4
-      do jj = 1, 3
-        uvpsi(idim, hgh_index(kk, jj)) = sum(psi(1:n_s, idim)*bra(1:n_s, kk, jj))
+    do idim = 1, dim
+      do kk = 1, 4 
+        do jj = 1, 3
+          uvpsi(idim, hgh_index(kk, jj)) = sum(psi(1:n_s, idim)*bra(1:n_s, kk, jj))
+        end do
       end do
     end do
-  end do
 
-  SAFE_DEALLOCATE_A(bra)
+    SAFE_DEALLOCATE_A(bra)
+
+  else
+
+    do idim = 1, dim
+      do sp = 1, n_s, block_size
+        ep = sp - 1 + min(block_size, n_s - sp + 1)
+        do jj = 1, 3
+          uvpsi(idim, hgh_index(4, jj)) = uvpsi(idim, hgh_index(4, jj)) + &
+                            sum(psi(sp:ep, idim)*hgh_p%p(sp:ep, jj))*mesh%volume_element
+          if(reltype == 1) then
+            do kk = 1, 3
+              uvpsi(idim, hgh_index(kk, jj)) = uvpsi(idim, hgh_index(kk, jj)) + &
+                  sum(psi(sp:ep, idim)*hgh_p%lp(sp:ep, kk, jj))*mesh%volume_element
+            end do
+          end if
+        end do
+      end do
+    end do
+  end if
+
+  call profiling_out(prof)
 
 end subroutine X(hgh_project_bra)
 
@@ -112,39 +141,69 @@ subroutine X(hgh_project_ket)(hgh_p, dim, reltype, uvpsi, ppsi)
   integer :: n_s, ii, jj, idim
   integer :: kk
   CMPLX, allocatable :: lp_psi(:, :, :)
+  R_TYPE :: weight(3,dim)
+  CMPLX  :: zweight(3,3,dim), total_weight
+
+  type(profile_t), save :: prof
+
+  call profiling_in(prof, "HGH_PROJECT_KET")
 
   n_s = hgh_p%n_s
 
+  weight(1:3, 1:dim) = M_ZERO
+
+  !We first compute for each value of ii and idim the weight of the projector hgh_p%p(1:n_s, ii)
+  !Doing that we need to only apply once the each projector
   do idim = 1, dim
-    do jj = 1, 3
-      do ii = 1, 3
-        ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + hgh_p%h(ii, jj)*uvpsi(idim, hgh_index(4, jj))*hgh_p%p(1:n_s, ii)
+    do ii = 1, 3
+      do jj = 1, 3
+        weight(ii,idim) = weight(ii,idim) + hgh_p%h(ii, jj)*uvpsi(idim, hgh_index(4, jj))
       end do
+!      ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + weight*hgh_p%p(1:n_s, ii)
     end do
   end do
   
   if (reltype == 1) then
 
-    SAFE_ALLOCATE(lp_psi(1:n_s, 1:3, 1:dim))
-    lp_psi = M_Z0
+    !We compute for each value of ii, kk and idim the weight of the projector hgh_p%p(1:n_s, ii)
+    !Doing that we need to only apply once the each projector 
+    zweight(1:3,1:3,1:dim) = M_z0
 
     do idim = 1, dim
       do kk = 1, 3
-        do jj = 1, 3
-          do ii = 1, 3
-            lp_psi(1:n_s, kk, idim) = lp_psi(1:n_s, kk, idim) + hgh_p%k(ii, jj)*uvpsi(idim, hgh_index(kk, jj))*hgh_p%p(1:n_s, ii)
+        do ii = 1, 3
+          do jj = 1, 3
+            zweight(kk,ii,idim) = zweight(kk,ii,idim) &
+                             + hgh_p%k(ii, jj)*uvpsi(idim, hgh_index(kk, jj))
           end do
         end do
       end do
     end do
 
-    ppsi(1:n_s, 1) = ppsi(1:n_s, 1) + M_zI*M_HALF*( lp_psi(1:n_s, 3, 1) + lp_psi(1:n_s, 1, 2) - M_zI*lp_psi(1:n_s, 2, 2))
-    ppsi(1:n_s, 2) = ppsi(1:n_s, 2) + M_zI*M_HALF*(-lp_psi(1:n_s, 3, 2) + lp_psi(1:n_s, 1, 1) + M_zI*lp_psi(1:n_s, 2, 1))
-    
-    SAFE_DEALLOCATE_A(lp_psi)
-   
+   !We now apply the projectors
+   do ii = 1, 3
+      total_weight = M_zI*M_HALF*( zweight(3, ii, 1) + zweight(1, ii, 2) - M_zI*zweight(2, ii, 2))
+      total_weight = total_weight + weight(ii,1)
+      ppsi(1:n_s, 1) = ppsi(1:n_s, 1) + total_weight * hgh_p%p(1:n_s, ii)
+
+      total_weight =  M_zI*M_HALF*(-zweight(3, ii, 2) + zweight(1, ii, 1) + M_zI*zweight(2, ii, 1))
+      total_weight = total_weight + weight(ii,2)
+      ppsi(1:n_s, 2) = ppsi(1:n_s, 2) + total_weight * hgh_p%p(1:n_s, ii)
+   end do
+
+  else
+
+    !We now apply the projectors
+    do idim = 1, dim
+      do ii = 1, 3
+        ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + weight(ii,dim)*hgh_p%p(1:n_s, ii)
+      end do
+    end do
+
   end if
-  
+
+  call profiling_out(prof)  
+
 end subroutine X(hgh_project_ket)
 
 !! Local Variables:

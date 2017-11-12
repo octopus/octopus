@@ -34,6 +34,7 @@ skipped_tests=0
 passed_tests=0
 total_tests=0
 failure_report=""
+failed_logs=""
 NUM=0
 
 # Usage.
@@ -132,12 +133,11 @@ function checkqueue {
     if [ x${failures} == x ]; then
 	failures="error";
     fi
-    
+
+    #We skip printing the log for failed tests, we do that at the end
     if [ x${failures} == xskipped ] || [ x${failures} == x0 ]; then
 	# Remove Status: line and following blank one.
 	sed 'N;$!P;$!D;$d' $logfile
-    else
-	cat $logfile
     fi
 
     # Look for failed/passed/skipped testcases and add to failure summary.
@@ -146,6 +146,8 @@ function checkqueue {
     elif [ ${failures} == "skipped" ]; then
 	skipped_tests=$((skipped_tests + 1))
     else
+	echo "Failed test: "$test_name
+	failed_logs="$failed_logs "$logfile
 	failed_tests=$((failed_tests + 1))
 	name_length=`echo -n $test_name | wc -m`
 	space_length=$((60 - name_length))
@@ -205,6 +207,17 @@ while [ $NUM -ge 1 ]
 do
     checkqueue
 done
+
+#Now print the logs for the tests that failed
+if [ $failed_tests -gt 0 ]; then
+    
+    for l in $failed_logs
+    do
+	echo
+	cat $l
+    done
+
+fi
 }
 
 

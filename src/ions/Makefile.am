@@ -31,7 +31,6 @@ libions_f_srcs =                         \
 	periodic_copy.F90                \
 	read_coords.F90                  \
 	simul_box.F90                    \
-        spglib_f08.f90                   \
 	symmetries.F90                   \
 	vibrations.F90                   \
 	xyz_adjust.F90
@@ -72,7 +71,6 @@ kpoints.o : kpoints.F90 symmetries.o geometry.o
 periodic_copy.o : periodic_copy.F90 simul_box.o geometry.o 
 read_coords.o : read_coords.F90 
 simul_box.o : simul_box.F90 symmetries.o kpoints.o geometry.o atom.o 
-symmetries.o : symmetries.F90 geometry.o spglib_f08.o 
+symmetries.o : symmetries.F90 geometry.o spglib_f.o 
 vibrations.o : vibrations.F90 simul_box.o geometry.o 
 xyz_adjust.o : xyz_adjust.F90 geometry.o
-spglib_f08.o : spglib_f08.f90

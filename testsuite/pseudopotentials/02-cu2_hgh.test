@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 Test       : Cu2 HGH 
 Program    : octopus
-TestGroups : short-run, pseudopotentials
+TestGroups : long-run, pseudopotentials
 Enabled    : Yes
 
 Input: 02-cu2_hgh.01_gs.inp
