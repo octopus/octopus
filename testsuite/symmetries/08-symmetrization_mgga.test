@@ -1,0 +1,40 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Real space symmetrization with MGGA
+Program    : octopus
+TestGroups : long-run, periodic_systems, symmetries
+Enabled    : Yes
+
+#Here the reference values should be copied from the calculation without symmetries
+Input : 08-symmetrization_mgga.01-spg3_sym.inp
+
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -5.80487513
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -5.32829846
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -1.80957522
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  1.72486169
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ;  0.00000000
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.36233426
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  2.94658001
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -4.78569329
+
+match ; Eigenvalue [  k=1, n=1   ] ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -0.445787
+match ; Eigenvalue [  k=1, n=2   ] ; GREPFIELD(static/info, '#k =   1', 3, 2) ; -0.155079
+match ; Eigenvalue [  k=1, n=3   ] ; GREPFIELD(static/info, '#k =   1', 3, 3) ; -0.135088
+match ; Eigenvalue [  k=1, n=4   ] ; GREPFIELD(static/info, '#k =   1', 3, 4) ; -0.107141
+
+
+match ; Force 1 (x)   ; GREPFIELD(static/info, '1        Si', 3) ;  0.212958
+match ; Force 1 (y)   ; GREPFIELD(static/info, '1        Si', 4) ; -0.000135
+match ; Force 1 (z)   ; GREPFIELD(static/info, '1        Si', 5) ;  0.126580
+
+match ; Force 2 (x)   ; GREPFIELD(static/info, '2        Si', 3) ; -0.212958
+match ; Force 2 (y)   ; GREPFIELD(static/info, '2        Si', 4) ; -0.000135
+match ; Force 2 (z)   ; GREPFIELD(static/info, '2        Si', 5) ; -0.126580
+
+match ; Partial charge  1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2)  ; 4.0
+match ; Partial charge  2 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3)  ; 4.0
+match ; Density value 1   ; LINEFIELD(static/density.y=0\,z=0,  5, 2)   ; 4.13407749831853E-002
+match ; Density value 2   ; LINEFIELD(static/density.y=0\,z=0,  6, 2)   ; 4.92225042631259E-002
+match ; Bader value 1     ; LINEFIELD(static/bader-sp1.y=0\,z=0,  5, 2) ; -3.59965316514216E-002
+match ; Bader value 2     ; LINEFIELD(static/bader-sp1.y=0\,z=0,  6, 2) ; -5.93823309581599E-002
+

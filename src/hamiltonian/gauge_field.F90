@@ -101,7 +101,7 @@ contains
     type(gauge_field_t),     intent(out)   :: this
     type(simul_box_t),       intent(in)    :: sb
 
-    integer :: ii, iop, iop2, ik
+    integer :: ii, iop
     type(block_t) :: blk
 
     PUSH_SUB(gauge_field_init)
@@ -173,15 +173,13 @@ contains
       end if
 
       if(sb%kpoints%use_symmetries) then
-        do ik = 1, sb%kpoints%reduced%npoints
-          do iop = 1, sb%kpoints%num_symmetry_ops(ik)
-            iop2 = sb%kpoints%symmetry_ops(ik, iop)
-            if(.not. symm_op_invariant(sb%symm%ops(iop2), this%vecpot, CNST(1e-5))) then
-              message(1) = "The GaugeVectorField breaks (at least) one of the symmetries used to reduce the k-points."
-              message(2) = "Set SymmetryBreakDir equal to GaugeVectorField."
-              call messages_fatal(2)
-            end if
-          end do
+        do iop = 1, symmetries_number(sb%symm)
+          if(iop == symmetries_identity_index(sb%symm)) cycle
+          if(.not. symm_op_invariant_cart(sb%symm%ops(iop), this%vecpot, CNST(1e-5))) then
+            message(1) = "The GaugeVectorField breaks (at least) one of the symmetries used to reduce the k-points."
+            message(2) = "Set SymmetryBreakDir equal to GaugeVectorField."
+            call messages_fatal(2)
+          end if
         end do
       end if
 

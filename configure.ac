@@ -108,11 +108,17 @@ dnl and with OpenMP threads.
 dnl these are the --enable/--disable possible in octopus
 AC_ARG_ENABLE(debug, AS_HELP_STRING([--disable-debug], [debug mode]), [DEBUG=${enableval}])
 AC_ARG_ENABLE(openmp, AS_HELP_STRING([--enable-openmp], [Multi-threaded parallel version using OpenMP from Fortran]))
+AC_ARG_ENABLE(openmp_simd, AS_HELP_STRING([--enable-openmp_simd], [OpenMP SIMD from Fortran]))
 AC_ARG_ENABLE(opencl, AS_HELP_STRING([--enable-opencl], [OpenCL support (experimental)]))
 
 if test -n "${enable_openmp}" -a x"${enable_openmp}" != x"no"; then
   HAVE_OPENMP=1
 fi
+if test -n "${enable_openmp_simd}" -a x"${enable_openmp_simd}" != x"no"; then
+  HAVE_OPENMP_SIMD=1
+fi
+
+
 
 AC_ARG_ENABLE(cuda, AS_HELP_STRING([--enable-cuda], [Cuda support (experimental)]))
 
@@ -229,6 +235,12 @@ if test "${HAVE_OPENMP}"; then
   AX_OPENMP(,AC_MSG_ERROR([Fortran compiler does not support OpenMP]))
   FCFLAGS="$FCFLAGS $OPENMP_FCFLAGS"
 fi
+
+if test "${HAVE_OPENMP_SIMD}"; then
+  AX_OPENMP_SIMD(,AC_MSG_ERROR([Fortran compiler does not support OpenMP SIMD]))
+  FCFLAGS="$FCFLAGS $OPENMP_SIMD_FCFLAGS"
+fi
+
 
 dnl debug mode
 if test x"${DEBUG}" = x"no" ; then
@@ -354,6 +366,7 @@ ACX_OCTOPUS_COMPILATION_INFO
 
 AC_CONFIG_FILES([Makefile
   external_libs/Makefile
+  external_libs/dftd3/Makefile
   external_libs/metis-5.1/Makefile
   external_libs/metis-5.1/include/Makefile
   external_libs/metis-5.1/GKlib/Makefile
@@ -424,7 +437,8 @@ AC_CONFIG_FILES([Makefile
   testsuite/photo_electron/Makefile
   testsuite/pseudopotentials/Makefile
   testsuite/complex_scaling/Makefile
-  testsuite/frozen/Makefile])
+  testsuite/frozen/Makefile
+  testsuite/symmetries/Makefile])
 AC_CONFIG_FILES([testsuite/oct-run_testsuite.sh], [chmod +x testsuite/oct-run_testsuite.sh])
 AC_CONFIG_FILES([doc/html/varsRightFrame.html])
 

@@ -180,6 +180,10 @@ contains
     integer :: idim, n_s, is
 
     CMPLX, allocatable :: bra(:, :)
+    type(profile_t), save :: prof
+
+    call profiling_in(prof, "RKB_PROJECT_BRA")
+ 
 #ifndef HAVE_OPENMP
     PUSH_SUB(rkb_project_bra)
 #endif
@@ -207,6 +211,9 @@ contains
 #ifndef HAVE_OPENMP
     POP_SUB(rkb_project_bra)
 #endif
+
+    call profiling_out(prof)
+
   end subroutine rkb_project_bra
 
   ! ---------------------------------------------------------
@@ -218,6 +225,9 @@ contains
 
     integer :: idim, jdim, n_s, is
     CMPLX :: aa
+    type(profile_t), save :: prof
+
+    call profiling_in(prof, "RKB_PROJECT_KET")
 #ifndef HAVE_OPENMP
     PUSH_SUB(rkb_project_ket)
 #endif
@@ -236,6 +246,9 @@ contains
 #ifndef HAVE_OPENMP
     POP_SUB(rkb_project_ket)
 #endif
+
+    call profiling_out(prof)
+
   end subroutine rkb_project_ket
   
 end module rkb_projector_oct_m

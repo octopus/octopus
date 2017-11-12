@@ -1,0 +1,28 @@
+FromScratch=yes
+CalculationMode = gs
+PeriodicDimensions = 3
+ExperimentalFeatures = yes
+BoxShape = parallelepiped
+%LatticeParameters
+ 1.0000000000E+00 | 1.0000000000E+00 | 1.0000000000E+00
+%
+%LatticeVectors
+ 7.0000000000E+00 | 0.0000000000E+00 | 0.0000000000E+00
+ 5.2047488964E-16 | 4.0000000000E+00 | 4.5000000000E+00
+ 3.0616169979E-17 | -4.0000000000E+00 | 4.5000000000E+00
+%
+Spacing = 0.8
+TheoryLevel = independent_particles
+MaximumIter = 0
+LCAOStart = lcao_none
+FilterPotentials = filter_none
+%KpointsGrid
+ 4 | 4 | 4 
+%
+KPointsUseSymmetries = yes
+%ReducedCoordinates
+"H" | 1.7000000000E-01 | 2.6000000000E-01 | 9.6000000000E-01
+"H" | 8.3000000000E-01 | 9.6000000000E-01 | 2.6000000000E-01
+"H" | 6.7000000000E-01 | 4.6000000000E-01 | 7.6000000000E-01
+"H" | 3.3000000000E-01 | 7.6000000000E-01 | 4.6000000000E-01
+%

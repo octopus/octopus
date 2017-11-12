@@ -360,7 +360,7 @@ contains
       call comm_allreduce(st%st_kpt_mpi_grp%comm, current) 
     end if
     
-    if(der%mesh%sb%kpoints%use_symmetries) then
+    if(st%symmetrize_density) then
       SAFE_ALLOCATE(symmcurrent(1:der%mesh%np, 1:der%mesh%sb%dim))
       call symmetrizer_init(symmetrizer, der%mesh)
       do ispin = 1, st%d%nspin

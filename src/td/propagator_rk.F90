@@ -356,7 +356,7 @@ contains
         call v_ks_calc(ks, hm, stphi, geo, calc_current = gauge_field_is_applied(hm%ep%gfield))
       end if
       call hamiltonian_update(hm, gr%mesh, time = tau)
-      call zhamiltonian_apply_all(hm, ks%xc, gr%der, stphi, hst, tau)
+      call zhamiltonian_apply_all(hm, ks%xc, gr%der, stphi, hst)
     end subroutine f_psi
 
     subroutine f_ions(tau)
@@ -383,7 +383,7 @@ contains
       call prepare_inh()
       call hamiltonian_adjoint(hm)
       call hamiltonian_update(hm, gr%mesh, time = tau)
-      call zhamiltonian_apply_all(hm, ks%xc, gr%der, stchi, hchi, tau)
+      call zhamiltonian_apply_all(hm, ks%xc, gr%der, stchi, hchi)
       call hamiltonian_not_adjoint(hm)
 
 
@@ -543,7 +543,7 @@ contains
     rhs1 = M_z0
     do ik = kp1, kp2
       do ist = st1, st2
-        call zhamiltonian_apply(hm_p, grid_p%der, zphi(:, :, ist, ik), rhs1(:, :, ist, ik), ist, ik, time -dt)
+        call zhamiltonian_apply(hm_p, grid_p%der, zphi(:, :, ist, ik), rhs1(:, :, ist, ik), ist, ik)
       end do
     end do
     do ik = kp1, kp2
@@ -799,7 +799,7 @@ contains
       rhs1 = M_z0
       do ik = kp1, kp2
         do ist = st1, st2
-          call zhamiltonian_apply(hm_p, grid_p%der, zphi(:, :, ist, ik), rhs1(:, :, ist, ik), ist, ik, t_op)
+          call zhamiltonian_apply(hm_p, grid_p%der, zphi(:, :, ist, ik), rhs1(:, :, ist, ik), ist, ik)
           if(hamiltonian_inh_term(hm)) then
             SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
             do idim = 1, st%d%dim
@@ -833,7 +833,7 @@ contains
       rhs2 = M_z0
       do ik = kp1, kp2
         do ist = st1, st2
-          call zhamiltonian_apply(hm_p, grid_p%der, zphi(:, :, ist, ik), rhs2(:, :, ist, ik), ist, ik, t_op)
+          call zhamiltonian_apply(hm_p, grid_p%der, zphi(:, :, ist, ik), rhs2(:, :, ist, ik), ist, ik)
           if(hamiltonian_inh_term(hm)) then
             SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
             do idim = 1, st%d%dim
@@ -1010,7 +1010,7 @@ contains
           k = k + np
         end do
 
-        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik, t_op + c(1)*dt_op)
+        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik)
 
         do idim = 1, dim
           yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
@@ -1035,7 +1035,7 @@ contains
           k = k + np
         end do
 
-        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik, t_op + c(2)*dt_op)
+        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik)
 
         do idim = 1, dim
           yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
@@ -1104,7 +1104,7 @@ contains
           k = k + np
         end do
 
-        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik, t_op + c(1)*dt_op)
+        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik)
 
         do idim = 1, dim
           yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
@@ -1129,7 +1129,7 @@ contains
           k = k + np
         end do
 
-        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik, t_op + c(2)*dt_op)
+        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik)
 
         do idim = 1, dim
           yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
@@ -1203,7 +1203,7 @@ contains
           zpsi(1:np, idim) = cmplx(xre(j:j+np-1), xim(j:j+np-1), REAL_PRECISION)
           j = j + np
         end do
-        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik, t_op + dt_op)
+        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik)
         do idim = 1, dim
           yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
           yim(jj:jj+np-1) = xim(jj:jj+np-1) + aimag(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
@@ -1298,7 +1298,7 @@ contains
           zpsi(1:np, idim) = cmplx(xre(j:j+np-1), -xim(j:j+np-1), REAL_PRECISION)
           j = j + np
         end do
-        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik, t_op + dt_op)
+        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik)
 
         do idim = 1, dim
           yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
