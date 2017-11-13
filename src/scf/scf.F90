@@ -1014,8 +1014,9 @@ contains
 
     if(simul_box_is_periodic(gr%sb) .and. st%d%nik > st%d%nspin) &
       call states_write_bands(STATIC_DIR, st%nst, st, gr%sb)
-      if(iand(gr%sb%kpoints%method, KPOINTS_PATH) /= 0) &
-        call states_write_bandstructure(STATIC_DIR, st%nst, st, gr%sb)
+    if(iand(gr%sb%kpoints%method, KPOINTS_PATH) /= 0) then
+        call states_write_bandstructure(STATIC_DIR, st%nst, st, gr%sb, 'bandstructure')
+     end if
       
 
     POP_SUB(scf_run)
