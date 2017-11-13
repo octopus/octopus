@@ -1,9 +1,9 @@
-  !                                                                                                                                                                          
-  ! Copyright (C) 2003-2013 Quantum ESPRESSO and Wannier90 groups                                                                                                            
-  ! This file is distributed under the terms of the                                                                                                                          
-  ! GNU General Public License. See the file `License'                                                                                                                       
-  ! in the root directory of the present distribution,                                                                                                                       
-  ! or http://www.gnu.org/copyleft/gpl.txt .         
+  !              
+  ! Copyright (C) 2003-2013 Quantum ESPRESSO and Wannier90 groups
+  ! This file is distributed under the terms of the
+  ! GNU General Public License. See the file `License'
+  ! in the root directory of the present distribution,
+  ! or http://www.gnu.org/copyleft/gpl.txt .
   !
   ! routine adapted from the original Pwscf interface PP/pw2wannier90.f90
   !
@@ -235,10 +235,4 @@
        fy3x2my2 =  0.25d0*sqrt(17.5d0/M_PI) * sint * sint * sint * sin(3.d0*phi)
        RETURN
     END FUNCTION fy3x2my2
-  
-end program wannier90_interface
 
-!! Local Variables:
-!! mode: f90
-!! coding: utf-8
-!! End:
