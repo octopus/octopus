@@ -231,8 +231,12 @@ contains
     SAFE_ALLOCATE(jj(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin))
     call states_calc_quantities(der, st, paramagnetic_current = jj)
 
-    !NTD: The routine does not support spin-polarized cases
-    ASSERT(st%d%nspin == 1)
+    !We sum the current for up and down, valid for collinear and noncollinear spins
+    if(st%d%nspin > 1) then
+      do idir = 1, der%mesh%sb%dim
+        jj(:, idir, 1) = jj(:, idir, 1) + jj(:, idir, 2)
+      end do 
+    end if
 
     a_ind = M_ZERO
     do idir = 1, der%mesh%sb%dim
