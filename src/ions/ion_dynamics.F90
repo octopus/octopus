@@ -98,6 +98,7 @@ module ion_dynamics_oct_m
       
     logical :: drive_ions  
     type(ion_td_displacement_t), pointer ::  td_displacements(:) !> Time-dependent displacements driving the ions
+    type(geometry_t), pointer :: geo_t0
   end type ion_dynamics_t
 
   type ion_state_t
@@ -162,7 +163,7 @@ contains
     !% as follows, for some or all of the atoms:
     !% 
     !% <tt>%IonsTimeDependentDisplacements
-    !% <br>&nbsp;&nbsp; atom_index | dx(t) | dy(t) | dz(t)
+    !% <br>&nbsp;&nbsp; atom_index | "dx(t)" | "dy(t)" | "dz(t)"
     !% <br>%</tt>
     !%
     !% The displacement functions are time-dependent functions and should match one
@@ -186,7 +187,7 @@ contains
         call parse_block_string(blk, i-1, 1, expression)
         call tdf_read(this%td_displacements(iatom)%fx, trim(expression), ierr)
         if (ierr /= 0) then            
-          write(message(1),'(3A)') 'Could not find "', trim(expression), '" in the TDExternalFields block:'
+          write(message(1),'(3A)') 'Could not find "', trim(expression), '" in the TDFunctions block:'
           call messages_warning(1)
         end if
         
@@ -194,18 +195,22 @@ contains
         call parse_block_string(blk, i-1, 2, expression)
         call tdf_read(this%td_displacements(iatom)%fy, trim(expression), ierr)
         if (ierr /= 0) then            
-          write(message(1),'(3A)') 'Could not find "', trim(expression), '" in the TDExternalFields block:'
+          write(message(1),'(3A)') 'Could not find "', trim(expression), '" in the TDFunctions block:'
           call messages_warning(1)
         end if
         
         call parse_block_string(blk, i-1, 3, expression)
         call tdf_read(this%td_displacements(iatom)%fz, trim(expression), ierr)
         if (ierr /= 0) then            
-          write(message(1),'(3A)') 'Could not find "', trim(expression), '" in the TDExternalFields block:'
+          write(message(1),'(3A)') 'Could not find "', trim(expression), '" in the TDFunctions block:'
           call messages_warning(1)
         end if
         
       end do
+      
+      SAFE_ALLOCATE(this%geo_t0)
+      call geometry_copy(this%geo_t0, geo)
+      
     end if
     
     
@@ -458,9 +463,15 @@ contains
       call tdf_end(this%temperature_function)
     end if
 
-    if (this%drive_ions) then
+    if (this%drive_ions .and. associated(this%td_displacements) ) then
+!       if (any (this%td_displacements(1:this%geo_t0%natoms)%move)) then
+!         call geometry_end(this%geo_t0)
+!       end if
       SAFE_DEALLOCATE_P(this%td_displacements)
     end if
+    
+      
+
 
     POP_SUB(ion_dynamics_end)
   end subroutine ion_dynamics_end
@@ -528,7 +539,7 @@ contains
                       TOFLOAT(tdf(this%td_displacements(iatom)%fy,time)), &
                       TOFLOAT(tdf(this%td_displacements(iatom)%fz,time)) /)
 
-            geo%atom(iatom)%x(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim) + DR(1:geo%space%dim)
+            geo%atom(iatom)%x(1:geo%space%dim) = this%geo_t0%atom(iatom)%x(1:geo%space%dim) + DR(1:geo%space%dim)
           end if
             
         end if
