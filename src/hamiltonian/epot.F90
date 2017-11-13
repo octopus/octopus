@@ -196,7 +196,7 @@ contains
 
     if(filter == PS_FILTER_TS) call spline_filter_mask_init()
     do ispec = 1, geo%nspecies
-      call species_pot_init(geo%species(ispec), mesh_gcutoff(gr%mesh), filter)
+      if(.not.geo%skip_species_pot_init) call species_pot_init(geo%species(ispec), mesh_gcutoff(gr%mesh), filter)
     end do
 
     ! Sets the pointer to the subsystem.
