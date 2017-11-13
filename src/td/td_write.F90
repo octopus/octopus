@@ -2865,7 +2865,7 @@ contains
 
     total_current = CNST(0.0)
     do idir = 1, gr%sb%dim
-      do ispin = 1, st%d%nspin
+      do ispin = 1, st%d%spin_channels
         total_current(idir) =  total_current(idir) + dmf_integrate(gr%mesh, st%current(:, idir, ispin))
       end do
       total_current(idir) = units_from_atomic(units_out%length/units_out%time, total_current(idir))
@@ -2873,7 +2873,7 @@ contains
 
     abs_current = CNST(0.0)
     do idir = 1, gr%sb%dim
-      do ispin = 1, st%d%nspin
+      do ispin = 1, st%d%spin_channels
         abs_current(idir) =  abs_current(idir) + dmf_integrate(gr%mesh, abs(st%current(:, idir, ispin)))
       end do
       abs_current(idir) = units_from_atomic(units_out%length/units_out%time, abs_current(idir))
@@ -2884,7 +2884,7 @@ contains
       call write_iter_double(out_total_current, abs_current, gr%mesh%sb%dim)
    end if
   
-    do ispin = 1, st%d%nspin
+    do ispin = 1, st%d%spin_channels
       total_current = CNST(0.0)
       do idir = 1, gr%sb%dim
         total_current(idir) = units_from_atomic(units_out%length/units_out%time, &

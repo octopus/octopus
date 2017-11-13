@@ -145,6 +145,7 @@ contains
     type(batch_t), allocatable :: commpsib(:)
     logical, parameter :: hamiltonian_current = .false.
     FLOAT :: ww
+    CMPLX :: c_tmp
 
     call profiling_in(prof, "CURRENT")
     PUSH_SUB(current_calculate)
@@ -202,15 +203,29 @@ contains
               end do
               
               ww = st%d%kweights(ik)*st%occ(ist, ik) 
-              do idim = 1, st%d%dim
+              if(st%d%ispin /= SPINORS) then
                 !$omp parallel do
                 do ip = 1, der%mesh%np
-                  current(ip, idir, ispin) = &
-                    current(ip, idir, ispin) + ww*aimag(conjg(psi(ip, idim))*hrpsi(ip, idim))
+                  current(ip, idir, ispin) = current(ip, idir, ispin) + &
+                    ww*aimag(conjg(psi(ip, idim))*gpsi(ip, idir, idim))
                 end do
                 !$omp end parallel do
-              end do
-              
+              else
+                !$omp parallel do private(c_tmp)
+                do ip = 1, der%mesh%np
+                  current(ip, idir, 1) = current(ip, idir, 1) + &
+                    ww*aimag(conjg(psi(ip, 1))*hrpsi(ip, 1))
+                  current(ip, idir, 2) = current(ip, idir, 2) + &
+                    ww*aimag(conjg(psi(ip, 2))*hrpsi(ip, 2))
+                  c_tmp = conjg(psi(ip, 1))*hrpsi(ip, 2) - psi(ip, 2)*conjg(hrpsi(ip, 1))
+                  current(ip, idir, 3) = current(ip, idir, 3) + ww* real(c_tmp)
+                  current(ip, idir, 4) = current(ip, idir, 4) + ww*aimag(c_tmp)
+                end do
+                !$omp end parallel do
+              end if            
+ 
+
+ 
             end do
 
             call batch_end(commpsib(idir))
@@ -257,15 +272,28 @@ contains
 
               ww = st%d%kweights(ik)*st%occ(ist, ik)              
 
-              do idim = 1, st%d%dim
+              if(st%d%ispin /= SPINORS) then
                 !$omp parallel do
                 do ip = 1, der%mesh%np
-                  current(ip, idir, ispin) = current(ip, idir, ispin) &
-                    - ww*aimag(conjg(psi(ip, idim))*hrpsi(ip, idim) - conjg(psi(ip, idim))*rhpsi(ip, idim))
+                  current(ip, idir, ispin) = current(ip, idir, ispin) + &
+                    ww*aimag(conjg(psi(ip, idim))*hrpsi(ip, idim) - conjg(psi(ip, idim))*rhpsi(ip, idim))
                 end do
                 !$omp end parallel do
-              end do
-              
+              else
+                !$omp parallel do  private(c_tmp)
+                do ip = 1, der%mesh%np
+                  current(ip, idir, 1) = current(ip, idir, 1) + &
+                    ww*aimag(conjg(psi(ip, 1))*hrpsi(ip, 1) - conjg(psi(ip, 1))*rhpsi(ip, 1))
+                  current(ip, idir, 2) = current(ip, idir, 2) + &
+                    ww*aimag(conjg(psi(ip, 2))*hrpsi(ip, 2) - conjg(psi(ip, 2))*rhpsi(ip, 2))
+                  c_tmp = conjg(psi(ip, 1))*hrpsi(ip, 2) - conjg(psi(ip, 1))*rhpsi(ip, 2) &
+                         -psi(ip, 2)*conjg(hrpsi(ip, 1)) - psi(ip, 2)*conjg(rhpsi(ip, 1))
+                  current(ip, idir, 3) = current(ip, idir, 3) + ww* real(c_tmp)
+                  current(ip, idir, 4) = current(ip, idir, 4) + ww*aimag(c_tmp)
+                end do
+                !$omp end parallel do
+              end if
+  
             end do
             
           end do
@@ -333,9 +361,8 @@ contains
 
           ww = st%d%kweights(ik)*st%occ(ist, ik)
 
-          do idir = 1, der%mesh%sb%dim
-            
-            do idim = 1, st%d%dim
+          if(st%d%ispin /= SPINORS) then
+            do idir = 1, der%mesh%sb%dim
               !$omp parallel do
               do ip = 1, der%mesh%np
                 current(ip, idir, ispin) = current(ip, idir, ispin) + &
@@ -343,7 +370,21 @@ contains
               end do
               !$omp end parallel do
             end do
-          end do
+          else
+            do idir = 1, der%mesh%sb%dim
+              !$omp parallel do  private(c_tmp)
+              do ip = 1, der%mesh%np
+                current(ip, idir, 1) = current(ip, idir, 1) + &
+                  ww*aimag(conjg(psi(ip, 1))*gpsi(ip, idir, 1))
+                current(ip, idir, 2) = current(ip, idir, 2) + &
+                  ww*aimag(conjg(psi(ip, 2))*gpsi(ip, idir, 2))
+                c_tmp = conjg(psi(ip, 1))*gpsi(ip, idir, 2) - psi(ip, 2)*conjg(gpsi(ip, idir, 1))
+                current(ip, idir, 3) = current(ip, idir, 3) + ww* real(c_tmp)
+                current(ip, idir, 4) = current(ip, idir, 4) + ww*aimag(c_tmp)
+              end do
+              !$omp end parallel do
+            end do
+          end if
 
         end do
       end do

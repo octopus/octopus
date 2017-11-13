@@ -184,6 +184,7 @@ contains
 
 
   ! ---------------------------------------------------------
+  !TODO: We should remove this routine and use st%current. NTD
   subroutine calc_physical_current(der, st, jj)
     type(derivatives_t),  intent(in)    :: der
     type(states_t),       intent(inout) :: st
@@ -229,6 +230,9 @@ contains
 
     SAFE_ALLOCATE(jj(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin))
     call states_calc_quantities(der, st, paramagnetic_current = jj)
+
+    !NTD: The routine does not support spin-polarized cases
+    ASSERT(st%d%nspin == 1)
 
     a_ind = M_ZERO
     do idir = 1, der%mesh%sb%dim
