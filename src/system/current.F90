@@ -207,7 +207,7 @@ contains
                 !$omp parallel do
                 do ip = 1, der%mesh%np
                   current(ip, idir, ispin) = current(ip, idir, ispin) + &
-                    ww*aimag(conjg(psi(ip, idim))*gpsi(ip, idir, idim))
+                    ww*aimag(conjg(psi(ip, 1))*gpsi(ip, idir, 1))
                 end do
                 !$omp end parallel do
               else
@@ -276,7 +276,7 @@ contains
                 !$omp parallel do
                 do ip = 1, der%mesh%np
                   current(ip, idir, ispin) = current(ip, idir, ispin) + &
-                    ww*aimag(conjg(psi(ip, idim))*hrpsi(ip, idim) - conjg(psi(ip, idim))*rhpsi(ip, idim))
+                    ww*aimag(conjg(psi(ip, 1))*hrpsi(ip, 1) - conjg(psi(ip, 1))*rhpsi(ip, 1))
                 end do
                 !$omp end parallel do
               else
@@ -366,7 +366,7 @@ contains
               !$omp parallel do
               do ip = 1, der%mesh%np
                 current(ip, idir, ispin) = current(ip, idir, ispin) + &
-                  ww*aimag(conjg(psi(ip, idim))*gpsi(ip, idir, idim))
+                  ww*aimag(conjg(psi(ip, 1))*gpsi(ip, idir, 1))
               end do
               !$omp end parallel do
             end do
