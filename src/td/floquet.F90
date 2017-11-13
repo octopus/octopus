@@ -802,7 +802,9 @@ contains
       st => sys%st
       
       ! initialize a state object with the Floquet dimension
-      call states_init(dressed_st, gr, hm%geo,floquet_dim=hm%F%floquet_dim,floquet_FBZ=hm%F%FBZ_solver)
+      dressed_st%floquet_dim = hm%F%floquet_dim
+      dressed_st%floquet_FBZ = hm%F%FBZ_solver
+      call states_init(dressed_st, gr, hm%geo)
       call kpoints_distribute(dressed_st%d,sys%mc)
       call states_distribute_nodes(dressed_st,sys%mc)
       call states_exec_init(dressed_st, sys%mc)

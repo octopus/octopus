@@ -212,7 +212,8 @@ program wannier90_interface
     elseif(w90_floquet) then
       call floquet_init(sys,hm%F,sys%st%d%dim)
 
-      call states_init(st, sys%gr, sys%geo,floquet_dim=hm%F%floquet_dim)
+      st%floquet_dim = hm%F%floquet_dim
+      call states_init(st, sys%gr, sys%geo)
       call kpoints_distribute(st%d,sys%mc)
       call states_distribute_nodes(st,sys%mc)
       call states_exec_init(st, sys%mc)
@@ -248,7 +249,8 @@ contains
       call states_init(st, sys%gr, sys%geo)
     else
       call floquet_init(sys,hm%F,sys%st%d%dim)
-      call states_init(st, sys%gr, sys%geo,floquet_dim=hm%F%floquet_dim)
+      st%floquet_dim = hm%F%floquet_dim
+      call states_init(st, sys%gr, sys%geo)
     end if
 
     ! open win file

@@ -215,6 +215,9 @@ module states_oct_m
     integer                     :: randomization      !< Method used to generate random states
 
     CMPLX, pointer              :: coeff(:,:)         !< complex coefficients
+    integer                     :: floquet_dim = 0       !< Dimension of Floquet states
+    logical                     :: floquet_FBZ = .false. !< Type of Floquet Hilbert spaces (full or periodic)
+
 
   end type states_t
 
@@ -287,12 +290,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_init(st, gr, geo, floquet_dim,floquet_FBZ)
+  subroutine states_init(st, gr, geo)
     type(states_t), target, intent(inout) :: st
     type(grid_t),           intent(in)    :: gr
     type(geometry_t),       intent(in)    :: geo
-    integer, optional, intent(in)         :: floquet_dim
-    logical, optional, intent(in)         :: floquet_FBZ
+!     integer, optional, intent(in)         :: floquet_dim
+!     logical, optional, intent(in)         :: floquet_FBZ
 
     FLOAT :: excess_charge
     integer :: nempty, ntot, default, nthreads
@@ -461,10 +464,11 @@ contains
       call messages_fatal(1)
     end if
 
-    if(optional_default(floquet_dim,1) > 1) then
-      st%d%dim = st%d%dim*floquet_dim
-      if(.not.optional_default(floquet_FBZ,.false.)) then
-        st%nst = st%nst*floquet_dim
+    !by default st%floquet_dim = 0
+    if(st%floquet_dim > 0) then
+      st%d%dim = st%d%dim*st%floquet_dim
+      if(.not. st%floquet_FBZ) then
+        st%nst = st%nst*st%floquet_dim
       end if
     end if
 

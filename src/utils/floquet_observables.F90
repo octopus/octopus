@@ -127,7 +127,9 @@ program floquet_observables
   call floquet_init(sys,hm%F,sys%st%d%dim)
   gs_st => sys%st
 
-  call states_init(dressed_st, sys%gr, sys%geo,floquet_dim=hm%F%floquet_dim,floquet_FBZ=hm%F%FBZ_solver)
+  dressed_st%floquet_dim = hm%F%floquet_dim
+  dressed_st%floquet_FBZ = hm%F%FBZ_solver
+  call states_init(dressed_st, sys%gr, sys%geo)
   call kpoints_distribute(dressed_st%d,sys%mc)
   call states_distribute_nodes(dressed_st,sys%mc)
   call states_exec_init(dressed_st, sys%mc)
@@ -421,7 +423,9 @@ program floquet_observables
 !      call floquet_init_dressed_wfs(hm, sys, FBZ_st, fromScratch=.true.)
      
     !init FBZ states
-     call states_init(FBZ_st, sys%gr, sys%geo,floquet_dim=hm%F%floquet_dim, floquet_FBZ=.true.)
+     dressed_st%floquet_dim = hm%F%floquet_dim
+     dressed_st%floquet_FBZ = hm%F%FBZ_solver
+     call states_init(FBZ_st, sys%gr, sys%geo)
      call kpoints_distribute(FBZ_st%d,sys%mc)
      call states_distribute_nodes(FBZ_st,sys%mc)
      call states_exec_init(FBZ_st, sys%mc)
@@ -470,7 +474,9 @@ contains
     if(.not.hm%F%FBZ_solver .and. hm%F%boson == OPTION__FLOQUETBOSON__CLASSICAL_FLOQUET) then
       ! this triggers FBZ allocation                                                                                                                                   
       hm%F%FBZ_solver = .true.
-      call states_init(FBZ_st, sys%gr, sys%geo,floquet_dim=hm%F%floquet_dim,floquet_FBZ=.true.)
+      FBZ_st%floquet_dim = hm%F%floquet_dim
+      FBZ_st%floquet_FBZ = hm%F%FBZ_solver
+      call states_init(FBZ_st, sys%gr, sys%geo)
       ! print *, 'FBZ_st dim t', FBZ_st%d%dim, dressed_st%d%dim, sys%st%d%dim
       call floquet_init_dressed_wfs(hm, sys, FBZ_st, fromScratch=.false.)
       ! reset flag                                                                                                                                                     
