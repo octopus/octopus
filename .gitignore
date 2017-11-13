@@ -167,6 +167,9 @@
 /external_libs/bpdn/*.a
 /external_libs/bpdn/*.o
 
+# /external_libs/dftd3/
+/external_libs/dftd3/Makefile.in
+
 # /external_libs/fortrancl/
 /external_libs/fortrancl/*.mod
 /external_libs/fortrancl/Makefile
