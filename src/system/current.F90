@@ -207,7 +207,7 @@ contains
                 !$omp parallel do
                 do ip = 1, der%mesh%np
                   current(ip, idir, ispin) = current(ip, idir, ispin) + &
-                    ww*aimag(conjg(psi(ip, 1))*gpsi(ip, idir, 1))
+                    ww*aimag(conjg(psi(ip, 1))*hrpsi(ip, 1))
                 end do
                 !$omp end parallel do
               else
