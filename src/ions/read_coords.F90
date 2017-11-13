@@ -112,10 +112,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine read_coords_read(what, gf, space)
+  subroutine read_coords_read(what, gf, space, xyzfname)
     character(len=*),       intent(in)    :: what
     type(read_coords_info), intent(inout) :: gf
     type(space_t),          intent(in)    :: space
+    character(len=*), optional, intent(in)  :: xyzfname
+
 
     integer :: ia, ncol, iunit, jdir, int_one, nsteps, istep, step_to_use
     type(block_t) :: blk
@@ -206,12 +208,17 @@ contains
     !% <tt>angstrom</tt>.
     !%End
 
-    if(parse_is_defined('XYZ'//trim(what))) then ! read an xyz file
-      call check_duplicated(done)
+    if(parse_is_defined('XYZ'//trim(what)) .or. present(xyzfname)) then ! read an xyz file
 
       gf%source = READ_COORDS_XYZ
-      ! no default, since we do not do this unless the input tag is present
-      call parse_variable('XYZ'//trim(what), '', str)
+
+      if(.not.present(xyzfname)) then
+        call check_duplicated(done)
+        ! no default, since we do not do this unless the input tag is present
+        call parse_variable('XYZ'//trim(what), '', str)
+      else 
+        str = xyzfname
+      end if
 
       message(1) = "Reading " // trim(what) // " from " // trim(str)
       call messages_info(1)
