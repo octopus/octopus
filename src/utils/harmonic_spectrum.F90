@@ -84,10 +84,6 @@ program harmonic_spectrum
     message(1) = 'The polarization direction given in the command line is not valid.'
     call messages_fatal(1)
   end if
-  if( (mode > 3) .or. (mode <= 0) ) then
-    message(1) = 'The harmonic-spectrum mode given in the command line is not valid.'
-    call messages_fatal(1)
-  end if
 
   select case(mode)
   case(HS_FROM_MULT)
@@ -119,7 +115,10 @@ program harmonic_spectrum
       call spectrum_hs_from_mult('hs-curr-maxima', spectrum, pol, vec, w0)
     else
       call spectrum_hs_from_current('hs-curr', spectrum, pol, vec)
-    end if
+    end if  
+  case default
+    message(1) = 'The harmonic-spectrum mode given in the command line is not valid.'
+    call messages_fatal(1)  
   end select
 
 
