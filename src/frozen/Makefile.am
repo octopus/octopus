@@ -180,7 +180,7 @@ frozen_model.o		: frozen_model.F90 frozen_hamiltonian.o frozen_density.o 				\
 	base_model.o base_hamiltonian.o base_density.o
 frozen_handle.o 	: frozen_handle.F90 frozen_model.o frozen_geometry.o fio_handle.o 			\
 	base_handle.o base_model.o base_geometry.o 
-frozen_config.o 	: frozen_config.F90 frozen_handle.o fio_handle.o					\
+frozen_config.o 	: frozen_config.F90 frozen_handle.o fio_handle.o fio_config.o				\
 	base_hamiltonian.o base_config.o storage.o
 
 live_handle.o		: live_handle.F90 base_handle.o base_geometry.o
