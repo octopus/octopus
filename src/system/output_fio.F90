@@ -367,8 +367,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine output_parse_config_molecule(this, geo)
-    type(json_object_t), intent(inout) :: this
-    type(geometry_t),    intent(in)    :: geo
+    type(json_object_t), intent(out) :: this
+    type(geometry_t),    intent(in)  :: geo
 
     type(json_object_t), pointer :: cnfg
     type(json_array_t),  pointer :: list
@@ -378,7 +378,6 @@ contains
     PUSH_SUB(output_parse_config_molecule)
 
     nullify(cnfg, list)
-    call json_end(this)
     call geometry_create_data_object(geo, this)
     call json_get(this, "species", list, ierr)
     ASSERT(ierr==JSON_OK)
@@ -401,14 +400,13 @@ contains
     type(geometry_t),    intent(in)    :: geo
 
     type(json_object_t), pointer :: cnfg
-    integer                      :: ierr
 
     PUSH_SUB(output_parse_config_geometry)
 
     nullify(cnfg)
-    call json_get(this, "molecule", cnfg, ierr)
-    ASSERT(ierr==JSON_OK)
+    SAFE_ALLOCATE(cnfg)
     call output_parse_config_molecule(cnfg, geo)
+    call json_set(this, "molecule", cnfg)
     nullify(cnfg)
     
     POP_SUB(output_parse_config_geometry)
@@ -631,7 +629,7 @@ contains
 
     nullify(cnfg)
     call json_init(this)
-    call json_set(this, "type", HMLT_TYPE_POTN)
+    call json_set(this, "type", TERM_TYPE_POTN)
     call json_set(this, "dir", trim(adjustl(dir)))
     call json_set(this, "file", "v0")
     call dio_function_output(output_format, dir, "v0", &

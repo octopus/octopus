@@ -15,6 +15,10 @@ module geo_intrf_oct_m
 
   private
 
+  public ::          &
+    GEO_INTRF_OK,    &
+    GEO_INTRF_ERROR
+
   public ::      &
     geo_intrf_t
 
@@ -33,23 +37,18 @@ module geo_intrf_oct_m
     geo_intrf_copy,  &
     geo_intrf_end
 
-  public ::          &
-    GEO_INTRF_OK,    &
-    GEO_INTRF_ERROR
-
   integer, parameter :: GEO_INTRF_OK    = 0
   integer, parameter :: GEO_INTRF_ERROR =-1
 
-  integer, parameter :: GEO_NULL = 0
-  integer, parameter :: GEO_ASSC = 1
-  integer, parameter :: GEO_ALLC = 2
+  integer, parameter :: GEO_INTRF_DISA = 0
+  integer, parameter :: GEO_INTRF_NULL = 1
+  integer, parameter :: GEO_INTRF_ASSC = 2
+  integer, parameter :: GEO_INTRF_ALLC = 3
 
   type :: geo_intrf_t
     private
-    type(json_object_t), pointer :: config =>null()
-    type(space_t),       pointer :: space  =>null()
-    type(geometry_t),    pointer :: pgeo   =>null()
-    integer                      :: type   = GEO_NULL
+    type(geometry_t), pointer :: self =>null()
+    integer                   :: type = GEO_INTRF_DISA
   end type geo_intrf_t
 
   type :: geo_intrf_iterator_t
@@ -61,13 +60,18 @@ module geo_intrf_oct_m
   end type geo_intrf_iterator_t
 
   interface geo_intrf_new
-    module procedure geo_intrf_new_geometry
+    module procedure geo_intrf_new_type
     module procedure geo_intrf_new_pass
+    module procedure geo_intrf_new_copy
   end interface geo_intrf_new
+
+  interface geo_intrf_del
+    module procedure geo_intrf_del_type
+    module procedure geo_intrf_del_pass
+  end interface geo_intrf_del
 
   interface geo_intrf_init
     module procedure geo_intrf_init_type
-    module procedure geo_intrf_init_copy
     module procedure geo_intrf_iterator_init_type
     module procedure geo_intrf_iterator_init_iterator
   end interface geo_intrf_init
@@ -77,16 +81,6 @@ module geo_intrf_oct_m
     module procedure geo_intrf_iterator_next_species
   end interface geo_intrf_next
 
-  interface geo_intrf_set
-    module procedure geo_intrf_set_geometry
-  end interface geo_intrf_set
-
-  interface geo_intrf_get
-    module procedure geo_intrf_get_config
-    module procedure geo_intrf_get_space
-    module procedure geo_intrf_get_geometry
-  end interface geo_intrf_get
-
   interface geo_intrf_copy
     module procedure geo_intrf_copy_type
     module procedure geo_intrf_iterator_copy
@@ -94,69 +88,169 @@ module geo_intrf_oct_m
 
   interface geo_intrf_end
     module procedure geo_intrf_end_type
+    module procedure geo_intrf_end_pass
     module procedure geo_intrf_iterator_end
   end interface geo_intrf_end
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine geo_intrf_new_geometry(this, that)
+  subroutine geo_intrf__new__(this, that)
     type(geo_intrf_t), intent(inout) :: this
     type(geometry_t), pointer        :: that
 
-    PUSH_SUB(geo_intrf_new_geometry)
-    
+    PUSH_SUB(geo_intrf__new__)
+
+    ASSERT(geo_intrf_isnull(this))
     nullify(that)
     SAFE_ALLOCATE(that)
-    call geometry_nullify(that)
     call geo_intrf_set(this, that)
-    this%type = GEO_ALLC
+    this%type = GEO_INTRF_ALLC
 
-    POP_SUB(geo_intrf_new_geometry)
-  end subroutine geo_intrf_new_geometry
+    POP_SUB(geo_intrf__new__)
+  end subroutine geo_intrf__new__
 
   ! ---------------------------------------------------------
-  subroutine geo_intrf_new_pass(this, geo_init)
+  subroutine geo_intrf__del__(this)
+    type(geo_intrf_t), intent(inout) :: this
+
+    PUSH_SUB(geo_intrf__del__)
+
+    ASSERT(geo_intrf_assoc(this))
+    if(geo_intrf_alloc(this))then
+      SAFE_DEALLOCATE_P(this%self)
+    end if
+    nullify(this%self)
+    this%type = GEO_INTRF_NULL
+
+    POP_SUB(geo_intrf__del__)
+  end subroutine geo_intrf__del__
+
+  ! ---------------------------------------------------------
+  subroutine geo_intrf_new_type(this, space, config)
+    type(geo_intrf_t),   intent(inout) :: this
+    type(space_t),       intent(in)    :: space
+    type(json_object_t), intent(in)    :: config
+
+    PUSH_SUB(geo_intrf_new_type)
+
+    ASSERT(geo_intrf_isnull(this))
+    call geo_intrf_new(this, init)
+
+    POP_SUB(geo_intrf_new_type)
+
+  contains
+
+    subroutine init(this)
+      type(geometry_t), intent(out) :: this
+
+      PUSH_SUB(geo_intrf_new_type.init)
+
+      call geometry_init_from_data_object(this, space, config)
+
+      POP_SUB(geo_intrf_new_type.init)
+    end subroutine init
+
+  end subroutine geo_intrf_new_type
+
+  ! ---------------------------------------------------------
+  subroutine geo_intrf_new_pass(this, init)
     type(geo_intrf_t), intent(inout) :: this
     
     interface
-      subroutine geo_init(this, space, config)
+      subroutine init(this)
         use geometry_oct_m
-        use json_oct_m
-        use space_oct_m
-        type(geometry_t),    intent(out) :: this
-        type(space_t),       intent(in)  :: space
-        type(json_object_t), intent(in)  :: config
-      end subroutine geo_init
+        type(geometry_t), intent(out) :: this
+      end subroutine init
     end interface
 
-    type(geometry_t), pointer :: pgeo
+    type(geometry_t), pointer :: self
 
     PUSH_SUB(geo_intrf_new_pass)
     
-    nullify(pgeo)
-    call geo_intrf_new(this, pgeo)
-    call geo_init(pgeo, this%space, this%config)
-    nullify(pgeo)
+    ASSERT(geo_intrf_isnull(this))
+    nullify(self)
+    call geo_intrf__new__(this, self)
+    call init(self)
+    nullify(self)
 
     POP_SUB(geo_intrf_new_pass)
   end subroutine geo_intrf_new_pass
 
   ! ---------------------------------------------------------
-  subroutine geo_intrf_del(this)
+  subroutine geo_intrf_new_copy(this, that)
+    type(geo_intrf_t), intent(inout) :: this
+    type(geo_intrf_t), intent(in)    :: that
+
+    type(geometry_t), pointer :: self
+
+    PUSH_SUB(geo_intrf_new_copy)
+
+    ASSERT(geo_intrf_isnull(this))
+    ASSERT(geo_intrf_assoc(that))
+    nullify(self)
+    call geo_intrf__new__(this, self)
+    call geometry_copy(self, that%self)
+    nullify(self)
+
+    POP_SUB(geo_intrf_new_copy)
+  end subroutine geo_intrf_new_copy
+
+  ! ---------------------------------------------------------
+  subroutine geo_intrf_del_type(this)
     type(geo_intrf_t), intent(inout) :: this
 
-    PUSH_SUB(geo_intrf_del)
+    PUSH_SUB(geo_intrf_del_type)
 
-    ASSERT(this%type==GEO_ALLC)
-    ASSERT(associated(this%pgeo))
-    call geometry_end(this%pgeo)
-    SAFE_DEALLOCATE_P(this%pgeo)
-    nullify(this%pgeo)
-    this%type = GEO_NULL
-    
-    POP_SUB(geo_intrf_del)
-  end subroutine geo_intrf_del
+    ASSERT(geo_intrf_assoc(this))
+    call geo_intrf_del(this, geometry_end)
+
+    POP_SUB(geo_intrf_del_type)
+  end subroutine geo_intrf_del_type
+
+  ! ---------------------------------------------------------
+  subroutine geo_intrf_del_pass(this, finis)
+    type(geo_intrf_t), intent(inout) :: this
+
+    interface
+      subroutine finis(this)
+        use geometry_oct_m
+        type(geometry_t), intent(inout) :: this
+      end subroutine finis
+    end interface
+
+    PUSH_SUB(geo_intrf_del_pass)
+
+    ASSERT(geo_intrf_assoc(this))
+    if(geo_intrf_alloc(this)) call finis(this%self)
+    call geo_intrf__del__(this)
+
+    POP_SUB(geo_intrf_del_pass)
+  end subroutine geo_intrf_del_pass
+
+  ! ---------------------------------------------------------
+  function geo_intrf_isnull(this) result(that)
+    type(geo_intrf_t), intent(in) :: this
+
+    logical :: that
+
+    PUSH_SUB(geo_intrf_isnull)
+
+    select case(this%type)
+    case(GEO_INTRF_DISA)
+      that = .false.
+    case(GEO_INTRF_NULL)
+      ASSERT(.not.associated(this%self))
+      that = .true.
+    case(GEO_INTRF_ASSC,GEO_INTRF_ALLC)
+      ASSERT(associated(this%self))
+      that = .false.
+    case default
+      ASSERT(.false.)
+    end select
+
+    POP_SUB(geo_intrf_isnull)
+  end function geo_intrf_isnull
 
   ! ---------------------------------------------------------
   function geo_intrf_assoc(this) result(that)
@@ -166,14 +260,14 @@ contains
 
     PUSH_SUB(geo_intrf_assoc)
 
-    ASSERT(associated(this%config))
-    ASSERT(associated(this%space))
     select case(this%type)
-    case(GEO_NULL)
-      ASSERT(.not.associated(this%pgeo))
+    case(GEO_INTRF_DISA)
       that = .false.
-    case(GEO_ASSC,GEO_ALLC)
-      ASSERT(associated(this%pgeo))
+    case(GEO_INTRF_NULL)
+      ASSERT(.not.associated(this%self))
+      that = .false.
+    case(GEO_INTRF_ASSC, GEO_INTRF_ALLC)
+      ASSERT(associated(this%self))
       that = .true.
     case default
       ASSERT(.false.)
@@ -190,17 +284,17 @@ contains
 
     PUSH_SUB(geo_intrf_alloc)
 
-    ASSERT(associated(this%config))
-    ASSERT(associated(this%space))
     select case(this%type)
-    case(GEO_NULL)
-      ASSERT(.not.associated(this%pgeo))
+    case(GEO_INTRF_DISA)
       that = .false.
-    case(GEO_ASSC)
-      ASSERT(associated(this%pgeo))
+    case(GEO_INTRF_NULL)
+      ASSERT(.not.associated(this%self))
       that = .false.
-    case(GEO_ALLC)
-      ASSERT(associated(this%pgeo))
+    case(GEO_INTRF_ASSC)
+      ASSERT(associated(this%self))
+      that = .false.
+    case(GEO_INTRF_ALLC)
+      ASSERT(associated(this%self))
       that = .true.
     case default
       ASSERT(.false.)
@@ -210,113 +304,60 @@ contains
   end function geo_intrf_alloc
 
   ! ---------------------------------------------------------
-  subroutine geo_intrf_init_type(this, space, config)
-    type(geo_intrf_t),           intent(out) :: this
-    type(space_t),       target, intent(in)  :: space
-    type(json_object_t), target, intent(in)  :: config
+  subroutine geo_intrf_init_type(this)
+    type(geo_intrf_t), intent(out) :: this
 
     PUSH_SUB(geo_intrf_init_type)
     
-    this%config => config
-    this%space => space
-    nullify(this%pgeo)
-    this%type = GEO_NULL
+    nullify(this%self)
+    this%type = GEO_INTRF_NULL
 
     POP_SUB(geo_intrf_init_type)
   end subroutine geo_intrf_init_type
 
   ! ---------------------------------------------------------
-  subroutine geo_intrf_init_copy(this, that)
-    type(geo_intrf_t), intent(out) :: this
-    type(geo_intrf_t), intent(in)  :: that
-
-    PUSH_SUB(geo_intrf_init_copy)
-    
-    ASSERT(associated(that%config))
-    ASSERT(associated(that%space))
-    call geo_intrf_init(this, that%space, that%config)
-
-    POP_SUB(geo_intrf_init_copy)
-  end subroutine geo_intrf_init_copy
-
-  ! ---------------------------------------------------------
-  subroutine geo_intrf_set_geometry(this, that)
+  subroutine geo_intrf_set(this, that)
     type(geo_intrf_t),        intent(inout) :: this
     type(geometry_t), target, intent(in)    :: that
 
-    PUSH_SUB(geo_intrf_set_geometry)
+    PUSH_SUB(geo_intrf_set)
 
-    ASSERT(associated(this%config))
-    ASSERT(associated(this%space))
-    ASSERT(.not.associated(this%pgeo))
-    ASSERT(this%type==GEO_NULL)
-    this%pgeo => that
-    this%type = GEO_ASSC
+    ASSERT(geo_intrf_isnull(this))
+    this%self => that
+    this%type = GEO_INTRF_ASSC
 
-    POP_SUB(geo_intrf_set_geometry)
-  end subroutine geo_intrf_set_geometry
+    POP_SUB(geo_intrf_set)
+  end subroutine geo_intrf_set
 
   ! ---------------------------------------------------------
-  subroutine geo_intrf_get_config(this, that)
-    type(geo_intrf_t),    intent(in) :: this
-    type(json_object_t), pointer     :: that
-
-    PUSH_SUB(geo_intrf_get_config)
-
-    nullify(that)
-    if(associated(this%config)) that => this%config
-
-    POP_SUB(geo_intrf_get_config)
-  end subroutine geo_intrf_get_config
-
-  ! ---------------------------------------------------------
-  subroutine geo_intrf_get_space(this, that)
-    type(geo_intrf_t), intent(in) :: this
-    type(space_t),    pointer     :: that
-
-    PUSH_SUB(geo_intrf_get_space)
-
-    nullify(that)
-    if(associated(this%space)) that => this%space
-
-    POP_SUB(geo_intrf_get_space)
-  end subroutine geo_intrf_get_space
-
-  ! ---------------------------------------------------------
-  subroutine geo_intrf_get_geometry(this, that)
+  subroutine geo_intrf_get(this, that)
     type(geo_intrf_t), intent(in) :: this
     type(geometry_t), pointer     :: that
 
-    PUSH_SUB(geo_intrf_get_geometry)
+    PUSH_SUB(geo_intrf_get)
 
+    ASSERT(this%type/=GEO_INTRF_DISA)
     nullify(that)
-    if(associated(this%pgeo)) that => this%pgeo
+    if(geo_intrf_assoc(this)) that => this%self
 
-    POP_SUB(geo_intrf_get_geometry)
-  end subroutine geo_intrf_get_geometry
+    POP_SUB(geo_intrf_get)
+  end subroutine geo_intrf_get
 
   ! ---------------------------------------------------------
   subroutine geo_intrf_copy_type(this, that)
     type(geo_intrf_t), intent(inout) :: this
     type(geo_intrf_t), intent(in)    :: that
 
-    type(geometry_t), pointer :: pgeo
-
     PUSH_SUB(geo_intrf_copy_type)
 
-    nullify(pgeo)
     call geo_intrf_end(this)
-    this%config => that%config
-    this%space => that%space
     select case(that%type)
-    case(GEO_NULL)
-      nullify(this%pgeo)
-    case(GEO_ASSC)
-      this%pgeo => that%pgeo
-    case(GEO_ALLC)
-      call geo_intrf_new(this, pgeo)
-      call geometry_copy(pgeo, that%pgeo)
-      nullify(pgeo)
+    case(GEO_INTRF_DISA)
+    case(GEO_INTRF_NULL)
+    case(GEO_INTRF_ASSC)
+      call geo_intrf_set(this, that%self)
+    case(GEO_INTRF_ALLC)
+      call geo_intrf_new(this, that)
     case default
       ASSERT(.false.)
     end select
@@ -326,17 +367,46 @@ contains
   end subroutine geo_intrf_copy_type
 
   ! ---------------------------------------------------------
+  subroutine geo_intrf__end__(this)
+    type(geo_intrf_t), intent(inout) :: this
+
+    PUSH_SUB(geo_intrf__end__)
+
+    nullify(this%self)
+    this%type = GEO_INTRF_DISA
+
+    POP_SUB(geo_intrf__end__)
+  end subroutine geo_intrf__end__
+
+  ! ---------------------------------------------------------
   subroutine geo_intrf_end_type(this)
     type(geo_intrf_t), intent(inout) :: this
 
     PUSH_SUB(geo_intrf_end_type)
 
-    if(this%type==GEO_ALLC) call geo_intrf_del(this)
-    nullify(this%config, this%space, this%pgeo)
-    this%type = GEO_NULL
+    call geo_intrf_end(this, geometry_end)
 
     POP_SUB(geo_intrf_end_type)
   end subroutine geo_intrf_end_type
+
+  ! ---------------------------------------------------------
+  subroutine geo_intrf_end_pass(this, finis)
+    type(geo_intrf_t), intent(inout) :: this
+
+    interface
+      subroutine finis(this)
+        use geometry_oct_m
+        type(geometry_t), intent(inout) :: this
+      end subroutine finis
+    end interface
+
+    PUSH_SUB(geo_intrf_end_pass)
+
+    if(geo_intrf_assoc(this)) call geo_intrf_del(this, finis)
+    call geo_intrf__end__(this)
+
+    POP_SUB(geo_intrf_end_pass)
+  end subroutine geo_intrf_end_pass
 
   ! ---------------------------------------------------------
   subroutine geo_intrf_iterator_init_type(this, that)
@@ -346,7 +416,7 @@ contains
     PUSH_SUB(geo_intrf_iterator_init_type)
 
     this%self => that
-    this%pgeo => that%pgeo
+    call geo_intrf_get(that, this%pgeo)
     this%natm = 0
     this%nspc = 0
 

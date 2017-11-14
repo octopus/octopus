@@ -299,15 +299,11 @@ contains
     type(base_handle_t),       intent(in) :: this
     type(base_hamiltonian_t), pointer     :: subsys_hm
 
-    type(base_model_t), pointer :: subsys_model
-    
     PUSH_SUB(subsystems_get)
 
-    nullify(subsys_hm, subsys_model)
-    call base_handle_get(this, subsys_model)
-    ASSERT(associated(subsys_model))
-    call base_model_get(subsys_model, subsys_hm)
-    nullify(subsys_model)
+    nullify(subsys_hm)
+    call base_handle_get(this, subsys_hm)
+    ASSERT(associated(subsys_hm))
       
     POP_SUB(subsystems_get)
   end subroutine subsystems_get

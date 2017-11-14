@@ -1,15 +1,11 @@
 #include "global.h"
 
-#undef LIST_TEMPLATE_NAME
-#undef LIST_TYPE_NAME
-#undef LIST_TYPE_MODULE_NAME
-
-#undef DICT_TEMPLATE_NAME
-#undef DICT_TYPE_NAME
-#undef DICT_TYPE_MODULE_NAME
-#undef DICT_INCLUDE_PREFIX
-#undef DICT_INCLUDE_HEADER
-#undef DICT_INCLUDE_BODY
+#undef BASE_TEMPLATE_NAME
+#undef BASE_TYPE_NAME
+#undef BASE_TYPE_MODULE_NAME
+#undef BASE_INCLUDE_PREFIX
+#undef BASE_INCLUDE_HEADER
+#undef BASE_INCLUDE_BODY
 
 module base_model_oct_m
 
@@ -26,32 +22,15 @@ module base_model_oct_m
   use simulation_oct_m
   use space_oct_m
 
-#define LIST_TEMPLATE_NAME base_model
-#define LIST_INCLUDE_PREFIX
-#include "tlist_inc.F90"
-#undef LIST_INCLUDE_PREFIX
-#undef LIST_TEMPLATE_NAME
-
-#define DICT_TEMPLATE_NAME base_model
-#define DICT_INCLUDE_PREFIX
-#include "tdict_inc.F90"
-#undef DICT_INCLUDE_PREFIX
-#undef DICT_TEMPLATE_NAME
-
-#define TEMPLATE_PREFIX base_model
-#define INCLUDE_PREFIX
-#include "iterator_inc.F90"
-#undef INCLUDE_PREFIX
-#undef TEMPLATE_PREFIX
+#define BASE_TEMPLATE_NAME base_model
+#define BASE_INCLUDE_PREFIX
+#include "tbase_inc.F90"
+#undef BASE_INCLUDE_PREFIX
+#undef BASE_TEMPLATE_NAME
 
   implicit none
 
   private
-
-  public ::                 &
-    BASE_MODEL_OK,          &
-    BASE_MODEL_KEY_ERROR,   &
-    BASE_MODEL_EMPTY_ERROR
 
   public ::       &
     base_model_t
@@ -60,9 +39,8 @@ module base_model_oct_m
     base_model__init__,   &
     base_model__start__,  &
     base_model__update__, &
-    base_model__stop__,   &
     base_model__reset__,  &
-    base_model__acc__,    &
+    base_model__stop__,   &
     base_model__copy__,   &
     base_model__end__
 
@@ -72,28 +50,17 @@ module base_model_oct_m
     base_model_init,   &
     base_model_start,  &
     base_model_update, &
+    base_model_reset,  &
     base_model_stop,   &
-    base_model_sets,   &
-    base_model_gets,   &
     base_model_get,    &
     base_model_copy,   &
     base_model_end
 
-#define LIST_TEMPLATE_NAME base_model
-#define LIST_INCLUDE_HEADER
-#include "tlist_inc.F90"
-#undef LIST_INCLUDE_HEADER
-#undef LIST_TEMPLATE_NAME
-
-#define DICT_TEMPLATE_NAME base_model
-#define DICT_INCLUDE_HEADER
-#include "tdict_inc.F90"
-#undef DICT_INCLUDE_HEADER
-#undef DICT_TEMPLATE_NAME
-
-  integer, parameter :: BASE_MODEL_OK          = BASE_MODEL_DICT_OK
-  integer, parameter :: BASE_MODEL_KEY_ERROR   = BASE_MODEL_DICT_KEY_ERROR
-  integer, parameter :: BASE_MODEL_EMPTY_ERROR = BASE_MODEL_DICT_EMPTY_ERROR
+#define BASE_TEMPLATE_NAME base_model
+#define BASE_INCLUDE_HEADER
+#include "tbase_inc.F90"
+#undef BASE_INCLUDE_HEADER
+#undef BASE_TEMPLATE_NAME
 
   type :: base_model_t
     private
@@ -107,24 +74,14 @@ module base_model_oct_m
   end type base_model_t
 
   interface base_model__init__
-    module procedure base_model__init__begin
-    module procedure base_model__init__finish
+    module procedure base_model__init__type
     module procedure base_model__init__copy
   end interface base_model__init__
-
-  interface base_model__copy__
-    module procedure base_model__copy__begin
-    module procedure base_model__copy__finish
-  end interface base_model__copy__
 
   interface base_model_init
     module procedure base_model_init_type
     module procedure base_model_init_copy
   end interface base_model_init
-
-  interface base_model_gets
-    module procedure base_model_gets_name
-  end interface base_model_gets
 
   interface base_model_get
     module procedure base_model_get_config
@@ -146,25 +103,13 @@ module base_model_oct_m
     module procedure base_model_end_type
   end interface base_model_end
 
-#define TEMPLATE_PREFIX base_model
-#define INCLUDE_HEADER
-#include "iterator_inc.F90"
-#undef INCLUDE_HEADER
-#undef TEMPLATE_PREFIX
-
 contains
 
-#define LIST_TEMPLATE_NAME base_model
-#define LIST_INCLUDE_BODY
-#include "tlist_inc.F90"
-#undef LIST_INCLUDE_BODY
-#undef LIST_TEMPLATE_NAME
-
-#define DICT_TEMPLATE_NAME base_model
-#define DICT_INCLUDE_BODY
-#include "tdict_inc.F90"
-#undef DICT_INCLUDE_BODY
-#undef DICT_TEMPLATE_NAME
+#define BASE_TEMPLATE_NAME base_model
+#define BASE_INCLUDE_BODY
+#include "tbase_inc.F90"
+#undef BASE_INCLUDE_BODY
+#undef BASE_TEMPLATE_NAME
 
   ! ---------------------------------------------------------
   subroutine base_model__new__(this)
@@ -225,14 +170,14 @@ contains
   end subroutine base_model_del
 
   ! ---------------------------------------------------------
-  subroutine base_model__init__begin(this, config)
+  subroutine base_model__init__type(this, config)
     type(base_model_t),          intent(out) :: this
     type(json_object_t), target, intent(in)  :: config
 
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
 
-    PUSH_SUB(base_model__init__begin)
+    PUSH_SUB(base_model__init__type)
 
     nullify(cnfg)
     this%config => config
@@ -240,66 +185,36 @@ contains
     ASSERT(ierr==JSON_OK)
     call base_system__init__(this%sys, cnfg)
     nullify(cnfg)
-    call base_model_dict_init(this%dict)
-    call base_model_list_init(this%list)
-
-    POP_SUB(base_model__init__begin)
-  end subroutine base_model__init__begin
-
-  ! ---------------------------------------------------------
-  subroutine base_model__build__(this)
-    type(base_model_t), intent(inout) :: this
-
-    type(base_model_iterator_t)        :: iter
-    character(len=BASE_MODEL_NAME_LEN) :: name
-    type(base_model_t),        pointer :: subs
-    integer                            :: ierr
-
-    PUSH_SUB(base_model__build__)
-
-    call base_model_init(iter, this)
-    do
-      nullify(subs)
-      call base_model_next(iter, name, subs, ierr)
-      if(ierr/=BASE_MODEL_OK)exit
-      call base_hamiltonian_sets(this%hm, name, subs%hm)
-    end do
-    call base_model_end(iter)
-    nullify(subs)
-
-    POP_SUB(base_model__build__)
-  end subroutine base_model__build__
-
-  ! ---------------------------------------------------------
-  subroutine base_model__init__finish(this)
-    type(base_model_t), intent(inout) :: this
-
-    type(json_object_t), pointer :: cnfg
-    integer                      :: ierr
-
-    PUSH_SUB(base_model__init__finish)
-
-    nullify(cnfg)
-    ASSERT(associated(this%config))
     call json_get(this%config, "hamiltonian", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
     call base_hamiltonian__init__(this%hm, this%sys, cnfg)
-    call base_model__build__(this)
     nullify(cnfg)
+    call base_model_dict_init(this%dict)
+    call base_model_list_init(this%list)
 
-    POP_SUB(base_model__init__finish)
-  end subroutine base_model__init__finish
+    POP_SUB(base_model__init__type)
+  end subroutine base_model__init__type
 
   ! ---------------------------------------------------------
-  subroutine base_model__init__copy(this, that)
+  subroutine base_model__init__copy(this, that, start)
     type(base_model_t), intent(out) :: this
     type(base_model_t), intent(in)  :: that
+    logical,  optional, intent(in)  :: start
+
+    logical :: istr
 
     PUSH_SUB(base_model__init__copy)
 
     ASSERT(associated(that%config))
     call base_model__init__(this, that%config)
-    if(associated(that%sim)) call base_model__start__(this, that%sim)
+    istr = .true.
+    if(present(start)) istr = start
+    if(istr)then
+      if(present(start))then
+        ASSERT(associated(that%sim))
+      end if
+      if(associated(that%sim)) call base_model__start__(this, that%sim)
+    end if
 
     POP_SUB(base_model__init__copy)
   end subroutine base_model__init__copy
@@ -312,7 +227,6 @@ contains
     PUSH_SUB(base_model_init_type)
 
     call base_model__init__(this, config)
-    call base_model__init__(this)
 
     POP_SUB(base_model_init_type)
   end subroutine base_model_init_type
@@ -341,7 +255,6 @@ contains
     end do
     call base_model_end(iter)
     nullify(osub, isub)
-    call base_model__init__(this)
 
     POP_SUB(base_model_init_copy)
   end subroutine base_model_init_copy
@@ -363,36 +276,13 @@ contains
   end subroutine base_model__start__
 
   ! ---------------------------------------------------------
-  recursive subroutine base_model_start(this, sim)
-    type(base_model_t), intent(inout) :: this
-    type(simulation_t), intent(in)    :: sim
-
-    type(base_model_iterator_t) :: iter
-    type(base_model_t), pointer :: subs
-    integer                     :: ierr
-
-    PUSH_SUB(base_model_start)
-
-    call base_model_init(iter, this)
-    do
-      nullify(subs)
-      call base_model_next(iter, subs, ierr)
-      if(ierr/=BASE_MODEL_OK)exit
-      call base_model_start(subs, sim)
-    end do
-    call base_model_end(iter)
-    nullify(subs)
-    call base_model__start__(this, sim)
-
-    POP_SUB(base_model_start)
-  end subroutine base_model_start
-
-  ! ---------------------------------------------------------
   subroutine base_model__update__(this)
     type(base_model_t), intent(inout) :: this
 
     PUSH_SUB(base_model__update__)
 
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
     call base_system__update__(this%sys)
     call base_hamiltonian__update__(this%hm)
 
@@ -400,28 +290,18 @@ contains
   end subroutine base_model__update__
 
   ! ---------------------------------------------------------
-  recursive subroutine base_model_update(this)
+  subroutine base_model__reset__(this)
     type(base_model_t), intent(inout) :: this
 
-    type(base_model_iterator_t) :: iter
-    type(base_model_t), pointer :: subs
-    integer                     :: ierr
+    PUSH_SUB(base_model__reset__)
 
-    PUSH_SUB(base_model_update)
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
+    call base_system__reset__(this%sys)
+    call base_hamiltonian__reset__(this%hm)
 
-    call base_model_init(iter, this)
-    do
-      nullify(subs)
-      call base_model_next(iter, subs, ierr)
-      if(ierr/=BASE_MODEL_OK)exit
-      call base_model_update(subs)
-    end do
-    call base_model_end(iter)
-    nullify(subs)
-    call base_model__update__(this)
-
-    POP_SUB(base_model_update)
-  end subroutine base_model_update
+    POP_SUB(base_model__reset__)
+  end subroutine base_model__reset__
 
   ! ---------------------------------------------------------
   subroutine base_model__stop__(this)
@@ -439,53 +319,62 @@ contains
   end subroutine base_model__stop__
 
   ! ---------------------------------------------------------
-  recursive subroutine base_model_stop(this)
+  subroutine base_model_start(this, sim)
+    type(base_model_t), intent(inout) :: this
+    type(simulation_t), intent(in)    :: sim
+
+    PUSH_SUB(base_model_start)
+
+    call base_model__apply__(this, start)
+
+    POP_SUB(base_model_start)
+    
+  contains
+
+    subroutine start(this)
+      type(base_model_t), intent(inout) :: this
+
+      PUSH_SUB(base_model_start.start)
+      
+      call base_model__start__(this, sim)
+
+      POP_SUB(base_model_start.start)
+    end subroutine start
+
+  end subroutine base_model_start
+
+  ! ---------------------------------------------------------
+  subroutine base_model_update(this)
     type(base_model_t), intent(inout) :: this
 
-    type(base_model_iterator_t) :: iter
-    type(base_model_t), pointer :: subs
-    integer                     :: ierr
+    PUSH_SUB(base_model_update)
+
+    call base_model__apply__(this, base_model__update__)
+
+    POP_SUB(base_model_update)
+  end subroutine base_model_update
+
+  ! ---------------------------------------------------------
+  subroutine base_model_reset(this)
+    type(base_model_t), intent(inout) :: this
+
+    PUSH_SUB(base_model_reset)
+
+    call base_model__apply__(this, base_model__reset__)
+    
+    POP_SUB(base_model_reset)
+  end subroutine base_model_reset
+
+  ! ---------------------------------------------------------
+  subroutine base_model_stop(this)
+    type(base_model_t), intent(inout) :: this
 
     PUSH_SUB(base_model_stop)
 
-    call base_model_init(iter, this)
-    do
-      nullify(subs)
-      call base_model_next(iter, subs, ierr)
-      if(ierr/=BASE_MODEL_OK)exit
-      call base_model_stop(subs)
-    end do
-    call base_model_end(iter)
-    nullify(subs)
-    call base_model__stop__(this)
+    call base_model__apply__(this, base_model__stop__)
 
     POP_SUB(base_model_stop)
   end subroutine base_model_stop
-
-  ! ---------------------------------------------------------
-  subroutine base_model__reset__(this)
-    type(base_model_t), intent(inout) :: this
-
-    PUSH_SUB(base_model__reset__)
-
-    call base_system__reset__(this%sys)
-    call base_hamiltonian__reset__(this%hm)
-
-    POP_SUB(base_model__reset__)
-  end subroutine base_model__reset__
-
-  ! ---------------------------------------------------------
-  subroutine base_model__acc__(this, that)
-    type(base_model_t), intent(inout) :: this
-    type(base_model_t), intent(in)    :: that
-
-    PUSH_SUB(base_model__acc__)
-
-    call base_system__acc__(this%sys, that%sys)
-    call base_hamiltonian__acc__(this%hm, that%hm)
-
-    POP_SUB(base_model__acc__)
-  end subroutine base_model__acc__
 
   ! ---------------------------------------------------------
   subroutine base_model__sets__(this, name, that)
@@ -495,40 +384,25 @@ contains
 
     PUSH_SUB(base_model__sets__)
 
-    call base_system_set(this%sys, name, that%sys)
+    call base_system_sets(this%sys, trim(adjustl(name)), that%sys)
+    call base_hamiltonian_sets(this%hm, trim(adjustl(name)), that%hm)
 
     POP_SUB(base_model__sets__)
   end subroutine base_model__sets__
 
   ! ---------------------------------------------------------
-  subroutine base_model_sets(this, name, that)
+  subroutine base_model__dels__(this, name, ierr)
     type(base_model_t),  intent(inout) :: this
     character(len=*),    intent(in)    :: name
-    type(base_model_t),  intent(in)    :: that
+    integer,             intent(out)   :: ierr
 
-    PUSH_SUB(base_model_sets)
+    PUSH_SUB(base_model__dels__)
 
-    ASSERT(associated(this%config))
-    call base_model_dict_set(this%dict, trim(adjustl(name)), that)
-    call base_model__sets__(this, trim(adjustl(name)), that)
+    call base_hamiltonian_dels(this%hm, trim(adjustl(name)), ierr)
+    call base_system_dels(this%sys, trim(adjustl(name)), ierr)
 
-    POP_SUB(base_model_sets)
-  end subroutine base_model_sets
-
-  ! ---------------------------------------------------------
-  subroutine base_model_gets_name(this, name, that)
-    type(base_model_t),  intent(in) :: this
-    character(len=*),    intent(in) :: name
-    type(base_model_t), pointer     :: that
-
-    PUSH_SUB(base_model_gets_name)
-
-    nullify(that)
-    ASSERT(associated(this%config))
-    call base_model_dict_get(this%dict, trim(adjustl(name)), that)
-
-    POP_SUB(base_model_gets_name)
-  end subroutine base_model_gets_name
+    POP_SUB(base_model__dels__)
+  end subroutine base_model__dels__
 
   ! ---------------------------------------------------------
   subroutine base_model_get_config(this, that)
@@ -563,7 +437,8 @@ contains
 
     PUSH_SUB(base_model_get_space)
 
-    call base_system_get(this%sys, that)
+    nullify(that)
+    if(associated(this%config)) call base_system_get(this%sys, that)
 
     POP_SUB(base_model_get_space)
   end subroutine base_model_get_space
@@ -575,7 +450,8 @@ contains
 
     PUSH_SUB(base_model_get_geometry)
 
-    call base_system_get(this%sys, that)
+    nullify(that)
+    if(associated(this%config)) call base_system_get(this%sys, that)
 
     POP_SUB(base_model_get_geometry)
   end subroutine base_model_get_geometry
@@ -587,7 +463,8 @@ contains
 
     PUSH_SUB(base_model_get_geom)
 
-    call base_system_get(this%sys, that)
+    nullify(that)
+    if(associated(this%config)) call base_system_get(this%sys, that)
 
     POP_SUB(base_model_get_geom)
   end subroutine base_model_get_geom
@@ -599,7 +476,8 @@ contains
 
     PUSH_SUB(base_model_get_density)
 
-    call base_system_get(this%sys, that)
+    nullify(that)
+    if(associated(this%config)) call base_system_get(this%sys, that)
 
     POP_SUB(base_model_get_density)
   end subroutine base_model_get_density
@@ -611,7 +489,8 @@ contains
 
     PUSH_SUB(base_model_get_states)
 
-    call base_system_get(this%sys, that)
+    nullify(that)
+    if(associated(this%config)) call base_system_get(this%sys, that)
 
     POP_SUB(base_model_get_states)
   end subroutine base_model_get_states
@@ -623,7 +502,8 @@ contains
 
     PUSH_SUB(base_model_get_system)
 
-    that => this%sys
+    nullify(that)
+    if(associated(this%config)) that => this%sys
 
     POP_SUB(base_model_get_system)
   end subroutine base_model_get_system
@@ -635,17 +515,18 @@ contains
 
     PUSH_SUB(base_model_get_hamiltonian)
 
-    that => this%hm
+    nullify(that)
+    if(associated(this%config)) that => this%hm
 
     POP_SUB(base_model_get_hamiltonian)
   end subroutine base_model_get_hamiltonian
 
   ! ---------------------------------------------------------
-  subroutine base_model__copy__begin(this, that)
+  subroutine base_model__copy__(this, that)
     type(base_model_t), intent(inout) :: this
     type(base_model_t), intent(in)    :: that
 
-    PUSH_SUB(base_model__copy__begin)
+    PUSH_SUB(base_model__copy__)
 
     call base_model__end__(this)
     if(associated(that%config))then
@@ -656,19 +537,8 @@ contains
       end if
     end if
 
-    POP_SUB(base_model__copy__begin)
-  end subroutine base_model__copy__begin
-
-  ! ---------------------------------------------------------
-  subroutine base_model__copy__finish(this)
-    type(base_model_t), intent(inout) :: this
-
-    PUSH_SUB(base_model__copy__finish)
-
-    call base_model__build__(this)
-
-    POP_SUB(base_model__copy__finish)
-  end subroutine base_model__copy__finish
+    POP_SUB(base_model__copy__)
+  end subroutine base_model__copy__
 
   ! ---------------------------------------------------------
   recursive subroutine base_model_copy_type(this, that)
@@ -695,7 +565,6 @@ contains
       call base_model_sets(this, name, osub)
     end do
     call base_model_end(iter)
-    call base_model__copy__(this)
     nullify(osub, isub)
 
     POP_SUB(base_model_copy_type)
@@ -736,12 +605,6 @@ contains
 
     POP_SUB(base_model_end_type)
   end subroutine base_model_end_type
-
-#define TEMPLATE_PREFIX base_model
-#define INCLUDE_BODY
-#include "iterator_inc.F90"
-#undef INCLUDE_BODY
-#undef TEMPLATE_PREFIX
 
 end module base_model_oct_m
 

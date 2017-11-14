@@ -1,15 +1,11 @@
 #include "global.h"
 
-#undef LIST_TEMPLATE_NAME
-#undef LIST_TYPE_NAME
-#undef LIST_TYPE_MODULE_NAME
-
-#undef DICT_TEMPLATE_NAME
-#undef DICT_TYPE_NAME
-#undef DICT_TYPE_MODULE_NAME
-#undef DICT_INCLUDE_PREFIX
-#undef DICT_INCLUDE_HEADER
-#undef DICT_INCLUDE_BODY
+#undef BASE_TEMPLATE_NAME
+#undef BASE_TYPE_NAME
+#undef BASE_TYPE_MODULE_NAME
+#undef BASE_INCLUDE_PREFIX
+#undef BASE_INCLUDE_HEADER
+#undef BASE_INCLUDE_BODY
 
 module base_states_oct_m
 
@@ -21,39 +17,21 @@ module base_states_oct_m
   use profiling_oct_m
   use simulation_oct_m
 
-#define LIST_TEMPLATE_NAME base_states
-#define LIST_INCLUDE_PREFIX
-#include "tlist_inc.F90"
-#undef LIST_INCLUDE_PREFIX
-#undef LIST_TEMPLATE_NAME
-
-#define DICT_TEMPLATE_NAME base_states
-#define DICT_INCLUDE_PREFIX
-#include "tdict_inc.F90"
-#undef DICT_INCLUDE_PREFIX
-#undef DICT_TEMPLATE_NAME
-
-#define TEMPLATE_PREFIX base_states
-#define INCLUDE_PREFIX
-#include "iterator_inc.F90"
-#undef INCLUDE_PREFIX
-#undef TEMPLATE_PREFIX
+#define BASE_TEMPLATE_NAME base_states
+#define BASE_INCLUDE_PREFIX
+#include "tbase_inc.F90"
+#undef BASE_INCLUDE_PREFIX
+#undef BASE_TEMPLATE_NAME
 
   implicit none
 
   private
-
-  public ::                  &
-    BASE_STATES_OK,          &
-    BASE_STATES_KEY_ERROR,   &
-    BASE_STATES_EMPTY_ERROR
 
   public ::        &
     base_states_t
 
   public ::                &
     base_states__init__,   &
-    base_states__build__,  &
     base_states__start__,  &
     base_states__acc__,    &
     base_states__update__, &
@@ -71,26 +49,15 @@ module base_states_oct_m
     base_states_update, &
     base_states_reset,  &
     base_states_stop,   &
-    base_states_set,    &
     base_states_get,    &
     base_states_copy,   &
     base_states_end
 
-#define LIST_TEMPLATE_NAME base_states
-#define LIST_INCLUDE_HEADER
-#include "tlist_inc.F90"
-#undef LIST_INCLUDE_HEADER
-#undef LIST_TEMPLATE_NAME
-
-#define DICT_TEMPLATE_NAME base_states
-#define DICT_INCLUDE_HEADER
-#include "tdict_inc.F90"
-#undef DICT_INCLUDE_HEADER
-#undef DICT_TEMPLATE_NAME
-
-  integer, parameter :: BASE_STATES_OK          = BASE_STATES_HASH_OK
-  integer, parameter :: BASE_STATES_KEY_ERROR   = BASE_STATES_HASH_KEY_ERROR
-  integer, parameter :: BASE_STATES_EMPTY_ERROR = BASE_STATES_HASH_EMPTY_ERROR
+#define BASE_TEMPLATE_NAME base_states
+#define BASE_INCLUDE_HEADER
+#include "tbase_inc.F90"
+#undef BASE_INCLUDE_HEADER
+#undef BASE_TEMPLATE_NAME
 
   type :: base_states_t
     private
@@ -112,10 +79,6 @@ module base_states_oct_m
     module procedure base_states_init_copy
   end interface base_states_init
 
-  interface base_states_set
-    module procedure base_states_set_sub
-  end interface base_states_set
-
   interface base_states_get
     module procedure base_states_get_info
     module procedure base_states_get_config
@@ -124,11 +87,13 @@ module base_states_oct_m
     module procedure base_states_get_density
     module procedure base_states_get_density_1d
     module procedure base_states_get_density_2d
-    module procedure base_states_get_sub
-    module procedure base_states_get_sub_density
-    module procedure base_states_get_sub_density_1d
-    module procedure base_states_get_sub_density_2d
   end interface base_states_get
+
+  interface base_states_gets
+    module procedure base_states_gets_density
+    module procedure base_states_gets_density_1d
+    module procedure base_states_gets_density_2d
+  end interface base_states_gets
 
   interface base_states_copy
     module procedure base_states_copy_type
@@ -138,25 +103,13 @@ module base_states_oct_m
     module procedure base_states_end_type
   end interface base_states_end
 
-#define TEMPLATE_PREFIX base_states
-#define INCLUDE_HEADER
-#include "iterator_inc.F90"
-#undef INCLUDE_HEADER
-#undef TEMPLATE_PREFIX
-
 contains
     
-#define LIST_TEMPLATE_NAME base_states
-#define LIST_INCLUDE_BODY
-#include "tlist_inc.F90"
-#undef LIST_INCLUDE_BODY
-#undef LIST_TEMPLATE_NAME
-
-#define DICT_TEMPLATE_NAME base_states
-#define DICT_INCLUDE_BODY
-#include "tdict_inc.F90"
-#undef DICT_INCLUDE_BODY
-#undef DICT_TEMPLATE_NAME
+#define BASE_TEMPLATE_NAME base_states
+#define BASE_INCLUDE_BODY
+#include "tbase_inc.F90"
+#undef BASE_INCLUDE_BODY
+#undef BASE_TEMPLATE_NAME
 
   ! ---------------------------------------------------------
   subroutine base_states__new__(this)
@@ -233,8 +186,8 @@ contains
     
   ! ---------------------------------------------------------
   subroutine base_states__init__type(this, config)
-    type(base_states_t),         intent(out) :: this
-    type(json_object_t), target, intent(in)  :: config
+    type(base_states_t), intent(out) :: this
+    type(json_object_t), intent(in)  :: config
 
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
@@ -252,52 +205,29 @@ contains
   end subroutine base_states__init__type
     
   ! ---------------------------------------------------------
-  subroutine base_states__init__copy(this, that)
+  subroutine base_states__init__copy(this, that, start)
     type(base_states_t), intent(out) :: this
     type(base_states_t), intent(in)  :: that
+    logical,   optional, intent(in)  :: start
+
+    logical :: istr
 
     PUSH_SUB(base_states__init__copy)
 
     ASSERT(associated(that%config))
     call base_states__iinit__(this, that%config)
     call base_density__init__(this%density, that%density)
-    if(associated(that%sim)) call base_states__start__(this, that%sim)
+    istr = .true.
+    if(present(start)) istr = start
+    if(istr)then
+      if(present(start))then
+        ASSERT(associated(that%sim))
+      end if
+      if(associated(that%sim)) call base_states__start__(this, that%sim)
+    end if
 
     POP_SUB(base_states__init__copy)
   end subroutine base_states__init__copy
-
-  ! ---------------------------------------------------------
-  subroutine base_states__build__(this, build)
-    type(base_states_t), intent(inout) :: this
-
-    interface
-      subroutine build(this, that, name)
-        import :: base_states_t
-        type(base_states_t), intent(inout) :: this
-        type(base_states_t), intent(in)    :: that
-        character(len=*),    intent(in)    :: name
-      end subroutine build
-    end interface
-
-    type(base_states_iterator_t)        :: iter
-    character(len=BASE_STATES_NAME_LEN) :: name
-    type(base_states_t),        pointer :: subs
-    integer                             :: ierr
-
-    PUSH_SUB(base_states__build__)
-
-    call base_states_init(iter, this)
-    do
-      nullify(subs)
-      call base_states_next(iter, name, subs, ierr)
-      if(ierr/=BASE_STATES_OK)exit
-      call build(this, subs, name)
-    end do
-    call base_states_end(iter)
-    nullify(subs)
-
-    POP_SUB(base_states__build__)
-  end subroutine base_states__build__
 
   ! ---------------------------------------------------------
   subroutine base_states_init_type(this, config)
@@ -325,10 +255,10 @@ contains
 
   contains
 
-    recursive subroutine init(this, isub, name)
+    recursive subroutine init(this, name, isub)
       type(base_states_t), intent(inout) :: this
-      type(base_states_t), intent(in)    :: isub
       character(len=*),    intent(in)    :: name
+      type(base_states_t), intent(in)    :: isub
 
       type(base_states_t), pointer :: osub
       
@@ -338,10 +268,10 @@ contains
       if(base_states_list_index(that%list, isub)>0)then
         call base_states_new(this, osub)
         call base_states_init(osub, isub)
-        call base_states_set(this, name, osub)
+        call base_states_sets(this, name, osub)
         nullify(osub)
       else
-        call base_states_set(this, name, isub)
+        call base_states_sets(this, name, isub)
       end if
 
       PUSH_SUB(base_states_init_copy.init)
@@ -421,36 +351,6 @@ contains
   end subroutine base_states__stop__
     
   ! ---------------------------------------------------------
-  recursive subroutine base_states__apply__(this, operation)
-    type(base_states_t), intent(inout) :: this
-
-    interface
-      subroutine operation(this)
-        import :: base_states_t
-        type(base_states_t), intent(inout) :: this
-      end subroutine operation
-    end interface
-
-    type(base_states_list_iterator_t) :: iter
-    type(base_states_t),      pointer :: subs
-
-    PUSH_SUB(base_states__apply__)
-
-    call base_states_list_init(iter, this%list)
-    do
-      nullify(subs)
-      call base_states_list_next(iter, subs)
-      if(.not.associated(subs))exit
-      call base_states__apply__(subs, operation)
-    end do
-    call base_states_list_end(iter)
-    nullify(subs)
-    call operation(this)
-
-    POP_SUB(base_states__apply__)
-  end subroutine base_states__apply__
-
-  ! ---------------------------------------------------------
   subroutine base_states_start(this, sim)
     type(base_states_t), intent(inout) :: this
     type(simulation_t),  intent(in)    :: sim
@@ -479,28 +379,15 @@ contains
   recursive subroutine base_states_acc(this)
     type(base_states_t), intent(inout) :: this
 
-    character(len=BASE_STATES_NAME_LEN) :: name
-
-    type(base_states_iterator_t) :: iter
-    type(base_states_t), pointer :: subs
-    logical                      :: accu
-
     PUSH_SUB(base_states_acc)
 
     ASSERT(associated(this%config))
-    call base_states_get(this, reduce=accu)
-    if(accu) call base_states__reset__(this)
-    call base_states_init(iter, this)
-    do
-      nullify(subs)
-      call base_states_next(iter, name, subs)
-      if(.not.associated(subs))exit
-      call base_states_acc(subs)
-      if(accu) call base_states__acc__(this, subs)
-    end do
-    call base_states_end(iter)
-    nullify(subs)
-    if(accu) call base_states__update__(this)
+    ASSERT(associated(this%sim))
+    if(base_states_dict_len(this%dict)>0)then
+      call base_states__reset__(this)
+      call base_states__reduce__(this, base_states__acc__)
+      call base_states__update__(this)
+    end if
     
     POP_SUB(base_states_acc)
   end subroutine base_states_acc
@@ -539,67 +426,50 @@ contains
   end subroutine base_states_stop
 
   ! ---------------------------------------------------------
-  subroutine base_states__set__(this, name, that)
+  subroutine base_states__sets__(this, name, that)
     type(base_states_t), intent(inout) :: this
     character(len=*),    intent(in)    :: name
     type(base_states_t), intent(in)    :: that
 
-    PUSH_SUB(base_states__set__)
+    PUSH_SUB(base_states__sets__)
 
-    call base_density_set(this%density, name, that%density)
+    call base_density_sets(this%density, trim(adjustl(name)), that%density)
 
-    POP_SUB(base_states__set__)
-  end subroutine base_states__set__
+    POP_SUB(base_states__sets__)
+  end subroutine base_states__sets__
     
   ! ---------------------------------------------------------
-  subroutine base_states_set_sub(this, name, that)
+  subroutine base_states__dels__(this, name, ierr)
     type(base_states_t), intent(inout) :: this
     character(len=*),    intent(in)    :: name
-    type(base_states_t), intent(in)    :: that
+    integer,             intent(out)   :: ierr
 
-    PUSH_SUB(base_states_set_sub)
+    PUSH_SUB(base_states__dels__)
 
-    ASSERT(associated(this%config))
-    call base_states_dict_set(this%dict, trim(adjustl(name)), that)
-    call base_states__set__(this, trim(adjustl(name)), that)
+    call base_density_dels(this%density, trim(adjustl(name)), ierr)
 
-    POP_SUB(base_states_set_sub)
-  end subroutine base_states_set_sub
+    POP_SUB(base_states__dels__)
+  end subroutine base_states__dels__
     
   ! ---------------------------------------------------------
-  subroutine base_states_get_sub(this, name, that)
-    type(base_states_t),  intent(in) :: this
-    character(len=*),     intent(in) :: name
-    type(base_states_t), pointer     :: that
-
-    PUSH_SUB(base_states_get_sub)
-
-    ASSERT(associated(this%config))
-    nullify(that)
-    call base_states_dict_get(this%dict, trim(adjustl(name)), that)
-
-    POP_SUB(base_states_get_sub)
-  end subroutine base_states_get_sub
-
-  ! ---------------------------------------------------------
-  subroutine base_states_get_sub_density(this, name, that)
+  subroutine base_states_gets_density(this, name, that)
     type(base_states_t),   intent(in) :: this
     character(len=*),      intent(in) :: name
     type(base_density_t), pointer     :: that
 
     type(base_states_t), pointer :: subs
 
-    PUSH_SUB(base_states_get_sub_density)
+    PUSH_SUB(base_states_gets_density)
 
     nullify(that, subs)
-    call base_states_get(this, name, subs)
+    call base_states_gets(this, trim(adjustl(name)), subs)
     if(associated(subs)) call base_states_get(subs, that)
 
-    POP_SUB(base_states_get_sub_density)
-  end subroutine base_states_get_sub_density
+    POP_SUB(base_states_gets_density)
+  end subroutine base_states_gets_density
     
   ! ---------------------------------------------------------
-  subroutine base_states_get_sub_density_1d(this, name, that, spin, total)
+  subroutine base_states_gets_density_1d(this, name, that, spin, total)
     type(base_states_t),          intent(in) :: this
     character(len=*),             intent(in) :: name
     real(kind=wp), dimension(:), pointer     :: that
@@ -608,17 +478,17 @@ contains
 
     type(base_density_t), pointer :: dnst
 
-    PUSH_SUB(base_states_get_sub_density_1d)
+    PUSH_SUB(base_states_gets_density_1d)
 
     nullify(that, dnst)
-    call base_states_get(this, name, dnst)
+    call base_states_gets(this, trim(adjustl(name)), dnst)
     if(associated(dnst)) call base_density_get(dnst, that, spin, total)
 
-    POP_SUB(base_states_get_sub_density_1d)
-  end subroutine base_states_get_sub_density_1d
+    POP_SUB(base_states_gets_density_1d)
+  end subroutine base_states_gets_density_1d
 
   ! ---------------------------------------------------------
-  subroutine base_states_get_sub_density_2d(this, name, that, total)
+  subroutine base_states_gets_density_2d(this, name, that, total)
     type(base_states_t),            intent(in) :: this
     character(len=*),               intent(in) :: name
     real(kind=wp), dimension(:,:), pointer     :: that
@@ -626,24 +496,23 @@ contains
 
     type(base_density_t), pointer :: dnst
 
-    PUSH_SUB(base_states_get_sub_density_2d)
+    PUSH_SUB(base_states_gets_density_2d)
 
     nullify(that, dnst)
-    call base_states_get(this, name, dnst)
+    call base_states_gets(this, trim(adjustl(name)), dnst)
     if(associated(dnst)) call base_density_get(dnst, that, total)
 
-    POP_SUB(base_states_get_sub_density_2d)
-  end subroutine base_states_get_sub_density_2d
+    POP_SUB(base_states_gets_density_2d)
+  end subroutine base_states_gets_density_2d
 
   ! ---------------------------------------------------------
-  subroutine base_states_get_info(this, nspin, reduce)
+  subroutine base_states_get_info(this, nspin)
     type(base_states_t), intent(in)  :: this
     integer,   optional, intent(out) :: nspin
-    logical,   optional, intent(out) :: reduce
 
     PUSH_SUB(base_states_get_info)
 
-    call base_density_get(this%density, nspin=nspin, reduce=reduce)
+    call base_density_get(this%density, nspin=nspin)
 
     POP_SUB(base_states_get_info)
   end subroutine base_states_get_info
@@ -761,10 +630,10 @@ contains
     
   contains
 
-    recursive subroutine copy(this, isub, name)
+    recursive subroutine copy(this, name, isub)
       type(base_states_t), intent(inout) :: this
-      type(base_states_t), intent(in)    :: isub
       character(len=*),    intent(in)    :: name
+      type(base_states_t), intent(in)    :: isub
 
       type(base_states_t), pointer :: osub
       
@@ -774,10 +643,10 @@ contains
       if(base_states_list_index(that%list, isub)>0)then
         call base_states_new(this, osub)
         call base_states_copy(osub, isub)
-        call base_states_set(this, name, osub)
+        call base_states_sets(this, name, osub)
         nullify(osub)
       else
-        call base_states_set(this, name, isub)
+        call base_states_sets(this, name, isub)
       end if
 
       PUSH_SUB(base_states_copy_type.copy)
@@ -819,12 +688,6 @@ contains
 
     POP_SUB(base_states_end_type)
   end subroutine base_states_end_type
-
-#define TEMPLATE_PREFIX base_states
-#define INCLUDE_BODY
-#include "iterator_inc.F90"
-#undef INCLUDE_BODY
-#undef TEMPLATE_PREFIX
 
 end module base_states_oct_m
 
