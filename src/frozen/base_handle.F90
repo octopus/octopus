@@ -150,14 +150,14 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_handle_new(this, that)
-    type(base_handle_t),  intent(inout) :: this
-    type(base_handle_t), pointer        :: that
+    type(base_handle_t),  target, intent(inout) :: this
+    type(base_handle_t), pointer                :: that
 
     PUSH_SUB(base_handle_new)
 
     nullify(that)
     call base_handle__new__(that)
-    call base_handle__set__(that, this)
+    that%prnt => this
     call base_handle_list_push(this%list, that)
 
     POP_SUB(base_handle_new)
@@ -206,7 +206,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_handle__init__pass(this, init)
-    type(base_handle_t), intent(inout) :: this
+    type(base_handle_t), target, intent(inout) :: this
 
     interface
       subroutine init(this, config)
@@ -235,8 +235,9 @@ contains
         call json_next(iter, name, cnfg, ierr)
         if(ierr/=JSON_OK)exit
         call base_handle_new(this, hndl)
+        ASSERT(associated(hndl))
         call init(hndl, cnfg)
-        call base_handle__set__(hndl, this)
+        hndl%prnt => this
         call base_handle_sets(this, trim(adjustl(name)), hndl)
       end do
       call json_end(iter)
@@ -475,18 +476,6 @@ contains
 
     POP_SUB(base_handle_stop)
   end subroutine base_handle_stop
-
-  ! ---------------------------------------------------------
-  subroutine base_handle__set__(this, that)
-    type(base_handle_t),         intent(inout) :: this
-    type(base_handle_t), target, intent(in)    :: that
-
-    PUSH_SUB(base_handle__set__)
-
-    this%prnt => that
-
-    POP_SUB(base_handle__set__)
-  end subroutine base_handle__set__
 
   ! ---------------------------------------------------------
   subroutine base_handle__sets__(this, name, that)
