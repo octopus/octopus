@@ -75,6 +75,7 @@ noinst_HEADERS =                         \
 	output_states_inc.F90            \
 	pert_inc.F90                     \
 	preconditioners_inc.F90          \
+	ssys_config.F90                  \
 	subspace_inc.F90                 \
 	xc_kli_inc.F90                   \
 	xc_kli_pauli_inc.F90             \
