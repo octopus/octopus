@@ -350,21 +350,21 @@ contains
     ASSERT(associated(potential))
     nullify(knadd)
     ASSERT(associated(st%subsys_st))
-    call base_states_get(st%subsys_st, "live", density)
+    call base_states_gets(st%subsys_st, "live", density)
     ASSERT(associated(density))
     intnvnad = dmf_dotp(gr%mesh, density(:,1), potential(:,1))
     if(hm%d%ispin>UNPOLARIZED)then
       intnvnad = intnvnad + dmf_dotp(gr%mesh, density(:,2), potential(:,ispin))
     end if
     nullify(potential, density)
-    call base_states_get(st%subsys_st, "frozen", density)
+    call base_states_gets(st%subsys_st, "frozen", density)
     ASSERT(associated(density))
     intnvhxc = dmf_dotp(gr%mesh, density(:,1), hm%vxc(:,1))
     if(hm%d%ispin>UNPOLARIZED)then
       intnvhxc = intnvhxc + dmf_dotp(gr%mesh, density(:,2), hm%vxc(:,2))
     end if
     nullify(density)
-    call base_states_get(st%subsys_st, "frozen", density, total=.true.)
+    call base_states_gets(st%subsys_st, "frozen", density, total=.true.)
     ASSERT(associated(density))
     intnvhxc = intnvhxc + dmf_dotp(gr%mesh, density(:,1), hm%vhartree)
     call base_hamiltonian_get(hm%subsys_hm, "external", extrnl)

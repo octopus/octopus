@@ -1,12 +1,13 @@
 #include "global.h"
 
-#undef LIST_TEMPLATE_NAME
-#undef LIST_TYPE_NAME
-#undef LIST_TYPE_MODULE_NAME
+#undef BASE_TEMPLATE_NAME
+#undef BASE_TYPE_NAME
+#undef BASE_TYPE_MODULE_NAME
+#undef BASE_INCLUDE_PREFIX
+#undef BASE_INCLUDE_HEADER
+#undef BASE_INCLUDE_BODY
 
-#undef DICT_TEMPLATE_NAME
-#undef DICT_TYPE_NAME
-#undef DICT_TYPE_MODULE_NAME
+#define BASE_LEAF_TYPE
 
 module base_term_oct_m
 
@@ -17,42 +18,25 @@ module base_term_oct_m
   use messages_oct_m
   use profiling_oct_m
 
-#define LIST_TEMPLATE_NAME base_term
-#define LIST_INCLUDE_PREFIX
-#include "tlist_inc.F90"
-#undef LIST_INCLUDE_PREFIX
-#undef LIST_TEMPLATE_NAME
-
-#define DICT_TEMPLATE_NAME base_term
-#define DICT_INCLUDE_PREFIX
-#include "tdict_inc.F90"
-#undef DICT_INCLUDE_PREFIX
-#undef DICT_TEMPLATE_NAME
-
-#define TEMPLATE_PREFIX base_term
-#define INCLUDE_PREFIX
-#include "iterator_inc.F90"
-#undef INCLUDE_PREFIX
-#undef TEMPLATE_PREFIX
+#define BASE_TEMPLATE_NAME base_term
+#define BASE_INCLUDE_PREFIX
+#include "tbase_inc.F90"
+#undef BASE_INCLUDE_PREFIX
+#undef BASE_TEMPLATE_NAME
 
   implicit none
 
   private
-
-  public ::                &
-    BASE_TERM_OK,          &
-    BASE_TERM_KEY_ERROR,   &
-    BASE_TERM_EMPTY_ERROR
 
   public ::      &
     base_term_t
 
   public ::              &
     base_term__init__,   &
-    base_term__update__, &
-    base_term__reset__,  &
     base_term__acc__,    &
     base_term__sub__,    &
+    base_term__update__, &
+    base_term__reset__,  &
     base_term__copy__,   &
     base_term__end__
 
@@ -60,29 +44,20 @@ module base_term_oct_m
     base_term_new,    &
     base_term_del,    &
     base_term_init,   &
+    base_term_acc,    &
+    base_term_calc,   &
     base_term_update, &
-    base_term_sets,   &
-    base_term_gets,   &
+    base_term_reset,  &
     base_term_set,    &
     base_term_get,    &
     base_term_copy,   &
     base_term_end
 
-#define LIST_TEMPLATE_NAME base_term
-#define LIST_INCLUDE_HEADER
-#include "tlist_inc.F90"
-#undef LIST_INCLUDE_HEADER
-#undef LIST_TEMPLATE_NAME
-
-#define DICT_TEMPLATE_NAME base_term
-#define DICT_INCLUDE_HEADER
-#include "tdict_inc.F90"
-#undef DICT_INCLUDE_HEADER
-#undef DICT_TEMPLATE_NAME
-
-  integer, parameter :: BASE_TERM_OK          = BASE_TERM_HASH_OK
-  integer, parameter :: BASE_TERM_KEY_ERROR   = BASE_TERM_HASH_KEY_ERROR
-  integer, parameter :: BASE_TERM_EMPTY_ERROR = BASE_TERM_HASH_EMPTY_ERROR
+#define BASE_TEMPLATE_NAME base_term
+#define BASE_INCLUDE_HEADER
+#include "tbase_inc.F90"
+#undef BASE_INCLUDE_HEADER
+#undef BASE_TEMPLATE_NAME
 
   type :: base_term_t
     private
@@ -108,10 +83,6 @@ module base_term_oct_m
     module procedure base_term_set_info
   end interface base_term_set
 
-  interface base_term_gets
-    module procedure base_term_gets_name
-  end interface base_term_gets
-
   interface base_term_get
     module procedure base_term_get_info
     module procedure base_term_get_config
@@ -126,25 +97,13 @@ module base_term_oct_m
     module procedure base_term_end_type
   end interface base_term_end
 
-#define TEMPLATE_PREFIX base_term
-#define INCLUDE_HEADER
-#include "iterator_inc.F90"
-#undef INCLUDE_HEADER
-#undef TEMPLATE_PREFIX
-
 contains
 
-#define LIST_TEMPLATE_NAME base_term
-#define LIST_INCLUDE_BODY
-#include "tlist_inc.F90"
-#undef LIST_INCLUDE_BODY
-#undef LIST_TEMPLATE_NAME
-
-#define DICT_TEMPLATE_NAME base_term
-#define DICT_INCLUDE_BODY
-#include "tdict_inc.F90"
-#undef DICT_INCLUDE_BODY
-#undef DICT_TEMPLATE_NAME
+#define BASE_TEMPLATE_NAME base_term
+#define BASE_INCLUDE_BODY
+#include "tbase_inc.F90"
+#undef BASE_INCLUDE_BODY
+#undef BASE_TEMPLATE_NAME
 
   ! ---------------------------------------------------------
   subroutine base_term__new__(this)
@@ -277,54 +236,6 @@ contains
   end subroutine base_term_init_copy
 
   ! ---------------------------------------------------------
-  subroutine base_term__update__(this)
-    type(base_term_t), intent(inout) :: this
-
-    PUSH_SUB(base_term__update__)
-
-    ASSERT(associated(this%config))
-
-    POP_SUB(base_term__update__)
-  end subroutine base_term__update__
-
-  ! ---------------------------------------------------------
-  recursive subroutine base_term_update(this)
-    type(base_term_t), intent(inout) :: this
-
-    type(base_term_iterator_t) :: iter
-    type(base_term_t), pointer :: subs
-    integer                    :: ierr
-
-    PUSH_SUB(base_term_update)
-
-    nullify(subs)
-    call base_term_init(iter, this)
-    do
-      nullify(subs)
-      call base_term_next(iter, subs, ierr)
-      if(ierr/=BASE_TERM_OK)exit
-      call base_term_update(subs)
-    end do
-    call base_term_end(iter)
-    nullify(subs)
-    call base_term__update__(this)
-
-    POP_SUB(base_term_update)
-  end subroutine base_term_update
-
-  ! ---------------------------------------------------------
-  subroutine base_term__reset__(this)
-    type(base_term_t), intent(inout) :: this
-
-    PUSH_SUB(base_term__reset__)
-
-    ASSERT(associated(this%config))
-    this%energy = 0.0_wp
-
-    POP_SUB(base_term__reset__)
-  end subroutine base_term__reset__
-
-  ! ---------------------------------------------------------
   subroutine base_term__acc__(this, that)
     type(base_term_t), intent(inout) :: this
     type(base_term_t), intent(in)    :: that
@@ -351,33 +262,75 @@ contains
   end subroutine base_term__sub__
 
   ! ---------------------------------------------------------
-  subroutine base_term_sets(this, name, that)
+  subroutine base_term__update__(this)
     type(base_term_t), intent(inout) :: this
-    character(len=*),  intent(in)    :: name
-    type(base_term_t), intent(in)    :: that
 
-    PUSH_SUB(base_term_sets)
+    PUSH_SUB(base_term__update__)
 
     ASSERT(associated(this%config))
-    call base_term_dict_set(this%dict, trim(adjustl(name)), that)
 
-    POP_SUB(base_term_sets)
-  end subroutine base_term_sets
+    POP_SUB(base_term__update__)
+  end subroutine base_term__update__
 
   ! ---------------------------------------------------------
-  subroutine base_term_gets_name(this, name, that)
-    type(base_term_t),  intent(in) :: this
-    character(len=*),   intent(in) :: name
-    type(base_term_t), pointer     :: that
+  subroutine base_term__reset__(this)
+    type(base_term_t), intent(inout) :: this
 
-    PUSH_SUB(base_term_gets_name)
+    PUSH_SUB(base_term__reset__)
 
-    nullify(that)
     ASSERT(associated(this%config))
-    call base_term_dict_get(this%dict, trim(adjustl(name)), that)
+    this%energy = 0.0_wp
 
-    POP_SUB(base_term_gets_name)
-  end subroutine base_term_gets_name
+    POP_SUB(base_term__reset__)
+  end subroutine base_term__reset__
+
+  ! ---------------------------------------------------------
+  subroutine base_term_acc(this)
+    type(base_term_t), intent(inout) :: this
+
+    PUSH_SUB(base_term_acc)
+
+    if(base_term_dict_len(this%dict)>0)then
+      call base_term__reset__(this)
+      call base_term__reduce__(this, base_term__acc__)
+      call base_term__update__(this)
+    end if
+    
+    POP_SUB(base_term_acc)
+  end subroutine base_term_acc
+
+  ! ---------------------------------------------------------
+  subroutine base_term_calc(this)
+    type(base_term_t), intent(inout) :: this
+
+    PUSH_SUB(base_term_calc)
+
+    call base_term_acc(this)
+    
+    POP_SUB(base_term_calc)
+  end subroutine base_term_calc
+
+  ! ---------------------------------------------------------
+  subroutine base_term_update(this)
+    type(base_term_t), intent(inout) :: this
+
+    PUSH_SUB(base_term_update)
+
+    call base_term__apply__(this, base_term__update__)
+
+    POP_SUB(base_term_update)
+  end subroutine base_term_update
+
+  ! ---------------------------------------------------------
+  subroutine base_term_reset(this)
+    type(base_term_t), intent(inout) :: this
+
+    PUSH_SUB(base_term_reset)
+
+    call base_term__apply__(this, base_term__reset__)
+
+    POP_SUB(base_term_reset)
+  end subroutine base_term_reset
 
   ! ---------------------------------------------------------
   subroutine base_term_set_info(this, energy)
@@ -386,6 +339,7 @@ contains
 
     PUSH_SUB(base_term_set_info)
 
+    ASSERT(associated(this%config))
     if(present(energy)) this%energy = energy
 
     POP_SUB(base_term_set_info)
@@ -398,6 +352,7 @@ contains
 
     PUSH_SUB(base_term_get_info)
 
+    ASSERT(associated(this%config))
     if(present(energy)) energy = this%energy
 
     POP_SUB(base_term_get_info)
@@ -512,13 +467,9 @@ contains
     POP_SUB(base_term_end_type)
   end subroutine base_term_end_type
 
-#define TEMPLATE_PREFIX base_term
-#define INCLUDE_BODY
-#include "iterator_inc.F90"
-#undef INCLUDE_BODY
-#undef TEMPLATE_PREFIX
-
 end module base_term_oct_m
+
+#undef BASE_LEAF_TYPE
 
 !! Local Variables:
 !! mode: f90

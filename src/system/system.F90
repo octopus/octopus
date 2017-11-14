@@ -35,7 +35,6 @@ module system_oct_m
   use hamiltonian_oct_m
   use io_function_oct_m
   use json_oct_m
-  use live_config_oct_m
   use mesh_oct_m
   use messages_oct_m
   use modelmb_particles_oct_m
@@ -117,7 +116,7 @@ contains
     call output_init(sys%outp, sys%gr%sb, sys%st%nst, sys%ks)
 
     nullify(sys%subsys_handle, subsys_states)
-    if(ssys_config_use())then
+    if(base_config_use())then
       SAFE_ALLOCATE(sys%subsys_handle)
       call subsystems_init(sys%subsys_handle, sys%st, sys%gr, sys%geo, sys%space)
       call subsystems_get(sys%subsys_handle, subsys_states)
@@ -170,20 +169,16 @@ contains
     type(geometry_t),    intent(in)  :: geo
     type(space_t),       intent(in)  :: space
 
-    type(json_object_t), pointer :: ssys_config, live_config
+    type(json_object_t), pointer :: config
 
     PUSH_SUB(subsystems_init)
 
-    nullify(ssys_config, live_config)
-    SAFE_ALLOCATE(ssys_config)
-    call ssys_config_parse(ssys_config, st%d%nspin, space%dim)
-    SAFE_ALLOCATE(live_config)
-    call live_config_parse(live_config, st, space)
-    call base_config_add(ssys_config, "live", live_config)
-    nullify(live_config)
-    call ssys_handle_init(this, geo, ssys_config)
+    nullify(config)
+    SAFE_ALLOCATE(config)
+    call ssys_config_parse(config, st, space)
+    call ssys_handle_init(this, geo, config)
     call ssys_handle_start(this, grid)
-    nullify(ssys_config)
+    nullify(config)
 
     POP_SUB(subsystems_init)
   end subroutine subsystems_init
@@ -193,19 +188,11 @@ contains
     type(base_handle_t),  intent(in) :: this
     type(base_states_t), pointer     :: subsys_states
 
-    type(base_model_t),  pointer :: subsys_model
-    type(base_system_t), pointer :: subsys_system
-
     PUSH_SUB(subsystems_get)
 
-    nullify(subsys_states, subsys_model, subsys_system)
-    call base_handle_get(this, subsys_model)
-    ASSERT(associated(subsys_model))
-    call base_model_get(subsys_model, subsys_system)
-    ASSERT(associated(subsys_system))
-    nullify(subsys_model)
-    call base_system_get(subsys_system, subsys_states)
-    nullify(subsys_system)
+    nullify(subsys_states)
+    call base_handle_get(this, subsys_states)
+    ASSERT(associated(subsys_states))
 
     POP_SUB(subsystems_get)
   end subroutine subsystems_get

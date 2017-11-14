@@ -42,6 +42,7 @@ libsystem_f_srcs =                       \
 	partial_charges.F90              \
 	pert.F90                         \
 	preconditioners.F90              \
+	ssys_config.F90                  \
 	stress.F90                       \
 	subspace.F90                     \
 	system.F90                       \

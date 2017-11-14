@@ -69,9 +69,9 @@ contains
   end subroutine fio_handle_init
 
   ! ---------------------------------------------------------
-  subroutine fio_handle__start__(this, mpi_grp)
+  subroutine fio_handle__start__(this, group)
     type(base_handle_t), intent(inout) :: this
-    type(mpi_grp_t),     intent(in)    :: mpi_grp
+    type(mpi_grp_t),     intent(in)    :: group
 
     type(simulation_t), pointer :: sim
 
@@ -80,8 +80,8 @@ contains
     nullify(sim)
     call base_handle_get(this, sim)
     ASSERT(associated(sim))
-    if(.not.simulation_assoc(sim)) call fio_simulation__init__(sim)
-    call fio_simulation__start__(sim, mpi_grp)
+    ASSERT(.not.simulation_assoc(sim))
+    call fio_simulation__start__(sim, group)
     nullify(sim)
 
     POP_SUB(fio_handle__start__)

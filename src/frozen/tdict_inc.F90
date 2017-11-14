@@ -1,4 +1,5 @@
 #include "global.h"
+#include "util.h"
 
 !DICT: DICT_TEMPLATE_NAME
 !DICT: DICT_TYPE_NAME
@@ -6,6 +7,7 @@
 
 #if defined(DICT_TEMPLATE_NAME)
 #if !defined(DICT_TYPE_NAME)
+#define IDICT_TYPE_NAME_INTERNAL
 #define DICT_TYPE_NAME DECORATE(DICT_TEMPLATE_NAME,t)
 #endif
 #if !defined(DICT_TYPE_MODULE_NAME)
@@ -63,8 +65,8 @@
 #error "Only one off 'DICT_INCLUDE_HEADER' or 'DICT_INCLUDE_BODY' can be defined."
 #endif
 
-#undef TEMPLATE_PREFIX
-#define TEMPLATE_PREFIX DICT_TEMPLATE_NAME
+#undef TEMPLATE_NAME
+#define TEMPLATE_NAME DICT_TEMPLATE_NAME
 #include "template.h"
  
 #if defined(DICT_INCLUDE_MODULE)
@@ -82,7 +84,7 @@ module TEMPLATE(dict_oct_m)
 #include "thash_inc.F90"
 #undef HASH_INCLUDE_PREFIX
 
-#define TEMPLATE_PREFIX DICT_TEMPLATE_NAME
+#define TEMPLATE_NAME DICT_TEMPLATE_NAME
 #include "template.h"
  
   use strng_oct_m
@@ -134,7 +136,7 @@ module TEMPLATE(dict_oct_m)
 #include "thash_inc.F90"
 #undef HASH_INCLUDE_HEADER
 
-#define TEMPLATE_PREFIX DICT_TEMPLATE_NAME
+#define TEMPLATE_NAME DICT_TEMPLATE_NAME
 #include "template.h"
 
   integer, parameter :: TEMPLATE(DICT_NAME_LEN) = 63
@@ -192,7 +194,7 @@ contains
 #include "thash_inc.F90"
 #undef HASH_INCLUDE_BODY
 
-#define TEMPLATE_PREFIX DICT_TEMPLATE_NAME
+#define TEMPLATE_NAME DICT_TEMPLATE_NAME
 #include "template.h"
 
   ! ---------------------------------------------------------
@@ -514,7 +516,12 @@ end module TEMPLATE(dict_oct_m)
 #undef HASH_VAL_TYPE_MODULE_NAME
 #undef HASH_VAL_INCLUDE
 
-#undef TEMPLATE_PREFIX
+#if defined(IDICT_TYPE_NAME_INTERNAL)
+#undef IDICT_TYPE_NAME_INTERNAL
+#undef DICT_TYPE_NAME
+#endif
+
+#undef TEMPLATE_NAME
 
 !! Local Variables:
 !! mode: f90

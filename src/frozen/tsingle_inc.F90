@@ -33,8 +33,8 @@
 #error "Only one off 'SINGLE_INCLUDE_HEADER' or 'SINGLE_INCLUDE_BODY' can be defined."
 #endif
 
-#undef TEMPLATE_PREFIX
-#define TEMPLATE_PREFIX SINGLE_TEMPLATE_NAME
+#undef TEMPLATE_NAME
+#define TEMPLATE_NAME SINGLE_TEMPLATE_NAME
 #include "template.h"
 
 #if defined(SINGLE_INCLUDE_MODULE)
@@ -247,7 +247,7 @@ end module TEMPLATE(single_m)
 
 #endif
 
-#undef TEMPLATE_PREFIX
+#undef TEMPLATE_NAME
 
 !! Local Variables:
 !! mode: f90

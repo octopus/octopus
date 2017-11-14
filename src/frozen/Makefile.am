@@ -99,7 +99,7 @@ noinst_HEADERS =		\
 	tlist_inc.F90		\
 	thash_inc.F90		\
 	tdict_inc.F90		\
-	iterator_inc.F90
+	tbase_inc.F90
 
 include $(srcdir)/../common-rules.make
 

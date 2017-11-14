@@ -49,7 +49,7 @@ contains
     nullify(list)
     ASSERT(st%d%nspin>0)
     ASSERT(st%d%nspin<3)
-    call json_set(this, "external", .true.)
+    !call json_set(this, "external", .true.)
     call json_get(this, "charge", list, ierr)
     ASSERT(ierr==JSON_OK)
     ASSERT(st%d%nspin==json_len(list))
@@ -122,7 +122,7 @@ contains
 
     nullify(cnfg)
     call json_init(this)
-    call json_set(this, "type", HMLT_TYPE_POTN)
+    call json_set(this, "type", TERM_TYPE_POTN)
     SAFE_ALLOCATE(cnfg)
     call storage_init(cnfg, full=.false.)
     call json_set(this, "storage", cnfg)
@@ -138,19 +138,24 @@ contains
     PUSH_SUB(live_config_parse_ionic)
 
     call json_init(this)
-    call json_set(this, "type", HMLT_TYPE_TERM)
+    call json_set(this, "type", TERM_TYPE_TERM)
 
     POP_SUB(live_config_parse_ionic)
   end subroutine live_config_parse_ionic
 
   ! ---------------------------------------------------------
-  subroutine live_config_parse_hamiltonian(this)
+  subroutine live_config_parse_hamiltonian(this, nspin)
     type(json_object_t), intent(inout) :: this
+    integer,             intent(in)    :: nspin
 
     type(json_object_t), pointer :: cnfg
 
     PUSH_SUB(live_config_parse_hamiltonian)
 
+    nullify(cnfg)
+    SAFE_ALLOCATE(cnfg)
+    call base_config_parse_kinetic(cnfg, nspin)
+    call json_set(this, "kinetic", cnfg)
     nullify(cnfg)
     SAFE_ALLOCATE(cnfg)
     call live_config_parse_external(cnfg)
@@ -181,7 +186,7 @@ contains
     nullify(cnfg)
     call json_get(this, "hamiltonian", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call live_config_parse_hamiltonian(cnfg)
+    call live_config_parse_hamiltonian(cnfg, st%d%nspin)
     nullify(cnfg)
 
     POP_SUB(live_config_parse_model)

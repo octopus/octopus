@@ -2,6 +2,9 @@
 
 module ssys_handle_oct_m
 
+  use base_functional_oct_m
+  use base_geometry_oct_m
+  use base_hamiltonian_oct_m
   use base_handle_oct_m
   use frozen_handle_oct_m
   use geometry_oct_m
@@ -30,63 +33,46 @@ module ssys_handle_oct_m
 contains
   
   ! ---------------------------------------------------------
+  subroutine ssys_hamiltonian__init__(this)
+    type(base_hamiltonian_t), intent(inout) :: this
+
+    type(base_hamiltonian_t), pointer :: tnadd, hmlt
+    type(base_functional_t),  pointer :: fnct
+
+    PUSH_SUB(ssys_hamiltonian__init__)
+
+    nullify(tnadd, hmlt, fnct)
+    call base_hamiltonian_get(this, "tnadd", tnadd)
+    ASSERT(associated(tnadd))
+    call base_hamiltonian_get(this, "kinetic", fnct)
+    ASSERT(associated(fnct))
+    call base_hamiltonian_set(tnadd, "total", fnct)
+    nullify(fnct)
+    call base_hamiltonian_gets(this, "live", hmlt)
+    ASSERT(associated(hmlt))
+    call base_hamiltonian_get(hmlt, "kinetic", fnct)
+    ASSERT(associated(fnct))
+    call base_hamiltonian_set(tnadd, "live", fnct)
+    nullify(tnadd, hmlt, fnct)
+
+    POP_SUB(ssys_hamiltonian__init__)
+  end subroutine ssys_hamiltonian__init__
+
+  ! ---------------------------------------------------------
   subroutine ssys_handle__init__(this)
-    use base_geometry_oct_m
-    use ssys_geometry_oct_m
     type(base_handle_t), intent(inout) :: this
 
-    type(base_geometry_t), pointer :: pgeo
+    type(base_hamiltonian_t), pointer :: hmlt
 
     PUSH_SUB(ssys_handle__init__)
 
-    nullify(pgeo)
-    call base_handle_get(this, pgeo)
-    ASSERT(associated(pgeo))
-    call ssys_geometry__build__(pgeo)
-    nullify(pgeo)
-
+    nullify(hmlt)
+    call base_handle_get(this, hmlt)
+    ASSERT(associated(hmlt))
+    call ssys_hamiltonian__init__(hmlt)
 
     POP_SUB(ssys_handle__init__)
   end subroutine ssys_handle__init__
-
-  ! ---------------------------------------------------------
-  subroutine ssys_handle__build__(this, geo, config)
-    type(base_handle_t), intent(inout) :: this
-    type(geometry_t),    intent(in)    :: geo
-    type(json_object_t), intent(in)    :: config
-
-    type(json_object_iterator_t)        :: iter
-    character(len=BASE_HANDLE_NAME_LEN) :: name
-    type(json_object_t),        pointer :: cnfg
-    type(base_handle_t),        pointer :: hndl
-    integer                             :: type, ierr
-
-    PUSH_SUB(ssys_handle__build__)
-
-    call json_init(iter, config)
-    do
-      nullify(cnfg, hndl)
-      call json_next(iter, name, cnfg, ierr)
-      if(ierr/=JSON_OK)exit
-      call json_get(cnfg, "type", type, ierr)
-      ASSERT(ierr==JSON_OK)
-      call base_handle_new(this, hndl)
-      select case(type)
-      case(HNDL_TYPE_FRZN)
-        call frozen_handle_init(hndl, cnfg)
-      case(HNDL_TYPE_LIVE)
-        call live_handle_init(hndl, geo, cnfg)
-      case default
-        message(1) = "Unknown subsystems type."
-        call messages_fatal(1)
-      end select
-      call base_handle_sets(this, name, hndl)
-    end do
-    call json_end(iter)
-    nullify(cnfg, hndl)
-
-    POP_SUB(ssys_handle__build__)
-  end subroutine ssys_handle__build__
 
   ! ---------------------------------------------------------
   subroutine ssys_handle_init(this, geo, config)
@@ -94,88 +80,122 @@ contains
     type(geometry_t),    intent(in)  :: geo
     type(json_object_t), intent(in)  :: config
 
-    type(json_object_t), pointer :: dict
-    integer                      :: type, ierr
+    integer :: type
 
     PUSH_SUB(ssys_handle_init)
 
-    nullify(dict)
     call base_handle__init__(this, config)
     call base_handle_get(this, type)
     ASSERT(type==HNDL_TYPE_SSYS)
-    call json_get(config, "subsystems", dict, ierr)
-    ASSERT(ierr==JSON_OK)
-    call ssys_handle__build__(this, geo, dict)
+    call base_handle__init__(this, init)
     call ssys_handle__init__(this)
     call base_handle__init__(this)
-    nullify(dict)
 
     POP_SUB(ssys_handle_init)
+    
+  contains
+
+    subroutine init(this, config)
+      type(base_handle_t), intent(out) :: this
+      type(json_object_t), intent(in)  :: config
+
+      integer :: type, ierr
+
+      PUSH_SUB(ssys_handle_init.init)
+
+      call json_get(config, "type", type, ierr)
+      ASSERT(ierr==JSON_OK)
+      select case(type)
+      case(HNDL_TYPE_FRZN)
+        call frozen_handle_init(this, config)
+      case(HNDL_TYPE_LIVE)
+        call live_handle_init(this, geo, config)
+      case default
+        ASSERT(.false.)
+      end select
+
+      POP_SUB(ssys_handle_init.init)
+    end subroutine init
+    
   end subroutine ssys_handle_init
+
+  ! ---------------------------------------------------------
+  subroutine ssys_handle__start__(this, grid)
+    type(base_handle_t), intent(inout) :: this
+    type(grid_t),        intent(in)    :: grid
+
+    integer :: type
+
+    PUSH_SUB(ssys_handle__start__)
+
+    call base_handle_get(this, type)
+    select case(type)
+    case(HNDL_TYPE_FRZN)
+      call frozen_handle_start(this, grid, mpi_world)
+    case(HNDL_TYPE_LIVE)
+      call live_handle_start(this, grid)
+    case(HNDL_TYPE_SSYS)
+      call base_handle__start__(this, grid)
+    case default
+      ASSERT(.false.)
+    end select
+
+    POP_SUB(ssys_handle__start__)
+  end subroutine ssys_handle__start__
 
   ! ---------------------------------------------------------
   subroutine ssys_handle_start(this, grid)
     type(base_handle_t), intent(inout) :: this
     type(grid_t),        intent(in)    :: grid
 
-    type(base_handle_iterator_t) :: iter
-    type(base_handle_t), pointer :: hndl
-    integer                      :: type, ierr
-
     PUSH_SUB(ssys_handle_start)
 
-    nullify(hndl)
-    call base_handle__start__(this, grid)
-    call base_handle_init(iter, this)
-    do
-      nullify(hndl)
-      call base_handle_next(iter, hndl, ierr)
-      if(ierr/=BASE_HANDLE_OK)exit
-      call base_handle_get(hndl, type)
-      select case(type)
-      case(HNDL_TYPE_FRZN)
-        call frozen_handle_start(hndl, grid, mpi_world)
-      case(HNDL_TYPE_LIVE)
-        call live_handle_start(hndl, grid)
-      case default
-        message(1)="Unknown subsystems type."
-        call messages_fatal(1)
-      end select
-    end do
-    call base_handle_end(iter)
-    nullify(hndl)
+    call base_handle__apply__(this, start)
 
     POP_SUB(ssys_handle_start)
+    
+  contains
+
+    subroutine start(this)
+      type(base_handle_t), intent(inout) :: this
+
+      PUSH_SUB(ssys_handle_start.start)
+      
+      call ssys_handle__start__(this, grid)
+
+      POP_SUB(ssys_handle_start.start)
+    end subroutine start
+
   end subroutine ssys_handle_start
+
+  ! ---------------------------------------------------------
+  subroutine ssys_handle__update__(this)
+    type(base_handle_t), intent(inout) :: this
+
+    integer :: type
+
+    PUSH_SUB(ssys_handle__update__)
+
+    call base_handle_get(this, type=type)
+    select case(type)
+    case(HNDL_TYPE_FRZN)
+    case(HNDL_TYPE_LIVE)
+    case(HNDL_TYPE_SSYS)
+      call base_handle__update__(this)
+    case default
+      ASSERT(.false.)
+    end select
+
+    POP_SUB(ssys_handle__update__)
+  end subroutine ssys_handle__update__
 
   ! ---------------------------------------------------------
   subroutine ssys_handle_update(this)
     type(base_handle_t), intent(inout) :: this
 
-    type(base_handle_iterator_t) :: iter
-    type(base_handle_t), pointer :: hndl
-    integer                      :: type, ierr
-
     PUSH_SUB(ssys_handle_update)
 
-    nullify(hndl)
-    call base_handle_init(iter, this)
-    do
-      nullify(hndl)
-      call base_handle_next(iter, hndl, ierr)
-      if(ierr/=BASE_HANDLE_OK)exit
-      call base_handle_get(hndl, type)
-      select case(type)
-      case(HNDL_TYPE_FRZN)
-      case(HNDL_TYPE_LIVE)
-      case default
-        message(1)="Unknown subsystems type."
-        call messages_fatal(1)
-      end select
-    end do
-    call base_handle_end(iter)
-    nullify(hndl)
-    call base_handle__update__(this)
+    call base_handle__apply__(this, ssys_handle__update__)
 
     POP_SUB(ssys_handle_update)
   end subroutine ssys_handle_update
@@ -204,34 +224,37 @@ contains
   end subroutine ssys_handle_copy
 
   ! ---------------------------------------------------------
+  subroutine ssys_handle__end__(this)
+    type(base_handle_t), intent(inout) :: this
+
+    integer :: type
+
+    PUSH_SUB(ssys_handle__end__)
+
+    call base_handle_get(this, type=type)
+    select case(type)
+    case(HNDL_TYPE_FRZN)
+      call frozen_handle_end(this)
+    case(HNDL_TYPE_LIVE)
+      call live_handle_end(this)
+    case default
+      ASSERT(.false.)
+    end select
+
+    POP_SUB(ssys_handle__end__)
+  end subroutine ssys_handle__end__
+
+  ! ---------------------------------------------------------
   subroutine ssys_handle_end(this)
     type(base_handle_t), intent(inout) :: this
 
-    type(base_handle_iterator_t) :: iter
-    type(base_handle_t), pointer :: hndl
-    integer                      :: type, ierr
+    integer :: type
 
     PUSH_SUB(ssys_handle_end)
 
-    call base_handle_init(iter, this)
-    do
-      nullify(hndl)
-      call base_handle_next(iter, hndl, ierr)
-      if(ierr/=BASE_HANDLE_OK)exit
-      call base_handle_get(hndl, type)
-      select case(type)
-      case(HNDL_TYPE_FRZN)
-        call frozen_handle_end(hndl)
-      case(HNDL_TYPE_LIVE)
-        call live_handle_end(hndl)
-      case default
-        message(1)="Unknown subsystems type."
-        call messages_fatal(1)
-      end select
-    end do
-    call base_handle_end(iter)
-    nullify(hndl)
-    call base_handle_end(this)
+    call base_handle_get(this, type=type)
+    ASSERT(type==HNDL_TYPE_SSYS)
+    call base_handle_end(this, ssys_handle__end__)
 
     POP_SUB(ssys_handle_end)
   end subroutine ssys_handle_end

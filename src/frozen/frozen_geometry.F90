@@ -4,7 +4,6 @@ module frozen_geometry_oct_m
 
   use base_geometry_oct_m
   use geo_build_oct_m
-  use geo_intrf_oct_m
   use geometry_oct_m
   use global_oct_m
   use json_oct_m
@@ -26,44 +25,48 @@ contains
     type(base_geometry_t), intent(inout) :: this
     type(json_object_t),   intent(in)    :: config
 
-    type(geo_intrf_t), pointer :: igeo
-    type(geo_build_t)          :: bgeo
+    type(json_object_t), pointer :: dict
+    type(space_t),       pointer :: space
+    type(geo_build_t)            :: bgeo
+    integer                      :: ierr
 
     PUSH_SUB(frozen_geometry__init__)
 
-    nullify(igeo)
-    call base_geometry_get(this, igeo)
-    ASSERT(associated(igeo))
-    call geo_intrf_new(igeo, init)
-    nullify(igeo)
+    nullify(dict, space)
+    call base_geometry_get(this, space)
+    ASSERT(associated(space))
+    call geo_build_init(bgeo, space)
+    nullify(space)
+    call json_get(config, "subsystems", dict, ierr)
+    ASSERT(ierr==JSON_OK)
+    ASSERT(json_len(dict)>0)
+    call base_geometry__reset__(this)
+    call base_geometry__build__(this, build)
+    call base_geometry__update__(this)
+    call base_geometry__init__(this, init)
+    call geo_build_end(bgeo)
+    nullify(dict)
 
     POP_SUB(frozen_geometry__init__)
 
   contains
     
     ! ---------------------------------------------------------
-    subroutine init(geom, space, gcfg)
-      type(geometry_t),    intent(out) :: geom
-      type(space_t),       intent(in)  :: space
-      type(json_object_t), intent(in)  :: gcfg
-
+    subroutine init(this)
+      type(geometry_t), intent(out) :: this
 
       PUSH_SUB(frozen_geometry__init__.init)
 
-      ASSERT(json_len(gcfg)==0)
-      call geo_build_init(bgeo, space)
-      call base_geometry__build__(this, build)
-      call geo_build_export(bgeo, geom)
-      call geo_build_end(bgeo)
+      call geo_build_export(bgeo, this)
 
       POP_SUB(frozen_geometry__init__.init)
     end subroutine init
 
     ! ---------------------------------------------------------
-    subroutine build(this, that, name)
+    subroutine build(this, name, that)
       type(base_geometry_t), intent(inout) :: this
-      type(base_geometry_t), intent(in)    :: that
       character(len=*),      intent(in)    :: name
+      type(base_geometry_t), intent(in)    :: that
 
       type(json_object_t), pointer :: cnfg
       type(json_array_t),  pointer :: list
@@ -73,14 +76,20 @@ contains
       PUSH_SUB(frozen_geometry__init__.build)
 
       nullify(cnfg, list, pgeo)
-      call json_get(config, trim(adjustl(name)), cnfg, ierr)
+      call base_geometry_get(this, pgeo)
+      ASSERT(.not.associated(pgeo))
+      nullify(pgeo)
+      call json_get(dict, trim(adjustl(name)), cnfg, ierr)
       ASSERT(ierr==JSON_OK)
       call json_get(cnfg, "positions", list, ierr)
       ASSERT(ierr==JSON_OK)
+      ASSERT(associated(list))
       ASSERT(json_len(list)>0)
+      nullify(cnfg)
       call base_geometry_get(that, pgeo)
       ASSERT(associated(pgeo))
       call geo_build_extend(bgeo, pgeo, list)
+      nullify(list, pgeo)
 
       POP_SUB(frozen_geometry__init__.build)
     end subroutine build

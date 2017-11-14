@@ -26,31 +26,37 @@ module dnst_intrf_oct_m
     dnst_intrf_copy,  &
     dnst_intrf_end
 
-  integer, parameter :: DNST_NULL = 0
-  integer, parameter :: DNST_ASSC = 1
-  integer, parameter :: DNST_ALLC = 2
+  integer, parameter :: DNST_INTRF_DISA = 0
+  integer, parameter :: DNST_INTRF_NULL = 1
+  integer, parameter :: DNST_INTRF_ASSC = 2
+  integer, parameter :: DNST_INTRF_ALLC = 3
 
   type :: dnst_intrf_t
     private
-    type(json_object_t), pointer :: config =>null()
-    type(dnst_t),        pointer :: pdns   =>null()
-    integer                      :: type   = DNST_NULL
+    type(dnst_t), pointer :: self =>null()
+    integer               :: type = DNST_INTRF_DISA
   end type dnst_intrf_t
 
   interface dnst_intrf_new
     module procedure dnst_intrf_new_type
     module procedure dnst_intrf_new_pass
+    module procedure dnst_intrf_new_copy
   end interface dnst_intrf_new
+
+  interface dnst_intrf_del
+    module procedure dnst_intrf_del_type
+    module procedure dnst_intrf_del_pass
+  end interface dnst_intrf_del
 
   interface dnst_intrf_init
     module procedure dnst_intrf_init_type
     module procedure dnst_intrf_init_copy
   end interface dnst_intrf_init
 
-  interface dnst_intrf_get
-    module procedure dnst_intrf_get_config
-    module procedure dnst_intrf_get_dnst
-  end interface dnst_intrf_get
+  interface dnst_intrf_end
+    module procedure dnst_intrf_end_type
+    module procedure dnst_intrf_end_pass
+  end interface dnst_intrf_end
 
 contains
 
@@ -61,75 +67,165 @@ contains
 
     PUSH_SUB(dnst_intrf__new__)
     
-    ASSERT(associated(this%config))
+    ASSERT(dnst_intrf_isnull(this))
     nullify(that)
     SAFE_ALLOCATE(that)
     call dnst_intrf_set(this, that)
-    this%type = DNST_ALLC
+    this%type = DNST_INTRF_ALLC
 
     POP_SUB(dnst_intrf__new__)
   end subroutine dnst_intrf__new__
 
   ! ---------------------------------------------------------
-  subroutine dnst_intrf_new_type(this, that)
+  subroutine dnst_intrf__del__(this)
     type(dnst_intrf_t), intent(inout) :: this
-    type(dnst_t),      pointer        :: that
+
+    PUSH_SUB(dnst_intrf__del__)
+
+    ASSERT(dnst_intrf_assoc(this))
+    if(dnst_intrf_alloc(this))then
+      SAFE_DEALLOCATE_P(this%self)
+    end if
+    nullify(this%self)
+    this%type = DNST_INTRF_NULL
+
+    POP_SUB(dnst_intrf__del__)
+  end subroutine dnst_intrf__del__
+
+  ! ---------------------------------------------------------
+  subroutine dnst_intrf_new_type(this, config)
+    type(dnst_intrf_t),  intent(inout) :: this
+    type(json_object_t), intent(in)    :: config
 
     PUSH_SUB(dnst_intrf_new_type)
     
-    nullify(that)
-    call dnst_intrf__new__(this, that)
+    ASSERT(dnst_intrf_isnull(this))
+    call dnst_intrf_new(this, init)
 
     POP_SUB(dnst_intrf_new_type)
+
+  contains
+
+    subroutine init(this)
+      type(dnst_t), intent(out) :: this
+
+      PUSH_SUB(dnst_intrf_new_type.init)
+
+      call dnst_init(this, config)
+
+      POP_SUB(dnst_intrf_new_type.init)
+    end subroutine init
+
   end subroutine dnst_intrf_new_type
 
   ! ---------------------------------------------------------
-  subroutine dnst_intrf_new_pass(this, type_init)
+  subroutine dnst_intrf_new_pass(this, init)
     type(dnst_intrf_t), intent(inout) :: this
     
     interface
-      subroutine type_init(this, config)
+      subroutine init(this)
         use dnst_oct_m
-        use json_oct_m
-        type(dnst_t),        intent(out) :: this
-        type(json_object_t), intent(in)  :: config
-      end subroutine type_init
+        type(dnst_t), intent(out) :: this
+      end subroutine init
     end interface
 
-    type(dnst_t), pointer :: dnst
+    type(dnst_t), pointer :: self
 
     PUSH_SUB(dnst_intrf_new_pass)
     
-    nullify(dnst)
-    call dnst_intrf__new__(this, dnst)
-    call type_init(dnst, this%config)
+    ASSERT(dnst_intrf_isnull(this))
+    nullify(self)
+    call dnst_intrf__new__(this, self)
+    call init(self)
+    nullify(self)
 
     POP_SUB(dnst_intrf_new_pass)
   end subroutine dnst_intrf_new_pass
 
   ! ---------------------------------------------------------
-  subroutine dnst_intrf_del(this, type_end)
+  subroutine dnst_intrf_new_copy(this, source, mold, start)
+    type(dnst_intrf_t),           intent(inout) :: this
+    type(dnst_intrf_t), optional, intent(in)    :: source
+    type(dnst_intrf_t), optional, intent(in)    :: mold
+    logical,            optional, intent(in)    :: start
+
+    type(dnst_t), pointer :: self
+
+    PUSH_SUB(dnst_intrf_new_copy)
+
+    ASSERT(present(source).or.present(mold))
+    ASSERT(.not.(present(source).and.present(mold)))
+    nullify(self)
+    call dnst_intrf__new__(this, self)
+    if(present(source))then
+      ASSERT(dnst_intrf_assoc(source))
+      call dnst_copy(self, source%self)
+    elseif(present(mold))then
+      ASSERT(dnst_intrf_assoc(mold))
+      call dnst_init(self, mold%self, start)
+    else
+      ASSERT(.FALSE.)
+    end if
+    nullify(self)
+
+    POP_SUB(dnst_intrf_new_copy)
+  end subroutine dnst_intrf_new_copy
+
+  ! ---------------------------------------------------------
+  subroutine dnst_intrf_del_type(this)
+    type(dnst_intrf_t), intent(inout) :: this
+
+    PUSH_SUB(dnst_intrf_del_type)
+
+    ASSERT(dnst_intrf_assoc(this))
+    call dnst_intrf_del(this, dnst_end)
+
+    POP_SUB(dnst_intrf_del_type)
+  end subroutine dnst_intrf_del_type
+
+  ! ---------------------------------------------------------
+  subroutine dnst_intrf_del_pass(this, finis)
     type(dnst_intrf_t), intent(inout) :: this
 
     interface
-      subroutine type_end(this)
+      subroutine finis(this)
         use dnst_oct_m
         type(dnst_t), intent(inout) :: this
-      end subroutine type_end
+      end subroutine finis
     end interface
 
-    PUSH_SUB(dnst_intrf_del)
+    PUSH_SUB(dnst_intrf_del_pass)
 
-    ASSERT(associated(this%config))
     ASSERT(dnst_intrf_assoc(this))
-    ASSERT(this%type==DNST_ALLC)
-    call type_end(this%pdns)
-    SAFE_DEALLOCATE_P(this%pdns)
-    nullify(this%pdns)
-    this%type = DNST_NULL
+    if(dnst_intrf_alloc(this)) call finis(this%self)
+    call dnst_intrf__del__(this)
     
-    POP_SUB(dnst_intrf_del)
-  end subroutine dnst_intrf_del
+    POP_SUB(dnst_intrf_del_pass)
+  end subroutine dnst_intrf_del_pass
+
+  ! ---------------------------------------------------------
+  function dnst_intrf_isnull(this) result(that)
+    type(dnst_intrf_t), intent(in) :: this
+
+    logical :: that
+
+    PUSH_SUB(dnst_intrf_isnull)
+
+    select case(this%type)
+    case(DNST_INTRF_DISA)
+      that = .false.
+    case(DNST_INTRF_NULL)
+      ASSERT(.not.associated(this%self))
+      that = .true.
+    case(DNST_INTRF_ASSC, DNST_INTRF_ALLC)
+      ASSERT(associated(this%self))
+      that = .false.
+    case default
+      ASSERT(.false.)
+    end select
+
+    POP_SUB(dnst_intrf_isnull)
+  end function dnst_intrf_isnull
 
   ! ---------------------------------------------------------
   function dnst_intrf_assoc(this) result(that)
@@ -139,13 +235,14 @@ contains
 
     PUSH_SUB(dnst_intrf_assoc)
 
-    ASSERT(associated(this%config))
     select case(this%type)
-    case(DNST_NULL)
-      ASSERT(.not.associated(this%pdns))
+    case(DNST_INTRF_DISA)
       that = .false.
-    case(DNST_ASSC,DNST_ALLC)
-      ASSERT(associated(this%pdns))
+    case(DNST_INTRF_NULL)
+      ASSERT(.not.associated(this%self))
+      that = .false.
+    case(DNST_INTRF_ASSC, DNST_INTRF_ALLC)
+      ASSERT(associated(this%self))
       that = .true.
     case default
       ASSERT(.false.)
@@ -162,16 +259,17 @@ contains
 
     PUSH_SUB(dnst_intrf_alloc)
 
-    ASSERT(associated(this%config))
     select case(this%type)
-    case(DNST_NULL)
-      ASSERT(.not.associated(this%pdns))
+    case(DNST_INTRF_DISA)
       that = .false.
-    case(DNST_ASSC)
-      ASSERT(associated(this%pdns))
+    case(DNST_INTRF_NULL)
+      ASSERT(.not.associated(this%self))
       that = .false.
-    case(DNST_ALLC)
-      ASSERT(associated(this%pdns))
+    case(DNST_INTRF_ASSC)
+      ASSERT(associated(this%self))
+      that = .false.
+    case(DNST_INTRF_ALLC)
+      ASSERT(associated(this%self))
       that = .true.
     case default
       ASSERT(.false.)
@@ -181,28 +279,37 @@ contains
   end function dnst_intrf_alloc
 
   ! ---------------------------------------------------------
-  subroutine dnst_intrf_init_type(this, config)
-    type(dnst_intrf_t),          intent(out) :: this
-    type(json_object_t), target, intent(in)  :: config
+  subroutine dnst_intrf_init_type(this)
+    type(dnst_intrf_t), intent(out) :: this
 
     PUSH_SUB(dnst_intrf_init_type)
     
-    this%config => config
-    nullify(this%pdns)
-    this%type = DNST_NULL
+    nullify(this%self)
+    this%type = DNST_INTRF_NULL
 
     POP_SUB(dnst_intrf_init_type)
   end subroutine dnst_intrf_init_type
 
   ! ---------------------------------------------------------
-  subroutine dnst_intrf_init_copy(this, that)
+  subroutine dnst_intrf_init_copy(this, that, start)
     type(dnst_intrf_t), intent(out) :: this
     type(dnst_intrf_t), intent(in)  :: that
+    logical,  optional, intent(in)  :: start
 
     PUSH_SUB(dnst_intrf_init_copy)
     
-    ASSERT(associated(that%config))
-    call dnst_intrf_init(this, that%config)
+    call dnst_intrf_init(this)
+    select case(that%type)
+    case(DNST_INTRF_DISA)
+    case(DNST_INTRF_NULL)
+    case(DNST_INTRF_ASSC)
+      call dnst_intrf_set(this, that%self)
+    case(DNST_INTRF_ALLC)
+      call dnst_intrf_new(this, mold=that, start=start)
+    case default
+      ASSERT(.false.)
+    end select
+    this%type = that%type
 
     POP_SUB(dnst_intrf_init_copy)
   end subroutine dnst_intrf_init_copy
@@ -214,105 +321,91 @@ contains
 
     PUSH_SUB(dnst_intrf_set)
 
-    ASSERT(associated(this%config))
-    ASSERT(.not.dnst_intrf_assoc(this))
-    ASSERT(this%type==DNST_NULL)
-    this%pdns => that
-    this%type = DNST_ASSC
+    ASSERT(dnst_intrf_isnull(this))
+    this%self => that
+    this%type = DNST_INTRF_ASSC
 
     POP_SUB(dnst_intrf_set)
   end subroutine dnst_intrf_set
 
   ! ---------------------------------------------------------
-  subroutine dnst_intrf_get_config(this, that)
-    type(dnst_intrf_t),   intent(in) :: this
-    type(json_object_t), pointer     :: that
-
-    PUSH_SUB(dnst_intrf_get_config)
-
-    nullify(that)
-    if(associated(this%config)) that => this%config
-
-    POP_SUB(dnst_intrf_get_config)
-  end subroutine dnst_intrf_get_config
-
-  ! ---------------------------------------------------------
-  subroutine dnst_intrf_get_dnst(this, that)
+  subroutine dnst_intrf_get(this, that)
     type(dnst_intrf_t), intent(in) :: this
     type(dnst_t),      pointer     :: that
 
-    PUSH_SUB(dnst_intrf_get_dnst)
+    PUSH_SUB(dnst_intrf_get)
 
+    ASSERT(this%type/=DNST_INTRF_DISA)
     nullify(that)
-    if(dnst_intrf_assoc(this)) that => this%pdns
+    if(dnst_intrf_assoc(this)) that => this%self
 
-    POP_SUB(dnst_intrf_get_dnst)
-  end subroutine dnst_intrf_get_dnst
+    POP_SUB(dnst_intrf_get)
+  end subroutine dnst_intrf_get
 
   ! ---------------------------------------------------------
-  subroutine dnst_intrf_copy(this, that, type_copy)
+  subroutine dnst_intrf_copy(this, that)
     type(dnst_intrf_t), intent(inout) :: this
-    type(dnst_intrf_t), intent(in)    :: that
-
-    interface
-      subroutine type_copy(this, that)
-        use dnst_oct_m
-        type(dnst_t), intent(inout) :: this
-        type(dnst_t), intent(in)    :: that
-      end subroutine type_copy
-    end interface
-
-    type(dnst_t), pointer :: pdns
-    integer               :: type
+    type(dnst_intrf_t), intent(in) :: that
 
     PUSH_SUB(dnst_intrf_copy)
 
-    nullify(pdns)
-    type = this%type
-    pdns => this%pdns
-    nullify(this%config, this%pdns)
-    this%type = DNST_NULL
-    if(associated(that%config))then
-      call dnst_intrf_init(this, that)
-      select case(that%type)
-      case(DNST_NULL)
-        ASSERT(type/=DNST_ALLC)
-      case(DNST_ASSC)
-        ASSERT(type/=DNST_ALLC)
-        call dnst_intrf_set(this, that%pdns)
-      case(DNST_ALLC)
-        if(type/=DNST_ALLC) call dnst_intrf__new__(this, pdns)
-        call type_copy(pdns, that%pdns)
-      case default
-        ASSERT(.false.)
-      end select
-    else
-      ASSERT(type/=DNST_ALLC)
-    end if
-    nullify(pdns)
+    call dnst_intrf_end(this)
+    select case(that%type)
+    case(DNST_INTRF_DISA)
+    case(DNST_INTRF_NULL)
+    case(DNST_INTRF_ASSC)
+      call dnst_intrf_set(this, that%self)
+    case(DNST_INTRF_ALLC)
+      call dnst_intrf_new(this, source=that)
+    case default
+      ASSERT(.false.)
+    end select
+    this%type = that%type
 
     POP_SUB(dnst_intrf_copy)
   end subroutine dnst_intrf_copy
 
   ! ---------------------------------------------------------
-  subroutine dnst_intrf_end(this, type_end)
+  subroutine dnst_intrf__end__(this)
+    type(dnst_intrf_t), intent(inout) :: this
+
+    PUSH_SUB(dnst_intrf__end__)
+
+    nullify(this%self)
+    this%type = DNST_INTRF_DISA
+
+    POP_SUB(dnst_intrf__end__)
+  end subroutine dnst_intrf__end__
+
+  ! ---------------------------------------------------------
+  subroutine dnst_intrf_end_type(this)
+    type(dnst_intrf_t), intent(inout) :: this
+
+    PUSH_SUB(dnst_intrf_end_type)
+
+    call dnst_intrf_end(this, dnst_end)
+
+    POP_SUB(dnst_intrf_end_type)
+  end subroutine dnst_intrf_end_type
+
+  ! ---------------------------------------------------------
+  subroutine dnst_intrf_end_pass(this, finis)
     type(dnst_intrf_t), intent(inout) :: this
 
     interface
-      subroutine type_end(this)
+      subroutine finis(this)
         use dnst_oct_m
         type(dnst_t), intent(inout) :: this
-      end subroutine type_end
+      end subroutine finis
     end interface
 
-    PUSH_SUB(dnst_intrf_end)
+    PUSH_SUB(dnst_intrf_end_pass)
 
-    if(this%type==DNST_ALLC) call dnst_intrf_del(this, type_end)
-    nullify(this%config, this%pdns)
-    this%type = DNST_NULL
+    if(dnst_intrf_assoc(this)) call dnst_intrf_del(this, finis)
+    call dnst_intrf__end__(this)
 
-    POP_SUB(dnst_intrf_end)
-  end subroutine dnst_intrf_end
+    POP_SUB(dnst_intrf_end_pass)
+  end subroutine dnst_intrf_end_pass
 
 end module dnst_intrf_oct_m
 
