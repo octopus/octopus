@@ -89,7 +89,7 @@ module eigensolver_oct_m
     logical :: save_mem
     logical :: skip_finite_weight_kpoints
     logical :: folded_spectrum
-    FLOAT,pointer   :: spectrum_shift(:,:)
+    FLOAT, pointer   :: spectrum_shift(:,:)
   end type eigensolver_t
 
 
@@ -701,7 +701,7 @@ contains
         
       end if
 
-      if(st%calc_eigenval.and..not.eigens%folded_spectrum) then
+      if(st%calc_eigenval .and. .not. eigens%folded_spectrum) then
         ! recheck convergence after subspace diagonalization, since states may have reordered
         eigens%converged(ik) = 0
         do ist = 1, st%nst
