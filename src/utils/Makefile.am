@@ -221,6 +221,12 @@ oct_wannier90_interface_LDADD = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/basic/libbasic.a \
                                    $(other_LIBS)
 
+
+# Include files - keep in alphabetical order
+noinst_HEADERS =                         \
+	wannier90_interface_defs_from_pwscf.F90 
+
+
 # debug files from MacOS gcc with -g
 clean-local :
 	rm -rf *.dSYM
