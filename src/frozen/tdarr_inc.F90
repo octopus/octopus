@@ -52,8 +52,8 @@
 #define SINGLE_TEMPLATE_NAME DARR_TEMPLATE_NAME
 #define SINGLE_TYPE_NAME DARR_TYPE_NAME
 
-#undef TEMPLATE_PREFIX
-#define TEMPLATE_PREFIX DARR_TEMPLATE_NAME
+#undef TEMPLATE_NAME
+#define TEMPLATE_NAME DARR_TEMPLATE_NAME
 #include "template.h"
 
 #if defined(DARR_INCLUDE_MODULE)
@@ -70,6 +70,9 @@ module TEMPLATE(darr_m)
 #define SINGLE_INCLUDE_PREFIX
 #include "tsingle_inc.F90"
 #undef SINGLE_INCLUDE_PREFIX
+
+#define TEMPLATE_NAME DARR_TEMPLATE_NAME
+#include "template.h"
 
   use kinds_oct_m
 
@@ -113,7 +116,7 @@ module TEMPLATE(darr_m)
 #include "tsingle_inc.F90"
 #undef SINGLE_INCLUDE_HEADER
 
-#define TEMPLATE_PREFIX DARR_TEMPLATE_NAME
+#define TEMPLATE_NAME DARR_TEMPLATE_NAME
 #include "template.h"
 
   real(kind=wp), parameter :: INTERNAL(DARR_FACTOR) = DECORATE(DARR_GROWTH_FACTOR,wp)
@@ -168,7 +171,7 @@ contains
 #include "tsingle_inc.F90"
 #undef SINGLE_INCLUDE_BODY
 
-#define TEMPLATE_PREFIX DARR_TEMPLATE_NAME
+#define TEMPLATE_NAME DARR_TEMPLATE_NAME
 #include "template.h"
 
   ! ---------------------------------------------------------
@@ -475,7 +478,7 @@ end module TEMPLATE(darr_m)
 #undef SINGLE_TYPE_NAME
 #undef SINGLE_TYPE_MODULE_NAME
 
-#undef TEMPLATE_PREFIX
+#undef TEMPLATE_NAME
 
 !! Local Variables:
 !! mode: f90

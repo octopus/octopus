@@ -33,8 +33,8 @@
 #error "Only one off 'LIST_INCLUDE_HEADER' or 'LIST_INCLUDE_BODY' can be defined."
 #endif
 
-#undef TEMPLATE_PREFIX
-#define TEMPLATE_PREFIX LIST_TEMPLATE_NAME
+#undef TEMPLATE_NAME
+#define TEMPLATE_NAME LIST_TEMPLATE_NAME
 #include "template.h"
 
 #if defined(LIST_INCLUDE_MODULE)
@@ -389,61 +389,25 @@ contains
 
     PUSH_SUB(INTERNAL(list_del_node))
 
-    if(associated(node))then
-      if(associated(prev))then
-        ASSERT(associated(prev%next,node))
-        prev%next => next
-      else
-        ASSERT(associated(node,this%head))
-        this%head => next
-      end if
-      if(associated(next))then
-        ASSERT(associated(node%next,next))
-      else
-        ASSERT(.not.associated(node%next))
-        this%tail => prev
-      end if
-      nullify(node%next)
+    ASSERT(associated(node))
+    if(associated(prev))then
+      ASSERT(associated(prev%next,node))
+      prev%next => next
+    else
+      ASSERT(associated(node,this%head))
+      this%head => next
     end if
+    if(associated(next))then
+      ASSERT(associated(node%next,next))
+    else
+      ASSERT(.not.associated(node%next))
+      this%tail => prev
+    end if
+    this%size = this%size - 1
+    nullify(node%next)
 
     POP_SUB(INTERNAL(list_del_node))
   end subroutine INTERNAL(list_del_node)
-
-  ! ---------------------------------------------------------
-  subroutine INTERNAL(list_del_node_data)(this, that, node, ierr)
-    type(TEMPLATE(list_t)),  intent(inout) :: this
-    type(LIST_TYPE_NAME),    intent(in)    :: that
-    type(INTERNAL(node_t)), pointer        :: node
-    integer,       optional, intent(out)   :: ierr
-
-    type(INTERNAL(node_t)), pointer :: prev, next
-
-    PUSH_SUB(INTERNAL(list_del_node_data))
-
-    nullify(prev, node, next)
-    call INTERNAL(list_walk_node)(this, that, prev, node, next, ierr)
-    if(associated(node))call INTERNAL(list_del_node)(this, prev, node, next)
-
-    POP_SUB(INTERNAL(list_del_node_data))
-  end subroutine INTERNAL(list_del_node_data)
-
-  ! ---------------------------------------------------------
-  subroutine INTERNAL(list_del_node_index)(this, index, node, ierr)
-    type(TEMPLATE(list_t)),  intent(inout) :: this
-    integer,                 intent(in)    :: index
-    type(INTERNAL(node_t)), pointer        :: node
-    integer,       optional, intent(out)   :: ierr
-
-    type(INTERNAL(node_t)), pointer :: prev, next
-
-    PUSH_SUB(INTERNAL(list_del_node_index))
-
-    nullify(prev, node, next)
-    call INTERNAL(list_walk_index)(this, index, prev, node, next, ierr)
-    if(associated(node))call INTERNAL(list_del_node)(this, prev, node, next)
-
-    POP_SUB(INTERNAL(list_del_node_index))
-  end subroutine INTERNAL(list_del_node_index)
 
   ! ---------------------------------------------------------
   subroutine INTERNAL(list_del_data)(this, that, ierr)
@@ -451,13 +415,17 @@ contains
     type(LIST_TYPE_NAME),   intent(in)    :: that
     integer,     optional,  intent(out)   :: ierr
 
-    type(INTERNAL(node_t)), pointer :: node
+    type(INTERNAL(node_t)), pointer :: prev, node, next
 
     PUSH_SUB(INTERNAL(list_del_data))
 
-    nullify(node)
-    call INTERNAL(list_del_node_data)(this, that, node, ierr)
-    if(associated(node)) call INTERNAL(node_del)(node)
+    nullify(prev, node, next)
+    call INTERNAL(list_walk_node)(this, that, prev, node, next, ierr)
+    if(associated(node))then
+      call INTERNAL(list_del_node)(this, prev, node, next)
+      call INTERNAL(node_del)(node)
+    end if
+    nullify(prev, node, next)
 
     POP_SUB(INTERNAL(list_del_data))
   end subroutine INTERNAL(list_del_data)
@@ -469,16 +437,18 @@ contains
     type(LIST_TYPE_NAME),  pointer        :: that
     integer,     optional,  intent(out)   :: ierr
 
-    type(INTERNAL(node_t)), pointer :: node
+    type(INTERNAL(node_t)), pointer :: prev, node, next
 
     PUSH_SUB(INTERNAL(list_del_index))
 
-    nullify(that, node)
-    call INTERNAL(list_del_node_index)(this, index, node, ierr)
+    nullify(that, prev, node, next)
+    call INTERNAL(list_walk_index)(this, index, prev, node, next, ierr)
     if(associated(node))then
+      call INTERNAL(list_del_node)(this, prev, node, next)
       call INTERNAL(node_get)(node, that)
       call INTERNAL(node_del)(node)
     end if
+    nullify(prev, node, next)
 
     POP_SUB(INTERNAL(list_del_index))
   end subroutine INTERNAL(list_del_index)
@@ -770,7 +740,7 @@ end module TEMPLATE(list_oct_m)
 
 #endif
 
-#undef TEMPLATE_PREFIX
+#undef TEMPLATE_NAME
 
 !! Local Variables:
 !! mode: f90

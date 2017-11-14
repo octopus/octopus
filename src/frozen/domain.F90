@@ -34,6 +34,7 @@ module domain_oct_m
     domain_init,   &
     domain_extend, &
     domain_start,  &
+    domain_stop,   &
     domain_in,     &
     domain_get,    &
     domain_copy,   &
@@ -215,10 +216,24 @@ contains
     PUSH_SUB(domain_start)
     
     ASSERT(associated(this%space))
+    ASSERT(.not.associated(this%igrid))
     this%igrid => igrid
 
     POP_SUB(domain_start)
   end subroutine domain_start
+
+  ! ---------------------------------------------------------
+  subroutine domain_stop(this)
+    type(domain_t), intent(inout) :: this
+
+    PUSH_SUB(domain_stop)
+    
+    ASSERT(associated(this%space))
+    ASSERT(associated(this%igrid))
+    nullify(this%igrid)
+
+    POP_SUB(domain_stop)
+  end subroutine domain_stop
 
   ! ---------------------------------------------------------
   subroutine domain_extend(this, that, config)

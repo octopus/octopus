@@ -37,7 +37,7 @@ module dnst_oct_m
     type(simulation_t),              pointer :: sim    =>null()
     type(storage_t),                 pointer :: total  =>null()
     logical                                  :: xtrnl  = .false.
-    integer                                  :: nspin  = 0
+    integer                                  :: nspin  = default_nspin
     real(kind=wp), dimension(:), allocatable :: charge
     type(storage_t)                          :: data
   end type dnst_t
@@ -102,15 +102,25 @@ contains
   end subroutine dnst_init_type
 
   ! ---------------------------------------------------------
-  subroutine dnst_init_copy(this, that)
-    type(dnst_t), intent(out) :: this
-    type(dnst_t), intent(in)  :: that
+  subroutine dnst_init_copy(this, that, start)
+    type(dnst_t),      intent(out) :: this
+    type(dnst_t),      intent(in)  :: that
+    logical, optional, intent(in)  :: start
+
+    logical :: istr
 
     PUSH_SUB(dnst_init_copy)
 
     ASSERT(associated(that%config))
     call dnst_init(this, that%config)
-    if(associated(that%sim)) call dnst_start(this, that%sim)
+    istr = .true.
+    if(present(start)) istr = start
+    if(istr)then
+      if(present(start))then
+        ASSERT(associated(that%sim))
+      end if
+      if(associated(that%sim)) call dnst_start(this, that%sim)
+    end if
 
     POP_SUB(dnst_init_copy)
   end subroutine dnst_init_copy

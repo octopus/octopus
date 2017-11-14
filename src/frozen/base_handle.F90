@@ -1,15 +1,11 @@
 #include "global.h"
 
-#undef LIST_TEMPLATE_NAME
-#undef LIST_TYPE_NAME
-#undef LIST_TYPE_MODULE_NAME
-
-#undef DICT_TEMPLATE_NAME
-#undef DICT_TYPE_NAME
-#undef DICT_TYPE_MODULE_NAME
-#undef DICT_INCLUDE_PREFIX
-#undef DICT_INCLUDE_HEADER
-#undef DICT_INCLUDE_BODY
+#undef BASE_TEMPLATE_NAME
+#undef BASE_TYPE_NAME
+#undef BASE_TYPE_MODULE_NAME
+#undef BASE_INCLUDE_PREFIX
+#undef BASE_INCLUDE_HEADER
+#undef BASE_INCLUDE_BODY
 
 module base_handle_oct_m
 
@@ -28,23 +24,11 @@ module base_handle_oct_m
   use simulation_oct_m
   use space_oct_m
 
-#define LIST_TEMPLATE_NAME base_handle
-#define LIST_INCLUDE_PREFIX
-#include "tlist_inc.F90"
-#undef LIST_INCLUDE_PREFIX
-#undef LIST_TEMPLATE_NAME
-
-#define DICT_TEMPLATE_NAME base_handle
-#define DICT_INCLUDE_PREFIX
-#include "tdict_inc.F90"
-#undef DICT_INCLUDE_PREFIX
-#undef DICT_TEMPLATE_NAME
-
-#define TEMPLATE_PREFIX base_handle
-#define INCLUDE_PREFIX
-#include "iterator_inc.F90"
-#undef INCLUDE_PREFIX
-#undef TEMPLATE_PREFIX
+#define BASE_TEMPLATE_NAME base_handle
+#define BASE_INCLUDE_PREFIX
+#include "tbase_inc.F90"
+#undef BASE_INCLUDE_PREFIX
+#undef BASE_TEMPLATE_NAME
 
   implicit none
 
@@ -53,11 +37,6 @@ module base_handle_oct_m
   public ::         &
     HNDL_TYPE_NONE
 
-  public ::                  &
-    BASE_HANDLE_OK,          &
-    BASE_HANDLE_KEY_ERROR,   &
-    BASE_HANDLE_EMPTY_ERROR
-
   public ::        &
     base_handle_t
 
@@ -65,8 +44,8 @@ module base_handle_oct_m
     base_handle__init__,   &
     base_handle__start__,  &
     base_handle__update__, &
-    base_handle__stop__,   &
     base_handle__reset__,  &
+    base_handle__stop__,   &
     base_handle__copy__,   &
     base_handle__end__
 
@@ -76,30 +55,19 @@ module base_handle_oct_m
     base_handle_init,   &
     base_handle_start,  &
     base_handle_update, &
+    base_handle_reset,  &
     base_handle_stop,   &
-    base_handle_sets,   &
-    base_handle_gets,   &
     base_handle_get,    &
     base_handle_copy,   &
     base_handle_end
 
-#define LIST_TEMPLATE_NAME base_handle
-#define LIST_INCLUDE_HEADER
-#include "tlist_inc.F90"
-#undef LIST_INCLUDE_HEADER
-#undef LIST_TEMPLATE_NAME
-
-#define DICT_TEMPLATE_NAME base_handle
-#define DICT_INCLUDE_HEADER
-#include "tdict_inc.F90"
-#undef DICT_INCLUDE_HEADER
-#undef DICT_TEMPLATE_NAME
+#define BASE_TEMPLATE_NAME base_handle
+#define BASE_INCLUDE_HEADER
+#include "tbase_inc.F90"
+#undef BASE_INCLUDE_HEADER
+#undef BASE_TEMPLATE_NAME
 
   integer, parameter :: HNDL_TYPE_NONE = 0
-
-  integer, parameter :: BASE_HANDLE_OK          = BASE_HANDLE_DICT_OK
-  integer, parameter :: BASE_HANDLE_KEY_ERROR   = BASE_HANDLE_DICT_KEY_ERROR
-  integer, parameter :: BASE_HANDLE_EMPTY_ERROR = BASE_HANDLE_DICT_EMPTY_ERROR
 
   type :: base_handle_t
     private
@@ -113,26 +81,17 @@ module base_handle_oct_m
   end type base_handle_t
 
   interface base_handle__init__
-    module procedure base_handle__init__begin
-    module procedure base_handle__init__build
-    module procedure base_handle__init__finish
+    module procedure base_handle__init__type
+    module procedure base_handle__init__pass
+    module procedure base_handle__init__smlt
     module procedure base_handle__init__copy
   end interface base_handle__init__
-
-  interface base_handle__copy__
-    module procedure base_handle__copy__begin
-    module procedure base_handle__copy__finish
-  end interface base_handle__copy__
 
   interface base_handle_init
     module procedure base_handle_init_type
     module procedure base_handle_init_pass
     module procedure base_handle_init_copy
   end interface base_handle_init
-
-  interface base_handle_gets
-    module procedure base_handle_gets_name
-  end interface base_handle_gets
 
   interface base_handle_get
     module procedure base_handle_get_info
@@ -152,27 +111,16 @@ module base_handle_oct_m
 
   interface base_handle_end
     module procedure base_handle_end_type
+    module procedure base_handle_end_pass
   end interface base_handle_end
-
-#define TEMPLATE_PREFIX base_handle
-#define INCLUDE_HEADER
-#include "iterator_inc.F90"
-#undef INCLUDE_HEADER
-#undef TEMPLATE_PREFIX
 
 contains
 
-#define LIST_TEMPLATE_NAME base_handle
-#define LIST_INCLUDE_BODY
-#include "tlist_inc.F90"
-#undef LIST_INCLUDE_BODY
-#undef LIST_TEMPLATE_NAME
-
-#define DICT_TEMPLATE_NAME base_handle
-#define DICT_INCLUDE_BODY
-#include "tdict_inc.F90"
-#undef DICT_INCLUDE_BODY
-#undef DICT_TEMPLATE_NAME
+#define BASE_TEMPLATE_NAME base_handle
+#define BASE_INCLUDE_BODY
+#include "tbase_inc.F90"
+#undef BASE_INCLUDE_BODY
+#undef BASE_TEMPLATE_NAME
 
   ! ---------------------------------------------------------
   subroutine base_handle__new__(this)
@@ -233,14 +181,14 @@ contains
   end subroutine base_handle_del
 
   ! ---------------------------------------------------------
-  subroutine base_handle__init__begin(this, config)
+  subroutine base_handle__init__type(this, config)
     type(base_handle_t),         intent(out) :: this
     type(json_object_t), target, intent(in)  :: config
 
     type(json_object_t), pointer :: cnfg
     integer                      :: ierr
 
-    PUSH_SUB(base_handle__init__begin)
+    PUSH_SUB(base_handle__init__type)
 
     nullify(cnfg)
     this%config => config
@@ -253,71 +201,75 @@ contains
     call base_handle_dict_init(this%dict)
     call base_handle_list_init(this%list)
     
-    POP_SUB(base_handle__init__begin)
-  end subroutine base_handle__init__begin
+    POP_SUB(base_handle__init__type)
+  end subroutine base_handle__init__type
 
   ! ---------------------------------------------------------
-  subroutine base_handle__init__build(this, config, handle_init)
+  subroutine base_handle__init__pass(this, init)
     type(base_handle_t), intent(inout) :: this
-    type(json_object_t), intent(in)    :: config
-
-    type(json_object_iterator_t)        :: iter
-    character(len=BASE_HANDLE_NAME_LEN) :: name
-    type(json_object_t),        pointer :: cnfg
-    type(base_handle_t),        pointer :: hndl
-    integer                             :: ierr
 
     interface
-      subroutine handle_init(this, config)
+      subroutine init(this, config)
         use json_oct_m
         import :: base_handle_t
         type(base_handle_t), intent(out) :: this
         type(json_object_t), intent(in)  :: config
-      end subroutine handle_init
+      end subroutine init
     end interface
 
-    PUSH_SUB(base_handle__init__build)
+    type(json_object_iterator_t)        :: iter
+    character(len=BASE_HANDLE_NAME_LEN) :: name
+    type(json_object_t),        pointer :: dict, cnfg
+    type(base_handle_t),        pointer :: hndl
+    integer                             :: ierr
 
-    call json_init(iter, config)
-    do
+    PUSH_SUB(base_handle__init__pass)
+
+    ASSERT(associated(this%config))
+    nullify(dict, cnfg, hndl)
+    call json_get(this%config, "subsystems", dict, ierr)
+    if(ierr==JSON_OK)then
+      call json_init(iter, dict)
+      do
+        nullify(cnfg, hndl)
+        call json_next(iter, name, cnfg, ierr)
+        if(ierr/=JSON_OK)exit
+        call base_handle_new(this, hndl)
+        call init(hndl, cnfg)
+        call base_handle__set__(hndl, this)
+        call base_handle_sets(this, trim(adjustl(name)), hndl)
+      end do
+      call json_end(iter)
       nullify(cnfg, hndl)
-      call json_next(iter, name, cnfg, ierr)
-      if(ierr/=JSON_OK)exit
-      call base_handle_new(this, hndl)
-      call handle_init(hndl, cnfg)
-      call base_handle__set__(hndl, this)
-      call base_handle_sets(this, name, hndl)
-    end do
-    call json_end(iter)
-    nullify(cnfg, hndl)
+    end if
+    nullify(dict)
 
-    POP_SUB(base_handle__init__build)
-  end subroutine base_handle__init__build
+    POP_SUB(base_handle__init__pass)
+  end subroutine base_handle__init__pass
 
   ! ---------------------------------------------------------
-  subroutine base_handle__init__finish(this)
+  subroutine base_handle__init__smlt(this)
     type(base_handle_t), intent(inout) :: this
 
     type(json_object_t), pointer :: cnfg
-    type(space_t),       pointer :: space
     type(geometry_t),    pointer :: geo
+    type(space_t),       pointer :: space
     integer                      :: ierr
 
-    PUSH_SUB(base_handle__init__finish)
+    PUSH_SUB(base_handle__init__smlt)
 
-    nullify(cnfg, space, geo)
-    call base_model__init__(this%model)
-    call base_model_get(this%model, space)
-    ASSERT(associated(space))
+    nullify(cnfg, geo, space)
     call base_model_get(this%model, geo)
     ASSERT(associated(geo))
+    call base_model_get(this%model, space)
+    ASSERT(associated(space))
     call json_get(this%config, "simulation", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
     call simulation_init(this%sim, geo, space, cnfg)
-    nullify(cnfg, space, geo)
+    nullify(cnfg, geo, space)
 
-    POP_SUB(base_handle__init__finish)
-  end subroutine base_handle__init__finish
+    POP_SUB(base_handle__init__smlt)
+  end subroutine base_handle__init__smlt
 
   ! ---------------------------------------------------------
   subroutine base_handle__init__copy(this, that)
@@ -343,39 +295,30 @@ contains
 
     PUSH_SUB(base_handle_init_type)
 
-    call base_handle_init_pass(this, config, base_handle_init_type)
+    call base_handle_init(this, config, base_handle_init_type)
 
     POP_SUB(base_handle_init_type)
   end subroutine base_handle_init_type
 
   ! ---------------------------------------------------------
-  recursive subroutine base_handle_init_pass(this, config, handle_init)
+  recursive subroutine base_handle_init_pass(this, config, init)
     type(base_handle_t), intent(out) :: this
     type(json_object_t), intent(in)  :: config
 
     interface
-      subroutine handle_init(this, config)
+      subroutine init(this, config)
         use json_oct_m
         import :: base_handle_t
         type(base_handle_t), intent(out) :: this
         type(json_object_t), intent(in)  :: config
-      end subroutine handle_init
+      end subroutine init
     end interface
-
-    type(json_object_t), pointer :: dict
-    integer                      :: ierr
 
     PUSH_SUB(base_handle_init_pass)
 
-    nullify(dict)
     call base_handle__init__(this, config)
-    call json_get(config, "subsystems", dict, ierr)
-    if(ierr==JSON_OK)then
-      if(json_len(dict)>0)&
-        call base_handle__init__(this, dict, handle_init)
-    end if
+    call base_handle__init__(this, init)
     call base_handle__init__(this)
-    nullify(dict)
 
     POP_SUB(base_handle_init_pass)
   end subroutine base_handle_init_pass
@@ -403,34 +346,11 @@ contains
       call base_handle_sets(this, name, osub)
     end do
     call base_handle_end(iter)
-    call base_handle__init__(this)
     nullify(osub, isub)
+    call base_handle__init__(this)
 
     POP_SUB(base_handle_init_copy)
   end subroutine base_handle_init_copy
-
-  ! ---------------------------------------------------------
-  subroutine base_handle__build__(this)
-    type(base_handle_t), intent(inout) :: this
-
-    type(base_handle_iterator_t) :: iter
-    type(base_handle_t), pointer :: subs
-    integer                      :: ierr
-
-    PUSH_SUB(base_handle__build__)
-
-    call base_handle_init(iter, this)
-    do
-      nullify(subs)
-      call base_handle_next(iter, subs, ierr)
-      if(ierr/=BASE_HANDLE_OK)exit
-      call simulation_extend(this%sim, subs%sim, subs%config)
-    end do
-    call base_handle_end(iter)
-    nullify(subs)
-
-    POP_SUB(base_handle__build__)
-  end subroutine base_handle__build__
 
   ! ---------------------------------------------------------
   subroutine base_handle__start__(this, grid)
@@ -440,38 +360,27 @@ contains
     PUSH_SUB(base_handle__start__)
 
     ASSERT(associated(this%config))
-    call base_handle__build__(this)
-    call simulation_start(this%sim, grid)
+    !call base_handle__reduce__(this, extend)
+    if(present(grid)) call simulation_start(this%sim, grid)
     ASSERT(simulation_assoc(this%sim))
     call base_model__start__(this%model, this%sim)
 
     POP_SUB(base_handle__start__)
+    
+  contains
+
+    subroutine extend(this, that)
+      type(base_handle_t), intent(inout) :: this
+      type(base_handle_t), intent(in)    :: that
+
+      PUSH_SUB(base_handle__start__.extend)
+      
+      call simulation_extend(this%sim, that%sim, that%config)
+
+      POP_SUB(base_handle__start__.extend)
+    end subroutine extend
+
   end subroutine base_handle__start__
-
-  ! ---------------------------------------------------------
-  recursive subroutine base_handle_start(this, grid)
-    type(base_handle_t),    intent(inout) :: this
-    type(grid_t), optional, intent(in)    :: grid
-
-    type(base_handle_iterator_t) :: iter
-    type(base_handle_t), pointer :: subs
-    integer                      :: ierr
-
-    PUSH_SUB(base_handle_start)
-
-    call base_handle_init(iter, this)
-    do
-      nullify(subs)
-      call base_handle_next(iter, subs, ierr)
-      if(ierr/=BASE_HANDLE_OK)exit
-      call base_handle_start(subs, grid)
-    end do
-    call base_handle_end(iter)
-    nullify(subs)
-    call base_handle__start__(this, grid)
-
-    POP_SUB(base_handle_start)
-  end subroutine base_handle_start
 
   ! ---------------------------------------------------------
   subroutine base_handle__update__(this)
@@ -486,28 +395,16 @@ contains
   end subroutine base_handle__update__
 
   ! ---------------------------------------------------------
-  recursive subroutine base_handle_update(this)
+  subroutine base_handle__reset__(this)
     type(base_handle_t), intent(inout) :: this
 
-    type(base_handle_iterator_t) :: iter
-    type(base_handle_t), pointer :: subs
-    integer                      :: ierr
+    PUSH_SUB(base_handle__reset__)
 
-    PUSH_SUB(base_handle_update)
+    ASSERT(associated(this%config))
+    call base_model__reset__(this%model)
 
-    call base_handle_init(iter, this)
-    do
-      nullify(subs)
-      call base_handle_next(iter, subs, ierr)
-      if(ierr/=BASE_HANDLE_OK)exit
-      call base_handle_update(subs)
-    end do
-    call base_handle_end(iter)
-    nullify(subs)
-    call base_handle__update__(this)
-
-    POP_SUB(base_handle_update)
-  end subroutine base_handle_update
+    POP_SUB(base_handle__reset__)
+  end subroutine base_handle__reset__
 
   ! ---------------------------------------------------------
   subroutine base_handle__stop__(this)
@@ -515,45 +412,69 @@ contains
 
     PUSH_SUB(base_handle__stop__)
 
+    ASSERT(associated(this%config))
     call base_model__stop__(this%model)
 
     POP_SUB(base_handle__stop__)
   end subroutine base_handle__stop__
 
   ! ---------------------------------------------------------
-  recursive subroutine base_handle_stop(this)
+  subroutine base_handle_start(this, grid)
+    type(base_handle_t),    intent(inout) :: this
+    type(grid_t), optional, intent(in)    :: grid
+
+    PUSH_SUB(base_handle_start)
+
+    call base_handle__apply__(this, start)
+
+    POP_SUB(base_handle_start)
+    
+  contains
+
+    subroutine start(this)
+      type(base_handle_t), intent(inout) :: this
+
+      PUSH_SUB(base_handle_start.start)
+      
+      call base_handle__start__(this, grid)
+
+      POP_SUB(base_handle_start.start)
+    end subroutine start
+
+  end subroutine base_handle_start
+
+  ! ---------------------------------------------------------
+  subroutine base_handle_update(this)
     type(base_handle_t), intent(inout) :: this
 
-    type(base_handle_iterator_t) :: iter
-    type(base_handle_t), pointer :: subs
-    integer                      :: ierr
+    PUSH_SUB(base_handle_update)
+
+    call base_handle__apply__(this, base_handle__update__)
+
+    POP_SUB(base_handle_update)
+  end subroutine base_handle_update
+
+  ! ---------------------------------------------------------
+  subroutine base_handle_reset(this)
+    type(base_handle_t), intent(inout) :: this
+
+    PUSH_SUB(base_handle_reset)
+
+    call base_handle__apply__(this, base_handle__reset__)
+
+    POP_SUB(base_handle_reset)
+  end subroutine base_handle_reset
+
+  ! ---------------------------------------------------------
+  subroutine base_handle_stop(this)
+    type(base_handle_t), intent(inout) :: this
 
     PUSH_SUB(base_handle_stop)
 
-    call base_handle_init(iter, this)
-    do
-      nullify(subs)
-      call base_handle_next(iter, subs, ierr)
-      if(ierr/=BASE_HANDLE_OK)exit
-      call base_handle_stop(subs)
-    end do
-    call base_handle_end(iter)
-    nullify(subs)
-    call base_handle__stop__(this)
+    call base_handle__apply__(this, base_handle__stop__)
 
     POP_SUB(base_handle_stop)
   end subroutine base_handle_stop
-
-  ! ---------------------------------------------------------
-  subroutine base_handle__reset__(this)
-    type(base_handle_t), intent(inout) :: this
-
-    PUSH_SUB(base_handle__reset__)
-
-    call base_model__reset__(this%model)
-
-    POP_SUB(base_handle__reset__)
-  end subroutine base_handle__reset__
 
   ! ---------------------------------------------------------
   subroutine base_handle__set__(this, that)
@@ -575,40 +496,23 @@ contains
 
     PUSH_SUB(base_handle__sets__)
 
-    call base_model_sets(this%model, name, that%model)
+    call base_model_sets(this%model, trim(adjustl(name)), that%model)
 
     POP_SUB(base_handle__sets__)
   end subroutine base_handle__sets__
 
   ! ---------------------------------------------------------
-  subroutine base_handle_sets(this, name, that)
+  subroutine base_handle__dels__(this, name, ierr)
     type(base_handle_t), intent(inout) :: this
     character(len=*),    intent(in)    :: name
-    type(base_handle_t), intent(in)    :: that
+    integer,             intent(out)   :: ierr
 
-    PUSH_SUB(base_handle_sets)
+    PUSH_SUB(base_handle__dels__)
 
-    ASSERT(associated(this%config))
-    call base_handle_dict_set(this%dict, trim(adjustl(name)), that)
-    call base_handle__sets__(this, name, that)
+    call base_model_dels(this%model, trim(adjustl(name)), ierr)
 
-    POP_SUB(base_handle_sets)
-  end subroutine base_handle_sets
-
-  ! ---------------------------------------------------------
-  subroutine base_handle_gets_name(this, name, that)
-    type(base_handle_t),  intent(in) :: this
-    character(len=*),     intent(in) :: name
-    type(base_handle_t), pointer     :: that
-
-    PUSH_SUB(base_handle_gets_name)
-
-    nullify(that)
-    ASSERT(associated(this%config))
-    call base_handle_dict_get(this%dict, trim(adjustl(name)), that)
-
-    POP_SUB(base_handle_gets_name)
-  end subroutine base_handle_gets_name
+    POP_SUB(base_handle__dels__)
+  end subroutine base_handle__dels__
 
   ! ---------------------------------------------------------
   subroutine base_handle_get_info(this, type)
@@ -714,17 +618,18 @@ contains
 
     PUSH_SUB(base_handle_get_model)
 
-    that => this%model
+    nullify(that)
+    if(associated(this%config)) that => this%model
 
     POP_SUB(base_handle_get_model)
   end subroutine base_handle_get_model
 
   ! ---------------------------------------------------------
-  subroutine base_handle__copy__begin(this, that)
+  subroutine base_handle__copy__(this, that)
     type(base_handle_t), intent(inout) :: this
     type(base_handle_t), intent(in)    :: that
 
-    PUSH_SUB(base_handle__copy__begin)
+    PUSH_SUB(base_handle__copy__)
 
     call base_handle__end__(this)
     if(associated(that%config))then
@@ -732,19 +637,8 @@ contains
       if(simulation_assoc(that%sim)) call base_model__copy__(this%model, that%model)
     end if
 
-    POP_SUB(base_handle__copy__begin)
-  end subroutine base_handle__copy__begin
-
-  ! ---------------------------------------------------------
-  subroutine base_handle__copy__finish(this)
-    type(base_handle_t), intent(inout) :: this
-
-    PUSH_SUB(base_handle__copy__finish)
-
-    call base_model__copy__(this%model)
-
-    POP_SUB(base_handle__copy__finish)
-  end subroutine base_handle__copy__finish
+    POP_SUB(base_handle__copy__)
+  end subroutine base_handle__copy__
 
   ! ---------------------------------------------------------
   recursive subroutine base_handle_copy_type(this, that)
@@ -771,7 +665,6 @@ contains
       call base_handle_sets(this, name, osub)
     end do
     call base_handle_end(iter)
-    call base_handle__copy__(this)
     nullify(osub, isub)
 
     POP_SUB(base_handle_copy_type)
@@ -788,6 +681,7 @@ contains
     call simulation_end(this%sim)
     call base_model__end__(this%model)
     call base_handle_dict_end(this%dict)
+    ASSERT(base_handle_list_len(this%list)==0)
     call base_handle_list_end(this%list)
 
     POP_SUB(base_handle__end__)
@@ -797,28 +691,40 @@ contains
   recursive subroutine base_handle_end_type(this)
     type(base_handle_t), intent(inout) :: this
 
+    PUSH_SUB(base_handle_end_type)
+
+    call base_handle_end(this, base_handle_end_type)
+    
+    POP_SUB(base_handle_end_type)
+  end subroutine base_handle_end_type
+
+  ! ---------------------------------------------------------
+  recursive subroutine base_handle_end_pass(this, finis)
+    type(base_handle_t), intent(inout) :: this
+
+    interface
+      subroutine finis(this)
+        import :: base_handle_t
+        type(base_handle_t), intent(inout) :: this
+      end subroutine finis
+    end interface
+    
     type(base_handle_t), pointer :: subs
 
-    PUSH_SUB(base_handle_end_type)
+    PUSH_SUB(base_handle_end_pass)
 
     do
       nullify(subs)
       call base_handle_list_pop(this%list, subs)
       if(.not.associated(subs))exit
-      call base_handle_end(subs)
+      call finis(subs)
       call base_handle__del__(subs)
     end do
     nullify(subs)
     call base_handle__end__(this)
 
-    POP_SUB(base_handle_end_type)
-  end subroutine base_handle_end_type
-
-#define TEMPLATE_PREFIX base_handle
-#define INCLUDE_BODY
-#include "iterator_inc.F90"
-#undef INCLUDE_BODY
-#undef TEMPLATE_PREFIX
+    POP_SUB(base_handle_end_pass)
+  end subroutine base_handle_end_pass
 
 end module base_handle_oct_m
 

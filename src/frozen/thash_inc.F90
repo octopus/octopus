@@ -101,12 +101,14 @@
 #define PAIR_FRST_TYPE_NAME HASH_KEY_TYPE_NAME
 #define PAIR_SCND_TYPE_NAME HASH_VAL_TYPE_NAME
 
-#define LIST_TEMPLATE_NAME DECORATE(IHASH_TMPL_NAME,hash_pair)
+#define LIST_TEMPLATE_NAME DECORATE(IHASH_TMPL_NAME,hash)
+#define LIST_TYPE_NAME DECORATE(IHASH_TMPL_NAME,hash_pair_t)
 
-#define DARR_TEMPLATE_NAME DECORATE(IHASH_TMPL_NAME,hash_pair_list)
+#define DARR_TEMPLATE_NAME DECORATE(IHASH_TMPL_NAME,hash)
+#define DARR_TYPE_NAME DECORATE(IHASH_TMPL_NAME,hash_list_t)
 
-#undef TEMPLATE_PREFIX
-#define TEMPLATE_PREFIX IHASH_TMPL_NAME
+#undef TEMPLATE_NAME
+#define TEMPLATE_NAME IHASH_TMPL_NAME
 #include "template.h"
 
 #if defined(HASH_INCLUDE_MODULE)
@@ -132,7 +134,7 @@ module TEMPLATE(hash_m)
 #include "tdarr_inc.F90"
 #undef DARR_INCLUDE_PREFIX
 
-#define TEMPLATE_PREFIX IHASH_TMPL_NAME
+#define TEMPLATE_NAME IHASH_TMPL_NAME
 #include "template.h"
 
   use kinds_oct_m
@@ -177,6 +179,8 @@ module TEMPLATE(hash_m)
 #endif
 #if defined(HASH_INCLUDE_HEADER) || defined(HASH_INCLUDE_MODULE)
 
+!begin hash_header_block
+  
 #define PAIR_INCLUDE_HEADER
 #include "tpair_inc.F90"
 #undef PAIR_INCLUDE_HEADER
@@ -189,7 +193,7 @@ module TEMPLATE(hash_m)
 #include "tdarr_inc.F90"
 #undef DARR_INCLUDE_HEADER
 
-#define TEMPLATE_PREFIX IHASH_TMPL_NAME
+#define TEMPLATE_NAME IHASH_TMPL_NAME
 #include "template.h"
 
   real(kind=wp), parameter :: INTERNAL(HASH_FACTOR) = DECORATE(HASH_GROWTH_FACTOR,wp)
@@ -201,16 +205,16 @@ module TEMPLATE(hash_m)
 
   type :: TEMPLATE(hash_t)
     private
-    integer                               :: size = 0
-    integer                               :: used = 0
-    type(TEMPLATE(hash_pair_list_darr_t)) :: data
+    integer                     :: size = 0
+    integer                     :: used = 0
+    type(TEMPLATE(hash_darr_t)) :: data
   end type TEMPLATE(hash_t)
 
   type :: TEMPLATE(hash_iterator_t)
     private
-    type(TEMPLATE(hash_t)),                pointer :: hash =>null()
-    type(TEMPLATE(hash_pair_list_darr_iterator_t)) :: itrd
-    type(TEMPLATE(hash_pair_list_iterator_t))      :: itrl
+    type(TEMPLATE(hash_t)),      pointer :: hash =>null()
+    type(TEMPLATE(hash_darr_iterator_t)) :: itrd
+    type(TEMPLATE(hash_list_iterator_t)) :: itrl
   end type TEMPLATE(hash_iterator_t)
 
   interface TEMPLATE(hash_init)
@@ -247,6 +251,8 @@ module TEMPLATE(hash_m)
     module procedure INTERNAL(hash_iterator_end)
   end interface TEMPLATE(hash_end)
 
+!end hash_header_block
+  
 #endif
 #if defined(HASH_INCLUDE_MODULE)
 
@@ -267,7 +273,7 @@ contains
 #include "tdarr_inc.F90"
 #undef DARR_INCLUDE_BODY
 
-#define TEMPLATE_PREFIX IHASH_TMPL_NAME
+#define TEMPLATE_NAME IHASH_TMPL_NAME
 #include "template.h"
 
   ! ---------------------------------------------------------
@@ -294,34 +300,34 @@ contains
   subroutine INTERNAL(hash_rehash)(this)
     type(TEMPLATE(hash_t)), intent(inout) :: this
 
-    type(HASH_KEY_TYPE_NAME),         pointer :: pkey
-    type(TEMPLATE(hash_pair_list_t))          :: list
-    type(TEMPLATE(hash_pair_list_t)), pointer :: plst
-    type(TEMPLATE(hash_pair_t)),      pointer :: pair
+    type(HASH_KEY_TYPE_NAME),    pointer :: pkey
+    type(TEMPLATE(hash_list_t))          :: list
+    type(TEMPLATE(hash_list_t)), pointer :: plst
+    type(TEMPLATE(hash_pair_t)), pointer :: pair
 
     PUSH_SUB(INTERNAL(hash_rehash))
 
     if(this%size<INTERNAL(hash_calc_size)(this%used))then
-      call TEMPLATE(hash_pair_list_init)(list)
+      call TEMPLATE(hash_list_init)(list)
       do
         nullify(pair)
         call INTERNAL(hash_pop_pair)(this, pair)
         if(.not.associated(pair)) exit
-        call TEMPLATE(hash_pair_list_push)(list, pair)
+        call TEMPLATE(hash_list_push)(list, pair)
       end do
       this%size = INTERNAL(hash_calc_size)(this%size)
-      call TEMPLATE(hash_pair_list_darr_realloc)(this%data, this%size)
+      call TEMPLATE(hash_darr_realloc)(this%data, this%size)
       do
         nullify(pkey, plst, pair)
-        call TEMPLATE(hash_pair_list_pop)(list, pair)
+        call TEMPLATE(hash_list_pop)(list, pair)
         if(.not.associated(pair)) exit
         call TEMPLATE(hash_pair_get)(pair, pkey)
         ASSERT(associated(pkey))
         call INTERNAL(hash_get_list)(this, pkey, plst)
-        call TEMPLATE(hash_pair_list_push)(plst, pair)
+        call TEMPLATE(hash_list_push)(plst, pair)
         this%used = this%used + 1
       end do
-      call TEMPLATE(hash_pair_list_end)(list)
+      call TEMPLATE(hash_list_end)(list)
       nullify(pkey, plst, pair)
     end if
 
@@ -333,8 +339,8 @@ contains
     type(TEMPLATE(hash_t)), intent(out) :: this
     integer,      optional, intent(in)  :: size
 
-    type(TEMPLATE(hash_pair_list_t)), pointer :: plst
-    integer                                   :: indx
+    type(TEMPLATE(hash_list_t)), pointer :: plst
+    integer                              :: indx
 
     PUSH_SUB(INTERNAL(hash_init))
 
@@ -342,12 +348,12 @@ contains
     ASSERT(INTERNAL(HASH_FACTOR)>1.0_wp)
     this%size=INTERNAL(HASH_SIZE)
     if(present(size))this%size=max(size,this%size)
-    call TEMPLATE(hash_pair_list_darr_init)(this%data, this%size)
+    call TEMPLATE(hash_darr_init)(this%data, this%size)
     do indx=1, this%size
       nullify(plst)
       SAFE_ALLOCATE(plst)
-      call TEMPLATE(hash_pair_list_init)(plst)
-      call TEMPLATE(hash_pair_list_darr_set)(this%data, indx, plst)
+      call TEMPLATE(hash_list_init)(plst)
+      call TEMPLATE(hash_darr_set)(this%data, indx, plst)
     end do
 
     POP_SUB(INTERNAL(hash_init))
@@ -358,8 +364,8 @@ contains
     type(TEMPLATE(hash_t)),       intent(inout) :: this
     type(TEMPLATE(hash_pair_t)), pointer        :: pair
 
-    type(TEMPLATE(hash_pair_list_t)), pointer :: plst
-    integer                                   :: indx
+    type(TEMPLATE(hash_list_t)), pointer :: plst
+    integer                              :: indx
 
     PUSH_SUB(INTERNAL(hash_pop_pair))
 
@@ -367,8 +373,8 @@ contains
     if(this%used>0)then
       do indx = 1, this%size
         nullify(pair, plst)
-        call TEMPLATE(hash_pair_list_darr_get)(this%data, indx, plst)
-        call TEMPLATE(hash_pair_list_pop)(plst, pair)
+        call TEMPLATE(hash_darr_get)(this%data, indx, plst)
+        call TEMPLATE(hash_list_pop)(plst, pair)
         if(associated(pair))then
           this%used = this%used - 1
           exit
@@ -445,7 +451,7 @@ contains
   subroutine INTERNAL(hash_get_list)(this, key, list)
     type(TEMPLATE(hash_t)),   intent(in) :: this
     type(HASH_KEY_TYPE_NAME), intent(in) :: key
-    type(TEMPLATE(hash_pair_list_t)),  pointer     :: list
+    type(TEMPLATE(hash_list_t)),  pointer     :: list
 
     integer :: ipos
 
@@ -453,7 +459,7 @@ contains
 
     nullify(list)
     ipos = modulo(HASH_KEY_FUNCTION_NAME(key), this%size) + 1
-    call TEMPLATE(hash_pair_list_darr_get)(this%data, ipos, list)
+    call TEMPLATE(hash_darr_get)(this%data, ipos, list)
     ASSERT(associated(list))
 
     POP_SUB(INTERNAL(hash_get_list))
@@ -461,28 +467,28 @@ contains
 
   ! ---------------------------------------------------------
   subroutine INTERNAL(hash_get_list_pair)(this, key, list, pair)
-    type(TEMPLATE(hash_t)),            intent(in) :: this
-    type(HASH_KEY_TYPE_NAME),          intent(in) :: key
-    type(TEMPLATE(hash_pair_list_t)), pointer     :: list
-    type(TEMPLATE(hash_pair_t)),      pointer     :: pair
+    type(TEMPLATE(hash_t)),       intent(in) :: this
+    type(HASH_KEY_TYPE_NAME),     intent(in) :: key
+    type(TEMPLATE(hash_list_t)), pointer     :: list
+    type(TEMPLATE(hash_pair_t)), pointer     :: pair
 
-    type(HASH_KEY_TYPE_NAME),         pointer :: pkey
-    type(TEMPLATE(hash_pair_list_iterator_t)) :: iter
+    type(HASH_KEY_TYPE_NAME),    pointer :: pkey
+    type(TEMPLATE(hash_list_iterator_t)) :: iter
 
     PUSH_SUB(INTERNAL(hash_get_list_pair))
 
     call INTERNAL(hash_get_list)(this, key, list)
     ASSERT(associated(list))
-    call TEMPLATE(hash_pair_list_init)(iter, list)
+    call TEMPLATE(hash_list_init)(iter, list)
     do
       nullify(pair, pkey)
-      call TEMPLATE(hash_pair_list_next)(iter, pair)
+      call TEMPLATE(hash_list_next)(iter, pair)
       if(.not.associated(pair)) exit
       call TEMPLATE(hash_pair_get)(pair, pkey)
       ASSERT(associated(pkey))
       if(key==pkey)exit
     end do
-    call TEMPLATE(hash_pair_list_end)(iter)
+    call TEMPLATE(hash_list_end)(iter)
     nullify(pkey)
 
     POP_SUB(INTERNAL(hash_get_list_pair))
@@ -495,8 +501,8 @@ contains
 
     logical :: has
 
-    type(TEMPLATE(hash_pair_list_t)), pointer :: list
-    type(TEMPLATE(hash_pair_t)),      pointer :: pair
+    type(TEMPLATE(hash_list_t)), pointer :: list
+    type(TEMPLATE(hash_pair_t)), pointer :: pair
 
     PUSH_SUB(TEMPLATE(hash_has_key))
 
@@ -514,8 +520,8 @@ contains
     type(HASH_KEY_TYPE_NAME), intent(in)    :: key
     type(HASH_VAL_TYPE_NAME), intent(in)    :: val
 
-    type(TEMPLATE(hash_pair_list_t)), pointer :: list
-    type(TEMPLATE(hash_pair_t)),      pointer :: pair
+    type(TEMPLATE(hash_list_t)), pointer :: list
+    type(TEMPLATE(hash_pair_t)), pointer :: pair
 
     PUSH_SUB(TEMPLATE(hash_set))
 
@@ -525,7 +531,7 @@ contains
       call TEMPLATE(hash_pair_set)(pair, val)
     else
       call TEMPLATE(hash_pair_new)(pair, key, val)
-      call TEMPLATE(hash_pair_list_push)(list, pair)
+      call TEMPLATE(hash_list_push)(list, pair)
       this%used = this%used + 1
       call INTERNAL(hash_rehash)(this)
     end if
@@ -541,9 +547,9 @@ contains
     type(HASH_VAL_TYPE_NAME), pointer      :: val
     integer,         optional, intent(out) :: ierr
 
-    type(TEMPLATE(hash_pair_list_t)), pointer :: list
-    type(TEMPLATE(hash_pair_t)),      pointer :: pair
-    integer                                   :: jerr
+    type(TEMPLATE(hash_list_t)), pointer :: list
+    type(TEMPLATE(hash_pair_t)), pointer :: pair
+    integer                              :: jerr
 
     PUSH_SUB(TEMPLATE(hash_get))
 
@@ -567,8 +573,8 @@ contains
     type(TEMPLATE(hash_pair_t)), pointer        :: pair
     integer,            optional, intent(out)   :: ierr
 
-    type(TEMPLATE(hash_pair_list_t)), pointer :: list
-    integer                                   :: jerr
+    type(TEMPLATE(hash_list_t)), pointer :: list
+    integer                              :: jerr
 
     PUSH_SUB(INTERNAL(hash_del_pair))
 
@@ -576,8 +582,8 @@ contains
     jerr = TEMPLATE(HASH_KEY_ERROR)
     call INTERNAL(hash_get_list_pair)(this, key, list, pair)
     if(associated(list).and.associated(pair))then
-      call TEMPLATE(hash_pair_list_del)(list, pair, jerr)
-      ASSERT(jerr==TEMPLATE(HASH_PAIR_LIST_OK))
+      call TEMPLATE(hash_list_del)(list, pair, jerr)
+      ASSERT(jerr==TEMPLATE(HASH_LIST_OK))
       this%used = this%used - 1
       jerr = TEMPLATE(HASH_OK)
     end if
@@ -709,19 +715,19 @@ contains
   subroutine INTERNAL(hash_end)(this)
     type(TEMPLATE(hash_t)), intent(inout) :: this
 
-    type(TEMPLATE(hash_pair_list_t)), pointer :: plst
-    integer                                   :: indx
+    type(TEMPLATE(hash_list_t)), pointer :: plst
+    integer                              :: indx
 
     PUSH_SUB(INTERNAL(hash_end))
 
     call INTERNAL(hash_purge)(this)
     do indx=1, this%size
       nullify(plst)
-      call TEMPLATE(hash_pair_list_darr_get)(this%data, indx, plst)
-      call TEMPLATE(hash_pair_list_end)(plst)
+      call TEMPLATE(hash_darr_get)(this%data, indx, plst)
+      call TEMPLATE(hash_list_end)(plst)
       SAFE_DEALLOCATE_P(plst)
     end do
-    call TEMPLATE(hash_pair_list_darr_end)(this%data)
+    call TEMPLATE(hash_darr_end)(this%data)
     this%size = 0
 
     POP_SUB(INTERNAL(hash_end))
@@ -732,8 +738,8 @@ contains
     type(TEMPLATE(hash_iterator_t)), intent(out) :: this
     type(TEMPLATE(hash_t)),  target, intent(in)  :: that
 
-    type(TEMPLATE(hash_pair_list_t)), pointer :: plst
-    integer                                   :: ierr
+    type(TEMPLATE(hash_list_t)), pointer :: plst
+    integer                              :: ierr
 
     PUSH_SUB(INTERNAL(hash_iterator_init_hash))
 
@@ -741,11 +747,11 @@ contains
     call INTERNAL(hash_iterator_end)(this)
     if(that%used>0)then
       this%hash => that
-      call TEMPLATE(hash_pair_list_darr_init)(this%itrd, that%data)
-      call TEMPLATE(hash_pair_list_darr_next)(this%itrd, plst, ierr)
-      ASSERT(ierr==TEMPLATE(HASH_PAIR_LIST_DARR_OK))
+      call TEMPLATE(hash_darr_init)(this%itrd, that%data)
+      call TEMPLATE(hash_darr_next)(this%itrd, plst, ierr)
+      ASSERT(ierr==TEMPLATE(HASH_DARR_OK))
       ASSERT(associated(plst))
-      call TEMPLATE(hash_pair_list_init)(this%itrl, plst)
+      call TEMPLATE(hash_list_init)(this%itrl, plst)
       nullify(plst)
     end if
 
@@ -769,8 +775,8 @@ contains
     type(TEMPLATE(hash_iterator_t)), intent(inout) :: this
     type(TEMPLATE(hash_pair_t)),    pointer        :: that
 
-    type(TEMPLATE(hash_pair_list_t)), pointer :: plst
-    integer                                   :: ierr
+    type(TEMPLATE(hash_list_t)), pointer :: plst
+    integer                              :: ierr
 
     PUSH_SUB(INTERNAL(hash_iterator_next_pair))
 
@@ -778,14 +784,14 @@ contains
     if(associated(this%hash))then
       do
         nullify(that)
-        call TEMPLATE(hash_pair_list_next)(this%itrl, that)
+        call TEMPLATE(hash_list_next)(this%itrl, that)
         if(associated(that))exit
         nullify(that)
-        call TEMPLATE(hash_pair_list_end)(this%itrl)
-        call TEMPLATE(hash_pair_list_darr_next)(this%itrd, plst, ierr)
-        if(ierr/=TEMPLATE(HASH_PAIR_LIST_DARR_OK))exit
+        call TEMPLATE(hash_list_end)(this%itrl)
+        call TEMPLATE(hash_darr_next)(this%itrd, plst, ierr)
+        if(ierr/=TEMPLATE(HASH_DARR_OK))exit
         ASSERT(associated(plst))
-        call TEMPLATE(hash_pair_list_init)(this%itrl, plst)
+        call TEMPLATE(hash_list_init)(this%itrl, plst)
         nullify(plst)
       end do
     end if
@@ -859,8 +865,8 @@ contains
 
     call INTERNAL(hash_iterator_end)(this)
     this%hash => that%hash
-    call TEMPLATE(hash_pair_list_darr_copy)(this%itrd, that%itrd)
-    call TEMPLATE(hash_pair_list_copy)(this%itrl, that%itrl)
+    call TEMPLATE(hash_darr_copy)(this%itrd, that%itrd)
+    call TEMPLATE(hash_list_copy)(this%itrl, that%itrl)
 
     POP_SUB(INTERNAL(hash_iterator_copy))
   end subroutine INTERNAL(hash_iterator_copy)
@@ -870,8 +876,8 @@ contains
     type(TEMPLATE(hash_iterator_t)), intent(inout) :: this
 
     nullify(this%hash)
-    call TEMPLATE(hash_pair_list_darr_end)(this%itrd)
-    call TEMPLATE(hash_pair_list_end)(this%itrl)
+    call TEMPLATE(hash_darr_end)(this%itrd)
+    call TEMPLATE(hash_list_end)(this%itrl)
 
   end subroutine INTERNAL(hash_iterator_end)
 
@@ -890,10 +896,11 @@ end module TEMPLATE(hash_m)
 #undef LIST_TYPE_NAME
 
 #undef DARR_TEMPLATE_NAME
+#undef DARR_TYPE_NAME
 
 #undef IHASH_TMPL_NAME
 
-#undef TEMPLATE_PREFIX
+#undef TEMPLATE_NAME
 
 !! Local Variables:
 !! mode: f90

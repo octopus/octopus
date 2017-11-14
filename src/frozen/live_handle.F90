@@ -8,7 +8,6 @@ module live_handle_oct_m
   use global_oct_m
   use grid_oct_m
   use json_oct_m
-  use live_geometry_oct_m
   use messages_oct_m
   use profiling_oct_m
 
@@ -42,7 +41,7 @@ contains
     nullify(geom)
     call base_handle_get(this, geom)
     ASSERT(associated(geom))
-    call live_geometry__init__(geom, geo)
+    call base_geometry_set(geom, geo)
     nullify(geom)
 
     POP_SUB(live_handle__init__)
@@ -86,7 +85,7 @@ contains
 
     PUSH_SUB(live_handle_stop)
 
-    call base_handle__stop__(this)
+    call base_handle_stop(this)
 
     POP_SUB(live_handle_stop)
   end subroutine live_handle_stop
@@ -98,8 +97,7 @@ contains
 
     PUSH_SUB(live_handle_copy)
 
-    call base_handle__copy__(this, that)
-    call base_handle__copy__(this)
+    call base_handle_copy(this, that)
 
     POP_SUB(live_handle_copy)
   end subroutine live_handle_copy
@@ -108,9 +106,13 @@ contains
   subroutine live_handle_end(this)
     type(base_handle_t), intent(inout) :: this
 
+    integer :: type
+
     PUSH_SUB(live_handle_end)
 
-    call base_handle__end__(this)
+    call base_handle_get(this, type=type)
+    ASSERT(type==HNDL_TYPE_LIVE)
+    call base_handle_end(this)
 
     POP_SUB(live_handle_end)
   end subroutine live_handle_end
