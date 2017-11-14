@@ -205,7 +205,7 @@ contains
   end subroutine base_handle__init__type
 
   ! ---------------------------------------------------------
-  subroutine base_handle__init__pass(this, init)
+  recursive subroutine base_handle__init__pass(this, init)
     type(base_handle_t), target, intent(inout) :: this
 
     interface
