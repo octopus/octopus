@@ -1401,7 +1401,7 @@ contains
 
     PUSH_SUB(spectrum_hs_ar_from_acc)
 
-    call spectrum_tdfile_info('td.general/acceleration', iunit, time_steps, dt)
+    call spectrum_tdfile_info('acceleration', iunit, time_steps, dt)
     call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
 
     ! load dipole from file
@@ -1719,7 +1719,7 @@ contains
 
     PUSH_SUB(spectrum_hs_from_acc)
 
-    call spectrum_tdfile_info('td.general/acceleration', iunit, time_steps, dt)
+    call spectrum_tdfile_info('acceleration', iunit, time_steps, dt)
     call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
 
     if(spectrum%energy_step <= M_ZERO) spectrum%energy_step = M_TWO * M_PI / (dt*time_steps)
@@ -1822,7 +1822,7 @@ contains
 
     PUSH_SUB(spectrum_hs_from_current)
 
-    call spectrum_tdfile_info('td.general/total_current', iunit, time_steps, dt)
+    call spectrum_tdfile_info('total_current', iunit, time_steps, dt)
     call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
 
     if(spectrum%energy_step <= M_ZERO) spectrum%energy_step = M_TWO * M_PI / (dt*time_steps)
@@ -2120,12 +2120,21 @@ contains
 
     integer :: trash
     FLOAT :: t1, t2, dummy
+    character(len=256) :: filename
+    
 
     PUSH_SUB(spectrum_tdfile_info)
 
 
     ! open files
-    iunit = io_open(fname, action='read', status='old')      
+    filename = trim('td.general')//trim(fname)
+    iunit = io_open(filename, action='read', status='old')      
+
+    if(iunit < 0) then
+      filename = trim('./')//trim(fname)
+      iunit = io_open(filename, action='read', status='old')
+    end if
+
 
     ! read in dipole
     call io_skip_header(iunit)
