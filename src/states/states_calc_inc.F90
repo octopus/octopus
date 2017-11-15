@@ -1399,7 +1399,6 @@ end subroutine X(states_calc_projections)
 
 ! ---------------------------------------------------------
 subroutine X(states_me_one_body)(dir, gr, geo, st, nspin, vhxc, nint, iindex, jindex, oneint)
-  use xc_oct_m
 
   character(len=*),    intent(in)    :: dir
   type(grid_t),        intent(inout) :: gr

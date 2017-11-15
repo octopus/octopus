@@ -242,12 +242,6 @@ contains
       SAFE_DEALLOCATE_A(oneint)
       call io_close(iunit)
 
-
-      if (states_are_real(st)) then
-        call doutput_me_gauge(dir, gr, geo, st, hm)
-      else
-        call zoutput_me_gauge(dir, gr, geo, st, hm)
-      end if
     end if
 
     if(iand(this%what, output_me_two_body) /= 0) then
