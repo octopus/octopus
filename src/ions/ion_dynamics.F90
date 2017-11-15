@@ -464,6 +464,9 @@ contains
     end if
 
     if (this%drive_ions .and. associated(this%td_displacements) ) then
+      if (any (this%td_displacements(1:this%geo_t0%natoms)%move)) then
+        call geometry_end(this%geo_t0)
+      end if
       SAFE_DEALLOCATE_P(this%td_displacements)
     end if
     
