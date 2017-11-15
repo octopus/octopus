@@ -389,6 +389,8 @@ contains
   ! ---------------------------------------------------------
   ! Calculate the current matrix element between two states
   ! I_{ij}(t) = <i| J(t) |j>
+  ! This is used only in the floquet_observables utility and 
+  ! is highly experimental
   
   subroutine current_calculate_mel(der, hm, geo, psi_i, psi_j, ik,  cmel)
     type(derivatives_t),  intent(inout) :: der
