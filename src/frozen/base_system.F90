@@ -106,10 +106,6 @@ module base_system_oct_m
     module procedure base_system_copy_type
   end interface base_system_copy
 
-  interface base_system_end
-    module procedure base_system_end_type
-  end interface base_system_end
-
 contains
 
 #define BASE_TEMPLATE_NAME base_system
@@ -158,23 +154,6 @@ contains
 
     POP_SUB(base_system_new)
   end subroutine base_system_new
-
-  ! ---------------------------------------------------------
-  subroutine base_system_del(this)
-    type(base_system_t), pointer :: this
-
-    PUSH_SUB(base_system_del)
-
-    if(associated(this))then
-      if(associated(this%prnt))then
-        call base_system_list_del(this%prnt%list, this)
-        call base_system_end(this)
-        call base_system__del__(this)
-      end if
-    end if
-
-    POP_SUB(base_system_del)
-  end subroutine base_system_del
 
   ! ---------------------------------------------------------
   subroutine base_system__iinit__(this, config)
@@ -665,31 +644,11 @@ contains
     call base_geometry__end__(this%geom)
     call base_states__end__(this%st)
     call base_system_dict_end(this%dict)
+    ASSERT(base_system_list_len(this%list)==0)
     call base_system_list_end(this%list)
 
     POP_SUB(base_system__end__)
   end subroutine base_system__end__
-
-  ! ---------------------------------------------------------
-  recursive subroutine base_system_end_type(this)
-    type(base_system_t), intent(inout) :: this
-
-    type(base_system_t), pointer :: subs
-
-    PUSH_SUB(base_system_end_type)
-
-    do
-      nullify(subs)
-      call base_system_list_pop(this%list, subs)
-      if(.not.associated(subs))exit
-      call base_system_end(subs)
-      call base_system__del__(subs)
-    end do
-    nullify(subs)
-    call base_system__end__(this)
-
-    POP_SUB(base_system_end_type)
-  end subroutine base_system_end_type
 
 end module base_system_oct_m
 

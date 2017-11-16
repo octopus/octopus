@@ -2,8 +2,9 @@
 
 module ssys_handle_oct_m
 
+  use refcount_oct_m
+
   use base_functional_oct_m
-  use base_geometry_oct_m
   use base_hamiltonian_oct_m
   use base_handle_oct_m
   use frozen_handle_oct_m
@@ -13,8 +14,9 @@ module ssys_handle_oct_m
   use json_oct_m
   use live_handle_oct_m
   use messages_oct_m
-  use mpi_oct_m
   use profiling_oct_m
+  use simulation_oct_m
+  use space_oct_m
 
   implicit none
 
@@ -89,7 +91,6 @@ contains
     ASSERT(type==HNDL_TYPE_SSYS)
     call base_handle__init__(this, init)
     call ssys_handle__init__(this)
-    call base_handle__init__(this)
 
     POP_SUB(ssys_handle_init)
     
@@ -120,9 +121,9 @@ contains
   end subroutine ssys_handle_init
 
   ! ---------------------------------------------------------
-  subroutine ssys_handle__start__(this, grid)
+  subroutine ssys_handle__start__(this, sim)
     type(base_handle_t), intent(inout) :: this
-    type(grid_t),        intent(in)    :: grid
+    type(simulation_t),  intent(in)    :: sim
 
     integer :: type
 
@@ -131,11 +132,9 @@ contains
     call base_handle_get(this, type)
     select case(type)
     case(HNDL_TYPE_FRZN)
-      call frozen_handle_start(this, grid, mpi_world)
+      call frozen_handle_start(this, sim)
     case(HNDL_TYPE_LIVE)
-      call live_handle_start(this, grid)
-    case(HNDL_TYPE_SSYS)
-      call base_handle__start__(this, grid)
+      call live_handle_start(this, sim)
     case default
       ASSERT(.false.)
     end select
@@ -150,21 +149,22 @@ contains
 
     PUSH_SUB(ssys_handle_start)
 
-    call base_handle__apply__(this, start)
+    call base_handle__start__(this, simstr)
+    call base_handle_start(this, ssys_handle__start__)
 
     POP_SUB(ssys_handle_start)
     
   contains
 
-    subroutine start(this)
-      type(base_handle_t), intent(inout) :: this
+    subroutine simstr(this)
+      type(simulation_t), intent(inout) :: this
 
-      PUSH_SUB(ssys_handle_start.start)
-      
-      call ssys_handle__start__(this, grid)
+      PUSH_SUB(ssys_handle_start.simstr)
 
-      POP_SUB(ssys_handle_start.start)
-    end subroutine start
+      call simulation_start(this, grid)
+
+      POP_SUB(ssys_handle_start.simstr)
+    end subroutine simstr
 
   end subroutine ssys_handle_start
 

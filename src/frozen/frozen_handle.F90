@@ -14,6 +14,7 @@ module frozen_handle_oct_m
   use messages_oct_m
   use mpi_oct_m
   use profiling_oct_m
+  use simulation_oct_m
 
   implicit none
 
@@ -65,7 +66,6 @@ contains
     ASSERT(type==HNDL_TYPE_FRZN)
     call base_handle__init__(this, fio_handle_init)
     call frozen_handle__init__(this, config)
-    call base_handle__init__(this)
 
     POP_SUB(frozen_handle_init)
   end subroutine frozen_handle_init
@@ -93,9 +93,9 @@ contains
   end subroutine frozen_handle__acc__
 
   ! ---------------------------------------------------------
-  subroutine frozen_handle__load__(this, mpi_group)
+  subroutine frozen_handle__load__(this, group)
     type(base_handle_t), intent(inout) :: this !> frozen
-    type(mpi_grp_t),     intent(in)    :: mpi_group
+    type(mpi_grp_t),     intent(in)    :: group
 
     type(base_handle_iterator_t) :: iter
     type(base_handle_t), pointer :: hndl !> fio
@@ -112,7 +112,7 @@ contains
       if(.not.associated(hndl))exit
       call base_handle_get(hndl, cnfg)
       ASSERT(associated(cnfg))
-      call fio_handle_start(hndl, mpi_group)
+      call fio_handle_start(hndl, group)
       call frozen_handle__acc__(this, hndl, cnfg)
       call fio_handle_stop(hndl)
     end do
@@ -124,15 +124,18 @@ contains
   end subroutine frozen_handle__load__
 
   ! ---------------------------------------------------------
-  subroutine frozen_handle_start(this, grid, mpi_group)
+  subroutine frozen_handle_start(this, sim)
     type(base_handle_t), intent(inout) :: this !> frozen
-    type(grid_t),        intent(in)    :: grid
-    type(mpi_grp_t),     intent(in)    :: mpi_group
+    type(simulation_t),  intent(in)    :: sim
+    
+    type(mpi_grp_t), pointer :: group
 
     PUSH_SUB(frozen_handle_start)
 
-    call base_handle__start__(this, grid)
-    call frozen_handle__load__(this, mpi_group)
+    call base_handle__start__(this, sim)
+    call simulation_get(sim, group)
+    ASSERT(associated(group))
+    call frozen_handle__load__(this, group)
 
     POP_SUB(frozen_handle_start)
   end subroutine frozen_handle_start
@@ -155,6 +158,7 @@ contains
 
     PUSH_SUB(frozen_handle_copy)
 
+    call frozen_handle_end(this)
     call base_handle_copy(this, that)
 
     POP_SUB(frozen_handle_copy)

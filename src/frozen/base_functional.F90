@@ -116,10 +116,6 @@ module base_functional_oct_m
     module procedure base_functional_copy_type
   end interface base_functional_copy
 
-  interface base_functional_end
-    module procedure base_functional_end_type
-  end interface base_functional_end
-
 contains
 
 #define BASE_TEMPLATE_NAME base_functional
@@ -168,23 +164,6 @@ contains
 
     POP_SUB(base_functional_new)
   end subroutine base_functional_new
-
-  ! ---------------------------------------------------------
-  subroutine base_functional_del(this)
-    type(base_functional_t), pointer :: this
-
-    PUSH_SUB(base_functional_del)
-
-    if(associated(this))then
-      if(associated(this%prnt))then
-        call base_functional_list_del(this%prnt%list, this)
-        call base_functional_end(this)
-        call base_functional__del__(this)
-      end if
-    end if
-
-    POP_SUB(base_functional_del)
-  end subroutine base_functional_del
 
   ! ---------------------------------------------------------
   subroutine base_functional__init__type(this, sys, config)
@@ -676,31 +655,11 @@ contains
     call functional_end(this%funct)
     call storage_end(this%data)
     call base_functional_dict_end(this%dict)
+    ASSERT(base_functional_list_len(this%list)==0)
     call base_functional_list_end(this%list)
 
     POP_SUB(base_functional__end__)
   end subroutine base_functional__end__
-
-  ! ---------------------------------------------------------
-  recursive subroutine base_functional_end_type(this)
-    type(base_functional_t), intent(inout) :: this
-
-    type(base_functional_t), pointer :: subs
-
-    PUSH_SUB(base_functional_end_type)
-
-    do
-      nullify(subs)
-      call base_functional_list_pop(this%list, subs)
-      if(.not.associated(subs))exit
-      call base_functional_end(subs)
-      call base_functional__del__(subs)
-    end do
-    nullify(subs)
-    call base_functional__end__(this)
-
-    POP_SUB(base_functional_end_type)
-  end subroutine base_functional_end_type
 
 end module base_functional_oct_m
 

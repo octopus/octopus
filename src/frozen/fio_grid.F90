@@ -28,20 +28,19 @@ module fio_grid_oct_m
 
   private
 
-  public ::         &
-    fio_grid_init,  &
-    fio_grid_start, &
-    fio_grid_stop,  &
-    fio_grid_copy,  &
+  public ::        &
+    fio_grid_init, &
+    fio_grid_copy, &
     fio_grid_end
 
 contains
   
   ! ---------------------------------------------------------
-  subroutine fio_grid_init(this, geo, space, config)
+  subroutine fio_grid_init(this, geo, space, group, config)
     type(grid_t), target, intent(out) :: this
     type(geometry_t),     intent(in)  :: geo
     type(space_t),        intent(in)  :: space
+    type(mpi_grp_t),      intent(in)  :: group
     type(json_object_t),  intent(in)  :: config
 
     type(json_object_t), pointer :: cnfg
@@ -58,6 +57,10 @@ contains
     ASSERT(ierr==JSON_OK)
     call fio_curvilinear_init(this%cv, this%sb, geo, cnfg)
     nullify(cnfg)
+    call json_get(config, "mesh", cnfg, ierr)
+    ASSERT(ierr==JSON_OK)
+    call fio_mesh_init(this%mesh, this%sb, this%cv, group, cnfg)
+    nullify(cnfg)
     call multigrid_level_nullify(this%fine)
     call derivatives_nullify(this%der)
     call double_grid_nullify(this%dgrid)
@@ -70,36 +73,25 @@ contains
     POP_SUB(fio_grid_init)
   end subroutine fio_grid_init
 
-  ! ---------------------------------------------------------
-  subroutine fio_grid_start(this, mpi_grp, config)
-    type(grid_t),        intent(inout) :: this
-    type(mpi_grp_t),     intent(in)    :: mpi_grp
-    type(json_object_t), intent(in)    :: config
+  ! ! ---------------------------------------------------------
+  ! subroutine fio_grid_start(this, mpi_grp, config)
+  !   type(grid_t),        intent(inout) :: this
+  !   type(mpi_grp_t),     intent(in)    :: mpi_grp
+  !   type(json_object_t), intent(in)    :: config
 
-    type(json_object_t), pointer :: cnfg
-    integer                      :: ierr
+  !   type(json_object_t), pointer :: cnfg
+  !   integer                      :: ierr
 
-    PUSH_SUB(fio_grid_start)
+  !   PUSH_SUB(fio_grid_start)
 
-    nullify(cnfg)
-    call json_get(config, "mesh", cnfg, ierr)
-    ASSERT(ierr==JSON_OK)
-    call fio_mesh_init(this%mesh, this%sb, this%cv, mpi_grp, cnfg)
-    nullify(cnfg)
+  !   nullify(cnfg)
+  !   call json_get(config, "mesh", cnfg, ierr)
+  !   ASSERT(ierr==JSON_OK)
+  !   call fio_mesh_init(this%mesh, this%sb, this%cv, mpi_grp, cnfg)
+  !   nullify(cnfg)
 
-    POP_SUB(fio_grid_start)
-  end subroutine fio_grid_start
-
-  ! ---------------------------------------------------------
-  subroutine fio_grid_stop(this)
-    type(grid_t),    intent(inout) :: this
-
-    PUSH_SUB(fio_grid_stop)
-
-    call fio_mesh_end(this%mesh)
-
-    POP_SUB(fio_grid_stop)
-  end subroutine fio_grid_stop
+  !   POP_SUB(fio_grid_start)
+  ! end subroutine fio_grid_start
 
   ! ---------------------------------------------------------
   subroutine fio_grid_copy(this, that)

@@ -99,10 +99,6 @@ module base_states_oct_m
     module procedure base_states_copy_type
   end interface base_states_copy
 
-  interface base_states_end
-    module procedure base_states_end_type
-  end interface base_states_end
-
 contains
     
 #define BASE_TEMPLATE_NAME base_states
@@ -151,24 +147,6 @@ contains
 
     POP_SUB(base_states_new)
   end subroutine base_states_new
-
-  ! ---------------------------------------------------------
-  subroutine base_states_del(this)
-    type(base_states_t), pointer :: this
-
-    PUSH_SUB(base_states_del)
-
-    if(associated(this))then
-      if(associated(this%prnt))then
-        call base_states_list_del(this%prnt%list, this)
-        call base_states_end(this)
-        call base_states__del__(this)
-      end if
-    end if
-    nullify(this)
-
-    POP_SUB(base_states_del)
-  end subroutine base_states_del
 
   ! ---------------------------------------------------------
   subroutine base_states__iinit__(this, config)
@@ -663,32 +641,12 @@ contains
     nullify(this%config, this%sim, this%prnt)
     call base_density__end__(this%density)
     call base_states_dict_end(this%dict)
+    ASSERT(base_states_list_len(this%list)==0)
     call base_states_list_end(this%list)
 
     POP_SUB(base_states__end__)
   end subroutine base_states__end__
     
-  ! ---------------------------------------------------------
-  recursive subroutine base_states_end_type(this)
-    type(base_states_t), intent(inout) :: this
-
-    type(base_states_t), pointer :: subs
-
-    PUSH_SUB(base_states_end_type)
-
-    do
-      nullify(subs)
-      call base_states_list_pop(this%list, subs)
-      if(.not.associated(subs))exit
-      call base_states_end(subs)
-      call base_states__del__(subs)
-    end do
-    nullify(subs)
-    call base_states__end__(this)
-
-    POP_SUB(base_states_end_type)
-  end subroutine base_states_end_type
-
 end module base_states_oct_m
 
 !! Local Variables:

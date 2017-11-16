@@ -111,10 +111,6 @@ module base_density_oct_m
     module procedure base_density_copy_type
   end interface base_density_copy
 
-  interface base_density_end
-    module procedure base_density_end_type
-  end interface base_density_end
-
 contains
 
 #define BASE_TEMPLATE_NAME base_density
@@ -163,23 +159,6 @@ contains
 
     POP_SUB(base_density_new)
   end subroutine base_density_new
-
-  ! ---------------------------------------------------------
-  subroutine base_density_del(this)
-    type(base_density_t), pointer :: this
-
-    PUSH_SUB(base_density_del)
-
-    if(associated(this))then
-      if(associated(this%prnt))then
-        call base_density_list_del(this%prnt%list, this)
-        call base_density_end(this)
-        call base_density__del__(this)
-      end if
-    end if
-
-    POP_SUB(base_density_del)
-  end subroutine base_density_del
 
   ! ---------------------------------------------------------
   subroutine base_density__iinit__(this, config)
@@ -923,27 +902,6 @@ contains
 
     POP_SUB(base_density__end__)
   end subroutine base_density__end__
-
-  ! ---------------------------------------------------------
-  recursive subroutine base_density_end_type(this)
-    type(base_density_t), intent(inout) :: this
-
-    type(base_density_t), pointer :: subs
-
-    PUSH_SUB(base_density_end_type)
-
-    do
-      nullify(subs)
-      call base_density_list_pop(this%list, subs)
-      if(.not.associated(subs))exit
-      call base_density_end(subs)
-      call base_density__del__(subs)
-    end do
-    nullify(subs)
-    call base_density__end__(this)
-
-    POP_SUB(base_density_end_type)
-  end subroutine base_density_end_type
 
 end module base_density_oct_m
 

@@ -118,10 +118,6 @@ module base_potential_oct_m
     module procedure base_potential_copy_type
   end interface base_potential_copy
 
-  interface base_potential_end
-    module procedure base_potential_end_type
-  end interface base_potential_end
-
 contains
 
 #define BASE_TEMPLATE_NAME base_potential
@@ -170,23 +166,6 @@ contains
 
     POP_SUB(base_potential_new)
   end subroutine base_potential_new
-
-  ! ---------------------------------------------------------
-  subroutine base_potential_del(this)
-    type(base_potential_t), pointer :: this
-
-    PUSH_SUB(base_potential_del)
-
-    if(associated(this))then
-      if(associated(this%prnt))then
-        call base_potential_list_del(this%prnt%list, this)
-        call base_potential_end(this)
-        call base_potential__del__(this)
-      end if
-    end if
-
-    POP_SUB(base_potential_del)
-  end subroutine base_potential_del
 
   ! ---------------------------------------------------------
   subroutine base_potential__init__type(this, sys, config)
@@ -706,27 +685,6 @@ contains
 
     POP_SUB(base_potential__end__)
   end subroutine base_potential__end__
-
-  ! ---------------------------------------------------------
-  recursive subroutine base_potential_end_type(this)
-    type(base_potential_t), intent(inout) :: this
-
-    type(base_potential_t), pointer :: subs
-
-    PUSH_SUB(base_potential_end_type)
-
-    do
-      nullify(subs)
-      call base_potential_list_pop(this%list, subs)
-      if(.not.associated(subs))exit
-      call base_potential_end(subs)
-      call base_potential__del__(subs)
-    end do
-    nullify(subs)
-    call base_potential__end__(this)
-
-    POP_SUB(base_potential_end_type)
-  end subroutine base_potential_end_type
 
 end module base_potential_oct_m
 

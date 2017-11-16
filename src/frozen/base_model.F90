@@ -99,10 +99,6 @@ module base_model_oct_m
     module procedure base_model_copy_type
   end interface base_model_copy
 
-  interface base_model_end
-    module procedure base_model_end_type
-  end interface base_model_end
-
 contains
 
 #define BASE_TEMPLATE_NAME base_model
@@ -151,23 +147,6 @@ contains
 
     POP_SUB(base_model_new)
   end subroutine base_model_new
-
-  ! ---------------------------------------------------------
-  subroutine base_model_del(this)
-    type(base_model_t), pointer :: this
-
-    PUSH_SUB(base_model_del)
-
-    if(associated(this))then
-      if(associated(this%prnt))then
-        call base_model_list_del(this%prnt%list, this)
-        call base_model_end(this)
-        call base_model__del__(this)
-      end if
-    end if
-
-    POP_SUB(base_model_del)
-  end subroutine base_model_del
 
   ! ---------------------------------------------------------
   subroutine base_model__init__type(this, config)
@@ -580,31 +559,11 @@ contains
     call base_hamiltonian__end__(this%hm)
     call base_system__end__(this%sys)
     call base_model_dict_end(this%dict)
+    ASSERT(base_model_list_len(this%list)==0)
     call base_model_list_end(this%list)
 
     POP_SUB(base_model__end__)
   end subroutine base_model__end__
-
-  ! ---------------------------------------------------------
-  recursive subroutine base_model_end_type(this)
-    type(base_model_t), intent(inout) :: this
-
-    type(base_model_t), pointer :: subs
-
-    PUSH_SUB(base_model_end_type)
-
-    do
-      nullify(subs)
-      call base_model_list_pop(this%list, subs)
-      if(.not.associated(subs))exit
-      call base_model_end(subs)
-      call base_model__del__(subs)
-    end do
-    nullify(subs)
-    call base_model__end__(this)
-
-    POP_SUB(base_model_end_type)
-  end subroutine base_model_end_type
 
 end module base_model_oct_m
 
