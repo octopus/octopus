@@ -29,7 +29,8 @@ module dos_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use orbital_set_oct_m
+  use orbitalset_oct_m
+  use orbitalset_utils_oct_m
   use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
@@ -162,7 +163,7 @@ contains
     FLOAT, allocatable :: dpsi(:,:), ddot(:,:)
     CMPLX, allocatable :: zpsi(:,:), zdot(:,:)
     FLOAT, allocatable :: weight(:,:)
-    type(orbital_set_t) :: os
+    type(orbitalset_t) :: os
 
     PUSH_SUB(dos_write_dos)
 
@@ -283,11 +284,11 @@ contains
 
       do ia = 1, geo%natoms
         !We first count how many orbital set we have
-        work = orbital_set_count(geo, ia)
+        work = orbitalset_utils_count(geo, ia)
 
         !We loop over the orbital sets of the atom ia
         do norb = 1, work
-          call orbital_set_nullify(os)
+          call orbitalset_nullify(os)
 
           !We count the orbitals
           work2 = 0
@@ -342,7 +343,7 @@ contains
               SAFE_ALLOCATE(os%eorb_submesh(1:os%sphere%np, 1:os%ndim, 1:os%norbs, st%d%kpt%start:st%d%kpt%end))
               os%eorb_submesh(:,:,:,:) = M_ZERO
             end if
-            call orbital_set_update_phase(os, sb, st%d%kpt, (st%d%ispin==SPIN_POLARIZED), &
+            call orbitalset_update_phase(os, sb, st%d%kpt, (st%d%ispin==SPIN_POLARIZED), &
                                             vec_pot = hm%hm_base%uniform_vector_potential, &
                                             vec_pot_var = hm%hm_base%vector_potential)
           end if
@@ -373,7 +374,7 @@ contains
            do ik = st%d%kpt%start, st%d%kpt%end
             if(states_are_real(st)) then
               call states_get_state(st, mesh, ist, ik, dpsi )
-              call dorbital_set_get_coefficients(os, st%d%dim, dpsi, ik, .false., ddot(1:st%d%dim,1:os%norbs))
+              call dorbitalset_get_coefficients(os, st%d%dim, dpsi, ik, .false., ddot(1:st%d%dim,1:os%norbs))
               do iorb = 1, os%norbs
                 do idim = 1, st%d%dim
                   weight(ik,ist) = weight(ik,ist) + st%d%kweights(ik)*abs(ddot(idim,iorb))**2
@@ -391,7 +392,7 @@ contains
                 !$omp end parallel do
               end do
               end if
-              call zorbital_set_get_coefficients(os, st%d%dim, zpsi, ik, associated(hm%hm_base%phase), &
+              call zorbitalset_get_coefficients(os, st%d%dim, zpsi, ik, associated(hm%hm_base%phase), &
                                  zdot(1:st%d%dim,1:os%norbs))
 
               do iorb = 1, os%norbs
@@ -429,7 +430,7 @@ contains
      
         end do
       
-        call orbital_set_end(os)
+        call orbitalset_end(os)
       end do
 
       SAFE_DEALLOCATE_A(weight)

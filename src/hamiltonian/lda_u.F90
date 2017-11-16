@@ -40,7 +40,8 @@ module lda_u_oct_m
   use messages_oct_m
   use multicomm_oct_m
   use mpi_oct_m
-  use orbital_set_oct_m
+  use orbitalset_oct_m
+  use orbitalset_utils_oct_m
   use parser_oct_m
   use periodic_copy_oct_m
   use poisson_oct_m
@@ -103,7 +104,7 @@ module lda_u_oct_m
     CMPLX, pointer           :: zcoulomb(:,:,:,:,:,:,:) !>Coulomb integrals for all the system
                                                         !> (for the ACBN0 functional with spinors) 
 
-    type(orbital_set_t), pointer :: orbsets(:)   !> All the orbital setss of the system
+    type(orbitalset_t), pointer :: orbsets(:)   !> All the orbital setss of the system
 
     integer             :: norbsets           !> Number of orbital sets 
     integer             :: nspins
@@ -406,7 +407,7 @@ contains
    SAFE_DEALLOCATE_P(this%zVloc2)
 
    do ios = 1, this%norbsets
-     call orbital_set_end(this%orbsets(ios))
+     call orbitalset_end(this%orbsets(ios))
    end do
 
    SAFE_DEALLOCATE_P(this%orbsets)
@@ -438,7 +439,7 @@ contains
 
   !We clean the orbital basis, to be able to reconstruct it
   do iorbset = 1, this%norbsets
-    call orbital_set_end(this%orbsets(iorbset))
+    call orbitalset_end(this%orbsets(iorbset))
   end do
   SAFE_DEALLOCATE_P(this%orbsets)
 
@@ -504,7 +505,7 @@ contains
    PUSH_SUB(lda_u_build_phase_correction)
 
    do ios = 1, this%norbsets
-     call orbital_set_update_phase(this%orbsets(ios), sb, std%kpt, (std%ispin==SPIN_POLARIZED), &
+     call orbitalset_update_phase(this%orbsets(ios), sb, std%kpt, (std%ispin==SPIN_POLARIZED), &
                                         vec_pot, vec_pot_var)
    end do
   

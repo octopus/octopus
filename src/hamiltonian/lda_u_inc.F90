@@ -30,7 +30,7 @@ subroutine X(lda_u_apply)(this, d, ik, psib, hpsib, has_phase)
   integer :: ios2
   R_TYPE  :: reduced2
   R_TYPE, allocatable :: dot(:,:,:), reduced(:,:)
-  type(orbital_set_t), pointer  :: os, os2
+  type(orbitalset_t), pointer  :: os, os2
   type(profile_t), save :: prof
 
   call profiling_in(prof, "DFTU_APPLY")
@@ -49,7 +49,7 @@ subroutine X(lda_u_apply)(this, d, ik, psib, hpsib, has_phase)
   !
   do ios = 1, this%norbsets
     os => this%orbsets(ios)
-    call X(orbital_set_get_coeff_batch)(os, d%dim, psib, ik, has_phase, dot(1:d%dim,1:os%norbs,1:psib%nst))
+    call X(orbitalset_get_coeff_batch)(os, d%dim, psib, ik, has_phase, dot(1:d%dim,1:os%norbs,1:psib%nst))
 
     !
     reduced(:,:) = R_TOTYPE(M_ZERO) 
@@ -75,7 +75,7 @@ subroutine X(lda_u_apply)(this, d, ik, psib, hpsib, has_phase)
     end do !ibatch
  
     !We add the orbitals properly weighted to hpsi
-    call X(orbital_set_add_to_batch)(this%orbsets(ios), d%dim, hpsib, ik, has_phase, reduced)
+    call X(orbitalset_add_to_batch)(this%orbsets(ios), d%dim, hpsib, ik, has_phase, reduced)
   end do
  
  !       !We add a test to avoid out-of-bound problem for the LCAO 
@@ -155,7 +155,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
   R_TYPE, allocatable :: dot(:,:,:)
   FLOAT   :: weight
   R_TYPE  :: renorm_weight
-  type(orbital_set_t), pointer :: os
+  type(orbitalset_t), pointer :: os
   type(profile_t), save :: prof
 
   call profiling_in(prof, "DFTU_OCC_MATRICES")
@@ -203,7 +203,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
         os => this%orbsets(ios)
         !We first compute the matrix elemets <\psi | orb_m>
         !taking into account phase correction if needed 
-        call X(orbital_set_get_coefficients)(os, st%d%dim, psi, ik, present(phase), &
+        call X(orbitalset_get_coefficients)(os, st%d%dim, psi, ik, present(phase), &
                             dot(1:st%d%dim,1:os%norbs,ios))
       end do !ios
 
@@ -727,7 +727,7 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der, st)
   integer :: norbs, np_sphere, ios, ip
   integer :: idone, ntodo
   FLOAT, allocatable :: tmp(:), vv(:), nn(:)
-  type(orbital_set_t), pointer :: os
+  type(orbitalset_t), pointer :: os
   type(profile_t), save :: prof
 
   call profiling_in(prof, "DFTU_COULOMB_INTEGRALS")
@@ -840,7 +840,7 @@ end subroutine X(compute_coulomb_integrals)
    integer :: idim_orb
    R_TYPE, allocatable :: dot(:,:)
    R_TYPE, allocatable :: epsi(:,:)
-   type(orbital_set_t), pointer  :: os 
+   type(orbitalset_t), pointer  :: os 
    R_TYPE, allocatable  :: reduced(:,:)
    type(profile_t), save :: prof
 
@@ -866,7 +866,7 @@ end subroutine X(compute_coulomb_integrals)
       !
       os => this%orbsets(ios)
       ! 
-      call X(orbital_set_get_coefficients)(os, d%dim, psi, ik, has_phase, dot)
+      call X(orbitalset_get_coefficients)(os, d%dim, psi, ik, has_phase, dot)
       !
       reduced(:,:) = M_ZERO
       do im = 1, os%norbs
@@ -992,7 +992,7 @@ end subroutine X(compute_coulomb_integrals)
 
        end do
 
-       call X(orbital_set_add_to_psi)(os, d%dim, gpsi(1:mesh%np,idir,1:d%dim), ik, has_phase, &
+       call X(orbitalset_add_to_psi)(os, d%dim, gpsi(1:mesh%np,idir,1:d%dim), ik, has_phase, &
                                          reduced(1:d%dim,1:os%norbs)) 
        !  if(this%ACBN0_corrected) then
        !    reduced = reduced + this%Vloc1(im,ispin,ios)*dot(im)
@@ -1024,7 +1024,7 @@ end subroutine X(compute_coulomb_integrals)
    logical,                   intent(in)    :: phase
 
    integer :: ios, iatom, ibatch, ist, im, imp, ispin, idir
-   type(orbital_set_t), pointer  :: os
+   type(orbitalset_t), pointer  :: os
    R_TYPE :: ff(1:ndim)
    R_TYPE, allocatable :: psi(:,:), gpsi(:,:)
    R_TYPE, allocatable :: dot(:,:), gdot(:,:,:), gradn(:,:,:,:)
@@ -1058,14 +1058,14 @@ end subroutine X(compute_coulomb_integrals)
        !We first compute the matrix elemets <\psi | orb_m>
        !taking into account phase correction if needed   
        ! 
-       call X(orbital_set_get_coefficients)(os, st%d%dim, psi, iq, phase, dot)
+       call X(orbitalset_get_coefficients)(os, st%d%dim, psi, iq, phase, dot)
 
        do idir = 1, ndim
          call batch_get_state(grad_psib(idir), ibatch, mesh%np, gpsi)     
          !We first compute the matrix elemets <\psi | orb_m>
          !taking into account phase correction if needed 
          ! 
-         call X(orbital_set_get_coefficients)(os, st%d%dim, gpsi, iq, phase, gdot(1:st%d%dim,1:os%norbs,idir))
+         call X(orbitalset_get_coefficients)(os, st%d%dim, gpsi, iq, phase, gdot(1:st%d%dim,1:os%norbs,idir))
 
          do im = 1, os%norbs
            gradn(1:os%norbs,im,ispin,idir) = gradn(1:os%norbs,im,ispin,idir) &
@@ -1110,7 +1110,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
   FLOAT   :: norm, hubbardj, radius
   FLOAT, allocatable :: minradii(:)
   logical :: hasSorbitals
-  type(orbital_set_t), pointer :: os
+  type(orbitalset_t), pointer :: os
 
   PUSH_SUB(X(construct_orbital_basis))
 
@@ -1158,7 +1158,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
   this%norbsets = norb
   SAFE_ALLOCATE(this%orbsets(1:norb))
   do iorbset = 1, this%norbsets
-    call orbital_set_nullify(this%orbsets(iorbset))
+    call orbitalset_nullify(this%orbsets(iorbset))
   end do
 
   if( this%useAllOrbitals .and. this%minimalAtomicSphere ) then
@@ -1206,12 +1206,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
         os%submeshforperiodic = this%submeshforperiodic
         os%spec => geo%atom(ia)%species
         os%iatom = ia
-        call submesh_null(os%sphere)
-        do iorb = 1, os%norbs
-          ! We obtain the orbital
-          call X(get_atomic_orbital)(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
-                                          os, iorb, os%radius, os%ndim)
-        end do
+        call X(orbitalset_utils_getorbitals)(os, geo, mesh)
       else !useAllOrbitals
         work = 0
         hasSorbitals = .false.
@@ -1262,13 +1257,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
           os%submeshforperiodic = this%submeshforperiodic
           os%spec => geo%atom(ia)%species
           os%iatom = ia
-          call submesh_null(os%sphere)        
-
-          do work2 = 1, os%norbs 
-            ! We obtain the orbital
-            call X(get_atomic_orbital)(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
-                                               os, work2, os%radius, os%ndim)
-          end do !work2
+          call X(orbitalset_utils_getorbitals)(os, geo, mesh)
         end do !norb
         iorbset = iorbset + work - offset
       end if
@@ -1366,7 +1355,7 @@ subroutine X(build_overlap_matrices)(this, ik, has_phase)
   logical,          intent(in)       :: has_phase
 
   integer :: ios, ios2, im, im2, norbs, np
-  type(orbital_set_t), pointer :: os, os2
+  type(orbitalset_t), pointer :: os, os2
 !  R_TYPE, allocatable :: orb1(:,:), orb2(:)
 
   if(this%nspins > this%spin_channels .and. this%IncludeOverlap) &

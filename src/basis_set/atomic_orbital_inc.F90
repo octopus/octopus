@@ -27,7 +27,7 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
   type(submesh_t),          intent(inout) :: sm
   integer,                  intent(in)    :: iatom, ii, ll
   FLOAT,                    intent(in)    :: jj
-  type(orbital_set_t),      intent(inout) :: os
+  type(orbitalset_t),       intent(inout) :: os
   integer,                  intent(in)    :: orbind
   FLOAT,                    intent(in)    :: radius
   integer,                  intent(in)    :: d_dim
@@ -136,7 +136,7 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
 
     mm = int(mu+M_HALF)
     if(abs(mm) <= ll) then
-      call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm, 2, geo%atom(iatom)%x,&
+      call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x,&
                                         os%X(orb)(1:sm%np,2,orbind))
       coeff = (-kappa/abs(kappa))*sqrt((kappa+mu+M_HALF)/(M_TWO*kappa+M_ONE))
       do is=1,sm%np

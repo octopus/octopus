@@ -34,7 +34,8 @@ module states_io_oct_m
   use messages_oct_m
   use mpi_oct_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
   use mpi_lib_oct_m
-  use orbital_set_oct_m
+  use orbitalset_oct_m
+  use orbitalset_utils_oct_m
   use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
@@ -812,7 +813,7 @@ contains
     FLOAT, allocatable :: dpsi(:,:), ddot(:,:)
     CMPLX, allocatable :: zpsi(:,:), zdot(:,:)
     FLOAT, allocatable :: weight(:,:,:,:,:)
-    type(orbital_set_t) :: os
+    type(orbitalset_t) :: os
 
 
     PUSH_SUB(states_write_bandstructure)   
@@ -853,9 +854,9 @@ contains
         else 
          write(iunit(is),'(a,i6,3a)',advance='no') '(red. coord.), bands:', nst, ' [', trim(units_abbrev(units_out%energy)), '] '
          do ia = 1, geo%natoms
-            work = orbital_set_count(geo, ia)
+            work = orbitalset_utils_count(geo, ia)
             do norb = 1, work
-             work2 = orbital_set_count(geo, ia, norb)
+             work2 = orbitalset_utils_count(geo, ia, norb)
               write(iunit(is),'(a, i3.3,a,i1.1,a)',advance='no') 'w(at=',ia,',os=',norb,') '
             end do
           end do
@@ -878,7 +879,7 @@ contains
 
       maxnorb = 0
       do ia = 1, geo%natoms
-        maxnorb = max(maxnorb, orbital_set_count(geo, ia))
+        maxnorb = max(maxnorb, orbitalset_utils_count(geo, ia))
       end do
 
       SAFE_ALLOCATE(weight(1:st%d%nik,1:st%nst, 1:maxnorb, 1:MAX_L, 1:geo%natoms))
@@ -887,11 +888,11 @@ contains
       do ia = 1, geo%natoms
 
         !We first count how many orbital set we have
-        work = orbital_set_count(geo, ia)
+        work = orbitalset_utils_count(geo, ia)
 
         !We loop over the orbital sets of the atom ia
         do norb = 1, work
-          call orbital_set_nullify(os)
+          call orbitalset_nullify(os)
 
           !We count the orbitals
           work2 = 0
@@ -946,7 +947,7 @@ contains
               SAFE_ALLOCATE(os%eorb_submesh(1:os%sphere%np, 1:os%ndim, 1:os%norbs, st%d%kpt%start:st%d%kpt%end))
               os%eorb_submesh(:,:,:,:) = M_ZERO
             end if
-            call orbital_set_update_phase(os, sb, st%d%kpt, (st%d%ispin==SPIN_POLARIZED), &
+            call orbitalset_update_phase(os, sb, st%d%kpt, (st%d%ispin==SPIN_POLARIZED), &
                               vec_pot = uniform_vector_potential, vec_pot_var = vector_potential)
           end if
 
@@ -961,7 +962,7 @@ contains
             if(ik < st%d%nik-npath+1 ) cycle ! We only want points inside the k-point path
             if(states_are_real(st)) then
               call states_get_state(st, mesh, ist, ik, dpsi )
-              call dorbital_set_get_coefficients(os, st%d%dim, dpsi, ik, .false., ddot(1:st%d%dim,1:os%norbs))
+              call dorbitalset_get_coefficients(os, st%d%dim, dpsi, ik, .false., ddot(1:st%d%dim,1:os%norbs))
               do iorb = 1, os%norbs
                 do idim = 1, st%d%dim
                   weight(ik,ist,iorb,norb,ia) = weight(ik,ist,iorb,norb,ia) + abs(ddot(idim,iorb))**2
@@ -977,7 +978,7 @@ contains
                   end forall
                 end do
               end if
-              call zorbital_set_get_coefficients(os, st%d%dim, zpsi, ik, associated(phase), &
+              call zorbitalset_get_coefficients(os, st%d%dim, zpsi, ik, associated(phase), &
                                  zdot(1:st%d%dim,1:os%norbs))
               do iorb = 1, os%norbs
                 do idim = 1, st%d%dim
@@ -991,7 +992,7 @@ contains
          SAFE_DEALLOCATE_A(ddot)
          SAFE_DEALLOCATE_A(zdot)
 
-         call orbital_set_end(os)
+         call orbitalset_end(os)
        end do !norb
 
        if(st%parallel_in_states .or. st%d%kpt%parallel) then
@@ -1021,9 +1022,9 @@ contains
         end do
         if(projection) then
           do ia = 1, geo%natoms
-            work = orbital_set_count(geo, ia)
+            work = orbitalset_utils_count(geo, ia)
             do norb = 1, work
-              work2 = orbital_set_count(geo, ia, norb)              
+              work2 = orbitalset_utils_count(geo, ia, norb)              
               do iorb = 1, work2
                 do ist = 1, nst
                   write(iunit(is),'(es15.8)',advance='no') weight(ik+is,ist,iorb,norb,ia)

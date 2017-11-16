@@ -29,7 +29,7 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st)
   integer :: norbs, np_sphere, ios, ip
   integer :: idone, ntodo
   CMPLX, allocatable :: tmp(:), vv(:,:), nn(:,:)
-  type(orbital_set_t), pointer :: os
+  type(orbitalset_t), pointer :: os
   type(profile_t), save :: prof
 
   call profiling_in(prof, "DFTU_COMPEX_COULOMB_INTEGRALS")
