@@ -6,10 +6,10 @@ module live_handle_oct_m
   use base_handle_oct_m
   use geometry_oct_m
   use global_oct_m
-  use grid_oct_m
   use json_oct_m
   use messages_oct_m
   use profiling_oct_m
+  use simulation_oct_m
 
   implicit none
 
@@ -61,20 +61,18 @@ contains
     call base_handle_get(this, type)
     ASSERT(type==HNDL_TYPE_LIVE)
     call live_handle__init__(this, geo)
-    call base_handle__init__(this)
 
     POP_SUB(live_handle_init)
   end subroutine live_handle_init
 
   ! ---------------------------------------------------------
-  subroutine live_handle_start(this, grid)
+  subroutine live_handle_start(this, sim)
     type(base_handle_t), intent(inout) :: this
-    type(grid_t),        intent(in)    :: grid
+    type(simulation_t),  intent(in)    :: sim
 
     PUSH_SUB(live_handle_start)
 
-    call base_handle__start__(this, grid)
-    call base_handle__update__(this)
+    call base_handle__start__(this, sim)
 
     POP_SUB(live_handle_start)
   end subroutine live_handle_start

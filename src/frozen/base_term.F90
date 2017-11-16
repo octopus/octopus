@@ -93,10 +93,6 @@ module base_term_oct_m
     module procedure base_term_copy_type
   end interface base_term_copy
 
-  interface base_term_end
-    module procedure base_term_end_type
-  end interface base_term_end
-
 contains
 
 #define BASE_TEMPLATE_NAME base_term
@@ -145,23 +141,6 @@ contains
 
     POP_SUB(base_term_new)
   end subroutine base_term_new
-
-  ! ---------------------------------------------------------
-  subroutine base_term_del(this)
-    type(base_term_t), pointer :: this
-
-    PUSH_SUB(base_term_del)
-
-    if(associated(this))then
-      if(associated(this%prnt))then
-        call base_term_list_del(this%prnt%list, this)
-        call base_term_end(this)
-        call base_term__del__(this)
-      end if
-    end if
-
-    POP_SUB(base_term_del)
-  end subroutine base_term_del
 
   ! ---------------------------------------------------------
   subroutine base_term__init__type(this, sys, config)
@@ -441,31 +420,11 @@ contains
     nullify(this%config, this%sys, this%prnt)
     this%energy = 0.0_wp
     call base_term_dict_end(this%dict)
+    ASSERT(base_term_list_len(this%list)==0)
     call base_term_list_end(this%list)
 
     POP_SUB(base_term__end__)
   end subroutine base_term__end__
-
-  ! ---------------------------------------------------------
-  recursive subroutine base_term_end_type(this)
-    type(base_term_t), intent(inout) :: this
-
-    type(base_term_t), pointer :: subs
-
-    PUSH_SUB(base_term_end_type)
-
-    do
-      nullify(subs)
-      call base_term_list_pop(this%list, subs)
-      if(.not.associated(subs))exit
-      call base_term_end(subs)
-      call base_term__del__(subs)
-    end do
-    nullify(subs)
-    call base_term__end__(this)
-
-    POP_SUB(base_term_end_type)
-  end subroutine base_term_end_type
 
 end module base_term_oct_m
 

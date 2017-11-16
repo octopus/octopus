@@ -181,7 +181,6 @@ module base_hamiltonian_oct_m
   end interface base_hamiltonian__sub__
 
   interface base_hamiltonian_del
-    module procedure base_hamiltonian_del_type
     module procedure base_hamiltonian_del_none
     module procedure base_hamiltonian_del_term
     module procedure base_hamiltonian_del_potn
@@ -220,10 +219,6 @@ module base_hamiltonian_oct_m
   interface base_hamiltonian_copy
     module procedure base_hamiltonian_copy_type
   end interface base_hamiltonian_copy
-
-  interface base_hamiltonian_end
-    module procedure base_hamiltonian_end_type
-  end interface base_hamiltonian_end
 
 contains
 
@@ -1094,18 +1089,18 @@ contains
   end subroutine base_hamiltonian__inew__
 
   ! ---------------------------------------------------------
-  subroutine base_hamiltonian__idel__(this)
+  subroutine base_hamiltonian__del__(this)
     type(base_hamiltonian_t), pointer :: this
 
-    PUSH_SUB(base_hamiltonian__idel__)
+    PUSH_SUB(base_hamiltonian__del__)
 
     if(associated(this))then
       SAFE_DEALLOCATE_P(this)
     end if
     nullify(this)
 
-    POP_SUB(base_hamiltonian__idel__)
-  end subroutine base_hamiltonian__idel__
+    POP_SUB(base_hamiltonian__del__)
+  end subroutine base_hamiltonian__del__
 
   ! ---------------------------------------------------------
   subroutine base_hamiltonian_new(this, that)
@@ -1121,23 +1116,6 @@ contains
 
     POP_SUB(base_hamiltonian_new)
   end subroutine base_hamiltonian_new
-
-  ! ---------------------------------------------------------
-  subroutine base_hamiltonian_del_type(this)
-    type(base_hamiltonian_t), pointer :: this
-
-    PUSH_SUB(base_hamiltonian_del_type)
-
-    if(associated(this))then
-      if(associated(this%prnt))then
-        call base_hamiltonian_list_del(this%prnt%list, this)
-        call base_hamiltonian_end(this)
-        call base_hamiltonian__idel__(this)
-      end if
-    end if
-
-    POP_SUB(base_hamiltonian_del_type)
-  end subroutine base_hamiltonian_del_type
 
   ! ---------------------------------------------------------
   subroutine base_hamiltonian__iinit__(this, sys, config)
@@ -1663,7 +1641,7 @@ contains
     ASSERT(associated(this%config))
     ASSERT(associated(this%sys))
     nullify(term)
-    call base_hamiltonian__del__(this, trim(adjustl(name)), term)
+    call base_hamiltonian__idel__(this, trim(adjustl(name)), term)
     if(associated(term)) call term_intrf_del(term)
     nullify(term)
     call term_dict_set(this%hdct, trim(adjustl(name)), that)
@@ -1691,14 +1669,14 @@ contains
   end subroutine base_hamiltonian__get__
 
   ! ---------------------------------------------------------
-  subroutine base_hamiltonian__del__(this, name, that)
+  subroutine base_hamiltonian__idel__(this, name, that)
     type(base_hamiltonian_t), intent(inout) :: this
     character(len=*),         intent(in)    :: name
     type(term_intrf_t),      pointer        :: that
 
     integer :: ierr
 
-    PUSH_SUB(base_hamiltonian__del__)
+    PUSH_SUB(base_hamiltonian__idel__)
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sys))
@@ -1706,8 +1684,8 @@ contains
     call term_dict_del(this%hdct, trim(adjustl(name)), that, ierr)
     if(ierr/=TERM_DICT_OK) nullify(that)
 
-    POP_SUB(base_hamiltonian__del__)
-  end subroutine base_hamiltonian__del__
+    POP_SUB(base_hamiltonian__idel__)
+  end subroutine base_hamiltonian__idel__
 
   ! ---------------------------------------------------------
   subroutine base_hamiltonian_set_info(this, energy)
@@ -1965,7 +1943,7 @@ contains
     PUSH_SUB(base_hamiltonian_del_none)
 
     nullify(htrm)
-    call base_hamiltonian__del__(this, trim(adjustl(name)), htrm)
+    call base_hamiltonian__idel__(this, trim(adjustl(name)), htrm)
     if(associated(htrm)) call term_intrf_del(htrm)
     nullify(htrm)
 
@@ -1983,7 +1961,7 @@ contains
     PUSH_SUB(base_hamiltonian_del_term)
 
     nullify(that, htrm)
-    call base_hamiltonian__del__(this, trim(adjustl(name)), htrm)
+    call base_hamiltonian__idel__(this, trim(adjustl(name)), htrm)
     if(associated(htrm))then
       call term_intrf_get(htrm, that)
       call term_intrf_del(htrm)
@@ -2004,7 +1982,7 @@ contains
     PUSH_SUB(base_hamiltonian_del_potn)
 
     nullify(that, htrm)
-    call base_hamiltonian__del__(this, trim(adjustl(name)), htrm)
+    call base_hamiltonian__idel__(this, trim(adjustl(name)), htrm)
     if(associated(htrm))then
       call term_intrf_get(htrm, that)
       call term_intrf_del(htrm)
@@ -2025,7 +2003,7 @@ contains
     PUSH_SUB(base_hamiltonian_del_fnct)
 
     nullify(that, htrm)
-    call base_hamiltonian__del__(this, trim(adjustl(name)), htrm)
+    call base_hamiltonian__idel__(this, trim(adjustl(name)), htrm)
     if(associated(htrm))then
       call term_intrf_get(htrm, that)
       call term_intrf_del(htrm)
@@ -2046,7 +2024,7 @@ contains
     PUSH_SUB(base_hamiltonian_del_hmlt)
 
     nullify(that, htrm)
-    call base_hamiltonian__del__(this, trim(adjustl(name)), htrm)
+    call base_hamiltonian__idel__(this, trim(adjustl(name)), htrm)
     if(associated(htrm))then
       call term_intrf_get(htrm, that)
       call term_intrf_del(htrm)
@@ -2144,27 +2122,6 @@ contains
 
     POP_SUB(base_hamiltonian__end__)
   end subroutine base_hamiltonian__end__
-
-  ! ---------------------------------------------------------
-  recursive subroutine base_hamiltonian_end_type(this)
-    type(base_hamiltonian_t), intent(inout) :: this
-
-    type(base_hamiltonian_t), pointer :: subs
-
-    PUSH_SUB(base_hamiltonian_end_type)
-
-    do
-      nullify(subs)
-      call base_hamiltonian_list_pop(this%list, subs)
-      if(.not.associated(subs))exit
-      call base_hamiltonian_end(subs)
-      call base_hamiltonian__idel__(subs)
-    end do
-    nullify(subs)
-    call base_hamiltonian__end__(this)
-
-    POP_SUB(base_hamiltonian_end_type)
-  end subroutine base_hamiltonian_end_type
 
 end module base_hamiltonian_oct_m
 

@@ -23,12 +23,14 @@ noinst_LIBRARIES = libfrozen.a
 libfrozen_a_SOURCES =		\
 	basis.F90		\
 	strng.F90		\
+	refcount.F90            \
 	geo_intrf.F90		\
 	geo_build.F90		\
 	grid_intrf.F90		\
 	interface_xc.F90	\
 	domain.F90		\
 	simulation.F90		\
+	smlt_intrf.F90          \
 	storage.F90		\
 	dnst.F90		\
 	dnst_intrf.F90		\
@@ -50,7 +52,6 @@ libfrozen_a_SOURCES =		\
 	fio_index.F90		\
 	fio_mesh.F90		\
 	fio_grid.F90		\
-	fio_simulation.F90	\
 	fio_density.F90		\
 	fio_external.F90	\
 	fio_hamiltonian.F90	\
@@ -91,6 +92,7 @@ depend:
 
 basis.o 	: basis.F90
 strng.o		: strng.F90
+refcount.o      : refcount.F90
 geo_intrf.o	: geo_intrf.F90
 geo_build.o	: geo_build.F90 										\
 	strng.o basis.o												\
@@ -101,7 +103,8 @@ interface_xc.o	: interface_xc.F90
 domain.o 	: domain.F90 											\
 	geo_intrf.o grid_intrf.o basis.o									\
 	tlist_inc.F90 template.h util.h
-simulation.o	: simulation.F90 domain.o grid_intrf.o
+simulation.o	: simulation.F90 domain.o grid_intrf.o refcount.o
+smlt_intrf.o    : smlt_intrf.F90 simulation.o
 storage.o 	: storage.F90 simulation.o
 dnst.o 		: dnst.F90 storage.o simulation.o
 dnst_intrf.o	: dnst_intrf.F90 dnst.o
@@ -148,7 +151,7 @@ base_model.o 		: base_model.F90 									\
 	template.h util.h
 base_handle.o 		: base_handle.F90 									\
 	base_model.o base_hamiltonian.o base_system.o base_states.o base_density.o base_geometry.o		\
-	simulation.o strng.o											\
+	smlt_intrf.o simulation.o strng.o									\
 	tbase_inc.F90 tdict_inc.F90 tdarr_inc.F90 thash_inc.F90 tlist_inc.F90 tpair_inc.F90 tsingle_inc.F90 	\
 	template.h util.h
 base_config.o 		: base_config.F90 									\
@@ -159,7 +162,7 @@ fio_curvilinear.o 	: fio_curvilinear.F90
 fio_index.o 		: fio_index.F90
 fio_mesh.o 		: fio_mesh.F90 fio_index.o 
 fio_grid.o 		: fio_grid.F90 fio_mesh.o fio_curvilinear.o fio_simul_box.o
-fio_simulation.o 	: fio_simulation.F90 fio_grid.o base_geometry.o simulation.o
+#fio_simulation.o 	: fio_simulation.F90 fio_grid.o base_geometry.o simulation.o
 fio_density.o 		: fio_density.F90									\
 	base_density.o intrpl.o simulation.o dnst_intrf.o dnst.o storage.o basis.o
 fio_external.o 		: fio_external.F90 base_potential.o base_geometry.o intrpl.o storage.o
@@ -168,7 +171,7 @@ fio_model.o             : fio_model.F90 									\
 	fio_hamiltonian.o fio_density.o 									\
 	base_model.o base_hamiltonian.o base_density.o
 fio_handle.o 		: fio_handle.F90									\
-	fio_model.o fio_density.o fio_simulation.o base_handle.o base_model.o base_density.o simulation.o
+	fio_model.o fio_density.o base_handle.o base_model.o base_density.o simulation.o
 fio_config.o 		: fio_config.F90 fio_handle.o base_hamiltonian.o base_config.o intrpl.o
 
 frozen_geometry.o 	: frozen_geometry.F90 base_geometry.o geo_build.o geo_intrf.o
@@ -180,7 +183,7 @@ frozen_model.o		: frozen_model.F90 frozen_hamiltonian.o frozen_density.o 				\
 	base_model.o base_hamiltonian.o base_density.o
 frozen_handle.o 	: frozen_handle.F90 frozen_model.o frozen_geometry.o fio_handle.o 			\
 	base_handle.o base_model.o base_geometry.o 
-frozen_config.o 	: frozen_config.F90 frozen_handle.o fio_handle.o fio_config.o				\
+frozen_config.o 	: frozen_config.F90 frozen_handle.o fio_config.o fio_handle.o				\
 	base_hamiltonian.o base_config.o storage.o
 
 live_handle.o		: live_handle.F90 base_handle.o base_geometry.o

@@ -13,6 +13,7 @@ module simulation_oct_m
   use messages_oct_m
   use mpi_oct_m
   use profiling_oct_m
+  use refcount_oct_m
   use space_oct_m
 
   implicit none
@@ -23,6 +24,9 @@ module simulation_oct_m
     simulation_t
 
   public ::            &
+    simulation_new,    &
+    simulation_del,    &
+    simulation_reg,    &
     simulation_assoc,  &
     simulation_init,   &
     simulation_start,  &
@@ -36,9 +40,20 @@ module simulation_oct_m
     private
     type(json_object_t), pointer :: config =>null()
     type(space_t),       pointer :: space  =>null()
+    type(refcount_t),    pointer :: rcnt   =>null()
     type(grid_intrf_t)           :: igrid
     type(domain_t)               :: domain
   end type simulation_t
+
+  interface simulation_new
+    module procedure simulation_new_type
+    module procedure simulation_new_pass
+  end interface simulation_new
+
+  interface simulation_del
+    module procedure simulation_del_type
+    module procedure simulation_del_pass
+  end interface simulation_del
 
   interface simulation_init
     module procedure simulation_init_cnfg
@@ -79,6 +94,105 @@ module simulation_oct_m
 contains
 
   ! ---------------------------------------------------------
+  function simulation_new_type(geo, space, config) result(this)
+    type(geometry_t),    intent(in) :: geo
+    type(space_t),       intent(in) :: space
+    type(json_object_t), intent(in) :: config
+
+    type(simulation_t), pointer :: this
+    
+    PUSH_SUB(simulation_new_type)
+
+    this => simulation_new(geo, space, config, simulation_init_type)
+
+    POP_SUB(simulation_new_type)
+  end function simulation_new_type
+
+  ! ---------------------------------------------------------
+  function simulation_new_pass(geo, space, config, init) result(this)
+    type(geometry_t),    intent(in) :: geo
+    type(space_t),       intent(in) :: space
+    type(json_object_t), intent(in) :: config
+
+    type(simulation_t), pointer :: this
+    
+    interface
+      subroutine init(this, geo, space, config)
+        use geometry_oct_m
+        use json_oct_m
+        use space_oct_m
+        import :: simulation_t
+        type(simulation_t),  intent(out) :: this
+        type(geometry_t),    intent(in)  :: geo
+        type(space_t),       intent(in)  :: space
+        type(json_object_t), intent(in)  :: config
+      end subroutine init
+    end interface
+    
+    PUSH_SUB(simulation_new_pass)
+
+    nullify(this)
+    SAFE_ALLOCATE(this)
+    call init(this, geo, space, config)
+    ASSERT(associated(this%rcnt))
+    call refcount_set(this%rcnt, dynamic=.true.)
+
+    POP_SUB(simulation_new_pass)
+  end function simulation_new_pass
+
+  ! ---------------------------------------------------------
+  subroutine simulation_del_type(this)
+    type(simulation_t), pointer :: this
+
+    PUSH_SUB(simulation_del_type)
+
+    call simulation_del(this, simulation_end_type)
+    
+    POP_SUB(simulation_del_type)
+  end subroutine simulation_del_type
+
+  ! ---------------------------------------------------------
+  subroutine simulation_del_pass(this, finis)
+    type(simulation_t), pointer :: this
+
+    interface
+      subroutine finis(this)
+        import :: simulation_t
+        type(simulation_t), intent(inout) :: this
+      end subroutine finis
+    end interface
+    
+    logical :: free
+
+    PUSH_SUB(simulation_del_pass)
+
+    if(associated(this))then
+      ASSERT(associated(this%rcnt))
+      call refcount_get(this%rcnt, free=free)
+      if(free)then
+        call finis(this)
+        SAFE_DEALLOCATE_P(this)
+        nullify(this)
+      end if
+    end if
+
+    POP_SUB(simulation_del_pass)
+  end subroutine simulation_del_pass
+
+  ! ---------------------------------------------------------
+  subroutine simulation_reg(this, that)
+    type(simulation_t), intent(in) :: this
+    type(refcount_t),  pointer     :: that
+
+    PUSH_SUB(simulation_reg)
+
+    nullify(that)
+    if(associated(this%rcnt)) that => this%rcnt
+
+    POP_SUB(simulation_reg)
+  end subroutine simulation_reg
+
+  ! ---------------------------------------------------------
   function simulation_assoc(this) result(that)
     type(simulation_t), intent(in) :: this
 
@@ -88,6 +202,7 @@ contains
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%space))
+    ASSERT(associated(this%rcnt))
     that = grid_intrf_assoc(this%igrid)
 
     POP_SUB(simulation_assoc)
@@ -102,7 +217,8 @@ contains
     PUSH_SUB(simulation__init__)
 
     this%config => config
-    this%space => space
+    this%space  => space
+    this%rcnt   => refcount_new()
 
     POP_SUB(simulation__init__)
   end subroutine simulation__init__
@@ -375,22 +491,28 @@ contains
     type(simulation_t), intent(inout) :: this
     type(simulation_t), intent(in)    :: that
 
+    type(refcount_t), pointer :: rcnt
+
     PUSH_SUB(simulation_copy_type)
 
+    rcnt => this%rcnt
+    nullify(this%rcnt)
     call simulation_end(this)
     if(associated(that%config).and.associated(that%space))then
       call simulation__init__(this, that%space, that%config)
       call grid_intrf_copy(this%igrid, that%igrid)
       call domain_copy(this%domain, that%domain)
     end if
+    this%rcnt => rcnt
+    nullify(rcnt)
 
     POP_SUB(simulation_copy_type)
   end subroutine simulation_copy_type
 
   ! ---------------------------------------------------------
   subroutine simulation_copy_pass(this, that, copy)
-    type(simulation_t), intent(inout) :: this
-    type(simulation_t), intent(in)    :: that
+    type(simulation_t), target, intent(inout) :: this
+    type(simulation_t),         intent(in)    :: that
 
     interface
       subroutine copy(this, that)
@@ -400,14 +522,20 @@ contains
       end subroutine copy
     end interface
 
+    type(refcount_t), pointer :: rcnt
+
     PUSH_SUB(simulation_copy_pass)
 
+    rcnt => this%rcnt
+    nullify(this%rcnt)
     call simulation_end(this)
     if(associated(that%config).and.associated(that%space))then
       call simulation__init__(this, that%space, that%config)
       call grid_intrf_copy(this%igrid, that%igrid, copy)
       call domain_copy(this%domain, that%domain)
     end if
+    this%rcnt => rcnt
+    nullify(rcnt)
 
     POP_SUB(simulation_copy_pass)
   end subroutine simulation_copy_pass
@@ -418,10 +546,8 @@ contains
 
     PUSH_SUB(simulation_end_type)
 
-    nullify(this%config, this%space)
-    call grid_intrf_end(this%igrid)
-    call domain_end(this%domain)
-
+    call simulation_end(this, grid_end)
+    
     POP_SUB(simulation_end_type)
   end subroutine simulation_end_type
 
@@ -439,6 +565,8 @@ contains
     PUSH_SUB(simulation_end_pass)
 
     nullify(this%config, this%space)
+    if(associated(this%rcnt)) call refcount_del(this%rcnt)
+    nullify(this%rcnt)
     call grid_intrf_end(this%igrid, finis)
     call domain_end(this%domain)
 

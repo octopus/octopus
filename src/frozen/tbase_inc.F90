@@ -140,6 +140,11 @@ module TEMPLATE(base_oct_m)
 
 #endif
 
+  interface TEMPLATE(del)
+    module procedure TEMPLATE(del_type)
+    module procedure TEMPLATE(del_pass)
+  end interface TEMPLATE(del)
+
   interface TEMPLATE(init)
     module procedure TEMPLATE(iterator_init_type)
     module procedure TEMPLATE(iterator_init_copy)
@@ -161,6 +166,8 @@ module TEMPLATE(base_oct_m)
   end interface TEMPLATE(copy)
 
   interface TEMPLATE(end)
+    module procedure TEMPLATE(end_type)
+    module procedure TEMPLATE(end_pass)
     module procedure TEMPLATE(iterator_end)
   end interface TEMPLATE(end)
 
@@ -187,6 +194,41 @@ contains
 #undef TEMPLATE_NAME
 #define TEMPLATE_NAME BASE_TEMPLATE_NAME
 #include "template.h"
+
+  ! ---------------------------------------------------------
+  recursive subroutine TEMPLATE(del_type)(this)
+    type(BASE_TYPE_NAME), pointer :: this
+
+    PUSH_SUB(TEMPLATE(del_type))
+
+    call TEMPLATE(del)(this, TEMPLATE(end_type))
+    
+    POP_SUB(TEMPLATE(del_type))
+  end subroutine TEMPLATE(del_type)
+
+  ! ---------------------------------------------------------
+  recursive subroutine TEMPLATE(del_pass)(this, finis)
+    type(BASE_TYPE_NAME), pointer :: this
+
+    interface
+      subroutine finis(this)
+        import :: BASE_TYPE_NAME
+        type(BASE_TYPE_NAME), intent(inout) :: this
+      end subroutine finis
+    end interface
+    
+    PUSH_SUB(TEMPLATE(del_pass))
+
+    if(associated(this))then
+      if(associated(this%prnt))then
+        call TEMPLATE(list_del)(this%prnt%list, this)
+        call finis(this)
+        call SPECIAL(del)(this)
+      end if
+    end if
+
+    POP_SUB(TEMPLATE(del_pass))
+  end subroutine TEMPLATE(del_pass)
 
   ! ---------------------------------------------------------
   subroutine SPECIAL(build)(this, build)
@@ -222,8 +264,9 @@ contains
   end subroutine SPECIAL(build)
 
   ! ---------------------------------------------------------
-  subroutine SPECIAL(apply)(this, operation)
+  subroutine SPECIAL(apply)(this, operation, parent)
     type(BASE_TYPE_NAME), intent(inout) :: this
+    logical,    optional, intent(in)    :: parent
 
     interface
       subroutine operation(this)
@@ -234,6 +277,7 @@ contains
 
     type(TEMPLATE(dict_iterator_t)) :: iter
     type(BASE_TYPE_NAME),   pointer :: subs
+    logical                         :: prnt
 
     PUSH_SUB(SPECIAL(apply))
 
@@ -247,7 +291,9 @@ contains
     end do
     call TEMPLATE(dict_end)(iter)
     nullify(subs)
-    call operation(this)
+    prnt = .true.
+    if(present(parent)) prnt = parent
+    if(prnt) call operation(this)
 
     POP_SUB(SPECIAL(apply))
   end subroutine SPECIAL(apply)
@@ -404,6 +450,44 @@ contains
 
     POP_SUB(TEMPLATE(gets_config))
   end subroutine TEMPLATE(gets_config)
+
+  ! ---------------------------------------------------------
+  recursive subroutine TEMPLATE(end_type)(this)
+    type(BASE_TYPE_NAME), intent(inout) :: this
+
+    PUSH_SUB(TEMPLATE(end_type))
+
+    call TEMPLATE(end)(this, TEMPLATE(end_type))
+    
+    POP_SUB(TEMPLATE(end_type))
+  end subroutine TEMPLATE(end_type)
+
+  ! ---------------------------------------------------------
+  recursive subroutine TEMPLATE(end_pass)(this, finis)
+    type(BASE_TYPE_NAME), intent(inout) :: this
+
+    interface
+      subroutine finis(this)
+        import :: BASE_TYPE_NAME
+        type(BASE_TYPE_NAME), intent(inout) :: this
+      end subroutine finis
+    end interface
+    
+    type(BASE_TYPE_NAME), pointer :: subs
+
+    PUSH_SUB(TEMPLATE(end_pass))
+
+    do
+      nullify(subs)
+      call TEMPLATE(list_pop)(this%list, subs)
+      if(.not.associated(subs))exit
+      call TEMPLATE(del)(subs, finis)
+    end do
+    nullify(subs)
+    call SPECIAL(end)(this)
+
+    POP_SUB(TEMPLATE(end_pass))
+  end subroutine TEMPLATE(end_pass)
 
 #if !defined(BASE_EXTENDED_ITERATOR_TYPE)
 
