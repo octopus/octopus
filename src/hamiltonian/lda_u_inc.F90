@@ -1215,19 +1215,19 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
           if(ll == 0) hasSorbitals = .true.
           work = max(work, ii)          
         end do
-
+        if(this%skipSOrbitals .and. hasSorbitals ) work = work-1
         offset = 0
         if(this%skipSOrbitals) offset = 1
 
         !We loop over the orbital sets of the atom ia
-        do norb = offset, work
+        do norb = 1, work
           os => this%orbsets(iorbset+norb)
           !We count the number of orbital for this orbital set
           work2 = 0
           do iorb = 1, species_niwfs(geo%atom(ia)%species)
             call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
             call species_iwf_n(geo%atom(ia)%species, iorb, 1, nn )
-            if(ii == norb) then
+            if(ii == norb+offset) then
               work2 = work2 + 1
               os%ll = ll
               os%nn = nn
@@ -1259,7 +1259,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
           os%iatom = ia
           call X(orbitalset_utils_getorbitals)(os, geo, mesh)
         end do !norb
-        iorbset = iorbset + work - offset
+        iorbset = iorbset + work
       end if
     end do
   end do
