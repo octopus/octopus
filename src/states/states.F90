@@ -2759,7 +2759,7 @@ subroutine states_set_phase(st_d, mesh, psi, phase, conjugate)
     do idim = 1, st_d%dim
       !$omp parallel do
       do ip = 1, mesh%np_part
-        psi(ip, idim) = phase(ip)*psi(ip, idim)
+        psi(ip, idim) = conjg(phase(ip))*psi(ip, idim)
       end do
       !$omp end parallel do
     end do
@@ -2768,7 +2768,7 @@ subroutine states_set_phase(st_d, mesh, psi, phase, conjugate)
     do idim = 1, st_d%dim
       !$omp parallel do
       do ip = 1, mesh%np_part
-        psi(ip, idim) = conjg(phase(ip))*psi(ip, idim)
+        psi(ip, idim) = phase(ip)*psi(ip, idim)
       end do
       !$omp end parallel do
     end do

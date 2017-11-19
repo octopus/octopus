@@ -186,6 +186,8 @@ contains
             call batch_copy(st%group%psib(ib, ik), commpsib(idir))
             call zderivatives_batch_perform(der%grad(idir), der, epsib, commpsib(idir), set_bc = .false.)
           end do
+
+          
           
           call zhamiltonian_base_nlocal_position_commutator(hm%hm_base, der%mesh, st%d, ik, epsib, commpsib)
 
