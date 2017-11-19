@@ -413,6 +413,7 @@ subroutine X(total_force_from_potential)(gr, geo, ep, st, x)
 
   !THE NON-LOCAL PART (parallel in states and k-points)
   do iq = st%d%kpt%start, st%d%kpt%end
+    ikpoint = states_dim_get_kpoint_index(st%d, iq)
     do ist = st%st_start, st%st_end
 
       call states_get_state(st, gr%mesh, ist, iq, psi)
@@ -420,14 +421,13 @@ subroutine X(total_force_from_potential)(gr, geo, ep, st, x)
       do idim = 1, st%d%dim
         call boundaries_set(gr%der%boundaries, psi(:, idim))
 
-        ikpoint = states_dim_get_kpoint_index(st%d, iq)
         if(simul_box_is_periodic(gr%sb) .and. .not. kpoints_point_is_gamma(gr%sb%kpoints, ikpoint)) then
 
           kpoint = M_ZERO
           kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, ikpoint)
 
-          !Note this phase is not correct in peneral. We should use the phase from the Hamiltonian
-          !Here we recompute is, and moreover the vector potential is missing
+          !Note this phase is not correct in general. We should use the phase from the Hamiltonian
+          !Here we recompute it, and moreover the vector potential is missing
           do ip = 1, np_part
             phase = exp(-M_zI*sum(kpoint(1:gr%sb%dim)*gr%mesh%x(ip, 1:gr%sb%dim)))
             psi(ip, idim) = phase*psi(ip, idim)
@@ -527,6 +527,7 @@ subroutine X(forces_derivative)(gr, geo, ep, st, lr, lr2, force_deriv)
 
   !THE NON-LOCAL PART (parallel in states and k-points)
   do iq = st%d%kpt%start, st%d%kpt%end
+    ikpoint = states_dim_get_kpoint_index(st%d, iq)
     do ist = st%st_start, st%st_end
       do idim = 1, st%d%dim
 
@@ -537,14 +538,13 @@ subroutine X(forces_derivative)(gr, geo, ep, st, lr, lr2, force_deriv)
         call lalg_copy(gr%mesh%np_part, lr2%X(dl_psi)(:, idim, ist, iq), dl_psi2(:, idim))
         call boundaries_set(gr%der%boundaries, dl_psi2(:, idim))
 
-        ikpoint = states_dim_get_kpoint_index(st%d, iq)
         if(simul_box_is_periodic(gr%sb) .and. .not. kpoints_point_is_gamma(gr%sb%kpoints, ikpoint)) then
 
           kpoint = M_ZERO
           kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, ikpoint)
 
-          !Note this phase is not correct in peneral. We should use the phase from the Hamiltonian
-          !Here we recompute is, and moreover the vector potential is missing
+          !Note this phase is not correct in general. We should use the phase from the Hamiltonian
+          !Here we recompute it, and moreover the vector potential is missing
           do ip = 1, np_part
             phase = exp(-M_zI*sum(kpoint(1:gr%sb%dim)*gr%mesh%x(ip, 1:gr%sb%dim)))
             psi(ip, idim) = phase*psi(ip, idim)
