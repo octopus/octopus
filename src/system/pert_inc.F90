@@ -130,9 +130,9 @@ subroutine X(pert_apply)(this, gr, geo, hm, ik, f_in, f_out, set_bc)
     apply_kpoint = .false.
 
   if (apply_kpoint) then
-    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np_part)
-      f_in_copy(ip, idim) = hm%hm_base%phase(ip, ik) * f_in_copy(ip, idim)
-    end forall
+#ifdef R_TCOMPLEX
+    call states_set_phase(hm%d, gr%mesh, f_in_copy, hm%hm_base%phase(1:gr%mesh%np_part, ik), .false.)
+#endif
   end if
 
   select case(this%pert_type)
@@ -154,9 +154,9 @@ subroutine X(pert_apply)(this, gr, geo, hm, ik, f_in, f_out, set_bc)
   end select
   
   if (apply_kpoint) then
-    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np)
-      f_out(ip, idim) = conjg(hm%hm_base%phase(ip, ik)) * f_out(ip, idim)
-    end forall
+#ifdef R_TCOMPLEX
+    call states_set_phase(hm%d, gr%mesh, f_out, hm%hm_base%phase(1:gr%mesh%np_part, ik), .true.)
+#endif
   end if
 
   if (this%pert_type /= PERTURBATION_ELECTRIC) then
@@ -420,9 +420,9 @@ subroutine X(pert_apply_order_2) (this, gr, geo, hm, ik, f_in, f_out)
   ! kdotp has the perturbation written in terms of the periodic part with the phase
 
   if (apply_kpoint) then
-    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np_part)
-      f_in_copy(ip, idim) = hm%hm_base%phase(ip, ik)*f_in_copy(ip, idim)
-    end forall
+#ifdef R_TCOMPLEX
+    call states_set_phase(hm%d, gr%mesh, f_in_copy, hm%hm_base%phase(1:gr%mesh%np_part, ik), .false.)
+#endif
   end if
 
   select case(this%pert_type)
@@ -440,9 +440,9 @@ subroutine X(pert_apply_order_2) (this, gr, geo, hm, ik, f_in, f_out)
   end select
 
   if (apply_kpoint) then
-    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np)
-      f_out(ip, idim) = conjg(hm%hm_base%phase(ip, ik))*f_out(ip, idim)
-    end forall
+#ifdef R_TCOMPLEX
+    call states_set_phase(hm%d, gr%mesh, f_out, hm%hm_base%phase(1:gr%mesh%np_part, ik), .true.)
+#endif
   end if
 
   if (this%pert_type /= PERTURBATION_ELECTRIC) then

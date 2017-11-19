@@ -322,7 +322,7 @@ contains
           end do
 
           if(associated(hm%hm_base%phase)) then 
-            call states_set_phase(st, der%mesh, psi, hm%hm_base%phase(1:der%mesh%np_part, ik))
+            call states_set_phase(st%d, der%mesh, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), .false.)
           end if
 
           do idim = 1, st%d%dim
