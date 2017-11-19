@@ -244,7 +244,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl)
               do iatom = 1, geo%natoms
                 if(projector_is_null(hm%ep%proj(iatom))) cycle
 
-                !Let's find the atom that correspond to this one, once symmetry is applied
+                !We find the atom that correspond to this one, once symmetry is applied
                 ratom = M_ZERO
                 if(geo%reduced_coordinates) then
                   ratom(1:gr%sb%dim) = symm_op_apply_inv_red(gr%sb%symm%ops(iop), geo%atom(iatom)%x)
@@ -273,7 +273,8 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl)
                 ! We convert the force to Cartesian coordinates before symmetrization
                 ! Grad_xyw = Bt Grad_uvw, see Chelikowsky after Eq. 10
                 if (simul_box_is_periodic(gr%mesh%sb) .and. gr%mesh%sb%nonorthogonal ) then 
-                  force_psi(1:gr%mesh%sb%dim) = matmul(gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim),force_psi(1:gr%mesh%sb%dim))
+                  force_psi(1:gr%mesh%sb%dim) = matmul(gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim), &
+                                                            force_psi(1:gr%mesh%sb%dim))
                 end if
 
                 !Let us now apply the symmetry to the force
@@ -299,7 +300,8 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl)
 
               ! We convert the forces to Cartesian coordinates
               if (simul_box_is_periodic(gr%mesh%sb) .and. gr%mesh%sb%nonorthogonal ) then
-                force_psi(1:gr%mesh%sb%dim) = matmul(gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim),force_psi(1:gr%mesh%sb%dim))
+                force_psi(1:gr%mesh%sb%dim) = matmul(gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim), &
+                                                             force_psi(1:gr%mesh%sb%dim))
               end if
 
               force_nl(1:gr%mesh%sb%dim, iatom) = force_nl(1:gr%mesh%sb%dim, iatom) + force_psi(1:gr%mesh%sb%dim)
@@ -330,7 +332,8 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl)
    ! We convert the forces to Cartesian coordinates
    if (simul_box_is_periodic(gr%mesh%sb) .and. gr%mesh%sb%nonorthogonal ) then
      do iatom = 1, geo%natoms
-       force_nl(1:gr%mesh%sb%dim,iatom) = matmul(gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim),force_nl(1:gr%mesh%sb%dim,iatom))
+       force_nl(1:gr%mesh%sb%dim,iatom) = matmul(gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim), &
+                                                   force_nl(1:gr%mesh%sb%dim,iatom))
      end do
    end if
  end if
@@ -349,7 +352,8 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl)
   ! Grad_xyw = Bt Grad_uvw, see Chelikowsky after Eq. 10
   if (simul_box_is_periodic(gr%mesh%sb) .and. gr%mesh%sb%nonorthogonal )  then
     do ip = 1, gr%mesh%np
-      grad_rho(ip, 1:gr%mesh%sb%dim) = matmul(gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim),grad_rho(ip, 1:gr%mesh%sb%dim))
+      grad_rho(ip, 1:gr%mesh%sb%dim) = matmul(gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim), &
+                                                   grad_rho(ip, 1:gr%mesh%sb%dim))
     end do
   end if
 
