@@ -125,7 +125,6 @@ module lda_u_oct_m
     logical             :: freeze_u           !> U is not recomputed during TD evolution
     logical             :: normalizeOrbitals  !> Do we normalize the orbitals 
     logical             :: minimalAtomicSphere!> Use the smallest atomic orbital radius for all of them
-    logical             :: jdeporbitals       !> J-dependent spherical harmonics (for noncollinear spin)
     logical             :: submeshforperiodic !> Do we use or not submeshes for the orbitals
 
     type(distributed_t) :: orbs_dist
@@ -148,7 +147,6 @@ contains
   this%freeze_occ = .false.
   this%freeze_u = .false.
   this%IncludeOverlap = .false.
-  this%jdeporbitals = .false.
 
   nullify(this%dn)
   nullify(this%zn)
@@ -178,7 +176,7 @@ contains
   type(states_t),            intent(in)    :: st
   type(multicomm_t),         intent(in)    :: mc
 
-  integer :: maxorbs, iat, ispin, iorb
+  integer :: maxorbs
 
   PUSH_SUB(lda_u_init)
 
@@ -244,23 +242,6 @@ contains
   !%End
   call parse_variable('DFTUNormalizeOrbitals', .true., this%normalizeOrbitals)
   call messages_print_var_value(stdout, 'DFTUNormalizeOrbitals', this%normalizeOrbitals)
-
-  !%Variable DFTUjdependentorbitals
-  !%Type logical
-  !%Default yes
-  !%Section Hamiltonian::DFT+U
-  !%Description
-  !% If set to yes, Octopus will use the j-dependent spherical harmonics as basis
-  !% instead of the usual spherical harmonics for describing the radial part of the
-  !% atomic orbitals. Only for noncollinear spins.
-  !%End
-  call parse_variable('DFTUjdependentorbitals', .false., this%jdeporbitals)
-  call messages_print_var_value(stdout, 'DFTUjdependentorbitals', this%jdeporbitals)
-  if(st%d%ispin /= SPINORS .and. this%jdeporbitals) then
-    message(1) = "DFTUjdependentorbitals can only be used with spinors."
-    call messages_fatal(1) 
-  end if
-  if(this%jdeporbitals) call messages_experimental("DFTUjdependentorbitals")
 
   !%Variable DFTUSubmeshForPeriodic
   !%Type logical
@@ -361,12 +342,12 @@ contains
 
   if(this%useACBN0) then
     call messages_info(1)
-    if(st%d%dim == 1 .or. .not. this%jdeporbitals) then 
+    if(st%d%dim == 1) then 
       write(message(1),'(a)')    'Computing the Coulomb integrals of the localized basis.'
       if (states_are_real(st)) then
-        call dcompute_coulomb_integrals(this, gr%mesh, gr%der, st)
+        call dcompute_coulomb_integrals(this, gr%mesh, gr%der)
       else
-        call zcompute_coulomb_integrals(this, gr%mesh, gr%der, st)
+        call zcompute_coulomb_integrals(this, gr%mesh, gr%der)
       end if
     else
       ASSERT(.not.states_are_real(st))
