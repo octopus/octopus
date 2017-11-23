@@ -131,7 +131,7 @@ subroutine X(pert_apply)(this, gr, geo, hm, ik, f_in, f_out, set_bc)
 
   if (apply_kpoint) then
 #ifdef R_TCOMPLEX
-    call states_set_phase(hm%d, gr%mesh, f_in_copy, hm%hm_base%phase(1:gr%mesh%np_part, ik), .false.)
+    call states_set_phase(hm%d, f_in_copy, hm%hm_base%phase(1:gr%mesh%np_part, ik), gr%mesh%np_part, .false.)
 #endif
   end if
 
@@ -155,7 +155,7 @@ subroutine X(pert_apply)(this, gr, geo, hm, ik, f_in, f_out, set_bc)
   
   if (apply_kpoint) then
 #ifdef R_TCOMPLEX
-    call states_set_phase(hm%d, gr%mesh, f_out, hm%hm_base%phase(1:gr%mesh%np_part, ik), .true.)
+    call states_set_phase(hm%d, f_out, hm%hm_base%phase(1:gr%mesh%np, ik), gr%mesh%np, .true.)
 #endif
   end if
 
@@ -421,7 +421,7 @@ subroutine X(pert_apply_order_2) (this, gr, geo, hm, ik, f_in, f_out)
 
   if (apply_kpoint) then
 #ifdef R_TCOMPLEX
-    call states_set_phase(hm%d, gr%mesh, f_in_copy, hm%hm_base%phase(1:gr%mesh%np_part, ik), .false.)
+    call states_set_phase(hm%d, f_in_copy, hm%hm_base%phase(1:gr%mesh%np_part, ik), gr%mesh%np_part, .false.)
 #endif
   end if
 
@@ -441,7 +441,7 @@ subroutine X(pert_apply_order_2) (this, gr, geo, hm, ik, f_in, f_out)
 
   if (apply_kpoint) then
 #ifdef R_TCOMPLEX
-    call states_set_phase(hm%d, gr%mesh, f_out, hm%hm_base%phase(1:gr%mesh%np_part, ik), .true.)
+    call states_set_phase(hm%d, f_out, hm%hm_base%phase(1:gr%mesh%np, ik), gr%mesh%np, .true.)
 #endif
   end if
 

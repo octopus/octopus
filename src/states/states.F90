@@ -2743,11 +2743,11 @@ contains
 
 
   ! ------------------------------------------------------------
-subroutine states_set_phase(st_d, mesh, psi, phase, conjugate)
+subroutine states_set_phase(st_d, psi, phase, np, conjugate)
   type(states_dim_t),intent(in)    :: st_d
-  type(mesh_t),      intent(in)    :: mesh
   CMPLX,          intent(inout)    :: psi(:, :)
   CMPLX,             intent(in)    :: phase(:)
+  integer,           intent(in)    :: np
   logical,           intent(in)    :: conjugate
 
   integer :: idim, ip
@@ -2758,7 +2758,7 @@ subroutine states_set_phase(st_d, mesh, psi, phase, conjugate)
     ! Apply the phase that contains both the k-point and vector-potential terms.
     do idim = 1, st_d%dim
       !$omp parallel do
-      do ip = 1, mesh%np_part
+      do ip = 1, np
         psi(ip, idim) = conjg(phase(ip))*psi(ip, idim)
       end do
       !$omp end parallel do
@@ -2767,7 +2767,7 @@ subroutine states_set_phase(st_d, mesh, psi, phase, conjugate)
     ! Apply the conjugate of the phase that contains both the k-point and vector-potential terms.
     do idim = 1, st_d%dim
       !$omp parallel do
-      do ip = 1, mesh%np_part
+      do ip = 1, np
         psi(ip, idim) = phase(ip)*psi(ip, idim)
       end do
       !$omp end parallel do
