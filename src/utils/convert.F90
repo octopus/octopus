@@ -449,7 +449,7 @@ contains
     character(len=*), intent(inout) :: ref_folder     !< Reference folder name
 
     integer                 :: ierr, i_space, i_time, nn(1:3), optimize_parity(1:3), wd_info
-    integer                 :: i_energy, e_end, e_start, e_point, chunk_size, read_count, t_point
+    integer                 :: i_energy, no_e, e_end, e_start, e_point, chunk_size, read_count, t_point
     logical                 :: optimize(1:3)
     integer                 :: folder_index
     character(MAX_PATH_LEN) :: filename, folder, restart_folder
@@ -570,6 +570,7 @@ contains
 
     select case(ft_method)
       case (FAST_FOURIER)
+        no_e = time_steps
         nn(1) = time_steps + 1
         nn(2) = 1
         nn(3) = 1
@@ -595,10 +596,11 @@ contains
         ! Manually setting already defined variables on spectrum.
         spectrum%start_time = c_start * dt
         spectrum%end_time = c_end * dt 
-        spectrum%energy_step =  dw
+        spectrum%energy_step = dw
         spectrum%max_energy = max_energy
         SAFE_ALLOCATE(tdrho_a(0:time_steps, 1, 1))
-        SAFE_ALLOCATE(wdrho_a(0:time_steps, 1, 1))
+        no_e = int(spectrum%max_energy / spectrum%energy_step)
+        SAFE_ALLOCATE(wdrho_a(0:no_e, 1, 1))
         !TODO: set system variable common for all the program in 
         !      order to use call kick_init(kick, sy%st%d%nspin, sys%space%dim, sys%geo%periodic_dim)
         call kick_init(kick, 1, mesh%sb%dim, geo%periodic_dim)
@@ -607,6 +609,7 @@ contains
 
     e_start = nint(min_energy / dw)
     e_end   = nint(max_energy / dw)
+
     write(message(1),'(a,1x,i0.7,a,f12.7,a,i0.7,a,f12.7,a)')'Frequency index:',e_start,'(',&
          units_from_atomic(units_out%energy, e_start * dw),')-',e_end,'(',units_from_atomic(units_out%energy, e_end * dw),')' 
     write(message(2),'(a,f12.7,a)')'Frequency Step, dw:  ', units_from_atomic(units_out%energy, dw), &
@@ -653,7 +656,7 @@ contains
     !For each mesh point, open density file and read corresponding point.  
     if (mpi_world%rank == 0) call loct_progress_bar(-1, mesh%np)
 
-    SAFE_ALLOCATE(point_tmp(1:chunk_size, 0:time_steps))
+    SAFE_ALLOCATE(point_tmp(1:chunk_size, 0:max(time_steps, no_e)))
     read_count = 0
     ! Space
     do i_space = 1, mesh%np
@@ -710,6 +713,7 @@ contains
         tdrho_a(0:time_steps, 1, 1) = read_ft(0:time_steps)
         call batch_init(tdrho_b, 1, 1, 1, tdrho_a)
         call batch_init(wdrho_b, 1, 1, 1, wdrho_a)
+
         call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, c_start + 1, c_start + time_steps + 1, & 
                                   kick%time, dt, tdrho_b)
         call spectrum_fourier_transform(spectrum%method, spectrum%transform, spectrum%noise, &
