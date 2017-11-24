@@ -112,7 +112,8 @@ module states_oct_m
     cmplx_array2_t,                   &
     states_count_pairs,               &
     occupied_states,                  &
-    states_type
+    states_type,                      &
+    states_set_phase
 
   !>cmplxscl: complex 2D matrices 
   type cmplx_array2_t    
@@ -2739,6 +2740,44 @@ contains
 
     POP_SUB(occupied_states)
   end subroutine occupied_states
+
+
+  ! ------------------------------------------------------------
+subroutine states_set_phase(st_d, psi, phase, np, conjugate)
+  type(states_dim_t),intent(in)    :: st_d
+  CMPLX,          intent(inout)    :: psi(:, :)
+  CMPLX,             intent(in)    :: phase(:)
+  integer,           intent(in)    :: np
+  logical,           intent(in)    :: conjugate
+
+  integer :: idim, ip
+
+  PUSH_SUB(states_set_phase)
+
+  if(conjugate) then
+    ! Apply the phase that contains both the k-point and vector-potential terms.
+    do idim = 1, st_d%dim
+      !$omp parallel do
+      do ip = 1, np
+        psi(ip, idim) = conjg(phase(ip))*psi(ip, idim)
+      end do
+      !$omp end parallel do
+    end do
+  else
+    ! Apply the conjugate of the phase that contains both the k-point and vector-potential terms.
+    do idim = 1, st_d%dim
+      !$omp parallel do
+      do ip = 1, np
+        psi(ip, idim) = phase(ip)*psi(ip, idim)
+      end do
+      !$omp end parallel do
+    end do
+  end if
+
+  POP_SUB(states_set_phase)
+
+end subroutine  states_set_phase
+
   
 #include "undef.F90"
 #include "real.F90"
