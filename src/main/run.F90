@@ -21,7 +21,6 @@
 module run_oct_m
   use base_hamiltonian_oct_m
   use base_handle_oct_m
-  use base_model_oct_m
   use casida_oct_m
   use em_resp_oct_m
   use fft_oct_m

@@ -22,9 +22,7 @@ module system_oct_m
   use accel_oct_m
   use base_config_oct_m
   use base_handle_oct_m
-  use base_model_oct_m
   use base_states_oct_m
-  use base_system_oct_m
   use calc_mode_par_oct_m
   use density_oct_m
   use elf_oct_m

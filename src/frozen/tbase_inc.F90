@@ -146,6 +146,7 @@ module TEMPLATE(base_oct_m)
   end interface TEMPLATE(del)
 
   interface TEMPLATE(init)
+    module procedure TEMPLATE(init_copy)
     module procedure TEMPLATE(iterator_init_type)
     module procedure TEMPLATE(iterator_init_copy)
   end interface TEMPLATE(init)
@@ -162,6 +163,7 @@ module TEMPLATE(base_oct_m)
   end interface TEMPLATE(next)
 
   interface TEMPLATE(copy)
+    module procedure TEMPLATE(copy_type)
     module procedure TEMPLATE(iterator_copy)
   end interface TEMPLATE(copy)
 
@@ -197,7 +199,7 @@ contains
 
   ! ---------------------------------------------------------
   recursive subroutine TEMPLATE(del_type)(this)
-    type(BASE_TYPE_NAME), pointer :: this
+    type(BASE_TYPE_NAME), pointer, intent(inout) :: this
 
     PUSH_SUB(TEMPLATE(del_type))
 
@@ -208,7 +210,7 @@ contains
 
   ! ---------------------------------------------------------
   recursive subroutine TEMPLATE(del_pass)(this, finis)
-    type(BASE_TYPE_NAME), pointer :: this
+    type(BASE_TYPE_NAME), pointer, intent(inout) :: this
 
     interface
       subroutine finis(this)
@@ -223,12 +225,41 @@ contains
       if(associated(this%prnt))then
         call TEMPLATE(list_del)(this%prnt%list, this)
         call finis(this)
-        call SPECIAL(del)(this)
+        SAFE_DEALLOCATE_P(this)
+        nullify(this)
       end if
     end if
 
     POP_SUB(TEMPLATE(del_pass))
   end subroutine TEMPLATE(del_pass)
+
+  ! ---------------------------------------------------------
+  recursive subroutine TEMPLATE(init_copy)(this, that)
+    type(BASE_TYPE_NAME), intent(out) :: this
+    type(BASE_TYPE_NAME), intent(in)  :: that
+
+    type(TEMPLATE(iterator_t))        :: iter
+    character(len=TEMPLATE(NAME_LEN)) :: name
+    type(BASE_TYPE_NAME),     pointer :: osub, isub
+
+    PUSH_SUB(TEMPLATE(init_copy))
+
+    ASSERT(associated(that%config))
+    call SPECIAL(init)(this, that)
+    call TEMPLATE(init)(iter, that)
+    do
+      nullify(osub, isub)
+      call TEMPLATE(next)(iter, name, isub)
+      if(.not.associated(isub))exit
+      call TEMPLATE(new)(this, osub)
+      call TEMPLATE(init)(osub, isub)
+      call TEMPLATE(sets)(this, trim(adjustl(name)), osub)
+    end do
+    call TEMPLATE(end)(iter)
+    nullify(osub, isub)
+
+    POP_SUB(TEMPLATE(init_copy))
+  end subroutine TEMPLATE(init_copy)
 
   ! ---------------------------------------------------------
   subroutine SPECIAL(build)(this, build)
@@ -332,37 +363,31 @@ contains
 #if defined(BASE_LEAF_TYPE)
 
   ! ---------------------------------------------------------
-  subroutine SPECIAL(sets)(this, name, that, config, lock, active)
+  subroutine SPECIAL(sets)(this, name, that)
     type(BASE_TYPE_NAME),          intent(inout) :: this
     character(len=*),              intent(in)    :: name
     type(BASE_TYPE_NAME),          intent(in)    :: that
-    type(json_object_t), optional, intent(in)    :: config
-    logical,             optional, intent(in)    :: lock
-    logical,             optional, intent(in)    :: active
 
     PUSH_SUB(SPECIAL(sets))
 
     ASSERT(associated(this%config))
     ASSERT(len_trim(name)>0)
     ASSERT(associated(that%config))
-    if(present(config)) continue
-    if(present(lock)) continue
-    if(present(active)) continue
     
     POP_SUB(SPECIAL(sets))
   end subroutine SPECIAL(sets)
     
   ! ---------------------------------------------------------
-  subroutine SPECIAL(dels)(this, name, ierr)
+  subroutine SPECIAL(dels)(this, name, that)
     type(BASE_TYPE_NAME), intent(inout) :: this
     character(len=*),     intent(in)    :: name
-    integer,              intent(out)   :: ierr
+    type(BASE_TYPE_NAME), intent(in)    :: that
 
     PUSH_SUB(SPECIAL(dels))
 
     ASSERT(associated(this%config))
     ASSERT(len_trim(name)>0)
-    ierr = TEMPLATE(OK)
+    ASSERT(associated(that%config))
 
     POP_SUB(SPECIAL(dels))
   end subroutine SPECIAL(dels)
@@ -386,9 +411,9 @@ contains
     
   ! ---------------------------------------------------------
   recursive subroutine TEMPLATE(gets_type)(this, name, that)
-    type(BASE_TYPE_NAME),  intent(in) :: this
-    character(len=*),      intent(in) :: name
-    type(BASE_TYPE_NAME), pointer     :: that
+    type(BASE_TYPE_NAME),          intent(in)  :: this
+    character(len=*),              intent(in)  :: name
+    type(BASE_TYPE_NAME), pointer, intent(out) :: that
 
     type(BASE_TYPE_NAME), pointer :: subs
     integer                       :: ipos
@@ -410,34 +435,28 @@ contains
   end subroutine TEMPLATE(gets_type)
 
   ! ---------------------------------------------------------
-  recursive subroutine TEMPLATE(dels)(this, name, ierr)
+  recursive subroutine TEMPLATE(dels)(this, name, that)
     type(BASE_TYPE_NAME), intent(inout) :: this
     character(len=*),     intent(in)    :: name
-    integer,    optional, intent(out)   :: ierr
+    type(BASE_TYPE_NAME), intent(in)    :: that
 
-    type(BASE_TYPE_NAME), pointer :: subs
-    integer                       :: jerr
+    integer :: ierr
 
     PUSH_SUB(TEMPLATE(dels))
 
     ASSERT(associated(this%config))
-    nullify(subs)
-    call TEMPLATE(dict_del)(this%dict, trim(adjustl(name)), subs, jerr)
-    if(associated(subs))then
-      call SPECIAL(dels)(this, trim(adjustl(name)), jerr)
-      call TEMPLATE(del)(subs)
-      nullify(subs)
-    end if
-    if(present(ierr)) ierr = jerr
+    call TEMPLATE(dict_del)(this%dict, trim(adjustl(name)), ierr)
+    ASSERT(ierr==TEMPLATE(OK))
+    call SPECIAL(dels)(this, trim(adjustl(name)), that)
 
     POP_SUB(TEMPLATE(dels))
   end subroutine TEMPLATE(dels)
 
   ! ---------------------------------------------------------
   subroutine TEMPLATE(gets_config)(this, name, that)
-    type(BASE_TYPE_NAME), intent(in) :: this
-    character(len=*),     intent(in) :: name
-    type(json_object_t), pointer     :: that
+    type(BASE_TYPE_NAME),         intent(in)  :: this
+    character(len=*),             intent(in)  :: name
+    type(json_object_t), pointer, intent(out) :: that
     
     type(BASE_TYPE_NAME), pointer :: subs
 
@@ -450,6 +469,34 @@ contains
 
     POP_SUB(TEMPLATE(gets_config))
   end subroutine TEMPLATE(gets_config)
+
+  ! ---------------------------------------------------------
+  recursive subroutine TEMPLATE(copy_type)(this, that)
+    type(BASE_TYPE_NAME), intent(inout) :: this
+    type(BASE_TYPE_NAME), intent(in)    :: that
+
+    type(TEMPLATE(iterator_t))        :: iter
+    character(len=TEMPLATE(NAME_LEN)) :: name
+    type(BASE_TYPE_NAME),     pointer :: osub, isub
+
+    PUSH_SUB(TEMPLATE(copy_type))
+
+    call TEMPLATE(end)(this)
+    call SPECIAL(copy)(this, that)
+    call TEMPLATE(init)(iter, that)
+    do
+      nullify(osub, isub)
+      call TEMPLATE(next)(iter, name, isub)
+      if(.not.associated(isub))exit
+      call TEMPLATE(new)(this, osub)
+      call TEMPLATE(copy)(osub, isub)
+      call TEMPLATE(sets)(this, trim(adjustl(name)), osub)
+    end do
+    call TEMPLATE(end)(iter)
+    nullify(osub, isub)
+
+    POP_SUB(TEMPLATE(copy_type))
+  end subroutine TEMPLATE(copy_type)
 
   ! ---------------------------------------------------------
   recursive subroutine TEMPLATE(end_type)(this)
@@ -573,9 +620,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine TEMPLATE(iterator_next_type)(this, that, ierr)
-    type(TEMPLATE(iterator_t)), intent(inout) :: this
-    type(BASE_TYPE_NAME),      pointer        :: that
-    integer,          optional, intent(out)   :: ierr
+    type(TEMPLATE(iterator_t)),    intent(inout) :: this
+    type(BASE_TYPE_NAME), pointer, intent(out)   :: that
+    integer,             optional, intent(out)   :: ierr
 
     PUSH_SUB(TEMPLATE(iterator_next_type))
 
@@ -589,7 +636,7 @@ contains
   subroutine TEMPLATE(iterator_next_name_type)(this, name, that, ierr)
     type(TEMPLATE(iterator_t)), intent(inout) :: this
     character(len=*),           intent(out)   :: name
-    type(TEMPLATE(t)),         pointer        :: that
+    type(TEMPLATE(t)), pointer, intent(out)   :: that
     integer,          optional, intent(out)   :: ierr
 
     PUSH_SUB(TEMPLATE(iterator_next_name_type))

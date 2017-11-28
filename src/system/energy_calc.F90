@@ -43,7 +43,6 @@ module energy_calc_oct_m
   use pcm_oct_m
   use simul_box_oct_m
   use smear_oct_m
-  use ssys_external_oct_m
   use states_oct_m
   use states_dim_oct_m
   use unit_oct_m

@@ -88,9 +88,12 @@ module base_potential_oct_m
     module procedure base_potential__init__copy
   end interface base_potential__init__
 
+  interface base_potential_new
+    module procedure base_potential_new_type
+  end interface base_potential_new
+
   interface base_potential_init
     module procedure base_potential_init_type
-    module procedure base_potential_init_copy
   end interface base_potential_init
 
   interface base_potential_set
@@ -114,10 +117,6 @@ module base_potential_oct_m
     module procedure base_potential_gets_potential_md
   end interface base_potential_gets
 
-  interface base_potential_copy
-    module procedure base_potential_copy_type
-  end interface base_potential_copy
-
 contains
 
 #define BASE_TEMPLATE_NAME base_potential
@@ -127,45 +126,19 @@ contains
 #undef BASE_TEMPLATE_NAME
 
   ! ---------------------------------------------------------
-  subroutine base_potential__new__(this)
-    type(base_potential_t), pointer :: this
-
-    PUSH_SUB(base_potential__new__)
-
-    nullify(this)
-    SAFE_ALLOCATE(this)
-
-    POP_SUB(base_potential__new__)
-  end subroutine base_potential__new__
-
-  ! ---------------------------------------------------------
-  subroutine base_potential__del__(this)
-    type(base_potential_t), pointer :: this
-
-    PUSH_SUB(base_potential__del__)
-
-    if(associated(this))then
-      SAFE_DEALLOCATE_P(this)
-    end if
-    nullify(this)
-
-    POP_SUB(base_potential__del__)
-  end subroutine base_potential__del__
-
-  ! ---------------------------------------------------------
-  subroutine base_potential_new(this, that)
+  subroutine base_potential_new_type(this, that)
     type(base_potential_t),  target, intent(inout) :: this
     type(base_potential_t), pointer                :: that
 
-    PUSH_SUB(base_potential_new)
+    PUSH_SUB(base_potential_new_type)
 
     nullify(that)
-    call base_potential__new__(that)
+    SAFE_ALLOCATE(that)
     that%prnt => this
     call base_potential_list_push(this%list, that)
 
-    POP_SUB(base_potential_new)
-  end subroutine base_potential_new
+    POP_SUB(base_potential_new_type)
+  end subroutine base_potential_new_type
 
   ! ---------------------------------------------------------
   subroutine base_potential__init__type(this, sys, config)
@@ -227,35 +200,6 @@ contains
 
     POP_SUB(base_potential_init_type)
   end subroutine base_potential_init_type
-
-  ! ---------------------------------------------------------
-  recursive subroutine base_potential_init_copy(this, that)
-    type(base_potential_t), intent(out) :: this
-    type(base_potential_t), intent(in)  :: that
-
-    type(base_potential_iterator_t)        :: iter
-    character(len=BASE_POTENTIAL_NAME_LEN) :: name
-    type(base_potential_t),        pointer :: osub, isub
-    integer                                :: ierr
-
-    PUSH_SUB(base_potential_init_copy)
-
-    nullify(osub, isub)
-    call base_potential__init__(this, that)
-    call base_potential_init(iter, that)
-    do
-      nullify(osub, isub)
-      call base_potential_next(iter, name, isub, ierr)
-      if(ierr/=BASE_POTENTIAL_OK)exit
-      call base_potential_new(this, osub)
-      call base_potential_init(osub, isub)
-      call base_potential_sets(this, name, osub)
-    end do
-    call base_potential_end(iter)
-    nullify(osub, isub)
-
-    POP_SUB(base_potential_init_copy)
-  end subroutine base_potential_init_copy
 
   ! ---------------------------------------------------------
   subroutine base_potential__start__(this, sim)
@@ -638,36 +582,6 @@ contains
 
     POP_SUB(base_potential__copy__)
   end subroutine base_potential__copy__
-
-  ! ---------------------------------------------------------
-  recursive subroutine base_potential_copy_type(this, that)
-    type(base_potential_t), intent(inout) :: this
-    type(base_potential_t), intent(in)    :: that
-
-    type(base_potential_iterator_t)        :: iter
-    character(len=BASE_POTENTIAL_NAME_LEN) :: name
-    type(base_potential_t),        pointer :: osub, isub
-    integer                                :: ierr
-
-    PUSH_SUB(base_potential_copy_type)
-
-    nullify(osub, isub)
-    call base_potential_end(this)
-    call base_potential__copy__(this, that)
-    call base_potential_init(iter, that)
-    do
-      nullify(osub, isub)
-      call base_potential_next(iter, name, isub, ierr)
-      if(ierr/=BASE_POTENTIAL_OK)exit
-      call base_potential_new(this, osub)
-      call base_potential_copy(osub, isub)
-      call base_potential_sets(this, name, osub)
-    end do
-    call base_potential_end(iter)
-    nullify(osub, isub)
-
-    POP_SUB(base_potential_copy_type)
-  end subroutine base_potential_copy_type
 
   ! ---------------------------------------------------------
   subroutine base_potential__end__(this)

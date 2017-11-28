@@ -655,8 +655,6 @@ contains
 
       ! get density taking into account non-linear core corrections
       SAFE_ALLOCATE(ks%calc%density(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
-      !> Calculate the subsystems total density.
-      if(associated(st%subsys_st)) call base_states_acc(st%subsys_st)
       if (.not. cmplxscl) then
         call states_total_density(st, ks%gr%fine%mesh, ks%calc%density)
       else

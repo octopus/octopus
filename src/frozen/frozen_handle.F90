@@ -2,6 +2,7 @@
 
 module frozen_handle_oct_m
 
+  use base_density_oct_m
   use base_geometry_oct_m
   use base_handle_oct_m
   use base_model_oct_m
@@ -128,14 +129,21 @@ contains
     type(base_handle_t), intent(inout) :: this !> frozen
     type(simulation_t),  intent(in)    :: sim
     
-    type(mpi_grp_t), pointer :: group
+    type(base_density_t), pointer :: pdns
+    type(mpi_grp_t),      pointer :: pgrp
 
     PUSH_SUB(frozen_handle_start)
 
+    nullify(pdns, pgrp)
     call base_handle__start__(this, sim)
-    call simulation_get(sim, group)
-    ASSERT(associated(group))
-    call frozen_handle__load__(this, group)
+    call simulation_get(sim, pgrp)
+    ASSERT(associated(pgrp))
+    call frozen_handle__load__(this, pgrp)
+    nullify(pgrp)
+    call base_handle_get(this, pdns)
+    ASSERT(associated(pdns))
+    call base_density_set(pdns, static=.true.)
+    nullify(pdns)
 
     POP_SUB(frozen_handle_start)
   end subroutine frozen_handle_start
@@ -146,7 +154,7 @@ contains
 
     PUSH_SUB(frozen_handle_stop)
 
-    call base_handle_stop(this)
+    call base_handle__stop__(this)
 
     POP_SUB(frozen_handle_stop)
   end subroutine frozen_handle_stop

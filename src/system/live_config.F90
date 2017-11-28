@@ -49,7 +49,7 @@ contains
     nullify(list)
     ASSERT(st%d%nspin>0)
     ASSERT(st%d%nspin<3)
-    !call json_set(this, "external", .true.)
+    call json_set(this, "external", .true.)
     call json_get(this, "charge", list, ierr)
     ASSERT(ierr==JSON_OK)
     ASSERT(st%d%nspin==json_len(list))

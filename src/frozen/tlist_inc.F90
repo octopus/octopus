@@ -72,6 +72,8 @@ module TEMPLATE(list_oct_m)
     TEMPLATE(list_del),    &
     TEMPLATE(list_push),   &
     TEMPLATE(list_pop),    &
+    TEMPLATE(list_insert), &
+    TEMPLATE(list_remove), &
     TEMPLATE(list_append), &
     TEMPLATE(list_extend), &
     TEMPLATE(list_copy),   &
@@ -99,8 +101,9 @@ module TEMPLATE(list_oct_m)
 
   type :: TEMPLATE(list_iterator_t)
     private
+    type(TEMPLATE(list_t)), pointer :: self =>null()
     type(INTERNAL(node_t)), pointer :: prev =>null()
-    type(INTERNAL(node_t)), pointer :: node =>null()
+    type(INTERNAL(node_t)), pointer :: curr =>null()
     type(INTERNAL(node_t)), pointer :: next =>null()
   end type TEMPLATE(list_iterator_t)
 
@@ -110,14 +113,26 @@ module TEMPLATE(list_oct_m)
     module procedure INTERNAL(list_iterator_init_iterator)
   end interface TEMPLATE(list_init)
 
-  interface TEMPLATE(list_next)
-    module procedure INTERNAL(list_iterator_next)
-  end interface TEMPLATE(list_next)
+  interface TEMPLATE(list_insert)
+    module procedure INTERNAL(list_ins_data)
+    module procedure INTERNAL(list_ins_index)
+    module procedure INTERNAL(list_iterator_insert)
+  end interface TEMPLATE(list_insert)
+
+  interface TEMPLATE(list_remove)
+    module procedure INTERNAL(list_del_data)
+    module procedure INTERNAL(list_del_index)
+    module procedure INTERNAL(list_iterator_remove)
+  end interface TEMPLATE(list_remove)
 
   interface TEMPLATE(list_del)
     module procedure INTERNAL(list_del_data)
     module procedure INTERNAL(list_del_index)
   end interface TEMPLATE(list_del)
+
+  interface TEMPLATE(list_next)
+    module procedure INTERNAL(list_iterator_next)
+  end interface TEMPLATE(list_next)
 
   interface TEMPLATE(list_copy)
     module procedure INTERNAL(list_copy)
@@ -343,10 +358,83 @@ contains
   end subroutine INTERNAL(list_walk_index)
   
   ! ---------------------------------------------------------
+  subroutine INTERNAL(list_ins_node)(this, that, prev, node)
+    type(TEMPLATE(list_t)),          intent(inout) :: this
+    type(INTERNAL(node_t)),  target, intent(inout) :: that
+    type(INTERNAL(node_t)), pointer                :: prev
+    type(INTERNAL(node_t)), pointer                :: node
+
+    PUSH_SUB(INTERNAL(list_ins_node))
+
+    ASSERT(associated(node))
+    if(associated(prev))then
+      ASSERT(associated(prev%next,node))
+      prev%next => that
+    else
+      ASSERT(associated(this%head,node))
+      this%head => that
+    end if
+    this%size = this%size + 1
+    that%next => node
+
+    POP_SUB(INTERNAL(list_ins_node))
+  end subroutine INTERNAL(list_ins_node)
+
+  ! ---------------------------------------------------------
+  subroutine INTERNAL(list_ins_data)(this, match, that, ierr)
+    type(TEMPLATE(list_t)), intent(inout) :: this
+    type(LIST_TYPE_NAME),   intent(in)    :: match
+    type(LIST_TYPE_NAME),   intent(in)    :: that
+    integer,     optional,  intent(out)   :: ierr
+
+    type(INTERNAL(node_t)), pointer :: node, prev, curr, next
+    integer                         :: jerr
+
+    PUSH_SUB(INTERNAL(list_ins_data))
+
+    nullify(node, prev, curr, next)
+    call INTERNAL(list_walk_node)(this, match, prev, curr, next, jerr)
+    if(jerr==TEMPLATE(LIST_OK))then
+      ASSERT(associated(curr))
+      call INTERNAL(node_new)(node, that)
+      call INTERNAL(list_ins_node)(this, node, prev, curr)
+    end if
+    nullify(node, prev, curr, next)
+    if(present(ierr)) ierr = jerr
+
+    POP_SUB(INTERNAL(list_ins_data))
+  end subroutine INTERNAL(list_ins_data)
+
+  ! ---------------------------------------------------------
+  subroutine INTERNAL(list_ins_index)(this, index, that, ierr)
+    type(TEMPLATE(list_t)), intent(inout) :: this
+    integer,                intent(in)    :: index
+    type(LIST_TYPE_NAME),   intent(in)    :: that
+    integer,      optional, intent(out)   :: ierr
+
+    type(INTERNAL(node_t)), pointer :: node, prev, curr, next
+    integer                         :: jerr
+
+    PUSH_SUB(INTERNAL(list_ins_index))
+
+    nullify(node, prev, curr, next)
+    call INTERNAL(list_walk_index)(this, index, prev, curr, next, jerr)
+    if(jerr==TEMPLATE(LIST_OK))then
+      ASSERT(associated(curr))
+      call INTERNAL(node_new)(node, that)
+      call INTERNAL(list_ins_node)(this, node, prev, curr)
+    end if
+    nullify(node, prev, curr, next)
+    if(present(ierr)) ierr = jerr
+
+    POP_SUB(INTERNAL(list_ins_index))
+  end subroutine INTERNAL(list_ins_index)
+
+  ! ---------------------------------------------------------
   subroutine TEMPLATE(list_set)(this, index, that, ierr)
     type(TEMPLATE(list_t)), intent(inout) :: this
     integer,                intent(in)    :: index
-    type(LIST_TYPE_NAME),  pointer        :: that
+    type(LIST_TYPE_NAME),   intent(in)    :: that
     integer,      optional, intent(out)   :: ierr
 
     type(INTERNAL(node_t)), pointer :: prev, node, next
@@ -455,8 +543,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine INTERNAL(list_push_node)(this, that)
-    type(TEMPLATE(list_t)),  intent(inout) :: this
-    type(INTERNAL(node_t)), pointer        :: that
+    type(TEMPLATE(list_t)),         intent(inout) :: this
+    type(INTERNAL(node_t)), target, intent(inout) :: that
 
     PUSH_SUB(INTERNAL(list_push_node))
 
@@ -561,7 +649,7 @@ contains
   ! ---------------------------------------------------------
   subroutine TEMPLATE(list_append)(this, that)
     type(TEMPLATE(list_t)), intent(inout) :: this
-    type(LIST_TYPE_NAME),  pointer        :: that
+    type(LIST_TYPE_NAME),   intent(in)    :: that
 
     type(INTERNAL(node_t)), pointer :: node
 
@@ -636,15 +724,13 @@ contains
   ! ---------------------------------------------------------
   subroutine INTERNAL(list_iterator_init_list)(this, that)
     type(TEMPLATE(list_iterator_t)), intent(out) :: this
-    type(TEMPLATE(list_t)),          intent(in)  :: that
+    type(TEMPLATE(list_t)),  target, intent(in)  :: that
 
     PUSH_SUB(INTERNAL(list_iterator_init_list))
 
-    call INTERNAL(list_iterator_end)(this)
-    if(associated(that%head))then
-       this%node => that%head
-       this%next => this%node%next
-    end if
+    this%self => that
+    nullify(this%prev, this%curr, this%next)
+    if(associated(that%head)) this%next => that%head
 
     POP_SUB(INTERNAL(list_iterator_init_list))
   end subroutine INTERNAL(list_iterator_init_list)
@@ -662,30 +748,88 @@ contains
   end subroutine INTERNAL(list_iterator_init_iterator)
 
   ! ---------------------------------------------------------
-  subroutine INTERNAL(list_iterator_next_node)(this, prev, node, next, ierr)
+  subroutine INTERNAL(list_iterator_insert)(this, that, ierr)
     type(TEMPLATE(list_iterator_t)), intent(inout) :: this
-    type(INTERNAL(node_t)),         pointer        :: prev
-    type(INTERNAL(node_t)),         pointer        :: node
-    type(INTERNAL(node_t)),         pointer        :: next
+    type(LIST_TYPE_NAME),            intent(in)    :: that
     integer,               optional, intent(out)   :: ierr
 
-    PUSH_SUB(INTERNAL(list_iterator_next_node))
+    type(INTERNAL(node_t)), pointer :: node
+    integer                         :: jerr
 
-    nullify(prev, node, next)
-    if(present(ierr)) ierr = TEMPLATE(LIST_EMPTY_ERROR)
-    if(associated(this%node))then
-      if(present(ierr)) ierr = TEMPLATE(LIST_OK)
-      prev => this%prev
-      node => this%node
-      next => this%next
+    PUSH_SUB(INTERNAL(list_iterator_insert))
+
+    nullify(node)
+    jerr = TEMPLATE(LIST_EMPTY_ERROR)
+    if(associated(this%self))then
+      ASSERT(associated(this%curr))
+      jerr = TEMPLATE(LIST_OK)
+      call INTERNAL(node_new)(node, that)
+      call INTERNAL(list_ins_node)(this%self, node, this%prev, this%curr)
+      this%prev => node
+    end if
+    if(present(ierr)) ierr = jerr
+
+    POP_SUB(INTERNAL(list_iterator_insert))
+  end subroutine INTERNAL(list_iterator_insert)
+
+  ! ---------------------------------------------------------
+  subroutine INTERNAL(list_iterator_remove)(this, that, ierr)
+    type(TEMPLATE(list_iterator_t)), intent(inout) :: this
+    type(LIST_TYPE_NAME),           pointer        :: that
+    integer,               optional, intent(out)   :: ierr
+
+    integer :: jerr
+
+    PUSH_SUB(INTERNAL(list_iterator_remove))
+
+    nullify(that)
+    jerr = TEMPLATE(LIST_EMPTY_ERROR)
+    if(associated(this%self))then
+      ASSERT(associated(this%curr))
+      jerr = TEMPLATE(LIST_OK)
+      call INTERNAL(node_get)(this%curr, that)
+      call INTERNAL(list_del_node)(this%self, this%prev, this%curr, this%next)
+      call INTERNAL(node_del)(this%curr)
       if(associated(this%next))then
-        this%prev => this%node
-        this%node => this%next
-        this%next => this%node%next
+        this%curr => this%next
+        this%next => this%curr%next
       else
         call INTERNAL(list_iterator_end)(this)
       end if
     end if
+    if(present(ierr)) ierr = jerr
+
+    POP_SUB(INTERNAL(list_iterator_remove))
+  end subroutine INTERNAL(list_iterator_remove)
+
+  ! ---------------------------------------------------------
+  subroutine INTERNAL(list_iterator_next_node)(this, prev, curr, next, ierr)
+    type(TEMPLATE(list_iterator_t)), intent(inout) :: this
+    type(INTERNAL(node_t)),         pointer        :: prev
+    type(INTERNAL(node_t)),         pointer        :: curr
+    type(INTERNAL(node_t)),         pointer        :: next
+    integer,               optional, intent(out)   :: ierr
+
+    integer :: jerr
+
+    PUSH_SUB(INTERNAL(list_iterator_next_node))
+
+    nullify(prev, curr, next)
+    jerr = TEMPLATE(LIST_EMPTY_ERROR)
+    if(associated(this%self))then
+      if(associated(this%next))then
+        jerr = TEMPLATE(LIST_OK)
+        this%prev => this%curr
+        this%curr => this%next
+        this%next => this%curr%next
+        prev => this%prev
+        curr => this%curr
+        next => this%next
+      else
+        call INTERNAL(list_iterator_end)(this)
+      end if
+    end if
+    if(present(ierr)) ierr = jerr
 
     POP_SUB(INTERNAL(list_iterator_next_node))
   end subroutine INTERNAL(list_iterator_next_node)
@@ -696,14 +840,14 @@ contains
     type(LIST_TYPE_NAME),           pointer        :: that
     integer,               optional, intent(out)   :: ierr
 
-    type(INTERNAL(node_t)), pointer :: prev, node, next
+    type(INTERNAL(node_t)), pointer :: prev, curr, next
 
     PUSH_SUB(INTERNAL(list_iterator_next))
 
-    nullify(that, prev, node, next)
-    call INTERNAL(list_iterator_next_node)(this, prev, node, next, ierr)
-    if(associated(node)) call INTERNAL(node_get)(node, that)
-    nullify(node)
+    nullify(that, prev, curr, next)
+    call INTERNAL(list_iterator_next_node)(this, prev, curr, next, ierr)
+    if(associated(curr)) call INTERNAL(node_get)(curr, that)
+    nullify(prev, curr, next)
 
     POP_SUB(INTERNAL(list_iterator_next))
   end subroutine INTERNAL(list_iterator_next)
@@ -716,9 +860,10 @@ contains
     PUSH_SUB(INTERNAL(list_iterator_copy))
 
     call INTERNAL(list_iterator_end)(this)
-    if(associated(that%node))then
+    this%self => that%self
+    if(associated(that%self))then
       this%prev => that%prev
-      this%node => that%node
+      this%curr => that%curr
       this%next => that%next
     end if
 
@@ -729,7 +874,7 @@ contains
   elemental subroutine INTERNAL(list_iterator_end)(this)
     type(TEMPLATE(list_iterator_t)), intent(inout) :: this
 
-    nullify(this%prev, this%node, this%next)
+    nullify(this%self, this%prev, this%curr, this%next)
 
   end subroutine INTERNAL(list_iterator_end)
 

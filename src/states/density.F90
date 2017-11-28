@@ -366,9 +366,12 @@ contains
       SAFE_DEALLOCATE_A(tmpdensity)
     end if
 
+    !> Notify the "live" subsystem of the density update.
+    if(associated(this%st%subsys_st))&
+      call base_states_notify(this%st%subsys_st, "live")
+
     POP_SUB(density_calc_end)
   end subroutine density_calc_end
-
 
   ! ---------------------------------------------------------
   !> Computes the density from the orbitals in st. 
@@ -572,7 +575,6 @@ contains
     call states_end(staux)
     POP_SUB(states_freeze_orbitals)
   end subroutine states_freeze_orbitals
-
 
   ! ---------------------------------------------------------
   !> this routine calculates the total electronic density,

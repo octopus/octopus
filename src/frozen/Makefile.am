@@ -24,6 +24,10 @@ libfrozen_a_SOURCES =		\
 	basis.F90		\
 	strng.F90		\
 	refcount.F90            \
+	message.F90		\
+	envelope.F90		\
+	channel.F90		\
+	msgbus.F90		\
 	geo_intrf.F90		\
 	geo_build.F90		\
 	grid_intrf.F90		\
@@ -66,11 +70,9 @@ libfrozen_a_SOURCES =		\
 	frozen_handle.F90	\
 	frozen_config.F90	\
 	live_handle.F90		\
-	ssys_system.F90		\
 	ssys_ionic.F90		\
 	ssys_external.F90	\
 	ssys_tnadd.F90		\
-	ssys_hamiltonian.F90	\
 	ssys_handle.F90
 
 noinst_HEADERS =		\
@@ -93,6 +95,10 @@ depend:
 basis.o 	: basis.F90
 strng.o		: strng.F90
 refcount.o      : refcount.F90
+message.o	: message.F90 refcount.o
+envelope.o	: envelope.F90 message.o refcount.o
+channel.o	: channel.F90 envelope.o tlist_inc.F90 template.h util.h
+msgbus.o	: msgbus.F90 channel.o envelope.o message.o tlist_inc.F90 template.h util.h
 geo_intrf.o	: geo_intrf.F90
 geo_build.o	: geo_build.F90 										\
 	strng.o basis.o												\
@@ -116,7 +122,7 @@ base_geometry.o 	: base_geometry.F90 									\
 	tbase_inc.F90 tdict_inc.F90 tdarr_inc.F90 thash_inc.F90 tlist_inc.F90 tpair_inc.F90 tsingle_inc.F90	\
 	template.h util.h
 base_density.o 		: base_density.F90 									\
-	dnst_intrf.o dnst.o storage.o simulation.o strng.o							\
+	dnst_intrf.o dnst.o storage.o simulation.o msgbus.o strng.o						\
 	tbase_inc.F90 tdict_inc.F90 tdarr_inc.F90 thash_inc.F90 tlist_inc.F90 tpair_inc.F90 tsingle_inc.F90 	\
 	template.h util.h
 base_states.o 		: base_states.F90 									\
@@ -162,7 +168,6 @@ fio_curvilinear.o 	: fio_curvilinear.F90
 fio_index.o 		: fio_index.F90
 fio_mesh.o 		: fio_mesh.F90 fio_index.o 
 fio_grid.o 		: fio_grid.F90 fio_mesh.o fio_curvilinear.o fio_simul_box.o
-#fio_simulation.o 	: fio_simulation.F90 fio_grid.o base_geometry.o simulation.o
 fio_density.o 		: fio_density.F90									\
 	base_density.o intrpl.o simulation.o dnst_intrf.o dnst.o storage.o basis.o
 fio_external.o 		: fio_external.F90 base_potential.o base_geometry.o intrpl.o storage.o
@@ -188,11 +193,8 @@ frozen_config.o 	: frozen_config.F90 frozen_handle.o fio_config.o fio_handle.o		
 
 live_handle.o		: live_handle.F90 base_handle.o base_geometry.o
 
-ssys_system.o		: ssys_system.F90 base_system.o
-ssys_ionic.o		: ssys_ionic.F90 ssys_system.o base_term.o base_geometry.o
+ssys_ionic.o		: ssys_ionic.F90 base_term.o base_geometry.o
 ssys_external.o		: ssys_external.F90 base_potential.o storage.o
 ssys_tnadd.o		: ssys_tnadd.F90 base_hamiltonian.o
-ssys_hamiltonian.o	: ssys_hamiltonian.F90 ssys_tnadd.o ssys_external.o ssys_ionic.o ssys_system.o		\
-	base_hamiltonian.o simulation.o
 ssys_handle.o		: ssys_handle.F90 live_handle.o frozen_handle.o base_handle.o
 

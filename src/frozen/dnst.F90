@@ -169,7 +169,7 @@ contains
   subroutine dnst_update(this)
     type(dnst_t), intent(inout) :: this
 
-    real(kind=wp) :: chrg, intg
+    real(kind=wp) :: chrg
     logical       :: static
     integer       :: ispn
 
@@ -182,10 +182,8 @@ contains
     if(.not.(static.or.this%xtrnl))then
       do ispn = 1, this%nspin
         chrg = this%charge(ispn)
-        if(chrg>0.0_wp)then
-          call storage_integrate(this%data, ispn, intg)
-          ASSERT(.not.(intg<0.0_wp))
-          if(intg>0.0_wp) call storage_mlt(this%data, ispn, chrg/intg)
+        if(chrg>tiny(chrg))then
+          call storage_norm(this%data, ispn, norm=chrg)
         else
           this%charge(ispn) = 0.0_wp
           call storage_reset(this%data, ispn)
@@ -321,8 +319,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine dnst_get_config(this, that)
-    type(dnst_t), target, intent(in) :: this
-    type(json_object_t), pointer     :: that
+    type(dnst_t),         target, intent(in)  :: this
+    type(json_object_t), pointer, intent(out) :: that
 
     PUSH_SUB(dnst_get_config)
 
@@ -334,8 +332,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine dnst_get_simulation(this, that)
-    type(dnst_t), target, intent(in) :: this
-    type(simulation_t),  pointer     :: that
+    type(dnst_t),        target, intent(in)  :: this
+    type(simulation_t), pointer, intent(out) :: that
 
     PUSH_SUB(dnst_get_simulation)
 
@@ -347,9 +345,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine dnst_get_storage(this, that, total)
-    type(dnst_t),     target, intent(in) :: this
-    type(storage_t), pointer             :: that
-    logical,        optional, intent(in) :: total
+    type(dnst_t),     target, intent(in)  :: this
+    type(storage_t), pointer, intent(out) :: that
+    logical,        optional, intent(in)  :: total
 
     logical :: ittl
 
@@ -369,10 +367,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine dnst_get_density_1d(this, that, spin, total)
-    type(dnst_t),                 intent(in) :: this
-    real(kind=wp), dimension(:), pointer     :: that
-    integer,            optional, intent(in) :: spin
-    logical,            optional, intent(in) :: total
+    type(dnst_t),                         intent(in)  :: this
+    real(kind=wp), dimension(:), pointer, intent(out) :: that
+    integer,                    optional, intent(in)  :: spin
+    logical,                    optional, intent(in)  :: total
 
     integer :: ispn
     logical :: ittl
@@ -396,9 +394,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine dnst_get_density_2d(this, that, total)
-    type(dnst_t),                   intent(in) :: this
-    real(kind=wp), dimension(:,:), pointer     :: that
-    logical,              optional, intent(in) :: total
+    type(dnst_t),                           intent(in)  :: this
+    real(kind=wp), dimension(:,:), pointer, intent(out) :: that
+    logical,                      optional, intent(in)  :: total
 
     logical :: ittl
 

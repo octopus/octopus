@@ -84,9 +84,12 @@ module base_geometry_oct_m
     module procedure base_geometry__init__copy
   end interface base_geometry__init__
 
+  interface base_geometry_new
+    module procedure base_geometry_new_type
+  end interface base_geometry_new
+
   interface base_geometry_init
     module procedure base_geometry_init_type
-    module procedure base_geometry_init_copy
   end interface base_geometry_init
 
   interface base_geometry_set
@@ -109,10 +112,6 @@ module base_geometry_oct_m
     module procedure base_geometry_iterator_next_geometry
   end interface base_geometry_next
 
-  interface base_geometry_copy
-    module procedure base_geometry_copy_type
-  end interface base_geometry_copy
-
 contains
 
 #define BASE_TEMPLATE_NAME base_geometry
@@ -122,46 +121,20 @@ contains
 #undef BASE_TEMPLATE_NAME
 
   ! ---------------------------------------------------------
-  subroutine base_geometry__new__(this)
-    type(base_geometry_t), pointer :: this
-
-    PUSH_SUB(base_geometry__new__)
-
-    nullify(this)
-    SAFE_ALLOCATE(this)
-
-    POP_SUB(base_geometry__new__)
-  end subroutine base_geometry__new__
-
-  ! ---------------------------------------------------------
-  subroutine base_geometry__del__(this)
-    type(base_geometry_t), pointer :: this
-
-    PUSH_SUB(base_geometry__del__)
-
-    if(associated(this))then
-      SAFE_DEALLOCATE_P(this)
-    end if
-    nullify(this)
-
-    POP_SUB(base_geometry__del__)
-  end subroutine base_geometry__del__
-
-  ! ---------------------------------------------------------
-  subroutine base_geometry_new(this, that)
+  subroutine base_geometry_new_type(this, that)
     type(base_geometry_t),  target, intent(inout) :: this
     type(base_geometry_t), pointer                :: that
 
-    PUSH_SUB(base_geometry_new)
+    PUSH_SUB(base_geometry_new_type)
 
     ASSERT(associated(this%config))
     nullify(that)
-    call base_geometry__new__(that)
+    SAFE_ALLOCATE(that)
     that%prnt => this
     call base_geometry_list_push(this%list, that)
 
-    POP_SUB(base_geometry_new)
-  end subroutine base_geometry_new
+    POP_SUB(base_geometry_new_type)
+  end subroutine base_geometry_new_type
 
   ! ---------------------------------------------------------
   subroutine base_geometry__init__type(this, space, config)
@@ -256,44 +229,6 @@ contains
 
     POP_SUB(base_geometry_init_type)
   end subroutine base_geometry_init_type
-
-  ! ---------------------------------------------------------
-  recursive subroutine base_geometry_init_copy(this, that)
-    type(base_geometry_t), intent(out) :: this
-    type(base_geometry_t), intent(in)  :: that
-
-    PUSH_SUB(base_geometry_init_copy)
-
-    call base_geometry__init__(this, that)
-    call base_geometry__build__(this, init)
-
-    POP_SUB(base_geometry_init_copy)
-
-  contains
-
-    recursive subroutine init(this, name, isub)
-      type(base_geometry_t), intent(inout) :: this
-      character(len=*),      intent(in)    :: name
-      type(base_geometry_t), intent(in)    :: isub
-
-      type(base_geometry_t), pointer :: osub
-      
-      POP_SUB(base_geometry_init_copy.init)
-
-      nullify(osub)
-      if(base_geometry_list_index(that%list, isub)>0)then
-        call base_geometry_new(this, osub)
-        call base_geometry_init(osub, isub)
-        call base_geometry_sets(this, name, osub)
-        nullify(osub)
-      else
-        call base_geometry_sets(this, name, isub)
-      end if
-
-      PUSH_SUB(base_geometry_init_copy.init)
-    end subroutine init
-
-  end subroutine base_geometry_init_copy
 
   ! ---------------------------------------------------------
   subroutine base_geometry__acc__(this, that, config)
@@ -467,7 +402,7 @@ contains
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%space))
-    ASSERT(len_trim(name)>0)
+    ASSERT(len_trim(adjustl(name))>0)
     ASSERT(associated(that%config))
     ASSERT(associated(that%space))
     ASSERT(this%space==that%space)
@@ -500,16 +435,18 @@ contains
   end subroutine base_geometry__sets__
   
   ! ---------------------------------------------------------
-  subroutine base_geometry__dels__(this, name, ierr)
+  subroutine base_geometry__dels__(this, name, that)
     type(base_geometry_t), intent(inout) :: this
     character(len=*),      intent(in)    :: name
-    integer,               intent(out)   :: ierr
+    type(base_geometry_t), intent(in)    :: that
 
     PUSH_SUB(base_geometry__dels__)
 
     ASSERT(associated(this%config))
-    ASSERT(len_trim(name)>0)
-    ierr = BASE_GEOMETRY_OK
+    ASSERT(len_trim(adjustl(name))>0)
+    ASSERT(associated(that%config))
+    ASSERT(associated(that%space))
+    ASSERT(this%space==that%space)
 
     POP_SUB(base_geometry__dels__)
   end subroutine base_geometry__dels__
@@ -609,45 +546,6 @@ contains
 
     POP_SUB(base_geometry__copy__)
   end subroutine base_geometry__copy__
-
-  ! ---------------------------------------------------------
-  recursive subroutine base_geometry_copy_type(this, that)
-    type(base_geometry_t), intent(inout) :: this
-    type(base_geometry_t), intent(in)    :: that
-
-    PUSH_SUB(base_geometry_copy_type)
-
-    call base_geometry_end(this)
-    call base_geometry__copy__(this, that)
-    call base_geometry__build__(this, copy)
-
-    POP_SUB(base_geometry_copy_type)
-
-  contains
-
-    recursive subroutine copy(this, name, isub)
-      type(base_geometry_t), intent(inout) :: this
-      character(len=*),      intent(in)    :: name
-      type(base_geometry_t), intent(in)    :: isub
-
-      type(base_geometry_t), pointer :: osub
-      
-      POP_SUB(base_geometry_copy_type.copy)
-
-      nullify(osub)
-      if(base_geometry_list_index(that%list, isub)>0)then
-        call base_geometry_new(this, osub)
-        call base_geometry_copy(osub, isub)
-        call base_geometry_sets(this, name, osub)
-        nullify(osub)
-      else
-        call base_geometry_sets(this, name, isub)
-      end if
-
-      PUSH_SUB(base_geometry_copy_type.copy)
-    end subroutine copy
-
-  end subroutine base_geometry_copy_type
 
   ! ---------------------------------------------------------
   subroutine base_geometry__end__(this)

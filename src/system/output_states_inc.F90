@@ -41,9 +41,7 @@ subroutine output_states(st, gr, geo, dir, outp)
   if(iand(outp%what, OPTION__OUTPUT__DENSITY) /= 0) then
     fn_unit = units_out%length**(-gr%mesh%sb%dim)
     if(associated(st%subsys_st))then
-      call base_states_get(st%subsys_st, subsys_density)
-      ASSERT(associated(subsys_density))
-      call base_density_get(subsys_density, density)
+      call base_states_get(st%subsys_st, density)
       ASSERT(associated(density))
     else
       density => st%rho
@@ -65,7 +63,9 @@ subroutine output_states(st, gr, geo, dir, outp)
           density(:, is), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
       end if
     end do
-    if(associated(subsys_density))then
+    if(associated(st%subsys_st))then
+      call base_states_get(st%subsys_st, subsys_density)
+      ASSERT(associated(subsys_density))
       call base_density_init(iter, subsys_density)
       do
         nullify(base_density, density)
