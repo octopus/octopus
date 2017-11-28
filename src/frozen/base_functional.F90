@@ -7,8 +7,6 @@
 #undef BASE_INCLUDE_HEADER
 #undef BASE_INCLUDE_BODY
 
-#define BASE_LEAF_TYPE
-
 module base_functional_oct_m
 
   use base_density_oct_m
@@ -18,7 +16,9 @@ module base_functional_oct_m
   use global_oct_m
   use json_oct_m
   use kinds_oct_m
+  use message_oct_m
   use messages_oct_m
+  use msgbus_oct_m
   use profiling_oct_m
   use simulation_oct_m
   use storage_oct_m
@@ -54,7 +54,6 @@ module base_functional_oct_m
     base_functional_init,   &
     base_functional_start,  &
     base_functional_acc,    &
-    base_functional_calc,   &
     base_functional_update, &
     base_functional_reset,  &
     base_functional_stop,   &
@@ -83,6 +82,7 @@ module base_functional_oct_m
     real(kind=wp)                    :: energy  = 0.0_wp
     type(functional_t)               :: funct
     type(storage_t)                  :: data
+    type(msgbus_t)                   :: msgb
     type(base_functional_dict_t)     :: dict
     type(base_functional_list_t)     :: list
   end type base_functional_t
@@ -92,9 +92,12 @@ module base_functional_oct_m
     module procedure base_functional__init__copy
   end interface base_functional__init__
 
+  interface base_functional_new
+    module procedure base_functional_new_type
+  end interface base_functional_new
+
   interface base_functional_init
     module procedure base_functional_init_type
-    module procedure base_functional_init_copy
   end interface base_functional_init
 
   interface base_functional_set
@@ -112,10 +115,6 @@ module base_functional_oct_m
     module procedure base_functional_get_functional_md
   end interface base_functional_get
 
-  interface base_functional_copy
-    module procedure base_functional_copy_type
-  end interface base_functional_copy
-
 contains
 
 #define BASE_TEMPLATE_NAME base_functional
@@ -125,45 +124,19 @@ contains
 #undef BASE_TEMPLATE_NAME
 
   ! ---------------------------------------------------------
-  subroutine base_functional__new__(this)
-    type(base_functional_t), pointer :: this
-
-    PUSH_SUB(base_functional__new__)
-
-    nullify(this)
-    SAFE_ALLOCATE(this)
-
-    POP_SUB(base_functional__new__)
-  end subroutine base_functional__new__
-
-  ! ---------------------------------------------------------
-  subroutine base_functional__del__(this)
-    type(base_functional_t), pointer :: this
-
-    PUSH_SUB(base_functional__del__)
-
-    if(associated(this))then
-      SAFE_DEALLOCATE_P(this)
-    end if
-    nullify(this)
-
-    POP_SUB(base_functional__del__)
-  end subroutine base_functional__del__
-
-  ! ---------------------------------------------------------
-  subroutine base_functional_new(this, that)
+  subroutine base_functional_new_type(this, that)
     type(base_functional_t),  target, intent(inout) :: this
-    type(base_functional_t), pointer                :: that
+    type(base_functional_t), pointer, intent(inout) :: that
 
-    PUSH_SUB(base_functional_new)
+    PUSH_SUB(base_functional_new_type)
 
     nullify(that)
-    call base_functional__new__(that)
+    SAFE_ALLOCATE(that)
     that%prnt => this
     call base_functional_list_push(this%list, that)
 
-    POP_SUB(base_functional_new)
-  end subroutine base_functional_new
+    POP_SUB(base_functional_new_type)
+  end subroutine base_functional_new_type
 
   ! ---------------------------------------------------------
   subroutine base_functional__init__type(this, sys, config)
@@ -208,6 +181,7 @@ contains
     if(.not.fuse) call json_set(cnfg, "allocate", .false.)
     call storage_init(this%data, cnfg)
     nullify(cnfg)
+    call msgbus_init(this%msgb, number=2)
     call base_functional_dict_init(this%dict)
     call base_functional_list_init(this%list)
 
@@ -243,46 +217,24 @@ contains
   end subroutine base_functional_init_type
 
   ! ---------------------------------------------------------
-  recursive subroutine base_functional_init_copy(this, that)
-    type(base_functional_t), intent(out) :: this
-    type(base_functional_t), intent(in)  :: that
-
-    type(base_functional_iterator_t)        :: iter
-    character(len=BASE_FUNCTIONAL_NAME_LEN) :: name
-    type(base_functional_t),        pointer :: osub, isub
-    integer                                 :: ierr
-
-    PUSH_SUB(base_functional_init_copy)
-
-    nullify(osub, isub)
-    call base_functional__init__(this, that)
-    call base_functional_init(iter, that)
-    do
-      nullify(osub, isub)
-      call base_functional_next(iter, name, isub, ierr)
-      if(ierr/=BASE_FUNCTIONAL_OK)exit
-      call base_functional_new(this, osub)
-      call base_functional_init(osub, isub)
-      call base_functional_sets(this, name, osub)
-    end do
-    call base_functional_end(iter)
-    nullify(osub, isub)
-
-    POP_SUB(base_functional_init_copy)
-  end subroutine base_functional_init_copy
-
-  ! ---------------------------------------------------------
   subroutine base_functional__start__(this, sim)
     type(base_functional_t),    intent(inout) :: this
     type(simulation_t), target, intent(in)    :: sim
+
+    type(msgbus_t), pointer :: msgb
 
     PUSH_SUB(base_functional__start__)
 
     ASSERT(associated(this%config))
     ASSERT(.not.associated(this%sim))
+    nullify(msgb)
     this%sim => sim
     call functional_start(this%funct, this%sim)
     call storage_start(this%data, this%sim)
+    call base_density_get(this%density, msgb)
+    ASSERT(associated(msgb))
+    call msgbus_attach(this%msgb, msgb, id=2)
+    nullify(msgb)
 
     POP_SUB(base_functional__start__)
   end subroutine base_functional__start__
@@ -329,9 +281,9 @@ contains
     ASSERT(associated(this%sim))
     call base_functional__reset__(this)
     call base_functional_get(this, use=fuse)
-    if(fuse.and.(abs(this%factor)>epsilon(this%factor)))then
+    if(fuse.and.(abs(this%factor)>tiny(this%factor)))then
       call functional_calc(this%funct, this%energy, this%data)
-      if(abs(this%factor-1.0_wp)>epsilon(this%factor))then
+      if(abs(abs(this%factor)-1.0_wp)>epsilon(this%factor))then
         this%energy = this%factor * this%energy
         call storage_mlt(this%data, this%factor)
       end if
@@ -372,17 +324,56 @@ contains
   subroutine base_functional__stop__(this)
     type(base_functional_t), intent(inout) :: this
 
+    type(msgbus_t), pointer :: msgb
+
     PUSH_SUB(base_functional__stop__)
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
-    nullify(this%sim)
+    nullify(this%sim, msgb)
     call functional_stop(this%funct)
     call storage_stop(this%data)
+    call base_density_get(this%density, msgb)
+    ASSERT(associated(msgb))
+    call msgbus_detach(this%msgb, msgb, id=2)
+    nullify(msgb)
 
     POP_SUB(base_functional__stop__)
   end subroutine base_functional__stop__
 
+  ! ---------------------------------------------------------
+  subroutine base_functional__recv__(this, update)
+    type(base_functional_t), intent(in)  :: this
+    logical,                 intent(out) :: update
+
+    type(msgbus_iterator_t)      :: iter
+    type(json_object_t), pointer :: data
+    type(message_t),     pointer :: mssg
+    logical                      :: updt
+    integer                      :: ierr
+
+    PUSH_SUB(base_functional__recv__)
+
+    update = .false.
+    call msgbus_init(iter, this%msgb, id=2)
+    do
+      nullify(data, mssg)
+      call msgbus_next(iter, mssg)
+      if(.not.associated(mssg))exit
+      call message_get(mssg, data)
+      ASSERT(associated(data))
+      call json_get(data, "update", updt, ierr)
+      if(ierr==JSON_OK)then
+        update = (update .or. updt)
+        call msgbus_remove(iter, ierr=ierr)
+        ASSERT(ierr==MSGBUS_OK)
+      end if
+    end do
+    nullify(data, mssg)
+    
+    POP_SUB(base_functional__recv__)
+  end subroutine base_functional__recv__
+    
   ! ---------------------------------------------------------
   subroutine base_functional_start(this, sim)
     type(base_functional_t), intent(inout) :: this
@@ -424,26 +415,40 @@ contains
   end subroutine base_functional_acc
 
   ! ---------------------------------------------------------
-  subroutine base_functional_calc(this)
-    type(base_functional_t), intent(inout) :: this
-
-    PUSH_SUB(base_functional_calc)
-
-    call base_density_acc(this%density)
-    call base_functional__apply__(this, base_functional__calc__)
-
-    POP_SUB(base_functional_calc)
-  end subroutine base_functional_calc
-
-  ! ---------------------------------------------------------
   subroutine base_functional_update(this)
     type(base_functional_t), intent(inout) :: this
 
+    logical :: updt
+
     PUSH_SUB(base_functional_update)
 
-    call base_functional__apply__(this, base_functional__update__)
+    ASSERT(associated(this%config))
+    call base_functional__recv__(this, updt)
+    if(updt)then
+      call base_density_update(this%density)
+      call base_functional__apply__(this, update, parent=.false.)
+      call base_functional__calc__(this)
+    end if
 
     POP_SUB(base_functional_update)
+
+  contains
+    
+    subroutine update(this)
+      type(base_functional_t), intent(inout) :: this
+
+      logical :: updt
+
+      PUSH_SUB(base_functional_update.update)
+
+      ASSERT(associated(this%config))
+      call base_functional__recv__(this, updt)
+      if(updt) call base_functional__calc__(this)
+
+      POP_SUB(base_functional_update.update)
+
+    end subroutine update
+
   end subroutine base_functional_update
 
   ! ---------------------------------------------------------
@@ -467,6 +472,38 @@ contains
 
     POP_SUB(base_functional_stop)
   end subroutine base_functional_stop
+
+  ! ---------------------------------------------------------
+  subroutine base_functional__sets__(this, name, that)
+    type(base_functional_t), intent(inout) :: this
+    character(len=*),        intent(in)    :: name
+    type(base_functional_t), intent(in)    :: that
+
+    PUSH_SUB(base_functional__sets__)
+
+    ASSERT(associated(this%config))
+    ASSERT(len_trim(name)>0)
+    ASSERT(associated(that%config))
+    call msgbus_attach(this%msgb, that%msgb)
+    
+    POP_SUB(base_functional__sets__)
+  end subroutine base_functional__sets__
+    
+  ! ---------------------------------------------------------
+  subroutine base_functional__dels__(this, name, that)
+    type(base_functional_t), intent(inout) :: this
+    character(len=*),        intent(in)    :: name
+    type(base_functional_t), intent(in)    :: that
+
+    PUSH_SUB(base_functional__dels__)
+
+    ASSERT(associated(this%config))
+    ASSERT(len_trim(name)>0)
+    ASSERT(associated(that%config))
+    call msgbus_detach(this%msgb, that%msgb)
+
+    POP_SUB(base_functional__dels__)
+  end subroutine base_functional__dels__
 
   ! ---------------------------------------------------------
   subroutine base_functional_set_info(this, energy)
@@ -505,8 +542,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_functional_get_config(this, that)
-    type(base_functional_t), target, intent(in) :: this
-    type(json_object_t),    pointer             :: that
+    type(base_functional_t), target, intent(in)  :: this
+    type(json_object_t),    pointer, intent(out) :: that
 
     PUSH_SUB(base_functional_get_config)
 
@@ -518,8 +555,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_functional_get_simulation(this, that)
-    type(base_functional_t), target, intent(in) :: this
-    type(simulation_t),     pointer             :: that
+    type(base_functional_t), target, intent(in)  :: this
+    type(simulation_t),     pointer, intent(out) :: that
 
     PUSH_SUB(base_functional_get_simulation)
 
@@ -530,22 +567,9 @@ contains
   end subroutine base_functional_get_simulation
 
   ! ---------------------------------------------------------
-  subroutine base_functional_get_storage(this, that)
-    type(base_functional_t), target, intent(in) :: this
-    type(storage_t),        pointer             :: that
-
-    PUSH_SUB(base_functional_get_storage)
-
-    nullify(that)
-    if(associated(this%config)) that => this%data
-
-    POP_SUB(base_functional_get_storage)
-  end subroutine base_functional_get_storage
-
-  ! ---------------------------------------------------------
   subroutine base_functional_get_system(this, that)
-    type(base_functional_t), target, intent(in) :: this
-    type(base_system_t),    pointer             :: that
+    type(base_functional_t), target, intent(in)  :: this
+    type(base_system_t),    pointer, intent(out) :: that
 
     PUSH_SUB(base_functional_get_system)
 
@@ -557,8 +581,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_functional_get_density(this, that)
-    type(base_functional_t), intent(in) :: this
-    type(base_density_t),   pointer     :: that
+    type(base_functional_t),         intent(in)  :: this
+    type(base_density_t),   pointer, intent(out) :: that
 
     PUSH_SUB(base_functional_get_density)
 
@@ -570,27 +594,52 @@ contains
   end subroutine base_functional_get_density
 
   ! ---------------------------------------------------------
+  subroutine base_functional_get_storage(this, that)
+    type(base_functional_t), target, intent(in)  :: this
+    type(storage_t),        pointer, intent(out) :: that
+
+    PUSH_SUB(base_functional_get_storage)
+
+    nullify(that)
+    if(associated(this%config)) that => this%data
+
+    POP_SUB(base_functional_get_storage)
+  end subroutine base_functional_get_storage
+
+  ! ---------------------------------------------------------
   subroutine base_functional_get_functional_1d(this, that)
-    type(base_functional_t),      intent(in) :: this
-    real(kind=wp), dimension(:), pointer     :: that
+    type(base_functional_t),              intent(inout) :: this
+    real(kind=wp), dimension(:), pointer, intent(out)   :: that
+
+    logical :: allc
 
     PUSH_SUB(base_functional_get_functional_1d)
 
     nullify(that)
-    call storage_get(this%data, that)
+    call storage_get(this%data, alloc=allc)
+    if(allc)then
+      call base_functional_update(this)
+      call storage_get(this%data, that)
+    end if
 
     POP_SUB(base_functional_get_functional_1d)
   end subroutine base_functional_get_functional_1d
 
   ! ---------------------------------------------------------
   subroutine base_functional_get_functional_md(this, that)
-    type(base_functional_t),        intent(in) :: this
-    real(kind=wp), dimension(:,:), pointer     :: that
+    type(base_functional_t),                intent(inout) :: this
+    real(kind=wp), dimension(:,:), pointer, intent(out)   :: that
+
+    logical :: allc
 
     PUSH_SUB(base_functional_get_functional_md)
 
     nullify(that)
-    call storage_get(this%data, that)
+    call storage_get(this%data, alloc=allc)
+    if(allc)then
+      call base_functional_update(this)
+      call storage_get(this%data, that)
+    end if
 
     POP_SUB(base_functional_get_functional_md)
   end subroutine base_functional_get_functional_md
@@ -613,36 +662,6 @@ contains
   end subroutine base_functional__copy__
 
   ! ---------------------------------------------------------
-  recursive subroutine base_functional_copy_type(this, that)
-    type(base_functional_t), intent(inout) :: this
-    type(base_functional_t), intent(in)    :: that
-
-    type(base_functional_iterator_t)        :: iter
-    character(len=BASE_FUNCTIONAL_NAME_LEN) :: name
-    type(base_functional_t),        pointer :: osub, isub
-    integer                                 :: ierr
-
-    PUSH_SUB(base_functional_copy_type)
-
-    nullify(osub, isub)
-    call base_functional_end(this)
-    call base_functional__copy__(this, that)
-    call base_functional_init(iter, that)
-    do
-      nullify(osub, isub)
-      call base_functional_next(iter, name, isub, ierr)
-      if(ierr/=BASE_FUNCTIONAL_OK)exit
-      call base_functional_new(this, osub)
-      call base_functional_copy(osub, isub)
-      call base_functional_sets(this, name, osub)
-    end do
-    call base_functional_end(iter)
-    nullify(osub, isub)
-
-    POP_SUB(base_functional_copy_type)
-  end subroutine base_functional_copy_type
-
-  ! ---------------------------------------------------------
   subroutine base_functional__end__(this)
     type(base_functional_t), intent(inout) :: this
 
@@ -654,6 +673,7 @@ contains
     this%energy = 0.0_wp
     call functional_end(this%funct)
     call storage_end(this%data)
+    call msgbus_end(this%msgb)
     call base_functional_dict_end(this%dict)
     ASSERT(base_functional_list_len(this%list)==0)
     call base_functional_list_end(this%list)
@@ -662,8 +682,6 @@ contains
   end subroutine base_functional__end__
 
 end module base_functional_oct_m
-
-#undef BASE_LEAF_TYPE
 
 !! Local Variables:
 !! mode: f90

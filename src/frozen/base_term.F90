@@ -74,9 +74,12 @@ module base_term_oct_m
     module procedure base_term__init__copy
   end interface base_term__init__
 
+  interface base_term_new
+    module procedure base_term_new_type
+  end interface base_term_new
+
   interface base_term_init
     module procedure base_term_init_type
-    module procedure base_term_init_copy
   end interface base_term_init
 
   interface base_term_set
@@ -89,10 +92,6 @@ module base_term_oct_m
     module procedure base_term_get_system
   end interface base_term_get
 
-  interface base_term_copy
-    module procedure base_term_copy_type
-  end interface base_term_copy
-
 contains
 
 #define BASE_TEMPLATE_NAME base_term
@@ -102,45 +101,19 @@ contains
 #undef BASE_TEMPLATE_NAME
 
   ! ---------------------------------------------------------
-  subroutine base_term__new__(this)
-    type(base_term_t), pointer :: this
-
-    PUSH_SUB(base_term__new__)
-
-    nullify(this)
-    SAFE_ALLOCATE(this)
-
-    POP_SUB(base_term__new__)
-  end subroutine base_term__new__
-
-  ! ---------------------------------------------------------
-  subroutine base_term__del__(this)
-    type(base_term_t), pointer :: this
-
-    PUSH_SUB(base_term__del__)
-
-    if(associated(this))then
-      SAFE_DEALLOCATE_P(this)
-    end if
-    nullify(this)
-
-    POP_SUB(base_term__del__)
-  end subroutine base_term__del__
-
-  ! ---------------------------------------------------------
-  subroutine base_term_new(this, that)
+  subroutine base_term_new_type(this, that)
     type(base_term_t),  target, intent(inout) :: this
     type(base_term_t), pointer                :: that
 
-    PUSH_SUB(base_term_new)
+    PUSH_SUB(base_term_new_type)
 
     nullify(that)
-    call base_term__new__(that)
+    SAFE_ALLOCATE(that)
     that%prnt => this
     call base_term_list_push(this%list, that)
 
-    POP_SUB(base_term_new)
-  end subroutine base_term_new
+    POP_SUB(base_term_new_type)
+  end subroutine base_term_new_type
 
   ! ---------------------------------------------------------
   subroutine base_term__init__type(this, sys, config)
@@ -184,35 +157,6 @@ contains
 
     POP_SUB(base_term_init_type)
   end subroutine base_term_init_type
-
-  ! ---------------------------------------------------------
-  recursive subroutine base_term_init_copy(this, that)
-    type(base_term_t), intent(out) :: this
-    type(base_term_t), intent(in)  :: that
-
-    type(base_term_iterator_t)        :: iter
-    character(len=BASE_TERM_NAME_LEN) :: name
-    type(base_term_t),        pointer :: osub, isub
-    integer                           :: ierr
-
-    PUSH_SUB(base_term_init_copy)
-
-    nullify(osub, isub)
-    call base_term__init__(this, that)
-    call base_term_init(iter, that)
-    do
-      nullify(osub, isub)
-      call base_term_next(iter, name, isub, ierr)
-      if(ierr/=BASE_TERM_OK)exit
-      call base_term_new(this, osub)
-      call base_term_init(osub, isub)
-      call base_term_sets(this, name, osub)
-    end do
-    call base_term_end(iter)
-    nullify(osub, isub)
-
-    POP_SUB(base_term_init_copy)
-  end subroutine base_term_init_copy
 
   ! ---------------------------------------------------------
   subroutine base_term__acc__(this, that)
@@ -380,36 +324,6 @@ contains
 
     POP_SUB(base_term__copy__)
   end subroutine base_term__copy__
-
-  ! ---------------------------------------------------------
-  recursive subroutine base_term_copy_type(this, that)
-    type(base_term_t), intent(inout) :: this
-    type(base_term_t), intent(in)    :: that
-
-    type(base_term_iterator_t)        :: iter
-    character(len=BASE_TERM_NAME_LEN) :: name
-    type(base_term_t),        pointer :: osub, isub
-    integer                           :: ierr
-
-    PUSH_SUB(base_term_copy_type)
-
-    nullify(osub, isub)
-    call base_term_end(this)
-    call base_term__copy__(this, that)
-    call base_term_init(iter, that)
-    do
-      nullify(osub, isub)
-      call base_term_next(iter, name, isub, ierr)
-      if(ierr/=BASE_TERM_OK)exit
-      call base_term_new(this, osub)
-      call base_term_copy(osub, isub)
-      call base_term_sets(this, name, osub)
-    end do
-    call base_term_end(iter)
-    nullify(osub, isub)
-
-    POP_SUB(base_term_copy_type)
-  end subroutine base_term_copy_type
 
   ! ---------------------------------------------------------
   subroutine base_term__end__(this)

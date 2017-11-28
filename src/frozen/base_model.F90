@@ -78,9 +78,12 @@ module base_model_oct_m
     module procedure base_model__init__copy
   end interface base_model__init__
 
+  interface base_model_new
+    module procedure base_model_new_type
+  end interface base_model_new
+
   interface base_model_init
     module procedure base_model_init_type
-    module procedure base_model_init_copy
   end interface base_model_init
 
   interface base_model_get
@@ -95,10 +98,6 @@ module base_model_oct_m
     module procedure base_model_get_hamiltonian
   end interface base_model_get
 
-  interface base_model_copy
-    module procedure base_model_copy_type
-  end interface base_model_copy
-
 contains
 
 #define BASE_TEMPLATE_NAME base_model
@@ -108,45 +107,19 @@ contains
 #undef BASE_TEMPLATE_NAME
 
   ! ---------------------------------------------------------
-  subroutine base_model__new__(this)
-    type(base_model_t), pointer :: this
-
-    PUSH_SUB(base_model__new__)
-
-    nullify(this)
-    SAFE_ALLOCATE(this)
-
-    POP_SUB(base_model__new__)
-  end subroutine base_model__new__
-
-  ! ---------------------------------------------------------
-  subroutine base_model__del__(this)
-    type(base_model_t), pointer :: this
-
-    PUSH_SUB(base_model__del__)
-
-    if(associated(this))then
-      SAFE_DEALLOCATE_P(this)
-    end if
-    nullify(this)
-
-    POP_SUB(base_model__del__)
-  end subroutine base_model__del__
-
-  ! ---------------------------------------------------------
-  subroutine base_model_new(this, that)
+  subroutine base_model_new_type(this, that)
     type(base_model_t),  target, intent(inout) :: this
     type(base_model_t), pointer                :: that
 
-    PUSH_SUB(base_model_new)
+    PUSH_SUB(base_model_new_type)
 
     nullify(that)
-    call base_model__new__(that)
+    SAFE_ALLOCATE(thAT)
     that%prnt => this
     call base_model_list_push(this%list, that)
 
-    POP_SUB(base_model_new)
-  end subroutine base_model_new
+    POP_SUB(base_model_new_type)
+  end subroutine base_model_new_type
 
   ! ---------------------------------------------------------
   subroutine base_model__init__type(this, config)
@@ -209,34 +182,6 @@ contains
 
     POP_SUB(base_model_init_type)
   end subroutine base_model_init_type
-
-  ! ---------------------------------------------------------
-  recursive subroutine base_model_init_copy(this, that)
-    type(base_model_t), intent(out) :: this
-    type(base_model_t), intent(in)  :: that
-
-    type(base_model_iterator_t)        :: iter
-    character(len=BASE_MODEL_NAME_LEN) :: name
-    type(base_model_t),        pointer :: osub, isub
-    integer                            :: ierr
-
-    PUSH_SUB(base_model_init_copy)
-
-    call base_model__init__(this, that)
-    call base_model_init(iter, that)
-    do
-      nullify(osub, isub)
-      call base_model_next(iter, name, isub, ierr)
-      if(ierr/=BASE_MODEL_OK)exit
-      call base_model_new(this, osub)
-      call base_model_init(osub, isub)
-      call base_model_sets(this, name, osub)
-    end do
-    call base_model_end(iter)
-    nullify(osub, isub)
-
-    POP_SUB(base_model_init_copy)
-  end subroutine base_model_init_copy
 
   ! ---------------------------------------------------------
   subroutine base_model__start__(this, sim)
@@ -370,15 +315,15 @@ contains
   end subroutine base_model__sets__
 
   ! ---------------------------------------------------------
-  subroutine base_model__dels__(this, name, ierr)
+  subroutine base_model__dels__(this, name, that)
     type(base_model_t),  intent(inout) :: this
     character(len=*),    intent(in)    :: name
-    integer,             intent(out)   :: ierr
+    type(base_model_t),  intent(in)    :: that
 
     PUSH_SUB(base_model__dels__)
 
-    call base_hamiltonian_dels(this%hm, trim(adjustl(name)), ierr)
-    call base_system_dels(this%sys, trim(adjustl(name)), ierr)
+    call base_hamiltonian_dels(this%hm, trim(adjustl(name)), that%hm)
+    call base_system_dels(this%sys, trim(adjustl(name)), that%sys)
 
     POP_SUB(base_model__dels__)
   end subroutine base_model__dels__
@@ -518,36 +463,6 @@ contains
 
     POP_SUB(base_model__copy__)
   end subroutine base_model__copy__
-
-  ! ---------------------------------------------------------
-  recursive subroutine base_model_copy_type(this, that)
-    type(base_model_t), intent(inout) :: this
-    type(base_model_t), intent(in)    :: that
-
-    type(base_model_iterator_t)        :: iter
-    character(len=BASE_MODEL_NAME_LEN) :: name
-    type(base_model_t),        pointer :: osub, isub
-    integer                            :: ierr
-
-    PUSH_SUB(base_model_copy_type)
-
-    nullify(osub, isub)
-    call base_model_end(this)
-    call base_model__copy__(this, that)
-    call base_model_init(iter, that)
-    do
-      nullify(osub, isub)
-      call base_model_next(iter, name, isub, ierr)
-      if(ierr/=BASE_MODEL_OK)exit
-      call base_model_new(this, osub)
-      call base_model_copy(osub, isub)
-      call base_model_sets(this, name, osub)
-    end do
-    call base_model_end(iter)
-    nullify(osub, isub)
-
-    POP_SUB(base_model_copy_type)
-  end subroutine base_model_copy_type
 
   ! ---------------------------------------------------------
   subroutine base_model__end__(this)

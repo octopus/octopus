@@ -20,6 +20,7 @@
 
 module lcao_oct_m
   use atom_oct_m
+  use base_states_oct_m
   use batch_oct_m
   use blacs_proc_grid_oct_m
   use geometry_oct_m
@@ -1323,6 +1324,11 @@ contains
     call messages_info(1)
 
     SAFE_DEALLOCATE_A(atom_rho)
+    
+    !> Notify the "live" subsystem of the density update.
+    if(associated(st%subsys_st))&
+      call base_states_notify(st%subsys_st, "live")
+
     POP_SUB(lcao_guess_density)
   end subroutine lcao_guess_density
 

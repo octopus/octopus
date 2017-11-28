@@ -97,10 +97,13 @@ module base_handle_oct_m
     module procedure base_handle__stop__pass
   end interface base_handle__stop__
 
+  interface base_handle_new
+    module procedure base_handle_new_type
+  end interface base_handle_new
+
   interface base_handle_init
     module procedure base_handle_init_type
     module procedure base_handle_init_pass
-    module procedure base_handle_init_copy
   end interface base_handle_init
 
   interface base_handle_start
@@ -126,10 +129,6 @@ module base_handle_oct_m
     module procedure base_handle_get_model
   end interface base_handle_get
 
-  interface base_handle_copy
-    module procedure base_handle_copy_type
-  end interface base_handle_copy
-
 contains
 
 #define BASE_TEMPLATE_NAME base_handle
@@ -139,45 +138,19 @@ contains
 #undef BASE_TEMPLATE_NAME
 
   ! ---------------------------------------------------------
-  subroutine base_handle__new__(this)
-    type(base_handle_t), pointer :: this
-
-    PUSH_SUB(base_handle__new__)
-
-    nullify(this)
-    SAFE_ALLOCATE(this)
-
-    POP_SUB(base_handle__new__)
-  end subroutine base_handle__new__
-
-  ! ---------------------------------------------------------
-  subroutine base_handle__del__(this)
-    type(base_handle_t), pointer :: this
-
-    PUSH_SUB(base_handle__del__)
-
-    if(associated(this))then
-      SAFE_DEALLOCATE_P(this)
-    end if
-    nullify(this)
-
-    POP_SUB(base_handle__del__)
-  end subroutine base_handle__del__
-
-  ! ---------------------------------------------------------
-  subroutine base_handle_new(this, that)
+  subroutine base_handle_new_type(this, that)
     type(base_handle_t),  target, intent(inout) :: this
     type(base_handle_t), pointer                :: that
 
-    PUSH_SUB(base_handle_new)
+    PUSH_SUB(base_handle_new_type)
 
     nullify(that)
-    call base_handle__new__(that)
+    SAFE_ALLOCATE(that)
     that%prnt => this
     call base_handle_list_push(this%list, that)
 
-    POP_SUB(base_handle_new)
-  end subroutine base_handle_new
+    POP_SUB(base_handle_new_type)
+  end subroutine base_handle_new_type
 
   ! ---------------------------------------------------------
   subroutine base_handle__init__type(this, config)
@@ -305,34 +278,6 @@ contains
   end subroutine base_handle_init_pass
 
   ! ---------------------------------------------------------
-  recursive subroutine base_handle_init_copy(this, that)
-    type(base_handle_t), intent(out) :: this
-    type(base_handle_t), intent(in)  :: that
-
-    type(base_handle_iterator_t)        :: iter
-    character(len=BASE_HANDLE_NAME_LEN) :: name
-    type(base_handle_t),        pointer :: osub, isub
-    integer                             :: ierr
-
-    PUSH_SUB(base_handle_init_copy)
-
-    call base_handle__init__(this, that)
-    call base_handle_init(iter, that)
-    do
-      nullify(osub, isub)
-      call base_handle_next(iter, name, isub, ierr)
-      if(ierr/=BASE_HANDLE_OK)exit
-      call base_handle_new(this, osub)
-      call base_handle_init(osub, isub)
-      call base_handle_sets(this, name, osub)
-    end do
-    call base_handle_end(iter)
-    nullify(osub, isub)
-
-    POP_SUB(base_handle_init_copy)
-  end subroutine base_handle_init_copy
-
-  ! ---------------------------------------------------------
   subroutine base_handle__start__type(this, sim)
     type(base_handle_t), intent(inout) :: this
     type(simulation_t),  intent(in)    :: sim
@@ -424,6 +369,7 @@ contains
     ASSERT(smlt_intrf_assoc(this%smlt))
     call smlt_intrf_del(this%smlt)
     ASSERT(.not.smlt_intrf_assoc(this%smlt))
+    call base_model__stop__(this%model)
 
     POP_SUB(base_handle__stop__type)
   end subroutine base_handle__stop__type
@@ -608,14 +554,14 @@ contains
   end subroutine base_handle__sets__
 
   ! ---------------------------------------------------------
-  subroutine base_handle__dels__(this, name, ierr)
+  subroutine base_handle__dels__(this, name, that)
     type(base_handle_t), intent(inout) :: this
     character(len=*),    intent(in)    :: name
-    integer,             intent(out)   :: ierr
+    type(base_handle_t), intent(in)    :: that
 
     PUSH_SUB(base_handle__dels__)
 
-    call base_model_dels(this%model, trim(adjustl(name)), ierr)
+    call base_model_dels(this%model, trim(adjustl(name)), that%model)
 
     POP_SUB(base_handle__dels__)
   end subroutine base_handle__dels__
@@ -748,36 +694,6 @@ contains
 
     POP_SUB(base_handle__copy__)
   end subroutine base_handle__copy__
-
-  ! ---------------------------------------------------------
-  recursive subroutine base_handle_copy_type(this, that)
-    type(base_handle_t), intent(inout) :: this
-    type(base_handle_t), intent(in)    :: that
-
-    type(base_handle_iterator_t)        :: iter
-    character(len=BASE_HANDLE_NAME_LEN) :: name
-    type(base_handle_t),        pointer :: osub, isub
-    integer                             :: ierr
-
-    PUSH_SUB(base_handle_copy_type)
-
-    nullify(osub, isub)
-    call base_handle_end(this)
-    call base_handle__copy__(this, that)
-    call base_handle_init(iter, that)
-    do
-      nullify(osub, isub)
-      call base_handle_next(iter, name, isub, ierr)
-      if(ierr/=BASE_HANDLE_OK)exit
-      call base_handle_new(this, osub)
-      call base_handle_copy(osub, isub)
-      call base_handle_sets(this, name, osub)
-    end do
-    call base_handle_end(iter)
-    nullify(osub, isub)
-
-    POP_SUB(base_handle_copy_type)
-  end subroutine base_handle_copy_type
 
   ! ---------------------------------------------------------
   subroutine base_handle__end__(this)
