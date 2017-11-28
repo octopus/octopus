@@ -226,6 +226,8 @@ contains
     type(block_t) :: blk
     type(profile_t), save :: prof
 
+    logical :: external_potentials_present
+
     PUSH_SUB(hamiltonian_init)
     call profiling_in(prof, 'HAMILTONIAN_INIT')
     
@@ -443,7 +445,11 @@ contains
     !%End
     call parse_variable('StatesPack', .true., hm%apply_packed)
 
-    call pcm_init(hm%pcm, geo, gr, st%qtot, st%val_charge)  !< initializes PCM  
+    external_potentials_present = associated(hm%ep%v_static) .or. &
+				  associated(hm%ep%E_field)  .or. &
+				  associated(hm%ep%lasers)
+
+    call pcm_init(hm%pcm, geo, gr, st%qtot, st%val_charge, external_potentials_present )  !< initializes PCM  
     if(hm%pcm%run_pcm .and. hm%theory_level /= KOHN_SHAM_DFT) &
       call messages_not_implemented("PCM for TheoryLevel /= DFT")
     
@@ -717,6 +723,12 @@ contains
             this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
               this%pcm%v_e_rs(ip) + this%pcm%v_n_rs(ip)
           end forall
+          if (this%pcm%localf) then !GGIL: 23/10/2017
+            forall (ip = 1:mesh%np)  
+              this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
+                this%pcm%v_ext_rs(ip)
+            end forall
+          end if 
         end if
 
         if(this%cmplxscl%space) then
@@ -913,6 +925,19 @@ contains
      !> Generates the real-space PCM potential due to nuclei which do not change
      !! during the SCF calculation.
      call pcm_calc_pot_rs(this%pcm, gr%mesh, geo = geo)
+
+      !> GGIL: 20/10/2017 - local field effects within PCM
+      ! due to electrostatic potential (if they were)
+      ! here only the static potentials are included
+      ! the laser is included in subroutine v_ks_hartree (module v_ks) 
+      ! still missing the kick
+      ! interpolation is needed, hence gr%mesh%np_part -> 1:gr%mesh%np
+      !write(*,*) "electric field", this%ep%E_field
+      write(*,*) "G-E", -M_TWO*(this%pcm%epsilon_0-M_ONE)/(M_TWO*this%pcm%epsilon_0+M_ONE) * this%pcm%epsilon_0 * this%ep%E_field
+      write(*,*) "E", this%pcm%epsilon_0 * this%ep%E_field
+      if( this%pcm%localf .and. associated(this%ep%v_static)) &
+        call pcm_calc_pot_rs(this%pcm, gr%mesh, v_ext = this%ep%v_static(1:gr%mesh%np_part) )
+
     end if
 
     POP_SUB(hamiltonian_epot_generate)

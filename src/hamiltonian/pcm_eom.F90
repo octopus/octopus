@@ -53,15 +53,24 @@ module pcm_eom_oct_m
   type(debye_param_t) :: deb
   type(drude_param_t) :: drl
 
+  character(8) :: which_eom			 !< character flag for PCM charges due to:
+                                                 !< electrons ('electron') or external potential ('external')
+
   character(3) :: which_eps			 !< character flag for Debye ('deb') and Drude-Lorentz models ('drl')
 
   FLOAT :: dt 					 !< time-step of the propagation
 
-  FLOAT, allocatable :: q_tp(:), dq_tp(:)	 !< polarization charges and variation of in it in the previous iteration
-  FLOAT, allocatable :: pot_tp(:)		 !< potential in previous iteration
+						 !< polarization charges and variation of it in the previous iteration:
+  FLOAT, allocatable :: q_tp(:), dq_tp(:)	 !< 			 due to solute electrons
+  FLOAT, allocatable :: qext_tp(:), dqext_tp(:)	 !< 			 due to external potential
+  FLOAT, allocatable :: pot_tp(:)		 !< potential in previous iteration; either Hartree (electrons) or external
+  FLOAT, allocatable :: pot_vac_tp(:)		 !< potential in the cavity in previous iteration; only for ext. pot. case
+  FLOAT, allocatable :: delta_pot_tp(:), ddelta_pot_tp(:) !< difference of ext.pot. in & out the cavity, and var. of it, prev. iter.
+
                                                  !< See Chem.Phys.Lett. 429 (2006) 310-316 for Velocity-Verlet (VV) algorithm... 
   FLOAT :: f1, f2, f3, f4, f5			 !< auxiliar constants for VV
-  FLOAT, allocatable :: force(:),force_p(:)	 !< analogous to force in the equation of motion for the pol.charges
+  FLOAT, allocatable :: force_tp(:)	         !< analogous to force in the equation of motion for the pol.charges, prev. iter.
+  FLOAT, allocatable :: force_delta_pot_tp(:), force_qext_tp(:) !< idem for the two 2nd order EOM for the external potential case
 
   						 !< In J.Phys.Chem.A 2015, 119, 5405-5416...
   FLOAT, allocatable :: cals(:,:),cald(:,:)	 !< Calderon matrices S and D from Eq.(5), ibid.
@@ -79,7 +88,7 @@ module pcm_eom_oct_m
   !------------------------------------------------------------------------------------------------------------------------------
   !> Driving subroutine for the Equation of Motion (EOM) propagation of the polarization charges
   !> within the Integral Equation Formalism (IEF) formulation of the Polarization Continuum Model (PCM).
-  subroutine pcm_charges_propagation(q_t, pot_t, this_dt, this_cts_act, this_eps, this_deb, this_drl) 
+  subroutine pcm_charges_propagation(q_t, pot_t, this_dt, this_cts_act, this_eom, this_eps, this_deb, this_drl) 
    save
    FLOAT, intent(out) :: q_t(:)
    FLOAT, intent(in)  :: pot_t(:)
@@ -88,14 +97,23 @@ module pcm_eom_oct_m
 
    type(pcm_tessera_t), intent(in) :: this_cts_act(:)
 
+   character(*), intent(in) :: this_eom !< EOM case, either due to electrons ('electron') or due to external potential ('external')
    character(*), intent(in) :: this_eps !< type of dielectric model to be used, either Debye ('deb') or Drude-Lorentz ('drl')
    type(debye_param_t), optional, intent(in) :: this_deb
    type(drude_param_t), optional, intent(in) :: this_drl 
 
    logical :: firsttime=.true.
+   logical :: initial_electron=.true.
+   logical :: initial_external=.true.
 
 
    PUSH_SUB(pcm_charges_propagation)
+
+   which_eom=this_eom
+   if (which_eps=='electron' .or. which_eps=='external' ) then
+    message(1) = "pcm_charges_propagation: EOM evolution of PCM charges can only be due to solute electrons or external potential."
+    call messages_fatal(1)
+   endif
 
    if(firsttime) then
     dt=this_dt
@@ -120,27 +138,30 @@ module pcm_eom_oct_m
      drl=this_drl
     endif
     call init_BEM
-    call init_charges(pot_t)
-    q_t=q_tp
     firsttime=.false.
+   endif
+
+   if(initial_electron .or. initial_external) then
+    call init_charges(q_t,pot_t) 
+    if(initial_electron) initial_electron=.false.
+    if(initial_external) initial_external=.false.
     POP_SUB(pcm_charges_propagation)
     return
    endif
 
    if( which_eps .eq. "deb") then
     if( deb%tau /= M_ZERO ) then
-     call pcm_ief_prop_deb(pot_t,q_t)
+     call pcm_ief_prop_deb(q_t,pot_t)
     else
      POP_SUB(pcm_charges_propagation)
      return
     endif
    elseif( which_eps .eq. "drl" ) then
-    call pcm_ief_prop_vv_ief_drl(pot_t,q_t)
+    call pcm_ief_prop_vv_ief_drl(q_t,pot_t)
    else
     message(1) = "pcm_charges_propagation: EOM-PCM error. Only Debye or Drude-Lorent dielectric models are allowed."
     call messages_fatal(1)
    endif
-   q_tp   = q_t
    pot_tp = pot_t
 
    POP_SUB(pcm_charges_propagation)
@@ -148,22 +169,66 @@ module pcm_eom_oct_m
 
   !------------------------------------------------------------------------------------------------------------------------------
   !> Polarization charges initialization in equilibrium with the initial potential.
-  subroutine init_charges(pot_t)
+  subroutine init_charges(q_t,pot_t)
+   FLOAT, intent(out) :: q_t(:)
    FLOAT, intent(in)  :: pot_t(:)
 
    PUSH_SUB(init_charges)
 
-   allocate(q_tp(nts_act))
+   if( which_eom == 'electron' ) then
+    !< Here we consider the potential at any earlier time equal to the initial potential.
+    !< Therefore, we can suppose that the solvent is already in equilibrium with the initial solute potential.
+    !< The latter is valid when starting the propagation from the ground state but do not hold in general.
+  
+    q_t=matmul(matq0,pot_t) !< applying the static IEF-PCM response matrix (corresponging to epsilon_0) to the initial potential
+
+    allocate(q_tp(nts_act))
+    q_tp = q_t
+
+    if( which_eps .eq. "drl" ) then
+     allocate(dq_tp(nts_act))
+     allocate(force_tp(nts_act))
+     dq_tp=M_ZERO
+     force_tp=M_ZERO
+    endif
+			    
+   else if( which_eom == 'external' ) then
+    !< Here (instead) we consider zero the potential at any earlier time.
+    !< Therefore, the solvent is not initially in equilibrium with the external potential unless its initial value is zero.
+
+    q_t=matmul(matqd,pot_t) !< applying the dynamic IEF-PCM response matrix (corresponging to epsilon_d) to the initial potential
+
+    allocate(pot_vac_tp(nts_act)) 
+    select case( which_eps)
+    case( 'deb' )
+     q_t = q_t * deb%eps_0
+     pot_vac_tp = pot_t * deb%eps_0
+    case( 'drl' )
+     q_t = M_ZERO
+     pot_vac_tp = pot_t
+
+     allocate(dqext_tp(nts_act))
+     allocate(force_delta_pot_tp(nts_act))
+     dqext_tp=M_ZERO
+     force_delta_pot_tp=drl%aa*pot_t
+     force_qext_tp=matmul(matqv,pot_vac_tp)
+    end select
+
+    allocate(qext_tp(nts_act))
+    qext_tp = q_t
+
+   endif
+
    allocate(pot_tp(nts_act))
-   q_tp=matmul(matq0,pot_t) !< applying the static IEF-PCM response matrix (corresponging to epsilon_0)
-   pot_tp=pot_t             !< to the initial potential, which is assumed to be the ground state potential (!)
-   if( which_eps .eq. "drl" ) then
-    allocate(dq_tp(nts_act))
-    allocate(force_p(nts_act))
-    allocate(force(nts_act))
-    dq_tp=M_ZERO
-    force_p=M_ZERO
-    call init_vv_propagator !< initializing Velocity-Verlet algorithm for the integration of EOM-PCM for Drude-Lorentz
+   pot_tp = pot_t
+
+   !< initializing Velocity-Verlet algorithm for the integration of EOM-PCM for Drude-Lorentz
+   if( which_eps == 'drl' ) then
+     call init_vv_propagator
+     allocate(delta_pot_tp(nts_act))
+     allocate(ddelta_pot_tp(nts_act))
+     delta_pot_tp=pot_vac_tp-pot_tp
+     ddelta_pot_tp=M_ZERO 
    endif
 
    POP_SUB(init_charges)
@@ -172,16 +237,35 @@ module pcm_eom_oct_m
   !------------------------------------------------------------------------------------------------------------------------------
   !> Euler method for integrating first order EOM for the polarization charges within IEF-PCM
   !> in the case of Debye dielectric functions.
-  subroutine pcm_ief_prop_deb(pot_t,q_t)
-   FLOAT, intent(in)  :: pot_t(:)
+  subroutine pcm_ief_prop_deb(q_t,pot_t)
    FLOAT, intent(out) :: q_t(:)
+   FLOAT, intent(in)  :: pot_t(:)
+
+   FLOAT :: pot_vac_t(nts_act)
 
    PUSH_SUB(pcm_ief_prop_deb)
 
-   !> Eq.(47) in S. Corni, S. Pipolo and R. Cammi, J.Phys.Chem.A 2015, 119, 5405-5416.
-   q_t(:) = q_tp(:) - dt*matmul(matqq,q_tp)   + &
-		      dt*matmul(matqv,pot_tp) + &
-			 matmul(matqd,pot_t-pot_tp)
+   if( which_eom == 'external' ) then
+    !> two equations of motion due to the presence of an extra epsilon factor in the PCM response matrix (unpublished)
+    pot_vac_t = pot_vac_tp + (dt/deb%tau) * (deb%eps_0*pot_t-pot_vac_t) + &
+		              deb%eps_d   * (pot_t-pot_tp)
+
+    q_t(:) = qext_tp(:) - dt*matmul(matqq,qext_tp)   + &
+	  	          dt*matmul(matqv,pot_vac_tp) + &
+			     matmul(matqd,pot_vac_t-pot_vac_tp)
+
+    pot_vac_tp = pot_vac_t
+    qext_tp = q_t
+
+   else if( which_eom == 'electron' ) then 
+    !> Eq.(47) in S. Corni, S. Pipolo and R. Cammi, J.Phys.Chem.A 2015, 119, 5405-5416.
+    q_t(:) = q_tp(:) - dt*matmul(matqq,q_tp)   + &
+	  	       dt*matmul(matqv,pot_tp) + &
+			  matmul(matqd,pot_t-pot_tp)
+
+    q_tp = q_t
+
+   endif
 
    POP_SUB(pcm_ief_prop_deb)
   end subroutine pcm_ief_prop_deb
@@ -206,19 +290,43 @@ module pcm_eom_oct_m
   !------------------------------------------------------------------------------------------------------------------------------
   !> VV algorithm for integrating second order EOM for the polarization charges within IEF-PCM
   !> in the case of Drude-Lorentz dielectric functions.
-  subroutine pcm_ief_prop_vv_ief_drl(pot_t,q_t)
-   FLOAT, intent(in)  :: pot_t(:)
+  subroutine pcm_ief_prop_vv_ief_drl(q_t,pot_t)
    FLOAT, intent(out) :: q_t(:)
+   FLOAT, intent(in)  :: pot_t(:)
+
+   FLOAT :: force(nts_act)
+   FLOAT :: delta_pot_t(nts_act), pot_vac_t(nts_act)
 
    PUSH_SUB(pcm_ief_prop_vv_ief_drl)
 
-   !> From Eq.(15) S. Pipolo and S. Corni, J.Phys.Chem.C 2016, 120, 28774-28781.
-   !> Using the scheme in Eq.(21) and (17) of E. Vanden-Eijnden, G. Ciccotti, Chem.Phys.Lett. 429 (2006) 310-316.
-   q_t = q_tp + f1*dq_tp + f2*force_p
-   force = -matmul(matqq,q_t) + matmul(matqv,pot_t)
-   dq_tp = f3*dq_tp + f4*(force+force_p) -f5*force_p
-   force_p = force
-   q_tp = q_t
+   if( which_eom == 'external' ) then
+    !> two equations of motion due to the presence of an extra epsilon factor in the PCM response matrix (unpublished)
+
+    delta_pot_t = delta_pot_tp + f1*ddelta_pot_tp + f2*force_delta_pot_tp
+    force = -drl%w0**2*delta_pot_t + drl%aa*pot_t
+    ddelta_pot_tp = f3*ddelta_pot_tp + f4*(force+force_delta_pot_tp) -f5*force_delta_pot_tp
+    force_delta_pot_tp = force
+    delta_pot_tp = delta_pot_t
+
+    pot_vac_t = delta_pot_t + pot_t
+    pot_vac_tp = pot_vac_t
+
+    q_t = qext_tp + f1*dqext_tp + f2*force_qext_tp
+    force = -matmul(matqq,q_t) + matmul(matqv,pot_vac_t)
+    dqext_tp = f3*dqext_tp + f4*(force+force_qext_tp) -f5*force_qext_tp
+    force_qext_tp = force
+    qext_tp = q_t
+
+   else if( which_eom == 'electron' ) then 
+    !> From Eq.(15) S. Pipolo and S. Corni, J.Phys.Chem.C 2016, 120, 28774-28781.
+    !> Using the scheme in Eq.(21) and (17) of E. Vanden-Eijnden, G. Ciccotti, Chem.Phys.Lett. 429 (2006) 310-316.
+    q_t = q_tp + f1*dq_tp + f2*force_tp
+    force = -matmul(matqq,q_t) + matmul(matqv,pot_t)
+    dq_tp = f3*dq_tp + f4*(force+force_tp) -f5*force_tp
+    force_tp = force
+    q_tp = q_t
+
+   endif
 
    POP_SUB(pcm_ief_prop_vv_ief_drl)
   end subroutine pcm_ief_prop_vv_ief_drl
