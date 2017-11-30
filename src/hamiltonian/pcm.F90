@@ -1009,15 +1009,15 @@ contains
     
     integer :: calc
 
-    integer :: asc_unit_test, asc_unit_test_aux, ii
-
-    FLOAT :: radius
-
-    FLOAT :: cavity_electric_field(3)
-
     logical :: firsttime = .true.
     FLOAT, allocatable :: v_ext_0(:)
     FLOAT :: aux
+
+    ! for debuggin - it should be cleaned up
+    integer :: asc_unit_test, asc_unit_test_aux, ii, jj
+    FLOAT :: radius
+    FLOAT :: cavity_electric_field(3), cavity_potential
+
 
     PUSH_SUB(pcm_calc_pot_rs)  
     
@@ -1100,6 +1100,7 @@ contains
     if (calc == PCM_EXTERNAL_POTENTIAL) then 
       ! Here we use same subroutine as for electrons; nothing special about it:
       ! it is just a linear interpolation at the tessera point of the potential evaluated at the nearest grid points.
+      pcm%v_ext = M_ZERO
       call pcm_v_electrons_cav_li(pcm%v_ext, v_ext, pcm, mesh)
       if( td_calc_mode .and. pcm%epsilon_infty /= pcm%epsilon_0 .and. pcm%noneq ) then
         if( firsttime ) then
@@ -1177,24 +1178,33 @@ contains
       else !< BEGIN - pcm charges propagation in equilibrium with external potential
         !< calculating polarization charges equilibrated with the external potential (always).
         !< if there are (together) time-dependent and static external potentials, 
-        !< the pcm charges due to the static one is calculated here. 
+        !< the pcm charges due to the static one is calculated here.
+        pcm%q_ext = M_ZERO
         call pcm_charges(pcm%q_ext, pcm%qtot_ext, pcm%epsilon_0 * pcm%v_ext, pcm%matrix, pcm%n_tesserae)
 
         asc_unit_test_aux = io_open(PCM_DIR//'ASCs_ext.dat', action='write')
-     
+        asc_unit_test = io_open(PCM_DIR//'analytic.dat', action='write')
         do ii = 1, pcm%n_tesserae
           write(asc_unit_test_aux,*) pcm%tess(ii)%point, pcm%q_ext(ii), ii
+          write(asc_unit_test,*) pcm%tess(ii)%point, &
+3/(4*M_Pi)*(pcm%epsilon_0-M_ONE)/(2*pcm%epsilon_0+M_ONE)*0.05*pcm%tess(ii)%point(1)*pcm%tess(ii)%area/norm2( pcm%tess(ii)%point ),&
+        ii
         end do
-          
         call io_close(asc_unit_test_aux)
+        call io_close(asc_unit_test)
 
+        jj=1
         cavity_electric_field = M_ZERO
+        cavity_potential = M_ZERO
         do ii = 1, pcm%n_tesserae
-          cavity_electric_field = cavity_electric_field +pcm%q_ext(ii) * pcm%tess(ii)%normal
+          cavity_electric_field = cavity_electric_field +pcm%q_ext(ii) * pcm%tess(ii)%normal / norm2( pcm%tess(ii)%point )**2
+          cavity_potential = cavity_potential -pcm%q_ext(ii)/ norm2( pcm%tess(ii)%point-mesh%x(jj,:))
         end do
-        cavity_electric_field = cavity_electric_field / norm2( pcm%tess(1)%point )**2
         write(*,*) "Cavity contribution to the local field", cavity_electric_field
-        write(*,*) "potential at cavity tesserae", pcm%v_ext(31)
+
+        write(*,*) 'test potential outside - onsager', mesh%x(jj,1)/1.889725989, &
+        -mesh%x(jj,1)*0.05-(78.39-M_ONE)/(2*78.39+M_ONE)*0.05*(5.0*1.889725989)**3*mesh%x(jj,1)/norm2(mesh%x(jj,:))**3, &
+        v_ext(jj)*pcm%epsilon_0+cavity_potential
 
         !< dont pay attention to the use of q_ext_in and qtot_ext_in, whose role here is only auxiliary
         pcm%q_ext_in = pcm%q_ext
@@ -1205,7 +1215,23 @@ contains
         call pcm_pot_rs(pcm, pcm%v_ext_rs, pcm%q_ext, pcm%rho_ext, mesh )
 
         ! adding the difference between vacuum and dielectric potential
-        pcm%v_ext_rs(1:mesh%np) = pcm%v_ext_rs(1:mesh%np) + (pcm%epsilon_0-M_ONE) * v_ext(1:mesh%np) 
+        pcm%v_ext_rs(1:mesh%np) = pcm%v_ext_rs(1:mesh%np) + (pcm%epsilon_0-M_ONE) * v_ext(1:mesh%np)
+
+        !do ii = 1, mesh%np
+        !  do jj = 1, pcm%n_spheres
+        !    aux = norm2(mesh%x(ii,:)-(/pcm%spheres(jj)%x,pcm%spheres(jj)%y,pcm%spheres(jj)%z/))
+        !    if ( aux .gt. pcm%spheres(jj)%r ) cycle
+        !    pcm%v_ext_rs(ii) = pcm%v_ext_rs(ii) + (pcm%epsilon_0-M_ONE) * v_ext(ii)
+        !  end do 
+        !end do
+
+        !ii=minloc(sqrt(sum(mesh%x(:,:)**2,2)),1)
+        !write(*,*) 'origin', ii 
+        !write(*,*) 'test potential - origin', mesh%x(ii,:), v_ext(ii) + pcm%v_ext_rs(ii)
+        !write(*,*) 'test potential - point', mesh%x(1,:), v_ext(1) + pcm%v_ext_rs(1)
+        !write(*,*) 'test potential - point - onsager', mesh%x(1,1), &
+        !-mesh%x(1,1)*0.05-(78.39-1)/(2*78.39+1)*0.05*5.0**3*mesh%x(1,1)/sqrt(sum(mesh%x(1,:)**2))**3, & 
+        !v_ext(1)+pcm%v_ext_rs(1)
       end if !< END - pcm charges propagation in equilibrium with external field
 
     end if

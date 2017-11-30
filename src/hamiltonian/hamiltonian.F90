@@ -719,10 +719,12 @@ contains
         forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
         !> Adds PCM contributions
         if (this%pcm%run_pcm) then
-          forall (ip = 1:mesh%np)  
-            this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
-              this%pcm%v_e_rs(ip) + this%pcm%v_n_rs(ip)
-          end forall
+          if (this%pcm%solute) then !GGIL: 23/10/2017
+            forall (ip = 1:mesh%np)  
+              this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
+                this%pcm%v_e_rs(ip) + this%pcm%v_n_rs(ip)
+            end forall
+          end if
           if (this%pcm%localf) then !GGIL: 23/10/2017
             forall (ip = 1:mesh%np)  
               this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
@@ -933,8 +935,8 @@ contains
       ! still missing the kick
       ! interpolation is needed, hence gr%mesh%np_part -> 1:gr%mesh%np
       !write(*,*) "electric field", this%ep%E_field
-      write(*,*) "G-E", -M_TWO*(this%pcm%epsilon_0-M_ONE)/(M_TWO*this%pcm%epsilon_0+M_ONE) * this%pcm%epsilon_0 * this%ep%E_field
-      write(*,*) "E", this%pcm%epsilon_0 * this%ep%E_field
+      write(*,*) "G-Evac", -M_TWO*(this%pcm%epsilon_0-M_ONE)/(M_TWO*this%pcm%epsilon_0+M_ONE) * this%pcm%epsilon_0 * this%ep%E_field
+      write(*,*) "Evac", this%pcm%epsilon_0 * this%ep%E_field
       if( this%pcm%localf .and. associated(this%ep%v_static)) &
         call pcm_calc_pot_rs(this%pcm, gr%mesh, v_ext = this%ep%v_static(1:gr%mesh%np_part) )
 
