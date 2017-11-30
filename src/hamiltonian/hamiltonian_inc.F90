@@ -370,7 +370,7 @@ subroutine X(exchange_operator)(hm, der, ik, exx_coef, psib, hpsib)
 
   ASSERT(associated(hm%hf_st))
 
-  if(der%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points")
+  if(hm%d%kpt%parallel) call messages_not_implemented("exchange operator with k-point parallelization")
 
   SAFE_ALLOCATE(psi(1:der%mesh%np, 1:hm%d%dim))
   SAFE_ALLOCATE(hpsi(1:der%mesh%np, 1:hm%d%dim))
@@ -383,6 +383,7 @@ subroutine X(exchange_operator)(hm, der, ik, exx_coef, psib, hpsib)
     call batch_get_state(psib, ibatch, der%mesh%np, psi)
     call batch_get_state(hpsib, ibatch, der%mesh%np, hpsi)
 
+    !The sum does not have the spin, this is not correct for spin polarized systems
     do ik2 = 1, hm%d%nik
       if(states_dim_get_spin_index(hm%d, ik2) /= states_dim_get_spin_index(hm%d, ik)) cycle
 
@@ -411,12 +412,15 @@ subroutine X(exchange_operator)(hm, der, ik, exx_coef, psib, hpsib)
 
           call X(poisson_solve)(psolver, pot, rho, all_nodes = .false.)
 
-          ff = hm%hf_st%occ(jst, ik2)
+
+          ff = hm%d%kweights(ik2)*exx_coef*hm%hf_st%occ(jst, ik2)
+          !I think that this condition is not correct but compensate for the missing sum over spin in 
+          !the above sum of ik2
           if(hm%d%ispin == UNPOLARIZED) ff = M_HALF*ff
 
           do idim = 1, hm%hf_st%d%dim
             forall(ip = 1:der%mesh%np)
-              hpsi(ip, idim) = hpsi(ip, idim) - exx_coef*ff*psi2(ip, idim)*pot(ip)
+              hpsi(ip, idim) = hpsi(ip, idim) - ff*psi2(ip, idim)*pot(ip)
             end forall
           end do
 
