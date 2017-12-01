@@ -247,11 +247,16 @@ contains
          if(cube%fft%library.eq.FFTLIB_NFFT) modg2=cube%Lfs(ix,1)**2+cube%Lfs(iy,2)**2+cube%Lfs(iz,3)**2
 #endif
 
-          if(abs(modg2) > M_EPSILON) then
-            fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
-          else
-            fft_Coulb_FS(ix, iy, iz) = M_ZERO
-          end if
+         if(abs(modg2) > M_EPSILON) then
+           fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
+         else
+           fft_Coulb_FS(ix, iy, iz) = M_ZERO
+         end if
+
+         !Screened coulomb potential (erfc function)
+         if(this%mu > M_ZERO) then
+           fft_Coulb_FS(ix, iy, iz) =  fft_Coulb_FS(ix, iy, iz)*(1-exp(-modg2/((M_TWO*this%mu)**2)))
+         end if
         end do
       end do
 
