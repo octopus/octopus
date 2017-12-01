@@ -371,7 +371,7 @@ subroutine X(exchange_operator)(hm, der, ik, exx_coef, psib, hpsib)
   ASSERT(associated(hm%hf_st))
 
   if(hm%d%kpt%parallel) call messages_not_implemented("exchange operator with k-point parallelization")
-  if(hm%d%ispin == POLARIZED)  call messages_not_implemented("exchange operator with colinear spins.")
+  if(hm%d%ispin == SPIN_POLARIZED)  call messages_not_implemented("exchange operator with colinear spins.")
 
   SAFE_ALLOCATE(psi(1:der%mesh%np, 1:hm%d%dim))
   SAFE_ALLOCATE(hpsi(1:der%mesh%np, 1:hm%d%dim))

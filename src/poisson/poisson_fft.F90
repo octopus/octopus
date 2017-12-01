@@ -64,26 +64,40 @@ module poisson_fft_oct_m
     type(fourier_space_op_t) :: coulb  !< object for Fourier space operations
     integer                  :: kernel !< choice of kernel, one of options above
     FLOAT                    :: qq(MAX_DIM) !< q-point for exchange in periodic system
+    FLOAT                    :: mu     !< For the short-range Coulomb potential
   end type poisson_fft_t
 contains
 
-  subroutine poisson_fft_init(this, mesh, cube, kernel, soft_coulb_param, qq, fullcube)
+  subroutine poisson_fft_init(this, mesh, cube, kernel, soft_coulb_param, qq, mu, fullcube)
     type(poisson_fft_t), intent(out)   :: this
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(inout) :: cube
     integer,             intent(in)    :: kernel
     FLOAT, optional,     intent(in)    :: soft_coulb_param
     FLOAT, optional,     intent(in)    :: qq(:) !< (1:mesh%sb%periodic_dim)
+    FLOAT, optional,     intent(in)    :: mu 
     type(cube_t), optional, intent(in) :: fullcube !< needed for Hockney kerenl
 
     PUSH_SUB(poisson_fft_init)
 
     this%kernel = kernel
     this%qq = M_ZERO
+    this%mu = M_ZERO
 
     if(present(qq) .and. simul_box_is_periodic(mesh%sb)) then
       ASSERT(ubound(qq, 1) >= mesh%sb%periodic_dim)
       this%qq(1:mesh%sb%periodic_dim) = qq(1:mesh%sb%periodic_dim)
+    end if
+
+    if(present(mu)) then
+      if(mu > M_ZERO) then
+        if(mesh%sb%dim == 3 .and. kernel == POISSON_FFT_KERNEL_NOCUT) then
+          this%mu = mu
+        else
+          message(1) = "The short range Coulomb potential is only implemented in 3D for PoissonFFTKernel=fft_nocut."
+          call messages_fatal(1)
+        end if
+      end if
     end if
 
     if(kernel == POISSON_FFT_KERNEL_HOCKNEY) then
