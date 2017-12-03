@@ -139,14 +139,14 @@ module poisson_oct_m
 contains
 
   !-----------------------------------------------------------------
-  subroutine poisson_init(this, der, mc, label, theta, qq, display_message)
+  subroutine poisson_init(this, der, mc, label, theta, qq, verbose)
     type(poisson_t),             intent(out) :: this
     type(derivatives_t), target, intent(in)  :: der
     type(multicomm_t),           intent(in)  :: mc
     character(len=*),  optional, intent(in)  :: label
     FLOAT,             optional, intent(in)  :: theta !< cmplxscl
     FLOAT,             optional, intent(in)  :: qq(:) !< (der%mesh%sb%periodic_dim)
-    logical,           optional, intent(in)  :: display_message
+    logical,           optional, intent(in)  :: verbose
 
     logical :: need_cube, isf_data_is_parallel
     integer :: default_solver, default_kernel, box(MAX_DIM), fft_type, fft_library
@@ -159,7 +159,7 @@ contains
 
     this%theta = optional_default(theta, M_ZERO)
 
-    if(optional_default(display_message,.true.)) then
+    if(optional_default(verbose,.true.)) then
       str = "Hartree"
       if(present(label)) str = trim(str) // trim(label)
       call messages_print_stress(stdout, trim(str))
@@ -254,7 +254,7 @@ contains
     call parse_variable('PoissonSolver', default_solver, this%method)
     if(.not.varinfo_valid_option('PoissonSolver', this%method)) call messages_input_error('PoissonSolver')
    
-    if(optional_default(display_message,.true.)) then
+    if(optional_default(verbose,.true.)) then
       select case(this%method)
       case (POISSON_DIRECT_SUM)
         str = "direct sum"
@@ -344,7 +344,7 @@ contains
       call parse_variable('PoissonFFTKernel', default_kernel, this%kernel)
       if(.not.varinfo_valid_option('PoissonFFTKernel', this%kernel)) call messages_input_error('PoissonFFTKernel')
 
-      if(optional_default(display_message,.true.)) &
+      if(optional_default(verbose,.true.)) &
         call messages_print_var_option(stdout, "PoissonFFTKernel", this%kernel)
 
     end if
@@ -458,7 +458,7 @@ contains
       end if
     end select
 
-    if(optional_default(display_message,.true.)) &
+    if(optional_default(verbose,.true.)) &
       call messages_print_stress(stdout)
 
     ! Now that we know the method, we check if we need a cube and its dimentions
@@ -573,7 +573,7 @@ contains
     ! Create the cube
     if (need_cube) then
       call cube_init(this%cube, box, der%mesh%sb, fft_type = fft_type, &
-                   verbose = optional_default(display_message,.true.), &
+                   verbose = optional_default(verbose,.true.), &
                      need_partition=.not.der%mesh%parallel_in_domains)
       if (this%cube%parallel_in_domains .and. this%method == POISSON_FFT) then
         call mesh_cube_parallel_map_init(this%mesh_cube_map, der%mesh, this%cube)
