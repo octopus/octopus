@@ -139,13 +139,14 @@ module poisson_oct_m
 contains
 
   !-----------------------------------------------------------------
-  subroutine poisson_init(this, der, mc, label, theta, qq)
+  subroutine poisson_init(this, der, mc, label, theta, qq, display_message)
     type(poisson_t),             intent(out) :: this
     type(derivatives_t), target, intent(in)  :: der
     type(multicomm_t),           intent(in)  :: mc
     character(len=*),  optional, intent(in)  :: label
     FLOAT,             optional, intent(in)  :: theta !< cmplxscl
     FLOAT,             optional, intent(in)  :: qq(:) !< (der%mesh%sb%periodic_dim)
+    logical,           optional, intent(in)  :: display_message
 
     logical :: need_cube, isf_data_is_parallel
     integer :: default_solver, default_kernel, box(MAX_DIM), fft_type, fft_library
@@ -158,19 +159,14 @@ contains
 
     this%theta = optional_default(theta, M_ZERO)
 
-    str = "Hartree"
-    if(present(label)) str = trim(str) // trim(label)
-    call messages_print_stress(stdout, trim(str))
+    if(optional_default(display_message,.true.)) then
+      str = "Hartree"
+      if(present(label)) str = trim(str) // trim(label)
+      call messages_print_stress(stdout, trim(str))
+    end if
 
     this%nslaves = 0
     this%der => der
-
-    this%qq = M_ZERO
-    if(present(qq)  .and. simul_box_is_periodic(der%mesh%sb)) then
-      ASSERT(ubound(qq, 1) >= der%mesh%sb%periodic_dim)
-      ASSERT(this%method == POISSON_FFT)
-      this%qq(1:der%mesh%sb%periodic_dim) = qq(1:der%mesh%sb%periodic_dim)
-    end if
 
 #ifdef HAVE_MPI
     !%Variable ParallelizationPoissonAllNodes
@@ -258,30 +254,39 @@ contains
     call parse_variable('PoissonSolver', default_solver, this%method)
     if(.not.varinfo_valid_option('PoissonSolver', this%method)) call messages_input_error('PoissonSolver')
    
-    select case(this%method)
-    case (POISSON_DIRECT_SUM)
-      str = "direct sum"
-    case (POISSON_FMM)
-      str = "fast multipole method"
-    case (POISSON_FFT)
-      str = "fast Fourier transform"
-    case (POISSON_CG)
-      str = "conjugate gradients"
-    case (POISSON_CG_CORRECTED)
-      str = "conjugate gradients, corrected"
-    case (POISSON_MULTIGRID)
-      str = "multigrid"
-    case (POISSON_ISF)
-      str = "interpolating scaling functions"
-    case (POISSON_LIBISF)
-      str = "interpolating scaling functions (from BigDFT)"
-    case (POISSON_NO)
-      str = "no Poisson solver - Hartree set to 0"
-    case (POISSON_POKE)
-      str = "Poke library"
-    end select
-    write(message(1),'(a,a,a)') "The chosen Poisson solver is '", trim(str), "'"
-    call messages_info(1)
+    if(optional_default(display_message,.true.)) then
+      select case(this%method)
+      case (POISSON_DIRECT_SUM)
+        str = "direct sum"
+      case (POISSON_FMM)
+         str = "fast multipole method"
+      case (POISSON_FFT)
+        str = "fast Fourier transform"
+      case (POISSON_CG)
+        str = "conjugate gradients"
+      case (POISSON_CG_CORRECTED)
+        str = "conjugate gradients, corrected"
+      case (POISSON_MULTIGRID)
+        str = "multigrid"
+      case (POISSON_ISF)
+        str = "interpolating scaling functions"
+      case (POISSON_LIBISF)
+        str = "interpolating scaling functions (from BigDFT)"
+      case (POISSON_NO)
+        str = "no Poisson solver - Hartree set to 0"
+      case (POISSON_POKE)
+        str = "Poke library"
+      end select
+      write(message(1),'(a,a,a)') "The chosen Poisson solver is '", trim(str), "'"
+      call messages_info(1)
+    end if
+
+    this%qq = M_ZERO
+    if(present(qq)  .and. simul_box_is_periodic(der%mesh%sb)) then
+      ASSERT(ubound(qq, 1) >= der%mesh%sb%periodic_dim)
+      ASSERT(this%method == POISSON_FFT)
+      this%qq(1:der%mesh%sb%periodic_dim) = qq(1:der%mesh%sb%periodic_dim)
+    end if
 
     if(this%method /= POISSON_FFT) then
       this%kernel = POISSON_FFT_KERNEL_NONE
@@ -339,7 +344,8 @@ contains
       call parse_variable('PoissonFFTKernel', default_kernel, this%kernel)
       if(.not.varinfo_valid_option('PoissonFFTKernel', this%kernel)) call messages_input_error('PoissonFFTKernel')
 
-      call messages_print_var_option(stdout, "PoissonFFTKernel", this%kernel)
+      if(optional_default(display_message,.true.)) &
+        call messages_print_var_option(stdout, "PoissonFFTKernel", this%kernel)
 
     end if
 
@@ -452,7 +458,8 @@ contains
       end if
     end select
 
-    call messages_print_stress(stdout)
+    if(optional_default(display_message,.true.)) &
+      call messages_print_stress(stdout)
 
     ! Now that we know the method, we check if we need a cube and its dimentions
     need_cube = .false.
@@ -565,7 +572,8 @@ contains
 
     ! Create the cube
     if (need_cube) then
-      call cube_init(this%cube, box, der%mesh%sb, fft_type = fft_type, verbose = .true., &
+      call cube_init(this%cube, box, der%mesh%sb, fft_type = fft_type, &
+                   verbose = optional_default(display_message,.true.), &
                      need_partition=.not.der%mesh%parallel_in_domains)
       if (this%cube%parallel_in_domains .and. this%method == POISSON_FFT) then
         call mesh_cube_parallel_map_init(this%mesh_cube_map, der%mesh, this%cube)

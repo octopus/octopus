@@ -254,7 +254,7 @@ contains
          end if
 
          !Screened coulomb potential (erfc function)
-         if(this%mu > M_ZERO) then
+         if(this%mu > M_ZERO .and. abs(modg2) > M_EPSILON) then
            fft_Coulb_FS(ix, iy, iz) =  fft_Coulb_FS(ix, iy, iz)*(1-exp(-modg2/((M_TWO*this%mu)**2)))
          end if
         end do
