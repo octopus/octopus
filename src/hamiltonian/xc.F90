@@ -77,6 +77,9 @@ module xc_oct_m
     FLOAT   :: kernel_lrc_alpha         !< long-range correction alpha parameter for kernel in solids
 
     FLOAT   :: exx_coef                 !< amount of EXX to add for the hybrids
+    FLOAT   :: cam_omega                !< Cam coefficients omega, alpha, beta
+    FLOAT   :: cam_alpha
+    FLOAT   :: cam_beta
     logical :: use_gi_ked               !< should we use the gauge-independent kinetic energy density?
 
     integer :: xc_density_correction
@@ -189,9 +192,14 @@ contains
       if(iand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_GGA) /= 0 .or. &
          iand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_MGGA) /= 0) then        
         call XC_F90(hyb_exx_coef)(xcs%functional(FUNC_C,1)%conf, xcs%exx_coef)
+        call XC_F90(hyb_cam_coef)(xcs%functional(FUNC_C,1)%conf, xcs%cam_omega, &
+                                     xcs%cam_alpha, xcs%cam_beta)
       else
         ! we are doing Hartree-Fock plus possibly a correlation functional
         xcs%exx_coef = M_ONE
+        xcs%cam_omega = M_ZERO
+        xcs%cam_alpha = M_ONE
+        xcs%cam_beta = M_ZERO
       end if
 
       ! reset certain variables
