@@ -16,7 +16,7 @@ PseudopotentialSet = standard
 %
 TnaddFunctional = lda_k_lp
 %SubSystems
-        'Na' | frozen | './static/frozen' | qshep
+        'Na' | frozen | './static/frozen'
 %
 %SubSystemCoordinates
         'Na' | -1.25*angstrom
