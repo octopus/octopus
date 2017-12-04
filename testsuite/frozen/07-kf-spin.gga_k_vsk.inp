@@ -17,7 +17,7 @@ PseudopotentialSet = standard
 %
 TnaddFunctional = gga_k_vsk
 %SubSystems
-        'Na' | frozen | './static/frozen' | qshep
+        'Na' | frozen | './static/frozen'
 %
 %SubSystemCoordinates
         'Na' | -1.25*angstrom

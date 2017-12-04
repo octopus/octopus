@@ -19,7 +19,7 @@ PseudopotentialSet = standard
 %
 TnaddFunctional = lda_k_tf
 %SubSystems
-    'Li+' | frozen | './static/frozen' | qshep | yes | no
+    'Li+' | frozen | './static/frozen' | nearest | yes | no
 %
 %SubSystemCoordinates
     'Li+' | -2.0*angstrom

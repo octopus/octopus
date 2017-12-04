@@ -18,7 +18,7 @@ PseudopotentialSet = standard
 TnaddFactor = 3.0
 TnaddFunctional = lda_k_tf
 %SubSystems
-        'Na' | frozen | './static/frozen' | qshep | yes | yes | yes
+        'Na' | frozen | './static/frozen' | nearest | yes | yes | yes
 %
 %SubSystemCoordinates
         'Na' | 0.0 | 0.0 |  1.25*angstrom

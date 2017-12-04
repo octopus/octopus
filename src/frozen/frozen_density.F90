@@ -39,7 +39,7 @@ contains
     nullify(fios, cnfg, list, sim)
     call base_density_get(that, use=accu)
     if(accu)then
-      call json_get(config, "type", type, ierr)
+      call json_get(config, "interpolation", type, ierr)
       if(ierr==JSON_OK)then
         call fio_density_intrpl_init(intrp, that, type)
       else

@@ -82,7 +82,7 @@ contains
     nullify(cnfg, list)
     call base_potential_get(that, cnfg)
     ASSERT(associated(cnfg))
-    call json_get(config, "type", type, ierr)
+    call json_get(config, "interpolation", type, ierr)
     if(ierr==JSON_OK)then
       call fio_external_intrpl_init(intrp, that, type)
     else
