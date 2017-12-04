@@ -201,8 +201,8 @@ contains
     ! no PUSH_SUB, called too frequently
 
     gg(1:3) = gg_in(1:3)
-    gg(1:sb%periodic_dim) = gg(1:sb%periodic_dim) + qq(1:sb%periodic_dim)
     gg(1:3) = gg(1:3) * temp(1:3)
+    gg(1:sb%periodic_dim) = gg(1:sb%periodic_dim) + qq(1:sb%periodic_dim)
     gg(1:3) = matmul(sb%klattice_primitive(1:3,1:3),gg(1:3))
 ! MJV 27 jan 2015 this should not be necessary
 !    do idir = 1, 3
@@ -254,8 +254,13 @@ contains
          end if
 
          !Screened coulomb potential (erfc function)
-         if(this%mu > M_ZERO .and. abs(modg2) > M_EPSILON) then
-           fft_Coulb_FS(ix, iy, iz) =  fft_Coulb_FS(ix, iy, iz)*(1-exp(-modg2/((M_TWO*this%mu)**2)))
+         if(this%mu > M_ZERO) then
+           if(abs(modg2) > M_EPSILON) then
+             fft_Coulb_FS(ix, iy, iz) =  fft_Coulb_FS(ix, iy, iz)*(M_ONE-exp(-modg2/((M_TWO*this%mu)**2)))
+           else
+              !Analytical limit of 1/|q|^2*(1-exp(-|q|^2/4mu^2))
+              fft_Coulb_FS(ix, iy, iz) = M_ONE/((M_TWO*this%mu)**2)
+           end if
          end if
         end do
       end do
