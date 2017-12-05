@@ -167,7 +167,7 @@ subroutine poisson_kernel_init(this, all_nodes_comm)
   case(POISSON_FFT)
 
     call poisson_fft_init(this%fft_solver, this%der%mesh, this%cube, this%kernel, &
-      soft_coulb_param = this%poisson_soft_coulomb_param, qq = this%qq)
+      soft_coulb_param = this%poisson_soft_coulomb_param, qq = this%qq, mu = this%mu)
     ! soft parameter has no effect unless in 1D
 
     if (this%kernel == POISSON_FFT_KERNEL_CORRECTED) then

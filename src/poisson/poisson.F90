@@ -118,6 +118,7 @@ module poisson_oct_m
     integer :: nslaves
     FLOAT :: theta !< cmplxscl
     FLOAT :: qq(MAX_DIM) !< for exchange in periodic system
+    FLOAT :: mu !< Range separation for the exchange operator
     type(poisson_fmm_t)  :: params_fmm
 #ifdef HAVE_MPI2
     integer         :: intercomm
@@ -139,13 +140,14 @@ module poisson_oct_m
 contains
 
   !-----------------------------------------------------------------
-  subroutine poisson_init(this, der, mc, label, theta, qq, verbose)
+  subroutine poisson_init(this, der, mc, label, theta, qq, mu, verbose)
     type(poisson_t),             intent(out) :: this
     type(derivatives_t), target, intent(in)  :: der
     type(multicomm_t),           intent(in)  :: mc
     character(len=*),  optional, intent(in)  :: label
     FLOAT,             optional, intent(in)  :: theta !< cmplxscl
     FLOAT,             optional, intent(in)  :: qq(:) !< (der%mesh%sb%periodic_dim)
+    FLOAT,             optional, intent(in)  :: mu
     logical,           optional, intent(in)  :: verbose
 
     logical :: need_cube, isf_data_is_parallel
@@ -286,6 +288,15 @@ contains
       ASSERT(ubound(qq, 1) >= der%mesh%sb%periodic_dim)
       ASSERT(this%method == POISSON_FFT)
       this%qq(1:der%mesh%sb%periodic_dim) = qq(1:der%mesh%sb%periodic_dim)
+    end if
+
+    this%mu = M_ZERO
+    if(present(mu)) then
+      this%mu = mu
+      if(this%method /= POISSON_FFT) then
+        write(message(1),'(a)') "Poisson solver with range separation is only implemented with FFT."
+        call messages_info(1)
+      end if
     end if
 
     if(this%method /= POISSON_FFT) then
