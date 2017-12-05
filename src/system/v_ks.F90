@@ -710,7 +710,8 @@ contains
     if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) then
       SAFE_ALLOCATE(ks%calc%hf_st)
       call states_copy(ks%calc%hf_st, st)
-      if(st%parallel_in_states) call states_parallel_remote_access_start(ks%calc%hf_st)
+      if(st%parallel_in_states .or. st%d%kpt%parallel) &
+        call states_parallel_remote_access_start(ks%calc%hf_st)
     end if
 
     ! Calculate the vector potential induced by the electronic current.
@@ -1231,7 +1232,8 @@ contains
 
         ! swap the states object
         if(associated(hm%hf_st)) then
-          if(hm%hf_st%parallel_in_states) call states_parallel_remote_access_stop(hm%hf_st)
+          if(hm%hf_st%parallel_in_states .or. hm%d%kpt%parallel) &
+            call states_parallel_remote_access_stop(hm%hf_st)
           call states_end(hm%hf_st)
           SAFE_DEALLOCATE_P(hm%hf_st)
         end if
@@ -1241,10 +1243,19 @@ contains
         select case(ks%theory_level)
         case(HARTREE_FOCK)
           hm%exx_coef = ks%xc%exx_coef
+          hm%cam_omega = kS%xc%cam_omega
+          hm%cam_alpha = kS%xc%cam_alpha
+          hm%cam_beta = kS%xc%cam_beta
         case(HARTREE)
           hm%exx_coef = M_ONE
+          hm%cam_omega = M_ZERO
+          hm%cam_alpha = M_ONE
+          hm%cam_beta = M_ZERO
         case(RDMFT) 
           hm%exx_coef = M_ONE
+          hm%cam_omega = M_ZERO
+          hm%cam_alpha = M_ONE
+          hm%cam_beta = M_ZERO
         end select
       end if
       
