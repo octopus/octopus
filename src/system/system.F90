@@ -112,6 +112,7 @@ contains
     call geometry_partition(sys%geo, sys%mc)
     call kpoints_distribute(sys%st%d, sys%mc)
     call states_distribute_nodes(sys%st, sys%mc)
+    call states_kpoints_distribution(sys%st)
     call grid_init_stage_2(sys%gr, sys%mc, sys%geo)
     call output_init(sys%outp, sys%gr%sb, sys%st%nst, sys%ks)
 

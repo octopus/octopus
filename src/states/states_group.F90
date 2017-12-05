@@ -46,7 +46,7 @@ module states_group_oct_m
     integer, pointer         :: block_range(:, :)     !< Each block contains states from block_range(:, 1) to block_range(:, 2)
     integer, pointer         :: block_size(:)         !< The number of states in each block.
     logical, pointer         :: block_is_local(:, :)  !< It is true if the block is in this node.
-    integer, allocatable     :: block_node(:)         !< The node that contains each block
+    integer, allocatable     :: block_node(:,:)       !< The node that contains each block
     integer, allocatable     :: rma_win(:, :)         !< The MPI window for one side communication
     logical                  :: block_initialized     !< For keeping track of the blocks to avoid memory leaks
   end type states_group_t

@@ -112,7 +112,8 @@ module states_oct_m
     cmplx_array2_t,                   &
     states_count_pairs,               &
     occupied_states,                  &
-    states_type
+    states_type,                      &
+    states_kpoints_distribution
 
   !>cmplxscl: complex 2D matrices 
   type cmplx_array2_t    
@@ -206,6 +207,7 @@ module states_oct_m
     integer                     :: lnst               !< Number of states on local node.
     integer                     :: st_start, st_end   !< Range of states processed by local node.
     integer, pointer            :: node(:)            !< To which node belongs each state.
+    integer, pointer            :: node_st_kpt(:,:)   !< To which node belongs each pair state-kpoint
     type(multicomm_all_pairs_t) :: ap                 !< All-pairs schedule.
 
     logical                     :: symmetrize_density
@@ -272,6 +274,7 @@ contains
     call blacs_proc_grid_nullify(st%dom_st_proc_grid)
 #endif
     nullify(st%node)
+    nullify(st%node_st_kpt)
     nullify(st%ap%schedule)
 
     st%packed = .false.
@@ -568,6 +571,8 @@ contains
     st%lnst = st%nst
     SAFE_ALLOCATE(st%node(1:st%nst))
     st%node(1:st%nst) = 0
+    SAFE_ALLOCATE(st%node_st_kpt(1:st%nst,1:st%d%nik))
+    st%node_st_kpt(1:st%nst,1:st%d%nik) = 0
 
     call mpi_grp_init(st%mpi_grp, -1)
     st%parallel_in_states = .false.
@@ -1151,16 +1156,19 @@ contains
 
     st%group%block_initialized = .true.
 
-    SAFE_ALLOCATE(st%group%block_node(1:st%group%nblocks))
+    SAFE_ALLOCATE(st%group%block_node(1:st%group%nblocks, 1:st%d%nik))
 
     ASSERT(associated(st%node))
     ASSERT(all(st%node >= 0) .and. all(st%node < st%mpi_grp%size))
-    
-    do ib = 1, st%group%nblocks
-      st%group%block_node(ib) = st%node(st%group%block_range(ib, 1))
-      ASSERT(st%group%block_node(ib) == st%node(st%group%block_range(ib, 2)))
+    do iqn = 1, st%d%nik
+      do ib = 1, st%group%nblocks
+        st%group%block_node(ib,iqn) = st%node_st_kpt(st%group%block_range(ib, 1), iqn)
+        !TODO: This assert should be change to check kpoint parallelization 
+        !and mixed parallelization
+        ASSERT(st%group%block_node(ib,iqn) == st%node_st_kpt(st%group%block_range(ib, 2), iqn))
+      end do
     end do
-    
+
     if(verbose_) then
       call messages_write('Info: Blocks of states')
       call messages_info()
@@ -1434,6 +1442,7 @@ contains
     end if
 
     call loct_pointer_copy(stout%node, stin%node)
+    call loct_pointer_copy(stout%node_st_kpt, stin%node_st_kpt)    
 
     if(.not. exclude_wfns_) then
       
@@ -1589,6 +1598,7 @@ contains
     call distributed_end(st%dist)
 
     SAFE_DEALLOCATE_P(st%node)
+    SAFE_DEALLOCATE_P(st%node_st_kpt)
 
     if(st%parallel_in_states) then
       SAFE_DEALLOCATE_P(st%ap%schedule)
@@ -2740,6 +2750,28 @@ contains
     POP_SUB(occupied_states)
   end subroutine occupied_states
   
+  ! ---------------------------------------------------------
+  ! The routine attributes the rank index for the states-kpoint distribution
+  ! They might a better of doing this
+  subroutine states_kpoints_distribution(st)
+    type(states_t),    intent(inout) :: st
+
+    integer :: ist, ik
+
+    PUSH_SUB(states_kpoints_distribution)
+
+    st%node_st_kpt(:,:) = 0
+    st%node_st_kpt(st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end) = st%st_kpt_mpi_grp%rank
+
+#if defined(HAVE_MPI)        
+    if(st%parallel_in_states .or. st%d%kpt%parallel) then
+      call comm_allreduce(st%st_kpt_mpi_grp%comm, st%node_st_kpt, dim=(/st%nst,st%d%nik/))
+    end if
+#endif 
+
+    POP_SUB(states_kpoints_distribution)
+  end subroutine states_kpoints_distribution
+ 
 #include "undef.F90"
 #include "real.F90"
 #include "states_inc.F90"

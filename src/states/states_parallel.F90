@@ -110,17 +110,19 @@ contains
 
     SAFE_ALLOCATE(this%group%rma_win(1:this%group%nblocks, 1:this%d%nik))
     
-    do iqn = this%d%kpt%start, this%d%kpt%end
+    do iqn = 1, this%d%nik
       do ib = 1, this%group%nblocks
-        if(this%group%block_is_local(ib, iqn)) then
-          call batch_remote_access_start(this%group%psib(ib, iqn), this%mpi_grp, this%group%rma_win(ib, iqn))
-        else
-#ifdef HAVE_MPI2
-          ! create an empty window
-          call MPI_Win_create(0, int(0, MPI_ADDRESS_KIND), 1, &
-            MPI_INFO_NULL, this%mpi_grp%comm, this%group%rma_win(ib, iqn), mpi_err)
-#endif
+        if(iqn >= this%d%kpt%start .and. iqn <= this%d%kpt%end) then
+          if(this%group%block_is_local(ib, iqn)) then
+            call batch_remote_access_start(this%group%psib(ib, iqn), this%st_kpt_mpi_grp, this%group%rma_win(ib, iqn))
+            cycle
+          end if
         end if
+#ifdef HAVE_MPI2
+        ! create an empty window
+        call MPI_Win_create(0, int(0, MPI_ADDRESS_KIND), 1, &
+          MPI_INFO_NULL, this%st_kpt_mpi_grp%comm, this%group%rma_win(ib, iqn), mpi_err)
+#endif
       end do
     end do
     
@@ -138,15 +140,17 @@ contains
 
     ASSERT(associated(this%group%psib))
     
-    do iqn = this%d%kpt%start, this%d%kpt%end
+    do iqn = 1, this%d%nik
       do ib = 1, this%group%nblocks
-        if(this%group%block_is_local(ib, iqn)) then
-          call batch_remote_access_stop(this%group%psib(ib, iqn), this%group%rma_win(ib, iqn))
-        else
-#ifdef HAVE_MPI2
-          call MPI_Win_free(this%group%rma_win(ib, iqn), mpi_err)
-#endif
+        if(iqn >= this%d%kpt%start .and. iqn <= this%d%kpt%end) then
+          if(this%group%block_is_local(ib, iqn)) then
+            call batch_remote_access_stop(this%group%psib(ib, iqn), this%group%rma_win(ib, iqn))
+            cycle
+          end if
         end if
+#ifdef HAVE_MPI2
+        call MPI_Win_free(this%group%rma_win(ib, iqn), mpi_err)
+#endif
       end do
     end do
 
@@ -169,37 +173,44 @@ contains
     PUSH_SUB(states_parallel_get_block)
 
     call profiling_in(prof, "STATES_GET_BLOCK")
-    
-    if(this%group%block_is_local(ib, iqn)) then
-      psib => this%group%psib(ib, iqn)
-    else
-      SAFE_ALLOCATE(psib)
-      call batch_init(psib, this%d%dim, this%group%block_size(ib))
-
-      if(states_are_real(this)) then
-        call dbatch_allocate(psib, this%group%block_range(ib, 1), this%group%block_range(ib, 2), mesh%np_part)
-      else
-        call zbatch_allocate(psib, this%group%block_range(ib, 1), this%group%block_range(ib, 2), mesh%np_part)
+  
+    !This test is needed as block_is_local is defined only 
+    !between kpt%start and kpt%end 
+    if(iqn >= this%d%kpt%start .and. iqn <= this%d%kpt%end) then  
+      if(this%group%block_is_local(ib, iqn)) then
+        psib => this%group%psib(ib, iqn)
+        call profiling_out(prof)
+        POP_SUB(states_parallel_get_block)
+        return 
       end if
+    end if
+
+    SAFE_ALLOCATE(psib)
+    call batch_init(psib, this%d%dim, this%group%block_size(ib))
+
+    if(states_are_real(this)) then
+      call dbatch_allocate(psib, this%group%block_range(ib, 1), this%group%block_range(ib, 2), mesh%np_part)
+    else
+      call zbatch_allocate(psib, this%group%block_range(ib, 1), this%group%block_range(ib, 2), mesh%np_part)
+    end if
       
-      call batch_pack(psib, copy = .false.)
+    call batch_pack(psib, copy = .false.)
       
 #ifdef HAVE_MPI2
-      call MPI_Win_lock(MPI_LOCK_SHARED, this%group%block_node(ib), 0, this%group%rma_win(ib, iqn),  mpi_err)
+    call MPI_Win_lock(MPI_LOCK_SHARED, this%group%block_node(ib,iqn), 0, this%group%rma_win(ib, iqn),  mpi_err)
 
-      if(states_are_real(this)) then
-        call MPI_Get(psib%pack%dpsi(1, 1), product(psib%pack%size), MPI_FLOAT, &
-          this%group%block_node(ib), int(0, MPI_ADDRESS_KIND), product(psib%pack%size), MPI_FLOAT, &
-          this%group%rma_win(ib, iqn), mpi_err)
-      else
-        call MPI_Get(psib%pack%zpsi(1, 1), product(psib%pack%size), MPI_CMPLX, &
-          this%group%block_node(ib), int(0, MPI_ADDRESS_KIND), product(psib%pack%size), MPI_CMPLX, &
-          this%group%rma_win(ib, iqn), mpi_err)
-      end if
-        
-      call MPI_Win_unlock(this%group%block_node(ib), this%group%rma_win(ib, iqn),  mpi_err)
-#endif
+    if(states_are_real(this)) then
+      call MPI_Get(psib%pack%dpsi(1, 1), product(psib%pack%size), MPI_FLOAT, &
+        this%group%block_node(ib,iqn), int(0, MPI_ADDRESS_KIND), product(psib%pack%size), MPI_FLOAT, &
+        this%group%rma_win(ib, iqn), mpi_err)
+    else
+      call MPI_Get(psib%pack%zpsi(1, 1), product(psib%pack%size), MPI_CMPLX, &
+        this%group%block_node(ib,iqn), int(0, MPI_ADDRESS_KIND), product(psib%pack%size), MPI_CMPLX, &
+        this%group%rma_win(ib, iqn), mpi_err)
     end if
+        
+    call MPI_Win_unlock(this%group%block_node(ib,iqn), this%group%rma_win(ib, iqn),  mpi_err)
+#endif
 
     call profiling_out(prof)
     
@@ -216,12 +227,18 @@ contains
 
     PUSH_SUB(states_parallel_release_block)
 
-    if(this%group%block_is_local(ib, iqn)) then
-      nullify(psib)
-    else
-      call batch_end(psib)
-      SAFE_DEALLOCATE_P(psib)
+    !This test is needed as block_is_local is defined only 
+    !between kpt%start and kpt%end
+    if(iqn >= this%d%kpt%start .and. iqn <= this%d%kpt%end) then
+      if(this%group%block_is_local(ib, iqn)) then
+        nullify(psib)
+        POP_SUB(states_parallel_release_block)
+        return
+      end if
     end if
+    
+    call batch_end(psib)
+    SAFE_DEALLOCATE_P(psib)
     
     POP_SUB(states_parallel_release_block)
   end subroutine states_parallel_release_block
