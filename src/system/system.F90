@@ -135,6 +135,10 @@ contains
 
     call v_ks_init(sys%ks, sys%gr, sys%st, sys%geo, sys%mc)
 
+    if(sys%ks%theory_level == HARTREE_FOCK) then
+      call poisson_init(exchange_psolver, sys%gr%der, sys%mc, theta = sys%st%cmplxscl%theta)
+    end if
+
     call profiling_out(prof)
     POP_SUB(system_init)
 
@@ -238,6 +242,11 @@ contains
     call multicomm_end(sys%mc)
 
     call poisson_end(psolver)
+
+    if(sys%ks%theory_level == HARTREE_FOCK) then
+      call poisson_end(exchange_psolver)
+    end if
+
     call v_ks_end(sys%ks)
     
     call output_end(sys%outp)

@@ -135,6 +135,9 @@ module hamiltonian_oct_m
 
     type(geometry_t), pointer :: geo
     FLOAT :: exx_coef !< how much of EXX to mix
+    FLOAT :: cam_omega
+    FLOAT :: cam_alpha
+    FLOAT :: cam_beta
 
     !> The self-induced vector potential and magnetic field
     logical :: self_induced_magnetic

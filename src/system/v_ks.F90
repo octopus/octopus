@@ -1243,9 +1243,9 @@ contains
         select case(ks%theory_level)
         case(HARTREE_FOCK)
           hm%exx_coef = ks%xc%exx_coef
-          hm%cam_omega = kS%xc%cam_omega
-          hm%cam_alpha = kS%xc%cam_alpha
-          hm%cam_beta = kS%xc%cam_beta
+          hm%cam_omega = ks%xc%cam_omega
+          hm%cam_alpha = ks%xc%cam_alpha
+          hm%cam_beta = ks%xc%cam_beta
         case(HARTREE)
           hm%exx_coef = M_ONE
           hm%cam_omega = M_ZERO

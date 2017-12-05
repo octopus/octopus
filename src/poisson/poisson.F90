@@ -132,6 +132,7 @@ module poisson_oct_m
   end type poisson_t
 
   type(poisson_t), target, save, public :: psolver
+  type(poisson_t), target, save, public :: exchange_psolver
 
   integer, parameter ::             &
     CMD_FINISH = 1,                 &

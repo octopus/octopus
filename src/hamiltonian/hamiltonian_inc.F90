@@ -132,7 +132,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc)
         call X(scdm_exchange_operator)(hm, der, epsib, hpsib, ik, hm%exx_coef)
       else
         ! standard HF 
-        call X(exchange_operator)(hm, der, ik, hm%exx_coef, epsib, hpsib)
+        call X(exchange_operator)(hm, der, ik, epsib, hpsib)
       end if
 
     case(RDMFT)
@@ -322,15 +322,13 @@ subroutine X(hamiltonian_apply_all) (hm, xc, der, st, hst)
   POP_SUB(X(hamiltonian_apply_all))
 end subroutine X(hamiltonian_apply_all)
 
-
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator_single)(hm, der, ist, ik, exx_coef, psi, hpsi)
+subroutine X(exchange_operator_single)(hm, der, ist, ik, psi, hpsi)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ist
   integer,             intent(in)    :: ik
-  FLOAT,               intent(in)    :: exx_coef
   R_TYPE,              intent(inout) :: psi(:, :)
   R_TYPE,              intent(inout) :: hpsi(:, :)
 
@@ -343,7 +341,7 @@ subroutine X(exchange_operator_single)(hm, der, ist, ik, exx_coef, psi, hpsi)
   call batch_init(hpsib, hm%d%dim, 1)
   call batch_add_state(hpsib, ist, hpsi)
 
-  call X(exchange_operator)(hm, der, ik, exx_coef, psib, hpsib)
+  call X(exchange_operator)(hm, der, ik, psib, hpsib)
 
   call batch_end(psib)
   call batch_end(hpsib)
@@ -353,31 +351,41 @@ end subroutine X(exchange_operator_single)
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator)(hm, der, ik, exx_coef, psib, hpsib)
+subroutine X(exchange_operator)(hm, der, ik, psib, hpsib)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ik
-  FLOAT,               intent(in)    :: exx_coef
   type(batch_t),       intent(inout) :: psib
   type(batch_t),       intent(inout) :: hpsib
 
   integer :: ibatch, jst, ip, idim, ik2, ib, ii, ist
   type(batch_t), pointer :: psi2b
-  FLOAT                              :: ff
+  FLOAT :: exx_coef, ff
   R_TYPE, allocatable :: rho(:), pot(:), psi2(:, :), psi(:, :), hpsi(:, :)
+  FLOAT :: qq(1:MAX_DIM) 
+  integer :: ikpoint
 
   PUSH_SUB(X(exchange_operator))
 
   ASSERT(associated(hm%hf_st))
 
-  if(hm%d%kpt%parallel) call messages_not_implemented("exchange operator with k-point parallelization")
+  !if(hm%d%kpt%parallel) call messages_not_implemented("exchange operator with k-point parallelization")
   if(hm%d%ispin == SPIN_POLARIZED)  call messages_not_implemented("exchange operator with colinear spins.")
+  if(hm%cam_omega == M_ZERO .and. hm%d%nik > 1) &
+    call messages_not_implemented("unscreened exchange operator without k-points.")
+
+  ! In case of k-points, the poisson solver must contains k-q 
+  ! in the Coulomb potential, and must be changed for each q point
+  exx_coef = max(hm%exx_coef,hm%cam_beta)
 
   SAFE_ALLOCATE(psi(1:der%mesh%np, 1:hm%d%dim))
   SAFE_ALLOCATE(hpsi(1:der%mesh%np, 1:hm%d%dim))
   SAFE_ALLOCATE(rho(1:der%mesh%np))
   SAFE_ALLOCATE(pot(1:der%mesh%np))
   SAFE_ALLOCATE(psi2(1:der%mesh%np, 1:hm%d%dim))
+
+  ikpoint = states_dim_get_kpoint_index(hm%d, ik)
+  qq(1:hm%d%dim) = M_ZERO
 
   do ibatch = 1, psib%nst
     ist = psib%states(ibatch)%ist
@@ -387,6 +395,13 @@ subroutine X(exchange_operator)(hm, der, ik, exx_coef, psib, hpsib)
     !The sum does not have the spin, this is not correct for spin polarized systems
     do ik2 = 1, hm%d%nik
       if(states_dim_get_spin_index(hm%d, ik2) /= states_dim_get_spin_index(hm%d, ik)) cycle
+
+      if(hm%d%nik > 1) then
+        if(.not.kpoints_is_compatible_downsampling(der%mesh%sb%kpoints, ikpoint, ik2, (/1,1,1/))) cycle
+        qq(1:hm%d%dim) = kpoints_get_point(der%mesh%sb%kpoints, ikpoint, absolute_coordinates =.false.)&
+                       - kpoints_get_point(der%mesh%sb%kpoints, ik2, absolute_coordinates =.false.) 
+      end if
+      if(hm%d%nik > 1 .or. hm%cam_omega > M_EPSILON) call poisson_kernel_reinit(exchange_psolver, qq, hm%cam_omega)
 
       do ib = 1, hm%hf_st%group%nblocks
 
@@ -411,10 +426,11 @@ subroutine X(exchange_operator)(hm, der, ik, exx_coef, psib, hpsib)
             end forall
           end do
 
-          call X(poisson_solve)(psolver, pot, rho, all_nodes = .false.)
+          call X(poisson_solve)(exchange_psolver, pot, rho, all_nodes = .false.)
 
 
           ff = hm%d%kweights(ik2)*exx_coef*hm%hf_st%occ(jst, ik2)
+          !ff = exx_coef*hm%hf_st%occ(jst, ik2)
           !I think that this condition is not correct but compensate for the missing sum over spin in 
           !the above sum of ik2
           if(hm%d%ispin == UNPOLARIZED) ff = M_HALF*ff
