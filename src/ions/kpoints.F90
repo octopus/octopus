@@ -57,7 +57,8 @@ module kpoints_oct_m
     kpoints_have_zero_weight_path,&
     kpoints_to_absolute,          &
     kpoints_get_kpoint_method,    &
-    kpoints_get_path_coord
+    kpoints_get_path_coord,       &
+    kpoints_is_compatible_downsampling
 
   type kpoints_grid_t
     FLOAT, pointer   :: point(:, :)
@@ -1484,6 +1485,41 @@ contains
  
     POP_SUB(kpoints_check_symmetries)
   end subroutine kpoints_check_symmetries
+
+  !--------------------------------------------------------
+  logical function kpoints_is_compatible_downsampling(kpt, ik, iq, C) result(compatible)
+    type(kpoints_t), intent(in) :: kpt
+    integer,              intent(in) :: ik
+    integer,              intent(in) :: iq
+    integer,              intent(in) :: C(:) !<  (1:dim) downsampling coefficients
+
+    integer :: dim, idim
+    FLOAT :: diff(1:MAX_DIM)
+
+    PUSH_SUB(kpoints_is_compatible_downsampling)
+
+    ASSERT(kpt%method == KPOINTS_MONKH_PACK)
+
+    if(any(C(1:kpt%reduced%dim)/=1)) then
+      ASSERT(.not.kpt%use_symmetries)
+    end if
+
+    compatible = .true.
+
+    dim = kpt%reduced%dim
+    diff(1:dim) = kpt%reduced%red_point(1:dim, ik)-kpt%reduced%red_point(1:dim, iq)
+    !We remove potential umklapp
+    do idim = 1, dim
+      diff(idim)=diff(idim)-anint(diff(idim)+M_HALF*SYMPREC)
+      if(mod(diff(idim), C(idim)/real(kpt%nik_axis(idim))) /= M_ZERO) then
+        compatible = .false. 
+        return
+      end if
+    end do
+
+    POP_SUB(kpoints_is_compatible_downsampling)
+
+  end function kpoints_is_compatible_downsampling
 
 end module kpoints_oct_m
 
