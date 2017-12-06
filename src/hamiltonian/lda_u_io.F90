@@ -138,7 +138,7 @@ contains
        trim(units_abbrev(units_out%energy)),']:'
      write(iunit,'(a,6x,14x,a)') ' Orbital',  'U'
      do ios = 1, this%norbsets
-       if(this%nspins == this%spin_channels .or. this%orbsets(ios)%jj == M_ZERO) then
+       if(this%orbsets(ios)%ndim == 1) then
          if(this%orbsets(ios)%nn /= 0 ) then
            write(iunit,'(i4,a10, 2x, i1, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
                         this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), this%orbsets(ios)%Ubar
@@ -164,7 +164,7 @@ contains
        trim(units_abbrev(units_out%energy)),']:'
      write(iunit,'(a,6x,14x,a)') ' Orbital',  'J'
      do ios = 1, this%norbsets
-       if(this%nspins == this%spin_channels .or. this%orbsets(ios)%jj == M_ZERO) then
+       if(this%orbsets(ios)%ndim == 1) then
          if(this%orbsets(ios)%nn /= 0 ) then
            write(iunit,'(i4,a10, 2x, i1, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
                         this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), this%orbsets(ios)%Jbar
@@ -203,9 +203,9 @@ contains
    integer :: iunit, ia, ios, im
    FLOAT, allocatable :: mm(:,:)
 
-   PUSH_SUB(lda_u_write_magnetization)
-
    if( .not. mpi_grp_is_root(mpi_world)) return
+
+   PUSH_SUB(lda_u_write_magnetization)
 
    call io_mkdir(dir)
     iunit = io_open(trim(dir)//'magnetization.xsf', action='write', position='asis')
@@ -253,7 +253,7 @@ contains
        trim(units_abbrev(units_out%energy)),']:'
      write(iunit,'(a,6x,14x,a)') ' Orbital',  'U'
      do ios = 1, this%norbsets
-       if(this%nspins == this%spin_channels .or. this%orbsets(ios)%jj == M_ZERO) then 
+       if(this%orbsets(ios)%ndim == 1) then 
          if(this%orbsets(ios)%nn /= 0 ) then
            write(iunit,'(i4,a10, 2x, i1, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
                         this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), this%orbsets(ios)%Ueff  
