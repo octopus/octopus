@@ -385,7 +385,7 @@ subroutine X(exchange_operator)(hm, der, ik, psib, hpsib)
   SAFE_ALLOCATE(psi2(1:der%mesh%np, 1:hm%d%dim))
 
   ikpoint = states_dim_get_kpoint_index(hm%d, ik)
-  qq(1:hm%d%dim) = M_ZERO
+  qq(1:der%dim) = M_ZERO
 
   do ibatch = 1, psib%nst
     ist = psib%states(ibatch)%ist
@@ -397,9 +397,9 @@ subroutine X(exchange_operator)(hm, der, ik, psib, hpsib)
       if(states_dim_get_spin_index(hm%d, ik2) /= states_dim_get_spin_index(hm%d, ik)) cycle
 
       if(hm%d%nik > 1) then
-        if(.not.kpoints_is_compatible_downsampling(der%mesh%sb%kpoints, ikpoint, ik2, (/1,1,1/))) cycle
-        qq(1:hm%d%dim) = kpoints_get_point(der%mesh%sb%kpoints, ikpoint, absolute_coordinates =.false.)&
-                       - kpoints_get_point(der%mesh%sb%kpoints, ik2, absolute_coordinates =.false.) 
+     !   if(.not.kpoints_is_compatible_downsampling(der%mesh%sb%kpoints, ikpoint, ik2, (/1,1,1/))) cycle
+        qq(1:der%dim) = kpoints_get_point(der%mesh%sb%kpoints, ikpoint) &
+                       - kpoints_get_point(der%mesh%sb%kpoints, ik2) 
       end if
       if(hm%d%nik > 1 .or. hm%cam_omega > M_EPSILON) call poisson_kernel_reinit(exchange_psolver, qq, hm%cam_omega)
 
