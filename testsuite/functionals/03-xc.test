@@ -440,16 +440,3 @@ match ; B3LYP OEP Exchange                     ; GREPFIELD(static/info, 'Exchang
 match ; B3LYP OEP Correlation                  ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.27343573
 match ; B3LYP OEP Int[n*v_xc]                  ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.44904268
 match ; B3LYP OEP Total                        ; GREPFIELD(static/info, 'Total       =', 3) ; -0.52588482
-
-Input: 03-xc.m05_fock.inp
-match ; M05 Fock Eigenvalue up                 ; GREPFIELD(static/info, '  1   up', 3)      ;    -0.896390
-match ; M05 Fock Eigenvalue dn                 ; GREPFIELD(static/info, '  1   dn', 3)      ;    -0.822790
-match ; M05 Fock Int[n*v_xc]                   ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.34770959
-match ; M05 Fock Total                         ; GREPFIELD(static/info, 'Total       =', 3) ;    -0.51582444
-
-Input: 03-xc.m05_oep.inp
-match ; M05 OEP Eigenvalue up                  ; GREPFIELD(static/info, '  1   up', 3)      ;    -0.896390
-match ; M05 OEP Eigenvalue dn                  ; GREPFIELD(static/info, '  1   dn', 3)      ;    -0.822790
-match ; M05 OEP Exchange                       ; GREPFIELD(static/info, 'Exchange    =', 3) ;    -0.31394727
-match ; M05 OEP Int[n*v_xc]                    ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.34770959
-match ; M05 OEP Total                          ; GREPFIELD(static/info, 'Total       =', 3) ;    -0.51582444
