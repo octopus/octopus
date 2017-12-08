@@ -324,13 +324,14 @@ end subroutine X(hamiltonian_apply_all)
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator_single)(hm, der, ist, ik, psi, hpsi)
+subroutine X(exchange_operator_single)(hm, der, ist, ik, psi, hpsi, exxcoef)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ist
   integer,             intent(in)    :: ik
   R_TYPE,              intent(inout) :: psi(:, :)
   R_TYPE,              intent(inout) :: hpsi(:, :)
+  FLOAT, optional,     intent(in)    :: exxcoef
 
   type(batch_t) :: psib, hpsib
 
@@ -341,7 +342,7 @@ subroutine X(exchange_operator_single)(hm, der, ist, ik, psi, hpsi)
   call batch_init(hpsib, hm%d%dim, 1)
   call batch_add_state(hpsib, ist, hpsi)
 
-  call X(exchange_operator)(hm, der, ik, psib, hpsib)
+  call X(exchange_operator)(hm, der, ik, psib, hpsib, exxcoef)
 
   call batch_end(psib)
   call batch_end(hpsib)
@@ -351,12 +352,14 @@ end subroutine X(exchange_operator_single)
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator)(hm, der, ik, psib, hpsib)
+subroutine X(exchange_operator)(hm, der, ik, psib, hpsib, exxcoef)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ik
   type(batch_t),       intent(inout) :: psib
   type(batch_t),       intent(inout) :: hpsib
+  FLOAT, optional,     intent(in)    :: exxcoef
+
 
   integer :: ibatch, jst, ip, idim, ik2, ib, ii, ist
   type(batch_t), pointer :: psi2b
@@ -376,7 +379,11 @@ subroutine X(exchange_operator)(hm, der, ik, psib, hpsib)
 
   ! In case of k-points, the poisson solver must contains k-q 
   ! in the Coulomb potential, and must be changed for each q point
-  exx_coef = max(hm%exx_coef,hm%cam_beta)
+  if(present(exxcoef)) then
+    exx_coef = exxcoef
+  else
+    exx_coef = max(hm%exx_coef,hm%cam_beta)
+  end if
 
   SAFE_ALLOCATE(psi(1:der%mesh%np, 1:hm%d%dim))
   SAFE_ALLOCATE(hpsi(1:der%mesh%np, 1:hm%d%dim))
