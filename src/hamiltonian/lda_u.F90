@@ -176,7 +176,8 @@ contains
   type(states_t),            intent(in)    :: st
   type(multicomm_t),         intent(in)    :: mc
 
-  integer :: maxorbs
+  integer :: maxorbs, ios
+  logical :: complex_coulomb_integrals
 
   PUSH_SUB(lda_u_init)
 
@@ -340,9 +341,16 @@ contains
   call distributed_init(this%orbs_dist, this%norbsets, MPI_COMM_WORLD, "orbsets")
  #endif 
 
+
   if(this%useACBN0) then
+
+    complex_coulomb_integrals = .false.
+    do ios = 1, this%norbsets
+        if(this%orbsets(ios)%ndim  > 1) complex_coulomb_integrals = .true.
+    end do
+
     call messages_info(1)
-    if(st%d%dim == 1) then 
+    if(.not. complex_coulomb_integrals) then 
       write(message(1),'(a)')    'Computing the Coulomb integrals of the localized basis.'
       if (states_are_real(st)) then
         call dcompute_coulomb_integrals(this, gr%mesh, gr%der)

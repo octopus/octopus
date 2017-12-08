@@ -114,36 +114,50 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
     os%X(orb)(1:sm%np,1,orbind) = tmp(1:sm%np)
     SAFE_DEALLOCATE_A(tmp)
   #else
-      call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x,&
+    call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x,&
                                          os%X(orb)(1:sm%np,1,orbind))
   #endif
   else
-    !see for instance https://arxiv.org/pdf/1011.3433.pdf
-    kappa = (ll-jj)*(M_TWO*jj+M_ONE)
-    mu = orbind-1-abs(kappa)+M_HALF
-
-    mm = int(mu-M_HALF)
-    if(abs(mm) <= ll) then
-      call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x,&
+    if(jj == ll+M_HALF) then
+      mm = orbind - 2 - ll
+      if(mm >= -ll) then
+        call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x,&
                                          os%X(orb)(1:sm%np,1,orbind))
-      coeff = sqrt((kappa-mu+M_HALF)/(M_TWO*kappa+M_ONE)) 
-      do is=1,sm%np
-        os%X(orb)(is,1,orbind) = coeff*os%X(orb)(is,1,orbind)
-      end do
+        coeff = sqrt((ll+mm+M_ONE)/(M_TWO*ll+M_ONE)) 
+        do is=1,sm%np
+          os%X(orb)(is,1,orbind) = coeff*os%X(orb)(is,1,orbind)
+        end do
+      else
+        os%X(orb)(1:sm%np,1,orbind) = M_ZERO
+      end if
+      if(mm < ll) then
+        call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm+1, 1, geo%atom(iatom)%x,&
+                                         os%X(orb)(1:sm%np,2,orbind))
+        coeff = sqrt((ll-mm)/(M_TWO*ll+M_ONE))                           
+        do is=1,sm%np
+          os%X(orb)(is,2,orbind) = coeff*os%X(orb)(is,2,orbind)
+        end do
+      else
+       os%X(orb)(1:sm%np,2,orbind) = M_ZERO
+      end if
     else
-       os%X(orb)(1:sm%np,1,orbind) = M_ZERO
-    end if
-
-    mm = int(mu+M_HALF)
-    if(abs(mm) <= ll) then
+      mm = orbind - ll
       call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x,&
                                         os%X(orb)(1:sm%np,2,orbind))
-      coeff = (-kappa/abs(kappa))*sqrt((kappa+mu+M_HALF)/(M_TWO*kappa+M_ONE))
+      coeff = -sqrt((ll+mm)/(M_TWO*ll+M_ONE))                           
       do is=1,sm%np
         os%X(orb)(is,2,orbind) = coeff*os%X(orb)(is,2,orbind)
       end do
-    else
-      os%X(orb)(1:sm%np,2,orbind) = M_ZERO
+      if(mm > -ll) then
+        call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm-1, 1, geo%atom(iatom)%x,&
+                                         os%X(orb)(1:sm%np,1,orbind))
+        coeff = sqrt((ll-mm+M_ONE)/(M_TWO*ll+M_ONE))      
+        do is=1,sm%np
+          os%X(orb)(is,1,orbind) = coeff*os%X(orb)(is,1,orbind)
+        end do
+      else
+       os%X(orb)(1:sm%np,1,orbind) = M_ZERO
+      end if
     end if
 
   end if

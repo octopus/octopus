@@ -1242,16 +1242,15 @@ contains
   end function poisson_is_async
 
 #include "poisson_init_direct_inc.F90"
+#include "poisson_direct_sm_inc.F90"
 
 #include "undef.F90"
 #include "real.F90"
 #include "poisson_inc.F90"
-#include "poisson_direct_sm_inc.F90"
 #include "solver_1d_solve_inc.F90"
 #include "undef.F90"
 #include "complex.F90"
 #include "poisson_inc.F90"
-#include "poisson_direct_sm_inc.F90"
 #include "solver_1d_solve_inc.F90"
 
 end module poisson_oct_m

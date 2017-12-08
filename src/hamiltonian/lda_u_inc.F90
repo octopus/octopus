@@ -297,7 +297,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
   if(this%useACBN0 .and. .not.this%freeze_u) then
     if(this%nspins > 1 ) then
       do ios = 1, this%norbsets
-        if(this%nspins == this%spin_channels .or. .not. this%orbsets(ios)%jj == M_ZERO) then
+        if(this%orbsets(ios)%ndim  == 1) then
           call X(compute_ACBNO_U)(this, ios)
         else
           call compute_ACBNO_U_noncollinear(this, ios)
@@ -533,9 +533,9 @@ subroutine X(compute_ACBNO_U)(this, ios)
   integer :: im, imp, impp, imppp, ispin1, ispin2, norbs
   FLOAT   :: numU, numJ, denomU, denomJ, tmpU, tmpJ
 
-  ASSERT(this%nspins == this%spin_channels .or. this%orbsets(ios)%jj == M_ZERO)
-
   PUSH_SUB(compute_ACBNO_U)
+
+  ASSERT(this%orbsets(ios)%ndim == 1)
 
   norbs = this%orbsets(ios)%norbs
   numU = M_ZERO
@@ -1187,11 +1187,16 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
     hasjdependence = .false.
     call species_iwf_j(geo%atom(ia)%species, 1, jj)
     if(jj /= M_ZERO) hasjdependence = .true.
+    if (debug%info .and. hasjdependence) then
+      write(message(1),'(a,i3,a)')  'Debug: Atom ', ia, ' has j-dependent pseudo-wavefunctions.'
+      call messages_info(1)
+    end if 
+
     if(.not. this%useAllOrbitals) then
       hubbardl = species_hubbard_l(geo%atom(ia)%species)
       if( hubbardl .eq. -1 ) cycle
       !In this case we only have one orbital or we only want one
-      if(.not. hasjdependence .or. hubbardj /=M_ZERO &
+      if(.not. hasjdependence .or. hubbardj /= M_ZERO &
             .or. hubbardl == 0 ) then
         iorbset = iorbset + 1
         os => this%orbsets(iorbset)
@@ -1212,10 +1217,11 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
         end do
         if( hasjdependence ) then
           os%ndim = st%d%dim
+          os%norbs = norb + int((os%jj - os%ll)*2)
         else
           os%ndim = 1
+          os%norbs = norb
         end if
-        os%norbs = norb
         os%Ueff = species_hubbard_u(geo%atom(ia)%species)
         os%submeshforperiodic = this%submeshforperiodic
         os%spec => geo%atom(ia)%species
@@ -1223,7 +1229,6 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
         call X(orbitalset_utils_getorbitals)(os, geo, mesh)
       else
         !j = l-1/2
-
         iorbset = iorbset + 1
         os => this%orbsets(iorbset)
         norb = 0
@@ -1242,7 +1247,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
           end if
         end do
         os%ndim = st%d%dim
-        os%norbs = norb
+        os%norbs = norb-1
         os%Ueff = species_hubbard_u(geo%atom(ia)%species)
         os%submeshforperiodic = this%submeshforperiodic
         os%spec => geo%atom(ia)%species
@@ -1257,7 +1262,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
           call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
           call species_iwf_n(geo%atom(ia)%species, iorb, 1, nn )
           call species_iwf_j(geo%atom(ia)%species, iorb, jj)
-          if(ll .eq. hubbardl .and. jj < ll ) then
+          if(ll .eq. hubbardl .and. jj > ll ) then
             norb = norb + 1
             os%ll = hubbardl
             os%nn = nn
@@ -1268,7 +1273,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
           end if
         end do
         os%ndim = st%d%dim
-        os%norbs = norb
+        os%norbs = norb+1
         os%Ueff = species_hubbard_u(geo%atom(ia)%species)
         os%submeshforperiodic = this%submeshforperiodic
         os%spec => geo%atom(ia)%species
@@ -1311,7 +1316,6 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
             end if
           end if
         end do
-        os%ndim = 1
         os%norbs = work2
         os%ndim = 1
         os%Ueff = species_hubbard_u(geo%atom(ia)%species)
@@ -1331,7 +1335,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
     do iorb = 1, os%norbs
       norm = M_ZERO
       do idim = 1, os%ndim
-        norm = norm + X(sm_nrm2)(os%sphere, os%X(orb)(1:os%sphere%np,idim,iorb))
+        norm = norm + X(sm_nrm2)(os%sphere, os%X(orb)(1:os%sphere%np,idim,iorb))**2
       end do
       norm = sqrt(norm)
       if(this%normalizeOrbitals) then

@@ -109,8 +109,8 @@ contains
 
     PUSH_SUB(write_valconf)
 
-    write(s,'(i2,1x,a2,i1,1x,i1,a1,6(i1,a1,f6.3,f3.1,a1))') c%z, c%symbol, c%type, c%p, ':',&
-         (c%n(j),spec_notation(c%l(j)),c%occ(j,1),c%j(j),',',j=1,c%p)
+    write(s,'(i2,1x,a2,i1,1x,i1,a1,6(i1,a1,f6.3,a1))') c%z, c%symbol, c%type, c%p, ':',&
+         (c%n(j),spec_notation(c%l(j)),c%occ(j,1),',',j=1,c%p)
 
     POP_SUB(write_valconf)
   end subroutine write_valconf
@@ -126,8 +126,8 @@ contains
 
     PUSH_SUB(read_valconf)
 
-    read (s,'(i2,1x,a2,i1,1x,i1,1x,6(i1,a1,f6.3,f3.1,1x))') c%z, c%symbol, c%type, c%p,&
-         (c%n(j),lvalues(j),c%occ(j,1),c%j(j),j=1,c%p)
+    read (s,'(i2,1x,a2,i1,1x,i1,1x,6(i1,a1,f6.3,1x))') c%z, c%symbol, c%type, c%p,&
+         (c%n(j),lvalues(j),c%occ(j,1),j=1,c%p)
     do j = 1, c%p
        select case(lvalues(j))
        case('s'); c%l(j) = 0
@@ -139,6 +139,8 @@ contains
           call messages_fatal(1)
        end select
     end do
+
+    c%j = M_ZERO
 
     POP_SUB(read_valconf)
   end subroutine read_valconf
