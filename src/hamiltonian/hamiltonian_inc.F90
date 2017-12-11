@@ -366,7 +366,7 @@ subroutine X(exchange_operator)(hm, der, ik, psib, hpsib, exxcoef)
   FLOAT :: exx_coef, ff
   R_TYPE, allocatable :: rho(:), pot(:), psi2(:, :), psi(:, :), hpsi(:, :)
   FLOAT :: qq(1:MAX_DIM) 
-  integer :: ikpoint
+  integer :: ikpoint, ikpoint2
 
   PUSH_SUB(X(exchange_operator))
 
@@ -402,11 +402,13 @@ subroutine X(exchange_operator)(hm, der, ik, psib, hpsib, exxcoef)
 
     do ik2 = 1, hm%d%nik
       if(states_dim_get_spin_index(hm%d, ik2) /= states_dim_get_spin_index(hm%d, ik)) cycle
+      
+      ikpoint2 = states_dim_get_kpoint_index(hm%d, ik2)
 
       if(hm%d%nik > 1) then
      !   if(.not.kpoints_is_compatible_downsampling(der%mesh%sb%kpoints, ikpoint, ik2, (/1,1,1/))) cycle
         qq(1:der%dim) = kpoints_get_point(der%mesh%sb%kpoints, ikpoint) &
-                       - kpoints_get_point(der%mesh%sb%kpoints, ik2) 
+                      - kpoints_get_point(der%mesh%sb%kpoints, ikpoint2) 
       end if
       if(hm%d%nik > 1 .or. hm%cam_omega > M_EPSILON) call poisson_kernel_reinit(exchange_psolver, qq, hm%cam_omega)
 
