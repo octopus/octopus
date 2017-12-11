@@ -239,7 +239,7 @@ contains
       end if
     end if
     
-    call batch_end(psib)
+    call batch_end(psib, copy = .false.)
     SAFE_DEALLOCATE_P(psib)
     
     POP_SUB(states_parallel_release_block)
