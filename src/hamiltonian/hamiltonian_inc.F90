@@ -372,10 +372,11 @@ subroutine X(exchange_operator)(hm, der, ik, psib, hpsib, exxcoef)
 
   ASSERT(associated(hm%hf_st))
 
-  !if(hm%d%kpt%parallel) call messages_not_implemented("exchange operator with k-point parallelization")
-  if(hm%d%ispin == SPIN_POLARIZED)  call messages_not_implemented("exchange operator with colinear spins.")
-  if(hm%cam_omega == M_ZERO .and. hm%d%nik > 1) &
-    call messages_not_implemented("unscreened exchange operator without k-points.")
+  if(hm%cam_omega == M_ZERO) then
+    if((hm%d%ispin == UNPOLARIZED .and. hm%d%nik > 1) .or. &
+       (hm%d%ispin == SPIN_POLARIZED .and. hm%d%nik > 2)) &
+      call messages_not_implemented("unscreened exchange operator without k-points")
+  end if
 
   ! In case of k-points, the poisson solver must contains k-q 
   ! in the Coulomb potential, and must be changed for each q point
@@ -399,7 +400,6 @@ subroutine X(exchange_operator)(hm, der, ik, psib, hpsib, exxcoef)
     call batch_get_state(psib, ibatch, der%mesh%np, psi)
     call batch_get_state(hpsib, ibatch, der%mesh%np, hpsi)
 
-    !The sum does not have the spin, this is not correct for spin polarized systems
     do ik2 = 1, hm%d%nik
       if(states_dim_get_spin_index(hm%d, ik2) /= states_dim_get_spin_index(hm%d, ik)) cycle
 
@@ -437,9 +437,6 @@ subroutine X(exchange_operator)(hm, der, ik, psib, hpsib, exxcoef)
 
 
           ff = hm%d%kweights(ik2)*exx_coef*hm%hf_st%occ(jst, ik2)
-          !ff = exx_coef*hm%hf_st%occ(jst, ik2)
-          !I think that this condition is not correct but compensate for the missing sum over spin in 
-          !the above sum of ik2
           if(hm%d%ispin == UNPOLARIZED) ff = M_HALF*ff
 
           do idim = 1, hm%hf_st%d%dim
