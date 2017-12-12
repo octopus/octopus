@@ -266,8 +266,8 @@ contains
 
   ! ---------------------------------------------------------
   function TEMPLATE(dict_has_key)(this, key) result(has)
-    type(TEMPLATE(dict_t)), intent(inout) :: this
-    character(len=*),       intent(in)    :: key
+    type(TEMPLATE(dict_t)), intent(in) :: this
+    character(len=*),       intent(in) :: key
 
     logical :: has
 

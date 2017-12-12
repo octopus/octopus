@@ -819,13 +819,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine storage_set_info(this, lock)
-    type(storage_t), intent(inout) :: this
-    logical,         intent(in)    :: lock
+    type(storage_t),   intent(inout) :: this
+    logical, optional, intent(in)    :: lock
 
     PUSH_SUB(storage_set_info)
 
     ASSERT(associated(this%config))
-    this%lock = lock
+    if(present(lock)) this%lock = lock
     
     POP_SUB(storage_set_info)
   end subroutine storage_set_info

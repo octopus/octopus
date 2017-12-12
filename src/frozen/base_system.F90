@@ -66,12 +66,11 @@ module base_system_oct_m
     private
     type(json_object_t), pointer :: config =>null()
     type(simulation_t),  pointer :: sim    =>null()
-    type(base_system_t), pointer :: prnt   =>null()
+    type(refcount_t),    pointer :: rcnt   =>null()
     type(space_t)                :: space
     type(base_geometry_t)        :: geom
     type(base_states_t)          :: st
     type(base_system_dict_t)     :: dict
-    type(base_system_list_t)     :: list
   end type base_system_t
 
   interface base_system__init__
@@ -81,6 +80,7 @@ module base_system_oct_m
 
   interface base_system_new
     module procedure base_system_new_type
+    module procedure base_system_new_pass
   end interface base_system_new
 
   interface base_system_init
@@ -112,19 +112,43 @@ contains
 #undef BASE_TEMPLATE_NAME
 
   ! ---------------------------------------------------------
-  subroutine base_system_new_type(this, that)
-    type(base_system_t),  target, intent(inout) :: this
-    type(base_system_t), pointer                :: that
+  function base_system_new_type(config) result(this)
+    type(json_object_t), intent(in)  :: config
+
+    type(base_system_t), pointer :: this
 
     PUSH_SUB(base_system_new_type)
 
-    nullify(that)
-    SAFE_ALLOCATE(that)
-    that%prnt => this
-    call base_system_list_push(this%list, that)
+    this => base_system_new(config, base_system_init_type)
 
     POP_SUB(base_system_new_type)
-  end subroutine base_system_new_type
+  end function base_system_new_type
+
+  ! ---------------------------------------------------------
+  function base_system_new_pass(config, init) result(this)
+    type(json_object_t), intent(in) :: config
+
+    type(base_system_t), pointer :: this
+    
+    interface
+      subroutine init(this, config)
+        use json_oct_m
+        import :: base_system_t
+        type(base_system_t), intent(out) :: this
+        type(json_object_t), intent(in)  :: config
+      end subroutine init
+    end interface
+    
+    PUSH_SUB(base_system_new_pass)
+
+    nullify(this)
+    SAFE_ALLOCATE(this)
+    call init(this, config)
+    ASSERT(associated(this%rcnt))
+    call refcount_set(this%rcnt, dynamic=.true.)
+
+    POP_SUB(base_system_new_pass)
+  end function base_system_new_pass
 
   ! ---------------------------------------------------------
   subroutine base_system__iinit__(this, config)
@@ -138,12 +162,12 @@ contains
 
     nullify(cnfg)
     this%config => config
+    this%rcnt => refcount_new()
     call json_get(this%config, "space", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
     call space_init(this%space, cnfg)
     nullify(cnfg)
     call base_system_dict_init(this%dict)
-    call base_system_list_init(this%list)
 
     POP_SUB(base_system__iinit__)
   end subroutine base_system__iinit__
@@ -324,16 +348,27 @@ contains
   end subroutine base_system_stop
 
   ! ---------------------------------------------------------
-  subroutine base_system__sets__(this, name, that)
-    type(base_system_t), intent(inout) :: this
-    character(len=*),    intent(in)    :: name
-    type(base_system_t), intent(in)    :: that
+  subroutine base_system__sets__(this, name, that, config, lock, active)
+    type(base_system_t),           intent(inout) :: this
+    character(len=*),              intent(in)    :: name
+    type(base_system_t), optional, intent(in)    :: that
+    type(json_object_t), optional, intent(in)    :: config
+    logical,             optional, intent(in)    :: lock
+    logical,             optional, intent(in)    :: active
 
     PUSH_SUB(base_system__sets__)
 
-    ASSERT(this%space==that%space)
-    call base_geometry_sets(this%geom, trim(adjustl(name)), that%geom)
-    call base_states_sets(this%st, trim(adjustl(name)), that%st)
+    ASSERT(associated(this%config))
+    ASSERT(len_trim(adjustl(name))>0)
+    if(present(that))then
+      ASSERT(associated(that%config))
+      ASSERT(this%space==that%space)
+      call base_geometry_sets(this%geom, trim(adjustl(name)), that%geom, config=config, lock=lock, active=active)
+      call base_states_sets(this%st, trim(adjustl(name)), that%st, config=config, lock=lock, active=active)
+    else
+      call base_geometry_sets(this%geom, trim(adjustl(name)), config=config, lock=lock, active=active)
+      call base_states_sets(this%st, trim(adjustl(name)), config=config, lock=lock, active=active)
+    end if
 
     POP_SUB(base_system__sets__)
   end subroutine base_system__sets__
@@ -346,6 +381,10 @@ contains
 
     PUSH_SUB(base_system__dels__)
 
+    ASSERT(associated(this%config))
+    ASSERT(len_trim(name)>0)
+    ASSERT(associated(that%config))
+    ASSERT(this%space==that%space)
     call base_geometry_dels(this%geom, trim(adjustl(name)), that%geom)
     call base_states_dels(this%st, trim(adjustl(name)), that%st)
 
@@ -481,15 +520,22 @@ contains
     type(base_system_t), intent(inout) :: this
     type(base_system_t), intent(in)    :: that
 
+    type(refcount_t), pointer :: rcnt
+
     PUSH_SUB(base_system__copy__)
 
+    rcnt => this%rcnt
+    nullify(this%rcnt)
     call base_system__end__(this)
     if(associated(that%config))then
       call base_system__iinit__(this, that%config)
+      call refcount_del(this%rcnt)
       this%sim => that%sim
       call base_geometry__copy__(this%geom, that%geom)
       call base_states__copy__(this%st, that%st)
     end if
+    this%rcnt => rcnt
+    nullify(rcnt)
 
     POP_SUB(base_system__copy__)
   end subroutine base_system__copy__
@@ -500,13 +546,13 @@ contains
 
     PUSH_SUB(base_system__end__)
 
-    nullify(this%config, this%sim, this%prnt)
+    nullify(this%config, this%sim)
+    if(associated(this%rcnt)) call refcount_del(this%rcnt)
     call space_end(this%space)
     call base_geometry__end__(this%geom)
     call base_states__end__(this%st)
+    ASSERT(base_system_dict_len(this%dict)==0)
     call base_system_dict_end(this%dict)
-    ASSERT(base_system_list_len(this%list)==0)
-    call base_system_list_end(this%list)
 
     POP_SUB(base_system__end__)
   end subroutine base_system__end__

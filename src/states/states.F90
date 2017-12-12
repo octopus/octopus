@@ -1423,11 +1423,10 @@ contains
 
     if(associated(stin%subsys_st))then
       !> Allocate and copy substates.
-      call base_states_new(stout%subsys_st, stin%subsys_st)
       if(exclude_wfns_)then
-        call base_states_init(stout%subsys_st, stin%subsys_st)
+        stout%subsys_st => base_states_new(mold=stin%subsys_st)
       else
-        call base_states_copy(stout%subsys_st, stin%subsys_st)
+        stout%subsys_st => base_states_new(source=stin%subsys_st)
       end if
     end if
 

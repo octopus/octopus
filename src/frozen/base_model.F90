@@ -66,11 +66,10 @@ module base_model_oct_m
     private
     type(json_object_t), pointer :: config =>null()
     type(simulation_t),  pointer :: sim    =>null()
-    type(base_model_t),  pointer :: prnt   =>null()
+    type(refcount_t),    pointer :: rcnt   =>null()
     type(base_system_t)          :: sys
     type(base_hamiltonian_t)     :: hm
     type(base_model_dict_t)      :: dict
-    type(base_model_list_t)      :: list
   end type base_model_t
 
   interface base_model__init__
@@ -80,6 +79,7 @@ module base_model_oct_m
 
   interface base_model_new
     module procedure base_model_new_type
+    module procedure base_model_new_pass
   end interface base_model_new
 
   interface base_model_init
@@ -107,19 +107,43 @@ contains
 #undef BASE_TEMPLATE_NAME
 
   ! ---------------------------------------------------------
-  subroutine base_model_new_type(this, that)
-    type(base_model_t),  target, intent(inout) :: this
-    type(base_model_t), pointer                :: that
+  function base_model_new_type(config) result(this)
+    type(json_object_t), intent(in)  :: config
+
+    type(base_model_t), pointer :: this
 
     PUSH_SUB(base_model_new_type)
 
-    nullify(that)
-    SAFE_ALLOCATE(thAT)
-    that%prnt => this
-    call base_model_list_push(this%list, that)
+    this => base_model_new(config, base_model_init_type)
 
     POP_SUB(base_model_new_type)
-  end subroutine base_model_new_type
+  end function base_model_new_type
+
+  ! ---------------------------------------------------------
+  function base_model_new_pass(config, init) result(this)
+    type(json_object_t), intent(in) :: config
+
+    type(base_model_t), pointer :: this
+    
+    interface
+      subroutine init(this, config)
+        use json_oct_m
+        import :: base_model_t
+        type(base_model_t),  intent(out) :: this
+        type(json_object_t), intent(in)  :: config
+      end subroutine init
+    end interface
+    
+    PUSH_SUB(base_model_new_pass)
+
+    nullify(this)
+    SAFE_ALLOCATE(this)
+    call init(this, config)
+    ASSERT(associated(this%rcnt))
+    call refcount_set(this%rcnt, dynamic=.true.)
+
+    POP_SUB(base_model_new_pass)
+  end function base_model_new_pass
 
   ! ---------------------------------------------------------
   subroutine base_model__init__type(this, config)
@@ -133,6 +157,7 @@ contains
 
     nullify(cnfg)
     this%config => config
+    this%rcnt => refcount_new()
     call json_get(this%config, "system", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
     call base_system__init__(this%sys, cnfg)
@@ -142,7 +167,6 @@ contains
     call base_hamiltonian__init__(this%hm, this%sys, cnfg)
     nullify(cnfg)
     call base_model_dict_init(this%dict)
-    call base_model_list_init(this%list)
 
     POP_SUB(base_model__init__type)
   end subroutine base_model__init__type
@@ -301,16 +325,27 @@ contains
   end subroutine base_model_stop
 
   ! ---------------------------------------------------------
-  subroutine base_model__sets__(this, name, that)
-    type(base_model_t),  intent(inout) :: this
-    character(len=*),    intent(in)    :: name
-    type(base_model_t),  intent(in)    :: that
+  subroutine base_model__sets__(this, name, that, config, lock, active)
+    type(base_model_t),            intent(inout) :: this
+    character(len=*),              intent(in)    :: name
+    type(base_model_t),  optional, intent(in)    :: that
+    type(json_object_t), optional, intent(in)    :: config
+    logical,             optional, intent(in)    :: lock
+    logical,             optional, intent(in)    :: active
 
     PUSH_SUB(base_model__sets__)
 
-    call base_system_sets(this%sys, trim(adjustl(name)), that%sys)
-    call base_hamiltonian_sets(this%hm, trim(adjustl(name)), that%hm)
-
+    ASSERT(associated(this%config))
+    ASSERT(len_trim(adjustl(name))>0)
+    if(present(that))then
+      ASSERT(associated(that%config))
+      call base_system_sets(this%sys, trim(adjustl(name)), that%sys, config=config, lock=lock, active=active)
+      call base_hamiltonian_sets(this%hm, trim(adjustl(name)), that%hm, config=config, lock=lock, active=active)
+    else
+      call base_system_sets(this%sys, trim(adjustl(name)), config=config, lock=lock, active=active)
+      call base_hamiltonian_sets(this%hm, trim(adjustl(name)), config=config, lock=lock, active=active)
+    end if
+    
     POP_SUB(base_model__sets__)
   end subroutine base_model__sets__
 
@@ -322,6 +357,9 @@ contains
 
     PUSH_SUB(base_model__dels__)
 
+    ASSERT(associated(this%config))
+    ASSERT(len_trim(adjustl(name))>0)
+    ASSERT(associated(that%config))
     call base_hamiltonian_dels(this%hm, trim(adjustl(name)), that%hm)
     call base_system_dels(this%sys, trim(adjustl(name)), that%sys)
 
@@ -450,16 +488,23 @@ contains
     type(base_model_t), intent(inout) :: this
     type(base_model_t), intent(in)    :: that
 
+    type(refcount_t), pointer :: rcnt
+
     PUSH_SUB(base_model__copy__)
 
+    rcnt => this%rcnt
+    nullify(this%rcnt)
     call base_model__end__(this)
     if(associated(that%config))then
       call base_model__init__(this, that)
+      call refcount_del(this%rcnt)
       if(associated(that%sim))then
         call base_system__copy__(this%sys, that%sys)
         call base_hamiltonian__copy__(this%hm, that%hm)
       end if
     end if
+    this%rcnt => rcnt
+    nullify(rcnt)
 
     POP_SUB(base_model__copy__)
   end subroutine base_model__copy__
@@ -470,12 +515,12 @@ contains
 
     PUSH_SUB(base_model__end__)
 
-    nullify(this%config, this%sim, this%prnt)
+    nullify(this%config, this%sim)
+    if(associated(this%rcnt)) call refcount_del(this%rcnt)
     call base_hamiltonian__end__(this%hm)
     call base_system__end__(this%sys)
+    ASSERT(base_model_dict_len(this%dict)==0)
     call base_model_dict_end(this%dict)
-    ASSERT(base_model_list_len(this%list)==0)
-    call base_model_list_end(this%list)
 
     POP_SUB(base_model__end__)
   end subroutine base_model__end__

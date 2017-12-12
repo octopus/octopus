@@ -66,13 +66,12 @@ module base_density_oct_m
 
   type :: base_density_t
     private
-    type(json_object_t),  pointer :: config =>null()
-    type(simulation_t),   pointer :: sim    =>null()
-    type(base_density_t), pointer :: prnt   =>null()
-    type(dnst_intrf_t)            :: dnst
-    type(msgbus_t)                :: msgb
-    type(base_density_dict_t)     :: dict
-    type(base_density_list_t)     :: list
+    type(json_object_t), pointer :: config =>null()
+    type(simulation_t),  pointer :: sim    =>null()
+    type(refcount_t),    pointer :: rcnt   =>null()
+    type(dnst_intrf_t)           :: dnst
+    type(msgbus_t)               :: msgb
+    type(base_density_dict_t)    :: dict
   end type base_density_t
 
   interface base_density__init__
@@ -83,6 +82,7 @@ module base_density_oct_m
 
   interface base_density_new
     module procedure base_density_new_type
+    module procedure base_density_new_pass
   end interface base_density_new
 
   interface base_density_init
@@ -108,15 +108,20 @@ module base_density_oct_m
     module procedure base_density_get_msgbus
     module procedure base_density_get_dnst
     module procedure base_density_get_storage
-    module procedure base_density_get_density_1d
-    module procedure base_density_get_density_2d
+    module procedure base_density_get_density_r1
+    module procedure base_density_get_density_r2
   end interface base_density_get
+
+  interface base_density__sets__
+    module procedure base_density__sets__info
+    module procedure base_density__sets__type
+  end interface base_density__sets__
 
   interface base_density_gets
     module procedure base_density_gets_dnst
     module procedure base_density_gets_storage
-    module procedure base_density_gets_density_1d
-    module procedure base_density_gets_density_2d
+    module procedure base_density_gets_density_r1
+    module procedure base_density_gets_density_r2
   end interface base_density_gets
 
 contains
@@ -128,19 +133,43 @@ contains
 #undef BASE_TEMPLATE_NAME
 
   ! ---------------------------------------------------------
-  subroutine base_density_new_type(this, that)
-    type(base_density_t),  target, intent(inout) :: this
-    type(base_density_t), pointer, intent(out)   :: that
+  function base_density_new_type(config) result(this)
+    type(json_object_t), intent(in) :: config
+
+    type(base_density_t), pointer :: this
 
     PUSH_SUB(base_density_new_type)
 
-    nullify(that)
-    SAFE_ALLOCATE(that)
-    that%prnt => this
-    call base_density_list_push(this%list, that)
+    this => base_density_new(config, base_density_init_type)
 
     POP_SUB(base_density_new_type)
-  end subroutine base_density_new_type
+  end function base_density_new_type
+
+  ! ---------------------------------------------------------
+  function base_density_new_pass(config, init) result(this)
+    type(json_object_t), intent(in) :: config
+
+    type(base_density_t), pointer :: this
+
+    interface
+      subroutine init(this, config)
+        use json_oct_m
+        import :: base_density_t
+        type(base_density_t), intent(out) :: this
+	type(json_object_t),  intent(in)  :: config
+      end subroutine init
+    end interface
+
+    PUSH_SUB(base_density_new_pass)
+
+    nullify(this)
+    SAFE_ALLOCATE(this)
+    call init(this, config)
+    ASSERT(associated(this%rcnt))
+    call refcount_set(this%rcnt, dynamic=.true.)
+    
+    POP_SUB(base_density_new_pass)
+  end function base_density_new_pass
 
   ! ---------------------------------------------------------
   subroutine base_density__iinit__(this, config)
@@ -150,9 +179,9 @@ contains
     PUSH_SUB(base_density__iinit__)
 
     this%config => config
+    this%rcnt => refcount_new()
     call msgbus_init(this%msgb)
     call base_density_dict_init(this%dict)
-    call base_density_list_init(this%list)
 
     POP_SUB(base_density__iinit__)
   end subroutine base_density__iinit__
@@ -228,26 +257,16 @@ contains
   end subroutine base_density__init__pass
 
   ! ---------------------------------------------------------
-  subroutine base_density__init__copy(this, that, start)
+  subroutine base_density__init__copy(this, that)
     type(base_density_t), intent(out) :: this
     type(base_density_t), intent(in)  :: that
-    logical,    optional, intent(in)  :: start
-
-    logical :: istr
 
     PUSH_SUB(base_density__init__copy)
 
     ASSERT(associated(that%config))
     call base_density__iinit__(this, that%config)
-    call dnst_intrf_init(this%dnst, that%dnst, start=.false.)
-    istr = .true.
-    if(present(start)) istr = start
-    if(istr)then
-      if(present(start))then
-        ASSERT(associated(that%sim))
-      end if
-      if(associated(that%sim)) call base_density__start__(this, that%sim)
-    end if
+    call dnst_intrf_init(this%dnst, that%dnst)
+    if(associated(that%sim)) call base_density__start__(this, that%sim)
 
     POP_SUB(base_density__init__copy)
   end subroutine base_density__init__copy
@@ -274,24 +293,23 @@ contains
     PUSH_SUB(base_density__start__)
 
     ASSERT(associated(this%config))
-    ASSERT(.not.associated(this%sim))
     ASSERT(dnst_intrf_assoc(this%dnst))
+    ASSERT(.not.associated(this%sim))
     nullify(dnst)
     this%sim => sim
-    if(dnst_intrf_alloc(this%dnst))then
-      call dnst_intrf_get(this%dnst, dnst)
-      ASSERT(associated(dnst))
-      call dnst_start(dnst, sim)
-      nullify(dnst)
-    end if
+    call dnst_intrf_get(this%dnst, dnst)
+    ASSERT(associated(dnst))
+    call dnst_start(dnst, sim)
+    nullify(dnst)
 
     POP_SUB(base_density__start__)
   end subroutine base_density__start__
 
   ! ---------------------------------------------------------
-  subroutine base_density__acc__(this, that)
-    type(base_density_t), intent(inout) :: this
-    type(base_density_t), intent(in)    :: that
+  subroutine base_density__acc__(this, that, config)
+    type(base_density_t),          intent(inout) :: this
+    type(base_density_t),          intent(in)    :: that
+    type(json_object_t), optional, intent(in)    :: config
 
     type(dnst_t), pointer :: odns, idns
 
@@ -300,18 +318,17 @@ contains
     ASSERT(associated(this%config))
     ASSERT(dnst_intrf_assoc(this%dnst))
     ASSERT(associated(this%sim))
+    ASSERT(associated(that%config))
+    ASSERT(dnst_intrf_assoc(that%dnst))
+    ASSERT(associated(that%sim))
     nullify(odns, idns)
-    if(dnst_intrf_alloc(this%dnst))then
-      ASSERT(associated(that%config))
-      ASSERT(dnst_intrf_assoc(that%dnst))
-      ASSERT(associated(that%sim))
-      call dnst_intrf_get(this%dnst, odns)
-      ASSERT(associated(odns))
-      call dnst_intrf_get(that%dnst, idns)
-      ASSERT(associated(idns))
-      call dnst_acc(odns, idns)
-      nullify(odns, idns)
-    end if
+    if(present(config)) continue
+    call dnst_intrf_get(this%dnst, odns)
+    ASSERT(associated(odns))
+    call dnst_intrf_get(that%dnst, idns)
+    ASSERT(associated(idns))
+    call dnst_acc(odns, idns)
+    nullify(odns, idns)
 
     POP_SUB(base_density__acc__)
   end subroutine base_density__acc__
@@ -321,7 +338,6 @@ contains
     type(base_density_t), intent(inout) :: this
 
     type(dnst_t), pointer :: dnst
-    logical               :: sttc
 
     PUSH_SUB(base_density__update__)
 
@@ -329,13 +345,10 @@ contains
     ASSERT(dnst_intrf_assoc(this%dnst))
     ASSERT(associated(this%sim))
     nullify(dnst)
-    call base_density_get(this, static=sttc)
-    if(.not.sttc.and.dnst_intrf_alloc(this%dnst))then
-      call dnst_intrf_get(this%dnst, dnst)
-      ASSERT(associated(dnst))
-      call dnst_update(dnst)
-      nullify(dnst)
-    end if
+    call dnst_intrf_get(this%dnst, dnst)
+    ASSERT(associated(dnst))
+    call dnst_update(dnst)
+    nullify(dnst)
 
     POP_SUB(base_density__update__)
   end subroutine base_density__update__
@@ -350,14 +363,11 @@ contains
 
     ASSERT(associated(this%config))
     ASSERT(dnst_intrf_assoc(this%dnst))
-    ASSERT(associated(this%sim))
     nullify(dnst)
-    if(dnst_intrf_alloc(this%dnst))then
-      call dnst_intrf_get(this%dnst, dnst)
-      ASSERT(associated(dnst))
-      call dnst_reset(dnst)
-      nullify(dnst)
-    end if
+    call dnst_intrf_get(this%dnst, dnst)
+    ASSERT(associated(dnst))
+    call dnst_reset(dnst)
+    nullify(dnst)
 
     POP_SUB(base_density__reset__)
   end subroutine base_density__reset__
@@ -374,12 +384,10 @@ contains
     ASSERT(dnst_intrf_assoc(this%dnst))
     ASSERT(associated(this%sim))
     nullify(this%sim, dnst)
-    if(dnst_intrf_alloc(this%dnst))then
-      call dnst_intrf_get(this%dnst, dnst)
-      ASSERT(associated(dnst))
-      call dnst_stop(dnst)
-      nullify(dnst)
-    end if
+    call dnst_intrf_get(this%dnst, dnst)
+    ASSERT(associated(dnst))
+    call dnst_stop(dnst)
+    nullify(dnst)
 
     POP_SUB(base_density__stop__)
   end subroutine base_density__stop__
@@ -506,38 +514,24 @@ contains
   recursive subroutine base_density_update(this)
     type(base_density_t), intent(inout) :: this
 
-    type(base_density_iterator_t) :: iter
-    type(base_density_t), pointer :: subs
-    logical                       :: sttc, updt, accu
-    integer                       :: ierr
+    logical :: updt, accu
+    integer :: ierr
 
     PUSH_SUB(base_density_update)
 
     ASSERT(associated(this%config))
     ASSERT(dnst_intrf_assoc(this%dnst))
     ASSERT(associated(this%sim))
-    call base_density_get(this, static=sttc)
     call base_density__recv__(this, updt)
-    ASSERT(.not.(sttc.and.updt))
-    if(.not.sttc.and.updt)then
+    if(updt)then
+      call base_density__apply__(this, base_density_update, parent=.false.)
       call json_get(this%config, "reduce", accu, ierr)
       if(ierr/=JSON_OK) accu = .false.
-      accu = (accu .and. dnst_intrf_alloc(this%dnst))
       if(accu)then
-        ASSERT(base_density_dict_len(this%dict)>0)
-        call base_density__reset__(this)
+        call base_density_acc(this)
+      else
+        call base_density__update__(this)
       end if
-      call base_density_init(iter, this)
-      do
-        nullify(subs)
-        call base_density_next(iter, subs)
-        if(.not.associated(subs))exit
-        call base_density_update(subs)
-        if(accu) call base_density__acc__(this, subs)
-      end do
-      call base_density_end(iter)
-      nullify(subs)
-      call base_density__update__(this)
     end if
 
     POP_SUB(base_density_update)
@@ -566,23 +560,48 @@ contains
   end subroutine base_density_stop
 
   ! ---------------------------------------------------------
-  subroutine base_density__sets__(this, name, that)
-    type(base_density_t), intent(inout) :: this
-    character(len=*),     intent(in)    :: name
-    type(base_density_t), intent(in)    :: that
+  subroutine base_density__sets__info(this, name, config, lock, active)
+    type(base_density_t),           intent(inout) :: this
+    character(len=*),               intent(in)    :: name
+    type(json_object_t),  optional, intent(in)    :: config
+    logical,              optional, intent(in)    :: lock
+    logical,              optional, intent(in)    :: active
+
+    PUSH_SUB(base_density__sets__info)
+
+    ASSERT(associated(this%config))
+    ASSERT(len_trim(adjustl(name))>0)
+    if(present(config)) continue
+    if(present(lock)) continue
+    if(present(active)) continue
+
+    POP_SUB(base_density__sets__info)
+  end subroutine base_density__sets__info
+  
+  ! ---------------------------------------------------------
+  subroutine base_density__sets__type(this, name, that, config, lock, active)
+    type(base_density_t),          intent(inout) :: this
+    character(len=*),              intent(in)    :: name
+    type(base_density_t),          intent(in)    :: that
+    type(json_object_t), optional, intent(in)    :: config
+    logical,             optional, intent(in)    :: lock
+    logical,             optional, intent(in)    :: active
 
     character(len=BASE_DENSITY_NAME_LEN) :: rnam
     type(dnst_t),                pointer :: dnst
     integer                              :: indx, ierr
     logical                              :: dflt, accu
 
-    PUSH_SUB(base_density__sets__)
+    PUSH_SUB(base_density__sets__type)
 
     ASSERT(associated(this%config))
     ASSERT(.not.associated(this%sim))
     ASSERT(len_trim(adjustl(name))>0)
     ASSERT(associated(that%config))
     nullify(dnst)
+    if(present(config)) continue
+    if(present(lock)) continue
+    if(present(active)) continue
     call msgbus_attach(this%msgb, that%msgb)
     call json_get(this%config, "default", dflt, ierr)
     if(ierr/=JSON_OK) dflt = .true.
@@ -603,8 +622,8 @@ contains
       end if
     end if
 
-    POP_SUB(base_density__sets__)
-  end subroutine base_density__sets__
+    POP_SUB(base_density__sets__type)
+  end subroutine base_density__sets__type
   
   ! ---------------------------------------------------------
   subroutine base_density__dels__(this, name, that)
@@ -660,7 +679,7 @@ contains
   end subroutine base_density_gets_storage
 
   ! ---------------------------------------------------------
-  subroutine base_density_gets_density_1d(this, name, that, spin, total)
+  subroutine base_density_gets_density_r1(this, name, that, spin, total)
     type(base_density_t),                 intent(in)  :: this
     character(len=*),                     intent(in)  :: name
     real(kind=wp), dimension(:), pointer, intent(out) :: that
@@ -669,18 +688,18 @@ contains
 
     type(base_density_t), pointer :: subs
 
-    PUSH_SUB(base_density_gets_density_1d)
+    PUSH_SUB(base_density_gets_density_r1)
 
     nullify(that, subs)
     call base_density_gets(this, trim(adjustl(name)), subs)
     if(associated(subs)) call base_density_get(subs, that, spin, total)
     nullify(subs)
 
-    POP_SUB(base_density_gets_density_1d)
-  end subroutine base_density_gets_density_1d
+    POP_SUB(base_density_gets_density_r1)
+  end subroutine base_density_gets_density_r1
 
   ! ---------------------------------------------------------
-  subroutine base_density_gets_density_2d(this, name, that, total)
+  subroutine base_density_gets_density_r2(this, name, that, total)
     type(base_density_t),                   intent(in)  :: this
     character(len=*),                       intent(in)  :: name
     real(kind=wp), dimension(:,:), pointer, intent(out) :: that
@@ -688,15 +707,15 @@ contains
 
     type(base_density_t), pointer :: subs
 
-    PUSH_SUB(base_density_gets_density_2d)
+    PUSH_SUB(base_density_gets_density_r2)
 
     nullify(that, subs)
     call base_density_gets(this, trim(adjustl(name)), subs)
     if(associated(subs)) call base_density_get(subs, that, total)
     nullify(subs)
 
-    POP_SUB(base_density_gets_density_2d)
-  end subroutine base_density_gets_density_2d
+    POP_SUB(base_density_gets_density_r2)
+  end subroutine base_density_gets_density_r2
 
   ! ---------------------------------------------------------
   subroutine base_density_set_info(this, static)
@@ -882,7 +901,7 @@ contains
   end subroutine base_density_get_storage
 
   ! ---------------------------------------------------------
-  subroutine base_density_get_density_1d(this, that, spin, total)
+  subroutine base_density_get_density_r1(this, that, spin, total)
     type(base_density_t),                 intent(inout) :: this
     real(kind=wp), dimension(:), pointer, intent(out)   :: that
     integer,                    optional, intent(in)    :: spin
@@ -891,25 +910,25 @@ contains
     type(dnst_t), pointer :: dnst
     logical               :: sttc
 
-    PUSH_SUB(base_density_get_density_1d)
+    PUSH_SUB(base_density_get_density_r1)
 
     nullify(that, dnst)
     if(dnst_intrf_assoc(this%dnst))then
       call base_density_update(this)
-      call base_density_get(this, static=sttc)
-      call base_density_set(this, static=.false.)
       call base_density_get(this, dnst)
       ASSERT(associated(dnst))
-      call dnst_get(dnst, that, spin, total)
-      nullify(dnst)
+      call base_density_get(this, static=sttc)
+      call base_density_set(this, static=.false.)
+      call dnst_get(dnst, that, spin=spin, total=total)
       call base_density_set(this, static=sttc)
+      nullify(dnst)
     end if
 
-    POP_SUB(base_density_get_density_1d)
-  end subroutine base_density_get_density_1d
+    POP_SUB(base_density_get_density_r1)
+  end subroutine base_density_get_density_r1
 
   ! ---------------------------------------------------------
-  subroutine base_density_get_density_2d(this, that, total)
+  subroutine base_density_get_density_r2(this, that, total)
     type(base_density_t),                   intent(inout) :: this
     real(kind=wp), dimension(:,:), pointer, intent(out)   :: that
     logical,                      optional, intent(in)    :: total
@@ -917,36 +936,43 @@ contains
     type(dnst_t), pointer :: dnst
     logical               :: sttc
 
-    PUSH_SUB(base_density_get_density_2d)
+    PUSH_SUB(base_density_get_density_r2)
 
     nullify(that, dnst)
     if(dnst_intrf_assoc(this%dnst))then
       call base_density_update(this)
-      call base_density_get(this, static=sttc)
-      call base_density_set(this, static=.false.)
       call base_density_get(this, dnst)
       ASSERT(associated(dnst))
-      call dnst_get(dnst, that, total)
-      nullify(dnst)
+      call base_density_get(this, static=sttc)
+      call base_density_set(this, static=.false.)
+      call dnst_get(dnst, that, total=total)
       call base_density_set(this, static=sttc)
+      nullify(dnst)
     end if
     
-    POP_SUB(base_density_get_density_2d)
-  end subroutine base_density_get_density_2d
+    POP_SUB(base_density_get_density_r2)
+  end subroutine base_density_get_density_r2
 
   ! ---------------------------------------------------------
   subroutine base_density__copy__(this, that)
     type(base_density_t), intent(inout) :: this
     type(base_density_t), intent(in)    :: that
 
+    type(refcount_t), pointer :: rcnt
+
     PUSH_SUB(base_density__copy__)
 
+    rcnt => this%rcnt
+    nullify(this%rcnt)
     call base_density__end__(this)
     if(associated(that%config))then
       call base_density__iinit__(this, that%config)
+      call refcount_del(this%rcnt)
       this%sim => that%sim
       call dnst_intrf_copy(this%dnst, that%dnst)
     end if
+    this%rcnt => rcnt
+    nullify(rcnt)
 
     POP_SUB(base_density__copy__)
   end subroutine base_density__copy__
@@ -957,12 +983,12 @@ contains
 
     PUSH_SUB(base_density__end__)
 
-    nullify(this%config, this%sim, this%prnt)
+    nullify(this%config, this%sim)
+    if(associated(this%rcnt)) call refcount_del(this%rcnt)
     call dnst_intrf_end(this%dnst)
     call msgbus_end(this%msgb)
+    ASSERT(base_density_dict_len(this%dict)==0)
     call base_density_dict_end(this%dict)
-    ASSERT(base_density_list_len(this%list)==0)
-    call base_density_list_end(this%list)
 
     POP_SUB(base_density__end__)
   end subroutine base_density__end__

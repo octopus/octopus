@@ -63,12 +63,11 @@ module base_geometry_oct_m
 
   type :: base_geometry_t
     private
-    type(json_object_t),   pointer :: config =>null()
-    type(space_t),         pointer :: space  =>null()
-    type(base_geometry_t), pointer :: prnt   =>null()
-    type(geo_intrf_t)              :: igeo
-    type(base_geometry_dict_t)     :: dict
-    type(base_geometry_list_t)     :: list
+    type(json_object_t), pointer :: config =>null()
+    type(space_t),       pointer :: space  =>null()
+    type(refcount_t),    pointer :: rcnt   =>null()
+    type(geo_intrf_t)            :: igeo
+    type(base_geometry_dict_t)   :: dict
   end type base_geometry_t
 
   type :: base_geometry_iterator_t
@@ -86,6 +85,7 @@ module base_geometry_oct_m
 
   interface base_geometry_new
     module procedure base_geometry_new_type
+    module procedure base_geometry_new_pass
   end interface base_geometry_new
 
   interface base_geometry_init
@@ -101,6 +101,11 @@ module base_geometry_oct_m
     module procedure base_geometry_get_space
     module procedure base_geometry_get_geometry
   end interface base_geometry_get
+
+  interface base_geometry__sets__
+    module procedure base_geometry__sets__info
+    module procedure base_geometry__sets__type
+  end interface base_geometry__sets__
 
   interface base_geometry_gets
     module procedure base_geometry_gets_geometry
@@ -121,20 +126,47 @@ contains
 #undef BASE_TEMPLATE_NAME
 
   ! ---------------------------------------------------------
-  subroutine base_geometry_new_type(this, that)
-    type(base_geometry_t),  target, intent(inout) :: this
-    type(base_geometry_t), pointer                :: that
+  function base_geometry_new_type(space, config) result(this)
+    type(space_t),       intent(in) :: space
+    type(json_object_t), intent(in) :: config
+
+    type(base_geometry_t), pointer :: this
 
     PUSH_SUB(base_geometry_new_type)
 
-    ASSERT(associated(this%config))
-    nullify(that)
-    SAFE_ALLOCATE(that)
-    that%prnt => this
-    call base_geometry_list_push(this%list, that)
+    this => base_geometry_new(space, config, base_geometry_init_type)
 
     POP_SUB(base_geometry_new_type)
-  end subroutine base_geometry_new_type
+  end function base_geometry_new_type
+  
+  ! ---------------------------------------------------------
+  function base_geometry_new_pass(space, config, init) result(this)
+    type(space_t),       intent(in) :: space
+    type(json_object_t), intent(in) :: config
+
+    type(base_geometry_t), pointer :: this
+
+    interface
+      subroutine init(this, space, config)
+        use json_oct_m
+        use space_oct_m
+        import :: base_geometry_t
+        type(base_geometry_t), intent(out) :: this
+        type(space_t),         intent(in)  :: space
+        type(json_object_t),   intent(in)  :: config
+      end subroutine init
+    end interface
+
+    PUSH_SUB(base_geometry_new_pass)
+
+    nullify(this)
+    SAFE_ALLOCATE(this)
+    call init(this, space, config)
+    ASSERT(associated(this%rcnt))
+    call refcount_set(this%rcnt, dynamic=.true.)
+    
+    POP_SUB(base_geometry_new_pass)
+  end function base_geometry_new_pass
 
   ! ---------------------------------------------------------
   subroutine base_geometry__init__type(this, space, config)
@@ -152,6 +184,7 @@ contains
     nullify(cnfg)
     this%config => config
     this%space => space
+    this%rcnt => refcount_new()
     call geo_intrf_init(this%igeo)
     call json_get(this%config, "default", dflt, ierr)
     if(ierr/=JSON_OK) dflt = .true.
@@ -162,14 +195,13 @@ contains
       call json_get(this%config, "reduce", accu, ierr)
       if(ierr/=JSON_OK) accu = .false.
       ASSERT(.not.(refs.and.accu))
-      call json_get(config, "molecule", cnfg, ierr)
+      call json_get(this%config, "molecule", cnfg, ierr)
       if(ierr==JSON_OK) call geo_intrf_new(this%igeo, this%space, cnfg)
       nullify(cnfg)
       allc = geo_intrf_assoc(this%igeo)
       ASSERT((.not.allc.and.(refs.or.accu)).or.(.not.(refs.or.accu).and.allc))
     end if
     call base_geometry_dict_init(this%dict)
-    call base_geometry_list_init(this%list)
 
     POP_SUB(base_geometry__init__type)
   end subroutine base_geometry__init__type
@@ -319,14 +351,13 @@ contains
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%space))
-    if(base_geometry_dict_len(this%dict)>0)then
-      call geo_build_init(bgeo, this%space)
-      call base_geometry__reset__(this)
-      call base_geometry__reduce__(this, acc)
-      call base_geometry__update__(this)
-      call geo_intrf_new(this%igeo, init)
-      call geo_build_end(bgeo)
-    end if
+    ASSERT(base_geometry_dict_len(this%dict)>0)
+    call geo_build_init(bgeo, this%space)
+    call base_geometry__reset__(this)
+    call base_geometry__reduce__(this, acc)
+    call base_geometry__update__(this)
+    call geo_intrf_new(this%igeo, init)
+    call geo_build_end(bgeo)
 
     POP_SUB(base_geometry_acc)
 
@@ -342,9 +373,10 @@ contains
       POP_SUB(base_geometry_acc.init)
     end subroutine init
 
-    subroutine acc(this, that)
-      type(base_geometry_t), intent(inout) :: this
-      type(base_geometry_t), intent(in)    :: that
+    subroutine acc(this, that, config)
+      type(base_geometry_t),         intent(inout) :: this
+      type(base_geometry_t),         intent(in)    :: that
+      type(json_object_t), optional, intent(in)    :: config
 
       type(geometry_t), pointer :: pgeo
 
@@ -355,6 +387,7 @@ contains
       ASSERT(geo_intrf_assoc(that%igeo))
       ASSERT(this%space==that%space)
       nullify(pgeo)
+      if(present(config)) continue
       call base_geometry_get(that, pgeo)
       ASSERT(associated(pgeo))
       call geo_build_extend(bgeo, pgeo)
@@ -388,17 +421,40 @@ contains
   end subroutine base_geometry_reset
 
   ! ---------------------------------------------------------
-  subroutine base_geometry__sets__(this, name, that)
-    type(base_geometry_t), intent(inout) :: this
-    character(len=*),      intent(in)    :: name
-    type(base_geometry_t), intent(in)    :: that
+  subroutine base_geometry__sets__info(this, name, config, lock, active)
+    type(base_geometry_t),         intent(inout) :: this
+    character(len=*),              intent(in)    :: name
+    type(json_object_t), optional, intent(in)    :: config
+    logical,             optional, intent(in)    :: lock
+    logical,             optional, intent(in)    :: active
+
+    PUSH_SUB(base_geometry__sets__info)
+
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%space))
+    ASSERT(len_trim(adjustl(name))>0)
+    if(present(config)) continue
+    if(present(lock)) continue
+    if(present(active)) continue
+
+    POP_SUB(base_geometry__sets__info)
+  end subroutine base_geometry__sets__info
+  
+  ! ---------------------------------------------------------
+  subroutine base_geometry__sets__type(this, name, that, config, lock, active)
+    type(base_geometry_t),         intent(inout) :: this
+    character(len=*),              intent(in)    :: name
+    type(base_geometry_t),         intent(in)    :: that
+    type(json_object_t), optional, intent(in)    :: config
+    logical,             optional, intent(in)    :: lock
+    logical,             optional, intent(in)    :: active
 
     character(len=BASE_GEOMETRY_NAME_LEN) :: rnam
     type(geometry_t),             pointer :: pgeo
     integer                               :: indx, ierr
     logical                               :: dflt, accu
 
-    PUSH_SUB(base_geometry__sets__)
+    PUSH_SUB(base_geometry__sets__type)
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%space))
@@ -407,6 +463,9 @@ contains
     ASSERT(associated(that%space))
     ASSERT(this%space==that%space)
     nullify(pgeo)
+    if(present(config)) continue
+    if(present(lock)) continue
+    if(present(active)) continue
     call json_get(this%config, "default", dflt, ierr)
     if(ierr==JSON_OK) dflt = .true.
     if(dflt)then
@@ -431,8 +490,8 @@ contains
       end if
     end if
 
-    POP_SUB(base_geometry__sets__)
-  end subroutine base_geometry__sets__
+    POP_SUB(base_geometry__sets__type)
+  end subroutine base_geometry__sets__type
   
   ! ---------------------------------------------------------
   subroutine base_geometry__dels__(this, name, that)
@@ -536,13 +595,20 @@ contains
     type(base_geometry_t), intent(inout) :: this
     type(base_geometry_t), intent(in)    :: that
 
+    type(refcount_t), pointer :: rcnt
+
     PUSH_SUB(base_geometry__copy__)
 
+    rcnt => this%rcnt
+    nullify(this%rcnt)
     call base_geometry__end__(this)
     if(associated(that%config).and.associated(that%space))then
       call base_geometry__init__(this, that%space, that%config)
+      call refcount_del(this%rcnt)
       call geo_intrf_copy(this%igeo, that%igeo)
     end if
+    this%rcnt => rcnt
+    nullify(rcnt)
 
     POP_SUB(base_geometry__copy__)
   end subroutine base_geometry__copy__
@@ -553,11 +619,11 @@ contains
 
     PUSH_SUB(base_geometry__end__)
 
-    nullify(this%config, this%space, this%prnt)
+    nullify(this%config, this%space)
+    if(associated(this%rcnt)) call refcount_del(this%rcnt)
     call geo_intrf_end(this%igeo)
+    ASSERT(base_geometry_dict_len(this%dict)==0)
     call base_geometry_dict_end(this%dict)
-    ASSERT(base_geometry_list_len(this%list)==0)
-    call base_geometry_list_end(this%list)
 
     POP_SUB(base_geometry__end__)
   end subroutine base_geometry__end__
