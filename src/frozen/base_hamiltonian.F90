@@ -117,16 +117,15 @@ module base_hamiltonian_oct_m
 
   type :: base_hamiltonian_t
     private
-    type(json_object_t),      pointer :: config =>null()
-    type(base_system_t),      pointer :: sys    =>null()
-    type(simulation_t),       pointer :: sim    =>null()
-    type(base_hamiltonian_t), pointer :: prnt   =>null()
-    integer                           :: nspin  = default_nspin
-    real(kind=wp)                     :: energy = 0.0_wp
-    type(storage_t)                   :: data
-    type(term_dict_t)                 :: hdct
-    type(base_hamiltonian_dict_t)     :: dict
-    type(base_hamiltonian_list_t)     :: list
+    type(json_object_t),  pointer :: config =>null()
+    type(base_system_t),  pointer :: sys    =>null()
+    type(simulation_t),   pointer :: sim    =>null()
+    type(refcount_t),     pointer :: rcnt   =>null()
+    integer                       :: nspin  = default_nspin
+    real(kind=wp)                 :: energy = 0.0_wp
+    type(storage_t)               :: data
+    type(term_dict_t)             :: hdct
+    type(base_hamiltonian_dict_t) :: dict
   end type base_hamiltonian_t
 
   interface term_intrf_new
@@ -180,8 +179,14 @@ module base_hamiltonian_oct_m
     module procedure base_hamiltonian__sub__hmlt
   end interface base_hamiltonian__sub__
 
+  interface base_hamiltonian__sets__
+    module procedure base_hamiltonian__sets__info
+    module procedure base_hamiltonian__sets__type
+  end interface base_hamiltonian__sets__
+
   interface base_hamiltonian_new
     module procedure base_hamiltonian_new_type
+    module procedure base_hamiltonian_new_pass
   end interface base_hamiltonian_new
 
   interface base_hamiltonian_del
@@ -732,10 +737,13 @@ contains
   end subroutine term_intrf__stop__
 
   ! ---------------------------------------------------------
-  recursive subroutine term_intrf_sets(this, name, that)
-    type(term_intrf_t), intent(inout) :: this
-    character(len=*),   intent(in)    :: name
-    type(term_intrf_t), intent(in)    :: that
+  recursive subroutine term_intrf_sets(this, name, that, config, lock, active)
+    type(term_intrf_t),            intent(inout) :: this
+    character(len=*),              intent(in)    :: name
+    type(term_intrf_t),            intent(in)    :: that
+    type(json_object_t), optional, intent(in)    :: config
+    logical,             optional, intent(in)    :: lock
+    logical,             optional, intent(in)    :: active
 
     PUSH_SUB(term_intrf_sets)
 
@@ -744,13 +752,13 @@ contains
     ASSERT(this%type==that%type)
     select case(this%type)
     case(TERM_TYPE_TERM)
-      call base_term_sets(this%term, trim(adjustl(name)), that%term)
+      call base_term_sets(this%term, trim(adjustl(name)), that%term, config=config, lock=lock, active=active)
     case(TERM_TYPE_POTN)
-      call base_potential_sets(this%potn, trim(adjustl(name)), that%potn)
+      call base_potential_sets(this%potn, trim(adjustl(name)), that%potn, config=config, lock=lock, active=active)
     case(TERM_TYPE_FNCT)
-      call base_functional_sets(this%fnct, trim(adjustl(name)), that%fnct)
+      call base_functional_sets(this%fnct, trim(adjustl(name)), that%fnct, config=config, lock=lock, active=active)
     case(TERM_TYPE_HMLT)
-      call base_hamiltonian_sets(this%hmlt, trim(adjustl(name)), that%hmlt)
+      call base_hamiltonian_sets(this%hmlt, trim(adjustl(name)), that%hmlt, config=config, lock=lock, active=active)
     case default
       ASSERT(.false.)
     end select
@@ -1078,19 +1086,47 @@ contains
   end subroutine term__apply__
 
   ! ---------------------------------------------------------
-  subroutine base_hamiltonian_new_type(this, that)
-    type(base_hamiltonian_t),  target, intent(inout) :: this
-    type(base_hamiltonian_t), pointer                :: that
+  function base_hamiltonian_new_type(sys, config) result(this)
+    type(base_system_t), intent(in) :: sys
+    type(json_object_t), intent(in) :: config
+
+    type(base_hamiltonian_t), pointer :: this
 
     PUSH_SUB(base_hamiltonian_new_type)
 
-    nullify(that)
-    SAFE_ALLOCATE(that)
-    that%prnt => this
-    call base_hamiltonian_list_push(this%list, that)
-
+    this => base_hamiltonian_new(sys, config, base_hamiltonian_init_type)
+    
     POP_SUB(base_hamiltonian_new_type)
-  end subroutine base_hamiltonian_new_type
+  end function base_hamiltonian_new_type
+
+  ! ---------------------------------------------------------
+  function base_hamiltonian_new_pass(sys, config, init) result(this)
+    type(base_system_t), intent(in) :: sys
+    type(json_object_t), intent(in) :: config
+
+    type(base_hamiltonian_t), pointer :: this
+    
+    interface
+      subroutine init(this, sys, config)
+        use json_oct_m
+        use base_system_oct_m
+        import :: base_hamiltonian_t
+        type(base_hamiltonian_t), intent(out) :: this
+        type(base_system_t),      intent(in)  :: sys
+        type(json_object_t),      intent(in)  :: config
+      end subroutine init
+    end interface
+    
+    PUSH_SUB(base_hamiltonian_new_pass)
+
+    nullify(this)
+    SAFE_ALLOCATE(this)
+    call init(this, sys, config)
+    ASSERT(associated(this%rcnt))
+    call refcount_set(this%rcnt, dynamic=.true.)
+
+    POP_SUB(base_hamiltonian_new_pass)
+  end function base_hamiltonian_new_pass
 
   ! ---------------------------------------------------------
   subroutine base_hamiltonian__iinit__(this, sys, config)
@@ -1106,6 +1142,7 @@ contains
     nullify(cnfg)
     this%config => config
     this%sys => sys
+    this%rcnt => refcount_new()
     call json_get(this%config, "type", type, ierr)
     ASSERT(ierr==JSON_OK)
     ASSERT(type==TERM_TYPE_HMLT)
@@ -1116,7 +1153,6 @@ contains
     nullify(cnfg)
     call term_dict_init(this%hdct)
     call base_hamiltonian_dict_init(this%dict)
-    call base_hamiltonian_list_init(this%list)
 
     POP_SUB(base_hamiltonian__iinit__)
   end subroutine base_hamiltonian__iinit__
@@ -1515,16 +1551,39 @@ contains
   end subroutine base_hamiltonian__sub__hmlt
 
   ! ---------------------------------------------------------
-  recursive subroutine base_hamiltonian__sets__(this, name, that)
-    type(base_hamiltonian_t), intent(inout) :: this
-    character(len=*),         intent(in)    :: name
-    type(base_hamiltonian_t), intent(in)    :: that
+  subroutine base_hamiltonian__sets__info(this, name, config, lock, active)
+    type(base_hamiltonian_t),      intent(inout) :: this
+    character(len=*),              intent(in)    :: name
+    type(json_object_t), optional, intent(in)    :: config
+    logical,             optional, intent(in)    :: lock
+    logical,             optional, intent(in)    :: active
+
+    PUSH_SUB(base_hamiltonian__sets__info)
+
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sys))
+    ASSERT(len_trim(adjustl(name))>0)
+    if(present(config)) continue
+    if(present(lock)) continue
+    if(present(active)) continue
+
+    POP_SUB(base_hamiltonian__sets__info)
+  end subroutine base_hamiltonian__sets__info
+  
+  ! ---------------------------------------------------------
+  recursive subroutine base_hamiltonian__sets__type(this, name, that, config, lock, active)
+    type(base_hamiltonian_t),      intent(inout) :: this
+    character(len=*),              intent(in)    :: name
+    type(base_hamiltonian_t),      intent(in)    :: that
+    type(json_object_t), optional, intent(in)    :: config
+    logical,             optional, intent(in)    :: lock
+    logical,             optional, intent(in)    :: active
 
     type(term_dict_iterator_t)               :: iter
     character(len=BASE_HAMILTONIAN_NAME_LEN) :: snam
     type(term_intrf_t),              pointer :: mtrm, strm
 
-    PUSH_SUB(base_hamiltonian__sets__)
+    PUSH_SUB(base_hamiltonian__sets__type)
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sys))
@@ -1537,13 +1596,13 @@ contains
       if(.not.associated(strm)) exit
       call term_dict_get(this%hdct, trim(adjustl(snam)), mtrm)
       if(.not.associated(mtrm)) cycle
-      call term_intrf_sets(mtrm, trim(adjustl(name)), strm)
+      call term_intrf_sets(mtrm, trim(adjustl(name)), strm, config=config, lock=lock, active=active)
     end do
     call term_dict_end(iter)
     nullify(mtrm, strm)
 
-    POP_SUB(base_hamiltonian__sets__)
-  end subroutine base_hamiltonian__sets__
+    POP_SUB(base_hamiltonian__sets__type)
+  end subroutine base_hamiltonian__sets__type
 
   ! ---------------------------------------------------------
   recursive subroutine base_hamiltonian__dels__(this, name, that)
@@ -1559,6 +1618,7 @@ contains
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sys))
+    ASSERT(len_trim(name)>0)
     ASSERT(associated(that%config))
     ASSERT(associated(that%sys))
     call term_dict_init(iter, that%hdct)
@@ -1988,15 +2048,18 @@ contains
     type(base_hamiltonian_t), intent(in)    :: that
 
     type(term_dict_iterator_t)               :: iter
-    type(term_intrf_t),              pointer :: term
     character(len=BASE_HAMILTONIAN_NAME_LEN) :: name
+    type(term_intrf_t),              pointer :: term
+    type(refcount_t),                pointer :: rcnt
 
     PUSH_SUB(base_hamiltonian__copy__)
 
-    nullify(term)
+    rcnt => this%rcnt
+    nullify(this%rcnt, term)
     call base_hamiltonian__end__(this)
     if(associated(that%config).and.associated(that%sys))then
       call base_hamiltonian__init__(this, that)
+      call refcount_del(this%rcnt)
       this%energy = that%energy
       call term_dict_init(iter, that%hdct)
       do
@@ -2009,6 +2072,8 @@ contains
       nullify(term)
       if(associated(that%sim)) call storage_copy(this%data, that%data)
     end if
+    this%rcnt => rcnt
+    nullify(rcnt)
 
     POP_SUB(base_hamiltonian__copy__)
   end subroutine base_hamiltonian__copy__
@@ -2021,7 +2086,8 @@ contains
 
     PUSH_SUB(base_hamiltonian__end__)
 
-    nullify(this%config, this%sys, this%sim, this%prnt)
+    nullify(this%config, this%sys, this%sim)
+    if(associated(this%rcnt)) call refcount_del(this%rcnt)
     this%nspin = default_nspin
     this%energy = 0.0_wp
     do
@@ -2034,9 +2100,8 @@ contains
     call storage_end(this%data)
     ASSERT(term_dict_len(this%hdct)==0)
     call term_dict_end(this%hdct)
+    ASSERT(base_hamiltonian_dict_len(this%dict)==0)
     call base_hamiltonian_dict_end(this%dict)
-    ASSERT(base_hamiltonian_list_len(this%list)==0)
-    call base_hamiltonian_list_end(this%list)
 
     POP_SUB(base_hamiltonian__end__)
   end subroutine base_hamiltonian__end__

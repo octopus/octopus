@@ -63,10 +63,9 @@ module base_term_oct_m
     private
     type(json_object_t), pointer :: config =>null()
     type(base_system_t), pointer :: sys    =>null()
-    type(base_term_t),   pointer :: prnt   =>null()
+    type(refcount_t),    pointer :: rcnt   =>null()
     real(kind=wp)                :: energy = 0.0_wp
     type(base_term_dict_t)       :: dict
-    type(base_term_list_t)       :: list
   end type base_term_t
 
   interface base_term__init__
@@ -76,6 +75,7 @@ module base_term_oct_m
 
   interface base_term_new
     module procedure base_term_new_type
+    module procedure base_term_new_pass
   end interface base_term_new
 
   interface base_term_init
@@ -101,19 +101,47 @@ contains
 #undef BASE_TEMPLATE_NAME
 
   ! ---------------------------------------------------------
-  subroutine base_term_new_type(this, that)
-    type(base_term_t),  target, intent(inout) :: this
-    type(base_term_t), pointer                :: that
+  function base_term_new_type(sys, config) result(this)
+    type(base_system_t), intent(in)  :: sys
+    type(json_object_t), intent(in)  :: config
+
+    type(base_term_t), pointer :: this
 
     PUSH_SUB(base_term_new_type)
 
-    nullify(that)
-    SAFE_ALLOCATE(that)
-    that%prnt => this
-    call base_term_list_push(this%list, that)
+    this => base_term_new(sys, config, base_term_init_type)
 
     POP_SUB(base_term_new_type)
-  end subroutine base_term_new_type
+  end function base_term_new_type
+
+  ! ---------------------------------------------------------
+  function base_term_new_pass(sys, config, init) result(this)
+    type(base_system_t), intent(in) :: sys
+    type(json_object_t), intent(in) :: config
+
+    type(base_term_t), pointer :: this
+
+    interface
+      subroutine init(this, sys, config)
+        use json_oct_m
+        use base_system_oct_m
+        import :: base_term_t
+        type(base_term_t),   intent(out) :: this
+        type(base_system_t), intent(in)  :: sys
+        type(json_object_t), intent(in)  :: config
+      end subroutine init
+    end interface
+
+    PUSH_SUB(base_term_new_pass)
+
+    nullify(this)
+    SAFE_ALLOCATE(this)
+    call init(this, sys, config)
+    ASSERT(associated(this%rcnt))
+    call refcount_set(this%rcnt, dynamic=.true.)
+
+    POP_SUB(base_term_new_pass)
+  end function base_term_new_pass
 
   ! ---------------------------------------------------------
   subroutine base_term__init__type(this, sys, config)
@@ -125,8 +153,8 @@ contains
 
     this%config => config
     this%sys => sys
+    this%rcnt => refcount_new()
     call base_term_dict_init(this%dict)
-    call base_term_list_init(this%list)
 
     POP_SUB(base_term__init__type)
   end subroutine base_term__init__type
@@ -159,26 +187,30 @@ contains
   end subroutine base_term_init_type
 
   ! ---------------------------------------------------------
-  subroutine base_term__acc__(this, that)
-    type(base_term_t), intent(inout) :: this
-    type(base_term_t), intent(in)    :: that
+  subroutine base_term__acc__(this, that, config)
+    type(base_term_t),             intent(inout) :: this
+    type(base_term_t),             intent(in)    :: that
+    type(json_object_t), optional, intent(in)    :: config
 
     PUSH_SUB(base_term__acc__)
 
     ASSERT(associated(this%config))
+    if(present(config)) continue
     this%energy = this%energy + that%energy
 
     POP_SUB(base_term__acc__)
   end subroutine base_term__acc__
 
   ! ---------------------------------------------------------
-  subroutine base_term__sub__(this, that)
-    type(base_term_t), intent(inout) :: this
-    type(base_term_t), intent(in)    :: that
+  subroutine base_term__sub__(this, that, config)
+    type(base_term_t),             intent(inout) :: this
+    type(base_term_t),             intent(in)    :: that
+    type(json_object_t), optional, intent(in)    :: config
 
     PUSH_SUB(base_term__sub__)
 
     ASSERT(associated(this%config))
+    if(present(config)) continue
     this%energy = this%energy - that%energy
 
     POP_SUB(base_term__sub__)
@@ -213,11 +245,10 @@ contains
 
     PUSH_SUB(base_term_acc)
 
-    if(base_term_dict_len(this%dict)>0)then
-      call base_term__reset__(this)
-      call base_term__reduce__(this, base_term__acc__)
-      call base_term__update__(this)
-    end if
+    ASSERT(base_term_dict_len(this%dict)>0)
+    call base_term__reset__(this)
+    call base_term__reduce__(this, base_term__acc__)
+    call base_term__update__(this)
     
     POP_SUB(base_term_acc)
   end subroutine base_term_acc
@@ -312,15 +343,19 @@ contains
     type(base_term_t), intent(inout) :: this
     type(base_term_t), intent(in)    :: that
 
-    type(base_term_t), pointer :: prnt
+    type(refcount_t), pointer :: rcnt
 
     PUSH_SUB(base_term__copy__)
 
-    prnt => this%prnt
+    rcnt => this%rcnt
+    nullify(this%rcnt)
     call  base_term__end__(this)
-    if(associated(that%config).and.associated(that%sys))&
+    if(associated(that%config).and.associated(that%sys))then
       call base_term__init__(this, that)
-    this%prnt => prnt
+      call refcount_del(this%rcnt)
+    end if
+    this%rcnt => rcnt
+    nullify(rcnt)
 
     POP_SUB(base_term__copy__)
   end subroutine base_term__copy__
@@ -331,11 +366,11 @@ contains
 
     PUSH_SUB(base_term__end__)
 
-    nullify(this%config, this%sys, this%prnt)
+    nullify(this%config, this%sys)
+    if(associated(this%rcnt)) call refcount_del(this%rcnt)
     this%energy = 0.0_wp
+    ASSERT(base_term_dict_len(this%dict)==0)
     call base_term_dict_end(this%dict)
-    ASSERT(base_term_list_len(this%list)==0)
-    call base_term_list_end(this%list)
 
     POP_SUB(base_term__end__)
   end subroutine base_term__end__

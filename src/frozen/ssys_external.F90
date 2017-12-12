@@ -110,8 +110,8 @@ contains
   
   ! ---------------------------------------------------------
   subroutine ssys_external_get_potential_1d(this, that)
-    type(base_potential_t),        intent(in) :: this
-    real(kind=wp), dimension(:), pointer     :: that
+    type(base_potential_t),               intent(in)  :: this
+    real(kind=wp), dimension(:), pointer, intent(out) :: that
     
     PUSH_SUB(ssys_external_get_potential_1d)
     

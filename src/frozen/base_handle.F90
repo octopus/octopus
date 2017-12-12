@@ -73,12 +73,11 @@ module base_handle_oct_m
   type :: base_handle_t
     private
     type(json_object_t), pointer :: config =>null()
-    type(base_handle_t), pointer :: prnt   =>null()
+    type(refcount_t),    pointer :: rcnt   =>null()
     integer                      :: type   = HNDL_TYPE_NONE
     type(smlt_intrf_t)           :: smlt
     type(base_model_t)           :: model
     type(base_handle_dict_t)     :: dict
-    type(base_handle_list_t)     :: list
   end type base_handle_t
 
   interface base_handle__init__
@@ -99,6 +98,7 @@ module base_handle_oct_m
 
   interface base_handle_new
     module procedure base_handle_new_type
+    module procedure base_handle_new_pass
   end interface base_handle_new
 
   interface base_handle_init
@@ -138,19 +138,43 @@ contains
 #undef BASE_TEMPLATE_NAME
 
   ! ---------------------------------------------------------
-  subroutine base_handle_new_type(this, that)
-    type(base_handle_t),  target, intent(inout) :: this
-    type(base_handle_t), pointer                :: that
+  function base_handle_new_type(config) result(this)
+    type(json_object_t), intent(in)  :: config
 
+    type(base_handle_t), pointer :: this
+    
     PUSH_SUB(base_handle_new_type)
 
-    nullify(that)
-    SAFE_ALLOCATE(that)
-    that%prnt => this
-    call base_handle_list_push(this%list, that)
+    this => base_handle_new(config, base_handle_init_type)
 
     POP_SUB(base_handle_new_type)
-  end subroutine base_handle_new_type
+  end function base_handle_new_type
+
+  ! ---------------------------------------------------------
+  function base_handle_new_pass(config, init) result(this)
+    type(json_object_t), intent(in) :: config
+
+    type(base_handle_t), pointer :: this
+    
+    interface
+      subroutine init(this, config)
+        use json_oct_m
+        import :: base_handle_t
+        type(base_handle_t), intent(out) :: this
+        type(json_object_t), intent(in)  :: config
+      end subroutine init
+    end interface
+    
+    PUSH_SUB(base_handle_new_pass)
+
+    nullify(this)
+    SAFE_ALLOCATE(this)
+    call init(this, config)
+    ASSERT(associated(this%rcnt))
+    call refcount_set(this%rcnt, dynamic=.true.)
+
+    POP_SUB(base_handle_new_pass)
+  end function base_handle_new_pass
 
   ! ---------------------------------------------------------
   subroutine base_handle__init__type(this, config)
@@ -164,6 +188,7 @@ contains
 
     nullify(cnfg)
     this%config => config
+    this%rcnt => refcount_new()
     call json_get(this%config, "type", this%type, ierr)
     if(ierr/=JSON_OK) this%type = HNDL_TYPE_NONE
     call smlt_intrf_init(this%smlt)
@@ -172,14 +197,13 @@ contains
     call base_model__init__(this%model, cnfg)
     nullify(cnfg)
     call base_handle_dict_init(this%dict)
-    call base_handle_list_init(this%list)
     
     POP_SUB(base_handle__init__type)
   end subroutine base_handle__init__type
 
   ! ---------------------------------------------------------
   recursive subroutine base_handle__init__pass(this, init)
-    type(base_handle_t), target, intent(inout) :: this
+    type(base_handle_t), intent(inout) :: this
 
     interface
       subroutine init(this, config)
@@ -193,28 +217,23 @@ contains
     type(json_object_iterator_t)        :: iter
     character(len=BASE_HANDLE_NAME_LEN) :: name
     type(json_object_t),        pointer :: dict, cnfg
-    type(base_handle_t),        pointer :: hndl
     integer                             :: ierr
 
     PUSH_SUB(base_handle__init__pass)
 
     ASSERT(associated(this%config))
-    nullify(dict, cnfg, hndl)
+    nullify(dict, cnfg)
     call json_get(this%config, "subsystems", dict, ierr)
     if(ierr==JSON_OK)then
       call json_init(iter, dict)
       do
-        nullify(cnfg, hndl)
+        nullify(cnfg)
         call json_next(iter, name, cnfg, ierr)
         if(ierr/=JSON_OK)exit
-        call base_handle_new(this, hndl)
-        ASSERT(associated(hndl))
-        call init(hndl, cnfg)
-        hndl%prnt => this
-        call base_handle_sets(this, trim(adjustl(name)), hndl)
+        call base_handle_sets(this, trim(adjustl(name)), base_handle_new(cnfg, init), config=cnfg)
       end do
       call json_end(iter)
-      nullify(cnfg, hndl)
+      nullify(cnfg)
     end if
     nullify(dict)
 
@@ -541,14 +560,24 @@ contains
   end subroutine base_handle_stop_pass
 
   ! ---------------------------------------------------------
-  subroutine base_handle__sets__(this, name, that)
-    type(base_handle_t), intent(inout) :: this
-    character(len=*),    intent(in)    :: name
-    type(base_handle_t), intent(in)    :: that
+  subroutine base_handle__sets__(this, name, that, config, lock, active)
+    type(base_handle_t),           intent(inout) :: this
+    character(len=*),              intent(in)    :: name
+    type(base_handle_t), optional, intent(in)    :: that
+    type(json_object_t), optional, intent(in)    :: config
+    logical,             optional, intent(in)    :: lock
+    logical,             optional, intent(in)    :: active
 
     PUSH_SUB(base_handle__sets__)
 
-    call base_model_sets(this%model, trim(adjustl(name)), that%model)
+    ASSERT(associated(this%config))
+    ASSERT(len_trim(adjustl(name))>0)
+    if(present(that))then
+      ASSERT(associated(that%config))
+      call base_model_sets(this%model, trim(adjustl(name)), that%model, config=config, lock=lock, active=active)
+    else
+      call base_model_sets(this%model, trim(adjustl(name)), config=config, lock=lock, active=active)
+    end if
 
     POP_SUB(base_handle__sets__)
   end subroutine base_handle__sets__
@@ -561,6 +590,9 @@ contains
 
     PUSH_SUB(base_handle__dels__)
 
+    ASSERT(associated(this%config))
+    ASSERT(len_trim(adjustl(name))>0)
+    ASSERT(associated(that%config))
     call base_model_dels(this%model, trim(adjustl(name)), that%model)
 
     POP_SUB(base_handle__dels__)
@@ -684,13 +716,20 @@ contains
     type(base_handle_t), intent(inout) :: this
     type(base_handle_t), intent(in)    :: that
 
+    type(refcount_t), pointer :: rcnt
+
     PUSH_SUB(base_handle__copy__)
 
+    rcnt => this%rcnt
+    nullify(this%rcnt)
     call base_handle__end__(this)
     if(associated(that%config))then
       call base_handle__init__(this, that)
+      call refcount_del(this%rcnt)
       if(smlt_intrf_assoc(that%smlt)) call base_model__copy__(this%model, that%model)
     end if
+    this%rcnt => rcnt
+    nullify(rcnt)
 
     POP_SUB(base_handle__copy__)
   end subroutine base_handle__copy__
@@ -701,13 +740,13 @@ contains
 
     PUSH_SUB(base_handle__end__)
 
-    nullify(this%config, this%prnt)
+    nullify(this%config)
+    if(associated(this%rcnt)) call refcount_del(this%rcnt)
     this%type = HNDL_TYPE_NONE
     call smlt_intrf_end(this%smlt)
     call base_model__end__(this%model)
+    ASSERT(base_handle_dict_len(this%dict)==0)
     call base_handle_dict_end(this%dict)
-    ASSERT(base_handle_list_len(this%list)==0)
-    call base_handle_list_end(this%list)
 
     POP_SUB(base_handle__end__)
   end subroutine base_handle__end__

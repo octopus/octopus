@@ -31,7 +31,7 @@ module base_potential_oct_m
   implicit none
 
   private
-
+  
   public ::           &
     base_potential_t
 
@@ -72,15 +72,14 @@ module base_potential_oct_m
 
   type :: base_potential_t
     private
-    type(json_object_t),    pointer :: config =>null()
-    type(base_system_t),    pointer :: sys    =>null()
-    type(simulation_t),     pointer :: sim    =>null()
-    type(base_potential_t), pointer :: prnt   =>null()
-    integer                         :: nspin  = default_nspin
-    real(kind=wp)                   :: energy = 0.0_wp
-    type(storage_t)                 :: data
-    type(base_potential_dict_t)     :: dict
-    type(base_potential_list_t)     :: list
+    type(json_object_t),  pointer :: config =>null()
+    type(base_system_t),  pointer :: sys    =>null()
+    type(simulation_t),   pointer :: sim    =>null()
+    type(refcount_t),     pointer :: rcnt   =>null()
+    integer                       :: nspin  = default_nspin
+    real(kind=wp)                 :: energy = 0.0_wp
+    type(storage_t)               :: data
+    type(base_potential_dict_t)   :: dict
   end type base_potential_t
 
   interface base_potential__init__
@@ -90,6 +89,7 @@ module base_potential_oct_m
 
   interface base_potential_new
     module procedure base_potential_new_type
+    module procedure base_potential_new_pass
   end interface base_potential_new
 
   interface base_potential_init
@@ -108,13 +108,14 @@ module base_potential_oct_m
     module procedure base_potential_get_density
     module procedure base_potential_get_simulation
     module procedure base_potential_get_storage
-    module procedure base_potential_get_potential_1d
-    module procedure base_potential_get_potential_md
+    module procedure base_potential_get_potential_r1
+    module procedure base_potential_get_potential_r2
   end interface base_potential_get
 
   interface base_potential_gets
-    module procedure base_potential_gets_potential_1d
-    module procedure base_potential_gets_potential_md
+    module procedure base_potential_gets_storage
+    module procedure base_potential_gets_potential_r1
+    module procedure base_potential_gets_potential_r2
   end interface base_potential_gets
 
 contains
@@ -126,19 +127,47 @@ contains
 #undef BASE_TEMPLATE_NAME
 
   ! ---------------------------------------------------------
-  subroutine base_potential_new_type(this, that)
-    type(base_potential_t),  target, intent(inout) :: this
-    type(base_potential_t), pointer                :: that
+  function base_potential_new_type(sys, config) result(this)
+    type(base_system_t), intent(in)  :: sys
+    type(json_object_t), intent(in)  :: config
+
+    type(base_potential_t), pointer :: this
 
     PUSH_SUB(base_potential_new_type)
 
-    nullify(that)
-    SAFE_ALLOCATE(that)
-    that%prnt => this
-    call base_potential_list_push(this%list, that)
+    this => base_potential_new(sys, config, base_potential_init_type)
 
     POP_SUB(base_potential_new_type)
-  end subroutine base_potential_new_type
+  end function base_potential_new_type
+
+  ! ---------------------------------------------------------
+  function base_potential_new_pass(sys, config, init) result(this)
+    type(base_system_t), intent(in) :: sys
+    type(json_object_t), intent(in) :: config
+
+    type(base_potential_t), pointer :: this
+    
+    interface
+      subroutine init(this, sys, config)
+        use json_oct_m
+        use base_system_oct_m
+        import :: base_potential_t
+        type(base_potential_t), intent(out) :: this
+        type(base_system_t),    intent(in)  :: sys
+        type(json_object_t),    intent(in)  :: config
+      end subroutine init
+    end interface
+    
+    PUSH_SUB(base_potential_new_pass)
+
+    nullify(this)
+    SAFE_ALLOCATE(this)
+    call init(this, sys, config)
+    ASSERT(associated(this%rcnt))
+    call refcount_set(this%rcnt, dynamic=.true.)
+
+    POP_SUB(base_potential_new_pass)
+  end function base_potential_new_pass
 
   ! ---------------------------------------------------------
   subroutine base_potential__init__type(this, sys, config)
@@ -147,14 +176,15 @@ contains
     type(json_object_t), target, intent(in)  :: config
 
     type(json_object_t), pointer :: cnfg
-    integer                      :: ierr
     logical                      :: uspn
+    integer                      :: ierr
 
     PUSH_SUB(base_potential__init__type)
 
     nullify(cnfg)
     this%config => config
     this%sys => sys
+    this%rcnt => refcount_new()
     this%nspin = default_nspin
     call json_get(this%config, "spin", uspn, ierr)
     if(ierr/=JSON_OK) uspn = .false.
@@ -168,7 +198,6 @@ contains
     call storage_init(this%data, cnfg)
     nullify(cnfg)
     call base_potential_dict_init(this%dict)
-    call base_potential_list_init(this%list)
 
     POP_SUB(base_potential__init__type)
   end subroutine base_potential__init__type
@@ -211,15 +240,16 @@ contains
     ASSERT(associated(this%config))
     ASSERT(.not.associated(this%sim))
     this%sim => sim
-    call storage_start(this%data, sim)
+    call storage_start(this%data, this%sim)
 
     POP_SUB(base_potential__start__)
   end subroutine base_potential__start__
 
   ! ---------------------------------------------------------
-  subroutine base_potential__acc__(this, that)
-    type(base_potential_t), intent(inout) :: this
-    type(base_potential_t), intent(in)    :: that
+  subroutine base_potential__acc__(this, that, config)
+    type(base_potential_t),        intent(inout) :: this
+    type(base_potential_t),        intent(in)    :: that
+    type(json_object_t), optional, intent(in)    :: config
 
     PUSH_SUB(base_potential__acc__)
 
@@ -227,6 +257,8 @@ contains
     ASSERT(associated(that%config))
     ASSERT(associated(this%sim))
     ASSERT(associated(that%sim))
+    ASSERT(this%nspin==that%nspin)
+    if(present(config)) continue
     this%energy = this%energy + that%energy
     call storage_add(this%data, that%data)
 
@@ -234,9 +266,10 @@ contains
   end subroutine base_potential__acc__
 
   ! ---------------------------------------------------------
-  subroutine base_potential__sub__(this, that)
-    type(base_potential_t), intent(inout) :: this
-    type(base_potential_t), intent(in)    :: that
+  subroutine base_potential__sub__(this, that, config)
+    type(base_potential_t),        intent(inout) :: this
+    type(base_potential_t),        intent(in)    :: that
+    type(json_object_t), optional, intent(in)    :: config
 
     PUSH_SUB(base_potential__sub__)
 
@@ -244,6 +277,8 @@ contains
     ASSERT(associated(that%config))
     ASSERT(associated(this%sim))
     ASSERT(associated(that%sim))
+    ASSERT(this%nspin==that%nspin)
+    if(present(config)) continue
     this%energy = this%energy - that%energy
     call storage_sub(this%data, that%data)
 
@@ -263,7 +298,7 @@ contains
     this%energy = 0.0_wp
     call base_potential_get(this, dnst)
     ASSERT(associated(dnst))
-    call base_density_get(dnst, data, total=.true.)
+    call base_density_get(dnst, data)
     ASSERT(associated(data))
     nullify(dnst)
     call storage_integrate(this%data, data, this%energy)
@@ -320,17 +355,19 @@ contains
 
     PUSH_SUB(base_potential_start)
 
+    ASSERT(associated(this%config))
+    ASSERT(.not.associated(this%sim))
     call base_potential__apply__(this, start)
 
     POP_SUB(base_potential_start)
-    
+
   contains
 
     subroutine start(this)
       type(base_potential_t), intent(inout) :: this
 
       PUSH_SUB(base_potential_start.start)
-      
+
       call base_potential__start__(this, sim)
 
       POP_SUB(base_potential_start.start)
@@ -344,12 +381,13 @@ contains
 
     PUSH_SUB(base_potential_acc)
 
-    if(base_potential_dict_len(this%dict)>0)then
-      call base_potential__reset__(this)
-      call base_potential__reduce__(this, base_potential__acc__)
-      call base_potential__update__(this)
-    end if
-    
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
+    ASSERT(base_potential_dict_len(this%dict)>0)
+    call base_potential__reset__(this)
+    call base_potential__reduce__(this, base_potential__acc__)
+    call base_potential__update__(this)
+
     POP_SUB(base_potential_acc)
   end subroutine base_potential_acc
 
@@ -359,18 +397,22 @@ contains
 
     PUSH_SUB(base_potential_calc)
 
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
     call base_potential_acc(this)
     call base_potential__apply__(this, base_potential__calc__)
-    
+
     POP_SUB(base_potential_calc)
   end subroutine base_potential_calc
 
   ! ---------------------------------------------------------
-  subroutine base_potential_update(this)
+  recursive subroutine base_potential_update(this)
     type(base_potential_t), intent(inout) :: this
 
     PUSH_SUB(base_potential_update)
 
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
     call base_potential__apply__(this, base_potential__update__)
 
     POP_SUB(base_potential_update)
@@ -399,64 +441,87 @@ contains
   end subroutine base_potential_stop
 
   ! ---------------------------------------------------------
-  subroutine base_potential_gets_potential_1d(this, name, that)
-    type(base_potential_t),       intent(in) :: this
-    character(len=*),             intent(in) :: name
-    real(kind=wp), dimension(:), pointer     :: that
+  subroutine base_potential_gets_storage(this, name, that)
+    type(base_potential_t),   intent(in)  :: this
+    character(len=*),         intent(in)  :: name
+    type(storage_t), pointer, intent(out) :: that
 
     type(base_potential_t), pointer :: subs
 
-    PUSH_SUB(base_potential_gets_potential_1d)
+    PUSH_SUB(base_potential_gets_storage)
+
+    nullify(that, subs)
+    call base_potential_gets(this, trim(adjustl(name)), subs)
+    if(associated(subs)) call base_potential_get(subs, that)
+    nullify(subs)
+
+    POP_SUB(base_potential_gets_storage)
+  end subroutine base_potential_gets_storage
+
+  ! ---------------------------------------------------------
+  subroutine base_potential_gets_potential_r1(this, name, that, spin)
+    type(base_potential_t),               intent(in)  :: this
+    character(len=*),                     intent(in)  :: name
+    real(kind=wp), dimension(:), pointer, intent(out) :: that
+    integer,                    optional, intent(in)  :: spin
+
+    type(base_potential_t), pointer :: subs
+
+    PUSH_SUB(base_potential_gets_potential_r1)
+
+    nullify(that, subs)
+    call base_potential_gets(this, trim(adjustl(name)), subs)
+    if(associated(subs)) call base_potential_get(subs, that, spin)
+
+    POP_SUB(base_potential_gets_potential_r1)
+  end subroutine base_potential_gets_potential_r1
+
+  ! ---------------------------------------------------------
+  subroutine base_potential_gets_potential_r2(this, name, that)
+    type(base_potential_t),                 intent(in)  :: this
+    character(len=*),                       intent(in)  :: name
+    real(kind=wp), dimension(:,:), pointer, intent(out) :: that
+
+    type(base_potential_t), pointer :: subs
+
+    PUSH_SUB(base_potential_gets_potential_r2)
 
     nullify(that, subs)
     call base_potential_gets(this, trim(adjustl(name)), subs)
     if(associated(subs)) call base_potential_get(subs, that)
 
-    POP_SUB(base_potential_gets_potential_1d)
-  end subroutine base_potential_gets_potential_1d
+    POP_SUB(base_potential_gets_potential_r2)
+  end subroutine base_potential_gets_potential_r2
 
   ! ---------------------------------------------------------
-  subroutine base_potential_gets_potential_md(this, name, that)
-    type(base_potential_t),         intent(in) :: this
-    character(len=*),               intent(in) :: name
-    real(kind=wp), dimension(:,:), pointer     :: that
-
-    type(base_potential_t), pointer :: subs
-
-    PUSH_SUB(base_potential_gets_potential_md)
-
-    nullify(that, subs)
-    call base_potential_gets(this, trim(adjustl(name)), subs)
-    if(associated(subs)) call base_potential_get(subs, that)
-
-    POP_SUB(base_potential_gets_potential_md)
-  end subroutine base_potential_gets_potential_md
-
-  ! ---------------------------------------------------------
-  subroutine base_potential_set_info(this, energy)
+  subroutine base_potential_set_info(this, static, energy)
     type(base_potential_t),  intent(inout) :: this
+    logical,       optional, intent(in)    :: static
     real(kind=wp), optional, intent(in)    :: energy
 
     PUSH_SUB(base_potential_set_info)
 
     ASSERT(associated(this%config))
+    call storage_set(this%data, lock=static)
     if(present(energy)) this%energy = energy
 
     POP_SUB(base_potential_set_info)
   end subroutine base_potential_set_info
- 
+
   ! ---------------------------------------------------------
-  subroutine base_potential_get_info(this, size, nspin, use)
+  subroutine base_potential_get_info(this, size, nspin, static, fine, use)
     type(base_potential_t), intent(in)  :: this
     integer,      optional, intent(out) :: size
     integer,      optional, intent(out) :: nspin
+    logical,      optional, intent(out) :: static
+    logical,      optional, intent(out) :: fine
     logical,      optional, intent(out) :: use
 
     PUSH_SUB(base_potential_get_info)
 
     ASSERT(associated(this%config))
     if(present(nspin)) nspin = this%nspin
-    call storage_get(this%data, size=size, alloc=use)
+    call storage_get(this%data, size=size, lock=static, fine=fine, alloc=use)
 
     POP_SUB(base_potential_get_info)
   end subroutine base_potential_get_info
@@ -476,8 +541,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_potential_get_config(this, that)
-    type(base_potential_t), target, intent(in) :: this
-    type(json_object_t),   pointer             :: that
+    type(base_potential_t), target, intent(in)  :: this
+    type(json_object_t),   pointer, intent(out) :: that
 
     PUSH_SUB(base_potential_get_config)
 
@@ -489,8 +554,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_potential_get_system(this, that)
-    type(base_potential_t), target, intent(in) :: this
-    type(base_system_t),   pointer             :: that
+    type(base_potential_t), target, intent(in)  :: this
+    type(base_system_t),   pointer, intent(out) :: that
 
     PUSH_SUB(base_potential_get_system)
 
@@ -502,8 +567,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_potential_get_density(this, that)
-    type(base_potential_t), target, intent(in) :: this
-    type(base_density_t),  pointer             :: that
+    type(base_potential_t), target, intent(in)  :: this
+    type(base_density_t),  pointer, intent(out) :: that
 
     PUSH_SUB(base_potential_get_density)
 
@@ -516,8 +581,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_potential_get_simulation(this, that)
-    type(base_potential_t), target, intent(in) :: this
-    type(simulation_t),    pointer             :: that
+    type(base_potential_t), target, intent(in)  :: this
+    type(simulation_t),    pointer, intent(out) :: that
 
     PUSH_SUB(base_potential_get_simulation)
 
@@ -529,8 +594,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_potential_get_storage(this, that)
-    type(base_potential_t), target, intent(in) :: this
-    type(storage_t),       pointer             :: that
+    type(base_potential_t), target, intent(in)  :: this
+    type(storage_t),       pointer, intent(out) :: that
 
     PUSH_SUB(base_potential_get_storage)
 
@@ -541,44 +606,56 @@ contains
   end subroutine base_potential_get_storage
 
   ! ---------------------------------------------------------
-  subroutine base_potential_get_potential_1d(this, that)
-    type(base_potential_t),       intent(in) :: this
-    real(kind=wp), dimension(:), pointer     :: that
+  subroutine base_potential_get_potential_r1(this, that, spin)
+    type(base_potential_t),               intent(in)  :: this
+    real(kind=wp), dimension(:), pointer, intent(out) :: that
+    integer,                    optional, intent(in)  :: spin
 
-    PUSH_SUB(base_potential_get_potential_1d)
+    integer :: ispn
+
+    PUSH_SUB(base_potential_get_potential_r1)
 
     nullify(that)
-    call storage_get(this%data, that)
+    ispn = 1
+    if(present(spin)) ispn = spin
+    call storage_get(this%data, that, ispn)
 
-    POP_SUB(base_potential_get_potential_1d)
-  end subroutine base_potential_get_potential_1d
+    POP_SUB(base_potential_get_potential_r1)
+  end subroutine base_potential_get_potential_r1
 
   ! ---------------------------------------------------------
-  subroutine base_potential_get_potential_md(this, that)
-    type(base_potential_t),         intent(in) :: this
-    real(kind=wp), dimension(:,:), pointer     :: that
+  subroutine base_potential_get_potential_r2(this, that)
+    type(base_potential_t),                 intent(in)  :: this
+    real(kind=wp), dimension(:,:), pointer, intent(out) :: that
 
-    PUSH_SUB(base_potential_get_potential_md)
+    PUSH_SUB(base_potential_get_potential_r2)
 
     nullify(that)
     call storage_get(this%data, that)
 
-    POP_SUB(base_potential_get_potential_md)
-  end subroutine base_potential_get_potential_md
+    POP_SUB(base_potential_get_potential_r2)
+  end subroutine base_potential_get_potential_r2
 
   ! ---------------------------------------------------------
   subroutine base_potential__copy__(this, that)
     type(base_potential_t), intent(inout) :: this
     type(base_potential_t), intent(in)    :: that
 
+    type(refcount_t), pointer :: rcnt
+
     PUSH_SUB(base_potential__copy__)
 
+    rcnt => this%rcnt
+    nullify(this%rcnt)
     call base_potential__end__(this)
     if(associated(that%config).and.associated(that%sys))then
       call base_potential__init__(this, that)
+      call refcount_del(this%rcnt)
       this%energy = that%energy
       if(associated(that%sim)) call storage_copy(this%data, that%data)
     end if
+    this%rcnt => rcnt
+    nullify(rcnt)
 
     POP_SUB(base_potential__copy__)
   end subroutine base_potential__copy__
@@ -589,13 +666,13 @@ contains
 
     PUSH_SUB(base_potential__end__)
 
-    nullify(this%config, this%sys, this%sim, this%prnt)
+    nullify(this%config, this%sys, this%sim)
+    if(associated(this%rcnt)) call refcount_del(this%rcnt)
     this%nspin = default_nspin
     this%energy = 0.0_wp
     call storage_end(this%data)
+    ASSERT(base_potential_dict_len(this%dict)==0)
     call base_potential_dict_end(this%dict)
-    ASSERT(base_potential_list_len(this%list)==0)
-    call base_potential_list_end(this%list)
 
     POP_SUB(base_potential__end__)
   end subroutine base_potential__end__

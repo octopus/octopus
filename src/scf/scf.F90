@@ -19,6 +19,7 @@
 #include "global.h"
 
 module scf_oct_m
+  use base_states_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use berry_oct_m
@@ -823,6 +824,8 @@ contains
           st%zrho%Re(1:gr%fine%mesh%np, 1:nspin) =  real(zrhonew(1:gr%fine%mesh%np, 1, 1:nspin))                   
           st%zrho%Im(1:gr%fine%mesh%np, 1:nspin) = aimag(zrhonew(1:gr%fine%mesh%np, 1, 1:nspin))                    
         end if
+        ! Notify the "live" subsystem of the density update.
+        if(associated(st%subsys_st)) call base_states_notify(st%subsys_st, "live")
         call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
       case (OPTION__MIXFIELD__POTENTIAL)
         ! mix input and output potentials
