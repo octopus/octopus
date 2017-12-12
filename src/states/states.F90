@@ -1159,6 +1159,7 @@ contains
     SAFE_ALLOCATE(st%group%block_node(1:st%group%nblocks, 1:st%d%nik))
 
     ASSERT(associated(st%node))
+    ASSERT(associated(st%node_st_kpt))
     ASSERT(all(st%node >= 0) .and. all(st%node < st%mpi_grp%size))
     do iqn = 1, st%d%nik
       do ib = 1, st%group%nblocks

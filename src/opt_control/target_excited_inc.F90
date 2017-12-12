@@ -46,16 +46,19 @@
     SAFE_DEALLOCATE_P(tg%st%occ)
     SAFE_DEALLOCATE_P(tg%st%eigenval)
     SAFE_DEALLOCATE_P(tg%st%node)
+    SAFE_DEALLOCATE_P(tg%st%node_st_kpt)
 
-    SAFE_ALLOCATE(     tg%st%occ(1:tg%st%nst, 1:tg%st%d%nik))
-    SAFE_ALLOCATE(tg%st%eigenval(1:tg%st%nst, 1:tg%st%d%nik))
-    SAFE_ALLOCATE(    tg%st%node(1:tg%st%nst))
+    SAFE_ALLOCATE(        tg%st%occ(1:tg%st%nst, 1:tg%st%d%nik))
+    SAFE_ALLOCATE(   tg%st%eigenval(1:tg%st%nst, 1:tg%st%d%nik))
+    SAFE_ALLOCATE(       tg%st%node(1:tg%st%nst))
+    SAFE_ALLOCATE(tg%st%node_st_kpt(1:tg%st%nst, 1:tg%st%d%nik))
     if(tg%st%d%ispin == SPINORS) then
       SAFE_DEALLOCATE_P(tg%st%spin)
       SAFE_ALLOCATE(tg%st%spin(1:3, 1:tg%st%nst, 1:tg%st%d%nik))
     end if
     call states_allocate_wfns(tg%st, gr%mesh, TYPE_CMPLX)
     tg%st%node(:)  = 0
+    tg%st%node_st_kpt(:,:) = 0
 
     call states_load(restart, tg%st, gr, ierr)
     if (ierr /= 0) then

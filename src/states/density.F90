@@ -481,6 +481,7 @@ contains
 
     call states_deallocate_wfns(st)
     call states_distribute_nodes(st, mc)
+    call states_kpoints_distribution(st)
     call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
 
     SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim, 1))

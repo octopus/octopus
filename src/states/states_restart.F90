@@ -103,8 +103,11 @@ contains
     st%lnst     = nst
 
     SAFE_DEALLOCATE_P(st%node)
+    SAFE_DEALLOCATE_P(st%node_st_kpt)
     SAFE_ALLOCATE(st%node(1:st%nst))
+    SAFE_ALLOCATE(st%node_st_kpt(1:st%nst, 1:st%d%nik))
     st%node(:)  = 0
+    st%node_st_kpt(:,:) = 0
 
     SAFE_DEALLOCATE_P(st%zeigenval%Re)
     nullify(st%eigenval)
