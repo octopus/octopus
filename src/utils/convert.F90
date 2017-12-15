@@ -664,10 +664,12 @@ contains
       t_point = 0
       do i_time = c_start, c_end, c_step
         
-        if (mesh%parallel_in_domains .and. i_space == 1) then
-          write(folder,'(a,i0.7,a)') in_folder(folder_index+1:len_trim(in_folder)-1),i_time,"/"
-          write(filename, '(a,a,a)') trim(folder), trim(basename)
-          call drestart_read_mesh_function(restart, trim(filename), mesh, point_tmp(:, t_point), ierr)
+        if (mesh%parallel_in_domains) then 
+          if (i_space == 1) then
+            write(folder,'(a,i0.7,a)') in_folder(folder_index+1:len_trim(in_folder)-1),i_time,"/"
+            write(filename, '(a,a,a)') trim(folder), trim(basename)
+            call drestart_read_mesh_function(restart, trim(filename), mesh, point_tmp(:, t_point), ierr)
+          end if 
         else
           ! Here, we always iterate folders
           ! Delete the last / and add the corresponding folder number
@@ -694,7 +696,7 @@ contains
 
         if (i_time == c_start) read_count = read_count + 1
         if (subtract_file) then
-          read_ft(t_point) =  point_tmp(read_count, t_point) - read_rff(i_space)
+          read_ft(t_point) = point_tmp(read_count, t_point) - read_rff(i_space)
         else
           read_ft(t_point) = point_tmp(read_count, t_point)
         end if
@@ -703,12 +705,14 @@ contains
       end do ! Time
 
       select case (ft_method)
+
       case (FAST_FOURIER)
         call profiling_in(prof_fftw, "CONVERT_FFTW")
         call dfft_forward1(fft, read_ft, out_fft)
         call profiling_out(prof_fftw)
         ! Should the value be multiplied by dt ??? as in standard discrete Fourier Transform ?
         point_tmp(read_count, 0:time_steps) = AIMAG(out_fft(0:time_steps)) * dt
+
       case (STANDARD_FOURIER)
         tdrho_a(0:time_steps, 1, 1) = read_ft(0:time_steps)
         call batch_init(tdrho_b, 1, 1, 1, tdrho_a)
