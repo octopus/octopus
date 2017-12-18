@@ -110,13 +110,10 @@ module base_potential_oct_m
     module procedure base_potential_get_storage
     module procedure base_potential_get_potential_r1
     module procedure base_potential_get_potential_r2
+    module procedure base_potential_get_sub_storage
+    module procedure base_potential_get_sub_potential_r1
+    module procedure base_potential_get_sub_potential_r2
   end interface base_potential_get
-
-  interface base_potential_gets
-    module procedure base_potential_gets_storage
-    module procedure base_potential_gets_potential_r1
-    module procedure base_potential_gets_potential_r2
-  end interface base_potential_gets
 
 contains
 
@@ -441,25 +438,25 @@ contains
   end subroutine base_potential_stop
 
   ! ---------------------------------------------------------
-  subroutine base_potential_gets_storage(this, name, that)
+  subroutine base_potential_get_sub_storage(this, name, that)
     type(base_potential_t),   intent(in)  :: this
     character(len=*),         intent(in)  :: name
     type(storage_t), pointer, intent(out) :: that
 
     type(base_potential_t), pointer :: subs
 
-    PUSH_SUB(base_potential_gets_storage)
+    PUSH_SUB(base_potential_get_sub_storage)
 
     nullify(that, subs)
-    call base_potential_gets(this, trim(adjustl(name)), subs)
+    call base_potential_gets(this, trim(adjustl(name)), type=subs)
     if(associated(subs)) call base_potential_get(subs, that)
     nullify(subs)
 
-    POP_SUB(base_potential_gets_storage)
-  end subroutine base_potential_gets_storage
+    POP_SUB(base_potential_get_sub_storage)
+  end subroutine base_potential_get_sub_storage
 
   ! ---------------------------------------------------------
-  subroutine base_potential_gets_potential_r1(this, name, that, spin)
+  subroutine base_potential_get_sub_potential_r1(this, name, that, spin)
     type(base_potential_t),               intent(in)  :: this
     character(len=*),                     intent(in)  :: name
     real(kind=wp), dimension(:), pointer, intent(out) :: that
@@ -467,31 +464,31 @@ contains
 
     type(base_potential_t), pointer :: subs
 
-    PUSH_SUB(base_potential_gets_potential_r1)
+    PUSH_SUB(base_potential_get_sub_potential_r1)
 
     nullify(that, subs)
-    call base_potential_gets(this, trim(adjustl(name)), subs)
+    call base_potential_gets(this, trim(adjustl(name)), type=subs)
     if(associated(subs)) call base_potential_get(subs, that, spin)
 
-    POP_SUB(base_potential_gets_potential_r1)
-  end subroutine base_potential_gets_potential_r1
+    POP_SUB(base_potential_get_sub_potential_r1)
+  end subroutine base_potential_get_sub_potential_r1
 
   ! ---------------------------------------------------------
-  subroutine base_potential_gets_potential_r2(this, name, that)
+  subroutine base_potential_get_sub_potential_r2(this, name, that)
     type(base_potential_t),                 intent(in)  :: this
     character(len=*),                       intent(in)  :: name
     real(kind=wp), dimension(:,:), pointer, intent(out) :: that
 
     type(base_potential_t), pointer :: subs
 
-    PUSH_SUB(base_potential_gets_potential_r2)
+    PUSH_SUB(base_potential_get_sub_potential_r2)
 
     nullify(that, subs)
-    call base_potential_gets(this, trim(adjustl(name)), subs)
+    call base_potential_gets(this, trim(adjustl(name)), type=subs)
     if(associated(subs)) call base_potential_get(subs, that)
 
-    POP_SUB(base_potential_gets_potential_r2)
-  end subroutine base_potential_gets_potential_r2
+    POP_SUB(base_potential_get_sub_potential_r2)
+  end subroutine base_potential_get_sub_potential_r2
 
   ! ---------------------------------------------------------
   subroutine base_potential_set_info(this, static, energy)

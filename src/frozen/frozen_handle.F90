@@ -3,11 +3,9 @@
 module frozen_handle_oct_m
 
   use base_density_oct_m
-  use base_geometry_oct_m
   use base_handle_oct_m
   use base_model_oct_m
   use fio_handle_oct_m
-  use frozen_geometry_oct_m
   use frozen_model_oct_m
   use global_oct_m
   use grid_oct_m
@@ -36,24 +34,6 @@ module frozen_handle_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine frozen_handle__init__(this, config)
-    type(base_handle_t), intent(inout) :: this
-    type(json_object_t), intent(in)    :: config
-
-    type(base_geometry_t), pointer :: pgeo
-
-    PUSH_SUB(frozen_handle__init__)
-
-    nullify(pgeo)
-    call base_handle_get(this, pgeo)
-    ASSERT(associated(pgeo))
-    call frozen_geometry__init__(pgeo, config)
-    nullify(pgeo)
-
-    POP_SUB(frozen_handle__init__)
-  end subroutine frozen_handle__init__
-
-  ! ---------------------------------------------------------
   subroutine frozen_handle_init(this, config)
     type(base_handle_t), intent(out) :: this
     type(json_object_t), intent(in)  :: config
@@ -66,7 +46,6 @@ contains
     call base_handle_get(this, type=type)
     ASSERT(type==HNDL_TYPE_FRZN)
     call base_handle__init__(this, fio_handle_init)
-    call frozen_handle__init__(this, config)
 
     POP_SUB(frozen_handle_init)
   end subroutine frozen_handle_init

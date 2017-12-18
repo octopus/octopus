@@ -69,7 +69,7 @@ subroutine output_states(st, gr, geo, dir, outp)
       call base_density_init(iter, subsys_density)
       do
         nullify(base_density, density)
-        call base_density_next(iter, name, base_density, ierr)
+        call base_density_next(iter, name, base_density, ierr=ierr)
         if(ierr/=BASE_DENSITY_OK)exit
         ASSERT(associated(base_density))
         call base_density_get(base_density, density)

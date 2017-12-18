@@ -152,7 +152,7 @@ contains
     call base_term_init(iter, this)
     do
       nullify(subs)
-      call base_term_next(iter, subs, ierr)
+      call base_term_next(iter, subs, ierr=ierr)
       if(ierr/=BASE_TERM_OK)exit
       call ssys_ionic__calc__(subs)
     end do
@@ -217,7 +217,7 @@ contains
     call base_term_init(iter, this)
     do
       nullify(subs)
-      call base_term_next(iter, name, subs, ierr)
+      call base_term_next(iter, name, subs, ierr=ierr)
       if(ierr/=BASE_TERM_OK)exit
       if(ssys_ionic__in__(name, except))cycle
       call ssys_ionic__interaction__(subs, atom, frce)

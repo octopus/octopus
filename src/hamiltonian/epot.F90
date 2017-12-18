@@ -684,7 +684,7 @@ contains
     nullify(vpsl)
     if(associated(ep%subsys_external))then
       ! Sets the vpsl pointer to the "live" part of the subsystem potential.
-      call base_potential_gets(ep%subsys_external, "live", vpsl)
+      call base_potential_get(ep%subsys_external, "live", vpsl)
       ASSERT(associated(vpsl))
     else
       ! Sets the vpsl pointer to the total potential.

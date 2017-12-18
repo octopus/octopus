@@ -1267,7 +1267,7 @@ contains
     PUSH_SUB(states_densities_init)
 
     if(associated(st%subsys_st))then
-      call base_states_gets(st%subsys_st, "live", st%zrho%Re)
+      call base_states_get(st%subsys_st, "live", st%zrho%Re)
       ASSERT(associated(st%zrho%Re))
     else
       SAFE_ALLOCATE(st%zrho%Re(1:gr%fine%mesh%np_part, 1:st%d%nspin))
@@ -1440,7 +1440,7 @@ contains
       !cmplxscl
       
       if(associated(stout%subsys_st))then
-        call base_states_gets(stout%subsys_st, "live", stout%zrho%Re)
+        call base_states_get(stout%subsys_st, "live", stout%zrho%Re)
         ASSERT(associated(stout%zrho%Re))
       else
         call loct_pointer_copy(stout%zrho%Re, stin%zrho%Re)
@@ -1745,7 +1745,7 @@ contains
     PUSH_SUB(substates_set_charge)
 
     nullify(dnst)
-    call base_states_gets(this, "live", dnst)
+    call base_states_get(this, "live", dnst)
     ASSERT(associated(dnst))
     qtot = M_ZERO
     do ispn = 1, st%d%nspin

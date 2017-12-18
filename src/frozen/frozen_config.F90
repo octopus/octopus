@@ -31,7 +31,8 @@ contains
 
     PUSH_SUB(frozen_config_parse_geometry)
 
-    call json_set(this, "default", .false.)
+    call json_set(this, "default", .true.)
+    call json_set(this, "reduce", .true.)
 
     POP_SUB(frozen_config_parse_geometry)
   end subroutine frozen_config_parse_geometry
@@ -43,7 +44,6 @@ contains
     PUSH_SUB(frozen_config_parse_density)
 
     call json_set(this, "default", .true.)
-    !call json_set(this, "external", .true.)
 
     POP_SUB(frozen_config_parse_density)
   end subroutine frozen_config_parse_density

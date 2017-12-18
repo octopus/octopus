@@ -67,7 +67,7 @@ contains
     call base_potential_init(iter, this)
     do
       nullify(subs)
-      call base_potential_next(iter, subs, ierr)
+      call base_potential_next(iter, subs, ierr=ierr)
       if(ierr/=BASE_POTENTIAL_OK)exit
       call ssys_external__calc__energy(subs)
       call base_potential__acc__(this, subs)

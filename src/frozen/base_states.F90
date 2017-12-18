@@ -72,6 +72,11 @@ module base_states_oct_m
     module procedure base_states__init__copy
   end interface base_states__init__
 
+  interface base_states__sets__
+    module procedure base_states__sets__info
+    module procedure base_states__sets__type
+  end interface base_states__sets__
+
   interface base_states_new
     module procedure base_states_new_type
     module procedure base_states_new_pass
@@ -94,13 +99,10 @@ module base_states_oct_m
     module procedure base_states_get_density
     module procedure base_states_get_density_1d
     module procedure base_states_get_density_2d
+    module procedure base_states_get_sub_density
+    module procedure base_states_get_sub_density_1d
+    module procedure base_states_get_sub_density_2d
   end interface base_states_get
-
-  interface base_states_gets
-    module procedure base_states_gets_density
-    module procedure base_states_gets_density_1d
-    module procedure base_states_gets_density_2d
-  end interface base_states_gets
 
 contains
     
@@ -296,7 +298,7 @@ contains
     PUSH_SUB(base_states_notify_subs)
 
     nullify(subs)
-    call base_states_gets(this, trim(adjustl(name)), subs)
+    call base_states_gets(this, trim(adjustl(name)), type=subs)
     ASSERT(associated(subs))
     call base_states_notify(subs)
     nullify(subs)
@@ -363,27 +365,39 @@ contains
   end subroutine base_states_stop
 
   ! ---------------------------------------------------------
-  subroutine base_states__sets__(this, name, that, config, lock, active)
-    type(base_states_t),           intent(inout) :: this
-    character(len=*),              intent(in)    :: name
-    type(base_states_t), optional, intent(in)    :: that
-    type(json_object_t), optional, intent(in)    :: config
-    logical,             optional, intent(in)    :: lock
-    logical,             optional, intent(in)    :: active
+  subroutine base_states__sets__info(this, name, lock, active)
+    type(base_states_t), intent(inout) :: this
+    character(len=*),    intent(in)    :: name
+    logical,   optional, intent(in)    :: lock
+    logical,   optional, intent(in)    :: active
 
-    PUSH_SUB(base_states__sets__)
+    PUSH_SUB(base_states__sets__info)
 
     ASSERT(associated(this%config))
     ASSERT(len_trim(adjustl(name))>0)
-    if(present(that))then
-      ASSERT(associated(that%config))
-      call base_density_sets(this%density, trim(adjustl(name)), that%density, config=config, lock=lock, active=active)
-    else
-      call base_density_sets(this%density, trim(adjustl(name)), config=config, lock=lock, active=active)
-    end if
+    call base_density_sets(this%density, trim(adjustl(name)), lock=lock, active=active)
 
-    POP_SUB(base_states__sets__)
-  end subroutine base_states__sets__
+    POP_SUB(base_states__sets__info)
+  end subroutine base_states__sets__info
+    
+  ! ---------------------------------------------------------
+  subroutine base_states__sets__type(this, name, that, config, lock, active)
+    type(base_states_t), intent(inout) :: this
+    character(len=*),    intent(in)    :: name
+    type(base_states_t), intent(in)    :: that
+    type(json_object_t), intent(in)    :: config
+    logical,   optional, intent(in)    :: lock
+    logical,   optional, intent(in)    :: active
+
+    PUSH_SUB(base_states__sets__type)
+
+    ASSERT(associated(this%config))
+    ASSERT(len_trim(adjustl(name))>0)
+    ASSERT(associated(that%config))
+    call base_density_sets(this%density, trim(adjustl(name)), that%density, config, lock=lock, active=active)
+
+    POP_SUB(base_states__sets__type)
+  end subroutine base_states__sets__type
     
   ! ---------------------------------------------------------
   subroutine base_states__dels__(this, name, that)
@@ -402,24 +416,24 @@ contains
   end subroutine base_states__dels__
     
   ! ---------------------------------------------------------
-  subroutine base_states_gets_density(this, name, that)
+  subroutine base_states_get_sub_density(this, name, that)
     type(base_states_t),   intent(in) :: this
     character(len=*),      intent(in) :: name
     type(base_density_t), pointer     :: that
 
     type(base_states_t), pointer :: subs
 
-    PUSH_SUB(base_states_gets_density)
+    PUSH_SUB(base_states_get_sub_density)
 
     nullify(that, subs)
-    call base_states_gets(this, trim(adjustl(name)), subs)
+    call base_states_gets(this, trim(adjustl(name)), type=subs)
     if(associated(subs)) call base_states_get(subs, that)
 
-    POP_SUB(base_states_gets_density)
-  end subroutine base_states_gets_density
+    POP_SUB(base_states_get_sub_density)
+  end subroutine base_states_get_sub_density
     
   ! ---------------------------------------------------------
-  subroutine base_states_gets_density_1d(this, name, that, spin, total)
+  subroutine base_states_get_sub_density_1d(this, name, that, spin, total)
     type(base_states_t),          intent(in) :: this
     character(len=*),             intent(in) :: name
     real(kind=wp), dimension(:), pointer     :: that
@@ -428,17 +442,17 @@ contains
 
     type(base_density_t), pointer :: dnst
 
-    PUSH_SUB(base_states_gets_density_1d)
+    PUSH_SUB(base_states_get_sub_density_1d)
 
     nullify(that, dnst)
-    call base_states_gets(this, trim(adjustl(name)), dnst)
+    call base_states_get(this, trim(adjustl(name)), dnst)
     if(associated(dnst)) call base_density_get(dnst, that, spin, total)
 
-    POP_SUB(base_states_gets_density_1d)
-  end subroutine base_states_gets_density_1d
+    POP_SUB(base_states_get_sub_density_1d)
+  end subroutine base_states_get_sub_density_1d
 
   ! ---------------------------------------------------------
-  subroutine base_states_gets_density_2d(this, name, that, total)
+  subroutine base_states_get_sub_density_2d(this, name, that, total)
     type(base_states_t),            intent(in) :: this
     character(len=*),               intent(in) :: name
     real(kind=wp), dimension(:,:), pointer     :: that
@@ -446,14 +460,14 @@ contains
 
     type(base_density_t), pointer :: dnst
 
-    PUSH_SUB(base_states_gets_density_2d)
+    PUSH_SUB(base_states_get_sub_density_2d)
 
     nullify(that, dnst)
-    call base_states_gets(this, trim(adjustl(name)), dnst)
+    call base_states_get(this, trim(adjustl(name)), dnst)
     if(associated(dnst)) call base_density_get(dnst, that, total)
 
-    POP_SUB(base_states_gets_density_2d)
-  end subroutine base_states_gets_density_2d
+    POP_SUB(base_states_get_sub_density_2d)
+  end subroutine base_states_get_sub_density_2d
 
   ! ---------------------------------------------------------
   subroutine base_states_get_info(this, nspin)
