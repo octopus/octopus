@@ -738,12 +738,12 @@ contains
 
   ! ---------------------------------------------------------
   recursive subroutine term_intrf_sets(this, name, that, config, lock, active)
-    type(term_intrf_t),            intent(inout) :: this
-    character(len=*),              intent(in)    :: name
-    type(term_intrf_t),            intent(in)    :: that
-    type(json_object_t), optional, intent(in)    :: config
-    logical,             optional, intent(in)    :: lock
-    logical,             optional, intent(in)    :: active
+    type(term_intrf_t),  intent(inout) :: this
+    character(len=*),    intent(in)    :: name
+    type(term_intrf_t),  intent(in)    :: that
+    type(json_object_t), intent(in)    :: config
+    logical,   optional, intent(in)    :: lock
+    logical,   optional, intent(in)    :: active
 
     PUSH_SUB(term_intrf_sets)
 
@@ -752,13 +752,13 @@ contains
     ASSERT(this%type==that%type)
     select case(this%type)
     case(TERM_TYPE_TERM)
-      call base_term_sets(this%term, trim(adjustl(name)), that%term, config=config, lock=lock, active=active)
+      call base_term_sets(this%term, trim(adjustl(name)), that%term, config, lock=lock, active=active)
     case(TERM_TYPE_POTN)
-      call base_potential_sets(this%potn, trim(adjustl(name)), that%potn, config=config, lock=lock, active=active)
+      call base_potential_sets(this%potn, trim(adjustl(name)), that%potn, config, lock=lock, active=active)
     case(TERM_TYPE_FNCT)
-      call base_functional_sets(this%fnct, trim(adjustl(name)), that%fnct, config=config, lock=lock, active=active)
+      call base_functional_sets(this%fnct, trim(adjustl(name)), that%fnct, config, lock=lock, active=active)
     case(TERM_TYPE_HMLT)
-      call base_hamiltonian_sets(this%hmlt, trim(adjustl(name)), that%hmlt, config=config, lock=lock, active=active)
+      call base_hamiltonian_sets(this%hmlt, trim(adjustl(name)), that%hmlt, config, lock=lock, active=active)
     case default
       ASSERT(.false.)
     end select
@@ -1551,19 +1551,17 @@ contains
   end subroutine base_hamiltonian__sub__hmlt
 
   ! ---------------------------------------------------------
-  subroutine base_hamiltonian__sets__info(this, name, config, lock, active)
-    type(base_hamiltonian_t),      intent(inout) :: this
-    character(len=*),              intent(in)    :: name
-    type(json_object_t), optional, intent(in)    :: config
-    logical,             optional, intent(in)    :: lock
-    logical,             optional, intent(in)    :: active
+  subroutine base_hamiltonian__sets__info(this, name, lock, active)
+    type(base_hamiltonian_t), intent(inout) :: this
+    character(len=*),         intent(in)    :: name
+    logical,        optional, intent(in)    :: lock
+    logical,        optional, intent(in)    :: active
 
     PUSH_SUB(base_hamiltonian__sets__info)
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sys))
     ASSERT(len_trim(adjustl(name))>0)
-    if(present(config)) continue
     if(present(lock)) continue
     if(present(active)) continue
 
@@ -1572,12 +1570,12 @@ contains
   
   ! ---------------------------------------------------------
   recursive subroutine base_hamiltonian__sets__type(this, name, that, config, lock, active)
-    type(base_hamiltonian_t),      intent(inout) :: this
-    character(len=*),              intent(in)    :: name
-    type(base_hamiltonian_t),      intent(in)    :: that
-    type(json_object_t), optional, intent(in)    :: config
-    logical,             optional, intent(in)    :: lock
-    logical,             optional, intent(in)    :: active
+    type(base_hamiltonian_t), intent(inout) :: this
+    character(len=*),         intent(in)    :: name
+    type(base_hamiltonian_t), intent(in)    :: that
+    type(json_object_t),      intent(in)    :: config
+    logical,        optional, intent(in)    :: lock
+    logical,        optional, intent(in)    :: active
 
     type(term_dict_iterator_t)               :: iter
     character(len=BASE_HAMILTONIAN_NAME_LEN) :: snam
@@ -1596,7 +1594,7 @@ contains
       if(.not.associated(strm)) exit
       call term_dict_get(this%hdct, trim(adjustl(snam)), mtrm)
       if(.not.associated(mtrm)) cycle
-      call term_intrf_sets(mtrm, trim(adjustl(name)), strm, config=config, lock=lock, active=active)
+      call term_intrf_sets(mtrm, trim(adjustl(name)), strm, config, lock=lock, active=active)
     end do
     call term_dict_end(iter)
     nullify(mtrm, strm)

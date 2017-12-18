@@ -91,6 +91,11 @@ module base_functional_oct_m
     module procedure base_functional__init__copy
   end interface base_functional__init__
 
+  interface base_functional__sets__
+    module procedure base_functional__sets__info
+    module procedure base_functional__sets__type
+  end interface base_functional__sets__
+
   interface base_functional_new
     module procedure base_functional_new_type
     module procedure base_functional_new_pass
@@ -490,26 +495,43 @@ contains
   end subroutine base_functional_stop
 
   ! ---------------------------------------------------------
-  subroutine base_functional__sets__(this, name, that, config, lock, active)
-    type(base_functional_t),           intent(inout) :: this
-    character(len=*),                  intent(in)    :: name
-    type(base_functional_t), optional, intent(in)    :: that
-    type(json_object_t),     optional, intent(in)    :: config
-    logical,                 optional, intent(in)    :: lock
-    logical,                 optional, intent(in)    :: active
+  subroutine base_functional__sets__info(this, name, lock, active)
+    type(base_functional_t), intent(inout) :: this
+    character(len=*),        intent(in)    :: name
+    logical,       optional, intent(in)    :: lock
+    logical,       optional, intent(in)    :: active
 
-    PUSH_SUB(base_functional__sets__)
+    PUSH_SUB(base_functional__sets__info)
+
+    ASSERT(associated(this%config))
+    ASSERT(len_trim(name)>0)
+    if(present(lock)) continue
+    if(present(active)) continue
+    
+    POP_SUB(base_functional__sets__info)
+  end subroutine base_functional__sets__info
+    
+  ! ---------------------------------------------------------
+  subroutine base_functional__sets__type(this, name, that, config, lock, active)
+    type(base_functional_t), intent(inout) :: this
+    character(len=*),        intent(in)    :: name
+    type(base_functional_t), intent(in)    :: that
+    type(json_object_t),     intent(in)    :: config
+    logical,       optional, intent(in)    :: lock
+    logical,       optional, intent(in)    :: active
+
+    PUSH_SUB(base_functional__sets__type)
 
     ASSERT(associated(this%config))
     ASSERT(len_trim(name)>0)
     ASSERT(associated(that%config))
-    if(present(config)) continue
+    ASSERT(json_len(config)>0)
     if(present(lock)) continue
     if(present(active)) continue
-    if(present(that)) call msgbus_attach(this%msgb, that%msgb)
+    call msgbus_attach(this%msgb, that%msgb)
     
-    POP_SUB(base_functional__sets__)
-  end subroutine base_functional__sets__
+    POP_SUB(base_functional__sets__type)
+  end subroutine base_functional__sets__type
     
   ! ---------------------------------------------------------
   subroutine base_functional__dels__(this, name, that)

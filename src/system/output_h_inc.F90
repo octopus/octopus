@@ -59,7 +59,7 @@
         call base_potential_init(iter, hm%ep%subsys_external)
         do
           nullify(subsys_external, xpot)
-          call base_potential_next(iter, name, subsys_external, err)
+          call base_potential_next(iter, name, subsys_external, ierr=err)
           if(err/=BASE_POTENTIAL_OK)exit
           ASSERT(associated(subsys_external))
           call base_potential_get(subsys_external, xpot)

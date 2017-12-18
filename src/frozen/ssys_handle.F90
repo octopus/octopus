@@ -151,6 +151,7 @@ contains
 
     call base_handle__start__(this, simstr)
     call base_handle_start(this, ssys_handle__start__)
+    call base_handle_sets(this, "frozen", lock=.true.)
 
     POP_SUB(ssys_handle_start)
     
@@ -206,6 +207,7 @@ contains
 
     PUSH_SUB(ssys_handle_stop)
 
+    call base_handle_sets(this, "frozen", lock=.false.)
     call base_handle_stop(this)
 
     POP_SUB(ssys_handle_stop)

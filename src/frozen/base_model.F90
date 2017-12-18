@@ -77,6 +77,11 @@ module base_model_oct_m
     module procedure base_model__init__copy
   end interface base_model__init__
 
+  interface base_model__sets__
+    module procedure base_model__sets__info
+    module procedure base_model__sets__type
+  end interface base_model__sets__
+
   interface base_model_new
     module procedure base_model_new_type
     module procedure base_model_new_pass
@@ -325,29 +330,41 @@ contains
   end subroutine base_model_stop
 
   ! ---------------------------------------------------------
-  subroutine base_model__sets__(this, name, that, config, lock, active)
-    type(base_model_t),            intent(inout) :: this
-    character(len=*),              intent(in)    :: name
-    type(base_model_t),  optional, intent(in)    :: that
-    type(json_object_t), optional, intent(in)    :: config
-    logical,             optional, intent(in)    :: lock
-    logical,             optional, intent(in)    :: active
+  subroutine base_model__sets__info(this, name, lock, active)
+    type(base_model_t), intent(inout) :: this
+    character(len=*),   intent(in)    :: name
+    logical,  optional, intent(in)    :: lock
+    logical,  optional, intent(in)    :: active
 
-    PUSH_SUB(base_model__sets__)
+    PUSH_SUB(base_model__sets__info)
 
     ASSERT(associated(this%config))
     ASSERT(len_trim(adjustl(name))>0)
-    if(present(that))then
-      ASSERT(associated(that%config))
-      call base_system_sets(this%sys, trim(adjustl(name)), that%sys, config=config, lock=lock, active=active)
-      call base_hamiltonian_sets(this%hm, trim(adjustl(name)), that%hm, config=config, lock=lock, active=active)
-    else
-      call base_system_sets(this%sys, trim(adjustl(name)), config=config, lock=lock, active=active)
-      call base_hamiltonian_sets(this%hm, trim(adjustl(name)), config=config, lock=lock, active=active)
-    end if
+    call base_system_sets(this%sys, trim(adjustl(name)), lock=lock, active=active)
+    call base_hamiltonian_sets(this%hm, trim(adjustl(name)), lock=lock, active=active)
     
-    POP_SUB(base_model__sets__)
-  end subroutine base_model__sets__
+    POP_SUB(base_model__sets__info)
+  end subroutine base_model__sets__info
+
+  ! ---------------------------------------------------------
+  subroutine base_model__sets__type(this, name, that, config, lock, active)
+    type(base_model_t),  intent(inout) :: this
+    character(len=*),    intent(in)    :: name
+    type(base_model_t),  intent(in)    :: that
+    type(json_object_t), intent(in)    :: config
+    logical,   optional, intent(in)    :: lock
+    logical,   optional, intent(in)    :: active
+
+    PUSH_SUB(base_model__sets__type)
+
+    ASSERT(associated(this%config))
+    ASSERT(len_trim(adjustl(name))>0)
+    ASSERT(associated(that%config))
+    call base_system_sets(this%sys, trim(adjustl(name)), that%sys, config, lock=lock, active=active)
+    call base_hamiltonian_sets(this%hm, trim(adjustl(name)), that%hm, config, lock=lock, active=active)
+    
+    POP_SUB(base_model__sets__type)
+  end subroutine base_model__sets__type
 
   ! ---------------------------------------------------------
   subroutine base_model__dels__(this, name, that)

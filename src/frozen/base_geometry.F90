@@ -100,16 +100,13 @@ module base_geometry_oct_m
     module procedure base_geometry_get_config
     module procedure base_geometry_get_space
     module procedure base_geometry_get_geometry
+    module procedure base_geometry_get_sub_geometry
   end interface base_geometry_get
 
   interface base_geometry__sets__
     module procedure base_geometry__sets__info
     module procedure base_geometry__sets__type
   end interface base_geometry__sets__
-
-  interface base_geometry_gets
-    module procedure base_geometry_gets_geometry
-  end interface base_geometry_gets
 
   interface base_geometry_next
     module procedure base_geometry_iterator_next_atom
@@ -378,7 +375,9 @@ contains
       type(base_geometry_t),         intent(in)    :: that
       type(json_object_t), optional, intent(in)    :: config
 
-      type(geometry_t), pointer :: pgeo
+      type(json_array_t), pointer :: list
+      type(geometry_t),   pointer :: pgeo
+      integer                     :: ierr
 
       PUSH_SUB(base_geometry_acc.acc)
 
@@ -386,12 +385,20 @@ contains
       ASSERT(associated(that%space))
       ASSERT(geo_intrf_assoc(that%igeo))
       ASSERT(this%space==that%space)
-      nullify(pgeo)
-      if(present(config)) continue
+      nullify(list, pgeo)
       call base_geometry_get(that, pgeo)
       ASSERT(associated(pgeo))
-      call geo_build_extend(bgeo, pgeo)
-      nullify(pgeo)
+      if(present(config))then
+        call json_get(config, "positions", list, ierr)
+        if(ierr/=JSON_OK) nullify(list)
+      end if
+      if(associated(list))then
+        ASSERT(json_len(list)>0)
+        call geo_build_extend(bgeo, pgeo, list)
+      else
+        call geo_build_extend(bgeo, pgeo)
+      end if
+      nullify(list, pgeo)
 
       POP_SUB(base_geometry_acc.acc)
     end subroutine acc
@@ -421,19 +428,17 @@ contains
   end subroutine base_geometry_reset
 
   ! ---------------------------------------------------------
-  subroutine base_geometry__sets__info(this, name, config, lock, active)
-    type(base_geometry_t),         intent(inout) :: this
-    character(len=*),              intent(in)    :: name
-    type(json_object_t), optional, intent(in)    :: config
-    logical,             optional, intent(in)    :: lock
-    logical,             optional, intent(in)    :: active
+  subroutine base_geometry__sets__info(this, name, lock, active)
+    type(base_geometry_t), intent(inout) :: this
+    character(len=*),      intent(in)    :: name
+    logical,     optional, intent(in)    :: lock
+    logical,     optional, intent(in)    :: active
 
     PUSH_SUB(base_geometry__sets__info)
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%space))
     ASSERT(len_trim(adjustl(name))>0)
-    if(present(config)) continue
     if(present(lock)) continue
     if(present(active)) continue
 
@@ -442,17 +447,20 @@ contains
   
   ! ---------------------------------------------------------
   subroutine base_geometry__sets__type(this, name, that, config, lock, active)
-    type(base_geometry_t),         intent(inout) :: this
-    character(len=*),              intent(in)    :: name
-    type(base_geometry_t),         intent(in)    :: that
-    type(json_object_t), optional, intent(in)    :: config
-    logical,             optional, intent(in)    :: lock
-    logical,             optional, intent(in)    :: active
+    type(base_geometry_t), intent(inout) :: this
+    character(len=*),      intent(in)    :: name
+    type(base_geometry_t), intent(in)    :: that
+    type(json_object_t),   intent(in)    :: config
+    logical,     optional, intent(in)    :: lock
+    logical,     optional, intent(in)    :: active
 
+    type(json_array_iterator_t)           :: iter
     character(len=BASE_GEOMETRY_NAME_LEN) :: rnam
+    type(json_object_t),          pointer :: cnfg
+    type(json_array_t),           pointer :: list
     type(geometry_t),             pointer :: pgeo
     integer                               :: indx, ierr
-    logical                               :: dflt, accu
+    logical                               :: dflt, actv, accu
 
     PUSH_SUB(base_geometry__sets__type)
 
@@ -462,17 +470,32 @@ contains
     ASSERT(associated(that%config))
     ASSERT(associated(that%space))
     ASSERT(this%space==that%space)
-    nullify(pgeo)
-    if(present(config)) continue
+    nullify(cnfg, list, pgeo)
     if(present(lock)) continue
-    if(present(active)) continue
     call json_get(this%config, "default", dflt, ierr)
     if(ierr==JSON_OK) dflt = .true.
     if(dflt)then
+      actv = .true.
+      if(present(active)) actv = active
       call json_get(this%config, "reduce", accu, ierr)
       if(ierr/=JSON_OK) accu = .false.
-      if(accu)then
-        call base_geometry__acc__(this, that)
+      if(actv.and.accu)then
+        call json_get(config, "positions", list, ierr)
+        if(ierr/=JSON_OK) nullify(list)
+        if(associated(list))then
+          ASSERT(json_len(list)>0)
+          call json_init(iter, list)
+          do
+            nullify(cnfg)
+            call json_next(iter, cnfg, ierr)
+            if(ierr/=JSON_OK)exit
+            call base_geometry__acc__(this, that, cnfg)
+          end do
+          call json_end(iter)
+          nullify(cnfg, list)
+        else
+          call base_geometry__acc__(this, that)
+        end if
         ASSERT(geo_intrf_alloc(this%igeo))
       end if
       call json_get(this%config, "reference", rnam, ierr)
@@ -481,7 +504,7 @@ contains
         indx = index(trim(adjustl(rnam)), trim(adjustl(name)))
         if(indx==1)then
           ASSERT(.not.geo_intrf_assoc(this%igeo))
-          call base_geometry_gets(this, trim(adjustl(rnam)), pgeo)
+          call base_geometry_get(this, trim(adjustl(rnam)), pgeo)
           ASSERT(associated(pgeo))
           call geo_intrf_set(this%igeo, pgeo)
           nullify(pgeo)
@@ -511,22 +534,22 @@ contains
   end subroutine base_geometry__dels__
 
   ! ---------------------------------------------------------
-  subroutine base_geometry_gets_geometry(this, name, that)
-    type(base_geometry_t), intent(in) :: this
-    character(len=*),      intent(in) :: name
-    type(geometry_t),     pointer     :: that
+  subroutine base_geometry_get_sub_geometry(this, name, that)
+    type(base_geometry_t),     intent(in)  :: this
+    character(len=*),          intent(in)  :: name
+    type(geometry_t), pointer, intent(out) :: that
 
     type(base_geometry_t), pointer :: subs
 
-    PUSH_SUB(base_geometry_gets_geometry)
+    PUSH_SUB(base_geometry_get_sub_geometry)
 
     nullify(subs, that)
     call base_geometry_gets(this, trim(adjustl(name)), subs)
     if(associated(subs)) call base_geometry_get(subs, that)
     nullify(subs)
     
-    POP_SUB(base_geometry_gets_geometry)
-  end subroutine base_geometry_gets_geometry
+    POP_SUB(base_geometry_get_sub_geometry)
+  end subroutine base_geometry_get_sub_geometry
 
   ! ---------------------------------------------------------
   subroutine base_geometry_set_geometry(this, that)
@@ -552,8 +575,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_geometry_get_config(this, that)
-    type(base_geometry_t), target, intent(in) :: this
-    type(json_object_t),  pointer             :: that
+    type(base_geometry_t), target, intent(in)  :: this
+    type(json_object_t),  pointer, intent(out) :: that
 
     PUSH_SUB(base_geometry_get_config)
 
@@ -565,8 +588,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_geometry_get_space(this, that)
-    type(base_geometry_t), target, intent(in) :: this
-    type(space_t),        pointer             :: that
+    type(base_geometry_t), target, intent(in)  :: this
+    type(space_t),        pointer, intent(out) :: that
 
     PUSH_SUB(base_geometry_get_space)
 
@@ -578,8 +601,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_geometry_get_geometry(this, that)
-    type(base_geometry_t), intent(in) :: this
-    type(geometry_t),     pointer     :: that
+    type(base_geometry_t),     intent(in)  :: this
+    type(geometry_t), pointer, intent(out) :: that
 
     PUSH_SUB(base_geometry_get_geometry)
 
@@ -643,7 +666,7 @@ contains
   ! ---------------------------------------------------------
   subroutine base_geometry_iterator_next_atom(this, atom, ierr)
     type(base_geometry_iterator_t), intent(inout) :: this
-    type(atom_t),                  pointer        :: atom
+    type(atom_t),          pointer, intent(out)   :: atom
     integer,              optional, intent(out)   :: ierr
 
     PUSH_SUB(base_geometry_iterator_next_atom)
@@ -656,7 +679,7 @@ contains
   ! ---------------------------------------------------------
   subroutine base_geometry_iterator_next_species(this, spec, ierr)
     type(base_geometry_iterator_t), intent(inout) :: this
-    type(species_t),               pointer        :: spec
+    type(species_t),       pointer, intent(out)   :: spec
     integer,              optional, intent(out)   :: ierr
 
     PUSH_SUB(base_geometry_iterator_next_species)
@@ -669,7 +692,7 @@ contains
   ! ---------------------------------------------------------
   subroutine base_geometry_iterator_next_geometry(this, geometry, ierr)
     type(base_geometry_iterator_t), intent(inout) :: this
-    type(geometry_t),              pointer        :: geometry
+    type(geometry_t),      pointer, intent(out)   :: geometry
     integer,              optional, intent(out)   :: ierr
 
     type(base_geometry_t), pointer :: geom
@@ -678,7 +701,7 @@ contains
     PUSH_SUB(base_geometry_iterator_next_geometry)
 
     nullify(geometry, geom)
-    call base_geometry_next(this, geom, jerr)
+    call base_geometry_next(this, geom, ierr=jerr)
     if(associated(geom)) call base_geometry_get(geom, geometry)
     if(present(ierr)) ierr = jerr
     nullify(geom)

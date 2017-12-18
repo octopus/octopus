@@ -62,7 +62,6 @@ libfrozen_a_SOURCES =		\
 	fio_model.F90		\
 	fio_handle.F90		\
 	fio_config.F90		\
-	frozen_geometry.F90	\
 	frozen_density.F90	\
 	frozen_external.F90	\
 	frozen_hamiltonian.F90	\
@@ -179,14 +178,13 @@ fio_handle.o 		: fio_handle.F90									\
 	fio_model.o fio_density.o base_handle.o base_model.o base_density.o simulation.o
 fio_config.o 		: fio_config.F90 fio_handle.o base_hamiltonian.o base_config.o intrpl.o
 
-frozen_geometry.o 	: frozen_geometry.F90 base_geometry.o geo_build.o geo_intrf.o
 frozen_density.o 	: frozen_density.F90 fio_density.o base_density.o simulation.o
 frozen_external.o 	: frozen_external.F90 fio_external.o base_potential.o simulation.o basis.o
 frozen_hamiltonian.o	: frozen_hamiltonian.F90 frozen_external.o		 				\
 	fio_hamiltonian.o fio_external.o base_hamiltonian.o simulation.o
 frozen_model.o		: frozen_model.F90 frozen_hamiltonian.o frozen_density.o 				\
 	base_model.o base_hamiltonian.o base_density.o
-frozen_handle.o 	: frozen_handle.F90 frozen_model.o frozen_geometry.o fio_handle.o 			\
+frozen_handle.o 	: frozen_handle.F90 frozen_model.o fio_handle.o 					\
 	base_handle.o base_model.o base_geometry.o 
 frozen_config.o 	: frozen_config.F90 frozen_handle.o fio_config.o fio_handle.o				\
 	base_hamiltonian.o base_config.o storage.o

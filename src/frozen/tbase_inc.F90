@@ -102,7 +102,6 @@ module TEMPLATE(base_oct_m)
     SPECIAL(register)
 
   public ::          &
-    SPECIAL(build),  &
     SPECIAL(apply),  &
     SPECIAL(reduce)
     
@@ -142,26 +141,11 @@ module TEMPLATE(base_oct_m)
 
 #endif
 
-  interface TEMPLATE(husk_new)
-    module procedure TEMPLATE(husk_new_type)
-    module procedure TEMPLATE(husk_new_copy)
-  end interface TEMPLATE(husk_new)
-
-  interface TEMPLATE(husk_del)
-    module procedure TEMPLATE(husk_del_type)
-    module procedure TEMPLATE(husk_del_pass)
-  end interface TEMPLATE(husk_del)
-
   interface TEMPLATE(husk_assoc)
     module procedure TEMPLATE(husk_assoc_type)
     module procedure TEMPLATE(husk_assoc_self)
     module procedure TEMPLATE(husk_assoc_husk)
   end interface TEMPLATE(husk_assoc)
-
-  interface TEMPLATE(husk_init)
-    module procedure TEMPLATE(husk_init_type)
-    module procedure TEMPLATE(husk_init_copy)
-  end interface TEMPLATE(husk_init)
 
   interface TEMPLATE(husk_set)
     module procedure TEMPLATE(husk_set_info)
@@ -172,11 +156,6 @@ module TEMPLATE(base_oct_m)
     module procedure TEMPLATE(husk_get_info)
     module procedure TEMPLATE(husk_get_type)
   end interface TEMPLATE(husk_get)
-
-  interface TEMPLATE(husk_end)
-    module procedure TEMPLATE(husk_end_type)
-    module procedure TEMPLATE(husk_end_pass)
-  end interface TEMPLATE(husk_end)
 
   interface TEMPLATE(new)
     module procedure TEMPLATE(new_copy)
@@ -198,10 +177,9 @@ module TEMPLATE(base_oct_m)
     module procedure TEMPLATE(sets_type)
   end interface TEMPLATE(sets)
 
-  interface TEMPLATE(gets)
-    module procedure TEMPLATE(gets_type)
-    module procedure TEMPLATE(gets_config)
-  end interface TEMPLATE(gets)
+  interface TEMPLATE(get)
+    module procedure TEMPLATE(get_sub_config)
+  end interface TEMPLATE(get)
 
   interface TEMPLATE(next)
     module procedure TEMPLATE(iterator_next_name)
@@ -237,88 +215,37 @@ contains
 #include "template.h"
 
   ! ---------------------------------------------------------
-  function TEMPLATE(husk_new_type)(that, config, lock, active) result(this)
-    type(BASE_TYPE_NAME),          intent(in) :: that
-    type(json_object_t), optional, intent(in) :: config
-    logical,             optional, intent(in) :: lock
-    logical,             optional, intent(in) :: active
+  function TEMPLATE(husk_new)(that, config, lock, active) result(this)
+    type(BASE_TYPE_NAME), intent(in) :: that
+    type(json_object_t),  intent(in) :: config
+    logical,    optional, intent(in) :: lock
+    logical,    optional, intent(in) :: active
 
     type(TEMPLATE(husk_t)), pointer :: this
 
-    PUSH_SUB(TEMPLATE(husk_new_type))
+    PUSH_SUB(TEMPLATE(husk_new))
 
     nullify(this)
     SAFE_ALLOCATE(this)
     call TEMPLATE(husk_init)(this, that, config, lock, active)
 
-    POP_SUB(TEMPLATE(husk_new_type))
-  end function TEMPLATE(husk_new_type)
+    POP_SUB(TEMPLATE(husk_new))
+  end function TEMPLATE(husk_new)
 
   ! ---------------------------------------------------------
-  function TEMPLATE(husk_new_copy)(source, mold, deep) result(this)
-    type(TEMPLATE(husk_t)), optional, intent(in) :: source
-    type(TEMPLATE(husk_t)), optional, intent(in) :: mold
-    logical,                optional, intent(in) :: deep
-
-    type(TEMPLATE(husk_t)), pointer :: this
-
-    logical :: dpcp
-
-    PUSH_SUB(TEMPLATE(husk_new_copy))
-
-    ASSERT(.not.(present(source).eqv.present(mold)))
-    nullify(this)
-    SAFE_ALLOCATE(this)
-    dpcp = .false.
-    if(present(deep)) dpcp = deep
-    if(present(source))then
-      call TEMPLATE(husk_copy)(this, source, deep=dpcp)
-    elseif(present(mold))then
-      call TEMPLATE(husk_init)(this, mold, deep=dpcp)
-    else
-      ASSERT(.FALSE.)
-    end if
-
-    POP_SUB(TEMPLATE(husk_new_copy))
-  end function TEMPLATE(husk_new_copy)
-
-  ! ---------------------------------------------------------
-  subroutine TEMPLATE(husk_del_type)(this, full)
+  subroutine TEMPLATE(husk_del)(this)
     type(TEMPLATE(husk_t)), pointer, intent(inout) :: this
-    logical,               optional, intent(in)    :: full
 
-    PUSH_SUB(TEMPLATE(husk_del_type))
+    PUSH_SUB(TEMPLATE(husk_del))
 
     if(associated(this))then
-      call TEMPLATE(husk_end)(this, full)
+      call TEMPLATE(husk_end)(this)
       SAFE_DEALLOCATE_P(this)
     end if
     nullify(this)
 
-    POP_SUB(TEMPLATE(husk_del_type))
-  end subroutine TEMPLATE(husk_del_type)
-
-  ! ---------------------------------------------------------
-  subroutine TEMPLATE(husk_del_pass)(this, finis)
-    type(TEMPLATE(husk_t)), pointer :: this
-
-    interface
-      subroutine finis(this)
-        import :: BASE_TYPE_NAME
-        type(BASE_TYPE_NAME), intent(inout) :: this
-      end subroutine finis
-    end interface
-    
-    PUSH_SUB(TEMPLATE(husk_del_pass))
-
-    if(associated(this))then
-      call TEMPLATE(husk_end)(this, finis)
-      SAFE_DEALLOCATE_P(this)
-    end if
-    nullify(this)
-
-    POP_SUB(TEMPLATE(husk_del_pass))
-  end subroutine TEMPLATE(husk_del_pass)
+    POP_SUB(TEMPLATE(husk_del))
+  end subroutine TEMPLATE(husk_del)
 
   ! ---------------------------------------------------------
   function TEMPLATE(husk_assoc_type)(this) result(that)
@@ -334,10 +261,12 @@ contains
     case(TEMPLATE(HUSK_NULL))
       ASSERT(.not.associated(this%self))
       ASSERT(.not.associated(this%rcnt))
+      ASSERT(.not.associated(this%cnfg))
       that = .false.
     case(TEMPLATE(HUSK_ASSC))
       ASSERT(associated(this%self))
       ASSERT(associated(this%rcnt))
+      ASSERT(associated(this%cnfg))
       that = .true.
     case default
       ASSERT(.false.)
@@ -383,14 +312,14 @@ contains
   end function TEMPLATE(husk_assoc_husk)
 
   ! ---------------------------------------------------------
-  subroutine TEMPLATE(husk_init_type)(this, that, config, lock, active)
-    type(TEMPLATE(husk_t)),        intent(out) :: this
-    type(BASE_TYPE_NAME),          intent(in)  :: that
-    type(json_object_t), optional, intent(in)  :: config
-    logical,             optional, intent(in)  :: lock
-    logical,             optional, intent(in)  :: active
+  subroutine TEMPLATE(husk_init)(this, that, config, lock, active)
+    type(TEMPLATE(husk_t)), intent(out) :: this
+    type(BASE_TYPE_NAME),   intent(in)  :: that
+    type(json_object_t),    intent(in)  :: config
+    logical,      optional, intent(in)  :: lock
+    logical,      optional, intent(in)  :: active
 
-    PUSH_SUB(TEMPLATE(husk_init_type))
+    PUSH_SUB(TEMPLATE(husk_init))
 
     nullify(this%self, this%rcnt, this%cnfg)
     this%lock = .false.
@@ -398,46 +327,18 @@ contains
     this%type = TEMPLATE(HUSK_NULL)
     call TEMPLATE(husk_set)(this, type=that, config=config, lock=lock, active=active)
 
-    POP_SUB(TEMPLATE(husk_init_type))
-  end subroutine TEMPLATE(husk_init_type)
+    POP_SUB(TEMPLATE(husk_init))
+  end subroutine TEMPLATE(husk_init)
 
   ! ---------------------------------------------------------
-  subroutine TEMPLATE(husk_init_copy)(this, that, deep)
-    type(TEMPLATE(husk_t)), intent(out) :: this
-    type(TEMPLATE(husk_t)), intent(in)  :: that
-    logical,      optional, intent(in)  :: deep
-
-    type(BASE_TYPE_NAME), pointer :: self
-    logical                       :: dpcp
-
-    PUSH_SUB(TEMPLATE(husk_init_copy))
-
-    ASSERT(TEMPLATE(husk_assoc)(that))
-    nullify(self)
-    dpcp = .false.
-    if(present(deep)) dpcp = deep
-    if(dpcp)then
-      self => TEMPLATE(new)(mold=that%self)
-    else
-      self => that%self
-    end if
-    call TEMPLATE(husk_init)(this, self, config=that%cnfg, lock=that%lock, active=that%actv)
-    nullify(self)
-
-    POP_SUB(TEMPLATE(husk_init_copy))
-  end subroutine TEMPLATE(husk_init_copy)
-
-  ! ---------------------------------------------------------
-  subroutine TEMPLATE(husk_set_info)(this, config, lock, active)
-    type(TEMPLATE(husk_t)),                intent(inout) :: this
-    type(json_object_t), target, optional, intent(in)    :: config
-    logical,                     optional, intent(in)    :: lock
-    logical,                     optional, intent(in)    :: active
+  subroutine TEMPLATE(husk_set_info)(this, lock, active)
+    type(TEMPLATE(husk_t)), intent(inout) :: this
+    logical,      optional, intent(in)    :: lock
+    logical,      optional, intent(in)    :: active
 
     PUSH_SUB(TEMPLATE(husk_set_info))
 
     ASSERT(TEMPLATE(husk_assoc)(this))
-    if(present(config)) this%cnfg =>config
     if(present(lock))   this%lock = lock
     if(present(active)) this%actv = active
 
@@ -446,22 +347,23 @@ contains
 
   ! ---------------------------------------------------------
   subroutine TEMPLATE(husk_set_type)(this, type, config, lock, active)
-    type(TEMPLATE(husk_t)),        intent(inout) :: this
-    type(BASE_TYPE_NAME),  target, intent(in)    :: type
-    type(json_object_t), optional, intent(in)    :: config
-    logical,             optional, intent(in)    :: lock
-    logical,             optional, intent(in)    :: active
+    type(TEMPLATE(husk_t)),       intent(inout) :: this
+    type(BASE_TYPE_NAME), target, intent(in)    :: type
+    type(json_object_t),  target, intent(in)    :: config
+    logical,            optional, intent(in)    :: lock
+    logical,            optional, intent(in)    :: active
 
     PUSH_SUB(TEMPLATE(husk_set_type))
 
     ASSERT(this%type==TEMPLATE(HUSK_NULL))
     ASSERT(.not.TEMPLATE(husk_assoc)(this))
     this%self => type
+    this%cnfg => config
     call SPECIAL(register)(type, this%rcnt)
     ASSERT(associated(this%rcnt))
     call refcount_inc(this%rcnt)
     this%type = TEMPLATE(HUSK_ASSC)
-    call TEMPLATE(husk_set)(this, config=config, lock=lock, active=active)
+    call TEMPLATE(husk_set)(this, lock=lock, active=active)
 
     POP_SUB(TEMPLATE(husk_set_type))
   end subroutine TEMPLATE(husk_set_type)
@@ -502,80 +404,34 @@ contains
   end subroutine TEMPLATE(husk_get_type)
 
   ! ---------------------------------------------------------
-  subroutine TEMPLATE(husk_copy)(this, that, deep)
+  subroutine TEMPLATE(husk_copy)(this, that)
     type(TEMPLATE(husk_t)), intent(inout) :: this
     type(TEMPLATE(husk_t)), intent(in)    :: that
-    logical,      optional, intent(in)    :: deep
-
-    type(BASE_TYPE_NAME), pointer :: self
-    logical                       :: dpcp
 
     PUSH_SUB(TEMPLATE(husk_copy))
 
-    nullify(self)
-    call TEMPLATE(husk_end)(this, full=deep)
+    call TEMPLATE(husk_end)(this)
     this%type = that%type
-    if(TEMPLATE(husk_assoc)(that))then
-      dpcp = .false.
-      if(present(deep)) dpcp = deep
-      if(dpcp)then
-        self => TEMPLATE(new)(source=that%self)
-      else
-        self => that%self
-      end if
-      call TEMPLATE(husk_set)(this, type=self, config=that%cnfg, lock=that%lock, active=that%actv)
-    end if
+    if(TEMPLATE(husk_assoc)(that))&
+      call TEMPLATE(husk_set)(this, that%self, that%cnfg, lock=that%lock, active=that%actv)
 
     POP_SUB(TEMPLATE(husk_copy))
   end subroutine TEMPLATE(husk_copy)
 
   ! ---------------------------------------------------------
-  subroutine TEMPLATE(husk_end_type)(this, full)
+  subroutine TEMPLATE(husk_end)(this)
     type(TEMPLATE(husk_t)), intent(inout) :: this
-    logical,      optional, intent(in)    :: full
 
-    logical :: ifll
+    PUSH_SUB(TEMPLATE(husk_end))
 
-    PUSH_SUB(TEMPLATE(husk_end_type))
-
-    ifll = .false.
-    if(present(full)) ifll = full
-    if(TEMPLATE(husk_assoc)(this))then
-      call refcount_dec(this%rcnt)
-      if(ifll) call TEMPLATE(del)(this%self)
-    end if
+    if(TEMPLATE(husk_assoc)(this)) call refcount_dec(this%rcnt)
     nullify(this%self, this%rcnt, this%cnfg)
     this%lock = .false.
     this%actv = .true.
     this%type = TEMPLATE(HUSK_DISA)
 
-    POP_SUB(TEMPLATE(husk_end_type))
-  end subroutine TEMPLATE(husk_end_type)
-
-  ! ---------------------------------------------------------
-  subroutine TEMPLATE(husk_end_pass)(this, finis)
-    type(TEMPLATE(husk_t)), intent(inout) :: this
-
-    interface
-      subroutine finis(this)
-        import :: BASE_TYPE_NAME
-        type(BASE_TYPE_NAME), intent(inout) :: this
-      end subroutine finis
-    end interface
-    
-    PUSH_SUB(TEMPLATE(husk_end_pass))
-
-    if(TEMPLATE(husk_assoc)(this))then
-      call refcount_dec(this%rcnt)
-      call TEMPLATE(del)(this%self, finis)
-    end if
-    nullify(this%self, this%rcnt, this%cnfg)
-    this%lock = .false.
-    this%actv = .true.
-    this%type = TEMPLATE(HUSK_DISA)
-
-    POP_SUB(TEMPLATE(husk_end_pass))
-  end subroutine TEMPLATE(husk_end_pass)
+    POP_SUB(TEMPLATE(husk_end))
+  end subroutine TEMPLATE(husk_end)
 
   ! ---------------------------------------------------------
   recursive function TEMPLATE(new_copy)(source, mold) result(this)
@@ -649,6 +505,10 @@ contains
     type(TEMPLATE(dict_iterator_t))   :: iter
     character(len=TEMPLATE(NAME_LEN)) :: name
     type(TEMPLATE(husk_t)),   pointer :: husk
+    type(BASE_TYPE_NAME),     pointer :: subs
+    type(json_object_t),      pointer :: cnfg
+    logical                           :: lock, actv
+    integer                           :: ierr
 
     PUSH_SUB(TEMPLATE(init_copy))
 
@@ -656,13 +516,16 @@ contains
     call SPECIAL(init)(this, that)
     call TEMPLATE(dict_init)(iter, that%dict)
     do
-      nullify(husk)
-      call TEMPLATE(dict_next)(iter, name, husk)
-      if(.not.associated(husk))exit
-      call INTERNAL(sets)(this, trim(adjustl(name)), TEMPLATE(husk_new)(mold=husk, deep=.true.))
+      nullify(husk, subs, cnfg)
+      call TEMPLATE(dict_next)(iter, name, husk, ierr)
+      if(ierr/=TEMPLATE(OK))exit
+      ASSERT(associated(husk))
+      ASSERT(TEMPLATE(husk_assoc)(husk))
+      call TEMPLATE(husk_get)(husk, type=subs, config=cnfg, lock=lock, active=actv)
+      call TEMPLATE(sets)(this, trim(adjustl(name)), TEMPLATE(new)(mold=subs), config=cnfg, lock=lock, active=actv)
     end do
     call TEMPLATE(dict_end)(iter)
-    nullify(husk)
+    nullify(husk, subs, cnfg)
 
     POP_SUB(TEMPLATE(init_copy))
   end subroutine TEMPLATE(init_copy)
@@ -679,42 +542,6 @@ contains
 
     POP_SUB(SPECIAL(register))
   end subroutine SPECIAL(register)
-
-  ! ---------------------------------------------------------
-  subroutine SPECIAL(build)(this, build)
-    type(BASE_TYPE_NAME), intent(inout) :: this
-
-    interface
-      subroutine build(this, name, that)
-        import :: BASE_TYPE_NAME
-        type(BASE_TYPE_NAME), intent(inout) :: this
-        character(len=*),     intent(in)    :: name
-        type(BASE_TYPE_NAME), intent(in)    :: that
-      end subroutine build
-    end interface
-
-    type(TEMPLATE(dict_iterator_t))   :: iter
-    character(len=TEMPLATE(NAME_LEN)) :: name
-    type(TEMPLATE(husk_t)),   pointer :: husk
-    type(BASE_TYPE_NAME),     pointer :: subs
-
-    PUSH_SUB(SPECIAL(build))
-
-    ASSERT(associated(this%config))
-    call TEMPLATE(dict_init)(iter, this%dict)
-    do
-      nullify(subs)
-      call TEMPLATE(dict_next)(iter, name, husk)
-      if(.not.associated(husk))exit
-      call TEMPLATE(husk_get)(husk, type=subs)
-      ASSERT(associated(subs))
-      call build(this, trim(adjustl(name)), subs)
-    end do
-    call TEMPLATE(dict_end)(iter)
-    nullify(subs)
-
-    POP_SUB(SPECIAL(build))
-  end subroutine SPECIAL(build)
 
   ! ---------------------------------------------------------
   subroutine SPECIAL(apply)(this, operation, parent)
@@ -784,13 +611,7 @@ contains
       if(.not.associated(husk))exit
       ASSERT(TEMPLATE(husk_assoc)(husk))
       call TEMPLATE(husk_get)(husk, type=subs, active=actv, config=cnfg)
-      if(actv)then
-        if(associated(cnfg))then
-          call operation(this, subs, config=cnfg)
-        else
-          call operation(this, subs)
-        end if
-      endif
+      if(actv) call operation(this, subs, config=cnfg)
     end do
     call TEMPLATE(dict_end)(iter)
     nullify(husk, subs)
@@ -802,20 +623,20 @@ contains
 
   ! ---------------------------------------------------------
   subroutine SPECIAL(sets)(this, name, that, config, lock, active)
-    type(BASE_TYPE_NAME),           intent(inout) :: this
-    character(len=*),               intent(in)    :: name
+    type(BASE_TYPE_NAME), intent(inout) :: this
+    character(len=*),     intent(in)    :: name
     type(BASE_TYPE_NAME), optional, intent(in)    :: that
     type(json_object_t),  optional, intent(in)    :: config
-    logical,              optional, intent(in)    :: lock
-    logical,              optional, intent(in)    :: active
+    logical,    optional, intent(in)    :: lock
+    logical,    optional, intent(in)    :: active
 
     PUSH_SUB(SPECIAL(sets))
 
     ASSERT(associated(this%config))
     ASSERT(len_trim(adjustl(name))>0)
-    if(present(that)) continue
+    if(present(that))   continue
     if(present(config)) continue
-    if(present(lock)) continue
+    if(present(lock))   continue
     if(present(active)) continue
     
     POP_SUB(SPECIAL(sets))
@@ -839,79 +660,56 @@ contains
 #endif
 
   ! ---------------------------------------------------------
-  recursive subroutine INTERNAL(sets)(this, name, that)
-    type(BASE_TYPE_NAME),   intent(inout) :: this
-    character(len=*),       intent(in)    :: name
-    type(TEMPLATE(husk_t)), intent(in)    :: that
-
-    type(TEMPLATE(husk_t)), pointer :: husk
-    type(BASE_TYPE_NAME),   pointer :: subs
-    type(json_object_t),    pointer :: cnfg
-    logical                         :: lock
-    logical                         :: actv
-    integer                         :: ierr
-
-    PUSH_SUB(INTERNAL(sets))
-
-    ASSERT(associated(this%config))
-    nullify(husk, subs, cnfg)
-    call TEMPLATE(dict_del)(this%dict, trim(adjustl(name)), husk, ierr)
-    if(ierr==TEMPLATE(OK))then
-      ASSERT(associated(husk))
-      call TEMPLATE(husk_del)(husk)
-      nullify(husk)
-    end if
-    call TEMPLATE(dict_set)(this%dict, trim(adjustl(name)), that)
-    call TEMPLATE(husk_get)(that, type=subs, config=cnfg, lock=lock, active=actv)
-    ASSERT(associated(subs))
-    if(associated(cnfg))then
-      call SPECIAL(sets)(this, trim(adjustl(name)), that=subs, config=cnfg, lock=lock, active=actv)
-    else
-      call SPECIAL(sets)(this, trim(adjustl(name)), that=subs, lock=lock, active=actv)
-    end if
-
-    POP_SUB(INTERNAL(sets))
-  end subroutine INTERNAL(sets)
-    
-  ! ---------------------------------------------------------
-  recursive subroutine TEMPLATE(sets_info)(this, name, config, lock, active)
-    type(BASE_TYPE_NAME),          intent(inout) :: this
-    character(len=*),              intent(in)    :: name
-    type(json_object_t), optional, intent(in)    :: config
-    logical,             optional, intent(in)    :: lock
-    logical,             optional, intent(in)    :: active
+  recursive subroutine TEMPLATE(sets_info)(this, name, lock, active)
+    type(BASE_TYPE_NAME), intent(inout) :: this
+    character(len=*),     intent(in)    :: name
+    logical,    optional, intent(in)    :: lock
+    logical,    optional, intent(in)    :: active
 
     type(TEMPLATE(husk_t)), pointer :: husk
     integer                         :: ierr
-    
+
     PUSH_SUB(TEMPLATE(sets_info))
 
     ASSERT(associated(this%config))
     nullify(husk)
-    call INTERNAL(gets)(this, name, husk, ierr)
+    call TEMPLATE(dict_get)(this%dict, trim(adjustl(name)), husk, ierr)
     ASSERT(ierr==TEMPLATE(OK))
     ASSERT(associated(husk))
     ASSERT(TEMPLATE(husk_assoc)(husk))
-    call TEMPLATE(husk_set)(husk, config=config, lock=lock, active=active)
+    call TEMPLATE(husk_set)(husk, lock=lock, active=active)
+    call SPECIAL(sets)(this, trim(adjustl(name)), lock=lock, active=active)
     nullify(husk)
-    call SPECIAL(sets)(this, trim(adjustl(name)), config=config, lock=lock, active=active)
 
     POP_SUB(TEMPLATE(sets_info))
   end subroutine TEMPLATE(sets_info)
     
   ! ---------------------------------------------------------
   recursive subroutine TEMPLATE(sets_type)(this, name, that, config, lock, active)
-    type(BASE_TYPE_NAME),          intent(inout) :: this
-    character(len=*),              intent(in)    :: name
-    type(BASE_TYPE_NAME),          intent(in)    :: that
-    type(json_object_t), optional, intent(in)    :: config
-    logical,             optional, intent(in)    :: lock
-    logical,             optional, intent(in)    :: active
+    type(BASE_TYPE_NAME), intent(inout) :: this
+    character(len=*),     intent(in)    :: name
+    type(BASE_TYPE_NAME), intent(in)    :: that
+    type(json_object_t),  intent(in)    :: config
+    logical,    optional, intent(in)    :: lock
+    logical,    optional, intent(in)    :: active
+
+    type(TEMPLATE(husk_t)), pointer :: husk
+    integer                         :: ierr
 
     PUSH_SUB(TEMPLATE(sets_type))
 
     ASSERT(associated(this%config))
-    call INTERNAL(sets)(this, trim(adjustl(name)), TEMPLATE(husk_new)(that, config=config, lock=lock, active=active))
+    ASSERT(associated(that%config))
+    nullify(husk)
+    call TEMPLATE(dict_del)(this%dict, trim(adjustl(name)), husk, ierr)
+    if(ierr==TEMPLATE(OK))then
+      ASSERT(associated(husk))
+      ASSERT(TEMPLATE(husk_assoc)(husk))
+      call TEMPLATE(husk_del)(husk)
+      nullify(husk)
+    end if
+    call TEMPLATE(dict_set)(this%dict, trim(adjustl(name)), TEMPLATE(husk_new)(that, config, lock=lock, active=active))
+    call SPECIAL(sets)(this, trim(adjustl(name)), that, config, lock=lock, active=active)
 
     POP_SUB(TEMPLATE(sets_type))
   end subroutine TEMPLATE(sets_type)
@@ -950,10 +748,13 @@ contains
   end subroutine INTERNAL(gets)
 
   ! ---------------------------------------------------------
-  subroutine TEMPLATE(gets_type)(this, name, that)
-    type(BASE_TYPE_NAME),          intent(in)  :: this
-    character(len=*),              intent(in)  :: name
-    type(BASE_TYPE_NAME), pointer, intent(out) :: that
+  subroutine TEMPLATE(gets)(this, name, type, config, lock, active)
+    type(BASE_TYPE_NAME),                    intent(in)  :: this
+    character(len=*),                        intent(in)  :: name
+    type(BASE_TYPE_NAME), pointer, optional, intent(out) :: type
+    type(json_object_t),  pointer, optional, intent(out) :: config
+    logical,                       optional, intent(out) :: lock
+    logical,                       optional, intent(out) :: active
 
     type(TEMPLATE(husk_t)), pointer :: husk
     integer                         :: ierr
@@ -961,17 +762,21 @@ contains
     PUSH_SUB(TEMPLATE(gets_type))
 
     ASSERT(associated(this%config))
-    nullify(that, husk)
+    nullify(type, husk)
     call INTERNAL(gets)(this, name, husk, ierr)
     if(ierr==TEMPLATE(OK))then
       ASSERT(associated(husk))
       ASSERT(TEMPLATE(husk_assoc)(husk))
-      call TEMPLATE(husk_get)(husk, type=that)
+      if(present(type))then
+        call TEMPLATE(husk_get)(husk, type=type, config=config, lock=lock, active=active)
+      else
+        call TEMPLATE(husk_get)(husk, config=config, lock=lock, active=active)
+      end if
     end if
     nullify(husk)
 
-    POP_SUB(TEMPLATE(gets_type))
-  end subroutine TEMPLATE(gets_type)
+    POP_SUB(TEMPLATE(gets))
+  end subroutine TEMPLATE(gets)
 
   ! ---------------------------------------------------------
   recursive subroutine TEMPLATE(dels)(this, name, that)
@@ -997,22 +802,22 @@ contains
   end subroutine TEMPLATE(dels)
 
   ! ---------------------------------------------------------
-  subroutine TEMPLATE(gets_config)(this, name, that)
+  subroutine TEMPLATE(get_sub_config)(this, name, that)
     type(BASE_TYPE_NAME),         intent(in)  :: this
     character(len=*),             intent(in)  :: name
     type(json_object_t), pointer, intent(out) :: that
     
     type(BASE_TYPE_NAME), pointer :: subs
 
-    PUSH_SUB(TEMPLATE(gets_config))
+    PUSH_SUB(TEMPLATE(get_sub_config))
 
     nullify(that, subs)
     call TEMPLATE(gets)(this, trim(adjustl(name)), subs)
     if(associated(subs)) call TEMPLATE(get)(subs, that)
     nullify(subs)
 
-    POP_SUB(TEMPLATE(gets_config))
-  end subroutine TEMPLATE(gets_config)
+    POP_SUB(TEMPLATE(get_sub_config))
+  end subroutine TEMPLATE(get_sub_config)
 
   ! ---------------------------------------------------------
   recursive subroutine TEMPLATE(copy_type)(this, that)
@@ -1022,7 +827,11 @@ contains
     type(TEMPLATE(dict_iterator_t))   :: iter
     character(len=TEMPLATE(NAME_LEN)) :: name
     type(TEMPLATE(husk_t)),   pointer :: husk
+    type(BASE_TYPE_NAME),     pointer :: subs
+    type(json_object_t),      pointer :: cnfg
     type(refcount_t),         pointer :: rcnt
+    logical                           :: lock, actv
+    integer                           :: ierr
 
     PUSH_SUB(TEMPLATE(copy_type))
 
@@ -1032,13 +841,16 @@ contains
     call SPECIAL(copy)(this, that)
     call TEMPLATE(dict_init)(iter, that%dict)
     do
-      nullify(husk)
-      call TEMPLATE(dict_next)(iter, name, husk)
-      if(.not.associated(husk))exit
-      call INTERNAL(sets)(this, trim(adjustl(name)), TEMPLATE(husk_new)(source=husk, deep=.true.))
+      nullify(husk, subs, cnfg)
+      call TEMPLATE(dict_next)(iter, name, husk, ierr)
+      if(ierr/=TEMPLATE(OK))exit
+      ASSERT(associated(husk))
+      ASSERT(TEMPLATE(husk_assoc)(husk))
+      call TEMPLATE(husk_get)(husk, type=subs, config=cnfg, lock=lock, active=actv)
+      call TEMPLATE(sets)(this, trim(adjustl(name)), TEMPLATE(new)(source=subs), config=cnfg, lock=lock, active=actv)
     end do
     call TEMPLATE(dict_end)(iter)
-    nullify(husk)
+    nullify(husk, subs, cnfg)
     this%rcnt => rcnt
     nullify(rcnt)
 
@@ -1070,17 +882,20 @@ contains
     character(len=TEMPLATE(NAME_LEN)) :: name
     type(TEMPLATE(husk_t)),   pointer :: husk
     type(BASE_TYPE_NAME),     pointer :: subs
+    integer                           :: ierr
 
     PUSH_SUB(TEMPLATE(end_pass))
 
     do
       nullify(husk, subs)
-      call TEMPLATE(dict_pop)(this%dict, name, husk)
-      if(.not.associated(husk))exit
+      call TEMPLATE(dict_pop)(this%dict, name, husk, ierr)
+      if(ierr/=TEMPLATE(OK))exit
+      ASSERT(associated(husk))
+      ASSERT(TEMPLATE(husk_assoc)(husk))
       call TEMPLATE(husk_get)(husk, type=subs)
-      ASSERT(associated(subs))
+      call TEMPLATE(husk_del)(husk)
       call SPECIAL(dels)(this, trim(adjustl(name)), subs)
-      call TEMPLATE(husk_del)(husk, finis)
+      call TEMPLATE(del)(subs, finis)
     end do
     nullify(husk, subs)
     call SPECIAL(end)(this)
@@ -1185,6 +1000,7 @@ contains
     call TEMPLATE(dict_next)(this%iter, husk, jerr)
     if(jerr==TEMPLATE(OK))then
       ASSERT(associated(husk))
+      ASSERT(TEMPLATE(husk_assoc)(husk))
       call TEMPLATE(husk_get)(husk, type=that)
     end if
     nullify(husk)
@@ -1195,10 +1011,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine TEMPLATE(iterator_next_name_type)(this, name, that, ierr)
-    type(TEMPLATE(iterator_t)), intent(inout) :: this
-    character(len=*),           intent(out)   :: name
-    type(TEMPLATE(t)), pointer, intent(out)   :: that
-    integer,          optional, intent(out)   :: ierr
+    type(TEMPLATE(iterator_t)),    intent(inout) :: this
+    character(len=*),              intent(out)   :: name
+    type(BASE_TYPE_NAME), pointer, intent(out)   :: that
+    integer,             optional, intent(out)   :: ierr
 
     type(TEMPLATE(husk_t)), pointer :: husk
     integer                         :: jerr
@@ -1209,6 +1025,7 @@ contains
     call TEMPLATE(dict_next)(this%iter, name, husk, jerr)
     if(jerr==TEMPLATE(OK))then
       ASSERT(associated(husk))
+      ASSERT(TEMPLATE(husk_assoc)(husk))
       call TEMPLATE(husk_get)(husk, type=that)
     end if
     nullify(husk)

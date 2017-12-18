@@ -96,6 +96,11 @@ module base_handle_oct_m
     module procedure base_handle__stop__pass
   end interface base_handle__stop__
 
+  interface base_handle__sets__
+    module procedure base_handle__sets__info
+    module procedure base_handle__sets__type
+  end interface base_handle__sets__
+
   interface base_handle_new
     module procedure base_handle_new_type
     module procedure base_handle_new_pass
@@ -151,7 +156,7 @@ contains
   end function base_handle_new_type
 
   ! ---------------------------------------------------------
-  function base_handle_new_pass(config, init) result(this)
+  recursive function base_handle_new_pass(config, init) result(this)
     type(json_object_t), intent(in) :: config
 
     type(base_handle_t), pointer :: this
@@ -560,27 +565,39 @@ contains
   end subroutine base_handle_stop_pass
 
   ! ---------------------------------------------------------
-  subroutine base_handle__sets__(this, name, that, config, lock, active)
-    type(base_handle_t),           intent(inout) :: this
-    character(len=*),              intent(in)    :: name
-    type(base_handle_t), optional, intent(in)    :: that
-    type(json_object_t), optional, intent(in)    :: config
-    logical,             optional, intent(in)    :: lock
-    logical,             optional, intent(in)    :: active
+  subroutine base_handle__sets__info(this, name, lock, active)
+    type(base_handle_t), intent(inout) :: this
+    character(len=*),    intent(in)    :: name
+    logical,   optional, intent(in)    :: lock
+    logical,   optional, intent(in)    :: active
 
-    PUSH_SUB(base_handle__sets__)
+    PUSH_SUB(base_handle__sets__info)
 
     ASSERT(associated(this%config))
     ASSERT(len_trim(adjustl(name))>0)
-    if(present(that))then
-      ASSERT(associated(that%config))
-      call base_model_sets(this%model, trim(adjustl(name)), that%model, config=config, lock=lock, active=active)
-    else
-      call base_model_sets(this%model, trim(adjustl(name)), config=config, lock=lock, active=active)
-    end if
+    call base_model_sets(this%model, trim(adjustl(name)), lock=lock, active=active)
 
-    POP_SUB(base_handle__sets__)
-  end subroutine base_handle__sets__
+    POP_SUB(base_handle__sets__info)
+  end subroutine base_handle__sets__info
+
+  ! ---------------------------------------------------------
+  subroutine base_handle__sets__type(this, name, that, config, lock, active)
+    type(base_handle_t), intent(inout) :: this
+    character(len=*),    intent(in)    :: name
+    type(base_handle_t), intent(in)    :: that
+    type(json_object_t), intent(in)    :: config
+    logical,   optional, intent(in)    :: lock
+    logical,   optional, intent(in)    :: active
+
+    PUSH_SUB(base_handle__sets__type)
+
+    ASSERT(associated(this%config))
+    ASSERT(len_trim(adjustl(name))>0)
+    ASSERT(associated(that%config))
+    call base_model_sets(this%model, trim(adjustl(name)), that%model, config, lock=lock, active=active)
+
+    POP_SUB(base_handle__sets__type)
+  end subroutine base_handle__sets__type
 
   ! ---------------------------------------------------------
   subroutine base_handle__dels__(this, name, that)
