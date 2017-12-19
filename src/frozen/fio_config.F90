@@ -98,14 +98,12 @@ contains
   end subroutine fio_config_parse_get_file
 
   ! ---------------------------------------------------------
-  subroutine fio_config_parse_storage(this, interpolation, allocate)
+  subroutine fio_config_parse_storage(this, allocate)
     type(json_object_t), intent(inout) :: this
-    integer,   optional, intent(in)    :: interpolation
     logical,   optional, intent(in)    :: allocate
 
     PUSH_SUB(fio_config_parse_storage)
 
-    if(present(interpolation)) call json_set(this, "type", interpolation)
     if(present(allocate)) call json_set(this, "allocate", allocate)
 
     POP_SUB(fio_config_parse_storage)
@@ -244,10 +242,9 @@ contains
   end subroutine fio_config_parse_simulation
 
   ! ---------------------------------------------------------
-  subroutine fio_config_parse_density(this, dirname, interpolation, usedensity, invertpol)
+  subroutine fio_config_parse_density(this, dirname, usedensity, invertpol)
     type(json_object_t), intent(inout) :: this
     character(len=*),    intent(in)    :: dirname
-    integer,   optional, intent(in)    :: interpolation
     logical,   optional, intent(in)    :: usedensity
     logical,   optional, intent(in)    :: invertpol
 
@@ -282,20 +279,20 @@ contains
     end do
     call json_set(this, "dir", trim(adjustl(odir)))
     nullify(list)
+    call json_set(this, "load", usedensity)
     call json_set(this, "invertpolarization", invertpol)
     call json_get(this, "storage", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call fio_config_parse_storage(cnfg, interpolation, usedensity)
+    call fio_config_parse_storage(cnfg, usedensity)
     nullify(cnfg)
 
     POP_SUB(fio_config_parse_density)
   end subroutine fio_config_parse_density
 
   ! ---------------------------------------------------------
-  subroutine fio_config_parse_states(this, dirname, interpolation, usedensity, invertpol)
+  subroutine fio_config_parse_states(this, dirname, usedensity, invertpol)
     type(json_object_t), intent(inout) :: this
     character(len=*),    intent(in)    :: dirname
-    integer,   optional, intent(in)    :: interpolation
     logical,   optional, intent(in)    :: usedensity
     logical,   optional, intent(in)    :: invertpol
 
@@ -307,17 +304,16 @@ contains
     nullify(cnfg)
     call json_get(this, "density", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call fio_config_parse_density(cnfg, dirname, interpolation, usedensity, invertpol)
+    call fio_config_parse_density(cnfg, dirname, usedensity, invertpol)
     nullify(cnfg)
 
     POP_SUB(fio_config_parse_states)
   end subroutine fio_config_parse_states
 
   ! ---------------------------------------------------------
-  subroutine fio_config_parse_system(this, dirname, interpolation, usedensity, invertpol)
+  subroutine fio_config_parse_system(this, dirname, usedensity, invertpol)
     type(json_object_t), intent(inout) :: this
     character(len=*),    intent(in)    :: dirname
-    integer,   optional, intent(in)    :: interpolation
     logical,   optional, intent(in)    :: usedensity
     logical,   optional, intent(in)    :: invertpol
 
@@ -329,17 +325,16 @@ contains
     nullify(cnfg)
     call json_get(this, "states", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call fio_config_parse_states(cnfg, dirname, interpolation, usedensity, invertpol)
+    call fio_config_parse_states(cnfg, dirname, usedensity, invertpol)
     nullify(cnfg)
 
     POP_SUB(fio_config_parse_system)
   end subroutine fio_config_parse_system
 
   ! ---------------------------------------------------------
-  subroutine fio_config_parse_external(this, dirname, interpolation, usepotential)
+  subroutine fio_config_parse_external(this, dirname, usepotential)
     type(json_object_t), intent(inout) :: this
     character(len=*),    intent(in)    :: dirname
-    integer,   optional, intent(in)    :: interpolation
     logical,   optional, intent(in)    :: usepotential
 
     type(json_object_t), pointer :: cnfg
@@ -364,17 +359,16 @@ contains
     call json_set(this, "file", trim(adjustl(file)))
     call json_get(this, "storage", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call fio_config_parse_storage(cnfg, interpolation, usepotential)
+    call fio_config_parse_storage(cnfg, usepotential)
     nullify(cnfg)
 
     POP_SUB(fio_config_parse_external)
   end subroutine fio_config_parse_external
 
   ! ---------------------------------------------------------
-  subroutine fio_config_parse_hamiltonian(this, dirname, interpolation, usepotential)
+  subroutine fio_config_parse_hamiltonian(this, dirname, usepotential)
     type(json_object_t), intent(inout) :: this
     character(len=*),    intent(in)    :: dirname
-    integer,   optional, intent(in)    :: interpolation
     logical,   optional, intent(in)    :: usepotential
 
     type(json_object_t), pointer :: cnfg
@@ -385,17 +379,16 @@ contains
     nullify(cnfg)
     call json_get(this, "external", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call fio_config_parse_external(cnfg, dirname, interpolation, usepotential)
+    call fio_config_parse_external(cnfg, dirname, usepotential)
     nullify(cnfg)
 
     POP_SUB(fio_config_parse_hamiltonian)
   end subroutine fio_config_parse_hamiltonian
 
   ! ---------------------------------------------------------
-  subroutine fio_config_parse_model(this, dirname, interpolation, usepotential, usedensity, invertpol)
+  subroutine fio_config_parse_model(this, dirname, usepotential, usedensity, invertpol)
     type(json_object_t), intent(inout) :: this
     character(len=*),    intent(in)    :: dirname
-    integer,   optional, intent(in)    :: interpolation
     logical,   optional, intent(in)    :: usepotential
     logical,   optional, intent(in)    :: usedensity
     logical,   optional, intent(in)    :: invertpol
@@ -408,11 +401,11 @@ contains
     nullify(cnfg)
     call json_get(this, "system", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call fio_config_parse_system(cnfg, dirname, interpolation, usedensity, invertpol)
+    call fio_config_parse_system(cnfg, dirname, usedensity, invertpol)
     nullify(cnfg)
     call json_get(this, "hamiltonian", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call fio_config_parse_hamiltonian(cnfg, dirname, interpolation, usepotential)
+    call fio_config_parse_hamiltonian(cnfg, dirname, usepotential)
     nullify(cnfg)
 
     POP_SUB(fio_config_parse_model)
@@ -482,7 +475,7 @@ contains
     nullify(cnfg)
     call json_get(this, "model", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
-    call fio_config_parse_model(cnfg, outdir, interpolation, usepotential, usedensity, invertpol)
+    call fio_config_parse_model(cnfg, outdir, usepotential, usedensity, invertpol)
     nullify(cnfg)
 
     POP_SUB(fio_config_parse_dir)
@@ -501,7 +494,7 @@ contains
     PUSH_SUB(fio_config_parse_block)
 
     call parse_block_string(block, line-1, 2, dirname)
-    intrp = NEAREST
+    intrp = INTRPL_DEFAULT
     usepot = .true.
     userho = .true.
     invpol = .false.

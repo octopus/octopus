@@ -3,6 +3,7 @@
 module dnst_oct_m
 
   use global_oct_m
+  use intrpl_oct_m
   use json_oct_m
   use kinds_oct_m
   use messages_oct_m
@@ -41,6 +42,12 @@ module dnst_oct_m
     real(kind=wp), dimension(:), allocatable :: charge
     type(storage_t)                          :: data
   end type dnst_t
+
+  interface dnst__acc__
+    module procedure dnst__acc__type
+    module procedure dnst__acc__cnfg
+    module procedure dnst__acc__list
+  end interface dnst__acc__
 
   interface dnst_init
     module procedure dnst_init_type
@@ -89,6 +96,7 @@ contains
     ASSERT(ierr==JSON_OK)
     call json_set(cnfg, "fine", .true.)
     call json_set(cnfg, "dimensions", this%nspin)
+    call json_set(cnfg, "default", 0.0_wp)
     if(this%nspin>1)then
       SAFE_ALLOCATE(this%total)
       call storage_init(this%total, cnfg)
@@ -142,13 +150,117 @@ contains
   end subroutine dnst_start
 
   ! ---------------------------------------------------------
-  subroutine dnst_acc(this, that)
+  pure subroutine dnst_adjust_spin_1_n(this, that)
+    real(kind=wp),               intent(out) :: this
+    real(kind=wp), dimension(:), intent(in)  :: that
+
+    select case(size(that))
+    case(1)
+      this = that(1)
+    case(2)
+      this = sum(that)
+    case default
+      this = -1.0_wp
+    end select
+
+  end subroutine dnst_adjust_spin_1_n
+
+  ! ---------------------------------------------------------
+  pure subroutine dnst_adjust_spin_2_n(this, that)
+    real(kind=wp), dimension(:), intent(out) :: this
+    real(kind=wp), dimension(:), intent(in)  :: that
+
+    select case(size(that))
+    case(1)
+      this = 0.5_wp*that(1)
+    case(2)
+      this = that
+    case default
+      this = -1.0_wp
+    end select
+
+  end subroutine dnst_adjust_spin_2_n
+
+  ! ---------------------------------------------------------
+  pure subroutine dnst_adjust_spin(this, that)
+    real(kind=wp), dimension(:), intent(out) :: this
+    real(kind=wp), dimension(:), intent(in)  :: that
+
+    select case(size(this))
+    case(1)
+      call dnst_adjust_spin_1_n(this(1), that)
+    case(2)
+      call dnst_adjust_spin_2_n(this, that)
+    case default
+      this = -1.0_wp
+    end select
+
+  end subroutine dnst_adjust_spin
+
+  ! ---------------------------------------------------------
+  subroutine dnst__load__(this, that, intp)
+    type(dnst_t),   intent(inout) :: this
+    type(dnst_t),   intent(in)    :: that
+    type(intrpl_t), intent(in)    :: intp
+
+    real(kind=wp), dimension(:), allocatable :: irho
+    integer                                  :: ospn, ispn
+
+    PUSH_SUB(dnst__load__)
+
+    call dnst__reset__(this)
+    call dnst_adjust_spin(this%charge, that%charge)
+    call dnst_get(this, nspin=ospn)
+    call dnst_get(that, nspin=ispn)
+    if(ispn==ospn)then
+      call storage_load(this%data, fnc1)
+    else
+      SAFE_ALLOCATE(irho(ispn))
+      call storage_load(this%data, fnc2)
+      SAFE_DEALLOCATE_A(irho)
+    end if
+    call dnst__update__(this)
+
+    POP_SUB(dnst__load__)
+
+  contains
+
+    subroutine fnc1(x, f)
+      real(kind=wp), dimension(:), intent(in)  :: x
+      real(kind=wp), dimension(:), intent(out) :: f
+
+      PUSH_SUB(dnst__load__.fnc1)
+
+      call intrpl_eval(intp, x, f)
+      
+      POP_SUB(dnst__load__.fnc1)
+    end subroutine fnc1
+
+    subroutine fnc2(x, f)
+      real(kind=wp), dimension(:), intent(in)  :: x
+      real(kind=wp), dimension(:), intent(out) :: f
+
+      integer :: ierr
+
+      PUSH_SUB(dnst__load__.fnc2)
+
+      f = 0.0_wp
+      call intrpl_eval(intp, x, irho, ierr=ierr)
+      if(ierr==INTRPL_OK) call dnst_adjust_spin(f, irho)
+      
+      POP_SUB(dnst__load__.fnc2)
+    end subroutine fnc2
+
+  end subroutine dnst__load__
+
+  ! ---------------------------------------------------------
+  subroutine dnst__acc__type(this, that)
     type(dnst_t), intent(inout) :: this
     type(dnst_t), intent(in)    :: that
 
     integer :: ispn
 
-    PUSH_SUB(dnst_acc)
+    PUSH_SUB(dnst__acc__type)
 
     ASSERT(associated(this%config))
     ASSERT(associated(that%config))
@@ -156,22 +268,141 @@ contains
     ASSERT(associated(that%sim))
     ASSERT(this%nspin==that%nspin)
     do ispn = 1, this%nspin
-      if(that%charge(ispn)>0.0_wp)then
+      if(that%charge(ispn)>tiny(that%charge))then
         this%charge(ispn) = this%charge(ispn) + that%charge(ispn)
         call storage_add(this%data, that%data, ispn)
       end if
     end do
 
+    POP_SUB(dnst__acc__type)
+  end subroutine dnst__acc__type
+
+  ! ---------------------------------------------------------
+  subroutine dnst__acc__cnfg(this, that, type, config)
+    type(dnst_t),        intent(inout) :: this
+    type(dnst_t),        intent(in)    :: that
+    integer,             intent(in)    :: type
+    type(json_object_t), intent(in)    :: config
+
+    type(dnst_t)   :: dnst
+    type(intrpl_t) :: intp
+    
+    PUSH_SUB(dnst__acc__cnfg)
+
+    ASSERT(.false.)
+    
+    call dnst_init(dnst, this, start=.true.)
+    call dnst_set(dnst, static=.false., external=.false.)
+    call intrpl_init(intp, that%data, type=type)
+    call intrpl_attach(intp, config)
+    call dnst__load__(dnst, that, intp)
+    call intrpl_detach(intp)
+    call dnst__acc__(this, dnst)
+    call intrpl_end(intp)
+    call dnst_end(dnst)
+
+    POP_SUB(dnst__acc__cnfg)
+  end subroutine dnst__acc__cnfg
+
+  ! ---------------------------------------------------------
+  subroutine dnst__acc__list(this, that, type, list)
+    type(dnst_t),       intent(inout) :: this
+    type(dnst_t),       intent(in)    :: that
+    integer,            intent(in)    :: type
+    type(json_array_t), intent(in)    :: list
+
+    type(json_object_t), pointer :: cnfg
+    type(json_array_iterator_t)  :: iter
+    type(dnst_t)                 :: dnst
+    type(intrpl_t)               :: intp
+    integer                      :: ierr
+
+    PUSH_SUB(dnst__acc__list)
+
+    call dnst_init(dnst, this, start=.true.)
+    call dnst_set(dnst, static=.false., external=.false.)
+    call intrpl_init(intp, that%data, type=type)
+    ASSERT(json_len(list)>0)
+    call json_init(iter, list)
+    do
+      nullify(cnfg)
+      call json_next(iter, cnfg, ierr)
+      if(ierr/=JSON_OK)exit
+      call intrpl_attach(intp, cnfg)
+      call dnst__load__(dnst, that, intp)
+      call intrpl_detach(intp)
+      call dnst__acc__(this, dnst)
+    end do
+    call json_end(iter)
+    nullify(cnfg)
+    call intrpl_end(intp)
+    call dnst_end(dnst)
+
+    POP_SUB(dnst__acc__list)
+  end subroutine dnst__acc__list
+
+  ! ---------------------------------------------------------
+  subroutine dnst_acc(this, that, config)
+    type(dnst_t),                  intent(inout) :: this
+    type(dnst_t),                  intent(in)    :: that
+    type(json_object_t), optional, intent(in)    :: config
+
+    type(json_array_t), pointer :: list
+    integer                     :: type, ierr
+
+    PUSH_SUB(dnst_acc)
+
+    ASSERT(associated(this%config))
+    ASSERT(associated(that%config))
+    ASSERT(associated(this%sim))
+    ASSERT(associated(that%sim))
+    nullify(list)
+    if(present(config))then
+      call json_get(config, "interpolation", type, ierr)
+      if(ierr/=JSON_OK) type = INTRPL_DEFAULT
+      call json_get(config, "positions", list, ierr)
+      if(ierr/=JSON_OK) nullify(list)
+    end if
+    if(associated(list))then
+      call dnst__acc__(this, that, type, list)
+    else
+      call dnst__acc__(this, that)
+    end if
+    nullify(list)
+
     POP_SUB(dnst_acc)
   end subroutine dnst_acc
+
+  ! ---------------------------------------------------------
+  subroutine dnst__update__(this)
+    type(dnst_t), intent(inout) :: this
+
+    real(kind=wp) :: chrg
+    integer       :: ispn
+
+    PUSH_SUB(dnst__update__)
+
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
+    call storage_update(this%data)
+    do ispn = 1, this%nspin
+      chrg = this%charge(ispn)
+      if(chrg>tiny(chrg))then
+        call storage_norm(this%data, ispn, norm=chrg)
+      else
+        this%charge(ispn) = 0.0_wp
+        call storage_reset(this%data, ispn)
+      end if
+    end do
+
+    POP_SUB(dnst__update__)
+  end subroutine dnst__update__
 
   ! ---------------------------------------------------------
   subroutine dnst_update(this)
     type(dnst_t), intent(inout) :: this
 
-    real(kind=wp) :: chrg
-    logical       :: static
-    integer       :: ispn
+    logical :: static
 
     PUSH_SUB(dnst_update)
 
@@ -179,33 +410,41 @@ contains
     ASSERT(associated(this%sim))
     call storage_get(this%data, lock=static)
     call storage_update(this%data)
-    if(.not.(static.or.this%xtrnl))then
-      do ispn = 1, this%nspin
-        chrg = this%charge(ispn)
-        if(chrg>tiny(chrg))then
-          call storage_norm(this%data, ispn, norm=chrg)
-        else
-          this%charge(ispn) = 0.0_wp
-          call storage_reset(this%data, ispn)
-        end if
-      end do
-    end if
+    if(.not.(static.or.this%xtrnl)) call dnst__update__(this)
     if(this%nspin>1) call storage_reduce(this%total, this%data)
 
     POP_SUB(dnst_update)
   end subroutine dnst_update
 
   ! ---------------------------------------------------------
+  subroutine dnst__reset__(this)
+    type(dnst_t), intent(inout) :: this
+
+    PUSH_SUB(dnst__reset__)
+
+    ASSERT(associated(this%config))
+    this%charge = 0.0_wp
+    if(associated(this%sim)) call storage_reset(this%data)
+
+    POP_SUB(dnst__reset__)
+  end subroutine dnst__reset__
+
+  ! ---------------------------------------------------------
   subroutine dnst_reset(this)
     type(dnst_t), intent(inout) :: this
+
+    logical :: static
 
     PUSH_SUB(dnst_reset)
 
     ASSERT(associated(this%config))
-    ASSERT(associated(this%sim))
-    this%charge = 0.0_wp
-    if(this%nspin>1) call storage_reset(this%total)
-    call storage_reset(this%data)
+    call storage_get(this%data, lock=static)
+    if(.not.(static.or.this%xtrnl))then
+      if(this%nspin>1)then
+        if(associated(this%sim)) call storage_reset(this%total)
+      end if
+      call dnst__reset__(this)
+    end if
 
     POP_SUB(dnst_reset)
   end subroutine dnst_reset
@@ -226,13 +465,15 @@ contains
   end subroutine dnst_stop
 
   ! ---------------------------------------------------------
-  subroutine dnst_set_info(this, static)
-    type(dnst_t), intent(inout) :: this
-    logical,      intent(in)    :: static
+  subroutine dnst_set_info(this, static, external)
+    type(dnst_t),      intent(inout) :: this
+    logical, optional, intent(in)    :: external
+    logical, optional, intent(in)    :: static
 
     PUSH_SUB(dnst_set_info)
 
     ASSERT(associated(this%config))
+    if(present(external)) this%xtrnl = external
     call storage_set(this%data, lock=static)
     if(this%nspin>1) call storage_set(this%total, lock=static)
 
@@ -270,10 +511,11 @@ contains
   end subroutine dnst_set_charge
 
   ! ---------------------------------------------------------
-  subroutine dnst_get_info(this, size, nspin, static, fine, use)
+  subroutine dnst_get_info(this, size, nspin, static, external, fine, use)
     type(dnst_t),      intent(in)  :: this
     integer, optional, intent(out) :: size
     integer, optional, intent(out) :: nspin
+    logical, optional, intent(out) :: external
     logical, optional, intent(out) :: static
     logical, optional, intent(out) :: fine
     logical, optional, intent(out) :: use
@@ -282,6 +524,7 @@ contains
 
     ASSERT(associated(this%config))
     if(present(nspin)) nspin = this%nspin
+    if(present(external)) external = this%xtrnl
     call storage_get(this%data, size=size, lock=static, fine=fine, alloc=use)
 
     POP_SUB(dnst_get_info)

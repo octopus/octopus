@@ -21,6 +21,8 @@ module basis_oct_m
     operator(/=)
 
   public ::            &
+    basis_new,         &
+    basis_del,         &
     basis_init,        &
     basis_use,         &
     basis_to_internal, &
@@ -66,6 +68,12 @@ module basis_oct_m
   interface operator(/=)
     module procedure basis_not_equal
   end interface operator(/=)
+
+  interface basis_new
+    module procedure basis_new_array
+    module procedure basis_new_json
+    module procedure basis_new_copy
+  end interface basis_new
 
   interface basis_init
     module procedure basis_init_array
@@ -296,6 +304,69 @@ contains
     if(ndim>2) nrot = (ndim * (ndim - 1)) / 2
 
   end function basis_nrot
+
+  ! ---------------------------------------------------------
+  function basis_new_array(space, r, theta) result(this)
+    type(space_t),                         intent(in) :: space
+    real(kind=wp), dimension(:), optional, intent(in) :: r
+    real(kind=wp), dimension(:), optional, intent(in) :: theta
+
+    type(basis_t), pointer :: this
+
+    PUSH_SUB(basis_new_array)
+
+    nullify(this)
+    SAFE_ALLOCATE(this)
+    call basis_init(this, space, r, theta)
+
+    POP_SUB(basis_new_array)
+  end function basis_new_array
+
+  ! ---------------------------------------------------------
+  function basis_new_json(space, config) result(this)
+    type(space_t),       intent(in) :: space
+    type(json_object_t), intent(in) :: config
+
+    type(basis_t), pointer :: this
+
+    PUSH_SUB(basis_new_json)
+
+    nullify(this)
+    SAFE_ALLOCATE(this)
+    call basis_init(this, space, config)
+
+    POP_SUB(basis_new_json)
+  end function basis_new_json
+
+  ! ---------------------------------------------------------
+  function basis_new_copy(that) result(this)
+    type(basis_t), intent(in) :: that
+
+    type(basis_t), pointer :: this
+
+    PUSH_SUB(basis_new_copy)
+
+    nullify(this)
+    SAFE_ALLOCATE(this)
+    call basis_copy(this, that)
+
+    POP_SUB(basis_new_copy)
+  end function basis_new_copy
+
+  ! ---------------------------------------------------------
+  subroutine basis_del(this)
+    type(basis_t), pointer, intent(inout) :: this
+
+    PUSH_SUB(basis_del)
+
+    if(associated(this))then
+      call basis_end(this)
+      SAFE_DEALLOCATE_P(this)
+      nullify(this)
+    end if
+
+    POP_SUB(basis_del)
+  end subroutine basis_del
 
   ! ---------------------------------------------------------
   subroutine basis_init_array(this, space, r, theta)

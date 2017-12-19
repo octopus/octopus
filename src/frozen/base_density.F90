@@ -319,12 +319,11 @@ contains
     ASSERT(dnst_intrf_assoc(that%dnst))
     ASSERT(associated(that%sim))
     nullify(odns, idns)
-    if(present(config)) continue
     call dnst_intrf_get(this%dnst, odns)
     ASSERT(associated(odns))
     call dnst_intrf_get(that%dnst, idns)
     ASSERT(associated(idns))
-    call dnst_acc(odns, idns)
+    call dnst_acc(odns, idns, config)
     nullify(odns, idns)
 
     POP_SUB(base_density__acc__)
@@ -521,10 +520,10 @@ contains
     ASSERT(associated(this%sim))
     call base_density__recv__(this, updt)
     if(updt)then
-      call base_density__apply__(this, base_density_update, parent=.false.)
       call json_get(this%config, "reduce", accu, ierr)
       if(ierr/=JSON_OK) accu = .false.
       if(accu)then
+        call base_density__apply__(this, base_density_update, parent=.false.)
         call base_density_acc(this)
       else
         call base_density__update__(this)
