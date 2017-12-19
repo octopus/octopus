@@ -5,7 +5,6 @@ module frozen_model_oct_m
   use base_density_oct_m
   use base_hamiltonian_oct_m
   use base_model_oct_m
-  use frozen_density_oct_m
   use frozen_hamiltonian_oct_m
   use global_oct_m
   use json_oct_m
@@ -31,6 +30,8 @@ contains
     type(base_hamiltonian_t), pointer :: mhml !> frozen
     type(base_density_t),     pointer :: sdns !> fio
     type(base_hamiltonian_t), pointer :: shml !> fio
+    logical                           :: accu
+
 
     PUSH_SUB(frozen_model__acc__)
 
@@ -39,7 +40,8 @@ contains
     ASSERT(associated(mdns))
     call base_model_get(that, sdns)
     ASSERT(associated(sdns))
-    call frozen_density__acc__(mdns, sdns, config)
+    call base_density_get(sdns, use=accu)
+    if(accu) call base_density__acc__(mdns, sdns, config)
     nullify(mdns, sdns)
     call base_model_get(this, mhml)
     ASSERT(associated(mhml))

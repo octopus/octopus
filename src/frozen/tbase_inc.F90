@@ -759,7 +759,7 @@ contains
     type(TEMPLATE(husk_t)), pointer :: husk
     integer                         :: ierr
     
-    PUSH_SUB(TEMPLATE(gets_type))
+    PUSH_SUB(TEMPLATE(gets))
 
     ASSERT(associated(this%config))
     nullify(type, husk)

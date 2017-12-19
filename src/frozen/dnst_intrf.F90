@@ -143,11 +143,10 @@ contains
   end subroutine dnst_intrf_new_pass
 
   ! ---------------------------------------------------------
-  subroutine dnst_intrf_new_copy(this, source, mold, start)
+  subroutine dnst_intrf_new_copy(this, source, mold)
     type(dnst_intrf_t),           intent(inout) :: this
     type(dnst_intrf_t), optional, intent(in)    :: source
     type(dnst_intrf_t), optional, intent(in)    :: mold
-    logical,            optional, intent(in)    :: start
 
     type(dnst_t), pointer :: self
 
@@ -162,7 +161,7 @@ contains
       call dnst_copy(self, source%self)
     elseif(present(mold))then
       ASSERT(dnst_intrf_assoc(mold))
-      call dnst_init(self, mold%self, start)
+      call dnst_init(self, mold%self)
     else
       ASSERT(.FALSE.)
     end if
@@ -291,10 +290,9 @@ contains
   end subroutine dnst_intrf_init_type
 
   ! ---------------------------------------------------------
-  subroutine dnst_intrf_init_copy(this, that, start)
+  subroutine dnst_intrf_init_copy(this, that)
     type(dnst_intrf_t), intent(out) :: this
     type(dnst_intrf_t), intent(in)  :: that
-    logical,  optional, intent(in)  :: start
 
     PUSH_SUB(dnst_intrf_init_copy)
     
@@ -305,7 +303,7 @@ contains
     case(DNST_INTRF_ASSC)
       call dnst_intrf_set(this, that%self)
     case(DNST_INTRF_ALLC)
-      call dnst_intrf_new(this, mold=that, start=start)
+      call dnst_intrf_new(this, mold=that)
     case default
       ASSERT(.false.)
     end select

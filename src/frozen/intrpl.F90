@@ -2,27 +2,31 @@
 
 module intrpl_oct_m
 
+  use basis_oct_m
   use curvilinear_oct_m
   use domain_oct_m
   use global_oct_m
   use grid_oct_m
   use index_oct_m
+  use json_oct_m
   use kinds_oct_m
   use mesh_oct_m
   use messages_oct_m
   use profiling_oct_m
   use qshep_oct_m
   use simulation_oct_m
+  use space_oct_m
   use storage_oct_m
 
   implicit none
 
   private
 
-  public ::   &
-    NONE,     &
-    NEAREST,  &
-    QSHEP
+  public ::         &
+    INTRPL_NONE,    &
+    INTRPL_NEAREST, &
+    INTRPL_QSHEP,   &
+    INTRPL_DEFAULT
 
   public ::    &
     INTRPL_OK, &
@@ -32,24 +36,36 @@ module intrpl_oct_m
   public ::   &
     intrpl_t
 
-  public ::      &
-    intrpl_init, &
-    intrpl_eval, &
-    intrpl_get,  &
-    intrpl_copy, &
+  public ::        &
+    intrpl_init,   &
+    intrpl_attach, &
+    intrpl_detach, &
+    intrpl_eval,   &
+    intrpl_get,    &
+    intrpl_copy,   &
     intrpl_end
 
-  integer, parameter :: NONE    = 0
-  integer, parameter :: NEAREST = 1
-  integer, parameter :: QSHEP   = 2
+  integer, parameter :: INTRPL_NONE    = 0
+  integer, parameter :: INTRPL_NEAREST = 1
+  integer, parameter :: INTRPL_QSHEP   = 2
+  integer, parameter :: INTRPL_DEFAULT = INTRPL_NEAREST
 
   integer, parameter :: INTRPL_OK = 0
   integer, parameter :: INTRPL_OD = 1
   integer, parameter :: INTRPL_NI = 2
 
+  integer, parameter :: INTRPL_BASIS_DISA = 0
+  integer, parameter :: INTRPL_BASIS_NULL = 1
+  integer, parameter :: INTRPL_BASIS_ASSC = 2
+  integer, parameter :: INTRPL_BASIS_ALLC = 3
+
+  integer,       parameter :: default_ndim  = 3
+  integer,       parameter :: default_nint  = 1
+  real(kind=wp), parameter :: default_value = 0.0_wp
+
   type :: intrp_t
     private
-    integer                              :: type  = NONE
+    integer                              :: type  = INTRPL_NONE
     type(qshep_t),               pointer :: qshep =>null()
     real(kind=wp), dimension(:), pointer :: vals  =>null()
   end type intrp_t
@@ -59,15 +75,41 @@ module intrpl_oct_m
     type(simulation_t),              pointer :: sim     =>null()
     type(mesh_t),                    pointer :: mesh    =>null()
     type(domain_t),                  pointer :: domain  =>null()
-    integer                                  :: type    = NONE
-    integer                                  :: nint    = 0
-    real(kind=wp)                            :: default = 0.0_wp
+    type(basis_t),                   pointer :: basis   =>null()
+    integer                                  :: stat    = INTRPL_BASIS_DISA
+    integer                                  :: ndim    = default_ndim
+    integer                                  :: nint    = default_nint
+    integer                                  :: type    = INTRPL_NONE
+    real(kind=wp)                            :: default = default_value
+    real(kind=wp)                            :: tol     = 0.0_wp
     type(intrp_t), dimension(:), allocatable :: intr
   end type intrpl_t
 
+  interface intrpl_attach
+    module procedure intrpl_attach_json
+    module procedure intrpl_attach_basis
+  end interface intrpl_attach
+
+  interface intrpl_qshep_eval
+    module procedure intrpl_qshep_eval_dim
+    module procedure intrpl_qshep_eval_all
+  end interface intrpl_qshep_eval
+
+  interface intrpl_nearest_eval
+    module procedure intrpl_nearest_eval_dim
+    module procedure intrpl_nearest_eval_all
+  end interface intrpl_nearest_eval
+
+  interface intrpl_internal_eval
+    module procedure intrpl_internal_eval_dim
+    module procedure intrpl_internal_eval_all
+  end interface intrpl_internal_eval
+
   interface intrpl_eval
-    module procedure intrpl_eval_1d
-    module procedure intrpl_eval_md
+    module procedure intrpl_eval_type_dim
+    module procedure intrpl_eval_type_all
+    module procedure intrpl_eval_pass_dim
+    module procedure intrpl_eval_pass_all
   end interface intrpl_eval
 
   interface intrpl_get
@@ -92,7 +134,7 @@ contains
     ASSERT(associated(this%vals))
     this%qshep => null()
     select case(this%type)
-    case(QSHEP)
+    case(INTRPL_QSHEP)
       nsz = size(vals)
       ASSERT(nsz>10)
       SAFE_ALLOCATE(this%qshep)
@@ -133,7 +175,7 @@ contains
 
     val = 0.0_wp
     select case(this%type)
-    case(QSHEP)
+    case(INTRPL_QSHEP)
       call intrp_qshep(this, x, val)
     end select
 
@@ -161,12 +203,12 @@ contains
     PUSH_SUB(intrp_end)
 
     select case(this%type)
-    case(QSHEP)
+    case(INTRPL_QSHEP)
       call qshep_end(this%qshep)
       SAFE_DEALLOCATE_P(this%qshep)
     end select
     nullify(this%qshep, this%vals)
-    this%type = NONE
+    this%type = INTRPL_NONE
 
     POP_SUB(intrp_end)
   end subroutine intrp_end
@@ -183,35 +225,100 @@ contains
 
     PUSH_SUB(intrpl_init)
 
-    nullify(data)
-    ASSERT(.not.associated(this%sim))
-    ASSERT(.not.associated(this%mesh))
-    ASSERT(.not.associated(this%domain))
+    nullify(this%sim, this%mesh, this%domain, this%basis, data)
     call storage_get(that, this%sim)
     ASSERT(associated(this%sim))
     call storage_get(that, this%mesh)
     ASSERT(associated(this%mesh))
     call simulation_get(this%sim, this%domain)
     ASSERT(associated(this%domain))
+    this%stat = INTRPL_BASIS_NULL
+    this%ndim = this%mesh%sb%dim
     call storage_get(that, dim=this%nint, default=this%default, alloc=allc)
     ASSERT(this%nint>0)
     if(allc)then
-      this%type = NEAREST
+      this%type = INTRPL_DEFAULT
       if(present(type)) this%type = type
     else
-      this%type = NONE
+      this%type = INTRPL_NONE
     end if
-    if(this%type>NONE)then
+    this%tol = 0.5_wp * minval(this%mesh%spacing(1:this%ndim))
+    if(this%type>INTRPL_NONE)then
       SAFE_ALLOCATE(this%intr(this%nint))
       call storage_get(that, data)
       ASSERT(associated(data))
       do indx = 1, this%nint
         call intrp_init(this%intr(indx), this%mesh, data(:,indx), this%type)
       end do
+      nullify(data)
     end if
 
     POP_SUB(intrpl_init)
   end subroutine intrpl_init
+
+  ! ---------------------------------------------------------
+  subroutine intrpl_attach_json(this, config)
+    type(intrpl_t),      intent(inout) :: this
+    type(json_object_t), intent(in)    :: config
+
+    type(basis_t), pointer :: basis
+    type(space_t), pointer :: space
+
+    PUSH_SUB(intrpl_attach_json)
+
+    ASSERT(this%stat==INTRPL_BASIS_NULL)
+    nullify(this%basis, basis, space)
+    call simulation_get(this%sim, space)
+    ASSERT(associated(space))
+    basis => basis_new(space, config)
+    nullify(space)
+    if(basis_use(basis))then
+      this%basis => basis
+      this%stat = INTRPL_BASIS_ALLC
+    else
+      call basis_del(basis)
+    end if
+    nullify(basis)
+
+    POP_SUB(intrpl_attach_json)
+  end subroutine intrpl_attach_json
+
+  ! ---------------------------------------------------------
+  subroutine intrpl_attach_basis(this, that)
+    type(intrpl_t),        intent(inout) :: this
+    type(basis_t), target, intent(in)    :: that
+
+    PUSH_SUB(intrpl_attach_basis)
+
+    ASSERT(this%stat==INTRPL_BASIS_NULL)
+    nullify(this%basis)
+    if(basis_use(that))then
+      this%basis => that
+      this%stat = INTRPL_BASIS_ASSC
+    end if
+
+    POP_SUB(intrpl_attach_basis)
+  end subroutine intrpl_attach_basis
+
+  ! ---------------------------------------------------------
+  subroutine intrpl_detach(this)
+    type(intrpl_t), intent(inout) :: this
+
+    PUSH_SUB(intrpl_detach)
+
+    ASSERT(this%stat>INTRPL_BASIS_NULL)
+    select case(this%stat)
+    case(INTRPL_BASIS_ASSC)
+    case(INTRPL_BASIS_ALLC)
+      call basis_del(this%basis)
+    case default
+      ASSERT(.false.)
+    end select
+    nullify(this%basis)
+    this%stat = INTRPL_BASIS_NULL
+
+    POP_SUB(intrpl_detach)
+  end subroutine intrpl_detach
 
   ! ---------------------------------------------------------
   function intrpl_nearest_index(this, x) result(n)
@@ -222,17 +329,18 @@ contains
 
     real(kind=wp), dimension(MAX_DIM) :: xp, chi
     integer,       dimension(MAX_DIM) :: ix
-    integer                           :: dm
+    real(kind=wp)                     :: dlt
 
     PUSH_SUB(intrpl_nearest_index)
 
-    dm = this%mesh%sb%dim
-    xp(1:dm) = x(1:dm)
-    xp(dm+1:MAX_DIM) = 0.0_wp
+    xp(1:this%ndim) = x(1:this%ndim)
+    xp(this%ndim+1:MAX_DIM) = 0.0_wp
     call curvilinear_x2chi(this%mesh%sb, this%mesh%cv, xp, chi)
-    ix(1:dm) = nint(chi(1:dm)/this%mesh%spacing(1:dm))
-    ix(dm+1:MAX_DIM) = 0
+    ix(1:this%ndim) = nint(chi(1:this%ndim)/this%mesh%spacing(1:this%ndim))
+    ix(this%ndim+1:MAX_DIM) = 0
     n = index_from_coords(this%mesh%idx, ix)
+    dlt = sqrt(sum((x(1:this%ndim)-this%mesh%x(n,1:this%ndim))**2))
+    ASSERT(dlt<this%tol)
 
     POP_SUB(intrpl_nearest_index)
   end function intrpl_nearest_index
@@ -259,28 +367,27 @@ contains
   end function intrpl_in_domain
 
   ! ---------------------------------------------------------
-  subroutine intrpl_nearest(this, x, val)
+  subroutine intrpl_qshep_eval_dim(this, x, val, dim, ierr)
     type(intrpl_t),               intent(in)  :: this
     real(kind=wp),  dimension(:), intent(in)  :: x
-    real(kind=wp),  dimension(:), intent(out) :: val
+    real(kind=wp),                intent(out) :: val
+    integer,                      intent(in)  :: dim
+    integer,                      intent(out) :: ierr
 
-    real(kind=wp) :: tol, dlt
-    integer       :: ix, np, dm
+    PUSH_SUB(intrpl_qshep_eval_dim)
 
-    PUSH_SUB(intrpl_nearest)
+    ierr = INTRPL_OD
+    val = this%default
+    if(intrpl_in_domain(this, x))then
+      ierr = INTRPL_OK
+      call intrp_eval(this%intr(dim), x, val)
+    end if
 
-    dm = this%mesh%sb%dim
-    np = intrpl_nearest_index(this, x)
-    tol = minval(this%mesh%spacing(1:dm))
-    dlt = sqrt(sum((x(1:dm)-this%mesh%x(np,1:dm))**2))
-    ASSERT(dlt<tol)
-    forall(ix=1:this%nint) val(ix) = this%intr(ix)%vals(np)
-
-    POP_SUB(intrpl_nearest)
-  end subroutine intrpl_nearest
+    POP_SUB(intrpl_qshep_eval_dim)
+  end subroutine intrpl_qshep_eval_dim
 
   ! ---------------------------------------------------------
-  subroutine intrpl_eval_internal(this, x, val, ierr)
+  subroutine intrpl_qshep_eval_all(this, x, val, ierr)
     type(intrpl_t),               intent(in)  :: this
     real(kind=wp),  dimension(:), intent(in)  :: x
     real(kind=wp),  dimension(:), intent(out) :: val
@@ -288,69 +395,240 @@ contains
 
     integer :: idx
 
-    PUSH_SUB(intrpl_eval_internal)
+    PUSH_SUB(intrpl_qshep_eval_all)
 
+    ierr = INTRPL_OD
+    val = this%default
     if(intrpl_in_domain(this, x))then
       ierr = INTRPL_OK
-      select case(this%type)
-      case(NEAREST)
-        call intrpl_nearest(this, x, val)
-      case(QSHEP)
-        do idx = 1, this%nint
-          call intrp_eval(this%intr(idx), x, val(idx))
-        end do
-      case default
-        val = this%default
-        ierr = INTRPL_NI
-      end select
-    else
-      val = this%default
-      ierr = INTRPL_OD
+      do idx = 1, this%nint
+        call intrp_eval(this%intr(idx), x, val(idx))
+      end do
     end if
-
-    POP_SUB(intrpl_eval_internal)
-  end subroutine intrpl_eval_internal
+    
+    POP_SUB(intrpl_qshep_eval_all)
+  end subroutine intrpl_qshep_eval_all
 
   ! ---------------------------------------------------------
-  subroutine intrpl_eval_1d(this, x, val, ierr)
+  subroutine intrpl_nearest_eval_dim(this, x, val, dim, ierr)
     type(intrpl_t),               intent(in)  :: this
     real(kind=wp),  dimension(:), intent(in)  :: x
     real(kind=wp),                intent(out) :: val
+    integer,                      intent(in)  :: dim
     integer,                      intent(out) :: ierr
 
-    real(kind=wp), dimension(1) :: tvl
+    integer :: np
 
-    PUSH_SUB(intrpl_eval_1d)
+    PUSH_SUB(intrpl_nearest_eval_dim)
 
-    if(this%type>NONE)then
-      call intrpl_eval_internal(this, x, tvl, ierr)
-      val = tvl(1)
-    else
-      val = this%default
-      ierr = INTRPL_NI
+    ASSERT(associated(this%domain))
+    ierr = INTRPL_OD
+    val = this%default
+    if(domain_in(this%domain, x))then
+      np = intrpl_nearest_index(this, x)
+      if((0<np).and.(np<=this%mesh%np))then
+        ierr = INTRPL_OK
+        val = this%intr(dim)%vals(np)
+      end if
     end if
 
-    POP_SUB(intrpl_eval_1d)
-  end subroutine intrpl_eval_1d
+    POP_SUB(intrpl_nearest_eval_dim)
+  end subroutine intrpl_nearest_eval_dim
 
   ! ---------------------------------------------------------
-  subroutine intrpl_eval_md(this, x, val, ierr)
+  subroutine intrpl_nearest_eval_all(this, x, val, ierr)
     type(intrpl_t),               intent(in)  :: this
     real(kind=wp),  dimension(:), intent(in)  :: x
     real(kind=wp),  dimension(:), intent(out) :: val
     integer,                      intent(out) :: ierr
 
-    PUSH_SUB(intrpl_eval_md)
+    integer :: ix, np
 
-    if(this%type>NONE)then
-      call intrpl_eval_internal(this, x, val, ierr)
-    else
-      val = this%default
-      ierr = INTRPL_NI
+    PUSH_SUB(intrpl_nearest_eval_all)
+
+    ASSERT(associated(this%domain))
+    ierr = INTRPL_OD
+    val = this%default
+    if(domain_in(this%domain, x))then
+      np = intrpl_nearest_index(this, x)
+      if((0<np).and.(np<=this%mesh%np))then
+        ierr = INTRPL_OK
+        forall(ix=1:this%nint) val(ix) = this%intr(ix)%vals(np)
+      end if
     end if
 
-    POP_SUB(intrpl_eval_md)
-  end subroutine intrpl_eval_md
+    POP_SUB(intrpl_nearest_eval_all)
+  end subroutine intrpl_nearest_eval_all
+
+  ! ---------------------------------------------------------
+  subroutine intrpl_internal_eval_dim(this, x, val, dim, ierr)
+    type(intrpl_t),               intent(in)  :: this
+    real(kind=wp),  dimension(:), intent(in)  :: x
+    real(kind=wp),                intent(out) :: val
+    integer,                      intent(in)  :: dim
+    integer,                      intent(out) :: ierr
+
+    PUSH_SUB(intrpl_internal_eval_dim)
+
+    ASSERT(dim<=this%nint)
+    select case(this%type)
+    case(INTRPL_NONE)
+      ierr = INTRPL_NI
+      val = this%default
+    case(INTRPL_NEAREST)
+      call intrpl_nearest_eval(this, x, val, dim, ierr)
+    case(INTRPL_QSHEP)
+      call intrpl_qshep_eval(this, x, val, dim, ierr)
+    case default
+      ASSERT(.false.)
+    end select
+
+    POP_SUB(intrpl_internal_eval_dim)
+  end subroutine intrpl_internal_eval_dim
+
+  ! ---------------------------------------------------------
+  subroutine intrpl_internal_eval_all(this, x, val, ierr)
+    type(intrpl_t),               intent(in)  :: this
+    real(kind=wp),  dimension(:), intent(in)  :: x
+    real(kind=wp),  dimension(:), intent(out) :: val
+    integer,                      intent(out) :: ierr
+
+    PUSH_SUB(intrpl_internal_eval_all)
+
+    ASSERT(size(val)==this%nint)
+    select case(this%type)
+    case(INTRPL_NONE)
+      val = this%default
+      ierr = INTRPL_NI
+    case(INTRPL_NEAREST)
+      call intrpl_nearest_eval(this, x, val, ierr)
+    case(INTRPL_QSHEP)
+      call intrpl_qshep_eval(this, x, val, ierr)
+    case default
+      ASSERT(.false.)
+    end select
+
+    POP_SUB(intrpl_internal_eval_all)
+  end subroutine intrpl_internal_eval_all
+
+  ! ---------------------------------------------------------
+  subroutine intrpl_eval_type_dim(this, x, val, dim, ierr)
+    type(intrpl_t),               intent(in)  :: this
+    real(kind=wp),  dimension(:), intent(in)  :: x
+    real(kind=wp),                intent(out) :: val
+    integer,            optional, intent(in)  :: dim
+    integer,            optional, intent(out) :: ierr
+
+    real(kind=wp), dimension(size(x)) :: y
+    integer                           :: idim, jerr
+
+    PUSH_SUB(intrpl_eval_type_dim)
+
+    idim = 1
+    if(present(dim)) idim = dim
+    if(this%stat>INTRPL_BASIS_NULL)then
+      ASSERT(associated(this%basis))
+      call basis_to_internal(this%basis, x, y)
+      call intrpl_internal_eval(this, y, val, idim, jerr)
+    else
+      call intrpl_internal_eval(this, x, val, idim, jerr)
+    end if
+    if(present(ierr)) ierr = jerr
+
+    POP_SUB(intrpl_eval_type_dim)
+  end subroutine intrpl_eval_type_dim
+
+  ! ---------------------------------------------------------
+  subroutine intrpl_eval_type_all(this, x, val, ierr)
+    type(intrpl_t),               intent(in)  :: this
+    real(kind=wp),  dimension(:), intent(in)  :: x
+    real(kind=wp),  dimension(:), intent(out) :: val
+    integer,            optional, intent(out) :: ierr
+
+    real(kind=wp), dimension(size(x)) :: y
+    integer                           :: jerr
+
+    PUSH_SUB(intrpl_eval_type_all)
+
+    if(this%stat>INTRPL_BASIS_NULL)then
+      ASSERT(associated(this%basis))
+      call basis_to_internal(this%basis, x, y)
+      call intrpl_internal_eval(this, y, val, jerr)
+    else
+      call intrpl_internal_eval(this, x, val, jerr)
+    end if
+    if(present(ierr)) ierr = jerr
+
+    POP_SUB(intrpl_eval_type_all)
+  end subroutine intrpl_eval_type_all
+
+  ! ---------------------------------------------------------
+  subroutine intrpl_eval_pass_dim(this, x, val, func, dim)
+    type(intrpl_t),               intent(in)  :: this
+    real(kind=wp),  dimension(:), intent(in)  :: x
+    real(kind=wp),                intent(out) :: val
+    integer,            optional, intent(in)  :: dim
+
+    interface
+      function func(x) result(f)
+        use kinds_oct_m
+        implicit none
+        real(kind=wp), dimension(:), intent(in) :: x
+        real(kind=wp)                           :: f
+      end function func
+    end interface
+
+    real(kind=wp), dimension(size(x)) :: y
+    integer                           :: idim, ierr
+
+    PUSH_SUB(intrpl_eval_pass_dim)
+
+    idim = 1
+    if(present(dim)) idim = dim
+    if(this%stat>INTRPL_BASIS_NULL)then
+      ASSERT(associated(this%basis))
+      call basis_to_internal(this%basis, x, y)
+      call intrpl_internal_eval(this, y, val, idim, ierr)
+      if(ierr/=INTRPL_OK) val = func(y)
+    else
+      call intrpl_internal_eval(this, x, val, idim, ierr)
+      if(ierr/=INTRPL_OK) val = func(x)
+    end if
+
+    POP_SUB(intrpl_eval_pass_dim)
+  end subroutine intrpl_eval_pass_dim
+
+  ! ---------------------------------------------------------
+  subroutine intrpl_eval_pass_all(this, x, val, func)
+    type(intrpl_t),               intent(in)  :: this
+    real(kind=wp),  dimension(:), intent(in)  :: x
+    real(kind=wp),  dimension(:), intent(out) :: val
+
+    interface
+      subroutine func(x, f)
+        use kinds_oct_m
+        real(kind=wp), dimension(:), intent(in)  :: x
+        real(kind=wp), dimension(:), intent(out) :: f
+      end subroutine func
+    end interface
+
+    real(kind=wp), dimension(size(x)) :: y
+    integer                           :: ierr
+
+    PUSH_SUB(intrpl_eval_pass_all)
+
+    if(this%stat>INTRPL_BASIS_NULL)then
+      ASSERT(associated(this%basis))
+      call basis_to_internal(this%basis, x, y)
+      call intrpl_internal_eval(this, y, val, ierr)
+      if(ierr/=INTRPL_OK) call func(y, val)
+    else
+      call intrpl_internal_eval(this, x, val, ierr)
+      if(ierr/=INTRPL_OK) call func(x, val)
+    end if
+
+    POP_SUB(intrpl_eval_pass_all)
+  end subroutine intrpl_eval_pass_all
 
   ! ---------------------------------------------------------
   subroutine intrpl_get_info(this, type, dim, default)
@@ -377,13 +655,28 @@ contains
 
     PUSH_SUB(intrpl_copy)
 
+    call intrpl_end(this)
     this%sim => that%sim
     this%mesh => that%mesh
     this%domain => that%domain
-    this%type = that%type
+    nullify(this%basis)
+    select case(that%stat)
+    case(INTRPL_BASIS_DISA)
+    case(INTRPL_BASIS_NULL)
+    case(INTRPL_BASIS_ASSC)
+      this%basis => that%basis
+    case(INTRPL_BASIS_ALLC)
+      this%basis => basis_new(that%basis)
+    case default
+      ASSERT(.false.)
+    end select
+    this%stat = that%stat
+    this%ndim = that%ndim
     this%nint = that%nint
+    this%type = that%type
     this%default = that%default
-    if(this%type>NONE)then
+    this%tol = that%tol
+    if(this%type>INTRPL_NONE)then
       SAFE_ALLOCATE(this%intr(this%nint))
       do idx = 1, this%nint
         call intrp_copy(this%intr(idx), that%intr(idx))
@@ -401,16 +694,29 @@ contains
 
     PUSH_SUB(intrpl_end)
 
-    if(this%type>NONE)then
+    nullify(this%sim, this%mesh, this%domain)
+    select case(this%stat)
+    case(INTRPL_BASIS_DISA)
+    case(INTRPL_BASIS_NULL)
+    case(INTRPL_BASIS_ASSC)
+    case(INTRPL_BASIS_ALLC)
+      call basis_del(this%basis)
+    case default
+      ASSERT(.false.)
+    end select
+    nullify(this%basis)
+    this%stat = INTRPL_BASIS_DISA
+    this%ndim = default_ndim
+    this%nint = default_nint
+    this%default = default_value
+    this%tol = 0.0_wp
+    if(this%type>INTRPL_NONE)then
       do idx = 1, this%nint
         call intrp_end(this%intr(idx))
       end do
       SAFE_DEALLOCATE_A(this%intr)
     end if
-    this%default = 0.0_wp
-    this%nint = 0
-    this%type = NONE
-    nullify(this%domain, this%mesh, this%sim)
+    this%type = INTRPL_NONE
 
     POP_SUB(intrpl_end)
   end subroutine intrpl_end

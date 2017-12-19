@@ -2,12 +2,8 @@
 
 module fio_external_oct_m
 
-  use atom_oct_m
-  use base_geometry_oct_m
   use base_potential_oct_m
-  use base_system_oct_m
   use global_oct_m
-  use intrpl_oct_m
   use io_function_oct_m
   use json_oct_m
   use kinds_oct_m
@@ -16,8 +12,6 @@ module fio_external_oct_m
   use path_oct_m
   use profiling_oct_m
   use simulation_oct_m
-  use species_oct_m
-  use storage_oct_m
 
   implicit none
 
@@ -25,27 +19,6 @@ module fio_external_oct_m
 
   public ::               &
     fio_external__load__
-
-  public ::                &
-    fio_external_intrpl_t
-
-  public ::                   &
-    fio_external_intrpl_init, &
-    fio_external_intrpl_eval, &
-    fio_external_intrpl_get,  &
-    fio_external_intrpl_copy, &
-    fio_external_intrpl_end
-
-  type :: fio_external_intrpl_t
-    private
-    type(base_potential_t), pointer :: self =>null()
-    type(intrpl_t)                  :: intrp
-  end type fio_external_intrpl_t
-
-  interface fio_external_intrpl_get
-    module procedure fio_external_intrpl_get_info
-    module procedure fio_external_intrpl_get_type
-  end interface fio_external_intrpl_get
 
 contains
 
@@ -107,163 +80,11 @@ contains
       ASSERT(ierr==JSON_OK)
       call fio_external__read__(this, trim(adjustl(dir)), trim(adjustl(file)))
       nullify(cnfg)
-      call base_potential__update__(this)
+      call base_potential_update(this)
     end if
 
     POP_SUB(fio_external__load__)
   end subroutine fio_external__load__
-
-  ! ---------------------------------------------------------
-  subroutine fio_external_intrpl_init(this, that, type)
-    type(fio_external_intrpl_t),    intent(out) :: this
-    type(base_potential_t), target, intent(in)  :: that
-    integer,              optional, intent(in)  :: type
-
-    type(storage_t), pointer :: data
-
-    PUSH_SUB(fio_external_intrpl_init)
-
-    nullify(data)
-    this%self => that
-    call base_potential_get(that, data)
-    ASSERT(associated(data))
-    call intrpl_init(this%intrp, data, type=type)
-    nullify(data)
-
-    POP_SUB(fio_external_intrpl_init)
-  end subroutine fio_external_intrpl_init
-
-  ! ---------------------------------------------------------
-  pure function fio_external_calc(x, y, c) result(v)
-    real(kind=wp), dimension(:), intent(in)  :: x
-    real(kind=wp), dimension(:), intent(in)  :: y
-    real(kind=wp),               intent(in)  :: c
-
-    real(kind=wp) :: v
-
-    real(kind=wp) :: r
-    integer       :: n
-
-    n = min(size(x), size(y))
-    r = sqrt(sum((x(1:n)-y(1:n))**2))
-    if(r<r_small) r = r_small
-    v = -c / r
-
-  end function fio_external_calc
-
-  ! ---------------------------------------------------------
-  subroutine fio_external_classical(this, x, v)
-    type(base_potential_t),      intent(in)  :: this
-    real(kind=wp), dimension(:), intent(in)  :: x
-    real(kind=wp),               intent(out) :: v
-
-    type(base_system_t),    pointer :: sys
-    type(base_geometry_t),  pointer :: geom
-    type(atom_t),           pointer :: atom
-    !type(atom_classical_t), pointer :: catom
-    type(base_geometry_iterator_t)  :: iter
-
-    PUSH_SUB(fio_external_classical)
-
-    v = 0.0_wp
-    nullify(sys, geom)
-    call base_potential_get(this, sys)
-    ASSERT(associated(sys))
-    call base_system_get(sys, geom)
-    ASSERT(associated(geom))
-    call base_geometry_init(iter, geom)
-    do
-      nullify(atom)
-      call base_geometry_next(iter, atom)
-      if(.not.associated(atom))exit
-      ASSERT(associated(atom%species))
-      v = v + fio_external_calc(x, atom%x, species_zval(atom%species))
-    end do
-    nullify(atom)
-    !do
-    !  nullify(catom)
-    !  call fio_geom_next(iter, catom)
-    !  if(.not.associated(catom))exit
-    !  v=v+fio_external_calc(x, catom%x, catom%charge)
-    !end do
-    call base_geometry_end(iter)
-    !nullify(catom)
-    nullify(sys, geom)
-
-    POP_SUB(fio_external_classical)
-  end subroutine fio_external_classical
-
-  ! ---------------------------------------------------------
-  subroutine fio_external_intrpl_eval(this, x, val)
-    type(fio_external_intrpl_t), intent(in)  :: this
-    real(kind=wp), dimension(:), intent(in)  :: x
-    real(kind=wp),               intent(out) :: val
-
-    integer :: ierr
-
-    PUSH_SUB(fio_external_intrpl_eval)
-
-    ierr = INTRPL_NI
-    if(associated(this%self)) call intrpl_eval(this%intrp, x, val, ierr)
-    if(ierr/=INTRPL_OK) call fio_external_classical(this%self, x, val)
-
-    POP_SUB(fio_external_intrpl_eval)
-  end subroutine fio_external_intrpl_eval
-
-  ! ---------------------------------------------------------
-  subroutine fio_external_intrpl_get_info(this, type, dim, default)
-    type(fio_external_intrpl_t), intent(in)  :: this
-    integer,           optional, intent(out) :: type
-    integer,           optional, intent(out) :: dim
-    real(kind=wp),     optional, intent(out) :: default
-
-    PUSH_SUB(fio_external_intrpl_get_info)
-
-    call intrpl_get(this%intrp, type, dim, default)
-
-    POP_SUB(fio_external_intrpl_get_info)
-  end subroutine fio_external_intrpl_get_info
-
-  ! ---------------------------------------------------------
-  subroutine fio_external_intrpl_get_type(this, that)
-    type(fio_external_intrpl_t), intent(in) :: this
-    type(base_potential_t),     pointer     :: that
-
-    PUSH_SUB(fio_external_intrpl_get_type)
-
-    nullify(that)
-    if(associated(this%self)) that => this%self
-
-    POP_SUB(fio_external_intrpl_get_type)
-  end subroutine fio_external_intrpl_get_type
-
-  ! ---------------------------------------------------------
-  subroutine fio_external_intrpl_copy(this, that)
-    type(fio_external_intrpl_t), intent(out) :: this
-    type(fio_external_intrpl_t), intent(in)  :: that
-
-    PUSH_SUB(fio_external_intrpl_copy)
-
-    call fio_external_intrpl_end(this)
-    if(associated(that%self))then
-      this%self => that%self
-      call intrpl_copy(this%intrp, that%intrp)
-    end if
-
-    POP_SUB(fio_external_intrpl_copy)
-  end subroutine fio_external_intrpl_copy
-
-  ! ---------------------------------------------------------
-  subroutine fio_external_intrpl_end(this)
-    type(fio_external_intrpl_t), intent(inout) :: this
-
-    PUSH_SUB(fio_external_intrpl_end)
-
-    if(associated(this%self)) call intrpl_end(this%intrp)
-    nullify(this%self)
-
-    POP_SUB(fio_external_intrpl_end)
-  end subroutine fio_external_intrpl_end
 
 end module fio_external_oct_m
 
