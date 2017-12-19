@@ -34,51 +34,44 @@ libfrozen_f_srcs =                       \
 	base_system.F90                  \
 	base_term.F90                    \
 	basis.F90                        \
-	config_dict.F90                  \
+	channel.F90                      \
+	dnst.F90                         \
+	dnst_intrf.F90                   \
 	domain.F90                       \
+	envelope.F90                     \
 	fio_config.F90                   \
 	fio_curvilinear.F90              \
 	fio_density.F90                  \
 	fio_external.F90                 \
-	fio_geometry.F90                 \
 	fio_grid.F90                     \
 	fio_hamiltonian.F90              \
 	fio_handle.F90                   \
 	fio_index.F90                    \
 	fio_mesh.F90                     \
 	fio_model.F90                    \
-	fio_simulation.F90               \
 	fio_simul_box.F90                \
 	fio_states.F90                   \
 	fio_system.F90                   \
 	frozen_config.F90                \
-	frozen_density.F90               \
 	frozen_external.F90              \
 	frozen_hamiltonian.F90           \
 	frozen_handle.F90                \
 	frozen_model.F90                 \
-	frozen_states.F90                \
-	frozen_system.F90                \
 	functional.F90                   \
 	geo_build.F90                    \
 	geo_intrf.F90                    \
 	grid_intrf.F90                   \
 	interface_xc.F90                 \
 	intrpl.F90                       \
-	live_geometry.F90                \
 	live_handle.F90                  \
-	live_model.F90                   \
-	live_system.F90                  \
+	message.F90                      \
+	msgbus.F90                       \
+	refcount.F90                     \
 	simulation.F90                   \
-	ssys_config.F90                  \
-	ssys_density.F90                 \
+	smlt_intrf.F90                   \
 	ssys_external.F90                \
-	ssys_hamiltonian.F90             \
 	ssys_handle.F90                  \
 	ssys_ionic.F90                   \
-	ssys_model.F90                   \
-	ssys_states.F90                  \
-	ssys_system.F90                  \
 	ssys_tnadd.F90                   \
 	storage.F90                      \
 	strng.F90
@@ -93,13 +86,13 @@ noinst_HEADERS =		\
 	kfunctionals_list.F90   \
 	util.h			\
 	template.h		\
-	tsingle_inc.F90		\
-	tpair_inc.F90		\
+	tbase_inc.F90		\
 	tdarr_inc.F90		\
-	tlist_inc.F90		\
-	thash_inc.F90		\
 	tdict_inc.F90		\
-	tbase_inc.F90
+	thash_inc.F90		\
+	tlist_inc.F90		\
+	tpair_inc.F90		\
+	tsingle_inc.F90
 
 include $(srcdir)/../common-rules.make
 
@@ -177,3 +170,4 @@ ssys_system.o : ssys_system.F90 base_system.o
 ssys_tnadd.o : ssys_tnadd.F90 base_hamiltonian.o base_functional.o 
 storage.o : storage.F90 simulation.o 
 strng.o : strng.F90
+

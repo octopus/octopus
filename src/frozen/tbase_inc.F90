@@ -544,7 +544,7 @@ contains
   end subroutine SPECIAL(register)
 
   ! ---------------------------------------------------------
-  subroutine SPECIAL(apply)(this, operation, parent)
+  recursive subroutine SPECIAL(apply)(this, operation, parent)
     type(BASE_TYPE_NAME), intent(inout) :: this
     logical,    optional, intent(in)    :: parent
 
