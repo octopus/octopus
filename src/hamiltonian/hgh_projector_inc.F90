@@ -30,22 +30,27 @@
 !! \sum_{ij}^3\sum{k}^3 p\%k(i,j) |hgh_p\%p(:, i)><hgh_p\%lp(:, k, j)|\hat{S(k)}|psi>
 !! \f]
 !------------------------------------------------------------------------------
-subroutine X(hgh_project)(mesh, sm, hgh_p, dim, psi, ppsi, reltype)
+subroutine X(hgh_project)(mesh, sm, hgh_p, ll, lmax, dim, psi, ppsi, reltype)
   type(mesh_t),          intent(in)    :: mesh
   type(submesh_t),       intent(in)    :: sm
-  type(hgh_projector_t), intent(in)    :: hgh_p
+  type(hgh_projector_t), intent(in)    :: hgh_p(-lmax:)
+  integer,               intent(in)    :: ll
+  integer,               intent(in)    :: lmax
   integer,               intent(in)    :: dim
   R_TYPE,                intent(in)    :: psi(:, :)  !< (hgh\%n_s, dim)
   R_TYPE,                intent(inout) :: ppsi(:, :) !< (hgh\%n_s, dim)
   integer,               intent(in)    :: reltype
 
-  R_TYPE :: uvpsi(1:2, 1:12)
+  integer :: mm
+  R_TYPE :: uvpsi(1:dim, 1:3, -ll:ll)
 
-  call X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
+  do mm = -ll,ll
+    call X(hgh_project_bra)(mesh, sm, hgh_p(mm), dim, reltype, psi, uvpsi(1:dim, 1:3, mm))
+  end do
 
   if(mesh%parallel_in_domains) call comm_allreduce(mesh%vp%comm, uvpsi)
 
-  call X(hgh_project_ket)(hgh_p, dim, reltype, uvpsi, ppsi)
+  call X(hgh_project_ket)(hgh_p, ll, lmax, dim, reltype, uvpsi, ppsi)
   
 end subroutine X(hgh_project)
 
@@ -58,10 +63,10 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
   integer,               intent(in)  :: dim
   integer,               intent(in)  :: reltype
   R_TYPE,                intent(in)  :: psi(:, :)
-  R_TYPE,                intent(out) :: uvpsi(:,:) !< (dim, 12)
+  R_TYPE,               intent(out)  :: uvpsi(:,:) !< (dim, 3)
 
   integer :: n_s, jj, idim, kk
-  R_TYPE, allocatable :: bra(:, :, :)
+  R_TYPE, allocatable :: bra(:, :)
   type(profile_t), save :: prof
   integer :: block_size, sp, ep
 
@@ -84,23 +89,20 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
 
   if(mesh%use_curvilinear) then
 
-    SAFE_ALLOCATE(bra(1:n_s, 1:4, 1:3))
+    SAFE_ALLOCATE(bra(1:n_s, 1:3))
     bra = M_ZERO
 
     do jj = 1, 3
       if(reltype == 1) then
-        do kk = 1, 3
-          bra(1:n_s, kk, jj) = hgh_p%lp(1:n_s, kk, jj)*mesh%vol_pp(sm%map(1:n_s))
-        end do
-      end if
-      bra(1:n_s, 4, jj) = hgh_p%p(1:n_s, jj)*mesh%vol_pp(sm%map(1:n_s))
+        bra(1:n_s, jj) = R_CONJ(hgh_p%X(p)(1:n_s, jj))*mesh%vol_pp(sm%map(1:n_s))
+      else
+        bra(1:n_s, jj) = hgh_p%dp(1:n_s, jj)*mesh%vol_pp(sm%map(1:n_s))
+      endif
     end do
 
     do idim = 1, dim
-      do kk = 1, 4 
-        do jj = 1, 3
-          uvpsi(idim, hgh_index(kk, jj)) = sum(psi(1:n_s, idim)*bra(1:n_s, kk, jj))
-        end do
+      do jj = 1, 3
+        uvpsi(idim, jj) = sum(psi(1:n_s, idim)*bra(1:n_s, jj))
       end do
     end do
 
@@ -112,17 +114,17 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
       do sp = 1, n_s, block_size
         ep = sp - 1 + min(block_size, n_s - sp + 1)
         do jj = 1, 3
-          uvpsi(idim, hgh_index(4, jj)) = uvpsi(idim, hgh_index(4, jj)) + &
-                            sum(psi(sp:ep, idim)*hgh_p%p(sp:ep, jj))*mesh%volume_element
-          if(reltype == 1) then
-            do kk = 1, 3
-              uvpsi(idim, hgh_index(kk, jj)) = uvpsi(idim, hgh_index(kk, jj)) + &
-                  sum(psi(sp:ep, idim)*hgh_p%lp(sp:ep, kk, jj))*mesh%volume_element
-            end do
-          end if
+          if(reltype == 1) then 
+            uvpsi(idim, jj) = uvpsi(idim, jj) + &
+                            sum(psi(sp:ep, idim)*R_CONJ(hgh_p%X(p)(sp:ep, jj)))*mesh%volume_element
+          else
+            uvpsi(idim, jj) = uvpsi(idim, jj) + &
+                            sum(psi(sp:ep, idim)*hgh_p%dp(sp:ep, jj))*mesh%volume_element
+          endif
         end do
       end do
     end do
+
   end if
 
   call profiling_out(prof)
@@ -131,88 +133,85 @@ end subroutine X(hgh_project_bra)
 
 !-------------------------------------------------------------------------
 !> THREADSAFE
-subroutine X(hgh_project_ket)(hgh_p, dim, reltype, uvpsi, ppsi)
-  type(hgh_projector_t), intent(in)    :: hgh_p
+subroutine X(hgh_project_ket)(hgh_p, ll, lmax, dim, reltype, uvpsi, ppsi)
+  type(hgh_projector_t), intent(in)    :: hgh_p(-lmax:)
+  integer,               intent(in)    :: ll
+  integer,               intent(in)    :: lmax
   integer,               intent(in)    :: dim
   integer,               intent(in)    :: reltype
-  R_TYPE,                intent(in)    :: uvpsi(:,:) !< (dim, 12)
+  R_TYPE,                intent(in)    :: uvpsi(:,:,-ll:) !< (dim, 3, 2*ll+1)
   R_TYPE,                intent(inout) :: ppsi(:, :)
 
-  integer :: n_s, ii, jj, idim
+  integer :: n_s, ii, jj, idim, mm
   integer :: kk
   CMPLX, allocatable :: lp_psi(:, :, :)
   R_TYPE :: weight(3,dim)
-  CMPLX  :: zweight(3,3,dim), total_weight(dim)
+  CMPLX  :: zweight(3,dim)
 
   type(profile_t), save :: prof
 
-  integer :: block_size, sp, ep
-
   call profiling_in(prof, "HGH_PROJECT_KET")
 
-  !Cache blocking, in order to reuse the projector for each spinor components
-  block_size = hardware%X(block_size)
+  do mm = -ll,ll
 
-  n_s = hgh_p%n_s
+    n_s = hgh_p(mm)%n_s
 
-  weight(1:3, 1:dim) = M_ZERO
+    weight(1:3, 1:dim) = M_z0
 
-  !We first compute for each value of ii and idim the weight of the projector hgh_p%p(1:n_s, ii)
-  !Doing that we need to only apply once the each projector
-  do idim = 1, dim
-    do ii = 1, 3
-      do jj = 1, 3
-        weight(ii,idim) = weight(ii,idim) + hgh_p%h(ii, jj)*uvpsi(idim, hgh_index(4, jj))
-      end do
-    end do
-  end do
-  
-  if (reltype == 1) then
-
-    !We compute for each value of ii, kk and idim the weight of the projector hgh_p%p(1:n_s, ii)
-    !Doing that we need to only apply once the each projector 
-    zweight(1:3,1:3,1:dim) = M_z0
-
+    !We first compute for each value of ii and idim the weight of the projector hgh_p%p(1:n_s, ii)
+    !Doing that we need to only apply once the each projector
     do idim = 1, dim
-      do kk = 1, 3
-        do ii = 1, 3
-          do jj = 1, 3
-            zweight(kk,ii,idim) = zweight(kk,ii,idim) &
-                             + hgh_p%k(ii, jj)*uvpsi(idim, hgh_index(kk, jj))
-          end do
+      do ii = 1, 3
+        do jj = 1, 3
+          weight(ii,idim) = weight(ii,idim) + hgh_p(mm)%h(ii, jj)*uvpsi(idim, jj, mm)
         end do
       end do
     end do
+  
+    if (reltype == 1) then
 
-   !We now apply the projectors
- 
-   do sp = 1, n_s, block_size
-     ep = sp - 1 + min(block_size, n_s - sp + 1) 
-     do ii = 1, 3
-      total_weight(1) = M_zI*M_HALF*( zweight(3, ii, 1) + zweight(1, ii, 2) - M_zI*zweight(2, ii, 2))
-      total_weight(1) = total_weight(1) + weight(ii,1)
+      !We compute for each value of ii, kk and idim the weight of the projector hgh_p%p(1:n_s, ii)
+      !Doing that we need to only apply once the each projector 
+      zweight(1:3,1:dim) = M_z0
+      
+      do ii = 1, 3
+        do jj = 1, 3
 
-      ppsi(sp:ep, 1) = ppsi(sp:ep, 1) + total_weight(1) * hgh_p%p(sp:ep, ii)
-     
-      total_weight(2) =  M_zI*M_HALF*(-zweight(3, ii, 2) + zweight(1, ii, 1) + M_zI*zweight(2, ii, 1))
-      total_weight(2) = total_weight(2) + weight(ii,2)
- 
-      ppsi(sp:ep, 2) = ppsi(sp:ep, 2) + total_weight(2) * hgh_p%p(sp:ep, ii)
+          zweight(ii,1) =  zweight(ii,1) + mm*hgh_p(mm)%k(ii, jj)*uvpsi(1, jj, mm)
+          zweight(ii,2) =  zweight(ii,2) - mm*hgh_p(mm)%k(ii, jj)*uvpsi(2, jj, mm)
+
+          if(mm < ll) then 
+            zweight(ii,1) =  zweight(ii,1) + hgh_p(mm)%k(ii, jj)*sqrt(real(ll*(ll+1)-mm*(mm+1)))&
+               * uvpsi(2, jj, mm+1) 
+          end if
+
+          if(-mm < ll) then
+            zweight(ii,2) =  zweight(ii,2) + hgh_p(mm)%k(ii, jj)*sqrt(real(ll*(ll+1)-mm*(mm-1)))&
+               * uvpsi(1, jj, mm-1)
+          end if
+
+        end do
       end do
-   end do
 
-  else
-
-    !We now apply the projectors
-    do ii = 1, 3
-      do sp = 1, n_s, block_size
-        ep = sp - 1 + min(block_size, n_s - sp + 1)
-        ppsi(sp:ep, 1) = ppsi(sp:ep, 1) + weight(ii,1)*hgh_p%p(sp:ep, ii)
-        ppsi(sp:ep, 2) = ppsi(sp:ep, 2) + weight(ii,2)*hgh_p%p(sp:ep, ii)    
+      !We now apply the projectors
+      do idim = 1, dim
+        do ii = 1, 3
+          ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + (M_HALF*zweight(ii,idim)+weight(ii,idim))*hgh_p(mm)%zp(1:n_s, ii)
+        end do
       end do
-    end do
 
-  end if
+    else
+
+      !We now apply the projectors
+      do idim = 1, dim
+        do ii = 1, 3
+          ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + weight(ii,idim)*hgh_p(mm)%dp(1:n_s, ii)
+        end do
+      end do
+
+    end if
+
+  end do
 
   call profiling_out(prof)  
 
