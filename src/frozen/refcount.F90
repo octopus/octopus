@@ -72,7 +72,6 @@ contains
 
     this%type  = REFCOUNT_STAT
     this%count = 0
-    !refcount = refcount + 1
 
     POP_SUB(refcount_init)
   end subroutine refcount_init
@@ -179,7 +178,6 @@ contains
     ASSERT(this%count==0)
     this%count = 0
     this%type  = REFCOUNT_NULL
-    !refcount = refcount - 1
 
     POP_SUB(refcount_end)
   end subroutine refcount_end

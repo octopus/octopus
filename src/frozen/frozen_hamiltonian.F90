@@ -5,7 +5,6 @@ module frozen_hamiltonian_oct_m
   use base_hamiltonian_oct_m
   use base_potential_oct_m
   use base_system_oct_m
-  use frozen_external_oct_m
   use global_oct_m
   use json_oct_m
   use kinds_oct_m
@@ -42,7 +41,7 @@ contains
     ASSERT(associated(mept))
     call base_hamiltonian_get(that, "external", sept)
     ASSERT(associated(sept))
-    call frozen_external__acc__(mept, sept, config)
+    call base_potential__acc__(mept, sept, config)
     nullify(mept, sept)
 
     POP_SUB(frozen_hamiltonian__acc__)

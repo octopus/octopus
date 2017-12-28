@@ -102,7 +102,6 @@ module TEMPLATE(pair_m)
 #if defined(PAIR_INCLUDE_HEADER) || defined(PAIR_INCLUDE_MODULE)
 
   interface TEMPLATE(pair_new)
-    module procedure INTERNAL(pair_new_pair)
     module procedure INTERNAL(pair_new_init)
     module procedure INTERNAL(pair_new_copy)
   end interface TEMPLATE(pair_new)
@@ -111,6 +110,7 @@ module TEMPLATE(pair_m)
     module procedure INTERNAL(pair_associated)
     module procedure INTERNAL(pair_pair_frst_associated)
     module procedure INTERNAL(pair_pair_scnd_associated)
+    module procedure INTERNAL(pair_frst_scnd_associated)
     module procedure INTERNAL(pair_pair_associated)
   end interface TEMPLATE(pair_associated)
 
@@ -141,47 +141,39 @@ contains
 #if defined(PAIR_INCLUDE_BODY) || defined(PAIR_INCLUDE_MODULE)
 
   ! -----------------------------------------------------
-  subroutine INTERNAL(pair_new_pair)(this)
-    type(TEMPLATE(pair_t)), pointer :: this
-
-    PUSH_SUB(INTERNAL(pair_new_pair))
-
-    nullify(this)
-    SAFE_ALLOCATE(this)
-
-    POP_SUB(INTERNAL(pair_new_pair))
-  end subroutine INTERNAL(pair_new_pair)
-
-  ! -----------------------------------------------------
-  subroutine INTERNAL(pair_new_init)(this, frst, scnd)
-    type(TEMPLATE(pair_t)),   pointer     :: this
+  function INTERNAL(pair_new_init)(frst, scnd) result(this)
     type(PAIR_FRST_TYPE_NAME), intent(in) :: frst
     type(PAIR_SCND_TYPE_NAME), intent(in) :: scnd
 
+    type(TEMPLATE(pair_t)), pointer :: this
+    
     PUSH_SUB(INTERNAL(pair_new_init))
 
-    call INTERNAL(pair_new_pair)(this)
+    nullify(this)
+    SAFE_ALLOCATE(this)
     call TEMPLATE(pair_init)(this, frst, scnd)
 
     POP_SUB(INTERNAL(pair_new_init))
-  end subroutine INTERNAL(pair_new_init)
+  end function INTERNAL(pair_new_init)
 
   ! -----------------------------------------------------
-  subroutine INTERNAL(pair_new_copy)(this, that)
-    type(TEMPLATE(pair_t)), pointer     :: this
+  function INTERNAL(pair_new_copy)(that) result(this)
     type(TEMPLATE(pair_t)),  intent(in) :: that
 
+    type(TEMPLATE(pair_t)), pointer :: this
+    
     PUSH_SUB(INTERNAL(pair_new_copy))
 
-    call INTERNAL(pair_new_pair)(this)
+    nullify(this)
+    SAFE_ALLOCATE(this)
     call TEMPLATE(pair_copy)(this, that)
 
     POP_SUB(INTERNAL(pair_new_copy))
-  end subroutine INTERNAL(pair_new_copy)
+  end function INTERNAL(pair_new_copy)
 
   ! -----------------------------------------------------
   subroutine TEMPLATE(pair_del)(this)
-    type(TEMPLATE(pair_t)), pointer :: this
+    type(TEMPLATE(pair_t)), pointer, intent(inout) :: this
 
     PUSH_SUB(TEMPLATE(pair_del))
 
@@ -242,6 +234,20 @@ contains
   end function INTERNAL(pair_pair_scnd_associated)
 
   ! -----------------------------------------------------
+  elemental function INTERNAL(pair_frst_scnd_associated)(this, frst, scnd) result(eqv)
+    type(TEMPLATE(pair_t)),            intent(in) :: this
+    type(PAIR_FRST_TYPE_NAME), target, intent(in) :: frst
+    type(PAIR_SCND_TYPE_NAME), target, intent(in) :: scnd
+
+    logical :: eqv
+
+    eqv = .false.
+    if(INTERNAL(pair_associated)(this))&
+      eqv = (associated(this%frst, frst).and.associated(this%scnd, scnd))
+
+  end function INTERNAL(pair_frst_scnd_associated)
+
+  ! -----------------------------------------------------
   elemental function INTERNAL(pair_pair_associated)(this, that) result(eqv)
     type(TEMPLATE(pair_t)), intent(in) :: this
     type(TEMPLATE(pair_t)), intent(in) :: that
@@ -298,8 +304,8 @@ contains
 
   ! -----------------------------------------------------
   subroutine INTERNAL(pair_get_frst)(this, that)
-    type(TEMPLATE(pair_t)),     intent(in) :: this
-    type(PAIR_FRST_TYPE_NAME), pointer     :: that
+    type(TEMPLATE(pair_t)),             intent(in)  :: this
+    type(PAIR_FRST_TYPE_NAME), pointer, intent(out) :: that
 
     PUSH_SUB(INTERNAL(pair_get_frst))
 
@@ -311,8 +317,8 @@ contains
 
   ! -----------------------------------------------------
   subroutine INTERNAL(pair_get_scnd)(this, that)
-    type(TEMPLATE(pair_t)),     intent(in) :: this
-    type(PAIR_SCND_TYPE_NAME), pointer     :: that
+    type(TEMPLATE(pair_t)),             intent(in)  :: this
+    type(PAIR_SCND_TYPE_NAME), pointer, intent(out) :: that
 
     PUSH_SUB(INTERNAL(pair_get_scnd))
 
@@ -325,9 +331,9 @@ contains
 
   ! -----------------------------------------------------
   subroutine INTERNAL(pair_get_both)(this, frst, scnd)
-    type(TEMPLATE(pair_t)),     intent(in) :: this
-    type(PAIR_FRST_TYPE_NAME), pointer     :: frst
-    type(PAIR_SCND_TYPE_NAME), pointer     :: scnd
+    type(TEMPLATE(pair_t)),             intent(in)  :: this
+    type(PAIR_FRST_TYPE_NAME), pointer, intent(out) :: frst
+    type(PAIR_SCND_TYPE_NAME), pointer, intent(out) :: scnd
 
     PUSH_SUB(INTERNAL(pair_get_both))
 

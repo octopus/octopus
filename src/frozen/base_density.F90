@@ -298,6 +298,7 @@ contains
     ASSERT(associated(dnst))
     call dnst_start(dnst, sim)
     nullify(dnst)
+    call base_density__attach__(this)
 
     POP_SUB(base_density__start__)
   end subroutine base_density__start__
@@ -345,6 +346,7 @@ contains
     ASSERT(associated(dnst))
     call dnst_update(dnst)
     nullify(dnst)
+    call base_density__publish__(this)
 
     POP_SUB(base_density__update__)
   end subroutine base_density__update__
@@ -379,6 +381,7 @@ contains
     ASSERT(associated(this%config))
     ASSERT(dnst_intrf_assoc(this%dnst))
     ASSERT(associated(this%sim))
+    call base_density__detach__(this)
     nullify(this%sim, dnst)
     call dnst_intrf_get(this%dnst, dnst)
     ASSERT(associated(dnst))
@@ -387,6 +390,72 @@ contains
 
     POP_SUB(base_density__stop__)
   end subroutine base_density__stop__
+
+  ! ---------------------------------------------------------
+  subroutine base_density__attach__(this)
+    type(base_density_t), intent(inout) :: this
+
+    logical :: accu
+    integer :: ierr
+
+    PUSH_SUB(base_density__attach__)
+
+    ASSERT(associated(this%config))
+    ASSERT(dnst_intrf_assoc(this%dnst))
+    ASSERT(associated(this%sim))
+    call json_get(this%config, "reduce", accu, ierr)
+    if(ierr/=JSON_OK) accu = .false.
+    if(accu) call base_density__apply__(this, attach, parent=.false.)
+    
+    POP_SUB(base_density__attach__)
+    
+  contains
+
+    subroutine attach(that)
+      type(base_density_t), intent(inout) :: that
+
+      PUSH_SUB(base_density__attach__.attach)
+      
+      ASSERT(associated(that%config))
+      call msgbus_attach(this%msgb, that%msgb)
+
+      POP_SUB(base_density__attach__.attach)
+    end subroutine attach
+
+  end subroutine base_density__attach__
+
+  ! ---------------------------------------------------------
+  subroutine base_density__detach__(this)
+    type(base_density_t), intent(inout) :: this
+
+    logical :: accu
+    integer :: ierr
+
+    PUSH_SUB(base_density__detach__)
+
+    ASSERT(associated(this%config))
+    ASSERT(dnst_intrf_assoc(this%dnst))
+    ASSERT(associated(this%sim))
+    call json_get(this%config, "reduce", accu, ierr)
+    if(ierr/=JSON_OK) accu = .false.
+    if(accu) call base_density__apply__(this, detach, parent=.false.)
+    
+    POP_SUB(base_density__detach__)
+    
+  contains
+
+    subroutine detach(that)
+      type(base_density_t), intent(inout) :: that
+
+      PUSH_SUB(base_density__detach__.detach)
+      
+      ASSERT(associated(that%config))
+      call msgbus_detach(this%msgb, that%msgb)
+
+      POP_SUB(base_density__detach__.detach)
+    end subroutine detach
+
+  end subroutine base_density__detach__
 
   ! ---------------------------------------------------------
   subroutine base_density__recv__(this, update)
@@ -401,6 +470,8 @@ contains
 
     PUSH_SUB(base_density__recv__)
 
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
     update = .false.
     call msgbus_init(iter, this%msgb)
     do
@@ -422,6 +493,30 @@ contains
   end subroutine base_density__recv__
     
   ! ---------------------------------------------------------
+  subroutine base_density__publish__(this)
+    type(base_density_t), intent(inout) :: this
+
+    type(json_object_t), pointer :: data
+    type(message_t),     pointer :: mssg
+
+    PUSH_SUB(base_density__publish__)
+
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
+    nullify(data, mssg)
+    mssg => message_new()
+    call message_get(mssg, data)
+    ASSERT(associated(data))
+    call json_set(data, "update", .true.)
+    nullify(data)
+    call msgbus_publish(this%msgb, mssg)
+    call message_del(mssg)
+    nullify(mssg)
+    
+    POP_SUB(base_density__publish__)
+  end subroutine base_density__publish__
+    
+  ! ---------------------------------------------------------
   subroutine base_density_notify_type(this)
     type(base_density_t), intent(inout) :: this
 
@@ -430,6 +525,8 @@ contains
 
     PUSH_SUB(base_density_notify_type)
 
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
     nullify(data, mssg)
     mssg => message_new()
     call message_get(mssg, data)
@@ -437,7 +534,7 @@ contains
     call json_set(data, "update", .true.)
     nullify(data)
     call msgbus_notify(this%msgb, mssg)
-    call msgbus_publish(this%msgb, mssg)
+    call message_del(mssg)
     nullify(mssg)
     
     POP_SUB(base_density_notify_type)
@@ -452,6 +549,8 @@ contains
     
     PUSH_SUB(base_density_notify_subs)
 
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
     nullify(subs)
     call base_density_gets(this, trim(adjustl(name)), type=subs)
     ASSERT(associated(subs))
@@ -472,7 +571,7 @@ contains
     ASSERT(dnst_intrf_assoc(this%dnst))
     ASSERT(.not.associated(this%sim))
     call base_density__apply__(this, start)
-    
+
     POP_SUB(base_density_start)
     
   contains
@@ -490,46 +589,30 @@ contains
   end subroutine base_density_start
 
   ! ---------------------------------------------------------
-  recursive subroutine base_density_acc(this)
-    type(base_density_t), intent(inout) :: this
-
-    PUSH_SUB(base_density_acc)
-
-    ASSERT(associated(this%config))
-    ASSERT(dnst_intrf_assoc(this%dnst))
-    ASSERT(associated(this%sim))
-    ASSERT(base_density_dict_len(this%dict)>0)
-    call base_density__reset__(this)
-    call base_density__reduce__(this, base_density__acc__)
-    call base_density__update__(this)
-    
-    POP_SUB(base_density_acc)
-  end subroutine base_density_acc
-
-  ! ---------------------------------------------------------
   recursive subroutine base_density_update(this)
     type(base_density_t), intent(inout) :: this
 
-    logical :: updt, accu
+    logical :: accu, updt
     integer :: ierr
-
+    
     PUSH_SUB(base_density_update)
 
     ASSERT(associated(this%config))
     ASSERT(dnst_intrf_assoc(this%dnst))
     ASSERT(associated(this%sim))
+    call json_get(this%config, "reduce", accu, ierr)
+    if(ierr/=JSON_OK) accu = .false.
+    if(accu) call base_density__apply__(this, base_density_update, parent=.false.)
     call base_density__recv__(this, updt)
     if(updt)then
-      call json_get(this%config, "reduce", accu, ierr)
-      if(ierr/=JSON_OK) accu = .false.
       if(accu)then
-        call base_density__apply__(this, base_density_update, parent=.false.)
-        call base_density_acc(this)
-      else
-        call base_density__update__(this)
+        ASSERT(base_density_dict_len(this%dict)>0)
+        call base_density__reset__(this)
+        call base_density__reduce__(this, base_density__acc__)
       end if
+      call base_density__update__(this)
     end if
-
+    
     POP_SUB(base_density_update)
   end subroutine base_density_update
 
@@ -550,6 +633,9 @@ contains
 
     PUSH_SUB(base_density_stop)
 
+    ASSERT(associated(this%config))
+    ASSERT(dnst_intrf_assoc(this%dnst))
+    ASSERT(associated(this%sim))
     call base_density__apply__(this, base_density__stop__)
     
     POP_SUB(base_density_stop)
@@ -596,7 +682,6 @@ contains
     nullify(dnst)
     if(present(lock)) continue
     if(present(active)) continue
-    call msgbus_attach(this%msgb, that%msgb)
     call json_get(this%config, "default", dflt, ierr)
     if(ierr/=JSON_OK) dflt = .true.
     if(dflt)then
@@ -630,7 +715,6 @@ contains
     ASSERT(associated(this%config))
     ASSERT(len_trim(adjustl(name))>0)
     ASSERT(associated(that%config))
-    call msgbus_detach(this%msgb, that%msgb)
 
     POP_SUB(base_density__dels__)
   end subroutine base_density__dels__
@@ -979,6 +1063,7 @@ contains
 
     nullify(this%config, this%sim)
     if(associated(this%rcnt)) call refcount_del(this%rcnt)
+    nullify(this%rcnt)
     call dnst_intrf_end(this%dnst)
     call msgbus_end(this%msgb)
     ASSERT(base_density_dict_len(this%dict)==0)

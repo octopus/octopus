@@ -5,6 +5,7 @@ module ssys_config_oct_m
   use base_config_oct_m
   use base_hamiltonian_oct_m
   ! use base_handle_oct_m
+  use base_potential_oct_m
   ! use fio_config_oct_m
   ! use fio_handle_oct_m
   use frozen_config_oct_m
@@ -104,6 +105,8 @@ contains
     nullify(cnfg)
     call json_init(this)
     call json_set(this, "type", TERM_TYPE_POTN)
+    call json_set(this, "kind", POTN_KIND_XTRN)
+    call json_set(this, "reduce", .true.)
     SAFE_ALLOCATE(cnfg)
     call storage_init(cnfg, full=.false.)
     call json_set(this, "storage", cnfg)

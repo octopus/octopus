@@ -530,8 +530,7 @@ contains
     if(associated(pair))then
       call TEMPLATE(hash_pair_set)(pair, val)
     else
-      call TEMPLATE(hash_pair_new)(pair, key, val)
-      call TEMPLATE(hash_list_push)(list, pair)
+      call TEMPLATE(hash_list_push)(list, TEMPLATE(hash_pair_new)(key, val))
       this%used = this%used + 1
       call INTERNAL(hash_rehash)(this)
     end if

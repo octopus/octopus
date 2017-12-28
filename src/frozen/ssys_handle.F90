@@ -2,8 +2,6 @@
 
 module ssys_handle_oct_m
 
-  use refcount_oct_m
-
   use base_functional_oct_m
   use base_hamiltonian_oct_m
   use base_handle_oct_m

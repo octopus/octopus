@@ -94,7 +94,7 @@ module TEMPLATE(list_oct_m)
 
   type :: TEMPLATE(list_t)
     private
-    integer                         :: size = 0
+    integer                         :: size = -1
     type(INTERNAL(node_t)), pointer :: head =>null()
     type(INTERNAL(node_t)), pointer :: tail =>null()
   end type TEMPLATE(list_t)
@@ -129,6 +129,14 @@ module TEMPLATE(list_oct_m)
     module procedure INTERNAL(list_del_data)
     module procedure INTERNAL(list_del_index)
   end interface TEMPLATE(list_del)
+
+  interface TEMPLATE(list_push)
+    module procedure INTERNAL(list_push_type)
+  end interface TEMPLATE(list_push)
+
+  interface TEMPLATE(list_pop)
+    module procedure INTERNAL(list_pop_type)
+  end interface TEMPLATE(list_pop)
 
   interface TEMPLATE(list_next)
     module procedure INTERNAL(list_iterator_next)
@@ -270,6 +278,7 @@ contains
 
     PUSH_SUB(TEMPLATE(list_index))
 
+    ASSERT(.not.TEMPLATE(list_len)(this)<0)
     icnt = 0
     index = 0
     call INTERNAL(list_iterator_init_list)(iter, this)
@@ -392,6 +401,7 @@ contains
 
     PUSH_SUB(INTERNAL(list_ins_data))
 
+    ASSERT(.not.TEMPLATE(list_len)(this)<0)
     nullify(node, prev, curr, next)
     call INTERNAL(list_walk_node)(this, match, prev, curr, next, jerr)
     if(jerr==TEMPLATE(LIST_OK))then
@@ -417,6 +427,7 @@ contains
 
     PUSH_SUB(INTERNAL(list_ins_index))
 
+    ASSERT(.not.TEMPLATE(list_len)(this)<0)
     nullify(node, prev, curr, next)
     call INTERNAL(list_walk_index)(this, index, prev, curr, next, jerr)
     if(jerr==TEMPLATE(LIST_OK))then
@@ -441,6 +452,7 @@ contains
 
     PUSH_SUB(TEMPLATE(list_set))
 
+    ASSERT(.not.TEMPLATE(list_len)(this)<0)
     nullify(prev, node, next)
     call INTERNAL(list_walk_index)(this, index, prev, node, next, ierr)
     if(associated(node))call INTERNAL(node_set)(node, that)
@@ -460,6 +472,7 @@ contains
 
     PUSH_SUB(TEMPLATE(list_get))
 
+    ASSERT(.not.TEMPLATE(list_len)(this)<0)
     nullify(that, prev, node, next)
     call INTERNAL(list_walk_index)(this, index, prev, node, next, ierr)
     if(associated(node))call INTERNAL(node_get)(node, that)
@@ -507,6 +520,7 @@ contains
 
     PUSH_SUB(INTERNAL(list_del_data))
 
+    ASSERT(.not.TEMPLATE(list_len)(this)<0)
     nullify(prev, node, next)
     call INTERNAL(list_walk_node)(this, that, prev, node, next, ierr)
     if(associated(node))then
@@ -529,6 +543,7 @@ contains
 
     PUSH_SUB(INTERNAL(list_del_index))
 
+    ASSERT(.not.TEMPLATE(list_len)(this)<0)
     nullify(that, prev, node, next)
     call INTERNAL(list_walk_index)(this, index, prev, node, next, ierr)
     if(associated(node))then
@@ -563,21 +578,22 @@ contains
   end subroutine INTERNAL(list_push_node)
 
   ! ---------------------------------------------------------
-  subroutine TEMPLATE(list_push)(this, that)
+  subroutine INTERNAL(list_push_type)(this, that)
     type(TEMPLATE(list_t)), intent(inout) :: this
     type(LIST_TYPE_NAME),   intent(in)    :: that
 
     type(INTERNAL(node_t)), pointer :: node
 
-    PUSH_SUB(TEMPLATE(list_push))
+    PUSH_SUB(INTERNAL(list_push_type))
 
+    ASSERT(.not.TEMPLATE(list_len)(this)<0)
     nullify(node)
     call INTERNAL(node_new)(node, that)
     call INTERNAL(list_push_node)(this, node)
     nullify(node)
 
-    POP_SUB(TEMPLATE(list_push))
-  end subroutine TEMPLATE(list_push)
+    POP_SUB(INTERNAL(list_push_type))
+  end subroutine INTERNAL(list_push_type)
 
   ! ---------------------------------------------------------
   subroutine INTERNAL(list_pop_node)(this, that)
@@ -603,15 +619,16 @@ contains
   end subroutine INTERNAL(list_pop_node)
 
   ! ---------------------------------------------------------
-  subroutine TEMPLATE(list_pop)(this, that, ierr)
+  subroutine INTERNAL(list_pop_type)(this, that, ierr)
     type(TEMPLATE(list_t)), intent(inout) :: this
     type(LIST_TYPE_NAME),  pointer        :: that
     integer,      optional, intent(out)   :: ierr
 
     type(INTERNAL(node_t)), pointer :: node
 
-    PUSH_SUB(TEMPLATE(list_pop))
+    PUSH_SUB(INTERNAL(list_pop_type))
 
+    ASSERT(.not.TEMPLATE(list_len)(this)<0)
     nullify(that, node)
     if(present(ierr)) ierr = TEMPLATE(LIST_EMPTY_ERROR)
     call INTERNAL(list_pop_node)(this, node)
@@ -621,8 +638,8 @@ contains
       call INTERNAL(node_del)(node)
     end if
 
-    POP_SUB(TEMPLATE(list_pop))
-  end subroutine TEMPLATE(list_pop)
+    POP_SUB(INTERNAL(list_pop_type))
+  end subroutine INTERNAL(list_pop_type)
 
   ! ---------------------------------------------------------
   subroutine INTERNAL(list_append_node)(this, that)
@@ -655,6 +672,7 @@ contains
 
     PUSH_SUB(TEMPLATE(list_append))
 
+    ASSERT(.not.TEMPLATE(list_len)(this)<0)
     nullify(node)
     call INTERNAL(node_new)(node, that)
     call INTERNAL(list_append_node)(this, node)
@@ -674,6 +692,8 @@ contains
 
     PUSH_SUB(TEMPLATE(list_extend))
 
+    ASSERT(.not.TEMPLATE(list_len)(this)<0)
+    ASSERT(.not.TEMPLATE(list_len)(that)<0)
     call INTERNAL(list_iterator_init_list)(iter, that)
     do
       nullify(pval)
@@ -694,7 +714,9 @@ contains
     PUSH_SUB(INTERNAL(list_copy))
 
     call INTERNAL(list_end)(this)
-    call TEMPLATE(list_extend)(this, that)
+    this%size = 0
+    if(TEMPLATE(list_len)(that)>0)&
+      call TEMPLATE(list_extend)(this, that)
 
     POP_SUB(INTERNAL(list_copy))
   end subroutine INTERNAL(list_copy)
@@ -716,6 +738,7 @@ contains
     ASSERT(this%size==0)
     ASSERT(.not.associated(this%head))
     ASSERT(.not.associated(this%tail))
+    this%size = -1
     nullify(node)
 
     POP_SUB(INTERNAL(list_end))
@@ -728,6 +751,7 @@ contains
 
     PUSH_SUB(INTERNAL(list_iterator_init_list))
 
+    ASSERT(.not.TEMPLATE(list_len)(that)<0)
     this%self => that
     nullify(this%prev, this%curr, this%next)
     if(associated(that%head)) this%next => that%head
@@ -742,6 +766,7 @@ contains
 
     PUSH_SUB(INTERNAL(list_iterator_init_iterator))
 
+    ASSERT(associated(that%self))
     call INTERNAL(list_iterator_copy)(this, that)
 
     POP_SUB(INTERNAL(list_iterator_init_iterator))
@@ -758,10 +783,10 @@ contains
 
     PUSH_SUB(INTERNAL(list_iterator_insert))
 
+    ASSERT(associated(this%self))
     nullify(node)
     jerr = TEMPLATE(LIST_EMPTY_ERROR)
-    if(associated(this%self))then
-      ASSERT(associated(this%curr))
+    if(associated(this%curr))then
       jerr = TEMPLATE(LIST_OK)
       call INTERNAL(node_new)(node, that)
       call INTERNAL(list_ins_node)(this%self, node, this%prev, this%curr)
@@ -782,19 +807,18 @@ contains
 
     PUSH_SUB(INTERNAL(list_iterator_remove))
 
+    ASSERT(associated(this%self))
     nullify(that)
     jerr = TEMPLATE(LIST_EMPTY_ERROR)
-    if(associated(this%self))then
-      ASSERT(associated(this%curr))
+    if(associated(this%curr))then
       jerr = TEMPLATE(LIST_OK)
       call INTERNAL(node_get)(this%curr, that)
       call INTERNAL(list_del_node)(this%self, this%prev, this%curr, this%next)
       call INTERNAL(node_del)(this%curr)
+      nullify(this%curr)
       if(associated(this%next))then
         this%curr => this%next
         this%next => this%curr%next
-      else
-        call INTERNAL(list_iterator_end)(this)
       end if
     end if
     if(present(ierr)) ierr = jerr
@@ -814,20 +838,17 @@ contains
 
     PUSH_SUB(INTERNAL(list_iterator_next_node))
 
+    ASSERT(associated(this%self))
     nullify(prev, curr, next)
     jerr = TEMPLATE(LIST_EMPTY_ERROR)
-    if(associated(this%self))then
-      if(associated(this%next))then
-        jerr = TEMPLATE(LIST_OK)
-        this%prev => this%curr
-        this%curr => this%next
-        this%next => this%curr%next
-        prev => this%prev
-        curr => this%curr
-        next => this%next
-      else
-        call INTERNAL(list_iterator_end)(this)
-      end if
+    if(associated(this%next))then
+      jerr = TEMPLATE(LIST_OK)
+      this%prev => this%curr
+      this%curr => this%next
+      this%next => this%curr%next
+      prev => this%prev
+      curr => this%curr
+      next => this%next
     end if
     if(present(ierr)) ierr = jerr
 
@@ -844,6 +865,7 @@ contains
 
     PUSH_SUB(INTERNAL(list_iterator_next))
 
+    ASSERT(associated(this%self))
     nullify(that, prev, curr, next)
     call INTERNAL(list_iterator_next_node)(this, prev, curr, next, ierr)
     if(associated(curr)) call INTERNAL(node_get)(curr, that)

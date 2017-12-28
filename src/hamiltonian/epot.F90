@@ -57,7 +57,6 @@ module epot_oct_m
   use species_pot_oct_m
   use splines_oct_m
   use spline_filter_oct_m
-  use ssys_external_oct_m
   use states_oct_m
   use states_dim_oct_m
   use submesh_oct_m
@@ -686,6 +685,7 @@ contains
       ! Sets the vpsl pointer to the "live" part of the subsystem potential.
       call base_potential_get(ep%subsys_external, "live", vpsl)
       ASSERT(associated(vpsl))
+      call base_potential_notify(ep%subsys_external, "live")
     else
       ! Sets the vpsl pointer to the total potential.
       vpsl => ep%vpsl
@@ -813,7 +813,7 @@ contains
     if (associated(ep%e_field) .and. sb%periodic_dim < sb%dim) vpsl(1:mesh%np) = vpsl(1:mesh%np) + ep%v_static(1:mesh%np)
 
     ! Calculates the total potential by summing all the subsystem contributions.
-    if(associated(ep%subsys_external)) call ssys_external_calc(ep%subsys_external)
+    if(associated(ep%subsys_external)) call base_potential_update(ep%subsys_external)
   
     POP_SUB(epot_generate)
     call profiling_out(epot_generate_prof)

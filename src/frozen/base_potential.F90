@@ -11,15 +11,22 @@
 
 module base_potential_oct_m
 
+  use atom_oct_m
   use base_density_oct_m
+  use base_geometry_oct_m
   use base_states_oct_m
   use base_system_oct_m
   use global_oct_m
+  use intrpl_oct_m
   use json_oct_m
   use kinds_oct_m
+  use memo_oct_m
+  use message_oct_m
   use messages_oct_m
+  use msgbus_oct_m
   use profiling_oct_m
   use simulation_oct_m
+  use species_oct_m
   use storage_oct_m
 
 #define BASE_TEMPLATE_NAME base_potential
@@ -32,6 +39,10 @@ module base_potential_oct_m
 
   private
   
+  public ::         &
+    POTN_KIND_NONE, &
+    POTN_KIND_XTRN
+
   public ::           &
     base_potential_t
 
@@ -40,7 +51,6 @@ module base_potential_oct_m
     base_potential__start__,  &
     base_potential__acc__,    &
     base_potential__sub__,    &
-    base_potential__calc__,   &
     base_potential__update__, &
     base_potential__reset__,  &
     base_potential__stop__,   &
@@ -52,8 +62,8 @@ module base_potential_oct_m
     base_potential_del,    &
     base_potential_init,   &
     base_potential_start,  &
-    base_potential_acc,    &
     base_potential_calc,   &
+    base_potential_notify, &
     base_potential_update, &
     base_potential_reset,  &
     base_potential_stop,   &
@@ -70,15 +80,20 @@ module base_potential_oct_m
 
   integer, parameter :: default_nspin = 1
 
+  integer, parameter :: POTN_KIND_NONE = 0
+  integer, parameter :: POTN_KIND_XTRN = 1
+
   type :: base_potential_t
     private
     type(json_object_t),  pointer :: config =>null()
     type(base_system_t),  pointer :: sys    =>null()
     type(simulation_t),   pointer :: sim    =>null()
     type(refcount_t),     pointer :: rcnt   =>null()
+    integer                       :: kind   = POTN_KIND_NONE
     integer                       :: nspin  = default_nspin
-    real(kind=wp)                 :: energy = 0.0_wp
+    type(memo_t)                  :: memo
     type(storage_t)               :: data
+    type(msgbus_t)                :: msgb
     type(base_potential_dict_t)   :: dict
   end type base_potential_t
 
@@ -87,6 +102,11 @@ module base_potential_oct_m
     module procedure base_potential__init__copy
   end interface base_potential__init__
 
+  interface base_potential__load__
+    module procedure base_potential__load__r1
+    module procedure base_potential__load__r2
+  end interface base_potential__load__
+  
   interface base_potential_new
     module procedure base_potential_new_type
     module procedure base_potential_new_pass
@@ -95,6 +115,16 @@ module base_potential_oct_m
   interface base_potential_init
     module procedure base_potential_init_type
   end interface base_potential_init
+
+  interface base_potential_notify
+    module procedure base_potential_notify_type
+    module procedure base_potential_notify_subs
+  end interface base_potential_notify
+
+  interface base_potential_update
+    module procedure base_potential_update_enrg
+    module procedure base_potential_update_data
+  end interface base_potential_update
 
   interface base_potential_set
     module procedure base_potential_set_info
@@ -182,18 +212,28 @@ contains
     this%config => config
     this%sys => sys
     this%rcnt => refcount_new()
+    call json_get(this%config, "kind", this%kind, ierr)
+    if(ierr/=JSON_OK) this%kind = POTN_KIND_NONE
     this%nspin = default_nspin
     call json_get(this%config, "spin", uspn, ierr)
     if(ierr/=JSON_OK) uspn = .false.
     if(uspn) call base_system_get(this%sys, nspin=this%nspin)
     ASSERT(this%nspin>0)
     ASSERT(this%nspin<3)
+    select case(this%kind)
+    case(POTN_KIND_XTRN)
+      ASSERT(this%nspin==1)
+    case default
+      ASSERT(.false.)
+    end select
+    call memo_init(this%memo)
     call json_get(this%config, "storage", cnfg, ierr)
     ASSERT(ierr==JSON_OK)
     call json_set(cnfg, "full", .false.)
     call json_set(cnfg, "dimensions", this%nspin)
     call storage_init(this%data, cnfg)
     nullify(cnfg)
+    call msgbus_init(this%msgb, number=2)
     call base_potential_dict_init(this%dict)
 
     POP_SUB(base_potential__init__type)
@@ -238,9 +278,201 @@ contains
     ASSERT(.not.associated(this%sim))
     this%sim => sim
     call storage_start(this%data, this%sim)
+    call base_potential__attach__(this)
 
     POP_SUB(base_potential__start__)
   end subroutine base_potential__start__
+
+  ! ---------------------------------------------------------
+  subroutine base_potential__xtrn__(this, x, v)
+    type(base_potential_t),      intent(in)  :: this
+    real(kind=wp), dimension(:), intent(in)  :: x
+    real(kind=wp),               intent(out) :: v
+
+    type(base_geometry_t), pointer :: geom
+    type(atom_t),          pointer :: atom
+    type(base_geometry_iterator_t) :: iter
+    integer                        :: nd
+
+    PUSH_SUB(base_potential__xtrn__)
+
+    v = 0.0_wp
+    call simulation_get(this%sim, ndim=nd)
+    call base_system_get(this%sys, geom)
+    ASSERT(associated(geom))
+    call base_geometry_init(iter, geom)
+    do
+      nullify(atom)
+      call base_geometry_next(iter, atom)
+      if(.not.associated(atom))exit
+      ASSERT(associated(atom%species))
+      v = v + calc(x, atom%x(1:nd), species_zval(atom%species))
+    end do
+    nullify(atom)
+    call base_geometry_end(iter)
+    nullify(geom)
+
+    POP_SUB(base_potential__xtrn__)
+
+  contains
+
+    pure function calc(x, y, c) result(v)
+      real(kind=wp), dimension(:), intent(in)  :: x
+      real(kind=wp), dimension(:), intent(in)  :: y
+      real(kind=wp),               intent(in)  :: c
+
+      real(kind=wp) :: v
+
+      real(kind=wp) :: r
+
+      r = sqrt(sum((x-y)**2))
+      if(r<r_small) r = r_small
+      v = -c / r
+
+    end function calc
+
+  end subroutine base_potential__xtrn__
+
+  ! ---------------------------------------------------------
+  subroutine base_potential__interpolate__(this, that, type, list, operation)
+    type(base_potential_t), intent(inout) :: this
+    type(base_potential_t), intent(in)    :: that
+    integer,                intent(in)    :: type
+    type(json_array_t),     intent(in)    :: list
+
+    interface
+      subroutine operation(this, that)
+        import :: base_potential_t
+        type(base_potential_t), intent(inout) :: this
+        type(base_potential_t), intent(in)    :: that
+      end subroutine operation
+    end interface
+
+    type(json_object_t), pointer :: cnfg
+    type(json_array_iterator_t)  :: iter
+    type(base_potential_t)       :: potn
+    type(intrpl_t)               :: intp
+    integer                      :: ierr
+
+    PUSH_SUB(base_potential__interpolate__)
+
+    ASSERT(associated(this%config))
+    ASSERT(associated(that%config))
+    ASSERT(associated(this%sim))
+    ASSERT(associated(that%sim))
+    ASSERT(this%kind==that%kind)
+    ASSERT(this%nspin==that%nspin)
+    nullify(cnfg)
+    call base_potential__init__(potn, this)
+    call base_potential_set(potn, static=.false.)
+    call intrpl_init(intp, that%data, type=type)
+    ASSERT(json_len(list)>0)
+    call json_init(iter, list)
+    do
+      nullify(cnfg)
+      call json_next(iter, cnfg, ierr)
+      if(ierr/=JSON_OK)exit
+      call intrpl_attach(intp, cnfg)
+      select case(that%kind)
+      case(POTN_KIND_XTRN)
+        call base_potential__load__(potn, sfnc)
+      case default
+        ASSERT(.false.)
+      end select
+      call intrpl_detach(intp)
+      call operation(this, potn)
+    end do
+    call json_end(iter)
+    nullify(cnfg)
+    call intrpl_end(intp)
+    call base_potential_end(potn)
+    
+    POP_SUB(base_potential__interpolate__)
+
+  contains
+
+    function sfnc(x) result(val)
+      real(kind=wp), dimension(:), intent(in) :: x
+
+      real(kind=wp) :: val
+
+      PUSH_SUB(base_potential__interpolate__.sfnc)
+
+      call intrpl_eval(intp, x, val, ifnc)
+
+      POP_SUB(base_potential__interpolate__.sfnc)
+    end function sfnc
+
+    function ifnc(x) result(val)
+      real(kind=wp), dimension(:), intent(in) :: x
+
+      real(kind=wp) :: val
+
+      PUSH_SUB(base_potential__interpolate__.ifnc)
+
+      call base_potential__xtrn__(that, x, val)
+
+      POP_SUB(base_potential__interpolate__.ifnc)
+    end function ifnc
+
+  end subroutine base_potential__interpolate__
+
+  ! ---------------------------------------------------------
+  subroutine base_potential__op__(this, that, config, operation)
+    type(base_potential_t),        intent(inout) :: this
+    type(base_potential_t),        intent(in)    :: that
+    type(json_object_t), optional, intent(in)    :: config
+
+    interface
+      subroutine operation(this, that)
+        import :: base_potential_t
+        type(base_potential_t), intent(inout) :: this
+        type(base_potential_t), intent(in)    :: that
+      end subroutine operation
+    end interface
+
+    type(json_array_t), pointer :: list
+    integer                     :: type, ierr
+    
+    PUSH_SUB(base_potential__op__)
+
+    ASSERT(associated(this%config))
+    ASSERT(associated(that%config))
+    ASSERT(associated(this%sim))
+    ASSERT(associated(that%sim))
+    ASSERT(this%nspin==that%nspin)
+    nullify(list)
+    if(present(config))then
+      call json_get(config, "interpolation", type, ierr)
+      if(ierr/=JSON_OK) type = INTRPL_DEFAULT
+      call json_get(config, "positions", list, ierr)
+      if(ierr/=JSON_OK) nullify(list)
+    end if
+    if(associated(list))then
+      call base_potential__interpolate__(this, that, type, list, operation)
+    else
+      call operation(this, that)
+    end if
+
+    POP_SUB(base_potential__op__)
+  end subroutine base_potential__op__
+
+  ! ---------------------------------------------------------
+  subroutine base_potential__iacc__(this, that)
+    type(base_potential_t), intent(inout) :: this
+    type(base_potential_t), intent(in)    :: that
+
+    PUSH_SUB(base_potential__iacc__)
+
+    ASSERT(associated(this%config))
+    ASSERT(associated(that%config))
+    ASSERT(associated(this%sim))
+    ASSERT(associated(that%sim))
+    ASSERT(this%nspin==that%nspin)
+    call storage_add(this%data, that%data)
+
+    POP_SUB(base_potential__iacc__)
+  end subroutine base_potential__iacc__
 
   ! ---------------------------------------------------------
   subroutine base_potential__acc__(this, that, config)
@@ -255,12 +487,27 @@ contains
     ASSERT(associated(this%sim))
     ASSERT(associated(that%sim))
     ASSERT(this%nspin==that%nspin)
-    if(present(config)) continue
-    this%energy = this%energy + that%energy
-    call storage_add(this%data, that%data)
+    call base_potential__op__(this, that, config, base_potential__iacc__)
 
     POP_SUB(base_potential__acc__)
   end subroutine base_potential__acc__
+
+  ! ---------------------------------------------------------
+  subroutine base_potential__isub__(this, that)
+    type(base_potential_t), intent(inout) :: this
+    type(base_potential_t), intent(in)    :: that
+
+    PUSH_SUB(base_potential__isub__)
+
+    ASSERT(associated(this%config))
+    ASSERT(associated(that%config))
+    ASSERT(associated(this%sim))
+    ASSERT(associated(that%sim))
+    ASSERT(this%nspin==that%nspin)
+    call storage_sub(this%data, that%data)
+
+    POP_SUB(base_potential__isub__)
+  end subroutine base_potential__isub__
 
   ! ---------------------------------------------------------
   subroutine base_potential__sub__(this, that, config)
@@ -275,35 +522,91 @@ contains
     ASSERT(associated(this%sim))
     ASSERT(associated(that%sim))
     ASSERT(this%nspin==that%nspin)
-    if(present(config)) continue
-    this%energy = this%energy - that%energy
-    call storage_sub(this%data, that%data)
+    call base_potential__op__(this, that, config, base_potential__isub__)
 
     POP_SUB(base_potential__sub__)
   end subroutine base_potential__sub__
 
   ! ---------------------------------------------------------
-  subroutine base_potential__calc__(this)
-    type(base_potential_t), intent(inout) :: this
+  function base_potential__calc__(this, that) result(energy)
+    type(base_potential_t), intent(in)  :: this
+    type(base_density_t),   intent(in)  :: that
+    
+    real(kind=wp) :: energy
 
-    type(base_density_t), pointer :: dnst
-    type(storage_t),      pointer :: data
+    type(storage_t), pointer :: data
+    logical                  :: fuse
+    integer                  :: nspn
 
     PUSH_SUB(base_potential__calc__)
 
-    nullify(dnst, data)
-    this%energy = 0.0_wp
-    call base_potential_get(this, dnst)
-    ASSERT(associated(dnst))
-    call base_density_get(dnst, data)
-    ASSERT(associated(data))
-    nullify(dnst)
-    call storage_integrate(this%data, data, this%energy)
     nullify(data)
+    energy = 0.0_wp
+    call base_density_get(that, nspin=nspn, use=fuse)
+    ASSERT(this%nspin<=nspn)
+    if(fuse)then
+      if(this%nspin<=nspn)then
+        ASSERT(this%nspin==default_nspin)
+        call base_density_get(that, data, total=.true.)
+      else
+        call base_density_get(that, data)
+      end if
+      ASSERT(associated(data))
+      call storage_integrate(this%data, data, energy)
+      nullify(data)
+    end if
 
     POP_SUB(base_potential__calc__)
-  end subroutine base_potential__calc__
+  end function base_potential__calc__
 
+  ! ---------------------------------------------------------
+  subroutine base_potential__load__r1(this, func)
+    type(base_potential_t), intent(inout) :: this
+
+    interface
+      function func(x) result(f)
+        use kinds_oct_m
+        implicit none
+        real(kind=wp), dimension(:), intent(in) :: x
+        real(kind=wp)                           :: f
+      end function func
+    end interface
+
+    PUSH_SUB(base_potential__load__r1)
+
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
+    ASSERT(this%nspin==1)
+    call base_potential__reset__(this)
+    call storage_load(this%data, func)
+    call base_potential__update__(this)
+    
+    POP_SUB(base_potential__load__r1)
+  end subroutine base_potential__load__r1
+  
+  ! ---------------------------------------------------------
+  subroutine base_potential__load__r2(this, func)
+    type(base_potential_t), intent(inout) :: this
+
+    interface
+      subroutine func(x, f)
+        use kinds_oct_m
+        real(kind=wp), dimension(:), intent(in)  :: x
+        real(kind=wp), dimension(:), intent(out) :: f
+      end subroutine func
+    end interface
+
+    PUSH_SUB(base_potential__load__r2)
+
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
+    call base_potential__reset__(this)
+    call storage_load(this%data, func)
+    call base_potential__update__(this)
+
+    POP_SUB(base_potential__load__r2)
+  end subroutine base_potential__load__r2
+  
   ! ---------------------------------------------------------
   subroutine base_potential__update__(this)
     type(base_potential_t), intent(inout) :: this
@@ -312,7 +615,9 @@ contains
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
+    call memo_del(this%memo, "energy")
     call storage_update(this%data)
+    call base_potential__publish__(this)
 
     POP_SUB(base_potential__update__)
   end subroutine base_potential__update__
@@ -325,7 +630,7 @@ contains
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
-    this%energy = 0.0_wp
+    call memo_del(this%memo, "energy")
     call storage_reset(this%data)
 
     POP_SUB(base_potential__reset__)
@@ -339,11 +644,207 @@ contains
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
+    call base_potential__detach__(this)
     nullify(this%sim)
     call storage_stop(this%data)
 
     POP_SUB(base_potential__stop__)
   end subroutine base_potential__stop__
+
+  ! ---------------------------------------------------------
+  subroutine base_potential__attach__(this)
+    type(base_potential_t), intent(inout) :: this
+
+    type(base_density_t), pointer :: dnst
+    type(msgbus_t),       pointer :: msgb
+    logical                       :: accu
+    integer                       :: ierr
+
+    PUSH_SUB(base_potential__attach__)
+
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
+    nullify(dnst, msgb)
+    call json_get(this%config, "reduce", accu, ierr)
+    if(ierr/=JSON_OK) accu = .false.
+    if(accu) call base_potential__apply__(this, attach, parent=.false.)
+    call base_potential_get(this, dnst)
+    ASSERT(associated(dnst))
+    call base_density_get(dnst, msgb)
+    ASSERT(associated(msgb))
+    nullify(dnst)
+    call msgbus_attach(this%msgb, msgb, id=2)
+    nullify(msgb)
+
+    POP_SUB(base_potential__attach__)
+
+  contains
+
+    subroutine attach(that)
+      type(base_potential_t), intent(inout) :: that
+
+      PUSH_SUB(base_potential__attach__.attach)
+      
+      ASSERT(associated(that%config))
+      call msgbus_attach(this%msgb, that%msgb)
+
+      POP_SUB(base_potential__attach__.attach)
+    end subroutine attach
+
+  end subroutine base_potential__attach__
+
+  ! ---------------------------------------------------------
+  subroutine base_potential__detach__(this)
+    type(base_potential_t), intent(inout) :: this
+
+    type(base_density_t), pointer :: dnst
+    type(msgbus_t),       pointer :: msgb
+
+    logical :: accu
+    integer :: ierr
+
+    PUSH_SUB(base_potential__detach__)
+
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
+    nullify(dnst, msgb)
+    call base_potential_get(this, dnst)
+    ASSERT(associated(dnst))
+    call base_density_get(dnst, msgb)
+    ASSERT(associated(msgb))
+    nullify(dnst)
+    call msgbus_detach(this%msgb, msgb, id=2)
+    nullify(msgb)
+    call json_get(this%config, "reduce", accu, ierr)
+    if(ierr/=JSON_OK) accu = .false.
+    if(accu) call base_potential__apply__(this, detach, parent=.false.)
+
+    POP_SUB(base_potential__detach__)
+    
+  contains
+
+    subroutine detach(that)
+      type(base_potential_t), intent(inout) :: that
+
+      PUSH_SUB(base_potential__detach__.detach)
+      
+      ASSERT(associated(that%config))
+      call msgbus_detach(this%msgb, that%msgb)
+
+      POP_SUB(base_potential__detach__.detach)
+    end subroutine detach
+
+  end subroutine base_potential__detach__
+
+  ! ---------------------------------------------------------
+  subroutine base_potential__recv__(this, update, channel)
+    type(base_potential_t), intent(in)  :: this
+    logical,                intent(out) :: update
+    integer,      optional, intent(in)  :: channel
+
+    type(msgbus_iterator_t)      :: iter
+    type(json_object_t), pointer :: data
+    type(message_t),     pointer :: mssg
+    logical                      :: updt
+    integer                      :: chid, ierr
+
+    integer :: mcnt
+
+    PUSH_SUB(base_potential__recv__)
+
+    mcnt = 0
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
+    chid = 1
+    if(present(channel)) chid = channel
+    update = .false.
+    call msgbus_init(iter, this%msgb, id=chid)
+    do
+      nullify(data, mssg)
+      call msgbus_next(iter, mssg)
+      if(.not.associated(mssg))exit
+      call message_get(mssg, data)
+      ASSERT(associated(data))
+      call json_get(data, "update", updt, ierr)
+      if(ierr==JSON_OK)then
+        update = (update .or. updt)
+        mcnt = mcnt + 1
+        call msgbus_remove(iter, ierr=ierr)
+        ASSERT(ierr==MSGBUS_OK)
+      end if
+    end do
+    nullify(data, mssg)
+
+    POP_SUB(base_potential__recv__)
+  end subroutine base_potential__recv__
+
+  ! ---------------------------------------------------------
+  subroutine base_potential__publish__(this)
+    type(base_potential_t), intent(inout) :: this
+
+    type(json_object_t), pointer :: data
+    type(message_t),     pointer :: mssg
+
+    PUSH_SUB(base_potential__publish__)
+
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
+    nullify(data, mssg)
+    mssg => message_new()
+    call message_get(mssg, data)
+    ASSERT(associated(data))
+    call json_set(data, "update", .true.)
+    nullify(data)
+    call msgbus_publish(this%msgb, mssg)
+    call message_del(mssg)
+    nullify(mssg)
+
+    POP_SUB(base_potential__publish__)
+  end subroutine base_potential__publish__
+
+  ! ---------------------------------------------------------
+  subroutine base_potential_notify_type(this)
+    type(base_potential_t), intent(inout) :: this
+
+    type(json_object_t), pointer :: data
+    type(message_t),     pointer :: mssg
+
+    PUSH_SUB(base_potential_notify_type)
+
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
+    nullify(data, mssg)
+    mssg => message_new()
+    call message_get(mssg, data)
+    ASSERT(associated(data))
+    call json_set(data, "update", .true.)
+    nullify(data)
+    call msgbus_notify(this%msgb, mssg)
+    call message_del(mssg)
+    nullify(mssg)
+
+    POP_SUB(base_potential_notify_type)
+  end subroutine base_potential_notify_type
+
+  ! ---------------------------------------------------------
+  subroutine base_potential_notify_subs(this, name)
+    type(base_potential_t), intent(inout) :: this
+    character(len=*),       intent(in)    :: name
+
+    type(base_potential_t), pointer :: subs
+
+    PUSH_SUB(base_potential_notify_subs)
+
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
+    nullify(subs)
+    call base_potential_gets(this, trim(adjustl(name)), subs)
+    ASSERT(associated(subs))
+    call base_potential_notify(subs)
+    nullify(subs)
+
+    POP_SUB(base_potential_notify_subs)
+  end subroutine base_potential_notify_subs
 
   ! ---------------------------------------------------------
   subroutine base_potential_start(this, sim)
@@ -373,47 +874,144 @@ contains
   end subroutine base_potential_start
 
   ! ---------------------------------------------------------
-  subroutine base_potential_acc(this)
-    type(base_potential_t), intent(inout) :: this
+  function base_potential_calc(this, that) result(energy)
+    type(base_potential_t),         intent(inout) :: this
+    type(base_density_t), optional, intent(in)    :: that
+    
+    real(kind=wp) :: energy
 
-    PUSH_SUB(base_potential_acc)
-
-    ASSERT(associated(this%config))
-    ASSERT(associated(this%sim))
-    ASSERT(base_potential_dict_len(this%dict)>0)
-    call base_potential__reset__(this)
-    call base_potential__reduce__(this, base_potential__acc__)
-    call base_potential__update__(this)
-
-    POP_SUB(base_potential_acc)
-  end subroutine base_potential_acc
-
-  ! ---------------------------------------------------------
-  subroutine base_potential_calc(this)
-    type(base_potential_t), intent(inout) :: this
+    logical :: fuse
 
     PUSH_SUB(base_potential_calc)
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
-    call base_potential_acc(this)
-    call base_potential__apply__(this, base_potential__calc__)
+    energy = 0.0_wp
+    call base_potential_get(this, use=fuse)
+    if(fuse)then
+      if(present(that))then
+        call base_potential_update(this)
+        energy = base_potential__calc__(this, that)
+      else
+        call base_potential_update(this, energy)
+      end if
+    end if
 
     POP_SUB(base_potential_calc)
-  end subroutine base_potential_calc
+  end function base_potential_calc
 
   ! ---------------------------------------------------------
-  recursive subroutine base_potential_update(this)
+  subroutine base_potential_update_enrg(this, energy)
     type(base_potential_t), intent(inout) :: this
+    real(kind=wp),          intent(out)   :: energy
 
-    PUSH_SUB(base_potential_update)
+    type(base_density_t), pointer :: dnst
+    logical                       :: fuse
+    integer                       :: ierr
+
+    PUSH_SUB(base_potential_update_enrg)
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
-    call base_potential__apply__(this, base_potential__update__)
+    nullify(dnst)
+    energy = 0.0_wp
+    call base_potential_get(this, use=fuse)
+    if(fuse)then
+      call base_system_get(this%sys, dnst)
+      ASSERT(associated(dnst))
+      call base_density_update(dnst)
+      nullify(dnst)
+      call base_potential_update(this)
+      call calc(this)
+      call memo_get(this%memo, 'energy', energy, ierr)
+      ASSERT(ierr==MEMO_OK)
+    end if
 
-    POP_SUB(base_potential_update)
-  end subroutine base_potential_update
+    POP_SUB(base_potential_update_enrg)
+
+  contains
+
+    recursive subroutine calc(this)
+      type(base_potential_t), intent(inout) :: this
+
+      type(base_density_t), pointer :: dnst
+      logical                       :: updt, accu
+      integer                       :: ierr
+
+      PUSH_SUB(base_potential_update_enrg.calc)
+
+      nullify(dnst)
+      call base_potential__recv__(this, updt, channel=2)
+      if(updt) call memo_del(this%memo, "energy")
+      if(.not.memo_in(this%memo, "energy"))then
+        call json_get(this%config, "reduce", accu, ierr)
+        if(ierr/=JSON_OK) accu = .false.
+        if(accu)then
+          call base_potential__apply__(this, calc, parent=.false.)
+          call memo_set(this%memo, "energy", 0.0_wp)
+          call base_potential__reduce__(this, reduce)
+        else
+          call base_system_get(this%sys, dnst)
+          ASSERT(associated(dnst))
+          call memo_set(this%memo, "energy", base_potential__calc__(this, dnst))
+          nullify(dnst)
+        end if
+      end if
+      
+      POP_SUB(base_potential_update_enrg.calc)
+    end subroutine calc
+
+    subroutine reduce(this, that, config)
+      type(base_potential_t),        intent(inout) :: this
+      type(base_potential_t),        intent(in)    :: that
+      type(json_object_t), optional, intent(in)    :: config
+
+      real(kind=wp) :: menr, senr
+      integer       :: ierr
+
+      PUSH_SUB(base_potential_update_enrg.reduce)
+
+      if(present(config)) continue
+      call memo_get(this%memo, "energy", menr, ierr)
+      ASSERT(ierr==MEMO_OK)
+      call memo_get(that%memo, "energy", senr, ierr)
+      ASSERT(ierr==MEMO_OK)
+      call memo_set(this%memo, "energy", menr+senr)
+
+      POP_SUB(base_potential_update_enrg.reduce)
+    end subroutine reduce
+
+  end subroutine base_potential_update_enrg
+
+  ! ---------------------------------------------------------
+  recursive subroutine base_potential_update_data(this)
+    type(base_potential_t), intent(inout) :: this
+
+    logical :: fuse, accu, updt
+    integer :: ierr
+    
+    PUSH_SUB(base_potential_update_data)
+
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
+    call base_potential_get(this, use=fuse)
+    if(fuse)then
+      call json_get(this%config, "reduce", accu, ierr)
+      if(ierr/=JSON_OK) accu = .false.
+      if(accu) call base_potential__apply__(this, base_potential_update_data, parent=.false.)
+      call base_potential__recv__(this, updt, channel=1)
+      if(updt)then
+        if(accu)then
+          ASSERT(base_potential_dict_len(this%dict)>0)
+          call base_potential__reset__(this)
+          call base_potential__reduce__(this, base_potential__acc__)
+        end if
+        call base_potential__update__(this)
+      end if
+    end if
+    
+    POP_SUB(base_potential_update_data)
+  end subroutine base_potential_update_data
 
   ! ---------------------------------------------------------
   subroutine base_potential_reset(this)
@@ -432,6 +1030,8 @@ contains
 
     PUSH_SUB(base_potential_stop)
 
+    ASSERT(associated(this%config))
+    ASSERT(associated(this%sim))
     call base_potential__apply__(this, base_potential__stop__)
 
     POP_SUB(base_potential_stop)
@@ -491,23 +1091,22 @@ contains
   end subroutine base_potential_get_sub_potential_r2
 
   ! ---------------------------------------------------------
-  subroutine base_potential_set_info(this, static, energy)
+  subroutine base_potential_set_info(this, static)
     type(base_potential_t),  intent(inout) :: this
     logical,       optional, intent(in)    :: static
-    real(kind=wp), optional, intent(in)    :: energy
 
     PUSH_SUB(base_potential_set_info)
 
     ASSERT(associated(this%config))
     call storage_set(this%data, lock=static)
-    if(present(energy)) this%energy = energy
 
     POP_SUB(base_potential_set_info)
   end subroutine base_potential_set_info
 
   ! ---------------------------------------------------------
-  subroutine base_potential_get_info(this, size, nspin, static, fine, use)
+  subroutine base_potential_get_info(this, kind, size, nspin, static, fine, use)
     type(base_potential_t), intent(in)  :: this
+    integer,      optional, intent(out) :: kind
     integer,      optional, intent(out) :: size
     integer,      optional, intent(out) :: nspin
     logical,      optional, intent(out) :: static
@@ -517,6 +1116,7 @@ contains
     PUSH_SUB(base_potential_get_info)
 
     ASSERT(associated(this%config))
+    if(present(kind)) kind = this%kind
     if(present(nspin)) nspin = this%nspin
     call storage_get(this%data, size=size, lock=static, fine=fine, alloc=use)
 
@@ -525,13 +1125,17 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_potential_get_energy(this, energy)
-    type(base_potential_t),  intent(in)  :: this
-    real(kind=wp),           intent(out) :: energy
+    type(base_potential_t),  intent(inout) :: this
+    real(kind=wp),           intent(out)   :: energy
 
+    logical :: fuse
+    
     PUSH_SUB(base_potential_get_energy)
 
     ASSERT(associated(this%config))
-    energy = this%energy
+    energy = 0.0_wp
+    call base_potential_get(this, use=fuse)
+    if(fuse) call base_potential_update(this, energy)
 
     POP_SUB(base_potential_get_energy)
   end subroutine base_potential_get_energy
@@ -604,10 +1208,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_potential_get_potential_r1(this, that, spin)
-    type(base_potential_t),               intent(in)  :: this
-    real(kind=wp), dimension(:), pointer, intent(out) :: that
-    integer,                    optional, intent(in)  :: spin
+    type(base_potential_t),               intent(inout) :: this
+    real(kind=wp), dimension(:), pointer, intent(out)   :: that
+    integer,                    optional, intent(in)    :: spin
 
+    logical :: fuse
     integer :: ispn
 
     PUSH_SUB(base_potential_get_potential_r1)
@@ -615,20 +1220,30 @@ contains
     nullify(that)
     ispn = 1
     if(present(spin)) ispn = spin
-    call storage_get(this%data, that, ispn)
+    call base_potential_get(this, use=fuse)
+    if(fuse)then
+      call base_potential_update(this)
+      call storage_get(this%data, that, ispn)
+    end if
 
     POP_SUB(base_potential_get_potential_r1)
   end subroutine base_potential_get_potential_r1
 
   ! ---------------------------------------------------------
   subroutine base_potential_get_potential_r2(this, that)
-    type(base_potential_t),                 intent(in)  :: this
-    real(kind=wp), dimension(:,:), pointer, intent(out) :: that
+    type(base_potential_t),                 intent(inout) :: this
+    real(kind=wp), dimension(:,:), pointer, intent(out)   :: that
 
+    logical :: fuse
+    
     PUSH_SUB(base_potential_get_potential_r2)
 
     nullify(that)
-    call storage_get(this%data, that)
+    call base_potential_get(this, use=fuse)
+    if(fuse)then
+      call base_potential_update(this)
+      call storage_get(this%data, that)
+    end if
 
     POP_SUB(base_potential_get_potential_r2)
   end subroutine base_potential_get_potential_r2
@@ -648,7 +1263,7 @@ contains
     if(associated(that%config).and.associated(that%sys))then
       call base_potential__init__(this, that)
       call refcount_del(this%rcnt)
-      this%energy = that%energy
+      call memo_copy(this%memo, that%memo)
       if(associated(that%sim)) call storage_copy(this%data, that%data)
     end if
     this%rcnt => rcnt
@@ -665,9 +1280,12 @@ contains
 
     nullify(this%config, this%sys, this%sim)
     if(associated(this%rcnt)) call refcount_del(this%rcnt)
+    nullify(this%rcnt)
+    this%kind = POTN_KIND_NONE
     this%nspin = default_nspin
-    this%energy = 0.0_wp
+    call memo_end(this%memo)
     call storage_end(this%data)
+    call msgbus_end(this%msgb)
     ASSERT(base_potential_dict_len(this%dict)==0)
     call base_potential_dict_end(this%dict)
 

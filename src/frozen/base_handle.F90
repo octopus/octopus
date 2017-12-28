@@ -20,7 +20,6 @@ module base_handle_oct_m
   use json_oct_m
   use messages_oct_m
   use profiling_oct_m
-  use refcount_oct_m
   use simulation_oct_m
   use smlt_intrf_oct_m
   use space_oct_m

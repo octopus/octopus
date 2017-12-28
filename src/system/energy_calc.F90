@@ -19,6 +19,7 @@
 #include "global.h"
 
 module energy_calc_oct_m
+  use base_density_oct_m
   use base_hamiltonian_oct_m
   use base_potential_oct_m
   use base_states_oct_m
@@ -326,6 +327,7 @@ contains
 
     type(base_hamiltonian_t), pointer :: knadd
     type(base_potential_t),   pointer :: extrnl
+    type(base_density_t),     pointer :: frozen
     FLOAT, dimension(:,:),    pointer :: potential, density
     integer                           :: ispin
 
@@ -338,7 +340,7 @@ contains
     ASSERT(hm%d%ispin>0)
     ASSERT(hm%d%ispin<3)
     ASSERT(.not.gr%have_fine_mesh)
-    nullify(knadd, extrnl, potential, density)
+    nullify(knadd, extrnl, frozen, potential, density)
     ASSERT(associated(hm%subsys_hm))
     call base_hamiltonian_get(hm%subsys_hm, "tnadd", knadd)
     ASSERT(associated(knadd))
@@ -366,13 +368,13 @@ contains
     call base_states_get(st%subsys_st, "frozen", density, total=.true.)
     ASSERT(associated(density))
     intnvhxc = intnvhxc + dmf_dotp(gr%mesh, density(:,1), hm%vhartree)
+    nullify(density)
     call base_hamiltonian_get(hm%subsys_hm, "external", extrnl)
     ASSERT(associated(extrnl))
-    call base_potential_get(extrnl, potential)
-    ASSERT(associated(potential))
-    nullify(extrnl)
-    externl = dmf_dotp(gr%mesh, density(:,1), potential(:,1))
-    nullify(potential, density)
+    call base_states_get(st%subsys_st, "frozen", frozen)
+    ASSERT(associated(frozen))
+    externl = base_potential_calc(extrnl, frozen)
+    nullify(extrnl, frozen)
 
     POP_SUB(energy_calc_ssys_corrections)
   end subroutine energy_calc_ssys_corrections

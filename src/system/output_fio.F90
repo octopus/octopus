@@ -3,7 +3,8 @@
 module output_fio_oct_m
 
   use base_config_oct_m
-  use base_hamiltonian_oct_m  
+  use base_hamiltonian_oct_m 
+  use base_potential_oct_m
   use batch_oct_m
   use curvilinear_oct_m
   use density_oct_m
@@ -630,6 +631,7 @@ contains
     nullify(cnfg)
     call json_init(this)
     call json_set(this, "type", TERM_TYPE_POTN)
+    call json_set(this, "kind", POTN_KIND_XTRN)
     call json_set(this, "dir", trim(adjustl(dir)))
     call json_set(this, "file", "v0")
     call dio_function_output(output_format, dir, "v0", &

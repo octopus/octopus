@@ -274,7 +274,7 @@ contains
     elseif(present(mold))then
       call term_intrf_init(this, mold)
     else
-      ASSERT(.FALSE.)
+      ASSERT(.false.)
     end if
 
     POP_SUB(term_intrf_new_copy)
@@ -1388,7 +1388,7 @@ contains
   ! ---------------------------------------------------------
   subroutine base_hamiltonian__acc__potn(this, that)
     type(base_hamiltonian_t), intent(inout) :: this
-    type(base_potential_t),   intent(in)    :: that
+    type(base_potential_t),   intent(inout) :: that
 
     type(storage_t), pointer :: data
     real(kind=wp)            :: energy
@@ -1409,7 +1409,7 @@ contains
   ! ---------------------------------------------------------
   subroutine base_hamiltonian__acc__fnct(this, that)
     type(base_hamiltonian_t), intent(inout) :: this
-    type(base_functional_t),  intent(in)    :: that
+    type(base_functional_t),  intent(inout) :: that
 
     type(storage_t), pointer :: data
     real(kind=wp)            :: energy
@@ -1479,7 +1479,7 @@ contains
   ! ---------------------------------------------------------
   subroutine base_hamiltonian__sub__potn(this, that)
     type(base_hamiltonian_t), intent(inout) :: this
-    type(base_potential_t),   intent(in)    :: that
+    type(base_potential_t),   intent(inout) :: that
 
     type(storage_t), pointer :: data
     real(kind=wp)            :: energy
@@ -1500,7 +1500,7 @@ contains
   ! ---------------------------------------------------------
   subroutine base_hamiltonian__sub__fnct(this, that)
     type(base_hamiltonian_t), intent(inout) :: this
-    type(base_functional_t),  intent(in)    :: that
+    type(base_functional_t),  intent(inout) :: that
 
     type(storage_t), pointer :: data
     real(kind=wp)            :: energy
