@@ -108,18 +108,18 @@ depend:
 
 base_config.o : base_config.F90 storage.o simulation.o functional.o base_handle.o base_hamiltonian.o 
 base_density.o : base_density.F90 tsingle_inc.F90 tdarr_inc.F90 tlist_inc.F90 tpair_inc.F90 thash_inc.F90 tdict_inc.F90 template.h util.h tbase_inc.F90 refcount.o strng.o storage.o simulation.o msgbus.o message.o dnst_intrf.o dnst.o 
-base_functional.o : base_functional.F90 tsingle_inc.F90 tdarr_inc.F90 tlist_inc.F90 tpair_inc.F90 thash_inc.F90 tdict_inc.F90 template.h util.h tbase_inc.F90 refcount.o strng.o storage.o simulation.o msgbus.o message.o functional.o base_system.o base_states.o base_density.o memo.o 
+base_functional.o : base_functional.F90 tsingle_inc.F90 tdarr_inc.F90 tlist_inc.F90 tpair_inc.F90 thash_inc.F90 tdict_inc.F90 template.h util.h tbase_inc.F90 refcount.o strng.o storage.o simulation.o msgbus.o message.o memo.o functional.o base_system.o base_states.o base_density.o 
 base_geometry.o : base_geometry.F90 tsingle_inc.F90 tdarr_inc.F90 tlist_inc.F90 tpair_inc.F90 thash_inc.F90 tdict_inc.F90 template.h util.h tbase_inc.F90 refcount.o strng.o geo_intrf.o geo_build.o 
 base_hamiltonian.o : base_hamiltonian.F90 tbase_inc.F90 tsingle_inc.F90 tdarr_inc.F90 tlist_inc.F90 tpair_inc.F90 thash_inc.F90 template.h util.h tdict_inc.F90 refcount.o strng.o storage.o simulation.o base_term.o base_system.o base_potential.o base_functional.o 
-base_handle.o : base_handle.F90 tsingle_inc.F90 tdarr_inc.F90 tlist_inc.F90 tpair_inc.F90 thash_inc.F90 tdict_inc.F90 template.h util.h tbase_inc.F90 strng.o smlt_intrf.o simulation.o refcount.o base_system.o base_states.o base_model.o base_hamiltonian.o base_geometry.o base_density.o 
+base_handle.o : base_handle.F90 tsingle_inc.F90 tdarr_inc.F90 tlist_inc.F90 tpair_inc.F90 thash_inc.F90 tdict_inc.F90 template.h util.h tbase_inc.F90 refcount.o strng.o smlt_intrf.o simulation.o base_system.o base_states.o base_model.o base_hamiltonian.o base_geometry.o base_density.o 
 base_model.o : base_model.F90 tsingle_inc.F90 tdarr_inc.F90 tlist_inc.F90 tpair_inc.F90 thash_inc.F90 tdict_inc.F90 template.h util.h tbase_inc.F90 refcount.o strng.o simulation.o base_system.o base_states.o base_hamiltonian.o base_geometry.o base_density.o 
-base_potential.o : base_potential.F90 tsingle_inc.F90 tdarr_inc.F90 tlist_inc.F90 tpair_inc.F90 thash_inc.F90 tdict_inc.F90 template.h util.h tbase_inc.F90 refcount.o strng.o storage.o simulation.o base_system.o base_states.o base_density.o memo.o 
+base_potential.o : base_potential.F90 tsingle_inc.F90 tdarr_inc.F90 tlist_inc.F90 tpair_inc.F90 thash_inc.F90 tdict_inc.F90 template.h util.h tbase_inc.F90 refcount.o strng.o storage.o simulation.o msgbus.o message.o memo.o intrpl.o base_system.o base_states.o base_geometry.o base_density.o 
 base_states.o : base_states.F90 tsingle_inc.F90 tdarr_inc.F90 tlist_inc.F90 tpair_inc.F90 thash_inc.F90 tdict_inc.F90 template.h util.h tbase_inc.F90 refcount.o strng.o simulation.o base_density.o 
 base_system.o : base_system.F90 tsingle_inc.F90 tdarr_inc.F90 tlist_inc.F90 tpair_inc.F90 thash_inc.F90 tdict_inc.F90 template.h util.h tbase_inc.F90 refcount.o strng.o simulation.o base_states.o base_geometry.o base_density.o 
 base_term.o : base_term.F90 tsingle_inc.F90 tdarr_inc.F90 tlist_inc.F90 tpair_inc.F90 thash_inc.F90 tdict_inc.F90 template.h util.h tbase_inc.F90 refcount.o strng.o base_system.o 
 basis.o : basis.F90 
-dnst.o : dnst.F90 storage.o simulation.o intrpl.o 
 dnst_intrf.o : dnst_intrf.F90 dnst.o 
+dnst.o : dnst.F90 storage.o simulation.o intrpl.o 
 domain.o : domain.F90 template.h util.h tlist_inc.F90 grid_intrf.o basis.o 
 envelope.o : envelope.F90 refcount.o message.o 
 fio_config.o : fio_config.F90 intrpl.o fio_handle.o base_hamiltonian.o base_config.o 
@@ -133,7 +133,7 @@ fio_index.o : fio_index.F90
 fio_mesh.o : fio_mesh.F90 fio_index.o 
 fio_model.o : fio_model.F90 fio_hamiltonian.o fio_density.o base_model.o base_hamiltonian.o base_density.o 
 fio_simul_box.o : fio_simul_box.F90 
-frozen_config.o : frozen_config.F90 storage.o frozen_handle.o fio_handle.o fio_config.o base_handle.o base_hamiltonian.o base_config.o 
+frozen_config.o : frozen_config.F90 storage.o frozen_handle.o fio_handle.o fio_config.o base_potential.o base_handle.o base_hamiltonian.o base_config.o 
 frozen_hamiltonian.o : frozen_hamiltonian.F90 simulation.o base_system.o base_potential.o base_hamiltonian.o 
 frozen_handle.o : frozen_handle.F90 simulation.o frozen_model.o fio_handle.o base_model.o base_handle.o base_density.o 
 frozen_model.o : frozen_model.F90 frozen_hamiltonian.o base_model.o base_hamiltonian.o base_density.o 
@@ -143,16 +143,15 @@ geo_intrf.o : geo_intrf.F90
 grid_intrf.o : grid_intrf.F90 
 interface_xc.o : interface_xc.F90 
 intrpl.o : intrpl.F90 storage.o simulation.o domain.o basis.o 
-live_handle.o : live_handle.F90 simulation.o base_handle.o base_geometry.o
-memo.o : memo.F90
+live_handle.o : live_handle.F90 simulation.o base_handle.o base_geometry.o 
+memo.o : memo.F90 tsingle_inc.F90 tdarr_inc.F90 tlist_inc.F90 tpair_inc.F90 thash_inc.F90 template.h util.h tdict_inc.F90 strng.o 
 message.o : message.F90 refcount.o 
-msgbus.o : msgbus.F90 template.h util.h tlist_inc.F90 message.o envelope.o
+msgbus.o : msgbus.F90 template.h util.h tlist_inc.F90 message.o envelope.o 
 refcount.o : refcount.F90 
 simulation.o : simulation.F90 refcount.o grid_intrf.o domain.o 
 smlt_intrf.o : smlt_intrf.F90 simulation.o refcount.o 
-ssys_handle.o : ssys_handle.F90 simulation.o live_handle.o frozen_handle.o base_handle.o base_hamiltonian.o base_functional.o refcount.o 
+ssys_handle.o : ssys_handle.F90 simulation.o live_handle.o frozen_handle.o base_handle.o base_hamiltonian.o base_functional.o 
 ssys_ionic.o : ssys_ionic.F90 base_term.o base_system.o base_geometry.o 
 ssys_tnadd.o : ssys_tnadd.F90 base_hamiltonian.o base_functional.o 
 storage.o : storage.F90 simulation.o 
 strng.o : strng.F90 
-
