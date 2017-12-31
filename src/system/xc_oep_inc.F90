@@ -121,9 +121,8 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
         ! solve the KLI equation
         if(oep%level /= XC_OEP_FULL .or. first) then
           oep%vxc = M_ZERO
-          call X(xc_KLI_solve) (gr%mesh, st, is, oep)
+          call X(xc_KLI_solve) (gr%mesh, gr, hm, st, is, oep, first)
         end if
-
         ! if asked, solve the full OEP equation
         if(oep%level == XC_OEP_FULL .and. (.not. first)) then
           call X(xc_oep_solve)(gr, hm, st, is, vxc(:,is), oep)
@@ -132,7 +131,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
         itera = itera+1
         if (is < nspin_) &
         ec = 0
-
+        if (itera>1) &
         first = .false.
         vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) + oep%vxc(1:gr%mesh%np,is)
       end if
@@ -201,6 +200,8 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
   ! fix xc potential (needed for Hpsi)
   vxc(1:gr%mesh%np) = vxc_old(1:gr%mesh%np) + oep%vxc(1:gr%mesh%np,is)
 
+!   oep%lr%X(dl_psi)(:,:, :, :) = M_ZERO
+  
   do iter = 1, oep%scftol%max_iter
     ! iteration over all states
     ss = M_ZERO
@@ -208,7 +209,7 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
     do ist = 1, (oep%eigen_n + 1)
 
       call states_get_state(st, gr%mesh, ist, is, psi)
-      
+
       ! evaluate right-hand side
       vxc_bar = dmf_dotp(gr%mesh, (R_ABS(psi(:, 1)))**2, oep%vxc(1:gr%mesh%np, is))
       bb(1:gr%mesh%np, 1) = -(oep%vxc(1:gr%mesh%np, is) - (vxc_bar - oep%uxc_bar(ist, is)))* &
