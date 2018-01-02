@@ -244,8 +244,9 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
         call X(lr_orth_vector) (gr%mesh, st, oep%lr%X(dl_psi)(:,:, ist, is), ist, is, R_TOTYPE(M_ZERO))
       else
         orthogonal = .true.
-        orthogonal(ist) = .false.    
-        call X(states_orthogonalize_single)(st, gr%mesh, st%nst, is, oep%lr%X(dl_psi)(:,:, ist, is), normalize = .false., mask = orthogonal)
+        orthogonal(ist) = .false.
+        call X(states_orthogonalize_single)(st, gr%mesh, st%nst, is, &
+        oep%lr%X(dl_psi)(:,:, ist, is), normalize = .false., mask = orthogonal)
       end if
 
       ! calculate this funny function ss
