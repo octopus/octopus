@@ -15,6 +15,8 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
+!> This file handles the evaluation of the photon0OEP potential, 
+!! as described in J. Flick et al. arXiv:1710.07999 [quant-ph] (2017))
 ! ---------------------------------------------------------
 subroutine X(xc_oep_pt_phi) (gr, hm, st, is, oep, phi1)
   type(grid_t),        intent(in)    :: gr
