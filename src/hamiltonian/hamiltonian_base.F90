@@ -559,7 +559,7 @@ contains
               end do
               
               do ic = 1, 3
-                forall(ip = 1:pmat%npoints) pmat%projectors(ip, imat) = hgh_p%p(ip, ic)
+                forall(ip = 1:pmat%npoints) pmat%projectors(ip, imat) = hgh_p%dp(ip, ic)
                 pmat%scal(imat) = mesh%volume_element
                 INCR(imat, 1)
               end do
