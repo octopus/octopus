@@ -1363,10 +1363,14 @@ contains
         write(iunit, '(1x,a)', advance = 'no') label
         label = 'rel_ev'
         write(iunit, '(1x,a)', advance = 'no') label
-         if (scf%conv_abs_force > M_ZERO) then
-           label = 'force_diff'
-           write(iunit, '(1x,a)', advance = 'no') label
-         end if
+        if (scf%conv_abs_force > M_ZERO) then
+          label = 'force_diff'
+          write(iunit, '(1x,a)', advance = 'no') label
+        end if
+        if (ks%oep%level == 5) then
+          label = 'OEP norm2ss'
+          write(iunit, '(1x,a)', advance = 'no') label
+        end if
         write(iunit,'(a)') ''
         call io_close(iunit)
       end if

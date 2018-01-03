@@ -104,7 +104,8 @@ subroutine X(xc_KLI_solve) (mesh, gr, hm, st, is, oep, first)
       oep%vxc(:, is) = oep%vxc(:, is) + oep%socc*st%occ(ist, is)*bb(:,1)*psi(:,1)
     else
       do ip = 1, mesh%np
-        oep%vxc(ip, is) = oep%vxc(ip, is) + oep%socc*st%occ(ist, is)*R_REAL(oep%X(lxc)(ip, ist, is)*psi(ip, 1))*single_electron_correction
+        oep%vxc(ip, is) = oep%vxc(ip, is) + &
+        oep%socc*st%occ(ist, is)*R_REAL(oep%X(lxc)(ip, ist, is)*psi(ip, 1))*single_electron_correction
       end do
     end if
   end do
