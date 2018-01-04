@@ -133,9 +133,9 @@ module casida_oct_m
     logical           :: parallel_in_eh_pairs
     type(mpi_grp_t)   :: mpi_grp
     logical           :: fromScratch
-    logical           :: pt
-    integer           :: pt_nmodes
-    type(photon_mode_t)   :: pt_mode
+    logical              :: has_photons
+    integer              :: pt_nmodes
+    type(photon_mode_t)  :: pt
 
   end type casida_t
 
@@ -293,13 +293,13 @@ contains
     !% Activate the photon Casida
     !%End
     
-    call parse_variable('Photons', .false., cas%pt)
+    call parse_variable('Photons', .false., cas%has_photons)
     cas%pt_nmodes = 0
-    if (cas%pt) then
-      call photon_mode_init(cas%pt_mode, sys%gr)
-      write(message(1), '(a,i5,a)') 'Happy to have Casida with ', cas%pt_mode%nmodes, ' photon modes.'
+    if (cas%has_photons) then
+      call photon_mode_init(cas%pt, sys%gr)
+      write(message(1), '(a,i5,a)') 'Happy to have Casida with ', cas%pt%nmodes, ' photon modes.'
       call messages_info(1)
-      cas%pt_nmodes = cas%pt_mode%nmodes
+      cas%pt_nmodes = cas%pt%nmodes
     end if
 
     !%Variable CasidaTransitionDensities
@@ -566,7 +566,7 @@ contains
       end do
     end do
 
-    if (cas%pt) then
+    if (cas%has_photons) then
     ! create pairs for photon modes (negative number refers to photonic excitation)
       do ik = 1, cas%pt_nmodes
          cas%pair(cas%n_pairs + ik)%i = 1
@@ -633,8 +633,8 @@ contains
     call restart_end(cas%restart_dump)
     call restart_end(cas%restart_load)
 
-    if (cas%pt) then
-      call photon_mode_end(cas%pt_mode)
+    if (cas%has_photons) then
+      call photon_mode_end(cas%pt)
     end if
 
     POP_SUB(casida_type_end)

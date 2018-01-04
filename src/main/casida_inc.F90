@@ -518,14 +518,14 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
       if(jb /= ia) matrix(jb, ia) = R_CONJ(matrix(ia, jb))
     end do
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(counter, maxcount)
-    if ((cas%pt).and.(cas%type == CASIDA_CASIDA)) then
+    if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
       do ia = 1, cas%pt_nmodes
          xx = M_ZERO
-         if (cas%pt) then
+         if (cas%has_photons) then
           call X(MN_term)(cas, ia, xx)
          end if
-         matrix(cas%n_pairs + ia, jb) = sqrt(M_HALF*cas%pt_mode%omega_array(ia))*xx(jb)
-         matrix(jb, cas%n_pairs + ia) = sqrt(M_HALF*cas%pt_mode%omega_array(ia))*xx(jb)
+         matrix(cas%n_pairs + ia, jb) = sqrt(M_HALF*cas%pt%omega_array(ia))*xx(jb)
+         matrix(jb, cas%n_pairs + ia) = sqrt(M_HALF*cas%pt%omega_array(ia))*xx(jb)
       end do
     end if
   end do
@@ -632,10 +632,10 @@ contains
     end if
 
     if(present(mtxel_vm)) then
-      if ((cas%pt).and.(cas%type == CASIDA_CASIDA)) then
+      if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
         do ia = 1, cas%pt_nmodes
-            mtxel_vm = X(mf_dotp)(mesh, cas%pt_mode%lambda_array(ia)*cas%pt_mode%pol_dipole_array(1:mesh%np,ia)*rho_i(1:mesh%np), &
-                cas%pt_mode%lambda_array(ia)*cas%pt_mode%pol_dipole_array(1:mesh%np,ia)*rho_j(1:mesh%np))
+            mtxel_vm = X(mf_dotp)(mesh, cas%pt%lambda_array(ia)*cas%pt%pol_dipole_array(1:mesh%np,ia)*rho_i(1:mesh%np), &
+                cas%pt%lambda_array(ia)*cas%pt%pol_dipole_array(1:mesh%np,ia)*rho_j(1:mesh%np))
         end do
       else
         mtxel_vm = M_ZERO
@@ -668,7 +668,7 @@ contains
 
     SAFE_ALLOCATE(deltav(1:mesh%np))
 !     do idir = 1, mesh%sb%dim
-      deltav(1:mesh%np) = cas%pt_mode%lambda_array(iimode)*cas%pt_mode%pol_dipole_array(1:mesh%np, iimode)
+      deltav(1:mesh%np) = cas%pt%lambda_array(iimode)*cas%pt%pol_dipole_array(1:mesh%np, iimode)
       ! let us get now the x vector.
       xx = X(ks_matrix_elements)(cas, st, mesh, deltav)
 !     end do
@@ -1096,12 +1096,12 @@ subroutine X(casida_solve)(cas, st)
       SAFE_DEALLOCATE_A(occ_diffs)
     end if
 
-    if ((cas%pt).and.(cas%type == CASIDA_CASIDA)) then
+    if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
        do ia = 1, cas%pt_nmodes  !diagonal
-         cas%X(mat)(cas%n_pairs+ia,cas%n_pairs+ia) = (cas%pt_mode%omega_array(ia))**2
+         cas%X(mat)(cas%n_pairs+ia,cas%n_pairs+ia) = (cas%pt%omega_array(ia))**2
          do jb = 1, cas%n_pairs
-           cas%X(mat)(jb,cas%n_pairs+ia) = M_TWO*cas%X(mat)(jb,cas%n_pairs+ia)*sqrt(cas%pt_mode%omega_array(ia))/sqrt(cas%s(jb))/sqrt(M_TWO)
-           cas%X(mat)(cas%n_pairs+ia,jb) = M_TWO*cas%X(mat)(cas%n_pairs+ia,jb)*sqrt(cas%pt_mode%omega_array(ia))/sqrt(cas%s(jb))/sqrt(M_TWO)
+           cas%X(mat)(jb,cas%n_pairs+ia) = M_TWO*cas%X(mat)(jb,cas%n_pairs+ia)*sqrt(cas%pt%omega_array(ia))/sqrt(cas%s(jb))/sqrt(M_TWO)
+           cas%X(mat)(cas%n_pairs+ia,jb) = M_TWO*cas%X(mat)(cas%n_pairs+ia,jb)*sqrt(cas%pt%omega_array(ia))/sqrt(cas%s(jb))/sqrt(M_TWO)
          end do
        end do
     end if
