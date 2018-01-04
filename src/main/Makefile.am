@@ -85,7 +85,8 @@ unocc.o : unocc.F90
 static_pol.o : static_pol.F90 
 geom_opt.o : geom_opt.F90 
 phonons_fd.o : phonons_fd.F90 
-casida.o : casida.F90 casida_inc.F90 
+casida.o : casida.F90 casida_qed_inc.F90 casida_inc.F90 
 pulpo.o : pulpo.F90 
 run.o : run.F90 unocc.o static_pol.o pulpo.o phonons_fd.o memory.o invert_ks.o geom_opt.o casida.o 
-main.o : main.F90 run.o 
+main.o : main.F90 run.o
+
