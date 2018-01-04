@@ -64,6 +64,8 @@ module photon_mode_oct_m
     FLOAT, pointer        :: pol_dipole_array(:,:)      ! polarization*dipole operator
     FLOAT, pointer        :: q0_array(:)
     FLOAT, pointer        :: p0_array(:)
+    logical               :: has_arrays                 ! will become obsolete after single mode removal
+    logical               :: has_q0_p0
   end type photon_mode_t
 
 contains
@@ -91,41 +93,36 @@ contains
     !% frequency, coupling strength, pol in (x,y,z), q(t0), p(t0)
     ! todo extend to more modes and put defaults
     this%nmodes = 0
+    this%has_arrays = .false.
+    this%has_q0_p0 = .false.
     if(parse_block('PhotonModes', blk) == 0) then
-!       write(*,*) this%nmodes
-
-       this%nmodes = parse_block_n(blk)
-!       write(*,*) this%nmodes
-       SAFE_ALLOCATE(this%omega_array(1:this%nmodes))
-       SAFE_ALLOCATE(this%lambda_array(1:this%nmodes))
-       SAFE_ALLOCATE(this%pol_array(1:this%nmodes,3))
-       SAFE_ALLOCATE(this%pol_dipole_array(1:gr%mesh%np,1:this%nmodes))
-       do ii = 1, this%nmodes
-          ncols = parse_block_cols(blk, ii-1)
-!          write(*,*) ncols
-          call parse_block_float(blk, ii-1, 0, this%omega_array(ii))   !row, column
-          call parse_block_float(blk, ii-1, 1, this%lambda_array(ii))  !row, column
-          call parse_block_float(blk, ii-1, 2, this%pol_array(ii,1))   !row, column
-          call parse_block_float(blk, ii-1, 3, this%pol_array(ii,2))   !row, column
-          call parse_block_float(blk, ii-1, 4, this%pol_array(ii,3))   !row, column
-          this%pol_dipole_array(1:gr%mesh%np,ii) = this%pol_array(ii,1)*gr%mesh%x(1:gr%mesh%np, 1) &
-                                        + this%pol_array(ii,2)*gr%mesh%x(1:gr%mesh%np, 2) &
-                                        + this%pol_array(ii,3)*gr%mesh%x(1:gr%mesh%np, 3)
-          if (ncols > 5) then
-            SAFE_ALLOCATE(this%q0_array(1:this%nmodes))
-            SAFE_ALLOCATE(this%p0_array(1:this%nmodes))
-            call parse_block_float(blk, ii-1, 5, this%q0_array(ii))   !row, column
-            call parse_block_float(blk, ii-1, 6, this%p0_array(ii))   !row, column
-          end if
-       end do
-!       call parse_block_float(blk, 0, 0, this%omega)   !row, column
-!       call parse_block_float(blk, 0, 1, this%lambda)  !row, column
-!       call parse_block_float(blk, 0, 2, this%pol_x)   !row, column
-!       call parse_block_float(blk, 0, 3, this%pol_y)   !row, column
-!       call parse_block_float(blk, 0, 4, this%pol_z)   !row, column
+      this%has_arrays = .true.
+      this%nmodes = parse_block_n(blk)
+      SAFE_ALLOCATE(this%omega_array(1:this%nmodes))
+      SAFE_ALLOCATE(this%lambda_array(1:this%nmodes))
+      SAFE_ALLOCATE(this%pol_array(1:this%nmodes,3))
+      SAFE_ALLOCATE(this%pol_dipole_array(1:gr%mesh%np,1:this%nmodes))
+      do ii = 1, this%nmodes
+         ncols = parse_block_cols(blk, ii-1)
+         call parse_block_float(blk, ii-1, 0, this%omega_array(ii))   !row, column
+         call parse_block_float(blk, ii-1, 1, this%lambda_array(ii))  !row, column
+         call parse_block_float(blk, ii-1, 2, this%pol_array(ii,1))   !row, column
+         call parse_block_float(blk, ii-1, 3, this%pol_array(ii,2))   !row, column
+         call parse_block_float(blk, ii-1, 4, this%pol_array(ii,3))   !row, column
+         this%pol_dipole_array(1:gr%mesh%np,ii) = this%pol_array(ii,1)*gr%mesh%x(1:gr%mesh%np, 1) &
+                                                   + this%pol_array(ii,2)*gr%mesh%x(1:gr%mesh%np, 2) &
+                                                   + this%pol_array(ii,3)*gr%mesh%x(1:gr%mesh%np, 3)
+         if (ncols > 5) then
+           this%has_q0_p0 = .true.
+           SAFE_ALLOCATE(this%q0_array(1:this%nmodes))
+           SAFE_ALLOCATE(this%p0_array(1:this%nmodes))
+           call parse_block_float(blk, ii-1, 5, this%q0_array(ii))   !row, column
+           call parse_block_float(blk, ii-1, 6, this%p0_array(ii))   !row, column
+         end if
+      end do
       call parse_block_end(blk)
     else
-      !The following syntax is depreciated, but still in for downwards compatibility, Todo remove
+      !The following syntax is depreciated, but still in for downwards compatibility, Todo remove, OEP only works with this syntax
       !%Variable OEPOmega
       !%Type float
       !%Default 1.0
@@ -180,8 +177,8 @@ contains
 
     SAFE_ALLOCATE(this%pol_dipole(1:gr%mesh%np,1))
     this%pol_dipole(1:gr%mesh%np,1) = this%pol_x*gr%mesh%x(1:gr%mesh%np, 1) &
-                                        + this%pol_y*gr%mesh%x(1:gr%mesh%np, 2) &
-                                        + this%pol_z*gr%mesh%x(1:gr%mesh%np, 3)
+                                      + this%pol_y*gr%mesh%x(1:gr%mesh%np, 2) &
+                                      + this%pol_z*gr%mesh%x(1:gr%mesh%np, 3)
 
     POP_SUB(photon_mode_init)
   end subroutine photon_mode_init
@@ -196,14 +193,16 @@ contains
     SAFE_DEALLOCATE_P(this%pol_dipole)
     SAFE_DEALLOCATE_P(this%correlator)
 
-    SAFE_DEALLOCATE_P(this%omega_array)
-    SAFE_DEALLOCATE_P(this%lambda_array)
-
-    SAFE_DEALLOCATE_P(this%pol_array)
-    SAFE_DEALLOCATE_P(this%pol_dipole_array)
-
-    SAFE_DEALLOCATE_P(this%q0_array)
-    SAFE_DEALLOCATE_P(this%p0_array)
+    if(this%has_arrays) then
+      SAFE_DEALLOCATE_P(this%omega_array)
+      SAFE_DEALLOCATE_P(this%lambda_array)
+      SAFE_DEALLOCATE_P(this%pol_array)
+      SAFE_DEALLOCATE_P(this%pol_dipole_array)
+      if (this%has_q0_p0) then 
+        SAFE_DEALLOCATE_P(this%q0_array)
+        SAFE_DEALLOCATE_P(this%p0_array)
+      end if
+    end if
 
     POP_SUB(photon_mode_end)
   end subroutine photon_mode_end
