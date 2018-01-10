@@ -98,8 +98,23 @@ contains
     
     call f_lib_initialize()
 
-    ! Free BC
-    this%geocode = "F" 
+    select case(mesh%sb%periodic_dim)
+    case(0)
+      ! Free BC
+      this%geocode = "F" 
+    case(1)
+      ! Wire BC
+      this%geocode = "W"
+      call messages_not_implemented("LibISF with 1D periodic boundary conditions.")
+    case(2)
+      ! Surface BC
+      this%geocode = "S"
+      call messages_not_implemented("LibISF with 2D periodic boundary conditions.")
+    case(3)
+      ! Periodic BC
+      this%geocode = "P"
+      call messages_not_implemented("LibISF with 3D periodic boundary conditions.")
+    end select
     this%isf_order = 16
 
     !%Variable PoissonSolverISFParallelData
