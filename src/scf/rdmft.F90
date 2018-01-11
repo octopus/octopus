@@ -93,7 +93,7 @@ contains
     
     integer :: iter, icount, ip, ist, iatom
     FLOAT :: energy, energy_dif, energy_old, energy_occ, xpos, xneg, sum_charge, rr, rel_ener
-    FLOAT, allocatable :: species_charge_center(:), psi(:, :)
+    FLOAT, allocatable :: species_charge_center(:), psi(:, :), stepsize(:)
     logical :: conv
     
     PUSH_SUB(scf_rdmft)
@@ -153,6 +153,7 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(psi)
+    SAFE_DEALLOCATE_A(species_charge_center)
     
     ! Orthogonalize the resulting orbitals
     call dstates_orthogonalization_full(st,gr%mesh,1)
@@ -161,27 +162,39 @@ contains
     call messages_info(1)
     
     call rdmft_init() 
+
+    !stepsize for steepest decent
+    SAFE_ALLOCATE(stepsize(1:st%nst))
+    stepsize = 0.05
+
     ! Start the actual minimization, first step is minimization of occupation numbers
     ! Orbital minimization is according to Piris and Ugalde, Vol.13, No. 13, J. Comput. Chem.
     do iter = 1, max_iter
-      write(message(1),'(a, 1x, i4)') 'RDM Iteration:', iter
+      write(message(1),'(a, i4)') 'RDM Iteration:', iter
       call messages_info(1)
 
       call scf_occ(rdm, gr, hm, st, energy_occ)
       ! Diagonalization of the generalized Fock matrix 
-      do icount = 1, 50 ! still under investigation how many iterations we need
-        call scf_orb(rdm, gr, geo, st, ks, hm, energy)
+      write(message(1), '(a)') 'Orbital optimization'
+      call messages_info(1)
+      do icount = 1, 5 !still under investigation how many iterations we need
+        !call scf_orb(rdm, gr, geo, st, ks, hm, energy)
+        call scf_orb_direct(rdm, gr, geo, st, ks, hm, stepsize, energy)
+        write(message(1), '(a, i4, es18.8)') 'Iteration', icount, energy
+        call messages_info(1)
+        
+        stepsize(:) = M_HALF*stepsize(:)
         energy_dif = energy - energy_old
         energy_old = energy
         if (abs(energy_dif)/abs(energy).lt. rdm%conv_ener.and.rdm%maxFO < 1.d3*rdm%conv_ener)  exit
-        if (energy_dif < M_ZERO) then
+        if (energy_dif < M_ZERO) then !NH Do we really need all this if we are setting xneg and xpos to zero after each iteration?
           xneg = xneg + 1
         else
           xpos = xpos + 1
         end if
         if (xneg > CNST(1.5e0)*xpos) then
           rdm%scale_f = CNST(1.01)*rdm%scale_f
-        elseif (xneg > CNST(1.1e0)*xpos) then
+        elseif (xneg > CNST(1.1e0)*xpos) then !NH this looks like a leftover as it doesn't do anything
           rdm%scale_f = rdm%scale_f
         else
           rdm%scale_f = CNST(0.95)* rdm%scale_f 
@@ -212,6 +225,8 @@ contains
       write(message(3),'(a,es15.5)') 'The maximal non-diagonal element of the Hermitian matrix F is ', rdm%maxFO
       call messages_info(3)
     end if
+
+    SAFE_DEALLOCATE_A(stepsize)
 
     call output_states(st,gr,geo,STATIC_DIR,outp)  
     call rdmft_end()
@@ -588,11 +603,11 @@ contains
     FO = M_ZERO
     if (rdm%do_basis.eqv..false.) then 
       call density_calc (st,gr,st%rho)
-      call v_ks_calc(ks, hm,st,geo)
+      call v_ks_calc(ks,hm,st,geo)
       call hamiltonian_update(hm, gr%mesh)
     end if
 
-    call construct_f(hm,st,gr,lambda, rdm)
+    call construct_f(hm,st,gr,lambda,rdm)
     
     !Set up FO matrix 
     if (rdm%iter==1) then
@@ -625,12 +640,267 @@ contains
     if (rdm%do_basis.eqv..true.) call sum_integrals(rdm) ! to calculate rdm%Coul and rdm%Exch with the new rdm%vecnat 
     call rdm_derivatives(rdm, hm, st, gr)
     call total_energy_rdm(rdm, st%occ(:,1), energy)
+
     SAFE_DEALLOCATE_A(lambda) 
     SAFE_DEALLOCATE_A(FO) 
 
     POP_SUB(scf_orb)
 
   end subroutine scf_orb
+
+ 
+  !---------------------------------------------------------------
+  ! Minimize the total energy wrt. an orbital by steepest descent
+  !---------------------------------------------------------------
+
+  subroutine scf_orb_direct(rdm, gr, geo, st, ks, hm, stepsize, energy)
+    
+    type(rdm_t),          intent(inout) :: rdm
+    type(grid_t),         intent(inout) :: gr !< grid
+    type(geometry_t),     intent(inout) :: geo !< geometry
+    type(states_t),       intent(inout) :: st !< States
+    type(v_ks_t),         intent(inout) :: ks !< Kohn-Sham
+    type(hamiltonian_t),  intent(inout) :: hm !< Hamiltonian
+    FLOAT,                intent(inout) :: stepsize(1:st%nst) !< step for steepest decent
+    FLOAT,                intent(out)   :: energy    
+
+    type(states_t)     :: states_old
+
+    integer            :: ist, jst, lst, ip, itry, trymax
+    FLOAT              :: scaleup, scaledown, norm, projection
+    FLOAT              :: energy_old, energy_diff, smallstep, thresh
+    FLOAT, allocatable :: E_deriv(:), dpsi(:,:), dpsi2(:,:)  
+
+    PUSH_SUB(scf_orb_direct)
+    
+    SAFE_ALLOCATE(E_deriv(1:gr%mesh%np_part))
+    SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(dpsi2(1:gr%mesh%np_part, 1:st%d%dim))
+
+    E_deriv = M_ZERO
+
+    !set parameters for steepest decent
+    scaleup = 2.2d0
+    scaledown = 0.5d0
+    trymax = 5
+    smallstep = 1d-10
+    thresh = 1d-10
+
+    call density_calc (st, gr, st%rho)
+    call v_ks_calc(ks, hm, st, geo)
+    call hamiltonian_update(hm, gr%mesh)
+
+    call rdm_derivatives(rdm, hm, st, gr)
+    call total_energy_rdm(rdm, st%occ(:,1), energy)
+    !store current energy
+    energy_old = energy
+
+    do ist = 1, st%nst
+      !store current states
+      call states_copy(states_old, st)
+
+      !calculate the derivative with respect to state ist
+      call E_deriv_calc(gr, st, hm, ist, E_deriv)    
+      !normalize derivative and orthogonalize to state ist
+      call states_get_state(st, gr%mesh, ist, 1, dpsi)
+      projection = dmf_dotp(gr%mesh, E_deriv(:), dpsi(1:gr%mesh%np_part, 1))
+      forall(ip=1:gr%mesh%np_part)
+        E_deriv(ip) = E_deriv(ip) - projection*dpsi(ip, 1)
+      end forall      
+      norm = dmf_dotp(gr%mesh, E_deriv(:), E_deriv(:))
+      norm = sqrt(norm)
+      if(norm > M_ZERO) then
+        forall(ip=1:gr%mesh%np_part)
+          E_deriv(ip) = E_deriv(ip)/norm
+        end forall      
+      endif
+
+      !add a step along the gradient
+      do itry = 1, trymax
+        forall(ip=1:gr%mesh%np_part)
+          dpsi(ip,1) = dpsi(ip,1) - E_deriv(ip)*stepsize(ist)
+        end forall      
+        !orthogonalize new orbital to all orbitals with smaller index and normalize
+        do jst = 1, ist - 1
+          call states_get_state(st, gr%mesh, jst, 1, dpsi2)
+          projection = dmf_dotp(gr%mesh, dpsi(:,1), dpsi2(:,1))
+          forall(ip = 1:gr%mesh%np_part)
+            dpsi(ip, 1) = dpsi(ip, 1) - projection*dpsi2(ip, 1)
+          end forall
+        enddo !jst
+        norm = sqrt(dmf_dotp(gr%mesh, dpsi(:,1), dpsi(:,1)))
+        forall(ip=1:gr%mesh%np_part)
+          dpsi(ip, 1) = dpsi(ip, 1)/norm
+        end forall
+        call states_set_state(st, gr%mesh, ist, 1, dpsi)
+        !orthogonalize all orbitals with larger index to new orbital and normalize
+        do jst = ist + 1, st%nst
+          call states_get_state(st, gr%mesh, jst, 1, dpsi)
+          do lst = ist, jst - 1
+            call states_get_state(st, gr%mesh, lst, 1, dpsi2)
+            projection = dmf_dotp(gr%mesh, dpsi(:,1), dpsi2(:,1))
+            forall(ip = 1:gr%mesh%np_part)
+              dpsi(ip,1) = dpsi(ip,1) - projection*dpsi2(ip,1)
+            end forall
+          enddo !lst
+          norm = sqrt(dmf_dotp(gr%mesh, dpsi(:,1), dpsi(:,1)))
+          forall(ip=1:gr%mesh%np_part)
+            dpsi(ip, 1) = dpsi(ip, 1)/norm
+          end forall
+          call states_set_state(st, gr%mesh, jst, 1, dpsi)
+        enddo !jst
+        
+        !calculate total energy
+        call density_calc (st, gr, st%rho)
+        call v_ks_calc(ks, hm, st, geo)
+        call hamiltonian_update(hm, gr%mesh)
+        call rdm_derivatives(rdm, hm, st, gr)
+        call total_energy_rdm(rdm, st%occ(:,1), energy)
+
+write(*,*) 'Energy after step in orbital', ist, energy
+
+        !check if step lowers the energy
+        energy_diff = energy - energy_old
+
+        if (energy_diff .lt. - thresh) then 
+          !sucessful step
+          stepsize(ist) = stepsize(ist)*scaleup !increase stepsize for this state
+          energy_old = energy
+          exit
+        else 
+          !not sucessful step
+          stepsize(ist) = stepsize(ist)*scaledown !decrease stepsize
+          !undo changes in st and dpsi (cannot use states_copy due to memory leak) 
+          do jst = st%nst, ist, -1
+            call states_get_state(states_old, gr%mesh, jst, 1, dpsi)
+            call states_set_state(st, gr%mesh, jst, 1, dpsi)
+          enddo
+          if(abs(stepsize(ist)) .lt. smallstep .or. itry == trymax) then
+            write(*,*) 'for state', ist, 'energy could not be improved'
+          endif
+        endif !energy_diff  
+      enddo !itry
+      energy = energy_old !put energy back to last sucessful change
+      call states_end(states_old)
+    enddo !ist
+
+    SAFE_DEALLOCATE_A(E_deriv)
+    SAFE_DEALLOCATE_A(dpsi)
+    SAFE_DEALLOCATE_A(dpsi2)
+
+    POP_SUB(scf_orb_direct)
+
+  end subroutine scf_orb_direct
+
+  !--------------------------------------------------------------------
+  ! calculate the derivative of the energy with respect to orbital ist
+  !--------------------------------------------------------------------
+  subroutine E_deriv_calc(gr, st, hm, ist, E_deriv)
+    type(grid_t),         intent(inout) :: gr !< grid
+    type(states_t),       intent(inout) :: st !< States
+    type(hamiltonian_t),  intent(inout) :: hm !< Hamiltonian
+    integer,              intent(in)    :: ist !number of state
+    FLOAT,                intent(out)   :: E_deriv(1:gr%mesh%np_part)
+
+    integer            :: jst, ii, ip
+    FLOAT              :: E_deriv_corr, norm, projection
+    FLOAT, allocatable :: rho_spin(:,:), rho(:), pot(:)
+    FLOAT, allocatable :: hpsi1(:,:), hpsi2(:,:), dpsi(:,:), dpsi2(:,:)
+  
+
+    PUSH_SUB(E_deriv_calc)
+
+    E_deriv = M_ZERO
+
+    SAFE_ALLOCATE(rho_spin(1:gr%mesh%np_part, 1:hm%d%ispin)) 
+    SAFE_ALLOCATE(rho(1:gr%mesh%np_part))
+    SAFE_ALLOCATE(pot(1:gr%mesh%np_part))
+    SAFE_ALLOCATE(hpsi1(1:gr%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(hpsi2(1:gr%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(dpsi2(1:gr%mesh%np_part, 1:st%d%dim))
+
+    !Initialize all local arrays to zero
+    hpsi1 = M_ZERO
+    hpsi2 = M_ZERO
+    dpsi  = M_ZERO
+    dpsi2  = M_ZERO
+    rho_spin = M_ZERO    
+    rho = M_ZERO    
+    pot = M_ZERO
+    E_deriv_corr = M_ZERO    
+
+    call density_calc(st, gr, rho_spin)
+    do ii = 1, hm%d%ispin
+      rho(:) = rho_spin(:, ii)
+    end do
+
+    SAFE_DEALLOCATE_A(rho_spin) 
+
+    call dpoisson_solve(psolver, pot, rho, all_nodes=.false.) !the Hartree potential
+    
+    call states_get_state(st, gr%mesh, ist, 1, dpsi)
+
+    call dhamiltonian_apply(hm, gr%der, dpsi, hpsi1, ist, 1, &
+                            & terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL)
+    call dhamiltonian_apply(hm, gr%der, dpsi, hpsi2, ist, 1, &
+                            & terms = TERM_OTHERS)
+      
+    !bare derivative wrt. state ist   
+    forall(ip=1:gr%mesh%np_part)
+      E_deriv(ip) = st%occ(ist, 1)*(hpsi1(ip, 1) + pot(ip)*dpsi(ip, 1)) 
+      !E_deriv(ip) = st%occ(ist, 1)*pot(ip)*dpsi(ip, 1) 
+   
+      !only for the Mueller functional
+      E_deriv(ip) = E_deriv(ip) + sqrt(st%occ(ist, 1))*hpsi2(ip, 1)
+    end forall
+
+    norm = sqrt(dmf_dotp(gr%mesh, E_deriv, E_deriv))
+
+    !corrections for orthogonality (Eq. (7) of PRA 55, 1765 (1997))
+    !this seems not to be doing anything to the projections calculated after applying the gradient step
+    !do jst = 1, st%nst
+    !  call states_get_state(st, gr%mesh, jst, 1, dpsi2)
+    !  call dhamiltonian_apply(hm,gr%der, dpsi2, hpsi1, ist, 1, &
+    !                        terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL)
+    !  call dhamiltonian_apply(hm, gr%der, dpsi2, hpsi2, ist, 1, &
+    !                        terms = TERM_OTHERS)
+    !  forall(ip = 1:gr%mesh%np_part)
+    !    rho(ip) = dpsi(ip, 1)*dpsi2(ip, 1)
+    !  end forall
+    !  E_deriv_corr = E_deriv_corr - (st%occ(ist, 1) + st%occ(jst, 1)) & 
+    !                 & *(dmf_dotp(gr%mesh, dpsi(:,1), hpsi1(:,1)) + dmf_dotp(gr%mesh, pot, rho)) &
+    !                 & + (sqrt(st%occ(ist, 1)) + sqrt(st%occ(jst, 1)))*dmf_dotp(gr%mesh, dpsi(:,1), hpsi2(:,1))
+    !  enddo !jst  
+    
+    !add correction terms
+    !forall(ip = 1:gr%mesh%np_part)
+    !  E_deriv(ip) = E_deriv(ip) + M_HALF*E_deriv_corr*dpsi(ip, 1)
+    !end forall
+
+    
+    !remove gradient in direction of orbital ist itself and normalize
+    projection = dmf_dotp(gr%mesh, E_deriv, dpsi(:,1))
+    forall(ip = 1:gr%mesh%np_part)
+      E_deriv(ip) = E_deriv(ip) - projection*dpsi(ip,1)
+    end forall
+    norm = M_ONE/sqrt(dmf_dotp(gr%mesh, E_deriv, E_deriv))
+    
+    forall(ip = 1:gr%mesh%np_part)
+      E_deriv(ip) = norm*E_deriv(ip)
+    end forall
+    
+    SAFE_DEALLOCATE_A(rho)
+    SAFE_DEALLOCATE_A(pot)
+    SAFE_DEALLOCATE_A(hpsi1)
+    SAFE_DEALLOCATE_A(hpsi2)
+    SAFE_DEALLOCATE_A(dpsi)
+    SAFE_DEALLOCATE_A(dpsi2)
+
+    POP_SUB(E_deriv_calc)
+
+  end subroutine E_deriv_calc
+
 
   ! ----------------------------------------
   ! constructs the Lagrange multiplyers needed for the orbital minimization
@@ -931,8 +1201,8 @@ contains
                               terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL)
         rdm%eone(ist) = dmf_dotp(gr%mesh, dpsi(:, 1), hpsi(:, 1))
       end do
-    
-    !integrals used for the hartree and exchange parts of the total energy and their derivatives
+
+      !integrals used for the hartree and exchange parts of the total energy and their derivatives
       do is = 1, nspin_
         do jdm = 1, st%d%dim
           call doep_x(gr%der, st, is, jdm, lxc, ex, 1.d0, v_ij)
@@ -1023,6 +1293,7 @@ contains
     
     lxc = M_ZERO
     v_ij = M_ZERO
+    !ex = M_ZERO
     
     do is = 1, nspin_
       do jdm = 1, st%d%dim
@@ -1149,6 +1420,7 @@ contains
     end do
 
  
+    SAFE_DEALLOCATE_A(rho)
     SAFE_DEALLOCATE_A(rho1)
     SAFE_DEALLOCATE_A(rho2)
     SAFE_DEALLOCATE_A(rho3)
