@@ -114,7 +114,9 @@ module simul_box_oct_m
     FLOAT :: klattice          (MAX_DIM,MAX_DIM)   !< reciprocal-lattice vectors
     FLOAT :: volume_element                      !< the volume element in real space
     FLOAT :: rcell_volume                        !< the volume of the cell in real space
+    FLOAT :: alpha, beta, gamma                  !< the angles defining the cell
     FLOAT :: metric            (MAX_DIM,MAX_DIM) !< metric tensor F matrix following Chelikowski paper PRB 78 075109 (2008)
+    FLOAT :: rmetric            (MAX_DIM,MAX_DIM) !< metric for the real space lattice vectors
     FLOAT :: stress_tensor(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
     logical :: nonorthogonal
     
@@ -632,6 +634,10 @@ contains
 
     PUSH_SUB(simul_box_build_lattice)
 
+    sb%alpha = CNST(90.0)
+    sb%beta  = CNST(90.0)
+    sb%gamma = CNST(90.0)
+
     if(present(rlattice_primitive)) then
       sb%rlattice_primitive(1:sb%dim, 1:sb%dim) = rlattice_primitive(1:sb%dim, 1:sb%dim)
     else
@@ -677,6 +683,9 @@ contains
       end if
 
       if( has_angles ) then
+        sb%alpha = angles(1)
+        sb%beta  = angles(2)
+        sb%gamma = angles(3)
         !Converting the angles to LatticeVectors
         !See 57_iovars/ingeo.F90 in Abinit for details
         if( abs(angles(1)-angles(2))< tol_angle .and. abs(angles(2)-angles(3))< tol_angle .and.  &
@@ -743,7 +752,7 @@ contains
             do jdim = 1, sb%dim
               call parse_block_float(blk, idim - 1,  jdim - 1, sb%rlattice_primitive(jdim, idim))
               if(idim /= jdim .and. abs(sb%rlattice_primitive(jdim, idim)) > M_EPSILON) sb%nonorthogonal = .true.
-            enddo
+            end do
           end do
           call parse_block_end(blk)
 
@@ -751,36 +760,43 @@ contains
             sb%lsize(:) = M_ZERO
             sb%lsize(1:sb%dim) = lparams(1:sb%dim)*M_HALF
           end if        
+        end if
       end if
-    end if
 
-    if(sb%nonorthogonal) &
-      call messages_experimental('Non-orthogonal unit cells')
-    end if
+      if(sb%nonorthogonal) &
+        call messages_experimental('Non-orthogonal unit cells')
+      end if
+ 
+      sb%rlattice = M_ZERO
+      do idim = 1, sb%dim
+        norm = sqrt(sum(sb%rlattice_primitive(1:sb%dim, idim)**2))
+        sb%lsize(idim) = sb%lsize(idim) * norm
+        forall(jdim = 1:sb%dim)
+          sb%rlattice_primitive(jdim, idim) = sb%rlattice_primitive(jdim, idim) / norm
+          sb%rlattice(jdim, idim) = sb%rlattice_primitive(jdim, idim) * M_TWO*sb%lsize(idim)
+        end forall
+      end do
 
-    sb%rlattice = M_ZERO
-    do idim = 1, sb%dim
-      norm = sqrt(sum(sb%rlattice_primitive(1:sb%dim, idim)**2))
-      sb%lsize(idim) = sb%lsize(idim) * norm
-      forall(jdim = 1:sb%dim)
-        sb%rlattice_primitive(jdim, idim) = sb%rlattice_primitive(jdim, idim) / norm
-        sb%rlattice(jdim, idim) = sb%rlattice_primitive(jdim, idim) * M_TWO*sb%lsize(idim)
-      end forall
-    end do
-    
-    call reciprocal_lattice(sb%rlattice, sb%klattice, sb%rcell_volume, sb%dim)
-    sb%klattice = sb%klattice * M_TWO*M_PI
+      call reciprocal_lattice(sb%rlattice, sb%klattice, sb%rcell_volume, sb%dim)
+      sb%klattice = sb%klattice * M_TWO*M_PI
 
-    call reciprocal_lattice(sb%rlattice_primitive, sb%klattice_primitive, sb%volume_element, sb%dim)
+      call reciprocal_lattice(sb%rlattice_primitive, sb%klattice_primitive, sb%volume_element, sb%dim)
 
-    sb%metric = M_ZERO
-    sb%metric = matmul(transpose(sb%klattice_primitive), sb%klattice_primitive)
+      sb%metric = M_ZERO
+      sb%metric = matmul(transpose(sb%klattice_primitive), sb%klattice_primitive)
 
-    ! rlattice_primitive is the A matrix from Chelikowski PRB 78 075109 (2008)
-    ! klattice_primitive is the transpose (!) of the B matrix, with no 2 pi factor included
-    ! klattice is the proper reciprocal lattice vectors, with 2 pi factor, and in units of 1/bohr
-    ! metric is the F matrix of Chelikowski
+      ! rlattice_primitive is the A matrix from Chelikowski PRB 78 075109 (2008)
+      ! klattice_primitive is the transpose (!) of the B matrix, with no 2 pi factor included
+      ! klattice is the proper reciprocal lattice vectors, with 2 pi factor, and in units of 1/bohr
+      ! metric is the F matrix of Chelikowski
 
+      sb%rmetric = matmul(transpose(sb%rlattice_primitive), sb%rlattice_primitive)
+      if(.not. has_angles) then
+        !We compute the angles from the lattice vectors
+        sb%alpha=acos(sb%rmetric(2,3)/sqrt(sb%rmetric(2,2)*sb%rmetric(3,3)))/M_PI*CNST(180.0)
+        sb%beta =acos(sb%rmetric(1,3)/sqrt(sb%rmetric(1,1)*sb%rmetric(3,3)))/M_PI*CNST(180.0)
+        sb%gamma=acos(sb%rmetric(1,2)/sqrt(sb%rmetric(1,1)*sb%rmetric(2,2)))/M_PI*CNST(180.0)
+      end if
 
     POP_SUB(simul_box_build_lattice)
   end subroutine simul_box_build_lattice
@@ -1037,6 +1053,12 @@ contains
           idir2 = 1, sb%dim)
       end do
       call messages_info(1+sb%dim, iunit)
+   
+      write(message(1),'(a)') '  Cell angles [degree]'
+      write(message(2),'(a, f8.3)') '    alpha = ', sb%alpha
+      write(message(3),'(a, f8.3)') '    beta  = ', sb%beta
+      write(message(4),'(a, f8.3)') '    gamma = ', sb%gamma
+      call messages_info(4, iunit)
     end if
 
     POP_SUB(simul_box_write_info)
