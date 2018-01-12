@@ -40,7 +40,8 @@ program harmonic_spectrum
 
   integer, parameter :: &
     HS_FROM_MULT = 1,   &
-    HS_FROM_ACC  = 2
+    HS_FROM_ACC  = 2,   &
+    HS_FROM_CURR = 3
 
   call getopt_init(ierr)
   if(ierr /= 0) then
@@ -83,11 +84,6 @@ program harmonic_spectrum
     message(1) = 'The polarization direction given in the command line is not valid.'
     call messages_fatal(1)
   end if
-  if( (mode /= HS_FROM_MULT) .and. &
-      (mode  /= HS_FROM_ACC) ) then
-    message(1) = 'The harmonic-spectrum mode given in the command line is not valid.'
-    call messages_fatal(1)
-  end if
 
   select case(mode)
   case(HS_FROM_MULT)
@@ -114,6 +110,15 @@ program harmonic_spectrum
        call spectrum_hs_from_acc('hs-acc', spectrum, pol, vec)
       end if
     end if
+  case(HS_FROM_CURR)
+    if(get_maxima) then
+      call spectrum_hs_from_mult('hs-curr-maxima', spectrum, pol, vec, w0)
+    else
+      call spectrum_hs_from_current('hs-curr', spectrum, pol, vec)
+    end if  
+  case default
+    message(1) = 'The harmonic-spectrum mode given in the command line is not valid.'
+    call messages_fatal(1)  
   end select
 
 

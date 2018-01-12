@@ -180,6 +180,10 @@ contains
     integer :: idim, n_s, is
 
     CMPLX, allocatable :: bra(:, :)
+    type(profile_t), save :: prof
+
+    call profiling_in(prof, "RKB_PROJECT_BRA")
+ 
 #ifndef HAVE_OPENMP
     PUSH_SUB(rkb_project_bra)
 #endif
@@ -187,26 +191,36 @@ contains
 
     n_s = rkb_p%n_s
 
-    SAFE_ALLOCATE(bra(1:n_s, 1:2))
-
     if(mesh%use_curvilinear) then
+      SAFE_ALLOCATE(bra(1:n_s, 1:2))
       bra(1:n_s, 1) = rkb_p%bra(1:n_s, 1)*mesh%vol_pp(sm%map(1:n_s))
       bra(1:n_s, 2) = rkb_p%bra(1:n_s, 2)*mesh%vol_pp(sm%map(1:n_s))
+      do idim = 1, 2
+        do is = 1, n_s
+          uvpsi(idim, 1) = uvpsi(idim, 1) + psi(is, idim)*bra(is, 1)
+          uvpsi(idim, 2) = uvpsi(idim, 2) + psi(is, idim)*bra(is, 2)
+        end do
+      end do
+      SAFE_DEALLOCATE_A(bra)
     else
-      bra(1:n_s, 1:2) = rkb_p%bra(1:n_s, 1:2)*mesh%volume_element
+      do idim = 1, 2
+        do is = 1, n_s
+          uvpsi(idim, 1) = uvpsi(idim, 1) + psi(is, idim)*rkb_p%bra(is, 1)
+          uvpsi(idim, 2) = uvpsi(idim, 2) + psi(is, idim)*rkb_p%bra(is, 2)
+        end do
+        uvpsi(idim, 1) = uvpsi(idim, 1)*mesh%volume_element
+        uvpsi(idim, 2) = uvpsi(idim, 2)*mesh%volume_element
+      end do
     end if
 
-    do idim = 1, 2
-      do is = 1, n_s
-        uvpsi(idim, 1) = uvpsi(idim, 1) + psi(is, idim)*bra(is, 1)
-        uvpsi(idim, 2) = uvpsi(idim, 2) + psi(is, idim)*bra(is, 2)
-      end do
-    end do
 
     SAFE_DEALLOCATE_A(bra)
 #ifndef HAVE_OPENMP
     POP_SUB(rkb_project_bra)
 #endif
+
+    call profiling_out(prof)
+
   end subroutine rkb_project_bra
 
   ! ---------------------------------------------------------
@@ -218,6 +232,9 @@ contains
 
     integer :: idim, jdim, n_s, is
     CMPLX :: aa
+    type(profile_t), save :: prof
+
+    call profiling_in(prof, "RKB_PROJECT_KET")
 #ifndef HAVE_OPENMP
     PUSH_SUB(rkb_project_ket)
 #endif
@@ -236,6 +253,9 @@ contains
 #ifndef HAVE_OPENMP
     POP_SUB(rkb_project_ket)
 #endif
+
+    call profiling_out(prof)
+
   end subroutine rkb_project_ket
   
 end module rkb_projector_oct_m

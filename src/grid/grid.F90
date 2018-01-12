@@ -227,6 +227,8 @@ contains
     type(multicomm_t),    intent(in)    :: mc
     type(geometry_t),     intent(in)    :: geo
 
+    PUSH_SUB(grid_init_stage_2)
+
     call mesh_init_stage_3(gr%mesh, gr%stencil, mc)
 
     call nl_operator_global_init()
@@ -270,6 +272,8 @@ contains
       gr%fine%mesh => gr%mesh
       gr%fine%der => gr%der
     end if
+
+    call mesh_check_symmetries(gr%mesh, gr%mesh%sb)
 
     ! multigrids are not initialized by default
     nullify(gr%mgrid)

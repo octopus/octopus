@@ -112,7 +112,8 @@ module states_oct_m
     cmplx_array2_t,                   &
     states_count_pairs,               &
     occupied_states,                  &
-    states_type
+    states_type,                      &
+    states_set_phase
 
   !>cmplxscl: complex 2D matrices 
   type cmplx_array2_t    
@@ -322,6 +323,12 @@ contains
     ! Use of spinors requires complex wavefunctions.
     if (st%d%ispin == SPINORS) st%priv%wfs_type = TYPE_CMPLX
 
+    if(st%d%ispin /= UNPOLARIZED .and. gr%sb%kpoints%use_time_reversal) then
+      message(1) = "Time reversal symmetry is only implemented for unpolarized spins."
+      message(2) = "Use KPointsUseTimeReversal = no."
+      call messages_fatal(2)
+    end if
+      
 
     !%Variable ExcessCharge
     !%Type float
@@ -587,11 +594,7 @@ contains
     !% When enabled the density is symmetrized. Currently, this can
     !% only be done for periodic systems. (Experimental.)
     !%End
-    if(gr%sb%kpoints%use_symmetries) then
-      call parse_variable('SymmetrizeDensity', .true., st%symmetrize_density)
-    else
-      call parse_variable('SymmetrizeDensity', .false., st%symmetrize_density)
-    end if
+    call parse_variable('SymmetrizeDensity', gr%sb%kpoints%use_symmetries, st%symmetrize_density)
     call messages_print_var_value(stdout, 'SymmetrizeDensity', st%symmetrize_density)
 
     ! Why? Resulting discrepancies can be suspiciously large even at SCF convergence;
@@ -2238,7 +2241,7 @@ contains
     ! We have to symmetrize everything as they are calculated from the
     ! wavefunctions.
     ! This must be done before compute the gauge-invariant kinetic energy density 
-    if(der%mesh%sb%kpoints%use_symmetries.or.st%symmetrize_density) then
+    if(st%symmetrize_density) then
       SAFE_ALLOCATE(symm(1:der%mesh%np, 1:der%mesh%sb%dim))
       call symmetrizer_init(symmetrizer, der%mesh)
       do is = 1, st%d%nspin
@@ -2737,6 +2740,44 @@ contains
 
     POP_SUB(occupied_states)
   end subroutine occupied_states
+
+
+  ! ------------------------------------------------------------
+subroutine states_set_phase(st_d, psi, phase, np, conjugate)
+  type(states_dim_t),intent(in)    :: st_d
+  CMPLX,          intent(inout)    :: psi(:, :)
+  CMPLX,             intent(in)    :: phase(:)
+  integer,           intent(in)    :: np
+  logical,           intent(in)    :: conjugate
+
+  integer :: idim, ip
+
+  PUSH_SUB(states_set_phase)
+
+  if(conjugate) then
+    ! Apply the phase that contains both the k-point and vector-potential terms.
+    do idim = 1, st_d%dim
+      !$omp parallel do
+      do ip = 1, np
+        psi(ip, idim) = conjg(phase(ip))*psi(ip, idim)
+      end do
+      !$omp end parallel do
+    end do
+  else
+    ! Apply the conjugate of the phase that contains both the k-point and vector-potential terms.
+    do idim = 1, st_d%dim
+      !$omp parallel do
+      do ip = 1, np
+        psi(ip, idim) = phase(ip)*psi(ip, idim)
+      end do
+      !$omp end parallel do
+    end do
+  end if
+
+  POP_SUB(states_set_phase)
+
+end subroutine  states_set_phase
+
   
 #include "undef.F90"
 #include "real.F90"
