@@ -124,6 +124,8 @@ contains
     this%sample = .false.
     this%FBZ_solver = .false.
     this%sample_one_only  = .true.
+    this%lambda = M_ZERO
+
 
     !%Variable FloquetBoson
     !%Type flag

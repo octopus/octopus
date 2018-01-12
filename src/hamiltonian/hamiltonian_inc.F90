@@ -1007,9 +1007,21 @@ subroutine  X(apply_floquet_hamiltonian)(hm, der, psib, hpsib, ik, terms, set_bc
       do in=Fdim(1),Fdim(2)
         call set_big_batch_axpy(small_hpsib,in, exp(M_zI*(im-in)*omega*it*dt)/nT, hpsib)
       end do
+      
+!       do in=Fdim(1),Fdim(2)
+!          if(in .ne. im) then
+!             if(in-im == -1) call set_big_batch_axpy(small_hpsib,im-1, sqrt(TOFLOAT(im)  )*exp(M_zI*(im-in)*omega*it*dt)/nT, hpsib)
+!             if(in-im ==  1) call set_big_batch_axpy(small_hpsib,im+1, sqrt(TOFLOAT(im+1))*exp(M_zI*(im-in)*omega*it*dt)/nT, hpsib)
+!          else
+!             call set_big_batch_axpy(small_hpsib,in, exp(M_zI*(im-in)*omega*it*dt)/nT, hpsib)
+!          end if
+!       end do
+      
     end do
 
   case (OPTION__FLOQUETBOSON__QED_PHOTON)
+
+
     SAFE_ALLOCATE(psi(1:der%mesh%np_part,1:spindim))
     SAFE_ALLOCATE(gppsi(1:der%mesh%np_part,1:spindim))
 
@@ -1028,10 +1040,11 @@ subroutine  X(apply_floquet_hamiltonian)(hm, der, psib, hpsib, ik, terms, set_bc
       end do
       
 
-      if (im+1<=Fdim(2)) call set_big_batch_axpy(small_hpsib,im+1,  M_zI*lam*sqrt(TOFLOAT(im+1))  , hpsib)
+      if (im+1<=Fdim(2)) call set_big_batch_axpy(small_hpsib,im+1, -M_zI*lam*sqrt(TOFLOAT(im+1))  , hpsib)
       if (im-1>=Fdim(1)) call set_big_batch_axpy(small_hpsib,im-1, -M_zI*lam*sqrt(TOFLOAT(im)), hpsib)
-      if (im+2<=Fdim(2)) call set_big_batch_axpy(small_psib,im+2, lam**2/M_z2*sqrt(TOFLOAT(im+1))  *sqrt(TOFLOAT(im+2)), hpsib)
-      if (im-2>=Fdim(1)) call set_big_batch_axpy(small_psib,im-2, lam**2/M_z2*sqrt(TOFLOAT(im))*sqrt(TOFLOAT(im-1)), hpsib)
+
+      if (im+2<=Fdim(2)) call set_big_batch_axpy(small_psib,im+2, lam**2/M_z2*sqrt(TOFLOAT(im+1))*sqrt(TOFLOAT(im+2)), hpsib)
+      if (im-2>=Fdim(1)) call set_big_batch_axpy(small_psib,im-2, lam**2/M_z2*sqrt(TOFLOAT(im-1))*sqrt(TOFLOAT(im)), hpsib)
 
       
     end do
@@ -1051,7 +1064,7 @@ subroutine  X(apply_floquet_hamiltonian)(hm, der, psib, hpsib, ik, terms, set_bc
   do in=Fdim(1),Fdim(2)
     call get_small_batch(psib,in,small_psib)
     call get_small_batch(hpsib,in,small_hpsib)
-    call batch_axpy(der%mesh%np, in*omega, small_psib , small_hpsib )
+    call batch_axpy(der%mesh%np, in*omega+lam**2, small_psib , small_hpsib )
     call set_big_batch(small_hpsib,in,hpsib)
   end do
 
