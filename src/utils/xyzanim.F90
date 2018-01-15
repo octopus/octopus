@@ -94,7 +94,7 @@ program xyzanim
       ((geo%atom(i)%x(j), j = 1, geo%space%dim), i = 1, geo%natoms)
       do i = 1, geo%natoms
         do j = 1, geo%space%dim
-          geo%atom(i)%x(j)=units_to_atomic(units_inp%length_xyz_file, geo%atom(i)%x(j))
+          geo%atom(i)%x(j)=units_to_atomic(units_out%length, geo%atom(i)%x(j))
         end do
       end do
     if(mod(iter, sampling) == 0) then
