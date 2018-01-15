@@ -193,6 +193,6 @@ match ; CV(2) spectrum z   ; LINEFIELD(casida/spectrum.variational, 532, 4) ; 7.
 match ; CV(2) spectrum tot ; LINEFIELD(casida/spectrum.variational, 532, 5) ; 6.517916E-01
 
 match ; Tamm-Dancoff spectrum x   ; LINEFIELD(casida/spectrum.tamm_dancoff, 532, 2) ; 5.393826E-01
-match ; Tamm-Dancoff spectrum y   ; LINEFIELD(casida/spectrum.tamm_dancoff, 532, 3) ; 1.837420E+01
+match ; Tamm-Dancoff spectrum y   ; LINEFIELD(casida/spectrum.tamm_dancoff, 532, 3) ; 1.837430E+01
 match ; Tamm-Dancoff spectrum z   ; LINEFIELD(casida/spectrum.tamm_dancoff, 532, 4) ; 1.837430E+01
 match ; Tamm-Dancoff spectrum tot ; LINEFIELD(casida/spectrum.tamm_dancoff, 532, 5) ; 1.242925E+01
