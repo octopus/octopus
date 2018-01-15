@@ -163,10 +163,12 @@ contains
     
     call rdmft_init() 
 
-    !stepsize for steepest decent
-    SAFE_ALLOCATE(stepsize(1:st%nst))
-    stepsize = 0.05
-
+    if(rdm%do_basis.eqv..false.) then
+      !stepsize for steepest decent
+      SAFE_ALLOCATE(stepsize(1:st%nst))
+      stepsize = 0.05
+    endif
+ 
     ! Start the actual minimization, first step is minimization of occupation numbers
     ! Orbital minimization is according to Piris and Ugalde, Vol.13, No. 13, J. Comput. Chem.
     do iter = 1, max_iter
@@ -178,31 +180,34 @@ contains
       write(message(1), '(a)') 'Orbital optimization'
       call messages_info(1)
       do icount = 1, 5 !still under investigation how many iterations we need
-        !call scf_orb(rdm, gr, geo, st, ks, hm, energy)
-        call scf_orb_direct(rdm, gr, geo, st, ks, hm, stepsize, energy)
-        write(message(1), '(a, i4, es18.8)') 'Iteration', icount, energy
-        call messages_info(1)
-        
-        stepsize(:) = M_HALF*stepsize(:)
+        if (rdm%do_basis.eqv..false.) then
+          call scf_orb_direct(rdm, gr, geo, st, ks, hm, stepsize, energy)
+          write(message(1), '(a, i4, es18.8)') 'Iteration', icount, energy
+          call messages_info(1)
+        else
+          call scf_orb(rdm, gr, geo, st, ks, hm, energy)
+        end if
         energy_dif = energy - energy_old
         energy_old = energy
-        if (abs(energy_dif)/abs(energy).lt. rdm%conv_ener.and.rdm%maxFO < 1.d3*rdm%conv_ener)  exit
-        if (energy_dif < M_ZERO) then !NH Do we really need all this if we are setting xneg and xpos to zero after each iteration?
-          xneg = xneg + 1
+        if (rdm%do_basis.eqv. .false.) then
+          if (abs(energy_dif)/abs(energy).lt. rdm%conv_ener)  exit
         else
-          xpos = xpos + 1
-        end if
-        if (xneg > CNST(1.5e0)*xpos) then
-          rdm%scale_f = CNST(1.01)*rdm%scale_f
-        elseif (xneg > CNST(1.1e0)*xpos) then !NH this looks like a leftover as it doesn't do anything
-          rdm%scale_f = rdm%scale_f
-        else
-          rdm%scale_f = CNST(0.95)* rdm%scale_f 
-        end if
-        xneg = M_ZERO
-        xpos = M_ZERO
+          if (abs(energy_dif)/abs(energy).lt. rdm%conv_ener.and.rdm%maxFO < 1.d3*rdm%conv_ener)  exit
+          if (energy_dif < M_ZERO) then 
+            xneg = xneg + 1
+          else
+            xpos = xpos + 1
+          end if
+          if (xneg > CNST(1.5e0)*xpos) then
+            rdm%scale_f = CNST(1.01)*rdm%scale_f
+          elseif (xneg < CNST(1.1e0)*xpos) then 
+            rdm%scale_f = CNST(0.95)* rdm%scale_f 
+          end if
+        endif !rdm%do_basis
         rdm%iter = rdm%iter + 1
       end do
+      xneg = M_ZERO
+      xpos = M_ZERO
       
       rel_ener = abs(energy_occ-energy)/abs(energy)
 
@@ -680,8 +685,8 @@ contains
     E_deriv = M_ZERO
 
     !set parameters for steepest decent
-    scaleup = 2.2d0
-    scaledown = 0.5d0
+    scaleup = 1.6d0
+    scaledown = 0.8d0
     trymax = 5
     smallstep = 1d-10
     thresh = 1d-10
@@ -757,8 +762,6 @@ contains
         call rdm_derivatives(rdm, hm, st, gr)
         call total_energy_rdm(rdm, st%occ(:,1), energy)
 
-write(*,*) 'Energy after step in orbital', ist, energy
-
         !check if step lowers the energy
         energy_diff = energy - energy_old
 
@@ -776,13 +779,16 @@ write(*,*) 'Energy after step in orbital', ist, energy
             call states_set_state(st, gr%mesh, jst, 1, dpsi)
           enddo
           if(abs(stepsize(ist)) .lt. smallstep .or. itry == trymax) then
-            write(*,*) 'for state', ist, 'energy could not be improved'
+            write(message(1),'(a,i3,2x,a)') 'for state', ist, 'energy could not be improved'
+            call messages_info(1)
           endif
         endif !energy_diff  
       enddo !itry
       energy = energy_old !put energy back to last sucessful change
       call states_end(states_old)
     enddo !ist
+
+    stepsize(:) = scaledown*stepsize(:)
 
     SAFE_DEALLOCATE_A(E_deriv)
     SAFE_DEALLOCATE_A(dpsi)
