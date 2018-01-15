@@ -229,10 +229,10 @@ contains
     end select
 
 
-    ! setup Hamiltonian
+    ! setup Hamiltonian, without recalculating eigenvalues (use the ones from the restart information)
     message(1) = 'Info: Setting up Hamiltonian.'
     call messages_info(1)
-    call system_h_setup(sys, hm)
+    call system_h_setup(sys, hm, calc_eigenval=.false.)
 
     !%Variable CasidaTheoryLevel
     !%Type flag
