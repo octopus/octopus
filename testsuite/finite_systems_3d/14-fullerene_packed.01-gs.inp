@@ -20,6 +20,7 @@ MaximumIter = 3
 StatesBlocksize = 32
 
 StatesPack = yes
+HamiltonianApplyPacked = yes
 
 %Coordinates
 'C'| 5.465626 | -3.656647 | -1.274761

@@ -1337,6 +1337,7 @@ contains
     !% will store the wave-functions in device (GPU) memory. If
     !% there is not enough memory to store all the wave-functions,
     !% execution will stop with an error.
+    !% See also the related <tt>HamiltonianApplyPacked</tt> variable.
     !%End
 
     call parse_variable('StatesPack', .false., st%d%pack_states)
