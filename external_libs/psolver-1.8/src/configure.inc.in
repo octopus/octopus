@@ -1,0 +1,10 @@
+! This file has been processed by configure, do not change it.
+! The source file is ${BigDFT sources}/src/modules/configure.inc.in.
+
+!Convenience variables.
+character(len = *), parameter :: package_name      = "@PACKAGE_NAME@"
+character(len = *), parameter :: package_tarname   = "@PACKAGE_TARNAME@"
+character(len = *), parameter :: package_version   = "@PACKAGE_VERSION@"
+character(len = *), parameter :: package_string    = "@PACKAGE_STRING@"
+character(len = *), parameter :: package_bugreport = "@PACKAGE_BUGREPORT@"
+
