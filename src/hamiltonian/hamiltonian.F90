@@ -454,16 +454,17 @@ contains
       call init_phase()
     ! no e^ik phase needed for Gamma-point-only periodic calculations
 
-    !%Variable StatesPack
+    !%Variable HamiltonianApplyPacked
     !%Type logical
     !%Default yes
     !%Section Execution::Optimization
     !%Description
     !% If set to yes (the default), Octopus will 'pack' the
-    !% wave-functions when operating with them. This involves some
+    !% wave-functions when operating with them. This might involve some
     !% additional copying but makes operations more efficient.
+    !% See also the related <tt>StatesPack</tt> variable.
     !%End
-    call parse_variable('StatesPack', .true., hm%apply_packed)
+    call parse_variable('HamiltonianApplyPacked', .true., hm%apply_packed)
 
     call pcm_init(hm%pcm, geo, gr, st%qtot, st%val_charge)  !< initializes PCM  
     if(hm%pcm%run_pcm .and. hm%theory_level /= KOHN_SHAM_DFT) &

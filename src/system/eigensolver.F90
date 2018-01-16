@@ -87,6 +87,9 @@ module eigensolver_oct_m
     integer :: rmmdiis_minimization_iter
 
     logical :: save_mem
+    logical :: skip_finite_weight_kpoints
+    logical :: folded_spectrum
+    FLOAT, pointer   :: spectrum_shift(:,:)
   end type eigensolver_t
 
 
@@ -446,6 +449,13 @@ contains
     call messages_obsolete_variable('EigensolverFinalTolerance', 'EigensolverTolerance')
     call messages_obsolete_variable('EigensolverFinalToleranceIteration')
 
+    ! this is an internal option that makes the solver use the 
+    ! folded operator (H-shift)^2 to converge first eigenvalues around
+    ! the values of shift 
+    ! c.f. L. W. Wang and A. Zunger 
+    ! JCP 100, 2394 (1994); doi: http://dx.doi.org/10.1063/1.466486
+    eigens%folded_spectrum = .false.
+
     !%Variable EigensolverTolerance
     !%Type float
     !%Section SCF::Eigensolver
@@ -520,6 +530,15 @@ contains
 
     call messages_print_stress(stdout)
 
+    !%Variable EigensolverSkipKpoints
+    !%Type logical
+    !%Section SCF::Eigensolver
+    !%Description
+    !% Only solve Hamiltonian for k-points with zero weight
+    !%End
+    call parse_variable('EigensolverSkipKpoints', .false., eigens%skip_finite_weight_kpoints)
+    call messages_print_var_value(stdout,'EigensolverSkipKpoints',  eigens%skip_finite_weight_kpoints)
+
     POP_SUB(eigensolver_init)
   end subroutine eigensolver_init
 
@@ -551,7 +570,7 @@ contains
     type(eigensolver_t),  intent(inout) :: eigens
     type(grid_t),         intent(in)    :: gr
     type(states_t),       intent(inout) :: st
-    type(hamiltonian_t),  intent(in)    :: hm
+    type(hamiltonian_t),  intent(inout) :: hm
     integer,              intent(in)    :: iter
     logical,    optional, intent(out)   :: conv
     integer,    optional, intent(in)    :: nstconv !< Number of states considered for 
@@ -583,6 +602,7 @@ contains
     end if
 
     ik_loop: do ik = st%d%kpt%start, st%d%kpt%end
+     if(eigens%skip_finite_weight_kpoints.and. st%d%kweights(ik) > M_ZERO) cycle
       maxiter = eigens%es_maxiter
 
       if(st%calc_eigenval) then
@@ -645,7 +665,13 @@ contains
         case(RS_CG_NEW)
           call zeigensolver_cg2_new(gr, st, hm, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_CG)
-          call zeigensolver_cg2(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+           if(eigens%folded_spectrum) then
+             call zeigensolver_cg2(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, & 
+                                eigens%diff(:, ik), shift=eigens%spectrum_shift)
+           else
+              call zeigensolver_cg2(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, &
+                                eigens%diff(:, ik))
+           end if
         case(RS_PLAN)
           call zeigensolver_plan(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik))
@@ -682,7 +708,7 @@ contains
         
       end if
 
-      if(st%calc_eigenval) then
+      if(st%calc_eigenval .and. .not. eigens%folded_spectrum) then
         ! recheck convergence after subspace diagonalization, since states may have reordered
         eigens%converged(ik) = 0
         do ist = 1, st%nst

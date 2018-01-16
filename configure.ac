@@ -366,6 +366,7 @@ ACX_OCTOPUS_COMPILATION_INFO
 
 AC_CONFIG_FILES([Makefile
   external_libs/Makefile
+  external_libs/dftd3/Makefile
   external_libs/metis-5.1/Makefile
   external_libs/metis-5.1/include/Makefile
   external_libs/metis-5.1/GKlib/Makefile

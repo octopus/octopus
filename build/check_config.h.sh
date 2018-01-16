@@ -39,8 +39,11 @@ set -x
 git clone git@gitlab.com:octopus-code/buildbot.git buildbot
 cp buildbot/config.h/$BRANCH/$BUILDER .
 
+# cleanup
+rm -rf buildbot
+
+# diff should be the last command so the script returns the correct error code
 # these two fields will generally be different, and that is fine
 diff -I '^#define BUILD_TIME' -I '^#define GIT_COMMIT' config.h $BUILDER
 
-# cleanup
-rm -rf buildbot
+

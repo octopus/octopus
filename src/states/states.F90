@@ -112,7 +112,8 @@ module states_oct_m
     cmplx_array2_t,                   &
     states_count_pairs,               &
     occupied_states,                  &
-    states_type
+    states_type,                      &
+    states_set_phase
 
   !>cmplxscl: complex 2D matrices 
   type cmplx_array2_t    
@@ -324,6 +325,12 @@ contains
     ! Use of spinors requires complex wavefunctions.
     if (st%d%ispin == SPINORS) st%priv%wfs_type = TYPE_CMPLX
 
+    if(st%d%ispin /= UNPOLARIZED .and. gr%sb%kpoints%use_time_reversal) then
+      message(1) = "Time reversal symmetry is only implemented for unpolarized spins."
+      message(2) = "Use KPointsUseTimeReversal = no."
+      call messages_fatal(2)
+    end if
+      
 
     !%Variable ExcessCharge
     !%Type float
@@ -1357,6 +1364,7 @@ contains
     !% will store the wave-functions in device (GPU) memory. If
     !% there is not enough memory to store all the wave-functions,
     !% execution will stop with an error.
+    !% See also the related <tt>HamiltonianApplyPacked</tt> variable.
     !%End
 
     call parse_variable('StatesPack', .false., st%d%pack_states)
@@ -2760,6 +2768,44 @@ contains
 
     POP_SUB(occupied_states)
   end subroutine occupied_states
+
+
+  ! ------------------------------------------------------------
+subroutine states_set_phase(st_d, psi, phase, np, conjugate)
+  type(states_dim_t),intent(in)    :: st_d
+  CMPLX,          intent(inout)    :: psi(:, :)
+  CMPLX,             intent(in)    :: phase(:)
+  integer,           intent(in)    :: np
+  logical,           intent(in)    :: conjugate
+
+  integer :: idim, ip
+
+  PUSH_SUB(states_set_phase)
+
+  if(conjugate) then
+    ! Apply the phase that contains both the k-point and vector-potential terms.
+    do idim = 1, st_d%dim
+      !$omp parallel do
+      do ip = 1, np
+        psi(ip, idim) = conjg(phase(ip))*psi(ip, idim)
+      end do
+      !$omp end parallel do
+    end do
+  else
+    ! Apply the conjugate of the phase that contains both the k-point and vector-potential terms.
+    do idim = 1, st_d%dim
+      !$omp parallel do
+      do ip = 1, np
+        psi(ip, idim) = phase(ip)*psi(ip, idim)
+      end do
+      !$omp end parallel do
+    end do
+  end if
+
+  POP_SUB(states_set_phase)
+
+end subroutine  states_set_phase
+
   
 #include "undef.F90"
 #include "real.F90"

@@ -286,6 +286,8 @@ contains
     !%End
     default_timereversal = this%use_symmetries .and. .not. symmetries_have_break_dir(symm)
     call parse_variable('KPointsUseTimeReversal', default_timereversal, this%use_time_reversal)
+    if(this%use_time_reversal) &
+      call messages_experimental("KPointsUseTimeReversal")
 
     !We determine the method used to define k-point
     this%method = 0
@@ -340,7 +342,7 @@ contains
     if( iand(this%method, KPOINTS_MONKH_PACK) /= 0  ) then
 
       write(message(1),'(a)') ' '
-      write(message(2),'(1x,i3,a)') this%reduced%npoints, ' k-points generated from parameters :'
+      write(message(2),'(1x,i5,a)') this%reduced%npoints, ' k-points generated from parameters :'
       write(message(3),'(1x,a)') '---------------------------------------------------'
       write(message(4),'(4x,a)') 'n ='
       do idir = 1, dim

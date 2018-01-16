@@ -50,6 +50,7 @@ module states_calc_oct_m
   use parser_oct_m
   use pblas_oct_m
   use physics_op_oct_m
+  use poisson_oct_m
   use profiling_oct_m
   use restart_oct_m
   use sort_oct_m
@@ -95,7 +96,11 @@ module states_calc_oct_m
     states_orthogonalize_cproduct,  &
     states_sort_complex,            &
     dstates_calc_projections,       &
-    zstates_calc_projections
+    zstates_calc_projections,       &
+    dstates_me_one_body,            &
+    zstates_me_one_body,            &
+    dstates_me_two_body,            &
+    zstates_me_two_body
 
   interface states_rotate
     module procedure dstates_rotate, zstates_rotate
