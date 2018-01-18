@@ -1100,8 +1100,10 @@ subroutine X(casida_solve)(cas, st)
        do ia = 1, cas%pt_nmodes  !diagonal
          cas%X(mat)(cas%n_pairs+ia,cas%n_pairs+ia) = (cas%pt%omega_array(ia))**2
          do jb = 1, cas%n_pairs
-           cas%X(mat)(jb,cas%n_pairs+ia) = M_TWO*cas%X(mat)(jb,cas%n_pairs+ia)*sqrt(cas%pt%omega_array(ia))/sqrt(cas%s(jb))/sqrt(M_TWO)
-           cas%X(mat)(cas%n_pairs+ia,jb) = M_TWO*cas%X(mat)(cas%n_pairs+ia,jb)*sqrt(cas%pt%omega_array(ia))/sqrt(cas%s(jb))/sqrt(M_TWO)
+           cas%X(mat)(jb,cas%n_pairs+ia) = M_TWO*cas%X(mat)(jb,cas%n_pairs+ia) &
+              *sqrt(cas%pt%omega_array(ia))/sqrt(cas%s(jb))/sqrt(M_TWO)
+           cas%X(mat)(cas%n_pairs+ia,jb) = M_TWO*cas%X(mat)(cas%n_pairs+ia,jb) &
+              *sqrt(cas%pt%omega_array(ia))/sqrt(cas%s(jb))/sqrt(M_TWO)
          end do
        end do
     end if
