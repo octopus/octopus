@@ -1184,12 +1184,19 @@ contains
         pcm%v_ext(1:pcm%n_tesserae) = pcm%epsilon_0 * pcm%v_ext
         call pcm_charges(pcm%q_ext, pcm%qtot_ext, pcm%v_ext, pcm%matrix, pcm%n_tesserae
 
+        forall (ii =1:pcm%n_tesserae)
+          pcm%q_ext(ii) = pcm%q_ext(ii) +&
+          -CNST(3.0)/(4*M_Pi)*(pcm%epsilon_0-M_ONE)*0.05*pcm%tess(ii)%point(1)/norm2( pcm%tess(ii)%point )*pcm%tess(ii)%area
+          !pcm%q_ext(ii) = pcm%q_ext(ii) -pcm%v_ext(ii)*(pcm%epsilon_0-M_ONE)/(4*M_Pi)*pcm%tess(ii)%area/norm2( pcm%tess(ii)%point )
+        end forall
+
         asc_unit_test_aux = io_open(PCM_DIR//'ASCs_ext.dat', action='write')
         asc_unit_test = io_open(PCM_DIR//'analytic.dat', action='write')
         do ii = 1, pcm%n_tesserae
           write(asc_unit_test_aux,*) pcm%tess(ii)%point, pcm%q_ext(ii), ii
           write(asc_unit_test,*) pcm%tess(ii)%point, &
-3/(4*M_Pi)*(pcm%epsilon_0-M_ONE)/(2*pcm%epsilon_0+M_ONE)*0.05*pcm%tess(ii)%point(1)*pcm%tess(ii)%area/norm2( pcm%tess(ii)%point ),&
+	-3.0/(4*M_Pi)*(pcm%epsilon_0-M_ONE)/(2*pcm%epsilon_0+M_ONE)*&
+	0.05*pcm%tess(ii)%point(1)/norm2( pcm%tess(ii)%point )*pcm%tess(ii)%area,&
         ii
         end do
         call io_close(asc_unit_test_aux)
