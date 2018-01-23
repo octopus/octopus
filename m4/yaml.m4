@@ -22,10 +22,10 @@ AC_DEFUN([ACX_YAML], [
                   [ac_use_libyaml=yes], [ac_use_libyaml=no])
      if test x"$ac_use_libyaml" = x"yes"; then
         if test x"$ac_path_yaml" != x"/usr" ; then
-           LIB_YAML_CFLAGS="-I$ac_path_yaml/include"
-           LIB_YAML_LIBS="-L$ac_path_yaml/lib "
+           CFLAGS_YAML="-I$ac_path_yaml/include"
+           LIBS_YAML="-L$ac_path_yaml/lib "
         fi
-        LIB_YAML_LIBS=$LIB_YAML_LIBS"-lyaml"
+        LIBS_YAML=$LIBS_YAML"-lyaml"
      else
         AC_MSG_WARN([libyaml is not available, building internal one.])
      fi
@@ -36,13 +36,15 @@ AC_DEFUN([ACX_YAML], [
   if test x"$ac_use_libyaml" != x"yes" ; then
      ac_use_libyaml="yes"
      ac_build_libyaml="yes"
-     LIB_YAML_CFLAGS="-I\$(top_srcdir)"/external_libs/yaml-0.1.4/include
-     LIB_YAML_LIBS="\$(top_builddir)/external_libs/yaml-0.1.4/src/.libs/libyaml.a"
+     CFLAGS_YAML="-I\$(top_srcdir)"/external_libs/yaml-0.1.4/include
+     LIBS_YAML="\$(top_builddir)/external_libs/yaml-0.1.4/src/.libs/libyaml.a"
      dnl tar -xzf ${srcdir}/external_libs/PyYAML-3.10.tar.gz
+     HAVE_COMP_YAML=1
+     AC_DEFINE(HAVE_COMP_YAML, 1, [This is defined when we link with an external YAML library.])
   fi
   AC_DEFINE([HAVE_YAML], [], [If set, we can call yaml.h])
-  AC_SUBST(LIB_YAML_CFLAGS)
-  AC_SUBST(LIB_YAML_LIBS)
+  AC_SUBST(CFLAGS_YAML)
+  AC_SUBST(LIBS_YAML)
   # Define the package version numbers and the bug reporting link of yaml.
   m4_define([YAML_MAJOR], 0)
   m4_define([YAML_MINOR], 1)

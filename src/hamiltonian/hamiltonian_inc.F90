@@ -18,7 +18,7 @@
 
 ! ---------------------------------------------------------
 subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc)
-  type(hamiltonian_t),   intent(in)    :: hm
+  type(hamiltonian_t),   intent(inout) :: hm
   type(derivatives_t),   intent(in)    :: der
   type(batch_t), target, intent(inout) :: psib
   type(batch_t), target, intent(inout) :: hpsib
@@ -248,7 +248,7 @@ end subroutine X(hamiltonian_external)
 ! ---------------------------------------------------------
 
 subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, terms, set_bc)
-  type(hamiltonian_t), intent(in)    :: hm
+  type(hamiltonian_t), intent(inout) :: hm
   type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ist       !< the index of the state
   integer,             intent(in)    :: ik        !< the index of the k-point
@@ -325,7 +325,7 @@ end subroutine X(hamiltonian_apply_all)
 ! ---------------------------------------------------------
 
 subroutine X(exchange_operator_single)(hm, der, ist, ik, psi, hpsi, exxcoef)
-  type(hamiltonian_t), intent(in)    :: hm
+  type(hamiltonian_t), intent(inout) :: hm
   type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ist
   integer,             intent(in)    :: ik
@@ -353,7 +353,7 @@ end subroutine X(exchange_operator_single)
 ! ---------------------------------------------------------
 
 subroutine X(exchange_operator)(hm, der, ik, psib, hpsib, exxcoef)
-  type(hamiltonian_t), intent(in)    :: hm
+  type(hamiltonian_t), intent(inout) :: hm
   type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ik
   type(batch_t),       intent(inout) :: psib
@@ -469,7 +469,7 @@ end subroutine X(exchange_operator)
 ! ---------------------------------------------------------
 
 subroutine X(exchange_operator_hartree) (hm, der, ik, exx_coef, psib, hpsib)
-  type(hamiltonian_t), intent(in)    :: hm
+  type(hamiltonian_t), intent(inout) :: hm
   type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ik
   FLOAT,               intent(in)    :: exx_coef
@@ -543,7 +543,7 @@ end subroutine X(exchange_operator_hartree)
 ! scdm_EXX
 ! ---------------------------------------------------------
 subroutine X(scdm_exchange_operator) (hm, der, psib, hpsib, ik, exx_coef)
-  type(hamiltonian_t), intent(in)    :: hm
+  type(hamiltonian_t), intent(inout) :: hm
   type(derivatives_t), intent(in)    :: der
   type(batch_t),       intent(inout) :: psib
   type(batch_t),       intent(inout) :: hpsib
@@ -682,7 +682,7 @@ end subroutine X(scdm_exchange_operator)
 ! ---------------------------------------------------------
 
 subroutine X(magnus) (hm, der, psi, hpsi, ik, vmagnus)
-  type(hamiltonian_t), intent(in)    :: hm
+  type(hamiltonian_t), intent(inout) :: hm
   type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ik
   R_TYPE,              intent(inout) :: psi(:,:)

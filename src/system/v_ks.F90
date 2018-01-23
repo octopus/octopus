@@ -604,7 +604,7 @@ contains
   !! can be modified after the function have been used.
   subroutine v_ks_calc_start(ks, hm, st, geo, time, calc_berry, calc_energy, calc_current) 
     type(v_ks_t),            target,   intent(inout) :: ks 
-    type(hamiltonian_t),     target,   intent(in)    :: hm !< This MUST be intent(in), changes to hm are done in v_ks_calc_finish.
+    type(hamiltonian_t),     target,   intent(inout) :: hm !< This MUST be intent(in), changes to hm are done in v_ks_calc_finish.
     type(states_t),                    intent(inout) :: st
     type(geometry_t) ,       target,   intent(in)    :: geo
     FLOAT,                   optional, intent(in)    :: time 
@@ -896,7 +896,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine v_a_xc(hm)
-      type(hamiltonian_t),  intent(in) :: hm 
+      type(hamiltonian_t),  intent(inout) :: hm 
 
       type(profile_t), save :: prof
       logical :: cmplxscl

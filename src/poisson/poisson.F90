@@ -670,7 +670,7 @@ contains
   !-----------------------------------------------------------------
 
   subroutine zpoisson_solve_real_and_imag_separately(this, pot, rho, all_nodes)
-    type(poisson_t),      intent(in)    :: this
+    type(poisson_t),      intent(inout) :: this
     CMPLX,                intent(inout) :: pot(:)  !< pot(mesh%np)
     CMPLX,                intent(in)    :: rho(:)  !< rho(mesh%np)
     logical, optional,    intent(in)    :: all_nodes
@@ -712,7 +712,7 @@ contains
   !-----------------------------------------------------------------
 
   subroutine zpoisson_solve(this, pot, rho, all_nodes)
-    type(poisson_t),      intent(in)    :: this
+    type(poisson_t),      intent(inout) :: this
     CMPLX,                intent(inout) :: pot(:)  !< pot(mesh%np)
     CMPLX,                intent(in)    :: rho(:)  !< rho(mesh%np)
     logical, optional,    intent(in)    :: all_nodes
@@ -776,7 +776,7 @@ contains
   !! Different solvers are available that can be chosen in the input file
   !! with the "PoissonSolver" parameter
   subroutine dpoisson_solve(this, pot, rho, all_nodes)
-    type(poisson_t),      intent(in)    :: this
+    type(poisson_t),      intent(inout) :: this
     FLOAT,                intent(inout) :: pot(:) !< Local size of the \b potential vector. 
     FLOAT,                intent(inout) :: rho(:) !< Local size of the \b density (rho) vector.
     !> Is the Poisson solver allowed to utilise

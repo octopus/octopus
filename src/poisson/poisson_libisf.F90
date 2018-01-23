@@ -34,7 +34,8 @@ module poisson_libisf_oct_m
 #ifdef HAVE_LIBISF
   !! From BigDFT
   use poisson_solver
-  use dynamic_memory
+  use dictionaries, dict_set => set
+  use yaml_output, only: yaml_map
 #endif
 
   implicit none
@@ -93,10 +94,14 @@ contains
 
 #ifdef HAVE_LIBISF
     logical data_is_parallel
+    type(dictionary), pointer :: inputs !input parameters
+    FLOAT :: alpha, beta, gamma
  
     PUSH_SUB(poisson_libisf_init)
     
     call f_lib_initialize()
+    !if you want complete potential for each process anytime
+    call dict_set(inputs//'setup'//'global_data',.true.)
 
     select case(mesh%sb%periodic_dim)
     case(0)
@@ -113,9 +118,10 @@ contains
     case(3)
       ! Periodic BC
       this%geocode = "P"
-      call messages_not_implemented("LibISF with 3D periodic boundary conditions.")
+      call messages_experimental("LibISF with 3D periodic boundary conditions.")
     end select
-    this%isf_order = 16
+    !if you want complete potential for each process anytime
+    call dict_set(inputs//'setup'//'isf_order',16)
 
     !%Variable PoissonSolverISFParallelData
     !%Type logical
@@ -137,9 +143,15 @@ contains
       this%datacode = "G"
     end if
 
-    this%kernel = pkernel_init(.false., cube%mpi_grp%rank, cube%mpi_grp%size, 0,&
-        this%geocode,cube%rs_n_global,mesh%spacing, this%isf_order)
-    call pkernel_set(this%kernel,.false.)
+
+    alpha = mesh%sb%alpha*M_PI/(CNST(180.0))
+    beta  = mesh%sb%beta*M_PI/(CNST(180.0))
+    gamma = mesh%sb%gamma*M_PI/(CNST(180.0))
+
+    this%kernel = pkernel_init(cube%mpi_grp%rank, cube%mpi_grp%size, inputs,&
+        this%geocode,cube%rs_n_global,mesh%spacing, &
+        alpha_bc = alpha, beta_ac = beta, gamma_ab = gamma)
+    call pkernel_set(this%kernel,verbose=.false.)
 
     POP_SUB(poisson_libisf_init)
 #endif
@@ -162,7 +174,7 @@ contains
   end subroutine poisson_libisf_end
 
   subroutine poisson_libisf_parallel_solve(this, mesh, cube, pot, rho,  mesh_cube_map)
-    type(poisson_libisf_t), intent(in) :: this
+    type(poisson_libisf_t), intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(in)    :: cube
     FLOAT,               intent(out)   :: pot(:)
@@ -209,7 +221,7 @@ contains
 
   !-----------------------------------------------------------------
   subroutine poisson_libisf_global_solve(this, mesh, cube, pot, rho)
-    type(poisson_libisf_t), intent(in) :: this
+    type(poisson_libisf_t), intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(in)    :: cube
     FLOAT,               intent(out)   :: pot(:)
@@ -306,7 +318,7 @@ contains
     call PS_dim4allocation(this%geocode, this%datacode, cube%mpi_grp%rank, cube%mpi_grp%size, &
          cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3), &
          use_gradient, use_wb_corr, &
-         n3d, n3p, n3pi, i3xcsh, i3s)
+         0, n3d, n3p, n3pi, i3xcsh, i3s)
     this%localnscatterarr(:) = (/ n3d, n3p, n3pi, i3xcsh, i3s /)
 
     cube%rs_n(1:2)      = cube%rs_n_global(1:2)

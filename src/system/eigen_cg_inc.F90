@@ -21,7 +21,7 @@
 subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff, shift)
   type(grid_t),           intent(in)    :: gr
   type(states_t),         intent(inout) :: st
-  type(hamiltonian_t),    intent(in)    :: hm
+  type(hamiltonian_t),    intent(inout) :: hm
   type(preconditioner_t), intent(in)    :: pre
   FLOAT,                  intent(in)    :: tol
   integer,                intent(inout) :: niter
@@ -274,7 +274,7 @@ end subroutine X(eigensolver_cg2)
 subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff)
   type(grid_t),        intent(in)    :: gr
   type(states_t),      intent(inout) :: st
-  type(hamiltonian_t), intent(in)    :: hm
+  type(hamiltonian_t), intent(inout) :: hm
   FLOAT,               intent(in)    :: tol
   integer,             intent(inout) :: niter
   integer,             intent(inout) :: converged

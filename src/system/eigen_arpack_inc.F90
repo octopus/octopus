@@ -20,7 +20,7 @@ subroutine X(eigensolver_arpack)(arpack, gr, st, hm, tolerance, current_rel_dens
   type(eigen_arpack_t),intent(in)    :: arpack
   type(grid_t),        intent(in)    :: gr
   type(states_t),      intent(inout) :: st
-  type(hamiltonian_t), intent(in)    :: hm
+  type(hamiltonian_t), intent(inout) :: hm
   FLOAT,               intent(in)    :: tolerance
   FLOAT,               intent(in)    :: current_rel_dens_error
   integer,             intent(inout) :: niter

@@ -22,7 +22,7 @@ subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
   type(subspace_t),       intent(in)    :: this
   type(derivatives_t),    intent(in)    :: der
   type(states_t), target, intent(inout) :: st
-  type(hamiltonian_t),    intent(in)    :: hm
+  type(hamiltonian_t),    intent(inout) :: hm
   integer,                intent(in)    :: ik
   FLOAT,                  intent(out)   :: eigenval(:)
   FLOAT, optional,        intent(out)   :: diff(:)
@@ -75,7 +75,7 @@ end subroutine X(subspace_diag)
 subroutine X(subspace_diag_standard)(der, st, hm, ik, eigenval, diff)
   type(derivatives_t),    intent(in)    :: der
   type(states_t), target, intent(inout) :: st
-  type(hamiltonian_t),    intent(in)    :: hm
+  type(hamiltonian_t),    intent(inout) :: hm
   integer,                intent(in)    :: ik
   FLOAT,                  intent(out)   :: eigenval(:)
   FLOAT, optional,        intent(out)   :: diff(:)
@@ -144,7 +144,7 @@ end subroutine X(subspace_diag_standard)
 subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   type(derivatives_t), intent(in)    :: der
   type(states_t),      intent(inout) :: st
-  type(hamiltonian_t), intent(in)    :: hm
+  type(hamiltonian_t), intent(inout) :: hm
   integer,             intent(in)    :: ik
   FLOAT,               intent(out)   :: eigenval(:)
   R_TYPE,              intent(inout) :: psi(:, :, st%st_start:)
@@ -355,7 +355,7 @@ end subroutine X(subspace_diag_scalapack)
 subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
   type(derivatives_t),    intent(in)    :: der
   type(states_t), target, intent(inout) :: st
-  type(hamiltonian_t),    intent(in)    :: hm
+  type(hamiltonian_t),    intent(inout) :: hm
   integer,                intent(in)    :: ik
   R_TYPE,                 intent(out)   :: hmss(:, :)
 

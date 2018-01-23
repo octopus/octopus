@@ -353,7 +353,9 @@ ACX_PATH_PARMETIS
 AC_LANG_POP(C)
 AM_CONDITIONAL(COMPILE_METIS, test x${HAVE_COMP_METIS} = x1)
 
+dnl check for YAML
 ACX_YAML
+AM_CONDITIONAL(COMPILE_YAML, test x${HAVE_COMP_YAML} = x1)
 
 AC_SUBST(FCEXTRALIBS)
 
@@ -442,9 +444,5 @@ AC_CONFIG_FILES([testsuite/oct-run_testsuite.sh], [chmod +x testsuite/oct-run_te
 AC_CONFIG_FILES([doc/html/varsRightFrame.html])
 
 AC_CONFIG_SUBDIRS([external_libs/spglib-1.9.9])
-
-dnl if test x"$ac_build_libyaml" != x"skip" ; then
-dnl    AC_CONFIG_SUBDIRS([external_libs/yaml-0.1.4])
-dnl fi
 
 AC_OUTPUT

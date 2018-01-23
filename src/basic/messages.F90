@@ -27,6 +27,7 @@ module messages_oct_m
   use string_oct_m
   use unit_oct_m
   use varinfo_oct_m
+  use yaml_strings, only: operator(+)
 
   implicit none
 
