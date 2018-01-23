@@ -998,13 +998,14 @@ contains
   end subroutine pcm_init
 
   ! -----------------------------------------------------------------------------
-  subroutine pcm_calc_pot_rs(pcm, mesh, geo, v_h, v_ext, time_present)
+  subroutine pcm_calc_pot_rs(pcm, mesh, geo, v_h, v_ext, v_ext2, time_present)
     save
     type(pcm_t),             intent(inout) :: pcm
     type(mesh_t),               intent(in) :: mesh  
     type(geometry_t), optional, intent(in) :: geo
     FLOAT,            optional, intent(in) :: v_h(:)
     FLOAT,            optional, intent(in) :: v_ext(:)
+    FLOAT,            optional, intent(in) :: v_ext2(:)
     logical,          optional, intent(in) :: time_present
     
     integer :: calc
@@ -1132,14 +1133,14 @@ contains
           ! N.B. the difference is time-dependent but uniform (position-independent)
           !aux = sum((pcm%v_ext(:)-v_ext_0(:))/v_ext_0(:))/pcm%n_tesserae
           aux = (pcm%v_ext(1)-v_ext_0(1))/v_ext_0(1)
-          pcm%v_ext_rs(1:mesh%np) = pcm%v_ext_rs(1:mesh%np) + aux * v_ext(1:mesh%np)   
+          pcm%v_ext_rs(1:mesh%np) = pcm%v_ext_rs(1:mesh%np) + aux * v_ext2(1:mesh%np)   
 
         else			!< inertial/dynamical partition
           select case (pcm%iter)
           case(1)
             if( firsttime ) then
               SAFE_ALLOCATE(v_ext_0(1:mesh%np))
-              v_ext_0(1:mesh%np) = v_ext(1:mesh%np)
+              v_ext_0(1:mesh%np) = v_ext2(1:mesh%np)
               firsttime = .false.
             end if
             !< calculating inertial polarization charges (once and for all)
@@ -1172,7 +1173,7 @@ contains
           ! adding the difference between vacuum and dielectric potential
           ! N.B. the difference is time-dependent but uniform (position-independent)
           pcm%v_ext_rs(1:mesh%np) = pcm%v_ext_rs(1:mesh%np) + (pcm%epsilon_0-pcm%epsilon_infty) * v_ext_0(1:mesh%np) + &
-                                                              (pcm%epsilon_infty-M_ONE) * v_ext(1:mesh%np)
+                                                              (pcm%epsilon_infty-M_ONE) * v_ext2(1:mesh%np)
 
         end if !< END - equation-of-motion propagation or inertial/dynamical charge splitting
       else !< BEGIN - pcm charges propagation in equilibrium with external potential
@@ -1180,7 +1181,8 @@ contains
         !< if there are (together) time-dependent and static external potentials, 
         !< the pcm charges due to the static one is calculated here.
         pcm%q_ext = M_ZERO
-        call pcm_charges(pcm%q_ext, pcm%qtot_ext, pcm%epsilon_0 * pcm%v_ext, pcm%matrix, pcm%n_tesserae)
+        pcm%v_ext(1:pcm%n_tesserae) = pcm%epsilon_0 * pcm%v_ext
+        call pcm_charges(pcm%q_ext, pcm%qtot_ext, pcm%v_ext, pcm%matrix, pcm%n_tesserae
 
         asc_unit_test_aux = io_open(PCM_DIR//'ASCs_ext.dat', action='write')
         asc_unit_test = io_open(PCM_DIR//'analytic.dat', action='write')
@@ -1192,6 +1194,11 @@ contains
         end do
         call io_close(asc_unit_test_aux)
         call io_close(asc_unit_test)
+
+       forall (ii =1:pcm%n_tesserae)
+       pcm%q_ext(ii) = pcm%q_ext(ii) + &
+        3.0d0/(4*M_Pi)*(pcm%epsilon_0-M_ONE)*0.05*pcm%tess(ii)%point(1)*pcm%tess(ii)%area/norm2( pcm%tess(ii)%point )
+       end forall
 
         jj=1
         cavity_electric_field = M_ZERO
@@ -1210,28 +1217,16 @@ contains
         pcm%q_ext_in = pcm%q_ext
         pcm%qtot_ext_in = pcm%qtot_ext
 
+        pcm%v_ext_rs = M_ZERO
         ! doing this in all cases - could it be take out the ifs?
         if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_ext, pcm%qtot_ext, mesh, pcm%rho_ext)
         call pcm_pot_rs(pcm, pcm%v_ext_rs, pcm%q_ext, pcm%rho_ext, mesh )
 
         ! adding the difference between vacuum and dielectric potential
-        pcm%v_ext_rs(1:mesh%np) = pcm%v_ext_rs(1:mesh%np) + (pcm%epsilon_0-M_ONE) * v_ext(1:mesh%np)
+        !forall(ii = 1:mesh%np)
+        !  pcm%v_ext_rs(ii) = pcm%v_ext_rs(ii) + (pcm%epsilon_0-M_ONE) * v_ext2(ii)
+        !end forall
 
-        !do ii = 1, mesh%np
-        !  do jj = 1, pcm%n_spheres
-        !    aux = norm2(mesh%x(ii,:)-(/pcm%spheres(jj)%x,pcm%spheres(jj)%y,pcm%spheres(jj)%z/))
-        !    if ( aux .gt. pcm%spheres(jj)%r ) cycle
-        !    pcm%v_ext_rs(ii) = pcm%v_ext_rs(ii) + (pcm%epsilon_0-M_ONE) * v_ext(ii)
-        !  end do 
-        !end do
-
-        !ii=minloc(sqrt(sum(mesh%x(:,:)**2,2)),1)
-        !write(*,*) 'origin', ii 
-        !write(*,*) 'test potential - origin', mesh%x(ii,:), v_ext(ii) + pcm%v_ext_rs(ii)
-        !write(*,*) 'test potential - point', mesh%x(1,:), v_ext(1) + pcm%v_ext_rs(1)
-        !write(*,*) 'test potential - point - onsager', mesh%x(1,1), &
-        !-mesh%x(1,1)*0.05-(78.39-1)/(2*78.39+1)*0.05*5.0**3*mesh%x(1,1)/sqrt(sum(mesh%x(1,:)**2))**3, & 
-        !v_ext(1)+pcm%v_ext_rs(1)
       end if !< END - pcm charges propagation in equilibrium with external field
 
     end if
@@ -1240,7 +1235,7 @@ contains
   end subroutine pcm_calc_pot_rs
 
   ! -----------------------------------------------------------------------------
-
+  ! change description and variable names to be more general - external potential feature use it
   !> Calculates the Hartree potential at the tessera representative points by doing 
   !! a 3D linear interpolation. 
   subroutine pcm_v_electrons_cav_li(v_e_cav, v_hartree, pcm, mesh)
