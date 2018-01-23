@@ -87,10 +87,11 @@ module poisson_libisf_oct_m
 
 contains
 
-  subroutine poisson_libisf_init(this, mesh, cube)
+  subroutine poisson_libisf_init(this, mesh, cube, mu)
     type(poisson_libisf_t), intent(out)   :: this
     type(mesh_t),           intent(inout) :: mesh
     type(cube_t),           intent(inout) :: cube
+    FLOAT,                  intent(in)    :: mu
 
 #ifdef HAVE_LIBISF
     logical data_is_parallel
@@ -100,6 +101,7 @@ contains
     PUSH_SUB(poisson_libisf_init)
     
     call f_lib_initialize()
+    call dict_init(inputs)
     !if you want complete potential for each process anytime
     call dict_set(inputs//'setup'//'global_data',.true.)
 
@@ -120,8 +122,13 @@ contains
       this%geocode = "P"
       call messages_experimental("LibISF with 3D periodic boundary conditions.")
     end select
-    !if you want complete potential for each process anytime
-    call dict_set(inputs//'setup'//'isf_order',16)
+
+    !Verbosity switch
+    call dict_set(inputs//'setup'//'verbose',.false.)
+    !Order of the Interpolating Scaling Function family
+    call dict_set(inputs//'kernel'//'isf_order',16)
+    !Mu screening parameter
+    call dict_set(inputs//'kernel'//'screening',mu)
 
     !%Variable PoissonSolverISFParallelData
     !%Type logical
@@ -151,6 +158,7 @@ contains
     this%kernel = pkernel_init(cube%mpi_grp%rank, cube%mpi_grp%size, inputs,&
         this%geocode,cube%rs_n_global,mesh%spacing, &
         alpha_bc = alpha, beta_ac = beta, gamma_ab = gamma)
+    call dict_free(inputs)
     call pkernel_set(this%kernel,verbose=.false.)
 
     POP_SUB(poisson_libisf_init)
