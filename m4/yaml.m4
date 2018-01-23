@@ -7,7 +7,7 @@ AC_DEFUN([ACX_YAML], [
   AC_ARG_WITH([yaml-path],
               AS_HELP_STRING([--with-yaml-prefix=DIR], [Directory where libYAML was installed.]),
               [ac_path_yaml=$withval])
-  AC_ARG_ENABLE(internal-libyaml, AS_HELP_STRING([--disable-internal-libyaml], [Do not build and link with internal libyaml library (default = auto).]), ac_build_libyaml=$enableval, ac_build_libyaml="auto")
+  AC_ARG_ENABLE(internal-libyaml, AS_HELP_STRING([--disable-internal-libyaml], [Do not build and link with internal libyaml library (default = yes).]), ac_build_libyaml=$enableval, ac_build_libyaml="yes")
   
   ac_use_libyaml="no"
   if test x"$ac_path_yaml" == x"" ; then

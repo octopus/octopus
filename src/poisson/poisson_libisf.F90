@@ -102,8 +102,6 @@ contains
     
     call f_lib_initialize()
     call dict_init(inputs)
-    !if you want complete potential for each process anytime
-    call dict_set(inputs//'setup'//'global_data',.true.)
 
     select case(mesh%sb%periodic_dim)
     case(0)
@@ -145,9 +143,9 @@ contains
     !%End
     call parse_variable('PoissonSolverISFParallelData', .true., data_is_parallel)
     if (data_is_parallel) then
-      this%datacode = "D"
+      call dict_set(inputs//'setup'//'global_data',.true.)
     else 
-      this%datacode = "G"
+      call dict_set(inputs//'setup'//'global_data',.false.)
     end if
 
 
