@@ -235,10 +235,10 @@ contains
     end select
 
 
-    ! setup Hamiltonian
+    ! setup Hamiltonian, without recalculating eigenvalues (use the ones from the restart information)
     message(1) = 'Info: Setting up Hamiltonian.'
     call messages_info(1)
-    call system_h_setup(sys, hm)
+    call system_h_setup(sys, hm, calc_eigenval=.false.)
 
     !%Variable CasidaTheoryLevel
     !%Type flag
@@ -776,9 +776,10 @@ contains
         cas%w(ia) = st%eigenval(cas%pair(ia)%a, cas%pair(ia)%kk) - &
                     st%eigenval(cas%pair(ia)%i, cas%pair(ia)%kk)
         if(cas%w(ia) < -M_EPSILON) then
-          message(1) = "There are negative unocc-occ KS eigenvalue differences."
-          message(2) = "This indicates an inconsistency between gs, unocc, and/or casida calculations."
-          call messages_fatal(2, only_root_writes = .true.)
+          message(1) = "There is a negative unocc-occ KS eigenvalue difference for"
+          write(message(2),'("states ",I5," and ",I5," of k-point ",I5,".")') cas%pair(ia)%i, cas%pair(ia)%a, cas%pair(ia)%kk
+          message(3) = "This indicates an inconsistency between gs, unocc, and/or casida calculations."
+          call messages_fatal(3, only_root_writes = .true.)
         end if
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ia, cas%n_pairs)
       end do

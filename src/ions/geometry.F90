@@ -768,7 +768,7 @@ contains
     integer :: iatom, iunit
     character(len=6) position
 
-    PUSH_SUB(atom_read_xyz)
+    PUSH_SUB(geometry_read_xyz)
 
     iunit = io_open(trim(fname)//'.xyz', action='read', position='rewind')
 
@@ -793,7 +793,7 @@ contains
       call io_close(iunit)
     end if
 
-    POP_SUB(atom_read_xyz)
+    POP_SUB(geometry_read_xyz)
   end subroutine geometry_read_xyz
 
 
