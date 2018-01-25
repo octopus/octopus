@@ -143,10 +143,12 @@ contains
     !%End
     call parse_variable('PoissonSolverISFParallelData', .true., data_is_parallel)
     if (data_is_parallel) then
-      call dict_set(inputs//'setup'//'global_data',.true.)
-    else 
       call dict_set(inputs//'setup'//'global_data',.false.)
+    else 
+      call dict_set(inputs//'setup'//'global_data',.true.)
     end if
+
+    call dict_set(inputs//'setup'//'verbose',debug%info)
 
 
     alpha = mesh%sb%alpha*M_PI/(CNST(180.0))
@@ -157,7 +159,7 @@ contains
         this%geocode,cube%rs_n_global,mesh%spacing, &
         alpha_bc = alpha, beta_ac = beta, gamma_ab = gamma)
     call dict_free(inputs)
-    call pkernel_set(this%kernel,verbose=.false.)
+    call pkernel_set(this%kernel,verbose=debug%info)
 
     POP_SUB(poisson_libisf_init)
 #endif
