@@ -85,6 +85,8 @@ module poisson_libisf_oct_m
 
   end type poisson_libisf_t
 
+  logical, save :: flib_initialized = .false.
+
 contains
 
   subroutine poisson_libisf_init(this, mesh, cube, mu)
@@ -99,8 +101,12 @@ contains
     FLOAT :: alpha, beta, gamma
  
     PUSH_SUB(poisson_libisf_init)
-    
-    call f_lib_initialize()
+   
+    if(.not.flib_initialized) then 
+      call f_lib_initialize()
+      flib_initialized = .true.
+    end if
+
     call dict_init(inputs)
 
     select case(mesh%sb%periodic_dim)
@@ -144,8 +150,10 @@ contains
     call parse_variable('PoissonSolverISFParallelData', .true., data_is_parallel)
     if (data_is_parallel) then
       call dict_set(inputs//'setup'//'global_data',.false.)
+      this%datacode = "D"       
     else 
       call dict_set(inputs//'setup'//'global_data',.true.)
+      this%datacode = "G"
     end if
 
     call dict_set(inputs//'setup'//'verbose',debug%info)
