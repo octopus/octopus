@@ -523,7 +523,7 @@ contains
     SAFE_ALLOCATE(cas%pair(1:cas%n_pairs+cas%pt_nmodes))
     if(cas%states_are_real) then
       SAFE_ALLOCATE( cas%dmat(1:cas%n_pairs+cas%pt_nmodes, 1:cas%n_pairs+cas%pt_nmodes))
-      SAFE_ALLOCATE(  cas%dtm(1:cas%n_pairs, 1:cas%sb_dim))
+      SAFE_ALLOCATE(  cas%dtm(1:cas%n_pairs+cas%pt_nmodes, 1:cas%sb_dim))
     else
       SAFE_ALLOCATE( cas%zmat(1:cas%n_pairs, 1:cas%n_pairs))
       SAFE_ALLOCATE(  cas%ztm(1:cas%n_pairs, 1:cas%sb_dim))

@@ -121,6 +121,7 @@ contains
          end if
       end do
       call parse_block_end(blk)
+      write(message(1), '(a,i5,a)') 'Info: Happy to have ', this%nmodes, ' photon modes with us.'
     else
       !The following syntax is depreciated, but still in for downwards compatibility, Todo remove, OEP only works with this syntax
       !%Variable OEPOmega

@@ -1108,8 +1108,6 @@ subroutine X(casida_solve)(cas, st)
        end do
     end if
 
-    write(*,*) cas%n_pairs
-    
     message(1) = "Info: Diagonalizing matrix for resonance energies."
     call messages_info(1)
     ! now we diagonalize the matrix
@@ -1118,11 +1116,9 @@ subroutine X(casida_solve)(cas, st)
     if(cas%calc_forces) cas%X(mat_save) = cas%X(mat) ! save before gets turned into eigenvectors
     call lalg_eigensolve(cas%n_pairs + cas%pt_nmodes, cas%X(mat), cas%w)
     call profiling_out(prof)
-    
-!     write(*,*) cas%X(mat)
-    
+
     do ia = 1, cas%n_pairs+cas%pt_nmodes
-      
+
       if(cas%type == CASIDA_CASIDA) then
         if(cas%w(ia) < -M_EPSILON) then       
           write(message(1),'(a,i4,a)') 'Casida excitation energy', ia, ' is imaginary.'
@@ -1184,7 +1180,6 @@ subroutine X(casida_write)(cas, sys)
     
     do ia = 1, cas%n_pairs+cas%pt_nmodes
       if((cas%type == CASIDA_EPS_DIFF)) then
-      write(*,*) ia, cas%ind(ia), cas%pair(cas%ind(ia))%i, cas%pair(cas%ind(ia))%a, cas%pair(cas%ind(ia))%kk
         write(iunit, '(2i4)', advance='no') cas%pair(cas%ind(ia))%i, cas%pair(cas%ind(ia))%a
         if(cas%nik > 1) then
           write(iunit, '(i7)', advance='no') cas%pair(cas%ind(ia))%kk
