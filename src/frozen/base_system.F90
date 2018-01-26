@@ -391,10 +391,13 @@ contains
   end subroutine base_system__sets__type
 
   ! ---------------------------------------------------------
-  subroutine base_system__dels__(this, name, that)
-    type(base_system_t), intent(inout) :: this
-    character(len=*),    intent(in)    :: name
-    type(base_system_t), intent(in)    :: that
+  subroutine base_system__dels__(this, name, that, config, lock, active)
+    type(base_system_t),           intent(inout) :: this
+    character(len=*),              intent(in)    :: name
+    type(base_system_t),           intent(in)    :: that
+    type(json_object_t), optional, intent(in)    :: config
+    logical,             optional, intent(in)    :: lock
+    logical,             optional, intent(in)    :: active
 
     PUSH_SUB(base_system__dels__)
 
@@ -404,6 +407,9 @@ contains
     ASSERT(this%space==that%space)
     call base_geometry_dels(this%geom, trim(adjustl(name)), that%geom)
     call base_states_dels(this%st, trim(adjustl(name)), that%st)
+    if(present(config)) continue
+    if(present(lock))   continue
+    if(present(active)) continue
 
     POP_SUB(base_system__dels__)
   end subroutine base_system__dels__

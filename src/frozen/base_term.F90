@@ -15,7 +15,9 @@ module base_term_oct_m
   use global_oct_m
   use json_oct_m
   use kinds_oct_m
+  use message_oct_m
   use messages_oct_m
+  use msgbus_oct_m
   use profiling_oct_m
 
 #define BASE_TEMPLATE_NAME base_term
@@ -33,8 +35,6 @@ module base_term_oct_m
 
   public ::              &
     base_term__init__,   &
-    base_term__acc__,    &
-    base_term__sub__,    &
     base_term__update__, &
     base_term__reset__,  &
     base_term__copy__,   &
@@ -47,7 +47,6 @@ module base_term_oct_m
     base_term_acc,    &
     base_term_calc,   &
     base_term_update, &
-    base_term_reset,  &
     base_term_set,    &
     base_term_get,    &
     base_term_copy,   &
@@ -65,6 +64,7 @@ module base_term_oct_m
     type(base_system_t), pointer :: sys    =>null()
     type(refcount_t),    pointer :: rcnt   =>null()
     real(kind=wp)                :: energy = 0.0_wp
+    type(msgbus_t)               :: msgb
     type(base_term_dict_t)       :: dict
   end type base_term_t
 
@@ -90,6 +90,7 @@ module base_term_oct_m
     module procedure base_term_get_info
     module procedure base_term_get_config
     module procedure base_term_get_system
+    module procedure base_term_get_msgbus
   end interface base_term_get
 
 contains
@@ -154,6 +155,7 @@ contains
     this%config => config
     this%sys => sys
     this%rcnt => refcount_new()
+    call msgbus_init(this%msgb, number=2)
     call base_term_dict_init(this%dict)
 
     POP_SUB(base_term__init__type)
@@ -314,8 +316,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_term_get_config(this, that)
-    type(base_term_t),    target, intent(in) :: this
-    type(json_object_t), pointer             :: that
+    type(base_term_t),    target, intent(in)  :: this
+    type(json_object_t), pointer, intent(out) :: that
 
     PUSH_SUB(base_term_get_config)
 
@@ -327,8 +329,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine base_term_get_system(this, that)
-    type(base_term_t),    target, intent(in) :: this
-    type(base_system_t), pointer             :: that
+    type(base_term_t),    target, intent(in)  :: this
+    type(base_system_t), pointer, intent(out) :: that
 
     PUSH_SUB(base_term_get_system)
 
@@ -337,6 +339,19 @@ contains
 
     POP_SUB(base_term_get_system)
   end subroutine base_term_get_system
+
+  ! ---------------------------------------------------------
+  subroutine base_term_get_msgbus(this, that)
+    type(base_term_t), target, intent(in)  :: this
+    type(msgbus_t),   pointer, intent(out) :: that
+
+    PUSH_SUB(base_term_get_msgbus)
+
+    nullify(that)
+    if(associated(this%config)) that => this%msgb
+
+    POP_SUB(base_term_get_msgbus)
+  end subroutine base_term_get_msgbus
 
   ! ---------------------------------------------------------
   subroutine base_term__copy__(this, that)
@@ -369,6 +384,7 @@ contains
     nullify(this%config, this%sys)
     if(associated(this%rcnt)) call refcount_del(this%rcnt)
     this%energy = 0.0_wp
+    call msgbus_end(this%msgb)
     ASSERT(base_term_dict_len(this%dict)==0)
     call base_term_dict_end(this%dict)
 

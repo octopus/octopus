@@ -150,23 +150,35 @@ contains
     type(json_object_t), intent(inout) :: this
     integer,             intent(in)    :: nspin
 
-    type(json_object_t), pointer :: cnfg
+    type(json_object_t), pointer :: trms, cnfg, defn
+    integer                      :: ierr
 
     PUSH_SUB(live_config_parse_hamiltonian)
 
-    nullify(cnfg)
+    nullify(trms, cnfg)
+    call json_get(this, "terms", trms, ierr)
+    ASSERT(ierr==JSON_OK)
     SAFE_ALLOCATE(cnfg)
-    call base_config_parse_kinetic(cnfg, nspin)
-    call json_set(this, "kinetic", cnfg)
-    nullify(cnfg)
+    call json_init(cnfg)
+    call json_set(trms, "kinetic", cnfg)
+    SAFE_ALLOCATE(defn)
+    call base_config_parse_kinetic(defn, nspin)
+    call json_set(cnfg, "definition", defn)
+    nullify(cnfg, defn)
     SAFE_ALLOCATE(cnfg)
-    call live_config_parse_external(cnfg)
-    call json_set(this, "external", cnfg)
-    nullify(cnfg)
+    call json_init(cnfg)
+    call json_set(trms, "external", cnfg)
+    SAFE_ALLOCATE(defn)
+    call live_config_parse_external(defn)
+    call json_set(cnfg, "definition", defn)
+    nullify(cnfg, defn)
     SAFE_ALLOCATE(cnfg)
-    call live_config_parse_ionic(cnfg)
-    call json_set(this, "ionic", cnfg)
-    nullify(cnfg)
+    call json_init(cnfg)
+    call json_set(trms, "ionic", cnfg)
+    SAFE_ALLOCATE(defn)
+    call live_config_parse_ionic(defn)
+    call json_set(cnfg, "definition", defn)
+    nullify(trms, cnfg, defn)
 
     POP_SUB(live_config_parse_hamiltonian)
   end subroutine live_config_parse_hamiltonian

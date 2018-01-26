@@ -48,7 +48,6 @@ module v_ks_oct_m
   use pcm_oct_m 
   use simul_box_oct_m
   use species_oct_m
-  use ssys_tnadd_oct_m
   use states_oct_m
   use states_dim_oct_m
   use states_parallel_oct_m
@@ -1208,7 +1207,6 @@ contains
       if(associated(hm%subsys_hm))then
         call base_hamiltonian_get(hm%subsys_hm, "tnadd", subsys_tnadd)
         ASSERT(associated(subsys_tnadd))
-        call ssys_tnadd_calc(subsys_tnadd)
         call base_hamiltonian_get(subsys_tnadd, nspin=ispin)
         ASSERT(ispin<=hm%d%ispin)
         call base_hamiltonian_get(subsys_tnadd, potential)

@@ -37,6 +37,8 @@ module memo_oct_m
   public ::    &
     memo_in,   &
     memo_init, &
+    memo_acc,  &
+    memo_sub,  &
     memo_set,  &
     memo_get,  &
     memo_del,  &
@@ -76,6 +78,18 @@ module memo_oct_m
     module procedure data_init_type
     module procedure data_init_copy
   end interface data_init
+
+  interface memo_acc
+    module procedure memo_acc_type
+    module procedure memo_acc_r0
+    module procedure memo_acc_r1
+  end interface memo_acc
+
+  interface memo_sub
+    module procedure memo_sub_type
+    module procedure memo_sub_r0
+    module procedure memo_sub_r1
+  end interface memo_sub
 
   interface memo_set
     module procedure memo_set_r0
@@ -274,6 +288,204 @@ contains
     
     POP_SUB(memo_in)
   end function memo_in
+
+  ! ---------------------------------------------------------
+  subroutine memo_acc_type(this, key, that, ierr)
+    type(memo_t),      intent(inout) :: this
+    character(len=*),  intent(in)    :: key
+    type(memo_t),      intent(in)    :: that
+    integer, optional, intent(out)   :: ierr
+
+    type(data_t),                pointer :: data
+    real(kind=wp), dimension(:), pointer :: ivl1, ivl2
+    integer                              :: indx, jerr
+
+    PUSH_SUB(memo_acc_type)
+
+    nullify(data, ivl1, ivl2)
+    call data_dict_get(this%dict, key, data, jerr)
+    if(jerr==MEMO_OK)then
+      ASSERT(associated(data))
+      call data_get(data, ivl1)
+      ASSERT(associated(ivl1))
+      nullify(data)
+      call data_dict_get(that%dict, key, data, jerr)
+      if(jerr==MEMO_OK)then
+        ASSERT(associated(data))
+        call data_get(data, ivl2)
+        ASSERT(associated(ivl2))
+        ASSERT(size(ivl1)==size(ivl2))
+        do indx = 1, size(ivl1)
+          ivl1(indx) = ivl1(indx) + ivl2(indx)
+        end do
+        nullify(data, ivl2)
+      end if
+      nullify(ivl1)
+    end if
+    nullify(data)
+    if(present(ierr)) ierr = jerr
+
+    POP_SUB(memo_acc_type)
+  end subroutine memo_acc_type
+
+  ! ---------------------------------------------------------
+  subroutine memo_acc_r0(this, key, val, ierr)
+    type(memo_t),      intent(inout) :: this
+    character(len=*),  intent(in)    :: key
+    real(kind=wp),     intent(in)    :: val
+    integer, optional, intent(out)   :: ierr
+
+    type(data_t),                pointer :: data
+    real(kind=wp), dimension(:), pointer :: ival
+    integer                              :: jerr
+
+    PUSH_SUB(memo_acc_r0)
+
+    nullify(data, ival)
+    call data_dict_get(this%dict, key, data, jerr)
+    if(jerr==MEMO_OK)then
+      ASSERT(associated(data))
+      call data_get(data, ival)
+      ASSERT(associated(ival))
+      ASSERT(size(ival)==1)
+      ival(1) = ival(1) + val
+      nullify(ival)
+    end if
+    nullify(data)
+    if(present(ierr)) ierr = jerr
+
+    POP_SUB(memo_acc_r0)
+  end subroutine memo_acc_r0
+
+  ! ---------------------------------------------------------
+  subroutine memo_acc_r1(this, key, val, ierr)
+    type(memo_t),                intent(inout) :: this
+    character(len=*),            intent(in)    :: key
+    real(kind=wp), dimension(:), intent(in)    :: val
+    integer,           optional, intent(out)   :: ierr
+
+    type(data_t),                pointer :: data
+    real(kind=wp), dimension(:), pointer :: ival
+    integer                              :: indx, jerr
+
+    PUSH_SUB(memo_acc_r1)
+
+    nullify(data, ival)
+    call data_dict_get(this%dict, key, data, jerr)
+    if(jerr==MEMO_OK)then
+      ASSERT(associated(data))
+      call data_get(data, ival)
+      ASSERT(associated(ival))
+      ASSERT(size(ival)==size(val))
+      do indx = 1, size(ival)
+        ival(indx) = ival(indx) + val(indx)
+      end do
+      nullify(ival)
+    end if
+    nullify(data)
+    if(present(ierr)) ierr = jerr
+
+    POP_SUB(memo_acc_r1)
+  end subroutine memo_acc_r1
+
+  ! ---------------------------------------------------------
+  subroutine memo_sub_type(this, key, that, ierr)
+    type(memo_t),      intent(inout) :: this
+    character(len=*),  intent(in)    :: key
+    type(memo_t),      intent(in)    :: that
+    integer, optional, intent(out)   :: ierr
+
+    type(data_t),                pointer :: data
+    real(kind=wp), dimension(:), pointer :: ivl1, ivl2
+    integer                              :: indx, jerr
+
+    PUSH_SUB(memo_sub_type)
+
+    nullify(data, ivl1, ivl2)
+    call data_dict_get(this%dict, key, data, jerr)
+    if(jerr==MEMO_OK)then
+      ASSERT(associated(data))
+      call data_get(data, ivl1)
+      ASSERT(associated(ivl1))
+      nullify(data)
+      call data_dict_get(that%dict, key, data, jerr)
+      if(jerr==MEMO_OK)then
+        ASSERT(associated(data))
+        call data_get(data, ivl2)
+        ASSERT(associated(ivl2))
+        ASSERT(size(ivl1)==size(ivl2))
+        do indx = 1, size(ivl1)
+          ivl1(indx) = ivl1(indx) - ivl2(indx)
+        end do
+        nullify(data, ivl2)
+      end if
+      nullify(ivl1)
+    end if
+    nullify(data)
+    if(present(ierr)) ierr = jerr
+
+    POP_SUB(memo_sub_type)
+  end subroutine memo_sub_type
+
+  ! ---------------------------------------------------------
+  subroutine memo_sub_r0(this, key, val, ierr)
+    type(memo_t),      intent(inout) :: this
+    character(len=*),  intent(in)    :: key
+    real(kind=wp),     intent(in)    :: val
+    integer, optional, intent(out)   :: ierr
+
+    type(data_t),                pointer :: data
+    real(kind=wp), dimension(:), pointer :: ival
+    integer                              :: jerr
+
+    PUSH_SUB(memo_sub_r0)
+
+    nullify(data, ival)
+    call data_dict_get(this%dict, key, data, jerr)
+    if(jerr==MEMO_OK)then
+      ASSERT(associated(data))
+      call data_get(data, ival)
+      ASSERT(associated(ival))
+      ASSERT(size(ival)==1)
+      ival(1) = ival(1) - val
+      nullify(ival)
+    end if
+    nullify(data)
+    if(present(ierr)) ierr = jerr
+
+    POP_SUB(memo_sub_r0)
+  end subroutine memo_sub_r0
+
+  ! ---------------------------------------------------------
+  subroutine memo_sub_r1(this, key, val, ierr)
+    type(memo_t),                intent(inout) :: this
+    character(len=*),            intent(in)    :: key
+    real(kind=wp), dimension(:), intent(in)    :: val
+    integer,           optional, intent(out)   :: ierr
+
+    type(data_t),                pointer :: data
+    real(kind=wp), dimension(:), pointer :: ival
+    integer                              :: indx, jerr
+
+    PUSH_SUB(memo_sub_r1)
+
+    nullify(data, ival)
+    call data_dict_get(this%dict, key, data, jerr)
+    if(jerr==MEMO_OK)then
+      ASSERT(associated(data))
+      call data_get(data, ival)
+      ASSERT(associated(ival))
+      ASSERT(size(ival)==size(val))
+      do indx = 1, size(ival)
+        ival(indx) = ival(indx) - val(indx)
+      end do
+      nullify(ival)
+    end if
+    nullify(data)
+    if(present(ierr)) ierr = jerr
+
+    POP_SUB(memo_sub_r1)
+  end subroutine memo_sub_r1
 
   ! ---------------------------------------------------------
   subroutine memo_set_r0(this, key, val)

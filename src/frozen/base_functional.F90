@@ -42,9 +42,6 @@ module base_functional_oct_m
   public ::                    &
     base_functional__init__,   &
     base_functional__start__,  &
-    base_functional__acc__,    &
-    base_functional__sub__,    &
-    base_functional__calc__,   &
     base_functional__update__, &
     base_functional__reset__,  &
     base_functional__stop__,   &
@@ -58,7 +55,6 @@ module base_functional_oct_m
     base_functional_start,  &
     base_functional_calc,   &
     base_functional_update, &
-    base_functional_reset,  &
     base_functional_stop,   &
     base_functional_get,    &
     base_functional_copy,   &
@@ -102,11 +98,6 @@ module base_functional_oct_m
     module procedure base_functional_init_type
   end interface base_functional_init
 
-  interface base_functional_update
-    module procedure base_functional_update_enrg
-    module procedure base_functional_update_data
-  end interface base_functional_update
-
   interface base_functional_get
     module procedure base_functional_get_info
     module procedure base_functional_get_energy
@@ -114,6 +105,7 @@ module base_functional_oct_m
     module procedure base_functional_get_system
     module procedure base_functional_get_density
     module procedure base_functional_get_simulation
+    module procedure base_functional_get_msgbus
     module procedure base_functional_get_storage
     module procedure base_functional_get_functional_r1
     module procedure base_functional_get_functional_r2
@@ -212,6 +204,7 @@ contains
     call json_set(cnfg, "full", .false.)
     if(plrz) call json_set(cnfg, "dimensions", this%nspin)
     call functional_get(this%funct, use=fuse)
+    fuse = fuse .and. (abs(this%factor)>tiny(this%factor))
     if(.not.fuse) call json_set(cnfg, "allocate", .false.)
     call storage_init(this%data, cnfg)
     nullify(cnfg)
@@ -255,14 +248,20 @@ contains
     type(simulation_t), target, intent(in)    :: sim
 
 
+    type(msgbus_t), pointer :: msgb
+
     PUSH_SUB(base_functional__start__)
 
     ASSERT(associated(this%config))
     ASSERT(.not.associated(this%sim))
+    nullify(msgb)
     this%sim => sim
     call functional_start(this%funct, this%sim)
     call storage_start(this%data, this%sim)
-    call base_functional__attach__(this)
+    call base_density_get(this%density, msgb)
+    ASSERT(associated(msgb))
+    call msgbus_attach(this%msgb, msgb, id=2)
+    nullify(msgb)
 
     POP_SUB(base_functional__start__)
   end subroutine base_functional__start__
@@ -300,44 +299,75 @@ contains
   end subroutine base_functional__sub__
 
   ! ---------------------------------------------------------
-  function base_functional__calc__(this) result(energy)
+  function base_functional__calc__(this, that) result(energy)
     type(base_functional_t), intent(in) :: this
+    type(base_density_t),    intent(in) :: that
 
     real(kind=wp) :: energy
 
-    logical :: fuse
+    type(storage_t), pointer :: data
+    logical                  :: fuse, plrz
+    integer                  :: ierr
 
     PUSH_SUB(base_functional__calc__)
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
+    nullify(data)
     energy = 0.0_wp
     call base_functional_get(this, use=fuse)
-    if(fuse.and.(abs(this%factor)>tiny(this%factor)))then
-      call functional_calc(this%funct, energy)
-      if(abs(abs(this%factor)-1.0_wp)>epsilon(this%factor)) energy = this%factor * energy
+    if(fuse)then
+      call json_get(this%config, "spin", plrz, ierr)
+      if(ierr/=JSON_OK) plrz = .true.
+      call base_density_get(that, data, total=(.not.plrz))
+      ASSERT(associated(data))
+      call storage_integrate(this%data, data, energy)
+      nullify(data)
     end if
 
     POP_SUB(base_functional__calc__)
   end function base_functional__calc__
 
   ! ---------------------------------------------------------
-  subroutine base_functional__update__(this)
+  subroutine base_functional__update__(this, energy)
     type(base_functional_t), intent(inout) :: this
+    logical,       optional, intent(in)    :: energy
 
-    logical :: fuse
+    real(kind=wp) :: enrg
+    logical       :: fuse, calc, updt, fmlt
 
     PUSH_SUB(base_functional__update__)
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
-    call base_functional__reset__(this)
     call base_functional_get(this, use=fuse)
-    if(fuse.and.(abs(this%factor)>tiny(this%factor)))then
-      call functional_calc(this%funct, this%data)
-      if(abs(abs(this%factor)-1.0_wp)>epsilon(this%factor)) call storage_mlt(this%data, this%factor)
-      call storage_update(this%data)
-      call base_functional__publish__(this)
+    if(fuse)then
+      calc = .false.
+      if(present(energy)) calc = energy
+      call base_density__update__(this%density)
+      call base_functional__recv__(this, updt, channel=2)
+      if(updt.or.calc)then
+        fmlt = (abs(this%factor-1.0_wp)>epsilon(this%factor))
+        if(updt)then
+          if(calc)then
+            call functional_calc(this%funct, enrg, this%data)
+            if(fmlt) enrg = this%factor * enrg
+            call memo_set(this%memo, "energy", enrg)
+          else
+            call memo_del(this%memo, "energy")
+            call functional_calc(this%funct, this%data)
+          end if
+          if(fmlt) call storage_mlt(this%data, this%factor)
+          call storage_update(this%data)
+          call base_functional__publish__(this)
+        else
+          if(.not.memo_in(this%memo, "energy").and.calc)then
+            call functional_calc(this%funct, enrg)
+            if(fmlt) enrg = this%factor * enrg
+            call memo_set(this%memo, "energy", enrg)
+          end if
+        end if
+      end if
     end if
 
     POP_SUB(base_functional__update__)
@@ -361,93 +391,22 @@ contains
   subroutine base_functional__stop__(this)
     type(base_functional_t), intent(inout) :: this
 
+    type(msgbus_t), pointer :: msgb
+
     PUSH_SUB(base_functional__stop__)
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
-    call base_functional__detach__(this)
-    nullify(this%sim)
+    nullify(this%sim, msgb)
+    call base_density_get(this%density, msgb)
+    ASSERT(associated(msgb))
+    call msgbus_detach(this%msgb, msgb, id=2)
+    nullify(msgb)
     call functional_stop(this%funct)
     call storage_stop(this%data)
 
     POP_SUB(base_functional__stop__)
   end subroutine base_functional__stop__
-
-  ! ---------------------------------------------------------
-  subroutine base_functional__attach__(this)
-    type(base_functional_t), intent(inout) :: this
-
-    type(msgbus_t), pointer :: msgb
-    logical                 :: accu
-    integer                 :: ierr
-
-    PUSH_SUB(base_functional__attach__)
-
-    ASSERT(associated(this%config))
-    ASSERT(associated(this%sim))
-    nullify(msgb)
-    call json_get(this%config, "reduce", accu, ierr)
-    if(ierr/=JSON_OK) accu = .false.
-    if(accu) call base_functional__apply__(this, attach, parent=.false.)
-    call base_density_get(this%density, msgb)
-    ASSERT(associated(msgb))
-    call msgbus_attach(this%msgb, msgb, id=2)
-    nullify(msgb)
-
-    POP_SUB(base_functional__attach__)
-    
-  contains
-
-    subroutine attach(that)
-      type(base_functional_t), intent(inout) :: that
-
-      PUSH_SUB(base_functional__attach__.attach)
-      
-      ASSERT(associated(that%config))
-      call msgbus_attach(this%msgb, that%msgb)
-
-      POP_SUB(base_functional__attach__.attach)
-    end subroutine attach
-
-  end subroutine base_functional__attach__
-
-  ! ---------------------------------------------------------
-  subroutine base_functional__detach__(this)
-    type(base_functional_t), intent(inout) :: this
-
-    type(msgbus_t), pointer :: msgb
-    logical                 :: accu
-    integer                 :: ierr
-
-    PUSH_SUB(base_functional__detach__)
-
-    ASSERT(associated(this%config))
-    ASSERT(associated(this%sim))
-    nullify(msgb)
-    call base_density_get(this%density, msgb)
-    ASSERT(associated(msgb))
-    call msgbus_detach(this%msgb, msgb, id=2)
-    nullify(msgb)
-    call json_get(this%config, "reduce", accu, ierr)
-    if(ierr/=JSON_OK) accu = .false.
-    if(accu) call base_functional__apply__(this, detach, parent=.false.)
-
-    POP_SUB(base_functional__detach__)
-    
-  contains
-
-    subroutine detach(that)
-      type(base_functional_t), intent(inout) :: that
-
-      PUSH_SUB(base_functional__detach__.detach)
-      
-      ASSERT(associated(that%config))
-      call msgbus_detach(this%msgb, that%msgb)
-
-      POP_SUB(base_functional__detach__.detach)
-    end subroutine detach
-
-  end subroutine base_functional__detach__
 
   ! ---------------------------------------------------------
   subroutine base_functional__recv__(this, update, channel)
@@ -545,8 +504,7 @@ contains
     
     real(kind=wp) :: energy
 
-    type(storage_t), pointer :: data
-    logical                  :: fuse
+    logical :: fuse
 
     PUSH_SUB(base_functional_calc)
 
@@ -557,62 +515,41 @@ contains
     if(fuse)then
       call base_functional_update(this)
       if(present(that))then
-        call base_density_get(that, data)
+        energy = base_functional__calc__(this, that)
       else
-        call base_density_get(this%density, data)
+        energy = base_functional__calc__(this, this%density)
       end if
-      ASSERT(associated(data))
-      call storage_integrate(this%data, data, energy)
-      nullify(data)
     end if
 
     POP_SUB(base_functional_calc)
   end function base_functional_calc
 
   ! ---------------------------------------------------------
-  subroutine base_functional_update_enrg(this, energy)
+  subroutine base_functional_update(this, energy)
     type(base_functional_t), intent(inout) :: this
-    real(kind=wp),           intent(out)   :: energy
+    logical,       optional, intent(in)    :: energy
 
-    logical :: fuse
-    integer :: ierr
-
-    PUSH_SUB(base_functional_update_enrg)
+    PUSH_SUB(base_functional_update)
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
-    energy = 0.0_wp
-    call base_functional_get(this, use=fuse)
-    if(fuse)then
-      call base_functional_update(this)
-      if(.not.memo_in(this%memo, "energy"))&
-        call memo_set(this%memo, "energy", base_functional__calc__(this))
-      call memo_get(this%memo, "energy", energy, ierr)
-      ASSERT(ierr==MEMO_OK)
-    end if
+    call base_functional__apply__(this, update, enforce_active=.true.)
 
-    POP_SUB(base_functional_update_enrg)
-  end subroutine base_functional_update_enrg
+    POP_SUB(base_functional_update)
 
-  ! ---------------------------------------------------------
-  subroutine base_functional_update_data(this)
-    type(base_functional_t), intent(inout) :: this
+  contains
+    
+    subroutine update(this)
+      type(base_functional_t), intent(inout) :: this
 
-    logical :: fuse, updt
+      PUSH_SUB(base_functional_update.update)
 
-    PUSH_SUB(base_functional_update_data)
+      call base_functional__update__(this, energy)
 
-    ASSERT(associated(this%config))
-    ASSERT(associated(this%sim))
-    call base_functional_get(this, use=fuse)
-    if(fuse)then
-      call base_density_update(this%density)
-      call base_functional__recv__(this, updt, channel=2)
-      if(updt) call base_functional__update__(this)
-    end if
+      POP_SUB(base_functional_update.update)
+    end subroutine update
 
-    POP_SUB(base_functional_update_data)
-  end subroutine base_functional_update_data
+  end subroutine base_functional_update
 
   ! ---------------------------------------------------------
   subroutine base_functional_reset(this)
@@ -664,14 +601,19 @@ contains
     type(base_functional_t), intent(inout) :: this
     real(kind=wp),           intent(out)   :: energy
 
-    logical :: allc
+    logical :: fuse
+    integer :: ierr
 
     PUSH_SUB(base_functional_get_energy)
 
     ASSERT(associated(this%config))
     energy = 0.0_wp
-    call storage_get(this%data, alloc=allc)
-    if(allc) call base_functional_update(this, energy)
+    call base_functional_get(this, use=fuse)
+    if(fuse)then
+      call base_functional_update(this, energy=.true.)
+      call memo_get(this%memo, "energy", energy, ierr)
+      ASSERT(ierr==MEMO_OK)
+    end if
 
     POP_SUB(base_functional_get_energy)
   end subroutine base_functional_get_energy
@@ -730,6 +672,19 @@ contains
   end subroutine base_functional_get_density
 
   ! ---------------------------------------------------------
+  subroutine base_functional_get_msgbus(this, that)
+    type(base_functional_t), target, intent(in)  :: this
+    type(msgbus_t),         pointer, intent(out) :: that
+
+    PUSH_SUB(base_functional_get_msgbus)
+
+    nullify(that)
+    if(associated(this%config)) that => this%msgb
+
+    POP_SUB(base_functional_get_msgbus)
+  end subroutine base_functional_get_msgbus
+
+  ! ---------------------------------------------------------
   subroutine base_functional_get_storage(this, that)
     type(base_functional_t), target, intent(in)  :: this
     type(storage_t),        pointer, intent(out) :: that
@@ -747,13 +702,13 @@ contains
     type(base_functional_t),              intent(inout) :: this
     real(kind=wp), dimension(:), pointer, intent(out)   :: that
 
-    logical :: allc
+    logical :: fuse
 
     PUSH_SUB(base_functional_get_functional_r1)
 
     nullify(that)
-    call storage_get(this%data, alloc=allc)
-    if(allc)then
+    call base_functional_get(this, use=fuse)
+    if(fuse)then
       call base_functional_update(this)
       call storage_get(this%data, that)
     end if
@@ -766,13 +721,13 @@ contains
     type(base_functional_t),                intent(inout) :: this
     real(kind=wp), dimension(:,:), pointer, intent(out)   :: that
 
-    logical :: allc
+    logical :: fuse
 
     PUSH_SUB(base_functional_get_functional_r2)
 
     nullify(that)
-    call storage_get(this%data, alloc=allc)
-    if(allc)then
+    call base_functional_get(this, use=fuse)
+    if(fuse)then
       call base_functional_update(this)
       call storage_get(this%data, that)
     end if
@@ -810,7 +765,7 @@ contains
 
     PUSH_SUB(base_functional__end__)
 
-    nullify(this%config, this%sys, this%sim)
+    nullify(this%config, this%sys, this%density, this%sim)
     if(associated(this%rcnt)) call refcount_del(this%rcnt)
     nullify(this%rcnt)
     this%nspin = default_nspin

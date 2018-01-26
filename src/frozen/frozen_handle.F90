@@ -45,7 +45,7 @@ contains
     call base_handle__init__(this, config)
     call base_handle_get(this, type=type)
     ASSERT(type==HNDL_TYPE_FRZN)
-    call base_handle__init__(this, fio_handle_init)
+    call base_handle__init__(this, fio_handle_init, lock=.true.)
 
     POP_SUB(frozen_handle_init)
   end subroutine frozen_handle_init
@@ -77,9 +77,11 @@ contains
     type(base_handle_t), intent(inout) :: this !> frozen
     type(mpi_grp_t),     intent(in)    :: group
 
-    type(base_handle_iterator_t) :: iter
-    type(base_handle_t), pointer :: hndl !> fio
-    type(json_object_t), pointer :: cnfg
+    type(base_handle_iterator_t)        :: iter
+    character(len=BASE_HANDLE_NAME_LEN) :: name
+    type(base_handle_t),        pointer :: hndl !> fio
+    type(json_object_t),        pointer :: cnfg
+    integer                             :: ierr
 
     PUSH_SUB(frozen_handle__load__)
 
@@ -88,10 +90,11 @@ contains
     call base_handle_init(iter, this)
     do
       nullify(hndl, cnfg)
-      call base_handle_next(iter, hndl)
-      if(.not.associated(hndl))exit
-      call base_handle_get(hndl, cnfg)
+      call base_handle_next(iter, name, hndl, config=cnfg, ierr=ierr)
+      if(ierr/=BASE_HANDLE_OK)exit
+      ASSERT(associated(hndl))
       ASSERT(associated(cnfg))
+      call base_handle_sets(this, trim(adjustl(name)), active=.false.)
       call fio_handle_start(hndl, group)
       call frozen_handle__acc__(this, hndl, cnfg)
       call fio_handle_stop(hndl)

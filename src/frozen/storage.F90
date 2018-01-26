@@ -34,7 +34,8 @@ module storage_oct_m
     storage_mlt,        &
     storage_add,        &
     storage_sub,        &
-    storage_reduce,     &
+    storage_madd,       &
+    storage_contract,   &
     storage_spread,     &
     storage_load,       &
     storage_set,        &
@@ -82,6 +83,11 @@ module storage_oct_m
     module procedure storage_sub_dim
     module procedure storage_sub_all
   end interface storage_sub
+
+  interface storage_madd
+    module procedure storage_madd_dim
+    module procedure storage_madd_all
+  end interface storage_madd
 
   interface storage_reset
     module procedure storage_reset_dim
@@ -472,7 +478,7 @@ contains
     else
       if(this%ndim>1)then
         call storage_init(data, this, ndim=1)
-        call storage_reduce_aux(data, this, dim=1)
+        call storage_contract_aux(data, this, dim=1)
         call storage_integrate_dotp_dim(that, data, value)
         call storage_end(data)
       else
@@ -780,51 +786,32 @@ contains
   end subroutine storage_sub_all
 
   ! ---------------------------------------------------------
-  subroutine storage_reduce_aux(this, that, dim, mlt)
-    type(storage_t),         intent(inout) :: this
-    type(storage_t),         intent(in)    :: that
-    integer,                 intent(in)    :: dim
-    real(kind=wp), optional, intent(in)    :: mlt
+  subroutine storage_madd_aux(this, mlt, that, dim)
+    type(storage_t), intent(inout) :: this
+    real(kind=wp),   intent(in)    :: mlt
+    type(storage_t), intent(in)    :: that
+    integer,         intent(in)    :: dim
 
-    integer :: indx, jndx
+    integer :: indx
 
-    PUSH_SUB(storage_reduce_aux)
+    PUSH_SUB(storage_madd_aux)
 
-    if(present(mlt))then
-      do indx = 1, this%mesh%np
-        this%data(indx,dim) = mlt * that%data(indx,1)
-      end do
-      do jndx = 2, that%ndim
-        do indx = 1, this%mesh%np
-          this%data(indx,dim) = this%data(indx,dim) + mlt * that%data(indx,jndx)
-        end do
-      end do
-    else
-      do indx = 1, this%mesh%np
-        this%data(indx,dim) = that%data(indx,1)
-      end do
-      do jndx = 2, that%ndim
-        do indx = 1, this%mesh%np
-          this%data(indx,dim) = this%data(indx,dim) + that%data(indx,jndx)
-        end do
-      end do
-    end if
+    do indx = 1, this%mesh%np
+      this%data(indx,dim) = this%data(indx,dim) + mlt * that%data(indx,dim)
+    end do
     if(this%full) call storage_update_aux(this, dim)
 
-    POP_SUB(storage_reduce_aux)
-  end subroutine storage_reduce_aux
+    POP_SUB(storage_madd_aux)
+  end subroutine storage_madd_aux
 
   ! ---------------------------------------------------------
-  subroutine storage_reduce(this, that, dim, mlt)
-    type(storage_t),         intent(inout) :: this
-    type(storage_t),         intent(in)    :: that
-    integer,       optional, intent(in)    :: dim
-    real(kind=wp), optional, intent(in)    :: mlt
+  subroutine storage_madd_dim(this, mlt, that, dim)
+    type(storage_t), intent(inout) :: this
+    real(kind=wp),   intent(in)    :: mlt
+    type(storage_t), intent(in)    :: that
+    integer,         intent(in)    :: dim
 
-    real(kind=wp) :: imlt
-    integer       :: idim
-
-    PUSH_SUB(storage_reduce)
+    PUSH_SUB(storage_madd_dim)
 
     ASSERT(associated(this%config))
     ASSERT(associated(that%config))
@@ -832,25 +819,92 @@ contains
     ASSERT(associated(that%sim))
     ASSERT(.not.this%lock.and.this%alloc)
     ASSERT(associated(this%mesh,that%mesh))
-    ASSERT(this%ndim==1)
-    ASSERT(this%ndim<=that%ndim)
+    ASSERT(this%ndim==that%ndim)
+    ASSERT(this%size==that%size)
+    ASSERT(this%default.equal.that%default)
+    if(that%alloc) call storage_madd_aux(this, mlt, that, dim)
+
+    POP_SUB(storage_madd_dim)
+  end subroutine storage_madd_dim
+
+  ! ---------------------------------------------------------
+  subroutine storage_madd_all(this, mlt, that)
+    type(storage_t), intent(inout) :: this
+    real(kind=wp),   intent(in)    :: mlt
+    type(storage_t), intent(in)    :: that
+
+    integer :: indx
+
+    PUSH_SUB(storage_madd_all)
+
+    ASSERT(associated(this%config))
+    ASSERT(associated(that%config))
+    ASSERT(associated(this%sim))
+    ASSERT(associated(that%sim))
+    ASSERT(.not.this%lock.and.this%alloc)
+    ASSERT(associated(this%mesh,that%mesh))
+    ASSERT(this%ndim==that%ndim)
+    ASSERT(this%size==that%size)
+    ASSERT(this%default.equal.that%default)
+    if(that%alloc)then
+      do indx = 1, this%ndim
+        call storage_madd_aux(this, mlt, that, indx)
+      end do
+    end if
+
+    POP_SUB(storage_madd_all)
+  end subroutine storage_madd_all
+
+  ! ---------------------------------------------------------
+  subroutine storage_contract_aux(this, that, dim)
+    type(storage_t), intent(inout) :: this
+    type(storage_t), intent(in)    :: that
+    integer,         intent(in)    :: dim
+
+    integer :: indx, jndx
+
+    PUSH_SUB(storage_contract_aux)
+
+    do indx = 1, this%mesh%np
+      this%data(indx,dim) = that%data(indx,1)
+    end do
+    do jndx = 2, that%ndim
+      do indx = 1, this%mesh%np
+        this%data(indx,dim) = this%data(indx,dim) + that%data(indx,jndx)
+      end do
+    end do
+    if(this%full) call storage_update_aux(this, dim)
+
+    POP_SUB(storage_contract_aux)
+  end subroutine storage_contract_aux
+
+  ! ---------------------------------------------------------
+  subroutine storage_contract(this, that, dim)
+    type(storage_t),   intent(inout) :: this
+    type(storage_t),   intent(in)    :: that
+    integer, optional, intent(in)    :: dim
+
+    integer :: idim
+
+    PUSH_SUB(storage_contract)
+
+    ASSERT(associated(this%config))
+    ASSERT(associated(that%config))
+    ASSERT(associated(this%sim))
+    ASSERT(associated(that%sim))
+    ASSERT(.not.this%lock.and.this%alloc)
+    ASSERT(associated(this%mesh,that%mesh))
     ASSERT(this%size==that%size)
     ASSERT(this%default.equal.that%default)
     if(that%alloc)then
       idim = 1
       if(present(dim)) idim = dim
       ASSERT(idim<=this%ndim)
-      imlt = 1.0_wp
-      if(present(mlt)) imlt = mlt
-      if(abs(imlt-1.0_wp)>epsilon(imlt))then
-        call storage_reduce_aux(this, that, idim, mlt=imlt)
-      else
-        call storage_reduce_aux(this, that, idim)
-      end if
+      call storage_contract_aux(this, that, dim=idim)
     end if
 
-    POP_SUB(storage_reduce)
-  end subroutine storage_reduce
+    POP_SUB(storage_contract)
+  end subroutine storage_contract
 
   ! ---------------------------------------------------------
   subroutine storage_spread_aux(this, that, dim, mlt)

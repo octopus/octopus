@@ -298,7 +298,7 @@ contains
     PUSH_SUB(base_states_notify_subs)
 
     nullify(subs)
-    call base_states_gets(this, trim(adjustl(name)), type=subs)
+    call base_states_gets(this, trim(adjustl(name)), subs)
     ASSERT(associated(subs))
     call base_states_notify(subs)
     nullify(subs)
@@ -400,10 +400,13 @@ contains
   end subroutine base_states__sets__type
     
   ! ---------------------------------------------------------
-  subroutine base_states__dels__(this, name, that)
-    type(base_states_t), intent(inout) :: this
-    character(len=*),    intent(in)    :: name
-    type(base_states_t), intent(in)    :: that
+  subroutine base_states__dels__(this, name, that, config, lock, active)
+    type(base_states_t),           intent(inout) :: this
+    character(len=*),              intent(in)    :: name
+    type(base_states_t),           intent(in)    :: that
+    type(json_object_t), optional, intent(in)    :: config
+    logical,             optional, intent(in)    :: lock
+    logical,             optional, intent(in)    :: active
 
     PUSH_SUB(base_states__dels__)
 
@@ -411,6 +414,9 @@ contains
     ASSERT(len_trim(name)>0)
     ASSERT(associated(that%config))
     call base_density_dels(this%density, trim(adjustl(name)), that%density)
+    if(present(config)) continue
+    if(present(lock))   continue
+    if(present(active)) continue
 
     POP_SUB(base_states__dels__)
   end subroutine base_states__dels__
@@ -426,7 +432,7 @@ contains
     PUSH_SUB(base_states_get_sub_density)
 
     nullify(that, subs)
-    call base_states_gets(this, trim(adjustl(name)), type=subs)
+    call base_states_gets(this, trim(adjustl(name)), subs)
     if(associated(subs)) call base_states_get(subs, that)
 
     POP_SUB(base_states_get_sub_density)

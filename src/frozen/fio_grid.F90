@@ -73,26 +73,6 @@ contains
     POP_SUB(fio_grid_init)
   end subroutine fio_grid_init
 
-  ! ! ---------------------------------------------------------
-  ! subroutine fio_grid_start(this, mpi_grp, config)
-  !   type(grid_t),        intent(inout) :: this
-  !   type(mpi_grp_t),     intent(in)    :: mpi_grp
-  !   type(json_object_t), intent(in)    :: config
-
-  !   type(json_object_t), pointer :: cnfg
-  !   integer                      :: ierr
-
-  !   PUSH_SUB(fio_grid_start)
-
-  !   nullify(cnfg)
-  !   call json_get(config, "mesh", cnfg, ierr)
-  !   ASSERT(ierr==JSON_OK)
-  !   call fio_mesh_init(this%mesh, this%sb, this%cv, mpi_grp, cnfg)
-  !   nullify(cnfg)
-
-  !   POP_SUB(fio_grid_start)
-  ! end subroutine fio_grid_start
-
   ! ---------------------------------------------------------
   subroutine fio_grid_copy(this, that)
     type(grid_t), target, intent(inout) :: this

@@ -125,19 +125,28 @@ contains
   subroutine frozen_config_parse_hamiltonian(this)
     type(json_object_t), intent(inout) :: this
 
-    type(json_object_t), pointer :: cnfg
+    type(json_object_t), pointer :: trms, cnfg, defn
+    integer                      :: ierr
 
     PUSH_SUB(frozen_config_parse_hamiltonian)
 
-    nullify(cnfg)
+    nullify(trms, cnfg, defn)
+    call json_get(this, "terms", trms, ierr)
+    ASSERT(ierr==JSON_OK)
     SAFE_ALLOCATE(cnfg)
-    call frozen_config_parse_external(cnfg)
-    call json_set(this, "external", cnfg)
-    nullify(cnfg)
+    call json_init(cnfg)
+    call json_set(trms, "external", cnfg)
+    SAFE_ALLOCATE(defn)
+    call frozen_config_parse_external(defn)
+    call json_set(cnfg, "definition", defn)
+    nullify(cnfg, defn)
     SAFE_ALLOCATE(cnfg)
-    call frozen_config_parse_ionic(cnfg)
-    call json_set(this, "ionic", cnfg)
-    nullify(cnfg)
+    call json_init(cnfg)
+    call json_set(trms, "ionic", cnfg)
+    SAFE_ALLOCATE(defn)
+    call frozen_config_parse_ionic(defn)
+    call json_set(cnfg, "definition", defn)
+    nullify(trms, cnfg, defn)
 
     POP_SUB(frozen_config_parse_hamiltonian)
   end subroutine frozen_config_parse_hamiltonian

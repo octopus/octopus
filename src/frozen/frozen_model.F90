@@ -41,7 +41,10 @@ contains
     call base_model_get(that, sdns)
     ASSERT(associated(sdns))
     call base_density_get(sdns, use=accu)
-    if(accu) call base_density__acc__(mdns, sdns, config)
+    if(accu)then
+      call base_density__acc__(mdns, sdns, config)
+      call base_density_notify(mdns)
+    end if
     nullify(mdns, sdns)
     call base_model_get(this, mhml)
     ASSERT(associated(mhml))

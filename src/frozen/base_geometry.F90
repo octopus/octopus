@@ -517,18 +517,22 @@ contains
   end subroutine base_geometry__sets__type
   
   ! ---------------------------------------------------------
-  subroutine base_geometry__dels__(this, name, that)
-    type(base_geometry_t), intent(inout) :: this
-    character(len=*),      intent(in)    :: name
-    type(base_geometry_t), intent(in)    :: that
+  subroutine base_geometry__dels__(this, name, that, config, lock, active)
+    type(base_geometry_t),         intent(inout) :: this
+    character(len=*),              intent(in)    :: name
+    type(base_geometry_t),         intent(in)    :: that
+    type(json_object_t), optional, intent(in)    :: config
+    logical,             optional, intent(in)    :: lock
+    logical,             optional, intent(in)    :: active
 
     PUSH_SUB(base_geometry__dels__)
 
     ASSERT(associated(this%config))
     ASSERT(len_trim(adjustl(name))>0)
     ASSERT(associated(that%config))
-    ASSERT(associated(that%space))
-    ASSERT(this%space==that%space)
+    if(present(config)) continue
+    if(present(lock))   continue
+    if(present(active)) continue
 
     POP_SUB(base_geometry__dels__)
   end subroutine base_geometry__dels__

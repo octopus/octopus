@@ -68,7 +68,6 @@ libfrozen_f_srcs =                       \
 	smlt_intrf.F90                   \
 	ssys_handle.F90                  \
 	ssys_ionic.F90                   \
-	ssys_tnadd.F90                   \
 	storage.F90                      \
 	strng.F90
 
@@ -92,7 +91,6 @@ noinst_HEADERS =		\
 
 include $(srcdir)/../common-rules.make
 
-
 # This is to generate the dependencies. It makes use of the makedepf90
 # program of Erik Edelmann
 # (http://www.helsinki.fi/~eedelman/makedepf90.html). It should be run
@@ -113,7 +111,7 @@ base_geometry.o : base_geometry.F90 tsingle_inc.F90 tdarr_inc.F90 tlist_inc.F90 
 base_hamiltonian.o : base_hamiltonian.F90 tbase_inc.F90 tsingle_inc.F90 tdarr_inc.F90 tlist_inc.F90 tpair_inc.F90 thash_inc.F90 template.h util.h tdict_inc.F90 refcount.o strng.o storage.o simulation.o base_term.o base_system.o base_potential.o base_functional.o 
 base_handle.o : base_handle.F90 tsingle_inc.F90 tdarr_inc.F90 tlist_inc.F90 tpair_inc.F90 thash_inc.F90 tdict_inc.F90 template.h util.h tbase_inc.F90 refcount.o strng.o smlt_intrf.o simulation.o base_system.o base_states.o base_model.o base_hamiltonian.o base_geometry.o base_density.o 
 base_model.o : base_model.F90 tsingle_inc.F90 tdarr_inc.F90 tlist_inc.F90 tpair_inc.F90 thash_inc.F90 tdict_inc.F90 template.h util.h tbase_inc.F90 refcount.o strng.o simulation.o base_system.o base_states.o base_hamiltonian.o base_geometry.o base_density.o 
-base_potential.o : base_potential.F90 tsingle_inc.F90 tdarr_inc.F90 tlist_inc.F90 tpair_inc.F90 thash_inc.F90 tdict_inc.F90 template.h util.h tbase_inc.F90 refcount.o strng.o storage.o simulation.o msgbus.o message.o memo.o intrpl.o base_system.o base_states.o base_geometry.o base_density.o 
+base_potential.o : base_potential.F90 tsingle_inc.F90 tdarr_inc.F90 tlist_inc.F90 tpair_inc.F90 thash_inc.F90 tdict_inc.F90 template.h util.h tbase_inc.F90 refcount.o strng.o storage.o simulation.o msgbus.o message.o memo.o intrpl.o base_system.o base_states.o base_geometry.o base_density.o
 base_states.o : base_states.F90 tsingle_inc.F90 tdarr_inc.F90 tlist_inc.F90 tpair_inc.F90 thash_inc.F90 tdict_inc.F90 template.h util.h tbase_inc.F90 refcount.o strng.o simulation.o base_density.o 
 base_system.o : base_system.F90 tsingle_inc.F90 tdarr_inc.F90 tlist_inc.F90 tpair_inc.F90 thash_inc.F90 tdict_inc.F90 template.h util.h tbase_inc.F90 refcount.o strng.o simulation.o base_states.o base_geometry.o base_density.o 
 base_term.o : base_term.F90 tsingle_inc.F90 tdarr_inc.F90 tlist_inc.F90 tpair_inc.F90 thash_inc.F90 tdict_inc.F90 template.h util.h tbase_inc.F90 refcount.o strng.o base_system.o 
@@ -152,6 +150,5 @@ simulation.o : simulation.F90 refcount.o grid_intrf.o domain.o
 smlt_intrf.o : smlt_intrf.F90 simulation.o refcount.o 
 ssys_handle.o : ssys_handle.F90 simulation.o live_handle.o frozen_handle.o base_handle.o base_hamiltonian.o base_functional.o 
 ssys_ionic.o : ssys_ionic.F90 base_term.o base_system.o base_geometry.o 
-ssys_tnadd.o : ssys_tnadd.F90 base_hamiltonian.o base_functional.o 
 storage.o : storage.F90 simulation.o 
 strng.o : strng.F90 

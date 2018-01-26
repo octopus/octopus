@@ -371,16 +371,22 @@ contains
     character(len=*),    intent(in)    :: dirname
     logical,   optional, intent(in)    :: usepotential
 
-    type(json_object_t), pointer :: cnfg
+    type(json_object_t), pointer :: trms, cnfg, defn
     integer                      :: ierr
 
     PUSH_SUB(fio_config_parse_hamiltonian)
 
-    nullify(cnfg)
-    call json_get(this, "external", cnfg, ierr)
+    nullify(trms, cnfg, defn)
+    call json_get(this, "terms", trms, ierr)
     ASSERT(ierr==JSON_OK)
-    call fio_config_parse_external(cnfg, dirname, usepotential)
+    call json_get(trms, "external", cnfg, ierr)
+    ASSERT(ierr==JSON_OK)
+    nullify(trms)
+    call json_get(cnfg, "definition", defn, ierr)
+    ASSERT(ierr==JSON_OK)
     nullify(cnfg)
+    call fio_config_parse_external(defn, dirname, usepotential)
+    nullify(defn)
 
     POP_SUB(fio_config_parse_hamiltonian)
   end subroutine fio_config_parse_hamiltonian

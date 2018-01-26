@@ -29,13 +29,9 @@ contains
 
     type(base_potential_t), pointer :: mept !> frozen
     type(base_potential_t), pointer :: sept !> fio
-    real(kind=wp)                   :: energy, enrg
 
     PUSH_SUB(frozen_hamiltonian__acc__)
 
-    call base_hamiltonian_get(this, energy=energy)
-    call base_hamiltonian_get(that, energy=enrg)
-    call base_hamiltonian_set(this, energy=(energy+enrg))
     nullify(mept, sept)
     call base_hamiltonian_get(this, "external", mept)
     ASSERT(associated(mept))

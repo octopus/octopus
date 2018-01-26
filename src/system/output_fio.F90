@@ -659,15 +659,22 @@ contains
     character(len=*),    intent(in)    :: dir
     type(mpi_grp_t),     intent(in)    :: group
 
-    type(json_object_t), pointer :: cnfg
+    type(json_object_t), pointer :: trms, cnfg, defn
+    integer                      :: ierr
 
     PUSH_SUB(output_parse_config_hamiltonian)
 
-    nullify(cnfg)
+    nullify(trms, cnfg, defn)
+    call json_get(this, "terms", trms, ierr)
+    ASSERT(ierr==JSON_OK)
     SAFE_ALLOCATE(cnfg)
-    call output_parse_config_external(cnfg, hm%ep, grid, geo, dir, group)
-    call json_set(this, "external", cnfg)
-    nullify(cnfg)
+    call json_init(cnfg)
+    call json_set(trms, "external", cnfg)
+    nullify(trms)
+    SAFE_ALLOCATE(defn)
+    call output_parse_config_external(defn, hm%ep, grid, geo, dir, group)
+    call json_set(cnfg, "definition", defn)
+    nullify(trms, cnfg, defn)
 
     POP_SUB(output_parse_config_hamiltonian)
   end subroutine output_parse_config_hamiltonian

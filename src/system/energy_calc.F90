@@ -327,37 +327,27 @@ contains
 
     type(base_hamiltonian_t), pointer :: knadd
     type(base_potential_t),   pointer :: extrnl
-    type(base_density_t),     pointer :: frozen
+    type(base_density_t),     pointer :: live, frozen
     FLOAT, dimension(:,:),    pointer :: potential, density
-    integer                           :: ispin
 
     PUSH_SUB(energy_calc_ssys_corrections)
 
+    ASSERT(associated(hm%subsys_hm))
+    ASSERT(hm%d%ispin>0)
+    ASSERT(hm%d%ispin<3)
+    ASSERT(.not.gr%have_fine_mesh)
+    ASSERT(associated(st%subsys_st))
     tnadd = M_ZERO
     intnvnad = M_ZERO
     intnvhxc = M_ZERO
     externl = M_ZERO
-    ASSERT(hm%d%ispin>0)
-    ASSERT(hm%d%ispin<3)
-    ASSERT(.not.gr%have_fine_mesh)
-    nullify(knadd, extrnl, frozen, potential, density)
-    ASSERT(associated(hm%subsys_hm))
+    nullify(knadd, extrnl, live, frozen, potential, density)
     call base_hamiltonian_get(hm%subsys_hm, "tnadd", knadd)
     ASSERT(associated(knadd))
     call base_hamiltonian_get(knadd, energy=tnadd)
-    call base_hamiltonian_get(knadd, nspin=ispin)
-    ASSERT(ispin<=hm%d%ispin)
-    call base_hamiltonian_get(knadd, potential)
-    ASSERT(associated(potential))
-    nullify(knadd)
-    ASSERT(associated(st%subsys_st))
-    call base_states_get(st%subsys_st, "live", density)
-    ASSERT(associated(density))
-    intnvnad = dmf_dotp(gr%mesh, density(:,1), potential(:,1))
-    if(hm%d%ispin>UNPOLARIZED)then
-      intnvnad = intnvnad + dmf_dotp(gr%mesh, density(:,2), potential(:,ispin))
-    end if
-    nullify(potential, density)
+    call base_states_get(st%subsys_st, "live", live)
+    intnvnad = base_hamiltonian_calc(knadd, live)
+    nullify(knadd, live)
     call base_states_get(st%subsys_st, "frozen", density)
     ASSERT(associated(density))
     intnvhxc = dmf_dotp(gr%mesh, density(:,1), hm%vxc(:,1))

@@ -209,13 +209,14 @@ contains
     PUSH_SUB(dnst__load__)
 
     call dnst__reset__(this)
-    call dnst_adjust_spin(this%charge, that%charge)
     call dnst_get(this, nspin=ospn)
     call dnst_get(that, nspin=ispn)
     if(ispn==ospn)then
+      this%charge(:) = that%charge(:)
       call storage_load(this%data, fnc1)
     else
       SAFE_ALLOCATE(irho(ispn))
+      call dnst_adjust_spin(this%charge, that%charge)
       call storage_load(this%data, fnc2)
       SAFE_DEALLOCATE_A(irho)
     end if
@@ -411,7 +412,7 @@ contains
     call storage_get(this%data, lock=static)
     call storage_update(this%data)
     if(.not.(static.or.this%xtrnl)) call dnst__update__(this)
-    if(this%nspin>1) call storage_reduce(this%total, this%data)
+    if(this%nspin>1) call storage_contract(this%total, this%data)
 
     POP_SUB(dnst_update)
   end subroutine dnst_update

@@ -10,6 +10,7 @@ module ssys_handle_oct_m
   use global_oct_m
   use grid_oct_m
   use json_oct_m
+  use kinds_oct_m
   use live_handle_oct_m
   use messages_oct_m
   use profiling_oct_m
@@ -36,24 +37,22 @@ contains
   subroutine ssys_hamiltonian__init__(this)
     type(base_hamiltonian_t), intent(inout) :: this
 
-    type(base_hamiltonian_t), pointer :: tnadd, hmlt
+    type(base_hamiltonian_t), pointer :: tnadd
     type(base_functional_t),  pointer :: fnct
 
     PUSH_SUB(ssys_hamiltonian__init__)
 
-    nullify(tnadd, hmlt, fnct)
+    nullify(tnadd, fnct)
     call base_hamiltonian_get(this, "tnadd", tnadd)
     ASSERT(associated(tnadd))
     call base_hamiltonian_get(this, "kinetic", fnct)
     ASSERT(associated(fnct))
-    call base_hamiltonian_set(tnadd, "total", fnct)
+    call base_hamiltonian_set(tnadd, "total", fnct, lock=.true.)
     nullify(fnct)
-    call base_hamiltonian_gets(this, "live", hmlt)
-    ASSERT(associated(hmlt))
-    call base_hamiltonian_get(hmlt, "kinetic", fnct)
+    call base_hamiltonian_get(this, "live/kinetic", fnct)
     ASSERT(associated(fnct))
-    call base_hamiltonian_set(tnadd, "live", fnct)
-    nullify(tnadd, hmlt, fnct)
+    call base_hamiltonian_set(tnadd, "live", fnct, factor=-1.0_wp, lock=.true.)
+    nullify(tnadd, fnct)
 
     POP_SUB(ssys_hamiltonian__init__)
   end subroutine ssys_hamiltonian__init__

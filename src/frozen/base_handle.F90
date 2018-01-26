@@ -206,8 +206,10 @@ contains
   end subroutine base_handle__init__type
 
   ! ---------------------------------------------------------
-  recursive subroutine base_handle__init__pass(this, init)
+  recursive subroutine base_handle__init__pass(this, init, lock, active)
     type(base_handle_t), intent(inout) :: this
+    logical,   optional, intent(in)    :: lock
+    logical,   optional, intent(in)    :: active
 
     interface
       subroutine init(this, config)
@@ -234,7 +236,7 @@ contains
         nullify(cnfg)
         call json_next(iter, name, cnfg, ierr)
         if(ierr/=JSON_OK)exit
-        call base_handle_sets(this, trim(adjustl(name)), base_handle_new(cnfg, init), config=cnfg)
+        call base_handle_sets(this, trim(adjustl(name)), base_handle_new(cnfg, init), config=cnfg, lock=lock, active=active)
       end do
       call json_end(iter)
       nullify(cnfg)
@@ -599,10 +601,13 @@ contains
   end subroutine base_handle__sets__type
 
   ! ---------------------------------------------------------
-  subroutine base_handle__dels__(this, name, that)
-    type(base_handle_t), intent(inout) :: this
-    character(len=*),    intent(in)    :: name
-    type(base_handle_t), intent(in)    :: that
+  subroutine base_handle__dels__(this, name, that, config, lock, active)
+    type(base_handle_t),           intent(inout) :: this
+    character(len=*),              intent(in)    :: name
+    type(base_handle_t),           intent(in)    :: that
+    type(json_object_t), optional, intent(in)    :: config
+    logical,             optional, intent(in)    :: lock
+    logical,             optional, intent(in)    :: active
 
     PUSH_SUB(base_handle__dels__)
 
@@ -610,6 +615,9 @@ contains
     ASSERT(len_trim(adjustl(name))>0)
     ASSERT(associated(that%config))
     call base_model_dels(this%model, trim(adjustl(name)), that%model)
+    if(present(config)) continue
+    if(present(lock))   continue
+    if(present(active)) continue
 
     POP_SUB(base_handle__dels__)
   end subroutine base_handle__dels__

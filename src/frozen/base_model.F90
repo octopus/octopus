@@ -367,10 +367,13 @@ contains
   end subroutine base_model__sets__type
 
   ! ---------------------------------------------------------
-  subroutine base_model__dels__(this, name, that)
-    type(base_model_t),  intent(inout) :: this
-    character(len=*),    intent(in)    :: name
-    type(base_model_t),  intent(in)    :: that
+  subroutine base_model__dels__(this, name, that, config, lock, active)
+    type(base_model_t),            intent(inout) :: this
+    character(len=*),              intent(in)    :: name
+    type(base_model_t),            intent(in)    :: that
+    type(json_object_t), optional, intent(in)    :: config
+    logical,             optional, intent(in)    :: lock
+    logical,             optional, intent(in)    :: active
 
     PUSH_SUB(base_model__dels__)
 
@@ -379,6 +382,9 @@ contains
     ASSERT(associated(that%config))
     call base_hamiltonian_dels(this%hm, trim(adjustl(name)), that%hm)
     call base_system_dels(this%sys, trim(adjustl(name)), that%sys)
+    if(present(config)) continue
+    if(present(lock))   continue
+    if(present(active)) continue
 
     POP_SUB(base_model__dels__)
   end subroutine base_model__dels__
