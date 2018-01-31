@@ -24,6 +24,7 @@ module poisson_libisf_oct_m
   use fourier_space_oct_m
   use global_oct_m
   use mesh_cube_parallel_map_oct_m
+  use mesh_function_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -45,6 +46,7 @@ module poisson_libisf_oct_m
     poisson_libisf_t,              &
     poisson_libisf_init,           &
     poisson_libisf_end,            &
+    poisson_libisf_reinit,         &
     poisson_libisf_global_solve,   &
     poisson_libisf_parallel_solve, &
     poisson_libisf_get_dims
@@ -83,22 +85,29 @@ module poisson_libisf_oct_m
     integer :: rs_n_global(3)      !< total size of the fft in each direction in real space
     integer :: rs_istart(1:3)      !< where does the local portion of the function start in real space
 
+    type(dictionary), pointer :: inputs !input parameters
+
+    !> offset:  Total integral on the supercell of the final potential on output.
+    !! To be used only in the periodic case, ignored for other boundary conditions.
+    double precision :: offset
+
   end type poisson_libisf_t
 
   logical, save :: flib_initialized = .false.
 
 contains
 
-  subroutine poisson_libisf_init(this, mesh, cube, mu)
+  subroutine poisson_libisf_init(this, mesh, cube, mu, qq)
     type(poisson_libisf_t), intent(out)   :: this
     type(mesh_t),           intent(inout) :: mesh
     type(cube_t),           intent(inout) :: cube
     FLOAT,                  intent(in)    :: mu
+    FLOAT,                  intent(in)    :: qq(1:MAX_DIM)
 
 #ifdef HAVE_LIBISF
     logical data_is_parallel
-    type(dictionary), pointer :: inputs !input parameters
     FLOAT :: alpha, beta, gamma
+    FLOAT :: modq2
  
     PUSH_SUB(poisson_libisf_init)
    
@@ -107,7 +116,7 @@ contains
       flib_initialized = .true.
     end if
 
-    call dict_init(inputs)
+    call dict_init(this%inputs)
 
     select case(mesh%sb%periodic_dim)
     case(0)
@@ -128,11 +137,13 @@ contains
     end select
 
     !Verbosity switch
-    call dict_set(inputs//'setup'//'verbose',.false.)
+    call dict_set(this%inputs//'setup'//'verbose',.false.)
     !Order of the Interpolating Scaling Function family
-    call dict_set(inputs//'kernel'//'isf_order',16)
+    call dict_set(this%inputs//'kernel'//'isf_order',16)
     !Mu screening parameter
-    call dict_set(inputs//'kernel'//'screening',mu)
+    call dict_set(this%inputs//'kernel'//'screening',mu)
+    !Calculation of the stress tensor 
+    call dict_set(this%inputs//'kernel'//'stress_tensor',.false.)
 
     !%Variable PoissonSolverISFParallelData
     !%Type logical
@@ -149,25 +160,43 @@ contains
     !%End
     call parse_variable('PoissonSolverISFParallelData', .true., data_is_parallel)
     if (data_is_parallel) then
-      call dict_set(inputs//'setup'//'global_data',.false.)
+      call dict_set(this%inputs//'setup'//'global_data',.false.)
       this%datacode = "D"       
     else 
-      call dict_set(inputs//'setup'//'global_data',.true.)
+      call dict_set(this%inputs//'setup'//'global_data',.true.)
       this%datacode = "G"
     end if
 
-    call dict_set(inputs//'setup'//'verbose',debug%info)
+    call dict_set(this%inputs//'setup'//'verbose',debug%info)
 
 
     alpha = mesh%sb%alpha*M_PI/(CNST(180.0))
     beta  = mesh%sb%beta*M_PI/(CNST(180.0))
     gamma = mesh%sb%gamma*M_PI/(CNST(180.0))
 
-    this%kernel = pkernel_init(cube%mpi_grp%rank, cube%mpi_grp%size, inputs,&
+    this%kernel = pkernel_init(cube%mpi_grp%rank, cube%mpi_grp%size, this%inputs,&
         this%geocode,cube%rs_n_global,mesh%spacing, &
         alpha_bc = alpha, beta_ac = beta, gamma_ab = gamma)
-    call dict_free(inputs)
     call pkernel_set(this%kernel,verbose=debug%info)
+
+    !G=0 component
+    modq2 = sum(qq(1:mesh%sb%periodic_dim)**2)
+    if(modq2 > M_EPSILON) then
+      this%offset = M_ONE/modq2
+    else
+      this%offset = M_ZERO
+    end if
+
+    !Screened coulomb potential (erfc function)
+    if(mu > M_EPSILON) then
+      if(modq2 > M_EPSILON) then
+        this%offset = this%offset*(M_ONE-exp(-modq2/((M_TWO*mu)**2)))
+      else
+        !Analytical limit of 1/|q|^2*(1-exp(-|q|^2/4mu^2))
+        this%offset = M_ONE/((M_TWO*mu)**2)
+      end if
+    end if
+    this%offset = this%offset*M_FOUR*M_PI
 
     POP_SUB(poisson_libisf_init)
 #endif
@@ -184,10 +213,60 @@ contains
 
 #ifdef HAVE_LIBISF
     call pkernel_free(this%kernel)
+    call dict_free(this%inputs)
 #endif
     
     POP_SUB(poisson_libisf_end)
   end subroutine poisson_libisf_end
+
+  !-----------------------------------------------------------------
+  subroutine poisson_libisf_reinit(this, mesh, cube, mu, qq)
+    type(poisson_libisf_t), intent(inout) :: this
+    type(cube_t),           intent(inout) :: cube
+    type(mesh_t),           intent(inout) :: mesh
+    FLOAT,                  intent(in)    :: mu
+    FLOAT,                  intent(in)    :: qq(1:MAX_DIM)
+
+    FLOAT :: alpha, beta, gamma
+    FLOAT :: modq2
+
+    PUSH_SUB(poisson_libisf_reinit)
+
+#ifdef HAVE_LIBISF
+    call pkernel_free(this%kernel)
+
+    !We might change the cell angles
+    alpha = mesh%sb%alpha*M_PI/(CNST(180.0))
+    beta  = mesh%sb%beta*M_PI/(CNST(180.0))
+    gamma = mesh%sb%gamma*M_PI/(CNST(180.0))
+
+    call dict_set(this%inputs//'kernel'//'screening',mu)
+
+    this%kernel = pkernel_init(cube%mpi_grp%rank, cube%mpi_grp%size, this%inputs,&
+        this%geocode,cube%rs_n_global,mesh%spacing, &
+        alpha_bc = alpha, beta_ac = beta, gamma_ab = gamma)
+    call pkernel_set(this%kernel,verbose=debug%info)
+
+    !G=0 component
+    modq2 = sum(qq(1:mesh%sb%periodic_dim)**2)
+    if(modq2 > M_EPSILON) then
+      this%offset = M_ONE/modq2
+    end if
+    !Screened coulomb potential (erfc function)
+    if(mu > M_EPSILON) then
+      if(modq2 > M_EPSILON) then
+        this%offset = this%offset*(M_ONE-exp(-modq2/((M_TWO*mu)**2)))
+      else
+        !Analytical limit of 1/|q|^2*(1-exp(-|q|^2/4mu^2))
+        this%offset = M_ONE/((M_TWO*mu)**2)
+      end if
+    end if
+    this%offset = this%offset*M_FOUR*M_PI
+
+#endif
+
+    POP_SUB(poisson_libisf_reinit)
+  end subroutine poisson_libisf_reinit
 
   subroutine poisson_libisf_parallel_solve(this, mesh, cube, pot, rho,  mesh_cube_map)
     type(poisson_libisf_t), intent(inout) :: this
@@ -201,9 +280,8 @@ contains
     type(profile_t), save :: prof
     type(cube_function_t) :: cf   
     double precision :: hartree_energy !<  Hartree energy 
-    !> offset:  Total integral on the supercell of the final potential on output.
-    !! To be used only in the periodic case, ignored for other boundary conditions.
-    double precision :: offset
+    character(len=3) :: quiet
+    FLOAT :: offset
 
     !> pot_ion:  additional external potential that is added to the output
     !! when the XC parameter ixc/=0 and sumpion=.true.
@@ -211,19 +289,33 @@ contains
     !! clearly without the overlapping terms which are needed only for the XC part
     double precision, allocatable :: pot_ion(:,:,:) 
 
-    double precision :: strten(6)
     PUSH_SUB(poisson_libisf_parallel_solve)
 
     call cube_function_null(cf)
     call dcube_function_alloc_RS(cube, cf)
 
     call dmesh_to_cube_parallel(mesh, rho, cube, cf, mesh_cube_map)
-  
+
     SAFE_ALLOCATE(pot_ion(1:cube%rs_n(1),1:cube%rs_n(2),1:cube%rs_n(3)))
+
+    if(.not.debug%info) then
+      quiet = "YES"
+    else
+      quiet = "NO "
+    end if
+
+    !The offset is the integral over space of the potential
+    !this%offset is the G=0 component of the (screened) Coulomb potential
+    !The G=0 component of the Hartree therefore needs to be
+    ! multiplied by the G=0 component of the density
+    if(this%offset > M_EPSILON) then
+      offset = this%offset*dmf_integrate(mesh,rho)
+    end if
+
     call profiling_in(prof,"ISF_LIBRARY")
     call H_potential(this%datacode, this%kernel, &
          cf%dRS, pot_ion, hartree_energy, offset, .false., &
-         quiet = "YES ", stress_tensor = strten) !optional argument
+         quiet = quiet) !optional argument
     call profiling_out(prof)
     SAFE_DEALLOCATE_A(pot_ion)
 
@@ -244,20 +336,17 @@ contains
     FLOAT,               intent(in)    :: rho(:)
 
 #ifdef HAVE_LIBISF
+    type(profile_t), save :: prof
     type(cube_function_t) :: cf
     double precision :: hartree_energy !<  Hartree energy
+    character(len=3) :: quiet
+    FLOAT :: offset
     
-    !> offset:  Total integral on the supercell of the final potential on output
-    !! To be used only in the periodic case, ignored for other boundary conditions.
-    double precision :: offset 
-
     !> pot_ion:  additional external potential
     !! that is added to the output when the XC parameter ixc/=0 and sumpion=.true.
     !! When sumpion=.true., it is always provided in the distributed form,
     !! clearly without the overlapping terms which are needed only for the XC part
     double precision, allocatable ::  pot_ion(:,:,:) 
-
-    double precision :: strten(6)
 
     PUSH_SUB(poisson_libisf_global_solve)
     
@@ -271,9 +360,25 @@ contains
     end if
 
     SAFE_ALLOCATE(pot_ion(1:cube%rs_n(1),1:cube%rs_n(2),1:cube%rs_n(3)))
+
+    if(.not.debug%info) then
+      quiet = "YES"
+    else
+      quiet = "NO "
+    end if
+
+    !The offset is the integral over space of the potential
+    !this%offset is the G=0 component of the (screened) Coulomb potential
+    !The G=0 component of the Hartree therefore needs to be
+    ! multiplied by the G=0 component of the density
+    if(this%offset > M_EPSILON) then
+      offset = this%offset*dmf_integrate(mesh,rho)
+    end if
+    call profiling_in(prof,"ISF_LIBRARY")
     call H_potential(this%datacode, this%kernel, &
          cf%dRS,  pot_ion, hartree_energy, offset, .false., &
-         quiet = "YES ", stress_tensor = strten) !optional argument
+         quiet = quiet) !optional argument
+    call profiling_out(prof)
     SAFE_DEALLOCATE_A(pot_ion)
 
     if(mesh%parallel_in_domains) then

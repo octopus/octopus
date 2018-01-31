@@ -157,7 +157,7 @@ subroutine poisson_kernel_init(this, all_nodes_comm)
     !! We`ll use the MPI_WORLD_COMM, to use all the available processes for the
     !! Poisson solver
     this%cube%mpi_grp = mpi_world
-    call poisson_libisf_init(this%libisf_solver, this%der%mesh, this%cube, mu = this%mu)
+    call poisson_libisf_init(this%libisf_solver, this%der%mesh, this%cube, this%mu, this%qq)
     call poisson_libisf_get_dims(this%libisf_solver, this%cube)
     this%cube%parallel_in_domains = this%libisf_solver%datacode == "D" .and. mpi_world%size > 1
     if (this%cube%parallel_in_domains) then
@@ -204,8 +204,10 @@ subroutine poisson_kernel_reinit(this, qq, mu)
       call poisson_fft_end(this%fft_solver)
       call poisson_fft_init(this%fft_solver, this%der%mesh, this%cube, this%kernel, &
         soft_coulb_param = this%poisson_soft_coulomb_param, qq = this%qq, mu = this%mu)
+    case(POISSON_LIBISF)
+      call poisson_libisf_reinit(this%libisf_solver, this%der%mesh, this%cube, this%mu, this%qq)
     case default
-      call messages_not_implemented("poisson_kernel_reinit with other methods than FFT")
+      call messages_not_implemented("poisson_kernel_reinit with other methods than FFT or libisf")
     end select
 
   end if
