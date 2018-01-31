@@ -100,6 +100,7 @@ endif
 
 if COMPILE_YAML
   external_LIBS += $(top_builddir)/external_libs/yaml-0.1.4/src/libyaml.a
+  FCFLAGS_MODS += -I$(top_srcdir)/external_libs/yaml-0.1.4/include/
 endif
 
 # These must be arranged so if LIB1 depends on LIB2, LIB1 must occur before LIB2.
