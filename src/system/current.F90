@@ -186,6 +186,8 @@ contains
             call batch_copy(st%group%psib(ib, ik), commpsib(idir))
             call zderivatives_batch_perform(der%grad(idir), der, epsib, commpsib(idir), set_bc = .false.)
           end do
+
+          
           
           call zhamiltonian_base_nlocal_position_commutator(hm%hm_base, der%mesh, st%d, ik, epsib, commpsib)
 
@@ -322,14 +324,7 @@ contains
           end do
 
           if(associated(hm%hm_base%phase)) then 
-            ! Apply the phase that contains both the k-point and vector-potential terms.
-            do idim = 1, st%d%dim
-              !$omp parallel do
-              do ip = 1, der%mesh%np_part
-                psi(ip, idim) = hm%hm_base%phase(ip, ik)*psi(ip, idim)
-              end do
-              !$omp end parallel do
-            end do
+            call states_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part, .false.)
           end if
 
           do idim = 1, st%d%dim

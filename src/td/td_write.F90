@@ -2888,7 +2888,7 @@ contains
       call write_iter_double(out_total_current, abs_current, gr%mesh%sb%dim)
    end if
   
-    do ispin = 1, st%d%spin_channels
+    do ispin = 1, st%d%nspin
       total_current = CNST(0.0)
       do idir = 1, gr%sb%dim
         total_current(idir) = units_from_atomic(units_out%length/units_out%time, &
