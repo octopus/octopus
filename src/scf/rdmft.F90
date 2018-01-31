@@ -94,7 +94,7 @@ contains
     integer,               intent(in)    :: max_iter
     type(restart_t),       intent(in)    :: restart_dump
     
-    integer :: iter, icount, ip, ist, iatom, ierr
+    integer :: iter, icount, ip, ist, iatom, ierr, maxcount
     FLOAT :: energy, energy_dif, energy_old, energy_occ, xpos, xneg, sum_charge, rr, rel_ener
     FLOAT, allocatable :: species_charge_center(:), psi(:, :), stepsize(:)
     logical :: conv
@@ -115,35 +115,36 @@ contains
       call messages_not_implemented("RDMFT parallel in states")
     end if
 
-   !NH What of these things do we only need for the localization?
-
-    SAFE_ALLOCATE(species_charge_center(1:geo%space%dim))
-
-    ! Find the charge center of they system  
-    call geometry_dipole(geo,species_charge_center)
+    call rdmft_init() 
    
-    sum_charge = M_ZERO
 
-    do iatom = 1, geo%natoms
-      sum_charge = sum_charge + species_zval(geo%atom(iatom)%species)
-    end do
-   
-    
-    species_charge_center = species_charge_center/(sum_charge*P_PROTON_CHARGE)
-
-
+    !set initial values
     energy_old = CNST(1.0e20)
     xpos = M_ZERO 
     xneg = M_ZERO
     energy = M_ZERO 
     conv = .false.
-   
-
-  
-    !If using a basis set, localize the starting orbitals so that they decay with the HOMO energy
-    if(rdm%do_basis.eqv..true.) then
-      SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
+    if(rdm%do_basis.eqv..false.) then
+      !stepsize for steepest decent
+      SAFE_ALLOCATE(stepsize(1:st%nst))
+      stepsize = 0.1
+      maxcount = 10
+    else
+      maxcount = 50
+    endif
     
+    !If using a basis set, localize the starting orbitals
+    if(rdm%do_basis.eqv..true.) then
+      !Find the charge center of they system  
+      SAFE_ALLOCATE(species_charge_center(1:geo%space%dim))
+      call geometry_dipole(geo,species_charge_center)
+      sum_charge = M_ZERO
+      do iatom = 1, geo%natoms
+        sum_charge = sum_charge + species_zval(geo%atom(iatom)%species)
+      end do
+      species_charge_center = species_charge_center/(sum_charge*P_PROTON_CHARGE)
+      !Localize orbitals
+      SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
       do ist = 1, st%nst
         call states_get_state(st, gr%mesh, ist, 1, psi)
         do ip = 1, gr%mesh%np
@@ -161,38 +162,23 @@ contains
       call dstates_orthogonalization_full(st,gr%mesh,1)
 
       SAFE_DEALLOCATE_A(psi)
-
+      SAFE_DEALLOCATE_A(species_charge_center)
     endif
-
-    SAFE_DEALLOCATE_A(species_charge_center)
     
-
-    write(message(1),'(a)') 'Initial minimization of occupation numbers'
-    call messages_info(1)
-    
-    call rdmft_init() 
-
-    if(rdm%do_basis.eqv..false.) then
-      !stepsize for steepest decent
-      SAFE_ALLOCATE(stepsize(1:st%nst))
-      stepsize = 0.1
-    endif
- 
     ! Start the actual minimization, first step is minimization of occupation numbers
-    ! Orbital minimization is according to Piris and Ugalde, Vol.13, No. 13, J. Comput. Chem.
+    ! Orbital minimization is according to Piris and Ugalde, Vol.13, No. 13, J. Comput. Chem. (scf_orb) or
+    ! using steepest decent (scf_orb_direct)
     do iter = 1, max_iter
-      write(message(1),'(a, i4)') 'RDM Iteration:', iter
-      call messages_info(1)
-
+      write(message(1), '(a)') '**********************************************************************'
+      write(message(2),'(a, i4)') 'RDM Iteration:', iter
+      call messages_info(2)
       call scf_occ(rdm, gr, hm, st, energy_occ)
       ! Diagonalization of the generalized Fock matrix 
-      write(message(1), '(a)') 'Orbital optimization'
+      write(message(1), '(a)') 'Optimization of natural orbitals'
       call messages_info(1)
-      do icount = 1, 10 !still under investigation how many iterations we need
+      do icount = 1, maxcount !still under investigation how many iterations we need
         if (rdm%do_basis.eqv..false.) then
           call scf_orb_direct(rdm, gr, geo, st, ks, hm, stepsize, energy)
-          write(message(1), '(a, i4, es18.8)') 'Iteration', icount, energy
-          call messages_info(1)
         else
           call scf_orb(rdm, gr, geo, st, ks, hm, energy)
         end if
@@ -218,7 +204,7 @@ contains
       
       rel_ener = abs(energy_occ-energy)/abs(energy)
 
-      write(message(1),'(a,es15.5)') ' etot RDMFT after orbital minim = ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
+      write(message(1),'(a,es15.5)') 'Total energy ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
       call messages_info(1)
       if (rdm%do_basis.eqv..true.) then
         if ((rel_ener < rdm%conv_ener).and.rdm%maxFO < 1.e3*rdm%conv_ener) then
@@ -230,7 +216,7 @@ contains
         end if
       endif
  
-      if (rdm%toler > 1e-4) rdm%toler = rdm%toler*1e-1
+      if (rdm%toler > 1e-4) rdm%toler = rdm%toler*1e-1 !Is this still okay or does it restrict the possible convergence?
 
       ! save restart information
       if ( (conv .or. (modulo(iter, outp%restart_write_interval) == 0) &
@@ -240,25 +226,19 @@ contains
           message(1) = 'Unable to write states wavefunctions.'
           call messages_warning(1)
         end if
-
-!        call states_dump_rho(restart_dump, st, gr, ierr, iter=iter)
-!        if (ierr /= 0) then
-!          message(1) = 'Unable to write density.'
-!          call messages_warning(1)
-!        end if
       endif
       if (conv) exit
     end do
 
     if(conv) then 
-      if (rdm%do_basis.eqv..false.) then
-        call scf_orb(rdm, gr, geo, st, ks, hm, energy)
-        write(message(1),'(a,es15.5)')  'The maximum non diagonal element of the matrix F formed by the Lagrange multiplyers is ', &
-                                         rdm%maxFO
-        call messages_info(1)
-      endif
+      !if (rdm%do_basis.eqv..false.) then
+        !call scf_orb(rdm, gr, geo, st, ks, hm, energy) !NH this call changes the energy again, needs to be replaced
+        !write(message(1),'(a,es15.5)')  'The maximum non diagonal element of the matrix F formed by the Lagrange multiplyers is ', &
+        !                                rdm%maxFO
+        !call messages_info(1)
+      !endif
       write(message(1),'(a,i3,a)')  'The calculation converged after ',iter,' iterations'
-      write(message(2),'(a,es15.5)')  'The total energy is ', energy_occ+hm%ep%eii
+      write(message(2),'(a,es15.5)')  'The total energy is ', units_from_atomic(units_out%energy,energy + hm%ep%eii)
       call messages_info(2)
     else
       write(message(1),'(a,i3,a)')  'The calculation did not converge after ', iter, ' iterations '
@@ -432,6 +412,8 @@ contains
 
     PUSH_SUB(scf_occ)
 
+    write(message(1),'(a)') 'Optimization of occupation numbers'
+    call messages_info(1)
     
     SAFE_ALLOCATE(occin(1:st%nst, 1:st%d%nik))
     SAFE_ALLOCATE(theta(1:st%nst))
@@ -540,16 +522,17 @@ contains
  
     energy = objective
     
-    write(message(1),'(a,1x,f11.4)') 'Occupations sum', rdm%occsum
-    write(message(2),'(a,es15.5)') ' etot RDMFT after occ minim = ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
-    write(message(3),'(a4,1x,a12)')'#st','Occupation'
-    call messages_info(3)   
+    write(message(1),'(a4,5x,a12)')'#st','Occupation'
+    call messages_info(1)   
 
     do ist = 1, st%nst
       write(message(1),'(i4,3x,f11.4)') ist, st%occ(ist, 1)
       call messages_info(1)
     end do
 
+    write(message(1),'(a,1x,f11.4)') 'Sum of occupation numbers', rdm%occsum
+    write(message(2),'(a,es15.5)') 'Total energy ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
+    call messages_info(2)   
 
     SAFE_DEALLOCATE_A(occin)
     SAFE_DEALLOCATE_A(theta)
@@ -713,7 +696,7 @@ contains
     FLOAT, allocatable :: E_deriv(:), dpsi(:,:), dpsi2(:,:)  
 
     PUSH_SUB(scf_orb_direct)
-    
+
     SAFE_ALLOCATE(E_deriv(1:gr%mesh%np_part))
     SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(dpsi2(1:gr%mesh%np_part, 1:st%d%dim))
@@ -789,8 +772,6 @@ contains
         call rdm_derivatives(rdm, hm, st, gr)
         call total_energy_rdm(rdm, st%occ(:,1), energy)
 
-write(*,*) 'Energy after optimization of orbital', ist, energy
-
         !check if step lowers the energy
         energy_diff = energy - energy_old
 
@@ -807,10 +788,10 @@ write(*,*) 'Energy after optimization of orbital', ist, energy
             call states_get_state(states_old, gr%mesh, jst, 1, dpsi)
             call states_set_state(st, gr%mesh, jst, 1, dpsi)
           enddo
-          if (itry == trymax) then
-            write(message(1),'(a,i3,2x,a)') 'for state', ist, 'energy could not be improved'
-            call messages_info(1)
-          endif
+          !if (itry == trymax) then
+          !  write(message(1),'(a,i3,2x,a)') 'for state', ist, 'energy could not be improved'
+          !  call messages_info(1)
+          !endif
         endif !energy_diff  
       enddo !itry
       call states_end(states_old)
