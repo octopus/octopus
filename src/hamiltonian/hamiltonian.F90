@@ -934,11 +934,9 @@ contains
       ! the laser is included in subroutine v_ks_hartree (module v_ks) 
       ! still missing the kick
       ! interpolation is needed, hence gr%mesh%np_part -> 1:gr%mesh%np
-      !write(*,*) "electric field", this%ep%E_field
-      write(*,*) "G-Evac", -M_TWO*(this%pcm%epsilon_0-M_ONE)/(M_TWO*this%pcm%epsilon_0+M_ONE) * this%pcm%epsilon_0 * this%ep%E_field
-      write(*,*) "Evac", this%pcm%epsilon_0 * this%ep%E_field
       if( this%pcm%localf .and. associated(this%ep%v_static)) &
-        call pcm_calc_pot_rs(this%pcm, gr%mesh, v_ext = this%ep%v_ext(1:gr%mesh%np_part), v_ext2 = this%ep%v_static(1:gr%mesh%np) )
+        call pcm_calc_pot_rs(this%pcm, gr%mesh, v_ext = this%ep%v_ext(1:gr%mesh%np_part))
+        !call pcm_calc_pot_rs(this%pcm, gr%mesh, v_ext = this%ep%v_static )
 
     end if
 

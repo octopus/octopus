@@ -148,7 +148,6 @@
 
       !PCM potentials
       if(hm%theory_level == KOHN_SHAM_DFT .and. hm%pcm%run_pcm ) then
-        write(*,*) 'output pcm'
         if (hm%pcm%solute .and. hm%pcm%localf) then
           call dio_function_output(outp%how, dir, 'vpcm', der%mesh, hm%pcm%v_e_rs + hm%pcm%v_n_rs + hm%pcm%v_ext_rs , & 
                                    units_out%energy, err, geo = geo, grp = grp)

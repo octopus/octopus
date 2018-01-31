@@ -93,6 +93,8 @@ module pcm_oct_m
     FLOAT                            :: scale_r       !< scaling factor for the radii of the spheres used in PCM
     FLOAT, allocatable               :: matrix(:,:)   !< static PCM response matrix (for epsilon_0)
     FLOAT, allocatable               :: matrix_d(:,:) !< dynamical PCM response matrix (for epsilon_infty)
+    FLOAT, allocatable               :: matrix_lf(:,:)   !< static PCM response matrix (for epsilon_0)        - local field effects
+    FLOAT, allocatable               :: matrix_lf_d(:,:) !< dynamical PCM response matrix (for epsilon_infty) - local field effects
     FLOAT, allocatable               :: q_e(:)        !< polarization charges due to the solute electrons        
     FLOAT, allocatable               :: q_n(:)        !< polarization charges due to the solute nuclei
     FLOAT, allocatable               :: q_e_in(:)     !< inertial polarization charges due to the solute electrons
@@ -471,6 +473,7 @@ contains
     !% This variable is a flag for including polarization effects of the solvent due to the solute.
     !%End
     call parse_variable('PCMSolute', .true., pcm%solute)
+    call messages_print_var_value(stdout, "PCMSolute", pcm%solute)
 
     if( pcm%run_pcm .and. (.not. pcm%solute) ) then
       call messages_write('N.B. This PCM run do not consider the polarization effects due to the solute.')        
@@ -837,6 +840,12 @@ contains
 
       call pcm_matrix(pcm%epsilon_infty, pcm%tess, pcm%n_tesserae, pcm%matrix_d)
 
+      SAFE_ALLOCATE( pcm%matrix_lf_d(1:pcm%n_tesserae, 1:pcm%n_tesserae) )
+      pcm%matrix_lf_d = M_ZERO
+
+      call pcm_matrix(pcm%epsilon_infty, pcm%tess, pcm%n_tesserae, pcm%matrix_lf_d, .true.)
+
+
       if ( gamess_benchmark .and. mpi_grp_is_root(mpi_world)) then 
            pcmmat_gamess_unit = io_open(PCM_DIR//'pcm_matrix_gamess_dyn.out', action='write')
 
@@ -858,6 +867,14 @@ contains
     call pcm_matrix(pcm%epsilon_0, pcm%tess, pcm%n_tesserae, pcm%matrix) 
     message(1) = "Info: PCM response matrix has been evaluated"
     call messages_info(1)
+
+
+    if( pcm%localf ) then !< static local field case
+     SAFE_ALLOCATE( pcm%matrix_lf(1:pcm%n_tesserae, 1:pcm%n_tesserae) )
+     pcm%matrix_lf = M_ZERO
+
+     call pcm_matrix(pcm%epsilon_0, pcm%tess, pcm%n_tesserae, pcm%matrix_lf, .true.)
+    end if
 
     if (mpi_grp_is_root(mpi_world)) then
       pcmmat_unit = io_open(PCM_DIR//'pcm_matrix.out', action='write')
@@ -998,26 +1015,20 @@ contains
   end subroutine pcm_init
 
   ! -----------------------------------------------------------------------------
-  subroutine pcm_calc_pot_rs(pcm, mesh, geo, v_h, v_ext, v_ext2, time_present)
+  !subroutine pcm_calc_pot_rs(pcm, mesh, geo, v_h, v_ext, time_present)
+  subroutine pcm_calc_pot_rs(pcm, mesh, geo, v_h, v_ext, time_present)
     save
     type(pcm_t),             intent(inout) :: pcm
     type(mesh_t),               intent(in) :: mesh  
     type(geometry_t), optional, intent(in) :: geo
     FLOAT,            optional, intent(in) :: v_h(:)
     FLOAT,            optional, intent(in) :: v_ext(:)
-    FLOAT,            optional, intent(in) :: v_ext2(:)
     logical,          optional, intent(in) :: time_present
     
     integer :: calc
 
-    logical :: firsttime = .true.
-    FLOAT, allocatable :: v_ext_0(:)
-    FLOAT :: aux
-
     ! for debuggin - it should be cleaned up
-    integer :: asc_unit_test, asc_unit_test_aux, ii, jj
-    FLOAT :: radius
-    FLOAT :: cavity_electric_field(3), cavity_potential
+    !integer :: asc_unit_test, asc_unit_test_aux, ii
 
 
     PUSH_SUB(pcm_calc_pot_rs)  
@@ -1042,9 +1053,7 @@ contains
       end if !< N.B.     
     end if
 
-
     if (calc == PCM_ELECTRONS) then
-
       call pcm_v_electrons_cav_li(pcm%v_e, v_h, pcm, mesh)
       if (pcm%solute) then !< N.B.
       if( td_calc_mode .and. pcm%epsilon_infty /= pcm%epsilon_0 .and. pcm%noneq ) then
@@ -1098,20 +1107,13 @@ contains
       end if !< N.B.
     end if
 
-    if (calc == PCM_EXTERNAL_POTENTIAL) then 
+    if (calc == PCM_EXTERNAL_POTENTIAL) then
       ! Here we use same subroutine as for electrons; nothing special about it:
       ! it is just a linear interpolation at the tessera point of the potential evaluated at the nearest grid points.
-      pcm%v_ext = M_ZERO
       call pcm_v_electrons_cav_li(pcm%v_ext, v_ext, pcm, mesh)
       if( td_calc_mode .and. pcm%epsilon_infty /= pcm%epsilon_0 .and. pcm%noneq ) then
-        if( firsttime ) then
-          SAFE_ALLOCATE(v_ext_0(1:pcm%n_tesserae))
-          firsttime = .false.
-        end if
-        v_ext_0(1:pcm%n_tesserae) = pcm%v_ext(1:pcm%n_tesserae)
-
         !< BEGIN - equation-of-motion propagation or inertial/dynamical charge splitting
-        if( pcm%eom ) then	!< equation-of-motion propagation 
+        if( pcm%eom ) then	!< equation-of-motion propagation
           select case (pcm%which_eps) !under development
             case('drl')
              call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, dt, pcm%tess, 'external', 'drl', this_drl = pcm%drl)
@@ -1124,28 +1126,12 @@ contains
           !< dont pay attention to the use of q_ext_in and qtot_ext_in, whose role here is only auxiliary
           pcm%q_ext = pcm%q_ext + pcm%q_ext_in
           pcm%qtot_ext = pcm%qtot_ext + pcm%qtot_ext_in
-
-          ! doing this in all cases - could it be take out the ifs?
-          if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_ext, pcm%qtot_ext, mesh, pcm%rho_ext)
-          call pcm_pot_rs(pcm, pcm%v_ext_rs, pcm%q_ext, pcm%rho_ext, mesh )
-
-          ! adding the difference between vacuum and dielectric potential
-          ! N.B. the difference is time-dependent but uniform (position-independent)
-          !aux = sum((pcm%v_ext(:)-v_ext_0(:))/v_ext_0(:))/pcm%n_tesserae
-          aux = (pcm%v_ext(1)-v_ext_0(1))/v_ext_0(1)
-          pcm%v_ext_rs(1:mesh%np) = pcm%v_ext_rs(1:mesh%np) + aux * v_ext2(1:mesh%np)   
-
         else			!< inertial/dynamical partition
           select case (pcm%iter)
           case(1)
-            if( firsttime ) then
-              SAFE_ALLOCATE(v_ext_0(1:mesh%np))
-              v_ext_0(1:mesh%np) = v_ext2(1:mesh%np)
-              firsttime = .false.
-            end if
             !< calculating inertial polarization charges (once and for all)
             !< (first step) calculating polarization charges equilibrated with the initial external potential (just once)
-            call pcm_charges(pcm%q_ext, pcm%qtot_ext, pcm%epsilon_0 * pcm%v_ext, pcm%matrix, pcm%n_tesserae)
+            call pcm_charges(pcm%q_ext, pcm%qtot_ext, pcm%v_ext, pcm%matrix_lf, pcm%n_tesserae)
             !< summing pcm charges due to the static external potential if there are any
             !< dont pay attention to the use of q_ext_in and qtot_ext_in, whose role here is only auxiliary
             pcm%q_ext = pcm%q_ext + pcm%q_ext_in
@@ -1154,88 +1140,44 @@ contains
             pcm%qtot_ext_in = M_ZERO
 	    !< (second step) calculating initial dynamic polarization charges 
 	    !< dont pay attention to the use of q_ext_in and qtot_ext_in, whose role here is only auxiliary
-            call pcm_charges(pcm%q_ext_in, pcm%qtot_ext_in, pcm%epsilon_infty * pcm%v_ext, pcm%matrix_d, pcm%n_tesserae)
+            call pcm_charges(pcm%q_ext_in, pcm%qtot_ext_in, pcm%v_ext, pcm%matrix_lf_d, pcm%n_tesserae)
             !< (finally) the inertial polarization charges
             pcm%q_ext_in = pcm%q_ext - pcm%q_ext_in
             pcm%qtot_ext_in = pcm%qtot_ext - pcm%qtot_ext_in
           case default
             !< calculating dynamical polarization charges (each time)
-            call pcm_charges(pcm%q_ext, pcm%qtot_ext, pcm%epsilon_infty * pcm%v_ext, pcm%matrix_d, pcm%n_tesserae)
+            call pcm_charges(pcm%q_ext, pcm%qtot_ext, pcm%v_ext, pcm%matrix_lf_d, pcm%n_tesserae)
 
             pcm%q_ext = pcm%q_ext + pcm%q_ext_in
             pcm%qtot_ext = pcm%qtot_ext + pcm%qtot_ext_in
           end select
-
-          ! doing this in all cases - could it be take out the ifs?
-          if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_ext, pcm%qtot_ext, mesh, pcm%rho_ext)
-          call pcm_pot_rs(pcm, pcm%v_ext_rs, pcm%q_ext, pcm%rho_ext, mesh )
-
-          ! adding the difference between vacuum and dielectric potential
-          ! N.B. the difference is time-dependent but uniform (position-independent)
-          pcm%v_ext_rs(1:mesh%np) = pcm%v_ext_rs(1:mesh%np) + (pcm%epsilon_0-pcm%epsilon_infty) * v_ext_0(1:mesh%np) + &
-                                                              (pcm%epsilon_infty-M_ONE) * v_ext2(1:mesh%np)
-
         end if !< END - equation-of-motion propagation or inertial/dynamical charge splitting
       else !< BEGIN - pcm charges propagation in equilibrium with external potential
+
         !< calculating polarization charges equilibrated with the external potential (always).
         !< if there are (together) time-dependent and static external potentials, 
         !< the pcm charges due to the static one is calculated here.
-        pcm%q_ext = M_ZERO
-        pcm%v_ext(1:pcm%n_tesserae) = pcm%epsilon_0 * pcm%v_ext
-        call pcm_charges(pcm%q_ext, pcm%qtot_ext, pcm%v_ext, pcm%matrix, pcm%n_tesserae
+        call pcm_charges(pcm%q_ext, pcm%qtot_ext, pcm%v_ext, pcm%matrix_lf, pcm%n_tesserae)
 
-        forall (ii =1:pcm%n_tesserae)
-          pcm%q_ext(ii) = pcm%q_ext(ii) +&
-          -CNST(3.0)/(4*M_Pi)*(pcm%epsilon_0-M_ONE)*0.05*pcm%tess(ii)%point(1)/norm2( pcm%tess(ii)%point )*pcm%tess(ii)%area
-          !pcm%q_ext(ii) = pcm%q_ext(ii) -pcm%v_ext(ii)*(pcm%epsilon_0-M_ONE)/(4*M_Pi)*pcm%tess(ii)%area/norm2( pcm%tess(ii)%point )
-        end forall
-
-        asc_unit_test_aux = io_open(PCM_DIR//'ASCs_ext.dat', action='write')
-        asc_unit_test = io_open(PCM_DIR//'analytic.dat', action='write')
-        do ii = 1, pcm%n_tesserae
-          write(asc_unit_test_aux,*) pcm%tess(ii)%point, pcm%q_ext(ii), ii
-          write(asc_unit_test,*) pcm%tess(ii)%point, &
-	-3.0/(4*M_Pi)*(pcm%epsilon_0-M_ONE)/(2*pcm%epsilon_0+M_ONE)*&
-	0.05*pcm%tess(ii)%point(1)/norm2( pcm%tess(ii)%point )*pcm%tess(ii)%area,&
-        ii
-        end do
-        call io_close(asc_unit_test_aux)
-        call io_close(asc_unit_test)
-
-       forall (ii =1:pcm%n_tesserae)
-       pcm%q_ext(ii) = pcm%q_ext(ii) + &
-        3.0d0/(4*M_Pi)*(pcm%epsilon_0-M_ONE)*0.05*pcm%tess(ii)%point(1)*pcm%tess(ii)%area/norm2( pcm%tess(ii)%point )
-       end forall
-
-        jj=1
-        cavity_electric_field = M_ZERO
-        cavity_potential = M_ZERO
-        do ii = 1, pcm%n_tesserae
-          cavity_electric_field = cavity_electric_field +pcm%q_ext(ii) * pcm%tess(ii)%normal / norm2( pcm%tess(ii)%point )**2
-          cavity_potential = cavity_potential -pcm%q_ext(ii)/ norm2( pcm%tess(ii)%point-mesh%x(jj,:))
-        end do
-        write(*,*) "Cavity contribution to the local field", cavity_electric_field
-
-        write(*,*) 'test potential outside - onsager', mesh%x(jj,1)/1.889725989, &
-        -mesh%x(jj,1)*0.05-(78.39-M_ONE)/(2*78.39+M_ONE)*0.05*(5.0*1.889725989)**3*mesh%x(jj,1)/norm2(mesh%x(jj,:))**3, &
-        v_ext(jj)*pcm%epsilon_0+cavity_potential
+        !for testing with spherical cavity
+        !asc_unit_test_aux = io_open(PCM_DIR//'ASCs_ext.dat', action='write')
+        !asc_unit_test = io_open(PCM_DIR//'analytic.dat', action='write')
+        !do ii = 1, pcm%n_tesserae
+        !  write(asc_unit_test_aux,*) pcm%tess(ii)%point, pcm%q_ext(ii), ii
+        !  write(asc_unit_test,*) pcm%tess(ii)%point, &
+	!3.0/(4*M_Pi)*(pcm%epsilon_0-M_ONE)/(2*pcm%epsilon_0+M_ONE)*&
+	!0.05*pcm%tess(ii)%point(1)/norm2( pcm%tess(ii)%point )*pcm%tess(ii)%area,&
+        !ii
+        !end do
+        !call io_close(asc_unit_test_aux)
+        !call io_close(asc_unit_test)
 
         !< dont pay attention to the use of q_ext_in and qtot_ext_in, whose role here is only auxiliary
         pcm%q_ext_in = pcm%q_ext
         pcm%qtot_ext_in = pcm%qtot_ext
-
-        pcm%v_ext_rs = M_ZERO
-        ! doing this in all cases - could it be take out the ifs?
-        if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_ext, pcm%qtot_ext, mesh, pcm%rho_ext)
-        call pcm_pot_rs(pcm, pcm%v_ext_rs, pcm%q_ext, pcm%rho_ext, mesh )
-
-        ! adding the difference between vacuum and dielectric potential
-        !forall(ii = 1:mesh%np)
-        !  pcm%v_ext_rs(ii) = pcm%v_ext_rs(ii) + (pcm%epsilon_0-M_ONE) * v_ext2(ii)
-        !end forall
-
       end if !< END - pcm charges propagation in equilibrium with external field
-
+      if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_ext, pcm%qtot_ext, mesh, pcm%rho_ext)
+      call pcm_pot_rs(pcm, pcm%v_ext_rs, pcm%q_ext, pcm%rho_ext, mesh )
     end if
 
     POP_SUB(pcm_calc_pot_rs)  
@@ -1385,10 +1327,6 @@ contains
     if (pcm%localf) E_int_ext_ext = M_HALF*E_int_ext_ext
     ! GGIL: E_int_e_ext and E_int_n_ext do not need M_HALF factor
 
-    write(*,*) "v_e", maxval(pcm%v_e)
-    !write(*,*) "ext. polarization charges int.  w/ Hartree potential", E_int_e_ext
-    write(*,*) "elec. polarization charges int. w/ Hartree potential", E_int_ee
-
 ! print results of the iteration in pcm_info file
 
     if ( mpi_grp_is_root(mpi_world) ) then
@@ -1416,10 +1354,6 @@ contains
                          ( pcm%epsilon_0/(pcm%epsilon_0 - M_ONE) ) * pcm%qtot_n, &
                                                                    pcm%deltaQ_n, &
                                                                    pcm%qtot_ext
-
-        write(*,*) "charges e, when printing", pcm%qtot_e, pcm%qtot_e_in, &
- ( pcm%epsilon_0 / (pcm%epsilon_0 - M_ONE) ) * pcm%qtot_e_in + &
- ( pcm%epsilon_infty / (pcm%epsilon_infty - M_ONE) ) * (pcm%qtot_e - pcm%qtot_e_in)
       else
         !if ( mpi_grp_is_root(mpi_world) ) &
         write(pcm%info_unit, &
@@ -1904,7 +1838,7 @@ contains
   ! -----------------------------------------------------------------------------
   
   !> Generates the PCM response matrix. J. Tomassi et al. Chem. Rev. 105, 2999 (2005). 
-  subroutine pcm_matrix(eps, tess, n_tess, pcm_mat )
+  subroutine pcm_matrix(eps, tess, n_tess, pcm_mat, localf )
     FLOAT, intent(in)           :: eps
     type(pcm_tessera_t), intent(in) :: tess(:)      !< (1:n_tess)
     integer, intent(in)         :: n_tess
@@ -1913,6 +1847,8 @@ contains
     integer :: i, info
     integer, allocatable :: iwork(:)
     FLOAT, allocatable :: mat_tmp(:,:)
+
+    logical, optional, intent(in) :: localf
 
     PUSH_SUB(pcm_matrix)
 
@@ -1932,33 +1868,51 @@ contains
     SAFE_ALLOCATE( Delta(1:n_tess, 1:n_tess) )
     Delta = d_mat_act
 
-    !> Start conforming the PCM matrix
-    pcm_mat = -d_mat_act
+    if ( present(localf) ) then !< PCM response matrix for polarization due to applied field or solute
 
-    do i=1, n_tess
-      pcm_mat(i,i) = pcm_mat(i,i) + M_TWO*M_Pi  
-    end do
+      SAFE_DEALLOCATE_A(d_mat_act)
+      SAFE_DEALLOCATE_A(s_mat_act)
 
-    SAFE_DEALLOCATE_A(d_mat_act) 
+      !> Start conforming the PCM matrix
+      pcm_mat = Delta
 
-    SAFE_ALLOCATE( iwork(1:n_tess) )
+      do i=1, n_tess
+        pcm_mat(i,i) = pcm_mat(i,i) + M_TWO*M_Pi  
+      end do
 
-    !> Solving for X = S_I^-1*(2*Pi - D_I) 
-    ! FIXME: use interface, or routine in lalg_adv_lapack_inc.F90
-    call dgesv(n_tess, n_tess, s_mat_act, n_tess, iwork, pcm_mat, n_tess, info)        
+      pcm_mat = pcm_mat * (M_ONE-eps)/eps
 
-    SAFE_DEALLOCATE_A(iwork)
+    else
 
-    SAFE_DEALLOCATE_A(s_mat_act)
+      !> Start conforming the PCM matrix
+      pcm_mat = -d_mat_act
 
-    !> Computing -S_E*S_I^-1*(2*Pi - D_I)
-    pcm_mat = -matmul( Sigma, pcm_mat ) 
+      do i=1, n_tess
+        pcm_mat(i,i) = pcm_mat(i,i) + M_TWO*M_Pi  
+      end do
 
-    do i=1, n_tess
-      pcm_mat(i,i) = pcm_mat(i,i) + M_TWO*M_Pi
-    end do
+      SAFE_DEALLOCATE_A(d_mat_act) 
 
-    pcm_mat = pcm_mat - Delta
+      SAFE_ALLOCATE( iwork(1:n_tess) )
+
+      !> Solving for X = S_I^-1*(2*Pi - D_I) 
+      ! FIXME: use interface, or routine in lalg_adv_lapack_inc.F90
+      call dgesv(n_tess, n_tess, s_mat_act, n_tess, iwork, pcm_mat, n_tess, info)        
+
+      SAFE_DEALLOCATE_A(iwork)
+
+      SAFE_DEALLOCATE_A(s_mat_act)
+
+      !> Computing -S_E*S_I^-1*(2*Pi - D_I)
+      pcm_mat = -matmul( Sigma, pcm_mat ) 
+
+      do i=1, n_tess
+        pcm_mat(i,i) = pcm_mat(i,i) + M_TWO*M_Pi
+      end do
+
+      pcm_mat = pcm_mat - Delta
+
+    end if 
 
     SAFE_ALLOCATE( mat_tmp(1:n_tess,1:n_tess) )
     mat_tmp = M_ZERO
@@ -2989,23 +2943,41 @@ contains
   subroutine pcm_end(pcm)
     type(pcm_t), intent(inout) :: pcm
 
-    integer :: asc_unit_test, ia
+    integer :: asc_unit_test, & 
+               asc_unit_test_sol, &
+               asc_unit_test_e, &
+               asc_unit_test_n, &
+               asc_unit_test_ext
+    integer :: ia
 
     PUSH_SUB(pcm_end)
 
-    asc_unit_test = io_open(PCM_DIR//'.xyz', action='write')
-
-    if ( pcm%solute .and. pcm%localf ) then     
+    if ( pcm%solute .and. pcm%localf ) then
+      asc_unit_test = io_open(PCM_DIR//'ASC.dat', action='write')     
+      asc_unit_test_sol = io_open(PCM_DIR//'ASC_sol.dat', action='write')
+      asc_unit_test_e = io_open(PCM_DIR//'ASC_e.dat', action='write')
+      asc_unit_test_n = io_open(PCM_DIR//'ASC_n.dat', action='write')
+      asc_unit_test_ext = io_open(PCM_DIR//'ASC_ext.dat', action='write')
       do ia = 1, pcm%n_tesserae
-        write(asc_unit_test,*) pcm%tess(ia)%point, pcm%q_e(ia) + pcm%q_n(ia) + pcm%q_ext(ia)
+        write(asc_unit_test,*) pcm%tess(ia)%point, pcm%q_e(ia) + pcm%q_n(ia) + pcm%q_ext(ia), ia
+        write(asc_unit_test_sol,*) pcm%tess(ia)%point, pcm%q_e(ia) + pcm%q_n(ia), ia
+        write(asc_unit_test_e,*) pcm%tess(ia)%point, pcm%q_e(ia), ia
+        write(asc_unit_test_n,*) pcm%tess(ia)%point, pcm%q_n(ia), ia
+        write(asc_unit_test_ext,*) pcm%tess(ia)%point, pcm%q_ext(ia), ia
       end do
     else if ( pcm%solute .and. .not.pcm%localf ) then
+      asc_unit_test_sol = io_open(PCM_DIR//'ASC_sol.dat', action='write')
+      asc_unit_test_e = io_open(PCM_DIR//'ASC_e.dat', action='write')
+      asc_unit_test_n = io_open(PCM_DIR//'ASC_n.dat', action='write')
       do ia = 1, pcm%n_tesserae
-        write(asc_unit_test,*) pcm%tess(ia)%point, pcm%q_e(ia) + pcm%q_n(ia)
+        write(asc_unit_test_sol,*) pcm%tess(ia)%point, pcm%q_e(ia) + pcm%q_n(ia), ia
+        write(asc_unit_test_e,*) pcm%tess(ia)%point, pcm%q_e(ia), ia
+        write(asc_unit_test_n,*) pcm%tess(ia)%point, pcm%q_n(ia), ia
       end do
     else if ( .not.pcm%solute .and. pcm%localf ) then
+      asc_unit_test_ext = io_open(PCM_DIR//'ASC_ext.dat', action='write')
       do ia = 1, pcm%n_tesserae
-        write(asc_unit_test,*) pcm%tess(ia)%point, pcm%q_ext(ia)
+        write(asc_unit_test_ext,*) pcm%tess(ia)%point, pcm%q_ext(ia), ia
       end do
     end if
           

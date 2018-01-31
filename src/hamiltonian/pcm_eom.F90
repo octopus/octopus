@@ -63,22 +63,31 @@ module pcm_eom_oct_m
 						 !< polarization charges and variation of it in the previous iteration:
   FLOAT, allocatable :: q_tp(:), dq_tp(:)	 !< 			 due to solute electrons
   FLOAT, allocatable :: qext_tp(:), dqext_tp(:)	 !< 			 due to external potential
-  FLOAT, allocatable :: pot_tp(:)		 !< potential in previous iteration; either Hartree (electrons) or external
-  FLOAT, allocatable :: pot_vac_tp(:)		 !< potential in the cavity in previous iteration; only for ext. pot. case
-  FLOAT, allocatable :: delta_pot_tp(:), ddelta_pot_tp(:) !< difference of ext.pot. in & out the cavity, and var. of it, prev. iter.
+  FLOAT, allocatable :: pot_tp(:)		 !< Hartree (electrons) potential in previous iteration
+  FLOAT, allocatable :: potext_tp(:)		 !< external potential in previous iteration
 
                                                  !< See Chem.Phys.Lett. 429 (2006) 310-316 for Velocity-Verlet (VV) algorithm... 
   FLOAT :: f1, f2, f3, f4, f5			 !< auxiliar constants for VV
-  FLOAT, allocatable :: force_tp(:)	         !< analogous to force in the equation of motion for the pol.charges, prev. iter.
-  FLOAT, allocatable :: force_delta_pot_tp(:), force_qext_tp(:) !< idem for the two 2nd order EOM for the external potential case
+                                                 !< analogous to force in the equation of motion for the pol.charges, prev. iter.
+  FLOAT, allocatable :: force_tp(:)	         !< 			 due to solute electrons
+  FLOAT, allocatable :: force_qext_tp(:)         !< 			 due to external potential
 
-  						 !< In J.Phys.Chem.A 2015, 119, 5405-5416...
-  FLOAT, allocatable :: cals(:,:),cald(:,:)	 !< Calderon matrices S and D from Eq.(5), ibid.
-  FLOAT, allocatable :: eigv(:),eigt(:,:)        !< \Lambda and T matrices from Eq.(10), ibid.
+  						 !< In Ref.1 - J.Phys.Chem.A 2015, 119, 5405-5416... - Debye dielectric func. (eps)
+                                                 !< In Ref.2 - In J. Phys. Chem. C 2016, 120, 28774−28781... - Drude-Lorentz eps
+  FLOAT, allocatable :: cals(:,:),cald(:,:)	 !< Calderon matrices S and D from Eq.(5), Ref.1
+  FLOAT, allocatable :: eigv(:),eigt(:,:)        !< \Lambda and T matrices from Eq.(10), Ref.1
   FLOAT, allocatable :: sm12(:,:),sp12(:,:)      !< S^{-1/2} and S^{1/2}
-  FLOAT, allocatable :: matq0(:,:),matqd(:,:)    !< Q^{IEF(d)}_0 (not used in ref.) and Q^{IEF(d)}_d from Eq.(18) with eps_0/eps_d
-  FLOAT, allocatable :: matqv(:,:),matqq(:,:)    !< \tilde{Q} and R matrices from Eq.(38)-(39), respectively
-                                                 !< Q^{IEF(d)}_d, \tilde{Q} and R matrices are those that enter the EOM eq.(37)
+                                                 !< Q^{IEF(d)}_0 (not used in ref.) and Q^{IEF(d)}_d from Eq.(18) with eps_0/eps_d
+  FLOAT, allocatable :: matq0(:,:),matqd(:,:)       !< 			 for solute
+  FLOAT, allocatable :: matq0_lf(:,:),matqd_lf(:,:) !< 			 for external potential
+                                                 !< \tilde{Q} and R matrices from Eq.(38)-(39) (Ref.1), respectively
+                                                 !<  Q_f and Q_{\omega} from Eq.(17)-(16) (Ref.2), respectively
+  FLOAT, allocatable :: matqv(:,:),matqq(:,:)       !< 			 for solute
+  FLOAT, allocatable :: matqv_lf(:,:),matqq_lf(:,:) !< 			 for external potential
+                                                 !< Q^{IEF(d)}_d, \tilde{Q} and R matrices enter the EOM in eq.(37), Ref.1
+                                                 !< Q_f and Q_{\omega} matrices enter the EOM in eq.(15), Ref.2
+                                                 !< N.B.: For Debye case (Ref.1), matqq_lf is not needed; matqq == matqq_lf !
+
   !> mathematical constants
   FLOAT, parameter :: twopi=M_TWO*M_Pi
   FLOAT, parameter :: fourpi=M_FOUR*M_Pi
@@ -110,7 +119,7 @@ module pcm_eom_oct_m
    PUSH_SUB(pcm_charges_propagation)
 
    which_eom=this_eom
-   if (which_eps=='electron' .or. which_eps=='external' ) then
+   if (which_eom=='electron' .or. which_eom=='external' ) then
     message(1) = "pcm_charges_propagation: EOM evolution of PCM charges can only be due to solute electrons or external potential."
     call messages_fatal(1)
    endif
@@ -191,48 +200,36 @@ module pcm_eom_oct_m
      dq_tp=M_ZERO
      force_tp=M_ZERO
     endif
+
+    allocate(pot_tp(nts_act))
+    pot_tp = pot_t
 			    
    else if( which_eom == 'external' ) then
     !< Here (instead) we consider zero the potential at any earlier time.
     !< Therefore, the solvent is not initially in equilibrium with the external potential unless its initial value is zero.
 
-    q_t=matmul(matqd,pot_t) !< applying the dynamic IEF-PCM response matrix (corresponging to epsilon_d) to the initial potential
-
-    allocate(pot_vac_tp(nts_act)) 
-    select case( which_eps)
-    case( 'deb' )
-     q_t = q_t * deb%eps_0
-     pot_vac_tp = pot_t * deb%eps_0
-    case( 'drl' )
-     q_t = M_ZERO
-     pot_vac_tp = pot_t
-
-     allocate(dqext_tp(nts_act))
-     allocate(force_delta_pot_tp(nts_act))
-     dqext_tp=M_ZERO
-     force_delta_pot_tp=drl%aa*pot_t
-     force_qext_tp=matmul(matqv,pot_vac_tp)
-    end select
+    q_t=matmul(matqd_lf,pot_t) !< applying the dynamic IEF-PCM response matrix (corresponging to epsilon_d) to the initial potential
 
     allocate(qext_tp(nts_act))
     qext_tp = q_t
 
-   endif
+    if( which_eps .eq. "drl" ) then
+     allocate(dqext_tp(nts_act))
+     allocate(force_qext_tp(nts_act))
+     dqext_tp=M_ZERO
+     force_qext_tp=M_ZERO
+    endif
 
-   allocate(pot_tp(nts_act))
-   pot_tp = pot_t
+    allocate(potext_tp(nts_act))
+    potext_tp = pot_t
+
+   endif
 
    !< initializing Velocity-Verlet algorithm for the integration of EOM-PCM for Drude-Lorentz
-   if( which_eps == 'drl' ) then
-     call init_vv_propagator
-     allocate(delta_pot_tp(nts_act))
-     allocate(ddelta_pot_tp(nts_act))
-     delta_pot_tp=pot_vac_tp-pot_tp
-     ddelta_pot_tp=M_ZERO 
-   endif
+   if( which_eps == 'drl' ) call init_vv_propagator
 
    POP_SUB(init_charges)
-  end subroutine
+  end subroutine init_charges
 
   !------------------------------------------------------------------------------------------------------------------------------
   !> Euler method for integrating first order EOM for the polarization charges within IEF-PCM
@@ -245,25 +242,21 @@ module pcm_eom_oct_m
 
    PUSH_SUB(pcm_ief_prop_deb)
 
-   if( which_eom == 'external' ) then
-    !> two equations of motion due to the presence of an extra epsilon factor in the PCM response matrix (unpublished)
-    pot_vac_t = pot_vac_tp + (dt/deb%tau) * (deb%eps_0*pot_t-pot_vac_t) + &
-		              deb%eps_d   * (pot_t-pot_tp)
-
-    q_t(:) = qext_tp(:) - dt*matmul(matqq,qext_tp)   + &
-	  	          dt*matmul(matqv,pot_vac_tp) + &
-			     matmul(matqd,pot_vac_t-pot_vac_tp)
-
-    pot_vac_tp = pot_vac_t
-    qext_tp = q_t
-
-   else if( which_eom == 'electron' ) then 
+   if( which_eom == 'electron' ) then
     !> Eq.(47) in S. Corni, S. Pipolo and R. Cammi, J.Phys.Chem.A 2015, 119, 5405-5416.
     q_t(:) = q_tp(:) - dt*matmul(matqq,q_tp)   + &
 	  	       dt*matmul(matqv,pot_tp) + &
 			  matmul(matqd,pot_t-pot_tp)
 
     q_tp = q_t
+
+   else if( which_eom == 'external' ) then 
+    !> analogous to Eq.(47) ibid. with different matrices
+    q_t(:) = qext_tp(:) - dt*matmul(matqq_lf,qext_tp)   + &
+	  	          dt*matmul(matqv_lf,potext_tp) + &
+			     matmul(matqd_lf,pot_t-potext_tp)
+
+    qext_tp = q_t
 
    endif
 
@@ -299,31 +292,21 @@ module pcm_eom_oct_m
 
    PUSH_SUB(pcm_ief_prop_vv_ief_drl)
 
-   if( which_eom == 'external' ) then
-    !> two equations of motion due to the presence of an extra epsilon factor in the PCM response matrix (unpublished)
-
-    delta_pot_t = delta_pot_tp + f1*ddelta_pot_tp + f2*force_delta_pot_tp
-    force = -drl%w0**2*delta_pot_t + drl%aa*pot_t
-    ddelta_pot_tp = f3*ddelta_pot_tp + f4*(force+force_delta_pot_tp) -f5*force_delta_pot_tp
-    force_delta_pot_tp = force
-    delta_pot_tp = delta_pot_t
-
-    pot_vac_t = delta_pot_t + pot_t
-    pot_vac_tp = pot_vac_t
-
-    q_t = qext_tp + f1*dqext_tp + f2*force_qext_tp
-    force = -matmul(matqq,q_t) + matmul(matqv,pot_vac_t)
-    dqext_tp = f3*dqext_tp + f4*(force+force_qext_tp) -f5*force_qext_tp
-    force_qext_tp = force
-    qext_tp = q_t
-
-   else if( which_eom == 'electron' ) then 
+   if( which_eom == 'electron' ) then 
     !> From Eq.(15) S. Pipolo and S. Corni, J.Phys.Chem.C 2016, 120, 28774-28781.
     !> Using the scheme in Eq.(21) and (17) of E. Vanden-Eijnden, G. Ciccotti, Chem.Phys.Lett. 429 (2006) 310-316.
     q_t = q_tp + f1*dq_tp + f2*force_tp
     force = -matmul(matqq,q_t) + matmul(matqv,pot_t)
     dq_tp = f3*dq_tp + f4*(force+force_tp) -f5*force_tp
     force_tp = force
+    q_tp = q_t
+
+   else if( which_eom == 'external' ) then
+    !> analagous to Eq.(15) ibid. with different matrices
+    q_t = qext_tp + f1*dqext_tp + f2*force_qext_tp
+    force = -matmul(matqq_lf,q_t) + matmul(matqv_lf,pot_t)
+    dqext_tp = f3*dqext_tp + f4*(force+force_qext_tp) -f5*force_qext_tp
+    force_qext_tp = force
     q_tp = q_t
 
    endif
@@ -336,10 +319,17 @@ module pcm_eom_oct_m
   subroutine init_BEM
    PUSH_SUB(init_BEM)
 
-   allocate(matqv(nts_act,nts_act))
-   allocate(matqq(nts_act,nts_act))
-   allocate(matq0(nts_act,nts_act))
-   allocate(matqd(nts_act,nts_act))
+   if( which_eom == 'electron' ) then
+    allocate(matqv(nts_act,nts_act))
+    allocate(matqq(nts_act,nts_act))
+    allocate(matq0(nts_act,nts_act))
+    allocate(matqd(nts_act,nts_act))
+   else if( which_eom == 'external' ) then
+    allocate(matqv_lf(nts_act,nts_act))
+    allocate(matqq_lf(nts_act,nts_act))
+    allocate(matq0_lf(nts_act,nts_act))
+    allocate(matqd_lf(nts_act,nts_act))
+   endif  
    call do_PCM_propMat
 
    POP_SUB(init_BEM)
@@ -355,15 +345,22 @@ module pcm_eom_oct_m
    integer :: i,j
    FLOAT, allocatable :: scr4(:,:),scr1(:,:)
    FLOAT, allocatable :: scr2(:,:),scr3(:,:)
-   FLOAT, allocatable :: fact1(:),fact2(:)
-   FLOAT, allocatable :: Kdiag0(:),Kdiagd(:)
-   FLOAT :: sgn,fac_eps0,fac_epsd
+   FLOAT, allocatable :: fact1(:),fact2(:)   !< tau^{-1} and tau^{-1}K_0 from (38)-(39), respectively, with from Eq.(32), Ref.1
+                                             !< K_{\omega} and K_f from (19)-(10), respectively, Ref.2
+   FLOAT, allocatable :: Kdiag0(:),Kdiagd(:) !< correspond to K_0 (static dielec. const.) and K_d (dynamic dielec. const.) in Ref.1
+                                             !< e.g. Eq.(38) -^                               ^- e.g. implicitly in Q_d^{IEF(d)}, 
+                                             !<                                                       see Eq.(18) and (37)
+                                             !< not used in Ref.2
+   FLOAT :: sgn,sgn_lf,fac_eps0,fac_epsd
    FLOAT :: temp
 
    PUSH_SUB(do_PCM_propMat)
 
-   sgn=M_ONE ! In the case of NP this is -one because the normal to the cavity is always pointing outward 
+   sgn=M_ONE ! In the case of NP this is -1 because the normal to the cavity is always pointing outward 
              ! and the field created by a positive unit charge outside the cavity is directed inward.
+
+   sgn_lf=M_ONE
+   if( which_eom == 'external' ) sgn_lf=M_ONE ! 'local field' differ from 'standard' PCM response matrix
 
    allocate(cals(nts_act,nts_act),cald(nts_act,nts_act))
    allocate(Kdiag0(nts_act),Kdiagd(nts_act))
@@ -384,15 +381,15 @@ module pcm_eom_oct_m
    allocate(scr2(nts_act,nts_act),scr3(nts_act,nts_act))
    if (which_eps .eq. "deb") then
     fac_eps0=(deb%eps_0+M_ONE)/(deb%eps_0-M_ONE)			 
-    Kdiag0(:)=(twopi-sgn*eigv(:))/(twopi*fac_eps0-sgn*eigv(:)) !< Eq.(14) with eps_0 in Ref.1
+    Kdiag0(:)=sgn_lf*(twopi-sgn*sgn_lf*eigv(:))/(twopi*fac_eps0-sgn*eigv(:)) !< Eq.(14) with eps_0 in Ref.1
     fac_epsd=(deb%eps_d+M_ONE)/(deb%eps_d-M_ONE)
-    Kdiagd(:)=(twopi-sgn*eigv(:))/(twopi*fac_epsd-sgn*eigv(:)) !< Eq.(14) with eps_d, ibid.
+    Kdiagd(:)=sgn_lf*(twopi-sgn*sgn_lf*eigv(:))/(twopi*fac_epsd-sgn*eigv(:)) !< Eq.(14) with eps_d, ibid.
     fact1(:)=((twopi-sgn*eigv(:))*deb%eps_0+twopi+eigv(:))/ &  !< inverse of Eq.(32), ibid.
     ((twopi-sgn*eigv(:))*deb%eps_d+twopi+eigv(:))/deb%tau
     fact2(:)=Kdiag0(:)*fact1(:)				       !< tau^{-1}K_0 in Eq.(38), ibid.
    elseif (which_eps .eq. "drl") then
     Kdiagd(:)=M_ZERO					       !< from Eq.(10) up in Ref.2
-    fact2(:)=(twopi-sgn*eigv(:))*drl%aa/fourpi		       !< Eq.(10) down
+    fact2(:)=sgn_lf*(twopi-sgn*sgn_lf*eigv(:))*drl%aa/fourpi   !< Eq.(10) down
     do i=1,nts_act
      if(fact2(i).lt.M_ZERO) fact2(i)=M_ZERO
     enddo
