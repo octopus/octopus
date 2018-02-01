@@ -632,19 +632,20 @@ contains
     end if
 
     if(present(mtxel_vm)) then
+      mtxel_vm = M_ZERO
       if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
         do ia = 1, cas%pt_nmodes
-            mtxel_vm = X(mf_dotp)(mesh, cas%pt%lambda_array(ia)*cas%pt%pol_dipole_array(1:mesh%np,ia)*rho_i(1:mesh%np), &
+            mtxel_vm = mtxel_vm + &
+            X(mf_dotp)(mesh, cas%pt%lambda_array(ia)*cas%pt%pol_dipole_array(1:mesh%np,ia)*rho_i(1:mesh%np), &
                 cas%pt%lambda_array(ia)*cas%pt%pol_dipole_array(1:mesh%np,ia)*rho_j(1:mesh%np))
         end do
-      else
-        mtxel_vm = M_ZERO
-       end if
+      end if
     end if
 
     if(cas%herm_conj) then
       if(present(mtxel_vh)) mtxel_vh = R_CONJ(mtxel_vh)
       if(present(mtxel_xc)) mtxel_xc = R_CONJ(mtxel_xc)
+      if(present(mtxel_vm)) mtxel_vm = R_CONJ(mtxel_vm)
     end if
 
     SAFE_DEALLOCATE_A(rho_i)
