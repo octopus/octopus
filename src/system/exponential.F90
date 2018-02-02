@@ -577,17 +577,13 @@ contains
     
     integer :: ii, ist
     CMPLX, pointer :: psi(:, :)
-    logical :: cmplxscl
 
     PUSH_SUB(exponential_apply_batch)
 
     ASSERT(batch_type(psib) == TYPE_CMPLX)
     ASSERT(present(psib2) .eqv. present(deltat2))
     
-    cmplxscl = .false.
-    if(present(Imdeltat)) cmplxscl = .true. 
-
-    if(cmplxscl .and. present(psib2)) then
+    if(present(Imdeltat) .and. present(psib2)) then
       ASSERT(present(Imdeltat2))
     end if
 
@@ -601,18 +597,10 @@ contains
         psi  => psib%states(ii)%zpsi
         ist  =  psib%states(ii)%ist
 
-        if (cmplxscl) then
-          call exponential_apply(te, der, hm, psi, ist, ik, deltat, Imdeltat = Imdeltat)
-        else 
-          call exponential_apply(te, der, hm, psi, ist, ik, deltat)
-        end if
+        call exponential_apply(te, der, hm, psi, ist, ik, deltat, Imdeltat = Imdeltat)
 
         if(present(psib2)) then
-          if (cmplxscl) then
-            call exponential_apply(te, der, hm, psib2%states(ii)%zpsi, ist, ik, deltat2, Imdeltat = Imdeltat2)
-          else 
-            call exponential_apply(te, der, hm, psib2%states(ii)%zpsi, ist, ik, deltat2)
-          end if
+          call exponential_apply(te, der, hm, psib2%states(ii)%zpsi, ist, ik, deltat2, Imdeltat = Imdeltat2)
         end if
         
       end do
@@ -659,7 +647,7 @@ contains
       if(present(psib2)) call batch_copy_data(der%mesh%np, psib, psib2)
 
       do iter = 1, te%exp_order
-        if(cmplxscl) then
+        if(present(Imdeltat2)) then
           zfact = zfact*(-M_zI*(deltat + M_zI * Imdeltat))/iter
           if(present(deltat2)) zfact2 = zfact2*(-M_zI*(deltat2 + M_zI * Imdeltat2))/iter
           zfact_is_real = .false.
