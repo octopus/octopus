@@ -85,10 +85,14 @@ function queue {
 function inqueue {
   if [ $OCT_TEST_NJOBS -gt 1 ]
   then
-    printf "In execution: $OUTLIST\n\n"
-  else
-    printf "\n"
+    printf "In execution: $OUTLIST\n"
   fi
+  if [ $failed_tests -gt 0 ]
+  then
+      printf "Failed tests: $failed_tests\n"
+  fi
+  printf "\n"
+
 }
 
 
