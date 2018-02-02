@@ -576,7 +576,7 @@ contains
     FLOAT, optional,                 intent(in)    :: Imdeltat2
     
     integer :: ii, ist
-    CMPLX, pointer :: psi(:, :)
+    CMPLX, allocatable :: psi(:, :), psi2(:, :)
 
     PUSH_SUB(exponential_apply_batch)
 
@@ -592,22 +592,29 @@ contains
     else
 
       if(present(psib2)) call batch_copy_data(der%mesh%np, psib, psib2)
-      
+
       do ii = 1, psib%nst
-        psi  => psib%states(ii)%zpsi
-        ist  =  psib%states(ii)%ist
+        ist = psib%states(ii)%ist
 
+        SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:hm%d%dim))
+        call batch_get_state(psib, ii, der%mesh%np_part, psi)
         call exponential_apply(te, der, hm, psi, ist, ik, deltat, Imdeltat = Imdeltat)
-
+        call batch_set_state(psib, ii, der%mesh%np_part, psi)
+        SAFE_DEALLOCATE_A(psi)
+        
         if(present(psib2)) then
-          call exponential_apply(te, der, hm, psib2%states(ii)%zpsi, ist, ik, deltat2, Imdeltat = Imdeltat2)
+          SAFE_ALLOCATE(psi2(1:der%mesh%np_part, 1:hm%d%dim))
+          call batch_get_state(psib2, ii, der%mesh%np_part, psi2)
+          call exponential_apply(te, der, hm, psi2, ist, ik, deltat2, Imdeltat = Imdeltat2)
+          call batch_set_state(psib2, ii, der%mesh%np_part, psi2)
+          SAFE_DEALLOCATE_A(psi2)
         end if
         
-      end do
+     end do
 
-    end if
+   end if
     
-    POP_SUB(exponential_apply_batch)
+   POP_SUB(exponential_apply_batch)
 
   contains
     
