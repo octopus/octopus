@@ -1219,16 +1219,26 @@ subroutine X(casida_write)(cas, sys)
         index = maxloc(abs(cas%X(mat)(:, cas%ind(ia))), dim = 1)
         temp = abs(cas%X(mat)(index, cas%ind(ia))) / cas%X(mat)(index, cas%ind(ia))
 
+        norm_e = M_ZERO
         do jb = 1, cas%n_pairs
           write(iunit,*) cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%kk, temp * cas%X(mat)(jb, cas%ind(ia))
+          norm_e = norm_e + abs(cas%X(mat)(jb, cas%ind(ia)))**2
         end do
 
+        norm_p = M_ZERO
         if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
         ! negative number refers to photonic excitation
           do jb = 1, cas%pt_nmodes
             write(iunit,*) cas%pair(cas%n_pairs + jb)%i, cas%pair(cas%n_pairs + jb)%a, &
               cas%pair(cas%n_pairs + jb)%kk, temp * cas%X(mat)(cas%n_pairs + jb, cas%ind(ia))
+            norm_p = norm_p + abs(cas%X(mat)(cas%n_pairs + jb, cas%ind(ia)))**2
           end do
+        write(iunit,'(a,es14.5)') '# Electronic contribution = ', &
+          norm_e
+        write(iunit,'(a,es14.5)') '# Photonic contribution = ', &
+          norm_p
+        write(iunit,'(a,i5.5,a,i5.5,a)') '# (electronic pairs, photon modes) = (', &
+          cas%n_pairs,',', cas%pt_nmodes,')'
         end if
 
         if(cas%type == CASIDA_TAMM_DANCOFF .or. cas%type == CASIDA_VARIATIONAL .or. cas%type == CASIDA_PETERSILKA) then
