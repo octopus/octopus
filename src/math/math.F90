@@ -197,32 +197,31 @@ contains
 
     integer :: i
     FLOAT :: dx, dy, dz, r, plm, cosm, sinm, cosmm1, sinmm1, cosphi, sinphi
-
+    FLOAT,   parameter :: tiny = CNST(1.e-30)
+ 
     !   no push_sub: this routine is called too many times
 
     ! if l=0, no calculations are required
     if (li == 0) then
-      ylm = TOCMPLX(CNST(0.282094791773878), M_ZERO)
+      ylm = TOCMPLX(sqrt(M_ONE/(M_FOUR*M_PI)), M_ZERO)
       return
     end if
 
-    r = sqrt(x*x + y*y + z*z)
+    r = x*x + y*y + z*z
 
     ! if r=0, direction is undefined => make ylm=0 except for l=0
-    if (r == M_ZERO) then
+    if (r <= tiny) then
       ylm = M_z0
       return
     end if
-
+    r = sqrt(r)
     dx = x/r; dy = y/r; dz = z/r
 
     ! get the associated Legendre polynomial (including the normalization factor)
     plm = loct_legendre_sphplm(li, abs(mi), dz)
 
     ! compute sin(|m|*phi) and cos(|m|*phi)
-    r = sqrt(dx*dx + dy*dy)
-    if (abs(r) < CNST(1e-20)) r = CNST(1e-20)
-
+    r = sqrt(max(dx*dx + dy*dy, tiny))
     cosphi = dx/r; sinphi = dy/r
 
     cosm = M_ONE; sinm = M_ZERO
