@@ -1119,7 +1119,6 @@ subroutine X(casida_solve)(cas, st)
     call profiling_out(prof)
 
     do ia = 1, cas%n_pairs+cas%pt_nmodes
-
       if(cas%type == CASIDA_CASIDA) then
         if(cas%w(ia) < -M_EPSILON) then       
           write(message(1),'(a,i4,a)') 'Casida excitation energy', ia, ' is imaginary.'
@@ -1135,12 +1134,12 @@ subroutine X(casida_solve)(cas, st)
           call messages_warning(2)
         end if
       end if
-      
+
       cas%ind(ia) = ia ! diagonalization returns eigenvalues in order.
     end do
-    
+
   end if
-    
+
   POP_SUB(X(casida_solve))
 end subroutine X(casida_solve)
 
@@ -1152,7 +1151,7 @@ subroutine X(casida_write)(cas, sys)
   character(len=5) :: str
   character(len=50) :: dir_name
   integer :: iunit, ia, jb, idim, index
-  R_TYPE  :: temp
+  R_TYPE  :: temp, norm_e, norm_p
   
   PUSH_SUB(X(casida_write))
   
@@ -1214,16 +1213,24 @@ subroutine X(casida_write)(cas, sys)
           write(iunit,'(a,2es14.5)') '# <' // index2axis(idim) // '> ['//trim(units_abbrev(units_out%length))// '] = ', &
             units_from_atomic(units_out%length, cas%X(tm)(cas%ind(ia), idim))
         end do
-        
+
         ! this stuff should go BEFORE calculation of transition matrix elements!
         ! make the largest component positive and real, to specify the phase
         index = maxloc(abs(cas%X(mat)(:, cas%ind(ia))), dim = 1)
         temp = abs(cas%X(mat)(index, cas%ind(ia))) / cas%X(mat)(index, cas%ind(ia))
-        
+
         do jb = 1, cas%n_pairs
           write(iunit,*) cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%kk, temp * cas%X(mat)(jb, cas%ind(ia))
         end do
-        
+
+        if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
+        ! negative number refers to photonic excitation
+          do jb = 1, cas%pt_nmodes
+            write(iunit,*) cas%pair(cas%n_pairs + jb)%i, cas%pair(cas%n_pairs + jb)%a, &
+              cas%pair(cas%n_pairs + jb)%kk, temp * cas%X(mat)(cas%n_pairs + jb, cas%ind(ia))
+          end do
+        end if
+
         if(cas%type == CASIDA_TAMM_DANCOFF .or. cas%type == CASIDA_VARIATIONAL .or. cas%type == CASIDA_PETERSILKA) then
           call X(write_implied_occupations)(cas, iunit, cas%ind(ia))
         end if
