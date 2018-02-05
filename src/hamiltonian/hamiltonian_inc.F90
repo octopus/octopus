@@ -406,7 +406,7 @@ subroutine X(exchange_operator)(hm, der, ik, psib, hpsib, exxcoef)
       ikpoint2 = states_dim_get_kpoint_index(hm%d, ik2)
 
       if(hm%d%nik > 1) then
-     !   if(.not.kpoints_is_compatible_downsampling(der%mesh%sb%kpoints, ikpoint, ik2, (/1,1,1/))) cycle
+        if(.not.kpoints_is_compatible_downsampling(der%mesh%sb%kpoints, ikpoint, ik2)) cycle
         qq(1:der%dim) = kpoints_get_point(der%mesh%sb%kpoints, ikpoint) &
                       - kpoints_get_point(der%mesh%sb%kpoints, ikpoint2) 
       end if

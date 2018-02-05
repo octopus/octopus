@@ -88,7 +88,9 @@ module kpoints_oct_m
     FLOAT, pointer       :: klattice(:, :)
  
     !> For the output of a band-structure
-    FLOAT, pointer       :: coord_along_path(:)
+    FLOAT,pointer        :: coord_along_path(:)
+
+    integer              :: downsampling(MAX_DIM) !< downsampling coefficients
   end type kpoints_t
 
   integer, public, parameter ::        &
@@ -202,7 +204,6 @@ contains
     this%point(1:old_grid%dim, old_grid%npoints+1:this%npoints)    = that%point(1:that%dim, 1:that%npoints)
     this%weight(old_grid%npoints+1:this%npoints)                   = that%weight(1:that%npoints)
 
-
     call kpoints_grid_end(old_grid)
 
 
@@ -224,6 +225,7 @@ contains
     nullify(this%symmetry_ops, this%num_symmetry_ops)
     nullify(this%klattice)
     nullify(this%coord_along_path)
+    this%downsampling = 1
 
   end subroutine kpoints_nullify
 
@@ -395,7 +397,8 @@ contains
       type(block_t) :: blk
       integer, allocatable :: symm_ops(:, :), num_symm_ops(:)
       FLOAT, allocatable :: shifts(:,:)
-      
+     
+      FLOAT :: qgrid(1:MAX_DIM) 
 
       PUSH_SUB(kpoints_init.read_MP)
 
@@ -475,6 +478,53 @@ contains
         end if
 
         call parse_block_end(blk)
+      end if
+
+
+      !%Variable QPointsGrid
+      !%Type block
+      !%Default KPointsGrid
+      !%Section Mesh::KPoints
+      !%Description
+      !% This block allows to define a q-point grid used for the calculation of the Fock operator 
+      !% with k-points. The <i>q</i>-points are distributed in a uniform grid, as done for the 
+      !% <tt>KPointsGrid</tt> variable.
+      !%
+      !% For each dimension, the number of q point must be a divider of the number of  k point
+      !%
+      !% <tt>%QPointsGrid
+      !% <br>&nbsp;&nbsp;2 | 2 | 1
+      !% <br>%</tt>
+      !%
+      !%End
+      if(parse_is_defined('QPointsGrid')) then
+        if(parse_block('QPointsGrid', blk) == 0) then
+          ncols = parse_block_cols(blk, 0)
+          if(ncols /= dim) then
+            write(message(1),'(a,i3,a,i3)') 'QPointsGrid first row has ', ncols, ' columns but must have ', dim
+            call messages_fatal(1)
+          end if
+          do ii = 1, dim
+            call parse_block_float(blk, 0, ii - 1, qgrid(ii))
+          end do 
+        
+          if (any(this%nik_axis(1:dim)/qgrid(1:dim) /= nint(this%nik_axis(1:dim)/qgrid(1:dim)))) then
+            message(1) = 'Input: QPointsGrid is not compatible with the KPointsGrid.'
+            call messages_fatal(1)
+          end if
+
+          this%downsampling(1:dim) = nint(this%nik_axis(1:dim)/qgrid(1:dim))
+ 
+          if(any(this%downsampling(1:dim)/=1)) then
+            ASSERT(.not.this%use_symmetries)
+          end if
+
+          call parse_block_end(blk)
+        else
+          this%downsampling(1:dim) = 1
+        end if
+      else
+        this%downsampling(1:dim) = 1
       end if
 
       call kpoints_grid_init(dim, this%full, product(this%nik_axis(1:dim))*nshifts, nshifts)
@@ -1487,11 +1537,10 @@ contains
   end subroutine kpoints_check_symmetries
 
   !--------------------------------------------------------
-  logical function kpoints_is_compatible_downsampling(kpt, ik, iq, C) result(compatible)
+  logical function kpoints_is_compatible_downsampling(kpt, ik, iq) result(compatible)
     type(kpoints_t), intent(in) :: kpt
     integer,              intent(in) :: ik
     integer,              intent(in) :: iq
-    integer,              intent(in) :: C(:) !<  (1:dim) downsampling coefficients
 
     integer :: dim, idim
     FLOAT :: diff(1:MAX_DIM)
@@ -1500,19 +1549,16 @@ contains
 
     ASSERT(kpt%method == KPOINTS_MONKH_PACK)
 
-    if(any(C(1:kpt%reduced%dim)/=1)) then
-      ASSERT(.not.kpt%use_symmetries)
-    end if
-
     compatible = .true.
-
     dim = kpt%reduced%dim
     diff(1:dim) = kpt%reduced%red_point(1:dim, ik)-kpt%reduced%red_point(1:dim, iq)
+ 
     !We remove potential umklapp
     do idim = 1, dim
       diff(idim)=diff(idim)-anint(diff(idim)+M_HALF*SYMPREC)
-      if(mod(diff(idim), C(idim)/real(kpt%nik_axis(idim))) /= M_ZERO) then
+      if(abs(mod(diff(idim),kpt%downsampling(idim)/real(kpt%nik_axis(idim)))) > SYMPREC) then
         compatible = .false. 
+        POP_SUB(kpoints_is_compatible_downsampling)
         return
       end if
     end do
