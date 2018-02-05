@@ -21,6 +21,7 @@
 module boundaries_oct_m
   use accel_oct_m
   use batch_oct_m
+  use batch_ops_oct_m
   use global_oct_m
   use math_oct_m
   use messages_oct_m
