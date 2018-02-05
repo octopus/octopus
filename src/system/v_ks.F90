@@ -1179,6 +1179,7 @@ contains
   !! directly.
   !
   subroutine v_ks_hartree(ks, hm)
+    save
     type(v_ks_t),                intent(inout) :: ks
     type(hamiltonian_t), target, intent(inout) :: hm
 
@@ -1186,8 +1187,10 @@ contains
     CMPLX, pointer :: zpot(:)
     CMPLX :: ztmp
 
-    FLOAT, allocatable :: potx(:)
+    FLOAT, allocatable :: potx(:), kick(:)
     integer :: ii
+
+    logical :: kick_time = .true.
 
     integer :: asc_unit_test
 
@@ -1246,18 +1249,41 @@ contains
       !! valid only in the long-wavelength limit
       !! here only the lasers are included 
       !! the static potentials are included in subroutine hamiltonian_epot_generate (module hamiltonian)
-      if( hm%pcm%localf ) then
-        if (associated(hm%ep%lasers) ) then
-          SAFE_ALLOCATE(potx(1:ks%gr%mesh%np_part)) 
-          potx = M_ZERO
-          if( ks%calc%time_present ) then          
-            do ii = 1, hm%ep%no_lasers        
-              call laser_potential(hm%ep%lasers(ii), ks%gr%mesh, potx, ks%calc%time)
-            end do
-            call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_ext = potx, time_present = ks%calc%time_present)
+      if( hm%pcm%localf .and. ks%calc%time_present ) then
+        if ( associated(hm%ep%lasers) .and. associated(hm%ep%kick) ) then !< external potential and kick
+          SAFE_ALLOCATE(potx(1:ks%gr%mesh%np_part))
+          SAFE_ALLOCATE(kick(1:ks%gr%mesh%np_part)) 
+          potx = M_ZERO    
+          kick = M_ZERO
+          do ii = 1, hm%ep%no_lasers        
+            call laser_potential(hm%ep%lasers(ii), ks%gr%mesh, potx, ks%calc%time)
+          end do
+          if ( kick_time ) then !< kick at first time in propagation
+            call kick_function_get(ks%gr%mesh, hm%ep%kick, kick)
+            kick_time == .false.
           end if
+          call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_ext = potx, kick = kick, time_present = ks%calc%time_present)
           SAFE_DEALLOCATE_A(potx)
+          SAFE_DEALLOCATE_A(kick)
+        else if ( associated(hm%ep%lasers) .and. .not.associated(hm%ep%kick) ) then !< just external potential
+          SAFE_ALLOCATE(potx(1:ks%gr%mesh%np_part))
+          potx = M_ZERO    
+          do ii = 1, hm%ep%no_lasers        
+            call laser_potential(hm%ep%lasers(ii), ks%gr%mesh, potx, ks%calc%time)
+          end do
+          call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_ext = potx, time_present = ks%calc%time_present)
+          SAFE_DEALLOCATE_A(potx)
+        else if ( .not.associated(hm%ep%lasers) .and. associated(hm%ep%kick) ) then !< just kick
+          SAFE_ALLOCATE(kick(1:ks%gr%mesh%np_part)) 
+          kick = M_ZERO
+          if ( kick_time ) then !< kick at first time in propagation
+            call kick_function_get(ks%gr%mesh, hm%ep%kick, kick)
+            kick_time == .false.
+          end if
+          call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, kick = kick, time_present = ks%calc%time_present)
+          SAFE_DEALLOCATE_A(kick)
         end if
+
         ! Calculating the PCM term renormalizing the sum of the single-particle energies
         ! to keep the idea of pcm_corr... but it will be added later on
         hm%energy%pcm_corr = dmf_dotp( ks%gr%fine%mesh, ks%calc%total_density, hm%pcm%v_e_rs + hm%pcm%v_n_rs + hm%pcm%v_ext_rs )

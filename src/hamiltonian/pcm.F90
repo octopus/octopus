@@ -60,7 +60,7 @@ module pcm_oct_m
     pcm_pot_rs,             &
     pcm_elect_energy,       &
     pcm_v_nuclei_cav,       &
-    pcm_v_electrons_cav_li, &
+    pcm_v_cav_li, &
     pcm_update,             &
     pcm_calc_pot_rs
 
@@ -121,6 +121,7 @@ module pcm_oct_m
     FLOAT                            :: qtot_ext    !< total polarization charge due to an ext. pot.
     FLOAT                            :: qtot_ext_in !< total inertial polarization charge due to an ext. pot.
     FLOAT, allocatable               :: v_ext(:)    !< external potential at each tessera
+    FLOAT, allocatable               :: v_kick(:)   !< kick     potential at each tessera
     FLOAT, allocatable               :: v_ext_rs(:) !< PCM potential in real-space produced by q_ext(:) 
     ! END -GGIL: 19/10/2017- Local field effects
 !     FLOAT, allocatable               :: arg_li(:,:)   !< used in the trilinear interpolation to estimate
@@ -133,7 +134,7 @@ module pcm_oct_m
     logical                          :: eom           !< Logical flag for polarization charges propagation through an EoM
     logical                          :: localf        !< Logical flag to include polarization charges due to external field
     logical                          :: solute        !< Logical flag to include polarization charges due to the solute
-    FLOAT                            :: gaussian_width!< Parameter to change the width of density of polarization charges  
+    FLOAT                            :: gaussian_width!< Parameter to change the width of density of polarization charges
 !     integer                          :: n_vertices    !< Number of grid points used to interpolate the Hartree potential
                                                       !! at the tesserae 
 !     integer, allocatable             :: ind_vh(:,:)   !< Grid points used during interpolation
@@ -159,7 +160,9 @@ module pcm_oct_m
   integer, parameter ::		&
     PCM_ELECTRONS = 0,		&
     PCM_NUCLEI    = 1,		&
-    PCM_EXTERNAL_POTENTIAL = 2
+    PCM_EXTERNAL_POTENTIAL = 2, &
+    PCM_KICK = 3,               &
+    PCM_EXTERNAL_PLUS_KICK = 4
 
   integer, parameter ::   &
     PCM_CALC_DIRECT  = 1, &
@@ -996,6 +999,7 @@ contains
 
     if (pcm%localf) then
       SAFE_ALLOCATE( pcm%v_ext(1:pcm%n_tesserae) )
+      SAFE_ALLOCATE( pcm%v_kick(1:pcm%n_tesserae) )
       SAFE_ALLOCATE( pcm%q_ext(1:pcm%n_tesserae) )
       SAFE_ALLOCATE( pcm%v_ext_rs(1:grid%mesh%np) )
       pcm%v_ext    = M_ZERO
@@ -1015,14 +1019,14 @@ contains
   end subroutine pcm_init
 
   ! -----------------------------------------------------------------------------
-  !subroutine pcm_calc_pot_rs(pcm, mesh, geo, v_h, v_ext, time_present)
-  subroutine pcm_calc_pot_rs(pcm, mesh, geo, v_h, v_ext, time_present)
+  subroutine pcm_calc_pot_rs(pcm, mesh, geo, v_h, v_ext, kick, time_present)
     save
     type(pcm_t),             intent(inout) :: pcm
     type(mesh_t),               intent(in) :: mesh  
     type(geometry_t), optional, intent(in) :: geo
     FLOAT,            optional, intent(in) :: v_h(:)
     FLOAT,            optional, intent(in) :: v_ext(:)
+    FLOAT,            optional, intent(in) :: kick(:)
     logical,          optional, intent(in) :: time_present
     
     integer :: calc
@@ -1037,7 +1041,9 @@ contains
     
     if (present(v_h))   calc = PCM_ELECTRONS
     if (present(geo))   calc = PCM_NUCLEI
-    if (present(v_ext)) calc = PCM_EXTERNAL_POTENTIAL
+    if (present(v_ext)        .and. (.not.present(kick)) ) calc = PCM_EXTERNAL_POTENTIAL
+    if ((.not.present(v_ext)) .and. present(kick) ) calc = PCM_KICK
+    if (present(v_ext)        .and. present(kick) ) calc = PCM_EXTERNAL_PLUS_KICK
 
     if (present(time_present)) then
      if (time_present) td_calc_mode = .true.
@@ -1054,7 +1060,7 @@ contains
     end if
 
     if (calc == PCM_ELECTRONS) then
-      call pcm_v_electrons_cav_li(pcm%v_e, v_h, pcm, mesh)
+      call pcm_v_cav_li(pcm%v_e, v_h, pcm, mesh)
       if (pcm%solute) then !< N.B.
       if( td_calc_mode .and. pcm%epsilon_infty /= pcm%epsilon_0 .and. pcm%noneq ) then
         !< BEGIN - equation-of-motion propagation or inertial/dynamical charge splitting
@@ -1108,9 +1114,7 @@ contains
     end if
 
     if (calc == PCM_EXTERNAL_POTENTIAL) then
-      ! Here we use same subroutine as for electrons; nothing special about it:
-      ! it is just a linear interpolation at the tessera point of the potential evaluated at the nearest grid points.
-      call pcm_v_electrons_cav_li(pcm%v_ext, v_ext, pcm, mesh)
+      call pcm_v_cav_li(pcm%v_ext, v_ext, pcm, mesh)
       if( td_calc_mode .and. pcm%epsilon_infty /= pcm%epsilon_0 .and. pcm%noneq ) then
         !< BEGIN - equation-of-motion propagation or inertial/dynamical charge splitting
         if( pcm%eom ) then	!< equation-of-motion propagation
@@ -1180,39 +1184,72 @@ contains
       call pcm_pot_rs(pcm, pcm%v_ext_rs, pcm%q_ext, pcm%rho_ext, mesh )
     end if
 
+    if (calc == PCM_EXTERNAL_PLUS_KICK .or. calc == PCM_KICK) then !under development
+      !if ( kick(:) /= M_ZERO ) then
+        call pcm_v_cav_li(pcm%v_kick, kick, pcm, mesh)
+      !else
+      !  pcm%v_kick = M_ZERO
+      !end if
+      if ( calc == PCM_EXTERNAL_PLUS_KICK ) then
+        call pcm_v_cav_li( pcm%v_ext, v_ext, pcm, mesh)
+        !< BEGIN - equation-of-motion propagation
+        select case (pcm%which_eps) !under development
+          case('drl')
+            call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, dt, pcm%tess, 'ext+kick', 'drl', this_drl = pcm%drl, &
+                                                    kick = pcm%v_kick)
+          case default
+            call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, dt, pcm%tess, 'ext+kick', 'deb', this_deb = pcm%deb, &
+                                                    kick = pcm%v_kick)
+        end select
+      else
+        !< BEGIN - equation-of-motion propagation
+        select case (pcm%which_eps) !under development
+          case('drl')
+            call pcm_charges_propagation(pcm%q_ext, pcm%v_kick, dt, pcm%tess, 'justkick', 'drl', this_drl = pcm%drl)
+          case default
+            call pcm_charges_propagation(pcm%q_ext, pcm%v_kick, dt, pcm%tess, 'justkick', 'deb', this_deb = pcm%deb)
+        end select
+      end if
+      !< END - equation-of-motion propagation
+      !< total pcm charges due to kick
+      pcm%qtot_ext = sum(pcm%q_ext)
+      if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_ext, pcm%qtot_ext, mesh, pcm%rho_ext)
+      call pcm_pot_rs(pcm, pcm%v_ext_rs, pcm%q_ext, pcm%rho_ext, mesh )
+    end if
+
     POP_SUB(pcm_calc_pot_rs)  
   end subroutine pcm_calc_pot_rs
 
   ! -----------------------------------------------------------------------------
   ! change description and variable names to be more general - external potential feature use it
-  !> Calculates the Hartree potential at the tessera representative points by doing 
+  !> Calculates the Hartree/external/kick potential at the tessera representative points by doing 
   !! a 3D linear interpolation. 
-  subroutine pcm_v_electrons_cav_li(v_e_cav, v_hartree, pcm, mesh)
+  subroutine pcm_v_cav_li(v_cav, v_mesh, pcm, mesh)
     type(pcm_t), intent(in)  :: pcm
     type(mesh_t), intent(in) :: mesh
-    FLOAT, intent(in)        :: v_hartree(:) !< (1:mesh%np)
-    FLOAT, intent(out)       :: v_e_cav(:)   !< (1:n_tess)
+    FLOAT, intent(in)        :: v_mesh(:) !< (1:mesh%np)
+    FLOAT, intent(out)       :: v_cav(:)   !< (1:n_tess)
 
     integer :: ia
 
     type(mesh_interpolation_t)  :: mesh_interpolation
 
-    PUSH_SUB(pcm_v_electrons_cav_li)    
+    PUSH_SUB(pcm_v_cav_li)    
 
-    v_e_cav = M_ZERO
+    v_cav = M_ZERO
     
     call mesh_interpolation_init(mesh_interpolation, mesh)
 
     do ia = 1, pcm%n_tesserae
 
-      call mesh_interpolation_evaluate(mesh_interpolation, v_hartree, pcm%tess(ia)%point, v_e_cav(ia))
+      call mesh_interpolation_evaluate(mesh_interpolation, v_mesh, pcm%tess(ia)%point, v_cav(ia))
 
     end do
 
     call mesh_interpolation_end(mesh_interpolation)
 
-    POP_SUB(pcm_v_electrons_cav_li)
-  end subroutine pcm_v_electrons_cav_li
+    POP_SUB(pcm_v_cav_li)
+  end subroutine pcm_v_cav_li
 
   !--------------------------------------------------------------------------------
   

@@ -447,7 +447,8 @@ contains
 
     external_potentials_present = associated(hm%ep%v_static) .or. &
 				  associated(hm%ep%E_field)  .or. &
-				  associated(hm%ep%lasers)
+				  associated(hm%ep%lasers)   .or. &
+				  hm%ep%kick%delta_strength /= M_ZERO
 
     call pcm_init(hm%pcm, geo, gr, st%qtot, st%val_charge, external_potentials_present )  !< initializes PCM  
     if(hm%pcm%run_pcm .and. hm%theory_level /= KOHN_SHAM_DFT) &
