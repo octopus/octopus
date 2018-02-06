@@ -236,6 +236,9 @@ subroutine X(submesh_batch_add)(this, ss, mm)
 
   PUSH_SUB(X(submesh_batch_add))
 
+  ASSERT(.not. batch_is_packed(ss))
+  ASSERT(.not. batch_is_packed(mm))
+  
   ASSERT(mm%nst == ss%nst)
 
   !$omp parallel do private(ist, idim, jdim, is)
@@ -283,6 +286,9 @@ subroutine X(submesh_batch_dotp_matrix)(this, mm, ss, dot, reduce)
   R_TYPE :: dotp
 
   PUSH_SUB(X(submesh_batch_dotp_matrix))
+
+  ASSERT(.not. batch_is_packed(ss))
+  ASSERT(.not. batch_is_packed(mm))
 
   if(this%mesh%use_curvilinear) then
 
