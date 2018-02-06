@@ -508,12 +508,13 @@ module pcm_eom_oct_m
     fact2(:)=Kdiag0(:)*fact1(:)				       !< tau^{-1}K_0 in Eq.(38), ibid.
    elseif (which_eps .eq. "drl") then
     Kdiagd(:)=M_ZERO					       !< from Eq.(10) up in Ref.2
-    fact2(:)=sgn_lf*(twopi-sgn*sgn_lf*eigv(:))*drl%aa/fourpi   !< Eq.(10) down
+    fact2(:)=(twopi-sgn*eigv(:))*drl%aa/fourpi                 !< Eq.(10) down
     do i=1,nts_act
-     if(fact2(i).lt.M_ZERO) fact2(i)=M_ZERO
+     if(fact2(i).lt.M_ZERO) fact2(i)=M_ZERO                    !< check out
     enddo
-    if (drl%w0.eq.M_ZERO) drl%w0=1.d-8
+    if (drl%w0.eq.M_ZERO) drl%w0=1.d-8                         !< check out
     fact1(:)=fact2(:)+drl%w0*drl%w0			       !< Eq.(19), ibid.
+    fact2(:)=sgn_lf*(twopi-sgn*sgn_lf*eigv(:))*drl%aa/fourpi   !< Eq.(10) down, local field analogous
     Kdiag0(:)=fact2(:)/fact1(:)				       !< from Eq.(10) up, ibid.
    endif
    scr3=matmul(sm12,eigt)
