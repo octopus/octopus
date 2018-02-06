@@ -145,8 +145,10 @@ contains
     type(geometry_t),    intent(in)    :: geo
     type(hamiltonian_t), intent(in)    :: hm
 
-    integer :: id, ll, mm, ik
+    integer :: id, ll, mm, ik, iunit
     character(len=256) :: fname
+    FLOAT, allocatable :: oneint(:), twoint(:)
+    integer, allocatable :: iindex(:), jindex(:), kindex(:), lindex(:)
     
     PUSH_SUB(output_me)
 
@@ -211,21 +213,69 @@ contains
     if(iand(this%what, output_me_one_body) /= 0) then
       message(1) = "Computing one-body matrix elements"
       call messages_info(1)
+
+      ASSERT(.not. st%parallel_in_states)
+      if(gr%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("OutputMatrixElements=two_body with k-points")
+      if(hm%family_is_mgga_with_exc) &
+      call messages_not_implemented("OutputMatrixElements=one_body with MGGA") 
+      ! how to do this properly? states_matrix
+      iunit = io_open(trim(dir)//'/output_me_one_body', action='write')
+
+      id = st%nst*(st%nst+1)/2
+
+      SAFE_ALLOCATE(oneint(1:id))
+      SAFE_ALLOCATE(iindex(1:id))
+      SAFE_ALLOCATE(jindex(1:id))
+
       if (states_are_real(st)) then
-        call done_body(dir, gr, geo, st, hm)
+        call dstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex, jindex, oneint)
       else
-        call zone_body(dir, gr, geo, st, hm)
+        call zstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex, jindex, oneint)
       end if
+
+      do ll = 1, id
+        write(iunit, *) iindex(ll), jindex(ll), oneint(ll)
+      enddo
+
+      SAFE_DEALLOCATE_A(iindex)
+      SAFE_DEALLOCATE_A(jindex)
+      SAFE_DEALLOCATE_A(oneint)
+      call io_close(iunit)
+
     end if
 
     if(iand(this%what, output_me_two_body) /= 0) then
       message(1) = "Computing two-body matrix elements"
       call messages_info(1)
+
+      ASSERT(.not. st%parallel_in_states)
+      if(gr%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("OutputMatrixElements=two_body with k-points")
+      ! how to do this properly? states_matrix
+      iunit = io_open(trim(dir)//'/output_me_two_body', action='write')
+
+      id = st%nst*(st%nst+1)*(st%nst**2+st%nst+2)/8
+      SAFE_ALLOCATE(twoint(1:id))
+      SAFE_ALLOCATE(iindex(1:id))
+      SAFE_ALLOCATE(jindex(1:id))
+      SAFE_ALLOCATE(kindex(1:id))
+      SAFE_ALLOCATE(lindex(1:id))
+
       if (states_are_real(st)) then
-        call dtwo_body(dir, gr, st)
+        call dstates_me_two_body(gr, st, id, iindex, jindex, kindex, lindex, twoint)
       else
-        call ztwo_body(dir, gr, st)
+        call zstates_me_two_body(gr, st, id, iindex, jindex, kindex, lindex, twoint)
       end if
+      
+      do ll = 1, id
+        write(iunit, *) iindex(ll), jindex(ll), kindex(ll), lindex(ll), twoint(ll)
+      enddo
+      SAFE_DEALLOCATE_A(iindex)
+      SAFE_DEALLOCATE_A(jindex)
+      SAFE_DEALLOCATE_A(kindex)
+      SAFE_DEALLOCATE_A(lindex)
+      SAFE_DEALLOCATE_A(twoint)
+      call io_close(iunit)
+
     end if
 
     POP_SUB(output_me)

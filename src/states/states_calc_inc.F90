@@ -1397,6 +1397,142 @@ subroutine X(states_calc_projections)(mesh, st, gs_st, ik, proj)
 
 end subroutine X(states_calc_projections)
 
+! ---------------------------------------------------------
+subroutine X(states_me_one_body)(dir, gr, geo, st, nspin, vhxc, nint, iindex, jindex, oneint)
+
+  character(len=*),    intent(in)    :: dir
+  type(grid_t),        intent(inout) :: gr
+  type(geometry_t),    intent(in)    :: geo
+  type(states_t),      intent(inout) :: st
+  integer,             intent(in)    :: nspin
+  FLOAT,               intent(in)    :: vhxc(1:gr%mesh%np, nspin)
+  integer,             intent(in)    :: nint
+  integer,             intent(out)   :: iindex(1:nint)
+  integer,             intent(out)   :: jindex(1:nint)
+  FLOAT,               intent(out)   :: oneint(1:nint)  !this needs to address complex numbers as well?!?
+  
+  integer ist, jst, np, iint
+  R_TYPE :: me
+  R_TYPE, allocatable :: psii(:, :), psij(:, :)
+
+  PUSH_SUB(X(states_me_one_body))
+
+  SAFE_ALLOCATE(psii(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(psij(1:gr%mesh%np_part, 1:st%d%dim))
+  
+  np = gr%mesh%np
+  iint = M_ONE
+
+  do ist = 1, st%nst
+
+    call states_get_state(st, gr%mesh, ist, 1, psii)
+    
+    do jst = 1, st%nst
+      if(jst > ist) cycle
+      
+      call states_get_state(st, gr%mesh, jst, 1, psij)
+
+      psij(1:np, 1) = R_CONJ(psii(1:np, 1))*vhxc(1:np, 1)*psij(1:np, 1)
+
+      me = - X(mf_integrate)(gr%mesh, psij(:, 1))
+
+      if(ist==jst) me = me + st%eigenval(ist,1)
+
+      iindex(iint) = ist
+      jindex(iint) = jst
+      oneint(iint) = me
+      iint = iint + 1
+
+    end do
+  end do
+
+  SAFE_DEALLOCATE_A(psii)
+  SAFE_DEALLOCATE_A(psij)
+
+  POP_SUB(X(states_me_one_body))
+end subroutine X(states_me_one_body)
+
+
+! ---------------------------------------------------------
+subroutine X(states_me_two_body) (gr, st, nint, iindex, jindex, kindex, lindex, twoint)
+  type(grid_t),     intent(inout)           :: gr
+  type(states_t),   intent(in)              :: st
+  integer,          intent(in)              :: nint
+  integer,          intent(out)             :: iindex(1:nint)
+  integer,          intent(out)             :: jindex(1:nint)
+  integer,          intent(out)             :: kindex(1:nint)
+  integer,          intent(out)             :: lindex(1:nint)
+  FLOAT,            intent(out)             :: twoint(1:nint)  !this needs to address complex numbers as well?!?
+
+  integer :: ist, jst, kst, lst, ijst, klst
+  integer :: iint
+  R_TYPE  :: me
+  R_TYPE, allocatable :: nn(:), vv(:)
+  R_TYPE, allocatable :: psii(:, :), psij(:, :), psik(:, :), psil(:, :)
+
+  PUSH_SUB(X(states_me_two_body))
+
+  SAFE_ALLOCATE(nn(1:gr%mesh%np))
+  SAFE_ALLOCATE(vv(1:gr%mesh%np))
+  SAFE_ALLOCATE(psii(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(psij(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(psik(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(psil(1:gr%mesh%np, 1:st%d%dim))
+
+  ijst = 0
+  iint = 1
+
+  do ist = 1, st%nst
+
+    call states_get_state(st, gr%mesh, ist, 1, psii)
+
+    do jst = 1, st%nst
+      if(jst > ist) cycle
+      ijst=ijst+1
+
+      call states_get_state(st, gr%mesh, jst, 1, psij)
+
+      nn(1:gr%mesh%np) = R_CONJ(psii(1:gr%mesh%np, 1))*psij(1:gr%mesh%np, 1)
+      call X(poisson_solve)(psolver, vv, nn, all_nodes=.false.)
+
+      klst=0
+      do kst = 1, st%nst
+ 
+        call states_get_state(st, gr%mesh, kst, 1, psik)
+
+        do lst = 1, st%nst
+          if(lst > kst) cycle
+          klst=klst+1
+          if(klst > ijst) cycle
+
+          call states_get_state(st, gr%mesh, lst, 1, psil)
+
+          psil(1:gr%mesh%np, 1) = vv(1:gr%mesh%np)*psik(1:gr%mesh%np, 1)*R_CONJ(psil(1:gr%mesh%np, 1))
+
+          me = X(mf_integrate)(gr%mesh, psil(:, 1))
+
+          iindex(iint) =  ist
+          jindex(iint) =  jst
+          kindex(iint) =  kst
+          lindex(iint) =  lst
+          twoint(iint) =  me
+          iint = iint + 1
+
+        end do
+      end do
+    end do
+  end do
+
+  SAFE_DEALLOCATE_A(nn)
+  SAFE_DEALLOCATE_A(vv)
+  SAFE_DEALLOCATE_A(psii)
+  SAFE_DEALLOCATE_A(psij)
+  SAFE_DEALLOCATE_A(psik)
+  SAFE_DEALLOCATE_A(psil)
+
+  POP_SUB(X(states_me_two_body))
+end subroutine X(states_me_two_body)
+
 
 !! Local Variables:
 !! mode: f90

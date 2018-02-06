@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-## Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
+## Copyright (C) 2017 Xavier Andrade
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -17,14 +17,22 @@
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 ## 02110-1301, USA.
 ##
-## $Id$
 
-SUBDIRS =               \
-	metis-5.1       \
-	qshep           \
-	spglib-1.9.9    \
-	fortrancl       \
-	bpdn            \
-	yaml-0.1.4      \
-	dftd3
+noinst_LIBRARIES = libdftd3.a
 
+libdftd3_a_SOURCES =     \
+	api.f90          \
+	common.f90       \
+	core.f90         \
+	pars.f90         \
+	sizes.f90
+
+api.o: api.f90 sizes.o core.o common.o
+core.o: core.f90 pars.o sizes.o common.o
+pars.o: pars.f90 common.o sizes.o
+
+# how to compile a f90 file :)
+.f90.o:
+	@FC@ @FCFLAGS@ -c @FCFLAGS_f90@ -o $@ $<
+
+CLEANFILES = *~ *.bak *.mod *.il *.d *.pc* ifc*
