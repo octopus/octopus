@@ -105,20 +105,23 @@ module pcm_eom_oct_m
   !------------------------------------------------------------------------------------------------------------------------------
   !> Driving subroutine for the Equation of Motion (EOM) propagation of the polarization charges
   !> within the Integral Equation Formalism (IEF) formulation of the Polarization Continuum Model (PCM).
-  subroutine pcm_charges_propagation(q_t, pot_t, this_dt, this_cts_act, this_eom, this_eps, this_deb, this_drl, kick) 
+  subroutine pcm_charges_propagation(q_t, pot_t, this_dt, this_cts_act, input_asc, this_eom, this_eps, this_deb, this_drl, kick) 
    save
    FLOAT, intent(out) :: q_t(:)
    FLOAT, intent(in)  :: pot_t(:)
-   FLOAT, optional, intent(in)  :: kick(:)
 
    FLOAT, intent(in) :: this_dt
 
    type(pcm_tessera_t), intent(in) :: this_cts_act(:)
 
+   logical, intent(in) :: input_asc
+
    character(*), intent(in) :: this_eom !< EOM case, either due to electrons ('electron') or due to external potential ('external')
    character(*), intent(in) :: this_eps !< type of dielectric model to be used, either Debye ('deb') or Drude-Lorentz ('drl')
    type(debye_param_t), optional, intent(in) :: this_deb
    type(drude_param_t), optional, intent(in) :: this_drl 
+
+   FLOAT, optional, intent(in)  :: kick(:)
 
    logical :: firsttime=.true.
    logical :: initial_electron=.true.
@@ -129,9 +132,9 @@ module pcm_eom_oct_m
 
    which_eom=this_eom
    if (which_eom /= 'electron' .or. which_eom /= 'external' .or. which_eom /= 'ext+kick' .or. which_eom /= 'ext+kick' ) then
-    message(1) = "pcm_charges_propagation: EOM evolution of PCM charges can only be due to solute electrons or external potential."
-    !< including the kick
-    call messages_fatal(1)
+    message(1) = "pcm_charges_propagation: EOM evolution of PCM charges can only be due to solute electrons"
+    message(2) = "or external potential (including the kick)."
+    call messages_fatal(2)
    endif
 
    if(firsttime) then
@@ -164,14 +167,13 @@ module pcm_eom_oct_m
        ( initial_kick     .and. ( which_eom == 'ext+kick' .or. which_eom == 'justkick' ) ) ) then
     call init_BEM
     if(initial_electron .or. initial_external .or. ( initial_kick .and. which_eom == 'justkick' ) ) then
-     call init_charges(q_t, pot_t) 
+     call init_charges(q_t, pot_t, input_asc ) 
      if(initial_electron .and. which_eom == 'electron' ) initial_electron=.false.
      if(initial_external .and. which_eom == 'external' ) initial_external=.false.
      if(initial_kick     .and. which_eom == 'justkick')  initial_kick=.false.
      POP_SUB(pcm_charges_propagation)
-     return
     else if(initial_kick .and. which_eom == 'ext+kick') then
-     call init_charges(q_t, pot_t, kick) 
+     call init_charges(q_t, pot_t, input_asc, kick = kick ) 
      initial_kick=.false.
     endif
    endif
@@ -181,7 +183,6 @@ module pcm_eom_oct_m
      call pcm_ief_prop_deb(q_t,pot_t)
     else
      POP_SUB(pcm_charges_propagation)
-     return
     endif
    else if( which_eps .eq. "drl" ) then
     call pcm_ief_prop_vv_ief_drl(q_t,pot_t)
@@ -196,17 +197,52 @@ module pcm_eom_oct_m
 
   !------------------------------------------------------------------------------------------------------------------------------
   !> Polarization charges initialization in equilibrium with the initial potential.
-  subroutine init_charges(q_t,pot_t,kick)
+  subroutine init_charges(q_t,pot_t,input_asc,kick)
    FLOAT, intent(out) :: q_t(:)
    FLOAT, intent(in)  :: pot_t(:)
+   logical, intent(in) :: input_asc
    FLOAT, optional, intent(in)  :: kick(:)
 
+   FLOAT :: aux1(3)
+   integer :: aux2
+
+   integer :: asc_unit_test_e, &
+              asc_unit_test_ext
+
+   integer :: ia
+
    PUSH_SUB(init_charges)
+
+   if( input_asc .and. which_eps == 'deb' ) then
+     SAFE_ALLOCATE(q_tp(nts_act))
+     q_tp = q_t
+
+     if( which_eom == 'electron' ) then
+      asc_unit_test_e = io_open(PCM_DIR//'ASC_e.dat', action='write')
+      do ia = 1, nts_act
+        write(asc_unit_test_e,*) aux1, q_tp(ia), aux2
+      end do
+      call io_close(asc_unit_test_e)
+     else if( which_eom == 'external' .or. which_eom == 'ext+kick' .or. which_eom == 'justkick') then
+      asc_unit_test_ext = io_open(PCM_DIR//'ASC_ext.dat', action='write')
+      do ia = 1, nts_act
+        write(asc_unit_test_ext,*) aux1, q_tp(ia), aux2
+      end do
+      call io_close(asc_unit_test_ext)
+     endif
+
+    SAFE_ALLOCATE(pot_tp(nts_act))
+    pot_tp = pot_t
+
+    POP_SUB(init_charges)
+   endif
 
    if( which_eom == 'electron' ) then
     !< Here we consider the potential at any earlier time equal to the initial potential.
     !< Therefore, we can suppose that the solvent is already in equilibrium with the initial solute potential.
     !< The latter is valid when starting the propagation from the ground state but do not hold in general.
+    message(1) = 'EOM-PCM for solvent polarization due to solute electrons considers that you start from a ground state run.'
+    call messages_warning(1)
   
     q_t=matmul(matq0,pot_t) !< applying the static IEF-PCM response matrix (corresponging to epsilon_0) to the initial potential
 

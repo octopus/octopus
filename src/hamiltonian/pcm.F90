@@ -134,6 +134,7 @@ module pcm_oct_m
     logical                          :: eom           !< Logical flag for polarization charges propagation through an EoM
     logical                          :: localf        !< Logical flag to include polarization charges due to external field
     logical                          :: solute        !< Logical flag to include polarization charges due to the solute
+    integer                          :: initial_asc   !< Flag to read or not pol.charges from input file
     FLOAT                            :: gaussian_width!< Parameter to change the width of density of polarization charges
 !     integer                          :: n_vertices    !< Number of grid points used to interpolate the Hartree potential
                                                       !! at the tesserae 
@@ -378,6 +379,31 @@ contains
       call messages_warning()
       pcm%noneq = .false.
     end if
+
+    !%Variable PCMEoMInitialCharges
+    !%Type integer
+    !%Default 0
+    !%Section Hamiltonian::PCM
+    !%Description
+    !% If 0 the propagation of the solvent polarization charges starts from internally generated initial charges 
+    !%  in equilibrium with the initial potential.
+    !% For Debye EOM-PCM, if >0 the propagation of the solvent polarization charges starts from initial charges from input file.
+    !%                      * 1 initial pol. charges due to solute electrons are read from input file.
+    !%                      * 2 initial pol. charges due to external potential are read from input file.
+    !%                      * 3 initial pol. charges due to solute electrons and external potential are read from input file.
+    !% Files should be located in pcm directory and are called ASC_e.dat and ASC_ext.dat, respectively.
+    !% The latter files are generated after any PCM run and contain the last values of the polarization charges.
+    !%End
+    call parse_variable('PCMEoMInitialCharges', 0, pcm%initial_asc)
+    call messages_print_var_value(stdout, "PCMEoMInitialCharges", pcm%initial_asc)
+
+    if( ( (.not.pcm%eom) .or. ( pcm%eom .and. pcm%which_eps /= 'deb' ) ) .and. pcm%initial_asc /= 0 ) then
+      call messages_write('Sorry, initial polarization charges can only be read from input file for a Debye EOM-PCM run.')
+      call messages_new_line()
+      call messages_write('To spare you some time, Octopus will proceed as if PCMEoMInitialCharges = 0.')       
+      call messages_warning()
+      pcm%initial_asc = 0
+    endif
 
     !> packing Debye parameters for convenience
     pcm%deb%eps_0 = pcm%epsilon_0
@@ -1031,6 +1057,9 @@ contains
     
     integer :: calc
 
+    logical :: input_asc_e
+    logical :: input_asc_ext
+
     ! for debuggin - it should be cleaned up
     !integer :: asc_unit_test, asc_unit_test_aux, ii
 
@@ -1048,6 +1077,21 @@ contains
     if (present(time_present)) then
      if (time_present) td_calc_mode = .true.
     end if
+
+    select case(pcm%initial_asc)
+      case(1)
+        input_asc_e = .true.
+        input_asc_ext = .false.
+      case(2)
+        input_asc_e = .false.
+        input_asc_ext = .true.
+      case(3)
+        input_asc_e = .true.
+        input_asc_ext = .true.
+      case default
+        input_asc_e = .false.
+        input_asc_ext = .false.
+    end select
      
     if (calc == PCM_NUCLEI) then
       call pcm_v_nuclei_cav(pcm%v_n, geo, pcm%tess, pcm%n_tesserae)
@@ -1067,9 +1111,9 @@ contains
         if( pcm%eom ) then	!< equation-of-motion propagation
           select case (pcm%which_eps)
             case('drl')
-             call pcm_charges_propagation(pcm%q_e, pcm%v_e, dt, pcm%tess, 'electron', 'drl', this_drl = pcm%drl)
+             call pcm_charges_propagation(pcm%q_e, pcm%v_e, dt, pcm%tess, input_asc_e, 'electron', 'drl', this_drl = pcm%drl)
             case default
-             call pcm_charges_propagation(pcm%q_e, pcm%v_e, dt, pcm%tess, 'electron', 'deb', this_deb = pcm%deb)
+             call pcm_charges_propagation(pcm%q_e, pcm%v_e, dt, pcm%tess, input_asc_e, 'electron', 'deb', this_deb = pcm%deb)
           end select
           !< total pcm charges due to solute electrons
           pcm%qtot_e = sum(pcm%q_e)
@@ -1120,9 +1164,9 @@ contains
         if( pcm%eom ) then	!< equation-of-motion propagation
           select case (pcm%which_eps) !under development
             case('drl')
-             call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, dt, pcm%tess, 'external', 'drl', this_drl = pcm%drl)
+             call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, dt, pcm%tess, input_asc_ext, 'external', 'drl', this_drl = pcm%drl)
             case default
-             call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, dt, pcm%tess, 'external', 'deb', this_deb = pcm%deb)
+             call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, dt, pcm%tess, input_asc_ext, 'external', 'deb', this_deb = pcm%deb)
           end select
           !< total pcm charges due to time-dependent external field
           pcm%qtot_ext = sum(pcm%q_ext)
@@ -1195,19 +1239,19 @@ contains
         !< BEGIN - equation-of-motion propagation
         select case (pcm%which_eps) !under development
           case('drl')
-            call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, dt, pcm%tess, 'ext+kick', 'drl', this_drl = pcm%drl, &
+            call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, dt, pcm%tess, input_asc_ext, 'ext+kick', 'drl', this_drl = pcm%drl,&
                                                     kick = pcm%v_kick)
           case default
-            call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, dt, pcm%tess, 'ext+kick', 'deb', this_deb = pcm%deb, &
+            call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, dt, pcm%tess, input_asc_ext, 'ext+kick', 'deb', this_deb = pcm%deb,&
                                                     kick = pcm%v_kick)
         end select
       else
         !< BEGIN - equation-of-motion propagation
         select case (pcm%which_eps) !under development
           case('drl')
-            call pcm_charges_propagation(pcm%q_ext, pcm%v_kick, dt, pcm%tess, 'justkick', 'drl', this_drl = pcm%drl)
+            call pcm_charges_propagation(pcm%q_ext, pcm%v_kick, dt, pcm%tess, input_asc_ext, 'justkick', 'drl', this_drl = pcm%drl)
           case default
-            call pcm_charges_propagation(pcm%q_ext, pcm%v_kick, dt, pcm%tess, 'justkick', 'deb', this_deb = pcm%deb)
+            call pcm_charges_propagation(pcm%q_ext, pcm%v_kick, dt, pcm%tess, input_asc_ext, 'justkick', 'deb', this_deb = pcm%deb)
         end select
       end if
       !< END - equation-of-motion propagation
@@ -3002,6 +3046,11 @@ contains
         write(asc_unit_test_n,*) pcm%tess(ia)%point, pcm%q_n(ia), ia
         write(asc_unit_test_ext,*) pcm%tess(ia)%point, pcm%q_ext(ia), ia
       end do
+      call io_close(asc_unit_test)
+      call io_close(asc_unit_test_sol)
+      call io_close(asc_unit_test_e)
+      call io_close(asc_unit_test_n)
+      call io_close(asc_unit_test_ext)
     else if ( pcm%solute .and. .not.pcm%localf ) then
       asc_unit_test_sol = io_open(PCM_DIR//'ASC_sol.dat', action='write')
       asc_unit_test_e = io_open(PCM_DIR//'ASC_e.dat', action='write')
@@ -3011,14 +3060,16 @@ contains
         write(asc_unit_test_e,*) pcm%tess(ia)%point, pcm%q_e(ia), ia
         write(asc_unit_test_n,*) pcm%tess(ia)%point, pcm%q_n(ia), ia
       end do
+      call io_close(asc_unit_test_sol)
+      call io_close(asc_unit_test_e)
+      call io_close(asc_unit_test_n)
     else if ( .not.pcm%solute .and. pcm%localf ) then
       asc_unit_test_ext = io_open(PCM_DIR//'ASC_ext.dat', action='write')
       do ia = 1, pcm%n_tesserae
         write(asc_unit_test_ext,*) pcm%tess(ia)%point, pcm%q_ext(ia), ia
       end do
+      call io_close(asc_unit_test_ext)
     end if
-          
-    call io_close(asc_unit_test)
 
     SAFE_DEALLOCATE_A(pcm%spheres)
     SAFE_DEALLOCATE_A(pcm%tess)
