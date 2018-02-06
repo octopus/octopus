@@ -148,6 +148,7 @@ contains
       call messages_obsolete_variable('OEPPtX', 'Photons')
       call parse_variable('Photons', .false., oep%has_photons)
       if (oep%has_photons) then
+        call messages_experimental("Photons = yes")
         call photon_mode_init(oep%pt, gr)
       end if
 
