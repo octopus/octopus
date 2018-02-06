@@ -1,4 +1,4 @@
-!! Copyright (C) 2007 X. Andrade
+!! Copyright (C) 2007-2018 X. Andrade
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -140,41 +140,80 @@ subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
   type(batch_t),    intent(in)    :: ss
   type(batch_t),    intent(inout) :: mm
 
-  integer :: ist, jst, idim, jdim, is
+  integer :: ist, jst, idim, jdim, is, ii
   type(profile_t), save :: prof
   
   PUSH_SUB(X(submesh_batch_add_matrix))
   call profiling_in(prof, 'SUBMESH_ADD_MATRIX')
 
-  !$omp parallel do private(ist, idim, jdim, jst, is)
-  do ist =  1, min(mm%nst, ubound(factor, 2))
-    do idim = 1, mm%dim
-      ! FIXME: this line should instead be assert(mm%dim == ss%dim)!!
-      jdim = min(idim, ss%dim)
-      do jst = 1, ss%nst
-        if(associated(ss%states(jst)%dpsi)) then
-          forall(is = 1:this%np)
-            mm%states(ist)%X(psi)(this%map(is), idim) = &
-              mm%states(ist)%X(psi)(this%map(is), idim) + factor(jst, ist)*ss%states(jst)%dpsi(is, jdim)
-          end forall
-        else
+  ASSERT(.not. batch_is_packed(ss))
+  
+  select case(batch_status(mm))
+  case(BATCH_CL_PACKED)
+    ASSERT(.false.)
 
+  case(BATCH_NOT_PACKED)
+    !$omp parallel do private(ist, idim, jdim, jst, is)
+    do ist =  1, min(mm%nst, ubound(factor, 2))
+      do idim = 1, mm%dim
+        ! FIXME: this line should instead be assert(mm%dim == ss%dim)!!
+        jdim = min(idim, ss%dim)
+        do jst = 1, ss%nst
+          if(associated(ss%states(jst)%dpsi)) then
+            forall(is = 1:this%np)
+              mm%states(ist)%X(psi)(this%map(is), idim) = &
+                mm%states(ist)%X(psi)(this%map(is), idim) + factor(jst, ist)*ss%states(jst)%dpsi(is, jdim)
+            end forall
+          else
+            
 #ifdef R_TCOMPLEX
-          forall(is = 1:this%np)
-            mm%states(ist)%X(psi)(this%map(is), idim) = &
-              mm%states(ist)%X(psi)(this%map(is), idim) + factor(jst, ist)*ss%states(jst)%zpsi(is, jdim)
-          end forall
+            forall(is = 1:this%np)
+              mm%states(ist)%X(psi)(this%map(is), idim) = &
+                mm%states(ist)%X(psi)(this%map(is), idim) + factor(jst, ist)*ss%states(jst)%zpsi(is, jdim)
+            end forall
 #else
-          message(1) = "Internal error: cannot call dsubmesh_batch_add_matrix with complex batch ss"
-          call messages_fatal(1)
+            message(1) = "Internal error: cannot call dsubmesh_batch_add_matrix with complex batch ss"
+            call messages_fatal(1)
 #endif
-
-        end if
+            
+          end if
+        end do
       end do
     end do
-  end do
-  !$omp end parallel do
+    !$omp end parallel do
 
+  case(BATCH_PACKED)
+    !$omp parallel do private(ist, idim, jdim, jst, is)
+    do ist =  1, min(mm%nst, ubound(factor, 2))
+      do idim = 1, mm%dim
+        ii = batch_ist_idim_to_linear(mm, (/ist, idim/))
+        
+        ! FIXME: this line should instead be assert(mm%dim == ss%dim)!!
+        jdim = min(idim, ss%dim)
+        do jst = 1, ss%nst
+          if(associated(ss%states(jst)%dpsi)) then
+            forall(is = 1:this%np)
+              mm%pack%X(psi)(ii, this%map(is)) = mm%pack%X(psi)(ii, this%map(is)) + factor(jst, ist)*ss%states(jst)%dpsi(is, jdim)
+            end forall
+          else
+            
+#ifdef R_TCOMPLEX
+            forall(is = 1:this%np)
+              mm%pack%X(psi)(ii, this%map(is)) = mm%pack%X(psi)(ii, this%map(is)) + factor(jst, ist)*ss%states(jst)%zpsi(is, jdim)
+            end forall
+#else
+            message(1) = "Internal error: cannot call dsubmesh_batch_add_matrix with complex batch ss"
+            call messages_fatal(1)
+#endif
+            
+          end if
+        end do
+      end do
+    end do
+    !$omp end parallel do
+    
+  end select
+    
   call profiling_count_operations(mm%nst*mm%dim*ss%nst*this%np*(R_ADD + R_MUL))
   
   call profiling_out(prof)
