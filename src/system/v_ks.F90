@@ -36,6 +36,7 @@ module v_ks_oct_m
   use io_function_oct_m
   use lalg_basic_oct_m
   use lasers_oct_m   !GGIL: 02/10/2017
+  use kick_oct_m     !GGIL: 06/02/2018
   use libvdwxc_oct_m
   use magnetic_oct_m
   use mesh_function_oct_m
@@ -1187,7 +1188,8 @@ contains
     CMPLX, pointer :: zpot(:)
     CMPLX :: ztmp
 
-    FLOAT, allocatable :: potx(:), kick(:)
+    FLOAT, allocatable :: potx(:)
+    CMPLX, allocatable :: kick(:)
     integer :: ii
 
     logical :: kick_time = .true.
@@ -1250,7 +1252,7 @@ contains
       !! here only the lasers are included 
       !! the static potentials are included in subroutine hamiltonian_epot_generate (module hamiltonian)
       if( hm%pcm%localf .and. ks%calc%time_present ) then
-        if ( associated(hm%ep%lasers) .and. associated(hm%ep%kick) ) then !< external potential and kick
+        if ( associated(hm%ep%lasers) .and. hm%ep%kick%delta_strength /= M_ZERO ) then !< external potential and kick
           SAFE_ALLOCATE(potx(1:ks%gr%mesh%np_part))
           SAFE_ALLOCATE(kick(1:ks%gr%mesh%np_part)) 
           potx = M_ZERO    
@@ -1260,12 +1262,12 @@ contains
           end do
           if ( kick_time ) then !< kick at first time in propagation
             call kick_function_get(ks%gr%mesh, hm%ep%kick, kick)
-            kick_time == .false.
+            kick_time = .false.
           end if
-          call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_ext = potx, kick = kick, time_present = ks%calc%time_present)
+          call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_ext = potx, kick = REALPART(kick), time_present = ks%calc%time_present)
           SAFE_DEALLOCATE_A(potx)
           SAFE_DEALLOCATE_A(kick)
-        else if ( associated(hm%ep%lasers) .and. .not.associated(hm%ep%kick) ) then !< just external potential
+        else if ( associated(hm%ep%lasers) .and. hm%ep%kick%delta_strength /= M_ZERO ) then !< just external potential
           SAFE_ALLOCATE(potx(1:ks%gr%mesh%np_part))
           potx = M_ZERO    
           do ii = 1, hm%ep%no_lasers        
@@ -1273,14 +1275,14 @@ contains
           end do
           call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_ext = potx, time_present = ks%calc%time_present)
           SAFE_DEALLOCATE_A(potx)
-        else if ( .not.associated(hm%ep%lasers) .and. associated(hm%ep%kick) ) then !< just kick
-          SAFE_ALLOCATE(kick(1:ks%gr%mesh%np_part)) 
+        else if ( .not.associated(hm%ep%lasers) .and. hm%ep%kick%delta_strength /= M_ZERO ) then !< just kick
+          SAFE_ALLOCATE(kick(1:ks%gr%mesh%np_part))
           kick = M_ZERO
           if ( kick_time ) then !< kick at first time in propagation
             call kick_function_get(ks%gr%mesh, hm%ep%kick, kick)
-            kick_time == .false.
+            kick_time = .false.
           end if
-          call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, kick = kick, time_present = ks%calc%time_present)
+          call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, kick = REALPART(kick), time_present = ks%calc%time_present)
           SAFE_DEALLOCATE_A(kick)
         end if
 
