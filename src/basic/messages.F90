@@ -27,7 +27,9 @@ module messages_oct_m
   use string_oct_m
   use unit_oct_m
   use varinfo_oct_m
+#ifdef HAVE_LIBISF
   use yaml_strings, only: operator(+)
+#endif
 
   implicit none
 

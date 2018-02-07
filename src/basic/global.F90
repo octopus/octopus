@@ -40,6 +40,10 @@ module global_oct_m
     optional_default, &
     assert_die,       &
     not_in_openmp
+
+#ifndef HAVE_LIBISF
+  public :: operator(+)
+#endif
   
   integer, public, parameter :: MAX_PATH_LEN=256
 
@@ -140,6 +144,12 @@ module global_oct_m
       integer, intent(in) :: l
     end subroutine assert_die
   end interface
+
+#ifndef HAVE_LIBISF
+  interface operator (+)
+    module procedure cat
+  end interface operator (+)
+#endif
 
 contains
 
@@ -258,6 +268,18 @@ FCFLAGS
 #endif
 
   end function not_in_openmp
+
+  !-----------------------------------------------------------
+#ifndef HAVE_LIBISF
+  function cat(str1, str2)
+    character(len=*), intent(in) :: str1
+    character(len=*), intent(in) :: str2
+
+    character(len=len(str1) + len(str2)) :: cat
+    cat = str1//str2
+    
+  end function cat
+#endif  
 
 end module global_oct_m
 
