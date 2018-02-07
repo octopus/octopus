@@ -141,7 +141,7 @@ module poisson_oct_m
 contains
 
   !-----------------------------------------------------------------
-  subroutine poisson_init(this, der, mc, label, theta, qq, mu, verbose)
+  subroutine poisson_init(this, der, mc, label, theta, qq, mu, verbose, force_serial)
     type(poisson_t),             intent(out) :: this
     type(derivatives_t), target, intent(in)  :: der
     type(multicomm_t),           intent(in)  :: mc
@@ -150,6 +150,7 @@ contains
     FLOAT,             optional, intent(in)  :: qq(:) !< (der%mesh%sb%periodic_dim)
     FLOAT,             optional, intent(in)  :: mu
     logical,           optional, intent(in)  :: verbose
+    logical,           optional, intent(in)  :: force_serial
 
     logical :: need_cube, isf_data_is_parallel
     integer :: default_solver, default_kernel, box(MAX_DIM), fft_type, fft_library
@@ -172,17 +173,21 @@ contains
     this%der => der
 
 #ifdef HAVE_MPI
-    !%Variable ParallelizationPoissonAllNodes
-    !%Type logical
-    !%Default true
-    !%Section Execution::Parallelization
-    !%Description
-    !% When running in parallel, this variable selects whether the
-    !% Poisson solver should divide the work among all nodes or only
-    !% among the parallelization-in-domains groups.
-    !%End
+    if(.not.optional_default(force_serial,.false.)) then
+      !%Variable ParallelizationPoissonAllNodes
+      !%Type logical
+      !%Default true
+      !%Section Execution::Parallelization
+      !%Description
+      !% When running in parallel, this variable selects whether the
+      !% Poisson solver should divide the work among all nodes or only
+      !% among the parallelization-in-domains groups.
+      !%End
 
-    call parse_variable('ParallelizationPoissonAllNodes', .true., this%all_nodes_default)
+      call parse_variable('ParallelizationPoissonAllNodes', .true., this%all_nodes_default)
+    else
+      this%all_nodes_default = .false.
+    end if
 #endif
 
     !%Variable PoissonSolver

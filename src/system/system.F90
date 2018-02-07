@@ -136,7 +136,8 @@ contains
     call v_ks_init(sys%ks, sys%gr, sys%st, sys%geo, sys%mc)
 
     if(sys%ks%theory_level == HARTREE_FOCK .or. output_need_exchange(sys%outp)) then
-      call poisson_init(exchange_psolver, sys%gr%der, sys%mc, theta = sys%st%cmplxscl%theta)
+      call poisson_init(exchange_psolver, sys%gr%der, sys%mc, theta = sys%st%cmplxscl%theta, &
+              force_serial = .true.)
     end if
 
     call profiling_out(prof)

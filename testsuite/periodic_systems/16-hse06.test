@@ -5,6 +5,9 @@ Program    : octopus
 TestGroups : long-run, periodic_systems
 Enabled    : Yes
 
+#We only have two k-points
+Processors : 2
+
 Input      : 16-hse06.01-fftw.inp
 
 match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 8
