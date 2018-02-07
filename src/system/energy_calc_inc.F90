@@ -19,11 +19,10 @@
 
 ! ---------------------------------------------------------
 !> calculates the eigenvalues of the orbitals
-subroutine X(calculate_eigenvalues)(hm, der, st, time)
+subroutine X(calculate_eigenvalues)(hm, der, st)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(inout) :: der
   type(states_t),      intent(inout) :: st
-  FLOAT,   optional,   intent(in)    :: time
 
   R_TYPE, allocatable :: eigen(:, :)
   logical :: cmplxscl
@@ -47,7 +46,7 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time)
   if(cmplxscl) st%zeigenval%Im = M_ZERO
 
   SAFE_ALLOCATE(eigen(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
-  call X(calculate_expectation_values)(hm, der, st, eigen, time = time)
+  call X(calculate_expectation_values)(hm, der, st, eigen)
 
   st%eigenval(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end) = &
     real(eigen(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), REAL_PRECISION)
@@ -64,12 +63,11 @@ subroutine X(calculate_eigenvalues)(hm, der, st, time)
   POP_SUB(X(calculate_eigenvalues))
 end subroutine X(calculate_eigenvalues)
 
-subroutine X(calculate_expectation_values)(hm, der, st, eigen, time, terms)
+subroutine X(calculate_expectation_values)(hm, der, st, eigen, terms)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(inout) :: der
   type(states_t),      intent(inout) :: st
   R_TYPE,              intent(out)   :: eigen(st%st_start:, st%d%kpt%start:) !< (:st%st_end, :st%d%kpt%end)
-  FLOAT,   optional,   intent(in)    :: time
   integer, optional,   intent(in)    :: terms
 
   integer :: ik, minst, maxst, ib
@@ -97,7 +95,7 @@ subroutine X(calculate_expectation_values)(hm, der, st, eigen, time, terms)
         call batch_pack(hpsib, copy = .false.)
       end if
 
-      call X(hamiltonian_apply_batch)(hm, der, st%group%psib(ib, ik), hpsib, ik, time = time, terms = terms)
+      call X(hamiltonian_apply_batch)(hm, der, st%group%psib(ib, ik), hpsib, ik, terms = terms)
       if(st%have_left_states) then
         call X(mesh_batch_dotp_vector)(der%mesh, st%psibL(ib, ik), hpsib, eigen(minst:maxst, ik), cproduct = cmplxscl)
       else

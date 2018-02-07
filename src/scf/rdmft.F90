@@ -36,6 +36,7 @@ module rdmft_oct_m
   use messages_oct_m
   use minimizer_oct_m
   use output_oct_m
+  use output_me_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
@@ -69,7 +70,7 @@ module rdmft_oct_m
     FLOAT    :: mu, occsum, qtot, scale_f, toler, conv_ener, maxFO
     FLOAT, allocatable   :: eone(:), eone_int(:,:), twoint(:), hartree(:,:), exchange(:,:), evalues(:)   
     FLOAT, allocatable   :: vecnat(:,:), Coul(:,:,:), Exch(:,:,:) 
-    FLOAT, allocatable   :: i_index(:), j_index(:), k_index(:), l_index(:) 
+    integer, allocatable :: i_index(:), j_index(:), k_index(:), l_index(:) 
 
     !>shortcuts
     type(states_t),   pointer :: st
@@ -97,9 +98,12 @@ contains
     integer :: iter, icount, ip, ist, iatom, ierr, maxcount
     FLOAT :: energy, energy_dif, energy_old, energy_occ, xpos, xneg, sum_charge, rr, rel_ener
     FLOAT, allocatable :: species_charge_center(:), psi(:, :), stepsize(:)
-    logical :: conv
-    
+    logical :: conv, gs_run_
+    character(len=MAX_PATH_LEN) :: dirname    
+
     PUSH_SUB(scf_rdmft)
+
+    gs_run_ = .true.
 
     if (hm%d%ispin /= 1) then
       call messages_not_implemented("RDMFT exchange function not yet implemented for spin_polarized or spinors")
@@ -227,10 +231,18 @@ contains
           call messages_warning(1)
         end if
       endif
+      ! write output for iterations if requested
+      if(outp%what/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
+        .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
+        write(dirname,'(a,a,i4.4)') trim(outp%iter_dir),"scf.",iter
+        call output_all(outp, gr, geo, st, hm, ks, dirname)
+      end if
+
       if (conv) exit
     end do
 
     if(conv) then 
+      ! output final information
       !if (rdm%do_basis.eqv..false.) then
         !call scf_orb(rdm, gr, geo, st, ks, hm, energy) !NH this call changes the energy again, needs to be replaced
         !write(message(1),'(a,es15.5)')  'The maximum non diagonal element of the matrix F formed by the Lagrange multiplyers is ', &
@@ -240,6 +252,10 @@ contains
       write(message(1),'(a,i3,a)')  'The calculation converged after ',iter,' iterations'
       write(message(2),'(a,es15.5)')  'The total energy is ', units_from_atomic(units_out%energy,energy + hm%ep%eii)
       call messages_info(2)
+      if(gs_run_) then 
+        !call scf_write_static(STATIC_DIR, "info") !NH can we turn this on?
+        call output_all(outp, gr, geo, st, hm, ks, STATIC_DIR)
+      end if
     else
       write(message(1),'(a,i3,a)')  'The calculation did not converge after ', iter, ' iterations '
       write(message(2),'(a,es15.5)') 'Relative energy difference between the last two iterations ', rel_ener
@@ -249,7 +265,6 @@ contains
 
     SAFE_DEALLOCATE_A(stepsize)
 
-    call output_states(st,gr,geo,STATIC_DIR,outp)  
     call rdmft_end()
  
     POP_SUB(scf_rdmft) 
@@ -449,6 +464,7 @@ contains
     st%occ = occin
     
     if((rdm%iter == 1).and. (rdm%do_basis.eqv. .true.))  then 
+      call dstates_me_two_body(gr, st, rdm%n_twoint, rdm%i_index, rdm%j_index, rdm%k_index, rdm%l_index, rdm%twoint)
       call rdm_integrals(rdm,hm,st,gr) 
       call sum_integrals(rdm)
     end if
@@ -658,7 +674,7 @@ contains
         end do
       end do
     end if
-    
+ 
     call lalg_eigensolve(st%nst, FO, rdm%evalues)
     call assign_eigfunctions(st, gr, FO)
     if (rdm%do_basis.eqv..true.) call sum_integrals(rdm) ! to calculate rdm%Coul and rdm%Exch with the new rdm%vecnat 
@@ -912,12 +928,11 @@ contains
     FLOAT, allocatable :: hpsi(:,:), hpsi1(:,:), dpsi(:,:), dpsi2(:,:), fvec(:) 
     FLOAT, allocatable :: g_x(:,:), g_h(:,:), rho(:,:), rho_tot(:), pot(:), fock(:,:,:)
     FLOAT :: dd
-    integer :: ist, kst, ip, iorb, jorb, jst, lst
+    integer :: ist, jst, ip, iorb, jorb
 
     PUSH_SUB(construct_f)
 
     lambda = M_ZERO
-
 
     if (rdm%do_basis.eqv..false.) then 
       SAFE_ALLOCATE(hpsi(1:gr%mesh%np_part,1:st%d%dim))
@@ -941,9 +956,7 @@ contains
       g_x = M_ZERO
       g_h = M_ZERO
     
-        
-
-    !calculate the Lagrange multiplyer lambda matrix on the grid, Eq. (9), Piris and Ugalde, Vol.13, No. 13, J. Comput. Chem.
+      !calculate the Lagrange multiplyer lambda matrix on the grid, Eq. (9), Piris and Ugalde, Vol.13, No. 13, J. Comput. Chem.
       call density_calc(st, gr, rho)
       do ist =1, hm%d%ispin
         rho_tot(:) = rho(:, ist)
@@ -977,7 +990,7 @@ contains
       end do
 
     else ! calculate the same lambda matrix on the basis
-      call sum_integrals(rdm)
+      !call sum_integrals(rdm)
       SAFE_ALLOCATE(fvec(1:st%nst))
       SAFE_ALLOCATE(Fock(1:st%nst, 1:st%nst, 1:st%nst))
       Fock = M_ZERO
@@ -995,7 +1008,6 @@ contains
           enddo
         enddo
       enddo
-      
 
       do jorb = 1, st%nst
         do ist = 1, st%nst
@@ -1099,21 +1111,17 @@ contains
     V_h = M_ZERO
     V_x = M_ZERO
      
-    !Calculate hartree contribution 
-    do ist = 1, rdm%st%nst
-      do jst = 1, rdm%st%nst
-        V_h(ist) = V_h(ist) + occ(jst)*rdm%hartree(ist, jst)
-      end do
-    end do
 
-    !Calculate exchange contribution
+    !Calculate hartree and exchange contribution 
     !This is only for the Mueller functional and has to be changed
     do ist = 1, rdm%st%nst
       do jst = 1, rdm%st%nst
-        V_x(ist) = V_x(ist) - sqrt(occ(jst))*rdm%exchange(ist, jst)
+        V_h(ist) = V_h(ist) + occ(jst)*rdm%hartree(ist, jst)
+        V_x(ist) = V_x(ist) - sqrt(occ(jst))*rdm%exchange(ist, jst) 
       end do
       V_x(ist) = V_x(ist)*M_HALF/max(sqrt(occ(ist)), CNST(1.0e-16))
     end do
+
 
     !Calculate the energy derivative with respect to the occupation numbers
     if (present(dE_dn)) then
@@ -1126,29 +1134,7 @@ contains
                       + M_HALF*occ(ist)*V_h(ist) & 
                       + occ(ist)*V_x(ist)
     end do
-    
-    energy=M_ZERO  
-    do ist = 1, rdm%st%nst
-      energy = energy + occ(ist)*rdm%eone(ist) 
-    end do
- 
-    energy=M_ZERO  
-    do ist = 1, rdm%st%nst
-      energy = energy +   M_HALF*occ(ist)*V_h(ist) 
-    end do
- 
-    energy=M_ZERO  
-    do ist = 1, rdm%st%nst
-      energy = energy +   occ(ist)*V_x(ist) 
-    end do
- 
-    !Total energy calculation without nuclei interaction  
-    energy=M_ZERO  
-    do ist = 1, rdm%st%nst
-      energy = energy + occ(ist)*rdm%eone(ist) &
-                      + M_HALF*occ(ist)*V_h(ist) & 
-                      + occ(ist)*V_x(ist)
-    end do
+
     SAFE_DEALLOCATE_A(V_h)
     SAFE_DEALLOCATE_A(V_x)
     
@@ -1169,7 +1155,7 @@ contains
     FLOAT, allocatable :: lxc(:, :, :) !required input variable for doep_x, not used otherwise, might get used
     FLOAT              :: ex !required input variable for doep_x, not used otherwise, might get used
     FLOAT              :: dd
-
+    
     integer :: ist, jst, nspin_, is, jdm, iorb, jorb
 
     PUSH_SUB(rdm_derivatives) 
@@ -1252,7 +1238,6 @@ contains
           rdm%hartree(jorb, iorb) = rdm%hartree(iorb, jorb); rdm%exchange(jorb, iorb) = rdm%exchange(iorb, jorb)
         end do
       end do
-
     end if
      
     POP_SUB(rdm_derivatives) 
@@ -1260,47 +1245,26 @@ contains
   end subroutine rdm_derivatives
   
   ! --------------------------------------------
-  !calculates the one and two electron integrals in the basis of the initial orbitals
+  !calculates the one electron integrals in the basis of the initial orbitals
   subroutine rdm_integrals(rdm, hm, st, gr)
     type(rdm_t),          intent(inout) :: rdm
     type(hamiltonian_t),  intent(in)    :: hm 
     type(states_t),       intent(in)    :: st 
     type(grid_t),         intent(inout) :: gr
     
-    FLOAT, allocatable :: hpsi(:,:), rho(:), rho1(:), rho2(:), rho3(:)
+    FLOAT, allocatable :: hpsi(:,:)
     FLOAT, allocatable :: dpsi(:,:), dpsi2(:,:)
-    FLOAT, allocatable :: v_ij(:,:,:)
-    FLOAT, allocatable :: lxc(:, :, :) !required input variable for doep_x, not used otherwise, might get used
-    FLOAT              :: ex !required input variable for doep_x, not used otherwise, might get used
-    integer :: ist, jst, kst, lst, nspin_, is, jdm,  icount
+    integer :: ist, jst, nspin_ 
 
     PUSH_SUB(rdm_integrals)
  
     nspin_ = min(st%d%nspin, 2)
     
-    SAFE_ALLOCATE(rho(1:gr%mesh%np))
-    SAFE_ALLOCATE(rho1(1:gr%mesh%np))
-    SAFE_ALLOCATE(rho2(1:gr%mesh%np))
-    SAFE_ALLOCATE(rho3(1:gr%mesh%np))
     SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(dpsi2(1:gr%mesh%np_part, 1:st%d%dim))
-    SAFE_ALLOCATE(v_ij(1:gr%der%mesh%np, 1:st%nst, 1:st%nst))
-    SAFE_ALLOCATE(lxc(1:gr%mesh%np, st%st_start:st%st_end, 1:nspin_))
     SAFE_ALLOCATE(hpsi(1:gr%mesh%np_part,1:st%d%dim))
-    
-    
-    lxc = M_ZERO
-    v_ij = M_ZERO
-    !ex = M_ZERO
-    
-    do is = 1, nspin_
-      do jdm = 1, st%d%dim
-        call doep_x(gr%der, st, is, jdm, lxc, ex, 1.d0, v_ij)
-      end do
-    end do
 
-
-  !calculate integrals of the one-electron energy term with respect to the initial orbital basis
+    !calculate integrals of the one-electron energy term with respect to the initial orbital basis
     do ist = 1, st%nst
       call states_get_state(st, gr%mesh, ist, 1, dpsi)
       do jst = ist, st%nst
@@ -1312,122 +1276,10 @@ contains
       end do
     end do
 
-    SAFE_DEALLOCATE_A(hpsi)
-    
-    
-    icount = 1
-    do ist = 1, st%nst 
-       call states_get_state(st, gr%mesh, ist, 1, dpsi)
-       rho1(1:gr%mesh%np) = dpsi(1:gr%mesh%np, 1)**2
-       rdm%twoint(icount) = dmf_dotp(gr%mesh, rho1, v_ij(:,ist, ist))  !<ii|ii>
-       rdm%i_index(icount)=ist
-       rdm%j_index(icount)=ist
-       rdm%k_index(icount)=ist
-       rdm%l_index(icount)=ist
-       icount = icount + 1 
-       do jst = ist + 1, st%nst  
-         call states_get_state(st, gr%mesh, jst, 1, dpsi2)
-         rdm%twoint(icount) = dmf_dotp(gr%mesh, rho1, v_ij(:,jst, jst))  !<jj|ii>
-         rdm%i_index(icount)=jst
-         rdm%j_index(icount)=jst
-         rdm%k_index(icount)=ist
-         rdm%l_index(icount)=ist
-         icount = icount + 1  
-         rho2(1:gr%mesh%np) = dpsi2(1:gr%mesh%np, 1)*dpsi(1:gr%mesh%np, 1)
-         rdm%twoint(icount) = dmf_dotp(gr%mesh, rho2, v_ij(:,jst, jst))  !<jj|ij>
-         rdm%i_index(icount)=jst
-         rdm%j_index(icount)=jst
-         rdm%k_index(icount)=ist
-         rdm%l_index(icount)=jst
-         icount = icount + 1  
-         rdm%twoint(icount) = dmf_dotp(gr%mesh, rho1, v_ij(:,ist, jst))  !<ii|ij>
-         rdm%i_index(icount)=ist
-         rdm%j_index(icount)=ist
-         rdm%k_index(icount)=ist
-         rdm%l_index(icount)=jst
-         icount = icount + 1  
-         rdm%twoint(icount) = dmf_dotp(gr%mesh, rho2, v_ij(:,ist, jst))  !<ij|ij>
-         rdm%i_index(icount)=ist
-         rdm%j_index(icount)=jst
-         rdm%k_index(icount)=ist
-         rdm%l_index(icount)=jst
-         icount = icount + 1  
-         do kst = jst + 1, st%nst 
-           call states_get_state(st, gr%mesh, kst, 1, dpsi2)
-           rdm%twoint(icount) = dmf_dotp(gr%mesh, rho1, v_ij(:,jst, kst)) !<ii|jk>
-           rdm%i_index(icount)=ist
-           rdm%j_index(icount)=ist
-           rdm%k_index(icount)=jst
-           rdm%l_index(icount)=kst
-           icount = icount + 1
-           rho3(1:gr%mesh%np) = dpsi2(1:gr%mesh%np, 1)*dpsi(1:gr%mesh%np, 1)
-           rdm%twoint(icount) = dmf_dotp(gr%mesh, rho3, v_ij(:,jst, jst)) !<jj|ik>
-           rdm%i_index(icount)=jst
-           rdm%j_index(icount)=jst
-           rdm%k_index(icount)=ist
-           rdm%l_index(icount)=kst
-           icount = icount + 1
-           rdm%twoint(icount) = dmf_dotp(gr%mesh, rho2, v_ij(:,kst, kst)) !<kk|ij> 
-           rdm%i_index(icount)=kst
-           rdm%j_index(icount)=kst
-           rdm%k_index(icount)=ist
-           rdm%l_index(icount)=jst
-           icount = icount + 1
-           rdm%twoint(icount) = dmf_dotp(gr%mesh, rho2, v_ij(:,ist, kst))  !<ij|ik>
-           rdm%i_index(icount)=ist
-           rdm%j_index(icount)=jst
-           rdm%k_index(icount)=ist
-           rdm%l_index(icount)=kst
-           icount = icount + 1
-           rdm%twoint(icount) = dmf_dotp(gr%mesh, rho2, v_ij(:,jst, kst))  !<ij|jk>
-           rdm%i_index(icount)=ist
-           rdm%j_index(icount)=jst
-           rdm%k_index(icount)=jst
-           rdm%l_index(icount)=kst
-           icount = icount + 1
-           rdm%twoint(icount) = dmf_dotp(gr%mesh, rho3, v_ij(:,jst, kst))  !<ik|jk>
-           rdm%i_index(icount)=ist
-           rdm%j_index(icount)=kst
-           rdm%k_index(icount)=jst
-           rdm%l_index(icount)=kst
-           icount = icount + 1
-           do lst = kst + 1, st%nst
-             call states_get_state(st, gr%mesh, lst, 1, dpsi2)
-             rdm%twoint(icount) = dmf_dotp(gr%mesh, rho2, v_ij(:,kst, lst))  !<ij|kl>
-             rdm%i_index(icount)=ist
-             rdm%j_index(icount)=jst
-             rdm%k_index(icount)=kst
-             rdm%l_index(icount)=lst
-             icount = icount + 1
-             rdm%twoint(icount) = dmf_dotp(gr%mesh, rho3, v_ij(:,jst, lst))  !<ik|jl>
-             rdm%i_index(icount)=ist
-             rdm%j_index(icount)=kst
-             rdm%k_index(icount)=jst
-             rdm%l_index(icount)=lst
-             icount = icount + 1
-             rho3(1:gr%mesh%np) = dpsi2(1:gr%mesh%np, 1)*dpsi(1:gr%mesh%np, 1)
-             rdm%twoint(icount) = dmf_dotp(gr%mesh, rho3, v_ij(:,jst, kst))  !<il|jk>
-             rdm%i_index(icount)=ist
-             rdm%j_index(icount)=lst
-             rdm%k_index(icount)=jst
-             rdm%l_index(icount)=kst
-             icount = icount + 1
-          end do
-        end do
-      end do
-    end do
-
- 
-    SAFE_DEALLOCATE_A(rho)
-    SAFE_DEALLOCATE_A(rho1)
-    SAFE_DEALLOCATE_A(rho2)
-    SAFE_DEALLOCATE_A(rho3)
+    SAFE_DEALLOCATE_A(hpsi)    
     SAFE_DEALLOCATE_A(dpsi)
     SAFE_DEALLOCATE_A(dpsi2)
-    SAFE_DEALLOCATE_A(lxc)
-    SAFE_DEALLOCATE_A(v_ij)
     
-
     POP_SUB(rdm_integrals) 
 
   end subroutine rdm_integrals
@@ -1439,9 +1291,8 @@ contains
 
     integer :: ist, jst, kst, lst, iorb, icount
     logical :: inv_pairs
-    FLOAT :: two_int, wij, wkl
+    FLOAT :: two_int, wij, wik, wil, wjk, wjl, wkl
     FLOAT, allocatable                :: DM(:,:,:)
-    
 
     PUSH_SUB(sum_integrals)
 
@@ -1460,7 +1311,6 @@ contains
       enddo
     enddo
 
- 
     do icount = 1, rdm%n_twoint
 
       ist = rdm%i_index(icount) 
@@ -1482,58 +1332,63 @@ contains
         wkl = 2.d0
       endif
 
+      if(ist == kst .and. jst /= lst) then
+        wik = M_TWO
+      else
+        wik = M_ONE
+      endif
+      if(ist == lst .and. jst /= kst) then
+        wil = M_TWO
+      else
+        wil = M_ONE
+      endif
+      if(jst == kst .and. ist /= lst) then
+        wjk = M_TWO
+      else
+        wjk = M_ONE
+      endif
+      if(jst == lst .and. ist /= kst) then
+        wjl = M_TWO
+      else
+        wjl = M_ONE
+      endif
+
       inv_pairs = (ist /= kst .or. jst /= lst)
 
       do iorb = 1, rdm%st%nst 
-         
+
         !the Hartree terms
         rdm%Coul(ist, jst, iorb) = rdm%Coul(ist, jst, iorb) + DM(kst, lst, iorb)*wkl*two_int
-
         if(inv_pairs) rdm%Coul(kst, lst, iorb) = rdm%Coul(kst, lst, iorb) + DM(ist, jst, iorb)*wij*two_int
+
         !the exchange terms
-        if(ist >= kst) rdm%Exch(ist, kst, iorb) = rdm%Exch(ist, kst, iorb) + two_int*DM(jst, lst, iorb)
-
-        if(inv_pairs .and. kst >= ist)  rdm%Exch(kst, ist, iorb) = rdm%Exch(kst, ist, iorb) + two_int*DM(jst, lst, iorb)
-     
+        !weights are only included if they can differ from one
+        rdm%Exch(ist, kst, iorb) = rdm%Exch(ist, kst, iorb) + two_int*DM(jst, lst, iorb)*wik
+        if (kst /= lst) then 
+          rdm%Exch(ist, lst, iorb) = rdm%Exch(ist, lst, iorb) + two_int*DM(jst, kst, iorb)*wil
+        endif
         if(ist /= jst) then
+          if(jst >= kst) then
+            rdm%Exch(jst, kst, iorb) = rdm%Exch(jst, kst, iorb) + two_int*DM(ist, lst, iorb)*wjk
+          else            
+            if(inv_pairs) rdm%Exch(kst, jst, iorb) = rdm%Exch(kst, jst, iorb) + two_int*DM(ist, lst, iorb)
+          endif
+        endif        
+        if(ist /=jst .and. kst /= lst) then
+          if(jst >= lst) then
+            rdm%Exch(jst, lst, iorb) = rdm%Exch(jst, lst, iorb) + two_int*DM(ist, kst, iorb)*wjl
+          else
+            if(inv_pairs) rdm%Exch(lst, jst, iorb) = rdm%Exch(lst, jst, iorb) + two_int*DM(ist, kst, iorb)
+          endif
+        endif
 
-          if(jst >= kst) rdm%Exch(jst, kst, iorb) = rdm%Exch(jst, kst, iorb) + two_int*DM(ist, lst, iorb)
-
-          if(inv_pairs .and. kst >= jst) rdm%Exch(kst, jst, iorb) = rdm%Exch(kst, jst, iorb) + two_int*DM(ist, lst, iorb)
-
-          if(kst /= lst) then
-
-            if(jst >= lst) rdm%Exch(jst, lst, iorb) = rdm%Exch(jst, lst, iorb) + two_int * DM(ist, kst, iorb)
-
-            if(inv_pairs .and. lst >= jst) rdm%Exch(lst, jst, iorb) = rdm%Exch(lst, jst, iorb) + two_int*DM(ist, kst, iorb)
-
-          endif !(kst/=lst)
-
-        endif !(ist/=jst)
-
-        if(kst /= lst) then
-
-          if(ist >= lst) rdm%Exch(ist, lst, iorb) = rdm%Exch(ist, lst, iorb) + two_int*DM(jst, kst, iorb)
-
-          if(inv_pairs .and. lst >= ist) rdm%Exch(lst, ist, iorb) = rdm%Exch(lst, ist, iorb) + two_int*DM(jst, kst, iorb)
-
-        endif !kst/=lst
       end do !iorb
     end do !icount
-    
-    
-    do iorb =1, rdm%st%nst
-      do ist = 1, rdm%st%nst
-        do jst = ist+1, rdm%st%nst
-          rdm%Coul(jst, ist, iorb) = rdm%Coul(ist, jst, iorb)
-        end do
-      end do
-    end do
-
    
     do iorb =1, rdm%st%nst
       do ist = 1, rdm%st%nst
-        do jst = 1, ist
+        do jst = 1, ist-1
+          rdm%Coul(jst, ist, iorb) = rdm%Coul(ist, jst, iorb)
           rdm%Exch(jst, ist, iorb) = rdm%Exch(ist, jst, iorb)
         end do
       end do

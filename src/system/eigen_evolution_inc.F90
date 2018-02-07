@@ -121,7 +121,7 @@ contains
 #else
     zpsi => psi
 #endif
-    call exponential_apply(te, gr%der, hm, zpsi, ist, ik, -tau, M_ZERO, order = order, imag_time = .true.)
+    call exponential_apply(te, gr%der, hm, zpsi, ist, ik, -tau, order = order, imag_time = .true.)
 #if defined(R_TREAL)
     psi(1:gr%mesh%np, 1:st%d%dim) = R_TOTYPE(zpsi(1:gr%mesh%np, 1:st%d%dim))
     SAFE_DEALLOCATE_P(zpsi)

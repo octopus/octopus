@@ -309,7 +309,8 @@ contains
     !In the case of a kick, the induced field could not be higher than the initial kick
     do idim = 1, this%ndim
       if(this%vecpot_kick(idim) /= M_ZERO .and.  &
-         abs(this%vecpot(idim))> abs(this%vecpot_kick(idim))*1.01 ) then
+         abs(this%vecpot(idim))> abs(this%vecpot_kick(idim))*1.01 .and. &
+          .not. this%kicktime > M_ZERO ) then
         write(message(1),'(a)') 'It seems that the gauge-field is diverging.'
         write(message(2),'(a)') 'You should probably check the propagation parameters.'
         call messages_fatal(2)
