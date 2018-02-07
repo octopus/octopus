@@ -144,8 +144,7 @@ contains
         call pcm_elect_energy(hm%geo, hm%pcm, hm%energy%int_ee_pcm, hm%energy%int_en_pcm, &
                                               hm%energy%int_ne_pcm, hm%energy%int_nn_pcm, &
                                               E_int_e_ext = hm%energy%int_e_ext_pcm,      &
-                                              E_int_n_ext = hm%energy%int_n_ext_pcm,      &
-                                              E_int_ext_ext = hm%energy%int_ext_ext_pcm   )
+                                              E_int_n_ext = hm%energy%int_n_ext_pcm,      )
       else
         call pcm_elect_energy(hm%geo, hm%pcm, hm%energy%int_ee_pcm, hm%energy%int_en_pcm, &
                                               hm%energy%int_ne_pcm, hm%energy%int_nn_pcm  )

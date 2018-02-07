@@ -312,6 +312,8 @@ contains
         forall(ip = 1:gr%mesh%np)
           ep%v_static(ip) = sum(gr%mesh%x(ip, gr%sb%periodic_dim + 1:gr%sb%dim) * ep%E_field(gr%sb%periodic_dim + 1:gr%sb%dim))
         end forall
+        ! The following is needed to make interpolations.
+        ! It is used by PCM.
         SAFE_ALLOCATE(ep%v_ext(1:gr%mesh%np_part))
         forall(ip = 1:gr%mesh%np_part)
           ep%v_ext(ip) = sum(gr%mesh%x(ip, gr%sb%periodic_dim + 1:gr%sb%dim) * ep%E_field(gr%sb%periodic_dim + 1:gr%sb%dim))

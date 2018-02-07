@@ -720,13 +720,13 @@ contains
         forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
         !> Adds PCM contributions
         if (this%pcm%run_pcm) then
-          if (this%pcm%solute) then !GGIL: 23/10/2017
+          if (this%pcm%solute) then
             forall (ip = 1:mesh%np)  
               this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
                 this%pcm%v_e_rs(ip) + this%pcm%v_n_rs(ip)
             end forall
           end if
-          if (this%pcm%localf) then !GGIL: 23/10/2017
+          if (this%pcm%localf) then
             forall (ip = 1:mesh%np)  
               this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
                 this%pcm%v_ext_rs(ip)
@@ -927,17 +927,14 @@ contains
     if (this%pcm%run_pcm) then
      !> Generates the real-space PCM potential due to nuclei which do not change
      !! during the SCF calculation.
-     call pcm_calc_pot_rs(this%pcm, gr%mesh, geo = geo)
+     if (this%pcm%solute) &
+       call pcm_calc_pot_rs(this%pcm, gr%mesh, geo = geo)
 
-      !> GGIL: 20/10/2017 - local field effects within PCM
-      ! due to electrostatic potential (if they were)
-      ! here only the static potentials are included
-      ! the laser is included in subroutine v_ks_hartree (module v_ks) 
-      ! still missing the kick
-      ! interpolation is needed, hence gr%mesh%np_part -> 1:gr%mesh%np
+      !> Local field effects due to static electrostatic potentials (if they were).
+      !! The laser and the kick are included in subroutine v_ks_hartree (module v_ks).
+      !  Interpolation is needed, hence gr%mesh%np_part -> 1:gr%mesh%np
       if( this%pcm%localf .and. associated(this%ep%v_static)) &
         call pcm_calc_pot_rs(this%pcm, gr%mesh, v_ext = this%ep%v_ext(1:gr%mesh%np_part))
-        !call pcm_calc_pot_rs(this%pcm, gr%mesh, v_ext = this%ep%v_static )
 
     end if
 

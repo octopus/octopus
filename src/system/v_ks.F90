@@ -32,11 +32,11 @@ module v_ks_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
+  use kick_oct_m
   use index_oct_m
   use io_function_oct_m
   use lalg_basic_oct_m
-  use lasers_oct_m   !GGIL: 02/10/2017
-  use kick_oct_m     !GGIL: 06/02/2018
+  use lasers_oct_m
   use libvdwxc_oct_m
   use magnetic_oct_m
   use mesh_function_oct_m
@@ -1239,18 +1239,16 @@ contains
     end if
 
 
-    !GGIL: 13/04/2017 - including time-dependent flag
     !> PCM reaction field due to the electronic density
     if (hm%pcm%run_pcm .and. pcm_update(hm%pcm,hm%current_time)) then
 
       !> Generates the real-space PCM potential due to electrons during the SCF calculation.
-      call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_h = pot, time_present = ks%calc%time_present)
+      if (this%pcm%solute) &
+        call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_h = pot, time_present = ks%calc%time_present)
 
-      !> GGIL: 02/10/2017 - local field effects within PCM
-      !! electrostatic potential from laser (if they were)
-      !! valid only in the long-wavelength limit
-      !! here only the lasers are included 
-      !! the static potentials are included in subroutine hamiltonian_epot_generate (module hamiltonian)
+      !> Local field effects due to the applied electrostatic potential representing the laser and the kick (if they were).
+      !! For the laser, the latter is only valid in the long-wavelength limit.
+      !! Static potentials are included in subroutine hamiltonian_epot_generate (module hamiltonian).
       if( hm%pcm%localf .and. ks%calc%time_present ) then
         if ( associated(hm%ep%lasers) .and. hm%ep%kick%delta_strength /= M_ZERO ) then !< external potential and kick
           SAFE_ALLOCATE(potx(1:ks%gr%mesh%np_part))

@@ -114,7 +114,6 @@ module pcm_oct_m
     FLOAT, allocatable               :: v_n(:)        !< Nuclear potential at each tessera
     FLOAT, allocatable               :: v_e_rs(:)     !< PCM potential in real-space produced by q_e(:) 
     FLOAT, allocatable               :: v_n_rs(:)     !< PCM potential in real-space produced by q_n(:)
-    ! BEGIN -GGIL: 19/10/2017- Local field effects
     FLOAT, allocatable               :: q_ext(:)    !< polarization charges due to an ext. pot.       
     FLOAT, allocatable               :: q_ext_in(:) !< inertial polarization charges due to an ext. pot.
     FLOAT, allocatable               :: rho_ext(:)  !< polarization density due to an ext. pot.        
@@ -123,7 +122,6 @@ module pcm_oct_m
     FLOAT, allocatable               :: v_ext(:)    !< external potential at each tessera
     FLOAT, allocatable               :: v_kick(:)   !< kick     potential at each tessera
     FLOAT, allocatable               :: v_ext_rs(:) !< PCM potential in real-space produced by q_ext(:) 
-    ! END -GGIL: 19/10/2017- Local field effects
 !     FLOAT, allocatable               :: arg_li(:,:)   !< used in the trilinear interpolation to estimate
                                                       !< the Hartree potential at the tesserae 
     FLOAT                            :: epsilon_0     !< Static dielectric constant of the solvent 
@@ -1338,7 +1336,7 @@ contains
   !> Calculates the solute-solvent electrostatic interaction energy
   !! E_M-solv = \sum{ik=1}^n_tess { [VHartree(ik) + Vnuclei(ik)]*[q_e(ik) + q_n(ik)] }
   !!            (if external potential)                                   + q_ext(ik)   
-  subroutine pcm_elect_energy(geo, pcm, E_int_ee, E_int_en, E_int_ne, E_int_nn, E_int_e_ext, E_int_n_ext, E_int_ext_ext)
+  subroutine pcm_elect_energy(geo, pcm, E_int_ee, E_int_en, E_int_ne, E_int_nn, E_int_e_ext, E_int_n_ext)
     type(geometry_t), intent(in)    :: geo
     type(pcm_t),      intent(in)    :: pcm
     FLOAT,            intent(out)   :: E_int_ee 
@@ -1346,8 +1344,7 @@ contains
     FLOAT,            intent(out)   :: E_int_ne 
     FLOAT,            intent(out)   :: E_int_nn
     FLOAT, optional,  intent(out)   :: E_int_e_ext
-    FLOAT, optional,  intent(out)   :: E_int_n_ext
-    FLOAT, optional,  intent(out)   :: E_int_ext_ext 
+    FLOAT, optional,  intent(out)   :: E_int_n_ext 
 
     FLOAT   :: diff(1:pcm_dim_space)
     FLOAT   :: dist, z_ia
@@ -1362,16 +1359,13 @@ contains
     E_int_nn = M_ZERO
     
     if ( pcm%localf .and. ( (.not.present(E_int_e_ext)) .or. &
-                            (.not.present(E_int_n_ext)) .or. &
-                            (.not.present(E_int_ext_ext))    ) ) then
+                            (.not.present(E_int_n_ext))      ) ) then
       message(1) = "pcm_elect_energy: There are lacking terms in subroutine call."
       call messages_fatal(1)
     else if ( pcm%localf .and. ( present(E_int_e_ext) .and. &
-                                 present(E_int_n_ext) .and. &
-                                 present(E_int_ext_ext)    ) ) then
+                                 present(E_int_n_ext)       ) ) then
       E_int_e_ext = M_ZERO
       E_int_n_ext = M_ZERO
-      E_int_ext_ext = M_ZERO
     end if
 
     diff = M_ZERO
@@ -1380,10 +1374,8 @@ contains
 
       E_int_ee = E_int_ee + pcm%v_e(ik)*pcm%q_e(ik)
       E_int_en = E_int_en + pcm%v_e(ik)*pcm%q_n(ik)
-      if (pcm%localf) then
+      if (pcm%localf) &
         E_int_e_ext = E_int_e_ext + pcm%v_e(ik)*pcm%q_ext(ik)
-        E_int_ext_ext = E_int_ext_ext + pcm%v_ext(ik)*pcm%q_ext(ik)
-      end if
 
       do ia = 1, geo%natoms
 
@@ -1405,8 +1397,7 @@ contains
     E_int_en = M_HALF*E_int_en
     E_int_ne = M_HALF*E_int_ne
     E_int_nn = M_HALF*E_int_nn
-    if (pcm%localf) E_int_ext_ext = M_HALF*E_int_ext_ext
-    ! GGIL: E_int_e_ext and E_int_n_ext do not need M_HALF factor
+    ! E_int_e_ext and E_int_n_ext do not need 1/2 factor
 
 ! print results of the iteration in pcm_info file
 
@@ -1427,8 +1418,7 @@ contains
                                                                   E_int_nn +  &
                                                                   E_int_ne +  &
                                                                E_int_e_ext +  &
-                                                               E_int_n_ext +  &
-                                                             E_int_ext_ext ), &
+                                                               E_int_n_ext ), &
                        ( pcm%epsilon_0 / (pcm%epsilon_0 - M_ONE) ) * pcm%qtot_e_in + &
  ( pcm%epsilon_infty / (pcm%epsilon_infty - M_ONE) ) * (pcm%qtot_e - pcm%qtot_e_in), &
                                                                    pcm%deltaQ_e, &

@@ -48,11 +48,8 @@ module energy_oct_m
     FLOAT :: int_en_pcm  !< 1/2 [v_Hartree]*[q_pcm_n] 
     FLOAT :: int_ne_pcm  !< 1/2 [v_n]*[q_pcm_e] 
     FLOAT :: int_nn_pcm  !< 1/2 [v_n]*[q_pcm_n]
-    !BEGIN - GGIL: 25/10/2017 - local field effects
-    FLOAT :: int_e_ext_pcm  !< 1/2 [v_Hartree]*[q_pcm_ext]
-    FLOAT :: int_n_ext_pcm  !< 1/2 [v_n]*[q_pcm_ext]
-    FLOAT :: int_ext_ext_pcm  !< 1/2 [v_ext]*[q_pcm_ext]
-    !END   - GGIL: 25/10/2017 - local field effects
+    FLOAT :: int_e_ext_pcm  !< [v_Hartree]*[q_pcm_ext]
+    FLOAT :: int_n_ext_pcm  !< [v_n]*[q_pcm_ext]
     FLOAT :: pcm_corr    !< Int[n (v_e_rs + v_n_rs)]
     FLOAT :: kinetic     !< Kinetic energy of the non-interacting (KS) system of electrons
     FLOAT :: extern      !< External     V = <Phi|V|Phi> = Int[n v] (if no non-local pseudos exist)
