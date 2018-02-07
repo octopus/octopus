@@ -1262,7 +1262,7 @@ contains
             call kick_function_get(ks%gr%mesh, hm%ep%kick, kick)
             kick_time = .false.
           end if
-          call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_ext = potx, kick = REALPART(kick), time_present = ks%calc%time_present)
+          call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_ext = potx, kick = DREAL(kick), time_present = ks%calc%time_present)
           SAFE_DEALLOCATE_A(potx)
           SAFE_DEALLOCATE_A(kick)
         else if ( associated(hm%ep%lasers) .and. hm%ep%kick%delta_strength /= M_ZERO ) then !< just external potential
@@ -1280,15 +1280,13 @@ contains
             call kick_function_get(ks%gr%mesh, hm%ep%kick, kick)
             kick_time = .false.
           end if
-          call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, kick = REALPART(kick), time_present = ks%calc%time_present)
+          call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, kick = DREAL(kick), time_present = ks%calc%time_present)
           SAFE_DEALLOCATE_A(kick)
         end if
 
         ! Calculating the PCM term renormalizing the sum of the single-particle energies
         ! to keep the idea of pcm_corr... but it will be added later on
         hm%energy%pcm_corr = dmf_dotp( ks%gr%fine%mesh, ks%calc%total_density, hm%pcm%v_e_rs + hm%pcm%v_n_rs + hm%pcm%v_ext_rs )
-        !write(*,*) "electrons int. w/ cavity field", dmf_dotp( ks%gr%fine%mesh, ks%calc%total_density, hm%pcm%v_ext_rs )
-        write(*,*) "electrons int. w/ elec. react. field", dmf_dotp( ks%gr%fine%mesh, ks%calc%total_density, hm%pcm%v_e_rs )
       else
         ! Calculating the PCM term renormalizing the sum of the single-particle energies
         hm%energy%pcm_corr = dmf_dotp( ks%gr%fine%mesh, ks%calc%total_density, hm%pcm%v_e_rs + hm%pcm%v_n_rs )
