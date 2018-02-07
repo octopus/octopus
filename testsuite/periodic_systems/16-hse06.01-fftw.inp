@@ -1,0 +1,49 @@
+CalculationMode = gs
+ExperimentalFeatures = yes
+FromScratch = yes
+
+PeriodicDimensions = 3
+BoxShape = parallelepiped
+
+ParKPoints = auto
+ParDomains =  no 
+
+a = 10.26120
+
+Spacing = 0.5
+
+%LatticeParameters
+  a | a | a
+%
+
+%LatticeVectors
+ 0.  | 0.5 | 0.5
+ 0.5 | 0.  | 0.5
+ 0.5 | 0.5 | 0.0
+%
+
+%ReducedCoordinates
+ "Si" |   0.0    | 0.0     | 0.0 
+ "Si" |   1/4    | 1/4     | 1/4 
+%
+
+nk = 2
+%KpointsGrid
+ nk | nk | nk
+%
+nq = 1
+%QPointsGrid
+ nq | nq | nq
+%
+
+KPointsUseSymmetries = no
+
+LCAOStart = lcao_simple
+ExtraStates = 1
+
+XCFunctional = hyb_gga_xc_hse06
+TheoryLevel = hartree_fock
+
+Output = dos
+OutputFormat = xyz
+
