@@ -1243,7 +1243,7 @@ contains
     if (hm%pcm%run_pcm .and. pcm_update(hm%pcm,hm%current_time)) then
 
       !> Generates the real-space PCM potential due to electrons during the SCF calculation.
-      if (this%pcm%solute) &
+      if (hm%pcm%solute) &
         call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_h = pot, time_present = ks%calc%time_present)
 
       !> Local field effects due to the applied electrostatic potential representing the laser and the kick (if they were).
