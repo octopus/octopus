@@ -100,6 +100,7 @@ endif
 
 if COMPILE_YAML
   FCFLAGS_MODS += @F90_MODULE_FLAG@$(top_builddir)/external_libs/yaml-0.1.4/include/
+  FCFLAGS_MODS += @F90_MODULE_FLAG@$(top_builddir)/external_libs/yaml-0.1.4/src/
 endif
 
 # These must be arranged so if LIB1 depends on LIB2, LIB1 must occur before LIB2.

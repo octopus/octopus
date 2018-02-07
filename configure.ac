@@ -24,7 +24,7 @@ AC_CONFIG_SRCDIR([src/basic/global.F90])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE
 
-AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_HEADERS([config.h external_libs/yaml-0.1.4/config.h])
 
 # Installation prefix by default
 AC_PREFIX_DEFAULT([/usr/local])

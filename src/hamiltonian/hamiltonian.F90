@@ -31,6 +31,7 @@ module hamiltonian_oct_m
   use comm_oct_m
   use derivatives_oct_m
   use energy_oct_m
+  use exchange_operator_oct_m
   use hamiltonian_base_oct_m
   use epot_oct_m
   use gauge_field_oct_m
@@ -57,14 +58,12 @@ module hamiltonian_oct_m
   use projector_oct_m
   use pcm_oct_m
   use restart_oct_m
-  use scdm_oct_m
   use scissor_oct_m
   use simul_box_oct_m
   use smear_oct_m
   use species_oct_m
   use states_oct_m
   use states_dim_oct_m
-  use states_parallel_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -103,10 +102,6 @@ module hamiltonian_oct_m
     hamiltonian_update,              &
     hamiltonian_get_time,            &
     hamiltonian_apply_packed,        &
-    dexchange_operator_single,       &
-    zexchange_operator_single,       &
-    dscdm_exchange_operator,         &
-    zscdm_exchange_operator,         &
     zhamiltonian_dervexternal,       &
     zhamiltonian_apply_atom,         &
     hamiltonian_dump_vhxc,           &
@@ -134,10 +129,8 @@ module hamiltonian_oct_m
     FLOAT, pointer :: Imvtau(:,:)   !< Derivative of e_XC w.r.t. tau
 
     type(geometry_t), pointer :: geo
-    FLOAT :: exx_coef !< how much of EXX to mix
-    FLOAT :: cam_omega
-    FLOAT :: cam_alpha
-    FLOAT :: cam_beta
+
+    type(exchange_operator_t) :: exxop
 
     !> The self-induced vector potential and magnetic field
     logical :: self_induced_magnetic
@@ -164,8 +157,6 @@ module hamiltonian_oct_m
     !> anisotropic scaling factor for the mass: different along x,y,z etc...
     FLOAT :: mass_scaling(MAX_DIM)
 
-    !> For the Hartree-Fock Hamiltonian, the Fock operator depends on the states.
-    type(states_t), pointer :: hf_st
     !> use the SCDM method to compute the action of the Fock operator
     logical :: scdm_EXX
 
@@ -189,7 +180,6 @@ module hamiltonian_oct_m
 
     !> For the Rashba spin-orbit coupling
     FLOAT :: rashba_coupling
-    type(scdm_t)  :: scdm
 
     logical :: time_zero
   end type hamiltonian_t
@@ -422,7 +412,7 @@ contains
         call parse_block_end(blk)
     end if
 
-    nullify(hm%hf_st)
+    call exchange_operator_nullify(hm%exxop)    
 
     hm%inh_term = .false.
     call oct_exchange_remove(hm%oct_exchange)
@@ -568,12 +558,7 @@ contains
 
     if(hm%scissor%apply) call scissor_end(hm%scissor)
 
-    ! this is a bit ugly, hf_st is initialized in v_ks_calc but deallocated here.
-    if(associated(hm%hf_st))  then
-      if(hm%hf_st%parallel_in_states) call states_parallel_remote_access_stop(hm%hf_st)
-      call states_end(hm%hf_st)
-      SAFE_DEALLOCATE_P(hm%hf_st)
-    end if
+    call exchange_operator_end(hm%exxop)
 
     SAFE_DEALLOCATE_P(hm%energy)
      

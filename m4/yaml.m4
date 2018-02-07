@@ -7,7 +7,7 @@ AC_DEFUN([ACX_YAML], [
   AC_ARG_WITH([yaml-path],
               AS_HELP_STRING([--with-yaml-prefix=DIR], [Directory where libYAML was installed.]),
               [ac_path_yaml=$withval])
-  AC_ARG_ENABLE(internal-libyaml, AS_HELP_STRING([--disable-internal-libyaml], [Do not build and link with internal libyaml library (default = auto).]), ac_build_libyaml=$enableval, ac_build_libyaml="auto")
+  AC_ARG_ENABLE(internal-libyaml, AS_HELP_STRING([--disable-internal-libyaml], [Do not build and link with internal libyaml library (default = yes).]), ac_build_libyaml=$enableval, ac_build_libyaml="yes")
   
   ac_use_libyaml="no"
   if test x"$ac_path_yaml" == x"" ; then
@@ -17,15 +17,29 @@ AC_DEFUN([ACX_YAML], [
   if test x"$ac_build_libyaml" != x"yes" ; then
      LDFLAGS_SVG="$LDFLAGS"
      AC_LANG_PUSH(C)
+     AC_CHECK_HEADER([yaml.h],
+                  [ac_have_yaml="yes"],
+                  [ac_have_yaml="no"])
+     if test x"$ac_have_libyaml" = x"yes"; then
+        if test x"$ac_path_yaml" != x"/usr" ; then
+         LIB_YAML_CFLAGS="-I$ac_path_yaml/include"
+        else
+          for path in ${C_INCLUDE_PATH//:/ }; do
+           LIB_YAML_CFLAGS="$LIB_YAML_CFLAGS -I$path"
+          done
+        fi     
+     else
+       AC_MSG_ERROR([libyaml is not available, install YAML and provide path --with-yaml-prefix.])
+     fi
+
      LDFLAGS="$LDFLAGS -L$ac_path_yaml/lib"
      AC_CHECK_LIB([yaml], [yaml_parser_parse],
                   [ac_use_libyaml=yes], [ac_use_libyaml=no])
      if test x"$ac_use_libyaml" = x"yes"; then
         if test x"$ac_path_yaml" != x"/usr" ; then
-           CFLAGS_YAML="-I$ac_path_yaml/include"
            LIBS_YAML="-L$ac_path_yaml/lib "
         fi
-        LIBS_YAML=$LIBS_YAML"-lyaml"
+        LIBS_YAML=$LIBS_YAML" -lyaml"
      else
         AC_MSG_WARN([libyaml is not available, building internal one.])
      fi
@@ -36,8 +50,8 @@ AC_DEFUN([ACX_YAML], [
   if test x"$ac_use_libyaml" != x"yes" ; then
      ac_use_libyaml="yes"
      ac_build_libyaml="yes"
-     CFLAGS_YAML="-I\$(top_srcdir)"/external_libs/yaml-0.1.4/include
-     LIBS_YAML="\$(top_builddir)/external_libs/yaml-0.1.4/src/.libs/libyaml.a -lyaml"
+     CFLAGS_YAML="-I\$(top_builddir)/external_libs/yaml-0.1.4/include "
+     LIBS_YAML="-L\$(top_builddir)/external_libs/yaml-0.1.4/src/.lib/ -lyaml"
      dnl tar -xzf ${srcdir}/external_libs/PyYAML-3.10.tar.gz
      HAVE_COMP_YAML=1
      AC_DEFINE(HAVE_COMP_YAML, 1, [This is defined when we link with an external YAML library.])

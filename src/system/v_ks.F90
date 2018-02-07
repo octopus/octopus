@@ -28,6 +28,7 @@ module v_ks_oct_m
   use energy_oct_m
   use energy_calc_oct_m
   use epot_oct_m 
+  use exchange_operator_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
@@ -1231,31 +1232,16 @@ contains
       if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) then
 
         ! swap the states object
-        if(associated(hm%hf_st)) then
-          if(hm%hf_st%parallel_in_states .or. hm%d%kpt%parallel) &
-            call states_parallel_remote_access_stop(hm%hf_st)
-          call states_end(hm%hf_st)
-          SAFE_DEALLOCATE_P(hm%hf_st)
-        end if
-        
-        hm%hf_st => ks%calc%hf_st
+        call exchange_operator_end(hm%exxop)
 
         select case(ks%theory_level)
         case(HARTREE_FOCK)
-          hm%exx_coef = ks%xc%exx_coef
-          hm%cam_omega = ks%xc%cam_omega
-          hm%cam_alpha = ks%xc%cam_alpha
-          hm%cam_beta = ks%xc%cam_beta
+          call exchange_operator_init(hm%exxop, ks%calc%hf_st, ks%xc%exx_coef, &
+            ks%xc%cam_omega, ks%xc%cam_alpha, ks%xc%cam_beta)
         case(HARTREE)
-          hm%exx_coef = M_ONE
-          hm%cam_omega = M_ZERO
-          hm%cam_alpha = M_ONE
-          hm%cam_beta = M_ZERO
+          call exchange_operator_init(hm%exxop, ks%calc%hf_st, M_ONE, M_ZERO, M_ONE, M_ZERO)
         case(RDMFT) 
-          hm%exx_coef = M_ONE
-          hm%cam_omega = M_ZERO
-          hm%cam_alpha = M_ONE
-          hm%cam_beta = M_ZERO
+          call exchange_operator_init(hm%exxop, ks%calc%hf_st, M_ONE, M_ZERO, M_ONE, M_ZERO)
         end select
       end if
       

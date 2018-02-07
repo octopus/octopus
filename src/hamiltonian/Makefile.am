@@ -27,6 +27,7 @@ libhamiltonian_f_srcs =                  \
 	boundary_op.F90                  \
 	energy.F90                       \
 	epot.F90                         \
+	exchange_operator.F90            \
 	functionals.F90                  \
 	gauge_field.F90                  \
 	hamiltonian_base.F90             \
@@ -58,6 +59,7 @@ libhamiltonian_a_SOURCES = $(libhamiltonian_c_srcs) $(libhamiltonian_f_srcs)
 
 # Include files - keep in alphabetical order
 noinst_HEADERS =                         \
+	exchange_operator_inc.F90        \
         functionals_list.F90             \
         fxc_inc.F90                      \
 	hamiltonian_base_inc.F90         \
@@ -94,10 +96,11 @@ born_charges.o : born_charges.F90
 boundary_op.o : boundary_op.F90 
 energy.o : energy.F90 
 epot.o : epot.F90 xc.o species_pot.o projector.o lasers.o kick.o ion_interaction.o gauge_field.o 
+exchange_operator.o : exchange_operator.F90 exchange_operator_inc.F90 scdm.o
 functionals.o : functionals.F90 libvdwxc.o 
 gauge_field.o : gauge_field.F90 projector.o 
 hamiltonian_base.o : hamiltonian_base.F90 hamiltonian_base_inc.F90 projector_matrix.o projector.o hgh_projector.o kb_projector.o epot.o 
-hamiltonian.o : hamiltonian.F90 hamiltonian_inc.F90 functionals.o xc.o scissor.o scdm.o pcm.o projector.o oct_exchange.o lasers.o gauge_field.o epot.o hamiltonian_base.o energy.o boundary_op.o 
+hamiltonian.o : hamiltonian.F90 hamiltonian_inc.F90 functionals.o xc.o scissor.o pcm.o projector.o oct_exchange.o lasers.o gauge_field.o epot.o hamiltonian_base.o energy.o boundary_op.o exchange_operator.o 
 hgh_projector.o : hgh_projector.F90 hgh_projector_inc.F90 
 hirshfeld.o : hirshfeld.F90 species_pot.o 
 ion_interaction.o : ion_interaction.F90 
