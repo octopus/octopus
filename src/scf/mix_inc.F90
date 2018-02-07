@@ -97,13 +97,15 @@ subroutine X(mixing_broyden)(smix, vin, vout, vnew, iter)
         gamma = gamma + X(mix_dotp)(smix, smix%X(df)(:, i, j, ipos), smix%X(df)(:, i, j, ipos))
       end do
     end do
-    gamma = sqrt(gamma)
-    
-    if(abs(gamma) > CNST(1e-8)) then
-      gamma = M_ONE/gamma
-    else
-      gamma = M_ONE
-    end if
+
+#ifdef R_TREAL
+    gamma = M_ONE/sqrt(max(gamma,M_EPSILON))
+#else
+    gamma = sqrt(cmplx(max(R_REAL(gamma),M_EPSILON),&
+                       max(R_AIMAG(gamma),M_EPSILON),REAL_PRECISION))
+    gamma = M_ONE/gamma
+#endif
+
     call lalg_scal(d1, d2, d3, gamma, smix%X(df)(:, :, :, ipos))
     call lalg_scal(d1, d2, d3, gamma, smix%X(dv)(:, :, :, ipos))
     
