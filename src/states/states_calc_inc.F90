@@ -326,6 +326,8 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
       end do
 
     end do 
+    
+    SAFE_DEALLOCATE_A(psicopy)
 
   else
 
