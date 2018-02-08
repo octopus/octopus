@@ -51,7 +51,7 @@ AC_DEFUN([ACX_YAML], [
      ac_use_libyaml="yes"
      ac_build_libyaml="yes"
      CFLAGS_YAML="-I\$(top_builddir)/external_libs/yaml-0.1.4/include "
-     LIBS_YAML="-L\$(top_builddir)/external_libs/yaml-0.1.4/src/.lib/ -lyaml"
+     LIBS_YAML="-L\$(top_builddir)/external_libs/yaml-0.1.4/src/.libs/libyaml.a"
      dnl tar -xzf ${srcdir}/external_libs/PyYAML-3.10.tar.gz
      HAVE_COMP_YAML=1
      AC_DEFINE(HAVE_COMP_YAML, 1, [This is defined when we link with an external YAML library.])

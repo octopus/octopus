@@ -85,7 +85,9 @@ module poisson_libisf_oct_m
     integer :: rs_n_global(3)      !< total size of the fft in each direction in real space
     integer :: rs_istart(1:3)      !< where does the local portion of the function start in real space
 
+#ifdef HAVE_LIBISF
     type(dictionary), pointer :: inputs !input parameters
+#endif
 
     !> offset:  Total integral on the supercell of the final potential on output.
     !! To be used only in the periodic case, ignored for other boundary conditions.

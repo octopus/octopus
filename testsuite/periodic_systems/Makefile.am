@@ -62,6 +62,16 @@ dist_share_DATA =                                \
 	12-boron_nitride.01-gs.inp               \
 	13-primitive.test                        \
 	13-primitive.01-diamond.inp              \
-	13-primitive.02-graphene.inp
+	13-primitive.02-graphene.inp             \
+	14-silicon_doubleshift.test              \
+	14-silicon_doubleshift.01-gs.inp         \
+	14-silicon_doubleshift.02-td.inp         \
+	15-bandstructure.test                    \
+	15-bandstructure.01-gs.inp               \
+	15-bandstructure.02-unocc.inp            \
+	16-hse06.test                            \
+	16-hse06.01-fftw.inp                     \
+	17-hybrids_psolver.test                  \
+	17-hybrids_psolver.01-Si_gs.inp
 
 CLEANFILES = *~ *.bak
