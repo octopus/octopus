@@ -64,6 +64,8 @@ subroutine X(exchange_operator_apply)(this, der, st_d, ik, psib, hpsib, exxcoef)
   FLOAT :: qq(1:MAX_DIM) 
   integer :: ikpoint, ikpoint2
 
+  type(profile_t), save :: prof, prof2, prof3, prof4
+
   PUSH_SUB(X(exchange_operator_apply))
 
   ASSERT(associated(this%st))
@@ -95,6 +97,7 @@ subroutine X(exchange_operator_apply)(this, der, st_d, ik, psib, hpsib, exxcoef)
     call batch_get_state(psib, ibatch, der%mesh%np, psi)
     call batch_get_state(hpsib, ibatch, der%mesh%np, hpsi)
 
+    call profiling_in(prof4, "EXCHANGE_OUTER")
     do ik2 = 1, st_d%nik
       if(states_dim_get_spin_index(st_d, ik2) /= states_dim_get_spin_index(st_d, ik)) cycle
       
@@ -106,48 +109,61 @@ subroutine X(exchange_operator_apply)(this, der, st_d, ik, psib, hpsib, exxcoef)
         qq(1:der%dim) = kpoints_get_point(der%mesh%sb%kpoints, ikpoint) &
                       - kpoints_get_point(der%mesh%sb%kpoints, ikpoint2) 
       end if
+
       if(st_d%nik > st_d%ispin .or. this%cam_omega > M_EPSILON) &
         call poisson_kernel_reinit(exchange_psolver, qq, this%cam_omega)
 
       do ib = 1, this%st%group%nblocks
-
+        !We copy data into psi2b from the corresponding MPI task
         call states_parallel_get_block(this%st, der%mesh, ib, ik2, psi2b)
 
+!Ici on veut ouvrir une fenetre et ne faire que la copie sur np point, au sein de la fenetre active
+!Evite la communication de np_part et ensuite la copie de psi2b a psi2
+
+!Essayer non-blocing communication MPI_ISEND et MPI_IRECV
+!Doit etre accompagner de MPI_WAIT
+
+!We have to double the memory here and create a fpsi batch
+        call profiling_in(prof3, "EXCHANGE_INNER")
         do ii = 1, psi2b%nst
 
           jst = psi2b%states(ii)%ist
-
-          if(this%st%occ(jst, ik2) < M_EPSILON) cycle
-
-          pot = R_TOTYPE(M_ZERO)
-          rho = R_TOTYPE(M_ZERO)
+          ff = st_d%kweights(ik2)*exx_coef*this%st%occ(jst, ik2)
+          if(st_d%ispin == UNPOLARIZED) ff = M_HALF*ff
+          if(ff < M_EPSILON) cycle
 
           call batch_get_state(psi2b, ii, der%mesh%np, psi2)
 
+          call profiling_in(prof, "CODENSITIES")
+          rho = R_TOTYPE(M_ZERO)          !We compute rho_ij
+          pot = R_TOTYPE(M_ZERO)
           do idim = 1, st_d%dim
             forall(ip = 1:der%mesh%np)
               rho(ip) = rho(ip) + R_CONJ(psi2(ip, idim))*psi(ip, idim)
             end forall
           end do
+          call profiling_out(prof)
 
+          !and V_ij
           call X(poisson_solve)(exchange_psolver, pot, rho, all_nodes = .false.)
 
-
-          ff = st_d%kweights(ik2)*exx_coef*this%st%occ(jst, ik2)
-          if(st_d%ispin == UNPOLARIZED) ff = M_HALF*ff
-
+          !Accumulate the result
+          call profiling_in(prof2, "EXCHANGE_ACCUMULATE")
           do idim = 1, st_d%dim
             forall(ip = 1:der%mesh%np)
               hpsi(ip, idim) = hpsi(ip, idim) - ff*psi2(ip, idim)*pot(ip)
             end forall
-          end do
+          end do 
+          call profiling_out(prof2)
 
         end do
+        call profiling_out(prof3)
 
         call states_parallel_release_block(this%st, ib, ik2, psi2b)
 
       end do
     end do
+    call profiling_out(prof4)
     call batch_set_state(hpsib, ibatch, der%mesh%np, hpsi)
 
   end do

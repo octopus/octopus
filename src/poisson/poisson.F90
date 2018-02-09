@@ -684,9 +684,13 @@ contains
     type(derivatives_t), pointer :: der
     logical :: all_nodes_value
 
+    type(profile_t), save :: prof
+
     der => this%der
 
     PUSH_SUB(zpoisson_solve_real_and_imag_separately)
+
+    call profiling_in(prof, 'POISSON_RE_IM_SOLVE')
 
     if(present(all_nodes)) then
       all_nodes_value = all_nodes
@@ -711,6 +715,8 @@ contains
     SAFE_DEALLOCATE_A(aux1)
     SAFE_DEALLOCATE_A(aux2)
 
+    call profiling_out(prof)
+ 
     POP_SUB(zpoisson_solve_real_and_imag_separately)
   end subroutine zpoisson_solve_real_and_imag_separately
 
