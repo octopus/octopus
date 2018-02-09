@@ -195,7 +195,11 @@ subroutine poisson_kernel_reinit(this, qq, mu)
   FLOAT,           intent(in)    :: qq(:)
   FLOAT,           intent(in)    :: mu
 
+  type(profile_t), save :: prof
+
   PUSH_SUB(poisson_kernel_reinit)
+
+  call profiling_in(prof, 'POISSON_REINIT')
 
   !We only reinitialize the poisson sover if needed
   if(any(abs(this%qq(1:this%der%mesh%sb%periodic_dim) - qq(1:this%der%mesh%sb%periodic_dim)) > M_EPSILON) &
@@ -215,6 +219,8 @@ subroutine poisson_kernel_reinit(this, qq, mu)
     end select
 
   end if
+
+  call profiling_out(prof)
 
   POP_SUB(poisson_kernel_reinit)
 end subroutine poisson_kernel_reinit
