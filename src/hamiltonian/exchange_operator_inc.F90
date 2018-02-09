@@ -60,11 +60,13 @@ subroutine X(exchange_operator_apply)(this, der, st_d, ik, psib, hpsib, exxcoef)
   integer :: ibatch, jst, ip, idim, ik2, ib, ii, ist
   type(batch_t), pointer :: psi2b
   FLOAT :: exx_coef, ff
-  R_TYPE, allocatable :: rho(:), pot(:), psi2(:, :), psi(:, :), hpsi(:, :)
+  R_TYPE, allocatable :: psi2(:, :), psi(:, :), hpsi(:, :)
+  FLOAT, allocatable :: rho(:), pot(:), rhoim(:), potim(:)
   FLOAT :: qq(1:MAX_DIM) 
   integer :: ikpoint, ikpoint2
+  CMPLX :: tmp
 
-  type(profile_t), save :: prof, prof2, prof3, prof4
+  type(profile_t), save :: prof, prof2
 
   PUSH_SUB(X(exchange_operator_apply))
 
@@ -87,6 +89,10 @@ subroutine X(exchange_operator_apply)(this, der, st_d, ik, psib, hpsib, exxcoef)
   SAFE_ALLOCATE(hpsi(1:der%mesh%np, 1:st_d%dim))
   SAFE_ALLOCATE(rho(1:der%mesh%np))
   SAFE_ALLOCATE(pot(1:der%mesh%np))
+#ifdef R_TCOMPLEX
+    SAFE_ALLOCATE(rhoim(1:der%mesh%np))
+    SAFE_ALLOCATE(potim(1:der%mesh%np))
+#endif
   SAFE_ALLOCATE(psi2(1:der%mesh%np, 1:st_d%dim))
 
   ikpoint = states_dim_get_kpoint_index(st_d, ik)
@@ -97,7 +103,6 @@ subroutine X(exchange_operator_apply)(this, der, st_d, ik, psib, hpsib, exxcoef)
     call batch_get_state(psib, ibatch, der%mesh%np, psi)
     call batch_get_state(hpsib, ibatch, der%mesh%np, hpsi)
 
-    call profiling_in(prof4, "EXCHANGE_OUTER")
     do ik2 = 1, st_d%nik
       if(states_dim_get_spin_index(st_d, ik2) /= states_dim_get_spin_index(st_d, ik)) cycle
       
@@ -117,14 +122,6 @@ subroutine X(exchange_operator_apply)(this, der, st_d, ik, psib, hpsib, exxcoef)
         !We copy data into psi2b from the corresponding MPI task
         call states_parallel_get_block(this%st, der%mesh, ib, ik2, psi2b)
 
-!Ici on veut ouvrir une fenetre et ne faire que la copie sur np point, au sein de la fenetre active
-!Evite la communication de np_part et ensuite la copie de psi2b a psi2
-
-!Essayer non-blocing communication MPI_ISEND et MPI_IRECV
-!Doit etre accompagner de MPI_WAIT
-
-!We have to double the memory here and create a fpsi batch
-        call profiling_in(prof3, "EXCHANGE_INNER")
         do ii = 1, psi2b%nst
 
           jst = psi2b%states(ii)%ist
@@ -137,33 +134,49 @@ subroutine X(exchange_operator_apply)(this, der, st_d, ik, psib, hpsib, exxcoef)
           call profiling_in(prof, "CODENSITIES")
           rho = R_TOTYPE(M_ZERO)          !We compute rho_ij
           pot = R_TOTYPE(M_ZERO)
+#ifdef R_TCOMPLEX
+          rhoim = R_TOTYPE(M_ZERO) 
+          potim = R_TOTYPE(M_ZERO)
+#endif
+
           do idim = 1, st_d%dim
-            forall(ip = 1:der%mesh%np)
-              rho(ip) = rho(ip) + R_CONJ(psi2(ip, idim))*psi(ip, idim)
-            end forall
+            do ip = 1,der%mesh%np
+#ifdef R_TCOMPLEX
+              tmp = R_CONJ(psi2(ip, idim))*psi(ip, idim)
+              rho(ip) = rho(ip) + real(tmp)
+              rhoim(ip) = rhoim(ip) + aimag(tmp)
+#else
+              rho(ip) = rho(ip) + psi2(ip, idim)*psi(ip, idim)
+#endif
+            end do
           end do
           call profiling_out(prof)
 
           !and V_ij
-          call X(poisson_solve)(exchange_psolver, pot, rho, all_nodes = .false.)
+          call dpoisson_solve(exchange_psolver, pot, rho, all_nodes = .false.)
+#ifdef R_TCOMPLEX
+          call dpoisson_solve(exchange_psolver, potim, rhoim, all_nodes = .false.)
+#endif
 
           !Accumulate the result
           call profiling_in(prof2, "EXCHANGE_ACCUMULATE")
           do idim = 1, st_d%dim
             forall(ip = 1:der%mesh%np)
+#ifdef R_TCOMPLEX
+              hpsi(ip, idim) = hpsi(ip, idim) - ff*psi2(ip, idim)*(pot(ip)+M_ZI*potim(ip))
+#else
               hpsi(ip, idim) = hpsi(ip, idim) - ff*psi2(ip, idim)*pot(ip)
+#endif
             end forall
           end do 
           call profiling_out(prof2)
 
         end do
-        call profiling_out(prof3)
 
         call states_parallel_release_block(this%st, ib, ik2, psi2b)
 
       end do
     end do
-    call profiling_out(prof4)
     call batch_set_state(hpsib, ibatch, der%mesh%np, hpsi)
 
   end do
@@ -172,6 +185,10 @@ subroutine X(exchange_operator_apply)(this, der, st_d, ik, psib, hpsib, exxcoef)
   SAFE_DEALLOCATE_A(hpsi)
   SAFE_DEALLOCATE_A(rho)
   SAFE_DEALLOCATE_A(pot)
+#ifdef R_TCOMPLEX
+  SAFE_DEALLOCATE_A(rhoim)
+  SAFE_DEALLOCATE_A(potim)
+#endif
   SAFE_DEALLOCATE_A(psi2)
 
   POP_SUB(X(exchange_operator_apply))
