@@ -431,8 +431,8 @@ contains
       pcm%eom = .false.
     end if
 
-    if( pcm%epsilon_0 /= M_ONE ) then
-      if( pcm%eom .and. pcm%which_eps == 'drl' .and. pcm%epsilon_0 == M_ONE ) then
+    if( pcm%epsilon_0 == M_ONE ) then
+      if( pcm%eom .and. pcm%which_eps == 'drl' ) then
         message(1) = "PCMEpsilonStatic = 1 is incompatible with a Drude-Lorentz EOM-PCM run."
         call messages_fatal(1)
       end if
