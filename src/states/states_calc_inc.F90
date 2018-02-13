@@ -199,7 +199,6 @@ contains
     integer :: ist, jst, idim
     FLOAT   :: cc
     R_TYPE, allocatable :: aa(:), psii(:, :), psij(:, :)
-    FLOAT,  allocatable :: bb(:)
     
     PUSH_SUB(X(states_orthogonalization_full).mgs)
 
@@ -208,27 +207,8 @@ contains
       call messages_fatal(1, only_root_writes = .true.)
     end if
 
-    SAFE_ALLOCATE(bb(1:nst))
     SAFE_ALLOCATE(psii(1:mesh%np, 1:st%d%dim))
     SAFE_ALLOCATE(psij(1:mesh%np, 1:st%d%dim))
-
-    ! normalize the initial vectors
-    do ist = 1, nst
-      call states_get_state(st, mesh, ist, ik, psii)
-      bb(ist) = TOFLOAT(X(mf_dotp)(mesh, st%d%dim, psii, psii, reduce = .false.))
-      call states_set_state(st, mesh, ist, ik, psii)
-    end do
-
-    if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, bb, dim = nst)
-
-    do ist = 1, nst
-      call states_get_state(st, mesh, ist, ik, psii)
-      do idim = 1, st%d%dim
-        call lalg_scal(mesh%np, M_ONE/sqrt(bb(ist)), psii(:, idim))
-      end do
-    end do
-
-    SAFE_DEALLOCATE_A(bb)
 
     SAFE_ALLOCATE(aa(1:nst))
 
