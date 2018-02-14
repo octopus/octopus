@@ -1324,9 +1324,7 @@ subroutine X(eigensolve_parallel)(n, a, e, bof, err_code)
   type(blacs_proc_grid_t) :: proc_grid
   integer :: desc(BLACS_DLEN)
   integer :: nb_rows, nb_cols
-  integer :: irow_local, icol_local, irow_block, icol_block, irow_global, icol_global
   R_TYPE, allocatable :: b(:,:), eigenvectors(:,:)
-
   R_TYPE, allocatable :: work(:)
   R_TYPE :: worksize
 #ifdef R_TCOMPLEX
