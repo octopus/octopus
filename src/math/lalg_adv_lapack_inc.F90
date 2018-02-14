@@ -1313,6 +1313,7 @@ end subroutine X(lalg_least_squares_vec)
 !! a: input matrix, on exit: contains eigenvectors
 !! e: eigenvalues
 subroutine X(eigensolve_parallel)(n, a, e, bof, err_code)
+  implicit none
   integer,           intent(in)    :: n
   R_TYPE,            intent(inout) :: a(:,:)   !< (n,n)
   FLOAT,             intent(out)   :: e(:)     !< (n)
@@ -1330,6 +1331,9 @@ subroutine X(eigensolve_parallel)(n, a, e, bof, err_code)
 #ifdef R_TCOMPLEX
   R_TYPE, allocatable :: rwork(:)
   R_TYPE :: rworksize
+#endif
+#ifdef HAVE_ELPA
+  class(elpa_t), pointer :: elpa
 #endif
 
 
@@ -1391,9 +1395,46 @@ subroutine X(eigensolve_parallel)(n, a, e, bof, err_code)
 
   ! 3. copy entries to distributed matrix
   ! assumes (0,0) as start of processor grid (also needed for ELPA)
-  ! use pXlacp3 helper function from ScaLAPACK to dsitribute the matrix a
+  ! use pXlacp3 helper function from ScaLAPACK to distribute the matrix a
   call pX(lacp3)(m=n, i=1, a=b(1, 1), desca=desc(1), b=a(1, 1), ldb=n, ii=0, jj=0, rev=1)
 
+#ifdef HAVE_ELPA
+  ! 4. eigensolver settings (allocate workspace)
+  if (elpa_init(20170403) /= elpa_ok) then
+    write(message(1),'(a)') "ELPA API version not supported"
+    call messages_fatal(1)
+  endif
+  elpa => elpa_allocate()
+
+  ! set parameters describing the matrix
+  call elpa%set("na", n, info)
+  call elpa%set("nev", n, info)
+  call elpa%set("local_nrows", nb_rows, info)
+  call elpa%set("local_ncols", nb_cols, info)
+  call elpa%set("nblk", block_size, info)
+  call elpa%set("mpi_comm_parent", mpi_world%comm, info)
+  call elpa%set("process_row", proc_grid%myrow, info)
+  call elpa%set("process_col", proc_grid%mycol, info)
+
+  info = elpa%setup()
+
+  call elpa%set("solver", elpa_solver_2stage, info)
+
+  ! 5. call eigensolver
+  call elpa%eigenvectors(b, e, eigenvectors, info)
+
+  ! error handling
+  if (info /= elpa_ok) then
+    write(message(1),'(a,i6,a,a)') "Error in ELPA, code: ", info, ", message: ", &
+      elpa_strerr(info)
+    call messages_fatal(1)
+  end if
+
+  call elpa_deallocate(elpa)
+  call elpa_uninit()
+
+#else
+  ! use ScaLAPACK solver if ELPA not available
   ! 4. eigensolver settings (allocate workspace)
   ! workspace query
 #ifdef R_TREAL
@@ -1480,6 +1521,8 @@ subroutine X(eigensolve_parallel)(n, a, e, bof, err_code)
   if(present(err_code)) then
     err_code = info
   end if
+#endif
+!(HAVE_ELPA)
 
   ! 6. copy eigenvector entries back from distributed matrix
   ! use pXlacp3 helper function from ScaLAPACK to collect the eigenvectors on

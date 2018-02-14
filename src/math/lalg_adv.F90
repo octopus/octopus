@@ -28,6 +28,9 @@ module lalg_adv_oct_m
   use scalapack_oct_m
   use sort_oct_m
   use utils_oct_m
+#ifdef HAVE_ELPA
+  use elpa
+#endif
   
   implicit none
 
