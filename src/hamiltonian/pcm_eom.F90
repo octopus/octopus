@@ -172,6 +172,7 @@ module pcm_eom_oct_m
      if(initial_external .and. which_eom == 'external' ) initial_external=.false.
      if(initial_kick     .and. which_eom == 'justkick')  initial_kick=.false.
      POP_SUB(pcm_charges_propagation)
+     return
     else if(initial_kick .and. which_eom == 'ext+kick') then
      call init_charges(q_t, pot_t, input_asc, kick = kick ) 
      initial_kick=.false.
@@ -185,6 +186,7 @@ module pcm_eom_oct_m
      call pcm_ief_prop_deb(q_t,pot_t)
     else
      POP_SUB(pcm_charges_propagation)
+     return
     endif
    else if( which_eps .eq. "drl" ) then
     call pcm_ief_prop_vv_ief_drl(q_t,pot_t)
