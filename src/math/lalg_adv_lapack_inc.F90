@@ -1336,7 +1336,7 @@ subroutine X(eigensolve_parallel)(n, a, e, bof, err_code)
 #ifndef HAVE_SCALAPACK
   write(message(1), '(a)') 'Called eigensolve_parallel but compiled without ScaLAPACK support.'
   write(message(2), '(a)') 'Using non-parallel solver as fallback.'
-  call messages_warning(2)
+  call messages_info(2)
   call X(eigensolve)(n, a, e, bof, err_code)
 #else
 
