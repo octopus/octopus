@@ -1050,7 +1050,9 @@ subroutine X(casida_solve)(cas, st)
     ! for huge matrices, perhaps we should consider ScaLAPACK here...
     call profiling_in(prof, "CASIDA_DIAGONALIZATION")
     if(cas%calc_forces) cas%X(mat_save) = cas%X(mat) ! save before gets turned into eigenvectors
-    call lalg_eigensolve(cas%n_pairs, cas%X(mat), cas%w)
+    ! use parallel eigensolver here; falls back to serial solver if ScaLAPACK
+    ! not available
+    call lalg_eigensolve_parallel(cas%n_pairs, cas%X(mat), cas%w)
     call profiling_out(prof)
     
     do ia = 1, cas%n_pairs
