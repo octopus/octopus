@@ -325,6 +325,14 @@ contains
       call messages_write('To spare you some time, Octopus will proceed as if PCMCalculation = yes.')       
       call messages_warning()
     endif
+
+    if( pcm%eom .and. (.not. pcm%noneq) ) then
+      call messages_write('You have set PCMEoM = yes, Octopus will set PCMNonequilibrium = yes')
+      call messages_new_line()
+      call messages_write('to remind you the non-equilibrium character of your run.')       
+      call messages_warning()
+      pcm%noneq = .true.
+    endif
     
     !%Variable PCMStaticEpsilon
     !%Type float

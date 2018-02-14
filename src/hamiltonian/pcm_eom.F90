@@ -131,7 +131,7 @@ module pcm_eom_oct_m
    PUSH_SUB(pcm_charges_propagation)
 
    which_eom=this_eom
-   if (which_eom /= 'electron' .or. which_eom /= 'external' .or. which_eom /= 'ext+kick' .or. which_eom /= 'ext+kick' ) then
+   if (which_eom /= 'electron' .and. which_eom /= 'external' .and. which_eom /= 'ext+kick' .and. which_eom /= 'justkick' ) then
     message(1) = "pcm_charges_propagation: EOM evolution of PCM charges can only be due to solute electrons"
     message(2) = "or external potential (including the kick)."
     call messages_fatal(2)
