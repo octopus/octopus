@@ -178,6 +178,8 @@ module pcm_eom_oct_m
     endif
    endif
 
+     write(*,*) "debugging flag - here"
+
    if( which_eps .eq. "deb") then
     if( deb%tau /= M_ZERO ) then
      call pcm_ief_prop_deb(q_t,pot_t)
@@ -190,7 +192,6 @@ module pcm_eom_oct_m
     message(1) = "pcm_charges_propagation: EOM-PCM error. Only Debye or Drude-Lorent dielectric models are allowed."
     call messages_fatal(1)
    endif
-   pot_tp = pot_t
 
    POP_SUB(pcm_charges_propagation)
   end subroutine pcm_charges_propagation
@@ -237,6 +238,7 @@ module pcm_eom_oct_m
     POP_SUB(init_charges)
    endif
 
+
    if( which_eom == 'electron' ) then
     !< Here we consider the potential at any earlier time equal to the initial potential.
     !< Therefore, we can suppose that the solvent is already in equilibrium with the initial solute potential.
@@ -278,11 +280,11 @@ module pcm_eom_oct_m
     SAFE_ALLOCATE(potext_tp(nts_act))
     potext_tp = pot_t
 
-   else if( which_eom == 'ext+kick' .or. which_eom == 'justkick' ) then
+   else if( which_eom == 'ext+kick' ) then
     !< Here we have a kick at time zero
 
     q_t=M_ZERO 
-    if ( which_eom == 'ext+kick' ) q_t=matmul(matqd_lf,pot_t) !< external potential initial condition
+    q_t=matmul(matqd_lf,pot_t) !< external potential initial condition
 
     if( which_eps .eq. "drl" ) then
      SAFE_ALLOCATE(dqext_tp(nts_act))
@@ -291,6 +293,26 @@ module pcm_eom_oct_m
      force_qext_tp=M_ZERO
     else if ( which_eps .eq. 'deb' ) then
      q_t = q_t + matmul(matqv_lf,kick) !< kick initial condition
+    endif
+
+    SAFE_ALLOCATE(qext_tp(nts_act))
+    qext_tp = q_t
+
+    SAFE_ALLOCATE(potext_tp(nts_act))
+    potext_tp = pot_t
+
+   else if( which_eom == 'justkick' ) then
+    !< Here we have a kick at time zero
+
+    q_t=M_ZERO 
+
+    if( which_eps .eq. "drl" ) then
+     SAFE_ALLOCATE(dqext_tp(nts_act))
+     SAFE_ALLOCATE(force_qext_tp(nts_act))
+     dqext_tp=matmul(matqv_lf,pot_t)*dt !< kick initial condition
+     force_qext_tp=M_ZERO
+    else if ( which_eps .eq. 'deb' ) then
+     q_t = q_t + matmul(matqv_lf,pot_t) !< kick initial condition
     endif
 
     SAFE_ALLOCATE(qext_tp(nts_act))

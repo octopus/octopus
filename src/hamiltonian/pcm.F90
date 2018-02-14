@@ -1072,7 +1072,7 @@ contains
 
     PUSH_SUB(pcm_calc_pot_rs)  
     
-    ASSERT(present(v_h) .or. present(geo) .or. present(v_ext))
+    ASSERT(present(v_h) .or. present(geo) .or. present(v_ext) .or. present(kick) )
     
     if (present(v_h))   calc = PCM_ELECTRONS
     if (present(geo))   calc = PCM_NUCLEI
@@ -1235,11 +1235,11 @@ contains
     end if
 
     if (calc == PCM_EXTERNAL_PLUS_KICK .or. calc == PCM_KICK) then !under development
-      !if ( kick(:) /= M_ZERO ) then
+      if ( NORM2(kick) /= M_ZERO ) then
         call pcm_v_cav_li(pcm%v_kick, kick, pcm, mesh)
-      !else
-      !  pcm%v_kick = M_ZERO
-      !end if
+      else
+        pcm%v_kick = M_ZERO
+      end if
       if ( calc == PCM_EXTERNAL_PLUS_KICK ) then
         call pcm_v_cav_li( pcm%v_ext, v_ext, pcm, mesh)
         !< BEGIN - equation-of-motion propagation
@@ -1258,6 +1258,7 @@ contains
             call pcm_charges_propagation(pcm%q_ext, pcm%v_kick, dt, pcm%tess, input_asc_ext, 'justkick', 'drl', this_drl = pcm%drl)
           case default
             call pcm_charges_propagation(pcm%q_ext, pcm%v_kick, dt, pcm%tess, input_asc_ext, 'justkick', 'deb', this_deb = pcm%deb)
+     write(*,*) "debugging flag - there"
         end select
       end if
       !< END - equation-of-motion propagation

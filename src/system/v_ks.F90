@@ -1265,7 +1265,7 @@ contains
           call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_ext = potx, kick = DREAL(kick), time_present = ks%calc%time_present)
           SAFE_DEALLOCATE_A(potx)
           SAFE_DEALLOCATE_A(kick)
-        else if ( associated(hm%ep%lasers) .and. hm%ep%kick%delta_strength /= M_ZERO ) then !< just external potential
+        else if ( associated(hm%ep%lasers) .and. hm%ep%kick%delta_strength == M_ZERO ) then !< just external potential
           SAFE_ALLOCATE(potx(1:ks%gr%mesh%np_part))
           potx = M_ZERO    
           do ii = 1, hm%ep%no_lasers        
@@ -1273,7 +1273,7 @@ contains
           end do
           call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_ext = potx, time_present = ks%calc%time_present)
           SAFE_DEALLOCATE_A(potx)
-        else if ( .not.associated(hm%ep%lasers) .and. hm%ep%kick%delta_strength /= M_ZERO ) then !< just kick
+        else if ( (.not.associated(hm%ep%lasers)) .and. hm%ep%kick%delta_strength /= M_ZERO ) then !< just kick
           SAFE_ALLOCATE(kick(1:ks%gr%mesh%np_part))
           kick = M_ZERO
           if ( kick_time ) then !< kick at first time in propagation
