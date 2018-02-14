@@ -1338,8 +1338,7 @@ subroutine X(eigensolve_parallel)(n, a, e, bof, err_code)
   write(message(2), '(a)') 'Using non-parallel solver as fallback.'
   call messages_warning(2)
   call X(eigensolve)(n, a, e, bof, err_code)
-  return
-#endif
+#else
 
   PUSH_SUB(X(eigensolve_parallel))
   call profiling_in(eigensolver_prof, "DENSE_EIGENSOLVER_PARALLEL")
@@ -1495,6 +1494,8 @@ subroutine X(eigensolve_parallel)(n, a, e, bof, err_code)
 
   call profiling_out(eigensolver_prof)
   POP_SUB(X(eigensolve_parallel))
+#endif
+!(HAVE_SCALAPACK)
 end subroutine X(eigensolve_parallel)
 
 !! Local Variables:
