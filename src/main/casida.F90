@@ -937,7 +937,6 @@ contains
 #include "undef.F90"
 #include "complex.F90"
 #include "casida_inc.F90"
-#include "casida_qed_inc.F90"
 
 end module casida_oct_m
 
