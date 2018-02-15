@@ -54,8 +54,6 @@ module species_pot_oct_m
   public ::                         &
     species_get_density,            &
     species_get_nlcc,               &
-    dspecies_get_orbital,           &
-    zspecies_get_orbital,           &
     dspecies_get_orbital_submesh,   &
     zspecies_get_orbital_submesh,   &
     species_get_local,              &
