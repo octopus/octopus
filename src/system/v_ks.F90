@@ -1260,8 +1260,9 @@ contains
           do ii = 1, hm%ep%no_lasers        
             call laser_potential(hm%ep%lasers(ii), ks%gr%mesh, potx, ks%calc%time)
           end do
-          if ( hm%pcm%iter > 1 .and. hm%current_time-dt <= hm%ep%kick%time .and. hm%current_time > hm%ep%kick%time ) then 
+          if ( hm%pcm%iter > 1 .and. hm%current_time-2*dt <= hm%ep%kick%time .and. hm%current_time > hm%ep%kick%time ) then 
             call kick_function_get(ks%gr%mesh, hm%ep%kick, kick) !< kick at first time in propagation
+            kick = hm%ep%kick%delta_strength * kick
             call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_ext = potx, kick = DREAL(kick), time_present = ks%calc%time_present)
           else
             call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_ext = potx, time_present = ks%calc%time_present)
@@ -1279,10 +1280,11 @@ contains
         else if ( (.not.associated(hm%ep%lasers)) .and. hm%ep%kick%delta_strength /= M_ZERO ) then !< just kick
           SAFE_ALLOCATE(kick(1:ks%gr%mesh%np_part))
           kick = M_ZERO
-          !write(*,*) 'test', hm%pcm%iter, hm%current_time, dt, hm%ep%kick%time
-          if ( hm%pcm%iter > 1 .and. hm%current_time-dt <= hm%ep%kick%time .and. hm%current_time > hm%ep%kick%time ) then
-            !write(*,*) "here you enter too" 
+          write(*,*) 'test', hm%pcm%iter, hm%current_time, dt, hm%ep%kick%time
+          if ( hm%pcm%iter > 1 .and. hm%current_time-2*dt <= hm%ep%kick%time .and. hm%current_time > hm%ep%kick%time ) then
+            write(*,*) "here you enter too" 
             call kick_function_get(ks%gr%mesh, hm%ep%kick, kick) !< kick at first time in propagation
+            kick = hm%ep%kick%delta_strength * kick
             call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, kick = DREAL(kick), time_present = ks%calc%time_present)
           end if
           SAFE_DEALLOCATE_A(kick)
