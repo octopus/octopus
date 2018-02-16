@@ -1192,9 +1192,9 @@ contains
     CMPLX, allocatable :: kick(:)
     integer :: ii
 
-    logical :: kick_time = .true.
-
     integer :: asc_unit_test
+
+    FLOAT :: dt
 
     PUSH_SUB(v_ks_hartree)
 
@@ -1246,6 +1246,8 @@ contains
       if (hm%pcm%solute) &
         call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_h = pot, time_present = ks%calc%time_present)
 
+      dt=hm%current_time/hm%pcm%iter
+
       !> Local field effects due to the applied electrostatic potential representing the laser and the kick (if they were).
       !! For the laser, the latter is only valid in the long-wavelength limit.
       !! Static potentials are included in subroutine hamiltonian_epot_generate (module hamiltonian).
@@ -1258,11 +1260,12 @@ contains
           do ii = 1, hm%ep%no_lasers        
             call laser_potential(hm%ep%lasers(ii), ks%gr%mesh, potx, ks%calc%time)
           end do
-          if ( kick_time ) then !< kick at first time in propagation
-            call kick_function_get(ks%gr%mesh, hm%ep%kick, kick)
-            kick_time = .false.
+          if ( hm%pcm%iter > 1 .and. hm%current_time-dt <= hm%ep%kick%time .and. hm%current_time > hm%ep%kick%time ) then 
+            call kick_function_get(ks%gr%mesh, hm%ep%kick, kick) !< kick at first time in propagation
+            call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_ext = potx, kick = DREAL(kick), time_present = ks%calc%time_present)
+          else
+            call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_ext = potx, time_present = ks%calc%time_present)
           end if
-          call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_ext = potx, kick = DREAL(kick), time_present = ks%calc%time_present)
           SAFE_DEALLOCATE_A(potx)
           SAFE_DEALLOCATE_A(kick)
         else if ( associated(hm%ep%lasers) .and. hm%ep%kick%delta_strength == M_ZERO ) then !< just external potential
@@ -1276,11 +1279,12 @@ contains
         else if ( (.not.associated(hm%ep%lasers)) .and. hm%ep%kick%delta_strength /= M_ZERO ) then !< just kick
           SAFE_ALLOCATE(kick(1:ks%gr%mesh%np_part))
           kick = M_ZERO
-          if ( kick_time ) then !< kick at first time in propagation
-            call kick_function_get(ks%gr%mesh, hm%ep%kick, kick)
-            kick_time = .false.
+          !write(*,*) 'test', hm%pcm%iter, hm%current_time, dt, hm%ep%kick%time
+          if ( hm%pcm%iter > 1 .and. hm%current_time-dt <= hm%ep%kick%time .and. hm%current_time > hm%ep%kick%time ) then
+            !write(*,*) "here you enter too" 
+            call kick_function_get(ks%gr%mesh, hm%ep%kick, kick) !< kick at first time in propagation
+            call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, kick = DREAL(kick), time_present = ks%calc%time_present)
           end if
-          call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, kick = DREAL(kick), time_present = ks%calc%time_present)
           SAFE_DEALLOCATE_A(kick)
         end if
 

@@ -179,8 +179,6 @@ module pcm_eom_oct_m
     endif
    endif
 
-     write(*,*) "debugging flag - here"
-
    if( which_eps .eq. "deb") then
     if( deb%tau /= M_ZERO ) then
      call pcm_ief_prop_deb(q_t,pot_t)
@@ -238,6 +236,7 @@ module pcm_eom_oct_m
     pot_tp = pot_t
 
     POP_SUB(init_charges)
+    return
    endif
 
 

@@ -1258,7 +1258,6 @@ contains
             call pcm_charges_propagation(pcm%q_ext, pcm%v_kick, dt, pcm%tess, input_asc_ext, 'justkick', 'drl', this_drl = pcm%drl)
           case default
             call pcm_charges_propagation(pcm%q_ext, pcm%v_kick, dt, pcm%tess, input_asc_ext, 'justkick', 'deb', this_deb = pcm%deb)
-     write(*,*) "debugging flag - there"
         end select
       end if
       !< END - equation-of-motion propagation
