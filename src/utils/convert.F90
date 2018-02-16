@@ -28,6 +28,7 @@ program oct_convert
   use fftw_params_oct_m
   use geometry_oct_m
   use global_oct_m
+  use grid_oct_m
   use io_oct_m
   use io_function_oct_m
   use io_binary_oct_m
@@ -35,6 +36,7 @@ program oct_convert
   use loct_oct_m
   use messages_oct_m
   use mesh_oct_m
+  use mesh_function_oct_m
   use mpi_oct_m
   use multicomm_oct_m
   use output_oct_m
@@ -42,6 +44,8 @@ program oct_convert
   use poisson_oct_m
   use profiling_oct_m
   use spectrum_oct_m
+  use states_oct_m
+  use states_restart_oct_m
   use string_oct_m
   use system_oct_m
   use restart_oct_m
@@ -145,7 +149,7 @@ contains
     character(MAX_PATH_LEN)  :: basename, folder, ref_name, ref_folder, folder_default
     integer                  :: c_start, c_end, c_step, c_start_default, length, c_how
     logical                  :: iterate_folder, subtract_file
-    integer, parameter       :: CONVERT_FORMAT = 1, FOURIER_TRANSFORM = 2, OPERATION = 3 
+    integer, parameter       :: CONVERT_FORMAT = 1, FOURIER_TRANSFORM = 2, OPERATION = 3, PROJECTIONS = 4
 
     PUSH_SUB(convert)
 
@@ -191,6 +195,9 @@ contains
     !%Option operation 3
     !% Convert utility will generate a new mesh function constructed by linear 
     !% combination of scalar function of different mesh functions,
+    !%Option projections 4
+    !% Convert utility will compute the projection matrix for a set of mesh functions.
+    !% An operator can be applied before the computation of the projections.
     !%End
     call parse_variable('ConvertHow', CONVERT_FORMAT, c_how)
 
@@ -286,6 +293,9 @@ contains
     call add_last_slash(folder)
     
     select case (c_how)
+    CASE(PROJECTIONS)
+      call convert_projections(sys%st, sys%gr%mesh, sys%geo, sys%mc, sys%gr) 
+
     CASE(OPERATION)
       call convert_operate(sys%gr%mesh, sys%geo, sys%mc)
 
@@ -915,6 +925,215 @@ contains
 
     POP_SUB(convert_operate)
   end subroutine convert_operate
+  ! ---------------------------------------------------------
+  !> Given a set of mesh functions, it computes the projections
+  !! after applying a spatial operator.
+  subroutine convert_projections(st, mesh, geo, mc, gr)
+
+    type(states_t)  , intent(inout)    :: st
+    type(mesh_t)    , intent(in)    :: mesh
+    type(geometry_t), intent(in)    :: geo
+    type(multicomm_t), intent(in)   :: mc
+    type(grid_t)    , intent(in)    :: gr
+
+    integer             :: ierr, ip, ik, ist, uist, pr_info
+    integer             :: n_operations, i_op
+    type(unit_t)        :: units
+    type(block_t)       :: blk
+    FLOAT, allocatable  :: projections(:,:), tmp(:,:)
+    FLOAT, allocatable  :: bra(:), ket(:,:)
+    CMPLX, allocatable  :: zprojections(:,:), ztmp(:,:)
+    FLOAT, allocatable  :: scalar_op(:)! , dipole(:)
+    CMPLX, allocatable  :: zscalar_op(:)
+    FLOAT               :: f_re, f_im
+    FLOAT               :: rr, xx(MAX_DIM)
+
+    type(restart_t)          :: restart
+    character(len=200) :: frmt, scalar_operator_expression, filename
+
+    PUSH_SUB(convert_projections)
+
+    ! Read all states and occupations
+    call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
+    call states_look_and_load(restart, st, gr)
+
+!    !%Variable ConvertScalarOperator
+!    !%Type string
+!    !%Section Utilities::oct-convert
+!    !%Description
+!    !% This variable is used define the scalar operator 
+!    !% which assumes that the variables in the expression are "x(:)", "r".
+!    !%End
+!    call parse_variable('ConvertScalarOperator', '1', scalar_operator_expression)
+
+    !%Variable ConvertScalarOperator
+    !%Type block
+    !%Section Utilities::oct-convert
+    !%Description
+    !% This variable is used to generate a new mesh function as a linear combination
+    !% different mesh function having the same mesh. Each row defines an operation for
+    !% for a single mesh function. 
+    !% which assumes that the variables in the expression are "x(:)", "r".
+    !% The format of the block is the following: <br>
+    !% 'operation'
+    !%End
+    ! First, find out if there is a ConvertScalarOperation block.
+    n_operations = 0
+    if(parse_block('ConvertScalarOperator', blk) == 0) then
+      n_operations = parse_block_n(blk)
+    end if
+
+    if (n_operations == 0) then
+      write(message(1),'(a)')'No operations found. Check the input file'
+      call messages_fatal(1)
+    end if
+
+    !Write down the results
+    call io_mkdir('./projections')
+    pr_info = io_open(file='./projections/projections.info', action='write')
+    call messages_print_stress(pr_info, "Projections from Convert Utility")
+    write(pr_info,'(a,i3)') 'Number of states = ', st%nst
+    call messages_print_stress(pr_info, "Eigenvalues & Occupations")
+    write(frmt, '(a1,i0,a11)') "(",st%nst,"(g15.6,1x))"
+    write(pr_info, fmt=trim(frmt)) ( st%eigenval(ik, 1), ik=1,st%nst )
+    write(pr_info, fmt=trim(frmt)) ( st%occ(ik, 1), ik=1,st%nst )
+    call messages_print_stress(pr_info, "")
+
+    if (states_are_real(st)) then
+      SAFE_ALLOCATE(projections(1:st%nst, 1:st%nst))
+      SAFE_ALLOCATE(tmp(1:st%nst, 1:st%nst))
+      SAFE_ALLOCATE(scalar_op(1:mesh%np))
+      projections = M_ZERO
+      tmp = M_ZERO
+    else
+      SAFE_ALLOCATE(zprojections(1:st%nst, 1:st%nst))
+      SAFE_ALLOCATE(ztmp(1:st%nst, 1:st%nst))
+      SAFE_ALLOCATE(zscalar_op(1:mesh%np))
+      zprojections = M_ZERO
+      ztmp = M_ZERO
+    end if
+
+    SAFE_ALLOCATE(ket(1:mesh%np, 1:st%nst))
+    SAFE_ALLOCATE(bra(1:mesh%np))
+     
+    !do ik = 1, st%d%nik
+    !  do ist = 1, st%nst
+    !    call states_get_state(st, mesh, 1, ist, ik, bra)
+    !    if (states_are_real(st)) then
+    !      units = units_out%length**(-mesh%sb%dim/2)
+    !      write(filename,'(a,i0.7)') 'bra',ist
+    !      call dio_function_output(outp%how, 'projections', trim(filename), mesh,  & 
+    !      bra, unit_one, ierr, geo = geo)
+    !      !units = units_out%length**(-mesh%sb%dim)
+    !      !write(filename,'(a,i0.7,a)') 'brasquare',ist,'-op'//trim(scalar_operator_expression)
+    !      !call dio_function_output(outp%how, 'projections', trim(filename), mesh,  & 
+    !      !bra*bra, unit_one, ierr, geo = geo)
+    !    end if
+    !  end do
+    !end do
+
+    !TODO: define subset of wfc to be projected 
+
+    do i_op = 1, n_operations
+      call parse_block_string(blk, i_op-1, 0, scalar_operator_expression)
+      call messages_print_stress(pr_info, "Scalar Operator = "//trim(scalar_operator_expression) )
+
+      do ip = 1, mesh%np
+        call mesh_r(mesh, ip, rr, coords = xx)
+        call parse_expression(f_re, f_im, mesh%sb%dim, xx, rr, M_ZERO, trim(scalar_operator_expression))
+        !TODO: implement use of complex functions. 
+        if (states_are_real(st)) then
+          scalar_op(ip) = f_re 
+        else
+          zscalar_op(ip) = cmplx(f_re, f_im)
+        end if
+      end do
+
+      !! SIMILAR TO WHAT IS DONE IN td_write_n_ex (td_write.F90, l2345)
+      !do ik = st%d%kpt%start, st%d%kpt%end
+      !  if (states_are_real(st)) then
+      !    tmp(:,:) = M_ZERO
+      !    call dstates_calc_projections(mesh, st, st, ik, tmp, oper=scalar_op)
+      !    projections = projections + tmp**2
+      !  else
+      !    ztmp(:,:) = M_ZERO
+      !    call zstates_calc_projections(mesh, st, st, ik, ztmp, oper=zscalar_op)
+      !    zprojections = zprojections + ztmp**2
+      !  end if
+      !end do
+      !do ik = 1, st%nst
+      !  write(pr_info, fmt=trim(frmt)) ( tmp(ik, ip), ip=1,ik )
+      !end do
+
+    ! SIMILAR TO WHAT IS DONE IN calc_projections in TD (td_write.F90, l2400)
+      do ik = 1, st%d%nik
+        do uist = 1, st%nst
+          call states_get_state(st, mesh, 1, uist, ik, ket(:, uist))
+          ket(1:mesh%np, uist) = scalar_op(1:mesh%np) * ket(1:mesh%np, uist)
+        end do
+      end do
+      do ik = 1, st%d%nik
+        do ist = 1, st%nst
+          call states_get_state(st, mesh, 1, ist, ik, bra)
+          !if (states_are_real(st)) then
+          !  units = units_out%length**(-1/2)
+          !  write(filename,'(a,i0.7,a)') 'ket',ist,'-op'//trim(scalar_operator_expression)
+          !  call dio_function_output(outp%how, 'projections', trim(filename), mesh,  & 
+          !  ket, unit_one, ierr, geo = geo)
+          !end if
+          do uist = 1, ist
+            !call states_get_state(st, mesh, 1, uist, ik, ket)
+            !ket(1:mesh%np) = scalar_op(1:mesh%np) * ket(1:mesh%np)
+            tmp(ist, uist) = dmf_dotp(mesh, bra, ket(:, uist))
+            !tmp(ist, uist) = dmf_integrate(mesh, bra*ket)  ! it give same results
+          end do
+          write(pr_info, fmt=trim(frmt)) ( tmp(ist, ip), ip=1,ist )
+        end do
+        projections = projections + tmp
+      
+      end do
+      !
+    end do
+    call parse_block_end(blk)
+    SAFE_DEALLOCATE_A(bra)
+    SAFE_DEALLOCATE_A(ket)
+
+
+#ifdef HAVE_MPI
+    call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
+#endif
+    call messages_print_stress(pr_info,'Total Operator')
+    do ik = 1, st%nst
+      write(pr_info, fmt=trim(frmt)) ( projections(ik, ip), ip=1,st%nst )
+!      write(filename,'(a,i0.7)') 'state-',ip
+!      units = units_out%length**(-mesh%sb%dim)
+!      if (states_are_real(st)) &
+!        call states_get_state(st, gr%mesh, 1, ip, 1, scalar_op)
+!        call dio_function_output(outp%how, 'restart/projections', trim(filename), mesh,  & 
+!        scalar_op, unit_one, ierr, geo = geo)
+    end do
+
+!    ! TESTING 
+!    SAFE_ALLOCATE(dipole(1:mesh%sb%dim))
+!    call geometry_dipole(geo, dipole)
+!    call messages_print_stress(pr_info, "Ionic Dipole = " )
+!    write(pr_info, fmt=trim(frmt)) ( dipole(ip), ip=1,mesh%sb%dim)
+!    SAFE_DEALLOCATE_A(dipole)
+
+    call io_close(pr_info)
+
+    if (states_are_real(st)) then
+      SAFE_DEALLOCATE_A(projections)
+      SAFE_DEALLOCATE_A(tmp)
+      SAFE_DEALLOCATE_A(scalar_op)
+    else
+      SAFE_DEALLOCATE_A(zprojections)
+      SAFE_DEALLOCATE_A(ztmp)
+      SAFE_DEALLOCATE_A(zscalar_op)
+    end if
+
+    POP_SUB(convert_projections)
+  end subroutine convert_projections
 end program
 
 !! Local Variables:
