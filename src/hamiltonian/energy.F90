@@ -57,6 +57,7 @@ module energy_oct_m
     FLOAT :: ts          !< TS
     FLOAT :: berry       !< Berry energy correction = -mu.E - <Vberry>
     FLOAT :: delta_xc    !< the XC derivative discontinuity
+    FLOAT :: pt_exchange
 
     !cmplxscl 
     FLOAT :: Imtotal
@@ -104,6 +105,7 @@ contains
     this%ts           = M_ZERO
     this%berry        = M_ZERO
     this%delta_xc     = M_ZERO
+    this%pt_exchange  = M_ZERO
 
     this%Imtotal       = M_ZERO
     this%Imeigenvalues = M_ZERO
@@ -150,6 +152,7 @@ contains
     eout%ts           = ein%ts
     eout%berry        = ein%berry
     eout%delta_xc     = ein%delta_xc
+    eout%pt_exchange  = ein%pt_exchange
 
     eout%Imtotal = ein%Imtotal
     eout%Imeigenvalues = ein%Imeigenvalues

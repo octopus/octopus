@@ -168,8 +168,8 @@ contains
       hm%energy%total = hm%ep%eii + hm%energy%eigenvalues &
         - hm%energy%hartree + hm%energy%exchange + hm%energy%correlation + hm%energy%vdw - hm%energy%intnvxc - evxctau &
         - hm%energy%pcm_corr + hm%energy%int_ee_pcm + hm%energy%int_en_pcm &
-                             + hm%energy%int_nn_pcm + hm%energy%int_ne_pcm
-
+                             + hm%energy%int_nn_pcm + hm%energy%int_ne_pcm &
+                             + hm%energy%pt_exchange
       if (cmplxscl) then
         hm%energy%Imtotal = hm%energy%Imeigenvalues - hm%energy%Imhartree + hm%energy%Imexchange + hm%energy%Imcorrelation &
           - hm%energy%Imintnvxc - Imevxctau
@@ -232,8 +232,9 @@ contains
       write(message(8), '(6x,a, f18.8)')'Delta XC    = ', units_from_atomic(units_out%energy, hm%energy%delta_xc)
       write(message(9), '(6x,a, f18.8)')'Entropy     = ', hm%energy%entropy ! the dimensionless sigma of Kittel&Kroemer
       write(message(10), '(6x,a, f18.8)')'-TS         = ', -units_from_atomic(units_out%energy, hm%energy%TS)
-      call messages_info(10, iunit)
-      
+      write(message(11), '(6x,a, f18.8)')'Pt-Exchange = ', units_from_atomic(units_out%energy, hm%energy%pt_exchange)
+      call messages_info(11, iunit)
+
       if (hm%pcm%run_pcm) then
           write(message(1),'(6x,a, f18.8)')'E_e-solvent = ',  units_from_atomic(units_out%energy, hm%energy%int_ee_pcm + &
                                                                                                   hm%energy%int_en_pcm   )

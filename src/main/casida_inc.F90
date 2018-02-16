@@ -1,5 +1,6 @@
 !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
 !! Copyright (C) 2011-2013 D. Strubbe
+!! Copyright (C) 2017-2018 J. Flick
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -123,14 +124,14 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
     ! let us get now the x vector.
     xx = X(ks_matrix_elements)(cas, st, mesh, deltav)
     ! And now we are able to get the transition matrix elements between many-electron states.
-    do ia = 1, cas%n_pairs
+    do ia = 1, cas%n_pairs+cas%pt_nmodes
       cas%X(tm)(ia, idir) = X(transition_matrix_element)(cas, ia, xx)
     end do
   end do
   SAFE_DEALLOCATE_A(xx)
 
   ! And the oscillator strengths.
-  do ia = 1, cas%n_pairs
+  do ia = 1, cas%n_pairs+cas%pt_nmodes
     cas%f(ia) = (M_TWO / mesh%sb%dim) * cas%w(ia) * sum( (abs(cas%X(tm)(ia, :)))**2 )
   end do
 
@@ -423,15 +424,19 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
 
   integer :: ia, jb, iunit, ia_iter, ia_length, jb_tmp
   integer :: maxcount, actual, counter
-  R_TYPE :: mtxel_vh, mtxel_xc
+  R_TYPE :: mtxel_vh, mtxel_xc, mtxel_vm
   logical, allocatable :: is_saved(:, :), is_calcd(:, :)
   logical :: is_forces_
   type(casida_save_pot_t) :: saved_pot
+  R_TYPE, allocatable :: xx(:)
 
   PUSH_SUB(X(casida_get_matrix))
 
+  SAFE_ALLOCATE(xx(1:cas%n_pairs))
+
   mtxel_vh = M_ZERO
   mtxel_xc = M_ZERO
+  mtxel_vm = M_ZERO
   is_forces_ = optional_default(is_forces, .false.)
 
   ! load saved matrix elements
@@ -505,13 +510,24 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
         if(is_forces_) then
           call X(K_term)(cas%pair(ia), cas%pair(jb), saved_pot, mtxel_xc = mtxel_xc)
         else
-          call X(K_term)(cas%pair(ia), cas%pair(jb), saved_pot, mtxel_vh = mtxel_vh, mtxel_xc = mtxel_xc)
+          call X(K_term)(cas%pair(ia), cas%pair(jb), saved_pot, mtxel_vh = mtxel_vh, mtxel_xc = mtxel_xc, &
+            mtxel_vm = mtxel_vm)
         end if
-        matrix(ia, jb) = mtxel_vh + mtxel_xc
+        matrix(ia, jb) = mtxel_vh + mtxel_xc + mtxel_vm
       end if
       if(jb /= ia) matrix(jb, ia) = R_CONJ(matrix(ia, jb))
     end do
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(counter, maxcount)
+    if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
+      do ia = 1, cas%pt_nmodes
+         xx = M_ZERO
+         if (cas%has_photons) then
+          call X(MN_term)(cas, ia, xx)
+         end if
+         matrix(cas%n_pairs + ia, jb) = sqrt(M_HALF*cas%pt%omega_array(ia))*xx(jb)
+         matrix(jb, cas%n_pairs + ia) = sqrt(M_HALF*cas%pt%omega_array(ia))*xx(jb)
+      end do
+    end if
   end do
 
   call X(casida_save_pot_end)(saved_pot)
@@ -539,6 +555,7 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   end if
   call restart_close(cas%restart_dump, iunit)
   SAFE_DEALLOCATE_A(is_saved)
+  SAFE_DEALLOCATE_A(xx)
 
   POP_SUB(X(casida_get_matrix))
 
@@ -546,14 +563,15 @@ contains
 
   ! ---------------------------------------------------------
   !> calculates the matrix elements <i(p),a(p)|v|j(q),b(q)> and/or <i(p),a(p)|xc|j(q),b(q)>
-  subroutine X(K_term)(pp, qq, saved, mtxel_vh, mtxel_xc)
+  subroutine X(K_term)(pp, qq, saved, mtxel_vh, mtxel_xc, mtxel_vm)
     type(states_pair_t),               intent(in)    :: pp
     type(states_pair_t),               intent(in)    :: qq
     type(casida_save_pot_t),           intent(inout) :: saved
     R_TYPE,                  optional, intent(out)   :: mtxel_vh
     R_TYPE,                  optional, intent(out)   :: mtxel_xc
+    R_TYPE,                  optional, intent(out)   :: mtxel_vm
 
-    integer :: pi, qi, pa, qa, pk, qk
+    integer :: pi, qi, pa, qa, pk, qk, ia
     R_TYPE, allocatable :: rho_i(:), rho_j(:), integrand(:)
     FLOAT :: coeff_vh
     type(profile_t), save :: prof
@@ -610,11 +628,24 @@ contains
     if(present(mtxel_xc)) then
       integrand(1:mesh%np) = rho_i(1:mesh%np)*rho_j(1:mesh%np)*xc(1:mesh%np, pk, qk)
       mtxel_xc = X(mf_integrate)(mesh, integrand)
+      ! mtxel_xc = M_ZERO    ! this is rpa, JF
+    end if
+
+    if(present(mtxel_vm)) then
+      mtxel_vm = M_ZERO
+      if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
+        do ia = 1, cas%pt_nmodes
+            mtxel_vm = mtxel_vm + &
+            X(mf_dotp)(mesh, cas%pt%lambda_array(ia)*cas%pt%pol_dipole_array(1:mesh%np,ia)*rho_i(1:mesh%np), &
+                cas%pt%lambda_array(ia)*cas%pt%pol_dipole_array(1:mesh%np,ia)*rho_j(1:mesh%np))
+        end do
+      end if
     end if
 
     if(cas%herm_conj) then
       if(present(mtxel_vh)) mtxel_vh = R_CONJ(mtxel_vh)
       if(present(mtxel_xc)) mtxel_xc = R_CONJ(mtxel_xc)
+      if(present(mtxel_vm)) mtxel_vm = R_CONJ(mtxel_vm)
     end if
 
     SAFE_DEALLOCATE_A(rho_i)
@@ -624,6 +655,28 @@ contains
     call profiling_out(prof)
     POP_SUB(X(casida_get_matrix).X(K_term))
   end subroutine X(K_term)
+
+  ! ---------------------------------------------------------
+  subroutine X(MN_term)(cas, iimode, xx)
+    type(casida_t), intent(in)  :: cas
+    integer,        intent(in)  :: iimode
+    R_TYPE,         intent(out) :: xx(:)
+
+    FLOAT, allocatable  :: deltav(:)
+    integer            :: idir
+
+    PUSH_SUB(X(casida_get_matrix).X(MN_term))
+
+    SAFE_ALLOCATE(deltav(1:mesh%np))
+!     do idir = 1, mesh%sb%dim
+      deltav(1:mesh%np) = cas%pt%lambda_array(iimode)*cas%pt%pol_dipole_array(1:mesh%np, iimode)
+      ! let us get now the x vector.
+      xx = X(ks_matrix_elements)(cas, st, mesh, deltav)
+!     end do
+    SAFE_DEALLOCATE_A(deltav)
+
+    POP_SUB(X(casida_get_matrix).X(MN_term))
+  end subroutine X(MN_term)
 
   ! ---------------------------------------------------------
   subroutine load_saved(matrix, is_saved, restart_file)
@@ -1043,18 +1096,29 @@ subroutine X(casida_solve)(cas, st)
     if(cas%type /= CASIDA_CASIDA) then
       SAFE_DEALLOCATE_A(occ_diffs)
     end if
-    
+
+    if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
+       do ia = 1, cas%pt_nmodes  !diagonal
+         cas%X(mat)(cas%n_pairs+ia,cas%n_pairs+ia) = (cas%pt%omega_array(ia))**2
+         do jb = 1, cas%n_pairs
+           cas%X(mat)(jb,cas%n_pairs+ia) = M_TWO*cas%X(mat)(jb,cas%n_pairs+ia) &
+              *sqrt(cas%pt%omega_array(ia))/sqrt(cas%s(jb))/sqrt(M_TWO)
+           cas%X(mat)(cas%n_pairs+ia,jb) = M_TWO*cas%X(mat)(cas%n_pairs+ia,jb) &
+              *sqrt(cas%pt%omega_array(ia))/sqrt(cas%s(jb))/sqrt(M_TWO)
+         end do
+       end do
+    end if
+
     message(1) = "Info: Diagonalizing matrix for resonance energies."
     call messages_info(1)
     ! now we diagonalize the matrix
     ! for huge matrices, perhaps we should consider ScaLAPACK here...
     call profiling_in(prof, "CASIDA_DIAGONALIZATION")
     if(cas%calc_forces) cas%X(mat_save) = cas%X(mat) ! save before gets turned into eigenvectors
-    call lalg_eigensolve(cas%n_pairs, cas%X(mat), cas%w)
+    call lalg_eigensolve(cas%n_pairs + cas%pt_nmodes, cas%X(mat), cas%w)
     call profiling_out(prof)
-    
-    do ia = 1, cas%n_pairs
-      
+
+    do ia = 1, cas%n_pairs+cas%pt_nmodes
       if(cas%type == CASIDA_CASIDA) then
         if(cas%w(ia) < -M_EPSILON) then       
           write(message(1),'(a,i4,a)') 'Casida excitation energy', ia, ' is imaginary.'
@@ -1070,12 +1134,12 @@ subroutine X(casida_solve)(cas, st)
           call messages_warning(2)
         end if
       end if
-      
+
       cas%ind(ia) = ia ! diagonalization returns eigenvalues in order.
     end do
-    
+
   end if
-    
+
   POP_SUB(X(casida_solve))
 end subroutine X(casida_solve)
 
@@ -1087,7 +1151,7 @@ subroutine X(casida_write)(cas, sys)
   character(len=5) :: str
   character(len=50) :: dir_name
   integer :: iunit, ia, jb, idim, index
-  R_TYPE  :: temp
+  R_TYPE  :: temp, norm_e, norm_p
   
   PUSH_SUB(X(casida_write))
   
@@ -1114,7 +1178,7 @@ subroutine X(casida_write)(cas, sys)
     end do
     write(iunit, '(1x,a15)') '<f>'
     
-    do ia = 1, cas%n_pairs
+    do ia = 1, cas%n_pairs+cas%pt_nmodes
       if((cas%type == CASIDA_EPS_DIFF)) then
         write(iunit, '(2i4)', advance='no') cas%pair(cas%ind(ia))%i, cas%pair(cas%ind(ia))%a
         if(cas%nik > 1) then
@@ -1135,7 +1199,7 @@ subroutine X(casida_write)(cas, sys)
       call io_mkdir(trim(dir_name))
     end if
     
-    do ia = 1, cas%n_pairs
+    do ia = 1, cas%n_pairs+cas%pt_nmodes
       
       write(str,'(i5.5)') ia
       
@@ -1149,16 +1213,34 @@ subroutine X(casida_write)(cas, sys)
           write(iunit,'(a,2es14.5)') '# <' // index2axis(idim) // '> ['//trim(units_abbrev(units_out%length))// '] = ', &
             units_from_atomic(units_out%length, cas%X(tm)(cas%ind(ia), idim))
         end do
-        
+
         ! this stuff should go BEFORE calculation of transition matrix elements!
         ! make the largest component positive and real, to specify the phase
         index = maxloc(abs(cas%X(mat)(:, cas%ind(ia))), dim = 1)
         temp = abs(cas%X(mat)(index, cas%ind(ia))) / cas%X(mat)(index, cas%ind(ia))
-        
+
+        norm_e = M_ZERO
         do jb = 1, cas%n_pairs
           write(iunit,*) cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%kk, temp * cas%X(mat)(jb, cas%ind(ia))
+          norm_e = norm_e + abs(cas%X(mat)(jb, cas%ind(ia)))**2
         end do
-        
+
+        norm_p = M_ZERO
+        if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
+        ! negative number refers to photonic excitation
+          do jb = 1, cas%pt_nmodes
+            write(iunit,*) cas%pair(cas%n_pairs + jb)%i, cas%pair(cas%n_pairs + jb)%a, &
+              cas%pair(cas%n_pairs + jb)%kk, temp * cas%X(mat)(cas%n_pairs + jb, cas%ind(ia))
+            norm_p = norm_p + abs(cas%X(mat)(cas%n_pairs + jb, cas%ind(ia)))**2
+          end do
+        write(iunit,'(a,es14.5)') '# Electronic contribution = ', &
+          norm_e
+        write(iunit,'(a,es14.5)') '# Photonic contribution = ', &
+          norm_p
+        write(iunit,'(a,i5.5,a,i5.5,a)') '# (electronic pairs, photon modes) = (', &
+          cas%n_pairs,',', cas%pt_nmodes,')'
+        end if
+
         if(cas%type == CASIDA_TAMM_DANCOFF .or. cas%type == CASIDA_VARIATIONAL .or. cas%type == CASIDA_PETERSILKA) then
           call X(write_implied_occupations)(cas, iunit, cas%ind(ia))
         end if

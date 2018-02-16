@@ -1,5 +1,6 @@
 !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
 !! Copyright (C) 2012-2013 D. Strubbe
+!! Copyright (C) 2017-2018 J. Flick
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -58,6 +59,7 @@ module casida_oct_m
   use xc_oct_m
   use messages_oct_m  
   use multicomm_oct_m
+  use photon_mode_oct_m
 
   implicit none
 
@@ -131,6 +133,10 @@ module casida_oct_m
     logical           :: parallel_in_eh_pairs
     type(mpi_grp_t)   :: mpi_grp
     logical           :: fromScratch
+    logical              :: has_photons
+    integer              :: pt_nmodes
+    type(photon_mode_t)  :: pt
+
   end type casida_t
 
   type casida_save_pot_t
@@ -277,6 +283,24 @@ contains
         call messages_fatal(1, only_root_writes = .true.)
         ! see section II.D of CV(2) paper regarding this assumption. Would be Eq. 30 with complex wfns.
       end if
+    end if
+
+    !%Variable Photons
+    !%Type logical
+    !%Default .false.
+    !%Section Hamiltonian::XC
+    !%Description
+    !% Activate the photon Casida
+    !%End
+    
+    call parse_variable('Photons', .false., cas%has_photons)
+    cas%pt_nmodes = 0
+    if (cas%has_photons) then
+      if(cas%has_photons) call messages_experimental('Photons = yes')  
+      call photon_mode_init(cas%pt, sys%gr)
+      write(message(1), '(a,i5,a)') 'Happy to have Casida with ', cas%pt%nmodes, ' photon modes.'
+      call messages_info(1)
+      cas%pt_nmodes = cas%pt%nmodes
     end if
 
     !%Variable CasidaTransitionDensities
@@ -497,19 +521,19 @@ contains
     if(mpi_grp_is_root(mpi_world)) write(*, "(1x)")
 
     ! allocate stuff
-    SAFE_ALLOCATE(cas%pair(1:cas%n_pairs))
+    SAFE_ALLOCATE(cas%pair(1:cas%n_pairs+cas%pt_nmodes))
     if(cas%states_are_real) then
-      SAFE_ALLOCATE( cas%dmat(1:cas%n_pairs, 1:cas%n_pairs))
-      SAFE_ALLOCATE(  cas%dtm(1:cas%n_pairs, 1:cas%sb_dim))
+      SAFE_ALLOCATE( cas%dmat(1:cas%n_pairs+cas%pt_nmodes, 1:cas%n_pairs+cas%pt_nmodes))
+      SAFE_ALLOCATE(  cas%dtm(1:cas%n_pairs+cas%pt_nmodes, 1:cas%sb_dim))
     else
       SAFE_ALLOCATE( cas%zmat(1:cas%n_pairs, 1:cas%n_pairs))
       SAFE_ALLOCATE(  cas%ztm(1:cas%n_pairs, 1:cas%sb_dim))
     end if
-    SAFE_ALLOCATE(   cas%f(1:cas%n_pairs))
+    SAFE_ALLOCATE(   cas%f(1:cas%n_pairs+cas%pt_nmodes))
     SAFE_ALLOCATE(   cas%s(1:cas%n_pairs))
-    SAFE_ALLOCATE(   cas%w(1:cas%n_pairs))
+    SAFE_ALLOCATE(   cas%w(1:cas%n_pairs+cas%pt_nmodes))
     SAFE_ALLOCATE(cas%index(1:maxval(cas%n_occ), cas%nst - maxval(cas%n_unocc) + 1:cas%nst, cas%nik))
-    SAFE_ALLOCATE( cas%ind(1:cas%n_pairs))
+    SAFE_ALLOCATE( cas%ind(1:cas%n_pairs+cas%pt_nmodes))
 
     if(cas%calc_forces) then
       if(cas%states_are_real) then
@@ -542,6 +566,15 @@ contains
         end do
       end do
     end do
+
+    if (cas%has_photons) then
+    ! create pairs for photon modes (negative number refers to photonic excitation)
+      do ik = 1, cas%pt_nmodes
+         cas%pair(cas%n_pairs + ik)%i = 1
+         cas%pair(cas%n_pairs + ik)%a = -ik
+         cas%pair(cas%n_pairs + ik)%kk = -ik
+      end do
+    end if
 
     SAFE_DEALLOCATE_P(cas%is_included)
 
@@ -600,6 +633,10 @@ contains
 
     call restart_end(cas%restart_dump)
     call restart_end(cas%restart_load)
+
+    if (cas%has_photons) then
+      call photon_mode_end(cas%pt)
+    end if
 
     POP_SUB(casida_type_end)
   end subroutine casida_type_end
