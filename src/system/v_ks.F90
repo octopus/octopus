@@ -1190,6 +1190,7 @@ contains
 
     FLOAT, allocatable :: potx(:)
     CMPLX, allocatable :: kick(:)
+    FLOAT, allocatable :: kick_real(:)
     integer :: ii
 
     integer :: asc_unit_test
@@ -1255,20 +1256,23 @@ contains
         if ( associated(hm%ep%lasers) .and. hm%ep%kick%delta_strength /= M_ZERO ) then !< external potential and kick
           SAFE_ALLOCATE(potx(1:ks%gr%mesh%np_part))
           SAFE_ALLOCATE(kick(1:ks%gr%mesh%np_part)) 
+          SAFE_ALLOCATE(kick_real(1:ks%gr%mesh%np_part))
           potx = M_ZERO    
           kick = M_ZERO
           do ii = 1, hm%ep%no_lasers        
             call laser_potential(hm%ep%lasers(ii), ks%gr%mesh, potx, ks%calc%time)
           end do
           if ( hm%pcm%iter > 1 .and. hm%current_time-2*dt <= hm%ep%kick%time .and. hm%current_time > hm%ep%kick%time ) then 
-            call kick_function_get(ks%gr%mesh, hm%ep%kick, kick) !< kick at first time in propagation
+            call kick_function_get(ks%gr%mesh, hm%ep%kick, kick, to_interpolate = .true.) !< kick at first time in propagation
             kick = hm%ep%kick%delta_strength * kick
-            call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_ext = potx, kick = DREAL(kick), time_present = ks%calc%time_present)
+            kick_real = DREAL(kick)
+            call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_ext = potx, kick = kick_real, time_present = ks%calc%time_present)
           else
             call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_ext = potx, time_present = ks%calc%time_present)
           end if
           SAFE_DEALLOCATE_A(potx)
           SAFE_DEALLOCATE_A(kick)
+          SAFE_DEALLOCATE_A(kick_real)
         else if ( associated(hm%ep%lasers) .and. hm%ep%kick%delta_strength == M_ZERO ) then !< just external potential
           SAFE_ALLOCATE(potx(1:ks%gr%mesh%np_part))
           potx = M_ZERO    
@@ -1279,15 +1283,16 @@ contains
           SAFE_DEALLOCATE_A(potx)
         else if ( (.not.associated(hm%ep%lasers)) .and. hm%ep%kick%delta_strength /= M_ZERO ) then !< just kick
           SAFE_ALLOCATE(kick(1:ks%gr%mesh%np_part))
+          SAFE_ALLOCATE(kick_real(1:ks%gr%mesh%np_part))
           kick = M_ZERO
-          write(*,*) 'test', hm%pcm%iter, hm%current_time, dt, hm%ep%kick%time
           if ( hm%pcm%iter > 1 .and. hm%current_time-2*dt <= hm%ep%kick%time .and. hm%current_time > hm%ep%kick%time ) then
-            write(*,*) "here you enter too" 
-            call kick_function_get(ks%gr%mesh, hm%ep%kick, kick) !< kick at first time in propagation
+            call kick_function_get(ks%gr%mesh, hm%ep%kick, kick, to_interpolate = .true.) !< kick at first time in propagation
             kick = hm%ep%kick%delta_strength * kick
-            call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, kick = DREAL(kick), time_present = ks%calc%time_present)
+            kick_real = DREAL(kick)
           end if
+          call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, kick = kick_real, time_present = ks%calc%time_present)
           SAFE_DEALLOCATE_A(kick)
+          SAFE_DEALLOCATE_A(kick_real)
         end if
 
         ! Calculating the PCM term renormalizing the sum of the single-particle energies

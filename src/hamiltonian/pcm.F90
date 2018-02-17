@@ -183,6 +183,8 @@ module pcm_oct_m
   integer, parameter :: n_tess_sphere = 60 !< minimum number of tesserae per sphere
 					   !< cannot be changed without changing cav_gen subroutine
 
+  integer :: asc_vs_t_unit
+
 contains
 
 
@@ -1047,6 +1049,8 @@ contains
     pcm%deltaQ_e = M_ZERO
     pcm%deltaQ_n = M_ZERO
 
+    asc_vs_t_unit = io_open(PCM_DIR//'ASC_vs_t.dat', action='write')
+
     POP_SUB(pcm_init)
   end subroutine pcm_init
 
@@ -1067,8 +1071,7 @@ contains
     logical :: input_asc_ext
 
     ! for debuggin - it should be cleaned up
-    !integer :: asc_unit_test, asc_unit_test_aux, ii
-
+    integer :: ii
 
     PUSH_SUB(pcm_calc_pot_rs)  
     
@@ -1259,6 +1262,7 @@ contains
           case default
             call pcm_charges_propagation(pcm%q_ext, pcm%v_kick, dt, pcm%tess, input_asc_ext, 'justkick', 'deb', this_deb = pcm%deb)
         end select
+      write(asc_vs_t_unit,*) pcm%iter*dt, pcm%q_ext(28)
       end if
       !< END - equation-of-motion propagation
       !< total pcm charges due to kick
@@ -3062,6 +3066,8 @@ contains
       end do
       call io_close(asc_unit_test_ext)
     end if
+
+    call io_close(asc_vs_t_unit)
 
     SAFE_DEALLOCATE_A(pcm%spheres)
     SAFE_DEALLOCATE_A(pcm%tess)

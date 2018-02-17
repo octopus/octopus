@@ -647,21 +647,31 @@ contains
 
   ! ---------------------------------------------------------
   ! 
-  subroutine kick_function_get(mesh, kick, kick_function, theta)
+  subroutine kick_function_get(mesh, kick, kick_function, theta, to_interpolate)
     type(mesh_t),         intent(in)    :: mesh
     type(kick_t),         intent(in)    :: kick
     CMPLX,                intent(out)   :: kick_function(:)
     FLOAT, optional,      intent(in)    :: theta
+    logical, optional,    intent(in)    :: to_interpolate
 
     integer :: ip, im
     FLOAT   :: xx(MAX_DIM)
     FLOAT   :: rkick, ikick, rr, ylm
     logical :: cmplxscl
 
+    integer :: np
+
     PUSH_SUB(kick_function_get)
 
     cmplxscl = .false.
     if(present(theta)) cmplxscl = .true.
+
+    np = mesh%np
+    if(present(to_interpolate)) then
+      if(to_interpolate) then
+        np = mesh%np_part
+      end if 
+    end if 
     
     if(abs(kick%qlength) > M_EPSILON) then ! q-vector is set
 
@@ -683,7 +693,7 @@ contains
       call messages_info(1)
 
       kick_function = M_z0
-      do ip = 1, mesh%np
+      do ip = 1, np
         call mesh_r(mesh, ip, rr, coords = xx)
         select case (kick%qkick_mode)
           case (QKICKMODE_COS)
@@ -704,7 +714,7 @@ contains
       if(kick%function_mode  ==  KICK_FUNCTION_USER_DEFINED) then
 
         kick_function = M_z0
-        do ip = 1, mesh%np
+        do ip = 1, np
           call mesh_r(mesh, ip, rr, coords = xx)
             rkick = M_ZERO; ikick = M_ZERO
           call parse_expression(rkick, ikick, mesh%sb%dim, xx, rr, M_ZERO, trim(kick%user_defined_function))
@@ -715,14 +725,14 @@ contains
 
         kick_function = M_z0
         do im = 1, kick%n_multipoles
-          do ip = 1, mesh%np
+          do ip = 1, np
             call mesh_r(mesh, ip, rr, coords = xx)
             call loct_ylm(1, xx(1), xx(2), xx(3), kick%l(im), kick%m(im), ylm)
               kick_function(ip) = kick_function(ip) + kick%weight(im) * (rr**kick%l(im)) * ylm
           end do
         end do
       else
-        forall(ip = 1:mesh%np)
+        forall(ip = 1:np)
           kick_function(ip) = sum(mesh%x(ip, 1:mesh%sb%dim) * &
             kick%pol(1:mesh%sb%dim, kick%pol_dir))
         end forall
