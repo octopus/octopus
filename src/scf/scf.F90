@@ -363,6 +363,7 @@ contains
     if(scf%mix_field /= OPTION__MIXFIELD__STATES) then
       call lda_u_mixer_init_auxmixer(hm%lda_u, scf%lda_u_mix, scf%smix, st)
     end if
+    call mix_get_field(scf%smix, scf%mixfield)
 
     ! now the eigensolver stuff
     call eigensolver_init(scf%eigens, gr, st)

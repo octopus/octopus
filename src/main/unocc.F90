@@ -253,12 +253,12 @@ contains
     do iter = 1, max_iter
       call eigensolver_run(eigens, sys%gr, sys%st, hm, 1, converged, sys%st%nst_conv)
 
-      call write_iter_(sys%st)
-
       ! If not all gs wavefunctions were read when starting, in particular for nscf with different k-points,
       ! the occupations must be recalculated each time, though they do not affect the result of course.
       ! FIXME: This is wrong for metals where we must use the Fermi level from the original calculation!
       call states_fermi(sys%st, sys%gr%mesh)
+
+      call write_iter_(sys%st)
 
       ! write output file
       if(mpi_grp_is_root(mpi_world)) then
