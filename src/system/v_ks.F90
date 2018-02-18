@@ -1180,7 +1180,6 @@ contains
   !! directly.
   !
   subroutine v_ks_hartree(ks, hm)
-    save
     type(v_ks_t),                intent(inout) :: ks
     type(hamiltonian_t), target, intent(inout) :: hm
 
@@ -1196,6 +1195,8 @@ contains
     integer :: asc_unit_test
 
     FLOAT :: dt
+
+    logical :: kick_time
 
     PUSH_SUB(v_ks_hartree)
 
@@ -1262,11 +1263,13 @@ contains
           do ii = 1, hm%ep%no_lasers        
             call laser_potential(hm%ep%lasers(ii), ks%gr%mesh, potx, ks%calc%time)
           end do
-          if ( hm%pcm%iter > 1 .and. hm%current_time-2*dt <= hm%ep%kick%time .and. hm%current_time > hm%ep%kick%time ) then 
+          kick_time = ( hm%current_time-2*dt <= hm%ep%kick%time .and. hm%current_time > hm%ep%kick%time )
+          if ( hm%pcm%iter > 1 .and. kick_time ) then 
             call kick_function_get(ks%gr%mesh, hm%ep%kick, kick, to_interpolate = .true.) !< kick at first time in propagation
             kick = hm%ep%kick%delta_strength * kick
             kick_real = DREAL(kick)
-            call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_ext = potx, kick = kick_real, time_present = ks%calc%time_present)
+            call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_ext = potx, kick = kick_real, time_present = ks%calc%time_present, &
+                                                                   kick_time = kick_time )
           else
             call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_ext = potx, time_present = ks%calc%time_present)
           end if
@@ -1285,12 +1288,14 @@ contains
           SAFE_ALLOCATE(kick(1:ks%gr%mesh%np_part))
           SAFE_ALLOCATE(kick_real(1:ks%gr%mesh%np_part))
           kick = M_ZERO
-          if ( hm%pcm%iter > 1 .and. hm%current_time-2*dt <= hm%ep%kick%time .and. hm%current_time > hm%ep%kick%time ) then
+          kick_real = M_ZERO
+          kick_time = ( hm%current_time-2*dt <= hm%ep%kick%time .and. hm%current_time > hm%ep%kick%time )
+          if ( hm%pcm%iter > 1 .and. kick_time ) then
             call kick_function_get(ks%gr%mesh, hm%ep%kick, kick, to_interpolate = .true.) !< kick at first time in propagation
             kick = hm%ep%kick%delta_strength * kick
             kick_real = DREAL(kick)
           end if
-          call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, kick = kick_real, time_present = ks%calc%time_present)
+          call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, kick = kick_real, time_present = ks%calc%time_present, kick_time = kick_time )
           SAFE_DEALLOCATE_A(kick)
           SAFE_DEALLOCATE_A(kick_real)
         end if

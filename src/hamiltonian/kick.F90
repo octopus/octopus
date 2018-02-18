@@ -668,9 +668,7 @@ contains
 
     np = mesh%np
     if(present(to_interpolate)) then
-      if(to_interpolate) then
-        np = mesh%np_part
-      end if 
+      if(to_interpolate) np = mesh%np_part
     end if 
     
     if(abs(kick%qlength) > M_EPSILON) then ! q-vector is set

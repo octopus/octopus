@@ -173,6 +173,8 @@ module pcm_oct_m
 
   logical :: td_calc_mode = .false.
 
+  logical :: is_time_for_kick = .false.
+
   integer :: CM
 
   integer, parameter :: CM_GS = 1, &
@@ -1055,7 +1057,7 @@ contains
   end subroutine pcm_init
 
   ! -----------------------------------------------------------------------------
-  subroutine pcm_calc_pot_rs(pcm, mesh, geo, v_h, v_ext, kick, time_present)
+  subroutine pcm_calc_pot_rs(pcm, mesh, geo, v_h, v_ext, kick, time_present, kick_time)
     save
     type(pcm_t),             intent(inout) :: pcm
     type(mesh_t),               intent(in) :: mesh  
@@ -1064,6 +1066,7 @@ contains
     FLOAT,            optional, intent(in) :: v_ext(:)
     FLOAT,            optional, intent(in) :: kick(:)
     logical,          optional, intent(in) :: time_present
+    logical,          optional, intent(in) :: kick_time
     
     integer :: calc
 
@@ -1085,6 +1088,10 @@ contains
 
     if (present(time_present)) then
      if (time_present) td_calc_mode = .true.
+    end if
+
+    if (present(kick_time)) then
+     if (kick_time) is_time_for_kick = .true.
     end if
 
     select case(pcm%initial_asc)
@@ -1248,21 +1255,23 @@ contains
         !< BEGIN - equation-of-motion propagation
         select case (pcm%which_eps) !under development
           case('drl')
-            call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, dt, pcm%tess, input_asc_ext, 'ext+kick', 'drl', this_drl = pcm%drl,&
-                                                    kick = pcm%v_kick)
+            call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, dt, pcm%tess, input_asc_ext, 'ext+kick', 'drl', this_drl=pcm%drl, &
+                                                    kick = pcm%v_kick, kick_time = is_time_for_kick)
           case default
-            call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, dt, pcm%tess, input_asc_ext, 'ext+kick', 'deb', this_deb = pcm%deb,&
-                                                    kick = pcm%v_kick)
+            call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, dt, pcm%tess, input_asc_ext, 'ext+kick', 'deb', this_deb=pcm%deb, &
+                                                    kick = pcm%v_kick, kick_time = is_time_for_kick)
         end select
       else
         !< BEGIN - equation-of-motion propagation
         select case (pcm%which_eps) !under development
           case('drl')
-            call pcm_charges_propagation(pcm%q_ext, pcm%v_kick, dt, pcm%tess, input_asc_ext, 'justkick', 'drl', this_drl = pcm%drl)
+            call pcm_charges_propagation(pcm%q_ext, pcm%v_kick, dt, pcm%tess, input_asc_ext, 'justkick', 'drl', this_drl=pcm%drl, &
+                                                                kick_time = is_time_for_kick)
           case default
-            call pcm_charges_propagation(pcm%q_ext, pcm%v_kick, dt, pcm%tess, input_asc_ext, 'justkick', 'deb', this_deb = pcm%deb)
+            call pcm_charges_propagation(pcm%q_ext, pcm%v_kick, dt, pcm%tess, input_asc_ext, 'justkick', 'deb', this_deb=pcm%deb, &
+                                                                kick_time = is_time_for_kick)
         end select
-      write(asc_vs_t_unit,*) pcm%iter*dt, pcm%q_ext(28)
+      write(asc_vs_t_unit,*) pcm%iter*dt, pcm%q_ext
       end if
       !< END - equation-of-motion propagation
       !< total pcm charges due to kick

@@ -105,7 +105,8 @@ module pcm_eom_oct_m
   !------------------------------------------------------------------------------------------------------------------------------
   !> Driving subroutine for the Equation of Motion (EOM) propagation of the polarization charges
   !> within the Integral Equation Formalism (IEF) formulation of the Polarization Continuum Model (PCM).
-  subroutine pcm_charges_propagation(q_t, pot_t, this_dt, this_cts_act, input_asc, this_eom, this_eps, this_deb, this_drl, kick) 
+  subroutine pcm_charges_propagation(q_t, pot_t, this_dt, this_cts_act, input_asc, this_eom, this_eps, this_deb, this_drl, &
+                                          kick, kick_time) 
    save
    FLOAT, intent(out) :: q_t(:)
    FLOAT, intent(in)  :: pot_t(:)
@@ -121,12 +122,13 @@ module pcm_eom_oct_m
    type(debye_param_t), optional, intent(in) :: this_deb
    type(drude_param_t), optional, intent(in) :: this_drl 
 
-   FLOAT, optional, intent(in)  :: kick(:)
+   FLOAT,   optional, intent(in)  :: kick(:)
+   logical, optional, intent(in)  :: kick_time
 
    logical :: firsttime=.true.
    logical :: initial_electron=.true.
    logical :: initial_external=.true.
-   logical :: initial_kick=.true.
+   logical :: initial_kick=.false.
 
    PUSH_SUB(pcm_charges_propagation)
 
@@ -159,50 +161,108 @@ module pcm_eom_oct_m
     else if (which_eps=='drl' .and. present(this_drl)) then
      drl=this_drl
     endif
+    if (which_eps/='deb' .and. which_eps/='drl') then
+     message(1) = "pcm_charges_propagation: EOM-PCM error. Only Debye or Drude-Lorent dielectric models are allowed."
+     call messages_fatal(1)
+    endif
+    if( deb%tau == M_ZERO ) then
+     message(1) = "pcm_charges_propagation: EOM-PCM error. Debye EOM-PCM require a non-null Debye relaxation time."
+     call messages_fatal(1)
+    endif
     firsttime=.false.
    endif
 
-   if( ( initial_electron .and.   which_eom == 'electron') .or.                            & 
-       ( initial_external .and.   which_eom == 'external') .or.                            &
-       ( initial_kick     .and. ( which_eom == 'ext+kick' .or. which_eom == 'justkick' ) ) ) then
+   if( present(kick_time) ) then 
+    if( kick_time ) initial_kick = .true.
+   endif
+
+   if( initial_kick ) then
+
+    !> kick at play
+
     call init_BEM
-    if(initial_electron .or. initial_external .or. ( initial_kick .and. which_eom == 'justkick' ) ) then
-     call init_charges(q_t, pot_t, input_asc ) 
-     if(initial_electron .and. which_eom == 'electron' ) initial_electron=.false.
-     if(initial_external .and. which_eom == 'external' ) initial_external=.false.
-     if(initial_kick     .and. which_eom == 'justkick')  initial_kick=.false.
-     POP_SUB(pcm_charges_propagation)
-     return
-    else if(initial_kick .and. which_eom == 'ext+kick') then
-     call init_charges(q_t, pot_t, input_asc, kick = kick ) 
-     initial_kick=.false.
-    endif
-   endif
 
-   if( which_eps .eq. "deb") then
-    if( deb%tau /= M_ZERO ) then
-     call pcm_ief_prop_deb(q_t,pot_t)
-    else
-     POP_SUB(pcm_charges_propagation)
-     return
+    if( which_eom == 'ext+kick' .and. initial_external ) then
+
+     !> initialize pcm charges due to external potential
+
+     call init_charges(q_t, pot_t, input_asc )
+     initial_external=.false.
+
+    else if( which_eom == 'ext+kick' .and. (.not.initial_external) ) then
+
+     !> propagate pcm charges due to external potential
+
+     if( which_eps .eq. "deb") then
+      write(*,*) "here"
+      call pcm_ief_prop_deb(q_t,pot_t)
+     else if( which_eps .eq. "drl" ) then
+      call pcm_ief_prop_vv_ief_drl(q_t,pot_t)
+     endif
+
     endif
-   else if( which_eps .eq. "drl" ) then
-    call pcm_ief_prop_vv_ief_drl(q_t,pot_t)
+
+    !> add pcm charges due to kick
+
+    if( which_eom == 'ext+kick' ) then
+     call pcm_charges_after_kick(q_t,kick,input_asc)
+    else if( which_eom == 'justkick' ) then
+     call pcm_charges_after_kick(q_t,pot_t,input_asc)
+    endif
+    initial_kick=.false.
+
+    POP_SUB(pcm_charges_propagation)
+    return
+
    else
-    message(1) = "pcm_charges_propagation: EOM-PCM error. Only Debye or Drude-Lorent dielectric models are allowed."
-    call messages_fatal(1)
-   endif
 
+    !> no kick at play
+
+    if( ( initial_electron .and.   which_eom == 'electron' )                                .or. & 
+        ( initial_external .and. ( which_eom == 'external' .or. which_eom == 'ext+kick' ) )      ) then
+
+     !> initialize pcm charges due to electrons or external potential
+
+     call init_BEM
+     call init_charges(q_t, pot_t, input_asc )
+     if(initial_electron .and.   which_eom == 'electron' )                                initial_electron=.false.
+     if(initial_external .and. ( which_eom == 'external' .or. which_eom == 'ext+kick' ) ) initial_external=.false.
+ 
+     POP_SUB(pcm_charges_propagation)
+     return
+
+    else if( which_eom == 'justkick' .and. (.not.allocated(qext_tp)) ) then
+ 
+     !> before the kick
+  
+     q_t  = M_ZERO
+
+    else
+
+     !> after the kick or with no kick at all
+
+     !> propagate pcm charges due to electrons or external potential
+
+     if( which_eps .eq. "deb") then
+      write(*,*) "there"
+      call pcm_ief_prop_deb(q_t,pot_t)
+     else if( which_eps .eq. "drl" ) then
+      call pcm_ief_prop_vv_ief_drl(q_t,pot_t)
+     endif
+
+    endif
+
+   endif
+   
    POP_SUB(pcm_charges_propagation)
   end subroutine pcm_charges_propagation
 
   !------------------------------------------------------------------------------------------------------------------------------
   !> Polarization charges initialization in equilibrium with the initial potential.
-  subroutine init_charges(q_t,pot_t,input_asc,kick)
+  subroutine init_charges(q_t,pot_t,input_asc)
    FLOAT, intent(out) :: q_t(:)
    FLOAT, intent(in)  :: pot_t(:)
    logical, intent(in) :: input_asc
-   FLOAT, optional, intent(in)  :: kick(:)
 
    FLOAT :: aux1(3)
    integer :: aux2
@@ -281,47 +341,6 @@ module pcm_eom_oct_m
     SAFE_ALLOCATE(potext_tp(nts_act))
     potext_tp = pot_t
 
-   else if( which_eom == 'ext+kick' ) then
-    !< Here we have a kick at time zero
-
-    q_t=M_ZERO 
-    q_t=matmul(matqd_lf,pot_t) !< external potential initial condition
-
-    if( which_eps .eq. "drl" ) then
-     SAFE_ALLOCATE(dqext_tp(nts_act))
-     SAFE_ALLOCATE(force_qext_tp(nts_act))
-     dqext_tp=matmul(matqv_lf,kick)*dt !< kick initial condition
-     force_qext_tp=M_ZERO
-    else if ( which_eps .eq. 'deb' ) then
-     q_t = q_t + matmul(matqv_lf,kick) !< kick initial condition
-    endif
-
-    SAFE_ALLOCATE(qext_tp(nts_act))
-    qext_tp = q_t
-
-    SAFE_ALLOCATE(potext_tp(nts_act))
-    potext_tp = pot_t
-
-   else if( which_eom == 'justkick' ) then
-    !< Here we have a kick at time zero
-
-    q_t=M_ZERO 
-
-    if( which_eps .eq. "drl" ) then
-     SAFE_ALLOCATE(dqext_tp(nts_act))
-     SAFE_ALLOCATE(force_qext_tp(nts_act))
-     dqext_tp=matmul(matqv_lf,pot_t)*dt !< kick initial condition
-     force_qext_tp=M_ZERO
-    else if ( which_eps .eq. 'deb' ) then
-     q_t = q_t + matmul(matqv_lf,pot_t) !< kick initial condition
-    endif
-
-    SAFE_ALLOCATE(qext_tp(nts_act))
-    qext_tp = q_t
-
-    SAFE_ALLOCATE(potext_tp(nts_act))
-    potext_tp = pot_t
-
    endif
 
    !< initializing Velocity-Verlet algorithm for the integration of EOM-PCM for Drude-Lorentz
@@ -329,6 +348,43 @@ module pcm_eom_oct_m
 
    POP_SUB(init_charges)
   end subroutine init_charges
+
+  !------------------------------------------------------------------------------------------------------------------------------
+  !> Polarization charges (and time-derivative) in response to kick.
+  subroutine pcm_charges_after_kick(q_t,pot_kick,input_asc)
+   FLOAT,   intent(inout) :: q_t(:)
+   FLOAT,   intent(in)    :: pot_kick(:)
+   logical, intent(in)    :: input_asc
+
+   PUSH_SUB(pcm_charges_after_kick)
+
+   if( input_asc ) then
+    POP_SUB(pcm_charges_after_kick)
+    return
+   endif
+
+   if( which_eom == 'justkick' ) then
+    q_t=M_ZERO
+    SAFE_ALLOCATE(qext_tp(nts_act))
+    qext_tp=M_ZERO
+    if( which_eps .eq. "drl" ) then
+     SAFE_ALLOCATE(dqext_tp(nts_act))
+     SAFE_ALLOCATE(force_qext_tp(nts_act))
+     dqext_tp=M_ZERO
+     force_qext_tp=M_ZERO
+    endif
+   endif
+
+   if( which_eps .eq. "drl" ) then
+     dqext_tp=matmul(matqv_lf,pot_kick)*dt
+   else
+     q_t = q_t + matmul(matqv_lf,pot_kick)
+   endif
+
+   qext_tp = q_t
+
+   POP_SUB(pcm_charges_after_kick)
+  end subroutine pcm_charges_after_kick
 
   !------------------------------------------------------------------------------------------------------------------------------
   !> Euler method for integrating first order EOM for the polarization charges within IEF-PCM
@@ -363,8 +419,9 @@ module pcm_eom_oct_m
 
     qext_tp = q_t
 
-
    endif
+
+   pot_tp = pot_t
 
    POP_SUB(pcm_ief_prop_deb)
   end subroutine pcm_ief_prop_deb
@@ -424,6 +481,8 @@ module pcm_eom_oct_m
     q_tp = q_t
 
    endif
+
+   pot_tp = pot_t
 
    POP_SUB(pcm_ief_prop_vv_ief_drl)
   end subroutine pcm_ief_prop_vv_ief_drl
