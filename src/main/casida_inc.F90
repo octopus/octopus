@@ -861,7 +861,9 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
       end if
       
       cas%X(mat2) = cas%X(mat_save) * factor + cas%X(lr_hmat2) + cas%X(mat2)
-      call lalg_eigensolve(cas%n_pairs, cas%X(mat2), cas%X(w2))
+      ! use parallel eigensolver here; falls back to serial solver if ScaLAPACK
+      ! not available
+      call lalg_eigensolve_parallel(cas%n_pairs, cas%X(mat2), cas%X(w2))
       do ia = 1, cas%n_pairs
         cas%forces(iatom, idir, cas%ind(ia)) = factor * cas%w(cas%ind(ia)) - R_REAL(cas%X(w2)(ia))
       end do
@@ -1060,9 +1062,6 @@ subroutine X(casida_solve)(cas, st)
     end do
   end if
       
-  ! all processors with the exception of the first are done
-  if (mpi_grp_is_root(cas%mpi_grp)) then
-
     if(cas%type /= CASIDA_CASIDA) then
       SAFE_ALLOCATE(occ_diffs(1:cas%n_pairs))
       do ia = 1, cas%n_pairs
@@ -1115,7 +1114,9 @@ subroutine X(casida_solve)(cas, st)
     ! for huge matrices, perhaps we should consider ScaLAPACK here...
     call profiling_in(prof, "CASIDA_DIAGONALIZATION")
     if(cas%calc_forces) cas%X(mat_save) = cas%X(mat) ! save before gets turned into eigenvectors
-    call lalg_eigensolve(cas%n_pairs + cas%pt_nmodes, cas%X(mat), cas%w)
+    ! use parallel eigensolver here; falls back to serial solver if ScaLAPACK
+    ! not available
+    call lalg_eigensolve_parallel(cas%n_pairs + cas%pt_nmodes, cas%X(mat), cas%w)
     call profiling_out(prof)
 
     do ia = 1, cas%n_pairs+cas%pt_nmodes
@@ -1137,8 +1138,6 @@ subroutine X(casida_solve)(cas, st)
 
       cas%ind(ia) = ia ! diagonalization returns eigenvalues in order.
     end do
-
-  end if
 
   POP_SUB(X(casida_solve))
 end subroutine X(casida_solve)
