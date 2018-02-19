@@ -796,7 +796,7 @@ end subroutine X(states_calc_momentum)
 subroutine X(states_calc_momentum_fullmat)(st, der, momentum)
   type(states_t),      intent(inout) :: st
   type(derivatives_t), intent(inout) :: der
-  FLOAT,               intent(out)   :: momentum(:,:,:)
+  CMPLX,               intent(out)   :: momentum(:,:,:)
 
   integer             :: idim, istl, istr, ik, idir, ncount
   CMPLX               :: expect_val_p
@@ -837,11 +837,7 @@ subroutine X(states_calc_momentum_fullmat)(st, der, momentum)
        
            ! In the case of real wavefunctions we do not include the 
            ! -i prefactor of p = -i \nabla
-           if (states_are_real(st)) then
-             momentum(idir, ncount, ik) = real( expect_val_p )
-           else
-             momentum(idir, ncount, ik) = real( -M_zI*expect_val_p )
-           end if
+           momentum(idir, ncount, ik) =  -M_zI*expect_val_p 
          end do
        
          ! have to add the momentum vector in the case of periodic systems, 

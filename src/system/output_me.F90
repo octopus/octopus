@@ -335,7 +335,7 @@ contains
     integer            :: ik, istl, istr, is, ns, iunit, idir, ncount
     character(len=80)  :: cspin, str_tmp
     FLOAT              :: kpoint(1:MAX_DIM)
-    FLOAT, allocatable :: momentum(:,:,:)
+    CMPLX, allocatable :: momentum(:,:,:)
 
     PUSH_SUB(output_me_out_momentum_fullmat)
 
@@ -375,7 +375,7 @@ contains
 
       write(message(1), '(a4,3x,a4,1x,a5)') '#stl','str',' Spin'
       do idir = 1, gr%sb%dim
-        write(str_tmp, '(a,a1,a)') '      <p', index2axis(idir), '>'
+        write(str_tmp, '(a,a1,a,a1,a)') '      Re<p', index2axis(idir), '>      Im<p', index2axis(idir), '>'
         message(1) = trim(message(1)) // trim(str_tmp)
       end do
       write(str_tmp, '(12x,a6,8x,a6)') 'Occ. L', 'Occ. R'
@@ -393,7 +393,7 @@ contains
               
               write(message(1), '(i4,3x,i4,3x,a2,1x)') istl, istr, trim(cspin)
               do idir = 1, gr%sb%dim
-                write(str_tmp, '(f12.6)') momentum(idir, ncount, ik)
+                write(str_tmp, '(f12.6,1x,f12.6)') real(momentum(idir, ncount, ik)), aimag(momentum(idir, ncount, ik))
                 message(1) = trim(message(1)) // trim(str_tmp)
               end do
               write(str_tmp, '(3x,f12.6,3x,f12.6)') st%occ(istl, ik+is), st%occ(istr, ik+is)

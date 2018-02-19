@@ -405,7 +405,7 @@ contains
   subroutine states_calc_momentum_fullmat(st, der, momentum)
     type(states_t),      intent(inout) :: st
     type(derivatives_t), intent(inout) :: der
-    FLOAT,               intent(out)   :: momentum(:,:,:)
+    CMPLX,               intent(out)   :: momentum(:,:,:)
 
     if (states_are_real(st)) then
       call dstates_calc_momentum_fullmat(st, der, momentum)
