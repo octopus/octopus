@@ -128,7 +128,8 @@ module pcm_eom_oct_m
    logical :: firsttime=.true.
    logical :: initial_electron=.true.
    logical :: initial_external=.true.
-   logical :: initial_kick=.false.
+   logical :: initial_kick=.true.
+   logical :: before_kick=.true.
 
    PUSH_SUB(pcm_charges_propagation)
 
@@ -172,133 +173,117 @@ module pcm_eom_oct_m
     firsttime=.false.
    endif
 
-   if( present(kick_time) ) then 
-    if( kick_time ) initial_kick = .true.
-   endif
 
-   if( initial_kick ) then
+   if( input_asc .and. which_eps == 'deb' ) then
 
-    !> kick at play
+    !> initialize pcm charges due to electrons or external potential
 
-    call init_BEM
-
-    if( which_eom == 'ext+kick' .and. initial_external ) then
-
-     !> initialize pcm charges due to external potential
-
-     call init_charges(q_t, pot_t, input_asc )
-     initial_external=.false.
-
-    else if( which_eom == 'ext+kick' .and. (.not.initial_external) ) then
-
-     !> propagate pcm charges due to external potential
-
-     if( which_eps .eq. "deb") then
-      write(*,*) "here"
-      call pcm_ief_prop_deb(q_t,pot_t)
-     else if( which_eps .eq. "drl" ) then
-      call pcm_ief_prop_vv_ief_drl(q_t,pot_t)
-     endif
-
-    endif
-
-    !> add pcm charges due to kick
-
-    if( which_eom == 'ext+kick' ) then
-     call pcm_charges_after_kick(q_t,kick,input_asc)
-    else if( which_eom == 'justkick' ) then
-     call pcm_charges_after_kick(q_t,pot_t,input_asc)
-    endif
-    initial_kick=.false.
+    call pcm_charges_from_input_file(q_t,pot_t)
 
     POP_SUB(pcm_charges_propagation)
     return
 
-   else
+   else if( input_asc .and. which_eps /= 'deb' ) then
 
-    !> no kick at play
+    message(1) = "pcm_charges_propagation: EOM-PCM error. Only Debye EOM-PCM can startup from input charges."
+    call messages_fatal(1)
 
-    if( ( initial_electron .and.   which_eom == 'electron' )                                .or. & 
-        ( initial_external .and. ( which_eom == 'external' .or. which_eom == 'ext+kick' ) )      ) then
+   endif
+
+
+   if( ( initial_electron .and.   which_eom == 'electron' )                                .or. & 
+       ( initial_external .and. ( which_eom == 'external' .or. which_eom == 'ext+kick' ) ) .or. & 
+       ( initial_kick .and. which_eom == 'justkick'       )                                     ) then
+
+     !> initialize pcm matrices
+
+     call init_BEM
 
      !> initialize pcm charges due to electrons or external potential
 
-     call init_BEM
-     call init_charges(q_t, pot_t, input_asc )
+     call init_charges(q_t, pot_t)
      if(initial_electron .and.   which_eom == 'electron' )                                initial_electron=.false.
      if(initial_external .and. ( which_eom == 'external' .or. which_eom == 'ext+kick' ) ) initial_external=.false.
- 
-     POP_SUB(pcm_charges_propagation)
-     return
+     if(initial_kick     .and.   which_eom == 'justkick' )                                initial_kick=.false.
 
-    else if( which_eom == 'justkick' .and. (.not.allocated(qext_tp)) ) then
- 
-     !> before the kick
-  
-     q_t  = M_ZERO
+   else if( (.not.initial_kick) .and. before_kick .and. which_eom == 'justkick' ) then
 
-    else
+    q_t = M_ZERO
+    qext_tp = q_t
 
-     !> after the kick or with no kick at all
+   else
 
-     !> propagate pcm charges due to electrons or external potential
+     !> propagate pcm charges due to electrons or external potential (including possible kick)
 
      if( which_eps .eq. "deb") then
-      write(*,*) "there"
       call pcm_ief_prop_deb(q_t,pot_t)
      else if( which_eps .eq. "drl" ) then
       call pcm_ief_prop_vv_ief_drl(q_t,pot_t)
      endif
 
-    endif
-
    endif
-   
+
+   !> add pcm charges due to kick
+
+   if( present(kick_time) ) then 
+    if( kick_time ) then
+     if( which_eom == 'ext+kick' ) then
+      call pcm_charges_after_kick(q_t,kick)
+     else if( which_eom == 'justkick' ) then
+      call pcm_charges_after_kick(q_t,pot_t)
+     endif
+     before_kick=.false.
+    endif
+   endif
+  
    POP_SUB(pcm_charges_propagation)
   end subroutine pcm_charges_propagation
 
   !------------------------------------------------------------------------------------------------------------------------------
-  !> Polarization charges initialization in equilibrium with the initial potential.
-  subroutine init_charges(q_t,pot_t,input_asc)
+  !> Polarization charges initialization from input file
+  subroutine pcm_charges_from_input_file(q_t, pot_t)
    FLOAT, intent(out) :: q_t(:)
    FLOAT, intent(in)  :: pot_t(:)
-   logical, intent(in) :: input_asc
 
    FLOAT :: aux1(3)
    integer :: aux2
 
-   integer :: asc_unit_test_e, &
-              asc_unit_test_ext
+   integer :: asc_unit
 
    integer :: ia
 
-   PUSH_SUB(init_charges)
+   PUSH_SUB(pcm_charges_from_input_file)
 
-   if( input_asc .and. which_eps == 'deb' ) then
-     SAFE_ALLOCATE(q_tp(nts_act))
-     q_tp = q_t
-
-     if( which_eom == 'electron' ) then
-      asc_unit_test_e = io_open(PCM_DIR//'ASC_e.dat', action='write')
-      do ia = 1, nts_act
-        write(asc_unit_test_e,*) aux1, q_tp(ia), aux2
-      end do
-      call io_close(asc_unit_test_e)
-     else if( which_eom == 'external' .or. which_eom == 'ext+kick' .or. which_eom == 'justkick') then
-      asc_unit_test_ext = io_open(PCM_DIR//'ASC_ext.dat', action='write')
-      do ia = 1, nts_act
-        write(asc_unit_test_ext,*) aux1, q_tp(ia), aux2
-      end do
-      call io_close(asc_unit_test_ext)
-     endif
-
-    SAFE_ALLOCATE(pot_tp(nts_act))
-    pot_tp = pot_t
-
-    POP_SUB(init_charges)
-    return
+   if( which_eom == 'electron' ) then
+    SAFE_ALLOCATE(q_tp(nts_act))
+    asc_unit = io_open(PCM_DIR//'ASC_e.dat', action='read')
+    do ia = 1, nts_act
+      read(asc_unit,*) aux1, q_t(ia), aux2
+    end do
+    q_tp=q_t
+   else if( which_eom == 'external' .or. which_eom == 'ext+kick' .or. which_eom == 'justkick') then
+    SAFE_ALLOCATE(qext_tp(nts_act))
+    asc_unit = io_open(PCM_DIR//'ASC_ext.dat', action='read')
+    do ia = 1, nts_act
+      read(asc_unit,*) aux1, q_t(ia), aux2
+    end do
+    qext_tp = q_t 
    endif
+   call io_close(asc_unit)   
 
+   SAFE_ALLOCATE(pot_tp(nts_act))
+   pot_tp = pot_t
+
+   POP_SUB(pcm_charges_from_input_file)
+  end subroutine pcm_charges_from_input_file
+
+  !------------------------------------------------------------------------------------------------------------------------------
+  !> Polarization charges initialization (in equilibrium with the initial potential for electrons)
+  subroutine init_charges(q_t,pot_t)
+   FLOAT, intent(out) :: q_t(:)
+   FLOAT, intent(in)  :: pot_t(:)
+
+   PUSH_SUB(init_charges)
 
    if( which_eom == 'electron' ) then
     !< Here we consider the potential at any earlier time equal to the initial potential.
@@ -307,7 +292,11 @@ module pcm_eom_oct_m
     message(1) = 'EOM-PCM for solvent polarization due to solute electrons considers that you start from a ground state run.'
     call messages_warning(1)
   
-    q_t=matmul(matq0,pot_t) !< applying the static IEF-PCM response matrix (corresponging to epsilon_0) to the initial potential
+    SAFE_ALLOCATE(pot_tp(nts_act))
+    pot_tp = pot_t
+
+    !< applying the static IEF-PCM response matrix (corresponging to epsilon_0) to the initial potential
+    q_t=matmul(matq0,pot_t) 
 
     SAFE_ALLOCATE(q_tp(nts_act))
     q_tp = q_t
@@ -318,15 +307,20 @@ module pcm_eom_oct_m
      dq_tp=M_ZERO
      force_tp=M_ZERO
     endif
-
-    SAFE_ALLOCATE(pot_tp(nts_act))
-    pot_tp = pot_t
 			    
-   else if( which_eom == 'external' ) then
+   else if( which_eom == 'external' .or. which_eom == 'ext+kick' .or. which_eom == 'justkick' ) then
     !< Here (instead) we consider zero the potential at any earlier time.
     !< Therefore, the solvent is not initially in equilibrium with the external potential unless its initial value is zero.
 
-    q_t=matmul(matqd_lf,pot_t) !< applying the dynamic IEF-PCM response matrix (for epsilon_d) to the initial potential
+    SAFE_ALLOCATE(potext_tp(nts_act))
+
+    !< applying the dynamic IEF-PCM response matrix (for epsilon_d) to the initial potential
+    if( which_eom /= 'justkick' ) then 
+     q_t=matmul(matqd_lf,pot_t)
+     potext_tp = pot_t
+    else
+     q_t=M_ZERO
+    endif
 
     SAFE_ALLOCATE(qext_tp(nts_act))
     qext_tp = q_t
@@ -338,9 +332,6 @@ module pcm_eom_oct_m
      force_qext_tp=M_ZERO
     endif
 
-    SAFE_ALLOCATE(potext_tp(nts_act))
-    potext_tp = pot_t
-
    endif
 
    !< initializing Velocity-Verlet algorithm for the integration of EOM-PCM for Drude-Lorentz
@@ -350,30 +341,12 @@ module pcm_eom_oct_m
   end subroutine init_charges
 
   !------------------------------------------------------------------------------------------------------------------------------
-  !> Polarization charges (and time-derivative) in response to kick.
-  subroutine pcm_charges_after_kick(q_t,pot_kick,input_asc)
+  !> Adding polarization charges (and time-derivative) in response to kick.
+  subroutine pcm_charges_after_kick(q_t,pot_kick)
    FLOAT,   intent(inout) :: q_t(:)
    FLOAT,   intent(in)    :: pot_kick(:)
-   logical, intent(in)    :: input_asc
 
    PUSH_SUB(pcm_charges_after_kick)
-
-   if( input_asc ) then
-    POP_SUB(pcm_charges_after_kick)
-    return
-   endif
-
-   if( which_eom == 'justkick' ) then
-    q_t=M_ZERO
-    SAFE_ALLOCATE(qext_tp(nts_act))
-    qext_tp=M_ZERO
-    if( which_eps .eq. "drl" ) then
-     SAFE_ALLOCATE(dqext_tp(nts_act))
-     SAFE_ALLOCATE(force_qext_tp(nts_act))
-     dqext_tp=M_ZERO
-     force_qext_tp=M_ZERO
-    endif
-   endif
 
    if( which_eps .eq. "drl" ) then
      dqext_tp=matmul(matqv_lf,pot_kick)*dt
@@ -395,6 +368,8 @@ module pcm_eom_oct_m
 
    FLOAT :: pot_vac_t(nts_act)
 
+   integer :: ii
+
    PUSH_SUB(pcm_ief_prop_deb)
 
    if( which_eom == 'electron' ) then
@@ -415,7 +390,12 @@ module pcm_eom_oct_m
 
    else if( which_eom == 'justkick' ) then 
     !> simplifying for kick
+    !test (commented line is the correct one)
     q_t(:) = qext_tp(:) - dt*matmul(matqq,qext_tp)            !< N.B. matqq
+
+    !do ii = 1, nts_act
+    ! if( sign(q_t(ii),M_ONE) /= sign(qext_tp(ii),M_ONE) ) q_t(ii) = M_ZERO
+    !enddo
 
     qext_tp = q_t
 

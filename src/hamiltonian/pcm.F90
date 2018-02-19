@@ -1058,7 +1058,6 @@ contains
 
   ! -----------------------------------------------------------------------------
   subroutine pcm_calc_pot_rs(pcm, mesh, geo, v_h, v_ext, kick, time_present, kick_time)
-    save
     type(pcm_t),             intent(inout) :: pcm
     type(mesh_t),               intent(in) :: mesh  
     type(geometry_t), optional, intent(in) :: geo
@@ -1091,7 +1090,11 @@ contains
     end if
 
     if (present(kick_time)) then
-     if (kick_time) is_time_for_kick = .true.
+     if (kick_time) then
+      is_time_for_kick = .true.
+     else
+      is_time_for_kick = .false.
+     endif
     end if
 
     select case(pcm%initial_asc)
