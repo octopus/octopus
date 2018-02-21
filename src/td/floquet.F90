@@ -285,7 +285,7 @@ contains
     !%End
     call parse_variable('FloquetFrequency', M_ZERO, this%omega, units_inp%energy)
     call messages_print_var_value(stdout,'Frequency used for Floquet analysis', this%omega)
-    if(this%omega==M_ZERO) then
+    if(this%omega==M_ZERO .and. this%boson/=OPTION__FLOQUETBOSON__QED_PHOTON) then
       message(1) = "Please give a non-zero value for FloquetFrequency"
       call messages_fatal(1)
     endif
