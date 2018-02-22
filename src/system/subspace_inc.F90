@@ -164,8 +164,7 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
 #endif
   type(profile_t), save :: prof_diag, prof_gemm1, prof_gemm2
 #ifdef HAVE_ELPA
-  integer :: rcomm, ccomm
-  logical :: elpa_success
+  class(elpa_t), pointer :: elpa
 #endif
 
   PUSH_SUB(X(subspace_diag_scalapack))
@@ -236,28 +235,39 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
 
   ! now diagonalize
 #ifdef HAVE_ELPA
+  if (elpa_init(20170403) /= elpa_ok) then
+    write(message(1),'(a)') "ELPA API version not supported"
+    call messages_fatal(1)
+  endif
+  elpa => elpa_allocate()
 
-  mpi_err = elpa_get_communicators(st%dom_st_mpi_grp%comm, st%dom_st_proc_grid%myrow, st%dom_st_proc_grid%mycol, rcomm, ccomm)
+  ! set parameters describing the matrix
+  call elpa%set("na", st%nst, info)
+  call elpa%set("nev", st%nst, info)
+  call elpa%set("local_nrows", nrow, info)
+  call elpa%set("local_ncols", ncol, info)
+  call elpa%set("nblk", nbl, info)
+  call elpa%set("mpi_comm_parent", st%dom_st_mpi_grp%comm, info)
+  call elpa%set("process_row", st%dom_st_proc_grid%myrow, info)
+  call elpa%set("process_col", st%dom_st_proc_grid%mycol, info)
 
-#define delpa_eigensolve elpa_solve_evp_real_2stage_double
-#define zelpa_eigensolve elpa_solve_evp_complex_2stage_double
+  info = elpa%setup()
 
-  elpa_success = X(elpa_eigensolve)(na = st%nst, nev = st%nst, a = hs, &
-    lda = ubound(hs, dim = 1), ev = eigenval, q = evectors, ldq = ubound(evectors, dim = 1), &
-    nblk = nbl, matrixCols = ubound(hs, dim = 2), &
-    mpi_comm_rows = rcomm, mpi_comm_cols = ccomm, mpi_comm_all = st%dom_st_mpi_grp%comm)
+  ! one stage solver usually shows worse performance than two stage solver
+  call elpa%set("solver", elpa_solver_2stage, info)
 
-  if(.not. elpa_success) then
-    write(message(1),'(a)') "Error in the ELPA eigensystem solver."
+  ! call eigensolver
+  call elpa%eigenvectors(hs, eigenval, evectors, info)
+
+  ! error handling
+  if (info /= elpa_ok) then
+    write(message(1),'(a,i6,a,a)') "Error in ELPA, code: ", info, ", message: ", &
+      elpa_strerr(info)
     call messages_fatal(1)
   end if
 
-#if 0
-  ! one stage solver usually shows worse performance than two stage solver
-  elpa_success = elpa_solve_evp_real_1stage_double(na = st%nst, nev = st%nst, a = hs, &
-    lda = ubound(hs, dim = 1), ev = eigenval, q = evectors, ldq = ubound(evectors, dim = 1), &
-    nblk = nbl, matrixCols = ubound(hs, dim = 2), mpi_comm_rows = rcomm, mpi_comm_cols = ccomm)
-#endif
+  call elpa_deallocate(elpa)
+  call elpa_uninit()
 
 #else
 ! Use ScaLAPACK function if ELPA not available
