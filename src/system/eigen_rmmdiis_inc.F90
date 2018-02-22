@@ -373,7 +373,8 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
   integer :: sd_steps
   integer :: isd, ist, minst, maxst, ib, ii
   R_TYPE  :: ca, cb, cc
-  R_TYPE, allocatable :: lambda(:), diff(:)
+  FLOAT, allocatable :: lambda(:)
+  R_TYPE, allocatable :: diff(:)
   R_TYPE, allocatable :: me1(:, :), me2(:, :)
   logical :: pack
   type(batch_t) :: resb, kresb
@@ -446,7 +447,7 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
         cb = me1(2, ii)*me2(3, ii) - me1(1, ii)*me2(1, ii)
         cc = me1(1, ii)*me2(2, ii) - me1(2, ii)*me2(4, ii)
 
-        lambda(ist) = CNST(2.0)*cc/(cb + sqrt(cb**2 - CNST(4.0)*ca*cc))
+        lambda(ist) = R_REAL(CNST(2.0)*cc/(cb + sqrt(cb**2 - CNST(4.0)*ca*cc)))
 
       end do
 
