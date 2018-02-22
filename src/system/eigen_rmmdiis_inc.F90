@@ -86,8 +86,9 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     nops = nops + bsize
 
     call X(mesh_batch_dotp_vector)(gr%mesh, psib(1)%batch, resb(1)%batch, eigen)
+    call X(mesh_batch_dotp_vector)(gr%mesh, psib(1)%batch, psib(1)%batch, nrmsq)
 
-    st%eigenval(minst:maxst, ik) = R_REAL(eigen(1:bsize))
+    st%eigenval(minst:maxst, ik) = R_REAL(eigen(1:bsize)/nrmsq(1:bsize))
 
     call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), psib(1)%batch, resb(1)%batch)
 
@@ -133,7 +134,13 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       cb = fr(3, ii) - st%eigenval(ist, ik)*fr(1, ii)
       cc = st%eigenval(ist, ik)*fr(2, ii) - fr(4, ii)
 
-      lambda(ist) = R_REAL(CNST(2.0)*cc/(cb + sqrt(cb**2 - CNST(4.0)*ca*cc)))
+      if(abs(cc) > CNST(1.0e-10)) then
+        !This is - the solution of ca*x^2+cb*x+cc
+        lambda(ist) = R_REAL(CNST(2.0)*cc/(cb + sqrt(cb**2 - CNST(4.0)*ca*cc)))
+      else
+        lambda(ist) = R_REAL((cb + sqrt(cb**2 - CNST(4.0)*ca*cc))/(M_TWO*ca))
+      end if
+
 
       ! restrict the value of lambda to be between 0.1 and 1.0
       if(abs(lambda(ist)) > CNST(1.0)) lambda(ist) = lambda(ist)/abs(lambda(ist))
@@ -410,6 +417,7 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
 
     do isd = 1, sd_steps
 
+      !We start by computing the Rayleigh quotient
       call X(hamiltonian_apply_batch)(hm, gr%der, st%group%psib(ib, ik), resb, ik)
 
       call X(mesh_batch_dotp_vector)(gr%mesh, st%group%psib(ib, ik), resb, me1(1, :), reduce = .false.)
@@ -417,8 +425,10 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
 
       if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, me1)
 
+      !This is the Rayleigh quotient
       forall(ist = minst:maxst) st%eigenval(ist, ik) = R_REAL(me1(1, ist - minst + 1)/me1(2, ist - minst + 1))
  
+      !We get the residual vector
       call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), st%group%psib(ib, ik), resb)
 
       if(debug%info) then
@@ -450,8 +460,13 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
         ca = me2(1, ii)*me2(4, ii) - me2(3, ii)*me2(2, ii)
         cb = me1(2, ii)*me2(3, ii) - me1(1, ii)*me2(1, ii)
         cc = me1(1, ii)*me2(2, ii) - me1(2, ii)*me2(4, ii)
-
-        lambda(ist) = R_REAL(CNST(2.0)*cc/(cb + sqrt(cb**2 - CNST(4.0)*ca*cc)))
+         
+        if(abs(cc) > CNST(1.0e-10)) then
+          !This is - the solution of ca*x^2+cb*x+cc
+          lambda(ist) = R_REAL(CNST(2.0)*cc/(cb + sqrt(cb**2 - CNST(4.0)*ca*cc)))
+        else
+          lambda(ist) = R_REAL((cb + sqrt(cb**2 - CNST(4.0)*ca*cc))/(M_TWO*ca))
+        end if
 
       end do
 
