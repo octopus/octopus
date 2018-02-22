@@ -1161,7 +1161,7 @@ subroutine X(casida_write)(cas, sys)
             temp = abs(cas%X(mat)(index, cas%ind(ia))) / cas%X(mat)(index, cas%ind(ia))
             
             do jb = 1, cas%n_pairs
-              if ( abs( temp * cas%X(mat)(jb, cas%ind(ia)) )**2 >= cas%weight_thresh ) &
+              if ( abs( temp * cas%X(mat)(jb, cas%ind(ia)) ) >= cas%weight_thresh ) &
                 write(iunit,*) cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%kk, temp * cas%X(mat)(jb, cas%ind(ia))
             end do
             
