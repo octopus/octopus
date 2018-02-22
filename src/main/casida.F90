@@ -392,6 +392,12 @@ contains
     !% For many case, a 0.01 value is a valid option.
     !%End
     call parse_variable('CasidaWeightThreshold', -M_ONE, cas%weight_thresh)
+    if (cas%weight_thresh > M_ONE) then
+      message(1) = 'Casida coefficients have values between 0 and 1'
+      message(2) = 'Threshold values reset to default value'
+      call messages_warning(2)
+      cas%weight_thresh = -M_ONE
+    end if
 
     !%Variable CasidaCalcForces
     !%Type logical
