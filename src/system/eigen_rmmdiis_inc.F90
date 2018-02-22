@@ -314,7 +314,9 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   do ib = st%group%block_start, st%group%block_end
     minst = states_block_min(st, ib)
     maxst = states_block_max(st, ib)
-    
+
+    if(pack) call batch_pack(st%group%psib(ib, ik))  
+  
     call batch_copy(st%group%psib(ib, ik), resb(1)%batch)
     
     call X(hamiltonian_apply_batch)(hm, gr%der, st%group%psib(ib, ik), resb(1)%batch, ik)
@@ -329,6 +331,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     diff(minst:maxst) = sqrt(abs(eigen(1:maxst - minst + 1)))
     
     call batch_end(resb(1)%batch, copy = .false.)
+
+    if(pack) call batch_unpack(st%group%psib(ib, ik))
     
     nops = nops + maxst - minst + 1
   end do
