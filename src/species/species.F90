@@ -74,6 +74,8 @@ module species_oct_m
     species_filename,              &
     species_niwfs,                 &
     species_iwf_ilm,               &
+    species_iwf_n,                 &
+    species_iwf_j,                 &
     species_userdef_pot,           &
     species_is_ps,                 &
     species_is_full,               &
@@ -143,9 +145,11 @@ module species_oct_m
 
 
     integer :: niwfs              !< The number of initial wavefunctions
-    integer, pointer :: iwf_l(:, :), iwf_m(:, :), iwf_i(:, :) !< i, l, m as a function of iorb and ispin
+    integer, pointer :: iwf_l(:, :), iwf_m(:, :), iwf_i(:, :), iwf_n(:, :) !< i, n, l, m as a function of iorb and ispin
+    CMPLX, pointer :: iwf_j(:)    !< j as a function of iorb
 
     integer :: lmax, lloc         !< For the TM pseudos, the lmax and lloc.
+ 
   end type species_t
 
   interface species_end
@@ -188,6 +192,8 @@ contains
     nullify(this%iwf_l)
     nullify(this%iwf_m)
     nullify(this%iwf_i)
+    nullify(this%iwf_n)
+    nullify(this%iwf_j)
     this%lmax=0
     this%lloc=0
 
@@ -676,9 +682,11 @@ contains
       spec%niwfs = max(5, spec%niwfs)
     end if
 
+    SAFE_ALLOCATE(spec%iwf_n(1:spec%niwfs, 1:ispin))
     SAFE_ALLOCATE(spec%iwf_l(1:spec%niwfs, 1:ispin))
     SAFE_ALLOCATE(spec%iwf_m(1:spec%niwfs, 1:ispin))
     SAFE_ALLOCATE(spec%iwf_i(1:spec%niwfs, 1:ispin))
+    SAFE_ALLOCATE(spec%iwf_j(1:spec%niwfs))
 
     call species_iwf_fix_qn(spec, ispin, dim)
 
@@ -855,9 +863,11 @@ contains
     end if
     this%def_h=-M_ONE
     this%niwfs=-1
+    nullify(this%iwf_n)
     nullify(this%iwf_l)
     nullify(this%iwf_m)
     nullify(this%iwf_i)
+    nullify(this%iwf_j)
 
     POP_SUB(species_init_from_data_object)
   end subroutine species_init_from_data_object
@@ -1055,6 +1065,26 @@ contains
   end subroutine species_iwf_ilm
   ! ---------------------------------------------------------
 
+   ! ---------------------------------------------------------
+  pure subroutine species_iwf_n(spec, j, is, n)
+    type(species_t), intent(in) :: spec
+    integer, intent(in)         :: j, is
+    integer, intent(out)        :: n
+
+    n = spec%iwf_n(j, is)
+  end subroutine species_iwf_n
+  ! ---------------------------------------------------------
+
+  ! ---------------------------------------------------------
+  pure subroutine species_iwf_j(spec, iorb, j)
+    type(species_t), intent(in) :: spec
+    integer, intent(in)         :: iorb
+    FLOAT,   intent(out)        :: j
+
+    j = spec%iwf_j(iorb)
+  end subroutine species_iwf_j
+  ! ---------------------------------------------------------
+
 
   ! ---------------------------------------------------------
   CMPLX function species_userdef_pot(spec, dim, xx, r)
@@ -1205,22 +1235,29 @@ contains
 
   ! ---------------------------------------------------------
   !> Return radius outside which orbital is less than threshold value 0.001
-  FLOAT function species_get_iwf_radius(spec, ii, is) result(radius)
+  FLOAT function species_get_iwf_radius(spec, ii, is, threshold) result(radius)
     type(species_t),   intent(in) :: spec
     integer,           intent(in) :: ii !< principal quantum number
     integer,           intent(in) :: is !< spin component
+    FLOAT, optional,   intent(in) :: threshold
 
-    FLOAT, parameter :: threshold = CNST(0.001)
+    FLOAT threshold_
 
     PUSH_SUB(species_get_iwf_radius)
 
     if(species_is_ps(spec)) then
-      ASSERT(ii <= spec%ps%conf%p)
-      radius = spline_cutoff_radius(spec%ps%ur(ii, is), spec%ps%projectors_sphere_threshold)
-    else if(species_represents_real_atom(spec)) then
-      radius = -ii*log(threshold)/spec%Z_val
+      threshold_ = optional_default(threshold, spec%ps%projectors_sphere_threshold)
     else
-      radius = sqrt(-M_TWO*log(threshold)/spec%omega)
+      threshold_ = optional_default(threshold, CNST(0.001))
+    end if
+
+    if(species_is_ps(spec)) then
+      ASSERT(ii <= spec%ps%conf%p)
+      radius = spline_cutoff_radius(spec%ps%ur(ii, is), threshold_)
+    else if(species_represents_real_atom(spec)) then
+      radius = -ii*log(threshold_)/spec%Z_val
+    else
+      radius = sqrt(-M_TWO*log(threshold_)/spec%omega)
     end if
 
     ! The values for hydrogenic and harmonic-oscillator wavefunctions
@@ -1289,10 +1326,12 @@ contains
     this%def_rsize=that%def_rsize
     this%def_h=that%def_h
     this%niwfs=that%niwfs
-    nullify(this%iwf_l, this%iwf_m, this%iwf_i)
+    nullify(this%iwf_n, this%iwf_l, this%iwf_m, this%iwf_i)
+    call loct_pointer_copy(this%iwf_n, that%iwf_n)
     call loct_pointer_copy(this%iwf_l, that%iwf_l)
     call loct_pointer_copy(this%iwf_m, that%iwf_m)
     call loct_pointer_copy(this%iwf_i, that%iwf_i)
+    call loct_pointer_copy(this%iwf_j, that%iwf_j)
     this%lmax=that%lmax
     this%lloc=that%lloc
 
@@ -1312,9 +1351,11 @@ contains
         SAFE_DEALLOCATE_P(spec%ps)
       end if
     end if
+    SAFE_DEALLOCATE_P(spec%iwf_n)
     SAFE_DEALLOCATE_P(spec%iwf_l)
     SAFE_DEALLOCATE_P(spec%iwf_m)
     SAFE_DEALLOCATE_P(spec%iwf_i)
+    SAFE_DEALLOCATE_P(spec%iwf_j)
 
     POP_SUB(species_end_species)
   end subroutine species_end_species
@@ -1554,6 +1595,7 @@ contains
         if(spec%lloc < 0) then
           call messages_input_error('Species', "The 'lloc' parameter in species "//trim(spec%label)//" cannot be negative")
         end if
+
 
       case(OPTION__SPECIES__MASS)
         call check_duplication(OPTION__SPECIES__MASS)
@@ -1832,8 +1874,10 @@ contains
           
           do m = -l, l
             spec%iwf_i(n, is) = i
+            spec%iwf_n(n, is) = spec%ps%conf%n(i)
             spec%iwf_l(n, is) = l
             spec%iwf_m(n, is) = m
+            spec%iwf_j(n) = spec%ps%conf%j(i)
             n = n + 1
           end do
           
@@ -1854,8 +1898,10 @@ contains
           do l = 0, i-1
             do m = -l, l
               spec%iwf_i(n, is) = i
+              spec%iwf_n(n, is) = i
               spec%iwf_l(n, is) = l
               spec%iwf_m(n, is) = m
+              spec%iwf_j(n) = M_ZERO
               n = n + 1
             end do
           end do
@@ -1869,8 +1915,10 @@ contains
         do is = 1, ispin
           do i = 1, spec%niwfs
             spec%iwf_i(i, is) = i
+            spec%iwf_n(i, is) = 0
             spec%iwf_l(i, is) = 0
             spec%iwf_m(i, is) = 0
+            spec%iwf_j(i) = M_ZERO
           end do
         end do
 
@@ -1879,18 +1927,24 @@ contains
           i = 1; n1 = 1; n2 = 1
           do
             spec%iwf_i(i, is) = n1
+            spec%iwf_n(i, is) = 1 
             spec%iwf_l(i, is) = n2
             spec%iwf_m(i, is) = 0
+            spec%iwf_j(i) = M_ZERO
             i = i + 1; if(i>spec%niwfs) exit
 
             spec%iwf_i(i, is) = n1+1
+            spec%iwf_n(i, is) = 1
             spec%iwf_l(i, is) = n2
             spec%iwf_m(i, is) = 0
+            spec%iwf_j(i) = M_ZERO
             i = i + 1; if(i>spec%niwfs) exit
 
             spec%iwf_i(i, is) = n1
+            spec%iwf_n(i, is) = 1
             spec%iwf_l(i, is) = n2+1
             spec%iwf_m(i, is) = 0
+            spec%iwf_j(i) = M_ZERO
             i = i + 1; if(i>spec%niwfs) exit
 
             n1 = n1 + 1; n2 = n2 + 1
@@ -1902,38 +1956,52 @@ contains
           i = 1; n1 = 1; n2 = 1; n3 = 1
           do
             spec%iwf_i(i, is) = n1
+            spec%iwf_n(i, is) = 1
             spec%iwf_l(i, is) = n2
             spec%iwf_m(i, is) = n3
+            spec%iwf_j(i) = M_ZERO
             i = i + 1; if(i>spec%niwfs) exit
 
             spec%iwf_i(i, is) = n1+1
+            spec%iwf_n(i, is) = 1
             spec%iwf_l(i, is) = n2
             spec%iwf_m(i, is) = n3
+            spec%iwf_j(i) = M_ZERO
             i = i + 1; if(i>spec%niwfs) exit
 
             spec%iwf_i(i, is) = n1
+            spec%iwf_n(i, is) = 1
             spec%iwf_l(i, is) = n2+1
             spec%iwf_m(i, is) = 0
+            spec%iwf_j(i) = M_ZERO
             i = i + 1; if(i>spec%niwfs) exit
 
             spec%iwf_i(i, is) = n1
+            spec%iwf_n(i, is) = 1
             spec%iwf_l(i, is) = n2
             spec%iwf_m(i, is) = n3+1
+            spec%iwf_j(i) = M_ZERO
             i = i + 1; if(i>spec%niwfs) exit
 
             spec%iwf_i(i, is) = n1+1
+            spec%iwf_n(i, is) = 1
             spec%iwf_l(i, is) = n2+1
             spec%iwf_m(i, is) = n3
+            spec%iwf_j(i) = M_ZERO
             i = i + 1; if(i>spec%niwfs) exit
 
             spec%iwf_i(i, is) = n1+1
+            spec%iwf_n(i, is) = 1
             spec%iwf_l(i, is) = n2
             spec%iwf_m(i, is) = n3+1
+            spec%iwf_j(i) = M_ZERO
             i = i + 1; if(i>spec%niwfs) exit
 
             spec%iwf_i(i, is) = n1
+            spec%iwf_n(i, is) = 1
             spec%iwf_l(i, is) = n2+1
             spec%iwf_m(i, is) = n3+1
+            spec%iwf_j(i) = M_ZERO
             i = i + 1; if(i>spec%niwfs) exit
 
             n1 = n1 + 1; n2 = n2 + 1; n3 = n3 + 1
