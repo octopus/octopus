@@ -912,7 +912,27 @@ contains
      SAFE_ALLOCATE( pcm%matrix_lf(1:pcm%n_tesserae, 1:pcm%n_tesserae) )
      pcm%matrix_lf = M_ZERO
 
+   ! only to benchmark
+     call pcm_matrix(pcm%epsilon_infty, pcm%tess, pcm%n_tesserae, pcm%matrix_lf, .true.)
+   pcmmat_unit = io_open(PCM_DIR//'pcm_matrix_dynamic_lf.out', action='write')
+    do jtess = 1, pcm%n_tesserae
+     do itess = 1, pcm%n_tesserae
+      write(pcmmat_unit,*) pcm%matrix_lf(itess,jtess)
+     end do
+    end do
+   call io_close(pcmmat_unit)
+
      call pcm_matrix(pcm%epsilon_0, pcm%tess, pcm%n_tesserae, pcm%matrix_lf, .true.)
+
+   ! only to benchmark
+   pcmmat_unit = io_open(PCM_DIR//'pcm_matrix_static_lf.out', action='write')
+    do jtess = 1, pcm%n_tesserae
+     do itess = 1, pcm%n_tesserae
+      write(pcmmat_unit,*) pcm%matrix_lf(itess,jtess)
+     end do
+    end do
+   call io_close(pcmmat_unit)
+
     end if
 
     if (mpi_grp_is_root(mpi_world)) then
@@ -1073,7 +1093,9 @@ contains
     logical :: input_asc_ext
 
     ! for debuggin - it should be cleaned up
-    integer :: ii
+    integer :: ii !, asc_unit_test_aux
+
+    !character*5 :: iteration 
 
     PUSH_SUB(pcm_calc_pot_rs)  
     
@@ -1193,31 +1215,14 @@ contains
           !< dont pay attention to the use of q_ext_in and qtot_ext_in, whose role here is only auxiliary
           pcm%q_ext = pcm%q_ext + pcm%q_ext_in
           pcm%qtot_ext = pcm%qtot_ext + pcm%qtot_ext_in
-        else			!< inertial/dynamical partition
-          select case (pcm%iter)
-          case(1)
-            !< calculating inertial polarization charges (once and for all)
-            !< (first step) calculating polarization charges equilibrated with the initial external potential (just once)
-            call pcm_charges(pcm%q_ext, pcm%qtot_ext, pcm%v_ext, pcm%matrix_lf, pcm%n_tesserae)
-            !< summing pcm charges due to the static external potential if there are any
-            !< dont pay attention to the use of q_ext_in and qtot_ext_in, whose role here is only auxiliary
-            pcm%q_ext = pcm%q_ext + pcm%q_ext_in
-            pcm%qtot_ext = pcm%qtot_ext + pcm%qtot_ext_in
-            pcm%q_ext_in = M_ZERO
-            pcm%qtot_ext_in = M_ZERO
-	    !< (second step) calculating initial dynamic polarization charges 
-	    !< dont pay attention to the use of q_ext_in and qtot_ext_in, whose role here is only auxiliary
-            call pcm_charges(pcm%q_ext_in, pcm%qtot_ext_in, pcm%v_ext, pcm%matrix_lf_d, pcm%n_tesserae)
-            !< (finally) the inertial polarization charges
-            pcm%q_ext_in = pcm%q_ext - pcm%q_ext_in
-            pcm%qtot_ext_in = pcm%qtot_ext - pcm%qtot_ext_in
-          case default
-            !< calculating dynamical polarization charges (each time)
-            call pcm_charges(pcm%q_ext, pcm%qtot_ext, pcm%v_ext, pcm%matrix_lf_d, pcm%n_tesserae)
+        else			!< inertial/dynamical partition -> sudden switch-on
+          !< calculating dynamical polarization charges (each time)
+          call pcm_charges(pcm%q_ext, pcm%qtot_ext, pcm%v_ext, pcm%matrix_lf_d, pcm%n_tesserae)
 
-            pcm%q_ext = pcm%q_ext + pcm%q_ext_in
-            pcm%qtot_ext = pcm%qtot_ext + pcm%qtot_ext_in
-          end select
+          !< summing pcm charges due to time-dependent and static external potentials
+          !< dont pay attention to the use of q_ext_in and qtot_ext_in, whose role here is only auxiliary
+          pcm%q_ext = pcm%q_ext + pcm%q_ext_in
+          pcm%qtot_ext = pcm%qtot_ext + pcm%qtot_ext_in
         end if !< END - equation-of-motion propagation or inertial/dynamical charge splitting
       else !< BEGIN - pcm charges propagation in equilibrium with external potential
 
@@ -1243,6 +1248,7 @@ contains
         pcm%q_ext_in = pcm%q_ext
         pcm%qtot_ext_in = pcm%qtot_ext
       end if !< END - pcm charges propagation in equilibrium with external field
+      write(asc_vs_t_unit,*) pcm%iter*dt, pcm%q_ext
       if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_ext, pcm%qtot_ext, mesh, pcm%rho_ext)
       call pcm_pot_rs(pcm, pcm%v_ext_rs, pcm%q_ext, pcm%rho_ext, mesh )
     end if
@@ -1274,7 +1280,6 @@ contains
             call pcm_charges_propagation(pcm%q_ext, pcm%v_kick, dt, pcm%tess, input_asc_ext, 'justkick', 'deb', this_deb=pcm%deb, &
                                                                 kick_time = is_time_for_kick)
         end select
-      write(asc_vs_t_unit,*) pcm%iter*dt, pcm%q_ext
       end if
       !< END - equation-of-motion propagation
       !< total pcm charges due to kick
@@ -1945,8 +1950,6 @@ contains
 
     logical, optional, intent(in) :: localf
 
-    FLOAT :: sgn_lf
-
     PUSH_SUB(pcm_matrix)
 
     !> Conforming the S_I matrix
@@ -1965,43 +1968,51 @@ contains
     SAFE_ALLOCATE( Delta(1:n_tess, 1:n_tess) )
     Delta = d_mat_act
 
-    sgn_lf=M_ONE
-    !> 'local field' differ from 'standard' PCM response matrix in some sign changes
-    if ( present(localf) ) then 
+    if ( present(localf) ) then !< PCM response matrix for polarization due to applied field or solute
 
-      if ( localf ) sgn_lf = -M_ONE
+      SAFE_DEALLOCATE_A(d_mat_act)
+      SAFE_DEALLOCATE_A(s_mat_act)
 
-    end if
+      !> Start conforming the PCM matrix
+      pcm_mat = Delta
 
-    !> Start conforming the PCM matrix
-    pcm_mat = -sgn_lf * d_mat_act
+      do i=1, n_tess
+        pcm_mat(i,i) = pcm_mat(i,i) + M_TWO*M_Pi  
+      end do
 
-    do i=1, n_tess
-      pcm_mat(i,i) = pcm_mat(i,i) + M_TWO*M_Pi  
-    end do
+      pcm_mat = pcm_mat * (M_ONE-eps)/eps
 
-    SAFE_DEALLOCATE_A(d_mat_act) 
+    else
 
-    SAFE_ALLOCATE( iwork(1:n_tess) )
+      !> Start conforming the PCM matrix
+      pcm_mat = -d_mat_act
 
-    !> Solving for X = S_I^-1*(2*Pi - D_I)
-    !! for local field effects ---> X = S_I^-1*(2*Pi + D_I) 
-    ! FIXME: use interface, or routine in lalg_adv_lapack_inc.F90
-    call dgesv(n_tess, n_tess, s_mat_act, n_tess, iwork, pcm_mat, n_tess, info)        
+      do i=1, n_tess
+        pcm_mat(i,i) = pcm_mat(i,i) + M_TWO*M_Pi  
+      end do
 
-    SAFE_DEALLOCATE_A(iwork)
+      SAFE_DEALLOCATE_A(d_mat_act) 
 
-    SAFE_DEALLOCATE_A(s_mat_act)
+      SAFE_ALLOCATE( iwork(1:n_tess) )
 
-    !> Computing -S_E*S_I^-1*(2*Pi - D_I)
-    !! for local field effects ---> -S_E*S_I^-1*(2*Pi + D_I)
-    pcm_mat = -matmul( Sigma, pcm_mat ) 
+      !> Solving for X = S_I^-1*(2*Pi - D_I) 
+      ! FIXME: use interface, or routine in lalg_adv_lapack_inc.F90
+      call dgesv(n_tess, n_tess, s_mat_act, n_tess, iwork, pcm_mat, n_tess, info)        
 
-    do i=1, n_tess
-      pcm_mat(i,i) = pcm_mat(i,i) + M_TWO*M_Pi
-    end do
+      SAFE_DEALLOCATE_A(iwork)
 
-    pcm_mat = pcm_mat - sgn_lf * Delta
+      SAFE_DEALLOCATE_A(s_mat_act)
+
+      !> Computing -S_E*S_I^-1*(2*Pi - D_I)
+      pcm_mat = -matmul( Sigma, pcm_mat ) 
+
+      do i=1, n_tess
+        pcm_mat(i,i) = pcm_mat(i,i) + M_TWO*M_Pi
+      end do
+
+      pcm_mat = pcm_mat - Delta
+
+    end if 
 
     SAFE_ALLOCATE( mat_tmp(1:n_tess,1:n_tess) )
     mat_tmp = M_ZERO
