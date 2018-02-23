@@ -202,7 +202,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       ! symmetrize
       do jter = 1, iter
         do kter = jter + 1, iter
-          mm(jter, kter, 1:2, 1:bsize) = mm(kter, jter, 1:2, 1:bsize)
+          mm(jter, kter, 1:2, 1:bsize) = R_CONJ(mm(kter, jter, 1:2, 1:bsize))
         end do
       end do
 
