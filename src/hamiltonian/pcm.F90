@@ -1950,6 +1950,8 @@ contains
 
     logical, optional, intent(in) :: localf
 
+    FLOAT :: sgn_lf
+
     PUSH_SUB(pcm_matrix)
 
     !> Conforming the S_I matrix
@@ -1968,51 +1970,43 @@ contains
     SAFE_ALLOCATE( Delta(1:n_tess, 1:n_tess) )
     Delta = d_mat_act
 
-    if ( present(localf) ) then !< PCM response matrix for polarization due to applied field or solute
+    sgn_lf=M_ONE
+    !> 'local field' differ from 'standard' PCM response matrix in some sign changes
+    if ( present(localf) ) then 
 
-      SAFE_DEALLOCATE_A(d_mat_act)
-      SAFE_DEALLOCATE_A(s_mat_act)
+      if ( localf ) sgn_lf = -M_ONE
 
-      !> Start conforming the PCM matrix
-      pcm_mat = Delta
+    end if
 
-      do i=1, n_tess
-        pcm_mat(i,i) = pcm_mat(i,i) + M_TWO*M_Pi  
-      end do
+    !> Start conforming the PCM matrix
+    pcm_mat = - sgn_lf * d_mat_act
 
-      pcm_mat = pcm_mat * (M_ONE-eps)/eps
+    do i=1, n_tess
+      pcm_mat(i,i) = pcm_mat(i,i) + M_TWO*M_Pi  
+    end do
 
-    else
+    SAFE_DEALLOCATE_A(d_mat_act) 
 
-      !> Start conforming the PCM matrix
-      pcm_mat = -d_mat_act
+    SAFE_ALLOCATE( iwork(1:n_tess) )
 
-      do i=1, n_tess
-        pcm_mat(i,i) = pcm_mat(i,i) + M_TWO*M_Pi  
-      end do
+    !> Solving for X = S_I^-1*(2*Pi - D_I)
+    !! for local field effects ---> X = S_I^-1*(2*Pi + D_I) 
+    ! FIXME: use interface, or routine in lalg_adv_lapack_inc.F90
+    call dgesv(n_tess, n_tess, s_mat_act, n_tess, iwork, pcm_mat, n_tess, info)        
 
-      SAFE_DEALLOCATE_A(d_mat_act) 
+    SAFE_DEALLOCATE_A(iwork)
 
-      SAFE_ALLOCATE( iwork(1:n_tess) )
+    SAFE_DEALLOCATE_A(s_mat_act)
 
-      !> Solving for X = S_I^-1*(2*Pi - D_I) 
-      ! FIXME: use interface, or routine in lalg_adv_lapack_inc.F90
-      call dgesv(n_tess, n_tess, s_mat_act, n_tess, iwork, pcm_mat, n_tess, info)        
+    !> Computing -S_E*S_I^-1*(2*Pi - D_I)
+    !! for local field effects ---> -S_E*S_I^-1*(2*Pi + D_I)
+    pcm_mat = -matmul( Sigma, pcm_mat ) 
 
-      SAFE_DEALLOCATE_A(iwork)
+    do i=1, n_tess
+      pcm_mat(i,i) = pcm_mat(i,i) + M_TWO*M_Pi
+    end do
 
-      SAFE_DEALLOCATE_A(s_mat_act)
-
-      !> Computing -S_E*S_I^-1*(2*Pi - D_I)
-      pcm_mat = -matmul( Sigma, pcm_mat ) 
-
-      do i=1, n_tess
-        pcm_mat(i,i) = pcm_mat(i,i) + M_TWO*M_Pi
-      end do
-
-      pcm_mat = pcm_mat - Delta
-
-    end if 
+    pcm_mat = pcm_mat - sgn_lf * Delta
 
     SAFE_ALLOCATE( mat_tmp(1:n_tess,1:n_tess) )
     mat_tmp = M_ZERO
@@ -2040,12 +2034,13 @@ contains
     SAFE_ALLOCATE( iwork(1:n_tess) )
 
     !> Solving for [(2*pi - D_E)*S_I + S_E*(2*Pi + D_I*)]*X = [(2*Pi - D_E) - S_E*S_I^-1*(2*Pi - D_I)]    
+    !! for local field ---> [(2*pi - D_E)*S_I + S_E*(2*Pi + D_I*)]*X = [(2*Pi + D_E) - S_E*S_I^-1*(2*Pi + D_I)]
     call dgesv(n_tess, n_tess, mat_tmp, n_tess, iwork, pcm_mat, n_tess, info)		  		  
 
     SAFE_DEALLOCATE_A(iwork)
     SAFE_DEALLOCATE_A(mat_tmp)
 
-    pcm_mat = -pcm_mat
+    pcm_mat = - sgn_lf * pcm_mat
 
     !   Testing
     if ( gamess_benchmark ) then
