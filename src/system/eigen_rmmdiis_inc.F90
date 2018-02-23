@@ -35,7 +35,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   FLOAT,  allocatable :: eval(:, :)
   FLOAT,  allocatable :: lambda(:)
   integer :: ist, minst, idim, ii, iter, nops, maxst, jj, bsize, ib, jter, kter, prog
-  R_TYPE :: ca, cb, cc
+  R_TYPE :: ca, cc
+  FLOAT  :: cb
   R_TYPE, allocatable :: fr(:, :)
   type(batch_pointer_t), allocatable :: psib(:), resb(:)
   integer, allocatable :: done(:), last(:)
@@ -88,7 +89,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     call X(mesh_batch_dotp_vector)(gr%mesh, psib(1)%batch, resb(1)%batch, eigen)
     call X(mesh_batch_dotp_vector)(gr%mesh, psib(1)%batch, psib(1)%batch, nrmsq)
 
-    st%eigenval(minst:maxst, ik) = R_REAL(eigen(1:bsize)/nrmsq(1:bsize))
+    st%eigenval(minst:maxst, ik) = R_REAL(eigen(1:bsize))/R_REAL(nrmsq(1:bsize))
 
     call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), psib(1)%batch, resb(1)%batch)
 
@@ -97,7 +98,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     call X(mesh_batch_dotp_vector)(gr%mesh, resb(1)%batch, resb(1)%batch, nrmsq)
 
     do ii = 1, bsize
-      if(sqrt(abs(nrmsq(ii))) < tol) done(ii) = 1
+      if(sqrt(abs(R_REAL(nrmsq(ii)))) < tol) done(ii) = 1
     end do
 
     if(all(done(1:bsize) /= 0)) then
@@ -130,8 +131,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     do ist = minst, maxst
       ii = ist - minst + 1
 
-      ca = fr(1, ii)*fr(4, ii) - fr(3, ii)*fr(2, ii)
-      cb = fr(3, ii) - st%eigenval(ist, ik)*fr(1, ii)
+      ca = R_REAL(fr(1, ii))*fr(4, ii) - R_REAL(fr(3, ii))*fr(2, ii)
+      cb = R_REAL(fr(3, ii)) - st%eigenval(ist, ik)*R_REAL(fr(1, ii))
       cc = st%eigenval(ist, ik)*fr(2, ii) - fr(4, ii)
 
       if(abs(cc) > CNST(1.0e-10)) then
@@ -328,14 +329,15 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     
     call X(hamiltonian_apply_batch)(hm, gr%der, st%group%psib(ib, ik), resb(1)%batch, ik)
     call X(mesh_batch_dotp_vector)(gr%der%mesh, st%group%psib(ib, ik), resb(1)%batch, eigen)
+    call X(mesh_batch_dotp_vector)(gr%mesh, st%group%psib(ib, ik), st%group%psib(ib, ik), nrmsq)
     
-    st%eigenval(minst:maxst, ik) = R_REAL(eigen(1:maxst - minst + 1))
+    st%eigenval(minst:maxst, ik) = R_REAL(eigen(1:maxst - minst + 1))/R_REAL(nrmsq(1:maxst - minst + 1))
     
     call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), st%group%psib(ib, ik), resb(1)%batch)
     
     call X(mesh_batch_dotp_vector)(gr%der%mesh, resb(1)%batch, resb(1)%batch, eigen)
     
-    diff(minst:maxst) = sqrt(abs(eigen(1:maxst - minst + 1)))
+    diff(minst:maxst) = sqrt(abs(R_REAL(eigen(1:maxst - minst + 1))))
     
     call batch_end(resb(1)%batch, copy = .false.)
 
