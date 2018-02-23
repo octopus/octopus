@@ -380,6 +380,8 @@ module pcm_eom_oct_m
 
     q_tp = q_t
 
+    pot_tp = pot_t
+
    else if( which_eom == 'external' .or. which_eom == 'ext+kick' ) then 
     !> analogous to Eq.(47) ibid. with different matrices
     q_t(:) = qext_tp(:) - dt*matmul(matqq,qext_tp)   + &
@@ -387,6 +389,8 @@ module pcm_eom_oct_m
 			     matmul(matqd_lf,pot_t-potext_tp) !< N.B. matqq
 
     qext_tp = q_t
+
+    potext_tp = pot_t
 
    else if( which_eom == 'justkick' ) then 
     !> simplifying for kick
@@ -400,8 +404,6 @@ module pcm_eom_oct_m
     qext_tp = q_t
 
    endif
-
-   pot_tp = pot_t
 
    POP_SUB(pcm_ief_prop_deb)
   end subroutine pcm_ief_prop_deb
@@ -470,6 +472,10 @@ module pcm_eom_oct_m
   !------------------------------------------------------------------------------------------------------------------------------
   !> Boundary Element Method (BEM) EOM-IEF-PCM matrices initialization.
   subroutine init_BEM
+
+   integer :: itess, jtess
+   integer :: pcmmat0_unit, pcmmatd_unit
+
    PUSH_SUB(init_BEM)
 
    if( which_eom == 'electron' ) then
@@ -480,7 +486,7 @@ module pcm_eom_oct_m
      SAFE_ALLOCATE(matqq(nts_act,nts_act))
     endif
    else if( which_eom == 'external' .or. which_eom == 'ext+kick' ) then
-    !SAFE_ALLOCATE(matq0_lf(nts_act,nts_act)) !< not used yet
+    SAFE_ALLOCATE(matq0_lf(nts_act,nts_act)) !< not used yet
     SAFE_ALLOCATE(matqd_lf(nts_act,nts_act))
     SAFE_ALLOCATE(matqv_lf(nts_act,nts_act))
     if( (.not.allocated(matqq)) .and. which_eps == 'deb' ) then
@@ -499,6 +505,30 @@ module pcm_eom_oct_m
     endif
    endif  
    call do_PCM_propMat
+
+   if( which_eom == 'electron' ) then
+    pcmmat0_unit = io_open(PCM_DIR//'pcm_matrix_static_from_eom.out', action='write')
+    pcmmatd_unit = io_open(PCM_DIR//'pcm_matrix_dynamic_from_eom.out', action='write')
+     do jtess = 1, nts_act
+      do itess = 1, nts_act
+       write(pcmmat0_unit,*) matq0(itess,jtess)
+       write(pcmmatd_unit,*) matqd(itess,jtess)
+      end do
+     end do
+    call io_close(pcmmat0_unit)
+    call io_close(pcmmatd_unit)
+   else if( which_eom == 'external' .or. which_eom == 'ext+kick' ) then
+    pcmmat0_unit = io_open(PCM_DIR//'pcm_matrix_static_lf_from_eom.out', action='write')
+    pcmmatd_unit = io_open(PCM_DIR//'pcm_matrix_dynamic_lf_from_eom.out', action='write')
+     do jtess = 1, nts_act
+      do itess = 1, nts_act
+       write(pcmmat0_unit,*) matq0_lf(itess,jtess)
+       write(pcmmatd_unit,*) matqd_lf(itess,jtess)
+      end do
+     end do
+    call io_close(pcmmat0_unit)
+    call io_close(pcmmatd_unit)
+   endif
 
    POP_SUB(init_BEM)
   end subroutine init_BEM
@@ -595,10 +625,18 @@ module pcm_eom_oct_m
    SAFE_ALLOCATE(scr2(nts_act,nts_act))
    SAFE_ALLOCATE(scr3(nts_act,nts_act))
    if (which_eps .eq. "deb") then
-    fac_eps0=(deb%eps_0+M_ONE)/(deb%eps_0-M_ONE)			 
-    Kdiag0(:)=sgn_lf*(twopi-sgn*sgn_lf*eigv(:))/(twopi*fac_eps0-sgn*eigv(:)) !< Eq.(14) with eps_0 in Ref.1
-    fac_epsd=(deb%eps_d+M_ONE)/(deb%eps_d-M_ONE)
-    Kdiagd(:)=sgn_lf*(twopi-sgn*sgn_lf*eigv(:))/(twopi*fac_epsd-sgn*eigv(:)) !< Eq.(14) with eps_d, ibid.
+    if( deb%eps_0 /= M_ONE ) then
+     fac_eps0=(deb%eps_0+M_ONE)/(deb%eps_0-M_ONE)			 
+     Kdiag0(:)=sgn_lf*(twopi-sgn*sgn_lf*eigv(:))/(twopi*fac_eps0-sgn*eigv(:)) !< Eq.(14) with eps_0 in Ref.1
+    else
+     Kdiag0(:)=M_ZERO
+    endif
+    if( deb%eps_d /= M_ONE ) then
+     fac_epsd=(deb%eps_d+M_ONE)/(deb%eps_d-M_ONE)
+     Kdiagd(:)=sgn_lf*(twopi-sgn*sgn_lf*eigv(:))/(twopi*fac_epsd-sgn*eigv(:)) !< Eq.(14) with eps_d, ibid.
+    else
+     Kdiagd(:)=M_ZERO
+    endif
     fact1(:)=((twopi-sgn*eigv(:))*deb%eps_0+twopi+eigv(:))/ &  !< inverse of Eq.(32), ibid.
     ((twopi-sgn*eigv(:))*deb%eps_d+twopi+eigv(:))/deb%tau
     fact2(:)=Kdiag0(:)*fact1(:)				       !< tau^{-1}K_0 in Eq.(38), ibid.
@@ -637,8 +675,8 @@ module pcm_eom_oct_m
    enddo
    if( which_eom == 'electron' ) then
     matq0=-matmul(scr1,scr4)				       !< from Eq.(14) and (18) for eps_0 in Ref.1
-   !else if( which_eom == 'external' .or. which_eom == 'ext+kick' ) then
-   ! matq0_lf=-matmul(scr1,scr4)			        !< local field analogous !< not used yet
+   else if( which_eom == 'external' .or. which_eom == 'ext+kick' ) then
+    matq0_lf=-matmul(scr1,scr4)			        !< local field analogous !< not used yet
    endif
    do i=1,nts_act
     scr1(:,i)=scr3(:,i)*Kdiagd(i)
