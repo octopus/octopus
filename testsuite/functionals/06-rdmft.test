@@ -13,10 +13,10 @@ match ; LDA eigenvalue                ; GREPFIELD(static/info, '  1   --', 3) ; 
 
 Input: 06-rdmft.02-gs.inp
 Precision : 1e-5
-match ; RDMFT energy after occupation numbers minimization            ; GREPFIELD(out, 'occ minim = ', 7) ; -1.15642
-match ; RDMFT converged energy                                        ; GREPFIELD(out, 'total energy is ', 5) ;  -1.15642
+match ; RDMFT energy after occupation numbers minimization            ; GREPFIELD(out, 'Total energy ', 3) ;  -1.15642
+match ; RDMFT converged energy                                        ; GREPFIELD(out, 'The total energy is ', 5) ;  -1.15672
 
 Input: 06-rdmft.03-gs_grid.inp
 Precision : 1e-5
-match ; RDMFT energy after occupation numbers minimization            ; GREPFIELD(out, 'occ minim = ', 7) ; -1.15642
-match ; RDMFT converged energy                                        ; GREPFIELD(out, 'total energy is ', 5) ;  -1.15642
+match ; RDMFT energy after occupation numbers minimization            ; GREPFIELD(out, 'Total energy ', 3) ;  -1.15642
+match ; RDMFT converged energy                                        ; GREPFIELD(out, 'The total energy is ', 5) ;  -1.16083

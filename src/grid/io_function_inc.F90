@@ -1137,6 +1137,7 @@ contains
   subroutine out_cube()
 
     integer :: ix, iy, iz, idir, idir2, iatom
+    integer :: int_unit(3)
     FLOAT   :: offset(MAX_DIM)
     type(cube_t) :: cube
     type(cube_function_t) :: cf
@@ -1168,12 +1169,13 @@ contains
 
     ! According to http://gaussian.com/cubegen/
     ! If N1<0 the input cube coordinates are assumed to be in Bohr, otherwise, they are interpreted as Angstroms. 
+    int_unit(1:3) = 1
     if (units_out%length%abbrev == "b") then
-      cube%rs_n_global(1) = -cube%rs_n_global(1) 
+      int_unit(1) = -1
     end if
 
     do idir = 1, 3
-      write(iunit, '(i5,3f12.6)') cube%rs_n_global(idir), (units_from_atomic(units_out%length, &
+      write(iunit, '(i5,3f12.6)') int_unit(idir)*cube%rs_n_global(idir), (units_from_atomic(units_out%length, &
         mesh%spacing(idir)*mesh%sb%rlattice_primitive(idir2, idir)), idir2 = 1, 3)
     end do
     do iatom = 1, geo%natoms
