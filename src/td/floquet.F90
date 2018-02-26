@@ -1206,7 +1206,8 @@ contains
         end if
 
       case (OPTION__FLOQUETBOSON__QED_PHOTON)
-        call floquet_calc_occupations_norms(hm, sys, dressed_st)
+        !call floquet_calc_occupations_norms(hm, sys, dressed_st)
+        call floquet_calc_occupations_sudden(hm, sys, dressed_st)
 
       case (OPTION__FLOQUETBOSON__QED_PHONON)
 
@@ -1326,16 +1327,27 @@ contains
             call states_get_state(gs_st, mesh, ist, ik, psi)
             
             tmp(:) = M_ZERO
-            do idx=hm%F%flat_idx%start, hm%F%flat_idx%end
-               it = hm%F%idx_map(idx,1)
-               im = hm%F%idx_map(idx,2)
-               imm = im - Fdim(1) + 1
+            if (hm%F%boson==OPTION__FLOQUETBOSON__QED_PHOTON) then 
+
                do idim=1,gs_st%d%dim
-                 tmp(idim)  =  tmp(idim) + exp(-M_zI*im*omega*it*dt)/nT * zmf_dotp(mesh, psi(1:mesh%np,idim), &
-                                                                          u_ma(1:mesh%np,(imm-1)*gs_st%d%dim+idim))
+                 tmp(idim)  =  tmp(idim) + zmf_dotp(mesh, psi(1:mesh%np,idim),u_ma(1:mesh%np,idim))
                end do
-               
-            end do
+
+            else
+
+               do idx=hm%F%flat_idx%start, hm%F%flat_idx%end
+                  it = hm%F%idx_map(idx,1)
+                  im = hm%F%idx_map(idx,2)
+                  imm = im - Fdim(1) + 1
+                  do idim=1,gs_st%d%dim
+                    tmp(idim)  =  tmp(idim) + exp(-M_zI*im*omega*it*dt)/nT * zmf_dotp(mesh, psi(1:mesh%np,idim), &
+                                                                             u_ma(1:mesh%np,(imm-1)*gs_st%d%dim+idim))
+                  end do
+                  
+               end do
+
+            end if
+
             if(hm%F%is_parallel) call comm_allreduce(hm%F%mpi_grp%comm, tmp(:))
             
             dressed_st%occ(ia,ik) = dressed_st%occ(ia,ik) + abs(sum(tmp(:)))**2 * gs_st%occ(ist,ik)
