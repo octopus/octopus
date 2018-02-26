@@ -1083,6 +1083,7 @@ contains
          call restart_init(restart, RESTART_FLOQUET, RESTART_TYPE_DUMP, &
                            sys%mc, ierr, gr%der%mesh)
          call states_dump(restart, dressed_st, gr, ierr, iter)
+         call states_dump_rho(restart,dressed_st, gr, ierr, iter=iter)
          call restart_end(restart)
 
 
