@@ -396,6 +396,9 @@ contains
       call hamiltonian_update(hm, gr%mesh, time = td%dt*td%iter)
     end if
 
+    call floquet_init(sys,hm%F,sys%st%d%dim)
+    call floquet_init_td(sys,hm,st)
+
     call init_wfs()
 
     if(td%iter >= td%max_iter) then
@@ -442,8 +445,6 @@ contains
     if(td%pesv%calc_spm .or. td%pesv%calc_mask .and. fromScratch) then
       call pes_init_write(td%pesv,gr%mesh,st)
     end if
-
-    call floquet_init(sys,hm%F,sys%st%d%dim)
 
     if(st%d%pack_states .and. hamiltonian_apply_packed(hm, gr%mesh)) call states_pack(st)
 
@@ -663,13 +664,29 @@ contains
       end if
 
       if (fromScratch) then
-        call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
+        
+        if (hm%F%propagate) then 
+          ! load Floquet structure
+          call restart_init(restart, RESTART_FLOQUET, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
 
-        if(.not. st%only_userdef_istates) then
-          if(ierr == 0) call states_load(restart, st, gr, ierr, label = ": gs")
-          if (ierr /= 0) then
-            message(1) = 'Unable to read ground-state wavefunctions.'
-            call messages_fatal(1)
+          if(.not. st%only_userdef_istates) then
+            if(ierr == 0) call states_load(restart, st, gr, ierr, label = ": floquet")
+            if (ierr /= 0) then
+              message(1) = 'Unable to read equilibrium Floquet wavefunctions.'
+              call messages_fatal(1)
+            end if
+          end if
+          
+        else 
+          ! the usual GS structure
+          call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
+
+          if(.not. st%only_userdef_istates) then
+            if(ierr == 0) call states_load(restart, st, gr, ierr, label = ": gs")
+            if (ierr /= 0) then
+              message(1) = 'Unable to read ground-state wavefunctions.'
+              call messages_fatal(1)
+            end if
           end if
         end if
 

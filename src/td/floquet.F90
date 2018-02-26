@@ -96,7 +96,8 @@ module floquet_oct_m
        floquet_FBZ_filter,        &
 !        zfloquet_FBZ_subspace_diag, &
 !        dfloquet_FBZ_subspace_diag, &
-       floquet_calc_FBZ_coefficients 
+       floquet_calc_FBZ_coefficients, & 
+       floquet_init_td
 
   integer, public, parameter ::    &
        FLOQUET_NONE            = 0, &      
@@ -148,7 +149,7 @@ contains
     !%Default non_interacting
     !%Section Floquet
     !%Description
-    !% Types of Floquet analysis performed when TDOutput=td_floquet
+    !% Types of Floquet analysis.
     !%Option none 0
     !%
     !%Option non_interacting 1
@@ -160,6 +161,16 @@ contains
     !%End
 
     call parse_variable('FloquetMode', FLOQUET_NONE, this%mode)
+
+    !%Variable FloquetTimePropagation
+    !%Type logical
+    !%Default no
+    !%Section Floquet
+    !%Description
+    !% Perform time propagation of Floquet states. Makes sense only for FloquetBoson=qed_photon.
+    !%End
+    call parse_variable('FloquetTimePropagation', .false., this%propagate)
+
 
 
     if (this%mode == FLOQUET_NONE) then
@@ -186,6 +197,9 @@ contains
     call messages_print_var_option(stdout, 'FloquetBoson',  this%boson)
 
     call messages_print_var_option(stdout, 'FloquetMode',  this%mode)
+    
+    call messages_print_var_value(stdout,  'Allows time propagation',  this%propagate)
+    
 
     if(this%mode==FLOQUET_FROZEN_PHONON) then
        if(.not.parse_is_defined('IonsTimeDependentDisplacements')) then
@@ -437,11 +451,55 @@ contains
        end do
     end do
     
+        
     call messages_print_stress(stdout)
 
    POP_SUB(floquet_init)
 
   end subroutine floquet_init
+
+
+  subroutine floquet_init_td(sys, hm, dressed_st)
+    type(system_t),      intent(in)    :: sys
+    type(hamiltonian_t), intent(inout) :: hm
+    type(states_t),      intent(inout) :: dressed_st
+
+    type(grid_t),   pointer :: gr
+
+    PUSH_SUB(floquet_init_td)
+
+    gr => sys%gr
+
+    if(hm%F%propagate) then
+      
+      ! Override undressed states initialization
+      ! First: end states
+      call states_deallocate_wfns(dressed_st)
+      call states_end(dressed_st)
+            
+      ! Second: reinitialize the state object with the Floquet dimension
+      dressed_st%floquet_dim = hm%F%floquet_dim
+      dressed_st%floquet_FBZ = hm%F%FBZ_solver
+      call states_init(dressed_st, gr, hm%geo)
+      call kpoints_distribute(dressed_st%d,sys%mc)
+      call states_distribute_nodes(dressed_st,sys%mc)
+      call states_exec_init(dressed_st, sys%mc)
+      call states_allocate_wfns(dressed_st,gr%der%mesh, wfs_type = TYPE_CMPLX)
+      call states_densities_init(dressed_st, sys%gr, sys%geo)
+
+            
+      ! set dimension of Floquet Hamiltonian                                                    
+      hm%d%dim = dressed_st%d%dim
+
+      ! Switch on the Floquet Hamiltonian 
+      hm%F%floquet_apply = .true.
+        
+    end if
+    
+    POP_SUB(floquet_init_td)
+  end subroutine floquet_init_td
+
+
 
   subroutine floquet_hamiltonians_init(this, gr, st, sys)
     type(hamiltonian_t), intent(inout) :: this ! this is not great, as everyhting should be within the floquet_t
