@@ -936,17 +936,21 @@ contains
     type(multicomm_t), intent(in)   :: mc
     type(grid_t)    , intent(in)    :: gr
 
-    integer             :: ierr, ip, ik, ist, uist, pr_info
+    integer             :: ierr, ip, ik, ist, ast, pr_info
     integer             :: n_operations, i_op
     type(unit_t)        :: units
     type(block_t)       :: blk
-    FLOAT, allocatable  :: projections(:,:), tmp(:,:)
+    FLOAT, allocatable  :: projections(:,:,:), tmp(:,:)
     FLOAT, allocatable  :: bra(:), ket(:,:)
-    CMPLX, allocatable  :: zprojections(:,:), ztmp(:,:)
+    CMPLX, allocatable  :: zprojections(:,:,:), ztmp(:,:)
     FLOAT, allocatable  :: scalar_op(:)! , dipole(:)
     CMPLX, allocatable  :: zscalar_op(:)
     FLOAT               :: f_re, f_im
     FLOAT               :: rr, xx(MAX_DIM)
+    integer             :: n_pairs
+    integer, allocatable:: n_occ(:), n_unocc(:)
+    logical, pointer    :: is_included(:,:,:) !< (i, a, k) is in the basis?
+    logical             :: is_frac_occ
 
     type(restart_t)          :: restart
     character(len=200) :: frmt, scalar_operator_expression, filename
@@ -956,15 +960,6 @@ contains
     ! Read all states and occupations
     call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
     call states_look_and_load(restart, st, gr)
-
-!    !%Variable ConvertScalarOperator
-!    !%Type string
-!    !%Section Utilities::oct-convert
-!    !%Description
-!    !% This variable is used define the scalar operator 
-!    !% which assumes that the variables in the expression are "x(:)", "r".
-!    !%End
-!    call parse_variable('ConvertScalarOperator', '1', scalar_operator_expression)
 
     !%Variable ConvertScalarOperator
     !%Type block
@@ -1000,13 +995,13 @@ contains
     call messages_print_stress(pr_info, "")
 
     if (states_are_real(st)) then
-      SAFE_ALLOCATE(projections(1:st%nst, 1:st%nst))
+      SAFE_ALLOCATE(projections(1:st%nst, 1:st%nst, st%d%nik))
       SAFE_ALLOCATE(tmp(1:st%nst, 1:st%nst))
       SAFE_ALLOCATE(scalar_op(1:mesh%np))
       projections = M_ZERO
       tmp = M_ZERO
     else
-      SAFE_ALLOCATE(zprojections(1:st%nst, 1:st%nst))
+      SAFE_ALLOCATE(zprojections(1:st%nst, 1:st%nst, st%d%nik))
       SAFE_ALLOCATE(ztmp(1:st%nst, 1:st%nst))
       SAFE_ALLOCATE(zscalar_op(1:mesh%np))
       zprojections = M_ZERO
@@ -1016,25 +1011,16 @@ contains
     SAFE_ALLOCATE(ket(1:mesh%np, 1:st%nst))
     SAFE_ALLOCATE(bra(1:mesh%np))
      
-    !do ik = 1, st%d%nik
-    !  do ist = 1, st%nst
-    !    call states_get_state(st, mesh, 1, ist, ik, bra)
-    !    if (states_are_real(st)) then
-    !      units = units_out%length**(-mesh%sb%dim/2)
-    !      write(filename,'(a,i0.7)') 'bra',ist
-    !      call dio_function_output(outp%how, 'projections', trim(filename), mesh,  & 
-    !      bra, unit_one, ierr, geo = geo)
-    !      !units = units_out%length**(-mesh%sb%dim)
-    !      !write(filename,'(a,i0.7,a)') 'brasquare',ist,'-op'//trim(scalar_operator_expression)
-    !      !call dio_function_output(outp%how, 'projections', trim(filename), mesh,  & 
-    !      !bra*bra, unit_one, ierr, geo = geo)
-    !    end if
-    !  end do
-    !end do
-
     !TODO: define subset of wfc to be projected 
+    SAFE_ALLOCATE(n_occ(st%d%nik))
+    SAFE_ALLOCATE(n_unocc(st%d%nik))
+    call states_count_pairs(st, n_pairs, n_occ, n_unocc, is_included, is_frac_occ)
+    do ist=1,n_occ(1)
+      print*,(is_included(ist, ast, 1), ast=n_occ(1)+1,st%nst)
+    end do
 
     do i_op = 1, n_operations
+      tmp = M_ZERO
       call parse_block_string(blk, i_op-1, 0, scalar_operator_expression)
       call messages_print_stress(pr_info, "Scalar Operator = "//trim(scalar_operator_expression) )
 
@@ -1049,47 +1035,42 @@ contains
         end if
       end do
 
-      !! SIMILAR TO WHAT IS DONE IN td_write_n_ex (td_write.F90, l2345)
-      !do ik = st%d%kpt%start, st%d%kpt%end
-      !  if (states_are_real(st)) then
-      !    tmp(:,:) = M_ZERO
-      !    call dstates_calc_projections(mesh, st, st, ik, tmp, oper=scalar_op)
-      !    projections = projections + tmp**2
-      !  else
-      !    ztmp(:,:) = M_ZERO
-      !    call zstates_calc_projections(mesh, st, st, ik, ztmp, oper=zscalar_op)
-      !    zprojections = zprojections + ztmp**2
-      !  end if
-      !end do
-      !do ik = 1, st%nst
-      !  write(pr_info, fmt=trim(frmt)) ( tmp(ik, ip), ip=1,ik )
-      !end do
-
     ! SIMILAR TO WHAT IS DONE IN calc_projections in TD (td_write.F90, l2400)
       do ik = 1, st%d%nik
-        do uist = 1, st%nst
-          call states_get_state(st, mesh, 1, uist, ik, ket(:, uist))
-          ket(1:mesh%np, uist) = scalar_op(1:mesh%np) * ket(1:mesh%np, uist)
+        !do ast = 1, st%nst
+        !  call states_get_state(st, mesh, 1, ast, ik, ket(:, ast))
+        !  ket(1:mesh%np, ast) = scalar_op(1:mesh%np) * ket(1:mesh%np, ast)
+        !end do
+        do ast = n_occ(ik)+1, st%nst
+          if (any(is_included(:, ast, ik))) then
+            call states_get_state(st, mesh, 1, ast, ik, ket(:, ast))
+            ket(1:mesh%np, ast) = scalar_op(1:mesh%np) * ket(1:mesh%np, ast)
+          end if
         end do
       end do
       do ik = 1, st%d%nik
-        do ist = 1, st%nst
-          call states_get_state(st, mesh, 1, ist, ik, bra)
+        do ist = 1,  n_occ(ik) !1, st%nst
+          if (any(is_included(ist, :, ik))) &
+              call states_get_state(st, mesh, 1, ist, ik, bra)
           !if (states_are_real(st)) then
           !  units = units_out%length**(-1/2)
           !  write(filename,'(a,i0.7,a)') 'ket',ist,'-op'//trim(scalar_operator_expression)
           !  call dio_function_output(outp%how, 'projections', trim(filename), mesh,  & 
           !  ket, unit_one, ierr, geo = geo)
           !end if
-          do uist = 1, ist
+          do ast = n_occ(ik)+1, n_occ(ik)+n_unocc(ik)!1, ist 
             !call states_get_state(st, mesh, 1, uist, ik, ket)
             !ket(1:mesh%np) = scalar_op(1:mesh%np) * ket(1:mesh%np)
-            tmp(ist, uist) = dmf_dotp(mesh, bra, ket(:, uist))
+            !
+            if (is_included(ist, ast, ik)) &
+              tmp(ist, ast) = dmf_dotp(mesh, bra, ket(:, ast)) !
             !tmp(ist, uist) = dmf_integrate(mesh, bra*ket)  ! it give same results
           end do
-          write(pr_info, fmt=trim(frmt)) ( tmp(ist, ip), ip=1,ist )
         end do
-        projections = projections + tmp
+        do ist=1, n_occ(ik)
+          write(pr_info, fmt=trim(frmt))  (tmp(ist, ast), ast=n_occ(ik)+1, n_occ(ik)+n_unocc(ik) )
+        end do
+        projections(:,:,ik) = projections(:,:,ik) + tmp
       
       end do
       !
@@ -1103,14 +1084,10 @@ contains
     call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
 #endif
     call messages_print_stress(pr_info,'Total Operator')
-    do ik = 1, st%nst
-      write(pr_info, fmt=trim(frmt)) ( projections(ik, ip), ip=1,st%nst )
-!      write(filename,'(a,i0.7)') 'state-',ip
-!      units = units_out%length**(-mesh%sb%dim)
-!      if (states_are_real(st)) &
-!        call states_get_state(st, gr%mesh, 1, ip, 1, scalar_op)
-!        call dio_function_output(outp%how, 'restart/projections', trim(filename), mesh,  & 
-!        scalar_op, unit_one, ierr, geo = geo)
+    do ik = 1, st%d%nik
+      do ist = 1, n_occ(ik)
+        write(pr_info, fmt=trim(frmt)) ( projections(ist, ast, ik), ast=n_occ(ik), st%nst )
+      end do
     end do
 
 !    ! TESTING 
@@ -1122,6 +1099,9 @@ contains
 
     call io_close(pr_info)
 
+    SAFE_DEALLOCATE_A(n_occ)
+    SAFE_DEALLOCATE_A(n_unocc)
+    SAFE_DEALLOCATE_P(is_included)
     if (states_are_real(st)) then
       SAFE_DEALLOCATE_A(projections)
       SAFE_DEALLOCATE_A(tmp)
