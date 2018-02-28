@@ -912,11 +912,11 @@ contains
       volume = rv(1, 1)
       kv(1, 1) = M_ONE / rv(1, 1)
     case default ! dim > 3
-      message(1) = "Reciprocal lattice is not correct for dim > 3."
+      message(1) = "Reciprocal lattice for dim > 3 assumes no periodicity."
       call messages_warning(1)
       volume = M_ONE
       do ii = 1, dim
-        kv(ii, ii) = M_ONE
+        kv(ii, ii) = M_ONE/rv(ii,ii)
         !  At least initialize the thing
         volume = volume * sqrt(sum(rv(:, ii)**2))
       end do
