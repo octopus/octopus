@@ -244,7 +244,7 @@ contains
       
       !%Variable GOMethod
       !%Type integer
-      !%Default steep
+      !%Default fire
       !%Section Calculation Modes::Geometry Optimization
       !%Description
       !% Method by which the minimization is performed. For more information see the
@@ -280,10 +280,10 @@ contains
       !% forces) which makes it less efficient than other schemes. It is included here
       !% for completeness, since it is free.
       !%Option fire 8
-      !% (Experimental) The FIRE algorithm. See also <tt>GOFireMass</tt> and <tt>GOFireIntegrator</tt>.
+      !% The FIRE algorithm. See also <tt>GOFireMass</tt> and <tt>GOFireIntegrator</tt>.
       !% Ref: E. Bitzek, P. Koskinen, F. Gahler, M. Moseler, and P. Gumbsch, <i>Phys. Rev. Lett.</i> <b>97</b>, 170201 (2006).
       !%End
-      call parse_variable('GOMethod', MINMETHOD_STEEPEST_DESCENT, g_opt%method)
+      call parse_variable('GOMethod', MINMETHOD_FIRE, g_opt%method)
       if(.not.varinfo_valid_option('GOMethod', g_opt%method)) call messages_input_error('GOMethod')
       call messages_print_var_option(stdout, "GOMethod", g_opt%method)
 

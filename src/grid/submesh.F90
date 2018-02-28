@@ -229,7 +229,8 @@ contains
       is = 0
       do ip = 1, mesh%np_part
         do icell = 1, periodic_copy_num(pp)
-          r2 = sum((mesh%x(ip, 1:sb%dim) - center_copies(1:sb%dim, icell))**2)
+          xx(1:sb%dim) = mesh%x(ip, 1:sb%dim) - center_copies(1:sb%dim, icell)
+          r2 = sum(xx(1:sb%dim)**2)
           if(r2 > rc**2 ) cycle
           is = is + 1
         end do
