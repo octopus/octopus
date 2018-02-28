@@ -119,7 +119,7 @@ module hamiltonian_oct_m
     logical :: floquet_apply !< use action of the Floquet Hamiltonian
     integer :: nT, ncycle, interval, count, floquet_dim, spindim, order(2), mode, boson
     integer :: max_solve_iter, iter, init, occ_cut, cf_nsteps
-    logical ::  downfolding, sample, sample_one_only, FBZ_solver
+    logical ::  downfolding, sample, sample_one_only, FBZ_solver, propagate
     FLOAT :: omega, Tcycle, dt, pes_omega, pol(1:MAX_DIM), lambda
     FLOAT, pointer :: frozen_distortion(:,:)
     logical :: is_parallel 
@@ -968,6 +968,7 @@ contains
     if(this%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) apply = .false.
     if(this%cmplxscl%space .and. accel_is_enabled()) apply = .false.
     if(associated(this%hm_base%phase) .and. accel_is_enabled()) apply = .false.
+    if(this%F%floquet_apply) apply = .false.
     
   end function hamiltonian_apply_packed
 
