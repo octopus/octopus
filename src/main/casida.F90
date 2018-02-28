@@ -85,6 +85,8 @@ module casida_oct_m
     integer           :: sb_dim         !< number of spatial dimensions
     integer           :: el_per_state
     character(len=80) :: trandens
+    character(len=80) :: print_exst     !< excited states for which Casida coefficients will be printed
+    FLOAT             :: weight_thresh  !< threshold for the Casida coefficients to be printed
     logical           :: triplet        !< use triplet kernel?
     logical           :: calc_forces    !< calculate excited-state forces
     logical           :: calc_forces_kernel    !< calculate excited-state forces with kernel
@@ -365,6 +367,37 @@ contains
     !% calculate the Hermitian conjugate of the usual matrix, for testing.
     !%End
     call parse_variable('CasidaHermitianConjugate', .false., cas%herm_conj)
+
+    !%Variable CasidaPrintExcitations
+    !%Type string
+    !%Section Linear Response::Casida
+    !%Default write all
+    !%Description
+    !% Specifies which excitations are written at the end of the calculation. 
+    !%
+    !% This variable is a string in list form, <i>i.e.</i> expressions such as "1,2-5,8-15" are
+    !% valid.
+    !%End
+    call parse_variable('CasidaPrintExcitations', "all", cas%print_exst)
+
+    !%Variable CasidaWeightThreshold
+    !%Type float
+    !%Section Linear Response::Casida
+    !%Default -1.
+    !%Description
+    !% Specifies the threshold value for which the individual excitations are printed. 
+    !% i.e. juste-h pairs with weight larger than this threshold will be printed. 
+    !% 
+    !% If a negative value (default) is set, all coefficients will be printed.
+    !% For many case, a 0.01 value is a valid option.
+    !%End
+    call parse_variable('CasidaWeightThreshold', -M_ONE, cas%weight_thresh)
+    if (cas%weight_thresh > M_ONE) then
+      message(1) = 'Casida coefficients have values between 0 and 1'
+      message(2) = 'Threshold values reset to default value'
+      call messages_warning(2)
+      cas%weight_thresh = -M_ONE
+    end if
 
     !%Variable CasidaCalcForces
     !%Type logical
