@@ -968,6 +968,7 @@ contains
     if(this%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) apply = .false.
     if(this%cmplxscl%space .and. accel_is_enabled()) apply = .false.
     if(associated(this%hm_base%phase) .and. accel_is_enabled()) apply = .false.
+    if(this%F%floquet_apply) apply = .false.
     
   end function hamiltonian_apply_packed
 
