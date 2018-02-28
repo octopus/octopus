@@ -227,6 +227,7 @@ contains
     type(profile_t), save :: prof
 
     logical :: external_potentials_present
+    logical :: kick_present
 
     PUSH_SUB(hamiltonian_init)
     call profiling_in(prof, 'HAMILTONIAN_INIT')
@@ -447,10 +448,11 @@ contains
 
     external_potentials_present = associated(hm%ep%v_static) .or. &
 				  associated(hm%ep%E_field)  .or. &
-				  associated(hm%ep%lasers)   .or. &
-				  hm%ep%kick%delta_strength /= M_ZERO
+				  associated(hm%ep%lasers)
 
-    call pcm_init(hm%pcm, geo, gr, st%qtot, st%val_charge, external_potentials_present )  !< initializes PCM  
+    kick_present = hm%ep%kick%delta_strength /= M_ZERO
+
+    call pcm_init(hm%pcm, geo, gr, st%qtot, st%val_charge, external_potentials_present, kick_present )  !< initializes PCM  
     if(hm%pcm%run_pcm .and. hm%theory_level /= KOHN_SHAM_DFT) &
       call messages_not_implemented("PCM for TheoryLevel /= DFT")
     
