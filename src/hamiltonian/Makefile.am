@@ -103,7 +103,7 @@ hgh_projector.o : hgh_projector.F90 hgh_projector_inc.F90
 hirshfeld.o : hirshfeld.F90 species_pot.o 
 ion_interaction.o : ion_interaction.F90 
 kb_projector.o : kb_projector.F90 kb_projector_inc.F90 
-kick.o : kick.F90 
+kick.o : kick.F90 pcm.o
 lasers.o : lasers.F90 lasers_inc.F90 
 libvdwxc.o : libvdwxc.F90 
 oct_exchange.o : oct_exchange.F90 oct_exchange_inc.F90 xc.o 
