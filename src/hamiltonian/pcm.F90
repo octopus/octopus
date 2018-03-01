@@ -62,7 +62,8 @@ module pcm_oct_m
     pcm_v_nuclei_cav,       &
     pcm_v_cav_li, &
     pcm_update,             &
-    pcm_calc_pot_rs
+    pcm_calc_pot_rs,				&
+		pcm_calc_kick_rs
 
 
   !> The cavity hosting the solute molecule is built from a set of 
@@ -1363,9 +1364,10 @@ contains
       end if
       if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_kick, pcm%qtot_kick, mesh, pcm%rho_kick)
       call pcm_pot_rs(pcm, pcm%v_kick_rs, pcm%q_kick, pcm%rho_kick, mesh )
-      pcm%q_ext    = pcm%q_ext    + pcm%q_kick
-      pcm%v_ext_rs = pcm%v_ext_rs + pcm%v_kick_rs
-
+      if( .not.pcm%kick_like ) then
+        pcm%q_ext    = pcm%q_ext    + pcm%q_kick
+        pcm%v_ext_rs = pcm%v_ext_rs + pcm%v_kick_rs
+      end if
      
     end if
 
@@ -1379,6 +1381,33 @@ contains
 
     POP_SUB(pcm_calc_pot_rs)  
   end subroutine pcm_calc_pot_rs
+
+  ! -----------------------------------------------------------------------------
+  subroutine pcm_calc_kick_rs(pcm, mesh, kick_function, pcm_kick_function)
+    save
+    type(pcm_t),  intent(inout) :: pcm
+    type(mesh_t), intent(in)    :: mesh  
+    CMPLX,        intent(in)    :: kick_function(:)
+    FLOAT,        intent(out)   :: pcm_kick_function(:)
+
+    FLOAT, allocatable :: kick_function_real(:)    
+
+    PUSH_SUB(pcm_calc_kick_rs)
+
+    SAFE_ALLOCATE(kick_function_real(1:mesh%np))
+    kick_function_real = DREAL(kick_function)
+    call pcm_v_cav_li(pcm%v_kick, kick_function_real, pcm, mesh)
+    if ( pcm%epsilon_infty /= pcm%epsilon_0 ) then
+      call pcm_charges(pcm%q_kick, pcm%qtot_kick, pcm%v_kick, pcm%matrix_lf_d, pcm%n_tesserae)
+    else
+      call pcm_charges(pcm%q_kick, pcm%qtot_kick, pcm%v_kick, pcm%matrix_lf, pcm%n_tesserae)
+    end if
+    if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_kick, pcm%qtot_kick, mesh, pcm%rho_kick)
+    call pcm_pot_rs(pcm, pcm%v_kick_rs, pcm%q_kick, pcm%rho_kick, mesh )
+    pcm_kick_function = pcm%v_kick_rs
+     
+    POP_SUB(pcm_calc_kick_rs)  
+  end subroutine pcm_calc_kick_rs
 
   ! -----------------------------------------------------------------------------
   ! change description and variable names to be more general - external potential feature use it

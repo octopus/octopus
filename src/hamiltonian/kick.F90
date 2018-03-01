@@ -29,6 +29,7 @@ module kick_oct_m
   use mesh_oct_m
   use messages_oct_m
   use parser_oct_m
+  use pcm_oct_m
   use profiling_oct_m
   use species_oct_m
   use states_oct_m
@@ -747,18 +748,21 @@ contains
   ! ---------------------------------------------------------
   !> Applies the delta-function electric field \f$ E(t) = E_0 \Delta(t) \f$
   !! where \f$ E_0 = \frac{- k \hbar}{e} \f$ k = kick\%delta_strength.
-  subroutine kick_apply(mesh, st, ions, geo, kick, theta)
+  subroutine kick_apply(mesh, st, ions, geo, kick, theta, pcm)
     type(mesh_t),         intent(in)    :: mesh
     type(states_t),       intent(inout) :: st
     type(ion_dynamics_t), intent(in)    :: ions
     type(geometry_t),     intent(inout) :: geo
     type(kick_t),         intent(in)    :: kick
     FLOAT, optional,      intent(in)    :: theta
+    type(pcm_t), optional, intent(inout) :: pcm
 
     integer :: iqn, ist, idim, ip, ispin, iatom
     CMPLX   :: cc(2), kick_value
     CMPLX, allocatable :: kick_function(:), psi(:, :)
     logical :: cmplxscl
+
+    FLOAT, allocatable :: pcm_kick_function(:)
 
     PUSH_SUB(kick_apply)
 
@@ -775,6 +779,12 @@ contains
         call kick_function_get(mesh, kick, kick_function)
       else
         call kick_function_get(mesh, kick, kick_function, theta)          
+      end if
+
+      if ( pcm%kick_like ) then
+        SAFE_ALLOCATE(pcm_kick_function(1:mesh%np))
+        call pcm_calc_kick_rs(pcm, mesh, kick_function, pcm_kick_function)
+        kick_function = kick_function + pcm_kick_function
       end if
 
       write(message(1),'(a,f11.6)') 'Info: Applying delta kick: k = ', kick%delta_strength

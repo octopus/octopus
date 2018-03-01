@@ -39,6 +39,7 @@ module td_oct_m
   use modelmb_exchange_syms_oct_m
   use mpi_oct_m
   use parser_oct_m
+  use pcm_oct_m
   use pes_oct_m
   use poisson_oct_m
   use potential_interpolation_oct_m
@@ -456,9 +457,17 @@ contains
       if(iter > 1) then
         if( ((iter-1)*td%dt <= hm%ep%kick%time) .and. (iter*td%dt > hm%ep%kick%time) ) then
           if(.not. cmplxscl) then
-            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick)
+            if( .not.hm%pcm%kick_like ) then
+              call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick)
+            else
+              call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, pcm = hm%pcm)
+            endif
           else
-            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, hm%cmplxscl%theta)
+            if( .not.hm%pcm%kick_like ) then
+              call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, hm%cmplxscl%theta)
+            else
+              call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, hm%cmplxscl%theta, pcm = hm%pcm)
+            endif
           end if
           call td_write_kick(gr%mesh, hm%ep%kick, sys%outp, geo, iter)
         end if
@@ -757,9 +766,17 @@ contains
       ! dipole matrix elements in write_proj are wrong
       if(hm%ep%kick%time  ==  M_ZERO) then
         if(.not. cmplxscl) then
-          call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick)
+          if( .not.hm%pcm%kick_like ) then
+            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick)
+          else
+            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, pcm = hm%pcm)
+          endif
         else
-          call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, hm%cmplxscl%theta)
+          if( .not.hm%pcm%kick_like ) then
+            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, hm%cmplxscl%theta)
+          else
+            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, hm%cmplxscl%theta, pcm = hm%pcm)
+          endif
         end if
         call td_write_kick(gr%mesh, hm%ep%kick, sys%outp, geo, 0)
       end if
