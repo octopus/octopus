@@ -429,7 +429,6 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   logical, allocatable :: is_saved(:, :), is_calcd(:, :)
   logical, allocatable :: is_saved_col(:)
   logical :: is_forces_
-  type(casida_save_pot_t) :: saved_pot
   R_TYPE, allocatable :: xx(:)
   R_TYPE, allocatable :: X(pot)(:)
 
@@ -496,7 +495,6 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   ! only root retains the saved values
   if(.not. mpi_grp_is_root(mpi_world)) matrix = M_ZERO
 
-  call X(casida_save_pot_init)(saved_pot, mesh)
   SAFE_ALLOCATE(rho_i(1:mesh%np))
   SAFE_ALLOCATE(rho_j(1:mesh%np))
   SAFE_ALLOCATE(integrand(1:mesh%np))
@@ -562,7 +560,7 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
         cycle
       end if
 
-      ! if not loaded, then calculate matrix element
+
       ! ---------------------------------------------------------
       !> calculates the matrix elements <i(p),a(p)|v|j(q),b(q)> and/or <i(p),a(p)|xc|j(q),b(q)>
       mtxel_vh = M_ZERO
@@ -619,7 +617,6 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   SAFE_DEALLOCATE_A(rho_j)
   SAFE_DEALLOCATE_A(integrand)
   SAFE_DEALLOCATE_A(X(pot))
-  call X(casida_save_pot_end)(saved_pot)
 
   if(mpi_grp_is_root(mpi_world)) then
     call loct_progress_bar(maxcount, maxcount)
@@ -651,101 +648,6 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   POP_SUB(X(casida_get_matrix))
 
 contains
-
-  ! ---------------------------------------------------------
-  !> calculates the matrix elements <i(p),a(p)|v|j(q),b(q)> and/or <i(p),a(p)|xc|j(q),b(q)>
-  subroutine X(K_term)(pp, qq, saved, mtxel_vh, mtxel_xc, mtxel_vm)
-    type(states_pair_t),               intent(in)    :: pp
-    type(states_pair_t),               intent(in)    :: qq
-    type(casida_save_pot_t),           intent(inout) :: saved
-    R_TYPE,                  optional, intent(out)   :: mtxel_vh
-    R_TYPE,                  optional, intent(out)   :: mtxel_xc
-    R_TYPE,                  optional, intent(out)   :: mtxel_vm
-
-    integer :: pi, qi, pa, qa, pk, qk, ia
-    R_TYPE, allocatable :: rho_i(:), rho_j(:), integrand(:)
-    FLOAT :: coeff_vh
-    type(profile_t), save :: prof
-
-    PUSH_SUB(X(casida_get_matrix).X(K_term))
-    call profiling_in(prof, 'CASIDA_K')
-    
-    if(cas%herm_conj) then
-      pi = qq%i
-      pa = qq%a
-      pk = qq%kk
-
-      qi = pp%i
-      qa = pp%a
-      qk = pp%kk
-    else
-      pi = pp%i
-      pa = pp%a
-      pk = pp%kk
-
-      qi = qq%i
-      qa = qq%a
-      qk = qq%kk
-    end if
-
-    SAFE_ALLOCATE(rho_i(1:mesh%np))
-    SAFE_ALLOCATE(rho_j(1:mesh%np))
-    SAFE_ALLOCATE(integrand(1:mesh%np))
-
-    call X(casida_get_rho)(st, mesh, pa, pi, pk, rho_i)
-    call X(casida_get_rho)(st, mesh, qi, qa, qk, rho_j)
-
-    !  first the Hartree part
-    if(present(mtxel_vh)) then
-      coeff_vh = - cas%kernel_lrc_alpha / (M_FOUR * M_PI)
-      if(.not. cas%triplet) coeff_vh = coeff_vh + M_ONE
-      if (ks%sic_type == SIC_ADSIC) coeff_vh = coeff_vh*(M_ONE - M_ONE/st%qtot)
-      if(abs(coeff_vh) > M_EPSILON) then
-        if(qi /= saved%qi  .or.   qa /= saved%qa .or.  qk /= saved%qk) then
-          saved%X(pot)(1:mesh%np) = M_ZERO
-          if(hm%theory_level /= INDEPENDENT_PARTICLES) call X(poisson_solve)(psolver, saved%X(pot), rho_j, all_nodes=.false.)
-          saved%qi = qi
-          saved%qa = qa
-          saved%qk = qk
-        end if
-        ! value of pot is retained between calls
-        mtxel_vh = coeff_vh * X(mf_dotp)(mesh, rho_i(:), saved%X(pot)(:))
-
-      else
-        mtxel_vh = M_ZERO
-      end if
-    end if
-
-    if(present(mtxel_xc)) then
-      integrand(1:mesh%np) = rho_i(1:mesh%np)*rho_j(1:mesh%np)*xc(1:mesh%np, pk, qk)
-      mtxel_xc = X(mf_integrate)(mesh, integrand)
-      ! mtxel_xc = M_ZERO    ! this is rpa, JF
-    end if
-
-    if(present(mtxel_vm)) then
-      mtxel_vm = M_ZERO
-      if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
-        do ia = 1, cas%pt_nmodes
-            mtxel_vm = mtxel_vm + &
-            X(mf_dotp)(mesh, cas%pt%lambda_array(ia)*cas%pt%pol_dipole_array(1:mesh%np,ia)*rho_i(1:mesh%np), &
-                cas%pt%lambda_array(ia)*cas%pt%pol_dipole_array(1:mesh%np,ia)*rho_j(1:mesh%np))
-        end do
-      end if
-    end if
-
-    if(cas%herm_conj) then
-      if(present(mtxel_vh)) mtxel_vh = R_CONJ(mtxel_vh)
-      if(present(mtxel_xc)) mtxel_xc = R_CONJ(mtxel_xc)
-      if(present(mtxel_vm)) mtxel_vm = R_CONJ(mtxel_vm)
-    end if
-
-    SAFE_DEALLOCATE_A(rho_i)
-    SAFE_DEALLOCATE_A(rho_j)
-    SAFE_DEALLOCATE_A(integrand)
-
-    call profiling_out(prof)
-    POP_SUB(X(casida_get_matrix).X(K_term))
-  end subroutine X(K_term)
 
   ! ---------------------------------------------------------
   subroutine X(MN_term)(cas, iimode, xx)
