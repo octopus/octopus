@@ -41,6 +41,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   integer, allocatable :: done(:), last(:)
   logical, allocatable :: failed(:)
   logical :: pack, save_pack_mem
+  integer :: err
 
   PUSH_SUB(X(eigensolver_rmmdiis))
 
@@ -213,7 +214,17 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
         ii = ist - minst + 1
 
         failed(ii) = .false.
-        call lalg_lowest_geneigensolve(1, iter, mm(:, :, 1, ii), mm(:, :, 2, ii), eval(:, ii), evec(:, :, ii))
+        call lalg_lowest_geneigensolve(1, iter, mm(:, :, 1, ii), mm(:, :, 2, ii), eval(:, ii), evec(:, :, ii), bof = failed(ii), err_code = err)
+        if( err < 0 .or. err > iter ) then
+          failed(ii) = .true.
+          last(ii) = iter - 1
+     
+          evec(1:iter - 1, 1, ii) = CNST(0.0)
+          evec(iter, 1, ii) = CNST(1.0)
+          cycle
+        else !In this case we did not reach the tolerance
+          failed(ii) = .false.
+        end if
       end do
 
       call batch_end(resb(iter)%batch, copy = .false.)
