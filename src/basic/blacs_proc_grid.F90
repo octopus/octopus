@@ -158,6 +158,8 @@ contains
   subroutine blacs_proc_grid_end(this)
     type(blacs_proc_grid_t), intent(inout) :: this
 
+#ifdef HAVE_SCALAPACK
+
     PUSH_SUB(blacs_proc_grid_end)
 
     if(this%context /= -1) then
@@ -166,6 +168,7 @@ contains
     end if
 
     POP_SUB(blacs_proc_grid_end)
+#endif
   end subroutine blacs_proc_grid_end
 
   ! ----------------------------------------------------
@@ -174,6 +177,8 @@ contains
     type(blacs_proc_grid_t), intent(in)  :: cin
     type(blacs_proc_grid_t), intent(out) :: cout
 
+#ifdef HAVE_SCALAPACK
+    
     PUSH_SUB(blacs_proc_grid_copy)
 
     cout%context = cin%context 
@@ -193,6 +198,7 @@ contains
     end if
     
     POP_SUB(blacs_proc_grid_copy)
+#endif
   end subroutine blacs_proc_grid_copy
 
   ! ----------------------------------------------------
