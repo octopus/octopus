@@ -78,59 +78,6 @@ subroutine X(lda_u_apply)(this, d, ik, psib, hpsib, has_phase)
     call X(orbitalset_add_to_batch)(this%orbsets(ios), d%dim, hpsib, ik, has_phase, reduced)
   end do
  
- !       !We add a test to avoid out-of-bound problem for the LCAO 
- !       if(this%ACBN0_corrected .and. psib%states(ibatch)%ist <= this%st_end) then
- !         reduced = reduced + this%Vloc1(im,ispin,ios)*dot(im)
- !        ! do imp = 1, os%norbs
- !        !   reduced = reduced + this%X(Vloc2)(im,imp,ispin,ios)*dot(imp)! &
- !        !      *this%renorm_occ(species_index(os%spec),os%nn,os%ll,psib%states(ibatch)%ist,ik)
- !        ! end do
- !
- !         do imp = 1, os%norbs
- !           reduced2 = reduced2 + this%X(Vloc2)(im,imp,ispin,ios)*R_CONJ(dot(im))*dot(imp)
- !         end do
- !       end if     
- 
-  !    if(this%ACBN0_corrected .and. psib%states(ibatch)%ist <= this%st_end) then
-  !      !We need to loop over the orbitals sharing the same quantum numbers
-  !      do ios2 = 1, this%norbsets
-  !        os2 => this%orbsets(ios2)
-  !        if(species_index(os%spec)/=species_index(os2%spec) &
-  !            .or.os%nn /= os2%nn .or. os%ll /= os2%ll ) cycle
-  !        do im = 1, os2%norbs
-  !          !If we need to add the phase, we explicitly do the operation using the sphere
-  !          !This does not change anything if the sphere occupies the full mesh or not
-  !          if(has_phase) then
-  !            !$omp parallel do 
-  !            do is = 1, os2%sphere%np
-  !              epsi(is,1) = psi(os2%sphere%map(is), 1)*os2%phase(is, ik)
-  !            end do
-  !            !$omp end parallel do
-  !            dot(im) = X(mf_dotp)(os2%sphere%mesh, os2%orbitals(im)%X(orb),&
-  !                             epsi(1:os2%sphere%np,1), reduce = .false., np = os2%sphere%np)
-  !            dot(im) = dot(im)*reduced2
-  !            !$omp parallel do
-  !            do is = 1, os2%sphere%np
-  !              eorb(is) = os2%orbitals(im)%X(orb)(is)*conjg(os2%phase(is, ik))
-  !            end do
-  !            !$omp end parallel do
-  !            do idim = 1, d%dim
-  !              call submesh_add_to_mesh(os2%sphere, eorb(1:os2%sphere%np),&
-  !                                 hpsi(:, idim), dot(im))
-  !            end do  
-  !          else
-  !            dot(im) = submesh_to_mesh_dotp(os2%sphere, d%dim, os2%orbitals(im)%X(orb),&
-  !                             psi(1:mesh%np,1:d%dim))
-  !            dot(im) = dot(im)*reduced2
-  !            do idim = 1, d%dim
-  !              call submesh_add_to_mesh(os2%sphere, os2%orbitals(im)%X(orb), &
-  !                                  hpsi(:, idim), dot(im))
-  !             end do !idim
-  !          end if 
-  !        end do 
-  !      end do 
-  !    end if
-
   SAFE_DEALLOCATE_A(dot)
   SAFE_DEALLOCATE_A(reduced)
 
@@ -381,146 +328,9 @@ subroutine X(lda_u_update_potential)(this, st)
     call comm_allreduce(this%orbs_dist%mpi_grp%comm, this%X(V))
   end if
 
-  if(this%ACBN0_corrected) then
-    call X(lda_u_ACBN0_correction)(this)
-  end if
-
   POP_SUB(lda_u_update_potential)
   call profiling_out(prof)
 end subroutine X(lda_u_update_potential)
-
-! ---------------------------------------------------------
-!> This routine adds the local contribution from the derivative
-!>  of the effective U to the LDA+U potential
-! ---------------------------------------------------------
-subroutine X(lda_u_ACBN0_correction)(this)
-  type(lda_u_t), intent(inout)    :: this
-
-  integer :: ios, im, imp, impp,imppp,ispin1, ispin2, norbs
-  FLOAT :: B, C, D, weight
-
-  PUSH_SUB(lda_u_ACBN0_correction)
-
-  if(this%nspins /= this%spin_channels) call messages_not_implemented("ACBN0 correction with spinors")
-
-  this%Vloc1(1:this%maxnorbs,1:this%nspins,1:this%norbsets) = M_ZERO
-  this%X(Vloc2)(1:this%maxnorbs,1:this%maxnorbs,1:this%nspins,1:this%norbsets) = R_TOTYPE(M_ZERO)
-
-  do ios = this%orbs_dist%start, this%orbs_dist%end
-    norbs = this%orbsets(ios)%norbs
- 
-    !TODO: These quantites are already computed, we should not recompute them 
-    !We compute B, C, and D
-    B = M_ZERO
-    C = M_ZERO
-    do im = 1, norbs
-    do imp = 1,norbs
-      ! We compute the term
-      ! sum_{alpha} sum_{m,mp/=m} N^alpha_{m}N^alpha_{mp}
-      if(imp/=im) then
-        do ispin1 = 1, this%nspins
-          C = C + this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin1,ios)
-        end do
-      end if
-      ! We compute the term
-      ! sum_{alpha} sum_{m,mp} N^alpha_{m}N^-alpha_{mp}
-      do ispin1 = 1, this%nspins
-        do ispin2 = 1, this%nspins
-          if(ispin1 /= ispin2) then
-            B = B + this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin2,ios)
-          end if
-        end do
-      end do
-    end do !imp
-    end do !im
-    D = M_ZERO
-    do ispin1 = 1, this%nspins
-      do im = 1, norbs
-        do imp = 1,norbs
-          D = D - abs(this%X(n)(im,imp,ispin1,ios))**2
-        end do
-        D = D + this%X(n)(im,im,ispin1,ios)
-      end do
-    end do
-    !This could append at first iteration, or for a fully occupied orbital
-    if(abs(D) < CNST(1.0e-10)) cycle
-  
-    !We now compute the diagonal part of the local potential
-    weight = -D*this%orbsets(ios)%Ubar/((B+C))
-    do ispin1 = 1, this%nspins
-      do im = 1, norbs
-        do imp = 1, norbs
-          if(imp /= im) then
-            !We add -D*U/((B+C))\sum_{mp/=m} N_mp^{\sigma}
-            this%Vloc1(im,ispin1,ios) = this%Vloc1(im,ispin1,ios) &
-                  + weight*this%X(n)(imp,imp,ispin1,ios)
-          end if
-          do ispin2 = 1, this%nspins
-            if(ispin1 /= ispin2) then
-              !We add +D*U/((B+C))\sum_{mp} N_mp^{-\sigma}
-              this%Vloc1(im,ispin1,ios) = this%Vloc1(im,ispin1,ios) &
-                     + weight*this%X(n)(imp,imp,ispin2,ios)
-            end if
-          end do !ispin2
-        end do !imp
-      end do !im
-    end do !ispin1
-
-    weight = D*this%orbsets(ios)%Jbar/C
-    do ispin1 = 1, this%nspins
-      do im = 1, norbs
-        do imp = 1, norbs
-          if(imp /= im) then
-            !We add -D*U/(2*(B+C))\sum_{mp/=m} N_mp^{\sigma}
-            this%Vloc1(im,ispin1,ios) = this%Vloc1(im,ispin1,ios) &
-                  + weight*this%X(n)(imp,imp,ispin1,ios)
-          end if
-        end do !imp
-      end do !im
-    end do !ispin1
-
-    !We now compute the non-diagonal part of the local potential
-    weight = D/(M_TWO*(B+C))
-    do ispin1 = 1, this%nspins
-      do im = 1, norbs
-      do imp = 1, norbs
-        do impp = 1, norbs
-        do imppp = 1, norbs
-          do ispin2 = 1, this%nspins
-            this%X(Vloc2)(im,imp,ispin1,ios) = this%X(Vloc2)(im,imp,ispin1,ios) &
-               + weight*this%X(n_alt)(impp,imppp,ispin2,ios) &
-                 * (this%coulomb(im,imp,impp,imppp,ios) + this%coulomb(impp,imppp,im,imp,ios))
-          end do 
-        end do !imppp
-        end do !impp
-      end do !imp
-      end do !im
-   end do !ispin1
-
-   weight = -D/(M_TWO*C)
-   do ispin1 = 1, this%nspins
-     do im = 1, norbs
-     do imp = 1, norbs
-       do impp = 1, norbs
-       do imppp = 1, norbs
-         this%X(Vloc2)(im,imp,ispin1,ios) = this%X(Vloc2)(im,imp,ispin1,ios) &
-             + weight*this%X(n_alt)(impp,imppp,ispin1,ios) &
-               * (this%coulomb(im,imppp,impp,imp,ios) + this%coulomb(impp,imp,im,imppp,ios))
-       end do !imppp
-       end do !impp
-     end do !imp
-     end do !im
-   end do !ispin1
-
-  end do !ios
-
-  if(this%orbs_dist%parallel) then
-    call comm_allreduce(this%orbs_dist%mpi_grp%comm, this%Vloc1)
-    call comm_allreduce(this%orbs_dist%mpi_grp%comm, this%X(Vloc2))
-  end if
-
-  POP_SUB(lda_u_ACBN0_correction)
-end subroutine X(lda_u_ACBN0_correction)
 
 ! ---------------------------------------------------------
 !> This routine computes the effective U following the expression 
@@ -883,14 +693,6 @@ end subroutine X(compute_coulomb_integrals)
         end do
       end do
 
-      !  if(this%ACBN0_corrected) then
-      !    reduced = reduced + this%Vloc1(im,ispin,ios)*dot(im)
-      !    do imp = 1, os%norbs
-      !      reduced = reduced + this%X(Vloc2)(im,imp,ispin,ios)*dot(imp) &
-      !         *this%renorm_occ(species_index(os%spec),os%nn,os%ll,ist,ik)
-      !    end do
-      !  end if
-
       do idir = 1, mesh%sb%dim
         do idim = 1, d%dim
           idim_orb = min(idim,os%ndim)
@@ -994,14 +796,6 @@ end subroutine X(compute_coulomb_integrals)
 
        call X(orbitalset_add_to_psi)(os, d%dim, gpsi(1:mesh%np,idir,1:d%dim), ik, has_phase, &
                                          reduced(1:d%dim,1:os%norbs)) 
-       !  if(this%ACBN0_corrected) then
-       !    reduced = reduced + this%Vloc1(im,ispin,ios)*dot(im)
-       !    do imp = 1, os%norbs
-       !      reduced = reduced + this%X(Vloc2)(im,imp,ispin,ios)*dot(imp) &
-       !         *this%renorm_occ(species_index(os%spec),os%nn,os%ll,ist,ik)
-       !    end do
-       !  end if
-
      end do !idir
 
    end do !ios
@@ -1577,12 +1371,6 @@ end subroutine X(build_overlap_matrices)
       this%X(n_alt)(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets) = R_TOTYPE(M_ZERO)
       SAFE_ALLOCATE(this%X(renorm_occ)(this%nspecies,0:5,0:(MAX_L-1),st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end))
       this%X(renorm_occ)(this%nspecies,0:5,0:(MAX_L-1),st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end) = R_TOTYPE(M_ZERO)
-      if(this%ACBN0_corrected) then
-        SAFE_ALLOCATE(this%Vloc1(1:maxorbs,1:nspin,1:this%norbsets))
-        this%Vloc1(1:maxorbs,1:nspin,1:this%norbsets) = M_ZERO
-        SAFE_ALLOCATE(this%X(Vloc2)(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets))
-        this%X(Vloc2)(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets) = R_TOTYPE(M_ZERO)
-      end if
     end if
 
     POP_SUB(X(lda_u_allocate))

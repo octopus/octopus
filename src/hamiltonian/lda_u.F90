@@ -91,8 +91,6 @@ module lda_u_oct_m
     FLOAT, pointer           :: dn(:,:,:,:), dV(:,:,:,:) !> Occupation matrices and potentials 
                                                          !> for the standard scheme
     CMPLX, pointer           :: zn(:,:,:,:), zV(:,:,:,:)
-    FLOAT, pointer           :: Vloc1(:,:,:), dVloc2(:,:,:,:) !> For the corrected ACBN0 functional
-    CMPLX, pointer           :: zVloc2(:,:,:,:)
     FLOAT, pointer           :: dn_alt(:,:,:,:) !> Stores the renomalized occ. matrices
     CMPLX, pointer           :: zn_alt(:,:,:,:) !> if the ACBN0 functional is used  
   
@@ -117,7 +115,6 @@ module lda_u_oct_m
     integer             :: truncation         !> Truncation method for the orbitals
     FLOAT               :: orbitals_threshold !> Threshold for orbital truncation
     logical             :: useACBN0           !> Do we use the ACBN0 functional
-    logical             :: ACBN0_corrected    !> Do we take into account missing terms from the ACBN0 original paper
     logical             :: useAllOrbitals     !> Do we use all atomic orbitals possible
     logical             :: skipSOrbitals      !> Not using s orbitals
     logical             :: IncludeOverlap     !> Do we compute and use overlap or not
@@ -158,9 +155,6 @@ contains
   nullify(this%zcoulomb)
   nullify(this%drenorm_occ)
   nullify(this%zrenorm_occ)
-  nullify(this%Vloc1)
-  nullify(this%dVloc2)
-  nullify(this%zVloc2)
   nullify(this%orbsets)
 
   call distributed_nullify(this%orbs_dist, 0)
@@ -280,17 +274,6 @@ contains
     call parse_variable('SkipSOrbitals', .true., this%skipSOrbitals)   
     if(.not.this%SkipSOrbitals) call messages_experimental("SkipSOrbitals")
 
-    !%Variable ACBN0_corrected
-    !%Type logical
-    !%Default no
-    !%Section Hamiltonian::DFT+U
-    !%Description
-    !% If set to yes, Octopus will determine the effective U term using the 
-    !% ACBN0 functional, including the missing term from the derivative of the effective U.
-    !%End
-    call parse_variable('ACBN0_corrected', .false., this%ACBN0_corrected)
-    if(this%ACBN0_corrected) call messages_experimental("ACBN0_corrected")
-
     !%Variable DFTUIncludeOverlap
     !%Type logical
     !%Default no
@@ -391,9 +374,6 @@ contains
    SAFE_DEALLOCATE_P(this%zcoulomb)
    SAFE_DEALLOCATE_P(this%drenorm_occ)
    SAFE_DEALLOCATE_P(this%zrenorm_occ)
-   SAFE_DEALLOCATE_P(this%Vloc1)
-   SAFE_DEALLOCATE_P(this%dVloc2)
-   SAFE_DEALLOCATE_P(this%zVloc2)
 
    do ios = 1, this%norbsets
      call orbitalset_end(this%orbsets(ios))
