@@ -426,8 +426,7 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   integer :: ia, jb, iunit, ia_iter, ia_length, jb_tmp, ii
   integer :: maxcount, actual, counter
   R_TYPE :: mtxel_vh, mtxel_xc, mtxel_vm
-  logical, allocatable :: is_saved(:, :), is_calcd(:, :)
-  logical, allocatable :: is_saved_col(:)
+  logical, allocatable :: is_calcd(:, :)
   logical :: is_forces_
   R_TYPE, allocatable :: xx(:)
   R_TYPE, allocatable :: X(pot)(:)
@@ -453,23 +452,12 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   mtxel_vm = M_ZERO
   is_forces_ = optional_default(is_forces, .false.)
 
-  ! load saved matrix elements
-  SAFE_ALLOCATE(is_saved(1:cas%n_pairs, 1:cas%n_pairs))
-  !call load_saved(matrix, is_saved, restart_file)
   ! get matrix from saved kernel if already computed
   if(cas%kernel_saved) then
-    is_saved = .true.
     ! TODO: use blas functions here for efficiency?
     matrix(1:cas%n_pairs+cas%pt_nmodes, 1:cas%n_pairs+cas%pt_nmodes) = &
       cas%X(kernel)(1:cas%n_pairs+cas%pt_nmodes, 1:cas%n_pairs+cas%pt_nmodes)
   end if
-  SAFE_ALLOCATE(is_saved_col(1:cas%n_pairs))
-  is_saved_col = .true.
-  do jb = 1, cas%n_pairs
-    do ia = 1, cas%n_pairs
-      is_saved_col(jb) = is_saved_col(jb) .and. is_saved(ia, jb)
-    end do
-  end do
 
 
   SAFE_ALLOCATE(is_calcd(1:cas%n_pairs, 1:cas%n_pairs))
@@ -520,110 +508,87 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
 
 
   ! calculate the matrix elements of (v + fxc)
-  do jb = 1, cas%n_pairs
+  do jb = 1, cas%n_pairs + cas%pt_nmodes
     actual = actual + 1
     if(mod(actual, cas%mpi_grp%size) /= cas%mpi_grp%rank) cycle
 
-    ! do not compute column if it has been saved before
-    if(is_saved_col(jb)) then
-      do ia = 1, cas%n_pairs
-        if(.not. is_saved(ia, jb) .and. jb /= ia) matrix(jb, ia) = R_CONJ(matrix(ia, jb))
-      end do
-      cycle
-    end if
+    ! first electron-hole contributions
+    if(jb <= cas%n_pairs) then
 
-    ! we only count diagonals for Petersilka
-    if(cas%type == CASIDA_PETERSILKA) counter = counter + 1
+      ! we only count diagonals for Petersilka
+      if(cas%type == CASIDA_PETERSILKA) counter = counter + 1
 
-    ! note: the ordering of jb, ia loops are crucial to minimize number of Poisson solves required.
-    ia_length = (cas%n_pairs - 1) / 2
-    if(mod(cas%n_pairs, 2) == 0) then ! even
-      if(jb > cas%n_pairs / 2) then
-        jb_tmp = cas%n_pairs - jb + 1
-      else
-        jb_tmp = jb
-      end if
-      ia_length = ia_length + mod(jb_tmp, 2)
-    end if
-
-    ! compute rho (order of indices important!) and potential (depends only on jb)
-    call X(casida_get_rho)(st, mesh, cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%kk, rho_j)
-
-    if(.not. is_forces_ .and. abs(coeff_vh) > M_EPSILON) then
-      X(pot)(1:mesh%np) = M_ZERO
-      if(hm%theory_level /= INDEPENDENT_PARTICLES) then
-        call X(poisson_solve)(psolver, X(pot), rho_j, all_nodes=.false.)
-      end if
-    end if
-
-    do ia_iter = jb, jb + ia_length
-      ! make ia in range [1, cas%n_pairs]
-      ia = mod(ia_iter, cas%n_pairs)
-      if(ia == 0) ia = cas%n_pairs
-
-      ! only calculate off-diagonals in degenerate subspace
-      if(cas%type == CASIDA_PETERSILKA .and. isnt_degenerate(cas, st, ia, jb)) cycle
-
-      counter = counter + 1
-
-      ! if saved, only set corresponding element
-      if(is_saved(ia, jb)) then
-        if(jb /= ia) matrix(jb, ia) = R_CONJ(matrix(ia, jb))
-        cycle
+      ! take care of not computing elements twice for the symmetric matrix
+      ia_length = cas%n_pairs / 2
+      if(mod(cas%n_pairs, 2) == 0 .and. jb > cas%n_pairs/2) then
+        ia_length = ia_length - 1
       end if
 
+      ! compute rho (order of indices important!) and potential (depends only on jb)
+      call X(casida_get_rho)(st, mesh, cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%kk, rho_j)
 
-      ! ---------------------------------------------------------
-      !> calculates the matrix elements <i(p),a(p)|v|j(q),b(q)> and/or <i(p),a(p)|xc|j(q),b(q)>
-      mtxel_vh = M_ZERO
-      mtxel_xc = M_ZERO
-
-      call X(casida_get_rho)(st, mesh, cas%pair(ia)%a, cas%pair(ia)%i, cas%pair(ia)%kk, rho_i)
-
-      !  first the Hartree part
-      !if(present(mtxel_vh)) then
       if(.not. is_forces_ .and. abs(coeff_vh) > M_EPSILON) then
-        ! value of pot is retained between calls
-        mtxel_vh = coeff_vh * X(mf_dotp)(mesh, rho_i(:), X(pot)(:))
+        X(pot)(1:mesh%np) = M_ZERO
+        if(hm%theory_level /= INDEPENDENT_PARTICLES) then
+          call X(poisson_solve)(psolver, X(pot), rho_j, all_nodes=.false.)
+        end if
       end if
 
-      ! now the exchange part
-      integrand(1:mesh%np) = rho_i(1:mesh%np)*rho_j(1:mesh%np)* &
-        xc(1:mesh%np, cas%pair(ia)%kk, cas%pair(jb)%kk)
-      mtxel_xc = X(mf_integrate)(mesh, integrand)
+      ! loop over columns
+      do ia_iter = jb, jb + ia_length
+        ! make ia in range [1, cas%n_pairs]
+        ia = mod(ia_iter, cas%n_pairs)
+        if(ia == 0) ia = cas%n_pairs
 
-      mtxel_vm = M_ZERO
+        ! only calculate off-diagonals in degenerate subspace
+        if(cas%type == CASIDA_PETERSILKA .and. isnt_degenerate(cas, st, ia, jb)) cycle
+
+        counter = counter + 1
+
+        ! ---------------------------------------------------------
+        !> calculates the matrix elements <i(p),a(p)|v|j(q),b(q)> and/or <i(p),a(p)|xc|j(q),b(q)>
+        mtxel_vh = M_ZERO
+        mtxel_xc = M_ZERO
+
+        call X(casida_get_rho)(st, mesh, cas%pair(ia)%a, cas%pair(ia)%i, cas%pair(ia)%kk, rho_i)
+
+        !  first the Hartree part
+        if(.not. is_forces_ .and. abs(coeff_vh) > M_EPSILON) then
+          ! value of pot is retained between calls
+          mtxel_vh = coeff_vh * X(mf_dotp)(mesh, rho_i(:), X(pot)(:))
+        end if
+
+        ! now the exchange part
+        integrand(1:mesh%np) = rho_i(1:mesh%np)*rho_j(1:mesh%np)* &
+          xc(1:mesh%np, cas%pair(ia)%kk, cas%pair(jb)%kk)
+        mtxel_xc = X(mf_integrate)(mesh, integrand)
+
+        mtxel_vm = M_ZERO
+        if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
+          do ii = 1, cas%pt_nmodes
+              mtxel_vm = mtxel_vm + &
+              X(mf_dotp)(mesh, cas%pt%lambda_array(ii)*cas%pt%pol_dipole_array(1:mesh%np,ii)*rho_i(1:mesh%np), &
+                  cas%pt%lambda_array(ii)*cas%pt%pol_dipole_array(1:mesh%np,ii)*rho_j(1:mesh%np))
+          end do
+        end if
+
+        matrix(ia, jb) = mtxel_vh + mtxel_xc + mtxel_vm
+        if(jb /= ia) matrix(jb, ia) = R_CONJ(matrix(ia, jb))
+      end do
+    else
+      ! photon-electron coupling (upper right/lower left)
+      ! here, jb > n_pairs
       if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
-        do ii = 1, cas%pt_nmodes
-            mtxel_vm = mtxel_vm + &
-            X(mf_dotp)(mesh, cas%pt%lambda_array(ii)*cas%pt%pol_dipole_array(1:mesh%np,ii)*rho_i(1:mesh%np), &
-                cas%pt%lambda_array(ii)*cas%pt%pol_dipole_array(1:mesh%np,ii)*rho_j(1:mesh%np))
+        ! avoid multiple computations of MN_term
+        call X(MN_term)(cas, jb-cas%n_pairs, xx)
+        do ia = 1, cas%n_pairs
+          matrix(jb, ia) = sqrt(M_HALF*cas%pt%omega_array(jb-cas%n_pairs))*xx(ia)
+          matrix(ia, jb) = matrix(jb, ia)
         end do
       end if
-
-      matrix(ia, jb) = mtxel_vh + mtxel_xc + mtxel_vm
-      if(jb /= ia) matrix(jb, ia) = R_CONJ(matrix(ia, jb))
-    end do
+    end if
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(counter, maxcount)
   end do
-
-
-
-  if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
-    ! photon-electron coupling (upper right/lower left)
-    actual = 0
-    ! outer loop over ia here to avoid multiple computations of MN_term
-    do ia = 1, cas%pt_nmodes
-      actual = actual + 1
-      if(mod(actual, cas%mpi_grp%size) /= cas%mpi_grp%rank) cycle
-
-      call X(MN_term)(cas, ia, xx)
-      do jb = 1, cas%n_pairs
-        matrix(cas%n_pairs + ia, jb) = sqrt(M_HALF*cas%pt%omega_array(ia))*xx(jb)
-        matrix(jb, cas%n_pairs + ia) = matrix(cas%n_pairs + ia, jb)
-      end do
-    end do
-  end if
 
   SAFE_DEALLOCATE_A(rho_i)
   SAFE_DEALLOCATE_A(rho_j)
@@ -647,19 +612,6 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
     cas%kernel_saved = .true.
   end if
 
-  !! output the restart file
-  !iunit = restart_open(cas%restart_dump, restart_file, position='append')
-  !if(mpi_grp_is_root(mpi_world)) then
-  !  do ia = 1, cas%n_pairs
-  !    do jb = ia, cas%n_pairs
-  !      if (.not. is_saved(ia, jb) .and. is_calcd(ia, jb)) &
-  !        call X(write_K_term)(cas, matrix(ia, jb), iunit, ia, jb)
-  !    end do
-  !  end do
-  !end if
-  !call restart_close(cas%restart_dump, iunit)
-  SAFE_DEALLOCATE_A(is_saved)
-  SAFE_DEALLOCATE_A(is_saved_col)
   SAFE_DEALLOCATE_A(xx)
 
 
