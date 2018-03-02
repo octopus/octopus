@@ -754,16 +754,17 @@ contains
     case(CASIDA_TAMM_DANCOFF,CASIDA_VARIATIONAL,CASIDA_CASIDA,CASIDA_PETERSILKA)
       if(cas%states_are_real) then
         call dcasida_get_matrix(cas, hm, st, sys%ks, mesh, cas%dmat, cas%fxc, restart_filename)
-        cas%dmat = cas%dmat * casida_matrix_factor(cas, sys)
-        call dcasida_solve(cas, st)
+        !cas%dmat = cas%dmat * casida_matrix_factor(cas, sys)
+        !call dcasida_solve(cas, st)
       else
         call zcasida_get_matrix(cas, hm, st, sys%ks, mesh, cas%zmat, cas%fxc, restart_filename)
-        cas%zmat = cas%zmat * casida_matrix_factor(cas, sys)
-        call zcasida_solve(cas, st)
+        !cas%zmat = cas%zmat * casida_matrix_factor(cas, sys)
+        !call zcasida_solve(cas, st)
       end if
     end select
 
     if (mpi_grp_is_root(cas%mpi_grp)) then
+      ! TODO: extend to parallel case
       if(cas%states_are_real) then
         call doscillator_strengths(cas, mesh, st)
       else
@@ -868,9 +869,9 @@ contains
   end subroutine casida_work
 
   ! ---------------------------------------------------------
-  FLOAT function casida_matrix_factor(cas, sys)
+  FLOAT function casida_matrix_factor(cas, st)
     type(casida_t), intent(in)    :: cas
-    type(system_t), intent(in)    :: sys
+    type(states_t), intent(in)    :: st
     
     PUSH_SUB(casida_matrix_factor)
     
@@ -880,7 +881,7 @@ contains
       casida_matrix_factor = M_TWO * casida_matrix_factor
     end if
     
-    if(sys%st%d%ispin == UNPOLARIZED) then
+    if(st%d%ispin == UNPOLARIZED) then
       casida_matrix_factor = M_TWO * casida_matrix_factor
     end if
     

@@ -432,6 +432,11 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   R_TYPE, allocatable :: xx(:)
   R_TYPE, allocatable :: X(pot)(:)
 
+  FLOAT :: eig_diff
+  FLOAT, allocatable :: occ_diffs(:)
+  !integer :: ia, jb
+  type(states_pair_t), pointer :: p
+
   type(profile_t), save :: prof
 
   !integer :: pi, qi, pa, qa, pk, qk
@@ -644,6 +649,103 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   SAFE_DEALLOCATE_A(is_saved_col)
   SAFE_DEALLOCATE_A(xx)
 
+
+  if(.not. is_forces_) then
+    ! solve if not computing matrix for forces
+    cas%X(mat) = cas%X(mat) * casida_matrix_factor(cas, st)
+    ! Note: this is not just a matter of implementation. CASIDA_CASIDA assumes real wfns in the derivation.
+    if(states_are_complex(st) .and. (cas%type == CASIDA_VARIATIONAL .or. cas%type == CASIDA_CASIDA)) then
+      message(1) = "Variational and full Casida theory levels cannot be used with complex wavefunctions."
+      call messages_fatal(1, only_root_writes = .true.)
+      ! see section II.D of CV(2) paper regarding this assumption. Would be Eq. 30 with complex wfns.
+    end if
+
+    if(cas%type == CASIDA_CASIDA) then
+      do ia = 1, cas%n_pairs
+        cas%s(ia) = cas%el_per_state / ( &
+          ( st%eigenval(cas%pair(ia)%a, cas%pair(ia)%kk) - st%eigenval(cas%pair(ia)%i, cas%pair(ia)%kk) ) &
+          * ( st%occ(cas%pair(ia)%i, cas%pair(ia)%kk) - st%occ(cas%pair(ia)%a, cas%pair(ia)%kk) ) )
+      end do
+    end if
+
+    if(cas%type /= CASIDA_CASIDA) then
+      SAFE_ALLOCATE(occ_diffs(1:cas%n_pairs))
+      do ia = 1, cas%n_pairs
+        occ_diffs(ia) = (st%occ(cas%pair(ia)%i, cas%pair(ia)%kk) - st%occ(cas%pair(ia)%a, cas%pair(ia)%kk)) &
+          / cas%el_per_state
+      end do
+    end if
+
+    ! complete the matrix
+    do ia = 1, cas%n_pairs
+      p => cas%pair(ia)
+      eig_diff = st%eigenval(p%a, p%kk) - st%eigenval(p%i, p%kk)
+
+      do jb = ia, cas%n_pairs
+        ! FIXME: need the equivalent of this stuff for forces too.
+        if(cas%type == CASIDA_CASIDA) then
+          cas%X(mat)(ia, jb) = M_TWO * cas%X(mat(ia, jb)) &
+            / sqrt(cas%s(ia) * cas%s(jb))
+        else
+          cas%X(mat)(ia, jb) = cas%X(mat(ia, jb)) * sqrt(occ_diffs(ia) * occ_diffs(jb))
+        end if
+        if(jb /= ia) cas%X(mat)(jb, ia) = R_CONJ(cas%X(mat)(ia, jb)) ! the matrix is Hermitian
+      end do
+      if(cas%type == CASIDA_CASIDA) then
+        cas%X(mat)(ia, ia) = eig_diff**2 + cas%X(mat)(ia, ia)
+      else
+        cas%X(mat)(ia, ia) = eig_diff + cas%X(mat)(ia, ia)
+      end if
+    end do
+
+    if(cas%type /= CASIDA_CASIDA) then
+      SAFE_DEALLOCATE_A(occ_diffs)
+    end if
+
+    if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
+       do ia = 1, cas%pt_nmodes  !diagonal
+         cas%X(mat)(cas%n_pairs+ia,cas%n_pairs+ia) = (cas%pt%omega_array(ia))**2
+         do jb = 1, cas%n_pairs
+           cas%X(mat)(jb,cas%n_pairs+ia) = M_TWO*cas%X(mat)(jb,cas%n_pairs+ia) &
+              *sqrt(cas%pt%omega_array(ia))/sqrt(cas%s(jb))/sqrt(M_TWO)
+           cas%X(mat)(cas%n_pairs+ia,jb) = M_TWO*cas%X(mat)(cas%n_pairs+ia,jb) &
+              *sqrt(cas%pt%omega_array(ia))/sqrt(cas%s(jb))/sqrt(M_TWO)
+         end do
+       end do
+    end if
+
+    message(1) = "Info: Diagonalizing matrix for resonance energies."
+    call messages_info(1)
+    ! now we diagonalize the matrix
+    ! for huge matrices, perhaps we should consider ScaLAPACK here...
+    call profiling_in(prof, "CASIDA_DIAGONALIZATION")
+    if(cas%calc_forces) cas%X(mat_save) = cas%X(mat) ! save before gets turned into eigenvectors
+    ! use parallel eigensolver here; falls back to serial solver if ScaLAPACK
+    ! not available
+    call lalg_eigensolve_parallel(cas%n_pairs + cas%pt_nmodes, cas%X(mat), cas%w)
+    call profiling_out(prof)
+
+    do ia = 1, cas%n_pairs+cas%pt_nmodes
+      if(cas%type == CASIDA_CASIDA) then
+        if(cas%w(ia) < -M_EPSILON) then
+          write(message(1),'(a,i4,a)') 'Casida excitation energy', ia, ' is imaginary.'
+          call messages_warning(1)
+          cas%w(ia) = -sqrt(-cas%w(ia))
+        else
+          cas%w(ia) = sqrt(cas%w(ia))
+        end if
+      else
+        if(cas%w(ia) < -M_EPSILON) then
+          write(message(1),'(a,i4,a)') 'For whatever reason, excitation energy', ia, ' is negative.'
+          write(message(2),'(a)')      'This should not happen.'
+          call messages_warning(2)
+        end if
+      end if
+
+      cas%ind(ia) = ia ! diagonalization returns eigenvalues in order.
+    end do
+  end if
+
   call profiling_out(prof)
   POP_SUB(X(casida_get_matrix))
 
@@ -848,7 +950,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
         if(cas%triplet) restart_filename = trim(restart_filename)//'_triplet'
         
         call X(casida_get_matrix)(cas, hm, st, sys%ks, mesh, cas%X(mat2), lr_fxc, restart_filename, is_forces = .true.)
-        cas%X(mat2) = cas%X(mat2) * casida_matrix_factor(cas, sys)
+        cas%X(mat2) = cas%X(mat2) * casida_matrix_factor(cas, st)
       else
         cas%X(mat2) = M_ZERO
       end if
@@ -1039,6 +1141,8 @@ subroutine X(casida_solve)(cas, st)
   type(states_pair_t), pointer :: p
 
   PUSH_SUB(X(casida_solve))
+
+  cas%X(mat) = cas%X(mat) * casida_matrix_factor(cas, st)
 
   ! Note: this is not just a matter of implementation. CASIDA_CASIDA assumes real wfns in the derivation.
   if(states_are_complex(st) .and. (cas%type == CASIDA_VARIATIONAL .or. cas%type == CASIDA_CASIDA)) then
