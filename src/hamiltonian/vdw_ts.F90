@@ -147,56 +147,68 @@ contains
     SAFE_ALLOCATE(c6(1:geo%natoms))
     SAFE_ALLOCATE(r0(1:geo%natoms))
     SAFE_ALLOCATE(volume_ratio(1:geo%natoms))
-    SAFE_ALLOCATE(coordinates(1:3, 1:geo%natoms))
     SAFE_ALLOCATE(zatom(1:geo%natoms))
     SAFE_ALLOCATE(derivative_coeff(1:geo%natoms))
     SAFE_ALLOCATE(dvadens(1:der%mesh%np))
     SAFE_ALLOCATE(dvadrr(1:3))
     
-    do iatom = 1, geo%natoms
-      ispecies = species_index(geo%atom(iatom)%species)
-      call hirshfeld_volume_ratio(this%hirshfeld, iatom, density, volume_ratio(iatom))
-      
-      c6(iatom) = volume_ratio(iatom)**2*this%c6free(ispecies)
-      r0(iatom) = volume_ratio(iatom)**(CNST(1.0)/CNST(3.0))*this%r0free(ispecies)
-      
-      !print*, species_label(geo%atom(iatom)%species), "c6 ", c6(iatom), this%c6free(ispecies)
-      !print*, species_label(geo%atom(iatom)%species), "r0 ", r0(iatom), this%r0free(ispecies)
+    energy=0
+    derivative_coeff(1:geo%natoms)=M_ZERO
 
-      coordinates(1:3, iatom) = geo%atom(iatom)%x(1:3)
-      !print*, "iatom ", iatom, ": ", coordinates(1:3, iatom)
-      zatom(iatom) = species_z(geo%atom(iatom)%species)
-      !print*, species_label(geo%atom(iatom)%species),zatom(iatom)
+    if(simul_box_is_periodic(sb)) then
 
-    end do
- 
-    call f90_vdw_calculate(geo%natoms, zatom(1), coordinates(1, 1), volume_ratio(1), &
-      energy, force(1, 1), derivative_coeff(1))
+      call vdw_interaction_periodic(this, geo, der, density, energy, potential, force)
 
-    ! add the extra term to the force
-!    force = CNST(0.0)
-    do jatom = 1, geo%natoms
+    else 
+    
+      SAFE_ALLOCATE(coordinates(1:3, 1:geo%natoms))
       do iatom = 1, geo%natoms
-        call hirshfeld_position_derivative(this%hirshfeld, der, iatom, jatom, density, dvadrr)
-        force(1:3, jatom) = force(1:3, jatom) - derivative_coeff(iatom)*dvadrr(1:3)
+        ispecies = species_index(geo%atom(iatom)%species)
+        call hirshfeld_volume_ratio(this%hirshfeld, iatom, density, volume_ratio(iatom))
+      
+        c6(iatom) = volume_ratio(iatom)**2*this%c6free(ispecies)
+        r0(iatom) = volume_ratio(iatom)**(CNST(1.0)/CNST(3.0))*this%r0free(ispecies)
+      
+        !print*, species_label(geo%atom(iatom)%species), "c6 ", c6(iatom), this%c6free(ispecies)
+        !print*, species_label(geo%atom(iatom)%species), "r0 ", r0(iatom), this%r0free(ispecies)
+
+        coordinates(1:3, iatom) = geo%atom(iatom)%x(1:3)
+        !print*, "iatom ", iatom, ": ", coordinates(1:3, iatom)
+        zatom(iatom) = species_z(geo%atom(iatom)%species)
+        !print*, species_label(geo%atom(iatom)%species),zatom(iatom)
+
       end do
-    end do
+ 
 
-    ! and calculate the potential
-    potential = CNST(0.0)
-    do iatom = 1, geo%natoms
-      call hirshfeld_density_derivative(this%hirshfeld, iatom, dvadens)
-      potential(1:der%mesh%np) = potential(1:der%mesh%np) + derivative_coeff(iatom)*dvadens(1:der%mesh%np)
-    end do
 
-    print*, "fxx", energy, force(1, 1), volume_ratio(1),  derivative_coeff(1)
+      call f90_vdw_calculate(geo%natoms,geo%natoms, zatom(1), zatom(1), coordinates(1, 1), coordinates(1, 1), volume_ratio(1), volume_ratio(1) &
+   energy, force(1, 1), derivative_coeff(1))
+
+      ! add the extra term to the force
+      !    force = CNST(0.0)
+      do jatom = 1, geo%natoms
+        do iatom = 1, geo%natoms
+          call hirshfeld_position_derivative(this%hirshfeld, der, iatom, jatom, density, dvadrr)
+          force(1:3, jatom) = force(1:3, jatom) - derivative_coeff(iatom)*dvadrr(1:3)
+        end do
+      end do
+
+      ! and calculate the potential
+      potential = CNST(0.0)
+      do iatom = 1, geo%natoms
+        call hirshfeld_density_derivative(this%hirshfeld, iatom, dvadens)
+        potential(1:der%mesh%np) = potential(1:der%mesh%np) + derivative_coeff(iatom)*dvadens(1:der%mesh%np)
+      end do
+
+      !print*, "fxx", energy, force(1, 1), volume_ratio(1),  derivative_coeff(1)
 
 #if 0
-    call dio_function_output(1, "./", "vvdw", der%mesh, potential, unit_one, ip)
     
-    print*, dmf_integrate(der%mesh, potential(1:der%mesh%np)*density(1:der%mesh%np, 1))
+      !print*, dmf_integrate(der%mesh, potential(1:der%mesh%np)*density(1:der%mesh%np, 1))
 #endif    
-
+      SAFE_DEALLOCATE_A(coordinates) 
+    end if
+    call dio_function_output(1, "./", "vvdw", der%mesh, potential, unit_one, ip)
     SAFE_DEALLOCATE_A(c6)
     SAFE_DEALLOCATE_A(r0)
     SAFE_DEALLOCATE_A(volume_ratio)
@@ -204,6 +216,123 @@ contains
     
     POP_SUB(vdw_ts_calculate)
   end subroutine vdw_ts_calculate
+
+
+ subroutine vdw_interaction_periodic(this, geo, der, density, energy, potential, force)
+    type,                      intent(in)    :: this
+    type,                      intent(in)    :: geo
+    type,                      intent(in)    :: sb
+    FLOAT,                     intent(in)    :: density(:, :)
+    FLOAT,                     intent(out)   :: energy
+    FLOAT,                     intent(out)   :: potential(:)
+    FLOAT,                     intent(out)   :: force(:, :) !< (sb%dim, geo%natoms)
+
+!!!!!!!!!!!!!!!! Amelioration possible: force et potential provenance (component) 
+    FLOAT :: rr, xi(1:MAX_DIM), zi, zj, ereal, efourier, eself, erfc, rcut, epseudo
+    integer :: iatom, jatom, icopy
+    type(periodic_copy_t) :: pc
+    integer :: ix, iy, iz, isph, ss, idim
+    type(profile_t), save :: prof_short, prof_long
+    type(ps_t) :: spec_ps
+
+    FLOAT, allocatable ::coordinates(:,:), coordinates_p(:,:), force_i(:,:), derivative_coeff_i(:)
+    integer, allocatable :: zatom(:), zatom_p(:)
+
+    PUSH_SUB(vdw_interaction_periodic)
+
+
+    SAFE_ALLOCATE(coordinates(1:3, 1))
+    SAFE_ALLOCATE(coordinates_p(1:3, 1))
+    SAFE_ALLOCATE(zatom(1:1))
+    SAFE_ALLOCATE(zatom_p(1:1))
+    SAFE_ALLOCATE(force_i(1:3, 1))
+    SAFE_ALLOCATE(derivative_coeff_i(1:1))
+
+!!!!!!!!!!!!
+! Quel Equivalent pour VDW?
+
+  !  if(any(geo%ionic_interaction_type /= INTERACTION_COULOMB)) then
+  !    message(1) = "Cannot calculate non-Coulombic interaction for periodic systems."
+  !    call messages_fatal(1)
+  !  end if
+!!!!!!!!!!!!!
+    force(1:sb%dim, 1:geo%natoms) = M_ZERO
+
+    ! The system is periodic we have to add the energy of the
+    ! interaction with the copies. Therefore a cut-off is define to limit the number of copy
+
+    call parse_variable('VDW_ts_cutoff', CNST(10.0), xcs%vdw_cutoff)
+
+    ! Atom in the box
+    do iatom = 1, geo%natoms
+      force_i(1:3, 1) = M_ZERO
+      derivative_coeff_i = CNST(0.0)
+
+      ispecies = species_index(geo%atom(iatom)%species)
+      call hirshfeld_volume_ratio(this%hirshfeld, iatom, density, volume_ratio(iatom))
+
+      c6(iatom) = volume_ratio(iatom)**2*this%c6free(ispecies)
+      r0(iatom) = volume_ratio(iatom)**(CNST(1.0)/CNST(3.0))*this%r0free(ispecies)
+
+      !print*, species_label(geo%atom(iatom)%species), "c6 ", c6(iatom), this%c6free(ispecies)
+      !print*, species_label(geo%atom(iatom)%species), "r0 ", r0(iatom), this%r0free(ispecies)
+
+      coordinates(1:3, 1) = geo%atom(iatom)%x(1:3)
+      !print*, "iatom ", iatom, ": ", coordinates(1:3, iatom)
+      zatom(1) = species_z(geo%atom(iatom)%species)
+      !print*, species_label(geo%atom(iatom)%species),zatom(iatom)
+
+      do jatom = geo%atoms_dist%start, geo%atoms_dist%end
+        ! Build the atom i nearbourghood 
+        zatom_p(1) = species_z(geo%atom(jatom)%species)
+        call hirshfeld_volume_ratio(this%hirshfeld, iatom, density, volume_ratio_p(1))
+
+        if (.not. species_represents_real_atom(geo%atom(iatom)%species)) cycle
+        ! zi = species_zval(geo%atom(jatom)%species)  Remove?
+
+          call periodic_copy_init(pc, sb, geo%atom(jatom)%x, xcs%vdw_cutoff)
+
+          do jcopy = 1, periodic_copy_num(pc)
+            ! Each periodic image is the same atom but at different position. 
+            !xj_trotter(1:sb%dim) = periodic_copy_position(pc, sb, jcopy)
+            coordinates_p(1:3, 1) = periodic_copy_position(pc, sb, jcopy)
+
+           ! Compute the action of atom jcopy on i 
+            call f90_vdw_calculate(1, 1, zatom(1), zatom_p(1), coordinates(1, 1), coordinates_p(1, 1), volume_ratio(1), volume_ratio_p(1) &
+      energy, force_i(1, 1), derivative_coeff_i(1))
+
+          end do
+        else 
+          coordinates_p(1:3, 1) = geo%atom(jatom)%x(1:3)
+          call f90_vdw_calculate(1, 1, zatom(1), zatom_p(1), coordinates(1, 1), coordinates_p(1, 1), volume_ratio(1), volume_ratio_p(1) &
+      energy, force_i(1, 1), derivative_coeff_i(1))
+
+        end if 
+      end do 
+      force(1:sb%dim,iatom) = force_i
+      derivative_coeff(iatom) = derivative_coeff_i
+      potential(1:der%mesh%np) = potential(1:der%mesh%np) + derivative_coeff(iatom)*dvadens(1:der%mesh%np)
+    end do
+    
+
+    ! add the extra term to the force STILL TO BE DONE
+!    force = CNST(0.0)
+!    do jatom = 1, geo%natoms
+!        force(1:3, jatom) = force(1:3, jatom) - derivative_coeff(iatom)*dvadrr(1:3)
+!      end do
+!    end do
+
+    !print*, dmf_integrate(der%mesh, potential(1:der%mesh%np)*density(1:der%mesh%np, 1))
+
+    SAFE_DEALLOCATE_A(coordinates)
+    SAFE_DEALLOCATE_A(coordinates_p)
+    SAFE_DEALLOCATE_A(zatom)
+    SAFE_DEALLOCATE_A(zatom_p)
+    SAFE_DEALLOCATE_A(force_i)
+    SAFE_DEALLOCATE_A(derivative_coeff_i)
+
+
+end subroutine vdw_interaction_periodic
 
   !------------------------------------------
   

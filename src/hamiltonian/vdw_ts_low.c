@@ -430,12 +430,16 @@ void fdamp (const double rr, const double r0ab,
 
 
 /* Calculation of the square of separations. */
-void distance (const int iatom, const int jatom, const double coordinates[], 
-	       double * rr, double * rr2, double * rr6, double *rr7) {
-  
-  double x_ij = coordinates[3*iatom + 0] - coordinates[3*jatom + 0];
-  double y_ij = coordinates[3*iatom + 1] - coordinates[3*jatom + 1];
-  double z_ij = coordinates[3*iatom + 2] - coordinates[3*jatom + 2];
+//void distance (const int iatom, const int jatom, const double coordinates[], 
+//	       double * rr, double * rr2, double * rr6, double *rr7) {
+
+
+void distance (const int iatom, const int jatom, const double coordinates[],const double coordinates_p[],
+               double * rr, double * rr2, double * rr6, double *rr7) {
+
+  double x_ij = coordinates[3*iatom + 0] - coordinates_p[3*jatom + 0];
+  double y_ij = coordinates[3*iatom + 1] - coordinates_p[3*jatom + 1];
+  double z_ij = coordinates[3*iatom + 2] - coordinates_p[3*jatom + 2];
   
   *rr2 = x_ij*x_ij + y_ij*y_ij + z_ij*z_ij;
   *rr6 = rr2[0]*rr2[0]*rr2[0]; // This is the same as: *rr6 = (*rr2)*(*rr2)*(*rr2)
@@ -451,14 +455,19 @@ void distance (const int iatom, const int jatom, const double coordinates[],
 
 
 /* Function to calculate the Van der Waals energy... and forces */
-void vdw_calculate (const int natoms, const int zatom[], const double coordinates[], const double volume_ratio[], 
-		    double * energy, double force[], double derivative_coeff[]) {
+//void vdw_calculate (const int natoms, const int zatom[], const double coordinates[], const double volume_ratio[], 
+//		    double * energy, double force[], double derivative_coeff[]) {
+
+void vdw_calculate (const int natoms, const int natoms_p, const int zatom[], const int zatom_p[], const double coordinates[], const double coordinates_p[],
+const double volume_ratio[], const double volume_ratio_p[], double * energy, double force[], double derivative_coeff[]) {
+
   
   int ia;
 
-  *energy = 0.0;
+ // *energy = 0.0;
 
   // Loop to calculate the pair-wise Van der Waals energy correction.
+  // Loop for atoms in the box
   for (ia = 0; ia < natoms; ia++) {
 
     double c6_a, alpha_a, r0_a;
@@ -468,11 +477,14 @@ void vdw_calculate (const int natoms, const int zatom[], const double coordinate
     force[3*ia + 1] = 0.0;
     force[3*ia + 2] = 0.0;
 
-    derivative_coeff[ia] = 0.0;
+   // derivative_coeff[ia] = 0.0;
     
     get_vdw_params(zatom[ia], &c6_a, &alpha_a, &r0_a);
     
-    for (ib = 0; ib < natoms; ib++) {
+    // Loop for atoms that may be not in the box - in the periodic condition case 
+    // for (ib = 0; ib < natoms; ib++) {
+      for (ib = 0; ib < natoms_p; ib++) {
+
 
       double c6_b, alpha_b, r0_b;
 
@@ -480,9 +492,9 @@ void vdw_calculate (const int natoms, const int zatom[], const double coordinate
 
       // Pair-wise calculation of separations.
       double rr, rr2, rr6, rr7;
-      distance(ia, ib, coordinates, &rr, &rr2, &rr6, &rr7);
+      distance_p(ia, ib, coordinates, coordinates_p, &rr, &rr2, &rr6, &rr7);
       
-      get_vdw_params(zatom[ib], &c6_b, &alpha_b, &r0_b);
+      get_vdw_params(zatom_p[ib], &c6_b, &alpha_b, &r0_b);
       
       // Determination of c6abfree, for isolated atoms a and b.
       double num = 2.0*c6_a*c6_b;
@@ -491,10 +503,10 @@ void vdw_calculate (const int natoms, const int zatom[], const double coordinate
       double c6abfree = num/den;
 
       // Determination of c6ab, for bonded atoms a and b.
-      double c6ab = volume_ratio[ia]*volume_ratio[ib]*c6abfree;
+      double c6ab = volume_ratio[ia]*volume_ratio_p[ib]*c6abfree;
       
       // Determination of the effective radius of atom a.
-      double r0ab = cbrt(volume_ratio[ia])*r0_a + cbrt(volume_ratio[ib])*r0_b;
+      double r0ab = cbrt(volume_ratio[ia])*r0_a + cbrt(volume_ratio_p[ib])*r0_b;
 
       // Pair-wise calculation of the damping coefficient
       double ff;
@@ -515,11 +527,11 @@ void vdw_calculate (const int natoms, const int zatom[], const double coordinate
       double dffdvra = dffdr0*dr0dvra;
       
       // Calculation of the pair-wise partial energy derivative with respect to the volume ratio of atom A.
-      double deabdvra = -dffdvra*c6ab/rr6 - ff*volume_ratio[ib]*c6abfree/rr6;
+      double deabdvra = -dffdvra*c6ab/rr6 - ff*volume_ratio_p[ib]*c6abfree/rr6;
       
-      force[3*ia + 0] += -deabdrab*(coordinates[3*ia + 0] - coordinates[3*ib + 0])/rr;
-      force[3*ia + 1] += -deabdrab*(coordinates[3*ia + 1] - coordinates[3*ib + 1])/rr;
-      force[3*ia + 2] += -deabdrab*(coordinates[3*ia + 2] - coordinates[3*ib + 2])/rr;
+      force[3*ia + 0] += -deabdrab*(coordinates[3*ia + 0] - coordinates_p[3*ib + 0])/rr;
+      force[3*ia + 1] += -deabdrab*(coordinates[3*ia + 1] - coordinates_p[3*ib + 1])/rr;
+      force[3*ia + 2] += -deabdrab*(coordinates[3*ia + 2] - coordinates_p[3*ib + 2])/rr;
       
       derivative_coeff[ia] += deabdvra;
       
@@ -536,9 +548,11 @@ void vdw_calculate (const int natoms, const int zatom[], const double coordinate
 
 #ifndef _TEST
 /* This is a wrapper to be called from Fortran. */
-void FC_FUNC_(f90_vdw_calculate, F90_VDW_CALCULATE) (const int * natoms, const int zatom[], const double coordinates[], const double volume_ratio[],
-						     double * energy, double force[], double derivative_coeff[]) {
-  vdw_calculate(*natoms, zatom, coordinates, volume_ratio, energy, force, derivative_coeff);
+
+
+void FC_FUNC_(f90_vdw_calculate, F90_VDW_CALCULATE) (const int * natoms, const int natoms_p, const int zatom[], const int zatom_p[], const double coordinates[], const double coordinates_p[], 
+const double volume_ratio[], const double volume_ratio_p[], double * energy, double force[], double derivative_coeff[]) {
+  vdw_calculate(*natoms, natoms_p, zatom, zatom_p, coordinates, coordinates_p, volume_ratio, volume_ratio_p, energy, force, derivative_coeff);
 }
 #endif
 
