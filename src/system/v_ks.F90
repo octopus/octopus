@@ -389,6 +389,25 @@ contains
     !% The DFT-D3 scheme of S. Grimme, J. Antony, S. Ehrlich, and
     !% S. Krieg, J. Chem. Phys. 132, 154104 (2010).
     !%End
+
+
+
+    !%Variable VDW_ts_cutoff
+    !%Type float
+    !%Default 10.0
+    !%Section Hamiltonian::XC
+    !%Description
+    !% Set the value of the cutoff for the VDW interaction in periodic system in the Tkatchenko and Scheffler (vdw_ts) scheme only. 
+    !%End
+
+
+
+
+
+
+
+
+
     call parse_variable('VDWCorrection', OPTION__VDWCORRECTION__NONE, ks%vdw_correction)
     
     if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
