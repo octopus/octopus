@@ -105,8 +105,10 @@ module casida_oct_m
 
     FLOAT,   pointer  :: dmat(:,:)      !< general-purpose matrix
     FLOAT,   pointer  :: dmat_save(:,:) !< to save mat when it gets turned into the eigenvectors
+    FLOAT,   pointer  :: dkernel(:,:)   !< to save casida kernel instead of restarting from file
     CMPLX,   pointer  :: zmat(:,:)      !< general-purpose matrix
     CMPLX,   pointer  :: zmat_save(:,:) !< to save mat when it gets turned into the eigenvectors
+    CMPLX,   pointer  :: zkernel(:,:)   !< to save casida kernel instead of restarting from file
     FLOAT,   pointer  :: w(:)           !< The excitation energies.
     FLOAT,   pointer  :: dtm(:, :)      !< The transition matrix elements (between the many-particle states)
     CMPLX,   pointer  :: ztm(:, :)      !< The transition matrix elements (between the many-particle states)
@@ -138,6 +140,8 @@ module casida_oct_m
     logical              :: has_photons
     integer              :: pt_nmodes
     type(photon_mode_t)  :: pt
+
+    logical           :: kernel_saved
 
   end type casida_t
 
@@ -558,9 +562,11 @@ contains
     if(cas%states_are_real) then
       SAFE_ALLOCATE( cas%dmat(1:cas%n_pairs+cas%pt_nmodes, 1:cas%n_pairs+cas%pt_nmodes))
       SAFE_ALLOCATE(  cas%dtm(1:cas%n_pairs+cas%pt_nmodes, 1:cas%sb_dim))
+      SAFE_ALLOCATE(cas%dkernel(1:cas%n_pairs+cas%pt_nmodes, 1:cas%n_pairs+cas%pt_nmodes))
     else
       SAFE_ALLOCATE( cas%zmat(1:cas%n_pairs, 1:cas%n_pairs))
       SAFE_ALLOCATE(  cas%ztm(1:cas%n_pairs, 1:cas%sb_dim))
+      SAFE_ALLOCATE(cas%zkernel(1:cas%n_pairs+cas%pt_nmodes, 1:cas%n_pairs+cas%pt_nmodes))
     end if
     SAFE_ALLOCATE(   cas%f(1:cas%n_pairs+cas%pt_nmodes))
     SAFE_ALLOCATE(   cas%s(1:cas%n_pairs))
@@ -622,6 +628,8 @@ contains
     call restart_init(cas%restart_dump, RESTART_CASIDA, RESTART_TYPE_DUMP, sys%mc, ierr)
     call restart_init(cas%restart_load, RESTART_CASIDA, RESTART_TYPE_LOAD, sys%mc, ierr)
 
+    cas%kernel_saved = .false.
+
     POP_SUB(casida_type_init)
   end subroutine casida_type_init
 
@@ -638,9 +646,11 @@ contains
     if(cas%states_are_real) then
       SAFE_DEALLOCATE_P(cas%dmat)
       SAFE_DEALLOCATE_P(cas%dtm)
+      SAFE_DEALLOCATE_P(cas%dkernel)
     else
       SAFE_DEALLOCATE_P(cas%zmat)
       SAFE_DEALLOCATE_P(cas%ztm)
+      SAFE_DEALLOCATE_P(cas%zkernel)
     end if
     SAFE_DEALLOCATE_P(cas%s)
     SAFE_DEALLOCATE_P(cas%f)

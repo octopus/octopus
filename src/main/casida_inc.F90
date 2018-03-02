@@ -455,7 +455,14 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
 
   ! load saved matrix elements
   SAFE_ALLOCATE(is_saved(1:cas%n_pairs, 1:cas%n_pairs))
-  call load_saved(matrix, is_saved, restart_file)
+  !call load_saved(matrix, is_saved, restart_file)
+  ! get matrix from saved kernel if already computed
+  if(cas%kernel_saved) then
+    is_saved = .true.
+    ! TODO: use blas functions here for efficiency?
+    matrix(1:cas%n_pairs+cas%pt_nmodes, 1:cas%n_pairs+cas%pt_nmodes) = &
+      cas%X(kernel)(1:cas%n_pairs+cas%pt_nmodes, 1:cas%n_pairs+cas%pt_nmodes)
+  end if
   SAFE_ALLOCATE(is_saved_col(1:cas%n_pairs))
   is_saved_col = .true.
   do jb = 1, cas%n_pairs
@@ -634,17 +641,23 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
     call comm_allreduce(cas%mpi_grp%comm, matrix)
   end if
 
-  ! output the restart file
-  iunit = restart_open(cas%restart_dump, restart_file, position='append')
-  if(mpi_grp_is_root(mpi_world)) then
-    do ia = 1, cas%n_pairs
-      do jb = ia, cas%n_pairs
-        if (.not. is_saved(ia, jb) .and. is_calcd(ia, jb)) &
-          call X(write_K_term)(cas, matrix(ia, jb), iunit, ia, jb)
-      end do
-    end do
+  if(.not.cas%kernel_saved) then
+    cas%X(kernel)(1:cas%n_pairs+cas%pt_nmodes, 1:cas%n_pairs+cas%pt_nmodes) = &
+      matrix(1:cas%n_pairs+cas%pt_nmodes, 1:cas%n_pairs+cas%pt_nmodes)
+    cas%kernel_saved = .true.
   end if
-  call restart_close(cas%restart_dump, iunit)
+
+  !! output the restart file
+  !iunit = restart_open(cas%restart_dump, restart_file, position='append')
+  !if(mpi_grp_is_root(mpi_world)) then
+  !  do ia = 1, cas%n_pairs
+  !    do jb = ia, cas%n_pairs
+  !      if (.not. is_saved(ia, jb) .and. is_calcd(ia, jb)) &
+  !        call X(write_K_term)(cas, matrix(ia, jb), iunit, ia, jb)
+  !    end do
+  !  end do
+  !end if
+  !call restart_close(cas%restart_dump, iunit)
   SAFE_DEALLOCATE_A(is_saved)
   SAFE_DEALLOCATE_A(is_saved_col)
   SAFE_DEALLOCATE_A(xx)
