@@ -547,15 +547,14 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
 
         ! ---------------------------------------------------------
         !> calculates the matrix elements <i(p),a(p)|v|j(q),b(q)> and/or <i(p),a(p)|xc|j(q),b(q)>
-        mtxel_vh = M_ZERO
-        mtxel_xc = M_ZERO
-
         call X(casida_get_rho)(st, mesh, cas%pair(ia)%a, cas%pair(ia)%i, cas%pair(ia)%kk, rho_i)
 
         !  first the Hartree part
         if(.not. is_forces_ .and. abs(coeff_vh) > M_EPSILON) then
           ! value of pot is retained between calls
           mtxel_vh = coeff_vh * X(mf_dotp)(mesh, rho_i(:), X(pot)(:))
+        else
+          mtxel_vh = M_ZERO
         end if
 
         ! now the exchange part
@@ -615,6 +614,7 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   SAFE_DEALLOCATE_A(xx)
 
 
+  ! now compute additional terms that may differ for different modes
   if(.not. is_forces_) then
     ! solve if not computing matrix for forces
     cas%X(mat) = cas%X(mat) * casida_matrix_factor(cas, st)
