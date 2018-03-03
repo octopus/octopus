@@ -302,7 +302,7 @@ contains
         vtot = psf_file%vps(ir, l) + ve(ir, 1) + dble((l-1)*l)/(g%rofi(ir)**2)
         hato(ir) = vtot*s(ir) + a2b4
       end do
-      hato(1) = linear_extrapolate(g%rofi(1), g%rofi(2), g%rofi(3), TOFLOAT(hato(2)), TOFLOAT(hato(3)))
+      hato(1) = first_point_extrapolate(g%rofi, hato)
 
       nnode = 1
       nprin = l
@@ -346,7 +346,7 @@ contains
               vtot = psf_file%vps(ir, l) + ve(ir, is) + dble((l-1)*l)/(g%rofi(ir)**2)
               hato(ir) = vtot*s(ir) + a2b4
             end do
-            hato(1) = linear_extrapolate(g%rofi(1), g%rofi(2), g%rofi(3), TOFLOAT(hato(2)), TOFLOAT(hato(3)))
+            hato(1) = first_point_extrapolate(g%rofi, hato)
 
             nnode = 1
             nprin = l
@@ -449,7 +449,7 @@ contains
         vtot = ps_grid%vlocal(ir) + ve(ir) + dble((l-1)*l)/(g%rofi(ir)**2)
         hato(ir) = vtot*s(ir) + a2b4
       end do
-      hato(1) = linear_extrapolate(g%rofi(1), g%rofi(2), g%rofi(3), TOFLOAT(hato(2)), TOFLOAT(hato(3)))
+      hato(1) = first_point_extrapolate(g%rofi, hato)
 
       do nnode = 1, 2
         nprin = l

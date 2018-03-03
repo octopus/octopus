@@ -109,8 +109,7 @@ contains
     ! add extra point at zero
     psf%rofi(1) = M_ZERO
     do l = 1, psf%no_l_channels
-      psf%vps(1,  l) = linear_extrapolate(psf%rofi(1), psf%rofi(2), psf%rofi(3), &
-        psf%vps(2, l), psf%vps(3, l))
+      psf%vps(1,  l) = first_point_extrapolate(psf%rofi, psf%vps(:, l))
 
       psf%rphi(1, l) = M_ZERO
     end do
@@ -121,15 +120,9 @@ contains
       ! have written 4*pi*\tilde{rho}, we multiply by r**2
       psf%chcore(:) = psf%chcore(:) * psf%rofi(:)**2
 
-      psf%chcore(1) = linear_extrapolate(psf%rofi(1), psf%rofi(2), psf%rofi(3), &
-        psf%chcore(2), psf%chcore(3))
-
-      psf%d1chcore(1) = linear_extrapolate(psf%rofi(1), psf%rofi(2), psf%rofi(3), &
-        psf%d1chcore(2), psf%d1chcore(3))
-      
-
-      psf%d2chcore(1) = linear_extrapolate(psf%rofi(1), psf%rofi(2), psf%rofi(3), &
-        psf%d2chcore(2), psf%d2chcore(3))
+      psf%chcore(1) = first_point_extrapolate(psf%rofi, psf%chcore)
+      psf%d1chcore(1) = first_point_extrapolate(psf%rofi, psf%d1chcore)
+      psf%d2chcore(1) = first_point_extrapolate(psf%rofi, psf%d2chcore)
     end if
 
     ! WARNING: This should go away
