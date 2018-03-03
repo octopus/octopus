@@ -347,8 +347,9 @@ contains
     y2 = y(3)
     y3 = y(4)
     
-    y0 = y1 - (y2 - y1)*x1/(x2 - x1)
-
+    y0 = y1*x2*x3*(x2 - x3) + y2*x1*x3*(x3 - x1) + y3*x1*x2*(x1 - x2);
+    y0 = y0/((x1 - x2)*(x1 - x3)*(x2 - x3));
+    
   end function first_point_extrapolate
 
 end module ps_in_grid_oct_m
