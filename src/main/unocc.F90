@@ -116,7 +116,7 @@ contains
 
       if(ierr == 0) then
         call states_load(restart_load_unocc, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
-        if(hm%lda_u%apply) &
+        if(hm%lda_u_level /= DFT_U_NONE) &
           call lda_u_load(restart_load_unocc, hm%lda_u, sys%st, ierr)
         call restart_end(restart_load_unocc)
       end if
@@ -133,7 +133,7 @@ contains
     if(ierr_rho == 0) then
       if (read_gs) then
         call states_load(restart_load_gs, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
-        if(hm%lda_u%apply) &
+        if(hm%lda_u_level /= DFT_U_NONE) &
           call lda_u_load(restart_load_gs, hm%lda_u, sys%st, ierr)
       end if
       call states_load_rho(restart_load_gs, sys%st, sys%gr, ierr_rho)

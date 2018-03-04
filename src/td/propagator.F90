@@ -671,7 +671,7 @@ contains
     end if
 
     !TODO: we should update the occupation matrices here 
-    if(hm%lda_u%apply) then
+    if(hm%lda_u_level /= DFT_U_NONE) then
       call messages_not_implemented("DFT+U with propagator_dt_bo")  
     end if
 

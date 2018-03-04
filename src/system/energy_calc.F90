@@ -261,7 +261,7 @@ contains
         write(message(1), '(6x,a, f18.8)')'Berry       = ', units_from_atomic(units_out%energy, hm%energy%berry)
         call messages_info(1, iunit)
       end if  
-      if(hm%lda_u%apply) then
+      if(hm%lda_u_level /= DFT_U_NONE) then
         write(message(1), '(6x,a, f18.8)')'Hubbard     = ', units_from_atomic(units_out%energy, hm%energy%dft_u)
         write(message(2), '(6x,a, f18.8)')'Int[n*v_U]  = ', units_from_atomic(units_out%energy, hm%energy%int_dft_u)
         if(cmplxscl) write(message(2), '(a, es18.6)') trim(message(2)),&

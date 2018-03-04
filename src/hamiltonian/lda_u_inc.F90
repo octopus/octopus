@@ -110,8 +110,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
   this%X(n)(1:this%maxnorbs,1:this%maxnorbs,1:st%d%nspin,1:this%norbsets) = R_TOTYPE(M_ZERO)
   SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(dot(1:st%d%dim,1:this%maxnorbs,1:this%norbsets))
-
-  if(this%useACBN0) then
+  if(this%level == DFT_U_ACBN0) then
     this%X(n_alt)(1:this%maxnorbs,1:this%maxnorbs,1:st%d%nspin,1:this%norbsets) = R_TOTYPE(M_ZERO)
   end if
 
@@ -120,10 +119,8 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
     ispin =  states_dim_get_spin_index(st%d,ik)
 
     !We recompute the overlap matrices here
-    if(this%useACBN0) then
-  !    print *, '=========== ik ', ik,  '========='
+    if(this%level == DFT_U_ACBN0) then
       call X(build_overlap_matrices)(this, ik, present(phase))
-  !    print *, '================================='
     end if
 
     do ist = st%st_start, st%st_end
@@ -154,7 +151,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
 
 
       !We compute the on-site occupation of the site, if needed 
-      if(this%useACBN0) then
+      if(this%level == DFT_U_ACBN0) then
         this%X(renorm_occ)(:,:,:,ist,ik) = R_TOTYPE(M_ZERO)
         do ios = 1, this%norbsets
           os => this%orbsets(ios)
@@ -185,7 +182,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
               this%X(n)(1:norbs,im,ispin,ios) = this%X(n)(1:norbs,im,ispin,ios) &
                                            + weight*dot(1,1:norbs,ios)*R_CONJ(dot(1,im,ios))
               !We compute the renomalized occupation matrices
-              if(this%useACBN0) then
+              if(this%level == DFT_U_ACBN0) then
                 renorm_weight = this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,ist,ik)*weight
                 this%X(n_alt)(1:norbs,im,ispin,ios) = this%X(n_alt)(1:norbs,im,ispin,ios) &
                                            + renorm_weight*dot(1,1:norbs,ios)*R_CONJ(dot(1,im,ios))
@@ -209,7 +206,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
             this%X(n)(1:norbs,im,4,ios) = this%X(n)(1:norbs,im,4,ios) &
                                       + weight*dot(2,1:norbs,ios)*R_CONJ(dot(1,im,ios))
             !We compute the renomalized occupation matrices
-            if(this%useACBN0) then
+            if(this%level == DFT_U_ACBN0) then
               renorm_weight = this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,ist,ik)*weight
               this%X(n_alt)(1:norbs,im,1,ios) = this%X(n_alt)(1:norbs,im,1,ios) &
                                          + renorm_weight*dot(1,1:norbs,ios)*R_CONJ(dot(1,im,ios))
@@ -239,7 +236,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
   end if
 #endif      
 
-  if(this%useACBN0 .and. .not.this%freeze_u) then
+  if(this%level == DFT_U_ACBN0 .and. .not.this%freeze_u) then
     if(this%nspins > 1 ) then
       do ios = 1, this%norbsets
         if(this%orbsets(ios)%ndim  == 1) then
@@ -822,7 +819,7 @@ end subroutine X(compute_coulomb_integrals)
    R_TYPE, allocatable :: dot(:,:), gdot(:,:,:), gradn(:,:,:,:)
    FLOAT :: weight
 
-   if(.not. this%apply) return
+   if(this%level == DFT_U_NONE) return
    if(st%d%ispin == SPINORS) call messages_not_implemented("Hubbard forces with spinors")
 
    PUSH_SUB(X(lda_u_force))
@@ -1185,7 +1182,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
      call messages_info(3)
   end do 
 
-  if(this%UseACBN0) then
+  if(this%level == DFT_U_ACBN0) then
     do iorbset = 1, this%norbsets
       os => this%orbsets(iorbset)
       if(states_are_real(st)) then
@@ -1290,7 +1287,7 @@ end subroutine X(build_overlap_matrices)
       end do
     end do 
 
-    if(this%useACBN0) then
+    if(this%level == DFT_U_ACBN0) then
       do ios = 1, this%norbsets
         norbs = this%orbsets(ios)%norbs
         do ispin = 1, this%nspins
@@ -1329,7 +1326,7 @@ end subroutine X(build_overlap_matrices)
       end do
     end do
 
-    if(this%useACBN0) then
+    if(this%level == DFT_U_ACBN0) then
       do ios = 1, this%norbsets
         norbs = this%orbsets(ios)%norbs
         do ispin = 1, this%nspins
@@ -1364,7 +1361,7 @@ end subroutine X(build_overlap_matrices)
     this%X(V)(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets) = R_TOTYPE(M_ZERO)
 
     !In case we use the ab-initio scheme, we need to allocate extra resources
-    if(this%useACBN0) then
+    if(this%level == DFT_U_ACBN0) then
       SAFE_ALLOCATE(this%X(n_alt)(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets))
       this%X(n_alt)(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets) = R_TOTYPE(M_ZERO)
       SAFE_ALLOCATE(this%X(renorm_occ)(this%nspecies,0:5,0:(MAX_L-1),st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end))

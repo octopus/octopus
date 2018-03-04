@@ -65,11 +65,11 @@ contains
 
    integer :: dim1
 
-   if(.not.this%apply) return
+   if(this%level == DFT_U_NONE) return
    PUSH_SUB(lda_u_mixer_init_auxmixer)
 
    dim1 = this%maxnorbs*this%maxnorbs*this%nspins*this%norbsets
-   if(this%useACBN0) dim1 = dim1*2
+   if(this%level == DFT_U_ACBN0) dim1 = dim1*2
 
    if(states_are_real(st)) then
      call mixfield_init( smix, mixer%mixfield_occ, dim1, 1, 1, mix_d4(smix), TYPE_FLOAT )
@@ -81,7 +81,7 @@ contains
    call mixfield_clear(mix_scheme(smix), mixer%mixfield_occ)
    call mix_add_auxmixfield(smix, mixer%mixfield_occ)
  
-   if(this%useACBN0) then
+   if(this%level == DFT_U_ACBN0) then
      call mixfield_init( smix, mixer%mixfield_U, this%norbsets, 1, 1,  mix_d4(smix), TYPE_FLOAT )
      call mixfield_clear(mix_scheme(smix), mixer%mixfield_U)
      call mix_add_auxmixfield(smix, mixer%mixfield_U)
@@ -101,13 +101,13 @@ contains
    type(lda_u_mixer_t), intent(inout) :: mixer
    type(states_t),      intent(in)    :: st
 
-   if(.not.this%apply) return
+   if(this%level == DFT_U_NONE) return
    PUSH_SUB(lda_u_mixer_init)
 
    mixer%apply = .true.
 
    mixer%occsize = this%maxnorbs*this%maxnorbs*this%nspins*this%norbsets
-   if(this%useACBN0) mixer%occsize = mixer%occsize*2
+   if(this%level == DFT_U_ACBN0) mixer%occsize = mixer%occsize*2
 
    nullify(mixer%dtmp_occ, mixer%ztmp_occ, mixer%tmpU)
 
@@ -121,7 +121,7 @@ contains
      call mixfield_set_vin(mixer%mixfield_occ, mixer%ztmp_occ)
    end if
 
-   if(this%useACBN0) then
+   if(this%level == DFT_U_ACBN0) then
      SAFE_ALLOCATE(mixer%tmpU(1:this%norbsets,1))
      call lda_u_get_effectiveU(this, mixer%tmpU(1:this% norbsets,1))
      call mixfield_set_vin(mixer%mixfield_U, mixer%tmpU)
@@ -135,7 +135,7 @@ contains
    type(lda_u_mixer_t), intent(inout) :: mixer
    type(mix_t),         intent(inout)   :: smix
 
-   if(.not.mixer%apply) return
+   if(.not. mixer%apply) return
    PUSH_SUB(lda_u_mixer_clear)
   
    call mixfield_clear(mix_scheme(smix), mixer%mixfield_occ)
@@ -150,7 +150,7 @@ contains
    type(lda_u_mixer_t), intent(inout) :: mixer
    type(mix_t),         intent(inout) :: smix
 
-   if(.not.mixer%apply) return
+   if(.not. mixer%apply) return
    PUSH_SUB(lda_u_mixer_end)
   
    SAFE_DEALLOCATE_P(mixer%dtmp_occ)
@@ -168,7 +168,7 @@ contains
    type(lda_u_t),       intent(in)    :: this
    type(lda_u_mixer_t), intent(inout) :: mixer
 
-   if(.not.this%apply) return
+   if(this%level == DFT_U_NONE) return
    PUSH_SUB(lda_u_mixer_set_vout)
 
    if(mixer%realstates) then
@@ -179,7 +179,7 @@ contains
      call mixfield_set_vout(mixer%mixfield_occ, mixer%ztmp_occ)
    end if
 
-   if(this%useACBN0) then
+   if(this%level == DFT_U_ACBN0) then
      call lda_u_get_effectiveU(this, mixer%tmpU(1:this%norbsets,1))
      call mixfield_set_vout(mixer%mixfield_U, mixer%tmpU)
    end if 
@@ -192,7 +192,7 @@ contains
    type(lda_u_t),       intent(in)    :: this
    type(lda_u_mixer_t), intent(inout) :: mixer
 
-   if(.not.this%apply) return
+   if(.not. mixer%apply) return
    PUSH_SUB(lda_u_mixer_set_vin)
 
    if(mixer%realstates) then
@@ -203,7 +203,7 @@ contains
      call mixfield_set_vin(mixer%mixfield_occ, mixer%ztmp_occ)
    end if
 
-   if(this%useACBN0) then
+   if(this%level == DFT_U_ACBN0) then
      call lda_u_get_effectiveU(this, mixer%tmpU(1:this%norbsets,1))
      call mixfield_set_vin(mixer%mixfield_U, mixer%tmpU)
    end if
@@ -217,10 +217,10 @@ contains
    type(lda_u_mixer_t), intent(in)    :: mixer
    type(states_t),      intent(in)    :: st
 
-   if(.not.this%apply) return
+   if(.not. mixer%apply) return
    PUSH_SUB(lda_u_mixer_get_vnew)
 
-   if(this%useACBN0) then
+   if(this%level == DFT_U_ACBN0) then
      call mixfield_get_vnew(mixer%mixfield_U, mixer%tmpU)
      call lda_u_set_effectiveU(this, mixer%tmpU(1:this%norbsets,1))
    end if

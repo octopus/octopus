@@ -354,7 +354,7 @@ contains
               call scissor_commute_r(hm%scissor, der%mesh, ik, psi, gpsi)
             end if
             
-            if(hm%lda_u%apply) then
+            if(hm%lda_u_level /= DFT_U_NONE) then
               call zlda_u_commute_r(hm%lda_u, der%mesh, st%d, ik, ist, psi, gpsi, &
                               associated(hm%hm_base%phase))
             end if

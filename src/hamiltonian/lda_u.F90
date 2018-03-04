@@ -87,7 +87,7 @@ module lda_u_oct_m
 
 
   type lda_u_t
-    logical                  :: apply
+    integer                  :: level
     FLOAT, pointer           :: dn(:,:,:,:), dV(:,:,:,:) !> Occupation matrices and potentials 
                                                          !> for the standard scheme
     CMPLX, pointer           :: zn(:,:,:,:), zV(:,:,:,:)
@@ -114,7 +114,6 @@ module lda_u_oct_m
  
     integer             :: truncation         !> Truncation method for the orbitals
     FLOAT               :: orbitals_threshold !> Threshold for orbital truncation
-    logical             :: useACBN0           !> Do we use the ACBN0 functional
     logical             :: useAllOrbitals     !> Do we use all atomic orbitals possible
     logical             :: skipSOrbitals      !> Not using s orbitals
     logical             :: IncludeOverlap     !> Do we compute and use overlap or not
@@ -127,6 +126,11 @@ module lda_u_oct_m
     type(distributed_t) :: orbs_dist
   end type lda_u_t
 
+  integer, public, parameter ::        &
+    DFT_U_NONE                    = 0, &
+    DFT_U_EMPIRICAL               = 1, &
+    DFT_U_ACBN0                   = 2
+
 contains
 
  subroutine lda_u_nullify(this)
@@ -134,7 +138,7 @@ contains
 
   PUSH_SUB(lda_u_nullify)
 
-  this%apply = .false.
+  this%level = DFT_U_NONE
   this%norbsets = 0
   this%max_np = 0
   this%maxnorbs = 0
@@ -163,8 +167,9 @@ contains
 
  end subroutine lda_u_nullify
 
- subroutine lda_u_init(this, gr, geo, st, mc)
+ subroutine lda_u_init(this, level, gr, geo, st, mc)
   type(lda_u_t),             intent(inout) :: this
+  integer,                   intent(in)    :: level
   type(grid_t),              intent(in)    :: gr
   type(geometry_t), target,  intent(in)    :: geo
   type(states_t),            intent(in)    :: st
@@ -175,13 +180,12 @@ contains
 
   PUSH_SUB(lda_u_init)
 
-  ASSERT(.not. this%apply)
+  ASSERT(.not. (level == DFT_U_NONE))
 
   call messages_print_stress(stdout, "DFT+U")
- 
   if(gr%mesh%parallel_in_domains) call messages_not_implemented("dft+u parallel in domains")
 
-  this%apply = .true.
+  this%level = level
 
   !%Variable OrbitalsTruncationMethod
   !%Type flag
@@ -217,17 +221,6 @@ contains
   if(this%orbitals_threshold <= M_ZERO) call messages_input_error('OrbitalsThreshold_LDAU')
   call messages_print_var_value(stdout, 'OrbitalsThreshold_LDAU', this%orbitals_threshold)
 
-  !%Variable UseACBN0Functional
-  !%Type logical
-  !%Default no
-  !%Section Hamiltonian::DFT+U
-  !%Description
-  !% If set to yes, Octopus will determine the effective U term using the 
-  !% ACBN0 functional as defined in PRX 5, 011006 (2015) 
-  !%End
-  call parse_variable('UseACBN0Functional', .false., this%useACBN0)
-  call messages_print_var_value(stdout,  'UseACBN0Functional', this%useACBN0)
-
   !%Variable DFTUNormalizeOrbitals
   !%Type logical
   !%Default yes
@@ -251,7 +244,7 @@ contains
   call messages_print_var_value(stdout, 'DFTUSubmeshForPeriodic', this%submeshforperiodic)
 
 
-  if( this%useACBN0) then
+  if( this%level == DFT_U_ACBN0 ) then
     !%Variable UseAllAtomicOrbitals
     !%Type logical
     !%Default no
@@ -325,7 +318,7 @@ contains
  #endif 
 
 
-  if(this%useACBN0) then
+  if( this%level == DFT_U_ACBN0 ) then
 
     complex_coulomb_integrals = .false.
     do ios = 1, this%norbsets
@@ -362,7 +355,7 @@ contains
   
    PUSH_SUB(lda_u_end)  
 
-   this%apply = .false.
+   this%level = DFT_U_ACBN0
 
    SAFE_DEALLOCATE_P(this%dn)
    SAFE_DEALLOCATE_P(this%zn)
@@ -400,7 +393,7 @@ contains
 
   integer :: iorbset
 
-  if(.not. this%apply) return
+  if(this%level == DFT_U_NONE) return
 
   PUSH_SUB(lda_u_update_basis)
 
@@ -444,7 +437,7 @@ contains
    type(hamiltonian_base_t),  intent(in)    :: hm_base 
    type(energy_t),            intent(inout) :: energy
 
-   if(.not. this%apply .or. this%freeze_occ) return
+   if(this%level == DFT_U_NONE .or. this%freeze_occ) return
    PUSH_SUB(lda_u_update_occ_matrices)
 
    if (states_are_real(st)) then
@@ -506,6 +499,7 @@ contains
     do ios = 1,this%norbsets
       this%orbsets(ios)%Ueff = Ueff(ios)
     end do
+
     POP_SUB(lda_u_set_effectiveU)
   end subroutine lda_u_set_effectiveU
 
@@ -521,6 +515,7 @@ contains
     do ios = 1,this%norbsets
       Ueff(ios) = this%orbsets(ios)%Ueff
     end do
+
     POP_SUB(lda_u_get_effectiveU)
   end subroutine lda_u_get_effectiveU
 

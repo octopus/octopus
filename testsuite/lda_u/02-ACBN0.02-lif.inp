@@ -44,8 +44,7 @@ KPointsUseSymmetries = no
 
 ExtraStates = 1
 
-LDA_U = yes
-UseACBN0Functional = yes
+DFTULevel = dft_u_acbn0
 UseAllAtomicOrbitals = yes
 DFTUMinimalAtomicSphere = no
 OrbitalsTruncationMethod = full

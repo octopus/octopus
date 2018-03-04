@@ -25,5 +25,5 @@ FilterPotentials = filter_none
 MixField = density
 ParDomains = no
 
-LDA_U = yes
+DFTULevel = dft_u_empirical
 OrbitalsThreshold_LDAU = 0.1

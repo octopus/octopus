@@ -16,7 +16,7 @@ a = 7.8809
 %Species
 "Ni" | species_pseudo | db_file | 'hscv/pbe/Ni_HSCV_PBE-1.0.xml' | hubbard_l | 2 | hubbard_u | 5.0/27.21138
 %
-LDA_U = yes
+DFTULevel = dft_u_empirical
 
 PseudopotentialSet=hscv_pbe
 XCFunctional=gga_x_pbe + gga_c_pbe
