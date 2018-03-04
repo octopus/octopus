@@ -229,13 +229,15 @@ program oct_test
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
 
     call system_init(sys)
+
+    call states_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX)
+    call states_generate_random(sys%st, sys%gr%mesh)
   
     !Initialize external potential
     nullify(subsys_hm)
     call epot_init(ep, sys%gr, sys%geo, SPINORS, 1, .false., subsys_hm, XC_FAMILY_NONE)
+    call epot_generate(ep, sys%gr, sys%geo, sys%st, .false.)
    
-    call states_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX)
-    call states_generate_random(sys%st, sys%gr%mesh)
     !Initialize external potential
     SAFE_ALLOCATE(epsib)
     call batch_copy(sys%st%group%psib(1, 1), epsib)
@@ -244,11 +246,11 @@ program oct_test
       call zproject_psi_batch(sys%gr%mesh, ep%proj, ep%natoms, 2, &
                                sys%st%group%psib(1, 1), epsib, 1)
     end do
+
     call batch_end(epsib)
     SAFE_DEALLOCATE_P(epsib)
-    call states_deallocate_wfns(sys%st)
-
     call epot_end(ep)
+    call states_deallocate_wfns(sys%st)
     call system_end(sys)
 
     POP_SUB(test_projector)
