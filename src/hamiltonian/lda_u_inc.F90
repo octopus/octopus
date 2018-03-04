@@ -27,10 +27,8 @@ subroutine X(lda_u_apply)(this, d, ik, psib, hpsib, has_phase)
   logical,            intent(in) :: has_phase !True if the wavefunction has an associated phase
 
   integer :: ibatch, ios, imp, im, ispin, bind1, bind2
-  !integer :: ios2
-  !R_TYPE  :: reduced2
   R_TYPE, allocatable :: dot(:,:,:), reduced(:,:)
-  type(orbitalset_t), pointer  :: os !, os2
+  type(orbitalset_t), pointer  :: os
   type(profile_t), save :: prof
 
   call profiling_in(prof, "DFTU_APPLY")
