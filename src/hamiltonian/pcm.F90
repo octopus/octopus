@@ -1383,18 +1383,16 @@ contains
   end subroutine pcm_calc_pot_rs
 
   ! -----------------------------------------------------------------------------
-  subroutine pcm_calc_kick_rs(pcm, mesh, kick_function, pcm_kick_function)
-    save
+  subroutine pcm_calc_kick_rs(pcm, mesh, kick_function)
     type(pcm_t),  intent(inout) :: pcm
     type(mesh_t), intent(in)    :: mesh  
     CMPLX,        intent(in)    :: kick_function(:)
-    FLOAT,        intent(out)   :: pcm_kick_function(:)
 
     FLOAT, allocatable :: kick_function_real(:)    
 
     PUSH_SUB(pcm_calc_kick_rs)
 
-    SAFE_ALLOCATE(kick_function_real(1:mesh%np))
+    SAFE_ALLOCATE(kick_function_real(1:mesh%np_part))
     kick_function_real = DREAL(kick_function)
     call pcm_v_cav_li(pcm%v_kick, kick_function_real, pcm, mesh)
     if ( pcm%epsilon_infty /= pcm%epsilon_0 ) then
@@ -1404,13 +1402,11 @@ contains
     end if
     if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_kick, pcm%qtot_kick, mesh, pcm%rho_kick)
     call pcm_pot_rs(pcm, pcm%v_kick_rs, pcm%q_kick, pcm%rho_kick, mesh )
-    pcm_kick_function = pcm%v_kick_rs
      
     POP_SUB(pcm_calc_kick_rs)  
   end subroutine pcm_calc_kick_rs
 
   ! -----------------------------------------------------------------------------
-  ! change description and variable names to be more general - external potential feature use it
   !> Calculates the Hartree/external/kick potential at the tessera representative points by doing 
   !! a 3D linear interpolation. 
   subroutine pcm_v_cav_li(v_cav, v_mesh, pcm, mesh)
@@ -1964,7 +1960,7 @@ contains
       call pcm_pot_rs_direct(v_pcm, q_pcm, pcm%tess, pcm%n_tesserae, mesh, pcm%gaussian_width)
 
     case(PCM_CALC_POISSON)
-      call pcm_pot_rs_poisson(pcm, v_pcm, rho, mesh)
+      call pcm_pot_rs_poisson(v_pcm, rho)
     case default
 
       message(1) = "BAD BAD BAD"
@@ -1987,11 +1983,9 @@ contains
   
   ! -----------------------------------------------------------------------------  
   !> Generates the potential 'v_pcm' in real-space solving the poisson equation for rho
-  subroutine pcm_pot_rs_poisson(pcm, v_pcm, rho, mesh)
-    type(pcm_t),   intent(inout) :: pcm 
+  subroutine pcm_pot_rs_poisson(v_pcm, rho)
     FLOAT,         intent(inout) :: v_pcm(:)
     FLOAT,         intent(inout) :: rho(:)
-    type(mesh_t),     intent(in) :: mesh
       
     PUSH_SUB(pcm_pot_rs_poisson)
     

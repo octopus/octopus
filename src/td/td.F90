@@ -39,7 +39,6 @@ module td_oct_m
   use modelmb_exchange_syms_oct_m
   use mpi_oct_m
   use parser_oct_m
-  use pcm_oct_m
   use pes_oct_m
   use poisson_oct_m
   use potential_interpolation_oct_m

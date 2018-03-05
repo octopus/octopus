@@ -98,7 +98,7 @@ epot.o : epot.F90 xc.o species_pot.o projector.o lasers.o kick.o ion_interaction
 functionals.o : functionals.F90 libvdwxc.o 
 gauge_field.o : gauge_field.F90 projector.o 
 hamiltonian_base.o : hamiltonian_base.F90 hamiltonian_base_inc.F90 projector_matrix.o projector.o hgh_projector.o kb_projector.o epot.o 
-hamiltonian.o : hamiltonian.F90 hamiltonian_inc.F90 functionals.o xc.o scissor.o scdm.o pcm.o pcm_eom.o projector.o oct_exchange.o lasers.o gauge_field.o epot.o hamiltonian_base.o energy.o boundary_op.o 
+hamiltonian.o : hamiltonian.F90 hamiltonian_inc.F90 functionals.o xc.o scissor.o scdm.o pcm.o projector.o oct_exchange.o lasers.o gauge_field.o epot.o hamiltonian_base.o energy.o boundary_op.o 
 hgh_projector.o : hgh_projector.F90 hgh_projector_inc.F90 
 hirshfeld.o : hirshfeld.F90 species_pot.o 
 ion_interaction.o : ion_interaction.F90 

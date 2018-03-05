@@ -762,7 +762,7 @@ contains
     CMPLX, allocatable :: kick_function(:), psi(:, :)
     logical :: cmplxscl
 
-    FLOAT, allocatable :: pcm_kick_function(:)
+    CMPLX, allocatable :: kick_function_interpolate(:)
 
     PUSH_SUB(kick_apply)
 
@@ -774,17 +774,24 @@ contains
     delta_strength: if(kick%delta_strength /= M_ZERO) then
 
       SAFE_ALLOCATE(kick_function(1:mesh%np))
-        
       if(.not. cmplxscl) then
         call kick_function_get(mesh, kick, kick_function)
       else
         call kick_function_get(mesh, kick, kick_function, theta)          
       end if
 
-      if ( pcm%kick_like ) then
-        SAFE_ALLOCATE(pcm_kick_function(1:mesh%np))
-        call pcm_calc_kick_rs(pcm, mesh, kick_function, pcm_kick_function)
-        kick_function = kick_function + pcm_kick_function
+      if( present(pcm) ) then
+        if ( pcm%kick_like ) then
+      		SAFE_ALLOCATE(kick_function_interpolate(1:mesh%np_part))
+          kick_function_interpolate = M_ZERO
+      		if(.not. cmplxscl) then
+        		call kick_function_get(mesh, kick, kick_function_interpolate, to_interpolate = .true.)
+      		else
+        		call kick_function_get(mesh, kick, kick_function_interpolate, theta, to_interpolate = .true.)
+      		end if
+          call pcm_calc_kick_rs(pcm, mesh, kick_function_interpolate)
+          kick_function = kick_function + pcm%v_kick_rs
+        end if
       end if
 
       write(message(1),'(a,f11.6)') 'Info: Applying delta kick: k = ', kick%delta_strength
