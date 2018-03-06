@@ -377,6 +377,7 @@ AC_CONFIG_FILES([Makefile
   external_libs/yaml-0.1.4/Makefile
   external_libs/yaml-0.1.4/include/Makefile
   external_libs/yaml-0.1.4/src/Makefile
+  external_libs/rapidxml/Makefile
   liboct_parser/Makefile
   src/Makefile
   src/include/Makefile
