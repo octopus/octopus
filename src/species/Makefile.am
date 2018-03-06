@@ -21,7 +21,7 @@
 noinst_LIBRARIES = libspecies.a
 
 # Fortran sources - keep in alphabetical order
-libspecies_f_srcs =                         \
+libspecies_f_srcs =                      \
 	atomic.F90                       \
 	element.F90                      \
 	logrid.F90                       \
@@ -36,7 +36,9 @@ libspecies_f_srcs =                         \
 	ps_psf_file.F90                  \
 	ps_qso.F90                       \
 	ps_upf.F90                       \
-	species.F90
+	pseudo_low.cc                    \
+	species.F90                      \
+	spline.cc
 
 # C/C++ sources - keep in alphabetical order
 libspecies_c_srcs =
@@ -45,7 +47,11 @@ libspecies_a_SOURCES = $(libspecies_c_srcs) $(libspecies_f_srcs)
 
 # Include files - keep in alphabetical order
 noinst_HEADERS =                         \
-	ps_pspio_inc.F90
+	base.hpp                         \
+	chemical_element.hpp             \
+	ps_pspio_inc.F90                 \
+	qso.hpp                          \
+	upf.hpp
 
 
 include $(srcdir)/../common-rules.make
@@ -79,3 +85,4 @@ ps_psf_file.o : ps_psf_file.F90 ps_in_grid.o
 ps_qso.o : ps_qso.F90 ps_in_grid.o atomic.o 
 ps_upf.o : ps_upf.F90 ps_in_grid.o atomic.o 
 species.o : species.F90 ps.o logrid.o element.o
+
