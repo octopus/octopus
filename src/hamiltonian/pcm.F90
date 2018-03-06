@@ -63,7 +63,7 @@ module pcm_oct_m
     pcm_v_cav_li, &
     pcm_update,             &
     pcm_calc_pot_rs,				&
-		pcm_calc_kick_rs
+    pcm_charge_density
 
 
   !> The cavity hosting the solute molecule is built from a set of 
@@ -1329,26 +1329,14 @@ contains
 
 
       if ( pcm%kick_like ) then
-        if( is_time_for_kick ) then
         !< kick-like polarization charges
         if ( pcm%epsilon_infty /= pcm%epsilon_0 ) then
           call pcm_charges(pcm%q_kick, pcm%qtot_kick, pcm%v_kick, pcm%matrix_lf_d, pcm%n_tesserae)
         else
           call pcm_charges(pcm%q_kick, pcm%qtot_kick, pcm%v_kick, pcm%matrix_lf, pcm%n_tesserae)
         end if
-
-        pcm%q_kick = pcm%q_kick / dt !< notice that these are not really polarization charges but currents
-			  															 !< this only makes a phase-shift to the Kohn-Sham orbitals after the kick
-    		else
-       		pcm%v_kick = M_ZERO
-       		pcm%q_kick  = M_ZERO
-       		pcm%qtot_kick  = M_ZERO
-       		if (pcm%calc_method == PCM_CALC_POISSON) pcm%rho_kick = M_ZERO
-       		pcm%v_kick_rs = M_ZERO
-      		POP_SUB(pcm_calc_pot_rs) 
-     		 	return
-      	end if 
       else
+        if( is_time_for_kick ) then
         !< BEGIN - equation-of-motion propagation
         select case (pcm%which_eps)
           case('drl')
@@ -1361,6 +1349,15 @@ contains
         if ( not_yet_called ) call pcm_eom_enough_initial(not_yet_called)
         pcm%qtot_kick  = sum(pcm%q_kick)
         !< END - equation-of-motion propagation      
+    		else
+       		pcm%v_kick = M_ZERO
+       		pcm%q_kick  = M_ZERO
+       		pcm%qtot_kick  = M_ZERO
+       		if (pcm%calc_method == PCM_CALC_POISSON) pcm%rho_kick = M_ZERO
+       		pcm%v_kick_rs = M_ZERO
+      		POP_SUB(pcm_calc_pot_rs) 
+     		 	return
+      	end if 
       end if
       if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_kick, pcm%qtot_kick, mesh, pcm%rho_kick)
       call pcm_pot_rs(pcm, pcm%v_kick_rs, pcm%q_kick, pcm%rho_kick, mesh )
@@ -1381,30 +1378,6 @@ contains
 
     POP_SUB(pcm_calc_pot_rs)  
   end subroutine pcm_calc_pot_rs
-
-  ! -----------------------------------------------------------------------------
-  subroutine pcm_calc_kick_rs(pcm, mesh, kick_function)
-    type(pcm_t),  intent(inout) :: pcm
-    type(mesh_t), intent(in)    :: mesh  
-    CMPLX,        intent(in)    :: kick_function(:)
-
-    FLOAT, allocatable :: kick_function_real(:)    
-
-    PUSH_SUB(pcm_calc_kick_rs)
-
-    SAFE_ALLOCATE(kick_function_real(1:mesh%np_part))
-    kick_function_real = DREAL(kick_function)
-    call pcm_v_cav_li(pcm%v_kick, kick_function_real, pcm, mesh)
-    if ( pcm%epsilon_infty /= pcm%epsilon_0 ) then
-      call pcm_charges(pcm%q_kick, pcm%qtot_kick, pcm%v_kick, pcm%matrix_lf_d, pcm%n_tesserae)
-    else
-      call pcm_charges(pcm%q_kick, pcm%qtot_kick, pcm%v_kick, pcm%matrix_lf, pcm%n_tesserae)
-    end if
-    if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_kick, pcm%qtot_kick, mesh, pcm%rho_kick)
-    call pcm_pot_rs(pcm, pcm%v_kick_rs, pcm%q_kick, pcm%rho_kick, mesh )
-     
-    POP_SUB(pcm_calc_kick_rs)  
-  end subroutine pcm_calc_kick_rs
 
   ! -----------------------------------------------------------------------------
   !> Calculates the Hartree/external/kick potential at the tessera representative points by doing 

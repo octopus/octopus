@@ -763,6 +763,7 @@ contains
     logical :: cmplxscl
 
     CMPLX, allocatable :: kick_function_interpolate(:)
+    FLOAT, allocatable :: kick_function_real(:)
 
     PUSH_SUB(kick_apply)
 
@@ -789,7 +790,9 @@ contains
       		else
         		call kick_function_get(mesh, kick, kick_function_interpolate, theta, to_interpolate = .true.)
       		end if
-          call pcm_calc_kick_rs(pcm, mesh, kick_function_interpolate)
+          SAFE_ALLOCATE(kick_function_real(1:mesh%np_part))
+          kick_function_real = DREAL(kick_function_interpolate)
+          call pcm_calc_pot_rs(pcm, mesh, kick = kick_function_real )
           kick_function = kick_function + pcm%v_kick_rs
         end if
       end if
