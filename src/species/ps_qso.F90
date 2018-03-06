@@ -24,6 +24,7 @@ module ps_qso_oct_m
   use io_oct_m
   use messages_oct_m
   use profiling_oct_m
+  use pseudo_oct_m
   use ps_in_grid_oct_m
   use xml_oct_m
 
@@ -61,9 +62,17 @@ contains
     integer :: ll, size, ierr, ii, ic, jc
     type(xml_file_t) :: qso_file
     type(xml_tag_t)  :: tag
-    
+    type(pseudo_t) :: pseudo
+
     PUSH_SUB(ps_qso_init)
 
+    call pseudo_init(pseudo, filename, ierr)
+
+    if(ierr /= 0) then
+      call messages_write("Pseudopotential file '" // trim(filename) // "' not found")
+      call messages_fatal()
+    end if
+    
     ierr = xml_file_init(qso_file, trim(filename))
 
     if(ierr /= 0) then

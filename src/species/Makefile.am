@@ -23,6 +23,7 @@ noinst_LIBRARIES = libspecies.a
 # Fortran sources - keep in alphabetical order
 libspecies_f_srcs =                      \
 	atomic.F90                       \
+	chemical_element.cc              \
 	element.F90                      \
 	logrid.F90                       \
 	ps_cpi.F90                       \
@@ -36,6 +37,7 @@ libspecies_f_srcs =                      \
 	ps_psf_file.F90                  \
 	ps_qso.F90                       \
 	ps_upf.F90                       \
+	pseudo.F90                       \
 	pseudo_low.cc                    \
 	species.F90                      \
 	spline.cc
@@ -82,7 +84,7 @@ ps_hgh.o : ps_hgh.F90 logrid.o atomic.o
 ps_in_grid.o : ps_in_grid.F90 logrid.o atomic.o 
 ps_psf.o : ps_psf.F90 ps_psf_file.o ps_in_grid.o logrid.o atomic.o 
 ps_psf_file.o : ps_psf_file.F90 ps_in_grid.o 
-ps_qso.o : ps_qso.F90 ps_in_grid.o atomic.o 
+ps_qso.o : ps_qso.F90 ps_in_grid.o atomic.o pseudo.o
 ps_upf.o : ps_upf.F90 ps_in_grid.o atomic.o 
 species.o : species.F90 ps.o logrid.o element.o
 
