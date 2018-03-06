@@ -1,5 +1,7 @@
 CalculationMode = go
 
+GOMethod = steep
+
 dist = 3.0
 
 %Coordinates

@@ -30,6 +30,7 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
   integer :: ii, jj, ia, ip, idir
   FLOAT :: theta, phi, qlen
   FLOAT :: qvect(MAX_DIM)
+  type(profile_t), save :: prof
 
   PUSH_SUB(X(oscillator_strengths))
 
@@ -422,15 +423,23 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   character(len=*),    intent(in)    :: restart_file
   logical,   optional, intent(in)    :: is_forces
 
-  integer :: ia, jb, iunit, ia_iter, ia_length, jb_tmp
+  integer :: ia, jb, iunit, ia_iter, ia_length, jb_tmp, ii
   integer :: maxcount, actual, counter
   R_TYPE :: mtxel_vh, mtxel_xc, mtxel_vm
   logical, allocatable :: is_saved(:, :), is_calcd(:, :)
+  logical, allocatable :: is_saved_col(:)
   logical :: is_forces_
-  type(casida_save_pot_t) :: saved_pot
   R_TYPE, allocatable :: xx(:)
+  R_TYPE, allocatable :: X(pot)(:)
+
+  type(profile_t), save :: prof
+
+  !integer :: pi, qi, pa, qa, pk, qk
+  R_TYPE, allocatable :: rho_i(:), rho_j(:), integrand(:)
+  FLOAT :: coeff_vh
 
   PUSH_SUB(X(casida_get_matrix))
+  call profiling_in(prof, 'CASIDA_GET_MATRIX')
 
   SAFE_ALLOCATE(xx(1:cas%n_pairs))
 
@@ -442,6 +451,14 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   ! load saved matrix elements
   SAFE_ALLOCATE(is_saved(1:cas%n_pairs, 1:cas%n_pairs))
   call load_saved(matrix, is_saved, restart_file)
+  SAFE_ALLOCATE(is_saved_col(1:cas%n_pairs))
+  is_saved_col = .true.
+  do jb = 1, cas%n_pairs
+    do ia = 1, cas%n_pairs
+      is_saved_col(jb) = is_saved_col(jb) .and. is_saved(ia, jb)
+    end do
+  end do
+
 
   SAFE_ALLOCATE(is_calcd(1:cas%n_pairs, 1:cas%n_pairs))
   is_calcd = .true.
@@ -468,15 +485,40 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   actual = 0
   if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, maxcount)
 
+  if(cas%herm_conj) then
+    message(1) = "herm_conj currently not implemented due to performance reasons."
+    ! look at older versions in git for reimplementing this...
+    call messages_fatal(1)
+  end if
+
+
   ! only root retains the saved values
   if(.not. mpi_grp_is_root(mpi_world)) matrix = M_ZERO
 
-  call X(casida_save_pot_init)(saved_pot, mesh)
+  SAFE_ALLOCATE(rho_i(1:mesh%np))
+  SAFE_ALLOCATE(rho_j(1:mesh%np))
+  SAFE_ALLOCATE(integrand(1:mesh%np))
+  SAFE_ALLOCATE(X(pot)(1:mesh%np))
+
+  ! coefficients for Hartree potential
+  coeff_vh = - cas%kernel_lrc_alpha / (M_FOUR * M_PI)
+  if(.not. cas%triplet) coeff_vh = coeff_vh + M_ONE
+  if (ks%sic_type == SIC_ADSIC) coeff_vh = coeff_vh*(M_ONE - M_ONE/st%qtot)
+
+
 
   ! calculate the matrix elements of (v + fxc)
   do jb = 1, cas%n_pairs
     actual = actual + 1
     if(mod(actual, cas%mpi_grp%size) /= cas%mpi_grp%rank) cycle
+
+    ! do not compute column if it has been saved before
+    if(is_saved_col(jb)) then
+      do ia = 1, cas%n_pairs
+        if(.not. is_saved(ia, jb) .and. jb /= ia) matrix(jb, ia) = R_CONJ(matrix(ia, jb))
+      end do
+      cycle
+    end if
 
     ! we only count diagonals for Petersilka
     if(cas%type == CASIDA_PETERSILKA) counter = counter + 1
@@ -492,45 +534,89 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
       ia_length = ia_length + mod(jb_tmp, 2)
     end if
 
-    do ia_iter = jb, jb + ia_length
+    ! compute rho (order of indices important!) and potential (depends only on jb)
+    call X(casida_get_rho)(st, mesh, cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%kk, rho_j)
 
+    if(.not. is_forces_ .and. abs(coeff_vh) > M_EPSILON) then
+      X(pot)(1:mesh%np) = M_ZERO
+      if(hm%theory_level /= INDEPENDENT_PARTICLES) then
+        call X(poisson_solve)(psolver, X(pot), rho_j, all_nodes=.false.)
+      end if
+    end if
+
+    do ia_iter = jb, jb + ia_length
       ! make ia in range [1, cas%n_pairs]
       ia = mod(ia_iter, cas%n_pairs)
       if(ia == 0) ia = cas%n_pairs
 
-      if(cas%type == CASIDA_PETERSILKA) then
-        ! only calculate off-diagonals in degenerate subspace
-        if(isnt_degenerate(cas, st, ia, jb)) cycle
-      else
-        counter = counter + 1
+      ! only calculate off-diagonals in degenerate subspace
+      if(cas%type == CASIDA_PETERSILKA .and. isnt_degenerate(cas, st, ia, jb)) cycle
+
+      counter = counter + 1
+
+      ! if saved, only set corresponding element
+      if(is_saved(ia, jb)) then
+        if(jb /= ia) matrix(jb, ia) = R_CONJ(matrix(ia, jb))
+        cycle
       end if
 
-      ! if not loaded, then calculate matrix element
-      if(.not. is_saved(ia, jb)) then
-        if(is_forces_) then
-          call X(K_term)(cas%pair(ia), cas%pair(jb), saved_pot, mtxel_xc = mtxel_xc)
-        else
-          call X(K_term)(cas%pair(ia), cas%pair(jb), saved_pot, mtxel_vh = mtxel_vh, mtxel_xc = mtxel_xc, &
-            mtxel_vm = mtxel_vm)
-        end if
-        matrix(ia, jb) = mtxel_vh + mtxel_xc + mtxel_vm
+
+      ! ---------------------------------------------------------
+      !> calculates the matrix elements <i(p),a(p)|v|j(q),b(q)> and/or <i(p),a(p)|xc|j(q),b(q)>
+      mtxel_vh = M_ZERO
+      mtxel_xc = M_ZERO
+
+      call X(casida_get_rho)(st, mesh, cas%pair(ia)%a, cas%pair(ia)%i, cas%pair(ia)%kk, rho_i)
+
+      !  first the Hartree part
+      !if(present(mtxel_vh)) then
+      if(.not. is_forces_ .and. abs(coeff_vh) > M_EPSILON) then
+        ! value of pot is retained between calls
+        mtxel_vh = coeff_vh * X(mf_dotp)(mesh, rho_i(:), X(pot)(:))
       end if
+
+      ! now the exchange part
+      integrand(1:mesh%np) = rho_i(1:mesh%np)*rho_j(1:mesh%np)* &
+        xc(1:mesh%np, cas%pair(ia)%kk, cas%pair(jb)%kk)
+      mtxel_xc = X(mf_integrate)(mesh, integrand)
+
+      mtxel_vm = M_ZERO
+      if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
+        do ii = 1, cas%pt_nmodes
+            mtxel_vm = mtxel_vm + &
+            X(mf_dotp)(mesh, cas%pt%lambda_array(ii)*cas%pt%pol_dipole_array(1:mesh%np,ii)*rho_i(1:mesh%np), &
+                cas%pt%lambda_array(ii)*cas%pt%pol_dipole_array(1:mesh%np,ii)*rho_j(1:mesh%np))
+        end do
+      end if
+
+      matrix(ia, jb) = mtxel_vh + mtxel_xc + mtxel_vm
       if(jb /= ia) matrix(jb, ia) = R_CONJ(matrix(ia, jb))
     end do
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(counter, maxcount)
-    if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
-      do ia = 1, cas%pt_nmodes
-         xx = M_ZERO
-         if (cas%has_photons) then
-          call X(MN_term)(cas, ia, xx)
-         end if
-         matrix(cas%n_pairs + ia, jb) = sqrt(M_HALF*cas%pt%omega_array(ia))*xx(jb)
-         matrix(jb, cas%n_pairs + ia) = sqrt(M_HALF*cas%pt%omega_array(ia))*xx(jb)
-      end do
-    end if
   end do
 
-  call X(casida_save_pot_end)(saved_pot)
+
+
+  if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
+    ! photon-electron coupling (upper right/lower left)
+    actual = 0
+    ! outer loop over ia here to avoid multiple computations of MN_term
+    do ia = 1, cas%pt_nmodes
+      actual = actual + 1
+      if(mod(actual, cas%mpi_grp%size) /= cas%mpi_grp%rank) cycle
+
+      call X(MN_term)(cas, ia, xx)
+      do jb = 1, cas%n_pairs
+        matrix(cas%n_pairs + ia, jb) = sqrt(M_HALF*cas%pt%omega_array(ia))*xx(jb)
+        matrix(jb, cas%n_pairs + ia) = matrix(cas%n_pairs + ia, jb)
+      end do
+    end do
+  end if
+
+  SAFE_DEALLOCATE_A(rho_i)
+  SAFE_DEALLOCATE_A(rho_j)
+  SAFE_DEALLOCATE_A(integrand)
+  SAFE_DEALLOCATE_A(X(pot))
 
   if(mpi_grp_is_root(mpi_world)) then
     call loct_progress_bar(maxcount, maxcount)
@@ -555,106 +641,13 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   end if
   call restart_close(cas%restart_dump, iunit)
   SAFE_DEALLOCATE_A(is_saved)
+  SAFE_DEALLOCATE_A(is_saved_col)
   SAFE_DEALLOCATE_A(xx)
 
+  call profiling_out(prof)
   POP_SUB(X(casida_get_matrix))
 
 contains
-
-  ! ---------------------------------------------------------
-  !> calculates the matrix elements <i(p),a(p)|v|j(q),b(q)> and/or <i(p),a(p)|xc|j(q),b(q)>
-  subroutine X(K_term)(pp, qq, saved, mtxel_vh, mtxel_xc, mtxel_vm)
-    type(states_pair_t),               intent(in)    :: pp
-    type(states_pair_t),               intent(in)    :: qq
-    type(casida_save_pot_t),           intent(inout) :: saved
-    R_TYPE,                  optional, intent(out)   :: mtxel_vh
-    R_TYPE,                  optional, intent(out)   :: mtxel_xc
-    R_TYPE,                  optional, intent(out)   :: mtxel_vm
-
-    integer :: pi, qi, pa, qa, pk, qk, ia
-    R_TYPE, allocatable :: rho_i(:), rho_j(:), integrand(:)
-    FLOAT :: coeff_vh
-    type(profile_t), save :: prof
-
-    PUSH_SUB(X(casida_get_matrix).X(K_term))
-    call profiling_in(prof, 'CASIDA_K')
-    
-    if(cas%herm_conj) then
-      pi = qq%i
-      pa = qq%a
-      pk = qq%kk
-
-      qi = pp%i
-      qa = pp%a
-      qk = pp%kk
-    else
-      pi = pp%i
-      pa = pp%a
-      pk = pp%kk
-
-      qi = qq%i
-      qa = qq%a
-      qk = qq%kk
-    end if
-
-    SAFE_ALLOCATE(rho_i(1:mesh%np))
-    SAFE_ALLOCATE(rho_j(1:mesh%np))
-    SAFE_ALLOCATE(integrand(1:mesh%np))
-
-    call X(casida_get_rho)(st, mesh, pa, pi, pk, rho_i)
-    call X(casida_get_rho)(st, mesh, qi, qa, qk, rho_j)
-
-    !  first the Hartree part
-    if(present(mtxel_vh)) then
-      coeff_vh = - cas%kernel_lrc_alpha / (M_FOUR * M_PI)
-      if(.not. cas%triplet) coeff_vh = coeff_vh + M_ONE
-      if (ks%sic_type == SIC_ADSIC) coeff_vh = coeff_vh*(M_ONE - M_ONE/st%qtot)
-      if(abs(coeff_vh) > M_EPSILON) then
-        if(qi /= saved%qi  .or.   qa /= saved%qa .or.  qk /= saved%qk) then
-          saved%X(pot)(1:mesh%np) = M_ZERO
-          if(hm%theory_level /= INDEPENDENT_PARTICLES) call X(poisson_solve)(psolver, saved%X(pot), rho_j, all_nodes=.false.)
-          saved%qi = qi
-          saved%qa = qa
-          saved%qk = qk
-        end if
-        ! value of pot is retained between calls
-        mtxel_vh = coeff_vh * X(mf_dotp)(mesh, rho_i(:), saved%X(pot)(:))
-
-      else
-        mtxel_vh = M_ZERO
-      end if
-    end if
-
-    if(present(mtxel_xc)) then
-      integrand(1:mesh%np) = rho_i(1:mesh%np)*rho_j(1:mesh%np)*xc(1:mesh%np, pk, qk)
-      mtxel_xc = X(mf_integrate)(mesh, integrand)
-      ! mtxel_xc = M_ZERO    ! this is rpa, JF
-    end if
-
-    if(present(mtxel_vm)) then
-      mtxel_vm = M_ZERO
-      if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
-        do ia = 1, cas%pt_nmodes
-            mtxel_vm = mtxel_vm + &
-            X(mf_dotp)(mesh, cas%pt%lambda_array(ia)*cas%pt%pol_dipole_array(1:mesh%np,ia)*rho_i(1:mesh%np), &
-                cas%pt%lambda_array(ia)*cas%pt%pol_dipole_array(1:mesh%np,ia)*rho_j(1:mesh%np))
-        end do
-      end if
-    end if
-
-    if(cas%herm_conj) then
-      if(present(mtxel_vh)) mtxel_vh = R_CONJ(mtxel_vh)
-      if(present(mtxel_xc)) mtxel_xc = R_CONJ(mtxel_xc)
-      if(present(mtxel_vm)) mtxel_vm = R_CONJ(mtxel_vm)
-    end if
-
-    SAFE_DEALLOCATE_A(rho_i)
-    SAFE_DEALLOCATE_A(rho_j)
-    SAFE_DEALLOCATE_A(integrand)
-
-    call profiling_out(prof)
-    POP_SUB(X(casida_get_matrix).X(K_term))
-  end subroutine X(K_term)
 
   ! ---------------------------------------------------------
   subroutine X(MN_term)(cas, iimode, xx)
@@ -1150,10 +1143,14 @@ subroutine X(casida_write)(cas, sys)
   character(len=5) :: str
   character(len=50) :: dir_name
   integer :: iunit, ia, jb, idim, index
+  logical :: full_printing
   R_TYPE  :: temp, norm_e, norm_p
   
   PUSH_SUB(X(casida_write))
   
+  full_printing = .false.
+  if (cas%print_exst == 'all') full_printing = .true.
+
   if(mpi_grp_is_root(mpi_world)) then
   ! output excitation energies and oscillator strengths
     call io_mkdir(CASIDA_DIR)
@@ -1193,65 +1190,69 @@ subroutine X(casida_write)(cas, sys)
   
     if(cas%qcalc) call qcasida_write(cas)
   
-    if(cas%type /= CASIDA_EPS_DIFF .or. cas%calc_forces) then
-      dir_name = CASIDA_DIR//trim(theory_name(cas))//'_excitations'
-      call io_mkdir(trim(dir_name))
+    if (.not.(cas%print_exst == "0" .or. cas%print_exst == "none")) then
+      if(cas%type /= CASIDA_EPS_DIFF .or. cas%calc_forces) then
+        dir_name = CASIDA_DIR//trim(theory_name(cas))//'_excitations'
+        call io_mkdir(trim(dir_name))
+      end if
+      
+      do ia = 1, cas%n_pairs+cas%pt_nmodes
+        if(loct_isinstringlist(ia, cas%print_exst) .or. full_printing) then 
+          write(str,'(i5.5)') ia
+          
+          ! output eigenvectors
+          if(cas%type /= CASIDA_EPS_DIFF) then
+            iunit = io_open(trim(dir_name)//'/'//trim(str), action='write')
+            ! First, a little header
+            write(iunit,'(a,es14.5)') '# Energy ['// trim(units_abbrev(units_out%energy)) // '] = ', &
+              units_from_atomic(units_out%energy, cas%w(cas%ind(ia)))
+            do idim = 1, cas%sb_dim
+              write(iunit,'(a,2es14.5)') '# <' // index2axis(idim) // '> ['//trim(units_abbrev(units_out%length))// '] = ', &
+                units_from_atomic(units_out%length, cas%X(tm)(cas%ind(ia), idim))
+            end do
+
+            ! this stuff should go BEFORE calculation of transition matrix elements!
+            ! make the largest component positive and real, to specify the phase
+            index = maxloc(abs(cas%X(mat)(:, cas%ind(ia))), dim = 1)
+            temp = abs(cas%X(mat)(index, cas%ind(ia))) / cas%X(mat)(index, cas%ind(ia))
+
+            norm_e = M_ZERO
+            do jb = 1, cas%n_pairs
+                  if ( abs( temp * cas%X(mat)(jb, cas%ind(ia)) ) >= cas%weight_thresh ) &
+              write(iunit,*) cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%kk, temp * cas%X(mat)(jb, cas%ind(ia))
+              norm_e = norm_e + abs(cas%X(mat)(jb, cas%ind(ia)))**2
+            end do
+
+            norm_p = M_ZERO
+            if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
+            ! negative number refers to photonic excitation
+              do jb = 1, cas%pt_nmodes
+                write(iunit,*) cas%pair(cas%n_pairs + jb)%i, cas%pair(cas%n_pairs + jb)%a, &
+                  cas%pair(cas%n_pairs + jb)%kk, temp * cas%X(mat)(cas%n_pairs + jb, cas%ind(ia))
+                norm_p = norm_p + abs(cas%X(mat)(cas%n_pairs + jb, cas%ind(ia)))**2
+              end do
+            write(iunit,'(a,es14.5)') '# Electronic contribution = ', &
+              norm_e
+            write(iunit,'(a,es14.5)') '# Photonic contribution = ', &
+              norm_p
+            write(iunit,'(a,i5.5,a,i5.5,a)') '# (electronic pairs, photon modes) = (', &
+              cas%n_pairs,',', cas%pt_nmodes,')'
+            end if
+
+            if(cas%type == CASIDA_TAMM_DANCOFF .or. cas%type == CASIDA_VARIATIONAL .or. cas%type == CASIDA_PETERSILKA) then
+              call X(write_implied_occupations)(cas, iunit, cas%ind(ia))
+            end if
+            call io_close(iunit)
+          end if
+          
+          if(cas%calc_forces .and. cas%type /= CASIDA_CASIDA) then
+            iunit = io_open(trim(dir_name)//'/forces_'//trim(str)//'.xsf', action='write')
+            call write_xsf_geometry(iunit, sys%geo, sys%gr%mesh, forces = cas%forces(:, :, cas%ind(ia)))
+            call io_close(iunit)
+          end if
+        end if
+      end do
     end if
-    
-    do ia = 1, cas%n_pairs+cas%pt_nmodes
-      
-      write(str,'(i5.5)') ia
-      
-      ! output eigenvectors
-      if(cas%type /= CASIDA_EPS_DIFF) then
-        iunit = io_open(trim(dir_name)//'/'//trim(str), action='write')
-        ! First, a little header
-        write(iunit,'(a,es14.5)') '# Energy ['// trim(units_abbrev(units_out%energy)) // '] = ', &
-          units_from_atomic(units_out%energy, cas%w(cas%ind(ia)))
-        do idim = 1, cas%sb_dim
-          write(iunit,'(a,2es14.5)') '# <' // index2axis(idim) // '> ['//trim(units_abbrev(units_out%length))// '] = ', &
-            units_from_atomic(units_out%length, cas%X(tm)(cas%ind(ia), idim))
-        end do
-
-        ! this stuff should go BEFORE calculation of transition matrix elements!
-        ! make the largest component positive and real, to specify the phase
-        index = maxloc(abs(cas%X(mat)(:, cas%ind(ia))), dim = 1)
-        temp = abs(cas%X(mat)(index, cas%ind(ia))) / cas%X(mat)(index, cas%ind(ia))
-
-        norm_e = M_ZERO
-        do jb = 1, cas%n_pairs
-          write(iunit,*) cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%kk, temp * cas%X(mat)(jb, cas%ind(ia))
-          norm_e = norm_e + abs(cas%X(mat)(jb, cas%ind(ia)))**2
-        end do
-
-        norm_p = M_ZERO
-        if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
-        ! negative number refers to photonic excitation
-          do jb = 1, cas%pt_nmodes
-            write(iunit,*) cas%pair(cas%n_pairs + jb)%i, cas%pair(cas%n_pairs + jb)%a, &
-              cas%pair(cas%n_pairs + jb)%kk, temp * cas%X(mat)(cas%n_pairs + jb, cas%ind(ia))
-            norm_p = norm_p + abs(cas%X(mat)(cas%n_pairs + jb, cas%ind(ia)))**2
-          end do
-        write(iunit,'(a,es14.5)') '# Electronic contribution = ', &
-          norm_e
-        write(iunit,'(a,es14.5)') '# Photonic contribution = ', &
-          norm_p
-        write(iunit,'(a,i5.5,a,i5.5,a)') '# (electronic pairs, photon modes) = (', &
-          cas%n_pairs,',', cas%pt_nmodes,')'
-        end if
-
-        if(cas%type == CASIDA_TAMM_DANCOFF .or. cas%type == CASIDA_VARIATIONAL .or. cas%type == CASIDA_PETERSILKA) then
-          call X(write_implied_occupations)(cas, iunit, cas%ind(ia))
-        end if
-        call io_close(iunit)
-      end if
-      
-      if(cas%calc_forces .and. cas%type /= CASIDA_CASIDA) then
-        iunit = io_open(trim(dir_name)//'/forces_'//trim(str)//'.xsf', action='write')
-        call write_xsf_geometry(iunit, sys%geo, sys%gr%mesh, forces = cas%forces(:, :, cas%ind(ia)))
-        call io_close(iunit)
-      end if
-    end do
   
   end if
   ! Calculate and write the transition densities
