@@ -47,33 +47,34 @@ extern "C" void FC_FUNC_(pseudo_end, PSEUDO_END)(pseudopotential::base ** pseudo
   delete *pseudo;
 }
 
-extern "C" fint FC_FUNC_(pseudo_type, PSEUDO_TYPE)(pseudopotential::base ** pseudo){
+extern "C" fint FC_FUNC_(pseudo_type, PSEUDO_TYPE)(const pseudopotential::base ** pseudo){
   return fint((*pseudo)->type());
 }
 
-extern "C" double FC_FUNC_(pseudo_valence_charge, PSEUDO_VALENCE_CHARGE)(pseudopotential::base ** pseudo){
+extern "C" double FC_FUNC_(pseudo_valence_charge, PSEUDO_VALENCE_CHARGE)(const pseudopotential::base ** pseudo){
   return (*pseudo)->valence_charge();
 }
 
-extern "C" double FC_FUNC_(pseudo_mesh_spacing, PSEUDO_MESH_SPACING)(pseudopotential::base ** pseudo){
+extern "C" double FC_FUNC_(pseudo_mesh_spacing, PSEUDO_MESH_SPACING)(const pseudopotential::base ** pseudo){
   return (*pseudo)->mesh_spacing();
 }
 
-extern "C" double FC_FUNC_(pseudo_mass, PSEUDO_MASS)(pseudopotential::base ** pseudo){
+extern "C" double FC_FUNC_(pseudo_mass, PSEUDO_MASS)(const pseudopotential::base ** pseudo){
   return (*pseudo)->mass();
 }
 
-extern "C" fint FC_FUNC_(pseudo_lmax, PSEUDO_LMAX)(pseudopotential::base ** pseudo){
+extern "C" fint FC_FUNC_(pseudo_lmax, PSEUDO_LMAX)(const pseudopotential::base ** pseudo){
   return (*pseudo)->lmax();
 }
 
-extern "C" fint FC_FUNC_(pseudo_llocal, PSEUDO_LLOCAL)(pseudopotential::base ** pseudo){
+extern "C" fint FC_FUNC_(pseudo_llocal, PSEUDO_LLOCAL)(const pseudopotential::base ** pseudo){
   return (*pseudo)->llocal();
 }
 
-extern "C" fint FC_FUNC_(pseudo_nchannels, PSEUDO_NCHANNELS)(pseudopotential::base ** pseudo){
+extern "C" fint FC_FUNC_(pseudo_nchannels, PSEUDO_NCHANNELS)(const pseudopotential::base ** pseudo){
   return (*pseudo)->nchannels();
 }
 
-
-
+extern "C" fint FC_FUNC_(pseudo_has_projectors_low, PSEUDO_HAS_PROJECTORS_LOW)(const pseudopotential::base ** pseudo, const fint * l){
+  return fint((*pseudo)->has_projectors(*l));
+}

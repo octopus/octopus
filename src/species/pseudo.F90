@@ -64,63 +64,79 @@ module pseudo_oct_m
       import :: pseudo_t
       implicit none
 
-      type(pseudo_t),   intent(out)   :: pseudo
+      type(pseudo_t),   intent(inout) :: pseudo
     end subroutine pseudo_end
 
     integer function pseudo_type(pseudo)
       import :: pseudo_t
       implicit none
       
-      type(pseudo_t),   intent(out)   :: pseudo
+      type(pseudo_t),   intent(in)    :: pseudo
     end function pseudo_type
     
     real(8) function pseudo_valence_charge(pseudo)
       import :: pseudo_t
       implicit none
 
-      type(pseudo_t),   intent(out)   :: pseudo
+      type(pseudo_t),   intent(in)    :: pseudo
     end function pseudo_valence_charge
 
     real(8) function pseudo_mesh_spacing(pseudo)
       import :: pseudo_t
       implicit none
       
-      type(pseudo_t),   intent(out)   :: pseudo
+      type(pseudo_t),   intent(in)    :: pseudo
     end function pseudo_mesh_spacing
     
     real(8) function pseudo_mass(pseudo)
       import :: pseudo_t
       implicit none
       
-      type(pseudo_t),   intent(out)   :: pseudo
+      type(pseudo_t),   intent(in)    :: pseudo
     end function pseudo_mass
 
     integer function pseudo_lmax(pseudo)
       import :: pseudo_t
       implicit none
       
-      type(pseudo_t),   intent(out)   :: pseudo
+      type(pseudo_t),   intent(in)    :: pseudo
     end function pseudo_lmax
 
     integer function pseudo_llocal(pseudo)
       import :: pseudo_t
       implicit none
       
-      type(pseudo_t),   intent(out)   :: pseudo
+      type(pseudo_t),   intent(in)    :: pseudo
     end function pseudo_llocal
 
     integer function pseudo_nchannels(pseudo)
       import :: pseudo_t
       implicit none
       
-      type(pseudo_t),   intent(out)   :: pseudo
+      type(pseudo_t),   intent(in)    :: pseudo
     end function pseudo_nchannels
     
   end interface
   
 contains
 
+  logical function pseudo_has_projectors(pseudo, l)
+    type(pseudo_t),   intent(in)      :: pseudo
+    integer,          intent(in)      :: l
+    
+    interface
+      integer function pseudo_has_projectors_low(pseudo, l)
+        import :: pseudo_t
+        implicit none
+        
+        type(pseudo_t),   intent(in)      :: pseudo
+        integer,          intent(in)      :: l
+      end function pseudo_has_projectors_low
+    end interface
 
+    pseudo_has_projectors = (pseudo_has_projectors_low(pseudo, l) /= 0)
+    
+  end function pseudo_has_projectors
   
 end module pseudo_oct_m
 
