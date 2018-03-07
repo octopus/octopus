@@ -61,7 +61,7 @@ contains
     type(ps_qso_t),   intent(inout) :: this
     character(len=*), intent(in)    :: filename
 
-    integer :: ll, size, ierr, ii, ic, jc
+    integer :: ll, ierr, ii, ic, jc
     type(pseudo_t) :: pseudo
 
     PUSH_SUB(ps_qso_init)
@@ -86,25 +86,25 @@ contains
     
     if(.not. this%oncv) then
 
-      SAFE_ALLOCATE(this%potential(1:size, 0:this%lmax))
-      SAFE_ALLOCATE(this%wavefunction(1:size, 0:this%lmax))
+      SAFE_ALLOCATE(this%potential(1:this%grid_size, 0:this%lmax))
+      SAFE_ALLOCATE(this%wavefunction(1:this%grid_size, 0:this%lmax))
       
       do ll = 0, this%lmax
-        call pseudo_radial_potential(pseudo, ll, this%potential(:, ll))
-        call pseudo_radial_function(pseudo, ll, this%wavefunction(:, ll))
+        call pseudo_radial_potential(pseudo, ll, this%potential(1, ll))
+        call pseudo_radial_function(pseudo, ll, this%wavefunction(1, ll))
       end do
 
     else
 
       SAFE_ALLOCATE(this%potential(1:this%grid_size, -1:-1))
       
-      call pseudo_local_potential(pseudo, this%potential(:, -1))
+      call pseudo_local_potential(pseudo, this%potential(1, -1))
 
       SAFE_ALLOCATE(this%projector(1:this%grid_size, 0:3, 1:2))
       
       do ll = 0, this%lmax
         do ic = 0, this%nchannels
-          call pseudo_projector(pseudo, ll, ic, this%projector(:, ll, ic))
+          call pseudo_projector(pseudo, ll, ic, this%projector(1, ll, ic))
         end do
       end do
 
@@ -114,7 +114,7 @@ contains
       do ll = 0, this%lmax
         do ic = 0, this%nchannels
           do jc = 0, this%nchannels
-            call pseudo_dij(pseudo, ll, ic, jc, this%dij(ll:ll, ic, jc))
+            call pseudo_dij(pseudo, ll, ic, jc, this%dij(ll, ic, jc))
           end do
         end do
       end do
@@ -124,7 +124,7 @@ contains
     this%nlcc = pseudo_has_nlcc(pseudo)
     if(this%nlcc) then
       SAFE_ALLOCATE(this%nlcc_density(1:this%grid_size))
-      call pseudo_nlcc_density(pseudo, this%nlcc_density)
+      call pseudo_nlcc_density(pseudo, this%nlcc_density(1))
     end if
 
     call pseudo_end(pseudo)

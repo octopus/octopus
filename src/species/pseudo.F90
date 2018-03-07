@@ -157,7 +157,7 @@ module pseudo_oct_m
       implicit none
       
       type(pseudo_t),   intent(in)    :: pseudo
-      real(8),          intent(out)   :: local_potential(:)
+      real(8),          intent(out)   :: local_potential
     end subroutine pseudo_local_potential
 
     ! -------------------------------------------------
@@ -169,7 +169,7 @@ module pseudo_oct_m
       type(pseudo_t),   intent(in)    :: pseudo
       integer,          intent(in)    :: l
       integer,          intent(in)    :: ic
-      real(8),          intent(out)   :: projector(:)
+      real(8),          intent(out)   :: projector
     end subroutine pseudo_projector
 
     ! -------------------------------------------------
@@ -191,7 +191,7 @@ module pseudo_oct_m
       
       type(pseudo_t),   intent(in)    :: pseudo
       integer,          intent(in)    :: l
-      real(8),          intent(out)   :: radial_potential(:)
+      real(8),          intent(inout) :: radial_potential
     end subroutine pseudo_radial_potential
 
     ! -------------------------------------------------
@@ -202,7 +202,7 @@ module pseudo_oct_m
       
       type(pseudo_t),   intent(in)    :: pseudo
       integer,          intent(in)    :: l
-      real(8),          intent(out)   :: radial_function(:)
+      real(8),          intent(out)   :: radial_function
     end subroutine pseudo_radial_function
 
     ! -------------------------------------------------
@@ -212,7 +212,7 @@ module pseudo_oct_m
       implicit none
       
       type(pseudo_t),   intent(in)    :: pseudo
-      real(8),          intent(out)   :: nlcc_density(:)
+      real(8),          intent(out)   :: nlcc_density
     end subroutine pseudo_nlcc_density
 
   end interface
