@@ -137,6 +137,10 @@ namespace pseudopotential {
       return 0.01;
     }
 
+    int mesh_size() const {
+      return value<int>(root_node_->first_node("PP_HEADER")->first_attribute("mesh_size"));
+    }
+    
     int nchannels() const {
       if(llocal() >= 0){
 	return nprojectors()/lmax();

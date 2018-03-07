@@ -29,6 +29,7 @@ namespace pseudopotential {
     virtual int nquad() const = 0;
     virtual double rquad() const = 0;
     virtual double mesh_spacing() const = 0;
+    virtual int mesh_size() const = 0;
     virtual void local_potential(std::vector<double> & potential) const = 0;
     virtual int nprojectors() const = 0;
     virtual bool has_projectors(int l) const = 0;

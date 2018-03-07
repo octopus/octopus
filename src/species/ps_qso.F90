@@ -88,6 +88,8 @@ contains
     this%nchannels = pseudo_nchannels(pseudo)
    
     this%oncv = (pseudo_type(pseudo) == PSEUDO_TYPE_KLEINMAN_BYLANDER)
+
+    this%grid_size = pseudo_mesh_size(pseudo)
     
     if(.not. this%oncv) then
       
@@ -115,17 +117,9 @@ contains
 
     else
 
-      ierr = xml_file_tag(qso_file, 'local_potential', 0, tag)
-      ASSERT(ierr == 0)
-      
-      ierr = xml_tag_get_attribute_value(tag, 'size', this%grid_size)
-      ASSERT(ierr == 0)
-      
       SAFE_ALLOCATE(this%potential(1:this%grid_size, -1:-1))
       
-      ierr = xml_get_tag_value(tag, this%grid_size, this%potential(:, -1))
-
-      call xml_tag_end(tag)
+      call pseudo_local_potential(pseudo, this%potential(:, -1))
 
       SAFE_ALLOCATE(this%projector(1:this%grid_size, 0:3, 1:2))
       

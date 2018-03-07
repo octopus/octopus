@@ -121,6 +121,14 @@ namespace pseudopotential {
       return value<double>(pseudo_node_->first_node("mesh_spacing"));
     }
 
+    int mesh_size() const {
+      rapidxml::xml_node<> * node = pseudo_node_->first_node("local_potential"); //kleinman bylander
+      if(!node) node = pseudo_node_->first_node("vlocal"); //ultrasoft
+      if(!node) node = pseudo_node_->first_node("projector"); //norm conserving
+      assert(node);
+      return value<int>(node->first_attribute("size"));
+    }
+    
     void local_potential(std::vector<double> & potential) const {
       rapidxml::xml_node<> * node = pseudo_node_->first_node("local_potential");
       if(!node){

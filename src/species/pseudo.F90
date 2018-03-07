@@ -34,6 +34,7 @@ module pseudo_oct_m
     pseudo_type,                &
     pseudo_valence_charge,      &
     pseudo_mesh_spacing,        &
+    pseudo_mesh_size,           &
     pseudo_mass,                &
     pseudo_lmax,                &
     pseudo_llocal,              &
@@ -87,6 +88,13 @@ module pseudo_oct_m
       
       type(pseudo_t),   intent(in)    :: pseudo
     end function pseudo_mesh_spacing
+
+    integer function pseudo_mesh_size(pseudo)
+      import :: pseudo_t
+      implicit none
+      
+      type(pseudo_t),   intent(in)    :: pseudo
+    end function pseudo_mesh_size
     
     real(8) function pseudo_mass(pseudo)
       import :: pseudo_t
@@ -115,6 +123,14 @@ module pseudo_oct_m
       
       type(pseudo_t),   intent(in)    :: pseudo
     end function pseudo_nchannels
+
+    subroutine pseudo_local_potential(pseudo, local_potential)
+      import :: pseudo_t
+      implicit none
+      
+      type(pseudo_t),   intent(in)    :: pseudo
+      real(8),          intent(in)    :: local_potential(:)
+    end subroutine pseudo_local_potential
     
   end interface
   
@@ -137,7 +153,7 @@ contains
     pseudo_has_projectors = (pseudo_has_projectors_low(pseudo, l) /= 0)
     
   end function pseudo_has_projectors
-  
+
 end module pseudo_oct_m
 
 !! Local Variables:

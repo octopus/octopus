@@ -59,6 +59,10 @@ extern "C" double FC_FUNC_(pseudo_mesh_spacing, PSEUDO_MESH_SPACING)(const pseud
   return (*pseudo)->mesh_spacing();
 }
 
+extern "C" fint FC_FUNC_(pseudo_mesh_size, PSEUDO_MESH_SIZE)(const pseudopotential::base ** pseudo){
+  return (*pseudo)->mesh_size();
+}
+
 extern "C" double FC_FUNC_(pseudo_mass, PSEUDO_MASS)(const pseudopotential::base ** pseudo){
   return (*pseudo)->mass();
 }
@@ -78,3 +82,12 @@ extern "C" fint FC_FUNC_(pseudo_nchannels, PSEUDO_NCHANNELS)(const pseudopotenti
 extern "C" fint FC_FUNC_(pseudo_has_projectors_low, PSEUDO_HAS_PROJECTORS_LOW)(const pseudopotential::base ** pseudo, const fint * l){
   return fint((*pseudo)->has_projectors(*l));
 }
+
+extern "C" void FC_FUNC_(pseudo_local_potential, PSEUDO_LOCAL_POTENTIAL)(const pseudopotential::base ** pseudo, double * local_potential){
+  std::vector<double> locpot;
+  (*pseudo)->local_potential(locpot);
+  for(unsigned i = 0; i < locpot.size(); i++) local_potential[i] = locpot[i];
+}
+
+
+
