@@ -169,7 +169,7 @@ module pcm_oct_m
     PCM_KICK = 3,               &
     PCM_EXTERNAL_PLUS_KICK = 4
 
-  integer, parameter ::   &
+  integer, parameter, public ::   &
     PCM_CALC_DIRECT  = 1, &
     PCM_CALC_POISSON = 2
 

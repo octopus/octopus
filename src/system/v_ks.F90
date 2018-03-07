@@ -1263,7 +1263,7 @@ contains
           do ii = 1, hm%ep%no_lasers        
             call laser_potential(hm%ep%lasers(ii), ks%gr%mesh, potx, ks%calc%time)
           end do
-          kick_time = ( hm%current_time-2*dt <= hm%ep%kick%time .and. hm%current_time > hm%ep%kick%time )
+          kick_time =((hm%pcm%iter-1)*dt <= hm%ep%kick%time) .and. (hm%pcm%iter*dt > hm%ep%kick%time)
           if ( hm%pcm%iter > 1 .and. kick_time ) then 
             call kick_function_get(ks%gr%mesh, hm%ep%kick, kick, to_interpolate = .true.) !< kick at first time in propagation
             kick = hm%ep%kick%delta_strength * kick
@@ -1289,7 +1289,7 @@ contains
           SAFE_ALLOCATE(kick_real(1:ks%gr%mesh%np_part))
           kick = M_ZERO
           kick_real = M_ZERO
-          kick_time = ( hm%current_time-2*dt <= hm%ep%kick%time .and. hm%current_time > hm%ep%kick%time )
+          kick_time =((hm%pcm%iter-1)*dt <= hm%ep%kick%time) .and. (hm%pcm%iter*dt > hm%ep%kick%time)
           if ( hm%pcm%iter > 1 .and. kick_time ) then
             call kick_function_get(ks%gr%mesh, hm%ep%kick, kick, to_interpolate = .true.) !< kick at first time in propagation
             kick = hm%ep%kick%delta_strength * kick
