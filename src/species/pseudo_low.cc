@@ -119,12 +119,12 @@ extern "C" void FC_FUNC_(pseudo_local_potential, PSEUDO_LOCAL_POTENTIAL)(const p
 
 extern "C" void FC_FUNC_(pseudo_projector, PSEUDO_PROJECTOR)(const pseudopotential::base ** pseudo, fint * l, fint * ic, double * projector){
   std::vector<double> val;
-  (*pseudo)->projector(*l, *ic, val);
+  (*pseudo)->projector(*l, *ic - 1, val);
   for(unsigned i = 0; i < val.size(); i++) projector[i] = val[i];
 }
 
 extern "C" double FC_FUNC_(pseudo_dij, PSEUDO_DIJ)(const pseudopotential::base ** pseudo, fint * l, fint * ic, fint * jc){
-  return (*pseudo)->d_ij(*l, *ic, *jc);
+  return (*pseudo)->d_ij(*l, *ic - 1, *jc - 1);
 }
 
 extern "C" void FC_FUNC_(pseudo_radial_potential, PSEUDO_RADIAL_POTENTIAL)(const pseudopotential::base ** pseudo, fint * l,double * radial_potential){

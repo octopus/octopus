@@ -104,7 +104,7 @@ contains
       SAFE_ALLOCATE(this%projector(1:this%grid_size, 0:3, 1:2))
       
       do ll = 0, this%lmax
-        do ic = 0, this%nchannels
+        do ic = 1, this%nchannels
           call pseudo_projector(pseudo, ll, ic, this%projector(1, ll, ic))
         end do
       end do
@@ -113,8 +113,8 @@ contains
 
       this%dij = CNST(0.0)
       do ll = 0, this%lmax
-        do ic = 0, this%nchannels
-          do jc = 0, this%nchannels
+        do ic = 1, this%nchannels
+          do jc = 1, this%nchannels
             call pseudo_dij(pseudo, ll, ic, jc, this%dij(ll, ic, jc))
           end do
         end do
