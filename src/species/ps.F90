@@ -1054,9 +1054,9 @@ contains
     type(ps_t),     intent(inout) :: ps
     type(ps_qso_t), intent(in)    :: ps_qso
 
-    integer :: ll, ip, is, ic, jc
+    integer :: ll, ip, is, ic, jc, ir, nrc
     FLOAT :: rr, kbcos, kbnorm, dnrm, avgv, volume_element
-    FLOAT, allocatable :: vlocal(:), kbprojector(:), wavefunction(:)
+    FLOAT, allocatable :: vlocal(:), kbprojector(:), wavefunction(:), nlcc_density(:)
 
     PUSH_SUB(ps_qso_load)
 
@@ -1064,8 +1064,7 @@ contains
       ps%hamann = .true.
     end if
     
-    ! no nonlinear core corrections
-    ps%nlcc = .false.
+    ps%nlcc = ps_qso%nlcc
 
     ps%z_val = ps_qso%valence_charge
 
@@ -1160,6 +1159,28 @@ contains
 
     end do
 
+    !Non-linear core-corrections
+    if(ps_qso%nlcc) then
+
+      SAFE_ALLOCATE(nlcc_density(1:ps_qso%grid_size))
+
+      nlcc_density(1:ps_qso%grid_size) = ps_qso%nlcc_density(1:ps_qso%grid_size)
+      
+      ! find cutoff radius
+      do ir = ps%g%nrval - 1, 1, -1
+        if(nlcc_density(ir) > eps) then
+          nrc = ir + 1
+          exit
+        end if
+      end do
+
+      nlcc_density(nrc:ps%g%nrval) = M_ZERO
+      
+      call spline_fit(ps%g%nrval, ps%g%rofi, nlcc_density, ps%core)
+
+      SAFE_DEALLOCATE_A(nlcc_density)
+    end if
+    
     call ps_getradius(ps)
 
     SAFE_DEALLOCATE_A(kbprojector)
