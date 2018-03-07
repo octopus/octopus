@@ -78,16 +78,15 @@ contains
     if(ierr /= 0) then
       call messages_write("Pseudopotential file '" // trim(filename) // "' not found")
       call messages_fatal()
-    end if    
+    end if
+    
+    this%valence_charge = pseudo_valence_charge(pseudo)
+    this%mesh_spacing = pseudo_mesh_spacing(pseudo)
+    this%mass = pseudo_mass(pseudo)
+    this%lmax = pseudo_lmax(pseudo)
 
-    ierr = xml_get_tag_value(qso_file, 'valence_charge', this%valence_charge)
-    ierr = xml_get_tag_value(qso_file, 'mesh_spacing', this%mesh_spacing)
-    ierr = xml_get_tag_value(qso_file, 'mass', this%mass)
-
-    ierr = xml_get_tag_value(qso_file, 'lmax', this%lmax)
-
-    this%oncv = ierr /= 0
-
+    this%oncv = (pseudo_type(pseudo) == PSEUDO_TYPE_KLEINMAN_BYLANDER)
+    
     if(.not. this%oncv) then
       this%nchannels = 1
       
