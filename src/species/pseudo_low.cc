@@ -28,6 +28,13 @@
 #include "upf.hpp"
 
 
+enum class status {
+  OKAY                  = 0,
+  FILE_NOT_FOUND        = 455,
+  FORMAT_NOT_SUPPORTED  = 456,
+  UNKNOWN_FORMAT        = 457
+};
+
 extern "C" void FC_FUNC_(pseudo_init, PSEUDO_INIT)(pseudopotential::base ** pseudo, STR_F_TYPE const filename_f, fint * ierr STR_ARG1){
   char * filename_c;
   TO_C_STR1(filename_f, filename_c);
@@ -39,7 +46,10 @@ extern "C" void FC_FUNC_(pseudo_init, PSEUDO_INIT)(pseudopotential::base ** pseu
   struct stat statbuf;
   bool found_file = !stat(filename.c_str(), &statbuf);
 
-  if(!found_file) *ierr = 1;
+  if(!found_file){
+    *ierr = fint(status::FILE_NOT_FOUND);
+    return;
+  }
   
   std::string extension = filename.substr(filename.find_last_of(".") + 1);
   std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);

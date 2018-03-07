@@ -141,7 +141,7 @@ contains
     FLOAT,             intent(in)    :: z
     character(len=*),  intent(in)    :: filename
     
-    integer :: l, ii, ll, is
+    integer :: l, ii, ll, is, ierr
     type(ps_psf_t) :: ps_psf !< SIESTA pseudopotential
     type(ps_cpi_t) :: ps_cpi !< Fritz-Haber pseudopotential
     type(ps_fhi_t) :: ps_fhi !< Fritz-Haber pseudopotential (from abinit)
@@ -265,62 +265,69 @@ contains
       call hgh_process(ps_hgh)
       call logrid_copy(ps_hgh%g, ps%g)
 
-    case(PS_TYPE_UPF)
-      call ps_upf_init(ps_upf, trim(filename))
-
-      call valconf_copy(ps%conf, ps_upf%conf)
-      ps%z      = z
-      ps%conf%z = nint(z)
-      ps%kbc    = ps_upf%kb_nc
-      lmax      = ps_upf%l_max
-      ps%l_max  = ps_upf%l_max
-      ps%l_loc  = ps_upf%l_local
-
-      nullify(ps%g%drdi, ps%g%s)
-      ps%g%nrval = ps_upf%np
-      SAFE_ALLOCATE(ps%g%rofi(1:ps%g%nrval))
-      SAFE_ALLOCATE(ps%g%r2ofi(1:ps%g%nrval))
-      ps%g%rofi = ps_upf%r
-      ps%g%r2ofi = ps%g%rofi**2
-
-    case(PS_TYPE_QSO)
-
+    case(PS_TYPE_QSO, PS_TYPE_UPF)
+      
       call messages_experimental('QSO pseudopotential support')
+      
+      call ps_qso_init(ps_qso, trim(filename), ierr)
+      
+      if(ierr /= 0) then
+        
+        call valconf_null(ps%conf)
+        
+        ps%z      = z
+        ps%conf%z = nint(z)
+        
+        if(ps_qso%oncv) then
+          ps%conf%p = 0
+        else
+          ps%conf%p = ps_qso%lmax + 1
+        end if
+        
+        do ll = 0, ps_qso%lmax
+          ps%conf%l(ll + 1) = ll
+        end do
+        
+        ps%kbc    = ps_qso%nchannels
+        ps%l_max  = ps_qso%lmax
+        ps%l_loc  = ps_qso%llocal
+        
+        nullify(ps%g%drdi, ps%g%s)
+        
+        ! use a larger grid
+        ps%g%nrval = max(ps_qso%grid_size, nint(CNST(20.0)/(ps_qso%mesh_spacing)))
+        
+        SAFE_ALLOCATE(ps%g%rofi(1:ps%g%nrval))
+        SAFE_ALLOCATE(ps%g%r2ofi(1:ps%g%nrval))
+        
+        do ii = 1, ps%g%nrval
+          ps%g%rofi(ii) = (ii - 1)*ps_qso%mesh_spacing
+          ps%g%r2ofi(ii) = ps%g%rofi(ii)**2
+        end do
 
-      call ps_qso_init(ps_qso, trim(filename))
-
-      call valconf_null(ps%conf)
-
-      ps%z      = z
-      ps%conf%z = nint(z)
-
-      if(ps_qso%oncv) then
-        ps%conf%p = 0
-      else
-        ps%conf%p = ps_qso%lmax + 1
+        ps%flavour = PS_TYPE_QSO
+        
+      else !read failed, this must be a UPF 1 file
+        
+        call ps_upf_init(ps_upf, trim(filename))
+        
+        call valconf_copy(ps%conf, ps_upf%conf)
+        ps%z      = z
+        ps%conf%z = nint(z)
+        ps%kbc    = ps_upf%kb_nc
+        lmax      = ps_upf%l_max
+        ps%l_max  = ps_upf%l_max
+        ps%l_loc  = ps_upf%l_local
+        
+        nullify(ps%g%drdi, ps%g%s)
+        ps%g%nrval = ps_upf%np
+        SAFE_ALLOCATE(ps%g%rofi(1:ps%g%nrval))
+        SAFE_ALLOCATE(ps%g%r2ofi(1:ps%g%nrval))
+        ps%g%rofi = ps_upf%r
+        ps%g%r2ofi = ps%g%rofi**2
+        
       end if
-
-      do ll = 0, ps_qso%lmax
-        ps%conf%l(ll + 1) = ll
-      end do
-
-      ps%kbc    = ps_qso%nchannels
-      ps%l_max  = ps_qso%lmax
-      ps%l_loc  = ps_qso%llocal
-
-      nullify(ps%g%drdi, ps%g%s)
-
-      ! use a larger grid
-      ps%g%nrval = max(ps_qso%grid_size, nint(CNST(20.0)/(ps_qso%mesh_spacing)))
-
-      SAFE_ALLOCATE(ps%g%rofi(1:ps%g%nrval))
-      SAFE_ALLOCATE(ps%g%r2ofi(1:ps%g%nrval))
-
-      do ii = 1, ps%g%nrval
-        ps%g%rofi(ii) = (ii - 1)*ps_qso%mesh_spacing
-        ps%g%r2ofi(ii) = ps%g%rofi(ii)**2
-      end do
-
+      
     end select
 
     write(message(1), '(a,i2,a)') "Info: l = ", ps%l_max, " is maximum angular momentum considered."

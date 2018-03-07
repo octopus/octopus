@@ -57,11 +57,12 @@ module ps_qso_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine ps_qso_init(this, filename)
+  subroutine ps_qso_init(this, filename, ierr)
     type(ps_qso_t),   intent(inout) :: this
     character(len=*), intent(in)    :: filename
+    integer,          intent(out)   :: ierr
 
-    integer :: ll, ierr, ii, ic, jc
+    integer :: ll, ii, ic, jc
     type(pseudo_t) :: pseudo
 
     PUSH_SUB(ps_qso_init)
@@ -72,7 +73,7 @@ contains
       call messages_write("Pseudopotential file '" // trim(filename) // "' not found")
       call messages_fatal()
     end if
-    
+
     this%valence_charge = pseudo_valence_charge(pseudo)
     this%mesh_spacing = pseudo_mesh_spacing(pseudo)
     this%mass = pseudo_mass(pseudo)

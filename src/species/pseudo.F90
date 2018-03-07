@@ -52,6 +52,13 @@ module pseudo_oct_m
     PSEUDO_TYPE_ULTRASOFT         = 30,       &
     PSEUDO_TYPE_NORM_CONSERVING   = 31,       &
     PSEUDO_TYPE_KLEINMAN_BYLANDER = 32
+
+  !these values have to match with those on pseudo_low.cc
+  integer, parameter, public ::                &
+    PSEUDO_STATUS_OKAY                  = 0,   &
+    PSEUDO_STATUS_FILE_NOT_FOUND        = 455, &
+    PSEUDO_STATUS_FORMAT_NOT_SUPPORTED  = 456, &
+    PSEUDO_STATUS_UNKNOWN_FORMAT        = 457
   
   type pseudo_t
     private
