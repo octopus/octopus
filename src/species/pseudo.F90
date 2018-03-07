@@ -36,7 +36,8 @@ module pseudo_oct_m
     pseudo_mesh_spacing,        &
     pseudo_mass,                &
     pseudo_lmax,                &
-    pseudo_llocal
+    pseudo_llocal,              &
+    pseudo_nchannels
 
   !these values have to match with those on base.hpp
   integer, parameter, public ::               &
@@ -107,6 +108,13 @@ module pseudo_oct_m
       
       type(pseudo_t),   intent(out)   :: pseudo
     end function pseudo_llocal
+
+    integer function pseudo_nchannels(pseudo)
+      import :: pseudo_t
+      implicit none
+      
+      type(pseudo_t),   intent(out)   :: pseudo
+    end function pseudo_nchannels
     
   end interface
   

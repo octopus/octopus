@@ -84,13 +84,12 @@ contains
     this%mesh_spacing = pseudo_mesh_spacing(pseudo)
     this%mass = pseudo_mass(pseudo)
     this%lmax = pseudo_lmax(pseudo)
-
+    this%llocal = pseudo_llocal(pseudo) 
+    this%nchannels = pseudo_nchannels(pseudo)
+   
     this%oncv = (pseudo_type(pseudo) == PSEUDO_TYPE_KLEINMAN_BYLANDER)
     
     if(.not. this%oncv) then
-      this%nchannels = 1
-      
-      ierr = xml_get_tag_value(qso_file, 'llocal', this%llocal)
       
       do ii = 0, this%lmax
         ierr = xml_file_tag(qso_file, 'projector', ii, tag)
@@ -115,10 +114,6 @@ contains
       end do
 
     else
-
-      this%llocal = -1
-      this%lmax = -1
-      this%nchannels = -1
 
       ierr = xml_file_tag(qso_file, 'local_potential', 0, tag)
       ASSERT(ierr == 0)

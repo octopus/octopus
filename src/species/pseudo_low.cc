@@ -71,5 +71,9 @@ extern "C" fint FC_FUNC_(pseudo_llocal, PSEUDO_LLOCAL)(pseudopotential::base * p
   return pseudo->llocal();
 }
 
+extern "C" fint FC_FUNC_(pseudo_nchannels, PSEUDO_NCHANNELS)(pseudopotential::base * pseudo){
+  return pseudo->nchannels();
+}
+
 
 
