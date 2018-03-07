@@ -38,6 +38,7 @@ module ps_qso_oct_m
 
   type ps_qso_t
     logical            :: oncv
+    logical            :: nlcc
     integer            :: atomic_number
     FLOAT              :: mass
     FLOAT              :: valence_charge
@@ -50,6 +51,7 @@ module ps_qso_oct_m
     FLOAT, allocatable :: wavefunction(:, :)
     FLOAT, allocatable :: projector(:, :, :)
     FLOAT, allocatable :: dij(:, :, :)
+    FLOAT, allocatable :: nlcc_density(:)
   end type ps_qso_t
 
 contains
@@ -102,7 +104,7 @@ contains
       
       do ll = 0, this%lmax
         do ic = 0, this%nchannels
-          call pseudo_projector(ll, ic, this%projector(:, ll, ic))
+          call pseudo_projector(pseudo, ll, ic, this%projector(:, ll, ic))
         end do
       end do
 
@@ -117,6 +119,12 @@ contains
         end do
       end do
 
+    end if
+
+    this%nlcc = pseudo_has_nlcc(pseudo)
+    if(this%nlcc) then
+      SAFE_ALLOCATE(this%nlcc_density(1:this%grid_size))
+      call pseudo_nlcc_density(pseudo, this%nlcc_density)
     end if
     
     if(.not. this%oncv) call ps_qso_check_normalization(this)
@@ -165,6 +173,7 @@ contains
     SAFE_DEALLOCATE_A(this%wavefunction)
     SAFE_DEALLOCATE_A(this%projector)
     SAFE_DEALLOCATE_A(this%dij)
+    SAFE_DEALLOCATE_A(this%nlcc_density)
 
     POP_SUB(ps_qso_end)
   end subroutine ps_qso_end

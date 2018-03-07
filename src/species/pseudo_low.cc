@@ -112,3 +112,12 @@ extern "C" void FC_FUNC_(pseudo_radial_function, PSEUDO_RADIAL_FUNCTION)(const p
 }
 
 
+extern "C" fint FC_FUNC_(pseudo_has_nlcc_low, PSEUDO_HAS_NLCC_LOW)(const pseudopotential::base ** pseudo){
+  return fint((*pseudo)->has_nlcc());
+}
+
+extern "C" void FC_FUNC_(pseudo_nlcc_density, PSEUDO_NLCC_DENSITY)(const pseudopotential::base ** pseudo, double * nlcc_density){
+  std::vector<double> val;
+  (*pseudo)->nlcc_density(val);
+  for(unsigned i = 0; i < val.size(); i++) nlcc_density[i] = val[i];
+}
