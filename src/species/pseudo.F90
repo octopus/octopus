@@ -131,7 +131,46 @@ module pseudo_oct_m
       type(pseudo_t),   intent(in)    :: pseudo
       real(8),          intent(in)    :: local_potential(:)
     end subroutine pseudo_local_potential
-    
+
+    subroutine pseudo_projector(pseudo, l, ic, projector)
+      import :: pseudo_t
+      implicit none
+      
+      type(pseudo_t),   intent(in)    :: pseudo
+      integer,          intent(in)    :: l
+      integer,          intent(in)    :: ic
+      real(8),          intent(in)    :: projector(:)
+    end subroutine pseudo_projector
+
+    real(8) function pseudo_dij(pseudo, l, ic)
+      import :: pseudo_t
+      implicit none
+      
+      type(pseudo_t),   intent(in)    :: pseudo
+      integer,          intent(in)    :: l
+      integer,          intent(in)    :: ic
+    end function pseudo_dij
+
+    subroutine pseudo_radial_potential(pseudo, l, ic, radial_potential)
+      import :: pseudo_t
+      implicit none
+      
+      type(pseudo_t),   intent(in)    :: pseudo
+      integer,          intent(in)    :: l
+      integer,          intent(in)    :: ic
+      real(8),          intent(in)    :: radial_potential(:)
+    end subroutine pseudo_radial_potential
+
+    subroutine pseudo_radial_function(pseudo, l, ic, radial_function)
+      import :: pseudo_t
+      implicit none
+      
+      type(pseudo_t),   intent(in)    :: pseudo
+      integer,          intent(in)    :: l
+      integer,          intent(in)    :: ic
+      real(8),          intent(in)    :: radial_function(:)
+    end subroutine pseudo_radial_function
+
   end interface
   
 contains

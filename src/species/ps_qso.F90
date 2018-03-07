@@ -60,20 +60,11 @@ contains
     character(len=*), intent(in)    :: filename
 
     integer :: ll, size, ierr, ii, ic, jc
-    type(xml_file_t) :: qso_file
-    type(xml_tag_t)  :: tag
     type(pseudo_t) :: pseudo
 
     PUSH_SUB(ps_qso_init)
 
     call pseudo_init(pseudo, filename, ierr)
-
-    if(ierr /= 0) then
-      call messages_write("Pseudopotential file '" // trim(filename) // "' not found")
-      call messages_fatal()
-    end if
-    
-    ierr = xml_file_init(qso_file, trim(filename))
 
     if(ierr /= 0) then
       call messages_write("Pseudopotential file '" // trim(filename) // "' not found")
@@ -92,27 +83,13 @@ contains
     this%grid_size = pseudo_mesh_size(pseudo)
     
     if(.not. this%oncv) then
+
+      SAFE_ALLOCATE(this%potential(1:size, 0:this%lmax))
+      SAFE_ALLOCATE(this%wavefunction(1:size, 0:this%lmax))
       
-      do ii = 0, this%lmax
-        ierr = xml_file_tag(qso_file, 'projector', ii, tag)
-        ierr = xml_tag_get_attribute_value(tag, 'l', ll)
-        ierr = xml_tag_get_attribute_value(tag, 'size', size)
-        
-        ASSERT(ll == ii)
-        
-        if(ii == 0) then
-          this%grid_size = size
-          SAFE_ALLOCATE(this%potential(1:size, 0:this%lmax))
-          SAFE_ALLOCATE(this%wavefunction(1:size, 0:this%lmax))
-        else
-          ASSERT(size == this%grid_size)
-        end if
-        
-        ierr = xml_get_tag_value(tag, 'radial_potential', size, this%potential(:, ll))
-        ierr = xml_get_tag_value(tag, 'radial_function', size, this%wavefunction(:, ll))
-        
-        call xml_tag_end(tag)
-        
+      do ll = 0, this%lmax
+        call pseudo_radial_potential(pseudo, ll, this%potential(:, ll))
+        call pseudo_radial_function(pseudo, ll, this%wavefunction(:, ll))
       end do
 
     else
@@ -131,19 +108,17 @@ contains
 
       SAFE_ALLOCATE(this%dij(0:this%lmax, 1:this%nchannels, 1:this%nchannels))
 
-      do ii = 0, (this%lmax + 1)*this%nchannels**2 - 1
-        ierr = xml_file_tag(qso_file, 'd_ij', ii, tag)
-        ierr = xml_tag_get_attribute_value(tag, 'l', ll)
-        ierr = xml_tag_get_attribute_value(tag, 'i', ic)
-        ierr = xml_tag_get_attribute_value(tag, 'j', jc)
-        ierr = xml_get_tag_value(tag, 1, this%dij(ll:ll, ic, jc))
-        call xml_tag_end(tag)
+      this%dij = CNST(0.0)
+      do ll = 0, this%lmax
+        do ic = 0, this%nchannels
+          do jc = 0, this%nchannels
+            call pseudo_dij(pseudo, ll, ic, jc, this%dij(ll:ll, ic, jc))
+          end do
+        end do
       end do
-      
+
     end if
     
-    call xml_file_end(qso_file)
-
     if(.not. this%oncv) call ps_qso_check_normalization(this)
     
     POP_SUB(ps_qso_init)

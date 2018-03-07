@@ -95,5 +95,20 @@ extern "C" void FC_FUNC_(pseudo_projector, PSEUDO_PROJECTOR)(const pseudopotenti
   for(unsigned i = 0; i < val.size(); i++) projector[i] = val[i];
 }
 
+extern "C" double FC_FUNC_(pseudo_dij, PSEUDO_DIJ)(const pseudopotential::base ** pseudo, fint * l, fint * ic, fint * jc){
+  return (*pseudo)->d_ij(*l, *ic, *jc);
+}
+
+extern "C" void FC_FUNC_(pseudo_radial_potential, PSEUDO_RADIAL_POTENTIAL)(const pseudopotential::base ** pseudo, fint * l,double * radial_potential){
+  std::vector<double> val;
+  (*pseudo)->radial_potential(*l, val);
+  for(unsigned i = 0; i < val.size(); i++) radial_potential[i] = val[i];
+}
+
+extern "C" void FC_FUNC_(pseudo_radial_function, PSEUDO_RADIAL_FUNCTION)(const pseudopotential::base ** pseudo, fint * l, double * radial_function){
+  std::vector<double> val;
+  (*pseudo)->radial_function(*l, val);
+  for(unsigned i = 0; i < val.size(); i++) radial_function[i] = val[i];
+}
 
 
