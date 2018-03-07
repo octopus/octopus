@@ -123,25 +123,10 @@ contains
 
       SAFE_ALLOCATE(this%projector(1:this%grid_size, 0:3, 1:2))
       
-      do ii = 0, 7
-       
-        ierr = xml_file_tag(qso_file, 'projector', ii, tag)
-
-        if(ierr /= 0) exit
-
-        ierr = xml_tag_get_attribute_value(tag, 'l', ll)
-        ierr = xml_tag_get_attribute_value(tag, 'i', ic)
-        ierr = xml_tag_get_attribute_value(tag, 'size', size)
-
-        ASSERT(size == this%grid_size)
-        
-        this%lmax = max(this%lmax, ll)
-        this%nchannels = max(this%nchannels, ic)
-
-        ierr = xml_get_tag_value(tag, this%grid_size, this%projector(:, ll, ic))
-
-        call xml_tag_end(tag)
-        
+      do ll = 0, this%lmax
+        do ic = 0, this%nchannels
+          call pseudo_projector(ll, ic, this%projector(:, ll, ic))
+        end do
       end do
 
       SAFE_ALLOCATE(this%dij(0:this%lmax, 1:this%nchannels, 1:this%nchannels))

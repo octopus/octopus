@@ -84,9 +84,15 @@ extern "C" fint FC_FUNC_(pseudo_has_projectors_low, PSEUDO_HAS_PROJECTORS_LOW)(c
 }
 
 extern "C" void FC_FUNC_(pseudo_local_potential, PSEUDO_LOCAL_POTENTIAL)(const pseudopotential::base ** pseudo, double * local_potential){
-  std::vector<double> locpot;
-  (*pseudo)->local_potential(locpot);
-  for(unsigned i = 0; i < locpot.size(); i++) local_potential[i] = locpot[i];
+  std::vector<double> val;
+  (*pseudo)->local_potential(val);
+  for(unsigned i = 0; i < val.size(); i++) local_potential[i] = val[i];
+}
+
+extern "C" void FC_FUNC_(pseudo_projector, PSEUDO_PROJECTOR)(const pseudopotential::base ** pseudo, fint * l, fint * ic, double * projector){
+  std::vector<double> val;
+  (*pseudo)->projector(*l, *ic, val);
+  for(unsigned i = 0; i < val.size(); i++) projector[i] = val[i];
 }
 
 
