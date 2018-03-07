@@ -126,9 +126,11 @@ contains
       SAFE_ALLOCATE(this%nlcc_density(1:this%grid_size))
       call pseudo_nlcc_density(pseudo, this%nlcc_density)
     end if
+
+    call pseudo_end(pseudo)
     
     if(.not. this%oncv) call ps_qso_check_normalization(this)
-    
+
     POP_SUB(ps_qso_init)
   end subroutine ps_qso_init
 
