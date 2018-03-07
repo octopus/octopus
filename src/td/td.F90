@@ -455,17 +455,17 @@ contains
 
       if(iter > 1) then
         if( ((iter-1)*td%dt <= hm%ep%kick%time) .and. (iter*td%dt > hm%ep%kick%time) ) then
-          if(.not. cmplxscl) then
-            if( .not.hm%pcm%kick_like ) then
+          if( .not.hm%pcm%kick_like ) then
+            if(.not. cmplxscl) then
               call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick)
             else
-              call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, pcm = hm%pcm)
+              call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, theta = hm%cmplxscl%theta)
             endif
           else
-            if( .not.hm%pcm%kick_like ) then
-              call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, hm%cmplxscl%theta)
+            if(.not. cmplxscl) then
+              call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, pcm = hm%pcm)
             else
-              call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, hm%cmplxscl%theta, pcm = hm%pcm)
+              call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, theta = hm%cmplxscl%theta, pcm = hm%pcm)
             endif
           end if
           call td_write_kick(gr%mesh, hm%ep%kick, sys%outp, geo, iter)
@@ -764,17 +764,17 @@ contains
       ! I apply the delta electric field *after* td_write_iter, otherwise the
       ! dipole matrix elements in write_proj are wrong
       if(hm%ep%kick%time  ==  M_ZERO) then
-        if(.not. cmplxscl) then
-          if( .not.hm%pcm%kick_like ) then
+        if( .not.hm%pcm%localf ) then
+          if(.not. cmplxscl) then
             call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick)
           else
-            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, pcm = hm%pcm)
+            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, theta = hm%cmplxscl%theta)
           endif
         else
-          if( .not.hm%pcm%kick_like ) then
-            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, hm%cmplxscl%theta)
+          if(.not. cmplxscl) then
+            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, pcm = hm%pcm)
           else
-            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, hm%cmplxscl%theta, pcm = hm%pcm)
+            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, theta = hm%cmplxscl%theta, pcm = hm%pcm)
           endif
         end if
         call td_write_kick(gr%mesh, hm%ep%kick, sys%outp, geo, 0)

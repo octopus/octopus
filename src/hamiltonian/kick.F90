@@ -782,7 +782,7 @@ contains
       end if
 
       if( present(pcm) ) then
-        if ( pcm%kick_like ) then
+        if ( pcm%localf ) then
       		SAFE_ALLOCATE(kick_function_interpolate(1:mesh%np_part))
           kick_function_interpolate = M_ZERO
       		if(.not. cmplxscl) then
@@ -792,8 +792,8 @@ contains
       		end if
           SAFE_ALLOCATE(kick_function_real(1:mesh%np_part))
           kick_function_real = DREAL(kick_function_interpolate)
-          call pcm_calc_pot_rs(pcm, mesh, kick = kick_function_real )
-          kick_function = kick_function + pcm%v_kick_rs
+          call pcm_calc_pot_rs(pcm, mesh, kick = kick_function_real, kick_time = .true.)
+          if ( pcm%kick_like ) kick_function = kick_function + pcm%v_kick_rs
         end if
       end if
 
