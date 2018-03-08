@@ -85,6 +85,7 @@ module xc_oct_m
     logical :: xcd_minimum
     logical :: xcd_normalize
     logical :: parallel
+    FLOAT   :: VDW_cutoff !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   end type xc_t
 
   FLOAT, parameter :: tiny      = CNST(1.0e-12)

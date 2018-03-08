@@ -392,13 +392,13 @@ contains
 
 
 
-    !%Variable VDW_ts_cutoff
-    !%Type float
-    !%Default 10.0
-    !%Section Hamiltonian::XC
-    !%Description
-    !% Set the value of the cutoff for the VDW interaction in periodic system in the Tkatchenko and Scheffler (vdw_ts) scheme only. 
-    !%End
+!!    !%Variable VDW_ts_cutoff
+!!    !%Type float
+!!    !%Default 10.0
+!!    !%Section Hamiltonian::XC
+!!    !%Description
+!!    !% Set the value of the cutoff for the VDW interaction in periodic system in the Tkatchenko and Scheffler (vdw_ts) scheme only. 
+!!    !%End
 
 
 
@@ -926,7 +926,8 @@ contains
       FLOAT, allocatable :: coords(:, :)
       FLOAT :: vdw_stress(1:3, 1:3), latvec(1:3, 1:3)
       integer, allocatable :: atnum(:)
-      
+      type(simul_box_t) :: sb 
+
       PUSH_SUB(v_ks_calc_start.v_a_xc)
       call profiling_in(prof, "XC")
 
@@ -1028,7 +1029,8 @@ contains
 
         case(OPTION__VDWCORRECTION__VDW_TS)
           vvdw = CNST(0.0)
-          call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, st%rho, ks%calc%energy%vdw, vvdw, ks%calc%vdw_forces)
+          call parse_variable('PeriodicDimensions', 0, sb%periodic_dim)
+          call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, sb, st%rho, ks%calc%energy%vdw, vvdw, ks%calc%vdw_forces)
 
         case(OPTION__VDWCORRECTION__VDW_D3)
 

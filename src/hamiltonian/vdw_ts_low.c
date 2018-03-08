@@ -434,7 +434,7 @@ void fdamp (const double rr, const double r0ab,
 //	       double * rr, double * rr2, double * rr6, double *rr7) {
 
 
-void distance (const int iatom, const int jatom, const double coordinates[],const double coordinates_p[],
+void distance_p (const int iatom, const int jatom, const double coordinates[],const double coordinates_p[],
                double * rr, double * rr2, double * rr6, double *rr7) {
 
   double x_ij = coordinates[3*iatom + 0] - coordinates_p[3*jatom + 0];
@@ -458,8 +458,9 @@ void distance (const int iatom, const int jatom, const double coordinates[],cons
 //void vdw_calculate (const int natoms, const int zatom[], const double coordinates[], const double volume_ratio[], 
 //		    double * energy, double force[], double derivative_coeff[]) {
 
-void vdw_calculate (const int natoms, const int natoms_p, const int zatom[], const int zatom_p[], const double coordinates[], const double coordinates_p[],
-const double volume_ratio[], const double volume_ratio_p[], double * energy, double force[], double derivative_coeff[]) {
+void vdw_calculate (const int natoms, const int natoms_p, const int zatom[], const int zatom_p[], const double coordinates[], 
+const double coordinates_p[], const double volume_ratio[], const double volume_ratio_p[], double * energy, 
+double force[], double derivative_coeff[]) {
 
   
   int ia;
@@ -473,9 +474,9 @@ const double volume_ratio[], const double volume_ratio_p[], double * energy, dou
     double c6_a, alpha_a, r0_a;
     int ib;
     
-    force[3*ia + 0] = 0.0;
-    force[3*ia + 1] = 0.0;
-    force[3*ia + 2] = 0.0;
+    // force[3*ia + 0] = 0.0; In this version the forces are initialised in the .F90 file
+    // force[3*ia + 1] = 0.0;
+    // force[3*ia + 2] = 0.0;
 
    // derivative_coeff[ia] = 0.0;
     
@@ -488,7 +489,7 @@ const double volume_ratio[], const double volume_ratio_p[], double * energy, dou
 
       double c6_b, alpha_b, r0_b;
 
-      if (ia == ib) continue;
+      if (ia == ib && natoms>1) continue;
 
       // Pair-wise calculation of separations.
       double rr, rr2, rr6, rr7;
@@ -550,10 +551,11 @@ const double volume_ratio[], const double volume_ratio_p[], double * energy, dou
 /* This is a wrapper to be called from Fortran. */
 
 
-void FC_FUNC_(f90_vdw_calculate, F90_VDW_CALCULATE) (const int * natoms, const int natoms_p, const int zatom[], const int zatom_p[], const double coordinates[], const double coordinates_p[], 
-const double volume_ratio[], const double volume_ratio_p[], double * energy, double force[], double derivative_coeff[]) {
-  vdw_calculate(*natoms, natoms_p, zatom, zatom_p, coordinates, coordinates_p, volume_ratio, volume_ratio_p, energy, force, derivative_coeff);
-}
+void FC_FUNC_(f90_vdw_calculate, F90_VDW_CALCULATE) (const int * natoms, const int natoms_p, const int zatom[], 
+const int zatom_p[], const double coordinates[], const double coordinates_p[], const double volume_ratio[], 
+const double volume_ratio_p[], double * energy, double force[], double derivative_coeff[]) {
+vdw_calculate(*natoms, natoms_p, zatom, zatom_p, coordinates, coordinates_p, volume_ratio, volume_ratio_p, 
+energy, force, derivative_coeff);}
 #endif
 
 /* Main test function. */
