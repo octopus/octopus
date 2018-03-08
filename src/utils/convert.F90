@@ -984,17 +984,17 @@ contains
     end if
 
     !Write down the results
-    call io_mkdir('./projections')
-    pr_info = io_open(file='./projections/projections.info', action='write')
-    call messages_print_stress(pr_info, "Projections from Convert Utility")
     if (mpi_world%rank == 0) then
+      call io_mkdir('./projections')
+      pr_info = io_open(file='./projections/projections.info', action='write')
+      call messages_print_stress(pr_info, "Projections from Convert Utility")
       write(pr_info,'(a,i3)') 'Number of states = ', st%nst
       call messages_print_stress(pr_info, "Eigenvalues & Occupations")
       write(frmt, '(a1,i0,a11)') "(",st%nst,"(g15.6,1x))"
       write(pr_info, fmt=trim(frmt)) ( st%eigenval(ik, 1), ik=1,st%nst )
       write(pr_info, fmt=trim(frmt)) ( st%occ(ik, 1), ik=1,st%nst )
+      call messages_print_stress(pr_info, "")
     end if
-    call messages_print_stress(pr_info, "")
 
     if (states_are_real(st)) then
       SAFE_ALLOCATE(projections(1:st%nst, 1:st%nst, st%d%nik))
@@ -1021,7 +1021,8 @@ contains
     do i_op = 1, n_operations
       tmp = M_ZERO
       call parse_block_string(blk, i_op-1, 0, scalar_operator_expression)
-      call messages_print_stress(pr_info, "Scalar Operator = "//trim(scalar_operator_expression) )
+      if (mpi_world%rank == 0) &
+        call messages_print_stress(pr_info, "Scalar Operator = "//trim(scalar_operator_expression) )
 
       do ip = 1, mesh%np
         call mesh_r(mesh, ip, rr, coords = xx)
