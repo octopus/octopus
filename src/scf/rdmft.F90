@@ -67,6 +67,7 @@ module rdmft_oct_m
     integer  :: iter
     integer  :: n_twoint !number of unique two electron integrals
     logical  :: do_basis
+    logical  :: dressed
     FLOAT    :: mu, occsum, qtot, scale_f, toler, conv_ener, maxFO
     FLOAT, allocatable   :: eone(:), eone_int(:,:), twoint(:), hartree(:,:), exchange(:,:), evalues(:)   
     FLOAT, allocatable   :: vecnat(:,:), Coul(:,:,:), Exch(:,:,:) 
@@ -326,6 +327,52 @@ contains
       !%End
 
       call parse_variable('RDMBasis',.true., rdm%do_basis)
+      
+      !%Variable RDMDressedState
+      !%Type logical
+      !%Default no 
+      !%Section SCF::RDMFT
+      !%Description
+      !% If true, the dressed electron photon state formalism can be applied
+      !% WARNING: very experimental
+      !% only works for 1 mode and 1d electrons, coordinate 1- electron, coordinate 2 - photon
+      !%End
+
+      call parse_variable('RDMDressedState',.false., rdm%dressed)
+	  
+!	  !%Variable RDMParamLambda
+!      !%Type float
+!      !%Default 1e-6 Ha !!neds to be changed!
+!      !%Section SCF::RDMFT
+!      !%Description
+!      !% interaction strength in dressed state formalism.
+!      !%End
+
+      call parse_variable('RDMParamLambda', CNST(1.0e-7), rdm%param_lamda)
+      
+!      !%Variable RDMParamOmega
+!      !%Type float
+!      !%Default 1e-6 Ha !!neds to be changed!
+!      !%Section SCF::RDMFT
+!      !%Description
+!      !% mode frequency in dressed state formalism.
+!      !%End
+
+      call parse_variable('RDMParamOmega', CNST(1.0e-7), rdm%param_omega)
+      
+      if (rdm%dressed) then
+        if (psolver%method .neq. POISSON_DRDMFT) then
+          message(1) = "dressed state formalism need PoissoSolver = POISSON_DRDMFT"
+          call messages_fatal(1)
+        end if
+        
+        if (rdm%do_basis.eqv..true.) then
+          message(1) = "dressed state formalism works (probably) not with basis set implementation"
+          message(2) = "instead RDMBasis=no needs to be set"
+          call messages_fatal(1)
+        end if
+
+      end if
 
       ! shortcuts
       rdm%gr   => gr

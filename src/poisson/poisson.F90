@@ -105,6 +105,7 @@ module poisson_oct_m
     POISSON_ISF           =  8,         &
     POISSON_LIBISF        = 10,         &
     POISSON_POKE          = 11,         &
+    POISSON_DRDMFT        = 12,         &
     POISSON_NO            = -99,        &
     POISSON_NULL          = -999
   
@@ -125,6 +126,8 @@ module poisson_oct_m
     integer :: nslaves
     FLOAT :: theta !< cmplxscl
     FLOAT :: qq(MAX_DIM) !< for exchange in periodic system
+    FLOAT :: dressed_lambda
+    FLOAT :: dressed_omega
     type(poisson_fmm_t)  :: params_fmm
 #ifdef HAVE_MPI2
     integer         :: intercomm
@@ -235,6 +238,8 @@ contains
     !% BigDFT</a> documentation. Tested with the version bigdft-1.7.6.
     !%Option poke 11
     !% (Experimental) Solver from the Poke library.
+    !%Option drdmft 12
+    !%The poisson solver for electron-photon rdmft
     !%End
 
     default_solver = POISSON_FFT
@@ -264,10 +269,32 @@ contains
 
     call parse_variable('PoissonSolver', default_solver, this%method)
     if(.not.varinfo_valid_option('PoissonSolver', this%method)) call messages_input_error('PoissonSolver')
+    
+    if (this%method == POISSON_DRDMFT) then
+      !%Variable RDMParamLambda
+      !%Type float
+      !%Default 1e-6 Ha !!neds to be changed!
+      !%Section SCF::RDMFT
+      !%Description
+      !% interaction strength in dressed state formalism.
+      !%End
+	  call parse_variable('RDMParamLambda', CNST(1.0e-7), this%dressed_lambda)
+	  
+	  !%Variable RDMParamOmega
+      !%Type float
+      !%Default 1e-6 Ha !!neds to be changed!
+      !%Section SCF::RDMFT
+      !%Description
+      !% mode frequency in dressed state formalism.
+      !%End
+	  call parse_variable('RDMParamOmega', CNST(1.0e-7), this%dressed_omega)
+    end if
    
     select case(this%method)
     case (POISSON_DIRECT_SUM)
       str = "direct sum"
+    case (POISSON_DRDMFT)
+      str = "direct sum with dressed state interaction"   
     case (POISSON_FMM)
       str = "fast multipole method"
     case (POISSON_FFT)
@@ -397,9 +424,9 @@ contains
       end if
 
     case(2)
-
-      if( (this%method /= POISSON_FFT) .and. (this%method /= POISSON_DIRECT_SUM) ) then
-        message(1) = 'A 2D system may only use fft or direct_sum Poisson solvers.'
+    
+      if( (this%method /= POISSON_FFT) .and. (this%method /= POISSON_DIRECT_SUM) .and. (this%method /= POISSON_DRDMFT)) then
+        message(1) = 'A 2D system may only use fft or direct_sum Poisson solvers. Exeption for dressed state formalism'
         call messages_fatal(1)
       end if
 
