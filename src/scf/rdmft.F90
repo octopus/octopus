@@ -69,6 +69,7 @@ module rdmft_oct_m
     logical  :: do_basis
     logical  :: dressed
     FLOAT    :: mu, occsum, qtot, scale_f, toler, conv_ener, maxFO
+	!FLOAT    :: param_lamda,param_omega
     FLOAT, allocatable   :: eone(:), eone_int(:,:), twoint(:), hartree(:,:), exchange(:,:), evalues(:)   
     FLOAT, allocatable   :: vecnat(:,:), Coul(:,:,:), Exch(:,:,:) 
     integer, allocatable :: i_index(:), j_index(:), k_index(:), l_index(:) 
@@ -348,7 +349,7 @@ contains
 !      !% interaction strength in dressed state formalism.
 !      !%End
 
-      call parse_variable('RDMParamLambda', CNST(1.0e-7), rdm%param_lamda)
+!!      call parse_variable('RDMParamLambda', CNST(1.0e-7), rdm%param_lamda)
       
 !      !%Variable RDMParamOmega
 !      !%Type float
@@ -358,10 +359,10 @@ contains
 !      !% mode frequency in dressed state formalism.
 !      !%End
 
-      call parse_variable('RDMParamOmega', CNST(1.0e-7), rdm%param_omega)
+!      call parse_variable('RDMParamOmega', CNST(1.0e-7), rdm%param_omega)
       
       if (rdm%dressed) then
-        if (psolver%method .neq. POISSON_DRDMFT) then
+        if (psolver%method .ne. POISSON_DRDMFT) then
           message(1) = "dressed state formalism need PoissoSolver = POISSON_DRDMFT"
           call messages_fatal(1)
         end if
