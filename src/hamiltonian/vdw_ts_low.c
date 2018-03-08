@@ -462,7 +462,12 @@ void vdw_calculate (const int natoms, const int natoms_p, const int zatom[], con
 const double coordinates_p[], const double volume_ratio[], const double volume_ratio_p[], double * energy, 
 double force[], double derivative_coeff[]) {
 
-  
+  ///////////////////////////////////////////////////////////////////////////////
+  //printf ("entre dans le code C\n");
+  //printf("natoms= %i \n", natoms);
+  //printf("natomsp= %i \n ", natoms_p);
+
+/////////////////////////////////////////////  
   int ia;
 
  // *energy = 0.0;
@@ -470,7 +475,7 @@ double force[], double derivative_coeff[]) {
   // Loop to calculate the pair-wise Van der Waals energy correction.
   // Loop for atoms in the box
   for (ia = 0; ia < natoms; ia++) {
-
+    //printf ("marqueur 1");
     double c6_a, alpha_a, r0_a;
     int ib;
     
@@ -479,24 +484,23 @@ double force[], double derivative_coeff[]) {
     // force[3*ia + 2] = 0.0;
 
    // derivative_coeff[ia] = 0.0;
-    
+    //printf ("marqueur 2");
     get_vdw_params(zatom[ia], &c6_a, &alpha_a, &r0_a);
-    
+    //printf ("marqueur 3 \n");
     // Loop for atoms that may be not in the box - in the periodic condition case 
     // for (ib = 0; ib < natoms; ib++) {
-      for (ib = 0; ib < natoms_p; ib++) {
-
+      for (ib = 0; ib < natoms; ib++) {
 
       double c6_b, alpha_b, r0_b;
 
       if (ia == ib && natoms>1) continue;
-
+      //printf ("marqueur 5");
       // Pair-wise calculation of separations.
       double rr, rr2, rr6, rr7;
       distance_p(ia, ib, coordinates, coordinates_p, &rr, &rr2, &rr6, &rr7);
-      
+      //printf ("marqueur 6");
       get_vdw_params(zatom_p[ib], &c6_b, &alpha_b, &r0_b);
-      
+      //printf ("marqueur 7");
       // Determination of c6abfree, for isolated atoms a and b.
       double num = 2.0*c6_a*c6_b;
       double den = (alpha_b/alpha_a)*c6_a + (alpha_a/alpha_b)*c6_b;
@@ -514,7 +518,7 @@ double force[], double derivative_coeff[]) {
       double dffdrab;
       double dffdr0;
       fdamp(rr, r0ab, &ff, &dffdrab, &dffdr0);
-      
+      //printf ("marqueur 8");
       // Pair-wise correction to energy.
       *energy += -0.5*ff*c6ab/rr6;
       
@@ -529,13 +533,13 @@ double force[], double derivative_coeff[]) {
       
       // Calculation of the pair-wise partial energy derivative with respect to the volume ratio of atom A.
       double deabdvra = -dffdvra*c6ab/rr6 - ff*volume_ratio_p[ib]*c6abfree/rr6;
-      
+      //printf ("marqueur 9");
       force[3*ia + 0] += -deabdrab*(coordinates[3*ia + 0] - coordinates_p[3*ib + 0])/rr;
       force[3*ia + 1] += -deabdrab*(coordinates[3*ia + 1] - coordinates_p[3*ib + 1])/rr;
       force[3*ia + 2] += -deabdrab*(coordinates[3*ia + 2] - coordinates_p[3*ib + 2])/rr;
-      
+      //printf ("marqueur 10");
       derivative_coeff[ia] += deabdvra;
-      
+      //printf ("marqueur 11\n");
       // Print information controls.
       //printf("Distance between atoms %i and %i = %f.\n", ia+1, ib+1, rr);
       //printf("Atom %i, c6= %f, alpha= %f, r0= %f.\n", ia+1, c6_a, alpha_a, r0_a);

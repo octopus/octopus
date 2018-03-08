@@ -98,9 +98,7 @@ contains
         this%c6abfree(ispecies, jspecies) = num/den
       end do
     end do
-
     call hirshfeld_init(this%hirshfeld, der%mesh, geo, st)
-
     POP_SUB(vdw_ts_init)
   end subroutine vdw_ts_init
 
@@ -154,7 +152,7 @@ contains
 
     type(periodic_copy_t) :: pc
     type(xc_t) :: xcs
-    integer :: iatom, jatom, ispecies, jspecies, ip, idir, jcopy
+    integer :: iatom, jatom, ispecies, jspecies, ip, idir, jcopy, natom_for_p, natom_for_pp
     FLOAT :: rr, c6ab, c6abfree, ff, dffdrr, dffdr0
     FLOAT, allocatable :: c6(:), r0(:), volume_ratio(:), volume_ratio_p(:), dvadens(:), dvadrr(:), coordinates(:,:), &
     coordinates_p(:,:), derivative_coeff(:), derivative_coeff_i(:), force_i(:,:)
@@ -183,10 +181,8 @@ contains
     derivative_coeff(1:geo%natoms) = M_ZERO
     force(1:3, 1:geo%natoms) = M_ZERO
 !---------------------------------------------------------------------------------!   
-    !print*, "test compiled"
-    !print*, "simul_box_is_periodic(sb)", sb%periodic_dim
      if(sb%periodic_dim > 0) then 
-      print*, "periodic ok"
+      !print*, "periodic ok"
       SAFE_ALLOCATE(force_i(1:3,1:1)) 
       SAFE_ALLOCATE(zatom(1:1))
       SAFE_ALLOCATE(zatom_p(1:1))
@@ -195,61 +191,52 @@ contains
       SAFE_ALLOCATE(coordinates(1:3, 1:1))
       SAFE_ALLOCATE(coordinates_p(1:3, 1:1))
       SAFE_ALLOCATE(derivative_coeff_i(1:1))
-      print*, "nbr atom dans la boite", geo%natoms
+
+      natom_for_p = 1
+      natom_for_pp = 1
+      !print*, "nbr atom dans la boite", geo%natoms
       do iatom = 1, geo%natoms ! For atom in the box
-        print*, "Boucle sur atom dans la boite", iatom
+        !print*, "Boucle sur atom dans la boite", iatom
         force_i(1:3, 1) = M_ZERO  
         derivative_coeff_i(1:1) = M_ZERO 
         ispecies = species_index(geo%atom(iatom)%species)
-        
-       ! print*, volume_ratio, volume_ratio(1)
         call hirshfeld_volume_ratio(this%hirshfeld, iatom, density, volume_ratio(1))
-        print*, "volume ratio", volume_ratio, volume_ratio(1)
 
         c6(iatom) = volume_ratio(1)**2*this%c6free(ispecies)
         r0(iatom) = volume_ratio(1)**(CNST(1.0)/CNST(3.0))*this%r0free(ispecies)
       
-        print*, species_label(geo%atom(iatom)%species), "c6 ", c6(iatom), this%c6free(ispecies)
-        !print*, species_label(geo%atom(iatom)%species), "r0 ", r0(iatom), this%r0free(ispecies)
+        !print*, species_label(geo%atom(iatom)%species), "c6 ", c6(iatom), this%c6free(ispecies)
 
         coordinates(1:3, 1) = geo%atom(iatom)%x(1:3)  
-        print*, "iatom ", iatom, ": ", coordinates(1:3, iatom)
+        !print*, "iatom ", iatom, ": ", coordinates(1:3, 1)
         zatom(1) = species_z(geo%atom(iatom)%species) 
-        !print*, species_label(geo%atom(iatom)%species),zatom(iatom)
 
          !manque un appel de periodicite ?
 
         do jatom = 1, geo%natoms
           if (.not. jatom == iatom) then ! Remove the self interaction case
           ! Build the atom i nearbourghood 
-            print*,'2e boucle', jatom
+           ! print*, '2e boucle', jatom
             zatom_p(1) = species_z(geo%atom(jatom)%species) 
             call hirshfeld_volume_ratio(this%hirshfeld, jatom, density, volume_ratio_p(1)) 
 
             !if (.not. species_represents_real_atom(geo%atom(iatom)%species)) cycle
             ! zi = species_zval(geo%atom(jatom)%species)  Remove?
-              print*,'vdw cutoff',xcs%VDW_cutoff
-
+                
               call periodic_copy_init(pc, sb, geo%atom(jatom)%x, xcs%VDW_cutoff)
-              print*,'periodic copy num(pc)', periodic_copy_num(pc)
-              if (periodic_copy_num(pc)>0) then
-                do jcopy = 1, periodic_copy_num(pc)    
-                  coordinates_p(1:3, 1) = periodic_copy_position(pc, sb, jcopy) ! Each periodic image is the same atom but at different position. 
-                  print*,'coordinate_p copied', coordinates_p 
-                  print*,'coordinate_p initial', geo%atom(jatom)%x(1:3)
+             ! print*, 'periodic copy num(pc)', periodic_copy_num(pc)
+              do jcopy = 1, periodic_copy_num(pc) ! one of the periodic copy is the initial atom   
+                coordinates_p(1:3, 1) = periodic_copy_position(pc, sb, jcopy) ! Each periodic image is the same atom but at different position. 
+               ! print*, 'energy at iter:', jcopy, energy
+               ! print*, 'force at iter:', jcopy, force_i
+               ! print*, 'derivative coeff at iter:', jcopy, derivative_coeff_i
+                 
+                ! Compute the action of atom jcopy on i 
+                call f90_vdw_calculate(natom_for_p, natom_for_pp, zatom(1), zatom_p(1), coordinates(1, 1), coordinates_p(1, 1), volume_ratio(1), &
+                volume_ratio_p(1), energy, force_i(1, 1), derivative_coeff_i(1))
 
-                  ! Compute the action of atom jcopy on i 
-                  !call f90_vdw_calculate(1, 1, zatom(1), zatom_p(1), coordinates(1, 1), coordinates_p(1, 1), volume_ratio(1), &
-                  !volume_ratio_p(1), energy, force_i(1, 1), derivative_coeff_i(1))
-
-                end do
-              else
-                coordinates_p(1:3, 1) = geo%atom(jatom)%x(1:3)
-                print*,'coordinate_p_initial', coordinates_p
-                !call f90_vdw_calculate(1, 1, zatom(1), zatom_p(1), coordinates(1, 1), coordinates_p(1, 1), volume_ratio(1), &
-                !volume_ratio_p(1), energy, force_i(1, 1), derivative_coeff_i(1))
-
-              end if
+              end do
+              call periodic_copy_end(pc)
           end if
         end do
         force(1:3,iatom) = force_i(1:3, 1)

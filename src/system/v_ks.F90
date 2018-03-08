@@ -1029,8 +1029,8 @@ contains
 
         case(OPTION__VDWCORRECTION__VDW_TS)
           vvdw = CNST(0.0)
-          call parse_variable('PeriodicDimensions', 0, sb%periodic_dim)
-          call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, sb, st%rho, ks%calc%energy%vdw, vvdw, ks%calc%vdw_forces)
+         
+          call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, ks%gr%sb, st%rho, ks%calc%energy%vdw, vvdw, ks%calc%vdw_forces)
 
         case(OPTION__VDWCORRECTION__VDW_D3)
 
