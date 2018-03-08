@@ -987,11 +987,13 @@ contains
     call io_mkdir('./projections')
     pr_info = io_open(file='./projections/projections.info', action='write')
     call messages_print_stress(pr_info, "Projections from Convert Utility")
-    write(pr_info,'(a,i3)') 'Number of states = ', st%nst
-    call messages_print_stress(pr_info, "Eigenvalues & Occupations")
-    write(frmt, '(a1,i0,a11)') "(",st%nst,"(g15.6,1x))"
-    write(pr_info, fmt=trim(frmt)) ( st%eigenval(ik, 1), ik=1,st%nst )
-    write(pr_info, fmt=trim(frmt)) ( st%occ(ik, 1), ik=1,st%nst )
+    if (mpi_world%rank == 0) then
+      write(pr_info,'(a,i3)') 'Number of states = ', st%nst
+      call messages_print_stress(pr_info, "Eigenvalues & Occupations")
+      write(frmt, '(a1,i0,a11)') "(",st%nst,"(g15.6,1x))"
+      write(pr_info, fmt=trim(frmt)) ( st%eigenval(ik, 1), ik=1,st%nst )
+      write(pr_info, fmt=trim(frmt)) ( st%occ(ik, 1), ik=1,st%nst )
+    end if
     call messages_print_stress(pr_info, "")
 
     if (states_are_real(st)) then
@@ -1015,9 +1017,6 @@ contains
     SAFE_ALLOCATE(n_occ(st%d%nik))
     SAFE_ALLOCATE(n_unocc(st%d%nik))
     call states_count_pairs(st, n_pairs, n_occ, n_unocc, is_included, is_frac_occ)
-    do ist=1,n_occ(1)
-      print*,(is_included(ist, ast, 1), ast=n_occ(1)+1,st%nst)
-    end do
 
     do i_op = 1, n_operations
       tmp = M_ZERO
@@ -1067,9 +1066,11 @@ contains
             !tmp(ist, uist) = dmf_integrate(mesh, bra*ket)  ! it give same results
           end do
         end do
-        do ist=1, n_occ(ik)
-          write(pr_info, fmt=trim(frmt))  (tmp(ist, ast), ast=n_occ(ik)+1, n_occ(ik)+n_unocc(ik) )
-        end do
+        if (mpi_world%rank == 0) then
+          do ist=1, n_occ(ik)
+            write(pr_info, fmt=trim(frmt))  (tmp(ist, ast), ast=n_occ(ik)+1, n_occ(ik)+n_unocc(ik) )
+          end do
+        end if
         projections(:,:,ik) = projections(:,:,ik) + tmp
       
       end do
@@ -1084,11 +1085,13 @@ contains
     call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
 #endif
     call messages_print_stress(pr_info,'Total Operator')
-    do ik = 1, st%d%nik
-      do ist = 1, n_occ(ik)
-        write(pr_info, fmt=trim(frmt)) ( projections(ist, ast, ik), ast=n_occ(ik), st%nst )
+    if (mpi_world%rank == 0) then
+      do ik = 1, st%d%nik
+        do ist = 1, n_occ(ik)
+          write(pr_info, fmt=trim(frmt)) ( projections(ist, ast, ik), ast=n_occ(ik), st%nst )
+        end do
       end do
-    end do
+    end if
 
 !    ! TESTING 
 !    SAFE_ALLOCATE(dipole(1:mesh%sb%dim))
