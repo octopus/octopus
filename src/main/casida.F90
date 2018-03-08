@@ -60,6 +60,12 @@ module casida_oct_m
   use messages_oct_m  
   use multicomm_oct_m
   use photon_mode_oct_m
+  use blacs_proc_grid_oct_m
+  use scalapack_oct_m
+  use pblas_oct_m
+#ifdef HAVE_ELPA
+  use elpa
+#endif
 
   implicit none
 
@@ -142,6 +148,10 @@ module casida_oct_m
     type(photon_mode_t)  :: pt
 
     logical           :: kernel_saved
+    ! parallel matrix layout stuff
+    integer :: n, nb_rows, nb_cols, block_size
+    type(blacs_proc_grid_t) :: proc_grid
+    integer :: desc(BLACS_DLEN)
 
   end type casida_t
 
@@ -541,6 +551,7 @@ contains
     type(system_t),    intent(in)    :: sys
 
     integer :: ist, ast, jpair, ik, ierr
+    integer :: np, np_rows, np_cols, ii, info
 
     PUSH_SUB(casida_type_init)
 
@@ -557,16 +568,65 @@ contains
 
     if(mpi_grp_is_root(mpi_world)) write(*, "(1x)")
 
+    ! now let us take care of initializing the parallel stuff
+    cas%parallel_in_eh_pairs = multicomm_strategy_is_parallel(sys%mc, P_STRATEGY_OTHER)
+    if(cas%parallel_in_eh_pairs) then
+      !call mpi_grp_init(cas%mpi_grp, sys%mc%group_comm(P_STRATEGY_OTHER))
+      !cas%mpi_grp = mpi_world
+      call mpi_grp_copy(cas%mpi_grp, mpi_world)
+    else
+      call mpi_grp_init(cas%mpi_grp, -1)
+    end if
+
+    ! initialize block-cyclic matrix
+    ! dimension of matrix
+    cas%n = cas%n_pairs+cas%pt_nmodes
+
+#ifdef HAVE_SCALAPACK
+    ! processor layout
+    np = cas%mpi_grp%size
+    if(np > 3) then
+      do ii = floor(sqrt(real(np))), 2, -1
+        if(mod(np, ii) == 0) then
+          np_rows = ii
+          exit
+        end if
+      end do
+    else
+      np_rows = 1
+    end if
+    np_cols = np / np_rows
+
+    ! recommended block size: 64, take smaller value for smaller matrices
+    !cas%block_size = min(64, n/np_cols)
+    cas%block_size = 10
+
+    call blacs_proc_grid_init(cas%proc_grid, mpi_world, procdim = (/np_rows, np_cols/))
+
+    ! get size of local matrices
+    cas%nb_rows = max(1, numroc(cas%n, cas%block_size, cas%proc_grid%myrow, 0, cas%proc_grid%nprow))
+    cas%nb_cols = max(1, numroc(cas%n, cas%block_size, cas%proc_grid%mycol, 0, cas%proc_grid%npcol))
+
+    ! get ScaLAPACK descriptor
+    call descinit(cas%desc(1), cas%n, cas%n, cas%block_size, cas%block_size, 0, 0, cas%proc_grid%context, &
+      cas%nb_rows, info)
+#else
+    ! set to full size
+    cas%nb_rows = cas%n
+    cas%nb_cols = cas%n
+#endif
+
+
     ! allocate stuff
     SAFE_ALLOCATE(cas%pair(1:cas%n_pairs+cas%pt_nmodes))
     if(cas%states_are_real) then
-      SAFE_ALLOCATE( cas%dmat(1:cas%n_pairs+cas%pt_nmodes, 1:cas%n_pairs+cas%pt_nmodes))
-      SAFE_ALLOCATE(  cas%dtm(1:cas%n_pairs+cas%pt_nmodes, 1:cas%sb_dim))
-      SAFE_ALLOCATE(cas%dkernel(1:cas%n_pairs+cas%pt_nmodes, 1:cas%n_pairs+cas%pt_nmodes))
+      SAFE_ALLOCATE(   cas%dmat(1:cas%nb_rows, 1:cas%nb_cols))
+      SAFE_ALLOCATE(    cas%dtm(1:cas%n_pairs+cas%pt_nmodes, 1:cas%sb_dim))
+      SAFE_ALLOCATE(cas%dkernel(1:cas%nb_rows, 1:cas%nb_cols))
     else
-      SAFE_ALLOCATE( cas%zmat(1:cas%n_pairs, 1:cas%n_pairs))
-      SAFE_ALLOCATE(  cas%ztm(1:cas%n_pairs, 1:cas%sb_dim))
-      SAFE_ALLOCATE(cas%zkernel(1:cas%n_pairs+cas%pt_nmodes, 1:cas%n_pairs+cas%pt_nmodes))
+      SAFE_ALLOCATE(   cas%zmat(1:cas%n_pairs, 1:cas%n_pairs))
+      SAFE_ALLOCATE(    cas%ztm(1:cas%n_pairs, 1:cas%sb_dim))
+      SAFE_ALLOCATE(cas%zkernel(1:cas%n_pairs, 1:cas%n_pairs))
     end if
     SAFE_ALLOCATE(   cas%f(1:cas%n_pairs+cas%pt_nmodes))
     SAFE_ALLOCATE(   cas%s(1:cas%n_pairs))
@@ -616,14 +676,6 @@ contains
     end if
 
     SAFE_DEALLOCATE_P(cas%is_included)
-
-    ! now let us take care of initializing the parallel stuff
-    cas%parallel_in_eh_pairs = multicomm_strategy_is_parallel(sys%mc, P_STRATEGY_OTHER)
-    if(cas%parallel_in_eh_pairs) then
-      call mpi_grp_init(cas%mpi_grp, sys%mc%group_comm(P_STRATEGY_OTHER))
-    else
-      call mpi_grp_init(cas%mpi_grp, -1)
-    end if
 
     call restart_init(cas%restart_dump, RESTART_CASIDA, RESTART_TYPE_DUMP, sys%mc, ierr)
     call restart_init(cas%restart_load, RESTART_CASIDA, RESTART_TYPE_LOAD, sys%mc, ierr)
@@ -680,6 +732,9 @@ contains
     if (cas%has_photons) then
       call photon_mode_end(cas%pt)
     end if
+#ifdef HAVE_SCALAPACK
+    call blacs_proc_grid_end(cas%proc_grid)
+#endif
 
     POP_SUB(casida_type_end)
   end subroutine casida_type_end
@@ -765,22 +820,25 @@ contains
       if(cas%states_are_real) then
         call dcasida_get_matrix(cas, hm, st, sys%ks, mesh, cas%dmat, cas%fxc, restart_filename)
         !cas%dmat = cas%dmat * casida_matrix_factor(cas, sys)
-        !call dcasida_solve(cas, st)
+        call dcasida_solve(cas, st)
       else
         call zcasida_get_matrix(cas, hm, st, sys%ks, mesh, cas%zmat, cas%fxc, restart_filename)
         !cas%zmat = cas%zmat * casida_matrix_factor(cas, sys)
-        !call zcasida_solve(cas, st)
+        call zcasida_solve(cas, st)
       end if
     end select
 
+#ifndef HAVE_SCALAPACK
     if (mpi_grp_is_root(cas%mpi_grp)) then
-      ! TODO: extend to parallel case
+#endif
       if(cas%states_are_real) then
         call doscillator_strengths(cas, mesh, st)
       else
         call zoscillator_strengths(cas, mesh, st)
       end if
+#ifndef HAVE_SCALAPACK
     end if
+#endif
 
     if(cas%calc_forces) then
       if(cas%states_are_real) then
@@ -975,6 +1033,30 @@ contains
 
     POP_SUB(isnt_degenerate)
   end function isnt_degenerate
+
+  integer function get_global_row(cas, jb_local) result(jb)
+    implicit none
+    type(casida_t), intent(inout) :: cas
+    integer, intent(in) :: jb_local
+#ifndef HAVE_SCALAPACK
+    jb = jb_local
+#else
+    ! get global value
+    jb = indxl2g(jb_local, cas%nb_rows, cas%proc_grid%myrow, 0, cas%proc_grid%nprow)
+#endif
+  end function get_global_row
+
+  integer function get_global_col(cas, ia_local) result(ia)
+    implicit none
+    type(casida_t), intent(inout) :: cas
+    integer, intent(in) :: ia_local
+#ifndef HAVE_SCALAPACK
+    ia = ia_local
+#else
+    ! get global value
+    ia = indxl2g(ia_local, cas%nb_cols, cas%proc_grid%mycol, 0, cas%proc_grid%npcol)
+#endif
+  end function get_global_col
 
 #include "undef.F90"
 #include "real.F90"
