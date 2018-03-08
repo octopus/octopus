@@ -271,7 +271,7 @@ contains
       
       call ps_qso_init(ps_qso, trim(filename), ierr)
       
-      if(ierr /= 0) then
+      if(ierr == 0) then
         
         call valconf_null(ps%conf)
         

@@ -140,7 +140,8 @@ namespace pseudopotential {
     }
 
     int llocal() const {
-      return value<int>(root_node_->first_node("PP_HEADER")->first_attribute("l_local"));
+      int ll = value<int>(root_node_->first_node("PP_HEADER")->first_attribute("l_local"));
+      return std::max(-1, ll); //some pseudos have maximum 
     }
 
     int nquad() const {
