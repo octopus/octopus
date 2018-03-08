@@ -141,7 +141,7 @@ namespace pseudopotential {
 
     int llocal() const {
       int ll = value<int>(root_node_->first_node("PP_HEADER")->first_attribute("l_local"));
-      return std::max(-1, ll); //some pseudos have maximum 
+      return std::max(-1, ll); 
     }
 
     int nquad() const {
@@ -157,7 +157,7 @@ namespace pseudopotential {
     }
 
     int mesh_size() const {
-      return value<int>(root_node_->first_node("PP_HEADER")->first_attribute("mesh_size"));
+      return start_point_ + value<int>(root_node_->first_node("PP_HEADER")->first_attribute("mesh_size"));
     }
     
     int nchannels() const {
