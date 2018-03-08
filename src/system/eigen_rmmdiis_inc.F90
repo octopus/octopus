@@ -35,7 +35,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   FLOAT,  allocatable :: eval(:, :)
   FLOAT,  allocatable :: lambda(:)
   integer :: ist, minst, idim, ii, iter, nops, maxst, jj, bsize, ib, jter, kter, prog
-  R_TYPE :: ca, cb, cc
+  FLOAT :: ca, cb, cc
   R_TYPE, allocatable :: fr(:, :), me(:, :)
   type(batch_pointer_t), allocatable :: psib(:), resb(:)
   integer, allocatable :: done(:), last(:)
@@ -134,12 +134,12 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     do ist = minst, maxst
       ii = ist - minst + 1
 
-      ca = fr(1, ii)*fr(4, ii) - fr(3, ii)*fr(2, ii)
-      cb = me(2, ii)*fr(3, ii) - st%eigenval(ist, ik)*fr(1, ii)
-      cc = st%eigenval(ist, ik)*fr(2, ii) - fr(4, ii)*me(2, ii)
+      ca = R_REAL(fr(1, ii))*R_REAL(fr(4, ii)) - R_REAL(fr(3, ii))*R_REAL(fr(2, ii))
+      cb = R_REAL(me(2, ii))*R_REAL(fr(3, ii)) - R_REAL(me(1, ii))*R_REAL(fr(1, ii))
+      cc = R_REAL(me(1, ii))*R_REAL(fr(2, ii)) - R_REAL(fr(4, ii))*R_REAL(me(2, ii))
 
       !This is - the solution of ca*x^2+cb*x+cc
-      lambda(ist) = R_REAL(CNST(2.0)*cc/(cb + sqrt(cb**2 - CNST(4.0)*ca*cc)))
+      lambda(ist) = CNST(2.0)*cc/(cb + sqrt(cb**2 - CNST(4.0)*ca*cc))
 
       ! restrict the value of lambda to be between 0.1 and 1.0
       if(abs(lambda(ist)) > CNST(1.0)) lambda(ist) = lambda(ist)/abs(lambda(ist))
@@ -389,7 +389,7 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
   integer, parameter :: sweeps = 5
   integer :: sd_steps
   integer :: isd, ist, minst, maxst, ib, ii
-  R_TYPE  :: ca, cb, cc
+  FLOAT  :: ca, cb, cc
   FLOAT, allocatable :: lambda(:)
   R_TYPE, allocatable :: diff(:)
   R_TYPE, allocatable :: me1(:, :), me2(:, :)
@@ -463,12 +463,13 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
       do ist = minst, maxst
         ii = ist - minst + 1
 
-        ca = me2(1, ii)*me2(4, ii) - me2(3, ii)*me2(2, ii)
-        cb = me1(2, ii)*me2(3, ii) - me1(1, ii)*me2(1, ii)
-        cc = me1(1, ii)*me2(2, ii) - me1(2, ii)*me2(4, ii)
+        ca = R_REAL(me2(1, ii))*R_REAL(me2(4, ii)) - R_REAL(me2(3, ii))*R_REAL(me2(2, ii))
+        cb = R_REAL(me1(2, ii))*R_REAL(me2(3, ii)) - R_REAL(me1(1, ii))*R_REAL(me2(1, ii))
+        cc = R_REAL(me1(1, ii))*R_REAL(me2(2, ii)) - R_REAL(me2(4, ii))*R_REAL(me1(2, ii))
          
+
         !This is - the solution of ca*x^2+cb*x+cc
-        lambda(ist) = R_REAL(CNST(2.0)*cc/(cb + sqrt(cb**2 - CNST(4.0)*ca*cc)))
+        lambda(ist) = CNST(2.0)*cc/(cb + sqrt(cb**2 - CNST(4.0)*ca*cc))
       end do
 
       call batch_axpy(gr%mesh%np, lambda, kresb, st%group%psib(ib, ik))
