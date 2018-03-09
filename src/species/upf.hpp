@@ -47,27 +47,20 @@ namespace pseudopotential {
       
       root_node_ = doc_.first_node("UPF");
       
-      if(!root_node_){
-	std::cerr << "Error: File '" << filename << "' is not a UPF 2 file (version 1 is not supported)." << std::endl;
-	exit(1);
-      }
+      if(!root_node_) throw status::FORMAT_NOT_SUPPORTED;
       
-      if(root_node_->first_attribute("version")->value()[0] != '2'){
-	std::cerr << "Unsupported UPF pseudopotential, can only read UPF v2." << std::endl;
-	exit(1);
-      }
+      if(root_node_->first_attribute("version")->value()[0] != '2') throw status::FORMAT_NOT_SUPPORTED;
       
       std::string pseudo_type = root_node_->first_node("PP_HEADER")->first_attribute("pseudo_type")->value();
       
       if(pseudo_type == "NC" || pseudo_type == "SL"){
 	type_ = type::KLEINMAN_BYLANDER;
       } else if(pseudo_type == "USPP"){
-	type_ = type::ULTRASOFT;
-	std::cerr << "Error: Ultrasoft UPF pseudopotentials are not supported at the moment." << std::endl;
-	exit(1);
+	throw status::UNSUPPORTED_TYPE_ULTRASOFT;
+      } else if(pseudo_type == "PAW") {
+	throw status::UNSUPPORTED_TYPE_PAW;
       } else {
-	std::cerr << "Error: Unsupported UPF pseudopotential." << std::endl;
-	exit(1);
+	throw status::UNSUPPORTED_TYPE;
       }
       
       assert(root_node_);

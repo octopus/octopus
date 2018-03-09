@@ -69,11 +69,21 @@ contains
 
     call pseudo_init(pseudo, filename, ierr)
 
-    if(ierr /= 0) then
+    if(ierr == PSEUDO_STATUS_FILE_NOT_FOUND) then
       call messages_write("Pseudopotential file '" // trim(filename) // "' not found")
       call messages_fatal()
     end if
 
+    if(ierr == PSEUDO_STATUS_UNKNOWN_FORMAT) then
+      call messages_write("Cannot determine the format for pseudopotential file '" // trim(filename) // "' not found")
+      call messages_fatal()
+    end if
+
+    if(ierr == PSEUDO_STATUS_FORMAT_NOT_SUPPORTED) then
+      POP_SUB(ps_qso_init)
+      return
+    end if
+    
     this%valence_charge = pseudo_valence_charge(pseudo)
     this%mesh_spacing = pseudo_mesh_spacing(pseudo)
     this%mass = pseudo_mass(pseudo)

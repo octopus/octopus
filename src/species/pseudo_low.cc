@@ -27,14 +27,6 @@
 #include "qso.hpp"
 #include "upf.hpp"
 
-
-enum class status {
-  OKAY                  = 0,
-  FILE_NOT_FOUND        = 455,
-  FORMAT_NOT_SUPPORTED  = 456,
-  UNKNOWN_FORMAT        = 457
-};
-
 extern "C" void FC_FUNC_(pseudo_init, PSEUDO_INIT)(pseudopotential::base ** pseudo, STR_F_TYPE const filename_f, fint * ierr STR_ARG1){
   char * filename_c;
   TO_C_STR1(filename_f, filename_c);
@@ -47,24 +39,27 @@ extern "C" void FC_FUNC_(pseudo_init, PSEUDO_INIT)(pseudopotential::base ** pseu
   bool found_file = !stat(filename.c_str(), &statbuf);
 
   if(!found_file){
-    *ierr = fint(status::FILE_NOT_FOUND);
+    *ierr = fint(pseudopotential::status::FILE_NOT_FOUND);
     return;
   }
   
   std::string extension = filename.substr(filename.find_last_of(".") + 1);
   std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
   
-  std::cout << "  Opening file " << filename << std::endl;
-  
   *pseudo = NULL;
-  
-  if(extension == "xml"){
-    *pseudo = new pseudopotential::qso(filename);
-  } else if(extension == "upf") {
-    *pseudo = new pseudopotential::upf(filename);
-  } else {
-    std::cerr << "Unknown pseudopotential type" << std::endl;
-    exit(1);
+
+  try{
+    if(extension == "xml"){
+      *pseudo = new pseudopotential::qso(filename);
+    } else if(extension == "upf") {
+      *pseudo = new pseudopotential::upf(filename);
+    } else {
+      *ierr = fint(pseudopotential::status::UNKNOWN_FORMAT);
+      return;
+    }
+  } catch(pseudopotential::status stat) {
+    *ierr = fint(stat);
+    return;
   }
 
   assert(*pseudo);
