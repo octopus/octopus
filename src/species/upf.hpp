@@ -90,6 +90,11 @@ namespace pseudopotential {
 	for(int ii = 0; ii < size; ii++) stst >> grid_[start_point_ + ii];
 	
 	assert(fabs(grid_[0]) <= 1e-10);
+
+	mesh_size_ = start_point_ + value<int>(root_node_->first_node("PP_HEADER")->first_attribute("mesh_size"));
+
+	mesh_size_ = 0;
+	for(double rr = 0.0; rr <= grid_[grid_.size() - 1]; rr += mesh_spacing()) mesh_size_++;
 	
       }
       
@@ -157,7 +162,7 @@ namespace pseudopotential {
     }
 
     int mesh_size() const {
-      return start_point_ + value<int>(root_node_->first_node("PP_HEADER")->first_attribute("mesh_size"));
+      return mesh_size_;
     }
     
     int nchannels() const {
@@ -182,7 +187,7 @@ namespace pseudopotential {
 	potential[ii] *= 0.5; //Convert from Rydberg to Hartree
       }
       if(start_point_ > 0) extrapolate_first_point(potential);
-      
+
       interpolate(potential);
       
     }
@@ -345,6 +350,7 @@ namespace pseudopotential {
     std::vector<double> grid_;
     std::vector<double> dij_;
     int start_point_;
+    int mesh_size_;
     
   };
 
