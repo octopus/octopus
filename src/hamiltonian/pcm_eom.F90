@@ -104,15 +104,12 @@ module pcm_eom_oct_m
 
   logical :: enough_initial = .false.
 
-  logical :: before_kick=.true.
-
   contains
 
   !------------------------------------------------------------------------------------------------------------------------------
   !> Driving subroutine for the Equation of Motion (EOM) propagation of the polarization charges
   !> within the Integral Equation Formalism (IEF) formulation of the Polarization Continuum Model (PCM).
-  subroutine pcm_charges_propagation(q_t, pot_t, this_dt, this_cts_act, input_asc, this_eom, this_eps, this_deb, this_drl, &
-                                          kick, kick_time) 
+  subroutine pcm_charges_propagation(q_t, pot_t, this_dt, this_cts_act, input_asc, this_eom, this_eps, this_deb, this_drl) 
    save
    FLOAT, intent(out) :: q_t(:)
    FLOAT, intent(in)  :: pot_t(:)
@@ -126,10 +123,7 @@ module pcm_eom_oct_m
    character(*), intent(in) :: this_eom !< EOM case, either due to electrons ('electron') or due to external potential ('external')
    character(*), intent(in) :: this_eps !< type of dielectric model to be used, either Debye ('deb') or Drude-Lorentz ('drl')
    type(debye_param_t), optional, intent(in) :: this_deb
-   type(drude_param_t), optional, intent(in) :: this_drl 
-
-   FLOAT,   optional, intent(in)  :: kick(:)
-   logical, optional, intent(in)  :: kick_time
+   type(drude_param_t), optional, intent(in) :: this_drl
 
    logical :: firsttime=.true.
    logical :: initial_electron=.true.
@@ -195,7 +189,6 @@ module pcm_eom_oct_m
 
    endif
 
-
    if( ( initial_electron .and. which_eom == 'electron' ) .or. & 
        ( initial_external .and. which_eom == 'external' ) .or. & 
        ( initial_kick     .and. which_eom == 'justkick' )      ) then
@@ -204,24 +197,13 @@ module pcm_eom_oct_m
 
      call pcm_bem_init
 
-     !> determining time for possible kick
-
-     if( present(kick_time) ) then 
-      if( kick_time ) before_kick=.false.
-     endif
-
      !> initialize pcm charges due to electrons, external potential or kick
 
      call init_charges(q_t, pot_t)
 
      if(initial_electron .and. which_eom == 'electron' ) initial_electron=.false.
      if(initial_external .and. which_eom == 'external' ) initial_external=.false.
-     if(initial_kick     .and. which_eom == 'justkick' .and. (.not.before_kick) ) initial_kick=.false.
-
-   else if( (.not.initial_kick) .and. before_kick .and. which_eom == 'justkick' ) then
-
-    q_t = M_ZERO
-    qkick_tp = q_t
+     if(initial_kick     .and. which_eom == 'justkick' ) initial_kick=.false.
 
    else
 
@@ -343,15 +325,11 @@ module pcm_eom_oct_m
      force_qkick_tp=M_ZERO
     endif
 
-    if( before_kick ) then
-      q_t = M_ZERO
+    if( which_eps .eq. "drl" ) then
+      dqkick_tp=matmul(matqv_lf,pot_t)*dt
     else
-      if( which_eps .eq. "drl" ) then
-        dqkick_tp=matmul(matqv_lf,pot_t)*dt
-      else
-        q_t = matmul(matqv_lf,pot_t)
-      endif
-    endif    
+      q_t = matmul(matqv_lf,pot_t)
+    endif
 
     SAFE_ALLOCATE(qkick_tp(nts_act))
     qkick_tp = q_t

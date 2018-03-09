@@ -797,7 +797,11 @@ contains
        		pcm%q_kick = kick%delta_strength * pcm%q_kick
        		pcm%qtot_kick = kick%delta_strength * pcm%qtot_kick
        		if (pcm%calc_method == PCM_CALC_POISSON) pcm%rho_kick = pcm%rho_kick * kick%delta_strength
-          if ( pcm%kick_like ) kick_function = kick_function + pcm%v_kick_rs
+          if ( pcm%kick_like ) then
+           kick_function = kick_function + pcm%v_kick_rs
+          else
+           pcm%v_kick_rs = kick%delta_strength * pcm%v_kick_rs
+          end if 
         end if
       end if
 

@@ -179,8 +179,6 @@ module pcm_oct_m
 
   logical :: td_calc_mode = .false.
 
-  logical :: is_time_for_kick = .false.
-
   integer :: CM
 
   integer, parameter :: CM_GS = 1, &
@@ -191,7 +189,7 @@ module pcm_oct_m
   integer, parameter :: n_tess_sphere = 60 !< minimum number of tesserae per sphere
 					   !< cannot be changed without changing cav_gen subroutine
 
-  integer :: asc_vs_t_unit
+  integer :: asc_vs_t_unit, asc_vs_t_unit_sol, asc_vs_t_unit_n, asc_vs_t_unit_e, asc_vs_t_unit_ext
 
   logical :: kick_is_present
 
@@ -1132,7 +1130,17 @@ contains
     pcm%deltaQ_e = M_ZERO
     pcm%deltaQ_n = M_ZERO
 
+
     asc_vs_t_unit = io_open(PCM_DIR//'ASC_vs_t.dat', action='write')
+    if ( pcm%solute .and. pcm%localf ) then
+     asc_vs_t_unit_sol = io_open(PCM_DIR//'ASC_sol_vs_t.dat', action='write')
+     asc_vs_t_unit_n = io_open(PCM_DIR//'ASC_n_vs_t.dat', action='write')
+     asc_vs_t_unit_e = io_open(PCM_DIR//'ASC_e_vs_t.dat', action='write')
+     asc_vs_t_unit_ext = io_open(PCM_DIR//'ASC_ext_vs_t.dat', action='write')
+    else if( pcm%solute .and. (.not.pcm%localf) ) then
+     asc_vs_t_unit_n = io_open(PCM_DIR//'ASC_n_vs_t.dat', action='write')
+     asc_vs_t_unit_e = io_open(PCM_DIR//'ASC_e_vs_t.dat', action='write')
+    end if
 
     POP_SUB(pcm_init)
   end subroutine pcm_init
@@ -1160,6 +1168,8 @@ contains
     !character*5 :: iteration 
 
     logical :: not_yet_called = .false.
+    logical :: is_time_for_kick = .false.
+    logical :: after_kick = .false.
 
     PUSH_SUB(pcm_calc_pot_rs)  
     
@@ -1178,6 +1188,7 @@ contains
     if (present(kick_time)) then
      if (kick_time) then
       is_time_for_kick = .true.
+      after_kick = .true.
      else
       is_time_for_kick = .false.
      endif
@@ -1263,6 +1274,11 @@ contains
       end if !< N.B.
     end if
 
+    if( .not.pcm%kick_like ) then
+      pcm%q_ext    = M_ZERO
+      pcm%v_ext_rs = M_ZERO
+    end if
+
     if (calc == PCM_EXTERNAL_POTENTIAL .or. calc == PCM_EXTERNAL_PLUS_KICK) then !under development
       call pcm_v_cav_li(pcm%v_ext, v_ext, pcm, mesh)
       if( td_calc_mode .and. pcm%epsilon_infty /= pcm%epsilon_0 .and. pcm%noneq ) then
@@ -1297,19 +1313,6 @@ contains
         !< the pcm charges due to the static one is calculated here.
         call pcm_charges(pcm%q_ext, pcm%qtot_ext, pcm%v_ext, pcm%matrix_lf, pcm%n_tesserae)
 
-        !for testing with spherical cavity
-        !asc_unit_test_aux = io_open(PCM_DIR//'ASCs_ext.dat', action='write')
-        !asc_unit_test = io_open(PCM_DIR//'analytic.dat', action='write')
-        !do ii = 1, pcm%n_tesserae
-        !  write(asc_unit_test_aux,*) pcm%tess(ii)%point, pcm%q_ext(ii), ii
-        !  write(asc_unit_test,*) pcm%tess(ii)%point, &
-	!3.0/(4*M_Pi)*(pcm%epsilon_0-M_ONE)/(2*pcm%epsilon_0+M_ONE)*&
-	!0.05*pcm%tess(ii)%point(1)/norm2( pcm%tess(ii)%point )*pcm%tess(ii)%area,&
-        !ii
-        !end do
-        !call io_close(asc_unit_test_aux)
-        !call io_close(asc_unit_test)
-
         !< dont pay attention to the use of q_ext_in and qtot_ext_in, whose role here is only auxiliary
         pcm%q_ext_in = pcm%q_ext
         pcm%qtot_ext_in = pcm%qtot_ext
@@ -1336,28 +1339,25 @@ contains
           call pcm_charges(pcm%q_kick, pcm%qtot_kick, pcm%v_kick, pcm%matrix_lf, pcm%n_tesserae)
         end if
       else
-        if( is_time_for_kick ) then
+        if ( after_kick ) then
         !< BEGIN - equation-of-motion propagation
         select case (pcm%which_eps)
           case('drl')
-            call pcm_charges_propagation(pcm%q_kick, pcm%v_kick, dt, pcm%tess, input_asc_ext, 'justkick', 'drl',this_drl=pcm%drl,&
-                                                                 kick_time = is_time_for_kick)
+            call pcm_charges_propagation(pcm%q_kick, pcm%v_kick, dt, pcm%tess, input_asc_ext, 'justkick', 'drl', this_drl = pcm%drl)
           case default
-            call pcm_charges_propagation(pcm%q_kick, pcm%v_kick, dt, pcm%tess, input_asc_ext, 'justkick', 'deb',this_deb=pcm%deb,&
-                                                                 kick_time = is_time_for_kick)
+            call pcm_charges_propagation(pcm%q_kick, pcm%v_kick, dt, pcm%tess, input_asc_ext, 'justkick', 'deb', this_deb = pcm%deb)
         end select
         if ( not_yet_called ) call pcm_eom_enough_initial(not_yet_called)
         pcm%qtot_kick  = sum(pcm%q_kick)
-        !< END - equation-of-motion propagation      
-    		else
-       		pcm%v_kick = M_ZERO
-       		pcm%q_kick  = M_ZERO
-       		pcm%qtot_kick  = M_ZERO
-       		if (pcm%calc_method == PCM_CALC_POISSON) pcm%rho_kick = M_ZERO
-       		pcm%v_kick_rs = M_ZERO
-      		POP_SUB(pcm_calc_pot_rs) 
-     		 	return
-      	end if 
+        !< END - equation-of-motion propagation
+        else
+         pcm%q_kick = M_ZERO
+         pcm%qtot_kick = M_ZERO
+         if (pcm%calc_method == PCM_CALC_POISSON) pcm%rho_kick = M_ZERO
+         pcm%v_kick_rs = M_ZERO
+         POP_SUB(pcm_calc_pot_rs)
+         return
+        end if
       end if
       if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_kick, pcm%qtot_kick, mesh, pcm%rho_kick)
       call pcm_pot_rs(pcm, pcm%v_kick_rs, pcm%q_kick, pcm%rho_kick, mesh )
@@ -1370,10 +1370,16 @@ contains
 
     if ( pcm%solute .and. pcm%localf ) then
       write(asc_vs_t_unit,*) pcm%iter*dt, pcm%q_n + pcm%q_e + pcm%q_ext
+      write(asc_vs_t_unit_sol,*) pcm%iter*dt, pcm%q_n + pcm%q_e
+      write(asc_vs_t_unit_n,*) pcm%iter*dt, pcm%q_n
+      write(asc_vs_t_unit_e,*) pcm%iter*dt, pcm%q_e
+      write(asc_vs_t_unit_ext,*) pcm%iter*dt, pcm%q_ext
     else if( (.not.pcm%solute) .and. pcm%localf ) then
       write(asc_vs_t_unit,*) pcm%iter*dt, pcm%q_ext
     else if( pcm%solute .and. (.not.pcm%localf) ) then
       write(asc_vs_t_unit,*) pcm%iter*dt, pcm%q_n + pcm%q_e
+      write(asc_vs_t_unit_n,*) pcm%iter*dt, pcm%q_n
+      write(asc_vs_t_unit_e,*) pcm%iter*dt, pcm%q_e
     end if
 
     POP_SUB(pcm_calc_pot_rs)  
@@ -3171,6 +3177,15 @@ contains
     end if
 
     call io_close(asc_vs_t_unit)
+    if ( pcm%solute .and. pcm%localf ) then
+     call io_close(asc_vs_t_unit_sol)
+     call io_close(asc_vs_t_unit_n)
+     call io_close(asc_vs_t_unit_e)
+     call io_close(asc_vs_t_unit_ext)
+    else if( pcm%solute .and. (.not.pcm%localf) ) then
+     call io_close(asc_vs_t_unit_n)
+     call io_close(asc_vs_t_unit_e)
+    end if
 
     SAFE_DEALLOCATE_A(pcm%spheres)
     SAFE_DEALLOCATE_A(pcm%tess)
