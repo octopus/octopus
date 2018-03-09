@@ -413,6 +413,10 @@ contains
       call forces_calculate(gr, geo, hm, st, td%iter*td%dt, td%dt)
 
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
+    else
+      if(iand(sys%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
+        call forces_calculate(gr, geo, hm, st, td%iter*td%dt, td%dt)
+      end if  
     end if
 
     call td_write_init(write_handler, gr, st, hm, geo, sys%ks, &
@@ -470,7 +474,7 @@ contains
       ! time iterate the system, one time step.
       select case(td%dynamics)
       case(EHRENFEST)
-        call propagator_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt, td%energy_update_iter*td%mu, iter, td%ions, geo, &
+        call propagator_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt, td%energy_update_iter*td%mu, iter, td%ions, geo, sys%outp, &
           scsteps = scsteps, &
           update_energy = (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter) )
       case(BO)

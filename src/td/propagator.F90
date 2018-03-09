@@ -486,7 +486,7 @@ contains
   !> Propagates st from time - dt to t.
   !! If dt<0, it propagates *backwards* from t+|dt| to t
   ! ---------------------------------------------------------
-  subroutine propagator_dt(ks, hm, gr, st, tr, time, dt, ionic_scale, nt, ions, geo, &
+  subroutine propagator_dt(ks, hm, gr, st, tr, time, dt, ionic_scale, nt, ions, geo, outp, &
     scsteps, update_energy, qcchi)
     type(v_ks_t), target,            intent(inout) :: ks
     type(hamiltonian_t), target,     intent(inout) :: hm
@@ -499,6 +499,7 @@ contains
     integer,                         intent(in)    :: nt
     type(ion_dynamics_t),            intent(inout) :: ions
     type(geometry_t),                intent(inout) :: geo
+    type(output_t),                  intent(in)    :: outp
     integer,              optional,  intent(out)   :: scsteps
     logical,              optional,  intent(in)    :: update_energy
     type(opt_control_state_t), optional, target, intent(inout) :: qcchi
@@ -594,6 +595,10 @@ contains
       call ion_dynamics_propagate_vel(ions, geo, atoms_moved = generate)
       if(generate) call hamiltonian_epot_generate(hm, gr, geo, st, time = abs(nt*dt))
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
+    else
+      if(iand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
+        call forces_calculate(gr, geo, hm, st, abs(nt*dt), dt)
+      end if
     end if
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
