@@ -45,7 +45,8 @@ module pseudo_oct_m
     pseudo_radial_function,     &
     pseudo_radial_potential,    &
     pseudo_has_nlcc,            &
-    pseudo_nlcc_density
+    pseudo_nlcc_density,        &
+    pseudo_dij
 
   !these values have to match with those on base.hpp
   integer, parameter, public ::               &
@@ -184,13 +185,14 @@ module pseudo_oct_m
 
     ! -------------------------------------------------
     
-    real(8) function pseudo_dij(pseudo, l, ic)
+    real(8) function pseudo_dij(pseudo, l, ic, jc)
       import :: pseudo_t
       implicit none
       
       type(pseudo_t),   intent(in)    :: pseudo
       integer,          intent(in)    :: l
       integer,          intent(in)    :: ic
+      integer,          intent(in)    :: jc
     end function pseudo_dij
 
     ! -------------------------------------------------

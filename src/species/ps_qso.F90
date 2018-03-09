@@ -129,7 +129,7 @@ contains
       do ll = 0, this%lmax
         do ic = 1, this%nchannels
           do jc = 1, this%nchannels
-            call pseudo_dij(pseudo, ll, ic, jc, this%dij(ll, ic, jc))
+            this%dij(ll, ic, jc) = pseudo_dij(pseudo, ll, ic, jc)
           end do
         end do
       end do
