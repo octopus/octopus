@@ -611,6 +611,10 @@ contains
       spec%nlcc = spec%ps%nlcc
       spec%niwfs = ps_niwfs(spec%ps)
 
+      ! give this variables an absurd value as they shouldn't be used after
+      spec%lmax = -2
+      spec%lloc = -2
+
     case(SPECIES_USDEF)
       if(print_info_) then
         write(message(1),'(a,a,a)')    'Species "',trim(spec%label),'" is a user-defined potential.'
@@ -1444,8 +1448,6 @@ contains
     write(iunit, '(a,l1)')    'nlcc   = ', spec%nlcc
     write(iunit, '(a,f15.2)') 'def_rsize = ', spec%def_rsize
     write(iunit, '(a,f15.2)') 'def_h = ', spec%def_h
-    if (spec%type /= SPECIES_USDEF ) write(iunit, '(a,i3)')    'lmax  = ', spec%lmax
-    if (spec%type /= SPECIES_USDEF ) write(iunit, '(a,i3)')    'lloc  = ', spec%lloc
 
     if(species_is_ps(spec)) then
        if(debug%info) call ps_debug(spec%ps, trim(dirname))

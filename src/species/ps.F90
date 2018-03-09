@@ -136,7 +136,7 @@ contains
   subroutine ps_init(ps, label, z, lmax, lloc, ispin, filename)
     type(ps_t),        intent(out)   :: ps
     character(len=10), intent(in)    :: label
-    integer,           intent(inout) :: lmax
+    integer,           intent(in)    :: lmax
     integer,           intent(in)    :: lloc, ispin
     FLOAT,             intent(in)    :: z
     character(len=*),  intent(in)    :: filename
@@ -315,7 +315,6 @@ contains
         ps%z      = z
         ps%conf%z = nint(z)
         ps%kbc    = ps_upf%kb_nc
-        lmax      = ps_upf%l_max
         ps%l_max  = ps_upf%l_max
         ps%l_loc  = ps_upf%l_local
         ps%has_density = .true.
