@@ -792,16 +792,8 @@ contains
       		end if
           SAFE_ALLOCATE(kick_function_real(1:mesh%np_part))
           kick_function_real = DREAL(kick_function_interpolate)
-          call pcm_calc_pot_rs(pcm, mesh, kick = kick_function_real, kick_time = .true.)
-       		pcm%v_kick = kick%delta_strength * pcm%v_kick
-       		pcm%q_kick = kick%delta_strength * pcm%q_kick
-       		pcm%qtot_kick = kick%delta_strength * pcm%qtot_kick
-       		if (pcm%calc_method == PCM_CALC_POISSON) pcm%rho_kick = pcm%rho_kick * kick%delta_strength
-          if ( pcm%kick_like ) then
-           kick_function = kick_function + pcm%v_kick_rs
-          else
-           pcm%v_kick_rs = kick%delta_strength * pcm%v_kick_rs
-          end if 
+          call pcm_calc_pot_rs(pcm, mesh, kick = kick%delta_strength * kick_function_real, kick_time = .true.)
+          if ( pcm%kick_like ) kick_function = kick_function + pcm%v_kick_rs / kick%delta_strength
         end if
       end if
 
