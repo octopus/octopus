@@ -114,7 +114,6 @@ extern "C" fint FC_FUNC_(pseudo_has_projectors_low, PSEUDO_HAS_PROJECTORS_LOW)(c
 extern "C" void FC_FUNC_(pseudo_local_potential, PSEUDO_LOCAL_POTENTIAL)(const pseudopotential::base ** pseudo, double * local_potential){
   std::vector<double> val;
   (*pseudo)->local_potential(val);
-  std::cout << "SIZEC " << val.size() << " " << (*pseudo)->mesh_size() <<  std::endl;
   for(unsigned i = 0; i < val.size(); i++) local_potential[i] = val[i];
 }
 

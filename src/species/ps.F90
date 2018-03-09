@@ -181,7 +181,7 @@ contains
     ps%ispin   = ispin
     ps%hamann  = .false.
     select case(ps%flavour)
-    case(PS_TYPE_PSF, PS_TYPE_HGH, PS_TYPE_UPF)
+    case(PS_TYPE_PSF, PS_TYPE_HGH)
       ps%has_density = .true.
     case default
       ps%has_density = .false.
@@ -318,6 +318,7 @@ contains
         lmax      = ps_upf%l_max
         ps%l_max  = ps_upf%l_max
         ps%l_loc  = ps_upf%l_local
+        ps%has_density = .true.
         
         nullify(ps%g%drdi, ps%g%s)
         ps%g%nrval = ps_upf%np
