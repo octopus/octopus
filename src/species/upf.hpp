@@ -108,7 +108,7 @@ namespace pseudopotential {
 
       //Read lmax
       lmax_ = value<int>(root_node_->first_node("PP_HEADER")->first_attribute("l_max"));
-	
+      assert(lmax_ >= 0);
     }
 
     std::string format() const { return "UPF 2"; }
