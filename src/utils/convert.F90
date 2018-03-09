@@ -990,6 +990,8 @@ contains
       call messages_print_stress(pr_info, "Projections from Convert Utility")
       write(pr_info,'(a,i3)') 'Number of states = ', st%nst
       call messages_print_stress(pr_info, "Eigenvalues & Occupations")
+      write(frmt, '(a1,i0,a11)') "(",st%nst,"(6x,i3,7x))"
+      write(pr_info, fmt=trim(frmt)) ( ik, ik=1,st%nst )
       write(frmt, '(a1,i0,a11)') "(",st%nst,"(g15.6,1x))"
       write(pr_info, fmt=trim(frmt)) ( st%eigenval(ik, 1), ik=1,st%nst )
       write(pr_info, fmt=trim(frmt)) ( st%occ(ik, 1), ik=1,st%nst )
@@ -1049,6 +1051,10 @@ contains
         end do
       end do
       do ik = 1, st%d%nik
+        if (mpi_world%rank == 0) then
+          write(frmt, '(a4,i0,a11)') "(a7, ",n_unocc(ik),"(6x,i3,7x))"
+          write(pr_info, fmt=trim(frmt))  "", (ast, ast=n_occ(ik)+1, n_occ(ik)+n_unocc(ik) )
+        end if
         do ist = 1,  n_occ(ik) !1, st%nst
           if (any(is_included(ist, :, ik))) &
               call states_get_state(st, mesh, 1, ist, ik, bra)
@@ -1068,8 +1074,9 @@ contains
           end do
         end do
         if (mpi_world%rank == 0) then
+          write(frmt, '(a4,i0,a11)') "(i7, ",n_unocc(ik),"(g15.6,1x))"
           do ist=1, n_occ(ik)
-            write(pr_info, fmt=trim(frmt))  (tmp(ist, ast), ast=n_occ(ik)+1, n_occ(ik)+n_unocc(ik) )
+            write(pr_info, fmt=trim(frmt))  ist, (tmp(ist, ast), ast=n_occ(ik)+1, n_occ(ik)+n_unocc(ik) )
           end do
         end if
         projections(:,:,ik) = projections(:,:,ik) + tmp
@@ -1089,7 +1096,7 @@ contains
     if (mpi_world%rank == 0) then
       do ik = 1, st%d%nik
         do ist = 1, n_occ(ik)
-          write(pr_info, fmt=trim(frmt)) ( projections(ist, ast, ik), ast=n_occ(ik), st%nst )
+          write(pr_info, fmt=trim(frmt)) ist, (projections(ist, ast, ik), ast=n_occ(ik)+1, n_occ(ik)+n_unocc(ik) )
         end do
       end do
     end if
