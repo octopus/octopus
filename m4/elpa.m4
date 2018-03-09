@@ -21,6 +21,7 @@ AC_DEFUN([ACX_ELPA],
 [
   
   acx_elpa_ok=no
+  acx_elpa_old_ok=no
 
   dnl BACKUP LIBS AND FCFLAGS
   acx_elpa_save_LIBS="$LIBS"
@@ -39,12 +40,23 @@ AC_DEFUN([ACX_ELPA],
 
   AC_MSG_CHECKING([for elpa])
 
-  elpa_program="AC_LANG_PROGRAM([],[
+  elpa_program_old="AC_LANG_PROGRAM([],[
     use :: elpa1
     implicit none
 
     integer :: c1, c2, c3, err
     err = get_elpa_communicators(c1, 0, 0, c2, c3)
+
+  ])"
+
+  elpa_program="AC_LANG_PROGRAM([],[
+    use :: elpa
+    implicit none
+    class(elpa_t), pointer :: e
+    integer :: status
+
+    status = elpa_init(20170403)
+    e => elpa_allocate()
 
   ])"
 
@@ -58,12 +70,17 @@ AC_DEFUN([ACX_ELPA],
 
   LIBS="$LIBS_ELPA $acx_elpa_save_LIBS $LIBS_LAPACK $LIBS_BLAS"
   AC_LINK_IFELSE($elpa_program, [acx_elpa_ok=yes], [acx_elpa_ok=no])
+  AC_LINK_IFELSE($elpa_program_old, [acx_elpa_old_ok=yes], [acx_elpa_old_ok=no])
 
   AC_MSG_RESULT([$acx_elpa_ok ($FCFLAGS_ELPA $LIBS_ELPA)])
 
   if test x$acx_elpa_ok != xyes; then
 
-    AC_MSG_WARN([Could not find the elpa library])
+    if test x$acx_elpa_old_ok != xyes; then
+      AC_MSG_WARN([Could not find the elpa library])
+    else
+      AC_MSG_WARN([Could only find an old version of the elpa library, compiling without elpa support])
+    fi
 
     FCFLAGS_ELPA=""
     LIBS_ELPA=""

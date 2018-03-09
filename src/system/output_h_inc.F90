@@ -32,12 +32,14 @@
     type(base_potential_t),        pointer :: subsys_external
     type(base_hamiltonian_t),      pointer :: subsys_tnadd
     character(len=BASE_POTENTIAL_NAME_LEN) :: name
+
     FLOAT,         dimension(:),   pointer :: xpot
     FLOAT,         dimension(:,:), pointer :: tnadd_potential
     FLOAT, allocatable :: v0(:,:), nxc(:), potential(:)
     FLOAT, allocatable :: current(:, :, :)
-
+    FLOAT, allocatable :: gradvh(:, :)
     PUSH_SUB(output_hamiltonian)
+   
 
     if(iand(outp%what, OPTION__OUTPUT__POTENTIAL) /= 0) then
       if(hm%cmplxscl%space) then
@@ -75,11 +77,17 @@
       if(hm%theory_level /= INDEPENDENT_PARTICLES) then
         if (.not. hm%cmplxscl%space) then 
           call dio_function_output(outp%how, dir, 'vh', der%mesh, hm%vhartree, units_out%energy, err, geo = geo, grp = grp)
+          if(outp%gradientpotential) then
+            SAFE_ALLOCATE(gradvh(1:der%mesh%np, 1:der%mesh%sb%dim))
+            call dderivatives_grad(der, hm%vhartree(1:der%mesh%np_part), gradvh(1:der%mesh%np, 1:der%mesh%sb%dim))
+            call io_function_output_vector(outp%how, dir, 'grad_vh', der%mesh, gradvh(:, :), der%mesh%sb%dim, units_out%force, err, &
+                     geo = geo, grp = grp, vector_dim_labels = (/'x', 'y', 'z'/))
+            SAFE_DEALLOCATE_A(gradvh)
+          end if
         else
           call zio_function_output(outp%how, dir, 'vh', der%mesh, &
             hm%vhartree(1:der%mesh%np) + M_zI*hm%Imvhartree(1:der%mesh%np), units_out%energy, err, geo = geo, grp = grp)
         end if
-
         nullify(subsys_tnadd, tnadd_potential)
         if(associated(hm%subsys_hm))then
           call base_hamiltonian_get(hm%subsys_hm, "tnadd", subsys_tnadd)
@@ -155,6 +163,7 @@
         end select
       end if
     end if
+
 
     if(iand(outp%what, OPTION__OUTPUT__XC_DENSITY) /= 0 .and. hm%theory_level /= INDEPENDENT_PARTICLES) then
       SAFE_ALLOCATE(v0(1:der%mesh%np_part, 1))
