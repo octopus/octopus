@@ -148,10 +148,10 @@ module casida_oct_m
     type(photon_mode_t)  :: pt
 
     logical           :: kernel_saved
-    ! parallel matrix layout stuff
-    integer :: n, nb_rows, nb_cols, block_size
-    type(blacs_proc_grid_t) :: proc_grid
-    integer :: desc(BLACS_DLEN)
+    integer           :: n, nb_rows, nb_cols, block_size !< parallel matrix layout
+    type(blacs_proc_grid_t) :: proc_grid    !< BLACS process grid type
+    integer           :: desc(BLACS_DLEN)   !< descriptor for distributed matrix
+    integer           :: darray             !< MPI IO type
 
   end type casida_t
 
@@ -608,8 +608,9 @@ contains
     cas%nb_cols = max(1, numroc(cas%n, cas%block_size, cas%proc_grid%mycol, 0, cas%proc_grid%npcol))
 
     ! get ScaLAPACK descriptor
-    call descinit(cas%desc(1), cas%n, cas%n, cas%block_size, cas%block_size, 0, 0, cas%proc_grid%context, &
-      cas%nb_rows, info)
+    call descinit(cas%desc(1), cas%n, cas%n, cas%block_size, cas%block_size, 0, 0, &
+      cas%proc_grid%context, cas%nb_rows, info)
+
 #else
     ! set to full size
     cas%nb_rows = cas%n
@@ -1042,7 +1043,7 @@ contains
     jb = jb_local
 #else
     ! get global value
-    jb = indxl2g(jb_local, cas%nb_rows, cas%proc_grid%myrow, 0, cas%proc_grid%nprow)
+    jb = indxl2g(jb_local, cas%block_size, cas%proc_grid%myrow, 0, cas%proc_grid%nprow)
 #endif
   end function get_global_row
 
@@ -1054,7 +1055,7 @@ contains
     ia = ia_local
 #else
     ! get global value
-    ia = indxl2g(ia_local, cas%nb_cols, cas%proc_grid%mycol, 0, cas%proc_grid%npcol)
+    ia = indxl2g(ia_local, cas%block_size, cas%proc_grid%mycol, 0, cas%proc_grid%npcol)
 #endif
   end function get_global_col
 

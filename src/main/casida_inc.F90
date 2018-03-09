@@ -120,7 +120,6 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
   SAFE_ALLOCATE(xx(1:cas%n_pairs))
   SAFE_ALLOCATE(deltav(1:mesh%np))
 
-  ! TODO: adapt for distributed memory!
   do idir = 1, mesh%sb%dim
     deltav(1:mesh%np) = mesh%x(1:mesh%np, idir)
     ! let us get now the x vector.
@@ -233,12 +232,13 @@ R_TYPE function X(transition_matrix_element) (cas, ia, xx) result(zz)
       ia_local = ia
       jb_local = jb
 #else
-      ia_proc = indxg2p(ia, cas%nb_cols, cas%proc_grid%mycol, 0, cas%proc_grid%npcol)
-      jb_proc = indxg2p(jb, cas%nb_rows, cas%proc_grid%myrow, 0, cas%proc_grid%nprow)
+      ia_proc = indxg2p(ia, cas%block_size, cas%proc_grid%mycol, 0, cas%proc_grid%npcol)
+      jb_proc = indxg2p(jb, cas%block_size, cas%proc_grid%myrow, 0, cas%proc_grid%nprow)
       if(cas%mpi_grp%rank == ia_proc .and. cas%mpi_grp%rank == jb_proc) then
+      !if(mpi_world%rank == ia_proc .and. mpi_world%rank == jb_proc) then
         on_this_processor = .true.
-        ia_local = indxg2l(ia, cas%nb_cols, cas%proc_grid%mycol, 0, cas%proc_grid%npcol)
-        jb_local = indxg2l(jb, cas%nb_rows, cas%proc_grid%myrow, 0, cas%proc_grid%nprow)
+        ia_local = indxg2l(ia, cas%block_size, cas%proc_grid%mycol, 0, cas%proc_grid%npcol)
+        jb_local = indxg2l(jb, cas%block_size, cas%proc_grid%myrow, 0, cas%proc_grid%nprow)
       end if
 #endif
     end subroutine local_indices
@@ -474,7 +474,6 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   integer :: ia_local, jb_local
   integer :: maxcount, actual, counter
   R_TYPE :: mtxel_vh, mtxel_xc, mtxel_vm
-  !logical, allocatable :: is_calcd(:, :)
   logical :: is_forces_
   R_TYPE, allocatable :: xx(:)
   R_TYPE, allocatable :: X(pot)(:)
@@ -502,17 +501,11 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
 
   ! get matrix from saved kernel if already computed
   if(cas%kernel_saved) then
-    ! TODO: use blas functions here for efficiency?
-    !matrix(1:cas%n_pairs+cas%pt_nmodes, 1:cas%n_pairs+cas%pt_nmodes) = &
-    !  cas%X(kernel)(1:cas%n_pairs+cas%pt_nmodes, 1:cas%n_pairs+cas%pt_nmodes)
     matrix(1:cas%nb_rows, 1:cas%nb_cols) = cas%X(kernel)(1:cas%nb_rows, 1:cas%nb_cols)
   end if
 
 
-  !SAFE_ALLOCATE(is_calcd(1:cas%n_pairs, 1:cas%n_pairs))
-  !is_calcd = .true.
   ! purge saved non-degenerate offdiagonals, mark which are being calculated
-  !if(cas%type == CASIDA_PETERSILKA .and. mpi_grp_is_root(mpi_world)) then
   if(cas%type == CASIDA_PETERSILKA) then
     do jb_local = 1, cas%nb_rows
       jb = get_global_row(cas, jb_local)
@@ -525,8 +518,6 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
 #ifndef HAVE_SCALAPACK
           matrix(ia_local, jb_local) = M_ZERO
 #endif
-          !is_calcd(ia, jb) = .false.
-          !is_calcd(jb, ia) = .false.
         end if
       end do
     end do
@@ -1191,21 +1182,37 @@ subroutine X(casida_solve)(cas, st)
     end do
   end if
 
-  print *, cas%mpi_grp%rank, " at barrier 1"
+  ! wait at barrier for profiling
   call MPI_Barrier(mpi_world%comm, info)
   message(1) = "Info: Diagonalizing matrix for resonance energies."
   call messages_info(1)
+
   ! now we diagonalize the matrix
-  ! for huge matrices, perhaps we should consider ScaLAPACK here...
   call profiling_in(prof, "CASIDA_DIAGONALIZATION")
   if(cas%calc_forces) cas%X(mat_save) = cas%X(mat) ! save before gets turned into eigenvectors
-  ! use parallel eigensolver here; falls back to serial solver if ScaLAPACK
-  ! not available
-!  call lalg_eigensolve_parallel(cas%n_pairs + cas%pt_nmodes, cas%X(mat), cas%w)
 
   SAFE_ALLOCATE(eigenvectors(cas%nb_rows, cas%nb_cols))
+
+  ! store upper right part as well
+  eigenvectors(1:cas%nb_rows,1:cas%nb_cols) = cas%X(mat)(1:cas%nb_rows,1:cas%nb_cols)
+  ! set diagonal to zero and add transpose of eigenvectors to X(mat) to get full
+  ! matrix
+  do jb_local = 1, cas%nb_rows
+    jb = get_global_row(cas, jb_local)
+    do ia_local = 1, cas%nb_cols
+      ia = get_global_col(cas, ia_local)
+      if(ia == jb) eigenvectors(jb_local,ia_local) = M_ZERO
+    end do
+  end do
+  call pblas_tran(cas%n, cas%n, R_TOTYPE(M_ONE), eigenvectors(1,1), 1, 1, cas%desc(1), &
+    R_TOTYPE(M_ONE), cas%X(mat)(1,1), 1, 1, cas%desc(1))
+
+  if(cas%type == CASIDA_CASIDA) then
+    call X(write_distributed_matrix)(cas, cas%X(mat), CASIDA_DIR//"casida_matrix")
+  end if
+
 #ifdef HAVE_ELPA
-  ! 4. eigensolver settings (allocate workspace)
+  ! eigensolver settings (allocate workspace)
   if (elpa_init(20170403) /= elpa_ok) then
     write(message(1),'(a)') "ELPA API version not supported"
     call messages_fatal(1)
@@ -1226,25 +1233,7 @@ subroutine X(casida_solve)(cas, st)
 
   call elpa%set("solver", elpa_solver_2stage, info)
   
-  ! store upper right part as well
-  eigenvectors(1:cas%nb_rows,1:cas%nb_cols) = cas%X(mat)(1:cas%nb_rows,1:cas%nb_cols)
-    do jb_local = 1, cas%nb_rows
-      jb = indxl2g(jb_local, cas%nb_rows, cas%proc_grid%myrow, 0, cas%proc_grid%nprow)
-      do ia_local = 1, cas%nb_cols
-        ia = indxl2g(ia_local, cas%nb_cols, cas%proc_grid%mycol, 0, cas%proc_grid%npcol)
-        if(ia == jb) eigenvectors(jb_local,ia_local) = M_ZERO
-      end do
-    end do
-  call pblas_tran(cas%n, cas%n, R_TOTYPE(M_ONE), eigenvectors(1,1), 1, 1, cas%desc(1), &
-    R_TOTYPE(M_ONE), cas%X(mat)(1,1), 1, 1, cas%desc(1))
-
-  if(mpi_grp_is_root(mpi_world) .and. cas%type == CASIDA_CASIDA) then
-    iunit = io_open(CASIDA_DIR//"casida_matrix", action='write', form="unformatted")
-    write(iunit) cas%X(mat)
-    call io_close(iunit)
-  end if
-
-  ! 5. call eigensolver
+  ! call eigensolver
   call elpa%eigenvectors(cas%X(mat), cas%w, eigenvectors, info)
 
   ! error handling
@@ -1259,7 +1248,7 @@ subroutine X(casida_solve)(cas, st)
 
 #else
   ! use ScaLAPACK solver if ELPA not available
-  ! 4. eigensolver settings (allocate workspace)
+  ! eigensolver settings (allocate workspace)
   ! workspace query
 #ifdef R_TREAL
   call pdsyev(jobz='V', uplo='L', n=cas%n, &
@@ -1283,7 +1272,7 @@ subroutine X(casida_solve)(cas, st)
   SAFE_ALLOCATE(rwork(1:int(rworksize)))
 #endif
 
-  ! 5. call eigensolver
+  ! call eigensolver
 #ifdef R_TREAL
   call pdsyev(jobz='V', uplo='L', n=cas%n, &
     a=cas%X(mat)(1, 1) , ia=1, ja=1, desca=cas%desc(1), w=cas%w(1), &
@@ -1339,9 +1328,6 @@ subroutine X(casida_solve)(cas, st)
   ! save eigenvectors to X(mat)
   cas%X(mat)(1:cas%nb_rows,1:cas%nb_cols) = eigenvectors(1:cas%nb_rows,1:cas%nb_cols)
   SAFE_DEALLOCATE_A(eigenvectors)
-
-  print *, cas%mpi_grp%rank, " at barrier 2"
-  call MPI_Barrier(mpi_world%comm, info)
 
   do ia = 1, cas%n_pairs+cas%pt_nmodes
     if(cas%type == CASIDA_CASIDA) then
@@ -1535,6 +1521,36 @@ subroutine X(write_implied_occupations)(cas, iunit, ind)
   
   POP_SUB(X(write_implied_occupations))
 end subroutine X(write_implied_occupations)
+
+subroutine X(write_distributed_matrix)(cas, matrix, filename)
+  implicit none
+  type(casida_t), intent(in) :: cas
+  R_TYPE, intent(in) :: matrix(:,:)
+  character(len=*), intent(in) :: filename
+  integer :: outfile, mpistatus, ierr
+  integer :: locsize, nelements
+
+  ! create MPI IO types
+  call MPI_Type_create_darray(mpi_world%size, mpi_world%rank, 2, (/ cas%n, cas%n /), &
+    (/ MPI_DISTRIBUTE_CYCLIC, MPI_DISTRIBUTE_CYCLIC /), (/ cas%block_size, cas%block_size/), &
+    (/ cas%proc_grid%nprow, cas%proc_grid%npcol /), MPI_ORDER_FORTRAN, MPI_FLOAT, &
+    cas%darray, ierr)
+  call MPI_Type_commit(cas%darray, ierr)
+
+  call MPI_Barrier(mpi_world%comm, ierr)
+  ! write out casida matrix
+  call MPI_File_open(mpi_world%comm, trim(filename), MPI_MODE_CREATE+MPI_MODE_WRONLY, &
+    MPI_INFO_NULL, outfile, ierr)
+  if(mpi_grp_is_root(mpi_world)) then
+    ! write size of matrix
+    call MPI_File_write(outfile, cas%n, 1, MPI_INTEGER, MPI_STATUS_IGNORE, ierr)
+  end if
+  ! write matrix with displacement of one integer (size)
+  call MPI_File_set_view(outfile, sizeof(cas%n), R_MPITYPE, cas%darray, "native", MPI_INFO_NULL, ierr)
+  call MPI_File_write_all(outfile, matrix, cas%nb_rows*cas%nb_cols, R_MPITYPE, mpistatus, ierr)
+  call MPI_File_close(outfile, ierr)
+end subroutine X(write_distributed_matrix)
+
 
 !! Local Variables:
 !! mode: f90
