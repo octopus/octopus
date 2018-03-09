@@ -369,12 +369,14 @@ contains
       SAFE_ALLOCATE(ps%k    (0:ps%l_max, 1:ps%kbc, 1:ps%kbc))
       call hgh_load(ps, ps_hgh)
       call hgh_end(ps_hgh)
-    case(PS_TYPE_UPF)
-      call ps_upf_load(ps, ps_upf)
-      call ps_upf_end(ps_upf)
-    case(PS_TYPE_QSO)
-      call ps_qso_load(ps, ps_qso)
-      call ps_qso_end(ps_qso)
+    case(PS_TYPE_QSO, PS_TYPE_UPF)
+      if(ps_qso%initialized) then
+        call ps_qso_load(ps, ps_qso)
+        call ps_qso_end(ps_qso)
+      else
+        call ps_upf_load(ps, ps_upf)
+        call ps_upf_end(ps_upf)
+      end if
     end select
 
     if(ps_has_density(ps)) then 
@@ -388,7 +390,6 @@ contains
     ps%is_separated = .false.
 
     POP_SUB(ps_init)
-
   end subroutine ps_init
 
   ! ---------------------------------------------------------

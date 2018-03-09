@@ -37,6 +37,7 @@ module ps_qso_oct_m
     ps_qso_end
 
   type ps_qso_t
+    logical            :: initialized
     logical            :: oncv
     logical            :: nlcc
     integer            :: atomic_number
@@ -67,6 +68,8 @@ contains
 
     PUSH_SUB(ps_qso_init)
 
+    this%initialized = .false.
+    
     call pseudo_init(pseudo, filename, ierr)
 
     if(ierr == PSEUDO_STATUS_FILE_NOT_FOUND) then
@@ -83,7 +86,8 @@ contains
       POP_SUB(ps_qso_init)
       return
     end if
-    
+
+    this%initialized = .true.
     this%valence_charge = pseudo_valence_charge(pseudo)
     this%mesh_spacing = pseudo_mesh_spacing(pseudo)
     this%mass = pseudo_mass(pseudo)
