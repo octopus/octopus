@@ -26,7 +26,6 @@ module ps_qso_oct_m
   use profiling_oct_m
   use pseudo_oct_m
   use ps_in_grid_oct_m
-  use xml_oct_m
 
   implicit none
 
