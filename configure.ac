@@ -408,14 +408,17 @@ AC_CONFIG_FILES([Makefile
   share/pseudopotentials/PSF/Makefile
   share/pseudopotentials/HGH/Makefile
   share/pseudopotentials/extra/Makefile
-  share/pseudopotentials/sg15/Makefile
-  share/pseudopotentials/hscv/Makefile
-  share/pseudopotentials/hscv/lda/Makefile
-  share/pseudopotentials/hscv/pbe/Makefile
-  share/pseudopotentials/pseudodojo/Makefile  
-  share/pseudopotentials/pseudodojo/pbe_s_sr/Makefile
-  share/pseudopotentials/pseudodojo/pbesol_s_sr/Makefile  
-  share/pseudopotentials/pseudodojo/pw_s_sr/Makefile
+  share/pseudopotentials/quantum-simulation.org/Makefile
+  share/pseudopotentials/quantum-simulation.org/hscv/Makefile
+  share/pseudopotentials/quantum-simulation.org/hscv/lda/Makefile
+  share/pseudopotentials/quantum-simulation.org/hscv/pbe/Makefile
+  share/pseudopotentials/quantum-simulation.org/sg15/Makefile
+  share/pseudopotentials/pseudo-dojo.org/Makefile  
+  share/pseudopotentials/pseudo-dojo.org/pbe_s_sr/Makefile
+  share/pseudopotentials/pseudo-dojo.org/pbesol_s_sr/Makefile  
+  share/pseudopotentials/pseudo-dojo.org/pw_s_sr/Makefile
+  share/pseudopotentials/pseudo-dojo.org/nc-sr-04_pbe_standard/Makefile
+  share/pseudopotentials/pseudo-dojo.org/nc-sr-04_pbe_stringent/Makefile
   share/recipes/Makefile
   share/recipes/da/Makefile
   share/recipes/de/Makefile
