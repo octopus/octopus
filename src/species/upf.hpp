@@ -336,7 +336,7 @@ namespace pseudopotential {
       rapidxml::xml_node<> * node = NULL;
       
       std::string tag = "PP_CHI." + std::to_string(index + 1);
-      node = root_node_->first_node("PP_NONLOCAL")->first_node(tag.c_str());
+      node = root_node_->first_node("PP_PSWFC")->first_node(tag.c_str());
       
       assert(node);
 

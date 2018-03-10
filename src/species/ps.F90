@@ -279,7 +279,7 @@ contains
         ps%conf%z = nint(z)
         
         if(ps_qso%kleinman_bylander) then
-          ps%conf%p = 0
+          ps%conf%p = ps_qso%nwavefunctions
         else
           ps%conf%p = ps_qso%lmax + 1
         end if
@@ -1062,7 +1062,7 @@ contains
     type(ps_t),     intent(inout) :: ps
     type(ps_qso_t), intent(in)    :: ps_qso
 
-    integer :: ll, ip, is, ic, jc, ir, nrc
+    integer :: ll, ip, is, ic, jc, ir, nrc, ii
     FLOAT :: rr, kbcos, kbnorm, dnrm, avgv, volume_element
     FLOAT, allocatable :: vlocal(:), kbprojector(:), wavefunction(:), nlcc_density(:), dens(:)
 
@@ -1099,13 +1099,11 @@ contains
     wavefunction = CNST(0.0)
 
     ! the projectors and the orbitals
+    if(ps_qso%kleinman_bylander) then
 
-    do ll = 0, ps_qso%lmax
-
-      if(ps_qso%kleinman_bylander) then
-
+      do ll = 0, ps_qso%lmax
         do ic = 1, ps_qso%nchannels
-
+          
           do ip = 1, ps%g%nrval
             if(ip <= ps_qso%grid_size) then
               kbprojector(ip) = ps_qso%projector(ip, ll, ic)
@@ -1121,9 +1119,28 @@ contains
           end do
 
         end do
+      end do
 
-      else
+      do ii = 1, ps_qso%nwavefunctions
+        
+        do ip = 1, ps%g%nrval
+          if(ip <= ps_qso%grid_size) then
+            wavefunction(ip) = ps_qso%wavefunction(ip, ii)
+          else
+            wavefunction(ip) = CNST(0.0)
+          end if
+        end do
+      
+        do is = 1, ps%ispin
+          call spline_fit(ps%g%nrval, ps%g%rofi, wavefunction, ps%ur(ii, is))
+          call spline_fit(ps%g%nrval, ps%g%r2ofi, wavefunction, ps%ur_sq(ii, is))
+        end do
 
+      end do
+      
+    else
+
+      do ll = 0, ps_qso%lmax
         ! we need to build the KB projectors
         ! the procedure was copied from ps_in_grid.F90 (r12967)
         dnrm = M_ZERO
@@ -1162,10 +1179,9 @@ contains
           call spline_fit(ps%g%nrval, ps%g%rofi, wavefunction, ps%ur(ll + 1, is))
           call spline_fit(ps%g%nrval, ps%g%r2ofi, wavefunction, ps%ur_sq(ll + 1, is))
         end do
-
-      end if
-
-    end do
+      end do
+        
+    end if
 
     ps%has_density = ps_qso%has_density
     

@@ -252,7 +252,7 @@ module pseudo_oct_m
 
     ! -------------------------------------------------
     
-    subroutine pseudo_wavefunction(pseudo, index, n, l, occ, radial_function)
+    subroutine pseudo_wavefunction(pseudo, index, n, l, occ, wf)
       import :: pseudo_t
       implicit none
       
@@ -261,7 +261,7 @@ module pseudo_oct_m
       integer,          intent(out)   :: n
       integer,          intent(out)   :: l
       real(8),          intent(out)   :: occ
-      real(8),          intent(out)   :: radial_function
+      real(8),          intent(out)   :: wf
     end subroutine pseudo_wavefunction
 
   end interface

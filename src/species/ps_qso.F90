@@ -49,12 +49,16 @@ module ps_qso_oct_m
     FLOAT              :: mesh_spacing
     integer            :: nchannels
     integer            :: grid_size
+    integer            :: nwavefunctions
     FLOAT, allocatable :: potential(:, :)
     FLOAT, allocatable :: wavefunction(:, :)
     FLOAT, allocatable :: projector(:, :, :)
     FLOAT, allocatable :: dij(:, :, :)
     FLOAT, allocatable :: nlcc_density(:)
     FLOAT, allocatable :: density(:)
+    integer, allocatable :: wf_n(:)
+    integer, allocatable :: wf_l(:)
+    FLOAT, allocatable :: wf_occ(:)
   end type ps_qso_t
 
 contains
@@ -135,6 +139,17 @@ contains
           end do
         end do
       end do
+
+      this%nwavefunctions = pseudo_nwavefunctions(pseudo)
+      
+      SAFE_ALLOCATE(this%wavefunction(1:this%grid_size, 1:this%nwavefunctions))
+      SAFE_ALLOCATE(this%wf_n(1:this%nwavefunctions))
+      SAFE_ALLOCATE(this%wf_l(1:this%nwavefunctions))
+      SAFE_ALLOCATE(this%wf_occ(1:this%nwavefunctions))
+      
+      do ii = 1, this%nwavefunctions
+        call pseudo_wavefunction(pseudo, ii, this%wf_n(ii), this%wf_l(ii), this%wf_occ(ii), this%wavefunction(1, ii))
+      end do
       
     end if
 
@@ -199,6 +214,10 @@ contains
     SAFE_DEALLOCATE_A(this%projector)
     SAFE_DEALLOCATE_A(this%dij)
     SAFE_DEALLOCATE_A(this%nlcc_density)
+    SAFE_DEALLOCATE_A(this%density)
+    SAFE_DEALLOCATE_A(this%wf_n)
+    SAFE_DEALLOCATE_A(this%wf_l)
+    SAFE_DEALLOCATE_A(this%wf_occ)
 
     POP_SUB(ps_qso_end)
   end subroutine ps_qso_end
