@@ -6029,7 +6029,7 @@ l="0" >
 </PP_RHOATOM>
 </UPF>
 
-END_PSP
+
 
 <INPUT>
 ONCVPSP  (Optimized Norm-Conservinng Vanderbilt PSeudopotential)
