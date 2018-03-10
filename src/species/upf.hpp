@@ -253,7 +253,9 @@ namespace pseudopotential {
 
       std::istringstream stst(node->value());
       for(int ii = 0; ii < size; ii++) stst >> density[start_point_ + ii];
-
+      extrapolate_first_point(density);
+      // this charge does not come multiplied by anything
+      
       interpolate(density);
     }
     
