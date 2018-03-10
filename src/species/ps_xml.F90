@@ -18,7 +18,7 @@
 
 #include "global.h"
 
-module ps_qso_oct_m
+module ps_xml_oct_m
   use atomic_oct_m
   use global_oct_m
   use io_oct_m
@@ -31,11 +31,11 @@ module ps_qso_oct_m
 
   private
   public ::     &
-    ps_qso_t,       &
-    ps_qso_init,    &
-    ps_qso_end
+    ps_xml_t,       &
+    ps_xml_init,    &
+    ps_xml_end
 
-  type ps_qso_t
+  type ps_xml_t
     logical            :: initialized
     logical            :: kleinman_bylander
     logical            :: nlcc
@@ -58,20 +58,20 @@ module ps_qso_oct_m
     integer, allocatable :: wf_n(:)
     integer, allocatable :: wf_l(:)
     FLOAT, allocatable :: wf_occ(:)
-  end type ps_qso_t
+  end type ps_xml_t
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine ps_qso_init(this, filename, ierr)
-    type(ps_qso_t),   intent(inout) :: this
+  subroutine ps_xml_init(this, filename, ierr)
+    type(ps_xml_t),   intent(inout) :: this
     character(len=*), intent(in)    :: filename
     integer,          intent(out)   :: ierr
 
     integer :: ll, ii, ic, jc
     type(pseudo_t) :: pseudo
 
-    PUSH_SUB(ps_qso_init)
+    PUSH_SUB(ps_xml_init)
 
     this%initialized = .false.
     
@@ -88,7 +88,7 @@ contains
     end if
 
     if(ierr == PSEUDO_STATUS_FORMAT_NOT_SUPPORTED) then
-      POP_SUB(ps_qso_init)
+      POP_SUB(ps_xml_init)
       return
     end if
 
@@ -166,20 +166,20 @@ contains
 
     call pseudo_end(pseudo)
     
-    if(.not. this%kleinman_bylander) call ps_qso_check_normalization(this)
+    if(.not. this%kleinman_bylander) call ps_xml_check_normalization(this)
 
-    POP_SUB(ps_qso_init)
-  end subroutine ps_qso_init
+    POP_SUB(ps_xml_init)
+  end subroutine ps_xml_init
 
   ! ---------------------------------------------------------
   !> checks normalization of the pseudo wavefunctions
-  subroutine ps_qso_check_normalization(this)
-    type(ps_qso_t), intent(in) :: this
+  subroutine ps_xml_check_normalization(this)
+    type(ps_xml_t), intent(in) :: this
     
     integer :: ll, ip
     FLOAT   :: nrm, rr
 
-    PUSH_SUB(ps_qso_check_normalization)
+    PUSH_SUB(ps_xml_check_normalization)
 
     !  checking normalization of the wavefunctions
     do ll = 0, this%lmax
@@ -199,14 +199,14 @@ contains
 
     end do
       
-    POP_SUB(ps_qso_check_normalization)
-  end subroutine ps_qso_check_normalization
+    POP_SUB(ps_xml_check_normalization)
+  end subroutine ps_xml_check_normalization
   
   ! ---------------------------------------------------------
-  subroutine ps_qso_end(this)
-    type(ps_qso_t), intent(inout) :: this
+  subroutine ps_xml_end(this)
+    type(ps_xml_t), intent(inout) :: this
 
-    PUSH_SUB(ps_qso_end)
+    PUSH_SUB(ps_xml_end)
 
     SAFE_DEALLOCATE_A(this%potential)
     SAFE_DEALLOCATE_A(this%wavefunction)
@@ -218,10 +218,10 @@ contains
     SAFE_DEALLOCATE_A(this%wf_l)
     SAFE_DEALLOCATE_A(this%wf_occ)
 
-    POP_SUB(ps_qso_end)
-  end subroutine ps_qso_end
+    POP_SUB(ps_xml_end)
+  end subroutine ps_xml_end
 
-end module ps_qso_oct_m
+end module ps_xml_oct_m
 
 !! Local Variables:
 !! mode: f90
