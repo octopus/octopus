@@ -1170,12 +1170,12 @@ contains
     !Non-linear core-corrections
     if(ps_qso%nlcc) then
 
-      SAFE_ALLOCATE(nlcc_density(1:ps_qso%grid_size))
+      SAFE_ALLOCATE(nlcc_density(1:ps%g%nrval))
 
       nlcc_density(1:ps_qso%grid_size) = ps_qso%nlcc_density(1:ps_qso%grid_size)
       
       ! find cutoff radius
-      do ir = ps%g%nrval - 1, 1, -1
+      do ir = ps_qso%grid_size - 1, 1, -1
         if(nlcc_density(ir) > eps) then
           nrc = ir + 1
           exit
