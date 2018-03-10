@@ -132,11 +132,11 @@ AC_DEFUN([AX_CXX_COMPILE_STDCXX], [dnl
   fi
   if test x$ac_success = xno; then
     HAVE_CXX$1=0
-    AC_MSG_NOTICE([No compiler with C++$1 support was found])
+    AC_MSG_ERROR([no compiler with C++$1 support was found])
   else
     HAVE_CXX$1=1
-    AC_DEFINE(HAVE_CXX$1,1,
-              [define if the compiler supports basic C++$1 syntax])
+dnl    AC_DEFINE(HAVE_CXX$1,1,
+dnl              [define if the compiler supports basic C++$1 syntax])
   fi
   AC_SUBST(HAVE_CXX$1)
   m4_if([$1], [17], [AC_MSG_WARN([C++17 is not yet standardized, so the checks may change in incompatible ways anytime])])
