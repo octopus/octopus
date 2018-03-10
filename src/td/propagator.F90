@@ -106,19 +106,19 @@ contains
       SAFE_ALLOCATE(tro%tdsk)
       tro%tdsk_size = tri%tdsk_size
 #ifdef HAVE_SPARSKIT
-      call sparskit_solver_init(tro%tdsk_size, tro%tdsk, is_complex = .true.)
+      call sparskit_solver_init(tro%tdsk_size, tro%tdsk, .true.)
 #endif
     case(PROP_RUNGE_KUTTA4)
       SAFE_ALLOCATE(tro%tdsk)
       tro%tdsk_size = tri%tdsk_size
 #ifdef HAVE_SPARSKIT
-      call sparskit_solver_init(tro%tdsk_size, tro%tdsk, is_complex = .true.)
+      call sparskit_solver_init(tro%tdsk_size, tro%tdsk, .true.)
 #endif
     case(PROP_RUNGE_KUTTA2)
       SAFE_ALLOCATE(tro%tdsk)
       tro%tdsk_size = tri%tdsk_size
 #ifdef HAVE_SPARSKIT
-      call sparskit_solver_init(tro%tdsk_size, tro%tdsk, is_complex = .true.)
+      call sparskit_solver_init(tro%tdsk_size, tro%tdsk, .true.)
 #endif
     end select
 
@@ -273,7 +273,7 @@ contains
       sp_distdot_mode = 3
       tr%tdsk_size = 2 * st%d%dim * gr%mesh%np * (st%st_end - st%st_start + 1) * (st%d%kpt%end - st%d%kpt%start + 1)
       SAFE_ALLOCATE(tr%tdsk)
-      call sparskit_solver_init(tr%tdsk_size, tr%tdsk, is_complex = .true.)
+      call sparskit_solver_init(tr%tdsk_size, tr%tdsk, .true.)
 #else
       message(1) = 'Octopus was not compiled with support for the SPARSKIT library. This'
       message(2) = 'library is required if the "runge_kutta4" propagator is selected.'
@@ -288,7 +288,7 @@ contains
       sp_distdot_mode = 2
       tr%tdsk_size = st%d%dim * gr%mesh%np * (st%st_end - st%st_start + 1) * (st%d%kpt%end - st%d%kpt%start + 1)
       SAFE_ALLOCATE(tr%tdsk)
-      call sparskit_solver_init(tr%tdsk_size, tr%tdsk, is_complex = .true.)
+      call sparskit_solver_init(tr%tdsk_size, tr%tdsk, .true.)
 #else
       message(1) = 'Octopus was not compiled with support for the SPARSKIT library. This'
       message(2) = 'library is required if the "runge_kutta2" propagator is selected.'
@@ -303,7 +303,7 @@ contains
       sp_distdot_mode = 1
       tr%tdsk_size = st%d%dim*gr%mesh%np
       SAFE_ALLOCATE(tr%tdsk)
-      call sparskit_solver_init(st%d%dim*gr%mesh%np, tr%tdsk, is_complex = .true.)
+      call sparskit_solver_init(st%d%dim*gr%mesh%np, tr%tdsk, .true.)
 #else
       message(1) = 'Octopus was not compiled with support for the SPARSKIT library. This'
       message(2) = 'library is required if the "crank_nicolson_sparskit" propagator is selected.'

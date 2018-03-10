@@ -832,7 +832,7 @@ contains
   
   ! ---------------------------------------------------------
   subroutine epot_local_potential(ep, der, dgrid, geo, iatom, vpsl, Imvpsl, rho_core, density, Imdensity)
-    type(epot_t),             intent(inout) :: ep
+    type(epot_t),             intent(in)    :: ep
     type(derivatives_t),      intent(in)    :: der
     type(double_grid_t),      intent(in)    :: dgrid
     type(geometry_t),         intent(in)    :: geo

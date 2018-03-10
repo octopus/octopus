@@ -601,7 +601,6 @@ contains
 
       ! free memory
       call states_deallocate_wfns(st)
-      call ion_dynamics_end(td%ions)
       call td_end(td)
       if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) call restart_end(restart_load)
 
