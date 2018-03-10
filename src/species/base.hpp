@@ -78,6 +78,8 @@ namespace pseudopotential {
     virtual void rinner(std::vector<double> & val) const = 0;
     virtual void qnm(int index, int & l1, int & l2, int & n, int & m, std::vector<double> & val) const = 0;
     virtual void qfcoeff(int index, int ltot, std::vector<double> & val) const = 0;
+    virtual bool has_density() const { return false; }
+    virtual void density(std::vector<double> & val) const { val.clear(); }
     
   protected:
 

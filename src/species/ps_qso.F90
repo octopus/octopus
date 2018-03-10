@@ -40,6 +40,7 @@ module ps_qso_oct_m
     logical            :: initialized
     logical            :: oncv
     logical            :: nlcc
+    logical            :: has_density
     integer            :: atomic_number
     FLOAT              :: mass
     FLOAT              :: valence_charge
@@ -53,6 +54,7 @@ module ps_qso_oct_m
     FLOAT, allocatable :: projector(:, :, :)
     FLOAT, allocatable :: dij(:, :, :)
     FLOAT, allocatable :: nlcc_density(:)
+    FLOAT, allocatable :: density(:)
   end type ps_qso_t
 
 contains
@@ -136,6 +138,12 @@ contains
 
     end if
 
+    this%has_density = pseudo_has_density(pseudo)
+    if(this%has_density) then
+      SAFE_ALLOCATE(this%density(1:this%grid_size))
+      call pseudo_density(pseudo, this%density(1))
+    end if
+    
     this%nlcc = pseudo_has_nlcc(pseudo)
     if(this%nlcc) then
       SAFE_ALLOCATE(this%nlcc_density(1:this%grid_size))

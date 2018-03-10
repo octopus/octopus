@@ -1064,7 +1064,7 @@ contains
 
     integer :: ll, ip, is, ic, jc, ir, nrc
     FLOAT :: rr, kbcos, kbnorm, dnrm, avgv, volume_element
-    FLOAT, allocatable :: vlocal(:), kbprojector(:), wavefunction(:), nlcc_density(:)
+    FLOAT, allocatable :: vlocal(:), kbprojector(:), wavefunction(:), nlcc_density(:), dens(:)
 
     PUSH_SUB(ps_qso_load)
 
@@ -1167,6 +1167,22 @@ contains
 
     end do
 
+    ps%has_density = ps_qso%has_density
+    
+    if(ps_has_density(ps)) then
+      
+      SAFE_ALLOCATE(dens(1:ps%g%nrval))
+      
+      dens(1:ps_qso%grid_size) = ps_qso%density(1:ps_qso%grid_size)/ps%ispin
+      dens(ps_qso%grid_size + 1:ps%g%nrval) = CNST(0.0)
+      
+      do is = 1, ps%ispin
+        call spline_fit(ps%g%nrval, ps%g%rofi, dens, ps%density(is))
+      end do
+      
+      SAFE_DEALLOCATE_A(dens)
+    end if
+    
     !Non-linear core-corrections
     if(ps_qso%nlcc) then
 

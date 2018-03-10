@@ -46,7 +46,9 @@ module pseudo_oct_m
     pseudo_radial_potential,    &
     pseudo_has_nlcc,            &
     pseudo_nlcc_density,        &
-    pseudo_dij
+    pseudo_dij,                 &
+    pseudo_has_density,         &
+    pseudo_density
 
   !these values have to match with those on base.hpp
   integer, parameter, public ::               &
@@ -227,6 +229,16 @@ module pseudo_oct_m
       real(8),          intent(out)   :: nlcc_density
     end subroutine pseudo_nlcc_density
 
+    ! -------------------------------------------------
+    
+    subroutine pseudo_density(pseudo, density)
+      import :: pseudo_t
+      implicit none
+      
+      type(pseudo_t),   intent(in)    :: pseudo
+      real(8),          intent(out)   :: density
+    end subroutine pseudo_density
+    
   end interface
   
 contains
@@ -269,6 +281,24 @@ contains
     
   end function pseudo_has_nlcc
 
+  ! -------------------------------------------------
+  
+  logical function pseudo_has_density(pseudo)
+    type(pseudo_t),   intent(in)      :: pseudo
+    
+    interface
+      integer function pseudo_has_density_low(pseudo)
+        import :: pseudo_t
+        implicit none
+        
+        type(pseudo_t),   intent(in)      :: pseudo
+      end function pseudo_has_density_low
+    end interface
+
+    pseudo_has_density = (pseudo_has_density_low(pseudo) /= 0)
+    
+  end function pseudo_has_density
+  
 end module pseudo_oct_m
 
 !! Local Variables:

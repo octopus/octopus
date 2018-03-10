@@ -144,3 +144,13 @@ extern "C" void FC_FUNC_(pseudo_nlcc_density, PSEUDO_NLCC_DENSITY)(const pseudop
   (*pseudo)->nlcc_density(val);
   for(unsigned i = 0; i < val.size(); i++) nlcc_density[i] = val[i];
 }
+
+extern "C" fint FC_FUNC_(pseudo_has_density_low, PSEUDO_HAS_DENSITY_LOW)(const pseudopotential::base ** pseudo){
+  return fint((*pseudo)->has_nlcc());
+}
+
+extern "C" void FC_FUNC_(pseudo_density, PSEUDO_DENSITY)(const pseudopotential::base ** pseudo, double * density){
+  std::vector<double> val;
+  (*pseudo)->density(val);
+  for(unsigned i = 0; i < val.size(); i++) density[i] = val[i];
+}
