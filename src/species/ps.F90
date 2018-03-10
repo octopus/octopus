@@ -278,7 +278,7 @@ contains
         ps%z      = z
         ps%conf%z = nint(z)
         
-        if(ps_qso%oncv) then
+        if(ps_qso%kleinman_bylander) then
           ps%conf%p = 0
         else
           ps%conf%p = ps_qso%lmax + 1
@@ -1068,7 +1068,7 @@ contains
 
     PUSH_SUB(ps_qso_load)
 
-    if(ps_qso%oncv .and. ps_qso%nchannels == 2) then
+    if(ps_qso%kleinman_bylander .and. ps_qso%nchannels == 2) then
       ps%hamann = .true.
     end if
     
@@ -1102,7 +1102,7 @@ contains
 
     do ll = 0, ps_qso%lmax
 
-      if(ps_qso%oncv) then
+      if(ps_qso%kleinman_bylander) then
 
         do ic = 1, ps_qso%nchannels
 

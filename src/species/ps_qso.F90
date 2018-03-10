@@ -38,7 +38,7 @@ module ps_qso_oct_m
 
   type ps_qso_t
     logical            :: initialized
-    logical            :: oncv
+    logical            :: kleinman_bylander
     logical            :: nlcc
     logical            :: has_density
     integer            :: atomic_number
@@ -97,11 +97,11 @@ contains
     this%llocal = pseudo_llocal(pseudo) 
     this%nchannels = pseudo_nchannels(pseudo)
    
-    this%oncv = (pseudo_type(pseudo) == PSEUDO_TYPE_KLEINMAN_BYLANDER)
+    this%kleinman_bylander = (pseudo_type(pseudo) == PSEUDO_TYPE_KLEINMAN_BYLANDER)
 
     this%grid_size = pseudo_mesh_size(pseudo)
     
-    if(.not. this%oncv) then
+    if(.not. this%kleinman_bylander) then
 
       SAFE_ALLOCATE(this%potential(1:this%grid_size, 0:this%lmax))
       SAFE_ALLOCATE(this%wavefunction(1:this%grid_size, 0:this%lmax))
@@ -152,7 +152,7 @@ contains
 
     call pseudo_end(pseudo)
     
-    if(.not. this%oncv) call ps_qso_check_normalization(this)
+    if(.not. this%kleinman_bylander) call ps_qso_check_normalization(this)
 
     POP_SUB(ps_qso_init)
   end subroutine ps_qso_init
