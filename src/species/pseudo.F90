@@ -48,8 +48,10 @@ module pseudo_oct_m
     pseudo_nlcc_density,        &
     pseudo_dij,                 &
     pseudo_has_density,         &
-    pseudo_density
-
+    pseudo_density,             &
+    pseudo_nwavefunctions,      &
+    pseudo_wavefunction
+  
   !these values have to match with those on base.hpp
   integer, parameter, public ::               &
     PSEUDO_TYPE_ULTRASOFT         = 30,       &
@@ -238,7 +240,30 @@ module pseudo_oct_m
       type(pseudo_t),   intent(in)    :: pseudo
       real(8),          intent(out)   :: density
     end subroutine pseudo_density
+
+    ! -------------------------------------------------
     
+    integer function pseudo_nwavefunctions(pseudo)
+      import :: pseudo_t
+      implicit none
+      
+      type(pseudo_t),   intent(in)    :: pseudo
+    end function pseudo_nwavefunctions
+
+    ! -------------------------------------------------
+    
+    subroutine pseudo_wavefunction(pseudo, index, n, l, occ, radial_function)
+      import :: pseudo_t
+      implicit none
+      
+      type(pseudo_t),   intent(in)    :: pseudo
+      integer,          intent(in)    :: index
+      integer,          intent(out)   :: n
+      integer,          intent(out)   :: l
+      real(8),          intent(out)   :: occ
+      real(8),          intent(out)   :: radial_function
+    end subroutine pseudo_wavefunction
+
   end interface
   
 contains

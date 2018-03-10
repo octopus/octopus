@@ -135,7 +135,7 @@ contains
           end do
         end do
       end do
-
+      
     end if
 
     this%has_density = pseudo_has_density(pseudo)

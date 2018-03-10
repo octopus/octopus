@@ -154,3 +154,16 @@ extern "C" void FC_FUNC_(pseudo_density, PSEUDO_DENSITY)(const pseudopotential::
   (*pseudo)->density(val);
   for(unsigned i = 0; i < val.size(); i++) density[i] = val[i];
 }
+
+extern "C" fint FC_FUNC_(pseudo_nwavefunctions, PSEUDO_NWAVEFUNCTIONS)(const pseudopotential::base ** pseudo){
+  return (*pseudo)->nwavefunctions();
+}
+
+extern "C" void FC_FUNC_(pseudo_wavefunction, PSEUDO_WAVEFUNCTION)
+  (const pseudopotential::base ** pseudo, const fint * index, fint * n, fint * l, double * occ, double * wavefunction){
+
+  std::vector<double> val;
+  (*pseudo)->wavefunction(*index - 1, *n, *l, *occ, val);
+  for(unsigned i = 0; i < val.size(); i++) wavefunction[i] = val[i];
+}
+
