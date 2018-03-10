@@ -629,7 +629,7 @@ contains
       spec%nlcc = spec%ps%nlcc
       spec%niwfs = ps_niwfs(spec%ps)
 
-      ! give this variables an absurd value as they shouldn't be used after
+      ! give this variables an absurd value as they should not be used after
       spec%lmax = -2
       spec%lloc = -2
 
