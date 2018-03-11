@@ -65,8 +65,11 @@ namespace pseudopotential {
 	int size = value<int>(node->first_attribute("npts"));
 	grid_.resize(size);
 	std::istringstream stst(node->first_node("grid-data")->value());
-	for(int ii = 0; ii < size; ii++) stst >> grid_[ii];
-	
+	for(int ii = 0; ii < size; ii++) {
+	  stst >> grid_[ii];
+	  if(ii > 0) assert(grid_[ii] > grid_[ii - 1]);
+	}
+
 	assert(fabs(grid_[0]) <= 1e-10);
 
 	mesh_size_ = 0;
@@ -121,7 +124,16 @@ namespace pseudopotential {
       return mesh_size_;
     }
     
-    void local_potential(std::vector<double> & potential) const {
+    void local_potential(std::vector<double> & val) const {
+      rapidxml::xml_node<> * node = root_node_->first_node("local-potential")->first_node("radfunc")->first_node("data");
+      assert(node);
+      int size = value<int>(node->first_attribute("npts"));
+      val.resize(grid_.size());
+      std::istringstream stst(node->value());
+      for(int ii = 0; ii < size; ii++) stst >> val[ii];
+      for(int ii = size + 1; ii < grid_.size(); ii++) val[ii] = -valence_charge()/grid_[ii];
+
+      interpolate(val);
       
     }
 
@@ -180,6 +192,18 @@ namespace pseudopotential {
     
   private:
 
+    void interpolate(std::vector<double> & function) const {
+      std::vector<double> function_in_grid = function;
+      
+      Spline function_spline;
+      function_spline.fit(grid_.data(), function_in_grid.data(), function_in_grid.size(), SPLINE_FLAT_BC, SPLINE_NATURAL_BC);
+      
+      function.clear();
+      for(double rr = 0.0; rr <= grid_[grid_.size() - 1]; rr += mesh_spacing()){
+	function.push_back(function_spline.value(rr));
+      }
+    }
+    
     //for some stupid reason psml uses letters instead of numbers for angular momentum
     static int letter_to_l(const std::string & letter){
       if(letter == "s") return 0;
