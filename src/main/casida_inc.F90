@@ -1422,6 +1422,7 @@ subroutine X(casida_write)(cas, sys)
         if(loct_isinstringlist(ia, cas%print_exst) .or. full_printing) then 
           write(str,'(i5.5)') ia
           
+#if 0
           ! output eigenvectors
           if(cas%type /= CASIDA_EPS_DIFF) then
             iunit = io_open(trim(dir_name)//'/'//trim(str), action='write')
@@ -1433,7 +1434,7 @@ subroutine X(casida_write)(cas, sys)
                 units_from_atomic(units_out%length, cas%X(tm)(cas%ind(ia), idim))
             end do
 
-#if 0
+!#if 0
 ! TODO: implement this for parallel data
             ! this stuff should go BEFORE calculation of transition matrix elements!
             ! make the largest component positive and real, to specify the phase
@@ -1466,7 +1467,7 @@ subroutine X(casida_write)(cas, sys)
             if(cas%type == CASIDA_TAMM_DANCOFF .or. cas%type == CASIDA_VARIATIONAL .or. cas%type == CASIDA_PETERSILKA) then
               call X(write_implied_occupations)(cas, iunit, cas%ind(ia))
             end if
-#endif
+!#endif
             call io_close(iunit)
           end if
           
@@ -1475,6 +1476,7 @@ subroutine X(casida_write)(cas, sys)
             call write_xsf_geometry(iunit, sys%geo, sys%gr%mesh, forces = cas%forces(:, :, cas%ind(ia)))
             call io_close(iunit)
           end if
+#endif
         end if
       end do
     end if
