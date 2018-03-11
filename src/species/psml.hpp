@@ -108,12 +108,22 @@ namespace pseudopotential {
     }
 
     int nchannels() const {
+      int nc = 0;
+      rapidxml::xml_node<> * node = root_node_->first_node("nonlocal-projectors")->first_node("proj");
+      while(node){
+	int read_ic = value<int>(node->first_attribute("seq")) - 1;
+	nc = std::max(nc, read_ic + 1);
+	node = node->next_sibling("proj");
+      }
+      return nc;
     }
     
     int nquad() const {
+      return 0;
     }
 
     double rquad() const {
+      return 0.0;
     }
 
     double mesh_spacing() const {
@@ -138,6 +148,13 @@ namespace pseudopotential {
     }
 
     int nprojectors() const {
+      rapidxml::xml_node<> * node = root_node_->first_node("nonlocal-projectors")->first_node("proj");
+      int count = 0;
+      while(node) {
+	count++;
+	node = node->next_sibling("proj");
+      }
+      return count;
     }
     
     bool has_projectors(int l) const {
@@ -151,13 +168,31 @@ namespace pseudopotential {
       return node != NULL;
     }
     
-    void projector(int l, int i, std::vector<double> & proj) const {
+    void projector(int l, int ic, std::vector<double> & val) const {
+      rapidxml::xml_node<> * node = root_node_->first_node("nonlocal-projectors")->first_node("proj");
+      while(node){
+	int read_l = letter_to_l(node->first_attribute("l")->value());
+	int read_ic = value<int>(node->first_attribute("seq")) - 1;
+	if(l == read_l && ic == read_ic) break;
+	node = node->next_sibling("proj");
+      }
+      node = node->first_node("radfunc")->first_node("data");
+      assert(node);
+      int size = value<int>(node->first_attribute("npts"));
+      val.resize(grid_.size());
+      std::istringstream stst(node->value());
+      for(int ii = 0; ii < size; ii++) stst >> val[ii];
+      for(int ii = size + 1; ii < grid_.size(); ii++) val[ii] = 0.0;
+
+      interpolate(val);
+      
     }
-    
+
     double d_ij(int l, int i, int j) const {
     }
 
     bool has_radial_function(int l) const{
+      return false;
     }
 
     void radial_function(int l, std::vector<double> & function) const {
@@ -167,6 +202,7 @@ namespace pseudopotential {
     }
 
     bool has_nlcc() const{
+      return false;
     }
 
     void nlcc_density(std::vector<double> & density) const {
