@@ -57,7 +57,22 @@ namespace pseudopotential {
       assert(lmax_ < 9);
 
       //read grid
-      
+      {
+	rapidxml::xml_node<> * node = root_node_->first_node("grid");
+	
+	assert(node);
+	
+	int size = value<int>(node->first_attribute("npts"));
+	grid_.resize(size);
+	std::istringstream stst(node->first_node("grid-data")->value());
+	for(int ii = 0; ii < size; ii++) stst >> grid_[ii];
+	
+	assert(fabs(grid_[0]) <= 1e-10);
+
+	mesh_size_ = 0;
+	for(double rr = 0.0; rr <= grid_[grid_.size() - 1]; rr += mesh_spacing()) mesh_size_++;
+	
+      }
     }
 
     std::string format() const { return "PSML"; }
@@ -99,12 +114,15 @@ namespace pseudopotential {
     }
 
     double mesh_spacing() const {
+      return 0.01;
     }
 
     int mesh_size() const {
+      return mesh_size_;
     }
     
     void local_potential(std::vector<double> & potential) const {
+      
     }
 
     int nprojectors() const {
@@ -177,6 +195,8 @@ namespace pseudopotential {
     std::vector<char> buffer_;
     rapidxml::xml_document<> doc_;
     rapidxml::xml_node<> * root_node_;
+    std::vector<double> grid_;
+    int mesh_size_;
     
   };
 
