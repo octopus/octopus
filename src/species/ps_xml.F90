@@ -120,7 +120,7 @@ contains
       
       call pseudo_local_potential(pseudo, this%potential(1, -1))
 
-      SAFE_ALLOCATE(this%projector(1:this%grid_size, 0:3, 1:2))
+      SAFE_ALLOCATE(this%projector(1:this%grid_size, 0:this%lmax, 1:this%nchannels))
       
       do ll = 0, this%lmax
         do ic = 1, this%nchannels
