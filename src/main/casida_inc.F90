@@ -209,7 +209,7 @@ R_TYPE function X(transition_matrix_element) (cas, ia, xx) result(zz)
       do jb = 1, cas%n_pairs
         call local_indices(cas, ia, jb, on_this_processor, ia_local, jb_local)
         if(on_this_processor) then
-          zz = zz + xx(jb) * cas%X(mat)(jb, ia)
+          zz = zz + xx(jb) * cas%X(mat)(jb_local, ia_local)
         end if
       end do
       zz = allreduce_sum(zz)
@@ -234,11 +234,15 @@ R_TYPE function X(transition_matrix_element) (cas, ia, xx) result(zz)
 #else
       ia_proc = indxg2p(ia, cas%block_size, cas%proc_grid%mycol, 0, cas%proc_grid%npcol)
       jb_proc = indxg2p(jb, cas%block_size, cas%proc_grid%myrow, 0, cas%proc_grid%nprow)
-      if(cas%mpi_grp%rank == ia_proc .and. cas%mpi_grp%rank == jb_proc) then
+      if(cas%proc_grid%mycol == ia_proc .and. cas%proc_grid%myrow == jb_proc) then
       !if(mpi_world%rank == ia_proc .and. mpi_world%rank == jb_proc) then
         on_this_processor = .true.
         ia_local = indxg2l(ia, cas%block_size, cas%proc_grid%mycol, 0, cas%proc_grid%npcol)
         jb_local = indxg2l(jb, cas%block_size, cas%proc_grid%myrow, 0, cas%proc_grid%nprow)
+      else
+        on_this_processor = .false.
+        ia_local = -1
+        jb_local = -1
       end if
 #endif
     end subroutine local_indices
