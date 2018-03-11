@@ -201,6 +201,7 @@ namespace pseudopotential {
 
     void nlcc_density(std::vector<double> & val) const {
       read_function(root_node_->first_node("pseudocore-charge"), val);
+      for(unsigned ii = 0; ii < val.size(); ii++) val[ii] /= 4.0*M_PI;
     }
     
     void beta(int index, int & l, std::vector<double> & proj) const {
@@ -220,6 +221,15 @@ namespace pseudopotential {
     }
 
     void qfcoeff(int index, int ltot, std::vector<double> & val) const {
+    }
+    
+    bool has_density(){
+      return root_node_->first_node("valence-charge");
+    }
+    
+    void density(std::vector<double> & val) const {
+      read_function(root_node_->first_node("valence-charge"), val);
+      for(unsigned ii = 0; ii < val.size(); ii++) val[ii] /= 4.0*M_PI;
     }
     
   private:
