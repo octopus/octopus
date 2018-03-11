@@ -141,7 +141,7 @@ namespace pseudopotential {
       val.resize(grid_.size());
       std::istringstream stst(node->value());
       for(int ii = 0; ii < size; ii++) stst >> val[ii];
-      for(int ii = size + 1; ii < grid_.size(); ii++) val[ii] = -valence_charge()/grid_[ii];
+      for(unsigned ii = size + 1; ii < grid_.size(); ii++) val[ii] = -valence_charge()/grid_[ii];
 
       interpolate(val);
       
@@ -182,13 +182,24 @@ namespace pseudopotential {
       val.resize(grid_.size());
       std::istringstream stst(node->value());
       for(int ii = 0; ii < size; ii++) stst >> val[ii];
-      for(int ii = size + 1; ii < grid_.size(); ii++) val[ii] = 0.0;
+      for(unsigned ii = size + 1; ii < grid_.size(); ii++) val[ii] = 0.0;
 
       interpolate(val);
       
     }
 
-    double d_ij(int l, int i, int j) const {
+    double d_ij(int l, int ic, int jc) const {
+      if(ic != jc) return 0.0;
+      
+      rapidxml::xml_node<> * node = root_node_->first_node("nonlocal-projectors")->first_node("proj");
+      while(node){
+	int read_l = letter_to_l(node->first_attribute("l")->value());
+	int read_ic = value<int>(node->first_attribute("seq")) - 1;
+	if(l == read_l && ic == read_ic) break;
+	node = node->next_sibling("proj");
+      }
+      assert(node);
+      return value<double>(node->first_attribute("ekb"));
     }
 
     bool has_radial_function(int l) const{
