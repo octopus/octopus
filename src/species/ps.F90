@@ -267,7 +267,7 @@ contains
 
     case(PS_TYPE_XML, PS_TYPE_UPF)
       
-      call messages_experimental('QSO pseudopotential support')
+      call messages_experimental('XML (QSO, UPF2, and PSML) pseudopotential support')
       
       call ps_xml_init(ps_xml, trim(filename), ierr)
 
