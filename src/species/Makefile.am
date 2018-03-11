@@ -52,6 +52,7 @@ noinst_HEADERS =                         \
 	base.hpp                         \
 	chemical_element.hpp             \
 	ps_pspio_inc.F90                 \
+	psml.hpp                         \
 	qso.hpp                          \
 	spline.h                         \
 	upf.hpp

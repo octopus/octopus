@@ -1,0 +1,185 @@
+#ifndef PSEUDO_PSML_HPP
+#define PSEUDO_PSML_HPP
+
+/*
+ Copyright (C) 2018 Xavier Andrade
+
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU Lesser General Public License as published by
+ the Free Software Foundation; either version 3 of the License, or
+ (at your option) any later version.
+  
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU Lesser General Public License for more details.
+  
+ You should have received a copy of the GNU Lesser General Public License
+ along with this program; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+#include <fstream>
+#include <vector>
+#include <cassert>
+#include <sstream>
+#include <iostream>
+
+#include "base.hpp"
+#include <rapidxml.hpp>
+
+namespace pseudopotential {
+
+  class psml : public pseudopotential::base {
+
+  public:
+
+    psml(const std::string & filename):
+      file_(filename),
+      buffer_((std::istreambuf_iterator<char>(file_)), std::istreambuf_iterator<char>()){
+
+      buffer_.push_back('\0');
+      doc_.parse<0>(&buffer_[0]);
+
+      root_node_ = doc_.first_node("psml");
+
+      type_ = pseudopotential::type::KLEINMAN_BYLANDER;
+
+      //read lmax
+      lmax_ = -1;
+      for(int l = 0; l <= 10; l++ ){
+	if(!has_projectors(l)){
+	  lmax_ = l - 1;
+	  break;
+	}
+      }
+      assert(lmax_ >= 0);
+      assert(lmax_ < 9);
+
+      //read grid
+      
+    }
+
+    std::string format() const { return "PSML"; }
+    
+    int size() const { return buffer_.size(); };
+
+    std::string description() const {
+      return "";
+    }
+    
+    std::string symbol() const {
+      return root_node_->first_node("pseudo-atom-spec")->first_attribute("atomic-label")->value();
+    }
+
+    int atomic_number() const {
+      return value<int>(root_node_->first_node("pseudo-atom-spec")->first_attribute("atomic-number"));
+    }
+
+    double mass() const {
+      chemical_element el(symbol());
+      return el.mass();
+    }
+    
+    int valence_charge() const {
+      return value<int>(root_node_->first_node("pseudo-atom-spec")->first_node("valence-configuration")->first_attribute("total-valence-charge"));
+    }
+
+    int llocal() const {
+      return -1;
+    }
+
+    int nchannels() const {
+    }
+    
+    int nquad() const {
+    }
+
+    double rquad() const {
+    }
+
+    double mesh_spacing() const {
+    }
+
+    int mesh_size() const {
+    }
+    
+    void local_potential(std::vector<double> & potential) const {
+    }
+
+    int nprojectors() const {
+    }
+    
+    bool has_projectors(int l) const {
+      //note: this function can't use lmax_ or lmax()
+      rapidxml::xml_node<> * node = root_node_->first_node("nonlocal-projectors")->first_node("proj");
+      while(node){
+	int read_l = letter_to_l(node->first_attribute("l")->value());
+	if(l == read_l) break;
+	node = node->next_sibling("proj");
+      }
+      return node != NULL;
+    }
+    
+    void projector(int l, int i, std::vector<double> & proj) const {
+    }
+    
+    double d_ij(int l, int i, int j) const {
+    }
+
+    bool has_radial_function(int l) const{
+    }
+
+    void radial_function(int l, std::vector<double> & function) const {
+    }
+
+    void radial_potential(int l, std::vector<double> & function) const {
+    }
+
+    bool has_nlcc() const{
+    }
+
+    void nlcc_density(std::vector<double> & density) const {
+    }
+    
+    void beta(int index, int & l, std::vector<double> & proj) const {
+    }
+
+    void dnm_zero(int nbeta, std::vector<std::vector<double> > & dnm) const {
+    }
+
+    bool has_rinner() const {
+    }
+    
+    void rinner(std::vector<double> & val) const {
+    }
+
+    void qnm(int index, int & l1, int & l2, int & n, int & m, std::vector<double> & val) const {
+    }
+
+    void qfcoeff(int index, int ltot, std::vector<double> & val) const {
+    }
+    
+  private:
+
+    //for some stupid reason psml uses letters instead of numbers for angular momentum
+    static int letter_to_l(const std::string & letter){
+      if(letter == "s") return 0;
+      if(letter == "p") return 1;
+      if(letter == "d") return 2;
+      if(letter == "f") return 3;
+      if(letter == "g") return 4;
+      if(letter == "h") return 5;
+      return -1;
+    }
+    
+    std::ifstream file_;
+    std::vector<char> buffer_;
+    rapidxml::xml_document<> doc_;
+    rapidxml::xml_node<> * root_node_;
+    
+  };
+
+}
+
+#endif

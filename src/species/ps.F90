@@ -1266,6 +1266,8 @@ contains
     if(index(filename, ".UPF ") /= 0) type = PS_TYPE_UPF
     if(index(filename, ".xml ") /= 0) type = PS_TYPE_XML
     if(index(filename, ".XML ") /= 0) type = PS_TYPE_XML
+    if(index(filename, ".psml") /= 0) type = PS_TYPE_XML
+    if(index(filename, ".PSML") /= 0) type = PS_TYPE_XML
     
     POP_SUB(ps_get_type)    
   end function ps_get_type

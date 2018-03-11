@@ -26,6 +26,7 @@
 #include "base.hpp"
 #include "qso.hpp"
 #include "upf.hpp"
+#include "psml.hpp"
 
 extern "C" void FC_FUNC_(pseudo_init, PSEUDO_INIT)(pseudopotential::base ** pseudo, STR_F_TYPE const filename_f, fint * ierr STR_ARG1){
   char * filename_c;
@@ -53,6 +54,8 @@ extern "C" void FC_FUNC_(pseudo_init, PSEUDO_INIT)(pseudopotential::base ** pseu
       *pseudo = new pseudopotential::qso(filename);
     } else if(extension == "upf") {
       *pseudo = new pseudopotential::upf(filename);
+    } else if(extension == "psml") {
+      *pseudo = new pseudopotential::psml(filename);
     } else {
       *ierr = fint(pseudopotential::status::UNKNOWN_FORMAT);
       return;
