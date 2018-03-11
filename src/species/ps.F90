@@ -30,7 +30,7 @@ module ps_oct_m
   use ps_cpi_oct_m
   use ps_fhi_oct_m
   use ps_hgh_oct_m
-  use ps_qso_oct_m
+  use ps_xml_oct_m
   use ps_in_grid_oct_m
 #ifdef HAVE_PSPIO
   use fpspio_m
@@ -136,18 +136,18 @@ contains
   subroutine ps_init(ps, label, z, lmax, lloc, ispin, filename)
     type(ps_t),        intent(out)   :: ps
     character(len=10), intent(in)    :: label
-    integer,           intent(inout) :: lmax
+    integer,           intent(in)    :: lmax
     integer,           intent(in)    :: lloc, ispin
     FLOAT,             intent(in)    :: z
     character(len=*),  intent(in)    :: filename
     
-    integer :: l, ii, ll, is
+    integer :: l, ii, ll, is, ierr
     type(ps_psf_t) :: ps_psf !< SIESTA pseudopotential
     type(ps_cpi_t) :: ps_cpi !< Fritz-Haber pseudopotential
     type(ps_fhi_t) :: ps_fhi !< Fritz-Haber pseudopotential (from abinit)
     type(ps_upf_t) :: ps_upf !< In case UPF format is used
     type(ps_hgh_t) :: ps_hgh !< In case Hartwigsen-Goedecker-Hutter ps are used.
-    type(ps_qso_t) :: ps_qso !< quantum-simulation.org xml format (from qbox)
+    type(ps_xml_t) :: ps_xml !< For xml based pseudopotentials
 
     PUSH_SUB(ps_init)
 
@@ -181,7 +181,7 @@ contains
     ps%ispin   = ispin
     ps%hamann  = .false.
     select case(ps%flavour)
-    case(PS_TYPE_PSF, PS_TYPE_HGH, PS_TYPE_UPF)
+    case(PS_TYPE_PSF, PS_TYPE_HGH)
       ps%has_density = .true.
     case default
       ps%has_density = .false.
@@ -265,62 +265,69 @@ contains
       call hgh_process(ps_hgh)
       call logrid_copy(ps_hgh%g, ps%g)
 
-    case(PS_TYPE_UPF)
-      call ps_upf_init(ps_upf, trim(filename))
-
-      call valconf_copy(ps%conf, ps_upf%conf)
-      ps%z      = z
-      ps%conf%z = nint(z)
-      ps%kbc    = ps_upf%kb_nc
-      lmax      = ps_upf%l_max
-      ps%l_max  = ps_upf%l_max
-      ps%l_loc  = ps_upf%l_local
-
-      nullify(ps%g%drdi, ps%g%s)
-      ps%g%nrval = ps_upf%np
-      SAFE_ALLOCATE(ps%g%rofi(1:ps%g%nrval))
-      SAFE_ALLOCATE(ps%g%r2ofi(1:ps%g%nrval))
-      ps%g%rofi = ps_upf%r
-      ps%g%r2ofi = ps%g%rofi**2
-
-    case(PS_TYPE_QSO)
-
+    case(PS_TYPE_QSO, PS_TYPE_UPF)
+      
       call messages_experimental('QSO pseudopotential support')
+      
+      call ps_xml_init(ps_xml, trim(filename), ierr)
 
-      call ps_qso_init(ps_qso, trim(filename))
+      if(ierr == 0) then
+        
+        call valconf_null(ps%conf)
+        
+        ps%z      = z
+        ps%conf%z = nint(z)
+        
+        if(ps_xml%kleinman_bylander) then
+          ps%conf%p = ps_xml%nwavefunctions
+        else
+          ps%conf%p = ps_xml%lmax + 1
+        end if
+        
+        do ll = 0, ps_xml%lmax
+          ps%conf%l(ll + 1) = ll
+        end do
+        
+        ps%kbc    = ps_xml%nchannels
+        ps%l_max  = ps_xml%lmax
+        ps%l_loc  = ps_xml%llocal
+        
+        nullify(ps%g%drdi, ps%g%s)
+        
+        ! use a larger grid
+        ps%g%nrval = max(ps_xml%grid_size, nint(CNST(20.0)/(ps_xml%mesh_spacing)))
+        
+        SAFE_ALLOCATE(ps%g%rofi(1:ps%g%nrval))
+        SAFE_ALLOCATE(ps%g%r2ofi(1:ps%g%nrval))
+        
+        do ii = 1, ps%g%nrval
+          ps%g%rofi(ii) = (ii - 1)*ps_xml%mesh_spacing
+          ps%g%r2ofi(ii) = ps%g%rofi(ii)**2
+        end do
 
-      call valconf_null(ps%conf)
-
-      ps%z      = z
-      ps%conf%z = nint(z)
-
-      if(ps_qso%oncv) then
-        ps%conf%p = 0
-      else
-        ps%conf%p = ps_qso%lmax + 1
+        ps%flavour = PS_TYPE_QSO
+        
+      else !read failed, this must be a UPF 1 file
+        
+        call ps_upf_init(ps_upf, trim(filename))
+        
+        call valconf_copy(ps%conf, ps_upf%conf)
+        ps%z      = z
+        ps%conf%z = nint(z)
+        ps%kbc    = ps_upf%kb_nc
+        ps%l_max  = ps_upf%l_max
+        ps%l_loc  = ps_upf%l_local
+        ps%has_density = .true.
+        
+        nullify(ps%g%drdi, ps%g%s)
+        ps%g%nrval = ps_upf%np
+        SAFE_ALLOCATE(ps%g%rofi(1:ps%g%nrval))
+        SAFE_ALLOCATE(ps%g%r2ofi(1:ps%g%nrval))
+        ps%g%rofi = ps_upf%r
+        ps%g%r2ofi = ps%g%rofi**2
+        
       end if
-
-      do ll = 0, ps_qso%lmax
-        ps%conf%l(ll + 1) = ll
-      end do
-
-      ps%kbc    = ps_qso%nchannels
-      ps%l_max  = ps_qso%lmax
-      ps%l_loc  = ps_qso%llocal
-
-      nullify(ps%g%drdi, ps%g%s)
-
-      ! use a larger grid
-      ps%g%nrval = max(ps_qso%grid_size, nint(CNST(20.0)/(ps_qso%mesh_spacing)))
-
-      SAFE_ALLOCATE(ps%g%rofi(1:ps%g%nrval))
-      SAFE_ALLOCATE(ps%g%r2ofi(1:ps%g%nrval))
-
-      do ii = 1, ps%g%nrval
-        ps%g%rofi(ii) = (ii - 1)*ps_qso%mesh_spacing
-        ps%g%r2ofi(ii) = ps%g%rofi(ii)**2
-      end do
-
+      
     end select
 
     write(message(1), '(a,i2,a)') "Info: l = ", ps%l_max, " is maximum angular momentum considered."
@@ -361,12 +368,14 @@ contains
       SAFE_ALLOCATE(ps%k    (0:ps%l_max, 1:ps%kbc, 1:ps%kbc))
       call hgh_load(ps, ps_hgh)
       call hgh_end(ps_hgh)
-    case(PS_TYPE_UPF)
-      call ps_upf_load(ps, ps_upf)
-      call ps_upf_end(ps_upf)
-    case(PS_TYPE_QSO)
-      call ps_qso_load(ps, ps_qso)
-      call ps_qso_end(ps_qso)
+    case(PS_TYPE_QSO, PS_TYPE_UPF)
+      if(ps_xml%initialized) then
+        call ps_xml_load(ps, ps_xml)
+        call ps_xml_end(ps_xml)
+      else
+        call ps_upf_load(ps, ps_upf)
+        call ps_upf_end(ps_upf)
+      end if
     end select
 
     if(ps_has_density(ps)) then 
@@ -380,7 +389,6 @@ contains
     ps%is_separated = .false.
 
     POP_SUB(ps_init)
-
   end subroutine ps_init
 
   ! ---------------------------------------------------------
@@ -1050,34 +1058,33 @@ contains
 
   
   ! ---------------------------------------------------------
-  subroutine ps_qso_load(ps, ps_qso)
+  subroutine ps_xml_load(ps, ps_xml)
     type(ps_t),     intent(inout) :: ps
-    type(ps_qso_t), intent(in)    :: ps_qso
+    type(ps_xml_t), intent(in)    :: ps_xml
 
-    integer :: ll, ip, is, ic, jc
+    integer :: ll, ip, is, ic, jc, ir, nrc, ii
     FLOAT :: rr, kbcos, kbnorm, dnrm, avgv, volume_element
-    FLOAT, allocatable :: vlocal(:), kbprojector(:), wavefunction(:)
+    FLOAT, allocatable :: vlocal(:), kbprojector(:), wavefunction(:), nlcc_density(:), dens(:)
 
-    PUSH_SUB(ps_qso_load)
+    PUSH_SUB(ps_xml_load)
 
-    if(ps_qso%oncv .and. ps_qso%nchannels == 2) then
+    if(ps_xml%kleinman_bylander .and. ps_xml%nchannels == 2) then
       ps%hamann = .true.
     end if
     
-    ! no nonlinear core corrections
-    ps%nlcc = .false.
+    ps%nlcc = ps_xml%nlcc
 
-    ps%z_val = ps_qso%valence_charge
+    ps%z_val = ps_xml%valence_charge
 
     ! the local potential
     SAFE_ALLOCATE(vlocal(1:ps%g%nrval))
 
     do ip = 1, ps%g%nrval
-      rr = (ip - 1)*ps_qso%mesh_spacing
-      if(ip <= ps_qso%grid_size) then
-        vlocal(ip) = ps_qso%potential(ip, ps_qso%llocal)
+      rr = (ip - 1)*ps_xml%mesh_spacing
+      if(ip <= ps_xml%grid_size) then
+        vlocal(ip) = ps_xml%potential(ip, ps_xml%llocal)
       else
-        vlocal(ip) = -ps_qso%valence_charge/rr
+        vlocal(ip) = -ps_xml%valence_charge/rr
       end if
     end do
 
@@ -1092,16 +1099,14 @@ contains
     wavefunction = CNST(0.0)
 
     ! the projectors and the orbitals
+    if(ps_xml%kleinman_bylander) then
 
-    do ll = 0, ps_qso%lmax
-
-      if(ps_qso%oncv) then
-
-        do ic = 1, ps_qso%nchannels
-
+      do ll = 0, ps_xml%lmax
+        do ic = 1, ps_xml%nchannels
+          
           do ip = 1, ps%g%nrval
-            if(ip <= ps_qso%grid_size) then
-              kbprojector(ip) = ps_qso%projector(ip, ll, ic)
+            if(ip <= ps_xml%grid_size) then
+              kbprojector(ip) = ps_xml%projector(ip, ll, ic)
             else
               kbprojector(ip) = 0.0
             end if
@@ -1109,30 +1114,49 @@ contains
 
           call spline_fit(ps%g%nrval, ps%g%rofi, kbprojector, ps%kb(ll, ic))
 
-          do jc = 1, ps_qso%nchannels
-            ps%h(ll, ic, jc) = ps_qso%dij(ll, ic, jc)
+          do jc = 1, ps_xml%nchannels
+            ps%h(ll, ic, jc) = ps_xml%dij(ll, ic, jc)
           end do
 
         end do
+      end do
 
-      else
+      do ii = 1, ps_xml%nwavefunctions
+        
+        do ip = 1, ps%g%nrval
+          if(ip <= ps_xml%grid_size) then
+            wavefunction(ip) = ps_xml%wavefunction(ip, ii)
+          else
+            wavefunction(ip) = CNST(0.0)
+          end if
+        end do
+      
+        do is = 1, ps%ispin
+          call spline_fit(ps%g%nrval, ps%g%rofi, wavefunction, ps%ur(ii, is))
+          call spline_fit(ps%g%nrval, ps%g%r2ofi, wavefunction, ps%ur_sq(ii, is))
+        end do
 
+      end do
+      
+    else
+
+      do ll = 0, ps_xml%lmax
         ! we need to build the KB projectors
         ! the procedure was copied from ps_in_grid.F90 (r12967)
         dnrm = M_ZERO
         avgv = M_ZERO
-        do ip = 1, ps_qso%grid_size
-          rr = (ip - 1)*ps_qso%mesh_spacing
-          volume_element = rr**2*ps_qso%mesh_spacing
-          kbprojector(ip) = (ps_qso%potential(ip, ll) - ps_qso%potential(ip, ps_qso%llocal))*ps_qso%wavefunction(ip, ll)
+        do ip = 1, ps_xml%grid_size
+          rr = (ip - 1)*ps_xml%mesh_spacing
+          volume_element = rr**2*ps_xml%mesh_spacing
+          kbprojector(ip) = (ps_xml%potential(ip, ll) - ps_xml%potential(ip, ps_xml%llocal))*ps_xml%wavefunction(ip, ll)
           dnrm = dnrm + kbprojector(ip)**2*volume_element
-          avgv = avgv + kbprojector(ip)*ps_qso%wavefunction(ip, ll)*volume_element
+          avgv = avgv + kbprojector(ip)*ps_xml%wavefunction(ip, ll)*volume_element
         end do
 
         kbcos = dnrm/(avgv + CNST(1.0e-20))
         kbnorm = M_ONE/(sqrt(dnrm) + CNST(1.0e-20))
 
-        if(ll /= ps_qso%llocal) then
+        if(ll /= ps_xml%llocal) then
           ps%h(ll, 1, 1) = kbcos        
           kbprojector = kbprojector*kbnorm
         else
@@ -1143,9 +1167,9 @@ contains
 
         ! wavefunctions, for the moment we pad them with zero
         do ip = 1, ps%g%nrval
-          rr = (ip - 1)*ps_qso%mesh_spacing
-          if(ip <= ps_qso%grid_size) then
-            wavefunction(ip) = ps_qso%wavefunction(ip, ll)
+          rr = (ip - 1)*ps_xml%mesh_spacing
+          if(ip <= ps_xml%grid_size) then
+            wavefunction(ip) = ps_xml%wavefunction(ip, ll)
           else
             wavefunction(ip) = CNST(0.0)
           end if
@@ -1155,18 +1179,55 @@ contains
           call spline_fit(ps%g%nrval, ps%g%rofi, wavefunction, ps%ur(ll + 1, is))
           call spline_fit(ps%g%nrval, ps%g%r2ofi, wavefunction, ps%ur_sq(ll + 1, is))
         end do
+      end do
+        
+    end if
 
-      end if
+    ps%has_density = ps_xml%has_density
+    
+    if(ps_has_density(ps)) then
+      
+      SAFE_ALLOCATE(dens(1:ps%g%nrval))
+      
+      dens(1:ps_xml%grid_size) = ps_xml%density(1:ps_xml%grid_size)/ps%ispin
+      dens(ps_xml%grid_size + 1:ps%g%nrval) = CNST(0.0)
+      
+      do is = 1, ps%ispin
+        call spline_fit(ps%g%nrval, ps%g%rofi, dens, ps%density(is))
+      end do
+      
+      SAFE_DEALLOCATE_A(dens)
+    end if
+    
+    !Non-linear core-corrections
+    if(ps_xml%nlcc) then
 
-    end do
+      SAFE_ALLOCATE(nlcc_density(1:ps%g%nrval))
 
+      nlcc_density(1:ps_xml%grid_size) = ps_xml%nlcc_density(1:ps_xml%grid_size)
+      
+      ! find cutoff radius
+      do ir = ps_xml%grid_size - 1, 1, -1
+        if(nlcc_density(ir) > eps) then
+          nrc = ir + 1
+          exit
+        end if
+      end do
+
+      nlcc_density(nrc:ps%g%nrval) = M_ZERO
+      
+      call spline_fit(ps%g%nrval, ps%g%rofi, nlcc_density, ps%core)
+
+      SAFE_DEALLOCATE_A(nlcc_density)
+    end if
+    
     call ps_getradius(ps)
 
     SAFE_DEALLOCATE_A(kbprojector)
     SAFE_DEALLOCATE_A(wavefunction)
 
-    POP_SUB(ps_qso_load)
-  end subroutine ps_qso_load
+    POP_SUB(ps_xml_load)
+  end subroutine ps_xml_load
 
 
   ! ---------------------------------------------------------

@@ -156,11 +156,11 @@ contains
     !%Type block
     !%Section Time-Dependent::Propagation
     !%Description
-    !% (Experimental) This variable allows you to specify a time-dependent
-    !% function describing the ions' displacement from their equilibrium
-    !% position: <math>r(t) = r_0 + \Delta r(t)</math>.
-    !% Specify the displacements dx(t), dy(t), dz(t)
-    !% as follows, for some or all of the atoms:
+    !% (Experimental) This variable allows you to specify a
+    !% time-dependent function describing the displacement of the ions
+    !% from their equilibrium position: <math>r(t) = r_0 + \Delta
+    !% r(t)</math>.  Specify the displacements dx(t), dy(t), dz(t) as
+    !% follows, for some or all of the atoms:
     !% 
     !% <tt>%IonsTimeDependentDisplacements
     !% <br>&nbsp;&nbsp; atom_index | "dx(t)" | "dy(t)" | "dz(t)"

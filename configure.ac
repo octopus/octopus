@@ -64,6 +64,7 @@ AC_PROG_CC($octopus_default_cc)
 AC_PROG_CC_C99
 
 AC_PROG_CXX
+AX_CXX_COMPILE_STDCXX([11])
 AC_CXX_LIBRARY_LDFLAGS
 
 # optimizations extensions supported by the compiler
@@ -377,6 +378,7 @@ AC_CONFIG_FILES([Makefile
   external_libs/yaml-0.1.4/Makefile
   external_libs/yaml-0.1.4/include/Makefile
   external_libs/yaml-0.1.4/src/Makefile
+  external_libs/rapidxml/Makefile
   liboct_parser/Makefile
   src/Makefile
   src/include/Makefile
@@ -407,10 +409,17 @@ AC_CONFIG_FILES([Makefile
   share/pseudopotentials/PSF/Makefile
   share/pseudopotentials/HGH/Makefile
   share/pseudopotentials/extra/Makefile
-  share/pseudopotentials/sg15/Makefile
-  share/pseudopotentials/hscv/Makefile
-  share/pseudopotentials/hscv/lda/Makefile
-  share/pseudopotentials/hscv/pbe/Makefile  
+  share/pseudopotentials/quantum-simulation.org/Makefile
+  share/pseudopotentials/quantum-simulation.org/hscv/Makefile
+  share/pseudopotentials/quantum-simulation.org/hscv/lda/Makefile
+  share/pseudopotentials/quantum-simulation.org/hscv/pbe/Makefile
+  share/pseudopotentials/quantum-simulation.org/sg15/Makefile
+  share/pseudopotentials/pseudo-dojo.org/Makefile  
+  share/pseudopotentials/pseudo-dojo.org/pbe_s_sr/Makefile
+  share/pseudopotentials/pseudo-dojo.org/pbesol_s_sr/Makefile  
+  share/pseudopotentials/pseudo-dojo.org/pw_s_sr/Makefile
+  share/pseudopotentials/pseudo-dojo.org/nc-sr-04_pbe_standard/Makefile
+  share/pseudopotentials/pseudo-dojo.org/nc-sr-04_pbe_stringent/Makefile
   share/recipes/Makefile
   share/recipes/da/Makefile
   share/recipes/de/Makefile
