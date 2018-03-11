@@ -243,9 +243,9 @@ namespace pseudopotential {
       for(int ii = 0; ii < size; ii++) stst >> val[ii];
 
       if(potential_padding){
-	for(unsigned ii = size + 1; ii < grid_.size(); ii++) val[ii] = -valence_charge()/grid_[ii];
+	for(unsigned ii = size; ii < grid_.size(); ii++) val[ii] = -valence_charge()/grid_[ii];
       } else {
-	for(unsigned ii = size + 1; ii < grid_.size(); ii++) val[ii] = 0.0;
+	for(unsigned ii = size; ii < grid_.size(); ii++) val[ii] = 0.0;
       }
       
       interpolate(val);
