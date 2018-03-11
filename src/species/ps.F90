@@ -63,14 +63,14 @@ module ps_oct_m
     PS_TYPE_CPI = 102,          &
     PS_TYPE_FHI = 103,          &
     PS_TYPE_UPF = 104,          &
-    PS_TYPE_QSO = 105
+    PS_TYPE_XML = 105
 
   integer, parameter, public :: &
     PS_FILTER_NONE = 0,         &
     PS_FILTER_TS   = 2,         &
     PS_FILTER_BSB  = 3
 
-  character(len=3), parameter  :: ps_name(PS_TYPE_PSF:PS_TYPE_QSO) = (/"tm2", "hgh", "cpi", "fhi", "upf", "qso"/)
+  character(len=3), parameter  :: ps_name(PS_TYPE_PSF:PS_TYPE_XML) = (/"tm2", "hgh", "cpi", "fhi", "upf", "qso"/)
 
   type ps_t
     character(len=10) :: label
@@ -187,7 +187,7 @@ contains
       ps%has_density = .false.
     end select
     
-    if(.not. (ps%flavour >= PS_TYPE_PSF .and. ps%flavour <= PS_TYPE_QSO)) then
+    if(.not. (ps%flavour >= PS_TYPE_PSF .and. ps%flavour <= PS_TYPE_XML)) then
       call messages_write("Cannot determine the pseudopotential type for species '"//trim(label)//"' from", new_line = .true.)
       call messages_write("file '"//trim(filename)//"'.")
       call messages_fatal()
@@ -265,7 +265,7 @@ contains
       call hgh_process(ps_hgh)
       call logrid_copy(ps_hgh%g, ps%g)
 
-    case(PS_TYPE_QSO, PS_TYPE_UPF)
+    case(PS_TYPE_XML, PS_TYPE_UPF)
       
       call messages_experimental('QSO pseudopotential support')
       
@@ -305,7 +305,7 @@ contains
           ps%g%r2ofi(ii) = ps%g%rofi(ii)**2
         end do
 
-        ps%flavour = PS_TYPE_QSO
+        ps%flavour = PS_TYPE_XML
         
       else !read failed, this must be a UPF 1 file
         
@@ -368,7 +368,7 @@ contains
       SAFE_ALLOCATE(ps%k    (0:ps%l_max, 1:ps%kbc, 1:ps%kbc))
       call hgh_load(ps, ps_hgh)
       call hgh_end(ps_hgh)
-    case(PS_TYPE_QSO, PS_TYPE_UPF)
+    case(PS_TYPE_XML, PS_TYPE_UPF)
       if(ps_xml%initialized) then
         call ps_xml_load(ps, ps_xml)
         call ps_xml_end(ps_xml)
@@ -1264,8 +1264,8 @@ contains
     if(index(filename, ".FHI ") /= 0) type = PS_TYPE_FHI
     if(index(filename, ".upf ") /= 0) type = PS_TYPE_UPF
     if(index(filename, ".UPF ") /= 0) type = PS_TYPE_UPF
-    if(index(filename, ".xml ") /= 0) type = PS_TYPE_QSO
-    if(index(filename, ".XML ") /= 0) type = PS_TYPE_QSO
+    if(index(filename, ".xml ") /= 0) type = PS_TYPE_XML
+    if(index(filename, ".XML ") /= 0) type = PS_TYPE_XML
     
     POP_SUB(ps_get_type)    
   end function ps_get_type
