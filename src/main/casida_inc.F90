@@ -481,6 +481,7 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   logical :: is_forces_
   R_TYPE, allocatable :: xx(:)
   R_TYPE, allocatable :: X(pot)(:)
+  R_TYPE, allocatable :: buffer(:)
 
   FLOAT :: eig_diff
   FLOAT, allocatable :: occ_diffs(:)
@@ -531,7 +532,8 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
     maxcount = cas%n_pairs
   else
     !maxcount = ceiling((cas%n_pairs*(M_ONE + cas%n_pairs)/M_TWO)/cas%mpi_grp%size)
-    maxcount = ceiling(cas%nb_rows*cas%nb_cols/M_TWO)
+    maxcount = ceiling((cas%n_pairs*(M_ONE + cas%n_pairs)/M_TWO + cas%n_pairs*cas%pt_nmodes) &
+      * cas%nb_rows/cas%n * cas%nb_cols/cas%n)
   end if
   counter = 0
   actual = 0
@@ -553,6 +555,7 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   SAFE_ALLOCATE(rho_j(1:mesh%np))
   SAFE_ALLOCATE(integrand(1:mesh%np))
   SAFE_ALLOCATE(X(pot)(1:mesh%np))
+  SAFE_ALLOCATE(buffer(1:mesh%np))
 
   ! coefficients for Hartree potential
   coeff_vh = - cas%kernel_lrc_alpha / (M_FOUR * M_PI)
@@ -629,9 +632,14 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
         mtxel_vm = M_ZERO
         if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
           do ii = 1, cas%pt_nmodes
+              buffer(1:mesh%np) = &
+                cas%pt%lambda_array(ii)* &
+                   ( cas%pt%pol_array(ii,1)*mesh%x(1:mesh%np, 1)  &
+                   + cas%pt%pol_array(ii,2)*mesh%x(1:mesh%np, 2)  &
+                   + cas%pt%pol_array(ii,3)*mesh%x(1:mesh%np, 3))
               mtxel_vm = mtxel_vm + &
-              X(mf_dotp)(mesh, cas%pt%lambda_array(ii)*cas%pt%pol_dipole_array(1:mesh%np,ii)*rho_i(1:mesh%np), &
-                  cas%pt%lambda_array(ii)*cas%pt%pol_dipole_array(1:mesh%np,ii)*rho_j(1:mesh%np))
+              X(mf_dotp)(mesh, buffer(1:mesh%np) * rho_i(1:mesh%np), &
+                  buffer(1:mesh%np) * rho_j(1:mesh%np))
           end do
         end if
 
@@ -640,11 +648,13 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
 #ifndef HAVE_SCALAPACK
         if(jb /= ia) matrix(jb, ia) = R_CONJ(matrix(ia, jb))
 #endif
+      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(counter, maxcount)
       end do
     else
       ! photon-electron coupling (upper right/lower left)
       ! here, jb > n_pairs
       if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
+        counter = counter + 1
         ! avoid multiple computations of MN_term
         call X(MN_term)(cas, jb-cas%n_pairs, xx)
         !do ia = 1, cas%n_pairs
@@ -666,6 +676,7 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   SAFE_DEALLOCATE_A(rho_j)
   SAFE_DEALLOCATE_A(integrand)
   SAFE_DEALLOCATE_A(X(pot))
+  SAFE_DEALLOCATE_A(buffer)
 
   if(mpi_grp_is_root(mpi_world)) then
     call loct_progress_bar(maxcount, maxcount)
@@ -681,8 +692,6 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
 #endif
 
   if(.not.cas%kernel_saved) then
-    !cas%X(kernel)(1:cas%n_pairs+cas%pt_nmodes, 1:cas%n_pairs+cas%pt_nmodes) = &
-    !  matrix(1:cas%n_pairs+cas%pt_nmodes, 1:cas%n_pairs+cas%pt_nmodes)
     cas%X(kernel)(1:cas%nb_rows, 1:cas%nb_cols) = matrix(1:cas%nb_rows, 1:cas%nb_cols)
     cas%kernel_saved = .true.
   end if
@@ -708,7 +717,10 @@ contains
 
     SAFE_ALLOCATE(deltav(1:mesh%np))
 !     do idir = 1, mesh%sb%dim
-      deltav(1:mesh%np) = cas%pt%lambda_array(iimode)*cas%pt%pol_dipole_array(1:mesh%np, iimode)
+      deltav(1:mesh%np) = cas%pt%lambda_array(iimode)*&
+                   ( cas%pt%pol_array(iimode,1)*mesh%x(1:mesh%np, 1)  &
+                   + cas%pt%pol_array(iimode,2)*mesh%x(1:mesh%np, 2)  &
+                   + cas%pt%pol_array(iimode,3)*mesh%x(1:mesh%np, 3))
       ! let us get now the x vector.
       xx = X(ks_matrix_elements)(cas, st, mesh, deltav)
 !     end do

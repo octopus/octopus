@@ -61,7 +61,6 @@ module photon_mode_oct_m
     integer               :: nmodes
     FLOAT, pointer        :: omega_array(:), lambda_array(:)  ! the arrays are only temporary, later merge, OEP has to be adapted
     FLOAT, pointer        :: pol_array(:,:)             ! polarization of the photon field
-    FLOAT, pointer        :: pol_dipole_array(:,:)      ! polarization*dipole operator
     FLOAT, pointer        :: q0_array(:)
     FLOAT, pointer        :: p0_array(:)
     logical               :: has_arrays                 ! will become obsolete after single mode removal
@@ -101,7 +100,6 @@ contains
       SAFE_ALLOCATE(this%omega_array(1:this%nmodes))
       SAFE_ALLOCATE(this%lambda_array(1:this%nmodes))
       SAFE_ALLOCATE(this%pol_array(1:this%nmodes,3))
-      SAFE_ALLOCATE(this%pol_dipole_array(1:gr%mesh%np,1:this%nmodes))
       do ii = 1, this%nmodes
          ncols = parse_block_cols(blk, ii-1)
          call parse_block_float(blk, ii-1, 0, this%omega_array(ii))   !row, column
@@ -109,9 +107,6 @@ contains
          call parse_block_float(blk, ii-1, 2, this%pol_array(ii,1))   !row, column
          call parse_block_float(blk, ii-1, 3, this%pol_array(ii,2))   !row, column
          call parse_block_float(blk, ii-1, 4, this%pol_array(ii,3))   !row, column
-         this%pol_dipole_array(1:gr%mesh%np,ii) = this%pol_array(ii,1)*gr%mesh%x(1:gr%mesh%np, 1) &
-                                                   + this%pol_array(ii,2)*gr%mesh%x(1:gr%mesh%np, 2) &
-                                                   + this%pol_array(ii,3)*gr%mesh%x(1:gr%mesh%np, 3)
          if (ncols > 5) then
            this%has_q0_p0 = .true.
            SAFE_ALLOCATE(this%q0_array(1:this%nmodes))
@@ -198,7 +193,6 @@ contains
       SAFE_DEALLOCATE_P(this%omega_array)
       SAFE_DEALLOCATE_P(this%lambda_array)
       SAFE_DEALLOCATE_P(this%pol_array)
-      SAFE_DEALLOCATE_P(this%pol_dipole_array)
       if (this%has_q0_p0) then 
         SAFE_DEALLOCATE_P(this%q0_array)
         SAFE_DEALLOCATE_P(this%p0_array)
