@@ -135,16 +135,7 @@ namespace pseudopotential {
     }
     
     void local_potential(std::vector<double> & val) const {
-      rapidxml::xml_node<> * node = root_node_->first_node("local-potential")->first_node("radfunc")->first_node("data");
-      assert(node);
-      int size = value<int>(node->first_attribute("npts"));
-      val.resize(grid_.size());
-      std::istringstream stst(node->value());
-      for(int ii = 0; ii < size; ii++) stst >> val[ii];
-      for(unsigned ii = size + 1; ii < grid_.size(); ii++) val[ii] = -valence_charge()/grid_[ii];
-
-      interpolate(val);
-      
+      read_function(root_node_->first_node("local-potential"), val, true);
     }
 
     int nprojectors() const {
@@ -176,16 +167,7 @@ namespace pseudopotential {
 	if(l == read_l && ic == read_ic) break;
 	node = node->next_sibling("proj");
       }
-      node = node->first_node("radfunc")->first_node("data");
-      assert(node);
-      int size = value<int>(node->first_attribute("npts"));
-      val.resize(grid_.size());
-      std::istringstream stst(node->value());
-      for(int ii = 0; ii < size; ii++) stst >> val[ii];
-      for(unsigned ii = size + 1; ii < grid_.size(); ii++) val[ii] = 0.0;
-
-      interpolate(val);
-      
+      read_function(node, val);      
     }
 
     double d_ij(int l, int ic, int jc) const {
@@ -213,10 +195,12 @@ namespace pseudopotential {
     }
 
     bool has_nlcc() const{
-      return false;
+      rapidxml::xml_node<> * node = root_node_->first_node("pseudocore-charge");
+      return node;
     }
 
-    void nlcc_density(std::vector<double> & density) const {
+    void nlcc_density(std::vector<double> & val) const {
+      read_function(root_node_->first_node("pseudocore-charge"), val);
     }
     
     void beta(int index, int & l, std::vector<double> & proj) const {
@@ -226,6 +210,7 @@ namespace pseudopotential {
     }
 
     bool has_rinner() const {
+      return false;
     }
     
     void rinner(std::vector<double> & val) const {
@@ -239,6 +224,23 @@ namespace pseudopotential {
     
   private:
 
+    void read_function(rapidxml::xml_node<> * base_node, std::vector<double> & val, bool potential_padding = false) const{
+      rapidxml::xml_node<> * node = base_node->first_node("radfunc")->first_node("data");
+      assert(node);
+      int size = value<int>(node->first_attribute("npts"));
+      val.resize(grid_.size());
+      std::istringstream stst(node->value());
+      for(int ii = 0; ii < size; ii++) stst >> val[ii];
+
+      if(potential_padding){
+	for(unsigned ii = size + 1; ii < grid_.size(); ii++) val[ii] = -valence_charge()/grid_[ii];
+      } else {
+	for(unsigned ii = size + 1; ii < grid_.size(); ii++) val[ii] = 0.0;
+      }
+      
+      interpolate(val);
+    }
+    
     void interpolate(std::vector<double> & function) const {
       std::vector<double> function_in_grid = function;
       
