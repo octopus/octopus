@@ -204,8 +204,7 @@ contains
       ps%z      = z
       ps%conf%z = nint(z) ! atomic number
       ps%kbc    = 1     ! only one projector per angular momentum
-      ps%llocal  = user_llocal  ! the local part of the pseudo
-
+      
       ps%lmax = ps_psf%ps_grid%no_l_channels - 1
 
       if(user_lmax /= HUGE_L) then
@@ -219,7 +218,14 @@ contains
       ps%conf%p = ps_psf%ps_grid%no_l_channels
       if(ps%lmax == 0) ps%llocal = 0 ! Vanderbilt is not acceptable if ps%lmax == 0.
 
-      call ps_psf_process(ps_psf, user_lmax, ps%llocal)
+      ! the local part of the pseudo
+      if(user_llocal == HUGE_L) then
+        ps%llocal = 0
+      else
+        ps%llocal = user_llocal
+      end if
+      
+      call ps_psf_process(ps_psf, ps%lmax, ps%llocal)
       call logrid_copy(ps_psf%ps_grid%g, ps%g)
 
     case(PS_TYPE_CPI, PS_TYPE_FHI)
@@ -242,7 +248,6 @@ contains
 
       ps%z      = z
       ps%kbc    = 1     ! only one projector per angular momentum
-      ps%llocal  = user_llocal  ! the local part of the pseudo
 
       ps%lmax  = ps%conf%p - 1
 
@@ -253,14 +258,21 @@ contains
           call messages_fatal(1)
         end if
       end if
-      
+
       if(ps%lmax == 0) ps%llocal = 0 ! Vanderbilt is not acceptable if ps%lmax == 0.
+
+      ! the local part of the pseudo
+      if(user_llocal == HUGE_L) then
+        ps%llocal = 0
+      else
+        ps%llocal = user_llocal
+      end if
       
       if(ps%flavour == PS_TYPE_CPI) then
         call ps_cpi_process(ps_cpi, ps%llocal)
         call logrid_copy(ps_cpi%ps_grid%g, ps%g)
       else
-        call ps_fhi_process(ps_fhi, user_lmax, ps%llocal)
+        call ps_fhi_process(ps_fhi, ps%lmax, ps%llocal)
         call logrid_copy(ps_fhi%ps_grid%g, ps%g)
       end if
 
