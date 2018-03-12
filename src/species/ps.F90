@@ -290,7 +290,17 @@ contains
         
         ps%kbc    = ps_xml%nchannels
         ps%lmax  = ps_xml%lmax
-        ps%llocal  = ps_xml%llocal
+
+        if(ps_xml%kleinman_bylander) then
+          ps%llocal = ps_xml%llocal
+        else
+          ! we have several options
+          ps%llocal = lloc                            ! user supplied local component
+          if(ps%llocal < 0) ps%llocal = ps_xml%llocal ! the one given in the pseudopotential file
+          if(ps%llocal < 0) ps%llocal = ps_xml%lmax   ! we use the maximum l possible as local
+          ASSERT(ps%llocal >= 0)
+          ASSERT(ps%llocal <= ps%lmax)
+        end if
         
         nullify(ps%g%drdi, ps%g%s)
         
@@ -1082,7 +1092,7 @@ contains
     do ip = 1, ps%g%nrval
       rr = (ip - 1)*ps_xml%mesh_spacing
       if(ip <= ps_xml%grid_size) then
-        vlocal(ip) = ps_xml%potential(ip, ps_xml%llocal)
+        vlocal(ip) = ps_xml%potential(ip, ps%llocal)
       else
         vlocal(ip) = -ps_xml%valence_charge/rr
       end if
@@ -1148,7 +1158,7 @@ contains
         do ip = 1, ps_xml%grid_size
           rr = (ip - 1)*ps_xml%mesh_spacing
           volume_element = rr**2*ps_xml%mesh_spacing
-          kbprojector(ip) = (ps_xml%potential(ip, ll) - ps_xml%potential(ip, ps_xml%llocal))*ps_xml%wavefunction(ip, ll)
+          kbprojector(ip) = (ps_xml%potential(ip, ll) - ps_xml%potential(ip, ps%llocal))*ps_xml%wavefunction(ip, ll)
           dnrm = dnrm + kbprojector(ip)**2*volume_element
           avgv = avgv + kbprojector(ip)*ps_xml%wavefunction(ip, ll)*volume_element
         end do
@@ -1156,7 +1166,7 @@ contains
         kbcos = dnrm/(avgv + CNST(1.0e-20))
         kbnorm = M_ONE/(sqrt(dnrm) + CNST(1.0e-20))
 
-        if(ll /= ps_xml%llocal) then
+        if(ll /= ps%llocal) then
           ps%h(ll, 1, 1) = kbcos        
           kbprojector = kbprojector*kbnorm
         else
