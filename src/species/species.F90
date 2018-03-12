@@ -148,7 +148,8 @@ module species_oct_m
     integer, pointer :: iwf_l(:, :), iwf_m(:, :), iwf_i(:, :), iwf_n(:, :) !< i, n, l, m as a function of iorb and ispin
     CMPLX, pointer :: iwf_j(:)    !< j as a function of iorb
 
-    integer :: lmax, lloc         !< For the TM pseudos, the lmax and lloc.
+    integer :: user_lmax          !< For the TM pseudos, user defined lmax 
+    integer :: user_llocal        !< For the TM pseudos, used defined llocal
  
   end type species_t
 
@@ -194,8 +195,8 @@ contains
     nullify(this%iwf_i)
     nullify(this%iwf_n)
     nullify(this%iwf_j)
-    this%lmax = -1
-    this%lloc = -1
+    this%user_lmax   = HUGE_L
+    this%user_llocal = HUGE_L
 
     POP_SUB(species_nullify)
   end subroutine species_nullify
@@ -621,17 +622,17 @@ contains
       ! allocate structure
       SAFE_ALLOCATE(spec%ps)
       if(spec%type == SPECIES_PSPIO) then
-        call ps_pspio_init(spec%ps, spec%label, spec%Z, spec%lmax, spec%lloc, ispin, spec%filename)
+        call ps_pspio_init(spec%ps, spec%label, spec%Z, spec%user_lmax, spec%user_llocal, ispin, spec%filename)
       else
-        call ps_init(spec%ps, spec%label, spec%Z, spec%lmax, spec%lloc, ispin, spec%filename)
+        call ps_init(spec%ps, spec%label, spec%Z, spec%user_lmax, spec%user_llocal, ispin, spec%filename)
       end if
       spec%z_val = spec%ps%z_val
       spec%nlcc = spec%ps%nlcc
       spec%niwfs = ps_niwfs(spec%ps)
 
       ! give this variables an absurd value as they should not be used after
-      spec%lmax = -2
-      spec%lloc = -2
+      spec%user_lmax = -2
+      spec%user_llocal = -2
 
     case(SPECIES_USDEF)
       if(print_info_) then
@@ -1369,8 +1370,8 @@ contains
     call loct_pointer_copy(this%iwf_m, that%iwf_m)
     call loct_pointer_copy(this%iwf_i, that%iwf_i)
     call loct_pointer_copy(this%iwf_j, that%iwf_j)
-    this%lmax=that%lmax
-    this%lloc=that%lloc
+    this%user_lmax=that%user_lmax
+    this%user_llocal=that%user_llocal
 
     POP_SUB(species_copy)
   end subroutine species_copy
@@ -1492,7 +1493,7 @@ contains
 
     spec%type = SPECIES_PSEUDO
     
-    read(iunit,*) label, spec%filename, spec%z, spec%lmax, spec%lloc, spec%def_h, spec%def_rsize
+    read(iunit,*) label, spec%filename, spec%z, spec%user_lmax, spec%user_llocal, spec%def_h, spec%def_rsize
 
     spec%filename = trim(conf%share)//'/pseudopotentials/'//trim(spec%filename)
     
@@ -1607,27 +1608,27 @@ contains
 
       case(OPTION__SPECIES__LMAX)
         call check_duplication(OPTION__SPECIES__LMAX)
-        call parse_block_integer(blk, row, icol + 1, spec%lmax)
+        call parse_block_integer(blk, row, icol + 1, spec%user_lmax)
 
         if(spec%type /= SPECIES_PSEUDO .and. spec%type /= SPECIES_PSPIO) then
           call messages_input_error('Species', &
             "The 'lmax' parameter in species "//trim(spec%label)//" can only be used with pseudopotential species")          
         end if
         
-        if(spec%lmax < 0) then
+        if(spec%user_lmax < 0) then
           call messages_input_error('Species', "The 'lmax' parameter in species "//trim(spec%label)//" cannot be negative")
         end if
 
       case(OPTION__SPECIES__LLOC)
         call check_duplication(OPTION__SPECIES__LLOC)
-        call parse_block_integer(blk, row, icol + 1, spec%lloc)
+        call parse_block_integer(blk, row, icol + 1, spec%user_llocal)
 
         if(spec%type /= SPECIES_PSEUDO .and. spec%type /= SPECIES_PSPIO) then
           call messages_input_error('Species', &
             "The 'lloc' parameter in species "//trim(spec%label)//" can only be used with pseudopotential species")          
         end if
 
-        if(spec%lloc < 0) then
+        if(spec%user_llocal < 0) then
           call messages_input_error('Species', "The 'lloc' parameter in species "//trim(spec%label)//" cannot be negative")
         end if
 
@@ -1760,7 +1761,7 @@ contains
     end if
 
     if(parameter_defined(OPTION__SPECIES__LMAX) .and. parameter_defined(OPTION__SPECIES__LLOC)) then
-      if(spec%lloc > spec%lmax) then
+      if(spec%user_llocal > spec%user_lmax) then
         call messages_input_error('Species', &
           "the 'lloc' parameter cannot be larger than the 'lmax' parameter in species "//trim(spec%label))
       end if

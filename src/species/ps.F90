@@ -70,6 +70,8 @@ module ps_oct_m
     PS_FILTER_TS   = 2,         &
     PS_FILTER_BSB  = 3
 
+  integer, parameter, public :: HUGE_L = 100
+  
   character(len=3), parameter  :: ps_name(PS_TYPE_PSF:PS_TYPE_XML) = (/"tm2", "hgh", "cpi", "fhi", "upf", "qso"/)
 
   type ps_t
@@ -206,7 +208,7 @@ contains
 
       ps%lmax = ps_psf%ps_grid%no_l_channels - 1
 
-      if(user_lmax >= 0) then
+      if(user_lmax /= HUGE_L) then
         ps%lmax = min(ps%lmax, user_lmax) ! Maybe the file does not have enough components.
         if(user_lmax /= ps%lmax) then
           message(1) = "lmax in Species block for " // trim(label) // " is larger than number available in pseudopotential."
@@ -235,7 +237,7 @@ contains
       ps%conf%symbol = label(1:2)
       ps%conf%type   = 1
       do l = 1, ps%conf%p
-        ps%conf%l(l) = l-1
+        ps%conf%l(l) = l - 1
       end do
 
       ps%z      = z
@@ -244,7 +246,7 @@ contains
 
       ps%lmax  = ps%conf%p - 1
 
-      if(user_lmax >= 0) then
+      if(user_lmax /= HUGE_L) then
         ps%lmax = min(ps%lmax, user_lmax) ! Maybe the file does not have enough components.
         if(user_lmax /= ps%lmax) then
           message(1) = "lmax in Species block for " // trim(label) // " is larger than number available in pseudopotential."
