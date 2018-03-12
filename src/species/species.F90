@@ -194,8 +194,8 @@ contains
     nullify(this%iwf_i)
     nullify(this%iwf_n)
     nullify(this%iwf_j)
-    this%lmax=0
-    this%lloc=0
+    this%lmax = -1
+    this%lloc = -1
 
     POP_SUB(species_nullify)
   end subroutine species_nullify
