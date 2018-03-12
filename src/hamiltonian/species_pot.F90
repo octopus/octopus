@@ -301,10 +301,11 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine species_atom_density_derivative(mesh, sb, atom, spin_channels, drho)
+  subroutine species_atom_density_derivative(mesh, sb, atom, xyz, spin_channels, drho)
     type(mesh_t),         intent(in)    :: mesh
     type(simul_box_t),    intent(in)    :: sb
     type(atom_t), target, intent(in)    :: atom
+    FLOAT,                intent(in)    :: xyz(:)
     integer,              intent(in)    :: spin_channels
     FLOAT,                intent(inout) :: drho(:, :) !< (mesh%np, spin_channels)
 
@@ -337,7 +338,7 @@ contains
 
       if(ps_has_density(ps)) then
 
-        call periodic_copy_init(pp, sb, atom%x, &
+        call periodic_copy_init(pp, sb, xyz, &
           range = spline_cutoff_radius(ps%Ur(1, 1), ps%projectors_sphere_threshold))
 
         do icell = 1, periodic_copy_num(pp)

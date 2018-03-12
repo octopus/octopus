@@ -195,14 +195,13 @@ contains
 !---------------------------------------------------------------------------------!    
 
     if(sb%periodic_dim > 0) then ! periodic case
-      do iatom = 1, geo%natoms 
-        ispecies = species_index(geo%atom(iatom)%species)
-
-        do jatom = 1, geo%natoms
-          jspecies = species_index(geo%atom(jatom)%species)
+      do jatom = 1, geo%natoms
+        jspecies = species_index(geo%atom(jatom)%species)
                 
-          call periodic_copy_init(pc, sb, geo%atom(jatom)%x, xcs%VDW_cutoff)
-          do jcopy = 1, periodic_copy_num(pc) ! one of the periodic copy is the initial atom   
+        call periodic_copy_init(pc, sb, geo%atom(jatom)%x, xcs%VDW_cutoff)
+        do jcopy = 1, periodic_copy_num(pc) ! one of the periodic copy is the initial atom  
+          do iatom = 1, geo%natoms
+            ispecies = species_index(geo%atom(iatom)%species) 
 
             x_j(1:sb%dim) = periodic_copy_position(pc, sb, jcopy)
             rr2 =  sum( (x_j(1:sb%dim) - geo%atom(iatom)%x(1:sb%dim))**2 )
@@ -237,10 +236,24 @@ contains
               derivative_coeff(iatom) = derivative_coeff(iatom) + deabdvra;
             end if
           end do
-          call periodic_copy_end(pc)
-          !end if
         end do
+        call periodic_copy_end(pc)
       end do
+
+      ! Add the extra term for the force 
+      do jatom = 1, geo%natoms
+        call periodic_copy_init(pc, sb, geo%atom(jatom)%x, xcs%VDW_cutoff)
+        do jcopy = 1, periodic_copy_num(pc)
+          x_j(1:sb%dim) = periodic_copy_position(pc, sb, jcopy)
+          do iatom = 1, geo%natoms
+            !call hirshfeld_position_derivative(this%hirshfeld, der, iatom, jatom, geo%atom(iatom)%x(1:sb%dim), x_j(1:sb%dim) , density, dvadrr)
+            !force(1:3, jatom) = force(1:3, jatom) - derivative_coeff(iatom)*dvadrr(1:3)
+          end do
+        end do
+        call periodic_copy_end(pc)
+      end do
+
+
 
 !------------------------------------------------------------!
 
@@ -256,6 +269,14 @@ contains
  
       call f90_vdw_calculate(geo%natoms, zatom(1), coordinates(1, 1), volume_ratio(1), &
       energy, force(1, 1), derivative_coeff(1))
+      
+      ! Add the extra term for the force 
+      do jatom = 1, geo%natoms
+        do iatom = 1, geo%natoms
+          call hirshfeld_position_derivative(this%hirshfeld, der, iatom, jatom, geo%atom(iatom)%x(1:3) , geo%atom(jatom)%x(1:3), density, dvadrr)
+          force(1:3, jatom) = force(1:3, jatom) - derivative_coeff(iatom)*dvadrr(1:3)
+        end do
+      end do
 
       SAFE_DEALLOCATE_A(coordinates)
       SAFE_DEALLOCATE_A(zatom)
@@ -263,15 +284,11 @@ contains
 
 !------------------------------------------------------------!
 
-    ! add the extra term to the force and calculate the potential
+    ! Calculate the potential
     potential = CNST(0.0)
-    do jatom = 1, geo%natoms
-      do iatom = 1, geo%natoms
-        call hirshfeld_position_derivative(this%hirshfeld, der, iatom, jatom, density, dvadrr)
-        force(1:3, jatom) = force(1:3, jatom) - derivative_coeff(iatom)*dvadrr(1:3)
-      end do
-      call hirshfeld_density_derivative(this%hirshfeld, jatom, dvadens)
-      potential(1:der%mesh%np) = potential(1:der%mesh%np) + derivative_coeff(jatom)*dvadens(1:der%mesh%np)
+    do iatom = 1, geo%natoms
+      call hirshfeld_density_derivative(this%hirshfeld, iatom, dvadens)
+      potential(1:der%mesh%np) = potential(1:der%mesh%np) + derivative_coeff(iatom)*dvadens(1:der%mesh%np)
     end do
 
     call dio_function_output(1, "./", "vvdw", der%mesh, potential, unit_one, ip)
@@ -285,7 +302,6 @@ contains
     SAFE_DEALLOCATE_A(r0ab)
     SAFE_DEALLOCATE_A(c6ab)
     SAFE_DEALLOCATE_A(x_j)
-
 
     POP_SUB(vdw_ts_calculate)
   end subroutine vdw_ts_calculate

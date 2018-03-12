@@ -225,11 +225,13 @@ contains
 
   ! -----------------------------------------------
 
-  subroutine hirshfeld_position_derivative(this, der, iatom, jatom, density, dposition)
+  subroutine hirshfeld_position_derivative(this, der, iatom, jatom, xyz_i, xyz_j, density, dposition)
     type(hirshfeld_t),         intent(in)    :: this
     type(derivatives_t),       intent(in)    :: der
     integer,                   intent(in)    :: iatom
     integer,                   intent(in)    :: jatom
+    FLOAT,                     intent(in)    :: xyz_i(:)
+    FLOAT,                     intent(in)    :: xyz_j(:)
     FLOAT,                     intent(in)    :: density(:, :)
     FLOAT,                     intent(out)   :: dposition(:)
 
@@ -244,13 +246,13 @@ contains
     SAFE_ALLOCATE(grad(1:this%mesh%np, 1:this%mesh%sb%dim))
     
     call species_atom_density(this%mesh, this%mesh%sb, this%geo%atom(iatom), this%st%d%nspin, atom_density)
-    call species_atom_density_derivative(this%mesh, this%mesh%sb, this%geo%atom(jatom), this%st%d%nspin, atom_derivative)
+    call species_atom_density_derivative(this%mesh, this%mesh%sb, this%geo%atom(jatom), xyz_j, this%st%d%nspin, atom_derivative)
 
     dposition(1:this%mesh%sb%dim) = CNST(0.0)
 
     do ip = 1, this%mesh%np
-      rri = sqrt(sum((this%mesh%x(ip, 1:this%mesh%sb%dim) - this%geo%atom(iatom)%x(1:this%mesh%sb%dim))**2))
-      rrj = sqrt(sum((this%mesh%x(ip, 1:this%mesh%sb%dim) - this%geo%atom(jatom)%x(1:this%mesh%sb%dim))**2))
+      rri = sqrt(sum((this%mesh%x(ip, 1:this%mesh%sb%dim) - xyz_i(1:this%mesh%sb%dim))**2))
+      rrj = sqrt(sum((this%mesh%x(ip, 1:this%mesh%sb%dim) - xyz_j(1:this%mesh%sb%dim))**2))
       tdensity = sum(density(ip, 1:this%st%d%nspin))
       atom_dens = sum(atom_density(ip, 1:this%st%d%nspin))
       atom_der = sum(atom_derivative(ip, 1:this%st%d%nspin))
