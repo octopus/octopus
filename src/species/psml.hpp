@@ -142,7 +142,9 @@ namespace pseudopotential {
 
     int nchannels() const {
       int nc = 0;
-      rapidxml::xml_node<> * node = root_node_->first_node("nonlocal-projectors")->first_node("proj");
+      rapidxml::xml_node<> * node = root_node_->first_node("nonlocal-projectors");
+      if(!node) return 0;
+      node = node->first_node("proj");
       while(node){
 	int read_ic = value<int>(node->first_attribute("seq")) - 1;
 	nc = std::max(nc, read_ic + 1);
