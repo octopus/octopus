@@ -318,9 +318,9 @@ contains
           ps%llocal = ps_xml%llocal
         else
           ! we have several options
-          ps%llocal = user_llocal                     ! user supplied local component
-          if(ps%llocal < 0) ps%llocal = ps_xml%llocal ! the one given in the pseudopotential file
-          if(ps%llocal < 0) ps%llocal = 0             ! we do not have any info, set the local component to 0
+          ps%llocal = 0                                     ! the default
+          if(ps_xml%llocal >= 0) ps%llocal = ps_xml%llocal  ! the one given in the pseudopotential file
+          if(user_llocal /= HUGE_L) ps%llocal = user_llocal ! user supplied local component
           ASSERT(ps%llocal >= 0)
           ASSERT(ps%llocal <= ps%lmax)
         end if
