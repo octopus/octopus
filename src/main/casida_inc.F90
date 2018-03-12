@@ -565,123 +565,123 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
 
 
   ! calculate the matrix elements of (v + fxc)
-!if(.not. cas%kernel_saved) then
+  if(.not. cas%kernel_saved) then
 
-  ! precompute buffer once
-  if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
-    buffer(1:mesh%np) = R_TOTYPE(M_ZERO)
-    do ii = 1, cas%pt_nmodes
-        buffer(1:mesh%np) = buffer(1:mesh%np) + &
-          (cas%pt%lambda_array(ii)* &
-             ( cas%pt%pol_array(ii,1)*mesh%x(1:mesh%np, 1)  &
-             + cas%pt%pol_array(ii,2)*mesh%x(1:mesh%np, 2)  &
-             + cas%pt%pol_array(ii,3)*mesh%x(1:mesh%np, 3)))**2
-    end do
-  end if
-
-  do jb_local = 1, cas%nb_rows
-#ifndef HAVE_SCALAPACK
-    actual = actual + 1
-    if(mod(actual, cas%mpi_grp%size) /= cas%mpi_grp%rank) cycle
-#endif
-    jb = get_global_row(cas, jb_local)
-
-    ! first electron-hole contributions
-    if(jb <= cas%n_pairs) then
-
-      ! we only count diagonals for Petersilka
-      if(cas%type == CASIDA_PETERSILKA) counter = counter + 1
-
-      ! compute rho (order of indices important!) and potential (depends only on jb)
-      call X(casida_get_rho)(st, mesh, cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%kk, rho_j)
-
-      if(.not. is_forces_ .and. abs(coeff_vh) > M_EPSILON) then
-        X(pot)(1:mesh%np) = M_ZERO
-        if(hm%theory_level /= INDEPENDENT_PARTICLES) then
-          call X(poisson_solve)(psolver, X(pot), rho_j, all_nodes=.false.)
-        end if
-      end if
-
-      ! take care of not computing elements twice for the symmetric matrix
-      ia_length = cas%n_pairs / 2
-      if(mod(cas%n_pairs, 2) == 0 .and. jb > cas%n_pairs/2) then
-        ia_length = ia_length - 1
-      end if
-
-      do ia_local = 1, cas%nb_cols
-        ia = get_global_col(cas, ia_local)
-
-        if(jb+ia_length <= cas%n_pairs) then
-          ! from diagonal to the right
-          if(.not.(ia >= jb .and. ia <= jb+ia_length)) cycle
-        else
-          ! wrap around the end of the electron-hole part
-          if(.not.((ia >= jb .and. ia <= cas%n_pairs) .or. &
-                    ia <= jb+ia_length-cas%n_pairs)) cycle
-        end if
-
-        ! only calculate off-diagonals in degenerate subspace
-        if(cas%type == CASIDA_PETERSILKA .and. isnt_degenerate(cas, st, ia, jb)) cycle
-
-        counter = counter + 1
-
-        ! ---------------------------------------------------------
-        !> calculates the matrix elements <i(p),a(p)|v|j(q),b(q)> and/or <i(p),a(p)|xc|j(q),b(q)>
-        call X(casida_get_rho)(st, mesh, cas%pair(ia)%a, cas%pair(ia)%i, cas%pair(ia)%kk, rho_i)
-
-        !  first the Hartree part
-        if(.not. is_forces_ .and. abs(coeff_vh) > M_EPSILON) then
-          ! value of pot is retained between calls
-          mtxel_vh = coeff_vh * X(mf_dotp)(mesh, rho_i(:), X(pot)(:))
-        else
-          mtxel_vh = M_ZERO
-        end if
-
-        ! now the exchange part
-        integrand(1:mesh%np) = rho_i(1:mesh%np)*rho_j(1:mesh%np)* &
-          xc(1:mesh%np, cas%pair(ia)%kk, cas%pair(jb)%kk)
-        mtxel_xc = X(mf_integrate)(mesh, integrand)
-
-        mtxel_vm = M_ZERO
-        if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
-          ! buffer is precomputed once before double loop
-          mtxel_vm = mtxel_vm + &
-            X(mf_dotp)(mesh, rho_i(1:mesh%np), buffer(1:mesh%np)*rho_j(1:mesh%np))
-        end if
-
-        !matrix(ia_local, jb_local) = mtxel_vh + mtxel_xc + mtxel_vm
-        matrix(jb_local, ia_local) = R_CONJ(mtxel_vh + mtxel_xc + mtxel_vm)
-#ifndef HAVE_SCALAPACK
-        if(jb /= ia) matrix(jb, ia) = R_CONJ(matrix(ia, jb))
-#endif
-      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(counter, maxcount)
+    ! precompute buffer once
+    if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
+      buffer(1:mesh%np) = R_TOTYPE(M_ZERO)
+      do ii = 1, cas%pt_nmodes
+          buffer(1:mesh%np) = buffer(1:mesh%np) + &
+            (cas%pt%lambda_array(ii)* &
+               ( cas%pt%pol_array(ii,1)*mesh%x(1:mesh%np, 1)  &
+               + cas%pt%pol_array(ii,2)*mesh%x(1:mesh%np, 2)  &
+               + cas%pt%pol_array(ii,3)*mesh%x(1:mesh%np, 3)))**2
       end do
-    else
-      ! photon-electron coupling (upper right/lower left)
-      ! here, jb > n_pairs
-      if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
-        counter = counter + 1
-        ! avoid multiple computations of MN_term
-        call X(MN_term)(cas, jb-cas%n_pairs, xx)
-        !do ia = 1, cas%n_pairs
+    end if
+
+    do jb_local = 1, cas%nb_rows
+#ifndef HAVE_SCALAPACK
+      actual = actual + 1
+      if(mod(actual, cas%mpi_grp%size) /= cas%mpi_grp%rank) cycle
+#endif
+      jb = get_global_row(cas, jb_local)
+
+      ! first electron-hole contributions
+      if(jb <= cas%n_pairs) then
+
+        ! we only count diagonals for Petersilka
+        if(cas%type == CASIDA_PETERSILKA) counter = counter + 1
+
+        ! compute rho (order of indices important!) and potential (depends only on jb)
+        call X(casida_get_rho)(st, mesh, cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%kk, rho_j)
+
+        if(.not. is_forces_ .and. abs(coeff_vh) > M_EPSILON) then
+          X(pot)(1:mesh%np) = M_ZERO
+          if(hm%theory_level /= INDEPENDENT_PARTICLES) then
+            call X(poisson_solve)(psolver, X(pot), rho_j, all_nodes=.false.)
+          end if
+        end if
+
+        ! take care of not computing elements twice for the symmetric matrix
+        ia_length = cas%n_pairs / 2
+        if(mod(cas%n_pairs, 2) == 0 .and. jb > cas%n_pairs/2) then
+          ia_length = ia_length - 1
+        end if
+
         do ia_local = 1, cas%nb_cols
           ia = get_global_col(cas, ia_local)
-          ! compute only lower left part for pairs
-          if(ia > cas%n_pairs) cycle
-          matrix(jb_local, ia_local) = sqrt(M_HALF*cas%pt%omega_array(jb-cas%n_pairs))*xx(ia)
+
+          if(jb+ia_length <= cas%n_pairs) then
+            ! from diagonal to the right
+            if(.not.(ia >= jb .and. ia <= jb+ia_length)) cycle
+          else
+            ! wrap around the end of the electron-hole part
+            if(.not.((ia >= jb .and. ia <= cas%n_pairs) .or. &
+                      ia <= jb+ia_length-cas%n_pairs)) cycle
+          end if
+
+          ! only calculate off-diagonals in degenerate subspace
+          if(cas%type == CASIDA_PETERSILKA .and. isnt_degenerate(cas, st, ia, jb)) cycle
+
+          counter = counter + 1
+
+          ! ---------------------------------------------------------
+          !> calculates the matrix elements <i(p),a(p)|v|j(q),b(q)> and/or <i(p),a(p)|xc|j(q),b(q)>
+          call X(casida_get_rho)(st, mesh, cas%pair(ia)%a, cas%pair(ia)%i, cas%pair(ia)%kk, rho_i)
+
+          !  first the Hartree part
+          if(.not. is_forces_ .and. abs(coeff_vh) > M_EPSILON) then
+            ! value of pot is retained between calls
+            mtxel_vh = coeff_vh * X(mf_dotp)(mesh, rho_i(:), X(pot)(:))
+          else
+            mtxel_vh = M_ZERO
+          end if
+
+          ! now the exchange part
+          integrand(1:mesh%np) = rho_i(1:mesh%np)*rho_j(1:mesh%np)* &
+            xc(1:mesh%np, cas%pair(ia)%kk, cas%pair(jb)%kk)
+          mtxel_xc = X(mf_integrate)(mesh, integrand)
+
+          mtxel_vm = M_ZERO
+          if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
+            ! buffer is precomputed once before double loop
+            mtxel_vm = mtxel_vm + &
+              X(mf_dotp)(mesh, rho_i(1:mesh%np), buffer(1:mesh%np)*rho_j(1:mesh%np))
+          end if
+
+          !matrix(ia_local, jb_local) = mtxel_vh + mtxel_xc + mtxel_vm
+          matrix(jb_local, ia_local) = R_CONJ(mtxel_vh + mtxel_xc + mtxel_vm)
 #ifndef HAVE_SCALAPACK
-          matrix(ia, jb) = matrix(jb, ia)
+          if(jb /= ia) matrix(jb, ia) = R_CONJ(matrix(ia, jb))
 #endif
+        if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(counter, maxcount)
         end do
+      else
+        ! photon-electron coupling (upper right/lower left)
+        ! here, jb > n_pairs
+        if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
+          counter = counter + 1
+          ! avoid multiple computations of MN_term
+          call X(MN_term)(cas, jb-cas%n_pairs, xx)
+          !do ia = 1, cas%n_pairs
+          do ia_local = 1, cas%nb_cols
+            ia = get_global_col(cas, ia_local)
+            ! compute only lower left part for pairs
+            if(ia > cas%n_pairs) cycle
+            matrix(jb_local, ia_local) = sqrt(M_HALF*cas%pt%omega_array(jb-cas%n_pairs))*xx(ia)
+#ifndef HAVE_SCALAPACK
+            matrix(ia, jb) = matrix(jb, ia)
+#endif
+          end do
+        end if
       end if
+      if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(counter, maxcount)
+    end do
+    if(.not.cas%kernel_saved) then
+      cas%X(kernel)(1:cas%nb_rows, 1:cas%nb_cols) = matrix(1:cas%nb_rows, 1:cas%nb_cols)
+      cas%kernel_saved = .true.
     end if
-    if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(counter, maxcount)
-  end do
-  if(.not.cas%kernel_saved) then
-    cas%X(kernel)(1:cas%nb_rows, 1:cas%nb_cols) = matrix(1:cas%nb_rows, 1:cas%nb_cols)
-    cas%kernel_saved = .true.
   end if
-!end if
 
   SAFE_DEALLOCATE_A(rho_i)
   SAFE_DEALLOCATE_A(rho_j)
