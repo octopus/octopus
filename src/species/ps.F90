@@ -84,8 +84,8 @@ module ps_oct_m
     type(spline_t), pointer :: ur_sq(:, :)  !< (1:conf%p, 1:ispin) atomic wavefunctions, as a function of r^2
 
     ! Kleinman-Bylander projectors stuff
-    integer  :: l_max    !< maximum value of l to take
-    integer  :: l_loc    !< which component to take as local
+    integer  :: lmax    !< maximum value of l to take
+    integer  :: llocal  !< which component to take as local
 
     type(spline_t) :: vl         !< local part
 
@@ -201,18 +201,18 @@ contains
       ps%z      = z
       ps%conf%z = nint(z) ! atomic number
       ps%kbc    = 1     ! only one projector per angular momentum
-      ps%l_loc  = lloc  ! the local part of the pseudo
+      ps%llocal  = lloc  ! the local part of the pseudo
 
-      ps%l_max  = min(ps_psf%ps_grid%no_l_channels - 1, lmax) ! Maybe the file does not have enough components.
+      ps%lmax  = min(ps_psf%ps_grid%no_l_channels - 1, lmax) ! Maybe the file does not have enough components.
       ps%conf%p = ps_psf%ps_grid%no_l_channels
-      if(ps%l_max == 0) ps%l_loc = 0 ! Vanderbilt is not acceptable if ps%l_max == 0.
+      if(ps%lmax == 0) ps%llocal = 0 ! Vanderbilt is not acceptable if ps%lmax == 0.
 
-      if(lmax /= ps%l_max) then
+      if(lmax /= ps%lmax) then
         message(1) = "lmax in Species block for " // trim(label) // " is larger than number available in pseudopotential."
         call messages_fatal(1)
       end if
 
-      call ps_psf_process(ps_psf, lmax, ps%l_loc)
+      call ps_psf_process(ps_psf, lmax, ps%llocal)
       call logrid_copy(ps_psf%ps_grid%g, ps%g)
 
     case(PS_TYPE_CPI, PS_TYPE_FHI)
@@ -235,21 +235,21 @@ contains
 
       ps%z      = z
       ps%kbc    = 1     ! only one projector per angular momentum
-      ps%l_loc  = lloc  ! the local part of the pseudo
+      ps%llocal  = lloc  ! the local part of the pseudo
 
-      ps%l_max  = min(ps%conf%p - 1, lmax)   ! Maybe the file does not have enough components.
-      if(ps%l_max == 0) ps%l_loc = 0 ! Vanderbilt is not acceptable if ps%l_max == 0.
+      ps%lmax  = min(ps%conf%p - 1, lmax)   ! Maybe the file does not have enough components.
+      if(ps%lmax == 0) ps%llocal = 0 ! Vanderbilt is not acceptable if ps%lmax == 0.
       
-      if(lmax /= ps%l_max) then
+      if(lmax /= ps%lmax) then
         message(1) = "lmax in Species block for " // trim(label) // " is larger than number available in pseudopotential."
         call messages_fatal(1)
       end if
 
       if(ps%flavour == PS_TYPE_CPI) then
-        call ps_cpi_process(ps_cpi, ps%l_loc)
+        call ps_cpi_process(ps_cpi, ps%llocal)
         call logrid_copy(ps_cpi%ps_grid%g, ps%g)
       else
-        call ps_fhi_process(ps_fhi, lmax, ps%l_loc)
+        call ps_fhi_process(ps_fhi, lmax, ps%llocal)
         call logrid_copy(ps_fhi%ps_grid%g, ps%g)
       end if
 
@@ -259,8 +259,8 @@ contains
 
       ps%z        = z
       ps%kbc      = 3
-      ps%l_loc    = -1
-      ps%l_max    = ps_hgh%l_max
+      ps%llocal    = -1
+      ps%lmax    = ps_hgh%l_max
 
       call hgh_process(ps_hgh)
       call logrid_copy(ps_hgh%g, ps%g)
@@ -289,8 +289,8 @@ contains
         end do
         
         ps%kbc    = ps_xml%nchannels
-        ps%l_max  = ps_xml%lmax
-        ps%l_loc  = ps_xml%llocal
+        ps%lmax  = ps_xml%lmax
+        ps%llocal  = ps_xml%llocal
         
         nullify(ps%g%drdi, ps%g%s)
         
@@ -315,8 +315,8 @@ contains
         ps%z      = z
         ps%conf%z = nint(z)
         ps%kbc    = ps_upf%kb_nc
-        ps%l_max  = ps_upf%l_max
-        ps%l_loc  = ps_upf%l_local
+        ps%lmax  = ps_upf%l_max
+        ps%llocal  = ps_upf%l_loc
         ps%has_density = .true.
         
         nullify(ps%g%drdi, ps%g%s)
@@ -330,17 +330,17 @@ contains
       
     end select
 
-    write(message(1), '(a,i2,a)') "Info: l = ", ps%l_max, " is maximum angular momentum considered."
+    write(message(1), '(a,i2,a)') "Info: l = ", ps%lmax, " is maximum angular momentum considered."
     call messages_info(1)
 
-    ps%local = (ps%l_max == 0 .and. ps%l_loc == 0 ) .or. (ps%l_max == -1 .and. ps%l_loc == -1)
+    ps%local = (ps%lmax == 0 .and. ps%llocal == 0 ) .or. (ps%lmax == -1 .and. ps%llocal == -1)
     
     ! We allocate all the stuff
-    SAFE_ALLOCATE(ps%kb   (0:ps%l_max, 1:ps%kbc))
-    SAFE_ALLOCATE(ps%dkb  (0:ps%l_max, 1:ps%kbc))
+    SAFE_ALLOCATE(ps%kb   (0:ps%lmax, 1:ps%kbc))
+    SAFE_ALLOCATE(ps%dkb  (0:ps%lmax, 1:ps%kbc))
     SAFE_ALLOCATE(ps%ur   (1:ps%conf%p, 1:ps%ispin))
     SAFE_ALLOCATE(ps%ur_sq(1:ps%conf%p, 1:ps%ispin))
-    SAFE_ALLOCATE(ps%h    (0:ps%l_max, 1:ps%kbc, 1:ps%kbc))
+    SAFE_ALLOCATE(ps%h    (0:ps%lmax, 1:ps%kbc, 1:ps%kbc))
     SAFE_ALLOCATE(ps%density(1:ps%ispin))
     SAFE_ALLOCATE(ps%density_der(1:ps%ispin))
 
@@ -365,7 +365,7 @@ contains
       call ps_grid_load(ps, ps_fhi%ps_grid)
       call ps_fhi_end(ps_fhi)
     case(PS_TYPE_HGH)
-      SAFE_ALLOCATE(ps%k    (0:ps%l_max, 1:ps%kbc, 1:ps%kbc))
+      SAFE_ALLOCATE(ps%k    (0:ps%lmax, 1:ps%kbc, 1:ps%kbc))
       call hgh_load(ps, ps_hgh)
       call hgh_end(ps_hgh)
     case(PS_TYPE_XML, PS_TYPE_UPF)
@@ -454,7 +454,7 @@ contains
 
     ps%rc_max = CNST(0.0)
 
-    do l = 0, ps%l_max
+    do l = 0, ps%lmax
       do j = 1, ps%kbc
         ps%rc_max = max(ps%rc_max, spline_cutoff_radius(ps%kb(l, j), ps%projectors_sphere_threshold))
       end do
@@ -471,7 +471,7 @@ contains
 
     PUSH_SUB(ps_derivatives)
 
-    do l = 0, ps%l_max
+    do l = 0, ps%lmax
       do j = 1, ps%kbc
         call spline_der(ps%kb(l, j), ps%dkb(l, j))
       end do
@@ -503,9 +503,9 @@ contains
       gamma = CNST(2.0)
 
       rmax = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold)
-      call spline_filter_mask(ps%vl, max(0, ps%l_loc), rmax, gmax, alpha, gamma)
-      do l = 0, ps%l_max
-        if(l == ps%l_loc) cycle
+      call spline_filter_mask(ps%vl, max(0, ps%llocal), rmax, gmax, alpha, gamma)
+      do l = 0, ps%lmax
+        if(l == ps%llocal) cycle
         do k = 1, ps%kbc
           call spline_filter_mask(ps%kb(l, k), l, ps%rc_max, gmax, alpha, gamma)
         end do
@@ -531,9 +531,9 @@ contains
       rcut    = CNST(2.5)
       beta_rs = CNST(0.4)
 
-      call spline_filter_bessel(ps%vl, ps%l_loc, gmax, alpha, beta_fs, rcut, beta_rs)
-      do l = 0, ps%l_max
-        if(l == ps%l_loc) cycle
+      call spline_filter_bessel(ps%vl, ps%llocal, gmax, alpha, beta_fs, rcut, beta_rs)
+      do l = 0, ps%lmax
+        if(l == ps%llocal) cycle
         do k = 1, ps%kbc
           call spline_filter_bessel(ps%kb(l, k), l, gmax, alpha, beta_fs, rcut, beta_rs)
         end do
@@ -576,19 +576,19 @@ contains
     write(iunit,'(a,a,/)')    'Flavour : ', ps_name(ps%flavour)
     write(iunit,'(a,f6.3)')   'z       : ', ps%z
     write(iunit,'(a,f6.3,/)') 'zval    : ', ps%z_val
-    write(iunit,'(a,i4)')     'lmax    : ', ps%l_max
-    write(iunit,'(a,i4)')     'lloc    : ', ps%l_loc
+    write(iunit,'(a,i4)')     'lmax    : ', ps%lmax
+    write(iunit,'(a,i4)')     'lloc    : ', ps%llocal
     write(iunit,'(a,i4,/)')   'kbc     : ', ps%kbc
     write(iunit,'(a,f9.5,/)') 'rcmax   : ', ps%rc_max
     write(iunit,'(a,/)')    'h matrix:'
-    do l = 0, ps%l_max
+    do l = 0, ps%lmax
       do k = 1, ps%kbc
         write(iunit,'(10f9.5)') (ps%h(l, k, j), j = 1, ps%kbc)
       end do
     end do
     if(associated(ps%k)) then
       write(iunit,'(/,a,/)')    'k matrix:'
-      do l = 0, ps%l_max
+      do l = 0, ps%lmax
         do k = 1, ps%kbc
           write(iunit,'(10f9.5)') (ps%k(l, k, j), j = 1, ps%kbc)
         end do
@@ -626,9 +626,9 @@ contains
     call io_close(iunit)
 
     iunit = io_open(trim(dir)//'/nonlocal_ft', action='write')
-    SAFE_ALLOCATE(fw(0:ps%l_max, 1:ps%kbc))
+    SAFE_ALLOCATE(fw(0:ps%lmax, 1:ps%kbc))
     call spline_init(fw)
-    do k = 0, ps%l_max
+    do k = 0, ps%lmax
       do j = 1, ps%kbc
         call spline_3dft(ps%kb(k, j), fw(k, j), gmax = gmax)
       end do
@@ -718,13 +718,13 @@ contains
     ! Fixes some components of ps
     ps%z_val = ps_hgh%z_val
     ps%nlcc = .false.
-    if(ps%l_max>=0) then
-      ps%rc_max = CNST(1.1) * maxval(ps_hgh%kbr(0:ps%l_max)) ! Increase a little.
+    if(ps%lmax>=0) then
+      ps%rc_max = CNST(1.1) * maxval(ps_hgh%kbr(0:ps%lmax)) ! Increase a little.
     else
       ps%rc_max = M_ZERO
     end if
-    ps%h(0:ps%l_max, 1:ps%kbc, 1:ps%kbc) = ps_hgh%h(0:ps%l_max, 1:ps%kbc, 1:ps%kbc)
-    ps%k(0:ps%l_max, 1:ps%kbc, 1:ps%kbc) = ps_hgh%k(0:ps%l_max, 1:ps%kbc, 1:ps%kbc)
+    ps%h(0:ps%lmax, 1:ps%kbc, 1:ps%kbc) = ps_hgh%h(0:ps%lmax, 1:ps%kbc, 1:ps%kbc)
+    ps%k(0:ps%lmax, 1:ps%kbc, 1:ps%kbc) = ps_hgh%k(0:ps%lmax, 1:ps%kbc, 1:ps%kbc)
 
     ! Fixes the occupations
     if(ps%ispin == 2) then
@@ -803,17 +803,17 @@ contains
 
     ps%nlcc = ps_grid%core_corrections
 
-    ps%h(0:ps%l_max, 1, 1) = ps_grid%dkbcos(1:ps%l_max+1)
+    ps%h(0:ps%lmax, 1, 1) = ps_grid%dkbcos(1:ps%lmax+1)
 
     ! Increasing radius a little, just in case.
     ! I have hard-coded a larger increase of the cutoff for the filtering.
-    ps%rc_max = maxval(ps_grid%kb_radius(1:ps%l_max+1)) * CNST(1.5)
+    ps%rc_max = maxval(ps_grid%kb_radius(1:ps%lmax+1)) * CNST(1.5)
 
     ! now we fit the splines
     call get_splines(ps_grid%g)
 
     ! Passes from Rydbergs to Hartrees.
-    ps%h(0:ps%l_max,:,:)    = ps%h(0:ps%l_max,:,:)    / M_TWO
+    ps%h(0:ps%lmax,:,:)    = ps%h(0:ps%lmax,:,:)    / M_TWO
 
     POP_SUB(ps_grid_load)
 
@@ -852,7 +852,7 @@ contains
       
 
       ! the Kleinman-Bylander projectors
-      do l = 1, ps%l_max+1
+      do l = 1, ps%lmax+1
         nrc = logrid_index(g, ps_grid%kb_radius(l)) + 1
         hato(1:nrc)         = ps_grid%KB(1:nrc, l)
         hato(nrc+1:g%nrval) = M_ZERO
@@ -957,10 +957,10 @@ contains
     ps%rc_max = max(ps_upf%local_radius, ps%rc_max) * CNST(1.5)
 
     ! Interpolate the KB-projection functions
-    if (ps_upf%l_local >= 0) then
+    if (ps_upf%l_loc >= 0) then
       hato = M_ZERO
       do j = 1, ps%kbc
-        call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%kb(ps_upf%l_local, j))
+        call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%kb(ps_upf%l_loc, j))
       end do
     end if
 

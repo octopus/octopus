@@ -39,7 +39,7 @@ module ps_upf_oct_m
 
     logical :: version2
     integer :: kb_nc
-    integer :: l_local
+    integer :: l_loc
     FLOAT :: local_radius
     FLOAT, pointer :: kb_radius(:)
 
@@ -137,11 +137,11 @@ contains
       end if
     end do
     if (count(found_l) /= 1) then
-      ps_upf%l_local = -1
+      ps_upf%l_loc = -1
     else
       do l = 0, ps_upf%l_max
         if (found_l(l)) then
-          ps_upf%l_local = l
+          ps_upf%l_loc = l
           exit
         end if
       end do
