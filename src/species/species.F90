@@ -195,8 +195,8 @@ contains
     nullify(this%iwf_i)
     nullify(this%iwf_n)
     nullify(this%iwf_j)
-    this%user_lmax   = HUGE_L
-    this%user_llocal = HUGE_L
+    this%user_lmax   = INVALID_L
+    this%user_llocal = INVALID_L
 
     POP_SUB(species_nullify)
   end subroutine species_nullify

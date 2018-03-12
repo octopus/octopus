@@ -70,7 +70,7 @@ module ps_oct_m
     PS_FILTER_TS   = 2,         &
     PS_FILTER_BSB  = 3
 
-  integer, parameter, public :: HUGE_L = 100
+  integer, parameter, public :: INVALID_L = 100
   
   character(len=3), parameter  :: ps_name(PS_TYPE_PSF:PS_TYPE_XML) = (/"tm2", "hgh", "cpi", "fhi", "upf", "qso"/)
 
@@ -207,7 +207,7 @@ contains
       
       ps%lmax = ps_psf%ps_grid%no_l_channels - 1
 
-      if(user_lmax /= HUGE_L) then
+      if(user_lmax /= INVALID_L) then
         ps%lmax = min(ps%lmax, user_lmax) ! Maybe the file does not have enough components.
         if(user_lmax /= ps%lmax) then
           message(1) = "lmax in Species block for " // trim(label) // " is larger than number available in pseudopotential."
@@ -219,7 +219,7 @@ contains
       if(ps%lmax == 0) ps%llocal = 0 ! Vanderbilt is not acceptable if ps%lmax == 0.
 
       ! the local part of the pseudo
-      if(user_llocal == HUGE_L) then
+      if(user_llocal == INVALID_L) then
         ps%llocal = 0
       else
         ps%llocal = user_llocal
@@ -251,7 +251,7 @@ contains
 
       ps%lmax  = ps%conf%p - 1
 
-      if(user_lmax /= HUGE_L) then
+      if(user_lmax /= INVALID_L) then
         ps%lmax = min(ps%lmax, user_lmax) ! Maybe the file does not have enough components.
         if(user_lmax /= ps%lmax) then
           message(1) = "lmax in Species block for " // trim(label) // " is larger than number available in pseudopotential."
@@ -262,7 +262,7 @@ contains
       if(ps%lmax == 0) ps%llocal = 0 ! Vanderbilt is not acceptable if ps%lmax == 0.
 
       ! the local part of the pseudo
-      if(user_llocal == HUGE_L) then
+      if(user_llocal == INVALID_L) then
         ps%llocal = 0
       else
         ps%llocal = user_llocal
@@ -320,7 +320,7 @@ contains
           ! we have several options
           ps%llocal = 0                                     ! the default
           if(ps_xml%llocal >= 0) ps%llocal = ps_xml%llocal  ! the one given in the pseudopotential file
-          if(user_llocal /= HUGE_L) ps%llocal = user_llocal ! user supplied local component
+          if(user_llocal /= INVALID_L) ps%llocal = user_llocal ! user supplied local component
           ASSERT(ps%llocal >= 0)
           ASSERT(ps%llocal <= ps%lmax)
         end if
