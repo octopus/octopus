@@ -44,6 +44,11 @@ namespace pseudopotential {
 
       root_node_ = doc_.first_node("psml");
 
+      spec_node_ = root_node_->first_node("pseudo-atom-spec");
+      //some files do not have "pseudo-atom-spec" but "header"
+      if(!spec_node_) spec_node_ = root_node_->first_node("header");
+      assert(spec_node_);
+      
       //now check the type
       bool has_local_potential = root_node_->first_node("local-potential");
       bool has_nl_projectors = root_node_->first_node("nonlocal-projectors");
@@ -115,11 +120,11 @@ namespace pseudopotential {
     }
     
     std::string symbol() const {
-      return root_node_->first_node("pseudo-atom-spec")->first_attribute("atomic-label")->value();
+      return spec_node_->first_attribute("atomic-label")->value();
     }
 
     int atomic_number() const {
-      return value<int>(root_node_->first_node("pseudo-atom-spec")->first_attribute("atomic-number"));
+      return value<int>(spec_node_->first_attribute("atomic-number"));
     }
 
     double mass() const {
@@ -128,7 +133,7 @@ namespace pseudopotential {
     }
     
     int valence_charge() const {
-      return value<int>(root_node_->first_node("pseudo-atom-spec")->first_node("valence-configuration")->first_attribute("total-valence-charge"));
+      return value<int>(spec_node_->first_node("valence-configuration")->first_attribute("total-valence-charge"));
     }
 
     int llocal() const {
@@ -295,6 +300,7 @@ namespace pseudopotential {
     std::vector<char> buffer_;
     rapidxml::xml_document<> doc_;
     rapidxml::xml_node<> * root_node_;
+    rapidxml::xml_node<> * spec_node_;
     std::vector<double> grid_;
     int mesh_size_;
     
