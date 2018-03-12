@@ -633,9 +633,9 @@ contains
       spec%nlcc = spec%ps%nlcc
       spec%niwfs = ps_niwfs(spec%ps)
 
-      ! give this variables an absurd value as they should not be used after
-      spec%user_lmax = -2
-      spec%user_llocal = -2
+      ! invalidate these variables as they should not be used after
+      spec%user_lmax = INVALID_L
+      spec%user_llocal = INVALID_L
 
     case(SPECIES_USDEF)
       if(print_info_) then
@@ -731,13 +731,11 @@ contains
 
     call species_iwf_fix_qn(spec, ispin, dim)
 
-    if(species_is_ps(spec)) then
-      write(message(1),'(a,i6,a,i6)') 'Number of orbitals: total = ', ps_niwfs(spec%ps), ', bound = ', spec%niwfs
-    else
+    if(.not. species_is_ps(spec)) then
       write(message(1),'(a,i6,a,i6)') 'Number of orbitals: ', spec%niwfs
+      if(print_info_) call messages_info(1)
       nullify(spec%ps)
     end if
-    if(print_info_) call messages_info(1)
 
     POP_SUB(species_build)
   end subroutine species_build

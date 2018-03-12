@@ -154,7 +154,8 @@ contains
     type(ps_upf_t) :: ps_upf !< In case UPF format is used
     type(ps_hgh_t) :: ps_hgh !< In case Hartwigsen-Goedecker-Hutter ps are used.
     type(ps_xml_t) :: ps_xml !< For xml based pseudopotentials
-
+    logical, save :: xml_warned = .false.
+    
     PUSH_SUB(ps_init)
 
     ! Fix the threshold to calculate the radius of the projector-function localization spheres:
@@ -198,11 +199,6 @@ contains
       call messages_write("file '"//trim(filename)//"'.")
       call messages_fatal()
     end if
-
-    call messages_write("Species '"//trim(label)//"'", new_line = .true.)
-    call messages_write("    type   : pseudopotential", new_line = .true.)
-    call messages_write("    file   : '"//trim(filename)//"'")
-    call messages_info()
     
     select case(ps%flavour)
     case(PS_TYPE_PSF)
@@ -311,7 +307,12 @@ contains
       call logrid_copy(ps_hgh%g, ps%g)
 
     case(PS_TYPE_XML, PS_TYPE_UPF)
-      call messages_experimental('XML (QSO, UPF, and PSML) pseudopotential support')
+      
+      if(.not. xml_warned) then
+        call messages_experimental('XML (QSO, UPF, and PSML) pseudopotential support')
+        xml_warned = .true.
+      end if
+      
       call ps_xml_init(ps_xml, trim(filename), ierr)
 
       if(ierr == 0) then
@@ -388,44 +389,8 @@ contains
       
     end select
 
-    call messages_write("    file format : ")
-    select case(ps%pseudo_format)
-    case(PSEUDO_FORMAT_UPF1)
-      call messages_write(" UPF1")
-    case(PSEUDO_FORMAT_UPF2)
-      call messages_write(" UPF2")
-    case(PSEUDO_FORMAT_QSO)
-      call messages_write(" QSO")
-    case(PSEUDO_FORMAT_PSML)
-      call messages_write(" PSML")
-    case(PSEUDO_FORMAT_PSF)
-      call messages_write(" PSF")
-    case(PSEUDO_FORMAT_CPI)
-      call messages_write(" CPI")
-    case(PSEUDO_FORMAT_FHI)
-      call messages_write(" FHI")
-    case(PSEUDO_FORMAT_HGH)
-      call messages_write(" HGH")
-    end select
-    call messages_new_line()
-
-    call messages_write("    form on file  : ")
-    select case(ps%pseudo_type)
-    case(PSEUDO_TYPE_ULTRASOFT)
-      call messages_write(" ultrasoft")
-    case(PSEUDO_TYPE_SEMILOCAL)
-      call messages_write(" semilocal")
-    case(PSEUDO_TYPE_KLEINMAN_BYLANDER)
-      call messages_write(" kleinman-bylander")
-    case(PSEUDO_TYPE_PAW)
-      call messages_write(" paw")
-    end select
-    call messages_info()
-    
-    write(message(1), '(a,i2,a)') "Info: l = ", ps%lmax, " is maximum angular momentum considered."
-    call messages_info(1)
-
     ps%local = (ps%lmax == 0 .and. ps%llocal == 0 ) .or. (ps%lmax == -1 .and. ps%llocal == -1)
+
     
     ! We allocate all the stuff
     SAFE_ALLOCATE(ps%kb   (0:ps%lmax, 1:ps%kbc))
@@ -477,12 +442,102 @@ contains
     end if
 
     ps%has_long_range = .true.
-
     ps%is_separated = .false.
+
+    call ps_info(ps, filename)
     
     POP_SUB(ps_init)
   end subroutine ps_init
 
+  !------------------------------------------------------------------------
+  
+  subroutine ps_info(ps, filename)
+    type(ps_t),       intent(in) :: ps
+    character(len=*), intent(in) :: filename
+
+    call messages_write("  Species '"//trim(ps%label)//"'", new_line = .true.)
+    call messages_write("    type             : pseudopotential", new_line = .true.)
+    call messages_write("    file             : '"//trim(filename)//"'")
+    call messages_info()
+    
+    call messages_write("    file format      :")
+    select case(ps%pseudo_format)
+    case(PSEUDO_FORMAT_UPF1)
+      call messages_write(" UPF1")
+    case(PSEUDO_FORMAT_UPF2)
+      call messages_write(" UPF2")
+    case(PSEUDO_FORMAT_QSO)
+      call messages_write(" QSO")
+    case(PSEUDO_FORMAT_PSML)
+      call messages_write(" PSML")
+    case(PSEUDO_FORMAT_PSF)
+      call messages_write(" PSF")
+    case(PSEUDO_FORMAT_CPI)
+      call messages_write(" CPI")
+    case(PSEUDO_FORMAT_FHI)
+      call messages_write(" FHI")
+    case(PSEUDO_FORMAT_HGH)
+      call messages_write(" HGH")
+    end select
+    call messages_new_line()
+
+    call messages_write("    valence charge   :")
+    call messages_write(ps%z_val, align_left = .true., fmt = '(f3.1)')
+    call messages_info()
+
+    call messages_write("    atomic number    :")
+    call messages_write(ps%z, align_left = .true., fmt = '(f3.1)')
+    call messages_info()
+    
+    call messages_write("    form on file     :")
+    select case(ps%pseudo_type)
+    case(PSEUDO_TYPE_ULTRASOFT)
+      call messages_write(" ultrasoft")
+    case(PSEUDO_TYPE_SEMILOCAL)
+      call messages_write(" semilocal")
+    case(PSEUDO_TYPE_KLEINMAN_BYLANDER)
+      call messages_write(" kleinman-bylander")
+    case(PSEUDO_TYPE_PAW)
+      call messages_write(" paw")
+    end select
+    call messages_info()
+
+    call messages_write("    lmax             :")
+    call messages_write(ps%lmax, fmt = '(i2)')
+    call messages_info()
+
+    call messages_write("    llocal           :")
+    if(ps%llocal >= 0) then
+      call messages_write(ps%llocal, fmt = '(i2)')
+    else
+      call messages_write(ps%llocal, fmt = '(i3)')
+    end if
+    call messages_info()
+
+    call messages_write("    total projectors :")
+    if(ps%llocal < 0) then
+      call messages_write(ps%kbc*(ps%lmax + 1), fmt = '(i2)')
+    else
+      call messages_write(ps%kbc*ps%lmax, fmt = '(i2)')
+    end if
+    call messages_info()
+
+    if(ps%local) then
+      call messages_write("    application form : local")
+    else
+      call messages_write("    application form : kleinman-bylander")
+    end if
+    call messages_info()
+
+    call messages_write("    orbitals         :")
+    call messages_write(ps_niwfs(ps), fmt='(i2)')
+    call messages_info()
+
+    call messages_info()
+    
+  end subroutine ps_info
+
+  
   ! ---------------------------------------------------------
   !> separate the local potential into (soft) long-ranged and (hard) short-ranged parts
   subroutine ps_separate(ps)
