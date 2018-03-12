@@ -482,6 +482,7 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   R_TYPE, allocatable :: xx(:)
   R_TYPE, allocatable :: X(pot)(:)
   R_TYPE, allocatable :: buffer(:)
+  R_TYPE, allocatable :: buffer_transpose(:,:)
 
   FLOAT :: eig_diff
   FLOAT, allocatable :: occ_diffs(:)
@@ -564,7 +565,20 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
 
 
   ! calculate the matrix elements of (v + fxc)
-  !do jb = 1, cas%n_pairs + cas%pt_nmodes
+!if(.not. cas%kernel_saved) then
+
+  ! precompute buffer once
+  if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
+    buffer(1:mesh%np) = R_TOTYPE(M_ZERO)
+    do ii = 1, cas%pt_nmodes
+        buffer(1:mesh%np) = buffer(1:mesh%np) + &
+          (cas%pt%lambda_array(ii)* &
+             ( cas%pt%pol_array(ii,1)*mesh%x(1:mesh%np, 1)  &
+             + cas%pt%pol_array(ii,2)*mesh%x(1:mesh%np, 2)  &
+             + cas%pt%pol_array(ii,3)*mesh%x(1:mesh%np, 3)))**2
+    end do
+  end if
+
   do jb_local = 1, cas%nb_rows
 #ifndef HAVE_SCALAPACK
     actual = actual + 1
@@ -630,16 +644,9 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
 
         mtxel_vm = M_ZERO
         if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
-          do ii = 1, cas%pt_nmodes
-              buffer(1:mesh%np) = &
-                cas%pt%lambda_array(ii)* &
-                   ( cas%pt%pol_array(ii,1)*mesh%x(1:mesh%np, 1)  &
-                   + cas%pt%pol_array(ii,2)*mesh%x(1:mesh%np, 2)  &
-                   + cas%pt%pol_array(ii,3)*mesh%x(1:mesh%np, 3))
-              mtxel_vm = mtxel_vm + &
-              X(mf_dotp)(mesh, buffer(1:mesh%np) * rho_i(1:mesh%np), &
-                  buffer(1:mesh%np) * rho_j(1:mesh%np))
-          end do
+          ! buffer is precomputed once before double loop
+          mtxel_vm = mtxel_vm + &
+            X(mf_dotp)(mesh, rho_i(1:mesh%np), buffer(1:mesh%np)*rho_j(1:mesh%np))
         end if
 
         !matrix(ia_local, jb_local) = mtxel_vh + mtxel_xc + mtxel_vm
