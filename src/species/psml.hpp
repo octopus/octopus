@@ -47,8 +47,12 @@ namespace pseudopotential {
       //now check the type
       bool has_local_potential = root_node_->first_node("local-potential");
       bool has_nl_projectors = root_node_->first_node("nonlocal-projectors");
+      bool has_semilocal_potentials = root_node_->first_node("semilocal-potentials");
+      bool has_pseudo_wavefunctions = root_node_->first_node("pseudo-wave-functions");
       if(has_nl_projectors && has_local_potential) {
 	type_ = pseudopotential::type::KLEINMAN_BYLANDER;
+      } else if(has_semilocal_potentials && has_pseudo_wavefunctions) {
+	type_ = pseudopotential::type::SEMILOCAL;
       } else {
 	throw status::UNSUPPORTED_TYPE;
       }
@@ -159,7 +163,9 @@ namespace pseudopotential {
     
     bool has_projectors(int l) const {
       //note: this function can't use lmax_ or lmax()
-      rapidxml::xml_node<> * node = root_node_->first_node("nonlocal-projectors")->first_node("proj");
+      rapidxml::xml_node<> * node = root_node_->first_node("nonlocal-projectors");
+      if(!node) return false;
+      node = node->first_node("proj");
       while(node){
 	int read_l = letter_to_l(node->first_attribute("l")->value());
 	if(l == read_l) break;
