@@ -281,7 +281,7 @@
     end if
 
     ! Local potential
-    ps%llocal = fpspio_pspdata_get_l_loc(pspdata)
+    ps%llocal = fpspio_pspdata_get_l_local(pspdata)
     vlocal = fpspio_pspdata_get_vlocal(pspdata)
     SAFE_ALLOCATE(v_local(1:ps%g%nrval))
     do ir = 1, ps%g%nrval
