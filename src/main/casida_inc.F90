@@ -588,25 +588,24 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
         end if
       end if
 
-#ifndef HAVE_SCALAPACK
       ! take care of not computing elements twice for the symmetric matrix
       ia_length = cas%n_pairs / 2
       if(mod(cas%n_pairs, 2) == 0 .and. jb > cas%n_pairs/2) then
         ia_length = ia_length - 1
       end if
 
-      ! loop over columns
-      do ia_iter = jb, jb + ia_length
-        ! make ia in range [1, cas%n_pairs]
-        ia = mod(ia_iter, cas%n_pairs)
-        if(ia == 0) ia = cas%n_pairs
-        ia_local = ia
-#else
       do ia_local = 1, cas%nb_cols
         ia = get_global_col(cas, ia_local)
-        ! compute only lower left part
-        if(ia > jb) cycle
-#endif
+
+        if(jb+ia_length <= cas%n_pairs) then
+          ! from diagonal to the right
+          if(.not.(ia >= jb .and. ia <= jb+ia_length)) cycle
+        else
+          ! wrap around the end of the electron-hole part
+          if(.not.((ia >= jb .and. ia <= cas%n_pairs) .or. &
+                    ia <= jb+ia_length-cas%n_pairs)) cycle
+        end if
+
         ! only calculate off-diagonals in degenerate subspace
         if(cas%type == CASIDA_PETERSILKA .and. isnt_degenerate(cas, st, ia, jb)) cycle
 
@@ -671,6 +670,11 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
     end if
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(counter, maxcount)
   end do
+  if(.not.cas%kernel_saved) then
+    cas%X(kernel)(1:cas%nb_rows, 1:cas%nb_cols) = matrix(1:cas%nb_rows, 1:cas%nb_cols)
+    cas%kernel_saved = .true.
+  end if
+!end if
 
   SAFE_DEALLOCATE_A(rho_i)
   SAFE_DEALLOCATE_A(rho_j)
@@ -689,12 +693,23 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   if(cas%parallel_in_eh_pairs) then
     call comm_allreduce(cas%mpi_grp%comm, matrix)
   end if
+#else
+  ! add transpose of matrix to get full matrix
+  SAFE_ALLOCATE(buffer_transpose(1:cas%nb_rows,1:cas%nb_cols))
+  buffer_transpose(1:cas%nb_rows,1:cas%nb_cols) = cas%X(mat)(1:cas%nb_rows,1:cas%nb_cols)
+  ! set diagonal to zero and add transpose of buffer to matrix to get full matrix
+  do jb_local = 1, cas%nb_rows
+    jb = get_global_row(cas, jb_local)
+    do ia_local = 1, cas%nb_cols
+      ia = get_global_col(cas, ia_local)
+      if(ia == jb) buffer_transpose(jb_local,ia_local) = M_ZERO
+    end do
+  end do
+  ! this call adds transpose/hermitian conjugate and saves it to matrix
+  call pblas_tran(cas%n, cas%n, R_TOTYPE(M_ONE), buffer_transpose(1,1), 1, 1, cas%desc(1), &
+    R_TOTYPE(M_ONE), matrix(1,1), 1, 1, cas%desc(1))
+  SAFE_DEALLOCATE_A(buffer_transpose)
 #endif
-
-  if(.not.cas%kernel_saved) then
-    cas%X(kernel)(1:cas%nb_rows, 1:cas%nb_cols) = matrix(1:cas%nb_rows, 1:cas%nb_cols)
-    cas%kernel_saved = .true.
-  end if
 
 
   SAFE_DEALLOCATE_A(xx)
@@ -1098,6 +1113,7 @@ subroutine X(casida_solve)(cas, st)
   R_TYPE, allocatable :: eigenvectors(:,:)
   R_TYPE, allocatable :: work(:)
   R_TYPE :: worksize
+  type(profile_t), save :: prof
 #ifdef R_TCOMPLEX
   R_TYPE, allocatable :: rwork(:)
   R_TYPE :: rworksize
@@ -1143,8 +1159,6 @@ subroutine X(casida_solve)(cas, st)
 
     do ia_local = 1, cas%nb_cols
       ia = get_global_col(cas, ia_local)
-      ! compute only lower left part
-      if(ia > jb) cycle
       if(ia > cas%n_pairs) cycle
       ! FIXME: need the equivalent of this stuff for forces too.
       if(cas%type == CASIDA_CASIDA) then
@@ -1153,9 +1167,9 @@ subroutine X(casida_solve)(cas, st)
       else
         cas%X(mat)(jb_local, ia_local) = cas%X(mat(jb_local, ia_local)) * sqrt(occ_diffs(jb) * occ_diffs(ia))
       end if
-#ifndef HAVE_SCALAPACK
-      if(ia /= jb) cas%X(mat)(ia, jb) = R_CONJ(cas%X(mat)(jb, ia)) ! the matrix is Hermitian
-#endif
+!#ifndef HAVE_SCALAPACK
+!      if(ia /= jb) cas%X(mat)(ia, jb) = R_CONJ(cas%X(mat)(jb, ia)) ! the matrix is Hermitian
+!#endif
       if(ia == jb) then
         if(cas%type == CASIDA_CASIDA) then
           cas%X(mat)(jb_local, ia_local) = eig_diff**2 + cas%X(mat)(jb_local, ia_local)
@@ -1181,25 +1195,32 @@ subroutine X(casida_solve)(cas, st)
         if(ia == jb) cas%X(mat)(jb_local,ia_local) = (cas%pt%omega_array(ia-cas%n_pairs))**2
       end do
     end do
-    ! now other photon-electron elements (lower left part)
+    ! now other photon-electron elements
     do jb_local = 1, cas%nb_rows
       jb = get_global_row(cas, jb_local)
-      if(jb <= cas%n_pairs) cycle
       do ia_local = 1, cas%nb_cols
         ia = get_global_col(cas, ia_local)
-        if(ia > cas%n_pairs) cycle
-
-        cas%X(mat)(jb_local,ia_local) = M_TWO*cas%X(mat)(jb_local,ia_local) &
-           *sqrt(cas%pt%omega_array(jb-cas%n_pairs))/sqrt(cas%s(ia))/sqrt(M_TWO)
-#ifndef HAVE_SCALAPACK
-        cas%X(mat)(ia_local,jb_local) = cas%X(mat)(jb_local,ia_local) 
-#endif
+        ! lower left part
+        if(jb > cas%n_pairs .and. ia <= cas%n_pairs) then
+          cas%X(mat)(jb_local,ia_local) = M_TWO*cas%X(mat)(jb_local,ia_local) &
+             *sqrt(cas%pt%omega_array(jb-cas%n_pairs))/sqrt(cas%s(ia))/sqrt(M_TWO)
+        end if
+        ! upper right part
+        if(jb <= cas%n_pairs .and. ia > cas%n_pairs) then
+          cas%X(mat)(jb_local,ia_local) = M_TWO*cas%X(mat)(jb_local,ia_local) &
+             *sqrt(cas%pt%omega_array(ia-cas%n_pairs))/sqrt(cas%s(jb))/sqrt(M_TWO)
+        end if
+!#ifndef HAVE_SCALAPACK
+!          cas%X(mat)(ia_local,jb_local) = cas%X(mat)(jb_local,ia_local)
+!#endif
       end do
     end do
   end if
 
+#if HAVE_MPI
   ! wait at barrier for profiling
   call MPI_Barrier(mpi_world%comm, info)
+#endif
   message(1) = "Info: Diagonalizing matrix for resonance energies."
   call messages_info(1)
 
@@ -1208,24 +1229,6 @@ subroutine X(casida_solve)(cas, st)
   if(cas%calc_forces) cas%X(mat_save) = cas%X(mat) ! save before gets turned into eigenvectors
 
   SAFE_ALLOCATE(eigenvectors(cas%nb_rows, cas%nb_cols))
-
-  ! store upper right part as well
-  eigenvectors(1:cas%nb_rows,1:cas%nb_cols) = cas%X(mat)(1:cas%nb_rows,1:cas%nb_cols)
-  ! set diagonal to zero and add transpose of eigenvectors to X(mat) to get full
-  ! matrix
-  do jb_local = 1, cas%nb_rows
-    jb = get_global_row(cas, jb_local)
-    do ia_local = 1, cas%nb_cols
-      ia = get_global_col(cas, ia_local)
-      if(ia == jb) eigenvectors(jb_local,ia_local) = M_ZERO
-    end do
-  end do
-  call pblas_tran(cas%n, cas%n, R_TOTYPE(M_ONE), eigenvectors(1,1), 1, 1, cas%desc(1), &
-    R_TOTYPE(M_ONE), cas%X(mat)(1,1), 1, 1, cas%desc(1))
-
-  if(cas%type == CASIDA_CASIDA) then
-    call X(write_distributed_matrix)(cas, cas%X(mat), CASIDA_DIR//"casida_matrix")
-  end if
 
 #ifdef HAVE_ELPA
   ! eigensolver settings (allocate workspace)
@@ -1434,7 +1437,7 @@ subroutine X(casida_write)(cas, sys)
         if(loct_isinstringlist(ia, cas%print_exst) .or. full_printing) then 
           write(str,'(i5.5)') ia
           
-#if 0
+#ifndef HAVE_SCALAPACK
           ! output eigenvectors
           if(cas%type /= CASIDA_EPS_DIFF) then
             iunit = io_open(trim(dir_name)//'/'//trim(str), action='write')
@@ -1446,8 +1449,6 @@ subroutine X(casida_write)(cas, sys)
                 units_from_atomic(units_out%length, cas%X(tm)(cas%ind(ia), idim))
             end do
 
-!#if 0
-! TODO: implement this for parallel data
             ! this stuff should go BEFORE calculation of transition matrix elements!
             ! make the largest component positive and real, to specify the phase
             index = maxloc(abs(cas%X(mat)(:, cas%ind(ia))), dim = 1)
@@ -1479,7 +1480,6 @@ subroutine X(casida_write)(cas, sys)
             if(cas%type == CASIDA_TAMM_DANCOFF .or. cas%type == CASIDA_VARIATIONAL .or. cas%type == CASIDA_PETERSILKA) then
               call X(write_implied_occupations)(cas, iunit, cas%ind(ia))
             end if
-!#endif
             call io_close(iunit)
           end if
           
@@ -1494,6 +1494,11 @@ subroutine X(casida_write)(cas, sys)
     end if
   end if
   
+#ifdef HAVE_SCALAPACK
+  call X(write_distributed_matrix)(cas, cas%X(mat), &
+    CASIDA_DIR//trim(theory_name(cas))//"_matrix")
+#endif
+
   ! Calculate and write the transition densities
   call X(get_transition_densities)(cas, sys)
 
