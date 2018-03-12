@@ -37,6 +37,7 @@ module ps_oct_m
 #endif
   use ps_psf_oct_m
   use ps_upf_oct_m
+  use pseudo_oct_m
   use splines_oct_m
   use spline_filter_oct_m
   implicit none
@@ -127,6 +128,8 @@ module ps_oct_m
     logical :: is_separated
     logical :: local
     logical :: hamann
+    integer :: pseudo_format
+    integer :: pseudo_type
   end type ps_t
 
   FLOAT, parameter :: eps = CNST(1.0e-8)
@@ -196,8 +199,16 @@ contains
       call messages_fatal()
     end if
 
+    call messages_write("Species '"//trim(label)//"'", new_line = .true.)
+    call messages_write("    type   : pseudopotential", new_line = .true.)
+    call messages_write("    file   : '"//trim(filename)//"'")
+    call messages_info()
+    
     select case(ps%flavour)
     case(PS_TYPE_PSF)
+      ps%pseudo_format = PSEUDO_FORMAT_PSF
+      ps%pseudo_type   = PSEUDO_TYPE_SEMILOCAL
+      
       call ps_psf_init(ps_psf, ispin, filename)
 
       call valconf_copy(ps%conf, ps_psf%conf)
@@ -229,6 +240,14 @@ contains
       call logrid_copy(ps_psf%ps_grid%g, ps%g)
 
     case(PS_TYPE_CPI, PS_TYPE_FHI)
+
+      if(PS_TYPE_CPI == ps%flavour) then
+        ps%pseudo_format = PSEUDO_FORMAT_CPI
+      else
+        ps%pseudo_format = PSEUDO_FORMAT_FHI
+      end if
+      ps%pseudo_type   = PSEUDO_TYPE_SEMILOCAL
+      
       call valconf_null(ps%conf)
 
       if(ps%flavour == PS_TYPE_CPI) then
@@ -277,6 +296,9 @@ contains
       end if
 
     case(PS_TYPE_HGH)
+      ps%pseudo_format = PSEUDO_FORMAT_HGH
+      ps%pseudo_type   = PSEUDO_TYPE_KLEINMAN_BYLANDER
+      
       call hgh_init(ps_hgh, trim(filename))
       call valconf_copy(ps%conf, ps_hgh%conf)
 
@@ -289,12 +311,12 @@ contains
       call logrid_copy(ps_hgh%g, ps%g)
 
     case(PS_TYPE_XML, PS_TYPE_UPF)
-      
-      call messages_experimental('XML (QSO, UPF2, and PSML) pseudopotential support')
-      
+      call messages_experimental('XML (QSO, UPF, and PSML) pseudopotential support')
       call ps_xml_init(ps_xml, trim(filename), ierr)
 
       if(ierr == 0) then
+        ps%pseudo_format = pseudo_format(ps_xml%pseudo)
+        ps%pseudo_type   = pseudo_type(ps_xml%pseudo)
         
         call valconf_null(ps%conf)
         
@@ -341,7 +363,10 @@ contains
         ps%flavour = PS_TYPE_XML
         
       else !read failed, this must be a UPF 1 file
-        
+
+        ps%pseudo_format = PSEUDO_FORMAT_UPF1
+        ps%pseudo_type   = PSEUDO_TYPE_KLEINMAN_BYLANDER
+      
         call ps_upf_init(ps_upf, trim(filename))
         
         call valconf_copy(ps%conf, ps_upf%conf)
@@ -363,6 +388,40 @@ contains
       
     end select
 
+    call messages_write("    file format : ")
+    select case(ps%pseudo_format)
+    case(PSEUDO_FORMAT_UPF1)
+      call messages_write(" UPF1")
+    case(PSEUDO_FORMAT_UPF2)
+      call messages_write(" UPF2")
+    case(PSEUDO_FORMAT_QSO)
+      call messages_write(" QSO")
+    case(PSEUDO_FORMAT_PSML)
+      call messages_write(" PSML")
+    case(PSEUDO_FORMAT_PSF)
+      call messages_write(" PSF")
+    case(PSEUDO_FORMAT_CPI)
+      call messages_write(" CPI")
+    case(PSEUDO_FORMAT_FHI)
+      call messages_write(" FHI")
+    case(PSEUDO_FORMAT_HGH)
+      call messages_write(" HGH")
+    end select
+    call messages_new_line()
+
+    call messages_write("    form on file  : ")
+    select case(ps%pseudo_type)
+    case(PSEUDO_TYPE_ULTRASOFT)
+      call messages_write(" ultrasoft")
+    case(PSEUDO_TYPE_SEMILOCAL)
+      call messages_write(" semilocal")
+    case(PSEUDO_TYPE_KLEINMAN_BYLANDER)
+      call messages_write(" kleinman-bylander")
+    case(PSEUDO_TYPE_PAW)
+      call messages_write(" paw")
+    end select
+    call messages_info()
+    
     write(message(1), '(a,i2,a)') "Info: l = ", ps%lmax, " is maximum angular momentum considered."
     call messages_info(1)
 
@@ -420,7 +479,7 @@ contains
     ps%has_long_range = .true.
 
     ps%is_separated = .false.
-
+    
     POP_SUB(ps_init)
   end subroutine ps_init
 

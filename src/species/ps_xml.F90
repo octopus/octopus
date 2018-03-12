@@ -58,6 +58,7 @@ module ps_xml_oct_m
     integer, allocatable :: wf_n(:)
     integer, allocatable :: wf_l(:)
     FLOAT, allocatable :: wf_occ(:)
+    type(pseudo_t)     :: pseudo
   end type ps_xml_t
 
 contains
@@ -179,10 +180,10 @@ contains
       call pseudo_nlcc_density(pseudo, this%nlcc_density(1))
     end if
 
-    call pseudo_end(pseudo)
-    
     if(.not. this%kleinman_bylander) call ps_xml_check_normalization(this)
 
+    this%pseudo = pseudo
+    
     POP_SUB(ps_xml_init)
   end subroutine ps_xml_init
 
@@ -222,6 +223,8 @@ contains
     type(ps_xml_t), intent(inout) :: this
 
     PUSH_SUB(ps_xml_end)
+
+    call pseudo_end(this%pseudo)
 
     SAFE_DEALLOCATE_A(this%potential)
     SAFE_DEALLOCATE_A(this%wavefunction)

@@ -77,6 +77,10 @@ extern "C" fint FC_FUNC_(pseudo_type, PSEUDO_TYPE)(const pseudopotential::base *
   return fint((*pseudo)->type());
 }
 
+extern "C" fint FC_FUNC_(pseudo_format, PSEUDO_FORMAT)(pseudopotential::base ** pseudo){
+  return fint((*pseudo)->format());
+}
+
 extern "C" double FC_FUNC_(pseudo_valence_charge, PSEUDO_VALENCE_CHARGE)(const pseudopotential::base ** pseudo){
   return (*pseudo)->valence_charge();
 }
@@ -165,4 +169,5 @@ extern "C" void FC_FUNC_(pseudo_wavefunction, PSEUDO_WAVEFUNCTION)
   (*pseudo)->wavefunction(*index - 1, *n, *l, *occ, val);
   for(unsigned i = 0; i < val.size(); i++) wavefunction[i] = val[i];
 }
+
 

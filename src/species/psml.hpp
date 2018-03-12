@@ -111,7 +111,7 @@ namespace pseudopotential {
       
     }
 
-    std::string format() const { return "PSML"; }
+    pseudopotential::format format() const { return pseudopotential::format::PSML; }
     
     int size() const { return buffer_.size(); };
 
