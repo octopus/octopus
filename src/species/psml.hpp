@@ -141,9 +141,10 @@ namespace pseudopotential {
     }
 
     int nchannels() const {
+      if(type_ == pseudopotential::type::SEMILOCAL) return 1;
       int nc = 0;
       rapidxml::xml_node<> * node = root_node_->first_node("nonlocal-projectors");
-      if(!node) return 0;
+      assert(node);
       node = node->first_node("proj");
       while(node){
 	int read_ic = value<int>(node->first_attribute("seq")) - 1;
