@@ -390,21 +390,14 @@ contains
     !% S. Krieg, J. Chem. Phys. 132, 154104 (2010).
     !%End
 
-
-
-!!    !%Variable VDW_ts_cutoff
-!!    !%Type float
-!!    !%Default 10.0
-!!    !%Section Hamiltonian::XC
-!!    !%Description
-!!    !% Set the value of the cutoff for the VDW interaction in periodic system in the Tkatchenko and Scheffler (vdw_ts) scheme only. 
-!!    !%End
-
-
-
-
-
-
+    !%Variable VDW_ts_cutoff
+    !%Type float
+    !%Default 10.0
+    !%Section Hamiltonian::XC
+    !%Description
+    !% Set the value of the cutoff for the VDW interaction in periodic system in the Tkatchenko and Scheffler (vdw_ts) scheme only. 
+    !%End
+    call parse_variable('VDW_ts_cutoff', CNST(10.0), ks%xc%VDW_cutoff)
 
 
 
@@ -1030,7 +1023,7 @@ contains
         case(OPTION__VDWCORRECTION__VDW_TS)
           vvdw = CNST(0.0)
          
-          call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, ks%gr%sb, st%rho, ks%calc%energy%vdw, vvdw, ks%calc%vdw_forces)
+          call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, ks%gr%sb, ks%xc, st%rho, ks%calc%energy%vdw, vvdw, ks%calc%vdw_forces)
 
         case(OPTION__VDWCORRECTION__VDW_D3)
 

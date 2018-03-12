@@ -22,8 +22,8 @@
 
 module vdw_ts_oct_m
 
-  use base_term_oct_m !
-  use comm_oct_m !
+  use base_term_oct_m 
+  use comm_oct_m 
   use derivatives_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -37,7 +37,7 @@ module vdw_ts_oct_m
   use periodic_copy_oct_m
   use profiling_oct_m
   use ps_oct_m
-  use simul_box_oct_m !
+  use simul_box_oct_m 
   use species_oct_m
   use states_oct_m
   use unit_oct_m
@@ -56,7 +56,7 @@ module vdw_ts_oct_m
   
   type vdw_ts_t
     private
-    FLOAT, allocatable :: c6free(:)    !> Free atomic volumes for each atomic species.
+    FLOAT, allocatable :: c6free(:)      !> Free atomic volumes for each atomic species.
     FLOAT, allocatable :: dpfree(:)      !> Free atomic static dipole polarizability for each atomic species.
     FLOAT, allocatable :: r0free(:)      !> Free atomic vdW radius for each atomic species.
     FLOAT, allocatable :: c6abfree(:, :) !> Free atomic heteronuclear C6 coefficient for each atom pair.
@@ -122,28 +122,24 @@ contains
 
   !------------------------------------------
 
-  subroutine vdw_ts_calculate(this, geo, der, sb, density, energy, potential, force)
+  subroutine vdw_ts_calculate(this, geo, der, sb, xcs, density, energy, potential, force)
     type(vdw_ts_t),      intent(inout) :: this
     type(geometry_t),    intent(in)    :: geo
     type(derivatives_t), intent(in)    :: der
     type(simul_box_t),   intent(in)    :: sb
+    type(xc_t),          intent(in)    :: xcs
     FLOAT,               intent(in)    :: density(:, :)
     FLOAT,               intent(out)   :: energy
     FLOAT,               intent(out)   :: potential(:)
     FLOAT,               intent(out)   :: force(:, :)
 
-    interface 
-     subroutine f90_vdw_calculate(natoms, natoms_p, zatom, zatom_p, coordinates, coordinates_p, volume_ratio, volume_ratio_p, &
+ interface
+     subroutine f90_vdw_calculate(natoms, zatom, coordinates, volume_ratio, &
        energy, force, derivative_coeff)
-
         integer, intent(in)  :: natoms
-        integer, intent(in)  :: natoms_p
         integer, intent(in)  :: zatom
-        integer, intent(in)  :: zatom_p
         real(8), intent(in)  :: coordinates
-        real(8), intent(in)  :: coordinates_p
         real(8), intent(in)  :: volume_ratio
-        real(8), intent(in)  :: volume_ratio_p
         real(8), intent(out) :: energy
         real(8), intent(out) :: force
         real(8), intent(out) :: derivative_coeff
@@ -151,162 +147,146 @@ contains
     end interface
 
     type(periodic_copy_t) :: pc
-    type(xc_t) :: xcs
-    integer :: iatom, jatom, ispecies, jspecies, ip, idir, jcopy, natom_for_p, natom_for_pp
-    FLOAT :: rr, c6ab, c6abfree, ff, dffdrr, dffdr0
-    FLOAT, allocatable :: c6(:), r0(:), volume_ratio(:), volume_ratio_p(:), dvadens(:), dvadrr(:), coordinates(:,:), &
-    coordinates_p(:,:), derivative_coeff(:), derivative_coeff_i(:), force_i(:,:)
-
-    integer, allocatable :: zatom(:), zatom_p(:)
+    integer :: iatom, jatom, ispecies, jspecies, jcopy, ddimention, ip 
+    FLOAT :: rr, rr2, rr6, rr7, dd, sr, dffdrr, dffdr0, ee, ff, dee, dffdrab, dffdvra, deabdvra, deabdrab
+    FLOAT, allocatable :: coordinates(:,:), x_j(:), volume_ratio(:), dvadens(:), dvadrr(:), derivative_coeff(:), & 
+                          dr0dvra(:), r0ab(:,:), c6ab(:,:)
+    integer, allocatable :: zatom(:)
 
     PUSH_SUB(vdw_ts_calculate)
 
-
-    !%Variable VDW_ts_cutoff
-    !%Type float
-    !%Default 10.0
-    !%Section Hamiltonian::XC
-    !%Description
-    !% Set the value of the cutoff for the VDW interaction in periodic system in the Tkatchenko and Scheffler (vdw_ts) scheme only. 
-    !%End
-    call parse_variable('VDW_ts_cutoff', CNST(10.0), xcs%VDW_cutoff)
-    
-    !call parse_variable('PeriodicDimensions', 0, sb%periodic_dim)
-    SAFE_ALLOCATE(c6(1:geo%natoms))
-    SAFE_ALLOCATE(r0(1:geo%natoms))
+    SAFE_ALLOCATE(volume_ratio(1:geo%natoms))
     SAFE_ALLOCATE(derivative_coeff(1:geo%natoms))
     SAFE_ALLOCATE(dvadens(1:der%mesh%np))
     SAFE_ALLOCATE(dvadrr(1:3))
+    SAFE_ALLOCATE(dr0dvra(1:3))
+    SAFE_ALLOCATE(r0ab(1:geo%natoms,1:geo%natoms))
+    SAFE_ALLOCATE(c6ab(1:geo%natoms,1:geo%natoms))
+    SAFE_ALLOCATE(x_j(1:sb%dim))
     energy=0
     derivative_coeff(1:geo%natoms) = M_ZERO
     force(1:3, 1:geo%natoms) = M_ZERO
-!---------------------------------------------------------------------------------!   
-     if(sb%periodic_dim > 0) then 
-      !print*, "periodic ok"
-      SAFE_ALLOCATE(force_i(1:3,1:1)) 
-      SAFE_ALLOCATE(zatom(1:1))
-      SAFE_ALLOCATE(zatom_p(1:1))
-      SAFE_ALLOCATE(volume_ratio(1:1))
-      SAFE_ALLOCATE(volume_ratio_p(1:1))
-      SAFE_ALLOCATE(coordinates(1:3, 1:1))
-      SAFE_ALLOCATE(coordinates_p(1:3, 1:1))
-      SAFE_ALLOCATE(derivative_coeff_i(1:1))
 
-      natom_for_p = 1
-      natom_for_pp = 1
-      !print*, "nbr atom dans la boite", geo%natoms
-      do iatom = 1, geo%natoms ! For atom in the box
-        !print*, "Boucle sur atom dans la boite", iatom
-        force_i(1:3, 1) = M_ZERO  
-        derivative_coeff_i(1:1) = M_ZERO 
+    do iatom = 1, geo%natoms
+      ispecies = species_index(geo%atom(iatom)%species)
+
+      call hirshfeld_volume_ratio(this%hirshfeld, iatom, density, volume_ratio(iatom))
+      dr0dvra(iatom) = this%r0free(ispecies)/(3.0*(volume_ratio(iatom)**(CNST(2.0)/CNST(3.0)))) 
+      ! I do not know how to compute in a better way x^(2/3) in F90
+
+    end do
+
+    do iatom = 1, geo%natoms
+      ispecies = species_index(geo%atom(iatom)%species)
+      do jatom = 1, geo%natoms
+       jspecies = species_index(geo%atom(jatom)%species)
+
+       r0ab(iatom,jatom) = (volume_ratio(iatom)**(CNST(1.0)/CNST(3.0)))*this%r0free(ispecies) &
+                          +(volume_ratio(jatom)**(CNST(1.0)/CNST(3.0)))*this%r0free(jspecies) 
+       ! I do not know how to implement in F90 a better way to compute the cubic root for a number !
+       c6ab(iatom,jatom) = volume_ratio(iatom)*volume_ratio(jatom)*this%c6abfree(ispecies,jspecies)
+
+      end do
+    end do
+
+    dd = 20.0
+    sr = 0.94 ! Value for PBE. Should be 0.96 for PBE0.
+
+!---------------------------------------------------------------------------------!    
+
+    if(sb%periodic_dim > 0) then ! periodic case
+      do iatom = 1, geo%natoms 
         ispecies = species_index(geo%atom(iatom)%species)
-        call hirshfeld_volume_ratio(this%hirshfeld, iatom, density, volume_ratio(1))
-
-        c6(iatom) = volume_ratio(1)**2*this%c6free(ispecies)
-        r0(iatom) = volume_ratio(1)**(CNST(1.0)/CNST(3.0))*this%r0free(ispecies)
-      
-        !print*, species_label(geo%atom(iatom)%species), "c6 ", c6(iatom), this%c6free(ispecies)
-
-        coordinates(1:3, 1) = geo%atom(iatom)%x(1:3)  
-        !print*, "iatom ", iatom, ": ", coordinates(1:3, 1)
-        zatom(1) = species_z(geo%atom(iatom)%species) 
-
-         !manque un appel de periodicite ?
 
         do jatom = 1, geo%natoms
-          if (.not. jatom == iatom) then ! Remove the self interaction case
-          ! Build the atom i nearbourghood 
-           ! print*, '2e boucle', jatom
-            zatom_p(1) = species_z(geo%atom(jatom)%species) 
-            call hirshfeld_volume_ratio(this%hirshfeld, jatom, density, volume_ratio_p(1)) 
-
-            !if (.not. species_represents_real_atom(geo%atom(iatom)%species)) cycle
-            ! zi = species_zval(geo%atom(jatom)%species)  Remove?
+          jspecies = species_index(geo%atom(jatom)%species)
                 
-              call periodic_copy_init(pc, sb, geo%atom(jatom)%x, xcs%VDW_cutoff)
-             ! print*, 'periodic copy num(pc)', periodic_copy_num(pc)
-              do jcopy = 1, periodic_copy_num(pc) ! one of the periodic copy is the initial atom   
-                coordinates_p(1:3, 1) = periodic_copy_position(pc, sb, jcopy) ! Each periodic image is the same atom but at different position. 
-               ! print*, 'energy at iter:', jcopy, energy
-               ! print*, 'force at iter:', jcopy, force_i
-               ! print*, 'derivative coeff at iter:', jcopy, derivative_coeff_i
-                 
-                ! Compute the action of atom jcopy on i 
-                call f90_vdw_calculate(natom_for_p, natom_for_pp, zatom(1), zatom_p(1), coordinates(1, 1), coordinates_p(1, 1), volume_ratio(1), &
-                volume_ratio_p(1), energy, force_i(1, 1), derivative_coeff_i(1))
+          call periodic_copy_init(pc, sb, geo%atom(jatom)%x, xcs%VDW_cutoff)
+          do jcopy = 1, periodic_copy_num(pc) ! one of the periodic copy is the initial atom   
 
-              end do
-              call periodic_copy_end(pc)
-          end if
+            x_j(1:sb%dim) = periodic_copy_position(pc, sb, jcopy)
+            rr2 =  sum( (x_j(1:sb%dim) - geo%atom(iatom)%x(1:sb%dim))**2 )
+           
+            if (.not. rr2<0.001) then ! Remove the self interaction case 
+              
+              rr =  sqrt(rr2)
+              rr6 = rr2*rr2*rr2
+              rr7 = rr6*rr
+
+              ee = exp(-dd*((rr/(sr*r0ab(iatom,jatom))) - 1.0))
+              ff = 1.0/(1.0 + ee)
+              dee = ee*(ff)*(ff)
+
+              !Calculate the derivative of the damping function with respect to the distance between atoms A and B.
+              dffdrab = (dd/(sr*r0ab(iatom,jatom)))*dee
+              !Calculate the derivative of the damping function with respect to the distance between the van der Waals radius.
+              dffdr0 = -dd*rr/(sr*r0ab(iatom,jatom)*r0ab(iatom,jatom))*dee
+
+              energy = energy -0.5*ff*c6ab(iatom,jatom)/rr6
+
+              ! Calculation of the pair-wise partial energy derivative with respect to the distance between atoms A and B.
+              deabdrab = -dffdrab*c6ab(iatom,jatom)/rr6 + 6.0*ff*c6ab(iatom,jatom)/rr7;
+      
+              ! Derivative of the damping function with respecto to the volume ratio of atom A.
+              dffdvra = dffdr0*dr0dvra(iatom);
+
+              ! Calculation of the pair-wise partial energy derivative with respect to the volume ratio of atom A.
+              deabdvra = (-dffdvra*c6ab(iatom,jatom) - ff*volume_ratio(jatom)*this%c6abfree(ispecies, jspecies))/rr6
+              
+              force(1:sb%dim,iatom)= force(1:sb%dim,iatom) - deabdrab*(geo%atom(iatom)%x(sb%dim) -x_j(1:sb%dim) )/rr; 
+              derivative_coeff(iatom) = derivative_coeff(iatom) + deabdvra;
+            end if
+          end do
+          call periodic_copy_end(pc)
+          !end if
         end do
-        force(1:3,iatom) = force_i(1:3, 1)
-        derivative_coeff(iatom) = derivative_coeff_i(1)
-        potential(1:der%mesh%np) = potential(1:der%mesh%np) + derivative_coeff(iatom)*dvadens(1:der%mesh%np)
       end do
-      SAFE_DEALLOCATE_A(force_i) 
-      SAFE_DEALLOCATE_A(zatom)
-      SAFE_DEALLOCATE_A(zatom_p)
-      SAFE_DEALLOCATE_A(volume_ratio)
-      SAFE_DEALLOCATE_A(volume_ratio_p)
-      SAFE_DEALLOCATE_A(coordinates)
-      SAFE_DEALLOCATE_A(coordinates_p)
+
 !------------------------------------------------------------!
+
     else ! Non periodic case 
       SAFE_ALLOCATE(coordinates(1:3, 1:geo%natoms))
-      SAFE_ALLOCATE(volume_ratio(1:geo%natoms))
       SAFE_ALLOCATE(zatom(1:geo%natoms))
 
       do iatom = 1, geo%natoms
-        ispecies = species_index(geo%atom(iatom)%species)
-        call hirshfeld_volume_ratio(this%hirshfeld, iatom, density, volume_ratio(iatom))
-      
-        c6(iatom) = volume_ratio(iatom)**2*this%c6free(ispecies)
-        r0(iatom) = volume_ratio(iatom)**(CNST(1.0)/CNST(3.0))*this%r0free(ispecies)
-      
-        !print*, species_label(geo%atom(iatom)%species), "c6 ", c6(iatom), this%c6free(ispecies)
-        !print*, species_label(geo%atom(iatom)%species), "r0 ", r0(iatom), this%r0free(ispecies)
-
         coordinates(1:3, iatom) = geo%atom(iatom)%x(1:3)
-        !print*, "iatom ", iatom, ": ", coordinates(1:3, iatom)
         zatom(iatom) = species_z(geo%atom(iatom)%species)
-        !print*, species_label(geo%atom(iatom)%species),zatom(iatom)
 
       end do
  
-      call f90_vdw_calculate(geo%natoms,geo%natoms, zatom(1), zatom(1), coordinates(1, 1), coordinates(1, 1), volume_ratio(1), &
-volume_ratio(1), energy, force(1, 1), derivative_coeff(1))
+      call f90_vdw_calculate(geo%natoms, zatom(1), coordinates(1, 1), volume_ratio(1), &
+      energy, force(1, 1), derivative_coeff(1))
 
-      ! add the extra term to the force
-      !    force = CNST(0.0)
-      do jatom = 1, geo%natoms
-        do iatom = 1, geo%natoms
-          call hirshfeld_position_derivative(this%hirshfeld, der, iatom, jatom, density, dvadrr)
-          force(1:3, jatom) = force(1:3, jatom) - derivative_coeff(iatom)*dvadrr(1:3)
-        end do
-      end do
-
-      ! and calculate the potential
-      potential = CNST(0.0)
-      do iatom = 1, geo%natoms
-        call hirshfeld_density_derivative(this%hirshfeld, iatom, dvadens)
-        potential(1:der%mesh%np) = potential(1:der%mesh%np) + derivative_coeff(iatom)*dvadens(1:der%mesh%np)
-      end do
-
-      !print*, "fxx", energy, force(1, 1), volume_ratio(1),  derivative_coeff(1)
-
-#if 0
-    
-      !print*, dmf_integrate(der%mesh, potential(1:der%mesh%np)*density(1:der%mesh%np, 1))
-#endif    
-      SAFE_DEALLOCATE_A(coordinates) 
-      SAFE_DEALLOCATE_A(volume_ratio)
+      SAFE_DEALLOCATE_A(coordinates)
       SAFE_DEALLOCATE_A(zatom)
     end if
+
+!------------------------------------------------------------!
+
+    ! add the extra term to the force and calculate the potential
+    potential = CNST(0.0)
+    do jatom = 1, geo%natoms
+      do iatom = 1, geo%natoms
+        call hirshfeld_position_derivative(this%hirshfeld, der, iatom, jatom, density, dvadrr)
+        force(1:3, jatom) = force(1:3, jatom) - derivative_coeff(iatom)*dvadrr(1:3)
+      end do
+      call hirshfeld_density_derivative(this%hirshfeld, jatom, dvadens)
+      potential(1:der%mesh%np) = potential(1:der%mesh%np) + derivative_coeff(jatom)*dvadens(1:der%mesh%np)
+    end do
+
     call dio_function_output(1, "./", "vvdw", der%mesh, potential, unit_one, ip)
-    SAFE_DEALLOCATE_A(c6)
-    SAFE_DEALLOCATE_A(r0)
+ 
+
+    SAFE_DEALLOCATE_A(volume_ratio)
+    SAFE_DEALLOCATE_A(derivative_coeff)
     SAFE_DEALLOCATE_A(dvadens)
-    
+    SAFE_DEALLOCATE_A(dvadrr)
+    SAFE_DEALLOCATE_A(dr0dvra)
+    SAFE_DEALLOCATE_A(r0ab)
+    SAFE_DEALLOCATE_A(c6ab)
+    SAFE_DEALLOCATE_A(x_j)
+
+
     POP_SUB(vdw_ts_calculate)
   end subroutine vdw_ts_calculate
 
@@ -512,7 +492,9 @@ volume_ratio(1), energy, force(1, 1), derivative_coeff(1))
       alpha = CNST(199.000000)
       c6 = CNST(3170.000000)
       r0 = CNST(4.540000)
-      
+     
+!   Elements from 39 - Yttrium (Y) to 44 Ruthenium (Ru) are not included. 
+
     case('Rh')
       alpha = CNST(56.1)
       c6 = CNST(469.0)
@@ -532,7 +514,9 @@ volume_ratio(1), energy, force(1, 1), derivative_coeff(1))
       alpha = CNST(39.7)
       c6 = CNST(452.0)
       r0 = CNST(3.99)
-      
+
+!  Elements from 49 - Indium (In) to 51 - Antimony (Sb) are not included.      
+
     case('Te')
       alpha = CNST(37.65)
       c6 = CNST(396.0)
@@ -547,11 +531,15 @@ volume_ratio(1), energy, force(1, 1), derivative_coeff(1))
       alpha = CNST(27.300000)
       c6 = CNST(285.900000)
       r0 = CNST(4.080000)
-      
+
+!  Element 55 - Caesium (Cs) is not included.
+ 
     case('Ba')
       alpha = CNST(275.0)
       c6 = CNST(5727.0)
       r0 = CNST(4.77)
+
+!  Elements from 57 - Lanthanum (La) to 76 - Osmium (Os) are not included.
       
     case('Ir')
       alpha = CNST(42.51)
@@ -572,7 +560,9 @@ volume_ratio(1), energy, force(1, 1), derivative_coeff(1))
       alpha = CNST(33.9)
       c6 = CNST(392.0)
       r0 = CNST(3.98)
-      
+
+!  Element 81 - Thallium (Tl) is not included.
+   
     case('Pb')
       alpha = CNST(61.8)
       c6 = CNST(697.0)
@@ -582,6 +572,8 @@ volume_ratio(1), energy, force(1, 1), derivative_coeff(1))
       alpha = CNST(49.02)
       c6 = CNST(571.0)
       r0 = CNST(4.32)
+
+! Elements from 84 - Polonium (Po) to 118 - Ununoctium (Uuo) are not included.
       
     case default
       
