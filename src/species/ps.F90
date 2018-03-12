@@ -133,11 +133,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine ps_init(ps, label, z, lmax, lloc, ispin, filename)
+  subroutine ps_init(ps, label, z, user_lmax, user_llocal, ispin, filename)
     type(ps_t),        intent(out)   :: ps
     character(len=10), intent(in)    :: label
-    integer,           intent(in)    :: lmax
-    integer,           intent(in)    :: lloc, ispin
+    integer,           intent(in)    :: user_lmax
+    integer,           intent(in)    :: user_llocal
+    integer,           intent(in)    :: ispin
     FLOAT,             intent(in)    :: z
     character(len=*),  intent(in)    :: filename
     
@@ -201,18 +202,22 @@ contains
       ps%z      = z
       ps%conf%z = nint(z) ! atomic number
       ps%kbc    = 1     ! only one projector per angular momentum
-      ps%llocal  = lloc  ! the local part of the pseudo
+      ps%llocal  = user_llocal  ! the local part of the pseudo
 
-      ps%lmax  = min(ps_psf%ps_grid%no_l_channels - 1, lmax) ! Maybe the file does not have enough components.
+      ps%lmax = ps_psf%ps_grid%no_l_channels - 1
+
+      if(user_lmax >= 0) then
+        ps%lmax = min(ps%lmax, user_lmax) ! Maybe the file does not have enough components.
+        if(user_lmax /= ps%lmax) then
+          message(1) = "lmax in Species block for " // trim(label) // " is larger than number available in pseudopotential."
+          call messages_fatal(1)
+        end if
+      end if
+
       ps%conf%p = ps_psf%ps_grid%no_l_channels
       if(ps%lmax == 0) ps%llocal = 0 ! Vanderbilt is not acceptable if ps%lmax == 0.
 
-      if(lmax /= ps%lmax) then
-        message(1) = "lmax in Species block for " // trim(label) // " is larger than number available in pseudopotential."
-        call messages_fatal(1)
-      end if
-
-      call ps_psf_process(ps_psf, lmax, ps%llocal)
+      call ps_psf_process(ps_psf, user_lmax, ps%llocal)
       call logrid_copy(ps_psf%ps_grid%g, ps%g)
 
     case(PS_TYPE_CPI, PS_TYPE_FHI)
@@ -235,21 +240,25 @@ contains
 
       ps%z      = z
       ps%kbc    = 1     ! only one projector per angular momentum
-      ps%llocal  = lloc  ! the local part of the pseudo
+      ps%llocal  = user_llocal  ! the local part of the pseudo
 
-      ps%lmax  = min(ps%conf%p - 1, lmax)   ! Maybe the file does not have enough components.
+      ps%lmax  = ps%conf%p - 1
+
+      if(user_lmax >= 0) then
+        ps%lmax = min(ps%lmax, user_lmax) ! Maybe the file does not have enough components.
+        if(user_lmax /= ps%lmax) then
+          message(1) = "lmax in Species block for " // trim(label) // " is larger than number available in pseudopotential."
+          call messages_fatal(1)
+        end if
+      end if
+      
       if(ps%lmax == 0) ps%llocal = 0 ! Vanderbilt is not acceptable if ps%lmax == 0.
       
-      if(lmax /= ps%lmax) then
-        message(1) = "lmax in Species block for " // trim(label) // " is larger than number available in pseudopotential."
-        call messages_fatal(1)
-      end if
-
       if(ps%flavour == PS_TYPE_CPI) then
         call ps_cpi_process(ps_cpi, ps%llocal)
         call logrid_copy(ps_cpi%ps_grid%g, ps%g)
       else
-        call ps_fhi_process(ps_fhi, lmax, ps%llocal)
+        call ps_fhi_process(ps_fhi, user_lmax, ps%llocal)
         call logrid_copy(ps_fhi%ps_grid%g, ps%g)
       end if
 
@@ -295,7 +304,7 @@ contains
           ps%llocal = ps_xml%llocal
         else
           ! we have several options
-          ps%llocal = lloc                            ! user supplied local component
+          ps%llocal = user_llocal                     ! user supplied local component
           if(ps%llocal < 0) ps%llocal = ps_xml%llocal ! the one given in the pseudopotential file
           if(ps%llocal < 0) ps%llocal = ps_xml%lmax   ! we use the maximum l possible as local
           ASSERT(ps%llocal >= 0)
