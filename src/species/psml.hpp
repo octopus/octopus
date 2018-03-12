@@ -26,6 +26,7 @@
 #include <iostream>
 
 #include "base.hpp"
+#include "chemical_element.hpp"
 #include <rapidxml.hpp>
 
 namespace pseudopotential {
